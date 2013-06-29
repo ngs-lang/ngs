@@ -1,0 +1,91 @@
+body {
+	font-family: monospace;
+	position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: 0;
+}
+#history {
+	float: right;
+	width: 20em;
+	height: 10em;
+	overflow: hidden;
+	border: 1px solid #EEE;
+}
+.box-title {
+	width: 100%;
+	color: #EEE;
+	background-color: #444;
+	padding: 0.5em;
+	text-align: center;
+}
+
+#output-wrapper {
+	/* http://stackoverflow.com/questions/585945/how-to-align-content-of-a-div-to-the-bottom-with-css */
+	position: absolute;
+  top: 0;
+  bottom: 5ex;
+  left: 0;
+  right: 0;
+  margin: 0.5ex;
+}
+#output {
+	position: absolute; bottom: 0; left: 0; right: 0;
+}
+#input-wrapper {
+  position: absolute; left: 0px; right: 0px; bottom: 2ex; height: 1.5ex; border-top: 1px solid #EEE;
+  padding: 0.5ex;
+}
+.cmd {
+	width: 100%;
+	font-weight: bold;
+}
+.out {
+  padding-left: 2em;
+}
+.out-err {
+  color: red;
+}
+.out-progress {
+  font-style: italic;
+}
+.out-cant-repr {
+  color: #F8F;
+}
+i {
+  opacity: 0.3;
+}
+.out:hoverX {
+  border-left: 1px solid red;
+  margin-left: -1px;
+}
+.out i {
+  width: 1em;
+  display: inline-block;
+}
+.progress-indicator {
+  width: 2em;
+  display: inline-block;
+}
+.progress-indicator > i[class*="thumbs-down"] {
+  color: red;
+}
+.pct {
+  border: 1px solid #8A8;
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+  width: 10em;
+  height: 0.5em;
+}
+.pct-inner {
+  height: 100%;
+  background-color: #4A4;
+}
+.pct.done {
+  border: 1px solid #AAA;
+}
+.pct.done > .pct-inner {
+  background-color: #DDD;
+}

@@ -1,0 +1,10 @@
+{
+  "name": "ze",
+  "version": "0.0.1",
+  "description": "Next generation CLI with GUI additions",
+  "keywords": ["cli"],
+  "dependencies": {
+    "socket.io": "0.x",
+    "node-static": "0.6.9"
+  }
+}
