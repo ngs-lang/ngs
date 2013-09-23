@@ -22,7 +22,7 @@ $(function() {
 		c.text(this.toString());
     this.cmdElt = c;
 
-    var progressElt = $('<div class="progress-indicator">X</div>');
+    var progressElt = $('<div class="progress-indicator">?</div>');
     this.progressElt = progressElt;
     progressElt.prependTo(c);
 
