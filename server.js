@@ -12,11 +12,9 @@ var options = {
 var https_server = https.createServer(options, function (req, res) {
   // console.log(req.connection.socket.remoteAddress);
   if(req.connection.socket.remoteAddress !== '127.0.0.1') {
-  	req.end('X'); // exception but I don't care
+  	res.end('X'); // exception but I don't care
   }
-  req.addListener('end', function () {
-  	fileServer.serve(req, res);
-  });
+  fileServer.serve(req, res);
   // res.writeHead(200);
   // res.end("hello world\n");
 });
