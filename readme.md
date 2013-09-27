@@ -222,6 +222,8 @@ Following instructions should work (not tested)
 * `mkdir ssl`
 * `cd ssl`
 * `openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout mysitename.key -out mysitename.crt`
+* `cd ..`
+* `nodejs server.js`
 * Go to <a href="https://127.0.0.1:8443/main.html">https://127.0.0.1:8443/main.html</a>
 
 Discussion / requests / comments
