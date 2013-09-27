@@ -230,7 +230,7 @@ Following instructions should work (tested on Debian)
 		* `ls`
 		* `pr` - a long process with progress bar
 		* `sleep` - a process that sleeps for 5 seconds
-		* `fail` - a progress that fails
+		* `fail` - a process that fails
 
 Discussion / requests / comments
 ================================
