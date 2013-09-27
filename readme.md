@@ -30,8 +30,8 @@ UI
 * All operations made via a UI, including mouse operations in GUI _must_ have and display textual representation, allowing to copy / paste / save to a file/ send to friend.
 
 * Different UI modules must exist. In the beginning we can start with these:
-* Web (allow multiple users to collaborate, some rw, some ro)
-* Console (use pty)
+  * Web (allow multiple users to collaborate, some rw, some ro)
+  * Console (use pty)
 
 * Different syntax modules
 	* With parse / construct features. Think an operation is done in a GUI, API called to
