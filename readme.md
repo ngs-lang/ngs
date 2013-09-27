@@ -218,13 +218,15 @@ How to run POC
 ==============
 
 Following instructions should work (tested on Debian)
-* `cd small-poc`
-* `mkdir ssl`
-* `cd ssl`
-* `openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout mysitename.key -out mysitename.crt`
-* `cd ..`
-* `npm install`
-* `nodejs server.js`
+
+	cd small-poc
+	mkdir ssl
+	cd ssl
+	openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout mysitename.key -out mysitename.crt
+	cd ..
+	npm install
+	nodejs server.js
+
 * Go to <a href="https://127.0.0.1:8443/main.html">https://127.0.0.1:8443/main.html</a>
 	* Commands to try:
 		* `ls`
