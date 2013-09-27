@@ -1,3 +1,5 @@
+Next generation UNIX shell
+
 Vision
 ======
 
