@@ -25,7 +25,7 @@ UI
 * Not to block, allow typing next commands even if previous command(s) still run(s).
 	* Open issue: how to deal with a command that requires interaction.
 
-* Provide good feedback. In GUI for example, this can be green / red icon near a completed command to show exit status. Tweaking prompt to include such info or typing "echo $?" all the time is not what I dream about.
+* Provide good feedback. In GUI for example, this can be green / red icon near a completed command to show exit status. Tweaking prompt to include such info or typing `echo $?` all the time is not what I dream about.
 
 * All operations made via a UI, including mouse operations in GUI _must_ have and display textual representation, allowing to copy / paste / save to a file/ send to friend.
 
@@ -35,7 +35,7 @@ UI
 
 * Different syntax modules
 	* With parse / construct features. Think an operation is done in a GUI, API called to
-	  construct the command or whatever that is. Call "construct" on this to create textual
+	  construct the command or whatever that is. Call `construct` on this to create textual
 	  representation of the command / whatever.
 	* On-the-fly syntax validation and errors reporting.
 
@@ -88,7 +88,19 @@ Cross-system
 		* (Locally) by /etc/hosts remark or by .ssh/config properties or remarks
 		* by naming conventions (for example regex defined) for all cases above
 		* Dynamic by a command output/exit code
-		  Think "netstat -lpnt | grep -q :8000" or "pgrep java" or "dpkg -l '*apache*' >/dev/null"
+		  Think `netstat -lpnt | grep -q :8000` or `pgrep java` or `dpkg -l '*apache*' >/dev/null`
+
+	* Allow to run commands on remote hosts and connect them with pipes
+		* Example: `@web_servers { cat /var/log/messages } | @management_server { grep MY_EVENT | sort > /tmp/MY_EVENT }`
+		  That's just for the sake of an example, it would probably be better to `grep` locally.
+		* Issue warning if the output of `cat` can not be pushed or pulled directly between
+		  the machines (and therefore will be transferred through the controlling host, where the shell runs)
+			* Have shortcut key to setup SSH access required for direct transfer
+			* Or.. run temporary SSH daemons to allow this?
+		* Provide meaningful progress on that, including ETA. This won't be easy but it's worth it.
+		* Provide processing speeds inspection, CPU graphs, network usage, including graphs.
+		  It can be helpful to identify and show slow machines.
+		  If it's a cluster,the performance should be similar. If not, it can inidcate a problem.
 
 * Easy integration with currently available software
 
@@ -98,12 +110,12 @@ Cross-system
 * Smart completion, context sensitive
 	* Command switches and values
 	* Complete objects (file names, urls, etc) depending on context.
-	  Think "wget .../x.tgz", "tar " [COMPLETION_KEY] [Maybe some choice keys] -> " xzf x.tgz"
+	  Think `wget .../x.tgz`, `tar ` [COMPLETION_KEY] [Maybe some choice keys] -> ` xzf x.tgz`
 	* Maybe API to insert objects to completion history
 	* Auto-detect completion history objects for existing commands (by wrappers and/or hooks probably)
 
 * "Mentioned" completion
-	* Complete objects from output of previous commands. Example: "apt-cache search ..." , "apt-get install ..."
+	* Complete objects from output of previous commands. Example: `apt-cache search ...` , `apt-get install ...`
 	  Isn't this copy+paste annoying? It's already on the screen, it's a package name, and still the system can't
 	  complete...
 
@@ -140,7 +152,7 @@ Later / unformed / unfinished thoughts
 
 * Preview output with a shortcut key (don't run the command and insert it's output to the stream)
 
-* Dynamic update command output, think "ps" / "top" when their output is in the stream
+* Dynamic update command output, think `ps` / `top` when their output is in the stream
 	* "pin" feature so user defined command sticks to the screen and being re-run and the output updated,
 	  essentially making it a widget
 
@@ -158,7 +170,7 @@ Later / unformed / unfinished thoughts
 	* ... and updates log, when machines were added/removed
 	* "Current" hosts group to execute commands on.
 	* Whenever group is formed, connectivity must be checked and problems notified
-	* Each host should have statuses, such as "pending" for EC2 machines
+	* Each host should have statuses, such as `pending` for EC2 machines
 	  (in "ze" can be pending till SSH connection is ready)
 
 * Statuses should have "debug level" to them so that background jobs could be showed as less important
@@ -172,7 +184,7 @@ Later / unformed / unfinished thoughts
 * Icons (in any UI that allows it). Icons are processed much faster than text.
 
 * Every failed script must have exact error information to it.
-  No re-run with added "-x" or "echo"s should be required.
+  No re-run with added `-x` or `echo`s should be required.
 
 * Commands of "ze" will pass objects in pipes between them, not strings.
   External commands should use JSON or API (not sure here).
@@ -193,22 +205,25 @@ Later / unformed / unfinished thoughts
 	* Auto discovery for jars? Think ec2 tools.
 	* Anyway, there must be a way to specify externally argument types and
 	  objects (file/url/pid... see bash doc about completion for more types)
-	* Learn from interaction. Example "curl URL" -> curl has argument of type URL.
+	* Learn from interaction. Example `curl URL` -> curl has argument of type URL.
 		* Provide easy access to modify/delete/blacklist learned commands' arguments.
-		* Shortcut key to define object type. Example "curl [SHORTCUT_KEY_PRESSES]" ->
+		* Shortcut key to define object type. Example `curl [SHORTCUT_KEY_PRESSES]` ->
 		  menu with object types -> remember the selection.
 		* Use same format for learned and pre-defined arguments, allowing easy adding
 		  to the ze package and interchange between people.
 			* The format (future feature, low priority) will include version detection
 			  and which switches are supported in which versions.
 			* The format will include how to do completion for specific arguments.
-			  Think "ec2kill" < "ec2din ...".
+			  Think `ec2kill` < `ec2din ...`.
 
-* Define which commands will run where when using hosts group. Think "ec2..." on
+* Define which commands will run where when using hosts group. Think `ec2...` on
   a group of machines which include all ec2 machines: "management" machine, web, app,
   etc. servers.
 
-* hosts groups should be organized in a stack ( pushd/popd style )
+* Hosts groups should be organized in a stack ( pushd/popd style )
+
+* Hosts group will be ordered. When running commands, one could specify to run in order or async.
+	* When commands run in order there should be an option to stop on first fail.
 
 Current state
 =============
