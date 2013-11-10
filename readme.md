@@ -3,8 +3,7 @@ Next generation UNIX shell
 Vision
 ======
 
-* The vision is to make a shell which will significantly increase the productivity
-  of system guys and girls.
+* The vision is to make a shell which will significantly increase the productivity of system guys and girls.
 
 * Current shells are outdated. They are not as powerful as we'd like them to be.
 
@@ -22,6 +21,8 @@ Features
 
 UI
 --
+* Screencast of `small-poc` is on youtube: http://www.youtube.com/watch?v=T5Bpu4thVNo
+
 * Not to block, allow typing next commands even if previous command(s) still run(s).
 	* Open issue: how to deal with a command that requires interaction.
 
