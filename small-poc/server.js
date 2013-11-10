@@ -28,19 +28,19 @@ var commands = {
 	'pr': function(cmd, socket) {
 		socket.emit('progress', {id: cmd.id, obj: {text: 'working'}});
 		console.log('A');
-		for(var i=0; i<10; i++) {
+		for(var i=0; i<20; i++) {
 			console.log('for', i);
 			(function(i) {
 				console.log('func', i);
 				setTimeout(function() {
 					console.log('setTimeout', i);
-					socket.emit('progress', {id: cmd.id, obj: {text: 'working', pct: i*10}});
-				}, i*1000);
+					socket.emit('progress', {id: cmd.id, obj: {text: 'working', pct: i*5}});
+				}, i*1500);
 			})(i);
 		}
 		setTimeout(function() {
 			socket.emit('progress', {id: cmd.id, obj: {text: 'done', pct: 100}});
-		}, 10000);
+		}, 30000);
 	},
 	'fail': function(cmd, socket) {
 		socket.emit('progress', {id: cmd.id, obj: {text: 'working'}});
