@@ -4,7 +4,15 @@
 Attempt to figure out the model
 """
 
+import sys
 import subprocess
+
+# 'io' will be dynamic later
+import plugins.io_pty
+plugins.io_pty.init()
+
+class Session(object):
+    pass
 
 
 class Host(object):
@@ -89,9 +97,17 @@ class MenthionedHistoryList(HistoryList):
 
 
 if __name__ == '__main__':
+    sess = Session()
+    io = plugins.io_pty.IO(sess)
+
     j = Job()
     j.withCommand(Command(argv=['ps', '-ef']))
     j.withCommand(Command(argv=['grep', 'vim']))
     # TODO: connect the commands with a pipe
     print j
     j.run()
+
+    while True:
+        cmd = io.get_command()
+        if cmd == 'exit':
+            break
