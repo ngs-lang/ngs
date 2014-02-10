@@ -17,6 +17,14 @@ class TabularIO(object):
     def get_columns_names(self):
         return self.columns
 
+def cell_to_str(v):
+    if v is None:
+        return ''
+    if isinstance(v, list):
+        return ','.join(map(cell_to_str, v))
+    return str(v)
+
+
 class Writer(TabularIO):
     def __init__(self, *columns):
         self.columns = columns
@@ -43,14 +51,14 @@ class Writer(TabularIO):
             widths = [len(c) for c in self.columns]
             for line in self.buf:
                 for i in range(0, len(self.columns)):
-                    widths[i] = max(widths[i], len(str(line[i])))
+                    widths[i] = max(widths[i], len(cell_to_str(line[i])))
             print(colorama.Style.BRIGHT, end='')
             for i, w in enumerate(widths):
                 print(("{0:"+str(w)+"} ").format(str(self.columns[i])), end='')
             print(colorama.Style.RESET_ALL)
             for line in self.buf:
                 for i, w in enumerate(widths):
-                    print(("{0:"+str(w)+"} ").format(str(line[i])), end='')
+                    print(("{0:"+str(w)+"} ").format(cell_to_str(line[i])), end='')
                 print()
         else:
             print(json.dumps({'version': 1, 'columns': self.columns}))
