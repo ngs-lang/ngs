@@ -15,15 +15,12 @@ def reservations2instances(reservations):
     return instances
 
 
-w = tabular.Writer(*FIELDS)
-
 conn = boto.ec2.connect_to_region('us-east-1', aws_access_key_id=os.getenv('AMAZON_ACCESS_KEY_ID'), aws_secret_access_key=os.getenv('AMAZON_SECRET_ACCESS_KEY'))
 reservations = conn.get_all_instances()
 instances = reservations2instances(reservations)
 
-for i in instances:
-    line = {f: getattr(i, f) for f in FIELDS}
-    line['groups'] = map(lambda g: g.id, line['groups'])
-    w.write(**line)
-w.close()
-
+tabular.write_objects_list(instances, columns=FIELDS)
+# tabular.write_objects_list(instances, exclude_class_fields={
+#     'boto.ec2.instance.Instance': ['connection'],
+#     'boto.ec2.blockdevicemapping.BlockDeviceType': ['connection'],
+# })
