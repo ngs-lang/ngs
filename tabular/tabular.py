@@ -1,17 +1,34 @@
 #!/usr/bin/env python
 # vim: ts=4 sw=4 et
 
+"""
+This is part of a POC project that deals with tabular data.
+It's a shame that the fact that most of the data in shell is tabular
+was ignored up until now. No, "awk '{print $3}'" is _not_ dealing with
+tables. It deals with records.
+"""
+
 # TODO:
 #  isatty() -> only output some records (N first, M last) and dots in the middle
 #  not isatty() -> output immediately, not on close()
 
+# WIP: lines_transformators
+
+# Sample usage: ec2din.py | awk.py 'write(env=line["tags"]["env"], name=line["tags"]["Name"], status=line["tags"].get("status"), **line)' | select.py id,ip_address,env,name,status
+
 from __future__ import print_function
 
 import argparse
+import fcntl
 import json
+import os
+import struct
 import sys
+import termios
 
 import colorama
+
+from history import *
 
 class TabularIO(object):
     def get_columns_names(self):
@@ -34,11 +51,19 @@ class ColumnRuleExcludeByName(object):
 
 
 class Writer(TabularIO):
-    def __init__(self, columns=None, columns_rules=None, display_columns=None):
-        self.columns = columns or []
+    def __init__(self, **kw):
+        attrs = {
+            'columns': [],
+            'columns_rules': [],
+            'display_columns': [],
+            'lines_transformators': [],
+            'version': 1
+        }
+        attrs.update(kw)
+        for k, v in attrs.items():
+            setattr(self, k, v)
         self.buf = []
-        self.columns_rules = columns_rules or []
-        self.display_columns = display_columns or self.columns
+        self.attrs = attrs
 
     def _object_data_attrs(self, obj):
         if hasattr(obj, '__class__'):
@@ -77,11 +102,10 @@ class Writer(TabularIO):
             return
         self.columns = sorted(self._object_data_attrs(obj))
 
-    def write(self, *__values, **kv_pairs):
+    def write(self, **kv_pairs):
+        for transformator in self.lines_transformators:
+            transformator(kv_pairs)
         self.maybe_init(**kv_pairs)
-        if __values:
-            self.buf.append(__values)
-            return
         if kv_pairs:
             self.buf.append([kv_pairs[k] for k in self.columns])
             return
@@ -96,26 +120,49 @@ class Writer(TabularIO):
         for obj in iterable:
             self.write_obj(obj)
 
+    def _calc_widths_for_columns(self, columns):
+        column_name_to_number = {c: self.columns.index(c) for c in self.columns}
+        widths = [len(c) for c in columns]
+        for line in self.buf:
+            for i in range(0, len(columns)):
+                widths[i] = max(widths[i], len(cell_to_str(self.serialize(line[column_name_to_number[columns[i]]]))))
+        return widths
+
+    # TODO: periodic, paginated output for console
+    # TODO: un-uglify the code ? :)
     def close(self):
         stream = sys.stdout
         if stream.isatty():
+
+            # Pick columns to display based on specified columns and display width - start
+            # Columns detection "inspired by"
+            # http://blog.taz.net.au/2012/04/09/getting-the-terminal-size-in-python/
+            hw = struct.unpack('hh', fcntl.ioctl(stream, termios.TIOCGWINSZ, '1234'))
+            terminal_cols = hw[1]
+            display_columns = self.display_columns[:]
             column_name_to_number = {c: self.columns.index(c) for c in self.columns}
-            widths = [len(c) for c in self.display_columns]
-            for line in self.buf:
-                for i in range(0, len(self.display_columns)):
-                    widths[i] = max(widths[i], len(cell_to_str(self.serialize(line[column_name_to_number[self.display_columns[i]]]))))
+            while True:
+                widths = self._calc_widths_for_columns(display_columns)
+                widths_sum = reduce(int.__add__, widths, 0) + len(widths) - 1
+                if widths_sum < terminal_cols:
+                    break
+                display_columns = display_columns[:-1]
+            # Pick columns to display based on specified columns and display width - end
+
             print(colorama.Style.BRIGHT, end='')
             for i, w in enumerate(widths):
-                print(("{0:"+str(w)+"} ").format(str(self.display_columns[i])), end='')
+                print(("{0:"+str(w)+"} ").format(str(display_columns[i])), end='')
             print(colorama.Style.RESET_ALL)
-            if len(self.display_columns) != len(self.columns):
-                print("  ... {0}".format(' '.join(sorted(list(set(self.columns)-set(self.display_columns))))))
+            if len(display_columns) != len(self.columns):
+                print("  ... {0}".format(' '.join(sorted(list(set(self.columns)-set(display_columns))))))
             for line in self.buf:
                 for i, w in enumerate(widths):
-                    print(("{0:"+str(w)+"} ").format(cell_to_str(self.serialize(line[column_name_to_number[self.display_columns[i]]]))), end='')
+                    print(("{0:"+str(w)+"} ").format(cell_to_str(self.serialize(line[column_name_to_number[display_columns[i]]]))), end='')
                 print()
         else:
-            print(json.dumps({'version': 1, 'columns': self.columns}))
+            # TODO: Find some better way to detect whch attributes should be printed
+            attrs = {a: getattr(self, a) for a in self.attrs if a != 'columns_rules' and a != 'lines_transformators'}
+            print(json.dumps(attrs))
             for line in self.buf:
                 print(json.dumps([self.serialize(x) for x in line]))
 
