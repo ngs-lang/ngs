@@ -22,14 +22,23 @@ def cell_to_str(v):
         return ''
     if isinstance(v, list):
         return ','.join(map(cell_to_str, v))
+    if isinstance(v, dict) and '$display' in v and '$value' in v:
+        return cell_to_str(v['$display'])
     return str(v)
 
+class ColumnRuleExcludeByName(object):
+    def __init__(self, column_name):
+        self.column_name = column_name
+    def allow(self, column_name, value):
+        return column_name != self.column_name
+
+
 class Writer(TabularIO):
-    def __init__(self, columns=None, class_fields=None, exclude_class_fields=None):
+    def __init__(self, columns=None, columns_rules=None, display_columns=None):
         self.columns = columns or []
         self.buf = []
-        self.class_fields = class_fields or {}
-        self.exclude_class_fields = exclude_class_fields or {}
+        self.columns_rules = columns_rules or []
+        self.display_columns = display_columns or self.columns
 
     def _object_data_attrs(self, obj):
         if hasattr(obj, '__class__'):
@@ -37,16 +46,24 @@ class Writer(TabularIO):
         else:
             class_name = None
 
-        if class_name in self.class_fields:
-            return self.class_fields[class_name]
+        # TODO: maybe move to rules
+        attrs = []
+        for a in dir(obj):
+            if a.startswith('_'):
+                continue
+            v = getattr(obj, a)
+            try:
+                if hasattr(v, '__call__'):
+                    continue
+            except AttributeError:
+                # Not sure
+                continue
+            ok = all([rule.allow(a, v) for rule in self.columns_rules])
+            if not ok:
+                continue
+            attrs.append(a)
 
-        attrs = [a for a in dir(obj) if not a.startswith('_')]
-        data_attrs = [a for a in attrs if not hasattr(getattr(obj, a, None), '__call__')]
-
-        if class_name in self.exclude_class_fields:
-            data_attrs = list(set(data_attrs) - set(self.exclude_class_fields[class_name]))
-
-        return data_attrs
+        return attrs
 
 
     def maybe_init(self, **kv_pairs):
@@ -82,46 +99,50 @@ class Writer(TabularIO):
     def close(self):
         stream = sys.stdout
         if stream.isatty():
-            widths = [len(c) for c in self.columns]
+            column_name_to_number = {c: self.columns.index(c) for c in self.columns}
+            widths = [len(c) for c in self.display_columns]
             for line in self.buf:
-                for i in range(0, len(self.columns)):
-                    widths[i] = max(widths[i], len(cell_to_str(self.pre_serialize(line[i]))))
+                for i in range(0, len(self.display_columns)):
+                    widths[i] = max(widths[i], len(cell_to_str(self.serialize(line[column_name_to_number[self.display_columns[i]]]))))
             print(colorama.Style.BRIGHT, end='')
             for i, w in enumerate(widths):
-                print(("{0:"+str(w)+"} ").format(str(self.columns[i])), end='')
+                print(("{0:"+str(w)+"} ").format(str(self.display_columns[i])), end='')
             print(colorama.Style.RESET_ALL)
+            if len(self.display_columns) != len(self.columns):
+                print("  ... {0}".format(' '.join(sorted(list(set(self.columns)-set(self.display_columns))))))
             for line in self.buf:
                 for i, w in enumerate(widths):
-                    print(("{0:"+str(w)+"} ").format(cell_to_str(self.pre_serialize(line[i]))), end='')
+                    print(("{0:"+str(w)+"} ").format(cell_to_str(self.serialize(line[column_name_to_number[self.display_columns[i]]]))), end='')
                 print()
         else:
             print(json.dumps({'version': 1, 'columns': self.columns}))
             for line in self.buf:
-                print(json.dumps([self.pre_serialize(x) for x in line]))
+                print(json.dumps([self.serialize(x) for x in line]))
 
     # Wasteful serialization (happens twice), fix later
     # Visited should be set() but does not work with (some?) objects
-    def pre_serialize(self, x, visited=None):
+    def serialize(self, x, visited=None):
         if visited is None:
             visited = []
         if x in visited:
             return '*RECURSION*'
         if isinstance(x, list):
-            return [self.pre_serialize(i, visited + [x]) for i in x]
+            return [self.serialize(i, visited + [x]) for i in x]
         if isinstance(x, dict):
-            return {k: self.pre_serialize(v, visited + [x]) for k,v in x.items()}
+            return {k: self.serialize(v, visited + [x]) for k,v in x.items()}
         try:
             json.dumps(x)
         except TypeError:
             # Might turn out as bad heuristic
             for attr in 'id', 'name':
                 if hasattr(x, attr):
-                    return self.pre_serialize(getattr(x, attr))
+                    return self.serialize(getattr(x, attr))
             data_attrs = self._object_data_attrs(x)
             # print(x.__class__.__name__)
-            return {k: self.pre_serialize(getattr(x, k, None), visited + [x]) for k in data_attrs}
+            return {k: self.serialize(getattr(x, k, None), visited + [x]) for k in data_attrs}
         return x
 
+# Warning: iterator is not safe, use only once!
 class Reader(TabularIO):
 
     def __init__(self, stream):

@@ -20,7 +20,6 @@ else:
 value_re = re.compile(args.re)
 
 r = tabular.Reader(sys.stdin)
-w = tabular.Writer()
 
 all_columns = r.get_columns_names()
 if column_re:
@@ -28,6 +27,7 @@ if column_re:
 else:
     columns = all_columns
 
+w = tabular.Writer(columns=columns)
 for line in r:
     matching_columns = [c for c in columns if value_re.search(str(line[c]))]
     if matching_columns and not args.invert:

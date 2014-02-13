@@ -27,7 +27,7 @@ parser = argparse.ArgumentParser(description='List locations')
 parser.add_argument('locations', metavar='LOCATION', type=str, nargs='+', help='Locations to list')
 
 # w = Writer('name', 'mode', 'nlink', 'size')
-w = Writer()
+w = Writer(display_columns=('name', 'mode', 'size'))
 args = parser.parse_args()
 if args.locations:
 	for location in args.locations:
