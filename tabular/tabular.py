@@ -143,7 +143,7 @@ class Writer(TabularIO):
             column_name_to_number = {c: self.columns.index(c) for c in self.columns}
             while True:
                 widths = self._calc_widths_for_columns(display_columns)
-                widths_sum = reduce(int.__add__, widths, 0) + len(widths) - 1
+                widths_sum = reduce(int.__add__, widths, 0) + (len(widths) - 1) * 2  # 2 spaces between columns
                 if widths_sum < terminal_cols:
                     break
                 display_columns = display_columns[:-1]
@@ -151,13 +151,13 @@ class Writer(TabularIO):
 
             print(colorama.Style.BRIGHT, end='')
             for i, w in enumerate(widths):
-                print(("{0:"+str(w)+"} ").format(str(display_columns[i])), end='')
+                print(("{0:"+str(w)+"}  ").format(str(display_columns[i])), end='')
             print(colorama.Style.RESET_ALL)
-            if len(display_columns) != len(self.columns):
-                print("  ... {0}".format(' '.join(sorted(list(set(self.columns)-set(display_columns))))))
+            # if len(display_columns) != len(self.columns):
+            #     print("  ... {0}".format(' '.join(sorted(list(set(self.columns)-set(display_columns))))))
             for line in self.buf:
                 for i, w in enumerate(widths):
-                    print(("{0:"+str(w)+"} ").format(cell_to_str(self.serialize(line[column_name_to_number[display_columns[i]]]))), end='')
+                    print(("{0:"+str(w)+"}  ").format(cell_to_str(self.serialize(line[column_name_to_number[display_columns[i]]]))), end='')
                 print()
         else:
             # TODO: Find some better way to detect whch attributes should be printed
@@ -195,6 +195,7 @@ class Reader(TabularIO):
     def __init__(self, stream):
         self.stream = stream
         meta = json.loads(self.stream.readline())
+        self.meta = meta
         self.columns = meta['columns']
 
     def read(self):

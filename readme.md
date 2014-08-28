@@ -71,6 +71,8 @@ Cross-system
 	  use heuristics such as look at open files + position in such files to guess the progress
 	  with high probability.
 
+* Ability to add new commands after a running one completes
+
 * Manage multiple servers at once
 
 	* Preferably using nothing more than standard SSH,
