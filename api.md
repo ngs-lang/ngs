@@ -1,7 +1,10 @@
 Ze API
 ======
 
-Overview. REST+JSON and maybe REST+plain.
+Overview
+--------
+
+REST+JSON and maybe REST+plain.
 
 Endpoint
 --------
