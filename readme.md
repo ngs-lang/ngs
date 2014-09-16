@@ -83,7 +83,9 @@ Cross-system
 
 	* Smart handling of failures,
 	  maybe divide into groups depending on command status / output and then letting
-	  to manage these groups.
+	  to manage these groups. Consider dividing to several "fail" groups depending on
+	  the fail mode. Think deploy script that should handle the conditions. Also make
+	  one large group for any failures (contains all fail sub-groups).
 
 	* Automatic server groups by
 		* (In a cloud) a security group, a tag or other properties (regex on name for example)

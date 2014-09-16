@@ -33,9 +33,9 @@ Objects
 Format
 ------
 
-Default: JSON.
+Default: JSON (or maybe react to `Accept: application/json` header)
 
-* Also support: `...?format=plain` (or cookie maybe)
+* Also support: `Accept: text/plain` header.
 
 Polling
 -------
@@ -47,10 +47,19 @@ Versioning
 
 TBD. Have versioned URLs?
 
+CORS
+----
+
+For web UI. TBD.
+
 URLs
 ----
 
+In order that we think of them.
+
 	/ - returns valid routes' patterns (POST adds new?)
+
+	/plugins - list of running plugins
 
 	/jobs [GET+POST]
 	/jobs/ID
@@ -61,12 +70,27 @@ URLs
 	/jobs/ID/control/terminate  [POST]
 	/jobs/ID/command
 	/jobs/ID/status
+		[TBD: maybe /jobs/ID/status/HOST]
+		[TBD: how to externalize the ok and fail groups]
 		seq - sequential number (history number) ??
 		started/paused/continued/finished/terminated - timestamp float
 		command - structured data with commands, pipes, etc.
 		state - running/paused/done
 		progress - 0..100 float
 		exit_code - 0..255 int
+		waiting_for_input: bool  (not sure whether can be implemented.
+		                   things like read() system call are probably
+						   visible outside but what about select() of
+						   an event loop?) having no TTY fds is a good
+						   clue for "false" here :)
+	/jobs/ID/stdin              [POST]
+	/jobs/ID/stdout
+	/jobs/ID/stderr
+
+	[TBD: graphical programs interface/embedding ... just a tought - start]
+	/jobs/ID/xvfb
+	/jobs/ID/events
+	[TBD: graphical programs interface/embedding ... just a tought - end]
 
 	/hosts [GET+POST]
 	/hosts/ID
@@ -97,3 +121,18 @@ URLs
 
 	/history - current session command history [GET+POST] [SEARCHABLE]
 	/history/SEQ
+		time - timestamp
+		user? - user that started the command (will be needed for session
+		        sharing later).
+		object_type - command/file/url/etc.
+		str
+
+	/users - TBD
+
+	/permissions - TBD
+	/permissions/TOKEN - TBD
+
+	/search - TBD
+
+	/sessions [GET+POST]
+	/sessions/ID
