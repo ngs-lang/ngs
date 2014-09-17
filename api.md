@@ -61,6 +61,17 @@ In order that we think of them.
 
 	/plugins - list of running plugins
 
+	/auth/tokens [GET+POST] - list all tokens / create new token
+
+	/auth/tokens/ID
+		name - Human readable explanation
+		rules - array of:
+			method - GET/POST/...
+			url - regex
+			action - allow/deny
+		created - timestamp
+		expires - timestamp
+
 	/jobs [GET+POST]
 	/jobs/ID
 	/jobs/ID/control

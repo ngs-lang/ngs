@@ -18,6 +18,7 @@ var options = {
 };
 
 https.createServer(options, app).listen(process.env['ZE_PORT'] || 8443);
+console.log('STARTED');
 
 // simple logger
 app.use(function(req, res, next){
@@ -25,11 +26,12 @@ app.use(function(req, res, next){
   next();
 });
 
-// TODO: auth
 app.use(auth.authenticationMiddleware);
 
 app.get('/', function(req, res){
-  res.send('hello world');
+  // TODO: list of all URL patterns
+  res.status(501);
+  res.send({'error_message': 'Listing of all URL patterns is not implemented yet'});
 });
 
 
