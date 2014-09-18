@@ -3,9 +3,12 @@
 //   pwgen 32 >~/.ze/token
 //   openssl x509 -req -in server-csr.pem -signkey server-key.pem -out server-cert.pem
 
+// Run server:
+//   nodejs ze/ze_server.js
+
 // Usage example 1:
 //   curl -H "X-ze-auth: $(cat ~/.ze/token)" --cacert server-cert.pem https://ze:8443/auth/tokens/ | jq .
-//
+
 // Usage example 2:
 //   curl -i -H "X-ze-auth: $(cat ~/.ze/token)" --cacert server-cert.pem -d 'cmd=ls' https://ze:8443/jobs
 //   curl -i -H "X-ze-auth: $(cat ~/.ze/token)" --cacert server-cert.pem https://ze:8443/jobs/1/stdout
