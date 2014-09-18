@@ -1,4 +1,5 @@
 // Setup:
+//   apt-get install node-express node-body-parser
 //   mkdir ~/.ze
 //   pwgen 32 >~/.ze/token
 //   openssl x509 -req -in server-csr.pem -signkey server-key.pem -out server-cert.pem
