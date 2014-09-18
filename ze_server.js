@@ -1,7 +1,20 @@
+// Setup:
+//   mkdir ~/.ze
+//   pwgen 32 >~/.ze/token
+//   openssl x509 -req -in server-csr.pem -signkey server-key.pem -out server-cert.pem
+
+// Usage example 1:
+//   curl -H "X-ze-auth: $(cat ~/.ze/token)" --cacert server-cert.pem https://ze:8443/auth/tokens/ | jq .
+//
+// Usage example 2:
+//   curl -i -H "X-ze-auth: $(cat ~/.ze/token)" --cacert server-cert.pem -d 'cmd=ls' https://ze:8443/jobs
+//   curl -i -H "X-ze-auth: $(cat ~/.ze/token)" --cacert server-cert.pem https://ze:8443/jobs/1/stdout
+
 var https = require('https');
 var fs = require('fs');
 
 var express = require('express');
+var bodyParser = require('body-parser');
 
 var objects = require('./ze_objects');
 var plugins = require('./ze_plugins');
@@ -21,6 +34,8 @@ https.createServer(options, app).listen(process.env['ZE_PORT'] || 8443);
 console.log('STARTED');
 
 // simple logger
+app.use(bodyParser());
+
 app.use(function(req, res, next){
   console.log('%s %s', req.method, req.url);
   next();

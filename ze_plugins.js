@@ -1,8 +1,8 @@
+// TODO: allow external plugins (simple scripts)
+//       For simplicity, allow only JS plugins for now.
+
 var fs = require('fs');
 var _ = require('underscore');
-var child_process = require('child_process')
-var execFile = child_process.execFile;
-var spawn = child_process.spawn;
 
 
 var _plugins = {
@@ -34,21 +34,8 @@ function scanPluginsDir(callback) {
 					console.log('fs.stat()', bin, err);
 					return;
 				}
-				if(isFileExecutable(stats)) {
-					execFile(bin, ['meta'], {env: process.env}, function(err, stdout, stderr) {
-						var data = null;
-						if(err) {
-							console.log('execFile()', bin, err);
-							return;
-						}
-						try {
-							data = JSON.parse(stdout);
-						} catch(e) {
-							console.log('JSON.parse() error for', bin, e);
-
-						}
-						_plugins[bin] = {'meta': {'data': data, 'stdout': stdout, 'stderr': stderr}};
-					});
+				if(/\.js$/.exec(file)) {
+					_plugins[file] = require(dir + '/' + file);
 				}
 			});
 		});
@@ -64,19 +51,18 @@ function handleRequest(req, res, next) {
 		return;
 	}
 
-	var env = _.extend({}, process.env);
-	_.extend(env, {
-
-	});
-	var args = [req.method, req.path];
+	var ctx = {
+		done: false,
+	}
 	// spawn() probably
 	for(bin in _plugins) {
-		if(!Object.prototype.hasOwnProperty.call(_plugins, bin)) {
-			continue;
-		}
-		var child = spawn(bin, args, {env: env});
-		console.log('handleRequest', 'child', child.pid);
+		_plugins[bin].handleRequest(req, res, ctx);
 	};
+
+	if(!ctx.done) {
+		res.status(404);
+		res.end();
+	}
 }
 
 scanPluginsDir();

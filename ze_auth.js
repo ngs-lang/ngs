@@ -3,8 +3,6 @@
 var fs = require('fs');
 var storage = require('./ze_storage').storage;
 
-// pwgen 32 >/home/ilya/.ze/token
-
 // TODO: warn or refuse to work when permissions are too open
 var token_file_path = process.env['ZE_TOKEN_PATH'] || (process.env['HOME'] + '/.ze/token');
 

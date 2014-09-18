@@ -79,14 +79,14 @@ In order that we think of them.
 	/jobs/ID/control/pause      [POST]
 	/jobs/ID/control/continue   [POST]
 	/jobs/ID/control/terminate  [POST]
-	/jobs/ID/command
+	/jobs/ID/cmd
 	/jobs/ID/status
 		[TBD: maybe /jobs/ID/status/HOST]
 		[TBD: how to externalize the ok and fail groups]
-		seq - sequential number (history number) ??
-		started/paused/continued/finished/terminated - timestamp float
-		command - structured data with commands, pipes, etc.
-		state - running/paused/done
+		id - sequential number (history number) ??
+		started/paused/continued/finished/terminated/last_output - timestamp float
+		cmd - structured data with commands, pipes, etc.
+		state - starting/running/paused/done
 		progress - 0..100 float
 		exit_code - 0..255 int
 		waiting_for_input: bool  (not sure whether can be implemented.
@@ -147,3 +147,16 @@ In order that we think of them.
 
 	/sessions [GET+POST]
 	/sessions/ID
+
+	/vars - session variables
+		[TBD: stack for each var]
+	/vars/VARNAME - [GET+PUT+DELETE]
+		JSON object containing the variable value
+		[TBD: interesting ways to get/set variables' sub-parts
+		      such as accessing /vars/VARNAME/myInstances/0
+			  also maybe support push() / pop() for arrays ]
+	(special, automatic vars, maybe shortcuts will be implemented
+	 by syntax modules)
+	/vars/ZE_LAST_JOB_ID
+	/vars/ZE_SESSION_ID
+	/vars/ZE_TOKEN_PATH [TBD]
