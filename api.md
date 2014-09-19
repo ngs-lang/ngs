@@ -99,6 +99,15 @@ In order that we think of them.
 	/jobs/ID/stdout
 	/jobs/ID/stderr
 
+	/scripts - API for uploading and running scripts
+	/scripts/ID [POST]
+	/scripts/ID/status
+	/scripts/ID/text
+	/scripts/ID/control/start      [POST]
+	/scripts/ID/control/pause      [POST]
+	/scripts/ID/control/continue   [POST]
+	/scripts/ID/control/terminate  [POST]
+
 	[TBD: graphical programs interface/embedding ... just a tought - start]
 	/jobs/ID/xvfb
 	/jobs/ID/events
@@ -158,6 +167,7 @@ In order that we think of them.
 			  also maybe support push() / pop() for arrays ]
 	(special, automatic vars, maybe shortcuts will be implemented
 	 by syntax modules)
-	/vars/ZE_LAST_JOB_ID
-	/vars/ZE_SESSION_ID
-	/vars/ZE_TOKEN_PATH [TBD]
+	/vars/LAST_JOB_ID
+	/vars/LAST_SCRIPT_ID
+	/vars/SESSION_ID
+	/vars/TOKEN_PATH [TBD]
