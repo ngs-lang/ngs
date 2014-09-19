@@ -20,9 +20,10 @@ var fs = require('fs');
 var express = require('express');
 var bodyParser = require('body-parser');
 
+var auth = require('./ze_auth');
 var objects = require('./ze_objects');
 var plugins = require('./ze_plugins');
-var auth = require('./ze_auth');
+var storage = require('./ze_storage').storage;
 
 var jobs = [];
 
@@ -51,6 +52,11 @@ app.get('/', function(req, res){
   // TODO: list of all URL patterns
   res.status(501);
   res.send({'error_message': 'Listing of all URL patterns is not implemented yet'});
+});
+
+app.get('/ALL', function(req, res){
+  // For debug
+  res.send(storage._data);
 });
 
 

@@ -80,6 +80,7 @@ In order that we think of them.
 	/jobs/ID/control/continue   [POST]
 	/jobs/ID/control/terminate  [POST]
 	/jobs/ID/cmd
+	/jobs/ID/args
 	/jobs/ID/status
 		[TBD: maybe /jobs/ID/status/HOST]
 		[TBD: how to externalize the ok and fail groups]

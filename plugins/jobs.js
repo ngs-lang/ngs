@@ -9,9 +9,11 @@ var child_process = require('child_process');
 function do_job(job, storage_path_known) {
   // TODO: Saner: return "Created" after spawn(), return failure if can't spawn()
   // TODO: Allow input feeding via stdin
-  var storage_path = '/jobs/' + job.id;
-  storage.set(storage_path, job);
-  storage_path_known(storage_path);
+  var job_storage_path = '/jobs/' + job.id;
+  var job_status_storage_path = job_storage_path + '/status';
+  storage.set(job_storage_path, job);
+  storage.set(job_status_storage_path, {state: 'starting'});
+  storage_path_known(job_storage_path);
   // TODO: something more sensible regarding environment
   // http://nodejs.org/api/child_process.html#child_process_child_process_spawn_command_args_options
   console.log(job.cmd, job.args,storage.get(STORAGE_CWD_PATH) || process.cwd());
@@ -20,13 +22,21 @@ function do_job(job, storage_path_known) {
   });
   // TODO: maybe store output with it's timestamp?
   (['stdout', 'stderr']).forEach(function(what) {
-    var path = storage_path + '/' + what
+    var path = job_storage_path + '/' + what
     storage.set(path, new Buffer(0));
     p[what].on('data', function capture_process_output(data) {
       console.log('DATA', what, data, path);
       // TODO: implement and use Storage.append() or Storage.appendBuffer() or alike
       storage.set(path, storage.get(path) + data);
     });
+  });
+  p.on('error', function(e) {
+    storage.setProperty(job_status_storage_path, 'state', 'error');
+    storage.setProperty(job_status_storage_path, 'error', e.toString());
+  });
+  p.on('exit', function(exit_code, _signal) {
+    storage.setProperty(job_status_storage_path, 'state', 'done');
+    storage.setProperty(job_status_storage_path, 'exit_code', exit_code);
   });
 }
 
@@ -38,7 +48,6 @@ function handleRequest(req, res, ctx) {
       'id': new_job_id,
       'cmd': req.param('cmd'),
       'args': req.param('args', []),
-      'state': 'starting'
     }
     console.log('JOB', job, req.body);
     storage.set(STORAGE_LAST_JOB_ID_PATH, new_job_id);

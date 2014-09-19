@@ -10,6 +10,7 @@ var all_perms_token_id = fs.readFileSync(token_file_path).toString().trim();
 
 // TODO: validation and/or escaping of the tokens
 storage.set('/auth/tokens/' + all_perms_token_id, {
+	id: all_perms_token_id,
 	name: 'Root token from the token file',
 	rules: [
 		{
@@ -49,12 +50,12 @@ function can_access(token_data, method, url) {
 }
 
 function handleRequest(req, res) {
-	if(req.url == '/auth/tokens') {
-		res.redirect(301, '/auth/tokens/');
+	if(req.url == '/auth/tokens/') {
+		res.redirect(301, '/auth/tokens');
 		return;
 	}
-	if(req.url == '/auth/tokens/') {
-		res.send(storage.getByPrefix('/auth/tokens/'));
+	if(req.url == '/auth/tokens') {
+		res.send({'result': storage.getByPrefix('/auth/tokens/')});
 	}
 	// TODO /auth/tokens/ID
 	res.status(404);

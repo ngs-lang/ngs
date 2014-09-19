@@ -26,6 +26,11 @@ Storage.prototype.set = function(url, v) {
 	return this;
 };
 
+Storage.prototype.setProperty = function(url, prop, v) {
+	this._data[url][prop] = v;
+	return this;
+};
+
 Storage.prototype.del = function(url) {
 	if(url in this._data) {
 		delete this._data[url];
