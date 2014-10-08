@@ -3,8 +3,6 @@ Next items for immediate implementation
 
 Roughly in priorities order:
 
-* Cleanup unused files
-* Rename project to "ngs" (including github move)
 * Allow running scripts via the API
 * `package.json`
 * Language implementation (`syntax.js`, `compile.js`, ...)
