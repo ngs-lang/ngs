@@ -9,6 +9,8 @@ Vision
 
 * Manage cloud/VMs with this shell.
 
+* Programs are written in shells but "stop and think" was not made till now. NGS will have two modes: `commands` and `code`. In `code` mode there will be a "normal" programming language while in `commands` mode we'll have something like current shells.
+
 About this document
 ===================
 This document started as internal draft. Some sections might not be clear. Still exposing it as per "release early" policy. Feel free to open a GitHub issue or email me directly: ilya (DOT) sher (AT) coding (DASH) knight (DOT) com
