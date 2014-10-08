@@ -70,3 +70,8 @@ Macros (?)
 ----------
 
 * `defmacro` NAME(params)
+
+Running / testing
+-----------------
+
+    echo 'a=if {b} then {2} else {3}' | (pegjs ze_syntax.pegs && nodejs ze_compile.js )
