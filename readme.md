@@ -7,14 +7,11 @@ Vision
 
 * Current shells are outdated. They are not as powerful as we'd like them to be.
 
+* Manage cloud/VMs with this shell.
+
 About this document
 ===================
 This document started as internal draft. Some sections might no be clear. Still exposing it as per "release early" policy. Feel free to open a GitHub issue or email me directly: ilya (DOT) sher (AT) coding (DASH) knight (DOT) com
-
-About project name
-==================
-"ze" is probably temporary.  It means "it" in Hebrew which can be a nice word play.
-
 
 Features
 ========
@@ -176,7 +173,7 @@ Later / unformed / unfinished thoughts
 	* "Current" hosts group to execute commands on.
 	* Whenever group is formed, connectivity must be checked and problems notified
 	* Each host should have statuses, such as `pending` for EC2 machines
-	  (in "ze" can be pending till SSH connection is ready)
+	  (in the shell can be pending till SSH connection is ready)
   * Have group history (snapshots of list of hosts in the given group)
   * When running a command on a group of hosts, run on one first and then rolling
     as default behaviour. Maybe stop at certain error rate.
@@ -194,7 +191,7 @@ Later / unformed / unfinished thoughts
 * Every failed script must have exact error information to it.
   No re-run with added `-x` or `echo`s should be required.
 
-* Commands of "ze" will pass objects in pipes between them, not strings.
+* Commands of the shell will pass objects in pipes between them, not strings.
   External commands should use JSON or API (not sure here).
 
 * For remote host or hosts group, give an option to execute command(s)
@@ -207,7 +204,7 @@ Later / unformed / unfinished thoughts
 * BIG: Arguments / etc. - description language. Think Javadoc.
 	* Python (and other high level languages) is half-way there with argparse.
 	  If a special comment is present meaning the script is "argparse safe",
-	  it can be run with ze's replacement for argparse to inspect the arguments.
+	  it can be run with the shell replacement for argparse to inspect the arguments.
 	* Auto discovery of file arguments: run a command with a unique value for
 	  an argument and see if it tries to open such file. Tricky, Dangerous.
 	* Auto discovery for jars? Think ec2 tools.
@@ -218,7 +215,7 @@ Later / unformed / unfinished thoughts
 		* Shortcut key to define object type. Example `curl [SHORTCUT_KEY_PRESSES]` ->
 		  menu with object types -> remember the selection.
 		* Use same format for learned and pre-defined arguments, allowing easy adding
-		  to the ze package and interchange between people.
+		  to the shell package and interchange between people.
 			* The format (future feature, low priority) will include version detection
 			  and which switches are supported in which versions.
 			* The format will include how to do completion for specific arguments.
