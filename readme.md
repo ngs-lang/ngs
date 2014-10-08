@@ -177,6 +177,9 @@ Later / unformed / unfinished thoughts
 	* Whenever group is formed, connectivity must be checked and problems notified
 	* Each host should have statuses, such as `pending` for EC2 machines
 	  (in "ze" can be pending till SSH connection is ready)
+  * Have group history (snapshots of list of hosts in the given group)
+  * When running a command on a group of hosts, run on one first and then rolling
+    as default behaviour. Maybe stop at certain error rate.
 
 * Statuses should have "debug level" to them so that background jobs could be showed as less important
 

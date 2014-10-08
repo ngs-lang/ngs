@@ -1,0 +1,74 @@
+start = 
+  commands
+
+space = [ \t\n]+
+inline_space = [ \t]+
+
+commands "commands" =
+  space? c:command space? [;] space? cs:commands { var ret = cs['commands'].slice(0); ret.unshift(c); return {'type': 'commands', 'commands': ret}; } /
+  c:command space? [;]? space? { return {'type': 'commands', 'commands': [c]}; }
+
+command "command" =
+  assignment " " command /
+  assignment /
+  if /
+  execute_external_prog
+
+// if CCEXPR [then] CCEXPR [[else] CCEXPR]
+if "if" =
+  'if' space? cond:CCEXPR space? 'then'? space? if_true:CCEXPR space? 'else'? space? if_false:CCEXPR? {
+    var ret = {
+      'type': 'if',
+      'cond': cond,
+      'true': if_true
+    };
+    if(if_false) {
+      ret['false'] = if_false;
+    }
+    return ret;
+  }
+
+assignment "assignment" =
+  varname:varname '=' val:expr { return {'type': 'assignment', 'lhs': varname, 'rhs': val}; }
+
+varname "variable name" =
+  v:[_a-zA-Z]+[_0-9a-zA-Z]* { return {'type': 'var', 'name': v.join('')} }
+
+CCEXPR "CCEXPR" =
+  CCEXPR_commands /
+  CCEXPR_code
+
+CCEXPR_commands =
+  '(' commands:commands ')' space? { return commands; }
+
+CCEXPR_code =
+  '{' code:expr '}' space? { return code; }
+
+expr "Expression" =
+  if /
+  assignment /
+  number /
+  varname /
+  CCEXPR_commands
+
+number "number" =
+  "0x" hex_digits:[0-9a-fA-F]+ { return {'type': 'number', 'val':parseInt(hex_digits.join(''), 16)}; } /
+  digits:[0-9]+ { return {'type': 'number', 'val':parseInt(digits.join(''), 10)}; }
+
+execute_external_prog "execute external program" =
+  w:cmd_words { return {'type': 'exec', 'words': w} }
+
+cmd_words "Command words" =
+  w:cmd_word space ws:cmd_words  { var ret = ws['words'].slice(0); ret.unshift(w); return {'type': 'words', 'words': ret}; } /
+  w:cmd_word { return {'type': 'words', 'words': [w]}; }
+
+cmd_word "Command word" =
+  s:string  { return s; } /
+  w:[-_a-zA-Z0-9*?]+ {  return {'type': 'string', 'val':w.join('')}; }
+
+string "Command string" =
+  '"' s:string_contents '"' {  return s; }
+
+// Temp. TODO: add escaping and substitution
+string_contents "String contents" =
+  s:[-_a-zA-Z0-9*?]* {  return {'type': 'string', 'val':s.join('')}; }

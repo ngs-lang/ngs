@@ -139,6 +139,7 @@ In order that we think of them.
 		            completion (how to complete) [SEARCHABLE]
 					[We'll have a lot of sh*t to eat here]
 		manual [SEARCHABLE]
+		exit_codes - map of code->description (should be used in UI when the command fails)
 
 	/history - current session command history [GET+POST] [SEARCHABLE]
 	/history/SEQ
