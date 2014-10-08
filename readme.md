@@ -11,7 +11,22 @@ Vision
 
 About this document
 ===================
-This document started as internal draft. Some sections might no be clear. Still exposing it as per "release early" policy. Feel free to open a GitHub issue or email me directly: ilya (DOT) sher (AT) coding (DASH) knight (DOT) com
+This document started as internal draft. Some sections might not be clear. Still exposing it as per "release early" policy. Feel free to open a GitHub issue or email me directly: ilya (DOT) sher (AT) coding (DASH) knight (DOT) com
+
+Project status
+==============
+
+Early development. Help is welcome.
+
+Running
+=======
+
+See `server.js`. Instructions are at the top of the file.
+
+Contributing
+============
+
+Fork on GitHub, work on whatever you like or what's in `doc/todo.md`, make a pull request.
 
 Features
 ========
@@ -229,10 +244,6 @@ Later / unformed / unfinished thoughts
 
 * Hosts group will be ordered. When running commands, one could specify to run in order or async.
 	* When commands run in order there should be an option to stop on first fail.
-
-Current state
-=============
-Currently the project is at features/requirements gathering and design phase.
 
 How to run POC
 ==============

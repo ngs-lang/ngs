@@ -3,7 +3,7 @@ var STORAGE_CWD_PATH = '/vars/CWD';
 var URL_SEE_OUTPUT = new RegExp('^/jobs/\\d+/std(out|err)$');
 // var STORAGE_ENV_PATH = '/vars/ZE_ENV';
 
-var storage = require('../ze_storage').storage;
+var storage = require('../storage').storage;
 var child_process = require('child_process');
 
 function do_job(job, storage_path_known) {

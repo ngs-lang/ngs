@@ -7,7 +7,7 @@ Roughly in priorities order:
 * Rename project to "ngs" (including github move)
 * Allow running scripts via the API
 * `package.json`
-* Language implementation (`ze_syntax.js`, `ze_compile.js`, ...)
+* Language implementation (`syntax.js`, `compile.js`, ...)
     * Add debug info so good error messages could be generated
         * Info to pass
             * Line

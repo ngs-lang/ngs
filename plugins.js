@@ -44,7 +44,7 @@ function scanPluginsDir(callback) {
 
 function handleRequest(req, res, next) {
 
-	console.log('ze_plugins.js:handleRequest() - URL', req.url);
+	console.log('plugins.js:handleRequest() - URL', req.url);
 
 	if(req.url == '/plugins') {
 		res.send(_plugins);

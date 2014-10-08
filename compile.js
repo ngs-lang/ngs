@@ -1,8 +1,8 @@
 'use strict';
 // apt-get install node-pegjs # 0.7.0
-// pegjs ze_syntax.pegs
+// pegjs syntax.pegs
 
-var parser = require('./ze_syntax');
+var parser = require('./syntax');
 
 var uid = 1;
 function uniq_id(pfx) {
@@ -28,7 +28,7 @@ function compile(node, pfx) {
     if(node['lhs']['type'] == 'var') {
       var rhs = compile(node['rhs'], pfx);
       // console.log('XXX', rhs, rhs['main']);
-      return new CodeChunk(pfx+"ze_set_var('" + node['lhs']['name'] + "', " + rhs.main + ");\n", rhs.pre, rhs.post);
+      return new CodeChunk(pfx+"set_var('" + node['lhs']['name'] + "', " + rhs.main + ");\n", rhs.pre, rhs.post);
     }
     throw new Error("Assignment to type " + lhs['type'] + " is not implemented");
   }
@@ -66,11 +66,11 @@ function compile(node, pfx) {
     return new CodeChunk(node['val'].toString());
   }
   if(node['type'] == 'var') {
-    return new CodeChunk(pfx + "ze_get_var('" + node['name'] + "')");
+    return new CodeChunk(pfx + "ngs_get_var('" + node['name'] + "')");
   }
   if(node['type'] == 'exec') {
     console.log('WORDS', node['words']);
-    return new CodeChunk(pfx + "ze_exec('" + node['words'] + "')");
+    return new CodeChunk(pfx + "ngs_exec('" + node['words'] + "')");
   }
   if(node['type']) {
     throw "Don't know how to compile type '" + node['type'] + "'";
