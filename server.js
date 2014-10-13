@@ -1,5 +1,5 @@
 // Setup:
-//   apt-get install node-express node-body-parser
+//   apt-get install node-express node-body-parser node-finished
 //   mkdir ~/.ngs
 //   pwgen 32 >~/.ngs/token
 //   # In directory above the checked out "ngs" directory:
@@ -16,7 +16,7 @@
 
 // Usage example 2:
 //   curl -i -H "X-ngs-auth: $(cat ~/.ngs/token)" --cacert server-cert.pem -d 'cmd=ls' https://ngs:8443/jobs
-//   curl -i -H "X-ngs-auth: $(cat ~/.ngs/token)" --cacert server-cert.pem https://ngs:8443/jobs/1/stdout
+//   curl -i -H "X-ngs-auth: $(cat ~/.ngs/token)" --cacert server-cert.pem https://ngs:8443/all | jq .
 
 var https = require('https');
 var fs = require('fs');
