@@ -4,7 +4,7 @@ var fs = require('fs');
 var storage = require('./storage').storage;
 
 // TODO: warn or refuse to work when permissions are too open
-var token_file_path = process.env['ZE_TOKEN_PATH'] || (process.env['HOME'] + '/.ngs/token');
+var token_file_path = process.env['NGS_TOKEN_PATH'] || (process.env['HOME'] + '/.ngs/token');
 
 var all_perms_token_id = fs.readFileSync(token_file_path).toString().trim();
 
@@ -63,7 +63,7 @@ function handleRequest(req, res) {
 }
 
 function authenticationMiddleware(req, res, next) {
-  console.log('AUTH FOR %s %s', req.method, req.url);
+  // console.log('AUTH FOR %s %s', req.method, req.url);
   var auth_token = req.get('X-ngs-auth');
   if(!auth_token) {
     deny(res, {'error_message': 'Missing X-ngs-auth header in request'});
@@ -88,3 +88,4 @@ function authenticationMiddleware(req, res, next) {
 }
 
 exports.authenticationMiddleware = authenticationMiddleware;
+exports.getRootToken = function() { return all_perms_token_id; }

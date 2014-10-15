@@ -21,7 +21,7 @@ function start_script(job, job_storage_path, job_status_storage_path) {
 function start_external(job, job_storage_path, job_status_storage_path) {
   // TODO: something more sensible regarding environment
   // http://nodejs.org/api/child_process.html#child_process_child_process_spawn_command_args_options
-  console.log(job.cmd, job.args,storage.get(STORAGE_CWD_PATH) || process.cwd());
+  console.log('start_external()', job);
   var p = child_process.spawn(job.cmd, job.args, {
     cwd: storage.get(STORAGE_CWD_PATH) || process.cwd()
   });
@@ -30,7 +30,7 @@ function start_external(job, job_storage_path, job_status_storage_path) {
     var path = job_storage_path + '/' + what
     storage.set(path, new Buffer(0));
     p[what].on('data', function capture_process_output(data) {
-      console.log('DATA', what, data, path);
+      // console.log('DATA', what, data, path);
       // TODO: implement and use Storage.append() or Storage.appendBuffer() or alike
       storage.set(path, storage.get(path) + data);
     });

@@ -24,14 +24,14 @@ function scanPluginsDir(callback) {
 	var dir = __dirname + '/plugins';
 	fs.readdir(dir, function(err, files) {
 		if(err) {
-			console.log('fs.readdir()', dir, err);
+			// console.log('fs.readdir()', dir, err);
 			return;
 		}
 		files.forEach(function(file) {
 			var bin = dir + '/' + file;
 			fs.stat(bin, function(err, stats) {
 				if(err) {
-					console.log('fs.stat()', bin, err);
+					// console.log('fs.stat()', bin, err);
 					return;
 				}
 				if(/\.js$/.exec(file)) {
@@ -44,7 +44,7 @@ function scanPluginsDir(callback) {
 
 function handleRequest(req, res, next) {
 
-	console.log('plugins.js:handleRequest() - URL', req.url);
+	// console.log('plugins.js:handleRequest() - URL', req.url);
 
 	if(req.url == '/plugins') {
 		res.send(_plugins);

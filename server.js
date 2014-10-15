@@ -45,20 +45,20 @@ console.log('STARTED');
 // simple logger
 app.use(bodyParser());
 
-app.use(function(req, res, next){
+app.use(function tiny_logger_middleware(req, res, next){
   console.log('%s %s', req.method, req.url);
   next();
 });
 
 app.use(auth.authenticationMiddleware);
 
-app.get('/', function(req, res){
+app.get('/', function slash_request_handler(req, res){
   // TODO: list of all URL patterns
   res.status(501);
   res.send({'error_message': 'Listing of all URL patterns is not implemented yet'});
 });
 
-app.get('/ALL', function(req, res){
+app.get('/ALL', function slash_all_request_handler(req, res){
   // For debug
   res.send(storage._data);
 });

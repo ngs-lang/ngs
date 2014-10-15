@@ -1,4 +1,7 @@
 *.swp
+\#*
+.#*
+*~
 *.html
 node_modules
 small-poc/ssl
