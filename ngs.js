@@ -5,6 +5,10 @@
 // TODO: parametrize via environment variables (with sane defaults):
 // * server endpoint
 // * ca certificate file location
+// * if invoked with an argument(s) - execute that command and exit
+// * make sure pipe in/out work (for non-interactive use)
+//   * no command specified - stdin is the script to execute
+//   * command specified - pipe to/from command
 
 var fs = require('fs');
 var https = require('https');
