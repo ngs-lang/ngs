@@ -90,7 +90,7 @@ function ScriptJob() {
   return ret;
 }
 
-ScriptJob.prototype = new Job();
+ScriptJob.prototype = Object.create(Job.prototype);
 
 ScriptJob.prototype.type = 'script';
 
@@ -112,7 +112,7 @@ function ExecJob() {
   return ret;
 }
 
-ExecJob.prototype = new Job();
+ExecJob.prototype = Object.create(Job.prototype);
 
 ExecJob.prototype.type = 'exec';
 
