@@ -61,7 +61,7 @@ Client.prototype.send_command = function send_command(line) {
 	// console.log();
 	var response = JSON.parse(response_data);
 	// console.log(('JOB CREATED: ' + response['/vars/LAST_JOB_ID']).green);
-	client.emit('job-created', response['/vars/LAST_JOB_ID']);
+	client.emit('job-created', response.id);
       } else {
 	console.error('[client.js] JOB CREATION FAILED', res.statusCode, res.headers, response_data);
 	client.emit('job-creation-failed', res);

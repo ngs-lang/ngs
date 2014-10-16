@@ -1,4 +1,6 @@
 'use strict';
+
+var objects = require('./objects');
 var storage = require('./storage').storage;
 var compile = require('./compile').compile;
 var jobs = require('./plugins/jobs');
@@ -24,7 +26,12 @@ function run(job) {
 
   function exec(cmd, args) {
     console.log('run.exec', cmd);
-    jobs.startJob(cmd, args, {'mode': 'external', 'parent_id': job.id});
+    var subJob = new objects.ExecJob(null, {
+      'cmd': cmd,
+      'args': args || [],
+      'parent_id': job.id
+    });
+    subJob.start();
   }
 
   // TODO: update state

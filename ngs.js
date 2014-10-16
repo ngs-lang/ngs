@@ -15,6 +15,7 @@ var Client = require('./client').Client;
 var client = new Client();
 
 function console_async_out() {
+  // Async in relation to readline. Will probably mess with it.
   readline.clearLine(process.stdin, 0); // clear whole line
   readline.cursorTo(process.stdin, 0);  // cursor to beginning of line
   console.log.apply(null, arguments);
