@@ -48,6 +48,7 @@ expr "Expression" =
   if /
   assignment /
   number /
+  string /
   varname /
   CCEXPR_commands
 
@@ -63,6 +64,7 @@ cmd_words "Command words" =
   w:cmd_word { return {'type': 'words', 'words': [w]}; }
 
 cmd_word "Command word" =
+  "$" v:varname { return v; } /
   s:string  { return s; } /
   w:[-_a-zA-Z0-9*?]+ {  return {'type': 'string', 'val':w.join('')}; }
 

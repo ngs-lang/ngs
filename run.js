@@ -5,11 +5,13 @@ var storage = require('./storage').storage;
 var compile = require('./compile').compile;
 var jobs = require('./plugins/jobs');
 
+// WARNING: global vars
+var vars={}; // TODO: sync with storage
+
 // TODO: security checks
 function run(job) {
 
   console.log('RUN START');
-  var vars={};
 
   // TODO: lexical scope, etc.
   function set_var(name, val) {
