@@ -71,14 +71,30 @@ function compile_tree(node, pfx) {
     return new CodeChunk("'" + s + "'");
   }
   if(node['type'] == 'var') {
-    return new CodeChunk(pfx + "get_var('" + node['name'] + "')");
+    // pfx not used - we are probably not a top level statement
+    return new CodeChunk("get_var('" + node['name'] + "')");
   }
   if(node['type'] == 'exec') {
     // TODO: real word expansion
     var w = node['words'];
-    console.log('WORDS', w);
+    // console.log('WORDS', w);
     var command = compile_tree(w['words'][0], pfx + INDENT);
     return new CodeChunk(pfx + "exec(" + command.main + ")", command.pre, command.post);
+  }
+  if(node['type'] == 'array') {
+    // TODO: decide about pfx. Are we expression or a top-level statement?
+    var elements = node['elements'];
+    // console.log('ARRAY', elements);
+    var ret = new CodeChunk();
+    var ret_elts = [];
+    elements.forEach(function(e) {
+      var e_tree = compile_tree(e, pfx);
+      ret.pre += e_tree.pre;
+      ret.post += e_tree.post;
+      ret_elts.push(e_tree.main);
+    });
+    ret.main = '[' + ret_elts.join(', ') + ']';
+    return ret;
   }
   if(node['type']) {
     throw "Don't know how to compile type '" + node['type'] + "'";

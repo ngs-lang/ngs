@@ -50,6 +50,7 @@ expr "Expression" =
   number /
   string /
   varname /
+  array_literal /
   CCEXPR_commands
 
 number "number" =
@@ -74,3 +75,14 @@ string "Command string" =
 // Temp. TODO: add escaping and substitution
 string_contents "String contents" =
   s:[-_a-zA-Z0-9*?]* {  return {'type': 'string', 'val':s.join('')}; }
+
+array_literal "array literal" =
+  "[" space? es:comma_separated_expressions space? "]" { return {'type': 'array', 'elements': es['expressions']}; }
+
+comma_separated_expressions "comma-separated expressions" =
+  e:expr space? "," space? es:comma_separated_expressions {
+    var ret = es['expressions'].slice(0);
+    ret.unshift(e);
+    return {'type': 'expressions', 'expressions': ret};
+  } /
+  e:expr { return {'type': 'expressions', 'expressions': [e]}; }
