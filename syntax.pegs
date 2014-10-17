@@ -9,6 +9,7 @@ commands "commands" =
   c:command space? [;]? space? { return {'type': 'commands', 'commands': [c]}; }
 
 command "command" =
+  CCEXPR_code /
   assignment " " command /
   assignment /
   if /
@@ -70,6 +71,7 @@ cmd_words "Command words" =
   w:cmd_word { return {'type': 'array', 'elements': [w]}; }
 
 cmd_word "Command word" =
+  CCEXPR_code /
   "$" v:varname { return v; } /
   "$*" v:varname { return {'type': 'splice', 'expression': v }; } /
   s:string  { return s; } /
