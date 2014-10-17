@@ -14,7 +14,8 @@ command "command" =
   if /
   execute_external_prog
 
-// if CCEXPR [then] CCEXPR [[else] CCEXPR]
+// if CCEXPR [then] CCEXPR [else] [CCEXPR]
+// ( while should be: if CCEXPR [then] CCEXPR [[else] CCEXPR] )
 if "if" =
   'if' space? cond:CCEXPR space? 'then'? space? if_true:CCEXPR space? 'else'? space? if_false:CCEXPR? {
     var ret = {
@@ -61,11 +62,16 @@ execute_external_prog "execute external program" =
   w:cmd_words { return {'type': 'exec', 'words': w} }
 
 cmd_words "Command words" =
-  w:cmd_word space ws:cmd_words  { var ret = ws['words'].slice(0); ret.unshift(w); return {'type': 'words', 'words': ret}; } /
-  w:cmd_word { return {'type': 'words', 'words': [w]}; }
+  w:cmd_word space ws:cmd_words  {
+    var ret = ws['elements'].slice(0);
+    ret.unshift(w);
+    return {'type': 'array', 'elements': ret};
+  } /
+  w:cmd_word { return {'type': 'array', 'elements': [w]}; }
 
 cmd_word "Command word" =
   "$" v:varname { return v; } /
+  "$*" v:varname { return {'type': 'splice', 'expression': v }; } /
   s:string  { return s; } /
   w:[-_a-zA-Z0-9*?]+ {  return {'type': 'string', 'val':w.join('')}; }
 
@@ -80,9 +86,16 @@ array_literal "array literal" =
   "[" space? es:comma_separated_expressions space? "]" { return {'type': 'array', 'elements': es['expressions']}; }
 
 comma_separated_expressions "comma-separated expressions" =
-  e:expr space? "," space? es:comma_separated_expressions {
+  e:expr_or_splice space? "," space? es:comma_separated_expressions {
     var ret = es['expressions'].slice(0);
     ret.unshift(e);
     return {'type': 'expressions', 'expressions': ret};
   } /
-  e:expr { return {'type': 'expressions', 'expressions': [e]}; }
+  e:expr_or_splice { return {'type': 'expressions', 'expressions': [e]}; }
+
+expr_or_splice =
+  e:expr { return e; } /
+  s:splice { return s; }
+
+  splice "splice" =
+  "*" space? e:expr { return {'type': 'splice', 'expression': e}; }

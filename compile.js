@@ -78,8 +78,14 @@ function compile_tree(node, pfx) {
     // TODO: real word expansion
     var w = node['words'];
     // console.log('WORDS', w);
-    var command = compile_tree(w['words'][0], pfx + INDENT);
-    return new CodeChunk(pfx + "exec(" + command.main + ")", command.pre, command.post);
+    var words_array = compile_tree(w, pfx);
+    var ret = new CodeChunk();
+    ret.pre = words_array.pre;
+    ret.post = words_array.post;
+    var uid = uniq_id('cmd$');
+    ret.main = pfx + 'var ' + uid + ' = ' + words_array.main + ';\n';
+    ret.main += pfx + 'exec(' + uid + '[0], ' + uid + '.slice(1));\n';
+    return ret;
   }
   if(node['type'] == 'array') {
     // TODO: decide about pfx. Are we expression or a top-level statement?
@@ -87,14 +93,36 @@ function compile_tree(node, pfx) {
     // console.log('ARRAY', elements);
     var ret = new CodeChunk();
     var ret_elts = [];
+    var have_splice = elements.some(function(elt) { return elt['type'] == 'splice'; });
+
+    if(have_splice) {
+      var uid = uniq_id('splice$');
+      ret.pre += pfx + 'var ' + uid + ' = []; // array accumulator\n';
+    }
+
     elements.forEach(function(e) {
       var e_tree = compile_tree(e, pfx);
       ret.pre += e_tree.pre;
       ret.post += e_tree.post;
-      ret_elts.push(e_tree.main);
+      if(have_splice) {
+	if(e['type'] == 'splice') {
+	  ret.pre += pfx + uid + ' = ' + uid + '.concat(' + e_tree.main + ');\n';
+	} else {
+	  ret.pre += pfx + uid + '.push(' + e_tree.main + ');\n';
+	}
+      } else {
+	ret_elts.push(e_tree.main);
+      }
     });
-    ret.main = '[' + ret_elts.join(', ') + ']';
+    if(have_splice) {
+      ret.main = uid;
+    } else {
+      ret.main = '[' + ret_elts.join(', ') + ']';
+    }
     return ret;
+  }
+  if(node['type'] == 'splice') {
+    return compile_tree(node['expression'], pfx);
   }
   if(node['type']) {
     throw "Don't know how to compile type '" + node['type'] + "'";

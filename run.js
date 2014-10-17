@@ -22,8 +22,9 @@ function run(job) {
 
   // TODO: exception if var not found
   function get_var(name) {
-    console.log('run.get_var', name);
-    return vars[name];
+    var ret = vars[name];
+    console.log('run.get_var', name, '->', ret);
+    return ret
   }
 
   function exec(cmd, args) {
