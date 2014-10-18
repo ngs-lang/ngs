@@ -31,7 +31,7 @@ if "if" =
   }
 
 assignment "assignment" =
-  varname:varname '=' val:expr { return {'type': 'assignment', 'lhs': varname, 'rhs': val}; }
+  varname:varname space? '=' space? val:expr { return {'type': 'assignment', 'lhs': varname, 'rhs': val}; }
 
 varname "variable name" =
   v:[_a-zA-Z]+[_0-9a-zA-Z]* { return {'type': 'var', 'name': v.join('')} }
@@ -46,7 +46,11 @@ CCEXPR_commands =
 CCEXPR_code =
   '{' code:expr '}' space? { return code; }
 
-expr "Expression" =
+expr "Expression/add" =
+  e1:expr_no_add space? "+" space? e2:expr_no_add { return {'type': 'binop', 'e1': e1, 'e2': e2, 'op': 'add'}; } /
+  e:expr_no_add { return e; }
+
+expr_no_add "Expression/no-add" =
   if /
   assignment /
   number /

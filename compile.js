@@ -21,6 +21,12 @@ CodeChunk.prototype.toString = function() {
   return this.pre + this.main + this.post;
 };
 
+CodeChunk.prototype.use = function(other) {
+  this.pre += other.pre;
+  this.post += other.post;
+  return this;
+}
+
 
 var INDENT = '\t';
 function compile_tree(node, pfx) {
@@ -102,8 +108,7 @@ function compile_tree(node, pfx) {
 
     elements.forEach(function(e) {
       var e_tree = compile_tree(e, pfx);
-      ret.pre += e_tree.pre;
-      ret.post += e_tree.post;
+      ret.use(e_tree);
       if(have_splice) {
 	if(e['type'] == 'splice') {
 	  ret.pre += pfx + uid + ' = ' + uid + '.concat(' + e_tree.main + ');\n';
@@ -123,6 +128,11 @@ function compile_tree(node, pfx) {
   }
   if(node['type'] == 'splice') {
     return compile_tree(node['expression'], pfx);
+  }
+  if(node['type'] == 'binop') {
+    var e1 = compile_tree(node['e1'], pfx);
+    var e2 = compile_tree(node['e2'], pfx);
+    return new CodeChunk(node['op'] + '(' + e1.main + ', ' + e2.main + ')').use(e1).use(e2);
   }
   if(node['type']) {
     throw "Don't know how to compile type '" + node['type'] + "'";

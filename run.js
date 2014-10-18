@@ -1,5 +1,7 @@
 'use strict';
 
+var _ = require('underscore');
+
 var objects = require('./objects');
 var storage = require('./storage').storage;
 var compile = require('./compile').compile;
@@ -35,6 +37,16 @@ function run(job) {
       'parent_id': job.id
     });
     subJob.start();
+  }
+
+  function add(e1, e2) {
+    // Fix JS arrays addition which makes no sense.
+    if(_.isArray(e1) && _.isArray(e2)) {
+      return e1.concat(e2);
+    }
+    // TODO: _.extend for two hashes
+    // TODO: errors when adding (and other binops) incompatible types
+    return e1 + e2;
   }
 
   // TODO: update state
