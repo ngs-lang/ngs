@@ -156,6 +156,79 @@ Cross-system
 	  sockets, pipes, resource usage (CPU, disk, network), process running time, accumulative
 	  CPU time, ...
 
+Jobs
+----
+
+A job is either a running script or external process (which was run by a script).
+
+The intention here is to give full transparency regarding what's happening.
+
+* Each job has it's own status, progress, etc.
+* External process is a "sub job" (should be shown under the script that it was running)
+* Sub job for each host that the script runs on
+
+History
+-------
+
+Two types of history:
+
+* Commands history, similar to todays history but each entry will consist of the following fields:
+	* Timestamp
+	* Command
+	* Output (stdout, stderr)
+	* Input (stdin) ?
+	* Exit code
+	* Comment - can be provided when runnig the command, editable after that
+	* Context:
+		* Target host / group
+			* Working directory
+			* Values of used variables
+* Host history - all changes on given host. Points:
+	* History entry will consist of:
+		* Timestamp
+		* Script or basic command (create/update/chmod file, etc)
+		* Script that changed the object (I guess only files for now)
+		* Host that was running the script
+		* User that was running the script
+		* Session (name) under which the script was running
+		* Relevant global variables
+		* Consider putting in git all modified files
+	* Host history will be kept on both the shell host and the target host
+
+Development
+-----------
+
+* Code completion
+* Variables values shown when editing the commands / code (think `ls $a`, when the cursor is on `$a`)
+* Running scripts will once in a while update current line/column in the job info
+* Ability to start tracing already running scripts
+* API to report the progress
+	* Current task (`Copying mydata.txt to /tmp/`)
+	* Overall progress (`70%` or `File 7 out of 10`)
+	* ETA maybe
+
+The NGS language
+----------------
+
+Two languages actually.
+
+* Current-shells-like but simplified (called "commands"), `(...)` syntax
+* Scripting language, "normal" programming language (called "code"), `{...}` syntax
+
+### The NGS "code" language ###
+
+* Functional
+* Types (File, Host, Group, String, Number, ...)
+* Multi-dispatch with guards (trying to avoid "regular" full-blown OO to minimize the work)
+	* For example:
+		* `replace(String orig, String a, String b) -> String`
+		* `replace(Array orig, String a, String b) -> Array` - replaces in all strings in the `orig` array
+			* This may have a guard something like: `all(orig, isString)`
+		* `replace(File f, String a, String b)` - will `sed` the file, possibly backing it up.
+* Lots of functions for data manipulation (TODO: list them)
+* File, Host, Group literals:
+	* f'/tmp/my-temp.txt'
+
 Later / unformed / unfinished thoughts
 --------------------------------------
 
