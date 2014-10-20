@@ -85,9 +85,7 @@ function compile_tree(node, pfx) {
     var w = node['words'];
     // console.log('WORDS', w);
     var words_array = compile_tree(w, pfx);
-    var ret = new CodeChunk();
-    ret.pre = words_array.pre;
-    ret.post = words_array.post;
+    var ret = new CodeChunk().use(words_array);
     var uid = uniq_id('cmd$');
     ret.main = pfx + 'var ' + uid + ' = ' + words_array.main + ';\n';
     ret.main += pfx + 'exec(' + uid + '[0], ' + uid + '.slice(1));\n';
@@ -133,6 +131,24 @@ function compile_tree(node, pfx) {
     var e1 = compile_tree(node['e1'], pfx);
     var e2 = compile_tree(node['e2'], pfx);
     return new CodeChunk(node['op'] + '(' + e1.main + ', ' + e2.main + ')').use(e1).use(e2);
+  }
+  if(node['type'] == 'func') {
+    return new CodeChunk(
+      '(function() {\n' +
+      compile_tree(node['code'], pfx + INDENT).toString() +
+      '})'
+    );
+  }
+  if(node['type'] == 'ret') {
+    var e = compile_tree(node['expression'], pfx);
+    if(e.post) {
+      throw new Error('Compling "return" with post effects in expression is not supported yet');
+    }
+    return new CodeChunk(pfx + "return " + e.main + ";\n").use(e);
+  }
+  if(node['type'] == 'call') {
+    var f = compile_tree(node['func'], pfx);
+    return new CodeChunk(f.main + '()').use(f);
   }
   if(node['type']) {
     throw "Don't know how to compile type '" + node['type'] + "'";

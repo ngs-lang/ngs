@@ -46,13 +46,23 @@ CCEXPR_commands =
 CCEXPR_code =
   '{' code:expr '}' space? { return code; }
 
-expr "Expression/add" =
-  e1:expr_no_add space? "+" space? e2:expr_no_add { return {'type': 'binop', 'e1': e1, 'e2': e2, 'op': 'add'}; } /
-  e:expr_no_add { return e; }
+// TODO fix expr_* order for operation precedence. Low priority at top.
 
-expr_no_add "Expression/no-add" =
+expr "Expression/add" =
+  e1:expr_call space? "+" space? e2:expr_call { return {'type': 'binop', 'e1': e1, 'e2': e2, 'op': 'add'}; } /
+  e:expr_call { return e; }
+
+
+expr_call "Function call" =
+  function_call /
+  expr_base
+
+expr_base "Expression/no-add" =
   if /
   assignment /
+  function_definition /
+  // function_call /
+  return /
   number /
   string /
   varname /
@@ -103,5 +113,20 @@ expr_or_splice =
   e:expr { return e; } /
   s:splice { return s; }
 
-  splice "splice" =
+splice "splice" =
   "*" space? e:expr { return {'type': 'splice', 'expression': e}; }
+
+function_definition "Function definition" =
+  "func" space? params:paremeters_list space? code:CCEXPR { return {'type': 'func', 'code': code}; }
+
+paremeters_list "Function parameters list" =
+  "(" space? ")"
+
+return "return" =
+  "return" space? e:expr { return {'type': 'ret', 'expression': e}; }
+
+function_call "function call" =
+  f:expr_base space? args:arguments_list space? { return {'type': 'call', 'func': f}; }
+
+arguments_list "Function call arguments list" =
+  "(" space? ")"
