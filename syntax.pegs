@@ -126,7 +126,5 @@ return "return" =
   "return" space? e:expr { return {'type': 'ret', 'expression': e}; }
 
 function_call "function call" =
-  f:expr_base space? args:arguments_list space? { return {'type': 'call', 'func': f}; }
+  f:expr_base space? "(" space? args:comma_separated_expressions? space? ")" space? { return {'type': 'call', 'func': f, 'args': args}; }
 
-arguments_list "Function call arguments list" =
-  "(" space? ")"

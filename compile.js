@@ -91,9 +91,12 @@ function compile_tree(node, pfx) {
     ret.main += pfx + 'exec(' + uid + '[0], ' + uid + '.slice(1));\n';
     return ret;
   }
-  if(node['type'] == 'array') {
+  if(node['type'] == 'array' || node['type'] == 'expressions') {
     // TODO: decide about pfx. Are we expression or a top-level statement?
     var elements = node['elements'];
+    if(node['type'] == 'expressions') {
+      elements = node['expressions'];
+    }
     // console.log('ARRAY', elements);
     var ret = new CodeChunk();
     var ret_elts = [];
@@ -108,19 +111,22 @@ function compile_tree(node, pfx) {
       var e_tree = compile_tree(e, pfx);
       ret.use(e_tree);
       if(have_splice) {
-	if(e['type'] == 'splice') {
-	  ret.pre += pfx + uid + ' = ' + uid + '.concat(' + e_tree.main + ');\n';
-	} else {
-	  ret.pre += pfx + uid + '.push(' + e_tree.main + ');\n';
-	}
+	    if(e['type'] == 'splice') {
+          ret.pre += pfx + uid + ' = ' + uid + '.concat(' + e_tree.main + ');\n';
+	    } else {
+	      ret.pre += pfx + uid + '.push(' + e_tree.main + ');\n';
+	    }
       } else {
-	ret_elts.push(e_tree.main);
+	    ret_elts.push(e_tree.main);
       }
     });
     if(have_splice) {
       ret.main = uid;
     } else {
       ret.main = '[' + ret_elts.join(', ') + ']';
+      if(node['type'] == 'expressions') {
+        ret.main = ret_elts.join(', ');
+      }
     }
     return ret;
   }
@@ -135,8 +141,8 @@ function compile_tree(node, pfx) {
   if(node['type'] == 'func') {
     return new CodeChunk(
       '(function() {\n' +
-      compile_tree(node['code'], pfx + INDENT).toString() +
-      '})'
+        compile_tree(node['code'], pfx + INDENT).toString() +
+        '})'
     );
   }
   if(node['type'] == 'ret') {
@@ -147,8 +153,20 @@ function compile_tree(node, pfx) {
     return new CodeChunk(pfx + "return " + e.main + ";\n").use(e);
   }
   if(node['type'] == 'call') {
+    // TODO: fix splice - it doesn't work yet
+    var args_array = [];
     var f = compile_tree(node['func'], pfx);
-    return new CodeChunk(f.main + '()').use(f);
+    var ret = new CodeChunk(f.main).use(f);
+
+    if(node['args']) {
+      var args_array = compile_tree(node['args'], pfx);
+      console.log('args_array', args_array);
+      ret.use(args_array);
+    }
+    ret.main += '(' + args_array.main + ')';
+
+    return ret;
+
   }
   if(node['type']) {
     throw "Don't know how to compile type '" + node['type'] + "'";

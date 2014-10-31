@@ -64,4 +64,6 @@ app.get('/ALL', function slash_all_request_handler(req, res){
 });
 
 
-app.route('*').all(plugins.handleRequest);
+//app.route('*').all(plugins.handleRequest);
+
+app.use(plugins.handleRequest);

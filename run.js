@@ -10,6 +10,11 @@ var jobs = require('./plugins/jobs');
 // WARNING: global vars
 var vars={}; // TODO: sync with storage
 
+// Built-in functions, will be rewritten for multi-dispatch
+vars['echo'] = function() {
+  console.log('ECHO()', Array.prototype.slice.call(arguments));
+};
+
 // TODO: security checks
 function run(job) {
 
