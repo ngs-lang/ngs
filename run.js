@@ -15,6 +15,15 @@ vars['echo'] = function() {
   console.log('ECHO()', Array.prototype.slice.call(arguments));
 };
 
+function NgsMethod() {
+
+}
+
+function NgsMethods() {
+
+}
+NgsMethods.prototype = Object.create(Array.prototype);
+
 // TODO: security checks
 function run(job) {
 
@@ -42,6 +51,7 @@ function run(job) {
       'parent_id': job.id
     });
     subJob.start();
+    return subJob;
   }
 
   function add(e1, e2) {

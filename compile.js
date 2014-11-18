@@ -11,7 +11,8 @@ function uniq_id(pfx) {
   return ret;
 }
 
-function CodeChunk(main, pre, post) {
+function CodeChunk(node, main, pre, post) {
+  this.node = node;
   this.pre = pre || '';
   this.main = main || '';
   this.post = post || '';
@@ -33,14 +34,22 @@ function compile_tree(node, pfx) {
   if(node['type'] == 'assignment') {
     if(node['lhs']['type'] == 'var') {
       var rhs = compile_tree(node['rhs'], pfx);
-      // console.log('XXX', rhs, rhs['main']);
-      return new CodeChunk(pfx+"set_var('" + node['lhs']['name'] + "', " + rhs.main + ");\n", rhs.pre, rhs.post);
+      console.log('XXX', rhs, rhs['main']);
+      return new CodeChunk(node, pfx+"set_var('" + node['lhs']['name'] + "', " + rhs.main + ");\n", rhs.pre, rhs.post);
     }
     throw new Error("Assignment to type " + lhs['type'] + " is not implemented");
   }
   if(node['type'] == 'commands') {
+    var uid = uniq_id('cmds$');
     var cs = node['commands'];
-    return new CodeChunk(cs.map(function(c) {return compile_tree(c, pfx);}).join('\n'));
+    // return new CodeChunk(node, cs.map(function(c) {return compile_tree(c, pfx);}).join('\n'));
+    var ret = new CodeChunk(node, uid, pfx + 'var ' + uid + ';\n');
+    for(var i=0; i<cs.length; i++) {
+      var t = compile_tree(cs[i], pfx);
+      ret.use(t);
+      ret.pre += pfx + uid + ' = ' + t.main + ';\n';
+    }
+    return ret;
   }
   if(node['type'] == 'if') {
     var f = null;
@@ -50,7 +59,7 @@ function compile_tree(node, pfx) {
       f = compile_tree(node['false'], pfx + INDENT);
     }
     var uid = uniq_id('tmp_if$');
-    var ret = new CodeChunk(uid);
+    var ret = new CodeChunk(node, uid);
     ret.pre += c.pre;
     ret.pre += pfx + 'var '+uid+'=null; /* temp if result */\n';
     ret.pre += pfx + 'if(' + c.main + ') {\n';
@@ -69,26 +78,26 @@ function compile_tree(node, pfx) {
     return ret;
   }
   if(node['type'] == 'number') {
-    return new CodeChunk(node['val'].toString());
+    return new CodeChunk(node, node['val'].toString());
   }
   if(node['type'] == 'string') {
     // TODO: more escape: quotes, backslashes, etc
     var s = node['val'].replace(/\r?\n/g, "\\n")
-    return new CodeChunk("'" + s + "'");
+    return new CodeChunk(node, "'" + s + "'");
   }
   if(node['type'] == 'var') {
     // pfx not used - we are probably not a top level statement
-    return new CodeChunk("get_var('" + node['name'] + "')");
+    return new CodeChunk(node, "get_var('" + node['name'] + "')");
   }
   if(node['type'] == 'exec') {
     // TODO: real word expansion
     var w = node['words'];
     // console.log('WORDS', w);
     var words_array = compile_tree(w, pfx);
-    var ret = new CodeChunk().use(words_array);
-    var uid = uniq_id('cmd$');
-    ret.main = pfx + 'var ' + uid + ' = ' + words_array.main + ';\n';
-    ret.main += pfx + 'exec(' + uid + '[0], ' + uid + '.slice(1));\n';
+    var ret = new CodeChunk(node).use(words_array);
+    var uid = uniq_id('exec$');
+    ret.pre = pfx + 'var ' + uid + ' = ' + words_array.main + ';\n';
+    ret.main += pfx + 'exec(' + uid + '[0], ' + uid + '.slice(1))';
     return ret;
   }
   if(node['type'] == 'array' || node['type'] == 'expressions') {
@@ -98,7 +107,7 @@ function compile_tree(node, pfx) {
       elements = node['expressions'];
     }
     // console.log('ARRAY', elements);
-    var ret = new CodeChunk();
+    var ret = new CodeChunk(node);
     var ret_elts = [];
     var have_splice = elements.some(function(elt) { return elt['type'] == 'splice'; });
 
@@ -136,10 +145,11 @@ function compile_tree(node, pfx) {
   if(node['type'] == 'binop') {
     var e1 = compile_tree(node['e1'], pfx);
     var e2 = compile_tree(node['e2'], pfx);
-    return new CodeChunk(node['op'] + '(' + e1.main + ', ' + e2.main + ')').use(e1).use(e2);
+    return new CodeChunk(node, node['op'] + '(' + e1.main + ', ' + e2.main + ')').use(e1).use(e2);
   }
   if(node['type'] == 'func') {
     return new CodeChunk(
+      node,
       '(function() {\n' +
         compile_tree(node['code'], pfx + INDENT).toString() +
         '})'
@@ -150,13 +160,13 @@ function compile_tree(node, pfx) {
     if(e.post) {
       throw new Error('Compling "return" with post effects in expression is not supported yet');
     }
-    return new CodeChunk(pfx + "return " + e.main + ";\n").use(e);
+    return new CodeChunk(node, pfx + "return " + e.main + ";\n").use(e);
   }
   if(node['type'] == 'call') {
     // TODO: fix splice - it doesn't work yet
     var args_array = [];
     var f = compile_tree(node['func'], pfx);
-    var ret = new CodeChunk(f.main).use(f);
+    var ret = new CodeChunk(node, f.main).use(f);
 
     if(node['args']) {
       var args_array = compile_tree(node['args'], pfx);

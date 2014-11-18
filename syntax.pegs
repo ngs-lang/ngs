@@ -13,6 +13,7 @@ command "command" =
   assignment " " command /
   assignment /
   if /
+  async /
   execute_external_prog
 
 // if CCEXPR [then] CCEXPR [else] [CCEXPR]
@@ -28,6 +29,11 @@ if "if" =
       ret['false'] = if_false;
     }
     return ret;
+  }
+
+async "async" =
+  "async" space e:CCEXPR {
+    return {'type': 'async', 'expression': e};
   }
 
 assignment "assignment" =
