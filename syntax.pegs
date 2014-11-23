@@ -1,3 +1,7 @@
+{
+	var N = require('./ast_node').ASTNode;
+}
+
 start = 
   commands
 
@@ -5,8 +9,10 @@ space = [ \t\n]+
 inline_space = [ \t]+
 
 commands "commands" =
-  space? c:command space? [;] space? cs:commands { var ret = cs['commands'].slice(0); ret.unshift(c); return {'type': 'commands', 'commands': ret}; } /
-  c:command space? [;]? space? { return {'type': 'commands', 'commands': [c]}; }
+  space? c:command space? [;] space? cs:commands {
+	return N('commands', [c]).concat(cs);
+  } /
+  c:command space? [;]? space? { return N('commands', [c]); }
 
 command "command" =
   CCEXPR_code /
@@ -20,27 +26,19 @@ command "command" =
 // ( while should be: if CCEXPR [then] CCEXPR [[else] CCEXPR] )
 if "if" =
   'if' space? cond:CCEXPR space? 'then'? space? if_true:CCEXPR space? 'else'? space? if_false:CCEXPR? {
-    var ret = {
-      'type': 'if',
-      'cond': cond,
-      'true': if_true
-    };
-    if(if_false) {
-      ret['false'] = if_false;
-    }
-    return ret;
+    return N('if', [cond, if_true]).push(if_false);
   }
 
 async "async" =
   "async" space e:CCEXPR {
-    return {'type': 'async', 'expression': e};
+    return N('async', [e]);
   }
 
 assignment "assignment" =
-  varname:varname space? '=' space? val:expr { return {'type': 'assignment', 'lhs': varname, 'rhs': val}; }
+  varname:varname space? '=' space? val:expr { return N('assignment', [varname, val]); }
 
 varname "variable name" =
-  v:[_a-zA-Z]+[_0-9a-zA-Z]* { return {'type': 'var', 'name': v.join('')} }
+  v:[_a-zA-Z]+[_0-9a-zA-Z]* { return N('varname', [], v.join('')); }
 
 CCEXPR "CCEXPR" =
   CCEXPR_commands /
@@ -55,7 +53,9 @@ CCEXPR_code =
 // TODO fix expr_* order for operation precedence. Low priority at top.
 
 expr "Expression/add" =
-  e1:expr_call space? "+" space? e2:expr_call { return {'type': 'binop', 'e1': e1, 'e2': e2, 'op': 'add'}; } /
+  e1:expr_call space? "+" space? e2:expr_call {
+    return N('binop', [e1, e2], 'add');
+  } /
   e:expr_call { return e; }
 
 
@@ -76,61 +76,61 @@ expr_base "Expression/no-add" =
   CCEXPR_commands
 
 number "number" =
-  "0x" hex_digits:[0-9a-fA-F]+ { return {'type': 'number', 'val':parseInt(hex_digits.join(''), 16)}; } /
-  digits:[0-9]+ { return {'type': 'number', 'val':parseInt(digits.join(''), 10)}; }
+  "0x" hex_digits:[0-9a-fA-F]+ { return N('number', [], parseInt(hex_digits.join(''), 16)); } /
+  digits:[0-9]+ { return N('number', [], parseInt(digits.join(''), 10)); }
 
 execute_external_prog "execute external program" =
-  w:cmd_words { return {'type': 'exec', 'words': w} }
+  w:cmd_words { return N('exec', [w]); }
 
 cmd_words "Command words" =
   w:cmd_word space ws:cmd_words  {
-    var ret = ws['elements'].slice(0);
-    ret.unshift(w);
-    return {'type': 'array', 'elements': ret};
+    return N('array', [w]).concat(ws);
   } /
-  w:cmd_word { return {'type': 'array', 'elements': [w]}; }
+  w:cmd_word { return N('array', [w]); }
 
 cmd_word "Command word" =
   CCEXPR_code /
   "$" v:varname { return v; } /
-  "$*" v:varname { return {'type': 'splice', 'expression': v }; } /
+  "$*" v:varname { return N('splice', [v]); } /
   s:string  { return s; } /
-  w:[-_a-zA-Z0-9*?]+ {  return {'type': 'string', 'val':w.join('')}; }
+  w:[-_a-zA-Z0-9*?]+ {  return N('string', [], w.join('')); }
 
 string "Command string" =
   '"' s:string_contents '"' {  return s; }
 
 // Temp. TODO: add escaping and substitution
 string_contents "String contents" =
-  s:[-_a-zA-Z0-9*?]* {  return {'type': 'string', 'val':s.join('')}; }
+  s:[-_a-zA-Z0-9*?]* {  return N('string', [], s.join('')); }
 
 array_literal "array literal" =
-  "[" space? es:comma_separated_expressions space? "]" { return {'type': 'array', 'elements': es['expressions']}; }
+  "[" space? es:comma_separated_expressions space? "]" {
+	return N('array', [es]);
+  }
 
 comma_separated_expressions "comma-separated expressions" =
   e:expr_or_splice space? "," space? es:comma_separated_expressions {
-    var ret = es['expressions'].slice(0);
-    ret.unshift(e);
-    return {'type': 'expressions', 'expressions': ret};
+	return N('expressions', [e]).concat(es);
   } /
-  e:expr_or_splice { return {'type': 'expressions', 'expressions': [e]}; }
+  e:expr_or_splice { return N('expressions', [e]); }
 
 expr_or_splice =
   e:expr { return e; } /
   s:splice { return s; }
 
 splice "splice" =
-  "*" space? e:expr { return {'type': 'splice', 'expression': e}; }
+  "*" space? e:expr { return N('splice', [e]); }
 
 function_definition "Function definition" =
-  "func" space? params:paremeters_list space? code:CCEXPR { return {'type': 'func', 'code': code}; }
+  "func" space? params:paremeters_list space? code:CCEXPR { return N('func', ['TODO:ARGS', code]); }
 
 paremeters_list "Function parameters list" =
   "(" space? ")"
 
 return "return" =
-  "return" space? e:expr { return {'type': 'ret', 'expression': e}; }
+  "return" space? e:expr { return N('ret', [e]); }
 
 function_call "function call" =
-  f:expr_base space? "(" space? args:comma_separated_expressions? space? ")" space? { return {'type': 'call', 'func': f, 'args': args}; }
+  f:expr_base space? "(" space? args:comma_separated_expressions? space? ")" space? {
+	return N('call', [f, args]);
+  }
 
