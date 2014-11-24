@@ -94,7 +94,7 @@ function compile_tree(node, pfx) {
     var ret = new CodeChunk(node).use(words_array);
     var uid = uniq_id('exec$');
     ret.pre += pfx + 'var ' + uid + ' = ' + words_array.main + ';\n';
-    ret.main += pfx + 'exec(' + uid + '[0], ' + uid + '.slice(1))';
+    ret.main += pfx + 'get_var("exec")(' + uid + '[0], ' + uid + '.slice(1))';
     return ret;
   }
   if(node.is('array') || node.is('expressions')) {

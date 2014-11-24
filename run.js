@@ -10,10 +10,6 @@ var jobs = require('./plugins/jobs');
 // WARNING: global vars
 var vars={}; // TODO: sync with storage
 
-// Built-in functions, will be rewritten for multi-dispatch
-vars['echo'] = function() {
-  console.log('ECHO()', Array.prototype.slice.call(arguments));
-};
 
 function NgsMethod() {
 
@@ -43,7 +39,13 @@ function run(job) {
     return ret
   }
 
-  function exec(cmd, args) {
+  // Built-in functions, will be rewritten for multi-dispatch
+  // TODO: function define_function(args_types, code)
+  set_var('echo', function ngs_runtime_echo() {
+	console.log('ECHO()', Array.prototype.slice.call(arguments));
+  });
+
+  set_var('exec', function ngs_runtime_exec(cmd, args, cb) {
     console.log('run.exec', cmd);
     var subJob = new objects.ExecJob(null, {
       'cmd': cmd,
@@ -52,7 +54,7 @@ function run(job) {
     });
     subJob.start();
     return subJob;
-  }
+  });
 
   function add(e1, e2) {
     // Fix JS arrays addition which makes no sense.

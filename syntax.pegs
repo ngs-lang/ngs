@@ -45,10 +45,10 @@ CCEXPR "CCEXPR" =
   CCEXPR_code
 
 CCEXPR_commands =
-  '(' commands:commands ')' space? { return commands; }
+  space? '(' space? commands:commands space? ')' space? { return commands; }
 
 CCEXPR_code =
-  '{' code:expr '}' space? { return code; }
+  space? '{' space? code:expr space? '}' space? { return code; }
 
 // TODO fix expr_* order for operation precedence. Low priority at top.
 
