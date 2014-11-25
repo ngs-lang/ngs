@@ -48,13 +48,17 @@ CCEXPR_commands =
   space? '(' space? commands:commands space? ')' space? { return commands; }
 
 CCEXPR_code =
-  space? '{' space? code:expr space? '}' space? { return code; }
+  space? '{' space? code:expr space? '}' space? {
+  return code; }
 
 // TODO fix expr_* order for operation precedence. Low priority at top.
 
 expr "Expression/add" =
   e1:expr_call space? "+" space? e2:expr_call {
     return N('binop', [e1, e2], 'add');
+  } /
+  e1:expr_call space? "-" space? e2:expr_call {
+    return N('binop', [e1, e2], 'sub');
   } /
   e:expr_call { return e; }
 
@@ -67,7 +71,6 @@ expr_base "Expression/no-add" =
   if /
   assignment /
   function_definition /
-  // function_call /
   return /
   number /
   string /

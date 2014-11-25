@@ -66,6 +66,16 @@ function run(job) {
     return e1 + e2;
   }
 
+  function sub(e1, e2) {
+	// TODO: For collections: set subtraction
+	return e1 - e2;
+  }
+
+  // TODO (maybe):
+  function method_not_found(func_name, op1, op2) {
+	// map func_name with elements op1_elt, op2_elt, opN_elt
+  }
+
   // TODO: update state
   var source_code = compile(job.cmd).compiled_code;
   console.log('SOURCE', source_code);
