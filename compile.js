@@ -122,15 +122,24 @@ function compile_tree(node, pfx) {
       }
     });
     if(have_splice) {
-      ret.main = uid;
+      ret.main += uid;
     } else {
-      ret.main = '[' + ret_elts.join(', ') + ']';
+      ret.main += '[' + ret_elts.join(', ') + ']';
       if(node.is('expressions')) {
         ret.main = ret_elts.join(', ');
       }
     }
 	// console.log('have_splice', have_splice, ret.toString());
     return ret;
+  }
+  if(node.is('top_level_expressions')) {
+	var ret = new CodeChunk();
+    node.forEach(function(e) {
+      var e_tree = compile_tree(e, pfx + INDENT);
+      ret.use(e_tree);
+      ret.pre += pfx + e_tree.main + ';\n';
+    });
+	return ret;
   }
   if(node.is('splice')) {
     return compile_tree(node[0], pfx);
@@ -191,6 +200,8 @@ if(require.main === module) {
 
 function compile(code) {
   var tree = parser.parse(code);
+  // tree.setCallback('ngs_runtime_script_finish_callback');
+  console.log('isSync', tree);
   var compiled = compile_tree(tree, '');
   return {'compiled_code': compiled.toString()};
 }

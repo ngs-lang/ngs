@@ -1,5 +1,7 @@
 'use strict';
 
+var _ = require('underscore');
+
 function ASTNode(node_type, sub_nodes, data) {
   if(!this) {
 	return new ASTNode(node_type, sub_nodes, data);
@@ -12,6 +14,7 @@ ASTNode.prototype = Object.create(Array.prototype);
 ASTNode.prototype.initialize = function(node_type, sub_nodes, data) {
   this.node_type = node_type;
   this.data = data || null;
+  this.callback = null;
   if(sub_nodes) {
 	for(var i=0; i<sub_nodes.length; i++) {
 	  this[i] = sub_nodes[i];
@@ -49,6 +52,33 @@ ASTNode.prototype.concat = function(other) {
   ret.length = this.length + other.length;
   return ret;
 }
+
+ASTNode.prototype.setCallback = function(callback) {
+  this.callback = callback;
+}
+
+ASTNode.prototype.isSync = function() {
+  if(this.hasOwnProperty('cached_isSync')) {
+	return this.cached_isSync;
+  }
+  if(this.is('call') || this.is('exec') || this.is('async')) {
+	this.cached_isSync = false;
+	return false;
+  }
+  if(_.contains(this._sync_nodes_types, this.node_type)) {
+	this.cached_isSync = true;
+	return true;
+  }
+  if(this.length == 0) {
+	throw new Error("Don't know whether node " + this.toString() + " isSync()");
+  }
+  this.cached_isSync = ! _.some(this, function(e) { return !e.isSync() });
+  return this.cached_isSync;
+}
+
+// TODO: add other sync types
+ASTNode.prototype._sync_nodes_types = ['number', 'string'];
+
 
 exports.ASTNode = ASTNode;
 

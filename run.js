@@ -18,6 +18,7 @@ function NgsMethod() {
 function NgsMethods() {
 
 }
+
 NgsMethods.prototype = Object.create(Array.prototype);
 
 // TODO: security checks
@@ -55,6 +56,10 @@ function run(job) {
     subJob.start();
     return subJob;
   });
+
+  function ngs_runtime_script_finish_callback() {
+
+  }
 
   function add(e1, e2) {
     // Fix JS arrays addition which makes no sense.
