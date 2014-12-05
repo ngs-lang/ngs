@@ -7,12 +7,17 @@ start =
 
 space = [ \t\n]+
 inline_space = [ \t]+
+newline_space = inline_space? [\n]+ inline_space?
 
 commands "commands" =
-  space? c:command space? [;] space? cs:commands {
+  space? c:command commands_separator cs:commands {
 	return N('commands', [c]).concat(cs);
   } /
-  c:command space? [;]? space? { return N('commands', [c]); }
+  c:command commands_separator? { return N('commands', [c]); }
+
+commands_separator "Command separator" =
+  newline_space /
+  inline_space? [;] inline_space?
 
 command "command" =
   CCEXPR_code /
@@ -94,7 +99,7 @@ execute_external_prog "execute external program" =
   w:cmd_words { return N('exec', [w]); }
 
 cmd_words "Command words" =
-  w:cmd_word space ws:cmd_words  {
+  w:cmd_word inline_space ws:cmd_words  {
     return N('array', [w]).concat(ws);
   } /
   w:cmd_word { return N('array', [w]); }
@@ -115,7 +120,7 @@ string_contents "String contents" =
 
 array_literal "array literal" =
   "[" space? es:comma_separated_expressions space? "]" {
-	return N('array', [es]);
+	return N('array', es);
   }
 
 comma_separated_expressions "comma-separated expressions" =

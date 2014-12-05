@@ -116,7 +116,7 @@ ExecJob.prototype = Object.create(Job.prototype);
 
 ExecJob.prototype.type = 'exec';
 
-ExecJob.prototype.start = function(){
+ExecJob.prototype.start = function(finish_callback){
   var job = this;
   console.log('start_external()', job.serialize());
   // TODO: process working directory should be
@@ -136,10 +136,12 @@ ExecJob.prototype.start = function(){
   p.on('error', function(e) {
     job.setState('error');
     // TODO // storage.setProperty(job_status_storage_path, 'error', e.toString());
+	finish_callback(e, null, null);
   });
-  p.on('exit', function(exit_code, _signal) {
+  p.on('exit', function(exit_code, signal) {
     job.setState('done');
     // TODO // storage.setProperty(job_status_storage_path, 'exit_code', exit_code);
+	finish_callback(null, exit_code, signal);
   });
 }
 

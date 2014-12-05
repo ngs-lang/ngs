@@ -7,86 +7,43 @@ var storage = require('./storage').storage;
 var compile = require('./compile').compile;
 var jobs = require('./plugins/jobs');
 
-// WARNING: global vars
-var vars={}; // TODO: sync with storage
-
-
-function NgsMethod() {
-
-}
-
-function NgsMethods() {
-
-}
-
-NgsMethods.prototype = Object.create(Array.prototype);
-
 // TODO: security checks
 function run(job) {
 
-  console.log('RUN START');
+  // console.log('RUN START');
 
-  // TODO: lexical scope, etc.
-  function set_var(name, val) {
-    console.log('run.set_var', name, val);
-    vars[name] = val;
-    return val;
-  }
-
-  // TODO: exception if var not found
-  function get_var(name) {
-    var ret = vars[name];
-    console.log('run.get_var', name, '->', ret);
-    return ret
-  }
-
-  // Built-in functions, will be rewritten for multi-dispatch
-  // TODO: function define_function(args_types, code)
-  set_var('echo', function ngs_runtime_echo() {
-	console.log('ECHO()', Array.prototype.slice.call(arguments));
-  });
-
-  set_var('exec', function ngs_runtime_exec(cmd, args, cb) {
-    console.log('run.exec', cmd);
-    var subJob = new objects.ExecJob(null, {
-      'cmd': cmd,
-      'args': args || [],
-      'parent_id': job.id
-    });
-    subJob.start();
-    return subJob;
-  });
 
   function ngs_runtime_script_finish_callback() {
 
   }
 
-  function add(e1, e2) {
-    // Fix JS arrays addition which makes no sense.
-    if(_.isArray(e1) && _.isArray(e2)) {
-      return e1.concat(e2);
-    }
-    // TODO: _.extend for two hashes
-    // TODO: errors when adding (and other binops) incompatible types
-    return e1 + e2;
-  }
-
-  function sub(e1, e2) {
-	// TODO: For collections: set subtraction
-	return e1 - e2;
-  }
-
-  // TODO (maybe):
-  function method_not_found(func_name, op1, op2) {
-	// map func_name with elements op1_elt, op2_elt, opN_elt
-  }
-
   // TODO: update state
-  var source_code = compile(job.cmd).compiled_code;
-  console.log('SOURCE', source_code);
+  var code = compile(job.cmd).compiled_code;
   // TODO: update state
   // TODO: update job with compiled code for debug purposes
-  eval(source_code);
+  var vm = require('./vm');
+  var v = new vm.VM();
+
+  v.register_method('exec', function ngs_runtime_exec(args) {
+	var ctx = this.context;
+    var subJob = new objects.ExecJob(null, {
+      'cmd': args[0],
+      'args': args.slice(1),
+      'parent_id': job.id
+    });
+    subJob.start(function ngs_runtime_exec_finish_callback(e, exit_code, signal) {
+	  // ctx.stack.push([e, exit_code, signal]);
+	  this.unsuspend_context(ctx);
+	}.bind(this));
+    ctx.stack.push(subJob);
+	this.suspend_context();
+  });
+
+  v.useCode(code);
+  console.log(code);
+  v.start(function ngs_runtime_script_finish_callback() {
+	console.log('stack', v.context.stack, 'globals', v.globals);
+  });
   // TODO: update state
   console.log('RUN END');
 }
