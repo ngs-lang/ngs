@@ -2,6 +2,8 @@
 // apt-get install node-pegjs # 0.7.0
 // pegjs syntax.pegs
 
+var _ = require('underscore');
+
 var parser = require('./syntax');
 
 var uid = 1;
@@ -31,8 +33,18 @@ CodeChunk.prototype.use = function(other) {
 function dup_if_needed(code, leave_value_in_stack) {
   if(leave_value_in_stack) {
 	return code.concat([
-	  ['comment', 'leave_value_in_stack'],
+	  ['comment', 'leave_value_in_stack', true],
 	  ['dup']
+	]);
+  }
+  return code;
+}
+
+function pop_if_needed(code, leave_value_in_stack) {
+  if(!leave_value_in_stack) {
+	return code.concat([
+	  ['comment', 'leave_value_in_stack', false],
+	  ['pop']
 	]);
   }
   return code;
@@ -48,7 +60,7 @@ function compile_tree(node, leave_value_in_stack) {
       var rhs = dup_if_needed(compile_tree(node[1]), leave_value_in_stack);
       return rhs.concat([
 		['push', node[0].data],
-		['push', 'setvar'],
+		['push', '__set_var'],
 		['invoke_method2'],
 	  ]);
     }
@@ -99,7 +111,7 @@ function compile_tree(node, leave_value_in_stack) {
   if(node.is('varname')) {
 	var ret = [
 	  ['push', node.data],
-	  ['push', 'getvar'],
+	  ['push', '__get_var'],
 	  ['invoke_method1']
 	];
 	if(!leave_value_in_stack) {
@@ -116,8 +128,7 @@ function compile_tree(node, leave_value_in_stack) {
 	  ['push', 'exec'],
 	  ['invoke_method1'],
 	]);
-	// TODO: pop?
-	return ret;
+	return pop_if_needed(ret, leave_value_in_stack);
   }
   if(node.is('splice')) {
 	return compile_tree(node[0], true);
@@ -149,9 +160,9 @@ function compile_tree(node, leave_value_in_stack) {
 		['invoke_method2'],
 	  ]);
     }
+    ret = pop_if_needed(ret, leave_value_in_stack);
 	ret = ret.concat([['comment', 'end', node.node_type]]);
-	// TODO: leave_value_in_stack
-    return ret;
+	return ret;
   }
   if(node.is('binop')) {
 	// node.data -- operation name
@@ -159,11 +170,11 @@ function compile_tree(node, leave_value_in_stack) {
 	  compile_tree(node[0], true),
       compile_tree(node[1], true),
 	  [
-		['push', node.data],
+		['push', '__' + node.data],
 		['invoke_method2']
 	  ]
 	)
-	return ret;
+	return pop_if_needed(ret, leave_value_in_stack);
   }
   /*
   if(node.is('func')) {
@@ -219,9 +230,13 @@ if(require.main === module) {
   console.log('stack', v.context.stack, 'globals', v.globals);
 }
 
-function compile(code) {
+function compile(code, options) {
+  var o = {
+	leave_value_in_stack: false
+  }
+  _.extend(o, options || {});
   var tree = parser.parse(code);
-  var compiled = compile_tree(tree);
+  var compiled = compile_tree(tree, o.leave_value_in_stack);
   return {'compiled_code': compiled};
 }
 

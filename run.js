@@ -24,7 +24,7 @@ function run(job) {
   var vm = require('./vm');
   var v = new vm.VM();
 
-  v.register_method('exec', function ngs_runtime_exec(args) {
+  v.registerMethod('exec', function ngs_runtime_exec(args) {
 	var ctx = this.context;
     var subJob = new objects.ExecJob(null, {
       'cmd': args[0],
