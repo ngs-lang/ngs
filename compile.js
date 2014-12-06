@@ -176,6 +176,40 @@ function compile_tree(node, leave_value_in_stack) {
 	)
 	return pop_if_needed(ret, leave_value_in_stack);
   }
+  if(node.is('deftype')) {
+    var ret = [
+	  ['comment', 'start', node.node_type],
+	  ['push', node.data],
+	  ['push', 'Array'],
+	  ['invoke_method0'],
+	];
+	for(var i=0; i<node.length; i++) {
+	  ret = ret.concat([
+		['comment', 'start', node.node_type, 'field'],
+	  ])
+	  ret = ret.concat([
+		['dup'],
+		['push', 'Array'],
+		['invoke_method0'],
+		['dup'],
+		['push', node[i].data[0]],
+		['push', 'push'],
+		['invoke_method2'],
+		['dup'],
+		['push', node[i].data[1]],
+		['push', 'push'],
+		['invoke_method2'],
+		['push', 'push'],
+		['invoke_method2'],
+		['comment', 'end', node.node_type, 'field'],
+	  ]);
+	}
+	ret = ret.concat([
+	  ['push', '__deftype'],
+	  ['invoke_method2'],
+	]);
+	return ret;
+  }
   /*
   if(node.is('func')) {
     return new CodeChunk(

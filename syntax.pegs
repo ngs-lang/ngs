@@ -82,6 +82,7 @@ expr_call "Function call" =
 
 expr_base "Expression/no-add" =
   if /
+  type_definition /
   assignment /
   function_definition /
   return /
@@ -150,3 +151,20 @@ function_call "function call" =
 	return N('call', [f, args]);
   }
 
+type_definition "Type definition" =
+  "deftype" space+ type:varname space? "{" space? ds:type_fields_definitions? space? "}" space? {
+    return N('deftype', ds || [], type.data);
+  }
+
+type_fields_definitions "Definitions of fields of a type" =
+  d:type_field_definition space? ";" space? ds:type_fields_definitions space? space? {
+    return N('fields_definitions', [d]).concat(ds);
+  } /
+  d:type_field_definition space? ";" ? {
+    return N('fields_definitions', [d]);
+  }
+
+type_field_definition "Definition of a field of a type" =
+  space? name:varname space? ":" space? type:varname space? {
+    return N('field_definition', [], [name.data, type.data]);
+  }

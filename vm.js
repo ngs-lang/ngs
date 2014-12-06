@@ -39,6 +39,7 @@ VM.prototype.initialize = function() {
   this.context = null;
   this.globals = {};
   this.methods = {}; // TODO: make it hash of arrays, not hash of scalars
+  this.types = {};
   this.registerMethod('Array', function() {
 	this.context.stack.push(new Array());
   });
@@ -85,9 +86,26 @@ VM.prototype.initialize = function() {
 	st.push(v1-v2);
   });
 
-  // stack: ... v
+  // stack: ... v -> ...
   this.registerMethod('echo', function(v) {
 	console.log('ECHO', v);
+  });
+
+  // stack: ... type_name fields_defs -> ...
+  this.registerMethod('__deftype', function(name, fields_defs) {
+	// TODO: maybe allow redefining type (for extending)
+	console.log('__deftype', name, fields_defs);
+	var order = [];
+	var fields = {};
+	for(var i=0; i<fields_defs.length; i++) {
+	  fields[fields_defs[i][0]] = fields_defs[i][1];
+	  order.push(fields_defs[i][0]);
+	}
+	this.types[name] = {
+	  name: name,
+	  fields: fields,
+	  order: order,
+	}
   });
 
   return this;

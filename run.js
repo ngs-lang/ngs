@@ -42,7 +42,9 @@ function run(job) {
   v.useCode(code);
   console.log(code);
   v.start(function ngs_runtime_script_finish_callback() {
-	console.log('stack', v.context.stack, 'globals', v.globals);
+	console.log('stack', v.context.stack)
+	console.log('globals', v.globals);
+	console.log('types', v.types);
   });
   // TODO: update state
   console.log('RUN END');
