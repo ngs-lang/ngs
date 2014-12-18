@@ -1,5 +1,7 @@
 'use strict';
 
+var util = require('util');
+
 var _ = require('underscore');
 
 var objects = require('./objects');
@@ -23,9 +25,9 @@ function run(job) {
   // TODO: update job with compiled code for debug purposes
   var vm = require('./vm');
   var v = new vm.VM();
+  var ctx = v.setupContext();
 
-  v.registerMethod('exec', function ngs_runtime_exec(args) {
-	var ctx = this.context;
+  ctx.registerMethod('exec', function ngs_runtime_exec(args) {
     var subJob = new objects.ExecJob(null, {
       'cmd': args[0],
       'args': args.slice(1),
@@ -33,18 +35,16 @@ function run(job) {
     });
     subJob.start(function ngs_runtime_exec_finish_callback(e, exit_code, signal) {
 	  // ctx.stack.push([e, exit_code, signal]);
-	  this.unsuspend_context(ctx);
+	  v.unsuspend_context(this);
 	}.bind(this));
-    ctx.stack.push(subJob);
-	this.suspend_context();
+    this.stack.push(subJob);
+	v.suspend_context();
   });
 
   v.useCode(code);
   console.log(code);
   v.start(function ngs_runtime_script_finish_callback() {
-	console.log('stack', v.context.stack)
-	console.log('globals', v.globals);
-	console.log('types', v.types);
+	console.log('finished_contexts', util.inspect(v.finished_contexts, {'depth': 10}));
   });
   // TODO: update state
   console.log('RUN END');

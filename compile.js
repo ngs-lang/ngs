@@ -6,30 +6,6 @@ var _ = require('underscore');
 
 var parser = require('./syntax');
 
-var uid = 1;
-function uniq_id(pfx) {
-  var ret = pfx + uid.toString();
-  uid++;
-  return ret;
-}
-
-function CodeChunk(node, main, pre, post) {
-  this.node = node;
-  this.pre = pre || '';
-  this.main = main || '';
-  this.post = post || '';
-};
-
-CodeChunk.prototype.toString = function() {
-  return this.pre + this.main + this.post;
-};
-
-CodeChunk.prototype.use = function(other) {
-  this.pre += other.pre;
-  this.post += other.post;
-  return this;
-}
-
 function dup_if_needed(code, leave_value_in_stack) {
   if(leave_value_in_stack) {
 	return code.concat([
@@ -50,6 +26,16 @@ function pop_if_needed(code, leave_value_in_stack) {
   return code;
 }
 
+function compile_invoke(method_name, positional_args, named_args) {
+  return [
+	['push', positional_args],
+	['push', named_args],
+	['push', method_name],
+	['get_var'],
+	['invoke'],
+  ];
+}
+
 function compile_tree(node, leave_value_in_stack) {
   if(leave_value_in_stack === undefined) {
 	leave_value_in_stack = 1;
@@ -57,11 +43,10 @@ function compile_tree(node, leave_value_in_stack) {
   console.log('node', node, leave_value_in_stack);
   if(node.is('assignment')) {
     if(node[0].is('varname')) {
-      var rhs = dup_if_needed(compile_tree(node[1]), leave_value_in_stack);
+      var rhs = dup_if_needed(compile_tree(node[1], true), leave_value_in_stack);
       return rhs.concat([
 		['push', node[0].data],
-		['push', '__set_var'],
-		['invoke_method2'],
+		['set_var'],
 	  ]);
     }
     throw new Error("Assignment to type " + node[0] + " is not implemented");
@@ -69,12 +54,7 @@ function compile_tree(node, leave_value_in_stack) {
   if(node.is('commands') || node.is('top_level_expressions')) {
     var ret = [];
     for(var i=0; i<node.length; i++) {
-	  var lvis;
-	  if(i<node.length-1) {
-		lvis = false;
-	  } else {
-		lvis = leave_value_in_stack;
-	  }
+	  var lvis = (i == node.length-1) && leave_value_in_stack;
       var t = compile_tree(node[i], lvis);
 	  ret = ret.concat(t);
     }
@@ -111,22 +91,18 @@ function compile_tree(node, leave_value_in_stack) {
   if(node.is('varname')) {
 	var ret = [
 	  ['push', node.data],
-	  ['push', '__get_var'],
-	  ['invoke_method1']
+	  ['get_var'],
 	];
-	if(!leave_value_in_stack) {
-	  ret = ret.concat([
-		['pop']
-	  ]);
-	}
-	return ret;
+	return pop_if_needed(ret, leave_value_in_stack);
   }
   if(node.is('exec')) {
     // TODO: real word expansion
 	var ret = compile_tree(node[0]);
 	ret = ret.concat([
+	  ['push', {}],
 	  ['push', 'exec'],
-	  ['invoke_method1'],
+	  ['get_var'],
+	  ['invoke'],
 	]);
 	return pop_if_needed(ret, leave_value_in_stack);
   }
@@ -137,18 +113,11 @@ function compile_tree(node, leave_value_in_stack) {
 	// TODO: implement 'expressions' here, for now it only tested with 'array'
     var ret = [
 	  ['comment', 'start', node.node_type],
-	  ['push', 'Array'],
-	  ['invoke_method0']
 	];
+	ret = ret.concat(compile_invoke('Array', [], {}));
 	var m;
     for(var i=0; i<node.length; i++) {
       var t = compile_tree(node[i]);
-	  if(!node[i].is('splice')) {
-		// because concat() leaves new array in stack but push() does not
-		ret = ret.concat([
-		  ['dup'],
-		]);
-	  }
 	  ret = ret.concat(t);
 	  if(node[i].is('splice')) {
 		m = 'concat'
@@ -157,7 +126,8 @@ function compile_tree(node, leave_value_in_stack) {
 	  }
 	  ret = ret.concat([
 		['push', m],
-		['invoke_method2'],
+		['get_var'],
+		['invoke2'],
 	  ]);
     }
     ret = pop_if_needed(ret, leave_value_in_stack);
@@ -171,61 +141,113 @@ function compile_tree(node, leave_value_in_stack) {
       compile_tree(node[1], true),
 	  [
 		['push', '__' + node.data],
-		['invoke_method2']
+		['get_var'],
+		['invoke2'],
 	  ]
 	)
 	return pop_if_needed(ret, leave_value_in_stack);
   }
   if(node.is('deftype')) {
-    var ret = [
-	  ['comment', 'start', node.node_type],
-	  ['push', node.data],
-	  ['push', 'Array'],
-	  ['invoke_method0'],
-	];
+	// TODO: new call convention
+	var mk_array = compile_invoke('Array', [], {});
+    var ret = [].concat(
+	  [
+		['comment', 'start', node.node_type],
+		['push', node.data],
+	  ],
+	  mk_array
+	);
 	for(var i=0; i<node.length; i++) {
 	  ret = ret.concat([
 		['comment', 'start', node.node_type, 'field'],
-	  ])
-	  ret = ret.concat([
-		['dup'],
-		['push', 'Array'],
-		['invoke_method0'],
-		['dup'],
-		['push', node[i].data[0]],
-		['push', 'push'],
-		['invoke_method2'],
-		['dup'],
-		['push', node[i].data[1]],
-		['push', 'push'],
-		['invoke_method2'],
-		['push', 'push'],
-		['invoke_method2'],
-		['comment', 'end', node.node_type, 'field'],
 	  ]);
+	  ret = ret.concat(
+		mk_array,
+		[
+		  ['push', node[i].data[0]],
+		  ['push', 'push'],
+		  ['get_var'],
+		  ['invoke2'],
+		  ['push', node[i].data[1]],
+		  ['push', 'push'],
+		  ['get_var'],
+		  ['invoke2'],
+		  ['push', 'push'],
+		  ['get_var'],
+		  ['invoke2'],
+		  ['comment', 'end', node.node_type, 'field'],
+		]
+	  );
 	}
 	ret = ret.concat([
 	  ['push', '__deftype'],
-	  ['invoke_method2'],
+	  ['get_var'],
+	  ['invoke2'],
 	]);
 	return ret;
   }
-  /*
-  if(node.is('func')) {
-    return new CodeChunk(
-      node,
-      '(function() {\n' +
-        compile_tree(node[1], pfx + INDENT).toString() +
-        '})'
-    );
+  if(node.is('defun')) {
+	var ret = compile_tree(node[0], true);
+	ret = ret.concat([
+	  ['push', node.data],
+	  ['push', '__register_method'],
+	  ['get_var'],
+	  ['invoke2'],
+	]);
+	return pop_if_needed(ret, leave_value_in_stack);
+  }
+  if(node.is('lambda')) {
+	// XXX
+	var code = compile_tree(node[1], true);
+	// code = code.concat(
+	//   [
+	// 	['push', null],
+	// 	['return']
+	//   ]
+	// );
+
+	console.log('FUNC CODE', code, leave_value_in_stack);
+	var ret = [].concat(
+	  compile_invoke('__get_lexical_scopes', [], {}),
+	  [
+		['push_ip'],
+		['jump', code.length],
+	  ],
+	  code,
+	  [
+		['push', 1],
+		['push', '__add'],
+		['get_var'],
+		['invoke2'],
+		['push', '__lambda'],
+		['get_var'],
+		['invoke2'],
+	  ]);
+	return pop_if_needed(ret, leave_value_in_stack);
+  }
+  if(node.is('call')) {
+	var ret = compile_tree(node[0]);
+	ret = [].concat(
+	  [
+		['push', []],
+		['push', {}],
+	  ],
+	  ret,
+	  [
+		['invoke']
+	  ]
+	);
+	return pop_if_needed(ret, leave_value_in_stack);
   }
   if(node.is('ret')) {
-    var e = compile_tree(node[0], pfx);
-    if(e.post) {
-      throw new Error('Compling "return" with post effects in expression is not supported yet');
-    }
-    return new CodeChunk(node, pfx + "return " + e.main + ";\n").use(e);
+	var ret = compile_tree(node[0], true);
+	ret = ret.concat([
+	  ['ret'],
+	]);
+	return ret;
+
   }
+  /*
   if(node.is('call')) {
     // TODO: fix splice - it doesn't work yet
     var args_array = [];
@@ -261,7 +283,7 @@ if(require.main === module) {
   var v = new vm.VM();
   v.useCode(code);
   v.start();
-  console.log('stack', v.context.stack, 'globals', v.globals);
+  console.log('stack', v.context.stack, 'lexical_scopes', v.lexical_scopes);
 }
 
 function compile(code, options) {
