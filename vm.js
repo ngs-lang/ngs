@@ -136,7 +136,7 @@ VM.prototype.initialize = function() {
   this.suspended_contexts = [];
   this.finished_contexts = [];
   this.context = null;
- 
+
   return this;
 }
 
