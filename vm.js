@@ -60,8 +60,8 @@ Context.prototype.initialize = function(global_scope) {
   });
 
   // stack: ... v -> ...
-  this.registerMethod('echo', function(v) {
-	console.log('ECHO', v);
+  this.registerMethod('echo', function(p, n) {
+	console.log('ECHO', p, n);
   });
 
   // stack: ... type_name fields_defs -> ...

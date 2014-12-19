@@ -151,7 +151,7 @@ return "return" =
 
 function_call "function call" =
   f:expr_base space? "(" space? args:comma_separated_expressions? space? ")" space? {
-	return N('call', [f, args]);
+	return N('call', [f, args || N('expressions', [])]);
   }
 
 type_definition "Type definition" =

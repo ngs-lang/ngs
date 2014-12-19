@@ -226,13 +226,14 @@ function compile_tree(node, leave_value_in_stack) {
 	return pop_if_needed(ret, leave_value_in_stack);
   }
   if(node.is('call')) {
-	var ret = compile_tree(node[0]);
-	ret = [].concat(
+	var methods = compile_tree(node[0]);
+	var positional_args = compile_tree(node[1]);
+	var ret = [].concat(
+	  positional_args,
 	  [
-		['push', []],
 		['push', {}],
 	  ],
-	  ret,
+	  methods,
 	  [
 		['invoke']
 	  ]
@@ -247,23 +248,6 @@ function compile_tree(node, leave_value_in_stack) {
 	return ret;
 
   }
-  /*
-  if(node.is('call')) {
-    // TODO: fix splice - it doesn't work yet
-    var args_array = [];
-    var f = compile_tree(node[0], pfx);
-    var ret = new CodeChunk(node, f.main).use(f);
-
-    if(node[1]) {
-      var args_array = compile_tree(node[1], pfx);
-      ret.use(args_array);
-    }
-    ret.main += '(' + args_array.main + ')';
-
-    return ret;
-
-  }
-  */
   if(node.node_type) {
     throw "Don't know how to compile type '" + node.node_type + "'";
   }
