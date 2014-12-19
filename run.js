@@ -37,8 +37,8 @@ function run(job) {
 	  // ctx.stack.push([e, exit_code, signal]);
 	  v.unsuspend_context(this);
 	}.bind(this));
-    this.stack.push(subJob);
 	v.suspend_context();
+	return subJob;
   });
 
   v.useCode(code);

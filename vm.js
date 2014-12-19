@@ -212,34 +212,14 @@ Context.prototype.registerMethod = function(name, f) {
   r[1][name].push(f);
 }
 
-Context.prototype.invokeMethod = function(m, args) {
-  var r = this.find_var_lexical_scope(m);
-  if(!r[0]) {
-	throw new Error('Failed to invoke_method ' + m);
-  }
-  // TODO:
-  //   * User defined methods
-  //   * Find appropriate method:
-  //     * Walk the array
-  //     * Walk the lexical scopes chain
-  if(r[1][m][0]) {
-	r[1][m][0].apply(this, args);
-	return;
-  }
-};
-
 Context.prototype.invoke = function(methods, positional_args, named_args, vm) {
   // TODO:
-  //   * User defined methods
-  //   * Find appropriate method:
-  //     * Walk the array
-  //     * Walk the lexical scopes chain
-  var m = methods[methods.length-1];
-
-  // console.log('invoke', positional_args, named_args, vm);
+  //   * Find appropriate method by parameters matching - walk the array
+  var m = methods[methods.length-1]; // Temp: always choose last method
 
   // 1. Native
   if(typeof m == 'function') {
+	// Maybe later: parameters matching
 	this.stack.push(m.call(this, positional_args, named_args, vm));
 	return;
   }

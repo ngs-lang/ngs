@@ -21,6 +21,7 @@ var code_vs_stack = [
 var code_vs_exec_args = [
   ['ls', ['ls']],
   ['a=["x", "y"]; ls zz $*a ww', ['ls', 'zz', 'x', 'y', 'ww']],
+  ['{exec("blah");}', ['blah']],
 ];
 
 // TODO: deduplicate tests code
