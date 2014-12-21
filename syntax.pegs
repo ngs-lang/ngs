@@ -138,13 +138,23 @@ splice "splice" =
   "*" space? e:expr { return N('splice', [e]); }
 
 lambda "Lambda" =
-  "lambda" space? params:paremeters_list space? code:CCEXPR { return N('lambda', ['TODO:ARGS', code]); }
+  "lambda" space? "(" space? params:parameters space? ")" space? code:CCEXPR { return N('lambda', ['TODO:ARGS', code]); }
 
 function_definition =
-  "defun" space+ name:varname space? params:paremeters_list space? code:CCEXPR { return N('defun', [N('lambda', ['TODO:ARGS', code])], name.data); }
+  "defun" space+ name:varname space? "(" space? params:parameters? space? ")" space? code:CCEXPR { return N('defun', [N('lambda', [params || N('parameters', []), code])], name.data); }
 
-paremeters_list "Function parameters list" =
-  "(" space? ")"
+parameters "Function parameters list" =
+  p:parameter space? "," space? ps:parameters {
+    return N('parameters', [p]).concat(ps);
+  } /
+  p:parameter {
+    return N('parameters', [p])
+  }
+
+parameter "Function parameter" =
+  "*" v:varname { return N('arg_rest', [], v.data); } /
+  "**" v:varname { return N('arg_kw', [], v.data); } /
+  v:varname { return N('arg_pos', [], v.data); }
 
 return "return" =
   "return" space? e:expr { return N('ret', [e]); }

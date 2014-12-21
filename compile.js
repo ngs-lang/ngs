@@ -28,12 +28,27 @@ function pop_if_needed(code, leave_value_in_stack) {
 
 function compile_invoke(method_name, positional_args, named_args) {
   return [
-	['push', positional_args],
-	['push', named_args],
+	['push', positional_args || []],
+	['push', named_args || {}],
 	['push', method_name],
 	['get_var'],
 	['invoke'],
   ];
+}
+
+function compile_push() {
+  return [
+	['push', 'push'],
+	['get_var'],
+	['invoke2'],
+  ];
+}
+
+function transform_args(node) {
+  if(!node.is('parameters')) {
+	throw new Error('transform_args() must handle "parameters" nodes only');
+  }
+  return node.map(function(n) { return [n.data, n.node_type]; });
 }
 
 function compile_tree(node, leave_value_in_stack) {
@@ -208,8 +223,16 @@ function compile_tree(node, leave_value_in_stack) {
 
 	console.log('FUNC CODE', code, leave_value_in_stack);
 	var ret = [].concat(
-	  compile_invoke('__get_lexical_scopes', [], {}),
+	  compile_invoke('Array'),
+	  // Lexical scopes
+	  compile_invoke('__get_lexical_scopes'),
+	  compile_push(),
 	  [
+		['push', transform_args(node[0])],
+	  ],
+	  compile_push(),
+	  [
+		// IP
 		['push_ip'],
 		['jump', code.length],
 	  ],
@@ -219,9 +242,13 @@ function compile_tree(node, leave_value_in_stack) {
 		['push', '__add'],
 		['get_var'],
 		['invoke2'],
+	  ],
+	  compile_push(),
+	  [
+		['push', {}],
 		['push', '__lambda'],
 		['get_var'],
-		['invoke2'],
+		['invoke'],
 	  ]);
 	return pop_if_needed(ret, leave_value_in_stack);
   }

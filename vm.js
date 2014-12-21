@@ -21,7 +21,7 @@ Context.prototype.initialize = function(global_scope) {
 
   // Don't want pop() method to be listed and printed in console.log()
   Object.defineProperty(this.stack, 'pop', {
-	'value': function() {
+	'value': function vm_pop() {
 	  if(this.length == 0) {
 		throw new Error("Stack underflow at " + (get_context_ip()-1));
 	  }
@@ -30,23 +30,23 @@ Context.prototype.initialize = function(global_scope) {
   });
 
   // stack: ... -> array
-  this.registerMethod('Array', function() {
+  this.registerMethod('Array', function vm_Array() {
 	return new Array();
   });
 
   // stack: ... array value -> ... array
-  this.registerMethod('push', function(p, n) {
+  this.registerMethod('push', function vm_push(p, n) {
 	p[0].push(p[1]);
 	return p[0];
   });
 
   // stack: ... array1 array2 -> ... arrayConcat
-  this.registerMethod('concat', function(p) {
+  this.registerMethod('concat', function vm_cocat(p) {
 	return p[0].concat(p[1]);
   });
 
   // stack: ... v1 v2 -> ... v
-  this.registerMethod('__add', function(p) {
+  this.registerMethod('__add', function vm___add(p) {
 	// TODO: when multi-method is implemented, move to another method
 	if(util.isArray(p[0]) && util.isArray(p[1])) {
       return p[0].concat(p[1]);
@@ -55,17 +55,18 @@ Context.prototype.initialize = function(global_scope) {
   });
 
   // stack: ... v1 v2 -> ... v
-  this.registerMethod('__sub', function(p) {
+  this.registerMethod('__sub', function vm___sub(p) {
 	return p[0] - p[1];
   });
 
   // stack: ... v -> ...
-  this.registerMethod('echo', function(p, n) {
+  this.registerMethod('echo', function vm_echo(p, n) {
 	console.log('ECHO', p, n);
+	return null;
   });
 
   // stack: ... type_name fields_defs -> ...
-  this.registerMethod('__deftype', function(p, n, vm) {
+  this.registerMethod('__deftype', function vm___deftype(p, n, vm) {
 	// TODO: maybe allow redefining type (for extending)
 	var name = p[0];
 	var fields_defs = p[1];
@@ -83,29 +84,29 @@ Context.prototype.initialize = function(global_scope) {
 	}
   });
 
-  this.registerMethod('__enter_lexical_scope', function() {
+  this.registerMethod('__enter_lexical_scope', function vm___enter_lexical_scope() {
 	var scope = {};
 	this.lexical_scopes.push(scope);
 	return scope;
   });
 
-  this.registerMethod('__leave_lexical_scope', function() {
+  this.registerMethod('__leave_lexical_scope', function vm___leave_lexical_scope() {
 	return this.lexical_scopes.pop();
   });
 
   // stack: ... -> ... lexical_scopes
-  this.registerMethod('__get_lexical_scopes', function() {
+  this.registerMethod('__get_lexical_scopes', function vm___get_lexical_scopes() {
 	return this.lexical_scopes;
   });
 
   // stack: ... lexical_scopes code_ptr -> ... lambda-object
   //                                           (temporary object repr.)
-  this.registerMethod('__lambda', function(lexical_scopes, code_ptr) {
-	return ['lambda', lexical_scopes, code_ptr];
+  this.registerMethod('__lambda', function vm___lambda(p) {
+	return ['lambda', p[0], p[1], p[2]];
   });
 
   // stack: ... lambda-object name -> ... lambda-object
-  this.registerMethod('__register_method', function(p) {
+  this.registerMethod('__register_method', function vm___register_method(p) {
 	this.registerMethod(p[1], p[0]);
 	return p[0];
   });
@@ -212,29 +213,57 @@ Context.prototype.registerMethod = function(name, f) {
   r[1][name].push(f);
 }
 
+function match_params(lambda, positional_args, named_args) {
+  var params = lambda[2];
+  var scope = {};
+  var positional_idx = 0;
+  console.log('match_params', positional_args, named_args, params);
+  for(var i=0; i<params.length; i++) {
+	if(params[i][1] == 'arg_pos') {
+	  if(positional_args.length-1 < positional_idx) {
+		return [false, {}, 'not enough pos args'];
+	  }
+	  scope[params[i][0]] = positional_args[positional_idx++];
+	}
+  }
+  return [true, scope, 'all matched'];
+}
+
+
 Context.prototype.invoke = function(methods, positional_args, named_args, vm) {
   // TODO:
   //   * Find appropriate method by parameters matching - walk the array
-  var m = methods[methods.length-1]; // Temp: always choose last method
 
-  // 1. Native
-  if(typeof m == 'function') {
-	// Maybe later: parameters matching
-	this.stack.push(m.call(this, positional_args, named_args, vm));
-	return;
+  for(var l=methods.length-1, i=l; i>=0; i--) {
+	var m = methods[i];
+
+	// 1. Native
+	if(typeof m == 'function') {
+	  // Maybe later: parameters matching
+	  this.stack.push(m.call(this, positional_args, named_args, vm));
+	  return;
+	}
+
+	// 2. User defined
+	if(m[0] === 'lambda') {
+	  var scope = match_params(m, positional_args, named_args);
+	  if(!scope[0]) {
+		continue;
+	  }
+	  // 1:scopes, 2:args, 3:ip
+	  this.frames.push({
+		lexical_scopes: this.lexical_scopes,
+		ip: this.ip,
+		stack_len: this.stack.length,
+	  });
+	  this.lexical_scopes = m[1];
+	  this.lexical_scopes.push(scope[1]);
+	  this.ip = m[3];
+	  return;
+	}
   }
 
-  // 2. User defined
-  if(m[0] === 'lambda') {
-	this.frames.push({
-	  lexical_scopes: this.lexical_scopes,
-	  ip: this.ip,
-	  stack_len: this.stack.length,
-	});
-	this.lexical_scopes = m[1][0];
-	this.ip = m[1][1];
-  }
-
+  throw new Error("Invoke: appropriate method not found");
 }
 
 VM.prototype.opcodes = {

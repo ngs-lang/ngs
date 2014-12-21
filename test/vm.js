@@ -16,6 +16,7 @@ var code_vs_stack = [
   ['{[1, 2] + [3, 4]}', [[1,2,3,4]]],
   ['{a=1; a}', [1]],
   ['{ defun f() { return 77; }; 1 + f(); }', [78]],
+  ['{ defun f(x, y) { return x - y; }; f(5, 2); }', [3]],
 ];
 
 var code_vs_exec_args = [
