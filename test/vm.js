@@ -7,22 +7,22 @@ var vm = require('../vm');
 var compile = require('../compile').compile;
 
 var code_vs_stack = [
-  ['{1}', [1]],
-  ['{1;2}', [2]],
-  ['{1+2}', [3]],
-  [' { 7 - 3 } ', [4]],
-  ['{[5]}', [[5]]],
-  ['a = [1, 2]', [[1,2]]],
-  ['{[1, 2] + [3, 4]}', [[1,2,3,4]]],
-  ['{a=1; a}', [1]],
-  ['{ defun f() { return 77; }; 1 + f(); }', [78]],
-  ['{ defun f(x, y) { return x - y; }; f(5, 2); }', [3]],
+  ['{1}', [["Number",1]]],
+  ['{1;2}', [["Number",2]]],
+  ['{1+2}', [["Number",3]]],
+  [' { 7 - 3 } ', [["Number",4]]],
+  ['{[5]}', [["Array",[["Number",5]]]]],
+  ['a = [1, 2]', [["Array",[["Number",1],["Number",2]]]]],
+  ['{[1, 2] + [3, 4]}', [["Array",[["Number",1],["Number",2],["Number",3],["Number",4]]]]],
+  ['{a=1; a}', [["Number",1]]],
+  ['{ defun f() { return 77; }; 1 + f(); }', [["Number",78]]],
+  ['{ defun f(x, y) { return x - y; }; f(5, 2); }', [["Number",3]]],
 ];
 
 var code_vs_exec_args = [
-  ['ls', ['ls']],
-  ['a=["x", "y"]; ls zz $*a ww', ['ls', 'zz', 'x', 'y', 'ww']],
-  ['{exec("blah");}', ['blah']],
+  ['ls', ["Array",[["String","ls"]]]],
+  ['a=["x", "y"]; ls zz $*a ww', ["Array",[["String","ls"],["String","zz"],["String","x"],["String","y"],["String","ww"]]]],
+  ['{exec("blah");}', ["Array",[["String","blah"]]]],
 ];
 
 // TODO: deduplicate tests code
