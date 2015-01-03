@@ -258,11 +258,14 @@ function match_params(lambda, positional_args, named_args) {
 	var cur_param_type = get_str(cur_param[1]);
 	// console.log('params', i, cur_param_name, cur_param_type);
 	if(cur_param_type == 'arg_pos') {
-	  if(positional_args.length-1 < positional_idx) {
+	  if(p.length-1 < positional_idx) {
 		return [false, {}, 'not enough pos args'];
 	  }
 	  scope[cur_param_name] = p[positional_idx++];
 	}
+  }
+  if(p.length > positional_idx) {
+	return [false, {}, 'not enough pos args'];
   }
   return [true, scope, 'all matched'];
 }
