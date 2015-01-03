@@ -265,7 +265,7 @@ function match_params(lambda, positional_args, named_args) {
 	}
   }
   if(p.length > positional_idx) {
-	return [false, {}, 'not enough pos args'];
+	return [false, {}, 'too much pos args'];
   }
   return [true, scope, 'all matched'];
 }
