@@ -152,9 +152,12 @@ parameters "Function parameters list" =
   }
 
 parameter "Function parameter" =
-  "*" v:varname { return N('arg_rest', [], v.data); } /
-  "**" v:varname { return N('arg_kw', [], v.data); } /
-  v:varname { return N('arg_pos', [], v.data); }
+  "*" v:varname { return N('arg_rest_pos', [], v.data); } /
+  "**" v:varname { return N('arg_rest_kw', [], v.data); } /
+  v:varname t:parameter_type? { return N('arg_pos', t ? [t] : [], v.data); }
+
+parameter_type "Function parameter type" =
+  space? ":" space? t:varname space? { return N('arg_type', [], t.data);  }
 
 return "return" =
   "return" space? e:expr { return N('ret', [e]); }

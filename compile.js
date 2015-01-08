@@ -50,6 +50,18 @@ function transform_args(node) {
   }
   var ret = [['push_arr']];
   node.forEach(function(n) {
+	if(n[0]) {
+	  var param_type =
+	  [
+		['push_str', n[0].data]
+	  ]
+	} else {
+	  var param_type =
+	  [
+		['push_nul']
+	  ]
+	};
+	// console.log('XXX', n, param_type);
 	ret = ret.concat(
 	  [
 		['push_arr'],
@@ -57,8 +69,10 @@ function transform_args(node) {
 	  ],
 	  compile_push(),
 	  [
-		['push_str', n.node_type],
+		['push_str', n.node_type], // mode: arg_pos, arg_rest_pos, arg_rest_kw
 	  ],
+	  compile_push(),
+	  param_type,
 	  compile_push(),
 	  compile_push()
 	)

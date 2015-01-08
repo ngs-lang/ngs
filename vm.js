@@ -20,6 +20,14 @@ function make_getter(type) {
   return r;
 }
 
+function get_type(data) {
+  if(Object.prototype.toString.call(data) !== '[object Array]') {
+	console.log('Got non-data', data);
+	throw new Error('Got non-data: ' + Object.toString(data));
+  }
+  return data[0];
+}
+
 var get_num = make_getter('Number');
 var get_str = make_getter('String');
 var get_arr = make_getter('Array');
@@ -255,11 +263,22 @@ function match_params(lambda, positional_args, named_args) {
   for(var i=0; i<params.length; i++) {
 	var cur_param = get_arr(params[i]);
 	var cur_param_name = get_str(cur_param[0]);
-	var cur_param_type = get_str(cur_param[1]);
-	// console.log('params', i, cur_param_name, cur_param_type);
-	if(cur_param_type == 'arg_pos') {
+	var cur_param_mode = get_str(cur_param[1]);
+	var cur_param_type;
+	if(get_type(cur_param[2]) !== 'Null') {
+	  cur_param_type = get_str(cur_param[2]);
+	} else {
+	  cur_param_type = null;
+	}
+	// console.log('params', i, cur_param_name, cur_param_mode);
+	if(cur_param_mode == 'arg_pos') {
 	  if(p.length-1 < positional_idx) {
 		return [false, {}, 'not enough pos args'];
+	  }
+	  if(cur_param_type) {
+		if(get_type(p[positional_idx]) !== cur_param_type) {
+		  return [false, {}, 'pos args type mismatch at ' + positional_idx];
+		}
 	  }
 	  scope[cur_param_name] = p[positional_idx++];
 	}
@@ -335,6 +354,7 @@ VM.prototype.opcodes = {
   'push_str': function(v) {	this.context.stack.push(['String', v]);  },
   'push_arr': function(v) {	this.context.stack.push(['Array', []]);  },
   'push_hsh': function(v) {	this.context.stack.push(['Hash', {}]);  },
+  'push_nul': function(v) {	this.context.stack.push(['Null', null]);  },
 
   // stack: ... value -> ...
   'pop': function() {

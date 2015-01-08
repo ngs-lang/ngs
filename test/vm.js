@@ -17,6 +17,7 @@ var code_vs_stack = [
   ['{a=1; a}', [["Number",1]]],
   ['{ defun f() { return 77; }; 1 + f(); }', [["Number",78]]],
   ['{ defun f(x, y) { return x - y; }; f(5, 2); }', [["Number",3]]],
+  ['{ defun f(x:String) { return 1; }; defun f(x:Number) { return 2; }; [f("a"), f(100)] }', [["Array",[["Number",1],["Number",2]]]]],
 ];
 
 var code_vs_exec_args = [
