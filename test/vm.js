@@ -8,6 +8,7 @@ var nm = require('../vm-native-methods');
 var compile = require('../compile').compile;
 
 var code_vs_stack = [
+  // * basics ***
   ['{1}', [["Number", 1]]],
   ['{1;2}', [["Number", 2]]],
   ['{1+2}', [["Number", 3]]],
@@ -16,14 +17,21 @@ var code_vs_stack = [
   ['a = [1, 2]', [["Array", [["Number", 1], ["Number", 2]]]]],
   ['{[1, 2] + [3, 4]}', [["Array", [["Number", 1], ["Number", 2], ["Number", 3], ["Number", 4]]]]],
   ['{a=1; a}', [["Number", 1]]],
+  // *** defun ***
   ['{ defun f() { return 77; }; 1 + f(); }', [["Number", 78]]],
   ['{ defun f(x, y) { return x - y; }; f(5, 2); }', [["Number", 3]]],
   ['{ defun f(x:String) { return 1; }; defun f(x:Number) { return 2; }; [f("a"), f(100)] }', [["Array", [["Number", 1], ["Number", 2]]]]],
-  ['{if{[]}{1}{2}}', [["Number", 2]]],
-  ['{if{[7]}{1}{2}}', [["Number", 1]]],
+  // *** if ***
+  ['{ if{[]}{1}{2} }', [["Number", 2]]],
+  ['{ if{[7]}{1}{2} }', [["Number", 1]]],
+  ['{ if{0}{1} }', [["Null", null]]],
+  // *** Bool() ***
   ['{ [ 1 < 2, 2 < 1] }', [["Array", [["Bool", true], ["Bool", false]]]]],
+  // *** while ***
   ['{a = 0; r = []; while {a < 2} {push(r, a); a = a + 1;}; r;}', [["Array", [["Number", 0], ["Number", 1]]]]],
   ['{a = 0; r = []; while not {1 < a} {push(r, a); a = a + 1;}; r;}', [["Array", [["Number", 0], ["Number", 1]]]]],
+  // *** break ***
+  ['{a = 0; r = []; while {a < 2} {break; push(r, a); a = a + 1;}; r;}', [["Array", []]]],
   // TODO // ['{Bool((ls))}', [["Bool", true]]],
   // TODO // ['{Bool((ls NOSUCHFILE))}', [["Bool", false]]],
 ];

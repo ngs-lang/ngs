@@ -53,6 +53,14 @@ function compile_push() {
   ];
 }
 
+function process_break(code, delta) {
+  for(var i=0; i<code.length; i++) {
+	if(code[i] === '$BREAK') {
+	  code[i] = ['jump', code.length - i - 1 /* from next instruction */ + delta];
+	}
+  }
+}
+
 function transform_args(node) {
   if(!node.is('parameters')) {
 	throw new Error('transform_args() must handle "parameters" nodes only');
@@ -128,7 +136,11 @@ function compile_tree(node, leave_value_in_stack) {
 	if(node[2]) {
 	  f = compile_tree(node[2], leave_value_in_stack);
 	} else {
-	  f = [];
+	  if(leave_value_in_stack) {
+		f = [['push_nul']];
+	  } else {
+		f = [];
+	  }
 	}
 	ret = ret.concat([
 	  ['jump_if_false', t.length+1]
@@ -139,22 +151,21 @@ function compile_tree(node, leave_value_in_stack) {
   }
   if(node.is('while')) {
     var ret = [];
-	// ret = ret.concat(compile_pos_args(
 	var inverse = node.data;
 	var jump_cmd = inverse ? 'jump_if_true': 'jump_if_false';
 
-	ret = ret.concat([
-	  ['push_arr'],
-	]);
-	ret = ret.concat(compile_tree(node[0], true)); // condition
-	ret = ret.concat(
-	  compile_push(),
-	  compile_invoke_pos_args_in_stack('Bool')
-	);
-    var body = compile_tree(node[1], false);
+	var body = compile_tree(node[1], false);
+	process_break(body, 1); // + 1 for jump up instruction
+
 	ret = ret.concat(
 	  [
-		[jump_cmd, body.length + 1] // +1 for the jump instruction itself
+		['push_arr'],
+	  ],
+	  compile_tree(node[0], true), // condition
+	  compile_push(),
+	  compile_invoke_pos_args_in_stack('Bool'),
+	  [
+		[jump_cmd, body.length + 1], // +1 for the jump
 	  ],
 	  body
 	);
@@ -164,7 +175,9 @@ function compile_tree(node, leave_value_in_stack) {
 	  ['push_nul'],
 	]);
     return pop_if_needed(ret, leave_value_in_stack);
-
+  }
+  if(node.is('break')) {
+	return ['$BREAK'];
   }
   // TODO - refactor - start
   if(node.is('number')) {

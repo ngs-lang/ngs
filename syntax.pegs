@@ -45,6 +45,11 @@ while "while" =
     return N('while', [cond, body], not ? true : false);
   }
 
+break "break" =
+  "break" space? {
+    return N('break', []);
+  }
+
 async "async" =
   "async" space e:CCEXPR {
     return N('async', [e]);
@@ -98,6 +103,7 @@ expr_call "Function call" =
 expr_base "Expression/no-add" =
   if /
   while /
+  break /
   guard /
   type_definition /
   assignment /
