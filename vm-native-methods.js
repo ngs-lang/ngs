@@ -1,5 +1,7 @@
 "use strict";
 
+var util = require('util');
+
 function Args() {
   if(!this || this == global) {
 	return new Args();
