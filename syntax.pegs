@@ -81,6 +81,7 @@ expr_call "Function call" =
 
 expr_base "Expression/no-add" =
   if /
+  guard /
   type_definition /
   assignment /
   lambda /
@@ -184,3 +185,6 @@ type_field_definition "Definition of a field of a type" =
   space? name:varname space? ":" space? type:varname space? {
     return N('field_definition', [], [name.data, type.data]);
   }
+
+guard "Function entry guard" =
+  "guard" space e:expr { return N('guard', [e]); }

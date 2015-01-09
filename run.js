@@ -9,6 +9,13 @@ var storage = require('./storage').storage;
 var compile = require('./compile').compile;
 var jobs = require('./plugins/jobs');
 
+var data = require('./vm-data');
+var nm = require('./vm-native-methods');
+
+for(var k in data) {
+  global[k] = data[k];
+}
+
 // TODO: security checks
 function run(job) {
 
@@ -27,10 +34,11 @@ function run(job) {
   var v = new vm.VM();
   var ctx = v.setupContext();
 
-  ctx.registerMethod('exec', function ngs_runtime_exec(args) {
+  ctx.registerNativeMethod('exec', nm.Args().rest_pos('args').get(), function ngs_runtime_exec(scope) {
+	var args = get_arr(scope.args);
     var subJob = new objects.ExecJob(null, {
-      'cmd': args[0],
-      'args': args.slice(1),
+      'cmd': get_str(args[0]),
+      'args': args.slice(1).map(get_str),
       'parent_id': job.id
     });
     subJob.start(function ngs_runtime_exec_finish_callback(e, exit_code, signal) {
@@ -42,9 +50,10 @@ function run(job) {
   });
 
   v.useCode(code);
-  console.log(code);
+  // console.log(code);
   v.start(function ngs_runtime_script_finish_callback() {
 	console.log('finished_contexts', util.inspect(v.finished_contexts, {'depth': 10}));
+	console.log('types', v.types);
   });
   // TODO: update state
   console.log('RUN END');

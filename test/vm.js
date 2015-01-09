@@ -4,6 +4,7 @@
 var assert = require('assert');
 
 var vm = require('../vm');
+var nm = require('../vm-native-methods');
 var compile = require('../compile').compile;
 
 var code_vs_stack = [
@@ -60,9 +61,9 @@ code_vs_exec_args.forEach(function(code_args, idx) {
 	it('Code #' + idx + ': ' + code_args[0].slice(0, 20), function(done) {
 	  var v = new vm.VM();
 	  var c = v.setupContext();
-	  c.registerMethod('exec', function(args) {
-		console.log('exec args', args);
-		assert.deepEqual(args, code_args[1]);
+	  c.registerNativeMethod('exec', nm.Args().rest_pos('args').get(), function(scope) {
+		console.log('exec args', scope.args);
+		assert.deepEqual(scope.args, code_args[1]);
 		return {'something': 'that', 'exec': 'returns'};
 	  });
 	  var code = compile(code_args[0]).compiled_code;

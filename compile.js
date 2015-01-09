@@ -84,7 +84,7 @@ function compile_tree(node, leave_value_in_stack) {
   if(leave_value_in_stack === undefined) {
 	leave_value_in_stack = 1;
   }
-  console.log('node', node, leave_value_in_stack);
+  // console.log('node', node, leave_value_in_stack);
   if(node.is('assignment')) {
     if(node[0].is('varname')) {
       var rhs = dup_if_needed(compile_tree(node[1], true), leave_value_in_stack);
@@ -164,7 +164,7 @@ function compile_tree(node, leave_value_in_stack) {
       var t = compile_tree(node[i]);
 	  ret = ret.concat(t);
 	  if(node[i].is('splice')) {
-		m = 'concat'
+		m = '__add'
 	  } else {
 		m = 'push'
 	  }
@@ -250,7 +250,7 @@ function compile_tree(node, leave_value_in_stack) {
 	//   ]
 	// );
 
-	console.log('FUNC CODE', code, leave_value_in_stack);
+	// console.log('FUNC CODE', code, leave_value_in_stack);
 	var ret = [].concat(
 	  compile_invoke('Array'),
 	  // Lexical scopes
@@ -294,13 +294,12 @@ function compile_tree(node, leave_value_in_stack) {
 	);
 	return pop_if_needed(ret, leave_value_in_stack);
   }
-  if(node.is('ret')) {
+  if(node.is('ret') || node.is('guard')) {
 	var ret = compile_tree(node[0], true);
 	ret = ret.concat([
-	  ['ret'],
+	  [node.node_type],
 	]);
 	return ret;
-
   }
   if(node.node_type) {
     throw "Don't know how to compile type '" + node.node_type + "'";
