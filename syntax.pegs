@@ -1,3 +1,7 @@
+// ***************************************************
+// Warning operators precedence is not handled yet !!!
+// ***************************************************
+
 {
 	var N = require('./ast_node').ASTNode;
 }
@@ -24,6 +28,7 @@ command "command" =
   assignment inline_space command /
   assignment /
   if /
+  while /
   async /
   execute_external_prog
 
@@ -32,6 +37,12 @@ command "command" =
 if "if" =
   'if' space? cond:CCEXPR space? 'then'? space? if_true:CCEXPR space? 'else'? space? if_false:CCEXPR? {
     return N('if', [cond, if_true]).push(if_false);
+  }
+
+while "while" =
+  // Experiemntal feature "not"
+  "while" space? not:"not"? space? cond:CCEXPR space? body:CCEXPR space? {
+    return N('while', [cond, body], not ? true : false);
   }
 
 async "async" =
@@ -63,7 +74,9 @@ top_level_expressions "semicolon separated top-level expressions" =
   } /
   e:expr { return N('top_level_expressions', [e]); }
 
+// ********************************************************************
 // TODO fix expr_* order for operation precedence. Low priority at top.
+// ********************************************************************
 
 expr "Expression/add" =
   e1:expr_call space? "+" space? e2:expr_call {
@@ -71,6 +84,9 @@ expr "Expression/add" =
   } /
   e1:expr_call space? "-" space? e2:expr_call {
     return N('binop', [e1, e2], 'sub');
+  } /
+  e1:expr_call space? "<" space? e2:expr_call {
+    return N('binop', [e1, e2], 'lt');
   } /
   e:expr_call { return e; }
 
@@ -81,6 +97,7 @@ expr_call "Function call" =
 
 expr_base "Expression/no-add" =
   if /
+  while /
   guard /
   type_definition /
   assignment /

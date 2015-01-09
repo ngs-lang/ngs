@@ -102,6 +102,12 @@ function register_native_methods() {
 	return ['Number', get_num(scope.a) - get_num(scope.b)];
   });
 
+  // stack: ... v1 v2 -> ... bool
+  this.registerNativeMethod('__lt', p_args('a', 'Number', 'b', 'Number'), function vm___sub(scope) {
+	// TODO: when multi-method is implemented, move to another method
+	return ['Bool', get_num(scope.a) < get_num(scope.b)];
+  });
+
   // stack: ... v -> ...
   this.registerNativeMethod('echo', Args().rest_pos('p').get(), function vm_echo(scope) {
 	console.log('ECHO', util.inspect(get_arr(scope.p), {depth: 20}), scope.n);

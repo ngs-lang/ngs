@@ -3,7 +3,8 @@
 // Naive implementation, not optimized.
 // Highly likely to be a throw-away so the major concern is simplicity.
 
-var debug_match_params = process.env.NGS_DEBUG_PARAMS;
+var debug_match_params = !!process.env.NGS_DEBUG_PARAMS;
+var debug_delay = !!process.env.NGS_DEBUG_DELAY;
 
 var util = require('util');
 var native_methods = require('./vm-native-methods');
@@ -21,6 +22,7 @@ function Context(global_scope) {
 }
 
 Context.prototype.initialize = function(global_scope) {
+  this.state = 'running';
   this.ip = 0;
   this.stack = [];
   this.frames = [];
@@ -101,6 +103,7 @@ VM.prototype.start = function(finished_callback) {
 VM.prototype.mainLoop = function() {
   var stack_debug = process.env.NGS_DEBUG_STACK;
   while(this.runnable_contexts.length) {
+	// console.log('DEBUG DELAY PRE', this.runnable_contexts.length);
 	this.context = this.runnable_contexts[0];
 	var op = this.code[this.context.ip];
 	this.context.ip++;
@@ -116,6 +119,18 @@ VM.prototype.mainLoop = function() {
 	  throw new Error("Illegal opcode: " + op[0] + " at " + (this.context.ip-1));
 	}
 	this.opcodes[op[0]].call(this, op[1]);
+	if(debug_delay && this.context.state === 'running') {
+	  console.log('DEBUG DELAY', this.runnable_contexts.length);
+	  var ctx = this.context;
+	  this.suspend_context();
+	  setTimeout(function() {
+		if(ctx.state === 'suspended') {
+		  // console.log('CALLING UNSUSPEND_CONTEXT');
+		  this.unsuspend_context(ctx);
+		}
+	  }.bind(this), 100);
+	  break;
+	}
   }
   if(!this.runnable_contexts.length && !this.suspended_contexts.length) {
 	this.finished_callback(this);
@@ -123,12 +138,18 @@ VM.prototype.mainLoop = function() {
 }
 
 VM.prototype.suspend_context = function() {
+  console.log('DEBUG DELAY B', this.runnable_contexts.length);
   var ctx = this.runnable_contexts.shift();
+  if(!ctx) {
+	throw new Error("VM.suspend_context: no runnable contexts.");
+  }
+  ctx.state = 'suspended';
   this.suspended_contexts.push(ctx);
   // console.log('suspend_context', ctx);
 }
 
 VM.prototype.unsuspend_context = function(ctx) {
+  console.log('UNSUSPEND_CONTEXT', ctx);
   var i = this.suspended_contexts.indexOf(ctx);
   if(i === -1) {
 	if(this.runnable_contexts.indexOf(ctx) !== -1) {
@@ -138,6 +159,7 @@ VM.prototype.unsuspend_context = function(ctx) {
 	}
   }
   this.suspended_contexts.splice(i, 1);
+  ctx.state = 'running';
   this.runnable_contexts.push(ctx);
   setTimeout(function() {
 	this.mainLoop();
@@ -268,6 +290,7 @@ Context.prototype.invoke = function(methods, positional_args, named_args, vm) {
 VM.prototype.opcodes = {
 
   'halt': function() {
+	this.context.state = 'finished';
 	this.finished_contexts.push(this.runnable_contexts.shift());
   },
 

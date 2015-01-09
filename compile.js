@@ -26,9 +26,18 @@ function pop_if_needed(code, leave_value_in_stack) {
   return code;
 }
 
-function compile_invoke(method_name, positional_args, named_args) {
+function compile_invoke_no_args(method_name) {
   return [
 	['push_arr'],
+	['push_hsh'],
+	['push_str', method_name],
+	['get_var'],
+	['invoke'],
+  ];
+}
+
+function compile_invoke_pos_args_in_stack(method_name) {
+  return [
 	['push_hsh'],
 	['push_str', method_name],
 	['get_var'],
@@ -112,12 +121,7 @@ function compile_tree(node, leave_value_in_stack) {
 	ret = ret.concat(compile_tree(node[0], true)); // condition
 	ret = ret.concat(
 	  compile_push(),
-	  [
-		['push_hsh'],
-		['push_str', 'Bool'],
-		['get_var'],
-		['invoke']
-	  ]
+	  compile_invoke_pos_args_in_stack('Bool')
 	);
     var t = compile_tree(node[1], leave_value_in_stack);
 	var f;
@@ -132,6 +136,35 @@ function compile_tree(node, leave_value_in_stack) {
 	  ['jump', f.length]
 	], f);
     return ret;
+  }
+  if(node.is('while')) {
+    var ret = [];
+	// ret = ret.concat(compile_pos_args(
+	var inverse = node.data;
+	var jump_cmd = inverse ? 'jump_if_true': 'jump_if_false';
+
+	ret = ret.concat([
+	  ['push_arr'],
+	]);
+	ret = ret.concat(compile_tree(node[0], true)); // condition
+	ret = ret.concat(
+	  compile_push(),
+	  compile_invoke_pos_args_in_stack('Bool')
+	);
+    var body = compile_tree(node[1], false);
+	ret = ret.concat(
+	  [
+		[jump_cmd, body.length + 1] // +1 for the jump instruction itself
+	  ],
+	  body
+	);
+	var jump_up = ret.length + 1; // +1 for the jump instruction itself
+	ret = ret.concat([
+	  ['jump', -jump_up],
+	  ['push_nul'],
+	]);
+    return pop_if_needed(ret, leave_value_in_stack);
+
   }
   // TODO - refactor - start
   if(node.is('number')) {
@@ -169,12 +202,7 @@ function compile_tree(node, leave_value_in_stack) {
   if(node.is('exec')) {
     // TODO: real word expansion
 	var ret = compile_tree(node[0]);
-	ret = ret.concat([
-	  ['push_hsh', {}],
-	  ['push_str', 'exec'],
-	  ['get_var'],
-	  ['invoke'],
-	]);
+	ret = ret.concat(compile_invoke_pos_args_in_stack('exec'));
 	return pop_if_needed(ret, leave_value_in_stack);
   }
   if(node.is('splice')) {
@@ -185,7 +213,7 @@ function compile_tree(node, leave_value_in_stack) {
     var ret = [
 	  ['comment', 'start', node.node_type],
 	];
-	ret = ret.concat(compile_invoke('Array'));
+	ret = ret.concat(compile_invoke_no_args('Array'));
 	var m;
     for(var i=0; i<node.length; i++) {
       var t = compile_tree(node[i]);
@@ -220,7 +248,7 @@ function compile_tree(node, leave_value_in_stack) {
   }
   if(node.is('deftype')) {
 	// TODO: new call convention
-	var mk_array = compile_invoke('Array');
+	var mk_array = compile_invoke_no_args('Array');
     var ret = [].concat(
 	  [
 		['comment', 'start', node.node_type],
@@ -268,20 +296,11 @@ function compile_tree(node, leave_value_in_stack) {
 	return pop_if_needed(ret, leave_value_in_stack);
   }
   if(node.is('lambda')) {
-	// XXX
 	var code = compile_tree(node[1], true);
-	// code = code.concat(
-	//   [
-	// 	['push', null],
-	// 	['return']
-	//   ]
-	// );
-
-	// console.log('FUNC CODE', code, leave_value_in_stack);
 	var ret = [].concat(
-	  compile_invoke('Array'),
+	  compile_invoke_no_args('Array'),
 	  // Lexical scopes
-	  compile_invoke('__get_lexical_scopes'),
+	  compile_invoke_no_args('__get_lexical_scopes'),
 	  compile_push(),
 	  transform_args(node[0]),
 	  compile_push(),
@@ -298,12 +317,8 @@ function compile_tree(node, leave_value_in_stack) {
 		['invoke2'],
 	  ],
 	  compile_push(),
-	  [
-		['push_hsh'],
-		['push_str', '__lambda'],
-		['get_var'],
-		['invoke'],
-	  ]);
+	  compile_invoke_pos_args_in_stack('__lambda')
+	);
 	return pop_if_needed(ret, leave_value_in_stack);
   }
   if(node.is('call')) {

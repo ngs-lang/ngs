@@ -8,27 +8,30 @@ var nm = require('../vm-native-methods');
 var compile = require('../compile').compile;
 
 var code_vs_stack = [
-  ['{1}', [["Number",1]]],
-  ['{1;2}', [["Number",2]]],
-  ['{1+2}', [["Number",3]]],
-  [' { 7 - 3 } ', [["Number",4]]],
-  ['{[5]}', [["Array",[["Number",5]]]]],
-  ['a = [1, 2]', [["Array",[["Number",1],["Number",2]]]]],
-  ['{[1, 2] + [3, 4]}', [["Array",[["Number",1],["Number",2],["Number",3],["Number",4]]]]],
-  ['{a=1; a}', [["Number",1]]],
-  ['{ defun f() { return 77; }; 1 + f(); }', [["Number",78]]],
-  ['{ defun f(x, y) { return x - y; }; f(5, 2); }', [["Number",3]]],
-  ['{ defun f(x:String) { return 1; }; defun f(x:Number) { return 2; }; [f("a"), f(100)] }', [["Array",[["Number",1],["Number",2]]]]],
+  ['{1}', [["Number", 1]]],
+  ['{1;2}', [["Number", 2]]],
+  ['{1+2}', [["Number", 3]]],
+  [' { 7 - 3 } ', [["Number", 4]]],
+  ['{[5]}', [["Array", [["Number", 5]]]]],
+  ['a = [1, 2]', [["Array", [["Number", 1], ["Number", 2]]]]],
+  ['{[1, 2] + [3, 4]}', [["Array", [["Number", 1], ["Number", 2], ["Number", 3], ["Number", 4]]]]],
+  ['{a=1; a}', [["Number", 1]]],
+  ['{ defun f() { return 77; }; 1 + f(); }', [["Number", 78]]],
+  ['{ defun f(x, y) { return x - y; }; f(5, 2); }', [["Number", 3]]],
+  ['{ defun f(x:String) { return 1; }; defun f(x:Number) { return 2; }; [f("a"), f(100)] }', [["Array", [["Number", 1], ["Number", 2]]]]],
   ['{if{[]}{1}{2}}', [["Number", 2]]],
   ['{if{[7]}{1}{2}}', [["Number", 1]]],
+  ['{ [ 1 < 2, 2 < 1] }', [["Array", [["Bool", true], ["Bool", false]]]]],
+  ['{a = 0; r = []; while {a < 2} {push(r, a); a = a + 1;}; r;}', [["Array", [["Number", 0], ["Number", 1]]]]],
+  ['{a = 0; r = []; while not {1 < a} {push(r, a); a = a + 1;}; r;}', [["Array", [["Number", 0], ["Number", 1]]]]],
   // TODO // ['{Bool((ls))}', [["Bool", true]]],
   // TODO // ['{Bool((ls NOSUCHFILE))}', [["Bool", false]]],
 ];
 
 var code_vs_exec_args = [
-  ['ls', ["Array",[["String","ls"]]]],
-  ['a=["x", "y"]; ls zz $*a ww', ["Array",[["String","ls"],["String","zz"],["String","x"],["String","y"],["String","ww"]]]],
-  ['{exec("blah");}', ["Array",[["String","blah"]]]],
+  ['ls', ["Array", [["String", "ls"]]]],
+  ['a=["x", "y"]; ls zz $*a ww', ["Array", [["String", "ls"], ["String", "zz"], ["String", "x"], ["String", "y"], ["String", "ww"]]]],
+  ['{exec("blah");}', ["Array", [["String", "blah"]]]],
 ];
 
 // TODO: deduplicate tests code
