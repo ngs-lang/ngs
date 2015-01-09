@@ -91,6 +91,7 @@ expr_base "Expression/no-add" =
   string /
   "true" { return N('bool', [], true); } /
   "false" { return N('bool', [], false); } /
+  "null" { return N('null', [], false); } /
   varname /
   array_literal /
   CCEXPR_commands

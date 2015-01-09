@@ -53,13 +53,26 @@ function register_native_methods() {
 	return ['Array', new Array()];
   });
 
-  // stack: ... -> Boolean
+  // stack: ... v -> Boolean
   this.registerNativeMethod('Bool', p_args('x', null), function vm_Bool_p_any(scope) {
-	return ['Bool', !!scope.x];
+	// Anything that was not processed by any other Bool() method
+	// will have it's JS boolean value as result.
+	return ['Bool', !!scope.x[1]]; // XXX broken get_TYP(v) data access abstraction
+  });
+
+  // stack: ... v -> Boolean
+  this.registerNativeMethod('Bool', p_args('p', 'Process'), function vm_Bool_p_process(scope) {
+	var p = get_prc(scope.p);
+	if(p.state !== 'done') {
+	  // TODO: throw GuardYield or something like that,
+	  //       indicating guard failure
+	  throw new Error("Can't Bool() unfinished process");
+	}
+	return ['Bool', p.exit_code === 0];
   });
 
   // TODO: move to NSL - Ngs Standard Library
-  // stack: ... -> Boolean
+  // stack: ... v -> Boolean
   this.registerNativeMethod('Bool', p_args('a', 'Array'), function vm_Bool_p_arr(scope) {
 	return ['Bool', get_arr(scope.a).length != 0];
   });

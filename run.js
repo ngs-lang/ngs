@@ -39,14 +39,20 @@ function run(job) {
     var subJob = new objects.ExecJob(null, {
       'cmd': get_str(args[0]),
       'args': args.slice(1).map(get_str),
-      'parent_id': job.id
+      'parent_id': job.id,
+	  'error': null,
+	  'exit_code': null,
+	  'signal': null,
     });
     subJob.start(function ngs_runtime_exec_finish_callback(e, exit_code, signal) {
 	  // ctx.stack.push([e, exit_code, signal]);
+	  subJob.error = e;
+	  subJob.exit_code = exit_code;
+	  subJob.signal = signal;
 	  v.unsuspend_context(this);
 	}.bind(this));
 	v.suspend_context();
-	return subJob;
+	return ['Process', subJob];
   });
 
   v.useCode(code);

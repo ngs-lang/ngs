@@ -21,6 +21,8 @@ var code_vs_stack = [
   ['{ defun f(x:String) { return 1; }; defun f(x:Number) { return 2; }; [f("a"), f(100)] }', [["Array",[["Number",1],["Number",2]]]]],
   ['{if{[]}{1}{2}}', [["Number", 2]]],
   ['{if{[7]}{1}{2}}', [["Number", 1]]],
+  // TODO // ['{Bool((ls))}', [["Bool", true]]],
+  // TODO // ['{Bool((ls NOSUCHFILE))}', [["Bool", false]]],
 ];
 
 var code_vs_exec_args = [

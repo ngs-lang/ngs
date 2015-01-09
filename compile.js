@@ -152,6 +152,12 @@ function compile_tree(node, leave_value_in_stack) {
 	}
 	return [['push_boo', node.data]];
   }
+  if(node.is('null')) {
+	if(!leave_value_in_stack) {
+	  return [];
+	}
+	return [['push_nul']];
+  }
   // TODO - refactor - end
   if(node.is('varname')) {
 	var ret = [

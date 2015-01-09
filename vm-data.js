@@ -28,7 +28,9 @@ make_getter('Bool',         'boo');
 make_getter('Hash',         'hsh');
 make_getter('Lambda',       'lmb');
 make_getter('NativeMethod', 'nm');
+make_getter('Null',         'nul');
 make_getter('Number',       'num');
+make_getter('Process',      'prc');
 make_getter('Scopes',       'scp');
 make_getter('String',       'str');
 
