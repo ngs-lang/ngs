@@ -52,8 +52,10 @@ function run(job) {
   v.useCode(code);
   // console.log(code);
   v.start(function ngs_runtime_script_finish_callback() {
-	console.log('finished_contexts', util.inspect(v.finished_contexts, {'depth': 10}));
-	console.log('types', v.types);
+	if(process.env.NGS_DEBUG_FINISH) {
+	  console.log('finished_contexts', util.inspect(v.finished_contexts, {'depth': 10}));
+	  console.log('types', v.types);
+	}
   });
   // TODO: update state
   console.log('RUN END');

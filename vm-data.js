@@ -23,12 +23,13 @@ function get_type(data) {
   return data[0];
 }
 
-make_getter('Number', 'num');
-make_getter('String', 'str');
-make_getter('Array', 'arr');
-make_getter('Hash', 'hsh');
-make_getter('Scopes', 'scp');
-make_getter('Lambda', 'lmb');
+make_getter('Array',        'arr');
+make_getter('Bool',         'boo');
+make_getter('Hash',         'hsh');
+make_getter('Lambda',       'lmb');
 make_getter('NativeMethod', 'nm');
+make_getter('Number',       'num');
+make_getter('Scopes',       'scp');
+make_getter('String',       'str');
 
 exports.get_type = get_type;

@@ -287,6 +287,7 @@ VM.prototype.opcodes = {
   'push_arr': function(v) {	this.context.stack.push(['Array', []]);  },
   'push_hsh': function(v) {	this.context.stack.push(['Hash', {}]);  },
   'push_nul': function(v) {	this.context.stack.push(['Null', null]);  },
+  'push_boo': function(v) {	this.context.stack.push(['Bool', v]);  },
 
   // stack: ... value -> ...
   'pop': function() {
@@ -375,14 +376,14 @@ VM.prototype.opcodes = {
 
   'jump_if_true': function(offset) {
 	var v = this.context.stack.pop();
-	if(v) {
+	if(get_boo(v)) {
 	  this.context.ip += offset;
 	}
   },
 
   'jump_if_false': function(offset) {
 	var v = this.context.stack.pop();
-	if(!v) {
+	if(!get_boo(v)) {
 	  this.context.ip += offset;
 	}
   },

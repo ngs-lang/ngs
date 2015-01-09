@@ -89,6 +89,8 @@ expr_base "Expression/no-add" =
   return /
   number /
   string /
+  "true" { return N('bool', [], true); } /
+  "false" { return N('bool', [], false); } /
   varname /
   array_literal /
   CCEXPR_commands
@@ -121,8 +123,8 @@ string_contents "String contents" =
   s:[-_a-zA-Z0-9*?]* {  return N('string', [], s.join('')); }
 
 array_literal "array literal" =
-  "[" space? es:comma_separated_expressions space? "]" {
-	return N('array', es);
+  "[" space? es:comma_separated_expressions? space? "]" {
+	return N('array', es ? es : []);
   }
 
 comma_separated_expressions "comma-separated expressions" =

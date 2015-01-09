@@ -53,6 +53,17 @@ function register_native_methods() {
 	return ['Array', new Array()];
   });
 
+  // stack: ... -> Boolean
+  this.registerNativeMethod('Bool', p_args('x', null), function vm_Bool_p_any(scope) {
+	return ['Bool', !!scope.x];
+  });
+
+  // TODO: move to NSL - Ngs Standard Library
+  // stack: ... -> Boolean
+  this.registerNativeMethod('Bool', p_args('a', 'Array'), function vm_Bool_p_arr(scope) {
+	return ['Bool', get_arr(scope.a).length != 0];
+  });
+
   // stack: ... array value -> ... array
   this.registerNativeMethod('push', p_args('a', 'Array', 'x', null), function vm_push(scope) {
 	var a = get_arr(scope.a);

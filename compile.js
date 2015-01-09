@@ -105,7 +105,20 @@ function compile_tree(node, leave_value_in_stack) {
     return ret;
   }
   if(node.is('if')) {
-    var ret = compile_tree(node[0], true); // condition
+    var ret = [];
+	ret = ret.concat([
+	  ['push_arr'],
+	]);
+	ret = ret.concat(compile_tree(node[0], true)); // condition
+	ret = ret.concat(
+	  compile_push(),
+	  [
+		['push_hsh'],
+		['push_str', 'Bool'],
+		['get_var'],
+		['invoke']
+	  ]
+	);
     var t = compile_tree(node[1], leave_value_in_stack);
 	var f;
 	if(node[2]) {
@@ -120,6 +133,7 @@ function compile_tree(node, leave_value_in_stack) {
 	], f);
     return ret;
   }
+  // TODO - refactor - start
   if(node.is('number')) {
 	if(!leave_value_in_stack) {
 	  return [];
@@ -132,6 +146,13 @@ function compile_tree(node, leave_value_in_stack) {
 	}
 	return [['push_str', node.data]];
   }
+  if(node.is('bool')) {
+	if(!leave_value_in_stack) {
+	  return [];
+	}
+	return [['push_boo', node.data]];
+  }
+  // TODO - refactor - end
   if(node.is('varname')) {
 	var ret = [
 	  ['push_str', node.data],
