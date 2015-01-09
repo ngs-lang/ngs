@@ -1,3 +1,5 @@
+"use strict";
+
 function make_getter(type, getter_name) {
   var r = function(data) {
 	if(Object.prototype.toString.call(data) !== '[object Array]') {

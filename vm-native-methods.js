@@ -1,5 +1,7 @@
+"use strict";
+
 function Args() {
-  if(this == global) {
+  if(!this || this == global) {
 	return new Args();
   }
   this.args = [];
@@ -110,8 +112,8 @@ function register_native_methods() {
 
   // stack: ... lexical_scopes code_ptr -> ... lambda-object
   //                                           (temporary object repr.)
-  this.registerMethod('__lambda', function vm___lambda(p) {
-	return ['Lambda', p];
+  this.registerNativeMethod('__lambda', p_args('scopes', 'Scopes', 'args', 'Array', 'ip', 'Number'), function vm___lambda(scope) {
+	return ['Lambda', ['Array', [scope.scopes, scope.args, scope.ip]]];
   });
 
   // stack: ... lambda-object name -> ... lambda-object

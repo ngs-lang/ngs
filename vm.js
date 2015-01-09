@@ -3,6 +3,8 @@
 // Naive implementation, not optimized.
 // Highly likely to be a throw-away so the major concern is simplicity.
 
+var debug_match_params = process.env.NGS_DEBUG_PARAMS;
+
 var util = require('util');
 var native_methods = require('./vm-native-methods');
 var data = require('./vm-data');
@@ -177,7 +179,11 @@ function match_params(lambda, positional_args, named_args) {
   var params = get_arr(l[1]);
   var scope = {};
   var positional_idx = 0;
-  // console.log('match_params', positional_args, named_args, util.inspect(params, {depth: 20}));
+  if(debug_match_params) {
+	console.log('match_params positional_args', positional_args);
+	console.log('match_params named_args', named_args);
+	console.log('match_params params', util.inspect(params, {depth: 20}));
+  }
 
   var p = get_arr(positional_args);
   var n = get_hsh(named_args);
@@ -218,59 +224,45 @@ function match_params(lambda, positional_args, named_args) {
 
 
 Context.prototype.invoke = function(methods, positional_args, named_args, vm) {
-  // TODO:
-  //   * Find appropriate method by parameters matching - walk the array
-
   var ms = get_arr(methods);
 
   for(var l=ms.length-1, i=l; i>=0; i--) {
 	var m = ms[i];
 
-	// console.log('m', m);
-
-	// 1. Native old
-	if(typeof m == 'function') {
-	  // Maybe later: parameters matching
-	  this.stack.push(m.call(this, positional_args, named_args, vm));
+	var lambda = get_arr(get_lmb(m));
+	// 0:scopes, 1:args, 2:ip/native_func
+	var scope = match_params(m, positional_args, named_args);
+	if(!scope[0]) {
+	  continue;
+	}
+	var call_type = get_type(lambda[2]);
+	this.frames.push({
+	  lexical_scopes: this.lexical_scopes,
+	  ip: this.ip,
+	  stack_len: this.stack.length,
+	});
+	this.lexical_scopes = get_scp(lambda[0])
+	this.lexical_scopes = this.lexical_scopes.concat(scope[1]);
+	// console.log('lexical_scopes', this.lexical_scopes);
+	if(call_type === 'Number') {
+	  this.ip = get_num(lambda[2]);
 	  return;
 	}
-
-	// 2. User defined or new style
-	if(m[0] === 'Lambda') {
-	  // ['Lambda', ['Array', [SCOPES, ARGS, IP]]]
-	  var scope = match_params(m, positional_args, named_args);
-	  if(!scope[0]) {
-		continue;
-	  }
-	  var lambda = get_arr(get_lmb(m));
-	  // 0:scopes, 1:args, 2:ip/native_func
-	  var call_type = get_type(lambda[2]);
-	  this.frames.push({
-		lexical_scopes: this.lexical_scopes,
-		ip: this.ip,
-		stack_len: this.stack.length,
-	  });
-	  this.lexical_scopes = get_scp(lambda[0])
-	  this.lexical_scopes = this.lexical_scopes.concat(scope[1]);
-	  // console.log('lexical_scopes', this.lexical_scopes);
-	  if(call_type === 'Number') {
-		this.ip = get_num(lambda[2]);
-		return;
-	  }
-	  if(call_type === 'NativeMethod') {
-		var nm = get_nm(lambda[2]);
-		this.stack.push(nm.call(this, scope[1], vm));
-		var frame = this.frames.pop();
-		this.lexical_scopes = frame.lexical_scopes;
-		if(this.stack.length != frame.stack_len + 1) {
-		  throw new Error("Returning with wrong stack size");
-		}
+	if(call_type === 'NativeMethod') {
+	  var nm = get_nm(lambda[2]);
+	  this.stack.push(nm.call(this, scope[1], vm));
+	  var frame = this.frames.pop();
+	  this.lexical_scopes = frame.lexical_scopes;
+	  if(this.stack.length != frame.stack_len + 1) {
+		throw new Error("Returning with wrong stack size");
 	  }
 	  return;
 	}
+	throw new Error("Don't know how to call matched method: " + m);
   }
 
-  throw new Error("Invoke: appropriate method not found");
+  console.log(positional_args);
+  throw new Error("Invoke: appropriate method not found for in " + util.inspect(ms, {depth: 20}));
 }
 
 VM.prototype.opcodes = {
