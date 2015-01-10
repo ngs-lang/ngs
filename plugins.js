@@ -1,5 +1,5 @@
 // TODO: allow external plugins (simple scripts)
-//       For simplicity, allow only JS plugins for now.
+//		 For simplicity, allow only JS plugins for now.
 
 var fs = require('fs');
 var _ = require('underscore');

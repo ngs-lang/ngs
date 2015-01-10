@@ -35,8 +35,8 @@ var jobs = [];
 // Express app setup
 var app = express();
 var options = {
-  key: fs.readFileSync('server-key.pem'),
-  cert: fs.readFileSync('server-cert.pem')
+	key: fs.readFileSync('server-key.pem'),
+	cert: fs.readFileSync('server-cert.pem')
 };
 
 https.createServer(options, app).listen(process.env['ZE_PORT'] || 8443);
@@ -46,21 +46,21 @@ console.log('STARTED');
 app.use(bodyParser());
 
 app.use(function tiny_logger_middleware(req, res, next){
-  console.log('%s %s', req.method, req.url);
-  next();
+	console.log('%s %s', req.method, req.url);
+	next();
 });
 
 app.use(auth.authenticationMiddleware);
 
 app.get('/', function slash_request_handler(req, res){
-  // TODO: list of all URL patterns
-  res.status(501);
-  res.send({'error_message': 'Listing of all URL patterns is not implemented yet'});
+	// TODO: list of all URL patterns
+	res.status(501);
+	res.send({'error_message': 'Listing of all URL patterns is not implemented yet'});
 });
 
 app.get('/ALL', function slash_all_request_handler(req, res){
-  // For debug
-  res.send(storage._data);
+	// For debug
+	res.send(storage._data);
 });
 
 

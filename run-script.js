@@ -5,8 +5,8 @@ var fs = require('fs');
 var f = fs.readSync(process.stdin.fd, BUFFER_SIZE);
 // console.log(f);
 var job = new objects.ScriptJob(null, {
-  'cmd': f[0].toString(),
-  'args': []
+	'cmd': f[0].toString(),
+	'args': []
 });
 job.start();
 
