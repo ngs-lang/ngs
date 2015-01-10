@@ -6,11 +6,28 @@ var _ = require('underscore');
 
 var parser = require('./syntax');
 
+var PUSH_NODES = {
+	'number': true,
+	'string': true,
+	'bool': true,
+	'null': true
+};
+
 function dup_if_needed(code, leave_value_in_stack) {
 	if(leave_value_in_stack) {
 		return code.concat([
 			['comment', 'leave_value_in_stack', true],
 			['dup']
+		]);
+	}
+	return code;
+}
+
+function null_if_needed(code, leave_value_in_stack) {
+	if(leave_value_in_stack) {
+		return code.concat([
+			['comment', 'leave_value_in_stack', true],
+			['push_nul']
 		]);
 	}
 	return code;
@@ -143,11 +160,7 @@ function compile_tree(node, leave_value_in_stack) {
 		if(node[2]) {
 			f = compile_tree(node[2], leave_value_in_stack);
 		} else {
-			if(leave_value_in_stack) {
-				f = [['push_nul']];
-			} else {
-				f = [];
-			}
+			f = null_if_needed([], leave_value_in_stack);
 		}
 		ret = ret.concat([
 			['jump_if_false', t.length+1]
@@ -179,9 +192,8 @@ function compile_tree(node, leave_value_in_stack) {
 		var jump_up = ret.length + 1; // +1 for the jump instruction itself
 		ret = ret.concat([
 			['jump', -jump_up],
-			['push_nul'],
 		]);
-		return pop_if_needed(ret, leave_value_in_stack);
+		return null_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('for')) {
 		// 0: init, 1:cond, 2:incr, 3:body
@@ -216,10 +228,9 @@ function compile_tree(node, leave_value_in_stack) {
 			incr,
 			[
 				['jump', -jump_up],
-				['push_nul'],
 			]
 		);
-		return pop_if_needed(ret, leave_value_in_stack);
+		return null_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('break')) {
 		return ['$BREAK'];
@@ -227,32 +238,12 @@ function compile_tree(node, leave_value_in_stack) {
 	if(node.is('continue')) {
 		return ['$CONTINUE'];
 	}
-	// TODO - refactor - start
-	if(node.is('number')) {
+	if(PUSH_NODES[node.node_type]) {
 		if(!leave_value_in_stack) {
 			return [];
 		}
-		return [['push_num', node.data]];
+		return [['push_' + node.node_type.slice(0, 3), node.data]];
 	}
-	if(node.is('string')) {
-		if(!leave_value_in_stack) {
-			return [];
-		}
-		return [['push_str', node.data]];
-	}
-	if(node.is('bool')) {
-		if(!leave_value_in_stack) {
-			return [];
-		}
-		return [['push_boo', node.data]];
-	}
-	if(node.is('null')) {
-		if(!leave_value_in_stack) {
-			return [];
-		}
-		return [['push_nul']];
-	}
-	// TODO - refactor - end
 	if(node.is('varname')) {
 		ret = [
 			['push_str', node.data],
