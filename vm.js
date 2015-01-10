@@ -109,7 +109,7 @@ VM.prototype.mainLoop = function() {
 		this.context.ip++;
 		if(stack_debug) {
 			console.log('ST', util.inspect(this.context.stack, {depth: 20}));
-			console.log('OP', op);
+			console.log('OP', op, '@', this.context.ip-1);
 			console.log('');
 		}
 		if(op[0] === 'comment') {

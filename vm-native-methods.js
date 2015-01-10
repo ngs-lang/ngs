@@ -100,15 +100,15 @@ function register_native_methods() {
 	});
 
 	// stack: ... v1 v2 -> ... bool
-	this.registerNativeMethod('__lt', p_args('a', 'Number', 'b', 'Number'), function vm___sub(scope) {
+	this.registerNativeMethod('__lt', p_args('a', 'Number', 'b', 'Number'), function vm___lt(scope) {
 		return ['Bool', get_num(scope.a) < get_num(scope.b)];
 	});
 
 	// stack: ... v1 v2 -> ... bool
-	this.registerNativeMethod('__eq', p_args('a', null, 'b', null), function vm___sub(scope) {
+	this.registerNativeMethod('__eq', p_args('a', null, 'b', null), function vm___eq(scope) {
 		// XXX: incorrect implementation, uses JS comparison
 		// XXX: does not use get_TYP data access abstraction
-		return ['Bool', a[1] == a[2]];
+		return ['Bool', scope.a[1] == scope.b[1]];
 	});
 
 	// stack: ... v -> ...

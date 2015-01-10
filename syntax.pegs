@@ -29,11 +29,13 @@ command "command" =
   assignment /
   if /
   while /
+  for /
   async /
   execute_external_prog
 
 // if CCEXPR [then] CCEXPR [else] [CCEXPR]
 // ( while should be: if CCEXPR [then] CCEXPR [[else] CCEXPR] )
+// TODO: if not
 if "if" =
   'if' space? cond:CCEXPR space? 'then'? space? if_true:CCEXPR space? 'else'? space? if_false:CCEXPR? {
     return N('if', [cond, if_true]).push(if_false);
@@ -43,6 +45,12 @@ while "while" =
   // Experiemntal feature "not"
   "while" space? not:"not"? space? cond:CCEXPR space? body:CCEXPR space? {
     return N('while', [cond, body], not ? true : false);
+  }
+
+for "for" =
+  // Experiemntal feature "not"
+  "for" space? init:CCEXPR space? cond:CCEXPR space? incr:CCEXPR space? body:CCEXPR space? {
+    return N('for', [init, cond, incr, body]);
   }
 
 break "break" = "break" space? { return N('break', []); }
@@ -104,6 +112,7 @@ expr_call "Function call" =
 expr_base "Expression/no-add" =
   if /
   while /
+  for /
   break /
   continue /
   guard /

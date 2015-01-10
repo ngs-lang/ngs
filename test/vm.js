@@ -17,25 +17,38 @@ var code_vs_stack = [
 	['a = [1, 2]', [["Array", [["Number", 1], ["Number", 2]]]]],
 	['{[1, 2] + [3, 4]}', [["Array", [["Number", 1], ["Number", 2], ["Number", 3], ["Number", 4]]]]],
 	['{a=1; a}', [["Number", 1]]],
+
 	// *** defun ***
 	['{ defun f() { return 77; }; 1 + f(); }', [["Number", 78]]],
 	['{ defun f(x, y) { return x - y; }; f(5, 2); }', [["Number", 3]]],
-	['{ defun f(x:String) { return 1; }; defun f(x:Number) { return 2; }; [f("a"), f(100)] }', [["Array", [["Number", 1], ["Number", 2]]]]],
+	['{ defun f(x:String) { return 1; }; defun f(x:Number) { return 2; }; [f("a"), f(100)] }',
+	 [["Array", [["Number", 1], ["Number", 2]]]]],
+
 	// *** if ***
 	['{ if{[]}{1}{2} }', [["Number", 2]]],
 	['{ if{[7]}{1}{2} }', [["Number", 1]]],
 	['{ if{0}{1} }', [["Null", null]]],
+
 	// *** Bool() ***
 	['{ [ 1 < 2, 2 < 1] }', [["Array", [["Bool", true], ["Bool", false]]]]],
+
 	// *** while ***
 	['{a = 0; r = []; while {a < 2} {push(r, a); a = a + 1;}; r;}', [["Array", [["Number", 0], ["Number", 1]]]]],
 	['{a = 0; r = []; while not {1 < a} {push(r, a); a = a + 1;}; r;}', [["Array", [["Number", 0], ["Number", 1]]]]],
-	// *** break ***
+
+	// *** while - break ***
 	['{a = 0; r = []; while {a < 2} {break; push(r, a); a = a + 1;}; r;}', [["Array", []]]],
-	// *** continue ***
-	['{a = 0; r = []; while {a < 5} {a = a + 1; if { a < 3 } {continue;}; push(r, a);}; r;}', [["Array", [["Number", 3], ["Number", 4], ["Number", 5]]]]],
+
+	// *** while - continue ***
+	['{a = 0; r = []; while {a < 5} {a = a + 1; if { a < 3 } {continue;}; push(r, a);}; r;}',
+	 [["Array", [["Number", 3], ["Number", 4], ["Number", 5]]]]],
+
+	// *** for/continue/break ***
+	['{a = 0; r = []; for {a=0} {a<5} {a=a+1} {if{a==1} { continue; }; if{a==3} { break; }; push(r, a);}; r}',
+	 [["Array", [["Number", 0], ["Number", 2]]]]],
 	// TODO // ['{Bool((ls))}', [["Bool", true]]],
 	// TODO // ['{Bool((ls NOSUCHFILE))}', [["Bool", false]]],
+
 ];
 
 var code_vs_exec_args = [
