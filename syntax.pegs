@@ -45,10 +45,8 @@ while "while" =
     return N('while', [cond, body], not ? true : false);
   }
 
-break "break" =
-  "break" space? {
-    return N('break', []);
-  }
+break "break" = "break" space? { return N('break', []); }
+continue "continue" = "continue" space? { return N('continue', []); }
 
 async "async" =
   "async" space e:CCEXPR {
@@ -93,6 +91,9 @@ expr "Expression/add" =
   e1:expr_call space? "<" space? e2:expr_call {
     return N('binop', [e1, e2], 'lt');
   } /
+  e1:expr_call space? "==" space? e2:expr_call {
+    return N('binop', [e1, e2], 'eq');
+  } /
   e:expr_call { return e; }
 
 
@@ -104,6 +105,7 @@ expr_base "Expression/no-add" =
   if /
   while /
   break /
+  continue /
   guard /
   type_definition /
   assignment /

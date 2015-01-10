@@ -61,6 +61,14 @@ function process_break(code, delta) {
 	}
 }
 
+function process_continue(code, delta) {
+	for(var i=0; i<code.length; i++) {
+		if(code[i] === '$CONTINUE') {
+			code[i] = ['jump', - i - 1 /* from next instruction */ + delta];
+		}
+	}
+}
+
 function transform_args(node) {
 	if(!node.is('parameters')) {
 		throw new Error('transform_args() must handle "parameters" nodes only');
@@ -156,6 +164,7 @@ function compile_tree(node, leave_value_in_stack) {
 
 		var body = compile_tree(node[1], false);
 		process_break(body, 1); // + 1 for jump up instruction
+		process_continue(body, 0);
 
 		ret = ret.concat(
 			[
@@ -178,6 +187,9 @@ function compile_tree(node, leave_value_in_stack) {
 	}
 	if(node.is('break')) {
 		return ['$BREAK'];
+	}
+	if(node.is('continue')) {
+		return ['$CONTINUE'];
 	}
 	// TODO - refactor - start
 	if(node.is('number')) {

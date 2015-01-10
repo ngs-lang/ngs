@@ -86,26 +86,29 @@ function register_native_methods() {
 
 	// stack: ... v1 v2 -> ... v
 	this.registerNativeMethod('__add', p_args('a', 'Number', 'b', 'Number'), function vm___add(scope) {
-		// TODO: when multi-method is implemented, move to another method
 		return ['Number', get_num(scope.a) + get_num(scope.b)];
 	});
 
 	// stack: ... v1 v2 -> ... v
 	this.registerNativeMethod('__add', p_args('a', 'Array', 'b', 'Array'), function vm___add(scope) {
-		// TODO: when multi-method is implemented, move to another method
 		return ['Array', get_arr(scope.a).concat(get_arr(scope.b))];
 	});
 
 	// stack: ... v1 v2 -> ... v
 	this.registerNativeMethod('__sub', p_args('a', 'Number', 'b', 'Number'), function vm___sub(scope) {
-		// TODO: when multi-method is implemented, move to another method
 		return ['Number', get_num(scope.a) - get_num(scope.b)];
 	});
 
 	// stack: ... v1 v2 -> ... bool
 	this.registerNativeMethod('__lt', p_args('a', 'Number', 'b', 'Number'), function vm___sub(scope) {
-		// TODO: when multi-method is implemented, move to another method
 		return ['Bool', get_num(scope.a) < get_num(scope.b)];
+	});
+
+	// stack: ... v1 v2 -> ... bool
+	this.registerNativeMethod('__eq', p_args('a', null, 'b', null), function vm___sub(scope) {
+		// XXX: incorrect implementation, uses JS comparison
+		// XXX: does not use get_TYP data access abstraction
+		return ['Bool', a[1] == a[2]];
 	});
 
 	// stack: ... v -> ...

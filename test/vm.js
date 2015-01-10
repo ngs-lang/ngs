@@ -32,6 +32,8 @@ var code_vs_stack = [
 	['{a = 0; r = []; while not {1 < a} {push(r, a); a = a + 1;}; r;}', [["Array", [["Number", 0], ["Number", 1]]]]],
 	// *** break ***
 	['{a = 0; r = []; while {a < 2} {break; push(r, a); a = a + 1;}; r;}', [["Array", []]]],
+	// *** continue ***
+	['{a = 0; r = []; while {a < 5} {a = a + 1; if { a < 3 } {continue;}; push(r, a);}; r;}', [["Array", [["Number", 3], ["Number", 4], ["Number", 5]]]]],
 	// TODO // ['{Bool((ls))}', [["Bool", true]]],
 	// TODO // ['{Bool((ls NOSUCHFILE))}', [["Bool", false]]],
 ];
