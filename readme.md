@@ -23,12 +23,12 @@ Early development. Help is welcome.
 Running
 =======
 
-See `server.js`. Instructions are at the top of the file.
+`nodejs ngs/run-script.js SCRIPT_NAME.ngs`
 
 Contributing
 ============
 
-Fork on GitHub, work on whatever you like or what's in `doc/todo.md`, make a pull request.
+Fork on GitHub, work on whatever you like or what's in `doc/todo.org`, make a pull request.
 
 Features
 ========

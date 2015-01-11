@@ -1,0 +1,82 @@
+#+STARTUP: indent
+#+TODO: TODO PROGRESS PENDING | DONE
+
+* Now
+** TODO Move exec() into the VM.
+** TODO examples folder with snippets + tests for the snippets
+** TODO Special-case (non-native!) "-..." execs: "test -.... "
+** Add comments
+*** TODO "#"
+*** TODO "//"
+** TODO Exceptions
+** TODO Native code calling user-land
+** TODO case
+* Type system
+** Function call
+*** DONE Call
+*** Arguments
+**** DONE Positional
+***** DONE Pass
+***** DONE Receive
+***** TODO Splice positional
+***** TODO Splice keywords
+**** TODO Named
+**** TODO Default value
+** TODO Convenience obj.method() syntax
+** TODO Fields access for composite types
+** TODO Function: last evaluated expr is the return value
+** TODO Generate constructor function
+** TODO Inheritance (also: mixins, runtime inheritance change?)
+** TODO Casting
+** Multi-method
+*** PROGRESS Guards
+*** Equality testing in params
+*** Consider "fake" params
+** TODO Parametrized types
+** TODO [think] Runtime type change: RunningProcess -> FinishedProcess
+* Error reporting
+** TODO Backtraces, do not "throw"
++ Method not found
++ "inspect" function to print objects
+* Local vars / lexical scope
+* Modules - load, user defined load, etc
++ Like nodejs with json
+* Get exec output and status (field access)
+* Commands one by one from CLI (solve globals, etc)
+* Session
+* Pubsub
+* Polling for CLI
+* Echo function
+* Host groups and target host
+* Security for code (permissions)
+
+
+=== Type system ===
+
+API:
+	* define type
+	* create object of given type
+	* set field
+	* define method
+	* call method
+
+Points:
+	* Extending built-in types
+
+Code:
+	deftype MyTypeName {
+		x: Number
+		y: String
+	}
+
+	deftype MyEnhancedArray inherits Array {
+		myData: String
+	}
+
+	defmethod MyEnhancedArray(X, a, *args) {
+			  a.myData = 
+			  a.a = args
+	}
+
+	x = MyEnhancedArray(Number, 
+	
