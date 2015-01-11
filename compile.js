@@ -424,6 +424,7 @@ function compile(code, options) {
 	_.extend(o, options || {});
 	var tree = parser.parse(code);
 	var compiled = compile_tree(tree, o.leave_value_in_stack);
+	// console.log('COMPILED', compiled);
 	return {'compiled_code': compiled};
 }
 

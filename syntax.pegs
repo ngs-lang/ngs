@@ -8,6 +8,7 @@
 
 start = 
   commands
+  // top_level_expressions
 
 space = [ \t\n]+
 inline_space = [ \t]+
@@ -43,7 +44,7 @@ if "if" =
 
 while "while" =
   // Experiemntal feature "not"
-  "while" space? not:"not"? space? cond:CCEXPR space? body:CCEXPR space? {
+  "while" space? not:"not"? space? cond:CCEXPR space? body:CCEXPR {
     return N('while', [cond, body], not ? true : false);
   }
 
@@ -80,10 +81,14 @@ CCEXPR_code =
   }
 
 top_level_expressions "semicolon separated top-level expressions" =
-  e:expr space? ";" space? es:top_level_expressions {
+  e:expr top_level_expressions_delimiter es:top_level_expressions {
     return N('top_level_expressions', [e]).concat(es);
   } /
   e:expr { return N('top_level_expressions', [e]); }
+
+top_level_expressions_delimiter =
+  inline_space? ";" space? /
+  space?
 
 // ********************************************************************
 // TODO fix expr_* order for operation precedence. Low priority at top.

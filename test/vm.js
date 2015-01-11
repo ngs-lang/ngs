@@ -49,6 +49,36 @@ var code_vs_stack = [
 	// TODO // ['{Bool((ls))}', [["Bool", true]]],
 	// TODO // ['{Bool((ls NOSUCHFILE))}', [["Bool", false]]],
 
+	[
+		'{\n'+
+			'	a = 1\n'+
+			'	r = []\n'+
+			'	for {a=0} {a\n'+
+			'	<5} {a=a+1}\n'+
+			'	{\n'+
+			'			if {a==1} {\n'+
+			'				continue\n'+
+			'			}\n'+
+			'		  if {a==3} { break }\n'+
+			'		  push(r, a)\n'+
+			'	}\n'+
+			'	while\n'+
+			'	{\n'+
+			'		a<10\n'+
+			'	} {\n'+
+			'	  a =\n'+
+			'	  a+1\n'+
+			'	}\n'+
+			'	push(r, a);\n'+
+			'	push(r,\n'+
+			'		if {1} {\n'+
+			'	   	   100\n'+
+			'		}\n'+
+			'	)\n'+
+			'	r\n'+
+			'}\n',
+		[["Array",[["Number",0],["Number",2],["Number",10],["Number",100]]]]
+	]
 ];
 
 var code_vs_exec_args = [
