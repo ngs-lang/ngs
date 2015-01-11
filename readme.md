@@ -25,6 +25,11 @@ Running
 
 `nodejs ngs/run-script.js SCRIPT_NAME.ngs`
 
+Running tests
+=============
+
+`cd ngs && mocha`
+
 Contributing
 ============
 
