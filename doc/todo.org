@@ -49,34 +49,3 @@
 * Echo function
 * Host groups and target host
 * Security for code (permissions)
-
-
-=== Type system ===
-
-API:
-	* define type
-	* create object of given type
-	* set field
-	* define method
-	* call method
-
-Points:
-	* Extending built-in types
-
-Code:
-	deftype MyTypeName {
-		x: Number
-		y: String
-	}
-
-	deftype MyEnhancedArray inherits Array {
-		myData: String
-	}
-
-	defmethod MyEnhancedArray(X, a, *args) {
-			  a.myData = 
-			  a.a = args
-	}
-
-	x = MyEnhancedArray(Number, 
-	
