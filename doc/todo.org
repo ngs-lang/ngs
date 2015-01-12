@@ -2,7 +2,8 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** TODO Move exec() into the VM.
+** DONE Move exec() into the VM.
+** TODO Start standard library
 ** TODO examples folder with snippets + tests for the snippets
 ** TODO Special-case (non-native!) "-..." execs: "test -.... "
 ** Add comments
@@ -12,6 +13,9 @@
 ** TODO Native code calling user-land
 ** TODO case
 * Type system
+** TODO Refactor objects creation
+from [type, val] expr
+to make_TYP(val)
 ** Function call
 *** DONE Call
 *** Arguments

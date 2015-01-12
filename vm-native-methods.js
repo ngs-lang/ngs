@@ -1,5 +1,6 @@
 "use strict";
 
+var child_process = require('child_process');
 var util = require('util');
 
 function Args() {
@@ -68,6 +69,7 @@ function register_native_methods() {
 			//		 indicating guard failure
 			throw new Error("Can't Bool() unfinished process");
 		}
+		// exit_code can be null if process was terminated by a signal
 		return ['Bool', p.exit_code === 0];
 	});
 
@@ -122,7 +124,7 @@ function register_native_methods() {
 		// TODO: maybe allow redefining type (for extending)
 		var name = get_str(scope.name);
 		var fields_defs = get_arr(scope.fields);
-		console.log('__deftype', name, fields_defs);
+		// console.log('__deftype', name, fields_defs);
 		var order = [];
 		var fields = {};
 		for(var i=0; i<fields_defs.length; i++) {
@@ -134,7 +136,7 @@ function register_native_methods() {
 			fields: fields,
 			order: order,
 		}
-		console.log(util.inspect(vm.types, {depth: 20}));
+		// console.log(util.inspect(vm.types, {depth: 20}));
 		return 'DUNNO-YET';
 	});
 
@@ -162,6 +164,48 @@ function register_native_methods() {
 		this.lexical_scopes = t;
 		// Dirty lexical_scopes hack end
 		return scope.lambda;
+	});
+	this.registerNativeMethod('exec', Args().rest_pos('args').get(), function ngs_runtime_spawn(scope, v) {
+		var args = get_arr(scope.args);
+		var props = {
+			'cmd': get_str(args[0]),
+			'args': args.slice(1).map(get_str),
+			'error': null,
+			'exit_code': null,
+			'signal': null,
+			'stdout': '',
+			'stderr': '',
+		};
+		var ngs_runtime_spawn_finish_callback = function(e, exit_code, signal) {
+			// console.log('end_external()', props);
+			props.error = e;
+			props.exit_code = exit_code;
+			props.signal = signal;
+			v.unsuspend_context(this);
+		}.bind(this);
+		// console.log('start_external()', props);
+		// TODO: process working directory should be
+		//		 inherited from parent process.
+		// TODO: XXX cwd must be flexible, not process.cwd
+		var p = child_process.spawn(props.cmd, props.args, {
+			cwd: process.cwd()
+		});
+		// TODO: maybe store output with it's timestamp?
+		(['stdout', 'stderr']).forEach(function(output_channel_name) {
+			p[output_channel_name].on('data', function ngs_runtime_spawn_on_data(data) {
+				// console.log('DATA', data);
+				props[output_channel_name] += data;
+			});
+		});
+		p.on('error', function(e) {
+			ngs_runtime_spawn_finish_callback(e, null, null);
+		});
+		p.on('close', function(exit_code, signal) {
+			ngs_runtime_spawn_finish_callback(null, exit_code, signal);
+		});
+
+		v.suspend_context();
+		return ['Process', props];
 	});
 }
 

@@ -23,7 +23,7 @@ Early development. Help is welcome.
 Running
 =======
 
-`nodejs ngs/run-script.js SCRIPT_NAME.ngs`
+`nodejs ngs/run.js SCRIPT_NAME.ngs`
 
 Running tests
 =============
