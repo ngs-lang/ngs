@@ -1,0 +1,9 @@
+{
+	defun __mul(s:String, n:Number) {
+		  ret = ""
+		  for {i=0}{i<n}{i=i+1} {
+			  ret = ret + s;
+		  };
+		  return ret
+	}
+}

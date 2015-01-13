@@ -87,18 +87,28 @@ function register_native_methods() {
 	});
 
 	// stack: ... v1 v2 -> ... v
-	this.registerNativeMethod('__add', p_args('a', 'Number', 'b', 'Number'), function vm___add(scope) {
+	this.registerNativeMethod('__add', p_args('a', 'Number', 'b', 'Number'), function vm___add_p_num_num(scope) {
 		return ['Number', get_num(scope.a) + get_num(scope.b)];
 	});
 
 	// stack: ... v1 v2 -> ... v
-	this.registerNativeMethod('__add', p_args('a', 'Array', 'b', 'Array'), function vm___add(scope) {
+	this.registerNativeMethod('__add', p_args('a', 'String', 'b', 'String'), function vm___add_p_str_str(scope) {
+		return ['String', get_str(scope.a) + get_str(scope.b)];
+	});
+
+	// stack: ... v1 v2 -> ... v
+	this.registerNativeMethod('__add', p_args('a', 'Array', 'b', 'Array'), function vm___add_p_arr_arr(scope) {
 		return ['Array', get_arr(scope.a).concat(get_arr(scope.b))];
 	});
 
 	// stack: ... v1 v2 -> ... v
 	this.registerNativeMethod('__sub', p_args('a', 'Number', 'b', 'Number'), function vm___sub(scope) {
 		return ['Number', get_num(scope.a) - get_num(scope.b)];
+	});
+
+	// stack: ... v1 v2 -> ... v
+	this.registerNativeMethod('__mul', p_args('a', 'Number', 'b', 'Number'), function vm___sub(scope) {
+		return ['Number', get_num(scope.a) * get_num(scope.b)];
 	});
 
 	// stack: ... v1 v2 -> ... bool
@@ -169,19 +179,24 @@ function register_native_methods() {
 		var args = get_arr(scope.args);
 		var props = {
 			'cmd': get_str(args[0]),
+			'state': 'running',
 			'args': args.slice(1).map(get_str),
 			'error': null,
 			'exit_code': null,
 			'signal': null,
 			'stdout': '',
 			'stderr': '',
+			'_finish_events': 2 // want both exit and close events
 		};
-		var ngs_runtime_spawn_finish_callback = function(e, exit_code, signal) {
-			// console.log('end_external()', props);
-			props.error = e;
-			props.exit_code = exit_code;
-			props.signal = signal;
-			v.unsuspend_context(this);
+		var ngs_runtime_spawn_finish_callback = function(force) {
+			props._finish_events--;
+			if(force) {
+				props._finish_events = 0;
+			}
+			if(!props._finish_events) {
+				props.state = 'done';
+				v.unsuspend_context(this);
+			}
 		}.bind(this);
 		// console.log('start_external()', props);
 		// TODO: process working directory should be
@@ -198,11 +213,15 @@ function register_native_methods() {
 			});
 		});
 		p.on('error', function(e) {
-			ngs_runtime_spawn_finish_callback(e, null, null);
+			props.error = e;
+			ngs_runtime_spawn_finish_callback(true);
 		});
-		p.on('close', function(exit_code, signal) {
-			ngs_runtime_spawn_finish_callback(null, exit_code, signal);
+		p.on('exit', function(exit_code, signal) {
+			props.exit_code = exit_code;
+			props.signal = signal;
+			ngs_runtime_spawn_finish_callback();
 		});
+		p.on('close', ngs_runtime_spawn_finish_callback);
 
 		v.suspend_context();
 		return ['Process', props];

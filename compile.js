@@ -142,6 +142,7 @@ function compile_tree(node, leave_value_in_stack) {
 		for(var i=0; i<node.length; i++) {
 			var lvis = (i == node.length-1) && leave_value_in_stack;
 			var t = compile_tree(node[i], lvis);
+			// console.log('IN', node[i], 'OUT', t);
 			ret = ret.concat(t);
 		}
 		return ret;
@@ -349,6 +350,7 @@ function compile_tree(node, leave_value_in_stack) {
 	}
 	if(node.is('lambda')) {
 		var code = compile_tree(node[1], true);
+		code = code.concat([['LAMBDA_NO_RET']]); // error
 		ret = [].concat(
 			compile_invoke_no_args('Array'),
 			// Lexical scopes
@@ -399,22 +401,6 @@ function compile_tree(node, leave_value_in_stack) {
 		throw "Don't know how to compile type '" + node.node_type + "'";
 	}
 	throw "Don't know how to compile '" + node + "'";
-}
-
-// console.log(tree.commands[0].rhs);
-
-if(require.main === module) {
-	var BUFFER_SIZE = 1024*1024;
-	var fs = require('fs');
-	var program = fs.readSync(process.stdin.fd, BUFFER_SIZE);
-	var tree = parser.parse(program[0]);
-	var code = compile_tree(tree);
-	console.log(code);
-	var vm = require('./vm');
-	var v = new vm.VM();
-	v.useCode(code);
-	v.start();
-	console.log('stack', v.context.stack, 'lexical_scopes', v.lexical_scopes);
 }
 
 function compile(code, options) {

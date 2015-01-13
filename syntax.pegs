@@ -101,6 +101,9 @@ expr "Expression/add" =
   e1:expr_call space? "-" space? e2:expr_call {
     return N('binop', [e1, e2], 'sub');
   } /
+  e1:expr_call space? "*" space? e2:expr_call {
+    return N('binop', [e1, e2], 'mul');
+  } /
   e1:expr_call space? "<" space? e2:expr_call {
     return N('binop', [e1, e2], 'lt');
   } /

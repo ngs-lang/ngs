@@ -84,7 +84,8 @@ VM.prototype.initialize = function() {
 VM.prototype.useCode = function(c) {
 	// TODO: assert that there are no cotext pointing to existing this.code
 	//		 (which is being replaced)
-	this.code = c;
+	this.code.pop(); // remove the halt that we've added
+	this.code = this.code.concat(c);
 	this.code.push(['halt']);
 	return this;
 }
@@ -138,7 +139,7 @@ VM.prototype.mainLoop = function() {
 }
 
 VM.prototype.suspend_context = function() {
-	console.log('DEBUG DELAY B', this.runnable_contexts.length);
+	// console.log('DEBUG DELAY B', this.runnable_contexts.length);
 	var ctx = this.runnable_contexts.shift();
 	if(!ctx) {
 		throw new Error("VM.suspend_context: no runnable contexts.");
@@ -149,7 +150,7 @@ VM.prototype.suspend_context = function() {
 }
 
 VM.prototype.unsuspend_context = function(ctx) {
-	console.log('UNSUSPEND_CONTEXT', ctx);
+	// console.log('UNSUSPEND_CONTEXT', ctx);
 	var i = this.suspended_contexts.indexOf(ctx);
 	if(i === -1) {
 		if(this.runnable_contexts.indexOf(ctx) !== -1) {
