@@ -11,7 +11,7 @@ var nm = require('../vm-native-methods');
 var compile = require('../compile').compile;
 
 var code_snippets = [
-	'{ t = "ab" * 3 ; t == "ababab" }',
+	'{ "ab" * 3 == "ababab" }',
 ];
 
 // console.log("+ Loading stdlib");

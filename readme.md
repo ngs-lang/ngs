@@ -23,7 +23,8 @@ Early development. Help is welcome.
 Running
 =======
 
-`nodejs ngs/run.js SCRIPT_NAME.ngs`
+	(cd ngs && pegjs --cache syntax.pegs)
+	nodejs ngs/run.js SCRIPT_NAME.ngs
 
 Running tests
 =============

@@ -2,8 +2,10 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** DONE Start standard library
-** TODO Fix non-compiling of expr: "ab" * 3 == "ababab"
+** DONE Fix non-compiling of expr: "ab" * 3 == "ababab"
+** DONE Allow 1+2+3 expressions
+** TODO Fix incorrect order in expr: 10-1-2
+** TODO Syntax - add parentheses
 ** TODO examples folder with snippets + tests for the snippets
 ** TODO Special-case (non-native!) "-..." execs: "test -.... "
 ** Add comments

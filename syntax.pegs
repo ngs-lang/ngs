@@ -94,23 +94,29 @@ top_level_expressions_delimiter =
 // TODO fix expr_* order for operation precedence. Low priority at top.
 // ********************************************************************
 
-expr "Expression/add" =
-  e1:expr_call space? "+" space? e2:expr_call {
+expr "Expression/eq" =
+  e1:expr_add space? "==" space? e2:expr {
+    return N('binop', [e1, e2], 'eq');
+  } /
+  e1:expr_add space? "<" space? e2:expr {
+    return N('binop', [e1, e2], 'lt');
+  } /
+  e: expr_add
+
+expr_add "Expression/add" =
+  e1:expr_mul space? "+" space? e2:expr_add {
     return N('binop', [e1, e2], 'add');
   } /
-  e1:expr_call space? "-" space? e2:expr_call {
+  e1:expr_mul space? "-" space? e2:expr_add {
     return N('binop', [e1, e2], 'sub');
   } /
+  e:expr_mul
+
+expr_mul "Expression/mul" =
   e1:expr_call space? "*" space? e2:expr_call {
     return N('binop', [e1, e2], 'mul');
   } /
-  e1:expr_call space? "<" space? e2:expr_call {
-    return N('binop', [e1, e2], 'lt');
-  } /
-  e1:expr_call space? "==" space? e2:expr_call {
-    return N('binop', [e1, e2], 'eq');
-  } /
-  e:expr_call { return e; }
+  e:expr_call
 
 
 expr_call "Function call" =
