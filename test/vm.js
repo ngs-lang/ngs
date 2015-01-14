@@ -46,8 +46,8 @@ var code_vs_stack = [
 	// *** for/continue/break ***
 	['{a = 0; r = []; for {a=0} {a<5} {a=a+1} {if{a==1} { continue; }; if{a==3} { break; }; push(r, a);}; r}',
 	 [["Array", [["Number", 0], ["Number", 2]]]]],
-	['{Bool((ls))}', [["Bool", true]]],
-	['{Bool((ls NOSUCHFILE))}', [["Bool", false]]],
+	['{Bool($(ls))}', [["Bool", true]]],
+	['{Bool($(ls NOSUCHFILE))}', [["Bool", false]]],
 
 	[
 		'{\n'+
@@ -78,7 +78,11 @@ var code_vs_stack = [
 			'	r\n'+
 			'}\n',
 		[["Array",[["Number",0],["Number",2],["Number",10],["Number",100]]]]
-	]
+	],
+
+	// *** parentheses ***
+	['{1+2*3}', [['Number', 7]]],
+	['{(1+2)*3}', [['Number', 9]]],
 ];
 
 var code_vs_exec_args = [

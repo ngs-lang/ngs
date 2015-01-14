@@ -142,7 +142,8 @@ expr_base "Expression/no-add" =
   "null" { return N('null', [], false); } /
   varname /
   array_literal /
-  CCEXPR_commands
+  "(" space? e:expr space? ")" { return e; } /
+  "$" cs:CCEXPR_commands { return cs; }
 
 number "number" =
   "0x" hex_digits:[0-9a-fA-F]+ { return N('number', [], parseInt(hex_digits.join(''), 16)); } /

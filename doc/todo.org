@@ -2,18 +2,21 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** DONE Fix non-compiling of expr: "ab" * 3 == "ababab"
-** DONE Allow 1+2+3 expressions
 ** TODO Fix incorrect order in expr: 10-1-2
-** TODO Syntax - add parentheses
+** DONE Syntax - add parentheses
+** TODO __get_item() / __set_item() for accessing array indexes
 ** TODO examples folder with snippets + tests for the snippets
 ** TODO Special-case (non-native!) "-..." execs: "test -.... "
 ** Add comments
 *** TODO "#"
 *** TODO "//"
 ** TODO Exceptions
+** TODO Failing spawn should generate exception
+... and some convenient mechanism to ignore that
 ** TODO Native code calling user-land
 ** TODO case
+** TODO String interpolation: "xyz${expr}ww"
+also "xyz$(cmd)ww"
 * Type system
 ** TODO Refactor objects creation
 from [type, val] expr

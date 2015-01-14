@@ -120,7 +120,7 @@ function register_native_methods() {
 	this.registerNativeMethod('__eq', p_args('a', null, 'b', null), function vm___eq(scope) {
 		// XXX: incorrect implementation, uses JS comparison
 		// XXX: does not use get_TYP data access abstraction
-		return ['Bool', scope.a[1] == scope.b[1]];
+		return ['Bool', scope.a[1] === scope.b[1]];
 	});
 
 	// stack: ... v -> ...
