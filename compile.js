@@ -13,6 +13,11 @@ var PUSH_NODES = {
 	'null': true
 };
 
+var CALL_NODES = {
+	'get_item': true,
+	'set_item': true
+}
+
 function dup_if_needed(code, leave_value_in_stack) {
 	if(leave_value_in_stack) {
 		return code.concat([
@@ -245,6 +250,21 @@ function compile_tree(node, leave_value_in_stack) {
 		}
 		return [['push_' + node.node_type.slice(0, 3), node.data]];
 	}
+	if(CALL_NODES[node.node_type]) {
+		ret = [['push_arr']];
+		for(var i=0; i<node.length; i++) {
+			ret = ret.concat(compile_tree(node[i], true), compile_push());
+		}
+		ret = ret.concat(
+			[
+				['push_hsh'],
+				['push_str', '__' + node.node_type],
+				['get_var'],
+				['invoke'],
+			]
+		);
+		return pop_if_needed(ret, leave_value_in_stack);
+	}
 	if(node.is('varname')) {
 		ret = [
 			['push_str', node.data],
@@ -408,7 +428,12 @@ function compile(code, options) {
 		leave_value_in_stack: false
 	}
 	_.extend(o, options || {});
-	var tree = parser.parse(code);
+	try {
+		var tree = parser.parse(code);
+	} catch(e) {
+		console.log(e);
+		throw e;
+	}
 	var compiled = compile_tree(tree, o.leave_value_in_stack);
 	// console.log('COMPILED', compiled);
 	return {'compiled_code': compiled};

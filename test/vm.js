@@ -83,6 +83,10 @@ var code_vs_stack = [
 	// *** parentheses ***
 	['{1+2*3}', [['Number', 7]]],
 	['{(1+2)*3}', [['Number', 9]]],
+
+	// *** Arrays ***
+	['{a=[]; a[1]=7; a}', [['Array', [['Null', null], ['Number', 7]]]]],
+	['{a=[10,20,30,40]; b=[1]; a[b[0]]}', [['Number', 20]]],
 ];
 
 var code_vs_exec_args = [

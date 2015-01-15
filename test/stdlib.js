@@ -12,6 +12,7 @@ var compile = require('../compile').compile;
 
 var code_snippets = [
 	'{ "ab" * 3 == "ababab" }',
+	'{ t = [10,20,30][[1,2]]; t == [20,30] }',
 ];
 
 // console.log("+ Loading stdlib");

@@ -1,9 +1,48 @@
 {
+	"string * number -> the string repeated number times"
 	defun __mul(s:String, n:Number) {
 		  ret = ""
 		  for {i=0}{i<n}{i=i+1} {
 			  ret = ret + s;
 		  };
 		  return ret
+	}
+
+	defun not(x:Bool) {
+		return if{x}{false}{true}
+	}
+
+	"The != operator"
+	defun __neq(a, b) {
+		return not(a==b)
+	}
+
+	defun __eq(a:Array, b:Array) {
+		len_a = len(a)
+		len_b = len(b)
+		if{len_a != len_b} {
+			return false;
+		}
+		for{i=0}{i<len_a}{i=i+1} {
+			"Work around syntax bug:"
+			"{a[i] != b[i]} does not work for now"
+			x = a[i]
+			y = b[i]
+			if{x != y} {
+				return false;
+			}
+		}
+		return true
+	}
+
+	defun __get_item(a:Array, idxs:Array) {
+		ret = []
+		j = len(idxs)
+		for{i=0}{i<j}{i=i+1} {
+			for{i=0}{i<j}{i=i+1} {
+				ret[i] = a[idxs[i]]
+			}
+		}
+		return ret
 	}
 }

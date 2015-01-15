@@ -94,9 +94,25 @@ top_level_expressions_delimiter =
 // TODO fix expr_* order for operation precedence. Low priority at top.
 // ********************************************************************
 
-expr "Expression/eq" =
+expr "Expression/set_item" =
+  // container must not be expr_get_item, should be expr_eq
+  container:expr_eq inline_space? "[" space? idx:expr space? "]" space? "=" space? v:expr {
+    return N('set_item', [container, idx, v]);
+  } /
+  e: expr_get_item
+
+expr_get_item "Expression/get_item" =
+  container:expr_eq inline_space? "[" space? idx:expr space? "]" {
+    return N('get_item', [container, idx]);
+  } /
+  e: expr_eq
+
+expr_eq "Expression/eq" =
   e1:expr_add space? "==" space? e2:expr {
     return N('binop', [e1, e2], 'eq');
+  } /
+  e1:expr_add space? "!=" space? e2:expr {
+    return N('binop', [e1, e2], 'neq');
   } /
   e1:expr_add space? "<" space? e2:expr {
     return N('binop', [e1, e2], 'lt');
@@ -170,7 +186,7 @@ string "Command string" =
 
 // Temp. TODO: add escaping and substitution
 string_contents "String contents" =
-  s:[-_a-zA-Z0-9*?]* {  return N('string', [], s.join('')); }
+  s:[^"]* {  return N('string', [], s.join('')); }
 
 array_literal "array literal" =
   "[" space? es:comma_separated_expressions? space? "]" {

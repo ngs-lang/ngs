@@ -123,6 +123,35 @@ function register_native_methods() {
 		return ['Bool', scope.a[1] === scope.b[1]];
 	});
 
+	// stack: ... container idx v -> ... v
+	this.registerNativeMethod('__set_item', p_args('a', 'Array', 'idx', 'Number', 'v', null), function vm___set_item_p_arr_num_any(scope) {
+		var a = get_arr(scope.a);
+		var i = get_num(scope.idx)
+		// TODO: assert i is integer
+		if(a.length < i) {
+			for(var j=a.length;j<i;j++) {
+				a[j] = ['Null', null];
+			}
+		}
+		a[i] = scope.v;
+		return scope.v;
+	});
+
+	// stack: ... container idx v -> ... v
+	this.registerNativeMethod('__get_item', p_args('a', 'Array', 'idx', 'Number'), function vm___set_item_p_arr_num_any(scope) {
+		var a = get_arr(scope.a);
+		var i = get_num(scope.idx)
+		// TODO: assert i is integer
+		if(i<0 || i>a.length-1) {
+			throw new Error("Accessing out of bounds. Array: " + a + ". Index: " + i);
+		}
+		return a[i];
+	});
+
+	this.registerNativeMethod('len', p_args('a', 'Array'), function vm___set_item_p_arr_num_any(scope) {
+		return ['Number', get_arr(scope.a).length];
+	});
+
 	// stack: ... v -> ...
 	this.registerNativeMethod('echo', Args().rest_pos('p').get(), function vm_echo(scope) {
 		console.log('ECHO', util.inspect(get_arr(scope.p), {depth: 20}), scope.n);
