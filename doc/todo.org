@@ -3,8 +3,7 @@
 
 * Now
 ** TODO Fix incorrect order in expr: 10-1-2
-** DONE Syntax - add parentheses
-** TODO __get_item() / __set_item() for accessing array indexes
+** DONE __get_item() / __set_item() for accessing array indexes
 ** TODO examples folder with snippets + tests for the snippets
 ** TODO Special-case (non-native!) "-..." execs: "test -.... "
 ** Add comments
