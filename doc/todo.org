@@ -2,9 +2,7 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** TODO Fix incorrect order in expr: 10-1-2
-** DONE __get_item() / __set_item() for accessing array indexes
-** TODO examples folder with snippets + tests for the snippets
+** DONE Fix incorrect order in expr: 10-1-2
 ** TODO Special-case (non-native!) "-..." execs: "test -.... "
 ** Add comments
 *** TODO "#"
@@ -16,6 +14,8 @@
 ** TODO case
 ** TODO String interpolation: "xyz${expr}ww"
 also "xyz$(cmd)ww"
+* Soon
+** TODO examples folder with snippets + tests for the snippets
 * Type system
 ** TODO Refactor objects creation
 from [type, val] expr

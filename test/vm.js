@@ -84,6 +84,11 @@ var code_vs_stack = [
 	['{1+2*3}', [['Number', 7]]],
 	['{(1+2)*3}', [['Number', 9]]],
 
+	// *** Same precedence operators proper order ***
+	['{100-10-1}', [['Number', 89]]],
+	['{1000-100-10-1}', [['Number', 889]]],
+	['{1000-100+10-1}', [['Number', 909]]],
+
 	// *** Arrays ***
 	['{a=[]; a[1]=7; a}', [['Array', [['Null', null], ['Number', 7]]]]],
 	['{a=[10,20,30,40]; b=[1]; a[b[0]]}', [['Number', 20]]],

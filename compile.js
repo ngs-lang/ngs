@@ -2,6 +2,8 @@
 // apt-get install node-pegjs # 0.7.0
 // pegjs syntax.pegs
 
+var util = require('util');
+
 var _ = require('underscore');
 
 var parser = require('./syntax');
@@ -16,6 +18,17 @@ var PUSH_NODES = {
 var CALL_NODES = {
 	'get_item': true,
 	'set_item': true
+}
+
+
+function fix_binops(tree) {
+	if((!tree[1]) || (!tree.same_precedence_binops_p(tree[1]))) {
+		return tree.map(fix_binops);
+	}
+	var ret = tree[1];
+	tree[1] = ret[0];
+	ret[0] = tree;
+	return fix_binops(ret);
 }
 
 function dup_if_needed(code, leave_value_in_stack) {
@@ -424,6 +437,7 @@ function compile_tree(node, leave_value_in_stack) {
 }
 
 function compile(code, options) {
+	var debug_ast = process.env.NGS_DEBUG_AST;
 	var o = {
 		leave_value_in_stack: false
 	}
@@ -433,6 +447,13 @@ function compile(code, options) {
 	} catch(e) {
 		console.log(e);
 		throw e;
+	}
+	if(debug_ast) {
+		console.log('AST BEFORE fix_binops()\n', tree.toString());
+	}
+	tree = fix_binops(tree);
+	if(debug_ast) {
+		console.log('AST AFTER fix_binops()\n', tree.toString());
 	}
 	var compiled = compile_tree(tree, o.leave_value_in_stack);
 	// console.log('COMPILED', compiled);
