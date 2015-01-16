@@ -444,6 +444,9 @@ function compile_tree(node, leave_value_in_stack) {
 		);
 		return ret;
 	}
+	if(node.is('comment')) {
+		return [['comment', 'user: ' + node.data]];
+	}
 	if(node.node_type) {
 		throw "Don't know how to compile type '" + node.node_type + "'";
 	}

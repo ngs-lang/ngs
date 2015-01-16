@@ -96,6 +96,11 @@ var code_vs_stack = [
 	// *** Guard ***
 	['{defun f(x) {return 1}; defun f(x) {guard {x==10}; return 20} [f(8), f(10)]}',
 	 [["Array", [["Number", 1], ["Number", 20]]]]],
+
+	// *** Comments ***
+	['{7 # mycomment1\n}', []],
+	['{7 // mycomment2\n}', []],
+	['# something', []],
 ];
 
 var code_vs_exec_args = [

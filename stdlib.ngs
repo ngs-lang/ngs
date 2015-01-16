@@ -1,5 +1,5 @@
 {
-	"string * number -> the string repeated number times"
+	# string * number -> the string repeated number times
 	defun __mul(s:String, n:Number) {
 		  ret = ""
 		  for {i=0}{i<n}{i=i+1} {
@@ -10,13 +10,13 @@
 
 	defun not(x:Bool) { return if{x}{false}{true} }
 
-	"The != operator"
+	# The != operator
 	defun __neq(a, b) {
 		return not(a==b)
 	}
 
-	"The == operator"
-	"Can NOT handle reqursive structures (untested)"
+	# The == operator
+	# Can NOT handle reqursive structures (untested)
 	defun __eq(a:Array, b:Array) {
 		len_a = len(a)
 		len_b = len(b)
@@ -64,7 +64,7 @@
 		return true
 	}
 
-	"Convert execution of (example) '-f somefile' to 'test -f somefile'"
+	# Convert execution of (example) '-f somefile' to 'test -f somefile'
 	defun exec(*args) {
 		  guard {len(args)}
 		  guard {startsWith(args[0], "-")}

@@ -32,7 +32,18 @@ command "command" =
   while /
   for /
   async /
+  hash_comment /
   execute_external_prog
+
+hash_comment "# Comment" =
+  "#" c:[^\n]+ { return N('comment', [], c.join('')); }
+
+slash_slash_comment "// Comment" =
+  "//" c:[^\n]+ { return N('comment', [], c.join('')); }
+
+comment "Any kind of comment" =
+  hash_comment /
+  slash_slash_comment
 
 // if CCEXPR [then] CCEXPR [else] [CCEXPR]
 // ( while should be: if CCEXPR [then] CCEXPR [[else] CCEXPR] )
@@ -95,6 +106,7 @@ top_level_expressions_delimiter =
 // ********************************************************************
 
 expr "Expression/set_item" =
+  comment /
   // container must not be expr_get_item, should be expr_eq
   container:expr_eq inline_space? "[" space? idx:expr space? "]" space? "=" space? v:expr {
     return N('set_item', [container, idx, v]);
