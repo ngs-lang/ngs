@@ -92,6 +92,10 @@ var code_vs_stack = [
 	// *** Arrays ***
 	['{a=[]; a[1]=7; a}', [['Array', [['Null', null], ['Number', 7]]]]],
 	['{a=[10,20,30,40]; b=[1]; a[b[0]]}', [['Number', 20]]],
+
+	// *** Guard ***
+	['{defun f(x) {return 1}; defun f(x) {guard {x==10}; return 20} [f(8), f(10)]}',
+	 [["Array", [["Number", 1], ["Number", 20]]]]],
 ];
 
 var code_vs_exec_args = [

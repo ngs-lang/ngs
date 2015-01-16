@@ -16,6 +16,74 @@ for(var k in data) {
 	global[k] = data[k];
 }
 
+function _repr_depth(depth) {
+	var ret = '';
+	for(var i=0;i<depth;i++) {
+		ret = ret + '  ';
+	}
+	return ret;
+}
+
+
+function inspect(x, depth) {
+	depth = depth || 0;
+	var t = get_type(x);
+	var pfx = _repr_depth(depth);
+	if(t == 'Number') {
+		return pfx + get_num(x) + '\n';
+	}
+	if(t == 'String') {
+		return pfx + '"' + get_str(x) + '"\n';
+	}
+	if(t == 'Array') {
+		var ret = pfx + '[\n'
+		var a = get_arr(x);
+		for(var i=0; i<a.length; i++) {
+			ret = ret + inspect(a[i], depth+1);
+		}
+		ret = ret + pfx + ']\n'
+		return ret;
+	}
+	if(t == 'Lambda') {
+		var l = get_arr(get_lmb(x))
+		var params = get_arr(l[1]);
+		var s = [];
+		var pt;
+		for(var i=0; i<params.length; i++) {
+			// TODO: arg_rest_pos & friends representation
+			var param_type = get_type(get_arr(params[i])[2]);
+			if(param_type == 'Null') {
+				pt = '';
+			} else {
+				pt = ':' + get_str(get_arr(params[i])[2]);
+			}
+			s.push(get_str(get_arr(params[i])[0]) + pt);
+		}
+		var code;
+		if(get_type(l[2]) == 'NativeMethod') {
+			code = 'native:' + l[2][1].name;
+		} else {
+			code = '@' + get_num(l[2]);
+		}
+		return pfx + '<Lambda '+ code +'(' +s.join(', ') + ')>\n';
+		// console.log(params, );
+	}
+	if(t == 'Bool') {
+		return pfx + String(get_boo(x)) + '\n';
+	}
+	if(t == 'Null') {
+		return pfx + 'null\n';
+	}
+	return _repr_depth(depth) + '<' + t + '>\n';
+}
+
+function inspect_stack(stack) {
+	var ret = [];
+	for(var i=0; i<stack.length; i++) {
+		ret = ret + String(i) + ': ' + inspect(stack[i]);
+	}
+	return ret;
+}
 
 function Context(global_scope) {
 	return this.initialize(global_scope);
@@ -27,6 +95,10 @@ Context.prototype.initialize = function(global_scope) {
 	this.stack = [];
 	this.frames = [];
 	this.lexical_scopes = [global_scope];
+	this.methods = ['Array', []];
+	this.positional_args = ['Array', []];
+	this.named_args = ['Hash', {}];
+	this.cycles = 0;
 
 	var get_context_ip = function() {
 		return this.ip;
@@ -109,8 +181,9 @@ VM.prototype.mainLoop = function() {
 		var op = this.code[this.context.ip];
 		this.context.ip++;
 		if(stack_debug) {
-			console.log('ST', util.inspect(this.context.stack, {depth: 20}));
-			console.log('OP', op, '@', this.context.ip-1);
+			console.log('ST', inspect_stack(this.context.stack));
+			console.log('FRAMES_N', this.context.frames.length);
+			console.log('OP', op, '@', this.context.ip-1, 'CYCLES', this.context.cycles);
 			console.log('');
 		}
 		if(op[0] === 'comment') {
@@ -120,6 +193,10 @@ VM.prototype.mainLoop = function() {
 			throw new Error("Illegal opcode: " + op[0] + " at " + (this.context.ip-1));
 		}
 		this.opcodes[op[0]].call(this, op[1]);
+		this.context.cycles++;
+		// Here, we might be with another stack, ip, etc
+
+		// Warning: in future, some operations might change `this.context`
 		if(debug_delay && this.context.state === 'running') {
 			console.log('DEBUG DELAY', this.runnable_contexts.length);
 			var ctx = this.context;
@@ -249,6 +326,7 @@ function match_params(lambda, positional_args, named_args) {
 Context.prototype.invoke = function(methods, positional_args, named_args, vm) {
 	var ms = get_arr(methods);
 
+	// console.log('Invoke methods', inspect(methods));
 	for(var l=ms.length-1, i=l; i>=0; i--) {
 		var m = ms[i];
 
@@ -263,22 +341,27 @@ Context.prototype.invoke = function(methods, positional_args, named_args, vm) {
 			lexical_scopes: this.lexical_scopes,
 			ip: this.ip,
 			stack_len: this.stack.length,
+			methods: this.methods,
+			positional_args: this.positional_args,
+			named_args: this.named_args,
 		});
 		this.lexical_scopes = get_scp(lambda[0])
 		this.lexical_scopes = this.lexical_scopes.concat(scope[1]);
-		// console.log('lexical_scopes', this.lexical_scopes);
+
+		// Stuff for guards
+		this.methods = methods;
+		this.positional_args = positional_args;
+		this.named_args = named_args;
+
 		if(call_type === 'Number') {
 			this.ip = get_num(lambda[2]);
 			return;
 		}
 		if(call_type === 'NativeMethod') {
 			var nm = get_nm(lambda[2]);
+			// console.log('NATIVEMETHOD', nm);
 			this.stack.push(nm.call(this, scope[1], vm));
-			var frame = this.frames.pop();
-			this.lexical_scopes = frame.lexical_scopes;
-			if(this.stack.length != frame.stack_len + 1) {
-				throw new Error("Returning with wrong stack size");
-			}
+			this.ret(1);
 			return;
 		}
 		throw new Error("Don't know how to call matched method: " + m);
@@ -286,6 +369,31 @@ Context.prototype.invoke = function(methods, positional_args, named_args, vm) {
 
 	console.log(positional_args);
 	throw new Error("Invoke: appropriate method not found for in " + util.inspect(ms, {depth: 20}));
+}
+
+Context.prototype.ret = function(stack_delta) {
+	var c = this;
+	var frame = c.frames.pop();
+	c.ip = frame.ip;
+	c.lexical_scopes = frame.lexical_scopes;
+	c.methods = frame.methods;
+	c.positional_args = frame.positional_args;
+	c.named_args = frame.named_args;
+	// console.log('RET DONE');
+	// console.log('Ret recovered methods to', inspect(c.methods));
+	if(c.stack.length != frame.stack_len + stack_delta) {
+		throw new Error("Returning with wrong stack size");
+	}
+}
+
+Context.prototype.guard = function(vm) {
+	var methods = this.methods;
+	var positional_args = this.positional_args;
+	var named_args = this.named_args;
+	this.ret(0);
+	var m = get_arr(methods);
+	// Invoke the rest of the methods
+	this.invoke(['Array', m.slice(0, m.length-1)], positional_args, named_args, vm);
 }
 
 VM.prototype.opcodes = {
@@ -316,23 +424,6 @@ VM.prototype.opcodes = {
 	// stack: ... value -> ...
 	'pop': function() {
 		this.context.stack.pop();
-	},
-
-	// stack: ... -> ... marker
-	'args_start': function() {
-		this.context.stack.push(['ArgsMarker', null]);
-	},
-
-	// stack: ... arg1 arg2 ... argN -> ... Array(arg1, arg2, ..., argN)
-
-	'args_end': function() {
-		var st = this.context.stack();
-		var ret = new Array();
-		var item = st.pop();
-		while(item[0] !== 'ArgsMarker') {
-			ret.push(item);
-		}
-		st.push(['Array', ret.reverse()]);
 	},
 
 	// stack: ... x -> ... x x
@@ -385,13 +476,16 @@ VM.prototype.opcodes = {
 
 	// stack: ... v -> ... v
 	'ret': function() {
-		var c = this.context;
-		var frame = c.frames.pop();
-		c.ip = frame.ip;
-		c.lexical_scopes = frame.lexical_scopes;
-		if(c.stack.length != frame.stack_len + 1) {
-			throw new Error("Returning with wrong stack size");
+		this.context.ret(1);
+	},
+
+	// guard: ... v
+	'guard': function() {
+		var v = get_boo(this.context.stack.pop())
+		if(v) {
+			return;
 		}
+		this.context.guard(this);
 	},
 
 	'jump': function(offset) {

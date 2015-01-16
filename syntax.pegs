@@ -179,7 +179,7 @@ cmd_word "Command word" =
   "$" v:varname { return v; } /
   "$*" v:varname { return N('splice', [v]); } /
   s:string  { return s; } /
-  w:[-_a-zA-Z0-9*?]+ {  return N('string', [], w.join('')); }
+  w:[-_a-zA-Z0-9*?/]+ {  return N('string', [], w.join('')); }
 
 string "Command string" =
   '"' s:string_contents '"' {  return s; }
@@ -255,4 +255,4 @@ type_field_definition "Definition of a field of a type" =
   }
 
 guard "Function entry guard" =
-  "guard" space e:expr { return N('guard', [e]); }
+  "guard" space e:CCEXPR { return N('guard', [e]); }

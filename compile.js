@@ -423,11 +423,25 @@ function compile_tree(node, leave_value_in_stack) {
 		);
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
-	if(node.is('ret') || node.is('guard')) {
+	if(node.is('ret')) {
 		ret = compile_tree(node[0], true);
 		ret = ret.concat([
 			[node.node_type],
 		]);
+		return ret;
+	}
+	if(node.is('guard')) {
+		ret = ret.concat(
+			[
+				['push_arr'],
+			],
+			compile_tree(node[0], true),
+			compile_push(),
+			compile_invoke_pos_args_in_stack('Bool'),
+			[
+				['guard'],
+			]
+		);
 		return ret;
 	}
 	if(node.node_type) {
@@ -456,7 +470,12 @@ function compile(code, options) {
 		console.log('AST AFTER fix_binops()\n', tree.toString());
 	}
 	var compiled = compile_tree(tree, o.leave_value_in_stack);
-	// console.log('COMPILED', compiled);
+	if(process.env.NGS_DEBUG_COMPILED) {
+		console.log('COMPILED');
+		for(var i=0; i<compiled.length; i++) {
+			console.log(i, compiled[i]);
+		}
+	}
 	return {'compiled_code': compiled};
 }
 

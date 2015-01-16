@@ -148,14 +148,29 @@ function register_native_methods() {
 		return a[i];
 	});
 
+	// stack: ... container idx v -> ... v
+	this.registerNativeMethod('__get_item', p_args('s', 'String', 'idx', 'Number'), function vm___set_item_p_arr_num_any(scope) {
+		var s = get_str(scope.s);
+		var i = get_num(scope.idx)
+		// TODO: assert i is integer
+		if(i<0 || i>s.length-1) {
+			throw new Error("Accessing out of bounds. Array: " + a + ". Index: " + i);
+		}
+		return ['String', s[i]];
+	});
+
 	this.registerNativeMethod('len', p_args('a', 'Array'), function vm___set_item_p_arr_num_any(scope) {
 		return ['Number', get_arr(scope.a).length];
+	});
+
+	this.registerNativeMethod('len', p_args('s', 'String'), function vm___set_item_p_arr_num_any(scope) {
+		return ['Number', get_str(scope.s).length];
 	});
 
 	// stack: ... v -> ...
 	this.registerNativeMethod('echo', Args().rest_pos('p').get(), function vm_echo(scope) {
 		console.log('ECHO', util.inspect(get_arr(scope.p), {depth: 20}), scope.n);
-		return null;
+		return ['Null', null];
 	});
 
 	// stack: ... type_name fields_defs -> ...
