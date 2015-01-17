@@ -66,7 +66,7 @@
 
 	# Convert execution of (example) '-f somefile' to 'test -f somefile'
 	defun exec(*args) {
-		  guard {len(args)}
+		  guard {1 < len(args)}
 		  guard {startsWith(args[0], "-")}
 		  args = ["test"] + args
 		  return exec(*args)
