@@ -4,15 +4,15 @@
 		  ret = ""
 		  for {i=0}{i<n}{i=i+1} {
 			  ret = ret + s;
-		  };
-		  return ret
+		  }
+		  ret
 	}
 
-	defun not(x:Bool) { return if{x}{false}{true} }
+	defun not(x:Bool) { if{x}{false}{true} }
 
 	# The != operator
 	defun __neq(a, b) {
-		return not(a==b)
+		not(a==b)
 	}
 
 	# The == operator
@@ -32,7 +32,7 @@
 				return false;
 			}
 		}
-		return true
+		true
 	}
 
 	defun __get_item(a:Array, idxs:Array) {

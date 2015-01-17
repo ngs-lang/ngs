@@ -11,10 +11,23 @@ var nm = require('../vm-native-methods');
 var compile = require('../compile').compile;
 
 var code_snippets = [
+	// __mul(s:String, n:Number)
 	'{ "ab" * 3 == "ababab" }',
+	// not(...)
+	'{ not(true) == false }',
+	'{ not(false) == true }',
+	// __neq(...)
+	'{ 1 != 2 }',
+	// __eq(a:Array, b:Array)
+	'{ [1,2] == [1,2] }',
+	'{ not([1,2] == [2,3]) }',
+	// __get_item(a:Array, idxs:Array)
 	'{ t = [10,20,30][[1,2]]; t == [20,30] }',
+	// min(...)
 	'{ min(3,5) == 3 }',
+	// max(...)
 	'{ max(3,5) == 5 }',
+	// startsWith(...)
 	'{ startsWith("abc", "a") }',
 	'{ not(startsWith("cd", "cde")) }',
 ];
