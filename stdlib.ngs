@@ -72,6 +72,10 @@
 		  return exec(*args)
 	}
 
+	# I wonder whether it's better not to have this default method
+	# That would mean osname() would cause
+	# "Invoke: appropriate method not found for in ..."
+	# error for unknown OSes...
 	defun osname() {
 		  null
 	}

@@ -7,6 +7,8 @@
 ** TODO Failing spawn should generate exception
 ... and some convenient mechanism to ignore that
 OTOH, if(-f somefile)... should not throw exception
+... and if(service SVC status)
+... and maybe stat(), when we have it
 ** TODO Native code calling user-land
 ** TODO case
 ** TODO String interpolation: "xyz${expr}ww"
