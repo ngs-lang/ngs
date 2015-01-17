@@ -13,6 +13,10 @@ var compile = require('../compile').compile;
 var code_snippets = [
 	'{ "ab" * 3 == "ababab" }',
 	'{ t = [10,20,30][[1,2]]; t == [20,30] }',
+	'{ min(3,5) == 3 }',
+	'{ max(3,5) == 5 }',
+	'{ startsWith("abc", "a") }',
+	'{ not(startsWith("cd", "cde")) }',
 ];
 
 // console.log("+ Loading stdlib");

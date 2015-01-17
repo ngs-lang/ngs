@@ -17,7 +17,8 @@ var PUSH_NODES = {
 
 var CALL_NODES = {
 	'get_item': true,
-	'set_item': true
+	'set_item': true,
+	'throw': true,
 }
 
 
@@ -383,7 +384,7 @@ function compile_tree(node, leave_value_in_stack) {
 	}
 	if(node.is('lambda')) {
 		var code = compile_tree(node[1], true);
-		code = code.concat([['LAMBDA_NO_RET']]); // error
+		code = code.concat([['ret']]);
 		ret = [].concat(
 			compile_invoke_no_args('Array'),
 			// Lexical scopes

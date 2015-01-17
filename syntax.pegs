@@ -158,6 +158,7 @@ expr_base "Expression/no-add" =
   break /
   continue /
   guard /
+  throw /
   type_definition /
   assignment /
   lambda /
@@ -268,3 +269,6 @@ type_field_definition "Definition of a field of a type" =
 
 guard "Function entry guard" =
   "guard" space e:CCEXPR { return N('guard', [e]); }
+
+throw "Throw an exception" =
+  "throw" space e:CCEXPR { return N('throw', [e]); }

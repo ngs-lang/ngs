@@ -101,6 +101,9 @@ var code_vs_stack = [
 	['{7 # mycomment1\n}', []],
 	['{7 // mycomment2\n}', []],
 	['# something', []],
+
+	// *** Empty function ***
+	['{defun f() { #xx\n}; f()}', [["Null", null]]],
 ];
 
 var code_vs_exec_args = [

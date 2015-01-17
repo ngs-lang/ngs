@@ -46,8 +46,8 @@
 		return ret
 	}
 
-	defun min(a:Number, b:Number) { return if{a<b}{a}{b} }
-	defun max(a:Number, b:Number) { return if{a<b}{b}{a} }
+	defun min(a:Number, b:Number) { if{a<b}{a}{b} }
+	defun max(a:Number, b:Number) { if{a<b}{b}{a} }
 
 	defun startsWith(s:String, pfx:String) {
 		if{len(s) < len(pfx)} {
@@ -61,7 +61,7 @@
 				return false
 			}
 		}
-		return true
+		true
 	}
 
 	# Convert execution of (example) '-f somefile' to 'test -f somefile'
@@ -73,11 +73,11 @@
 	}
 
 	defun osname() {
-		  return null
+		  null
 	}
 
 	defun osname() {
 		  guard (-f /etc/debian_version)
-		  return "debian"
+		  "debian"
 	}
 }

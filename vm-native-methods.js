@@ -219,6 +219,13 @@ function register_native_methods() {
 		// Dirty lexical_scopes hack end
 		return scope.lambda;
 	});
+
+	// stack: ... lambda-object name -> ... lambda-object
+	this.registerNativeMethod('__throw', p_args('e', null), function vm___throw(scope) {
+		throw new Error('Uncaught exception');
+		return scope.lambda;
+	});
+
 	this.registerNativeMethod('exec', Args().rest_pos('args').get(), function ngs_runtime_spawn(scope, v) {
 		var args = get_arr(scope.args);
 		var props = {

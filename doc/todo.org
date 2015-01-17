@@ -2,14 +2,12 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** Add comments
-*** DONE "#"
-*** DONE "//"
-** TODO Exceptions
+** DONE Last expression in function should be the result
+** PROGRESS Exceptions
 ** TODO Failing spawn should generate exception
 ... and some convenient mechanism to ignore that
+OTOH, if(-f somefile)... should not throw exception
 ** TODO Native code calling user-land
-** TODO Last expression in function should be the result
 ** TODO case
 ** TODO String interpolation: "xyz${expr}ww"
 also "xyz$(cmd)ww"

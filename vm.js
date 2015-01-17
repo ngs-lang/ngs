@@ -476,6 +476,12 @@ VM.prototype.opcodes = {
 
 	// stack: ... v -> ... v
 	'ret': function() {
+		var c = this.context;
+		if(c.frames[c.frames.length-1].stack_len === c.stack.length) {
+			// We need to return a value but there isn't one in the stack
+			// return Null in these rare cases.
+			c.stack.push(['Null', null]);
+		}
 		this.context.ret(1);
 	},
 
