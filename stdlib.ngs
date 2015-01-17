@@ -16,7 +16,7 @@
 	}
 
 	# The == operator
-	# Can NOT handle reqursive structures (untested)
+	# Can NOT handle recursive structures (untested)
 	defun __eq(a:Array, b:Array) {
 		len_a = len(a)
 		len_b = len(b)
