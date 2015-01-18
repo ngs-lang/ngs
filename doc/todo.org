@@ -9,6 +9,11 @@
 OTOH, if(-f somefile)... should not throw exception
 ... and if(service SVC status)
 ... and maybe stat(), when we have it
+*** The decision of whether to throw exception will be made by
+*isException(p:Process, e:Number)*
+or may be *isException(exec_args: Array, e:Number)*
+wich will be called when the process finishes
+other conditions, such as program not found etc will be exceptions
 ** TODO Native code calling user-land
 ** TODO case
 ** TODO String interpolation: "xyz${expr}ww"
