@@ -147,6 +147,15 @@ function compile_tree(node, leave_value_in_stack) {
 	if(leave_value_in_stack === undefined) {
 		leave_value_in_stack = 1;
 	}
+	function concat(a) {
+		ret = ret.concat(a);
+	}
+	function cmd() {
+		concat([Array.prototype.slice.call(arguments)]);
+	}
+	function concat_tree(i, lvs) {
+		concat(compile_tree(node[i], lvs));
+	}
 	// console.log('node', node, leave_value_in_stack);
 	if(node.is('assignment')) {
 		if(node[0].is('varname')) {
@@ -168,14 +177,10 @@ function compile_tree(node, leave_value_in_stack) {
 		return ret;
 	}
 	if(node.is('if')) {
-		ret = ret.concat([
-			['push_arr'],
-		]);
-		ret = ret.concat(compile_tree(node[0], true)); // condition
-		ret = ret.concat(
-			compile_push(),
-			compile_invoke_pos_args_in_stack('Bool')
-		);
+		cmd('push_arr');
+		concat_tree(0, true); // condition
+		concat(compile_push());
+		concat(compile_invoke_pos_args_in_stack('Bool'))
 		var t = compile_tree(node[1], leave_value_in_stack);
 		var f;
 		if(node[2]) {
@@ -183,11 +188,10 @@ function compile_tree(node, leave_value_in_stack) {
 		} else {
 			f = null_if_needed([], leave_value_in_stack);
 		}
-		ret = ret.concat([
-			['jump_if_false', t.length+1]
-		], t, [
-			['jump', f.length]
-		], f);
+		cmd('jump_if_false', t.length+1);
+		concat(t);
+		cmd('jump', f.length);
+		concat(f);
 		return ret;
 	}
 	if(node.is('while')) {
@@ -198,22 +202,14 @@ function compile_tree(node, leave_value_in_stack) {
 		process_break(body, 1); // + 1 for jump up instruction
 		process_continue(body, 0);
 
-		ret = ret.concat(
-			[
-				['push_arr'],
-			],
-			compile_tree(node[0], true), // condition
-			compile_push(),
-			compile_invoke_pos_args_in_stack('Bool'),
-			[
-				[jump_cmd, body.length + 1], // +1 for the jump
-			],
-			body
-		);
+		cmd('push_arr');
+		concat(compile_tree(node[0], true)); // condition
+		concat(compile_push());
+		concat(compile_invoke_pos_args_in_stack('Bool'));
+		cmd(jump_cmd, body.length + 1); // +1 for the jump
+		concat(body);
 		var jump_up = ret.length + 1; // +1 for the jump instruction itself
-		ret = ret.concat([
-			['jump', -jump_up],
-		]);
+		cmd('jump', -jump_up);
 		return null_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('for')) {
@@ -239,18 +235,13 @@ function compile_tree(node, leave_value_in_stack) {
 		// typically continue jumps to start of the body
 		// but we need it at the end, the "incr" part
 		process_continue(body, body.length);
-		ret = [].concat(
-			init,
-			cond,
-			[
-				['jump_if_false', body.length + incr.length + 1], // +1 for the jump
-			],
-			body,
-			incr,
-			[
-				['jump', -jump_up],
-			]
-		);
+
+		concat(init);
+		concat(cond);
+		cmd('jump_if_false', body.length + incr.length + 1);
+		concat(body);
+		concat(incr);
+		cmd('jump', -jump_up);
 		return null_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('break')) {
@@ -266,31 +257,26 @@ function compile_tree(node, leave_value_in_stack) {
 		return [['push_' + node.node_type.slice(0, 3), node.data]];
 	}
 	if(CALL_NODES[node.node_type]) {
-		ret = [['push_arr']];
+		cmd('push_arr');
 		for(var i=0; i<node.length; i++) {
-			ret = ret.concat(compile_tree(node[i], true), compile_push());
+			concat(compile_tree(node[i], true))
+			concat(compile_push());
 		}
-		ret = ret.concat(
-			[
-				['push_hsh'],
-				['push_str', '__' + node.node_type],
-				['get_var'],
-				['invoke'],
-			]
-		);
+		cmd('push_hsh');
+		cmd('push_str', '__' + node.node_type);
+		cmd('get_var');
+		cmd('invoke');
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('varname')) {
-		ret = [
-			['push_str', node.data],
-			['get_var'],
-		];
+		cmd('push_str', node.data);
+		cmd('get_var');
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('exec')) {
 		// TODO: real word expansion
-		ret = compile_tree(node[0]);
-		ret = ret.concat(compile_invoke_pos_args_in_stack('exec'));
+		concat_tree(0, true);
+		concat(compile_invoke_pos_args_in_stack('exec'));
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('splice')) {
@@ -298,199 +284,134 @@ function compile_tree(node, leave_value_in_stack) {
 	}
 	if(node.is('array') || node.is('expressions')) {
 		// TODO: implement 'expressions' here, for now it only tested with 'array'
-		ret = [
-			['comment', 'start', node.node_type],
-		];
-		ret = ret.concat(compile_invoke_no_args('Array'));
+		cmd('comment', 'start', node.node_type);
+		concat(compile_invoke_no_args('Array'));
 		var m;
 		for(var i=0; i<node.length; i++) {
-			var t = compile_tree(node[i]);
-			ret = ret.concat(t);
+			concat_tree(i, true);
 			if(node[i].is('splice')) {
 				m = '__add'
 			} else {
 				m = 'push'
 			}
-			ret = ret.concat([
-				['push_str', m],
-				['get_var'],
-				['invoke2'],
-			]);
+			cmd('push_str', m);
+			cmd('get_var');
+			cmd('invoke2');
 		}
 		ret = pop_if_needed(ret, leave_value_in_stack);
-		ret = ret.concat([['comment', 'end', node.node_type]]);
+		cmd('comment', 'end', node.node_type);
 		return ret;
 	}
 	if(node.is('binop')) {
 		// node.data -- operation name
-		ret = ret.concat(
-			compile_tree(node[0], true),
-			compile_tree(node[1], true),
-			[
-				['push_str', '__' + node.data],
-				['get_var'],
-				['invoke2'],
-			]
-		)
+		concat_tree(0, true);
+		concat_tree(1, true);
+		cmd('push_str', '__' + node.data);
+		cmd('get_var');
+		cmd('invoke2');
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('deftype')) {
 		// TODO: new call convention
 		var mk_array = compile_invoke_no_args('Array');
-		ret = [].concat(
-			[
-				['comment', 'start', node.node_type],
-				['push_str', node.data],
-			],
-			mk_array
-		);
+		cmd('comment', 'start', node.node_type);
+		cmd('push_str', node.data);
+		concat(mk_array)
 		for(var i=0; i<node.length; i++) {
-			ret = ret.concat([
-				['comment', 'start', node.node_type, 'field'],
-			]);
-			ret = ret.concat(
-				mk_array,
-				[
-					['push_str', node[i].data[0]],
-					['push_str', 'push'],
-					['get_var'],
-					['invoke2'],
-					['push_str', node[i].data[1]],
-					['push_str', 'push'],
-					['get_var'],
-					['invoke2'],
-					['push_str', 'push'],
-					['get_var'],
-					['invoke2'],
-					['comment', 'end', node.node_type, 'field'],
-				]
-			);
+			cmd('comment', 'start', node.node_type, 'field');
+			concat(mk_array);
+			cmd('push_str', node[i].data[0]);
+			cmd('push_str', 'push');
+			cmd('get_var');
+			cmd('invoke2');
+			cmd('push_str', node[i].data[1]);
+			cmd('push_str', 'push');
+			cmd('get_var');
+			cmd('invoke2');
+			cmd('push_str', 'push');
+			cmd('get_var');
+			cmd('invoke2');
+			cmd('comment', 'end', node.node_type, 'field');
 		}
-		ret = ret.concat([
-			['push_str', '__deftype'],
-			['get_var'],
-			['invoke2'],
-		]);
+		cmd('push_str', '__deftype');
+		cmd('get_var');
+		cmd('invoke2');
 		return ret;
 	}
 	if(node.is('defun')) {
-		ret = compile_tree(node[0], true);
-		ret = ret.concat([
-			['push_str', node.data],
-			['push_str', '__register_method'],
-			['get_var'],
-			['invoke2'],
-		]);
+		concat_tree(0, true);
+		cmd('push_str', node.data);
+		cmd('push_str', '__register_method');
+		cmd('get_var');
+		cmd('invoke2');
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('lambda')) {
 		var code = compile_tree(node[1], true);
 		code = code.concat([['ret']]);
-		ret = [].concat(
-			compile_invoke_no_args('Array'),
-			// Lexical scopes
-			compile_invoke_no_args('__get_lexical_scopes'),
-			compile_push(),
-			transform_args(node[0]),
-			compile_push(),
-			[
-				// IP
-				['push_ip'],
-				['jump', code.length],
-			],
-			code,
-			[
-				['push_num', 1],
-				['push_str', '__add'],
-				['get_var'],
-				['invoke2'],
-			],
-			compile_push(),
-			compile_invoke_pos_args_in_stack('__lambda')
-		);
+		concat(compile_invoke_no_args('Array'));
+		// Lexical scopes
+		concat(compile_invoke_no_args('__get_lexical_scopes'));
+		concat(compile_push());
+		concat(transform_args(node[0]));
+		concat(compile_push());
+		// IP
+		cmd('push_ip');
+		cmd('jump', code.length);
+		concat(code);
+		cmd('push_num', 1);
+		cmd('push_str', '__add');
+		cmd('get_var');
+		cmd('invoke2');
+		concat(compile_push());
+		concat(compile_invoke_pos_args_in_stack('__lambda'));
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('call')) {
-		var methods = compile_tree(node[0]);
-		var positional_args = compile_tree(node[1]);
-		ret = [].concat(
-			positional_args,
-			[
-				['push_hsh'],
-			],
-			methods,
-			[
-				['invoke']
-			]
-		);
+		concat_tree(1, true); // positional_args
+		cmd('push_hsh');
+		concat_tree(0, true); // methods
+		cmd('invoke');
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('ret')) {
-		ret = compile_tree(node[0], true);
-		ret = ret.concat([
-			[node.node_type],
-		]);
+		concat_tree(0, true);
+		cmd('ret');
 		return ret;
 	}
 	if(node.is('guard')) {
-		ret = ret.concat(
-			[
-				['push_arr'],
-			],
-			compile_tree(node[0], true),
-			compile_push(),
-			compile_invoke_pos_args_in_stack('Bool'),
-			[
-				['guard'],
-			]
-		);
+		cmd('push_arr');
+		concat_tree(0, true);
+		concat(compile_push());
+		concat(compile_invoke_pos_args_in_stack('Bool'));
+		cmd('guard');
 		return ret;
 	}
 	if(node.is('try_catch')) {
 		var l = N('lambda', [N('parameters', [N('arg_pos', [], 'catch')]), node[0] /* body */]);
 		var catches = node[1];
-		ret = ret.concat(
-			compile_invoke_no_args('Array'),
-			compile_invoke_no_args('Array')
-		);
+		concat(compile_invoke_no_args('Array'));
+		concat(compile_invoke_no_args('Array'));
 		for(var i=catches.length-1; i>=0; i--) {
-			ret = ret.concat(
-				[
-					['comment', 'catch clause ' + i + ' start'],
-				],
-				compile_tree(catches[i], true),
-				[
-					['comment', 'catch clause ' + i + ' push result'],
-				],
-				compile_push(),
-				[
-					['comment', 'catch clause ' + i + ' end'],
-				]
-			);
+			cmd('comment', 'catch clause ' + i + ' start');
+			concat(compile_tree(catches[i], true));
+			cmd('comment', 'catch clause ' + i + ' push result');
+			concat(compile_push());
+			cmd('comment', 'catch clause ' + i + ' end');
 		} // for catches
-		ret = ret.concat(
-			compile_push(), // finsih positional_args for try lambda
-			[
-				['push_hsh'], // named_args for try lambda
-			],
-			compile_invoke_no_args('Array'),
-			[
-				['comment', 'try lambda begin'],
-			],
-			compile_tree(l),
-			[
-				['comment', 'try lambda end'],
-			],
-			compile_push(),
-			[
-				['invoke'],
-			]
-		);
-
+		concat(compile_push()); // finsih positional_args for try lambda
+		cmd('push_hsh'); // named_args for try lambda
+		concat(compile_invoke_no_args('Array'));
+		cmd('comment', 'try lambda begin');
+		concat(compile_tree(l));
+		cmd('comment', 'try lambda end');
+		concat(compile_push());
+		cmd('invoke');
 		return pop_if_needed(ret);
 	}
 	if(node.is('comment')) {
-		return [['comment', 'user: ' + node.data]];
+		cmd('comment', 'user: ' + node.data);
+		return ret;
 	}
 	if(node.node_type) {
 		throw "Don't know how to compile type '" + node.node_type + "'";
