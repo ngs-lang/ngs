@@ -2,8 +2,7 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** DONE Last expression in function should be the result
-** DONE Exceptions
+** DONE Preliminary exceptions
 ** TODO Expose inspect()
 ** TODO Failing spawn should generate exception
 ... and some convenient mechanism to ignore that
