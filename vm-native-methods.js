@@ -204,6 +204,7 @@ function register_native_methods() {
 	// stack: ... lexical_scopes code_ptr -> ... lambda-object
 	//											 (temporary object repr.)
 	this.registerNativeMethod('__lambda', p_args('scopes', 'Scopes', 'args', 'Array', 'ip', 'Number'), function vm___lambda(scope) {
+		// console.log('__lambda', scope.scopes.length, scope.ip);
 		return ['Lambda', ['Array', [scope.scopes, scope.args, scope.ip]]];
 	});
 
@@ -221,9 +222,9 @@ function register_native_methods() {
 	});
 
 	// stack: ... lambda-object name -> ... lambda-object
-	this.registerNativeMethod('__throw', p_args('e', null), function vm___throw(scope) {
-		throw new Error('Uncaught exception');
-		return scope.lambda;
+	this.registerNativeMethod('__throw', p_args('e', null), function vm___throw(scope, vm) {
+		this.throw_(scope.e, vm);
+		return ['Null', null];
 	});
 
 	this.registerNativeMethod('exec', Args().rest_pos('args').get(), function ngs_runtime_spawn(scope, v) {

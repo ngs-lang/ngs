@@ -104,6 +104,11 @@ var code_vs_stack = [
 
 	// *** Empty function ***
 	['{defun f() { #xx\n}; f()}', [["Null", null]]],
+
+	// *** try/catch ***
+	['{r=[]; try{push(r,1); throw{2}; push(r,3);} catch(n:Number){push(r, n)}; r}', [["Array",[["Number",1],["Number",2]]]]],
+	['{r = []; defun g() {throw {777};} defun f() {try {push(r, "AA"); g(); push(r, "BB");} catch(s:String) {push(r, s + "XX");}} try{push(r, "A"); f(); push(r, "B");} catch(n:Number) {push(r, n * 2)} r}', [["Array",[["String","A"],["String","AA"],["Number",1554]]]]],
+	['{r = []; defun g() {throw {"ZZ"};} defun f() {try {push(r, "AA"); g(); push(r, "BB");} catch(s:String) {push(r, s + "XX");}} try{push(r, "A"); f(); push(r, "B");} catch(n:Number) {push(r, n * 2)} r}', [["Array",[["String","A"],["String","AA"],["String","ZZXX"],["String","B"]]]]],
 ];
 
 var code_vs_exec_args = [

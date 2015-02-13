@@ -7,8 +7,8 @@
 }
 
 start = 
-  commands
-  // top_level_expressions
+  commands /
+  top_level_expressions
 
 space = [ \t\n]+
 inline_space = [ \t]+
@@ -91,7 +91,7 @@ CCEXPR_code =
     return code;
   }
 
-top_level_expressions "semicolon separated top-level expressions" =
+top_level_expressions "Top-level expressions" =
   e:expr top_level_expressions_delimiter es:top_level_expressions {
     return N('top_level_expressions', [e]).concat(es);
   } /
@@ -159,6 +159,7 @@ expr_base "Expression/no-add" =
   continue /
   guard /
   throw /
+  try_catch /
   type_definition /
   assignment /
   lambda /
@@ -255,7 +256,7 @@ type_definition "Type definition" =
   }
 
 type_fields_definitions "Definitions of fields of a type" =
-  d:type_field_definition space? ";" space? ds:type_fields_definitions space? space? {
+  d:type_field_definition space? ";" space? ds:type_fields_definitions space? {
     return N('fields_definitions', [d]).concat(ds);
   } /
   d:type_field_definition space? ";" ? {
@@ -268,7 +269,25 @@ type_field_definition "Definition of a field of a type" =
   }
 
 guard "Function entry guard" =
-  "guard" space e:CCEXPR { return N('guard', [e]); }
+  "guard" space? e:CCEXPR { return N('guard', [e]); }
 
 throw "Throw an exception" =
-  "throw" space e:CCEXPR { return N('throw', [e]); }
+  "throw" space? e:CCEXPR { return N('throw', [e]); }
+
+try_catch "Try...catch" =
+  "try" space? body:CCEXPR space? c:catches  {
+    return N('try_catch', [body, c])
+  }
+  
+catches "Catch clauses" =
+  c:catch space? cs:catches {
+    return N('cacthes', [c]).concat(cs);
+  } /
+  c:catch {
+    return N('catches', [c]);
+  }
+
+catch "Catch clause" =
+  "catch" space? "(" space? params:parameters? space? ")" space? code:CCEXPR {
+    return N('lambda', [params || N('parameters', []), code]);
+  }

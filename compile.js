@@ -7,6 +7,7 @@ var util = require('util');
 var _ = require('underscore');
 
 var parser = require('./syntax');
+var N = require('./ast_node').ASTNode;
 
 var PUSH_NODES = {
 	'number': true,
@@ -445,6 +446,49 @@ function compile_tree(node, leave_value_in_stack) {
 		);
 		return ret;
 	}
+	if(node.is('try_catch')) {
+		var l = N('lambda', [N('parameters', [N('arg_pos', [], 'catch')]), node[0] /* body */]);
+		var catches = node[1];
+		ret = ret.concat(
+			compile_invoke_no_args('Array'),
+			compile_invoke_no_args('Array')
+		);
+		for(var i=catches.length-1; i>=0; i--) {
+			ret = ret.concat(
+				[
+					['comment', 'catch clause ' + i + ' start'],
+				],
+				compile_tree(catches[i], true),
+				[
+					['comment', 'catch clause ' + i + ' push result'],
+				],
+				compile_push(),
+				[
+					['comment', 'catch clause ' + i + ' end'],
+				]
+			);
+		} // for catches
+		ret = ret.concat(
+			compile_push(), // finsih positional_args for try lambda
+			[
+				['push_hsh'], // named_args for try lambda
+			],
+			compile_invoke_no_args('Array'),
+			[
+				['comment', 'try lambda begin'],
+			],
+			compile_tree(l),
+			[
+				['comment', 'try lambda end'],
+			],
+			compile_push(),
+			[
+				['invoke'],
+			]
+		);
+
+		return pop_if_needed(ret);
+	}
 	if(node.is('comment')) {
 		return [['comment', 'user: ' + node.data]];
 	}
@@ -457,11 +501,12 @@ function compile_tree(node, leave_value_in_stack) {
 function compile(code, options) {
 	var debug_ast = process.env.NGS_DEBUG_AST;
 	var o = {
+		start_rule: 'commands',
 		leave_value_in_stack: false
 	}
 	_.extend(o, options || {});
 	try {
-		var tree = parser.parse(code);
+		var tree = parser.parse(code, o.start_rule);
 	} catch(e) {
 		console.log(e);
 		throw e;

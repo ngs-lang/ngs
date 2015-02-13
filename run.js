@@ -19,15 +19,22 @@ var vm = require('./vm');
 var v = new vm.VM();
 var ctx = v.setupContext();
 
-function load(fname) {
+var start_rule = 'commands';
+
+function load(fname, start_rule) {
 	var f = fs.readSync(fs.openSync(fname, 'r'), BUFFER_SIZE);
-	var code = compile(f[0].toString()).compiled_code;
+	var code = compile(f[0].toString(), {'start_rule': start_rule}).compiled_code;
 	code = [].concat([['comment', 'file: ' + fname]], code);
 	v.useCode(code);
 }
 
-load('ngs/stdlib.ngs');
-load(process.argv[2]);
+load('ngs/stdlib.ngs', start_rule);
+
+if(process.env.NGS_START_CODE) {
+	start_rule = 'top_level_expressions';
+}
+
+load(process.argv[2], start_rule);
 
 v.start(function ngs_runtime_script_finish_callback() {
 	if(process.env.NGS_DEBUG_FINISH) {

@@ -16,6 +16,11 @@ for(var k in data) {
 	global[k] = data[k];
 }
 
+function ReturnLater() {}
+
+function Return(v) { this.v = v; }
+
+
 function _repr_depth(depth) {
 	var ret = '';
 	for(var i=0;i<depth;i++) {
@@ -122,10 +127,12 @@ Context.prototype.initialize = function(global_scope) {
 Context.prototype.find_var_lexical_scope = function(varname) {
 	var scopes = this.lexical_scopes;
 	for(var i=scopes.length-1; i>=0; i--) {
+		// console.log('find_var_lexical_scope', varname, i);
 		if(Object.prototype.hasOwnProperty.call(scopes[i], varname)) {
 			return [true, scopes[i]];
 		}
 	}
+	// console.log(scopes[0]);
 	return [false, scopes[0]];
 }
 
@@ -134,8 +141,50 @@ Context.prototype.getCallerLexicalScopes = function() {
 	return this.frames[this.frames.length-1].lexical_scopes;
 }
 
-Context.prototype.registerNativeMethod
+// *** Exceptions - start ***
+// TODO: Fix non-working guards
+// TODO: Handle when exception handler is not found at all
+// TODO: Refactor for clarity
+Context.prototype._find_catches = function() {
+	var t;
+	var catches;
+	while(true) {
+		t = this.lexical_scopes;
+		this.lexical_scopes = this.getCallerLexicalScopes();
+		catches = this.find_var_lexical_scope('catch');
+		this.lexical_scopes = t;
+		if(catches[0]) {
+			break;
+		}
+		if(!this.frames.length) {
+			break;
+		}
+		this.ret(null); // pop a frame
+	}
+	return catches;
+}
 
+Context.prototype.throw_ = function(v, vm) {
+	var catches = this._find_catches();
+	if(!catches[0]) {
+		throw new Error("Couldn't find 'catch' variable during 'throw'. Probably throw without try.");
+	}
+	catches = catches[1]['catch'];
+	var st = this.stack;
+	this.ip = '_throw_end';
+	var status = this.invoke(catches, ['Array', [v]], ['Hash', {}], vm);
+	if(!status[0]) {
+		this._throw_end();
+		this.throw_(v, vm);
+	}
+	throw new ReturnLater();
+}
+
+Context.prototype._throw_end = function() {
+	this.ret(null); // gets rid of the catch() frame
+	this.ret(null); // breaks the try body
+}
+// *** Exceptions - end ***
 
 function VM() {
 	return this.initialize();
@@ -261,7 +310,7 @@ Context.prototype.registerNativeMethod = function(name, args, f) {
 			[
 				'Array',
 				[
-					['Scopes', []], // Maybe change later and give access to the global scope. Simplicity for now.
+					['Scopes', this.lexical_scopes], // Maybe change later and give access to the global scope. Simplicity for now.
 					args,
 					['NativeMethod', f],
 				]
@@ -322,6 +371,14 @@ function match_params(lambda, positional_args, named_args) {
 	return [true, scope, 'all matched'];
 }
 
+Context.prototype.invoke_or_throw = function(methods, positional_args, named_args, vm) {
+	var status = this.invoke(methods, positional_args, named_args, vm);
+	if(!status[0]) {
+		console.log(positional_args);
+		throw new Error("Invoke: appropriate method for + " + inspect(positional_args) + " and " + inspect(named_args) + " not found for in " + inspect(methods));
+	}
+}
+
 
 Context.prototype.invoke = function(methods, positional_args, named_args, vm) {
 	var ms = get_arr(methods);
@@ -355,20 +412,28 @@ Context.prototype.invoke = function(methods, positional_args, named_args, vm) {
 
 		if(call_type === 'Number') {
 			this.ip = get_num(lambda[2]);
-			return;
+			return [true];
 		}
 		if(call_type === 'NativeMethod') {
 			var nm = get_nm(lambda[2]);
 			// console.log('NATIVEMETHOD', nm);
-			this.stack.push(nm.call(this, scope[1], vm));
-			this.ret(1);
-			return;
+			try {
+				this.stack.push(nm.call(this, scope[1], vm));
+				this.ret(1);
+			} catch(e) {
+				if(e instanceof ReturnLater) {
+					// all good
+				} else {
+					throw e;
+				}
+			}
+			return [true];
 		}
 		throw new Error("Don't know how to call matched method: " + m);
 	}
 
-	console.log(positional_args);
-	throw new Error("Invoke: appropriate method not found for in " + util.inspect(ms, {depth: 20}));
+	return [false, 'no_method'];
+
 }
 
 Context.prototype.ret = function(stack_delta) {
@@ -381,8 +446,15 @@ Context.prototype.ret = function(stack_delta) {
 	c.named_args = frame.named_args;
 	// console.log('RET DONE');
 	// console.log('Ret recovered methods to', inspect(c.methods));
-	if(c.stack.length != frame.stack_len + stack_delta) {
-		throw new Error("Returning with wrong stack size");
+	if(stack_delta === null) {
+	} else {
+		if(c.stack.length != frame.stack_len + stack_delta) {
+			throw new Error("Returning with wrong stack size");
+		}
+	}
+	if(typeof(this.ip) == 'string') {
+		var f = this[this.ip];
+		f.call(this);
 	}
 }
 
@@ -393,7 +465,7 @@ Context.prototype.guard = function(vm) {
 	this.ret(0);
 	var m = get_arr(methods);
 	// Invoke the rest of the methods
-	this.invoke(['Array', m.slice(0, m.length-1)], positional_args, named_args, vm);
+	this.invoke_or_throw(['Array', m.slice(0, m.length-1)], positional_args, named_args, vm);
 }
 
 VM.prototype.opcodes = {
@@ -461,7 +533,7 @@ VM.prototype.opcodes = {
 		var methods = st.pop();
 		var named_args = st.pop();
 		var positional_args = st.pop();
-		this.context.invoke(methods, positional_args, named_args, this);
+		this.context.invoke_or_throw(methods, positional_args, named_args, this);
 	},
 
 	// stack: ... arg1 arg2 methods -> ... X
@@ -471,7 +543,7 @@ VM.prototype.opcodes = {
 		var arg2 = st.pop();
 		var arg1 = st.pop();
 		var positional_args = ['Array', [arg1, arg2]];
-		this.context.invoke(methods, positional_args, ['Hash', {}], this);
+		this.context.invoke_or_throw(methods, positional_args, ['Hash', {}], this);
 	},
 
 	// stack: ... v -> ... v

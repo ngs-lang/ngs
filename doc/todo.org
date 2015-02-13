@@ -3,7 +3,8 @@
 
 * Now
 ** DONE Last expression in function should be the result
-** PROGRESS Exceptions
+** DONE Exceptions
+** TODO Expose inspect()
 ** TODO Failing spawn should generate exception
 ... and some convenient mechanism to ignore that
 OTOH, if(-f somefile)... should not throw exception
@@ -15,9 +16,14 @@ or may be *isException(exec_args: Array, e:Number)*
 wich will be called when the process finishes
 other conditions, such as program not found etc will be exceptions
 ** TODO Native code calling user-land
+** TODO f(1, cmap [2,3], 4) ~~~ map(f, [2,3], before=1, after=4)
 ** TODO case
 ** TODO String interpolation: "xyz${expr}ww"
 also "xyz$(cmd)ww"
+** TODO Arguments parsing
+** TODO String pointers to native methods for serialization
+** TODO Context.methods -> "super" variable
+** TODO Refactor and improve exceptions
 * Soon
 ** TODO examples folder with snippets + tests for the snippets
 ** TODO Refactor arguments to be single data structure
