@@ -271,9 +271,6 @@ type_field_definition "Definition of a field of a type" =
 guard "Function entry guard" =
   "guard" space? e:CCEXPR { return N('guard', [e]); }
 
-throw "Throw an exception" =
-  "throw" space? e:CCEXPR { return N('throw', [e]); }
-
 try_catch "Try...catch" =
   "try" space? body:CCEXPR space? c:catches  {
     return N('try_catch', [body, c])

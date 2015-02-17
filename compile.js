@@ -19,7 +19,6 @@ var PUSH_NODES = {
 var CALL_NODES = {
 	'get_item': true,
 	'set_item': true,
-	'throw': true,
 }
 
 

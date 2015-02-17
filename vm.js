@@ -90,23 +90,34 @@ function inspect_stack(stack) {
 	return ret;
 }
 
+function Frame() {
+	return this.initialize();
+}
+
+Frame.prototype.initialize = function() {
+	this.ip = 0;
+	this.scopes = [];
+	this.positional_args = ['Array', []];
+	this.named_args = ['Hash', {}];
+	this.methods = ['Array', []];
+}
+
 function Context(global_scope) {
 	return this.initialize(global_scope);
 }
 
 Context.prototype.initialize = function(global_scope) {
+
 	this.state = 'running';
-	this.ip = 0;
 	this.stack = [];
-	this.frames = [];
-	this.lexical_scopes = [global_scope];
-	this.methods = ['Array', []];
-	this.positional_args = ['Array', []];
-	this.named_args = ['Hash', {}];
+
+	this.frame = new Frame();
+	this.frame.scopes = [global_scope];
+	this.frames = [this.frame];
 	this.cycles = 0;
 
 	var get_context_ip = function() {
-		return this.ip;
+		return this.frame.ip;
 	}.bind(this);
 
 	// Don't want pop() method to be listed and printed in console.log()
@@ -125,9 +136,8 @@ Context.prototype.initialize = function(global_scope) {
 }
 
 Context.prototype.find_var_lexical_scope = function(varname) {
-	var scopes = this.lexical_scopes;
+	var scopes = this.frame.scopes;
 	for(var i=scopes.length-1; i>=0; i--) {
-		// console.log('find_var_lexical_scope', varname, i);
 		if(Object.prototype.hasOwnProperty.call(scopes[i], varname)) {
 			return [true, scopes[i]];
 		}
@@ -138,53 +148,8 @@ Context.prototype.find_var_lexical_scope = function(varname) {
 
 Context.prototype.getCallerLexicalScopes = function() {
 	// Should only be exposed to internal functions for security reasons.
-	return this.frames[this.frames.length-1].lexical_scopes;
+	return this.frames[this.frames.length-2].scopes;
 }
-
-// *** Exceptions - start ***
-// TODO: Fix non-working guards
-// TODO: Handle when exception handler is not found at all
-// TODO: Refactor for clarity
-Context.prototype._find_catches = function() {
-	var t;
-	var catches;
-	while(true) {
-		t = this.lexical_scopes;
-		this.lexical_scopes = this.getCallerLexicalScopes();
-		catches = this.find_var_lexical_scope('catch');
-		this.lexical_scopes = t;
-		if(catches[0]) {
-			break;
-		}
-		if(!this.frames.length) {
-			break;
-		}
-		this.ret(null); // pop a frame
-	}
-	return catches;
-}
-
-Context.prototype.throw_ = function(v, vm) {
-	var catches = this._find_catches();
-	if(!catches[0]) {
-		throw new Error("Couldn't find 'catch' variable during 'throw'. Probably throw without try.");
-	}
-	catches = catches[1]['catch'];
-	var st = this.stack;
-	this.ip = '_throw_end';
-	var status = this.invoke(catches, ['Array', [v]], ['Hash', {}], vm);
-	if(!status[0]) {
-		this._throw_end();
-		this.throw_(v, vm);
-	}
-	throw new ReturnLater();
-}
-
-Context.prototype._throw_end = function() {
-	this.ret(null); // gets rid of the catch() frame
-	this.ret(null); // breaks the try body
-}
-// *** Exceptions - end ***
 
 function VM() {
 	return this.initialize();
@@ -227,19 +192,19 @@ VM.prototype.mainLoop = function() {
 	while(this.runnable_contexts.length) {
 		// console.log('DEBUG DELAY PRE', this.runnable_contexts.length);
 		this.context = this.runnable_contexts[0];
-		var op = this.code[this.context.ip];
-		this.context.ip++;
+		var op = this.code[this.context.frame.ip];
+		this.context.frame.ip++;
 		if(stack_debug) {
 			console.log('ST', inspect_stack(this.context.stack));
 			console.log('FRAMES_N', this.context.frames.length);
-			console.log('OP', op, '@', this.context.ip-1, 'CYCLES', this.context.cycles);
+			console.log('OP', op, '@', this.context.frame.ip-1, 'CYCLES', this.context.cycles);
 			console.log('');
 		}
 		if(op[0] === 'comment') {
 			continue;
 		}
 		if(!(op[0] in this.opcodes)) {
-			throw new Error("Illegal opcode: " + op[0] + " at " + (this.context.ip-1));
+			throw new Error("Illegal opcode: " + op[0] + " at " + (this.context.frame.ip-1));
 		}
 		this.opcodes[op[0]].call(this, op[1]);
 		this.context.cycles++;
@@ -310,7 +275,7 @@ Context.prototype.registerNativeMethod = function(name, args, f) {
 			[
 				'Array',
 				[
-					['Scopes', this.lexical_scopes], // Maybe change later and give access to the global scope. Simplicity for now.
+					['Scopes', this.frame.scopes], // Maybe change later and give access to the global scope. Simplicity for now.
 					args,
 					['NativeMethod', f],
 				]
@@ -394,24 +359,28 @@ Context.prototype.invoke = function(methods, positional_args, named_args, vm) {
 			continue;
 		}
 		var call_type = get_type(lambda[2]);
-		this.frames.push({
-			lexical_scopes: this.lexical_scopes,
-			ip: this.ip,
-			stack_len: this.stack.length,
-			methods: this.methods,
-			positional_args: this.positional_args,
-			named_args: this.named_args,
-		});
-		this.lexical_scopes = get_scp(lambda[0])
-		this.lexical_scopes = this.lexical_scopes.concat(scope[1]);
+		// this.frames.push({
+		// 	lexical_scopes: this.lexical_scopes,
+		// 	ip: this.ip,
+		// 	stack_len: this.stack.length,
+		// 	methods: this.methods,
+		// 	positional_args: this.positional_args,
+		// 	named_args: this.named_args,
+		// });
+		var old_frame = this.frame;
+		this.frame = new Frame();
+		this.frames.push(this.frame);
+		this.frame.scopes = get_scp(lambda[0])
+		this.frame.scopes = old_frame.scopes.concat(scope[1]);
+		old_frame.stack_len = this.stack.length;
 
 		// Stuff for guards
-		this.methods = methods;
-		this.positional_args = positional_args;
-		this.named_args = named_args;
+		this.frame.methods = methods;
+		this.frame.positional_args = positional_args;
+		this.frame.named_args = named_args;
 
 		if(call_type === 'Number') {
-			this.ip = get_num(lambda[2]);
+			this.frame.ip = get_num(lambda[2]);
 			return [true];
 		}
 		if(call_type === 'NativeMethod') {
@@ -437,31 +406,25 @@ Context.prototype.invoke = function(methods, positional_args, named_args, vm) {
 }
 
 Context.prototype.ret = function(stack_delta) {
-	var c = this;
-	var frame = c.frames.pop();
-	c.ip = frame.ip;
-	c.lexical_scopes = frame.lexical_scopes;
-	c.methods = frame.methods;
-	c.positional_args = frame.positional_args;
-	c.named_args = frame.named_args;
-	// console.log('RET DONE');
-	// console.log('Ret recovered methods to', inspect(c.methods));
+	this.frames.pop();
+	this.frame = this.frames[this.frames.length - 1];
 	if(stack_delta === null) {
 	} else {
-		if(c.stack.length != frame.stack_len + stack_delta) {
+		if(this.stack.length != this.frame.stack_len + stack_delta) {
+			console.log('STACK', this.stack.length, this.frame.stack_len, stack_delta);
 			throw new Error("Returning with wrong stack size");
 		}
 	}
-	if(typeof(this.ip) == 'string') {
-		var f = this[this.ip];
+	if(typeof(this.frame.ip) == 'string') {
+		var f = this[this.frame.ip];
 		f.call(this);
 	}
 }
 
 Context.prototype.guard = function(vm) {
-	var methods = this.methods;
-	var positional_args = this.positional_args;
-	var named_args = this.named_args;
+	var methods = this.frame.methods;
+	var positional_args = this.frame.positional_args;
+	var named_args = this.frame.named_args;
 	this.ret(0);
 	var m = get_arr(methods);
 	// Invoke the rest of the methods
@@ -483,7 +446,7 @@ VM.prototype.opcodes = {
 
 	// stack: ... -> ... ip of the next instruction
 	'push_ip': function(v) {
-		this.context.stack.push(['Number', this.context.ip]);
+		this.context.stack.push(['Number', this.context.frame.ip]);
 	},
 
 	'push_num': function(v) { this.context.stack.push(['Number', v]); },
@@ -549,7 +512,7 @@ VM.prototype.opcodes = {
 	// stack: ... v -> ... v
 	'ret': function() {
 		var c = this.context;
-		if(c.frames[c.frames.length-1].stack_len === c.stack.length) {
+		if(c.frames[c.frames.length-2].stack_len === c.stack.length) {
 			// We need to return a value but there isn't one in the stack
 			// return Null in these rare cases.
 			c.stack.push(['Null', null]);
@@ -567,20 +530,20 @@ VM.prototype.opcodes = {
 	},
 
 	'jump': function(offset) {
-		this.context.ip += offset;
+		this.context.frame.ip += offset;
 	},
 
 	'jump_if_true': function(offset) {
 		var v = this.context.stack.pop();
 		if(get_boo(v)) {
-			this.context.ip += offset;
+			this.context.frame.ip += offset;
 		}
 	},
 
 	'jump_if_false': function(offset) {
 		var v = this.context.stack.pop();
 		if(!get_boo(v)) {
-			this.context.ip += offset;
+			this.context.frame.ip += offset;
 		}
 	},
 };
