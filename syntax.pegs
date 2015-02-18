@@ -158,8 +158,7 @@ expr_base "Expression/no-add" =
   break /
   continue /
   guard /
-  throw /
-  try_catch /
+  match /
   type_definition /
   assignment /
   lambda /
@@ -271,20 +270,20 @@ type_field_definition "Definition of a field of a type" =
 guard "Function entry guard" =
   "guard" space? e:CCEXPR { return N('guard', [e]); }
 
-try_catch "Try...catch" =
-  "try" space? body:CCEXPR space? c:catches  {
-    return N('try_catch', [body, c])
+match "Match" =
+  "match" space? "(" space? args:comma_separated_expressions? space? ")" space? "{" space? c:cases space? "}" {
+    return N('match', [args || N('expressions', []), c])
   }
   
-catches "Catch clauses" =
-  c:catch space? cs:catches {
-    return N('cacthes', [c]).concat(cs);
+cases "Match case clauses" =
+  c:case space? cs:cases {
+    return N('cases', [c]).concat(cs);
   } /
-  c:catch {
-    return N('catches', [c]);
+  c:case {
+    return N('cases', [c]);
   }
 
-catch "Catch clause" =
-  "catch" space? "(" space? params:parameters? space? ")" space? code:CCEXPR {
+case "Case clause" =
+  "(" space? params:parameters? space? ")" space? code:CCEXPR {
     return N('lambda', [params || N('parameters', []), code]);
   }

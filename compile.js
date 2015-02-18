@@ -53,6 +53,9 @@ function null_if_needed(code, leave_value_in_stack) {
 }
 
 function pop_if_needed(code, leave_value_in_stack) {
+	if(leave_value_in_stack === undefined) {
+		throw new Error("pop_if_needed requires two arguments");
+	}
 	if(!leave_value_in_stack) {
 		return code.concat([
 			['comment', 'leave_value_in_stack', false],
@@ -386,27 +389,27 @@ function compile_tree(node, leave_value_in_stack) {
 		cmd('guard');
 		return ret;
 	}
-	if(node.is('try_catch')) {
-		var l = N('lambda', [N('parameters', [N('arg_pos', [], 'catch')]), node[0] /* body */]);
-		var catches = node[1];
+	if(node.is('match')) {
+		var cases = node[1];
+
+		// --- preapre args as in 'call' - start ---
+		// positional_args for cases
+		concat_tree(0, true);
+		// named_args for cases
+		cmd('push_hsh');
+		// --- preapre args as in 'call' - end ---
+
 		concat(compile_invoke_no_args('Array'));
-		concat(compile_invoke_no_args('Array'));
-		for(var i=catches.length-1; i>=0; i--) {
+		for(var i=cases.length-1; i>=0; i--) {
 			cmd('comment', 'catch clause ' + i + ' start');
-			concat(compile_tree(catches[i], true));
+			concat(compile_tree(cases[i], true));
 			cmd('comment', 'catch clause ' + i + ' push result');
 			concat(compile_push());
 			cmd('comment', 'catch clause ' + i + ' end');
-		} // for catches
-		concat(compile_push()); // finsih positional_args for try lambda
-		cmd('push_hsh'); // named_args for try lambda
-		concat(compile_invoke_no_args('Array'));
-		cmd('comment', 'try lambda begin');
-		concat(compile_tree(l));
-		cmd('comment', 'try lambda end');
-		concat(compile_push());
+		} // for cases
+
 		cmd('invoke');
-		return pop_if_needed(ret);
+		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('comment')) {
 		cmd('comment', 'user: ' + node.data);

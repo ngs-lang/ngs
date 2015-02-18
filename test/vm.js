@@ -105,6 +105,10 @@ var code_vs_stack = [
 	// *** Empty function ***
 	['{defun f() { #xx\n}; f()}', [["Null", null]]],
 
+	// *** Match ***
+	['{match(100) {(n:Number) {1} (s:String) {2}}}', [["Number", 1]]],
+	['{match("X") {(n:Number) {1} (s:String) {2}}}', [["Number", 2]]],
+
 ];
 
 var code_vs_exec_args = [

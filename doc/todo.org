@@ -2,11 +2,8 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** DONE remove exceptions
-** PROGRESS Refactor vm frames
-** TODO match / case
+** DONE match / case
 ** TODO Context.methods -> "super" variable
-** TODO Refactor and improve exceptions
 ** TODO Expose inspect()
 ** TODO Failing spawn should generate exception
 ... and some convenient mechanism to ignore that
