@@ -109,6 +109,9 @@ var code_vs_stack = [
 	['{match(100) {(n:Number) {1} (s:String) {2}}}', [["Number", 1]]],
 	['{match("X") {(n:Number) {1} (s:String) {2}}}', [["Number", 2]]],
 
+	// *** __super ***
+	['{defun f(x) {x*2} defun f(y) { __super(y) * 3} f(5)}', [["Number", 30]]],
+
 ];
 
 var code_vs_exec_args = [

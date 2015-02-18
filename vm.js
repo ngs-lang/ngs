@@ -97,9 +97,6 @@ function Frame() {
 Frame.prototype.initialize = function() {
 	this.ip = 0;
 	this.scopes = [];
-	this.positional_args = ['Array', []];
-	this.named_args = ['Hash', {}];
-	this.methods = ['Array', []];
 }
 
 function Context(global_scope) {
@@ -144,6 +141,14 @@ Context.prototype.find_var_lexical_scope = function(varname) {
 	}
 	// console.log(scopes[0]);
 	return [false, scopes[0]];
+}
+
+Context.prototype.get_var = function(name) {
+	var r = this.find_var_lexical_scope(name);
+	if(!r[0]) {
+		throw new Error("Using undefined variable '" + name + "'");
+	}
+	return r[1][name];
 }
 
 Context.prototype.getCallerLexicalScopes = function() {
@@ -259,7 +264,6 @@ VM.prototype.unsuspend_context = function(ctx) {
 }
 
 Context.prototype.registerMethod = function(name, f) {
-	// TODO: types
 	var r = this.find_var_lexical_scope(name);
 	if(!r[0]) {
 		r[1][name] = ['Array', [f]];
@@ -284,7 +288,7 @@ Context.prototype.registerNativeMethod = function(name, args, f) {
 	this.registerMethod(name, m);
 }
 
-function match_params(lambda, positional_args, named_args) {
+function match_params(lambda, args, kwargs) {
 	var l = get_lmb(lambda); // ['Lambda', ['Array', [SCOPES, ARGS, IP]]]
 	var l = get_arr(l);
 	if(l[1] instanceof Args) {
@@ -294,13 +298,13 @@ function match_params(lambda, positional_args, named_args) {
 	var scope = {};
 	var positional_idx = 0;
 	if(debug_match_params) {
-		console.log('match_params positional_args', positional_args);
-		console.log('match_params named_args', named_args);
+		console.log('match_params args', args);
+		console.log('match_params kwargs', kwargs);
 		console.log('match_params params', util.inspect(params, {depth: 20}));
 	}
 
-	var p = get_arr(positional_args);
-	var n = get_hsh(named_args);
+	var p = get_arr(args);
+	var n = get_hsh(kwargs);
 	for(var i=0; i<params.length; i++) {
 		var cur_param = get_arr(params[i]);
 		var cur_param_name = get_str(cur_param[0]);
@@ -336,48 +340,42 @@ function match_params(lambda, positional_args, named_args) {
 	return [true, scope, 'all matched'];
 }
 
-Context.prototype.invoke_or_throw = function(methods, positional_args, named_args, vm) {
-	var status = this.invoke(methods, positional_args, named_args, vm);
+Context.prototype.invoke_or_throw = function(methods, args, kwargs, vm) {
+	var status = this.invoke(methods, args, kwargs, vm);
 	if(!status[0]) {
-		console.log(positional_args);
-		throw new Error("Invoke: appropriate method for + " + inspect(positional_args) + " and " + inspect(named_args) + " not found for in " + inspect(methods));
+		console.log(args);
+		throw new Error("Invoke: appropriate method for + " + inspect(args) + " and " + inspect(kwargs) + " not found for in " + inspect(methods));
 	}
 }
 
 
-Context.prototype.invoke = function(methods, positional_args, named_args, vm) {
+Context.prototype.invoke = function(methods, args, kwargs, vm) {
 	var ms = get_arr(methods);
 
-	// console.log('Invoke methods', inspect(methods));
 	for(var l=ms.length-1, i=l; i>=0; i--) {
 		var m = ms[i];
 
 		var lambda = get_arr(get_lmb(m));
 		// 0:scopes, 1:args, 2:ip/native_func
-		var scope = match_params(m, positional_args, named_args);
+		var scope = match_params(m, args, kwargs);
 		if(!scope[0]) {
 			continue;
 		}
 		var call_type = get_type(lambda[2]);
-		// this.frames.push({
-		// 	lexical_scopes: this.lexical_scopes,
-		// 	ip: this.ip,
-		// 	stack_len: this.stack.length,
-		// 	methods: this.methods,
-		// 	positional_args: this.positional_args,
-		// 	named_args: this.named_args,
-		// });
+
+		// __super, __args, __kwargs for new frame
+		// TODO: make these invalid arguments
+		var vars = scope[1];
+		vars['__super'] = ['Array', ms.slice(0, ms.length-1)];
+		vars['__args'] = args;
+		vars['__kwargs'] = kwargs;
+
 		var old_frame = this.frame;
 		this.frame = new Frame();
 		this.frames.push(this.frame);
 		this.frame.scopes = get_scp(lambda[0])
 		this.frame.scopes = old_frame.scopes.concat(scope[1]);
 		old_frame.stack_len = this.stack.length;
-
-		// Stuff for guards
-		this.frame.methods = methods;
-		this.frame.positional_args = positional_args;
-		this.frame.named_args = named_args;
 
 		if(call_type === 'Number') {
 			this.frame.ip = get_num(lambda[2]);
@@ -422,13 +420,12 @@ Context.prototype.ret = function(stack_delta) {
 }
 
 Context.prototype.guard = function(vm) {
-	var methods = this.frame.methods;
-	var positional_args = this.frame.positional_args;
-	var named_args = this.frame.named_args;
+	var methods = this.get_var('__super');
+	var args = this.get_var('__args');
+	var kwargs = this.get_var('__kwargs');
 	this.ret(0);
 	var m = get_arr(methods);
-	// Invoke the rest of the methods
-	this.invoke_or_throw(['Array', m.slice(0, m.length-1)], positional_args, named_args, vm);
+	this.invoke_or_throw(methods, args, kwargs, vm);
 }
 
 VM.prototype.opcodes = {
@@ -473,12 +470,7 @@ VM.prototype.opcodes = {
 	'get_var': function() {
 		var st = this.context.stack;
 		var name = get_str(st.pop());
-		var r = this.context.find_var_lexical_scope(name);
-		if(!r[0]) {
-			// console.log('XXX', this.context.lexical_scopes, this.context.frames[0].lexical_scopes);
-			throw new Error("Using undefined variable '" + name + "'");
-		}
-		this.context.stack.push(r[1][name]);
+		this.context.stack.push(this.context.get_var(name));
 	},
 
 	// stack: ... value varname -> ...
@@ -490,13 +482,13 @@ VM.prototype.opcodes = {
 		this.context.find_var_lexical_scope(name)[1][name] = val;
 	},
 
-	// stack: ... positional_args named_args methods -> ... X
+	// stack: ... args kwargs methods -> ... X
 	'invoke': function() {
 		var st = this.context.stack;
 		var methods = st.pop();
-		var named_args = st.pop();
-		var positional_args = st.pop();
-		this.context.invoke_or_throw(methods, positional_args, named_args, this);
+		var kwargs = st.pop();
+		var args = st.pop();
+		this.context.invoke_or_throw(methods, args, kwargs, this);
 	},
 
 	// stack: ... arg1 arg2 methods -> ... X
@@ -505,8 +497,8 @@ VM.prototype.opcodes = {
 		var methods = st.pop();
 		var arg2 = st.pop();
 		var arg1 = st.pop();
-		var positional_args = ['Array', [arg1, arg2]];
-		this.context.invoke_or_throw(methods, positional_args, ['Hash', {}], this);
+		var args = ['Array', [arg1, arg2]];
+		this.context.invoke_or_throw(methods, args, ['Hash', {}], this);
 	},
 
 	// stack: ... v -> ... v

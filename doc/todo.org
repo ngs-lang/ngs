@@ -2,8 +2,7 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** DONE match / case
-** TODO Context.methods -> "super" variable
+** DONE Context.methods -> "super" variable
 ** TODO Expose inspect()
 ** TODO Failing spawn should generate exception
 ... and some convenient mechanism to ignore that
