@@ -61,7 +61,7 @@ while "while" =
 
 for "for" =
   // Experiemntal feature "not"
-  "for" space? init:CCEXPR space? cond:CCEXPR space? incr:CCEXPR space? body:CCEXPR space? {
+  "for" space? "(" init:expr space? ";" space? cond:expr space? ";" incr:expr space? ")" space? body:CCEXPR_code space? {
     return N('for', [init, cond, incr, body]);
   }
 

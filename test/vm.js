@@ -44,7 +44,7 @@ var code_vs_stack = [
 	 [["Array", [["Number", 3], ["Number", 4], ["Number", 5]]]]],
 
 	// *** for/continue/break ***
-	['{a = 0; r = []; for {a=0} {a<5} {a=a+1} {if{a==1} { continue; }; if{a==3} { break; }; push(r, a);}; r}',
+	['{a = 0; r = []; for(a=0;a<5;a=a+1) {if{a==1} { continue; }; if{a==3} { break; }; push(r, a);}; r}',
 	 [["Array", [["Number", 0], ["Number", 2]]]]],
 	['{Bool($(ls))}', [["Bool", true]]],
 	['{Bool($(ls NOSUCHFILE))}', [["Bool", false]]],
@@ -53,8 +53,8 @@ var code_vs_stack = [
 		'{\n'+
 			'	a = 1\n'+
 			'	r = []\n'+
-			'	for {a=0} {a\n'+
-			'	<5} {a=a+1}\n'+
+			'	for(a=0;a\n'+
+			'	<5;a=a+1)\n'+
 			'	{\n'+
 			'			if {a==1} {\n'+
 			'				continue\n'+

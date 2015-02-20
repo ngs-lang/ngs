@@ -2,9 +2,9 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** DONE Read parser (e.g. .json)
+** DONE Fix "for" syntax
 ** TODO Output parser support
-** TODO Make set_var local by default
+** TODO Make set_var local by default / global option
 ** TODO Improve parameters matching
 ** TODO Rename exec to spawn
 ** Fix syntax

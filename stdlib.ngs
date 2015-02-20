@@ -2,7 +2,7 @@
 	# string * number -> the string repeated number times
 	defun __mul(s:String, n:Number) {
 		  ret = ""
-		  for {i=0}{i<n}{i=i+1} {
+		  for(i=0;i<n;i=i+1) {
 			  ret = ret + s;
 		  }
 		  ret
@@ -23,10 +23,9 @@
 		if{len_a != len_b} {
 			return false;
 		}
-		for{i=0}{i<len_a}{i=i+1} {
-			"Work around syntax bug:"
-			"{a[i] != b[i]} does not work for now"
-			if{(a[i]) != (b[i])} {
+		for(i=0;i<len_a;i=i+1) {
+			# Work around syntax bug: {a[i] != b[i]} does not work for now
+			if{(a[i]) != b[i]} {
 				return false;
 			}
 		}
@@ -36,8 +35,8 @@
 	defun __get_item(a:Array, idxs:Array) {
 		ret = []
 		j = len(idxs)
-		for{i=0}{i<j}{i=i+1} {
-			for{i=0}{i<j}{i=i+1} {
+		for(i=0;i<j;i=i+1) {
+			for(i=0;i<j;i=i+1) {
 				ret[i] = a[idxs[i]]
 			}
 		}
@@ -46,9 +45,8 @@
 
 	defun __in(v, a:Array) {
 		len_a = len(a)
-		for{i=0}{i<len_a}{i=i+1} {
-			"Work around syntax bug:"
-			"{a[i] == v} does not work for now"
+		for(i=0;i<len_a;i=i+1) {
+			# Work around syntax bug: {a[i] == v} does not work for now
 			if{(a[i]) == v} {
 				return true
 			}
@@ -69,7 +67,7 @@
 			return false
 		}
 		l = len(pfx)
-		for{i=0}{i<l}{i=i+1} {
+		for(i=0;i<l;i=i+1) {
 			a = s[i]
 			b = pfx[i]
 			if{a != b} {
