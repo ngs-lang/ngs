@@ -19,6 +19,8 @@ var PUSH_NODES = {
 var CALL_NODES = {
 	'get_item': true,
 	'set_item': true,
+	'in': true,
+	'not_in': true,
 }
 
 
@@ -413,6 +415,15 @@ function compile_tree(node, leave_value_in_stack) {
 	}
 	if(node.is('comment')) {
 		cmd('comment', 'user: ' + node.data);
+		return ret;
+	}
+	if(node.is('get_attr')) {
+		cmd('push_arr');
+		concat_tree(0, true);
+		concat(compile_push());
+		cmd('push_str', node.data);
+		concat(compile_push());
+		concat(compile_invoke_pos_args_in_stack('__get_attr'));
 		return ret;
 	}
 	if(node.node_type) {

@@ -30,6 +30,9 @@ var code_snippets = [
 	// startsWith(...)
 	'{ startsWith("abc", "a") }',
 	'{ not(startsWith("cd", "cde")) }',
+	'{ 1 in [0,1] }',
+	'{ not(2 in [0,1]) }',
+	'{ 2 not in [0,1] }',
 ];
 
 // console.log("+ Loading stdlib");

@@ -26,9 +26,7 @@
 		for{i=0}{i<len_a}{i=i+1} {
 			"Work around syntax bug:"
 			"{a[i] != b[i]} does not work for now"
-			x = a[i]
-			y = b[i]
-			if{x != y} {
+			if{(a[i]) != (b[i])} {
 				return false;
 			}
 		}
@@ -45,6 +43,23 @@
 		}
 		return ret
 	}
+
+	defun __in(v, a:Array) {
+		len_a = len(a)
+		for{i=0}{i<len_a}{i=i+1} {
+			"Work around syntax bug:"
+			"{a[i] == v} does not work for now"
+			if{(a[i]) == v} {
+				return true
+			}
+		}
+		false
+	}
+
+	defun __not_in(*args) {
+		  not(__in(*args))
+	}
+
 
 	defun min(a:Number, b:Number) { if{a<b}{a}{b} }
 	defun max(a:Number, b:Number) { if{a<b}{b}{a} }
@@ -72,10 +87,6 @@
 		  return exec(*args)
 	}
 
-	# I wonder whether it's better not to have this default method
-	# That would mean osname() would cause
-	# "Invoke: appropriate method not found for in ..."
-	# error for unknown OSes...
 	defun osname() {
 		  null
 	}
@@ -84,4 +95,30 @@
 		  guard (-f /etc/debian_version)
 		  "debian"
 	}
+
+
+	# ----- Finished commands handlers - start -----
+
+	defun finished_command(p:Process) {
+		p.exit_code == 0
+	}
+
+	defun finished_command(p:Process) {
+		guard { p.cmd == "test" }
+		p.exit_code in [0,1]
+	}
+
+	defun finished_command(p:Process) {
+		guard { p.cmd == "false" }
+		p.exit_code == 1
+	}
+
+	defun finished_command(p:Process) {
+		guard { p.cmd == "service" }
+		guard { (p.args[1]) == "status" }
+		p.exit_code in [0, 1, 2, 3]
+	}
+
+	# ----- Finished commands handlers - end -----
+
 }

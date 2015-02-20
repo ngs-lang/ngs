@@ -113,9 +113,19 @@ expr "Expression/set_item" =
   } /
   e: expr_get_item
 
+
 expr_get_item "Expression/get_item" =
-  container:expr_eq inline_space? "[" space? idx:expr space? "]" {
+  container:expr_in inline_space? "[" space? idx:expr space? "]" {
     return N('get_item', [container, idx]);
+  } /
+  e: expr_in
+
+expr_in "Expression/in" =
+  v:expr_eq inline_space "in" space container:expr_eq {
+    return N('in', [v, container])
+  } /
+  v:expr_eq inline_space "not" space "in" space container:expr_eq {
+    return N('not_in', [v, container])
   } /
   e: expr_eq
 
@@ -149,6 +159,13 @@ expr_mul "Expression/mul" =
 
 expr_call "Function call" =
   function_call /
+  expr_get_attr
+
+// Not sure it's the correct placement
+expr_get_attr "Get attribute" =
+  container:expr_base "." attr:varname {
+    return N('get_attr', [container], attr.data);
+  } /
   expr_base
 
 expr_base "Expression/no-add" =

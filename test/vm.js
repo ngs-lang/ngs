@@ -120,30 +120,28 @@ var code_vs_exec_args = [
 	['{exec("blah");}', ["Array", [["String", "blah"]]]],
 ];
 
-// TODO: deduplicate tests code
+var how = [
+	['Running code should result correct stack', true],
+	['Running code should result empty stack with leave_value_in_stack=false', false],
+];
 
 code_vs_stack.forEach(function(code_stack, idx) {
-	describe('Running code should result correct stack', function(){
-		it('Code #' + idx + ': ' + code_stack[0].slice(0, 20), function(done) {
-			var v = new vm.VM();
-			var c = v.setupContext();
-			var code = compile(code_stack[0], {leave_value_in_stack: true}).compiled_code;
-			v.useCode(code);
-			v.start(function() {
-				assert.deepEqual(c.stack, code_stack[1]);
-				done();
-			});
-		});
-	});
-	describe('Running code should result empty stack with leave_value_in_stack=false', function() {
-		it('Code #' + idx + ': ' + code_stack[0].slice(0, 20), function(done) {
-			var v = new vm.VM();
-			var c = v.setupContext();
-			var code = compile(code_stack[0], {leave_value_in_stack: false}).compiled_code;
-			v.useCode(code);
-			v.start(function() {
-				assert.deepEqual(c.stack, []);
-				done();
+	how.forEach(function(h) {
+		describe(h[0], function(){
+			it('Code #' + idx + ': ' + code_stack[0].slice(0, 20), function(done) {
+				var v = new vm.VM();
+				var c = v.setupContext();
+
+				c.registerNativeMethod('finished_command', nm.Args().pos('p', 'Process').get(), function(scope) {
+					return ['Bool', true];
+				});
+
+				var code = compile(code_stack[0], {leave_value_in_stack: h[1]}).compiled_code;
+				v.useCode(code);
+				v.start(function() {
+					assert.deepEqual(c.stack, h[1] ? code_stack[1] : []);
+					done();
+				});
 			});
 		});
 	});

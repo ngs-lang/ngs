@@ -127,7 +127,7 @@ Context.prototype.initialize = function(global_scope) {
 		}
 	});
 
-	native_methods.register_native_methods.call(this);
+	native_methods.register_native_methods.call(this, ReturnLater);
 	this.registerNativeMethod('inspect', native_methods.Args().pos('x', null).get(), function vm_inspect_p_any(scope) {
 		return ['String', inspect(scope.x)];
 	});
@@ -200,6 +200,13 @@ VM.prototype.mainLoop = function() {
 	while(this.runnable_contexts.length) {
 		// console.log('DEBUG DELAY PRE', this.runnable_contexts.length);
 		this.context = this.runnable_contexts[0];
+
+		if(typeof(this.context.frame.ip) == 'string') {
+			var f = this.context[this.context.frame.ip];
+			f.call(this.context);
+			continue;
+		}
+
 		var op = this.code[this.context.frame.ip];
 		this.context.frame.ip++;
 		if(stack_debug) {
@@ -415,10 +422,6 @@ Context.prototype.ret = function(stack_delta) {
 			console.log('STACK', this.stack.length, this.frame.stack_len, stack_delta);
 			throw new Error("Returning with wrong stack size");
 		}
-	}
-	if(typeof(this.frame.ip) == 'string') {
-		var f = this[this.frame.ip];
-		f.call(this);
 	}
 }
 

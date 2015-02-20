@@ -2,20 +2,23 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** DONE Expose inspect()
-** TODO Failing spawn should generate exception
+** DONE Failing spawn should crash
 ... and some convenient mechanism to ignore that
 OTOH, if(-f somefile)... should not throw exception
 ... and if(service SVC status)
 ... and maybe stat(), when we have it
 *** The decision of whether to throw exception will be made by
-*isException(p:Process, e:Number)*
-or may be *isException(exec_args: Array, e:Number)*
+*finished_command(p:Process)*
 wich will be called when the process finishes
-other conditions, such as program not found etc will be exceptions
+other conditions, such as program not found etc will crash
+** TODO Read parser (e.g. .json)
+** TODO Output parser support
+** TODO Improve parameters matching
+** TODO Rename exec to spawn
+** Fix syntax
+*** TODO CCEXPR -> CCEXPR_code -- for code mode
 ** TODO Native code calling user-land
 ** TODO f(1, cmap [2,3], 4) ~~~ map(f, [2,3], before=1, after=4)
-** TODO case
 ** TODO String interpolation: "xyz${expr}ww"
 also "xyz$(cmd)ww"
 ** TODO Arguments parsing
@@ -52,9 +55,8 @@ to make_TYP(val)
 * Error reporting
 ** TODO Backtraces, do not "throw"
 + Method not found
-+ "inspect" function to print objects
-* Local vars / lexical scope
-* Modules - load, user defined load, etc
+* Namespaces
+* Modules load, user defined load, etc
 + Like nodejs with json
 * Get exec output and status (field access)
 * Commands one by one from CLI (solve globals, etc)

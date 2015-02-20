@@ -2,6 +2,24 @@
 
 var child_process = require('child_process');
 var util = require('util');
+var _ = require('underscore');
+var data = require('./vm-data');
+
+function to_ngs_object(v) {
+	if(_.isNull(v)) {
+		return ['Null', null];
+	}
+	if(_.isNumber(v)) {
+		return ['Number', v];
+	}
+	if(_.isString(v)) {
+		return ['String', v];
+	}
+	if(_.isArray(v)) {
+		return ['Array', v.map(to_ngs_object)];
+	}
+	throw new Error("to_ngs_object() failed for " + v);
+}
 
 function Args() {
 	if(!this || this == global) {
@@ -45,7 +63,7 @@ function p_args() {
 	return ret.get();
 }
 
-function register_native_methods() {
+function register_native_methods(ReturnLater) {
 	// Expecting:
 	// this - Context object
 	
@@ -227,6 +245,17 @@ function register_native_methods() {
 		return ['Null', null];
 	});
 
+	this.finish_exec = function() {
+		var v = this.stack.pop();
+		if(data.get_type(v) !== 'Bool') {
+			throw new Error("finished_command returned not boolean but " + util.inspect(v));
+		}
+		if(!data.get_boo(v)) {
+			var p = get_prc(this.stack.pop());
+			throw new Error("Process '" + p.cmd + "' failed. Arguments: " + util.inspect(p.args));
+		}
+		this.ret(1);
+	}
 	this.registerNativeMethod('exec', Args().rest_pos('args').get(), function ngs_runtime_spawn(scope, v) {
 		var args = get_arr(scope.args);
 		var props = {
@@ -247,6 +276,12 @@ function register_native_methods() {
 			}
 			if(!props._finish_events) {
 				props.state = 'done';
+				this.frame.ip = 'finish_exec';
+				var t = this.lexical_scopes;
+				this.lexical_scopes = this.getCallerLexicalScopes();
+				var f = this.get_var('finished_command');
+				this.lexical_scopes = t;
+				this.invoke_or_throw(f, ['Array', [['Process', props]]], ['Hash', {}], v);
 				v.unsuspend_context(this);
 			}
 		}.bind(this);
@@ -276,9 +311,21 @@ function register_native_methods() {
 		p.on('close', ngs_runtime_spawn_finish_callback);
 
 		v.suspend_context();
-		return ['Process', props];
+		this.stack.push(['Process', props]);
+		throw new ReturnLater();
 	});
+	this.registerNativeMethod('__get_attr', p_args('p', 'Process', 'attr', null), function ngs_runtime_get_process_attr(scope) {
+		// TODO later: something generic to access all fields
+		// TODO (maybe): store all fields as NGS objects in the first place
+		var a = get_str(scope.attr);
+		var p = get_prc(scope.p);
+		if(!_.has(p, a)) {
+			throw new Error("Process object does not have attribute " + a);
+		}
+		return to_ngs_object(p[a]);
+	})
 }
 
 exports.Args = Args.bind(null);
 exports.register_native_methods = register_native_methods;
+exports.to_ngs_object = to_ngs_object;
