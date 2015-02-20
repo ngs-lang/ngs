@@ -2,17 +2,9 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** DONE Failing spawn should crash
-... and some convenient mechanism to ignore that
-OTOH, if(-f somefile)... should not throw exception
-... and if(service SVC status)
-... and maybe stat(), when we have it
-*** The decision of whether to throw exception will be made by
-*finished_command(p:Process)*
-wich will be called when the process finishes
-other conditions, such as program not found etc will crash
-** TODO Read parser (e.g. .json)
+** DONE Read parser (e.g. .json)
 ** TODO Output parser support
+** TODO Make set_var local by default
 ** TODO Improve parameters matching
 ** TODO Rename exec to spawn
 ** Fix syntax

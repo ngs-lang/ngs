@@ -121,4 +121,22 @@
 
 	# ----- Finished commands handlers - end -----
 
+	defun parse_file(f:String, content:String) {
+		content
+	}
+
+	defun parse_file(f:String, content:String) {
+		guard {f ~ "\.json$"}
+		r = from_json(content)
+		if {not(r[0])} {
+			crash("Failed to read json file " + f)
+		}
+		r[1]
+	}
+
+	defun read(f:String) {
+		  content = fetch_file(f)
+		  parse_file(f, content)
+	}
+
 }

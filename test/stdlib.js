@@ -33,6 +33,7 @@ var code_snippets = [
 	'{ 1 in [0,1] }',
 	'{ not(2 in [0,1]) }',
 	'{ 2 not in [0,1] }',
+	'{ c = read("test/test.json"); c.did_it }',
 ];
 
 // console.log("+ Loading stdlib");

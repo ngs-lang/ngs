@@ -1,13 +1,19 @@
 "use strict";
 
+var fs = require('fs');
 var child_process = require('child_process');
 var util = require('util');
+
 var _ = require('underscore');
+
 var data = require('./vm-data');
 
 function to_ngs_object(v) {
 	if(_.isNull(v)) {
 		return ['Null', null];
+	}
+	if(_.isBoolean(v)) {
+		return ['Bool', v];
 	}
 	if(_.isNumber(v)) {
 		return ['Number', v];
@@ -17,6 +23,13 @@ function to_ngs_object(v) {
 	}
 	if(_.isArray(v)) {
 		return ['Array', v.map(to_ngs_object)];
+	}
+	if(_.isObject(v)) {
+		var h = {}
+		_.keys(v).forEach(function(k) {
+			h[k] = to_ngs_object(v[k]);
+		});
+		return ['Hash', h];
 	}
 	throw new Error("to_ngs_object() failed for " + v);
 }
@@ -314,8 +327,7 @@ function register_native_methods(ReturnLater) {
 		this.stack.push(['Process', props]);
 		throw new ReturnLater();
 	});
-	this.registerNativeMethod('__get_attr', p_args('p', 'Process', 'attr', null), function ngs_runtime_get_process_attr(scope) {
-		// TODO later: something generic to access all fields
+	this.registerNativeMethod('__get_attr', p_args('p', 'Process', 'attr', null), function vm___get_attr(scope) {
 		// TODO (maybe): store all fields as NGS objects in the first place
 		var a = get_str(scope.attr);
 		var p = get_prc(scope.p);
@@ -324,6 +336,37 @@ function register_native_methods(ReturnLater) {
 		}
 		return to_ngs_object(p[a]);
 	})
+	this.registerNativeMethod('__get_attr', p_args('h', 'Hash', 'attr', 'String'), function vm___get_attr(scope) {
+		// TODO (maybe): store all fields as NGS objects in the first place
+		var a = get_str(scope.attr);
+		var h = get_hsh(scope.h);
+		if(!_.has(h, a)) {
+			throw new Error("Hash does not have attribute " + a);
+		}
+		return h[a];
+	})
+	this.registerNativeMethod('from_json', p_args('s', 'String'), function vm_from_json(scope) {
+		var json;
+		var ret;
+		json = get_str(scope.s);
+		try {
+			ret = [true, JSON.parse(json)];
+		} catch(e) {
+			ret = [false, null];
+		}
+		return to_ngs_object(ret);
+	})
+	this.registerNativeMethod('fetch_file', p_args('f', 'String'), function vm_read(scope) {
+		// TODO: handle encoding later
+		return ['String', fs.readFileSync(get_str(scope.f), {encoding: 'UTF-8'})];
+	})
+	this.registerNativeMethod('__tilde', p_args('s', 'String', 'regex', 'String'), function vm___tilde(scope) {
+		var r = new RegExp(get_str(scope.regex));
+		return to_ngs_object(get_str(scope.s).match(r));
+	})
+	this.registerNativeMethod('crash', p_args('s', 'String'), function vm_crash(scope) {
+		throw new Error("CRASH: " + get_str(scope.s));
+	});
 }
 
 exports.Args = Args.bind(null);

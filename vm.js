@@ -354,7 +354,7 @@ Context.prototype.invoke_or_throw = function(methods, args, kwargs, vm) {
 	var status = this.invoke(methods, args, kwargs, vm);
 	if(!status[0]) {
 		console.log(args);
-		throw new Error("Invoke: appropriate method for + " + inspect(args) + " and " + inspect(kwargs) + " not found for in " + inspect(methods));
+		throw new Error("Invoke: appropriate method for " + inspect(args) + " and " + inspect(kwargs) + " not found for in " + inspect(methods));
 	}
 }
 

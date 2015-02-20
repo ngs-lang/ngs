@@ -139,6 +139,9 @@ expr_eq "Expression/eq" =
   e1:expr_add space? "<" space? e2:expr {
     return N('binop', [e1, e2], 'lt', 1500);
   } /
+  e1:expr_add space? "~" space? e2:expr {
+    return N('binop', [e1, e2], 'tilde', 1500);
+  } /
   e: expr_add
 
 expr_add "Expression/add" =
