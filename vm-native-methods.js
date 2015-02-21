@@ -353,6 +353,15 @@ function register_native_methods() {
 	this.registerNativeMethod('crash', p_args('s', 'String'), function vm_crash(scope) {
 		throw new Error("CRASH: " + get_str(scope.s));
 	});
+	this.registerNativeMethod('sort', p_args('a', 'Array'), function vm_sort(scope) {
+		var a = get_arr(scope.a);
+		a.sort();
+		return ['Array', a];
+	});
+	this.registerNativeMethod('uniq', p_args('a', 'Array'), function vm_sort(scope) {
+		var a = get_arr(scope.a);
+		return ['Array', _.uniq(a, false, function(elt) {return elt[1]})];
+	});
 }
 
 exports.Args = Args.bind(null);

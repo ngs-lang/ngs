@@ -40,7 +40,16 @@
 				ret[i] = a[idxs[i]]
 			}
 		}
-		return ret
+		ret
+	}
+
+	defun __get_attr(a:Array, attr:String) {
+		l = len(a)
+		ret = []
+		for(i=0; i<l; i=i+1) {
+			push(ret, __get_attr(a[i], attr))
+		}
+		ret
 	}
 
 	defun __in(v, a:Array) {

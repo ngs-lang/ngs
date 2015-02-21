@@ -54,7 +54,7 @@ var code_vs_stack = [
 		'{\n'+
 			'	a = 1\n'+
 			'	r = []\n'+
-			'	for( a=0 ; a\n'+
+			'	for ( a=0 ; a\n'+
 			'	<5 ; a=a+1 ) \n'+
 			'	{\n'+
 			'			if a==1 {\n'+

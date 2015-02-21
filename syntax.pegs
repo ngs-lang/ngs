@@ -106,7 +106,18 @@ top_level_expressions_delimiter =
 // TODO fix expr_* order for operation precedence. Low priority at top.
 // ********************************************************************
 
-expr "Expression/set_item" =
+expr "Expression" =
+  e:expr_set_item c:dot_call* {
+	var ret = e;
+	for(var i=0; i<c.length; i++) {
+	  var a = c[i][1]; // args
+	  a.unshift(ret);
+	  ret = N('call', [c[i][0], a]);
+	}
+    return ret;
+  }
+
+expr_set_item "Expression/set_item" =
   comment /
   // container must not be expr_get_item, should be expr_eq
   container:expr_eq inline_space? "[" space? idx:expr space? "]" space? "=" space? v:expr {
@@ -269,6 +280,13 @@ function_call "function call" =
   f:expr_base space? "(" space? args:comma_separated_expressions? space? ")" space? {
 	return N('call', [f, args || N('expressions', [])]);
   }
+
+dot_call "dot function call" =
+  "." f:varname space? "(" space? args:comma_separated_expressions? space? ")" space? {
+	var a = args || N('expressions', []);
+	return N('dot_call', [f, a]);
+  }
+
 
 type_definition "Type definition" =
   "deftype" space+ type:varname space? "{" space? ds:type_fields_definitions? space? "}" space? {

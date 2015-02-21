@@ -6,9 +6,6 @@
 ** TODO Output parser support
 ** TODO Make set_var local by default / global option
 ** TODO Improve parameters matching
-** Fix syntax
-*** TODO CCEXPR -> CCEXPR_code -- for code mode
-** TODO Native code calling user-land
 ** TODO f(1, cmap [2,3], 4) ~~~ map(f, [2,3], before=1, after=4)
 ** TODO String interpolation: "xyz${expr}ww"
 also "xyz$(cmd)ww"
