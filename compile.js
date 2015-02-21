@@ -277,10 +277,10 @@ function compile_tree(node, leave_value_in_stack) {
 		cmd('get_var');
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
-	if(node.is('exec')) {
+	if(node.is('spawn')) {
 		// TODO: real word expansion
 		concat_tree(0, true);
-		concat(compile_invoke_pos_args_in_stack('exec'));
+		concat(compile_invoke_pos_args_in_stack('spawn'));
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('splice')) {

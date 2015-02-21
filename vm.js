@@ -127,7 +127,7 @@ Context.prototype.initialize = function(global_scope) {
 		}
 	});
 
-	native_methods.register_native_methods.call(this, ReturnLater);
+	native_methods.register_native_methods.call(this);
 	this.registerNativeMethod('inspect', native_methods.Args().pos('x', null).get(), function vm_inspect_p_any(scope) {
 		return ['String', inspect(scope.x)];
 	});

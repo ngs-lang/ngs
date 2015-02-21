@@ -76,7 +76,7 @@ function p_args() {
 	return ret.get();
 }
 
-function register_native_methods(ReturnLater) {
+function register_native_methods() {
 	// Expecting:
 	// this - Context object
 	
@@ -258,18 +258,7 @@ function register_native_methods(ReturnLater) {
 		return ['Null', null];
 	});
 
-	this.finish_exec = function() {
-		var v = this.stack.pop();
-		if(data.get_type(v) !== 'Bool') {
-			throw new Error("finished_command returned not boolean but " + util.inspect(v));
-		}
-		if(!data.get_boo(v)) {
-			var p = get_prc(this.stack.pop());
-			throw new Error("Process '" + p.cmd + "' failed. Arguments: " + util.inspect(p.args));
-		}
-		this.ret(1);
-	}
-	this.registerNativeMethod('exec', Args().rest_pos('args').get(), function ngs_runtime_spawn(scope, v) {
+	this.registerNativeMethod('native_spawn', Args().rest_pos('args').get(), function ngs_runtime_spawn(scope, v) {
 		var args = get_arr(scope.args);
 		var props = {
 			'cmd': get_str(args[0]),
@@ -283,18 +272,16 @@ function register_native_methods(ReturnLater) {
 			'_finish_events': 2 // want both exit and close events
 		};
 		var ngs_runtime_spawn_finish_callback = function(force) {
+			if(!props._finish_events) {
+				// already finished
+				return;
+			}
 			props._finish_events--;
 			if(force) {
 				props._finish_events = 0;
 			}
 			if(!props._finish_events) {
 				props.state = 'done';
-				this.frame.ip = 'finish_exec';
-				var t = this.lexical_scopes;
-				this.lexical_scopes = this.getCallerLexicalScopes();
-				var f = this.get_var('finished_command');
-				this.lexical_scopes = t;
-				this.invoke_or_throw(f, ['Array', [['Process', props]]], ['Hash', {}], v);
 				v.unsuspend_context(this);
 			}
 		}.bind(this);
@@ -324,8 +311,7 @@ function register_native_methods(ReturnLater) {
 		p.on('close', ngs_runtime_spawn_finish_callback);
 
 		v.suspend_context();
-		this.stack.push(['Process', props]);
-		throw new ReturnLater();
+		return ['Process', props];
 	});
 	this.registerNativeMethod('__get_attr', p_args('p', 'Process', 'attr', null), function vm___get_attr(scope) {
 		// TODO (maybe): store all fields as NGS objects in the first place

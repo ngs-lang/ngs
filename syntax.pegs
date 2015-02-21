@@ -199,7 +199,7 @@ number "number" =
   digits:[0-9]+ { return N('number', [], parseInt(digits.join(''), 10)); }
 
 execute_external_prog "execute external program" =
-  w:cmd_words { return N('exec', [w]); }
+  w:cmd_words { return N('spawn', [w]); }
 
 cmd_words "Command words" =
   w:cmd_word inline_space ws:cmd_words  {

@@ -77,12 +77,24 @@
 		true
 	}
 
+	defun spawn(*args) {
+		# TODO: handle async
+		p = native_spawn(*args)
+		ok = cmd_finished_ok_p(p)
+		if{not(ok)} {
+			# TODO: nicer output of the args
+			# TODO: output stack trace
+			crash("Command execution failed: " + inspect(args))
+		}
+		p
+	}
+
 	# Convert execution of (example) '-f somefile' to 'test -f somefile'
-	defun exec(*args) {
+	defun spawn(*args) {
 		  guard {1 < len(args)}
 		  guard {startsWith(args[0], "-")}
 		  args = ["test"] + args
-		  return exec(*args)
+		  return __super(*args)
 	}
 
 	defun osname() {
@@ -97,21 +109,21 @@
 
 	# ----- Finished commands handlers - start -----
 
-	defun finished_command(p:Process) {
+	defun cmd_finished_ok_p(p:Process) {
 		p.exit_code == 0
 	}
 
-	defun finished_command(p:Process) {
+	defun cmd_finished_ok_p(p:Process) {
 		guard { p.cmd == "test" }
 		p.exit_code in [0,1]
 	}
 
-	defun finished_command(p:Process) {
+	defun cmd_finished_ok_p(p:Process) {
 		guard { p.cmd == "false" }
 		p.exit_code == 1
 	}
 
-	defun finished_command(p:Process) {
+	defun cmd_finished_ok_p(p:Process) {
 		guard { p.cmd == "service" }
 		guard { (p.args[1]) == "status" }
 		p.exit_code in [0, 1, 2, 3]

@@ -2,11 +2,10 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** DONE Fix "for" syntax
+** DONE Rename exec to spawn
 ** TODO Output parser support
 ** TODO Make set_var local by default / global option
 ** TODO Improve parameters matching
-** TODO Rename exec to spawn
 ** Fix syntax
 *** TODO CCEXPR -> CCEXPR_code -- for code mode
 ** TODO Native code calling user-land

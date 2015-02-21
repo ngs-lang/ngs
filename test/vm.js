@@ -46,8 +46,9 @@ var code_vs_stack = [
 	// *** for/continue/break ***
 	['{a = 0; r = []; for(a=0;a<5;a=a+1) {if{a==1} { continue; }; if{a==3} { break; }; push(r, a);}; r}',
 	 [["Array", [["Number", 0], ["Number", 2]]]]],
-	['{Bool($(ls))}', [["Bool", true]]],
-	['{Bool($(ls NOSUCHFILE))}', [["Bool", false]]],
+
+	['{spawn=native_spawn; Bool($(ls))}', [["Bool", true]]],
+	['{spawn=native_spawn; Bool($(ls NOSUCHFILE))}', [["Bool", false]]],
 
 	[
 		'{\n'+
@@ -114,10 +115,10 @@ var code_vs_stack = [
 
 ];
 
-var code_vs_exec_args = [
+var code_vs_spawn_args = [
 	['ls', ["Array", [["String", "ls"]]]],
 	['a=["x", "y"]; ls zz $*a ww', ["Array", [["String", "ls"], ["String", "zz"], ["String", "x"], ["String", "y"], ["String", "ww"]]]],
-	['{exec("blah");}', ["Array", [["String", "blah"]]]],
+	['{spawn("blah");}', ["Array", [["String", "blah"]]]],
 ];
 
 var how = [
@@ -147,15 +148,15 @@ code_vs_stack.forEach(function(code_stack, idx) {
 	});
 });
 
-code_vs_exec_args.forEach(function(code_args, idx) {
-	describe('Running code should result correct exec arguments', function(){
+code_vs_spawn_args.forEach(function(code_args, idx) {
+	describe('Running code should result correct spawn arguments', function(){
 		it('Code #' + idx + ': ' + code_args[0].slice(0, 20), function(done) {
 			var v = new vm.VM();
 			var c = v.setupContext();
-			c.registerNativeMethod('exec', nm.Args().rest_pos('args').get(), function(scope) {
-				// console.log('exec args', scope.args);
+			c.registerNativeMethod('spawn', nm.Args().rest_pos('args').get(), function(scope) {
+				// console.log('spawn args', scope.args);
 				assert.deepEqual(scope.args, code_args[1]);
-				return {'something': 'that', 'exec': 'returns'};
+				return {'something': 'that', 'spawn': 'returns'};
 			});
 			var code = compile(code_args[0]).compiled_code;
 			v.useCode(code);

@@ -30,10 +30,15 @@ var code_snippets = [
 	// startsWith(...)
 	'{ startsWith("abc", "a") }',
 	'{ not(startsWith("cd", "cde")) }',
+	// in, not in
 	'{ 1 in [0,1] }',
 	'{ not(2 in [0,1]) }',
 	'{ 2 not in [0,1] }',
+	// read json
 	'{ c = read("test/test.json"); c.did_it }',
+	// spawn()
+	'{ Bool($(ls)) }',
+	'{ not(Bool($(-f NOSUCHFILE))) }',
 ];
 
 // console.log("+ Loading stdlib");
