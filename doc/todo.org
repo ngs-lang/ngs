@@ -2,9 +2,8 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** DONE Rename exec to spawn
+** DONE all, any, none
 ** TODO map and lambda passing syntax
-** TODO all, any, none
 ** TODO syntax: literal for hash
 ** TODO syntax: set_attr
 ** TODO Output parser support
