@@ -107,15 +107,7 @@ top_level_expressions_delimiter =
 // ********************************************************************
 
 expr "Expression" =
-  e:expr_set_item c:dot_call* {
-	var ret = e;
-	for(var i=0; i<c.length; i++) {
-	  var a = c[i][1]; // args
-	  a.unshift(ret);
-	  ret = N('call', [c[i][0], a]);
-	}
-    return ret;
-  }
+  expr_set_item
 
 expr_set_item "Expression/set_item" =
   comment /
@@ -123,14 +115,8 @@ expr_set_item "Expression/set_item" =
   container:expr_eq inline_space? "[" space? idx:expr space? "]" space? "=" space? v:expr {
     return N('set_item', [container, idx, v]);
   } /
-  e: expr_get_item
-
-
-expr_get_item "Expression/get_item" =
-  container:expr_in inline_space? "[" space? idx:expr space? "]" {
-    return N('get_item', [container, idx]);
-  } /
   e: expr_in
+
 
 expr_in "Expression/in" =
   v:expr_eq inline_space "in" space container:expr_eq {
@@ -169,19 +155,57 @@ expr_mul "Expression/mul" =
   e1:expr_call space? "*" space? e2:expr_call {
     return N('binop', [e1, e2], 'mul', 500);
   } /
-  e:expr_call
+  e:expr_chain
+
+
+expr_chain =
+  e:expr_call c:dots* {
+	var ret = e;
+	for(var i=0; i<c.length; i++) {
+	  if(c[i].is('dot_call')) {
+	    var a = c[i][1]; // args
+	    a.unshift(ret);
+	    ret = N('call', [c[i][0], a]);
+	  }
+	  if(c[i].is('get_attr')) {
+	    c[i].push(ret); // container
+		ret = c[i];
+	  }
+	  if(c[i].is('get_item')) {
+	    c[i][0] = ret; // container
+		ret = c[i];
+	  }
+	}
+    return ret;
+  }
+
+
+dots "expression dot expression, maybe call" =
+  dot_call /
+  get_attr /
+  get_item
+
+dot_call "dot function call" =
+  "." f:varname space? "(" space? args:comma_separated_expressions? space? ")" space? {
+	var a = args || N('expressions', []);
+	return N('dot_call', [f, a]);
+  }
+
+get_attr "Get attribute" =
+  "." attr:varname !(space? "=" [^=]) {
+    return N('get_attr', [], attr.data);
+  }
+
+get_item "Expression/get_item" =
+  "[" space? idx:expr space? "]" !(space? "=" [^=]) {
+    return N('get_item', [null, idx]);
+  }
 
 
 expr_call "Function call" =
   function_call /
-  expr_get_attr
-
-// Not sure it's the correct placement
-expr_get_attr "Get attribute" =
-  container:expr_base "." attr:varname {
-    return N('get_attr', [container], attr.data);
-  } /
   expr_base
+
 
 expr_base "Expression/no-add" =
   if /
@@ -279,12 +303,6 @@ return "return" =
 function_call "function call" =
   f:expr_base space? "(" space? args:comma_separated_expressions? space? ")" space? {
 	return N('call', [f, args || N('expressions', [])]);
-  }
-
-dot_call "dot function call" =
-  "." f:varname space? "(" space? args:comma_separated_expressions? space? ")" space? {
-	var a = args || N('expressions', []);
-	return N('dot_call', [f, a]);
   }
 
 

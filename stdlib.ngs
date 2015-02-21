@@ -24,8 +24,7 @@
 			return false;
 		}
 		for(i=0; i<len_a; i=i+1) {
-			# Work around syntax bug: a[i] != b[i] does not work for now
-			if (a[i]) != b[i] {
+			if a[i] != b[i] {
 				return false;
 			}
 		}
@@ -55,8 +54,7 @@
 	defun __in(v, a:Array) {
 		len_a = len(a)
 		for(i=0;i<len_a;i=i+1) {
-			# Work around syntax bug: {a[i] == v} does not work for now
-			if (a[i]) == v {
+			if a[i] == v {
 				return true
 			}
 		}
@@ -135,7 +133,7 @@
 
 	defun cmd_finished_ok_p(p:Process) {
 		guard p.cmd == "service"
-		guard (p.args[1]) == "status"
+		guard p.args[1] == "status"
 		p.exit_code in [0, 1, 2, 3]
 	}
 
