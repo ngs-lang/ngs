@@ -25,26 +25,26 @@ var code_vs_stack = [
 	 [["Array", [["Number", 1], ["Number", 2]]]]],
 
 	// *** if ***
-	['{ if{[]}{1}{2} }', [["Number", 2]]],
-	['{ if{[7]}{1}{2} }', [["Number", 1]]],
-	['{ if{0}{1} }', [["Null", null]]],
+	['{ if [] {1}{2} }', [["Number", 2]]],
+	['{ if [7] {1}{2} }', [["Number", 1]]],
+	['{ if 0 {1} }', [["Null", null]]],
 
 	// *** Bool() ***
 	['{ [ 1 < 2, 2 < 1] }', [["Array", [["Bool", true], ["Bool", false]]]]],
 
 	// *** while ***
-	['{a = 0; r = []; while {a < 2} {push(r, a); a = a + 1;}; r;}', [["Array", [["Number", 0], ["Number", 1]]]]],
-	['{a = 0; r = []; while not {1 < a} {push(r, a); a = a + 1;}; r;}', [["Array", [["Number", 0], ["Number", 1]]]]],
+	['{a = 0; r = []; while a < 2 {push(r, a); a = a + 1;}; r;}', [["Array", [["Number", 0], ["Number", 1]]]]],
+	['{a = 0; r = []; while not 1 < a {push(r, a); a = a + 1;}; r;}', [["Array", [["Number", 0], ["Number", 1]]]]],
 
 	// *** while - break ***
-	['{a = 0; r = []; while {a < 2} {break; push(r, a); a = a + 1;}; r;}', [["Array", []]]],
+	['{a = 0; r = []; while a < 2 {break; push(r, a); a = a + 1;}; r;}', [["Array", []]]],
 
 	// *** while - continue ***
-	['{a = 0; r = []; while {a < 5} {a = a + 1; if { a < 3 } {continue;}; push(r, a);}; r;}',
+	['{a = 0; r = []; while a < 5 {a = a + 1; if a < 3 {continue;}; push(r, a);}; r;}',
 	 [["Array", [["Number", 3], ["Number", 4], ["Number", 5]]]]],
 
 	// *** for/continue/break ***
-	['{a = 0; r = []; for(a=0;a<5;a=a+1) {if{a==1} { continue; }; if{a==3} { break; }; push(r, a);}; r}',
+	['{a = 0; r = []; for(a=0;a<5;a=a+1) {if a==1 { continue; }; if a==3 { break; }; push(r, a);}; r}',
 	 [["Array", [["Number", 0], ["Number", 2]]]]],
 
 	['{spawn=native_spawn; Bool($(ls))}', [["Bool", true]]],
@@ -54,25 +54,25 @@ var code_vs_stack = [
 		'{\n'+
 			'	a = 1\n'+
 			'	r = []\n'+
-			'	for(a=0;a\n'+
-			'	<5;a=a+1)\n'+
+			'	for( a=0 ; a\n'+
+			'	<5 ; a=a+1 ) \n'+
 			'	{\n'+
-			'			if {a==1} {\n'+
+			'			if a==1 {\n'+
 			'				continue\n'+
 			'			}\n'+
-			'		  if {a==3} { break }\n'+
+			'		  if a==3 { break }\n'+
 			'		  push(r, a)\n'+
 			'	}\n'+
 			'	while\n'+
-			'	{\n'+
+			'	\n'+
 			'		a<10\n'+
-			'	} {\n'+
+			'	{\n'+
 			'	  a =\n'+
 			'	  a+1\n'+
 			'	}\n'+
 			'	push(r, a);\n'+
 			'	push(r,\n'+
-			'		if {1} {\n'+
+			'		if 1 {\n'+
 			'	   	   100\n'+
 			'		}\n'+
 			'	)\n'+

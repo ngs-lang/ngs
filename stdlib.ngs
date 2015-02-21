@@ -1,14 +1,14 @@
 {
 	# string * number -> the string repeated number times
 	defun __mul(s:String, n:Number) {
-		  ret = ""
-		  for(i=0;i<n;i=i+1) {
-			  ret = ret + s;
-		  }
-		  ret
+		ret = ""
+		for(i=0;i<n;i=i+1) {
+			ret = ret + s;
+		}
+		ret
 	}
 
-	defun not(x:Bool) { if{x}{false}{true} }
+	defun not(x:Bool) { if x {false}{true} }
 
 	# The != operator
 	defun __neq(a, b) {
@@ -20,12 +20,12 @@
 	defun __eq(a:Array, b:Array) {
 		len_a = len(a)
 		len_b = len(b)
-		if{len_a != len_b} {
+		if len_a != len_b {
 			return false;
 		}
-		for(i=0;i<len_a;i=i+1) {
-			# Work around syntax bug: {a[i] != b[i]} does not work for now
-			if{(a[i]) != b[i]} {
+		for(i=0; i<len_a; i=i+1) {
+			# Work around syntax bug: a[i] != b[i] does not work for now
+			if (a[i]) != b[i] {
 				return false;
 			}
 		}
@@ -47,7 +47,7 @@
 		len_a = len(a)
 		for(i=0;i<len_a;i=i+1) {
 			# Work around syntax bug: {a[i] == v} does not work for now
-			if{(a[i]) == v} {
+			if (a[i]) == v {
 				return true
 			}
 		}
@@ -59,18 +59,18 @@
 	}
 
 
-	defun min(a:Number, b:Number) { if{a<b}{a}{b} }
-	defun max(a:Number, b:Number) { if{a<b}{b}{a} }
+	defun min(a:Number, b:Number) { if a<b {a}{b} }
+	defun max(a:Number, b:Number) { if a<b {b}{a} }
 
 	defun startsWith(s:String, pfx:String) {
-		if{len(s) < len(pfx)} {
+		if len(s) < len(pfx) {
 			return false
 		}
 		l = len(pfx)
 		for(i=0;i<l;i=i+1) {
 			a = s[i]
 			b = pfx[i]
-			if{a != b} {
+			if a != b {
 				return false
 			}
 		}
@@ -81,7 +81,7 @@
 		# TODO: handle async
 		p = native_spawn(*args)
 		ok = cmd_finished_ok_p(p)
-		if{not(ok)} {
+		if not(ok) {
 			# TODO: nicer output of the args
 			# TODO: output stack trace
 			crash("Command execution failed: " + inspect(args))
@@ -139,7 +139,7 @@
 	defun parse_file(f:String, content:String) {
 		guard f ~ "\.json$"
 		r = from_json(content)
-		if {not(r[0])} {
+		if not(r[0]) {
 			crash("Failed to read json file " + f)
 		}
 		r[1]
@@ -149,5 +149,4 @@
 		  content = fetch_file(f)
 		  parse_file(f, content)
 	}
-
 }

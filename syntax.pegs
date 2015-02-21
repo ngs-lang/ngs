@@ -49,19 +49,19 @@ comment "Any kind of comment" =
 // ( while should be: if CCEXPR [then] CCEXPR [[else] CCEXPR] )
 // TODO: if not
 if "if" =
-  'if' space? cond:CCEXPR space? 'then'? space? if_true:CCEXPR space? 'else'? space? if_false:CCEXPR? {
+  'if' space? cond:expr space? 'then'? space? if_true:CCEXPR space? 'else'? space? if_false:CCEXPR? {
     return N('if', [cond, if_true]).push(if_false);
   }
 
 while "while" =
   // Experiemntal feature "not"
-  "while" space? not:"not"? space? cond:CCEXPR space? body:CCEXPR {
+  "while" space? not:"not"? space? cond:expr space? body:CCEXPR {
     return N('while', [cond, body], not ? true : false);
   }
 
 for "for" =
   // Experiemntal feature "not"
-  "for" space? "(" init:expr space? ";" space? cond:expr space? ";" incr:expr space? ")" space? body:CCEXPR_code space? {
+  "for" space? "(" space? init:expr space? ";" space? cond:expr space? ";" space? incr:expr space? ")" space? body:CCEXPR_code space? {
     return N('for', [init, cond, incr, body]);
   }
 
@@ -100,6 +100,7 @@ top_level_expressions "Top-level expressions" =
 top_level_expressions_delimiter =
   inline_space? ";" space? /
   space?
+
 
 // ********************************************************************
 // TODO fix expr_* order for operation precedence. Low priority at top.
