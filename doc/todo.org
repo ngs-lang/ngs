@@ -3,6 +3,10 @@
 
 * Now
 ** DONE Rename exec to spawn
+** TODO map and lambda passing syntax
+** TODO all, any, none
+** TODO syntax: literal for hash
+** TODO syntax: set_attr
 ** TODO Output parser support
 ** TODO Make set_var local by default / global option
 ** TODO Improve parameters matching

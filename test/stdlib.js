@@ -39,6 +39,11 @@ var code_snippets = [
 	// spawn()
 	'{ Bool($(ls)) }',
 	'{ not(Bool($(-f NOSUCHFILE))) }',
+	// functional
+	'{ map([0,1,2], Bool) == [false, true, true] }',
+	'{ all([7,8], __gt, 5)}',
+	'{ any([7,8], __eq, 7)}',
+	'{ none([7,8], __gt, 10)}',
 ];
 
 // console.log("+ Loading stdlib");

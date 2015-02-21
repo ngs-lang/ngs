@@ -31,38 +31,58 @@
 		true
 	}
 
-	defun __get_item(a:Array, idxs:Array) {
+	defun map(a:Array, mapper, *args) {
 		ret = []
-		j = len(idxs)
+		j = a.len()
 		for(i=0;i<j;i=i+1) {
-			for(i=0;i<j;i=i+1) {
-				ret[i] = a[idxs[i]]
-			}
+			ret.push(mapper(a[i], *args))
 		}
 		ret
 	}
 
-	defun __get_attr(a:Array, attr:String) {
-		l = len(a)
-		ret = []
-		for(i=0; i<l; i=i+1) {
-			push(ret, __get_attr(a[i], attr))
-		}
-		ret
-	}
-
-	defun __in(v, a:Array) {
-		len_a = len(a)
+	defun any(a:Array, predicate, *args) {
+		len_a = a.len()
 		for(i=0;i<len_a;i=i+1) {
-			if a[i] == v {
+			if predicate(a[i], *args) {
 				return true
 			}
 		}
 		false
 	}
 
+	defun all(a:Array, predicate, *args) {
+		len_a = a.len()
+		for(i=0;i<len_a;i=i+1) {
+			if not(predicate(a[i], *args)) {
+				return false
+			}
+		}
+		true
+	}
+
+	defun none(a:Array, predicate, *args) {
+		not(any(a, predicate, *args))
+	}
+
+	defun __get_item(a:Array, idxs:Array) {
+		ret = []
+		j = idxs.len()
+		for(i=0;i<j;i=i+1) {
+			ret.push(a[idxs[i]])
+		}
+		ret
+	}
+
+	defun __get_attr(a:Array, attr:String) {
+		return map(a, __get_attr, attr)
+	}
+
+	defun __in(v, a:Array) {
+		any(a, __eq, v)
+	}
+
 	defun __not_in(*args) {
-		  not(__in(*args))
+		not(__in(*args))
 	}
 
 
@@ -73,11 +93,9 @@
 		if len(s) < len(pfx) {
 			return false
 		}
-		l = len(pfx)
+		l = pfx.len()
 		for(i=0;i<l;i=i+1) {
-			a = s[i]
-			b = pfx[i]
-			if a != b {
+			if s[i] != pfx[i] {
 				return false
 			}
 		}
@@ -98,7 +116,7 @@
 
 	# Convert execution of (example) '-f somefile' to 'test -f somefile'
 	defun spawn(*args) {
-		  guard 1 < len(args)
+		  guard args.len() > 1
 		  guard startsWith(args[0], "-")
 		  args = ["test"] + args
 		  # or spawn() again?
@@ -106,12 +124,12 @@
 	}
 
 	defun osname() {
-		  null
+		null
 	}
 
 	defun osname() {
-		  guard $(-f /etc/debian_version)
-		  "debian"
+		guard $(-f /etc/debian_version)
+		"debian"
 	}
 
 
@@ -134,7 +152,7 @@
 	defun cmd_finished_ok_p(p:Process) {
 		guard p.cmd == "service"
 		guard p.args[1] == "status"
-		p.exit_code in [0, 1, 2, 3]
+		p.exit_code < 4
 	}
 
 	# ----- Finished commands handlers - end -----
@@ -153,7 +171,7 @@
 	}
 
 	defun read(f:String) {
-		  content = fetch_file(f)
-		  parse_file(f, content)
+		content = fetch_file(f)
+		parse_file(f, content)
 	}
 }

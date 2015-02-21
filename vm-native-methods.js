@@ -146,6 +146,9 @@ function register_native_methods() {
 	this.registerNativeMethod('__lt', p_args('a', 'Number', 'b', 'Number'), function vm___lt(scope) {
 		return ['Bool', get_num(scope.a) < get_num(scope.b)];
 	});
+	this.registerNativeMethod('__gt', p_args('a', 'Number', 'b', 'Number'), function vm___lt(scope) {
+		return ['Bool', get_num(scope.a) > get_num(scope.b)];
+	});
 
 	// stack: ... v1 v2 -> ... bool
 	this.registerNativeMethod('__eq', p_args('a', null, 'b', null), function vm___eq(scope) {
