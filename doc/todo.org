@@ -2,10 +2,10 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** DONE all, any, none
-** TODO map and lambda passing syntax
+** DONE map and lambda syntax
 ** TODO syntax: literal for hash
 ** TODO syntax: set_attr
+** TODO Generated documentation
 ** TODO Output parser support
 ** TODO Make set_var local by default / global option
 ** TODO Improve parameters matching

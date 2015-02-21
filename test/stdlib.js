@@ -41,9 +41,14 @@ var code_snippets = [
 	'{ not(Bool($(-f NOSUCHFILE))) }',
 	// functional
 	'{ map([0,1,2], Bool) == [false, true, true] }',
+	'{ map([0,1,2], lambda (x) {x+1} ) == [1, 2, 3] }',
+	'{ map([3,4], F mymapper (x) {x*2} ) == [6, 8] }',
+	'{ map([3,"a"], [F (x:Number) {1}, F(x:String) {"A"}]) == [1, "A"] }',
 	'{ all([7,8], __gt, 5)}',
 	'{ any([7,8], __eq, 7)}',
 	'{ none([7,8], __gt, 10)}',
+	'{ r=[]; [1,10].each(F(x) {r.push(x*2)}); r == [2,20] }',
+	'{ [1,10].each(F(x) {0}) == [1,10] }',
 ];
 
 // console.log("+ Loading stdlib");

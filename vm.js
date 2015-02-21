@@ -360,7 +360,12 @@ Context.prototype.invoke_or_throw = function(methods, args, kwargs, vm) {
 
 
 Context.prototype.invoke = function(methods, args, kwargs, vm) {
-	var ms = get_arr(methods);
+	var ms;
+	if(get_type(methods) == 'Lambda') {
+		ms = [methods]
+	} else {
+		ms = get_arr(methods);
+	}
 
 	for(var l=ms.length-1, i=l; i>=0; i--) {
 		var m = ms[i];

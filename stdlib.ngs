@@ -40,6 +40,14 @@
 		ret
 	}
 
+	defun each(a:Array, mapper, *args) {
+		j = a.len()
+		for(i=0;i<j;i=i+1) {
+			mapper(a[i], *args)
+		}
+		a
+	}
+
 	defun any(a:Array, predicate, *args) {
 		len_a = a.len()
 		for(i=0;i<len_a;i=i+1) {
@@ -152,6 +160,7 @@
 	defun cmd_finished_ok_p(p:Process) {
 		guard p.cmd == "service"
 		guard p.args[1] == "status"
+		# Empirical
 		p.exit_code < 4
 	}
 

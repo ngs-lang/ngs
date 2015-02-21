@@ -279,7 +279,7 @@ splice "splice" =
   "*" space? e:expr { return N('splice', [e]); }
 
 lambda "Lambda" =
-  "lambda" space? "(" space? params:parameters space? ")" space? code:CCEXPR { return N('lambda', ['TODO:ARGS', code]); }
+  ("lambda" / "F") (space+ name:varname)? space? "(" space? params:parameters? space? ")" space? code:CCEXPR { return N('lambda', [params || N('parameters', []), code], name? name.data : null); }
 
 function_definition =
   "defun" space+ name:varname space? "(" space? params:parameters? space? ")" space? code:CCEXPR { return N('defun', [N('lambda', [params || N('parameters', []), code])], name.data); }
