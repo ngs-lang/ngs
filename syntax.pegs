@@ -288,7 +288,7 @@ type_field_definition "Definition of a field of a type" =
   }
 
 guard "Function entry guard" =
-  "guard" space? e:CCEXPR { return N('guard', [e]); }
+  "guard" space? e:expr { return N('guard', [e]); }
 
 match "Match" =
   "match" space? "(" space? args:comma_separated_expressions? space? ")" space? "{" space? c:cases space? "}" {

@@ -91,9 +91,10 @@
 
 	# Convert execution of (example) '-f somefile' to 'test -f somefile'
 	defun spawn(*args) {
-		  guard {1 < len(args)}
-		  guard {startsWith(args[0], "-")}
+		  guard 1 < len(args)
+		  guard startsWith(args[0], "-")
 		  args = ["test"] + args
+		  # or spawn() again?
 		  return __super(*args)
 	}
 
@@ -102,7 +103,7 @@
 	}
 
 	defun osname() {
-		  guard (-f /etc/debian_version)
+		  guard $(-f /etc/debian_version)
 		  "debian"
 	}
 
@@ -114,18 +115,18 @@
 	}
 
 	defun cmd_finished_ok_p(p:Process) {
-		guard { p.cmd == "test" }
+		guard p.cmd == "test"
 		p.exit_code in [0,1]
 	}
 
 	defun cmd_finished_ok_p(p:Process) {
-		guard { p.cmd == "false" }
+		guard p.cmd == "false"
 		p.exit_code == 1
 	}
 
 	defun cmd_finished_ok_p(p:Process) {
-		guard { p.cmd == "service" }
-		guard { (p.args[1]) == "status" }
+		guard p.cmd == "service"
+		guard (p.args[1]) == "status"
 		p.exit_code in [0, 1, 2, 3]
 	}
 
@@ -136,7 +137,7 @@
 	}
 
 	defun parse_file(f:String, content:String) {
-		guard {f ~ "\.json$"}
+		guard f ~ "\.json$"
 		r = from_json(content)
 		if {not(r[0])} {
 			crash("Failed to read json file " + f)
