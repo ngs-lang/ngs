@@ -80,7 +80,6 @@ function register_native_methods() {
 	// Expecting:
 	// this - Context object
 
-	// stack: ... -> array
 	this.registerNativeMethod('Array', p_args(), function vm_Array() {
 		return ['Array', new Array()];
 	});
@@ -89,14 +88,12 @@ function register_native_methods() {
 		return ['Hash', new Object()];
 	});
 
-	// stack: ... v -> Boolean
 	this.registerNativeMethod('Bool', p_args('x', null), function vm_Bool_p_any(scope) {
 		// Anything that was not processed by any other Bool() method
 		// will have it's JS boolean value as result.
 		return ['Bool', !!scope.x[1]]; // XXX broken get_TYP(v) data access abstraction
 	});
 
-	// stack: ... v -> Boolean
 	this.registerNativeMethod('Bool', p_args('p', 'Process'), function vm_Bool_p_process(scope) {
 		var p = get_prc(scope.p);
 		if(p.state !== 'done') {
@@ -109,44 +106,36 @@ function register_native_methods() {
 	});
 
 	// TODO: move to NSL - Ngs Standard Library
-	// stack: ... v -> Boolean
 	this.registerNativeMethod('Bool', p_args('a', 'Array'), function vm_Bool_p_arr(scope) {
 		return ['Bool', get_arr(scope.a).length != 0];
 	});
 
-	// stack: ... array value -> ... array
 	this.registerNativeMethod('push', p_args('a', 'Array', 'x', null), function vm_push(scope) {
 		var a = get_arr(scope.a);
 		a.push(scope.x);
 		return scope.a;
 	});
 
-	// stack: ... v1 v2 -> ... v
 	this.registerNativeMethod('__add', p_args('a', 'Number', 'b', 'Number'), function vm___add_p_num_num(scope) {
 		return ['Number', get_num(scope.a) + get_num(scope.b)];
 	});
 
-	// stack: ... v1 v2 -> ... v
 	this.registerNativeMethod('__add', p_args('a', 'String', 'b', 'String'), function vm___add_p_str_str(scope) {
 		return ['String', get_str(scope.a) + get_str(scope.b)];
 	});
 
-	// stack: ... v1 v2 -> ... v
 	this.registerNativeMethod('__add', p_args('a', 'Array', 'b', 'Array'), function vm___add_p_arr_arr(scope) {
 		return ['Array', get_arr(scope.a).concat(get_arr(scope.b))];
 	});
 
-	// stack: ... v1 v2 -> ... v
 	this.registerNativeMethod('__sub', p_args('a', 'Number', 'b', 'Number'), function vm___sub(scope) {
 		return ['Number', get_num(scope.a) - get_num(scope.b)];
 	});
 
-	// stack: ... v1 v2 -> ... v
 	this.registerNativeMethod('__mul', p_args('a', 'Number', 'b', 'Number'), function vm___sub(scope) {
 		return ['Number', get_num(scope.a) * get_num(scope.b)];
 	});
 
-	// stack: ... v1 v2 -> ... bool
 	this.registerNativeMethod('__lt', p_args('a', 'Number', 'b', 'Number'), function vm___lt(scope) {
 		return ['Bool', get_num(scope.a) < get_num(scope.b)];
 	});
@@ -154,14 +143,12 @@ function register_native_methods() {
 		return ['Bool', get_num(scope.a) > get_num(scope.b)];
 	});
 
-	// stack: ... v1 v2 -> ... bool
 	this.registerNativeMethod('__eq', p_args('a', null, 'b', null), function vm___eq(scope) {
 		// XXX: incorrect implementation, uses JS comparison
 		// XXX: does not use get_TYP data access abstraction
 		return ['Bool', scope.a[1] === scope.b[1]];
 	});
 
-	// stack: ... container idx v -> ... v
 	this.registerNativeMethod('__set_item', p_args('a', 'Array', 'idx', 'Number', 'v', null), function vm___set_item_p_arr_num_any(scope) {
 		var a = get_arr(scope.a);
 		var i = get_num(scope.idx)
@@ -175,8 +162,19 @@ function register_native_methods() {
 		return scope.v;
 	});
 
-	// stack: ... container idx v -> ... v
-	this.registerNativeMethod('__get_item', p_args('a', 'Array', 'idx', 'Number'), function vm___set_item_p_arr_num_any(scope) {
+	this.registerNativeMethod('keys', p_args('h', 'Hash'), function vm_keys_p_hsh(scope) {
+		var h = get_hsh(scope.h);
+		return to_ngs_object(_.keys(h));
+	});
+
+	this.registerNativeMethod('__set_item', p_args('h', 'Hash', 'k', 'String', 'v', null), function vm___set_item_p_hsh_str_any(scope) {
+		var h = get_hsh(scope.h);
+		var k = get_str(scope.k)
+		h[k] = scope.v;
+		return scope.v;
+	});
+
+	this.registerNativeMethod('__get_item', p_args('a', 'Array', 'idx', 'Number'), function vm___get_item_p_arr_num(scope) {
 		var a = get_arr(scope.a);
 		var i = get_num(scope.idx)
 		// TODO: assert i is integer
@@ -186,8 +184,7 @@ function register_native_methods() {
 		return a[i];
 	});
 
-	// stack: ... container idx v -> ... v
-	this.registerNativeMethod('__get_item', p_args('s', 'String', 'idx', 'Number'), function vm___set_item_p_arr_num_any(scope) {
+	this.registerNativeMethod('__get_item', p_args('s', 'String', 'idx', 'Number'), function vm___get_item_p_str_num(scope) {
 		var s = get_str(scope.s);
 		var i = get_num(scope.idx)
 		// TODO: assert i is integer
@@ -197,21 +194,23 @@ function register_native_methods() {
 		return ['String', s[i]];
 	});
 
-	this.registerNativeMethod('len', p_args('a', 'Array'), function vm___set_item_p_arr_num_any(scope) {
+	this.registerNativeMethod('len', p_args('a', 'Array'), function vm_len_p_arr(scope) {
 		return ['Number', get_arr(scope.a).length];
 	});
 
-	this.registerNativeMethod('len', p_args('s', 'String'), function vm___set_item_p_arr_num_any(scope) {
+	this.registerNativeMethod('len', p_args('s', 'String'), function vm_len_p_str(scope) {
 		return ['Number', get_str(scope.s).length];
 	});
 
-	// stack: ... v -> ...
+	this.registerNativeMethod('len', p_args('h', 'Hash'), function vm_len_p_hsh(scope) {
+		return ['Number', _.size(get_hsh(scope.h))];
+	});
+
 	this.registerNativeMethod('echo', Args().rest_pos('p').get(), function vm_echo(scope) {
 		console.log('ECHO', util.inspect(get_arr(scope.p), {depth: 20}), scope.n);
 		return ['Null', null];
 	});
 
-	// stack: ... type_name fields_defs -> ...
 	this.registerNativeMethod('__deftype', p_args('name', 'String', 'fields', null), function vm___deftype(scope, vm) {
 		// TODO: maybe allow redefining type (for extending)
 		var name = get_str(scope.name);
@@ -232,21 +231,17 @@ function register_native_methods() {
 		return 'DUNNO-YET';
 	});
 
-	// stack: ... -> ... lexical_scopes
 	this.registerNativeMethod('__get_lexical_scopes', p_args(), function vm___get_lexical_scopes() {
 		// Need lexical scopes of caller, not ours.
 		// Dirty scopes hack
 		return ['Scopes', this.getCallerLexicalScopes()];
 	});
 
-	// stack: ... lexical_scopes code_ptr -> ... lambda-object
-	//											 (temporary object repr.)
 	this.registerNativeMethod('__lambda', p_args('scopes', 'Scopes', 'args', 'Array', 'ip', 'Number'), function vm___lambda(scope) {
 		// console.log('__lambda', scope.scopes.length, scope.ip);
 		return ['Lambda', ['Array', [scope.scopes, scope.args, scope.ip]]];
 	});
 
-	// stack: ... lambda-object name -> ... lambda-object
 	this.registerNativeMethod('__register_method', p_args('lambda', 'Lambda', 'name', 'String'), function vm___register_method(scope) {
 		var name = get_str(scope.name);
 		// The method is created in _caller_ lexical scops, not in ours.
@@ -259,7 +254,6 @@ function register_native_methods() {
 		return scope.lambda;
 	});
 
-	// stack: ... lambda-object name -> ... lambda-object
 	this.registerNativeMethod('__throw', p_args('e', null), function vm___throw(scope, vm) {
 		this.throw_(scope.e, vm);
 		return ['Null', null];
@@ -329,7 +323,7 @@ function register_native_methods() {
 		}
 		return to_ngs_object(p[a]);
 	})
-	this.registerNativeMethod('__get_attr', p_args('h', 'Hash', 'attr', 'String'), function vm___get_attr(scope) {
+	this.registerNativeMethod('__get_item', p_args('h', 'Hash', 'attr', 'String'), function vm___get_attr(scope) {
 		// TODO (maybe): store all fields as NGS objects in the first place
 		var a = get_str(scope.attr);
 		var h = get_hsh(scope.h);

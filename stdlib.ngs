@@ -31,6 +31,16 @@
 		true
 	}
 
+	defun __eq(a:Hash, b:Hash) {
+		if a.len() != b.len() {
+			return false
+		}
+		if a.keys().sort() != b.keys().sort() {
+			return false
+		}
+		all(a.keys(), F(k) { a[k] == b[k] })
+	}
+
 	defun map(a:Array, mapper, *args) {
 		ret = []
 		j = a.len()
@@ -79,6 +89,17 @@
 			ret.push(a[idxs[i]])
 		}
 		ret
+	}
+
+	defun __get_item(a:Hash, keys:Array) {
+		ret = {}
+		keys.each(F(k) { ret[k] = a[k] })
+		ret
+	}
+
+	# hash.key is same as hash["key"]
+	defun __get_attr(h:Hash, k:String) {
+		h[k]
 	}
 
 	defun __get_attr(a:Array, attr:String) {

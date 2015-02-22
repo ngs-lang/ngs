@@ -18,8 +18,6 @@ var code_vs_stack = [
 	['{[1, 2] + [3, 4]}', [["Array", [["Number", 1], ["Number", 2], ["Number", 3], ["Number", 4]]]]],
 	['{a=1; a}', [["Number", 1]]],
 
-	['{h = { "k" : 7, "x": 99 }; h.k}', [["Number",7]]],
-
 	// *** defun ***
 	['{ defun f() { return 77; }; 1 + f(); }', [["Number", 78]]],
 	['{ defun f(x, y) { return x - y; }; f(5, 2); }', [["Number", 3]]],
@@ -95,6 +93,11 @@ var code_vs_stack = [
 	// *** Arrays ***
 	['{a=[]; a[1]=7; a}', [['Array', [['Null', null], ['Number', 7]]]]],
 	['{a=[10,20,30,40]; b=[1]; a[b[0]]}', [['Number', 20]]],
+
+	// *** Hashes ***
+	['{ {"a": 7, "b": 8} }', [["Hash",{"a":["Number",7],"b":["Number",8]}]]],
+	['{ h = { "k" : 7, "x": 99 }; h["k"]}', [["Number",7]]],
+	['{ { "k" : 77, "x": 99 }["k"] }', [["Number",77]]],
 
 	// *** Guard ***
 	['{defun f(x) {return 1}; defun f(x) {guard x==10; return 20} [f(8), f(10)]}',

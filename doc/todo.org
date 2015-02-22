@@ -2,9 +2,9 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** DONE map and lambda syntax
-** TODO syntax: literal for hash
-** TODO syntax: set_attr
+** DONE syntax: literal for hash
+** DONE syntax: set_attr
+** TODO Add boolean and + or, rewrite __eq(Hash,Hash)
 ** TODO Generated documentation
 ** TODO Output parser support
 ** TODO Make set_var local by default / global option

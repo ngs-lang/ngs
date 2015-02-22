@@ -388,8 +388,7 @@ Context.prototype.invoke = function(methods, args, kwargs, vm) {
 		var old_frame = this.frame;
 		this.frame = new Frame();
 		this.frames.push(this.frame);
-		this.frame.scopes = get_scp(lambda[0])
-		this.frame.scopes = old_frame.scopes.concat(scope[1]);
+		this.frame.scopes = get_scp(lambda[0]).concat(vars)
 		old_frame.stack_len = this.stack.length;
 
 		if(call_type === 'Number') {
@@ -490,7 +489,14 @@ VM.prototype.opcodes = {
 		var name = st.pop();
 		var val = st.pop();
 		name = get_str(name);
-		this.context.find_var_lexical_scope(name)[1][name] = val;
+		var var_scope = this.context.find_var_lexical_scope(name);
+		if(var_scope[0]) {
+			// Found: set it. Maybe change later to assign to local anyway
+			var_scope[1][name] = val;
+			return;
+		}
+		var scopes = this.context.frame.scopes;
+		scopes[scopes.length-1][name] = val;
 	},
 
 	// stack: ... args kwargs methods -> ... X
