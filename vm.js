@@ -511,6 +511,15 @@ VM.prototype.opcodes = {
 		var args = ['Array', [arg1, arg2]];
 		this.context.invoke_or_throw(methods, args, ['Hash', {}], this);
 	},
+	'invoke3': function() {
+		var st = this.context.stack;
+		var methods = st.pop();
+		var arg3 = st.pop();
+		var arg2 = st.pop();
+		var arg1 = st.pop();
+		var args = ['Array', [arg1, arg2, arg3]];
+		this.context.invoke_or_throw(methods, args, ['Hash', {}], this);
+	},
 
 	// stack: ... v -> ... v
 	'ret': function() {

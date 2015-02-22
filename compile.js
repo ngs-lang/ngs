@@ -306,6 +306,17 @@ function compile_tree(node, leave_value_in_stack) {
 		cmd('comment', 'end', node.node_type);
 		return ret;
 	}
+	if(node.is('hash')) {
+		concat(compile_invoke_no_args('Hash'));
+		for(var i=0; i<node.length; i++) {
+			concat(compile_tree(node[i][0]), true);
+			concat(compile_tree(node[i][1]), true);
+			cmd('push_str', '__set_attr');
+			cmd('get_var');
+			cmd('invoke3');
+		}
+		return pop_if_needed(ret, leave_value_in_stack);
+	}
 	if(node.is('binop')) {
 		// node.data -- operation name
 		concat_tree(0, true);
@@ -424,7 +435,7 @@ function compile_tree(node, leave_value_in_stack) {
 		cmd('push_str', node.data);
 		concat(compile_push());
 		concat(compile_invoke_pos_args_in_stack('__get_attr'));
-		return ret;
+		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.node_type) {
 		throw "Don't know how to compile type '" + node.node_type + "'";

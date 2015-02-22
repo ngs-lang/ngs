@@ -79,10 +79,14 @@ function p_args() {
 function register_native_methods() {
 	// Expecting:
 	// this - Context object
-	
+
 	// stack: ... -> array
 	this.registerNativeMethod('Array', p_args(), function vm_Array() {
 		return ['Array', new Array()];
+	});
+
+	this.registerNativeMethod('Hash', p_args(), function vm_Array() {
+		return ['Hash', new Object()];
 	});
 
 	// stack: ... v -> Boolean
@@ -333,6 +337,13 @@ function register_native_methods() {
 			throw new Error("Hash does not have attribute " + a);
 		}
 		return h[a];
+	})
+	this.registerNativeMethod('__set_attr', p_args('h', 'Hash', 'attr', 'String', 'v', null), function vm___get_attr(scope) {
+		// TODO (maybe): store all fields as NGS objects in the first place
+		var a = get_str(scope.attr);
+		var h = get_hsh(scope.h);
+		h[a] = scope.v;
+		return scope.h;
 	})
 	this.registerNativeMethod('from_json', p_args('s', 'String'), function vm_from_json(scope) {
 		var json;
