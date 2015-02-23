@@ -7,7 +7,7 @@ function make_getter(type, getter_name) {
 			throw new Error('Got non-data: ' + Object.toString(data));
 		}
 		if(data[0] !== type) {
-			console.log('Got data of unexpcted type. Expected', type, 'got', data[0]);
+			console.log('Got data of unexpected type. Expected', type, 'got', data[0]);
 			throw new Error('Got non-'+type+': ' + Object.toString(data));
 		}
 		return data[1];

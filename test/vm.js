@@ -118,6 +118,12 @@ var code_vs_stack = [
 	// *** __super ***
 	['{defun f(x) {x*2} defun f(y) { __super(y) * 3} f(5)}', [["Number", 30]]],
 
+	// *** Boolean operators ***
+	['{ 0 and 2 }', [["Number",0]]],
+	['{ 1 and 2 }', [["Number",2]]],
+	['{ 0 or 2 }', [["Number",2]]],
+	['{ 1 or 2 }', [["Number",1]]],
+
 ];
 
 var code_vs_spawn_args = [

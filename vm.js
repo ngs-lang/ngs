@@ -476,6 +476,14 @@ VM.prototype.opcodes = {
 		st.push(v);
 	},
 
+	'xchg': function() {
+		var st = this.context.stack;
+		var v1 = st.pop();
+		var v2 = st.pop();
+		st.push(v1);
+		st.push(v2);
+	},
+
 	// stack: ... var_name -> ... var_value
 	'get_var': function() {
 		var st = this.context.stack;

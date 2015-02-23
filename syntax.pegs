@@ -119,13 +119,25 @@ expr_set_item "Expression/set_item" =
 
 
 expr_in "Expression/in" =
-  v:expr_eq inline_space "in" space container:expr_eq {
+  v:expr_or inline_space "in" space container:expr_or {
     return N('in', [v, container])
   } /
-  v:expr_eq inline_space "not" space "in" space container:expr_eq {
+  v:expr_or inline_space "not" space "in" space container:expr_or {
     return N('not_in', [v, container])
   } /
-  e: expr_eq
+  e: expr_or
+
+expr_or "Expression/or" =
+  e1:expr_and space? "or" space? e2:expr {
+    return N('binop', [e1, e2], 'or', 2500);
+  } /
+  expr_and
+
+expr_and "Expression/and" =
+  e1:expr_eq space? "and" space? e2:expr {
+    return N('binop', [e1, e2], 'and', 2000);
+  } /
+  expr_eq
 
 expr_eq "Expression/eq" =
   e1:expr_add space? "==" space? e2:expr {

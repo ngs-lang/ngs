@@ -50,6 +50,7 @@ var code_snippets = [
 	'{ r=[]; [1,10].each(F(x) {r.push(x*2)}); r == [2,20] }',
 	'{ [1,10].each(F(x) {0}) == [1,10] }',
 	'{ h={"kk": 7, "xx": 8}; h[["kk"]] == {"kk": 7} }',
+	'{ h={"kk": 7, "xx": 8}; h[["xx"]] != {"kk": 7} }',
 ];
 
 // console.log("+ Loading stdlib");

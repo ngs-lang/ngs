@@ -317,6 +317,21 @@ function compile_tree(node, leave_value_in_stack) {
 		}
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
+	if(node.is('binop') && ((node.data == 'and') || (node.data == 'or'))) {
+		concat_tree(0, true);
+		cmd('dup');
+		cmd('push_arr');
+		cmd('xchg');
+		concat(compile_push());
+		concat(compile_invoke_pos_args_in_stack('Bool'));
+		var l = ret.length;
+		var jump_cmd = (node.data == 'and' ? 'jump_if_false' : 'jump_if_true')
+		cmd(jump_cmd, 0); // unknown yet
+		cmd('pop')
+		concat_tree(1, true)
+		ret[l][1] = ret.length - l - 1; // minus jump_if_false instruction
+		return pop_if_needed(ret, leave_value_in_stack);
+	}
 	if(node.is('binop')) {
 		// node.data -- operation name
 		concat_tree(0, true);
