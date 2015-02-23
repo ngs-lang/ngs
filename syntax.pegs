@@ -92,10 +92,9 @@ CCEXPR_code =
   }
 
 top_level_expressions "Top-level expressions" =
-  e:expr top_level_expressions_delimiter es:top_level_expressions {
-    return N('top_level_expressions', [e]).concat(es);
-  } /
-  e:expr { return N('top_level_expressions', [e]); }
+  e:(expr top_level_expressions_delimiter)+ {
+    return N('top_level_expressions', e.map(function(item) {return item[0]}));
+  }
 
 top_level_expressions_delimiter =
   inline_space? ";" space? /
