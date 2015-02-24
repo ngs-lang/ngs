@@ -7,8 +7,7 @@
 }
 
 start = 
-  commands /
-  top_level_expressions
+  commands
 
 space = [ \t\n]+
 inline_space = [ \t]+
@@ -18,7 +17,7 @@ commands "commands" =
   space? c:command commands_separator cs:commands {
 	return N('commands', [c]).concat(cs);
   } /
-  c:command commands_separator? { return N('commands', [c]); }
+  c:command commands_separator? space? { return N('commands', [c]); }
 
 commands_separator "Command separator" =
   newline_space /
@@ -36,21 +35,18 @@ command "command" =
   execute_external_prog
 
 hash_comment "# Comment" =
-  "#" c:[^\n]+ { return N('comment', [], c.join('')); }
+  inline_space? "#" c:[^\n]+ { return N('comment', [], c.join('')); }
 
 slash_slash_comment "// Comment" =
-  "//" c:[^\n]+ { return N('comment', [], c.join('')); }
+  inline_space? "//" c:[^\n]+ { return N('comment', [], c.join('')); }
 
 comment "Any kind of comment" =
   hash_comment /
   slash_slash_comment
 
-// if CCEXPR [then] CCEXPR [else] [CCEXPR]
-// ( while should be: if CCEXPR [then] CCEXPR [[else] CCEXPR] )
-// TODO: if not
 if "if" =
-  'if' space? cond:expr space? 'then'? space? if_true:CCEXPR space? 'else'? space? if_false:CCEXPR? {
-    return N('if', [cond, if_true]).push(if_false);
+  'if' space? cond:expr space? 'then'? space? if_true:CCEXPR if_false:(space? 'else'? space? CCEXPR)? {
+    return N('if', [cond, if_true]).push(if_false ? if_false[3] : null);
   }
 
 while "while" =
@@ -61,12 +57,12 @@ while "while" =
 
 for "for" =
   // Experiemntal feature "not"
-  "for" space? "(" space? init:expr space? ";" space? cond:expr space? ";" space? incr:expr space? ")" space? body:CCEXPR_code space? {
+  "for" space? "(" space? init:expr space? ";" space? cond:expr space? ";" space? incr:expr space? ")" space? body:CCEXPR_code {
     return N('for', [init, cond, incr, body]);
   }
 
-break "break" = "break" space? { return N('break', []); }
-continue "continue" = "continue" space? { return N('continue', []); }
+break "break" = "break" { return N('break', []); }
+continue "continue" = "continue" { return N('continue', []); }
 
 async "async" =
   "async" space e:CCEXPR {
@@ -84,21 +80,23 @@ CCEXPR "CCEXPR" =
   CCEXPR_code
 
 CCEXPR_commands =
-  space? '(' space? commands:commands space? ')' space? { return commands; }
+  space? '(' space? commands:commands space? ')' { return commands; }
 
 CCEXPR_code =
-  space? '{' space? code:top_level_expressions space? ";"? space? '}' space? {
+  space? '{' space? code:top_level_expressions space? ";"? space? '}' {
     return code;
   }
 
 top_level_expressions "Top-level expressions" =
-  e:(expr top_level_expressions_delimiter)+ {
-    return N('top_level_expressions', e.map(function(item) {return item[0]}));
-  }
+  e:expr top_level_expressions_delimiter es:top_level_expressions {
+    return N('top_level_expressions', [e]).concat(es);
+  } /
+  e:expr { return N('top_level_expressions', [e]); }
 
 top_level_expressions_delimiter =
-  inline_space? ";" space? /
-  space?
+  newline_space /
+  inline_space? ";" space?
+
 
 
 // ********************************************************************
@@ -106,10 +104,10 @@ top_level_expressions_delimiter =
 // ********************************************************************
 
 expr "Expression" =
-  expr_set_item
+  comment /
+  e:expr_set_item comment? { return e; }
 
 expr_set_item "Expression/set_item" =
-  comment /
   // container must not be expr_get_item, should be expr_eq
   container:expr_eq inline_space? "[" space? idx:expr space? "]" space? "=" space? v:expr {
     return N('set_item', [container, idx, v]);
@@ -200,7 +198,7 @@ dots "expression dot expression, maybe call" =
   get_item
 
 dot_call "dot function call" =
-  "." f:varname space? "(" space? args:comma_separated_expressions? space? ")" space? {
+  "." f:varname space? "(" space? args:comma_separated_expressions? space? ")" {
 	var a = args || N('expressions', []);
 	return N('dot_call', [f, a]);
   }
@@ -324,16 +322,16 @@ parameter_type "Function parameter type" =
   space? ":" space? t:varname space? { return N('arg_type', [], t.data);  }
 
 return "return" =
-  "return" space? e:expr { return N('ret', [e]); }
+  "return" space e:expr { return N('ret', [e]); }
 
 function_call "function call" =
-  f:expr_base space? "(" space? args:comma_separated_expressions? space? ")" space? {
+  f:expr_base space? "(" space? args:comma_separated_expressions? space? ")" {
 	return N('call', [f, args || N('expressions', [])]);
   }
 
 
 type_definition "Type definition" =
-  "deftype" space+ type:varname space? "{" space? ds:type_fields_definitions? space? "}" space? {
+  "deftype" space+ type:varname space? "{" space? ds:type_fields_definitions? space? "}" {
     return N('deftype', ds || [], type.data);
   }
 

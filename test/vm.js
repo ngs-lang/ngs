@@ -100,12 +100,12 @@ var code_vs_stack = [
 	['{ { "k" : 77, "x": 99 }["k"] }', [["Number",77]]],
 
 	// *** Guard ***
-	['{defun f(x) {return 1}; defun f(x) {guard x==10; return 20} [f(8), f(10)]}',
+	['{defun f(x) {return 1}; defun f(x) {guard x==10; return 20}; [f(8), f(10)]}',
 	 [["Array", [["Number", 1], ["Number", 20]]]]],
 
 	// *** Comments ***
-	['{7 # mycomment1\n}', []],
-	['{7 // mycomment2\n}', []],
+	['{7 # mycomment1\n}', [['Number', 7]]],
+	['{7 // mycomment2\n}', [['Number', 7]]],
 	['# something', []],
 
 	// *** Empty function ***
@@ -116,7 +116,7 @@ var code_vs_stack = [
 	['{match("X") {(n:Number) {1} (s:String) {2}}}', [["Number", 2]]],
 
 	// *** __super ***
-	['{defun f(x) {x*2} defun f(y) { __super(y) * 3} f(5)}', [["Number", 30]]],
+	['{defun f(x) {x*2}; defun f(y) { __super(y) * 3}; f(5)}', [["Number", 30]]],
 
 	// *** Boolean operators ***
 	['{ 0 and 2 }', [["Number",0]]],
