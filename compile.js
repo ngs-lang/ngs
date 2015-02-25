@@ -37,6 +37,9 @@ function fix_binops_node(node) {
 		}
 		ret.splice(op_idx - 1, 3, N('binop', [ret[op_idx-1], ret[op_idx+1]], ret[op_idx].data, -1));
 	}
+	if(ret[0].is('binops')) {
+		ret[0] = fix_binops_node(ret[0]);
+	}
 	return ret[0];
 }
 

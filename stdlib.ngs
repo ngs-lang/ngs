@@ -59,8 +59,8 @@ defun each(a:Array, processor, *args) {
 }
 
 defun any(a:Array, predicate, *args) {
-	len_a = a.len()
-	for(i=0;i<len_a;i=i+1) {
+	j = a.len()
+	for(i=0;i<j;i=i+1) {
 		if predicate(a[i], *args) {
 			return true
 		}
@@ -69,8 +69,8 @@ defun any(a:Array, predicate, *args) {
 }
 
 defun all(a:Array, predicate, *args) {
-	len_a = a.len()
-	for(i=0;i<len_a;i=i+1) {
+	j = a.len()
+	for(i=0;i<j;i=i+1) {
 		if not(predicate(a[i], *args)) {
 			return false
 		}
@@ -80,6 +80,17 @@ defun all(a:Array, predicate, *args) {
 
 defun none(a:Array, predicate, *args) {
 	not(any(a, predicate, *args))
+}
+
+defun filter(a:Array, predicate, *args) {
+	ret = []
+	j = a.len()
+	for(i=0;i<j;i=i+1) {
+		if predicate(a[i], *args) {
+			ret.push(a[i])
+		}
+	}
+	ret
 }
 
 defun __get_item(a:Array, idxs:Array) {
