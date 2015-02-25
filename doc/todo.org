@@ -3,6 +3,7 @@
 
 * Now
 ** DONE Add boolean and + or, rewrite __eq(Hash,Hash)
+** TODO Fix top level syntax (commands/expressions)
 ** TODO binary function call
 ** TODO Generated documentation
 ** TODO Output parser support

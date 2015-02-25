@@ -53,6 +53,7 @@ command "command" =
   CCEXPR_code /
   assignment inline_space command /
   assignment /
+  function_definition /
   if /
   while /
   for /

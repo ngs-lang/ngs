@@ -1,207 +1,205 @@
-{
-	# string * number -> the string repeated number times
-	defun __mul(s:String, n:Number) {
-		ret = ""
-		for(i=0;i<n;i=i+1) {
-			ret = ret + s;
-		}
-		ret
+# string * number -> the string repeated number times
+defun __mul(s:String, n:Number) {
+	ret = ""
+	for(i=0;i<n;i=i+1) {
+		ret = ret + s;
 	}
+	ret
+}
 
-	defun not(x:Bool) { if x {false}{true} }
+defun not(x:Bool) { if x {false}{true} }
 
-	defun Bool(a:Array) { a.len() > 0 }
+defun Bool(a:Array) { a.len() > 0 }
 
-	# The != operator
-	defun __neq(a, b) {
-		not(a==b)
+# The != operator
+defun __neq(a, b) {
+	not(a==b)
+}
+
+# The == operator
+# Can NOT handle recursive structures (untested)
+defun __eq(a:Array, b:Array) {
+	len_a = len(a)
+	len_b = len(b)
+	if len_a != len_b {
+		return false;
 	}
-
-	# The == operator
-	# Can NOT handle recursive structures (untested)
-	defun __eq(a:Array, b:Array) {
-		len_a = len(a)
-		len_b = len(b)
-		if len_a != len_b {
+	for(i=0; i<len_a; i=i+1) {
+		if a[i] != b[i] {
 			return false;
 		}
-		for(i=0; i<len_a; i=i+1) {
-			if a[i] != b[i] {
-				return false;
-			}
+	}
+	true
+}
+
+defun __eq(a:Hash, b:Hash) {
+	a.len() == b.len()
+	and
+	a.keys().sort() == b.keys().sort()
+	and
+	all(a.keys(), F(k) { a[k] == b[k] })
+}
+
+defun map(a:Array, mapper, *args) {
+	ret = []
+	j = a.len()
+	for(i=0;i<j;i=i+1) {
+		ret.push(mapper(a[i], *args))
+	}
+	ret
+}
+
+defun each(a:Array, processor, *args) {
+	j = a.len()
+	for(i=0;i<j;i=i+1) {
+		processor(a[i], *args)
+	}
+	a
+}
+
+defun any(a:Array, predicate, *args) {
+	len_a = a.len()
+	for(i=0;i<len_a;i=i+1) {
+		if predicate(a[i], *args) {
+			return true
 		}
-		true
 	}
+	false
+}
 
-	defun __eq(a:Hash, b:Hash) {
-		a.len() == b.len()
-		and
-		a.keys().sort() == b.keys().sort()
-		and
-		all(a.keys(), F(k) { a[k] == b[k] })
-	}
-
-	defun map(a:Array, mapper, *args) {
-		ret = []
-		j = a.len()
-		for(i=0;i<j;i=i+1) {
-			ret.push(mapper(a[i], *args))
-		}
-		ret
-	}
-
-	defun each(a:Array, processor, *args) {
-		j = a.len()
-		for(i=0;i<j;i=i+1) {
-			processor(a[i], *args)
-		}
-		a
-	}
-
-	defun any(a:Array, predicate, *args) {
-		len_a = a.len()
-		for(i=0;i<len_a;i=i+1) {
-			if predicate(a[i], *args) {
-				return true
-			}
-		}
-		false
-	}
-
-	defun all(a:Array, predicate, *args) {
-		len_a = a.len()
-		for(i=0;i<len_a;i=i+1) {
-			if not(predicate(a[i], *args)) {
-				return false
-			}
-		}
-		true
-	}
-
-	defun none(a:Array, predicate, *args) {
-		not(any(a, predicate, *args))
-	}
-
-	defun __get_item(a:Array, idxs:Array) {
-		ret = []
-		j = idxs.len()
-		for(i=0;i<j;i=i+1) {
-			ret.push(a[idxs[i]])
-		}
-		ret
-	}
-
-	defun __get_item(a:Hash, keys:Array) {
-		ret = {}
-		keys.each(F(k) { ret[k] = a[k] })
-		ret
-	}
-
-	# hash.key is same as hash["key"]
-	defun __get_attr(h:Hash, k:String) {
-		h[k]
-	}
-
-	defun __get_attr(a:Array, attr:String) {
-		return map(a, __get_attr, attr)
-	}
-
-	defun __in(v, a:Array) {
-		any(a, __eq, v)
-	}
-
-	defun __not_in(*args) {
-		not(__in(*args))
-	}
-
-
-	defun min(a:Number, b:Number) { if a<b {a}{b} }
-	defun max(a:Number, b:Number) { if a<b {b}{a} }
-
-	defun startsWith(s:String, pfx:String) {
-		if len(s) < len(pfx) {
+defun all(a:Array, predicate, *args) {
+	len_a = a.len()
+	for(i=0;i<len_a;i=i+1) {
+		if not(predicate(a[i], *args)) {
 			return false
 		}
-		l = pfx.len()
-		for(i=0;i<l;i=i+1) {
-			if s[i] != pfx[i] {
-				return false
-			}
+	}
+	true
+}
+
+defun none(a:Array, predicate, *args) {
+	not(any(a, predicate, *args))
+}
+
+defun __get_item(a:Array, idxs:Array) {
+	ret = []
+	j = idxs.len()
+	for(i=0;i<j;i=i+1) {
+		ret.push(a[idxs[i]])
+	}
+	ret
+}
+
+defun __get_item(a:Hash, keys:Array) {
+	ret = {}
+	keys.each(F(k) { ret[k] = a[k] })
+	ret
+}
+
+# hash.key is same as hash["key"]
+defun __get_attr(h:Hash, k:String) {
+	h[k]
+}
+
+defun __get_attr(a:Array, attr:String) {
+	return map(a, __get_attr, attr)
+}
+
+defun __in(v, a:Array) {
+	any(a, __eq, v)
+}
+
+defun __not_in(*args) {
+	not(__in(*args))
+}
+
+
+defun min(a:Number, b:Number) { if a<b {a}{b} }
+defun max(a:Number, b:Number) { if a<b {b}{a} }
+
+defun startsWith(s:String, pfx:String) {
+	if len(s) < len(pfx) {
+		return false
+	}
+	l = pfx.len()
+	for(i=0;i<l;i=i+1) {
+		if s[i] != pfx[i] {
+			return false
 		}
-		true
 	}
+	true
+}
 
-	defun spawn(*args) {
-		# TODO: handle async
-		p = native_spawn(*args)
-		ok = cmd_finished_ok_p(p)
-		if not(ok) {
-			# TODO: nicer output of the args
-			# TODO: output stack trace
-			crash("Command execution failed: " + inspect(args))
-		}
-		p
+defun spawn(*args) {
+	# TODO: handle async
+	p = native_spawn(*args)
+	ok = cmd_finished_ok_p(p)
+	if not(ok) {
+		# TODO: nicer output of the args
+		# TODO: output stack trace
+		crash("Command execution failed: " + inspect(args))
 	}
+	p
+}
 
-	# Convert execution of (example) '-f somefile' to 'test -f somefile'
-	defun spawn(*args) {
-		  guard args.len() > 1
-		  guard startsWith(args[0], "-")
-		  args = ["test"] + args
-		  # or spawn() again?
-		  return __super(*args)
+# Convert execution of (example) '-f somefile' to 'test -f somefile'
+defun spawn(*args) {
+	  guard args.len() > 1
+	  guard startsWith(args[0], "-")
+	  args = ["test"] + args
+	  # or spawn() again?
+	  return __super(*args)
+}
+
+defun osname() {
+	null
+}
+
+defun osname() {
+	guard $(-f /etc/debian_version)
+	"debian"
+}
+
+
+# ----- Finished commands handlers - start -----
+
+defun cmd_finished_ok_p(p:Process) {
+	p.exit_code == 0
+}
+
+defun cmd_finished_ok_p(p:Process) {
+	guard p.cmd == "test"
+	p.exit_code in [0,1]
+}
+
+defun cmd_finished_ok_p(p:Process) {
+	guard p.cmd == "false"
+	p.exit_code == 1
+}
+
+defun cmd_finished_ok_p(p:Process) {
+	guard p.cmd == "service"
+	guard p.args[1] == "status"
+	# Empirical
+	p.exit_code < 4
+}
+
+# ----- Finished commands handlers - end -----
+
+defun parse_file(f:String, content:String) {
+	content
+}
+
+defun parse_file(f:String, content:String) {
+	guard f ~ "\.json$"
+	r = from_json(content)
+	if not(r[0]) {
+		crash("Failed to read json file " + f)
 	}
+	r[1]
+}
 
-	defun osname() {
-		null
-	}
-
-	defun osname() {
-		guard $(-f /etc/debian_version)
-		"debian"
-	}
-
-
-	# ----- Finished commands handlers - start -----
-
-	defun cmd_finished_ok_p(p:Process) {
-		p.exit_code == 0
-	}
-
-	defun cmd_finished_ok_p(p:Process) {
-		guard p.cmd == "test"
-		p.exit_code in [0,1]
-	}
-
-	defun cmd_finished_ok_p(p:Process) {
-		guard p.cmd == "false"
-		p.exit_code == 1
-	}
-
-	defun cmd_finished_ok_p(p:Process) {
-		guard p.cmd == "service"
-		guard p.args[1] == "status"
-		# Empirical
-		p.exit_code < 4
-	}
-
-	# ----- Finished commands handlers - end -----
-
-	defun parse_file(f:String, content:String) {
-		content
-	}
-
-	defun parse_file(f:String, content:String) {
-		guard f ~ "\.json$"
-		r = from_json(content)
-		if not(r[0]) {
-			crash("Failed to read json file " + f)
-		}
-		r[1]
-	}
-
-	defun read(f:String) {
-		content = fetch_file(f)
-		parse_file(f, content)
-	}
+defun read(f:String) {
+	content = fetch_file(f)
+	parse_file(f, content)
 }
