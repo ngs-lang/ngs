@@ -23,15 +23,29 @@ var CALL_NODES = {
 	'not_in': true,
 }
 
+function fix_binops_node(node) {
+	var ret = node;
+	while(ret.length > 1) {
+		// find the most binding op and turn it into binop node
+		var op_idx = null;
+		var op_precedence = -1;
+		for(var i=1; i<ret.length; i+=2) {
+			if(ret[i].precedence > op_precedence) {
+				op_idx = i;
+				op_precedence = ret[i].precedence;
+			}
+		}
+		ret.splice(op_idx - 1, 3, N('binop', [ret[op_idx-1], ret[op_idx+1]], ret[op_idx].data, -1));
+	}
+	return ret[0];
+}
 
 function fix_binops(tree) {
-	if((!tree[1]) || (!tree.same_precedence_binops_p(tree[1]))) {
-		return tree.map(fix_binops);
+	var ret = tree;
+	if(ret.is('binops')) {
+		ret = fix_binops_node(ret);
 	}
-	var ret = tree[1];
-	tree[1] = ret[0];
-	ret[0] = tree;
-	return fix_binops(ret);
+	return ret.map(fix_binops);
 }
 
 function dup_if_needed(code, leave_value_in_stack) {

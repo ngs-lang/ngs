@@ -1,9 +1,35 @@
-// ***************************************************
-// Warning operators precedence is not handled yet !!!
-// ***************************************************
-
+# TODO: "not in" -> "not" space "in"
 {
 	var N = require('./ast_node').ASTNode;
+	var ngs_precedence_src = [
+		['in', 'not in'],
+		['or'],
+		['and'],
+		['==', '!=', '<', '>', '~'],
+		['+', '-'],
+		['*', '/'],
+    ]
+	var ngs_precedence = {};
+	for(var i=0; i<ngs_precedence_src.length; i++) {
+		ngs_precedence_src[i].forEach(function(op) {
+			ngs_precedence[op] = i;
+		});
+	}
+	var ngs_binops_names = {
+		'in'    : 'in',
+		'not in': 'not_in',
+		'or'    : 'or',
+		'and'   : 'and',
+		'=='    : 'eq',
+		'!='    : 'neq',
+		'<'     : 'lt',
+		'>'     : 'gt',
+		'~'     : 'tilde',
+		'+'     : 'add',
+		'-'     : 'sub',
+		'*'     : 'mul',
+		'/'     : 'div',
+	}
 }
 
 start = 
@@ -97,78 +123,30 @@ top_level_expressions_delimiter =
   newline_space /
   inline_space? ";" space?
 
-
-
-// ********************************************************************
-// TODO fix expr_* order for operation precedence. Low priority at top.
-// ********************************************************************
-
 expr "Expression" =
   comment /
   e:expr_set_item comment? { return e; }
 
 expr_set_item "Expression/set_item" =
   // container must not be expr_get_item, should be expr_eq
-  container:expr_eq inline_space? "[" space? idx:expr space? "]" space? "=" space? v:expr {
+  container:expr_binop inline_space? "[" space? idx:expr space? "]" space? "=" space? v:expr {
     return N('set_item', [container, idx, v]);
   } /
-  e: expr_in
+  e: expr_binop
 
 
-expr_in "Expression/in" =
-  v:expr_or inline_space "in" space container:expr_or {
-    return N('in', [v, container])
-  } /
-  v:expr_or inline_space "not" space "in" space container:expr_or {
-    return N('not_in', [v, container])
-  } /
-  e: expr_or
-
-expr_or "Expression/or" =
-  e1:expr_and space? "or" space? e2:expr {
-    return N('binop', [e1, e2], 'or', 2500);
-  } /
-  expr_and
-
-expr_and "Expression/and" =
-  e1:expr_eq space? "and" space? e2:expr {
-    return N('binop', [e1, e2], 'and', 2000);
-  } /
-  expr_eq
-
-expr_eq "Expression/eq" =
-  e1:expr_add space? "==" space? e2:expr {
-    return N('binop', [e1, e2], 'eq', 1500);
-  } /
-  e1:expr_add space? "!=" space? e2:expr {
-    return N('binop', [e1, e2], 'neq', 1500);
-  } /
-  e1:expr_add space? "<" space? e2:expr {
-    return N('binop', [e1, e2], 'lt', 1500);
-  } /
-  e1:expr_add space? ">" space? e2:expr {
-    return N('binop', [e1, e2], 'gt', 1500);
-  } /
-  e1:expr_add space? "~" space? e2:expr {
-    return N('binop', [e1, e2], 'tilde', 1500);
-  } /
-  e: expr_add
-
-expr_add "Expression/add" =
-  e1:expr_mul space? "+" space? e2:expr_add {
-    return N('binop', [e1, e2], 'add', 1000);
-  } /
-  e1:expr_mul space? "-" space? e2:expr_add {
-    return N('binop', [e1, e2], 'sub', 1000);
-  } /
-  e:expr_mul
-
-expr_mul "Expression/mul" =
-  e1:expr_call space? "*" space? e2:expr_call {
-    return N('binop', [e1, e2], 'mul', 500);
-  } /
-  e:expr_chain
-
+expr_binop =
+  e:expr_chain es:(space? ("or" / "and" / "==" / "!=" / "<" / ">" / "~" / "+" / "-" / "*" / "/" / "in" / "not in") space? expr_chain)* {
+    var ret = [e];
+    for(var i=0; i<es.length; i++) {
+	  if(!ngs_binops_names[es[i][1]]) {
+	    throw new Error("No name for binop: " + es[i][1]);
+	  }
+	  ret.push(N('binop', [], ngs_binops_names[es[i][1]], ngs_precedence[es[i][1]]));
+	  ret.push(es[i][3]);
+	}
+    return N('binops', ret);
+  }
 
 expr_chain =
   e:expr_call c:dots* {

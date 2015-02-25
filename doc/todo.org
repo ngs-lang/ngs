@@ -2,7 +2,7 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** PROGRESS Add boolean and + or, rewrite __eq(Hash,Hash)
+** DONE Add boolean and + or, rewrite __eq(Hash,Hash)
 ** TODO binary function call
 ** TODO Generated documentation
 ** TODO Output parser support

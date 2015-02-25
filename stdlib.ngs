@@ -32,12 +32,10 @@
 	}
 
 	defun __eq(a:Hash, b:Hash) {
-		if a.len() != b.len() {
-			return false
-		}
-		if a.keys().sort() != b.keys().sort() {
-			return false
-		}
+		a.len() == b.len()
+		and
+		a.keys().sort() == b.keys().sort()
+		and
 		all(a.keys(), F(k) { a[k] == b[k] })
 	}
 
