@@ -1,6 +1,7 @@
 "use strict";
 
 var fs = require('fs');
+var tty = require('tty');
 var child_process = require('child_process');
 var util = require('util');
 
@@ -364,6 +365,40 @@ function register_native_methods() {
 	this.registerNativeMethod('uniq', p_args('a', 'Array'), function vm_sort(scope) {
 		var a = get_arr(scope.a);
 		return ['Array', _.uniq(a, false, function(elt) {return elt[1]})];
+	});
+
+	// stdin, stdout, ...
+	['stdin', 'stdout', 'stderr'].forEach(function(s) {
+		this.set_var(s, ['Stream', s]);
+	}.bind(this))
+	this.registerNativeMethod('istty', p_args('s', 'Stream'), function vm_istty(scope) {
+		var s = get_stm(scope.s);
+		return ['Bool', s.isTTY];
+	});
+	this.registerNativeMethod('Readline', p_args(), function vm_readline(scope) {
+		var readline = require('readline');
+		var rl = readline.createInterface(process.stdin, process.stdout);
+		return ['Readline', rl];
+	});
+	this.registerNativeMethod('read', p_args('rl', 'Readline', 'prompt', 'String'), function vm_readline(scope, v) {
+		var rl = get_rl(scope.rl);
+		var ctx = this;
+		function line_handler(line) {
+			ctx.stack.pop();
+			ctx.stack.push(['String', line]);
+			v.unsuspend_context(ctx);
+			rl.removeListener('line', line_handler);
+		}
+		rl.on('line', line_handler);
+		v.suspend_context(this);
+		rl.setPrompt(get_str(scope.prompt));
+		rl.prompt();
+		return ['String', 'READLINE-TO-BE-READ']
+	});
+	this.registerNativeMethod('close', p_args('rl', 'Readline'), function vm_readline(scope, v) {
+		var rl = get_rl(scope.rl);
+		rl.close();
+		return ['Null', null]
 	});
 }
 

@@ -2,11 +2,18 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** DONE Add boolean and + or, rewrite __eq(Hash,Hash)
-** TODO Fix top level syntax (commands/expressions)
+** DONE Fix top level syntax (commands/expressions)
+** CLI
+*** PROGRESS TTY io basics, layout manager, think of widgets (commands output), think completion from widgets
+*** TODO "fN" command "F1..12" to remember last command into fN key
+*** TODO support running regular commands
+*** TODO Output parser support
+*** defun cli_XXX for CLI commands (that return objects/widgets)
+**** TODO ls
+*** TODO Modules
+*** TODO Module automatic reloading
 ** TODO binary function call
 ** TODO Generated documentation
-** TODO Output parser support
 ** TODO Make set_var local by default / global option
 ** TODO Improve parameters matching
 ** TODO f(1, cmap [2,3], 4) ~~~ map(f, [2,3], before=1, after=4)

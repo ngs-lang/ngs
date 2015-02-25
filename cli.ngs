@@ -1,0 +1,27 @@
+if not(stdout.istty()) {
+	crash("CLI needs stdout to be a TTY")
+}
+
+# TODO: load cli-specific user ini .ngs files
+# TODO: history file
+
+# not used yet
+defun cli_complete(l) {
+	[["DUNNO"], l]
+}
+
+rl = Readline()
+
+while true {
+	l = rl.read("NGS v0.0.1 > ")
+	echo("GOT", l)
+	if l == "exit" {
+		break
+	}
+	# TODO: compile, load into vm, execute
+}
+
+
+{
+	rl.close()
+}

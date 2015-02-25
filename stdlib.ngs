@@ -7,9 +7,10 @@ defun __mul(s:String, n:Number) {
 	ret
 }
 
-defun not(x:Bool) { if x {false}{true} }
+defun not(x) { if x {false}{true} }
 
 defun Bool(a:Array) { a.len() > 0 }
+defun Bool(s:String) { s.len() > 0 }
 
 # The != operator
 defun __neq(a, b) {

@@ -19,6 +19,9 @@ var code_snippets = [
 	// Bool(Array)
 	'{ if [] {1}{2} == 2 }',
 	'{ if [7] {1}{2} == 1 }',
+	// Bool(String)
+	'{ if "" {1}{2} == 2 }',
+	'{ if "x" {1}{2} == 1 }',
 	// __neq(...)
 	'{ 1 != 2 }',
 	// __eq(a:Array, b:Array)

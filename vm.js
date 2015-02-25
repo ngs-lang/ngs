@@ -154,6 +154,18 @@ Context.prototype.get_var = function(name) {
 	return r[1][name];
 }
 
+Context.prototype.set_var = function(name, val) {
+	var var_scope = this.find_var_lexical_scope(name);
+	if(var_scope[0]) {
+		// Found: set it. Maybe change later to assign to local anyway
+		var_scope[1][name] = val;
+		return;
+	}
+	var scopes = this.frame.scopes;
+	scopes[scopes.length-1][name] = val;
+
+}
+
 Context.prototype.getCallerLexicalScopes = function() {
 	// Should only be exposed to internal functions for security reasons.
 	return this.frames[this.frames.length-2].scopes;
@@ -497,14 +509,7 @@ VM.prototype.opcodes = {
 		var name = st.pop();
 		var val = st.pop();
 		name = get_str(name);
-		var var_scope = this.context.find_var_lexical_scope(name);
-		if(var_scope[0]) {
-			// Found: set it. Maybe change later to assign to local anyway
-			var_scope[1][name] = val;
-			return;
-		}
-		var scopes = this.context.frame.scopes;
-		scopes[scopes.length-1][name] = val;
+		this.context.set_var(name, val);
 	},
 
 	// stack: ... args kwargs methods -> ... X
