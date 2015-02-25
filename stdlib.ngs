@@ -10,6 +10,8 @@
 
 	defun not(x:Bool) { if x {false}{true} }
 
+	defun Bool(a:Array) { a.len() > 0 }
+
 	# The != operator
 	defun __neq(a, b) {
 		not(a==b)
@@ -48,10 +50,10 @@
 		ret
 	}
 
-	defun each(a:Array, mapper, *args) {
+	defun each(a:Array, processor, *args) {
 		j = a.len()
 		for(i=0;i<j;i=i+1) {
-			mapper(a[i], *args)
+			processor(a[i], *args)
 		}
 		a
 	}

@@ -25,8 +25,6 @@ var code_vs_stack = [
 	 [["Array", [["Number", 1], ["Number", 2]]]]],
 
 	// *** if ***
-	['{ if [] {1}{2} }', [["Number", 2]]],
-	['{ if [7] {1}{2} }', [["Number", 1]]],
 	['{ if 0 {1} }', [["Null", null]]],
 
 	// *** Bool() ***

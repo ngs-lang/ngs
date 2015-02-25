@@ -105,11 +105,6 @@ function register_native_methods() {
 		return ['Bool', p.exit_code === 0];
 	});
 
-	// TODO: move to NSL - Ngs Standard Library
-	this.registerNativeMethod('Bool', p_args('a', 'Array'), function vm_Bool_p_arr(scope) {
-		return ['Bool', get_arr(scope.a).length != 0];
-	});
-
 	this.registerNativeMethod('push', p_args('a', 'Array', 'x', null), function vm_push(scope) {
 		var a = get_arr(scope.a);
 		a.push(scope.x);

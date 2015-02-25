@@ -16,6 +16,9 @@ var code_snippets = [
 	// not(...)
 	'{ not(true) == false }',
 	'{ not(false) == true }',
+	// Bool(Array)
+	'{ if [] {1}{2} == 2 }',
+	'{ if [7] {1}{2} == 1 }',
 	// __neq(...)
 	'{ 1 != 2 }',
 	// __eq(a:Array, b:Array)
