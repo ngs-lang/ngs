@@ -1,4 +1,4 @@
-# TODO: "not in" -> "not" space "in"
+// TODO: "not in" -> "not" space "in"
 {
 	var N = require('./ast_node').ASTNode;
 	var ngs_precedence_src = [
