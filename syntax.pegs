@@ -37,7 +37,7 @@ start =
 
 space = [ \t\n]+
 inline_space = [ \t]+
-newline_space = inline_space? [\n]+ inline_space?
+newline_space = (inline_space? [\n]+ inline_space?)+
 
 commands "commands" =
   space? c:command commands_separator cs:commands {

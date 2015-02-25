@@ -58,6 +58,7 @@ var code_snippets = [
 	'{ [1,10].each(F(x) {0}) == [1,10] }',
 	'{ h={"kk": 7, "xx": 8}; h[["kk"]] == {"kk": 7} }',
 	'{ h={"kk": 7, "xx": 8}; h[["xx"]] != {"kk": 7} }',
+	'{ Hash(["a","b"], "x") == {"a": "x", "b": "x"} }',
 ];
 
 // console.log("+ Loading stdlib");

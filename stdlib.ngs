@@ -1,3 +1,7 @@
+# TODO: Organize by sections.
+# TODO: Something that will tell whether all methods were covered at the end of each tests run.
+#       Don't want to add a test for each method because some are checked by proxy.
+
 # string * number -> the string repeated number times
 defun __mul(s:String, n:Number) {
 	ret = ""
@@ -12,25 +16,34 @@ defun not(x) { if x {false}{true} }
 defun Bool(a:Array) { a.len() > 0 }
 defun Bool(s:String) { s.len() > 0 }
 
-# The != operator
+defun Hash(a:Array) {
+	ret = {}
+	a.each(F(x) { ret[x[0]] = x[1] })
+	ret
+}
+
+defun Hash(a:Array, v) {
+	a.map(F(x) {[x,v]}).Hash()
+}
+
+defun zip(a:Array, b:Array) {
+	l = len(a)
+
+	if l != b.len() {
+		crash("Zip with different arrays length")
+	}
+
+	l.map(F(i) { [a[i], b[i]] })
+}
+
 defun __neq(a, b) {
 	not(a==b)
 }
 
-# The == operator
-# Can NOT handle recursive structures (untested)
 defun __eq(a:Array, b:Array) {
-	len_a = len(a)
-	len_b = len(b)
-	if len_a != len_b {
-		return false;
-	}
-	for(i=0; i<len_a; i=i+1) {
-		if a[i] != b[i] {
-			return false;
-		}
-	}
-	true
+	a.len() == b.len()
+	and
+	none(zip(a,b), F(x) { x[0] != x[1] })
 }
 
 defun __eq(a:Hash, b:Hash) {
@@ -42,10 +55,13 @@ defun __eq(a:Hash, b:Hash) {
 }
 
 defun map(a:Array, mapper, *args) {
+	a.len().map(F(i) { mapper(a[i], *args) })
+}
+
+defun map(n:Number, mapper, *args) {
 	ret = []
-	j = a.len()
-	for(i=0;i<j;i=i+1) {
-		ret.push(mapper(a[i], *args))
+	for(i=0;i<n;i=i+1) {
+		ret.push(mapper(i, *args))
 	}
 	ret
 }
@@ -56,6 +72,12 @@ defun each(a:Array, processor, *args) {
 		processor(a[i], *args)
 	}
 	a
+}
+
+defun each(n:Number, processor, *args) {
+	for(i=0;i<n;i=i+1) {
+		processor(i, *args)
+	}
 }
 
 defun any(a:Array, predicate, *args) {
