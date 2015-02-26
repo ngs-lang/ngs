@@ -43,7 +43,7 @@ defun __neq(a, b) {
 defun __eq(a:Array, b:Array) {
 	a.len() == b.len()
 	and
-	none(zip(a,b), F(x) { x[0] != x[1] })
+	all(zip(a,b), F(x) { x[0] == x[1] })
 }
 
 defun __eq(a:Hash, b:Hash) {
