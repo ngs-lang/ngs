@@ -176,6 +176,11 @@ defun spawn(*args) {
 	p
 }
 
+defun spawn(*args) {
+	guard args.map(typeof).any(__neq, "String")
+	args.map(String).__super()
+}
+
 # Convert execution of (example) '-f somefile' to 'test -f somefile'
 defun spawn(*args) {
 	  guard args.len() > 1
@@ -237,3 +242,25 @@ defun read(f:String) {
 	content = fetch_file(f)
 	parse_file(f, content)
 }
+
+# ----- Output helpers - start -----
+
+defun echo(p:Process) {
+	# TODO:
+	#   Handle processes that are still running.
+	#   Handle stderr
+	#   Handle failed processes
+	#   Handle exit_code
+	p.stdout.echo()
+}
+
+defun echo(n:Number) {
+	String(n).echo()
+}
+
+defun echo(*args) {
+	guard args.len() > 1
+	args.each(echo)
+}
+
+# ----- Output helpers - end -----

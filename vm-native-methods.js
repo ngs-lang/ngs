@@ -8,6 +8,7 @@ var util = require('util');
 var _ = require('underscore');
 
 var data = require('./vm-data');
+var compile = require('./compile');
 
 function to_ngs_object(v) {
 	if(_.isNull(v)) {
@@ -135,7 +136,7 @@ function register_native_methods() {
 	this.registerNativeMethod('__lt', p_args('a', 'Number', 'b', 'Number'), function vm___lt(scope) {
 		return ['Bool', get_num(scope.a) < get_num(scope.b)];
 	});
-	this.registerNativeMethod('__gt', p_args('a', 'Number', 'b', 'Number'), function vm___lt(scope) {
+	this.registerNativeMethod('__gt', p_args('a', 'Number', 'b', 'Number'), function vm___gt(scope) {
 		return ['Bool', get_num(scope.a) > get_num(scope.b)];
 	});
 
@@ -202,9 +203,10 @@ function register_native_methods() {
 		return ['Number', _.size(get_hsh(scope.h))];
 	});
 
-	this.registerNativeMethod('echo', Args().rest_pos('p').get(), function vm_echo(scope) {
-		console.log('ECHO', util.inspect(get_arr(scope.p), {depth: 20}), scope.n);
-		return ['Null', null];
+	this.registerNativeMethod('echo', p_args('s', 'String'), function vm_echo(scope) {
+		// console.log('ECHO', util.inspect(get_arr(scope.p), {depth: 20}), scope.n);
+		console.log(get_str(scope.s));
+		return scope.s;
 	});
 
 	this.registerNativeMethod('__deftype', p_args('name', 'String', 'fields', null), function vm___deftype(scope, vm) {
@@ -328,7 +330,7 @@ function register_native_methods() {
 		}
 		return h[a];
 	})
-	this.registerNativeMethod('__set_attr', p_args('h', 'Hash', 'attr', 'String', 'v', null), function vm___get_attr(scope) {
+	this.registerNativeMethod('__set_attr', p_args('h', 'Hash', 'attr', 'String', 'v', null), function vm___set_attr(scope) {
 		// TODO (maybe): store all fields as NGS objects in the first place
 		var a = get_str(scope.attr);
 		var h = get_hsh(scope.h);
@@ -362,7 +364,7 @@ function register_native_methods() {
 		a.sort();
 		return ['Array', a];
 	});
-	this.registerNativeMethod('uniq', p_args('a', 'Array'), function vm_sort(scope) {
+	this.registerNativeMethod('uniq', p_args('a', 'Array'), function vm_uniq(scope) {
 		var a = get_arr(scope.a);
 		return ['Array', _.uniq(a, false, function(elt) {return elt[1]})];
 	});
@@ -380,7 +382,7 @@ function register_native_methods() {
 		var rl = readline.createInterface(process.stdin, process.stdout);
 		return ['Readline', rl];
 	});
-	this.registerNativeMethod('read', p_args('rl', 'Readline', 'prompt', 'String'), function vm_readline(scope, v) {
+	this.registerNativeMethod('read', p_args('rl', 'Readline', 'prompt', 'String'), function vm_read_p_readline(scope, v) {
 		var rl = get_rl(scope.rl);
 		var ctx = this;
 		function line_handler(line) {
@@ -395,10 +397,44 @@ function register_native_methods() {
 		rl.prompt();
 		return ['String', 'READLINE-TO-BE-READ']
 	});
-	this.registerNativeMethod('close', p_args('rl', 'Readline'), function vm_readline(scope, v) {
+	this.registerNativeMethod('close', p_args('rl', 'Readline'), function vm_close_p_readline(scope, v) {
 		var rl = get_rl(scope.rl);
 		rl.close();
 		return ['Null', null]
+	});
+	this.registerNativeMethod('compile', p_args('s', 'String'), function vm_compile_p_str(scope, v) {
+		var s = get_str(scope.s);
+		var out;
+		try {
+			out = compile.compile(s, {leave_value_in_stack: true});
+			return ['Array', [to_ngs_object(true), ['Code', out.compiled_code]]];
+		} catch(e) {
+			return to_ngs_object([false, e]);
+		}
+	});
+	this.registerNativeMethod('load', p_args('c', 'Code'), function vm_load_p_cod(scope, v) {
+		// TODO: handle scopes correcty
+		var c = get_cod(scope.c);
+		var ptr = v.useCodeWithRet(c);
+		var m =
+			[
+				'Lambda',
+				[
+					'Array',
+					[
+						['Scopes', this.frame.scopes.slice(0, this.frame.scopes.length-1)],
+						p_args(),
+						to_ngs_object(ptr),
+					]
+				]
+			];
+		return m;
+	});
+	this.registerNativeMethod('String', p_args('n', 'Number'), function vm_string_p_num(scope, v) {
+		return to_ngs_object(get_num(scope.n).toString());
+	});
+	this.registerNativeMethod('typeof', p_args('x', null), function vm_typeof_p_any(scope, v) {
+		return to_ngs_object(get_type(scope.x));
 	});
 }
 

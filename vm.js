@@ -196,6 +196,13 @@ VM.prototype.useCode = function(c) {
 	return this;
 }
 
+VM.prototype.useCodeWithRet = function(c) {
+	var ptr = this.code.length;
+	this.code = this.code.concat(c);
+	this.code.push(['ret']);
+	return ptr;
+}
+
 VM.prototype.setupContext = function() {
 	var c = new Context(this.global_scope);
 	this.runnable_contexts.push(c);

@@ -30,6 +30,7 @@ function get_type(data) {
 
 make_getter('Array',		'arr');
 make_getter('Bool',			'boo');
+make_getter('Code',			'cod');
 make_getter('Hash',			'hsh');
 make_getter('Lambda',		'lmb');
 make_getter('NativeMethod', 'nm');
