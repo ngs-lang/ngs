@@ -30,7 +30,7 @@ defun zip(a:Array, b:Array) {
 	l = len(a)
 
 	if l != b.len() {
-		crash("Zip with different arrays length")
+		throw ["args", "Zip with different arrays length"]
 	}
 
 	l.map(F(i) { [a[i], b[i]] })
@@ -171,7 +171,7 @@ defun spawn(*args) {
 	if not(ok) {
 		# TODO: nicer output of the args
 		# TODO: output stack trace
-		crash("Command execution failed: " + inspect(args))
+		throw ["runtime", "Command execution failed: " + inspect(args)]
 	}
 	p
 }
@@ -231,9 +231,9 @@ defun parse_file(f:String, content:String) {
 
 defun parse_file(f:String, content:String) {
 	guard f ~ "\.json$"
-	r = from_json(content)
+	r = catch from_json(content)
 	if not(r[0]) {
-		crash("Failed to read json file " + f)
+		throw ["runtime", "Failed to read json file " + f]
 	}
 	r[1]
 }
@@ -245,17 +245,34 @@ defun read(f:String) {
 
 # ----- Output helpers - start -----
 
-defun echo(p:Process) {
+defun String(p:Process) {
 	# TODO:
 	#   Handle processes that are still running.
 	#   Handle stderr
 	#   Handle failed processes
 	#   Handle exit_code
-	p.stdout.echo()
+	p.stdout
 }
 
-defun echo(n:Number) {
-	String(n).echo()
+defun join(a:Array, sep:String) {
+	ret = ""
+	j = a.len()
+	for(i=0;i<j;i=i+1) {
+		ret = ret + a[i]
+		if i < j - 1 {
+			ret = ret + sep
+		}
+	}
+	ret
+}
+
+defun String(a:Array) {
+	a.join(",")
+}
+
+defun echo(x) {
+	guard typeof(x) != "String"
+	String(x).echo()
 }
 
 defun echo(*args) {

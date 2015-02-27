@@ -5,6 +5,7 @@
 ** DONE Fix top level syntax (commands/expressions)
 ** CLI
 *** PROGRESS TTY io basics, layout manager, think of widgets (commands output), think completion from widgets
+*** TODO Scope so that "a=1" & "echo(a)" work
 *** TODO "fN" command "F1..12" to remember last command into fN key
 *** TODO support running regular commands
 *** TODO Output parser support
@@ -40,9 +41,9 @@ to make_TYP(val)
 ***** TODO Splice keywords
 **** TODO Named
 **** TODO Default value
-** TODO Convenience obj.method() syntax
+** DONE Convenience obj.method() syntax
 ** TODO Fields access for composite types
-** TODO Function: last evaluated expr is the return value
+** DONE Function: last evaluated expr is the return value
 ** TODO Generate constructor function
 ** TODO Inheritance (also: mixins, runtime inheritance change?)
 ** TODO Casting

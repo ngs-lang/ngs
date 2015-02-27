@@ -45,6 +45,10 @@ var code_vs_stack = [
 	['{a = 0; r = []; for(a=0;a<5;a=a+1) {if a==1 { continue; }; if a==3 { break; }; push(r, a);}; r}',
 	 [["Array", [["Number", 0], ["Number", 2]]]]],
 
+	// *** throw ... catch ***
+	['{ catch (F() { 1 })() }', [["Array", [["Bool", true],["Number", 1]]]]],
+	['{ catch (F() { throw 2 })() }', [["Array", [["Bool",false], ["Number", 2]]]]],
+
 	['{spawn=native_spawn; Bool($(ls))}', [["Bool", true]]],
 	['{spawn=native_spawn; Bool($(ls NOSUCHFILE))}', [["Bool", false]]],
 

@@ -211,6 +211,7 @@ expr_base "Expression/no-add" =
   lambda /
   function_definition /
   return /
+  throw /
   number /
   string /
   "true" { return N('bool', [], true); } /
@@ -303,9 +304,12 @@ parameter_type "Function parameter type" =
 return "return" =
   "return" space e:expr { return N('ret', [e]); }
 
+throw "throw" =
+  "throw" space e:expr { return N('throw', [e]); }
+
 function_call "function call" =
-  f:expr_base space? "(" space? args:comma_separated_expressions? space? ")" {
-	return N('call', [f, args || N('expressions', [])]);
+  do_catch:("catch" space?)? f:expr_base space? "(" space? args:comma_separated_expressions? space? ")" {
+	return N('call', [f, args || N('expressions', [])], do_catch ? true : false);
   }
 
 

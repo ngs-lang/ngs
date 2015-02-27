@@ -342,9 +342,10 @@ function register_native_methods() {
 		var ret;
 		json = get_str(scope.s);
 		try {
-			ret = [true, JSON.parse(json)];
+			ret = JSON.parse(json);
 		} catch(e) {
-			ret = [false, null];
+			this.thr(to_ngs_object(['runtime', 'failed to parse JSON']));
+			return;
 		}
 		return to_ngs_object(ret);
 	})
@@ -356,9 +357,6 @@ function register_native_methods() {
 		var r = new RegExp(get_str(scope.regex));
 		return to_ngs_object(get_str(scope.s).match(r));
 	})
-	this.registerNativeMethod('crash', p_args('s', 'String'), function vm_crash(scope) {
-		throw new Error("CRASH: " + get_str(scope.s));
-	});
 	this.registerNativeMethod('sort', p_args('a', 'Array'), function vm_sort(scope) {
 		var a = get_arr(scope.a);
 		a.sort();

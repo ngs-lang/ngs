@@ -12,10 +12,10 @@ defun cli_complete(l) {
 
 rl = Readline()
 
-n = 1
+n = 0
 while true {
-	l = rl.read("NGS v0.0.1 " + String(n) + " > ")
 	n = n + 1
+	l = rl.read("NGS v0.0.1 " + String(n) + " > ")
 	# echo("GOT", l)
 	if l == "exit" {
 		break
@@ -27,8 +27,12 @@ while true {
 	}
 	# echo("COMPILED OK")
 	lambda_ = load(code[1])
-	result = lambda_()
-	echo(result)
+	result = catch lambda_()
+	if result[0] {
+		echo(result[1])
+	} else {
+		echo("FAIL", result[1])
+	}
 }
 
 

@@ -418,12 +418,18 @@ function compile_tree(node, leave_value_in_stack) {
 		concat_tree(1, true); // positional_args
 		cmd('push_hsh');
 		concat_tree(0, true); // methods
-		cmd('invoke');
+		var c = node.data ? 'invoke_catch' : 'invoke';
+		cmd(c);
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('ret')) {
 		concat_tree(0, true);
 		cmd('ret');
+		return ret;
+	}
+	if(node.is('throw')) {
+		concat_tree(0, true);
+		cmd('thr');
 		return ret;
 	}
 	if(node.is('guard')) {

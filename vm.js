@@ -11,6 +11,7 @@ var native_methods = require('./vm-native-methods');
 var data = require('./vm-data');
 
 var Args = native_methods.Args;
+var to_ngs_object = native_methods.to_ngs_object;
 
 for(var k in data) {
 	global[k] = data[k];
@@ -112,6 +113,7 @@ Context.prototype.initialize = function(global_scope) {
 	this.frame.scopes = [global_scope];
 	this.frames = [this.frame];
 	this.cycles = 0;
+	this.thrown = false;
 
 	var get_context_ip = function() {
 		return this.frame.ip;
@@ -369,8 +371,8 @@ function match_params(lambda, args, kwargs) {
 	return [true, scope, 'all matched'];
 }
 
-Context.prototype.invoke_or_throw = function(methods, args, kwargs, vm) {
-	var status = this.invoke(methods, args, kwargs, vm);
+Context.prototype.invoke_or_throw = function(methods, args, kwargs, vm, do_catch) {
+	var status = this.invoke(methods, args, kwargs, vm, do_catch);
 	if(!status[0]) {
 		console.log(args);
 		throw new Error("Invoke: appropriate method for " + inspect(args) + " and " + inspect(kwargs) + " not found for in " + inspect(methods));
@@ -378,7 +380,7 @@ Context.prototype.invoke_or_throw = function(methods, args, kwargs, vm) {
 }
 
 
-Context.prototype.invoke = function(methods, args, kwargs, vm) {
+Context.prototype.invoke = function(methods, args, kwargs, vm, do_catch) {
 	var ms;
 	if(get_type(methods) == 'Lambda') {
 		ms = [methods]
@@ -406,9 +408,11 @@ Context.prototype.invoke = function(methods, args, kwargs, vm) {
 
 		var old_frame = this.frame;
 		this.frame = new Frame();
+		this.frame.do_catch = do_catch;
 		this.frames.push(this.frame);
 		this.frame.scopes = get_scp(lambda[0]).concat(vars)
 		old_frame.stack_len = this.stack.length;
+
 
 		if(call_type === 'Number') {
 			this.frame.ip = get_num(lambda[2]);
@@ -418,8 +422,12 @@ Context.prototype.invoke = function(methods, args, kwargs, vm) {
 			var nm = get_nm(lambda[2]);
 			// console.log('NATIVEMETHOD', nm);
 			try {
-				this.stack.push(nm.call(this, scope[1], vm));
-				this.ret(1);
+				this.thrown = false;
+				var v = nm.call(this, scope[1], vm);
+				if(!this.thrown) {
+					this.stack.push(v);
+					this.ret(1);
+				}
 			} catch(e) {
 				if(e instanceof ReturnLater) {
 					// all good
@@ -437,7 +445,7 @@ Context.prototype.invoke = function(methods, args, kwargs, vm) {
 }
 
 Context.prototype.ret = function(stack_delta) {
-	this.frames.pop();
+	var deeper_frame = this.frames.pop();
 	this.frame = this.frames[this.frames.length - 1];
 	if(stack_delta === null) {
 	} else {
@@ -446,6 +454,24 @@ Context.prototype.ret = function(stack_delta) {
 			throw new Error("Returning with wrong stack size");
 		}
 	}
+	if(deeper_frame.do_catch) {
+		var v = this.stack.pop();
+		this.stack.push(['Array', [to_ngs_object(true), v]]);
+	}
+}
+
+Context.prototype.thr = function(v) {
+	this.thrown = true;
+	while(this.frames.length > 0) {
+		var deeper_frame = this.frames.pop();
+		this.frame = this.frames[this.frames.length - 1];
+		if(deeper_frame.do_catch) {
+			this.stack.length = this.frame.stack_len;
+			this.stack.push(['Array', [to_ngs_object(false), v]]);
+			return;
+		}
+	}
+	throw new Error("Uncaught exception" + inspect(v));
 }
 
 Context.prototype.guard = function(vm) {
@@ -525,7 +551,16 @@ VM.prototype.opcodes = {
 		var methods = st.pop();
 		var kwargs = st.pop();
 		var args = st.pop();
-		this.context.invoke_or_throw(methods, args, kwargs, this);
+		this.context.invoke_or_throw(methods, args, kwargs, this, false);
+	},
+
+	// stack: ... args kwargs methods -> ... X
+	'invoke_catch': function() {
+		var st = this.context.stack;
+		var methods = st.pop();
+		var kwargs = st.pop();
+		var args = st.pop();
+		this.context.invoke_or_throw(methods, args, kwargs, this, true);
 	},
 
 	// stack: ... arg1 arg2 methods -> ... X
@@ -556,6 +591,11 @@ VM.prototype.opcodes = {
 			c.stack.push(['Null', null]);
 		}
 		this.context.ret(1);
+	},
+
+	// stack: ... v -> ... v
+	'thr': function() {
+		this.context.thr(this.context.stack.pop());
 	},
 
 	// guard: ... v
