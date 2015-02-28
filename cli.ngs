@@ -1,41 +1,46 @@
 if not(stdout.istty()) {
-	crash("CLI needs stdout to be a TTY")
+	throw ["runtime", "CLI needs stdout to be a TTY"]
 }
 
 # TODO: load cli-specific user ini .ngs files
 # TODO: history file
 
-# not used yet
-defun cli_complete(l) {
-	[["DUNNO"], l]
-}
+defun cli_main() {
+	rl = Readline()
 
-rl = Readline()
+	local_scope = {"x": 7}
+	n = 0
+	while true {
+		n = n + 1
+		l = rl.read("NGS v0.0.1 " + String(n) + " > ")
 
-n = 0
-while true {
-	n = n + 1
-	l = rl.read("NGS v0.0.1 " + String(n) + " > ")
-	# echo("GOT", l)
-	if l == "exit" {
-		break
+		if l == "" {
+			n = n - 1
+			continue
+		}
+		if l == "exit" {
+			echo("BYE")
+			break
+		}
+		if l == "vars" {
+			echo("VARS:", local_scope)
+			continue
+		}
+		code = compile(l)
+		if not(code[0]) {
+			echo("ERROR", code[1])
+			continue
+		}
+		lambda_ = load(code[1]).locals(local_scope)
+		result = catch lambda_()
+		if result[0] {
+			echo(result[1])
+		} else {
+			echo("FAIL", result[1])
+		}
 	}
-	code = compile(l)
-	if not(code[0]) {
-		echo("ERROR", code[1])
-		continue
-	}
-	# echo("COMPILED OK")
-	lambda_ = load(code[1])
-	result = catch lambda_()
-	if result[0] {
-		echo(result[1])
-	} else {
-		echo("FAIL", result[1])
-	}
-}
 
-
-{
 	rl.close()
 }
+
+{ cli_main() }

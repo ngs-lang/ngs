@@ -3,6 +3,8 @@
 // Naive implementation, not optimized.
 // Highly likely to be a throw-away so the major concern is simplicity.
 
+var _ = require('underscore');
+
 var debug_match_params = !!process.env.NGS_DEBUG_PARAMS;
 var debug_delay = !!process.env.NGS_DEBUG_DELAY;
 
@@ -139,13 +141,22 @@ Context.prototype.initialize = function(global_scope) {
 
 Context.prototype.find_var_lexical_scope = function(varname) {
 	var scopes = this.frame.scopes;
+	var target = null;
 	for(var i=scopes.length-1; i>=0; i--) {
+		// Not very elegant target scope marker
+		if((target === null) && (scopes[i] === true)) {
+			target = i-1;
+			continue;
+		}
 		if(Object.prototype.hasOwnProperty.call(scopes[i], varname)) {
 			return [true, scopes[i]];
 		}
 	}
-	// console.log(scopes[0]);
-	return [false, scopes[0]];
+	if(target === null) {
+		target = scopes.length - 1;
+	}
+
+	return [false, scopes[target]];
 }
 
 Context.prototype.get_var = function(name) {
@@ -158,14 +169,7 @@ Context.prototype.get_var = function(name) {
 
 Context.prototype.set_var = function(name, val) {
 	var var_scope = this.find_var_lexical_scope(name);
-	if(var_scope[0]) {
-		// Found: set it. Maybe change later to assign to local anyway
-		var_scope[1][name] = val;
-		return;
-	}
-	var scopes = this.frame.scopes;
-	scopes[scopes.length-1][name] = val;
-
+	var_scope[1][name] = val;
 }
 
 Context.prototype.getCallerLexicalScopes = function() {

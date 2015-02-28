@@ -244,10 +244,10 @@ function register_native_methods() {
 		var name = get_str(scope.name);
 		// The method is created in _caller_ lexical scops, not in ours.
 		// Dirty lexical_scopes hack start
-		var t = this.lexical_scopes;
-		this.lexical_scopes = this.getCallerLexicalScopes();
+		var t = this.frame.scopes;
+		this.frame.scopes = this.getCallerLexicalScopes();
 		this.registerMethod(name, scope.lambda);
-		this.lexical_scopes = t;
+		this.frame.scopes = t;
 		// Dirty lexical_scopes hack end
 		return scope.lambda;
 	});
@@ -433,6 +433,18 @@ function register_native_methods() {
 	});
 	this.registerNativeMethod('typeof', p_args('x', null), function vm_typeof_p_any(scope, v) {
 		return to_ngs_object(get_type(scope.x));
+	});
+	// Not very elegant solution :/
+	// Injects additional scope and marks it as target for set_var instead of the deepest scope.
+	// Allows saving variables between code calls in CLI:
+	//   code = compile(l)
+	//   ...
+	//   lambda_ = load(code[1]).locals(local_scope)
+	this.registerNativeMethod('locals', p_args('l', 'Lambda', 'h', 'Hash'), function vm_locals_p_lmb_hsh(scope, v) {
+		var lambda = get_arr(get_lmb(scope.l));
+		var locals = get_hsh(scope.h);
+		var scopes = get_scp(lambda[0]);
+		return ['Lambda', ['Array', [['Scopes', scopes.concat(locals, true)], lambda[1], lambda[2]]]];
 	});
 }
 

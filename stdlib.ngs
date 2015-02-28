@@ -66,6 +66,10 @@ defun map(n:Number, mapper, *args) {
 	ret
 }
 
+defun map(h:Hash, mapper, *args) {
+	h.keys().map(F(k) { mapper(k, h[k], *args) })
+}
+
 defun each(a:Array, processor, *args) {
 	j = a.len()
 	for(i=0;i<j;i=i+1) {
@@ -266,8 +270,22 @@ defun join(a:Array, sep:String) {
 	ret
 }
 
+defun String(s:String) { s }
+
 defun String(a:Array) {
-	a.join(",")
+	a.join(", ")
+}
+
+defun String(h:Hash) {
+	"{" + h.map(F(k,v) { String(k) + ": " + String(v) }).join(", ") + "}"
+}
+
+defun String(b:Bool) {
+	if b {"true"}{"false"}
+}
+
+defun String(n:Null) {
+	"null"
 }
 
 defun echo(x) {

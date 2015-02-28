@@ -49,6 +49,10 @@ var code_vs_stack = [
 	['{ catch (F() { 1 })() }', [["Array", [["Bool", true],["Number", 1]]]]],
 	['{ catch (F() { throw 2 })() }', [["Array", [["Bool",false], ["Number", 2]]]]],
 
+	// *** locals ***
+	['{ x=1; y=1; l = {"x": 2}; f = (F() { y = 3; x = 4 }).locals(l); f(); [x, y, l["x"]]}',
+	 [["Array", [["Number",1], ["Number",3], ["Number",4]]]]],
+
 	['{spawn=native_spawn; Bool($(ls))}', [["Bool", true]]],
 	['{spawn=native_spawn; Bool($(ls NOSUCHFILE))}', [["Bool", false]]],
 
