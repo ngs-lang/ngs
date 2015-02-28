@@ -34,7 +34,7 @@ defun cli_main() {
 		lambda_ = load(code[1]).locals(local_scope)
 		result = catch lambda_()
 		if result[0] {
-			echo(result[1])
+			echo("OK")
 		} else {
 			echo("FAIL", result[1])
 		}

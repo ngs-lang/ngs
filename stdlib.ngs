@@ -147,6 +147,10 @@ defun __in(v, a:Array) {
 	any(a, __eq, v)
 }
 
+defun __in(v, h:Hash) {
+	v in h.keys()
+}
+
 defun __not_in(*args) {
 	not(__in(*args))
 }
@@ -168,9 +172,20 @@ defun startsWith(s:String, pfx:String) {
 	true
 }
 
+# XXX: Warning: should be per Context or it will bite you
+defun spawn_update_globals(args, p:Process) {
+	g = globals()
+	g["P"] = p
+	if "PP" not in g {
+		g["PP"] = {}
+	}
+	g["PP"][args[0]] = p
+}
+
 defun spawn(*args) {
 	# TODO: handle async
 	p = native_spawn(*args)
+	spawn_update_globals(args, p)
 	ok = cmd_finished_ok_p(p)
 	if not(ok) {
 		# TODO: nicer output of the args
@@ -286,6 +301,10 @@ defun String(b:Bool) {
 
 defun String(n:Null) {
 	"null"
+}
+
+defun String(l:Lambda) {
+	"<Lambda>"
 }
 
 defun echo(x) {

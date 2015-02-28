@@ -446,6 +446,10 @@ function register_native_methods() {
 		var scopes = get_scp(lambda[0]);
 		return ['Lambda', ['Array', [['Scopes', scopes.concat(locals, true)], lambda[1], lambda[2]]]];
 	});
+	this.registerNativeMethod('globals', p_args(), function vm_globals(scope, v) {
+		var scopes = this.getCallerLexicalScopes();
+		return ['Hash', scopes[0]];
+	});
 }
 
 exports.Args = Args.bind(null);
