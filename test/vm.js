@@ -124,6 +124,9 @@ var code_vs_stack = [
 	// *** __super ***
 	['{defun f(x) {x*2}; defun f(y) { __super(y) * 3}; f(5)}', [["Number", 30]]],
 
+	// *** meta ***
+	['{a=1; a.meta()["x"] = 8; [a, a.meta()["x"]]}', [["Array",[["Number",1,{"x":["Number",8]}],["Number",8]]]]],
+
 	// *** Boolean operators ***
 	['{ 0 and 2 }', [["Number",0]]],
 	['{ 1 and 2 }', [["Number",2]]],

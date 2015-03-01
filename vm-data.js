@@ -2,12 +2,16 @@
 
 var tty = require('tty');
 
-function make_getter(type, getter_name, processor) {
-	var r = function(data) {
+function assert_data(data) {
 		if(Object.prototype.toString.call(data) !== '[object Array]') {
 			console.log('Got non-data', data);
 			throw new Error('Got non-data: ' + Object.toString(data));
 		}
+}
+
+function make_getter(type, getter_name, processor) {
+	var r = function(data) {
+		assert_data(data);
 		if(data[0] !== type) {
 			console.log('Got data of unexpected type. Expected', type, 'got', data[0]);
 			throw new Error('Got non-'+type+': ' + Object.toString(data));
@@ -21,11 +25,16 @@ function make_getter(type, getter_name, processor) {
 }
 
 function get_type(data) {
-	if(Object.prototype.toString.call(data) !== '[object Array]') {
-		console.log('Got non-data', data);
-		throw new Error('Got non-data: ' + Object.toString(data));
-	}
+	assert_data(data);
 	return data[0];
+}
+
+function get_meta(data) {
+	assert_data(data);
+	if(!data[2]) {
+		data[2] = {}
+	}
+	return data[2];
 }
 
 make_getter('Array',		'arr');
@@ -49,3 +58,4 @@ make_getter('Stream', 'stm', function(s) {
 });
 
 exports.get_type = get_type;
+exports.get_meta = get_meta;

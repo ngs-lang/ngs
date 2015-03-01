@@ -450,6 +450,10 @@ function register_native_methods() {
 		var scopes = this.getCallerLexicalScopes();
 		return ['Hash', scopes[0]];
 	});
+	this.registerNativeMethod('meta', p_args('x', null), function vm_meta(scope, v) {
+		// to_ngs_object() can not handle it properly
+		return ['Hash', data.get_meta(scope.x)];
+	});
 }
 
 exports.Args = Args.bind(null);

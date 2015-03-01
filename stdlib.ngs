@@ -259,7 +259,7 @@ defun parse_file(f:String, content:String) {
 
 defun read(f:String) {
 	content = fetch_file(f)
-	parse_file(f, content)
+	parse_file(f, content).meta("file", f)
 }
 
 defun one(a:Array) {
@@ -334,3 +334,18 @@ defun echo(*args) {
 }
 
 # ----- Output helpers - end -----
+
+# ----- Meta sugar - start -----
+defun meta(x, k:String) {
+	x.meta()[k]
+}
+
+defun meta(x, k:String, v) {
+	x.meta()[k] = v
+	x
+}
+
+defun has_meta(x, k:String) {
+	k in x.meta()
+}
+# ----- Meta sugar - end -----
