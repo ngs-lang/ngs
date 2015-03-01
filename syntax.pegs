@@ -54,6 +54,7 @@ command "command" =
   assignment inline_space command /
   assignment /
   function_definition /
+  function_call /
   if /
   while /
   for /

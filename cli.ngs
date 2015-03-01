@@ -34,6 +34,9 @@ defun cli_main() {
 		lambda_ = load(code[1]).locals(local_scope)
 		result = catch lambda_()
 		if result[0] {
+			if result[1].typeof() == "Process" {
+				echo(result[1])
+			}
 			echo("OK")
 		} else {
 			echo("FAIL", result[1])

@@ -173,7 +173,7 @@ defun startsWith(s:String, pfx:String) {
 }
 
 # XXX: Warning: should be per Context or it will bite you
-defun spawn_update_globals(args, p:Process) {
+defun spawn_update_globals(args:Array, p:Process) {
 	g = globals()
 	g["P"] = p
 	if "PP" not in g {
@@ -262,6 +262,22 @@ defun read(f:String) {
 	parse_file(f, content)
 }
 
+defun one(a:Array) {
+	if a.len() != 1 {
+		throw ["data", "Expected array with exactly one item but had " + a.len().String(), a]
+	}
+	a[0]
+}
+
+# Abstract usage example:
+# servers.filter(F(x) {'unicorn' in x.tags}).one("Unicorn server").create_image("Unicorn backup")
+defun one(a:Array, s:String) {
+	if a.len() != 1 {
+		throw ["data", "Expected array with exactly one " + s + " but had " + a.len().String(), a]
+	}
+	a[0]
+}
+
 # ----- Output helpers - start -----
 
 defun String(p:Process) {
@@ -277,7 +293,7 @@ defun join(a:Array, sep:String) {
 	ret = ""
 	j = a.len()
 	for(i=0;i<j;i=i+1) {
-		ret = ret + a[i]
+		ret = ret + String(a[i])
 		if i < j - 1 {
 			ret = ret + sep
 		}

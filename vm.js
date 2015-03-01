@@ -162,7 +162,8 @@ Context.prototype.find_var_lexical_scope = function(varname) {
 Context.prototype.get_var = function(name) {
 	var r = this.find_var_lexical_scope(name);
 	if(!r[0]) {
-		throw new Error("Using undefined variable '" + name + "'");
+		this.thr(to_ngs_object(["programming", "Using undefined variable '" + name + "'"]));
+		return;
 	}
 	return r[1][name];
 }
@@ -379,7 +380,8 @@ Context.prototype.invoke_or_throw = function(methods, args, kwargs, vm, do_catch
 	var status = this.invoke(methods, args, kwargs, vm, do_catch);
 	if(!status[0]) {
 		console.log(args);
-		throw new Error("Invoke: appropriate method for " + inspect(args) + " and " + inspect(kwargs) + " not found for in " + inspect(methods));
+		var types = get_arr(args).map(get_type);
+		throw new Error("Invoke: appropriate method for types (" + types.join(',') + "), args " + inspect(args) + ", kwargs " + inspect(kwargs) + " not found for in " + inspect(methods));
 	}
 }
 
@@ -537,7 +539,11 @@ VM.prototype.opcodes = {
 	'get_var': function() {
 		var st = this.context.stack;
 		var name = get_str(st.pop());
-		this.context.stack.push(this.context.get_var(name));
+		var v = this.context.get_var(name);
+		if(this.thrown) {
+			return;
+		}
+		this.context.stack.push(v);
 	},
 
 	// stack: ... value varname -> ...
