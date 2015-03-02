@@ -5,6 +5,23 @@ if not(stdout.istty()) {
 # TODO: load cli-specific user ini .ngs files
 # TODO: history file
 
+# Example of how to remove parts
+# { prompt_contributors = prompt_contributors.filter(F(x) { x.first() != "ver" }) }
+prompt_contributors = [
+	["ver", F() { "NGS v" + ver }],
+	["nothing_to_say", F() { null }],
+	["num", F() { n }],
+	["finish", F() { "> " }],
+]
+
+
+defun cli_make_prompt(vars) {
+	prompt_contributors.map(second).map(F(contributor_func) {
+		(contributor_func.locals(vars))()
+	}).filter().join(" ")
+}
+
+
 defun cli_main() {
 	rl = Readline()
 
@@ -12,7 +29,11 @@ defun cli_main() {
 	n = 0
 	while true {
 		n = n + 1
-		l = rl.read("NGS v0.0.1 " + String(n) + " > ")
+
+		prompt_vars = {"n": n, "ver": "0.0.1"}
+		prompt = cli_make_prompt(prompt_vars)
+
+		l = rl.read(prompt)
 
 		if l == "" {
 			n = n - 1

@@ -252,7 +252,7 @@ string_contents "String contents" =
   s:[^"]* {  return N('string', [], s.join('')); }
 
 array_literal "array literal" =
-  "[" space? es:comma_separated_expressions? space? "]" {
+  "[" space? es:comma_separated_expressions? space? ","? space? "]" {
 	return N('array', es ? es : []);
   }
 

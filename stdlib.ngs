@@ -119,6 +119,10 @@ defun filter(a:Array, predicate, *args) {
 	ret
 }
 
+defun filter(a:Array) {
+	a.filter(F(x) { x != null })
+}
+
 defun __get_item(a:Array, idxs:Array) {
 	ret = []
 	j = idxs.len()
@@ -349,3 +353,9 @@ defun has_meta(x, k:String) {
 	k in x.meta()
 }
 # ----- Meta sugar - end -----
+
+defun first(a)  { a[0] }
+defun second(a) { a[1] }
+defun third(a)  { a[2] }
+defun fourth(a) { a[3] }
+defun fifth(a)  { a[4] }
