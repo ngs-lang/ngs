@@ -133,6 +133,10 @@ var code_vs_stack = [
 	['{ 0 or 2 }', [["Number",2]]],
 	['{ 1 or 2 }', [["Number",1]]],
 
+	// *** Thread ***
+	['{ r=[]; t=thread(F() { r.push(1); }); r.push(2); t.wait(); r.len() }', [["Number", 2]]],
+	['{ t=thread(F() { thread().locals()["x"] = 7 }); t.wait().locals()["x"]; }', [["Number", 7]]],
+
 ];
 
 var code_vs_spawn_args = [

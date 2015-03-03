@@ -22,13 +22,16 @@ var code_snippets = [
 	// Bool(String)
 	'{ if "" {1}{2} == 2 }',
 	'{ if "x" {1}{2} == 1 }',
+	'{ Bool([]) == false }',
+	'{ Bool({}) == false }',
 	// __neq(...)
 	'{ 1 != 2 }',
 	// __eq(a:Array, b:Array)
 	'{ [1,2] == [1,2] }',
 	'{ not([1,2] == [2,3]) }',
-	// __get_item(a:Array, idxs:Array)
+	// __get_item()
 	'{ t = [10,20,30][[1,2]]; t == [20,30] }',
+	'{ t = [1,2,3,4][[-1,-2]]; t == [4, 3] }',
 	// min(...)
 	'{ min(3,5) == 3 }',
 	// max(...)

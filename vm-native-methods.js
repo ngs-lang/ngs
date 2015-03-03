@@ -209,6 +209,12 @@ function register_native_methods() {
 		return scope.s;
 	});
 
+	this.registerNativeMethod('write', p_args('s', 'String'), function vm_echo(scope) {
+		// console.log('ECHO', util.inspect(get_arr(scope.p), {depth: 20}), scope.n);
+		process.stdout.write(get_str(scope.s));
+		return scope.s;
+	});
+
 	this.registerNativeMethod('__deftype', p_args('name', 'String', 'fields', null), function vm___deftype(scope, vm) {
 		// TODO: maybe allow redefining type (for extending)
 		var name = get_str(scope.name);
@@ -235,10 +241,19 @@ function register_native_methods() {
 		return ['Scopes', this.getCallerLexicalScopes()];
 	});
 
-	this.registerNativeMethod('__lambda', p_args('scopes', 'Scopes', 'args', 'Array', 'ip', 'Number'), function vm___lambda(scope) {
+	this.registerNativeMethod('__lambda', p_args('scopes', 'Scopes', 'args', 'Array', 'ip', 'Number', 'name', 'String'), function vm___lambda(scope) {
 		// console.log('__lambda', scope.scopes.length, scope.ip);
-		return ['Lambda', ['Array', [scope.scopes, scope.args, scope.ip]]];
+		return ['Lambda', ['Array', [scope.scopes, scope.args, scope.ip, scope.name]]];
 	});
+	// this.registerNativeMethod('__get_attr', p_args('l', 'Lambda', 'attr', 'String'), function vm___get_attr(scope) {
+	// 	var a = get_str(scope.attr);
+	// 	var l = get_lmb(scope.l);
+	// 	if(a === 'args') {
+	// 		return get_arr(l)[1];
+	// 	}
+	// 	this.thr(to_ngs_object(['programming', 'Lambda object does not have attribute ' + a]));
+	// 	return;
+	// });
 
 	this.registerNativeMethod('__register_method', p_args('lambda', 'Lambda', 'name', 'String'), function vm___register_method(scope) {
 		var name = get_str(scope.name);
@@ -310,7 +325,10 @@ function register_native_methods() {
 		p.on('close', ngs_runtime_spawn_finish_callback);
 
 		v.suspend_context();
-		return ['Process', props];
+		var ret = ['Process', props];
+		// Status hack. Find another solution later.
+		this.thread_locals['P'] = ret;
+		return ret;
 	});
 	this.registerNativeMethod('__get_attr', p_args('p', 'Process', 'attr', null), function vm___get_attr(scope) {
 		// TODO (maybe): store all fields as NGS objects in the first place
@@ -453,6 +471,45 @@ function register_native_methods() {
 	this.registerNativeMethod('meta', p_args('x', null), function vm_meta(scope, v) {
 		// to_ngs_object() can not handle it properly
 		return ['Hash', data.get_meta(scope.x)];
+	});
+	this.registerNativeMethod('thread', p_args(), function vm_thread(scope, v) {
+		return ['Thread', this];
+	});
+	this.registerNativeMethod('thread', p_args('f', 'Lambda'), function vm_thread_p_lmb(scope, v) {
+		var ctx = v.setupContext();
+		ctx.frame.ip = 'context_finished';
+		ctx.invoke_or_throw(scope.f, to_ngs_object([]), to_ngs_object({}), v, true);
+		return ['Thread', ctx];
+	});
+	this.registerNativeMethod('String', p_args('t', 'Thread'), function vm_string_p_thread(scope) {
+		var t = get_thr(scope.t);
+		return ['String', "<Thread " + t.id.toString() + ":" + t.state + ">"];
+	});
+	this.registerNativeMethod('__get_attr', p_args('t', 'Thread', 'k', 'String'), function vm___get_attr_p_thr(scope) {
+		var attrs = ['id', 'state', 'cycles'];
+		var t = get_thr(scope.t);
+		var k = get_str(scope.k);
+		if(!_.contains(attrs, k)) {
+			this.thr(["programming", "Thread does not have attribute " + k]);
+			return;
+		}
+		return to_ngs_object(t[k]);
+	});
+	this.registerNativeMethod('wait', p_args('t', 'Thread'), function vm_wait_p_thread(scope, v) {
+		this.wait(get_thr(scope.t), v);
+		return scope.t;
+	});
+	this.registerNativeMethod('locals', p_args('t', 'Thread'), function vm_locals_p_thread(scope) {
+		return ['Hash', get_thr(scope.t).thread_locals];
+	});
+	this.registerNativeMethod('kill', p_args('t', 'Thread'), function vm_kill_p_thread(scope) {
+		// Not functional yet
+		get_thr(scope.t).finish_context();
+		return scope.t;
+	});
+	this.registerNativeMethod('lines', p_args('s', 'String'), function vm_lines_p_str(scope) {
+		// TODO: make non-naive implementation in stdlib instead of this
+		return to_ngs_object(get_str(scope.s).split("\n"));
 	});
 }
 

@@ -49,6 +49,7 @@ make_getter('Process',		'prc');
 make_getter('Readline',		'rl');
 make_getter('Scopes',		'scp');
 make_getter('String',		'str');
+make_getter('Thread',		'thr');
 
 make_getter('Stream', 'stm', function(s) {
 	if(s != 'stdin' && s != 'stdout' && s != 'stderr') {

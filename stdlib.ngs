@@ -13,7 +13,15 @@ defun __mul(s:String, n:Number) {
 
 defun not(x) { if x {false}{true} }
 
-defun Bool(a:Array) { a.len() > 0 }
+# TODO: somtheing genereic like:
+# defun Bool(x) {
+#   len_methods_first_args_types = len.args.filter(F(x) { x.len() == 1 }).map(first).map(third)
+#   guard typeof(x) in len_methods_first_args
+#   x.len() > 0
+# }
+
+defun Bool(a:Array)  { a.len() > 0 }
+defun Bool(h:Hash)   { h.len() > 0 }
 defun Bool(s:String) { s.len() > 0 }
 
 defun Hash(a:Array) {
@@ -70,6 +78,12 @@ defun map(h:Hash, mapper, *args) {
 	h.keys().map(F(k) { mapper(k, h[k], *args) })
 }
 
+defun reduce(a:Array, start, reducer) {
+	acc = start
+	a.each(F(x) { acc = reducer(acc, x) })
+	acc
+}
+
 defun each(a:Array, processor, *args) {
 	j = a.len()
 	for(i=0;i<j;i=i+1) {
@@ -121,6 +135,12 @@ defun filter(a:Array, predicate, *args) {
 
 defun filter(a:Array) {
 	a.filter(F(x) { x != null })
+}
+
+defun __get_item(a:Array, idx:Number) {
+	guard idx < 0
+	l = a.len()
+	a[l+idx]
 }
 
 defun __get_item(a:Array, idxs:Array) {
@@ -324,7 +344,11 @@ defun String(n:Null) {
 }
 
 defun String(l:Lambda) {
-	"<Lambda>"
+	inspect(l)
+}
+
+defun String(t:Thread) {
+	"<Thread " + t.id.String() + " " + t.state + ">"
 }
 
 defun echo(x) {
@@ -359,3 +383,5 @@ defun second(a) { a[1] }
 defun third(a)  { a[2] }
 defun fourth(a) { a[3] }
 defun fifth(a)  { a[4] }
+
+defun last(a)   { a[-1] }

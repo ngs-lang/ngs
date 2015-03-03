@@ -67,13 +67,13 @@ function inspect(x, depth) {
 			}
 			s.push(get_str(get_arr(params[i])[0]) + pt);
 		}
-		var code;
+		var code = get_str(l[3]) || 'anonymous';
 		if(get_type(l[2]) == 'NativeMethod') {
-			code = 'native:' + l[2][1].name;
+			code += '@native:' + l[2][1].name;
 		} else {
-			code = '@' + get_num(l[2]);
+			code += '@' + get_num(l[2]);
 		}
-		return pfx + '<Lambda '+ code +'(' +s.join(', ') + ')>\n';
+		return pfx + '<Lambda '+ code +'(' +s.join(', ') + ')>';
 		// console.log(params, );
 	}
 	if(t == 'Bool') {
@@ -106,8 +106,11 @@ function Context(global_scope) {
 	return this.initialize(global_scope);
 }
 
+var context_id = 1;
+
 Context.prototype.initialize = function(global_scope) {
 
+	this.id = context_id++;
 	this.state = 'running';
 	this.stack = [];
 
@@ -116,6 +119,8 @@ Context.prototype.initialize = function(global_scope) {
 	this.frames = [this.frame];
 	this.cycles = 0;
 	this.thrown = false;
+	this.waiting_for_me = [];
+	this.thread_locals = {};
 
 	var get_context_ip = function() {
 		return this.frame.ip;
@@ -131,10 +136,14 @@ Context.prototype.initialize = function(global_scope) {
 		}
 	});
 
-	native_methods.register_native_methods.call(this);
-	this.registerNativeMethod('inspect', native_methods.Args().pos('x', null).get(), function vm_inspect_p_any(scope) {
-		return ['String', inspect(scope.x)];
-	});
+	if(!_.has(global_scope, 'inspect')) {
+		// TODO: some better solution. Native methods are shared among contexts.
+		//       Their regsitration should probably be done elsewhere.
+		native_methods.register_native_methods.call(this);
+		this.registerNativeMethod('inspect', native_methods.Args().pos('x', null).get(), function vm_inspect_p_any(scope) {
+			return ['String', inspect(scope.x)];
+		});
+	}
 
 	return this;
 }
@@ -178,6 +187,18 @@ Context.prototype.getCallerLexicalScopes = function() {
 	return this.frames[this.frames.length-2].scopes;
 }
 
+Context.prototype.context_finished = function(vm) {
+	vm.finish_context();
+	this.waiting_for_me.forEach(function(ctx) {
+		vm.unsuspend_context(ctx);
+	});
+}
+
+Context.prototype.wait = function(other_context, vm) {
+	other_context.waiting_for_me.push(this);
+	vm.suspend_context();
+}
+
 function VM() {
 	return this.initialize();
 }
@@ -190,6 +211,7 @@ VM.prototype.initialize = function() {
 	this.suspended_contexts = [];
 	this.finished_contexts = [];
 	this.context = null;
+	this.finished = false;
 
 	return this;
 }
@@ -224,12 +246,18 @@ VM.prototype.start = function(finished_callback) {
 VM.prototype.mainLoop = function() {
 	var stack_debug = process.env.NGS_DEBUG_STACK;
 	while(this.runnable_contexts.length) {
+		if(this.finished) {
+			throw new Exception("Finished VM is not finished");
+		}
 		// console.log('DEBUG DELAY PRE', this.runnable_contexts.length);
 		this.context = this.runnable_contexts[0];
 
 		if(typeof(this.context.frame.ip) == 'string') {
 			var f = this.context[this.context.frame.ip];
-			f.call(this.context);
+			if(!f) {
+				throw new Error("Context method '" + this.context.frame.ip + "' not found");
+			}
+			f.call(this.context, this);
 			continue;
 		}
 
@@ -265,7 +293,8 @@ VM.prototype.mainLoop = function() {
 			break;
 		}
 	}
-	if(!this.runnable_contexts.length && !this.suspended_contexts.length) {
+	if(!this.runnable_contexts.length && !this.suspended_contexts.length && !this.finished) {
+		this.finished = true;
 		this.finished_callback(this);
 	}
 }
@@ -280,6 +309,16 @@ VM.prototype.suspend_context = function() {
 	this.suspended_contexts.push(ctx);
 	// console.log('suspend_context', ctx);
 }
+
+VM.prototype.finish_context = function() {
+	var ctx = this.runnable_contexts.shift();
+	if(!ctx) {
+		throw new Error("VM.finish_context: no runnable contexts.");
+	}
+	ctx.state = 'finished';
+	this.finished_contexts.push(ctx);
+}
+
 
 VM.prototype.unsuspend_context = function(ctx) {
 	// console.log('UNSUSPEND_CONTEXT', ctx);
@@ -318,6 +357,7 @@ Context.prototype.registerNativeMethod = function(name, args, f) {
 					['Scopes', this.frame.scopes], // Maybe change later and give access to the global scope. Simplicity for now.
 					args,
 					['NativeMethod', f],
+					['String', name],
 				]
 			]
 		];
@@ -325,7 +365,7 @@ Context.prototype.registerNativeMethod = function(name, args, f) {
 }
 
 function match_params(lambda, args, kwargs) {
-	var l = get_lmb(lambda); // ['Lambda', ['Array', [SCOPES, ARGS, IP]]]
+	var l = get_lmb(lambda); // ['Lambda', ['Array', [SCOPES, ARGS, IP, NAME?]]]
 	var l = get_arr(l);
 	if(l[1] instanceof Args) {
 		throw new Error("You forgot to use .get() in the end of Args().x().y().z() sequence when defining: " + l)

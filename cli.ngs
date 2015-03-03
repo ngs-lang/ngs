@@ -10,9 +10,17 @@ if not(stdout.istty()) {
 prompt_contributors = [
 	["ver", F() { "NGS v" + ver }],
 	["nothing_to_say", F() { null }],
+	["threads", F() {
+		ts = supervised_threads.filter(F(x) {x.state != "finished"})
+		if(ts) {
+			"jobs:" + ts.join(",")
+		}
+	}],
 	["num", F() { n }],
 	["finish", F() { "> " }],
 ]
+
+supervised_threads = []
 
 
 defun cli_make_prompt(vars) {
@@ -21,14 +29,68 @@ defun cli_make_prompt(vars) {
 	}).filter().join(" ")
 }
 
+defun cli_widget_for_thread(t:Thread) {
+	ret = []
+	vars = t.locals()
+	ret.push("*** " + vars["cli_n"].String() + ": " + vars["cli_input"] + " ***") # Original command for the thread
+}
+
+# Widget for a running process.
+# Warning: only works correctly for one (concurrent and total per life-time) running process per Thread
+defun cli_widget_for_thread(t:Thread) {
+	guard "P" in t.locals()
+	ret = __super(t)
+	p = t.locals()["P"]
+	ret.push("PROCESS")
+	if(p.exit_code != null) {
+		ret.push("EXIT CODE: " + p.exit_code.String())
+	}
+	# TODO: only show first few lines and last few lines for large outputs
+	p.stdout.lines().each(F(x) { ret.push("OUT: " + x) })
+	ret
+}
+
+cli_tput_cache = ["el", "sc", "rc"].map(F(x) {[x, $(tput $x).stdout]}).Hash()
+
+# Hack. We want "tput ..." commands output to be sent to our stdout automatically.
+defun spawn(*args) {
+	guard args[0] == "tput"
+	p = __super(*args)
+	write(p.stdout)
+	p
+}
+
+defun cli_status_updater() {
+	while true {
+		$(sleep 2)
+		widgets = supervised_threads.map(cli_widget_for_thread)
+		# not used # widgets_lines = reduce(widgets.map(len), 0, __add)
+		write(cli_tput_cache["sc"])
+		$(tput cup 0 0)
+		# start temp
+		if widgets {
+			widgets = [widgets.last()]
+		}
+		# end temp
+		widgets.each(F(w) {
+			w.each(F(widget_line) {
+				echo(cli_tput_cache["el"] + widget_line)
+			})
+		})
+		write(cli_tput_cache["rc"])
+	}
+}
 
 defun cli_main() {
 	rl = Readline()
 
 	local_scope = {"x": 7}
 	n = 0
+	status_updater = thread(cli_status_updater.one())
 	while true {
 		n = n + 1
+
+		# echo(supervised_threads.Bool(), [].Bool(), Bool);
 
 		prompt_vars = {"n": n, "ver": "0.0.1"}
 		prompt = cli_make_prompt(prompt_vars)
@@ -53,16 +115,26 @@ defun cli_main() {
 			continue
 		}
 		lambda_ = load(code[1]).locals(local_scope)
-		result = catch lambda_()
-		if result[0] {
-			if result[1].typeof() == "Process" {
-				echo(result[1])
-			}
-			echo("OK")
-		} else {
-			echo("FAIL", result[1])
-		}
+
+		t = thread(F() {
+			result = catch lambda_()
+			# if result[0] {
+			# 	if result[1].typeof() == "Process" {
+			# 		echo(result[1])
+			# 	}
+			# 	echo("OK")
+			# } else {
+			# 	echo("FAIL", result[1])
+			# }
+		})
+
+		t.locals()["cli_input"] = l
+		t.locals()["cli_n"] = n
+
+		supervised_threads.push(t)
 	}
+
+	# does not work for now # status_updater.kill()
 
 	rl.close()
 }

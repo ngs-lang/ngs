@@ -411,6 +411,8 @@ function compile_tree(node, leave_value_in_stack) {
 		cmd('get_var');
 		cmd('invoke2');
 		concat(compile_push());
+		cmd('push_str', node.data ? node.data : '');
+		concat(compile_push());
 		concat(compile_invoke_pos_args_in_stack('__lambda'));
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
