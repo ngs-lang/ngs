@@ -197,12 +197,16 @@ defun spawn_update_globals(args:Array, p:Process) {
 		g["PP"] = {}
 	}
 	g["PP"][args[0]] = p
+
+	# Hack for CLI
+	thread().locals()["P"] = p
 }
 
 defun spawn(*args) {
 	# TODO: handle async
 	p = native_spawn(*args)
 	spawn_update_globals(args, p)
+	p.wait()
 	ok = cmd_finished_ok_p(p)
 	if not(ok) {
 		# TODO: nicer output of the args

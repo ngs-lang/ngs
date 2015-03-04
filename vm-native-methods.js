@@ -283,6 +283,7 @@ function register_native_methods() {
 			'signal': null,
 			'stdout': '',
 			'stderr': '',
+			'threads_waiting': [],
 			'_finish_events': 2 // want both exit and close events
 		};
 		var ngs_runtime_spawn_finish_callback = function(force) {
@@ -296,7 +297,9 @@ function register_native_methods() {
 			}
 			if(!props._finish_events) {
 				props.state = 'done';
-				v.unsuspend_context(this);
+				props.threads_waiting.forEach(function(ctx) {
+					v.unsuspend_context(ctx);
+				});
 			}
 		}.bind(this);
 		// console.log('start_external()', props);
@@ -324,12 +327,18 @@ function register_native_methods() {
 		});
 		p.on('close', ngs_runtime_spawn_finish_callback);
 
-		v.suspend_context();
-		var ret = ['Process', props];
-		// Status hack. Find another solution later.
-		this.thread_locals['P'] = ret;
-		return ret;
+		return ['Process', props];
 	});
+	this.registerNativeMethod('wait', p_args('p', 'Process'), function vm___get_attr(scope, v) {
+		// TODO (maybe): store all fields as NGS objects in the first place
+		var p = get_prc(scope.p);
+		if(p.state === 'done') {
+			return scope.p;
+		}
+		v.suspend_context();
+		p.threads_waiting.push(this);
+		return scope.p;
+	})
 	this.registerNativeMethod('__get_attr', p_args('p', 'Process', 'attr', null), function vm___get_attr(scope) {
 		// TODO (maybe): store all fields as NGS objects in the first place
 		var a = get_str(scope.attr);

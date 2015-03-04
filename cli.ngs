@@ -32,7 +32,7 @@ defun cli_make_prompt(vars) {
 defun cli_widget_for_thread(t:Thread) {
 	ret = []
 	vars = t.locals()
-	ret.push("*** " + vars["cli_n"].String() + ": " + vars["cli_input"] + " ***") # Original command for the thread
+	ret.push(" " *3 + vars["cli_n"].String() + ": " + vars["cli_input"] + " " * 3) # Original command for the thread
 }
 
 # Widget for a running process.
@@ -50,7 +50,8 @@ defun cli_widget_for_thread(t:Thread) {
 	ret
 }
 
-cli_tput_cache = ["el", "sc", "rc"].map(F(x) {[x, $(tput $x).stdout]}).Hash()
+# http://www.tldp.org/HOWTO/Bash-Prompt-HOWTO/x405.html
+cli_tput_cache = ["el", "sc", "rc", "smso", "rmso"].map(F(x) {[x, $(tput $x).stdout]}).Hash()
 
 # Hack. We want "tput ..." commands output to be sent to our stdout automatically.
 defun spawn(*args) {
@@ -61,11 +62,12 @@ defun spawn(*args) {
 }
 
 defun cli_status_updater() {
+	tput = cli_tput_cache
 	while true {
 		$(sleep 2)
 		widgets = supervised_threads.map(cli_widget_for_thread)
 		# not used # widgets_lines = reduce(widgets.map(len), 0, __add)
-		write(cli_tput_cache["sc"])
+		write(tput["sc"])
 		$(tput cup 0 0)
 		# start temp
 		if widgets {
@@ -73,11 +75,14 @@ defun cli_status_updater() {
 		}
 		# end temp
 		widgets.each(F(w) {
-			w.each(F(widget_line) {
-				echo(cli_tput_cache["el"] + widget_line)
-			})
+			j = w.len()
+			for(i=0; i<j; i=i+1) {
+				l = tput["el"] + w[i]
+				if i == 0 { l = tput["smso"] + l + tput["rmso"] }
+				echo(l)
+			}
 		})
-		write(cli_tput_cache["rc"])
+		write(tput["rc"])
 	}
 }
 

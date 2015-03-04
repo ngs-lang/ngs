@@ -53,8 +53,8 @@ var code_vs_stack = [
 	['{ x=1; y=1; l = {"x": 2}; f = (F() { y = 3; x = 4 }).locals(l); f(); [x, y, l["x"]]}',
 	 [["Array", [["Number",1], ["Number",3], ["Number",4]]]]],
 
-	['{spawn=native_spawn; Bool($(ls))}', [["Bool", true]]],
-	['{spawn=native_spawn; Bool($(ls NOSUCHFILE))}', [["Bool", false]]],
+	['{spawn=native_spawn; Bool($(ls).wait())}', [["Bool", true]]],
+	['{spawn=native_spawn; Bool($(ls NOSUCHFILE).wait())}', [["Bool", false]]],
 
 	[
 		'{\n'+
