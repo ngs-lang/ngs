@@ -34,6 +34,8 @@ function _repr_depth(depth) {
 
 
 function inspect(x, depth) {
+	// TODO: output meta data
+	// TODO: format for n columns
 	depth = depth || 0;
 	var t = get_type(x);
 	var pfx = _repr_depth(depth);
@@ -53,8 +55,8 @@ function inspect(x, depth) {
 		return ret;
 	}
 	if(t == 'Lambda') {
-		var l = get_arr(get_lmb(x))
-		var params = get_arr(l[1]);
+		var l = get_lmb(x);
+		var params = l.args;
 		var s = [];
 		var pt;
 		for(var i=0; i<params.length; i++) {
@@ -67,11 +69,11 @@ function inspect(x, depth) {
 			}
 			s.push(get_str(get_arr(params[i])[0]) + pt);
 		}
-		var code = get_str(l[3]) || 'anonymous';
-		if(get_type(l[2]) == 'NativeMethod') {
-			code += '@native:' + l[2][1].name;
+		var code = get_str(l.name) || 'anonymous';
+		if(get_type(l.code_ptr) == 'NativeMethod') {
+			code += '@native:' + get_nm(l.code_ptr).name;
 		} else {
-			code += '@' + get_num(l[2]);
+			code += '@' + get_num(l.code_ptr);
 		}
 		return pfx + '<Lambda '+ code +'(' +s.join(', ') + ')>';
 		// console.log(params, );
@@ -102,13 +104,13 @@ Frame.prototype.initialize = function() {
 	this.scopes = [];
 }
 
-function Context(global_scope) {
-	return this.initialize(global_scope);
+function Context(global_scope, cycles_limit) {
+	return this.initialize(global_scope, cycles_limit);
 }
 
 var context_id = 1;
 
-Context.prototype.initialize = function(global_scope) {
+Context.prototype.initialize = function(global_scope, cycles_limit) {
 
 	this.id = context_id++;
 	this.state = 'running';
@@ -118,6 +120,7 @@ Context.prototype.initialize = function(global_scope) {
 	this.frame.scopes = [global_scope];
 	this.frames = [this.frame];
 	this.cycles = 0;
+	this.cycles_limit = cycles_limit || null;
 	this.thrown = false;
 	this.waiting_for_me = [];
 	this.thread_locals = {};
@@ -141,7 +144,7 @@ Context.prototype.initialize = function(global_scope) {
 		//       Their regsitration should probably be done elsewhere.
 		native_methods.register_native_methods.call(this);
 		this.registerNativeMethod('inspect', native_methods.Args().pos('x', null).get(), function vm_inspect_p_any(scope) {
-			return ['String', inspect(scope.x)];
+			return NgsValue('String', inspect(scope.x));
 		});
 	}
 
@@ -232,8 +235,8 @@ VM.prototype.useCodeWithRet = function(c) {
 	return ptr;
 }
 
-VM.prototype.setupContext = function() {
-	var c = new Context(this.global_scope);
+VM.prototype.setupContext = function(cycles_limit) {
+	var c = new Context(this.global_scope, cycles_limit);
 	this.runnable_contexts.push(c);
 	return c;
 }
@@ -277,6 +280,10 @@ VM.prototype.mainLoop = function() {
 		}
 		this.opcodes[op[0]].call(this, op[1]);
 		this.context.cycles++;
+		if(this.context.cycles_limit && (this.context.cycles > this.context.cycles_limit)) {
+			// TODO: make it NGS exception. Still make sure works for tests
+			throw new Error("Cycles limit reached: " + this.context.cycles_limit);
+		}
 		// Here, we might be with another stack, ip, etc
 
 		// Warning: in future, some operations might change `this.context`
@@ -341,36 +348,28 @@ VM.prototype.unsuspend_context = function(ctx) {
 Context.prototype.registerMethod = function(name, f) {
 	var r = this.find_var_lexical_scope(name);
 	if(!r[0]) {
-		r[1][name] = ['Array', [f]];
+		r[1][name] = NgsValue('Array', [f]);
 		return;
 	}
-	r[1][name][1].push(f);
+	r[1][name].data.push(f);
 }
 
 Context.prototype.registerNativeMethod = function(name, args, f) {
-	var m =
-		[
-			'Lambda',
-			[
-				'Array',
-				[
-					['Scopes', this.frame.scopes], // Maybe change later and give access to the global scope. Simplicity for now.
-					args,
-					['NativeMethod', f],
-					['String', name],
-				]
-			]
-		];
+	var m = NgsValue('Lambda', {
+		scopes: NgsValue('Scopes', this.frame.scopes),
+		args: args,
+		code_ptr: NgsValue('NativeMethod', f),
+		name: NgsValue('String', name),
+	});
 	this.registerMethod(name, m);
 }
 
 function match_params(lambda, args, kwargs) {
-	var l = get_lmb(lambda); // ['Lambda', ['Array', [SCOPES, ARGS, IP, NAME?]]]
-	var l = get_arr(l);
-	if(l[1] instanceof Args) {
+	var l = get_lmb(lambda);
+	if(l.args instanceof Args) {
 		throw new Error("You forgot to use .get() in the end of Args().x().y().z() sequence when defining: " + l)
 	}
-	var params = get_arr(l[1]);
+	var params = get_arr(l.args);
 	var scope = {};
 	var positional_idx = 0;
 	if(debug_match_params) {
@@ -388,7 +387,7 @@ function match_params(lambda, args, kwargs) {
 		var cur_param_type;
 
 		if(cur_param_mode === 'arg_rest_pos') {
-			scope[cur_param_name] = ['Array', p.slice(i)];
+			scope[cur_param_name] = NgsValue('Array', p.slice(i));
 			positional_idx += (p.length - i);
 			break;
 		}
@@ -437,18 +436,17 @@ Context.prototype.invoke = function(methods, args, kwargs, vm, do_catch) {
 	for(var l=ms.length-1, i=l; i>=0; i--) {
 		var m = ms[i];
 
-		var lambda = get_arr(get_lmb(m));
-		// 0:scopes, 1:args, 2:ip/native_func
+		var lambda = get_lmb(m);
 		var scope = match_params(m, args, kwargs);
 		if(!scope[0]) {
 			continue;
 		}
-		var call_type = get_type(lambda[2]);
+		var call_type = get_type(lambda.code_ptr);
 
 		// __super, __args, __kwargs for new frame
 		// TODO: make these invalid arguments
 		var vars = scope[1];
-		vars['__super'] = ['Array', ms.slice(0, ms.length-1)];
+		vars['__super'] = NgsValue('Array', ms.slice(0, ms.length-1));
 		vars['__args'] = args;
 		vars['__kwargs'] = kwargs;
 
@@ -456,16 +454,16 @@ Context.prototype.invoke = function(methods, args, kwargs, vm, do_catch) {
 		this.frame = new Frame();
 		this.frame.do_catch = do_catch;
 		this.frames.push(this.frame);
-		this.frame.scopes = get_scp(lambda[0]).concat(vars)
+		this.frame.scopes = get_scp(lambda.scopes).concat(vars)
 		old_frame.stack_len = this.stack.length;
 
 
 		if(call_type === 'Number') {
-			this.frame.ip = get_num(lambda[2]);
+			this.frame.ip = get_num(lambda.code_ptr);
 			return [true];
 		}
 		if(call_type === 'NativeMethod') {
-			var nm = get_nm(lambda[2]);
+			var nm = get_nm(lambda.code_ptr);
 			// console.log('NATIVEMETHOD', nm);
 			try {
 				this.thrown = false;
@@ -502,7 +500,7 @@ Context.prototype.ret = function(stack_delta) {
 	}
 	if(deeper_frame.do_catch) {
 		var v = this.stack.pop();
-		this.stack.push(['Array', [to_ngs_object(true), v]]);
+		this.stack.push(NgsValue('Array', [to_ngs_object(true), v]));
 	}
 }
 
@@ -513,7 +511,7 @@ Context.prototype.thr = function(v) {
 		this.frame = this.frames[this.frames.length - 1];
 		if(deeper_frame.do_catch) {
 			this.stack.length = this.frame.stack_len;
-			this.stack.push(['Array', [to_ngs_object(false), v]]);
+			this.stack.push(NgsValue('Array', [to_ngs_object(false), v]));
 			return;
 		}
 	}
@@ -544,15 +542,15 @@ VM.prototype.opcodes = {
 
 	// stack: ... -> ... ip of the next instruction
 	'push_ip': function(v) {
-		this.context.stack.push(['Number', this.context.frame.ip]);
+		this.context.stack.push(NgsValue('Number', this.context.frame.ip));
 	},
 
-	'push_num': function(v) { this.context.stack.push(['Number', v]); },
-	'push_str': function(v) { this.context.stack.push(['String', v]); },
-	'push_arr': function(v) { this.context.stack.push(['Array', []]); },
-	'push_hsh': function(v) { this.context.stack.push(['Hash', {}]); },
-	'push_nul': function(v) { this.context.stack.push(['Null', null]); },
-	'push_boo': function(v) { this.context.stack.push(['Bool', v]); },
+	'push_num': function(v) { this.context.stack.push(NgsValue('Number', v)); },
+	'push_str': function(v) { this.context.stack.push(NgsValue('String', v)); },
+	'push_arr': function(v) { this.context.stack.push(NgsValue('Array', [])); },
+	'push_hsh': function(v) { this.context.stack.push(NgsValue('Hash', {})); },
+	'push_nul': function(v) { this.context.stack.push(NgsValue('Null', null)); },
+	'push_boo': function(v) { this.context.stack.push(NgsValue('Bool', v)); },
 
 	// stack: ... value -> ...
 	'pop': function() {
@@ -619,8 +617,8 @@ VM.prototype.opcodes = {
 		var methods = st.pop();
 		var arg2 = st.pop();
 		var arg1 = st.pop();
-		var args = ['Array', [arg1, arg2]];
-		this.context.invoke_or_throw(methods, args, ['Hash', {}], this);
+		var args = NgsValue('Array', [arg1, arg2]);
+		this.context.invoke_or_throw(methods, args, NgsValue('Hash', {}), this);
 	},
 	'invoke3': function() {
 		var st = this.context.stack;
@@ -628,8 +626,8 @@ VM.prototype.opcodes = {
 		var arg3 = st.pop();
 		var arg2 = st.pop();
 		var arg1 = st.pop();
-		var args = ['Array', [arg1, arg2, arg3]];
-		this.context.invoke_or_throw(methods, args, ['Hash', {}], this);
+		var args = NgsValue('Array', [arg1, arg2, arg3]);
+		this.context.invoke_or_throw(methods, args, NgsValue('Hash', {}), this);
 	},
 
 	// stack: ... v -> ... v
@@ -638,7 +636,7 @@ VM.prototype.opcodes = {
 		if(c.frames[c.frames.length-2].stack_len === c.stack.length) {
 			// We need to return a value but there isn't one in the stack
 			// return Null in these rare cases.
-			c.stack.push(['Null', null]);
+			c.stack.push(NgsValue('Null', null));
 		}
 		this.context.ret(1);
 	},

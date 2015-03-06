@@ -81,7 +81,9 @@ code_snippets.forEach(function(code_snippet, idx) {
 			v.useCode(stdlib_code);
 			v.useCode(code);
 			v.start(function() {
-				assert.deepEqual(c.stack, [['Bool', true]]);
+				assert.equal(c.stack.length, 1);
+				assert.equal(c.stack[0].type, 'Bool');
+				assert.equal(c.stack[0].data, true);
 				done();
 			});
 		});

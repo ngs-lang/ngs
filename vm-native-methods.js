@@ -12,26 +12,26 @@ var compile = require('./compile');
 
 function to_ngs_object(v) {
 	if(_.isNull(v)) {
-		return ['Null', null];
+		return NgsValue('Null', null);
 	}
 	if(_.isBoolean(v)) {
-		return ['Bool', v];
+		return NgsValue('Bool', v);
 	}
 	if(_.isNumber(v)) {
-		return ['Number', v];
+		return NgsValue('Number', v);
 	}
 	if(_.isString(v)) {
-		return ['String', v];
+		return NgsValue('String', v);
 	}
 	if(_.isArray(v)) {
-		return ['Array', v.map(to_ngs_object)];
+		return NgsValue('Array', v.map(to_ngs_object));
 	}
 	if(_.isObject(v)) {
 		var h = {}
 		_.keys(v).forEach(function(k) {
 			h[k] = to_ngs_object(v[k]);
 		});
-		return ['Hash', h];
+		return NgsValue('Hash', h);
 	}
 	throw new Error("to_ngs_object() failed for " + v);
 }
@@ -46,14 +46,14 @@ function Args() {
 
 Args.prototype.general = function(name, typ, arg_type) {
 	this.args.push(
-		[
+		NgsValue(
 			'Array',
 			[
-				['String', name],
-				['String', arg_type],
-				[(typ ? 'String' : 'Null'), typ]
+				NgsValue('String', name),
+				NgsValue('String', arg_type),
+				NgsValue(typ ? 'String' : 'Null', typ)
 			]
-		]
+		)
 	);
 	return this;
 }
@@ -67,7 +67,7 @@ Args.prototype.named = function(name, typ) {
 	return this.general(name, typ, 'arg_nam')
 }
 Args.prototype.get = function() {
-	return ['Array', this.args];
+	return NgsValue('Array', this.args);
 }
 
 function p_args() {
@@ -83,17 +83,17 @@ function register_native_methods() {
 	// this - Context object
 
 	this.registerNativeMethod('Array', p_args(), function vm_Array() {
-		return ['Array', new Array()];
+		return NgsValue('Array', new Array());
 	});
 
 	this.registerNativeMethod('Hash', p_args(), function vm_Array() {
-		return ['Hash', new Object()];
+		return NgsValue('Hash', new Object());
 	});
 
 	this.registerNativeMethod('Bool', p_args('x', null), function vm_Bool_p_any(scope) {
 		// Anything that was not processed by any other Bool() method
 		// will have it's JS boolean value as result.
-		return ['Bool', !!scope.x[1]]; // XXX broken get_TYP(v) data access abstraction
+		return NgsValue('Bool', !!scope.x.data); // XXX broken get_TYP(v) data access abstraction
 	});
 
 	this.registerNativeMethod('Bool', p_args('p', 'Process'), function vm_Bool_p_process(scope) {
@@ -104,7 +104,7 @@ function register_native_methods() {
 			throw new Error("Can't Bool() unfinished process");
 		}
 		// exit_code can be null if process was terminated by a signal
-		return ['Bool', p.exit_code === 0];
+		return NgsValue('Bool', p.exit_code === 0);
 	});
 
 	this.registerNativeMethod('push', p_args('a', 'Array', 'x', null), function vm_push(scope) {
@@ -114,36 +114,34 @@ function register_native_methods() {
 	});
 
 	this.registerNativeMethod('__add', p_args('a', 'Number', 'b', 'Number'), function vm___add_p_num_num(scope) {
-		return ['Number', get_num(scope.a) + get_num(scope.b)];
+		return NgsValue('Number', get_num(scope.a) + get_num(scope.b));
 	});
 
 	this.registerNativeMethod('__add', p_args('a', 'String', 'b', 'String'), function vm___add_p_str_str(scope) {
-		return ['String', get_str(scope.a) + get_str(scope.b)];
+		return NgsValue('String', get_str(scope.a) + get_str(scope.b));
 	});
 
 	this.registerNativeMethod('__add', p_args('a', 'Array', 'b', 'Array'), function vm___add_p_arr_arr(scope) {
-		return ['Array', get_arr(scope.a).concat(get_arr(scope.b))];
+		return NgsValue('Array', get_arr(scope.a).concat(get_arr(scope.b)));
 	});
 
 	this.registerNativeMethod('__sub', p_args('a', 'Number', 'b', 'Number'), function vm___sub(scope) {
-		return ['Number', get_num(scope.a) - get_num(scope.b)];
+		return NgsValue('Number', get_num(scope.a) - get_num(scope.b));
 	});
 
 	this.registerNativeMethod('__mul', p_args('a', 'Number', 'b', 'Number'), function vm___sub(scope) {
-		return ['Number', get_num(scope.a) * get_num(scope.b)];
+		return NgsValue('Number', get_num(scope.a) * get_num(scope.b));
 	});
 
 	this.registerNativeMethod('__lt', p_args('a', 'Number', 'b', 'Number'), function vm___lt(scope) {
-		return ['Bool', get_num(scope.a) < get_num(scope.b)];
+		return NgsValue('Bool', get_num(scope.a) < get_num(scope.b));
 	});
 	this.registerNativeMethod('__gt', p_args('a', 'Number', 'b', 'Number'), function vm___gt(scope) {
-		return ['Bool', get_num(scope.a) > get_num(scope.b)];
+		return NgsValue('Bool', get_num(scope.a) > get_num(scope.b));
 	});
 
 	this.registerNativeMethod('__eq', p_args('a', null, 'b', null), function vm___eq(scope) {
-		// XXX: incorrect implementation, uses JS comparison
-		// XXX: does not use get_TYP data access abstraction
-		return ['Bool', scope.a[1] === scope.b[1]];
+		return NgsValue('Bool', scope.a.eq(scope.b));
 	});
 
 	this.registerNativeMethod('__set_item', p_args('a', 'Array', 'idx', 'Number', 'v', null), function vm___set_item_p_arr_num_any(scope) {
@@ -152,7 +150,7 @@ function register_native_methods() {
 		// TODO: assert i is integer
 		if(a.length < i) {
 			for(var j=a.length;j<i;j++) {
-				a[j] = ['Null', null];
+				a[j] = NgsValue('Null', null);
 			}
 		}
 		a[i] = scope.v;
@@ -188,19 +186,19 @@ function register_native_methods() {
 		if(i<0 || i>s.length-1) {
 			throw new Error("Accessing out of bounds. Array: " + a + ". Index: " + i);
 		}
-		return ['String', s[i]];
+		return NgsValue('String', s[i]);
 	});
 
 	this.registerNativeMethod('len', p_args('a', 'Array'), function vm_len_p_arr(scope) {
-		return ['Number', get_arr(scope.a).length];
+		return NgsValue('Number', get_arr(scope.a).length);
 	});
 
 	this.registerNativeMethod('len', p_args('s', 'String'), function vm_len_p_str(scope) {
-		return ['Number', get_str(scope.s).length];
+		return NgsValue('Number', get_str(scope.s).length);
 	});
 
 	this.registerNativeMethod('len', p_args('h', 'Hash'), function vm_len_p_hsh(scope) {
-		return ['Number', _.size(get_hsh(scope.h))];
+		return NgsValue('Number', _.size(get_hsh(scope.h)));
 	});
 
 	this.registerNativeMethod('echo', p_args('s', 'String'), function vm_echo(scope) {
@@ -238,12 +236,12 @@ function register_native_methods() {
 	this.registerNativeMethod('__get_lexical_scopes', p_args(), function vm___get_lexical_scopes() {
 		// Need lexical scopes of caller, not ours.
 		// Dirty scopes hack
-		return ['Scopes', this.getCallerLexicalScopes()];
+		return NgsValue('Scopes', this.getCallerLexicalScopes());
 	});
 
 	this.registerNativeMethod('__lambda', p_args('scopes', 'Scopes', 'args', 'Array', 'ip', 'Number', 'name', 'String'), function vm___lambda(scope) {
 		// console.log('__lambda', scope.scopes.length, scope.ip);
-		return ['Lambda', ['Array', [scope.scopes, scope.args, scope.ip, scope.name]]];
+		return NgsValue('Lambda', {scopes: scope.scopes, args: scope.args, code_ptr: scope.ip, name: scope.name});
 	});
 	// this.registerNativeMethod('__get_attr', p_args('l', 'Lambda', 'attr', 'String'), function vm___get_attr(scope) {
 	// 	var a = get_str(scope.attr);
@@ -251,7 +249,7 @@ function register_native_methods() {
 	// 	if(a === 'args') {
 	// 		return get_arr(l)[1];
 	// 	}
-	// 	this.thr(to_ngs_object(['programming', 'Lambda object does not have attribute ' + a]));
+	// 	this.thr(to_ngs_object(NgsValue('programming', 'Lambda object does not have attribute ' + a]));
 	// 	return;
 	// });
 
@@ -269,7 +267,7 @@ function register_native_methods() {
 
 	this.registerNativeMethod('__throw', p_args('e', null), function vm___throw(scope, vm) {
 		this.throw_(scope.e, vm);
-		return ['Null', null];
+		return NgsValue('Null', null);
 	});
 
 	this.registerNativeMethod('native_spawn', Args().rest_pos('args').get(), function ngs_runtime_spawn(scope, v) {
@@ -327,7 +325,7 @@ function register_native_methods() {
 		});
 		p.on('close', ngs_runtime_spawn_finish_callback);
 
-		return ['Process', props];
+		return NgsValue('Process', props);
 	});
 	this.registerNativeMethod('wait', p_args('p', 'Process'), function vm___get_attr(scope, v) {
 		// TODO (maybe): store all fields as NGS objects in the first place
@@ -378,7 +376,7 @@ function register_native_methods() {
 	})
 	this.registerNativeMethod('fetch_file', p_args('f', 'String'), function vm_read(scope) {
 		// TODO: handle encoding later
-		return ['String', fs.readFileSync(get_str(scope.f), {encoding: 'UTF-8'})];
+		return NgsValue('String', fs.readFileSync(get_str(scope.f), {encoding: 'UTF-8'}));
 	})
 	this.registerNativeMethod('__tilde', p_args('s', 'String', 'regex', 'String'), function vm___tilde(scope) {
 		var r = new RegExp(get_str(scope.regex));
@@ -387,32 +385,32 @@ function register_native_methods() {
 	this.registerNativeMethod('sort', p_args('a', 'Array'), function vm_sort(scope) {
 		var a = get_arr(scope.a);
 		a.sort();
-		return ['Array', a];
+		return NgsValue('Array', a);
 	});
 	this.registerNativeMethod('uniq', p_args('a', 'Array'), function vm_uniq(scope) {
 		var a = get_arr(scope.a);
-		return ['Array', _.uniq(a, false, function(elt) {return elt[1]})];
+		return NgsValue('Array', _.uniq(a, false, function(elt) {return elt[1]}));
 	});
 
 	// stdin, stdout, ...
 	['stdin', 'stdout', 'stderr'].forEach(function(s) {
-		this.set_var(s, ['Stream', s]);
+		this.set_var(s, NgsValue('Stream', s));
 	}.bind(this))
 	this.registerNativeMethod('istty', p_args('s', 'Stream'), function vm_istty(scope) {
 		var s = get_stm(scope.s);
-		return ['Bool', s.isTTY];
+		return NgsValue('Bool', s.isTTY);
 	});
 	this.registerNativeMethod('Readline', p_args(), function vm_readline(scope) {
 		var readline = require('readline');
 		var rl = readline.createInterface(process.stdin, process.stdout);
-		return ['Readline', rl];
+		return NgsValue('Readline', rl);
 	});
 	this.registerNativeMethod('read', p_args('rl', 'Readline', 'prompt', 'String'), function vm_read_p_readline(scope, v) {
 		var rl = get_rl(scope.rl);
 		var ctx = this;
 		function line_handler(line) {
 			ctx.stack.pop();
-			ctx.stack.push(['String', line]);
+			ctx.stack.push(NgsValue('String', line));
 			v.unsuspend_context(ctx);
 			rl.removeListener('line', line_handler);
 		}
@@ -420,19 +418,19 @@ function register_native_methods() {
 		v.suspend_context(this);
 		rl.setPrompt(get_str(scope.prompt));
 		rl.prompt();
-		return ['String', 'READLINE-TO-BE-READ']
+		return NgsValue('String', 'READLINE-TO-BE-READ');
 	});
 	this.registerNativeMethod('close', p_args('rl', 'Readline'), function vm_close_p_readline(scope, v) {
 		var rl = get_rl(scope.rl);
 		rl.close();
-		return ['Null', null]
+		return NgsValue('Null', null);
 	});
 	this.registerNativeMethod('compile', p_args('s', 'String'), function vm_compile_p_str(scope, v) {
 		var s = get_str(scope.s);
 		var out;
 		try {
 			out = compile.compile(s, {leave_value_in_stack: true});
-			return ['Array', [to_ngs_object(true), ['Code', out.compiled_code]]];
+			return NgsValue('Array', [to_ngs_object(true), NgsValue('Code', out.compiled_code)]);
 		} catch(e) {
 			return to_ngs_object([false, e]);
 		}
@@ -441,18 +439,13 @@ function register_native_methods() {
 		// TODO: handle scopes correcty
 		var c = get_cod(scope.c);
 		var ptr = v.useCodeWithRet(c);
-		var m =
-			[
-				'Lambda',
-				[
-					'Array',
-					[
-						['Scopes', this.frame.scopes.slice(0, this.frame.scopes.length-1)],
-						p_args(),
-						to_ngs_object(ptr),
-					]
-				]
-			];
+		var m = NgsValue('Lambda', {
+			scopes: NgsValue('Scopes', this.frame.scopes.slice(0, this.frame.scopes.length-1)),
+			args: p_args(),
+			code_ptr: to_ngs_object(ptr),
+			name: 'loaded_code',
+		});
+
 		return m;
 	});
 	this.registerNativeMethod('String', p_args('n', 'Number'), function vm_string_p_num(scope, v) {
@@ -468,31 +461,35 @@ function register_native_methods() {
 	//   ...
 	//   lambda_ = load(code[1]).locals(local_scope)
 	this.registerNativeMethod('locals', p_args('l', 'Lambda', 'h', 'Hash'), function vm_locals_p_lmb_hsh(scope, v) {
-		var lambda = get_arr(get_lmb(scope.l));
+		var lambda = get_lmb(scope.l);
 		var locals = get_hsh(scope.h);
-		var scopes = get_scp(lambda[0]);
-		return ['Lambda', ['Array', [['Scopes', scopes.concat(locals, true)], lambda[1], lambda[2]]]];
+		return NgsValue('Lambda', {
+			scopes: NgsValue('Scopes', scope.l.data.scopes.data.concat(locals, true)),
+			args: lambda.args,
+			code_ptr: lambda.code_ptr,
+			name: lambda.name + '_with_locals'
+		});
 	});
 	this.registerNativeMethod('globals', p_args(), function vm_globals(scope, v) {
 		var scopes = this.getCallerLexicalScopes();
-		return ['Hash', scopes[0]];
+		return NgsValue('Hash', scopes[0]);
 	});
 	this.registerNativeMethod('meta', p_args('x', null), function vm_meta(scope, v) {
 		// to_ngs_object() can not handle it properly
-		return ['Hash', data.get_meta(scope.x)];
+		return NgsValue('Hash', data.get_meta(scope.x));
 	});
 	this.registerNativeMethod('thread', p_args(), function vm_thread(scope, v) {
-		return ['Thread', this];
+		return NgsValue('Thread', this);
 	});
 	this.registerNativeMethod('thread', p_args('f', 'Lambda'), function vm_thread_p_lmb(scope, v) {
 		var ctx = v.setupContext();
 		ctx.frame.ip = 'context_finished';
 		ctx.invoke_or_throw(scope.f, to_ngs_object([]), to_ngs_object({}), v, true);
-		return ['Thread', ctx];
+		return NgsValue('Thread', ctx);
 	});
 	this.registerNativeMethod('String', p_args('t', 'Thread'), function vm_string_p_thread(scope) {
 		var t = get_thr(scope.t);
-		return ['String', "<Thread " + t.id.toString() + ":" + t.state + ">"];
+		return NgsValue('String', "<Thread " + t.id.toString() + ":" + t.state + ">");
 	});
 	this.registerNativeMethod('__get_attr', p_args('t', 'Thread', 'k', 'String'), function vm___get_attr_p_thr(scope) {
 		var attrs = ['id', 'state', 'cycles'];
@@ -509,7 +506,7 @@ function register_native_methods() {
 		return scope.t;
 	});
 	this.registerNativeMethod('locals', p_args('t', 'Thread'), function vm_locals_p_thread(scope) {
-		return ['Hash', get_thr(scope.t).thread_locals];
+		return NgsValue('Hash', get_thr(scope.t).thread_locals);
 	});
 	this.registerNativeMethod('kill', p_args('t', 'Thread'), function vm_kill_p_thread(scope) {
 		// Not functional yet

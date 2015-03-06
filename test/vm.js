@@ -1,60 +1,64 @@
 // apt-get install mocha
 // # brings version 1.20.1-1 on Debian
 
+var _ = require('underscore');
+
 var assert = require('assert');
 
 var vm = require('../vm');
 var nm = require('../vm-native-methods');
 var compile = require('../compile').compile;
 
+CYCLES_LIMIT = 5000; // Empirical: 485 is enough as of 2015-03
+
 var code_vs_stack = [
 	// * basics ***
-	['{1}', [["Number", 1]]],
-	['{1;2}', [["Number", 2]]],
-	['{1+2}', [["Number", 3]]],
-	[' { 7 - 3 } ', [["Number", 4]]],
-	['{[5]}', [["Array", [["Number", 5]]]]],
-	['a = [1, 2]', [["Array", [["Number", 1], ["Number", 2]]]]],
-	['{[1, 2] + [3, 4]}', [["Array", [["Number", 1], ["Number", 2], ["Number", 3], ["Number", 4]]]]],
-	['{a=1; a}', [["Number", 1]]],
+	['{1}', [1]],
+	['{1;2}', [2]],
+	['{1+2}', [3]],
+	[' { 7 - 3 } ', [4]],
+	['{[5]}', [[5]]],
+	['a = [1, 2]', [[1, 2]]],
+	['{[1, 2] + [3, 4]}', [[1, 2, 3, 4]]],
+	['{a=1; a}', [1]],
 
 	// *** defun ***
-	['{ defun f() { return 77; }; 1 + f(); }', [["Number", 78]]],
-	['{ defun f(x, y) { return x - y; }; f(5, 2); }', [["Number", 3]]],
+	['{ defun f() { return 77; }; 1 + f(); }', [78]],
+	['{ defun f(x, y) { return x - y; }; f(5, 2); }', [3]],
 	['{ defun f(x:String) { return 1; }; defun f(x:Number) { return 2; }; [f("a"), f(100)] }',
-	 [["Array", [["Number", 1], ["Number", 2]]]]],
+	 [[1, 2]]],
 
 	// *** if ***
-	['{ if 0 {1} }', [["Null", null]]],
+	['{ if 0 {1} }', [null]],
 
 	// *** Bool() ***
-	['{ [ 1 < 2, 2 < 1] }', [["Array", [["Bool", true], ["Bool", false]]]]],
+	['{ [ 1 < 2, 2 < 1] }', [[true, false]]],
 
 	// *** while ***
-	['{a = 0; r = []; while a < 2 {r.push(a); a = a + 1;}; r;}', [["Array", [["Number", 0], ["Number", 1]]]]],
-	['{a = 0; r = []; while not 1 < a {push(r, a); a = a + 1;}; r;}', [["Array", [["Number", 0], ["Number", 1]]]]],
+	['{a = 0; r = []; while a < 2 {r.push(a); a = a + 1;}; r;}', [[0, 1]]],
+	['{a = 0; r = []; while not 1 < a {push(r, a); a = a + 1;}; r;}', [[0, 1]]],
 
 	// *** while - break ***
-	['{a = 0; r = []; while a < 2 {break; push(r, a); a = a + 1;}; r;}', [["Array", []]]],
+	['{a = 0; r = []; while a < 2 {break; push(r, a); a = a + 1;}; r;}', [[]]],
 
 	// *** while - continue ***
 	['{a = 0; r = []; while a < 5 {a = a + 1; if a < 3 {continue;}; push(r, a);}; r;}',
-	 [["Array", [["Number", 3], ["Number", 4], ["Number", 5]]]]],
+	 [[3, 4, 5]]],
 
 	// *** for/continue/break ***
 	['{a = 0; r = []; for(a=0;a<5;a=a+1) {if a==1 { continue; }; if a==3 { break; }; push(r, a);}; r}',
-	 [["Array", [["Number", 0], ["Number", 2]]]]],
+	 [[0, 2]]],
 
 	// *** throw ... catch ***
-	['{ catch (F() { 1 })() }', [["Array", [["Bool", true],["Number", 1]]]]],
-	['{ catch (F() { throw 2 })() }', [["Array", [["Bool",false], ["Number", 2]]]]],
+	['{ catch (F() { 1 })() }', [[true,1]]],
+	['{ catch (F() { throw 2 })() }', [[false, 2]]],
 
 	// *** locals ***
 	['{ x=1; y=1; l = {"x": 2}; f = (F() { y = 3; x = 4 }).locals(l); f(); [x, y, l["x"]]}',
-	 [["Array", [["Number",1], ["Number",3], ["Number",4]]]]],
+	 [[1, 3, 4]]],
 
-	['{spawn=native_spawn; Bool($(ls).wait())}', [["Bool", true]]],
-	['{spawn=native_spawn; Bool($(ls NOSUCHFILE).wait())}', [["Bool", false]]],
+	['{spawn=native_spawn; Bool($(ls).wait())}', [true]],
+	['{spawn=native_spawn; Bool($(ls NOSUCHFILE).wait())}', [false]],
 
 	[
 		'{\n'+
@@ -84,65 +88,65 @@ var code_vs_stack = [
 			'	)\n'+
 			'	r\n'+
 			'}\n',
-		[["Array",[["Number",0],["Number",2],["Number",10],["Number",100]]]]
+		[[0,2,10,100]]
 	],
 
 	// *** parentheses ***
-	['{1+2*3}', [['Number', 7]]],
-	['{(1+2)*3}', [['Number', 9]]],
+	['{1+2*3}', [7]],
+	['{(1+2)*3}', [9]],
 
 	// *** Same precedence operators proper order ***
-	['{100-10-1}', [['Number', 89]]],
-	['{1000-100-10-1}', [['Number', 889]]],
-	['{1000-100+10-1}', [['Number', 909]]],
+	['{100-10-1}', [89]],
+	['{1000-100-10-1}', [889]],
+	['{1000-100+10-1}', [909]],
 
 	// *** Arrays ***
-	['{a=[]; a[1]=7; a}', [['Array', [['Null', null], ['Number', 7]]]]],
-	['{a=[10,20,30,40]; b=[1]; a[b[0]]}', [['Number', 20]]],
+	['{a=[]; a[1]=7; a}', [[null, 7]]],
+	['{a=[10,20,30,40]; b=[1]; a[b[0]]}', [20]],
 
 	// *** Hashes ***
-	['{ {"a": 7, "b": 8} }', [["Hash",{"a":["Number",7],"b":["Number",8]}]]],
-	['{ h = { "k" : 7, "x": 99 }; h["k"]}', [["Number",7]]],
-	['{ { "k" : 77, "x": 99 }["k"] }', [["Number",77]]],
+	['{ {"a": 7, "b": 8} }', [{"a":7,"b":8}]],
+	['{ h = { "k" : 7, "x": 99 }; h["k"]}', [7]],
+	['{ { "k" : 77, "x": 99 }["k"] }', [77]],
 
 	// *** Guard ***
 	['{defun f(x) {return 1}; defun f(x) {guard x==10; return 20}; [f(8), f(10)]}',
-	 [["Array", [["Number", 1], ["Number", 20]]]]],
+	 [[1, 20]]],
 
 	// *** Comments ***
-	['{7 # mycomment1\n}', [['Number', 7]]],
-	['{7 // mycomment2\n}', [['Number', 7]]],
+	['{7 # mycomment1\n}', [7]],
+	['{7 // mycomment2\n}', [7]],
 	['# something', []],
 
 	// *** Empty function ***
-	['{defun f() { #xx\n}; f()}', [["Null", null]]],
+	['{defun f() { #xx\n}; f()}', [null]],
 
 	// *** Match ***
-	['{match(100) {(n:Number) {1} (s:String) {2}}}', [["Number", 1]]],
-	['{match("X") {(n:Number) {1} (s:String) {2}}}', [["Number", 2]]],
+	['{match(100) {(n:Number) {1} (s:String) {2}}}', [1]],
+	['{match("X") {(n:Number) {1} (s:String) {2}}}', [2]],
 
 	// *** __super ***
-	['{defun f(x) {x*2}; defun f(y) { __super(y) * 3}; f(5)}', [["Number", 30]]],
+	['{defun f(x) {x*2}; defun f(y) { __super(y) * 3}; f(5)}', [30]],
 
 	// *** meta ***
-	['{a=1; a.meta()["x"] = 8; [a, a.meta()["x"]]}', [["Array",[["Number",1,{"x":["Number",8]}],["Number",8]]]]],
+	['{a=1; a.meta()["x"] = 8; [a, a.meta()["x"]]}', [[1,8]]],
 
 	// *** Boolean operators ***
-	['{ 0 and 2 }', [["Number",0]]],
-	['{ 1 and 2 }', [["Number",2]]],
-	['{ 0 or 2 }', [["Number",2]]],
-	['{ 1 or 2 }', [["Number",1]]],
+	['{ 0 and 2 }', [0]],
+	['{ 1 and 2 }', [2]],
+	['{ 0 or 2 }', [2]],
+	['{ 1 or 2 }', [1]],
 
 	// *** Thread ***
-	['{ r=[]; t=thread(F() { r.push(1); }); r.push(2); t.wait(); r.len() }', [["Number", 2]]],
-	['{ t=thread(F() { thread().locals()["x"] = 7 }); t.wait().locals()["x"]; }', [["Number", 7]]],
+	['{ r=[]; t=thread(F() { r.push(1); }); r.push(2); t.wait(); r.len() }', [2]],
+	['{ t=thread(F() { thread().locals()["x"] = 7 }); t.wait().locals()["x"]; }', [7]],
 
 ];
 
 var code_vs_spawn_args = [
-	['ls', ["Array", [["String", "ls"]]]],
-	['a=["x", "y"]; ls zz $*a ww', ["Array", [["String", "ls"], ["String", "zz"], ["String", "x"], ["String", "y"], ["String", "ww"]]]],
-	['{spawn("blah");}', ["Array", [["String", "blah"]]]],
+	['ls', ["ls"]],
+	['a=["x", "y"]; ls zz $*a ww', ["ls","zz","x","y","ww"]],
+	['{spawn("blah");}', ["blah"]],
 ];
 
 var how = [
@@ -150,21 +154,28 @@ var how = [
 	['Running code should result empty stack with leave_value_in_stack=false', false],
 ];
 
+function to_js_object(val) {
+	if(val.type === 'Array') {
+		return val.data.map(to_js_object);
+	}
+	if(val.type === 'Hash') {
+		var ret = {}
+		_.keys(val.data).forEach(function (k) { ret[k] = to_js_object(val.data[k]) });
+		return ret;
+	}
+	return val.data;
+}
+
 code_vs_stack.forEach(function(code_stack, idx) {
 	how.forEach(function(h) {
 		describe(h[0], function(){
 			it('Code #' + idx + ': ' + code_stack[0].slice(0, 20), function(done) {
 				var v = new vm.VM();
-				var c = v.setupContext();
-
-				c.registerNativeMethod('finished_command', nm.Args().pos('p', 'Process').get(), function(scope) {
-					return ['Bool', true];
-				});
-
+				var c = v.setupContext(CYCLES_LIMIT);
 				var code = compile(code_stack[0], {leave_value_in_stack: h[1]}).compiled_code;
 				v.useCode(code);
 				v.start(function() {
-					assert.deepEqual(c.stack, h[1] ? code_stack[1] : []);
+					assert.deepEqual(c.stack.map(to_js_object), h[1] ? code_stack[1] : []);
 					done();
 				});
 			});
@@ -176,10 +187,9 @@ code_vs_spawn_args.forEach(function(code_args, idx) {
 	describe('Running code should result correct spawn arguments', function(){
 		it('Code #' + idx + ': ' + code_args[0].slice(0, 20), function(done) {
 			var v = new vm.VM();
-			var c = v.setupContext();
+			var c = v.setupContext(CYCLES_LIMIT);
 			c.registerNativeMethod('spawn', nm.Args().rest_pos('args').get(), function(scope) {
-				// console.log('spawn args', scope.args);
-				assert.deepEqual(scope.args, code_args[1]);
+				assert.deepEqual(to_js_object(scope.args), code_args[1]);
 				return {'something': 'that', 'spawn': 'returns'};
 			});
 			var code = compile(code_args[0]).compiled_code;
