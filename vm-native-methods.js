@@ -517,6 +517,9 @@ function register_native_methods() {
 		// TODO: make non-naive implementation in stdlib instead of this
 		return to_ngs_object(get_str(scope.s).split("\n"));
 	});
+	this.registerNativeMethod('id', p_args('x', null), function vm_id_p_any(scope) {
+		return to_ngs_object(get_id(scope.x));
+	});
 }
 
 exports.Args = Args.bind(null);

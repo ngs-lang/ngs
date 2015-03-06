@@ -46,6 +46,11 @@ function make_getter(type, getter_name, processor) {
 	exports['get_' + getter_name] = r;
 }
 
+function get_id(data) {
+	assert_data(data);
+	return data.id;
+}
+
 function get_type(data) {
 	assert_data(data);
 	return data.type;
@@ -77,6 +82,7 @@ make_getter('Stream', 'stm', function(s) {
 	return process[s];
 });
 
+exports.get_id = get_id;
 exports.get_type = get_type;
 exports.get_meta = get_meta;
 exports.NgsValue = NgsValue;
