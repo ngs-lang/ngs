@@ -40,9 +40,7 @@ to make_TYP(val)
 ***** TODO Splice keywords
 **** TODO Named
 **** TODO Default value
-** DONE Convenience obj.method() syntax
 ** TODO Fields access for composite types
-** DONE Function: last evaluated expr is the return value
 ** TODO Generate constructor function
 ** TODO Inheritance (also: mixins, runtime inheritance change?)
 ** TODO Casting
