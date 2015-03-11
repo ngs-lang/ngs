@@ -1,5 +1,7 @@
 "use strict";
 
+var _ = require('underscore');
+
 var tty = require('tty');
 
 var value_id = 1;
@@ -30,14 +32,18 @@ function assert_data(data) {
 	}
 }
 
-function make_getter(type, getter_name, processor) {
+function make_getter(type, getter_name, assertor, processor) {
+	// Ideally we should check whether type is anchestor of data.type
+	// For simplicity and speed we don't.
 	var r = function(data) {
 		assert_data(data);
-		if(data.type !== type) {
-			console.log('Got data of unexpected type. Expected', type, 'got', data.type);
-			throw new Error('Got non-'+type+': ' + Object.toString(data));
-		}
 		var ret = data.data;
+		if(assertor) {
+			if(!assertor(ret)) {
+				console.log('Got data of unexpected type. Expected', type, 'got', data.type, ' (', data, ')');
+				throw new Error('Got non-'+type+': ' + Object.toString(data));
+			}
+		}
 		if(processor) {
 			ret = processor(ret);
 		}
@@ -61,21 +67,21 @@ function get_meta(data) {
 	return data.meta;
 }
 
-make_getter('Array',		'arr');
-make_getter('Bool',			'boo');
-make_getter('Code',			'cod');
-make_getter('Hash',			'hsh');
-make_getter('Lambda',		'lmb');
-make_getter('NativeMethod', 'nm');
-make_getter('Null',			'nul');
-make_getter('Number',		'num');
-make_getter('Process',		'prc');
-make_getter('Readline',		'rl');
-make_getter('Scopes',		'scp');
-make_getter('String',		'str');
-make_getter('Thread',		'thr');
+make_getter('Array',		'arr', _.isArray);
+make_getter('Bool',			'boo', _.isBoolean);
+make_getter('Code',			'cod', _.isArray);
+make_getter('Hash',			'hsh', _.isObject);
+make_getter('Lambda',		'lmb', _.isObject);
+make_getter('NativeMethod', 'nm' , _.isFunction);
+make_getter('Null',			'nul', _.isNull);
+make_getter('Number',		'num', _.isNumber);
+make_getter('Process',		'prc', _.isObject);
+make_getter('Readline',		'rl' , _.isObject);
+make_getter('Scopes',		'scp', _.isArray);
+make_getter('String',		'str', _.isString);
+make_getter('Thread',		'thr', _.isObject);
 
-make_getter('Stream', 'stm', function(s) {
+make_getter('Stream', 'stm', _.isString, function(s) {
 	if(s != 'stdin' && s != 'stdout' && s != 'stderr') {
 		throw new Error('Currently supported streams are only stdin, stdout and stderr');
 	}

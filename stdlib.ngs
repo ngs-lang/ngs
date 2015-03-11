@@ -325,12 +325,23 @@ defun join(a:Array, sep:String) {
 defun String(s:String) { s }
 
 defun String(a:Array) {
-	a.join(", ")
+	"[" + a.join(", ") + "]"
+}
+
+defun String(a:Array) {
+	guard typeof(a) != "Array"
+	"<" + typeof(a) + " " + __super(a) + ">"
 }
 
 defun String(h:Hash) {
 	"{" + h.map(F(k,v) { String(k) + ": " + String(v) }).join(", ") + "}"
 }
+
+defun String(h:Hash) {
+	guard typeof(h) != "Hash"
+	"<" + typeof(h) + " " + __super(h) + ">"
+}
+
 
 defun String(b:Bool) {
 	if b {"true"}{"false"}
@@ -384,3 +395,18 @@ defun fifth(a)  { a[4] }
 
 defun last(a)   { a[-1] }
 # ----- __get_item sugar - end -----
+
+# ----- Types sugar - start -----
+defun inherits(child:String, parent:String) {
+	if child not in __TYPES {
+		__TYPES[child] = {}
+	}
+	if "inherits" not in __TYPES[child] {
+		__TYPES[child]["inherits"] = []
+	}
+	if parent in __TYPES[child]["inherits"] {
+		return null
+	}
+	__TYPES[child]["inherits"].push(parent)
+}
+# ----- Types sugar - end -----

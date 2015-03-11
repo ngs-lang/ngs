@@ -127,6 +127,7 @@ var code_vs_stack = [
 
 	// *** __super ***
 	['{defun f(x) {x*2}; defun f(y) { __super(y) * 3}; f(5)}', [30]],
+	['{defun f(x) {x*2}; defun f(y) { __super(y) * 3}; defun f(z:String) { "DOESNT MATTER" }; f(5)}', [30]],
 
 	// *** meta ***
 	['{a=1; a.meta()["x"] = 8; [a, a.meta()["x"]]}', [[1,8]]],
@@ -143,6 +144,11 @@ var code_vs_stack = [
 
 	// *** id ***
 	['{ x=1; y=2; id(y) - id(x) > 0 and id(y) - id(x) < 10}', [true]], // As of 2015-03, the difference is 2
+
+	// *** inheritance ***
+	['{ __TYPES = {"T1": {"inherits": ["Hash"]}, "T2": {"inherits": ["T1"]}}; ' +
+	 'defun init(x:T1) {x.__super(); x.a=7; x}; defun init(x:T2) {x.__super(); x.b=8; x}; o=obj("T2").init(); [o["a"], o["b"]]}', [[7,8]]],
+	['{ __TYPES = {"T1": {"inherits": ["Array"]}}; o=obj("T1").init(); o[0] = 7; o[0]}', [7]],
 
 ];
 

@@ -38,25 +38,29 @@ function inspect(x, depth) {
 	// TODO: format for n columns
 	depth = depth || 0;
 	var t = get_type(x);
-	var pfx = _repr_depth(depth);
+	// var pfx = _repr_depth(depth);
+	var pfx = '';
 	if(t == 'Number') {
-		return pfx + get_num(x) + '\n';
+		return pfx + get_num(x);
 	}
 	if(t == 'String') {
-		return pfx + '"' + get_str(x) + '"\n';
+		return pfx + '"' + get_str(x) + '"';
 	}
 	if(t == 'Array') {
-		var ret = pfx + '[\n'
+		var ret = pfx + '['
 		var a = get_arr(x);
 		for(var i=0; i<a.length; i++) {
 			ret = ret + inspect(a[i], depth+1);
+			if(i<a.length-1) {
+				ret = ret + ', '
+			}
 		}
-		ret = ret + pfx + ']\n'
+		ret = ret + pfx + ']'
 		return ret;
 	}
 	if(t == 'Lambda') {
 		var l = get_lmb(x);
-		var params = l.args;
+		var params = get_arr(l.args);
 		var s = [];
 		var pt;
 		for(var i=0; i<params.length; i++) {
@@ -79,18 +83,23 @@ function inspect(x, depth) {
 		// console.log(params, );
 	}
 	if(t == 'Bool') {
-		return pfx + String(get_boo(x)) + '\n';
+		return pfx + String(get_boo(x));
 	}
 	if(t == 'Null') {
 		return pfx + 'null\n';
 	}
-	return _repr_depth(depth) + '<' + t + '>\n';
+
+	if(t === 'Scopes') {
+		return '<Scopes len ' + x.data.length + '>';
+	}
+
+	return pfx + '<' + t + ' ' + util.inspect(x.data) + '>';
 }
 
 function inspect_stack(stack) {
 	var ret = [];
 	for(var i=0; i<stack.length; i++) {
-		ret = ret + String(i) + ': ' + inspect(stack[i]);
+		ret = ret + String(i) + ': ' + inspect(stack[i]) + '\n';
 	}
 	return ret;
 }
@@ -364,7 +373,24 @@ Context.prototype.registerNativeMethod = function(name, args, f) {
 	this.registerMethod(name, m);
 }
 
-function match_params(lambda, args, kwargs) {
+Context.prototype.type_types = function(type_name, ret) {
+	var ret = ret || {};
+	ret[type_name] = true;
+	var __TYPES = get_hsh(this.get_var('__TYPES'));
+	if(!_.has(__TYPES, type_name)) {
+		return ret;
+	}
+	var type_ = get_hsh(__TYPES[type_name]);
+	if(!_.has(type_, 'inherits')) {
+		return ret;
+	}
+	var inherits = get_arr(type_['inherits']);
+	inherits.forEach(function(i) { this.type_types(get_str(i), ret) }.bind(this));
+	// console.log('type_types', type_name, ret);
+	return ret;
+}
+
+function match_params(ctx, lambda, args, kwargs) {
 	var l = get_lmb(lambda);
 	if(l.args instanceof Args) {
 		throw new Error("You forgot to use .get() in the end of Args().x().y().z() sequence when defining: " + l)
@@ -402,7 +428,8 @@ function match_params(lambda, args, kwargs) {
 				return [false, {}, 'not enough pos args'];
 			}
 			if(cur_param_type) {
-				if(get_type(p[positional_idx]) !== cur_param_type) {
+				var tt = ctx.type_types(get_type(p[positional_idx]));
+				if(!_.has(tt, cur_param_type)) {
 					return [false, {}, 'pos args type mismatch at ' + positional_idx];
 				}
 			}
@@ -437,7 +464,7 @@ Context.prototype.invoke = function(methods, args, kwargs, vm, do_catch) {
 		var m = ms[i];
 
 		var lambda = get_lmb(m);
-		var scope = match_params(m, args, kwargs);
+		var scope = match_params(this, m, args, kwargs);
 		if(!scope[0]) {
 			continue;
 		}
@@ -446,7 +473,7 @@ Context.prototype.invoke = function(methods, args, kwargs, vm, do_catch) {
 		// __super, __args, __kwargs for new frame
 		// TODO: make these invalid arguments
 		var vars = scope[1];
-		vars['__super'] = NgsValue('Array', ms.slice(0, ms.length-1));
+		vars['__super'] = NgsValue('Array', ms.slice(0, i));
 		vars['__args'] = args;
 		vars['__kwargs'] = kwargs;
 

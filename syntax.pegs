@@ -101,7 +101,7 @@ assignment "assignment" =
   varname:varname space? '=' space? val:expr { return N('assignment', [varname, val]); }
 
 varname "variable name" =
-  v:[_a-zA-Z]+[_0-9a-zA-Z]* { return N('varname', [], v.join('')); }
+  v:([_a-zA-Z]+[_0-9a-zA-Z]*) { return N('varname', [], (v[0].concat(v[1])).join('')); }
 
 CCEXPR "CCEXPR" =
   CCEXPR_commands /
@@ -133,6 +133,9 @@ expr_set_item "Expression/set_item" =
   // container must not be expr_get_item, should be expr_eq
   container:expr_binop inline_space? "[" space? idx:expr space? "]" space? "=" space? v:expr {
     return N('set_item', [container, idx, v]);
+  } /
+  container:expr_binop "." idx:varname space? "=" space? v:expr {
+    return N('set_item', [container, N('string', [], idx.data), v]);
   } /
   e: expr_binop
 
@@ -207,7 +210,6 @@ expr_base "Expression/no-add" =
   continue /
   guard /
   match /
-  type_definition /
   assignment /
   lambda /
   function_definition /
@@ -313,25 +315,6 @@ throw "throw" =
 function_call "function call" =
   do_catch:("catch" space?)? f:expr_base space? "(" space? args:comma_separated_expressions? space? ")" {
 	return N('call', [f, args || N('expressions', [])], do_catch ? true : false);
-  }
-
-
-type_definition "Type definition" =
-  "deftype" space+ type:varname space? "{" space? ds:type_fields_definitions? space? "}" {
-    return N('deftype', ds || [], type.data);
-  }
-
-type_fields_definitions "Definitions of fields of a type" =
-  d:type_field_definition space? ";" space? ds:type_fields_definitions space? {
-    return N('fields_definitions', [d]).concat(ds);
-  } /
-  d:type_field_definition space? ";" ? {
-    return N('fields_definitions', [d]);
-  }
-
-type_field_definition "Definition of a field of a type" =
-  space? name:varname space? ":" space? type:varname space? {
-    return N('field_definition', [], [name.data, type.data]);
   }
 
 guard "Function entry guard" =

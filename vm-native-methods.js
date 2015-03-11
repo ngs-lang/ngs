@@ -520,6 +520,22 @@ function register_native_methods() {
 	this.registerNativeMethod('id', p_args('x', null), function vm_id_p_any(scope) {
 		return to_ngs_object(get_id(scope.x));
 	});
+	this.registerNativeMethod('obj', p_args('type', 'String'), function vm_obj_p_str(scope) {
+		return NgsValue(get_str(scope.type), {});
+	});
+	this.registerNativeMethod('init', p_args('n', 'Number'), function vm_init_p_num(scope) {
+		scope.n.data = 0;
+		return scope.n;
+	});
+	this.registerNativeMethod('init', p_args('a', 'Array'), function vm_init_p_arr(scope) {
+		scope.a.data = [];
+		return scope.a;
+	});
+	this.registerNativeMethod('init', p_args('h', 'Hash'), function vm_init_p_hsh(scope) {
+		scope.h.data = {};
+		return scope.h;
+	});
+	this.set_var('__TYPES', to_ngs_object({}));
 }
 
 exports.Args = Args.bind(null);

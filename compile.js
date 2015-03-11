@@ -358,33 +358,6 @@ function compile_tree(node, leave_value_in_stack) {
 		cmd('invoke2');
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
-	if(node.is('deftype')) {
-		// TODO: new call convention
-		var mk_array = compile_invoke_no_args('Array');
-		cmd('comment', 'start', node.node_type);
-		cmd('push_str', node.data);
-		concat(mk_array)
-		for(var i=0; i<node.length; i++) {
-			cmd('comment', 'start', node.node_type, 'field');
-			concat(mk_array);
-			cmd('push_str', node[i].data[0]);
-			cmd('push_str', 'push');
-			cmd('get_var');
-			cmd('invoke2');
-			cmd('push_str', node[i].data[1]);
-			cmd('push_str', 'push');
-			cmd('get_var');
-			cmd('invoke2');
-			cmd('push_str', 'push');
-			cmd('get_var');
-			cmd('invoke2');
-			cmd('comment', 'end', node.node_type, 'field');
-		}
-		cmd('push_str', '__deftype');
-		cmd('get_var');
-		cmd('invoke2');
-		return ret;
-	}
 	if(node.is('defun')) {
 		concat_tree(0, true);
 		cmd('push_str', node.data);
