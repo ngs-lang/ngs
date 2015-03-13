@@ -4,7 +4,7 @@
 
 # string * number -> the string repeated number times
 defun __mul(s:String, n:Number) {
-	ret = ""
+	ret = ''
 	for(i=0;i<n;i=i+1) {
 		ret = ret + s;
 	}
@@ -38,7 +38,7 @@ defun zip(a:Array, b:Array) {
 	l = len(a)
 
 	if l != b.len() {
-		throw ["args", "Zip with different arrays length"]
+		throw ['args', 'Zip with different arrays length']
 	}
 
 	l.map(F(i) { [a[i], b[i]] })
@@ -151,7 +151,7 @@ defun __get_item(a:Hash, keys:Array) {
 	keys.map(F(k) { [k, a[k]] }).Hash()
 }
 
-# Make hash.key same as hash["key"]
+# Make hash.key same as hash['key']
 defun __get_attr(h:Hash, k:String) {
 	h[k]
 }
@@ -192,14 +192,14 @@ defun startsWith(s:String, pfx:String) {
 # XXX: Warning: should be per Context or it will bite you
 defun spawn_update_globals(args:Array, p:Process) {
 	g = globals()
-	g["P"] = p
-	if "PP" not in g {
-		g["PP"] = {}
+	g['P'] = p
+	if 'PP' not in g {
+		g['PP'] = {}
 	}
-	g["PP"][args[0]] = p
+	g['PP'][args[0]] = p
 
 	# Hack for CLI
-	thread().locals()["P"] = p
+	thread().locals()['P'] = p
 }
 
 defun spawn(*args) {
@@ -211,21 +211,21 @@ defun spawn(*args) {
 	if not(ok) {
 		# TODO: nicer output of the args
 		# TODO: output stack trace
-		throw ["runtime", "Command execution failed: " + inspect(args)]
+		throw ['runtime', 'Command execution failed: ' + inspect(args)]
 	}
 	p
 }
 
 defun spawn(*args) {
-	guard args.map(typeof).any(__neq, "String")
+	guard args.map(typeof).any(__neq, 'String')
 	args.map(String).__super()
 }
 
 # Convert execution of (example) '-f somefile' to 'test -f somefile'
 defun spawn(*args) {
 	  guard args.len() > 1
-	  guard startsWith(args[0], "-")
-	  args = ["test"] + args
+	  guard startsWith(args[0], '-')
+	  args = ['test'] + args
 	  # or spawn() again?
 	  return __super(*args)
 }
@@ -236,7 +236,7 @@ defun osname() {
 
 defun osname() {
 	guard $(-f /etc/debian_version)
-	"debian"
+	'debian'
 }
 
 
@@ -247,18 +247,18 @@ defun cmd_finished_ok_p(p:Process) {
 }
 
 defun cmd_finished_ok_p(p:Process) {
-	guard p.cmd == "test"
+	guard p.cmd == 'test'
 	p.exit_code in [0,1]
 }
 
 defun cmd_finished_ok_p(p:Process) {
-	guard p.cmd == "false"
+	guard p.cmd == 'false'
 	p.exit_code == 1
 }
 
 defun cmd_finished_ok_p(p:Process) {
-	guard p.cmd == "service"
-	guard p.args[1] == "status"
+	guard p.cmd == 'service'
+	guard p.args[1] == 'status'
 	# Empirical
 	p.exit_code < 4
 }
@@ -270,31 +270,31 @@ defun parse_file(f:String, content:String) {
 }
 
 defun parse_file(f:String, content:String) {
-	guard f ~ "\.json$"
+	guard f ~ '\\.json$'
 	r = catch from_json(content)
 	if not(r[0]) {
-		throw ["runtime", "Failed to read json file " + f]
+		throw ['runtime', "Failed to read json file ${f}"]
 	}
 	r[1]
 }
 
 defun read(f:String) {
 	content = fetch_file(f)
-	parse_file(f, content).meta("file", f)
+	parse_file(f, content).meta('file', f)
 }
 
 defun one(a:Array) {
 	if a.len() != 1 {
-		throw ["data", "Expected array with exactly one item but had " + a.len().String(), a]
+		throw ['data', "Expected array with exactly one item but had ${a.len()}", a]
 	}
 	a[0]
 }
 
 # Abstract usage example:
-# servers.filter(F(x) {'unicorn' in x.tags}).one("Unicorn server").create_image("Unicorn backup")
+# servers.filter(F(x) {'unicorn' in x.tags}).one('Unicorn server').create_image('Unicorn backup')
 defun one(a:Array, s:String) {
 	if a.len() != 1 {
-		throw ["data", "Expected array with exactly one " + s + " but had " + a.len().String(), a]
+		throw ['data', "Expected array with exactly one $s but had ${a.len()}", a]
 	}
 	a[0]
 }
@@ -311,7 +311,7 @@ defun String(p:Process) {
 }
 
 defun join(a:Array, sep:String) {
-	ret = ""
+	ret = ''
 	j = a.len()
 	for(i=0;i<j;i=i+1) {
 		ret = ret + String(a[i])
@@ -325,30 +325,31 @@ defun join(a:Array, sep:String) {
 defun String(s:String) { s }
 
 defun String(a:Array) {
-	"[" + a.join(", ") + "]"
+	'[' + a.join(', ') + ']'
+	# Could be less readable: "[${a.join(', ')}]"
 }
 
 defun String(a:Array) {
-	guard typeof(a) != "Array"
-	"<" + typeof(a) + " " + __super(a) + ">"
+	guard typeof(a) != 'Array'
+	'<' + typeof(a) + ' ' + __super(a) + '>'
 }
 
 defun String(h:Hash) {
-	"{" + h.map(F(k,v) { String(k) + ": " + String(v) }).join(", ") + "}"
+	'{' + h.map(F(k,v) { "${k}: ${v}" }).join(', ') + '}'
 }
 
 defun String(h:Hash) {
-	guard typeof(h) != "Hash"
-	"<" + typeof(h) + " " + __super(h) + ">"
+	guard typeof(h) != 'Hash'
+	'<' + typeof(h) + ' ' + __super(h) + '>'
 }
 
 
 defun String(b:Bool) {
-	if b {"true"}{"false"}
+	if b {'true'}{'false'}
 }
 
 defun String(n:Null) {
-	"null"
+	'null'
 }
 
 defun String(l:Lambda) {
@@ -356,12 +357,12 @@ defun String(l:Lambda) {
 }
 
 defun String(t:Thread) {
-	"<Thread " + t.id.String() + " " + t.state + ">"
+	"<Thread ${t.id} ${t.state}>"
 }
 
 defun echo(x) {
-	guard typeof(x) != "String"
-	String(x).echo()
+	guard typeof(x) != 'String'
+	x.String().echo()
 }
 
 defun echo(*args) {
@@ -401,12 +402,12 @@ defun inherits(child:String, parent:String) {
 	if child not in __TYPES {
 		__TYPES[child] = {}
 	}
-	if "inherits" not in __TYPES[child] {
-		__TYPES[child]["inherits"] = []
+	if 'inherits' not in __TYPES[child] {
+		__TYPES[child]['inherits'] = []
 	}
-	if parent in __TYPES[child]["inherits"] {
+	if parent in __TYPES[child]['inherits'] {
 		return null
 	}
-	__TYPES[child]["inherits"].push(parent)
+	__TYPES[child]['inherits'].push(parent)
 }
 # ----- Types sugar - end -----

@@ -150,6 +150,11 @@ var code_vs_stack = [
 	 'defun init(x:T1) {x.__super(); x.a=7; x}; defun init(x:T2) {x.__super(); x.b=8; x}; o=obj("T2").init(); [o["a"], o["b"]]}', [[7,8]]],
 	['{ __TYPES = {"T1": {"inherits": ["Array"]}}; o=obj("T1").init(); o[0] = 7; o[0]}', [7]],
 
+
+	// *** String interpolation ***
+	// TODO: check "$(run_something x y)"
+	['{ x=1; y=2; "$x\\n\\u01E2\\U000001E2\\.\\"${y}${x+y}" }', ['1\nǢǢ."23']],
+
 ];
 
 var code_vs_spawn_args = [

@@ -13,7 +13,6 @@
 *** TODO Modules
 *** TODO Module automatic reloading
 *** TODO "fN" command "F1..12" to remember last command into fN key
-** TODO binary function call
 ** TODO Generated documentation
 ** TODO Make set_var local by default / global option
 ** TODO Improve parameters matching
@@ -27,7 +26,7 @@ also "xyz$(cmd)ww"
 ** TODO examples folder with snippets + tests for the snippets
 ** TODO Refactor arguments to be single data structure
 * Type system
-** TODO Refactor objects creation
+** DONE Refactor objects creation
 from [type, val] expr
 to make_TYP(val)
 ** Function call
@@ -36,28 +35,30 @@ to make_TYP(val)
 **** DONE Positional
 ***** DONE Pass
 ***** DONE Receive
-***** TODO Splice positional
+***** DONE Splice positional
 ***** TODO Splice keywords
 **** TODO Named
 **** TODO Default value
-** TODO Fields access for composite types
+** DONE Fields access for composite types
 ** TODO Generate constructor function
 ** TODO Inheritance (also: mixins, runtime inheritance change?)
 ** TODO Casting
 ** Multi-method
-*** PROGRESS Guards
+*** DONE Guards
 *** Equality testing in params
-*** Consider "fake" params
-** TODO Parametrized types
 ** TODO [think] Runtime type change: RunningProcess -> FinishedProcess
+* String manipulation
+** Consider marking whether parts of string are original or expanded
+To allow "abc{d,e,f}ghi${v}".expand_curlys() instead of
+"abc{d,e,f}ghi${v.escape_curlys()}".expand_curlys()
 * Error reporting
 ** TODO Backtraces, do not "throw"
 + Method not found
 * Namespaces
 * Modules load, user defined load, etc
 + Like nodejs with json
-* Get exec output and status (field access)
-* Commands one by one from CLI (solve globals, etc)
+* DONE Get exec output and status (field access)
+* DONE Commands one by one from CLI (solve globals, etc)
 * Session
 * Pubsub
 * Polling for CLI

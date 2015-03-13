@@ -450,6 +450,32 @@ function compile_tree(node, leave_value_in_stack) {
 		concat(compile_invoke_pos_args_in_stack('__get_attr'));
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
+	if(node.is('string_container')) {
+		// TODO: optimize - join consecutive .is('string') nodes
+		cmd('push_str', '');
+		for(var i=0; i<node.length; i++) {
+			var elt = node[i];
+			if(elt.is('string')) {
+				cmd('comment', 'string_container string start')
+				cmd('push_str', elt.data);
+				cmd('push_str', '__add');
+				cmd('get_var');
+				cmd('invoke2');
+				cmd('comment', 'string_container string end')
+				continue;
+			}
+			cmd('comment', 'string_container tree start')
+			cmd('push_arr');
+			concat(compile_tree(elt, true))
+			concat(compile_push());
+			concat(compile_invoke_pos_args_in_stack('String'));
+			cmd('push_str', '__add');
+			cmd('get_var');
+			cmd('invoke2');
+			cmd('comment', 'string_container tree end')
+		}
+		return pop_if_needed(ret, leave_value_in_stack);
+	}
 	if(node.node_type) {
 		throw "Don't know how to compile type '" + node.node_type + "'";
 	}

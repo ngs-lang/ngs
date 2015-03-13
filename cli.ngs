@@ -22,6 +22,10 @@ prompt_contributors = [
 
 supervised_threads = []
 
+inherits("JobInfo", "Array")
+defun JobInfo() {
+	obj("JobInfo").init()
+}
 
 defun cli_make_prompt(vars) {
 	prompt_contributors.map(second).map(F(contributor_func) {

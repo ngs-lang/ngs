@@ -247,11 +247,39 @@ cmd_word "Command word" =
   w:[-_a-zA-Z0-9*?/]+ {  return N('string', [], w.join('')); }
 
 string "Command string" =
-  '"' s:string_contents '"' {  return s; }
+  "'" s:string_contents_sq "'" { return s; } /
+  '"' s:string_contents_dq '"' { return s; }
 
-// Temp. TODO: add escaping and substitution
-string_contents "String contents" =
-  s:[^"]* {  return N('string', [], s.join('')); }
+string_contents_sq "Single quoted string contents" =
+  sces:(string_contents_sq_element*) {  return N('string_container', sces); }
+
+string_contents_dq "Double quoted string contents" =
+  sces:(string_contents_dq_element*) {  return N('string_container', sces); }
+
+string_contents_sq_element "String contents element" =
+  string_contents_common_element /
+  s:[^'\\]+ { return N('string', [], s.join('')); }
+
+string_contents_dq_element "String contents element" =
+  string_contents_common_element /
+  "$" v:varname { return v; } /
+  "$" c:CCEXPR_code { return c; } /
+  "$" c:CCEXPR_commands { return c; } /
+  s:[^"$\\]+ { return N('string', [], s.join('')); }
+
+// http://en.wikipedia.org/wiki/Escape_sequences_in_C
+string_contents_common_element =
+  "\\a" { return N('string', [], String.fromCharCode(7)); } /
+  "\\b" { return N('string', [], String.fromCharCode(8)); } /
+  "\\e" { return N('string', [], String.fromCharCode(27)); } /
+  "\\f" { return N('string', [], String.fromCharCode(12)); } /
+  "\\n" { return N('string', [], String.fromCharCode(10)); } /
+  "\\r" { return N('string', [], String.fromCharCode(13)); } /
+  "\\t" { return N('string', [], String.fromCharCode(9)); } /
+  "\\x" hex:([0-9A-F][0-9A-F]) { return N('string', [], String.fromCharCode(parseInt(hex.join(''), 16))); } /
+  "\\u" hex:([0-9A-F][0-9A-F][0-9A-F][0-9A-F]) { return N('string', [], String.fromCharCode(parseInt(hex.join(''), 16))); } /
+  "\\U" hex:([0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F]) { return N('string', [], String.fromCharCode(parseInt(hex.join(''), 16))); } /
+  "\\" ch:. { return N('string', [], ch); }
 
 array_literal "array literal" =
   "[" space? es:comma_separated_expressions? space? ","? space? "]" {
