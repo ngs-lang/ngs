@@ -16,7 +16,7 @@
 ** TODO Generated documentation
 ** TODO Make set_var local by default / global option
 ** TODO Improve parameters matching
-** TODO String interpolation: "xyz${expr}ww"
+** DONE String interpolation: "xyz${expr}ww"
 also "xyz$(cmd)ww"
 ** TODO Arguments parsing
 ** TODO String pointers to native methods for serialization

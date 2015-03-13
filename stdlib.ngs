@@ -335,7 +335,7 @@ defun String(a:Array) {
 }
 
 defun String(h:Hash) {
-	'{' + h.map(F(k,v) { "${k}: ${v}" }).join(', ') + '}'
+	'{' + h.map(F(k,v) { "$k: $v" }).join(', ') + '}'
 }
 
 defun String(h:Hash) {

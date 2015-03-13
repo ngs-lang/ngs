@@ -65,6 +65,8 @@ var code_snippets = [
 	'{ Hash(["a","b"], "x") == {"a": "x", "b": "x"} }',
 	// meta
 	'{ a=1; a.meta("x", 2); a.meta("y", 3) == a and a.meta("x") == 2 and a.has_meta("x") }',
+	// String
+	'{ String({"x": 7}) == "{x: 7}" }',
 ];
 
 // console.log("+ Loading stdlib");
