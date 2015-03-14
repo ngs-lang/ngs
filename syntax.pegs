@@ -228,6 +228,7 @@ expr_base "Expression/no-add" =
   throw /
   number /
   string /
+  regexp /
   "true" { return N('bool', [], true); } /
   "false" { return N('bool', [], false); } /
   "null" { return N('null', [], false); } /
@@ -257,6 +258,9 @@ cmd_word "Command word" =
   s:string  { return s; } /
   w:[-_a-zA-Z0-9*?/]+ {  return N('string', [], w.join('')); }
 
+regexp "Regular expression" =
+  "/" s:string_contents_regexp "/" flags:([gim]*) { return N('regexp', [s, N('string', [], flags.join(''))]); }
+
 string "Command string" =
   "'" s:string_contents_sq "'" { return s; } /
   '"' s:string_contents_dq '"' { return s; }
@@ -267,16 +271,27 @@ string_contents_sq "Single quoted string contents" =
 string_contents_dq "Double quoted string contents" =
   sces:(string_contents_dq_element*) {  return N('string_container', sces); }
 
+string_contents_regexp "Regexp string contents" =
+  sces:(string_contents_regexp_element*) {  return N('string_container', sces); }
+
 string_contents_sq_element "String contents element" =
   string_contents_common_element /
-  s:[^'\\]+ { return N('string', [], s.join('')); }
+  s:[^'] { return N('string', [], s); }
 
 string_contents_dq_element "String contents element" =
   string_contents_common_element /
+  string_contents_var_element /
+  s:[^"] { return N('string', [], s); }
+
+string_contents_regexp_element "Regexp contents element" =
+  string_contents_common_element /
+  string_contents_var_element /
+  s:[^/] { return N('string', [], s); }
+
+string_contents_var_element =
   "$" v:varname { return v; } /
   "$" c:CCEXPR_code { return c; } /
-  "$" c:CCEXPR_commands { return c; } /
-  s:[^"$\\]+ { return N('string', [], s.join('')); }
+  "$" c:CCEXPR_commands { return c; }
 
 // http://en.wikipedia.org/wiki/Escape_sequences_in_C
 string_contents_common_element =

@@ -2,6 +2,7 @@
 # TODO: Something that will tell whether all methods were covered at the end of each tests run.
 #       Don't want to add a test for each method because some are checked by proxy.
 
+# ----- String functions - start -----
 # string * number -> the string repeated number times
 defun __mul(s:String, n:Number) {
 	ret = ''
@@ -11,14 +12,18 @@ defun __mul(s:String, n:Number) {
 	ret
 }
 
+defun __match(s:String, n:Number) { s.len() == n }
+
+# ----- String functions - end -----
+
+defun __match(a:Array, n:Number) { a.len() == n }
+
 defun not(x) { if x {false}{true} }
 
-# TODO: somtheing genereic like:
-# defun Bool(x) {
-#   len_methods_first_args_types = len.args.filter(F(x) { x.len() == 1 }).map(first).map(third)
-#   guard typeof(x) in len_methods_first_args
-#   x.len() > 0
-# }
+# TODO:
+#   Make String and Array inherit from new type Sequence.
+#   Sequence will have method len() among others.
+#   defun Bool(s:Sequence) { s.len() > 0 }
 
 defun Bool(a:Array)  { a.len() > 0 }
 defun Bool(h:Hash)   { h.len() > 0 }
@@ -270,7 +275,7 @@ defun parse_file(f:String, content:String) {
 }
 
 defun parse_file(f:String, content:String) {
-	guard f ~ '\\.json$'
+	guard f ~ /\\.json$/
 	r = catch from_json(content)
 	if not(r[0]) {
 		throw ['runtime', "Failed to read json file ${f}"]

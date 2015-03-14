@@ -77,6 +77,7 @@ make_getter('Null',			'nul', _.isNull);
 make_getter('Number',		'num', _.isNumber);
 make_getter('Process',		'prc', _.isObject);
 make_getter('Readline',		'rl' , _.isObject);
+make_getter('Regexp',		'rgx', _.isRegExp);
 make_getter('Scopes',		'scp', _.isArray);
 make_getter('String',		'str', _.isString);
 make_getter('Thread',		'thr', _.isObject);

@@ -348,9 +348,9 @@ function register_native_methods() {
 		// TODO: handle encoding later
 		return NgsValue('String', fs.readFileSync(get_str(scope.f), {encoding: 'UTF-8'}));
 	})
-	this.registerNativeMethod('__match', p_args('s', 'String', 'regex', 'String'), function vm___tilde(scope) {
-		var r = new RegExp(get_str(scope.regex));
-		return to_ngs_object(get_str(scope.s).match(r));
+	this.registerNativeMethod('__match', p_args('s', 'String', 'regex', 'Regexp'), function vm___match(scope) {
+		var r = get_rgx(scope.regex);
+		return to_ngs_object(r.exec(get_str(scope.s)));
 	})
 	this.registerNativeMethod('sort', p_args('a', 'Array'), function vm_sort(scope) {
 		var a = get_arr(scope.a);
@@ -506,6 +506,9 @@ function register_native_methods() {
 		return scope.h;
 	});
 	this.set_var('__TYPES', to_ngs_object({}));
+	this.registerNativeMethod('Regexp', p_args('pattern', 'String', 'flags', 'String'), function vm_regexp_p_str_str(scope) {
+		return NgsValue('Regexp', new RegExp(get_str(scope.pattern), get_str(scope.flags)));
+	});
 }
 
 exports.Args = Args.bind(null);

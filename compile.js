@@ -457,17 +457,24 @@ function compile_tree(node, leave_value_in_stack) {
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('string_container')) {
-		// TODO: optimize - join consecutive .is('string') nodes
 		cmd('push_str', '');
+		var last_is_string = ret.length;
 		for(var i=0; i<node.length; i++) {
 			var elt = node[i];
+			if(elt.is('string') && last_is_string) {
+				ret[last_is_string-1][1] += elt.data;
+				continue;
+			}
 			cmd('comment', 'string_container tree start')
 			if(!elt.is('string')) {
 				// Only invoke String() for non-immediate strings
 				cmd('push_arr');
 			}
-			concat(compile_tree(elt, true))
-			if(!elt.is('string')) {
+			concat(compile_tree(elt, true));
+			if(elt.is('string')) {
+				last_is_string = ret.length;
+			} else {
+				last_is_string = 0;
 				// Only invoke String() for non-immediate strings
 				concat(compile_push());
 				concat(compile_invoke_pos_args_in_stack('String'));
@@ -477,6 +484,14 @@ function compile_tree(node, leave_value_in_stack) {
 			cmd('invoke2');
 			cmd('comment', 'string_container tree end')
 		}
+		return pop_if_needed(ret, leave_value_in_stack);
+	}
+	if(node.is('regexp')) {
+		concat_tree(0, true);
+		concat_tree(1, true);
+		cmd('push_str', 'Regexp');
+		cmd('get_var');
+		cmd('invoke2');
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.node_type) {
