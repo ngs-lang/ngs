@@ -360,6 +360,10 @@ defun String(t:Thread) {
 	"<Thread ${t.id} ${t.state}>"
 }
 
+defun String(c:Code) {
+	"<Compiled code>"
+}
+
 defun echo(x) {
 	guard typeof(x) != 'String'
 	x.String().echo()
@@ -411,3 +415,21 @@ defun inherits(child:String, parent:String) {
 	__TYPES[child]['inherits'].push(parent)
 }
 # ----- Types sugar - end -----
+
+# Should be defined for files fetched from remote locations, maybe
+# in some other cases too.
+defun validate_source_file(f:String, content:String) {
+	  true
+}
+
+# TODO: path to search in
+# TODO: specify version of the required file/module
+defun require(f:String, *args) {
+	content = fetch_file(f)
+	if not(validate_source_file(f, content)) {
+		throw ['runtime', "Failed to validate source file $f"]
+	}
+	code = compile(content)
+	lambda_ = load(code)
+	lambda_(*args)
+}

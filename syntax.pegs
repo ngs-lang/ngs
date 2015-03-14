@@ -1,4 +1,8 @@
 // TODO: "not in" -> "not" space "in"
+// TODO: implement sane parts of
+//       https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html
+//       while fitting the style of NGS of course.
+//       First candidate is ":=". Only for unset. If it's null, one should use "x or myval"
 {
 	var N = require('./ast_node').ASTNode;
 	var ngs_precedence_src = [
@@ -141,17 +145,24 @@ expr_set_item "Expression/set_item" =
 
 
 expr_binop =
-  e:expr_chain es:(space? ("or" / "and" / "==" / "!=" / "<" / ">" / "~" / "+" / "-" / "*" / "/" / "in" / "not in") space? expr_chain)* {
+  e:expr_chain es:(binop expr_chain)* {
     var ret = [e];
     for(var i=0; i<es.length; i++) {
-	  if(!ngs_binops_names[es[i][1]]) {
-	    throw new Error("No name for binop: " + es[i][1]);
+	  if(!ngs_binops_names[es[i][0]]) {
+	    throw new Error("No name for binop: " + es[i][0]);
 	  }
-	  ret.push(N('binop', [], ngs_binops_names[es[i][1]], ngs_precedence[es[i][1]]));
-	  ret.push(es[i][3]);
+	  ret.push(N('binop', [], ngs_binops_names[es[i][0]], ngs_precedence[es[i][0]]));
+	  ret.push(es[i][1]);
 	}
     return N('binops', ret);
   }
+
+binop =
+  binop1 /
+  binop2
+
+binop1 = space? b:("==" / "!=" / "<" / ">" / "~" / "+" / "-" / "*" / "/") space? { return b; }
+binop2 = space b:("or" / "and" /  "in" / "not in") space { return b; }
 
 expr_chain =
   e:expr_call c:dots* {

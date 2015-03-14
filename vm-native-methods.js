@@ -430,9 +430,9 @@ function register_native_methods() {
 		var out;
 		try {
 			out = compile.compile(s, {leave_value_in_stack: true});
-			return NgsValue('Array', [to_ngs_object(true), NgsValue('Code', out.compiled_code)]);
+			return NgsValue('Code', out.compiled_code);
 		} catch(e) {
-			return to_ngs_object([false, e]);
+			this.thr(to_ngs_object(['compile', e.toString()]));
 		}
 	});
 	this.registerNativeMethod('load', p_args('c', 'Code'), function vm_load_p_cod(scope, v) {

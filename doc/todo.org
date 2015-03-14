@@ -2,12 +2,9 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** DONE Fix top level syntax (commands/expressions)
 ** CLI
 *** PROGRESS TTY io basics, layout manager, think of widgets (commands output), think completion from widgets
-*** DONE Scope so that "a=1" & "echo(a)" work
 *** PROGRESS support running regular commands
-*** CANCELED Output parser support. Adding meta will allow in-language implementation.
 *** defun cli_XXX for CLI commands (that return objects/widgets)
 **** TODO ls
 *** TODO Modules
@@ -16,9 +13,7 @@
 ** TODO Generated documentation
 ** TODO Make set_var local by default / global option
 ** TODO Improve parameters matching
-** DONE String interpolation: "xyz${expr}ww"
-also "xyz$(cmd)ww"
-** TODO Arguments parsing
+*** TODO Arguments parsing
 ** TODO String pointers to native methods for serialization
 * Soon
 ** TODO CLI - related info widget. Example: after "pkill java" - a widget that would show number of java processes
@@ -26,11 +21,7 @@ also "xyz$(cmd)ww"
 ** TODO examples folder with snippets + tests for the snippets
 ** TODO Refactor arguments to be single data structure
 * Type system
-** DONE Refactor objects creation
-from [type, val] expr
-to make_TYP(val)
 ** Function call
-*** DONE Call
 *** Arguments
 **** DONE Positional
 ***** DONE Pass
@@ -39,12 +30,10 @@ to make_TYP(val)
 ***** TODO Splice keywords
 **** TODO Named
 **** TODO Default value
-** DONE Fields access for composite types
 ** TODO Generate constructor function
 ** TODO Inheritance (also: mixins, runtime inheritance change?)
 ** TODO Casting
 ** Multi-method
-*** DONE Guards
 *** Equality testing in params
 ** TODO [think] Runtime type change: RunningProcess -> FinishedProcess
 * String manipulation

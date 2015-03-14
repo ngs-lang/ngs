@@ -2,6 +2,9 @@ if not(stdout.istty()) {
 	throw ["runtime", "CLI needs stdout to be a TTY"]
 }
 
+# require("ngs/widgets.ngs")
+# echo(WidgetsSeq())
+
 # TODO: load cli-specific user ini .ngs files
 # TODO: history file
 
@@ -21,11 +24,6 @@ prompt_contributors = [
 ]
 
 supervised_threads = []
-
-inherits("JobInfo", "Array")
-defun JobInfo() {
-	obj("JobInfo").init()
-}
 
 defun cli_make_prompt(vars) {
 	prompt_contributors.map(second).map(F(contributor_func) {
@@ -118,7 +116,8 @@ defun cli_main() {
 			echo("VARS:", local_scope)
 			continue
 		}
-		code = compile(l)
+		code = catch compile(l)
+		echo("CODE", code)
 		if not(code[0]) {
 			echo("ERROR", code[1])
 			continue

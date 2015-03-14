@@ -189,8 +189,13 @@ function compile_tree(node, leave_value_in_stack) {
 		throw new Error("Assignment to type " + node[0] + " is not implemented");
 	}
 	if(node.is('commands') || node.is('top_level_expressions')) {
-		for(var i=0; i<node.length; i++) {
-			var lvis = (i == node.length-1) && leave_value_in_stack;
+		var last_non_comment = node.length-1;
+		while((last_non_comment>=0) && (node[last_non_comment].is('comment'))) {
+			last_non_comment--;
+		}
+		var j = last_non_comment+1;
+		for(var i=0; i<j; i++) {
+			var lvis = (i == last_non_comment) && leave_value_in_stack;
 			var t = compile_tree(node[i], lvis);
 			// console.log('IN', node[i], 'OUT', t);
 			ret = ret.concat(t);
@@ -455,20 +460,17 @@ function compile_tree(node, leave_value_in_stack) {
 		cmd('push_str', '');
 		for(var i=0; i<node.length; i++) {
 			var elt = node[i];
-			if(elt.is('string')) {
-				cmd('comment', 'string_container string start')
-				cmd('push_str', elt.data);
-				cmd('push_str', '__add');
-				cmd('get_var');
-				cmd('invoke2');
-				cmd('comment', 'string_container string end')
-				continue;
-			}
 			cmd('comment', 'string_container tree start')
-			cmd('push_arr');
+			if(!elt.is('string')) {
+				// Only invoke String() for non-immediate strings
+				cmd('push_arr');
+			}
 			concat(compile_tree(elt, true))
-			concat(compile_push());
-			concat(compile_invoke_pos_args_in_stack('String'));
+			if(!elt.is('string')) {
+				// Only invoke String() for non-immediate strings
+				concat(compile_push());
+				concat(compile_invoke_pos_args_in_stack('String'));
+			}
 			cmd('push_str', '__add');
 			cmd('get_var');
 			cmd('invoke2');
