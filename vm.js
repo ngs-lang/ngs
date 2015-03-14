@@ -218,7 +218,6 @@ function VM() {
 VM.prototype.initialize = function() {
 	this.code = [];
 	this.global_scope = {};
-	this.types = {};
 	this.runnable_contexts = [];
 	this.suspended_contexts = [];
 	this.finished_contexts = [];

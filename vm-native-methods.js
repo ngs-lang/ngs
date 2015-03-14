@@ -213,26 +213,6 @@ function register_native_methods() {
 		return scope.s;
 	});
 
-	this.registerNativeMethod('__deftype', p_args('name', 'String', 'fields', null), function vm___deftype(scope, vm) {
-		// TODO: maybe allow redefining type (for extending)
-		var name = get_str(scope.name);
-		var fields_defs = get_arr(scope.fields);
-		// console.log('__deftype', name, fields_defs);
-		var order = [];
-		var fields = {};
-		for(var i=0; i<fields_defs.length; i++) {
-			fields[fields_defs[i][0]] = fields_defs[i][1];
-			order.push(fields_defs[i][0]);
-		}
-		vm.types[name] = {
-			name: name,
-			fields: fields,
-			order: order,
-		}
-		// console.log(util.inspect(vm.types, {depth: 20}));
-		return 'DUNNO-YET';
-	});
-
 	this.registerNativeMethod('__get_lexical_scopes', p_args(), function vm___get_lexical_scopes() {
 		// Need lexical scopes of caller, not ours.
 		// Dirty scopes hack

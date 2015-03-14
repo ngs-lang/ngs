@@ -39,6 +39,5 @@ load(process.argv[2], start_rule);
 v.start(function ngs_runtime_script_finish_callback() {
 	if(process.env.NGS_DEBUG_FINISH) {
 		console.log('finished_contexts', util.inspect(v.finished_contexts, {'depth': 10}));
-		console.log('types', v.types);
 	}
 });
