@@ -322,12 +322,23 @@ comma_separated_kv "comma-separated kv" =
   k:expr space? ":" space? v:expr space? { return N('kv_list', [N('kv', [k,v])]); }
 
 lambda "Lambda" =
-  ("lambda" / "F") name:(space+ varname)? space? "(" space? params:parameters? space? ")" space? code:CCEXPR {
-    return N('lambda', [params || N('parameters', []), code], name ? name[1].data : null);
+  ("lambda" / "F") name:(space+ identifier)? space? "(" space? params:parameters? space? ")" space? code:CCEXPR {
+    return N('lambda', [name?name[1]:N('string', [], ''), params || N('parameters', []), code]);
   }
 
 function_definition =
-  "defun" space+ name:varname space? "(" space? params:parameters? space? ")" space? code:CCEXPR { return N('defun', [N('lambda', [params || N('parameters', []), code], name.data)], name.data); }
+  "defun" global:(space+ "global")? space+ name:identifier space? "(" space? params:parameters? space? ")" space? code:CCEXPR {
+    return N(
+      'defun',
+      [name, N('lambda', [name, params || N('parameters', []), code])],
+      {global: !!global}
+    );
+  }
+
+identifier =
+  v:varname { return N('string', [], v.data) } /
+  string
+
 
 parameters "Function parameters list" =
   p:parameter space? "," space? ps:parameters {

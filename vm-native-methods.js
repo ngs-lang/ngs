@@ -240,26 +240,16 @@ function register_native_methods() {
 	});
 
 	this.registerNativeMethod('__lambda', p_args('scopes', 'Scopes', 'args', 'Array', 'ip', 'Number', 'name', 'String'), function vm___lambda(scope) {
-		// console.log('__lambda', scope.scopes.length, scope.ip);
 		return NgsValue('Lambda', {scopes: scope.scopes, args: scope.args, code_ptr: scope.ip, name: scope.name});
 	});
-	// this.registerNativeMethod('__get_attr', p_args('l', 'Lambda', 'attr', 'String'), function vm___get_attr(scope) {
-	// 	var a = get_str(scope.attr);
-	// 	var l = get_lmb(scope.l);
-	// 	if(a === 'args') {
-	// 		return get_arr(l)[1];
-	// 	}
-	// 	this.thr(to_ngs_object(NgsValue('programming', 'Lambda object does not have attribute ' + a]));
-	// 	return;
-	// });
 
-	this.registerNativeMethod('__register_method', p_args('lambda', 'Lambda', 'name', 'String'), function vm___register_method(scope) {
+	this.registerNativeMethod('__register_method', p_args('lambda', 'Lambda', 'name', 'String', 'global', 'Bool'), function vm___register_method(scope) {
 		var name = get_str(scope.name);
 		// The method is created in _caller_ lexical scops, not in ours.
 		// Dirty lexical_scopes hack start
 		var t = this.frame.scopes;
 		this.frame.scopes = this.getCallerLexicalScopes();
-		this.registerMethod(name, scope.lambda);
+		this.registerMethod(name, scope.lambda, get_boo(scope.global));
 		this.frame.scopes = t;
 		// Dirty lexical_scopes hack end
 		return scope.lambda;

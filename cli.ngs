@@ -2,8 +2,8 @@ if not(stdout.istty()) {
 	throw ["runtime", "CLI needs stdout to be a TTY"]
 }
 
-# require("ngs/widgets.ngs")
-# echo(WidgetsSeq())
+require("ngs/widgets.ngs")
+echo(WidgetsSeq())
 
 # TODO: load cli-specific user ini .ngs files
 # TODO: history file

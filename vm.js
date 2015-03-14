@@ -354,8 +354,14 @@ VM.prototype.unsuspend_context = function(ctx) {
 	}.bind(this), 0);
 }
 
-Context.prototype.registerMethod = function(name, f) {
-	var r = this.find_var_lexical_scope(name);
+Context.prototype.registerMethod = function(name, f, global) {
+	var r;
+	if(global) {
+		var s = this.frame.scopes[0];
+		r = [_.has(s, name), s];
+	} else {
+		r = this.find_var_lexical_scope(name);
+	}
 	if(!r[0]) {
 		r[1][name] = NgsValue('Array', [f]);
 		return;

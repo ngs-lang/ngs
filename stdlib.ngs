@@ -414,6 +414,17 @@ defun inherits(child:String, parent:String) {
 	}
 	__TYPES[child]['inherits'].push(parent)
 }
+
+defun mktype(type:String, parents:Array) {
+	parents.each(F(p) { inherits(type, p) })
+	defun global "$type"() {
+		obj(type).init()
+	}
+}
+
+defun mktype(type:String, parent:String) {
+	mktype(type, [parent])
+}
 # ----- Types sugar - end -----
 
 # Should be defined for files fetched from remote locations, maybe

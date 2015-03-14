@@ -364,21 +364,22 @@ function compile_tree(node, leave_value_in_stack) {
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('defun')) {
-		concat_tree(0, true);
-		cmd('push_str', node.data);
+		concat_tree(1, true); // Lambda
+		concat_tree(0, true); // Name
+		cmd('push_boo', node.data.global);
 		cmd('push_str', '__register_method');
 		cmd('get_var');
-		cmd('invoke2');
+		cmd('invoke3');
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('lambda')) {
-		var code = compile_tree(node[1], true);
+		var code = compile_tree(node[2], true);
 		code = code.concat([['ret']]);
 		concat(compile_invoke_no_args('Array'));
 		// Lexical scopes
 		concat(compile_invoke_no_args('__get_lexical_scopes'));
 		concat(compile_push());
-		concat(transform_args(node[0]));
+		concat(transform_args(node[1]));
 		concat(compile_push());
 		// IP
 		cmd('push_ip');
@@ -389,7 +390,7 @@ function compile_tree(node, leave_value_in_stack) {
 		cmd('get_var');
 		cmd('invoke2');
 		concat(compile_push());
-		cmd('push_str', node.data ? node.data : '');
+		concat_tree(0, true);
 		concat(compile_push());
 		concat(compile_invoke_pos_args_in_stack('__lambda'));
 		return pop_if_needed(ret, leave_value_in_stack);
