@@ -155,6 +155,11 @@ var code_vs_stack = [
 	// TODO: check "$(run_something x y)"
 	['{ x=1; y=2; "$x\\n\\u01E2\\U000001E2\\.\\"${y}${x+y}" }', ['1\nǢǢ."23']],
 
+	// *** Check matcing of "F" type ***
+	['{defun f(x) {1}; defun f(cb:F) {2}; f(F(x) {3}) }', [2]],
+	['{defun f(x) {1}; defun f(cb:F) {2}; f(f) }', [2]],
+	['{defun f(x) {1}; defun f(cb:F) {2}; f(3) }', [1]],
+
 ];
 
 var code_vs_spawn_args = [

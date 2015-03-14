@@ -396,6 +396,25 @@ Context.prototype.type_types = function(type_name, ret) {
 	return ret;
 }
 
+Context.prototype.is_callable = function(v, max_depth_one) {
+	var _types = this.type_types(get_type(v));
+	if(_.has(_types, 'Lambda')) {
+		return true;
+	}
+	if(max_depth_one) {
+		return false;
+	}
+	if(_.has(_types, 'Array')) {
+		// XXX: Not very correct, might have user-defined __get_item()
+		var a = get_arr(v);
+		if(a.length == 0) {
+			return false;
+		}
+		var elt = a[a.length-1];
+		return this.is_callable(elt, true);
+	}
+}
+
 function match_params(ctx, lambda, args, kwargs) {
 	var l = get_lmb(lambda);
 	if(l.args instanceof Args) {
@@ -435,8 +454,14 @@ function match_params(ctx, lambda, args, kwargs) {
 			}
 			if(cur_param_type) {
 				var tt = ctx.type_types(get_type(p[positional_idx]));
-				if(!_.has(tt, cur_param_type)) {
-					return [false, {}, 'pos args type mismatch at ' + positional_idx];
+				if(cur_param_type == 'F') {
+					if(!ctx.is_callable(p[positional_idx])) {
+						return [false, {}, 'pos args type mismatch at ' + positional_idx];
+					}
+				} else {
+					if(!_.has(tt, cur_param_type)) {
+						return [false, {}, 'pos args type mismatch at ' + positional_idx];
+					}
 				}
 			}
 			scope[cur_param_name] = p[positional_idx++];

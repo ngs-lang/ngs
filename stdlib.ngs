@@ -62,11 +62,11 @@ defun __eq(a:Hash, b:Hash) {
 	all(a.keys(), F(k) { a[k] == b[k] })
 }
 
-defun map(a:Array, mapper, *args) {
+defun map(a:Array, mapper:F, *args) {
 	a.len().map(F(i) { mapper(a[i], *args) })
 }
 
-defun map(n:Number, mapper, *args) {
+defun map(n:Number, mapper:F, *args) {
 	ret = []
 	for(i=0;i<n;i=i+1) {
 		ret.push(mapper(i, *args))
@@ -74,17 +74,17 @@ defun map(n:Number, mapper, *args) {
 	ret
 }
 
-defun map(h:Hash, mapper, *args) {
+defun map(h:Hash, mapper:F, *args) {
 	h.keys().map(F(k) { mapper(k, h[k], *args) })
 }
 
-defun reduce(a:Array, start, reducer) {
+defun reduce(a:Array, start, reducer:F) {
 	acc = start
 	a.each(F(x) { acc = reducer(acc, x) })
 	acc
 }
 
-defun each(a:Array, processor, *args) {
+defun each(a:Array, processor:F, *args) {
 	j = a.len()
 	for(i=0;i<j;i=i+1) {
 		processor(a[i], *args)
@@ -98,7 +98,7 @@ defun each(n:Number, processor, *args) {
 	}
 }
 
-defun any(a:Array, predicate, *args) {
+defun any(a:Array, predicate:F, *args) {
 	j = a.len()
 	for(i=0;i<j;i=i+1) {
 		if predicate(a[i], *args) {
@@ -108,7 +108,7 @@ defun any(a:Array, predicate, *args) {
 	false
 }
 
-defun all(a:Array, predicate, *args) {
+defun all(a:Array, predicate:F, *args) {
 	j = a.len()
 	for(i=0;i<j;i=i+1) {
 		if not(predicate(a[i], *args)) {
@@ -118,11 +118,11 @@ defun all(a:Array, predicate, *args) {
 	true
 }
 
-defun none(a:Array, predicate, *args) {
+defun none(a:Array, predicate:F, *args) {
 	not(any(a, predicate, *args))
 }
 
-defun filter(a:Array, predicate, *args) {
+defun filter(a:Array, predicate:F, *args) {
 	ret = []
 	j = a.len()
 	for(i=0;i<j;i=i+1) {
