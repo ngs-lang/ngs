@@ -385,5 +385,5 @@ cases "Match case clauses" =
 
 case "Case clause" =
   "(" space? params:parameters? space? ")" space? code:CCEXPR {
-    return N('lambda', [params || N('parameters', []), code]);
+    return N('lambda', [N('string', [], 'match_clause'), params || N('parameters', []), code]);
   }
