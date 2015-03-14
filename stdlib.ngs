@@ -97,7 +97,7 @@ defun each(a:Array, processor:F, *args) {
 	a
 }
 
-defun each(n:Number, processor, *args) {
+defun each(n:Number, processor:F, *args) {
 	for(i=0;i<n;i=i+1) {
 		processor(i, *args)
 	}
