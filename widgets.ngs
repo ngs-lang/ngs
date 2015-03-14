@@ -1,0 +1,1 @@
+mktype('WidgetsSeq', 'Array')

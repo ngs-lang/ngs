@@ -348,7 +348,7 @@ function register_native_methods() {
 		// TODO: handle encoding later
 		return NgsValue('String', fs.readFileSync(get_str(scope.f), {encoding: 'UTF-8'}));
 	})
-	this.registerNativeMethod('__tilde', p_args('s', 'String', 'regex', 'String'), function vm___tilde(scope) {
+	this.registerNativeMethod('__match', p_args('s', 'String', 'regex', 'String'), function vm___tilde(scope) {
 		var r = new RegExp(get_str(scope.regex));
 		return to_ngs_object(get_str(scope.s).match(r));
 	})
