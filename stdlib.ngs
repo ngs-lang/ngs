@@ -25,9 +25,8 @@ defun not(x) { if x {false}{true} }
 #   Sequence will have method len() among others.
 #   defun Bool(s:Sequence) { s.len() > 0 }
 
-defun Bool(a:Array)  { a.len() > 0 }
+defun Bool(s:Seq)    { s.len() > 0 }
 defun Bool(h:Hash)   { h.len() > 0 }
-defun Bool(s:String) { s.len() > 0 }
 
 defun Hash(a:Array) {
 	ret = {}
@@ -39,11 +38,11 @@ defun Hash(a:Array, v) {
 	a.map(F(x) {[x,v]}).Hash()
 }
 
-defun zip(a:Array, b:Array) {
+defun zip(a:Seq, b:Seq) {
 	l = len(a)
 
 	if l != b.len() {
-		throw ['args', 'Zip with different arrays length']
+		throw ['args', 'Zip with different Seqs length']
 	}
 
 	l.map(F(i) { [a[i], b[i]] })
@@ -53,6 +52,7 @@ defun __neq(a, b) {
 	not(a==b)
 }
 
+# Don't make it Seq. It causes infinite recursion I guess.
 defun __eq(a:Array, b:Array) {
 	a.len() == b.len()
 	and
@@ -67,8 +67,8 @@ defun __eq(a:Hash, b:Hash) {
 	all(a.keys(), F(k) { a[k] == b[k] })
 }
 
-defun map(a:Array, mapper:F, *args) {
-	a.len().map(F(i) { mapper(a[i], *args) })
+defun map(s:Seq, mapper:F, *args) {
+	s.len().map(F(i) { mapper(s[i], *args) })
 }
 
 defun map(n:Number, mapper:F, *args) {
@@ -83,18 +83,18 @@ defun map(h:Hash, mapper:F, *args) {
 	h.keys().map(F(k) { mapper(k, h[k], *args) })
 }
 
-defun reduce(a:Array, start, reducer:F) {
+defun reduce(s:Seq, start, reducer:F) {
 	acc = start
-	a.each(F(x) { acc = reducer(acc, x) })
+	s.each(F(x) { acc = reducer(acc, x) })
 	acc
 }
 
-defun each(a:Array, processor:F, *args) {
-	j = a.len()
+defun each(s:Seq, processor:F, *args) {
+	j = s.len()
 	for(i=0;i<j;i=i+1) {
-		processor(a[i], *args)
+		processor(s[i], *args)
 	}
-	a
+	s
 }
 
 defun each(n:Number, processor:F, *args) {
@@ -103,53 +103,53 @@ defun each(n:Number, processor:F, *args) {
 	}
 }
 
-defun any(a:Array, predicate:F, *args) {
-	j = a.len()
+defun any(s:Seq, predicate:F, *args) {
+	j = s.len()
 	for(i=0;i<j;i=i+1) {
-		if predicate(a[i], *args) {
+		if predicate(s[i], *args) {
 			return true
 		}
 	}
 	false
 }
 
-defun all(a:Array, predicate:F, *args) {
-	j = a.len()
+defun all(s:Seq, predicate:F, *args) {
+	j = s.len()
 	for(i=0;i<j;i=i+1) {
-		if not(predicate(a[i], *args)) {
+		if not(predicate(s[i], *args)) {
 			return false
 		}
 	}
 	true
 }
 
-defun none(a:Array, predicate:F, *args) {
-	not(any(a, predicate, *args))
+defun none(s:Seq, predicate:F, *args) {
+	not(any(s, predicate, *args))
 }
 
-defun filter(a:Array, predicate:F, *args) {
+defun filter(s:Seq, predicate:F, *args) {
 	ret = []
-	j = a.len()
+	j = s.len()
 	for(i=0;i<j;i=i+1) {
-		if predicate(a[i], *args) {
-			ret.push(a[i])
+		if predicate(s[i], *args) {
+			ret.push(s[i])
 		}
 	}
 	ret
 }
 
-defun filter(a:Array) {
-	a.filter(F(x) { x != null })
+defun filter(s:Seq) {
+	s.filter(F(x) { x != null })
 }
 
-defun __get_item(a:Array, idx:Number) {
+defun __get_item(s:Seq, idx:Number) {
 	guard idx < 0
-	l = a.len()
-	a[l+idx]
+	l = s.len()
+	s[l+idx]
 }
 
-defun __get_item(a:Array, idxs:Array) {
-	idxs.map(F(i) { a[i] })
+defun __get_item(s:Seq, idxs:Array) {
+	idxs.map(F(i) { s[i] })
 }
 
 defun __get_item(a:Hash, keys:Array) {
@@ -165,17 +165,21 @@ defun __get_attr(a:Array, attr:String) {
 	return map(a, __get_attr, attr)
 }
 
-defun __in(v, a:Array) {
-	any(a, __eq, v)
+defun __in(v, s:Seq) {
+	any(s, __eq, v)
 }
 
 defun __in(v, h:Hash) {
 	v in h.keys()
 }
 
+# TODO: defun __in(substring, string)
+
 defun __not_in(*args) {
 	not(__in(*args))
 }
+
+defun has(container, item) {item in container}
 
 
 defun min(a:Number, b:Number) { if a<b {a}{b} }
@@ -288,20 +292,20 @@ defun read(f:String) {
 	parse_file(f, content).meta('file', f)
 }
 
-defun one(a:Array) {
-	if a.len() != 1 {
+defun one(s:Seq) {
+	if s.len() != 1 {
 		throw ['data', "Expected array with exactly one item but had ${a.len()}", a]
 	}
-	a[0]
+	s[0]
 }
 
 # Abstract usage example:
 # servers.filter(F(x) {'unicorn' in x.tags}).one('Unicorn server').create_image('Unicorn backup')
-defun one(a:Array, s:String) {
-	if a.len() != 1 {
-		throw ['data', "Expected array with exactly one $s but had ${a.len()}", a]
+defun one(s:Seq, msg:String) {
+	if s.len() != 1 {
+		throw ['data', "Expected array with exactly one $msg but had ${a.len()}", a]
 	}
-	a[0]
+	s[0]
 }
 
 # ----- Output helpers - start -----
@@ -315,11 +319,11 @@ defun String(p:Process) {
 	p.stdout
 }
 
-defun join(a:Array, sep:String) {
+defun join(s:Seq, sep:String) {
 	ret = ''
-	j = a.len()
+	j = s.len()
 	for(i=0;i<j;i=i+1) {
-		ret = ret + String(a[i])
+		ret = ret + String(s[i])
 		if i < j - 1 {
 			ret = ret + sep
 		}
@@ -397,13 +401,13 @@ defun has_meta(x, k:String) {
 # ----- Meta sugar - end -----
 
 # ----- __get_item sugar - start -----
-defun first(a)  { a[0] }
-defun second(a) { a[1] }
-defun third(a)  { a[2] }
-defun fourth(a) { a[3] }
-defun fifth(a)  { a[4] }
+defun first(s:Seq)  { s[0] }
+defun second(s:Seq) { s[1] }
+defun third(s:Seq)  { s[2] }
+defun fourth(s:Seq) { s[3] }
+defun fifth(s:Seq)  { s[4] }
 
-defun last(a)   { a[-1] }
+defun last(s:Seq)   { s[-1] }
 # ----- __get_item sugar - end -----
 
 # ----- Types sugar - start -----

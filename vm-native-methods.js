@@ -189,12 +189,8 @@ function register_native_methods() {
 		return NgsValue('String', s[i]);
 	});
 
-	this.registerNativeMethod('len', p_args('a', 'Array'), function vm_len_p_arr(scope) {
-		return NgsValue('Number', get_arr(scope.a).length);
-	});
-
-	this.registerNativeMethod('len', p_args('s', 'String'), function vm_len_p_str(scope) {
-		return NgsValue('Number', get_str(scope.s).length);
+	this.registerNativeMethod('len', p_args('s', 'Seq'), function vm_len_p_seq(scope) {
+		return NgsValue('Number', get_seq(scope.s).length);
 	});
 
 	this.registerNativeMethod('len', p_args('h', 'Hash'), function vm_len_p_hsh(scope) {
@@ -505,7 +501,10 @@ function register_native_methods() {
 		scope.h.data = {};
 		return scope.h;
 	});
-	this.set_var('__TYPES', to_ngs_object({}));
+	this.set_var('__TYPES', to_ngs_object({
+		'String': {'inherits': ['Seq']},
+		'Array': {'inherits': ['Seq']},
+	}));
 	this.registerNativeMethod('Regexp', p_args('pattern', 'String', 'flags', 'String'), function vm_regexp_p_str_str(scope) {
 		return NgsValue('Regexp', new RegExp(get_str(scope.pattern), get_str(scope.flags)));
 	});

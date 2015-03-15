@@ -46,6 +46,9 @@ var code_snippets = [
 	'{ 1 in [0,1] }',
 	'{ not(2 in [0,1]) }',
 	'{ 2 not in [0,1] }',
+	'{ [0,1].has(1) }',
+	'{ [0,1].has(2).not() }',
+	'{ "abc".has("b") }',
 	// read json
 	'{ c = read("test/test.json"); c.did_it }',
 	// spawn()
