@@ -508,6 +508,16 @@ function register_native_methods() {
 	this.registerNativeMethod('Regexp', p_args('pattern', 'String', 'flags', 'String'), function vm_regexp_p_str_str(scope) {
 		return NgsValue('Regexp', new RegExp(get_str(scope.pattern), get_str(scope.flags)));
 	});
+	this.registerNativeMethod('slice', p_args('s', 'String', 'start', 'Number', 'count', 'Number'), function vm_slice_p_str_num_num(scope) {
+		var start = get_num(scope.start);
+		var count = get_num(scope.count);
+		return NgsValue('String', get_seq(scope.s).slice(start, start+count));
+	});
+	this.registerNativeMethod('slice', p_args('a', 'Array', 'start', 'Number', 'count', 'Number'), function vm_slice_p_arr_num_num(scope) {
+		var start = get_num(scope.start);
+		var count = get_num(scope.count);
+		return NgsValue('Array', get_seq(scope.a).slice(start, start+count));
+	});
 }
 
 exports.Args = Args.bind(null);

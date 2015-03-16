@@ -185,7 +185,7 @@ defun has(container, item) {item in container}
 defun min(a:Number, b:Number) { if a<b {a}{b} }
 defun max(a:Number, b:Number) { if a<b {b}{a} }
 
-defun startsWith(s:String, pfx:String) {
+defun startsWith(s:Seq, pfx:Seq) {
 	if len(s) < len(pfx) {
 		return false
 	}
@@ -196,6 +196,30 @@ defun startsWith(s:String, pfx:String) {
 		}
 	}
 	true
+}
+
+defun endsWith(s:Seq, sfx:Seq) {
+	if len(s) < len(sfx) {
+		return false
+	}
+	l = sfx.len()
+	sidx = s.len() - l
+	for(i=0;i<l;i=i+1) {
+		if s[sidx+i] != sfx[i] {
+			return false
+		}
+	}
+	true
+}
+
+# Not sure, maybe Seq? Need use cases. For String it's: fname - '.txt' + '.bak'
+defun __sub(s:String, sfx:String) {
+	if s.endsWith(sfx) {
+		s.slice(0, s.len() - sfx.len())
+	} else {
+		# throw maybe?
+		s
+	}
 }
 
 # XXX: Warning: should be per Context or it will bite you

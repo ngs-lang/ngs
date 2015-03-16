@@ -160,6 +160,10 @@ var code_vs_stack = [
 	['{defun f(x) {1}; defun f(cb:F) {2}; f(f) }', [2]],
 	['{defun f(x) {1}; defun f(cb:F) {2}; f(3) }', [1]],
 
+	// *** slice ***
+	['{"abcd".slice(1,2)}', ["bc"]],
+	['{[1,2,3,4].slice(2,2)}', [[3,4]]],
+
 ];
 
 var code_vs_spawn_args = [

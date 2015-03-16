@@ -42,6 +42,11 @@ var code_snippets = [
 	// startsWith(...)
 	'{ startsWith("abc", "a") }',
 	'{ not(startsWith("cd", "cde")) }',
+	// endsWith(...)
+	'{ endsWith("abc", "c") }',
+	'{ not(endsWith("abc", "bd")) }',
+	// String - String
+	'{ "abc.txt" - ".txt" == "abc" }',
 	// in, not in
 	'{ 1 in [0,1] }',
 	'{ not(2 in [0,1]) }',
