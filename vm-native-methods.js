@@ -44,27 +44,24 @@ function Args() {
 };
 
 
-Args.prototype.general = function(name, typ, arg_type) {
-	this.args.push(
-		NgsValue(
-			'Array',
-			[
-				NgsValue('String', name),
-				NgsValue('String', arg_type),
-				NgsValue(typ ? 'String' : 'Null', typ)
-			]
-		)
-	);
+Args.prototype.general = function(name, typ, arg_type, dflt) {
+	var r = [
+		NgsValue('String', name),
+		NgsValue('String', arg_type),
+		NgsValue(typ ? 'String' : 'Null', typ),
+	];
+	if(dflt) { r.push(dflt); }
+	this.args.push(NgsValue('Array',r));
 	return this;
 }
 Args.prototype.pos = function(name, typ) {
 	return this.general(name, typ, 'arg_pos')
 }
 Args.prototype.rest_pos = function(name) {
-	return this.general(name, 'Array' /* not used */, 'arg_rest_pos')
+	return this.general(name, 'Array' /* not used */, 'arg_rest_pos');
 }
-Args.prototype.named = function(name, typ) {
-	return this.general(name, typ, 'arg_nam')
+Args.prototype.named = function(name, typ, dflt) {
+	return this.general(name, typ, 'arg_nam', dflt);
 }
 Args.prototype.get = function() {
 	return NgsValue('Array', this.args);
@@ -517,6 +514,9 @@ function register_native_methods() {
 		var start = get_num(scope.start);
 		var count = get_num(scope.count);
 		return NgsValue('Array', get_seq(scope.a).slice(start, start+count));
+	});
+	this.registerNativeMethod('ord', p_args('s', 'String'), function vm_ord_p_str(scope) {
+		return NgsValue('Number', get_str(scope.s).charCodeAt(0));
 	});
 }
 

@@ -14,6 +14,65 @@ defun __mul(s:String, n:Number) {
 
 defun __match(s:String, n:Number) { s.len() == n }
 
+defun strip(s:Seq, elts:Seq) {
+	l = s.len()
+	i = 0
+	while i < l and s[i] in elts {
+		i = i + 1
+	}
+	j = l-1
+	while j > i and s[j] in elts {
+		j = j - 1
+	}
+	s.slice(i, j-i+1)
+}
+
+defun strip(s:String) {
+	strip(s, " \t\r\n")
+}
+
+# Not the most efficient :/
+defun pos(s:Seq, subseq:Seq, start:Number=0) {
+	sl = s.len()
+	ssl = subseq.len()
+	if sl < ssl {
+		return null
+	}
+	j = sl - ssl + 1
+
+	for(i=start; i<j; i=i+1) {
+		if slice(s, i, ssl) == subseq {
+			return i
+		}
+	}
+	return null
+}
+
+defun split(s:Seq, delim:Seq) {
+	sl = s.len()
+	dl = delim.len()
+	ret = []
+	start = 0
+	while (i=s.pos(delim, start)) != null {
+		ret.push(s.slice(start, i-start))
+		start = i + dl
+	}
+	if(start<sl) {
+		ret.push(s.slice(start, sl-start))
+	}
+	ret
+}
+
+defun split(s:String) { split(s, ' ') }
+
+defun Number(s:String) {
+	# TODO: checks, negatives, floats, base
+	ord_zero = ord('0')
+	ret = 0
+	s.each(F(ch) { ret = ret * 10 + ord(ch) - ord_zero })
+	ret
+}
+
 # ----- String functions - end -----
 
 defun __match(a:Array, n:Number) { a.len() == n }

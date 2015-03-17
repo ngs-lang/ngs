@@ -45,8 +45,6 @@ var code_snippets = [
 	// endsWith(...)
 	'{ endsWith("abc", "c") }',
 	'{ not(endsWith("abc", "bd")) }',
-	// String - String
-	'{ "abc.txt" - ".txt" == "abc" }',
 	// in, not in
 	'{ 1 in [0,1] }',
 	'{ not(2 in [0,1]) }',
@@ -78,6 +76,11 @@ var code_snippets = [
 	'{ a=1; a.meta("x", 2); a.meta("y", 3) == a and a.meta("x") == 2 and a.has_meta("x") }',
 	// String
 	'{ String({"x": 7}) == "{x: 7}" }',
+	'{ "abc.txt" - ".txt" == "abc" }',
+	'{ " abc\\n\\n".strip() == "abc" }',
+	'{ split("a::bc::d", "::") == ["a", "bc", "d"] }', // split(Seq, Seq), uses pos(Seq, Seq)
+	'{ split("a bc de") == ["a", "bc", "de"] }', // split(String)
+	'{ Number("123") == 123 }', // Number(String), uses native ord()
 ];
 
 // console.log("+ Loading stdlib");

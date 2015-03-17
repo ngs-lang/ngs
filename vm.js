@@ -431,26 +431,38 @@ function match_params(ctx, lambda, args, kwargs) {
 	var p = get_arr(args);
 	var n = get_hsh(kwargs);
 	for(var i=0; i<params.length; i++) {
+		// params: 0:name, 1:mode, 2:type, 3:default_value
 		var cur_param = get_arr(params[i]);
 		var cur_param_name = get_str(cur_param[0]);
 		var cur_param_mode = get_str(cur_param[1]);
-		var cur_param_type;
+		var cur_param_default;
+		// console.log('D', cur_param_default, cur_param);
 
 		if(cur_param_mode === 'arg_rest_pos') {
 			scope[cur_param_name] = NgsValue('Array', p.slice(i));
 			positional_idx += (p.length - i);
 			break;
 		}
-		if(get_type(cur_param[2]) !== 'Null') {
-			cur_param_type = get_str(cur_param[2]);
-		} else {
-			cur_param_type = null;
+		if(cur_param_mode == 'arg_nam') {
+			if(p.length-1 < positional_idx) {
+				scope[cur_param_name] = cur_param[3]; // param default value
+				continue;
+			}
+			cur_param_mode = 'arg_pos';
 		}
-		// console.log('params', i, cur_param_name, cur_param_mode);
 		if(cur_param_mode == 'arg_pos') {
+			var cur_param_type;
+
 			if(p.length-1 < positional_idx) {
 				return [false, {}, 'not enough pos args'];
 			}
+
+			if(get_type(cur_param[2]) !== 'Null') {
+				cur_param_type = get_str(cur_param[2]);
+			} else {
+				cur_param_type = null;
+			}
+
 			if(cur_param_type) {
 				var tt = ctx.type_types(get_type(p[positional_idx]));
 				if(cur_param_type == 'F') {

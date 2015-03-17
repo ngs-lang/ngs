@@ -1,1 +1,26 @@
+mktype('ScreenManager', 'Hash')
 mktype('WidgetsSeq', 'Array')
+
+defun ScreenManager(indev:Stream, outdev:Stream) {
+	sm = __super()
+	sm.init(indev, outdev)
+}
+
+defun init(sm:ScreenManager, indev:Stream, outdev:Stream) {
+	sm.indev = indev
+	sm.outdev = outdev
+	sm.updateDimensions()
+	sm
+}
+
+defun updateDimensions(sm:ScreenManager) {
+	# TODO: check why does not work with stdin. Is it connected?
+	dims = $(stty size -F /dev/tty).stdout.strip().split().map(Number)
+	sm.lines = dims[0]
+	sm.cols = dims[1]
+	sm
+}
+
+defun String(sm:ScreenManager) {
+	"<ScreenManager id=${sm.id()} lines=${sm.lines} cols=${sm.cols}>"
+}

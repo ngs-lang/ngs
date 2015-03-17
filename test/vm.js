@@ -164,6 +164,9 @@ var code_vs_stack = [
 	['{"abcd".slice(1,2)}', ["bc"]],
 	['{[1,2,3,4].slice(2,2)}', [[3,4]]],
 
+	// *** default parameters values
+	['{ defun f(x,y=2) { [x,y] }; [f(1), f(1,3)] }', [[[1, 2], [1, 3]]]],
+
 ];
 
 var code_vs_spawn_args = [

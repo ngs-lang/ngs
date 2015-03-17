@@ -3,7 +3,10 @@ if not(stdout.istty()) {
 }
 
 require("ngs/widgets.ngs")
-echo(WidgetsSeq())
+
+sm = ScreenManager(stdin, stdout)
+
+echo(sm)
 
 # TODO: load cli-specific user ini .ngs files
 # TODO: history file
