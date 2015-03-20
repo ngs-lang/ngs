@@ -200,8 +200,7 @@ function register_native_methods() {
 		return scope.s;
 	});
 
-	this.registerNativeMethod('write', p_args('s', 'String'), function vm_echo(scope) {
-		// console.log('ECHO', util.inspect(get_arr(scope.p), {depth: 20}), scope.n);
+	this.registerNativeMethod('write', p_args('s', 'String'), function vm_write(scope) {
 		process.stdout.write(get_str(scope.s));
 		return scope.s;
 	});
@@ -499,8 +498,10 @@ function register_native_methods() {
 		return scope.h;
 	});
 	this.set_var('__TYPES', to_ngs_object({
-		'String': {'inherits': ['Seq']},
 		'Array': {'inherits': ['Seq']},
+		'File': {'inherits': ['Path', 'Hash']},
+		'Path': {'inherits': ['Hash']},
+		'String': {'inherits': ['Seq']},
 	}));
 	this.registerNativeMethod('Regexp', p_args('pattern', 'String', 'flags', 'String'), function vm_regexp_p_str_str(scope) {
 		return NgsValue('Regexp', new RegExp(get_str(scope.pattern), get_str(scope.flags)));
@@ -517,6 +518,42 @@ function register_native_methods() {
 	});
 	this.registerNativeMethod('ord', p_args('s', 'String'), function vm_ord_p_str(scope) {
 		return NgsValue('Number', get_str(scope.s).charCodeAt(0));
+	});
+	this.registerNativeMethod('Path', p_args('s', 'String'), function vm_path_p_str(scope) {
+		return NgsValue('Path', {name: scope.s});
+	});
+	this.registerNativeMethod('File', p_args('s', 'String'), function vm_file_p_str(scope) {
+		return NgsValue('File', {name: scope.s});
+	});
+	// TODO: Make s Seq/buffer maybe.
+	// TODO: Actually appends so 'write' may not be the best name. To consider.
+	this.registerNativeMethod('write', p_args('f', 'File', 's', 'String'), function vm_write_p_fil_str(scope, v) {
+		var filename = get_str(scope.f.data.name);
+		var data = get_str(scope.s);
+		var ctx = this;
+		fs.writeFile(filename, data, {flag: 'a'}, function write_done(err) {
+			// TODO: Error handling
+			// console.log('ERR', err);
+			v.unsuspend_context(ctx);
+		});
+		v.suspend_context();
+		return scope.f;
+	});
+	this.registerNativeMethod('read', p_args('fd', 'Number'), function vm_read_p_num(scope, v) {
+		// TODO: Read specified number of bytes, not 1.
+		var fd = get_num(scope.fd);
+		var ctx = this;
+		var buf = new Buffer(1);
+		// console.log('read()', fd);
+		fs.read(fd, buf, 0, 1, null, function read_done(err, bytesRead, buffer) {
+			// TODO: Error handling
+			// console.log('ERR', err, bytesRead, buffer);
+			ctx.stack.pop();
+			ctx.stack.push(NgsValue('String', ''+buffer));
+			v.unsuspend_context(ctx);
+		});
+		v.suspend_context();
+		return null;
 	});
 }
 

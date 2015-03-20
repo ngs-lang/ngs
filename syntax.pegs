@@ -227,6 +227,7 @@ expr_base "Expression/no-add" =
   return /
   throw /
   number /
+  object_literal /
   string /
   regexp /
   "true" { return N('bool', [], true); } /
@@ -306,6 +307,9 @@ string_contents_common_element =
   "\\u" hex:([0-9A-F][0-9A-F][0-9A-F][0-9A-F]) { return N('string', [], String.fromCharCode(parseInt(hex.join(''), 16))); } /
   "\\U" hex:([0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F]) { return N('string', [], String.fromCharCode(parseInt(hex.join(''), 16))); } /
   "\\" ch:. { return N('string', [], ch); }
+
+object_literal "Object literal" =
+  i:identifier s:string { return N('object_literal', [i, s]); }
 
 array_literal "array literal" =
   "[" space? es:comma_separated_expressions? space? ","? space? "]" {

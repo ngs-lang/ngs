@@ -12,7 +12,6 @@ var compile = require('../compile').compile;
 
 var code_snippets = [
 	// string functions
-	'{ "ab" * 3 == "ababab" }',
 	'{ "abcd" ~ 4 }',
 	// __match(Array,Number)
 	'{ [3,4] ~ 2 }',
@@ -72,6 +71,7 @@ var code_snippets = [
 	'{ h={"kk": 7, "xx": 8}; h[["kk"]] == {"kk": 7} }',
 	'{ h={"kk": 7, "xx": 8}; h[["xx"]] != {"kk": 7} }',
 	'{ Hash(["a","b"], "x") == {"a": "x", "b": "x"} }',
+	'{ ["a", "b"].Hash(F(x) { x*2 }) == {"a": "aa", "b": "bb" } }', // also tests String * Number
 	// meta
 	'{ a=1; a.meta("x", 2); a.meta("y", 3) == a and a.meta("x") == 2 and a.has_meta("x") }',
 	// String

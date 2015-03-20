@@ -1,3 +1,5 @@
+# TODO: get rid of /dev/tty references all over the place
+
 mktype('ScreenManager', 'Hash')
 mktype('WidgetsSeq', 'Array')
 
@@ -14,13 +16,51 @@ defun init(sm:ScreenManager, indev:Stream, outdev:Stream) {
 }
 
 defun updateDimensions(sm:ScreenManager) {
-	# TODO: check why does not work with stdin. Is it connected?
-	dims = $(stty size -F /dev/tty).stdout.strip().split().map(Number)
-	sm.lines = dims[0]
-	sm.cols = dims[1]
+	sm.dims = getDimensions()
 	sm
 }
 
 defun String(sm:ScreenManager) {
-	"<ScreenManager id=${sm.id()} lines=${sm.lines} cols=${sm.cols}>"
+	"<ScreenManager id=${sm.id()} lines=${sm.dims[0]} cols=${sm.dims[1]}>"
 }
+
+# --------------- Low level tty handling - start ---------------
+
+defun getDimensions() {
+	# TODO: check why does not work with stdin. Is it connected?
+	# TODO: think how to get "dims = ..." line to be nearly short as bash alternative B
+
+	$(stty size -F /dev/tty).stdout.strip().split().map(Number)
+
+	# Bash alternative A:
+	# t=`stty size -F /dev/tty`
+	# lines=`echo "$t" | awk '{print $1}'`
+	# cols=`echo "$t" | awk '{print $2}'`
+	# Bash alternative B:
+	# dims=($(stty size -F /dev/tty))
+}
+
+# Based on http://stackoverflow.com/questions/2575037/how-to-get-the-cursor-position-in-bash
+defun getCursorPosition() {
+	tty = f'/dev/tty'
+	# defun stty(*args) { $(stty -F $tty $*args) }
+	saved_stty=$(stty -F $tty -g)
+	$(stty -F $tty raw -echo min 0)
+	tty.write('\e[6n')
+	$(sleep '0.01')
+
+	# IFS=';' read -r -d R -a pos;row=$((${pos[0]:2} - 1));col=$((${pos[1]} - 1))
+	ret = 0.read_till('R').strip('\x00\e[').split(';').map(Number) - 1
+
+	$(stty -F $tty $saved_stty)
+	ret
+}
+
+defun setCursorPosition(line, col) {
+	$(tput cup $line $col)
+}
+
+# http://www.tldp.org/HOWTO/Bash-Prompt-HOWTO/x405.html
+tput_cache = ["el", "sc", "rc", "smso", "rmso"].Hash(F(x) { $(tput $x).stdout })
+
+# --------------- Low level tty handling - end ---------------

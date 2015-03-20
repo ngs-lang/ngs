@@ -97,6 +97,10 @@ defun Hash(a:Array, v) {
 	a.map(F(x) {[x,v]}).Hash()
 }
 
+defun Hash(keys:Array, mapper:F, *args) {
+	keys.map(F(x) {[x, mapper(x, *args)]}).Hash()
+}
+
 defun zip(a:Seq, b:Seq) {
 	l = len(a)
 
@@ -141,6 +145,12 @@ defun map(n:Number, mapper:F, *args) {
 defun map(h:Hash, mapper:F, *args) {
 	h.keys().map(F(k) { mapper(k, h[k], *args) })
 }
+
+# defun mapv(h:Hash, mapper:F, *args) {
+# 	ret = {}
+# 	h.keys().map(F(k) { ret[k] = mapper(h[k], *args) })
+# 	ret
+# }
 
 defun reduce(s:Seq, start, reducer:F) {
 	acc = start
@@ -310,7 +320,7 @@ defun spawn(*args) {
 
 defun spawn(*args) {
 	guard args.map(typeof).any(__neq, 'String')
-	args.map(String).__super()
+	__super(*args.map(String))
 }
 
 # Convert execution of (example) '-f somefile' to 'test -f somefile'
@@ -327,7 +337,7 @@ defun osname() {
 }
 
 defun osname() {
-	guard $(-f /etc/debian_version)
+	guard f'/etc/debian_version'
 	'debian'
 }
 
@@ -399,7 +409,7 @@ defun String(p:Process) {
 	#   Handle stderr
 	#   Handle failed processes
 	#   Handle exit_code
-	p.stdout
+	p.stdout.strip()
 }
 
 defun join(s:Seq, sep:String) {
@@ -536,3 +546,31 @@ defun require(f:String, *args) {
 	lambda_ = load(code)
 	lambda_(*args)
 }
+
+# ----- Files - start -----
+__literal_f = File
+
+# Anything else will break $(ls $f) and probably other stuff
+defun String(f:File) { f.name }
+
+defun Bool(p:Path) { $(-e $p).Bool() }
+defun Bool(f:File) { $(-f $f).Bool() }
+
+defun read_till(fd:Number, tillChar:String) {
+	ret = ''
+	while (ch = fd.read()) != tillChar {
+		ret = ret + ch
+		# echo("<CH:${ch.ord()}>")
+	}
+	ret
+}
+
+# ----- Files - end -----
+
+# TODO: Something like this should work:
+# ['__add', '__sub', '__mul', '__div'].each(F(op) {
+# 	defun "$op"(a:Array, n:Number) { a.map(globals()[op], n) }
+# })
+
+defun __add(a:Array, n:Number) { a.map(__add, n) }
+defun __sub(a:Array, n:Number) { a.map(__sub, n) }

@@ -487,6 +487,20 @@ function compile_tree(node, leave_value_in_stack) {
 		cmd('invoke2');
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
+	if(node.is('object_literal')) {
+		cmd('push_arr');
+		concat_tree(1, true); // Literal string
+		concat(compile_push());
+		cmd('push_hsh');
+		cmd('push_str', '__literal_')
+		concat_tree(0, true); // Name
+		cmd('push_str', '__add');
+		cmd('get_var');
+		cmd('invoke2');
+		cmd('get_var');
+		cmd('invoke');
+		return pop_if_needed(ret, leave_value_in_stack);
+	}
 	if(node.node_type) {
 		throw "Don't know how to compile type '" + node.node_type + "'";
 	}
