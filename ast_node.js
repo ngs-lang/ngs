@@ -9,17 +9,18 @@
 
 var _ = require('underscore');
 
-function ASTNode(node_type, sub_nodes, data, precedence) {
+function ASTNode(node_type, offset, sub_nodes, data, precedence) {
 	if(!this) {
-		return new ASTNode(node_type, sub_nodes, data, precedence);
+		return new ASTNode(node_type, offset, sub_nodes, data, precedence);
 	}
-	this.initialize(node_type, sub_nodes, data, precedence);
+	this.initialize(node_type, offset, sub_nodes, data, precedence);
 }
 
 ASTNode.prototype = Object.create(Array.prototype);
 
-ASTNode.prototype.initialize = function(node_type, sub_nodes, data, precedence) {
+ASTNode.prototype.initialize = function(node_type, offset, sub_nodes, data, precedence) {
 	this.node_type = node_type;
+	this.offset = offset;
 	if(data === undefined) {
 		this.data = null;
 	} else {
@@ -59,7 +60,7 @@ ASTNode.prototype.toString = function(depth) {
 	depth = depth || 0;
 	var d = this.data !== null ? ' ' + this.data : '';
 	var p = this.precedence !== null ? ' precedence=' + this.precedence : '';
-	var ret = _repr_depth(depth) + '+ ' + this.node_type + d + p + '\n';
+	var ret = _repr_depth(depth) + '+ ' + this.node_type + ' @' + this.offset + d + p + '\n';
 	for(var i=0; i<this.length; i++) {
 		ret += this[i].toString(depth+1);
 	}
@@ -68,7 +69,7 @@ ASTNode.prototype.toString = function(depth) {
 
 // Array.prototype.concat returns Array object, not ASTNode object
 ASTNode.prototype.concat = function(other) {
-	var ret = new ASTNode(this.node_type, [], this.data);
+	var ret = new ASTNode(this.node_type, this.offset, [], this.data);
 	for(var i=0; i<this.length; i++) {
 		ret[i] = this[i];
 	}
@@ -80,7 +81,7 @@ ASTNode.prototype.concat = function(other) {
 }
 
 ASTNode.prototype.map = function(f) {
-	var ret = new ASTNode(this.node_type, [], this.data, this.precedence);
+	var ret = new ASTNode(this.node_type, this.offset, [], this.data, this.precedence);
 	for(var i=0; i<this.length; i++) {
 		ret[i] = f(this[i]);
 	}

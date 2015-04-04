@@ -189,10 +189,21 @@ Context.prototype.get_var = function(name) {
 	return r[1][name];
 }
 
-Context.prototype.set_var = function(name, val) {
+Context.prototype.set_loc_var = function(name, val) {
 	var var_scope = this.find_var_lexical_scope(name);
+	if(var_scope[1] == this.frame.scopes[0]) {
+		// Do not set global
+		this.frame.scopes[this.frame.scopes.length-1][name] = val;
+		return;
+	}
 	var_scope[1][name] = val;
 }
+
+
+Context.prototype.set_glo_var = function(name, val) {
+	this.frame.scopes[0][name] = val;
+}
+
 
 Context.prototype.getCallerLexicalScopes = function() {
 	// Should only be exposed to internal functions for security reasons.
@@ -335,8 +346,7 @@ VM.prototype.finish_context = function() {
 }
 
 
-VM.prototype.unsuspend_context = function(ctx) {
-	// console.log('UNSUSPEND_CONTEXT', ctx);
+VM.prototype.unsuspend_context = function(ctx, make_it_first) {
 	var i = this.suspended_contexts.indexOf(ctx);
 	if(i === -1) {
 		if(this.runnable_contexts.indexOf(ctx) !== -1) {
@@ -347,7 +357,7 @@ VM.prototype.unsuspend_context = function(ctx) {
 	}
 	this.suspended_contexts.splice(i, 1);
 	ctx.state = 'running';
-	this.runnable_contexts.push(ctx);
+	this.runnable_contexts[make_it_first?'unshift':'push'](ctx);
 	setTimeout(function() {
 		this.mainLoop();
 	}.bind(this), 0);
@@ -485,7 +495,7 @@ function match_params(ctx, lambda, args, kwargs) {
 }
 
 Context.prototype.invoke_or_throw = function(methods, args, kwargs, vm, do_catch) {
-	var status = this.invoke(methods, args, kwargs, vm, do_catch);
+	var status = this.invoke(methods, args, kwargs, vm, do_catch || false);
 	if(!status[0]) {
 		console.log(args);
 		var types = get_arr(args).map(get_type);
@@ -521,7 +531,7 @@ Context.prototype.invoke = function(methods, args, kwargs, vm, do_catch) {
 
 		var old_frame = this.frame;
 		this.frame = new Frame();
-		this.frame.do_catch = do_catch;
+		this.frame.do_catch = do_catch || false;
 		this.frames.push(this.frame);
 		this.frame.scopes = get_scp(lambda.scopes).concat(vars)
 		old_frame.stack_len = this.stack.length;
@@ -603,6 +613,10 @@ VM.prototype.opcodes = {
 		this.finished_contexts.push(this.runnable_contexts.shift());
 	},
 
+	'src_pos': function(offset) {
+		// console.log(offset);
+	},
+
 	// stack: ... -> ... value
 	'push': function(v) {
 		// ideally v is a scalar
@@ -654,12 +668,21 @@ VM.prototype.opcodes = {
 	},
 
 	// stack: ... value varname -> ...
-	'set_var': function() {
+	'set_loc_var': function() {
 		var st = this.context.stack;
 		var name = st.pop();
 		var val = st.pop();
 		name = get_str(name);
-		this.context.set_var(name, val);
+		this.context.set_loc_var(name, val);
+	},
+
+	// stack: ... value varname -> ...
+	'set_glo_var': function() {
+		var st = this.context.stack;
+		var name = st.pop();
+		var val = st.pop();
+		name = get_str(name);
+		this.context.set_glo_var(name, val);
 	},
 
 	// stack: ... args kwargs methods -> ... X

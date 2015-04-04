@@ -1,3 +1,6 @@
+# TODO: load cli-specific user ini .ngs files
+# TODO: history file
+
 if not(stdout.istty()) {
 	throw ["runtime", "CLI needs stdout to be a TTY"]
 }
@@ -5,11 +8,6 @@ if not(stdout.istty()) {
 require("ngs/widgets.ngs")
 
 sm = ScreenManager(stdin, stdout)
-
-echo(sm)
-
-# TODO: load cli-specific user ini .ngs files
-# TODO: history file
 
 # Example of how to remove parts
 # { prompt_contributors = prompt_contributors.filter(F(x) { x.first() != "ver" }) }
@@ -27,6 +25,7 @@ prompt_contributors = [
 ]
 
 supervised_threads = []
+widgets = []
 
 defun cli_make_prompt(vars) {
 	prompt_contributors.map(second).map(F(contributor_func) {
@@ -34,69 +33,18 @@ defun cli_make_prompt(vars) {
 	}).filter().join(" ")
 }
 
-defun cli_widget_for_thread(t:Thread) {
-	ret = []
-	vars = t.locals()
-	ret.push(" " *3 + vars["cli_n"].String() + ": " + vars["cli_input"] + " " * 3) # Original command for the thread
-}
-
-# Widget for a running process.
-# Warning: only works correctly for one (concurrent and total per life-time) running process per Thread
-defun cli_widget_for_thread(t:Thread) {
-	guard "P" in t.locals()
-	ret = __super(t)
-	p = t.locals()["P"]
-	ret.push("PROCESS")
-	if(p.exit_code != null) {
-		ret.push("EXIT CODE: " + p.exit_code.String())
-	}
-	# TODO: only show first few lines and last few lines for large outputs
-	p.stdout.lines().each(F(x) { ret.push("OUT: " + x) })
-	ret
-}
-
-# http://www.tldp.org/HOWTO/Bash-Prompt-HOWTO/x405.html
-cli_tput_cache = ["el", "sc", "rc", "smso", "rmso"].map(F(x) {[x, $(tput $x).stdout]}).Hash()
-
-# Hack. We want "tput ..." commands output to be sent to our stdout automatically.
-defun spawn(*args) {
-	guard args[0] == "tput"
-	p = __super(*args)
-	write(p.stdout)
-	p
-}
-
-defun cli_status_updater() {
-	tput = cli_tput_cache
-	while true {
+defun cli_screen_updater() {
+	while 1 {
 		$(sleep 2)
-		widgets = supervised_threads.map(cli_widget_for_thread)
-		# not used # widgets_lines = reduce(widgets.map(len), 0, __add)
-		write(tput["sc"])
-		$(tput cup 0 0)
-		# start temp
-		if widgets {
-			widgets = [widgets.last()]
-		}
-		# end temp
-		widgets.each(F(w) {
-			j = w.len()
-			for(i=0; i<j; i=i+1) {
-				l = tput["el"] + w[i]
-				if i == 0 { l = tput["smso"] + l + tput["rmso"] }
-				echo(l)
-			}
-		})
-		write(tput["rc"])
+		# sm.echo(widgets)
 	}
 }
 
 defun cli_main() {
-	rl = Readline()
 
 	local_scope = {"x": 7}
 	n = 0
-	status_updater = thread(cli_status_updater.one())
+	screen_updater = thread(cli_screen_updater.one())
 	while true {
 		n = n + 1
 
@@ -105,7 +53,7 @@ defun cli_main() {
 		prompt_vars = {"n": n, "ver": "0.0.1"}
 		prompt = cli_make_prompt(prompt_vars)
 
-		l = rl.read(prompt)
+		l = sm.read(prompt)
 
 		if l == "" {
 			n = n - 1
@@ -119,33 +67,30 @@ defun cli_main() {
 			echo("VARS:", local_scope)
 			continue
 		}
+
 		code = catch compile(l)
-		echo("CODE", code)
+		# echo("CODE", code)
 		if not(code[0]) {
-			echo("ERROR", code[1])
+			# echo("ERROR", code[1])
+			widgets.push(WidgetsSeq().push(OrigCmdWidget(l)).push(ErrorWidget(String(code[1]))))
 			continue
 		}
 		lambda_ = load(code[1]).locals(local_scope)
 
 		t = thread(F() {
 			result = catch lambda_()
-			# if result[0] {
-			# 	if result[1].typeof() == "Process" {
-			# 		echo(result[1])
-			# 	}
-			# 	echo("OK")
-			# } else {
-			# 	echo("FAIL", result[1])
-			# }
 		})
 
 		t.locals()["cli_input"] = l
 		t.locals()["cli_n"] = n
 
 		supervised_threads.push(t)
+		ws = WidgetsSeq().push(OrigCmdWidget(l)).push(StdoutWidget()).push(StderrWidget())
+		widgets.push(ws)
+		sm.echo(widgets)
 	}
 
-	# does not work for now # status_updater.kill()
+	# later # screen_updater.kill()
 
 	rl.close()
 }

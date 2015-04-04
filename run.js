@@ -28,13 +28,10 @@ function load(fname, start_rule) {
 	v.useCode(code);
 }
 
-load('ngs/stdlib.ngs', start_rule);
+// load('ngs/stdlib.ngs', start_rule);
+// load(process.argv[2], start_rule);
 
-if(process.env.NGS_START_CODE) {
-	start_rule = 'top_level_expressions';
-}
-
-load(process.argv[2], start_rule);
+load('ngs/bootstrap.ngs');
 
 v.start(function ngs_runtime_script_finish_callback() {
 	if(process.env.NGS_DEBUG_FINISH) {

@@ -35,7 +35,8 @@ function fix_binops_node(node) {
 				op_precedence = ret[i].precedence;
 			}
 		}
-		ret.splice(op_idx - 1, 3, N('binop', [ret[op_idx-1], ret[op_idx+1]], ret[op_idx].data, -1));
+		// TODO: fix offset later
+		ret.splice(op_idx - 1, 3, N('binop', null, [ret[op_idx-1], ret[op_idx+1]], ret[op_idx].data, -1));
 	}
 	if(ret[0].is('binops')) {
 		ret[0] = fix_binops_node(ret[0]);
@@ -170,13 +171,15 @@ function compile_tree(node, leave_value_in_stack) {
 	function concat_tree(i, lvs) {
 		concat(compile_tree(node[i], lvs));
 	}
+	// cmd('src_pos', node.offset);
+
 	// console.log('node', node, leave_value_in_stack);
 	if(node.is('assignment')) {
 		if(node[0].is('varname')) {
 			var rhs = dup_if_needed(compile_tree(node[1], true), leave_value_in_stack);
 			return rhs.concat([
 				['push_str', node[0].data],
-				['set_var'],
+				[node.data.global ? 'set_glo_var': 'set_loc_var'],
 			]);
 		}
 		throw new Error("Assignment to type " + node[0] + " is not implemented");

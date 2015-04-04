@@ -45,9 +45,9 @@ newline_space = (inline_space? [\n]+ inline_space?)+
 
 commands "commands" =
   space? c:command commands_separator cs:commands {
-	return N('commands', [c]).concat(cs);
+	return N('commands', offset, [c]).concat(cs);
   } /
-  c:command commands_separator? space? { return N('commands', [c]); }
+  c:command commands_separator? space? { return N('commands', offset, [c]); }
 
 commands_separator "Command separator" =
   newline_space /
@@ -67,10 +67,10 @@ command "command" =
   execute_external_prog
 
 hash_comment "# Comment" =
-  inline_space? "#" c:[^\n]+ { return N('comment', [], c.join('')); }
+  inline_space? "#" c:[^\n]+ { return N('comment', offset, [], c.join('')); }
 
 slash_slash_comment "// Comment" =
-  inline_space? "//" c:[^\n]+ { return N('comment', [], c.join('')); }
+  inline_space? "//" c:[^\n]+ { return N('comment', offset, [], c.join('')); }
 
 comment "Any kind of comment" =
   hash_comment /
@@ -78,34 +78,34 @@ comment "Any kind of comment" =
 
 if "if" =
   'if' space? cond:expr space? 'then'? space? if_true:CCEXPR if_false:(space? 'else'? space? CCEXPR)? {
-    return N('if', [cond, if_true]).push(if_false ? if_false[3] : null);
+    return N('if', offset, [cond, if_true]).push(if_false ? if_false[3] : null);
   }
 
 while "while" =
   // Experiemntal feature "not"
   "while" space? not:"not"? space? cond:expr space? body:CCEXPR {
-    return N('while', [cond, body], not ? true : false);
+    return N('while', offset, [cond, body], not ? true : false);
   }
 
 for "for" =
   // Experiemntal feature "not"
   "for" space? "(" space? init:expr space? ";" space? cond:expr space? ";" space? incr:expr space? ")" space? body:CCEXPR_code {
-    return N('for', [init, cond, incr, body]);
+    return N('for', offset, [init, cond, incr, body]);
   }
 
-break "break" = "break" { return N('break', []); }
-continue "continue" = "continue" { return N('continue', []); }
+break "break" = "break" { return N('break', offset, []); }
+continue "continue" = "continue" { return N('continue', offset, []); }
 
 async "async" =
   "async" space e:CCEXPR {
-    return N('async', [e]);
+    return N('async', offset, [e]);
   }
 
 assignment "assignment" =
-  varname:varname space? '=' space? val:expr { return N('assignment', [varname, val]); }
+  global:("global" space+)? varname:varname space? '=' space? val:expr { return N('assignment', offset, [varname, val], {global: !!global}); }
 
 varname "variable name" =
-  v:([_a-zA-Z]+[_0-9a-zA-Z]*) { return N('varname', [], (v[0].concat(v[1])).join('')); }
+  v:([_a-zA-Z]+[_0-9a-zA-Z]*) { return N('varname', offset, [], (v[0].concat(v[1])).join('')); }
 
 CCEXPR "CCEXPR" =
   CCEXPR_commands /
@@ -121,9 +121,9 @@ CCEXPR_code =
 
 top_level_expressions "Top-level expressions" =
   e:expr top_level_expressions_delimiter es:top_level_expressions {
-    return N('top_level_expressions', [e]).concat(es);
+    return N('top_level_expressions', offset, [e]).concat(es);
   } /
-  e:expr { return N('top_level_expressions', [e]); }
+  e:expr { return N('top_level_expressions', offset, [e]); }
 
 top_level_expressions_delimiter =
   newline_space /
@@ -136,10 +136,10 @@ expr "Expression" =
 expr_set_item "Expression/set_item" =
   // container must not be expr_get_item, should be expr_eq
   container:expr_binop inline_space? "[" space? idx:expr space? "]" space? "=" space? v:expr {
-    return N('set_item', [container, idx, v]);
+    return N('set_item', offset, [container, idx, v]);
   } /
   container:expr_binop "." idx:varname space? "=" space? v:expr {
-    return N('set_item', [container, N('string', [], idx.data), v]);
+    return N('set_item', offset, [container, N('string', offset, [], idx.data), v]);
   } /
   e: expr_binop
 
@@ -151,10 +151,10 @@ expr_binop =
 	  if(!ngs_binops_names[es[i][0]]) {
 	    throw new Error("No name for binop: " + es[i][0]);
 	  }
-	  ret.push(N('binop', [], ngs_binops_names[es[i][0]], ngs_precedence[es[i][0]]));
+	  ret.push(N('binop', offset, [], ngs_binops_names[es[i][0]], ngs_precedence[es[i][0]]));
 	  ret.push(es[i][1]);
 	}
-    return N('binops', ret);
+    return N('binops', offset, ret);
   }
 
 binop =
@@ -171,7 +171,7 @@ expr_chain =
 	  if(c[i].is('dot_call')) {
 	    var a = c[i][1]; // args
 	    a.unshift(ret);
-	    ret = N('call', [c[i][0], a]);
+	    ret = N('call', offset, [c[i][0], a]);
 	  }
 	  if(c[i].is('get_attr')) {
 	    c[i].push(ret); // container
@@ -193,18 +193,18 @@ dots "expression dot expression, maybe call" =
 
 dot_call "dot function call" =
   "." f:varname space? "(" space? args:comma_separated_expressions? space? ")" {
-	var a = args || N('expressions', []);
-	return N('dot_call', [f, a]);
+	var a = args || N('expressions', offset, []);
+	return N('dot_call', offset, [f, a]);
   }
 
 get_attr "Get attribute" =
   "." attr:varname !(space? "=" [^=]) {
-    return N('get_attr', [], attr.data);
+    return N('get_attr', offset, [], attr.data);
   }
 
 get_item "Expression/get_item" =
   "[" space? idx:expr space? "]" !(space? "=" [^=]) {
-    return N('get_item', [null, idx]);
+    return N('get_item', offset, [null, idx]);
   }
 
 
@@ -230,9 +230,9 @@ expr_base "Expression/no-add" =
   object_literal /
   string /
   regexp /
-  "true" { return N('bool', [], true); } /
-  "false" { return N('bool', [], false); } /
-  "null" { return N('null', [], false); } /
+  "true" { return N('bool', offset, [], true); } /
+  "false" { return N('bool', offset, [], false); } /
+  "null" { return N('null', offset, [], false); } /
   varname /
   array_literal /
   hash_literal /
@@ -240,54 +240,54 @@ expr_base "Expression/no-add" =
   "$" cs:CCEXPR_commands { return cs; }
 
 number "number" =
-  "0x" hex_digits:[0-9a-fA-F]+ { return N('number', [], parseInt(hex_digits.join(''), 16)); } /
-  neg:"-"? digits:[0-9]+ { return N('number', [], parseInt(digits.join(''), 10) * (neg ? -1 : 1)); }
+  "0x" hex_digits:[0-9a-fA-F]+ { return N('number', offset, [], parseInt(hex_digits.join(''), 16)); } /
+  neg:"-"? digits:[0-9]+ { return N('number', offset, [], parseInt(digits.join(''), 10) * (neg ? -1 : 1)); }
 
 execute_external_prog "execute external program" =
-  w:cmd_words { return N('spawn', [w]); }
+  w:cmd_words { return N('spawn', offset, [w]); }
 
 cmd_words "Command words" =
   w:cmd_word inline_space ws:cmd_words  {
-    return N('array', [w]).concat(ws);
+    return N('array', offset, [w]).concat(ws);
   } /
-  w:cmd_word { return N('array', [w]); }
+  w:cmd_word { return N('array', offset, [w]); }
 
 cmd_word "Command word" =
   CCEXPR_code /
   "$" v:varname { return v; } /
-  "$*" v:varname { return N('splice', [v]); } /
+  "$*" v:varname { return N('splice', offset, [v]); } /
   s:string  { return s; } /
-  w:[-_a-zA-Z0-9*?/]+ {  return N('string', [], w.join('')); }
+  w:[-_a-zA-Z0-9*?/]+ {  return N('string', offset, [], w.join('')); }
 
 regexp "Regular expression" =
-  "/" s:string_contents_regexp "/" flags:([gim]*) { return N('regexp', [s, N('string', [], flags.join(''))]); }
+  "/" s:string_contents_regexp "/" flags:([gim]*) { return N('regexp', offset, [s, N('string', offset, [], flags.join(''))]); }
 
 string "Command string" =
   "'" s:string_contents_sq "'" { return s; } /
   '"' s:string_contents_dq '"' { return s; }
 
 string_contents_sq "Single quoted string contents" =
-  sces:(string_contents_sq_element*) {  return N('string_container', sces); }
+  sces:(string_contents_sq_element*) {  return N('string_container', offset, sces); }
 
 string_contents_dq "Double quoted string contents" =
-  sces:(string_contents_dq_element*) {  return N('string_container', sces); }
+  sces:(string_contents_dq_element*) {  return N('string_container', offset, sces); }
 
 string_contents_regexp "Regexp string contents" =
-  sces:(string_contents_regexp_element*) {  return N('string_container', sces); }
+  sces:(string_contents_regexp_element*) {  return N('string_container', offset, sces); }
 
 string_contents_sq_element "String contents element" =
   string_contents_common_element /
-  s:[^'] { return N('string', [], s); }
+  s:[^'] { return N('string', offset, [], s); }
 
 string_contents_dq_element "String contents element" =
   string_contents_common_element /
   string_contents_var_element /
-  s:[^"] { return N('string', [], s); }
+  s:[^"] { return N('string', offset, [], s); }
 
 string_contents_regexp_element "Regexp contents element" =
   string_contents_common_element /
   string_contents_var_element /
-  s:[^/] { return N('string', [], s); }
+  s:[^/] { return N('string', offset, [], s); }
 
 string_contents_var_element =
   "$" v:varname { return v; } /
@@ -296,84 +296,85 @@ string_contents_var_element =
 
 // http://en.wikipedia.org/wiki/Escape_sequences_in_C
 string_contents_common_element =
-  "\\a" { return N('string', [], String.fromCharCode(7)); } /
-  "\\b" { return N('string', [], String.fromCharCode(8)); } /
-  "\\e" { return N('string', [], String.fromCharCode(27)); } /
-  "\\f" { return N('string', [], String.fromCharCode(12)); } /
-  "\\n" { return N('string', [], String.fromCharCode(10)); } /
-  "\\r" { return N('string', [], String.fromCharCode(13)); } /
-  "\\t" { return N('string', [], String.fromCharCode(9)); } /
-  "\\x" hex:([0-9A-F][0-9A-F]) { return N('string', [], String.fromCharCode(parseInt(hex.join(''), 16))); } /
-  "\\u" hex:([0-9A-F][0-9A-F][0-9A-F][0-9A-F]) { return N('string', [], String.fromCharCode(parseInt(hex.join(''), 16))); } /
-  "\\U" hex:([0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F]) { return N('string', [], String.fromCharCode(parseInt(hex.join(''), 16))); } /
-  "\\" ch:. { return N('string', [], ch); }
+  "\\a" { return N('string', offset, [], String.fromCharCode(7)); } /
+  "\\b" { return N('string', offset, [], String.fromCharCode(8)); } /
+  "\\e" { return N('string', offset, [], String.fromCharCode(27)); } /
+  "\\f" { return N('string', offset, [], String.fromCharCode(12)); } /
+  "\\n" { return N('string', offset, [], String.fromCharCode(10)); } /
+  "\\r" { return N('string', offset, [], String.fromCharCode(13)); } /
+  "\\t" { return N('string', offset, [], String.fromCharCode(9)); } /
+  "\\x" hex:([0-9A-F][0-9A-F]) { return N('string', offset, [], String.fromCharCode(parseInt(hex.join(''), 16))); } /
+  "\\u" hex:([0-9A-F][0-9A-F][0-9A-F][0-9A-F]) { return N('string', offset, [], String.fromCharCode(parseInt(hex.join(''), 16))); } /
+  "\\U" hex:([0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F]) { return N('string', offset, [], String.fromCharCode(parseInt(hex.join(''), 16))); } /
+  "\\" ch:. { return N('string', offset, [], ch); }
 
 object_literal "Object literal" =
-  i:identifier s:string { return N('object_literal', [i, s]); }
+  i:identifier s:string { return N('object_literal', offset, [i, s]); }
 
 array_literal "array literal" =
   "[" space? es:comma_separated_expressions? space? ","? space? "]" {
-	return N('array', es ? es : []);
+	return N('array', offset, es ? es : []);
   }
 
 comma_separated_expressions "comma-separated expressions" =
   e:expr_or_splice space? "," space? es:comma_separated_expressions {
-	return N('expressions', [e]).concat(es);
+	return N('expressions', offset, [e]).concat(es);
   } /
-  e:expr_or_splice { return N('expressions', [e]); }
+  e:expr_or_splice { return N('expressions', offset, [e]); }
 
 expr_or_splice =
   e:expr { return e; } /
   s:splice { return s; }
 
 splice "splice" =
-  "*" space? e:expr { return N('splice', [e]); }
+  "*" space? e:expr { return N('splice', offset, [e]); }
 
 hash_literal "hash literal" =
   "{" space? es:comma_separated_kv? space? "}" {
-	return N('hash', es ? es : []);
+	return N('hash', offset, es ? es : []);
   }
 
 comma_separated_kv "comma-separated kv" =
   k:expr space? ":" space? v:expr space? "," space? es:comma_separated_kv {
-	return N('kv_list', [N('kv', [k,v])]).concat(es);
+	return N('kv_list', offset, [N('kv', offset, [k,v])]).concat(es);
   } /
-  k:expr space? ":" space? v:expr space? { return N('kv_list', [N('kv', [k,v])]); }
+  k:expr space? ":" space? v:expr space? { return N('kv_list', offset, [N('kv', offset, [k,v])]); }
 
 lambda "Lambda" =
   ("lambda" / "F") name:(space+ identifier)? space? "(" space? params:parameters? space? ")" space? code:CCEXPR {
-    return N('lambda', [name?name[1]:N('string', [], ''), params || N('parameters', []), code]);
+    return N('lambda', offset, [name?name[1]:N('string', offset, [], ''), params || N('parameters', offset, []), code]);
   }
 
 function_definition =
   "defun" global:(space+ "global")? space+ name:identifier space? "(" space? params:parameters? space? ")" space? code:CCEXPR {
     return N(
       'defun',
-      [name, N('lambda', [name, params || N('parameters', []), code])],
+      offset,
+      [name, N('lambda', offset, [name, params || N('parameters', offset, []), code])],
       {global: !!global}
     );
   }
 
 identifier =
-  v:varname { return N('string', [], v.data) } /
+  v:varname { return N('string', offset, [], v.data) } /
   string
 
 
 parameters "Function parameters list" =
   p:parameter space? "," space? ps:parameters {
-    return N('parameters', [p]).concat(ps);
+    return N('parameters', offset, [p]).concat(ps);
   } /
   p:parameter {
-    return N('parameters', [p])
+    return N('parameters', offset, [p])
   }
 
 parameter "Function parameter" =
-  "*" name:identifier { return N('arg_rest_pos', [name]); } /
-  "**" name:identifier { return N('arg_rest_kw', [name]); } /
+  "*" name:identifier { return N('arg_rest_pos', offset, [name]); } /
+  "**" name:identifier { return N('arg_rest_kw', offset, [name]); } /
   name:identifier t:parameter_type? dflt:parameter_value? {
-    var r = [name, t?t:N('null', [], false)];
+    var r = [name, t?t:N('null', offset, [], false)];
     if(dflt) { r.push(dflt); }
-    return N(dflt?'arg_nam':'arg_pos', r);
+    return N(dflt?'arg_nam':'arg_pos', offset, r);
   }
 
 parameter_type "Function parameter type" =
@@ -383,33 +384,33 @@ parameter_value "Function parameter default value" =
   space? "=" e:expr { return e; }
 
 return "return" =
-  "return" space e:expr { return N('ret', [e]); }
+  "return" space e:expr { return N('ret', offset, [e]); }
 
 throw "throw" =
-  "throw" space e:expr { return N('throw', [e]); }
+  "throw" space e:expr { return N('throw', offset, [e]); }
 
 function_call "function call" =
   do_catch:("catch" space?)? f:expr_base space? "(" space? args:comma_separated_expressions? space? ")" {
-	return N('call', [f, args || N('expressions', [])], do_catch ? true : false);
+	return N('call', offset, [f, args || N('expressions', offset, [])], do_catch ? true : false);
   }
 
 guard "Function entry guard" =
-  "guard" space? e:expr { return N('guard', [e]); }
+  "guard" space? e:expr { return N('guard', offset, [e]); }
 
 match "Match" =
   "match" space? "(" space? args:comma_separated_expressions? space? ")" space? "{" space? c:cases space? "}" {
-    return N('match', [args || N('expressions', []), c])
+    return N('match', offset, [args || N('expressions', offset, []), c])
   }
   
 cases "Match case clauses" =
   c:case space? cs:cases {
-    return N('cases', [c]).concat(cs);
+    return N('cases', offset, [c]).concat(cs);
   } /
   c:case {
-    return N('cases', [c]);
+    return N('cases', offset, [c]);
   }
 
 case "Case clause" =
   "(" space? params:parameters? space? ")" space? code:CCEXPR {
-    return N('lambda', [N('string', [], 'match_clause'), params || N('parameters', []), code]);
+    return N('lambda', offset, [N('string', offset, [], 'match_clause'), params || N('parameters', offset, []), code]);
   }

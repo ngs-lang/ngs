@@ -4,7 +4,7 @@
 
 # ----- String functions - start -----
 # string * number -> the string repeated number times
-defun __mul(s:String, n:Number) {
+defun global __mul(s:String, n:Number) {
 	ret = ''
 	for(i=0;i<n;i=i+1) {
 		ret = ret + s;
@@ -12,9 +12,9 @@ defun __mul(s:String, n:Number) {
 	ret
 }
 
-defun __match(s:String, n:Number) { s.len() == n }
+defun global __match(s:String, n:Number) { s.len() == n }
 
-defun strip(s:Seq, elts:Seq) {
+defun global strip(s:Seq, elts:Seq) {
 	l = s.len()
 	i = 0
 	while i < l and s[i] in elts {
@@ -27,12 +27,12 @@ defun strip(s:Seq, elts:Seq) {
 	s.slice(i, j-i+1)
 }
 
-defun strip(s:String) {
+defun global strip(s:String) {
 	strip(s, " \t\r\n")
 }
 
 # Not the most efficient :/
-defun pos(s:Seq, subseq:Seq, start:Number=0) {
+defun global pos(s:Seq, subseq:Seq, start:Number=0) {
 	sl = s.len()
 	ssl = subseq.len()
 	if sl < ssl {
@@ -48,7 +48,7 @@ defun pos(s:Seq, subseq:Seq, start:Number=0) {
 	return null
 }
 
-defun split(s:Seq, delim:Seq) {
+defun global split(s:Seq, delim:Seq) {
 	sl = s.len()
 	dl = delim.len()
 	ret = []
@@ -63,9 +63,9 @@ defun split(s:Seq, delim:Seq) {
 	ret
 }
 
-defun split(s:String) { split(s, ' ') }
+defun global split(s:String) { split(s, ' ') }
 
-defun Number(s:String) {
+defun global Number(s:String) {
 	# TODO: checks, negatives, floats, base
 	ord_zero = ord('0')
 	ret = 0
@@ -75,33 +75,33 @@ defun Number(s:String) {
 
 # ----- String functions - end -----
 
-defun __match(a:Array, n:Number) { a.len() == n }
+defun global __match(a:Array, n:Number) { a.len() == n }
 
-defun not(x) { if x {false}{true} }
+defun global not(x) { if x {false}{true} }
 
 # TODO:
 #   Make String and Array inherit from new type Sequence.
 #   Sequence will have method len() among others.
 #   defun Bool(s:Sequence) { s.len() > 0 }
 
-defun Bool(s:Seq)    { s.len() > 0 }
-defun Bool(h:Hash)   { h.len() > 0 }
+defun global Bool(s:Seq)    { s.len() > 0 }
+defun global Bool(h:Hash)   { h.len() > 0 }
 
-defun Hash(a:Array) {
+defun global Hash(a:Array) {
 	ret = {}
 	a.each(F(x) { ret[x[0]] = x[1] })
 	ret
 }
 
-defun Hash(a:Array, v) {
+defun global Hash(a:Array, v) {
 	a.map(F(x) {[x,v]}).Hash()
 }
 
-defun Hash(keys:Array, mapper:F, *args) {
+defun global Hash(keys:Array, mapper:F, *args) {
 	keys.map(F(x) {[x, mapper(x, *args)]}).Hash()
 }
 
-defun zip(a:Seq, b:Seq) {
+defun global zip(a:Seq, b:Seq) {
 	l = len(a)
 
 	if l != b.len() {
@@ -111,18 +111,18 @@ defun zip(a:Seq, b:Seq) {
 	l.map(F(i) { [a[i], b[i]] })
 }
 
-defun __neq(a, b) {
+defun global __neq(a, b) {
 	not(a==b)
 }
 
 # Don't make it Seq. It causes infinite recursion I guess.
-defun __eq(a:Array, b:Array) {
+defun global __eq(a:Array, b:Array) {
 	a.len() == b.len()
 	and
 	all(zip(a,b), F(x) { x[0] == x[1] })
 }
 
-defun __eq(a:Hash, b:Hash) {
+defun global __eq(a:Hash, b:Hash) {
 	a.len() == b.len()
 	and
 	a.keys().sort() == b.keys().sort()
@@ -130,11 +130,11 @@ defun __eq(a:Hash, b:Hash) {
 	all(a.keys(), F(k) { a[k] == b[k] })
 }
 
-defun map(s:Seq, mapper:F, *args) {
+defun global map(s:Seq, mapper:F, *args) {
 	s.len().map(F(i) { mapper(s[i], *args) })
 }
 
-defun map(n:Number, mapper:F, *args) {
+defun global map(n:Number, mapper:F, *args) {
 	ret = []
 	for(i=0;i<n;i=i+1) {
 		ret.push(mapper(i, *args))
@@ -142,23 +142,25 @@ defun map(n:Number, mapper:F, *args) {
 	ret
 }
 
-defun map(h:Hash, mapper:F, *args) {
+defun global map(h:Hash, mapper:F, *args) {
 	h.keys().map(F(k) { mapper(k, h[k], *args) })
 }
 
-# defun mapv(h:Hash, mapper:F, *args) {
+# defun global mapv(h:Hash, mapper:F, *args) {
 # 	ret = {}
 # 	h.keys().map(F(k) { ret[k] = mapper(h[k], *args) })
 # 	ret
 # }
 
-defun reduce(s:Seq, start, reducer:F) {
+defun global reduce(s:Seq, start, reducer:F) {
 	acc = start
 	s.each(F(x) { acc = reducer(acc, x) })
 	acc
 }
 
-defun each(s:Seq, processor:F, *args) {
+defun global sum(a:Array) { reduce(a, 0, __add) }
+
+defun global each(s:Seq, processor:F, *args) {
 	j = s.len()
 	for(i=0;i<j;i=i+1) {
 		processor(s[i], *args)
@@ -166,13 +168,13 @@ defun each(s:Seq, processor:F, *args) {
 	s
 }
 
-defun each(n:Number, processor:F, *args) {
+defun global each(n:Number, processor:F, *args) {
 	for(i=0;i<n;i=i+1) {
 		processor(i, *args)
 	}
 }
 
-defun any(s:Seq, predicate:F, *args) {
+defun global any(s:Seq, predicate:F, *args) {
 	j = s.len()
 	for(i=0;i<j;i=i+1) {
 		if predicate(s[i], *args) {
@@ -182,7 +184,7 @@ defun any(s:Seq, predicate:F, *args) {
 	false
 }
 
-defun all(s:Seq, predicate:F, *args) {
+defun global all(s:Seq, predicate:F, *args) {
 	j = s.len()
 	for(i=0;i<j;i=i+1) {
 		if not(predicate(s[i], *args)) {
@@ -192,11 +194,11 @@ defun all(s:Seq, predicate:F, *args) {
 	true
 }
 
-defun none(s:Seq, predicate:F, *args) {
+defun global none(s:Seq, predicate:F, *args) {
 	not(any(s, predicate, *args))
 }
 
-defun filter(s:Seq, predicate:F, *args) {
+defun global filter(s:Seq, predicate:F, *args) {
 	ret = []
 	j = s.len()
 	for(i=0;i<j;i=i+1) {
@@ -207,54 +209,54 @@ defun filter(s:Seq, predicate:F, *args) {
 	ret
 }
 
-defun filter(s:Seq) {
+defun global filter(s:Seq) {
 	s.filter(F(x) { x != null })
 }
 
-defun __get_item(s:Seq, idx:Number) {
+defun global __get_item(s:Seq, idx:Number) {
 	guard idx < 0
 	l = s.len()
 	s[l+idx]
 }
 
-defun __get_item(s:Seq, idxs:Array) {
+defun global __get_item(s:Seq, idxs:Array) {
 	idxs.map(F(i) { s[i] })
 }
 
-defun __get_item(a:Hash, keys:Array) {
+defun global __get_item(a:Hash, keys:Array) {
 	keys.map(F(k) { [k, a[k]] }).Hash()
 }
 
 # Make hash.key same as hash['key']
-defun __get_attr(h:Hash, k:String) {
+defun global __get_attr(h:Hash, k:String) {
 	h[k]
 }
 
-defun __get_attr(a:Array, attr:String) {
+defun global __get_attr(a:Array, attr:String) {
 	return map(a, __get_attr, attr)
 }
 
-defun __in(v, s:Seq) {
+defun global __in(v, s:Seq) {
 	any(s, __eq, v)
 }
 
-defun __in(v, h:Hash) {
+defun global __in(v, h:Hash) {
 	v in h.keys()
 }
 
-# TODO: defun __in(substring, string)
+# TODO: defun global __in(substring, string)
 
-defun __not_in(*args) {
+defun global __not_in(*args) {
 	not(__in(*args))
 }
 
-defun has(container, item) {item in container}
+defun global has(container, item) {item in container}
 
 
-defun min(a:Number, b:Number) { if a<b {a}{b} }
-defun max(a:Number, b:Number) { if a<b {b}{a} }
+defun global min(a:Number, b:Number) { if a<b {a}{b} }
+defun global max(a:Number, b:Number) { if a<b {b}{a} }
 
-defun startsWith(s:Seq, pfx:Seq) {
+defun global startsWith(s:Seq, pfx:Seq) {
 	if len(s) < len(pfx) {
 		return false
 	}
@@ -267,7 +269,7 @@ defun startsWith(s:Seq, pfx:Seq) {
 	true
 }
 
-defun endsWith(s:Seq, sfx:Seq) {
+defun global endsWith(s:Seq, sfx:Seq) {
 	if len(s) < len(sfx) {
 		return false
 	}
@@ -282,7 +284,7 @@ defun endsWith(s:Seq, sfx:Seq) {
 }
 
 # Not sure, maybe Seq? Need use cases. For String it's: fname - '.txt' + '.bak'
-defun __sub(s:String, sfx:String) {
+defun global __sub(s:String, sfx:String) {
 	if s.endsWith(sfx) {
 		s.slice(0, s.len() - sfx.len())
 	} else {
@@ -292,7 +294,7 @@ defun __sub(s:String, sfx:String) {
 }
 
 # XXX: Warning: should be per Context or it will bite you
-defun spawn_update_globals(args:Array, p:Process) {
+defun global spawn_update_globals(args:Array, p:Process) {
 	g = globals()
 	g['P'] = p
 	if 'PP' not in g {
@@ -304,7 +306,7 @@ defun spawn_update_globals(args:Array, p:Process) {
 	thread().locals()['P'] = p
 }
 
-defun spawn(*args) {
+defun global spawn(*args) {
 	# TODO: handle async
 	p = native_spawn(*args)
 	spawn_update_globals(args, p)
@@ -318,13 +320,13 @@ defun spawn(*args) {
 	p
 }
 
-defun spawn(*args) {
+defun global spawn(*args) {
 	guard args.map(typeof).any(__neq, 'String')
 	__super(*args.map(String))
 }
 
 # Convert execution of (example) '-f somefile' to 'test -f somefile'
-defun spawn(*args) {
+defun global spawn(*args) {
 	  guard args.len() > 1
 	  guard startsWith(args[0], '-')
 	  args = ['test'] + args
@@ -332,11 +334,11 @@ defun spawn(*args) {
 	  return __super(*args)
 }
 
-defun osname() {
+defun global osname() {
 	null
 }
 
-defun osname() {
+defun global osname() {
 	guard f'/etc/debian_version'
 	'debian'
 }
@@ -344,21 +346,21 @@ defun osname() {
 
 # ----- Finished commands handlers - start -----
 
-defun cmd_finished_ok_p(p:Process) {
+defun global cmd_finished_ok_p(p:Process) {
 	p.exit_code == 0
 }
 
-defun cmd_finished_ok_p(p:Process) {
+defun global cmd_finished_ok_p(p:Process) {
 	guard p.cmd == 'test'
 	p.exit_code in [0,1]
 }
 
-defun cmd_finished_ok_p(p:Process) {
+defun global cmd_finished_ok_p(p:Process) {
 	guard p.cmd == 'false'
 	p.exit_code == 1
 }
 
-defun cmd_finished_ok_p(p:Process) {
+defun global cmd_finished_ok_p(p:Process) {
 	guard p.cmd == 'service'
 	guard p.args[1] == 'status'
 	# Empirical
@@ -367,11 +369,11 @@ defun cmd_finished_ok_p(p:Process) {
 
 # ----- Finished commands handlers - end -----
 
-defun parse_file(f:String, content:String) {
+defun global parse_file(f:String, content:String) {
 	content
 }
 
-defun parse_file(f:String, content:String) {
+defun global parse_file(f:String, content:String) {
 	guard f ~ /\\.json$/
 	r = catch from_json(content)
 	if not(r[0]) {
@@ -380,12 +382,12 @@ defun parse_file(f:String, content:String) {
 	r[1]
 }
 
-defun read(f:String) {
+defun global read(f:String) {
 	content = fetch_file(f)
 	parse_file(f, content).meta('file', f)
 }
 
-defun one(s:Seq) {
+defun global one(s:Seq) {
 	if s.len() != 1 {
 		throw ['data', "Expected array with exactly one item but had ${a.len()}", a]
 	}
@@ -394,7 +396,7 @@ defun one(s:Seq) {
 
 # Abstract usage example:
 # servers.filter(F(x) {'unicorn' in x.tags}).one('Unicorn server').create_image('Unicorn backup')
-defun one(s:Seq, msg:String) {
+defun global one(s:Seq, msg:String) {
 	if s.len() != 1 {
 		throw ['data', "Expected array with exactly one $msg but had ${a.len()}", a]
 	}
@@ -403,7 +405,7 @@ defun one(s:Seq, msg:String) {
 
 # ----- Output helpers - start -----
 
-defun String(p:Process) {
+defun global String(p:Process) {
 	# TODO:
 	#   Handle processes that are still running.
 	#   Handle stderr
@@ -412,7 +414,7 @@ defun String(p:Process) {
 	p.stdout.strip()
 }
 
-defun join(s:Seq, sep:String) {
+defun global join(s:Seq, sep:String) {
 	ret = ''
 	j = s.len()
 	for(i=0;i<j;i=i+1) {
@@ -424,54 +426,54 @@ defun join(s:Seq, sep:String) {
 	ret
 }
 
-defun String(s:String) { s }
+defun global String(s:String) { s }
 
-defun String(a:Array) {
+defun global String(a:Array) {
 	'[' + a.join(', ') + ']'
 	# Could be less readable: "[${a.join(', ')}]"
 }
 
-defun String(a:Array) {
+defun global String(a:Array) {
 	guard typeof(a) != 'Array'
 	'<' + typeof(a) + ' ' + __super(a) + '>'
 }
 
-defun String(h:Hash) {
+defun global String(h:Hash) {
 	'{' + h.map(F(k,v) { "$k: $v" }).join(', ') + '}'
 }
 
-defun String(h:Hash) {
+defun global String(h:Hash) {
 	guard typeof(h) != 'Hash'
 	'<' + typeof(h) + ' ' + __super(h) + '>'
 }
 
 
-defun String(b:Bool) {
+defun global String(b:Bool) {
 	if b {'true'}{'false'}
 }
 
-defun String(n:Null) {
+defun global String(n:Null) {
 	'null'
 }
 
-defun String(l:Lambda) {
+defun global String(l:Lambda) {
 	inspect(l)
 }
 
-defun String(t:Thread) {
+defun global String(t:Thread) {
 	"<Thread ${t.id} ${t.state}>"
 }
 
-defun String(c:Code) {
+defun global String(c:Code) {
 	"<Compiled code>"
 }
 
-defun echo(x) {
+defun global echo(x) {
 	guard typeof(x) != 'String'
 	x.String().echo()
 }
 
-defun echo(*args) {
+defun global echo(*args) {
 	guard args.len() > 1
 	args.each(echo)
 }
@@ -479,32 +481,32 @@ defun echo(*args) {
 # ----- Output helpers - end -----
 
 # ----- Meta sugar - start -----
-defun meta(x, k:String) {
+defun global meta(x, k:String) {
 	x.meta()[k]
 }
 
-defun meta(x, k:String, v) {
+defun global meta(x, k:String, v) {
 	x.meta()[k] = v
 	x
 }
 
-defun has_meta(x, k:String) {
+defun global has_meta(x, k:String) {
 	k in x.meta()
 }
 # ----- Meta sugar - end -----
 
 # ----- __get_item sugar - start -----
-defun first(s:Seq)  { s[0] }
-defun second(s:Seq) { s[1] }
-defun third(s:Seq)  { s[2] }
-defun fourth(s:Seq) { s[3] }
-defun fifth(s:Seq)  { s[4] }
+defun global first(s:Seq)  { s[0] }
+defun global second(s:Seq) { s[1] }
+defun global third(s:Seq)  { s[2] }
+defun global fourth(s:Seq) { s[3] }
+defun global fifth(s:Seq)  { s[4] }
 
-defun last(s:Seq)   { s[-1] }
+defun global last(s:Seq)   { s[-1] }
 # ----- __get_item sugar - end -----
 
 # ----- Types sugar - start -----
-defun inherits(child:String, parent:String) {
+defun global inherits(child:String, parent:String) {
 	if child not in __TYPES {
 		__TYPES[child] = {}
 	}
@@ -517,27 +519,27 @@ defun inherits(child:String, parent:String) {
 	__TYPES[child]['inherits'].push(parent)
 }
 
-defun mktype(type:String, parents:Array) {
+defun global mktype(type:String, parents:Array) {
 	parents.each(F(p) { inherits(type, p) })
 	defun global "$type"() {
 		obj(type).init()
 	}
 }
 
-defun mktype(type:String, parent:String) {
+defun global mktype(type:String, parent:String) {
 	mktype(type, [parent])
 }
 # ----- Types sugar - end -----
 
 # Should be defined for files fetched from remote locations, maybe
 # in some other cases too.
-defun validate_source_file(f:String, content:String) {
+defun global validate_source_file(f:String, content:String) {
 	  true
 }
 
 # TODO: path to search in
 # TODO: specify version of the required file/module
-defun require(f:String, *args) {
+defun global require(f:String, *args) {
 	content = fetch_file(f)
 	if not(validate_source_file(f, content)) {
 		throw ['runtime', "Failed to validate source file $f"]
@@ -548,18 +550,19 @@ defun require(f:String, *args) {
 }
 
 # ----- Files - start -----
-__literal_f = File
+global __literal_f = File
 
 # Anything else will break $(ls $f) and probably other stuff
-defun String(f:File) { f.name }
+defun global String(f:File) { f.name }
 
-defun Bool(p:Path) { $(-e $p).Bool() }
-defun Bool(f:File) { $(-f $f).Bool() }
+defun global Bool(p:Path) { $(-e $p).Bool() }
+defun global Bool(f:File) { $(-f $f).Bool() }
 
-defun read_till(fd:Number, tillChar:String) {
+defun global read_till(fd:Number, tillChar:String, max:Number=1024) {
 	ret = ''
 	while (ch = fd.read()) != tillChar {
 		ret = ret + ch
+		if ret.len() > max { throw ['runtime', 'read_till epic fail'] }
 		# echo("<CH:${ch.ord()}>")
 	}
 	ret
@@ -569,8 +572,8 @@ defun read_till(fd:Number, tillChar:String) {
 
 # TODO: Something like this should work:
 # ['__add', '__sub', '__mul', '__div'].each(F(op) {
-# 	defun "$op"(a:Array, n:Number) { a.map(globals()[op], n) }
+# 	defun global "$op"(a:Array, n:Number) { a.map(globals()[op], n) }
 # })
 
-defun __add(a:Array, n:Number) { a.map(__add, n) }
-defun __sub(a:Array, n:Number) { a.map(__sub, n) }
+defun global __add(a:Array, n:Number) { a.map(__add, n) }
+defun global __sub(a:Array, n:Number) { a.map(__sub, n) }

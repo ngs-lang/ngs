@@ -54,7 +54,7 @@ var code_vs_stack = [
 	['{ catch (F() { throw 2 })() }', [[false, 2]]],
 
 	// *** locals ***
-	['{ x=1; y=1; l = {"x": 2}; f = (F() { y = 3; x = 4 }).locals(l); f(); [x, y, l["x"]]}',
+	['{ x=1; y=1; l = {"x": 2}; f = (F() { global y = 3; x = 4 }).locals(l); f(); [x, y, l["x"]]}',
 	 [[1, 3, 4]]],
 
 	['{spawn=native_spawn; Bool($(ls).wait())}', [true]],

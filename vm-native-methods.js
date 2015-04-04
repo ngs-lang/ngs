@@ -356,7 +356,7 @@ function register_native_methods() {
 
 	// stdin, stdout, ...
 	['stdin', 'stdout', 'stderr'].forEach(function(s) {
-		this.set_var(s, NgsValue('Stream', s));
+		this.set_glo_var(s, NgsValue('Stream', s));
 	}.bind(this))
 	this.registerNativeMethod('istty', p_args('s', 'Stream'), function vm_istty(scope) {
 		var s = get_stm(scope.s);
@@ -381,6 +381,16 @@ function register_native_methods() {
 		rl.setPrompt(get_str(scope.prompt));
 		rl.prompt();
 		return NgsValue('String', 'READLINE-TO-BE-READ');
+	});
+	this.registerNativeMethod('pause', p_args('rl', 'Readline'), function vm_pause_p_readline(scope, v) {
+		var rl = get_rl(scope.rl);
+		rl.pause();
+		return NgsValue('Null', null);
+	});
+	this.registerNativeMethod('resume', p_args('rl', 'Readline'), function vm_resume_p_readline(scope, v) {
+		var rl = get_rl(scope.rl);
+		rl.resume();
+		return NgsValue('Null', null);
 	});
 	this.registerNativeMethod('close', p_args('rl', 'Readline'), function vm_close_p_readline(scope, v) {
 		var rl = get_rl(scope.rl);
@@ -470,9 +480,14 @@ function register_native_methods() {
 	this.registerNativeMethod('locals', p_args('t', 'Thread'), function vm_locals_p_thread(scope) {
 		return NgsValue('Hash', get_thr(scope.t).thread_locals);
 	});
-	this.registerNativeMethod('kill', p_args('t', 'Thread'), function vm_kill_p_thread(scope) {
-		// Not functional yet
-		get_thr(scope.t).finish_context();
+	this.registerNativeMethod('kill', p_args('t', 'Thread'), function vm_kill_p_thread(scope, v) {
+		// Does not work yet: ngs_runtime_spawn_finish_callback performs additional unsuspend_context on finished_context
+		// console.log(scope.t.data)
+		// console.log('R', v.runnable_contexts.indexOf(scope.t.data));
+		// console.log('S', v.suspended_contexts.indexOf(scope.t.data));
+		// console.log('F', v.finished_contexts.indexOf(scope.t.data));
+		v.unsuspend_context(scope.t.data, true);
+		v.finish_context();
 		return scope.t;
 	});
 	this.registerNativeMethod('lines', p_args('s', 'String'), function vm_lines_p_str(scope) {
@@ -497,7 +512,7 @@ function register_native_methods() {
 		scope.h.data = {};
 		return scope.h;
 	});
-	this.set_var('__TYPES', to_ngs_object({
+	this.set_glo_var('__TYPES', to_ngs_object({
 		'Array': {'inherits': ['Seq']},
 		'File': {'inherits': ['Path', 'Hash']},
 		'Path': {'inherits': ['Hash']},
@@ -555,6 +570,7 @@ function register_native_methods() {
 		v.suspend_context();
 		return null;
 	});
+	this.set_glo_var('ARGV', to_ngs_object(process.argv));
 }
 
 exports.Args = Args.bind(null);

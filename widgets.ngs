@@ -1,7 +1,36 @@
 # TODO: get rid of /dev/tty references all over the place
 
 mktype('ScreenManager', 'Hash')
-mktype('WidgetsSeq', 'Array')
+
+mktype('Widget', 'Hash')
+mktype('OrigCmdWidget', 'Widget')
+mktype('OutputWidget', 'Widget')
+mktype('StdoutWidget', 'OutputWidget')
+mktype('StderrWidget', 'OutputWidget')
+mktype('ErrorWidget', 'Widget')
+
+mktype('WidgetsSeq', 'Hash')
+
+defun OrigCmdWidget(cmd:String) {w = __super(); w.cmd = cmd; w}
+defun height(w: OrigCmdWidget) { 1 }
+defun echo(w:OrigCmdWidget) { echo("--- ${w.cmd} ---"); }
+
+defun ErrorWidget(cmd:String) {w = __super(); w.cmd = cmd; w}
+defun height(w: ErrorWidget) { 1 }
+defun echo(w:ErrorWidget) { echo("ERROR: ${w.cmd}"); }
+
+defun WidgetsSeq() { ws = __super(); ws.items = []; ws}
+defun push(ws:WidgetsSeq, x) { ws.items.push(x); ws }
+defun height(ws:WidgetsSeq) { ws.items.map(height).sum() }
+defun echo(ws:WidgetsSeq) { ws.items.each(echo); }
+
+defun init(ow:OutputWidget) { ow.text = ''; ow }
+defun echo(ow:OutputWidget) {
+	if not(ow.text) { return null }
+	ow.text.lines().map(echo)
+}
+defun height(ow:OutputWidget) { ow.text.lines().len() }
+defun height(ow:OutputWidget) { guard not(ow.text); 0 }
 
 defun ScreenManager(indev:Stream, outdev:Stream) {
 	sm = __super()
@@ -11,13 +40,28 @@ defun ScreenManager(indev:Stream, outdev:Stream) {
 defun init(sm:ScreenManager, indev:Stream, outdev:Stream) {
 	sm.indev = indev
 	sm.outdev = outdev
+	# TODO: later: sm <- indev, outdev
 	sm.updateDimensions()
+	sm.rl = Readline()
 	sm
+}
+
+defun read(sm:ScreenManager, prompt:String) {
+	sm.rl.read(prompt)
 }
 
 defun updateDimensions(sm:ScreenManager) {
 	sm.dims = getDimensions()
 	sm
+}
+
+defun echo(sm:ScreenManager, widgets:Array) {
+	sm.rl.pause()
+	pos = getCursorPosition()
+	lines_count = widgets.map(height).sum()
+	widgets.map(echo)
+	setCursorPosition(*pos)
+	sm.rl.resume()
 }
 
 defun String(sm:ScreenManager) {
@@ -50,7 +94,7 @@ defun getCursorPosition() {
 	$(sleep '0.01')
 
 	# IFS=';' read -r -d R -a pos;row=$((${pos[0]:2} - 1));col=$((${pos[1]} - 1))
-	ret = 0.read_till('R').strip('\x00\e[').split(';').map(Number) - 1
+	ret = 0.read_till('R', 16).strip('\x00\e[').split(';').map(Number) - 1
 
 	$(stty -F $tty $saved_stty)
 	ret
