@@ -43,6 +43,7 @@ defun cli_screen_updater() {
 			pw = process_widgets[prc.ngs_id]
 			pw.stdout.text = prc.stdout.strip()
 			pw.stderr.text = prc.stderr.strip()
+			pw.cmd.exit_code = prc.exit_code
 		})
 		sm.echo(widgets)
 	}
@@ -60,7 +61,7 @@ defun native_spawn(*args) {
 	o = StdoutWidget()
 	e = StderrWidget()
 	thread_widget[t].push(o).push(e)
-	process_widgets[prc.ngs_id] = {'stdout': o, 'stderr': e}
+	process_widgets[prc.ngs_id] = {'cmd': thread_widget[t].items[0], 'stdout': o, 'stderr': e}
 	prc
 }
 
@@ -93,32 +94,44 @@ defun cli_main() {
 			continue
 		}
 
+		time=$(date -Iseconds).stdout.strip()
+
 		code = catch compile(l)
 		# echo("CODE", code)
 		if not(code[0]) {
 			# echo("ERROR", code[1])
-			widgets.push(WidgetsSeq().push(OrigCmdWidget(l)).push(ErrorWidget(String(code[1]))))
+			widgets.push(WidgetsSeq().push(OrigCmdWidget(l, time)).push(ErrorWidget(String(code[1]))))
 			continue
 		}
 		lambda_ = load(code[1]).locals(local_scope)
 
 		t = thread(F() {
 			result = catch lambda_()
+			tw = thread_widget[thread().id]
+			cmdw = tw.items[0]
+			if result[0] {
+				ow = StdoutWidget()
+				cmdw.exit_code = 0
+			} else {
+				ow = StderrWidget()
+				# XXX: Not sure this works:
+				cmdw.exit_code = 1
+			}
+			ow.text = result[1].String()
+			tw.push(ow)
 		})
 
 		t.locals()["cli_input"] = l
 		t.locals()["cli_n"] = n
 
 		supervised_threads.push(t)
-		ws = WidgetsSeq().push(OrigCmdWidget(l))
+		ws = WidgetsSeq().push(OrigCmdWidget(l, time))
 		widgets.push(ws)
 		thread_widget[t.id] = ws
 		sm.echo(widgets)
 	}
 
 	# later # screen_updater.kill()
-
-	rl.close()
 }
 
-{ cli_main() }
+cli_main()

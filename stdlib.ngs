@@ -9,6 +9,13 @@ defun global __mul(s:String, n:Number) {
 	join(n | s)
 }
 
+# TODO: maybe generic for Seq
+defun global fill(s:String, n:Number) {
+	t = n - s.len()
+	if t < 1 { return s }
+	s + ' ' * t
+}
+
 defun global __match(s:String, n:Number) { s.len() == n }
 
 defun global strip(s:Seq, elts:Seq) {
@@ -261,7 +268,7 @@ defun global __get_attr(h:Hash, k:String) {
 
 defun global __get_attr(a:Array, attr:String) {
 	# map(a, __get_attr, attr)
-	a | X.attr
+	a | X.__get_attr(attr)
 }
 
 defun global __in(v, s:Seq) {

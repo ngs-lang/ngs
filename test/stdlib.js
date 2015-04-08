@@ -72,6 +72,7 @@ var code_snippets = [
 	'{ h={"kk": 7, "xx": 8}; h[["xx"]] != {"kk": 7} }',
 	'{ Hash(["a","b"], "x") == {"a": "x", "b": "x"} }',
 	'{ ["a", "b"].Hash(F(x) { x*2 }) == {"a": "aa", "b": "bb" } }', // also tests String * Number
+	'{ [{"x": 7}, {"x": 8}].x == [7,8] }',
 	// meta
 	'{ a=1; a.meta("x", 2); a.meta("y", 3) == a and a.meta("x") == 2 and a.has_meta("x") }',
 	// String
