@@ -24,6 +24,7 @@ var CALL_NODES = {
 }
 
 function fix_binops_node(node) {
+	// console.log('fix_binops_node', node);
 	var ret = node;
 	while(ret.length > 1) {
 		// find the most binding op and turn it into binop node
@@ -36,10 +37,34 @@ function fix_binops_node(node) {
 			}
 		}
 		// TODO: fix offset later
-		ret.splice(op_idx - 1, 3, N('binop', null, [ret[op_idx-1], ret[op_idx+1]], ret[op_idx].data, -1));
+		ret.splice(op_idx - 1, 3, new N('binop', null, [ret[op_idx-1], ret[op_idx+1]], ret[op_idx].data, -1));
 	}
 	if(ret[0].is('binops')) {
 		ret[0] = fix_binops_node(ret[0]);
+	}
+	// e1 | e2 -> __pipe(e1, F(X) { e2 })
+	if(ret[0].is('binop') && (ret[0].data=='pipe')) {
+		var o = ret[0].offset;
+		var f = new N(
+			'lambda',
+			o,
+			[
+				new N('string', o, [], 'anonymous_pipe_' + o),
+				new N('parameters', o, [
+					new N('arg_pos', o, [new N('string', o, [], 'X'), new N('null', o, [], false)])
+				]),
+				ret[0][1]
+			]
+		);
+		return new N(
+			'call',
+			o,
+			[
+				new N('varname', o, [], '__pipe'),
+				new N('expressions', o, [ret[0][0], f])
+			],
+			false
+		);
 	}
 	return ret[0];
 }

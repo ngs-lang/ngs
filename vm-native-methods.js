@@ -10,6 +10,8 @@ var _ = require('underscore');
 var data = require('./vm-data');
 var compile = require('./compile');
 
+var process_ngs_id = 1;
+
 function to_ngs_object(v) {
 	if(_.isNull(v)) {
 		return NgsValue('Null', null);
@@ -234,7 +236,9 @@ function register_native_methods() {
 
 	this.registerNativeMethod('native_spawn', Args().rest_pos('args').get(), function ngs_runtime_spawn(scope, v) {
 		var args = get_arr(scope.args);
+		// TODO: make the next id a language global variable. It will help with serialization later.
 		var props = {
+			'ngs_id': 'process_' + (process_ngs_id++),
 			'cmd': get_str(args[0]),
 			'state': 'running',
 			'args': args.slice(1).map(get_str),
@@ -377,23 +381,26 @@ function register_native_methods() {
 			rl.removeListener('line', line_handler);
 		}
 		rl.on('line', line_handler);
-		v.suspend_context(this);
+		v.suspend_context();
 		rl.setPrompt(get_str(scope.prompt));
 		rl.prompt();
 		return NgsValue('String', 'READLINE-TO-BE-READ');
 	});
 	this.registerNativeMethod('pause', p_args('rl', 'Readline'), function vm_pause_p_readline(scope, v) {
 		var rl = get_rl(scope.rl);
+		v.suspend_context_till(rl, 'pause');
 		rl.pause();
 		return NgsValue('Null', null);
 	});
 	this.registerNativeMethod('resume', p_args('rl', 'Readline'), function vm_resume_p_readline(scope, v) {
 		var rl = get_rl(scope.rl);
+		v.suspend_context_till(rl, 'resume');
 		rl.resume();
 		return NgsValue('Null', null);
 	});
 	this.registerNativeMethod('close', p_args('rl', 'Readline'), function vm_close_p_readline(scope, v) {
 		var rl = get_rl(scope.rl);
+		v.suspend_context_till(rl, 'close');
 		rl.close();
 		return NgsValue('Null', null);
 	});
@@ -404,6 +411,8 @@ function register_native_methods() {
 			out = compile.compile(s, {leave_value_in_stack: true});
 			return NgsValue('Code', out.compiled_code);
 		} catch(e) {
+			// console.log(e);
+			// throw e;
 			this.thr(to_ngs_object(['compile', e.toString()]));
 		}
 	});
@@ -515,6 +524,7 @@ function register_native_methods() {
 	this.set_glo_var('__TYPES', to_ngs_object({
 		'Array': {'inherits': ['Seq']},
 		'File': {'inherits': ['Path', 'Hash']},
+		'Lock': {'inherits': ['Hash']},
 		'Path': {'inherits': ['Hash']},
 		'String': {'inherits': ['Seq']},
 	}));
@@ -571,6 +581,36 @@ function register_native_methods() {
 		return null;
 	});
 	this.set_glo_var('ARGV', to_ngs_object(process.argv));
+
+	// TODO: Lock tests, maybe move locks methods to be Context methods
+	this.registerNativeMethod('Lock', p_args(), function vm_lock(scope, v) {
+		return NgsValue('Lock', {
+			acquired: to_ngs_object(false),
+			// holding_context: to_ngs_object(null),
+			waiting_contexts: to_ngs_object([])
+		});
+	});
+	this.registerNativeMethod('acquire', p_args('l', 'Lock'), function vm_acquire_p_lck(scope, v) {
+		// TODO: maybe add "waiting_for_lock" state for Context
+		var l = get_lck(scope.l);
+		if(get_boo(l.acquired)) {
+			v.suspend_context();
+			get_arr(l.waiting_contexts).push(this);
+		} else {
+			l.acquired.data = true;
+		}
+		return to_ngs_object(true);
+	});
+	this.registerNativeMethod('release', p_args('l', 'Lock'), function vm_release_p_lck(scope, v) {
+		var l = get_lck(scope.l);
+		if(get_arr(l.waiting_contexts).length == 0) {
+			l.acquired.data = false;
+			return;
+		}
+		var ctx = get_arr(l.waiting_contexts).shift();
+		v.unsuspend_context(ctx);
+		return to_ngs_object(null);
+	});
 }
 
 exports.Args = Args.bind(null);

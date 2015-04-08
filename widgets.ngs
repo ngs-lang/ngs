@@ -11,6 +11,8 @@ mktype('ErrorWidget', 'Widget')
 
 mktype('WidgetsSeq', 'Hash')
 
+redraw_lock = Lock()
+
 defun OrigCmdWidget(cmd:String) {w = __super(); w.cmd = cmd; w}
 defun height(w: OrigCmdWidget) { 1 }
 defun echo(w:OrigCmdWidget) { echo("--- ${w.cmd} ---"); }
@@ -56,12 +58,14 @@ defun updateDimensions(sm:ScreenManager) {
 }
 
 defun echo(sm:ScreenManager, widgets:Array) {
-	sm.rl.pause()
-	pos = getCursorPosition()
-	lines_count = widgets.map(height).sum()
-	widgets.map(echo)
-	setCursorPosition(*pos)
-	sm.rl.resume()
+	redraw_lock.acquire(F() {
+		sm.rl.pause()
+		pos = getCursorPosition()
+		lines_count = widgets.map(height).sum()
+		widgets.map(echo)
+		setCursorPosition(*pos)
+		sm.rl.resume()
+	})
 }
 
 defun String(sm:ScreenManager) {
@@ -74,7 +78,8 @@ defun getDimensions() {
 	# TODO: check why does not work with stdin. Is it connected?
 	# TODO: think how to get "dims = ..." line to be nearly short as bash alternative B
 
-	$(stty size -F /dev/tty).stdout.strip().split().map(Number)
+	# $(stty size -F /dev/tty).stdout.strip().split().map(Number)
+	$(stty size -F /dev/tty).split().map(Number)
 
 	# Bash alternative A:
 	# t=`stty size -F /dev/tty`
@@ -93,10 +98,16 @@ defun getCursorPosition() {
 	tty.write('\e[6n')
 	$(sleep '0.01')
 
+	0.read_till('\e') # somewhat safer
 	# IFS=';' read -r -d R -a pos;row=$((${pos[0]:2} - 1));col=$((${pos[1]} - 1))
-	ret = 0.read_till('R', 16).strip('\x00\e[').split(';').map(Number) - 1
+	# t = 0.read_till('R', 16)
+	# ret = t.strip('\x00\e[').split(';').map(Number) - 1
+
+	ret = 0.read_till('R').strip('\x00\e[').split(';').map(Number) - 1
 
 	$(stty -F $tty $saved_stty)
+	# echo("getCursorPosition -> ${ret}")
+	# echo("READ TILL '$t'")
 	ret
 }
 

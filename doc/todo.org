@@ -2,6 +2,7 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
+** Fix undefinded_var['some_idx']. Returns with wrong stack size, should throw error.
 ** CLI
 *** PROGRESS TTY io basics, layout manager, think of widgets (commands output), think completion from widgets
 *** PROGRESS support running regular commands

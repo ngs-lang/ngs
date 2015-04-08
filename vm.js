@@ -121,7 +121,7 @@ var context_id = 1;
 
 Context.prototype.initialize = function(global_scope, cycles_limit) {
 
-	this.id = context_id++;
+	this.id = 'thread_' + (context_id++);
 	this.state = 'running';
 	this.stack = [];
 
@@ -323,6 +323,7 @@ VM.prototype.mainLoop = function() {
 		this.finished = true;
 		this.finished_callback(this);
 	}
+	// console.log('NRC', this.runnable_contexts.length, this.suspended_contexts.length, this.finished_contexts.length);
 }
 
 VM.prototype.suspend_context = function() {
@@ -334,6 +335,17 @@ VM.prototype.suspend_context = function() {
 	ctx.state = 'suspended';
 	this.suspended_contexts.push(ctx);
 	// console.log('suspend_context', ctx);
+}
+
+VM.prototype.suspend_context_till = function(obj, ev) {
+	var vm = this;
+	var ctx = this.runnable_contexts[0];
+	function suspend_context_till_handler() {
+		obj.removeListener(ev, suspend_context_till_handler);
+		vm.unsuspend_context(ctx);
+	}
+	obj.on(ev, suspend_context_till_handler);
+	vm.suspend_context();
 }
 
 VM.prototype.finish_context = function() {

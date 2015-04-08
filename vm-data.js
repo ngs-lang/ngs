@@ -72,6 +72,7 @@ make_getter('Bool',			'boo', _.isBoolean);
 make_getter('Code',			'cod', _.isArray);
 make_getter('Hash',			'hsh', _.isObject);
 make_getter('Lambda',		'lmb', _.isObject);
+make_getter('Lock',			'lck', _.isObject);
 make_getter('NativeMethod', 'nm' , _.isFunction);
 make_getter('Null',			'nul', _.isNull);
 make_getter('Number',		'num', _.isNumber);

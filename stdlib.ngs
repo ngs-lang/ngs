@@ -5,11 +5,8 @@
 # ----- String functions - start -----
 # string * number -> the string repeated number times
 defun global __mul(s:String, n:Number) {
-	ret = ''
-	for(i=0;i<n;i=i+1) {
-		ret = ret + s;
-	}
-	ret
+	# n.map(F(x) { s }).join()
+	join(n | s)
 }
 
 defun global __match(s:String, n:Number) { s.len() == n }
@@ -65,6 +62,8 @@ defun global split(s:Seq, delim:Seq) {
 
 defun global split(s:String) { split(s, ' ') }
 
+defun global split(p:Process, *args) { split(p.stdout.strip(), *args) }
+
 defun global Number(s:String) {
 	# TODO: checks, negatives, floats, base
 	ord_zero = ord('0')
@@ -94,11 +93,13 @@ defun global Hash(a:Array) {
 }
 
 defun global Hash(a:Array, v) {
-	a.map(F(x) {[x,v]}).Hash()
+	# a.map(F(x) {[x,v]}).Hash()
+	Hash(a | [X,v])
 }
 
 defun global Hash(keys:Array, mapper:F, *args) {
-	keys.map(F(x) {[x, mapper(x, *args)]}).Hash()
+	# keys.map(F(x) {[x, mapper(x, *args)]}).Hash()
+	Hash(keys | [X, mapper(X, *args)])
 }
 
 defun global zip(a:Seq, b:Seq) {
@@ -108,7 +109,8 @@ defun global zip(a:Seq, b:Seq) {
 		throw ['args', 'Zip with different Seqs length']
 	}
 
-	l.map(F(i) { [a[i], b[i]] })
+	# l.map(F(i) { [a[i], b[i]] })
+	l | [a[X], b[X]]
 }
 
 defun global __neq(a, b) {
@@ -130,8 +132,11 @@ defun global __eq(a:Hash, b:Hash) {
 	all(a.keys(), F(k) { a[k] == b[k] })
 }
 
+defun global __eq(a:Thread, b:Thread) { a.id == b.id }
+
 defun global map(s:Seq, mapper:F, *args) {
-	s.len().map(F(i) { mapper(s[i], *args) })
+	# s.len().map(F(i) { mapper(s[i], *args) })
+	s.len() | mapper(s[X], *args)
 }
 
 defun global map(n:Number, mapper:F, *args) {
@@ -143,7 +148,8 @@ defun global map(n:Number, mapper:F, *args) {
 }
 
 defun global map(h:Hash, mapper:F, *args) {
-	h.keys().map(F(k) { mapper(k, h[k], *args) })
+	# h.keys().map(F(k) { mapper(k, h[k], *args) })
+	h.keys() | mapper(X, h[X], *args)
 }
 
 # defun global mapv(h:Hash, mapper:F, *args) {
@@ -152,9 +158,20 @@ defun global map(h:Hash, mapper:F, *args) {
 # 	ret
 # }
 
+# By default a pipe is map() but we don't do __pipe=map to
+# allow overriding of __pipe for specific types.
+defun global __pipe(*args) {
+	map(*args)
+}
+
+defun global __pipe(h:Hash, f:F) {
+	h.map(F(k, v) { f([k,v]) })
+}
+
 defun global reduce(s:Seq, start, reducer:F) {
 	acc = start
 	s.each(F(x) { acc = reducer(acc, x) })
+	# s | acc = reducer(acc, X)
 	acc
 }
 
@@ -220,11 +237,21 @@ defun global __get_item(s:Seq, idx:Number) {
 }
 
 defun global __get_item(s:Seq, idxs:Array) {
-	idxs.map(F(i) { s[i] })
+	# idxs.map(F(i) { s[i] })
+	idxs | s[X]
+}
+
+defun global __get_item(h:Hash, n:Number) {
+	h[n.String()]
+}
+
+defun global __set_item(h:Hash, n:Number, v) {
+	h[n.String()] = v
 }
 
 defun global __get_item(a:Hash, keys:Array) {
-	keys.map(F(k) { [k, a[k]] }).Hash()
+	# keys.map(F(k) { [k, a[k]] }).Hash()
+	Hash(keys | [X, a[X]])
 }
 
 # Make hash.key same as hash['key']
@@ -233,7 +260,8 @@ defun global __get_attr(h:Hash, k:String) {
 }
 
 defun global __get_attr(a:Array, attr:String) {
-	return map(a, __get_attr, attr)
+	# map(a, __get_attr, attr)
+	a | X.attr
 }
 
 defun global __in(v, s:Seq) {
@@ -426,6 +454,8 @@ defun global join(s:Seq, sep:String) {
 	ret
 }
 
+defun global join(s:Seq) { join(s, '') }
+
 defun global String(s:String) { s }
 
 defun global String(a:Array) {
@@ -521,6 +551,7 @@ defun global inherits(child:String, parent:String) {
 
 defun global mktype(type:String, parents:Array) {
 	parents.each(F(p) { inherits(type, p) })
+	# parents | inherits(type, X)
 	defun global "$type"() {
 		obj(type).init()
 	}
@@ -563,17 +594,27 @@ defun global read_till(fd:Number, tillChar:String, max:Number=1024) {
 	while (ch = fd.read()) != tillChar {
 		ret = ret + ch
 		if ret.len() > max { throw ['runtime', 'read_till epic fail'] }
-		# echo("<CH:${ch.ord()}>")
+		# echo("<CH thread=${thread().id} ord=${ch.ord()} ch=$ch ret=$ret>")
 	}
+	# echo("<READ_TILL thread=${thread().id} till=$tillChar ch=$ch ret=$ret>")
 	ret
 }
 
 # ----- Files - end -----
 
-# TODO: Something like this should work:
-# ['__add', '__sub', '__mul', '__div'].each(F(op) {
-# 	defun global "$op"(a:Array, n:Number) { a.map(globals()[op], n) }
-# })
+# ----- Array arithmetcis - start -----
+{
+	'add sub mul div'.split().each(F(op) {
+		defun global "__$op"(a:Array, n:Number) { a.map(globals()["__$op"], n) }
+	})
+}
+# ----- Array arithmetcis - end -----
 
-defun global __add(a:Array, n:Number) { a.map(__add, n) }
-defun global __sub(a:Array, n:Number) { a.map(__sub, n) }
+# ----- Lock sugar - start -----
+defun global acquire(l:Lock, f:F, *args) {
+	# TODO: maybe catch and rethrow after release()
+	l.acquire()
+	f(*args)
+	l.release()
+}
+# ----- Lock sugar - end -----

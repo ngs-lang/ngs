@@ -25,7 +25,10 @@ prompt_contributors = [
 ]
 
 supervised_threads = []
+supervised_processes = []
 widgets = []
+thread_widget = {}
+process_widgets = {}
 
 defun cli_make_prompt(vars) {
 	prompt_contributors.map(second).map(F(contributor_func) {
@@ -36,8 +39,29 @@ defun cli_make_prompt(vars) {
 defun cli_screen_updater() {
 	while 1 {
 		$(sleep 2)
-		# sm.echo(widgets)
+		supervised_processes.each(F(prc) {
+			pw = process_widgets[prc.ngs_id]
+			pw.stdout.text = prc.stdout.strip()
+			pw.stderr.text = prc.stderr.strip()
+		})
+		sm.echo(widgets)
 	}
+}
+
+defun native_spawn(*args) {
+	# TODO: handle children threads maybe?
+	prc = __super(*args)
+	if thread() not in supervised_threads {
+	   return prc
+	}
+	t = thread().id
+	# echo("SPAWN", thread().id, prc.ngs_id)
+	supervised_processes.push(prc)
+	o = StdoutWidget()
+	e = StderrWidget()
+	thread_widget[t].push(o).push(e)
+	process_widgets[prc.ngs_id] = {'stdout': o, 'stderr': e}
+	prc
 }
 
 defun cli_main() {
@@ -57,6 +81,7 @@ defun cli_main() {
 
 		if l == "" {
 			n = n - 1
+			sm.echo(widgets)
 			continue
 		}
 		if l == "exit" {
@@ -85,8 +110,9 @@ defun cli_main() {
 		t.locals()["cli_n"] = n
 
 		supervised_threads.push(t)
-		ws = WidgetsSeq().push(OrigCmdWidget(l)).push(StdoutWidget()).push(StderrWidget())
+		ws = WidgetsSeq().push(OrigCmdWidget(l))
 		widgets.push(ws)
+		thread_widget[t.id] = ws
 		sm.echo(widgets)
 	}
 

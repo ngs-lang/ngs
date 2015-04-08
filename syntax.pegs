@@ -6,6 +6,7 @@
 {
 	var N = require('./ast_node').ASTNode;
 	var ngs_precedence_src = [
+		['|'],
 		['in', 'not in'],
 		['or'],
 		['and'],
@@ -20,6 +21,7 @@
 		});
 	}
 	var ngs_binops_names = {
+		'|'     : 'pipe',
 		'in'    : 'in',
 		'not in': 'not_in',
 		'or'    : 'or',
@@ -33,7 +35,7 @@
 		'-'     : 'sub',
 		'*'     : 'mul',
 		'/'     : 'div',
-	}
+	};
 }
 
 start = 
@@ -161,7 +163,7 @@ binop =
   binop1 /
   binop2
 
-binop1 = space? b:("==" / "!=" / "<" / ">" / "~" / "+" / "-" / "*" / "/") space? { return b; }
+binop1 = space? b:("|" / "==" / "!=" / "<" / ">" / "~" / "+" / "-" / "*" / "/") space? { return b; }
 binop2 = space b:("or" / "and" /  "in" / "not in") space { return b; }
 
 expr_chain =

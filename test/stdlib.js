@@ -81,6 +81,9 @@ var code_snippets = [
 	'{ split("a::bc::d", "::") == ["a", "bc", "d"] }', // split(Seq, Seq), uses pos(Seq, Seq)
 	'{ split("a bc de") == ["a", "bc", "de"] }', // split(String)
 	'{ Number("123") == 123 }', // Number(String), uses native ord()
+	// Pipe
+	'{ ([1, 2] | X*2) == [2,4] }',
+	'{ ({"a": "x"} | X[0] + X[1]) == ["ax"]}',
 ];
 
 // console.log("+ Loading stdlib");
