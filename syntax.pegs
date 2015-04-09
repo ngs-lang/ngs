@@ -6,7 +6,6 @@
 {
 	var N = require('./ast_node').ASTNode;
 	var ngs_precedence_src = [
-		['|'],
 		['in', 'not in'],
 		['or'],
 		['and'],
@@ -21,7 +20,6 @@
 		});
 	}
 	var ngs_binops_names = {
-		'|'     : 'pipe',
 		'in'    : 'in',
 		'not in': 'not_in',
 		'or'    : 'or',
@@ -345,6 +343,14 @@ comma_separated_kv "comma-separated kv" =
 lambda "Lambda" =
   ("lambda" / "F") name:(space+ identifier)? space? "(" space? params:parameters? space? ")" space? code:CCEXPR {
     return N('lambda', offset, [name?name[1]:N('string', offset, [], ''), params || N('parameters', offset, []), code]);
+  } /
+  at_lambda
+
+at_lambda "At-Lambda" =
+  "@" space? e:expr {
+    var p1 = N('arg_nam', offset, [N('string', offset, [N('null', offset, [], false)], 'X'), N('null', offset, [], false)]);
+    var p2 = N('arg_nam', offset, [N('string', offset, [N('null', offset, [], false)], 'Y'), N('null', offset, [], false)]);
+    return N('lambda', offset, [N('string', offset, [], ''), N('parameters', offset, [p1, p2]), e]);
   }
 
 function_definition =

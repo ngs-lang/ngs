@@ -42,30 +42,6 @@ function fix_binops_node(node) {
 	if(ret[0].is('binops')) {
 		ret[0] = fix_binops_node(ret[0]);
 	}
-	// e1 | e2 -> __pipe(e1, F(X) { e2 })
-	if(ret[0].is('binop') && (ret[0].data=='pipe')) {
-		var o = ret[0].offset;
-		var f = new N(
-			'lambda',
-			o,
-			[
-				new N('string', o, [], 'anonymous_pipe_' + o),
-				new N('parameters', o, [
-					new N('arg_pos', o, [new N('string', o, [], 'X'), new N('null', o, [], false)])
-				]),
-				ret[0][1]
-			]
-		);
-		return new N(
-			'call',
-			o,
-			[
-				new N('varname', o, [], '__pipe'),
-				new N('expressions', o, [ret[0][0], f])
-			],
-			false
-		);
-	}
 	return ret[0];
 }
 

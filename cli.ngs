@@ -10,27 +10,27 @@ require("ngs/widgets.ngs")
 sm = ScreenManager(stdin, stdout)
 
 # Example of how to remove parts
-# { prompt_contributors = prompt_contributors.filter(F(x) { x.first() != "ver" }) }
+# { prompt_contributors = prompt_contributors.filter(@X.first() != 'ver' ) }
 prompt_contributors = [
-	["ver", F() { "NGS v$ver" }],
-	["nothing_to_say", F() { null }],
+	["ver", @"NGS v$ver"],
+	["nothing_to_say", @null],
 	["threads", F() {
-		ts = supervised_threads.filter(F(x) {x.state != "finished"})
+		ts = supervised_threads.filter(@X.state != 'finished')
 		if(ts) {
 			"jobs:" + ts.join(",")
 		}
 	}],
-	["num", F() { n }],
-	["finish", F() { "> " }],
+	["num", @n],
+	["finish", @"> "],
 ]
 
 supervised_threads = Set()
 supervised_processes = Set()
 
 defun global cli_make_prompt(vars) {
-	prompt_contributors.map(second).map(F(contributor_func) {
-		(contributor_func.locals(vars))()
-	}).filter().join(" ")
+	prompt_contributors.map(second).map(@
+		(X.locals(vars))()
+	).filter().join(" ")
 }
 
 defun global cli_screen_updater() {
@@ -92,7 +92,7 @@ defun cli_main() {
 			break
 		}
 		if l == "vars" {
-			lambda_ = F() { local_scope }
+			lambda_ = @local_scope
 		}
 
 		time = $(date '+%Y-%m-%d %H:%M:%S').String()

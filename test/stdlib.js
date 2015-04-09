@@ -84,9 +84,9 @@ var code_snippets = [
 	'{ split("a::bc::d", "::") == ["a", "bc", "d"] }', // split(Seq, Seq), uses pos(Seq, Seq)
 	'{ split("a bc de") == ["a", "bc", "de"] }', // split(String)
 	'{ Number("123") == 123 }', // Number(String), uses native ord()
-	// Pipe
-	'{ ([1, 2] | X*2) == [2,4] }',
-	'{ ({"a": "x"} | X[0] + X[1]) == ["ax"]}',
+	// @
+	'{ [1, 2].map(@X*2) == [2,4] }',
+	'{ {"a": "x"}.map(@X+Y) == ["ax"]}',
 	// Set
 	'{ s=Set([1,2,"a"]); (1 in s) and (3 not in s) }', // Set(), add(Set, v)
 	'{ s=Set(); s.push(7); (s.len() == 1) and (s.values() == [7]) }',

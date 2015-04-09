@@ -16,9 +16,7 @@ redraw_lock = Lock()
 status_width = 5
 spacer = ' ' * status_width
 
-defun colored(s:String, c:String) {
-	"${tput_cache["${c}_color"]}$s${tput_cache.sgr0}"
-}
+defun colored(s:String, c:String) { "${tput_cache["${c}_color"]}$s${tput_cache.sgr0}" }
 
 defun OrigCmdWidget(cmd:String, time:String) {
 	w = __super()
@@ -65,7 +63,7 @@ defun init(ow:OutputWidget) { ow.text = ''; ow }
 defun colored(ow:OutputWidget, s:String) { s }
 defun echo(ow:OutputWidget) {
 	if not(ow.text) { return null }
-	ow.text.lines() | echo("$spacer${ow.colored(X)}${tput_cache.el}")
+	ow.text.lines().each(@echo("$spacer${ow.colored(X)}${tput_cache.el}"))
 }
 defun height(ow:OutputWidget) { ow.text.lines().len() }
 defun height(ow:OutputWidget) { guard not(ow.text); 0 }
@@ -111,9 +109,7 @@ defun echo(sm:ScreenManager) {
 	})
 }
 
-defun String(sm:ScreenManager) {
-	"<ScreenManager id=${sm.id()} lines=${sm.dims[0]} cols=${sm.dims[1]}>"
-}
+defun String(sm:ScreenManager) { "<ScreenManager id=${sm.id()} lines=${sm.dims[0]} cols=${sm.dims[1]}>" }
 
 # --------------- Low level tty handling - start ---------------
 
@@ -135,7 +131,6 @@ defun getDimensions() {
 # Based on http://stackoverflow.com/questions/2575037/how-to-get-the-cursor-position-in-bash
 defun getCursorPosition() {
 	tty = f'/dev/tty'
-	# defun stty(*args) { $(stty -F $tty $*args) }
 	saved_stty=$(stty -F $tty -g)
 	$(stty -F $tty raw -echo min 0)
 	tty.write('\e[6n')
@@ -143,14 +138,9 @@ defun getCursorPosition() {
 
 	0.read_till('\e') # somewhat safer
 	# IFS=';' read -r -d R -a pos;row=$((${pos[0]:2} - 1));col=$((${pos[1]} - 1))
-	# t = 0.read_till('R', 16)
-	# ret = t.strip('\x00\e[').split(';').map(Number) - 1
-
 	ret = 0.read_till('R').strip('\x00\e[').split(';').map(Number) - 1
 
 	$(stty -F $tty $saved_stty)
-	# echo("getCursorPosition -> ${ret}")
-	# echo("READ TILL '$t'")
 	ret
 }
 

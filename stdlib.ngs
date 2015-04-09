@@ -8,8 +8,7 @@ defun global repr(x) { String(x) }
 # ----- String - start -----
 # string * number -> the string repeated number times
 defun global __mul(s:String, n:Number) {
-	# n.map(F(x) { s }).join()
-	join(n | s)
+	n.map(@s).join()
 }
 
 # TODO: maybe generic for Seq
@@ -105,18 +104,13 @@ defun global Hash(a:Array) {
 	ret
 }
 
-defun global Hash(a:Array, v) {
-	# a.map(F(x) {[x,v]}).Hash()
-	# MAYBE: a.map(@[X,v]).Hash()
-	Hash(a | [X,v])
-}
+defun global Hash(a:Array, v) { a.map(@[X,v]).Hash() }
 
 defun global Hash(keys:Array, mapper:F, *args) {
-	# keys.map(F(x) {[x, mapper(x, *args)]}).Hash()
-	Hash(keys | [X, mapper(X, *args)])
+	keys.map(@[X, mapper(X, *args)]).Hash()
 }
 
-defun global values(h:Hash) { h | X[1] }
+defun global values(h:Hash) { h.map(@Y) }
 defun global values(s:Seq) { s }
 
 defun global zip(a:Seq, b:Seq) {
@@ -126,8 +120,7 @@ defun global zip(a:Seq, b:Seq) {
 		throw ['args', 'Zip with different Seqs length']
 	}
 
-	# l.map(F(i) { [a[i], b[i]] })
-	l | [a[X], b[X]]
+	l.map(@[a[X], b[X]])
 }
 
 defun global __neq(a, b) {
@@ -153,7 +146,7 @@ defun global __eq(a:Thread, b:Thread) { a.id == b.id }
 
 defun global map(s:Seq, mapper:F, *args) {
 	# s.len().map(F(i) { mapper(s[i], *args) })
-	s.len() | mapper(s[X], *args)
+	s.len().map(@mapper(s[X], *args))
 }
 
 defun global map(n:Number, mapper:F, *args) {
@@ -165,30 +158,12 @@ defun global map(n:Number, mapper:F, *args) {
 }
 
 defun global map(h:Hash, mapper:F, *args) {
-	# h.keys().map(F(k) { mapper(k, h[k], *args) })
-	h.keys() | mapper(X, h[X], *args)
-}
-
-# defun global mapv(h:Hash, mapper:F, *args) {
-# 	ret = {}
-# 	h.keys().map(F(k) { ret[k] = mapper(h[k], *args) })
-# 	ret
-# }
-
-# By default a pipe is map() but we don't do __pipe=map to
-# allow overriding of __pipe for specific types.
-defun global __pipe(*args) {
-	map(*args)
-}
-
-defun global __pipe(h:Hash, f:F) {
-	h.map(F(k, v) { f([k,v]) })
+	h.keys().map(@mapper(X, h[X], *args))
 }
 
 defun global reduce(s:Seq, start, reducer:F) {
 	acc = start
 	s.each(F(x) { acc = reducer(acc, x) })
-	# s | acc = reducer(acc, X)
 	acc
 }
 
@@ -254,8 +229,7 @@ defun global __get_item(s:Seq, idx:Number) {
 }
 
 defun global __get_item(s:Seq, idxs:Array) {
-	# idxs.map(F(i) { s[i] })
-	idxs | s[X]
+	idxs.map(@s[X])
 }
 
 defun global __get_item(h:Hash, n:Number) {
@@ -267,8 +241,7 @@ defun global __set_item(h:Hash, n:Number, v) {
 }
 
 defun global __get_item(a:Hash, keys:Array) {
-	# keys.map(F(k) { [k, a[k]] }).Hash()
-	Hash(keys | [X, a[X]])
+	keys.map(@[X, a[X]]).Hash()
 }
 
 # Make hash.key same as hash['key']
@@ -277,8 +250,7 @@ defun global __get_attr(h:Hash, k:String) {
 }
 
 defun global __get_attr(a:Array, attr:String) {
-	# map(a, __get_attr, attr)
-	a | X.__get_attr(attr)
+	map(a, __get_attr, attr)
 }
 
 defun global __in(v, s:Seq) {
@@ -581,7 +553,6 @@ defun global inherits(child:String, parent:String) {
 
 defun global mktype(type:String, parents:Array) {
 	parents.each(F(p) { inherits(type, p) })
-	# parents | inherits(type, X)
 	defun global "$type"() {
 		obj(type).init()
 	}
@@ -672,7 +643,7 @@ defun global set_id(t:Thread)  { "thr:${t.id}" }
 
 # Constructors
 defun global Set()      { Hash().as('Set') }
-defun global Set(s:Seq) { ret = Set(); s | ret.add(X); ret }
+defun global Set(s:Seq) { ret = Set(); s.each(@ret.add(X)); ret }
 
 # Mutators
 defun global add(s:Set, v)	{ s.as('Hash')[v.set_id()] = v; s }
