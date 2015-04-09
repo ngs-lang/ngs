@@ -25,8 +25,7 @@ def OrigCmdWidget(cmd:String, time:String) {
 	w.exit_code = null
 	w
 }
-def height(w: OrigCmdWidget) { 1 }
-def echo(w:OrigCmdWidget) {
+def lines(w:OrigCmdWidget) {
 	err = false
 	ok = false
 	if w.exit_code == null {
@@ -47,26 +46,22 @@ def echo(w:OrigCmdWidget) {
 	if ok {
 		status = colored(status, 'success')
 	}
-	echo("$status--- ${w.cmd} --- ${w.time}${tput_cache.el}");
+	["$status--- ${w.cmd} --- ${w.time}${tput_cache.el}"]
 }
 
 def ErrorWidget(cmd:String) {w = __super(); w.cmd = cmd; w}
-def height(w: ErrorWidget) { 1 }
-def echo(w:ErrorWidget) { echo("${spacer}ERROR: ${w.cmd} ${tput_cache.el}"); }
+def lines(w:ErrorWidget) { ["${spacer}ERROR: ${w.cmd} ${tput_cache.el}"] }
 
 def WidgetsSeq() { ws = __super(); ws.items = []; ws}
 def push(ws:WidgetsSeq, x) { ws.items.push(x); ws }
-def height(ws:WidgetsSeq) { ws.items.map(height).sum() }
-def echo(ws:WidgetsSeq) { ws.items.each(echo); }
+def lines(ws:WidgetsSeq) { ws.items.map(lines).flatten() }
 
 def init(ow:OutputWidget) { ow.text = ''; ow }
 def colored(ow:OutputWidget, s:String) { s }
-def echo(ow:OutputWidget) {
-	if not(ow.text) { return null }
-	ow.text.lines().each(@echo("$spacer${ow.colored(X)}${tput_cache.el}"))
+def lines(ow:OutputWidget) {
+	if not(ow.text) { return [] }
+	ow.text.lines().map(@"$spacer${ow.colored(X)}${tput_cache.el}")
 }
-def height(ow:OutputWidget) { ow.text.lines().len() }
-def height(ow:OutputWidget) { guard not(ow.text); 0 }
 
 def colored(ew:StderrWidget, s:String) { colored(s, 'error') }
 
@@ -95,15 +90,20 @@ def updateDimensions(sm:ScreenManager) {
 	sm
 }
 
+prev_lines = []
 def echo(sm:ScreenManager) {
-	# TODO: Smarter, on demand, maybe partial screen update.
+	# TODO: Only redraw updated lines
 	# TODO: handle situations when cursor is now higher than the number of lines needed for widgets
 	redraw_lock.acquire(F() {
+		l = sm.widgets.map(lines).flatten()
+		if l == prev_lines {
+			return null
+		}
+		prev_lines = l
 		sm.rl.pause()
 		pos = getCursorPosition()
-		lines_count = sm.widgets.map(height).sum()
-		setCursorPosition(pos[0] - lines_count, 0)
-		sm.widgets.map(echo)
+		setCursorPosition(pos[0] - l.len(), 0)
+		l.each(echo)
 		setCursorPosition(*pos)
 		sm.rl.resume()
 	})

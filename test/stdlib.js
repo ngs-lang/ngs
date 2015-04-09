@@ -75,6 +75,7 @@ var code_snippets = [
 	'{ [{"x": 7}, {"x": 8}].x == [7,8] }',
 	'{ {"x": 7, "y": 8}.values().sort() == [7,8]}',
 	'{ [1,2,2,3].uniq() == [1,2,3] }',
+	'{ [[1, 2], [3, 4]].flatten() == [1, 2, 3, 4] }',
 	// meta
 	'{ a=1; a.meta("x", 2); a.meta("y", 3) == a and a.meta("x") == 2 and a.has_meta("x") }',
 	// String
