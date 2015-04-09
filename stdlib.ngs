@@ -575,7 +575,7 @@ defg add(s:Set, v)	{ s.as('Hash')[v.set_id()] = v; s }
 defg push(s:Set, v) { add(s,v) }
 
 # Operators
-defg __sub(a:Set, b:Set) { a.filter(F(x) { x not in b }) }
+defg __sub(a:Set, b:Set) { a.filter(@ X not in b) }
 
 # Getters
 act_as('values', 'Set', 'Hash')
