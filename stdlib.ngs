@@ -242,30 +242,17 @@ defg min(a:Number, b:Number) { if a<b {a}{b} }
 defg max(a:Number, b:Number) { if a<b {b}{a} }
 
 defg startsWith(s:Seq, pfx:Seq) {
-	if len(s) < len(pfx) {
-		return false
-	}
-	l = pfx.len()
-	for(i=0;i<l;i=i+1) {
-		if s[i] != pfx[i] {
-			return false
-		}
-	}
-	true
+	not(len(s) < len(pfx))
+	and
+	s.slice(0, pfx.len()) == pfx
 }
 
 defg endsWith(s:Seq, sfx:Seq) {
-	if len(s) < len(sfx) {
+	l = sfx.len()
+	if len(s) < l {
 		return false
 	}
-	l = sfx.len()
-	sidx = s.len() - l
-	for(i=0;i<l;i=i+1) {
-		if s[sidx+i] != sfx[i] {
-			return false
-		}
-	}
-	true
+	s.slice(s.len() - l, l) == sfx
 }
 
 # Not sure, maybe Seq? Need use cases. For String it's: fname - '.txt' + '.bak'
@@ -315,8 +302,7 @@ defg spawn(*args) {
 	  guard args.len() > 1
 	  guard startsWith(args[0], '-')
 	  args = ['test'] + args
-	  # or spawn() again?
-	  return __super(*args)
+	  return spawn(*args)
 }
 
 defg osname() { null }
@@ -405,19 +391,13 @@ defg join(s:Seq) { join(s, '') }
 
 defg String(s:String) { s }
 
-defg String(a:Array) {
-	'[' + a.join(', ') + ']'
-	# Could be less readable: "[${a.join(', ')}]"
-}
-
+defg String(a:Array) { '[' + a.join(', ') + ']' }
 defg String(a:Array) {
 	guard typeof(a) != 'Array'
 	'<' + typeof(a) + ' ' + __super(a) + '>'
 }
 
-defg String(h:Hash) {
-	'{' + h.map(F(k,v) { "$k: $v" }).join(', ') + '}'
-}
+defg String(h:Hash) { '{' + h.map(F(k,v) { "$k: $v" }).join(', ') + '}' }
 
 defg String(h:Hash) {
 	guard typeof(h) != 'Hash'
@@ -425,25 +405,11 @@ defg String(h:Hash) {
 }
 
 
-defg String(b:Bool) {
-	if b {'true'}{'false'}
-}
-
-defg String(n:Null) {
-	'null'
-}
-
-defg String(l:Lambda) {
-	inspect(l)
-}
-
-defg String(t:Thread) {
-	"<Thread id=${t.id} state=${t.state}>"
-}
-
-defg String(c:Code) {
-	"<Compiled code>"
-}
+defg String(b:Bool)   { if b {'true'}{'false'} }
+defg String(n:Null)   { 'null' }
+defg String(l:Lambda) { inspect(l) }
+defg String(t:Thread) { "<Thread id=${t.id} state=${t.state}>" }
+defg String(c:Code)   { "<Compiled code>" }
 
 
 defg repr(p:Process) { "<Process pid=${p.pid} code=${p.exit_code} id=${p.id} o=${p.stdout.len()} e=${p.stderr.len()}>" }
