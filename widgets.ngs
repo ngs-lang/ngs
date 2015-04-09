@@ -144,15 +144,13 @@ defun getCursorPosition() {
 	ret
 }
 
-defun setCursorPosition(line, col) {
-	$(tput cup $line $col).stdout.write()
-}
+defun setCursorPosition(line, col) { $(tput cup $line $col).stdout.write() }
 
 # http://www.tldp.org/HOWTO/Bash-Prompt-HOWTO/x405.html
-tput_cache = ["el", "sc", "rc", "smso", "rmso", "sgr0"].Hash(F(x) { $(tput $x).stdout })
+tput_cache = ['el', 'sc', 'rc', 'smso', 'rmso', 'sgr0'].Hash(@ $(tput $X).String())
 {
-	tput_cache.error_color = $(tput setaf 1)   # red
-	tput_cache.success_color = $(tput setaf 2) # green
+	tput_cache.error_color = $(tput setaf 1).String()   # red
+	tput_cache.success_color = $(tput setaf 2).String() # green
 }
 
 # --------------- Low level tty handling - end ---------------

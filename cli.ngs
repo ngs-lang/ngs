@@ -65,15 +65,13 @@ defun native_spawn(*args) {
 	prc
 }
 
-defun cli_main() {
+defun global cli_main() {
 
 	local_scope = {"x": 7}
 	n = 0
 	screen_updater = thread(cli_screen_updater.one())
 	while true {
 		n = n + 1
-
-		# echo(supervised_threads.Bool(), [].Bool(), Bool);
 
 		prompt_vars = {"n": n, "ver": "0.0.1"}
 		prompt = cli_make_prompt(prompt_vars)
