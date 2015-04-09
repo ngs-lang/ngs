@@ -2,25 +2,25 @@
 # TODO: Something that will tell whether all methods were covered at the end of each tests run.
 #       Don't want to add a test for each method because some are checked by proxy.
 
-defun global repr(x) { String(x) }
+defg repr(x) { String(x) }
 
 
 # ----- String - start -----
 # string * number -> the string repeated number times
-defun global __mul(s:String, n:Number) {
+defg __mul(s:String, n:Number) {
 	n.map(@s).join()
 }
 
 # TODO: maybe generic for Seq
-defun global fill(s:String, n:Number) {
+defg fill(s:String, n:Number) {
 	t = n - s.len()
 	if t < 1 { return s }
 	s + ' ' * t
 }
 
-defun global __match(s:String, n:Number) { s.len() == n }
+defg __match(s:String, n:Number) { s.len() == n }
 
-defun global strip(s:Seq, elts:Seq) {
+defg strip(s:Seq, elts:Seq) {
 	l = s.len()
 	i = 0
 	while i < l and s[i] in elts {
@@ -33,12 +33,11 @@ defun global strip(s:Seq, elts:Seq) {
 	s.slice(i, j-i+1)
 }
 
-defun global strip(s:String) {
-	strip(s, " \t\r\n")
-}
+defg strip(s:String) { strip(s, " \t\r\n") }
 
 # Not the most efficient :/
-defun global pos(s:Seq, subseq:Seq, start:Number=0) {
+# I wonder why all other languages return -1 for not found.
+defg pos(s:Seq, subseq:Seq, start:Number=0) {
 	sl = s.len()
 	ssl = subseq.len()
 	if sl < ssl {
@@ -54,7 +53,7 @@ defun global pos(s:Seq, subseq:Seq, start:Number=0) {
 	return null
 }
 
-defun global split(s:Seq, delim:Seq) {
+defg split(s:Seq, delim:Seq) {
 	sl = s.len()
 	dl = delim.len()
 	ret = []
@@ -69,11 +68,11 @@ defun global split(s:Seq, delim:Seq) {
 	ret
 }
 
-defun global split(s:String) { split(s, ' ') }
+defg split(s:String) { split(s, ' ') }
 
-defun global split(p:Process, *args) { split(p.stdout.strip(), *args) }
+defg split(p:Process, *args) { split(p.stdout.strip(), *args) }
 
-defun global Number(s:String) {
+defg Number(s:String) {
 	# TODO: checks, negatives, floats, base
 	ord_zero = ord('0')
 	ret = 0
@@ -82,38 +81,33 @@ defun global Number(s:String) {
 }
 
 # TODO: escaping
-defun global repr(s:String) { "'$s'" }
+defg repr(s:String) { "'$s'" }
 
 # ----- String - end -----
 
-defun global __match(a:Array, n:Number) { a.len() == n }
+defg __match(a:Array, n:Number) { a.len() == n }
 
-defun global not(x) { if x {false}{true} }
+defg not(x) { if x {false}{true} }
 
-# TODO:
-#   Make String and Array inherit from new type Sequence.
-#   Sequence will have method len() among others.
-#   defun Bool(s:Sequence) { s.len() > 0 }
+defg Bool(s:Seq)    { s.len() > 0 }
+defg Bool(h:Hash)   { h.len() > 0 }
 
-defun global Bool(s:Seq)    { s.len() > 0 }
-defun global Bool(h:Hash)   { h.len() > 0 }
-
-defun global Hash(a:Array) {
+defg Hash(a:Array) {
 	ret = {}
 	a.each(F(x) { ret[x[0]] = x[1] })
 	ret
 }
 
-defun global Hash(a:Array, v) { a.map(@[X,v]).Hash() }
+defg Hash(a:Array, v) { a.map(@[X,v]).Hash() }
 
-defun global Hash(keys:Array, mapper:F, *args) {
+defg Hash(keys:Array, mapper:F, *args) {
 	keys.map(@[X, mapper(X, *args)]).Hash()
 }
 
-defun global values(h:Hash) { h.map(@Y) }
-defun global values(s:Seq) { s }
+defg values(h:Hash) { h.map(@Y) }
+defg values(s:Seq) { s }
 
-defun global zip(a:Seq, b:Seq) {
+defg zip(a:Seq, b:Seq) {
 	l = len(a)
 
 	if l != b.len() {
@@ -123,33 +117,28 @@ defun global zip(a:Seq, b:Seq) {
 	l.map(@[a[X], b[X]])
 }
 
-defun global __neq(a, b) {
-	not(a==b)
-}
+defg __neq(a, b) { not(a==b) }
 
 # Don't make it Seq. It causes infinite recursion I guess.
-defun global __eq(a:Array, b:Array) {
+defg __eq(a:Array, b:Array) {
 	a.len() == b.len()
 	and
-	all(zip(a,b), F(x) { x[0] == x[1] })
+	all(zip(a,b), @ X[0] == X[1])
 }
 
-defun global __eq(a:Hash, b:Hash) {
+defg __eq(a:Hash, b:Hash) {
 	a.len() == b.len()
 	and
 	a.keys().sort() == b.keys().sort()
 	and
-	all(a.keys(), F(k) { a[k] == b[k] })
+	all(a.keys(), @ a[X] == b[X])
 }
 
-defun global __eq(a:Thread, b:Thread) { a.id == b.id }
+defg __eq(a:Thread, b:Thread) { a.id == b.id }
 
-defun global map(s:Seq, mapper:F, *args) {
-	# s.len().map(F(i) { mapper(s[i], *args) })
-	s.len().map(@mapper(s[X], *args))
-}
+defg map(s:Seq, mapper:F, *args) { s.len().map(@mapper(s[X], *args)) }
 
-defun global map(n:Number, mapper:F, *args) {
+defg map(n:Number, mapper:F, *args) {
 	ret = []
 	for(i=0;i<n;i=i+1) {
 		ret.push(mapper(i, *args))
@@ -157,19 +146,17 @@ defun global map(n:Number, mapper:F, *args) {
 	ret
 }
 
-defun global map(h:Hash, mapper:F, *args) {
-	h.keys().map(@mapper(X, h[X], *args))
-}
+defg map(h:Hash, mapper:F, *args) { h.keys().map(@mapper(X, h[X], *args)) }
 
-defun global reduce(s:Seq, start, reducer:F) {
+defg reduce(s:Seq, start, reducer:F) {
 	acc = start
 	s.each(F(x) { acc = reducer(acc, x) })
 	acc
 }
 
-defun global sum(a:Array) { reduce(a, 0, __add) }
+defg sum(a:Array) { reduce(a, 0, __add) }
 
-defun global each(s:Seq, processor:F, *args) {
+defg each(s:Seq, processor:F, *args) {
 	j = s.len()
 	for(i=0;i<j;i=i+1) {
 		processor(s[i], *args)
@@ -177,13 +164,13 @@ defun global each(s:Seq, processor:F, *args) {
 	s
 }
 
-defun global each(n:Number, processor:F, *args) {
+defg each(n:Number, processor:F, *args) {
 	for(i=0;i<n;i=i+1) {
 		processor(i, *args)
 	}
 }
 
-defun global any(s:Seq, predicate:F, *args) {
+defg any(s:Seq, predicate:F, *args) {
 	j = s.len()
 	for(i=0;i<j;i=i+1) {
 		if predicate(s[i], *args) {
@@ -193,7 +180,7 @@ defun global any(s:Seq, predicate:F, *args) {
 	false
 }
 
-defun global all(s:Seq, predicate:F, *args) {
+defg all(s:Seq, predicate:F, *args) {
 	j = s.len()
 	for(i=0;i<j;i=i+1) {
 		if not(predicate(s[i], *args)) {
@@ -203,11 +190,11 @@ defun global all(s:Seq, predicate:F, *args) {
 	true
 }
 
-defun global none(s:Seq, predicate:F, *args) {
+defg none(s:Seq, predicate:F, *args) {
 	not(any(s, predicate, *args))
 }
 
-defun global filter(s:Seq, predicate:F, *args) {
+defg filter(s:Seq, predicate:F, *args) {
 	ret = []
 	j = s.len()
 	for(i=0;i<j;i=i+1) {
@@ -218,63 +205,43 @@ defun global filter(s:Seq, predicate:F, *args) {
 	ret
 }
 
-defun global filter(s:Seq) {
-	s.filter(F(x) { x != null })
-}
+defg filter(s:Seq) { s.filter(@ X != null) }
 
-defun global __get_item(s:Seq, idx:Number) {
+defg __get_item(s:Seq, idx:Number) {
 	guard idx < 0
 	l = s.len()
 	s[l+idx]
 }
 
-defun global __get_item(s:Seq, idxs:Array) {
+defg __get_item(s:Seq, idxs:Array) {
 	idxs.map(@s[X])
 }
 
-defun global __get_item(h:Hash, n:Number) {
-	h[n.String()]
-}
+defg __get_item(h:Hash, n:Number) { h[n.String()] }
+defg __set_item(h:Hash, n:Number, v) { h[n.String()] = v }
 
-defun global __set_item(h:Hash, n:Number, v) {
-	h[n.String()] = v
-}
-
-defun global __get_item(a:Hash, keys:Array) {
-	keys.map(@[X, a[X]]).Hash()
-}
+defg __get_item(a:Hash, keys:Array) { keys.map(@[X, a[X]]).Hash() }
 
 # Make hash.key same as hash['key']
-defun global __get_attr(h:Hash, k:String) {
-	h[k]
-}
+defg __get_attr(h:Hash, k:String) { h[k] }
 
-defun global __get_attr(a:Array, attr:String) {
+defg __get_attr(a:Array, attr:String) {
 	map(a, __get_attr, attr)
 }
 
-defun global __in(v, s:Seq) {
-	any(s, __eq, v)
-}
+defg __in(v, s:Seq)  { any(s, __eq, v) }
+defg __in(v, h:Hash) { v in h.keys() }
 
-defun global __in(v, h:Hash) {
-	v in h.keys()
-}
+defg __not_in(*args) { not(__in(*args)) }
 
-# TODO: defun global __in(substring, string)
-
-defun global __not_in(*args) {
-	not(__in(*args))
-}
-
-defun global has(container, item) {item in container}
-defun global has_no(container, item) {item not in container}
+defg has(container, item) {item in container}
+defg has_no(container, item) {item not in container}
 
 
-defun global min(a:Number, b:Number) { if a<b {a}{b} }
-defun global max(a:Number, b:Number) { if a<b {b}{a} }
+defg min(a:Number, b:Number) { if a<b {a}{b} }
+defg max(a:Number, b:Number) { if a<b {b}{a} }
 
-defun global startsWith(s:Seq, pfx:Seq) {
+defg startsWith(s:Seq, pfx:Seq) {
 	if len(s) < len(pfx) {
 		return false
 	}
@@ -287,7 +254,7 @@ defun global startsWith(s:Seq, pfx:Seq) {
 	true
 }
 
-defun global endsWith(s:Seq, sfx:Seq) {
+defg endsWith(s:Seq, sfx:Seq) {
 	if len(s) < len(sfx) {
 		return false
 	}
@@ -302,7 +269,7 @@ defun global endsWith(s:Seq, sfx:Seq) {
 }
 
 # Not sure, maybe Seq? Need use cases. For String it's: fname - '.txt' + '.bak'
-defun global __sub(s:String, sfx:String) {
+defg __sub(s:String, sfx:String) {
 	if s.endsWith(sfx) {
 		s.slice(0, s.len() - sfx.len())
 	} else {
@@ -312,7 +279,7 @@ defun global __sub(s:String, sfx:String) {
 }
 
 # XXX: Warning: should be per Context or it will bite you
-defun global spawn_update_globals(args:Array, p:Process) {
+defg spawn_update_globals(args:Array, p:Process) {
 	g = globals()
 	g['P'] = p
 	if 'PP' not in g {
@@ -324,7 +291,7 @@ defun global spawn_update_globals(args:Array, p:Process) {
 	thread().locals()['P'] = p
 }
 
-defun global spawn(*args) {
+defg spawn(*args) {
 	# TODO: handle async
 	p = native_spawn(*args)
 	spawn_update_globals(args, p)
@@ -338,13 +305,13 @@ defun global spawn(*args) {
 	p
 }
 
-defun global spawn(*args) {
+defg spawn(*args) {
 	guard args.map(typeof).any(__neq, 'String')
 	__super(*args.map(String))
 }
 
 # Convert execution of (example) '-f somefile' to 'test -f somefile'
-defun global spawn(*args) {
+defg spawn(*args) {
 	  guard args.len() > 1
 	  guard startsWith(args[0], '-')
 	  args = ['test'] + args
@@ -352,33 +319,25 @@ defun global spawn(*args) {
 	  return __super(*args)
 }
 
-defun global osname() {
-	null
-}
-
-defun global osname() {
-	guard f'/etc/debian_version'
-	'debian'
-}
+defg osname() { null }
+defg osname() { guard f'/etc/debian_version'; 'debian'}
 
 
 # ----- Finished commands handlers - start -----
 
-defun global cmd_finished_ok_p(p:Process) {
-	p.exit_code == 0
-}
+defg cmd_finished_ok_p(p:Process) { p.exit_code == 0 }
 
-defun global cmd_finished_ok_p(p:Process) {
+defg cmd_finished_ok_p(p:Process) {
 	guard p.cmd == 'test'
 	p.exit_code in [0,1]
 }
 
-defun global cmd_finished_ok_p(p:Process) {
+defg cmd_finished_ok_p(p:Process) {
 	guard p.cmd == 'false'
 	p.exit_code == 1
 }
 
-defun global cmd_finished_ok_p(p:Process) {
+defg cmd_finished_ok_p(p:Process) {
 	guard p.cmd == 'service'
 	guard p.args[1] == 'status'
 	# Empirical
@@ -387,11 +346,9 @@ defun global cmd_finished_ok_p(p:Process) {
 
 # ----- Finished commands handlers - end -----
 
-defun global parse_file(f:String, content:String) {
-	content
-}
+defg parse_file(f:String, content:String) { content }
 
-defun global parse_file(f:String, content:String) {
+defg parse_file(f:String, content:String) {
 	guard f ~ /\\.json$/
 	r = catch from_json(content)
 	if not(r[0]) {
@@ -400,12 +357,12 @@ defun global parse_file(f:String, content:String) {
 	r[1]
 }
 
-defun global read(f:String) {
+defg read(f:String) {
 	content = fetch_file(f)
 	parse_file(f, content).meta('file', f)
 }
 
-defun global one(s:Seq) {
+defg one(s:Seq) {
 	if s.len() != 1 {
 		throw ['data', "Expected array with exactly one item but had ${a.len()}", a]
 	}
@@ -414,7 +371,7 @@ defun global one(s:Seq) {
 
 # Abstract usage example:
 # servers.filter(F(x) {'unicorn' in x.tags}).one('Unicorn server').create_image('Unicorn backup')
-defun global one(s:Seq, msg:String) {
+defg one(s:Seq, msg:String) {
 	if s.len() != 1 {
 		throw ['data', "Expected array with exactly one $msg but had ${a.len()}", a]
 	}
@@ -423,7 +380,7 @@ defun global one(s:Seq, msg:String) {
 
 # ----- Output helpers - start -----
 
-defun global String(p:Process) {
+defg String(p:Process) {
 	# TODO:
 	#   Handle processes that are still running.
 	#   Handle stderr
@@ -432,7 +389,7 @@ defun global String(p:Process) {
 	p.stdout.strip()
 }
 
-defun global join(s:Seq, sep:String) {
+defg join(s:Seq, sep:String) {
 	ret = ''
 	j = s.len()
 	for(i=0;i<j;i=i+1) {
@@ -444,59 +401,59 @@ defun global join(s:Seq, sep:String) {
 	ret
 }
 
-defun global join(s:Seq) { join(s, '') }
+defg join(s:Seq) { join(s, '') }
 
-defun global String(s:String) { s }
+defg String(s:String) { s }
 
-defun global String(a:Array) {
+defg String(a:Array) {
 	'[' + a.join(', ') + ']'
 	# Could be less readable: "[${a.join(', ')}]"
 }
 
-defun global String(a:Array) {
+defg String(a:Array) {
 	guard typeof(a) != 'Array'
 	'<' + typeof(a) + ' ' + __super(a) + '>'
 }
 
-defun global String(h:Hash) {
+defg String(h:Hash) {
 	'{' + h.map(F(k,v) { "$k: $v" }).join(', ') + '}'
 }
 
-defun global String(h:Hash) {
+defg String(h:Hash) {
 	guard typeof(h) != 'Hash'
 	'<' + typeof(h) + ' ' + __super(h) + '>'
 }
 
 
-defun global String(b:Bool) {
+defg String(b:Bool) {
 	if b {'true'}{'false'}
 }
 
-defun global String(n:Null) {
+defg String(n:Null) {
 	'null'
 }
 
-defun global String(l:Lambda) {
+defg String(l:Lambda) {
 	inspect(l)
 }
 
-defun global String(t:Thread) {
+defg String(t:Thread) {
 	"<Thread id=${t.id} state=${t.state}>"
 }
 
-defun global String(c:Code) {
+defg String(c:Code) {
 	"<Compiled code>"
 }
 
 
-defun global repr(p:Process) { "<Process pid=${p.pid} code=${p.exit_code} id=${p.id} o=${p.stdout.len()} e=${p.stderr.len()}>" }
+defg repr(p:Process) { "<Process pid=${p.pid} code=${p.exit_code} id=${p.id} o=${p.stdout.len()} e=${p.stderr.len()}>" }
 
-defun global echo(x) {
+defg echo(x) {
 	guard typeof(x) != 'String'
 	x.String().echo()
 }
 
-defun global echo(*args) {
+defg echo(*args) {
 	guard args.len() > 1
 	args.each(echo)
 }
@@ -504,11 +461,11 @@ defun global echo(*args) {
 # ----- Output helpers - end -----
 
 # ----- Meta sugar - start -----
-defun global meta(x, k:String) {
+defg meta(x, k:String) {
 	x.meta()[k]
 }
 
-defun global meta_dflt(x, k:String, v) {
+defg meta_dflt(x, k:String, v) {
 	m = x.meta()
 	if k in m {
 		m[k]
@@ -517,28 +474,28 @@ defun global meta_dflt(x, k:String, v) {
 	}
 }
 
-defun global meta(x, k:String, v) {
+defg meta(x, k:String, v) {
 	x.meta()[k] = v
 	x
 }
 
-defun global has_meta(x, k:String) {
+defg has_meta(x, k:String) {
 	k in x.meta()
 }
 # ----- Meta sugar - end -----
 
 # ----- __get_item sugar - start -----
-defun global first(s:Seq)  { s[0] }
-defun global second(s:Seq) { s[1] }
-defun global third(s:Seq)  { s[2] }
-defun global fourth(s:Seq) { s[3] }
-defun global fifth(s:Seq)  { s[4] }
+defg first(s:Seq)  { s[0] }
+defg second(s:Seq) { s[1] }
+defg third(s:Seq)  { s[2] }
+defg fourth(s:Seq) { s[3] }
+defg fifth(s:Seq)  { s[4] }
 
-defun global last(s:Seq)   { s[-1] }
+defg last(s:Seq)   { s[-1] }
 # ----- __get_item sugar - end -----
 
 # ----- Types sugar - start -----
-defun global inherits(child:String, parent:String) {
+defg inherits(child:String, parent:String) {
 	if child not in __TYPES {
 		__TYPES[child] = {}
 	}
@@ -551,27 +508,23 @@ defun global inherits(child:String, parent:String) {
 	__TYPES[child]['inherits'].push(parent)
 }
 
-defun global mktype(type:String, parents:Array) {
-	parents.each(F(p) { inherits(type, p) })
-	defun global "$type"() {
+defg mktype(type:String, parents:Array) {
+	parents.each(@inherits(type, X))
+	defg "$type"() {
 		obj(type).init()
 	}
 }
 
-defun global mktype(type:String, parent:String) {
-	mktype(type, [parent])
-}
+defg mktype(type:String, parent:String) { mktype(type, [parent]) }
 # ----- Types sugar - end -----
 
 # Should be defined for files fetched from remote locations, maybe
 # in some other cases too.
-defun global validate_source_file(f:String, content:String) {
-	  true
-}
+defg validate_source_file(f:String, content:String) { true }
 
 # TODO: path to search in
 # TODO: specify version of the required file/module
-defun global require(f:String, *args) {
+defg require(f:String, *args) {
 	content = fetch_file(f)
 	if not(validate_source_file(f, content)) {
 		throw ['runtime', "Failed to validate source file $f"]
@@ -585,12 +538,12 @@ defun global require(f:String, *args) {
 global __literal_f = File
 
 # Anything else will break $(ls $f) and probably other stuff
-defun global String(f:File) { f.name }
+defg String(f:File) { f.name }
 
-defun global Bool(p:Path) { $(-e $p).Bool() }
-defun global Bool(f:File) { $(-f $f).Bool() }
+defg Bool(p:Path) { $(-e $p).Bool() }
+defg Bool(f:File) { $(-f $f).Bool() }
 
-defun global read_till(fd:Number, tillChar:String, max:Number=1024) {
+defg read_till(fd:Number, tillChar:String, max:Number=1024) {
 	ret = ''
 	while (ch = fd.read()) != tillChar {
 		ret = ret + ch
@@ -601,20 +554,20 @@ defun global read_till(fd:Number, tillChar:String, max:Number=1024) {
 	ret
 }
 
-defun global repr(f:File) { "File(${f.name.repr()})" }
+defg repr(f:File) { "File(${f.name.repr()})" }
 
 # ----- Files - end -----
 
 # ----- Array arithmetcis - start -----
 {
 	'add sub mul div'.split().each(F(op) {
-		defun global "__$op"(a:Array, n:Number) { a.map(globals()["__$op"], n) }
+		defg "__$op"(a:Array, n:Number) { a.map(globals()["__$op"], n) }
 	})
 }
 # ----- Array arithmetcis - end -----
 
 # ----- Lock sugar - start -----
-defun global acquire(l:Lock, f:F, *args) {
+defg acquire(l:Lock, f:F, *args) {
 	# TODO: maybe catch and rethrow after release()
 	l.acquire()
 	f(*args)
@@ -622,11 +575,11 @@ defun global acquire(l:Lock, f:F, *args) {
 }
 # ----- Lock sugar - end -----
 
-# act_as(M, ORIG, AS) -> defun global M(x:ORIG, *args) { x.as(AS).M(*args) }
+# act_as(M, ORIG, AS) -> defg M(x:ORIG, *args) { x.as(AS).M(*args) }
 # Method M acts on objects of type ORIG as if they are of type AS
 
-defun global act_as(method:String, orig_type:String, as_type:String) {
-	defun global "$method"(x:"$orig_type", *args) {
+defg act_as(method:String, orig_type:String, as_type:String) {
+	defg "$method"(x:"$orig_type", *args) {
 		m = globals()[method]
 		m(x.as(as_type), *args)
 	}
@@ -634,41 +587,41 @@ defun global act_as(method:String, orig_type:String, as_type:String) {
 
 # ----- Set - start -----
 
-defun global set_id(x)         { "id():${x.id().String()}" }
-defun global set_id(n:Number)  { "num:$n" }
-defun global set_id(s:String)  { "str:$s" }
-defun global set_id(p:Process) { "prc:${p.id}" }
-defun global set_id(t:Thread)  { "thr:${t.id}" }
+defg set_id(x)         { "id():${x.id().String()}" }
+defg set_id(n:Number)  { "num:$n" }
+defg set_id(s:String)  { "str:$s" }
+defg set_id(p:Process) { "prc:${p.id}" }
+defg set_id(t:Thread)  { "thr:${t.id}" }
 
 
 # Constructors
-defun global Set()      { Hash().as('Set') }
-defun global Set(s:Seq) { ret = Set(); s.each(@ret.add(X)); ret }
+defg Set()      { Hash().as('Set') }
+defg Set(s:Seq) { ret = Set(); s.each(@ret.add(X)); ret }
 
 # Mutators
-defun global add(s:Set, v)	{ s.as('Hash')[v.set_id()] = v; s }
-defun global push(s:Set, v) { add(s,v) }
+defg add(s:Set, v)	{ s.as('Hash')[v.set_id()] = v; s }
+defg push(s:Set, v) { add(s,v) }
 
 # Operators
-defun global __sub(a:Set, b:Set) { a.filter(F(x) { x not in b }) }
+defg __sub(a:Set, b:Set) { a.filter(F(x) { x not in b }) }
 
 # Getters
 act_as('values', 'Set', 'Hash')
 act_as('len',    'Set', 'Hash')
 
 # Functional
-defun global each(s:Set, *args)	  { s.values().each(*args); s }
-defun global filter(s:Set, *args) { Set(filter(s.values(), *args)) }
+defg each(s:Set, *args)	  { s.values().each(*args); s }
+defg filter(s:Set, *args) { Set(filter(s.values(), *args)) }
 
 # Predicates
-defun global Bool(s:Set)        { s.len() > 0 }
-defun global __in(v, s:Set)     { v.set_id() in s.as('Hash') }
-defun global __eq(a:Set, b:Set) { a.values().sort() == b.values().sort() }
+defg Bool(s:Set)        { s.len() > 0 }
+defg __in(v, s:Set)     { v.set_id() in s.as('Hash') }
+defg __eq(a:Set, b:Set) { a.values().sort() == b.values().sort() }
 
 # Misc
-defun global String(s:Set)      { "<Set ${s.values()}>" }
-defun global repr(s:Set)        { "Set(${s.values().sort().repr()})" }
-defun global join(s:Set, *args) { join(s.values().sort(), *args) }
+defg String(s:Set)      { "<Set ${s.values()}>" }
+defg repr(s:Set)        { "Set(${s.values().sort().repr()})" }
+defg join(s:Set, *args) { join(s.values().sort(), *args) }
 
 
 # ----- Set - end -----

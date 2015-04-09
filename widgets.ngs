@@ -16,17 +16,17 @@ redraw_lock = Lock()
 status_width = 5
 spacer = ' ' * status_width
 
-defun colored(s:String, c:String) { "${tput_cache["${c}_color"]}$s${tput_cache.sgr0}" }
+def colored(s:String, c:String) { "${tput_cache["${c}_color"]}$s${tput_cache.sgr0}" }
 
-defun OrigCmdWidget(cmd:String, time:String) {
+def OrigCmdWidget(cmd:String, time:String) {
 	w = __super()
 	w.cmd = cmd
 	w.time = time
 	w.exit_code = null
 	w
 }
-defun height(w: OrigCmdWidget) { 1 }
-defun echo(w:OrigCmdWidget) {
+def height(w: OrigCmdWidget) { 1 }
+def echo(w:OrigCmdWidget) {
 	err = false
 	ok = false
 	if w.exit_code == null {
@@ -50,34 +50,34 @@ defun echo(w:OrigCmdWidget) {
 	echo("$status--- ${w.cmd} --- ${w.time}${tput_cache.el}");
 }
 
-defun ErrorWidget(cmd:String) {w = __super(); w.cmd = cmd; w}
-defun height(w: ErrorWidget) { 1 }
-defun echo(w:ErrorWidget) { echo("${spacer}ERROR: ${w.cmd} ${tput_cache.el}"); }
+def ErrorWidget(cmd:String) {w = __super(); w.cmd = cmd; w}
+def height(w: ErrorWidget) { 1 }
+def echo(w:ErrorWidget) { echo("${spacer}ERROR: ${w.cmd} ${tput_cache.el}"); }
 
-defun WidgetsSeq() { ws = __super(); ws.items = []; ws}
-defun push(ws:WidgetsSeq, x) { ws.items.push(x); ws }
-defun height(ws:WidgetsSeq) { ws.items.map(height).sum() }
-defun echo(ws:WidgetsSeq) { ws.items.each(echo); }
+def WidgetsSeq() { ws = __super(); ws.items = []; ws}
+def push(ws:WidgetsSeq, x) { ws.items.push(x); ws }
+def height(ws:WidgetsSeq) { ws.items.map(height).sum() }
+def echo(ws:WidgetsSeq) { ws.items.each(echo); }
 
-defun init(ow:OutputWidget) { ow.text = ''; ow }
-defun colored(ow:OutputWidget, s:String) { s }
-defun echo(ow:OutputWidget) {
+def init(ow:OutputWidget) { ow.text = ''; ow }
+def colored(ow:OutputWidget, s:String) { s }
+def echo(ow:OutputWidget) {
 	if not(ow.text) { return null }
 	ow.text.lines().each(@echo("$spacer${ow.colored(X)}${tput_cache.el}"))
 }
-defun height(ow:OutputWidget) { ow.text.lines().len() }
-defun height(ow:OutputWidget) { guard not(ow.text); 0 }
+def height(ow:OutputWidget) { ow.text.lines().len() }
+def height(ow:OutputWidget) { guard not(ow.text); 0 }
 
-defun colored(ew:StderrWidget, s:String) { colored(s, 'error') }
+def colored(ew:StderrWidget, s:String) { colored(s, 'error') }
 
-defun ScreenManager(indev:Stream, outdev:Stream) {
+def ScreenManager(indev:Stream, outdev:Stream) {
 	sm = __super()
 	sm.init(indev, outdev)
 	sm.widgets = []
 	sm
 }
 
-defun init(sm:ScreenManager, indev:Stream, outdev:Stream) {
+def init(sm:ScreenManager, indev:Stream, outdev:Stream) {
 	sm.indev = indev
 	sm.outdev = outdev
 	# TODO: later: sm <- indev, outdev
@@ -86,16 +86,16 @@ defun init(sm:ScreenManager, indev:Stream, outdev:Stream) {
 	sm
 }
 
-defun read(sm:ScreenManager, prompt:String) {
+def read(sm:ScreenManager, prompt:String) {
 	sm.rl.read(prompt)
 }
 
-defun updateDimensions(sm:ScreenManager) {
+def updateDimensions(sm:ScreenManager) {
 	sm.dims = getDimensions()
 	sm
 }
 
-defun echo(sm:ScreenManager) {
+def echo(sm:ScreenManager) {
 	# TODO: Smarter, on demand, maybe partial screen update.
 	# TODO: handle situations when cursor is now higher than the number of lines needed for widgets
 	redraw_lock.acquire(F() {
@@ -109,11 +109,11 @@ defun echo(sm:ScreenManager) {
 	})
 }
 
-defun String(sm:ScreenManager) { "<ScreenManager id=${sm.id()} lines=${sm.dims[0]} cols=${sm.dims[1]}>" }
+def String(sm:ScreenManager) { "<ScreenManager id=${sm.id()} lines=${sm.dims[0]} cols=${sm.dims[1]}>" }
 
 # --------------- Low level tty handling - start ---------------
 
-defun getDimensions() {
+def getDimensions() {
 	# TODO: check why does not work with stdin. Is it connected?
 	# TODO: think how to get "dims = ..." line to be nearly short as bash alternative B
 
@@ -129,7 +129,7 @@ defun getDimensions() {
 }
 
 # Based on http://stackoverflow.com/questions/2575037/how-to-get-the-cursor-position-in-bash
-defun getCursorPosition() {
+def getCursorPosition() {
 	tty = f'/dev/tty'
 	saved_stty=$(stty -F $tty -g)
 	$(stty -F $tty raw -echo min 0)
@@ -144,7 +144,7 @@ defun getCursorPosition() {
 	ret
 }
 
-defun setCursorPosition(line, col) { $(tput cup $line $col).stdout.write() }
+def setCursorPosition(line, col) { $(tput cup $line $col).stdout.write() }
 
 # http://www.tldp.org/HOWTO/Bash-Prompt-HOWTO/x405.html
 tput_cache = ['el', 'sc', 'rc', 'smso', 'rmso', 'sgr0'].Hash(@ $(tput $X).String())

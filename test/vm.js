@@ -22,10 +22,10 @@ var code_vs_stack = [
 	['{[1, 2] + [3, 4]}', [[1, 2, 3, 4]]],
 	['{a=1; a}', [1]],
 
-	// *** defun ***
-	['{ defun f() { return 77; }; 1 + f(); }', [78]],
-	['{ defun f(x, y) { return x - y; }; f(5, 2); }', [3]],
-	['{ defun f(x:String) { return 1; }; defun f(x:Number) { return 2; }; [f("a"), f(100)] }',
+	// *** def ***
+	['{ def f() { return 77; }; 1 + f(); }', [78]],
+	['{ def f(x, y) { return x - y; }; f(5, 2); }', [3]],
+	['{ def f(x:String) { return 1; }; def f(x:Number) { return 2; }; [f("a"), f(100)] }',
 	 [[1, 2]]],
 
 	// *** if ***
@@ -112,7 +112,7 @@ var code_vs_stack = [
 	['{ { "k" : 77, "x": 99 }["k"] }', [77]],
 
 	// *** Guard ***
-	['{defun f(x) {return 1}; defun f(x) {guard x==10; return 20}; [f(8), f(10)]}',
+	['{def f(x) {return 1}; def f(x) {guard x==10; return 20}; [f(8), f(10)]}',
 	 [[1, 20]]],
 
 	// *** Comments ***
@@ -121,15 +121,15 @@ var code_vs_stack = [
 	['# something', []],
 
 	// *** Empty function ***
-	['{defun f() { #xx\n}; f()}', [null]],
+	['{def f() { #xx\n}; f()}', [null]],
 
 	// *** Match ***
 	['{match(100) {(n:Number) {1} (s:String) {2}}}', [1]],
 	['{match("X") {(n:Number) {1} (s:String) {2}}}', [2]],
 
 	// *** __super ***
-	['{defun f(x) {x*2}; defun f(y) { __super(y) * 3}; f(5)}', [30]],
-	['{defun f(x) {x*2}; defun f(y) { __super(y) * 3}; defun f(z:String) { "DOESNT MATTER" }; f(5)}', [30]],
+	['{def f(x) {x*2}; def f(y) { __super(y) * 3}; f(5)}', [30]],
+	['{def f(x) {x*2}; def f(y) { __super(y) * 3}; def f(z:String) { "DOESNT MATTER" }; f(5)}', [30]],
 
 	// *** meta ***
 	['{a=1; a.meta()["x"] = 8; [a, a.meta()["x"]]}', [[1,8]]],
@@ -149,7 +149,7 @@ var code_vs_stack = [
 
 	// *** inheritance ***
 	['{ __TYPES = {"T1": {"inherits": ["Hash"]}, "T2": {"inherits": ["T1"]}}; ' +
-	 'defun init(x:T1) {x.__super(); x.a=7; x}; defun init(x:T2) {x.__super(); x.b=8; x}; o=obj("T2").init(); [o["a"], o["b"]]}', [[7,8]]],
+	 'def init(x:T1) {x.__super(); x.a=7; x}; def init(x:T2) {x.__super(); x.b=8; x}; o=obj("T2").init(); [o["a"], o["b"]]}', [[7,8]]],
 	['{ __TYPES = {"T1": {"inherits": ["Array"]}}; o=obj("T1").init(); o[0] = 7; o[0]}', [7]],
 
 
@@ -158,16 +158,16 @@ var code_vs_stack = [
 	['{ x=1; y=2; "$x\\n\\u01E2\\U000001E2\\.\\"${y}${x+y}" }', ['1\nǢǢ."23']],
 
 	// *** Check matcing of "F" type ***
-	['{defun f(x) {1}; defun f(cb:F) {2}; f(F(x) {3}) }', [2]],
-	['{defun f(x) {1}; defun f(cb:F) {2}; f(f) }', [2]],
-	['{defun f(x) {1}; defun f(cb:F) {2}; f(3) }', [1]],
+	['{def f(x) {1}; def f(cb:F) {2}; f(F(x) {3}) }', [2]],
+	['{def f(x) {1}; def f(cb:F) {2}; f(f) }', [2]],
+	['{def f(x) {1}; def f(cb:F) {2}; f(3) }', [1]],
 
 	// *** slice ***
 	['{"abcd".slice(1,2)}', ["bc"]],
 	['{[1,2,3,4].slice(2,2)}', [[3,4]]],
 
 	// *** default parameters values
-	['{ defun f(x,y=2) { [x,y] }; [f(1), f(1,3)] }', [[[1, 2], [1, 3]]]],
+	['{ def f(x,y=2) { [x,y] }; [f(1), f(1,3)] }', [[[1, 2], [1, 3]]]],
 
 ];
 

@@ -1,11 +1,11 @@
-defun bootstrap_require(f) {
+def bootstrap_require(f) {
 	content = fetch_file(f)
 	code = compile(content)
 	lambda_ = load(code)
 	lambda_()
 }
 
-defun bootstrap() {
+def bootstrap() {
 	  bootstrap_require('ngs/stdlib.ngs')
 	  require(ARGV[2])
 }

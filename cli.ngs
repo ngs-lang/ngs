@@ -27,13 +27,13 @@ prompt_contributors = [
 supervised_threads = Set()
 supervised_processes = Set()
 
-defun global cli_make_prompt(vars) {
+defg cli_make_prompt(vars) {
 	prompt_contributors.map(second).map(@
 		(X.locals(vars))()
 	).filter().join(" ")
 }
 
-defun global cli_screen_updater() {
+defg cli_screen_updater() {
 	while 1 {
 		$(sleep 2)
 		supervised_processes.each(F(prc) {
@@ -46,7 +46,7 @@ defun global cli_screen_updater() {
 	}
 }
 
-defun native_spawn(*args) {
+defg native_spawn(*args) {
 	# TODO: handle children threads maybe?
 	prc = __super(*args)
 	if thread().has_meta('cli_widgets') {
@@ -65,7 +65,7 @@ defun native_spawn(*args) {
 	prc
 }
 
-defun global cli_main() {
+defg cli_main() {
 
 	local_scope = {"x": 7}
 	n = 0

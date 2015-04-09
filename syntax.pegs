@@ -354,12 +354,12 @@ at_lambda "At-Lambda" =
   }
 
 function_definition =
-  "defun" global:(space+ "global")? space+ name:identifier space? "(" space? params:parameters? space? ")" space? code:CCEXPR {
+  d:("defg" / "def") space+ name:identifier space? "(" space? params:parameters? space? ")" space? code:CCEXPR {
     return N(
       'defun',
       offset,
       [name, N('lambda', offset, [name, params || N('parameters', offset, []), code])],
-      {global: !!global}
+      {global: d=='defg'}
     );
   }
 
