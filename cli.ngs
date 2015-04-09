@@ -12,7 +12,7 @@ sm = ScreenManager(stdin, stdout)
 # Example of how to remove parts
 # { prompt_contributors = prompt_contributors.filter(F(x) { x.first() != "ver" }) }
 prompt_contributors = [
-	["ver", F() { "NGS v" + ver }],
+	["ver", F() { "NGS v$ver" }],
 	["nothing_to_say", F() { null }],
 	["threads", F() {
 		ts = supervised_threads.filter(F(x) {x.state != "finished"})
@@ -24,44 +24,44 @@ prompt_contributors = [
 	["finish", F() { "> " }],
 ]
 
-supervised_threads = []
-supervised_processes = []
-widgets = []
-thread_widget = {}
-process_widgets = {}
+supervised_threads = Set()
+supervised_processes = Set()
 
-defun cli_make_prompt(vars) {
+defun global cli_make_prompt(vars) {
 	prompt_contributors.map(second).map(F(contributor_func) {
 		(contributor_func.locals(vars))()
 	}).filter().join(" ")
 }
 
-defun cli_screen_updater() {
+defun global cli_screen_updater() {
 	while 1 {
 		$(sleep 2)
 		supervised_processes.each(F(prc) {
-			pw = process_widgets[prc.ngs_id]
-			pw.stdout.text = prc.stdout.strip()
-			pw.stderr.text = prc.stderr.strip()
-			pw.cmd.exit_code = prc.exit_code
+			process_widgets = prc.meta('cli_widgets')
+			process_widgets.stdout.text = prc.stdout.strip()
+			process_widgets.stderr.text = prc.stderr.strip()
+			process_widgets.cmd.exit_code = prc.exit_code
 		})
-		sm.echo(widgets)
+		sm.echo()
 	}
 }
 
 defun native_spawn(*args) {
 	# TODO: handle children threads maybe?
 	prc = __super(*args)
-	if thread() not in supervised_threads {
-	   return prc
+	if thread().has_meta('cli_widgets') {
+		supervised_processes.push(prc)
+		thread_widgets = thread().meta('cli_widgets')
+		o = StdoutWidget()
+		e = StderrWidget()
+		thread_widgets.container.push(o).push(e)
+
+		prc.meta('cli_widgets', {
+			'cmd': thread_widgets.cmd,
+			'stdout': o,
+			'stderr': e
+		})
 	}
-	t = thread().id
-	# echo("SPAWN", thread().id, prc.ngs_id)
-	supervised_processes.push(prc)
-	o = StdoutWidget()
-	e = StderrWidget()
-	thread_widget[t].push(o).push(e)
-	process_widgets[prc.ngs_id] = {'cmd': thread_widget[t].items[0], 'stdout': o, 'stderr': e}
 	prc
 }
 
@@ -80,9 +80,11 @@ defun cli_main() {
 
 		l = sm.read(prompt)
 
+		lambda_ = null
+
 		if l == "" {
 			n = n - 1
-			sm.echo(widgets)
+			sm.echo()
 			continue
 		}
 		if l == "exit" {
@@ -90,45 +92,54 @@ defun cli_main() {
 			break
 		}
 		if l == "vars" {
-			echo("VARS:", local_scope)
-			continue
+			lambda_ = F() { local_scope }
 		}
 
-		time=$(date -Iseconds).stdout.strip()
+		time = $(date '+%Y-%m-%d %H:%M:%S').String()
 
-		code = catch compile(l)
-		# echo("CODE", code)
-		if not(code[0]) {
-			# echo("ERROR", code[1])
-			widgets.push(WidgetsSeq().push(OrigCmdWidget(l, time)).push(ErrorWidget(String(code[1]))))
-			continue
+		if not(lambda_) {
+			code = catch compile(l)
+			# echo("CODE", code)
+			if not(code[0]) {
+				# echo("ERROR", code[1])
+				sm.widgets.push(WidgetsSeq().push(OrigCmdWidget(l, time)).push(ErrorWidget(String(code[1]))))
+				continue
+			}
+			lambda_ = load(code[1]).locals(local_scope)
 		}
-		lambda_ = load(code[1]).locals(local_scope)
 
 		t = thread(F() {
 			result = catch lambda_()
-			tw = thread_widget[thread().id]
-			cmdw = tw.items[0]
+			thread_widgets = thread().meta('cli_widgets')
+			cmd_widget = thread_widgets.cmd
+			do_display_result = true
 			if result[0] {
 				ow = StdoutWidget()
-				cmdw.exit_code = 0
+				cmd_widget.exit_code = 0
+				if result[1].typeof() == 'Process' {
+					do_display_result = false
+				}
 			} else {
 				ow = StderrWidget()
 				# XXX: Not sure this works:
-				cmdw.exit_code = 1
+				cmd_widget.exit_code = 1
 			}
-			ow.text = result[1].String()
-			tw.push(ow)
+			ow.text = repr(result[1])
+			if do_display_result {
+				thread_widgets.container.push(ow)
+			}
 		})
 
-		t.locals()["cli_input"] = l
-		t.locals()["cli_n"] = n
-
 		supervised_threads.push(t)
-		ws = WidgetsSeq().push(OrigCmdWidget(l, time))
-		widgets.push(ws)
-		thread_widget[t.id] = ws
-		sm.echo(widgets)
+		cmd_widget = OrigCmdWidget(l, time)
+		container_widget = WidgetsSeq()
+		container_widget.push(cmd_widget)
+		t.meta('cli_widgets', {
+			'container': container_widget,
+			'cmd': cmd_widget
+		})
+		sm.widgets.push(container_widget)
+		sm.echo()
 	}
 
 	# later # screen_updater.kill()

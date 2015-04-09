@@ -238,7 +238,8 @@ function register_native_methods() {
 		var args = get_arr(scope.args);
 		// TODO: make the next id a language global variable. It will help with serialization later.
 		var props = {
-			'ngs_id': 'process_' + (process_ngs_id++),
+			'id': 'process_' + (process_ngs_id++),
+			'pid': null,
 			'cmd': get_str(args[0]),
 			'state': 'running',
 			'args': args.slice(1).map(get_str),
@@ -273,6 +274,7 @@ function register_native_methods() {
 		var p = child_process.spawn(props.cmd, props.args, {
 			cwd: process.cwd()
 		});
+		props.pid = p.pid;
 		// TODO: maybe store output with it's timestamp?
 		(['stdout', 'stderr']).forEach(function(output_channel_name) {
 			p[output_channel_name].on('data', function ngs_runtime_spawn_on_data(data) {
@@ -350,12 +352,11 @@ function register_native_methods() {
 	})
 	this.registerNativeMethod('sort', p_args('a', 'Array'), function vm_sort(scope) {
 		var a = get_arr(scope.a);
-		a.sort();
-		return NgsValue('Array', a);
+		return NgsValue('Array', _.sortBy(a, function(elt) { return elt.data }));
 	});
 	this.registerNativeMethod('uniq', p_args('a', 'Array'), function vm_uniq(scope) {
 		var a = get_arr(scope.a);
-		return NgsValue('Array', _.uniq(a, false, function(elt) {return elt[1]}));
+		return NgsValue('Array', _.uniq(a, false, function(elt) {return elt.data}));
 	});
 
 	// stdin, stdout, ...
@@ -460,13 +461,13 @@ function register_native_methods() {
 		return NgsValue('Hash', data.get_meta(scope.x));
 	});
 	this.registerNativeMethod('thread', p_args(), function vm_thread(scope, v) {
-		return NgsValue('Thread', this);
+		return NgsValue('Thread', this, this.meta);
 	});
 	this.registerNativeMethod('thread', p_args('f', 'Lambda'), function vm_thread_p_lmb(scope, v) {
 		var ctx = v.setupContext();
 		ctx.frame.ip = 'context_finished';
 		ctx.invoke_or_throw(scope.f, to_ngs_object([]), to_ngs_object({}), v, true);
-		return NgsValue('Thread', ctx);
+		return NgsValue('Thread', ctx, ctx.meta);
 	});
 	this.registerNativeMethod('String', p_args('t', 'Thread'), function vm_string_p_thread(scope) {
 		var t = get_thr(scope.t);
@@ -610,6 +611,11 @@ function register_native_methods() {
 		var ctx = get_arr(l.waiting_contexts).shift();
 		v.unsuspend_context(ctx);
 		return to_ngs_object(null);
+	});
+	this.registerNativeMethod('as', p_args('v', null, 't', 'String'), function vm_as_p_nul_str(scope, v) {
+		// TODO: check that t is super-type of type of v (in stdlib)
+		var v = scope.v;
+		return NgsValue(get_str(scope.t), v.data, v.meta);
 	});
 }
 

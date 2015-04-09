@@ -4,15 +4,15 @@
 * Now
 ** Fix undefinded_var['some_idx']. Returns with wrong stack size, should throw error.
 ** CLI
-*** PROGRESS TTY io basics, layout manager, think of widgets (commands output), think completion from widgets
-*** PROGRESS support running regular commands
+*** Make P usable in CLI
+*** TODO think completion from widgets
+*** DONE support running regular commands
 *** defun cli_XXX for CLI commands (that return objects/widgets)
 **** TODO ls
-*** TODO Modules
 *** TODO Module automatic reloading
 *** TODO "fN" command "F1..12" to remember last command into fN key
 ** TODO Generated documentation
-** TODO Make set_var local by default / global option
+** DONE Make set_var local by default / global option
 ** TODO Improve parameters matching
 *** TODO Arguments parsing
 ** TODO String pointers to native methods for serialization

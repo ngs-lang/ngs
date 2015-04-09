@@ -73,6 +73,8 @@ var code_snippets = [
 	'{ Hash(["a","b"], "x") == {"a": "x", "b": "x"} }',
 	'{ ["a", "b"].Hash(F(x) { x*2 }) == {"a": "aa", "b": "bb" } }', // also tests String * Number
 	'{ [{"x": 7}, {"x": 8}].x == [7,8] }',
+	'{ {"x": 7, "y": 8}.values().sort() == [7,8]}',
+	'{ [1,2,2,3].uniq() == [1,2,3] }',
 	// meta
 	'{ a=1; a.meta("x", 2); a.meta("y", 3) == a and a.meta("x") == 2 and a.has_meta("x") }',
 	// String
@@ -85,6 +87,12 @@ var code_snippets = [
 	// Pipe
 	'{ ([1, 2] | X*2) == [2,4] }',
 	'{ ({"a": "x"} | X[0] + X[1]) == ["ax"]}',
+	// Set
+	'{ s=Set([1,2,"a"]); (1 in s) and (3 not in s) }', // Set(), add(Set, v)
+	'{ s=Set(); s.push(7); (s.len() == 1) and (s.values() == [7]) }',
+	'{ summ=0; Set([1,2,3]).each(F(x) { global summ = summ + x }); summ == 6 }',
+	'{ Set([1,2,3]) - Set([1,3]) == Set([2]) }', // __in(v, Set), filter(Set,...)
+	'{ Set([1,2]).join() == "12" }',
 ];
 
 // console.log("+ Loading stdlib");

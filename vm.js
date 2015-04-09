@@ -133,6 +133,7 @@ Context.prototype.initialize = function(global_scope, cycles_limit) {
 	this.thrown = false;
 	this.waiting_for_me = [];
 	this.thread_locals = {};
+	this.meta = {};
 
 	var get_context_ip = function() {
 		return this.frame.ip;

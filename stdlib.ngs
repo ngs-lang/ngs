@@ -2,7 +2,10 @@
 # TODO: Something that will tell whether all methods were covered at the end of each tests run.
 #       Don't want to add a test for each method because some are checked by proxy.
 
-# ----- String functions - start -----
+defun global repr(x) { String(x) }
+
+
+# ----- String - start -----
 # string * number -> the string repeated number times
 defun global __mul(s:String, n:Number) {
 	# n.map(F(x) { s }).join()
@@ -79,7 +82,10 @@ defun global Number(s:String) {
 	ret
 }
 
-# ----- String functions - end -----
+# TODO: escaping
+defun global repr(s:String) { "'$s'" }
+
+# ----- String - end -----
 
 defun global __match(a:Array, n:Number) { a.len() == n }
 
@@ -101,6 +107,7 @@ defun global Hash(a:Array) {
 
 defun global Hash(a:Array, v) {
 	# a.map(F(x) {[x,v]}).Hash()
+	# MAYBE: a.map(@[X,v]).Hash()
 	Hash(a | [X,v])
 }
 
@@ -108,6 +115,9 @@ defun global Hash(keys:Array, mapper:F, *args) {
 	# keys.map(F(x) {[x, mapper(x, *args)]}).Hash()
 	Hash(keys | [X, mapper(X, *args)])
 }
+
+defun global values(h:Hash) { h | X[1] }
+defun global values(s:Seq) { s }
 
 defun global zip(a:Seq, b:Seq) {
 	l = len(a)
@@ -286,6 +296,7 @@ defun global __not_in(*args) {
 }
 
 defun global has(container, item) {item in container}
+defun global has_no(container, item) {item not in container}
 
 
 defun global min(a:Number, b:Number) { if a<b {a}{b} }
@@ -498,12 +509,15 @@ defun global String(l:Lambda) {
 }
 
 defun global String(t:Thread) {
-	"<Thread ${t.id} ${t.state}>"
+	"<Thread id=${t.id} state=${t.state}>"
 }
 
 defun global String(c:Code) {
 	"<Compiled code>"
 }
+
+
+defun global repr(p:Process) { "<Process pid=${p.pid} code=${p.exit_code} id=${p.id} o=${p.stdout.len()} e=${p.stderr.len()}>" }
 
 defun global echo(x) {
 	guard typeof(x) != 'String'
@@ -520,6 +534,15 @@ defun global echo(*args) {
 # ----- Meta sugar - start -----
 defun global meta(x, k:String) {
 	x.meta()[k]
+}
+
+defun global meta_dflt(x, k:String, v) {
+	m = x.meta()
+	if k in m {
+		m[k]
+	} else {
+		v
+	}
 }
 
 defun global meta(x, k:String, v) {
@@ -607,6 +630,8 @@ defun global read_till(fd:Number, tillChar:String, max:Number=1024) {
 	ret
 }
 
+defun global repr(f:File) { "File(${f.name.repr()})" }
+
 # ----- Files - end -----
 
 # ----- Array arithmetcis - start -----
@@ -625,3 +650,54 @@ defun global acquire(l:Lock, f:F, *args) {
 	l.release()
 }
 # ----- Lock sugar - end -----
+
+# act_as(M, ORIG, AS) -> defun global M(x:ORIG, *args) { x.as(AS).M(*args) }
+# Method M acts on objects of type ORIG as if they are of type AS
+
+defun global act_as(method:String, orig_type:String, as_type:String) {
+	defun global "$method"(x:"$orig_type", *args) {
+		m = globals()[method]
+		m(x.as(as_type), *args)
+	}
+}
+
+# ----- Set - start -----
+
+defun global set_id(x)         { "id():${x.id().String()}" }
+defun global set_id(n:Number)  { "num:$n" }
+defun global set_id(s:String)  { "str:$s" }
+defun global set_id(p:Process) { "prc:${p.id}" }
+defun global set_id(t:Thread)  { "thr:${t.id}" }
+
+
+# Constructors
+defun global Set()      { Hash().as('Set') }
+defun global Set(s:Seq) { ret = Set(); s | ret.add(X); ret }
+
+# Mutators
+defun global add(s:Set, v)	{ s.as('Hash')[v.set_id()] = v; s }
+defun global push(s:Set, v) { add(s,v) }
+
+# Operators
+defun global __sub(a:Set, b:Set) { a.filter(F(x) { x not in b }) }
+
+# Getters
+act_as('values', 'Set', 'Hash')
+act_as('len',    'Set', 'Hash')
+
+# Functional
+defun global each(s:Set, *args)	  { s.values().each(*args); s }
+defun global filter(s:Set, *args) { Set(filter(s.values(), *args)) }
+
+# Predicates
+defun global Bool(s:Set)        { s.len() > 0 }
+defun global __in(v, s:Set)     { v.set_id() in s.as('Hash') }
+defun global __eq(a:Set, b:Set) { a.values().sort() == b.values().sort() }
+
+# Misc
+defun global String(s:Set)      { "<Set ${s.values()}>" }
+defun global repr(s:Set)        { "Set(${s.values().sort().repr()})" }
+defun global join(s:Set, *args) { join(s.values().sort(), *args) }
+
+
+# ----- Set - end -----
