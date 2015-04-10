@@ -141,8 +141,8 @@ var code_vs_stack = [
 	['{ 1 or 2 }', [1]],
 
 	// *** Thread ***
-	['{ r=[]; t=thread(F() { r.push(1); }); r.push(2); t.wait(); r.len() }', [2]],
-	['{ t=thread(F() { thread().locals()["x"] = 7 }); t.wait().locals()["x"]; }', [7]],
+	['{ r=[]; t=thread(F() { r.push(1); }); t.run(); r.push(2); t.wait(); r.len() }', [2]],
+	['{ t=thread(F() { thread().locals()["x"] = 7 }); t.run(); t.wait().locals()["x"]; }', [7]],
 
 	// *** id ***
 	['{ x=1; y=2; id(y) - id(x) > 0 and id(y) - id(x) < 10}', [true]], // As of 2015-03, the difference is 2

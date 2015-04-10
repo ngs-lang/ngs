@@ -9,15 +9,15 @@ require("ngs/widgets.ngs")
 
 sm = ScreenManager(stdin, stdout)
 
-# Example of how to remove parts
-# { prompt_contributors = prompt_contributors.filter(@X.first() != 'ver' ) }
-prompt_contributors = [
+# Example of how to remove parts:
+# prompt_contributors = prompt_contributors @? X.first() != 'ver'
+global cli_prompt_contributors = [
 	["ver", @"NGS v$ver"],
 	["nothing_to_say", @null],
-	["threads", F() {
-		ts = supervised_threads @? X.state != 'finished'
+	["threads", F cli_thread_prompt() {
+		ts = supervised_threads.count(@ X.state != 'finished')
 		if(ts) {
-			"jobs:" + ts.join(",")
+			"(${ts} jobs)"
 		}
 	}],
 	["num", @n],
@@ -28,21 +28,26 @@ supervised_threads = Set()
 supervised_processes = Set()
 
 defg cli_make_prompt(vars) {
-	prompt_contributors.map(second).map(@
-		(X.locals(vars))()
+	# (cli_prompt_contributors[*][1] @
+	(cli_prompt_contributors.map(second) @
+		X.locals(vars).call()
 	).filter().join(" ")
+}
+
+defg cli_update_screen() {
+	supervised_processes.each(F(prc) {
+		process_widgets = prc.meta('cli_widgets')
+		process_widgets.stdout.text = prc.stdout.strip()
+		process_widgets.stderr.text = prc.stderr.strip()
+		process_widgets.cmd.exit_code = prc.exit_code
+	})
+	sm.echo()
 }
 
 defg cli_screen_updater() {
 	while 1 {
 		$(sleep 2)
-		supervised_processes.each(F(prc) {
-			process_widgets = prc.meta('cli_widgets')
-			process_widgets.stdout.text = prc.stdout.strip()
-			process_widgets.stderr.text = prc.stderr.strip()
-			process_widgets.cmd.exit_code = prc.exit_code
-		})
-		sm.echo()
+		cli_update_screen()
 	}
 }
 
@@ -126,7 +131,9 @@ defg cli_main() {
 			if do_display_result {
 				thread_widgets.container.push(ow)
 			}
+			cli_update_screen()
 		})
+
 
 		supervised_threads.push(t)
 		cmd_widget = OrigCmdWidget(l, time)
@@ -137,7 +144,8 @@ defg cli_main() {
 			'cmd': cmd_widget
 		})
 		sm.widgets.push(container_widget)
-		sm.echo()
+
+		t.run()
 	}
 
 	# later # screen_updater.kill()

@@ -78,6 +78,8 @@ defg Number(s:String) {
 	ret
 }
 
+defg Number(b:Bool) { if b {1}{0} }
+
 # TODO: escaping
 defg repr(s:String) { "'$s'" }
 
@@ -205,11 +207,19 @@ defg filter(s:Seq, predicate:F, *args) {
 
 defg filter(s:Seq) { s @? X != null }
 
+defg count(s:Seq, predicate:F, *args) {
+	sum(s @ predicate(X, *args).Number())
+}
+
+defg count(s:Set, predicate:F, *args) { s.values().count(predicate, *args) }
+
 defg flatten(s:Seq) {
 	ret = []
 	s.each(@X.each(@ret.push(X)))
 	ret
 }
+
+defg call(f:F, *args) { f(*args) }
 
 defg __get_item(s:Seq, idx:Number) {
 	guard idx < 0

@@ -450,7 +450,7 @@ function register_native_methods() {
 			scopes: NgsValue('Scopes', scope.l.data.scopes.data.concat(locals, true)),
 			args: lambda.args,
 			code_ptr: lambda.code_ptr,
-			name: NgsValue('String', get_str(lambda.name) + '_with_locals')
+			name: lambda.name
 		});
 	});
 	this.registerNativeMethod('globals', p_args(), function vm_globals(scope, v) {
@@ -465,10 +465,20 @@ function register_native_methods() {
 		return NgsValue('Thread', this, this.meta);
 	});
 	this.registerNativeMethod('thread', p_args('f', 'Lambda'), function vm_thread_p_lmb(scope, v) {
-		var ctx = v.setupContext();
+		var ctx = v.makeContext();
 		ctx.frame.ip = 'context_finished';
 		ctx.invoke_or_throw(scope.f, to_ngs_object([]), to_ngs_object({}), v, true);
+		this.vm.suspended_contexts.push(ctx);
 		return NgsValue('Thread', ctx, ctx.meta);
+	});
+	this.registerNativeMethod('run', p_args('t', 'Thread'), function vm_run_p_thr(scope) {
+		var t = get_thr(scope.t);
+		if(t.state !== 'new') {
+			this.thr(to_ngs_object(['programming', 'Trying to run() non-new thread ' + t.id]));
+			return scope.t;
+		}
+		this.vm.unsuspend_context(t);
+		return scope.t;
 	});
 	this.registerNativeMethod('String', p_args('t', 'Thread'), function vm_string_p_thread(scope) {
 		var t = get_thr(scope.t);

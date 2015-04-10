@@ -37,7 +37,7 @@ function fix_binops_node(node) {
 			}
 		}
 		// TODO: fix offset later
-		ret.splice(op_idx - 1, 3, new N('binop', null, [ret[op_idx-1], ret[op_idx+1]], ret[op_idx].data, -1));
+		ret.splice(op_idx - 1, 3, new N('binop', ret[op_idx].offset, [ret[op_idx-1], ret[op_idx+1]], ret[op_idx].data, -1));
 	}
 	if(ret[0].is('binops')) {
 		ret[0] = fix_binops_node(ret[0]);
@@ -52,7 +52,7 @@ function fix_binops_node(node) {
 			'lambda',
 			o,
 			[
-				new N('string', o, [], 'anonymous_mapper_' + o),
+				new N('string', o, [], ret[0].data + '_' + o),
 				new N('parameters', o, [p1, p2]),
 				ret[0][1]
 			]

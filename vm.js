@@ -105,6 +105,10 @@ function inspect(x, depth) {
 		return '<Scopes len ' + x.data.length + '>';
 	}
 
+	if(t === 'Thread') {
+		return '<Thread ' + x.data.id + '>';
+	}
+
 	return pfx + '<' + t + ' ' + util.inspect(x.data) + '>';
 }
 
@@ -137,7 +141,7 @@ Context.prototype.initialize = function(vm, global_scope, cycles_limit) {
 
 	this.vm = vm;
 	this.id = 'thread_' + (context_id++);
-	this.state = 'running';
+	this.state = 'new';
 	this.stack = [];
 
 	this.frame = new Frame();
@@ -270,8 +274,13 @@ VM.prototype.useCodeWithRet = function(c) {
 	return ptr;
 }
 
+VM.prototype.makeContext = function(cycles_limit) {
+	return new Context(this, this.global_scope, cycles_limit);
+}
+
 VM.prototype.setupContext = function(cycles_limit) {
-	var c = new Context(this, this.global_scope, cycles_limit);
+	var c = this.makeContext(cycles_limit);
+	c.state = 'running';
 	this.runnable_contexts.push(c);
 	return c;
 }
@@ -525,9 +534,12 @@ function match_params(ctx, lambda, args, kwargs) {
 Context.prototype.invoke_or_throw = function(methods, args, kwargs, vm, do_catch) {
 	var status = this.invoke(methods, args, kwargs, vm, do_catch || false);
 	if(!status[0]) {
-		console.log(args);
+		// console.log(args);
 		var types = get_arr(args).map(get_type);
-		throw new Error("Invoke: appropriate method for types (" + types.join(',') + "), args " + inspect(args) + ", kwargs " + inspect(kwargs) + " not found for in " + inspect(methods));
+		this.thr(to_ngs_object([
+			'programming',
+			"Invoke: appropriate method for types (" + types.join(',') + "), args " + inspect(args) + ", kwargs " + inspect(kwargs) + " not found for in " + inspect(methods)
+		]));
 	}
 }
 
@@ -620,12 +632,14 @@ Context.prototype.ret = function(stack_delta) {
 
 Context.prototype._ip_to_backtrace_item = function(ip) {
 	var vm = this.vm;
-	// console.log('_ip_to_backtrace_item', ip);
 	if(ip === 0) {
 		return '?'
 	}
 	var op = vm.code[ip];
 	var debug_info = op[0]; // (diff to 'src_file', line, col)
+	if(!debug_info) {
+		return '?';
+	}
 	var src_file = vm.code[ip - debug_info[0]][2];
 	return src_file + ':' + debug_info[1] + ':' + debug_info[2];
 }

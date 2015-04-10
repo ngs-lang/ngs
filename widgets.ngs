@@ -60,7 +60,7 @@ def init(ow:OutputWidget) { ow.text = ''; ow }
 def colored(ow:OutputWidget, s:String) { s }
 def lines(ow:OutputWidget) {
 	if not(ow.text) { return [] }
-	ow.text.lines().map(@"$spacer${ow.colored(X)}${tput_cache.el}")
+	ow.text.lines() @ "$spacer${ow.colored(X)}${tput_cache.el}"
 }
 
 def colored(ew:StderrWidget, s:String) { colored(s, 'error') }
