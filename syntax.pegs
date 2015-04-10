@@ -109,7 +109,8 @@ CCEXPR "CCEXPR" =
   CCEXPR_code
 
 CCEXPR_commands =
-  space? '(' space? commands:commands space? ')' { return commands; }
+  space? '$(' space? commands:commands space? ')' { return commands; } /
+  space? '`' space? commands:commands space? '`' { return N('capture', offset, [commands]); }
 
 CCEXPR_code =
   space? '{' space? code:top_level_expressions space? ";"? space? '}' {
@@ -234,7 +235,7 @@ expr_base "Expression/no-add" =
   array_literal /
   hash_literal /
   "(" space? e:expr space? ")" { return e; } /
-  "$" cs:CCEXPR_commands { return cs; }
+  CCEXPR_commands
 
 number "number" =
   "0x" hex_digits:[0-9a-fA-F]+ { return N('number', offset, [], parseInt(hex_digits.join(''), 16)); } /
@@ -289,7 +290,7 @@ string_contents_regexp_element "Regexp contents element" =
 string_contents_var_element =
   "$" v:varname { return v; } /
   "$" c:CCEXPR_code { return c; } /
-  "$" c:CCEXPR_commands { return c; }
+  CCEXPR_commands
 
 // http://en.wikipedia.org/wiki/Escape_sequences_in_C
 string_contents_common_element =

@@ -97,7 +97,7 @@ defg cli_main() {
 			lambda_ = @local_scope
 		}
 
-		time = $(date '+%Y-%m-%d %H:%M:%S').String()
+		time = `date '+%Y-%m-%d %H:%M:%S'`
 
 		if not(lambda_) {
 			code = catch compile(l, "cli_command_$n")

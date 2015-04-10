@@ -115,23 +115,17 @@ def String(sm:ScreenManager) { "<ScreenManager id=${sm.id()} lines=${sm.dims[0]}
 
 def getDimensions() {
 	# TODO: check why does not work with stdin. Is it connected?
-	# TODO: think how to get "dims = ..." line to be nearly short as bash alternative B
 
-	# $(stty size -F /dev/tty).stdout.strip().split().map(Number)
-	$(stty size -F /dev/tty).split().map(Number)
+	`stty size -F /dev/tty`.split().map(Number)
 
-	# Bash alternative A:
-	# t=`stty size -F /dev/tty`
-	# lines=`echo "$t" | awk '{print $1}'`
-	# cols=`echo "$t" | awk '{print $2}'`
-	# Bash alternative B:
+	# Bash alternative:
 	# dims=($(stty size -F /dev/tty))
 }
 
 # Based on http://stackoverflow.com/questions/2575037/how-to-get-the-cursor-position-in-bash
 def getCursorPosition() {
 	tty = f'/dev/tty'
-	saved_stty=$(stty -F $tty -g)
+	saved_stty=`stty -F $tty -g`
 	$(stty -F $tty raw -echo min 0)
 	tty.write('\e[6n')
 	# $(sleep '0.01')
@@ -144,13 +138,13 @@ def getCursorPosition() {
 	ret
 }
 
-def setCursorPosition(line, col) { $(tput cup $line $col).stdout.write() }
+def setCursorPosition(line, col) { `tput cup $line $col`.write() }
 
 # http://www.tldp.org/HOWTO/Bash-Prompt-HOWTO/x405.html
-tput_cache = ['el', 'sc', 'rc', 'smso', 'rmso', 'sgr0'].Hash(@ $(tput $X).String())
+tput_cache = ['el', 'sc', 'rc', 'smso', 'rmso', 'sgr0'].Hash(@ `tput $X`)
 {
-	tput_cache.error_color = $(tput setaf 1).String()   # red
-	tput_cache.success_color = $(tput setaf 2).String() # green
+	tput_cache.error_color = `tput setaf 1`   # red
+	tput_cache.success_color = `tput setaf 2` # green
 }
 
 # --------------- Low level tty handling - end ---------------
