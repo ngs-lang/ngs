@@ -15,7 +15,7 @@ prompt_contributors = [
 	["ver", @"NGS v$ver"],
 	["nothing_to_say", @null],
 	["threads", F() {
-		ts = supervised_threads.filter(@X.state != 'finished')
+		ts = supervised_threads @? X.state != 'finished'
 		if(ts) {
 			"jobs:" + ts.join(",")
 		}

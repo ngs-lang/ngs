@@ -7,9 +7,7 @@ defg repr(x) { String(x) }
 
 # ----- String - start -----
 # string * number -> the string repeated number times
-defg __mul(s:String, n:Number) {
-	n.map(@s).join()
-}
+defg __mul(s:String, n:Number) { join(n@s) }
 
 # TODO: maybe generic for Seq
 defg fill(s:String, n:Number) {
@@ -98,13 +96,13 @@ defg Hash(a:Array) {
 	ret
 }
 
-defg Hash(a:Array, v) { a.map(@[X,v]).Hash() }
+defg Hash(a:Array, v) { Hash(a@[X,v]) }
 
 defg Hash(keys:Array, mapper:F, *args) {
-	keys.map(@[X, mapper(X, *args)]).Hash()
+	Hash(keys@[X, mapper(X, *args)])
 }
 
-defg values(h:Hash) { h.map(@Y) }
+defg values(h:Hash) { h@Y }
 defg values(s:Seq) { s }
 
 defg zip(a:Seq, b:Seq) {
@@ -114,7 +112,7 @@ defg zip(a:Seq, b:Seq) {
 		throw ['args', 'Zip with different Seqs length']
 	}
 
-	l.map(@[a[X], b[X]])
+	l@[a[X], b[X]]
 }
 
 defg __neq(a, b) { not(a==b) }
@@ -136,7 +134,7 @@ defg __eq(a:Hash, b:Hash) {
 
 defg __eq(a:Thread, b:Thread) { a.id == b.id }
 
-defg map(s:Seq, mapper:F, *args) { s.len().map(@mapper(s[X], *args)) }
+defg map(s:Seq, mapper:F, *args) { s.len() @ mapper(s[X], *args) }
 
 defg map(n:Number, mapper:F, *args) {
 	ret = []
@@ -146,7 +144,7 @@ defg map(n:Number, mapper:F, *args) {
 	ret
 }
 
-defg map(h:Hash, mapper:F, *args) { h.keys().map(@mapper(X, h[X], *args)) }
+defg map(h:Hash, mapper:F, *args) { h.keys() @ mapper(X, h[X], *args) }
 
 defg reduce(s:Seq, start, reducer:F) {
 	acc = start
@@ -205,7 +203,7 @@ defg filter(s:Seq, predicate:F, *args) {
 	ret
 }
 
-defg filter(s:Seq) { s.filter(@ X != null) }
+defg filter(s:Seq) { s @? X != null }
 
 defg flatten(s:Seq) {
 	ret = []
@@ -219,21 +217,14 @@ defg __get_item(s:Seq, idx:Number) {
 	s[l+idx]
 }
 
-defg __get_item(s:Seq, idxs:Array) {
-	idxs.map(@s[X])
-}
-
+defg __get_item(s:Seq, idxs:Array) { idxs@s[X] }
 defg __get_item(h:Hash, n:Number) { h[n.String()] }
 defg __set_item(h:Hash, n:Number, v) { h[n.String()] = v }
-
-defg __get_item(a:Hash, keys:Array) { keys.map(@[X, a[X]]).Hash() }
+defg __get_item(a:Hash, keys:Array) { Hash(keys@[X, a[X]]) }
 
 # Make hash.key same as hash['key']
 defg __get_attr(h:Hash, k:String) { h[k] }
-
-defg __get_attr(a:Array, attr:String) {
-	map(a, __get_attr, attr)
-}
+defg __get_attr(a:Array, attr:String) { map(a, __get_attr, attr) }
 
 defg __in(v, s:Seq)  { any(s, __eq, v) }
 defg __in(v, h:Hash) { v in h.keys() }
@@ -575,7 +566,7 @@ defg add(s:Set, v)  { s.as('Hash')[v.set_id()] = v; s }
 defg push(s:Set, v) { add(s,v) }
 
 # Operators
-defg __sub(a:Set, b:Set) { a.filter(@ X not in b) }
+defg __sub(a:Set, b:Set) { a @? X not in b }
 
 # Getters
 act_as('values', 'Set', 'Hash')
