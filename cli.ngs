@@ -28,9 +28,8 @@ supervised_threads = Set()
 supervised_processes = Set()
 
 defg cli_make_prompt(vars) {
-	# (cli_prompt_contributors[*][1] @
-	(cli_prompt_contributors.map(second) @
-		X.locals(vars).call()
+	(cli_prompt_contributors @
+		X[1].locals(vars).call()
 	).filter().join(" ")
 }
 
@@ -111,7 +110,7 @@ defg cli_main() {
 			lambda_ = load(code[1]).locals(local_scope)
 		}
 
-		t = thread(F() {
+		t = thread(F cli_input_line_thread() {
 			result = catch lambda_()
 			thread_widgets = thread().meta('cli_widgets')
 			cmd_widget = thread_widgets.cmd
