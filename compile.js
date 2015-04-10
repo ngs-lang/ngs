@@ -255,9 +255,6 @@ function compile_tree_kern(node, leave_value_in_stack) {
 		return ret;
 	}
 	if(node.is('while')) {
-		var inverse = node.data;
-		var jump_cmd = inverse ? 'jump_if_true': 'jump_if_false';
-
 		var body = compile_tree(node[1], false);
 		process_break(body, 1); // + 1 for jump up instruction
 		process_continue(body, 0);
@@ -266,7 +263,7 @@ function compile_tree_kern(node, leave_value_in_stack) {
 		concat(compile_tree(node[0], true)); // condition
 		concat(compile_push());
 		concat(compile_invoke_pos_args_in_stack('Bool'));
-		cmd(jump_cmd, body.length + 1); // +1 for the jump
+		cmd('jump_if_false', body.length + 1); // +1 for the jump
 		concat(body);
 		var jump_up = ret.length + 1; // +1 for the jump instruction itself
 		cmd('jump', -jump_up);

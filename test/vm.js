@@ -36,7 +36,6 @@ var code_vs_stack = [
 
 	// *** while ***
 	['{a = 0; r = []; while a < 2 {r.push(a); a = a + 1;}; r;}', [[0, 1]]],
-	['{a = 0; r = []; while not 1 < a {push(r, a); a = a + 1;}; r;}', [[0, 1]]],
 
 	// *** while - break ***
 	['{a = 0; r = []; while a < 2 {break; push(r, a); a = a + 1;}; r;}', [[]]],

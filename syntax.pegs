@@ -65,7 +65,6 @@ command "command" =
   if /
   while /
   for /
-  async /
   hash_comment /
   execute_external_prog
 
@@ -86,8 +85,8 @@ if "if" =
 
 while "while" =
   // Experiemntal feature "not"
-  "while" space? not:"not"? space? cond:expr space? body:CCEXPR {
-    return N('while', offset, [cond, body], not ? true : false);
+  "while" space cond:expr space? body:CCEXPR {
+    return N('while', offset, [cond, body]);
   }
 
 for "for" =
@@ -98,11 +97,6 @@ for "for" =
 
 break "break" = "break" { return N('break', offset, []); }
 continue "continue" = "continue" { return N('continue', offset, []); }
-
-async "async" =
-  "async" space e:CCEXPR {
-    return N('async', offset, [e]);
-  }
 
 assignment "assignment" =
   global:("global" space+)? varname:varname space? '=' space? val:expr { return N('assignment', offset, [varname, val], {global: !!global}); }
