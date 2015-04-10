@@ -2,6 +2,8 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
+** DONE Backtrace
+*** Include line and col info for each instruction
 ** Fix undefinded_var['some_idx']. Returns with wrong stack size, should throw error.
 ** CLI
 *** Make P usable in CLI

@@ -110,17 +110,20 @@ function Frame() {
 
 Frame.prototype.initialize = function() {
 	this.ip = 0;
+	this.prev_ip = 0;
 	this.scopes = [];
+	this.func_name = null;
 }
 
-function Context(global_scope, cycles_limit) {
-	return this.initialize(global_scope, cycles_limit);
+function Context(vm, global_scope, cycles_limit) {
+	return this.initialize(vm, global_scope, cycles_limit);
 }
 
 var context_id = 1;
 
-Context.prototype.initialize = function(global_scope, cycles_limit) {
+Context.prototype.initialize = function(vm, global_scope, cycles_limit) {
 
+	this.vm = vm;
 	this.id = 'thread_' + (context_id++);
 	this.state = 'running';
 	this.stack = [];
@@ -244,19 +247,19 @@ VM.prototype.useCode = function(c) {
 	//		 (which is being replaced)
 	this.code.pop(); // remove the halt that we've added
 	this.code = this.code.concat(c);
-	this.code.push(['halt']);
+	this.code.push([null, 'halt']);
 	return this;
 }
 
 VM.prototype.useCodeWithRet = function(c) {
 	var ptr = this.code.length;
 	this.code = this.code.concat(c);
-	this.code.push(['ret']);
+	this.code.push([null, 'ret']);
 	return ptr;
 }
 
 VM.prototype.setupContext = function(cycles_limit) {
-	var c = new Context(this.global_scope, cycles_limit);
+	var c = new Context(this, this.global_scope, cycles_limit);
 	this.runnable_contexts.push(c);
 	return c;
 }
@@ -268,6 +271,7 @@ VM.prototype.start = function(finished_callback) {
 
 VM.prototype.mainLoop = function() {
 	var stack_debug = process.env.NGS_DEBUG_STACK;
+	var op, ip;
 	while(this.runnable_contexts.length) {
 		if(this.finished) {
 			throw new Exception("Finished VM is not finished");
@@ -284,7 +288,9 @@ VM.prototype.mainLoop = function() {
 			continue;
 		}
 
-		var op = this.code[this.context.frame.ip];
+		ip = this.context.frame.ip;
+		op = this.code[ip];
+		this.context.frame.prev_ip = ip;
 		this.context.frame.ip++;
 		if(stack_debug) {
 			console.log('ST', inspect_stack(this.context.stack));
@@ -292,13 +298,10 @@ VM.prototype.mainLoop = function() {
 			console.log('OP', op, '@', this.context.frame.ip-1, 'CYCLES', this.context.cycles);
 			console.log('');
 		}
-		if(op[0] === 'comment') {
-			continue;
+		if(!(op[1] in this.opcodes)) {
+			throw new Error("Illegal opcode: " + op[1] + " at " + (this.context.frame.ip-1) + " (op: " +op+ ")");
 		}
-		if(!(op[0] in this.opcodes)) {
-			throw new Error("Illegal opcode: " + op[0] + " at " + (this.context.frame.ip-1));
-		}
-		this.opcodes[op[0]].call(this, op[1]);
+		this.opcodes[op[1]].call(this, op[2]);
 		this.context.cycles++;
 		if(this.context.cycles_limit && (this.context.cycles > this.context.cycles_limit)) {
 			// TODO: make it NGS exception. Still make sure works for tests
@@ -547,6 +550,8 @@ Context.prototype.invoke = function(methods, args, kwargs, vm, do_catch) {
 		this.frame.do_catch = do_catch || false;
 		this.frames.push(this.frame);
 		this.frame.scopes = get_scp(lambda.scopes).concat(vars)
+		this.frame.func_name = get_str(lambda.name);
+		this.frame.native_func_name = null;
 		old_frame.stack_len = this.stack.length;
 
 
@@ -556,7 +561,7 @@ Context.prototype.invoke = function(methods, args, kwargs, vm, do_catch) {
 		}
 		if(call_type === 'NativeMethod') {
 			var nm = get_nm(lambda.code_ptr);
-			// console.log('NATIVEMETHOD', nm);
+			this.frame.native_func_name = nm.name;
 			try {
 				this.thrown = false;
 				var v = nm.call(this, scope[1], vm);
@@ -596,8 +601,35 @@ Context.prototype.ret = function(stack_delta) {
 	}
 }
 
+Context.prototype._ip_to_backtrace_item = function(ip) {
+	var vm = this.vm;
+	// console.log('_ip_to_backtrace_item', ip);
+	if(ip === 0) {
+		return '?'
+	}
+	var op = vm.code[ip];
+	var debug_info = op[0]; // (diff to 'src_file', line, col)
+	var src_file = vm.code[ip - debug_info[0]][2];
+	return src_file + ':' + debug_info[1] + ':' + debug_info[2];
+}
+
+Context.prototype.get_backtrace = function() {
+	// console.log('get_backtrace0', this.frames.length);
+	return this.frames.map(function(frame) {
+		if(frame.native_func_name) {
+			return 'native:?:? (' + frame.func_name + ') (native ' + frame.native_func_name + ')';
+		}
+		var ret = this._ip_to_backtrace_item(frame.prev_ip);
+		if(frame.func_name) {
+			ret = ret + ' (' + frame.func_name + ')'
+		}
+		return ret;
+	}.bind(this));
+}
+
 Context.prototype.thr = function(v) {
 	this.thrown = true;
+	var bt = this.get_backtrace();
 	while(this.frames.length > 0) {
 		var deeper_frame = this.frames.pop();
 		this.frame = this.frames[this.frames.length - 1];
@@ -607,7 +639,9 @@ Context.prototype.thr = function(v) {
 			return;
 		}
 	}
-	throw new Error("Uncaught exception" + inspect(v));
+	console.log('Backtrace (deepest frame last):')
+	bt.forEach(function(frame_info) { console.log('  ' + frame_info) })
+	throw new Error("Uncaught exception" + inspect(v) + ". Backtrace: " + bt);
 }
 
 Context.prototype.guard = function(vm) {
@@ -626,9 +660,8 @@ VM.prototype.opcodes = {
 		this.finished_contexts.push(this.runnable_contexts.shift());
 	},
 
-	'src_pos': function(offset) {
-		// console.log(offset);
-	},
+	'comment': function() {},
+	'src_file': function() {},
 
 	// stack: ... -> ... value
 	'push': function(v) {

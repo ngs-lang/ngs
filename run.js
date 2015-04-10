@@ -23,8 +23,7 @@ var start_rule = 'commands';
 
 function load(fname, start_rule) {
 	var f = fs.readSync(fs.openSync(fname, 'r'), BUFFER_SIZE);
-	var code = compile(f[0].toString(), {'start_rule': start_rule}).compiled_code;
-	code = [].concat([['comment', 'file: ' + fname]], code);
+	var code = compile(f[0].toString(), fname, {'start_rule': start_rule}).compiled_code;
 	v.useCode(code);
 }
 

@@ -96,7 +96,7 @@ defg cli_main() {
 		time = $(date '+%Y-%m-%d %H:%M:%S').String()
 
 		if not(lambda_) {
-			code = catch compile(l)
+			code = catch compile(l, "cli_command_$n")
 			# echo("CODE", code)
 			if not(code[0]) {
 				# echo("ERROR", code[1])

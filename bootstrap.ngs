@@ -1,6 +1,6 @@
 def bootstrap_require(f) {
 	content = fetch_file(f)
-	code = compile(content)
+	code = compile(content, f)
 	lambda_ = load(code)
 	lambda_()
 }

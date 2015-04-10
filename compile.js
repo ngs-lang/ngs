@@ -115,16 +115,16 @@ function compile_push() {
 
 function process_break(code, delta) {
 	for(var i=0; i<code.length; i++) {
-		if(code[i] === '$BREAK') {
-			code[i] = ['jump', code.length - i - 1 /* from next instruction */ + delta];
+		if(code[i][1] === '$BREAK') {
+			code[i] = [code[i][0], 'jump', code.length - i - 1 /* from next instruction */ + delta];
 		}
 	}
 }
 
 function process_continue(code, delta) {
 	for(var i=0; i<code.length; i++) {
-		if(code[i] === '$CONTINUE') {
-			code[i] = ['jump', - i - 1 /* from next instruction */ + delta];
+		if(code[i][1] === '$CONTINUE') {
+			code[i] = [code[i][0], 'jump', - i - 1 /* from next instruction */ + delta];
 		}
 	}
 }
@@ -159,6 +159,18 @@ function transform_args(node) {
 }
 
 function compile_tree(node, leave_value_in_stack) {
+	var ret = compile_tree_kern(node, leave_value_in_stack);
+	ret = ret.map(function(op) {
+		if(typeof(op[0]) == 'string') {
+			return [node.offset].concat(op);
+		} else {
+			return op;
+		}
+	});
+	return ret;
+}
+
+function compile_tree_kern(node, leave_value_in_stack) {
 	var ret = [];
 	if(leave_value_in_stack === undefined) {
 		leave_value_in_stack = 1;
@@ -172,7 +184,6 @@ function compile_tree(node, leave_value_in_stack) {
 	function concat_tree(i, lvs) {
 		concat(compile_tree(node[i], lvs));
 	}
-	// cmd('src_pos', node.offset);
 
 	// console.log('node', node, leave_value_in_stack);
 	if(node.is('assignment')) {
@@ -268,10 +279,10 @@ function compile_tree(node, leave_value_in_stack) {
 		return null_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('break')) {
-		return ['$BREAK'];
+		return [['$BREAK']];
 	}
 	if(node.is('continue')) {
-		return ['$CONTINUE'];
+		return [['$CONTINUE']];
 	}
 	if(PUSH_NODES[node.node_type]) {
 		if(!leave_value_in_stack) {
@@ -456,10 +467,12 @@ function compile_tree(node, leave_value_in_stack) {
 	if(node.is('string_container')) {
 		cmd('push_str', '');
 		var last_is_string = ret.length;
+		// concat_idx - after compile_tree() the index of the immediate string is 2, because of prepended offset
+		var concat_idx = 1;
 		for(var i=0; i<node.length; i++) {
 			var elt = node[i];
 			if(elt.is('string') && last_is_string) {
-				ret[last_is_string-1][1] += elt.data;
+				ret[last_is_string-1][concat_idx] += elt.data;
 				continue;
 			}
 			cmd('comment', 'string_container tree start')
@@ -470,6 +483,7 @@ function compile_tree(node, leave_value_in_stack) {
 			concat(compile_tree(elt, true));
 			if(elt.is('string')) {
 				last_is_string = ret.length;
+				concat_idx = 2;
 			} else {
 				last_is_string = 0;
 				// Only invoke String() for non-immediate strings
@@ -511,7 +525,56 @@ function compile_tree(node, leave_value_in_stack) {
 	throw "Don't know how to compile '" + node + "'";
 }
 
-function compile(code, options) {
+function get_newlines_positions(code) {
+	var ret = [];
+	for(var i=0; i<code.length; i++) {
+		if(code[i] == '\n') {
+			ret.push(i);
+		}
+	}
+	return ret;
+}
+/*
+defg get_newlines_positions(code:String) {
+	code.len().map(@if code[X] == '\n' {X}).filter()
+}
+*/
+
+var offset_to_line_and_col = (function() {
+	var prev_positions = null;
+	var prev_offset = null;
+	var prev_result = null;
+	var hits = 0;
+	var misses = 0;
+	function offset_to_line_and_col(positions, offset) {
+		// TODO: binary search
+		var ret = null;
+		if((positions === prev_positions) && (offset === prev_offset)) {
+			hits++;
+			return prev_result;
+		}
+		for(var i=0; i<positions.length; i++) {
+			if(positions[i] > offset) {
+				ret = [i+1, positions[i] - offset + 1];
+				break;
+			}
+		}
+		if(!ret) {
+			ret = [positions.length, positions[positions.length] - offset + 1]
+		}
+		prev_positions = positions;
+		prev_offset = offset;
+		prev_result = ret;
+		misses++;
+		return ret;
+	}
+	offset_to_line_and_col.stats = function() {
+		console.log('offset_to_line_and_col() hits and misses:', hits, misses);
+	}
+	return offset_to_line_and_col;
+})();
+
+function compile(code, fname, options) {
 	var debug_ast = process.env.NGS_DEBUG_AST;
 	var o = {
 		start_rule: 'commands',
@@ -532,11 +595,24 @@ function compile(code, options) {
 		console.log('AST AFTER fix_binops()\n', tree.toString());
 	}
 	var compiled = compile_tree(tree, o.leave_value_in_stack);
+
+	// debug data processing - start
+	var newlines_positions = get_newlines_positions(code);
+	compiled.forEach(function(op, i) {
+		if(op[0] === null) {
+			return;
+		}
+		op[0] = [i+1].concat(offset_to_line_and_col(newlines_positions, op[0]));
+	});
+	compiled = [[null, 'src_file', fname]].concat(compiled);
+	// debug data processing - end
+
 	if(process.env.NGS_DEBUG_COMPILED) {
 		console.log('COMPILED');
 		for(var i=0; i<compiled.length; i++) {
-			console.log(i, compiled[i]);
+			console.log(compiled[i]);
 		}
+		offset_to_line_and_col.stats();
 	}
 	return {'compiled_code': compiled};
 }

@@ -200,7 +200,7 @@ code_vs_stack.forEach(function(code_stack, idx) {
 			it('Code #' + idx + ': ' + code_stack[0].slice(0, 20), function(done) {
 				var v = new vm.VM();
 				var c = v.setupContext(CYCLES_LIMIT);
-				var code = compile(code_stack[0], {leave_value_in_stack: h[1]}).compiled_code;
+				var code = compile(code_stack[0], 'code_vs_stack_test_' + idx, {leave_value_in_stack: h[1]}).compiled_code;
 				v.useCode(code);
 				v.start(function() {
 					assert.deepEqual(c.stack.map(to_js_object), h[1] ? code_stack[1] : []);
@@ -220,7 +220,7 @@ code_vs_spawn_args.forEach(function(code_args, idx) {
 				assert.deepEqual(to_js_object(scope.args), code_args[1]);
 				return {'something': 'that', 'spawn': 'returns'};
 			});
-			var code = compile(code_args[0]).compiled_code;
+			var code = compile(code_args[0], 'code_vs_spawn_test_' + idx).compiled_code;
 			v.useCode(code);
 			v.start(function() {
 				done();

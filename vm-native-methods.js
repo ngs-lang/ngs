@@ -405,11 +405,12 @@ function register_native_methods() {
 		rl.close();
 		return NgsValue('Null', null);
 	});
-	this.registerNativeMethod('compile', p_args('s', 'String'), function vm_compile_p_str(scope, v) {
+	this.registerNativeMethod('compile', p_args('s', 'String', 'fname', 'String'), function vm_compile_p_str(scope) {
 		var s = get_str(scope.s);
+		var fname = get_str(scope.fname);
 		var out;
 		try {
-			out = compile.compile(s, {leave_value_in_stack: true});
+			out = compile.compile(s, fname, {leave_value_in_stack: true});
 			return NgsValue('Code', out.compiled_code);
 		} catch(e) {
 			// console.log(e);
@@ -425,7 +426,7 @@ function register_native_methods() {
 			scopes: NgsValue('Scopes', this.frame.scopes.slice(0, this.frame.scopes.length-1)),
 			args: p_args(),
 			code_ptr: to_ngs_object(ptr),
-			name: 'loaded_code',
+			name: to_ngs_object('-loaded-code-wrapper-'),
 		});
 
 		return m;
@@ -449,7 +450,7 @@ function register_native_methods() {
 			scopes: NgsValue('Scopes', scope.l.data.scopes.data.concat(locals, true)),
 			args: lambda.args,
 			code_ptr: lambda.code_ptr,
-			name: lambda.name + '_with_locals'
+			name: NgsValue('String', get_str(lambda.name) + '_with_locals')
 		});
 	});
 	this.registerNativeMethod('globals', p_args(), function vm_globals(scope, v) {
@@ -478,7 +479,7 @@ function register_native_methods() {
 		var t = get_thr(scope.t);
 		var k = get_str(scope.k);
 		if(!_.contains(attrs, k)) {
-			this.thr(["programming", "Thread does not have attribute " + k]);
+			this.thr(to_ngs_object(["programming", "Thread does not have attribute " + k]));
 			return;
 		}
 		return to_ngs_object(t[k]);

@@ -98,7 +98,7 @@ var code_snippets = [
 
 // console.log("+ Loading stdlib");
 var f = fs.readSync(fs.openSync('stdlib.ngs', 'r'), BUFFER_SIZE);
-var stdlib_code = compile(f[0].toString()).compiled_code;
+var stdlib_code = compile(f[0].toString(), 'stdlib.ngs').compiled_code;
 // console.log("+ Loaded stdlib");
 
 code_snippets.forEach(function(code_snippet, idx) {
@@ -106,7 +106,7 @@ code_snippets.forEach(function(code_snippet, idx) {
 		it('Code #' + idx + ': ' + code_snippet.slice(0, 20), function(done) {
 			var v = new vm.VM();
 			var c = v.setupContext();
-			var code = compile(code_snippet, {leave_value_in_stack: true}).compiled_code;
+			var code = compile(code_snippet, 'stdlib_test_' + idx, {leave_value_in_stack: true}).compiled_code;
 			v.useCode(stdlib_code);
 			v.useCode(code);
 			v.start(function() {

@@ -501,7 +501,7 @@ defg require(f:String, *args) {
 	if not(validate_source_file(f, content)) {
 		throw ['runtime', "Failed to validate source file $f"]
 	}
-	code = compile(content)
+	code = compile(content, f)
 	lambda_ = load(code)
 	lambda_(*args)
 }
@@ -571,7 +571,7 @@ defg Set()      { Hash().as('Set') }
 defg Set(s:Seq) { ret = Set(); s.each(@ret.add(X)); ret }
 
 # Mutators
-defg add(s:Set, v)	{ s.as('Hash')[v.set_id()] = v; s }
+defg add(s:Set, v)  { s.as('Hash')[v.set_id()] = v; s }
 defg push(s:Set, v) { add(s,v) }
 
 # Operators
@@ -582,7 +582,7 @@ act_as('values', 'Set', 'Hash')
 act_as('len',    'Set', 'Hash')
 
 # Functional
-defg each(s:Set, *args)	  { s.values().each(*args); s }
+defg each(s:Set, *args)   { s.values().each(*args); s }
 defg filter(s:Set, *args) { Set(filter(s.values(), *args)) }
 
 # Predicates
