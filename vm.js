@@ -44,7 +44,11 @@ function inspect(x, depth) {
 		return pfx + get_num(x);
 	}
 	if(t == 'String') {
-		return pfx + '"' + get_str(x) + '"';
+		var s = get_str(x);
+		if(s.length > 128) {
+			s = s.slice(0, 128) + '...';
+		}
+		return pfx + '"' + s + '"';
 	}
 	if(t == 'Array') {
 		var ret = pfx + '['
@@ -65,7 +69,12 @@ function inspect(x, depth) {
 		var pt;
 		for(var i=0; i<params.length; i++) {
 			// TODO: arg_rest_pos & friends representation
-			var param_type = get_type(get_arr(params[i])[2]);
+			var param_type;
+			if(get_arr(params[i])[2]) {
+				param_type = get_type(get_arr(params[i])[2]);
+			} else {
+				param_type = 'Null';
+			}
 			if(param_type == 'Null') {
 				pt = '';
 			} else {
@@ -87,6 +96,9 @@ function inspect(x, depth) {
 	}
 	if(t == 'Null') {
 		return pfx + 'null\n';
+	}
+	if(t == 'Code') {
+		return '<Code len ' + x.data.length + '>';
 	}
 
 	if(t === 'Scopes') {
@@ -188,7 +200,7 @@ Context.prototype.get_var = function(name) {
 	var r = this.find_var_lexical_scope(name);
 	if(!r[0]) {
 		this.thr(to_ngs_object(["programming", "Using undefined variable '" + name + "'"]));
-		return;
+		return NgsValue('Null', null);
 	}
 	return r[1][name];
 }
@@ -591,8 +603,13 @@ Context.prototype.ret = function(stack_delta) {
 	if(stack_delta === null) {
 	} else {
 		if(this.stack.length != this.frame.stack_len + stack_delta) {
-			console.log('STACK', this.stack.length, this.frame.stack_len, stack_delta);
-			throw new Error("Returning with wrong stack size");
+			// console.log('STACK', this.stack.length, this.frame.stack_len, stack_delta);
+			throw new Error(
+				"Returning with wrong stack size. Expected: " +
+					(this.frame.stack_len + stack_delta) +
+					' Actual: ' +
+					this.stack.length
+			);
 		}
 	}
 	if(deeper_frame.do_catch) {
@@ -707,7 +724,8 @@ VM.prototype.opcodes = {
 		var st = this.context.stack;
 		var name = get_str(st.pop());
 		var v = this.context.get_var(name);
-		if(this.thrown) {
+		if(this.context.thrown) {
+			this.context.thrown = false;
 			return;
 		}
 		this.context.stack.push(v);

@@ -2,20 +2,16 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** DONE Backtrace
-*** Include line and col info for each instruction
-** Fix undefinded_var['some_idx']. Returns with wrong stack size, should throw error.
+** DONE Fix undefinded_var['some_idx']. Returns with wrong stack size, should throw error.
 ** CLI
 *** Make P usable in CLI
 *** TODO think completion from widgets
-*** DONE support running regular commands
 *** defun cli_XXX for CLI commands (that return objects/widgets)
 **** TODO ls
 *** TODO Module automatic reloading
 *** TODO "fN" command "F1..12" to remember last command into fN key
 ** TODO Generated documentation
-** DONE Make set_var local by default / global option
-** TODO Improve parameters matching
+*** TODO Improve parameters matching
 *** TODO Arguments parsing
 ** TODO String pointers to native methods for serialization
 * Soon
