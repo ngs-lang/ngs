@@ -606,8 +606,12 @@ defg thread(f:Array) { thread(f.one()) }
 
 # ----- thread() sugar - end -----
 
+
+# ----- `cmd` -----
 defg __capture(p:Process) { String(p) }
 
+
+# ----- ``cmd`` -----
 defg __parse(p:Process) {
 	s = String(p)
 	guard s
