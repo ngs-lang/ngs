@@ -11,10 +11,6 @@ var nm = require('../vm-native-methods');
 var compile = require('../compile').compile;
 
 var code_snippets = [
-	// string functions
-	'{ "abcd" ~ 4 }',
-	// __match(Array,Number)
-	'{ [3,4] ~ 2 }',
 	// not(...)
 	'{ not(true) == false }',
 	'{ not(false) == true }',
