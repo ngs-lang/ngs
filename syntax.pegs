@@ -110,6 +110,7 @@ CCEXPR "CCEXPR" =
 
 CCEXPR_commands =
   space? '$(' space? commands:commands space? ')' { return commands; } /
+  space? '``' space? commands:commands space? '``' { return N('capture_parse', offset, [commands]); } /
   space? '`' space? commands:commands space? '`' { return N('capture', offset, [commands]); }
 
 CCEXPR_code =

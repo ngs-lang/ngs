@@ -57,6 +57,7 @@ var code_snippets = [
 	'{ Bool($(ls)) }',
 	'{ not(Bool($(-f NOSUCHFILE))) }',
 	'{ `echo a` == "a" }',
+	'{ ``echo "{\\"a\\":7}"`` == {"a": 7} }',
 	// functional
 	'{ map([0,1,2], Bool) == [false, true, true] }',
 	'{ map([0,1,2], lambda (x) {x+1} ) == [1, 2, 3] }',

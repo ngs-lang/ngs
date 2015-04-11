@@ -598,3 +598,19 @@ defg join(s:Set, *args) { join(s.values().sort(), *args) }
 
 
 # ----- Set - end -----
+
+
+# ----- thread() sugar - start -----
+
+defg thread(f:Array) { thread(f.one()) }
+
+# ----- thread() sugar - end -----
+
+defg __capture(p:Process) { String(p) }
+
+defg __parse(p:Process) {
+	s = String(p)
+	guard s
+	guard s[0] == '{'
+	s.from_json()
+}

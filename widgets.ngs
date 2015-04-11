@@ -17,6 +17,7 @@ status_width = 5
 spacer = ' ' * status_width
 
 def colored(s:String, c:String) { "${tput_cache["${c}_color"]}$s${tput_cache.sgr0}" }
+def colored(s:String, n:Null) { s }
 
 def OrigCmdWidget(cmd:String, time:String) {
 	w = __super()
@@ -26,26 +27,19 @@ def OrigCmdWidget(cmd:String, time:String) {
 	w
 }
 def lines(w:OrigCmdWidget) {
-	err = false
-	ok = false
+	status_color = null
 	if w.exit_code == null {
 		status = 'R'
 	}
 	if w.exit_code == 0 {
 		status = 'OK'
-		ok = true
+		status_color = 'success'
 	}
 	if w.exit_code {
 		status = w.exit_code.String()
-		err = true
+		status_color = 'error'
 	}
-	status = status.fill(status_width)
-	if err {
-		status = colored(status, 'error')
-	}
-	if ok {
-		status = colored(status, 'success')
-	}
+	status = status.fill(status_width).colored(status_color)
 	["$status--- ${w.cmd} --- ${w.time}${tput_cache.el}"]
 }
 

@@ -542,11 +542,19 @@ function compile_tree_kern(node, leave_value_in_stack) {
 		cmd('invoke');
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
-	if(node.is('capture')) {
+
+	function concat_capture(f) {
 		cmd('push_arr');
 		concat_tree(0, true);
 		concat(compile_push());
-		concat(compile_invoke_pos_args_in_stack('String'));
+		concat(compile_invoke_pos_args_in_stack(f));
+	}
+	if(node.is('capture')) {
+		concat_capture('__capture')
+		return pop_if_needed(ret, leave_value_in_stack);
+	}
+	if(node.is('capture_parse')) {
+		concat_capture('__parse')
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.node_type) {
