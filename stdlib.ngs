@@ -7,7 +7,6 @@ defg __not_in(*args) { not(__in(*args)) }
 defg has(container, item) {item in container}
 defg has_no(container, item) {item not in container}
 
-
 # ----- Type system sugar - start -----
 
 # act_as(M, ORIG, AS) -> defg M(x:ORIG, *args) { x.as(AS).M(*args) }
@@ -479,19 +478,9 @@ defg String(p:Process) {
 	p.stdout.strip()
 }
 
-# String(ARRAY-LIKE)
-defg String(a:Array) { '[' + a.join(', ') + ']' }
-defg String(a:Array) {
-	guard typeof(a) != 'Array'
-	'<' + typeof(a) + ' ' + __super(a) + '>'
-}
+defg String(a:Array) { guard typeof(a) == 'Array'; '[' + a.join(', ') + ']' }
 
-# String(HASH-LIKE)
-defg String(h:Hash) { '{' + h.map(F(k,v) { "$k: $v" }).join(', ') + '}' }
-defg String(h:Hash) {
-	guard typeof(h) != 'Hash'
-	'<' + typeof(h) + ' ' + __super(h) + '>'
-}
+defg String(h:Hash) { guard typeof(h) == 'Hash'; '{' + h.map(F(k,v) { "$k: $v" }).join(', ') + '}' }
 
 # Functions
 # TODO: maybe generic for Seq
