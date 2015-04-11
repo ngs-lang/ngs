@@ -511,10 +511,6 @@ function register_native_methods() {
 		v.finish_context();
 		return scope.t;
 	});
-	this.registerNativeMethod('lines', p_args('s', 'String'), function vm_lines_p_str(scope) {
-		// TODO: make non-naive implementation in stdlib instead of this
-		return to_ngs_object(get_str(scope.s).split("\n"));
-	});
 	this.registerNativeMethod('id', p_args('x', null), function vm_id_p_any(scope) {
 		return to_ngs_object(get_id(scope.x));
 	});

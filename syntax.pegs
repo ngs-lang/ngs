@@ -63,6 +63,7 @@ command "command" =
   function_definition /
   function_call /
   if /
+  cond /
   while /
   for /
   hash_comment /
@@ -81,6 +82,21 @@ comment "Any kind of comment" =
 if "if" =
   'if' space? cond:expr space? 'then'? space? if_true:CCEXPR if_false:(space? 'else'? space? CCEXPR)? {
     return N('if', offset, [cond, if_true]).push(if_false ? if_false[3] : null);
+  }
+
+cond "cond" =
+  'cond' space? "{" space? clauses:(cond_clause space?)* "}" {
+    // Cond is actually a flattened if-elseif-elseif-...
+	// Unflatten:
+    for(var i=0; i < clauses.length-1; i++) {
+	  clauses[i][0].push(clauses[i+1][0]);
+    }
+	return clauses[0][0];
+  }
+
+cond_clause =
+  cond:expr space? then:CCEXPR {
+    return N('if', offset, [cond, then]);
   }
 
 while "while" =
@@ -214,6 +230,7 @@ expr_call "Function call" =
 
 expr_base "Expression/no-add" =
   if /
+  cond /
   while /
   for /
   break /

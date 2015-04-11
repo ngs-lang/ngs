@@ -27,19 +27,15 @@ def OrigCmdWidget(cmd:String, time:String) {
 	w
 }
 def lines(w:OrigCmdWidget) {
-	status_color = null
-	if w.exit_code == null {
-		status = 'R'
+	sc = cond {
+		w.exit_code == null { ['R', null] }
+		w.exit_code == 0    { ['OK', 'success'] }
+		w.exit_code > 0     { [w.exit_code.String(), 'error'] }
+		1                   { throw ['programming', 'unexpected exit_code value'] }
 	}
-	if w.exit_code == 0 {
-		status = 'OK'
-		status_color = 'success'
-	}
-	if w.exit_code {
-		status = w.exit_code.String()
-		status_color = 'error'
-	}
-	status = status.fill(status_width).colored(status_color)
+	status = sc[0]
+	color = sc[1]
+	status = status.fill(status_width).colored(color)
 	["$status--- ${w.cmd} --- ${w.time}${tput_cache.el}"]
 }
 
@@ -53,7 +49,6 @@ def lines(ws:WidgetsSeq) { ws.items.map(lines).flatten() }
 def init(ow:OutputWidget) { ow.text = ''; ow }
 def colored(ow:OutputWidget, s:String) { s }
 def lines(ow:OutputWidget) {
-	if not(ow.text) { return [] }
 	ow.text.lines() @ "$spacer${ow.colored(X)}${tput_cache.el}"
 }
 

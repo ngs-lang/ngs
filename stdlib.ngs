@@ -507,6 +507,8 @@ defg strip(s:String) { strip(s, " \t\r\n") }
 
 defg split(s:String) { split(s, ' ') }
 
+defg lines(s:String) { split(s, '\n') }
+
 # TODO: escaping
 defg repr(s:String) { "'$s'" }
 
