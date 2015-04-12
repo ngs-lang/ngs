@@ -54,6 +54,7 @@ var code_vs_stack = [
 	// *** throw ... catch ***
 	['{ catch (F() { 1 })() }', [[true,1]]],
 	['{ catch (F() { throw 2 })() }', [[false, 2]]],
+	['{ catch (F() { throw 2 })(); [].push(1) }', [[1]]],
 
 	// *** locals ***
 	['{ x=1; y=1; l = {"x": 2}; f = (F() { global y = 3; x = 4 }).locals(l); f(); [x, y, l["x"]]}',

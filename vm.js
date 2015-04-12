@@ -158,11 +158,14 @@ Context.prototype.initialize = function(vm, global_scope, cycles_limit) {
 		return this.frame.ip;
 	}.bind(this);
 
+	var ctx = this;
+
 	// Don't want pop() method to be listed and printed in console.log()
 	Object.defineProperty(this.stack, 'pop', {
 		'value': function vm_pop() {
 			if(this.length == 0) {
-				throw new Error("Stack underflow at " + (get_context_ip()-1));
+				print_backtrace(ctx.get_backtrace());
+				throw new Error("Stack underflow at " + (ctx.frame.prev_ip));
 			}
 			return Array.prototype.pop.call(this);
 		}
@@ -322,6 +325,7 @@ VM.prototype.mainLoop = function() {
 		if(!(op[1] in this.opcodes)) {
 			throw new Error("Illegal opcode: " + op[1] + " at " + (this.context.frame.ip-1) + " (op: " +op+ ")");
 		}
+		this.context.thrown = false;
 		this.opcodes[op[1]].call(this, op[2]);
 		this.context.cycles++;
 		if(this.context.cycles_limit && (this.context.cycles > this.context.cycles_limit)) {
@@ -587,7 +591,6 @@ Context.prototype.invoke = function(methods, args, kwargs, vm, do_catch) {
 			var nm = get_nm(lambda.code_ptr);
 			this.frame.native_func_name = nm.name;
 			try {
-				this.thrown = false;
 				var v = nm.call(this, scope[1], vm);
 				if(!this.thrown) {
 					this.stack.push(v);
@@ -658,6 +661,11 @@ Context.prototype.get_backtrace = function() {
 	}.bind(this));
 }
 
+function print_backtrace(bt) {
+	console.log('Backtrace (deepest frame last):')
+	bt.forEach(function(frame_info) { console.log('  ' + frame_info) })
+}
+
 Context.prototype.thr = function(v) {
 	this.thrown = true;
 	var bt = this.get_backtrace();
@@ -670,8 +678,7 @@ Context.prototype.thr = function(v) {
 			return;
 		}
 	}
-	console.log('Backtrace (deepest frame last):')
-	bt.forEach(function(frame_info) { console.log('  ' + frame_info) })
+	print_backtrace(bt);
 	throw new Error("Uncaught exception" + inspect(v) + ". Backtrace: " + bt);
 }
 

@@ -7,7 +7,6 @@ mktype('OrigCmdWidget', 'Widget')
 mktype('OutputWidget', 'Widget')
 mktype('StdoutWidget', 'OutputWidget')
 mktype('StderrWidget', 'OutputWidget')
-mktype('ErrorWidget', 'Widget')
 
 mktype('WidgetsSeq', 'Hash')
 
@@ -24,10 +23,12 @@ def OrigCmdWidget(cmd:String, time:String) {
 	w.cmd = cmd
 	w.time = time
 	w.exit_code = null
+	w.err = null
 	w
 }
 def lines(w:OrigCmdWidget) {
 	sc = cond {
+		w.err               { [w.err, 'error'] }
 		w.exit_code == null { ['R', null] }
 		w.exit_code == 0    { ['OK', 'success'] }
 		w.exit_code > 0     { [w.exit_code.String(), 'error'] }
@@ -38,9 +39,6 @@ def lines(w:OrigCmdWidget) {
 	status = status.fill(status_width).colored(color)
 	["$status--- ${w.cmd} --- ${w.time}${tput_cache.el}"]
 }
-
-def ErrorWidget(cmd:String) {w = __super(); w.cmd = cmd; w}
-def lines(w:ErrorWidget) { ["${spacer}ERROR: ${w.cmd} ${tput_cache.el}"] }
 
 def WidgetsSeq() { ws = __super(); ws.items = []; ws}
 def push(ws:WidgetsSeq, x) { ws.items.push(x); ws }

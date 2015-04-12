@@ -104,7 +104,12 @@ defg cli_main() {
 			# echo("CODE", code)
 			if not(code[0]) {
 				# echo("ERROR", code[1])
-				sm.widgets.push(WidgetsSeq().push(OrigCmdWidget(l, time)).push(ErrorWidget(String(code[1]))))
+				o = OrigCmdWidget(l, time)
+				o.err = 'COMP'
+				e = StderrWidget()
+				e.text = code[1].String()
+				sm.widgets.push(WidgetsSeq().push(o).push(e))
+				sm.echo()
 				continue
 			}
 			lambda_ = load(code[1]).locals(local_scope)

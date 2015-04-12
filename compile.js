@@ -622,7 +622,6 @@ function compile(code, fname, options) {
 	try {
 		var tree = parser.parse(code, o.start_rule);
 	} catch(e) {
-		console.log(e);
 		throw e;
 	}
 	if(debug_ast) {

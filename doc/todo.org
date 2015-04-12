@@ -2,9 +2,8 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** DONE Fix undefinded_var['some_idx']. Returns with wrong stack size, should throw error.
 ** CLI
-*** Make P usable in CLI
+*** TODO Make P usable in CLI
 *** TODO think completion from widgets
 *** defun cli_XXX for CLI commands (that return objects/widgets)
 **** TODO ls
