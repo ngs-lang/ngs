@@ -270,8 +270,9 @@ defg repr(p:Process) { "<Process pid=${p.pid} code=${p.exit_code} id=${p.id} o=$
 defg acquire(l:Lock, f:F, *args) {
 	# TODO: maybe catch and rethrow after release()
 	l.acquire()
-	f(*args)
+	ret = f(*args)
 	l.release()
+	ret
 }
 # ----- Lock sugar - end -----
 
@@ -450,6 +451,8 @@ defg Bool(s:Seq) { s.len() > 0 }
 # Magic methods
 
 defg __in(v, s:Seq)  { any(s, __eq, v) }
+
+# defg __sub(a:Seq, b:Seq) { a @? X not in b }
 
 defg __get_item(s:Seq, idxs:Array) { idxs@s[X] }
 
@@ -644,10 +647,12 @@ defg Set()      { Hash().as('Set') }
 defg Set(s:Seq) { ret = Set(); s.each(@ret.add(X)); ret }
 
 # Mutators
-defg add(s:Set, v)  { s.as('Hash')[v.set_id()] = v; s }
-defg push(s:Set, v) { add(s,v) }
+defg add(s:Set, v)    { s.as('Hash')[v.set_id()] = v; s }
+defg push(s:Set, v)   { add(s,v) }
+defg remove(s:Set, v) { s.as('Hash').remove(v.set_id()); s }
 
-# Operators
+# Transformations
+defg without(a:Set, v) { a @? X != v }
 defg __sub(a:Set, b:Set) { a @? X not in b }
 
 # Getters
@@ -656,7 +661,8 @@ act_as('len',    'Set', 'Hash')
 
 # Functional
 defg each(s:Set, *args)   { s.values().each(*args); s }
-defg filter(s:Set, *args) { Set(filter(s.values(), *args)) }
+defg map(s:Set, *args)    { s.values().map(*args).Set() }
+defg filter(s:Set, *args) { s.values().filter(*args).Set() }
 
 # Predicates
 defg Bool(s:Set)        { s.len() > 0 }

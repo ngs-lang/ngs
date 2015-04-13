@@ -168,6 +168,13 @@ function register_native_methods() {
 		return scope.v;
 	});
 
+	this.registerNativeMethod('remove', p_args('h', 'Hash', 'k', 'String'), function vm___remove_p_hsh_str(scope) {
+		var h = get_hsh(scope.h);
+		var k = get_str(scope.k)
+		delete h[k];
+		return scope.h;
+	});
+
 	this.registerNativeMethod('__get_item', p_args('a', 'Array', 'idx', 'Number'), function vm___get_item_p_arr_num(scope) {
 		var a = get_arr(scope.a);
 		var i = get_num(scope.idx)

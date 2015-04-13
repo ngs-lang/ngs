@@ -96,7 +96,9 @@ var code_snippets = [
 	'{ s=Set(); s.push(7); (s.len() == 1) and (s.values() == [7]) }',
 	'{ summ=0; Set([1,2,3]).each(F(x) { global summ = summ + x }); summ == 6 }',
 	'{ Set([1,2,3]) - Set([1,3]) == Set([2]) }', // __in(v, Set), filter(Set,...)
-	'{ Set([1,2]).join() == "12" }',
+	'{ s=Set([1,2,3]); s.remove(3); s.join() == "12" }',
+	'{ Set([1,2,3]).without(1) == Set([2,3]) }', // filter
+	'{ (Set([1,2]) @ X*2) == Set([2,4]) }', // map
 ];
 
 // console.log("+ Loading stdlib");

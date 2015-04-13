@@ -53,7 +53,7 @@ defg cli_screen_updater() {
 defg native_spawn(*args) {
 	# TODO: handle children threads maybe?
 	prc = __super(*args)
-	if thread().has_meta('cli_widgets') {
+	if thread() in supervised_threads {
 		supervised_processes.push(prc)
 		thread_widgets = thread().meta('cli_widgets')
 		o = StdoutWidget()
@@ -73,7 +73,7 @@ defg cli_main() {
 
 	local_scope = {"x": 7}
 	n = 0
-	screen_updater = thread(cli_screen_updater)
+	screen_updater = thread(cli_screen_updater).run()
 	while true {
 		n = n + 1
 
@@ -135,11 +135,13 @@ defg cli_main() {
 			if do_display_result {
 				thread_widgets.container.push(ow)
 			}
+
+			supervised_threads.remove(thread())
+
 			cli_update_screen()
 		})
 
-
-		supervised_threads.push(t)
+		supervised_threads.add(t)
 		cmd_widget = OrigCmdWidget(l, time)
 		container_widget = WidgetsSeq()
 		container_widget.push(cmd_widget)
@@ -150,6 +152,7 @@ defg cli_main() {
 		sm.widgets.push(container_widget)
 
 		t.run()
+		cli_update_screen()
 	}
 
 	# later # screen_updater.kill()
