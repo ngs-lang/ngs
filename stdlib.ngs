@@ -7,6 +7,8 @@ defg __not_in(*args) { not(__in(*args)) }
 defg has(container, item) {item in container}
 defg has_no(container, item) {item not in container}
 
+defg __pipe(*args) { map(*args) }
+
 # ----- Type system sugar - start -----
 
 # act_as(M, ORIG, AS) -> defg M(x:ORIG, *args) { x.as(AS).M(*args) }
@@ -128,11 +130,6 @@ defg cmd_finished_ok_p(p:Process) {
 # ----- spawn sugar - end -----
 
 
-# ----- Files reading sugar - start -----
-
-# ----- Files reading sugar - end -----
-
-
 # ----- Meta sugar - start -----
 defg meta(x, k:String) {
 	x.meta()[k]
@@ -228,6 +225,10 @@ defg read(f:String) {
 	parse_file(f, content).meta('file', f)
 }
 
+defg read(f:File) { read(f.name) }
+
+defg lines(f:File) { read(f).lines() }
+
 defg read_till(fd:Number, tillChar:String, max:Number=1024) {
 	ret = ''
 	while (ch = fd.read()) != tillChar {
@@ -244,6 +245,8 @@ defg String(f:File) { f.name }
 defg Bool(p:Path) { $(-e $p).Bool() }
 defg Bool(f:File) { $(-f $f).Bool() }
 defg repr(f:File) { "File(${f.name.repr()})" }
+
+
 
 # ----- Files sugar - end -----
 
@@ -437,6 +440,8 @@ defg filter(s:Seq, predicate:F, *args) {
 }
 
 defg filter(s:Seq) { s @? X != null }
+defg without(a:Seq, v) { a @? X != v }
+
 
 defg count(s:Seq, predicate:F, *args) {
 	sum(s @ predicate(X, *args).Number())
@@ -507,6 +512,7 @@ defg strip(s:Seq, elts:Seq) {
 }
 
 defg strip(s:String) { strip(s, " \t\r\n") }
+# defg strip(a:Array) { a.map(strip) }
 
 defg split(s:String) { split(s, ' ') }
 
@@ -695,3 +701,21 @@ defg __parse(p:Process) {
 }
 
 # ----- ``cmd``- end -----
+
+# ----- MaybeFile - start -----
+
+mktype('MaybeFile', 'File')
+
+defg MaybeFile(s:String) { File(s).as('MaybeFile') }
+
+defg lines(f:MaybeFile) {
+	guard not(f)
+	[]
+}
+
+defg read(f:MaybeFile) {
+	guard not(f)
+	''
+}
+
+# ----- MaybeFile - end -----

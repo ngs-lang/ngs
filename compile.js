@@ -210,6 +210,7 @@ function compile_tree_kern(node, leave_value_in_stack) {
 	function concat_tree(i, lvs) {
 		concat(compile_tree(node[i], lvs));
 	}
+	cmd('comment', 'type: ' + node.node_type + ' data:' + node.data);
 
 	// console.log('node', node, leave_value_in_stack);
 	if(node.is('assignment')) {

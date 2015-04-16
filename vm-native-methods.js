@@ -538,9 +538,9 @@ function register_native_methods() {
 	});
 	this.set_glo_var('__TYPES', to_ngs_object({
 		'Array': {'inherits': ['Seq']},
-		'File': {'inherits': ['Path', 'Hash']},
-		'Lock': {'inherits': ['Hash']},
-		'Path': {'inherits': ['Hash']},
+		'File': {'inherits': ['Path']},
+		'Lock': {'inherits': []},
+		'Path': {'inherits': []},
 		'String': {'inherits': ['Seq']},
 	}));
 	this.registerNativeMethod('Regexp', p_args('pattern', 'String', 'flags', 'String'), function vm_regexp_p_str_str(scope) {
@@ -565,6 +565,15 @@ function register_native_methods() {
 	this.registerNativeMethod('File', p_args('s', 'String'), function vm_file_p_str(scope) {
 		return NgsValue('File', {name: scope.s});
 	});
+	this.registerNativeMethod('__get_attr', p_args('f', 'File', 'attr', 'String'), function vm___get_attr_p_fil_str(scope) {
+		var a = get_str(scope.attr);
+		var f = get_fil(scope.f);
+		if(!_.has(f, a)) {
+			throw new Error("File object does not have attribute " + a);
+		}
+		return f[a];
+	});
+
 	// TODO: Make s Seq/buffer maybe.
 	// TODO: Actually appends so 'write' may not be the best name. To consider.
 	this.registerNativeMethod('write', p_args('f', 'File', 's', 'String'), function vm_write_p_fil_str(scope, v) {

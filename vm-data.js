@@ -70,12 +70,14 @@ function get_meta(data) {
 make_getter('Array',		'arr', _.isArray);
 make_getter('Bool',			'boo', _.isBoolean);
 make_getter('Code',			'cod', _.isArray);
+make_getter('File',			'fil', _.isObject);
 make_getter('Hash',			'hsh', _.isObject);
 make_getter('Lambda',		'lmb', _.isObject);
 make_getter('Lock',			'lck', _.isObject);
 make_getter('NativeMethod', 'nm' , _.isFunction);
 make_getter('Null',			'nul', _.isNull);
 make_getter('Number',		'num', _.isNumber);
+make_getter('Path',			'pth', _.isObject);
 make_getter('Process',		'prc', _.isObject);
 make_getter('Readline',		'rl' , _.isObject);
 make_getter('Regexp',		'rgx', _.isRegExp);
