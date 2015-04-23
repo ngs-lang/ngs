@@ -36,7 +36,9 @@ load(path.join(NGS_FOLDER, 'bootstrap.ngs'));
 
 v.start(function ngs_runtime_script_finish_callback() {
 	if(process.env.NGS_DEBUG_FINISH) {
-		console.log('finished_contexts', util.inspect(v.finished_contexts, {'depth': 10}));
+		v.finished_contexts.forEach(function(ctx, i) {
+			console.log('Finished context', ctx.id, 'cycles', ctx.cycles);
+		});
 	}
 	if(process.env.NGS_PROFILE) {
 		console.log('OPCODES', v.opcodes_stats);

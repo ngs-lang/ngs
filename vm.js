@@ -6,7 +6,6 @@
 var _ = require('underscore');
 
 var debug_match_params = !!process.env.NGS_DEBUG_PARAMS;
-var debug_delay = !!process.env.NGS_DEBUG_DELAY;
 var profiling = !!process.env.NGS_PROFILE;
 
 var util = require('util');
@@ -312,7 +311,6 @@ VM.prototype.mainLoop = function() {
 		if(this.finished) {
 			throw new Exception("Finished VM is not finished");
 		}
-		// console.log('DEBUG DELAY PRE', this.runnable_contexts.length);
 		this.context = this.runnable_contexts[0];
 
 		if(typeof(this.context.frame.ip) == 'string') {
@@ -354,36 +352,20 @@ VM.prototype.mainLoop = function() {
 		}
 		// Here, we might be with another stack, ip, etc
 
-		// Warning: in future, some operations might change `this.context`
-		if(debug_delay && this.context.state === 'running') {
-			console.log('DEBUG DELAY', this.runnable_contexts.length);
-			var ctx = this.context;
-			this.suspend_context();
-			setTimeout(function() {
-				if(ctx.state === 'suspended') {
-					// console.log('CALLING UNSUSPEND_CONTEXT');
-					this.unsuspend_context(ctx);
-				}
-			}.bind(this), 100);
-			break;
-		}
 	}
 	if(!this.runnable_contexts.length && !this.suspended_contexts.length && !this.finished) {
 		this.finished = true;
 		this.finished_callback(this);
 	}
-	// console.log('NRC', this.runnable_contexts.length, this.suspended_contexts.length, this.finished_contexts.length);
 }
 
 VM.prototype.suspend_context = function() {
-	// console.log('DEBUG DELAY B', this.runnable_contexts.length);
 	var ctx = this.runnable_contexts.shift();
 	if(!ctx) {
 		throw new Error("VM.suspend_context: no runnable contexts.");
 	}
 	ctx.state = 'suspended';
 	this.suspended_contexts.push(ctx);
-	// console.log('suspend_context', ctx);
 }
 
 VM.prototype.suspend_context_till = function(obj, ev) {
