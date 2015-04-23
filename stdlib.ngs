@@ -36,8 +36,8 @@ defg inherits(child:String, parent:String) {
 
 defg mktype(type:String, parents:Array) {
 	parents.each(@inherits(type, X))
-	defg "$type"() {
-		obj(type).init()
+	defg "$type"(*args) {
+		obj(type).init(*args)
 	}
 }
 
@@ -184,6 +184,10 @@ defg Number(s:String) {
 
 defg min(a:Number, b:Number) { if a<b {a}{b} }
 defg max(a:Number, b:Number) { if a<b {b}{a} }
+defg max(s:Seq) {
+	guard s.len() > 0
+	s.reduce(s[0], max)
+}
 
 # Functional
 
@@ -396,7 +400,11 @@ defg each(s:Seq, processor:F, *args) {
 	s
 }
 
+defg each_star(s:Seq, processor:F, *args) { s.each(@processor(*X+args)) }
+
 defg map(s:Seq, mapper:F, *args) { s.len() @ mapper(s[X], *args) }
+
+defg map_star(s:Seq, mapper:F, *args) { s.len() @ mapper(*s[X] + args) }
 
 defg reduce(s:Seq, start, reducer:F) {
 	acc = start
@@ -426,6 +434,10 @@ defg all(s:Seq, predicate:F, *args) {
 
 defg none(s:Seq, predicate:F, *args) {
 	not(any(s, predicate, *args))
+}
+
+defg all_in(a:Seq, x) {
+	a.all(@X in x)
 }
 
 defg filter(s:Seq, predicate:F, *args) {
@@ -498,6 +510,8 @@ defg fill(s:String, n:Number) {
 	s + ' ' * t
 }
 
+defg fill(nothing:Null, n:Number) { ' ' * n }
+
 defg strip(s:Seq, elts:Seq) {
 	l = s.len()
 	i = 0
@@ -550,6 +564,7 @@ defg __eq(a:Array, b:Array) {
 	all(zip(a,b), @ X[0] == X[1])
 }
 
+global __literal_w = split
 
 
 # Arithmetcis
@@ -605,9 +620,6 @@ defg __get_item(h:Hash, n:Number) { h[n.String()] }
 defg __get_item(h:Hash, keys:Array) { Hash(keys@[X, h[X]]) }
 defg __set_item(h:Hash, n:Number, v) { h[n.String()] = v }
 
-# Make hash.key same as hash['key']
-defg __get_attr(h:Hash, k:String) { h[k] }
-
 # ----- Hash - end -----
 
 
@@ -647,23 +659,24 @@ defg set_id(s:String)  { "str:$s" }
 defg set_id(p:Process) { "prc:${p.id}" }
 defg set_id(t:Thread)  { "thr:${t.id}" }
 
+mktype('Set', [])
 
 # Constructors
-defg Set()      { Hash().as('Set') }
-defg Set(s:Seq) { ret = Set(); s.each(@ret.add(X)); ret }
+defg init(s:Set)            { s.data={}; s }
+defg init(s:Set, items:Seq) { ret = Set(); items.each(@ret.add(X)); ret }
 
 # Mutators
-defg add(s:Set, v)    { s.as('Hash')[v.set_id()] = v; s }
+defg add(s:Set, v)    { s.data[v.set_id()] = v; s }
 defg push(s:Set, v)   { add(s,v) }
-defg remove(s:Set, v) { s.as('Hash').remove(v.set_id()); s }
+defg remove(s:Set, v) { s.data.remove(v.set_id()); s }
 
 # Transformations
 defg without(a:Set, v) { a @? X != v }
 defg __sub(a:Set, b:Set) { a @? X not in b }
 
 # Getters
-act_as('values', 'Set', 'Hash')
-act_as('len',    'Set', 'Hash')
+defg values(s:Set) { s.data.values() }
+defg len(s:Set) { s.data.len() }
 
 # Functional
 defg each(s:Set, *args)   { s.values().each(*args); s }
@@ -672,7 +685,7 @@ defg filter(s:Set, *args) { s.values().filter(*args).Set() }
 
 # Predicates
 defg Bool(s:Set)        { s.len() > 0 }
-defg __in(v, s:Set)     { v.set_id() in s.as('Hash') }
+defg __in(v, s:Set)     { v.set_id() in s.data }
 defg __eq(a:Set, b:Set) { a.values().sort() == b.values().sort() }
 
 # Misc
@@ -719,3 +732,53 @@ defg read(f:MaybeFile) {
 }
 
 # ----- MaybeFile - end -----
+
+# ----- DfltHash - start -----
+
+mktype('DfltHash', [])
+
+defg init(df:DfltHash, v) {
+	df.default = v
+	df.data = {}
+	df
+}
+
+defg __get_item(dh:DfltHash, k:String) {
+	if k in dh.data {
+		dh.data[k]
+	} else {
+		dh.default
+	}
+}
+
+{
+	'__set_item keys values __in map each'.split().each(F(method) {
+		defg "$method"(dh:DfltHash, *args) { globals()[method].call(dh.data, *args) }
+	})
+	# 10.each(F(i) {
+	# 	defg "x_$i"(dh:DfltHash, *args) { globals()[method].call(dh.data, *args) }
+	# })
+}
+
+# ----- DfltHash - end -----
+
+# ----- Stats - start -----
+mktype('Stats', 'DfltHash')
+
+defg Stats() {
+	DfltHash(0).as('Stats')
+}
+
+defg incr(s:Stats, k:String) {
+	s[k] = s[k] + 1
+}
+# ----- Stats - end -----
+
+
+# ----- Host name utilities - start -----
+
+defg sanitize_hostname() {
+	# TODO
+}
+
+# ----- Host name utilities - end -----

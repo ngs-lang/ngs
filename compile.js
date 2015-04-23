@@ -19,6 +19,7 @@ var PUSH_NODES = {
 var CALL_NODES = {
 	'get_item': true,
 	'set_item': true,
+	'set_attr': true,
 	'in': true,
 	'not_in': true,
 }
@@ -82,7 +83,7 @@ function fix_binops(tree) {
 function dup_if_needed(code, leave_value_in_stack) {
 	if(leave_value_in_stack) {
 		return code.concat([
-			['comment', 'leave_value_in_stack', true],
+			// ['comment', 'leave_value_in_stack', true],
 			['dup']
 		]);
 	}
@@ -92,7 +93,7 @@ function dup_if_needed(code, leave_value_in_stack) {
 function null_if_needed(code, leave_value_in_stack) {
 	if(leave_value_in_stack) {
 		return code.concat([
-			['comment', 'leave_value_in_stack', true],
+			// ['comment', 'leave_value_in_stack', true],
 			['push_nul']
 		]);
 	}
@@ -105,7 +106,7 @@ function pop_if_needed(code, leave_value_in_stack) {
 	}
 	if(!leave_value_in_stack) {
 		return code.concat([
-			['comment', 'leave_value_in_stack', false],
+			// ['comment', 'leave_value_in_stack', false],
 			['pop']
 		]);
 	}
@@ -210,7 +211,7 @@ function compile_tree_kern(node, leave_value_in_stack) {
 	function concat_tree(i, lvs) {
 		concat(compile_tree(node[i], lvs));
 	}
-	cmd('comment', 'type: ' + node.node_type + ' data:' + node.data);
+	// cmd('comment', 'type: ' + node.node_type + ' data:' + node.data);
 
 	// console.log('node', node, leave_value_in_stack);
 	if(node.is('assignment')) {
@@ -320,10 +321,7 @@ function compile_tree_kern(node, leave_value_in_stack) {
 			concat(compile_tree(node[i], true))
 			concat(compile_push());
 		}
-		cmd('push_hsh');
-		cmd('push_str', '__' + node.node_type);
-		cmd('get_var');
-		cmd('invoke');
+		concat(compile_invoke_pos_args_in_stack('__' + node.node_type));
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('varname')) {
@@ -342,8 +340,9 @@ function compile_tree_kern(node, leave_value_in_stack) {
 	}
 	if(node.is('array') || node.is('expressions')) {
 		// TODO: implement 'expressions' here, for now it only tested with 'array'
-		cmd('comment', 'start', node.node_type);
-		concat(compile_invoke_no_args('Array'));
+		// cmd('comment', 'start', node.node_type);
+		// concat(compile_invoke_no_args('Array'));
+		cmd('push_arr');
 		var m;
 		for(var i=0; i<node.length; i++) {
 			concat_tree(i, true);
@@ -357,7 +356,7 @@ function compile_tree_kern(node, leave_value_in_stack) {
 			cmd('invoke2');
 		}
 		ret = pop_if_needed(ret, leave_value_in_stack);
-		cmd('comment', 'end', node.node_type);
+		// cmd('comment', 'end', node.node_type);
 		return ret;
 	}
 	if(node.is('hash')) {
@@ -407,7 +406,8 @@ function compile_tree_kern(node, leave_value_in_stack) {
 	if(node.is('lambda')) {
 		var code = compile_tree(node[2], true);
 		code = code.concat([['ret']]);
-		concat(compile_invoke_no_args('Array'));
+		// concat(compile_invoke_no_args('Array'));
+		cmd('push_arr');
 		// Lexical scopes
 		concat(compile_invoke_no_args('__get_lexical_scopes'));
 		concat(compile_push());
@@ -463,20 +463,21 @@ function compile_tree_kern(node, leave_value_in_stack) {
 		cmd('push_hsh');
 		// --- preapre args as in 'call' - end ---
 
-		concat(compile_invoke_no_args('Array'));
+		// concat(compile_invoke_no_args('Array'));
+		cmd('push_arr');
 		for(var i=cases.length-1; i>=0; i--) {
-			cmd('comment', 'catch clause ' + i + ' start');
+			// cmd('comment', 'catch clause ' + i + ' start');
 			concat(compile_tree(cases[i], true));
-			cmd('comment', 'catch clause ' + i + ' push result');
+			// cmd('comment', 'catch clause ' + i + ' push result');
 			concat(compile_push());
-			cmd('comment', 'catch clause ' + i + ' end');
+			// cmd('comment', 'catch clause ' + i + ' end');
 		} // for cases
 
 		cmd('invoke');
 		return pop_if_needed(ret, leave_value_in_stack);
 	}
 	if(node.is('comment')) {
-		cmd('comment', 'user: ' + node.data);
+		// cmd('comment', 'user: ' + node.data);
 		return ret;
 	}
 	if(node.is('get_attr')) {
@@ -499,7 +500,7 @@ function compile_tree_kern(node, leave_value_in_stack) {
 				ret[last_is_string-1][concat_idx] += elt.data;
 				continue;
 			}
-			cmd('comment', 'string_container tree start')
+			// cmd('comment', 'string_container tree start')
 			if(!elt.is('string')) {
 				// Only invoke String() for non-immediate strings
 				cmd('push_arr');
@@ -517,7 +518,7 @@ function compile_tree_kern(node, leave_value_in_stack) {
 			cmd('push_str', '__add');
 			cmd('get_var');
 			cmd('invoke2');
-			cmd('comment', 'string_container tree end')
+			// cmd('comment', 'string_container tree end')
 		}
 		return pop_if_needed(ret, leave_value_in_stack);
 	}

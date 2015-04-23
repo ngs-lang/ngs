@@ -106,6 +106,19 @@ function register_native_methods() {
 		return NgsValue('Bool', p.exit_code === 0);
 	});
 
+	this.registerNativeMethod('__get_attr', p_args('o', null, 'attr', 'String'), function vm___get_attr_p_any_str(scope) {
+		var a = get_str(scope.attr);
+		var o = scope.o.data;
+		return o[a];
+	})
+
+	this.registerNativeMethod('__set_attr', p_args('o', null, 'attr', 'String', 'v', null), function vm___set_attr_p_any_str_any(scope) {
+		var a = get_str(scope.attr);
+		var o = scope.o.data;
+		o[a] = scope.v;
+		return scope.o;
+	})
+
 	this.registerNativeMethod('push', p_args('a', 'Array', 'x', null), function vm_push(scope) {
 		var a = get_arr(scope.a);
 		a.push(scope.x);
@@ -180,7 +193,7 @@ function register_native_methods() {
 		var i = get_num(scope.idx)
 		// TODO: assert i is integer
 		if(i<0 || i>a.length-1) {
-			throw new Error("Accessing out of bounds. Array: " + a + ". Index: " + i);
+			this.thr(to_ngs_object(['runtime', "Accessing out of bounds. Array: " + a + ". Index: " + i]));
 		}
 		return a[i];
 	});
@@ -190,7 +203,7 @@ function register_native_methods() {
 		var i = get_num(scope.idx)
 		// TODO: assert i is integer
 		if(i<0 || i>s.length-1) {
-			throw new Error("Accessing out of bounds. Array: " + a + ". Index: " + i);
+			this.thr(to_ngs_object(['runtime', "Accessing string out of bounds. String: " + s + ". Index: " + i]));
 		}
 		return NgsValue('String', s[i]);
 	});

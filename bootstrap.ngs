@@ -6,7 +6,7 @@ def bootstrap_require(f) {
 }
 
 def bootstrap() {
-	  bootstrap_require('ngs/stdlib.ngs')
+	  bootstrap_require(NGS_FOLDER + '/' + 'stdlib.ngs')
 	  require(ARGV[2])
 }
 

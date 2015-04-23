@@ -155,7 +155,7 @@ expr_set_item "Expression/set_item" =
     return N('set_item', offset, [container, idx, v]);
   } /
   container:expr_binop "." idx:varname space? "=" space? v:expr {
-    return N('set_item', offset, [container, N('string', offset, [], idx.data), v]);
+    return N('set_attr', offset, [container, N('string', offset, [], idx.data), v]);
   } /
   e: expr_binop
 

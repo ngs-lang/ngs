@@ -57,7 +57,7 @@ var code_snippets = [
 	// functional
 	'{ map([0,1,2], Bool) == [false, true, true] }',
 	'{ map([0,1,2], lambda (x) {x+1} ) == [1, 2, 3] }',
-	'{ map([3,4], F mymapper (x) {x*2} ) == [6, 8] }',
+	'{ map_star([[3, 30], [4, 40]], F mymapper (x,y) {x+y*2} ) == [63, 84] }',
 	'{ map([3,"a"], [F (x:Number) {1}, F(x:String) {"A"}]) == [1, "A"] }',
 	'{ all([7,8], __gt, 5)}',
 	'{ any([7,8], __eq, 7)}',
@@ -65,7 +65,7 @@ var code_snippets = [
 	'{ filter([1,2,3,4], __gt, 2) == [3,4] }',
 	'{ filter([0,1,null,false]) == [0,1,false] }',
 	'{ count([0,1,2,3,4], @X>1) == 3 }',
-	'{ r=[]; [1,10].each(F(x) {r.push(x*2)}); r == [2,20] }',
+	'{ r=[]; [[1, 2], [10,20]].each_star(F(x,y) {r.push(x+y*2)}); r == [5,50] }',
 	'{ [1,10].each(F(x) {0}) == [1,10] }',
 	'{ h={"kk": 7, "xx": 8}; h[["kk"]] == {"kk": 7} }',
 	'{ h={"kk": 7, "xx": 8}; h[["xx"]] != {"kk": 7} }',
@@ -123,4 +123,3 @@ code_snippets.forEach(function(code_snippet, idx) {
 		});
 	});
 });
-

@@ -7,6 +7,7 @@ var _ = require('underscore');
 
 var debug_match_params = !!process.env.NGS_DEBUG_PARAMS;
 var debug_delay = !!process.env.NGS_DEBUG_DELAY;
+var profiling = !!process.env.NGS_PROFILE;
 
 var util = require('util');
 var native_methods = require('./vm-native-methods');
@@ -18,11 +19,6 @@ var to_ngs_object = native_methods.to_ngs_object;
 for(var k in data) {
 	global[k] = data[k];
 }
-
-function ReturnLater() {}
-
-function Return(v) { this.v = v; }
-
 
 function _repr_depth(depth) {
 	var ret = '';
@@ -258,22 +254,38 @@ VM.prototype.initialize = function() {
 	this.context = null;
 	this.finished = false;
 
+	this.opcodes_stats = {};
+	this.match_params_stats = {'total': {'ok': 0, 'fail': 0}}
+
 	return this;
+}
+
+VM.prototype._prepareCode = function(c) {
+	var vm = this;
+	return c.map(function prepare_op(op) {
+		// console.log('OP', op);
+		if(!(op[1] in vm.opcodes)) {
+			throw new Error("Illegal opcode: " + op[1]);
+		}
+		var f = vm.opcodes[op[1]];
+		f.opcode_name = op[1];
+		return [op[0], f, op[2]];
+	});
 }
 
 VM.prototype.useCode = function(c) {
 	// TODO: assert that there are no cotext pointing to existing this.code
 	//		 (which is being replaced)
 	this.code.pop(); // remove the halt that we've added
-	this.code = this.code.concat(c);
-	this.code.push([null, 'halt']);
+	this.code = this.code.concat(this._prepareCode(c));
+	this.code.push([null, this.opcodes.halt]);
 	return this;
 }
 
 VM.prototype.useCodeWithRet = function(c) {
 	var ptr = this.code.length;
-	this.code = this.code.concat(c);
-	this.code.push([null, 'ret']);
+	this.code = this.code.concat(this._prepareCode(c));
+	this.code.push([null, this.opcodes.ret]);
 	return ptr;
 }
 
@@ -322,11 +334,19 @@ VM.prototype.mainLoop = function() {
 			console.log('OP', op, '@', this.context.frame.ip-1, 'CYCLES', this.context.cycles);
 			console.log('');
 		}
-		if(!(op[1] in this.opcodes)) {
-			throw new Error("Illegal opcode: " + op[1] + " at " + (this.context.frame.ip-1) + " (op: " +op+ ")");
-		}
 		this.context.thrown = false;
-		this.opcodes[op[1]].call(this, op[2]);
+		if(profiling) {
+			var opcode_name = op[1].opcode_name;
+			this.opcodes_stats[opcode_name] = (this.opcodes_stats[opcode_name] || 0) + 1;
+			var time1 = process.hrtime();
+		}
+		op[1].call(this, op[2]);
+		if(profiling) {
+			var opcode_name = op[1].opcode_name;
+			var time2 = process.hrtime();
+			var delta = (time2[0] * 1000000000 + time2[1]) - (time1[0] * 1000000000 + time1[1])
+			this.opcodes_stats[opcode_name + '_t'] = (this.opcodes_stats[opcode_name + '_t'] || 0) + delta / 1000000000;
+		}
 		this.context.cycles++;
 		if(this.context.cycles_limit && (this.context.cycles > this.context.cycles_limit)) {
 			// TODO: make it NGS exception. Still make sure works for tests
@@ -480,7 +500,7 @@ function match_params(ctx, lambda, args, kwargs) {
 	}
 
 	var p = get_arr(args);
-	var n = get_hsh(kwargs);
+	// var n = get_hsh(kwargs);
 	for(var i=0; i<params.length; i++) {
 		// params: 0:name, 1:mode, 2:type, 3:default_value
 		var cur_param = get_arr(params[i]);
@@ -515,14 +535,17 @@ function match_params(ctx, lambda, args, kwargs) {
 			}
 
 			if(cur_param_type) {
-				var tt = ctx.type_types(get_type(p[positional_idx]));
 				if(cur_param_type == 'F') {
 					if(!ctx.is_callable(p[positional_idx])) {
 						return [false, {}, 'pos args type mismatch at ' + positional_idx];
 					}
 				} else {
-					if(!_.has(tt, cur_param_type)) {
-						return [false, {}, 'pos args type mismatch at ' + positional_idx];
+					var tt = get_type(p[positional_idx])
+					if(cur_param_type != tt) {
+						tt = ctx.type_types(get_type(p[positional_idx]));
+						if(!_.has(tt, cur_param_type)) {
+							return [false, {}, 'pos args type mismatch at ' + positional_idx];
+						}
 					}
 				}
 			}
@@ -561,6 +584,14 @@ Context.prototype.invoke = function(methods, args, kwargs, vm, do_catch) {
 
 		var lambda = get_lmb(m);
 		var scope = match_params(this, m, args, kwargs);
+		if(profiling) {
+			this.vm.match_params_stats['total'][scope[0]?'ok':'fail']++;
+			var match_params_iter = 'iter_' + (l-i+1);
+			if(!this.vm.match_params_stats[match_params_iter]) {
+				this.vm.match_params_stats[match_params_iter] = {'ok': 0, 'fail': 0}
+			}
+			this.vm.match_params_stats[match_params_iter][scope[0]?'ok':'fail']++;
+		}
 		if(!scope[0]) {
 			continue;
 		}
@@ -590,18 +621,10 @@ Context.prototype.invoke = function(methods, args, kwargs, vm, do_catch) {
 		if(call_type === 'NativeMethod') {
 			var nm = get_nm(lambda.code_ptr);
 			this.frame.native_func_name = nm.name;
-			try {
-				var v = nm.call(this, scope[1], vm);
-				if(!this.thrown) {
-					this.stack.push(v);
-					this.ret(1);
-				}
-			} catch(e) {
-				if(e instanceof ReturnLater) {
-					// all good
-				} else {
-					throw e;
-				}
+			var v = nm.call(this, scope[1], vm);
+			if(!this.thrown) {
+				this.stack.push(v);
+				this.ret(1);
 			}
 			return [true];
 		}
@@ -679,7 +702,8 @@ Context.prototype.thr = function(v) {
 		}
 	}
 	print_backtrace(bt);
-	throw new Error("Uncaught exception" + inspect(v) + ". Backtrace: " + bt);
+	console.log('Uncaught NGS exception:', inspect(v));
+	process.exit(1);
 }
 
 Context.prototype.guard = function(vm) {
@@ -751,6 +775,7 @@ VM.prototype.opcodes = {
 		}
 		this.context.stack.push(v);
 	},
+
 
 	// stack: ... value varname -> ...
 	'set_loc_var': function() {
