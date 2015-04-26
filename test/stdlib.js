@@ -67,6 +67,7 @@ var code_snippets = [
 	'{ count([0,1,2,3,4], @X>1) == 3 }',
 	'{ r=[]; [[1, 2], [10,20]].each_star(F(x,y) {r.push(x+y*2)}); r == [5,50] }',
 	'{ [1,10].each(F(x) {0}) == [1,10] }',
+	'{ {"x": 7, "y": 8 }.without("x") == {"y": 8} }', // filter(Hash, ...), each(Hash, ...)
 	'{ h={"kk": 7, "xx": 8}; h[["kk"]] == {"kk": 7} }',
 	'{ h={"kk": 7, "xx": 8}; h[["xx"]] != {"kk": 7} }',
 	'{ Hash(["a","b"], "x") == {"a": "x", "b": "x"} }',
@@ -76,7 +77,7 @@ var code_snippets = [
 	'{ [1,2,2,3].uniq() == [1,2,3] }',
 	'{ [[1, 2], [3, 4]].flatten() == [1, 2, 3, 4] }',
 	// meta
-	'{ a=1; a.meta("x", 2); a.meta("y", 3) == a and a.meta("x") == 2 and a.has_meta("x") }',
+	'{ a=1; a.meta("x", 2); a.meta("y", 3) == a and a.meta("x") == 2 and a.has_meta("x") and a.meta_dflt("k", 7) == 7 }',
 	// String
 	'{ String({"x": 7}) == "{x: 7}" }',
 	'{ "abc.txt" - ".txt" == "abc" }',
@@ -99,6 +100,8 @@ var code_snippets = [
 	'{ s=Set([1,2,3]); s.remove(3); s.join() == "12" }',
 	'{ Set([1,2,3]).without(1) == Set([2,3]) }', // filter
 	'{ (Set([1,2]) @ X*2) == Set([2,4]) }', // map
+	// DfltHash
+	'{ d = DfltHash(7); d["y"] = 8; d["x"] == 7 and d["y"] == 8 }', // get(Hash, ...)
 ];
 
 // console.log("+ Loading stdlib");

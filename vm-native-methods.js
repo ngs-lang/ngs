@@ -109,6 +109,9 @@ function register_native_methods() {
 	this.registerNativeMethod('__get_attr', p_args('o', null, 'attr', 'String'), function vm___get_attr_p_any_str(scope) {
 		var a = get_str(scope.attr);
 		var o = scope.o.data;
+		if(!_.has(o, a)) {
+			this.thr(to_ngs_object(['runtime', "Attribute not found: " + a]));
+		}
 		return o[a];
 	})
 
