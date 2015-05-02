@@ -364,8 +364,8 @@ VM.prototype.mainLoop = function() {
 		this.context.frame.prev_ip = ip;
 		this.context.frame.ip++;
 		if(stack_debug) {
-			// console.log('ST', this.inspect_stack(this.context.stack));
-			// console.log('DEPTH', this.context.frames.length);
+			console.log('ST', this.inspect_stack(this.context.stack));
+			console.log('DEPTH', this.context.frames.length);
 			console.log('OP', op[1].opcode_name, '@', this.context.frame.ip-1, this.context._ip_to_backtrace_item(this.context.frame.ip-1), 'CYCLES', this.context.cycles);
 			console.log('');
 		}
@@ -460,16 +460,12 @@ Context.prototype.registerMethod = function(name, f, global) {
 		r[1][name] = NgsValue(this.vm.types.Array, [f]);
 		return;
 	}
-	// New type system - start
-	// console.log('TYPES', name, this.vm.types);
 	if((r[1][name].type === this.vm.types.Type) || (r[1][name].type === 'Type')) {
 		// Hack to allow methods with the same name as the type itself
 		// such as String, Array, etc..
 		r[1][name].data.init_methods.push(f);
 		return;
 	}
-	// New type system - end
-	// console.log('TYPE', r[1][name].type);
 	r[1][name].data.push(f);
 }
 
@@ -497,17 +493,13 @@ Context.prototype.type_types = function(t, ret) {
 }
 
 Context.prototype.is_callable = function(v, max_depth_one) {
-	// console.log('TYPE_TYPES/FROM_IS_CALLABLE');
 	var _types = this.type_types(get_type(v));
-	// console.log('IS_CALLABLE', '_types', _types);
 	if(_.contains(_types, this.vm.types.Lambda)) {
 		return true;
 	}
-	// New type system - start
 	if(_.contains(_types, this.vm.types.Type)) {
 		return true;
 	}
-	// New type system - end
 	if(max_depth_one) {
 		return false;
 	}
@@ -567,7 +559,6 @@ function match_params(ctx, lambda, args, kwargs) {
 			}
 
 			if(get_type(cur_param[2]) !== ctx.vm.types.Null) {
-				// console.log('CUR_PARAM/TYPE', cur_param);
 				cur_param_type = cur_param[2];
 			} else {
 				cur_param_type = null;
@@ -621,7 +612,6 @@ Context.prototype.invoke = function(methods, args, kwargs, vm, do_catch) {
 			// such as String, Array, etc..
 			ms = methods.data.init_methods;
 		} else {
-			// console.log('methods', methods);
 			ms = get_arr(methods);
 		}
 	}
