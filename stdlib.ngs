@@ -42,9 +42,7 @@ defg validate_source_file(f:String, content:String) { true }
 # TODO: specify version of the required file/module
 defg require(f:String, *args) {
 	content = fetch_file(f)
-	if not(validate_source_file(f, content)) {
-		throw ['runtime', "Failed to validate source file $f"]
-	}
+	not(validate_source_file(f, content)) throws ['runtime', "Failed to validate source file $f"]
 	code = compile(content, f)
 	lambda_ = load(code)
 	lambda_(*args)
@@ -73,11 +71,7 @@ defg spawn(*args) {
 	spawn_update_globals(args, p)
 	p.wait()
 	ok = cmd_finished_ok_p(p)
-	if not(ok) {
-		# TODO: nicer output of the args
-		# TODO: output stack trace
-		throw ['runtime', 'Command execution failed: ' + inspect(args)]
-	}
+	not(ok) throws ['runtime', 'Command execution failed: ' + inspect(args)]
 	p
 }
 
@@ -91,7 +85,7 @@ defg spawn(*args) {
 	  guard args.len() > 1
 	  guard startsWith(args[0], '-')
 	  args = ['test'] + args
-	  return spawn(*args)
+	  spawn(*args)
 }
 
 defg cmd_finished_ok_p(p:Process) { p.exit_code == 0 }
@@ -197,9 +191,7 @@ defg parse_file(f:String, content:String) { content }
 defg parse_file(f:String, content:String) {
 	guard f ~ /\\.json$/
 	r = catch from_json(content)
-	if not(r[0]) {
-		throw ['runtime', "Failed to read json file ${f}"]
-	}
+	not(r[0]) throws ['runtime', "Failed to read json file ${f}"]
 	r[1]
 }
 
@@ -216,7 +208,7 @@ defg read_till(fd:Number, tillChar:String, max:Number=1024) {
 	ret = ''
 	while (ch = fd.read()) != tillChar {
 		ret = ret + ch
-		if ret.len() > max { throw ['runtime', 'read_till epic fail'] }
+		ret.len() > max throws ['runtime', 'read_till epic fail']
 		# echo("<CH thread=${thread().id} ord=${ch.ord()} ch=$ch ret=$ret>")
 	}
 	# echo("<READ_TILL thread=${thread().id} till=$tillChar ch=$ch ret=$ret>")
@@ -272,15 +264,13 @@ defg acquire(l:Lock, f:F, *args) {
 defg pos(s:Seq, subseq:Seq, start:Number=0) {
 	sl = s.len()
 	ssl = subseq.len()
-	if sl < ssl {
-		return null
-	}
+
+	sl < ssl returns null
+
 	j = sl - ssl + 1
 
 	for(i=start; i<j; i=i+1) {
-		if slice(s, i, ssl) == subseq {
-			return i
-		}
+		slice(s, i, ssl) == subseq returns i
 	}
 	return null
 }
@@ -303,11 +293,7 @@ defg split(s:Seq, delim:Seq) {
 
 defg zip(a:Seq, b:Seq) {
 	l = len(a)
-
-	if l != b.len() {
-		throw ['args', 'Zip with different Seqs length']
-	}
-
+	l != b.len() throws ['args', 'Zip with different Seqs length']
 	l@[a[X], b[X]]
 }
 
@@ -325,19 +311,10 @@ defg fifth(s:Seq)  { s[4] }
 
 defg last(s:Seq)   { s[-1] }
 
-defg one(s:Seq) {
-	if s.len() != 1 {
-		throw ['data', "Expected array with exactly one item but had ${a.len()}", a]
-	}
-	s[0]
-}
-
 # Abstract usage example:
 # servers.filter(F(x) {'unicorn' in x.tags}).one('Unicorn server').create_image('Unicorn backup')
-defg one(s:Seq, msg:String) {
-	if s.len() != 1 {
-		throw ['data', "Expected array with exactly one $msg but had ${a.len()}", a]
-	}
+defg one(s:Seq, msg:String='item') {
+	s.len() != 1 throws ['data', "Expected array with exactly one $msg but had ${a.len()}", a]
 	s[0]
 }
 
@@ -365,9 +342,7 @@ defg startsWith(s:Seq, pfx:Seq) {
 
 defg endsWith(s:Seq, sfx:Seq) {
 	l = sfx.len()
-	if len(s) < l {
-		return false
-	}
+	len(s) < l returns false
 	s.slice(s.len() - l, l) == sfx
 }
 
@@ -396,9 +371,7 @@ defg reduce(s:Seq, start, reducer:F) {
 defg any(s:Seq, predicate:F, *args) {
 	j = s.len()
 	for(i=0;i<j;i=i+1) {
-		if predicate(s[i], *args) {
-			return true
-		}
+		predicate(s[i], *args) returns true
 	}
 	false
 }
@@ -406,9 +379,7 @@ defg any(s:Seq, predicate:F, *args) {
 defg all(s:Seq, predicate:F, *args) {
 	j = s.len()
 	for(i=0;i<j;i=i+1) {
-		if not(predicate(s[i], *args)) {
-			return false
-		}
+		not(predicate(s[i], *args)) returns false
 	}
 	true
 }
@@ -487,7 +458,7 @@ defg String(h:Hash) { guard typeof(h) == Hash; '{' + h.map(F(k,v) { "$k: $v" }).
 # TODO: maybe generic for Seq
 defg fill(s:String, n:Number) {
 	t = n - s.len()
-	if t < 1 { return s }
+	t < 1 returns s
 	s + ' ' * t
 }
 

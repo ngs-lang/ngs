@@ -515,6 +515,25 @@ Context.prototype.is_callable = function(v, max_depth_one) {
 	return false;
 }
 
+Context.prototype.type_is_type = function(child, parent) {
+	if(!parent) {
+		return true;
+	}
+
+	if(parent === this.vm.types.F) {
+		return this.is_callable(child);
+	}
+
+	var tt = get_type(child);
+	if(parent === tt) {
+		return true;
+	}
+
+	tt = this.type_types(get_type(child));
+	return _.contains(tt, parent);
+
+}
+
 function match_params(ctx, lambda, args, kwargs) {
 	var l = get_lmb(lambda);
 	if(l.args instanceof Args) {
@@ -564,21 +583,10 @@ function match_params(ctx, lambda, args, kwargs) {
 				cur_param_type = null;
 			}
 
-			if(cur_param_type) {
-				if(cur_param_type === ctx.vm.types.F) {
-					if(!ctx.is_callable(p[positional_idx])) {
-						return [false, {}, 'pos args type mismatch at ' + positional_idx];
-					}
-				} else {
-					var tt = get_type(p[positional_idx])
-					if(cur_param_type !== tt) {
-						tt = ctx.type_types(get_type(p[positional_idx]));
-						if(!_.contains(tt, cur_param_type)) {
-							return [false, {}, 'pos args type mismatch at ' + positional_idx];
-						}
-					}
-				}
+			if(!ctx.type_is_type(p[positional_idx], cur_param_type)) {
+				return [false, {}, 'pos args type mismatch at ' + positional_idx];
 			}
+
 			scope[cur_param_name] = p[positional_idx++];
 		}
 	}

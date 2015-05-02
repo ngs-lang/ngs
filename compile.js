@@ -45,30 +45,53 @@ function fix_binops_node(node) {
 	}
 
 	// e1 @ e2 -> map(e1, F(X=null, Y=null) { e2 })
-	if(ret[0].is('binop') && (ret[0].data.substring(0, 7)=='inline_')) {
-		var o = ret[0].offset;
-		var p1 = new N('arg_nam', o, [new N('string', o, [new N('null', o, [], false)], 'X'), new N('null', o, [], false)]);
-		var p2 = new N('arg_nam', o, [new N('string', o, [new N('null', o, [], false)], 'Y'), new N('null', o, [], false)]);
-		var f = new N(
-			'lambda',
-			o,
-			[
-				new N('string', o, [], ret[0].data + '_' + o),
-				new N('parameters', o, [p1, p2]),
-				ret[0][1]
-			]
-		);
-		return new N(
-			'call',
-			o,
-			[
-				new N('varname', o, [], ret[0].data.substring(7)),
-				new N('expressions', o, [ret[0][0], f])
-			],
-			false
-		);
+	if(ret[0].is('binop')) {
+		if (ret[0].data.substring(0, 7)=='inline_') {
+			var o = ret[0].offset;
+			var p1 = new N('arg_nam', o, [new N('string', o, [new N('null', o, [], false)], 'X'), new N('null', o, [], false)]);
+			var p2 = new N('arg_nam', o, [new N('string', o, [new N('null', o, [], false)], 'Y'), new N('null', o, [], false)]);
+			var f = new N(
+				'lambda',
+				o,
+				[
+					new N('string', o, [], ret[0].data + '_' + o),
+					new N('parameters', o, [p1, p2]),
+					ret[0][1]
+				]
+			);
+			return new N(
+				'call',
+				o,
+				[
+					new N('varname', o, [], ret[0].data.substring(7)),
+					new N('expressions', o, [ret[0][0], f])
+				],
+				false
+			);
+		}
+		if(ret[0].data == 'throws') {
+			return new N(
+				'if',
+				o,
+				[
+					ret[0][0],
+					new N('throw', o, [ret[0][1]])
+				],
+				false
+			);
+		}
+		if(ret[0].data == 'returns') {
+			return new N(
+				'if',
+				o,
+				[
+					ret[0][0],
+					new N('ret', o, [ret[0][1]])
+				],
+				false
+			);
+		}
 	}
-
 	return ret[0];
 }
 

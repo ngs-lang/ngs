@@ -6,6 +6,7 @@
 {
 	var N = require('./ast_node').ASTNode;
 	var ngs_precedence_src = [
+		['throws', 'returns'],
 		['@', '@?', '|'],
 		['in', 'not in'],
 		['or'],
@@ -21,22 +22,24 @@
 		});
 	}
 	var ngs_binops_names = {
-		'@'     : 'inline_map',
-		'@?'    : 'inline_filter',
-		'|'     : 'pipe',
-		'in'    : 'in',
-		'not in': 'not_in',
-		'or'    : 'or',
-		'and'   : 'and',
-		'=='    : 'eq',
-		'!='    : 'neq',
-		'<'     : 'lt',
-		'>'     : 'gt',
-		'~'     : 'match',
-		'+'     : 'add',
-		'-'     : 'sub',
-		'*'     : 'mul',
-		'/'     : 'div',
+	    'throws'  : 'throws',
+	    'returns' : 'returns',
+		'@'       : 'inline_map',
+		'@?'      : 'inline_filter',
+		'|'       : 'pipe',
+		'in'      : 'in',
+		'not in'  : 'not_in',
+		'or'      : 'or',
+		'and'     : 'and',
+		'=='      : 'eq',
+		'!='      : 'neq',
+		'<'       : 'lt',
+		'>'       : 'gt',
+		'~'       : 'match',
+		'+'       : 'add',
+		'-'       : 'sub',
+		'*'       : 'mul',
+		'/'       : 'div',
 	};
 }
 
@@ -178,7 +181,7 @@ binop =
   binop2
 
 binop1 = space? b:("@?" / "@" / "|" / "==" / "!=" / "<" / ">" / "~" / "+" / "-" / "*" / "/") space? { return b; }
-binop2 = space b:("or" / "and" /  "in" / "not in") space { return b; }
+binop2 = space b:("throws" / "returns" / "or" / "and" /  "in" / "not in") space { return b; }
 
 expr_chain =
   e:expr_call c:dots* {
