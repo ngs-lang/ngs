@@ -14,34 +14,20 @@ defg __pipe(*args) { map(*args) }
 # act_as(M, ORIG, AS) -> defg M(x:ORIG, *args) { x.as(AS).M(*args) }
 # Method M acts on objects of type ORIG as if they are of type AS
 
-defg act_as(method:String, orig_type:String, as_type:String) {
-	defg "$method"(x:"$orig_type", *args) {
+defg act_as(method:String, orig_type:Type, as_type:String) {
+	defg "$method"(x:orig_type, *args) {
 		m = globals()[method]
 		m(x.as(as_type), *args)
 	}
 }
 
-defg inherits(child:String, parent:String) {
-	if child not in __TYPES {
-		__TYPES[child] = {}
-	}
-	if 'inherits' not in __TYPES[child] {
-		__TYPES[child]['inherits'] = []
-	}
-	if parent in __TYPES[child]['inherits'] {
-		return null
-	}
-	__TYPES[child]['inherits'].push(parent)
-}
+defg String(t:Type) { "<Type ${t.name}>" }
 
-defg mktype(type:String, parents:Array) {
-	parents.each(@inherits(type, X))
-	defg "$type"(*args) {
-		obj(type).init(*args)
-	}
+defg Type(name:String, parents:Array) {
+	ret = Type(name)
+	parents.each(@ ret.inherits(X))
+	ret
 }
-
-defg mktype(type:String, parent:String) { mktype(type, [parent]) }
 
 # ----- Type system sugar - end -----
 
@@ -96,8 +82,8 @@ defg spawn(*args) {
 }
 
 defg spawn(*args) {
-	guard args.map(typeof).any(__neq, 'String')
-	__super(*args.map(String))
+	guard args.map(typeof).any(__neq, String)
+	spawn(*args.map(String))
 }
 
 # Convert execution of (example) '-f somefile' to 'test -f somefile'
@@ -493,9 +479,9 @@ defg String(p:Process) {
 	p.stdout.strip()
 }
 
-defg String(a:Array) { guard typeof(a) == 'Array'; '[' + a.join(', ') + ']' }
+defg String(a:Array) { guard typeof(a) == Array; '[' + a.join(', ') + ']' }
 
-defg String(h:Hash) { guard typeof(h) == 'Hash'; '{' + h.map(F(k,v) { "$k: $v" }).join(', ') + '}' }
+defg String(h:Hash) { guard typeof(h) == Hash; '{' + h.map(F(k,v) { "$k: $v" }).join(', ') + '}' }
 
 # Functions
 # TODO: maybe generic for Seq
@@ -650,6 +636,8 @@ defg __set_item(h:Hash, n:Number, v) { h[n.String()] = v }
 
 # ----- Set - start -----
 
+global Set = Type('Set')
+
 defg count(s:Set, predicate:F, *args) { s.values().count(predicate, *args) }
 
 # ----- Set - end -----
@@ -664,7 +652,7 @@ defg osname() { guard f'/etc/debian_version'; 'debian'}
 # ----- Output sugar - start -----
 
 defg echo(x) {
-	guard typeof(x) != 'String'
+	guard typeof(x) != String
 	x.String().echo()
 }
 
@@ -684,11 +672,9 @@ defg set_id(s:String)  { "str:$s" }
 defg set_id(p:Process) { "prc:${p.id}" }
 defg set_id(t:Thread)  { "thr:${t.id}" }
 
-mktype('Set', [])
-
 # Constructors
-defg init(s:Set)            { s.data={}; s }
-defg init(s:Set, items:Seq) { ret = Set(); items.each(@ret.add(X)); ret }
+defg Set()            { s=obj(Set); s.data={}; s }
+defg Set(items:Seq)   { ret = Set(); items.each(@ret.add(X)); ret }
 
 # Mutators
 defg add(s:Set, v)    { s.data[v.set_id()] = v; s }
@@ -742,9 +728,9 @@ defg __parse(p:Process) {
 
 # ----- MaybeFile - start -----
 
-mktype('MaybeFile', 'File')
+global MaybeFile = Type('MaybeFile', [File])
 
-defg MaybeFile(s:String) { File(s).as('MaybeFile') }
+defg MaybeFile(s:String) { File(s).as(MaybeFile) }
 
 defg lines(f:MaybeFile) {
 	guard not(f)
@@ -760,12 +746,13 @@ defg read(f:MaybeFile) {
 
 # ----- DfltHash - start -----
 
-mktype('DfltHash', [])
+global DfltHash = Type('DfltHash')
 
-defg init(df:DfltHash, v) {
-	df.default = v
-	df.data = {}
-	df
+defg DfltHash(v) {
+	dh = obj(DfltHash)
+	dh.default = v
+	dh.data = {}
+	dh
 }
 
 defg __get_item(dh:DfltHash, k:String) {
@@ -776,23 +763,26 @@ defg __get_item(dh:DfltHash, k:String) {
 	'__set_item keys values __in map each'.split().each(F(method) {
 		defg "$method"(dh:DfltHash, *args) { globals()[method].call(dh.data, *args) }
 	})
-	# 10.each(F(i) {
-	# 	defg "x_$i"(dh:DfltHash, *args) { globals()[method].call(dh.data, *args) }
-	# })
 }
+
+defg String(dh:DfltHash) { "<DfltHash dflt=${dh.default} data=${dh.data}>" }
 
 # ----- DfltHash - end -----
 
 # ----- Stats - start -----
-mktype('Stats', 'DfltHash')
+
+global Stats = Type('Stats', [DfltHash])
 
 defg Stats() {
-	DfltHash(0).as('Stats')
+	s = DfltHash(0).as(Stats)
 }
 
 defg incr(s:Stats, k:String) {
 	s[k] = s[k] + 1
 }
+
+defg String(s:Stats) { "<Stats ${s.data}>" }
+
 # ----- Stats - end -----
 
 

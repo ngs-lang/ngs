@@ -118,10 +118,11 @@ code_snippets.forEach(function(code_snippet, idx) {
 			v.useCode(stdlib_code);
 			v.useCode(code);
 			v.start(function() {
-				assert.equal(c.stack.length, 1);
-				assert.equal(c.stack[0].type, 'Bool');
-				assert.equal(c.stack[0].data, true);
-				done();
+				if((c.stack.length == 1) && (c.stack[0].type == v.types.Bool) && (c.stack[0].data === true)) {
+					done();
+				} else {
+					fail();
+				}
 			});
 		});
 	});

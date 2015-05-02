@@ -150,12 +150,6 @@ var code_vs_stack = [
 	// *** id ***
 	['{ x=1; y=2; id(y) - id(x) > 0 and id(y) - id(x) < 10}', [true]], // As of 2015-03, the difference is 2
 
-	// *** inheritance ***
-	['{ __TYPES = {"T1": {"inherits": ["Hash"]}, "T2": {"inherits": ["T1"]}}; ' +
-	 'def init(x:T1) {x.__super(); x.a=7; x}; def init(x:T2) {x.__super(); x.b=8; x}; o=obj("T2").init(); [o["a"], o["b"]]}', [[7,8]]],
-	['{ __TYPES = {"T1": {"inherits": ["Array"]}}; o=obj("T1").init(); o[0] = 7; o[0]}', [7]],
-
-
 	// *** String interpolation ***
 	// TODO: check "$(run_something x y)"
 	['{ x=1; y=2; "$x\\n\\u01E2\\U000001E2\\.\\"${y}${x+y}" }', ['1\nǢǢ."23']],
@@ -185,13 +179,13 @@ var how = [
 	['Running code should result empty stack with leave_value_in_stack=false', false],
 ];
 
-function to_js_object(val) {
-	if(val.type === 'Array') {
-		return val.data.map(to_js_object);
+function to_js_object(types, val) {
+	if(val.type === types.Array) {
+		return val.data.map(to_js_object.bind(null, types));
 	}
-	if(val.type === 'Hash') {
+	if(val.type === types.Hash) {
 		var ret = {}
-		_.keys(val.data).forEach(function (k) { ret[k] = to_js_object(val.data[k]) });
+		_.keys(val.data).forEach(function (k) { ret[k] = to_js_object(types, val.data[k]) });
 		return ret;
 	}
 	return val.data;
@@ -206,7 +200,7 @@ code_vs_stack.forEach(function(code_stack, idx) {
 				var code = compile(code_stack[0], 'code_vs_stack_test_' + idx, {leave_value_in_stack: h[1]}).compiled_code;
 				v.useCode(code);
 				v.start(function() {
-					assert.deepEqual(c.stack.map(to_js_object), h[1] ? code_stack[1] : []);
+					assert.deepEqual(c.stack.map(to_js_object.bind(null, v.types)), h[1] ? code_stack[1] : []);
 					done();
 				});
 			});
@@ -219,8 +213,8 @@ code_vs_spawn_args.forEach(function(code_args, idx) {
 		it('Code #' + idx + ': ' + code_args[0].slice(0, 20), function(done) {
 			var v = new vm.VM();
 			var c = v.setupContext(CYCLES_LIMIT);
-			c.registerNativeMethod('spawn', nm.Args().rest_pos('args').get(), function(scope) {
-				assert.deepEqual(to_js_object(scope.args), code_args[1]);
+			c.registerNativeMethod('spawn', nm.Args(v.types).rest_pos('args').get(), function(scope) {
+				assert.deepEqual(to_js_object(v.types, scope.args), code_args[1]);
 				return {'something': 'that', 'spawn': 'returns'};
 			});
 			var code = compile(code_args[0], 'code_vs_spawn_test_' + idx).compiled_code;

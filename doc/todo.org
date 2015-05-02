@@ -2,8 +2,7 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Now
-** Redo type system
-** Improve type_types speed
+** DONE Redo type system
 ** CLI
 *** TODO Make P usable in CLI
 *** TODO think completion from widgets

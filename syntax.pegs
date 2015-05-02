@@ -403,7 +403,7 @@ parameter "Function parameter" =
   }
 
 parameter_type "Function parameter type" =
-  space? ":" space? t:identifier space? { return t;  }
+  space? ":" space? t:varname space? { return t;  }
 
 parameter_value "Function parameter default value" =
   space? "=" e:expr { return e; }

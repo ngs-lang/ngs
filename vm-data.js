@@ -1,10 +1,13 @@
 "use strict";
 
+var util = require('util');
+
 var _ = require('underscore');
 
 var tty = require('tty');
 
 var value_id = 1;
+var types = [];
 
 function NgsValue(type, data, meta) {
 	if(!this) {
@@ -17,12 +20,20 @@ function NgsValue(type, data, meta) {
 }
 
 NgsValue.prototype.toString = function() {
-	return '<' + this.type + ' #' + this.id + ' ' + this.data + '>';
+	return '<' + (this.type === 'Type'?'(Type)':this.type.data.name) + ' #' + this.id + ' ' + this.data + '>';
 }
 
 NgsValue.prototype.eq = function(other) {
 	// Only for scalars
 	return (this.type == other.type) && (this.data == other.data);
+}
+
+function NgsType(name, type, parents) {
+	return NgsValue(type, {
+		name: name,
+		parents: parents || [],
+		init_methods: []
+	});
 }
 
 function assert_data(data) {
@@ -35,6 +46,7 @@ function assert_data(data) {
 function make_getter(type, getter_name, assertor, processor) {
 	// Ideally we should check whether type is anchestor of data.type
 	// For simplicity and speed we don't.
+	types.push(type);
 	var r = function(data) {
 		assert_data(data);
 		var ret = data.data;
@@ -85,6 +97,7 @@ make_getter('Scopes',		'scp', _.isArray);
 make_getter('Seq',			'seq', function(x) {return _.isArray(x) || _.isString(x)}); // Maybe _.has(x, 'length')?
 make_getter('String',		'str', _.isString);
 make_getter('Thread',		'thr', _.isObject);
+make_getter('Type',			'typ', _.isObject);
 
 make_getter('Stream', 'stm', _.isString, function(s) {
 	if(s != 'stdin' && s != 'stdout' && s != 'stderr') {
@@ -97,3 +110,5 @@ exports.get_id = get_id;
 exports.get_type = get_type;
 exports.get_meta = get_meta;
 exports.NgsValue = NgsValue;
+exports.NgsType = NgsType;
+exports.types = types;

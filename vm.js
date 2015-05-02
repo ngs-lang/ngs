@@ -28,93 +28,6 @@ function _repr_depth(depth) {
 }
 
 
-function inspect(x, depth) {
-	// TODO: output meta data
-	// TODO: format for n columns
-	depth = depth || 0;
-	var t = get_type(x);
-	// var pfx = _repr_depth(depth);
-	var pfx = '';
-	if(t == 'Number') {
-		return pfx + get_num(x);
-	}
-	if(t == 'String') {
-		var s = get_str(x);
-		if(s.length > 128) {
-			s = s.slice(0, 128) + '...';
-		}
-		return pfx + '"' + s + '"';
-	}
-	if(t == 'Array') {
-		var ret = pfx + '['
-		var a = get_arr(x);
-		for(var i=0; i<a.length; i++) {
-			ret = ret + inspect(a[i], depth+1);
-			if(i<a.length-1) {
-				ret = ret + ', '
-			}
-		}
-		ret = ret + pfx + ']'
-		return ret;
-	}
-	if(t == 'Lambda') {
-		var l = get_lmb(x);
-		var params = get_arr(l.args);
-		var s = [];
-		var pt;
-		for(var i=0; i<params.length; i++) {
-			// TODO: arg_rest_pos & friends representation
-			var param_type;
-			if(get_arr(params[i])[2]) {
-				param_type = get_type(get_arr(params[i])[2]);
-			} else {
-				param_type = 'Null';
-			}
-			if(param_type == 'Null') {
-				pt = '';
-			} else {
-				pt = ':' + get_str(get_arr(params[i])[2]);
-			}
-			s.push(get_str(get_arr(params[i])[0]) + pt);
-		}
-		var code = get_str(l.name) || 'anonymous';
-		if(get_type(l.code_ptr) == 'NativeMethod') {
-			code += '@native:' + get_nm(l.code_ptr).name;
-		} else {
-			code += '@' + get_num(l.code_ptr);
-		}
-		return pfx + '<Lambda '+ code +'(' +s.join(', ') + ')>';
-		// console.log(params, );
-	}
-	if(t == 'Bool') {
-		return pfx + String(get_boo(x));
-	}
-	if(t == 'Null') {
-		return pfx + 'null\n';
-	}
-	if(t == 'Code') {
-		return '<Code len ' + x.data.length + '>';
-	}
-
-	if(t === 'Scopes') {
-		return '<Scopes len ' + x.data.length + '>';
-	}
-
-	if(t === 'Thread') {
-		return '<Thread ' + x.data.id + '>';
-	}
-
-	return pfx + '<' + t + ' ' + util.inspect(x.data) + '>';
-}
-
-function inspect_stack(stack) {
-	var ret = [];
-	for(var i=0; i<stack.length; i++) {
-		ret = ret + String(i) + ': ' + inspect(stack[i]) + '\n';
-	}
-	return ret;
-}
-
 function Frame() {
 	return this.initialize();
 }
@@ -170,9 +83,9 @@ Context.prototype.initialize = function(vm, global_scope, cycles_limit) {
 		// TODO: some better solution. Native methods are shared among contexts.
 		//       Their regsitration should probably be done elsewhere.
 		native_methods.register_native_methods.call(this);
-		this.registerNativeMethod('inspect', native_methods.Args().pos('x', null).get(), function vm_inspect_p_any(scope) {
-			return NgsValue('String', inspect(scope.x));
-		});
+		this.registerNativeMethod('inspect', native_methods.Args(this.vm.types).pos('x', null).get(), function vm_inspect_p_any(scope) {
+			return NgsValue(this.vm.types.String, this.vm.inspectNgsValue(scope.x));
+		}.bind(this));
 	}
 
 	return this;
@@ -201,8 +114,8 @@ Context.prototype.find_var_lexical_scope = function(varname) {
 Context.prototype.get_var = function(name) {
 	var r = this.find_var_lexical_scope(name);
 	if(!r[0]) {
-		this.thr(to_ngs_object(["programming", "Using undefined variable '" + name + "'"]));
-		return NgsValue('Null', null);
+		this.thr(to_ngs_object(this.vm.types, ["programming", "Using undefined variable '" + name + "'"]));
+		return NgsValue(this.vm.types.Null, null);
 	}
 	return r[1][name];
 }
@@ -254,9 +167,133 @@ VM.prototype.initialize = function() {
 	this.finished = false;
 
 	this.opcodes_stats = {};
-	this.match_params_stats = {'total': {'ok': 0, 'fail': 0}}
+	this.match_params_stats = {'time':0, 'total': {'ok': 0, 'fail': 0}}
+	this.types = {};
+
+	var mytypes = this.types;
+	function register_my_type(t) {
+		mytypes[t.data.name] = t;
+	}
+
+	register_my_type(NgsType('Type', 'Type'));
+	mytypes.Type.type = mytypes.Type;
+	register_my_type(NgsType('F', mytypes.Type, []))
+	register_my_type(NgsType('NativeMethod', mytypes.Type, []))
+
+	types.forEach(function(t) {
+		if(t !== 'Type') {
+			register_my_type(NgsType(t, mytypes.Type, []));
+		}
+	});
+
+	mytypes.Array.data.parents.push(mytypes.Seq);
+	mytypes.String.data.parents.push(mytypes.Seq);
+	mytypes.File.data.parents.push(mytypes.Path);
 
 	return this;
+}
+
+VM.prototype.inspectNgsValue = function(x, depth) {
+	// TODO: output meta data
+	// TODO: format for n columns
+	depth = depth || 0;
+	// console.log('INSPECT/'+depth, x);
+	var t = get_type(x);
+	// console.log('TYPE', t);
+	// var pfx = _repr_depth(depth);
+	var pfx = '';
+	if(t == this.types.Number) {
+		return pfx + get_num(x);
+	}
+	if(t == this.types.String) {
+		var s = get_str(x);
+		if(s.length > 128) {
+			s = s.slice(0, 128) + '...';
+		}
+		return pfx + '"' + s + '"';
+	}
+	if(t == this.types.Array) {
+		var ret = pfx + '['
+		var a = get_arr(x);
+		for(var i=0; i<a.length; i++) {
+			ret = ret + this.inspectNgsValue(a[i], depth+1);
+			if(i<a.length-1) {
+				ret = ret + ', '
+			}
+		}
+		ret = ret + pfx + ']'
+		return ret;
+	}
+	if(t == this.types.Lambda) {
+		var l = get_lmb(x);
+		var params = get_arr(l.args);
+		var s = [];
+		var pt;
+		for(var i=0; i<params.length; i++) {
+			// TODO: arg_rest_pos & friends representation
+			var param_type;
+			if(get_arr(params[i])[2]) {
+				param_type = get_type(get_arr(params[i])[2]);
+			} else {
+				param_type = this.types.Null;
+			}
+			if(param_type === this.types.Null) {
+				pt = '';
+			} else {
+				// console.log('COLON', get_arr(params[i])[2]);
+				pt = ':' + this.inspectNgsValue(get_arr(params[i])[2]);
+			}
+			s.push(get_str(get_arr(params[i])[0]) + pt);
+		}
+		var code = get_str(l.name) || 'anonymous';
+		if(get_type(l.code_ptr) == this.types.NativeMethod) {
+			code += '@native:' + get_nm(l.code_ptr).name;
+		} else {
+			code += '@' + get_num(l.code_ptr);
+		}
+		return pfx + '<Lambda '+ code +'(' +s.join(', ') + ')>';
+		// console.log(params, );
+	}
+	if(t == this.types.Bool) {
+		return pfx + String(get_boo(x));
+	}
+	if(t == this.types.Null) {
+		return pfx + 'null';
+	}
+	if(t == this.types.Code) {
+		return '<Code len ' + x.data.length + '>';
+	}
+
+	if(t === this.types.Scopes) {
+		return '<Scopes len ' + x.data.length + '>';
+	}
+
+	if(t === this.types.Thread) {
+		return '<Thread ' + x.data.id + '>';
+	}
+
+	if(t === this.types.Type) {
+		return '<Type ' + x.data.name + '>';
+	}
+
+	if(t === 'Type') {
+		return '<Type Type>';
+	}
+
+	_.keys(x.data).forEach(function(k) {
+		console.log('K', k);
+		console.log('V', x.data[k]);
+	});
+	console.log('TYPE', t, 'DATA', x.data);
+	return pfx + '<' + this.inspectNgsValue(t) + ' ' + util.inspect(x.data) + '>';
+}
+
+VM.prototype.inspect_stack = function(stack) {
+	var ret = [];
+	for(var i=0; i<stack.length; i++) {
+		ret = ret + String(i) + ': ' + this.inspectNgsValue(stack[i]) + '\n';
+	}
+	return ret;
 }
 
 VM.prototype._prepareCode = function(c) {
@@ -327,9 +364,9 @@ VM.prototype.mainLoop = function() {
 		this.context.frame.prev_ip = ip;
 		this.context.frame.ip++;
 		if(stack_debug) {
-			console.log('ST', inspect_stack(this.context.stack));
-			console.log('FRAMES_N', this.context.frames.length);
-			console.log('OP', op, '@', this.context.frame.ip-1, 'CYCLES', this.context.cycles);
+			// console.log('ST', this.inspect_stack(this.context.stack));
+			// console.log('DEPTH', this.context.frames.length);
+			console.log('OP', op[1].opcode_name, '@', this.context.frame.ip-1, this.context._ip_to_backtrace_item(this.context.frame.ip-1), 'CYCLES', this.context.cycles);
 			console.log('');
 		}
 		this.context.thrown = false;
@@ -339,6 +376,11 @@ VM.prototype.mainLoop = function() {
 			var time1 = process.hrtime();
 		}
 		op[1].call(this, op[2]);
+		if(this.context.stack.length && this.context.stack[this.context.stack.length-1] === 'Type') {
+			this.context.stack[this.context.stack.length-1] = to_ngs_object(this.types, 'TYPE_WAS_HERE');
+			this.context.thr(to_ngs_object(this.types, ['intrenal', 'Type in stack']));
+			// throw new Error('FUCK');
+		}
 		if(profiling) {
 			var opcode_name = op[1].opcode_name;
 			var time2 = process.hrtime();
@@ -415,48 +457,61 @@ Context.prototype.registerMethod = function(name, f, global) {
 		r = this.find_var_lexical_scope(name);
 	}
 	if(!r[0]) {
-		r[1][name] = NgsValue('Array', [f]);
+		r[1][name] = NgsValue(this.vm.types.Array, [f]);
 		return;
 	}
+	// New type system - start
+	// console.log('TYPES', name, this.vm.types);
+	if((r[1][name].type === this.vm.types.Type) || (r[1][name].type === 'Type')) {
+		// Hack to allow methods with the same name as the type itself
+		// such as String, Array, etc..
+		r[1][name].data.init_methods.push(f);
+		return;
+	}
+	// New type system - end
+	// console.log('TYPE', r[1][name].type);
 	r[1][name].data.push(f);
 }
 
 Context.prototype.registerNativeMethod = function(name, args, f) {
-	var m = NgsValue('Lambda', {
-		scopes: NgsValue('Scopes', this.frame.scopes),
+	var m = NgsValue(this.vm.types.Lambda, {
+		scopes: NgsValue(this.vm.types.Scopes, this.frame.scopes),
 		args: args,
-		code_ptr: NgsValue('NativeMethod', f),
-		name: NgsValue('String', name),
+		code_ptr: NgsValue(this.vm.types.NativeMethod, f),
+		name: NgsValue(this.vm.types.String, name),
 	});
 	this.registerMethod(name, m);
 }
 
-Context.prototype.type_types = function(type_name, ret) {
-	var ret = ret || {};
-	ret[type_name] = true;
-	var __TYPES = get_hsh(this.get_var('__TYPES'));
-	if(!_.has(__TYPES, type_name)) {
-		return ret;
+Context.prototype.type_types = function(t, ret) {
+	if(_.isString(t)) {
+		throw new Error("Old style usage of type_types: " + t);
 	}
-	var type_ = get_hsh(__TYPES[type_name]);
-	if(!_.has(type_, 'inherits')) {
-		return ret;
-	}
-	var inherits = get_arr(type_['inherits']);
-	inherits.forEach(function(i) { this.type_types(get_str(i), ret) }.bind(this));
-	// console.log('type_types', type_name, ret);
+	ret = ret || [];
+	if(_.include(ret, t)) { return ret; }
+	ret.push(t);
+	t.data.parents.forEach(function(p) {
+		this.type_types(p, ret);
+	}.bind(this));
 	return ret;
 }
 
 Context.prototype.is_callable = function(v, max_depth_one) {
+	// console.log('TYPE_TYPES/FROM_IS_CALLABLE');
 	var _types = this.type_types(get_type(v));
-	if(_.has(_types, 'Lambda')) {
+	// console.log('IS_CALLABLE', '_types', _types);
+	if(_.contains(_types, this.vm.types.Lambda)) {
 		return true;
 	}
+	// New type system - start
+	if(_.contains(_types, this.vm.types.Type)) {
+		return true;
+	}
+	// New type system - end
 	if(max_depth_one) {
 		return false;
 	}
-	if(_.has(_types, 'Array')) {
+	if(_.contains(_types, this.vm.types.Array)) {
 		// XXX: Not very correct, might have user-defined __get_item()
 		var a = get_arr(v);
 		if(a.length == 0) {
@@ -465,6 +520,7 @@ Context.prototype.is_callable = function(v, max_depth_one) {
 		var elt = a[a.length-1];
 		return this.is_callable(elt, true);
 	}
+	return false;
 }
 
 function match_params(ctx, lambda, args, kwargs) {
@@ -492,7 +548,7 @@ function match_params(ctx, lambda, args, kwargs) {
 		// console.log('D', cur_param_default, cur_param);
 
 		if(cur_param_mode === 'arg_rest_pos') {
-			scope[cur_param_name] = NgsValue('Array', p.slice(i));
+			scope[cur_param_name] = NgsValue(ctx.vm.types.Array, p.slice(i));
 			positional_idx += (p.length - i);
 			break;
 		}
@@ -510,22 +566,23 @@ function match_params(ctx, lambda, args, kwargs) {
 				return [false, {}, 'not enough pos args'];
 			}
 
-			if(get_type(cur_param[2]) !== 'Null') {
-				cur_param_type = get_str(cur_param[2]);
+			if(get_type(cur_param[2]) !== ctx.vm.types.Null) {
+				// console.log('CUR_PARAM/TYPE', cur_param);
+				cur_param_type = cur_param[2];
 			} else {
 				cur_param_type = null;
 			}
 
 			if(cur_param_type) {
-				if(cur_param_type == 'F') {
+				if(cur_param_type === ctx.vm.types.F) {
 					if(!ctx.is_callable(p[positional_idx])) {
 						return [false, {}, 'pos args type mismatch at ' + positional_idx];
 					}
 				} else {
 					var tt = get_type(p[positional_idx])
-					if(cur_param_type != tt) {
+					if(cur_param_type !== tt) {
 						tt = ctx.type_types(get_type(p[positional_idx]));
-						if(!_.has(tt, cur_param_type)) {
+						if(!_.contains(tt, cur_param_type)) {
 							return [false, {}, 'pos args type mismatch at ' + positional_idx];
 						}
 					}
@@ -544,10 +601,11 @@ Context.prototype.invoke_or_throw = function(methods, args, kwargs, vm, do_catch
 	var status = this.invoke(methods, args, kwargs, vm, do_catch || false);
 	if(!status[0]) {
 		// console.log(args);
-		var types = get_arr(args).map(get_type);
-		this.thr(to_ngs_object([
+		var vm = this.vm;
+		var types = get_arr(args).map(get_type).map(function(t) {return vm.inspectNgsValue(t);});
+		this.thr(to_ngs_object(this.vm.types, [
 			'programming',
-			"Invoke: appropriate method for types (" + types.join(',') + "), args " + inspect(args) + ", kwargs " + inspect(kwargs) + " not found for in " + inspect(methods)
+			"Invoke: appropriate method for types (" + types.join(',') + "), args " + this.vm.inspectNgsValue(args) + ", kwargs " + this.vm.inspectNgsValue(kwargs) + " not found for in " + this.vm.inspectNgsValue(methods)
 		]));
 	}
 }
@@ -555,18 +613,32 @@ Context.prototype.invoke_or_throw = function(methods, args, kwargs, vm, do_catch
 
 Context.prototype.invoke = function(methods, args, kwargs, vm, do_catch) {
 	var ms;
-	if(get_type(methods) == 'Lambda') {
+	if(get_type(methods) == this.vm.types.Lambda) {
 		ms = [methods]
 	} else {
-		ms = get_arr(methods);
+		if(get_type(methods) == this.vm.types.Type) {
+			// Hack to allow methods with the same name as the type itself
+			// such as String, Array, etc..
+			ms = methods.data.init_methods;
+		} else {
+			// console.log('methods', methods);
+			ms = get_arr(methods);
+		}
 	}
 
 	for(var l=ms.length-1, i=l; i>=0; i--) {
 		var m = ms[i];
 
 		var lambda = get_lmb(m);
+		if(profiling) {
+			var match_params_time1 = process.hrtime();
+		}
 		var scope = match_params(this, m, args, kwargs);
 		if(profiling) {
+			var match_params_time2 = process.hrtime();
+			var delta = (match_params_time2[0] * 1000000000 + match_params_time2[1]) - (match_params_time1[0] * 1000000000 + match_params_time1[1])
+			this.vm.match_params_stats['time'] = (this.vm.match_params_stats['time'] || 0) + delta / 1000000000;
+
 			this.vm.match_params_stats['total'][scope[0]?'ok':'fail']++;
 			var match_params_iter = 'iter_' + (l-i+1);
 			if(!this.vm.match_params_stats[match_params_iter]) {
@@ -582,7 +654,7 @@ Context.prototype.invoke = function(methods, args, kwargs, vm, do_catch) {
 		// __super, __args, __kwargs for new frame
 		// TODO: make these invalid arguments
 		var vars = scope[1];
-		vars['__super'] = NgsValue('Array', ms.slice(0, i));
+		vars['__super'] = NgsValue(this.vm.types.Array, ms.slice(0, i));
 		vars['__args'] = args;
 		vars['__kwargs'] = kwargs;
 
@@ -596,11 +668,11 @@ Context.prototype.invoke = function(methods, args, kwargs, vm, do_catch) {
 		old_frame.stack_len = this.stack.length;
 
 
-		if(call_type === 'Number') {
+		if(call_type === this.vm.types.Number) {
 			this.frame.ip = get_num(lambda.code_ptr);
 			return [true];
 		}
-		if(call_type === 'NativeMethod') {
+		if(call_type === this.vm.types.NativeMethod) {
 			var nm = get_nm(lambda.code_ptr);
 			this.frame.native_func_name = nm.name;
 			var v = nm.call(this, scope[1], vm);
@@ -610,7 +682,7 @@ Context.prototype.invoke = function(methods, args, kwargs, vm, do_catch) {
 			}
 			return [true];
 		}
-		throw new Error("Don't know how to call matched method: " + m);
+		throw new Error("Don't know how to call matched method: " + this.vm.inspectNgsValue(m));
 	}
 
 	return [false, 'no_method'];
@@ -634,7 +706,7 @@ Context.prototype.ret = function(stack_delta) {
 	}
 	if(deeper_frame.do_catch) {
 		var v = this.stack.pop();
-		this.stack.push(NgsValue('Array', [to_ngs_object(true), v]));
+		this.stack.push(NgsValue(this.vm.types.Array, [to_ngs_object(this.vm.types, true), v]));
 	}
 }
 
@@ -679,12 +751,12 @@ Context.prototype.thr = function(v) {
 		this.frame = this.frames[this.frames.length - 1];
 		if(deeper_frame.do_catch) {
 			this.stack.length = this.frame.stack_len;
-			this.stack.push(NgsValue('Array', [to_ngs_object(false), v]));
+			this.stack.push(NgsValue(this.vm.types.Array, [to_ngs_object(this.vm.types, false), v]));
 			return;
 		}
 	}
 	print_backtrace(bt);
-	console.log('Uncaught NGS exception:', inspect(v));
+	console.log('Uncaught NGS exception:', this.vm.inspectNgsValue(v));
 	process.exit(1);
 }
 
@@ -715,15 +787,15 @@ VM.prototype.opcodes = {
 
 	// stack: ... -> ... ip of the next instruction
 	'push_ip': function(v) {
-		this.context.stack.push(NgsValue('Number', this.context.frame.ip));
+		this.context.stack.push(NgsValue(this.types.Number, this.context.frame.ip));
 	},
 
-	'push_num': function(v) { this.context.stack.push(NgsValue('Number', v)); },
-	'push_str': function(v) { this.context.stack.push(NgsValue('String', v)); },
-	'push_arr': function(v) { this.context.stack.push(NgsValue('Array', [])); },
-	'push_hsh': function(v) { this.context.stack.push(NgsValue('Hash', {})); },
-	'push_nul': function(v) { this.context.stack.push(NgsValue('Null', null)); },
-	'push_boo': function(v) { this.context.stack.push(NgsValue('Bool', v)); },
+	'push_num': function(v) { this.context.stack.push(NgsValue(this.types.Number, v)); },
+	'push_str': function(v) { this.context.stack.push(NgsValue(this.types.String, v)); },
+	'push_arr': function(v) { this.context.stack.push(NgsValue(this.types.Array, [])); },
+	'push_hsh': function(v) { this.context.stack.push(NgsValue(this.types.Hash, {})); },
+	'push_nul': function(v) { this.context.stack.push(NgsValue(this.types.Null, null)); },
+	'push_boo': function(v) { this.context.stack.push(NgsValue(this.types.Bool, v)); },
 
 	// stack: ... value -> ...
 	'pop': function() {
@@ -801,8 +873,8 @@ VM.prototype.opcodes = {
 		var methods = st.pop();
 		var arg2 = st.pop();
 		var arg1 = st.pop();
-		var args = NgsValue('Array', [arg1, arg2]);
-		this.context.invoke_or_throw(methods, args, NgsValue('Hash', {}), this);
+		var args = NgsValue(this.types.Array, [arg1, arg2]);
+		this.context.invoke_or_throw(methods, args, NgsValue(this.types.Hash, {}), this);
 	},
 	'invoke3': function() {
 		var st = this.context.stack;
@@ -810,8 +882,8 @@ VM.prototype.opcodes = {
 		var arg3 = st.pop();
 		var arg2 = st.pop();
 		var arg1 = st.pop();
-		var args = NgsValue('Array', [arg1, arg2, arg3]);
-		this.context.invoke_or_throw(methods, args, NgsValue('Hash', {}), this);
+		var args = NgsValue(this.types.Array, [arg1, arg2, arg3]);
+		this.context.invoke_or_throw(methods, args, NgsValue(this.types.Hash, {}), this);
 	},
 
 	// stack: ... v -> ... v
@@ -820,7 +892,7 @@ VM.prototype.opcodes = {
 		if(c.frames[c.frames.length-2].stack_len === c.stack.length) {
 			// We need to return a value but there isn't one in the stack
 			// return Null in these rare cases.
-			c.stack.push(NgsValue('Null', null));
+			c.stack.push(NgsValue(this.types.Null, null));
 		}
 		this.context.ret(1);
 	},

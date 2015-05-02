@@ -23,8 +23,8 @@ var ctx = v.setupContext();
 var start_rule = 'commands';
 
 var NGS_FOLDER = path.dirname(path.normalize(process.argv[1]));
-ctx.frames[0].scopes[0]['NGS_FOLDER'] = nm.to_ngs_object(NGS_FOLDER);
-ctx.frames[0].scopes[0]['ENV'] = nm.to_ngs_object(process.env);
+ctx.frames[0].scopes[0]['NGS_FOLDER'] = nm.to_ngs_object(v.types, NGS_FOLDER);
+ctx.frames[0].scopes[0]['ENV'] = nm.to_ngs_object(v.types, process.env);
 
 function load(fname, start_rule) {
 	var f = fs.readSync(fs.openSync(fname, 'r'), BUFFER_SIZE);
