@@ -15,6 +15,10 @@
 *** TODO Arguments parsing
 ** TODO String pointers to native methods for serialization
 * Soon
+** TODO Consider matlab style .op on vectors
+** TODO Numbers' units (1K, 2M, 3G, ...)
+** TODO Autoloading
+** TODO Table type
 ** TODO Context
 *** TODO @hosts -> $(...) on the hosts
 ** TODO Check maybe reverse to String.match(RegExp)
