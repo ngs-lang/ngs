@@ -56,6 +56,10 @@
 (defclass function-arguments-node (node) ())
 (defclass function-call-node (node) ())
 
+(defclass incompilable-node (node) ())
+(defclass comment-node (incompilable-node) ())
+(defclass end-node (incompilable-node) ())
+
 
 (defun make-binop-node (ls)
   (let ((result (first ls)))
@@ -63,6 +67,18 @@
 	   for (op expr) in (second ls)
 	   do (setq result (make-instance 'binary-operation-node :data (second op) :children (list result expr))))
 	result))
+
+(define-symbol-macro %std-src (list 'list (make-human-position start) (make-human-position end)))
+
+(defrule comment (and #\# (* (and (! #\Newline) character)) (? #\Newline))
+  (:lambda (list &bounds start end)
+	(declare (ignore list))
+	(make-instance 'comment-node :src %std-src)))
+
+(defrule end (and #\Newline "END" #\Newline (* (string 1)))
+  (:lambda (list &bounds start end)
+	(declare (ignore list))
+	(make-instance 'end-node :src %std-src)))
 
 (defrule optional-sign (or "+" "-" ""))
 
@@ -72,25 +88,31 @@
 
 (defrule space (+ (or #\Space #\Tab #\Newline)) (:constant nil))
 
+(defrule newline-space (+ (and (? inline-space) (+ #\Newline) (? inline-space))))
+
 (defrule optional-space (* space) (:constant nil))
 
 (defrule integer (and optional-sign digits) (:lambda (list) (parse-integer (text list) :radix 10)))
 
 (defrule float (and optional-sign digits "." digits) (:lambda (list) (with-input-from-string (s (text list)) (read s))))
 
-(defrule number (or float integer) (:lambda (n) (make-instance 'number-node :data n)))
+(defrule number (or float integer) (:lambda (n &bounds start end) (make-instance 'number-node :data n :src %std-src)))
+
+(defrule string (and #\" #\") (:lambda (&bounds start end) (make-instance 'string-node :data "" :src %std-src)))
 
 (defrule letters (character-ranges (#\a #\z) (#\A #\Z)) (:lambda (list) (text list)))
 
 (defrule identifier-immediate (and (+ letters) (* digits))
-  (:lambda (list)
-	(make-instance 'string-node :data (text list))))
+  (:lambda (list &bounds start end)
+	(make-instance 'string-node :data (text list) :src %std-src)))
 
 (defrule identifier (or identifier-immediate))
 
-(defrule expression (or function-definition binary-expression-1))
+(defrule expression (or comment end function-definition binary-expression-1))
 
-(defrule varname (and (+ letters) (* digits)) (:lambda (list) (make-instance 'varname-node :data (text list))))
+(defrule varname (and (+ letters) (* digits))
+  (:lambda (list &bounds start end)
+	(make-instance 'varname-node :data (text list) :src %std-src)))
 
 (defun %bin-expr (n)
   (intern (concatenate 'string "BINARY-EXPRESSION-" (write-to-string n))))
@@ -108,9 +130,11 @@
 	 (defrule ,(%bin-expr (1+ (length *binary-operators*))) non-binary-operation
 	   (:lambda (list) list))))
 
-(defrule expressions (and expression (* (+ (and optional-space ";" optional-space expression optional-space))) (* ";"))
+(defrule expressions (and expression (* (+ (and expressions-delimiter expression optional-space))) (* ";"))
   (:lambda (list)
-	(make-instance 'expressions-node :children (append (list (first list)) (mapcar #'fourth (caadr list))))))
+	(make-instance 'expressions-node :children (append (list (first list)) (mapcar #'second (caadr list))))))
+
+(defrule expressions-delimiter (or newline-space (and (? inline-space) ";" (? space))))
 
 (defmacro defrule-spaced-seq (name seq &body body)
   `(defrule
@@ -160,24 +184,25 @@
 							(and identifier optional-space "=" optional-space expression)
 							expression)
   (:lambda (list)
-	(format t "ARG: ~S~%" list)
+	;; (format t "ARG: ~S~%" list)
 	(make-instance 'function-argument-node :children (list list))))
 
 
 ;; TODO: named arguments
 (defrule function-arguments (? (and function-argument (* (and optional-space "," optional-space function-argument optional-space))))
   (:lambda (list)
-	(format t "ARGS: ~S~%" list)
+	;; (format t "ARGS: ~S~%" list)
 	(make-instance 'function-arguments-node :children (when list (append (list (first list)) (mapcar #'fourth (cadr list)))))))
 
 (defrule-spaced-seq function-call (expression "(" function-arguments ")")
-  (:lambda (list)
-	(make-instance 'function-call-node :children (list (first list) (fifth list)))))
+  (:lambda (list &bounds start end)
+	(make-instance 'function-call-node :children (list (first list) (fifth list)) :src %std-src)))
 
 (defrule non-binary-operation (or
 							   assignment
 							   function-call
 							   number
+							   string
 							   varname))
 
 ;; Parser - end ------------------------------
@@ -202,17 +227,18 @@
 				  collecting (list key (gethash key hash))))))
 
 (defvar *ngs-globals* (make-instance 'lexical-scopes))
+(defvar *source-position* nil)
 
 (defun one-level-deeper-lexical-vars (ls)
   (make-instance 'lexical-scopes :hashes (cons (make-hash-table :test #'equal :size 20) (lexical-scopes-hashes ls))))
 
 (defun getvar (name vars)
   (let ((key (value-data name)))
-	(format t "GETVAR ~S ~S~%" key vars)
+	;; (format t "GETVAR ~S ~S~%" key vars)
 	(loop for hash in (lexical-scopes-hashes vars)
 	   do (multiple-value-bind (result found) (gethash key hash)
 			(when found (return-from getvar (values result hash)))))
-	(error 'variable-not-found :varname name)))
+	(error 'variable-not-found :varname name :stack-trace *source-position*)))
 
 (defun getvar-or-default (name vars default)
   (handler-case (getvar name vars)
@@ -226,9 +252,8 @@
 
 (defun %set-global-variable (name value)
   ;; (format t "X ~S ~%" (last (lexical-scopes-hashes *ngs-globals*)))
-  (setf (gethash name (first (last (lexical-scopes-hashes *ngs-globals*)))) value))
+  (setf (gethash name (first (lexical-scopes-hashes *ngs-globals*))) value))
 
-(format t "LS: ~S~%" *ngs-globals*)
 ;; Variables - end ------------------------------
 
 
@@ -260,12 +285,26 @@
 
 ;; Compiler - start ------------------------------
 
+(defvar *source-file-name* "TOP-LEVEL")
+(defvar *source-file-positions* #(0))
+
+(defun make-human-position (position)
+  (let ((line (loop
+				 for p across *source-file-positions*
+				 for line from 0
+				 if (or (eq line (1- (length *source-file-positions*)))
+						(> (elt *source-file-positions* (1+ line)) position)) return line)))
+	(format nil "~A:~A:~A" *source-file-name* (1+ line) (1+ (- position (elt *source-file-positions* line))))))
+
 (define-symbol-macro %1 (generate-code (first (node-children n))))
 (define-symbol-macro %2 (generate-code (second (node-children n))))
 (define-symbol-macro %children (children-code n))
 (define-symbol-macro %data (node-data n))
 
-(defun children-code (node &key (start 0)) (mapcar #'generate-code (subseq (node-children node) start)))
+(defun children-code (node &key (start 0))
+  (mapcar #'generate-code
+		  (remove-if #'(lambda (x) (typep x 'incompilable-node))
+					 (subseq (node-children node) start))))
 
 (defun generate-expected-parameters (n)
   `(list
@@ -323,17 +362,37 @@
 																	 for a in (node-children n) ; a is function-argument-node
 																	 collecting (generate-code (first (node-children a)))))))
 
-(defun ngs-compile (code)
-  (let ((c (generate-code (parse 'expressions code))))
+;; (defmethod generate-code ((n end-node)) `(mk-null nil))
+;; (defmethod generate-code ((n comment-node)) `(mk-null nil)) ; XXX
+
+(defmethod generate-code :around ((n node))
+  `(let ((*source-position* (cons ,(node-src n) *source-position*)))
+	 ,(call-next-method)))
+
+(defun make-source-file-positions (code)
+  "Positions where lines start"
+  (apply #'vector 0 (loop
+					 for char across code
+					 for position from 0
+					 if (eq #\Newline char) collecting (1+ position))))
+
+(defun ngs-compile (code file-name)
+  (let* ((*source-file-name* file-name)
+		 (*source-file-positions* (make-source-file-positions code))
+		 (c (generate-code (parse 'expressions code))))
 	`(let ((vars *ngs-globals*))
-	   ,c)))
+	   (handler-case ,c
+		 (runtime-error (e) (format t "Run-time error: ~A~%Stack: ~S" e (runtime-error-stack-trace e)))))))
 
 ;; Compiler - end ------------------------------
 
 ;; Runtime - start ------------------------------
 
+(define-condition runtime-error () ((stack-trace :initarg :stack-trace :initform nil :reader runtime-error-stack-trace)))
+(define-condition variable-not-found (runtime-error) ((varname :initarg :varname :reader variable-not-found-varname)))
 
-(define-condition variable-not-found () ((varname :initarg :varname)))
+(defmethod print-object ((e variable-not-found) stream)
+  (format stream "Variable '~A' not found" (value-data (variable-not-found-varname e))))
 
 ;; TODO: check parents
 (defun ngs-is-subtype (sub typ)
@@ -365,24 +424,32 @@
 (define-symbol-macro %positionals (mapcar #'value-data (arguments-positional parameters)))
 
 (ngs-define-function (mk-string "+") *ngs-globals* nil (lambda (parameters) (mk-number (apply #'+ %positionals))))
+(ngs-define-function (mk-string "echo")
+					 *ngs-globals*
+					 nil
+					 (lambda (parameters)
+					   (format t "~S~%" (value-data (first (arguments-positional parameters))))
+					   (mk-null nil)))
 
 ;; Runtime - end ------------------------------
 
-;; (princ (eval (generate-code (parse 'expression "1+2+3"))))
-;; (let ((c (generate-code (parse 'expressions "a=1; def f { a }; f();"))))
+(defun get-argv ()
+  "Abstraction layer for ARGV"
+  sb-ext:*posix-argv*)
+
+(defun file-string (path)
+  "http://rosettacode.org/wiki/Read_entire_file#Common_Lisp"
+  (with-open-file (stream path)
+    (let ((data (make-string (file-length stream))))
+      (read-sequence data stream)
+      data)))
 
 (defun main ()
-  ;; (let ((c (generate-code (parse 'expressions "def f(x:Number, y:Number=5) {x+y}; f(10,20);"))))
-  (let ((c (ngs-compile "def f(x:Number, y:Number=5) {x+y}; f(10,20);")))
-  ;; (let ((c (generate-code (parse 'function-parameters-with-parens "(x:Number=3, y:Number=5)"))))
-	(format t "CODE: ~S~%" c)
-	(format t "RESULT: ~S~%" (eval c))))
-	;; ))
+  (let* ((argv (get-argv))
+		 (file-name (second argv))
+		 (source-code (file-string file-name))
+		 (code (ngs-compile source-code file-name)))
+	(eval code)))
 
-;; defg fib(x) { fib(x-1) + fib(x-2) }
-;; defg fib(x<=2) { 1 }
-;; defg fib(x<=0) { 0 }
-
-;; (format t "COMPILING~%")
-;; (sb-ext:save-lisp-and-die "ngs-bin" :toplevel #'main :executable t)
-(main)
+;(format t "~S~%" (get-argv))
+;(main)
