@@ -70,12 +70,12 @@
 
 (define-symbol-macro %std-src (list 'list (make-human-position start) (make-human-position end)))
 
-(defrule comment (and #\# (* (and (! #\Newline) character)) (? #\Newline))
+(defrule comment (and #\# (* (and (! #\Newline) character)))
   (:lambda (list &bounds start end)
 	(declare (ignore list))
 	(make-instance 'comment-node :src %std-src)))
 
-(defrule end (and #\Newline "END" #\Newline (* (string 1)))
+(defrule end (and "END" #\Newline (* (string 1)))
   (:lambda (list &bounds start end)
 	(declare (ignore list))
 	(make-instance 'end-node :src %std-src)))
@@ -102,17 +102,24 @@
 
 (defrule letters (character-ranges (#\a #\z) (#\A #\Z)) (:lambda (list) (text list)))
 
-(defrule identifier-immediate (and (+ letters) (* digits))
+(defrule identifier-first (+ (or letters "_")))
+
+(defrule identifier-rest (* (or identifier-first digits)))
+
+(defrule identifier-whole-text (and identifier-first identifier-rest)
+  (:lambda (list) (text list)))
+
+(defrule identifier-immediate identifier-whole-text
   (:lambda (list &bounds start end)
-	(make-instance 'string-node :data (text list) :src %std-src)))
+	(make-instance 'string-node :data list :src %std-src)))
 
 (defrule identifier (or identifier-immediate))
 
 (defrule expression (or comment end function-definition binary-expression-1))
 
-(defrule varname (and (+ letters) (* digits))
+(defrule varname identifier-whole-text
   (:lambda (list &bounds start end)
-	(make-instance 'varname-node :data (text list) :src %std-src)))
+	(make-instance 'varname-node :data list :src %std-src)))
 
 (defun %bin-expr (n)
   (intern (concatenate 'string "BINARY-EXPRESSION-" (write-to-string n))))
@@ -130,7 +137,7 @@
 	 (defrule ,(%bin-expr (1+ (length *binary-operators*))) non-binary-operation
 	   (:lambda (list) list))))
 
-(defrule expressions (and expression (* (+ (and expressions-delimiter expression optional-space))) (* ";"))
+(defrule expressions (and expression (* (+ (and expressions-delimiter expression))) optional-space (* ";"))
   (:lambda (list)
 	(make-instance 'expressions-node :children (append (list (first list)) (mapcar #'second (caadr list))))))
 
@@ -166,12 +173,14 @@
 
 (defrule-spaced-seq function-parameters-with-parens ("(" function-parameters ")") (:lambda (list) (third list)))
 
-(defrule-spaced-seq function-definition ("def" space identifier function-parameters-with-parens "{" (? expressions) "}")
+(defrule-spaced-seq function-definition ((or "defg" "def") space identifier function-parameters-with-parens "{" (? expressions) "}")
   (:lambda (list)
-	(make-instance 'function-definition-node :children (list
-														(fourth list)
-														(sixth list)
-														(tenth list)))))
+	(make-instance 'function-definition-node
+				   :data (list (equal "defg" (first list)))
+				   :children (list
+							  (fourth list)
+							  (sixth list)
+							  (tenth list)))))
 
 (define-binary-operations-rules)
 
@@ -390,6 +399,7 @@
 
 (define-condition runtime-error () ((stack-trace :initarg :stack-trace :initform nil :reader runtime-error-stack-trace)))
 (define-condition variable-not-found (runtime-error) ((varname :initarg :varname :reader variable-not-found-varname)))
+(define-condition method-implementatoin-not-found (runtime-error) ())
 
 (defmethod print-object ((e variable-not-found) stream)
   (format stream "Variable '~A' not found" (value-data (variable-not-found-varname e))))
@@ -411,25 +421,42 @@
   (loop for key being the hash-keys of h
 	 collecting key))
 
+;; XXX - some issues, probably global/local
 (defun ngs-define-function (function-name vars expected-parameters lambda)
   (let ((v (getvar-or-default function-name vars nil)))
-	(setvar function-name vars (cons lambda v)))) ; XXX
+	(if (typep v 'ngs-type)
+		(setf (ngs-type-constructors v) (cons lambda (ngs-type-constructors v)))
+		(setvar function-name vars (cons lambda v)))))
 
+;; TODO - handle parameters-mismatch
 (defun ngs-call-function (methods arguments)
-  (loop for f in methods
-	 ;; do (format t "+ Trying implementation ~A~%" f)
-	 return (funcall f arguments)))
+  ;; (format t "TYPE? ~S ~S ~%" (typep methods 'ngs-type) methods)
+  (if (typep methods 'ngs-type)
+	  (ngs-call-function (ngs-type-constructors methods) arguments)
+	  (progn
+		(loop for m in methods
+		   ;; do (format t "+ Trying implementation ~A~%" f)
+		   do (return-from ngs-call-function (funcall m arguments)))
+		(error 'method-implementatoin-not-found))))
 
 
 (define-symbol-macro %positionals (mapcar #'value-data (arguments-positional parameters)))
 
 (ngs-define-function (mk-string "+") *ngs-globals* nil (lambda (parameters) (mk-number (apply #'+ %positionals))))
+
+(ngs-define-function (mk-string "String")
+					 *ngs-globals*
+					 nil
+					 (lambda (parameters)
+					   (mk-string (format nil "~A" (value-data (first (arguments-positional parameters)))))))
+
 (ngs-define-function (mk-string "echo")
 					 *ngs-globals*
 					 nil
 					 (lambda (parameters)
-					   (format t "~S~%" (value-data (first (arguments-positional parameters))))
-					   (mk-null nil)))
+					   (let ((v (ngs-call-function (getvar (mk-string "String") *ngs-globals*) parameters)))
+						 (format t "~A~%" (value-data v))
+						 v)))
 
 ;; Runtime - end ------------------------------
 
@@ -452,4 +479,4 @@
 	(eval code)))
 
 ;(format t "~S~%" (get-argv))
-;(main)
+(main)
