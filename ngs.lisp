@@ -6,7 +6,10 @@
 (defpackage :ngs
   (:use :cl :esrap)
   (:export
-   #:ngs-call-function))
+   :ngs-call-function
+   :ngs-compile
+   :value :value-data))
+
 (in-package :ngs)
 
 (defstruct parameters positional named)
@@ -155,20 +158,26 @@
 
 
 (defrule function-parameter (and
+							 (? (or "**" "*"))
 							 identifier
 							 optional-space
 							 (? (and optional-space ":" optional-space varname))
 							 (? (and optional-space "=" optional-space expression)))
   (:lambda (list)
-	(make-instance 'function-parameter-node :children (list
-													   (first list)
-													   (fourth (third list))
-													   (fourth (fourth list))))))
+	(make-instance 'function-parameter-node
+				   :data (list
+						  (cond ((eq "*"  (first list)) 'positional-rest)
+								((eq "**" (first list)) 'named-rest)
+								(t 'regular)))
+				   :children (list
+							  (second list)
+							  (fourth (fourth list))
+							  (fourth (fifth list))))))
 
 (defrule function-parameters (? (and function-parameter (* (and optional-space "," optional-space function-parameter optional-space))))
   (:lambda (list)
 	;; (format t "~%WTF1: ~S~%" (make-instance 'function-parameters-node :children (append (list (first list)) (mapcar #'fourth (cadr list)))))
-	(make-instance 'function-parameters-node :children (append (list (first list)) (mapcar #'fourth (cadr list))))))
+	(make-instance 'function-parameters-node :children (when list (append (list (first list)) (mapcar #'fourth (cadr list)))))))
 
 
 (defrule-spaced-seq function-parameters-with-parens ("(" function-parameters ")") (:lambda (list) (third list)))
@@ -270,6 +279,9 @@
 
 (defstruct ngs-type name parents constructors)
 
+(defmethod print-object ((typ ngs-type) stream)
+  (format stream "#<ngs-type ~A>" (ngs-type-name typ)))
+
 (defun %ngs-type-symbol (type-name)
   (intern (concatenate 'string "NGS-TYPE-" (string-upcase type-name))))
 
@@ -288,6 +300,7 @@
 (def-ngs-type "Number")
 (def-ngs-type "String")
 (def-ngs-type "List")
+(def-ngs-type "Array")
 (def-ngs-type "Null")
 
 ;; Types definitions - end ------------------------------
@@ -356,13 +369,21 @@
 																for p in (node-children n)
 																for pc = (node-children p)
 																for i from 0
-																collecting `(setvar (first (nth ,i expected-parameters)) vars
-																				 (if
-																				  (> (length (arguments-positional parameters)) ,i)
-																				  (nth ,i (arguments-positional parameters))
-																				  ,(if (third pc)
-																					   `(third (nth ,i expected-parameters))
-																					   `(error 'parameters-mismatch)))))))
+																collecting
+																  (cond
+																	((eq (first (node-data p)) 'positional-rest)
+																	 `(setvar
+																	   (first (nth ,i expected-parameters))
+																	   vars
+																	   (mk-array (apply #'vector (subseq (arguments-positional parameters) ,i)))))
+																	(t
+																	 `(setvar (first (nth ,i expected-parameters)) vars
+																			  (if
+																			   (> (length (arguments-positional parameters)) ,i)
+																			   (nth ,i (arguments-positional parameters))
+																			   ,(if (third pc)
+																					`(third (nth ,i expected-parameters))
+																					`(error 'parameters-mismatch)))))))))
 
 (defmethod generate-code ((n function-call-node))       `(ngs-call-function ,%1 ,%2))
 (defmethod generate-code ((n function-arguments-node))  `(make-arguments
@@ -371,11 +392,8 @@
 																	 for a in (node-children n) ; a is function-argument-node
 																	 collecting (generate-code (first (node-children a)))))))
 
-;; (defmethod generate-code ((n end-node)) `(mk-null nil))
-;; (defmethod generate-code ((n comment-node)) `(mk-null nil)) ; XXX
-
 (defmethod generate-code :around ((n node))
-  `(let ((*source-position* (cons ,(node-src n) *source-position*)))
+  `(let ((*source-position* (cons ,(or (node-src n) "<unknown>") *source-position*)))
 	 ,(call-next-method)))
 
 (defun make-source-file-positions (code)
@@ -470,13 +488,3 @@
     (let ((data (make-string (file-length stream))))
       (read-sequence data stream)
       data)))
-
-(defun main ()
-  (let* ((argv (get-argv))
-		 (file-name (second argv))
-		 (source-code (file-string file-name))
-		 (code (ngs-compile source-code file-name)))
-	(eval code)))
-
-;(format t "~S~%" (get-argv))
-(main)
