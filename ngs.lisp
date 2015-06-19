@@ -25,12 +25,12 @@
 
 (defparameter *required-space-binary-operators*
   '(("or")
-	("and")
-	("in" "not in")))
+    ("and")
+    ("in" "not in")))
 
 (defparameter *optional-space-binary-operations*
   '(("*" "/")
-	("+" "-")))
+    ("+" "-")))
 
 (defparameter *binary-operators*
   (append
@@ -39,10 +39,10 @@
 
 (defmethod print-object ((n node) stream)
   (format stream "#<~A :SRC ~A :DATA ~A :CHILDREN ~A>"
-		  (class-name (class-of n))
-		  (node-src n)
-		  (node-data n)
-		  (node-children n)))
+          (class-name (class-of n))
+          (node-src n)
+          (node-data n)
+          (node-children n)))
 
 (defclass number-node (node) ())
 (defclass string-node (node) ())
@@ -66,22 +66,22 @@
 
 (defun make-binop-node (ls)
   (let ((result (first ls)))
-	(loop
-	   for (op expr) in (second ls)
-	   do (setq result (make-instance 'binary-operation-node :data (second op) :children (list result expr))))
-	result))
+    (loop
+       for (op expr) in (second ls)
+       do (setq result (make-instance 'binary-operation-node :data (second op) :children (list result expr))))
+    result))
 
 (define-symbol-macro %std-src (list 'list (make-human-position start) (make-human-position end)))
 
 (defrule comment (and #\# (* (and (! #\Newline) character)))
   (:lambda (list &bounds start end)
-	(declare (ignore list))
-	(make-instance 'comment-node :src %std-src)))
+    (declare (ignore list))
+    (make-instance 'comment-node :src %std-src)))
 
 (defrule end (and "END" #\Newline (* (string 1)))
   (:lambda (list &bounds start end)
-	(declare (ignore list))
-	(make-instance 'end-node :src %std-src)))
+    (declare (ignore list))
+    (make-instance 'end-node :src %std-src)))
 
 (defrule optional-sign (or "+" "-" ""))
 
@@ -114,7 +114,7 @@
 
 (defrule identifier-immediate identifier-whole-text
   (:lambda (list &bounds start end)
-	(make-instance 'string-node :data list :src %std-src)))
+    (make-instance 'string-node :data list :src %std-src)))
 
 (defrule identifier (or identifier-immediate))
 
@@ -122,108 +122,108 @@
 
 (defrule varname identifier-whole-text
   (:lambda (list &bounds start end)
-	(make-instance 'varname-node :data list :src %std-src)))
+    (make-instance 'varname-node :data list :src %std-src)))
 
 (defun %bin-expr (n)
   (intern (concatenate 'string "BINARY-EXPRESSION-" (write-to-string n))))
 
 (defmacro define-binary-operations-rules ()
   `(progn
-	 ,@(loop
-		  for binary-operator in *binary-operators*
-		  for i from 1
-		  collecting
-		  ;; http://en.wikipedia.org/wiki/Operator-precedence_parser
-			`(defrule ,(%bin-expr i) (and ,(%bin-expr (1+ i)) (* (and ,binary-operator ,(%bin-expr (1+ i)))))
-			   (:lambda (list)
-				 (make-binop-node list))))
-	 (defrule ,(%bin-expr (1+ (length *binary-operators*))) non-binary-operation
-	   (:lambda (list) list))))
+     ,@(loop
+          for binary-operator in *binary-operators*
+          for i from 1
+          collecting
+          ;; http://en.wikipedia.org/wiki/Operator-precedence_parser
+            `(defrule ,(%bin-expr i) (and ,(%bin-expr (1+ i)) (* (and ,binary-operator ,(%bin-expr (1+ i)))))
+               (:lambda (list)
+                 (make-binop-node list))))
+     (defrule ,(%bin-expr (1+ (length *binary-operators*))) non-binary-operation
+       (:lambda (list) list))))
 
 (defrule expressions (and expression (* (+ (and expressions-delimiter expression))) optional-space (* ";"))
   (:lambda (list)
-	(make-instance 'expressions-node :children (append (list (first list)) (mapcar #'second (caadr list))))))
+    (make-instance 'expressions-node :children (append (list (first list)) (mapcar #'second (caadr list))))))
 
 (defrule expressions-delimiter (or newline-space (and (? inline-space) ";" (? space))))
 
 (defmacro defrule-spaced-seq (name seq &body body)
   `(defrule
-	   ,name
-	   (and ,@(butlast (loop
-						  for item in seq
-						  for i from 0
-						  collecting item
-						  if (not (eq 'space (nth (1+ i) seq))) collecting 'optional-space)))
-	 ,@body))
+       ,name
+       (and ,@(butlast (loop
+                          for item in seq
+                          for i from 0
+                          collecting item
+                          if (not (eq 'space (nth (1+ i) seq))) collecting 'optional-space)))
+     ,@body))
 
 
 (defrule function-parameter (and
-							 (? (or "**" "*"))
-							 identifier
-							 optional-space
-							 (? (and optional-space ":" optional-space varname))
-							 (? (and optional-space "=" optional-space expression)))
+                             (? (or "**" "*"))
+                             identifier
+                             optional-space
+                             (? (and optional-space ":" optional-space varname))
+                             (? (and optional-space "=" optional-space expression)))
   (:lambda (list)
-	(make-instance 'function-parameter-node
-				   :data (list
-						  (cond ((eq "*"  (first list)) 'positional-rest)
-								((eq "**" (first list)) 'named-rest)
-								(t 'regular)))
-				   :children (list
-							  (second list)
-							  (fourth (fourth list))
-							  (fourth (fifth list))))))
+    (make-instance 'function-parameter-node
+                   :data (list
+                          (cond ((eq "*"  (first list)) 'positional-rest)
+                                ((eq "**" (first list)) 'named-rest)
+                                (t 'regular)))
+                   :children (list
+                              (second list)
+                              (fourth (fourth list))
+                              (fourth (fifth list))))))
 
 (defrule function-parameters (? (and function-parameter (* (and optional-space "," optional-space function-parameter optional-space))))
   (:lambda (list)
-	;; (format t "~%WTF1: ~S~%" (make-instance 'function-parameters-node :children (append (list (first list)) (mapcar #'fourth (cadr list)))))
-	(make-instance 'function-parameters-node :children (when list (append (list (first list)) (mapcar #'fourth (cadr list)))))))
+    ;; (format t "~%WTF1: ~S~%" (make-instance 'function-parameters-node :children (append (list (first list)) (mapcar #'fourth (cadr list)))))
+    (make-instance 'function-parameters-node :children (when list (append (list (first list)) (mapcar #'fourth (cadr list)))))))
 
 
 (defrule-spaced-seq function-parameters-with-parens ("(" function-parameters ")") (:lambda (list) (third list)))
 
 (defrule-spaced-seq function-definition ((or "defg" "def") space identifier function-parameters-with-parens "{" (? expressions) "}")
   (:lambda (list)
-	(make-instance 'function-definition-node
-				   :data (list (equal "defg" (first list)))
-				   :children (list
-							  (fourth list)
-							  (sixth list)
-							  (tenth list)))))
+    (make-instance 'function-definition-node
+                   :data (list (equal "defg" (first list)))
+                   :children (list
+                              (fourth list)
+                              (sixth list)
+                              (tenth list)))))
 
 (define-binary-operations-rules)
 
 (defrule assignment (and (? (and "global" space)) identifier optional-space "=" optional-space expression)
   (:lambda (list)
-	(make-instance 'assignment-node
-				   :data (not (not (first list)))
-				   :children (list (second list) (sixth list)))))
+    (make-instance 'assignment-node
+                   :data (not (not (first list)))
+                   :children (list (second list) (sixth list)))))
 
 ;; TODO: named arguments
 (defrule function-argument (or
-							(and identifier optional-space "=" optional-space expression)
-							expression)
+                            (and identifier optional-space "=" optional-space expression)
+                            expression)
   (:lambda (list)
-	;; (format t "ARG: ~S~%" list)
-	(make-instance 'function-argument-node :children (list list))))
+    ;; (format t "ARG: ~S~%" list)
+    (make-instance 'function-argument-node :children (list list))))
 
 
 ;; TODO: named arguments
 (defrule function-arguments (? (and function-argument (* (and optional-space "," optional-space function-argument optional-space))))
   (:lambda (list)
-	;; (format t "ARGS: ~S~%" list)
-	(make-instance 'function-arguments-node :children (when list (append (list (first list)) (mapcar #'fourth (cadr list)))))))
+    ;; (format t "ARGS: ~S~%" list)
+    (make-instance 'function-arguments-node :children (when list (append (list (first list)) (mapcar #'fourth (cadr list)))))))
 
 (defrule-spaced-seq function-call (expression "(" function-arguments ")")
   (:lambda (list &bounds start end)
-	(make-instance 'function-call-node :children (list (first list) (fifth list)) :src %std-src)))
+    (make-instance 'function-call-node :children (list (first list) (fifth list)) :src %std-src)))
 
 (defrule non-binary-operation (or
-							   assignment
-							   function-call
-							   number
-							   string
-							   varname))
+                               assignment
+                               function-call
+                               number
+                               string
+                               varname))
 
 ;; Parser - end ------------------------------
 
@@ -233,18 +233,18 @@
 
 (defclass lexical-scopes ()
   ((hashes
-	:initform (list (make-hash-table :test #'equal :size 100))
-	:initarg :hashes
-	:accessor lexical-scopes-hashes)))
+    :initform (list (make-hash-table :test #'equal :size 100))
+    :initarg :hashes
+    :accessor lexical-scopes-hashes)))
 
 (defmethod print-object ((ls lexical-scopes) stream)
   (format stream "#<LEXICAL-SCOPES ~S>"
-		  (loop
-			 for hash in (lexical-scopes-hashes ls)
-			 collecting
-			   (loop
-				  for key being the hash-keys of hash
-				  collecting (list key (gethash key hash))))))
+          (loop
+             for hash in (lexical-scopes-hashes ls)
+             collecting
+               (loop
+                  for key being the hash-keys of hash
+                  collecting (list key (gethash key hash))))))
 
 (defvar *ngs-globals* (make-instance 'lexical-scopes))
 (defvar *source-position* nil)
@@ -254,28 +254,28 @@
 
 (defun getvar (name vars &optional (include-top-level t))
   (let ((key (value-data name)))
-	;; (format t "GETVAR ~S ~S~%" key vars)
-	(loop for hash in (if include-top-level
-						  (lexical-scopes-hashes vars)
-						  (butlast (lexical-scopes-hashes vars)))
-	   do (multiple-value-bind (result found) (gethash key hash)
-			(when found (return-from getvar (values result hash)))))
-	(error 'variable-not-found :varname name :stack-trace *source-position*)))
+    ;; (format t "GETVAR ~S ~S~%" key vars)
+    (loop for hash in (if include-top-level
+                          (lexical-scopes-hashes vars)
+                          (butlast (lexical-scopes-hashes vars)))
+       do (multiple-value-bind (result found) (gethash key hash)
+            (when found (return-from getvar (values result hash)))))
+    (error 'variable-not-found :varname name :stack-trace *source-position*)))
 
 (defun getvar-or-default (name vars default)
   (handler-case (getvar name vars)
-	(variable-not-found () default)))
+    (variable-not-found () default)))
 
 (defun set-var (name vars value &optional (global t))
   (let ((dst-hash
-		 (handler-case (multiple-value-bind (unused-result hash) (getvar name vars global)
-						 (declare (ignore unused-result))
-						 hash)
-		   (variable-not-found ()
-			 (if global
-				 (first (last (lexical-scopes-hashes vars)))
-				 (first (lexical-scopes-hashes vars)))))))
-	(setf (gethash (value-data name) dst-hash) value)))
+         (handler-case (multiple-value-bind (unused-result hash) (getvar name vars global)
+                         (declare (ignore unused-result))
+                         hash)
+           (variable-not-found ()
+             (if global
+                 (first (last (lexical-scopes-hashes vars)))
+                 (first (lexical-scopes-hashes vars)))))))
+    (setf (gethash (value-data name) dst-hash) value)))
 
 (defun set-local-var (name vars value) (set-var name vars value nil))
 
@@ -298,13 +298,13 @@
 
 (defmacro def-ngs-type (name)
   (let*
-	  ((symb (%ngs-type-symbol name)))
-	`(progn
-	   (defvar ,symb
-		 (make-ngs-type :name ,name))
-	   (defun ,(intern (concatenate 'string "MK-" (string-upcase name))) (data)
-		   (make-value :type ,symb :data data))
-	   (%set-global-variable ,name ,symb))))
+      ((symb (%ngs-type-symbol name)))
+    `(progn
+       (defvar ,symb
+         (make-ngs-type :name ,name))
+       (defun ,(intern (concatenate 'string "MK-" (string-upcase name))) (data)
+           (make-value :type ,symb :data data))
+       (%set-global-variable ,name ,symb))))
 
 (def-ngs-type "Any")
 (def-ngs-type "Type")
@@ -323,11 +323,11 @@
 
 (defun make-human-position (position)
   (let ((line (loop
-				 for p across *source-file-positions*
-				 for line from 0
-				 if (or (eq line (1- (length *source-file-positions*)))
-						(> (elt *source-file-positions* (1+ line)) position)) return line)))
-	(format nil "~A:~A:~A" *source-file-name* (1+ line) (1+ (- position (elt *source-file-positions* line))))))
+                 for p across *source-file-positions*
+                 for line from 0
+                 if (or (eq line (1- (length *source-file-positions*)))
+                        (> (elt *source-file-positions* (1+ line)) position)) return line)))
+    (format nil "~A:~A:~A" *source-file-name* (1+ line) (1+ (- position (elt *source-file-positions* line))))))
 
 (define-symbol-macro %1 (generate-code (first (node-children n))))
 (define-symbol-macro %2 (generate-code (second (node-children n))))
@@ -336,14 +336,14 @@
 
 (defun children-code (node &key (start 0))
   (mapcar #'generate-code
-		  (remove-if #'(lambda (x) (typep x 'incompilable-node))
-					 (subseq (node-children node) start))))
+          (remove-if #'(lambda (x) (typep x 'incompilable-node))
+                     (subseq (node-children node) start))))
 
 (defun generate-expected-parameters (n)
   `(list
-	,@(mapcar
-	   #'(lambda(x) `(list ,@(apply #'list (mapcar #'generate-code (node-children x)))))
-	   (node-children n))))
+    ,@(mapcar
+       #'(lambda(x) `(list ,@(apply #'list (mapcar #'generate-code (node-children x)))))
+       (node-children n))))
 
 (defgeneric generate-code (node))
 
@@ -355,73 +355,73 @@
 (defmethod generate-code ((n string-node))               (mk-string %data))
 (defmethod generate-code ((n varname-node))             `(getvar ,(mk-string %data) vars))
 (defmethod generate-code ((n binary-operation-node))    `(ngs-call-function
-														  (getvar ,(mk-string %data) vars)
-														  (make-arguments :positional (list ,@(children-code n)))))
+                                                          (getvar ,(mk-string %data) vars)
+                                                          (make-arguments :positional (list ,@(children-code n)))))
 (defmethod generate-code ((n assignment-node))          `(set-var
-														  (mk-string ,(node-data (first (node-children n))))
-														  vars
-														  ,@(children-code n :start 1)
-														  ,(node-data n)))
+                                                          (mk-string ,(node-data (first (node-children n))))
+                                                          vars
+                                                          ,@(children-code n :start 1)
+                                                          ,(node-data n)))
 (defmethod generate-code ((n expressions-node))         `(progn ,@%children))
 
 (defmethod generate-code ((n function-definition-node)) `(let ((expected-parameters ,(generate-expected-parameters (second (node-children n)))))
-														   (ngs-define-function
-															,%1
-															vars
-															expected-parameters
-															(lambda (parameters)
-															  (let ((vars (one-level-deeper-lexical-vars vars)))
-																,@(children-code n :start 1))))))
+                                                           (ngs-define-function
+                                                            ,%1
+                                                            vars
+                                                            expected-parameters
+                                                            (lambda (parameters)
+                                                              (let ((vars (one-level-deeper-lexical-vars vars)))
+                                                                ,@(children-code n :start 1))))))
 
 ;; 1. match the parameters and signal if there is a mismatch
 ;; 2. set local variables
 ;; 3. do it smarter and more efficient
 (defmethod generate-code ((n function-parameters-node)) `(progn
-														   ,@(loop
-																for p in (node-children n)
-																for pc = (node-children p)
-																for i from 0
-																collecting
-																  (cond
-																	((eq (first (node-data p)) 'positional-rest)
-																	 `(set-local-var
-																	   (first (nth ,i expected-parameters))
-																	   vars
-																	   (mk-array (apply #'vector (subseq (arguments-positional parameters) ,i)))))
-																	(t
-																	 `(set-local-var (first (nth ,i expected-parameters)) vars
-																					 (if
-																					  (> (length (arguments-positional parameters)) ,i)
-																					  (nth ,i (arguments-positional parameters))
-																					  ,(if (third pc)
-																						   `(third (nth ,i expected-parameters))
-																						   `(error 'parameters-mismatch)))))))))
+                                                           ,@(loop
+                                                                for p in (node-children n)
+                                                                for pc = (node-children p)
+                                                                for i from 0
+                                                                collecting
+                                                                  (cond
+                                                                    ((eq (first (node-data p)) 'positional-rest)
+                                                                     `(set-local-var
+                                                                       (first (nth ,i expected-parameters))
+                                                                       vars
+                                                                       (mk-array (apply #'vector (subseq (arguments-positional parameters) ,i)))))
+                                                                    (t
+                                                                     `(set-local-var (first (nth ,i expected-parameters)) vars
+                                                                                     (if
+                                                                                      (> (length (arguments-positional parameters)) ,i)
+                                                                                      (nth ,i (arguments-positional parameters))
+                                                                                      ,(if (third pc)
+                                                                                           `(third (nth ,i expected-parameters))
+                                                                                           `(error 'parameters-mismatch)))))))))
 
 (defmethod generate-code ((n function-call-node))       `(ngs-call-function ,%1 ,%2))
 (defmethod generate-code ((n function-arguments-node))  `(make-arguments
-														  :positional
-														  (list ,@(loop
-																	 for a in (node-children n) ; a is function-argument-node
-																	 collecting (generate-code (first (node-children a)))))))
+                                                          :positional
+                                                          (list ,@(loop
+                                                                     for a in (node-children n) ; a is function-argument-node
+                                                                     collecting (generate-code (first (node-children a)))))))
 
 (defmethod generate-code :around ((n node))
   `(let ((*source-position* (cons ,(or (node-src n) "<unknown>") *source-position*)))
-	 ,(call-next-method)))
+     ,(call-next-method)))
 
 (defun make-source-file-positions (code)
   "Positions where lines start"
   (apply #'vector 0 (loop
-					 for char across code
-					 for position from 0
-					 if (eq #\Newline char) collecting (1+ position))))
+                     for char across code
+                     for position from 0
+                     if (eq #\Newline char) collecting (1+ position))))
 
 (defun ngs-compile (code file-name)
   (let* ((*source-file-name* file-name)
-		 (*source-file-positions* (make-source-file-positions code))
-		 (c (generate-code (parse 'expressions code))))
-	`(let ((vars *ngs-globals*))
-	   (handler-case ,c
-		 (runtime-error (e) (format t "Run-time error: ~A~%Stack: ~S" e (runtime-error-stack-trace e)))))))
+         (*source-file-positions* (make-source-file-positions code))
+         (c (generate-code (parse 'expressions code))))
+    `(let ((vars *ngs-globals*))
+       (handler-case ,c
+         (runtime-error (e) (format t "Run-time error: ~A~%Stack: ~S" e (runtime-error-stack-trace e)))))))
 
 ;; Compiler - end ------------------------------
 
@@ -445,29 +445,29 @@
 
 (defun assert-type (val typ)
   (unless (ngs-value-is-of-type val typ)
-	(error 'parameters-mismatch)))
+    (error 'parameters-mismatch)))
 
 (defun hash-keys (h)
   (loop for key being the hash-keys of h
-	 collecting key))
+     collecting key))
 
 ;; XXX - some issues, probably global/local
 (defun ngs-define-function (function-name vars expected-parameters lambda)
   (let ((v (getvar-or-default function-name vars nil)))
-	(if (typep v 'ngs-type)
-		(setf (ngs-type-constructors v) (cons lambda (ngs-type-constructors v)))
-		(set-local-var function-name vars (cons lambda v)))))
+    (if (typep v 'ngs-type)
+        (setf (ngs-type-constructors v) (cons lambda (ngs-type-constructors v)))
+        (set-local-var function-name vars (cons lambda v)))))
 
 ;; TODO - handle parameters-mismatch
 (defun ngs-call-function (methods arguments)
   ;; (format t "TYPE? ~S ~S ~%" (typep methods 'ngs-type) methods)
   (if (typep methods 'ngs-type)
-	  (ngs-call-function (ngs-type-constructors methods) arguments)
-	  (progn
-		(loop for m in methods
-		   ;; do (format t "+ Trying implementation ~A~%" f)
-		   do (return-from ngs-call-function (funcall m arguments)))
-		(error 'method-implementatoin-not-found))))
+      (ngs-call-function (ngs-type-constructors methods) arguments)
+      (progn
+        (loop for m in methods
+           ;; do (format t "+ Trying implementation ~A~%" f)
+           do (return-from ngs-call-function (funcall m arguments)))
+        (error 'method-implementatoin-not-found))))
 
 
 (define-symbol-macro %positionals (mapcar #'value-data (arguments-positional parameters)))
@@ -475,18 +475,18 @@
 (ngs-define-function (mk-string "+") *ngs-globals* nil (lambda (parameters) (mk-number (apply #'+ %positionals))))
 
 (ngs-define-function (mk-string "String")
-					 *ngs-globals*
-					 nil
-					 (lambda (parameters)
-					   (mk-string (format nil "~A" (value-data (first (arguments-positional parameters)))))))
+                     *ngs-globals*
+                     nil
+                     (lambda (parameters)
+                       (mk-string (format nil "~A" (value-data (first (arguments-positional parameters)))))))
 
 (ngs-define-function (mk-string "echo")
-					 *ngs-globals*
-					 nil
-					 (lambda (parameters)
-					   (let ((v (ngs-call-function (getvar (mk-string "String") *ngs-globals*) parameters)))
-						 (format t "~A~%" (value-data v))
-						 v)))
+                     *ngs-globals*
+                     nil
+                     (lambda (parameters)
+                       (let ((v (ngs-call-function (getvar (mk-string "String") *ngs-globals*) parameters)))
+                         (format t "~A~%" (value-data v))
+                         v)))
 
 ;; Runtime - end ------------------------------
 
