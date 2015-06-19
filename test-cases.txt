@@ -1,0 +1,11 @@
+Addition
+1+2
+3
+
+Local variable should not override global variable
+x=1; def f() {x=2}; f(); x
+1
+
+Local parameter should not override global variable
+x=1; def f(x) {100}; f(10); x
+1

@@ -250,10 +250,12 @@
 (defun one-level-deeper-lexical-vars (ls)
   (make-instance 'lexical-scopes :hashes (cons (make-hash-table :test #'equal :size 20) (lexical-scopes-hashes ls))))
 
-(defun getvar (name vars)
+(defun getvar (name vars &optional (include-top-level t))
   (let ((key (value-data name)))
 	;; (format t "GETVAR ~S ~S~%" key vars)
-	(loop for hash in (lexical-scopes-hashes vars)
+	(loop for hash in (if include-top-level
+						  (lexical-scopes-hashes vars)
+						  (butlast (lexical-scopes-hashes vars)))
 	   do (multiple-value-bind (result found) (gethash key hash)
 			(when found (return-from getvar (values result hash)))))
 	(error 'variable-not-found :varname name :stack-trace *source-position*)))
@@ -262,11 +264,15 @@
   (handler-case (getvar name vars)
 	(variable-not-found () default)))
 
-(defun setvar (name vars value)
+(defun setvar (name vars value &optional (include-top-level t))
   (let ((dst-hash
-		 (handler-case (multiple-value-bind (unused-result hash) (getvar name vars) hash)
+		 (handler-case (multiple-value-bind (unused-result hash) (getvar name vars include-top-level)
+						 (declare (ignore unused-result))
+						 hash)
 		   (variable-not-found () (first (lexical-scopes-hashes vars))))))
 	(setf (gethash (value-data name) dst-hash) value)))
+
+(defun set-local-var (name vars value) (setvar name vars value nil))
 
 (defun %set-global-variable (name value)
   ;; (format t "X ~S ~%" (last (lexical-scopes-hashes *ngs-globals*)))
@@ -346,7 +352,7 @@
 (defmethod generate-code ((n binary-operation-node))    `(ngs-call-function
 														  (getvar ,(mk-string %data) vars)
 														  (make-arguments :positional (list ,@(children-code n)))))
-(defmethod generate-code ((n assignment-node))          `(setvar
+(defmethod generate-code ((n assignment-node))          `(set-local-var
 														  (mk-string ,(node-data (first (node-children n))))
 														  vars
 														  ,@(children-code n :start 1)))
@@ -372,18 +378,18 @@
 																collecting
 																  (cond
 																	((eq (first (node-data p)) 'positional-rest)
-																	 `(setvar
+																	 `(set-local-var
 																	   (first (nth ,i expected-parameters))
 																	   vars
 																	   (mk-array (apply #'vector (subseq (arguments-positional parameters) ,i)))))
 																	(t
-																	 `(setvar (first (nth ,i expected-parameters)) vars
-																			  (if
-																			   (> (length (arguments-positional parameters)) ,i)
-																			   (nth ,i (arguments-positional parameters))
-																			   ,(if (third pc)
-																					`(third (nth ,i expected-parameters))
-																					`(error 'parameters-mismatch)))))))))
+																	 `(set-local-var (first (nth ,i expected-parameters)) vars
+																					 (if
+																					  (> (length (arguments-positional parameters)) ,i)
+																					  (nth ,i (arguments-positional parameters))
+																					  ,(if (third pc)
+																						   `(third (nth ,i expected-parameters))
+																						   `(error 'parameters-mismatch)))))))))
 
 (defmethod generate-code ((n function-call-node))       `(ngs-call-function ,%1 ,%2))
 (defmethod generate-code ((n function-arguments-node))  `(make-arguments
@@ -444,7 +450,7 @@
   (let ((v (getvar-or-default function-name vars nil)))
 	(if (typep v 'ngs-type)
 		(setf (ngs-type-constructors v) (cons lambda (ngs-type-constructors v)))
-		(setvar function-name vars (cons lambda v)))))
+		(set-local-var function-name vars (cons lambda v)))))
 
 ;; TODO - handle parameters-mismatch
 (defun ngs-call-function (methods arguments)
