@@ -15,5 +15,5 @@ x=1; def f() { global x = 2 }; f(); x
 2
 
 Set global variable at top level
-global x=1; x
-1
+x=1; global x=2; x
+2
