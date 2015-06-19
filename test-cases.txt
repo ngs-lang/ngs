@@ -6,6 +6,14 @@ Local variable should not override global variable
 x=1; def f() {x=2}; f(); x
 1
 
-Local parameter should not override global variable
+Function parameter should not override global variable
 x=1; def f(x) {100}; f(10); x
+1
+
+Set global variable in function
+x=1; def f() { global x = 2 }; f(); x
+2
+
+Set global variable at top level
+global x=1; x
 1

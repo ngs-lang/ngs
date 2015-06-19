@@ -193,9 +193,11 @@
 
 (define-binary-operations-rules)
 
-(defrule assignment (and identifier optional-space "=" optional-space expression)
+(defrule assignment (and (? (and "global" space)) identifier optional-space "=" optional-space expression)
   (:lambda (list)
-	(make-instance 'assignment-node :children (list (first list) (fifth list)))))
+	(make-instance 'assignment-node
+				   :data (not (not (first list)))
+				   :children (list (second list) (sixth list)))))
 
 ;; TODO: named arguments
 (defrule function-argument (or
@@ -264,15 +266,18 @@
   (handler-case (getvar name vars)
 	(variable-not-found () default)))
 
-(defun setvar (name vars value &optional (include-top-level t))
+(defun set-var (name vars value &optional (global t))
   (let ((dst-hash
-		 (handler-case (multiple-value-bind (unused-result hash) (getvar name vars include-top-level)
+		 (handler-case (multiple-value-bind (unused-result hash) (getvar name vars global)
 						 (declare (ignore unused-result))
 						 hash)
-		   (variable-not-found () (first (lexical-scopes-hashes vars))))))
+		   (variable-not-found ()
+			 (if global
+				 (first (last (lexical-scopes-hashes vars)))
+				 (first (lexical-scopes-hashes vars)))))))
 	(setf (gethash (value-data name) dst-hash) value)))
 
-(defun set-local-var (name vars value) (setvar name vars value nil))
+(defun set-local-var (name vars value) (set-var name vars value nil))
 
 (defun %set-global-variable (name value)
   ;; (format t "X ~S ~%" (last (lexical-scopes-hashes *ngs-globals*)))
@@ -352,10 +357,11 @@
 (defmethod generate-code ((n binary-operation-node))    `(ngs-call-function
 														  (getvar ,(mk-string %data) vars)
 														  (make-arguments :positional (list ,@(children-code n)))))
-(defmethod generate-code ((n assignment-node))          `(set-local-var
+(defmethod generate-code ((n assignment-node))          `(set-var
 														  (mk-string ,(node-data (first (node-children n))))
 														  vars
-														  ,@(children-code n :start 1)))
+														  ,@(children-code n :start 1)
+														  ,(node-data n)))
 (defmethod generate-code ((n expressions-node))         `(progn ,@%children))
 
 (defmethod generate-code ((n function-definition-node)) `(let ((expected-parameters ,(generate-expected-parameters (second (node-children n)))))
