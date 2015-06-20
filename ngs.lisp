@@ -52,6 +52,7 @@
 (defclass expressions-node (node) ())
 
 (defclass function-definition-node (node) ())
+(defclass lambda-node (node) ())
 (defclass function-parameter-node (node) ())
 (defclass function-parameters-node (node) ())
 (defclass function-argument-node (node) ())
@@ -123,7 +124,7 @@
 
 (defrule identifier (or identifier-immediate))
 
-(defrule expression (or comment end function-definition binary-expression-1))
+(defrule expression (or comment end function-definition lambda binary-expression-1))
 
 (defrule varname identifier-whole-text
   (:lambda (list &bounds start end)
@@ -196,6 +197,14 @@
                               (sixth list)
                               (tenth list)))))
 
+(defrule lambda (and (or "F" "lambda") (? (and space identifier)) optional-space function-parameters-with-parens optional-space "{" optional-space (? expressions) optional-space "}")
+  (:lambda (list)
+    (make-instance 'lambda-node
+                   :children (list
+                              (second (second list))
+                              (fourth list)
+                              (eighth list)))))
+
 (define-binary-operations-rules)
 
 (defrule assignment (and (? (and "global" space)) identifier optional-space "=" optional-space expression)
@@ -263,6 +272,7 @@
   (make-instance 'lexical-scopes :hashes (cons (make-hash-table :test #'equal :size 20) (lexical-scopes-hashes ls))))
 
 (defun get-var (name vars &optional (include-top-level t))
+  ;; (format t "GET ~S~%" name)
   (loop for hash in (if include-top-level
                         (lexical-scopes-hashes vars)
                         (butlast (lexical-scopes-hashes vars)))
@@ -275,6 +285,7 @@
     (variable-not-found () default)))
 
 (defun set-var (name vars value &optional (global t))
+  ;; (format t "SET ~S=~S~%" name value)
   (let ((dst-hash
          (handler-case (multiple-value-bind (unused-result hash) (get-var name vars global)
                          (declare (ignore unused-result))
@@ -381,10 +392,16 @@
                                                               (let ((vars (one-level-deeper-lexical-vars vars)))
                                                                 ,@(children-code n :start 1))))))
 
+(defmethod generate-code ((n lambda-node))              `(let ((expected-parameters ,(generate-expected-parameters (second (node-children n)))))
+                                                            (lambda (parameters)
+                                                              (let ((vars (one-level-deeper-lexical-vars vars)))
+                                                                ,@(children-code n :start 1)))))
+
 ;; 1. match the parameters and signal if there is a mismatch
 ;; 2. set local variables
 ;; 3. do it smarter and more efficient
 (defmethod generate-code ((n function-parameters-node)) `(progn
+                                                           ;; (format t "GOT PARAMS: ~S~%" parameters)
                                                            ,@(loop
                                                                 for p in (node-children n)
                                                                 for pc = (node-children p)
@@ -442,6 +459,7 @@
 (define-condition runtime-error () ((stack-trace :initarg :stack-trace :initform nil :reader runtime-error-stack-trace)))
 (define-condition variable-not-found (runtime-error) ((varname :initarg :varname :reader variable-not-found-varname)))
 (define-condition method-implementatoin-not-found (runtime-error) ())
+(define-condition calling-non-a-method (runtime-error) ())
 (define-condition parameters-mismatch () ())
 
 (defmethod print-object ((e variable-not-found) stream)
@@ -453,7 +471,8 @@
 
 (defun guard-type (val typ)
   (unless (ngs-value-is-of-type val typ)
-    (error 'parameters-mismatch)))
+    (error 'parameters-mismatch))
+  val)
 
 (defun hash-keys (h)
   (loop for key being the hash-keys of h
@@ -468,15 +487,20 @@
 
 ;; TODO - handle parameters-mismatch
 (defun ngs-call-function (methods arguments)
-  ;; (format t "TYPE? ~S ~S ~%" (typep methods 'ngs-type) methods)
-  (if (typep methods 'ngs-type)
-      (ngs-call-function (ngs-type-constructors methods) arguments)
-      (progn
-        (loop for m in methods
-           ;; do (format t "+ Trying implementation ~A~%" m)
-           do (handler-case (return-from ngs-call-function (funcall m arguments))
-                (parameters-mismatch () nil)))
-        (error 'method-implementatoin-not-found))))
+  ;; (format t "METHODS: ~S~%" methods)
+  (cond
+    ((typep methods 'ngs-type) (ngs-call-function (ngs-type-constructors methods) arguments))
+    ((functionp methods) (ngs-call-function (list methods) arguments))
+    ((listp methods)
+     ;; TODO: check that at least the first element is callable
+     (progn
+       (loop for m in methods
+          ;; do (format t "+ Trying implementation ~A~%" m)
+          do (handler-case (return-from ngs-call-function (funcall m arguments))
+               (parameters-mismatch () nil)))
+       (error 'method-implementatoin-not-found)))
+    (t
+     (error 'calling-non-a-method))))
 
 ;; (handler-case (get-var name vars)
 ;;     (variable-not-found () default)))
@@ -488,6 +512,7 @@
 (defmacro %call (name parameters)
   `(ngs-call-function (get-var ,name *ngs-globals*) ,parameters))
 
+;; TODO: guard - Number(s)
 (native "+" (apply #'+ %positionals))
 
 (native "String" (format nil "~A" (first (arguments-positional parameters))))

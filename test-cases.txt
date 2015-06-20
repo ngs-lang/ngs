@@ -41,3 +41,12 @@ gmethod()
 Echo
 echo("echotest")
 "echotest"
+
+Lambda
+f=F(x) { x + 10 }
+f(1)
+11
+
+Method param test
+defg m(x) { x + 10 }; m(1)
+11
