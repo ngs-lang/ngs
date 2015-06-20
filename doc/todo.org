@@ -2,8 +2,7 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Re-implement in Lisp
-** DONE lambda
-** decide on lists/vectors for [x,y,z] syntax
+** DONE decide on lists/vectors for [x,y,z] syntax
 ** show native functins in stack trace
 * Now
 ** DONE Redo type system

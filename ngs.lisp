@@ -65,6 +65,8 @@
 
 (defclass keyword-node (node) ())
 
+(defclass list-node (node) ())
+
 (defun make-binop-node (ls)
   (let ((result (first ls)))
     (loop
@@ -236,6 +238,12 @@
 (defrule false "false" (:constant (make-instance 'keyword-node :data :false)))
 (defrule null  "null"  (:constant (make-instance 'keyword-node :data :null)))
 
+(defrule list (and "[" optional-space (? (and expression (* (and optional-space "," optional-space expression optional-space)))) optional-space "]")
+  (:lambda (list &bounds start end)
+    (make-instance 'list-node
+                   :children (when (first (third list)) (append (list (first (third list))) (mapcar #'fourth (second (third list)))))
+                   :src %std-src)))
+
 (defrule non-binary-operation (or
                                assignment
                                function-call
@@ -244,6 +252,7 @@
                                true
                                false
                                null
+                               list
                                varname))
 
 ;; Parser - end ------------------------------
@@ -432,6 +441,7 @@
                                                                      collecting (generate-code (first (node-children a)))))))
 
 (defmethod generate-code ((n keyword-node))             %data)
+(defmethod generate-code ((n list-node))                `(list ,@(children-code n)))
 
 (defmethod generate-code :around ((n node))
   `(let ((*source-position* (cons ,(or (node-src n) "<unknown>") *source-position*)))
@@ -515,7 +525,7 @@
 ;; TODO: guard - Number(s)
 (native "+" (apply #'+ %positionals))
 
-(native "String" (format nil "~A" (first (arguments-positional parameters))))
+(native "String" (format nil "~A" (first %positionals)))
 
 (native "echo"
   (let ((v (%call "String" parameters)))

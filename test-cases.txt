@@ -24,9 +24,9 @@ def ms(n:Number) { 2 }
 ms("")
 1
 
-Constants
-true
-:true
+Constants and a list
+[true, false, null]
+(list :true :false :null)
 
 Define global method
 def dodefine() {
