@@ -7,8 +7,7 @@
   (:use :cl :esrap)
   (:export
    :ngs-call-function
-   :ngs-compile
-   :value :value-data))
+   :ngs-compile))
 
 (in-package :ngs)
 
@@ -63,6 +62,7 @@
 (defclass comment-node (incompilable-node) ())
 (defclass end-node (incompilable-node) ())
 
+(defclass keyword-node (node) ())
 
 (defun make-binop-node (ls)
   (let ((result (first ls)))
@@ -101,7 +101,12 @@
 
 (defrule number (or float integer) (:lambda (n &bounds start end) (make-instance 'number-node :data n :src %std-src)))
 
-(defrule string (and #\" #\") (:lambda (&bounds start end) (make-instance 'string-node :data "" :src %std-src)))
+;; XXX
+(defrule string-content (character-ranges (#\a #\z) (#\A #\Z))
+  (:lambda (list) (text list)))
+
+(defrule string (and #\" (* string-content) #\")
+  (:lambda (list &bounds start end) (make-instance 'string-node :data (text (second list)) :src %std-src)))
 
 (defrule letters (character-ranges (#\a #\z) (#\A #\Z)) (:lambda (list) (text list)))
 
@@ -218,18 +223,23 @@
   (:lambda (list &bounds start end)
     (make-instance 'function-call-node :children (list (first list) (fifth list)) :src %std-src)))
 
+(defrule true  "true"  (:constant (make-instance 'keyword-node :data :true)))
+(defrule false "false" (:constant (make-instance 'keyword-node :data :false)))
+(defrule null  "null"  (:constant (make-instance 'keyword-node :data :null)))
+
 (defrule non-binary-operation (or
                                assignment
                                function-call
                                number
                                string
+                               true
+                               false
+                               null
                                varname))
 
 ;; Parser - end ------------------------------
 
 ;; Variables - start ------------------------------
-
-(defstruct value data type meta id)
 
 (defclass lexical-scopes ()
   ((hashes
@@ -252,30 +262,28 @@
 (defun one-level-deeper-lexical-vars (ls)
   (make-instance 'lexical-scopes :hashes (cons (make-hash-table :test #'equal :size 20) (lexical-scopes-hashes ls))))
 
-(defun getvar (name vars &optional (include-top-level t))
-  (let ((key (value-data name)))
-    ;; (format t "GETVAR ~S ~S~%" key vars)
-    (loop for hash in (if include-top-level
-                          (lexical-scopes-hashes vars)
-                          (butlast (lexical-scopes-hashes vars)))
-       do (multiple-value-bind (result found) (gethash key hash)
-            (when found (return-from getvar (values result hash)))))
-    (error 'variable-not-found :varname name :stack-trace *source-position*)))
+(defun get-var (name vars &optional (include-top-level t))
+  (loop for hash in (if include-top-level
+                        (lexical-scopes-hashes vars)
+                        (butlast (lexical-scopes-hashes vars)))
+     do (multiple-value-bind (result found) (gethash name hash)
+          (when found (return-from get-var (values result hash)))))
+  (error 'variable-not-found :varname name :stack-trace *source-position*))
 
-(defun getvar-or-default (name vars default)
-  (handler-case (getvar name vars)
+(defun get-var-or-default (name vars default)
+  (handler-case (get-var name vars)
     (variable-not-found () default)))
 
 (defun set-var (name vars value &optional (global t))
   (let ((dst-hash
-         (handler-case (multiple-value-bind (unused-result hash) (getvar name vars global)
+         (handler-case (multiple-value-bind (unused-result hash) (get-var name vars global)
                          (declare (ignore unused-result))
                          hash)
            (variable-not-found ()
              (if global
                  (first (last (lexical-scopes-hashes vars)))
                  (first (lexical-scopes-hashes vars)))))))
-    (setf (gethash (value-data name) dst-hash) value)))
+    (setf (gethash name dst-hash) value)))
 
 (defun set-local-var (name vars value) (set-var name vars value nil))
 
@@ -288,7 +296,7 @@
 
 ;; Types definitions - start ------------------------------
 
-(defstruct ngs-type name parents constructors)
+(defstruct ngs-type name parents constructors predicate)
 
 (defmethod print-object ((typ ngs-type) stream)
   (format stream "#<ngs-type ~A>" (ngs-type-name typ)))
@@ -296,23 +304,22 @@
 (defun %ngs-type-symbol (type-name)
   (intern (concatenate 'string "NGS-TYPE-" (string-upcase type-name))))
 
-(defmacro def-ngs-type (name)
+(defmacro def-ngs-type (name predicate)
   (let*
       ((symb (%ngs-type-symbol name)))
     `(progn
        (defvar ,symb
-         (make-ngs-type :name ,name))
-       (defun ,(intern (concatenate 'string "MK-" (string-upcase name))) (data)
-           (make-value :type ,symb :data data))
+         (make-ngs-type :name ,name :predicate ,predicate))
        (%set-global-variable ,name ,symb))))
 
-(def-ngs-type "Any")
-(def-ngs-type "Type")
-(def-ngs-type "Number")
-(def-ngs-type "String")
-(def-ngs-type "List")
-(def-ngs-type "Array")
-(def-ngs-type "Null")
+;; (def-ngs-type "Any"    #'(lambda (x) (declare (ignore x)) t))
+(def-ngs-type "Type"   #'ngs-type-p)
+(def-ngs-type "Number" #'numberp)
+(def-ngs-type "String" #'stringp)
+(def-ngs-type "List"   #'listp)
+(def-ngs-type "Array"  #'arrayp)
+(def-ngs-type "Null"   #'(lambda (x) (eq x :null)))
+(def-ngs-type "Bool"   #'(lambda (x) (or (eq x :true) (eq x :false))))
 
 ;; Types definitions - end ------------------------------
 
@@ -351,14 +358,14 @@
 
 (defmethod generate-code ((n null))                      nil)
 
-(defmethod generate-code ((n number-node))               (mk-number %data))
-(defmethod generate-code ((n string-node))               (mk-string %data))
-(defmethod generate-code ((n varname-node))             `(getvar ,(mk-string %data) vars))
+(defmethod generate-code ((n number-node))               %data)
+(defmethod generate-code ((n string-node))               %data)
+(defmethod generate-code ((n varname-node))             `(get-var ,%data vars))
 (defmethod generate-code ((n binary-operation-node))    `(ngs-call-function
-                                                          (getvar ,(mk-string %data) vars)
+                                                          (get-var ,%data vars)
                                                           (make-arguments :positional (list ,@(children-code n)))))
 (defmethod generate-code ((n assignment-node))          `(set-var
-                                                          (mk-string ,(node-data (first (node-children n))))
+                                                          ,(node-data (first (node-children n)))
                                                           vars
                                                           ,@(children-code n :start 1)
                                                           ,(node-data n)))
@@ -368,7 +375,8 @@
                                                            (ngs-define-function
                                                             ,%1
                                                             vars
-                                                            expected-parameters
+                                                            ,(first %data)
+                                                            ;; expected-parameters
                                                             (lambda (parameters)
                                                               (let ((vars (one-level-deeper-lexical-vars vars)))
                                                                 ,@(children-code n :start 1))))))
@@ -387,12 +395,14 @@
                                                                      `(set-local-var
                                                                        (first (nth ,i expected-parameters))
                                                                        vars
-                                                                       (mk-array (apply #'vector (subseq (arguments-positional parameters) ,i)))))
+                                                                       (subseq (arguments-positional parameters) ,i)))
                                                                     (t
                                                                      `(set-local-var (first (nth ,i expected-parameters)) vars
                                                                                      (if
                                                                                       (> (length (arguments-positional parameters)) ,i)
-                                                                                      (nth ,i (arguments-positional parameters))
+                                                                                      (guard-type
+                                                                                       (nth ,i (arguments-positional parameters))
+                                                                                       (second (nth ,i expected-parameters)))
                                                                                       ,(if (third pc)
                                                                                            `(third (nth ,i expected-parameters))
                                                                                            `(error 'parameters-mismatch)))))))))
@@ -403,6 +413,8 @@
                                                           (list ,@(loop
                                                                      for a in (node-children n) ; a is function-argument-node
                                                                      collecting (generate-code (first (node-children a)))))))
+
+(defmethod generate-code ((n keyword-node))             %data)
 
 (defmethod generate-code :around ((n node))
   `(let ((*source-position* (cons ,(or (node-src n) "<unknown>") *source-position*)))
@@ -430,20 +442,16 @@
 (define-condition runtime-error () ((stack-trace :initarg :stack-trace :initform nil :reader runtime-error-stack-trace)))
 (define-condition variable-not-found (runtime-error) ((varname :initarg :varname :reader variable-not-found-varname)))
 (define-condition method-implementatoin-not-found (runtime-error) ())
+(define-condition parameters-mismatch () ())
 
 (defmethod print-object ((e variable-not-found) stream)
-  (format stream "Variable '~A' not found" (value-data (variable-not-found-varname e))))
+  (format stream "Variable '~A' not found" (variable-not-found-varname e)))
 
 ;; TODO: check parents
-(defun ngs-is-subtype (sub typ)
-  (or
-   (eq sub typ)
-   nil))
-
 (defun ngs-value-is-of-type (val typ)
-  (ngs-is-subtype (value-type val) typ))
+  (or (null typ) (funcall (ngs-type-predicate typ) val)))
 
-(defun assert-type (val typ)
+(defun guard-type (val typ)
   (unless (ngs-value-is-of-type val typ)
     (error 'parameters-mismatch)))
 
@@ -452,11 +460,11 @@
      collecting key))
 
 ;; XXX - some issues, probably global/local
-(defun ngs-define-function (function-name vars expected-parameters lambda)
-  (let ((v (getvar-or-default function-name vars nil)))
+(defun ngs-define-function (function-name vars global lambda)
+  (let ((v (get-var-or-default function-name vars nil)))
     (if (typep v 'ngs-type)
         (setf (ngs-type-constructors v) (cons lambda (ngs-type-constructors v)))
-        (set-local-var function-name vars (cons lambda v)))))
+        (set-var function-name vars (cons lambda v) global))))
 
 ;; TODO - handle parameters-mismatch
 (defun ngs-call-function (methods arguments)
@@ -465,28 +473,29 @@
       (ngs-call-function (ngs-type-constructors methods) arguments)
       (progn
         (loop for m in methods
-           ;; do (format t "+ Trying implementation ~A~%" f)
-           do (return-from ngs-call-function (funcall m arguments)))
+           ;; do (format t "+ Trying implementation ~A~%" m)
+           do (handler-case (return-from ngs-call-function (funcall m arguments))
+                (parameters-mismatch () nil)))
         (error 'method-implementatoin-not-found))))
 
+;; (handler-case (get-var name vars)
+;;     (variable-not-found () default)))
 
-(define-symbol-macro %positionals (mapcar #'value-data (arguments-positional parameters)))
 
-(ngs-define-function (mk-string "+") *ngs-globals* nil (lambda (parameters) (mk-number (apply #'+ %positionals))))
+(defmacro native (name &body body)
+  `(ngs-define-function ,name *ngs-globals* t (lambda (parameters) ,@body)))
+(define-symbol-macro %positionals (arguments-positional parameters))
+(defmacro %call (name parameters)
+  `(ngs-call-function (get-var ,name *ngs-globals*) ,parameters))
 
-(ngs-define-function (mk-string "String")
-                     *ngs-globals*
-                     nil
-                     (lambda (parameters)
-                       (mk-string (format nil "~A" (value-data (first (arguments-positional parameters)))))))
+(native "+" (apply #'+ %positionals))
 
-(ngs-define-function (mk-string "echo")
-                     *ngs-globals*
-                     nil
-                     (lambda (parameters)
-                       (let ((v (ngs-call-function (getvar (mk-string "String") *ngs-globals*) parameters)))
-                         (format t "~A~%" (value-data v))
-                         v)))
+(native "String" (format nil "~A" (first (arguments-positional parameters))))
+
+(native "echo"
+  (let ((v (%call "String" parameters)))
+    (format t "~A~%" v)
+    v))
 
 ;; Runtime - end ------------------------------
 

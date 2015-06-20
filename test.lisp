@@ -15,9 +15,9 @@
 
 (defclass test-1 (test-case) ())
 
-(defmacro eql-test (name expr result)
+(defmacro equal-test (name expr result)
   `(def-test-method ,name ((test test-1) :run nil)
-     (assert-eql ,result (ngs:value-data (eval (ngs:ngs-compile ,expr "<test>"))))))
+     (assert-equal ,result (eval (ngs:ngs-compile ,expr "<test>")))))
 
 ;; For development
 (setf (tests (get-suite test-1)) nil)
@@ -49,7 +49,7 @@
     `(progn
        ,@(loop
             for tc in test-cases
-            collecting `(eql-test ,(ngs-test-name tc) ,(ngs-test-code tc) ,(ngs-test-expected-result tc))))))
+            collecting `(equal-test ,(ngs-test-name tc) ,(ngs-test-code tc) ,(ngs-test-expected-result tc))))))
 
 (setup-tests)
 

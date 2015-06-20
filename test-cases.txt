@@ -17,3 +17,27 @@ x=1; def f() { global x = 2 }; f(); x
 Set global variable at top level
 x=1; global x=2; x
 2
+
+Correct method implementation selection
+def ms(s:String) { 1 }
+def ms(n:Number) { 2 }
+ms("")
+1
+
+Constants
+true
+:true
+
+Define global method
+def dodefine() {
+	defg gmethod() {
+		 3
+	}
+}
+dodefine()
+gmethod()
+3
+
+Echo
+echo("echotest")
+"echotest"
