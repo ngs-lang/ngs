@@ -54,3 +54,7 @@ defg m(x) { x + 10 }; m(1)
 List splice
 a=[1,2]; [3,*a,4]
 (list 3 1 2 4)
+
+Function arguments splice
+a=[1,2]; defg f2(x,y) { [y,x] }; f2(*a)
+(list 2 1)

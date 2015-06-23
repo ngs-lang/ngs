@@ -2,8 +2,9 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Re-implement in Lisp
-** DONE show native functins in stack trace
-** DONE Splice in list
+** DONE Function arguments splice
+** Fail parameters match if there are too many arguments
+** Fail def/defg fname() if fname containts non-list
 * Now
 ** DONE Redo type system
 ** CLI

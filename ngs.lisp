@@ -456,11 +456,13 @@
                                                                                            `(error 'parameters-mismatch)))))))))
 
 (defmethod generate-code ((n function-call-node))       `(ngs-call-function ,%1 ,%2))
+;; TODO: support named arguments
 (defmethod generate-code ((n function-arguments-node))  `(make-arguments
                                                           :positional
-                                                          (list ,@(loop
-                                                                     for a in (node-children n) ; a is function-argument-node
-                                                                     collecting (generate-code (first (node-children a)))))))
+                                                          ,(generate-code
+                                                            (process-possible-splice
+                                                             (make-instance 'list-node
+                                                                            :children (mapcar #'(lambda (a) (first (node-children a))) (node-children n)))))))
 
 (defmethod generate-code ((n keyword-node))             %data)
 (defmethod generate-code ((n list-node))                `(list ,@%children))
