@@ -66,6 +66,8 @@
 (defclass keyword-node (node) ())
 
 (defclass list-node (node) ())
+(defclass splice-node (node) ())
+(defclass list-concat-node (node) ())
 
 (defun make-binop-node (ls)
   (let ((result (first ls)))
@@ -73,6 +75,18 @@
        for (op expr) in (second ls)
        do (setq result (make-instance 'binary-operation-node :data (second op) :children (list result expr))))
     result))
+
+(defun process-possible-splice (node)
+  (if (some #'(lambda (x) (typep x 'splice-node)) (node-children node))
+      (make-instance
+       'list-concat-node
+       :children
+       (mapcar #'(lambda (x)
+                   (if (typep x 'splice-node)
+                       (first (node-children x))
+                       (make-instance 'list-node :children (list x))))
+               (node-children node)))
+      node))
 
 (define-symbol-macro %std-src (list 'list (make-human-position start) (make-human-position end)))
 
@@ -240,8 +254,15 @@
 
 (defrule list (and "[" optional-space (? (and expression (* (and optional-space "," optional-space expression optional-space)))) optional-space "]")
   (:lambda (list &bounds start end)
-    (make-instance 'list-node
-                   :children (when (first (third list)) (append (list (first (third list))) (mapcar #'fourth (second (third list)))))
+    (process-possible-splice
+     (make-instance 'list-node
+                    :children (when (first (third list)) (append (list (first (third list))) (mapcar #'fourth (second (third list)))))
+                    :src %std-src))))
+
+(defrule splice (and "*" optional-space expression)
+  (:lambda (list &bounds start end)
+    (make-instance 'splice-node
+                   :children (list (third list))
                    :src %std-src)))
 
 (defrule non-binary-operation (or
@@ -253,6 +274,7 @@
                                false
                                null
                                list
+                               splice
                                varname))
 
 ;; Parser - end ------------------------------
@@ -441,7 +463,8 @@
                                                                      collecting (generate-code (first (node-children a)))))))
 
 (defmethod generate-code ((n keyword-node))             %data)
-(defmethod generate-code ((n list-node))                `(list ,@(children-code n)))
+(defmethod generate-code ((n list-node))                `(list ,@%children))
+(defmethod generate-code ((n list-concat-node))         `(concatenate 'list ,@%children))
 
 (defmethod generate-code :around ((n node))
   `(let ((*source-position* (cons ,(or (node-src n) "<unknown>") *source-position*)))
@@ -517,7 +540,14 @@
 
 
 (defmacro native (name &body body)
-  `(ngs-define-function ,name *ngs-globals* t (lambda (parameters) ,@body)))
+  `(ngs-define-function
+    ,name *ngs-globals*
+    t
+    (lambda (parameters)
+      (let* ((source-position (format nil "<builtin:~A>" ,name))
+             (*source-position* (cons (list source-position source-position) *source-position*)))
+      ,@body))))
+
 (define-symbol-macro %positionals (arguments-positional parameters))
 (defmacro %call (name parameters)
   `(ngs-call-function (get-var ,name *ngs-globals*) ,parameters))

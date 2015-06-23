@@ -50,3 +50,7 @@ f(1)
 Method param test
 defg m(x) { x + 10 }; m(1)
 11
+
+List splice
+a=[1,2]; [3,*a,4]
+(list 3 1 2 4)
