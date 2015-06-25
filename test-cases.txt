@@ -58,3 +58,14 @@ a=[1,2]; [3,*a,4]
 Function arguments splice
 a=[1,2]; defg f2(x,y) { [y,x] }; f2(*a)
 (list 2 1)
+
+Function parameters splice
+defg fps(x, *y) { y }; fps(1,2,3)
+(list 2 3)
+
+Parameters number match
+def pnm(x,y) { 1 }
+def pnm() { 2 }
+def pnm(x) { 3 }
+pnm(10,11)
+1

@@ -14,6 +14,10 @@
 (defstruct parameters positional named)
 (defstruct arguments  positional named)
 
+
+(defvar *source-file-name* "TOP-LEVEL")
+(defvar *source-file-positions* #(0))
+
 ;; Parser - start ------------------------------
 
 
@@ -87,6 +91,15 @@
                        (make-instance 'list-node :children (list x))))
                (node-children node)))
       node))
+
+
+(defun make-human-position (position)
+  (let ((line (loop
+                 for p across *source-file-positions*
+                 for line from 0
+                 if (or (eq line (1- (length *source-file-positions*)))
+                        (> (elt *source-file-positions* (1+ line)) position)) return line)))
+    (format nil "~A:~A:~A" *source-file-name* (1+ line) (1+ (- position (elt *source-file-positions* line))))))
 
 (define-symbol-macro %std-src (list 'list (make-human-position start) (make-human-position end)))
 
@@ -188,8 +201,8 @@
   (:lambda (list)
     (make-instance 'function-parameter-node
                    :data (list
-                          (cond ((eq "*"  (first list)) 'positional-rest)
-                                ((eq "**" (first list)) 'named-rest)
+                          (cond ((equal "*"  (first list)) 'positional-rest)
+                                ((equal "**" (first list)) 'named-rest)
                                 (t 'regular)))
                    :children (list
                               (second list)
@@ -367,16 +380,7 @@
 
 ;; Compiler - start ------------------------------
 
-(defvar *source-file-name* "TOP-LEVEL")
-(defvar *source-file-positions* #(0))
-
-(defun make-human-position (position)
-  (let ((line (loop
-                 for p across *source-file-positions*
-                 for line from 0
-                 if (or (eq line (1- (length *source-file-positions*)))
-                        (> (elt *source-file-positions* (1+ line)) position)) return line)))
-    (format nil "~A:~A:~A" *source-file-name* (1+ line) (1+ (- position (elt *source-file-positions* line))))))
+(defgeneric generate-code (node))
 
 (define-symbol-macro %1 (generate-code (first (node-children n))))
 (define-symbol-macro %2 (generate-code (second (node-children n))))
@@ -393,8 +397,6 @@
     ,@(mapcar
        #'(lambda(x) `(list ,@(apply #'list (mapcar #'generate-code (node-children x)))))
        (node-children n))))
-
-(defgeneric generate-code (node))
 
 ;; For simplicity of generate-expected-parameters, which has nullable fields in each parameter
 
@@ -432,7 +434,12 @@
 ;; 2. set local variables
 ;; 3. do it smarter and more efficient
 (defmethod generate-code ((n function-parameters-node)) `(progn
-                                                           ;; (format t "GOT PARAMS: ~S~%" parameters)
+                                                           ,(when
+                                                             (notany
+                                                              #'(lambda (p) (eq (first (node-data p)) 'positional-rest))
+                                                              (node-children n))
+                                                             `(when (> (length (arguments-positional parameters)) ,(length (node-children n)))
+                                                                (error 'parameters-mismatch)))
                                                            ,@(loop
                                                                 for p in (node-children n)
                                                                 for pc = (node-children p)
