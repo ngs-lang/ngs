@@ -129,7 +129,26 @@
 
 (defrule float (and optional-sign digits "." digits) (:lambda (list) (with-input-from-string (s (text list)) (read s))))
 
-(defrule number (or float integer) (:lambda (n &bounds start end) (make-instance 'number-node :data n :src %std-src)))
+(defun make-integer-if-possible (x)
+  (multiple-value-bind (result remainder) (floor x)
+    (if (zerop remainder)
+        result
+        x)))
+
+;; Units idea - Thanks to Avishai Ish Shalom
+(defrule number (and (or float integer) (? (or #\K #\M #\G)))
+  (:lambda (n &bounds start end)
+    (make-instance
+     'number-node
+     :data (make-integer-if-possible (* (first n)
+                                        (let ((units (second n)))
+                                          ;; (format t "UNITS ~S~%" units)
+                                          (cond
+                                            ((equal units "K") 1024)
+                                            ((equal units "M") (* 1024 1024))
+                                            ((equal units "G") (* 1024 1024 1024))
+                                            (t 1)))))
+     :src %std-src)))
 
 ;; XXX
 (defrule string-content (character-ranges (#\a #\z) (#\A #\Z))
