@@ -2,7 +2,7 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Re-implement in Lisp
-** DONE Fail parameters match if there are too many arguments
+** DONE String interpolation
 ** Fail def/defg fname() if fname containts non-list
 * Now
 ** DONE Redo type system
