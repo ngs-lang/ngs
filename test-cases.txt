@@ -71,5 +71,5 @@ pnm(10,11)
 1
 
 String interpolation
-x=1; y=2; "ab\x40\u0040\U00000040cd${x}ef${y+10}\t"
-"ab@@@cd1ef12	"
+x=1; y=2; "ab\x40\u0040\U00000040cd${x}ef${y+10}\t$y$"
+"ab@@@cd1ef12	2$"
