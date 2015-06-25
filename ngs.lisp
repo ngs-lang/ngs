@@ -49,6 +49,7 @@
 
 (defclass number-node (node) ())
 (defclass string-node (node) ())
+(defclass string-container-node (node) ())
 (defclass binary-operation-node (node) ())
 (defclass identifier-node (node) ())
 (defclass varname-node (node) ())
@@ -115,7 +116,13 @@
 
 (defrule optional-sign (or "+" "-" ""))
 
-(defrule digits (+ (or "0" "1" "2" "3" "4" "5" "6" "7" "8" "9")))
+(defrule digit (character-ranges (#\0 #\9)))
+
+(defrule digits (+ digit))
+
+(defrule hex-digit (or digit (character-ranges (#\a #\f) (#\A #\F))))
+
+(defrule hex-digits (+ hex-digit))
 
 (defrule inline-space (+ (or #\Space #\Tab)) (:constant nil))
 
@@ -150,12 +157,61 @@
                                             (t 1)))))
      :src %std-src)))
 
-;; XXX
-(defrule string-content (character-ranges (#\a #\z) (#\A #\Z))
-  (:lambda (list) (text list)))
+;; http://en.wikipedia.org/wiki/Escape_sequences_in_C
+(defparameter *escape-chars*
+  '((#\a 7)
+    (#\b 8)
+    (#\e 27)
+    (#\f 12)
+    (#\n 10)
+    (#\r 13)
+    (#\t 9)))
 
-(defrule string (and #\" (* string-content) #\")
-  (:lambda (list &bounds start end) (make-instance 'string-node :data (text (second list)) :src %std-src)))
+(defun is-escape-char (ch) (assoc ch *escape-chars*))
+
+(defrule string-contents-common-escape (and #\\ (is-escape-char character))
+  (:lambda (list)
+    (make-instance 'string-node :data (text (code-char (second (assoc (second list) *escape-chars*)))))))
+
+(define-symbol-macro %code-char (make-instance 'string-node :data (text (code-char (parse-integer (text (cddr list)) :radix 16)))))
+(defrule string-contents-common-x (and #\\ #\x hex-digit hex-digit) (:lambda (list) %code-char))
+(defrule string-contents-common-u (and #\\ #\u hex-digit hex-digit hex-digit hex-digit) (:lambda (list) %code-char))
+(defrule string-contents-common-cap-u (and #\\ #\U
+                                           hex-digit hex-digit hex-digit hex-digit
+                                           hex-digit hex-digit hex-digit hex-digit) (:lambda (list) %code-char))
+
+(defrule string-contents-common (or
+                                 string-contents-common-escape
+                                 string-contents-common-x
+                                 string-contents-common-u
+                                 string-contents-common-cap-u))
+
+(defrule string-contents-var (and "$" varname)
+  (:lambda (list)
+    ;; (format t "string-contents-var: ~S~%" list)
+    (second list)))
+
+(defrule string-contents-expression (and "${" expression "}")
+  (:lambda (list)
+    (second list)))
+
+(defun not-single-quote (x) (not (eq x #\')))
+(defun not-double-quote (x) (not (eq x #\")))
+
+(defrule not-double-quote (not-double-quote character)
+  (:lambda (list)
+    (make-instance 'string-node :data (text list))))
+
+(defrule string-contents-dq (+ (or
+                                string-contents-var
+                                string-contents-expression
+                                string-contents-common
+                                not-double-quote)))
+
+(defrule string-dq (and #\" (* string-contents-dq) #\")
+  (:lambda (list &bounds start end) (make-instance 'string-container-node :children (first (second list)) :src %std-src)))
+
+(defrule string (or string-dq))
 
 (defrule letters (character-ranges (#\a #\z) (#\A #\Z)) (:lambda (list) (text list)))
 
@@ -417,6 +473,32 @@
        #'(lambda(x) `(list ,@(apply #'list (mapcar #'generate-code (node-children x)))))
        (node-children n))))
 
+;; TODO :src
+(defun string-container-children-optimize (list)
+  (if list
+      (let ((p (position-if-not #'(lambda (x) (typep x 'string-node)) list)))
+        (if (eq 0 p)
+            (cons
+             (first list)
+             (string-container-children-optimize (rest list)))
+            (cons
+             (make-instance 'string-node :data (apply #'concatenate 'string (mapcar #'(lambda (x) (node-data x)) (subseq list 0 p))))
+             (subseq list (or p (length list))))))
+      nil))
+
+(defun make-function-call-node (fname positionals)
+  (make-instance
+   'function-call-node
+   :children (list
+              (make-instance 'varname-node :data fname)
+              (make-instance 'function-arguments-node :children (mapcar #'(lambda (x) (make-instance 'function-argument-node :children (list x))) positionals)))
+   :src (node-src (first positionals))))
+
+(defun wrap-with-call-to-string (n)
+  (if (typep n 'string-node)
+      n
+      (make-function-call-node "String" (list n))))
+
 ;; For simplicity of generate-expected-parameters, which has nullable fields in each parameter
 
 (defmethod generate-code ((n null))                      nil)
@@ -493,6 +575,15 @@
 (defmethod generate-code ((n keyword-node))             %data)
 (defmethod generate-code ((n list-node))                `(list ,@%children))
 (defmethod generate-code ((n list-concat-node))         `(concatenate 'list ,@%children))
+
+(defmethod generate-code ((n string-container-node))    (if (null (node-children n))
+                                                            ""
+                                                            (let* ((children (string-container-children-optimize (node-children n)))
+                                                                   (stringified-children (mapcar #'wrap-with-call-to-string children)))
+                                                              (if (eq 1 (length stringified-children))
+                                                                  (generate-code (first stringified-children))
+                                                                  `(apply #'concatenate (list 'string ,@(mapcar #'generate-code stringified-children)))))))
+
 
 (defmethod generate-code :around ((n node))
   `(let ((*source-position* (cons ,(or (node-src n) "<unknown>") *source-position*)))

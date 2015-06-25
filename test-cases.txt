@@ -69,3 +69,7 @@ def pnm() { 2 }
 def pnm(x) { 3 }
 pnm(10,11)
 1
+
+String interpolation
+x=1; y=2; "ab\x40\u0040\U00000040cd${x}ef${y+10}\t"
+"ab@@@cd1ef12	"
