@@ -73,6 +73,7 @@
 (defclass list-node (node) ())
 (defclass splice-node (node) ())
 (defclass list-concat-node (node) ())
+(defclass getattr-node (node) ())
 
 (defun make-binop-node (ls)
   (let ((result (first ls)))
@@ -353,17 +354,51 @@
                    :children (list (third list))
                    :src %std-src)))
 
-(defrule non-binary-operation (or
-                               assignment
-                               function-call
-                               number
-                               string
-                               true
-                               false
-                               null
-                               list
-                               splice
-                               varname))
+(defrule non-binary-operation (or chain))
+
+(defrule chain (and non-chain (* chain-item))
+  (:lambda (list)
+    (let ((result (first list)))
+      (loop for n in (second list)
+         do (nsubst result :arg (second n))
+         do (setq result (first n)))
+      result)))
+
+(defrule chain-item (or
+                     chain-item-dot-call
+                     chain-item-getattr
+                     ;; chain-item-getitem
+                     ))
+
+(defrule chain-item-dot-call (and "." varname optional-space "(" function-arguments ")")
+  (:lambda (list &bounds start end)
+    (let*
+        ((args (fifth list))
+         (target-list (list :arg)))
+      (setf (node-children args) (cons (make-instance 'function-argument-node :children target-list) (node-children args)))
+      (list
+       (make-instance 'function-call-node :children (list (second list) args) :src %std-src)
+       target-list))))
+
+(defrule chain-item-getattr (and "." identifier)
+  (:lambda (list &bounds start end)
+    (let ((target-list (list :arg (second list))))
+      (list
+       (make-instance 'getattr-node :children target-list :src %std-src)
+       target-list))))
+
+
+(defrule non-chain (or
+                    assignment
+                    function-call
+                    number
+                    string
+                    true
+                    false
+                    null
+                    list
+                    splice
+                    varname))
 
 ;; Parser - end ------------------------------
 
@@ -584,6 +619,11 @@
                                                                   (generate-code (first stringified-children))
                                                                   `(apply #'concatenate (list 'string ,@(mapcar #'generate-code stringified-children)))))))
 
+(defmethod generate-code ((n getattr-node))             `(ngs-call-function
+                                                          (get-var "__get_attr" vars)
+                                                          (make-arguments :positional (list ,@(children-code n)))))
+
+;; GENERATE MARKER
 
 (defmethod generate-code :around ((n node))
   `(let ((*source-position* (cons ,(or (node-src n) "<unknown>") *source-position*)))
@@ -626,6 +666,12 @@
     (error 'parameters-mismatch))
   val)
 
+(defun guard-equalp (v1 v2)
+  (unless (equalp v1 v2)
+    (error 'parameters-mismatch))
+  v1)
+
+
 (defun hash-keys (h)
   (loop for key being the hash-keys of h
      collecting key))
@@ -657,6 +703,9 @@
 ;; (handler-case (get-var name vars)
 ;;     (variable-not-found () default)))
 
+(define-symbol-macro %positionals (arguments-positional parameters))
+(define-symbol-macro %p1 (first %positionals))
+(define-symbol-macro %p2 (second %positionals))
 
 (defmacro native (name &body body)
   `(ngs-define-function
@@ -667,19 +716,29 @@
              (*source-position* (cons (list source-position source-position) *source-position*)))
       ,@body))))
 
-(define-symbol-macro %positionals (arguments-positional parameters))
+(defmacro native-getattr (typ &body body) `(native "__get_attr"
+                                             (guard-type %p1 ,typ)
+                                             (cond
+                                             ,@(loop
+                                                  for clause in body
+                                                  collecting `((equalp %p2 ,(first clause)) ,(second clause))))))
+
 (defmacro %call (name parameters)
   `(ngs-call-function (get-var ,name *ngs-globals*) ,parameters))
 
 ;; TODO: guard - Number(s)
 (native "+" (apply #'+ %positionals))
 
-(native "String" (format nil "~A" (first %positionals)))
+(native "String" (format nil "~A" %p1))
 
 (native "echo"
   (let ((v (%call "String" parameters)))
     (format t "~A~%" v)
     v))
+
+(native-getattr ngs-type-type
+  ("name" (ngs-type-name %p1))
+  ("constructors" (ngs-type-constructors %p1)))
 
 ;; Runtime - end ------------------------------
 

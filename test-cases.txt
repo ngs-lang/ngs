@@ -73,3 +73,11 @@ pnm(10,11)
 String interpolation
 x=1; y=2; "ab\x40\u0040\U00000040cd${x}ef${y+10}\t$y$"
 "ab@@@cd1ef12	2$"
+
+Get attribute
+Number.name
+"Number"
+
+Dot call
+1.String()
+"1"
