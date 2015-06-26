@@ -2,7 +2,8 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Re-implement in Lisp
-** DONE String interpolation
+** DONE syntax: x.y , x.f() , x[idx]
+** Fix __get_item crash with invalid number of parameters
 ** Fail def/defg fname() if fname containts non-list
 * Now
 ** DONE Redo type system
