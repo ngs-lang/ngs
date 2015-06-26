@@ -74,6 +74,7 @@
 (defclass splice-node (node) ())
 (defclass list-concat-node (node) ())
 (defclass getattr-node (node) ())
+(defclass getitem-node (node) ())
 
 (defun make-binop-node (ls)
   (let ((result (first ls)))
@@ -367,8 +368,7 @@
 (defrule chain-item (or
                      chain-item-dot-call
                      chain-item-getattr
-                     ;; chain-item-getitem
-                     ))
+                     chain-item-getitem))
 
 (defrule chain-item-dot-call (and "." varname optional-space "(" function-arguments ")")
   (:lambda (list &bounds start end)
@@ -385,6 +385,13 @@
     (let ((target-list (list :arg (second list))))
       (list
        (make-instance 'getattr-node :children target-list :src %std-src)
+       target-list))))
+
+(defrule chain-item-getitem (and optional-space "[" optional-space expression optional-space "]")
+  (:lambda (list &bounds start end)
+    (let ((target-list (list :arg (fourth list))))
+      (list
+       (make-instance 'getitem-node :children target-list :src %std-src)
        target-list))))
 
 
@@ -623,6 +630,10 @@
                                                           (get-var "__get_attr" vars)
                                                           (make-arguments :positional (list ,@(children-code n)))))
 
+(defmethod generate-code ((n getitem-node))             `(ngs-call-function
+                                                          (get-var "__get_item" vars)
+                                                          (make-arguments :positional (list ,@(children-code n)))))
+
 ;; GENERATE MARKER
 
 (defmethod generate-code :around ((n node))
@@ -731,6 +742,10 @@
 
 (native "+" (all-positionals ngs-type-number) (apply #'+ %positionals))
 (native "+" (all-positionals ngs-type-string) (apply #'concatenate 'string %positionals))
+(native "__get_item" (nth (guard-type %p2 ngs-type-number) (guard-type %p1 ngs-type-list)))
+(native "__get_item" (let ((pos (guard-type %p2 ngs-type-number)))
+                            (subseq (guard-type %p1 ngs-type-string) pos (1+ pos))))
+
 
 (native "String" (format nil "~A" %p1))
 
