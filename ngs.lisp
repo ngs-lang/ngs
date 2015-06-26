@@ -716,6 +716,9 @@
              (*source-position* (cons (list source-position source-position) *source-position*)))
       ,@body))))
 
+(defmacro all-positionals (typ)
+  `(loop for p in %positionals do (guard-type p ,typ)))
+
 (defmacro native-getattr (typ &body body) `(native "__get_attr"
                                              (guard-type %p1 ,typ)
                                              (cond
@@ -726,8 +729,8 @@
 (defmacro %call (name parameters)
   `(ngs-call-function (get-var ,name *ngs-globals*) ,parameters))
 
-;; TODO: guard - Number(s)
-(native "+" (apply #'+ %positionals))
+(native "+" (all-positionals ngs-type-number) (apply #'+ %positionals))
+(native "+" (all-positionals ngs-type-string) (apply #'concatenate 'string %positionals))
 
 (native "String" (format nil "~A" %p1))
 
