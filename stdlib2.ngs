@@ -42,7 +42,7 @@ defg validate_source_file(f:String, content:String) { true }
 # TODO: path to search in
 # TODO: specify version of the required file/module
 defg require(f:String, *args) {
-	content = fetch_file(f)
+	content = File(f).fetch()
 	not(validate_source_file(f, content)) throws ['runtime', "Failed to validate source file $f"]
 	code = compile(content, f)
 	lambda_ = load(code)
@@ -184,33 +184,35 @@ defg map(n:Number, mapper:F, *args) {
 	ret
 }
 
-END
-
 # ----- Number - end -----
 
 
 # ----- Files sugar - start -----
 
+# later #
 global __literal_f = File
 
 # Reading
-defg parse_file(f:String, content:String) { content }
+defg parse(f:File, content:String) { content }
 
-defg parse_file(f:String, content:String) {
+END
+
+defg parse(f:File, content:String) {
 	guard f ~ /\\.json$/
 	r = catch from_json(content)
 	not(r[0]) throws ['runtime', "Failed to read json file ${f}"]
 	r[1]
 }
 
-defg read(f:String) {
-	content = fetch_file(f)
+defg read(f:File) {
+	content = f.fetch()
 	parse_file(f, content).meta('file', f)
 }
 
-defg read(f:File) { read(f.name) }
 
-defg lines(f:File) { read(f).lines() }
+defg read(f:String) { File(f).read() }
+
+defg lines(f:File) { f.read().lines() }
 
 defg read_till(fd:Number, tillChar:String, max:Number=1024) {
 	ret = ''

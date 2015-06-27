@@ -138,3 +138,7 @@ summ = 0; 5.each(F(x,y) { global summ = summ + x + y}, 1000); summ
 Stdlib map(Number,F,*args)
 3.map(F(x,y) { x+y}, 1000)
 #(1000 1001 1002)
+
+File literal
+f'/etc/motd'
+#P"/etc/motd"

@@ -83,6 +83,7 @@
 (defclass if-node (node) ())
 (defclass for-node (node) ())
 (defclass guard-node (node) ())
+(defclass literal-node (node) ())
 
 (defun make-binop-node (ls)
   (let ((result (first ls)))
@@ -233,6 +234,9 @@
   (:lambda (list &bounds start end) (make-instance 'string-container-node :children (first (second list)) :src %std-src)))
 
 (defrule string (or string-sq string-dq))
+
+(defrule literal (and identifier string)
+  (:lambda (list &bounds start end) (make-instance 'literal-node :children list :src %std-src)))
 
 (defrule letters (character-ranges (#\a #\z) (#\A #\Z)) (:lambda (list) (text list)))
 
@@ -449,6 +453,7 @@
                     assignment
                     function-call
                     number
+                    literal
                     string
                     true
                     false
@@ -536,19 +541,20 @@
        (%set-global-variable ,name ,symb))))
 
 ;; (def-ngs-type "Any"    #'(lambda (x) (declare (ignore x)) t))
-(def-ngs-type "Type"   #'ngs-type-p)
-(def-ngs-type "Number" #'numberp)
-(def-ngs-type "String" #'stringp)
-(def-ngs-type "List"   #'listp)
 (def-ngs-type "Array"  #'arrayp)
-(def-ngs-type "Seq"    #'(lambda (x) (or (listp x) (arrayp x) (stringp x))))
-(def-ngs-type "Hash"   #'hash-table-p)
-(def-ngs-type "Null"   #'(lambda (x) (eq x :null)))
 (def-ngs-type "Bool"   #'(lambda (x) (or (eq x :true) (eq x :false))))
 (def-ngs-type "F"      #'(lambda (x) (or
                                       (functionp x)
                                       (ngs-type-p x)
                                       (and (listp x) (functionp (first x))))))
+(def-ngs-type "File"   #'pathnamep)
+(def-ngs-type "Hash"   #'hash-table-p)
+(def-ngs-type "List"   #'listp)
+(def-ngs-type "Null"   #'(lambda (x) (eq x :null)))
+(def-ngs-type "Number" #'numberp)
+(def-ngs-type "Seq"    #'(lambda (x) (or (listp x) (arrayp x) (stringp x))))
+(def-ngs-type "String" #'stringp)
+(def-ngs-type "Type"   #'ngs-type-p)
 
 ;; Types definitions - end ------------------------------
 
@@ -734,6 +740,10 @@
                                                              do ,%3)
                                                           :null))
 
+(defmethod generate-code ((n literal-node))             `(ngs-call-function
+                                                          (get-var (apply #'concatenate 'string (list "__literal_" ,%1)) vars)
+                                                          (make-arguments :positional (list ,%2))))
+
 ;; GENERATE MARKER
 
 (defmethod generate-code :around ((n node))
@@ -893,7 +903,8 @@
 (native "in" (%bool (nth-value 1 (gethash %p1 (guard-type %p2 ngs-type-hash)))))
 
 ;; TODO: Consider using path, not string
-(native "fetch_file" (file-string (parse-namestring (guard-type %p1 ngs-type-string))))
+(native "File" (parse-namestring (guard-type %p1 ngs-type-string)))
+(native "fetch" (file-string (guard-type %p1 ngs-type-file)))
 
 
 (native "echo"
