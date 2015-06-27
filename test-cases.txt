@@ -26,7 +26,7 @@ ms("")
 
 Constants and a list
 [true, false, null]
-(list :true :false :null)
+#(:true :false :null)
 
 Define global method
 def dodefine() {
@@ -51,13 +51,13 @@ Method param test
 defg m(x) { x + 10 }; m(1)
 11
 
-List splice
+Array splice
 a=[1,2]; [3,*a,4]
-(list 3 1 2 4)
+#(3 1 2 4)
 
 Function arguments splice
 a=[1,2]; defg f2(x,y) { [y,x] }; f2(*a)
-(list 2 1)
+#(2 1)
 
 Function parameters splice
 defg fps(x, *y) { y }; fps(1,2,3)
@@ -109,11 +109,11 @@ String.meta()["xyz"]
 
 Meta - stdlib
 String.meta("xyz", 7); [String.meta("xyz"), String.has_meta("xyz"), String.has_meta("no-such-meta")]
-(list 7 :true :false)
+#(7 :true :false)
 
 Stdlib not
 [not(true), not(false)]
-(list :false :true)
+#(:false :true)
 
 Stdlib __neq
 __neq(1,2)
@@ -121,15 +121,15 @@ __neq(1,2)
 
 Stdlib String(Bool)
 [true.String(), false.String()]
-(list "true" "false")
+#("true" "false")
 
 Stdlib Number(Bool)
 [true.Number(), false.Number()]
-(list 1 0)
+#(1 0)
 
 Stdlib min,max
 [min(10,20), min(20,10), max(30,40), max(40, 30)]
-(list 10 10 40 40)
+#(10 10 40 40)
 
 Stdlib each(Number,F,*args)
 summ = 0; 5.each(F(x,y) { global summ = summ + x + y}, 1000); summ
@@ -137,4 +137,4 @@ summ = 0; 5.each(F(x,y) { global summ = summ + x + y}, 1000); summ
 
 Stdlib map(Number,F,*args)
 3.map(F(x,y) { x+y}, 1000)
-(list 1000 1001 1002)
+#(1000 1001 1002)

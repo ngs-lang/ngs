@@ -73,8 +73,10 @@
 (defclass keyword-node (node) ())
 
 (defclass list-node (node) ())
+(defclass array-node (node) ())
 (defclass splice-node (node) ())
 (defclass list-concat-node (node) ())
+(defclass array-concat-node (node) ())
 (defclass getattr-node (node) ())
 (defclass getitem-node (node) ())
 (defclass setitem-node (node) ())
@@ -89,10 +91,10 @@
        do (setq result (make-instance 'binary-operation-node :data (second op) :children (list result expr))))
     result))
 
-(defun process-possible-splice (node)
+(defun process-possible-splice (result-type node)
   (if (some #'(lambda (x) (typep x 'splice-node)) (node-children node))
       (make-instance
-       'list-concat-node
+       result-type
        :children
        (mapcar #'(lambda (x)
                    (if (typep x 'splice-node)
@@ -366,7 +368,8 @@
 (defrule list (and "[" optional-space (? (and expression (* (and optional-space "," optional-space expression optional-space)))) optional-space "]")
   (:lambda (list &bounds start end)
     (process-possible-splice
-     (make-instance 'list-node
+     'array-concat-node
+     (make-instance 'array-node
                     :children (when (first (third list)) (append (list (first (third list))) (mapcar #'fourth (second (third list)))))
                     :src %std-src))))
 
@@ -667,12 +670,26 @@
                                                           :positional
                                                           ,(generate-code
                                                             (process-possible-splice
+                                                             'list-concat-node
                                                              (make-instance 'list-node
                                                                             :children (mapcar #'(lambda (a) (first (node-children a))) (node-children n)))))))
 
 (defmethod generate-code ((n keyword-node))             %data)
 (defmethod generate-code ((n list-node))                `(list ,@%children))
+(defmethod generate-code ((n array-node))               `(make-array
+                                                          ,(length (node-children n))
+                                                          :adjustable t
+                                                          :fill-pointer t
+                                                          :initial-contents (list ,@%children)))
+
 (defmethod generate-code ((n list-concat-node))         `(concatenate 'list ,@%children))
+
+(defmethod generate-code ((n array-concat-node))        `(let ((l (concatenate 'list ,@%children)))
+                                                           (make-array
+                                                            (length l)
+                                                            :adjustable t
+                                                            :fill-pointer t
+                                                            :initial-contents l)))
 
 (defmethod generate-code ((n string-container-node))    (if (null (node-children n))
                                                             ""
@@ -858,7 +875,10 @@
 
 ;; list[n]
 (native "__get_item" (nth (guard-type %p2 ngs-type-number) (guard-type %p1 ngs-type-list)))
-(native "push" (guard-type %p1 ngs-type-list) (nconc %p1 (list %p2)))
+
+;; Array
+(native "__get_item" (elt (guard-type %p1 ngs-type-array) (guard-type %p2 ngs-type-number)))
+(native "push" (guard-type %p1 ngs-type-array) (vector-push-extend %p2 %p1))
 
 (native "String" (format nil "~A" %p1))
 (native "__get_item" (let ((pos (guard-type %p2 ngs-type-number)))

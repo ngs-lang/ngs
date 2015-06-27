@@ -17,7 +17,7 @@
 
 (defmacro equal-test (name expr result)
   `(def-test-method ,name ((test test-1) :run nil)
-     (assert-equal ,result (eval (ngs:ngs-compile ,expr "<test>")))))
+     (assert-true (equalp ,result (eval (ngs:ngs-compile ,expr "<test>"))))))
 
 ;; For development
 (setf (tests (get-suite test-1)) nil)
