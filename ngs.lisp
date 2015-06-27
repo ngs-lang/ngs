@@ -27,7 +27,8 @@
    (data :initarg :data :initform nil :accessor node-data)))
 
 (defparameter *required-space-binary-operators*
-  '(("or")
+  '(("throws")
+    ("or")
     ("and")
     ("in" "not in")))
 
@@ -75,6 +76,7 @@
 (defclass list-concat-node (node) ())
 (defclass getattr-node (node) ())
 (defclass getitem-node (node) ())
+(defclass setitem-node (node) ())
 
 (defun make-binop-node (ls)
   (let ((result (first ls)))
@@ -230,7 +232,11 @@
 
 (defrule identifier (or identifier-immediate))
 
-(defrule expression (or comment end function-definition lambda binary-expression-1))
+(defrule setitem (and binary-expression-1 optional-space "[" optional-space expression optional-space "]" optional-space "=" optional-space expression)
+  (:lambda (list &bounds start end)
+    (make-instance 'setitem-node :children (list (first list) (fifth list) (nth 10 list)) :src %std-src)))
+
+(defrule expression (or comment end setitem function-definition lambda binary-expression-1))
 
 (defrule varname identifier-whole-text
   (:lambda (list &bounds start end)
@@ -387,7 +393,7 @@
        (make-instance 'getattr-node :children target-list :src %std-src)
        target-list))))
 
-(defrule chain-item-getitem (and optional-space "[" optional-space expression optional-space "]")
+(defrule chain-item-getitem (and optional-space "[" optional-space expression optional-space "]" (! (and optional-space "=")))
   (:lambda (list &bounds start end)
     (let ((target-list (list :arg (fourth list))))
       (list
@@ -428,6 +434,8 @@
 
 (defvar *ngs-globals* (make-instance 'lexical-scopes))
 (defvar *source-position* nil)
+;; TODO: consider :synchronized
+(defvar *ngs-meta* (make-hash-table :weakness :key))
 
 (defun one-level-deeper-lexical-vars (ls)
   (make-instance 'lexical-scopes :hashes (cons (make-hash-table :test #'equal :size 20) (lexical-scopes-hashes ls))))
@@ -490,6 +498,7 @@
 (def-ngs-type "String" #'stringp)
 (def-ngs-type "List"   #'listp)
 (def-ngs-type "Array"  #'arrayp)
+(def-ngs-type "Hash"   #'hash-table-p)
 (def-ngs-type "Null"   #'(lambda (x) (eq x :null)))
 (def-ngs-type "Bool"   #'(lambda (x) (or (eq x :true) (eq x :false))))
 
@@ -634,6 +643,9 @@
                                                           (get-var "__get_item" vars)
                                                           (make-arguments :positional (list ,@(children-code n)))))
 
+(defmethod generate-code ((n setitem-node))             `(ngs-call-function
+                                                          (get-var "__set_item" vars)
+                                                          (make-arguments :positional (list ,@(children-code n)))))
 ;; GENERATE MARKER
 
 (defmethod generate-code :around ((n node))
@@ -664,6 +676,8 @@
 (define-condition method-implementatoin-not-found (runtime-error) ())
 (define-condition calling-non-a-method (runtime-error) ())
 (define-condition parameters-mismatch () ())
+(define-condition ngs-user-exception (runtime-error) ((datum :initarg :datum :reader ngs-user-exception-datum)))
+(define-condition item-does-not-exist (runtime-error) ((datum :initarg :datum :reader ngs-user-exception-datum)))
 
 (defmethod print-object ((e variable-not-found) stream)
   (format stream "Variable '~A' not found" (variable-not-found-varname e)))
@@ -717,15 +731,32 @@
 (define-symbol-macro %positionals (arguments-positional parameters))
 (define-symbol-macro %p1 (first %positionals))
 (define-symbol-macro %p2 (second %positionals))
+(define-symbol-macro %p3 (third %positionals))
+
+(defun find-in-tree (item tree)
+  (if tree
+      (or
+       (eq (car tree) item)
+       (and (listp (car tree)) (find-in-tree item (car tree)))
+       (find-in-tree item (cdr tree)))
+      nil))
 
 (defmacro native (name &body body)
-  `(ngs-define-function
-    ,name *ngs-globals*
-    t
-    (lambda (parameters)
-      (let* ((source-position (format nil "<builtin:~A>" ,name))
-             (*source-position* (cons (list source-position source-position) *source-position*)))
-      ,@body))))
+  ;; (format t "find-in-tree: ~S~%" (find-in-tree '%p1 body))
+  (let ((expected-args-number (cond
+                                ((find-in-tree '%p3 body) 3)
+                                ((find-in-tree '%p2 body) 2)
+                                ((find-in-tree '%p1 body) 1)
+                                (t 0))))
+    `(ngs-define-function
+      ,name *ngs-globals*
+      t
+      (lambda (parameters)
+        (let* ((source-position (format nil "<builtin:~A>" ,name))
+               (*source-position* (cons (list source-position source-position) *source-position*)))
+          (when (not (eq (length %positionals) ,expected-args-number))
+            (error 'parameters-mismatch))
+          ,@body)))))
 
 (defmacro all-positionals (typ)
   `(loop for p in %positionals do (guard-type p ,typ)))
@@ -735,28 +766,60 @@
                                              (cond
                                              ,@(loop
                                                   for clause in body
-                                                  collecting `((equalp %p2 ,(first clause)) ,(second clause))))))
+                                                  collecting `((equalp %p2 ,(first clause)) ,@(rest clause))))))
 
 (defmacro %call (name parameters)
   `(ngs-call-function (get-var ,name *ngs-globals*) ,parameters))
 
-(native "+" (all-positionals ngs-type-number) (apply #'+ %positionals))
-(native "+" (all-positionals ngs-type-string) (apply #'concatenate 'string %positionals))
-(native "__get_item" (nth (guard-type %p2 ngs-type-number) (guard-type %p1 ngs-type-list)))
-(native "__get_item" (let ((pos (guard-type %p2 ngs-type-number)))
-                            (subseq (guard-type %p1 ngs-type-string) pos (1+ pos))))
+(defun %bool (x) (if x :true :false))
 
+(native "+" (all-positionals ngs-type-number) (+ %p1 %p2))
+(native "+" (all-positionals ngs-type-string) (concatenate 'string (list %p1 %p2)))
+(native "Bool" (%bool (not (zerop (guard-type %p1 ngs-type-number)))))
+
+;; list[n]
+(native "__get_item" (nth (guard-type %p2 ngs-type-number) (guard-type %p1 ngs-type-list)))
 
 (native "String" (format nil "~A" %p1))
+(native "__get_item" (let ((pos (guard-type %p2 ngs-type-number)))
+                       (subseq (guard-type %p1 ngs-type-string) pos (1+ pos))))
+
+(native "Hash" (make-hash-table :test #'equalp))
+(native "__get_item" (multiple-value-bind (result found) (gethash %p2 (guard-type %p1 ngs-type-hash))
+                       (if found
+                           result
+                           (error 'item-does-not-exist :datum %p2))))
+(native "__set_item" (setf (gethash %p2 (guard-type %p1 ngs-type-hash)) %p3))
+
+;; TODO: Consider using path, not string
+(native "fetch_file" (file-string (parse-namestring (guard-type %p1 ngs-type-string))))
+
 
 (native "echo"
-  (let ((v (%call "String" parameters)))
+  (let ((v (%call "String" (make-arguments :positional (list %p1)))))
     (format t "~A~%" v)
     v))
 
 (native-getattr ngs-type-type
   ("name" (ngs-type-name %p1))
   ("constructors" (ngs-type-constructors %p1)))
+
+;; TODO: Improve throw/catch because it's now simple
+(native "throws" (let ((b (%call "Bool" (make-arguments :positional (list %p1)))))
+                   (ecase b
+                     (:true (error 'ngs-user-exception :datum %p2))
+                     (:false %p1))))
+
+;; TODO: consider removing handler-case for runtime-error in ngs-compile when called from here
+(native "compile" (ngs-compile (guard-type %p1 ngs-type-string) (guard-type %p2 ngs-type-string)))
+
+;; TODO: type assertion
+(native "load" (lambda (load-generated-lambda-params) (declare (ignore load-generated-lambda-params)) (eval %p1)))
+
+(native "meta" (multiple-value-bind (result found) (gethash %p1 *ngs-meta*)
+                 (if found
+                     result
+                     (setf (gethash %p1 *ngs-meta*) (make-hash-table :test #'equalp)))))
 
 ;; Runtime - end ------------------------------
 

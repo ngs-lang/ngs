@@ -53,4 +53,6 @@
 
 (setup-tests)
 
+(eval (ngs:ngs-compile (ngs::file-string "stdlib2.ngs") "stdlib2.ngs"))
+
 (textui-test-run (get-suite test-1))

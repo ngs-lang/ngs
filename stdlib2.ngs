@@ -1,0 +1,770 @@
+# ********** Used for Lisp rewrire **********
+
+defg repr(x) { String(x) }
+defg __not_in(*args) { not(__in(*args)) }
+
+defg has(container, item) {item in container}
+defg has_no(container, item) {item not in container}
+
+defg __pipe(*args) { map(*args) }
+
+# ----- Type system sugar - start -----
+
+# act_as(M, ORIG, AS) -> defg M(x:ORIG, *args) { x.as(AS).M(*args) }
+# Method M acts on objects of type ORIG as if they are of type AS
+
+# # XXX - can we get rid of this? Looks bad
+# defg act_as(method:String, orig_type:Type, as_type:String) {
+# 	defg "$method"(x:orig_type, *args) {
+# 		m = globals()[method]
+# 		m(x.as(as_type), *args)
+# 	}
+# }
+
+defg String(t:Type) { "<Type ${t.name}>" }
+
+# later # defg Type(name:String, parents:Array) {
+# later # 	ret = Type(name)
+# later # 	parents.each(@ ret.inherits(X))
+# later # 	ret
+# later # }
+
+
+# ----- Type system sugar - end -----
+
+
+# ----- Loading code - start -----
+
+# Should be defined for files fetched from remote locations, maybe
+# in some other cases too.
+defg validate_source_file(f:String, content:String) { true }
+
+# TODO: path to search in
+# TODO: specify version of the required file/module
+defg require(f:String, *args) {
+	content = fetch_file(f)
+	not(validate_source_file(f, content)) throws ["runtime", "Failed to validate source file $f"]
+	code = compile(content, f)
+	lambda_ = load(code)
+	lambda_(*args)
+}
+
+# ----- Loading code - end -----
+
+
+# later # # ----- spawn sugar - start -----
+# later # # XXX: Warning: should be per Context or it will bite you
+# later # defg spawn_update_globals(args:Array, p:Process) {
+# later # 	g = globals()
+# later # 	g['P'] = p
+# later # 	if 'PP' not in g {
+# later # 		g['PP'] = {}
+# later # 	}
+# later # 	g['PP'][args[0]] = p
+# later # 
+# later # 	# Hack for CLI
+# later # 	thread().locals()['P'] = p
+# later # }
+# later # 
+# later # defg spawn(*args) {
+# later # 	# TODO: handle async
+# later # 	p = native_spawn(*args)
+# later # 	spawn_update_globals(args, p)
+# later # 	p.wait()
+# later # 	ok = cmd_finished_ok_p(p)
+# later # 	not(ok) throws ['runtime', 'Command execution failed: ' + inspect(args)]
+# later # 	p
+# later # }
+# later # 
+# later # defg spawn(*args) {
+# later # 	guard args.map(typeof).any(__neq, String)
+# later # 	spawn(*args.map(String))
+# later # }
+# later # 
+# later # # Convert execution of (example) '-f somefile' to 'test -f somefile'
+# later # defg spawn(*args) {
+# later # 	  guard args.len() > 1
+# later # 	  guard startsWith(args[0], '-')
+# later # 	  args = ['test'] + args
+# later # 	  spawn(*args)
+# later # }
+# later # 
+# later # defg cmd_finished_ok_p(p:Process) { p.exit_code == 0 }
+# later # 
+# later # defg cmd_finished_ok_p(p:Process) {
+# later # 	guard p.cmd == 'test'
+# later # 	p.exit_code in [0,1]
+# later # }
+# later # 
+# later # defg cmd_finished_ok_p(p:Process) {
+# later # 	guard p.cmd == 'false'
+# later # 	p.exit_code == 1
+# later # }
+# later # 
+# later # defg cmd_finished_ok_p(p:Process) {
+# later # 	guard p.cmd == 'service'
+# later # 	guard p.args[1] == 'status'
+# later # 	# Empirical
+# later # 	p.exit_code < 4
+# later # }
+# later # 
+# later # # ----- spawn sugar - end -----
+
+
+# ----- Meta sugar - start -----
+defg meta(x, k:String) {
+	x.meta()[k]
+}
+
+defg meta_dflt(x, k:String, v) { x.meta().get(k, v) }
+
+defg meta(x, k:String, v) {
+	x.meta()[k] = v
+	x
+}
+
+END
+
+defg has_meta(x, k:String) {
+	k in x.meta()
+}
+# ----- Meta sugar - end -----
+
+
+
+# ----- Null - start -----
+defg String(n:Null)   { 'null' }
+# ----- Null - end -----
+
+
+# ----- Bool - start -----
+
+defg not(x) { if x {false}{true} }
+defg __neq(a, b) { not(a==b) }
+
+# Type transformations
+defg String(b:Bool) { if b {'true'}{'false'} }
+defg Number(b:Bool) { if b {1}{0} }
+
+# ----- Bool - end -----
+
+
+# ----- Number - start -----
+
+defg Number(s:String) {
+	# TODO: checks, negatives, floats, base
+	ord_zero = ord('0')
+	ret = 0
+	s.each(F(ch) { ret = ret * 10 + ord(ch) - ord_zero })
+	ret
+}
+
+defg min(a:Number, b:Number) { if a<b {a}{b} }
+defg max(a:Number, b:Number) { if a<b {b}{a} }
+defg max(s:Seq) {
+	guard s.len() > 0
+	s.reduce(s[0], max)
+}
+
+# Functional
+
+defg each(n:Number, processor:F, *args) {
+	for(i=0;i<n;i=i+1) {
+		processor(i, *args)
+	}
+}
+
+defg map(n:Number, mapper:F, *args) {
+	ret = []
+	for(i=0;i<n;i=i+1) {
+		ret.push(mapper(i, *args))
+	}
+	ret
+}
+
+# ----- Number - end -----
+
+
+# ----- Files sugar - start -----
+
+global __literal_f = File
+
+# Reading
+defg parse_file(f:String, content:String) { content }
+
+defg parse_file(f:String, content:String) {
+	guard f ~ /\\.json$/
+	r = catch from_json(content)
+	not(r[0]) throws ['runtime', "Failed to read json file ${f}"]
+	r[1]
+}
+
+defg read(f:String) {
+	content = fetch_file(f)
+	parse_file(f, content).meta('file', f)
+}
+
+defg read(f:File) { read(f.name) }
+
+defg lines(f:File) { read(f).lines() }
+
+defg read_till(fd:Number, tillChar:String, max:Number=1024) {
+	ret = ''
+	while (ch = fd.read()) != tillChar {
+		ret = ret + ch
+		ret.len() > max throws ['runtime', 'read_till epic fail']
+		# echo("<CH thread=${thread().id} ord=${ch.ord()} ch=$ch ret=$ret>")
+	}
+	# echo("<READ_TILL thread=${thread().id} till=$tillChar ch=$ch ret=$ret>")
+	ret
+}
+
+# Anything else will break $(ls $f) and probably other stuff
+defg String(f:File) { f.name }
+defg Bool(p:Path) { $(-e $p).Bool() }
+defg Bool(f:File) { $(-f $f).Bool() }
+defg repr(f:File) { "File(${f.name.repr()})" }
+
+defg dirs() {
+	`find -maxdepth 1 -type d`.lines() @ slice(X,2,X.len()-2)
+}
+
+# ----- Files sugar - end -----
+
+
+# ----- Thread - start -----
+
+defg thread(f:Array) { thread(f.one()) }
+
+defg String(t:Thread) { "<Thread id=${t.id} state=${t.state}>" }
+
+defg __eq(a:Thread, b:Thread) { a.id == b.id }
+
+# ----- Thread - end -----
+
+
+# ----- Process - start -----
+
+defg repr(p:Process) { "<Process pid=${p.pid} code=${p.exit_code} id=${p.id} o=${p.stdout.len()} e=${p.stderr.len()}>" }
+
+# ----- Process - end -----
+
+
+# ----- Lock sugar - start -----
+defg acquire(l:Lock, f:F, *args) {
+	# TODO: maybe catch and rethrow after release()
+	l.acquire()
+	ret = f(*args)
+	l.release()
+	ret
+}
+# ----- Lock sugar - end -----
+
+
+# ----- Seq - start -----
+
+# Not the most efficient :/
+# I wonder why all other languages return -1 for not found.
+defg pos(s:Seq, subseq:Seq, start:Number=0) {
+	sl = s.len()
+	ssl = subseq.len()
+
+	sl < ssl returns null
+
+	j = sl - ssl + 1
+
+	for(i=start; i<j; i=i+1) {
+		slice(s, i, ssl) == subseq returns i
+	}
+	return null
+}
+
+defg split(s:Seq, delim:Seq) {
+	sl = s.len()
+	dl = delim.len()
+	ret = []
+	start = 0
+	while (i=s.pos(delim, start)) != null {
+		ret.push(s.slice(start, i-start))
+		start = i + dl
+	}
+	if(start<sl) {
+		ret.push(s.slice(start, sl-start))
+	}
+	ret
+}
+
+
+defg zip(a:Seq, b:Seq) {
+	l = len(a)
+	l != b.len() throws ['args', 'Zip with different Seqs length']
+	l@[a[X], b[X]]
+}
+
+defg flatten(s:Seq) {
+	ret = []
+	s.each(@X.each(@ret.push(X)))
+	ret
+}
+
+defg first(s:Seq)  { s[0] }
+defg second(s:Seq) { s[1] }
+defg third(s:Seq)  { s[2] }
+defg fourth(s:Seq) { s[3] }
+defg fifth(s:Seq)  { s[4] }
+
+defg last(s:Seq)   { s[-1] }
+
+# Abstract usage example:
+# servers.filter(F(x) {'unicorn' in x.tags}).one('Unicorn server').create_image('Unicorn backup')
+defg one(s:Seq, msg:String='item') {
+	s.len() != 1 throws ['data', "Expected array with exactly one $msg but had ${a.len()}", a]
+	s[0]
+}
+
+defg join(s:Seq, sep:String) {
+	ret = ''
+	j = s.len()
+	for(i=0;i<j;i=i+1) {
+		ret = ret + String(s[i])
+		if i < j - 1 {
+			ret = ret + sep
+		}
+	}
+	ret
+}
+
+defg join(s:Seq) { join(s, '') }
+
+# Predicates
+
+defg startsWith(s:Seq, pfx:Seq) {
+	not(len(s) < len(pfx))
+	and
+	s.slice(0, pfx.len()) == pfx
+}
+
+defg endsWith(s:Seq, sfx:Seq) {
+	l = sfx.len()
+	len(s) < l returns false
+	s.slice(s.len() - l, l) == sfx
+}
+
+# Functional
+
+defg each(s:Seq, processor:F, *args) {
+	j = s.len()
+	for(i=0;i<j;i=i+1) {
+		processor(s[i], *args)
+	}
+	s
+}
+
+defg each_star(s:Seq, processor:F, *args) { s.each(@processor(*X+args)) }
+
+defg map(s:Seq, mapper:F, *args) { s.len() @ mapper(s[X], *args) }
+
+defg map_star(s:Seq, mapper:F, *args) { s.len() @ mapper(*s[X] + args) }
+
+defg reduce(s:Seq, start, reducer:F) {
+	acc = start
+	s.each(F(x) { acc = reducer(acc, x) })
+	acc
+}
+
+defg any(s:Seq, predicate:F, *args) {
+	j = s.len()
+	for(i=0;i<j;i=i+1) {
+		predicate(s[i], *args) returns true
+	}
+	false
+}
+
+defg all(s:Seq, predicate:F, *args) {
+	j = s.len()
+	for(i=0;i<j;i=i+1) {
+		not(predicate(s[i], *args)) returns false
+	}
+	true
+}
+
+defg none(s:Seq, predicate:F, *args) {
+	not(any(s, predicate, *args))
+}
+
+defg all_in(a:Seq, x) {
+	a.all(@X in x)
+}
+
+defg filter(s:Seq, predicate:F, *args) {
+	ret = []
+	j = s.len()
+	for(i=0;i<j;i=i+1) {
+		if predicate(s[i], *args) {
+			ret.push(s[i])
+		}
+	}
+	ret
+}
+
+defg filter(s:Seq) { s @? X != null }
+defg without(a:Seq, v) { a @? X != v }
+
+
+defg count(s:Seq, predicate:F, *args) {
+	sum(s @ predicate(X, *args).Number())
+}
+
+# Misc
+defg values(s:Seq) { s }
+
+# Types transformations
+defg Bool(s:Seq) { s.len() > 0 }
+
+# Magic methods
+
+defg __in(v, s:Seq)  { any(s, __eq, v) }
+
+# defg __sub(a:Seq, b:Seq) { a @? X not in b }
+
+defg __get_item(s:Seq, idxs:Array) { idxs@s[X] }
+
+defg __get_item(s:Seq, idx:Number) {
+	guard idx < 0
+	l = s.len()
+	s[l+idx]
+}
+
+# ----- Seq - end -----
+
+
+# ----- String - start -----
+
+# String(SCALAR)
+defg String(s:String) { s }
+defg String(l:Lambda) { inspect(l) }
+defg String(c:Code)   { "<Compiled code>" }
+
+defg String(p:Process) {
+	# TODO:
+	#   Handle processes that are still running.
+	#   Handle stderr
+	#   Handle failed processes
+	#   Handle exit_code
+	p.stdout.strip()
+}
+
+defg String(a:Array) { guard typeof(a) == Array; '[' + a.join(', ') + ']' }
+
+defg String(h:Hash) { guard typeof(h) == Hash; '{' + h.map(F(k,v) { "$k: $v" }).join(', ') + '}' }
+
+# Functions
+# TODO: maybe generic for Seq
+defg fill(s:String, n:Number) {
+	t = n - s.len()
+	t < 1 returns s
+	s + ' ' * t
+}
+
+defg fill(nothing:Null, n:Number) { ' ' * n }
+
+defg strip(s:Seq, elts:Seq) {
+	l = s.len()
+	i = 0
+	while i < l and s[i] in elts {
+		i = i + 1
+	}
+	j = l-1
+	while j > i and s[j] in elts {
+		j = j - 1
+	}
+	s.slice(i, j-i+1)
+}
+
+defg strip(s:String) { strip(s, " \t\r\n") }
+# defg strip(a:Array) { a.map(strip) }
+
+defg split(s:String) { split(s, ' ') }
+
+defg lines(s:String) { split(s, '\n') }
+
+# TODO: escaping
+defg repr(s:String) { "'$s'" }
+
+# Magic methods
+defg __mul(s:String, n:Number) { join(n@s) }
+
+# Not sure, maybe Seq? Need use cases. For String it's: fname - '.txt' + '.bak'
+defg __sub(s:String, sfx:String) {
+	if s.endsWith(sfx) {
+		s.slice(0, s.len() - sfx.len())
+	} else {
+		# throw maybe?
+		s
+	}
+}
+
+# ----- String - end -----
+
+
+
+# ----- Array - start -----
+
+defg sum(a:Array) { reduce(a, 0, __add) }
+
+# Magic methods
+# Don't make it Seq. It causes infinite recursion I guess.
+defg __eq(a:Array, b:Array) {
+	a.len() == b.len()
+	and
+	all(zip(a,b), @ X[0] == X[1])
+}
+
+global __literal_w = split
+
+
+# Arithmetcis
+{
+	'add sub mul div'.split().each(F(op) {
+		defg "__$op"(a:Array, n:Number) { a.map(globals()["__$op"], n) }
+	})
+}
+
+# Magic methods
+defg __get_attr(a:Array, attr:String) { map(a, __get_attr, attr) }
+
+# ----- Array - end -----
+
+
+# ----- Hash - start -----
+
+# Constructors
+defg Hash(a:Array) {
+	ret = {}
+	a.each(F(x) { ret[x[0]] = x[1] })
+	ret
+}
+
+defg Hash(a:Array, v) { Hash(a@[X,v]) }
+
+defg Hash(keys:Array, mapper:F, *args) {
+	Hash(keys@[X, mapper(X, *args)])
+}
+
+# Functional
+
+defg each(h:Hash, processor:F, *args) { h.keys().each(@processor(X, h[X], *args)) }
+defg map(h:Hash, mapper:F, *args) { h.keys() @ mapper(X, h[X], *args) }
+defg filter(h:Hash, predicate:F, *args) {
+	ret = {}
+	h.each(F(k,v) {
+		if predicate(k, v, *args) {
+			ret[k] = v
+		}
+	})
+	ret
+}
+
+defg values(h:Hash) { h@Y }
+
+defg without(h:Hash, k:String) {
+	h @? X != k
+}
+
+# Misc
+defg get(h:Hash, k:String, dflt=null) {
+	if k in h {
+		h[k]
+	} else {
+		dflt
+	}
+}
+
+defg dflt(h:Hash, k:String, v) {
+	if k not in h {
+		h[k] = v
+	}
+	h
+}
+
+# Type transformations
+
+defg Bool(h:Hash)   { h.len() > 0 }
+
+# Magic methods
+defg __in(v, h:Hash) { v in h.keys() }
+
+defg __eq(a:Hash, b:Hash) {
+	a.len() == b.len()
+	and
+	a.keys().sort() == b.keys().sort()
+	and
+	all(a.keys(), @ a[X] == b[X])
+}
+
+defg __get_item(h:Hash, n:Number) { h[n.String()] }
+defg __get_item(h:Hash, keys:Array) { Hash(keys@[X, h[X]]) }
+defg __set_item(h:Hash, n:Number, v) { h[n.String()] = v }
+
+# ----- Hash - end -----
+
+
+# ----- Set - start -----
+
+global Set = Type('Set')
+
+defg count(s:Set, predicate:F, *args) { s.values().count(predicate, *args) }
+
+# ----- Set - end -----
+
+defg call(f:F, *args) { f(*args) }
+
+
+defg osname() { null }
+defg osname() { guard f'/etc/debian_version'; 'debian'}
+
+
+# ----- Output sugar - start -----
+
+defg echo(x) {
+	guard typeof(x) != String
+	x.String().echo()
+}
+
+defg echo(*args) {
+	guard args.len() > 1
+	args.each(echo)
+}
+
+# ----- Output sugar - end -----
+
+
+# ----- Set - start -----
+
+defg set_id(x)         { "id():${x.id().String()}" }
+defg set_id(n:Number)  { "num:$n" }
+defg set_id(s:String)  { "str:$s" }
+defg set_id(p:Process) { "prc:${p.id}" }
+defg set_id(t:Thread)  { "thr:${t.id}" }
+
+# Constructors
+defg Set()            { s=obj(Set); s.data={}; s }
+defg Set(items:Seq)   { ret = Set(); items.each(@ret.add(X)); ret }
+
+# Mutators
+defg add(s:Set, v)    { s.data[v.set_id()] = v; s }
+defg push(s:Set, v)   { add(s,v) }
+defg remove(s:Set, v) { s.data.remove(v.set_id()); s }
+
+# Transformations
+defg without(a:Set, v) { a @? X != v }
+defg __sub(a:Set, b:Set) { a @? X not in b }
+
+# Getters
+defg values(s:Set) { s.data.values() }
+defg len(s:Set) { s.data.len() }
+
+# Functional
+defg each(s:Set, *args)   { s.values().each(*args); s }
+defg map(s:Set, *args)    { s.values().map(*args).Set() }
+defg filter(s:Set, *args) { s.values().filter(*args).Set() }
+
+# Predicates
+defg Bool(s:Set)        { s.len() > 0 }
+defg __in(v, s:Set)     { v.set_id() in s.data }
+defg __eq(a:Set, b:Set) { a.values().sort() == b.values().sort() }
+
+# Misc
+defg String(s:Set)      { "<Set ${s.values()}>" }
+defg repr(s:Set)        { "Set(${s.values().sort().repr()})" }
+defg join(s:Set, *args) { join(s.values().sort(), *args) }
+
+
+# ----- Set - end -----
+
+
+# ----- `cmd` -----
+defg __capture(p:Process) { String(p) }
+
+
+# ----- ``cmd``- start -----
+
+# Or throw exception?
+defg __parse(p:Process) { String(p) }
+
+defg __parse(p:Process) {
+	s = String(p)
+	guard s
+	guard s[0] == '{'
+	s.from_json()
+}
+
+# ----- ``cmd``- end -----
+
+# ----- MaybeFile - start -----
+
+global MaybeFile = Type('MaybeFile', [File])
+
+defg MaybeFile(s:String) { File(s).as(MaybeFile) }
+
+defg lines(f:MaybeFile) {
+	guard not(f)
+	[]
+}
+
+defg read(f:MaybeFile) {
+	guard not(f)
+	''
+}
+
+# ----- MaybeFile - end -----
+
+# ----- DfltHash - start -----
+
+global DfltHash = Type('DfltHash')
+
+defg DfltHash(v) {
+	dh = obj(DfltHash)
+	dh.default = v
+	dh.data = {}
+	dh
+}
+
+defg __get_item(dh:DfltHash, k:String) {
+	dh.data.get(k, dh.default)
+}
+
+{
+	'__set_item keys values __in map each'.split().each(F(method) {
+		defg "$method"(dh:DfltHash, *args) { globals()[method].call(dh.data, *args) }
+	})
+}
+
+defg String(dh:DfltHash) { "<DfltHash dflt=${dh.default} data=${dh.data}>" }
+
+# ----- DfltHash - end -----
+
+# ----- Stats - start -----
+
+global Stats = Type('Stats', [DfltHash])
+
+defg Stats() {
+	s = DfltHash(0).as(Stats)
+}
+
+defg incr(s:Stats, k:String) {
+	s[k] = s[k] + 1
+}
+
+defg String(s:Stats) { "<Stats ${s.data}>" }
+
+# ----- Stats - end -----
+
+
+# ----- Host name utilities - start -----
+
+defg sanitize_hostname() {
+	# TODO
+}
+
+# ----- Host name utilities - end -----

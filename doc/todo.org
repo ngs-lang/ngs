@@ -3,8 +3,14 @@
 
 * Re-implement in Lisp
 ** DONE syntax: x.y , x.f() , x[idx]
+** Single quotes
+** Improve error messages
 ** Fix __get_item crash with invalid number of parameters
 ** Fail def/defg fname() if fname containts non-list
+** Consider function call for expression f(x,y) = z
+defg (x,y,=z) {
+do_something
+}
 * Now
 ** DONE Redo type system
 ** CLI

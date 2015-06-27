@@ -89,3 +89,20 @@ Get list item
 Get string character at index
 "abc"[1]
 "b"
+
+Hash
+h=Hash(); h[7]=8; h[7]
+8
+
+Hash with object key
+h=Hash(); h[String]=10; h[String]
+10
+
+Meta - basics
+String.meta()["xyz"] = "string-meta"
+String.meta()["xyz"]
+"string-meta"
+
+Meta - stdlib
+String.meta("xyz", 7); String.meta("xyz")
+7
