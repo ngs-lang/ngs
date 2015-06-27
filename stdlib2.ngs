@@ -147,14 +147,9 @@ defg Number(b:Bool) { if b {1}{0} }
 
 # ----- Bool - end -----
 
-END
-
-
-
-
-
 # ----- Number - start -----
 
+# later #
 defg Number(s:String) {
 	# TODO: checks, negatives, floats, base
 	ord_zero = ord('0')
@@ -165,6 +160,8 @@ defg Number(s:String) {
 
 defg min(a:Number, b:Number) { if a<b {a}{b} }
 defg max(a:Number, b:Number) { if a<b {b}{a} }
+
+# later #
 defg max(s:Seq) {
 	guard s.len() > 0
 	s.reduce(s[0], max)
@@ -178,6 +175,7 @@ defg each(n:Number, processor:F, *args) {
 	}
 }
 
+# TODO: Consider performance penalty for working with Lists here
 defg map(n:Number, mapper:F, *args) {
 	ret = []
 	for(i=0;i<n;i=i+1) {
@@ -185,6 +183,8 @@ defg map(n:Number, mapper:F, *args) {
 	}
 	ret
 }
+
+END
 
 # ----- Number - end -----
 

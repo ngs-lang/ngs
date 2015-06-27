@@ -33,9 +33,9 @@
     ("in" "not in")))
 
 (defparameter *optional-space-binary-operations*
-  '(("*" "/")
-    ("+" "-")
-    ("===" "==")))
+  '(("===" "!==" "==" "!=" "<" ">" "~")
+    ("*" "/")
+    ("+" "-")))
 
 (defparameter *binary-operators*
   (append
@@ -79,6 +79,8 @@
 (defclass getitem-node (node) ())
 (defclass setitem-node (node) ())
 (defclass if-node (node) ())
+(defclass for-node (node) ())
+(defclass guard-node (node) ())
 
 (defun make-binop-node (ls)
   (let ((result (first ls)))
@@ -424,8 +426,23 @@
                               (if (sixth list) (second (sixth list)) (make-instance 'keyword-node :data :null)))
                    :src %std-src)))
 
+(defun items-at-positions (positions list)
+  (loop for p in positions collecting (nth p list)))
+
+(defrule-spaced-seq for ("for" "(" expression ";" expression ";" expression ")" curly-braces-expressions)
+  (:lambda (list &bounds start end)
+    (make-instance 'for-node
+                   :children (items-at-positions '(4 8 12 16) list)
+                   :src %std-src)))
+
+(defrule guard (and "guard" space expression)
+  (:lambda (list &bounds start end)
+    (make-instance 'guard-node :children (list (third list)) :src %std-src)))
+
 (defrule non-chain (or
                     if
+                    for
+                    guard
                     assignment
                     function-call
                     number
@@ -460,6 +477,7 @@
 (defvar *source-position* nil)
 ;; TODO: consider :synchronized
 (defvar *ngs-meta* (make-hash-table :weakness :key))
+;; (defvar *ngs-list-origin* (make-hash-table :weakness :key))
 
 (defun one-level-deeper-lexical-vars (ls)
   (make-instance 'lexical-scopes :hashes (cons (make-hash-table :test #'equal :size 20) (lexical-scopes-hashes ls))))
@@ -520,9 +538,14 @@
 (def-ngs-type "String" #'stringp)
 (def-ngs-type "List"   #'listp)
 (def-ngs-type "Array"  #'arrayp)
+(def-ngs-type "Seq"    #'(lambda (x) (or (listp x) (arrayp x) (stringp x))))
 (def-ngs-type "Hash"   #'hash-table-p)
 (def-ngs-type "Null"   #'(lambda (x) (eq x :null)))
 (def-ngs-type "Bool"   #'(lambda (x) (or (eq x :true) (eq x :false))))
+(def-ngs-type "F"      #'(lambda (x) (or
+                                      (functionp x)
+                                      (ngs-type-p x)
+                                      (and (listp x) (functionp (first x))))))
 
 ;; Types definitions - end ------------------------------
 
@@ -533,6 +556,7 @@
 (define-symbol-macro %1 (generate-code (first (node-children n))))
 (define-symbol-macro %2 (generate-code (second (node-children n))))
 (define-symbol-macro %3 (generate-code (third (node-children n))))
+(define-symbol-macro %4 (generate-code (fourth (node-children n))))
 (define-symbol-macro %children (children-code n))
 (define-symbol-macro %data (node-data n))
 
@@ -674,6 +698,24 @@
                                                                  (make-arguments :positional (list ,%1)))
                                                            (:true ,%2)
                                                            (:false ,%3)))
+(defmethod generate-code ((n guard-node))               `(ecase (ngs-call-function
+                                                                 (get-var "Bool" vars)
+                                                                 (make-arguments :positional (list ,%1)))
+                                                           (:true :null)
+                                                           (:false (error 'parameters-mismatch))))
+
+(defmethod generate-code ((n for-node))                 `(progn
+                                                           ,%1
+                                                          (loop
+                                                            while
+                                                              (ecase (ngs-call-function
+                                                                      (get-var "Bool" vars)
+                                                                      (make-arguments :positional (list ,%2)))
+                                                                (:true t)
+                                                                (:false nil))
+                                                            do ,%4
+                                                             do ,%3)
+                                                          :null))
 
 ;; GENERATE MARKER
 
@@ -803,15 +845,20 @@
 (defun %bool (x) (if x :true :false))
 
 (native "==" (%bool (equalp %p1 %p2)))
+(native "!=" (%bool (not (equalp %p1 %p2))))
 (native "===" (%bool (eq %p1 %p2)))
+(native "!==" (%bool (not (eq %p1 %p2))))
+(native "<" (%bool (< %p1 %p2)))
+(native ">" (%bool (> %p1 %p2)))
 (native "+" (all-positionals ngs-type-number) (+ %p1 %p2))
 (native "+" (all-positionals ngs-type-string) (concatenate 'string (list %p1 %p2)))
-(native "Bool" (format t "FAILING BOOL: ~S~%"  %p1))
+;; (native "Bool" (format t "FAILING BOOL: ~S~%"  %p1))
 (native "Bool" (guard-type %p1 ngs-type-bool))
-;; (native "Bool" (%bool (not (zerop (guard-type %p1 ngs-type-number)))))
+(native "Bool" (%bool (not (zerop (guard-type %p1 ngs-type-number)))))
 
 ;; list[n]
 (native "__get_item" (nth (guard-type %p2 ngs-type-number) (guard-type %p1 ngs-type-list)))
+(native "push" (guard-type %p1 ngs-type-list) (nconc %p1 (list %p2)))
 
 (native "String" (format nil "~A" %p1))
 (native "__get_item" (let ((pos (guard-type %p2 ngs-type-number)))

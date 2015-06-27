@@ -2,7 +2,7 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Re-implement in Lisp
-** DONE Single quotes
+** Fix push(List, x)
 ** Make missing expressions return :null
 ** Improve error messages
 ** Fix __get_item crash with invalid number of parameters

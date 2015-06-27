@@ -126,3 +126,15 @@ Stdlib String(Bool)
 Stdlib Number(Bool)
 [true.Number(), false.Number()]
 (list 1 0)
+
+Stdlib min,max
+[min(10,20), min(20,10), max(30,40), max(40, 30)]
+(list 10 10 40 40)
+
+Stdlib each(Number,F,*args)
+summ = 0; 5.each(F(x,y) { global summ = summ + x + y}, 1000); summ
+5010
+
+Stdlib map(Number,F,*args)
+3.map(F(x,y) { x+y}, 1000)
+(list 1000 1001 1002)
