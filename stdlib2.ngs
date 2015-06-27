@@ -43,7 +43,7 @@ defg validate_source_file(f:String, content:String) { true }
 # TODO: specify version of the required file/module
 defg require(f:String, *args) {
 	content = fetch_file(f)
-	not(validate_source_file(f, content)) throws ["runtime", "Failed to validate source file $f"]
+	not(validate_source_file(f, content)) throws ['runtime', "Failed to validate source file $f"]
 	code = compile(content, f)
 	lambda_ = load(code)
 	lambda_(*args)
@@ -123,8 +123,6 @@ defg meta(x, k:String, v) {
 	x
 }
 
-END
-
 defg has_meta(x, k:String) {
 	k in x.meta()
 }
@@ -132,14 +130,15 @@ defg has_meta(x, k:String) {
 
 
 
+
 # ----- Null - start -----
 defg String(n:Null)   { 'null' }
 # ----- Null - end -----
 
-
 # ----- Bool - start -----
 
 defg not(x) { if x {false}{true} }
+
 defg __neq(a, b) { not(a==b) }
 
 # Type transformations
@@ -147,6 +146,11 @@ defg String(b:Bool) { if b {'true'}{'false'} }
 defg Number(b:Bool) { if b {1}{0} }
 
 # ----- Bool - end -----
+
+END
+
+
+
 
 
 # ----- Number - start -----

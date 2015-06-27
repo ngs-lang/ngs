@@ -34,7 +34,8 @@
 
 (defparameter *optional-space-binary-operations*
   '(("*" "/")
-    ("+" "-")))
+    ("+" "-")
+    ("===" "==")))
 
 (defparameter *binary-operators*
   (append
@@ -77,6 +78,7 @@
 (defclass getattr-node (node) ())
 (defclass getitem-node (node) ())
 (defclass setitem-node (node) ())
+(defclass if-node (node) ())
 
 (defun make-binop-node (ls)
   (let ((result (first ls)))
@@ -202,9 +204,17 @@
 (defun not-single-quote (x) (not (eq x #\')))
 (defun not-double-quote (x) (not (eq x #\")))
 
+(defrule not-single-quote (not-single-quote character)
+  (:lambda (list)
+    (make-instance 'string-node :data (text list))))
+
 (defrule not-double-quote (not-double-quote character)
   (:lambda (list)
     (make-instance 'string-node :data (text list))))
+
+(defrule string-contents-sq (+ (or
+                                string-contents-common
+                                not-single-quote)))
 
 (defrule string-contents-dq (+ (or
                                 string-contents-var
@@ -212,10 +222,13 @@
                                 string-contents-common
                                 not-double-quote)))
 
+(defrule string-sq (and #\' (* string-contents-sq) #\')
+  (:lambda (list &bounds start end) (make-instance 'string-container-node :children (first (second list)) :src %std-src)))
+
 (defrule string-dq (and #\" (* string-contents-dq) #\")
   (:lambda (list &bounds start end) (make-instance 'string-container-node :children (first (second list)) :src %std-src)))
 
-(defrule string (or string-dq))
+(defrule string (or string-sq string-dq))
 
 (defrule letters (character-ranges (#\a #\z) (#\A #\Z)) (:lambda (list) (text list)))
 
@@ -400,8 +413,19 @@
        (make-instance 'getitem-node :children target-list :src %std-src)
        target-list))))
 
+(defrule curly-braces-expressions (and "{" optional-space expressions optional-space "}") (:lambda (list) (third list)))
+
+(defrule if (and "if" space expression optional-space curly-braces-expressions (? (and optional-space curly-braces-expressions)))
+  (:lambda (list &bounds start end)
+    (make-instance 'if-node
+                   :children (list
+                              (third list)
+                              (fifth list)
+                              (if (sixth list) (second (sixth list)) (make-instance 'keyword-node :data :null)))
+                   :src %std-src)))
 
 (defrule non-chain (or
+                    if
                     assignment
                     function-call
                     number
@@ -456,9 +480,7 @@
 (defun set-var (name vars value &optional (global t))
   ;; (format t "SET ~S=~S~%" name value)
   (let ((dst-hash
-         (handler-case (multiple-value-bind (unused-result hash) (get-var name vars global)
-                         (declare (ignore unused-result))
-                         hash)
+         (handler-case (nth-value 1 (get-var name vars global))
            (variable-not-found ()
              (if global
                  (first (last (lexical-scopes-hashes vars)))
@@ -510,6 +532,7 @@
 
 (define-symbol-macro %1 (generate-code (first (node-children n))))
 (define-symbol-macro %2 (generate-code (second (node-children n))))
+(define-symbol-macro %3 (generate-code (third (node-children n))))
 (define-symbol-macro %children (children-code n))
 (define-symbol-macro %data (node-data n))
 
@@ -646,6 +669,12 @@
 (defmethod generate-code ((n setitem-node))             `(ngs-call-function
                                                           (get-var "__set_item" vars)
                                                           (make-arguments :positional (list ,@(children-code n)))))
+(defmethod generate-code ((n if-node))                  `(ecase (ngs-call-function
+                                                                 (get-var "Bool" vars)
+                                                                 (make-arguments :positional (list ,%1)))
+                                                           (:true ,%2)
+                                                           (:false ,%3)))
+
 ;; GENERATE MARKER
 
 (defmethod generate-code :around ((n node))
@@ -773,9 +802,13 @@
 
 (defun %bool (x) (if x :true :false))
 
+(native "==" (%bool (equalp %p1 %p2)))
+(native "===" (%bool (eq %p1 %p2)))
 (native "+" (all-positionals ngs-type-number) (+ %p1 %p2))
 (native "+" (all-positionals ngs-type-string) (concatenate 'string (list %p1 %p2)))
-(native "Bool" (%bool (not (zerop (guard-type %p1 ngs-type-number)))))
+(native "Bool" (format t "FAILING BOOL: ~S~%"  %p1))
+(native "Bool" (guard-type %p1 ngs-type-bool))
+;; (native "Bool" (%bool (not (zerop (guard-type %p1 ngs-type-number)))))
 
 ;; list[n]
 (native "__get_item" (nth (guard-type %p2 ngs-type-number) (guard-type %p1 ngs-type-list)))
@@ -790,6 +823,7 @@
                            result
                            (error 'item-does-not-exist :datum %p2))))
 (native "__set_item" (setf (gethash %p2 (guard-type %p1 ngs-type-hash)) %p3))
+(native "in" (%bool (nth-value 1 (gethash %p1 (guard-type %p2 ngs-type-hash)))))
 
 ;; TODO: Consider using path, not string
 (native "fetch_file" (file-string (parse-namestring (guard-type %p1 ngs-type-string))))

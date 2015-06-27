@@ -74,6 +74,10 @@ String interpolation
 x=1; y=2; "ab\x40\u0040\U00000040cd${x}ef${y+10}\t$y$"
 "ab@@@cd1ef12	2$"
 
+String non-interpolation
+x=1; 'ab$x'
+"ab$x"
+
 Get attribute
 Number.name
 "Number"
@@ -104,5 +108,21 @@ String.meta()["xyz"]
 "string-meta"
 
 Meta - stdlib
-String.meta("xyz", 7); String.meta("xyz")
-7
+String.meta("xyz", 7); [String.meta("xyz"), String.has_meta("xyz"), String.has_meta("no-such-meta")]
+(list 7 :true :false)
+
+Stdlib not
+[not(true), not(false)]
+(list :false :true)
+
+Stdlib __neq
+__neq(1,2)
+:true
+
+Stdlib String(Bool)
+[true.String(), false.String()]
+(list "true" "false")
+
+Stdlib Number(Bool)
+[true.Number(), false.Number()]
+(list 1 0)
