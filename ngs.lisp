@@ -2,6 +2,7 @@
 
 (require :asdf)
 (require :esrap)
+(require :cl-ppcre)
 
 (defpackage :ngs
   (:use :cl :esrap)
@@ -41,6 +42,12 @@
   (append
    (mapcar #'(lambda(x) `(and space (or ,@x) space)) *required-space-binary-operators*)
    (mapcar #'(lambda(x) `(and optional-space (or ,@x) optional-space)) *optional-space-binary-operations*)))
+
+(defparameter *regexp-flags*
+  '((#\i . :case-insensitive-mode)
+    (#\m . :multi-line-mode)
+    (#\s . :single-line-mode)
+    (#\e . :extended-mode)))
 
 (defmethod print-object ((n node) stream)
   (format stream "#<~A :SRC ~A :DATA ~A :CHILDREN ~A>"
@@ -84,6 +91,7 @@
 (defclass for-node (node) ())
 (defclass guard-node (node) ())
 (defclass literal-node (node) ())
+(defclass regexp-node (node) ())
 
 (defun make-binop-node (ls)
   (let ((result (first ls)))
@@ -208,14 +216,11 @@
 
 (defun not-single-quote (x) (not (eq x #\')))
 (defun not-double-quote (x) (not (eq x #\")))
+(defun not-slash (x) (not (eq x #\/)))
 
-(defrule not-single-quote (not-single-quote character)
-  (:lambda (list)
-    (make-instance 'string-node :data (text list))))
-
-(defrule not-double-quote (not-double-quote character)
-  (:lambda (list)
-    (make-instance 'string-node :data (text list))))
+(defrule not-single-quote (not-single-quote character) (:lambda (list) (make-instance 'string-node :data (text list))))
+(defrule not-double-quote (not-double-quote character) (:lambda (list) (make-instance 'string-node :data (text list))))
+(defrule not-slash        (not-slash character)        (:lambda (list) (make-instance 'string-node :data (text list))))
 
 (defrule string-contents-sq (+ (or
                                 string-contents-common
@@ -227,6 +232,12 @@
                                 string-contents-common
                                 not-double-quote)))
 
+(defrule string-contents-regexp (+ (or
+                                string-contents-var
+                                string-contents-expression
+                                string-contents-common
+                                not-slash)))
+
 (defrule string-sq (and #\' (* string-contents-sq) #\')
   (:lambda (list &bounds start end) (make-instance 'string-container-node :children (first (second list)) :src %std-src)))
 
@@ -237,6 +248,16 @@
 
 (defrule literal (and identifier string)
   (:lambda (list &bounds start end) (make-instance 'literal-node :children list :src %std-src)))
+
+(defmacro def-regexp-rule ()
+  `(defrule regexp (and "/" (* string-contents-regexp) "/" (* (or ,@(mapcar #'first *regexp-flags*))))
+    (:lambda (list &bounds start end)
+      (make-instance 'regexp-node
+                     :data (text (fourth list))
+                     :children (list (make-instance 'string-container-node :children (first (second list)) :src %std-src))
+                     :src %std-src))))
+
+(def-regexp-rule)
 
 (defrule letters (character-ranges (#\a #\z) (#\A #\Z)) (:lambda (list) (text list)))
 
@@ -454,6 +475,7 @@
                     function-call
                     number
                     literal
+                    regexp
                     string
                     true
                     false
@@ -485,7 +507,7 @@
 (defvar *source-position* nil)
 ;; TODO: consider :synchronized
 (defvar *ngs-meta* (make-hash-table :weakness :key))
-;; (defvar *ngs-list-origin* (make-hash-table :weakness :key))
+(defvar *ngs-objects-types* (make-hash-table :weakness :key))
 
 (defun one-level-deeper-lexical-vars (ls)
   (make-instance 'lexical-scopes :hashes (cons (make-hash-table :test #'equal :size 20) (lexical-scopes-hashes ls))))
@@ -552,6 +574,7 @@
 (def-ngs-type "List"   #'listp)
 (def-ngs-type "Null"   #'(lambda (x) (eq x :null)))
 (def-ngs-type "Number" #'numberp)
+(def-ngs-type "Regexp" #'(lambda (x) (eq :regexp (gethash x *ngs-objects-types*))))
 (def-ngs-type "Seq"    #'(lambda (x) (or (listp x) (arrayp x) (stringp x))))
 (def-ngs-type "String" #'stringp)
 (def-ngs-type "Type"   #'ngs-type-p)
@@ -744,6 +767,8 @@
                                                           (get-var (apply #'concatenate 'string (list "__literal_" ,%1)) vars)
                                                           (make-arguments :positional (list ,%2))))
 
+(defmethod generate-code ((n regexp-node))              `(ngs-call-function (get-var "Regexp" vars) (make-arguments :positional (list ,%1 ,(node-data n)))))
+
 ;; GENERATE MARKER
 
 (defmethod generate-code :around ((n node))
@@ -902,10 +927,16 @@
 (native "__set_item" (setf (gethash %p2 (guard-type %p1 ngs-type-hash)) %p3))
 (native "in" (%bool (nth-value 1 (gethash %p1 (guard-type %p2 ngs-type-hash)))))
 
-;; TODO: Consider using path, not string
 (native "File" (parse-namestring (guard-type %p1 ngs-type-string)))
 (native "fetch" (file-string (guard-type %p1 ngs-type-file)))
 
+(native "Regexp" (let ((ret (apply #'cl-ppcre:create-scanner
+                                   (guard-type %p1 ngs-type-string)
+                                   (apply #'append (loop for modifier across (guard-type %p2 ngs-type-string) collecting (list (cdr (assoc modifier *regexp-flags*)) t))))))
+                   (setf (gethash ret *ngs-objects-types*) :regexp)
+                   ret))
+
+;; (native "~" ...
 
 (native "echo"
   (let ((v (%call "String" (make-arguments :positional (list %p1)))))
