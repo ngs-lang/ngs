@@ -864,111 +864,66 @@
        (find-in-tree item (cdr tree)))
       nil))
 
-(defmacro native (name &body body)
+(defmacro native (name params &body body)
   ;; (format t "find-in-tree: ~S~%" (find-in-tree '%p1 body))
-  (let ((expected-args-number (cond
-                                ((find-in-tree '%p3 body) 3)
-                                ((find-in-tree '%p2 body) 2)
-                                ((find-in-tree '%p1 body) 1)
-                                (t 0))))
     `(ngs-define-function
       ,name *ngs-globals*
       t
       (lambda (parameters)
         (let* ((source-position (format nil "<builtin:~A>" ,name))
                (*source-position* (cons (list source-position source-position) *source-position*)))
-          (when (not (eq (length %positionals) ,expected-args-number))
+          (when (not (eq (length %positionals) ,(length params)))
             (error 'parameters-mismatch))
-          ,@body)))))
+          ,@(loop
+               for p in params
+               for i from 0
+               if (not (eq 'any p))
+               collecting `(guard-type (nth ,i (arguments-positional parameters)) ,(%ngs-type-symbol (symbol-name p))))
+          ,@body))))
 
 (defmacro all-positionals (typ)
   `(loop for p in %positionals do (guard-type p ,typ)))
 
-(defmacro native-getattr (typ &body body) `(native "__get_attr"
-                                             (guard-type %p1 ,typ)
+(defmacro native-getattr (typ &body body) `(native "__get_attr" (,typ string)
                                              (cond
-                                             ,@(loop
-                                                  for clause in body
-                                                  collecting `((equalp %p2 ,(first clause)) ,@(rest clause))))))
+                                               ,@(loop
+                                                    for clause in body
+                                                    collecting `((equalp %p2 ,(first clause)) ,@(rest clause))))))
 
 (defmacro %call (name parameters)
   `(ngs-call-function (get-var ,name *ngs-globals*) ,parameters))
 
 (defun %bool (x) (if x :true :false))
 
-(native "==" (%bool (equalp %p1 %p2)))
-(native "!=" (%bool (not (equalp %p1 %p2))))
-(native "===" (%bool (eq %p1 %p2)))
-(native "!==" (%bool (not (eq %p1 %p2))))
-(native "<" (%bool (< %p1 %p2)))
-(native ">" (%bool (> %p1 %p2)))
-(native "+" (all-positionals ngs-type-number) (+ %p1 %p2))
-(native "+" (all-positionals ngs-type-string) (concatenate 'string (list %p1 %p2)))
-;; (native "Bool" (format t "FAILING BOOL: ~S~%"  %p1))
-(native "Bool" (guard-type %p1 ngs-type-bool))
-(native "Bool" (%bool (not (zerop (guard-type %p1 ngs-type-number)))))
+(native "==" (any any) (%bool (equalp %p1 %p2)))
+(native "!=" (any any) (%bool (not (equalp %p1 %p2))))
+(native "===" (any any) (%bool (eq %p1 %p2)))
+(native "!==" (any any) (%bool (not (eq %p1 %p2))))
+(native "<" (number number) (%bool (< %p1 %p2)))
+(native ">" (number number) (%bool (> %p1 %p2)))
+(native "+" (number number) (+ %p1 %p2))
+(native "+" (string string) (concatenate 'string (list %p1 %p2)))
+(native "Bool" (bool) %p1)
+(native "Bool" (number) (%bool (not (zerop %p1))))
 
-;; list[n]
-(native "__get_item" (nth (guard-type %p2 ngs-type-number) (guard-type %p1 ngs-type-list)))
+;; List
+(native "__get_item" (list number) (nth %p2 %p1))
 
 ;; Array
-(native "__get_item" (elt (guard-type %p1 ngs-type-array) (guard-type %p2 ngs-type-number)))
-(native "push" (guard-type %p1 ngs-type-array) (vector-push-extend %p2 %p1))
+(native "__get_item" (array number) (elt %p1 %p2))
+(native "push" (array any) (vector-push-extend %p2 %p1) %p1)
 
-(native "String" (format nil "~A" %p1))
-(native "__get_item" (let ((pos (guard-type %p2 ngs-type-number)))
-                       (subseq (guard-type %p1 ngs-type-string) pos (1+ pos))))
+(native "String" (any) (format nil "~A" %p1))
+(native "__get_item" (string number) (let ((pos %p2)) (subseq %p1 pos (1+ pos))))
 
-(native "Hash" (make-hash-table :test #'equalp))
-(native "__get_item" (multiple-value-bind (result found) (gethash %p2 (guard-type %p1 ngs-type-hash))
-                       (if found
-                           result
-                           (error 'item-does-not-exist :datum %p2))))
-(native "__set_item" (setf (gethash %p2 (guard-type %p1 ngs-type-hash)) %p3))
-(native "in" (%bool (nth-value 1 (gethash %p1 (guard-type %p2 ngs-type-hash)))))
-
-(native "File" (parse-namestring (guard-type %p1 ngs-type-string)))
-(native "fetch" (file-string (guard-type %p1 ngs-type-file)))
-
-(native "Regexp" (let ((ret (apply #'cl-ppcre:create-scanner
-                                   (guard-type %p1 ngs-type-string)
-                                   (apply #'append (loop for modifier across (guard-type %p2 ngs-type-string) collecting (list (cdr (assoc modifier *regexp-flags*)) t))))))
-                   (setf (gethash ret *ngs-objects-types*) :regexp)
-                   ret))
-
-;; (native "~" ...
-
-(native "echo"
-  (let ((v (%call "String" (make-arguments :positional (list %p1)))))
-    (format t "~A~%" v)
-    v))
-
-(native-getattr ngs-type-type
-  ("name" (ngs-type-name %p1))
-  ("constructors" (ngs-type-constructors %p1)))
-
-;; TODO: Improve throw/catch because it's now simple
-(native "throws" (let ((b (%call "Bool" (make-arguments :positional (list %p1)))))
-                   (ecase b
-                     (:true (error 'ngs-user-exception :datum %p2))
-                     (:false %p1))))
-
-;; TODO: consider removing handler-case for runtime-error in ngs-compile when called from here
-(native "compile" (ngs-compile (guard-type %p1 ngs-type-string) (guard-type %p2 ngs-type-string)))
-
-;; TODO: type assertion
-(native "load" (lambda (load-generated-lambda-params) (declare (ignore load-generated-lambda-params)) (eval %p1)))
-
-(native "meta" (multiple-value-bind (result found) (gethash %p1 *ngs-meta*)
-                 (if found
-                     result
-                     (setf (gethash %p1 *ngs-meta*) (make-hash-table :test #'equalp)))))
-
-;; Runtime - end ------------------------------
-
-(defun get-argv ()
-  "Abstraction layer for ARGV"
-  sb-ext:*posix-argv*)
+(native "Hash" () (make-hash-table :test #'equalp))
+(native "__get_item" (hash any)
+  (multiple-value-bind (result found) (gethash %p2 %p1)
+    (if found
+        result
+        (error 'item-does-not-exist :datum %p2))))
+(native "__set_item" (hash any any) (setf (gethash %p2 %p1) %p3))
+(native "in" (any hash) (%bool (nth-value 1 (gethash %p1 %p2))))
 
 (defun file-string (path)
   "http://rosettacode.org/wiki/Read_entire_file#Common_Lisp"
@@ -976,3 +931,48 @@
     (let ((data (make-string (file-length stream))))
       (read-sequence data stream)
       data)))
+(native "File" (string) (parse-namestring %p1))
+(native "fetch" (file) (file-string %p1))
+
+(native "Regexp" (string string)
+  (let ((ret (apply #'cl-ppcre:create-scanner
+                    %p1
+                    (apply #'append (loop
+                                       for modifier across %p2
+                                       collecting (list (cdr (assoc modifier *regexp-flags*)) t))))))
+    (setf (gethash ret *ngs-objects-types*) :regexp)
+    ret))
+
+;; (native "~" ...
+
+(native "echo" (any)
+  (let ((v (%call "String" (make-arguments :positional (list %p1)))))
+    (format t "~A~%" v)
+    v))
+
+(native-getattr type
+  ("name" (ngs-type-name %p1))
+  ("constructors" (ngs-type-constructors %p1)))
+
+;; TODO: Improve throw/catch because it's now simple
+(native "throws" (any any) (let ((b (%call "Bool" (make-arguments :positional (list %p1)))))
+                             (ecase b
+                               (:true (error 'ngs-user-exception :datum %p2))
+                               (:false %p1))))
+
+;; TODO: consider removing handler-case for runtime-error in ngs-compile when called from here
+(native "compile" (string string) (ngs-compile %p1 %p2))
+
+;; TODO: type assertion
+(native "load" (any) (lambda (load-generated-lambda-params) (declare (ignore load-generated-lambda-params)) (eval %p1)))
+
+(native "meta" (any) (multiple-value-bind (result found) (gethash %p1 *ngs-meta*)
+                       (if found
+                           result
+                           (setf (gethash %p1 *ngs-meta*) (make-hash-table :test #'equalp)))))
+
+;; Runtime - end ------------------------------
+
+(defun get-argv ()
+  "Abstraction layer for ARGV"
+  sb-ext:*posix-argv*)
