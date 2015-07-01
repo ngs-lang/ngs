@@ -154,3 +154,7 @@ Regexp match all
 Regexp split
 'ab:cd,ef'.split(/[:,]/)
 (list "ab" "cd" "ef")
+
+Try-catch
+try { 1 throws 7 } catch(e:String) {2} catch(e:Number) {3} catch(e) {4}
+3

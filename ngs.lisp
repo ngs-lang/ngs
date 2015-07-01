@@ -88,6 +88,7 @@
 (defclass getitem-node (node) ())
 (defclass setitem-node (node) ())
 (defclass if-node (node) ())
+(defclass try-catch-node (node) ())
 (defclass for-node (node) ())
 (defclass guard-node (node) ())
 (defclass literal-node (node) ())
@@ -351,13 +352,17 @@
                               (sixth list)
                               (tenth list)))))
 
-(defrule lambda (and (or "F" "lambda") (? (and space identifier)) optional-space function-parameters-with-parens optional-space "{" optional-space (? expressions) optional-space "}")
-  (:lambda (list)
-    (make-instance 'lambda-node
-                   :children (list
-                              (second (second list))
-                              (fourth list)
-                              (eighth list)))))
+(defmacro define-lambda (name &body names)
+  `(defrule ,name (and (or ,@names) (? (and space identifier)) optional-space function-parameters-with-parens optional-space "{" optional-space (? expressions) optional-space "}")
+    (:lambda (list)
+      (make-instance 'lambda-node
+                     :children (list
+                                (second (second list))
+                                (fourth list)
+                                (eighth list))))))
+
+(define-lambda lambda "F" "lambda")
+(define-lambda catch "catch")
 
 (define-binary-operations-rules)
 
@@ -454,6 +459,10 @@
                               (if (sixth list) (second (sixth list)) (make-instance 'keyword-node :data :null)))
                    :src %std-src)))
 
+(defrule try-catch (and "try" optional-space curly-braces-expressions (+ (and optional-space catch)))
+  (:lambda (list &bounds start end)
+    (make-instance 'try-catch-node :children (apply #'list (third list) (mapcar #'second (fourth list))) :src %std-src)))
+
 (defun items-at-positions (positions list)
   (loop for p in positions collecting (nth p list)))
 
@@ -469,6 +478,7 @@
 
 (defrule non-chain (or
                     if
+                    try-catch
                     for
                     guard
                     assignment
@@ -744,6 +754,12 @@
                                                                  (make-arguments :positional (list ,%1)))
                                                            (:true ,%2)
                                                            (:false ,%3)))
+(defmethod generate-code ((n try-catch-node))           `(handler-case ,%1
+                                                           (ngs-user-exception (e)
+                                                             (ngs-call-function
+                                                              (list ,@(children-code n :start 1))
+                                                              (make-arguments :positional (list (ngs-user-exception-datum e)))))))
+
 (defmethod generate-code ((n guard-node))               `(ecase (ngs-call-function
                                                                  (get-var "Bool" vars)
                                                                  (make-arguments :positional (list ,%1)))
@@ -953,6 +969,7 @@
 
 ;; TODO: consider returning an array
 (native "~~" (string regexp) (cl-ppcre:all-matches-as-strings %p2 %p1))
+;; (native "replace" (string regexp string) (cl-ppcre:regex-replace ...
 
 ;; TODO: v1, v2, v3 = "str" ~ "regexp(with).*(groups)"
 ;; TODO: consider returning an array

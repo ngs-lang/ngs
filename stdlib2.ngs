@@ -199,9 +199,11 @@ END
 
 defg parse(f:File, content:String) {
 	guard f ~ /\\.json$/
-	r = catch from_json(content)
-	not(r[0]) throws ['runtime', "Failed to read json file ${f}"]
-	r[1]
+	try {
+		from_json(content)
+	} catch(e) {
+		throw ['runtime', "Failed to read json file ${f}"]
+	}
 }
 
 defg read(f:File) {
