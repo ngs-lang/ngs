@@ -142,3 +142,15 @@ Stdlib map(Number,F,*args)
 File literal
 f'/etc/motd'
 #P"/etc/motd"
+
+Regexp match - whole and groups
+'abcdef' ~ /(..)(.).*/
+(list "abcdef" "ab" "c")
+
+Regexp match all
+'a1b2c' ~~ /\d/
+(list "1" "2")
+
+Regexp split
+'ab:cd,ef'.split(/[:,]/)
+(list "ab" "cd" "ef")

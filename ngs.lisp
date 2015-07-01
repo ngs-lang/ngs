@@ -34,7 +34,7 @@
     ("in" "not in")))
 
 (defparameter *optional-space-binary-operations*
-  '(("===" "!==" "==" "!=" "<" ">" "~")
+  '(("===" "!==" "==" "!=" "<" ">" "~~" "~")
     ("*" "/")
     ("+" "-")))
 
@@ -894,6 +894,7 @@
   `(ngs-call-function (get-var ,name *ngs-globals*) ,parameters))
 
 (defun %bool (x) (if x :true :false))
+;; (defun %nil->nul (x) (if x x :null))
 
 (native "==" (any any) (%bool (equalp %p1 %p2)))
 (native "!=" (any any) (%bool (not (equalp %p1 %p2))))
@@ -934,6 +935,7 @@
 (native "File" (string) (parse-namestring %p1))
 (native "fetch" (file) (file-string %p1))
 
+;; TODO: performance: cache the mapping of string->regex
 (native "Regexp" (string string)
   (let ((ret (apply #'cl-ppcre:create-scanner
                     %p1
@@ -943,7 +945,18 @@
     (setf (gethash ret *ngs-objects-types*) :regexp)
     ret))
 
-;; (native "~" ...
+;; TODO: consider returning an array
+(native "~" (string regexp) (multiple-value-bind (whole groups) (cl-ppcre:scan-to-strings %p2 %p1)
+                              (if whole
+                                  (concatenate 'list (list whole) groups)
+                                  :null)))
+
+;; TODO: consider returning an array
+(native "~~" (string regexp) (cl-ppcre:all-matches-as-strings %p2 %p1))
+
+;; TODO: v1, v2, v3 = "str" ~ "regexp(with).*(groups)"
+;; TODO: consider returning an array
+(native "split" (string regexp) (cl-ppcre:split %p2 %p1))
 
 (native "echo" (any)
   (let ((v (%call "String" (make-arguments :positional (list %p1)))))
