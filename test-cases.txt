@@ -158,3 +158,7 @@ Regexp split
 Try-catch
 try { 1 throws 7 } catch(e:String) {2} catch(e:Number) {3} catch(e) {4}
 3
+
+JSON parse
+from_json('[true, false, null, [], 1]')
+(list :true :false :null nil 1)

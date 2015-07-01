@@ -1,8 +1,9 @@
-;; apt-get install cl-esrap
+;; apt-get install cl-esrap cl-ppcre cl-yason cl-trivial-gray-streams
 
 (require :asdf)
 (require :esrap)
 (require :cl-ppcre)
+(require :yason)
 
 (defpackage :ngs
   (:use :cl :esrap)
@@ -1000,6 +1001,11 @@
                        (if found
                            result
                            (setf (gethash %p1 *ngs-meta*) (make-hash-table :test #'equalp)))))
+
+(native "from_json" (string)
+  (nsubst :true 'yason:true
+          (nsubst :false 'yason:false
+                  (yason:parse %p1 :json-booleans-as-symbols t :json-nulls-as-keyword t))))
 
 ;; Runtime - end ------------------------------
 
