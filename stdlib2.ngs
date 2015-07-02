@@ -192,10 +192,13 @@ defg map(n:Number, mapper:F, *args) {
 # later #
 global __literal_f = File
 
+defg '~'(f:File, r:Regexp) {
+	# echo(['PP0', f.String()])
+	f.String() ~ r
+}
+
 # Reading
 defg parse(f:File, content:String) { content }
-
-END
 
 defg parse(f:File, content:String) {
 	guard f ~ /\\.json$/
@@ -208,11 +211,13 @@ defg parse(f:File, content:String) {
 
 defg read(f:File) {
 	content = f.fetch()
-	parse_file(f, content).meta('file', f)
+	parse(f, content).meta('file', f)
 }
 
 
 defg read(f:String) { File(f).read() }
+
+END
 
 defg lines(f:File) { f.read().lines() }
 

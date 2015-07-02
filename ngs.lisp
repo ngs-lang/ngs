@@ -90,6 +90,7 @@
 (defclass setitem-node (node) ())
 (defclass if-node (node) ())
 (defclass try-catch-node (node) ())
+(defclass throw-node (node) ())
 (defclass for-node (node) ())
 (defclass guard-node (node) ())
 (defclass literal-node (node) ())
@@ -190,9 +191,11 @@
 
 (defun is-escape-char (ch) (assoc ch *escape-chars*))
 
-(defrule string-contents-common-escape (and #\\ (is-escape-char character))
+(defrule string-contents-common-escape (and #\\ character)
   (:lambda (list)
-    (make-instance 'string-node :data (text (code-char (second (assoc (second list) *escape-chars*)))))))
+    (make-instance 'string-node :data (if (is-escape-char (second list))
+                                          (text (code-char (second (assoc (second list) *escape-chars*))))
+                                          (text (second list))))))
 
 (define-symbol-macro %code-char (make-instance 'string-node :data (text (code-char (parse-integer (text (cddr list)) :radix 16)))))
 (defrule string-contents-common-x (and #\\ #\x hex-digit hex-digit) (:lambda (list) %code-char))
@@ -202,10 +205,10 @@
                                            hex-digit hex-digit hex-digit hex-digit) (:lambda (list) %code-char))
 
 (defrule string-contents-common (or
-                                 string-contents-common-escape
                                  string-contents-common-x
                                  string-contents-common-u
-                                 string-contents-common-cap-u))
+                                 string-contents-common-cap-u
+                                 string-contents-common-escape))
 
 (defrule string-contents-var (and "$" varname)
   (:lambda (list)
@@ -274,7 +277,7 @@
   (:lambda (list &bounds start end)
     (make-instance 'string-node :data list :src %std-src)))
 
-(defrule identifier (or identifier-immediate))
+(defrule identifier (or identifier-immediate string))
 
 (defrule setitem (and binary-expression-1 optional-space "[" optional-space expression optional-space "]" optional-space "=" optional-space expression)
   (:lambda (list &bounds start end)
@@ -464,6 +467,10 @@
   (:lambda (list &bounds start end)
     (make-instance 'try-catch-node :children (apply #'list (third list) (mapcar #'second (fourth list))) :src %std-src)))
 
+(defrule throw (and "throw" space expression)
+  (:lambda (list &bounds start end)
+    (make-instance 'throw-node :children (list (third list)) :src %std-src)))
+
 (defun items-at-positions (positions list)
   (loop for p in positions collecting (nth p list)))
 
@@ -480,6 +487,7 @@
 (defrule non-chain (or
                     if
                     try-catch
+                    throw
                     for
                     guard
                     assignment
@@ -649,7 +657,8 @@
 (defmethod generate-code ((n varname-node))             `(get-var ,%data vars))
 (defmethod generate-code ((n binary-operation-node))    `(ngs-call-function
                                                           (get-var ,%data vars)
-                                                          (make-arguments :positional (list ,@(children-code n)))))
+                                                          (make-arguments :positional (list ,@(children-code n)))
+                                                          :name ,%data))
 (defmethod generate-code ((n assignment-node))          `(set-var
                                                           ,(node-data (first (node-children n)))
                                                           vars
@@ -704,7 +713,14 @@
                                                                                            `(third (nth ,i expected-parameters))
                                                                                            `(error 'parameters-mismatch)))))))))
 
-(defmethod generate-code ((n function-call-node))       `(ngs-call-function ,%1 ,%2))
+(defmethod generate-code ((n function-call-node))       (if
+                                                         (typep (first (node-children n)) 'varname-node)
+                                                         `(ngs-call-function ,%1 ,%2 :name ,(node-data (first (node-children n))))
+                                                         `(ngs-call-function ,%1 ,%2)))
+
+
+;; (defmethod generate-code :before ((n function-call-node)) (format t "First: ~S~%" (typep (first (node-children n)) 'varname-node)))
+
 ;; TODO: support named arguments
 (defmethod generate-code ((n function-arguments-node))  `(make-arguments
                                                           :positional
@@ -761,9 +777,12 @@
                                                               (list ,@(children-code n :start 1))
                                                               (make-arguments :positional (list (ngs-user-exception-datum e)))))))
 
+(defmethod generate-code ((n throw-node))               `(error 'ngs-user-exception :datum ,%1))
+
 (defmethod generate-code ((n guard-node))               `(ecase (ngs-call-function
                                                                  (get-var "Bool" vars)
-                                                                 (make-arguments :positional (list ,%1)))
+                                                                 (make-arguments :positional (list ,%1))
+                                                                 :name "Bool")
                                                            (:true :null)
                                                            (:false (error 'parameters-mismatch))))
 
@@ -773,7 +792,8 @@
                                                             while
                                                               (ecase (ngs-call-function
                                                                       (get-var "Bool" vars)
-                                                                      (make-arguments :positional (list ,%2)))
+                                                                      (make-arguments :positional (list ,%2))
+                                                                      :name "Bool")
                                                                 (:true t)
                                                                 (:false nil))
                                                             do ,%4
@@ -784,7 +804,7 @@
                                                           (get-var (apply #'concatenate 'string (list "__literal_" ,%1)) vars)
                                                           (make-arguments :positional (list ,%2))))
 
-(defmethod generate-code ((n regexp-node))              `(ngs-call-function (get-var "Regexp" vars) (make-arguments :positional (list ,%1 ,(node-data n)))))
+(defmethod generate-code ((n regexp-node))              `(ngs-call-function (get-var "Regexp" vars) (make-arguments :positional (list ,%1 ,(node-data n))) :name "Regexp"))
 
 ;; GENERATE MARKER
 
@@ -813,7 +833,9 @@
 
 (define-condition runtime-error () ((stack-trace :initarg :stack-trace :initform nil :reader runtime-error-stack-trace)))
 (define-condition variable-not-found (runtime-error) ((varname :initarg :varname :reader variable-not-found-varname)))
-(define-condition method-implementatoin-not-found (runtime-error) ())
+(define-condition method-implementatoin-not-found (runtime-error)
+  ((method-name :initarg :method-name :reader method-implementatoin-not-found-method-name)
+   (arguments :initarg :arguments :reader method-implementatoin-not-found-arguments)))
 (define-condition calling-non-a-method (runtime-error) ())
 (define-condition parameters-mismatch () ())
 (define-condition ngs-user-exception (runtime-error) ((datum :initarg :datum :reader ngs-user-exception-datum)))
@@ -821,6 +843,13 @@
 
 (defmethod print-object ((e variable-not-found) stream)
   (format stream "Variable '~A' not found" (variable-not-found-varname e)))
+
+(defmethod print-object ((e method-implementatoin-not-found) stream)
+  (let ((name (method-implementatoin-not-found-method-name e)))
+    (if name
+        (format stream "Method implementation '~A' not found." name)
+        (format stream "Method implementation with unknown name (probably computed) not found."))
+    (format stream "Arguments: ~S" (method-implementatoin-not-found-arguments e))))
 
 ;; TODO: check parents
 (defun ngs-value-is-of-type (val typ)
@@ -849,11 +878,11 @@
         (set-var function-name vars (cons lambda v) global))))
 
 ;; TODO - handle parameters-mismatch
-(defun ngs-call-function (methods arguments)
+(defun ngs-call-function (methods arguments &key (name nil))
   ;; (format t "METHODS: ~S~%" methods)
   (cond
-    ((typep methods 'ngs-type) (ngs-call-function (ngs-type-constructors methods) arguments))
-    ((functionp methods) (ngs-call-function (list methods) arguments))
+    ((typep methods 'ngs-type) (ngs-call-function (ngs-type-constructors methods) arguments :name name))
+    ((functionp methods) (ngs-call-function (list methods) arguments :name name))
     ((listp methods)
      ;; TODO: check that at least the first element is callable
      (progn
@@ -861,7 +890,8 @@
           ;; do (format t "+ Trying implementation ~A~%" m)
           do (handler-case (return-from ngs-call-function (funcall m arguments))
                (parameters-mismatch () nil)))
-       (error 'method-implementatoin-not-found)))
+       ;; (format t "METHODS WERE: ~S~%" methods)
+       (error 'method-implementatoin-not-found :stack-trace *source-position* :method-name name :arguments arguments)))
     (t
      (error 'calling-non-a-method))))
 
@@ -908,7 +938,7 @@
                                                     collecting `((equalp %p2 ,(first clause)) ,@(rest clause))))))
 
 (defmacro %call (name parameters)
-  `(ngs-call-function (get-var ,name *ngs-globals*) ,parameters))
+  `(ngs-call-function (get-var ,name *ngs-globals*) ,parameters :name ,name))
 
 (defun %bool (x) (if x :true :false))
 ;; (defun %nil->nul (x) (if x x :null))
@@ -921,8 +951,11 @@
 (native ">" (number number) (%bool (> %p1 %p2)))
 (native "+" (number number) (+ %p1 %p2))
 (native "+" (string string) (concatenate 'string (list %p1 %p2)))
+
 (native "Bool" (bool) %p1)
 (native "Bool" (number) (%bool (not (zerop %p1))))
+(native "Bool" (list) (%bool (not (null %p1)))) ; probably move to stdlib later
+(native "Bool" (null) :false)
 
 ;; List
 (native "__get_item" (list number) (nth %p2 %p1))
@@ -932,6 +965,7 @@
 (native "push" (array any) (vector-push-extend %p2 %p1) %p1)
 
 (native "String" (any) (format nil "~A" %p1))
+;; (native "String" (file) (file-name %p1))
 (native "__get_item" (string number) (let ((pos %p2)) (subseq %p1 pos (1+ pos))))
 
 (native "Hash" () (make-hash-table :test #'equalp))
@@ -954,6 +988,7 @@
 
 ;; TODO: performance: cache the mapping of string->regex
 (native "Regexp" (string string)
+  ;; (format t "Regexp(~A,~A)" %p1 %p2)
   (let ((ret (apply #'cl-ppcre:create-scanner
                     %p1
                     (apply #'append (loop
@@ -1002,10 +1037,16 @@
                            result
                            (setf (gethash %p1 *ngs-meta*) (make-hash-table :test #'equalp)))))
 
-(native "from_json" (string)
-  (nsubst :true 'yason:true
-          (nsubst :false 'yason:false
-                  (yason:parse %p1 :json-booleans-as-symbols t :json-nulls-as-keyword t))))
+;; Hack attack!
+(let ((orig (fdefinition 'yason::parse-constant)))
+  (setf (fdefinition 'yason::parse-constant) (lambda (input)
+                                               (let ((x (funcall orig input)))
+                                                 (cond
+                                                   ((eq x t) :true)
+                                                   ((eq x nil) :false)
+                                                   (t x))))))
+
+(native "from_json" (string) (yason:parse %p1 :json-nulls-as-keyword t :json-arrays-as-vectors t))
 
 ;; Runtime - end ------------------------------
 
