@@ -220,35 +220,19 @@
   (:lambda (list)
     (second list)))
 
-(defun not-single-quote (x) (not (eq x #\')))
-(defun not-double-quote (x) (not (eq x #\")))
-(defun not-slash (x) (not (eq x #\/)))
+(defmacro def-string-rules (rule-name start-char end-char &body contents-rules)
+  (let ((not-ending-name (intern (concatenate 'string (symbol-name rule-name) "-NOT-ENDING-CHAR")))
+        (contents-name (intern (concatenate 'string (symbol-name rule-name) "-CONTENTS"))))
+    `(progn
+       (defun ,not-ending-name (x) (not (eq x ,end-char)))
+       (defrule ,not-ending-name (,not-ending-name character) (:lambda (list) (make-instance 'string-node :data (text list))))
+       (defrule ,contents-name (+ (or ,@contents-rules ,not-ending-name)))
+       (defrule ,rule-name (and ,start-char (* ,contents-name) ,end-char)
+         (:lambda (list &bounds start end) (make-instance 'string-container-node :children (first (second list)) :src %std-src))))))
 
-(defrule not-single-quote (not-single-quote character) (:lambda (list) (make-instance 'string-node :data (text list))))
-(defrule not-double-quote (not-double-quote character) (:lambda (list) (make-instance 'string-node :data (text list))))
-(defrule not-slash        (not-slash character)        (:lambda (list) (make-instance 'string-node :data (text list))))
-
-(defrule string-contents-sq (+ (or
-                                string-contents-common
-                                not-single-quote)))
-
-(defrule string-contents-dq (+ (or
-                                string-contents-var
-                                string-contents-expression
-                                string-contents-common
-                                not-double-quote)))
-
-(defrule string-contents-regexp (+ (or
-                                string-contents-var
-                                string-contents-expression
-                                string-contents-common
-                                not-slash)))
-
-(defrule string-sq (and #\' (* string-contents-sq) #\')
-  (:lambda (list &bounds start end) (make-instance 'string-container-node :children (first (second list)) :src %std-src)))
-
-(defrule string-dq (and #\" (* string-contents-dq) #\")
-  (:lambda (list &bounds start end) (make-instance 'string-container-node :children (first (second list)) :src %std-src)))
+(def-string-rules string-sq #\' #\' string-contents-common)
+(def-string-rules string-dq #\" #\" string-contents-var string-contents-expression string-contents-common)
+(def-string-rules string-regexp #\/ #\/ string-contents-var string-contents-expression string-contents-common)
 
 (defrule string (or string-sq string-dq))
 
@@ -256,12 +240,12 @@
   (:lambda (list &bounds start end) (make-instance 'literal-node :children list :src %std-src)))
 
 (defmacro def-regexp-rule ()
-  `(defrule regexp (and "/" (* string-contents-regexp) "/" (* (or ,@(mapcar #'first *regexp-flags*))))
-    (:lambda (list &bounds start end)
-      (make-instance 'regexp-node
-                     :data (text (fourth list))
-                     :children (list (make-instance 'string-container-node :children (first (second list)) :src %std-src))
-                     :src %std-src))))
+  `(defrule regexp (and string-regexp (* (or ,@(mapcar #'first *regexp-flags*))))
+     (:lambda (list &bounds start end)
+       (make-instance 'regexp-node
+                      :data (text (second list))
+                      :children (list (first list))
+                      :src %std-src))))
 
 (def-regexp-rule)
 
@@ -1043,6 +1027,10 @@
 (native-getattr type
   ("name" (ngs-type-name %p1))
   ("constructors" (ngs-type-constructors %p1)))
+
+;; Not sure about correctness
+(native-getattr file
+  ("name" (format nil "~A" %p1)))
 
 ;; TODO: Improve throw/catch because it's now simple
 (native "throws" (any any) (let ((b (%call "Bool" (make-arguments :positional (list %p1)))))

@@ -232,11 +232,15 @@ defg read_till(fd:Number, tillChar:String, max:Number=1024) {
 	ret
 }
 
-END
-
 # Anything else will break $(ls $f) and probably other stuff
 defg String(f:File) { f.name }
+
+END
+
 defg Bool(p:Path) { $(-e $p).Bool() }
+
+END
+
 defg Bool(f:File) { $(-f $f).Bool() }
 defg repr(f:File) { "File(${f.name.repr()})" }
 

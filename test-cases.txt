@@ -151,6 +151,10 @@ Regexp match all
 'a1b2c' ~~ /\\d/
 (list "1" "2")
 
+Regexp ignore case
+'A' ~ /a/i
+(list "A")
+
 Regexp split
 'ab:cd,ef'.split(/[:,]/)
 (list "ab" "cd" "ef")
