@@ -217,7 +217,7 @@ defg read(f:File) {
 
 defg read(f:String) { File(f).read() }
 
-END
+### TEST COVEREGE ENDS HERE
 
 defg lines(f:File) { f.read().lines() }
 
@@ -231,6 +231,8 @@ defg read_till(fd:Number, tillChar:String, max:Number=1024) {
 	# echo("<READ_TILL thread=${thread().id} till=$tillChar ch=$ch ret=$ret>")
 	ret
 }
+
+END
 
 # Anything else will break $(ls $f) and probably other stuff
 defg String(f:File) { f.name }

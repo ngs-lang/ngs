@@ -92,6 +92,7 @@
 (defclass try-catch-node (node) ())
 (defclass throw-node (node) ())
 (defclass for-node (node) ())
+(defclass while-node (node) ())
 (defclass guard-node (node) ())
 (defclass literal-node (node) ())
 (defclass regexp-node (node) ())
@@ -480,15 +481,25 @@
                    :children (items-at-positions '(4 8 12 16) list)
                    :src %std-src)))
 
+(defrule while (and "while" space expression optional-space curly-braces-expressions)
+  (:lambda (list &bounds start end)
+    (make-instance 'while-node
+                   :children (items-at-positions '(2 4) list)
+                   :src %std-src)))
+
 (defrule guard (and "guard" space expression)
   (:lambda (list &bounds start end)
     (make-instance 'guard-node :children (list (third list)) :src %std-src)))
+
+(defrule parentheses (and "(" optional-space expression optional-space ")")
+  (:lambda (list) (third list)))
 
 (defrule non-chain (or
                     if
                     try-catch
                     throw
                     for
+                    while
                     guard
                     assignment
                     function-call
@@ -501,7 +512,8 @@
                     null
                     list
                     splice
-                    varname))
+                    varname
+                    parentheses))
 
 ;; Parser - end ------------------------------
 
@@ -798,6 +810,18 @@
                                                                 (:false nil))
                                                             do ,%4
                                                              do ,%3)
+                                                          :null))
+
+(defmethod generate-code ((n while-node))               `(progn
+                                                          (loop
+                                                            while
+                                                              (ecase (ngs-call-function
+                                                                      (get-var "Bool" vars)
+                                                                      (make-arguments :positional (list ,%1))
+                                                                      :name "Bool")
+                                                                (:true t)
+                                                                (:false nil))
+                                                            do ,%2)
                                                           :null))
 
 (defmethod generate-code ((n literal-node))             `(ngs-call-function
