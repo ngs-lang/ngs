@@ -96,6 +96,8 @@
 (defclass guard-node (node) ())
 (defclass literal-node (node) ())
 (defclass regexp-node (node) ())
+(defclass command-node (node) ())
+(defclass commands-node (node) ())
 
 (defun make-binop-node (ls)
   (let ((result (first ls)))
@@ -478,6 +480,50 @@
 (defrule parentheses (and "(" optional-space expression optional-space ")")
   (:lambda (list) (third list)))
 
+(defrule command-inline-spearator (and optional-space ";" optional-space))
+
+(defrule command-separator (or newline-space command-inline-spearator))
+
+(defrule command-word-text (+ (character-ranges #\- #\_ (#\a #\z) (#\A #\Z) (#\0 #\9) #\* #\? #\/))
+  (:lambda (list &bounds start end)
+    (make-instance 'string-node :data (text list) :src %std-src)))
+
+(defrule command-expression (and "${" expression "}") (:lambda (list) (second list)))
+(defrule command-var (and "$" varname) (:lambda (list) (second list)))
+
+(defrule command-word (or
+                       command-expression
+                       command-var
+                       command-word-text
+                       string))
+
+(defrule command (and command-word (* (and inline-space command-word)))
+  (:lambda (list &bounds start end)
+    (make-instance
+     'command-node
+     :children (apply #'list (first list) (mapcar #'second (second list)))
+     :src %std-src)))
+
+(defrule commands (and command (* (command-separator command)))
+  (:lambda (list &bounds start end)
+    (make-instance
+     'commands-node
+     :children (apply #'list (first list) (mapcar #'second (second list)))
+     :src %std-src)))
+
+(defun %with-data (node data)
+  (setf (node-data node) data)
+  node)
+
+(defrule spawn-commands-dollar-paren (and "$(" optional-space commands optional-space ")")
+  (:lambda (list) (%with-data (third list) "$(")))
+(defrule spawn-commands-backtick-backtick (and "``" optional-space commands optional-space "``")
+  (:lambda (list) (%with-data (third list) "``")))
+(defrule spawn-commands-backtick (and "`" optional-space commands optional-space "`")
+  (:lambda (list) (%with-data (third list) "`")))
+
+(defrule spawn-commands (or spawn-commands-dollar-paren spawn-commands-backtick-backtick spawn-commands-backtick))
+
 (defrule non-chain (or
                     if
                     try-catch
@@ -497,6 +543,7 @@
                     list
                     splice
                     varname
+                    spawn-commands
                     parentheses))
 
 ;; Parser - end ------------------------------
@@ -584,15 +631,16 @@
                                       (functionp x)
                                       (ngs-type-p x)
                                       (and (listp x) (functionp (first x))))))
-(def-ngs-type "File"   #'pathnamep)
-(def-ngs-type "Hash"   #'hash-table-p)
-(def-ngs-type "List"   #'listp)
-(def-ngs-type "Null"   #'(lambda (x) (eq x :null)))
-(def-ngs-type "Number" #'numberp)
-(def-ngs-type "Regexp" #'(lambda (x) (eq :regexp (gethash x *ngs-objects-types*))))
-(def-ngs-type "Seq"    #'(lambda (x) (or (listp x) (arrayp x) (stringp x))))
-(def-ngs-type "String" #'stringp)
-(def-ngs-type "Type"   #'ngs-type-p)
+(def-ngs-type "File"    #'pathnamep)
+(def-ngs-type "Hash"    #'hash-table-p)
+(def-ngs-type "List"    #'listp)
+(def-ngs-type "Null"    #'(lambda (x) (eq x :null)))
+(def-ngs-type "Number"  #'numberp)
+(def-ngs-type "Process" #'sb-ext:process-p)
+(def-ngs-type "Regexp"  #'(lambda (x) (eq :regexp (gethash x *ngs-objects-types*))))
+(def-ngs-type "Seq"     #'(lambda (x) (or (listp x) (arrayp x) (stringp x))))
+(def-ngs-type "String"  #'stringp)
+(def-ngs-type "Type"    #'ngs-type-p)
 
 ;; Types definitions - end ------------------------------
 
@@ -813,6 +861,10 @@
                                                           (make-arguments :positional (list ,%2))))
 
 (defmethod generate-code ((n regexp-node))              `(ngs-call-function (get-var "Regexp" vars) (make-arguments :positional (list ,%1 ,(node-data n))) :name "Regexp"))
+
+(defmethod generate-code ((n command-node))             `(ngs-call-function spawn-function  (make-arguments :positional (list ,@%children)) :name spawn-function-name))
+(defmethod generate-code ((n commands-node))            `(let ((spawn-function (get-var ,%data vars))
+                                                               (spawn-function-name ,%data)) ,@%children))
 
 ;; GENERATE MARKER
 
@@ -1059,6 +1111,21 @@
                                                    (t x))))))
 
 (native "from_json" (string) (yason:parse %p1 :json-nulls-as-keyword t :json-arrays-as-vectors t))
+
+;; WARNING: Lisp implementation specific code
+(ngs-define-function "Process" *ngs-globals* t
+                     (lambda (parameters)
+                       (sb-ext:run-program
+                        %p1
+                        (cdr (arguments-positional parameters))
+                        :wait nil
+                        :search t)))
+
+(native "wait" (process) (sb-ext:process-wait %p1))
+
+(native-getattr process
+  ("code" (sb-ext:process-exit-code %p1))
+  ("status" (string-downcase (symbol-name (sb-ext:process-status %p1)))))
 
 ;; Runtime - end ------------------------------
 

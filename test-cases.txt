@@ -174,3 +174,7 @@ read('./test/test.json')
 While
 a=0; r=[]; while a<3 {r.push(a); a=a+1}; r
 #(0 1 2)
+
+Process exit code
+[$(true).code, $(false).code]
+#(0 1)

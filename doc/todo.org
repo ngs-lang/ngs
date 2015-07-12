@@ -3,7 +3,8 @@
 
 * Re-implement in Lisp
 ** DONE Fix push(List, x)
-** Change (native ...) to clearer (native (params-types) ...)
+** $* syntax as command word
+** DONE Change (native ...) to clearer (native (params-types) ...)
 ** Make missing expressions return :null
 ** Improve error messages
 ** Fix __get_item crash with invalid number of parameters
