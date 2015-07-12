@@ -690,8 +690,7 @@ defg __parse(p:Process) { String(p) }
 
 defg __parse(p:Process) {
 	s = String(p)
-	guard s
-	guard s[0] == '{'
+	guard s and s[0] == '{'
 	s.from_json()
 }
 
