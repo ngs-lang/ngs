@@ -178,3 +178,7 @@ a=0; r=[]; while a<3 {r.push(a); a=a+1}; r
 Process exit code
 [$(true).code, $(false).code]
 #(0 1)
+
+Process truthness
+[Bool($(true)), Bool($(false))]
+#(:true :false)

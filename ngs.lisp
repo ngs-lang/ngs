@@ -694,15 +694,29 @@
 
 ;; For simplicity of generate-expected-parameters, which has nullable fields in each parameter
 
+;; TODO: factor out (ecase (ngs-call-function (get-var "Bool" vars) (make-arguments :positional (list ...))) ...)
+
 (defmethod generate-code ((n null))                      nil)
 
 (defmethod generate-code ((n number-node))               %data)
 (defmethod generate-code ((n string-node))               %data)
 (defmethod generate-code ((n varname-node))             `(get-var ,%data vars))
-(defmethod generate-code ((n binary-operation-node))    `(ngs-call-function
-                                                          (get-var ,%data vars)
-                                                          (make-arguments :positional (list ,@(children-code n)))
-                                                          :name ,%data))
+(defmethod generate-code ((n binary-operation-node))    (let ((op %data))
+                                                          (cond
+                                                            ((equal op "and")
+                                                             `(let ((r ,%1))
+                                                                (ecase (ngs-call-function (get-var "Bool" vars) (make-arguments :positional (list r)) :name "Bool")
+                                                                  (:true ,%2)
+                                                                  (:false r))))
+                                                            ((equal op "or")
+                                                             `(let ((r ,%1))
+                                                                (ecase (ngs-call-function (get-var "Bool" vars) (make-arguments :positional (list r)) :name "Bool")
+                                                                  (:true r)
+                                                                  (:false ,%2))))
+                                                            (t
+                                                             `(ngs-call-function (get-var ,op vars)
+                                                                                 (make-arguments :positional (list ,@(children-code n)))
+                                                                                 :name ,op)))))
 (defmethod generate-code ((n assignment-node))          `(set-var
                                                           ,(node-data (first (node-children n)))
                                                           vars
