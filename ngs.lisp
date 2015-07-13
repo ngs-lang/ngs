@@ -694,7 +694,11 @@
 
 ;; For simplicity of generate-expected-parameters, which has nullable fields in each parameter
 
-;; TODO: factor out (ecase (ngs-call-function (get-var "Bool" vars) (make-arguments :positional (list ...))) ...)
+(defmacro %bool-ecase (expr yes no)
+  `(ecase
+       (ngs-call-function (get-var "Bool" vars) (make-arguments :positional (list ,expr)) :name "Bool")
+     (:true ,yes)
+     (:false ,no)))
 
 (defmethod generate-code ((n null))                      nil)
 
@@ -703,16 +707,8 @@
 (defmethod generate-code ((n varname-node))             `(get-var ,%data vars))
 (defmethod generate-code ((n binary-operation-node))    (let ((op %data))
                                                           (cond
-                                                            ((equal op "and")
-                                                             `(let ((r ,%1))
-                                                                (ecase (ngs-call-function (get-var "Bool" vars) (make-arguments :positional (list r)) :name "Bool")
-                                                                  (:true ,%2)
-                                                                  (:false r))))
-                                                            ((equal op "or")
-                                                             `(let ((r ,%1))
-                                                                (ecase (ngs-call-function (get-var "Bool" vars) (make-arguments :positional (list r)) :name "Bool")
-                                                                  (:true r)
-                                                                  (:false ,%2))))
+                                                            ((equal op "and") `(let ((r ,%1)) (%bool-ecase r ,%2 r)))
+                                                            ((equal op "or") `(let ((r ,%1)) (%bool-ecase r r ,%2)))
                                                             (t
                                                              `(ngs-call-function (get-var ,op vars)
                                                                                  (make-arguments :positional (list ,@(children-code n)))
@@ -824,11 +820,7 @@
 (defmethod generate-code ((n setitem-node))             `(ngs-call-function
                                                           (get-var "__set_item" vars)
                                                           (make-arguments :positional (list ,@(children-code n)))))
-(defmethod generate-code ((n if-node))                  `(ecase (ngs-call-function
-                                                                 (get-var "Bool" vars)
-                                                                 (make-arguments :positional (list ,%1)))
-                                                           (:true ,%2)
-                                                           (:false ,%3)))
+(defmethod generate-code ((n if-node))                  `(%bool-ecase ,%1 ,%2, %3))
 (defmethod generate-code ((n try-catch-node))           `(handler-case ,%1
                                                            (ngs-user-exception (e)
                                                              (ngs-call-function
@@ -837,38 +829,14 @@
 
 (defmethod generate-code ((n throw-node))               `(error 'ngs-user-exception :datum ,%1))
 
-(defmethod generate-code ((n guard-node))               `(ecase (ngs-call-function
-                                                                 (get-var "Bool" vars)
-                                                                 (make-arguments :positional (list ,%1))
-                                                                 :name "Bool")
-                                                           (:true :null)
-                                                           (:false (error 'parameters-mismatch))))
+(defmethod generate-code ((n guard-node))               `(%bool-ecase ,%1 :null (error 'parameters-mismatch)))
 
 (defmethod generate-code ((n for-node))                 `(progn
                                                            ,%1
-                                                          (loop
-                                                            while
-                                                              (ecase (ngs-call-function
-                                                                      (get-var "Bool" vars)
-                                                                      (make-arguments :positional (list ,%2))
-                                                                      :name "Bool")
-                                                                (:true t)
-                                                                (:false nil))
-                                                            do ,%4
-                                                             do ,%3)
-                                                          :null))
+                                                           (loop while (%bool-ecase ,%2 t nil) do ,%4 do ,%3)
+                                                           :null))
 
-(defmethod generate-code ((n while-node))               `(progn
-                                                          (loop
-                                                            while
-                                                              (ecase (ngs-call-function
-                                                                      (get-var "Bool" vars)
-                                                                      (make-arguments :positional (list ,%1))
-                                                                      :name "Bool")
-                                                                (:true t)
-                                                                (:false nil))
-                                                            do ,%2)
-                                                          :null))
+(defmethod generate-code ((n while-node))               `(progn (loop while (%bool-ecase ,%1 t nil) do ,%2) :null))
 
 (defmethod generate-code ((n literal-node))             `(ngs-call-function
                                                           (get-var (apply #'concatenate 'string (list "__literal_" ,%1)) vars)

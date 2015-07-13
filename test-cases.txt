@@ -175,6 +175,10 @@ While
 a=0; r=[]; while a<3 {r.push(a); a=a+1}; r
 #(0 1 2)
 
+For
+r=[]; for(a=0;a<3;a=a+1) { r.push(a+2) }; r
+#(2 3 4)
+
 Process exit code
 [$(true).code, $(false).code]
 #(0 1)
@@ -182,3 +186,7 @@ Process exit code
 Process truthness
 [Bool($(true)), Bool($(false))]
 #(:true :false)
+
+Guard
+def gg(x:Number) { 1 }; def gg(x:Number) { guard x==20; 2 }; [gg(20), gg(10)]
+#(2 1)
