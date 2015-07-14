@@ -530,6 +530,8 @@
 
 (defrule spawn-commands (or spawn-commands-dollar-paren spawn-commands-backtick-backtick spawn-commands-backtick))
 
+(defrule at-lambda (and "@" optional-space expression) (:lambda (list) (%make-xyz-lambda-node (third list))))
+
 (defrule non-chain (or
                     if
                     try-catch
@@ -548,6 +550,7 @@
                     null
                     list
                     splice
+                    at-lambda
                     varname
                     spawn-commands
                     parentheses))

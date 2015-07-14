@@ -194,3 +194,7 @@ def gg(x:Number) { 1 }; def gg(x:Number) { guard x==20; 2 }; [gg(20), gg(10)]
 Automatic @ lambda
 [1,2] @ X+1
 #(2 3)
+
+Flatten (includes @X)
+[[1,2],[3,4]].flatten()
+#(1 2 3 4)

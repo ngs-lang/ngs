@@ -321,11 +321,11 @@ defg zip(a:Seq, b:Seq) {
 	l@[a[X], b[X]]
 }
 
-# later # defg flatten(s:Seq) {
-# later # 	ret = []
-# later # 	s.each(@X.each(@ret.push(X)))
-# later # 	ret
-# later # }
+defg flatten(s:Seq) {
+	ret = []
+	s.each(@X.each(@ret.push(X)))
+	ret
+}
 
 defg first(s:Seq)  { s[0] }
 defg second(s:Seq) { s[1] }
