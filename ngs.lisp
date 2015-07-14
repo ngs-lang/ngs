@@ -432,7 +432,7 @@
        (make-instance 'getattr-node :children target-list :src %std-src)
        target-list))))
 
-(defrule chain-item-getitem (and optional-space "[" optional-space expression optional-space "]" (! (and optional-space "=")))
+(defrule chain-item-getitem (and optional-space "[" optional-space expression optional-space "]" (! (and optional-space "=" (! "="))))
   (:lambda (list &bounds start end)
     (let ((target-list (list :arg (fourth list))))
       (list
@@ -516,11 +516,11 @@
   node)
 
 (defrule spawn-commands-dollar-paren (and "$(" optional-space commands optional-space ")")
-  (:lambda (list) (%with-data (third list) "$(")))
+  (:lambda (list) (%with-data (third list) "$()")))
 (defrule spawn-commands-backtick-backtick (and "``" optional-space commands optional-space "``")
-  (:lambda (list) (%with-data (third list) "``")))
+  (:lambda (list) (%with-data (third list) "````")))
 (defrule spawn-commands-backtick (and "`" optional-space commands optional-space "`")
-  (:lambda (list) (%with-data (third list) "`")))
+  (:lambda (list) (%with-data (third list) "``")))
 
 (defrule spawn-commands (or spawn-commands-dollar-paren spawn-commands-backtick-backtick spawn-commands-backtick))
 
@@ -570,6 +570,7 @@
 ;; TODO: consider :synchronized
 (defvar *ngs-meta* (make-hash-table :weakness :key))
 (defvar *ngs-objects-types* (make-hash-table :weakness :key))
+(defvar *ngs-objects-attributes* (make-hash-table :weakness :key))
 
 (defun one-level-deeper-lexical-vars (ls)
   (make-instance 'lexical-scopes :hashes (cons (make-hash-table :test #'equal :size 20) (lexical-scopes-hashes ls))))
@@ -811,15 +812,19 @@
 
 (defmethod generate-code ((n getattr-node))             `(ngs-call-function
                                                           (get-var "__get_attr" vars)
-                                                          (make-arguments :positional (list ,@(children-code n)))))
+                                                          (make-arguments :positional (list ,@(children-code n)))
+                                                          :name "__get_attr"))
 
 (defmethod generate-code ((n getitem-node))             `(ngs-call-function
                                                           (get-var "__get_item" vars)
-                                                          (make-arguments :positional (list ,@(children-code n)))))
+                                                          (make-arguments :positional (list ,@(children-code n)))
+                                                          :name "__get_item"))
 
 (defmethod generate-code ((n setitem-node))             `(ngs-call-function
                                                           (get-var "__set_item" vars)
-                                                          (make-arguments :positional (list ,@(children-code n)))))
+                                                          (make-arguments :positional (list ,@(children-code n)))
+                                                          :name "__set_item"))
+
 (defmethod generate-code ((n if-node))                  `(%bool-ecase ,%1 ,%2, %3))
 (defmethod generate-code ((n try-catch-node))           `(handler-case ,%1
                                                            (ngs-user-exception (e)
@@ -882,6 +887,7 @@
 (define-condition parameters-mismatch () ())
 (define-condition ngs-user-exception (runtime-error) ((datum :initarg :datum :reader ngs-user-exception-datum)))
 (define-condition item-does-not-exist (runtime-error) ((datum :initarg :datum :reader ngs-user-exception-datum)))
+(define-condition attribute-does-not-exist (runtime-error) ((datum :initarg :datum :reader ngs-user-exception-datum)))
 
 (defmethod print-object ((e variable-not-found) stream)
   (format stream "Variable '~A' not found" (variable-not-found-varname e)))
@@ -973,11 +979,13 @@
 (defmacro all-positionals (typ)
   `(loop for p in %positionals do (guard-type p ,typ)))
 
+;; TODO: %p2 is computed twice
 (defmacro native-getattr (typ &body body) `(native "__get_attr" (,typ string)
                                              (cond
                                                ,@(loop
                                                     for clause in body
-                                                    collecting `((equalp %p2 ,(first clause)) ,@(rest clause))))))
+                                                    collecting `((equalp %p2 ,(first clause)) ,@(rest clause)))
+                                               (t (error 'attribute-does-not-exist :datum %p2)))))
 
 (defmacro %call (name parameters)
   `(ngs-call-function (get-var ,name *ngs-globals*) ,parameters :name ,name))
@@ -992,7 +1000,7 @@
 (native "<" (number number) (%bool (< %p1 %p2)))
 (native ">" (number number) (%bool (> %p1 %p2)))
 (native "+" (number number) (+ %p1 %p2))
-(native "+" (string string) (concatenate 'string (list %p1 %p2)))
+(native "+" (string string) (concatenate 'string %p1 %p2))
 
 (native "Bool" (bool) %p1)
 (native "Bool" (number) (%bool (not (zerop %p1))))
@@ -1001,10 +1009,12 @@
 
 ;; List
 (native "__get_item" (list number) (nth %p2 %p1))
+(native "in" (any list) (%bool (member %p1 %p2 :test #'equalp)))
 
 ;; Array
 (native "__get_item" (array number) (elt %p1 %p2))
 (native "push" (array any) (vector-push-extend %p2 %p1) %p1)
+(native "in" (any array) (%bool (position %p1 %p2))) ; probably move to stdlib later, provide (position)
 
 (native "String" (any) (format nil "~A" %p1))
 ;; (native "String" (file) (file-name %p1))
@@ -1095,17 +1105,23 @@
 (native "from_json" (string) (yason:parse %p1 :json-nulls-as-keyword t :json-arrays-as-vectors t))
 
 ;; WARNING: Lisp implementation specific code
+
 (ngs-define-function "Process" *ngs-globals* t
                      (lambda (parameters)
-                       (sb-ext:run-program
-                        %p1
-                        (cdr (arguments-positional parameters))
-                        :wait nil
-                        :search t)))
+                       (let* ((positionals %positionals)
+                              (p
+                              (sb-ext:run-program
+                               (car positionals)
+                               (cdr positionals)
+                               :wait nil
+                               :search t)))
+                         (setf (gethash p *ngs-objects-attributes*) `(("argv" ,positionals)))
+                         p)))
 
 (native "wait" (process) (sb-ext:process-wait %p1))
 
 (native-getattr process
+  ("argv" (second (assoc "argv" (gethash %p1 *ngs-objects-attributes*) :test #'equalp)))
   ("code" (sb-ext:process-exit-code %p1))
   ("status" (string-downcase (symbol-name (sb-ext:process-status %p1)))))
 

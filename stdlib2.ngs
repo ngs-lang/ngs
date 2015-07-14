@@ -69,13 +69,13 @@ defg Bool(p:Process) { p.status == 'exited' and p.code == 0 }
 # later # 	thread().locals()['P'] = p
 # later # }
 # later # 
-defg '$('(*args) {
+defg '$()'(*args) {
 	# TODO: handle async
 	p = Process(*args)
 # later # 	spawn_update_globals(args, p)
 	p.wait()
-# later # 	ok = cmd_finished_ok_p(p)
-# later # 	not(ok) throws ['runtime', 'Command execution failed: ' + inspect(args)]
+	ok = cmd_finished_ok_p(p)
+	not(ok) throws ['runtime', 'Command execution failed: ' + String(args)]
 	p
 }
 # later # 
@@ -92,26 +92,27 @@ defg '$('(*args) {
 # later # 	  spawn(*args)
 # later # }
 # later # 
-# later # defg cmd_finished_ok_p(p:Process) { p.exit_code == 0 }
-# later # 
-# later # defg cmd_finished_ok_p(p:Process) {
-# later # 	guard p.cmd == 'test'
-# later # 	p.exit_code in [0,1]
-# later # }
-# later # 
-# later # defg cmd_finished_ok_p(p:Process) {
-# later # 	guard p.cmd == 'false'
-# later # 	p.exit_code == 1
-# later # }
-# later # 
-# later # defg cmd_finished_ok_p(p:Process) {
-# later # 	guard p.cmd == 'service'
-# later # 	guard p.args[1] == 'status'
-# later # 	# Empirical
-# later # 	p.exit_code < 4
-# later # }
-# later # 
-# later # # ----- spawn sugar - end -----
+
+defg cmd_finished_ok_p(p:Process) { p.code == 0 }
+
+defg cmd_finished_ok_p(p:Process) {
+	guard p.argv[0] == 'test'
+	p.code in [0,1]
+}
+
+defg cmd_finished_ok_p(p:Process) {
+	guard p.argv[0] == 'false'
+	p.code == 1
+}
+
+defg cmd_finished_ok_p(p:Process) {
+	guard p.argv[0] == 'service'
+	guard p.argv[1] == 'status'
+	# Empirical
+	p.code < 4
+}
+
+# ----- spawn sugar - end -----
 
 
 # ----- Meta sugar - start -----
