@@ -78,10 +78,11 @@ defg '$()'(*args) {
 	not(ok) throws ['runtime', 'Command execution failed: ' + String(args)]
 	p
 }
-# later # 
-# later # defg spawn(*args) {
-# later # 	guard args.map(typeof).any(__neq, String)
-# later # 	spawn(*args.map(String))
+
+# later # defg '$()'(*args) {
+# later # 	# guard args.map(typeof).any(__neq, String)
+# later # 	guard args.any(F(x) {x is not String})
+# later # 	# spawn(*args.map(String))
 # later # }
 # later # 
 # later # # Convert execution of (example) '-f somefile' to 'test -f somefile'
@@ -244,8 +245,6 @@ defg String(f:File) { f.name }
 defg Bool(f:File) { $(-f $f).Bool() }
 defg repr(f:File) { "File(${f.name.repr()})" }
 
-END
-
 defg dirs() {
 	`find -maxdepth 1 -type d`.lines() @ slice(X,2,X.len()-2)
 }
@@ -253,52 +252,52 @@ defg dirs() {
 # ----- Files sugar - end -----
 
 
-# ----- Thread - start -----
-
-defg thread(f:Array) { thread(f.one()) }
-
-defg String(t:Thread) { "<Thread id=${t.id} state=${t.state}>" }
-
-defg __eq(a:Thread, b:Thread) { a.id == b.id }
-
-# ----- Thread - end -----
-
+# later # # ----- Thread - start -----
+# later # 
+# later # defg thread(f:Array) { thread(f.one()) }
+# later # 
+# later # defg String(t:Thread) { "<Thread id=${t.id} state=${t.state}>" }
+# later # 
+# later # defg __eq(a:Thread, b:Thread) { a.id == b.id }
+# later # 
+# later # # ----- Thread - end -----
 
 # ----- Process - start -----
 
-defg repr(p:Process) { "<Process pid=${p.pid} code=${p.exit_code} id=${p.id} o=${p.stdout.len()} e=${p.stderr.len()}>" }
+# later # defg repr(p:Process) { "<Process pid=${p.pid} code=${p.code} id=${p.id} o=${p.stdout.len()} e=${p.stderr.len()}>" }
 
 # ----- Process - end -----
 
 
-# ----- Lock sugar - start -----
-defg acquire(l:Lock, f:F, *args) {
-	# TODO: maybe catch and rethrow after release()
-	l.acquire()
-	ret = f(*args)
-	l.release()
-	ret
-}
-# ----- Lock sugar - end -----
+# later # # ----- Lock sugar - start -----
+# later # defg acquire(l:Lock, f:F, *args) {
+# later # 	# TODO: maybe catch and rethrow after release()
+# later # 	l.acquire()
+# later # 	ret = f(*args)
+# later # 	l.release()
+# later # 	ret
+# later # }
+# later # # ----- Lock sugar - end -----
+
 
 
 # ----- Seq - start -----
 
-# Not the most efficient :/
-# I wonder why all other languages return -1 for not found.
-defg pos(s:Seq, subseq:Seq, start:Number=0) {
-	sl = s.len()
-	ssl = subseq.len()
-
-	sl < ssl returns null
-
-	j = sl - ssl + 1
-
-	for(i=start; i<j; i=i+1) {
-		slice(s, i, ssl) == subseq returns i
-	}
-	return null
-}
+# later # # Not the most efficient :/
+# later # # I wonder why all other languages return -1 for not found.
+# later # defg pos(s:Seq, subseq:Seq, start:Number=0) {
+# later # 	sl = s.len()
+# later # 	ssl = subseq.len()
+# later # 
+# later # 	sl < ssl returns null
+# later # 
+# later # 	j = sl - ssl + 1
+# later # 
+# later # 	for(i=start; i<j; i=i+1) {
+# later # 		slice(s, i, ssl) == subseq returns i
+# later # 	}
+# later # 	return null
+# later # }
 
 defg split(s:Seq, delim:Seq) {
 	sl = s.len()
@@ -309,7 +308,7 @@ defg split(s:Seq, delim:Seq) {
 		ret.push(s.slice(start, i-start))
 		start = i + dl
 	}
-	if(start<sl) {
+	if start<sl {
 		ret.push(s.slice(start, sl-start))
 	}
 	ret
@@ -322,11 +321,11 @@ defg zip(a:Seq, b:Seq) {
 	l@[a[X], b[X]]
 }
 
-defg flatten(s:Seq) {
-	ret = []
-	s.each(@X.each(@ret.push(X)))
-	ret
-}
+# later # defg flatten(s:Seq) {
+# later # 	ret = []
+# later # 	s.each(@X.each(@ret.push(X)))
+# later # 	ret
+# later # }
 
 defg first(s:Seq)  { s[0] }
 defg second(s:Seq) { s[1] }
@@ -335,6 +334,7 @@ defg fourth(s:Seq) { s[3] }
 defg fifth(s:Seq)  { s[4] }
 
 defg last(s:Seq)   { s[-1] }
+
 
 # Abstract usage example:
 # servers.filter(F(x) {'unicorn' in x.tags}).one('Unicorn server').create_image('Unicorn backup')
@@ -365,11 +365,11 @@ defg startsWith(s:Seq, pfx:Seq) {
 	s.slice(0, pfx.len()) == pfx
 }
 
-defg endsWith(s:Seq, sfx:Seq) {
-	l = sfx.len()
-	len(s) < l returns false
-	s.slice(s.len() - l, l) == sfx
-}
+# later # defg endsWith(s:Seq, sfx:Seq) {
+# later # 	l = sfx.len()
+# later # 	len(s) < l returns false
+# later # 	s.slice(s.len() - l, l) == sfx
+# later # }
 
 # Functional
 
@@ -381,9 +381,11 @@ defg each(s:Seq, processor:F, *args) {
 	s
 }
 
-defg each_star(s:Seq, processor:F, *args) { s.each(@processor(*X+args)) }
+# later # defg each_star(s:Seq, processor:F, *args) { s.each(@processor(*X+args)) }
 
 defg map(s:Seq, mapper:F, *args) { s.len() @ mapper(s[X], *args) }
+
+END
 
 defg map_star(s:Seq, mapper:F, *args) { s.len() @ mapper(*s[X] + args) }
 

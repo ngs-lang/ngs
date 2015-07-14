@@ -190,3 +190,7 @@ Process truthness
 Guard
 def gg(x:Number) { 1 }; def gg(x:Number) { guard x==20; 2 }; [gg(20), gg(10)]
 #(2 1)
+
+Automatic @ lambda
+[1,2] @ X+1
+#(2 3)

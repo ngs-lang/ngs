@@ -28,8 +28,13 @@
    (children :initarg :children :initform (list) :accessor node-children)
    (data :initarg :data :initform nil :accessor node-data)))
 
+(defparameter *high-priority-optional-space-operators*
+  '(("@?" "@")))
+
 (defparameter *required-space-binary-operators*
-  '(("throws")
+  '(("is not" "is")
+    ("throws")
+    ("returnsNotDoneYet")
     ("or")
     ("and")
     ("in" "not in")))
@@ -41,6 +46,7 @@
 
 (defparameter *binary-operators*
   (append
+   (mapcar #'(lambda(x) `(and optional-space (or ,@x) optional-space)) *high-priority-optional-space-operators*)
    (mapcar #'(lambda(x) `(and space (or ,@x) space)) *required-space-binary-operators*)
    (mapcar #'(lambda(x) `(and optional-space (or ,@x) optional-space)) *optional-space-binary-operations*)))
 
@@ -701,6 +707,30 @@
      (:true ,yes)
      (:false ,no)))
 
+
+(defun %make-function-parameter-node (name)
+  (make-instance
+   'function-parameter-node
+   :data (list 'regular)
+   :children (list
+              (make-instance 'string-node :data name)
+              nil
+              (make-instance 'keyword-node :data :null))))
+
+(defun %make-xyz-lambda-node (expr)
+  (make-instance
+   'lambda-node
+   :src (node-src expr)
+   :children (list
+              "auto-generated-@"
+              (make-instance
+               'function-parameters-node
+               :children (list
+                          (%make-function-parameter-node "X")
+                          (%make-function-parameter-node "Y")
+                          (%make-function-parameter-node "Z")))
+              expr)))
+
 (defmethod generate-code ((n null))                      nil)
 
 (defmethod generate-code ((n number-node))               %data)
@@ -710,6 +740,14 @@
                                                           (cond
                                                             ((equal op "and") `(let ((r ,%1)) (%bool-ecase r ,%2 r)))
                                                             ((equal op "or") `(let ((r ,%1)) (%bool-ecase r r ,%2)))
+                                                            ((equal op "@")
+                                                             ;; Look at (parse 'expression "F(X=null,Y=null,Z=null) {1}")
+                                                             (generate-code
+                                                              (make-function-call-node
+                                                               "map"
+                                                               (list
+                                                                (first (node-children n))
+                                                                (%make-xyz-lambda-node (second (node-children n)))))))
                                                             (t
                                                              `(ngs-call-function (get-var ,op vars)
                                                                                  (make-arguments :positional (list ,@(children-code n)))
@@ -1015,6 +1053,9 @@
 (native "__get_item" (array number) (elt %p1 %p2))
 (native "push" (array any) (vector-push-extend %p2 %p1) %p1)
 (native "in" (any array) (%bool (position %p1 %p2))) ; probably move to stdlib later, provide (position)
+
+;; Sequence
+(native "len" (Seq) (length %p1))
 
 (native "String" (any) (format nil "~A" %p1))
 ;; (native "String" (file) (file-name %p1))
