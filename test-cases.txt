@@ -198,3 +198,11 @@ Automatic @ lambda
 Flatten (includes @X)
 [[1,2],[3,4]].flatten()
 #(1 2 3 4)
+
+map_star
+[[1,2],[3,4]].map_star(@Y)
+#(2 4)
+
+reduce
+reduce([1,2,3], 10, @X+Y)
+16

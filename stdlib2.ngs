@@ -1,5 +1,14 @@
 # ********** Used for Lisp rewrire **********
 
+# ----- Lang -----
+
+defg 'is not'(o, t:Type) { not(o is t) }
+
+defg '+'(s1:Seq, s2:Seq)  {
+	 guard s1 is not String
+	 [*s1, *s2]
+}
+
 defg repr(x) { String(x) }
 defg __not_in(*args) { not(__in(*args)) }
 
@@ -385,8 +394,6 @@ defg each(s:Seq, processor:F, *args) {
 
 defg map(s:Seq, mapper:F, *args) { s.len() @ mapper(s[X], *args) }
 
-END
-
 defg map_star(s:Seq, mapper:F, *args) { s.len() @ mapper(*s[X] + args) }
 
 defg reduce(s:Seq, start, reducer:F) {
@@ -394,6 +401,8 @@ defg reduce(s:Seq, start, reducer:F) {
 	s.each(F(x) { acc = reducer(acc, x) })
 	acc
 }
+
+END
 
 defg any(s:Seq, predicate:F, *args) {
 	j = s.len()

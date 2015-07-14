@@ -1048,6 +1048,9 @@
 (native "Bool" (list) (%bool (not (null %p1)))) ; probably move to stdlib later
 (native "Bool" (null) :false)
 
+;; Type
+(native "is" (any type) (%bool (ngs-value-is-of-type %p1 %p2)))
+
 ;; List
 (native "__get_item" (list number) (nth %p2 %p1))
 (native "in" (any list) (%bool (member %p1 %p2 :test #'equalp)))
