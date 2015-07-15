@@ -270,3 +270,7 @@ w'ab cd ef'
 Array math
 [1,2]+2
 #(3 4)
+
+Array.X
+[File('name1'), File('name2')].name
+#("name1" "name2")

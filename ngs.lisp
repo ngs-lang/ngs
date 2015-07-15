@@ -46,7 +46,7 @@
     ("+" "-")))
 
 (defparameter *binary-functions*
-  `("is not" "is" "in" "not in" "[]" ,@(alexandria:flatten *optional-space-binary-operations*)))
+  `("is not" "is" "in" "not in" "[]" "." ,@(alexandria:flatten *optional-space-binary-operations*)))
 
 (defparameter *binary-operators*
   (append
@@ -885,9 +885,9 @@
                                                                   `(apply #'concatenate (list 'string ,@(mapcar #'generate-code stringified-children)))))))
 
 (defmethod generate-code ((n getattr-node))             `(ngs-call-function
-                                                          (get-var "__get_attr" vars)
+                                                          (get-var "." vars)
                                                           (make-arguments :positional (list ,@(children-code n)))
-                                                          :name "__get_attr"))
+                                                          :name "."))
 
 (defmethod generate-code ((n getitem-node))             `(ngs-call-function
                                                           (get-var "[]" vars)
@@ -1056,7 +1056,7 @@
   `(loop for p in %positionals do (guard-type p ,typ)))
 
 ;; TODO: %p2 is computed twice
-(defmacro native-getattr (typ &body body) `(native "__get_attr" (,typ string)
+(defmacro native-getattr (typ &body body) `(native "." (,typ string)
                                              (cond
                                                ,@(loop
                                                     for clause in body

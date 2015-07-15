@@ -548,12 +548,12 @@ global __literal_w = split
 	})
 # later # }
 
-END
-
 # Magic methods
-defg __get_attr(a:Array, attr:String) { map(a, __get_attr, attr) }
+defg '.'(a:Array, attr:String) { map(a, (.), attr) }
 
 # ----- Array - end -----
+
+END
 
 
 # ----- Hash - start -----
