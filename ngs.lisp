@@ -901,11 +901,9 @@
                                                            (loop
                                                               for key being the hash-keys of src-hash
                                                               do (setf (gethash key h) (gethash key src-hash)))))
-;; (defmethod generate-code ((n kv-splice-node))           `(let ((x 1))))
-
 
 (defmethod generate-code ((n hash-node))                `(let ((h (make-hash-table :test #'equalp)))
-                                                           (progn ,@%children)
+                                                           ,@%children
                                                            h))
 
 (defmethod generate-code ((n list-concat-node))         `(concatenate 'list ,@%children))
