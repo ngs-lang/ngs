@@ -10,7 +10,7 @@ defg '+'(s1:Seq, s2:Seq)  {
 }
 
 defg repr(x) { String(x) }
-defg __not_in(*args) { not(__in(*args)) }
+defg 'not in'(*args) { not(in(*args)) }
 
 defg has(container, item) {item in container}
 defg has_no(container, item) {item not in container}
@@ -374,11 +374,11 @@ defg startsWith(s:Seq, pfx:Seq) {
 	s.slice(0, pfx.len()) == pfx
 }
 
-# later # defg endsWith(s:Seq, sfx:Seq) {
-# later # 	l = sfx.len()
-# later # 	len(s) < l returns false
-# later # 	s.slice(s.len() - l, l) == sfx
-# later # }
+defg endsWith(s:Seq, sfx:Seq) {
+	l = sfx.len()
+	len(s) < l returns false
+	s.slice(s.len() - l, l) == sfx
+}
 
 # Functional
 
@@ -445,8 +445,6 @@ defg count(s:Seq, predicate:F, *args) {
 	sum(s @ predicate(X, *args).Number())
 }
 
-END
-
 # Misc
 defg values(s:Seq) { s }
 
@@ -455,13 +453,9 @@ defg Bool(s:Seq) { s.len() > 0 }
 
 # Magic methods
 
-defg __in(v, s:Seq)  { any(s, __eq, v) }
+defg '[]'(s:Seq, idxs:Array) { idxs@s[X] }
 
-# defg __sub(a:Seq, b:Seq) { a @? X not in b }
-
-defg __get_item(s:Seq, idxs:Array) { idxs@s[X] }
-
-defg __get_item(s:Seq, idx:Number) {
+defg '[]'(s:Seq, idx:Number) {
 	guard idx < 0
 	l = s.len()
 	s[l+idx]
@@ -473,22 +467,20 @@ defg __get_item(s:Seq, idx:Number) {
 # ----- String - start -----
 
 # String(SCALAR)
-defg String(s:String) { s }
-defg String(l:Lambda) { inspect(l) }
-defg String(c:Code)   { "<Compiled code>" }
+# later # defg String(l:F) { inspect(l) }
 
-defg String(p:Process) {
-	# TODO:
-	#   Handle processes that are still running.
-	#   Handle stderr
-	#   Handle failed processes
-	#   Handle exit_code
-	p.stdout.strip()
-}
+# later # defg String(p:Process) {
+# later # 	# TODO:
+# later # 	#   Handle processes that are still running.
+# later # 	#   Handle stderr
+# later # 	#   Handle failed processes
+# later # 	#   Handle exit_code
+# later # 	p.stdout.strip()
+# later # }
 
-defg String(a:Array) { guard typeof(a) == Array; '[' + a.join(', ') + ']' }
-
-defg String(h:Hash) { guard typeof(h) == Hash; '{' + h.map(F(k,v) { "$k: $v" }).join(', ') + '}' }
+# later # defg String(a:Array) { guard a is Array; '[' + a.join(', ') + ']' }
+# later # 
+# later # defg String(h:Hash) { guard h is Hash; '{' + h.map(F(k,v) { "$k: $v" }).join(', ') + '}' }
 
 # Functions
 # TODO: maybe generic for Seq
@@ -514,7 +506,6 @@ defg strip(s:Seq, elts:Seq) {
 }
 
 defg strip(s:String) { strip(s, " \t\r\n") }
-# defg strip(a:Array) { a.map(strip) }
 
 defg split(s:String) { split(s, ' ') }
 
@@ -524,13 +515,13 @@ defg lines(s:String) { split(s, '\n') }
 defg repr(s:String) { "'$s'" }
 
 # Magic methods
-defg __mul(s:String, n:Number) { join(n@s) }
+defg '*'(s:String, n:Number) { join(n@s) }
 
 # Not sure, maybe Seq? Need use cases. For String it's: fname - '.txt' + '.bak'
-defg __sub(s:String, sfx:String) {
+defg '-'(s:String, sfx:String) {
 	if s.endsWith(sfx) {
 		s.slice(0, s.len() - sfx.len())
-	} else {
+	} {
 		# throw maybe?
 		s
 	}
@@ -539,18 +530,13 @@ defg __sub(s:String, sfx:String) {
 # ----- String - end -----
 
 
-
 # ----- Array - start -----
 
 defg sum(a:Array) { reduce(a, 0, (+)) }
 
+END
+
 # Magic methods
-# Don't make it Seq. It causes infinite recursion I guess.
-defg __eq(a:Array, b:Array) {
-	a.len() == b.len()
-	and
-	all(zip(a,b), @ X[0] == X[1])
-}
 
 global __literal_w = split
 
@@ -634,8 +620,8 @@ defg __eq(a:Hash, b:Hash) {
 	all(a.keys(), @ a[X] == b[X])
 }
 
-defg __get_item(h:Hash, n:Number) { h[n.String()] }
-defg __get_item(h:Hash, keys:Array) { Hash(keys@[X, h[X]]) }
+defg '[]'(h:Hash, n:Number) { h[n.String()] }
+defg '[]'(h:Hash, keys:Array) { Hash(keys@[X, h[X]]) }
 defg __set_item(h:Hash, n:Number, v) { h[n.String()] = v }
 
 # ----- Hash - end -----
@@ -690,7 +676,7 @@ defg remove(s:Set, v) { s.data.remove(v.set_id()); s }
 
 # Transformations
 defg without(a:Set, v) { a @? X != v }
-defg __sub(a:Set, b:Set) { a @? X not in b }
+defg '-'(a:Set, b:Set) { a @? X not in b }
 
 # Getters
 defg values(s:Set) { s.data.values() }
@@ -762,7 +748,7 @@ defg DfltHash(v) {
 	dh
 }
 
-defg __get_item(dh:DfltHash, k:String) {
+defg '[]'(dh:DfltHash, k:String) {
 	dh.data.get(k, dh.default)
 }
 

@@ -234,3 +234,31 @@ filter/null (includes @?)
 without
 [1,2,3].without(2)
 #(1 3)
+
+Pick indexes
+[1,2,3][[0,2]]
+#(1 3)
+
+Negative index
+[1,2,3][-1]
+3
+
+String/string
+String('abc')
+"abc"
+
+fill (includes */string)
+'ab'.fill(3)
+"ab "
+
+strip/0 (includes strip/1)
+' a \n\t'.strip()
+"a"
+
+-/string
+['abcd' - 'cd', 'abxy' - 'cd']
+#("ab" "abxy")
+
+sum
+[1,2,3].sum()
+6

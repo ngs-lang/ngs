@@ -46,7 +46,7 @@
     ("+" "-")))
 
 (defparameter *binary-functions*
-  `("is not" "is" "in" "not in" ,@(alexandria:flatten *optional-space-binary-operations*)))
+  `("is not" "is" "in" "not in" "[]" ,@(alexandria:flatten *optional-space-binary-operations*)))
 
 (defparameter *binary-operators*
   (append
@@ -890,9 +890,9 @@
                                                           :name "__get_attr"))
 
 (defmethod generate-code ((n getitem-node))             `(ngs-call-function
-                                                          (get-var "__get_item" vars)
+                                                          (get-var "[]" vars)
                                                           (make-arguments :positional (list ,@(children-code n)))
-                                                          :name "__get_item"))
+                                                          :name "[]"))
 
 (defmethod generate-code ((n setitem-node))             `(ngs-call-function
                                                           (get-var "__set_item" vars)
@@ -1076,6 +1076,7 @@
 (native "<" (number number) (%bool (< %p1 %p2)))
 (native ">" (number number) (%bool (> %p1 %p2)))
 (native "+" (number number) (+ %p1 %p2))
+(native "-" (number number) (- %p1 %p2))
 (native "+" (string string) (concatenate 'string %p1 %p2))
 
 (native "Bool" (bool) %p1)
@@ -1087,23 +1088,26 @@
 (native "is" (any type) (%bool (ngs-value-is-of-type %p1 %p2)))
 
 ;; List
-(native "__get_item" (list number) (nth %p2 %p1))
+(native "[]" (list number) (nth %p2 %p1))
 (native "in" (any list) (%bool (member %p1 %p2 :test #'equalp)))
 
 ;; Array
-(native "__get_item" (array number) (elt %p1 %p2))
+(native "[]" (array number) (elt %p1 %p2))
 (native "push" (array any) (vector-push-extend %p2 %p1) %p1)
 (native "in" (any array) (%bool (position %p1 %p2))) ; probably move to stdlib later, provide (position)
 
 ;; Sequence
-(native "len" (Seq) (length %p1))
+(native "len" (seq) (length %p1))
+(native "slice" (seq number number) (let ((start %p2)) (subseq %p1 start (+ start %p3))))
 
+;; String
 (native "String" (any) (format nil "~A" %p1))
 ;; (native "String" (file) (file-name %p1))
-(native "__get_item" (string number) (let ((pos %p2)) (subseq %p1 pos (1+ pos))))
+(native "[]" (string number) (let ((pos %p2)) (subseq %p1 pos (1+ pos))))
+(native "in" (string string) (%bool (search %p1 %p2)))
 
 (native "Hash" () (make-hash-table :test #'equalp))
-(native "__get_item" (hash any)
+(native "[]" (hash any)
   (multiple-value-bind (result found) (gethash %p2 %p1)
     (if found
         result
