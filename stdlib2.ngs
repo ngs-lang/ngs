@@ -402,8 +402,6 @@ defg reduce(s:Seq, start, reducer:F) {
 	acc
 }
 
-END
-
 defg any(s:Seq, predicate:F, *args) {
 	j = s.len()
 	for(i=0;i<j;i=i+1) {
@@ -446,6 +444,8 @@ defg without(a:Seq, v) { a @? X != v }
 defg count(s:Seq, predicate:F, *args) {
 	sum(s @ predicate(X, *args).Number())
 }
+
+END
 
 # Misc
 defg values(s:Seq) { s }
@@ -542,7 +542,7 @@ defg __sub(s:String, sfx:String) {
 
 # ----- Array - start -----
 
-defg sum(a:Array) { reduce(a, 0, __add) }
+defg sum(a:Array) { reduce(a, 0, (+)) }
 
 # Magic methods
 # Don't make it Seq. It causes infinite recursion I guess.

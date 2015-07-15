@@ -1,6 +1,7 @@
-;; apt-get install cl-esrap cl-ppcre cl-yason cl-trivial-gray-streams
+;; apt-get install cl-alexandria cl-esrap cl-ppcre cl-yason cl-trivial-gray-streams
 
 (require :asdf)
+(require :alexandria)
 (require :esrap)
 (require :cl-ppcre)
 (require :yason)
@@ -34,7 +35,7 @@
 (defparameter *required-space-binary-operators*
   '(("is not" "is")
     ("throws")
-    ("returnsNotDoneYet")
+    ("returns")
     ("or")
     ("and")
     ("in" "not in")))
@@ -43,6 +44,9 @@
   '(("===" "!==" "==" "!=" "<" ">" "~~" "~")
     ("*" "/")
     ("+" "-")))
+
+(defparameter *binary-functions*
+  `("is not" "is" "in" "not in" ,@(alexandria:flatten *optional-space-binary-operations*)))
 
 (defparameter *binary-operators*
   (append
@@ -100,6 +104,7 @@
 (defclass for-node (node) ())
 (defclass while-node (node) ())
 (defclass guard-node (node) ())
+(defclass return-node (node) ())
 (defclass literal-node (node) ())
 (defclass regexp-node (node) ())
 (defclass command-node (node) ())
@@ -298,6 +303,13 @@
      (defrule ,(%bin-expr (1+ (length *binary-operators*))) non-binary-operation
        (:lambda (list) list))))
 
+(defmacro define-binary-vars-rule ()
+  `(defrule binary-var (and "(" (or ,@*binary-functions*) ")")
+     (:lambda (list &bounds start end)
+       (make-instance 'varname-node :data (second list) :src %std-src))))
+
+(define-binary-vars-rule)
+
 (defrule expressions (and expression (* (+ (and expressions-delimiter expression))) optional-space (* ";"))
   (:lambda (list)
     (make-instance 'expressions-node :children (append (list (first list)) (mapcar #'second (caadr list))))))
@@ -483,6 +495,10 @@
   (:lambda (list &bounds start end)
     (make-instance 'guard-node :children (list (third list)) :src %std-src)))
 
+(defrule return (and "return" space expression)
+  (:lambda (list &bounds start end)
+    (make-instance 'return-node :children (list (third list)) :src %std-src)))
+
 (defrule parentheses (and "(" optional-space expression optional-space ")")
   (:lambda (list) (third list)))
 
@@ -539,6 +555,7 @@
                     for
                     while
                     guard
+                    return
                     assignment
                     function-call
                     number
@@ -553,6 +570,7 @@
                     at-lambda
                     varname
                     spawn-commands
+                    binary-var
                     parentheses))
 
 ;; Parser - end ------------------------------
@@ -751,6 +769,19 @@
                                                                (list
                                                                 (first (node-children n))
                                                                 (%make-xyz-lambda-node (second (node-children n)))))))
+                                                            ((equal op "@?")
+                                                             (generate-code
+                                                              (make-function-call-node
+                                                               "filter"
+                                                               (list
+                                                                (first (node-children n))
+                                                                (%make-xyz-lambda-node (second (node-children n)))))))
+                                                            ((equal op "returns")
+                                                             ;; Look at (parse 'expression "F(X=null,Y=null,Z=null) {1}")
+                                                             `(%bool-ecase
+                                                                             ,%1
+                                                                             (return-from function-block ,%2)
+                                                                             :null))
                                                             (t
                                                              `(ngs-call-function (get-var ,op vars)
                                                                                  (make-arguments :positional (list ,@(children-code n)))
@@ -769,13 +800,15 @@
                                                             ,(first %data)
                                                             ;; expected-parameters
                                                             (lambda (parameters)
-                                                              (let ((vars (one-level-deeper-lexical-vars vars)))
-                                                                ,@(children-code n :start 1))))))
+                                                              (block function-block
+                                                                (let ((vars (one-level-deeper-lexical-vars vars)))
+                                                                  ,@(children-code n :start 1)))))))
 
 (defmethod generate-code ((n lambda-node))              `(let ((expected-parameters ,(generate-expected-parameters (second (node-children n)))))
-                                                            (lambda (parameters)
+                                                           (lambda (parameters)
+                                                             (block function-block
                                                               (let ((vars (one-level-deeper-lexical-vars vars)))
-                                                                ,@(children-code n :start 1)))))
+                                                                ,@(children-code n :start 1))))))
 
 ;; 1. match the parameters and signal if there is a mismatch
 ;; 2. set local variables
@@ -876,6 +909,8 @@
 (defmethod generate-code ((n throw-node))               `(error 'ngs-user-exception :datum ,%1))
 
 (defmethod generate-code ((n guard-node))               `(%bool-ecase ,%1 :null (error 'parameters-mismatch)))
+
+(defmethod generate-code ((n return-node))              `(return-from function-block ,%1))
 
 (defmethod generate-code ((n for-node))                 `(progn
                                                            ,%1
