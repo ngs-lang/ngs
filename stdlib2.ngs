@@ -538,15 +538,17 @@ defg sum(a:Array) { reduce(a, 0, (+)) }
 
 global __literal_w = split
 
-END
-
 
 # Arithmetcis
-{
-	'add sub mul div'.split().each(F(op) {
-		defg "__$op"(a:Array, n:Number) { a.map(globals()["__$op"], n) }
+# later # {
+	w'+ - * /'.each(F(op) {
+		defg "$op"(a:Array, n:Number) {
+			a.map(globals()["$op"], n)
+		}
 	})
-}
+# later # }
+
+END
 
 # Magic methods
 defg __get_attr(a:Array, attr:String) { map(a, __get_attr, attr) }

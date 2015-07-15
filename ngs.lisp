@@ -653,7 +653,7 @@
        (%set-global-variable ,name ,symb))))
 
 ;; (def-ngs-type "Any"    #'(lambda (x) (declare (ignore x)) t))
-(def-ngs-type "Array"  #'arrayp)
+(def-ngs-type "Array"  #'(lambda (x) (and (arrayp x) (not (stringp x)))))
 (def-ngs-type "Bool"   #'(lambda (x) (or (eq x :true) (eq x :false))))
 (def-ngs-type "F"      #'(lambda (x) (or
                                       (functionp x)
@@ -666,7 +666,7 @@
 (def-ngs-type "Number"  #'numberp)
 (def-ngs-type "Process" #'sb-ext:process-p)
 (def-ngs-type "Regexp"  #'(lambda (x) (eq :regexp (gethash x *ngs-objects-types*))))
-(def-ngs-type "Seq"     #'(lambda (x) (or (listp x) (arrayp x) (stringp x))))
+(def-ngs-type "Seq"     #'(lambda (x) (or (arrayp x) (listp x)))) ; arrayp includes stringp, arrayp has higher probability
 (def-ngs-type "String"  #'stringp)
 (def-ngs-type "Type"    #'ngs-type-p)
 
@@ -1079,6 +1079,9 @@
 (native "-" (number number) (- %p1 %p2))
 (native "+" (string string) (concatenate 'string %p1 %p2))
 
+(native "globals" () (first (lexical-scopes-hashes *ngs-globals*)))
+
+;; Bool
 (native "Bool" (bool) %p1)
 (native "Bool" (number) (%bool (not (zerop %p1))))
 (native "Bool" (list) (%bool (not (null %p1)))) ; probably move to stdlib later
