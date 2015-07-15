@@ -526,7 +526,7 @@
      :children (apply #'list (first list) (mapcar #'second (second list)))
      :src %std-src)))
 
-(defrule commands (and command (* (command-separator command)))
+(defrule commands (and command (* (and command-separator command)))
   (:lambda (list &bounds start end)
     (make-instance
      'commands-node
@@ -743,7 +743,7 @@
    'lambda-node
    :src (node-src expr)
    :children (list
-              "auto-generated-@"
+              "auto-generated-@-or-@?"
               (make-instance
                'function-parameters-node
                :children (list
@@ -1099,6 +1099,8 @@
 ;; Sequence
 (native "len" (seq) (length %p1))
 (native "slice" (seq number number) (let ((start %p2)) (subseq %p1 start (+ start %p3))))
+(native "pos" (seq seq number) (or (search %p2 %p1 :start2 %p3) :null)) ; %p1 - seq, %p2 - subseq, %p3 - start in seq
+(native "pos" (seq seq) (or (search %p2 %p1) :null)) ; %p1 - seq, %p2 - subseq
 
 ;; String
 (native "String" (any) (format nil "~A" %p1))

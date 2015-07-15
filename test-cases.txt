@@ -262,3 +262,7 @@ strip/0 (includes strip/1)
 sum
 [1,2,3].sum()
 6
+
+literal w (is split/1, includes split/2)
+w'ab cd ef'
+#("ab" "cd" "ef")

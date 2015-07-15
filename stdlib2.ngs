@@ -534,11 +534,11 @@ defg '-'(s:String, sfx:String) {
 
 defg sum(a:Array) { reduce(a, 0, (+)) }
 
-END
-
 # Magic methods
 
 global __literal_w = split
+
+END
 
 
 # Arithmetcis
