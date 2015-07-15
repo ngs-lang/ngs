@@ -542,8 +542,8 @@ global __literal_w = split
 # Arithmetcis
 # later # {
 	w'+ - * /'.each(F(op) {
-		defg "$op"(a:Array, n:Number) {
-			a.map(globals()["$op"], n)
+		defg $op(a:Array, n:Number) {
+			a.map(globals()[op], n)
 		}
 	})
 # later # }
@@ -552,8 +552,6 @@ global __literal_w = split
 defg '.'(a:Array, attr:String) { map(a, (.), attr) }
 
 # ----- Array - end -----
-
-END
 
 
 # ----- Hash - start -----
@@ -587,9 +585,11 @@ defg filter(h:Hash, predicate:F, *args) {
 
 defg values(h:Hash) { h@Y }
 
-defg without(h:Hash, k:String) {
+defg without(h:Hash, k) {
 	h @? X != k
 }
+
+END
 
 # Misc
 defg get(h:Hash, k:String, dflt=null) {

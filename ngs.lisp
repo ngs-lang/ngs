@@ -95,6 +95,9 @@
 (defclass splice-node (node) ())
 (defclass list-concat-node (node) ())
 (defclass array-concat-node (node) ())
+(defclass kv-splice-node (node) ())
+(defclass kv-pair-node (node) ())
+(defclass hash-node (node) ())
 (defclass getattr-node (node) ())
 (defclass getitem-node (node) ())
 (defclass setitem-node (node) ())
@@ -275,7 +278,7 @@
   (:lambda (list &bounds start end)
     (make-instance 'string-node :data list :src %std-src)))
 
-(defrule identifier (or identifier-immediate string))
+(defrule identifier (or identifier-immediate string string-contents-var string-contents-expression))
 
 (defrule setitem (and binary-expression-1 optional-space "[" optional-space expression optional-space "]" optional-space "=" optional-space expression)
   (:lambda (list &bounds start end)
@@ -417,6 +420,27 @@
     (make-instance 'splice-node
                    :children (list (third list))
                    :src %std-src)))
+
+(defrule kv-pair (and expression optional-space ":" optional-space expression)
+  (:lambda (list &bounds start end)
+    (make-instance 'kv-pair-node
+                   :children (list (first list) (fifth list))
+                   :src %std-src)))
+
+(defrule kv-splice (and "**" optional-space expression)
+  (:lambda (list &bounds start end)
+    (make-instance 'kv-splice-node
+                   :children (list (third list))
+                   :src %std-src)))
+
+(defrule hash-item (or kv-pair kv-splice))
+
+(defrule hash (and "{" optional-space (? (and hash-item (* (and optional-space "," optional-space hash-item optional-space)))) optional-space "}")
+  (:lambda (list &bounds start end)
+     (make-instance 'hash-node
+                    :children (when (first (third list)) (append (list (first (third list))) (mapcar #'fourth (second (third list)))))
+                    :src %std-src)))
+
 
 (defrule non-binary-operation (or chain))
 
@@ -566,6 +590,7 @@
                     false
                     null
                     list
+                    hash
                     splice
                     at-lambda
                     varname
@@ -867,6 +892,22 @@
                                                           :fill-pointer t
                                                           :initial-contents (list ,@%children)))
 
+(defmethod generate-code ((n kv-pair-node))             `(setf (gethash ,%1 h) ,%2))
+
+(defmethod generate-code ((n kv-splice-node))           `(let ((src-hash
+                                                                (ngs-call-function (get-var "Hash" vars)
+                                                                                   (make-arguments :positional (list ,%1))
+                                                                                   :name "Hash")))
+                                                           (loop
+                                                              for key being the hash-keys of src-hash
+                                                              do (setf (gethash key h) (gethash key src-hash)))))
+;; (defmethod generate-code ((n kv-splice-node))           `(let ((x 1))))
+
+
+(defmethod generate-code ((n hash-node))                `(let ((h (make-hash-table :test #'equalp)))
+                                                           (progn ,@%children)
+                                                           h))
+
 (defmethod generate-code ((n list-concat-node))         `(concatenate 'list ,@%children))
 
 (defmethod generate-code ((n array-concat-node))        `(let ((l (concatenate 'list ,@%children)))
@@ -967,6 +1008,9 @@
 
 (defmethod print-object ((e variable-not-found) stream)
   (format stream "Variable '~A' not found" (variable-not-found-varname e)))
+
+(defmethod print-object ((e item-does-not-exist) stream)
+  (format stream "Item '~A' not found" (ngs-user-exception-datum e)))
 
 (defmethod print-object ((e method-implementatoin-not-found) stream)
   (let ((name (method-implementatoin-not-found-method-name e)))
@@ -1111,6 +1155,8 @@
 (native "[]" (string number) (let ((pos %p2)) (subseq %p1 pos (1+ pos))))
 (native "in" (string string) (%bool (search %p1 %p2)))
 
+;; Hash
+(native "Hash" (hash) %p1)
 (native "Hash" () (make-hash-table :test #'equalp))
 (native "[]" (hash any)
   (multiple-value-bind (result found) (gethash %p2 %p1)
@@ -1119,6 +1165,8 @@
         (error 'item-does-not-exist :datum %p2))))
 (native "__set_item" (hash any any) (setf (gethash %p2 %p1) %p3))
 (native "in" (any hash) (%bool (nth-value 1 (gethash %p1 %p2))))
+(native "keys" (hash) (hash-keys %p1))
+(native "len" (hash) (hash-table-count %p1))
 
 (defun file-string (path)
   "http://rosettacode.org/wiki/Read_entire_file#Common_Lisp"

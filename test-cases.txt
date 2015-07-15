@@ -274,3 +274,35 @@ Array math
 Array.X
 [File('name1'), File('name2')].name
 #("name1" "name2")
+
+Hash
+h={'a':1, 'b':2}; hh={'a':3, **h, 'b':4, 1:7}; [hh['a'], hh['b'], hh[1]]
+#(1 4 7)
+
+Hash(Array, v) (includes Hash(Array))
+h=Hash(['a', 'b'], 7); [h['a'], h['b']]
+#(7 7)
+
+Hash(Array, F, *args)
+h=Hash([1,2], @X+Y, 10); [h[1], h[2]]
+#(11 12)
+
+each(Hash, F, *args)
+r=[]; {'a': 1}.each(F(k,v) { r.push(k); r.push(v) }); r
+#("a" 1)
+
+map(Hash, F, *args)
+{'a': 1}.map(@[X,Y,Z], 7)
+#(#("a" 1 7))
+
+filter(Hash, F, *args)
+h={'a': 1, 'b': 2}.filter(@X!='a'); [h['b'], h.len()]
+#(2 1)
+
+values(Hash)
+{'a': 1}.values()
+#(1)
+
+without(Hash, k)
+h={'a': 1, 'b': 2}.without('a'); [h['b'], h.len()]
+#(2 1)
