@@ -306,3 +306,15 @@ values(Hash)
 without(Hash, k)
 h={'a': 1, 'b': 2}.without('a'); [h['b'], h.len()]
 #(2 1)
+
+get(Hash, k, dflt)
+h={'a': 1}; [h.get('a', 10), h.get('b', 11)]
+#(1 11)
+
+dflt(Hash, k, v)
+h={'a': 1}; h.dflt('a', 10).dflt('b', 11); [h.get('a', 10), h.get('b', 11)]
+#(1 11)
+
+Bool(Hash)
+[Bool({}), Bool({'a': 1})]
+#(:false :true)

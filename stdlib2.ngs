@@ -589,18 +589,16 @@ defg without(h:Hash, k) {
 	h @? X != k
 }
 
-END
-
 # Misc
-defg get(h:Hash, k:String, dflt=null) {
+defg get(h:Hash, k, dflt=null) {
 	if k in h {
 		h[k]
-	} else {
+	} {
 		dflt
 	}
 }
 
-defg dflt(h:Hash, k:String, v) {
+defg dflt(h:Hash, k, v) {
 	if k not in h {
 		h[k] = v
 	}
@@ -611,22 +609,9 @@ defg dflt(h:Hash, k:String, v) {
 
 defg Bool(h:Hash)   { h.len() > 0 }
 
-# Magic methods
-defg __in(v, h:Hash) { v in h.keys() }
-
-defg __eq(a:Hash, b:Hash) {
-	a.len() == b.len()
-	and
-	a.keys().sort() == b.keys().sort()
-	and
-	all(a.keys(), @ a[X] == b[X])
-}
-
-defg '[]'(h:Hash, n:Number) { h[n.String()] }
-defg '[]'(h:Hash, keys:Array) { Hash(keys@[X, h[X]]) }
-defg __set_item(h:Hash, n:Number, v) { h[n.String()] = v }
-
 # ----- Hash - end -----
+
+END
 
 
 # ----- Set - start -----
