@@ -468,14 +468,14 @@ defg '[]'(s:Seq, idx:Number) {
 # String(SCALAR)
 # later # defg String(l:F) { inspect(l) }
 
-# later # defg String(p:Process) {
-# later # 	# TODO:
-# later # 	#   Handle processes that are still running.
-# later # 	#   Handle stderr
-# later # 	#   Handle failed processes
-# later # 	#   Handle exit_code
-# later # 	p.stdout.strip()
-# later # }
+defg String(p:Process) {
+	# TODO:
+	#   Handle processes that are still running.
+	#   Handle stderr
+	#   Handle failed processes
+	#   Handle exit_code
+	p.stdout.read().strip()
+}
 
 defg String(a:Array) { guard a is Array; '[' + a.join(', ') + ']' }
 
@@ -673,12 +673,12 @@ defg join(s:Set, *args) { join(s.values().sort(), *args) }
 
 # ----- Set - end -----
 
-END
-
 
 # ----- `cmd` -----
-defg __capture(p:Process) { String(p) }
+defg '``'(*args) { ($()).call(*args).String() }
 
+
+END
 
 # ----- ``cmd``- start -----
 

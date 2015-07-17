@@ -350,3 +350,7 @@ Set([1,2, null]).repr()
 join(Set, *args)
 Set([1, 2, 3]).join('::')
 "1::2::3"
+
+Process output capture
+`echo abc`
+"abc"

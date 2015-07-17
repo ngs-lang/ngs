@@ -14,6 +14,8 @@
 
 (in-package :ngs)
 
+(defparameter *read-buffer-size* 4096)
+
 (defstruct parameters positional named)
 (defstruct arguments  positional named)
 
@@ -715,6 +717,7 @@
 (def-ngs-type "Process" #'sb-ext:process-p)
 (def-ngs-type "Regexp"  #'(lambda (x) (eq :regexp (gethash x *ngs-objects-types*))))
 (def-ngs-type "Seq"     #'(lambda (x) (or (arrayp x) (listp x)))) ; arrayp includes stringp, arrayp has higher probability
+(def-ngs-type "Stream"  #'streamp)
 (def-ngs-type "String"  #'stringp)
 (def-ngs-type "Type"    #'ngs-type-p)
 
@@ -1169,6 +1172,9 @@
 (native "Bool" (list) (%bool (not (null %p1)))) ; probably move to stdlib later
 (native "Bool" (null) :false)
 
+;; Number
+(native "chr" (number) (coerce (list (code-char %p1)) 'string))
+
 ;; List
 (native "[]" (list number) (nth %p2 %p1))
 (native "in" (any list) (%bool (member %p1 %p2 :test #'equalp)))
@@ -1202,6 +1208,7 @@
 ;; (native "String" (file) (file-name %p1))
 (native "[]" (string number) (let ((pos %p2)) (subseq %p1 pos (1+ pos))))
 (native "in" (string string) (%bool (search %p1 %p2)))
+(native "ord" (string) (char-code (elt %p1 0)))
 
 ;; Hash
 (native "Hash" (hash) %p1)
@@ -1323,6 +1330,7 @@
                               (sb-ext:run-program
                                (car positionals)
                                (cdr positionals)
+                               :output :stream
                                :wait nil
                                :search t)))
                          (setf (gethash p *ngs-objects-attributes*) `(("argv" ,positionals)))
@@ -1333,7 +1341,25 @@
 (native-getattr process
   ("argv" (second (assoc "argv" (gethash %p1 *ngs-objects-attributes*) :test #'equalp)))
   ("code" (sb-ext:process-exit-code %p1))
-  ("status" (string-downcase (symbol-name (sb-ext:process-status %p1)))))
+  ("status" (string-downcase (symbol-name (sb-ext:process-status %p1))))
+  ("stdout" (sb-ext:process-output %p1)))
+
+;; Stream
+
+(defun read-whole-stream (stream buf-size)
+  (with-output-to-string (ret)
+    (let ((buf (make-array buf-size :element-type 'character
+                           :adjustable t
+                           :fill-pointer buf-size)))
+      (loop
+         (setf (fill-pointer buf) (read-sequence buf stream))
+         (when (zerop (fill-pointer buf)) (return))
+         (write-sequence buf ret)))))
+
+(native "read" (stream number) (read-whole-stream %p1 %p2))
+(native "read" (stream) (read-whole-stream %p1 *read-buffer-size*))
+(native "read_byte" (stream) (read-byte %p1))
+(native "read_line" (stream) (read-line %p1))
 
 ;; Runtime - end ------------------------------
 
