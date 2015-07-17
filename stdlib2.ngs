@@ -88,20 +88,19 @@ defg '$()'(*args) {
 	p
 }
 
-# later # defg '$()'(*args) {
-# later # 	# guard args.map(typeof).any(__neq, String)
-# later # 	guard args.any(F(x) {x is not String})
-# later # 	# spawn(*args.map(String))
-# later # }
-# later # 
-# later # # Convert execution of (example) '-f somefile' to 'test -f somefile'
-# later # defg spawn(*args) {
-# later # 	  guard args.len() > 1
-# later # 	  guard startsWith(args[0], '-')
-# later # 	  args = ['test'] + args
-# later # 	  spawn(*args)
-# later # }
-# later # 
+defg '$()'(*args) {
+	guard args.any(@X is not String)
+	($())(*args.map(String))
+}
+
+# Convert execution of (example) '-f somefile' to 'test -f somefile'
+defg '$()'(*args) {
+	  guard args.len() > 1
+	  guard startsWith(args[0], '-')
+	  args = ['test'] + args
+	  ($())(*args)
+}
+
 
 defg cmd_finished_ok_p(p:Process) { p.code == 0 }
 
@@ -478,9 +477,9 @@ defg '[]'(s:Seq, idx:Number) {
 # later # 	p.stdout.strip()
 # later # }
 
-# later # defg String(a:Array) { guard a is Array; '[' + a.join(', ') + ']' }
-# later # 
-# later # defg String(h:Hash) { guard h is Hash; '{' + h.map(F(k,v) { "$k: $v" }).join(', ') + '}' }
+defg String(a:Array) { guard a is Array; '[' + a.join(', ') + ']' }
+
+defg String(h:Hash) { guard h is Hash; '{' + h.map(F(k,v) { "$k: $v" }).join(', ') + '}' }
 
 # Functions
 # TODO: maybe generic for Seq
@@ -611,8 +610,6 @@ defg Bool(h:Hash)   { h.len() > 0 }
 
 # ----- Hash - end -----
 
-END
-
 
 # ----- Set - start -----
 
@@ -631,11 +628,6 @@ defg osname() { guard f'/etc/debian_version'; 'debian'}
 
 # ----- Output sugar - start -----
 
-defg echo(x) {
-	guard typeof(x) != String
-	x.String().echo()
-}
-
 defg echo(*args) {
 	guard args.len() > 1
 	args.each(echo)
@@ -646,27 +638,21 @@ defg echo(*args) {
 
 # ----- Set - start -----
 
-defg set_id(x)         { "id():${x.id().String()}" }
-defg set_id(n:Number)  { "num:$n" }
-defg set_id(s:String)  { "str:$s" }
-defg set_id(p:Process) { "prc:${p.id}" }
-defg set_id(t:Thread)  { "thr:${t.id}" }
-
 # Constructors
 defg Set()            { s=obj(Set); s.data={}; s }
 defg Set(items:Seq)   { ret = Set(); items.each(@ret.add(X)); ret }
 
 # Mutators
-defg add(s:Set, v)    { s.data[v.set_id()] = v; s }
+defg add(s:Set, v)    { s.data[v] = true; s }
 defg push(s:Set, v)   { add(s,v) }
-defg remove(s:Set, v) { s.data.remove(v.set_id()); s }
+defg remove(s:Set, v) { s.data.remove(v); s }
 
 # Transformations
 defg without(a:Set, v) { a @? X != v }
 defg '-'(a:Set, b:Set) { a @? X not in b }
 
 # Getters
-defg values(s:Set) { s.data.values() }
+defg values(s:Set) { s.data.keys() }
 defg len(s:Set) { s.data.len() }
 
 # Functional
@@ -676,16 +662,18 @@ defg filter(s:Set, *args) { s.values().filter(*args).Set() }
 
 # Predicates
 defg Bool(s:Set)        { s.len() > 0 }
-defg __in(v, s:Set)     { v.set_id() in s.data }
-defg __eq(a:Set, b:Set) { a.values().sort() == b.values().sort() }
+defg in(v, s:Set)       { v in s.data }
+defg '=='(a:Set, b:Set) { a.values().sort() == b.values().sort() }
 
 # Misc
-defg String(s:Set)      { "<Set ${s.values()}>" }
+defg String(s:Set)      { "<Set ${s.values().sort()}>" }
 defg repr(s:Set)        { "Set(${s.values().sort().repr()})" }
 defg join(s:Set, *args) { join(s.values().sort(), *args) }
 
 
 # ----- Set - end -----
+
+END
 
 
 # ----- `cmd` -----

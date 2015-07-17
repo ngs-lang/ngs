@@ -318,3 +318,35 @@ h={'a': 1}; h.dflt('a', 10).dflt('b', 11); [h.get('a', 10), h.get('b', 11)]
 Bool(Hash)
 [Bool({}), Bool({'a': 1})]
 #(:false :true)
+
+Set(), Bool(Set), in(v, Set)
+s=Set(); s.push(7); [7 in s, 8 in s]
+#(:true :false)
+
+Bool(Set)
+s1=Set(); s2=Set([1,2]); [Bool(s1), Bool(s2)]
+#(:false :true)
+
+Remove(Set, x)
+s=Set([1]); s.remove(1); len(s)
+0
+
+without(Set, x)
+Set([1,2,3]).without(1).len()
+2
+
+'=='(Set, Set)
+[Set(["a", 1]) == Set(["a", 1]), Set(["a", 1]) == Set(["a", 2])]
+#(:true :false)
+
+String(Set)
+Set([1,2]).String()
+"<Set [1, 2]>"
+
+repr(Set)
+Set([1,2, null]).repr()
+"Set([null, 1, 2])"
+
+join(Set, *args)
+Set([1, 2, 3]).join('::')
+"1::2::3"

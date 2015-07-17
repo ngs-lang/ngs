@@ -46,7 +46,7 @@
     ("+" "-")))
 
 (defparameter *binary-functions*
-  `("is not" "is" "in" "not in" "[]" "." ,@(alexandria:flatten *optional-space-binary-operations*)))
+  `("is not" "is" "in" "not in" "[]" "." "$()" "````" "``" ,@(alexandria:flatten *optional-space-binary-operations*)))
 
 (defparameter *binary-operators*
   (append
@@ -99,6 +99,7 @@
 (defclass kv-pair-node (node) ())
 (defclass hash-node (node) ())
 (defclass getattr-node (node) ())
+(defclass setattr-node (node) ())
 (defclass getitem-node (node) ())
 (defclass setitem-node (node) ())
 (defclass if-node (node) ())
@@ -284,7 +285,11 @@
   (:lambda (list &bounds start end)
     (make-instance 'setitem-node :children (list (first list) (fifth list) (nth 10 list)) :src %std-src)))
 
-(defrule expression (or comment end setitem function-definition lambda binary-expression-1))
+(defrule setattr (and binary-expression-1 "." identifier optional-space "=" optional-space expression)
+  (:lambda (list &bounds start end)
+    (make-instance 'setattr-node :children (list (first list) (third list) (seventh list)) :src %std-src)))
+
+(defrule expression (or comment end setitem setattr function-definition lambda binary-expression-1))
 
 (defrule varname identifier-whole-text
   (:lambda (list &bounds start end)
@@ -467,7 +472,7 @@
        (make-instance 'function-call-node :children (list (second list) args) :src %std-src)
        target-list))))
 
-(defrule chain-item-getattr (and "." identifier)
+(defrule chain-item-getattr (and "." identifier (! (and optional-space "=" (! "="))))
   (:lambda (list &bounds start end)
     (let ((target-list (list :arg (second list))))
       (list
@@ -662,9 +667,27 @@
 ;; Types definitions - start ------------------------------
 
 (defstruct ngs-type name parents constructors predicate)
+(defclass ngs-object ()
+  ((type
+    :initarg :type
+    :accessor ngs-object-type)
+   (attributes
+    :initform (make-hash-table :test #'equal :size 8)
+    :initarg :attributes
+    :accessor ngs-object-attributes)))
+
 
 (defmethod print-object ((typ ngs-type) stream)
   (format stream "#<ngs-type ~A>" (ngs-type-name typ)))
+
+(defmethod print-object ((o ngs-object) stream)
+  (format stream "#<ngs-object ~A" (ngs-type-name (ngs-object-type o)))
+  (let ((h (ngs-object-attributes o)))
+    (loop
+       for key being the hash-keys of h
+       do (format stream " ~A=~A" key (gethash key h))))
+  (format stream ">"))
+
 
 (defun %ngs-type-symbol (type-name)
   (intern (concatenate 'string "NGS-TYPE-" (string-upcase type-name))))
@@ -938,6 +961,11 @@
                                                           (make-arguments :positional (list ,@(children-code n)))
                                                           :name "__set_item"))
 
+(defmethod generate-code ((n setattr-node))             `(ngs-call-function
+                                                          (get-var "__set_attr" vars)
+                                                          (make-arguments :positional (list ,@(children-code n)))
+                                                          :name "__set_attr"))
+
 (defmethod generate-code ((n if-node))                  `(%bool-ecase ,%1 ,%2, %3))
 (defmethod generate-code ((n try-catch-node))           `(handler-case ,%1
                                                            (ngs-user-exception (e)
@@ -1112,6 +1140,7 @@
 ;; (defun %nil->nul (x) (if x x :null))
 
 (native "==" (any any) (%bool (equalp %p1 %p2)))
+;; TO FIX: should be not(%p1 == %p2).
 (native "!=" (any any) (%bool (not (equalp %p1 %p2))))
 (native "===" (any any) (%bool (eq %p1 %p2)))
 (native "!==" (any any) (%bool (not (eq %p1 %p2))))
@@ -1123,14 +1152,22 @@
 
 (native "globals" () (first (lexical-scopes-hashes *ngs-globals*)))
 
+;; Type
+(native "Type" (string)
+  (let* ((type-name %p1)
+         (type (make-ngs-type :name type-name)))
+    (setf (ngs-type-predicate type) #'(lambda (x) (and (typep x 'ngs-object) (eq (ngs-object-type x) type))))
+    ;; TODO: not ignore parameters
+    (setf (ngs-type-constructors type) (list (lambda (parameters) (make-instance 'ngs-object :type type))))
+    type))
+(native "is" (any type) (%bool (ngs-value-is-of-type %p1 %p2)))
+(native "obj" (type) (make-instance 'ngs-object :type %p1))
+
 ;; Bool
 (native "Bool" (bool) %p1)
 (native "Bool" (number) (%bool (not (zerop %p1))))
 (native "Bool" (list) (%bool (not (null %p1)))) ; probably move to stdlib later
 (native "Bool" (null) :false)
-
-;; Type
-(native "is" (any type) (%bool (ngs-value-is-of-type %p1 %p2)))
 
 ;; List
 (native "[]" (list number) (nth %p2 %p1))
@@ -1146,6 +1183,19 @@
 (native "slice" (seq number number) (let ((start %p2)) (subseq %p1 start (+ start %p3))))
 (native "pos" (seq seq number) (or (search %p2 %p1 :start2 %p3) :null)) ; %p1 - seq, %p2 - subseq, %p3 - start in seq
 (native "pos" (seq seq) (or (search %p2 %p1) :null)) ; %p1 - seq, %p2 - subseq
+
+;; TODO: complete comparator-<
+(defun comparator-< (a b)
+  (cond
+    ((and (stringp a) (stringp b)) (string< a b))
+    ((and (numberp a) (numberp b)) (< a b))
+    ((and (numberp a) (stringp b)) t)
+    ((eq a :null) (not (eq b :null)))
+    (t nil)))
+    ;; ((eq a :false) (not (eq b :false)))
+    ;; ((eq a :true) (not (eq b :true)))))
+
+(native "sort" (seq) (sort %p1 #'comparator-<))
 
 ;; String
 (native "String" (any) (format nil "~A" %p1))
@@ -1163,8 +1213,31 @@
         (error 'item-does-not-exist :datum %p2))))
 (native "__set_item" (hash any any) (setf (gethash %p2 %p1) %p3))
 (native "in" (any hash) (%bool (nth-value 1 (gethash %p1 %p2))))
-(native "keys" (hash) (hash-keys %p1))
+(native "keys" (hash)
+  (let ((keys (hash-keys %p1)))
+    (make-array (length keys)
+                :adjustable t
+                :fill-pointer t
+                :initial-contents keys)))
+
 (native "len" (hash) (hash-table-count %p1))
+(native "remove" (hash any) (%bool (remhash %p2 %p1)))
+
+;; User-defined-types
+(native "__set_attr" (any any any)
+  (let ((target %p1))
+     (when (not (typep target 'ngs-object))
+       (error 'parameters-mismatch))
+     (let ((v %p3))
+       (setf (gethash %p2 (ngs-object-attributes target)) v)
+       v)))
+
+(native "." (any any)
+  (let ((target %p1))
+     (when (not (typep target 'ngs-object))
+       (error 'parameters-mismatch))
+     (gethash %p2 (ngs-object-attributes target))))
+
 
 (defun file-string (path)
   "http://rosettacode.org/wiki/Read_entire_file#Common_Lisp"
