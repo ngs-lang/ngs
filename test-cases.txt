@@ -168,8 +168,8 @@ from_json('[true, false, null, [], 1]')
 #(:true :false :null #() 1)
 
 Read and parse a file
-read('./test/test.json')
-(let ((h (make-hash-table :test 'equal))) (setf (gethash "did_it" h) :true) h)
+read('./test/test.json') == {'did_it': true}
+:true
 
 While
 a=0; r=[]; while a<3 {r.push(a); a=a+1}; r
@@ -354,3 +354,7 @@ Set([1, 2, 3]).join('::')
 Process output capture
 `echo abc`
 "abc"
+
+``command``
+``echo '{"a": 1}'`` == {'a': 1}
+:true

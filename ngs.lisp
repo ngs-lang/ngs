@@ -1319,6 +1319,15 @@
                                                    ((eq x nil) :false)
                                                    (t x))))))
 
+;; Hack attack!
+(setf (fdefinition 'yason::create-container)
+      (lambda ()
+        (ecase yason::*parse-object-as*
+          ((:plist :alist)
+           nil)
+          (:hash-table
+           (make-hash-table :test #'equalp)))))
+
 (native "from_json" (string) (yason:parse %p1 :json-nulls-as-keyword t :json-arrays-as-vectors t))
 
 ;; WARNING: Lisp implementation specific code

@@ -678,21 +678,20 @@ defg join(s:Set, *args) { join(s.values().sort(), *args) }
 defg '``'(*args) { ($()).call(*args).String() }
 
 
-END
-
 # ----- ``cmd``- start -----
 
 # Or throw exception?
-defg __parse(p:Process) { String(p) }
+defg '````'(*args) { (``).call(*args) }
 
-defg __parse(p:Process) {
-	s = String(p)
-	guard s
-	guard s[0] == '{'
+defg '````'(*args) {
+	s = (``).call(*args)
+	guard s.startsWith('{')
 	s.from_json()
 }
 
 # ----- ``cmd``- end -----
+
+END
 
 # ----- MaybeFile - start -----
 
