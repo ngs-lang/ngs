@@ -673,6 +673,7 @@ defg join(s:Set, *args) { join(s.values().sort(), *args) }
 
 # ----- Set - end -----
 
+# XXX: Absolutely wrong. Re-design. Currently commands may run more than once.
 
 # ----- `cmd` -----
 defg '``'(*args) { ($()).call(*args).String() }
@@ -691,50 +692,51 @@ defg '````'(*args) {
 
 # ----- ``cmd``- end -----
 
-END
-
-# ----- MaybeFile - start -----
-
-global MaybeFile = Type('MaybeFile', [File])
-
-defg MaybeFile(s:String) { File(s).as(MaybeFile) }
-
-defg lines(f:MaybeFile) {
-	guard not(f)
-	[]
-}
-
-defg read(f:MaybeFile) {
-	guard not(f)
-	''
-}
-
-# ----- MaybeFile - end -----
+# later # # ----- MaybeFile - start -----
+# later # 
+# later # global MaybeFile = Type('MaybeFile', [File])
+# later # 
+# later # defg MaybeFile(s:String) { File(s).as(MaybeFile) }
+# later # 
+# later # defg lines(f:MaybeFile) {
+# later # 	guard not(f)
+# later # 	[]
+# later # }
+# later # 
+# later # defg read(f:MaybeFile) {
+# later # 	guard not(f)
+# later # 	''
+# later # }
+# later # 
+# later # # ----- MaybeFile - end -----
 
 # ----- DfltHash - start -----
 
 global DfltHash = Type('DfltHash')
 
+# TODO: what happens if someone external uses DfltHash()?
 defg DfltHash(v) {
-	dh = obj(DfltHash)
+	dh = DfltHash()
 	dh.default = v
 	dh.data = {}
 	dh
 }
 
-defg '[]'(dh:DfltHash, k:String) {
+defg '[]'(dh:DfltHash, k) {
 	dh.data.get(k, dh.default)
 }
 
-{
-	'__set_item keys values __in map each'.split().each(F(method) {
-		defg "$method"(dh:DfltHash, *args) { globals()[method].call(dh.data, *args) }
+# later # {
+	'__set_item keys values in map each'.split().each(F(method) {
+		defg $method(dh:DfltHash, *args) { globals()[method].call(dh.data, *args) }
 	})
-}
+# later # }
 
 defg String(dh:DfltHash) { "<DfltHash dflt=${dh.default} data=${dh.data}>" }
 
 # ----- DfltHash - end -----
+
+END
 
 # ----- Stats - start -----
 
