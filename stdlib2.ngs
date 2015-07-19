@@ -716,11 +716,13 @@ global DfltHash = Type('DfltHash')
 
 # TODO: what happens if someone external uses DfltHash()?
 defg DfltHash(v) {
-	dh = DfltHash()
+	dh = DfltHash.constructors[-1].call()
 	dh.default = v
 	dh.data = {}
 	dh
 }
+
+defg DfltHash() { DfltHash(null) }
 
 defg '[]'(dh:DfltHash, k) {
 	dh.data.get(k, dh.default)

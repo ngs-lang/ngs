@@ -359,6 +359,10 @@ Process output capture
 ``echo '{"a": 1}'`` == {'a': 1}
 :true
 
-DfltHash
+DfltHash/1
 d = DfltHash(10); d[1]=2; [d[1], d[2]]
 #(2 10)
+
+DfltHash/0
+d = DfltHash(); d[1]=2; [d[1], d[2]]
+#(2 :null)
