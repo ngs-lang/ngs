@@ -5,6 +5,7 @@
 ** DONE Fix push(List, x)
 ** $* syntax as command word
 ** DONE Change (native ...) to clearer (native (params-types) ...)
+** Consider splitting object creation and initialization. s = DfltHash(0).as(Stats) is not pretty.
 ** Make missing expressions return :null
 ** Improve error messages
 ** Fix __get_item crash with invalid number of parameters

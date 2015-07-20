@@ -1049,6 +1049,7 @@
     (format stream "Arguments: ~S" (method-implementatoin-not-found-arguments e))))
 
 ;; TODO: check parents
+;; TODO: don't call with nil as typ, eliminate the calls instead, remove (or) here
 (defun ngs-value-is-of-type (val typ)
   (or (null typ) (funcall (ngs-type-predicate typ) val)))
 
@@ -1057,11 +1058,18 @@
     (error 'parameters-mismatch))
   val)
 
-(defun guard-equalp (v1 v2)
-  (unless (equalp v1 v2)
-    (error 'parameters-mismatch))
-  v1)
+(defun ngs-user-type-is (checked-type super-type)
+  (or
+   (eq checked-type super-type)
+   (loop
+      for parent-type in (ngs-type-parents checked-type)
+      ;; do (format t "[c ~S]" super-type)
+      if (ngs-user-type-is parent-type super-type) return t)))
 
+;; TODO: later, optimize by recompiling super-types after inherits() and
+;;       embedding all possible children immediately in the predicate
+(defun make-user-defined-type-predicate (typ)
+  (lambda (x) (and (typep x 'ngs-object) (ngs-user-type-is (ngs-object-type x) typ))))
 
 (defun hash-keys (h)
   (loop for key being the hash-keys of h
@@ -1159,12 +1167,17 @@
 (native "Type" (string)
   (let* ((type-name %p1)
          (type (make-ngs-type :name type-name)))
-    (setf (ngs-type-predicate type) #'(lambda (x) (and (typep x 'ngs-object) (eq (ngs-object-type x) type))))
+    (setf (ngs-type-predicate type) (make-user-defined-type-predicate type))
     ;; TODO: not ignore parameters
-    (setf (ngs-type-constructors type) (list (lambda (parameters) (make-instance 'ngs-object :type type))))
+    (setf (ngs-type-constructors type) (list (lambda (parameters) (declare (ignore parameters)) (make-instance 'ngs-object :type type))))
     type))
 (native "is" (any type) (%bool (ngs-value-is-of-type %p1 %p2)))
 (native "obj" (type) (make-instance 'ngs-object :type %p1))
+(native "inherits" (type type)
+  (let ((dst-type %p1))
+    (setf (ngs-type-parents dst-type) (cons %p2 (ngs-type-parents dst-type)))))
+(native "as" (any type)
+  (make-instance 'ngs-object :type %p2 :attributes (ngs-object-attributes %p1)))
 
 ;; Bool
 (native "Bool" (bool) %p1)

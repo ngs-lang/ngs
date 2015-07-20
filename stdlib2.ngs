@@ -32,11 +32,11 @@ defg __pipe(*args) { map(*args) }
 
 defg String(t:Type) { "<Type ${t.name}>" }
 
-# later # defg Type(name:String, parents:Array) {
-# later # 	ret = Type(name)
-# later # 	parents.each(@ ret.inherits(X))
-# later # 	ret
-# later # }
+defg Type(name:String, parents:Array) {
+	ret = Type(name)
+	parents.each(@ ret.inherits(X))
+	ret
+}
 
 
 # ----- Type system sugar - end -----
@@ -716,7 +716,7 @@ global DfltHash = Type('DfltHash')
 
 # TODO: what happens if someone external uses DfltHash()?
 defg DfltHash(v) {
-	dh = DfltHash.constructors[-1].call()
+	dh = obj(DfltHash)
 	dh.default = v
 	dh.data = {}
 	dh
@@ -737,8 +737,6 @@ defg '[]'(dh:DfltHash, k) {
 defg String(dh:DfltHash) { "<DfltHash dflt=${dh.default} data=${dh.data}>" }
 
 # ----- DfltHash - end -----
-
-END
 
 # ----- Stats - start -----
 
