@@ -374,3 +374,7 @@ s = Stats(); s.incr('my'); [s.keys(), s['my'], s['something']]
 lines(File)
 f=f'/tmp/lines-test'; f.store('a\nb\n'); f.lines()
 #("a" "b")
+
+read_till(Stream, String, Number)
+read_till(Stream('ab:cd'), ':')
+"ab"

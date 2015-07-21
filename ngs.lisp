@@ -1150,6 +1150,8 @@
 (defun %bool (x) (if x :true :false))
 ;; (defun %nil->nul (x) (if x x :null))
 
+(defun %array (init) (make-array (length init) :adjustable t :fill-pointer t :initial-contents init))
+
 (native "==" (any any) (%bool (equalp %p1 %p2)))
 ;; TO FIX: should be not(%p1 == %p2).
 (native "!=" (any any) (%bool (not (equalp %p1 %p2))))
@@ -1178,6 +1180,10 @@
     (setf (ngs-type-parents dst-type) (cons %p2 (ngs-type-parents dst-type)))))
 (native "as" (any type)
   (make-instance 'ngs-object :type %p2 :attributes (ngs-object-attributes %p1)))
+
+(native-getattr type
+  ("name" (ngs-type-name %p1))
+  ("constructors" (ngs-type-constructors %p1)))
 
 ;; Bool
 (native "Bool" (bool) %p1)
@@ -1258,7 +1264,7 @@
        (error 'parameters-mismatch))
      (gethash %p2 (ngs-object-attributes target))))
 
-
+;; File
 (defun file-string (path)
   "http://rosettacode.org/wiki/Read_entire_file#Common_Lisp"
   (with-open-file (stream path)
@@ -1271,6 +1277,11 @@
   (with-open-file (stream %p1 :direction :output :if-exists :overwrite :if-does-not-exist :create)
     (write-sequence %p2 stream)))
 
+;; Not sure about correctness
+(native-getattr file
+  ("name" (format nil "~A" %p1)))
+
+;; Regexp
 ;; TODO: performance: cache the mapping of string->regex
 (native "Regexp" (string string)
   ;; (format t "Regexp(~A,~A)" %p1 %p2)
@@ -1300,14 +1311,6 @@
   (let ((v (%call "String" (make-arguments :positional (list %p1)))))
     (format t "~A~%" v)
     v))
-
-(native-getattr type
-  ("name" (ngs-type-name %p1))
-  ("constructors" (ngs-type-constructors %p1)))
-
-;; Not sure about correctness
-(native-getattr file
-  ("name" (format nil "~A" %p1)))
 
 ;; TODO: Improve throw/catch because it's now simple
 (native "throws" (any any) (let ((b (%call "Bool" (make-arguments :positional (list %p1)))))
@@ -1371,6 +1374,9 @@
 
 ;; Stream
 
+(native "Stream" () (make-string-output-stream))
+(native "Stream" (string) (make-string-input-stream %p1))
+
 (defun read-whole-stream (stream buf-size)
   (with-output-to-string (ret)
     (let ((buf (make-array buf-size :element-type 'character
@@ -1383,11 +1389,21 @@
 
 (native "read" (stream number) (read-whole-stream %p1 %p2))
 (native "read" (stream) (read-whole-stream %p1 *read-buffer-size*))
+(native "read_char" (stream) (coerce (list (read-char %p1)) 'string))
 (native "read_byte" (stream) (read-byte %p1))
 (native "read_line" (stream) (read-line %p1))
 
-;; Runtime - end ------------------------------
+
+;; variables
+
+(set-var "stdin"  *ngs-globals* *standard-input*)
+(set-var "stdout" *ngs-globals* *standard-output*)
+(set-var "stderr" *ngs-globals* *error-output*)
 
 (defun get-argv ()
   "Abstraction layer for ARGV"
   sb-ext:*posix-argv*)
+
+(set-var "ARGV" *ngs-globals* (%array (get-argv)))
+
+;; Runtime - end ------------------------------

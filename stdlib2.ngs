@@ -229,13 +229,11 @@ defg write(f:File, content) {
 defg write(content) { write(content.meta('file'), content) }
 defg write(f:String, content) { File(f).write(content) }
 
-### TEST COVEREGE ENDS HERE
-
 defg lines(f:File) { f.read().lines() }
 
-defg read_till(fd:Number, tillChar:String, max:Number=1024) {
+defg read_till(s:Stream, tillChar:String, max:Number=1024) {
 	ret = ''
-	while (ch = fd.read()) != tillChar {
+	while (ch = s.read_char()) != tillChar {
 		ret = ret + ch
 		ret.len() > max throws ['runtime', 'read_till epic fail']
 		# echo("<CH thread=${thread().id} ord=${ch.ord()} ch=$ch ret=$ret>")
@@ -243,6 +241,8 @@ defg read_till(fd:Number, tillChar:String, max:Number=1024) {
 	# echo("<READ_TILL thread=${thread().id} till=$tillChar ch=$ch ret=$ret>")
 	ret
 }
+
+### TEST COVEREGE ENDS HERE
 
 # Anything else will break $(ls $f) and probably other stuff
 defg String(f:File) { f.name }
