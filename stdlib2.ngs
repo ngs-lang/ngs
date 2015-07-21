@@ -19,17 +19,6 @@ defg __pipe(*args) { map(*args) }
 
 # ----- Type system sugar - start -----
 
-# act_as(M, ORIG, AS) -> defg M(x:ORIG, *args) { x.as(AS).M(*args) }
-# Method M acts on objects of type ORIG as if they are of type AS
-
-# # XXX - can we get rid of this? Looks bad
-# defg act_as(method:String, orig_type:Type, as_type:String) {
-# 	defg "$method"(x:orig_type, *args) {
-# 		m = globals()[method]
-# 		m(x.as(as_type), *args)
-# 	}
-# }
-
 defg String(t:Type) { "<Type ${t.name}>" }
 
 defg Type(name:String, parents:Array) {
@@ -205,15 +194,12 @@ defg map(n:Number, mapper:F, *args) {
 # later #
 global __literal_f = File
 
-defg '~'(f:File, r:Regexp) {
-	# echo(['PP0', f.String()])
-	f.String() ~ r
-}
+defg '~'(f:File, r:Regexp) { f.String() ~ r }
 
 # Reading
-defg parse(f:File, content:String) { content }
+defg unserialize(f:File, content:String) { content }
 
-defg parse(f:File, content:String) {
+defg unserialize(f:File, content:String) {
 	guard f ~ /\\.json$/
 	try {
 		from_json(content)
@@ -224,11 +210,24 @@ defg parse(f:File, content:String) {
 
 defg read(f:File) {
 	content = f.fetch()
-	parse(f, content).meta('file', f)
+	unserialize(f, content).meta('file', f)
 }
 
-
 defg read(f:String) { File(f).read() }
+
+# Writing
+
+defg store(f:String, content) { File(f).store(content) }
+
+defg serialize(f:File, content) { String(content) }
+
+defg write(f:File, content) {
+	s = serialize(f, content)
+	f.store(s)
+}
+
+defg write(content) { write(content.meta('file'), content) }
+defg write(f:String, content) { File(f).write(content) }
 
 ### TEST COVEREGE ENDS HERE
 

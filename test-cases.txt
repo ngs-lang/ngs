@@ -370,3 +370,7 @@ d = DfltHash(); d[1]=2; [d[1], d[2]]
 Stats (includes as(x, Type))
 s = Stats(); s.incr('my'); [s.keys(), s['my'], s['something']]
 #(#("my") 1 0)
+
+lines(File)
+f=f'/tmp/lines-test'; f.store('a\nb\n'); f.lines()
+#("a" "b")

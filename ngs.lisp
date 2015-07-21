@@ -1267,6 +1267,9 @@
       data)))
 (native "File" (string) (parse-namestring %p1))
 (native "fetch" (file) (file-string %p1))
+(native "store" (file string)
+  (with-open-file (stream %p1 :direction :output :if-exists :overwrite :if-does-not-exist :create)
+    (write-sequence %p2 stream)))
 
 ;; TODO: performance: cache the mapping of string->regex
 (native "Regexp" (string string)
