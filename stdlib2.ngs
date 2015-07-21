@@ -242,8 +242,6 @@ defg read_till(s:Stream, tillChar:String, max:Number=1024) {
 	ret
 }
 
-### TEST COVEREGE ENDS HERE
-
 # Anything else will break $(ls $f) and probably other stuff
 defg String(f:File) { f.name }
 
@@ -251,6 +249,8 @@ defg String(f:File) { f.name }
 
 defg Bool(f:File) { $(-f $f).Bool() }
 defg repr(f:File) { "File(${f.name.repr()})" }
+
+### TEST COVEREGE ENDS HERE
 
 defg dirs() {
 	`find -maxdepth 1 -type d`.lines() @ slice(X,2,X.len()-2)

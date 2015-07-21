@@ -378,3 +378,15 @@ f=f'/tmp/lines-test'; f.store('a\nb\n'); f.lines()
 read_till(Stream, String, Number)
 read_till(Stream('ab:cd'), ':')
 "ab"
+
+String(File)
+String(f'abc')
+"abc"
+
+Bool(File)
+[Bool(f'/etc/passwd'), Bool(f'/no-such-file')]
+#(:true :false)
+
+repr(File)
+repr(f'/')
+"File('/')"
