@@ -613,10 +613,9 @@ defg osname() { null }
 defg osname() { guard f'/etc/debian_version'; 'debian'}
 
 
-### TEST COVERAGE ENDS HERE
-
 # ----- Output sugar - start -----
 
+# UNTESTED
 defg echo(*args) {
 	guard args.len() > 1
 	args.each(echo)
@@ -645,9 +644,11 @@ defg values(s:Set) { s.data.keys() }
 defg len(s:Set) { s.data.len() }
 
 # Functional
+# UNTESTED - start
 defg each(s:Set, *args)   { s.values().each(*args); s }
 defg map(s:Set, *args)    { s.values().map(*args).Set() }
 defg filter(s:Set, *args) { s.values().filter(*args).Set() }
+# UNTESTED - end
 
 # Predicates
 defg Bool(s:Set)        { s.len() > 0 }
@@ -663,6 +664,8 @@ defg join(s:Set, *args) { join(s.values().sort(), *args) }
 # ----- Set - end -----
 
 # XXX: Absolutely wrong. Re-design. Currently commands may run more than once.
+
+### TEST COVERAGE ENDS HERE
 
 # ----- `cmd` -----
 defg '``'(*args) { ($()).call(*args).String() }

@@ -38,7 +38,7 @@ dodefine()
 gmethod()
 3
 
-Echo
+echo(String)
 echo("echotest")
 "echotest"
 
@@ -319,7 +319,7 @@ Bool(Hash)
 [Bool({}), Bool({'a': 1})]
 #(:false :true)
 
-Set(), Bool(Set), in(v, Set)
+Set(), in(v, Set), push(Set, v)
 s=Set(); s.push(7); [7 in s, 8 in s]
 #(:true :false)
 
@@ -327,7 +327,7 @@ count(Set, F, *args)
 [1,2,11,12,13].Set().count(@X>Y, 10)
 3
 
-Bool(Set)
+Bool(Set), Set(Seq)
 s1=Set(); s2=Set([1,2]); [Bool(s1), Bool(s2)]
 #(:false :true)
 
@@ -337,6 +337,14 @@ s=Set([1]); s.remove(1); len(s)
 
 without(Set, x)
 Set([1,2,3]).without(1).len()
+2
+
+'-'(Set, Set), values(Set)
+(Set([1,2,3]) - Set([1,2])).values()
+#(3)
+
+len(Set)
+Set([1,2]).len()
 2
 
 '=='(Set, Set)
