@@ -323,6 +323,10 @@ Set(), Bool(Set), in(v, Set)
 s=Set(); s.push(7); [7 in s, 8 in s]
 #(:true :false)
 
+count(Set, F, *args)
+[1,2,11,12,13].Set().count(@X>Y, 10)
+3
+
 Bool(Set)
 s1=Set(); s2=Set([1,2]); [Bool(s1), Bool(s2)]
 #(:false :true)
@@ -355,7 +359,7 @@ Process output capture (includes String(Process))
 `echo abc`
 "abc"
 
-``command``
+``command`` (includes call(F, *args))
 ``echo '{"a": 1}'`` == {'a': 1}
 :true
 
@@ -432,5 +436,14 @@ Bool(Seq)
 #(:false :true)
 
 String(Hash)
-{'a': 7}.String().echo()
+{'a': 7}.String()
 "{a: 7}"
+
+math_op(Array, Number)
+a=[1,2]
+[a+3, a-1, a*2, a/0.25]
+#(#(4 5) #(0 1) #(2 4) #(4 8))
+
+'.'(Array,String)
+[{'a': 1}, {'a': 2}].a
+#(1 2)

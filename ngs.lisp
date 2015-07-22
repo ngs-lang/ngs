@@ -1161,6 +1161,8 @@
 (native ">" (number number) (%bool (> %p1 %p2)))
 (native "+" (number number) (+ %p1 %p2))
 (native "-" (number number) (- %p1 %p2))
+(native "*" (number number) (* %p1 %p2))
+(native "/" (number number) (/ %p1 %p2))
 (native "+" (string string) (concatenate 'string %p1 %p2))
 
 (native "globals" () (first (lexical-scopes-hashes *ngs-globals*)))

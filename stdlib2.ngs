@@ -523,8 +523,6 @@ defg sum(a:Array) { reduce(a, 0, (+)) }
 
 global __literal_w = split
 
-### TEST COVERAGE ENDS HERE
-
 # Arithmetcis
 # later # {
 	w'+ - * /'.each(F(op) {
@@ -591,6 +589,8 @@ defg dflt(h:Hash, k, v) {
 	h
 }
 
+defg '.'(h:Hash, k) { h[k] }
+
 # Type transformations
 
 defg Bool(h:Hash)   { h.len() > 0 }
@@ -608,10 +608,12 @@ defg count(s:Set, predicate:F, *args) { s.values().count(predicate, *args) }
 
 defg call(f:F, *args) { f(*args) }
 
-
+# UNTESTED
 defg osname() { null }
 defg osname() { guard f'/etc/debian_version'; 'debian'}
 
+
+### TEST COVERAGE ENDS HERE
 
 # ----- Output sugar - start -----
 
