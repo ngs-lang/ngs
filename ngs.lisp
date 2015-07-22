@@ -32,7 +32,7 @@
    (data :initarg :data :initform nil :accessor node-data)))
 
 (defparameter *high-priority-optional-space-operators*
-  '(("@?" "@")))
+  '(("|" "@?" "@")))
 
 (defparameter *required-space-binary-operators*
   '(("is not" "is")

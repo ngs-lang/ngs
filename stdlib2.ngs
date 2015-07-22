@@ -15,7 +15,7 @@ defg 'not in'(*args) { not(in(*args)) }
 defg has(container, item) {item in container}
 defg has_no(container, item) {item not in container}
 
-defg __pipe(*args) { map(*args) }
+defg '|'(*args) { map(*args) }
 
 # ----- Type system sugar - start -----
 
@@ -668,6 +668,7 @@ defg join(s:Set, *args) { join(s.values().sort(), *args) }
 ### TEST COVERAGE ENDS HERE
 
 # ----- `cmd` -----
+# TODO: see what happens when the output of the process is lenghty
 defg '``'(*args) { ($()).call(*args).String() }
 
 
