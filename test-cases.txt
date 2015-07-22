@@ -127,15 +127,15 @@ Stdlib Number(Bool)
 [true.Number(), false.Number()]
 #(1 0)
 
-Stdlib min,max
+min,max
 [min(10,20), min(20,10), max(30,40), max(40, 30)]
 #(10 10 40 40)
 
-Stdlib each(Number,F,*args)
+each(Number,F,*args)
 summ = 0; 5.each(F(x,y) { global summ = summ + x + y}, 1000); summ
 5010
 
-Stdlib map(Number,F,*args)
+map(Number,F,*args)
 3.map(F(x,y) { x+y}, 1000)
 #(1000 1001 1002)
 
@@ -240,7 +240,7 @@ Pick indexes
 #(1 3)
 
 Negative index
-[1,2,3][-1]
+[1,2,3].last()
 3
 
 String/string
@@ -383,10 +383,42 @@ String(File)
 String(f'abc')
 "abc"
 
-Bool(File)
+Bool(File) (includes startsWith(Seq,Seq))
 [Bool(f'/etc/passwd'), Bool(f'/no-such-file')]
 #(:true :false)
 
 repr(File)
 repr(f'/')
 "File('/')"
+
+zip(Seq, Seq)
+zip([1,2], [3,4])
+#(#(1 3) #(2 4))
+
+one(Seq)
+[[10].one(), try { [20,30].one() } catch (e) { 'OK' }]
+#(10 "OK")
+
+join(Seq)
+[1,2].join()
+"12"
+
+endsWith(Seq, Seq)
+['abcd'.endsWith('cd'), 'abcd'.endsWith('bc')]
+#(:true :false)
+
+each(Seq,F,*args)
+summ = 0; [0,1,2,3,4].each(F(x,y) { global summ = summ + x + y}, 1000); summ
+5010
+
+map(Seq,F,*args)
+[0,1,2].map(F(x,y) { x+y}, 1000)
+#(1000 1001 1002)
+
+each_star(Seq,F,*args)
+summ = 0; [[1,2], [3,4]].each_star(@ global summ = summ + X + Y + Z, 1000); summ
+2010
+
+each_map(Seq,F,*args)
+[[1,2], [3,4]].map_star(@ X+Y+Z, 1000)
+#(1003 1007)

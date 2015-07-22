@@ -250,8 +250,7 @@ defg String(f:File) { f.name }
 defg Bool(f:File) { $(-f $f).Bool() }
 defg repr(f:File) { "File(${f.name.repr()})" }
 
-### TEST COVEREGE ENDS HERE
-
+# UNTESTED
 defg dirs() {
 	`find -maxdepth 1 -type d`.lines() @ slice(X,2,X.len()-2)
 }
@@ -290,22 +289,6 @@ defg dirs() {
 
 # ----- Seq - start -----
 
-# later # # Not the most efficient :/
-# later # # I wonder why all other languages return -1 for not found.
-# later # defg pos(s:Seq, subseq:Seq, start:Number=0) {
-# later # 	sl = s.len()
-# later # 	ssl = subseq.len()
-# later # 
-# later # 	sl < ssl returns null
-# later # 
-# later # 	j = sl - ssl + 1
-# later # 
-# later # 	for(i=start; i<j; i=i+1) {
-# later # 		slice(s, i, ssl) == subseq returns i
-# later # 	}
-# later # 	return null
-# later # }
-
 defg split(s:Seq, delim:Seq) {
 	sl = s.len()
 	dl = delim.len()
@@ -334,11 +317,13 @@ defg flatten(s:Seq) {
 	ret
 }
 
+# UNTESTED - start
 defg first(s:Seq)  { s[0] }
 defg second(s:Seq) { s[1] }
 defg third(s:Seq)  { s[2] }
 defg fourth(s:Seq) { s[3] }
 defg fifth(s:Seq)  { s[4] }
+# UNTESTED - end
 
 defg last(s:Seq)   { s[-1] }
 
@@ -346,7 +331,8 @@ defg last(s:Seq)   { s[-1] }
 # Abstract usage example:
 # servers.filter(F(x) {'unicorn' in x.tags}).one('Unicorn server').create_image('Unicorn backup')
 defg one(s:Seq, msg:String='item') {
-	s.len() != 1 throws ['data', "Expected array with exactly one $msg but had ${a.len()}", a]
+	# echo("SEQ: ${s.len()}")
+	s.len() != 1 throws ['data', "Expected array with exactly one $msg but had ${s.len()}", s]
 	s[0]
 }
 
@@ -388,11 +374,13 @@ defg each(s:Seq, processor:F, *args) {
 	s
 }
 
-# later # defg each_star(s:Seq, processor:F, *args) { s.each(@processor(*X+args)) }
+defg each_star(s:Seq, processor:F, *args) { s.each(@processor(*X+args)) }
 
 defg map(s:Seq, mapper:F, *args) { s.len() @ mapper(s[X], *args) }
 
 defg map_star(s:Seq, mapper:F, *args) { s.len() @ mapper(*s[X] + args) }
+
+### TEST COVERAGE ENDS HERE
 
 defg reduce(s:Seq, start, reducer:F) {
 	acc = start
