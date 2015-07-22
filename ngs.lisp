@@ -235,9 +235,9 @@
     ;; (format t "string-contents-var: ~S~%" list)
     (second list)))
 
-(defrule string-contents-expression (and "${" expression "}")
+(defrule string-contents-expression (and "${" optional-space expression optional-space "}")
   (:lambda (list)
-    (second list)))
+    (third list)))
 
 (defmacro def-string-rules (rule-name start-char end-char &body contents-rules)
   (let ((not-ending-name (intern (concatenate 'string (symbol-name rule-name) "-NOT-ENDING-CHAR")))

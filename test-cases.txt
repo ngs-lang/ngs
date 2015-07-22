@@ -111,19 +111,19 @@ Meta - stdlib
 String.meta("xyz", 7); [String.meta("xyz"), String.has_meta("xyz"), String.has_meta("no-such-meta")]
 #(7 :true :false)
 
-Stdlib not
+not(Bool)
 [not(true), not(false)]
 #(:false :true)
 
-Stdlib __neq
+__neq
 __neq(1,2)
 :true
 
-Stdlib String(Bool)
+String(Bool)
 [true.String(), false.String()]
 #("true" "false")
 
-Stdlib Number(Bool)
+Number(Bool)
 [true.Number(), false.Number()]
 #(1 0)
 
@@ -199,11 +199,11 @@ Flatten (includes @X)
 [[1,2],[3,4]].flatten()
 #(1 2 3 4)
 
-map_star
-[[1,2],[3,4]].map_star(@Y)
-#(2 4)
+map_star(Seq,F,*args)
+[[1,2], [3,4]].map_star(@ X+Y+Z, 1000)
+#(1003 1007)
 
-reduce
+reduce(Seq, start, F)
 reduce([1,2,3], 10, @X+Y)
 16
 
@@ -235,33 +235,33 @@ without
 [1,2,3].without(2)
 #(1 3)
 
-Pick indexes
+'[]'(Seq, Array)
 [1,2,3][[0,2]]
 #(1 3)
 
-Negative index
+last(Seq) (includes '[]'(Seq, Number < 0))
 [1,2,3].last()
 3
 
-String/string
+String(String)
 String('abc')
 "abc"
 
-fill (includes */string)
+fill (includes '*'(String, Number))
 'ab'.fill(3)
 "ab "
 
-strip/0 (includes strip/1)
+fill(Null, Number)
+fill(null, 2)
+"  "
+
+strip(Seq) (includes strip(Seq,Seq))
 ' a \n\t'.strip()
 "a"
 
--/string
+'-'(String, String)
 ['abcd' - 'cd', 'abxy' - 'cd']
 #("ab" "abxy")
-
-sum
-[1,2,3].sum()
-6
 
 literal w (is split/1, includes split/2)
 w'ab cd ef'
@@ -343,7 +343,7 @@ String(Set)
 Set([1,2]).String()
 "<Set [1, 2]>"
 
-repr(Set)
+repr(Set) (includes String(Array))
 Set([1,2, null]).repr()
 "Set([null, 1, 2])"
 
@@ -351,7 +351,7 @@ join(Set, *args)
 Set([1, 2, 3]).join('::')
 "1::2::3"
 
-Process output capture
+Process output capture (includes String(Process))
 `echo abc`
 "abc"
 
@@ -371,7 +371,7 @@ Stats (includes as(x, Type))
 s = Stats(); s.incr('my'); [s.keys(), s['my'], s['something']]
 #(#("my") 1 0)
 
-lines(File)
+lines(File) (includes lines(String))
 f=f'/tmp/lines-test'; f.store('a\nb\n'); f.lines()
 #("a" "b")
 
@@ -387,7 +387,7 @@ Bool(File) (includes startsWith(Seq,Seq))
 [Bool(f'/etc/passwd'), Bool(f'/no-such-file')]
 #(:true :false)
 
-repr(File)
+repr(File) (inlcudes repr(String))
 repr(f'/')
 "File('/')"
 
@@ -419,6 +419,18 @@ each_star(Seq,F,*args)
 summ = 0; [[1,2], [3,4]].each_star(@ global summ = summ + X + Y + Z, 1000); summ
 2010
 
-each_map(Seq,F,*args)
-[[1,2], [3,4]].map_star(@ X+Y+Z, 1000)
-#(1003 1007)
+count(Seq, F, *args) (includes sum(Seq))
+[1,2,11,12,13].count(@X>Y, 10)
+3
+
+values(Seq)
+[1,2].values()
+#(1 2)
+
+Bool(Seq)
+[[], [1]] @ Bool(X)
+#(:false :true)
+
+String(Hash)
+{'a': 7}.String().echo()
+"{a: 7}"

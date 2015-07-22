@@ -380,8 +380,6 @@ defg map(s:Seq, mapper:F, *args) { s.len() @ mapper(s[X], *args) }
 
 defg map_star(s:Seq, mapper:F, *args) { s.len() @ mapper(*s[X] + args) }
 
-### TEST COVERAGE ENDS HERE
-
 defg reduce(s:Seq, start, reducer:F) {
 	acc = start
 	s.each(F(x) { acc = reducer(acc, x) })
@@ -426,7 +424,6 @@ defg filter(s:Seq, predicate:F, *args) {
 defg filter(s:Seq) { s @? X != null }
 defg without(a:Seq, v) { a @? X != v }
 
-
 defg count(s:Seq, predicate:F, *args) {
 	sum(s @ predicate(X, *args).Number())
 }
@@ -464,9 +461,11 @@ defg String(p:Process) {
 	p.stdout.read().strip()
 }
 
-defg String(a:Array) { guard a is Array; '[' + a.join(', ') + ']' }
+# TODO: don't handle Array children types
+defg String(a:Array) { "[${ a.join(', ') }]" }
 
-defg String(h:Hash) { guard h is Hash; '{' + h.map(F(k,v) { "$k: $v" }).join(', ') + '}' }
+# TODO: don't handle Hash children types
+defg String(h:Hash) { '{' + h.map(F(k,v) { "$k: $v" }).join(', ') + '}' }
 
 # Functions
 # TODO: maybe generic for Seq
@@ -524,6 +523,7 @@ defg sum(a:Array) { reduce(a, 0, (+)) }
 
 global __literal_w = split
 
+### TEST COVERAGE ENDS HERE
 
 # Arithmetcis
 # later # {
