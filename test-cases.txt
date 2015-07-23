@@ -371,11 +371,11 @@ Process output capture (includes String(Process))
 ``echo '{"a": 1}'`` == {'a': 1}
 :true
 
-DfltHash/1
+DfltHash(v)
 d = DfltHash(10); d[1]=2; [d[1], d[2]]
 #(2 10)
 
-DfltHash/0
+DfltHash()
 d = DfltHash(); d[1]=2; [d[1], d[2]]
 #(2 :null)
 
