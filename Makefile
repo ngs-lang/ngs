@@ -6,7 +6,7 @@ test-js:
 	mocha
 readme.html: readme.md
 	markdown_py readme.md >readme.html
-ngs: ngs.lisp
+ngs: ngs.lisp run.lisp
 	NGS_COMPILE=1 time sbcl --script run.lisp
 timing: ngs
 	time ./ngs stdlib2.ngs >/dev/null

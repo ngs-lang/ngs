@@ -4,6 +4,8 @@
 (in-package :ngs)
 
 (defun main ()
+  (when (sb-posix:getenv "NGS_TRACE")
+    (trace "NGS"))
   (when (sb-posix:getenv "NGS_PROFILE")
     (sb-profile:profile ngs-compile
                         esrap::parse

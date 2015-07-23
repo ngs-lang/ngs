@@ -845,16 +845,21 @@
                                                           ,(node-data n)))
 (defmethod generate-code ((n expressions-node))         `(progn ,@%children))
 
-(defmethod generate-code ((n function-definition-node)) `(let ((expected-parameters ,(generate-expected-parameters (second (node-children n)))))
-                                                           (ngs-define-function
-                                                            ,%1
-                                                            vars
-                                                            ,(first %data)
-                                                            ;; expected-parameters
-                                                            (lambda (parameters)
-                                                              (block function-block
-                                                                (let ((vars (one-level-deeper-lexical-vars vars)))
-                                                                  ,@(children-code n :start 1)))))))
+(defmethod generate-code ((n function-definition-node))
+  ;; `(let ((expected-parameters ,(generate-expected-parameters (second (node-children n)))))
+  (let ((ret `(ngs-define-function
+           ,%1
+           vars
+           ,(first %data)
+           ;; expected-parameters
+           (lambda (parameters)
+             (block function-block
+               (let ((vars (one-level-deeper-lexical-vars vars)))
+                 ,@(children-code n :start 1)))))))
+    ;; (format t "sec: ~S~%" (first (node-children (second (node-children n)))))
+    (if (first (node-children (second (node-children n))))
+        `(let ((expected-parameters ,(generate-expected-parameters (second (node-children n))))) ,ret)
+        ret)))
 
 (defmethod generate-code ((n lambda-node))              `(let ((expected-parameters ,(generate-expected-parameters (second (node-children n)))))
                                                            (lambda (parameters)
