@@ -144,7 +144,8 @@
                         (> (elt *source-file-positions* (1+ line)) position)) return line)))
     (format nil "~A:~A:~A" *source-file-name* (1+ line) (1+ (- position (elt *source-file-positions* line))))))
 
-(define-symbol-macro %std-src (list 'list (make-human-position start) (make-human-position end)))
+;; (define-symbol-macro %std-src (list 'list (make-human-position start) (make-human-position end)))
+(define-symbol-macro %std-src (format nil "~A-~A" (make-human-position start) (make-human-position end)))
 
 (defrule comment (and #\# (* (and (! #\Newline) character)))
   (:lambda (list &bounds start end)
@@ -1130,20 +1131,19 @@
 
 (defmacro native (name params &body body)
   ;; (format t "find-in-tree: ~S~%" (find-in-tree '%p1 body))
-    `(ngs-define-function
-      ,name *ngs-globals*
-      t
-      (lambda (parameters)
-        (let* ((source-position (format nil "<builtin:~A>" ,name))
-               (*source-position* (cons (list source-position source-position) *source-position*)))
-          (when (not (eq (length %positionals) ,(length params)))
-            (error 'parameters-mismatch))
-          ,@(loop
-               for p in params
-               for i from 0
-               if (not (eq 'any p))
-               collecting `(guard-type (nth ,i (arguments-positional parameters)) ,(%ngs-type-symbol (symbol-name p))))
-          ,@body))))
+  `(ngs-define-function
+    ,name *ngs-globals*
+    t
+    (lambda (parameters)
+      (when (not (eq (length %positionals) ,(length params)))
+        (error 'parameters-mismatch))
+      (let* ((*source-position* (cons ,(format nil "<builtin:~A>" name) *source-position*)))
+        ,@(loop
+             for p in params
+             for i from 0
+             if (not (eq 'any p))
+             collecting `(guard-type (nth ,i (arguments-positional parameters)) ,(%ngs-type-symbol (symbol-name p))))
+        ,@body))))
 
 (defmacro all-positionals (typ)
   `(loop for p in %positionals do (guard-type p ,typ)))
