@@ -1012,8 +1012,10 @@
 ;; GENERATE MARKER
 
 (defmethod generate-code :around ((n node))
-  `(let ((*source-position* (cons ,(or (node-src n) "<unknown>") *source-position*)))
-     ,(call-next-method)))
+  (if (node-src n)
+      `(let ((*source-position* (cons ,(or (node-src n) "<unknown>") *source-position*)))
+         ,(call-next-method))
+      (call-next-method)))
 
 (defun make-source-file-positions (code)
   "Positions where lines start"
