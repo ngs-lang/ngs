@@ -48,7 +48,7 @@
     ("+" "-")))
 
 (defparameter *binary-functions*
-  `("is not" "is" "in" "not in" "[]" "." "$()" "````" "``" ,@(alexandria:flatten *optional-space-binary-operations*)))
+  `("is not" "is" "in" "not in" "[]" "." "$()" "````" "``" "|" ,@(alexandria:flatten *optional-space-binary-operations*)))
 
 (defparameter *binary-operators*
   (append
@@ -995,7 +995,17 @@
 
 (defmethod generate-code ((n regexp-node))              `(ngs-call-function (get-var "Regexp" vars) (make-arguments :positional (list ,%1 ,(node-data n))) :name "Regexp"))
 
-(defmethod generate-code ((n command-node))             `(ngs-call-function spawn-function  (make-arguments :positional (list ,@%children)) :name spawn-function-name))
+(defmethod generate-code ((n command-node))             `(ngs-call-function
+                                                          spawn-function
+                                                          (make-arguments
+                                                           :positional
+                                                           (list
+                                                            (ngs-call-function
+                                                             (get-var "Command" vars)
+                                                             (make-arguments :positional (list ,@%children))
+                                                             :name "Command")))
+                                                           :name spawn-function-name))
+
 (defmethod generate-code ((n commands-node))            `(let ((spawn-function (get-var ,%data vars))
                                                                (spawn-function-name ,%data)) ,@%children))
 
@@ -1148,7 +1158,7 @@
   `(ngs-call-function (get-var ,name *ngs-globals*) ,parameters :name ,name))
 
 (defun %bool (x) (if x :true :false))
-;; (defun %nil->nul (x) (if x x :null))
+(defun %nil->nul (x) (if x x :null))
 
 (defun %array (init) (make-array (length init) :adjustable t :fill-pointer t :initial-contents init))
 
@@ -1370,7 +1380,7 @@
 
 (native-getattr process
   ("argv" (second (assoc "argv" (gethash %p1 *ngs-objects-attributes*) :test #'equalp)))
-  ("code" (sb-ext:process-exit-code %p1))
+  ("code" (%nil->nul (sb-ext:process-exit-code %p1)))
   ("status" (string-downcase (symbol-name (sb-ext:process-status %p1))))
   ("stdout" (sb-ext:process-output %p1)))
 

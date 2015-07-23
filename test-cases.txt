@@ -179,11 +179,11 @@ For
 r=[]; for(a=0;a<3;a=a+1) { r.push(a+2) }; r
 #(2 3 4)
 
-Process exit code
-[$(true).code, $(false).code]
-#(0 1)
+finish(Process), Process#code
+[$(true).finish().process.code, $(false).finish().process.code, $(sleep 1).process.code]
+#(0 1 :null)
 
-Process truthness
+Bool(Process)
 [Bool($(true)), Bool($(false))]
 #(:true :false)
 

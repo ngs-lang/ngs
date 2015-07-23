@@ -17,6 +17,8 @@ defg has_no(container, item) {item not in container}
 
 defg '|'(*args) { map(*args) }
 
+global Command = Type('Command')
+
 # ----- Type system sugar - start -----
 
 defg String(t:Type) { "<Type ${t.name}>" }
@@ -50,9 +52,22 @@ defg require(f:String, *args) {
 # ----- Loading code - end -----
 
 
-# later # # ----- spawn sugar - start -----
+# later # # ----- Process() sugar - start -----
 
-defg Bool(p:Process) { p.status == 'exited' and p.code == 0 }
+defg Bool(c:Command) {
+	($()).call(c)
+	p = c.process
+	# echo("Bool: [command: $c] [process: ${p is Process}]")
+	p.finish()
+	p.status == 'exited' and p.code == 0
+}
+
+defg finish(p:Process) {
+	p.wait()
+	ok = cmd_finished_ok_p(p)
+	not(ok) throws ['runtime', 'Command execution failed: ' + String(p.argv)]
+	p
+}
 
 # later # # XXX: Warning: should be per Context or it will bite you
 # later # defg spawn_update_globals(args:Array, p:Process) {
@@ -67,27 +82,32 @@ defg Bool(p:Process) { p.status == 'exited' and p.code == 0 }
 # later # 	thread().locals()['P'] = p
 # later # }
 # later # 
-defg '$()'(*args) {
-	# TODO: handle async
-	p = Process(*args)
-# later # 	spawn_update_globals(args, p)
-	p.wait()
-	ok = cmd_finished_ok_p(p)
-	not(ok) throws ['runtime', 'Command execution failed: ' + String(args)]
-	p
+
+defg Command(*args) {
+	guard args
+	c = Command()
+	c.argv = args | String
+	c.process = null
+	c.stdout = null
+	c.stderr = null
+	c
 }
 
-defg '$()'(*args) {
-	guard args.any(@X is not String)
-	($())(*args.map(String))
+defg '$()'(c:Command) {
+	if c.process is Null {
+		c.process = Process(*c.argv)
+	}
+	# later # spawn_update_globals(args, p)
+	c
 }
+
+defg finish(c:Command) { c.process.finish(); c }
 
 # Convert execution of (example) '-f somefile' to 'test -f somefile'
-defg '$()'(*args) {
+defg Command(*args) {
 	  guard args.len() > 1
-	  guard startsWith(args[0], '-')
-	  args = ['test'] + args
-	  ($())(*args)
+	  guard args[0].startsWith('-')
+	  Command(*['test'] + args)
 }
 
 
@@ -110,7 +130,7 @@ defg cmd_finished_ok_p(p:Process) {
 	p.code < 4
 }
 
-# ----- spawn sugar - end -----
+# ----- Process() sugar - end -----
 
 
 # ----- Meta sugar - start -----
@@ -454,11 +474,10 @@ defg '[]'(s:Seq, idx:Number) {
 
 defg String(p:Process) {
 	# TODO:
-	#   Handle processes that are still running.
 	#   Handle stderr
-	#   Handle failed processes
-	#   Handle exit_code
-	p.stdout.read().strip()
+	ret = p.stdout.read().strip()
+	p.finish()
+	ret
 }
 
 # TODO: don't handle Array children types
@@ -663,22 +682,27 @@ defg join(s:Set, *args) { join(s.values().sort(), *args) }
 
 # ----- Set - end -----
 
-# XXX: Absolutely wrong. Re-design. Currently commands may run more than once.
-
-### TEST COVERAGE ENDS HERE
-
 # ----- `cmd` -----
 # TODO: see what happens when the output of the process is lenghty
-defg '``'(*args) { ($()).call(*args).String() }
+defg '``'(c:Command) {
+
+	($()).call(c)
+
+	if c.stdout is Null {
+		c.stdout = c.process.String()
+	}
+
+	c.stdout.String()
+}
 
 
 # ----- ``cmd``- start -----
 
 # Or throw exception?
-defg '````'(*args) { (``).call(*args) }
+defg '````'(c:Command) { (``).call(c) }
 
-defg '````'(*args) {
-	s = (``).call(*args)
+defg '````'(c:Command) {
+	s = (``).call(c)
 	guard s.startsWith('{')
 	s.from_json()
 }
