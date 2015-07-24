@@ -171,7 +171,7 @@
 
 (defrule space (+ (or #\Space #\Tab #\Newline)) (:constant nil))
 
-(defrule newline-space (+ (and (? inline-space) (+ #\Newline) (? inline-space))))
+(defrule newline-space (+ (and (? inline-space) (+ #\Newline) (? inline-space))) (:constant nil))
 
 (defrule optional-space (* space) (:constant nil))
 
@@ -292,10 +292,11 @@
   (:lambda (list &bounds start end)
     (make-instance 'setattr-node :children (list (first list) (third list) (seventh list)) :src %std-src)))
 
-(defrule expression (or comment end setitem setattr function-definition lambda binary-expression-1))
+(defrule expression (or comment end function-definition lambda setitem setattr binary-expression-1))
 
 (defrule varname identifier-whole-text
   (:lambda (list &bounds start end)
+    ;; (format t "varname @ ~S~%" start)
     (make-instance 'varname-node :data list :src %std-src)))
 
 (defun %bin-expr (n)
@@ -325,7 +326,7 @@
   (:lambda (list)
     (make-instance 'expressions-node :children (append (list (first list)) (mapcar #'second (caadr list))))))
 
-(defrule expressions-delimiter (or newline-space (and (? inline-space) ";" (? space))))
+(defrule expressions-delimiter (or newline-space (and (? inline-space) ";" (? space))) (:constant nil))
 
 (defmacro defrule-spaced-seq (name seq &body body)
   `(defrule
