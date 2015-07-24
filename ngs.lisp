@@ -1,6 +1,7 @@
 ;; apt-get install cl-alexandria cl-esrap cl-ppcre cl-yason cl-trivial-gray-streams
 
 (require :asdf)
+(require :sb-posix)
 (require :alexandria)
 (require :esrap)
 (require :cl-ppcre)
@@ -44,8 +45,8 @@
 
 (defparameter *optional-space-binary-operations*
   '(("===" "!==" "==" "!=" "<" ">" "~~" "~")
-    ("*" "/")
-    ("+" "-")))
+    ("+" "-")
+    ("*" "/")))
 
 (defparameter *binary-functions*
   `("is not" "is" "in" "not in" "[]" "." "$()" "````" "``" "|" ,@(alexandria:flatten *optional-space-binary-operations*)))
@@ -55,6 +56,15 @@
    (mapcar #'(lambda(x) `(and optional-space (or ,@x) optional-space)) *high-priority-optional-space-operators*)
    (mapcar #'(lambda(x) `(and space (or ,@x) space)) *required-space-binary-operators*)
    (mapcar #'(lambda(x) `(and optional-space (or ,@x) optional-space)) *optional-space-binary-operations*)))
+
+(defparameter *binary-operators-precedence*
+  (let ((h (make-hash-table :test 'equal :size 30)))
+    (loop
+       for group in (append *high-priority-optional-space-operators* *required-space-binary-operators* *optional-space-binary-operations*)
+       for idx from 0
+       do (loop for op in group
+             do (setf (gethash op h) idx)))
+    h))
 
 (defparameter *regexp-flags*
   '((#\i . :case-insensitive-mode)
@@ -302,18 +312,28 @@
 (defun %bin-expr (n)
   (intern (concatenate 'string "BINARY-EXPRESSION-" (write-to-string n))))
 
+;; Overall (ngs-compile) is faster (414ms -> 306ms in pre-compiled, 425ms -> 317ms in regular) as opposed
+;; http://en.wikipedia.org/wiki/Operator-precedence_parser
+;; Consing: 150M -> 85M
 (defmacro define-binary-operations-rules ()
-  `(progn
-     ,@(loop
-          for binary-operator in *binary-operators*
-          for i from 1
-          collecting
-          ;; http://en.wikipedia.org/wiki/Operator-precedence_parser
-            `(defrule ,(%bin-expr i) (and ,(%bin-expr (1+ i)) (* (and ,binary-operator ,(%bin-expr (1+ i)))))
-               (:lambda (list)
-                 (make-binop-node list))))
-     (defrule ,(%bin-expr (1+ (length *binary-operators*))) non-binary-operation
-       (:lambda (list) list))))
+  `(defrule binary-expression-1 (and non-binary-operation (* (and (or ,@*binary-operators*) binary-expression-1)))
+     (:lambda (list)
+       (if (second list)
+           (let ((operator (second (first (first (second list)))))
+                 (other (second (first (second list)))))
+             (if (and
+                  (typep other 'binary-operation-node)
+                  (>= (gethash operator *binary-operators-precedence*)
+                      (gethash (node-data other) *binary-operators-precedence*)))
+                 (let ((new-node (make-instance 'binary-operation-node
+                                                :data operator
+                                                :children (list (first list) (first (node-children other))))))
+                   (setf (nth 0 (node-children other)) new-node)
+                   other)
+                 (make-instance 'binary-operation-node
+                                :data operator
+                                :children (list (first list) other))))
+           (first list)))))
 
 (defmacro define-binary-vars-rule ()
   `(defrule binary-var (and "(" (or ,@*binary-functions*) ")")
@@ -1018,11 +1038,15 @@
 
 ;; GENERATE MARKER
 
-(defmethod generate-code :around ((n node))
-  (if (node-src n)
-      `(let ((*source-position* (cons ,(or (node-src n) "<unknown>") *source-position*)))
-         ,(call-next-method))
-      (call-next-method)))
+;; Total running time differences for stdlib2.ngs
+;; 2.28 -> 1.30 sec for compiled
+;; 4.12 -> 2.81 sec for regular
+(when (null (sb-posix:getenv "NGS_NO_SOURCE_POS"))
+  (defmethod generate-code :around ((n node))
+             (if (node-src n)
+                 `(let ((*source-position* (cons ,(or (node-src n) "<unknown>") *source-position*)))
+                    ,(call-next-method))
+                 (call-next-method))))
 
 (defun make-source-file-positions (code)
   "Positions where lines start"
