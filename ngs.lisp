@@ -11,7 +11,8 @@
   (:use :cl :esrap)
   (:export
    :ngs-call-function
-   :ngs-compile))
+   :ngs-compile
+   :update-runtime-info))
 
 (in-package :ngs)
 
@@ -20,6 +21,7 @@
 (defstruct parameters positional named)
 (defstruct arguments  positional named)
 
+(defparameter *running-as-binary* nil)
 
 (defvar *source-file-name* "TOP-LEVEL")
 (defvar *source-file-positions* #(0))
@@ -512,13 +514,13 @@
 
 (defrule curly-braces-expressions (and "{" optional-space expressions optional-space "}") (:lambda (list) (third list)))
 
-(defrule if (and "if" space expression optional-space curly-braces-expressions (? (and optional-space curly-braces-expressions)))
+(defrule if (and "if" space expression optional-space curly-braces-expressions (? (and optional-space (? (and "else" optional-space)) curly-braces-expressions)))
   (:lambda (list &bounds start end)
     (make-instance 'if-node
                    :children (list
                               (third list)
                               (fifth list)
-                              (if (sixth list) (second (sixth list)) (make-instance 'keyword-node :data :null)))
+                              (if (sixth list) (third (sixth list)) (make-instance 'keyword-node :data :null)))
                    :src %std-src)))
 
 (defrule try-catch (and "try" optional-space curly-braces-expressions (+ (and optional-space catch)))
@@ -1444,10 +1446,33 @@
 (set-var "stdout" *ngs-globals* *standard-output*)
 (set-var "stderr" *ngs-globals* *error-output*)
 
-(defun get-argv ()
-  "Abstraction layer for ARGV"
-  sb-ext:*posix-argv*)
+(defun get-argv () sb-ext:*posix-argv*)
+(defun get-env (name) (sb-posix:getenv name))
+(defun get-pid () (sb-posix:getpid))
 
-(set-var "ARGV" *ngs-globals* (%array (get-argv)))
+(defun get-all-env ()
+  (let ((h (make-hash-table :test 'equalp)))
+    (loop
+       for s in (sb-ext:posix-environ)
+       do (let ((p (position #\= s)))
+            (setf (gethash (subseq s 0 p) h) (subseq s (1+ p)))))
+    h))
+
+;; XXX: temp
+(defun get-ngs-folder ()
+  (or
+   (get-env "NGS_FOLDER")
+   (let ((dir (directory-namestring (pathname (first (get-argv))))))
+     (cond
+       ((equalp dir "") ".")
+       (t (subseq dir 0 (1- (length dir))))))))
+
+(defun update-runtime-info ()
+  ;; Remember to update if fork() is supported
+  (set-var "PID" *ngs-globals* (get-pid))
+  (set-var "ARGV" *ngs-globals* (%array (get-argv)))
+  (set-var "ENV" *ngs-globals* (get-all-env))
+  (set-var "NGS_FOLDER" *ngs-globals* (get-ngs-folder)))
+
 
 ;; Runtime - end ------------------------------

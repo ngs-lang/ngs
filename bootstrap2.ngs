@@ -1,0 +1,23 @@
+def bootstrap_require(f) {
+	# echo("bootstrap_require($f)")
+	content = fetch(f.File())
+	code = compile(content, f)
+	lambda_ = load(code)
+	lambda_()
+}
+
+# defg ngs_exit_code(x) { 0 }
+# defg ngs_exit_code(b:Bool) { if b {0} {1} }
+# defg ngs_exit_code(n:Number) { n }
+
+def bootstrap() {
+	if 'NGS_SKIP_STDLIB' in ENV {
+		bootstrap_require(ARGV[1])
+	} {
+		bootstrap_require("$NGS_FOLDER/stdlib2.ngs")
+		require(ARGV[1])
+	}
+}
+
+bootstrap()
+
