@@ -364,8 +364,8 @@ Set([1, 2, 3]).join('::')
 "1::2::3"
 
 Process output capture (includes String(Process))
-`echo abc`
-"abc"
+x=[1,2]; `echo abc $*x`
+"abc 1 2"
 
 ``command`` (includes call(F, *args))
 ``echo '{"a": 1}'`` == {'a': 1}
