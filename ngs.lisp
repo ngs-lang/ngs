@@ -199,7 +199,7 @@
 
 ;; Units idea - Thanks to Avishai Ish Shalom
 (defrule number (and (or float integer) (? (or #\K #\M #\G)))
-  (:lambda (n &bounds start end)
+  (:lambda (n)
     (make-instance
      'number-node
      :data (make-integer-if-possible (* (first n)
@@ -209,8 +209,7 @@
                                             ((equal units "K") 1024)
                                             ((equal units "M") (* 1024 1024))
                                             ((equal units "G") (* 1024 1024 1024))
-                                            (t 1)))))
-     :src %std-src)))
+                                            (t 1))))))))
 
 ;; http://en.wikipedia.org/wiki/Escape_sequences_in_C
 (defparameter *escape-chars*
@@ -967,7 +966,7 @@
                                                               for key being the hash-keys of src-hash
                                                               do (setf (gethash key h) (gethash key src-hash)))))
 
-(defmethod generate-code ((n hash-node))                `(let ((h (make-hash-table :test #'equalp)))
+(defmethod generate-code ((n hash-node))                `(let ((h (make-hash-table :test #'equal)))
                                                            ,@%children
                                                            h))
 
@@ -1080,6 +1079,7 @@
          (*source-file-positions* (make-source-file-positions code))
          (c (generate-code (parse 'expressions code))))
     `(let ((vars *ngs-globals*))
+       (declare (ignorable vars))
        (handler-case ,c
          (runtime-error (e) (format t "Run-time error: ~A~%Stack: ~S" e (runtime-error-stack-trace e)))))))
 
@@ -1203,7 +1203,7 @@
                                              (cond
                                                ,@(loop
                                                     for clause in body
-                                                    collecting `((equalp %p2 ,(first clause)) ,@(rest clause)))
+                                                    collecting `((equal %p2 ,(first clause)) ,@(rest clause)))
                                                (t (error 'attribute-does-not-exist :datum %p2)))))
 
 (defmacro %call (name parameters)
@@ -1214,9 +1214,11 @@
 
 (defun %array (init) (make-array (length init) :adjustable t :fill-pointer t :initial-contents init))
 
-(native "==" (any any) (%bool (equalp %p1 %p2)))
-;; TO FIX: should be not(%p1 == %p2).
-(native "!=" (any any) (%bool (not (equalp %p1 %p2))))
+(native "==" (any any) (%bool (equal %p1 %p2)))
+(native "!=" (any any) (ecase (%call "==" (make-arguments :positional (list %p1 %p2)))
+                               (:true :false)
+                               (:false :true)))
+
 (native "===" (any any) (%bool (eq %p1 %p2)))
 (native "!==" (any any) (%bool (not (eq %p1 %p2))))
 (native "<" (number number) (%bool (< %p1 %p2)))
@@ -1260,7 +1262,7 @@
 
 ;; List
 (native "[]" (list number) (nth %p2 %p1))
-(native "in" (any list) (%bool (member %p1 %p2 :test #'equalp)))
+(native "in" (any list) (%bool (member %p1 %p2 :test #'equal)))
 
 ;; Array
 (native "[]" (array number) (elt %p1 %p2))
@@ -1295,7 +1297,7 @@
 
 ;; Hash
 (native "Hash" (hash) %p1)
-(native "Hash" () (make-hash-table :test #'equalp))
+(native "Hash" () (make-hash-table :test #'equal))
 (native "[]" (hash any)
   (multiple-value-bind (result found) (gethash %p2 %p1)
     (if found
@@ -1391,7 +1393,7 @@
 (native "meta" (any) (multiple-value-bind (result found) (gethash %p1 *ngs-meta*)
                        (if found
                            result
-                           (setf (gethash %p1 *ngs-meta*) (make-hash-table :test #'equalp)))))
+                           (setf (gethash %p1 *ngs-meta*) (make-hash-table :test #'equal)))))
 
 ;; Hack attack!
 (let ((orig (fdefinition 'yason::parse-constant)))
@@ -1409,7 +1411,7 @@
           ((:plist :alist)
            nil)
           (:hash-table
-           (make-hash-table :test #'equalp)))))
+           (make-hash-table :test #'equal)))))
 
 (native "from_json" (string) (yason:parse %p1 :json-nulls-as-keyword t :json-arrays-as-vectors t))
 
@@ -1431,7 +1433,7 @@
 (native "wait" (process) (sb-ext:process-wait %p1))
 
 (native-getattr process
-  ("argv" (second (assoc "argv" (gethash %p1 *ngs-objects-attributes*) :test #'equalp)))
+  ("argv" (second (assoc "argv" (gethash %p1 *ngs-objects-attributes*) :test #'equal)))
   ("code" (%nil->nul (sb-ext:process-exit-code %p1)))
   ("status" (string-downcase (symbol-name (sb-ext:process-status %p1))))
   ("stdout" (sb-ext:process-output %p1)))
@@ -1457,6 +1459,8 @@
 (native "read_byte" (stream) (read-byte %p1))
 (native "read_line" (stream) (read-line %p1))
 
+;; system misc
+(native "exit" (number) (sb-ext:exit :code %p1))
 
 ;; variables
 
@@ -1469,7 +1473,7 @@
 (defun get-pid () (sb-posix:getpid))
 
 (defun get-all-env ()
-  (let ((h (make-hash-table :test 'equalp)))
+  (let ((h (make-hash-table :test 'equal)))
     (loop
        for s in (sb-ext:posix-environ)
        do (let ((p (position #\= s)))
@@ -1482,7 +1486,7 @@
    (get-env "NGS_FOLDER")
    (let ((dir (directory-namestring (pathname (first (get-argv))))))
      (cond
-       ((equalp dir "") ".")
+       ((equal dir "") ".")
        (t (subseq dir 0 (1- (length dir))))))))
 
 (defun update-runtime-info ()

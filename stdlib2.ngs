@@ -372,6 +372,17 @@ defg join(s:Seq) { join(s, '') }
 
 # Predicates
 
+defg '=='(s1:Seq, s2:Seq) {
+	guard s1 is not String
+	guard s2 is not String
+	sl = s1.len()
+	sl != s2.len() returns false
+	for(i=0; i<sl; i=i+1) {
+		s1[i] != s2[i] returns false
+	}
+	true
+}
+
 defg startsWith(s:Seq, pfx:Seq) {
 	not(len(s) < len(pfx))
 	and
@@ -611,6 +622,14 @@ defg dflt(h:Hash, k, v) {
 defg '.'(h:Hash, k) { h[k] }
 
 defg '.='(h:Hash, k, v) { h[k] = v }
+
+# Misc
+defg '=='(h1:Hash, h2:Hash) {
+	len(h1) != len(h2) returns false
+	k = h1.keys().sort()
+	k != h2.keys().sort() returns false
+	k.all(@ h1[X]==h2[X])
+}
 
 # Type transformations
 
