@@ -1128,6 +1128,9 @@
 (defmethod print-object ((e item-does-not-exist) stream)
   (format stream "Item '~A' not found" (ngs-user-exception-datum e)))
 
+(defmethod print-object ((e ngs-user-exception) stream)
+  (format stream "User exception: ~A" (ngs-user-exception-datum e)))
+
 (defmethod print-object ((e method-implementatoin-not-found) stream)
   (let ((name (method-implementatoin-not-found-method-name e)))
     (if name
