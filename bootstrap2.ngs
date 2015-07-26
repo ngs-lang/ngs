@@ -13,7 +13,7 @@ def bootstrap_require(f) {
 def bootstrap() {
 	if 'NGS_SKIP_STDLIB' in ENV {
 		bootstrap_require(ARGV[1])
-	} {
+	} else {
 		bootstrap_require("$NGS_FOLDER/stdlib2.ngs")
 		require(ARGV[1])
 	}

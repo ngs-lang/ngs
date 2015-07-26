@@ -566,10 +566,18 @@
     (make-instance 'string-node :data (text list) :src %std-src)))
 
 (defrule command-expression (and "${" expression "}") (:lambda (list) (second list)))
+
+(defrule command-splice-var (and "$*" varname)
+  (:lambda (list &bounds start end)
+    (make-instance 'splice-node
+                   :children (list (second list))
+                   :src %std-src)))
+
 (defrule command-var (and "$" varname) (:lambda (list) (second list)))
 
 (defrule command-word (or
                        command-expression
+                       command-splice-var
                        command-var
                        command-word-text
                        string))
@@ -1031,9 +1039,17 @@
                                                            (list
                                                             (ngs-call-function
                                                              (get-var "Command" vars)
-                                                             (make-arguments :positional (list ,@%children))
+                                                             (make-arguments
+                                                              :positional
+                                                              ,(generate-code
+                                                                (process-possible-splice
+                                                                 'list-concat-node
+                                                                 (make-instance
+                                                                  'list-node
+                                                                  :children
+                                                                  (node-children n)))))
                                                              :name "Command")))
-                                                           :name spawn-function-name))
+                                                          :name spawn-function-name))
 
 (defmethod generate-code ((n commands-node))            `(let ((spawn-function (get-var ,%data vars))
                                                                (spawn-function-name ,%data)) ,@%children))
