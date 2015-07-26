@@ -16,8 +16,8 @@ def bootstrap_use_stdlib_p() {
 
 def bootstrap_run_code(require_func) {
 	if ARGV[1] == '-e' or ARGV[1] == '-E' {
-		bootstrap_debug('Executing code from command line: ' + ARGV[2])
-		code = compile(ARGV[2], '-e')
+		bootstrap_debug("Executing code from command line: { ${ARGV[2]} }")
+		code = compile("{ ${ARGV[2]} }", '<command-line-e-switch>')
 		lambda_ = load(code)
 		lambda_()
 	} else {
