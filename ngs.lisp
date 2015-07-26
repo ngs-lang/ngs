@@ -126,6 +126,7 @@
 (defclass literal-node (node) ())
 (defclass regexp-node (node) ())
 (defclass command-node (node) ())
+(defclass command-code-node (node) ())
 (defclass commands-node (node) ())
 
 (defun make-binop-node (ls)
@@ -592,6 +593,7 @@
   (:lambda (list &bounds start end)
     (make-instance
      'commands-node
+     :data "$()" ; default for script top-level commands
      :children (apply #'list (first list) (mapcar #'second (second list)))
      :src %std-src)))
 
@@ -635,6 +637,26 @@
                     spawn-commands
                     binary-var
                     parentheses))
+
+(defrule code (and "{" optional-space expressions optional-space "}")
+  (:lambda (list &bounds start end)
+    (make-instance 'command-code-node :children (list (third list)) :src %std-src)))
+
+(defrule top-level-item (or
+                         comment
+                         function-definition
+                         function-call
+                         assignment
+                         code
+                         end
+                         commands))
+
+(defrule top-level (and top-level-item (* (and command-separator top-level-item)) optional-space)
+  (:lambda (list)
+    ;; (format t "~S~%" (first (second list)))
+    (make-instance 'expressions-node
+                   :children (apply #'list (first list) (mapcar #'second (second list))))))
+
 
 ;; Parser - end ------------------------------
 
@@ -1052,8 +1074,10 @@
                                                              :name "Command")))
                                                           :name spawn-function-name))
 
+(defmethod generate-code ((n command-code-node))        (generate-code (first (node-children n))))
 (defmethod generate-code ((n commands-node))            `(let ((spawn-function (get-var ,%data vars))
                                                                (spawn-function-name ,%data)) ,@%children))
+
 
 ;; GENERATE MARKER
 
@@ -1077,7 +1101,7 @@
 (defun ngs-compile (code file-name)
   (let* ((*source-file-name* file-name)
          (*source-file-positions* (make-source-file-positions code))
-         (c (generate-code (parse 'expressions code))))
+         (c (generate-code (parse 'top-level code))))
     `(let ((vars *ngs-globals*))
        (declare (ignorable vars))
        (handler-case ,c

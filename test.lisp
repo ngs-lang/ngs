@@ -31,11 +31,12 @@
      collecting (subseq string start finish)
      until (null finish)))
 
+;; Note that each test is wrapped with { }
 (defun parse-test (test-string)
   (let*
       ((lines (split-sequence:split-sequence #\Newline test-string))
        (name (first lines))
-       (code (format nil "~{~a~^~%~}" (butlast (rest lines))))
+       (code (format nil "{~{~a~^~%~}}" (butlast (rest lines))))
        (expected-result (with-input-from-string (s (first (last lines)))
                           ;; (format t "STR: <<~S>>~%" (first (last lines)))
                           (read s))))

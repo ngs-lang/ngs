@@ -554,13 +554,13 @@ defg sum(a:Array) { reduce(a, 0, (+)) }
 global __literal_w = split
 
 # Arithmetcis
-# later # {
+{
 	w'+ - * /'.each(F(op) {
 		defg $op(a:Array, n:Number) {
 			a.map(globals()[op], n)
 		}
 	})
-# later # }
+}
 
 # Magic methods
 defg '.'(a:Array, attr:String) { map(a, (.), attr) }
@@ -766,11 +766,11 @@ defg '[]'(dh:DfltHash, k) {
 	dh.data.get(k, dh.default)
 }
 
-# later # {
+{
 	'[]= keys values in map each'.split().each(F(method) {
 		defg $method(dh:DfltHash, *args) { globals()[method].call(dh.data, *args) }
 	})
-# later # }
+}
 
 defg String(dh:DfltHash) { "<DfltHash dflt=${dh.default} data=${dh.data}>" }
 
