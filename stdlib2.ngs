@@ -610,6 +610,8 @@ defg dflt(h:Hash, k, v) {
 
 defg '.'(h:Hash, k) { h[k] }
 
+defg __set_attr(h:Hash, k, v) { h[k] = v }
+
 # Type transformations
 
 defg Bool(h:Hash)   { h.len() > 0 }
