@@ -51,7 +51,7 @@
     ("*" "/")))
 
 (defparameter *binary-functions*
-  `("is not" "is" "in" "not in" "[]" "." "$()" "````" "``" "|" ,@(alexandria:flatten *optional-space-binary-operations*)))
+  `("is not" "is" "in" "not in" "[]=" "[]" ".=" "." "$()" "````" "``" "|" ,@(alexandria:flatten *optional-space-binary-operations*)))
 
 (defparameter *binary-operators*
   (append
@@ -874,7 +874,8 @@
                                                           vars
                                                           ,@(children-code n :start 1)
                                                           ,(node-data n)))
-(defmethod generate-code ((n expressions-node))         `(progn ,@%children))
+(defmethod generate-code ((n expressions-node))         (let ((c %children))
+                                                          (if c `(progn ,@%children) :null)))
 
 (defmethod generate-code ((n function-definition-node))
   ;; `(let ((expected-parameters ,(generate-expected-parameters (second (node-children n)))))
@@ -886,6 +887,7 @@
            (lambda (parameters)
              (block function-block
                (let ((vars (one-level-deeper-lexical-vars vars)))
+                 (declare (ignorable vars))
                  ,@(children-code n :start 1)))))))
     ;; (format t "sec: ~S~%" (first (node-children (second (node-children n)))))
     (if (first (node-children (second (node-children n))))
@@ -997,14 +999,14 @@
                                                           :name "[]"))
 
 (defmethod generate-code ((n setitem-node))             `(ngs-call-function
-                                                          (get-var "__set_item" vars)
+                                                          (get-var "[]=" vars)
                                                           (make-arguments :positional (list ,@(children-code n)))
-                                                          :name "__set_item"))
+                                                          :name "[]="))
 
 (defmethod generate-code ((n setattr-node))             `(ngs-call-function
-                                                          (get-var "__set_attr" vars)
+                                                          (get-var ".=" vars)
                                                           (make-arguments :positional (list ,@(children-code n)))
-                                                          :name "__set_attr"))
+                                                          :name ".="))
 
 (defmethod generate-code ((n if-node))                  `(%bool-ecase ,%1 ,%2, %3))
 (defmethod generate-code ((n try-catch-node))           `(handler-case ,%1
@@ -1299,7 +1301,7 @@
     (if found
         result
         (error 'item-does-not-exist :datum %p2))))
-(native "__set_item" (hash any any) (setf (gethash %p2 %p1) %p3))
+(native "[]=" (hash any any) (setf (gethash %p2 %p1) %p3))
 (native "in" (any hash) (%bool (nth-value 1 (gethash %p1 %p2))))
 (native "keys" (hash)
   (let ((keys (hash-keys %p1)))
@@ -1312,7 +1314,7 @@
 (native "remove" (hash any) (%bool (remhash %p2 %p1)))
 
 ;; User-defined-types
-(native "__set_attr" (any any any)
+(native ".=" (any any any)
   (let ((target %p1))
      (when (not (typep target 'ngs-object))
        (error 'parameters-mismatch))
