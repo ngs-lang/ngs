@@ -1,5 +1,6 @@
 all: ngs
 
+.PHONY: test
 test:
 	time sbcl --script test.lisp
 readme.html: readme.md
