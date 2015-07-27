@@ -922,7 +922,7 @@
                  ,@(children-code n :start 1)))))))
     ;; (format t "sec: ~S~%" (first (node-children (second (node-children n)))))
     (if (first (node-children (second (node-children n))))
-        `(let ((expected-parameters ,(generate-expected-parameters (second (node-children n))))) ,ret)
+        `(let ((expected-parameters ,(generate-expected-parameters (second (node-children n))))) (declare (ignorable expected-parameters))  ,ret)
         ret)))
 
 (defmethod generate-code ((n lambda-node))              `(let ((expected-parameters ,(generate-expected-parameters (second (node-children n)))))

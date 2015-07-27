@@ -2,9 +2,7 @@
 #+TODO: TODO PROGRESS PENDING | DONE
 
 * Re-implement in Lisp
-** DONE Fix push(List, x)
-** $* syntax as command word
-** DONE Change (native ...) to clearer (native (params-types) ...)
+** DONE $* syntax as command word
 ** Consider splitting object creation and initialization. s = DfltHash(0).as(Stats) is not pretty.
 ** Make missing expressions return :null
 ** Improve error messages
@@ -14,8 +12,8 @@
 defg (x,y,=z) {
 do_something
 }
+** Consider syntaxes: breaks / continues / r if cond
 * Now
-** DONE Redo type system
 ** CLI
 *** TODO Make P usable in CLI
 *** TODO think completion from widgets
