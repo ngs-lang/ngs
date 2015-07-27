@@ -23,13 +23,13 @@ Early development. Help is welcome.
 Running
 =======
 
-	(cd ngs && pegjs --cache syntax.pegs)
-	nodejs ngs/run.js SCRIPT_NAME.ngs
+	make
+	./ngs SCRIPT_NAME.ngs
 
 Running tests
 =============
 
-`cd ngs && mocha`
+	make test
 
 Contributing
 ============
