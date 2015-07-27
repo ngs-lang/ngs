@@ -125,6 +125,7 @@
 (defclass continue-node (node) ())
 (defclass guard-node (node) ())
 (defclass return-node (node) ())
+(defclass type-definition-node (node) ())
 (defclass literal-node (node) ())
 (defclass regexp-node (node) ())
 (defclass command-node (node) ())
@@ -559,6 +560,18 @@
   (:lambda (list &bounds start end)
     (make-instance 'return-node :children (list (third list)) :src %std-src)))
 
+(defrule type-definition (and (or "typeg" "type") space identifier (? (and optional-space "(" function-arguments ")")))
+         (:lambda (list &bounds start end)
+                  (let ((args (or
+                                (third (fourth list))
+                                (make-instance 'function-arguments-node)))
+                        (name-argument (make-instance 'function-argument-node :children (list (third list)))))
+                    (setf (node-children args) (cons name-argument (node-children args)))
+                    (make-instance 'type-definition-node
+                                   :data (equal (first list) "typeg")
+                                   :children (list args)
+                                   :src %std-src))))
+
 (defrule parentheses (and "(" optional-space expression optional-space ")")
   (:lambda (list) (third list)))
 
@@ -627,6 +640,7 @@
                     continue
                     guard
                     return
+                    type-definition
                     assignment
                     function-call
                     number
@@ -654,6 +668,7 @@
                          if
                          while
                          for
+                         type-definition
                          function-definition
                          function-call
                          assignment
@@ -1052,6 +1067,13 @@
 
 (defmethod generate-code ((n return-node))              `(return-from function-block ,%1))
 
+(defmethod generate-code ((n type-definition-node))     `(let ((args ,%1))
+                                                           (set-var
+                                                             (first (arguments-positional args))
+                                                             vars
+                                                             (ngs-call-function (get-var "Type" vars) args :name "Type")
+                                                             ,(node-data n))))
+
 (defmethod generate-code ((n for-node))                 `(progn
                                                            ,%1
                                                            (loop while (%bool-ecase ,%2 t nil) do (block continue-block ,%4) do ,%3)
@@ -1117,7 +1139,7 @@
     `(let ((vars *ngs-globals*))
        (declare (ignorable vars))
        (handler-case ,c
-         (runtime-error (e) (format t "Run-time error: ~A~%Stack: ~S" e (runtime-error-stack-trace e)))))))
+         (runtime-error (e) (format t "Run-time error: ~A~%Stack (deepest first): ~S" e (runtime-error-stack-trace e)))))))
 
 ;; Compiler - end ------------------------------
 

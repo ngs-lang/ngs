@@ -1,6 +1,9 @@
+# WIP: fixes after rewrite
 # TODO: get rid of /dev/tty references all over the place
 
-mktype('ScreenManager', 'Hash')
+type ScreenManager;
+
+END
 
 mktype('Widget', 'Hash')
 mktype('OrigCmdWidget', 'Widget')

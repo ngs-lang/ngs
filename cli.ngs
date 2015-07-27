@@ -1,3 +1,4 @@
+# WIP: fixes after rewrite
 # TODO: load cli-specific user ini .ngs files
 # TODO: history file
 
@@ -5,7 +6,7 @@ if not(stdout.istty()) {
 	throw ["runtime", "CLI needs stdout to be a TTY"]
 }
 
-require("ngs/widgets.ngs")
+require("widgets.ngs")
 
 sm = ScreenManager(stdin, stdout)
 
@@ -100,9 +101,9 @@ defg cli_main() {
 		time = `date '+%Y-%m-%d %H:%M:%S'`
 
 		if not(lambda_) {
-			code = catch compile(l, "cli_command_$n")
-			# echo("CODE", code)
-			if not(code[0]) {
+			code = try {
+				compile(l, "cli_command_$n")
+			} catch(e) {
 				# echo("ERROR", code[1])
 				o = OrigCmdWidget(l, time)
 				o.err = 'COMP'
@@ -112,6 +113,7 @@ defg cli_main() {
 				sm.echo()
 				continue
 			}
+
 			lambda_ = load(code[1]).locals(local_scope)
 		}
 

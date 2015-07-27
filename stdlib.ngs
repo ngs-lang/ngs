@@ -17,13 +17,14 @@ defg has_no(container, item) {item not in container}
 
 defg '|'(*args) { map(*args) }
 
-global Command = Type('Command')
+typeg Command
 
 # ----- Type system sugar - start -----
 
 defg String(t:Type) { "<Type ${t.name}>" }
 
-defg Type(name:String, parents:Array) {
+defg Type(name:String, *parents) {
+	guard parents
 	ret = Type(name)
 	parents.each(@ ret.inherits(X))
 	ret
@@ -640,7 +641,7 @@ defg Bool(h:Hash)   { h.len() > 0 }
 
 # ----- Set - start -----
 
-global Set = Type('Set')
+typeg Set
 
 defg count(s:Set, predicate:F, *args) { s.values().count(predicate, *args) }
 
@@ -732,7 +733,7 @@ defg '````'(c:Command) {
 
 # later # # ----- MaybeFile - start -----
 # later # 
-# later # global MaybeFile = Type('MaybeFile', [File])
+# later # typeg MaybeFile(File)
 # later # 
 # later # defg MaybeFile(s:String) { File(s).as(MaybeFile) }
 # later # 
@@ -750,7 +751,7 @@ defg '````'(c:Command) {
 
 # ----- DfltHash - start -----
 
-global DfltHash = Type('DfltHash')
+typeg DfltHash
 
 # TODO: what happens if someone external uses DfltHash()?
 defg DfltHash(v) {
@@ -778,7 +779,7 @@ defg String(dh:DfltHash) { "<DfltHash dflt=${dh.default} data=${dh.data}>" }
 
 # ----- Stats - start -----
 
-global Stats = Type('Stats', [DfltHash])
+typeg Stats(DfltHash)
 
 defg Stats() {
 	s = DfltHash(0).as(Stats)
