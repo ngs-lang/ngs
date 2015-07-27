@@ -1093,7 +1093,7 @@
 
 ;; GENERATE MARKER
 
-;; Total running time differences for stdlib2.ngs
+;; Total running time differences for stdlib.ngs
 ;; 2.28 -> 1.30 sec for compiled
 ;; 4.12 -> 2.81 sec for regular
 (when (null (sb-posix:getenv "NGS_NO_SOURCE_POS"))

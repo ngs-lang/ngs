@@ -1,13 +1,49 @@
+defg to_exit_code(x) { 0 }
+defg to_exit_code(b:Bool) { if b {0} {1} }
+defg to_exit_code(n:Number) { n }
+
+defg bootstrap_debug(s:String) {
+	if 'NGS_BOOTSTRAP_DEBUG' in ENV {
+		echo('+ BOOSTRAP DEBUG: ' + s)
+	}
+}
+
+def bootstrap_use_stdlib_p() {
+	'NGS_SKIP_STDLIB' in ENV returns false
+	ARGV[1] == '-E' returns false
+	true
+}
+
+def bootstrap_run_code(require_func) {
+	if ARGV[1] == '-e' or ARGV[1] == '-E' {
+		bootstrap_debug("Executing code from command line: { ${ARGV[2]} }")
+		code = compile("{ ${ARGV[2]} }", '<command-line-e-switch>')
+		lambda_ = load(code)
+		lambda_()
+	} else {
+		bootstrap_debug('Executing code from file: ' + ARGV[1])
+		require_func(ARGV[1])
+	}
+}
+
 def bootstrap_require(f) {
-	content = fetch_file(f)
+	# echo("bootstrap_require($f)")
+	content = fetch(f.File())
 	code = compile(content, f)
 	lambda_ = load(code)
 	lambda_()
 }
 
 def bootstrap() {
-	  bootstrap_require(NGS_FOLDER + '/' + 'stdlib.ngs')
-	  require(ARGV[2])
+	ret = if bootstrap_use_stdlib_p() {
+		bootstrap_debug("Using stdlib")
+		bootstrap_require("$NGS_FOLDER/stdlib.ngs")
+		bootstrap_run_code(require)
+	} else {
+		bootstrap_debug("Skipping stdlib")
+		bootstrap_run_code(bootstrap_require)
+	}
+	ret.to_exit_code().exit()
 }
 
 bootstrap()

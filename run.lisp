@@ -28,7 +28,7 @@
                         ngs::ngs-call-function))
   (let* ((argv (get-argv))
          (file-name (second argv))
-         (source-code (file-string (format nil "~A/~A" (get-ngs-folder) "bootstrap2.ngs")))
+         (source-code (file-string (format nil "~A/~A" (get-ngs-folder) "bootstrap.ngs")))
          (code (ngs-compile source-code file-name)))
     (when (get-env "NGS_CODE")
       (format t "~S~%" code))
