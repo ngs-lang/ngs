@@ -121,6 +121,8 @@
 (defclass throw-node (node) ())
 (defclass for-node (node) ())
 (defclass while-node (node) ())
+(defclass break-node (node) ())
+(defclass continue-node (node) ())
 (defclass guard-node (node) ())
 (defclass return-node (node) ())
 (defclass literal-node (node) ())
@@ -438,7 +440,7 @@
 (defrule false "false" (:constant (make-instance 'keyword-node :data :false)))
 (defrule null  "null"  (:constant (make-instance 'keyword-node :data :null)))
 
-(defrule list (and "[" optional-space (? (and expression (* (and optional-space "," optional-space expression optional-space)))) optional-space "]")
+(defrule list (and "[" optional-space (? (and expression (* (and optional-space "," optional-space expression optional-space)))) optional-space (? (and "," optional-space)) "]")
   (:lambda (list &bounds start end)
     (process-possible-splice
      'array-concat-node
@@ -546,6 +548,9 @@
                    :children (items-at-positions '(2 4) list)
                    :src %std-src)))
 
+(defrule break    "break"    (:lambda (list &bounds start end) (declare (ignore list)) (make-instance 'break-node    :src %std-src)))
+(defrule continue "continue" (:lambda (list &bounds start end) (declare (ignore list)) (make-instance 'continue-node :src %std-src)))
+
 (defrule guard (and "guard" space expression)
   (:lambda (list &bounds start end)
     (make-instance 'guard-node :children (list (third list)) :src %std-src)))
@@ -618,6 +623,8 @@
                     throw
                     for
                     while
+                    break
+                    continue
                     guard
                     return
                     assignment
@@ -644,6 +651,9 @@
 
 (defrule top-level-item (or
                          comment
+                         if
+                         while
+                         for
                          function-definition
                          function-call
                          assignment
@@ -1044,10 +1054,12 @@
 
 (defmethod generate-code ((n for-node))                 `(progn
                                                            ,%1
-                                                           (loop while (%bool-ecase ,%2 t nil) do ,%4 do ,%3)
+                                                           (loop while (%bool-ecase ,%2 t nil) do (block continue-block ,%4) do ,%3)
                                                            :null))
 
-(defmethod generate-code ((n while-node))               `(progn (loop while (%bool-ecase ,%1 t nil) do ,%2) :null))
+(defmethod generate-code ((n while-node))               `(progn (loop while (%bool-ecase ,%1 t nil) do (block continue-block ,%2)) :null))
+(defmethod generate-code ((n break-node))               `(return))
+(defmethod generate-code ((n continue-node))            `(return-from continue-block))
 
 (defmethod generate-code ((n literal-node))             `(ngs-call-function
                                                           (get-var (apply #'concatenate 'string (list "__literal_" ,%1)) vars)

@@ -16,7 +16,7 @@ global cli_prompt_contributors = [
 	["nothing_to_say", @null],
 	["threads", F cli_thread_prompt() {
 		ts = supervised_threads.count(@ X.state != 'finished')
-		if(ts) {
+		if ts {
 			"(${ts} jobs)"
 		}
 	}],
