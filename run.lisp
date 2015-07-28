@@ -4,7 +4,7 @@
 (in-package :ngs)
 
 (defun main ()
-  (when (get-env "NGS_TRACE")
+  (when (get-env "NGS_TRACE_SYNTAX")
     (ngs::trace-rule 'expressions :recursive t))
   (when (get-env "NGS_PROFILE")
     (sb-profile:profile ngs-compile
@@ -30,8 +30,6 @@
          (file-name (second argv))
          (source-code (file-string (format nil "~A/~A" (get-ngs-folder) "bootstrap.ngs")))
          (code (ngs-compile source-code file-name)))
-    (when (get-env "NGS_CODE")
-      (format t "~S~%" code))
     (ngs:update-runtime-info)
     (eval code))
   (when (get-env "NGS_PROFILE")

@@ -24,8 +24,17 @@ Exit code 0
 
 .SH ENVIRONMENT
 
+.SS NGS_CODE
+If set to any value, including the empty string, prints compiled (to Lisp) code any time \fBcompile(...)\fP is called. Used for debugging of the \fBngs\fP implementation. Produces a lot of output: 37.5K lines for 803 lines in \fBstdlib.ngs\fP.
+
+.SS NGS_COMPILE
+Used as \fBNGS_COMPILE=1 sbcl --script run.lisp\fP to create the \fBngs\fP binary.
+
 .SS NGS_FOLDER
 Directory to load \fBbootstrap.ngs\fP and \fBstdlib.ngs\fP from. If not set, defaults to the directory where the \fBngs\fP binary resides. Available, to the scripting language as \fBNGS_FOLDER\fP global variable in any case.
+
+.SS NGS_PROFILE
+If set to any value, including the empty string, turns \fBngs\fP profiling on. Profiles \fBngs\fP implementation, not the (\fIscript_name\fP or \fIexpression\fP). Do not expect any particular exit code when profiling. Usually zero.
 
 .SS NGS_SKIP_STDLIB
 If set to any value, including the empty string, prevents loading of \fBstdlib.ngs\fP.

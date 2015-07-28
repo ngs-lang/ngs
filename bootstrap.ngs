@@ -43,7 +43,11 @@ def bootstrap() {
 		bootstrap_debug("Skipping stdlib")
 		bootstrap_run_code(bootstrap_require)
 	}
-	ret.to_exit_code().exit()
+	if 'NGS_PROFILE' in ENV {
+		"not exiting for profiling"
+	} else {
+		ret.to_exit_code().exit()
+	}
 }
 
 bootstrap()

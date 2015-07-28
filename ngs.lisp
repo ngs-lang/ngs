@@ -1136,6 +1136,8 @@
   (let* ((*source-file-name* file-name)
          (*source-file-positions* (make-source-file-positions code))
          (c (generate-code (parse 'top-level code))))
+    (when (get-env "NGS_CODE")
+      (format t "Code for file '~A':~%~S" file-name c))
     `(let ((vars *ngs-globals*))
        (declare (ignorable vars))
        (handler-case ,c
