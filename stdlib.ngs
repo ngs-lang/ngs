@@ -338,6 +338,20 @@ defg flatten(s:Seq) {
 	ret
 }
 
+defg chunk(s:Seq, n:Number, cb:F, *args) {
+	# TODO: check why % has no higher precedence
+	(s.len() % n) != 0 throws ['data', 'Chunk got invalid sequence length']
+	for(i=0;i<s.len()/n;i=i+1) {
+		cb(slice(s, i*n, n), *args)
+	}
+}
+
+defg chunk(s:Seq, n:Number) {
+	ret = []
+	chunk(s, n, @ret.push(X))
+	ret
+}
+
 # UNTESTED - start
 defg first(s:Seq)  { s[0] }
 defg second(s:Seq) { s[1] }

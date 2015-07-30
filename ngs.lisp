@@ -48,7 +48,7 @@
 (defparameter *optional-space-binary-operations*
   '(("===" "!==" "==" "!=" "<" ">" "~~" "~")
     ("+" "-")
-    ("*" "/")))
+    ("*" "/" "%")))
 
 (defparameter *binary-functions*
   `("is not" "is" "in" "not in" "[]=" "[]" ".=" "." "$()" "````" "``" "|" ,@(alexandria:flatten *optional-space-binary-operations*)))
@@ -1290,6 +1290,7 @@
 (native "-" (number number) (- %p1 %p2))
 (native "*" (number number) (* %p1 %p2))
 (native "/" (number number) (/ %p1 %p2))
+(native "%" (number number) (mod %p1 %p2))
 (native "+" (string string) (concatenate 'string %p1 %p2))
 
 (native "globals" () (first (lexical-scopes-hashes *ngs-globals*)))

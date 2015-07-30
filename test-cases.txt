@@ -503,3 +503,7 @@ a=[1,2]
 type
 type T1; type T2(T1); T2() is T1
 :true
+
+chunk(Seq, Number)
+[1,2,3,4].chunk(2)
+#(#(1 2) #(3 4))
