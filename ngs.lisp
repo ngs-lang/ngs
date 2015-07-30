@@ -132,13 +132,6 @@
 (defclass command-code-node (node) ())
 (defclass commands-node (node) ())
 
-(defun make-binop-node (ls)
-  (let ((result (first ls)))
-    (loop
-       for (op expr) in (second ls)
-       do (setq result (make-instance 'binary-operation-node :data (second op) :children (list result expr))))
-    result))
-
 (defun process-possible-splice (result-type node)
   (if (some #'(lambda (x) (typep x 'splice-node)) (node-children node))
       (make-instance

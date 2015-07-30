@@ -588,7 +588,7 @@ defg '.'(a:Array, attr:String) { map(a, (.), attr) }
 # Constructors
 defg Hash(a:Array) {
 	ret = {}
-	a.each(F(x) { ret[x[0]] = x[1] })
+	a.each(@ ret[X[0]] = X[1])
 	ret
 }
 
