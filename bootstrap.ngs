@@ -14,7 +14,7 @@ def bootstrap_use_stdlib_p() {
 	true
 }
 
-def bootstrap_run_code(require_func) {
+def bootstrap_run_code() {
 	if ARGV[1] == '-e' or ARGV[1] == '-E' {
 		bootstrap_debug("Executing code from command line: { ${ARGV[2]} }")
 		code = compile("{ ${ARGV[2]} }", '<command-line-e-switch>')
@@ -22,11 +22,11 @@ def bootstrap_run_code(require_func) {
 		lambda_()
 	} else {
 		bootstrap_debug('Executing code from file: ' + ARGV[1])
-		require_func(ARGV[1])
+		require(ARGV[1])
 	}
 }
 
-def bootstrap_require(f) {
+def require(f) {
 	# echo("bootstrap_require($f)")
 	content = fetch(f.File())
 	code = compile(content, f)
@@ -37,11 +37,11 @@ def bootstrap_require(f) {
 def bootstrap() {
 	ret = if bootstrap_use_stdlib_p() {
 		bootstrap_debug("Using stdlib")
-		bootstrap_require("$NGS_FOLDER/stdlib.ngs")
-		bootstrap_run_code(require)
+		require("$NGS_FOLDER/stdlib.ngs")
+		bootstrap_run_code()
 	} else {
 		bootstrap_debug("Skipping stdlib")
-		bootstrap_run_code(bootstrap_require)
+		bootstrap_run_code()
 	}
 	if 'NGS_PROFILE' in ENV {
 		"not exiting for profiling"
