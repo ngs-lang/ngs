@@ -507,3 +507,15 @@ type T1; type T2(T1); T2() is T1
 chunk(Seq, Number)
 [1,2,3,4].chunk(2)
 #(#(1 2) #(3 4))
+
+Lib.types
+"int" in Lib.types
+:true
+
+LibPtr
+[LibPtr(1) == LibPtr(1), LibPtr(1) + 1 == LibPtr(2), LibPtr(1) == LibPtr(2), LibPtr().Bool(), LibPtr("printf").Bool(), LibPtr(10).Number()]
+#(:true :true :false :false :true 10)
+
+lib_call
+`id -u`.Number() == lib_call("getuid", "int")
+:true

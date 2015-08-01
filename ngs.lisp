@@ -2,6 +2,8 @@
 
 (require :asdf)
 (require :sb-posix)
+(require :cffi)
+
 (require :alexandria)
 (require :esrap)
 (require :cl-ppcre)
@@ -307,31 +309,46 @@
     ;; (format t "varname @ ~S~%" start)
     (make-instance 'varname-node :data list :src %std-src)))
 
-(defun %bin-expr (n)
-  (intern (concatenate 'string "BINARY-EXPRESSION-" (write-to-string n))))
+(defun %flatten-binary-operations (list)
+  (cond
+    ((not (second list)) (list (first list)))
+    (t (cons (first list)
+             (cons (second (first (first (second list))))
+                   (%flatten-binary-operations (second (first (second list)))))))))
 
+;; TODO: source tracking
+(defun %make-binops-tree (list)
+  (let ((flat-list (%flatten-binary-operations list)))
+    (when (not (cdr list))
+      (return-from %make-binops-tree (first list)))
+    (let ((v (make-array (length flat-list) :initial-contents flat-list)))
+      (labels ((%least-priority-op-position (start end)
+                                            (let* ((pos (1- end)) (priority (gethash (aref v pos) *binary-operators-precedence*)))
+                                              ;; (format t "INITIAL POS/PRI: ~S/~S~%V:~S" pos priority v)
+                                              (loop
+                                                for i from (- end 3) downto (1+ start) by 2
+                                                ;; do (format t "LOOK: I=~S V[I]=~S~%" i (aref v i))
+                                                do (let ((pri (gethash (aref v i) *binary-operators-precedence*)))
+                                                     (when (< pri priority) (setq pos i priority pri))))
+                                              pos))
+               (%make-binop (start end)
+                            (if (eq start end)
+                              (aref v start)
+                              (let ((p (%least-priority-op-position start end)))
+                                (make-instance 'binary-operation-node
+                                               :data (aref v p)
+                                               :children (list (%make-binop start (1- p))
+                                                               (%make-binop (1+ p) end)))))))
+        (%make-binop 0 (1- (length v)))))))
+
+(defrule binary-expression-1 binary-expression-2 (:lambda (list) (%make-binops-tree list)))
+
+;; (Old comment)
 ;; Overall (ngs-compile) is faster (414ms -> 306ms in pre-compiled, 425ms -> 317ms in regular) as opposed
 ;; http://en.wikipedia.org/wiki/Operator-precedence_parser
 ;; Consing: 150M -> 85M
 (defmacro define-binary-operations-rules ()
-  `(defrule binary-expression-1 (and non-binary-operation (* (and (or ,@*binary-operators*) binary-expression-1)))
-     (:lambda (list)
-       (if (second list)
-           (let ((operator (second (first (first (second list)))))
-                 (other (second (first (second list)))))
-             (if (and
-                  (typep other 'binary-operation-node)
-                  (>= (gethash operator *binary-operators-precedence*)
-                      (gethash (node-data other) *binary-operators-precedence*)))
-                 (let ((new-node (make-instance 'binary-operation-node
-                                                :data operator
-                                                :children (list (first list) (first (node-children other))))))
-                   (setf (nth 0 (node-children other)) new-node)
-                   other)
-                 (make-instance 'binary-operation-node
-                                :data operator
-                                :children (list (first list) other))))
-           (first list)))))
+  `(defrule binary-expression-2 (and non-binary-operation (* (and (or ,@*binary-operators*) binary-expression-2)))))
 
 (defmacro define-binary-vars-rule ()
   `(defrule binary-var (and "(" (or ,@*binary-functions*) ")")
@@ -494,7 +511,7 @@
        (make-instance 'function-call-node :children (list (second list) args) :src %std-src)
        target-list))))
 
-(defrule chain-item-getattr (and "." identifier (! (and optional-space "=" (! "="))))
+(defrule chain-item-getattr (and (or "." "::") identifier (! (and optional-space "=" (! "="))))
   (:lambda (list &bounds start end)
     (let ((target-list (list :arg (second list))))
       (list
@@ -782,6 +799,8 @@
                                       (and (listp x) (functionp (first x))))))
 (def-ngs-type "File"    #'pathnamep)
 (def-ngs-type "Hash"    #'hash-table-p)
+(def-ngs-type "Lib"     #'(lambda (x) (typep x 'cffi:foreign-library)))
+(def-ngs-type "LibPtr"  #'cffi-sys:pointerp)
 (def-ngs-type "List"    #'listp)
 (def-ngs-type "Null"    #'(lambda (x) (eq x :null)))
 (def-ngs-type "Number"  #'numberp)
@@ -1510,11 +1529,47 @@
          (when (zerop (fill-pointer buf)) (return))
          (write-sequence buf ret)))))
 
-(native "read" (stream number) (read-whole-stream %p1 %p2))
+(native "read" (stream number) (read-whole-stream %p1 %p2)) ; maybe %p2 should limit the read elements count?
 (native "read" (stream) (read-whole-stream %p1 *read-buffer-size*))
 (native "read_char" (stream) (coerce (list (read-char %p1)) 'string))
 (native "read_byte" (stream) (read-byte %p1))
 (native "read_line" (stream) (read-line %p1))
+
+;; ----- CFFI start -----
+;; TODO: maybe a module/namespace for the Lib related stuff?
+;; TODO: consider moving above more commonly used method's implementatons for performance
+;; Lib
+(native "Lib" (string) (cffi:load-foreign-library %p1)) ; UNTESTED
+(native "lib_types" () (%array (mapcar #'string-downcase (mapcar #'symbol-name cffi:*built-in-foreign-types*))))
+
+(defun %cffi-type (s) (intern (string-upcase s) "KEYWORD"))
+(native "lib_size" (string) (cffi-sys:%foreign-type-size (%cffi-type %p1))) ; UNTESTED
+(native "lib_alignment" (string) (cffi-sys:%foreign-type-alignment (%cffi-type %p1))) ; UNTESTED
+
+;; XXX: There must be a cleaner way
+(ngs-define-function "lib_call" *ngs-globals* t
+                     (lambda (parameters)
+                       (eval `(cffi:foreign-funcall ,%p1
+                                                    ,@(loop
+                                                        for p in (cdr %positionals)
+                                                        for idx from 0
+                                                        collecting (if (evenp idx) (%cffi-type p) p))))))
+
+;; LibPtr
+(native "LibPtr" () (cffi-sys:null-pointer))
+(native "LibPtr" (number) (cffi-sys:make-pointer %p1))
+(native "LibPtr" (string) (cffi:foreign-symbol-pointer %p1))
+(native "Bool" (libptr) (%bool (not (cffi-sys:null-pointer-p %p1))))
+(native "Number" (libptr) (cffi-sys:pointer-address %p1))
+(native "+" (libptr number) (cffi-sys:inc-pointer %p1 %p2))
+(native "libptr_alloc" (number) (cffi-sys:%foreign-alloc %p1)) ; UNTESTED
+(native "libptr_free" (libptr) (cffi-sys:foreign-free %p1)) ; UNTESTED
+(native "libptr_ref" (libptr string) (cffi-sys:%mem-ref %p1 (%cffi-type %p2))) ; UNTESTED ; TODO: (setf ...)
+(native "==" (libptr libptr) (%bool (cffi-sys:pointer-eq %p1 %p2)))
+
+(native "errno" () (sb-alien:get-errno)) ; UNTESTED
+
+;; ----- CFFI end -----
 
 ;; system misc
 (native "exit" (number) (sb-ext:exit :code %p1))

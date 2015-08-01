@@ -410,6 +410,8 @@ defg endsWith(s:Seq, sfx:Seq) {
 	s.slice(s.len() - l, l) == sfx
 }
 
+defg in(v, s:Seq) { any(s, @X==v) }
+
 # Functional
 
 defg each(s:Seq, processor:F, *args) {
@@ -815,3 +817,8 @@ defg sanitize_hostname() {
 }
 
 # ----- Host name utilities - end -----
+
+# ----- Lib sugar - start -----
+defg '.'(o, attr:String) { guard o == Lib and attr = 'types'; lib_types() }
+
+# ----- Lib sugar - end -----
