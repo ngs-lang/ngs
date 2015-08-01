@@ -822,3 +822,21 @@ defg sanitize_hostname() {
 defg '.'(o, attr:String) { guard o == Lib and attr = 'types'; lib_types() }
 
 # ----- Lib sugar - end -----
+
+# ----- Readline - start -----
+
+# https://cnswww.cns.cwru.edu/php/chet/readline/readline.html
+
+defg readline_loaded_p() { LibPtr('readline') }
+
+defg load_readline() {
+	readline_loaded_p() returns null
+	Lib('libreadline.so')
+	LibPtr('rl_readline_name')
+}
+
+defg readline(prompt:String) {
+	load_readline()
+	lib_call('readline', 'string', prompt, 'string')
+}
+# ----- Readline - end -----
