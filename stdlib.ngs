@@ -648,6 +648,13 @@ defg '=='(h1:Hash, h2:Hash) {
 	k.all(@ h1[X]==h2[X])
 }
 
+defg '+'(h1:Hash, h2:Hash) {
+	ret = {}
+	h1.each(@ ret[X] = Y)
+	h2.each(@ ret[X] = Y)
+	ret
+}
+
 # Type transformations
 
 defg Bool(h:Hash)   { h.len() > 0 }

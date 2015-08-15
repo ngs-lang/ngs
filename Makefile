@@ -18,5 +18,5 @@ profiling: ngs
 	NGS_PROFILE=1 NGS_SKIP_STDLIB=1 time ./ngs stdlib.ngs
 	NGS_PROFILE=1 NGS_SKIP_STDLIB=1 time sbcl --script run.lisp stdlib.ngs
 
-trace:
-	NGS_TRACE=1 time sbcl --script run.lisp stdlib.ngs >trace.txt 2>&1
+trace-syntax:
+	NGS_TRACE_SYNTAX=1 time sbcl --script run.lisp stdlib.ngs >trace.txt 2>&1

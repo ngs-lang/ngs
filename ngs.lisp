@@ -809,6 +809,7 @@
 (def-ngs-type "Seq"     #'(lambda (x) (or (arrayp x) (listp x)))) ; arrayp includes stringp, arrayp has higher probability
 (def-ngs-type "Stream"  #'streamp)
 (def-ngs-type "String"  #'stringp)
+(def-ngs-type "Thread"  #'(lambda (x) (typep x 'sb-thread:thread)))
 (def-ngs-type "Type"    #'ngs-type-p)
 
 ;; Types definitions - end ------------------------------
@@ -1570,6 +1571,16 @@
 (native "errno" () (sb-alien:get-errno)) ; UNTESTED
 
 ;; ----- CFFI end -----
+
+;; ----- Thread start ----- UNTESTED
+(native "Thread" () sb-thread:*current-thread*)
+;; TODO (native "Thread" (string f array) (sb-thread:make-thread ...
+(native "threads" () (%array (sb-thread:list-all-threads)))
+(native-getattr thread
+                ("is_alive" (%bool (sb-thread:thread-alive-p %p1)))
+                ("is_main"  (%bool (sb-thread:main-thread-p %p1)))
+                ("name"     (%bool (sb-thread:thread-name %p1))))
+;; ----- Thread end -----
 
 ;; system misc
 (native "exit" (number) (sb-ext:exit :code %p1))
