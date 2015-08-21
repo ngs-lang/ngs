@@ -19,6 +19,16 @@ defg '|'(*args) { map(*args) }
 
 typeg Command
 
+# UNTESTED.
+defg assert(v, err:String, f:F, *args) {
+	ok = f(*[v, *args])
+	not(ok) throws ['assert', err]
+	v
+}
+defg assert(ok:Bool, err:String) {
+	not(ok) throws ['assert', err]
+}
+
 # ----- Type system sugar - start -----
 
 defg String(t:Type) { "<Type ${t.name}>" }
@@ -44,7 +54,7 @@ defg validate_source_file(f:String, content:String) { true }
 # TODO: specify version of the required file/module
 defg require(f:String, *args) {
 	content = File(f).fetch()
-	not(validate_source_file(f, content)) throws ['runtime', "Failed to validate source file $f"]
+	assert(validate_source_file(f, content), "Failed to validate source file $f")
 	code = compile(content, f)
 	lambda_ = load(code)
 	lambda_(*args)
@@ -65,8 +75,7 @@ defg Bool(c:Command) {
 
 defg finish(p:Process) {
 	p.wait()
-	ok = cmd_finished_ok_p(p)
-	not(ok) throws ['runtime', 'Command execution failed: ' + String(p.argv)]
+	assert(cmd_finished_ok_p(p), 'Command execution failed: ' + String(p.argv))
 	p
 }
 
@@ -328,7 +337,7 @@ defg split(s:Seq, delim:Seq) {
 
 defg zip(a:Seq, b:Seq) {
 	l = len(a)
-	l != b.len() throws ['args', 'Zip with different Seqs length']
+	assert(l == b.len(), 'Zip with different Seqs length')
 	l@[a[X], b[X]]
 }
 
@@ -339,8 +348,7 @@ defg flatten(s:Seq) {
 }
 
 defg chunk(s:Seq, n:Number, cb:F, *args) {
-	# TODO: check why % has no higher precedence
-	(s.len() % n) != 0 throws ['data', 'Chunk got invalid sequence length']
+	assert(s.len() % n == 0, 'Chunk got invalid sequence length')
 	for(i=0;i<s.len()/n;i=i+1) {
 		cb(slice(s, i*n, n), *args)
 	}
