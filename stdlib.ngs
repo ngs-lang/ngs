@@ -37,6 +37,7 @@ defg Type(name:String, *parents) {
 	guard parents
 	ret = Type(name)
 	parents.each(@ ret.inherits(X))
+	# ret.inherits(each parents)
 	ret
 }
 
@@ -282,7 +283,7 @@ defg repr(f:File) { "File(${f.name.repr()})" }
 
 # UNTESTED
 defg dirs() {
-	`find -maxdepth 1 -type d`.lines() @ slice(X,2,X.len()-2)
+	`find -maxdepth 1 -mindepth 1 -type d`.lines() @ slice(X,2,X.len()-2)
 }
 
 # ----- Files sugar - end -----
@@ -606,6 +607,11 @@ defg Hash(a:Array, v) { Hash(a@[X,v]) }
 
 defg Hash(keys:Array, mapper:F, *args) {
 	Hash(keys@[X, mapper(X, *args)])
+}
+
+# experimental
+defg Hash(attr:String, a:Array) {
+	Hash(a @ [X[attr], X])
 }
 
 # Functional
