@@ -26,5 +26,6 @@ digits			[0-9]+
 
 {digits}		{
 	yylval->n = atoi(yytext);
+	printf("LEX NUMBER: %d\n", yylval->n);
 	return NUMBER;
 }

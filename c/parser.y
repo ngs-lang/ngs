@@ -1,10 +1,12 @@
 %{
 #include <stdio.h>
+#define NODE(name) ast_node *name = malloc(sizeof(ast_node))
 %}
 
 %define api.pure full
 /* cheat a little: supposed to be scanner_t scanner */
 %parse-param { void * scanner }
+%parse-param { ast_node ** result }
 %lex-param   { void * scanner }
 %locations
 
@@ -12,29 +14,33 @@
 %union
 {
 	int		n;
-	ast_node node;
+	/*ast_node node;*/
 };
-%token <sval> IDENTIFIER
 %token <n> NUMBER
-%token PROCEDURE
-%token BLOCK_START
-%token BLOCK_END
+%type <n> Number
+%type <n> Numbers
+/*%type <ast_node> Program*/
 
 %start Program
 %%
 
 Program:
-	/* empty */
-	Numbers
+	Numbers { printf("P0\n"); NODE(ret); ret->val.num = $1; *result=ret; }
 	;
 
 Numbers:
-	/* empty */
-	| Numbers Number
+	/* empty */ { printf("numbers-empty\n"); $$ = 0;}
+	| Numbers Number { printf("numbers-something %d %d\n", $1, $2); $$=$1+$2; }
 	;
 
 Number:
-	NUMBER  { printf("\t\tNumber : %d at line %d\n", $1, @1.first_line); }
+	NUMBER  {
+		printf("+ Number : %d at line %d\n", $1, @1.first_line);
+		// NODE(ret);
+		// ret->val.num = yylval.n;
+		// result = malloc(sizeof(ast_node));
+		// return yylval.n;
+	}
 	;
 %%
 

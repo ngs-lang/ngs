@@ -15,3 +15,7 @@ profiling
 trace.txt
 ngs
 scratch.txt
+
+parser.c
+parser.h
+scanner.c
