@@ -1,6 +1,16 @@
 %{
+#include <stdlib.h>
 #include <stdio.h>
-#define NODE(name) ast_node *name = malloc(sizeof(ast_node))
+#include <string.h>
+#define NODE(name) \
+	ast_node *name = calloc(sizeof(ast_node), 1); \
+	printf("[debug] allocated ast_node at %p\n", name);
+#define NODET(name, type_) NODE(name); name->type = type_;
+#define SET_LOC(src) \
+	yyloc.first_line   = src.first_line; \
+	yyloc.first_column = src.first_column; \
+	yyloc.last_line    = src.first_column; \
+	yyloc.last_column  = src.last_column;
 %}
 
 %define api.pure full
@@ -13,34 +23,31 @@
 // Symbols.
 %union
 {
-	int		n;
-	/*ast_node node;*/
+	int      number;
+	char     *name;
+	ast_node *ast_node;
 };
-%token <n> NUMBER
-%type <n> Number
-%type <n> Numbers
-/*%type <ast_node> Program*/
+%token <number> NUMBER
+%token <name> BINOP
+%type <ast_node> top_level
+%type <ast_node> number
 
-%start Program
+/*TODO: intern symbols*/
+
 %%
 
-Program:
-	Numbers { printf("P0\n"); NODE(ret); ret->val.num = $1; *result=ret; }
-	;
+top_level: number BINOP number {
+		 $1->next_sibling = $3;
+		 printf("[debug] top_level $1 %p %3 %p\n", $1, $3);
+		 NODET(ret, BINOP);
+		 ret->name = $2;
+		 ret->first_child = $1;
+		 @$ = @2; // is it ok to do this?
+		 // $$ = ret;
+		 SET_LOC(@2);
+		 *result = ret;
+}
 
-Numbers:
-	/* empty */ { printf("numbers-empty\n"); $$ = 0;}
-	| Numbers Number { printf("numbers-something %d %d\n", $1, $2); $$=$1+$2; }
-	;
+number: NUMBER { NODET(ret, NUMBER); SET_INT(ret->val, $1); $$ = ret; }
 
-Number:
-	NUMBER  {
-		printf("+ Number : %d at line %d\n", $1, @1.first_line);
-		// NODE(ret);
-		// ret->val.num = yylval.n;
-		// result = malloc(sizeof(ast_node));
-		// return yylval.n;
-	}
-	;
 %%
-

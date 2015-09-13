@@ -1,4 +1,6 @@
 // NGS objects
+#ifndef OBJ_H
+#define OBJ_H
 #include <stdint.h>
 typedef union {
 	int32_t num;
@@ -20,6 +22,8 @@ typedef union {
 #define IS_INT(obj)    (obj.num & META_AND == 0)
 // TODO: handle situation when n is wider than int32_t - META_BITS bits
 #define SET_INT(obj,n) obj.num = n << META_BITS
-#define GET_INT(n)     (obj.num >> META_BITS)
+#define GET_INT(obj)   (obj.num >> META_BITS)
 
 #define MK_OBJ         ((obj *) malloc(sizeof(obj)))
+
+#endif

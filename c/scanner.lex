@@ -2,10 +2,13 @@
 #include "parser.h"
 %}
 
+/* TODO: multibyte characters support? */
+
 %option bison-bridge
 %option bison-locations
 %option reentrant
 %option yylineno
+%option stack
 
 /* TODO: keep track of file name, see http://archive.oreilly.com/pub/a/linux/excerpts/9780596155971/error-reporting-recovery.html */
 %{
@@ -16,16 +19,21 @@
 	yycolumn += yyleng;
 %}
 
+/* INITIAL is commands */
+%x CODE
+
 blanks          [ \t\n]+
 identifier		[_a-zA-Z0-9]+
 digits			[0-9]+
 
 %%
 
-{blanks}        { /* ignore */ }
+{blanks}            { /* ignore */ }
 
-{digits}		{
-	yylval->n = atoi(yytext);
-	printf("LEX NUMBER: %d\n", yylval->n);
-	return NUMBER;
+<INITIAL>"{"        { yy_push_state(CODE, yyscanner); printf("Starting CODE\n"); }
+<CODE>"}"           { yy_pop_state(yyscanner); printf("Ending CODE\n"); }
+
+<CODE>{
+	"+"             { printf("LEX BINOP\n"); yylval->name = strdup(yytext) /* strdup needed?*/; return BINOP; }
+	{digits}		{ yylval->number = atoi(yytext); printf("LEX NUMBER: %d\n", yylval->number); return NUMBER; }
 }

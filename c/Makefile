@@ -14,7 +14,7 @@ parser.c: parser.y
 scanner.c: scanner.lex
 	flex -o $@ $<
 
-ngs: ngs.c scanner.c parser.c ast.h obj.h
+ngs: *.c *.h
 	gcc -g -o $@ ngs.c -lfl
 
 clean:

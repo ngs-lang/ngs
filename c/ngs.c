@@ -1,5 +1,6 @@
 #include "obj.h"
 #include "ast.h"
+#include "ast.c"
 #include "parser.c"
 #include "scanner.c"
 
@@ -17,7 +18,8 @@ int main (int argc, char * argv[])
 	ret = yyparse(scanner, &tree);
 	yylex_destroy(scanner);
 
-	printf("Tree: %p\n", tree);
-	printf("Result: %d\n", tree->val.num);
+	// printf("Tree: %p\n", tree);
+	// printf("Result: %d\n", tree->val.num);
+	print_ast(tree, 0);
 	return ret;
 }
