@@ -48,6 +48,6 @@ top_level: number BINOP number {
 		 *result = ret;
 }
 
-number: NUMBER { NODET(ret, NUMBER); SET_INT(ret->val, $1); $$ = ret; }
+number: NUMBER { NODET(ret, NUMBER); ret->number = $1; $$ = ret; }
 
 %%

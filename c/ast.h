@@ -4,7 +4,7 @@
 typedef struct ast_node {
 	int type;
 	char *name;
-	obj val;
+	int number;
 	// Chidren
 	struct ast_node *first_child;
 	struct ast_node *next_sibling;

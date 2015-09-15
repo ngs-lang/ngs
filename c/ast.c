@@ -12,7 +12,7 @@ void print_ast(ast_node *node, int level) {
 	char info[AST_NODE_INFO_STR_LEN] = "(n/a)";
 
 	switch(node->type) {
-		case NUMBER: type_="number"; snprintf(info, AST_NODE_INFO_STR_LEN-1, "%d", GET_INT(node->val)); break;
+		case NUMBER: type_="number"; snprintf(info, AST_NODE_INFO_STR_LEN-1, "%d", node->number); break;
 		case BINOP: type_="binop"; break;
 	}
 

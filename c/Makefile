@@ -15,7 +15,8 @@ scanner.c: scanner.lex
 	flex -o $@ $<
 
 ngs: *.c *.h
-	gcc -g -o $@ ngs.c -lfl
+	# -gdwarf-2 -g3 -- for debugging macros
+	gcc -gdwarf-2 -g3 -g -o $@ ngs.c -lfl
 
 clean:
 	-rm parser.h parser.c
