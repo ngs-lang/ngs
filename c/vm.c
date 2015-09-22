@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <uthash.h>
+#include "ngs.h"
 #include "vm.h"
 #include "obj.h"
 
@@ -23,7 +24,7 @@ void native_plus(CTX *ctx, int n_args, VALUE *args) {
 // NOTE: couldn't make it macro - collision with uthash probably.
 void _register_global_func(VM *vm, char *func_name, void *func_ptr) {
 	VAR *var;
-	var = malloc(sizeof(VAR));
+	var = NGS_MALLOC(sizeof(VAR));
 	var->name = strdup(func_name);
 	var->v.ptr = func_ptr;
 	HASH_ADD_KEYPTR(hh, vm->globals, var->name, strlen(var->name), var);
@@ -48,7 +49,7 @@ void vm_load_bytecode(VM *vm, char *bc, IP len) {
 // TODO: some normaml stack implementation, not linked list
 void push(STACK **st, VALUE v) {
 	STACK *elt;
-	elt = malloc(sizeof(STACK));
+	elt = NGS_MALLOC(sizeof(STACK));
 	memcpy(&(elt->v), &v, sizeof(v));
 	elt->next = *st;
 	*st = elt;
@@ -62,7 +63,7 @@ VALUE pop(STACK **st) {
 	stack_top = *st;
 	memcpy(&v, &stack_top->v, sizeof(VALUE));
 	*st = stack_top->next;
-	free(stack_top);
+	// NGS_FREE(stack_top);
 	return v;
 }
 
@@ -75,12 +76,12 @@ void _vm_call(VM *vm, CTX *ctx, IP *ip) {
 
 	func_name = POP();
 	n_args = POP();
-	args = malloc(sizeof(VALUE) * GET_INT(n_args));
+	args = NGS_MALLOC(sizeof(VALUE) * GET_INT(n_args));
 	for(i=GET_INT(n_args)-1; i>=0; i--) {
 		args[i] = POP();
 	}
 
-	ch = GET_LSTR(func_name);
+	GET_LSTR(ch, func_name);
 	len = *ch;
 	memcpy(asciiz_func_name, ch+1, len);
 	asciiz_func_name[len] = 0;
@@ -100,6 +101,7 @@ void _vm_call(VM *vm, CTX *ctx, IP *ip) {
 void vm_run(VM *vm, CTX *ctx) {
 	int i, opcode;
 	VALUE v;
+	OBJECT *o;
 	IP ip = ctx->ip;
 main_loop:
 	// printf("[debug] main loop. ip %i\n", ip);
@@ -110,12 +112,13 @@ main_loop:
 	switch(opcode) {
 		case OP_HALT:
 							v = POP();
-							printf("HALT V=%d\n", GET_INT(v));
+							// printf("HALT V=%d\n", GET_INT(v));
 							goto end_main_loop;
 		case OP_PUSH_L_STR:
 							// TODO: duplicate the string?
-							SET_LSTR(v, &vm->bytecode[ip]);
+							assert((ip & 7) == 0); // 8 byte alignment as we will point to the Lstring here
 							printf("LSTR @ %p\n", &vm->bytecode[ip]);
+							SET_LSTR(v, &(vm->bytecode[ip]));
 							PUSH(v);
 							// Skip length byte and the string that is stored in the length byte
 							ip += 1 + vm->bytecode[ip];

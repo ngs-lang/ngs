@@ -14,9 +14,9 @@ parser.c: parser.y
 scanner.c: scanner.lex
 	flex -o $@ $<
 
-ngs: *.c *.h
+ngs: *.c *.h Makefile
 	# -gdwarf-2 -g3 -- for debugging macros
-	gcc -gdwarf-2 -g3 -g -o $@ ngs.c -lfl
+	gcc -gdwarf-2 -g3 -g -o $@ ngs.c -lfl -lpthread -lgc
 
 clean:
 	-rm parser.h parser.c

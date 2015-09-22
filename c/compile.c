@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "ngs.h"
 #include "ast.h"
 #include "parser.h"
 #include "vm.h"
@@ -37,7 +38,7 @@ void compile_to_buf(ast_node *node, char *buf, int *idx, int limit) {
 }
 
 char *compile(ast_node *node, IP *len) {
-	char *buf = malloc(NGS_COMPILE_BUF_SIZE);
+	char *buf = NGS_MALLOC(NGS_COMPILE_BUF_SIZE);
 	*len = 0;
 	compile_to_buf(node, buf, len, NGS_COMPILE_BUF_SIZE);
 	buf[(*len)++] = OP_HALT;

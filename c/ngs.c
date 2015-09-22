@@ -1,5 +1,7 @@
-// apt-get install flex bison uthash-dev
+// apt-get install flex bison uthash-dev libgc-dev
 // uthash - http://stackoverflow.com/questions/18197825/looking-for-hash-table-c-library. using version 1.9.7
+// libgc-dev - 1:7.2d-6.4
+#include "ngs.h"
 #include "obj.h"
 #include "ast.h"
 #include "vm.c"
@@ -12,11 +14,14 @@ int yyerror (yyscan_t scanner, char const *s) {
 	fprintf (stderr, "%s\n", s);
 }
 
-int main (int argc, char * argv[])
+int main(int argc, char * argv[])
 {
 	ast_node *tree;
 	VM vm;
 	CTX ctx;
+
+	NGS_GC_INIT();
+	// (causes warning) // NGS_GC_THR_INIT();
 
 	int ret = 0;
 	yyscan_t scanner;
