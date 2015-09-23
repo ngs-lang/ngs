@@ -31,6 +31,7 @@ enum instructions {
 	OP_HALT,
 	OP_PUSH_INT,
 	OP_PUSH_L_STR,
+	OP_FETCH_GLOBAL,
 	OP_CALL,
 	OP_FILLER = 255
 };
@@ -39,10 +40,16 @@ char *opcodes_names[] = {
 	"HALT",
 	"PUSH_INT",
 	"PUSH_L_STR",
+	"FETCH_GLOBAL",
 	"CALL",
 };
 
-typedef void (*VM_FUNC)(CTX *ctx, int n_args, VALUE *args);
+typedef enum method_result_enum {
+	METHOD_OK,
+	METHOD_ARGS_MISMATCH
+} METHOD_RESULT;
+
+typedef METHOD_RESULT (*VM_FUNC)(CTX *ctx, int n_args, VALUE *args);
 
 // typedef int VM_INT;
 #endif

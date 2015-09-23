@@ -3,6 +3,7 @@
 // libgc-dev - 1:7.2d-6.4
 #include "ngs.h"
 #include "obj.h"
+#include "obj.c"
 #include "ast.h"
 #include "vm.c"
 #include "ast.c"

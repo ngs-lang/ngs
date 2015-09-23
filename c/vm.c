@@ -13,9 +13,11 @@ VALUE pop(STACK **st);
 #define PUSH(v) push(&ctx->stack, v)
 #define POP() pop(&ctx->stack)
 
-void native_plus(CTX *ctx, int n_args, VALUE *args) {
+#define METHOD_MUST_HAVE_N_ARGS(n) if(n != n_args) { return METHOD_ARGS_MISMATCH; }
+
+METHOD_RESULT native_plus(CTX *ctx, int n_args, VALUE *args) {
 	VALUE v;
-	assert(n_args == 2);
+	METHOD_MUST_HAVE_N_ARGS(2);
 	SET_INT(v, GET_INT(args[0]) + GET_INT(args[1]));
 	PUSH(v);
 }
@@ -47,7 +49,7 @@ void vm_load_bytecode(VM *vm, char *bc, IP len) {
 }
 
 // TODO: some normaml stack implementation, not linked list
-void push(STACK **st, VALUE v) {
+void inline push(STACK **st, VALUE v) {
 	STACK *elt;
 	elt = NGS_MALLOC(sizeof(STACK));
 	memcpy(&(elt->v), &v, sizeof(v));
@@ -57,7 +59,7 @@ void push(STACK **st, VALUE v) {
 
 // Do not return pointer to stack element value because then
 // the stack element can't be freed... I think.
-VALUE pop(STACK **st) {
+VALUE inline pop(STACK **st) {
 	VALUE v;
 	STACK *stack_top;
 	stack_top = *st;
@@ -68,41 +70,34 @@ VALUE pop(STACK **st) {
 }
 
 void _vm_call(VM *vm, CTX *ctx, IP *ip) {
-	VALUE func_name, n_args, *args, f;
+	VALUE func_name, n_args, *args;
 	VAR *func;
 	int i;
 
-	char len, *ch, asciiz_func_name[256];
+	METHOD_RESULT result;
 
 	func_name = POP();
+	assert(OBJ_TYPE(func_name) == OBJ_TYPE_STRING);
 	n_args = POP();
 	args = NGS_MALLOC(sizeof(VALUE) * GET_INT(n_args));
 	for(i=GET_INT(n_args)-1; i>=0; i--) {
 		args[i] = POP();
 	}
 
-	GET_LSTR(ch, func_name);
-	len = *ch;
-	memcpy(asciiz_func_name, ch+1, len);
-	asciiz_func_name[len] = 0;
-	printf("ASCIIZ [%s]\n", asciiz_func_name);
-
-	for(func = vm->globals; func; func=func->hh.next) {
-		printf("FUNC [%s]\n", func->name);
-
-	}
-
-	HASH_FIND_STR(vm->globals, asciiz_func_name, func);
+	HASH_FIND(hh, vm->globals, OBJ_DATA_PTR(func_name), OBJ_LEN(func_name), func);
 	assert(func);
-	printf("NARGS %d\n", GET_INT(n_args));
-	((VM_FUNC)func->v.ptr)(ctx, GET_INT(n_args), args);
+	dump_titled("_vm_call/n_args", n_args);
+	dump_titled("_vm_call/func_name", func_name);
+	result = ((VM_FUNC)func->v.ptr)(ctx, GET_INT(n_args), args);
 }
 
 void vm_run(VM *vm, CTX *ctx) {
 	int i, opcode;
 	VALUE v;
 	OBJECT *o;
+	VAR_LEN_OBJECT *vlo;
 	IP ip = ctx->ip;
+	char *ch;
 main_loop:
 	// printf("[debug] main loop. ip %i\n", ip);
 	opcode = vm->bytecode[ip++];
@@ -112,16 +107,21 @@ main_loop:
 	switch(opcode) {
 		case OP_HALT:
 							v = POP();
-							// printf("HALT V=%d\n", GET_INT(v));
+							dump_titled("halt/pop", v);
 							goto end_main_loop;
 		case OP_PUSH_L_STR:
-							// TODO: duplicate the string?
-							assert((ip & 7) == 0); // 8 byte alignment as we will point to the Lstring here
 							printf("LSTR @ %p\n", &vm->bytecode[ip]);
-							SET_LSTR(v, &(vm->bytecode[ip]));
+							vlo = NGS_MALLOC(sizeof(*vlo));
+							vlo->len = (size_t) vm->bytecode[ip];
+							vlo->base.type.num = OBJ_TYPE_STRING;
+							vlo->base.val.ptr = NGS_MALLOC(vlo->len);
+							memcpy(vlo->base.val.ptr, &(vm->bytecode[ip+1]), vlo->len);
+							SET_OBJ(v, vlo);
 							PUSH(v);
-							// Skip length byte and the string that is stored in the length byte
 							ip += 1 + vm->bytecode[ip];
+							goto main_loop;
+		case OP_FETCH_GLOBAL:
+							v = POP();
 							goto main_loop;
 		case OP_PUSH_INT:
 							i = *(int *) &vm->bytecode[ip];

@@ -23,10 +23,6 @@ void compile_to_buf(ast_node *node, char *buf, int *idx, int limit) {
 			/*printf("Compiling BINOP @ %d\n", *idx);*/
 			OPCODE(OP_PUSH_INT); DATA(n_args);
 			OPCODE(OP_PUSH_L_STR);
-			for(;(*idx) & 7; (*idx)++) {
-				printf("PADDING\n");
-				OPCODE(OP_FILLER);
-			}
 			L_STR(node->name);
 			OPCODE(OP_CALL);
 			break;
