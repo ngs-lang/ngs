@@ -55,8 +55,12 @@ typedef struct var_len_object_struct {
 #define SET_OBJECT_TYPE_LSTR(o) o->type.num = 1
 #define SET_OBJECT_TYPE_ARRAY(o) o->type.num = 2
 
-#define OBJ_TYPE_STRING (1)
-#define OBJ_TYPE_ARRAY  (4)
+// TODO: some saner numbering maybe
+#define OBJ_TYPE_STRING        (1)
+#define OBJ_TYPE_NATIVE_METHOD (2)
+#define OBJ_TYPE_USER_METHOD   (3)
+#define OBJ_TYPE_ARRAY         (4)
+
 #define OBJ_LEN(v)  ((VAR_LEN_OBJECT *) v.ptr)->len
 #define OBJ_DATA_PTR(v) ((OBJECT *)v.ptr)->val.ptr
 #define OBJ_TYPE(v) (((OBJECT *)v.ptr)->type.num)

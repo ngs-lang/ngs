@@ -26,9 +26,13 @@ METHOD_RESULT native_plus(CTX *ctx, int n_args, VALUE *args) {
 // NOTE: couldn't make it macro - collision with uthash probably.
 void _register_global_func(VM *vm, char *func_name, void *func_ptr) {
 	VAR *var;
-	var = NGS_MALLOC(sizeof(VAR));
+	OBJECT *o;
+	o = NGS_MALLOC(sizeof(*o));
+	o->type.num = OBJ_TYPE_NATIVE_METHOD;
+	o->val.ptr = func_ptr;
+	var = NGS_MALLOC(sizeof(*var));
 	var->name = strdup(func_name);
-	var->v.ptr = func_ptr;
+	SET_OBJ(var->v, o);
 	HASH_ADD_KEYPTR(hh, vm->globals, var->name, strlen(var->name), var);
 }
 
@@ -70,31 +74,28 @@ VALUE inline pop(STACK **st) {
 }
 
 void _vm_call(VM *vm, CTX *ctx, IP *ip) {
-	VALUE func_name, n_args, *args;
-	VAR *func;
+	VALUE func, n_args, *args;
 	int i;
 
 	METHOD_RESULT result;
 
-	func_name = POP();
-	assert(OBJ_TYPE(func_name) == OBJ_TYPE_STRING);
+	func = POP();
+	assert(OBJ_TYPE(func) == OBJ_TYPE_NATIVE_METHOD);
 	n_args = POP();
 	args = NGS_MALLOC(sizeof(VALUE) * GET_INT(n_args));
 	for(i=GET_INT(n_args)-1; i>=0; i--) {
 		args[i] = POP();
 	}
 
-	HASH_FIND(hh, vm->globals, OBJ_DATA_PTR(func_name), OBJ_LEN(func_name), func);
-	assert(func);
 	dump_titled("_vm_call/n_args", n_args);
-	dump_titled("_vm_call/func_name", func_name);
-	result = ((VM_FUNC)func->v.ptr)(ctx, GET_INT(n_args), args);
+	dump_titled("_vm_call/func", func);
+	result = ((VM_FUNC)OBJ_DATA_PTR(func))(ctx, GET_INT(n_args), args);
 }
 
 void vm_run(VM *vm, CTX *ctx) {
 	int i, opcode;
 	VALUE v;
-	OBJECT *o;
+	VAR *var;
 	VAR_LEN_OBJECT *vlo;
 	IP ip = ctx->ip;
 	char *ch;
@@ -122,6 +123,10 @@ main_loop:
 							goto main_loop;
 		case OP_FETCH_GLOBAL:
 							v = POP();
+							assert(OBJ_TYPE(v) == OBJ_TYPE_STRING);
+							HASH_FIND(hh, vm->globals, OBJ_DATA_PTR(v), OBJ_LEN(v), var);
+							assert(var);
+							PUSH(var->v);
 							goto main_loop;
 		case OP_PUSH_INT:
 							i = *(int *) &vm->bytecode[ip];

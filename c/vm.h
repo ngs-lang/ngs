@@ -10,8 +10,9 @@ typedef struct stack {
 	struct stack *next;
 } STACK;
 
+// TODO: maybe convert vm->globals to regular NGS hash so it could be accessible via `globals()` function.
 typedef struct variable {
-	char *name; // intern?
+	char *name; // maybe intern?
 	VALUE v;
 	UT_hash_handle hh;
 } VAR;
