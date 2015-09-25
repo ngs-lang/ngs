@@ -11,8 +11,9 @@
 #define OPCODE(x) buf[*idx]=x; (*idx)++
 #define L_STR(x) int l = strlen(x); assert(l<256); OPCODE(l); memcpy(buf+(*idx), x, l); (*idx) += l;
 #define DATA(x) memcpy(buf+(*idx), &(x), sizeof(x)); (*idx) += sizeof(x)
+#define DATA_UINT16(x) *(uint16_t *)&buf[*idx] = x; (*idx)+=2
 
-void compile_to_buf(ast_node *node, char *buf, int *idx, int limit) {
+void compile_to_buf(ast_node *node, char *buf, size_t *idx, size_t limit) {
 	ast_node *ptr;
 	int n_args = 0;
 	switch(node->type) {
@@ -20,10 +21,8 @@ void compile_to_buf(ast_node *node, char *buf, int *idx, int limit) {
 			for(ptr=node->first_child, n_args=0; ptr; ptr=ptr->next_sibling, n_args++) {
 				compile_to_buf(ptr, buf, idx, limit);
 			}
-			/*printf("Compiling BINOP @ %d\n", *idx);*/
 			OPCODE(OP_PUSH_INT); DATA(n_args);
-			OPCODE(OP_PUSH_L_STR); L_STR(node->name);
-			OPCODE(OP_FETCH_GLOBAL);
+			OPCODE(OP_FETCH_GLOBAL); DATA_UINT16(0); // XXX: put actual symbol index here
 			OPCODE(OP_CALL);
 			break;
 		case NUMBER:
@@ -33,7 +32,7 @@ void compile_to_buf(ast_node *node, char *buf, int *idx, int limit) {
 	}
 }
 
-char *compile(ast_node *node, IP *len) {
+char *compile(ast_node *node, size_t *len) {
 	char *buf = NGS_MALLOC(NGS_COMPILE_BUF_SIZE);
 	*len = 0;
 	compile_to_buf(node, buf, len, NGS_COMPILE_BUF_SIZE);

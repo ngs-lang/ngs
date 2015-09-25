@@ -37,7 +37,7 @@ int main(int argc, char * argv[])
 
 	// print - start
 	char *buf;
-	IP *len;
+	size_t *len;
 	int i;
 	buf = compile(tree, len);
 	for(i=0; i<*len; i++) {

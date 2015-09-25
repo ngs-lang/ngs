@@ -22,3 +22,6 @@ clean:
 	-rm parser.h parser.c
 	-rm scanner.c
 	-rm ngs
+
+tags: *.c *.h
+	ctags $^

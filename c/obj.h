@@ -61,11 +61,11 @@ typedef struct var_len_object_struct {
 #define OBJ_TYPE_USER_METHOD   (3)
 #define OBJ_TYPE_ARRAY         (4)
 
-#define OBJ_LEN(v)  ((VAR_LEN_OBJECT *) v.ptr)->len
+#define OBJ_LEN(v)      ((VAR_LEN_OBJECT *) v.ptr)->len
 #define OBJ_DATA_PTR(v) ((OBJECT *)v.ptr)->val.ptr
-#define OBJ_TYPE(v) (((OBJECT *)v.ptr)->type.num)
+#define OBJ_TYPE(v)     (((OBJECT *)v.ptr)->type.num)
 #define OBJ_TYPE_PTR(v) ((OBJECT *)v.ptr)->type.ptr
-#define IS_STRING(v) (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_STRING)
+#define IS_STRING(v)    (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_STRING)
 
 void dump(VALUE v);
 void dump_titled(char *title, VALUE v);
