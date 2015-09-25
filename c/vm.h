@@ -32,6 +32,7 @@ typedef struct vm_struct {
 	char *bytecode;
 	VALUE *globals;
 	size_t globals_len;
+	size_t builtin_globals_count;
 	VAR_INDEX *globals_indexes;
 } VM;
 
@@ -68,6 +69,7 @@ typedef enum method_result_enum {
 
 typedef METHOD_RESULT (*VM_FUNC)(CTX *ctx, int n_args, VALUE *args);
 void vm_init(VM *vm);
+size_t get_global_index(VM *vm, char *name, size_t name_len);
 
 // typedef int VM_INT;
 #endif

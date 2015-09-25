@@ -15,6 +15,7 @@ VALUE pop(STACK **st);
 
 #define METHOD_MUST_HAVE_N_ARGS(n) if(n != n_args) { return METHOD_ARGS_MISMATCH; }
 #define METHOD_ARG_N_MUST_BE(n, what) if(!IS_ ## what(args[n])) { return METHOD_ARGS_MISMATCH; }
+#define MAXIMIZE_INTO(dst, src) if((src)>(dst)) { dst = src; }
 
 METHOD_RESULT native_plus(CTX *ctx, int n_args, VALUE *args) {
 	VALUE v;
@@ -49,6 +50,7 @@ void register_global_func(VM *vm, char *func_name, void *func_ptr) {
 	o->type.num = OBJ_TYPE_NATIVE_METHOD;
 	o->val.ptr = func_ptr;
 	index = get_global_index(vm, func_name, strlen(func_name));
+	MAXIMIZE_INTO(vm->builtin_globals_count, index+1);
 	SET_OBJ(vm->globals[index], o);
 }
 
@@ -56,6 +58,7 @@ void vm_init(VM *vm) {
 	vm->bytecode = NULL;
 	vm->globals_indexes = NULL;
 	vm->globals_len = 0;
+	vm->builtin_globals_count = 0;
 	vm->globals = NGS_MALLOC(sizeof(*(vm->globals)) * MAX_GLOBALS);
 	// Keep global functions registration in order.
 	// This way the compiler can use globals_indexes as the beginning of

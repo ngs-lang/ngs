@@ -37,15 +37,15 @@ int main(int argc, char * argv[])
 
 	// print - start
 	char *buf;
-	size_t *len;
+	size_t len;
 	int i;
-	buf = compile(tree, len);
-	for(i=0; i<*len; i++) {
+	buf = compile(tree, &len);
+	for(i=0; i<len; i++) {
 		printf("[%d] %d\n", i, buf[i]);
 	}
 	// print - end
 	vm_init(&vm);
-	vm_load_bytecode(&vm, buf, *len);
+	vm_load_bytecode(&vm, buf, len);
 	ctx_init(&ctx);
 	vm_run(&vm, &ctx);
 
