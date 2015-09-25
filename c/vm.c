@@ -54,6 +54,7 @@ void register_global_func(VM *vm, char *func_name, void *func_ptr) {
 
 void vm_init(VM *vm) {
 	vm->bytecode = NULL;
+	vm->globals_indexes = NULL;
 	vm->globals_len = 0;
 	vm->globals = NGS_MALLOC(sizeof(*(vm->globals)) * MAX_GLOBALS);
 	// Keep global functions registration in order.

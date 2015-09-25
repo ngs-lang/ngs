@@ -67,6 +67,7 @@ typedef enum method_result_enum {
 } METHOD_RESULT;
 
 typedef METHOD_RESULT (*VM_FUNC)(CTX *ctx, int n_args, VALUE *args);
+void vm_init(VM *vm);
 
 // typedef int VM_INT;
 #endif
