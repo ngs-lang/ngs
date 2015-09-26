@@ -1,0 +1,10 @@
+{
+   GC-cond
+   Memcheck:Cond
+   obj:*/libgc.so*
+}
+{
+   GC-value8
+   Memcheck:Value8
+   obj:*/libgc.so*
+}
