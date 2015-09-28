@@ -2,6 +2,7 @@
 #include "ast.h"
 #include "parser.h"
 #include "obj.h"
+#include "ngs.h"
 
 #define AST_NODE_INFO_STR_LEN (128)
 
@@ -20,7 +21,7 @@ void print_ast(ast_node *node, int level) {
 		name = node->name;
 	}
 
-	printf("%*s+ AST node at %p, type %s, name %s, info %s\n", level*2, "", node, type_, name, info);
+	DEBUG_PARSER("%*s+ AST node at %p, type %s, name %s, info %s\n", level*2, "", node, type_, name, info);
 	for(child = node->first_child; child; child=child->next_sibling) {
 		print_ast(child, level+1);
 	}

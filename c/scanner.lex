@@ -17,6 +17,7 @@
 	yylloc->first_column = yycolumn; \
 	yylloc->last_column = yycolumn + yyleng - 1; \
 	yycolumn += yyleng;
+
 %}
 
 /* INITIAL is commands */
@@ -30,10 +31,10 @@ digits			[0-9]+
 
 {blanks}            { /* ignore */ }
 
-<INITIAL>"{"        { yy_push_state(CODE, yyscanner); printf("Starting CODE\n"); }
-<CODE>"}"           { yy_pop_state(yyscanner); printf("Ending CODE\n"); }
+<INITIAL>"{"        { yy_push_state(CODE, yyscanner); DEBUG_PARSER("%s", "Entering mode: CODE\n"); }
+<CODE>"}"           { yy_pop_state(yyscanner); DEBUG_PARSER("%s", "Leaving mode: CODE\n"); }
 
 <CODE>{
-	"+"             { printf("LEX BINOP\n"); yylval->name = strdup(yytext) /* strdup needed?*/; return BINOP; }
-	{digits}		{ yylval->number = atoi(yytext); printf("LEX NUMBER: %d\n", yylval->number); return NUMBER; }
+	"+"|"-"         { DEBUG_PARSER("%s", "LEX BINOP +\n"); yylval->name = strdup(yytext) /* strdup needed?*/; return BINOP; }
+	{digits}		{ yylval->number = atoi(yytext); DEBUG_PARSER("LEX NUMBER %d\n", yylval->number); return NUMBER; }
 }

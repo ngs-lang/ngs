@@ -29,7 +29,7 @@ typedef struct var_len_object_struct {
 // .....100 - null
 // .....101 - reserved
 // .....110 - reserved
-// .....111 - reserved
+// .....111 - undef
 
 #define META_BITS    (3)
 #define META_AND     (7)
@@ -38,6 +38,7 @@ typedef struct var_len_object_struct {
 #define V_FALSE (2)
 #define V_TRUE  (3)
 #define V_NULL  (4)
+#define V_UNDEF (7)
 
 // object
 // .....000 - *TYPE
@@ -48,6 +49,13 @@ typedef struct var_len_object_struct {
 // .....101 - Hash
 
 // TODO: handle situation when n is wider than size_t - META_BITS bits
+#define IS_NULL(v)      (v.num == V_NULL)
+#define IS_TRUE(v)      (v.num == V_TRUE)
+#define IS_FALSE(v)     (v.num == V_FALSE)
+#define IS_UNDEF(v)     (v.num == V_UNDEF)
+#define IS_NOT_UNDEF(v) (v.num != V_UNDEF)
+#define IS_BOOL(v)      ((v.num & 6) == 2)
+
 #define IS_INT(v)    ((v.num & META_AND) == META_INT)
 #define SET_INT(v,n) v.num = (n << META_BITS) | META_INT
 #define GET_INT(v)   ((v).num >> META_BITS)
@@ -61,11 +69,14 @@ typedef struct var_len_object_struct {
 #define OBJ_TYPE_USER_METHOD   (3)
 #define OBJ_TYPE_ARRAY         (4)
 
-#define OBJ_LEN(v)      ((VAR_LEN_OBJECT *) v.ptr)->len
-#define OBJ_DATA_PTR(v) ((OBJECT *)v.ptr)->val.ptr
-#define OBJ_TYPE(v)     (((OBJECT *)v.ptr)->type.num)
-#define OBJ_TYPE_PTR(v) ((OBJECT *)v.ptr)->type.ptr
-#define IS_STRING(v)    (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_STRING)
+#define OBJ_LEN(v)          ((VAR_LEN_OBJECT *) v.ptr)->len
+#define OBJ_DATA_PTR(v)     ((OBJECT *)v.ptr)->val.ptr
+#define OBJ_TYPE(v)         (((OBJECT *)v.ptr)->type.num)
+#define OBJ_TYPE_PTR(v)     ((OBJECT *)v.ptr)->type.ptr
+#define IS_STRING(v)        (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_STRING)
+#define IS_NATIVE_METHOD(v) (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_NATIVE_METHOD)
+#define IS_USER_METHOD(v)   (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_USER_METHOD)
+#define IS_ARRAY(v)         (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_ARRAY)
 
 void dump(VALUE v);
 void dump_titled(char *title, VALUE v);

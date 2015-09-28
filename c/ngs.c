@@ -41,7 +41,7 @@ int main(int argc, char * argv[])
 	int i;
 	buf = compile(tree, &len);
 	for(i=0; i<len; i++) {
-		printf("[%d] %d\n", i, buf[i]);
+		PRINTF_DEBUG(DEBUG_FLAG_BYTECODE, "MAIN BYTECODE [%d] %d\n", i, buf[i]);
 	}
 	// print - end
 	vm_init(&vm);

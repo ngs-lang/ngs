@@ -2,9 +2,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "ngs.h"
 #define NODE(name) \
 	ast_node *name = calloc(sizeof(ast_node), 1); \
-	printf("[debug] allocated ast_node at %p\n", name);
+	DEBUG_PARSER("Allocated ast_node at %p\n", name);
 #define NODET(name, type_) NODE(name); name->type = type_;
 #define SET_LOC(src) \
 	yyloc.first_line   = src.first_line; \
@@ -38,7 +39,7 @@
 
 top_level: number BINOP number {
 		 $1->next_sibling = $3;
-		 printf("[debug] top_level $1 %p %3 %p\n", $1, $3);
+		 DEBUG_PARSER("top_level $1 %p %3 %p\n", $1, $3);
 		 NODET(ret, BINOP);
 		 ret->name = $2;
 		 ret->first_child = $1;
