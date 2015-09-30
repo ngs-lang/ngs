@@ -12,10 +12,13 @@
 #include "compile.c"
 
 int yyerror (yyscan_t scanner, char const *s) {
+	// Eliminate warning about unused `scanner` variable
+	(void)(scanner);
 	fprintf (stderr, "%s\n", s);
+	return 0;
 }
 
-int main(int argc, char * argv[])
+int main()
 {
 	ast_node *tree = NULL;
 	VM vm;

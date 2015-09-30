@@ -1,4 +1,7 @@
 %{
+/* Eliminate warnings - start */
+#define YY_NO_INPUT
+/* Eliminate warnings - end */
 #include "parser.h"
 %}
 
@@ -9,6 +12,11 @@
 %option reentrant
 %option yylineno
 %option stack
+
+/* Eliminate warnings - start */
+%option nounput
+%option noyy_top_state
+/* Eliminate warnings - end */
 
 /* TODO: keep track of file name, see http://archive.oreilly.com/pub/a/linux/excerpts/9780596155971/error-reporting-recovery.html */
 %{

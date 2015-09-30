@@ -4,6 +4,12 @@
 #include <string.h>
 #include "ngs.h"
 #include "compile.h"
+
+// handle warnings - start
+int yylex();
+int yyerror();
+// handle warnings - end
+
 #define NODE(name) \
 	ast_node *name = calloc(sizeof(*name), 1); \
 	DEBUG_PARSER("Allocated ast_node at %p\n", name);

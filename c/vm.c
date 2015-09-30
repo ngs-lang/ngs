@@ -142,8 +142,6 @@ void _vm_call(CTX *ctx) {
 	VALUE func, n_args, *args;
 	int i;
 
-	METHOD_RESULT result;
-
 	func = POP();
 	IF_DEBUG(VM_RUN,
 		dump_titled("_vm_call/func", func);
@@ -159,7 +157,7 @@ void _vm_call(CTX *ctx) {
 	);
 
 	if(IS_NATIVE_METHOD(func)) {
-		result = ((VM_FUNC)OBJ_DATA_PTR(func))(ctx, GET_INT(n_args), args);
+		((VM_FUNC)OBJ_DATA_PTR(func))(ctx, GET_INT(n_args), args);
 		goto done;
 	}
 
@@ -271,7 +269,7 @@ main_loop:
 							v = POP();
 							gvi = *(GLOBAL_VAR_INDEX *) &vm->bytecode[ip];
 							ip += sizeof(gvi);
-							DEBUG_VM_RUN("OP_STORE_GLOBAL gvi=%d len=%d\n", gvi, vm->globals_len);
+							DEBUG_VM_RUN("OP_STORE_GLOBAL gvi=%d len=%zu\n", gvi, vm->globals_len);
 							assert(gvi < vm->globals_len);
 							// TODO: report error here instead of crashing
 							vm->globals[gvi] = v;
