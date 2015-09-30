@@ -1,3 +1,5 @@
+CC := gcc
+
 all: ngs
 
 scanner.lex:
@@ -19,7 +21,7 @@ scanner.c: scanner.lex Makefile
 ngs: *.c *.h Makefile
 	# -gdwarf-2 -g3 -- for debugging macros
 	# -rdynamic -- for backtrace_symbols() to work
-	gcc -Wall -Wextra -gdwarf-2 -g3 -g -rdynamic -o $@ ngs.c -lfl -lpthread -lgc
+	$(CC) -Wall -Wextra -gdwarf-2 -g3 -g -rdynamic -o $@ ngs.c -lfl -lpthread -lgc
 
 clean:
 	-rm parser.h parser.c

@@ -23,7 +23,8 @@
 #define DONT_NEED_RESULT (0)
 #define NEED_RESULT (1)
 
-inline void ensure_room(char **buf, const size_t cur_len, size_t *allocated, size_t room) {
+/* static here makes `clang` compiler happy and not "undefined reference to `ensure_room'"*/
+static inline void ensure_room(char **buf, const size_t cur_len, size_t *allocated, size_t room) {
 	size_t new_size;
 	DEBUG_COMPILER("entering ensure_room() buf=%p, cur_len=%zu, allocated=%zu, room=%zu\n", *buf, cur_len, *allocated, room);
 	assert(*allocated);

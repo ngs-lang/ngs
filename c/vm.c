@@ -12,7 +12,7 @@ VALUE pop(STACK **st);
 
 #define PUSH(v) push(&ctx->stack, v)
 #define POP() pop(&ctx->stack)
-#define PUSH_NULL PUSH((VALUE){num: V_NULL})
+#define PUSH_NULL PUSH((VALUE){.num=V_NULL})
 #define RETURN_NULL {PUSH_NULL; return METHOD_OK;}
 
 #define METHOD_MUST_HAVE_N_ARGS(n) if(n != n_args) { return METHOD_ARGS_MISMATCH; }
