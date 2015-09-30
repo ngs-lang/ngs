@@ -88,14 +88,13 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 	ensure_room(buf, *idx, allocated, 1024); // XXX - magic number
 
 	switch(node->type) {
-		case BINOP_NODE:
-			for(ptr=node->first_child, n_args=0; ptr; ptr=ptr->next_sibling, n_args++) {
+		case CALL_NODE:
+			DEBUG_COMPILER("COMPILER: %s %zu\n", "CALL NODE", *idx);
+			for(ptr=node->first_child->next_sibling, n_args=0; ptr; ptr=ptr->next_sibling, n_args++) {
 				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
 			}
 			OPCODE(*buf, OP_PUSH_INT); DATA(*buf, n_args);
-			OPCODE(*buf, OP_FETCH_GLOBAL);
-			index = get_global_var_index(ctx, node->name, idx);
-			DATA_UINT16(*buf, index);
+			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
 			OPCODE(*buf, OP_CALL);
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
@@ -129,8 +128,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			break;
 		case EXPRESSIONS_NODE:
 			for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
-				compile_main_section(ctx, ptr, buf, idx, allocated,
-						(ptr == node->last_child) && need_result);
+				compile_main_section(ctx, ptr, buf, idx, allocated, (ptr == node->last_child) && need_result);
 			}
 			break;
 		default:

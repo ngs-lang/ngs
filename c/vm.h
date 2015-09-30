@@ -56,20 +56,20 @@ enum opcodes {
 
 char *opcodes_names[] = {
 	/*  0 */ "HALT",
-	/*  1 */"PUSH_NULL",
-	/*  2 */"PUSH_FALSE",
-	/*  3 */"PUSH_TRUE",
-	/*  4 */"PUSH_UNDEF",
-	/*  5 */"PUSH_INT",
-	/*  6 */"PUSH_L_STR",
-	/*  7 */"DUP",
-	/*  8 */"POP",
-	/*  9 */"RESOLVE_GLOBAL",
-	/* 10 */"PATCH",
-	/* 11 */"INIT_DONE",
-	/* 12 */"FETCH_GLOBAL",
-	/* 13 */"STORE_GLOBAL",
-	/* 14 */"CALL"
+	/*  1 */ "PUSH_NULL",
+	/*  2 */ "PUSH_FALSE",
+	/*  3 */ "PUSH_TRUE",
+	/*  4 */ "PUSH_UNDEF",
+	/*  5 */ "PUSH_INT",
+	/*  6 */ "PUSH_L_STR",
+	/*  7 */ "DUP",
+	/*  8 */ "POP",
+	/*  9 */ "RESOLVE_GLOBAL",
+	/* 10 */ "PATCH",
+	/* 11 */ "INIT_DONE",
+	/* 12 */ "FETCH_GLOBAL",
+	/* 13 */ "STORE_GLOBAL",
+	/* 14 */ "CALL"
 };
 
 typedef enum method_result_enum {

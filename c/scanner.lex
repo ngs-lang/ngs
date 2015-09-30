@@ -42,4 +42,5 @@ digits			[0-9]+
 	{digits}		{ yylval->number = atoi(yytext); DEBUG_PARSER("LEX NUMBER %d\n", yylval->number); return NUMBER; }
 	{identifier}    { DEBUG_PARSER("LEX IDENTIFIER %s\n", yytext); USE_TEXT_AS_NAME; return IDENTIFIER; }
 	";"             { DEBUG_PARSER("LEX E.DELIMITER %s\n", yytext); return EXPRESSIONS_DELIMITER; }
+	"("|")"         { DEBUG_PARSER("LEX PAREN %s\n", yytext); return *yytext; }
 }

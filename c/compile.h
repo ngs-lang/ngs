@@ -25,9 +25,18 @@ typedef struct compilation_context {
 enum ast_node_type {
 	ASSIGNMENT_NODE=1,
 	IDENTIFIER_NODE,
-	BINOP_NODE,
 	NUMBER_NODE,
 	EXPRESSIONS_NODE,
+	CALL_NODE,
+};
+
+char *NGS_AST_NODE_TYPES_NAMES[] = {
+	NULL,
+	"assignment",
+	"identifier",
+	"number",
+	"expressions",
+	"call",
 };
 
 #endif

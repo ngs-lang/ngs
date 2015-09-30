@@ -38,6 +38,7 @@
 %token <number> NUMBER
 
 %type <ast_node> assignment
+%type <ast_node> call
 %type <ast_node> expression
 %type <ast_node> expressions
 %type <ast_node> binop
@@ -89,17 +90,24 @@ expressions:
 			$$ = ret;
 		};
 
-expression: assignment | binop | number | identifier;
+expression: assignment | binop | number | identifier | call;
 
 binop: expression BINOP expression {
-		$1->next_sibling = $3;
 		DEBUG_PARSER("expression $1 %p $3 %p\n", $1, $3);
-		NODET(ret, BINOP_NODE);
-		ret->name = $2;
-		ret->first_child = $1;
-		@$ = @2; // is it ok to do this?
-		// $$ = ret;
+		NODET(ret, CALL_NODE);
+		NODET(id, IDENTIFIER_NODE);
+		$1->next_sibling = $3;
+		id->next_sibling = $1;
+		id->name = $2;
+		ret->first_child = id;
 		SET_LOC(@2);
+		$$ = ret;
+}
+
+call: expression '(' expression ')' {
+		NODET(ret, CALL_NODE);
+		ret->first_child = $1;
+		ret->first_child->next_sibling = $3;
 		$$ = ret;
 }
 

@@ -12,8 +12,12 @@ VALUE pop(STACK **st);
 
 #define PUSH(v) push(&ctx->stack, v)
 #define POP() pop(&ctx->stack)
+#define PUSH_NULL PUSH((VALUE){num: V_NULL})
+#define RETURN_NULL {PUSH_NULL; return METHOD_OK;}
 
 #define METHOD_MUST_HAVE_N_ARGS(n) if(n != n_args) { return METHOD_ARGS_MISMATCH; }
+#define METHOD_MUST_HAVE_AT_LEAST_ARGS(n) if(n_args < n) { return METHOD_ARGS_MISMATCH; }
+#define METHOD_MUST_HAVE_AT_MOST_ARGS(n) if(n_args > n) { return METHOD_ARGS_MISMATCH; }
 #define METHOD_ARG_N_MUST_BE(n, what) if(!IS_ ## what(args[n])) { return METHOD_ARGS_MISMATCH; }
 #define MAXIMIZE_INTO(dst, src) if((src)>(dst)) { dst = src; }
 
@@ -33,6 +37,14 @@ METHOD_RESULT native_ ## name(CTX *ctx, int n_args, VALUE *args) { \
 
 INT_METHOD(plus, +);
 INT_METHOD(minus, -);
+
+METHOD_RESULT native_dump(CTX *ctx, int n_args, VALUE *args) {
+	if(n_args == 1) {
+		dump(args[0]);
+		RETURN_NULL;
+	}
+	return METHOD_ARGS_MISMATCH;
+}
 
 size_t check_global_index(VM *vm, char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
@@ -87,6 +99,7 @@ void vm_init(VM *vm) {
 	// it's symbol table for globals.
 	register_global_func(vm, "+", &native_plus);
 	register_global_func(vm, "-", &native_minus);
+	register_global_func(vm, "dump", &native_dump);
 }
 
 void ctx_init(CTX *ctx) {
@@ -178,8 +191,7 @@ main_loop:
 							dump_titled("halt/pop", v);
 							goto end_main_loop;
 		case OP_PUSH_NULL:
-							SET_NULL(v);
-							PUSH(v);
+							PUSH_NULL;
 							goto main_loop;
 		case OP_PUSH_FALSE:
 							SET_FALSE(v);
