@@ -9,16 +9,21 @@
 #include "vm.h"
 #include "compile.h"
 
-#define OPCODE(buf, x) (buf)[*idx]=x; (*idx)++
-#define L_STR(buf, x) int l = strlen(x); assert(l<256); OPCODE(buf, l); memcpy((buf)+(*idx), x, l); (*idx) += l;
-#define DATA(buf, x) memcpy((buf)+(*idx), &(x), sizeof(x)); (*idx) += sizeof(x)
-#define DATA_UINT16(buf, x) *(uint16_t *)&(buf)[*idx] = x; (*idx)+=2
+#define OPCODE(buf, x) { (buf)[*idx]=x; (*idx)++; }
+#define L_STR(buf, x) { int l = strlen(x); assert(l<256); OPCODE(buf, l); memcpy((buf)+(*idx), x, l); (*idx) += l; }
+#define DATA(buf, x) { memcpy((buf)+(*idx), &(x), sizeof(x)); (*idx) += sizeof(x); }
+#define DATA_UINT16(buf, x) { *(uint16_t *)&(buf)[*idx] = x; (*idx)+=2; }
 
 // Symbol table:
 // symbol -> [offset1, offset2, ..., offsetN]
 
+#define POP_IF_DONT_NEED_RESULT(buf) if(!need_result) OPCODE(buf, OP_POP);
+#define DUP_IF_NEED_RESULT(buf) if(need_result) OPCODE(buf, OP_DUP);
 
-void inline ensure_room(char **buf, const size_t cur_len, size_t *allocated, size_t room) {
+#define DONT_NEED_RESULT (0)
+#define NEED_RESULT (1)
+
+inline void ensure_room(char **buf, const size_t cur_len, size_t *allocated, size_t room) {
 	size_t new_size;
 	DEBUG_COMPILER("entering ensure_room() buf=%p, cur_len=%zu, allocated=%zu, room=%zu\n", *buf, cur_len, *allocated, room);
 	assert(*allocated);
@@ -52,48 +57,84 @@ SYMBOL_TABLE *get_symbol_table_entry(SYMBOL_TABLE **st, char *name, int create_i
 }
 
 
-void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated) {
-	ast_node *ptr;
-	int n_args = 0;
-
+GLOBAL_VAR_INDEX get_global_var_index(COMPILATION_CONTEXT *ctx, char *name, size_t *idx) {
 	SYMBOL_TABLE *st = NULL;
 	int created;
-	size_t index;
+	st = get_symbol_table_entry(&ctx->globals, name, 1, &created);
+	if(created) {
+		int global_found;
+		st->index = check_global_index(&ctx->vm, name, strlen(name), &global_found);
+		DEBUG_COMPILER("New global symbol name=%s is_predefinded_global=%d\n", name, global_found);
+		// global_found = 0; // XXX: test
+		st->is_predefinded_global = global_found;
+		if(!st->is_predefinded_global) {
+			utarray_new(st->offsets, &ut_size_t_icd);
+		}
+	}
+	if(st->is_predefinded_global) {
+		return st->index;
+	}
+
+	utarray_push_back(st->offsets, idx);
+	DEBUG_COMPILER("Global %s to be patched at offset %zu\n", name, *idx);
+	return 0;
+}
+
+void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
+	ast_node *ptr;
+	int n_args = 0;
+	GLOBAL_VAR_INDEX index;
 
 	ensure_room(buf, *idx, allocated, 1024); // XXX - magic number
 
 	switch(node->type) {
-		case BINOP:
+		case BINOP_NODE:
 			for(ptr=node->first_child, n_args=0; ptr; ptr=ptr->next_sibling, n_args++) {
-				compile_main_section(ctx, ptr, buf, idx, allocated);
+				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
 			}
 			OPCODE(*buf, OP_PUSH_INT); DATA(*buf, n_args);
 			OPCODE(*buf, OP_FETCH_GLOBAL);
-			st = get_symbol_table_entry(&ctx->globals, node->name, 1, &created);
-			if(created) {
-				int global_found;
-				st->index = check_global_index(&ctx->vm, node->name, strlen(node->name), &global_found);
-				DEBUG_COMPILER("New global symbol name=%s is_predefinded_global=%d\n", node->name, global_found);
-				// global_found = 0; // XXX: test
-				st->is_predefinded_global = global_found;
-				if(!st->is_predefinded_global) {
-					utarray_new(st->offsets, &ut_size_t_icd);
-				}
-			}
-			if(st->is_predefinded_global) {
-				index = st->index;
-			} else {
-				index = 0;
-				utarray_push_back(st->offsets, idx);
-				DEBUG_COMPILER("Global %s to be patched at offset %d\n", node->name, *idx);
-			}
+			index = get_global_var_index(ctx, node->name, idx);
 			DATA_UINT16(*buf, index);
 			OPCODE(*buf, OP_CALL);
+			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
-		case NUMBER:
+		case NUMBER_NODE:
 			/*printf("Compiling NUMBER @ %d\n", *idx);*/
 			OPCODE(*buf, OP_PUSH_INT); DATA(*buf, node->number);
+			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
+		case IDENTIFIER_NODE:
+			// TODO: handle local vs global
+			OPCODE(*buf, OP_FETCH_GLOBAL);
+			index = get_global_var_index(ctx, node->name, idx);
+			DATA_UINT16(*buf, index);
+			POP_IF_DONT_NEED_RESULT(*buf);
+			break;
+		case ASSIGNMENT_NODE:
+			ptr = node->first_child;
+			compile_main_section(ctx, ptr->next_sibling, buf, idx, allocated, NEED_RESULT);
+			DUP_IF_NEED_RESULT(*buf);
+			switch(ptr->type) {
+				case IDENTIFIER_NODE:
+					// TODO: handle local vs global
+					DEBUG_COMPILER("COMPILER: %s %zu\n", "identifier <- expression", *idx);
+					OPCODE(*buf, OP_STORE_GLOBAL);
+					index = get_global_var_index(ctx, ptr->name, idx);
+					DATA_UINT16(*buf, index);
+					break;
+				default:
+					assert(0=="compile_main_section(): assignment to unknown node type");
+			}
+			break;
+		case EXPRESSIONS_NODE:
+			for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
+				compile_main_section(ctx, ptr, buf, idx, allocated,
+						(ptr == node->last_child) && need_result);
+			}
+			break;
+		default:
+			assert(0=="compile_main_section(): unknown node type");
 	}
 }
 
@@ -120,7 +161,7 @@ size_t calculate_init_section_size(COMPILATION_CONTEXT *ctx) {
 	)
 
 	ret += 1; // OP_INIT_DONE
-	DEBUG_COMPILER("leaving calculate_init_section_size() -> %d\n", ret);
+	DEBUG_COMPILER("leaving calculate_init_section_size() -> %zu\n", ret);
 	return ret;
 }
 
@@ -151,16 +192,12 @@ void compile_init_section(COMPILATION_CONTEXT *ctx, char **init_buf, size_t *idx
 					OPCODE(buf, OP_DUP);
 				}
 				OPCODE(buf, OP_PATCH);
-				DEBUG_COMPILER("compile_init_section() global i=%d name=%s offset=%d idx=%d\n", i, globals->name, *(int *)utarray_eltptr(globals->offsets, i), *idx);
+				DEBUG_COMPILER("compile_init_section() global i=%zu name=%s offset=%d idx=%zu\n", i, globals->name, *(int *)utarray_eltptr(globals->offsets, i), *idx);
 				DATA_UINT16(buf, *(int *)utarray_eltptr(globals->offsets, i) + init_section_size - *idx - 2 /* sizeof this uint16 itself */);
 			}
 	);
 	OPCODE(buf, OP_INIT_DONE);
 	assert(*idx == init_section_size); // the init section size calculations must be correct
-	int i;
-	for(i=0; i<*idx; i++) {
-		PRINTF_DEBUG(DEBUG_FLAG_BYTECODE, "INIT BYTECODE [%d] %d\n", i, buf[i]);
-	}
 	DEBUG_COMPILER("%s", "leaving compile_init_section()\n");
 	*init_buf = buf;
 }
@@ -181,7 +218,7 @@ char *compile(ast_node *node /* the top level node */, size_t *len) {
 	ctx.globals = NULL;
 
 	*len = 0;
-	compile_main_section(&ctx, node, &main_buf, &main_len, &main_allocated);
+	compile_main_section(&ctx, node, &main_buf, &main_len, &main_allocated, NEED_RESULT);
 	ensure_room(&main_buf, main_len, &main_allocated, 1);
 	main_buf[(main_len)++] = OP_HALT;
 

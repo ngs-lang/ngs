@@ -22,4 +22,12 @@ typedef struct compilation_context {
 	SYMBOL_TABLE *globals;
 } COMPILATION_CONTEXT;
 
+enum ast_node_type {
+	ASSIGNMENT_NODE=1,
+	IDENTIFIER_NODE,
+	BINOP_NODE,
+	NUMBER_NODE,
+	EXPRESSIONS_NODE,
+};
+
 #endif

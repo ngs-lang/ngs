@@ -7,6 +7,7 @@ typedef struct ast_node {
 	int number;
 	// Chidren
 	struct ast_node *first_child;
+	struct ast_node *last_child;
 	struct ast_node *next_sibling;
 	// Location. TODO: start/end line/col
 	char *fname;

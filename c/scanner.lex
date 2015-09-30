@@ -18,13 +18,15 @@
 	yylloc->last_column = yycolumn + yyleng - 1; \
 	yycolumn += yyleng;
 
+#define USE_TEXT_AS_NAME yylval->name = strdup(yytext) /* strdup needed?*/
 %}
+
 
 /* INITIAL is commands */
 %x CODE
 
 blanks          [ \t\n]+
-identifier		[_a-zA-Z0-9]+
+identifier		[_a-zA-Z]+[_a-zA-Z0-9]*
 digits			[0-9]+
 
 %%
@@ -35,6 +37,9 @@ digits			[0-9]+
 <CODE>"}"           { yy_pop_state(yyscanner); DEBUG_PARSER("%s", "Leaving mode: CODE\n"); }
 
 <CODE>{
-	"+"|"-"         { DEBUG_PARSER("%s", "LEX BINOP +\n"); yylval->name = strdup(yytext) /* strdup needed?*/; return BINOP; }
+	"+"|"-"         { DEBUG_PARSER("%s", "LEX BINOP\n"); USE_TEXT_AS_NAME; return BINOP; }
+	"="             { DEBUG_PARSER("%s", "LEX EQUALS\n"); return EQUALS; }
 	{digits}		{ yylval->number = atoi(yytext); DEBUG_PARSER("LEX NUMBER %d\n", yylval->number); return NUMBER; }
+	{identifier}    { DEBUG_PARSER("LEX IDENTIFIER %s\n", yytext); USE_TEXT_AS_NAME; return IDENTIFIER; }
+	";"             { DEBUG_PARSER("LEX E.DELIMITER %s\n", yytext); return EXPRESSIONS_DELIMITER; }
 }

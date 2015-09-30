@@ -57,11 +57,15 @@ typedef struct var_len_object_struct {
 #define IS_BOOL(v)      ((v.num & 6) == 2)
 
 #define IS_INT(v)    ((v.num & META_AND) == META_INT)
-#define SET_INT(v,n) v.num = (n << META_BITS) | META_INT
+#define SET_INT(v,n) v.num = ((n) << META_BITS) | META_INT
 #define GET_INT(v)   ((v).num >> META_BITS)
 #define SET_OBJ(v,o) v.ptr = o
 #define SET_OBJECT_TYPE_LSTR(o) o->type.num = 1
 #define SET_OBJECT_TYPE_ARRAY(o) o->type.num = 2
+#define SET_NULL(v) v.num = V_NULL
+#define SET_FALSE(v) v.num = V_FALSE
+#define SET_TRUE(v) v.num = V_TRUE
+#define SET_UNDEF(v) v.num = V_UNDEF
 
 // TODO: some saner numbering maybe
 #define OBJ_TYPE_STRING        (1)

@@ -14,13 +14,13 @@ void _dump(VALUE v, int level) {
 		goto _dump_exit;
 	}
 	if(IS_STRING(v)) {
-		printf("%*s* string(len=%d) %.*s\n", level << 1, "", OBJ_LEN(v), OBJ_LEN(v), OBJ_DATA_PTR(v));
+		printf("%*s* string(len=%zu) %.*s\n", level << 1, "", OBJ_LEN(v), (int) OBJ_LEN(v), (char *)OBJ_DATA_PTR(v));
 		goto _dump_exit;
 	}
 	if(IS_NATIVE_METHOD(v)) {
 		symbols_buffer[0] = OBJ_DATA_PTR(v);
 		symbols = backtrace_symbols(symbols_buffer, 1);
-		printf("%*s* native method %s at 0x%zX\n", level << 1, "", symbols[0], OBJ_DATA_PTR(v));
+		printf("%*s* native method %s at %p\n", level << 1, "", symbols[0], OBJ_DATA_PTR(v));
 		goto _dump_exit;
 	}
 

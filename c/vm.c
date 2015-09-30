@@ -49,10 +49,10 @@ size_t get_global_index(VM *vm, char *name, size_t name_len) {
 	VAR_INDEX *var;
 	size_t index;
 	int found;
-	DEBUG_VM_RUN("entering get_global_index() vm=%p name=%.*s\n", vm, name_len, name);
+	DEBUG_VM_RUN("entering get_global_index() vm=%p name=%.*s\n", vm, (int)name_len, name);
 	index = check_global_index(vm, name, name_len, &found);
 	if(found) {
-		DEBUG_VM_RUN("leaving get_global_index() status=found vm=%p name=%.*s -> index=%d\n", vm, name_len, name, index);
+		DEBUG_VM_RUN("leaving get_global_index() status=found vm=%p name=%.*s -> index=%zu\n", vm, (int)name_len, name, index);
 		return index;
 	}
 	assert(vm->globals_len < (MAX_GLOBALS-1));
@@ -62,7 +62,7 @@ size_t get_global_index(VM *vm, char *name, size_t name_len) {
 	var->index = vm->globals_len++;
 	HASH_ADD_KEYPTR(hh, vm->globals_indexes, var->name, name_len, var);
 	vm->globals[var->index].num = V_UNDEF;
-	DEBUG_VM_RUN("leaving get_global_index() status=new vm=%p name=%.*s -> index=%d\n", vm, name_len, name, var->index);
+	DEBUG_VM_RUN("leaving get_global_index() status=new vm=%p name=%.*s -> index=%zu\n", vm, (int)name_len, name, var->index);
 	return var->index;
 }
 
@@ -105,7 +105,7 @@ void vm_load_bytecode(VM *vm, char *bc, size_t len) {
 // TODO: some normaml stack implementation, not linked list...
 //       Actually check the performance, maybe Boehm plays nice
 //       with such usage so we are losing only locality.
-void inline push(STACK **st, VALUE v) {
+inline void push(STACK **st, VALUE v) {
 	STACK *elt;
 	elt = NGS_MALLOC(sizeof(STACK));
 	memcpy(&(elt->v), &v, sizeof(v));
@@ -115,7 +115,7 @@ void inline push(STACK **st, VALUE v) {
 
 // Do not return pointer to stack element value because then
 // the stack element can't be freed... I think.
-VALUE inline pop(STACK **st) {
+inline VALUE pop(STACK **st) {
 	VALUE v;
 	STACK *stack_top;
 	stack_top = *st;
@@ -125,7 +125,7 @@ VALUE inline pop(STACK **st) {
 	return v;
 }
 
-void _vm_call(VM *vm, CTX *ctx, IP *ip) {
+void _vm_call(CTX *ctx) {
 	VALUE func, n_args, *args;
 	int i;
 
@@ -167,7 +167,7 @@ void vm_run(VM *vm, CTX *ctx) {
 	PATCH_OFFSET po;
 main_loop:
 	opcode = vm->bytecode[ip++];
-	if(opcode>=0 && opcode <= sizeof(opcodes_names) / sizeof(char *)) {
+	if(opcode <= sizeof(opcodes_names) / sizeof(char *)) {
 		DEBUG_VM_RUN("main_loop IP=%i OP=%s\n", ip-1, opcodes_names[opcode]);
 	}
 	// Guidelines
@@ -177,6 +177,22 @@ main_loop:
 							v = POP();
 							dump_titled("halt/pop", v);
 							goto end_main_loop;
+		case OP_PUSH_NULL:
+							SET_NULL(v);
+							PUSH(v);
+							goto main_loop;
+		case OP_PUSH_FALSE:
+							SET_FALSE(v);
+							PUSH(v);
+							goto main_loop;
+		case OP_PUSH_TRUE:
+							SET_TRUE(v);
+							PUSH(v);
+							goto main_loop;
+		case OP_PUSH_UNDEF:
+							SET_UNDEF(v);
+							PUSH(v);
+							goto main_loop;
 		case OP_PUSH_INT:
 							// Arg: n
 							// In ...
@@ -221,6 +237,8 @@ main_loop:
 							v = POP();
 							po = *(PATCH_OFFSET *) &vm->bytecode[ip];
 							ip += sizeof(po);
+							// XXX: assert does not seem to work (not triggered by == 1)
+							DEBUG_VM_RUN("OP_PATCH dst_idx=%d v=%d\n", ip+po, *(GLOBAL_VAR_INDEX *)&vm->bytecode[ip+po]);
 							assert(*(GLOBAL_VAR_INDEX *)&vm->bytecode[ip+po] == 0); // try to catch patching at invalid offset
 							*(GLOBAL_VAR_INDEX *)&vm->bytecode[ip+po] = GET_INT(v);
 							goto main_loop;
@@ -237,8 +255,17 @@ main_loop:
 							assert(IS_NOT_UNDEF(vm->globals[gvi]));
 							PUSH(vm->globals[gvi]);
 							goto main_loop;
+		case OP_STORE_GLOBAL:
+							v = POP();
+							gvi = *(GLOBAL_VAR_INDEX *) &vm->bytecode[ip];
+							ip += sizeof(gvi);
+							DEBUG_VM_RUN("OP_STORE_GLOBAL gvi=%d len=%d\n", gvi, vm->globals_len);
+							assert(gvi < vm->globals_len);
+							// TODO: report error here instead of crashing
+							vm->globals[gvi] = v;
+							goto main_loop;
 		case OP_CALL:
-							_vm_call(vm, ctx, &ip);
+							_vm_call(ctx);
 							goto main_loop;
 		default:
 							// TODO: exception

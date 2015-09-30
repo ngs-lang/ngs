@@ -38,6 +38,10 @@ typedef struct vm_struct {
 
 enum opcodes {
 	OP_HALT,
+	OP_PUSH_NULL,
+	OP_PUSH_FALSE,
+	OP_PUSH_TRUE,
+	OP_PUSH_UNDEF,
 	OP_PUSH_INT,
 	OP_PUSH_L_STR,
 	OP_DUP,
@@ -46,20 +50,26 @@ enum opcodes {
 	OP_PATCH,
 	OP_INIT_DONE,
 	OP_FETCH_GLOBAL,
+	OP_STORE_GLOBAL,
 	OP_CALL
 };
 
 char *opcodes_names[] = {
-	"HALT",
-	"PUSH_INT",
-	"PUSH_L_STR",
-	"DUP",
-	"POP",
-	"RESOLVE_GLOBAL",
-	"PATCH",
-	"INIT_DONE",
-	"FETCH_GLOBAL",
-	"CALL"
+	/*  0 */ "HALT",
+	/*  1 */"PUSH_NULL",
+	/*  2 */"PUSH_FALSE",
+	/*  3 */"PUSH_TRUE",
+	/*  4 */"PUSH_UNDEF",
+	/*  5 */"PUSH_INT",
+	/*  6 */"PUSH_L_STR",
+	/*  7 */"DUP",
+	/*  8 */"POP",
+	/*  9 */"RESOLVE_GLOBAL",
+	/* 10 */"PATCH",
+	/* 11 */"INIT_DONE",
+	/* 12 */"FETCH_GLOBAL",
+	/* 13 */"STORE_GLOBAL",
+	/* 14 */"CALL"
 };
 
 typedef enum method_result_enum {

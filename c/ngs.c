@@ -17,7 +17,7 @@ int yyerror (yyscan_t scanner, char const *s) {
 
 int main(int argc, char * argv[])
 {
-	ast_node *tree;
+	ast_node *tree = NULL;
 	VM vm;
 	CTX ctx;
 
@@ -38,10 +38,10 @@ int main(int argc, char * argv[])
 	// print - start
 	char *buf;
 	size_t len;
-	int i;
+	size_t i;
 	buf = compile(tree, &len);
 	for(i=0; i<len; i++) {
-		PRINTF_DEBUG(DEBUG_FLAG_BYTECODE, "MAIN BYTECODE [%d] %d\n", i, buf[i]);
+		PRINTF_DEBUG(DEBUG_FLAG_BYTECODE, "BYTECODE [%zu] %d\n", i, buf[i]);
 	}
 	// print - end
 	vm_init(&vm);
