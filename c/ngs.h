@@ -21,7 +21,14 @@
 // GC - end
 
 // DEBUG facilities - start
-uint32_t debug_flags = 0xFFFF;
+// TODO: maybe do compile time decisions per debug flag
+//       instead of one global yes/no and then runtime per flag decisions
+#ifdef NGS_DEBUG_FLAGS
+#define DO_NGS_DEBUG
+uint32_t debug_flags = NGS_DEBUG_FLAGS;
+#else
+uint32_t debug_flags = 0x0000;
+#endif
 #define DEBUG_FLAG_BYTECODE (1 << 0)
 #define DEBUG_FLAG_PARSER   (1 << 1)
 #define DEBUG_FLAG_COMPILER (1 << 2)

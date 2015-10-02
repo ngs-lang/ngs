@@ -9,10 +9,14 @@
 #include "vm.h"
 #include "compile.h"
 
+// TODO: abstract UINT16
+
 #define OPCODE(buf, x) { (buf)[*idx]=x; (*idx)++; }
 #define L_STR(buf, x) { int l = strlen(x); assert(l<256); OPCODE(buf, l); memcpy((buf)+(*idx), x, l); (*idx) += l; }
 #define DATA(buf, x) { memcpy((buf)+(*idx), &(x), sizeof(x)); (*idx) += sizeof(x); }
 #define DATA_UINT16(buf, x) { *(uint16_t *)&(buf)[*idx] = x; (*idx)+=2; }
+#define DATA_INT16(buf, x) { *(int16_t *)&(buf)[*idx] = x; (*idx)+=2; }
+#define DATA_INT16_AT(buf, loc, x) { *(int16_t *)&(buf)[loc] = x; }
 
 // Symbol table:
 // symbol -> [offset1, offset2, ..., offsetN]
@@ -41,9 +45,11 @@ static inline void ensure_room(char **buf, const size_t cur_len, size_t *allocat
 
 SYMBOL_TABLE *get_symbol_table_entry(SYMBOL_TABLE **st, char *name, int create_if_not_exists, int *created) {
 	SYMBOL_TABLE *s;
-	HASH_FIND_STR(*st, name, s);
 	*created = 0;
+	HASH_FIND(hh, *st, name, strlen(name), s);
+	// printf("SYMBOL TABLE QUERY %s (len %zu) %p\n", name, strlen(name), *st);
 	if(s) {
+		// printf("SYMBOL TABLE LOOKUP OK %s -> %p\n", name, s);
 		return s;
 	}
 	if(!create_if_not_exists) {
@@ -52,8 +58,10 @@ SYMBOL_TABLE *get_symbol_table_entry(SYMBOL_TABLE **st, char *name, int create_i
 	s = NGS_MALLOC(sizeof(*s));
 	s->name = strdup(name);
 	s->is_predefinded_global = 0;
-	HASH_ADD_STR(*st, name /* field */, s);
+	// HASH_ADD_STR(*st, name /* field */, s);
+	HASH_ADD_KEYPTR(hh, *st, s->name, strlen(s->name), s);
 	*created = 1;
+	// printf("SYMBOL TABLE ADD OK %s -> %p\n", name, *st);
 	return s;
 }
 
@@ -85,6 +93,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 	ast_node *ptr;
 	int n_args = 0;
 	GLOBAL_VAR_INDEX index;
+	size_t loop_beg, cond_jump;
 
 	ensure_room(buf, *idx, allocated, 1024); // XXX - magic number
 
@@ -131,6 +140,30 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
 				compile_main_section(ctx, ptr, buf, idx, allocated, (ptr == node->last_child) && need_result);
 			}
+			break;
+		case FOR_NODE:
+			// setup
+			compile_main_section(ctx, node->first_child, buf, idx, allocated, DONT_NEED_RESULT);
+			// condition
+			loop_beg = *idx;
+			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+			OPCODE(*buf, OP_JMP_FALSE);
+			cond_jump = *idx;
+			DATA_INT16(*buf, 1024);
+			// body
+			compile_main_section(ctx, node->first_child->next_sibling->next_sibling->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
+			// increment
+			compile_main_section(ctx, node->first_child->next_sibling->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
+			// printf("XX %zu\n",(*idx - cond_jump));
+			assert((*idx - cond_jump + 1) < 0x7FFF);
+			// DATA_INT16_AT(*buf, cond_jump, (*idx - cond_jump));
+			*(int16_t *)&(*buf)[cond_jump] = (*idx - cond_jump + 1);
+			// printf("XX [%zu] %zu %d\n",cond_jump, (*idx - cond_jump), *(int16_t *)&(*buf)[cond_jump]);
+			// assert(0);
+			OPCODE(*buf, OP_JMP);
+			assert((*idx - loop_beg) < 0x7FFF);
+			DATA_INT16(*buf, -(*idx - loop_beg + 2));
+			if(need_result) OPCODE(*buf, OP_PUSH_NULL);
 			break;
 		default:
 			assert(0=="compile_main_section(): unknown node type");

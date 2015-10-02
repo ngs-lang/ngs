@@ -27,6 +27,7 @@ enum ast_node_type {
 	IDENTIFIER_NODE,
 	NUMBER_NODE,
 	EXPRESSIONS_NODE,
+	FOR_NODE,
 	CALL_NODE,
 };
 
@@ -36,6 +37,7 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 	"identifier",
 	"number",
 	"expressions",
+	"for",
 	"call",
 };
 

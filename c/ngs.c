@@ -10,6 +10,7 @@
 #include "parser.c"
 #include "scanner.c"
 #include "compile.c"
+#include "decompile.c"
 
 int yyerror (yyscan_t scanner, char const *s) {
 	// Eliminate warning about unused `scanner` variable
@@ -41,10 +42,9 @@ int main()
 	// print - start
 	char *buf;
 	size_t len;
-	size_t i;
 	buf = compile(tree, &len);
-	for(i=0; i<len; i++) {
-		PRINTF_DEBUG(DEBUG_FLAG_BYTECODE, "BYTECODE [%zu] %d\n", i, buf[i]);
+	if(debug_flags & DEBUG_FLAG_COMPILER) {
+		decompile(buf, 0, len);
 	}
 	// print - end
 	vm_init(&vm);

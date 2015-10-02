@@ -58,6 +58,8 @@ typedef struct var_len_object_struct {
 
 #define IS_INT(v)    ((v.num & META_AND) == META_INT)
 #define SET_INT(v,n) v.num = ((n) << META_BITS) | META_INT
+#define MAKE_INT(n)  ((VALUE){.num=((n) << META_BITS) | META_INT})
+#define MAKE_BOOL(n)  ((VALUE){.num=(n ? V_TRUE : V_FALSE)})
 #define GET_INT(v)   ((v).num >> META_BITS)
 #define SET_OBJ(v,o) v.ptr = o
 #define SET_OBJECT_TYPE_LSTR(o) o->type.num = 1

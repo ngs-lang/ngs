@@ -5,16 +5,13 @@
 
 #define MAX_GLOBALS   (1024)
 #define MAX_LOCALS    (1024)
+#define MAX_STACK     (1024)
 typedef uint16_t GLOBAL_VAR_INDEX;
 typedef uint16_t LOCAL_VAR_INDEX;
 typedef uint16_t PATCH_OFFSET;
+typedef int16_t JUMP_OFFSET;
 
 typedef int IP;
-
-typedef struct stack {
-	VALUE v;
-	struct stack *next;
-} STACK;
 
 // TODO: maybe convert vm->globals to regular NGS hash so it could be accessible via `globals()` function.
 typedef struct var_index {
@@ -26,7 +23,8 @@ typedef struct var_index {
 // Plan: have exactly one context per thread.
 typedef struct context {
 	IP ip;
-	STACK *stack;
+	VALUE stack[MAX_STACK];
+	size_t stack_ptr;
 } CTX;
 
 typedef struct vm_struct {
@@ -51,7 +49,10 @@ enum opcodes {
 	OP_INIT_DONE,
 	OP_FETCH_GLOBAL,
 	OP_STORE_GLOBAL,
-	OP_CALL
+	OP_CALL,
+	OP_JMP,
+	OP_JMP_TRUE,
+	OP_JMP_FALSE,
 };
 
 char *opcodes_names[] = {
@@ -69,7 +70,10 @@ char *opcodes_names[] = {
 	/* 11 */ "INIT_DONE",
 	/* 12 */ "FETCH_GLOBAL",
 	/* 13 */ "STORE_GLOBAL",
-	/* 14 */ "CALL"
+	/* 14 */ "CALL",
+	/* 15 */ "JMP",
+	/* 16 */ "JMP_TRUE",
+	/* 17 */ "JMP_FALSE",
 };
 
 typedef enum method_result_enum {

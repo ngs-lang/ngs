@@ -6,12 +6,10 @@
 #include "ngs.h"
 #include "vm.h"
 #include "obj.h"
+#include "decompile.c"
 
-void push(STACK **st, VALUE v);
-VALUE pop(STACK **st);
-
-#define PUSH(v) push(&ctx->stack, v)
-#define POP() pop(&ctx->stack)
+#define PUSH(v) assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr++] = v
+#define POP(dst) assert(ctx->stack_ptr); ctx->stack_ptr--; dst = ctx->stack[ctx->stack_ptr]
 #define PUSH_NULL PUSH((VALUE){.num=V_NULL})
 #define RETURN_NULL {PUSH_NULL; return METHOD_OK;}
 
@@ -22,7 +20,6 @@ VALUE pop(STACK **st);
 #define MAXIMIZE_INTO(dst, src) if((src)>(dst)) { dst = src; }
 
 #define METHOD_BINOP_SETUP(type) \
-	VALUE v; \
 	METHOD_MUST_HAVE_N_ARGS(2); \
 	METHOD_ARG_N_MUST_BE(0, type); \
 	METHOD_ARG_N_MUST_BE(1, type);
@@ -30,13 +27,20 @@ VALUE pop(STACK **st);
 #define INT_METHOD(name, op) \
 METHOD_RESULT native_ ## name(CTX *ctx, int n_args, VALUE *args) { \
 	METHOD_BINOP_SETUP(INT); \
-	SET_INT(v, GET_INT(args[0]) op GET_INT(args[1])); \
-	PUSH(v); \
+	PUSH(MAKE_INT(GET_INT(args[0]) op GET_INT(args[1]))); \
+	return METHOD_OK; \
+}
+
+#define INT_CMP_METHOD(name, op) \
+METHOD_RESULT native_ ## name(CTX *ctx, int n_args, VALUE *args) { \
+	METHOD_BINOP_SETUP(INT); \
+	PUSH(MAKE_BOOL(GET_INT(args[0]) op GET_INT(args[1]))); \
 	return METHOD_OK; \
 }
 
 INT_METHOD(plus, +);
 INT_METHOD(minus, -);
+INT_CMP_METHOD(less, <);
 
 METHOD_RESULT native_dump(CTX *ctx, int n_args, VALUE *args) {
 	if(n_args == 1) {
@@ -99,11 +103,13 @@ void vm_init(VM *vm) {
 	// it's symbol table for globals.
 	register_global_func(vm, "+", &native_plus);
 	register_global_func(vm, "-", &native_minus);
+	register_global_func(vm, "<", &native_less);
 	register_global_func(vm, "dump", &native_dump);
 }
 
 void ctx_init(CTX *ctx) {
 	ctx->ip = 0;
+	ctx->stack_ptr = 0;
 }
 
 void vm_load_bytecode(VM *vm, char *bc, size_t len) {
@@ -115,41 +121,18 @@ void vm_load_bytecode(VM *vm, char *bc, size_t len) {
 	vm->bytecode = bc;
 }
 
-// TODO: some normaml stack implementation, not linked list...
-//       Actually check the performance, maybe Boehm plays nice
-//       with such usage so we are losing only locality.
-inline void push(STACK **st, VALUE v) {
-	STACK *elt;
-	elt = NGS_MALLOC(sizeof(STACK));
-	memcpy(&(elt->v), &v, sizeof(v));
-	elt->next = *st;
-	*st = elt;
-}
-
-// Do not return pointer to stack element value because then
-// the stack element can't be freed... I think.
-inline VALUE pop(STACK **st) {
-	VALUE v;
-	STACK *stack_top;
-	stack_top = *st;
-	memcpy(&v, &stack_top->v, sizeof(VALUE));
-	*st = stack_top->next;
-	// NGS_FREE(stack_top);
-	return v;
-}
-
 void _vm_call(CTX *ctx) {
 	VALUE func, n_args, *args;
 	int i;
 
-	func = POP();
+	POP(func);
 	IF_DEBUG(VM_RUN,
 		dump_titled("_vm_call/func", func);
 	);
-	n_args = POP();
+	POP(n_args);
 	args = NGS_MALLOC(sizeof(VALUE) * GET_INT(n_args));
 	for(i=GET_INT(n_args)-1; i>=0; i--) {
-		args[i] = POP();
+		 POP(args[i]);
 	}
 
 	IF_DEBUG(VM_RUN,
@@ -176,17 +159,20 @@ void vm_run(VM *vm, CTX *ctx) {
 	unsigned char opcode;
 	GLOBAL_VAR_INDEX gvi;
 	PATCH_OFFSET po;
+	JUMP_OFFSET jo;
 main_loop:
 	opcode = vm->bytecode[ip++];
+#ifdef DO_NGS_DEBUG
 	if(opcode <= sizeof(opcodes_names) / sizeof(char *)) {
 		DEBUG_VM_RUN("main_loop IP=%i OP=%s\n", ip-1, opcodes_names[opcode]);
 	}
+#endif
 	// Guidelines
 	// * increase ip as soon as arguments extraction is finished
 	switch(opcode) {
 		case OP_HALT:
-							v = POP();
-							dump_titled("halt/pop", v);
+							// POP(v);
+							// dump_titled("halt/pop", v);
 							goto end_main_loop;
 		case OP_PUSH_NULL:
 							PUSH_NULL;
@@ -226,16 +212,18 @@ main_loop:
 							goto main_loop;
 		case OP_DUP:
 							// TODO: optimize later
-							v = POP();
+							POP(v);
 							PUSH(v);
 							PUSH(v);
 							goto main_loop;
 		case OP_POP:
-							POP();
+							POP(v);
 							goto main_loop;
 		case OP_RESOLVE_GLOBAL:
-							v = POP();
+							POP(v);
+#ifdef DO_NGS_DEBUG
 							assert(OBJ_TYPE(v) == OBJ_TYPE_STRING);
+#endif
 							SET_INT(v, get_global_index(vm, OBJ_DATA_PTR(v), OBJ_LEN(v)));
 							PUSH(v);
 							goto main_loop;
@@ -244,12 +232,13 @@ main_loop:
 							// In ... n
 							// Out: ...
 							// Effect: bytecode[offset] <- n
-							v = POP();
+							POP(v);
 							po = *(PATCH_OFFSET *) &vm->bytecode[ip];
 							ip += sizeof(po);
-							// XXX: assert does not seem to work (not triggered by == 1)
+#ifdef DO_NGS_DEBUG
 							DEBUG_VM_RUN("OP_PATCH dst_idx=%d v=%d\n", ip+po, *(GLOBAL_VAR_INDEX *)&vm->bytecode[ip+po]);
 							assert(*(GLOBAL_VAR_INDEX *)&vm->bytecode[ip+po] == 0); // try to catch patching at invalid offset
+#endif
 							*(GLOBAL_VAR_INDEX *)&vm->bytecode[ip+po] = GET_INT(v);
 							goto main_loop;
 		case OP_INIT_DONE:
@@ -259,24 +248,53 @@ main_loop:
 		case OP_FETCH_GLOBAL:
 							gvi = *(GLOBAL_VAR_INDEX *) &vm->bytecode[ip];
 							ip += sizeof(gvi);
+#ifdef DO_NGS_DEBUG
 							// DEBUG_VM_RUN("OP_FETCH_GLOBAL gvi=%d len=%d\n", gvi, vm->globals_len);
 							assert(gvi < vm->globals_len);
 							// TODO: report error here instead of crashing
 							assert(IS_NOT_UNDEF(vm->globals[gvi]));
+							// dump_titled("FETCH_GLOBAL", vm->globals[gvi]);
+#endif
 							PUSH(vm->globals[gvi]);
 							goto main_loop;
 		case OP_STORE_GLOBAL:
-							v = POP();
+							POP(v);
 							gvi = *(GLOBAL_VAR_INDEX *) &vm->bytecode[ip];
 							ip += sizeof(gvi);
-							DEBUG_VM_RUN("OP_STORE_GLOBAL gvi=%d len=%zu\n", gvi, vm->globals_len);
+#ifdef DO_NGS_DEBUG
+							// DEBUG_VM_RUN("OP_STORE_GLOBAL gvi=%d len=%zu\n", gvi, vm->globals_len);
 							assert(gvi < vm->globals_len);
 							// TODO: report error here instead of crashing
+#endif
 							vm->globals[gvi] = v;
 							goto main_loop;
 		case OP_CALL:
 							_vm_call(ctx);
 							goto main_loop;
+		case OP_JMP:
+do_jump:
+							jo = *(JUMP_OFFSET *) &vm->bytecode[ip];
+							// DEBUG_VM_RUN("JUMP OFFSET %d\n", jo);
+							ip += sizeof(jo);
+							ip += jo;
+							goto main_loop;
+		case OP_JMP_TRUE:
+							POP(v);
+#ifdef DO_NGS_DEBUG
+							assert(IS_BOOL(v));
+#endif
+							if(IS_TRUE(v)) goto do_jump;
+							ip += sizeof(jo);
+							goto main_loop;
+		case OP_JMP_FALSE:
+							POP(v);
+#ifdef DO_NGS_DEBUG
+							assert(IS_BOOL(v));
+#endif
+							if(IS_FALSE(v)) goto do_jump;
+							ip += sizeof(jo);
+							goto main_loop;
+
 		default:
 							// TODO: exception
 							printf("ERROR: Unknown opcode %d\n", opcode);

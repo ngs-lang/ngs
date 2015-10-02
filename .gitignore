@@ -14,6 +14,8 @@ JUNK
 profiling
 trace.txt
 ngs
+ngs-prof
+ngs-debug
 scratch.txt
 
 parser.c

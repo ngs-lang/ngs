@@ -38,6 +38,8 @@ int yyerror();
 
 %token EXPRESSIONS_DELIMITER
 %token EQUALS
+%token FOR
+%token WHILE
 
 %token <name> BINOP
 %token <name> IDENTIFIER
@@ -47,6 +49,7 @@ int yyerror();
 %type <ast_node> call
 %type <ast_node> expression
 %type <ast_node> expressions
+%type <ast_node> for
 %type <ast_node> binop
 %type <ast_node> identifier
 %type <ast_node> number
@@ -96,7 +99,7 @@ expressions:
 			$$ = ret;
 		};
 
-expression: assignment | binop | number | identifier | call;
+expression: assignment | binop | number | identifier | call | for;
 
 binop: expression BINOP expression {
 		DEBUG_PARSER("expression $1 %p $3 %p\n", $1, $3);
@@ -114,6 +117,15 @@ call: expression '(' expression ')' {
 		NODET(ret, CALL_NODE);
 		ret->first_child = $1;
 		ret->first_child->next_sibling = $3;
+		$$ = ret;
+}
+
+for: FOR expression expression expression expression {
+		NODET(ret, FOR_NODE);
+		$2->next_sibling = $3;
+		$3->next_sibling = $4;
+		$4->next_sibling = $5;
+		ret->first_child = $2;
 		$$ = ret;
 }
 

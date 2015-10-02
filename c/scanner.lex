@@ -45,9 +45,11 @@ digits			[0-9]+
 <CODE>"}"           { yy_pop_state(yyscanner); DEBUG_PARSER("%s", "Leaving mode: CODE\n"); }
 
 <CODE>{
-	"+"|"-"         { DEBUG_PARSER("%s", "LEX BINOP\n"); USE_TEXT_AS_NAME; return BINOP; }
+	"+"|"-"|"<"|">" { DEBUG_PARSER("%s", "LEX BINOP\n"); USE_TEXT_AS_NAME; return BINOP; }
 	"="             { DEBUG_PARSER("%s", "LEX EQUALS\n"); return EQUALS; }
 	{digits}		{ yylval->number = atoi(yytext); DEBUG_PARSER("LEX NUMBER %d\n", yylval->number); return NUMBER; }
+	"while"         { DEBUG_PARSER("%s", "LEX WHILE\n"); return WHILE; }
+	"for"           { DEBUG_PARSER("%s", "LEX FOR\n"); return FOR; }
 	{identifier}    { DEBUG_PARSER("LEX IDENTIFIER %s\n", yytext); USE_TEXT_AS_NAME; return IDENTIFIER; }
 	";"             { DEBUG_PARSER("LEX E.DELIMITER %s\n", yytext); return EXPRESSIONS_DELIMITER; }
 	"("|")"         { DEBUG_PARSER("LEX PAREN %s\n", yytext); return *yytext; }
