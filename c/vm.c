@@ -110,6 +110,9 @@ void vm_init(VM *vm) {
 void ctx_init(CTX *ctx) {
 	ctx->ip = 0;
 	ctx->stack_ptr = 0;
+#ifdef NGS_DEBUG_FLAGS
+	memset(ctx->stack, 0, sizeof(ctx->stack));
+#endif
 }
 
 void vm_load_bytecode(VM *vm, char *bc, size_t len) {

@@ -15,7 +15,7 @@
 int yyerror (yyscan_t scanner, char const *s) {
 	// Eliminate warning about unused `scanner` variable
 	(void)(scanner);
-	fprintf (stderr, "%s\n", s);
+	fprintf (stderr, "PARSE ERROR: <<%s>>\n", s);
 	return 0;
 }
 

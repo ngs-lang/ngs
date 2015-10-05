@@ -36,10 +36,9 @@ int yyerror();
 	ast_node *ast_node;
 };
 
-%token EXPRESSIONS_DELIMITER
-%token EQUALS
 %token FOR
 %token WHILE
+%token NEWLINE
 
 %token <name> BINOP
 %token <name> IDENTIFIER
@@ -47,6 +46,7 @@ int yyerror();
 
 %type <ast_node> assignment
 %type <ast_node> call
+%type <ast_node> curly_expressions
 %type <ast_node> expression
 %type <ast_node> expressions
 %type <ast_node> for
@@ -55,6 +55,11 @@ int yyerror();
 %type <ast_node> number
 %type <ast_node> top_level
 %type <ast_node> top_level2
+
+%right '='
+%left BINOP
+%left '('
+/* %precedence xx */
 
 /*TODO: intern symbols*/
 
@@ -66,9 +71,9 @@ top_level: top_level2 {
 }
 
 top_level2:
-		 expressions;
+		 curly_expressions;
 
-assignment: identifier EQUALS expression {
+assignment: identifier '=' expression {
 		 DEBUG_PARSER("assignment $1 %p $3 %p\n", $1, $3);
 		 NODET(ret, ASSIGNMENT_NODE);
 		 $1->next_sibling = $3;
@@ -85,11 +90,16 @@ identifier: IDENTIFIER {
 		 $$ = ret;
 }
 
+curly_expressions: '{' expressions '}' { $$ = $2; }
+
 expressions:
-		expressions EXPRESSIONS_DELIMITER expression {
+		expressions ';' expression {
 			DEBUG_PARSER("expressions $1 %p $3 %p\n", $1, $3);
 			$1->last_child->next_sibling = $3;
 			$1->last_child = $3;
+			$$ = $1;
+		}
+		| expressions ';' {
 			$$ = $1;
 		}
 		| expression {
@@ -120,12 +130,12 @@ call: expression '(' expression ')' {
 		$$ = ret;
 }
 
-for: FOR expression expression expression expression {
+for: FOR '(' expression ';' expression ';' expression ')' curly_expressions {
 		NODET(ret, FOR_NODE);
-		$2->next_sibling = $3;
-		$3->next_sibling = $4;
-		$4->next_sibling = $5;
-		ret->first_child = $2;
+		$3->next_sibling = $5;
+		$5->next_sibling = $7;
+		$7->next_sibling = $9;
+		ret->first_child = $3;
 		$$ = ret;
 }
 

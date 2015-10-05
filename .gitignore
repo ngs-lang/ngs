@@ -22,3 +22,4 @@ parser.c
 parser.h
 scanner.c
 tags
+parser.output

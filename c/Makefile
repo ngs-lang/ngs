@@ -41,19 +41,39 @@ ngs-debug: $(NGS_TARGET_DEPS)
 
 # Micro bechmark but it's still something
 time-sum: ngs
+
 	# About 3.5 seconds on my laptop
-	time ./ngs < <(echo '{s=0;for i=0 i<10000000 i=i+1 s=s+i}')
-	# About 1.2 seconds / perl 5.20.2
+	time ./ngs < <(echo '{s=0;for(i=0;i<10000000;i=i+1) {s=s+i}}')
+
+	# About 1.1 seconds / perl 5.20.2
 	time perl -e '$$s=0; for($$i=0; $$i<10000000; $$i++) { $$s+=$$i}'
+
 	# About 7 seconds, 10x less work / bash 4.3.30
 	time bash -c 's=0; for ((i=0;i<1000000;i=i+1));do s=$$((s+i));done; '
-	# About 0.7 seconds / ruby 2.1.5p273
+
+	# About 0.7 seconds / ruby 2.1.5p273 (1.9, 2.0, 2.1 have similar performance)
 	time ruby -e 's=0; for i in 0...10000000 do s=s+i end'
+
+	# About 1 second / python 2.7.9
+	time python2.7 -c $$'s=0\nfor i in range(0,10000000): s=s+i'
+
+	# About 1.3 seconds / 3.4.2
+	time python3.4 -c $$'s=0\nfor i in range(0,10000000): s=s+i'
+
+	# 3.9 seconds, 100x less work / Perl 6 2014.07 built on parrot 6.6.0 revision 0
+	time perl6 -e 'my $$s=0; loop (my $$i=0; $$i < 100000; $$i++) {$$s+=$$i}'
+
+	# About 5.5 seconds / TCL 8.6
+	time echo 'set s 0; for {set i 0} {$$i < 10000000} {incr i} {set s [expr {$$s + $$i}]}' | tclsh8.6
 
 clean:
 	-rm parser.h parser.c
 	-rm scanner.c
-	-rm ngs
+	-rm ngs ngs-prof ngs-debug
+	-rm parser.output
 
-tags: *.c *.h
+tags: *.c *.h *.lex *.y
 	ctags $^
+
+parser.output: parser.y ngs.h compile.h
+	bison --report=lookahead --report=solved --report=state --defines=parser.h -o parser.c parser.y
