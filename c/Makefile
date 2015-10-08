@@ -10,7 +10,7 @@ LDLIBS := -lfl -lpthread -lgc
 # -pg - for gprof profiler
 PROFILER_CFLAGS := $(CFLAGS) -pg
 DEBUG_CFLAGS := $(CFLAGS) -DNGS_DEBUG_FLAGS=0xFFFF
-NGS_TARGET_DEPS := *.c *.h Makefile
+NGS_TARGET_DEPS := *.c *.h parser.c parser.h scanner.c Makefile
 
 all: ngs ngs-prof ngs-debug
 
@@ -19,10 +19,7 @@ scanner.lex:
 parser.y:
 	# nothing
 
-parser.h: parser.y
-	bison --defines=parser.h -o parser.c parser.y
-
-parser.c: parser.y
+parser.c parser.h: parser.y
 	bison --defines=parser.h -o parser.c parser.y
 
 scanner.c: scanner.lex Makefile
