@@ -110,8 +110,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			break;
 		case NUMBER_NODE:
 			/*printf("Compiling NUMBER @ %d\n", *idx);*/
-			OPCODE(*buf, OP_PUSH_INT); DATA(*buf, node->number);
-			POP_IF_DONT_NEED_RESULT(*buf);
+			if(need_result) {
+				OPCODE(*buf, OP_PUSH_INT); DATA(*buf, node->number);
+			}
 			break;
 		case IDENTIFIER_NODE:
 			// TODO: handle local vs global
@@ -164,6 +165,8 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			assert((*idx - loop_beg) < 0x7FFF);
 			DATA_INT16(*buf, -(*idx - loop_beg + 2));
 			if(need_result) OPCODE(*buf, OP_PUSH_NULL);
+			break;
+		case EMPTY_NODE:
 			break;
 		default:
 			assert(0=="compile_main_section(): unknown node type");

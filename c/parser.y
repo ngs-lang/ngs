@@ -38,7 +38,6 @@ int yyerror();
 
 %token FOR
 %token WHILE
-%token NEWLINE
 
 %token <name> BINOP
 %token <name> IDENTIFIER
@@ -55,6 +54,7 @@ int yyerror();
 %type <ast_node> number
 %type <ast_node> top_level
 %type <ast_node> top_level2
+%type <ast_node> top_level_item
 
 %right '='
 %left BINOP
@@ -71,10 +71,30 @@ top_level: top_level2 {
 }
 
 top_level2:
-		 curly_expressions;
+		top_level2 expressions_delimiter top_level_item {
+			DEBUG_PARSER("top_level2 $1 %p $3 %p\n", $1, $3);
+			$1->last_child->next_sibling = $3;
+			$1->last_child = $3;
+			$$ = $1;
+		}
+		| top_level2 expressions_delimiter {
+			$$ = $1;
+		}
+		| top_level_item {
+			NODET(ret, EXPRESSIONS_NODE);
+			ret->first_child = $1;
+			ret->last_child = $1;
+			$$ = ret;
+		}
+		| expressions_delimiter {
+			NODET(ret, EMPTY_NODE);
+			$$ = ret;
+		};
+
+top_level_item: curly_expressions
 
 assignment: identifier '=' expression {
-		 DEBUG_PARSER("assignment $1 %p $3 %p\n", $1, $3);
+		 DEBUG_PARSER("assignment $1 %p $5 %p\n", $1, $3);
 		 NODET(ret, ASSIGNMENT_NODE);
 		 $1->next_sibling = $3;
 		 ret->first_child = $1;
@@ -92,14 +112,15 @@ identifier: IDENTIFIER {
 
 curly_expressions: '{' expressions '}' { $$ = $2; }
 
+/* TODO: straighten this */
 expressions:
-		expressions ';' expression {
+		expressions expressions_delimiter expression {
 			DEBUG_PARSER("expressions $1 %p $3 %p\n", $1, $3);
 			$1->last_child->next_sibling = $3;
 			$1->last_child = $3;
 			$$ = $1;
 		}
-		| expressions ';' {
+		| expressions expressions_delimiter {
 			$$ = $1;
 		}
 		| expression {
@@ -107,7 +128,16 @@ expressions:
 			ret->first_child = $1;
 			ret->last_child = $1;
 			$$ = ret;
+		}
+		| expressions_delimiter expressions {
+			$$ = $2;
+		}
+		| expressions_delimiter {
+			NODET(ret, EMPTY_NODE);
+			$$ = ret;
 		};
+
+expressions_delimiter: ';' | '\n';
 
 expression: assignment | binop | number | identifier | call | for;
 

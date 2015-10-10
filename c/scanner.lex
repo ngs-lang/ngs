@@ -33,17 +33,19 @@
 /* INITIAL is commands */
 %x CODE
 
-blanks          [ \t\n]+
+whitespace      [ \t]+
 identifier		[_a-zA-Z]+[_a-zA-Z0-9]*
 digits			[0-9]+
 
 %%
 
-{blanks}            { /* ignore */ }
+<INITIAL,CODE>^#.*$               { /* ignore comments */ }
 
 <INITIAL>"{"        { yy_push_state(CODE, yyscanner); DEBUG_PARSER("%s", "Entering mode: CODE\n"); return '{'; }
 
 <CODE>{
+	[\n]            { DEBUG_PARSER("%s", "LEX NEWLINE\n"); return *yytext; }
+	{whitespace}    { /* ignore whitespace */ }
 	"+"|"-"|"<"|">" { DEBUG_PARSER("%s", "LEX BINOP\n"); USE_TEXT_AS_NAME; return BINOP; }
 	"="             { DEBUG_PARSER("%s", "LEX EQUALS\n"); return '='; }
 	{digits}		{ yylval->number = atoi(yytext); DEBUG_PARSER("LEX NUMBER %d\n", yylval->number); return NUMBER; }

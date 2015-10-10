@@ -38,6 +38,7 @@ int main()
 	// printf("Tree: %p\n", tree);
 	// printf("Result: %d\n", tree->val.num);
 	print_ast(tree, 0);
+	assert(ret == 0);
 
 	// print - start
 	char *buf;
