@@ -110,17 +110,14 @@ identifier: IDENTIFIER {
 		 $$ = ret;
 }
 
-curly_expressions: '{' expressions '}' { $$ = $2; }
+curly_expressions: '{' expressions_delimiter_zero_or_more expressions expressions_delimiter_zero_or_more '}' { $$ = $3; }
 
 /* TODO: straighten this */
 expressions:
-		expressions expressions_delimiter expression {
+		expressions expressions_delimiter_one_or_more expression {
 			DEBUG_PARSER("expressions $1 %p $3 %p\n", $1, $3);
 			$1->last_child->next_sibling = $3;
 			$1->last_child = $3;
-			$$ = $1;
-		}
-		| expressions expressions_delimiter {
 			$$ = $1;
 		}
 		| expression {
@@ -128,16 +125,13 @@ expressions:
 			ret->first_child = $1;
 			ret->last_child = $1;
 			$$ = ret;
-		}
-		| expressions_delimiter expressions {
-			$$ = $2;
-		}
-		| expressions_delimiter {
-			NODET(ret, EMPTY_NODE);
-			$$ = ret;
 		};
 
 expressions_delimiter: ';' | '\n';
+
+expressions_delimiter_one_or_more: expressions_delimiter_one_or_more expressions_delimiter | expressions_delimiter;
+
+expressions_delimiter_zero_or_more: expressions_delimiter_one_or_more | /* nothing */;
 
 expression: assignment | binop | number | identifier | call | for;
 
