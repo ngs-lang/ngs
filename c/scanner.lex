@@ -54,6 +54,8 @@ digits			[0-9]+
 	{identifier}    { DEBUG_PARSER("LEX IDENTIFIER %s\n", yytext); USE_TEXT_AS_NAME; return IDENTIFIER; }
 	";"             { DEBUG_PARSER("LEX E.DELIMITER %s\n", yytext); return *yytext; }
 	"("|")"         { DEBUG_PARSER("LEX PAREN %s\n", yytext); return *yytext; }
+	"["|"]"         { DEBUG_PARSER("LEX BRACKET %s\n", yytext); return *yytext; }
+	","             { DEBUG_PARSER("LEX COMMA %s\n", yytext); return *yytext; }
 	"{"             { yy_push_state(CODE, yyscanner); DEBUG_PARSER("%s", "Re-entering mode: CODE\n"); return '{'; }
 	"}"             { yy_pop_state(yyscanner); DEBUG_PARSER("%s", "Leaving mode: CODE\n"); return '}'; }
 }

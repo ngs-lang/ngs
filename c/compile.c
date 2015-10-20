@@ -14,6 +14,7 @@
 #define OPCODE(buf, x) { (buf)[*idx]=x; (*idx)++; }
 #define L_STR(buf, x) { int l = strlen(x); assert(l<256); OPCODE(buf, l); memcpy((buf)+(*idx), x, l); (*idx) += l; }
 #define DATA(buf, x) { memcpy((buf)+(*idx), &(x), sizeof(x)); (*idx) += sizeof(x); }
+#define DATA_INT(buf, x) { *(int *)&(buf)[*idx] = x; (*idx)+=sizeof(int); }
 #define DATA_UINT16(buf, x) { *(uint16_t *)&(buf)[*idx] = x; (*idx)+=2; }
 #define DATA_INT16(buf, x) { *(int16_t *)&(buf)[*idx] = x; (*idx)+=2; }
 #define DATA_INT16_AT(buf, loc, x) { *(int16_t *)&(buf)[loc] = x; }
@@ -167,6 +168,16 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			if(need_result) OPCODE(*buf, OP_PUSH_NULL);
 			break;
 		case EMPTY_NODE:
+			break;
+		case ARR_LIT_NODE:
+			DEBUG_COMPILER("COMPILER: %s %zu\n", "ARRAY NODE", *idx);
+			for(n_args=0, ptr=node->first_child; ptr; n_args++, ptr=ptr->next_sibling) {
+				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
+			}
+			OPCODE(*buf, OP_PUSH_INT);
+			DATA_INT(*buf, n_args);
+			OPCODE(*buf, OP_MAKE_ARR);
+			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 		default:
 			assert(0=="compile_main_section(): unknown node type");

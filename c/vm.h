@@ -1,6 +1,7 @@
 #ifndef VM_H
 #define VM_H
 #include <uthash.h>
+#include <utarray.h>
 #include "obj.h"
 
 #define MAX_GLOBALS   (1024)
@@ -53,6 +54,7 @@ enum opcodes {
 	OP_JMP,
 	OP_JMP_TRUE,
 	OP_JMP_FALSE,
+	OP_MAKE_ARR,
 };
 
 char *opcodes_names[] = {
@@ -74,6 +76,7 @@ char *opcodes_names[] = {
 	/* 15 */ "JMP",
 	/* 16 */ "JMP_TRUE",
 	/* 17 */ "JMP_FALSE",
+	/* 18 */ "MAKE_ARR",
 };
 
 typedef enum method_result_enum {
@@ -86,5 +89,6 @@ void vm_init(VM *vm);
 size_t check_global_index(VM *vm, char *name, size_t name_len, int *found);
 size_t get_global_index(VM *vm, char *name, size_t name_len);
 
+static const UT_icd ut_value_icd _UNUSED_ = {sizeof(VALUE),NULL,NULL,NULL};
 // typedef int VM_INT;
 #endif

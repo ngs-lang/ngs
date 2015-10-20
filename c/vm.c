@@ -6,6 +6,7 @@
 #include "ngs.h"
 #include "vm.h"
 #include "obj.h"
+#include "obj.c"
 #include "decompile.c"
 
 #define PUSH(v) assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr++] = v
@@ -163,6 +164,7 @@ void vm_run(VM *vm, CTX *ctx) {
 	GLOBAL_VAR_INDEX gvi;
 	PATCH_OFFSET po;
 	JUMP_OFFSET jo;
+	size_t vlo_len;
 main_loop:
 	opcode = vm->bytecode[ip++];
 #ifdef DO_NGS_DEBUG
@@ -297,7 +299,15 @@ do_jump:
 							if(IS_FALSE(v)) goto do_jump;
 							ip += sizeof(jo);
 							goto main_loop;
-
+		case OP_MAKE_ARR:
+							POP(v);
+							vlo_len = GET_INT(v);
+							v = make_var_len_obj(sizeof(VALUE), vlo_len);
+							if(vlo_len) {
+								memcpy(OBJ_DATA_PTR(v), &(ctx->stack[ctx->stack_ptr-vlo_len]), sizeof(VALUE)*vlo_len);
+							}
+							PUSH(v);
+							goto main_loop;
 		default:
 							// TODO: exception
 							printf("ERROR: Unknown opcode %d\n", opcode);

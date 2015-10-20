@@ -30,6 +30,7 @@ enum ast_node_type {
 	FOR_NODE,
 	CALL_NODE,
 	EMPTY_NODE,
+	ARR_LIT_NODE,
 };
 
 char *NGS_AST_NODE_TYPES_NAMES[] = {
@@ -41,6 +42,7 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 	"for",
 	"call",
 	"empty",
+	"array",
 };
 
 #endif

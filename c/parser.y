@@ -43,6 +43,8 @@ int yyerror();
 %token <name> IDENTIFIER
 %token <number> NUMBER
 
+%type <ast_node> array_items
+%type <ast_node> array_literal
 %type <ast_node> assignment
 %type <ast_node> call
 %type <ast_node> curly_expressions
@@ -133,7 +135,7 @@ expressions_delimiter_one_or_more: expressions_delimiter_one_or_more expressions
 
 expressions_delimiter_zero_or_more: expressions_delimiter_one_or_more | /* nothing */;
 
-expression: assignment | binop | number | identifier | call | for;
+expression: assignment | binop | number | identifier | call | for | array_literal;
 
 binop: expression BINOP expression {
 		DEBUG_PARSER("expression $1 %p $3 %p\n", $1, $3);
@@ -162,6 +164,32 @@ for: FOR '(' expression ';' expression ';' expression ')' curly_expressions {
 		ret->first_child = $3;
 		$$ = ret;
 }
+
+array_literal:
+		'[' ']' {
+				NODET(ret, ARR_LIT_NODE);
+				ret->first_child = NULL; // not needed because of calloc but want to be explicit
+				$$ = ret;
+		}
+		| '[' array_items ']' {
+				NODET(ret, ARR_LIT_NODE);
+				ret->first_child = $2->first_child;
+				$$ = ret;
+		}
+
+array_items:
+		array_items ',' expression {
+			DEBUG_PARSER("array_items $1 %p $3 %p\n", $1, $3);
+			$1->last_child->next_sibling = $3;
+			$1->last_child = $3;
+			$$ = $1;
+		}
+		| expression {
+			NODET(ret, EXPRESSIONS_NODE);
+			ret->first_child = $1;
+			ret->last_child = $1;
+			$$ = ret;
+		};
 
 number: NUMBER { NODET(ret, NUMBER_NODE); ret->number = $1; $$ = ret; }
 

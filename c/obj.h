@@ -19,6 +19,7 @@ typedef struct object_struct {
 typedef struct var_len_object_struct {
 	OBJECT base;
 	size_t len;
+	size_t item_size;
 } VAR_LEN_OBJECT;
 
 // malloc() / NGS_MALLOC() memory is 8 byte aligned
@@ -59,15 +60,13 @@ typedef struct var_len_object_struct {
 #define IS_INT(v)    ((v.num & META_AND) == META_INT)
 #define SET_INT(v,n) v.num = ((n) << META_BITS) | META_INT
 #define MAKE_INT(n)  ((VALUE){.num=((n) << META_BITS) | META_INT})
-#define MAKE_BOOL(n)  ((VALUE){.num=(n ? V_TRUE : V_FALSE)})
+#define MAKE_BOOL(n) ((VALUE){.num=(n ? V_TRUE : V_FALSE)})
 #define GET_INT(v)   ((v).num >> META_BITS)
-#define SET_OBJ(v,o) v.ptr = o
-#define SET_OBJECT_TYPE_LSTR(o) o->type.num = 1
-#define SET_OBJECT_TYPE_ARRAY(o) o->type.num = 2
-#define SET_NULL(v) v.num = V_NULL
-#define SET_FALSE(v) v.num = V_FALSE
-#define SET_TRUE(v) v.num = V_TRUE
-#define SET_UNDEF(v) v.num = V_UNDEF
+#define SET_OBJ(v,o) (v).ptr = o
+#define SET_NULL(v)  (v).num = V_NULL
+#define SET_FALSE(v) (v).num = V_FALSE
+#define SET_TRUE(v)  (v).num = V_TRUE
+#define SET_UNDEF(v) (v).num = V_UNDEF
 
 // TODO: some saner numbering maybe
 #define OBJ_TYPE_STRING        (1)
@@ -76,9 +75,9 @@ typedef struct var_len_object_struct {
 #define OBJ_TYPE_ARRAY         (4)
 
 #define OBJ_LEN(v)          ((VAR_LEN_OBJECT *) v.ptr)->len
-#define OBJ_DATA_PTR(v)     ((OBJECT *)v.ptr)->val.ptr
+#define OBJ_DATA_PTR(v)     (((OBJECT *)v.ptr)->val.ptr)
 #define OBJ_TYPE(v)         (((OBJECT *)v.ptr)->type.num)
-#define OBJ_TYPE_PTR(v)     ((OBJECT *)v.ptr)->type.ptr
+#define OBJ_TYPE_PTR(v)     (((OBJECT *)v.ptr)->type.ptr)
 #define IS_STRING(v)        (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_STRING)
 #define IS_NATIVE_METHOD(v) (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_NATIVE_METHOD)
 #define IS_USER_METHOD(v)   (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_USER_METHOD)
