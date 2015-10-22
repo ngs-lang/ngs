@@ -7,6 +7,7 @@
 #define MAX_GLOBALS   (1024)
 #define MAX_LOCALS    (1024)
 #define MAX_STACK     (1024)
+#define MAX_FRAMES      (64)
 typedef uint16_t GLOBAL_VAR_INDEX;
 typedef uint16_t LOCAL_VAR_INDEX;
 typedef uint16_t PATCH_OFFSET;
@@ -21,11 +22,18 @@ typedef struct var_index {
 	UT_hash_handle hh;
 } VAR_INDEX;
 
+typedef struct frame {
+	IP prev_ip;
+	size_t prev_stack_ptr;
+} FRAME;
+
 // Plan: have exactly one context per thread.
 typedef struct context {
 	IP ip;
 	VALUE stack[MAX_STACK];
 	size_t stack_ptr;
+	FRAME frames[MAX_FRAMES];
+	size_t frame_ptr;
 } CTX;
 
 typedef struct vm_struct {

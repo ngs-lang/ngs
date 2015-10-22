@@ -111,8 +111,10 @@ void vm_init(VM *vm) {
 void ctx_init(CTX *ctx) {
 	ctx->ip = 0;
 	ctx->stack_ptr = 0;
+	ctx->frame_ptr = 0;
 #ifdef NGS_DEBUG_FLAGS
 	memset(ctx->stack, 0, sizeof(ctx->stack));
+	memset(ctx->frames, 0, sizeof(ctx->frames));
 #endif
 }
 
