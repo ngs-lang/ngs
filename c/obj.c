@@ -31,6 +31,11 @@ void _dump(VALUE v, int level) {
 		goto exit;
 	}
 
+	if(IS_CLOSURE(v)) {
+		printf("%*s* closure ip=%zu\n", level << 1, "", CLOSURE_OBJ_IP(v));
+		goto exit;
+	}
+
 	if(IS_ARRAY(v)) {
 		printf("%*s* array of length %zu\n", level << 1, "", OBJ_LEN(v));
 		for(i=0, ptr=(VALUE *)OBJ_DATA_PTR(v); i<OBJ_LEN(v); i++, ptr++) {
@@ -61,6 +66,20 @@ VALUE make_var_len_obj(const size_t item_size, const size_t len) {
 	}
 
 	SET_OBJ(v, vlo);
+
+	return v;
+}
+
+VALUE make_closure_obj(size_t ip) {
+
+	VALUE v;
+	CLOSURE_OBJECT *c;
+
+	c = NGS_MALLOC(sizeof(*c));
+	c->base.type.num = OBJ_TYPE_CLOSURE;
+	c->ip = ip;
+
+	SET_OBJ(v, c);
 
 	return v;
 }

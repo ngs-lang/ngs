@@ -18,6 +18,7 @@
 #define DATA_UINT16(buf, x) { *(uint16_t *)&(buf)[*idx] = x; (*idx)+=2; }
 #define DATA_INT16(buf, x) { *(int16_t *)&(buf)[*idx] = x; (*idx)+=2; }
 #define DATA_INT16_AT(buf, loc, x) { *(int16_t *)&(buf)[loc] = x; }
+#define DATA_JUMP_OFFSET(buf, x) { *(JUMP_OFFSET *)&(buf)[*idx] = x; (*idx)+=sizeof(JUMP_OFFSET); }
 
 // Symbol table:
 // symbol -> [offset1, offset2, ..., offsetN]
@@ -31,10 +32,10 @@
 /* static here makes `clang` compiler happy and not "undefined reference to `ensure_room'"*/
 static inline void ensure_room(char **buf, const size_t cur_len, size_t *allocated, size_t room) {
 	size_t new_size;
-	DEBUG_COMPILER("entering ensure_room() buf=%p, cur_len=%zu, allocated=%zu, room=%zu\n", *buf, cur_len, *allocated, room);
+	// DEBUG_COMPILER("entering ensure_room() buf=%p, cur_len=%zu, allocated=%zu, room=%zu\n", *buf, cur_len, *allocated, room);
 	assert(*allocated);
 	if(*allocated-cur_len >= room) {
-		DEBUG_COMPILER("leaving ensure_room() status=enough_room buf=%p, cur_len=%zu, allocated=%zu, room=%zu\n", *buf, cur_len, *allocated, room);
+		// DEBUG_COMPILER("leaving ensure_room() status=enough_room buf=%p, cur_len=%zu, allocated=%zu, room=%zu\n", *buf, cur_len, *allocated, room);
 		return;
 	}
 	for(new_size = *allocated; new_size-cur_len < room; new_size <<= 1) ;
@@ -94,7 +95,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 	ast_node *ptr;
 	int n_args = 0;
 	GLOBAL_VAR_INDEX index;
-	size_t loop_beg, cond_jump;
+	size_t loop_beg, cond_jump, func_jump;
 
 	ensure_room(buf, *idx, allocated, 1024); // XXX - magic number
 
@@ -159,12 +160,12 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			// printf("XX %zu\n",(*idx - cond_jump));
 			assert((*idx - cond_jump + 1) < 0x7FFF);
 			// DATA_INT16_AT(*buf, cond_jump, (*idx - cond_jump));
-			*(int16_t *)&(*buf)[cond_jump] = (*idx - cond_jump + 1);
+			*(JUMP_OFFSET *)&(*buf)[cond_jump] = (*idx - cond_jump + 1);
 			// printf("XX [%zu] %zu %d\n",cond_jump, (*idx - cond_jump), *(int16_t *)&(*buf)[cond_jump]);
 			// assert(0);
 			OPCODE(*buf, OP_JMP);
 			assert((*idx - loop_beg) < 0x7FFF);
-			DATA_INT16(*buf, -(*idx - loop_beg + 2));
+			DATA_JUMP_OFFSET(*buf, -(*idx - loop_beg + sizeof(JUMP_OFFSET)));
 			if(need_result) OPCODE(*buf, OP_PUSH_NULL);
 			break;
 		case EMPTY_NODE:
@@ -178,6 +179,18 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			DATA_INT(*buf, n_args);
 			OPCODE(*buf, OP_MAKE_ARR);
 			POP_IF_DONT_NEED_RESULT(*buf);
+			break;
+		case FUNC_NODE:
+			/* Work in progress */
+			DEBUG_COMPILER("COMPILER: %s %zu\n", "FUNC NODE", *idx);
+			OPCODE(*buf, OP_JMP);
+			func_jump = *idx;
+			DATA_JUMP_OFFSET(*buf, 0);
+			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+			OPCODE(*buf, OP_RET);
+			*(JUMP_OFFSET *)&(*buf)[func_jump] = (*idx - func_jump - sizeof(JUMP_OFFSET));
+			OPCODE(*buf, OP_MAKE_CLOSURE);
+			DATA_JUMP_OFFSET(*buf, -(*idx - func_jump));
 			break;
 		default:
 			assert(0=="compile_main_section(): unknown node type");

@@ -22,6 +22,11 @@ typedef struct var_len_object_struct {
 	size_t item_size;
 } VAR_LEN_OBJECT;
 
+typedef struct closure {
+	OBJECT base;
+	size_t ip;
+} CLOSURE_OBJECT;
+
 // malloc() / NGS_MALLOC() memory is 8 byte aligned
 // .....000 - *OBJECT
 // .....001 - int number
@@ -71,16 +76,17 @@ typedef struct var_len_object_struct {
 // TODO: some saner numbering maybe
 #define OBJ_TYPE_STRING        (1)
 #define OBJ_TYPE_NATIVE_METHOD (2)
-#define OBJ_TYPE_USER_METHOD   (3)
+#define OBJ_TYPE_CLOSURE       (3)
 #define OBJ_TYPE_ARRAY         (4)
 
 #define OBJ_LEN(v)          ((VAR_LEN_OBJECT *) v.ptr)->len
+#define CLOSURE_OBJ_IP(v)   ((CLOSURE_OBJECT *) v.ptr)->ip
 #define OBJ_DATA_PTR(v)     (((OBJECT *)v.ptr)->val.ptr)
 #define OBJ_TYPE(v)         (((OBJECT *)v.ptr)->type.num)
 #define OBJ_TYPE_PTR(v)     (((OBJECT *)v.ptr)->type.ptr)
 #define IS_STRING(v)        (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_STRING)
 #define IS_NATIVE_METHOD(v) (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_NATIVE_METHOD)
-#define IS_USER_METHOD(v)   (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_USER_METHOD)
+#define IS_CLOSURE(v)       (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_CLOSURE)
 #define IS_ARRAY(v)         (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_ARRAY)
 
 void dump(VALUE v);

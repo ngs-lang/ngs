@@ -12,6 +12,8 @@
 #include "vm.h"
 #include "compile.h"
 
+// TODO: get rid of int16_t and int32_t, use types such as JUMP_OFFSET and PATCH_OFFSET instead.
+
 void decompile(const char *buf, const size_t start, const size_t end) {
 	size_t idx, orig_idx;
 	unsigned char opcode;
@@ -26,11 +28,14 @@ void decompile(const char *buf, const size_t start, const size_t end) {
 			case OP_JMP:
 			case OP_JMP_TRUE:
 			case OP_JMP_FALSE:
-			case OP_PATCH:
-				sprintf(info_buf, " %+05d (%04zu)", *(int16_t *)&buf[idx], idx + *(int16_t *)&buf[idx] + 2);
-				idx+=2;
+			case OP_MAKE_CLOSURE:
+				sprintf(info_buf, " %+05d (%04zu)", *(JUMP_OFFSET *)&buf[idx], idx + *(JUMP_OFFSET *)&buf[idx] + sizeof(JUMP_OFFSET));
+				idx+=sizeof(JUMP_OFFSET);
 				break;
-
+			case OP_PATCH:
+				sprintf(info_buf, " %+05d (%04zu)", *(PATCH_OFFSET *)&buf[idx], idx + *(PATCH_OFFSET *)&buf[idx] + sizeof(PATCH_OFFSET));
+				idx+=sizeof(PATCH_OFFSET);
+				break;
 			case OP_FETCH_GLOBAL:
 			case OP_STORE_GLOBAL:
 				sprintf(info_buf, " %d", *(int16_t *)&buf[idx]); idx+=2; break;

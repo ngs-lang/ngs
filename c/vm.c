@@ -128,30 +128,34 @@ void vm_load_bytecode(VM *vm, char *bc, size_t len) {
 }
 
 void _vm_call(CTX *ctx) {
-	VALUE func, n_args, *args;
+	VALUE callable, n_args, *args;
 	int i;
 
-	POP(func);
-	IF_DEBUG(VM_RUN,
-		dump_titled("_vm_call/func", func);
-	);
+	POP(callable);
+	IF_DEBUG(VM_RUN, dump_titled("_vm_call/callable", callable); );
 	POP(n_args);
 	args = NGS_MALLOC(sizeof(VALUE) * GET_INT(n_args));
 	for(i=GET_INT(n_args)-1; i>=0; i--) {
 		 POP(args[i]);
 	}
 
-	IF_DEBUG(VM_RUN,
-		dump_titled("_vm_call/n_args", n_args);
-	);
+	IF_DEBUG(VM_RUN, dump_titled("_vm_call/n_args", n_args); );
 
-	if(IS_NATIVE_METHOD(func)) {
-		((VM_FUNC)OBJ_DATA_PTR(func))(ctx, GET_INT(n_args), args);
+	if(IS_NATIVE_METHOD(callable)) {
+		((VM_FUNC)OBJ_DATA_PTR(callable))(ctx, GET_INT(n_args), args);
+		goto done;
+	}
+
+	if(IS_CLOSURE(callable)) {
+		assert(ctx->frame_ptr < MAX_FRAMES);
+		ctx->frames[ctx->frame_ptr].prev_ip = ctx->ip;
+		ctx->frame_ptr++;
+		ctx->ip = CLOSURE_OBJ_IP(callable);
 		goto done;
 	}
 
 	// TODO: allow handling of calling of undefined methods by the NGS language
-	dump_titled("_vm_call(): Don't know how to call", func);
+	dump_titled("_vm_call(): Don't know how to call", callable);
 	abort();
 
 done: ;
@@ -276,7 +280,15 @@ main_loop:
 							vm->globals[gvi] = v;
 							goto main_loop;
 		case OP_CALL:
+							/* maybe pass pointer to ip for better performance? */
+							ctx->ip = ip;
 							_vm_call(ctx);
+							ip = ctx->ip;
+							goto main_loop;
+		case OP_RET:
+							assert(ctx->frame_ptr);
+							ctx->frame_ptr--;
+							ip = ctx->frames[ctx->frame_ptr].prev_ip;
 							goto main_loop;
 		case OP_JMP:
 do_jump:
@@ -309,6 +321,11 @@ do_jump:
 								memcpy(OBJ_DATA_PTR(v), &(ctx->stack[ctx->stack_ptr-vlo_len]), sizeof(VALUE)*vlo_len);
 							}
 							PUSH(v);
+							goto main_loop;
+		case OP_MAKE_CLOSURE:
+							jo = *(JUMP_OFFSET *) &vm->bytecode[ip];
+							ip += sizeof(jo);
+							PUSH(make_closure_obj(ip+jo));
 							goto main_loop;
 		default:
 							// TODO: exception

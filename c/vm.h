@@ -59,10 +59,12 @@ enum opcodes {
 	OP_FETCH_GLOBAL,
 	OP_STORE_GLOBAL,
 	OP_CALL,
+	OP_RET,
 	OP_JMP,
 	OP_JMP_TRUE,
 	OP_JMP_FALSE,
 	OP_MAKE_ARR,
+	OP_MAKE_CLOSURE,
 };
 
 char *opcodes_names[] = {
@@ -81,10 +83,12 @@ char *opcodes_names[] = {
 	/* 12 */ "FETCH_GLOBAL",
 	/* 13 */ "STORE_GLOBAL",
 	/* 14 */ "CALL",
-	/* 15 */ "JMP",
-	/* 16 */ "JMP_TRUE",
-	/* 17 */ "JMP_FALSE",
-	/* 18 */ "MAKE_ARR",
+	/* 15 */ "RET",
+	/* 16 */ "JMP",
+	/* 17 */ "JMP_TRUE",
+	/* 18 */ "JMP_FALSE",
+	/* 19 */ "MAKE_ARR",
+	/* 20 */ "MAKE_CLOSURE",
 };
 
 typedef enum method_result_enum {
