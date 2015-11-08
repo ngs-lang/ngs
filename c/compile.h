@@ -34,7 +34,7 @@ typedef struct compilation_context {
 	VM vm;
 	SYMBOL_TABLE *globals;
 	SYMBOL_TABLE **locals;
-	N_LOCAL_VARS *n_locals;
+	LOCAL_VAR_INDEX *n_locals;
 	int locals_ptr;
 	int in_function; /* as opposed to global scope */
 } COMPILATION_CONTEXT;

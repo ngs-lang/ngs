@@ -8,8 +8,6 @@
 #define MAX_LOCALS    (1024)
 #define MAX_STACK     (1024)
 #define MAX_FRAMES      (64)
-typedef uint16_t GLOBAL_VAR_INDEX;
-typedef uint16_t LOCAL_VAR_INDEX;
 typedef uint16_t PATCH_OFFSET;
 typedef int16_t JUMP_OFFSET;
 

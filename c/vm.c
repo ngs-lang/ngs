@@ -176,8 +176,8 @@ void vm_run(VM *vm, CTX *ctx) {
 	GLOBAL_VAR_INDEX gvi;
 	PATCH_OFFSET po;
 	JUMP_OFFSET jo;
-	N_LOCAL_VARS n_local_vars;
-	N_LOCAL_VARS lvi;
+	LOCAL_VAR_INDEX n_locals;
+	LOCAL_VAR_INDEX lvi;
 	size_t vlo_len;
 main_loop:
 	opcode = vm->bytecode[ip++];
@@ -288,13 +288,13 @@ main_loop:
 							vm->globals[gvi] = v;
 							goto main_loop;
 		case OP_FETCH_LOCAL:
-							lvi = *(N_LOCAL_VARS *) &vm->bytecode[ip];
+							lvi = *(LOCAL_VAR_INDEX *) &vm->bytecode[ip];
 							printf("FETCH LOCAL %d !!!\n", lvi);
 							ip += sizeof(lvi);
 							PUSH(ctx->frames[ctx->frame_ptr-1].locals[lvi]);
 							goto main_loop;
 		case OP_STORE_LOCAL:
-							lvi = *(N_LOCAL_VARS *) &vm->bytecode[ip];
+							lvi = *(LOCAL_VAR_INDEX *) &vm->bytecode[ip];
 							ip += sizeof(lvi);
 							printf("STORE LOCAL %d %p!!!\n", lvi, ctx->frames[ctx->frame_ptr-1].locals);
 							POP(v);
@@ -346,9 +346,9 @@ do_jump:
 		case OP_MAKE_CLOSURE:
 							jo = *(JUMP_OFFSET *) &vm->bytecode[ip];
 							ip += sizeof(jo);
-							n_local_vars = *(N_LOCAL_VARS *) &vm->bytecode[ip];
-							ip += sizeof(n_local_vars);
-							PUSH(make_closure_obj(ip+jo, n_local_vars));
+							n_locals = *(LOCAL_VAR_INDEX *) &vm->bytecode[ip];
+							ip += sizeof(n_locals);
+							PUSH(make_closure_obj(ip+jo, n_locals));
 							goto main_loop;
 		default:
 							// TODO: exception

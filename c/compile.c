@@ -19,7 +19,7 @@
 #define DATA_INT16(buf, x) { *(int16_t *)&(buf)[*idx] = x; (*idx)+=2; }
 #define DATA_INT16_AT(buf, loc, x) { *(int16_t *)&(buf)[loc] = x; }
 #define DATA_JUMP_OFFSET(buf, x) { *(JUMP_OFFSET *)&(buf)[*idx] = x; (*idx)+=sizeof(JUMP_OFFSET); }
-#define DATA_N_LOCAL_VARS(buf, x) { *(N_LOCAL_VARS *)&(buf)[*idx] = x; (*idx)+=sizeof(N_LOCAL_VARS); }
+#define DATA_N_LOCAL_VARS(buf, x) { *(LOCAL_VAR_INDEX *)&(buf)[*idx] = x; (*idx)+=sizeof(LOCAL_VAR_INDEX); }
 
 // Symbol table:
 // symbol -> [offset1, offset2, ..., offsetN]
@@ -162,7 +162,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 	ast_node *ptr;
 	int n_args = 0;
 	GLOBAL_VAR_INDEX index;
-	N_LOCAL_VARS n_locals;
+	LOCAL_VAR_INDEX n_locals;
 	IDENTIFIER_INFO identifier_info;
 	size_t loop_beg, cond_jump, func_jump;
 
@@ -296,7 +296,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_RET);
 			*(JUMP_OFFSET *)&(*buf)[func_jump] = (*idx - func_jump - sizeof(JUMP_OFFSET));
 			OPCODE(*buf, OP_MAKE_CLOSURE);
-			DATA_JUMP_OFFSET(*buf, -(*idx - func_jump + sizeof(N_LOCAL_VARS)));
+			DATA_JUMP_OFFSET(*buf, -(*idx - func_jump + sizeof(LOCAL_VAR_INDEX)));
 			DATA_N_LOCAL_VARS(*buf, n_locals);
 			break;
 		default:
@@ -383,7 +383,7 @@ char *compile(ast_node *node /* the top level node */, size_t *len) {
 	vm_init(&(ctx.vm));
 	ctx.globals = NULL;
 	ctx.locals = NGS_MALLOC(COMPILE_MAX_FUNC_DEPTH * sizeof(SYMBOL_TABLE *));
-	ctx.n_locals = NGS_MALLOC(COMPILE_MAX_FUNC_DEPTH * sizeof(N_LOCAL_VARS *));
+	ctx.n_locals = NGS_MALLOC(COMPILE_MAX_FUNC_DEPTH * sizeof(LOCAL_VAR_INDEX *));
 	ctx.locals_ptr = 0;
 	// ctx.n_locals = 0;
 	ctx.in_function = 0;

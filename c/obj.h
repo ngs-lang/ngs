@@ -4,7 +4,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
-typedef uint8_t N_LOCAL_VARS;
+typedef uint16_t GLOBAL_VAR_INDEX;
+typedef uint8_t LOCAL_VAR_INDEX;
 
 // On problems with `uintptr_t` change here according to Ruby source in `include/ruby/ruby.h`
 // uintptr_t format for printf - PRIXPTR - printf("Blah %" PRIXPTR "\n", VALUE.num);
@@ -29,7 +30,7 @@ typedef struct closure {
 	size_t ip;
 	VALUE **upvars;
 	int upvars_levels; // needed?
-	N_LOCAL_VARS n_local_vars; // number of local variables including arguments
+	LOCAL_VAR_INDEX n_local_vars; // number of local variables including arguments
 } CLOSURE_OBJECT;
 
 // malloc() / NGS_MALLOC() memory is 8 byte aligned
