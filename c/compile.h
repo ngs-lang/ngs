@@ -3,6 +3,7 @@
 
 #define SYMBOL_OFFSETS_INITIAL_SIZE (16)
 #define COMPILE_INITIAL_BUF_SIZE (16384)
+#define COMPILE_MAX_FUNC_DEPTH (16)
 
 #include <utarray.h>
 
@@ -16,10 +17,26 @@ typedef struct symbol_table {
 	size_t index;
 } SYMBOL_TABLE;
 
+enum identifier_type {
+	NO_IDENTIFIER=0,
+	GLOBAL_IDENTIFIER,
+	LOCAL_IDENTIFIER,
+	UPVAR_IDENTIFIER,
+};
+
+typedef struct identifier_info {
+	enum identifier_type type;
+	unsigned int index; // assuming sizeof(unsigned int) > max(sizeof(GLOBAL_VAR_INDEX), sizeof(LOCAL_VAR_INDEX))
+	unsigned int uplevel;
+} IDENTIFIER_INFO;
+
 typedef struct compilation_context {
 	VM vm;
-	int need_result;
 	SYMBOL_TABLE *globals;
+	SYMBOL_TABLE **locals;
+	N_LOCAL_VARS *n_locals;
+	int locals_ptr;
+	int in_function; /* as opposed to global scope */
 } COMPILATION_CONTEXT;
 
 enum ast_node_type {

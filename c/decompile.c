@@ -28,9 +28,12 @@ void decompile(const char *buf, const size_t start, const size_t end) {
 			case OP_JMP:
 			case OP_JMP_TRUE:
 			case OP_JMP_FALSE:
-			case OP_MAKE_CLOSURE:
 				sprintf(info_buf, " %+05d (%04zu)", *(JUMP_OFFSET *)&buf[idx], idx + *(JUMP_OFFSET *)&buf[idx] + sizeof(JUMP_OFFSET));
 				idx+=sizeof(JUMP_OFFSET);
+				break;
+			case OP_MAKE_CLOSURE:
+				sprintf(info_buf, " %+05d (%04zu), %d", *(JUMP_OFFSET *)&buf[idx], idx + *(JUMP_OFFSET *)&buf[idx] + sizeof(JUMP_OFFSET) + sizeof(N_LOCAL_VARS), *(N_LOCAL_VARS *)&buf[idx+sizeof(JUMP_OFFSET)]);
+				idx+=sizeof(JUMP_OFFSET)+sizeof(N_LOCAL_VARS);
 				break;
 			case OP_PATCH:
 				sprintf(info_buf, " %+05d (%04zu)", *(PATCH_OFFSET *)&buf[idx], idx + *(PATCH_OFFSET *)&buf[idx] + sizeof(PATCH_OFFSET));
@@ -39,6 +42,9 @@ void decompile(const char *buf, const size_t start, const size_t end) {
 			case OP_FETCH_GLOBAL:
 			case OP_STORE_GLOBAL:
 				sprintf(info_buf, " %d", *(int16_t *)&buf[idx]); idx+=2; break;
+			case OP_FETCH_LOCAL:
+			case OP_STORE_LOCAL:
+				sprintf(info_buf, " %d", *(N_LOCAL_VARS *)&buf[idx]); idx+=sizeof(N_LOCAL_VARS); break;
 			case OP_PUSH_INT:
 				sprintf(info_buf, " %d", *(int32_t *)&buf[idx]); idx+=4; break;
 			case OP_PUSH_L_STR:

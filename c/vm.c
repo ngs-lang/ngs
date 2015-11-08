@@ -149,6 +149,12 @@ void _vm_call(CTX *ctx) {
 	if(IS_CLOSURE(callable)) {
 		assert(ctx->frame_ptr < MAX_FRAMES);
 		ctx->frames[ctx->frame_ptr].prev_ip = ctx->ip;
+		if(CLOSURE_OBJ_N_LOCALS(callable)) {
+			ctx->frames[ctx->frame_ptr].locals = NGS_MALLOC(CLOSURE_OBJ_N_LOCALS(callable) * sizeof(VALUE));
+			assert(ctx->frames[ctx->frame_ptr].locals);
+		} else {
+			ctx->frames[ctx->frame_ptr].locals = NULL;
+		}
 		ctx->frame_ptr++;
 		ctx->ip = CLOSURE_OBJ_IP(callable);
 		goto done;
@@ -170,6 +176,8 @@ void vm_run(VM *vm, CTX *ctx) {
 	GLOBAL_VAR_INDEX gvi;
 	PATCH_OFFSET po;
 	JUMP_OFFSET jo;
+	N_LOCAL_VARS n_local_vars;
+	N_LOCAL_VARS lvi;
 	size_t vlo_len;
 main_loop:
 	opcode = vm->bytecode[ip++];
@@ -279,6 +287,19 @@ main_loop:
 #endif
 							vm->globals[gvi] = v;
 							goto main_loop;
+		case OP_FETCH_LOCAL:
+							lvi = *(N_LOCAL_VARS *) &vm->bytecode[ip];
+							printf("FETCH LOCAL %d !!!\n", lvi);
+							ip += sizeof(lvi);
+							PUSH(ctx->frames[ctx->frame_ptr-1].locals[lvi]);
+							goto main_loop;
+		case OP_STORE_LOCAL:
+							lvi = *(N_LOCAL_VARS *) &vm->bytecode[ip];
+							ip += sizeof(lvi);
+							printf("STORE LOCAL %d %p!!!\n", lvi, ctx->frames[ctx->frame_ptr-1].locals);
+							POP(v);
+							ctx->frames[ctx->frame_ptr-1].locals[lvi] = v;
+							goto main_loop;
 		case OP_CALL:
 							/* maybe pass pointer to ip for better performance? */
 							ctx->ip = ip;
@@ -325,7 +346,9 @@ do_jump:
 		case OP_MAKE_CLOSURE:
 							jo = *(JUMP_OFFSET *) &vm->bytecode[ip];
 							ip += sizeof(jo);
-							PUSH(make_closure_obj(ip+jo));
+							n_local_vars = *(N_LOCAL_VARS *) &vm->bytecode[ip];
+							ip += sizeof(n_local_vars);
+							PUSH(make_closure_obj(ip+jo, n_local_vars));
 							goto main_loop;
 		default:
 							// TODO: exception

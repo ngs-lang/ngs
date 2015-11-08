@@ -70,7 +70,7 @@ VALUE make_var_len_obj(const size_t item_size, const size_t len) {
 	return v;
 }
 
-VALUE make_closure_obj(size_t ip) {
+VALUE make_closure_obj(size_t ip, N_LOCAL_VARS n_local_vars) {
 
 	VALUE v;
 	CLOSURE_OBJECT *c;
@@ -78,6 +78,7 @@ VALUE make_closure_obj(size_t ip) {
 	c = NGS_MALLOC(sizeof(*c));
 	c->base.type.num = OBJ_TYPE_CLOSURE;
 	c->ip = ip;
+	c->n_local_vars = n_local_vars;
 
 	SET_OBJ(v, c);
 

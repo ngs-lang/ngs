@@ -19,6 +19,7 @@
 #define DATA_INT16(buf, x) { *(int16_t *)&(buf)[*idx] = x; (*idx)+=2; }
 #define DATA_INT16_AT(buf, loc, x) { *(int16_t *)&(buf)[loc] = x; }
 #define DATA_JUMP_OFFSET(buf, x) { *(JUMP_OFFSET *)&(buf)[*idx] = x; (*idx)+=sizeof(JUMP_OFFSET); }
+#define DATA_N_LOCAL_VARS(buf, x) { *(N_LOCAL_VARS *)&(buf)[*idx] = x; (*idx)+=sizeof(N_LOCAL_VARS); }
 
 // Symbol table:
 // symbol -> [offset1, offset2, ..., offsetN]
@@ -28,6 +29,15 @@
 
 #define DONT_NEED_RESULT (0)
 #define NEED_RESULT (1)
+
+typedef enum identifier_resolution_type {
+	RESOLVE_ANY_IDENTFIER=0,
+	RESOLVE_GLOBAL_IDENTFIER=1,
+} IDENTIFIER_RESOLUTION_TYPE;
+
+#define LOCALS (ctx->locals[ctx->locals_ptr-1])
+#define N_LOCALS (ctx->n_locals[ctx->locals_ptr-1])
+// #define IN_FUNCTION (ctx->locals_ptr)
 
 /* static here makes `clang` compiler happy and not "undefined reference to `ensure_room'"*/
 static inline void ensure_room(char **buf, const size_t cur_len, size_t *allocated, size_t room) {
@@ -91,10 +101,69 @@ GLOBAL_VAR_INDEX get_global_var_index(COMPILATION_CONTEXT *ctx, char *name, size
 	return 0;
 }
 
+IDENTIFIER_INFO resolve_identifier(COMPILATION_CONTEXT *ctx, char *name, IDENTIFIER_RESOLUTION_TYPE res_type) {
+	IDENTIFIER_INFO ret;
+	SYMBOL_TABLE *s;
+
+	if(res_type==RESOLVE_ANY_IDENTFIER && ctx->locals_ptr) {
+		HASH_FIND(hh, LOCALS, name, strlen(name), s);
+		if(s) {
+			ret.type = LOCAL_IDENTIFIER;
+			ret.index = s->index;
+			goto exit;
+		}
+		// TODO: upvars
+	}
+
+	HASH_FIND(hh, ctx->globals, name, strlen(name), s);
+	if(s) {
+		ret.type = GLOBAL_IDENTIFIER;
+		ret.index = s->index;
+		goto exit;
+	}
+
+	// Identifier not found
+	ret.type = NO_IDENTIFIER;
+
+exit:
+	return ret;
+}
+
+void register_local_var(COMPILATION_CONTEXT *ctx, char *name) {
+	SYMBOL_TABLE *s;
+	HASH_FIND(hh, LOCALS, name, strlen(name), s);
+	if(s) {
+		return;
+	}
+	s = NGS_MALLOC(sizeof(*s));
+	s->name = strdup(name);
+	s->index = N_LOCALS++;
+	HASH_ADD_KEYPTR(hh, LOCALS, s->name, strlen(s->name), s);
+}
+
+void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
+	ast_node *ptr;
+	switch(node->type) {
+		case FUNC_NODE: return;
+		case ASSIGNMENT_NODE:
+			ptr = node->first_child;
+			switch(ptr->type) {
+				case IDENTIFIER_NODE:
+					register_local_var(ctx, ptr->name);
+					printf("register_local_vars - detected %s\n", ptr->name);
+			}
+	}
+	for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
+		register_local_vars(ctx, ptr);
+	}
+}
+
 void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
 	ast_node *ptr;
 	int n_args = 0;
 	GLOBAL_VAR_INDEX index;
+	N_LOCAL_VARS n_locals;
+	IDENTIFIER_INFO identifier_info;
 	size_t loop_beg, cond_jump, func_jump;
 
 	ensure_room(buf, *idx, allocated, 1024); // XXX - magic number
@@ -117,10 +186,24 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			}
 			break;
 		case IDENTIFIER_NODE:
-			// TODO: handle local vs global
-			OPCODE(*buf, OP_FETCH_GLOBAL);
-			index = get_global_var_index(ctx, node->name, idx);
-			DATA_UINT16(*buf, index);
+			identifier_info = resolve_identifier(ctx, node->name, RESOLVE_ANY_IDENTFIER);
+			switch(identifier_info.type) {
+				case LOCAL_IDENTIFIER:
+					OPCODE(*buf, OP_FETCH_LOCAL);
+					// index = get_global_var_index(ctx, ptr->name, idx);
+					// DATA_UINT16(*buf, index);
+					DATA_N_LOCAL_VARS(*buf, identifier_info.index);
+					break;
+				case UPVAR_IDENTIFIER:
+					assert(0=="Upvars are not implemented yet");
+					break;
+				case NO_IDENTIFIER:
+				case GLOBAL_IDENTIFIER:
+					OPCODE(*buf, OP_FETCH_GLOBAL);
+					index = get_global_var_index(ctx, node->name, idx);
+					DATA_UINT16(*buf, index);
+					break;
+			}
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 		case ASSIGNMENT_NODE:
@@ -131,9 +214,25 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				case IDENTIFIER_NODE:
 					// TODO: handle local vs global
 					DEBUG_COMPILER("COMPILER: %s %zu\n", "identifier <- expression", *idx);
-					OPCODE(*buf, OP_STORE_GLOBAL);
-					index = get_global_var_index(ctx, ptr->name, idx);
-					DATA_UINT16(*buf, index);
+					identifier_info = resolve_identifier(ctx, ptr->name, RESOLVE_ANY_IDENTFIER);
+					switch(identifier_info.type) {
+						case LOCAL_IDENTIFIER:
+							OPCODE(*buf, OP_STORE_LOCAL);
+							// index = get_global_var_index(ctx, ptr->name, idx);
+							// DATA_UINT16(*buf, index);
+							DATA_N_LOCAL_VARS(*buf, identifier_info.index);
+							break;
+						case UPVAR_IDENTIFIER:
+							assert(0=="Upvars are not implemented yet");
+							break;
+						case NO_IDENTIFIER:
+						case GLOBAL_IDENTIFIER:
+							// printf("identifier_info.type %d\n", identifier_info.type);
+							OPCODE(*buf, OP_STORE_GLOBAL);
+							index = get_global_var_index(ctx, ptr->name, idx);
+							DATA_UINT16(*buf, index);
+							break;
+					}
 					break;
 				default:
 					assert(0=="compile_main_section(): assignment to unknown node type");
@@ -186,11 +285,19 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_JMP);
 			func_jump = *idx;
 			DATA_JUMP_OFFSET(*buf, 0);
+			ctx->locals_ptr++;
+			assert(ctx->locals_ptr < COMPILE_MAX_FUNC_DEPTH);
+			LOCALS = NULL;
+			N_LOCALS = 0;
+			register_local_vars(ctx, node->first_child->next_sibling);
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+			n_locals = N_LOCALS;
+			ctx->locals_ptr--;
 			OPCODE(*buf, OP_RET);
 			*(JUMP_OFFSET *)&(*buf)[func_jump] = (*idx - func_jump - sizeof(JUMP_OFFSET));
 			OPCODE(*buf, OP_MAKE_CLOSURE);
-			DATA_JUMP_OFFSET(*buf, -(*idx - func_jump));
+			DATA_JUMP_OFFSET(*buf, -(*idx - func_jump + sizeof(N_LOCAL_VARS)));
+			DATA_N_LOCAL_VARS(*buf, n_locals);
 			break;
 		default:
 			assert(0=="compile_main_section(): unknown node type");
@@ -275,6 +382,11 @@ char *compile(ast_node *node /* the top level node */, size_t *len) {
 
 	vm_init(&(ctx.vm));
 	ctx.globals = NULL;
+	ctx.locals = NGS_MALLOC(COMPILE_MAX_FUNC_DEPTH * sizeof(SYMBOL_TABLE *));
+	ctx.n_locals = NGS_MALLOC(COMPILE_MAX_FUNC_DEPTH * sizeof(N_LOCAL_VARS *));
+	ctx.locals_ptr = 0;
+	// ctx.n_locals = 0;
+	ctx.in_function = 0;
 
 	*len = 0;
 	compile_main_section(&ctx, node, &main_buf, &main_len, &main_allocated, NEED_RESULT);

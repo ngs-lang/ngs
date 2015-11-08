@@ -25,13 +25,19 @@ typedef struct var_index {
 typedef struct frame {
 	IP prev_ip;
 	size_t prev_stack_ptr;
+	// TODO: smarter allocation of locals when can't be captured by clousre,
+	//       probably on stack.
+	VALUE *locals;
+	// int n_local_vars; // needed
 } FRAME;
 
 // Plan: have exactly one context per thread.
 typedef struct context {
 	IP ip;
+
 	VALUE stack[MAX_STACK];
 	size_t stack_ptr;
+
 	FRAME frames[MAX_FRAMES];
 	size_t frame_ptr;
 } CTX;
@@ -58,6 +64,8 @@ enum opcodes {
 	OP_INIT_DONE,
 	OP_FETCH_GLOBAL,
 	OP_STORE_GLOBAL,
+	OP_FETCH_LOCAL,
+	OP_STORE_LOCAL,
 	OP_CALL,
 	OP_RET,
 	OP_JMP,
@@ -82,13 +90,15 @@ char *opcodes_names[] = {
 	/* 11 */ "INIT_DONE",
 	/* 12 */ "FETCH_GLOBAL",
 	/* 13 */ "STORE_GLOBAL",
-	/* 14 */ "CALL",
-	/* 15 */ "RET",
-	/* 16 */ "JMP",
-	/* 17 */ "JMP_TRUE",
-	/* 18 */ "JMP_FALSE",
-	/* 19 */ "MAKE_ARR",
-	/* 20 */ "MAKE_CLOSURE",
+	/* 14 */ "FETCH_LOCAL",
+	/* 15 */ "STORE_LOCAL",
+	/* 16 */ "CALL",
+	/* 17 */ "RET",
+	/* 18 */ "JMP",
+	/* 19 */ "JMP_TRUE",
+	/* 20 */ "JMP_FALSE",
+	/* 21 */ "MAKE_ARR",
+	/* 22 */ "MAKE_CLOSURE",
 };
 
 typedef enum method_result_enum {

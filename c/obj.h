@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+typedef uint8_t N_LOCAL_VARS;
+
 // On problems with `uintptr_t` change here according to Ruby source in `include/ruby/ruby.h`
 // uintptr_t format for printf - PRIXPTR - printf("Blah %" PRIXPTR "\n", VALUE.num);
 typedef union value_union {
@@ -25,6 +27,9 @@ typedef struct var_len_object_struct {
 typedef struct closure {
 	OBJECT base;
 	size_t ip;
+	VALUE **upvars;
+	int upvars_levels; // needed?
+	N_LOCAL_VARS n_local_vars; // number of local variables including arguments
 } CLOSURE_OBJECT;
 
 // malloc() / NGS_MALLOC() memory is 8 byte aligned
@@ -79,15 +84,16 @@ typedef struct closure {
 #define OBJ_TYPE_CLOSURE       (3)
 #define OBJ_TYPE_ARRAY         (4)
 
-#define OBJ_LEN(v)          ((VAR_LEN_OBJECT *) v.ptr)->len
-#define CLOSURE_OBJ_IP(v)   ((CLOSURE_OBJECT *) v.ptr)->ip
-#define OBJ_DATA_PTR(v)     (((OBJECT *)v.ptr)->val.ptr)
-#define OBJ_TYPE(v)         (((OBJECT *)v.ptr)->type.num)
-#define OBJ_TYPE_PTR(v)     (((OBJECT *)v.ptr)->type.ptr)
-#define IS_STRING(v)        (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_STRING)
-#define IS_NATIVE_METHOD(v) (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_NATIVE_METHOD)
-#define IS_CLOSURE(v)       (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_CLOSURE)
-#define IS_ARRAY(v)         (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_ARRAY)
+#define OBJ_LEN(v)                ((VAR_LEN_OBJECT *) v.ptr)->len
+#define CLOSURE_OBJ_IP(v)         ((CLOSURE_OBJECT *) v.ptr)->ip
+#define CLOSURE_OBJ_N_LOCALS(v)   ((CLOSURE_OBJECT *) v.ptr)->n_local_vars
+#define OBJ_DATA_PTR(v)           (((OBJECT *)v.ptr)->val.ptr)
+#define OBJ_TYPE(v)               (((OBJECT *)v.ptr)->type.num)
+#define OBJ_TYPE_PTR(v)           (((OBJECT *)v.ptr)->type.ptr)
+#define IS_STRING(v)              (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_STRING)
+#define IS_NATIVE_METHOD(v)       (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_NATIVE_METHOD)
+#define IS_CLOSURE(v)             (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_CLOSURE)
+#define IS_ARRAY(v)               (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_ARRAY)
 
 void dump(VALUE v);
 void dump_titled(char *title, VALUE v);
