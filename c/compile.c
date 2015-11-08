@@ -402,3 +402,4 @@ char *compile(ast_node *node /* the top level node */, size_t *len) {
 
 	return result_buf;
 }
+#undef LOCALS

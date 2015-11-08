@@ -13,6 +13,7 @@
 #define POP(dst) assert(ctx->stack_ptr); ctx->stack_ptr--; dst = ctx->stack[ctx->stack_ptr]
 #define PUSH_NULL PUSH((VALUE){.num=V_NULL})
 #define RETURN_NULL {PUSH_NULL; return METHOD_OK;}
+#define LOCALS (ctx->frames[ctx->frame_ptr-1].locals)
 
 #define METHOD_MUST_HAVE_N_ARGS(n) if(n != n_args) { return METHOD_ARGS_MISMATCH; }
 #define METHOD_MUST_HAVE_AT_LEAST_ARGS(n) if(n_args < n) { return METHOD_ARGS_MISMATCH; }
@@ -289,16 +290,16 @@ main_loop:
 							goto main_loop;
 		case OP_FETCH_LOCAL:
 							lvi = *(LOCAL_VAR_INDEX *) &vm->bytecode[ip];
-							printf("FETCH LOCAL %d !!!\n", lvi);
+							// printf("FETCH LOCAL %d !!!\n", lvi);
 							ip += sizeof(lvi);
-							PUSH(ctx->frames[ctx->frame_ptr-1].locals[lvi]);
+							PUSH(LOCALS[lvi]);
 							goto main_loop;
 		case OP_STORE_LOCAL:
 							lvi = *(LOCAL_VAR_INDEX *) &vm->bytecode[ip];
 							ip += sizeof(lvi);
-							printf("STORE LOCAL %d %p!!!\n", lvi, ctx->frames[ctx->frame_ptr-1].locals);
+							// printf("STORE LOCAL %d %p!!!\n", lvi, LOCALS);
 							POP(v);
-							ctx->frames[ctx->frame_ptr-1].locals[lvi] = v;
+							LOCALS[lvi] = v;
 							goto main_loop;
 		case OP_CALL:
 							/* maybe pass pointer to ip for better performance? */
@@ -357,3 +358,4 @@ do_jump:
 end_main_loop:
 	return;
 }
+#undef LOCALS
