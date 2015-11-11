@@ -135,6 +135,7 @@ void register_local_var(COMPILATION_CONTEXT *ctx, char *name) {
 	if(s) {
 		return;
 	}
+	assert(N_LOCALS < MAX_LOCALS);
 	s = NGS_MALLOC(sizeof(*s));
 	s->name = strdup(name);
 	s->index = N_LOCALS++;
@@ -143,6 +144,7 @@ void register_local_var(COMPILATION_CONTEXT *ctx, char *name) {
 
 void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 	ast_node *ptr;
+	printf("register_local_vars %p\n", node);
 	switch(node->type) {
 		case FUNC_NODE: return;
 		case ASSIGNMENT_NODE:
@@ -152,6 +154,11 @@ void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 					register_local_var(ctx, ptr->name);
 					printf("register_local_vars - detected %s\n", ptr->name);
 			}
+		// case ARGS_NODE:
+		// 	// Only identifiers
+		// 	for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
+		// 		register_local_vars(ctx, ptr);
+		// 	}
 	}
 	for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
 		register_local_vars(ctx, ptr);
@@ -289,6 +296,12 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			assert(ctx->locals_ptr < COMPILE_MAX_FUNC_DEPTH);
 			LOCALS = NULL;
 			N_LOCALS = 0;
+			// Arguments
+			for(ptr=node->first_child->first_child; ptr; ptr=ptr->next_sibling) {
+				printf("ARG PTR %p\n", ptr);
+				register_local_var(ctx, ptr->name);
+			}
+			// Body
 			register_local_vars(ctx, node->first_child->next_sibling);
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 			n_locals = N_LOCALS;

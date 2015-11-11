@@ -6,6 +6,8 @@
 
 typedef uint16_t GLOBAL_VAR_INDEX;
 typedef uint8_t LOCAL_VAR_INDEX;
+#define MAX_GLOBALS (65535)
+#define MAX_LOCALS    (255)
 
 // On problems with `uintptr_t` change here according to Ruby source in `include/ruby/ruby.h`
 // uintptr_t format for printf - PRIXPTR - printf("Blah %" PRIXPTR "\n", VALUE.num);

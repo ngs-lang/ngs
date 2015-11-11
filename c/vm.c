@@ -129,31 +129,46 @@ void vm_load_bytecode(VM *vm, char *bc, size_t len) {
 }
 
 void _vm_call(CTX *ctx) {
-	VALUE callable, n_args, *args;
+	VALUE v, callable, *args, *local_var_ptr;
+	LOCAL_VAR_INDEX lvi, n_args;
 	int i;
 
 	POP(callable);
 	IF_DEBUG(VM_RUN, dump_titled("_vm_call/callable", callable); );
-	POP(n_args);
-	args = NGS_MALLOC(sizeof(VALUE) * GET_INT(n_args));
-	for(i=GET_INT(n_args)-1; i>=0; i--) {
-		 POP(args[i]);
-	}
+	POP(v);
+	n_args = GET_INT(v);
 
-	IF_DEBUG(VM_RUN, dump_titled("_vm_call/n_args", n_args); );
+	IF_DEBUG(VM_RUN, dump_titled("_vm_call/n_args", v); );
 
 	if(IS_NATIVE_METHOD(callable)) {
-		((VM_FUNC)OBJ_DATA_PTR(callable))(ctx, GET_INT(n_args), args);
+		// TODO: check whether everything works find with n_args == 0
+		args = NGS_MALLOC(sizeof(VALUE) * n_args);
+		memcpy(args, &ctx->stack[ctx->stack_ptr-n_args], sizeof(VALUE) * n_args);
+		for(i=n_args-1; i>=0; i--) {
+			 POP(args[i]);
+		}
+		((VM_FUNC)OBJ_DATA_PTR(callable))(ctx, n_args, args);
 		goto done;
 	}
 
 	if(IS_CLOSURE(callable)) {
 		assert(ctx->frame_ptr < MAX_FRAMES);
 		ctx->frames[ctx->frame_ptr].prev_ip = ctx->ip;
-		if(CLOSURE_OBJ_N_LOCALS(callable)) {
-			ctx->frames[ctx->frame_ptr].locals = NGS_MALLOC(CLOSURE_OBJ_N_LOCALS(callable) * sizeof(VALUE));
+		lvi = CLOSURE_OBJ_N_LOCALS(callable);
+		if(lvi) {
+			ctx->frames[ctx->frame_ptr].locals = NGS_MALLOC(lvi * sizeof(VALUE));
 			assert(ctx->frames[ctx->frame_ptr].locals);
+			// TODO: make it number of arguments, not local variables
+			// TODO: throw ngs exception on arguments mismatch
+			assert(n_args <= lvi);
+			memcpy(ctx->frames[ctx->frame_ptr].locals, &ctx->stack[ctx->stack_ptr-n_args], sizeof(VALUE) * n_args);
+			lvi -= n_args;
+			for(local_var_ptr=&ctx->frames[ctx->frame_ptr].locals[n_args];lvi;lvi--,local_var_ptr++) {
+				SET_UNDEF(*local_var_ptr);
+			}
 		} else {
+			// TODO: throw ngs exception on arguments mismatch
+			assert(n_args == 0);
 			ctx->frames[ctx->frame_ptr].locals = NULL;
 		}
 		ctx->frame_ptr++;
@@ -292,6 +307,7 @@ main_loop:
 							lvi = *(LOCAL_VAR_INDEX *) &vm->bytecode[ip];
 							// printf("FETCH LOCAL %d !!!\n", lvi);
 							ip += sizeof(lvi);
+							assert(IS_NOT_UNDEF(LOCALS[lvi]));
 							PUSH(LOCALS[lvi]);
 							goto main_loop;
 		case OP_STORE_LOCAL:

@@ -44,6 +44,7 @@ int yyerror();
 %token <name> IDENTIFIER
 %token <number> NUMBER
 
+%type <ast_node> argument
 %type <ast_node> array_items
 %type <ast_node> array_literal
 %type <ast_node> assignment
@@ -57,6 +58,7 @@ int yyerror();
 %type <ast_node> binop
 %type <ast_node> identifier
 %type <ast_node> number
+%type <ast_node> optional_arguments
 %type <ast_node> top_level
 %type <ast_node> top_level2
 %type <ast_node> top_level_item
@@ -235,9 +237,9 @@ f:
  		'F' '(' optional_arguments ')' curly_expressions[body] {
 			/* Work in progress */
 			MAKE_NODE(ret, FUNC_NODE);
-			MAKE_NODE(args, EXPRESSIONS_NODE); /* wrong type */
-			ret->first_child = args;
-			args->next_sibling = $body;
+			// MAKE_NODE(args, EXPRESSIONS_NODE); /* wrong type */
+			ret->first_child = $optional_arguments;
+			ret->first_child->next_sibling = $body;
 			$$ = ret;
 		}
 def:
@@ -247,11 +249,34 @@ def:
 			MAKE_NODE(args, EXPRESSIONS_NODE); /* wrong type */
 			ret->first_child = args;
 			args->next_sibling = $body;
-
-
+			$$ = ret;
 		}
 
-optional_arguments: /* nothing */;
+optional_arguments:
+	optional_arguments[arguments] ',' argument {
+		printf("ARGS MULTI\n");
+		$arguments->last_child->next_sibling = $argument;
+		$arguments->last_child = $argument;
+		$$ = $arguments;
+	}
+	| argument {
+		printf("ARGS ONE\n");
+		MAKE_NODE(ret, ARGS_NODE);
+		ret->first_child = $argument;
+		ret->last_child = $argument;
+		$$ = ret;
+	}
+	|
+	/* nothing */ {
+		MAKE_NODE(ret, ARGS_NODE);
+		printf("ARGS NONE\n");
+		ret->first_child = NULL;
+		ret->last_child = NULL;
+		$$ = ret;
+	};
+
+argument:
+	identifier;
 
 number: NUMBER { MAKE_NODE(ret, NUMBER_NODE); ret->number = $NUMBER; $$ = ret; }
 

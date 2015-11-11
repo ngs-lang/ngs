@@ -4,8 +4,6 @@
 #include <utarray.h>
 #include "obj.h"
 
-#define MAX_GLOBALS   (1024)
-#define MAX_LOCALS    (1024)
 #define MAX_STACK     (1024)
 #define MAX_FRAMES      (64)
 typedef uint16_t PATCH_OFFSET;
@@ -104,7 +102,7 @@ typedef enum method_result_enum {
 	METHOD_ARGS_MISMATCH
 } METHOD_RESULT;
 
-typedef METHOD_RESULT (*VM_FUNC)(CTX *ctx, int n_args, VALUE *args);
+typedef METHOD_RESULT (*VM_FUNC)(CTX *ctx, LOCAL_VAR_INDEX n_args, VALUE *args);
 void vm_init(VM *vm);
 size_t check_global_index(VM *vm, char *name, size_t name_len, int *found);
 size_t get_global_index(VM *vm, char *name, size_t name_len);
