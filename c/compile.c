@@ -178,6 +178,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 	switch(node->type) {
 		case CALL_NODE:
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "CALL NODE", *idx);
+			OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
 			for(ptr=node->first_child->next_sibling, n_args=0; ptr; ptr=ptr->next_sibling, n_args++) {
 				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
 			}

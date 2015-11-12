@@ -51,7 +51,7 @@ int main()
 	vm_init(&vm);
 	vm_load_bytecode(&vm, buf, len);
 	ctx_init(&ctx);
-	vm_run(&vm, &ctx);
+	vm_run(&vm, &ctx, 0);
 
 	return ret;
 }

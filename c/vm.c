@@ -12,14 +12,12 @@
 #define PUSH(v) assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr++] = v
 #define POP(dst) assert(ctx->stack_ptr); ctx->stack_ptr--; dst = ctx->stack[ctx->stack_ptr]
 #define PUSH_NULL PUSH((VALUE){.num=V_NULL})
-#define RETURN_NULL {PUSH_NULL; return METHOD_OK;}
 #define LOCALS (ctx->frames[ctx->frame_ptr-1].locals)
 
 #define METHOD_MUST_HAVE_N_ARGS(n) if(n != n_args) { return METHOD_ARGS_MISMATCH; }
 #define METHOD_MUST_HAVE_AT_LEAST_ARGS(n) if(n_args < n) { return METHOD_ARGS_MISMATCH; }
 #define METHOD_MUST_HAVE_AT_MOST_ARGS(n) if(n_args > n) { return METHOD_ARGS_MISMATCH; }
 #define METHOD_ARG_N_MUST_BE(n, what) if(!IS_ ## what(args[n])) { return METHOD_ARGS_MISMATCH; }
-#define MAXIMIZE_INTO(dst, src) if((src)>(dst)) { dst = src; }
 
 #define METHOD_BINOP_SETUP(type) \
 	METHOD_MUST_HAVE_N_ARGS(2); \
@@ -27,16 +25,16 @@
 	METHOD_ARG_N_MUST_BE(1, type);
 
 #define INT_METHOD(name, op) \
-METHOD_RESULT native_ ## name(CTX *ctx, int n_args, VALUE *args) { \
+METHOD_RESULT native_ ## name(NGS_UNUSED CTX *ctx, int n_args, VALUE *args, VALUE *result) { \
 	METHOD_BINOP_SETUP(INT); \
-	PUSH(MAKE_INT(GET_INT(args[0]) op GET_INT(args[1]))); \
+	SET_INT(*result, GET_INT(args[0]) op GET_INT(args[1])); \
 	return METHOD_OK; \
 }
 
 #define INT_CMP_METHOD(name, op) \
-METHOD_RESULT native_ ## name(CTX *ctx, int n_args, VALUE *args) { \
+METHOD_RESULT native_ ## name(NGS_UNUSED CTX *ctx, int n_args, VALUE *args, VALUE *result) { \
 	METHOD_BINOP_SETUP(INT); \
-	PUSH(MAKE_BOOL(GET_INT(args[0]) op GET_INT(args[1]))); \
+	SET_BOOL(*result, GET_INT(args[0]) op GET_INT(args[1])); \
 	return METHOD_OK; \
 }
 
@@ -44,10 +42,10 @@ INT_METHOD(plus, +);
 INT_METHOD(minus, -);
 INT_CMP_METHOD(less, <);
 
-METHOD_RESULT native_dump(CTX *ctx, int n_args, VALUE *args) {
+METHOD_RESULT native_dump(NGS_UNUSED CTX *ctx, int n_args, VALUE *args, NGS_UNUSED VALUE *result) {
 	if(n_args == 1) {
 		dump(args[0]);
-		RETURN_NULL;
+		return METHOD_OK; // null
 	}
 	return METHOD_ARGS_MISMATCH;
 }
@@ -110,7 +108,6 @@ void vm_init(VM *vm) {
 }
 
 void ctx_init(CTX *ctx) {
-	ctx->ip = 0;
 	ctx->stack_ptr = 0;
 	ctx->frame_ptr = 0;
 #ifdef NGS_DEBUG_FLAGS
@@ -128,32 +125,42 @@ void vm_load_bytecode(VM *vm, char *bc, size_t len) {
 	vm->bytecode = bc;
 }
 
-void _vm_call(CTX *ctx) {
-	VALUE v, callable, *args, *local_var_ptr;
-	LOCAL_VAR_INDEX lvi, n_args;
+METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX n_args, const VALUE *args) {
+	VALUE *local_var_ptr;
+	LOCAL_VAR_INDEX lvi;
 	int i;
+	METHOD_RESULT mr;
 
-	POP(callable);
 	IF_DEBUG(VM_RUN, dump_titled("_vm_call/callable", callable); );
-	POP(v);
-	n_args = GET_INT(v);
+	DEBUG_VM_RUN("_vm_call/n_args = %d\n", n_args);
 
-	IF_DEBUG(VM_RUN, dump_titled("_vm_call/n_args", v); );
+	if(IS_ARRAY(callable)) {
+		// args here is used for callable array items
+		for(i=OBJ_LEN(callable), args = OBJ_DATA_PTR(callable); i>=0; i--) {
+			IF_DEBUG(VM_RUN, dump_titled("_vm_call/will_call", args[i]); );
+			mr = _vm_call(vm, ctx, args[i], n_args, args);
+			if(mr == METHOD_OK) {
+				return METHOD_OK;
+			}
+			// Don't know how to handle other condittions yet
+			assert(mr == METHOD_ARGS_MISMATCH);
+		}
+		return METHOD_IMPL_MISSING;
+	}
 
 	if(IS_NATIVE_METHOD(callable)) {
 		// TODO: check whether everything works find with n_args == 0
-		args = NGS_MALLOC(sizeof(VALUE) * n_args);
-		memcpy(args, &ctx->stack[ctx->stack_ptr-n_args], sizeof(VALUE) * n_args);
-		for(i=n_args-1; i>=0; i--) {
-			 POP(args[i]);
+		mr = ((VM_FUNC)OBJ_DATA_PTR(callable))(ctx, n_args, args, &ctx->stack[ctx->stack_ptr-n_args-1]);
+		if(mr != METHOD_ARGS_MISMATCH) {
+			// Zeroing out for GC:
+			// memset(&ctx->stack[ctx->stack_ptr-n_args], 0, sizeof(VALUE) * n_args);
+			ctx->stack_ptr -= n_args;
 		}
-		((VM_FUNC)OBJ_DATA_PTR(callable))(ctx, n_args, args);
-		goto done;
+		return mr;
 	}
 
 	if(IS_CLOSURE(callable)) {
 		assert(ctx->frame_ptr < MAX_FRAMES);
-		ctx->frames[ctx->frame_ptr].prev_ip = ctx->ip;
 		lvi = CLOSURE_OBJ_N_LOCALS(callable);
 		if(lvi) {
 			ctx->frames[ctx->frame_ptr].locals = NGS_MALLOC(lvi * sizeof(VALUE));
@@ -172,21 +179,21 @@ void _vm_call(CTX *ctx) {
 			ctx->frames[ctx->frame_ptr].locals = NULL;
 		}
 		ctx->frame_ptr++;
-		ctx->ip = CLOSURE_OBJ_IP(callable);
-		goto done;
+		mr = vm_run(vm, ctx, CLOSURE_OBJ_IP(callable));
+		return mr;
 	}
 
 	// TODO: allow handling of calling of undefined methods by the NGS language
 	dump_titled("_vm_call(): Don't know how to call", callable);
 	abort();
+	// TODO: return the exception
+	return METHOD_EXCEPTION_OCCURED;
 
-done: ;
 }
 
-void vm_run(VM *vm, CTX *ctx) {
-	VALUE v;
+METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip) {
+	VALUE v, callable;
 	VAR_LEN_OBJECT *vlo;
-	IP ip = ctx->ip;
 	int i;
 	unsigned char opcode;
 	GLOBAL_VAR_INDEX gvi;
@@ -195,6 +202,7 @@ void vm_run(VM *vm, CTX *ctx) {
 	LOCAL_VAR_INDEX n_locals;
 	LOCAL_VAR_INDEX lvi;
 	size_t vlo_len;
+	METHOD_RESULT mr;
 main_loop:
 	opcode = vm->bytecode[ip++];
 #ifdef DO_NGS_DEBUG
@@ -318,16 +326,16 @@ main_loop:
 							LOCALS[lvi] = v;
 							goto main_loop;
 		case OP_CALL:
-							/* maybe pass pointer to ip for better performance? */
-							ctx->ip = ip;
-							_vm_call(ctx);
-							ip = ctx->ip;
+							// In: ... result_placeholder (null), arg1, ..., argN, num_of_args, callable
+							// Out: ... result
+							POP(callable);
+							POP(v); // number of arguments
+							mr = _vm_call(vm, ctx, callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
+							assert(mr == METHOD_OK);
 							goto main_loop;
 		case OP_RET:
-							assert(ctx->frame_ptr);
-							ctx->frame_ptr--;
-							ip = ctx->frames[ctx->frame_ptr].prev_ip;
-							goto main_loop;
+							// TODO: check stack length
+							return METHOD_OK;
 		case OP_JMP:
 do_jump:
 							jo = *(JUMP_OFFSET *) &vm->bytecode[ip];
@@ -372,6 +380,6 @@ do_jump:
 							printf("ERROR: Unknown opcode %d\n", opcode);
 	}
 end_main_loop:
-	return;
+	return METHOD_OK;
 }
 #undef LOCALS

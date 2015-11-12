@@ -39,7 +39,8 @@ ngs-debug: $(NGS_TARGET_DEPS)
 # Micro bechmark but it's still something
 time-sum: ngs
 
-	# About 3.5 seconds on my laptop
+	# About 3.6 seconds on my laptop with gcc
+	# About 3.2 seconds on my laptop with clang
 	time ./ngs < <(echo '{s=0;for(i=0;i<10000000;i=i+1) {s=s+i}}')
 
 	# About 1.1 seconds / perl 5.20.2

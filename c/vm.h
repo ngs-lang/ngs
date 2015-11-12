@@ -4,6 +4,8 @@
 #include <utarray.h>
 #include "obj.h"
 
+#define NGS_UNUSED __attribute__((unused))
+
 #define MAX_STACK     (1024)
 #define MAX_FRAMES      (64)
 typedef uint16_t PATCH_OFFSET;
@@ -29,8 +31,6 @@ typedef struct frame {
 
 // Plan: have exactly one context per thread.
 typedef struct context {
-	IP ip;
-
 	VALUE stack[MAX_STACK];
 	size_t stack_ptr;
 
@@ -99,14 +99,17 @@ char *opcodes_names[] = {
 
 typedef enum method_result_enum {
 	METHOD_OK,
-	METHOD_ARGS_MISMATCH
+	METHOD_ARGS_MISMATCH,
+	METHOD_IMPL_MISSING,
+	METHOD_EXCEPTION_OCCURED,
 } METHOD_RESULT;
 
-typedef METHOD_RESULT (*VM_FUNC)(CTX *ctx, LOCAL_VAR_INDEX n_args, VALUE *args);
+typedef METHOD_RESULT (*VM_FUNC)(CTX *ctx, LOCAL_VAR_INDEX n_args, const VALUE *args, VALUE *result);
 void vm_init(VM *vm);
 size_t check_global_index(VM *vm, char *name, size_t name_len, int *found);
 size_t get_global_index(VM *vm, char *name, size_t name_len);
 
 static const UT_icd ut_value_icd _UNUSED_ = {sizeof(VALUE),NULL,NULL,NULL};
 // typedef int VM_INT;
+METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip);
 #endif

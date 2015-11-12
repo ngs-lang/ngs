@@ -69,17 +69,18 @@ typedef struct closure {
 #define IS_UNDEF(v)     (v.num == V_UNDEF)
 #define IS_NOT_UNDEF(v) (v.num != V_UNDEF)
 #define IS_BOOL(v)      ((v.num & 6) == 2)
+#define IS_INT(v)       ((v.num & META_AND) == META_INT)
 
-#define IS_INT(v)    ((v.num & META_AND) == META_INT)
-#define SET_INT(v,n) v.num = ((n) << META_BITS) | META_INT
-#define MAKE_INT(n)  ((VALUE){.num=((n) << META_BITS) | META_INT})
-#define MAKE_BOOL(n) ((VALUE){.num=(n ? V_TRUE : V_FALSE)})
-#define GET_INT(v)   ((v).num >> META_BITS)
-#define SET_OBJ(v,o) (v).ptr = o
-#define SET_NULL(v)  (v).num = V_NULL
-#define SET_FALSE(v) (v).num = V_FALSE
-#define SET_TRUE(v)  (v).num = V_TRUE
-#define SET_UNDEF(v) (v).num = V_UNDEF
+#define SET_INT(v,n)    (v).num = ((n) << META_BITS) | META_INT
+#define MAKE_INT(n)     ((VALUE){.num=((n) << META_BITS) | META_INT})
+#define MAKE_BOOL(n)    ((VALUE){.num=(n ? V_TRUE : V_FALSE)})
+#define GET_INT(v)      ((v).num >> META_BITS)
+#define SET_OBJ(v,o)    (v).ptr = o
+#define SET_NULL(v)     (v).num = V_NULL
+#define SET_FALSE(v)    (v).num = V_FALSE
+#define SET_TRUE(v)     (v).num = V_TRUE
+#define SET_BOOL(v, b)  (v).num = b ? V_TRUE : V_FALSE
+#define SET_UNDEF(v)    (v).num = V_UNDEF
 
 // TODO: some saner numbering maybe
 #define OBJ_TYPE_STRING        (1)
