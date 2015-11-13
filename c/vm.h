@@ -111,5 +111,5 @@ size_t get_global_index(VM *vm, char *name, size_t name_len);
 
 static const UT_icd ut_value_icd _UNUSED_ = {sizeof(VALUE),NULL,NULL,NULL};
 // typedef int VM_INT;
-METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip);
+METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result);
 #endif

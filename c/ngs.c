@@ -24,6 +24,7 @@ int main()
 	ast_node *tree = NULL;
 	VM vm;
 	CTX ctx;
+	VALUE result;
 
 	NGS_GC_INIT();
 	// (causes warning) // NGS_GC_THR_INIT();
@@ -51,7 +52,7 @@ int main()
 	vm_init(&vm);
 	vm_load_bytecode(&vm, buf, len);
 	ctx_init(&ctx);
-	vm_run(&vm, &ctx, 0);
+	vm_run(&vm, &ctx, 0, &result);
 
 	return ret;
 }

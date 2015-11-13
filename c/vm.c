@@ -152,8 +152,6 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX n_args,
 		// TODO: check whether everything works find with n_args == 0
 		mr = ((VM_FUNC)OBJ_DATA_PTR(callable))(ctx, n_args, args, &ctx->stack[ctx->stack_ptr-n_args-1]);
 		if(mr != METHOD_ARGS_MISMATCH) {
-			// Zeroing out for GC:
-			// memset(&ctx->stack[ctx->stack_ptr-n_args], 0, sizeof(VALUE) * n_args);
 			ctx->stack_ptr -= n_args;
 		}
 		return mr;
@@ -179,7 +177,11 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX n_args,
 			ctx->frames[ctx->frame_ptr].locals = NULL;
 		}
 		ctx->frame_ptr++;
-		mr = vm_run(vm, ctx, CLOSURE_OBJ_IP(callable));
+		mr = vm_run(vm, ctx, CLOSURE_OBJ_IP(callable), &ctx->stack[ctx->stack_ptr-n_args-1]);
+		// TODO: dedup
+		if(mr != METHOD_ARGS_MISMATCH) {
+			ctx->stack_ptr -= n_args;
+		}
 		return mr;
 	}
 
@@ -191,7 +193,7 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX n_args,
 
 }
 
-METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip) {
+METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result) {
 	VALUE v, callable;
 	VAR_LEN_OBJECT *vlo;
 	int i;
@@ -203,6 +205,7 @@ METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip) {
 	LOCAL_VAR_INDEX lvi;
 	size_t vlo_len;
 	METHOD_RESULT mr;
+	size_t saved_stack_ptr = ctx->stack_ptr;
 main_loop:
 	opcode = vm->bytecode[ip++];
 #ifdef DO_NGS_DEBUG
@@ -335,6 +338,12 @@ main_loop:
 							goto main_loop;
 		case OP_RET:
 							// TODO: check stack length
+							// TODO: return value
+							assert(saved_stack_ptr <= ctx->stack_ptr);
+							if(saved_stack_ptr < ctx->stack_ptr) {
+								POP(*result);
+								// dump_titled("RESULT", *result);
+							}
 							return METHOD_OK;
 		case OP_JMP:
 do_jump:
