@@ -5,7 +5,7 @@ SHELL := /bin/bash
 CC := gcc
 # -gdwarf-2 -g3 -- for debugging macros
 # -rdynamic -- for backtrace_symbols() to work
-CFLAGS := -Wall -Wextra -gdwarf-2 -g3 -g -rdynamic
+CFLAGS := -Wall -Wextra -gdwarf-2 -g3 -g -rdynamic -O1
 LDLIBS := -lfl -lpthread -lgc
 # -pg - for gprof profiler
 PROFILER_CFLAGS := $(CFLAGS) -pg
@@ -39,8 +39,8 @@ ngs-debug: $(NGS_TARGET_DEPS)
 # Micro bechmark but it's still something
 time-sum: ngs
 
-	# About 3.6 seconds on my laptop with gcc
-	# About 3.2 seconds on my laptop with clang
+	# About 1.3 seconds on my laptop with gcc -O1
+	# About 1.8 seconds on my laptop with clang -O1
 	time ./ngs < <(echo '{s=0;for(i=0;i<10000000;i=i+1) {s=s+i}}')
 
 	# About 1.1 seconds / perl 5.20.2

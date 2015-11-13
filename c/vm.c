@@ -267,9 +267,7 @@ main_loop:
 							goto main_loop;
 		case OP_RESOLVE_GLOBAL:
 							POP(v);
-#ifdef DO_NGS_DEBUG
 							assert(OBJ_TYPE(v) == OBJ_TYPE_STRING);
-#endif
 							SET_INT(v, get_global_index(vm, OBJ_DATA_PTR(v), OBJ_LEN(v)));
 							PUSH(v);
 							goto main_loop;
