@@ -167,7 +167,7 @@ void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 
 void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
 	ast_node *ptr;
-	int n_args = 0;
+	int argc = 0;
 	GLOBAL_VAR_INDEX index;
 	LOCAL_VAR_INDEX n_locals;
 	IDENTIFIER_INFO identifier_info;
@@ -179,10 +179,10 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 		case CALL_NODE:
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "CALL NODE", *idx);
 			OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
-			for(ptr=node->first_child->next_sibling, n_args=0; ptr; ptr=ptr->next_sibling, n_args++) {
+			for(ptr=node->first_child->next_sibling, argc=0; ptr; ptr=ptr->next_sibling, argc++) {
 				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
 			}
-			OPCODE(*buf, OP_PUSH_INT); DATA(*buf, n_args);
+			OPCODE(*buf, OP_PUSH_INT); DATA(*buf, argc);
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
 			OPCODE(*buf, OP_CALL);
 			POP_IF_DONT_NEED_RESULT(*buf);
@@ -277,11 +277,11 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			break;
 		case ARR_LIT_NODE:
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "ARRAY NODE", *idx);
-			for(n_args=0, ptr=node->first_child; ptr; n_args++, ptr=ptr->next_sibling) {
+			for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
 				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
 			}
 			OPCODE(*buf, OP_PUSH_INT);
-			DATA_INT(*buf, n_args);
+			DATA_INT(*buf, argc);
 			OPCODE(*buf, OP_MAKE_ARR);
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;

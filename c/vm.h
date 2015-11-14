@@ -104,7 +104,7 @@ typedef enum method_result_enum {
 	METHOD_EXCEPTION_OCCURED,
 } METHOD_RESULT;
 
-typedef METHOD_RESULT (*VM_FUNC)(CTX *ctx, LOCAL_VAR_INDEX n_args, const VALUE *args, VALUE *result);
+typedef METHOD_RESULT (*VM_FUNC)(CTX *ctx, LOCAL_VAR_INDEX argc, const VALUE *argv, VALUE *result);
 void vm_init(VM *vm);
 size_t check_global_index(VM *vm, char *name, size_t name_len, int *found);
 size_t get_global_index(VM *vm, char *name, size_t name_len);

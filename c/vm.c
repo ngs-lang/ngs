@@ -14,10 +14,10 @@
 #define PUSH_NULL PUSH((VALUE){.num=V_NULL})
 #define LOCALS (ctx->frames[ctx->frame_ptr-1].locals)
 
-#define METHOD_MUST_HAVE_N_ARGS(n) if(n != n_args) { return METHOD_ARGS_MISMATCH; }
-#define METHOD_MUST_HAVE_AT_LEAST_ARGS(n) if(n_args < n) { return METHOD_ARGS_MISMATCH; }
-#define METHOD_MUST_HAVE_AT_MOST_ARGS(n) if(n_args > n) { return METHOD_ARGS_MISMATCH; }
-#define METHOD_ARG_N_MUST_BE(n, what) if(!IS_ ## what(args[n])) { return METHOD_ARGS_MISMATCH; }
+#define METHOD_MUST_HAVE_N_ARGS(n) if(n != argc) { return METHOD_ARGS_MISMATCH; }
+#define METHOD_MUST_HAVE_AT_LEAST_ARGS(n) if(argc < n) { return METHOD_ARGS_MISMATCH; }
+#define METHOD_MUST_HAVE_AT_MOST_ARGS(n) if(argc > n) { return METHOD_ARGS_MISMATCH; }
+#define METHOD_ARG_N_MUST_BE(n, what) if(!IS_ ## what(argv[n])) { return METHOD_ARGS_MISMATCH; }
 
 #define METHOD_BINOP_SETUP(type) \
 	METHOD_MUST_HAVE_N_ARGS(2); \
@@ -25,39 +25,39 @@
 	METHOD_ARG_N_MUST_BE(1, type);
 
 #define INT_METHOD(name, op) \
-METHOD_RESULT native_ ## name ## _int_int(NGS_UNUSED CTX *ctx, int n_args, VALUE *args, VALUE *result) { \
+METHOD_RESULT native_ ## name ## _int_int(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *result) { \
 	METHOD_BINOP_SETUP(INT); \
-	SET_INT(*result, GET_INT(args[0]) op GET_INT(args[1])); \
+	SET_INT(*result, GET_INT(argv[0]) op GET_INT(argv[1])); \
 	return METHOD_OK; \
 }
 
 #define INT_CMP_METHOD(name, op) \
-METHOD_RESULT native_ ## name ## _int_int(NGS_UNUSED CTX *ctx, int n_args, VALUE *args, VALUE *result) { \
+METHOD_RESULT native_ ## name ## _int_int(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *result) { \
 	METHOD_BINOP_SETUP(INT); \
-	SET_BOOL(*result, GET_INT(args[0]) op GET_INT(args[1])); \
+	SET_BOOL(*result, GET_INT(argv[0]) op GET_INT(argv[1])); \
 	return METHOD_OK; \
 }
 
-#define ARG_LEN(n) OBJ_LEN(args[n])
-#define ARG_DATA_PTR(n) OBJ_DATA_PTR(args[n])
+#define ARG_LEN(n) OBJ_LEN(argv[n])
+#define ARG_DATA_PTR(n) OBJ_DATA_PTR(argv[n])
 
 INT_METHOD(plus, +);
 INT_METHOD(minus, -);
 INT_CMP_METHOD(less, <);
 
-METHOD_RESULT native_dump(NGS_UNUSED CTX *ctx, int n_args, VALUE *args, NGS_UNUSED VALUE *result) {
-	if(n_args == 1) {
-		dump(args[0]);
+METHOD_RESULT native_dump(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, NGS_UNUSED VALUE *result) {
+	if(argc == 1) {
+		dump(argv[0]);
 		return METHOD_OK; // null
 	}
 	return METHOD_ARGS_MISMATCH;
 }
 
-METHOD_RESULT native_plus_arr_arr(NGS_UNUSED CTX *ctx, int n_args, VALUE *args, VALUE *result) {
+METHOD_RESULT native_plus_arr_arr(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *result) {
 	METHOD_BINOP_SETUP(ARRAY);
 	*result = make_array(ARG_LEN(0) + ARG_LEN(1));
 	memcpy(ARRAY_ITEMS(*result)+0, ARG_DATA_PTR(0), sizeof(VALUE)*ARG_LEN(0));
-	memcpy(ARRAY_ITEMS(*result)+ARG_LEN(0), OBJ_DATA_PTR(args[1]), sizeof(VALUE)*ARG_LEN(1));
+	memcpy(ARRAY_ITEMS(*result)+ARG_LEN(0), OBJ_DATA_PTR(argv[1]), sizeof(VALUE)*ARG_LEN(1));
 	return METHOD_OK;
 }
 
@@ -146,7 +146,7 @@ void vm_load_bytecode(VM *vm, char *bc, size_t len) {
 	vm->bytecode = bc;
 }
 
-METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX n_args, const VALUE *args) {
+METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, const VALUE *argv) {
 	VALUE *local_var_ptr;
 	LOCAL_VAR_INDEX lvi;
 	int i;
@@ -154,12 +154,12 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX n_args,
 	VALUE *callable_items;
 
 	IF_DEBUG(VM_RUN, dump_titled("_vm_call/callable", callable); );
-	DEBUG_VM_RUN("_vm_call/n_args = %d\n", n_args);
+	DEBUG_VM_RUN("_vm_call/argc = %d\n", argc);
 
 	if(IS_ARRAY(callable)) {
 		for(i=OBJ_LEN(callable)-1, callable_items = OBJ_DATA_PTR(callable); i>=0; i--) {
 			IF_DEBUG(VM_RUN, dump_titled("_vm_call/will_call", callable_items[i]); );
-			mr = _vm_call(vm, ctx, callable_items[i], n_args, args);
+			mr = _vm_call(vm, ctx, callable_items[i], argc, argv);
 			if(mr == METHOD_OK) {
 				return METHOD_OK;
 			}
@@ -170,10 +170,10 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX n_args,
 	}
 
 	if(IS_NATIVE_METHOD(callable)) {
-		// TODO: check whether everything works find with n_args == 0
-		mr = ((VM_FUNC)OBJ_DATA_PTR(callable))(ctx, n_args, args, &ctx->stack[ctx->stack_ptr-n_args-1]);
+		// TODO: check whether everything works find with argc == 0
+		mr = ((VM_FUNC)OBJ_DATA_PTR(callable))(ctx, argc, argv, &ctx->stack[ctx->stack_ptr-argc-1]);
 		if(mr != METHOD_ARGS_MISMATCH) {
-			ctx->stack_ptr -= n_args;
+			ctx->stack_ptr -= argc;
 		}
 		return mr;
 	}
@@ -186,22 +186,22 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX n_args,
 			assert(ctx->frames[ctx->frame_ptr].locals);
 			// TODO: make it number of arguments, not local variables
 			// TODO: throw ngs exception on arguments mismatch
-			assert(n_args <= lvi);
-			memcpy(ctx->frames[ctx->frame_ptr].locals, &ctx->stack[ctx->stack_ptr-n_args], sizeof(VALUE) * n_args);
-			lvi -= n_args;
-			for(local_var_ptr=&ctx->frames[ctx->frame_ptr].locals[n_args];lvi;lvi--,local_var_ptr++) {
+			assert(argc <= lvi);
+			memcpy(ctx->frames[ctx->frame_ptr].locals, &ctx->stack[ctx->stack_ptr-argc], sizeof(VALUE) * argc);
+			lvi -= argc;
+			for(local_var_ptr=&ctx->frames[ctx->frame_ptr].locals[argc];lvi;lvi--,local_var_ptr++) {
 				SET_UNDEF(*local_var_ptr);
 			}
 		} else {
 			// TODO: throw ngs exception on arguments mismatch
-			assert(n_args == 0);
+			assert(argc == 0);
 			ctx->frames[ctx->frame_ptr].locals = NULL;
 		}
 		ctx->frame_ptr++;
-		mr = vm_run(vm, ctx, CLOSURE_OBJ_IP(callable), &ctx->stack[ctx->stack_ptr-n_args-1]);
+		mr = vm_run(vm, ctx, CLOSURE_OBJ_IP(callable), &ctx->stack[ctx->stack_ptr-argc-1]);
 		// TODO: dedup
 		if(mr != METHOD_ARGS_MISMATCH) {
-			ctx->stack_ptr -= n_args;
+			ctx->stack_ptr -= argc;
 		}
 		return mr;
 	}
@@ -348,7 +348,7 @@ main_loop:
 							LOCALS[lvi] = v;
 							goto main_loop;
 		case OP_CALL:
-							// In: ... result_placeholder (null), arg1, ..., argN, num_of_args, callable
+							// In: ... result_placeholder (null), arg1, ..., argN, argc, callable
 							// Out: ... result
 							POP(callable);
 							POP(v); // number of arguments
