@@ -2,6 +2,7 @@
 #define OBJ_C
 #include <execinfo.h>
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 #include "ngs.h"
 #include "obj.h"
@@ -44,11 +45,11 @@ void _dump(VALUE v, int level) {
 		goto exit;
 	}
 
-
 exit:
 	return;
 }
 
+// TODO: consider allocating power-of-two length
 VALUE make_var_len_obj(const size_t item_size, const size_t len) {
 
 	VALUE v;
@@ -57,6 +58,7 @@ VALUE make_var_len_obj(const size_t item_size, const size_t len) {
 	vlo = NGS_MALLOC(sizeof(*vlo));
 	vlo->base.type.num = OBJ_TYPE_ARRAY;
 	vlo->len = len;
+	vlo->allocated = len;
 	vlo->item_size = item_size;
 	if(len) {
 		vlo->base.val.ptr = NGS_MALLOC(item_size*len);
@@ -68,6 +70,46 @@ VALUE make_var_len_obj(const size_t item_size, const size_t len) {
 	SET_OBJ(v, vlo);
 
 	return v;
+}
+
+VALUE make_array(size_t len) {
+	VALUE ret;
+	ret = make_var_len_obj(sizeof(VALUE), len);
+	return ret;
+}
+
+VALUE make_array_with_values(size_t len, VALUE *values) {
+	VALUE ret;
+	ret = make_array(len);
+	memcpy(OBJ_DATA_PTR(ret), values, sizeof(VALUE)*len);
+	return ret;
+}
+
+// Very not thread safe
+// Inspired by utarray.h
+void vlo_ensure_additional_space(VALUE v, size_t n) {
+	VAR_LEN_OBJECT *o;
+	assert(IS_VLO(v));
+	o = v.ptr;
+	if(o->allocated - o->len < n) {
+		if(!o->allocated) {
+			o->allocated = INITITAL_ARRAY_SIZE;
+		}
+		while(o->allocated - o->len < n) {
+			o->allocated <<= 1;
+		}
+		o->base.val.ptr = NGS_REALLOC(o->base.val.ptr, o->allocated * o->item_size);
+		assert(o->base.val.ptr);
+	}
+}
+
+void array_push(VALUE arr, VALUE v) {
+	VAR_LEN_OBJECT *o;
+	VALUE *arr_items;
+	vlo_ensure_additional_space(arr, 1);
+	o = arr.ptr;
+	arr_items = o->base.val.ptr;
+	arr_items[o->len++] = v;
 }
 
 VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars) {

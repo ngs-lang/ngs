@@ -198,8 +198,6 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			switch(identifier_info.type) {
 				case LOCAL_IDENTIFIER:
 					OPCODE(*buf, OP_FETCH_LOCAL);
-					// index = get_global_var_index(ctx, ptr->name, idx);
-					// DATA_UINT16(*buf, index);
 					DATA_N_LOCAL_VARS(*buf, identifier_info.index);
 					break;
 				case UPVAR_IDENTIFIER:

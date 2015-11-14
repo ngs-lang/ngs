@@ -6,8 +6,9 @@
 
 typedef uint16_t GLOBAL_VAR_INDEX;
 typedef uint8_t LOCAL_VAR_INDEX;
-#define MAX_GLOBALS (65535)
-#define MAX_LOCALS    (255)
+#define MAX_GLOBALS         (65535)
+#define MAX_LOCALS            (255)
+#define INITITAL_ARRAY_SIZE     (8)
 
 // On problems with `uintptr_t` change here according to Ruby source in `include/ruby/ruby.h`
 // uintptr_t format for printf - PRIXPTR - printf("Blah %" PRIXPTR "\n", VALUE.num);
@@ -24,6 +25,7 @@ typedef struct object_struct {
 typedef struct var_len_object_struct {
 	OBJECT base;
 	size_t len;
+	size_t allocated;
 	size_t item_size;
 } VAR_LEN_OBJECT;
 
@@ -73,7 +75,8 @@ typedef struct closure {
 
 #define SET_INT(v,n)    (v).num = ((n) << META_BITS) | META_INT
 #define MAKE_INT(n)     ((VALUE){.num=((n) << META_BITS) | META_INT})
-#define MAKE_BOOL(n)    ((VALUE){.num=(n ? V_TRUE : V_FALSE)})
+#define MAKE_BOOL(b)    ((VALUE){.num=(b ? V_TRUE : V_FALSE)})
+#define MAKE_OBJ(o)     ((VALUE){.ptr=(o)})
 #define GET_INT(v)      ((v).num >> META_BITS)
 #define SET_OBJ(v,o)    (v).ptr = o
 #define SET_NULL(v)     (v).num = V_NULL
@@ -89,15 +92,18 @@ typedef struct closure {
 #define OBJ_TYPE_ARRAY         (4)
 
 #define OBJ_LEN(v)                ((VAR_LEN_OBJECT *) v.ptr)->len
+#define OBJ_ALLOCATED(v)          ((VAR_LEN_OBJECT *) v.ptr)->allocated
 #define CLOSURE_OBJ_IP(v)         ((CLOSURE_OBJECT *) v.ptr)->ip
 #define CLOSURE_OBJ_N_LOCALS(v)   ((CLOSURE_OBJECT *) v.ptr)->n_local_vars
-#define OBJ_DATA_PTR(v)           (((OBJECT *)v.ptr)->val.ptr)
-#define OBJ_TYPE(v)               (((OBJECT *)v.ptr)->type.num)
-#define OBJ_TYPE_PTR(v)           (((OBJECT *)v.ptr)->type.ptr)
+#define OBJ_DATA_PTR(v)           (((OBJECT *)(v).ptr)->val.ptr)
+#define OBJ_TYPE(v)               (((OBJECT *)(v).ptr)->type.num)
+#define OBJ_TYPE_PTR(v)           (((OBJECT *)(v).ptr)->type.ptr)
 #define IS_STRING(v)              (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_STRING)
 #define IS_NATIVE_METHOD(v)       (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_NATIVE_METHOD)
 #define IS_CLOSURE(v)             (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_CLOSURE)
 #define IS_ARRAY(v)               (((v.num & META_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_ARRAY)
+#define IS_VLO(v)                 (IS_ARRAY(v) || IS_STRING(v))
+#define ARRAY_ITEMS(v)            ((VALUE *)(OBJ_DATA_PTR(v)))
 
 void dump(VALUE v);
 void dump_titled(char *title, VALUE v);

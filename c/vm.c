@@ -25,18 +25,21 @@
 	METHOD_ARG_N_MUST_BE(1, type);
 
 #define INT_METHOD(name, op) \
-METHOD_RESULT native_ ## name(NGS_UNUSED CTX *ctx, int n_args, VALUE *args, VALUE *result) { \
+METHOD_RESULT native_ ## name ## _int_int(NGS_UNUSED CTX *ctx, int n_args, VALUE *args, VALUE *result) { \
 	METHOD_BINOP_SETUP(INT); \
 	SET_INT(*result, GET_INT(args[0]) op GET_INT(args[1])); \
 	return METHOD_OK; \
 }
 
 #define INT_CMP_METHOD(name, op) \
-METHOD_RESULT native_ ## name(NGS_UNUSED CTX *ctx, int n_args, VALUE *args, VALUE *result) { \
+METHOD_RESULT native_ ## name ## _int_int(NGS_UNUSED CTX *ctx, int n_args, VALUE *args, VALUE *result) { \
 	METHOD_BINOP_SETUP(INT); \
 	SET_BOOL(*result, GET_INT(args[0]) op GET_INT(args[1])); \
 	return METHOD_OK; \
 }
+
+#define ARG_LEN(n) OBJ_LEN(args[n])
+#define ARG_DATA_PTR(n) OBJ_DATA_PTR(args[n])
 
 INT_METHOD(plus, +);
 INT_METHOD(minus, -);
@@ -48,6 +51,14 @@ METHOD_RESULT native_dump(NGS_UNUSED CTX *ctx, int n_args, VALUE *args, NGS_UNUS
 		return METHOD_OK; // null
 	}
 	return METHOD_ARGS_MISMATCH;
+}
+
+METHOD_RESULT native_plus_arr_arr(NGS_UNUSED CTX *ctx, int n_args, VALUE *args, VALUE *result) {
+	METHOD_BINOP_SETUP(ARRAY);
+	*result = make_array(ARG_LEN(0) + ARG_LEN(1));
+	memcpy(ARRAY_ITEMS(*result)+0, ARG_DATA_PTR(0), sizeof(VALUE)*ARG_LEN(0));
+	memcpy(ARRAY_ITEMS(*result)+ARG_LEN(0), OBJ_DATA_PTR(args[1]), sizeof(VALUE)*ARG_LEN(1));
+	return METHOD_OK;
 }
 
 size_t check_global_index(VM *vm, char *name, size_t name_len, int *found) {
@@ -90,7 +101,16 @@ void register_global_func(VM *vm, char *func_name, void *func_ptr) {
 	o->type.num = OBJ_TYPE_NATIVE_METHOD;
 	o->val.ptr = func_ptr;
 	index = get_global_index(vm, func_name, strlen(func_name));
-	SET_OBJ(vm->globals[index], o);
+	if(IS_ARRAY(vm->globals[index])) {
+		array_push(vm->globals[index], MAKE_OBJ(o));
+		return;
+	}
+	if(IS_UNDEF(vm->globals[index])) {
+		vm->globals[index] = make_array_with_values(1, &MAKE_OBJ(o));
+		// dump_titled("register_global_func", vm->globals[index]);
+		return;
+	}
+	assert(0 == "register_global_func fail");
 }
 
 void vm_init(VM *vm) {
@@ -101,9 +121,10 @@ void vm_init(VM *vm) {
 	// Keep global functions registration in order.
 	// This way the compiler can use globals_indexes as the beginning of
 	// it's symbol table for globals.
-	register_global_func(vm, "+", &native_plus);
-	register_global_func(vm, "-", &native_minus);
-	register_global_func(vm, "<", &native_less);
+	register_global_func(vm, "+", &native_plus_arr_arr);
+	register_global_func(vm, "+", &native_plus_int_int);
+	register_global_func(vm, "-", &native_minus_int_int);
+	register_global_func(vm, "<", &native_less_int_int);
 	register_global_func(vm, "dump", &native_dump);
 }
 
@@ -130,19 +151,19 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX n_args,
 	LOCAL_VAR_INDEX lvi;
 	int i;
 	METHOD_RESULT mr;
+	VALUE *callable_items;
 
 	IF_DEBUG(VM_RUN, dump_titled("_vm_call/callable", callable); );
 	DEBUG_VM_RUN("_vm_call/n_args = %d\n", n_args);
 
 	if(IS_ARRAY(callable)) {
-		// args here is used for callable array items
-		for(i=OBJ_LEN(callable), args = OBJ_DATA_PTR(callable); i>=0; i--) {
-			IF_DEBUG(VM_RUN, dump_titled("_vm_call/will_call", args[i]); );
-			mr = _vm_call(vm, ctx, args[i], n_args, args);
+		for(i=OBJ_LEN(callable)-1, callable_items = OBJ_DATA_PTR(callable); i>=0; i--) {
+			IF_DEBUG(VM_RUN, dump_titled("_vm_call/will_call", callable_items[i]); );
+			mr = _vm_call(vm, ctx, callable_items[i], n_args, args);
 			if(mr == METHOD_OK) {
 				return METHOD_OK;
 			}
-			// Don't know how to handle other condittions yet
+			// Don't know how to handle other conditions yet
 			assert(mr == METHOD_ARGS_MISMATCH);
 		}
 		return METHOD_IMPL_MISSING;
@@ -369,10 +390,8 @@ do_jump:
 		case OP_MAKE_ARR:
 							POP(v);
 							vlo_len = GET_INT(v);
-							v = make_var_len_obj(sizeof(VALUE), vlo_len);
-							if(vlo_len) {
-								memcpy(OBJ_DATA_PTR(v), &(ctx->stack[ctx->stack_ptr-vlo_len]), sizeof(VALUE)*vlo_len);
-							}
+							v = make_array_with_values(vlo_len, &(ctx->stack[ctx->stack_ptr-vlo_len]));
+							ctx->stack_ptr -= vlo_len;
 							PUSH(v);
 							goto main_loop;
 		case OP_MAKE_CLOSURE:
