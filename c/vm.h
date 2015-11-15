@@ -16,7 +16,7 @@ typedef int IP;
 // TODO: maybe convert vm->globals to regular NGS hash so it could be accessible via `globals()` function.
 typedef struct var_index {
 	char *name;
-	size_t index;
+	GLOBAL_VAR_INDEX index;
 	UT_hash_handle hh;
 } VAR_INDEX;
 
@@ -106,8 +106,8 @@ typedef enum method_result_enum {
 
 typedef METHOD_RESULT (*VM_FUNC)(CTX *ctx, LOCAL_VAR_INDEX argc, const VALUE *argv, VALUE *result);
 void vm_init(VM *vm);
-size_t check_global_index(VM *vm, char *name, size_t name_len, int *found);
-size_t get_global_index(VM *vm, char *name, size_t name_len);
+GLOBAL_VAR_INDEX check_global_index(VM *vm, char *name, size_t name_len, int *found);
+GLOBAL_VAR_INDEX get_global_index(VM *vm, char *name, size_t name_len);
 
 static const UT_icd ut_value_icd _UNUSED_ = {sizeof(VALUE),NULL,NULL,NULL};
 // typedef int VM_INT;

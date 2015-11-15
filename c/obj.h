@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 typedef uint16_t GLOBAL_VAR_INDEX;
+#define GLOBAL_VAR_INDEX_FMT "%d"
 typedef uint8_t LOCAL_VAR_INDEX;
 #define MAX_GLOBALS         (65535)
 #define MAX_LOCALS            (255)

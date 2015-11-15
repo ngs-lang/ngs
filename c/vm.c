@@ -61,7 +61,7 @@ METHOD_RESULT native_plus_arr_arr(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VA
 	return METHOD_OK;
 }
 
-size_t check_global_index(VM *vm, char *name, size_t name_len, int *found) {
+GLOBAL_VAR_INDEX check_global_index(VM *vm, char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
 	HASH_FIND(hh, vm->globals_indexes, name, name_len, var);
 	if(var) {
@@ -72,14 +72,14 @@ size_t check_global_index(VM *vm, char *name, size_t name_len, int *found) {
 	return 0;
 }
 
-size_t get_global_index(VM *vm, char *name, size_t name_len) {
+GLOBAL_VAR_INDEX get_global_index(VM *vm, char *name, size_t name_len) {
 	VAR_INDEX *var;
-	size_t index;
+	GLOBAL_VAR_INDEX index;
 	int found;
 	DEBUG_VM_RUN("entering get_global_index() vm=%p name=%.*s\n", vm, (int)name_len, name);
 	index = check_global_index(vm, name, name_len, &found);
 	if(found) {
-		DEBUG_VM_RUN("leaving get_global_index() status=found vm=%p name=%.*s -> index=%zu\n", vm, (int)name_len, name, index);
+		DEBUG_VM_RUN("leaving get_global_index() status=found vm=%p name=%.*s -> index=" GLOBAL_VAR_INDEX_FMT "\n", vm, (int)name_len, name, index);
 		return index;
 	}
 	assert(vm->globals_len < (MAX_GLOBALS-1));
@@ -89,7 +89,7 @@ size_t get_global_index(VM *vm, char *name, size_t name_len) {
 	var->index = vm->globals_len++;
 	HASH_ADD_KEYPTR(hh, vm->globals_indexes, var->name, name_len, var);
 	vm->globals[var->index].num = V_UNDEF;
-	DEBUG_VM_RUN("leaving get_global_index() status=new vm=%p name=%.*s -> index=%zu\n", vm, (int)name_len, name, var->index);
+	DEBUG_VM_RUN("leaving get_global_index() status=new vm=%p name=%.*s -> index=" GLOBAL_VAR_INDEX_FMT "\n", vm, (int)name_len, name, var->index);
 	return var->index;
 }
 
