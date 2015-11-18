@@ -54,6 +54,7 @@ digits			[0-9]+
 	"def"           { DEBUG_PARSER("%s", "LEX DEF\n"); return DEF; }
 	"F"             { DEBUG_PARSER("LEX F %s\n", yytext); return *yytext; } /* not sure about correctness */
 	{identifier}    { DEBUG_PARSER("LEX IDENTIFIER %s\n", yytext); USE_TEXT_AS_NAME; return IDENTIFIER; }
+	":"             { DEBUG_PARSER("LEX COLON %s\n", yytext); return *yytext; }
 	";"             { DEBUG_PARSER("LEX E.DELIMITER %s\n", yytext); return *yytext; }
 	"("|")"         { DEBUG_PARSER("LEX PAREN %s\n", yytext); return *yytext; }
 	"["|"]"         { DEBUG_PARSER("LEX BRACKET %s\n", yytext); return *yytext; }

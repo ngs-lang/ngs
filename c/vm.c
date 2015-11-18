@@ -11,6 +11,8 @@
 
 #define PUSH(v) assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr++] = v
 #define POP(dst) assert(ctx->stack_ptr); ctx->stack_ptr--; dst = ctx->stack[ctx->stack_ptr]
+#define DUP assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr] = ctx->stack[ctx->stack_ptr-1]; ctx->stack_ptr++;
+#define REMOVE_TOP assert(ctx->stack_ptr); ctx->stack_ptr--; 
 #define PUSH_NULL PUSH((VALUE){.num=V_NULL})
 #define LOCALS (ctx->frames[ctx->frame_ptr-1].locals)
 
@@ -267,26 +269,27 @@ main_loop:
 							PUSH(v);
 							goto main_loop;
 		case OP_PUSH_L_STR:
+							// Arg: LEN + string
+							// In: ...
+							// Out: ... string
 							// printf("LSTR @ %p\n", &vm->bytecode[ip]);
 							vlo = NGS_MALLOC(sizeof(*vlo));
 							vlo->len = (size_t) vm->bytecode[ip];
 							vlo->base.type.num = OBJ_TYPE_STRING;
-							vlo->base.val.ptr = NGS_MALLOC(vlo->len);
+							vlo->base.val.ptr = NGS_MALLOC_ATOMIC(vlo->len);
 							memcpy(vlo->base.val.ptr, &(vm->bytecode[ip+1]), vlo->len);
 							ip += 1 + vm->bytecode[ip];
 							SET_OBJ(v, vlo);
 							PUSH(v);
 							goto main_loop;
 		case OP_DUP:
-							// TODO: optimize later
-							POP(v);
-							PUSH(v);
-							PUSH(v);
+							DUP;
 							goto main_loop;
 		case OP_POP:
-							POP(v);
+							REMOVE_TOP;
 							goto main_loop;
 		case OP_RESOLVE_GLOBAL:
+							// Probably not worh optimizing
 							POP(v);
 							assert(OBJ_TYPE(v) == OBJ_TYPE_STRING);
 							SET_INT(v, get_global_index(vm, OBJ_DATA_PTR(v), OBJ_LEN(v)));

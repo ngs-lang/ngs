@@ -13,12 +13,17 @@ typedef int16_t JUMP_OFFSET;
 
 typedef int IP;
 
-// TODO: maybe convert vm->globals to regular NGS hash so it could be accessible via `globals()` function.
 typedef struct var_index {
 	char *name;
 	GLOBAL_VAR_INDEX index;
 	UT_hash_handle hh;
 } VAR_INDEX;
+
+// WIP
+typedef struct interned_string {
+	char *str;
+	UT_hash_handle hh;
+} INTERNED_STRING;
 
 typedef struct frame {
 	IP prev_ip;

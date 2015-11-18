@@ -17,6 +17,7 @@
 #define NGS_MALLOC(n) GC_MALLOC(n)
 #define NGS_REALLOC(p, n) GC_REALLOC(p, n)
 #define NGS_MALLOC_UNCOLLECTALE(n) GC_MALLOC_UNCOLLECTABLE(n)
+#define NGS_MALLOC_ATOMIC(n) GC_MALLOC_ATOMIC(n)
 #define NGS_GCOLLECT() GC_gcollect()
 // GC - end
 

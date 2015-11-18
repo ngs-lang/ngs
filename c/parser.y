@@ -276,7 +276,18 @@ optional_arguments:
 	};
 
 argument:
-	identifier;
+	identifier ':' curly_expressions {
+		// $identifier->next_sibling = $curly_expressions; // ???
+		MAKE_NODE(ret, ARG_NODE);
+		ret->first_child = $identifier;
+		$identifier->next_sibling = $curly_expressions;
+		$$ = ret;
+	}
+	| identifier {
+		MAKE_NODE(ret, ARG_NODE);
+		ret->first_child = $identifier;
+		$$ = ret;
+	}
 
 number: NUMBER { MAKE_NODE(ret, NUMBER_NODE); ret->number = $NUMBER; $$ = ret; }
 

@@ -50,6 +50,7 @@ enum ast_node_type {
 	ARR_LIT_NODE,
 	FUNC_NODE,
 	ARGS_NODE,
+	ARG_NODE,
 };
 
 char *NGS_AST_NODE_TYPES_NAMES[] = {
@@ -64,6 +65,7 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 	"array",
 	"func",
 	"args",
+	"arg",
 };
 
 #endif

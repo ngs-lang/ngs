@@ -287,6 +287,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			break;
 		case FUNC_NODE:
 			/* Work in progress */
+			// FUNC_NODE children: arguments, body
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "FUNC NODE", *idx);
 			OPCODE(*buf, OP_JMP);
 			func_jump = *idx;
@@ -298,7 +299,8 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			// Arguments
 			for(ptr=node->first_child->first_child; ptr; ptr=ptr->next_sibling) {
 				printf("ARG PTR %p\n", ptr);
-				register_local_var(ctx, ptr->name);
+				// ptr: identifier, type, default value
+				register_local_var(ctx, ptr->first_child->name);
 			}
 			// Body
 			register_local_vars(ctx, node->first_child->next_sibling);
