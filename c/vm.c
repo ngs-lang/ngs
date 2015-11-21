@@ -63,7 +63,7 @@ METHOD_RESULT native_plus_arr_arr(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VA
 	return METHOD_OK;
 }
 
-GLOBAL_VAR_INDEX check_global_index(VM *vm, char *name, size_t name_len, int *found) {
+GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
 	HASH_FIND(hh, vm->globals_indexes, name, name_len, var);
 	if(var) {
@@ -74,7 +74,7 @@ GLOBAL_VAR_INDEX check_global_index(VM *vm, char *name, size_t name_len, int *fo
 	return 0;
 }
 
-GLOBAL_VAR_INDEX get_global_index(VM *vm, char *name, size_t name_len) {
+GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
 	GLOBAL_VAR_INDEX index;
 	int found;
@@ -96,13 +96,13 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, char *name, size_t name_len) {
 }
 
 // NOTE: couldn't make it macro - collision with uthash probably.
-void register_global_func(VM *vm, char *func_name, void *func_ptr) {
+void register_global_func(VM *vm, char *name, void *func_ptr) {
 	size_t index;
 	OBJECT *o;
 	o = NGS_MALLOC(sizeof(*o));
 	o->type.num = OBJ_TYPE_NATIVE_METHOD;
 	o->val.ptr = func_ptr;
-	index = get_global_index(vm, func_name, strlen(func_name));
+	index = get_global_index(vm, name, strlen(name));
 	if(IS_ARRAY(vm->globals[index])) {
 		array_push(vm->globals[index], MAKE_OBJ(o));
 		return;
@@ -113,6 +113,13 @@ void register_global_func(VM *vm, char *func_name, void *func_ptr) {
 		return;
 	}
 	assert(0 == "register_global_func fail");
+}
+
+void register_builtin_type(VM *vm, const char *name, uintptr_t id) {
+	size_t index;
+	index = get_global_index(vm, name, strlen(name));
+	assert(IS_UNDEF(vm->globals[index]));
+	vm->globals[index].num = id;
 }
 
 void vm_init(VM *vm) {
@@ -128,6 +135,14 @@ void vm_init(VM *vm) {
 	register_global_func(vm, "-", &native_minus_int_int);
 	register_global_func(vm, "<", &native_less_int_int);
 	register_global_func(vm, "dump", &native_dump);
+	register_builtin_type(vm, "Null", T_NULL);
+	register_builtin_type(vm, "Bool", T_BOOL);
+	register_builtin_type(vm, "Int", T_INT);
+	register_builtin_type(vm, "Str", T_STR);
+	register_builtin_type(vm, "Arr", T_ARR);
+	register_builtin_type(vm, "Fun", T_FUN);
+	register_builtin_type(vm, "Any", T_ANY);
+	register_builtin_type(vm, "Seq", T_SEQ);
 }
 
 void ctx_init(CTX *ctx) {
@@ -224,11 +239,15 @@ METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result) {
 	GLOBAL_VAR_INDEX gvi;
 	PATCH_OFFSET po;
 	JUMP_OFFSET jo;
-	LOCAL_VAR_INDEX n_locals;
 	LOCAL_VAR_INDEX lvi;
 	size_t vlo_len;
 	METHOD_RESULT mr;
 	size_t saved_stack_ptr = ctx->stack_ptr;
+
+	// for OP_MAKE_CLOSURE
+	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
+	VALUE *params = NULL;
+
 main_loop:
 	opcode = vm->bytecode[ip++];
 #ifdef DO_NGS_DEBUG
@@ -351,10 +370,19 @@ main_loop:
 							LOCALS[lvi] = v;
 							goto main_loop;
 		case OP_CALL:
-							// In: ... result_placeholder (null), arg1, ..., argN, argc, callable
+							// In (current): ... result_placeholder (null), arg1, ..., argN, argc, callable
+							// In (WIP): ...
+							//     result_placeholder (null),
+							//     pos_arg1, ..., pos_argN,
+							//     opt_arg1, ..., opt_argN,
+							//     n_params_required,
+							//     n_params_optional,
+							//     callable
 							// Out: ... result
 							POP(callable);
 							POP(v); // number of arguments
+							// POP(n_params_required); // number of arguments
+							// POP(n_params_optional);
 							mr = _vm_call(vm, ctx, callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
 							assert(mr == METHOD_OK);
 							goto main_loop;
@@ -398,11 +426,23 @@ do_jump:
 							PUSH(v);
 							goto main_loop;
 		case OP_MAKE_CLOSURE:
+							// Arg: code_jump_offset, number_of_locals
+							// In: ...,
+							//   arg1_name, arg1_type, ... argN_name, argN_type,
+							//   argN+1_name, argN+1_type, argN+1_default_value, ... argM_name, argM_type, argM_default_value,
+							//   argc_of_required_args, argc_of_optional_args
+							// Out: ..., CLOSURE_OBJECT
 							jo = *(JUMP_OFFSET *) &vm->bytecode[ip];
 							ip += sizeof(jo);
 							n_locals = *(LOCAL_VAR_INDEX *) &vm->bytecode[ip];
 							ip += sizeof(n_locals);
-							PUSH(make_closure_obj(ip+jo, n_locals));
+							POP(v);
+							n_params_optional = GET_INT(v);
+							POP(v);
+							n_params_required = GET_INT(v);
+							params = &ctx->stack[ctx->stack_ptr - n_params_required*2 - n_params_optional*3];
+							// n_params_required = n_params_optional = 0;
+							PUSH(make_closure_obj(ip+jo, n_locals, n_params_required, n_params_optional, params));
 							goto main_loop;
 		default:
 							// TODO: exception

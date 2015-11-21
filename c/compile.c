@@ -169,9 +169,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 	ast_node *ptr;
 	int argc = 0;
 	GLOBAL_VAR_INDEX index;
-	LOCAL_VAR_INDEX n_locals;
+	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
 	IDENTIFIER_INFO identifier_info;
-	size_t loop_beg, cond_jump, func_jump;
+	size_t loop_beg, cond_jump, func_jump, end_of_func_idx;
 
 	ensure_room(buf, *idx, allocated, 1024); // XXX - magic number
 
@@ -298,7 +298,6 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			N_LOCALS = 0;
 			// Arguments
 			for(ptr=node->first_child->first_child; ptr; ptr=ptr->next_sibling) {
-				printf("ARG PTR %p\n", ptr);
 				// ptr: identifier, type, default value
 				register_local_var(ctx, ptr->first_child->name);
 			}
@@ -308,7 +307,25 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			n_locals = N_LOCALS;
 			ctx->locals_ptr--;
 			OPCODE(*buf, OP_RET);
-			*(JUMP_OFFSET *)&(*buf)[func_jump] = (*idx - func_jump - sizeof(JUMP_OFFSET));
+			end_of_func_idx = *idx;
+
+			// Arguments' types and default values
+			for(ptr=node->first_child->first_child, n_params_required=0; ptr; ptr=ptr->next_sibling) {
+				// ptr: identifier, type, default value
+				OPCODE(*buf, OP_PUSH_L_STR);
+				L_STR(*buf, ptr->first_child->name);
+				compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+				n_params_required++;
+			}
+
+			n_params_optional = 0; // Not implemented yet
+
+			OPCODE(*buf, OP_PUSH_INT); // XXX. TODO: Add OP_PUSH_N_PARAMS
+			DATA_INT(*buf, n_params_required);
+			OPCODE(*buf, OP_PUSH_INT); // XXX. TODO: Add OP_PUSH_N_PARAMS
+			DATA_INT(*buf, n_params_optional);
+
+			*(JUMP_OFFSET *)&(*buf)[func_jump] = (end_of_func_idx - func_jump - sizeof(JUMP_OFFSET));
 			OPCODE(*buf, OP_MAKE_CLOSURE);
 			DATA_JUMP_OFFSET(*buf, -(*idx - func_jump + sizeof(LOCAL_VAR_INDEX)));
 			DATA_N_LOCAL_VARS(*buf, n_locals);

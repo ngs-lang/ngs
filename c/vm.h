@@ -111,8 +111,8 @@ typedef enum method_result_enum {
 
 typedef METHOD_RESULT (*VM_FUNC)(CTX *ctx, LOCAL_VAR_INDEX argc, const VALUE *argv, VALUE *result);
 void vm_init(VM *vm);
-GLOBAL_VAR_INDEX check_global_index(VM *vm, char *name, size_t name_len, int *found);
-GLOBAL_VAR_INDEX get_global_index(VM *vm, char *name, size_t name_len);
+GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found);
+GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len);
 
 static const UT_icd ut_value_icd _UNUSED_ = {sizeof(VALUE),NULL,NULL,NULL};
 // typedef int VM_INT;

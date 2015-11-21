@@ -112,15 +112,23 @@ void array_push(VALUE arr, VALUE v) {
 	arr_items[o->len++] = v;
 }
 
-VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars) {
+VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, VALUE *params) {
 
 	VALUE v;
 	CLOSURE_OBJECT *c;
+	size_t params_size;
 
 	c = NGS_MALLOC(sizeof(*c));
+	assert(c);
 	c->base.type.num = OBJ_TYPE_CLOSURE;
 	c->ip = ip;
 	c->n_local_vars = n_local_vars;
+	c->n_params_required = n_params_required;
+	c->n_params_optional = n_params_optional;
+	params_size = (n_params_required*2 + n_params_optional*3) * sizeof(VALUE);
+	c->params = NGS_MALLOC(params_size);
+	assert(c->params);
+	memcpy(c->params, params, params_size);
 
 	SET_OBJ(v, c);
 

@@ -277,15 +277,18 @@ optional_arguments:
 
 argument:
 	identifier ':' curly_expressions {
-		// $identifier->next_sibling = $curly_expressions; // ???
 		MAKE_NODE(ret, ARG_NODE);
 		ret->first_child = $identifier;
 		$identifier->next_sibling = $curly_expressions;
 		$$ = ret;
 	}
+	/* f(arg) is same as f(x:Any) */
 	| identifier {
 		MAKE_NODE(ret, ARG_NODE);
 		ret->first_child = $identifier;
+		MAKE_NODE(any_type, IDENTIFIER_NODE);
+		any_type->name = "Any";
+		ret->next_sibling = any_type;
 		$$ = ret;
 	}
 
