@@ -75,3 +75,12 @@ tags: *.c *.h *.lex *.y
 
 parser.output: parser.y ngs.h compile.h
 	bison --report=lookahead --report=solved --report=state --defines=parser.h -o parser.c parser.y
+
+test: ngs
+	cd tests/ && \
+	for f in *.in;do \
+		echo "[$${f%.in}]"; \
+		out=$$(../ngs <$$f); \
+		diff -u <(echo "$$out") $${f%.in}.ok || exit 1; \
+	done; \
+	echo "ALL OK"

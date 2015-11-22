@@ -56,7 +56,7 @@ VALUE make_var_len_obj(const size_t item_size, const size_t len) {
 	VAR_LEN_OBJECT *vlo;
 
 	vlo = NGS_MALLOC(sizeof(*vlo));
-	vlo->base.type.num = OBJ_TYPE_ARRAY;
+	vlo->base.type.num = T_ARR; // XXX: Should be subtype of T_SEQ (T_ARR or T_STR)
 	vlo->len = len;
 	vlo->allocated = len;
 	vlo->item_size = item_size;
@@ -120,7 +120,7 @@ VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX 
 
 	c = NGS_MALLOC(sizeof(*c));
 	assert(c);
-	c->base.type.num = OBJ_TYPE_CLOSURE;
+	c->base.type.num = T_CLOSURE;
 	c->ip = ip;
 	c->n_local_vars = n_local_vars;
 	c->n_params_required = n_params_required;

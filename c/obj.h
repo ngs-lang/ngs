@@ -95,15 +95,9 @@ enum IMMEDIATE_VALUES {
 	T_ANY   = 42,
 	T_SEQ   = 46,
 	T_TYPE  = 50,
+	T_NATIVE_METHOD = (1 << 8) | T_FUN,
+	T_CLOSURE       = (2 << 8) | T_FUN,
 };
-
-// object
-// .....000 - *TYPE
-// .....001 - String
-// .....010 - Native method
-// .....011 - NGS method
-// .....100 - Array
-// .....101 - Hash
 
 // TODO: handle situation when n is wider than size_t - TAG_BITS bits
 #define IS_NULL(v)      (v.num == V_NULL)
@@ -128,7 +122,6 @@ enum IMMEDIATE_VALUES {
 #define SET_UNDEF(v)    (v).num = V_UNDEF
 
 // TODO: some saner numbering maybe
-#define OBJ_TYPE_STRING        (1)
 #define OBJ_TYPE_NATIVE_METHOD (2)
 #define OBJ_TYPE_CLOSURE       (3)
 #define OBJ_TYPE_ARRAY         (4)
@@ -140,10 +133,10 @@ enum IMMEDIATE_VALUES {
 #define OBJ_DATA_PTR(v)           (((OBJECT *)(v).ptr)->val.ptr)
 #define OBJ_TYPE(v)               (((OBJECT *)(v).ptr)->type.num)
 #define OBJ_TYPE_PTR(v)           (((OBJECT *)(v).ptr)->type.ptr)
-#define IS_STRING(v)              (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_STRING)
-#define IS_NATIVE_METHOD(v)       (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_NATIVE_METHOD)
-#define IS_CLOSURE(v)             (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_CLOSURE)
-#define IS_ARRAY(v)               (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == OBJ_TYPE_ARRAY)
+#define IS_STRING(v)              (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_STR)
+#define IS_NATIVE_METHOD(v)       (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_NATIVE_METHOD)
+#define IS_CLOSURE(v)             (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_CLOSURE)
+#define IS_ARRAY(v)               (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_ARR)
 #define IS_VLO(v)                 (IS_ARRAY(v) || IS_STRING(v))
 #define ARRAY_ITEMS(v)            ((VALUE *)(OBJ_DATA_PTR(v)))
 

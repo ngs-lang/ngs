@@ -100,7 +100,7 @@ void register_global_func(VM *vm, char *name, void *func_ptr) {
 	size_t index;
 	OBJECT *o;
 	o = NGS_MALLOC(sizeof(*o));
-	o->type.num = OBJ_TYPE_NATIVE_METHOD;
+	o->type.num = T_NATIVE_METHOD;
 	o->val.ptr = func_ptr;
 	index = get_global_index(vm, name, strlen(name));
 	if(IS_ARRAY(vm->globals[index])) {
@@ -294,7 +294,7 @@ main_loop:
 							// printf("LSTR @ %p\n", &vm->bytecode[ip]);
 							vlo = NGS_MALLOC(sizeof(*vlo));
 							vlo->len = (size_t) vm->bytecode[ip];
-							vlo->base.type.num = OBJ_TYPE_STRING;
+							vlo->base.type.num = T_STR;
 							vlo->base.val.ptr = NGS_MALLOC_ATOMIC(vlo->len);
 							memcpy(vlo->base.val.ptr, &(vm->bytecode[ip+1]), vlo->len);
 							ip += 1 + vm->bytecode[ip];
@@ -310,7 +310,7 @@ main_loop:
 		case OP_RESOLVE_GLOBAL:
 							// Probably not worh optimizing
 							POP(v);
-							assert(OBJ_TYPE(v) == OBJ_TYPE_STRING);
+							assert(OBJ_TYPE(v) == T_STR);
 							SET_INT(v, get_global_index(vm, OBJ_DATA_PTR(v), OBJ_LEN(v)));
 							PUSH(v);
 							goto main_loop;
