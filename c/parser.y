@@ -44,7 +44,6 @@ int yyerror();
 %token <name> IDENTIFIER
 %token <number> NUMBER
 
-%type <ast_node> argument
 %type <ast_node> array_items
 %type <ast_node> array_literal
 %type <ast_node> assignment
@@ -58,7 +57,8 @@ int yyerror();
 %type <ast_node> binop
 %type <ast_node> identifier
 %type <ast_node> number
-%type <ast_node> optional_arguments
+%type <ast_node> optional_parameters
+%type <ast_node> parameter
 %type <ast_node> top_level
 %type <ast_node> top_level2
 %type <ast_node> top_level_item
@@ -234,16 +234,16 @@ array_items:
 		};
 
 f:
- 		'F' '(' optional_arguments ')' curly_expressions[body] {
+ 		'F' '(' optional_parameters ')' curly_expressions[body] {
 			/* Work in progress */
 			MAKE_NODE(ret, FUNC_NODE);
 			// MAKE_NODE(args, EXPRESSIONS_NODE); /* wrong type */
-			ret->first_child = $optional_arguments;
+			ret->first_child = $optional_parameters;
 			ret->first_child->next_sibling = $body;
 			$$ = ret;
 		}
 def:
-		DEF identifier '(' optional_arguments ')' curly_expressions[body] {
+		DEF identifier '(' optional_parameters ')' curly_expressions[body] {
 			/* Work in progress */
 			MAKE_NODE(ret, EXPRESSIONS_NODE);
 			MAKE_NODE(args, EXPRESSIONS_NODE); /* wrong type */
@@ -252,39 +252,39 @@ def:
 			$$ = ret;
 		}
 
-optional_arguments:
-	optional_arguments[arguments] ',' argument {
-		// printf("ARGS MULTI\n");
-		$arguments->last_child->next_sibling = $argument;
-		$arguments->last_child = $argument;
-		$$ = $arguments;
+optional_parameters:
+	optional_parameters[parameters] ',' parameter {
+		// printf("PARAMS MULTI\n");
+		$parameters->last_child->next_sibling = $parameter;
+		$parameters->last_child = $parameter;
+		$$ = $parameters;
 	}
-	| argument {
-		// printf("ARGS ONE\n");
-		MAKE_NODE(ret, ARGS_NODE);
-		ret->first_child = $argument;
-		ret->last_child = $argument;
+	| parameter {
+		// printf("PARAMS ONE\n");
+		MAKE_NODE(ret, PARAMS_NODE);
+		ret->first_child = $parameter;
+		ret->last_child = $parameter;
 		$$ = ret;
 	}
 	|
 	/* nothing */ {
-		MAKE_NODE(ret, ARGS_NODE);
-		printf("ARGS NONE\n");
+		MAKE_NODE(ret, PARAMS_NODE);
+		printf("PARAMS NONE\n");
 		ret->first_child = NULL;
 		ret->last_child = NULL;
 		$$ = ret;
 	};
 
-argument:
+parameter:
 	identifier ':' curly_expressions {
-		MAKE_NODE(ret, ARG_NODE);
+		MAKE_NODE(ret, PARAM_NODE);
 		ret->first_child = $identifier;
 		$identifier->next_sibling = $curly_expressions;
 		$$ = ret;
 	}
 	/* f(arg) is same as f(x:Any) */
 	| identifier {
-		MAKE_NODE(ret, ARG_NODE);
+		MAKE_NODE(ret, PARAM_NODE);
 		ret->first_child = $identifier;
 			MAKE_NODE(any_type, IDENTIFIER_NODE);
 			any_type->name = "Any";
