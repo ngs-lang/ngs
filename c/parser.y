@@ -254,13 +254,13 @@ def:
 
 optional_arguments:
 	optional_arguments[arguments] ',' argument {
-		printf("ARGS MULTI\n");
+		// printf("ARGS MULTI\n");
 		$arguments->last_child->next_sibling = $argument;
 		$arguments->last_child = $argument;
 		$$ = $arguments;
 	}
 	| argument {
-		printf("ARGS ONE\n");
+		// printf("ARGS ONE\n");
 		MAKE_NODE(ret, ARGS_NODE);
 		ret->first_child = $argument;
 		ret->last_child = $argument;
@@ -286,9 +286,9 @@ argument:
 	| identifier {
 		MAKE_NODE(ret, ARG_NODE);
 		ret->first_child = $identifier;
-		MAKE_NODE(any_type, IDENTIFIER_NODE);
-		any_type->name = "Any";
-		ret->next_sibling = any_type;
+			MAKE_NODE(any_type, IDENTIFIER_NODE);
+			any_type->name = "Any";
+			$identifier->next_sibling = any_type;
 		$$ = ret;
 	}
 

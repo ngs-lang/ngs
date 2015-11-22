@@ -144,7 +144,6 @@ void register_local_var(COMPILATION_CONTEXT *ctx, char *name) {
 
 void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 	ast_node *ptr;
-	printf("register_local_vars %p\n", node);
 	switch(node->type) {
 		case FUNC_NODE: return;
 		case ASSIGNMENT_NODE:
