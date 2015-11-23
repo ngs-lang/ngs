@@ -39,7 +39,8 @@ digits			[0-9]+
 
 %%
 
-<INITIAL,CODE>^#.*$               { /* ignore comments */ }
+<INITIAL,CODE>^#.*$ { /* ignore comments */ }
+<INITIAL>\n         { /* TEMP: ignore newlines for now */ }
 
 <INITIAL>"{"        { yy_push_state(CODE, yyscanner); DEBUG_PARSER("%s", "Entering mode: CODE\n"); return '{'; }
 
