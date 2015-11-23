@@ -11,14 +11,16 @@ int yyerror();
 // handle warnings - end
 
 #define ALLOC_NODE(dst, type_) (dst) = NGS_MALLOC(sizeof(ast_node)); dst->type=type_
-#define MAKE_NODE(name, type_) ast_node *name = NGS_MALLOC(sizeof(*name)); name->type = type_; DEBUG_PARSER("ast_node %p has type %d\n", name, name->type)
+#define MAKE_NODE_LOC(name, type_, fl, fc, ll, lc, is_gen) \
+	ast_node *name = NGS_MALLOC(sizeof(*name)); name->type = type_; \
+	DEBUG_PARSER("[ast_node] at %p type %3d (%-12s) starts %d:%d ends %d:%d is_generated %d\n", name, name->type, NGS_AST_NODE_TYPES_NAMES[name->type], fl, fc, ll, lc, is_gen); \
+	name->location.first_line = fl; \
+	name->location.first_column = fc; \
+	name->location.last_line = ll; \
+	name->location.last_column = lc
+#define MAKE_NODE(name, type_) MAKE_NODE_LOC(name, type_, yyloc.first_line, yyloc.first_column, yyloc.last_line, yyloc.last_column, 0)
 // TODO: check whether it's appropriate to use Boehm's "atomic" allocation.
 #define COPY_NODE(dst, src) (dst) = NGS_MALLOC(sizeof(ast_node)); memcpy((dst), (src), sizeof(ast_node))
-#define SET_LOC(src) \
-	yyloc.first_line   = src.first_line; \
-	yyloc.first_column = src.first_column; \
-	yyloc.last_line    = src.first_column; \
-	yyloc.last_column  = src.last_column;
 %}
 
 %define api.pure full
@@ -113,7 +115,6 @@ identifier: IDENTIFIER {
 		 DEBUG_PARSER("identifier $1 %p name=%s\n", $1, $1);
 		 MAKE_NODE(ret, IDENTIFIER_NODE);
 		 ret->name = $IDENTIFIER;
-		 SET_LOC(@IDENTIFIER);
 		 $$ = ret;
 }
 
@@ -130,6 +131,7 @@ expressions:
 			$$ = $1;
 		}
 		| expression {
+			DEBUG_PARSER("expression $1 %p\n", $1);
 			MAKE_NODE(ret, EXPRESSIONS_NODE);
 			ret->first_child = $1;
 			ret->last_child = $1;
@@ -145,14 +147,13 @@ expressions_delimiter_zero_or_more: expressions_delimiter_one_or_more | /* nothi
 expression: assignment | binop | number | identifier | call | for | array_literal | f | def;
 
 binop: expression[e1] BINOP expression[e2] {
-		DEBUG_PARSER("expression $e1 %p $e2 %p\n", $e1, $e2);
+		DEBUG_PARSER("binop $e1 %p $e2 %p\n", $e1, $e2);
 		MAKE_NODE(ret, CALL_NODE);
 			MAKE_NODE(id, IDENTIFIER_NODE);
 			ret->first_child = id;
 			id->name = $BINOP;
 			id->next_sibling = $e1;
 			$e1->next_sibling = $e2;
-			SET_LOC(@BINOP);
 		$$ = ret;
 }
 
