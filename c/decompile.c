@@ -1,16 +1,8 @@
-#ifndef DECOMPILE_H
-#define DECOMPILE_H
-
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <utarray.h>
 #include "ngs.h"
-#include "ast.h"
-#include "parser.h"
-#include "vm.h"
-#include "compile.h"
 
 // TODO: get rid of int16_t and int32_t, use types such as JUMP_OFFSET and PATCH_OFFSET instead.
 
@@ -57,5 +49,3 @@ void decompile(const char *buf, const size_t start, const size_t end) {
 		}
 	}
 }
-
-#endif

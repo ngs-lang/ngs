@@ -140,6 +140,13 @@ enum IMMEDIATE_VALUES {
 #define IS_VLO(v)                 (IS_ARRAY(v) || IS_STRING(v))
 #define ARRAY_ITEMS(v)            ((VALUE *)(OBJ_DATA_PTR(v)))
 
+VALUE make_var_len_obj(const size_t item_size, const size_t len);
+VALUE make_array(size_t len);
+VALUE make_array_with_values(size_t len, VALUE *values);
+void vlo_ensure_additional_space(VALUE v, size_t n);
+void array_push(VALUE arr, VALUE v);
+VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, VALUE *params);
 void dump(VALUE v);
 void dump_titled(char *title, VALUE v);
+
 #endif

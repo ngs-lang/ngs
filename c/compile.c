@@ -1,13 +1,4 @@
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <utarray.h>
 #include "ngs.h"
-#include "ast.h"
-#include "parser.h"
-#include "vm.h"
-#include "compile.h"
 
 // TODO: abstract UINT16
 

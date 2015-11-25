@@ -1,10 +1,20 @@
-#include <assert.h>
-#include <stdio.h>
-#include "ast.h"
-#include "parser.h"
-#include "obj.h"
 #include "ngs.h"
-#include "compile.h"
+
+char *NGS_AST_NODE_TYPES_NAMES[] = {
+	NULL,
+	"assignment",
+	"identifier",
+	"number",
+	"expressions",
+	"for",
+	"call",
+	"empty",
+	"array",
+	"func",
+	"params",
+	"param",
+};
+
 
 #define AST_NODE_INFO_STR_LEN (128)
 

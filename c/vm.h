@@ -1,8 +1,6 @@
 #ifndef VM_H
 #define VM_H
-#include <uthash.h>
-#include <utarray.h>
-#include "obj.h"
+#include "ngs.h"
 
 #define NGS_UNUSED __attribute__((unused))
 
@@ -74,33 +72,10 @@ enum opcodes {
 	OP_JMP_FALSE,
 	OP_MAKE_ARR,
 	OP_MAKE_CLOSURE,
+	NUMBER_OF_OPCODES,
 };
 
-char *opcodes_names[] = {
-	/*  0 */ "HALT",
-	/*  1 */ "PUSH_NULL",
-	/*  2 */ "PUSH_FALSE",
-	/*  3 */ "PUSH_TRUE",
-	/*  4 */ "PUSH_UNDEF",
-	/*  5 */ "PUSH_INT",
-	/*  6 */ "PUSH_L_STR",
-	/*  7 */ "DUP",
-	/*  8 */ "POP",
-	/*  9 */ "RESOLVE_GLOBAL",
-	/* 10 */ "PATCH",
-	/* 11 */ "INIT_DONE",
-	/* 12 */ "FETCH_GLOBAL",
-	/* 13 */ "STORE_GLOBAL",
-	/* 14 */ "FETCH_LOCAL",
-	/* 15 */ "STORE_LOCAL",
-	/* 16 */ "CALL",
-	/* 17 */ "RET",
-	/* 18 */ "JMP",
-	/* 19 */ "JMP_TRUE",
-	/* 20 */ "JMP_FALSE",
-	/* 21 */ "MAKE_ARR",
-	/* 22 */ "MAKE_CLOSURE",
-};
+extern char *opcodes_names[NUMBER_OF_OPCODES];
 
 typedef enum method_result_enum {
 	METHOD_OK,
@@ -111,6 +86,8 @@ typedef enum method_result_enum {
 
 typedef METHOD_RESULT (*VM_FUNC)(CTX *ctx, LOCAL_VAR_INDEX argc, const VALUE *argv, VALUE *result);
 void vm_init(VM *vm);
+void vm_load_bytecode(VM *vm, char *bc, size_t len);
+void ctx_init(CTX *ctx);
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found);
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len);
 

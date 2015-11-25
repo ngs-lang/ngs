@@ -39,33 +39,6 @@ typedef struct compilation_context {
 	int in_function; /* as opposed to global scope */
 } COMPILATION_CONTEXT;
 
-enum ast_node_type {
-	ASSIGNMENT_NODE=1,
-	IDENTIFIER_NODE,
-	NUMBER_NODE,
-	EXPRESSIONS_NODE,
-	FOR_NODE,
-	CALL_NODE,
-	EMPTY_NODE,
-	ARR_LIT_NODE,
-	FUNC_NODE,
-	PARAMS_NODE,
-	PARAM_NODE,
-};
-
-char *NGS_AST_NODE_TYPES_NAMES[] = {
-	NULL,
-	"assignment",
-	"identifier",
-	"number",
-	"expressions",
-	"for",
-	"call",
-	"empty",
-	"array",
-	"func",
-	"params",
-	"param",
-};
-
+SYMBOL_TABLE *get_symbol_table_entry(SYMBOL_TABLE **st, char *name, int create_if_not_exists, int *created);
+char *compile(ast_node *node /* the top level node */, size_t *len);
 #endif

@@ -1,9 +1,5 @@
 %{
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include "ngs.h"
-#include "compile.h"
 
 // handle warnings - start
 int yylex();

@@ -2,7 +2,7 @@
 /* Eliminate warnings - start */
 #define YY_NO_INPUT
 /* Eliminate warnings - end */
-#include "parser.h"
+#include "ngs.h"
 %}
 
 /* TODO: multibyte characters support? */

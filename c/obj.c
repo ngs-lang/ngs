@@ -1,11 +1,5 @@
-#ifndef OBJ_C
-#define OBJ_C
 #include <execinfo.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
 #include "ngs.h"
-#include "obj.h"
 
 void _dump(VALUE v, int level) {
 	char **symbols;
@@ -143,4 +137,3 @@ void dump_titled(char *title, VALUE v) {
 	printf("=== [ dump %s ] ===\n", title);
 	dump(v);
 }
-#endif

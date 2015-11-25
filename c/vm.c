@@ -1,13 +1,31 @@
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <uthash.h>
 #include "ngs.h"
-#include "vm.h"
-#include "obj.h"
-#include "obj.c"
-#include "decompile.c"
+
+char *opcodes_names[] = {
+	/*  0 */ "HALT",
+	/*  1 */ "PUSH_NULL",
+	/*  2 */ "PUSH_FALSE",
+	/*  3 */ "PUSH_TRUE",
+	/*  4 */ "PUSH_UNDEF",
+	/*  5 */ "PUSH_INT",
+	/*  6 */ "PUSH_L_STR",
+	/*  7 */ "DUP",
+	/*  8 */ "POP",
+	/*  9 */ "RESOLVE_GLOBAL",
+	/* 10 */ "PATCH",
+	/* 11 */ "INIT_DONE",
+	/* 12 */ "FETCH_GLOBAL",
+	/* 13 */ "STORE_GLOBAL",
+	/* 14 */ "FETCH_LOCAL",
+	/* 15 */ "STORE_LOCAL",
+	/* 16 */ "CALL",
+	/* 17 */ "RET",
+	/* 18 */ "JMP",
+	/* 19 */ "JMP_TRUE",
+	/* 20 */ "JMP_FALSE",
+	/* 21 */ "MAKE_ARR",
+	/* 22 */ "MAKE_CLOSURE",
+};
+
 
 #define PUSH(v) assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr++] = v
 #define POP(dst) assert(ctx->stack_ptr); ctx->stack_ptr--; dst = ctx->stack[ctx->stack_ptr]

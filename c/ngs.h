@@ -1,7 +1,11 @@
 #ifndef NGS_H
 #define NGS_H
 
+#include <assert.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // GC - start
 // http://www.hboehm.info/gc/scale.html
@@ -24,12 +28,8 @@
 // DEBUG facilities - start
 // TODO: maybe do compile time decisions per debug flag
 //       instead of one global yes/no and then runtime per flag decisions
-#ifdef NGS_DEBUG_FLAGS
-#define DO_NGS_DEBUG
-uint32_t debug_flags = NGS_DEBUG_FLAGS;
-#else
-uint32_t debug_flags = 0x0000;
-#endif
+extern uint32_t debug_flags;
+
 #define DEBUG_FLAG_BYTECODE (1 << 0)
 #define DEBUG_FLAG_PARSER   (1 << 1)
 #define DEBUG_FLAG_COMPILER (1 << 2)
@@ -44,5 +44,17 @@ uint32_t debug_flags = 0x0000;
 #define DEBUG_VM_API(...)   PRINTF_DEBUG(DEBUG_FLAG_VM_API,   __VA_ARGS__)
 #define DEBUG_VM_RUN(...)   PRINTF_DEBUG(DEBUG_FLAG_VM_RUN,   __VA_ARGS__)
 // DEBUG facilities - end
+
+// Libs
+#include <utarray.h>
+#include <uthash.h>
+
+// Project
+#include "ast.h"
+#include "parser.h"
+#include "obj.h"
+#include "vm.h"
+#include "compile.h"
+#include "decompile.h"
 
 #endif

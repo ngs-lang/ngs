@@ -2,15 +2,9 @@
 // uthash - http://stackoverflow.com/questions/18197825/looking-for-hash-table-c-library. using version 1.9.7
 // libgc-dev - 1:7.2d-6.4
 #include "ngs.h"
-#include "obj.h"
-#include "obj.c"
-#include "ast.h"
-#include "vm.c"
-#include "ast.c"
 #include "parser.c"
 #include "scanner.c"
-#include "compile.c"
-#include "decompile.c"
+
 
 int yyerror (yyscan_t scanner, char const *s) {
 	// Eliminate warning about unused `scanner` variable
