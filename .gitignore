@@ -23,3 +23,4 @@ parser.h
 scanner.c
 tags
 parser.output
+*.o

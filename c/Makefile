@@ -5,8 +5,9 @@ SHELL := /bin/bash
 CC := gcc
 # -gdwarf-2 -g3 -- for debugging macros
 # -rdynamic -- for backtrace_symbols() to work
-CFLAGS := -Wall -Wextra -gdwarf-2 -g3 -g -rdynamic -O1
+CFLAGS := -Wall -Wextra -gdwarf-2 -g3 -g -O1
 LDLIBS := -lfl -lpthread -lgc
+LDFLAGS := -rdynamic
 # -pg - for gprof profiler
 PROFILER_CFLAGS := $(CFLAGS) -pg
 DEBUG_CFLAGS := $(CFLAGS) -DNGS_DEBUG_FLAGS=0xFFFF

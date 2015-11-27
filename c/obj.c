@@ -4,7 +4,7 @@
 #include "ngs.h"
 #include "obj.h"
 
-void _dump(VALUE v, int level) {
+static void _dump(VALUE v, int level) {
 	char **symbols;
 	void *symbols_buffer[1];
 	VALUE *ptr;

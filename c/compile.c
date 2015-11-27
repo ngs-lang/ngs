@@ -1,5 +1,6 @@
 #include <assert.h>
 #include "ngs.h"
+#include "ast.h"
 #include "compile.h"
 #include "obj.h"
 

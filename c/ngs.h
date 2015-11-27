@@ -42,7 +42,4 @@ extern uint32_t debug_flags;
 #define DEBUG_VM_RUN(...)   PRINTF_DEBUG(DEBUG_FLAG_VM_RUN,   __VA_ARGS__)
 // DEBUG facilities - end
 
-// Project
-#include "ast.h"
-
 #endif

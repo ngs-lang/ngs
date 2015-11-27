@@ -1,4 +1,5 @@
 #include "ngs.h"
+#include "ast.h"
 
 char *NGS_AST_NODE_TYPES_NAMES[] = {
 	NULL,

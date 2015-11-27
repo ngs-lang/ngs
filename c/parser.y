@@ -1,6 +1,7 @@
 %{
 #include <string.h>
 #include "ngs.h"
+#include "ast.h"
 
 // handle warnings - start
 int yylex();
