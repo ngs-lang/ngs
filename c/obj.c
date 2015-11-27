@@ -1,5 +1,8 @@
+#include <assert.h>
 #include <execinfo.h>
+#include <string.h>
 #include "ngs.h"
+#include "obj.h"
 
 void _dump(VALUE v, int level) {
 	char **symbols;

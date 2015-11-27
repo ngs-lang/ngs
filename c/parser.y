@@ -1,4 +1,5 @@
 %{
+#include <string.h>
 #include "ngs.h"
 
 // handle warnings - start

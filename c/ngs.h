@@ -1,11 +1,8 @@
 #ifndef NGS_H
 #define NGS_H
 
-#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 // GC - start
 // http://www.hboehm.info/gc/scale.html
@@ -45,16 +42,7 @@ extern uint32_t debug_flags;
 #define DEBUG_VM_RUN(...)   PRINTF_DEBUG(DEBUG_FLAG_VM_RUN,   __VA_ARGS__)
 // DEBUG facilities - end
 
-// Libs
-#include <utarray.h>
-#include <uthash.h>
-
 // Project
 #include "ast.h"
-#include "parser.h"
-#include "obj.h"
-#include "vm.h"
-#include "compile.h"
-#include "decompile.h"
 
 #endif

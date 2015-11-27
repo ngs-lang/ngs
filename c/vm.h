@@ -1,6 +1,9 @@
 #ifndef VM_H
 #define VM_H
+#include <utarray.h>
+#include <uthash.h>
 #include "ngs.h"
+#include "obj.h"
 
 #define NGS_UNUSED __attribute__((unused))
 

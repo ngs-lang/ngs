@@ -6,6 +6,7 @@
 #define COMPILE_MAX_FUNC_DEPTH (16)
 
 #include <utarray.h>
+#include "vm.h"
 
 static const UT_icd ut_size_t_icd _UNUSED_ = {sizeof(size_t),NULL,NULL,NULL};
 

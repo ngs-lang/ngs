@@ -1,4 +1,6 @@
+#include <assert.h>
 #include "ngs.h"
+#include "vm.h"
 
 char *opcodes_names[] = {
 	/*  0 */ "HALT",

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ngs.h"
+#include "vm.h"
 
 // TODO: get rid of int16_t and int32_t, use types such as JUMP_OFFSET and PATCH_OFFSET instead.
 

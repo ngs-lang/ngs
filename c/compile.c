@@ -1,4 +1,7 @@
+#include <assert.h>
 #include "ngs.h"
+#include "compile.h"
+#include "obj.h"
 
 // TODO: abstract UINT16
 
