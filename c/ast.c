@@ -19,6 +19,7 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 
 #define AST_NODE_INFO_STR_LEN (128)
 
+#ifdef DO_NGS_DEBUG
 void print_ast(ast_node *node, int level) {
 	ast_node *child;
 	char *name = "(n/a)";
@@ -41,3 +42,4 @@ void print_ast(ast_node *node, int level) {
 		print_ast(child, level+1);
 	}
 }
+#endif

@@ -22,6 +22,8 @@ int main()
 	ast_node *tree = NULL;
 	VM vm;
 	CTX ctx;
+	char *bytecode;
+	size_t len;
 	VALUE result;
 
 	NGS_GC_INIT();
@@ -32,23 +34,15 @@ int main()
 	yylex_init(&scanner);
 
 	ret = yyparse(scanner, &tree);
+	assert(ret == 0);
 	yylex_destroy(scanner);
 
-	// printf("Tree: %p\n", tree);
-	// printf("Result: %d\n", tree->val.num);
-	print_ast(tree, 0);
-	assert(ret == 0);
+	IF_DEBUG(COMPILER, print_ast(tree, 0);)
 
-	// print - start
-	char *buf;
-	size_t len;
-	buf = compile(tree, &len);
-	if(debug_flags & DEBUG_FLAG_COMPILER) {
-		decompile(buf, 0, len);
-	}
-	// print - end
+	bytecode = compile(tree, &len);
+	IF_DEBUG(COMPILER, decompile(bytecode, 0, len);)
 	vm_init(&vm);
-	vm_load_bytecode(&vm, buf, len);
+	vm_load_bytecode(&vm, bytecode, len);
 	ctx_init(&ctx);
 	vm_run(&vm, &ctx, 0, &result);
 

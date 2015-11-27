@@ -32,10 +32,13 @@ enum ast_node_type {
 	FUNC_NODE,
 	PARAMS_NODE,
 	PARAM_NODE,
+	NUMBER_OF_AST_NODE_TYPES
 };
 
-extern char *NGS_AST_NODE_TYPES_NAMES[];
+extern char *NGS_AST_NODE_TYPES_NAMES[NUMBER_OF_AST_NODE_TYPES];
 
+#ifdef DO_NGS_DEBUG
 void print_ast(ast_node *node, int level);
+#endif
 
 #endif
