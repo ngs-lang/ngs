@@ -10,11 +10,10 @@
 #include "vm.h"
 
 
-int yyerror (yyscan_t scanner, char const *s) {
-	// Eliminate warning about unused `scanner` variable
+void yyerror(struct YYLTYPE * loc, void *scanner, ast_node **result, const char *s) {
 	(void)(scanner);
-	fprintf (stderr, "PARSE ERROR: <<%s>>\n", s);
-	return 0;
+	(void)(result);
+	fprintf (stderr, "Parse error: %s at %d:%d - %d:%d\n", s, loc->first_line, loc->first_column, loc->last_line, loc->last_column);
 }
 
 int main()

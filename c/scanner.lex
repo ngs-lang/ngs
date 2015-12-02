@@ -32,6 +32,12 @@
 
 /* INITIAL is commands */
 %x CODE
+/* Single quoted string */
+%x SQ_STR
+/* Double quoted string */
+%x DQ_STR
+/* Regex (/.../) quoted string */
+%x RQ_STR
 
 whitespace      [ \t]+
 identifier		[_a-zA-Z]+[_a-zA-Z0-9]*
@@ -43,6 +49,12 @@ digits			[0-9]+
 <INITIAL>\n         { /* TEMP: ignore newlines for now */ }
 
 <INITIAL>"{"        { yy_push_state(CODE, yyscanner); DEBUG_PARSER("%s", "Entering mode: CODE\n"); return '{'; }
+
+ /* strings */
+<INITIAL,CODE>'     { yy_push_state(SQ_STR, yyscanner); DEBUG_PARSER("%s", "Entering mode: SQ_STR\n"); return STR_BEGIN; }
+<SQ_STR>'           { yy_pop_state(yyscanner); DEBUG_PARSER("%s", "Leaving mode: SQ_STR\n"); return STR_END; }
+<SQ_STR>[^\']+      { USE_TEXT_AS_NAME; return STR_COMP_IMM; }
+
 
 <CODE>{
 	[\n]            { DEBUG_PARSER("%s", "LEX NEWLINE\n"); return *yytext; }

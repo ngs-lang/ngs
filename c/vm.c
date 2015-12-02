@@ -26,6 +26,7 @@ char *opcodes_names[] = {
 	/* 20 */ "JMP_FALSE",
 	/* 21 */ "MAKE_ARR",
 	/* 22 */ "MAKE_CLOSURE",
+	/* 23 */ "TO_STR",
 };
 
 
@@ -464,6 +465,12 @@ do_jump:
 							// n_params_required = n_params_optional = 0;
 							PUSH(make_closure_obj(ip+jo, n_locals, n_params_required, n_params_optional, params));
 							goto main_loop;
+		case OP_TO_STR:
+							assert(ctx->stack_ptr);
+							if(IS_STRING(ctx->stack[ctx->stack_ptr-1])) {
+								goto main_loop;
+							}
+							assert(0=="OP_TO_STR is not implemented yet for any non-string object");
 		default:
 							// TODO: exception
 							printf("ERROR: Unknown opcode %d\n", opcode);

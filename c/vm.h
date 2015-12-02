@@ -75,6 +75,7 @@ enum opcodes {
 	OP_JMP_FALSE,
 	OP_MAKE_ARR,
 	OP_MAKE_CLOSURE,
+	OP_TO_STR,
 	NUMBER_OF_OPCODES,
 };
 

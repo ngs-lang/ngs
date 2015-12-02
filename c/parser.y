@@ -3,9 +3,13 @@
 #include "ngs.h"
 #include "ast.h"
 
+// Without the following line you get message that struct YYLTYPE will not be visible outside the function yyerror
+struct YYLTYPE;
+void yyerror(struct YYLTYPE * yylloc_param, void *scanner, ast_node **result, const char *s);
+
 // handle warnings - start
+// int yylex (union YYSTYPE * yyval_param, struct YYLTYPE * yylloc_param, void * yyscanner);
 int yylex();
-int yyerror();
 // handle warnings - end
 
 #define ALLOC_NODE(dst, type_) (dst) = NGS_MALLOC(sizeof(ast_node)); dst->type=type_
@@ -38,6 +42,9 @@ int yyerror();
 
 %token DEF
 %token FOR
+%token STR_BEGIN
+%token <name> STR_COMP_IMM
+%token STR_END
 %token WHILE
 
 %token <name> BINOP
@@ -58,7 +65,10 @@ int yyerror();
 %type <ast_node> identifier
 %type <ast_node> number
 %type <ast_node> optional_parameters
+%type <ast_node> optional_string_components
 %type <ast_node> parameter
+%type <ast_node> string
+%type <ast_node> string_component
 %type <ast_node> top_level
 %type <ast_node> top_level2
 %type <ast_node> top_level_item
@@ -142,7 +152,7 @@ expressions_delimiter_one_or_more: expressions_delimiter_one_or_more expressions
 
 expressions_delimiter_zero_or_more: expressions_delimiter_one_or_more | /* nothing */;
 
-expression: assignment | binop | number | identifier | call | for | array_literal | f | def;
+expression: assignment | binop | number | identifier | call | for | array_literal | f | def | string;
 
 binop: expression[e1] BINOP expression[e2] {
 		DEBUG_PARSER("binop $e1 %p $e2 %p\n", $e1, $e2);
@@ -291,6 +301,37 @@ parameter:
 		$$ = ret;
 	}
 
-number: NUMBER { MAKE_NODE(ret, NUMBER_NODE); ret->number = $NUMBER; $$ = ret; }
+string: STR_BEGIN optional_string_components STR_END {
+	  $$ = $optional_string_components;
+	}
+
+optional_string_components:
+	optional_string_components[opt_comps] ',' string_component {
+		printf("STR COMPS MULTI\n");
+		$opt_comps->last_child->next_sibling = $string_component;
+		$opt_comps->last_child = $string_component;
+		$$ = $opt_comps;
+	}
+	| string_component {
+		printf("STR COMPS ONE\n");
+		MAKE_NODE(ret, STR_COMPS_NODE);
+		ret->first_child = $string_component;
+		ret->last_child = $string_component;
+		$$ = ret;
+	}
+	|
+	/* nothing */ {
+		MAKE_NODE(ret, STR_COMPS_NODE);
+		printf("STR COMPS NONE\n");
+		ret->first_child = NULL;
+		ret->last_child = NULL;
+		$$ = ret;
+	};
+
+string_component:
+  STR_COMP_IMM { MAKE_NODE(ret, STR_COMP_IMM_NODE); ret->name = $STR_COMP_IMM; $$ = ret; }
+
+number:
+  NUMBER { MAKE_NODE(ret, NUMBER_NODE); ret->number = $NUMBER; $$ = ret; }
 
 %%

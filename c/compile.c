@@ -324,6 +324,31 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			DATA_JUMP_OFFSET(*buf, -(*idx - func_jump + sizeof(LOCAL_VAR_INDEX)));
 			DATA_N_LOCAL_VARS(*buf, n_locals);
 			break;
+		case STR_COMPS_NODE:
+			for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
+				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
+				if(ptr->type != STR_COMP_IMM_NODE) {
+					OPCODE(*buf, OP_TO_STR);
+				}
+			}
+			switch(argc) {
+				case 0:
+					assert(0=="Empty string is not implemented yet");
+					// OPCODE(*buf, OP_PUSH_EMPTY_STR);
+					break;
+				case 1:
+					break;
+				default:
+					assert(0=="String with 2 and more components is not implemented yet");
+					// OPCODE(*buf, OP_PUSH_INT);
+					// DATA_INT(*buf, argc);
+					// OPCODE(*buf, OP_MAKE_STR);
+			}
+			break;
+		case STR_COMP_IMM_NODE:
+			OPCODE(*buf, OP_PUSH_L_STR);
+			L_STR(*buf, node->name);
+			break;
 		default:
 			assert(0=="compile_main_section(): unknown node type");
 	}
