@@ -27,6 +27,11 @@
 	yycolumn += yyleng;
 
 #define USE_TEXT_AS_NAME yylval->name = strdup(yytext) /* strdup needed?*/
+
+#define DOLLAR_EXPANSION_END \
+		if(YYSTATE == DOLLAR_EXPANSION) {\
+			yy_pop_state(yyscanner);\
+		}
 %}
 
 
@@ -77,11 +82,7 @@ digits			[0-9]+
 	{identifier}    {
 		DEBUG_PARSER("LEX IDENTIFIER %s\n", yytext);
 		USE_TEXT_AS_NAME;
-		// printf("IDENTIFIER POP STATE cur=%d init=%d dq=%d dollar=%d\n", yy_top_state(yyscanner), INITIAL, DQ_STR, DOLLAR_EXPANSION);
-		if(YYSTATE == DOLLAR_EXPANSION) {
-			yy_pop_state(yyscanner);
-			// printf("IDENTIFIER POPPED STATE TO %d\n", YYSTATE);
-		}
+		DOLLAR_EXPANSION_END;
 		return IDENTIFIER;
 	}
 }
@@ -92,6 +93,13 @@ digits			[0-9]+
 	"("|")"         { DEBUG_PARSER("LEX PAREN %s\n", yytext); return *yytext; }
 	"["|"]"         { DEBUG_PARSER("LEX BRACKET %s\n", yytext); return *yytext; }
 	","             { DEBUG_PARSER("LEX COMMA %s\n", yytext); return *yytext; }
-	"{"             { yy_push_state(CODE, yyscanner); DEBUG_PARSER("%s", "Re-entering mode: CODE\n"); return '{'; }
-	"}"             { yy_pop_state(yyscanner); DEBUG_PARSER("%s", "Leaving mode: CODE\n"); return '}'; }
+}
+<CODE,DOLLAR_EXPANSION>{
+	"{"             { yy_push_state(CODE, yyscanner); DEBUG_PARSER("%s", "Entering mode: CODE\n"); return '{'; }
+	"}"             {
+		yy_pop_state(yyscanner);
+		DEBUG_PARSER("%s", "Leaving mode: CODE\n");
+		DOLLAR_EXPANSION_END;
+		return '}';
+	}
 }

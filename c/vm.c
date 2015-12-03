@@ -28,6 +28,7 @@ char *opcodes_names[] = {
 	/* 22 */ "MAKE_CLOSURE",
 	/* 23 */ "TO_STR",
 	/* 24 */ "MAKE_STR",
+	/* 25 */ "PUSH_EMPTY_STR",
 };
 
 
@@ -509,6 +510,10 @@ do_jump:
 							POP(v);
 							string_components_count = GET_INT(v);
 							v = join_strings(string_components_count, &(ctx->stack[ctx->stack_ptr-string_components_count]));
+							PUSH(v);
+							goto main_loop;
+		case OP_PUSH_EMPTY_STR:
+							v = make_var_len_obj(T_STR, 1, 0);
 							PUSH(v);
 							goto main_loop;
 		default:

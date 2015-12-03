@@ -336,8 +336,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			}
 			switch(argc) {
 				case 0:
-					assert(0=="Empty string is not implemented yet");
-					// OPCODE(*buf, OP_PUSH_EMPTY_STR);
+					OPCODE(*buf, OP_PUSH_EMPTY_STR);
 					break;
 				case 1:
 					break;

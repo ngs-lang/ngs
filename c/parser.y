@@ -56,6 +56,7 @@ int yylex();
 %type <ast_node> assignment
 %type <ast_node> call
 %type <ast_node> curly_expressions
+%type <ast_node> curly_expressions_only
 %type <ast_node> def
 %type <ast_node> expression
 %type <ast_node> expressions
@@ -126,8 +127,11 @@ identifier: IDENTIFIER {
 		 $$ = ret;
 }
 
-curly_expressions:
+curly_expressions_only:
 		'{' expressions_delimiter_zero_or_more expressions expressions_delimiter_zero_or_more '}' { $$ = $expressions; }
+
+curly_expressions:
+		curly_expressions_only
 		| expression;
 
 /* TODO: straighten this */
@@ -331,7 +335,9 @@ optional_string_components:
 string_component:
   STR_COMP_IMM { MAKE_NODE(ret, STR_COMP_IMM_NODE); ret->name = $STR_COMP_IMM; $$ = ret; }
   |
-  identifier;
+  identifier
+  |
+  curly_expressions_only;
 
 number:
   NUMBER { MAKE_NODE(ret, NUMBER_NODE); ret->number = $NUMBER; $$ = ret; }

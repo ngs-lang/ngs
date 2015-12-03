@@ -86,6 +86,7 @@ enum opcodes {
 	OP_MAKE_CLOSURE,
 	OP_TO_STR,
 	OP_MAKE_STR,
+	OP_PUSH_EMPTY_STR,
 	NUMBER_OF_OPCODES,
 };
 
