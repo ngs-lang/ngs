@@ -326,6 +326,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			break;
 		case STR_COMPS_NODE:
 			for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
+				if(ptr->type != STR_COMP_IMM_NODE) {
+					OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value of OP_TO_STR
+				}
 				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
 				if(ptr->type != STR_COMP_IMM_NODE) {
 					OPCODE(*buf, OP_TO_STR);
@@ -339,10 +342,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				case 1:
 					break;
 				default:
-					assert(0=="String with 2 and more components is not implemented yet");
-					// OPCODE(*buf, OP_PUSH_INT);
-					// DATA_INT(*buf, argc);
-					// OPCODE(*buf, OP_MAKE_STR);
+					OPCODE(*buf, OP_PUSH_INT);
+					DATA_INT(*buf, argc);
+					OPCODE(*buf, OP_MAKE_STR);
 			}
 			break;
 		case STR_COMP_IMM_NODE:

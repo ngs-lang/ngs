@@ -49,6 +49,15 @@ typedef struct vm_struct {
 	VALUE *globals;
 	size_t globals_len;
 	VAR_INDEX *globals_indexes;
+
+	NGS_TYPE *Null;
+	NGS_TYPE *Bool;
+	NGS_TYPE *Int;
+	NGS_TYPE *Str;
+	NGS_TYPE *Arr;
+	NGS_TYPE *Fun;
+	NGS_TYPE *Any;
+	NGS_TYPE *Seq;
 } VM;
 
 enum opcodes {
@@ -76,6 +85,7 @@ enum opcodes {
 	OP_MAKE_ARR,
 	OP_MAKE_CLOSURE,
 	OP_TO_STR,
+	OP_MAKE_STR,
 	NUMBER_OF_OPCODES,
 };
 

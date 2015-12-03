@@ -27,6 +27,7 @@ char *opcodes_names[] = {
 	/* 21 */ "MAKE_ARR",
 	/* 22 */ "MAKE_CLOSURE",
 	/* 23 */ "TO_STR",
+	/* 24 */ "MAKE_STR",
 };
 
 
@@ -84,6 +85,15 @@ METHOD_RESULT native_plus_arr_arr(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VA
 	return METHOD_OK;
 }
 
+METHOD_RESULT native_Str_int(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *result) {
+	METHOD_MUST_HAVE_N_ARGS(1);
+	METHOD_ARG_N_MUST_BE(0, INT);
+	char s[MAX_INT_TO_STR_LEN];
+	snprintf(s, sizeof(s), "%" PRIiPTR, GET_INT(argv[0]));
+	*result = make_string(s);
+	return METHOD_OK;
+}
+
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
 	HASH_FIND(hh, vm->globals_indexes, name, name_len, var);
@@ -128,6 +138,10 @@ void register_global_func(VM *vm, char *name, void *func_ptr) {
 		array_push(vm->globals[index], MAKE_OBJ(o));
 		return;
 	}
+	if(IS_NGS_TYPE(vm->globals[index])) {
+		array_push(NGS_TYPE_CONSTRUCTORS(vm->globals[index]), MAKE_OBJ(o));
+		return;
+	}
 	if(IS_UNDEF(vm->globals[index])) {
 		vm->globals[index] = make_array_with_values(1, &MAKE_OBJ(o));
 		// dump_titled("register_global_func", vm->globals[index]);
@@ -136,11 +150,22 @@ void register_global_func(VM *vm, char *name, void *func_ptr) {
 	assert(0 == "register_global_func fail");
 }
 
-void register_builtin_type(VM *vm, const char *name, uintptr_t id) {
+NGS_TYPE *register_builtin_type(VM *vm, const char *name) {
 	size_t index;
+	NGS_TYPE *t;
+	t = NGS_MALLOC(sizeof(*t));
+	assert(t);
+	t->base.type.num = T_TYPE;
+	t->base.val.ptr = NULL; /* unused */
+	t->name = make_string(name);
+	t->constructors = make_array(0);
+	t->meta = make_array(0); /* unused for now */
+
+
 	index = get_global_index(vm, name, strlen(name));
 	assert(IS_UNDEF(vm->globals[index]));
-	vm->globals[index].num = id;
+	SET_OBJ(vm->globals[index], t);
+	return t;
 }
 
 void vm_init(VM *vm) {
@@ -156,14 +181,15 @@ void vm_init(VM *vm) {
 	register_global_func(vm, "-", &native_minus_int_int);
 	register_global_func(vm, "<", &native_less_int_int);
 	register_global_func(vm, "dump", &native_dump);
-	register_builtin_type(vm, "Null", T_NULL);
-	register_builtin_type(vm, "Bool", T_BOOL);
-	register_builtin_type(vm, "Int", T_INT);
-	register_builtin_type(vm, "Str", T_STR);
-	register_builtin_type(vm, "Arr", T_ARR);
-	register_builtin_type(vm, "Fun", T_FUN);
-	register_builtin_type(vm, "Any", T_ANY);
-	register_builtin_type(vm, "Seq", T_SEQ);
+	vm->Null = register_builtin_type(vm, "Null");
+	vm->Bool = register_builtin_type(vm, "Bool");
+	vm->Int = register_builtin_type(vm, "Int");
+	vm->Str = register_builtin_type(vm, "Str");
+	vm->Arr = register_builtin_type(vm, "Arr");
+	vm->Fun = register_builtin_type(vm, "Fun");
+	vm->Any = register_builtin_type(vm, "Any");
+	vm->Seq = register_builtin_type(vm, "Seq");
+	register_global_func(vm, "Str", &native_Str_int);
 }
 
 void ctx_init(CTX *ctx) {
@@ -244,6 +270,10 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, c
 		return mr;
 	}
 
+	if(IS_NGS_TYPE(callable)) {
+		return _vm_call(vm, ctx, NGS_TYPE_CONSTRUCTORS(callable), argc, argv);
+	}
+
 	// TODO: allow handling of calling of undefined methods by the NGS language
 	dump_titled("_vm_call(): Don't know how to call", callable);
 	abort();
@@ -264,6 +294,7 @@ METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result) {
 	size_t vlo_len;
 	METHOD_RESULT mr;
 	size_t saved_stack_ptr = ctx->stack_ptr;
+	size_t string_components_count;
 
 	// for OP_MAKE_CLOSURE
 	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
@@ -470,7 +501,16 @@ do_jump:
 							if(IS_STRING(ctx->stack[ctx->stack_ptr-1])) {
 								goto main_loop;
 							}
-							assert(0=="OP_TO_STR is not implemented yet for any non-string object");
+							mr = _vm_call(vm, ctx, (VALUE){.ptr = vm->Str}, 1, &ctx->stack[ctx->stack_ptr-1]);
+							assert(mr == METHOD_OK);
+							goto main_loop;
+		case OP_MAKE_STR:
+							// TODO: (optimization) update top of the stack instead of POP and PUSH
+							POP(v);
+							string_components_count = GET_INT(v);
+							v = join_strings(string_components_count, &(ctx->stack[ctx->stack_ptr-string_components_count]));
+							PUSH(v);
+							goto main_loop;
 		default:
 							// TODO: exception
 							printf("ERROR: Unknown opcode %d\n", opcode);

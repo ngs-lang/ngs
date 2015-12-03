@@ -47,13 +47,13 @@ exit:
 }
 
 // TODO: consider allocating power-of-two length
-VALUE make_var_len_obj(const size_t item_size, const size_t len) {
+VALUE make_var_len_obj(uintptr_t type, const size_t item_size, const size_t len) {
 
 	VALUE v;
 	VAR_LEN_OBJECT *vlo;
 
 	vlo = NGS_MALLOC(sizeof(*vlo));
-	vlo->base.type.num = T_ARR; // XXX: Should be subtype of T_SEQ (T_ARR or T_STR)
+	vlo->base.type.num = type;
 	vlo->len = len;
 	vlo->allocated = len;
 	vlo->item_size = item_size;
@@ -71,7 +71,7 @@ VALUE make_var_len_obj(const size_t item_size, const size_t len) {
 
 VALUE make_array(size_t len) {
 	VALUE ret;
-	ret = make_var_len_obj(sizeof(VALUE), len);
+	ret = make_var_len_obj(T_ARR, sizeof(VALUE), len);
 	return ret;
 }
 
@@ -81,6 +81,19 @@ VALUE make_array_with_values(size_t len, VALUE *values) {
 	memcpy(OBJ_DATA_PTR(ret), values, sizeof(VALUE)*len);
 	return ret;
 }
+
+VALUE make_string(const char *s) {
+	VALUE v;
+	VAR_LEN_OBJECT *vlo;
+	vlo = NGS_MALLOC(sizeof(*vlo));
+	vlo->len = strlen(s);
+	vlo->base.type.num = T_STR;
+	vlo->base.val.ptr = NGS_MALLOC_ATOMIC(vlo->len);
+	memcpy(vlo->base.val.ptr, s, vlo->len);
+	SET_OBJ(v, vlo);
+	return v;
+}
+
 
 // Very not thread safe
 // Inspired by utarray.h
@@ -130,6 +143,30 @@ VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX 
 	SET_OBJ(v, c);
 
 	return v;
+}
+
+VALUE join_strings(int argc, VALUE *argv) {
+	size_t len;
+	int i;
+	VALUE ret;
+	void *dst;
+
+	// printf("JOIN ARGC %d\n", argc);
+	for(i=0, len=0; i<argc; i++) {
+		// dump_titled("JOIN", argv[i]);
+		assert(IS_STRING(argv[i]));
+		len += OBJ_LEN(argv[i]);
+	}
+	// printf("JOIN TOTAL LEN %d\n", len);
+	ret = make_var_len_obj(T_STR, 1, len);
+	for(i=0, dst=OBJ_DATA_PTR(ret); i<argc; i++) {
+		len = OBJ_LEN(argv[i]);
+		// printf("JOIN ITEM LEN %d\n", len);
+		memcpy(dst, OBJ_DATA_PTR(argv[i]), len);
+		dst += len;
+	}
+	// dump_titled("JOIN RET", ret);
+	return ret;
 }
 
 void dump(VALUE v) {

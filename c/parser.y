@@ -306,14 +306,14 @@ string: STR_BEGIN optional_string_components STR_END {
 	}
 
 optional_string_components:
-	optional_string_components[opt_comps] ',' string_component {
-		printf("STR COMPS MULTI\n");
+	optional_string_components[opt_comps] string_component {
+		// printf("STR COMPS MULTI\n");
 		$opt_comps->last_child->next_sibling = $string_component;
 		$opt_comps->last_child = $string_component;
 		$$ = $opt_comps;
 	}
 	| string_component {
-		printf("STR COMPS ONE\n");
+		// printf("STR COMPS ONE\n");
 		MAKE_NODE(ret, STR_COMPS_NODE);
 		ret->first_child = $string_component;
 		ret->last_child = $string_component;
@@ -322,7 +322,7 @@ optional_string_components:
 	|
 	/* nothing */ {
 		MAKE_NODE(ret, STR_COMPS_NODE);
-		printf("STR COMPS NONE\n");
+		// printf("STR COMPS NONE\n");
 		ret->first_child = NULL;
 		ret->last_child = NULL;
 		$$ = ret;
@@ -330,6 +330,8 @@ optional_string_components:
 
 string_component:
   STR_COMP_IMM { MAKE_NODE(ret, STR_COMP_IMM_NODE); ret->name = $STR_COMP_IMM; $$ = ret; }
+  |
+  identifier;
 
 number:
   NUMBER { MAKE_NODE(ret, NUMBER_NODE); ret->number = $NUMBER; $$ = ret; }

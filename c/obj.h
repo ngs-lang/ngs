@@ -10,6 +10,7 @@ typedef uint8_t LOCAL_VAR_INDEX;
 #define MAX_GLOBALS         (65535)
 #define MAX_LOCALS            (255)
 #define INITITAL_ARRAY_SIZE     (8)
+#define MAX_INT_TO_STR_LEN    (256)
 
 // On problems with `uintptr_t` change here according to Ruby source in `include/ruby/ruby.h`
 // uintptr_t format for printf - PRIXPTR - printf("Blah %" PRIXPTR "\n", VALUE.num);
@@ -40,6 +41,13 @@ typedef struct closure {
 	LOCAL_VAR_INDEX n_params_optional;
 	VALUE *params;
 } CLOSURE_OBJECT;
+
+typedef struct ngs_type {
+	OBJECT base;
+	VALUE name;
+	VALUE constructors;
+	VALUE meta;
+} NGS_TYPE;
 
 // malloc() / NGS_MALLOC() memory is 8 bytes aligned, should be at least 4 bytes aligned
 // .....000 - *OBJECT
@@ -130,6 +138,7 @@ enum IMMEDIATE_VALUES {
 #define OBJ_ALLOCATED(v)          ((VAR_LEN_OBJECT *) v.ptr)->allocated
 #define CLOSURE_OBJ_IP(v)         ((CLOSURE_OBJECT *) v.ptr)->ip
 #define CLOSURE_OBJ_N_LOCALS(v)   ((CLOSURE_OBJECT *) v.ptr)->n_local_vars
+#define NGS_TYPE_CONSTRUCTORS(v)  ((NGS_TYPE *) v.ptr)->constructors
 #define OBJ_DATA_PTR(v)           (((OBJECT *)(v).ptr)->val.ptr)
 #define OBJ_TYPE(v)               (((OBJECT *)(v).ptr)->type.num)
 #define OBJ_TYPE_PTR(v)           (((OBJECT *)(v).ptr)->type.ptr)
@@ -137,15 +146,18 @@ enum IMMEDIATE_VALUES {
 #define IS_NATIVE_METHOD(v)       (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_NATIVE_METHOD)
 #define IS_CLOSURE(v)             (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_CLOSURE)
 #define IS_ARRAY(v)               (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_ARR)
+#define IS_NGS_TYPE(v)            (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_TYPE)
 #define IS_VLO(v)                 (IS_ARRAY(v) || IS_STRING(v))
 #define ARRAY_ITEMS(v)            ((VALUE *)(OBJ_DATA_PTR(v)))
 
-VALUE make_var_len_obj(const size_t item_size, const size_t len);
+VALUE make_var_len_obj(uintptr_t type, const size_t item_size, const size_t len);
 VALUE make_array(size_t len);
 VALUE make_array_with_values(size_t len, VALUE *values);
+VALUE make_string(const char *s);
 void vlo_ensure_additional_space(VALUE v, size_t n);
 void array_push(VALUE arr, VALUE v);
 VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, VALUE *params);
+VALUE join_strings(int argc, VALUE *argv);
 void dump(VALUE v);
 void dump_titled(char *title, VALUE v);
 

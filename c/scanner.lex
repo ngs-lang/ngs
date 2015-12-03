@@ -38,6 +38,7 @@
 %x DQ_STR
 /* Regex (/.../) quoted string */
 %x RQ_STR
+%x DOLLAR_EXPANSION
 
 whitespace      [ \t]+
 identifier		[_a-zA-Z]+[_a-zA-Z0-9]*
@@ -55,6 +56,10 @@ digits			[0-9]+
 <SQ_STR>'           { yy_pop_state(yyscanner); DEBUG_PARSER("%s", "Leaving mode: SQ_STR\n"); return STR_END; }
 <SQ_STR>[^\']+      { USE_TEXT_AS_NAME; return STR_COMP_IMM; }
 
+<INITIAL,CODE>\"    { yy_push_state(DQ_STR, yyscanner); DEBUG_PARSER("%s", "Entering mode: DQ_STR\n"); return STR_BEGIN; }
+<DQ_STR>\"          { yy_pop_state(yyscanner); DEBUG_PARSER("%s", "Leaving mode: DQ_STR\n"); return STR_END; }
+<DQ_STR>\$          { yy_push_state(DOLLAR_EXPANSION, yyscanner); DEBUG_PARSER("%s", "Entering mode: DOLLAR_EXPANSION\n");  }
+<DQ_STR>[^\"$]+     { USE_TEXT_AS_NAME; return STR_COMP_IMM; }
 
 <CODE>{
 	[\n]            { DEBUG_PARSER("%s", "LEX NEWLINE\n"); return *yytext; }
@@ -66,7 +71,22 @@ digits			[0-9]+
 	"for"           { DEBUG_PARSER("%s", "LEX FOR\n"); return FOR; }
 	"def"           { DEBUG_PARSER("%s", "LEX DEF\n"); return DEF; }
 	"F"             { DEBUG_PARSER("LEX F %s\n", yytext); return *yytext; } /* not sure about correctness */
-	{identifier}    { DEBUG_PARSER("LEX IDENTIFIER %s\n", yytext); USE_TEXT_AS_NAME; return IDENTIFIER; }
+}
+
+<CODE,DOLLAR_EXPANSION>{
+	{identifier}    {
+		DEBUG_PARSER("LEX IDENTIFIER %s\n", yytext);
+		USE_TEXT_AS_NAME;
+		// printf("IDENTIFIER POP STATE cur=%d init=%d dq=%d dollar=%d\n", yy_top_state(yyscanner), INITIAL, DQ_STR, DOLLAR_EXPANSION);
+		if(YYSTATE == DOLLAR_EXPANSION) {
+			yy_pop_state(yyscanner);
+			// printf("IDENTIFIER POPPED STATE TO %d\n", YYSTATE);
+		}
+		return IDENTIFIER;
+	}
+}
+
+<CODE>{
 	":"             { DEBUG_PARSER("LEX COLON %s\n", yytext); return *yytext; }
 	";"             { DEBUG_PARSER("LEX E.DELIMITER %s\n", yytext); return *yytext; }
 	"("|")"         { DEBUG_PARSER("LEX PAREN %s\n", yytext); return *yytext; }
