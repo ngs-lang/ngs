@@ -1,0 +1,7 @@
+{
+	F myfunc(x) 1+x
+	dump(myfunc(2))
+
+	myfunc2 = F myfunc2(y) 2+y
+	dump(myfunc2(4))
+}

@@ -190,6 +190,7 @@ void vm_init(VM *vm) {
 	vm->Fun = register_builtin_type(vm, "Fun");
 	vm->Any = register_builtin_type(vm, "Any");
 	vm->Seq = register_builtin_type(vm, "Seq");
+	vm->Type = register_builtin_type(vm, "Type");
 	register_global_func(vm, "Str", &native_Str_int);
 }
 
@@ -391,10 +392,13 @@ main_loop:
 #ifdef DO_NGS_DEBUG
 							// DEBUG_VM_RUN("OP_FETCH_GLOBAL gvi=%d len=%d\n", gvi, vm->globals_len);
 							assert(gvi < vm->globals_len);
-							// TODO: report error here instead of crashing
-							assert(IS_NOT_UNDEF(vm->globals[gvi]));
-							// dump_titled("FETCH_GLOBAL", vm->globals[gvi]);
 #endif
+							// TODO: report error here instead of crashing
+							if(IS_UNDEF(vm->globals[gvi])) {
+								printf("Global %d not found\n", gvi);
+								assert(0=="Global not found");
+							}
+							// dump_titled("FETCH_GLOBAL", vm->globals[gvi]);
 							PUSH(vm->globals[gvi]);
 							goto main_loop;
 		case OP_STORE_GLOBAL:

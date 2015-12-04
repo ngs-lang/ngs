@@ -69,12 +69,14 @@ digits			[0-9]+
 <CODE>{
 	[\n]            { DEBUG_PARSER("%s", "LEX NEWLINE\n"); return *yytext; }
 	{whitespace}    { /* ignore whitespace */ }
-	"+"|"-"|"<"|">" { DEBUG_PARSER("%s", "LEX BINOP\n"); USE_TEXT_AS_NAME; return BINOP; }
+	"+"|"-"|"<"|">"|"is" { DEBUG_PARSER("%s", "LEX BINOP\n"); USE_TEXT_AS_NAME; return BINOP; }
 	"="             { DEBUG_PARSER("%s", "LEX EQUALS\n"); return '='; }
 	{digits}		{ yylval->number = atoi(yytext); DEBUG_PARSER("LEX NUMBER %d\n", yylval->number); return NUMBER; }
+}
+<INITIAL,CODE>{
+	"END"           { return 0; }
 	"while"         { DEBUG_PARSER("%s", "LEX WHILE\n"); return WHILE; }
 	"for"           { DEBUG_PARSER("%s", "LEX FOR\n"); return FOR; }
-	"def"           { DEBUG_PARSER("%s", "LEX DEF\n"); return DEF; }
 	"F"             { DEBUG_PARSER("LEX F %s\n", yytext); return *yytext; } /* not sure about correctness */
 }
 
@@ -88,6 +90,7 @@ digits			[0-9]+
 }
 
 <CODE>{
+	"."             { DEBUG_PARSER("LEX DOT %s\n", yytext); return *yytext; }
 	":"             { DEBUG_PARSER("LEX COLON %s\n", yytext); return *yytext; }
 	";"             { DEBUG_PARSER("LEX E.DELIMITER %s\n", yytext); return *yytext; }
 	"("|")"         { DEBUG_PARSER("LEX PAREN %s\n", yytext); return *yytext; }

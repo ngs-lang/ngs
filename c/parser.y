@@ -1,4 +1,5 @@
 %{
+#define YYERROR_VERBOSE (1)
 #include <string.h>
 #include "ngs.h"
 #include "ast.h"
@@ -57,7 +58,6 @@ int yylex();
 %type <ast_node> call
 %type <ast_node> curly_expressions
 %type <ast_node> curly_expressions_only
-%type <ast_node> def
 %type <ast_node> expression
 %type <ast_node> expressions
 %type <ast_node> f
@@ -65,9 +65,11 @@ int yylex();
 %type <ast_node> binop
 %type <ast_node> identifier
 %type <ast_node> number
+%type <ast_node> optional_func_name
 %type <ast_node> optional_parameters
 %type <ast_node> optional_string_components
 %type <ast_node> parameter
+%type <ast_node> quoted_identifier
 %type <ast_node> string
 %type <ast_node> string_component
 %type <ast_node> top_level
@@ -127,6 +129,13 @@ identifier: IDENTIFIER {
 		 $$ = ret;
 }
 
+quoted_identifier: STR_BEGIN STR_COMP_IMM STR_END {
+		 DEBUG_PARSER("quoted identifier $2 %p name=%s\n", $2, $2);
+		 MAKE_NODE(ret, IDENTIFIER_NODE);
+		 ret->name = $STR_COMP_IMM;
+		 $$ = ret;
+}
+
 curly_expressions_only:
 		'{' expressions_delimiter_zero_or_more expressions expressions_delimiter_zero_or_more '}' { $$ = $expressions; }
 
@@ -156,7 +165,7 @@ expressions_delimiter_one_or_more: expressions_delimiter_one_or_more expressions
 
 expressions_delimiter_zero_or_more: expressions_delimiter_one_or_more | /* nothing */;
 
-expression: assignment | binop | number | identifier | call | for | array_literal | f | def | string;
+expression: assignment | binop | number | identifier | call | for | array_literal | f | string;
 
 binop: expression[e1] BINOP expression[e2] {
 		DEBUG_PARSER("binop $e1 %p $e2 %p\n", $e1, $e2);
@@ -247,23 +256,25 @@ array_items:
 		};
 
 f:
- 		'F' '(' optional_parameters ')' curly_expressions[body] {
-			/* Work in progress */
+		'F' optional_func_name[name] '(' optional_parameters ')' curly_expressions[body] {
 			MAKE_NODE(ret, FUNC_NODE);
-			// MAKE_NODE(args, EXPRESSIONS_NODE); /* wrong type */
 			ret->first_child = $optional_parameters;
 			ret->first_child->next_sibling = $body;
 			$$ = ret;
+			if($name) {
+				// TODO: check that source locations are correct
+				MAKE_NODE_LOC(ret_assign, ASSIGNMENT_NODE, @name.first_line, @name.first_column, @name.last_line, @name.last_column, 1);
+				ret_assign->first_child = $name;
+				$name->next_sibling = ret;
+				$$ = ret_assign;
+			}
 		}
-def:
-		DEF identifier '(' optional_parameters ')' curly_expressions[body] {
-			/* Work in progress */
-			MAKE_NODE(ret, EXPRESSIONS_NODE);
-			MAKE_NODE(args, EXPRESSIONS_NODE); /* wrong type */
-			ret->first_child = args;
-			args->next_sibling = $body;
-			$$ = ret;
-		}
+
+optional_func_name:
+	identifier
+	|
+	quoted_identifier
+	| /* nothing */ { $$=NULL; };
 
 optional_parameters:
 	optional_parameters[parameters] ',' parameter {
