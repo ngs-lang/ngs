@@ -39,6 +39,7 @@ char *opcodes_names[] = {
 #define PUSH_NULL PUSH((VALUE){.num=V_NULL})
 #define LOCALS (ctx->frames[ctx->frame_ptr-1].locals)
 
+#define NATIVE_METHOD_PARAMS (NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *result)
 #define METHOD_MUST_HAVE_N_ARGS(n) if(n != argc) { return METHOD_ARGS_MISMATCH; }
 #define METHOD_MUST_HAVE_AT_LEAST_ARGS(n) if(argc < n) { return METHOD_ARGS_MISMATCH; }
 #define METHOD_MUST_HAVE_AT_MOST_ARGS(n) if(argc > n) { return METHOD_ARGS_MISMATCH; }
@@ -118,6 +119,14 @@ METHOD_RESULT native_is(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *resul
 
 		assert(0=="native_is(): Unimplemented check against builtin type");
 	}
+	return METHOD_ARGS_MISMATCH;
+}
+
+METHOD_RESULT native_Bool_any NATIVE_METHOD_PARAMS {
+	METHOD_MUST_HAVE_N_ARGS(1);
+	if(IS_BOOL(argv[0])) { *result = argv[0]; return METHOD_OK; }
+	if(IS_INT(argv[0])) { *result = MAKE_BOOL(GET_INT(argv[0])); return METHOD_OK; }
+	if(IS_STRING(argv[0]) || IS_ARRAY(argv[0])) { *result = MAKE_BOOL(OBJ_LEN(argv[0])); return METHOD_OK; }
 	return METHOD_ARGS_MISMATCH;
 }
 
@@ -218,6 +227,7 @@ void vm_init(VM *vm) {
 	vm->Any = register_builtin_type(vm, "Any", T_ANY);
 	vm->Seq = register_builtin_type(vm, "Seq", T_SEQ);
 	vm->Type = register_builtin_type(vm, "Type", T_TYPE);
+	register_global_func(vm, "Bool", &native_Bool_any);
 	register_global_func(vm, "Str", &native_Str_int);
 	register_global_func(vm, "is", &native_is);
 }
