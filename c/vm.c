@@ -95,6 +95,29 @@ METHOD_RESULT native_Str_int(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *
 	return METHOD_OK;
 }
 
+// TODO: make it faster, probably using vector of NATIVE_TYPE_IDs and how to detect them
+METHOD_RESULT native_is(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *result) {
+	METHOD_MUST_HAVE_N_ARGS(2);
+	METHOD_ARG_N_MUST_BE(1, NGS_TYPE);
+	NATIVE_TYPE_ID tid = NGS_TYPE_ID(argv[1]);
+	// printf("DUMPING\n");
+	// dump_titled("IS TYPE", argv[1]);
+	// printf("DUMPED\n");
+	if(tid) {
+		// handling builtin type
+		if(tid == T_INT) {
+			SET_BOOL(*result, IS_INT(argv[0]));
+			return METHOD_OK;
+		}
+		if(tid == T_BOOL) {
+			SET_BOOL(*result, IS_BOOL(argv[0]));
+			return METHOD_OK;
+		}
+		assert(0=="native_is(): Unimplemented check against builtin type");
+	}
+	return METHOD_ARGS_MISMATCH;
+}
+
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
 	HASH_FIND(hh, vm->globals_indexes, name, name_len, var);
@@ -151,7 +174,7 @@ void register_global_func(VM *vm, char *name, void *func_ptr) {
 	assert(0 == "register_global_func fail");
 }
 
-NGS_TYPE *register_builtin_type(VM *vm, const char *name) {
+NGS_TYPE *register_builtin_type(VM *vm, const char *name, NATIVE_TYPE_ID native_type_id) {
 	size_t index;
 	NGS_TYPE *t;
 	t = NGS_MALLOC(sizeof(*t));
@@ -161,6 +184,7 @@ NGS_TYPE *register_builtin_type(VM *vm, const char *name) {
 	t->name = make_string(name);
 	t->constructors = make_array(0);
 	t->meta = make_array(0); /* unused for now */
+	t->native_type_id = native_type_id;
 
 
 	index = get_global_index(vm, name, strlen(name));
@@ -182,16 +206,17 @@ void vm_init(VM *vm) {
 	register_global_func(vm, "-", &native_minus_int_int);
 	register_global_func(vm, "<", &native_less_int_int);
 	register_global_func(vm, "dump", &native_dump);
-	vm->Null = register_builtin_type(vm, "Null");
-	vm->Bool = register_builtin_type(vm, "Bool");
-	vm->Int = register_builtin_type(vm, "Int");
-	vm->Str = register_builtin_type(vm, "Str");
-	vm->Arr = register_builtin_type(vm, "Arr");
-	vm->Fun = register_builtin_type(vm, "Fun");
-	vm->Any = register_builtin_type(vm, "Any");
-	vm->Seq = register_builtin_type(vm, "Seq");
-	vm->Type = register_builtin_type(vm, "Type");
+	vm->Null = register_builtin_type(vm, "Null", T_NULL);
+	vm->Bool = register_builtin_type(vm, "Bool", T_BOOL);
+	vm->Int = register_builtin_type(vm, "Int", T_INT);
+	vm->Str = register_builtin_type(vm, "Str", T_STR);
+	vm->Arr = register_builtin_type(vm, "Arr", T_ARR);
+	vm->Fun = register_builtin_type(vm, "Fun", T_FUN);
+	vm->Any = register_builtin_type(vm, "Any", T_ANY);
+	vm->Seq = register_builtin_type(vm, "Seq", T_SEQ);
+	vm->Type = register_builtin_type(vm, "Type", T_TYPE);
 	register_global_func(vm, "Str", &native_Str_int);
+	register_global_func(vm, "is", &native_is);
 }
 
 void ctx_init(CTX *ctx) {

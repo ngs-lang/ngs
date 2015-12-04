@@ -42,6 +42,13 @@ static void _dump(VALUE v, int level) {
 		goto exit;
 	}
 
+	if(IS_NGS_TYPE(v)) {
+		printf("%*s* type (name and constructors follow) id=%d\n", level << 1, "", NGS_TYPE_ID(v));
+		_dump(NGS_TYPE_NAME(v), level + 1);
+		_dump(NGS_TYPE_CONSTRUCTORS(v), level + 1);
+		goto exit;
+	}
+
 exit:
 	return;
 }

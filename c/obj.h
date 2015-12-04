@@ -11,6 +11,7 @@ typedef uint8_t LOCAL_VAR_INDEX;
 #define MAX_LOCALS            (255)
 #define INITITAL_ARRAY_SIZE     (8)
 #define MAX_INT_TO_STR_LEN    (256)
+typedef uint16_t NATIVE_TYPE_ID;
 
 // On problems with `uintptr_t` change here according to Ruby source in `include/ruby/ruby.h`
 // uintptr_t format for printf - PRIXPTR - printf("Blah %" PRIXPTR "\n", VALUE.num);
@@ -47,6 +48,7 @@ typedef struct ngs_type {
 	VALUE name;
 	VALUE constructors;
 	VALUE meta;
+	NATIVE_TYPE_ID native_type_id;
 } NGS_TYPE;
 
 // malloc() / NGS_MALLOC() memory is 8 bytes aligned, should be at least 4 bytes aligned
@@ -139,6 +141,8 @@ enum IMMEDIATE_VALUES {
 #define CLOSURE_OBJ_IP(v)         ((CLOSURE_OBJECT *) v.ptr)->ip
 #define CLOSURE_OBJ_N_LOCALS(v)   ((CLOSURE_OBJECT *) v.ptr)->n_local_vars
 #define NGS_TYPE_CONSTRUCTORS(v)  ((NGS_TYPE *) v.ptr)->constructors
+#define NGS_TYPE_NAME(v)          ((NGS_TYPE *) v.ptr)->name
+#define NGS_TYPE_ID(v)            ((NGS_TYPE *) v.ptr)->native_type_id
 #define OBJ_DATA_PTR(v)           (((OBJECT *)(v).ptr)->val.ptr)
 #define OBJ_TYPE(v)               (((OBJECT *)(v).ptr)->type.num)
 #define OBJ_TYPE_PTR(v)           (((OBJECT *)(v).ptr)->type.ptr)

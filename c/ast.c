@@ -16,6 +16,8 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 	"param",
 	"str_comps",
 	"str_comp_imm",
+	"true",
+	"false"
 };
 
 

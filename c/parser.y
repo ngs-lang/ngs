@@ -46,6 +46,7 @@ int yylex();
 %token STR_BEGIN
 %token <name> STR_COMP_IMM
 %token STR_END
+%token TRUE_TOK FALSE_TOK
 %token WHILE
 
 %token <name> BINOP
@@ -61,6 +62,7 @@ int yylex();
 %type <ast_node> expression
 %type <ast_node> expressions
 %type <ast_node> f
+%type <ast_node> false
 %type <ast_node> for
 %type <ast_node> binop
 %type <ast_node> identifier
@@ -75,6 +77,7 @@ int yylex();
 %type <ast_node> top_level
 %type <ast_node> top_level2
 %type <ast_node> top_level_item
+%type <ast_node> true
 
 %right '='
 %left BINOP
@@ -165,7 +168,7 @@ expressions_delimiter_one_or_more: expressions_delimiter_one_or_more expressions
 
 expressions_delimiter_zero_or_more: expressions_delimiter_one_or_more | /* nothing */;
 
-expression: assignment | binop | number | identifier | call | for | array_literal | f | string;
+expression: assignment | binop | number | identifier | call | for | array_literal | f | string | true | false;
 
 binop: expression[e1] BINOP expression[e2] {
 		DEBUG_PARSER("binop $e1 %p $e2 %p\n", $e1, $e2);
@@ -352,5 +355,9 @@ string_component:
 
 number:
   NUMBER { MAKE_NODE(ret, NUMBER_NODE); ret->number = $NUMBER; $$ = ret; }
+
+true: TRUE_TOK   { MAKE_NODE(ret, TRUE_NODE); $$ = ret; }
+false: FALSE_TOK { MAKE_NODE(ret, FALSE_NODE); $$ = ret; }
+
 
 %%

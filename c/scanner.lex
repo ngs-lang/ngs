@@ -69,12 +69,14 @@ digits			[0-9]+
 <CODE>{
 	[\n]            { DEBUG_PARSER("%s", "LEX NEWLINE\n"); return *yytext; }
 	{whitespace}    { /* ignore whitespace */ }
-	"+"|"-"|"<"|">"|"is" { DEBUG_PARSER("%s", "LEX BINOP\n"); USE_TEXT_AS_NAME; return BINOP; }
+	"+"|"-"|"<"|">"|"is not"|"is"|"not in"|"in" { DEBUG_PARSER("%s", "LEX BINOP\n"); USE_TEXT_AS_NAME; return BINOP; }
 	"="             { DEBUG_PARSER("%s", "LEX EQUALS\n"); return '='; }
 	{digits}		{ yylval->number = atoi(yytext); DEBUG_PARSER("LEX NUMBER %d\n", yylval->number); return NUMBER; }
 }
 <INITIAL,CODE>{
 	"END"           { return 0; }
+	"true"          { DEBUG_PARSER("%s", "LEX TRUE\n"); return TRUE_TOK; }
+	"false"         { DEBUG_PARSER("%s", "LEX FALSE\n"); return FALSE_TOK; }
 	"while"         { DEBUG_PARSER("%s", "LEX WHILE\n"); return WHILE; }
 	"for"           { DEBUG_PARSER("%s", "LEX FOR\n"); return FOR; }
 	"F"             { DEBUG_PARSER("LEX F %s\n", yytext); return *yytext; } /* not sure about correctness */
