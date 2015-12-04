@@ -8,3 +8,18 @@
 * true
 * false
 * false
+* string(len=12) Testing Null
+* true
+* false
+* false
+* false
+* string(len=11) Testing Str
+* true
+* false
+* false
+* false
+* string(len=11) Testing Arr
+* true
+* false
+* false
+* false

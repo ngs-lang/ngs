@@ -350,7 +350,8 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_PUSH_L_STR);
 			L_STR(*buf, node->name);
 			break;
-		case TRUE_NODE: OPCODE(*buf, OP_PUSH_TRUE); break;
+		case NULL_NODE:  OPCODE(*buf, OP_PUSH_NULL); break;
+		case TRUE_NODE:  OPCODE(*buf, OP_PUSH_TRUE); break;
 		case FALSE_NODE: OPCODE(*buf, OP_PUSH_FALSE); break;
 		default:
 			assert(0=="compile_main_section(): unknown node type");

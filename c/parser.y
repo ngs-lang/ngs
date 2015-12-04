@@ -4,6 +4,11 @@
 #include "ngs.h"
 #include "ast.h"
 
+#define YYMALLOC(size)        NGS_MALLOC(size)
+#define YYREALLOC(ptr, size)  NGS_REALLOC(ptr, size)
+#define YYCALLOC(nelem, size) assert(0=="YYCALLOC is not implemented")
+#define YYFREE(ptr)           (void)(ptr)
+
 // Without the following line you get message that struct YYLTYPE will not be visible outside the function yyerror
 struct YYLTYPE;
 void yyerror(struct YYLTYPE * yylloc_param, void *scanner, ast_node **result, const char *s);
@@ -46,7 +51,7 @@ int yylex();
 %token STR_BEGIN
 %token <name> STR_COMP_IMM
 %token STR_END
-%token TRUE_TOK FALSE_TOK
+%token NULL_TOK TRUE_TOK FALSE_TOK
 %token WHILE
 
 %token <name> BINOP
@@ -66,6 +71,7 @@ int yylex();
 %type <ast_node> for
 %type <ast_node> binop
 %type <ast_node> identifier
+%type <ast_node> null
 %type <ast_node> number
 %type <ast_node> optional_func_name
 %type <ast_node> optional_parameters
@@ -168,7 +174,7 @@ expressions_delimiter_one_or_more: expressions_delimiter_one_or_more expressions
 
 expressions_delimiter_zero_or_more: expressions_delimiter_one_or_more | /* nothing */;
 
-expression: assignment | binop | number | identifier | call | for | array_literal | f | string | true | false;
+expression: assignment | binop | number | identifier | call | for | array_literal | f | string | null | true | false;
 
 binop: expression[e1] BINOP expression[e2] {
 		DEBUG_PARSER("binop $e1 %p $e2 %p\n", $e1, $e2);
@@ -356,7 +362,8 @@ string_component:
 number:
   NUMBER { MAKE_NODE(ret, NUMBER_NODE); ret->number = $NUMBER; $$ = ret; }
 
-true: TRUE_TOK   { MAKE_NODE(ret, TRUE_NODE); $$ = ret; }
+null:  NULL_TOK  { MAKE_NODE(ret, NULL_NODE); $$ = ret; }
+true:  TRUE_TOK  { MAKE_NODE(ret, TRUE_NODE); $$ = ret; }
 false: FALSE_TOK { MAKE_NODE(ret, FALSE_NODE); $$ = ret; }
 
 

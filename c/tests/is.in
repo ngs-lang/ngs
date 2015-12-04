@@ -4,9 +4,28 @@
 	dump(true is Int)
 	dump(false is Int)
 	dump('a' is Int)
+
 	dump("Testing Bool")
 	dump(true is Bool)
 	dump(false is Bool)
 	dump(1 is Bool)
 	dump('a' is Bool)
+
+	dump("Testing Null")
+	dump(null is Null)
+	dump(1 is Null)
+	dump(false is Null)
+	dump('a' is Null)
+
+	dump("Testing Str")
+	dump('a' is Str)
+	dump(null is Str)
+	dump(1 is Str)
+	dump(false is Str)
+
+	dump("Testing Arr")
+	dump([1,2,3] is Arr)
+	dump(null is Arr)
+	dump(1 is Arr)
+	dump(false is Arr)
 }

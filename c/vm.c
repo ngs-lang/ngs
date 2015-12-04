@@ -96,23 +96,26 @@ METHOD_RESULT native_Str_int(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *
 }
 
 // TODO: make it faster, probably using vector of NATIVE_TYPE_IDs and how to detect them
+//       maybe re-work tagged types so the check would be VALUE & TYPE_VAL == TYPE_VAL
+#define NATIVE_IS_TYPE_CHECK(type, check) \
+	if(tid == type) { SET_BOOL(*result, check(argv[0])); return METHOD_OK; }
 METHOD_RESULT native_is(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *result) {
 	METHOD_MUST_HAVE_N_ARGS(2);
 	METHOD_ARG_N_MUST_BE(1, NGS_TYPE);
 	NATIVE_TYPE_ID tid = NGS_TYPE_ID(argv[1]);
-	// printf("DUMPING\n");
-	// dump_titled("IS TYPE", argv[1]);
-	// printf("DUMPED\n");
 	if(tid) {
 		// handling builtin type
-		if(tid == T_INT) {
-			SET_BOOL(*result, IS_INT(argv[0]));
-			return METHOD_OK;
-		}
-		if(tid == T_BOOL) {
-			SET_BOOL(*result, IS_BOOL(argv[0]));
-			return METHOD_OK;
-		}
+		if(tid == T_ANY) { SET_TRUE(*result); return METHOD_OK; }
+		NATIVE_IS_TYPE_CHECK(T_NULL, IS_NULL);
+		NATIVE_IS_TYPE_CHECK(T_BOOL, IS_BOOL);
+		NATIVE_IS_TYPE_CHECK(T_INT, IS_INT);
+
+		NATIVE_IS_TYPE_CHECK(T_STR, IS_STRING);
+		NATIVE_IS_TYPE_CHECK(T_ARR, IS_ARRAY);
+		// if(tid == T_FUN) { SET_BOOL(*result, ???(argv[0])); return METHOD_OK; }
+		// NATIVE_IS_TYPE_CHECK(T_SEQ,   = 46,
+		// NATIVE_IS_TYPE_CHECK(T_TYPE,  = 50,
+
 		assert(0=="native_is(): Unimplemented check against builtin type");
 	}
 	return METHOD_ARGS_MISMATCH;
