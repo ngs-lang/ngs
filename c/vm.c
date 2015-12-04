@@ -132,6 +132,17 @@ METHOD_RESULT native_Bool_any METHOD_PARAMS {
 	return METHOD_ARGS_MISMATCH;
 }
 
+METHOD_RESULT native_not_any METHOD_PARAMS {
+	METHOD_MUST_HAVE_N_ARGS(1);
+	if(!IS_BOOL(argv[0])) {
+		assert(0=="not() on non-booleans is not implemented yet");
+		// TODO: Call Bool() on the value, then continue with not() on the returned value
+		// ...
+		assert(IS_BOOL(argv[0]));
+	}
+	METHOD_RETURN(GET_INVERTED_BOOL(argv[0]));
+}
+
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
 	HASH_FIND(hh, vm->globals_indexes, name, name_len, var);
@@ -231,7 +242,8 @@ void vm_init(VM *vm) {
 	vm->Type = register_builtin_type(vm, "Type", T_TYPE);
 	register_global_func(vm, "Bool", &native_Bool_any);
 	register_global_func(vm, "Str", &native_Str_int);
-	register_global_func(vm, "is", &native_is);
+	register_global_func(vm, "is", &native_is); // TODO: name native_is according to convention
+	register_global_func(vm, "not", &native_not_any);
 }
 
 void ctx_init(CTX *ctx) {

@@ -154,6 +154,9 @@ enum IMMEDIATE_VALUES {
 #define IS_VLO(v)                 (IS_ARRAY(v) || IS_STRING(v))
 #define ARRAY_ITEMS(v)            ((VALUE *)(OBJ_DATA_PTR(v)))
 
+// Boolean 00001X10
+#define GET_INVERTED_BOOL(v)      ((VALUE){.num = (v).num ^= 4})
+
 VALUE make_var_len_obj(uintptr_t type, const size_t item_size, const size_t len);
 VALUE make_array(size_t len);
 VALUE make_array_with_values(size_t len, VALUE *values);

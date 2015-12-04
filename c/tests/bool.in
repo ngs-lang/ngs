@@ -11,4 +11,8 @@
 	dump("Testing Arr")
 	dump(Bool([]))
 	dump(Bool([1,2]))
+
+	dump("not")
+	dump(not(true))
+	dump(not(false))
 }

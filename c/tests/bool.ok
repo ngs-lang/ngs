@@ -10,3 +10,6 @@
 * string(len=11) Testing Arr
 * false
 * true
+* string(len=3) not
+* false
+* true
