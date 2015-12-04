@@ -1,0 +1,12 @@
+{
+	dump("Testing Int")
+	dump(1 is Int)
+	dump(true is Int)
+	dump(false is Int)
+	dump('a' is Int)
+	dump("Testing Bool")
+	dump(true is Bool)
+	dump(false is Bool)
+	dump(1 is Bool)
+	dump('a' is Bool)
+}
