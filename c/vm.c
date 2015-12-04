@@ -39,11 +39,12 @@ char *opcodes_names[] = {
 #define PUSH_NULL PUSH((VALUE){.num=V_NULL})
 #define LOCALS (ctx->frames[ctx->frame_ptr-1].locals)
 
-#define NATIVE_METHOD_PARAMS (NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *result)
+#define METHOD_PARAMS (NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *result)
 #define METHOD_MUST_HAVE_N_ARGS(n) if(n != argc) { return METHOD_ARGS_MISMATCH; }
 #define METHOD_MUST_HAVE_AT_LEAST_ARGS(n) if(argc < n) { return METHOD_ARGS_MISMATCH; }
 #define METHOD_MUST_HAVE_AT_MOST_ARGS(n) if(argc > n) { return METHOD_ARGS_MISMATCH; }
 #define METHOD_ARG_N_MUST_BE(n, what) if(!IS_ ## what(argv[n])) { return METHOD_ARGS_MISMATCH; }
+#define METHOD_RETURN(v) { *result = (v); return METHOD_OK; }
 
 #define METHOD_BINOP_SETUP(type) \
 	METHOD_MUST_HAVE_N_ARGS(2); \
@@ -71,7 +72,7 @@ INT_METHOD(plus, +);
 INT_METHOD(minus, -);
 INT_CMP_METHOD(less, <);
 
-METHOD_RESULT native_dump NATIVE_METHOD_PARAMS {
+METHOD_RESULT native_dump METHOD_PARAMS {
 	if(argc == 1) {
 		dump(argv[0]);
 		SET_NULL(*result);
@@ -80,7 +81,7 @@ METHOD_RESULT native_dump NATIVE_METHOD_PARAMS {
 	return METHOD_ARGS_MISMATCH;
 }
 
-METHOD_RESULT native_plus_arr_arr NATIVE_METHOD_PARAMS {
+METHOD_RESULT native_plus_arr_arr METHOD_PARAMS {
 	METHOD_BINOP_SETUP(ARRAY);
 	*result = make_array(ARG_LEN(0) + ARG_LEN(1));
 	memcpy(ARRAY_ITEMS(*result)+0, ARG_DATA_PTR(0), sizeof(VALUE)*ARG_LEN(0));
@@ -88,7 +89,7 @@ METHOD_RESULT native_plus_arr_arr NATIVE_METHOD_PARAMS {
 	return METHOD_OK;
 }
 
-METHOD_RESULT native_Str_int NATIVE_METHOD_PARAMS {
+METHOD_RESULT native_Str_int METHOD_PARAMS {
 	METHOD_MUST_HAVE_N_ARGS(1);
 	METHOD_ARG_N_MUST_BE(0, INT);
 	char s[MAX_INT_TO_STR_LEN];
@@ -101,7 +102,7 @@ METHOD_RESULT native_Str_int NATIVE_METHOD_PARAMS {
 //       maybe re-work tagged types so the check would be VALUE & TYPE_VAL == TYPE_VAL
 #define NATIVE_IS_TYPE_CHECK(type, check) \
 	if(tid == type) { SET_BOOL(*result, check(argv[0])); return METHOD_OK; }
-METHOD_RESULT native_is NATIVE_METHOD_PARAMS {
+METHOD_RESULT native_is METHOD_PARAMS {
 	METHOD_MUST_HAVE_N_ARGS(2);
 	METHOD_ARG_N_MUST_BE(1, NGS_TYPE);
 	NATIVE_TYPE_ID tid = NGS_TYPE_ID(argv[1]);
@@ -123,11 +124,11 @@ METHOD_RESULT native_is NATIVE_METHOD_PARAMS {
 	return METHOD_ARGS_MISMATCH;
 }
 
-METHOD_RESULT native_Bool_any NATIVE_METHOD_PARAMS {
+METHOD_RESULT native_Bool_any METHOD_PARAMS {
 	METHOD_MUST_HAVE_N_ARGS(1);
-	if(IS_BOOL(argv[0])) { *result = argv[0]; return METHOD_OK; }
-	if(IS_INT(argv[0])) { *result = MAKE_BOOL(GET_INT(argv[0])); return METHOD_OK; }
-	if(IS_STRING(argv[0]) || IS_ARRAY(argv[0])) { *result = MAKE_BOOL(OBJ_LEN(argv[0])); return METHOD_OK; }
+	if(IS_BOOL(argv[0])) METHOD_RETURN(argv[0])
+	if(IS_INT(argv[0])) METHOD_RETURN(MAKE_BOOL(GET_INT(argv[0])))
+	if(IS_STRING(argv[0]) || IS_ARRAY(argv[0])) METHOD_RETURN(MAKE_BOOL(OBJ_LEN(argv[0])))
 	return METHOD_ARGS_MISMATCH;
 }
 
