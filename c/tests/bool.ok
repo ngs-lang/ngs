@@ -1,0 +1,12 @@
+* string(len=12) Testing Bool
+* false
+* true
+* string(len=11) Testing Int
+* false
+* true
+* string(len=11) Testing Str
+* false
+* true
+* string(len=11) Testing Arr
+* false
+* true

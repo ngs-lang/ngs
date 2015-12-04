@@ -1,0 +1,14 @@
+{
+	dump("Testing Bool")
+	dump(Bool(false))
+	dump(Bool(true))
+	dump("Testing Int")
+	dump(Bool(0))
+	dump(Bool(1))
+	dump("Testing Str")
+	dump(Bool(''))
+	dump(Bool('x'))
+	dump("Testing Arr")
+	dump(Bool([]))
+	dump(Bool([1,2]))
+}

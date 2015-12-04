@@ -71,15 +71,16 @@ INT_METHOD(plus, +);
 INT_METHOD(minus, -);
 INT_CMP_METHOD(less, <);
 
-METHOD_RESULT native_dump(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, NGS_UNUSED VALUE *result) {
+METHOD_RESULT native_dump NATIVE_METHOD_PARAMS {
 	if(argc == 1) {
 		dump(argv[0]);
+		SET_NULL(*result);
 		return METHOD_OK; // null
 	}
 	return METHOD_ARGS_MISMATCH;
 }
 
-METHOD_RESULT native_plus_arr_arr(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *result) {
+METHOD_RESULT native_plus_arr_arr NATIVE_METHOD_PARAMS {
 	METHOD_BINOP_SETUP(ARRAY);
 	*result = make_array(ARG_LEN(0) + ARG_LEN(1));
 	memcpy(ARRAY_ITEMS(*result)+0, ARG_DATA_PTR(0), sizeof(VALUE)*ARG_LEN(0));
@@ -87,7 +88,7 @@ METHOD_RESULT native_plus_arr_arr(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VA
 	return METHOD_OK;
 }
 
-METHOD_RESULT native_Str_int(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *result) {
+METHOD_RESULT native_Str_int NATIVE_METHOD_PARAMS {
 	METHOD_MUST_HAVE_N_ARGS(1);
 	METHOD_ARG_N_MUST_BE(0, INT);
 	char s[MAX_INT_TO_STR_LEN];
@@ -100,7 +101,7 @@ METHOD_RESULT native_Str_int(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *
 //       maybe re-work tagged types so the check would be VALUE & TYPE_VAL == TYPE_VAL
 #define NATIVE_IS_TYPE_CHECK(type, check) \
 	if(tid == type) { SET_BOOL(*result, check(argv[0])); return METHOD_OK; }
-METHOD_RESULT native_is(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *result) {
+METHOD_RESULT native_is NATIVE_METHOD_PARAMS {
 	METHOD_MUST_HAVE_N_ARGS(2);
 	METHOD_ARG_N_MUST_BE(1, NGS_TYPE);
 	NATIVE_TYPE_ID tid = NGS_TYPE_ID(argv[1]);
