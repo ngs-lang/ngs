@@ -29,6 +29,8 @@ char *opcodes_names[] = {
 	/* 23 */ "TO_STR",
 	/* 24 */ "MAKE_STR",
 	/* 25 */ "PUSH_EMPTY_STR",
+	/* 26 */ "GLOBAL_DEF_P",
+	/* 27 */ "LOCAL_DEF_P",
 };
 
 
@@ -571,6 +573,16 @@ do_jump:
 		case OP_PUSH_EMPTY_STR:
 							v = make_var_len_obj(T_STR, 1, 0);
 							PUSH(v);
+							goto main_loop;
+		case OP_GLOBAL_DEF_P:
+							gvi = *(GLOBAL_VAR_INDEX *) &vm->bytecode[ip];
+							ip += sizeof(gvi);
+							PUSH(MAKE_BOOL(IS_NOT_UNDEF(vm->globals[gvi])));
+							goto main_loop;
+		case OP_LOCAL_DEF_P:
+							lvi = *(LOCAL_VAR_INDEX *) &vm->bytecode[ip];
+							ip += sizeof(lvi);
+							PUSH(MAKE_BOOL(IS_NOT_UNDEF(LOCALS[lvi])));
 							goto main_loop;
 		default:
 							// TODO: exception

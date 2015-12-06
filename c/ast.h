@@ -37,6 +37,7 @@ enum ast_node_type {
 	NULL_NODE,
 	TRUE_NODE,
 	FALSE_NODE,
+	DEFINED_NODE,
 	NUMBER_OF_AST_NODE_TYPES
 };
 

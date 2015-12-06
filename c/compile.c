@@ -353,6 +353,25 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 		case NULL_NODE:  OPCODE(*buf, OP_PUSH_NULL); break;
 		case TRUE_NODE:  OPCODE(*buf, OP_PUSH_TRUE); break;
 		case FALSE_NODE: OPCODE(*buf, OP_PUSH_FALSE); break;
+		case DEFINED_NODE:
+			identifier_info = resolve_identifier(ctx, node->first_child->name, RESOLVE_ANY_IDENTFIER);
+			switch(identifier_info.type) {
+				case LOCAL_IDENTIFIER:
+					OPCODE(*buf, OP_LOCAL_DEF_P);
+					DATA_N_LOCAL_VARS(*buf, identifier_info.index);
+					break;
+				case UPVAR_IDENTIFIER:
+					assert(0=="Upvars are not implemented yet");
+					break;
+				case NO_IDENTIFIER:
+				case GLOBAL_IDENTIFIER:
+					OPCODE(*buf, OP_GLOBAL_DEF_P);
+					index = get_global_var_index(ctx, node->first_child->name, idx);
+					DATA_UINT16(*buf, index);
+					break;
+			}
+			POP_IF_DONT_NEED_RESULT(*buf);
+			break;
 		default:
 			assert(0=="compile_main_section(): unknown node type");
 	}

@@ -1,0 +1,14 @@
+{
+	dump(defined x)
+	x=1
+	dump(defined x)
+
+	F f(something) {
+		dump(defined x)
+		x=1
+		dump(defined x)
+	}
+
+	f(7)
+
+}

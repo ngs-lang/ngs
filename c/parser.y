@@ -46,7 +46,7 @@ int yylex();
 	ast_node *ast_node;
 };
 
-%token DEF
+%token DEFINED
 %token FOR
 %token STR_BEGIN
 %token <name> STR_COMP_IMM
@@ -64,6 +64,7 @@ int yylex();
 %type <ast_node> call
 %type <ast_node> curly_expressions
 %type <ast_node> curly_expressions_only
+%type <ast_node> defined
 %type <ast_node> expression
 %type <ast_node> expressions
 %type <ast_node> f
@@ -174,7 +175,7 @@ expressions_delimiter_one_or_more: expressions_delimiter_one_or_more expressions
 
 expressions_delimiter_zero_or_more: expressions_delimiter_one_or_more | /* nothing */;
 
-expression: assignment | binop | number | identifier | call | for | array_literal | f | string | null | true | false;
+expression: assignment | binop | number | identifier | call | for | array_literal | f | string | null | true | false | defined;
 
 binop: expression[e1] BINOP expression[e2] {
 		DEBUG_PARSER("binop $e1 %p $e2 %p\n", $e1, $e2);
@@ -365,6 +366,8 @@ number:
 null:  NULL_TOK  { MAKE_NODE(ret, NULL_NODE); $$ = ret; }
 true:  TRUE_TOK  { MAKE_NODE(ret, TRUE_NODE); $$ = ret; }
 false: FALSE_TOK { MAKE_NODE(ret, FALSE_NODE); $$ = ret; }
+
+defined: DEFINED identifier { MAKE_NODE(ret, DEFINED_NODE); ret->first_child = $identifier; $$ = ret; }
 
 
 %%

@@ -78,6 +78,7 @@ digits			[0-9]+
 	"null"          { DEBUG_PARSER("%s", "LEX NULL\n"); return NULL_TOK; }
 	"true"          { DEBUG_PARSER("%s", "LEX TRUE\n"); return TRUE_TOK; }
 	"false"         { DEBUG_PARSER("%s", "LEX FALSE\n"); return FALSE_TOK; }
+	"defined"       { DEBUG_PARSER("%s", "LEX DEFINED\n"); return DEFINED; }
 	"while"         { DEBUG_PARSER("%s", "LEX WHILE\n"); return WHILE; }
 	"for"           { DEBUG_PARSER("%s", "LEX FOR\n"); return FOR; }
 	"F"             { DEBUG_PARSER("LEX F %s\n", yytext); return *yytext; } /* not sure about correctness */
