@@ -15,6 +15,7 @@
 #define DATA_INT16_AT(buf, loc, x) { *(int16_t *)&(buf)[loc] = x; }
 #define DATA_JUMP_OFFSET(buf, x) { *(JUMP_OFFSET *)&(buf)[*idx] = x; (*idx)+=sizeof(JUMP_OFFSET); }
 #define DATA_N_LOCAL_VARS(buf, x) { *(LOCAL_VAR_INDEX *)&(buf)[*idx] = x; (*idx)+=sizeof(LOCAL_VAR_INDEX); }
+#define DATA_N_GLOBAL_VARS(buf, x) { *(GLOBAL_VAR_INDEX *)&(buf)[*idx] = x; (*idx)+=sizeof(GLOBAL_VAR_INDEX); }
 
 // Symbol table:
 // symbol -> [offset1, offset2, ..., offsetN]
@@ -201,7 +202,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				case GLOBAL_IDENTIFIER:
 					OPCODE(*buf, OP_FETCH_GLOBAL);
 					index = get_global_var_index(ctx, node->name, idx);
-					DATA_UINT16(*buf, index);
+					DATA_N_GLOBAL_VARS(*buf, index);
 					break;
 			}
 			POP_IF_DONT_NEED_RESULT(*buf);
@@ -230,7 +231,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 							// printf("identifier_info.type %d\n", identifier_info.type);
 							OPCODE(*buf, OP_STORE_GLOBAL);
 							index = get_global_var_index(ctx, ptr->name, idx);
-							DATA_UINT16(*buf, index);
+							DATA_N_GLOBAL_VARS(*buf, index);
 							break;
 					}
 					break;
@@ -367,7 +368,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				case GLOBAL_IDENTIFIER:
 					OPCODE(*buf, OP_GLOBAL_DEF_P);
 					index = get_global_var_index(ctx, node->first_child->name, idx);
-					DATA_UINT16(*buf, index);
+					DATA_N_GLOBAL_VARS(*buf, index);
 					break;
 			}
 			POP_IF_DONT_NEED_RESULT(*buf);
