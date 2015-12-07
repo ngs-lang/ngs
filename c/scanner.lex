@@ -57,39 +57,39 @@ digits			[0-9]+
 <INITIAL>"{"        { yy_push_state(CODE, yyscanner); DEBUG_PARSER("%s", "Entering mode: CODE\n"); return '{'; }
 
  /* strings */
-<INITIAL,CODE>'     { yy_push_state(SQ_STR, yyscanner); DEBUG_PARSER("%s", "Entering mode: SQ_STR\n"); return STR_BEGIN; }
-<SQ_STR>'           { yy_pop_state(yyscanner); DEBUG_PARSER("%s", "Leaving mode: SQ_STR\n"); return STR_END; }
-<SQ_STR>[^\']+      { USE_TEXT_AS_NAME; return STR_COMP_IMM; }
+<INITIAL,CODE>'     { yy_push_state(SQ_STR, yyscanner); DEBUG_PARSER("%s", "Entering mode: SQ_STR\n"); return tSTR_BEGIN; }
+<SQ_STR>'           { yy_pop_state(yyscanner); DEBUG_PARSER("%s", "Leaving mode: SQ_STR\n"); return tSTR_END; }
+<SQ_STR>[^\']+      { USE_TEXT_AS_NAME; return tSTR_COMP_IMM; }
 
-<INITIAL,CODE>\"    { yy_push_state(DQ_STR, yyscanner); DEBUG_PARSER("%s", "Entering mode: DQ_STR\n"); return STR_BEGIN; }
-<DQ_STR>\"          { yy_pop_state(yyscanner); DEBUG_PARSER("%s", "Leaving mode: DQ_STR\n"); return STR_END; }
+<INITIAL,CODE>\"    { yy_push_state(DQ_STR, yyscanner); DEBUG_PARSER("%s", "Entering mode: DQ_STR\n"); return tSTR_BEGIN; }
+<DQ_STR>\"          { yy_pop_state(yyscanner); DEBUG_PARSER("%s", "Leaving mode: DQ_STR\n"); return tSTR_END; }
 <DQ_STR>\$          { yy_push_state(DOLLAR_EXPANSION, yyscanner); DEBUG_PARSER("%s", "Entering mode: DOLLAR_EXPANSION\n");  }
-<DQ_STR>[^\"$]+     { USE_TEXT_AS_NAME; return STR_COMP_IMM; }
+<DQ_STR>[^\"$]+     { USE_TEXT_AS_NAME; return tSTR_COMP_IMM; }
 
 <CODE>{
 	[\n]            { DEBUG_PARSER("%s", "LEX NEWLINE\n"); return *yytext; }
 	{whitespace}    { /* ignore whitespace */ }
-	"+"|"-"|"<"|">"|"is not"|"is"|"not in"|"in" { DEBUG_PARSER("%s", "LEX BINOP\n"); USE_TEXT_AS_NAME; return BINOP; }
+	"+"|"-"|"<"|">"|"is not"|"is"|"not in"|"in" { DEBUG_PARSER("%s", "LEX tBINOP\n"); USE_TEXT_AS_NAME; return tBINOP; }
 	"="             { DEBUG_PARSER("%s", "LEX EQUALS\n"); return '='; }
-	{digits}		{ yylval->number = atoi(yytext); DEBUG_PARSER("LEX NUMBER %d\n", yylval->number); return NUMBER; }
+	{digits}		{ yylval->number = atoi(yytext); DEBUG_PARSER("LEX tNUMBER %d\n", yylval->number); return tNUMBER; }
 }
 <INITIAL,CODE>{
 	"END"           { return 0; }
-	"null"          { DEBUG_PARSER("%s", "LEX NULL\n"); return NULL_TOK; }
-	"true"          { DEBUG_PARSER("%s", "LEX TRUE\n"); return TRUE_TOK; }
-	"false"         { DEBUG_PARSER("%s", "LEX FALSE\n"); return FALSE_TOK; }
-	"defined"       { DEBUG_PARSER("%s", "LEX DEFINED\n"); return DEFINED; }
-	"while"         { DEBUG_PARSER("%s", "LEX WHILE\n"); return WHILE; }
-	"for"           { DEBUG_PARSER("%s", "LEX FOR\n"); return FOR; }
+	"null"          { DEBUG_PARSER("%s", "LEX NULL\n"); return tNULL; }
+	"true"          { DEBUG_PARSER("%s", "LEX TRUE\n"); return tTRUE; }
+	"false"         { DEBUG_PARSER("%s", "LEX FALSE\n"); return tFALSE; }
+	"defined"       { DEBUG_PARSER("%s", "LEX tDEFINED\n"); return tDEFINED; }
+	"while"         { DEBUG_PARSER("%s", "LEX tWHILE\n"); return tWHILE; }
+	"for"           { DEBUG_PARSER("%s", "LEX tFOR\n"); return tFOR; }
 	"F"             { DEBUG_PARSER("LEX F %s\n", yytext); return *yytext; } /* not sure about correctness */
 }
 
 <CODE,DOLLAR_EXPANSION>{
 	{identifier}    {
-		DEBUG_PARSER("LEX IDENTIFIER %s\n", yytext);
+		DEBUG_PARSER("LEX tIDENTIFIER %s\n", yytext);
 		USE_TEXT_AS_NAME;
 		DOLLAR_EXPANSION_END;
-		return IDENTIFIER;
+		return tIDENTIFIER;
 	}
 }
 

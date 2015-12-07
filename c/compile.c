@@ -184,7 +184,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 		case NUMBER_NODE:
-			/*printf("Compiling NUMBER @ %d\n", *idx);*/
+			/*printf("Compiling tNUMBER @ %d\n", *idx);*/
 			if(need_result) {
 				OPCODE(*buf, OP_PUSH_INT); DATA(*buf, node->number);
 			}

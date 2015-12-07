@@ -46,17 +46,17 @@ int yylex();
 	ast_node *ast_node;
 };
 
-%token DEFINED
-%token FOR
-%token STR_BEGIN
-%token <name> STR_COMP_IMM
-%token STR_END
-%token NULL_TOK TRUE_TOK FALSE_TOK
-%token WHILE
+%token tDEFINED
+%token tFOR
+%token tSTR_BEGIN
+%token <name> tSTR_COMP_IMM
+%token tSTR_END
+%token tNULL tTRUE tFALSE
+%token tWHILE
 
-%token <name> BINOP
-%token <name> IDENTIFIER
-%token <number> NUMBER
+%token <name> tBINOP
+%token <name> tIDENTIFIER
+%token <number> tNUMBER
 
 %type <ast_node> array_items
 %type <ast_node> array_literal
@@ -87,7 +87,7 @@ int yylex();
 %type <ast_node> true
 
 %right '='
-%left BINOP
+%left tBINOP
 %left '('
 /* %precedence xx */
 
@@ -132,17 +132,17 @@ assignment: identifier '=' expression {
 }
 
 
-identifier: IDENTIFIER {
+identifier: tIDENTIFIER {
 		 DEBUG_PARSER("identifier $1 %p name=%s\n", $1, $1);
 		 MAKE_NODE(ret, IDENTIFIER_NODE);
-		 ret->name = $IDENTIFIER;
+		 ret->name = $tIDENTIFIER;
 		 $$ = ret;
 }
 
-quoted_identifier: STR_BEGIN STR_COMP_IMM STR_END {
+quoted_identifier: tSTR_BEGIN tSTR_COMP_IMM tSTR_END {
 		 DEBUG_PARSER("quoted identifier $2 %p name=%s\n", $2, $2);
 		 MAKE_NODE(ret, IDENTIFIER_NODE);
-		 ret->name = $STR_COMP_IMM;
+		 ret->name = $tSTR_COMP_IMM;
 		 $$ = ret;
 }
 
@@ -177,12 +177,12 @@ expressions_delimiter_zero_or_more: expressions_delimiter_one_or_more | /* nothi
 
 expression: assignment | binop | number | identifier | call | for | array_literal | f | string | null | true | false | defined;
 
-binop: expression[e1] BINOP expression[e2] {
+binop: expression[e1] tBINOP expression[e2] {
 		DEBUG_PARSER("binop $e1 %p $e2 %p\n", $e1, $e2);
 		MAKE_NODE(ret, CALL_NODE);
 			MAKE_NODE(id, IDENTIFIER_NODE);
 			ret->first_child = id;
-			id->name = $BINOP;
+			id->name = $tBINOP;
 			id->next_sibling = $e1;
 			$e1->next_sibling = $e2;
 		$$ = ret;
@@ -197,7 +197,7 @@ call: expression '(' expression ')' {
 
 for:
 		/* for(i;expr) => for(i=0;i<expr;i=i+1) */
-		FOR '(' identifier[id] ';' expression[expr] ')' curly_expressions[body] {
+		tFOR '(' identifier[id] ';' expression[expr] ')' curly_expressions[body] {
 			MAKE_NODE(ret, FOR_NODE);
 
 				MAKE_NODE(init_node, ASSIGNMENT_NODE);
@@ -230,7 +230,7 @@ for:
 
 			$$ = ret;
 		}
-		| FOR '(' expression[init] ';' expression[cond] ';' expression[incr] ')' curly_expressions[body] {
+		| tFOR '(' expression[init] ';' expression[cond] ';' expression[incr] ')' curly_expressions[body] {
 			MAKE_NODE(ret, FOR_NODE);
 			$init->next_sibling = $cond;
 			$cond->next_sibling = $incr;
@@ -326,7 +326,7 @@ parameter:
 		$$ = ret;
 	}
 
-string: STR_BEGIN optional_string_components STR_END {
+string: tSTR_BEGIN optional_string_components tSTR_END {
 	  $$ = $optional_string_components;
 	}
 
@@ -354,20 +354,20 @@ optional_string_components:
 	};
 
 string_component:
-  STR_COMP_IMM { MAKE_NODE(ret, STR_COMP_IMM_NODE); ret->name = $STR_COMP_IMM; $$ = ret; }
+  tSTR_COMP_IMM { MAKE_NODE(ret, STR_COMP_IMM_NODE); ret->name = $tSTR_COMP_IMM; $$ = ret; }
   |
   identifier
   |
   curly_expressions_only;
 
 number:
-  NUMBER { MAKE_NODE(ret, NUMBER_NODE); ret->number = $NUMBER; $$ = ret; }
+  tNUMBER { MAKE_NODE(ret, NUMBER_NODE); ret->number = $tNUMBER; $$ = ret; }
 
-null:  NULL_TOK  { MAKE_NODE(ret, NULL_NODE); $$ = ret; }
-true:  TRUE_TOK  { MAKE_NODE(ret, TRUE_NODE); $$ = ret; }
-false: FALSE_TOK { MAKE_NODE(ret, FALSE_NODE); $$ = ret; }
+null:  tNULL  { MAKE_NODE(ret, NULL_NODE); $$ = ret; }
+true:  tTRUE  { MAKE_NODE(ret, TRUE_NODE); $$ = ret; }
+false: tFALSE { MAKE_NODE(ret, FALSE_NODE); $$ = ret; }
 
-defined: DEFINED identifier { MAKE_NODE(ret, DEFINED_NODE); ret->first_child = $identifier; $$ = ret; }
+defined: tDEFINED identifier { MAKE_NODE(ret, DEFINED_NODE); ret->first_child = $identifier; $$ = ret; }
 
 
 %%
