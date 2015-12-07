@@ -14,6 +14,7 @@
 #define DATA_INT16(buf, x) { *(int16_t *)&(buf)[*idx] = x; (*idx)+=2; }
 #define DATA_INT16_AT(buf, loc, x) { *(int16_t *)&(buf)[loc] = x; }
 #define DATA_JUMP_OFFSET(buf, x) { *(JUMP_OFFSET *)&(buf)[*idx] = x; (*idx)+=sizeof(JUMP_OFFSET); }
+#define DATA_PATCH_OFFSET(buf, x) { *(PATCH_OFFSET *)&(buf)[*idx] = x; (*idx)+=sizeof(PATCH_OFFSET); }
 #define DATA_N_LOCAL_VARS(buf, x) { *(LOCAL_VAR_INDEX *)&(buf)[*idx] = x; (*idx)+=sizeof(LOCAL_VAR_INDEX); }
 #define DATA_N_GLOBAL_VARS(buf, x) { *(GLOBAL_VAR_INDEX *)&(buf)[*idx] = x; (*idx)+=sizeof(GLOBAL_VAR_INDEX); }
 
@@ -433,7 +434,7 @@ void compile_init_section(COMPILATION_CONTEXT *ctx, char **init_buf, size_t *idx
 				}
 				OPCODE(buf, OP_PATCH);
 				DEBUG_COMPILER("compile_init_section() global i=%zu name=%s offset=%d idx=%zu\n", i, globals->name, *(int *)utarray_eltptr(globals->offsets, i), *idx);
-				DATA_UINT16(buf, *(int *)utarray_eltptr(globals->offsets, i) + init_section_size - *idx - 2 /* sizeof this uint16 itself */);
+				DATA_PATCH_OFFSET(buf, *(int *)utarray_eltptr(globals->offsets, i) + init_section_size - *idx - sizeof(PATCH_OFFSET));
 			}
 	);
 	OPCODE(buf, OP_INIT_DONE);
