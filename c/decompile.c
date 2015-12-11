@@ -35,10 +35,12 @@ void decompile(const char *buf, const size_t start, const size_t end) {
 			case OP_FETCH_GLOBAL:
 			case OP_STORE_GLOBAL:
 			case OP_GLOBAL_DEF_P:
+			case OP_DEF_GLOBAL_FUNC:
 				sprintf(info_buf, " %d", *(int16_t *)&buf[idx]); idx+=2; break;
 			case OP_FETCH_LOCAL:
 			case OP_STORE_LOCAL:
 			case OP_LOCAL_DEF_P:
+			case OP_DEF_LOCAL_FUNC:
 				sprintf(info_buf, " %d", *(LOCAL_VAR_INDEX *)&buf[idx]); idx+=sizeof(LOCAL_VAR_INDEX); break;
 			case OP_PUSH_INT:
 				sprintf(info_buf, " %d", *(int32_t *)&buf[idx]); idx+=4; break;
