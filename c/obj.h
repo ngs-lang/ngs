@@ -168,7 +168,7 @@ void vlo_ensure_additional_space(VALUE v, size_t n);
 void array_push(VALUE arr, VALUE v);
 VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, VALUE *params);
 VALUE join_strings(int argc, VALUE *argv);
-inline int obj_is_of_type(VALUE obj, VALUE t);
+int obj_is_of_type(VALUE obj, VALUE t);
 void dump(VALUE v);
 void dump_titled(char *title, VALUE v);
 

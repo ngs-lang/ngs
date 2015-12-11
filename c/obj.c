@@ -194,7 +194,7 @@ VALUE join_strings(int argc, VALUE *argv) {
 // TODO: make it faster, probably using vector of NATIVE_TYPE_IDs and how to detect them
 //       maybe re-work tagged types so the check would be VALUE & TYPE_VAL == TYPE_VAL
 // WARNING: t must be IS_NGS_TYPE(t)
-inline int obj_is_of_type(VALUE obj, VALUE t) {
+int obj_is_of_type(VALUE obj, VALUE t) {
 	NATIVE_TYPE_ID tid = NGS_TYPE_ID(t);
 	assert(tid);
 	if(tid == T_ANY) { return 1; }
