@@ -145,8 +145,7 @@ void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 	switch(node->type) {
 		case FUNC_NODE:
 			if(node->first_child->next_sibling->next_sibling) {
-				// Have name
-				// printf("register_local_vars - detected function definition %s\n", node->first_child->next_sibling->next_sibling->name);
+				// Function has a name
 				register_local_var(ctx, node->first_child->next_sibling->next_sibling->name);
 			}
 			return;
@@ -156,13 +155,7 @@ void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 			switch(ptr->type) {
 				case IDENTIFIER_NODE:
 					register_local_var(ctx, ptr->name);
-					printf("register_local_vars - detected %s\n", ptr->name);
 			}
-		// case ARGS_NODE:
-		// 	// Only identifiers
-		// 	for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
-		// 		register_local_vars(ctx, ptr);
-		// 	}
 	}
 	for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
 		register_local_vars(ctx, ptr);
