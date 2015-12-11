@@ -31,6 +31,8 @@ char *opcodes_names[] = {
 	/* 25 */ "PUSH_EMPTY_STR",
 	/* 26 */ "GLOBAL_DEF_P",
 	/* 27 */ "LOCAL_DEF_P",
+	/* 28 */ "DEF_GLOBAL_FUNC",
+	/* 29 */ "DEF_LOCAL_FUNC",
 };
 
 
@@ -39,6 +41,7 @@ char *opcodes_names[] = {
 #define DUP assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr] = ctx->stack[ctx->stack_ptr-1]; ctx->stack_ptr++;
 #define REMOVE_TOP assert(ctx->stack_ptr); ctx->stack_ptr--; 
 #define PUSH_NULL PUSH((VALUE){.num=V_NULL})
+#define GLOBALS (vm->globals)
 #define LOCALS (ctx->frames[ctx->frame_ptr-1].locals)
 
 #define METHOD_PARAMS (NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *result)
@@ -100,30 +103,11 @@ METHOD_RESULT native_Str_int METHOD_PARAMS {
 	return METHOD_OK;
 }
 
-// TODO: make it faster, probably using vector of NATIVE_TYPE_IDs and how to detect them
-//       maybe re-work tagged types so the check would be VALUE & TYPE_VAL == TYPE_VAL
-#define NATIVE_IS_TYPE_CHECK(type, check) \
-	if(tid == type) { SET_BOOL(*result, check(argv[0])); return METHOD_OK; }
 METHOD_RESULT native_is METHOD_PARAMS {
 	METHOD_MUST_HAVE_N_ARGS(2);
 	METHOD_ARG_N_MUST_BE(1, NGS_TYPE);
-	NATIVE_TYPE_ID tid = NGS_TYPE_ID(argv[1]);
-	if(tid) {
-		// handling builtin type
-		if(tid == T_ANY) { SET_TRUE(*result); return METHOD_OK; }
-		NATIVE_IS_TYPE_CHECK(T_NULL, IS_NULL);
-		NATIVE_IS_TYPE_CHECK(T_BOOL, IS_BOOL);
-		NATIVE_IS_TYPE_CHECK(T_INT, IS_INT);
-
-		NATIVE_IS_TYPE_CHECK(T_STR, IS_STRING);
-		NATIVE_IS_TYPE_CHECK(T_ARR, IS_ARRAY);
-		// if(tid == T_FUN) { SET_BOOL(*result, ???(argv[0])); return METHOD_OK; }
-		// NATIVE_IS_TYPE_CHECK(T_SEQ,   = 46,
-		// NATIVE_IS_TYPE_CHECK(T_TYPE,  = 50,
-
-		assert(0=="native_is(): Unimplemented check against builtin type");
-	}
-	return METHOD_ARGS_MISMATCH;
+	SET_BOOL(*result, obj_is_of_type(argv[0], argv[1]));
+	return METHOD_OK;
 }
 
 METHOD_RESULT native_Bool_any METHOD_PARAMS {
@@ -172,7 +156,7 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	memcpy(var->name, name, name_len);
 	var->index = vm->globals_len++;
 	HASH_ADD_KEYPTR(hh, vm->globals_indexes, var->name, name_len, var);
-	vm->globals[var->index].num = V_UNDEF;
+	GLOBALS[var->index].num = V_UNDEF;
 	DEBUG_VM_RUN("leaving get_global_index() status=new vm=%p name=%.*s -> index=" GLOBAL_VAR_INDEX_FMT "\n", vm, (int)name_len, name, var->index);
 	return var->index;
 }
@@ -185,17 +169,17 @@ void register_global_func(VM *vm, char *name, void *func_ptr) {
 	o->type.num = T_NATIVE_METHOD;
 	o->val.ptr = func_ptr;
 	index = get_global_index(vm, name, strlen(name));
-	if(IS_ARRAY(vm->globals[index])) {
-		array_push(vm->globals[index], MAKE_OBJ(o));
+	if(IS_ARRAY(GLOBALS[index])) {
+		array_push(GLOBALS[index], MAKE_OBJ(o));
 		return;
 	}
-	if(IS_NGS_TYPE(vm->globals[index])) {
-		array_push(NGS_TYPE_CONSTRUCTORS(vm->globals[index]), MAKE_OBJ(o));
+	if(IS_NGS_TYPE(GLOBALS[index])) {
+		array_push(NGS_TYPE_CONSTRUCTORS(GLOBALS[index]), MAKE_OBJ(o));
 		return;
 	}
-	if(IS_UNDEF(vm->globals[index])) {
-		vm->globals[index] = make_array_with_values(1, &MAKE_OBJ(o));
-		// dump_titled("register_global_func", vm->globals[index]);
+	if(IS_UNDEF(GLOBALS[index])) {
+		GLOBALS[index] = make_array_with_values(1, &MAKE_OBJ(o));
+		// dump_titled("register_global_func", GLOBALS[index]);
 		return;
 	}
 	assert(0 == "register_global_func fail");
@@ -215,8 +199,8 @@ NGS_TYPE *register_builtin_type(VM *vm, const char *name, NATIVE_TYPE_ID native_
 
 
 	index = get_global_index(vm, name, strlen(name));
-	assert(IS_UNDEF(vm->globals[index]));
-	SET_OBJ(vm->globals[index], t);
+	assert(IS_UNDEF(GLOBALS[index]));
+	SET_OBJ(GLOBALS[index], t);
 	return t;
 }
 
@@ -299,13 +283,29 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, c
 	}
 
 	if(IS_CLOSURE(callable)) {
+		// Check parameters type matching
+		if(CLOSURE_OBJ_N_OPT_PAR(callable)) {
+			assert(0=="Calling closure with optional parameters is not implemented yet");
+		}
+		if(argc < CLOSURE_OBJ_N_REQ_PAR(callable)) {
+			return METHOD_ARGS_MISMATCH;
+		}
+		if(argc > CLOSURE_OBJ_N_REQ_PAR(callable) + CLOSURE_OBJ_N_OPT_PAR(callable)) {
+			return METHOD_ARGS_MISMATCH;
+		}
+		for(lvi=0; lvi<CLOSURE_OBJ_N_REQ_PAR(callable); lvi++) {
+			// TODO: make sure second argument is type durng closure creation
+			if(!obj_is_of_type(argv[lvi], CLOSURE_OBJ_PARAMS(callable)[lvi*2+1])) {
+				return METHOD_ARGS_MISMATCH;
+			}
+		}
+
+		// Setup call frame
 		assert(ctx->frame_ptr < MAX_FRAMES);
 		lvi = CLOSURE_OBJ_N_LOCALS(callable);
 		if(lvi) {
 			ctx->frames[ctx->frame_ptr].locals = NGS_MALLOC(lvi * sizeof(VALUE));
 			assert(ctx->frames[ctx->frame_ptr].locals);
-			// TODO: make it number of arguments, not local variables
-			// TODO: throw ngs exception on arguments mismatch
 			assert(argc <= lvi);
 			memcpy(ctx->frames[ctx->frame_ptr].locals, &ctx->stack[ctx->stack_ptr-argc], sizeof(VALUE) * argc);
 			lvi -= argc;
@@ -313,8 +313,6 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, c
 				SET_UNDEF(*local_var_ptr);
 			}
 		} else {
-			// TODO: throw ngs exception on arguments mismatch
-			assert(argc == 0);
 			ctx->frames[ctx->frame_ptr].locals = NULL;
 		}
 		ctx->frame_ptr++;
@@ -448,12 +446,12 @@ main_loop:
 							assert(gvi < vm->globals_len);
 #endif
 							// TODO: report error here instead of crashing
-							if(IS_UNDEF(vm->globals[gvi])) {
+							if(IS_UNDEF(GLOBALS[gvi])) {
 								printf("Global %d not found\n", gvi);
 								assert(0=="Global not found");
 							}
-							// dump_titled("FETCH_GLOBAL", vm->globals[gvi]);
-							PUSH(vm->globals[gvi]);
+							// dump_titled("FETCH_GLOBAL", GLOBALS[gvi]);
+							PUSH(GLOBALS[gvi]);
 							goto main_loop;
 		case OP_STORE_GLOBAL:
 							POP(v);
@@ -464,7 +462,7 @@ main_loop:
 							assert(gvi < vm->globals_len);
 							// TODO: report error here instead of crashing
 #endif
-							vm->globals[gvi] = v;
+							GLOBALS[gvi] = v;
 							goto main_loop;
 		case OP_FETCH_LOCAL:
 							lvi = *(LOCAL_VAR_INDEX *) &vm->bytecode[ip];
@@ -552,7 +550,6 @@ do_jump:
 							POP(v);
 							n_params_required = GET_INT(v);
 							params = &ctx->stack[ctx->stack_ptr - n_params_required*2 - n_params_optional*3];
-							// n_params_required = n_params_optional = 0;
 							PUSH(make_closure_obj(ip+jo, n_locals, n_params_required, n_params_optional, params));
 							goto main_loop;
 		case OP_TO_STR:
@@ -577,12 +574,43 @@ do_jump:
 		case OP_GLOBAL_DEF_P:
 							gvi = *(GLOBAL_VAR_INDEX *) &vm->bytecode[ip];
 							ip += sizeof(gvi);
-							PUSH(MAKE_BOOL(IS_NOT_UNDEF(vm->globals[gvi])));
+							PUSH(MAKE_BOOL(IS_NOT_UNDEF(GLOBALS[gvi])));
 							goto main_loop;
 		case OP_LOCAL_DEF_P:
 							lvi = *(LOCAL_VAR_INDEX *) &vm->bytecode[ip];
 							ip += sizeof(lvi);
 							PUSH(MAKE_BOOL(IS_NOT_UNDEF(LOCALS[lvi])));
+							goto main_loop;
+		case OP_DEF_GLOBAL_FUNC:
+							// Arg: gvi
+							// In: ..., closure
+							// Out: ..., closure
+							assert(ctx->stack_ptr);
+							gvi = *(GLOBAL_VAR_INDEX *) &vm->bytecode[ip];
+							ip += sizeof(gvi);
+#ifdef DO_NGS_DEBUG
+							// DEBUG_VM_RUN("OP_STORE_GLOBAL gvi=%d len=%zu\n", gvi, vm->globals_len);
+							assert(gvi < vm->globals_len);
+							// TODO: report error here instead of crashing
+#endif
+							if(IS_UNDEF(GLOBALS[gvi])) {
+								GLOBALS[gvi] = make_array_with_values(1, &(ctx->stack[ctx->stack_ptr-1]));
+							} else {
+								array_push(GLOBALS[gvi], ctx->stack[ctx->stack_ptr-1]);
+							}
+							goto main_loop;
+		case OP_DEF_LOCAL_FUNC:
+							// Arg: lvi
+							// In: ..., closure
+							// Out: ..., closure
+							assert(ctx->stack_ptr);
+							lvi = *(LOCAL_VAR_INDEX *) &vm->bytecode[ip];
+							ip += sizeof(lvi);
+							if(IS_UNDEF(LOCALS[lvi])) {
+								LOCALS[lvi] = make_array_with_values(1, &(ctx->stack[ctx->stack_ptr-1]));
+							} else {
+								array_push(LOCALS[lvi], ctx->stack[ctx->stack_ptr-1]);
+							}
 							goto main_loop;
 		default:
 							// TODO: exception

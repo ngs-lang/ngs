@@ -1,2 +1,11 @@
+* string(len=8) F myfunc
 * int 3
+* string(len=23) myfunc2 = F myfunc2 ...
 * int 6
+* string(len=14) f(Int), f(Str)
+* int 10
+* string(len=3) aha
+* string(len=9) Shadowing
+* int 100
+* int 200
+* int 100

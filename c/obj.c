@@ -30,7 +30,20 @@ static void _dump(VALUE v, int level) {
 	}
 
 	if(IS_CLOSURE(v)) {
-		printf("%*s* closure ip=%zu\n", level << 1, "", CLOSURE_OBJ_IP(v));
+		printf("%*s* closure ip=%zu locals_including_params=%d req_params=%d opt_params=%d\n", level << 1, "",
+			CLOSURE_OBJ_IP(v),
+			CLOSURE_OBJ_N_LOCALS(v),
+			CLOSURE_OBJ_N_REQ_PAR(v),
+			CLOSURE_OBJ_N_OPT_PAR(v)
+		);
+		for(i=0; i<CLOSURE_OBJ_N_REQ_PAR(v); i++) {
+			printf("%*s* required parameter %zu\n", (level+1) << 1, "", i+1);
+			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+0], level+2);
+			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+1], level+2);
+		}
+		if(CLOSURE_OBJ_N_OPT_PAR(v)) {
+			printf("%*s* dumping optional parameters is not implemented yet\n", (level+1) << 1, "");
+		}
 		goto exit;
 	}
 
@@ -174,6 +187,23 @@ VALUE join_strings(int argc, VALUE *argv) {
 	}
 	// dump_titled("JOIN RET", ret);
 	return ret;
+}
+
+#define OBJ_C_OBJ_IS_OF_TYPE(type, check) if(tid == type) { return check(obj); }
+
+// TODO: make it faster, probably using vector of NATIVE_TYPE_IDs and how to detect them
+//       maybe re-work tagged types so the check would be VALUE & TYPE_VAL == TYPE_VAL
+// WARNING: t must be IS_NGS_TYPE(t)
+inline int obj_is_of_type(VALUE obj, VALUE t) {
+	NATIVE_TYPE_ID tid = NGS_TYPE_ID(t);
+	assert(tid);
+	if(tid == T_ANY) { return 1; }
+	OBJ_C_OBJ_IS_OF_TYPE(T_NULL, IS_NULL);
+	OBJ_C_OBJ_IS_OF_TYPE(T_BOOL, IS_BOOL);
+	OBJ_C_OBJ_IS_OF_TYPE(T_INT, IS_INT);
+	OBJ_C_OBJ_IS_OF_TYPE(T_STR, IS_STRING);
+	OBJ_C_OBJ_IS_OF_TYPE(T_ARR, IS_ARRAY);
+	assert(0=="native_is(): Unimplemented check against builtin type");
 }
 
 void dump(VALUE v) {

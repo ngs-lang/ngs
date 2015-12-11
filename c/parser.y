@@ -27,6 +27,7 @@ int yylex();
 	name->location.last_line = ll; \
 	name->location.last_column = lc
 #define MAKE_NODE(name, type_) MAKE_NODE_LOC(name, type_, yyloc.first_line, yyloc.first_column, yyloc.last_line, yyloc.last_column, 0)
+#define MAKE_GENERATED_NODE(name, type_) MAKE_NODE_LOC(name, type_, yyloc.first_line, yyloc.first_column, yyloc.last_line, yyloc.last_column, 1)
 // TODO: check whether it's appropriate to use Boehm's "atomic" allocation.
 #define COPY_NODE(dst, src) (dst) = NGS_MALLOC(sizeof(ast_node)); memcpy((dst), (src), sizeof(ast_node))
 %}
@@ -311,18 +312,13 @@ array_items:
 		};
 
 f:
+		/* F myfunc(...) { ....} -> if (defined myfunc) {null} {myfunc=[]}; push(myfunc, THIS_CLOSURE_OBJ) */
 		'F' optional_func_name[name] '(' optional_parameters ')' curly_expressions[body] {
 			MAKE_NODE(ret, FUNC_NODE);
 			ret->first_child = $optional_parameters;
-			ret->first_child->next_sibling = $body;
+			$optional_parameters->next_sibling = $body;
+			$body->next_sibling = $name;
 			$$ = ret;
-			if($name) {
-				// TODO: check that source locations are correct
-				MAKE_NODE_LOC(ret_assign, ASSIGNMENT_NODE, @name.first_line, @name.first_column, @name.last_line, @name.last_column, 1);
-				ret_assign->first_child = $name;
-				$name->next_sibling = ret;
-				$$ = ret_assign;
-			}
 		}
 
 optional_func_name:

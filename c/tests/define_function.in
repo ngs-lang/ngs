@@ -1,7 +1,30 @@
 {
+	dump("F myfunc")
 	F myfunc(x) 1+x
 	dump(myfunc(2))
 
+	dump("myfunc2 = F myfunc2 ...")
 	myfunc2 = F myfunc2(y) 2+y
 	dump(myfunc2(4))
+
+
+	dump("f(Int), f(Str)")
+	F f(x:Int) { 10 }
+	F f(x:Str) { 'aha' }
+	dump(f(1))
+	dump(f('a'))
+
+	dump("Shadowing")
+	F shadowed(x) 100
+
+	F shadowing(y) {
+		F shadowed(x) 200
+		dump(shadowed(null))
+
+	}
+
+	dump(shadowed(null))
+	shadowing(null)
+	dump(shadowed(null))
+
 }

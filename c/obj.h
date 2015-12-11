@@ -140,6 +140,9 @@ enum IMMEDIATE_VALUES {
 #define OBJ_ALLOCATED(v)          ((VAR_LEN_OBJECT *) v.ptr)->allocated
 #define CLOSURE_OBJ_IP(v)         ((CLOSURE_OBJECT *) v.ptr)->ip
 #define CLOSURE_OBJ_N_LOCALS(v)   ((CLOSURE_OBJECT *) v.ptr)->n_local_vars
+#define CLOSURE_OBJ_N_REQ_PAR(v)  ((CLOSURE_OBJECT *) v.ptr)->n_params_required
+#define CLOSURE_OBJ_N_OPT_PAR(v)  ((CLOSURE_OBJECT *) v.ptr)->n_params_optional
+#define CLOSURE_OBJ_PARAMS(v)     (((CLOSURE_OBJECT *) v.ptr)->params)
 #define NGS_TYPE_CONSTRUCTORS(v)  ((NGS_TYPE *) v.ptr)->constructors
 #define NGS_TYPE_NAME(v)          ((NGS_TYPE *) v.ptr)->name
 #define NGS_TYPE_ID(v)            ((NGS_TYPE *) v.ptr)->native_type_id
@@ -165,6 +168,7 @@ void vlo_ensure_additional_space(VALUE v, size_t n);
 void array_push(VALUE arr, VALUE v);
 VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, VALUE *params);
 VALUE join_strings(int argc, VALUE *argv);
+inline int obj_is_of_type(VALUE obj, VALUE t);
 void dump(VALUE v);
 void dump_titled(char *title, VALUE v);
 

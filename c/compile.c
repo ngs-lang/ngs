@@ -143,7 +143,13 @@ void register_local_var(COMPILATION_CONTEXT *ctx, char *name) {
 void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 	ast_node *ptr;
 	switch(node->type) {
-		case FUNC_NODE: return;
+		case FUNC_NODE:
+			if(node->first_child->next_sibling->next_sibling) {
+				// Have name
+				// printf("register_local_vars - detected function definition %s\n", node->first_child->next_sibling->next_sibling->name);
+				register_local_var(ctx, node->first_child->next_sibling->next_sibling->name);
+			}
+			return;
 		case ASSIGNMENT_NODE:
 		case ASSIGN_DEFAULT_NODE:
 			ptr = node->first_child;
@@ -323,6 +329,26 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_MAKE_CLOSURE);
 			DATA_JUMP_OFFSET(*buf, -(*idx - func_jump + sizeof(LOCAL_VAR_INDEX)));
 			DATA_N_LOCAL_VARS(*buf, n_locals);
+
+			if(node->first_child->next_sibling->next_sibling) {
+				// Function has a name
+				identifier_info = resolve_identifier(ctx, node->first_child->next_sibling->next_sibling->name, RESOLVE_ANY_IDENTFIER);
+				switch(identifier_info.type) {
+					case LOCAL_IDENTIFIER:
+						OPCODE(*buf, OP_DEF_LOCAL_FUNC);
+						DATA_N_LOCAL_VARS(*buf, identifier_info.index);
+						break;
+					case UPVAR_IDENTIFIER:
+						assert(0=="Upvars are not implemented yet");
+						break;
+					case NO_IDENTIFIER:
+					case GLOBAL_IDENTIFIER:
+						OPCODE(*buf, OP_DEF_GLOBAL_FUNC);
+						index = get_global_var_index(ctx, node->first_child->next_sibling->next_sibling->name, idx);
+						DATA_N_GLOBAL_VARS(*buf, index);
+						break;
+				}
+			}
 			break;
 		case STR_COMPS_NODE:
 			for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
