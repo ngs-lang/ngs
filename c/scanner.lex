@@ -79,6 +79,7 @@ digits			[0-9]+
 	"true"          { DEBUG_PARSER("%s", "LEX TRUE\n"); return tTRUE; }
 	"false"         { DEBUG_PARSER("%s", "LEX FALSE\n"); return tFALSE; }
 	"defined"       { DEBUG_PARSER("%s", "LEX tDEFINED\n"); return tDEFINED; }
+	"if"            { DEBUG_PARSER("%s", "LEX tIF\n"); return tIF; }
 	"while"         { DEBUG_PARSER("%s", "LEX tWHILE\n"); return tWHILE; }
 	"for"           { DEBUG_PARSER("%s", "LEX tFOR\n"); return tFOR; }
 	"F"             { DEBUG_PARSER("LEX F %s\n", yytext); return *yytext; } /* not sure about correctness */
@@ -95,6 +96,7 @@ digits			[0-9]+
 
 <CODE>{
 	"."             { DEBUG_PARSER("LEX DOT %s\n", yytext); return *yytext; }
+	":="            { DEBUG_PARSER("LEX COLON EQUALS %s\n", yytext); return tCOLONEQ; }
 	":"             { DEBUG_PARSER("LEX COLON %s\n", yytext); return *yytext; }
 	";"             { DEBUG_PARSER("LEX E.DELIMITER %s\n", yytext); return *yytext; }
 	"("|")"         { DEBUG_PARSER("LEX PAREN %s\n", yytext); return *yytext; }

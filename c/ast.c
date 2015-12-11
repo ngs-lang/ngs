@@ -18,7 +18,11 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 	"str_comp_imm",
 	"null",
 	"true",
-	"false"
+	"false",
+	"defined",
+	"if",
+	"assign_default",
+	"while",
 };
 
 

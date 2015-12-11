@@ -46,13 +46,16 @@ int yylex();
 	ast_node *ast_node;
 };
 
+%token tCOLONEQ
 %token tDEFINED
 %token tFOR
+%token tIF
+%token tNULL tTRUE tFALSE
+%token tWHILE
+
 %token tSTR_BEGIN
 %token <name> tSTR_COMP_IMM
 %token tSTR_END
-%token tNULL tTRUE tFALSE
-%token tWHILE
 
 %token <name> tBINOP
 %token <name> tIDENTIFIER
@@ -60,7 +63,9 @@ int yylex();
 
 %type <ast_node> array_items
 %type <ast_node> array_literal
+%type <ast_node> assign_default
 %type <ast_node> assignment
+%type <ast_node> binop
 %type <ast_node> call
 %type <ast_node> curly_expressions
 %type <ast_node> curly_expressions_only
@@ -70,10 +75,11 @@ int yylex();
 %type <ast_node> f
 %type <ast_node> false
 %type <ast_node> for
-%type <ast_node> binop
 %type <ast_node> identifier
+%type <ast_node> if
 %type <ast_node> null
 %type <ast_node> number
+%type <ast_node> optional_else_clause
 %type <ast_node> optional_func_name
 %type <ast_node> optional_parameters
 %type <ast_node> optional_string_components
@@ -85,11 +91,19 @@ int yylex();
 %type <ast_node> top_level2
 %type <ast_node> top_level_item
 %type <ast_node> true
+%type <ast_node> while
 
-%right '='
+%nonassoc tLOWEST
+%right '=' tCOLONEQ
+%right tIF
+%left tWHILE
+%left tFOR
 %left tBINOP
+%left tDEFINED
+%left '[' '{'
+%left tNULL tTRUE tFALSE tIDENTIFIER tNUMBER tSTR_BEGIN tSTR_COMP_IMM tSTR_END
+%left 'F'
 %left '('
-/* %precedence xx */
 
 /*TODO: intern symbols*/
 
@@ -124,11 +138,19 @@ top_level2:
 top_level_item: curly_expressions
 
 assignment: identifier '=' expression {
-		 DEBUG_PARSER("assignment $identifier %p $5 %p\n", $identifier, $expression);
-		 MAKE_NODE(ret, ASSIGNMENT_NODE);
-		 $identifier->next_sibling = $expression;
-		 ret->first_child = $identifier;
-		 $$ = ret;
+		DEBUG_PARSER("assignment $identifier %p $5 %p\n", $identifier, $expression);
+		MAKE_NODE(ret, ASSIGNMENT_NODE);
+		$identifier->next_sibling = $expression;
+		ret->first_child = $identifier;
+		$$ = ret;
+}
+
+assign_default: identifier tCOLONEQ expression {
+		DEBUG_PARSER("assign_default $identifier %p $5 %p\n", $identifier, $expression);
+		MAKE_NODE(ret, ASSIGN_DEFAULT_NODE);
+		$identifier->next_sibling = $expression;
+		ret->first_child = $identifier;
+		$$ = ret;
 }
 
 
@@ -151,7 +173,7 @@ curly_expressions_only:
 
 curly_expressions:
 		curly_expressions_only
-		| expression;
+		| expression %prec tLOWEST;
 
 /* TODO: straighten this */
 expressions:
@@ -175,7 +197,7 @@ expressions_delimiter_one_or_more: expressions_delimiter_one_or_more expressions
 
 expressions_delimiter_zero_or_more: expressions_delimiter_one_or_more | /* nothing */;
 
-expression: assignment | binop | number | identifier | call | for | array_literal | f | string | null | true | false | defined;
+expression: assignment | assign_default | binop | number | identifier | call | if | for | while | array_literal | f | string | null | true | false | defined;
 
 binop: expression[e1] tBINOP expression[e2] {
 		DEBUG_PARSER("binop $e1 %p $e2 %p\n", $e1, $e2);
@@ -194,6 +216,29 @@ call: expression '(' expression ')' {
 		ret->first_child->next_sibling = $3;
 		$$ = ret;
 }
+
+if:
+		tIF curly_expressions[cond] curly_expressions[yes] optional_else_clause[no] {
+			MAKE_NODE(ret, IF_NODE);
+			ret->first_child = $cond;
+			$cond->next_sibling = $yes;
+			$yes->next_sibling = $no;
+			$$ = ret;
+		}
+
+while:
+		tWHILE curly_expressions[cond] curly_expressions[body] {
+			MAKE_NODE(ret, WHILE_NODE);
+			ret->first_child = $cond;
+			$cond->next_sibling = $body;
+			$$ = ret;
+		}
+
+optional_else_clause:
+		curly_expressions
+		| /* nothing */ {
+			MAKE_NODE(ret, NULL_NODE); $$ = ret;
+		} %prec tLOWEST
 
 for:
 		/* for(i;expr) => for(i=0;i<expr;i=i+1) */
@@ -351,7 +396,7 @@ optional_string_components:
 		ret->first_child = NULL;
 		ret->last_child = NULL;
 		$$ = ret;
-	};
+	} %prec tLOWEST;
 
 string_component:
   tSTR_COMP_IMM { MAKE_NODE(ret, STR_COMP_IMM_NODE); ret->name = $tSTR_COMP_IMM; $$ = ret; }

@@ -14,6 +14,7 @@
 #define DATA_INT16(buf, x) { *(int16_t *)&(buf)[*idx] = x; (*idx)+=2; }
 #define DATA_INT16_AT(buf, loc, x) { *(int16_t *)&(buf)[loc] = x; }
 #define DATA_JUMP_OFFSET(buf, x) { *(JUMP_OFFSET *)&(buf)[*idx] = x; (*idx)+=sizeof(JUMP_OFFSET); }
+#define DATA_JUMP_OFFSET_PLACEHOLDER(buf) DATA_JUMP_OFFSET(buf, 1024)
 #define DATA_PATCH_OFFSET(buf, x) { *(PATCH_OFFSET *)&(buf)[*idx] = x; (*idx)+=sizeof(PATCH_OFFSET); }
 #define DATA_N_LOCAL_VARS(buf, x) { *(LOCAL_VAR_INDEX *)&(buf)[*idx] = x; (*idx)+=sizeof(LOCAL_VAR_INDEX); }
 #define DATA_N_GLOBAL_VARS(buf, x) { *(GLOBAL_VAR_INDEX *)&(buf)[*idx] = x; (*idx)+=sizeof(GLOBAL_VAR_INDEX); }
@@ -144,6 +145,7 @@ void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 	switch(node->type) {
 		case FUNC_NODE: return;
 		case ASSIGNMENT_NODE:
+		case ASSIGN_DEFAULT_NODE:
 			ptr = node->first_child;
 			switch(ptr->type) {
 				case IDENTIFIER_NODE:
@@ -167,7 +169,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 	GLOBAL_VAR_INDEX index;
 	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
 	IDENTIFIER_INFO identifier_info;
-	size_t loop_beg, cond_jump, func_jump, end_of_func_idx;
+	size_t loop_beg, cond_jump, func_jump, end_of_func_idx, if_jump, while_jump;
 
 	ensure_room(buf, *idx, allocated, 1024); // XXX - magic number
 
@@ -251,19 +253,15 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			// condition
 			loop_beg = *idx;
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
-			OPCODE(*buf, OP_JMP_FALSE);
 			cond_jump = *idx;
-			DATA_INT16(*buf, 1024);
+			OPCODE(*buf, OP_JMP_FALSE);
+			DATA_JUMP_OFFSET(*buf, 1024);
 			// body
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
 			// increment
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
-			// printf("XX %zu\n",(*idx - cond_jump));
-			assert((*idx - cond_jump + 1) < 0x7FFF);
-			// DATA_INT16_AT(*buf, cond_jump, (*idx - cond_jump));
-			*(JUMP_OFFSET *)&(*buf)[cond_jump] = (*idx - cond_jump + 1);
-			// printf("XX [%zu] %zu %d\n",cond_jump, (*idx - cond_jump), *(int16_t *)&(*buf)[cond_jump]);
-			// assert(0);
+			assert(*idx - cond_jump < 0x7FFF);
+			*(JUMP_OFFSET *)&(*buf)[cond_jump+1] = *idx - cond_jump;
 			OPCODE(*buf, OP_JMP);
 			assert((*idx - loop_beg) < 0x7FFF);
 			DATA_JUMP_OFFSET(*buf, -(*idx - loop_beg + sizeof(JUMP_OFFSET)));
@@ -373,6 +371,30 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					break;
 			}
 			POP_IF_DONT_NEED_RESULT(*buf);
+			break;
+		case IF_NODE:
+			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			if_jump = *idx;
+			OPCODE(*buf, OP_JMP_FALSE);
+			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
+			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, need_result);
+			OPCODE(*buf, OP_JMP);
+			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
+			*(JUMP_OFFSET *)&(*buf)[if_jump+1] = *idx - if_jump - 1 - sizeof(JUMP_OFFSET); // Jump is OP_JMP_FALSE JUMP_OFFSET shorter
+			if_jump = *idx - 1 - sizeof(JUMP_OFFSET);
+			compile_main_section(ctx, node->first_child->next_sibling->next_sibling, buf, idx, allocated, need_result);
+			*(JUMP_OFFSET *)&(*buf)[if_jump+1] = *idx - if_jump - 1 - sizeof(JUMP_OFFSET);
+			break;
+		case WHILE_NODE:
+			loop_beg = *idx;
+			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			while_jump = *idx;
+			OPCODE(*buf, OP_JMP_FALSE);
+			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
+			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, need_result);
+			OPCODE(*buf, OP_JMP);
+			DATA_JUMP_OFFSET(*buf, -(*idx - loop_beg + sizeof(JUMP_OFFSET)));
+			*(JUMP_OFFSET *)&(*buf)[while_jump+1] = *idx - while_jump - 1 - sizeof(JUMP_OFFSET);
 			break;
 		default:
 			assert(0=="compile_main_section(): unknown node type");

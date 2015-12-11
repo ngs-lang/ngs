@@ -1,0 +1,26 @@
+{
+# condition: true, false
+# condition: expression, curly_expressions
+# true and false caluses: expression, curly_expressions
+# false clause: present, missing
+
+	dump("Simple")
+	dump(if true 1 2)
+	dump(if false 1 2)
+	dump("Curly condition")
+	dump(if {false; true} 1 2)
+	dump(if {true; false} 1 2)
+	dump("Curly if_true and if_false")
+	dump(if true {1; 10} {2; 20})
+	dump(if false {1; 10} {2; 20})
+
+	dump("Simple, no else")
+	dump(if true 1)
+	dump(if false 1)
+	dump("Curly condition, no else")
+	dump(if {false; true} 1)
+	dump(if {true; false} 1)
+	dump("Curly if_true, no else")
+	dump(if true {1; 10})
+	dump(if false {1; 10})
+}

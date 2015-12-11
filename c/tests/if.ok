@@ -1,0 +1,18 @@
+* string(len=6) Simple
+* int 1
+* int 2
+* string(len=15) Curly condition
+* int 1
+* int 2
+* string(len=26) Curly if_true and if_false
+* int 10
+* int 20
+* string(len=15) Simple, no else
+* int 1
+* null
+* string(len=24) Curly condition, no else
+* int 1
+* null
+* string(len=22) Curly if_true, no else
+* int 10
+* null
