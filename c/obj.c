@@ -25,7 +25,12 @@ static void _dump(VALUE v, int level) {
 	if(IS_NATIVE_METHOD(v)) {
 		symbols_buffer[0] = OBJ_DATA_PTR(v);
 		symbols = backtrace_symbols(symbols_buffer, 1);
-		printf("%*s* native method %s at %p\n", level << 1, "", symbols[0], OBJ_DATA_PTR(v));
+		printf("%*s* native method %s at %p req_params=%d\n", level << 1, "", symbols[0], OBJ_DATA_PTR(v), NATIVE_METHOD_OBJ_N_REQ_PAR(v));
+		for(i=0; i<NATIVE_METHOD_OBJ_N_REQ_PAR(v); i++) {
+			printf("%*s* required parameter %zu\n", (level+1) << 1, "", i+1);
+			_dump(NATIVE_METHOD_OBJ_PARAMS(v)[i*2+0], level+2);
+			_dump(NATIVE_METHOD_OBJ_PARAMS(v)[i*2+1], level+2);
+		}
 		goto exit;
 	}
 
