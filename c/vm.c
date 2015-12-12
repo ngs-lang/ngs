@@ -98,7 +98,9 @@ METHOD_RESULT native_Str_int METHOD_PARAMS {
 	METHOD_MUST_HAVE_N_ARGS(1);
 	METHOD_ARG_N_MUST_BE(0, INT);
 	char s[MAX_INT_TO_STR_LEN];
-	snprintf(s, sizeof(s), "%" PRIiPTR, GET_INT(argv[0]));
+	size_t len;
+	len = snprintf(s, sizeof(s), "%" PRIiPTR, GET_INT(argv[0]));
+	assert(len<sizeof(s)); // Or we might haver truncated represnetation
 	*result = make_string(s);
 	return METHOD_OK;
 }
