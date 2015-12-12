@@ -493,7 +493,9 @@ main_loop:
 							// POP(n_params_required); // number of arguments
 							// POP(n_params_optional);
 							mr = _vm_call(vm, ctx, callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
-							assert(mr == METHOD_OK);
+							if(mr != METHOD_OK) {
+								assert(0=="Handling failed method calls is not implemented yet");
+							}
 							goto main_loop;
 		case OP_RET:
 							// TODO: check stack length
