@@ -67,7 +67,7 @@ INT_METHOD(plus, +);
 INT_METHOD(minus, -);
 INT_CMP_METHOD(less, <);
 
-METHOD_RESULT native_dump METHOD_PARAMS {
+METHOD_RESULT native_dump_any METHOD_PARAMS {
 	dump(argv[0]);
 	SET_NULL(*result);
 	return METHOD_OK; // null
@@ -224,7 +224,7 @@ void vm_init(VM *vm) {
 	register_global_func(vm, "+",    &native_plus_int_int,  2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "-",    &native_minus_int_int, 2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "<",    &native_less_int_int,  2, "a",   vm->Int, "b", vm->Int);
-	register_global_func(vm, "dump", &native_dump,          1, "obj", vm->Any);
+	register_global_func(vm, "dump", &native_dump_any,      1, "obj", vm->Any);
 	register_global_func(vm, "Bool", &native_Bool_any,      1, "x",   vm->Any);
 	register_global_func(vm, "Str",  &native_Str_int,       1, "n",   vm->Int);
 	register_global_func(vm, "is",   &native_is_any_type,   2, "obj", vm->Any, "t", vm->Type);
