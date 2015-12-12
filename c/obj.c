@@ -195,7 +195,9 @@ VALUE join_strings(int argc, VALUE *argv) {
 //       maybe re-work tagged types so the check would be VALUE & TYPE_VAL == TYPE_VAL
 // WARNING: t must be IS_NGS_TYPE(t)
 int obj_is_of_type(VALUE obj, VALUE t) {
-	NATIVE_TYPE_ID tid = NGS_TYPE_ID(t);
+	NATIVE_TYPE_ID tid;
+	assert(IS_NGS_TYPE(t));
+	tid = NGS_TYPE_ID(t);
 	assert(tid);
 	if(tid == T_ANY) { return 1; }
 	OBJ_C_OBJ_IS_OF_TYPE(T_NULL, IS_NULL);
