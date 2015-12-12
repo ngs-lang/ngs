@@ -15,16 +15,20 @@
 	dump(f('a'))
 
 	dump("Shadowing")
-	F shadowed(x) 100
+	F shadowed() 100
 
-	F shadowing(y) {
-		F shadowed(x) 200
-		dump(shadowed(null))
+	F shadowing() {
+		F shadowed() 200
+		dump(shadowed())
 
 	}
 
-	dump(shadowed(null))
-	shadowing(null)
-	dump(shadowed(null))
+	dump(shadowed())
+	shadowing()
+	dump(shadowed())
+
+	dump("Two args function")
+	F twoargs(x,y) x+y
+	dump(twoargs(10,20))
 
 }

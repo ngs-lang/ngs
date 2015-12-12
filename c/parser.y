@@ -30,6 +30,7 @@ int yylex();
 #define MAKE_GENERATED_NODE(name, type_) MAKE_NODE_LOC(name, type_, yyloc.first_line, yyloc.first_column, yyloc.last_line, yyloc.last_column, 1)
 // TODO: check whether it's appropriate to use Boehm's "atomic" allocation.
 #define COPY_NODE(dst, src) (dst) = NGS_MALLOC(sizeof(ast_node)); memcpy((dst), (src), sizeof(ast_node))
+#define MAKE_REQ_ARG_NODE(name, val) MAKE_NODE(name, ARG_NODE); name->first_child = val; val->next_sibling = NULL;
 %}
 
 %define api.pure full
@@ -64,6 +65,7 @@ int yylex();
 
 %type <ast_node> array_items
 %type <ast_node> array_literal
+%type <ast_node> argument
 %type <ast_node> assign_default
 %type <ast_node> assignment
 %type <ast_node> binop
@@ -78,8 +80,10 @@ int yylex();
 %type <ast_node> for
 %type <ast_node> identifier
 %type <ast_node> if
+%type <ast_node> non_assignment_expression
 %type <ast_node> null
 %type <ast_node> number
+%type <ast_node> optional_arguments
 %type <ast_node> optional_else_clause
 %type <ast_node> optional_func_name
 %type <ast_node> optional_parameters
@@ -105,6 +109,7 @@ int yylex();
 %left tNULL tTRUE tFALSE tIDENTIFIER tNUMBER tSTR_BEGIN tSTR_COMP_IMM tSTR_END
 %left 'F'
 %left '('
+%nonassoc tHIGHEST
 
 /*TODO: intern symbols*/
 
@@ -198,7 +203,8 @@ expressions_delimiter_one_or_more: expressions_delimiter_one_or_more expressions
 
 expressions_delimiter_zero_or_more: expressions_delimiter_one_or_more | /* nothing */;
 
-expression: assignment | assign_default | binop | number | identifier | call | if | for | while | array_literal | f | string | null | true | false | defined;
+expression: assignment | assign_default | non_assignment_expression;
+non_assignment_expression: binop | number | identifier | call | if | for | while | array_literal | f | string | null | true | false | defined;
 
 binop: expression[e1] tBINOP expression[e2] {
 		DEBUG_PARSER("binop $e1 %p $e2 %p\n", $e1, $e2);
@@ -206,17 +212,55 @@ binop: expression[e1] tBINOP expression[e2] {
 			MAKE_NODE(id, IDENTIFIER_NODE);
 			ret->first_child = id;
 			id->name = $tBINOP;
-			id->next_sibling = $e1;
-			$e1->next_sibling = $e2;
+			MAKE_NODE(args, ARGS_NODE);
+				MAKE_REQ_ARG_NODE(a1, $e1);
+				MAKE_REQ_ARG_NODE(a2, $e2);
+				a1->next_sibling = a2;
+				args->first_child = a1;
+			id->next_sibling = args;
 		$$ = ret;
 }
 
-call: expression '(' expression ')' {
+call: expression[callable] '(' optional_arguments[args] ')' {
 		MAKE_NODE(ret, CALL_NODE);
-		ret->first_child = $1;
-		ret->first_child->next_sibling = $3;
+		ret->first_child = $callable;
+		ret->first_child->next_sibling = $args;
 		$$ = ret;
 }
+
+optional_arguments:
+	optional_arguments[arguments] ',' argument {
+		$arguments->last_child->next_sibling = $argument;
+		$arguments->last_child = $argument;
+		$$ = $arguments;
+	}
+	| argument {
+		MAKE_NODE(ret, ARGS_NODE);
+		ret->first_child = $argument;
+		ret->last_child = $argument;
+		$$ = ret;
+	}
+	|
+	/* nothing */ {
+		MAKE_NODE(ret, ARGS_NODE);
+		ret->first_child = NULL;
+		ret->last_child = NULL;
+		$$ = ret;
+	};
+
+argument:
+	identifier '=' expression {
+		MAKE_NODE(ret, ARG_NODE);
+		ret->first_child = $expression;
+		$expression->next_sibling = $identifier;
+		$$ = ret;
+	}
+	| non_assignment_expression[expression] {
+		MAKE_NODE(ret, ARG_NODE);
+		ret->first_child = $expression;
+		$expression->next_sibling = NULL;
+		$$ = ret;
+	}
 
 if:
 		tIF curly_expressions[cond] curly_expressions[yes] optional_else_clause[no] {
@@ -256,8 +300,16 @@ for:
 				init_node->next_sibling = cond_node;
 					ALLOC_NODE(cond_node->first_child, IDENTIFIER_NODE);
 					cond_node->first_child->name = "<";
-					COPY_NODE(cond_node->first_child->next_sibling, $id);
-					cond_node->first_child->next_sibling->next_sibling = $expr;
+					MAKE_NODE(cond_args, ARGS_NODE);
+						MAKE_NODE(cond_arg1, ARG_NODE);
+							COPY_NODE(cond_arg1->first_child, $id);
+							cond_arg1->first_child->next_sibling = NULL;
+						MAKE_NODE(cond_arg2, ARG_NODE);
+							COPY_NODE(cond_arg2->first_child, $expr);
+							cond_arg2->first_child->next_sibling = NULL;
+						cond_arg1->next_sibling = cond_arg2;
+						cond_args->first_child = cond_arg1;
+					cond_node->first_child->next_sibling = cond_args;
 
 				MAKE_NODE(incr_node, ASSIGNMENT_NODE);
 				cond_node->next_sibling = incr_node;
@@ -268,9 +320,18 @@ for:
 					incr_node->first_child->next_sibling = incr_plus_node;
 						ALLOC_NODE(incr_plus_node->first_child, IDENTIFIER_NODE);
 						incr_plus_node->first_child->name = "+";
-						COPY_NODE(incr_plus_node->first_child->next_sibling, $id);
-						ALLOC_NODE(incr_plus_node->first_child->next_sibling->next_sibling, NUMBER_NODE);
-						incr_plus_node->first_child->next_sibling->next_sibling->number = 1;
+
+						MAKE_NODE(incr_plus_args, ARGS_NODE);
+							MAKE_NODE(incr_plus_arg1, ARG_NODE);
+								COPY_NODE(incr_plus_arg1->first_child, $id);
+								incr_plus_arg1->first_child->next_sibling = NULL;
+							MAKE_NODE(incr_plus_arg2, ARG_NODE);
+								ALLOC_NODE(incr_plus_arg2->first_child, NUMBER_NODE);
+								incr_plus_arg2->first_child->number = 1;
+								incr_plus_arg2->first_child->next_sibling = NULL;
+							incr_plus_arg1->next_sibling = incr_plus_arg2;
+							incr_plus_args->first_child = incr_plus_arg1;
+						incr_plus_node->first_child->next_sibling = incr_plus_args;
 
 				incr_node->next_sibling = $body;
 
@@ -344,7 +405,6 @@ optional_parameters:
 	|
 	/* nothing */ {
 		MAKE_NODE(ret, PARAMS_NODE);
-		printf("PARAMS NONE\n");
 		ret->first_child = NULL;
 		ret->last_child = NULL;
 		$$ = ret;

@@ -176,8 +176,14 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 		case CALL_NODE:
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "CALL NODE", *idx);
 			OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
-			for(ptr=node->first_child->next_sibling, argc=0; ptr; ptr=ptr->next_sibling, argc++) {
-				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
+			// print_ast(node, 0);
+			assert(node->first_child->next_sibling->type == ARGS_NODE);
+			for(ptr=node->first_child->next_sibling->first_child, argc=0; ptr; ptr=ptr->next_sibling, argc++) {
+				assert(ptr->type == ARG_NODE);
+				if(ptr->first_child->next_sibling) {
+					assert(0=="Compiling keyword arguments is not implemented yet");
+				}
+				compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
 			}
 			OPCODE(*buf, OP_PUSH_INT); DATA(*buf, argc);
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);

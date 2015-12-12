@@ -9,3 +9,5 @@
 * int 100
 * int 200
 * int 100
+* string(len=17) Two args function
+* int 30
