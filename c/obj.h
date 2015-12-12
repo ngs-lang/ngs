@@ -32,16 +32,23 @@ typedef struct var_len_object_struct {
 	size_t item_size;
 } VAR_LEN_OBJECT;
 
-typedef struct closure {
-	OBJECT base;
-	size_t ip;
-	VALUE **upvars;
-	int upvars_levels; // needed?
+typedef struct params {
 	LOCAL_VAR_INDEX n_local_vars; // number of local variables including arguments
 	LOCAL_VAR_INDEX n_params_required;
 	LOCAL_VAR_INDEX n_params_optional;
 	VALUE *params;
+} PARAMS_DESC;
+
+typedef struct closure {
+	OBJECT base;
+	size_t ip;
+	PARAMS_DESC params;
 } CLOSURE_OBJECT;
+
+typedef struct native_method {
+	OBJECT base;
+	PARAMS_DESC params;
+} NATIVE_METHOD_OBJECT;
 
 typedef struct ngs_type {
 	OBJECT base;
@@ -139,10 +146,13 @@ enum IMMEDIATE_VALUES {
 #define OBJ_LEN(v)                ((VAR_LEN_OBJECT *) v.ptr)->len
 #define OBJ_ALLOCATED(v)          ((VAR_LEN_OBJECT *) v.ptr)->allocated
 #define CLOSURE_OBJ_IP(v)         ((CLOSURE_OBJECT *) v.ptr)->ip
-#define CLOSURE_OBJ_N_LOCALS(v)   ((CLOSURE_OBJECT *) v.ptr)->n_local_vars
-#define CLOSURE_OBJ_N_REQ_PAR(v)  ((CLOSURE_OBJECT *) v.ptr)->n_params_required
-#define CLOSURE_OBJ_N_OPT_PAR(v)  ((CLOSURE_OBJECT *) v.ptr)->n_params_optional
-#define CLOSURE_OBJ_PARAMS(v)     (((CLOSURE_OBJECT *) v.ptr)->params)
+#define CLOSURE_OBJ_N_LOCALS(v)   ((CLOSURE_OBJECT *) v.ptr)->params.n_local_vars
+#define CLOSURE_OBJ_N_REQ_PAR(v)  ((CLOSURE_OBJECT *) v.ptr)->params.n_params_required
+#define CLOSURE_OBJ_N_OPT_PAR(v)  ((CLOSURE_OBJECT *) v.ptr)->params.n_params_optional
+#define CLOSURE_OBJ_PARAMS(v)     (((CLOSURE_OBJECT *) v.ptr)->params.params)
+#define NATIVE_METHOD_OBJ_N_REQ_PAR(v)  ((NATIVE_METHOD_OBJECT *) v.ptr)->params.n_params_required
+#define NATIVE_METHOD_OBJ_N_OPT_PAR(v)  ((NATIVE_METHOD_OBJECT *) v.ptr)->params.n_params_optional
+#define NATIVE_METHOD_OBJ_PARAMS(v)     (((NATIVE_METHOD_OBJECT *) v.ptr)->params.params)
 #define NGS_TYPE_CONSTRUCTORS(v)  ((NGS_TYPE *) v.ptr)->constructors
 #define NGS_TYPE_NAME(v)          ((NGS_TYPE *) v.ptr)->name
 #define NGS_TYPE_ID(v)            ((NGS_TYPE *) v.ptr)->native_type_id

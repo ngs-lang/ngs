@@ -104,7 +104,7 @@ typedef enum method_result_enum {
 	METHOD_EXCEPTION_OCCURED,
 } METHOD_RESULT;
 
-typedef METHOD_RESULT (*VM_FUNC)(CTX *ctx, LOCAL_VAR_INDEX argc, const VALUE *argv, VALUE *result);
+typedef METHOD_RESULT (*VM_FUNC)(const VALUE *argv, VALUE *result);
 void vm_init(VM *vm);
 void vm_load_bytecode(VM *vm, char *bc, size_t len);
 void ctx_init(CTX *ctx);

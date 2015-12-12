@@ -48,8 +48,8 @@ ngs-debug: $(patsubst %.o, %_debug.o, $(SRC))
 # Micro bechmark but it's still something
 time-sum: ngs
 
-	# About 2.2 seconds on my laptop with gcc -O1
-	# About 1.6 seconds on my laptop with clang -O1
+	# About 2.6 seconds on my laptop with gcc -O1
+	# About 1.8 seconds on my laptop with clang -O1
 	time ./ngs < <(echo '{s=0;for(i=0;i<10000000;i=i+1) {s=s+i}}')
 
 	# About 1.1 seconds / perl 5.20.2

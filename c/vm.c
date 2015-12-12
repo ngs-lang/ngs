@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdarg.h>
 #include "ngs.h"
 #include "vm.h"
 
@@ -44,28 +45,17 @@ char *opcodes_names[] = {
 #define GLOBALS (vm->globals)
 #define LOCALS (ctx->frames[ctx->frame_ptr-1].locals)
 
-#define METHOD_PARAMS (NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *result)
-#define METHOD_MUST_HAVE_N_ARGS(n) if(n != argc) { return METHOD_ARGS_MISMATCH; }
-#define METHOD_MUST_HAVE_AT_LEAST_ARGS(n) if(argc < n) { return METHOD_ARGS_MISMATCH; }
-#define METHOD_MUST_HAVE_AT_MOST_ARGS(n) if(argc > n) { return METHOD_ARGS_MISMATCH; }
-#define METHOD_ARG_N_MUST_BE(n, what) if(!IS_ ## what(argv[n])) { return METHOD_ARGS_MISMATCH; }
+#define METHOD_PARAMS (VALUE *argv, VALUE *result)
 #define METHOD_RETURN(v) { *result = (v); return METHOD_OK; }
 
-#define METHOD_BINOP_SETUP(type) \
-	METHOD_MUST_HAVE_N_ARGS(2); \
-	METHOD_ARG_N_MUST_BE(0, type); \
-	METHOD_ARG_N_MUST_BE(1, type);
-
 #define INT_METHOD(name, op) \
-METHOD_RESULT native_ ## name ## _int_int(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *result) { \
-	METHOD_BINOP_SETUP(INT); \
+METHOD_RESULT native_ ## name ## _int_int METHOD_PARAMS { \
 	SET_INT(*result, GET_INT(argv[0]) op GET_INT(argv[1])); \
 	return METHOD_OK; \
 }
 
 #define INT_CMP_METHOD(name, op) \
-METHOD_RESULT native_ ## name ## _int_int(NGS_UNUSED CTX *ctx, int argc, VALUE *argv, VALUE *result) { \
-	METHOD_BINOP_SETUP(INT); \
+METHOD_RESULT native_ ## name ## _int_int METHOD_PARAMS { \
 	SET_BOOL(*result, GET_INT(argv[0]) op GET_INT(argv[1])); \
 	return METHOD_OK; \
 }
@@ -78,16 +68,12 @@ INT_METHOD(minus, -);
 INT_CMP_METHOD(less, <);
 
 METHOD_RESULT native_dump METHOD_PARAMS {
-	if(argc == 1) {
-		dump(argv[0]);
-		SET_NULL(*result);
-		return METHOD_OK; // null
-	}
-	return METHOD_ARGS_MISMATCH;
+	dump(argv[0]);
+	SET_NULL(*result);
+	return METHOD_OK; // null
 }
 
 METHOD_RESULT native_plus_arr_arr METHOD_PARAMS {
-	METHOD_BINOP_SETUP(ARRAY);
 	*result = make_array(ARG_LEN(0) + ARG_LEN(1));
 	memcpy(ARRAY_ITEMS(*result)+0, ARG_DATA_PTR(0), sizeof(VALUE)*ARG_LEN(0));
 	memcpy(ARRAY_ITEMS(*result)+ARG_LEN(0), OBJ_DATA_PTR(argv[1]), sizeof(VALUE)*ARG_LEN(1));
@@ -95,8 +81,6 @@ METHOD_RESULT native_plus_arr_arr METHOD_PARAMS {
 }
 
 METHOD_RESULT native_Str_int METHOD_PARAMS {
-	METHOD_MUST_HAVE_N_ARGS(1);
-	METHOD_ARG_N_MUST_BE(0, INT);
 	char s[MAX_INT_TO_STR_LEN];
 	size_t len;
 	len = snprintf(s, sizeof(s), "%" PRIiPTR, GET_INT(argv[0]));
@@ -106,14 +90,11 @@ METHOD_RESULT native_Str_int METHOD_PARAMS {
 }
 
 METHOD_RESULT native_is METHOD_PARAMS {
-	METHOD_MUST_HAVE_N_ARGS(2);
-	METHOD_ARG_N_MUST_BE(1, NGS_TYPE);
 	SET_BOOL(*result, obj_is_of_type(argv[0], argv[1]));
 	return METHOD_OK;
 }
 
 METHOD_RESULT native_Bool_any METHOD_PARAMS {
-	METHOD_MUST_HAVE_N_ARGS(1);
 	if(IS_BOOL(argv[0])) METHOD_RETURN(argv[0])
 	if(IS_INT(argv[0])) METHOD_RETURN(MAKE_BOOL(GET_INT(argv[0])))
 	if(IS_STRING(argv[0]) || IS_ARRAY(argv[0])) METHOD_RETURN(MAKE_BOOL(OBJ_LEN(argv[0])))
@@ -121,7 +102,6 @@ METHOD_RESULT native_Bool_any METHOD_PARAMS {
 }
 
 METHOD_RESULT native_not_any METHOD_PARAMS {
-	METHOD_MUST_HAVE_N_ARGS(1);
 	if(!IS_BOOL(argv[0])) {
 		assert(0=="not() on non-booleans is not implemented yet");
 		// TODO: Call Bool() on the value, then continue with not() on the returned value
@@ -164,12 +144,30 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 }
 
 // NOTE: couldn't make it macro - collision with uthash probably.
-void register_global_func(VM *vm, char *name, void *func_ptr) {
+void register_global_func(VM *vm, char *name, void *func_ptr, LOCAL_VAR_INDEX argc, ...) {
 	size_t index;
-	OBJECT *o;
+	int i;
+	va_list varargs;
+	NATIVE_METHOD_OBJECT *o;
+	VALUE *argv = NULL;
 	o = NGS_MALLOC(sizeof(*o));
-	o->type.num = T_NATIVE_METHOD;
-	o->val.ptr = func_ptr;
+	o->base.type.num = T_NATIVE_METHOD;
+	o->base.val.ptr = func_ptr;
+	o->params.n_params_required = argc;
+	o->params.n_params_optional = 0; /* currently none of builtins uses optional parameters */
+	if(argc) {
+		argv = NGS_MALLOC(sizeof(VALUE) * 2);
+		assert(argv);
+		va_start(varargs, argc);
+		for(i=0; i<argc; i++) {
+			// name:
+			argv[i*2+0] = make_string(va_arg(varargs, char *));
+			// type:
+			argv[i*2+1] = (VALUE){.ptr = va_arg(varargs, NGS_TYPE *)};
+		}
+		va_end(varargs);
+	}
+	o->params.params = argv;
 	index = get_global_index(vm, name, strlen(name));
 	if(IS_ARRAY(GLOBALS[index])) {
 		array_push(GLOBALS[index], MAKE_OBJ(o));
@@ -214,11 +212,6 @@ void vm_init(VM *vm) {
 	// Keep global functions registration in order.
 	// This way the compiler can use globals_indexes as the beginning of
 	// it's symbol table for globals.
-	register_global_func(vm, "+", &native_plus_arr_arr);
-	register_global_func(vm, "+", &native_plus_int_int);
-	register_global_func(vm, "-", &native_minus_int_int);
-	register_global_func(vm, "<", &native_less_int_int);
-	register_global_func(vm, "dump", &native_dump);
 	vm->Null = register_builtin_type(vm, "Null", T_NULL);
 	vm->Bool = register_builtin_type(vm, "Bool", T_BOOL);
 	vm->Int = register_builtin_type(vm, "Int", T_INT);
@@ -228,10 +221,15 @@ void vm_init(VM *vm) {
 	vm->Any = register_builtin_type(vm, "Any", T_ANY);
 	vm->Seq = register_builtin_type(vm, "Seq", T_SEQ);
 	vm->Type = register_builtin_type(vm, "Type", T_TYPE);
-	register_global_func(vm, "Bool", &native_Bool_any);
-	register_global_func(vm, "Str", &native_Str_int);
-	register_global_func(vm, "is", &native_is); // TODO: name native_is according to convention
-	register_global_func(vm, "not", &native_not_any);
+	register_global_func(vm, "+",    &native_plus_arr_arr,  2, "a",   vm->Arr, "b", vm->Arr);
+	register_global_func(vm, "+",    &native_plus_int_int,  2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, "-",    &native_minus_int_int, 2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, "<",    &native_less_int_int,  2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, "dump", &native_dump,          1, "obj", vm->Any);
+	register_global_func(vm, "Bool", &native_Bool_any,      1, "x",   vm->Any);
+	register_global_func(vm, "Str",  &native_Str_int,       1, "n",   vm->Int);
+	register_global_func(vm, "is",   &native_is,            2, "obj", vm->Any, "t", vm->Type); // TODO: name native_is according to convention
+	register_global_func(vm, "not",  &native_not_any,       1, "x",   vm->Any);
 }
 
 void ctx_init(CTX *ctx) {
@@ -276,8 +274,21 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, c
 	}
 
 	if(IS_NATIVE_METHOD(callable)) {
-		// TODO: check whether everything works find with argc == 0
-		mr = ((VM_FUNC)OBJ_DATA_PTR(callable))(ctx, argc, argv, &ctx->stack[ctx->stack_ptr-argc-1]);
+		// None of native method uses optional parameters for now
+		if(NATIVE_METHOD_OBJ_N_OPT_PAR(callable)) {
+			assert(0=="Optional parameters are not implemented yet");
+		}
+		if(argc != NATIVE_METHOD_OBJ_N_REQ_PAR(callable)) {
+			return METHOD_ARGS_MISMATCH;
+		}
+		for(lvi=0; lvi<NATIVE_METHOD_OBJ_N_REQ_PAR(callable); lvi++) {
+			// TODO: make sure second argument is type durng closure creation
+			if(!obj_is_of_type(argv[lvi], NATIVE_METHOD_OBJ_PARAMS(callable)[lvi*2+1])) {
+				return METHOD_ARGS_MISMATCH;
+			}
+		}
+		mr = ((VM_FUNC)OBJ_DATA_PTR(callable))(argv, &ctx->stack[ctx->stack_ptr-argc-1]);
+		// Will actually be needed if/when builtins start using guards
 		if(mr != METHOD_ARGS_MISMATCH) {
 			ctx->stack_ptr -= argc;
 		}
@@ -287,7 +298,7 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, c
 	if(IS_CLOSURE(callable)) {
 		// Check parameters type matching
 		if(CLOSURE_OBJ_N_OPT_PAR(callable)) {
-			assert(0=="Calling closure with optional parameters is not implemented yet");
+			assert(0=="Optional parameters are not implemented yet");
 		}
 		if(argc < CLOSURE_OBJ_N_REQ_PAR(callable)) {
 			return METHOD_ARGS_MISMATCH;

@@ -152,13 +152,13 @@ VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX 
 	assert(c);
 	c->base.type.num = T_CLOSURE;
 	c->ip = ip;
-	c->n_local_vars = n_local_vars;
-	c->n_params_required = n_params_required;
-	c->n_params_optional = n_params_optional;
+	c->params.n_local_vars = n_local_vars;
+	c->params.n_params_required = n_params_required;
+	c->params.n_params_optional = n_params_optional;
 	params_size = (n_params_required*2 + n_params_optional*3) * sizeof(VALUE);
-	c->params = NGS_MALLOC(params_size);
-	assert(c->params);
-	memcpy(c->params, params, params_size);
+	c->params.params = NGS_MALLOC(params_size);
+	assert(c->params.params);
+	memcpy(c->params.params, params, params_size);
 
 	SET_OBJ(v, c);
 
@@ -194,17 +194,21 @@ VALUE join_strings(int argc, VALUE *argv) {
 // TODO: make it faster, probably using vector of NATIVE_TYPE_IDs and how to detect them
 //       maybe re-work tagged types so the check would be VALUE & TYPE_VAL == TYPE_VAL
 // WARNING: t must be IS_NGS_TYPE(t)
+// WARNING: only for builtin types!
 int obj_is_of_type(VALUE obj, VALUE t) {
 	NATIVE_TYPE_ID tid;
-	assert(IS_NGS_TYPE(t));
+	assert(IS_NGS_TYPE(t)); // XXX: Performance hit
 	tid = NGS_TYPE_ID(t);
-	assert(tid);
+	assert(tid); // XXX: Performance hit
 	if(tid == T_ANY) { return 1; }
 	OBJ_C_OBJ_IS_OF_TYPE(T_NULL, IS_NULL);
 	OBJ_C_OBJ_IS_OF_TYPE(T_BOOL, IS_BOOL);
 	OBJ_C_OBJ_IS_OF_TYPE(T_INT, IS_INT);
 	OBJ_C_OBJ_IS_OF_TYPE(T_STR, IS_STRING);
 	OBJ_C_OBJ_IS_OF_TYPE(T_ARR, IS_ARRAY);
+	OBJ_C_OBJ_IS_OF_TYPE(T_TYPE, IS_NGS_TYPE);
+
+	dump_titled("Unimplemented type to check", t);
 	assert(0=="native_is(): Unimplemented check against builtin type");
 }
 
