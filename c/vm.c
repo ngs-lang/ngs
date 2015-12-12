@@ -89,7 +89,7 @@ METHOD_RESULT native_Str_int METHOD_PARAMS {
 	return METHOD_OK;
 }
 
-METHOD_RESULT native_is METHOD_PARAMS {
+METHOD_RESULT native_is_any_type METHOD_PARAMS {
 	SET_BOOL(*result, obj_is_of_type(argv[0], argv[1]));
 	return METHOD_OK;
 }
@@ -143,7 +143,6 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	return var->index;
 }
 
-// NOTE: couldn't make it macro - collision with uthash probably.
 void register_global_func(VM *vm, char *name, void *func_ptr, LOCAL_VAR_INDEX argc, ...) {
 	size_t index;
 	int i;
@@ -214,12 +213,12 @@ void vm_init(VM *vm) {
 	// it's symbol table for globals.
 	vm->Null = register_builtin_type(vm, "Null", T_NULL);
 	vm->Bool = register_builtin_type(vm, "Bool", T_BOOL);
-	vm->Int = register_builtin_type(vm, "Int", T_INT);
-	vm->Str = register_builtin_type(vm, "Str", T_STR);
-	vm->Arr = register_builtin_type(vm, "Arr", T_ARR);
-	vm->Fun = register_builtin_type(vm, "Fun", T_FUN);
-	vm->Any = register_builtin_type(vm, "Any", T_ANY);
-	vm->Seq = register_builtin_type(vm, "Seq", T_SEQ);
+	vm->Int  = register_builtin_type(vm, "Int",  T_INT);
+	vm->Str  = register_builtin_type(vm, "Str",  T_STR);
+	vm->Arr  = register_builtin_type(vm, "Arr",  T_ARR);
+	vm->Fun  = register_builtin_type(vm, "Fun",  T_FUN);
+	vm->Any  = register_builtin_type(vm, "Any",  T_ANY);
+	vm->Seq  = register_builtin_type(vm, "Seq",  T_SEQ);
 	vm->Type = register_builtin_type(vm, "Type", T_TYPE);
 	register_global_func(vm, "+",    &native_plus_arr_arr,  2, "a",   vm->Arr, "b", vm->Arr);
 	register_global_func(vm, "+",    &native_plus_int_int,  2, "a",   vm->Int, "b", vm->Int);
@@ -228,7 +227,7 @@ void vm_init(VM *vm) {
 	register_global_func(vm, "dump", &native_dump,          1, "obj", vm->Any);
 	register_global_func(vm, "Bool", &native_Bool_any,      1, "x",   vm->Any);
 	register_global_func(vm, "Str",  &native_Str_int,       1, "n",   vm->Int);
-	register_global_func(vm, "is",   &native_is,            2, "obj", vm->Any, "t", vm->Type); // TODO: name native_is according to convention
+	register_global_func(vm, "is",   &native_is_any_type,   2, "obj", vm->Any, "t", vm->Type);
 	register_global_func(vm, "not",  &native_not_any,       1, "x",   vm->Any);
 }
 
