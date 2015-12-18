@@ -1,4 +1,9 @@
+global
 * false
 * true
+local
+* false
+* true
+upvar
 * false
 * true

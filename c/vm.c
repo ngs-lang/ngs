@@ -649,7 +649,6 @@ do_jump:
 							PUSH(UPLEVELS[uvi][lvi]);
 							goto main_loop;
 		case OP_STORE_UPVAR:
-							// XXX: untested and not covered by tests yet
 #ifdef DO_NGS_DEBUG
 							assert(ctx->frame_ptr);
 #endif
@@ -659,7 +658,6 @@ do_jump:
 							UPLEVELS[uvi][lvi] = v;
 							goto main_loop;
 		case OP_UPVAR_DEF_P:
-							// XXX: untested and not covered by tests yet
 #ifdef DO_NGS_DEBUG
 							assert(ctx->frame_ptr);
 #endif

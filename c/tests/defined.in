@@ -1,14 +1,30 @@
 {
+	echo('global')
 	dump(defined x)
 	x=1
 	dump(defined x)
 
+	echo('local')
 	F f(something) {
+		local x
 		dump(defined x)
 		x=1
 		dump(defined x)
 	}
 
 	f(7)
+
+	echo('upvar')
+	F outer() {
+		local my_upvar
+		F inner() {
+			dump(defined my_upvar)
+			my_upvar = 1
+		}
+	}
+
+	inner_ref = outer()
+	inner_ref()
+	inner_ref()
 
 }

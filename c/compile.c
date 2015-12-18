@@ -175,13 +175,9 @@ void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 				register_local_var(ctx, node->first_child->next_sibling->next_sibling->name);
 			}
 			return;
-		case ASSIGNMENT_NODE:
-		case ASSIGN_DEFAULT_NODE:
-			ptr = node->first_child;
-			switch(ptr->type) {
-				case IDENTIFIER_NODE:
-					register_local_var(ctx, ptr->name);
-			}
+		case LOCAL_NODE:
+			register_local_var(ctx, node->first_child->name);
+			return;
 	}
 	for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
 		register_local_vars(ctx, ptr);
@@ -406,6 +402,10 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_JMP);
 			DATA_JUMP_OFFSET(*buf, -(*idx - loop_beg + sizeof(JUMP_OFFSET)));
 			*(JUMP_OFFSET *)&(*buf)[while_jump+1] = *idx - while_jump - 1 - sizeof(JUMP_OFFSET);
+			break;
+		case LOCAL_NODE:
+			// "local my_var"
+			// Used for register_local_var, does not produce any code
 			break;
 		default:
 			assert(0=="compile_main_section(): unknown node type");

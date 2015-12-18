@@ -82,6 +82,7 @@ digits			[0-9]+
 	"if"            { DEBUG_PARSER("%s", "LEX tIF\n"); return tIF; }
 	"while"         { DEBUG_PARSER("%s", "LEX tWHILE\n"); return tWHILE; }
 	"for"           { DEBUG_PARSER("%s", "LEX tFOR\n"); return tFOR; }
+	"local"         { DEBUG_PARSER("%s", "LEX tLOCAL\n"); return tLOCAL; }
 	"F"             { DEBUG_PARSER("LEX F %s\n", yytext); return *yytext; } /* not sure about correctness */
 }
 

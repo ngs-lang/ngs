@@ -43,6 +43,7 @@ enum ast_node_type {
 	WHILE_NODE,
 	ARGS_NODE,
 	ARG_NODE,
+	LOCAL_NODE,
 	NUMBER_OF_AST_NODE_TYPES
 };
 

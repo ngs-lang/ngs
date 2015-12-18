@@ -80,6 +80,7 @@ int yylex();
 %type <ast_node> for
 %type <ast_node> identifier
 %type <ast_node> if
+%type <ast_node> local_declaration
 %type <ast_node> non_assignment_expression
 %type <ast_node> null
 %type <ast_node> number
@@ -99,6 +100,7 @@ int yylex();
 %type <ast_node> while
 
 %nonassoc tLOWEST
+%nonassoc tLOCAL
 %right '=' tCOLONEQ
 %right tIF
 %left tWHILE
@@ -204,7 +206,7 @@ expressions_delimiter_one_or_more: expressions_delimiter_one_or_more expressions
 expressions_delimiter_zero_or_more: expressions_delimiter_one_or_more | /* nothing */;
 
 expression: assignment | assign_default | non_assignment_expression;
-non_assignment_expression: binop | number | identifier | call | if | for | while | array_literal | f | string | null | true | false | defined;
+non_assignment_expression: binop | number | identifier | call | if | for | while | array_literal | f | string | null | true | false | defined | local_declaration;
 
 binop: expression[e1] tBINOP expression[e2] {
 		DEBUG_PARSER("binop $e1 %p $e2 %p\n", $e1, $e2);
@@ -469,6 +471,8 @@ true:  tTRUE  { MAKE_NODE(ret, TRUE_NODE); $$ = ret; }
 false: tFALSE { MAKE_NODE(ret, FALSE_NODE); $$ = ret; }
 
 defined: tDEFINED identifier { MAKE_NODE(ret, DEFINED_NODE); ret->first_child = $identifier; $$ = ret; }
+
+local_declaration: tLOCAL identifier { MAKE_NODE(ret, LOCAL_NODE); ret->first_child = $identifier; $$ = ret; }
 
 
 %%

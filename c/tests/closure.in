@@ -4,12 +4,14 @@
 			F level3() {
 				dump(x)
 				dump(y)
+				y = y + 1
 			}
 		}
 	}
 
 	level2_func = level1(7)
 	level3_func = level2_func(8)
+	level3_func()
 	level3_func()
 
 }
