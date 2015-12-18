@@ -101,7 +101,7 @@ GLOBAL_VAR_INDEX get_global_var_index(COMPILATION_CONTEXT *ctx, char *name, size
 	return 0;
 }
 
-IDENTIFIER_INFO resolve_identifier(COMPILATION_CONTEXT *ctx, char *name, IDENTIFIER_RESOLUTION_TYPE res_type) {
+IDENTIFIER_INFO resolve_identifier(COMPILATION_CONTEXT *ctx, const char *name, IDENTIFIER_RESOLUTION_TYPE res_type) {
 	IDENTIFIER_INFO ret;
 	SYMBOL_TABLE *s;
 	int locals_idx;
@@ -188,13 +188,34 @@ void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 	}
 }
 
+void compile_identifier(COMPILATION_CONTEXT *ctx, char **buf, size_t *idx, char *name, int opcode_local, int opcode_upvar, int opcode_global) {
+	IDENTIFIER_INFO identifier_info;
+	GLOBAL_VAR_INDEX gvi;
+	identifier_info = resolve_identifier(ctx, name, RESOLVE_ANY_IDENTFIER);
+	switch(identifier_info.type) {
+		case LOCAL_IDENTIFIER:
+			OPCODE(*buf, opcode_local);
+			DATA_N_LOCAL_VARS(*buf, identifier_info.index);
+			break;
+		case UPVAR_IDENTIFIER:
+			OPCODE(*buf, opcode_upvar);
+			DATA_N_UPVAR_INDEX(*buf, identifier_info.uplevel);
+			DATA_N_LOCAL_VARS(*buf, identifier_info.index);
+			break;
+		case NO_IDENTIFIER:
+		case GLOBAL_IDENTIFIER:
+			OPCODE(*buf, opcode_global);
+			gvi = get_global_var_index(ctx, name, idx);
+			DATA_N_GLOBAL_VARS(*buf, gvi);
+			break;
+	}
+}
+
 void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
 	ast_node *ptr;
 	int argc = 0;
-	GLOBAL_VAR_INDEX index;
 	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
 	UPVAR_INDEX n_uplevels;
-	IDENTIFIER_INFO identifier_info;
 	size_t loop_beg, cond_jump, func_jump, end_of_func_idx, if_jump, while_jump;
 
 	ensure_room(buf, *idx, allocated, 1024); // XXX - magic number
@@ -224,24 +245,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			}
 			break;
 		case IDENTIFIER_NODE:
-			identifier_info = resolve_identifier(ctx, node->name, RESOLVE_ANY_IDENTFIER);
-			switch(identifier_info.type) {
-				case LOCAL_IDENTIFIER:
-					OPCODE(*buf, OP_FETCH_LOCAL);
-					DATA_N_LOCAL_VARS(*buf, identifier_info.index);
-					break;
-				case UPVAR_IDENTIFIER:
-					OPCODE(*buf, OP_FETCH_UPVAR);
-					DATA_N_UPVAR_INDEX(*buf, identifier_info.uplevel);
-					DATA_N_LOCAL_VARS(*buf, identifier_info.index);
-					break;
-				case NO_IDENTIFIER:
-				case GLOBAL_IDENTIFIER:
-					OPCODE(*buf, OP_FETCH_GLOBAL);
-					index = get_global_var_index(ctx, node->name, idx);
-					DATA_N_GLOBAL_VARS(*buf, index);
-					break;
-			}
+			compile_identifier(ctx, buf, idx, node->name, OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 		case ASSIGNMENT_NODE:
@@ -252,27 +256,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				case IDENTIFIER_NODE:
 					// TODO: handle local vs global
 					DEBUG_COMPILER("COMPILER: %s %zu\n", "identifier <- expression", *idx);
-					identifier_info = resolve_identifier(ctx, ptr->name, RESOLVE_ANY_IDENTFIER);
-					switch(identifier_info.type) {
-						case LOCAL_IDENTIFIER:
-							OPCODE(*buf, OP_STORE_LOCAL);
-							// index = get_global_var_index(ctx, ptr->name, idx);
-							// DATA_UINT16(*buf, index);
-							DATA_N_LOCAL_VARS(*buf, identifier_info.index);
-							break;
-						case UPVAR_IDENTIFIER:
-							OPCODE(*buf, OP_STORE_UPVAR);
-							DATA_N_UPVAR_INDEX(*buf, identifier_info.uplevel);
-							DATA_N_LOCAL_VARS(*buf, identifier_info.index);
-							break;
-						case NO_IDENTIFIER:
-						case GLOBAL_IDENTIFIER:
-							// printf("identifier_info.type %d\n", identifier_info.type);
-							OPCODE(*buf, OP_STORE_GLOBAL);
-							index = get_global_var_index(ctx, ptr->name, idx);
-							DATA_N_GLOBAL_VARS(*buf, index);
-							break;
-					}
+					compile_identifier(ctx, buf, idx, ptr->name, OP_STORE_LOCAL, OP_STORE_UPVAR, OP_STORE_GLOBAL);
 					break;
 				default:
 					assert(0=="compile_main_section(): assignment to unknown node type");
@@ -362,24 +346,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 
 			if(node->first_child->next_sibling->next_sibling) {
 				// Function has a name
-				identifier_info = resolve_identifier(ctx, node->first_child->next_sibling->next_sibling->name, RESOLVE_ANY_IDENTFIER);
-				switch(identifier_info.type) {
-					case LOCAL_IDENTIFIER:
-						OPCODE(*buf, OP_DEF_LOCAL_FUNC);
-						DATA_N_LOCAL_VARS(*buf, identifier_info.index);
-						break;
-					case UPVAR_IDENTIFIER:
-						OPCODE(*buf, OP_DEF_UPVAR_FUNC);
-						DATA_N_UPVAR_INDEX(*buf, identifier_info.uplevel);
-						DATA_N_LOCAL_VARS(*buf, identifier_info.index);
-						break;
-					case NO_IDENTIFIER:
-					case GLOBAL_IDENTIFIER:
-						OPCODE(*buf, OP_DEF_GLOBAL_FUNC);
-						index = get_global_var_index(ctx, node->first_child->next_sibling->next_sibling->name, idx);
-						DATA_N_GLOBAL_VARS(*buf, index);
-						break;
-				}
+				compile_identifier(ctx, buf, idx, node->first_child->next_sibling->next_sibling->name, OP_DEF_LOCAL_FUNC, OP_DEF_UPVAR_FUNC, OP_DEF_GLOBAL_FUNC);
 			}
 			break;
 		case STR_COMPS_NODE:
@@ -413,24 +380,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 		case TRUE_NODE:  OPCODE(*buf, OP_PUSH_TRUE); break;
 		case FALSE_NODE: OPCODE(*buf, OP_PUSH_FALSE); break;
 		case DEFINED_NODE:
-			identifier_info = resolve_identifier(ctx, node->first_child->name, RESOLVE_ANY_IDENTFIER);
-			switch(identifier_info.type) {
-				case LOCAL_IDENTIFIER:
-					OPCODE(*buf, OP_LOCAL_DEF_P);
-					DATA_N_LOCAL_VARS(*buf, identifier_info.index);
-					break;
-				case UPVAR_IDENTIFIER:
-					OPCODE(*buf, OP_UPVAR_DEF_P);
-					DATA_N_UPVAR_INDEX(*buf, identifier_info.uplevel);
-					DATA_N_LOCAL_VARS(*buf, identifier_info.index);
-					break;
-				case NO_IDENTIFIER:
-				case GLOBAL_IDENTIFIER:
-					OPCODE(*buf, OP_GLOBAL_DEF_P);
-					index = get_global_var_index(ctx, node->first_child->name, idx);
-					DATA_N_GLOBAL_VARS(*buf, index);
-					break;
-			}
+			compile_identifier(ctx, buf, idx, node->first_child->name, OP_LOCAL_DEF_P, OP_UPVAR_DEF_P, OP_GLOBAL_DEF_P);
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 		case IF_NODE:
