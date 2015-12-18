@@ -32,6 +32,7 @@ typedef struct frame {
 	// TODO: smarter allocation of locals when can't be captured by clousre,
 	//       probably on stack.
 	VALUE *locals;
+	VALUE closure;
 	// int n_local_vars; // needed
 } FRAME;
 
@@ -92,6 +93,10 @@ enum opcodes {
 	OP_LOCAL_DEF_P,
 	OP_DEF_GLOBAL_FUNC,
 	OP_DEF_LOCAL_FUNC,
+	OP_FETCH_UPVAR,
+	OP_STORE_UPVAR,
+	OP_UPVAR_DEF_P,
+	OP_DEF_UPVAR_FUNC,
 	NUMBER_OF_OPCODES,
 };
 

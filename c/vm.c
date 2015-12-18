@@ -34,16 +34,27 @@ char *opcodes_names[] = {
 	/* 27 */ "LOCAL_DEF_P",
 	/* 28 */ "DEF_GLOBAL_FUNC",
 	/* 29 */ "DEF_LOCAL_FUNC",
+	/* 30 */ "FETCH_UPVAR",
+	/* 31 */ "STORE_UPVAR",
+	/* 32 */ "UPVAR_DEF_P",
+	/* 33 */ "DEF_UPVAR_FUNC",
 };
 
 
 #define PUSH(v) assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr++] = v
 #define POP(dst) assert(ctx->stack_ptr); ctx->stack_ptr--; dst = ctx->stack[ctx->stack_ptr]
+#define TOP (ctx->stack[ctx->stack_ptr-1])
 #define DUP assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr] = ctx->stack[ctx->stack_ptr-1]; ctx->stack_ptr++;
 #define REMOVE_TOP assert(ctx->stack_ptr); ctx->stack_ptr--; 
 #define PUSH_NULL PUSH((VALUE){.num=V_NULL})
 #define GLOBALS (vm->globals)
 #define LOCALS (ctx->frames[ctx->frame_ptr-1].locals)
+#define THIS_FRAME_CLOSURE (ctx->frames[ctx->frame_ptr-1].closure)
+#define UPLEVELS CLOSURE_OBJ_UPLEVELS(THIS_FRAME_CLOSURE)
+#define ARG(name, type) name = *(type *) &vm->bytecode[ip]; ip += sizeof(type);
+#define ARG_LVI ARG(lvi, LOCAL_VAR_INDEX);
+#define ARG_GVI ARG(gvi, GLOBAL_VAR_INDEX);
+#define ARG_UVI ARG(uvi, UPVAR_INDEX);
 
 #define METHOD_PARAMS (VALUE *argv, VALUE *result)
 #define METHOD_RETURN(v) { *result = (v); return METHOD_OK; }
@@ -70,7 +81,12 @@ INT_CMP_METHOD(less, <);
 METHOD_RESULT native_dump_any METHOD_PARAMS {
 	dump(argv[0]);
 	SET_NULL(*result);
-	return METHOD_OK; // null
+	return METHOD_OK;
+}
+
+METHOD_RESULT native_echo_str METHOD_PARAMS {
+	SET_INT(*result, printf("%s\n", obj_to_cstring(argv[0])));
+	return METHOD_OK;
 }
 
 METHOD_RESULT native_plus_arr_arr METHOD_PARAMS {
@@ -225,6 +241,7 @@ void vm_init(VM *vm) {
 	register_global_func(vm, "-",    &native_minus_int_int, 2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "<",    &native_less_int_int,  2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "dump", &native_dump_any,      1, "obj", vm->Any);
+	register_global_func(vm, "echo", &native_echo_str,      1, "s",   vm->Str);
 	register_global_func(vm, "Bool", &native_Bool_any,      1, "x",   vm->Any);
 	register_global_func(vm, "Str",  &native_Str_int,       1, "n",   vm->Int);
 	register_global_func(vm, "is",   &native_is_any_type,   2, "obj", vm->Any, "t", vm->Type);
@@ -234,10 +251,9 @@ void vm_init(VM *vm) {
 void ctx_init(CTX *ctx) {
 	ctx->stack_ptr = 0;
 	ctx->frame_ptr = 0;
-#ifdef NGS_DEBUG_FLAGS
+	// XXX: correct sizeof?
 	memset(ctx->stack, 0, sizeof(ctx->stack));
 	memset(ctx->frames, 0, sizeof(ctx->frames));
-#endif
 }
 
 void vm_load_bytecode(VM *vm, char *bc, size_t len) {
@@ -256,12 +272,12 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, c
 	METHOD_RESULT mr;
 	VALUE *callable_items;
 
-	IF_DEBUG(VM_RUN, dump_titled("_vm_call/callable", callable); );
-	DEBUG_VM_RUN("_vm_call/argc = %d\n", argc);
+	// IF_DEBUG(VM_RUN, dump_titled("_vm_call/callable", callable); );
+	// DEBUG_VM_RUN("_vm_call/argc = %d\n", argc);
 
 	if(IS_ARRAY(callable)) {
 		for(i=OBJ_LEN(callable)-1, callable_items = OBJ_DATA_PTR(callable); i>=0; i--) {
-			IF_DEBUG(VM_RUN, dump_titled("_vm_call/will_call", callable_items[i]); );
+			// IF_DEBUG(VM_RUN, dump_titled("_vm_call/will_call", callable_items[i]); );
 			mr = _vm_call(vm, ctx, callable_items[i], argc, argv);
 			if(mr == METHOD_OK) {
 				return METHOD_OK;
@@ -327,6 +343,7 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, c
 		} else {
 			ctx->frames[ctx->frame_ptr].locals = NULL;
 		}
+		ctx->frames[ctx->frame_ptr].closure = callable;
 		ctx->frame_ptr++;
 		mr = vm_run(vm, ctx, CLOSURE_OBJ_IP(callable), &ctx->stack[ctx->stack_ptr-argc-1]);
 		// TODO: dedup
@@ -364,7 +381,7 @@ METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result) {
 
 	// for OP_MAKE_CLOSURE
 	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
-	VALUE *params = NULL;
+	UPVAR_INDEX n_uplevels, uvi;
 
 main_loop:
 	opcode = vm->bytecode[ip++];
@@ -377,8 +394,6 @@ main_loop:
 	// * increase ip as soon as arguments extraction is finished
 	switch(opcode) {
 		case OP_HALT:
-							// POP(v);
-							// dump_titled("halt/pop", v);
 							goto end_main_loop;
 		case OP_PUSH_NULL:
 							PUSH_NULL;
@@ -438,8 +453,7 @@ main_loop:
 							// Out: ...
 							// Effect: bytecode[offset] <- n
 							POP(v);
-							po = *(PATCH_OFFSET *) &vm->bytecode[ip];
-							ip += sizeof(po);
+							ARG(po, PATCH_OFFSET);
 #ifdef DO_NGS_DEBUG
 							DEBUG_VM_RUN("OP_PATCH dst_idx=%d v=%d\n", ip+po, *(GLOBAL_VAR_INDEX *)&vm->bytecode[ip+po]);
 							assert(*(GLOBAL_VAR_INDEX *)&vm->bytecode[ip+po] == 0); // try to catch patching at invalid offset
@@ -451,8 +465,7 @@ main_loop:
 							// TODO: handle included/required bytecode here
 							goto main_loop;
 		case OP_FETCH_GLOBAL:
-							gvi = *(GLOBAL_VAR_INDEX *) &vm->bytecode[ip];
-							ip += sizeof(gvi);
+							ARG_GVI;
 #ifdef DO_NGS_DEBUG
 							// DEBUG_VM_RUN("OP_FETCH_GLOBAL gvi=%d len=%d\n", gvi, vm->globals_len);
 							assert(gvi < vm->globals_len);
@@ -466,9 +479,8 @@ main_loop:
 							PUSH(GLOBALS[gvi]);
 							goto main_loop;
 		case OP_STORE_GLOBAL:
+							ARG_GVI;
 							POP(v);
-							gvi = *(GLOBAL_VAR_INDEX *) &vm->bytecode[ip];
-							ip += sizeof(gvi);
 #ifdef DO_NGS_DEBUG
 							// DEBUG_VM_RUN("OP_STORE_GLOBAL gvi=%d len=%zu\n", gvi, vm->globals_len);
 							assert(gvi < vm->globals_len);
@@ -477,16 +489,12 @@ main_loop:
 							GLOBALS[gvi] = v;
 							goto main_loop;
 		case OP_FETCH_LOCAL:
-							lvi = *(LOCAL_VAR_INDEX *) &vm->bytecode[ip];
-							// printf("FETCH LOCAL %d !!!\n", lvi);
-							ip += sizeof(lvi);
+							ARG_LVI;
 							assert(IS_NOT_UNDEF(LOCALS[lvi]));
 							PUSH(LOCALS[lvi]);
 							goto main_loop;
 		case OP_STORE_LOCAL:
-							lvi = *(LOCAL_VAR_INDEX *) &vm->bytecode[ip];
-							ip += sizeof(lvi);
-							// printf("STORE LOCAL %d %p!!!\n", lvi, LOCALS);
+							ARG_LVI;
 							POP(v);
 							LOCALS[lvi] = v;
 							goto main_loop;
@@ -501,6 +509,7 @@ main_loop:
 							//     callable
 							// Out: ... result
 							POP(callable);
+							// dump_titled("CALLABLE", callable);
 							POP(v); // number of arguments
 							// POP(n_params_required); // number of arguments
 							// POP(n_params_optional);
@@ -520,9 +529,7 @@ main_loop:
 							return METHOD_OK;
 		case OP_JMP:
 do_jump:
-							jo = *(JUMP_OFFSET *) &vm->bytecode[ip];
-							// DEBUG_VM_RUN("JUMP OFFSET %d\n", jo);
-							ip += sizeof(jo);
+							ARG(jo, JUMP_OFFSET);
 							ip += jo;
 							goto main_loop;
 		case OP_JMP_TRUE:
@@ -555,16 +562,26 @@ do_jump:
 							//   argN+1_name, argN+1_type, argN+1_default_value, ... argM_name, argM_type, argM_default_value,
 							//   argc_of_required_args, argc_of_optional_args
 							// Out: ..., CLOSURE_OBJECT
-							jo = *(JUMP_OFFSET *) &vm->bytecode[ip];
-							ip += sizeof(jo);
-							n_locals = *(LOCAL_VAR_INDEX *) &vm->bytecode[ip];
-							ip += sizeof(n_locals);
-							POP(v);
-							n_params_optional = GET_INT(v);
-							POP(v);
-							n_params_required = GET_INT(v);
-							params = &ctx->stack[ctx->stack_ptr - n_params_required*2 - n_params_optional*3];
-							PUSH(make_closure_obj(ip+jo, n_locals, n_params_required, n_params_optional, params));
+							ARG(jo, JUMP_OFFSET);
+							ARG(n_params_required, LOCAL_VAR_INDEX);
+							ARG(n_params_optional, LOCAL_VAR_INDEX);
+							ARG(n_locals, LOCAL_VAR_INDEX);
+							ARG(n_uplevels, UPVAR_INDEX);
+							v = make_closure_obj(
+									ip+jo,
+									n_locals, n_params_required, n_params_optional, n_uplevels,
+									&ctx->stack[ctx->stack_ptr - n_params_required*2 - n_params_optional*3]
+							);
+							ctx->stack_ptr -= n_params_required*2 - n_params_optional*3;
+							if(n_uplevels) {
+								assert(CLOSURE_OBJ_N_UPLEVELS(THIS_FRAME_CLOSURE) >= n_uplevels-1);
+								CLOSURE_OBJ_UPLEVELS(v) = NGS_MALLOC(sizeof(CLOSURE_OBJ_UPLEVELS(v)[0]) * n_uplevels);
+								// First level of upvars are the local variables of current frame
+								CLOSURE_OBJ_UPLEVELS(v)[0] = LOCALS;
+								// Other levels come from current closure upvars
+								memcpy(&(CLOSURE_OBJ_UPLEVELS(v)[1]), CLOSURE_OBJ_UPLEVELS(THIS_FRAME_CLOSURE), sizeof(CLOSURE_OBJ_UPLEVELS(v)[0]) * (n_uplevels - 1));
+							}
+							PUSH(v);
 							goto main_loop;
 		case OP_TO_STR:
 							assert(ctx->stack_ptr);
@@ -586,13 +603,11 @@ do_jump:
 							PUSH(v);
 							goto main_loop;
 		case OP_GLOBAL_DEF_P:
-							gvi = *(GLOBAL_VAR_INDEX *) &vm->bytecode[ip];
-							ip += sizeof(gvi);
+							ARG_GVI;
 							PUSH(MAKE_BOOL(IS_NOT_UNDEF(GLOBALS[gvi])));
 							goto main_loop;
 		case OP_LOCAL_DEF_P:
-							lvi = *(LOCAL_VAR_INDEX *) &vm->bytecode[ip];
-							ip += sizeof(lvi);
+							ARG_LVI;
 							PUSH(MAKE_BOOL(IS_NOT_UNDEF(LOCALS[lvi])));
 							goto main_loop;
 		case OP_DEF_GLOBAL_FUNC:
@@ -600,17 +615,16 @@ do_jump:
 							// In: ..., closure
 							// Out: ..., closure
 							assert(ctx->stack_ptr);
-							gvi = *(GLOBAL_VAR_INDEX *) &vm->bytecode[ip];
-							ip += sizeof(gvi);
+							ARG_GVI;
 #ifdef DO_NGS_DEBUG
 							// DEBUG_VM_RUN("OP_STORE_GLOBAL gvi=%d len=%zu\n", gvi, vm->globals_len);
 							assert(gvi < vm->globals_len);
 							// TODO: report error here instead of crashing
 #endif
 							if(IS_UNDEF(GLOBALS[gvi])) {
-								GLOBALS[gvi] = make_array_with_values(1, &(ctx->stack[ctx->stack_ptr-1]));
+								GLOBALS[gvi] = make_array_with_values(1, &TOP);
 							} else {
-								array_push(GLOBALS[gvi], ctx->stack[ctx->stack_ptr-1]);
+								array_push(GLOBALS[gvi], TOP);
 							}
 							goto main_loop;
 		case OP_DEF_LOCAL_FUNC:
@@ -618,14 +632,59 @@ do_jump:
 							// In: ..., closure
 							// Out: ..., closure
 							assert(ctx->stack_ptr);
-							lvi = *(LOCAL_VAR_INDEX *) &vm->bytecode[ip];
-							ip += sizeof(lvi);
+							ARG_LVI;
 							if(IS_UNDEF(LOCALS[lvi])) {
-								LOCALS[lvi] = make_array_with_values(1, &(ctx->stack[ctx->stack_ptr-1]));
+								LOCALS[lvi] = make_array_with_values(1, &TOP);
 							} else {
-								array_push(LOCALS[lvi], ctx->stack[ctx->stack_ptr-1]);
+								array_push(LOCALS[lvi], TOP);
 							}
 							goto main_loop;
+		case OP_FETCH_UPVAR:
+#ifdef DO_NGS_DEBUG
+							assert(ctx->frame_ptr);
+#endif
+							ARG_UVI;
+							ARG_LVI;
+							// printf("uvi=%d lvi=%d\n", uvi, lvi);
+							PUSH(UPLEVELS[uvi][lvi]);
+							goto main_loop;
+		case OP_STORE_UPVAR:
+							// XXX: untested and not covered by tests yet
+#ifdef DO_NGS_DEBUG
+							assert(ctx->frame_ptr);
+#endif
+							ARG_UVI;
+							ARG_LVI;
+							POP(v);
+							UPLEVELS[uvi][lvi] = v;
+							goto main_loop;
+		case OP_UPVAR_DEF_P:
+							// XXX: untested and not covered by tests yet
+#ifdef DO_NGS_DEBUG
+							assert(ctx->frame_ptr);
+#endif
+							ARG_UVI;
+							ARG_LVI;
+							PUSH(MAKE_BOOL(IS_NOT_UNDEF(UPLEVELS[uvi][lvi])));
+							goto main_loop;
+		case OP_DEF_UPVAR_FUNC:
+							// XXX: untested and not covered by tests yet
+#ifdef DO_NGS_DEBUG
+							assert(ctx->frame_ptr);
+#endif
+							// Arg: uvi, lvi
+							// In: ..., closure
+							// Out: ..., closure
+							assert(ctx->stack_ptr);
+							ARG_UVI;
+							ARG_LVI;
+							if(IS_UNDEF(UPLEVELS[uvi][lvi])) {
+								UPLEVELS[uvi][lvi] = make_array_with_values(1, &TOP);
+							} else {
+								array_push(UPLEVELS[uvi][lvi], TOP);
+							}
+							goto main_loop;
+
 		default:
 							// TODO: exception
 							printf("ERROR: Unknown opcode %d\n", opcode);

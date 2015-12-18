@@ -1,0 +1,15 @@
+{
+	F level1(x) {
+		F level2(y) {
+			F level3() {
+				dump(x)
+				dump(y)
+			}
+		}
+	}
+
+	level2_func = level1(7)
+	level3_func = level2_func(8)
+	level3_func()
+
+}

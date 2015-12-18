@@ -18,6 +18,7 @@
 #define DATA_PATCH_OFFSET(buf, x) { *(PATCH_OFFSET *)&(buf)[*idx] = x; (*idx)+=sizeof(PATCH_OFFSET); }
 #define DATA_N_LOCAL_VARS(buf, x) { *(LOCAL_VAR_INDEX *)&(buf)[*idx] = x; (*idx)+=sizeof(LOCAL_VAR_INDEX); }
 #define DATA_N_GLOBAL_VARS(buf, x) { *(GLOBAL_VAR_INDEX *)&(buf)[*idx] = x; (*idx)+=sizeof(GLOBAL_VAR_INDEX); }
+#define DATA_N_UPVAR_INDEX(buf, x) { *(UPVAR_INDEX *)&(buf)[*idx] = x; (*idx)+=sizeof(UPVAR_INDEX); }
 
 // Symbol table:
 // symbol -> [offset1, offset2, ..., offsetN]
@@ -35,6 +36,7 @@ typedef enum identifier_resolution_type {
 
 #define LOCALS (ctx->locals[ctx->locals_ptr-1])
 #define N_LOCALS (ctx->n_locals[ctx->locals_ptr-1])
+#define N_UPLEVELS (ctx->n_uplevels[ctx->locals_ptr-1])
 // #define IN_FUNCTION (ctx->locals_ptr)
 
 /* static here makes `clang` compiler happy and not "undefined reference to `ensure_room'"*/
@@ -102,6 +104,7 @@ GLOBAL_VAR_INDEX get_global_var_index(COMPILATION_CONTEXT *ctx, char *name, size
 IDENTIFIER_INFO resolve_identifier(COMPILATION_CONTEXT *ctx, char *name, IDENTIFIER_RESOLUTION_TYPE res_type) {
 	IDENTIFIER_INFO ret;
 	SYMBOL_TABLE *s;
+	int locals_idx;
 
 	if(res_type==RESOLVE_ANY_IDENTFIER && ctx->locals_ptr) {
 		HASH_FIND(hh, LOCALS, name, strlen(name), s);
@@ -110,7 +113,30 @@ IDENTIFIER_INFO resolve_identifier(COMPILATION_CONTEXT *ctx, char *name, IDENTIF
 			ret.index = s->index;
 			goto exit;
 		}
-		// TODO: upvars
+		for(locals_idx = ctx->locals_ptr-1; locals_idx > 0; locals_idx--) {
+			HASH_FIND(hh, ctx->locals[locals_idx-1], name, strlen(name), s);
+			if(s) {
+				UPVAR_INDEX u = locals_idx;
+				ret.type = UPVAR_IDENTIFIER;
+				ret.index = s->index;
+				ret.uplevel = ctx->locals_ptr - locals_idx - 1; // -1 is to make it zero based
+				// F level1(x) {    -> uplevels=0
+				//   F level2() {   -> uplevels=1
+				//     F level3() { -> uplevels=2
+				//       dump(x)    -> uplevels=2 (we are here, maximize also uplevels for level3, level2 and up)
+				//     }
+				//   }
+				// }
+				for(locals_idx = ctx->locals_ptr; locals_idx > 0; locals_idx--) {
+					if(ctx->n_uplevels[locals_idx-1] < locals_idx - u) {
+						ctx->n_uplevels[locals_idx-1] = locals_idx - u;
+					}
+					// XXX: else break? all upper levels should be up to date in this case
+				}
+				goto exit;
+			}
+
+		}
 	}
 
 	HASH_FIND(hh, ctx->globals, name, strlen(name), s);
@@ -167,6 +193,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 	int argc = 0;
 	GLOBAL_VAR_INDEX index;
 	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
+	UPVAR_INDEX n_uplevels;
 	IDENTIFIER_INFO identifier_info;
 	size_t loop_beg, cond_jump, func_jump, end_of_func_idx, if_jump, while_jump;
 
@@ -204,7 +231,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					DATA_N_LOCAL_VARS(*buf, identifier_info.index);
 					break;
 				case UPVAR_IDENTIFIER:
-					assert(0=="Upvars are not implemented yet");
+					OPCODE(*buf, OP_FETCH_UPVAR);
+					DATA_N_UPVAR_INDEX(*buf, identifier_info.uplevel);
+					DATA_N_LOCAL_VARS(*buf, identifier_info.index);
 					break;
 				case NO_IDENTIFIER:
 				case GLOBAL_IDENTIFIER:
@@ -232,7 +261,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 							DATA_N_LOCAL_VARS(*buf, identifier_info.index);
 							break;
 						case UPVAR_IDENTIFIER:
-							assert(0=="Upvars are not implemented yet");
+							OPCODE(*buf, OP_STORE_UPVAR);
+							DATA_N_UPVAR_INDEX(*buf, identifier_info.uplevel);
+							DATA_N_LOCAL_VARS(*buf, identifier_info.index);
 							break;
 						case NO_IDENTIFIER:
 						case GLOBAL_IDENTIFIER:
@@ -295,6 +326,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			assert(ctx->locals_ptr < COMPILE_MAX_FUNC_DEPTH);
 			LOCALS = NULL;
 			N_LOCALS = 0;
+			N_UPLEVELS = 0;
 			// Arguments
 			for(ptr=node->first_child->first_child; ptr; ptr=ptr->next_sibling) {
 				// ptr: identifier, type, default value
@@ -304,6 +336,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			register_local_vars(ctx, node->first_child->next_sibling);
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 			n_locals = N_LOCALS;
+			n_uplevels = N_UPLEVELS;
 			ctx->locals_ptr--;
 			OPCODE(*buf, OP_RET);
 			end_of_func_idx = *idx;
@@ -319,15 +352,13 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 
 			n_params_optional = 0; // Not implemented yet
 
-			OPCODE(*buf, OP_PUSH_INT); // XXX. TODO: Add OP_PUSH_N_PARAMS
-			DATA_INT(*buf, n_params_required);
-			OPCODE(*buf, OP_PUSH_INT); // XXX. TODO: Add OP_PUSH_N_PARAMS
-			DATA_INT(*buf, n_params_optional);
-
 			*(JUMP_OFFSET *)&(*buf)[func_jump] = (end_of_func_idx - func_jump - sizeof(JUMP_OFFSET));
 			OPCODE(*buf, OP_MAKE_CLOSURE);
-			DATA_JUMP_OFFSET(*buf, -(*idx - func_jump + sizeof(LOCAL_VAR_INDEX)));
+			DATA_JUMP_OFFSET(*buf, -(*idx - func_jump + 3*sizeof(LOCAL_VAR_INDEX) + sizeof(UPVAR_INDEX)));
+			DATA_N_LOCAL_VARS(*buf, n_params_required);
+			DATA_N_LOCAL_VARS(*buf, n_params_optional);
 			DATA_N_LOCAL_VARS(*buf, n_locals);
+			DATA_N_UPVAR_INDEX(*buf, n_uplevels);
 
 			if(node->first_child->next_sibling->next_sibling) {
 				// Function has a name
@@ -338,7 +369,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 						DATA_N_LOCAL_VARS(*buf, identifier_info.index);
 						break;
 					case UPVAR_IDENTIFIER:
-						assert(0=="Upvars are not implemented yet");
+						OPCODE(*buf, OP_DEF_UPVAR_FUNC);
+						DATA_N_UPVAR_INDEX(*buf, identifier_info.uplevel);
+						DATA_N_LOCAL_VARS(*buf, identifier_info.index);
 						break;
 					case NO_IDENTIFIER:
 					case GLOBAL_IDENTIFIER:
@@ -370,6 +403,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					DATA_INT(*buf, argc);
 					OPCODE(*buf, OP_MAKE_STR);
 			}
+			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 		case STR_COMP_IMM_NODE:
 			OPCODE(*buf, OP_PUSH_L_STR);
@@ -386,7 +420,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					DATA_N_LOCAL_VARS(*buf, identifier_info.index);
 					break;
 				case UPVAR_IDENTIFIER:
-					assert(0=="Upvars are not implemented yet");
+					OPCODE(*buf, OP_UPVAR_DEF_P);
+					DATA_N_UPVAR_INDEX(*buf, identifier_info.uplevel);
+					DATA_N_LOCAL_VARS(*buf, identifier_info.index);
 					break;
 				case NO_IDENTIFIER:
 				case GLOBAL_IDENTIFIER:
@@ -506,6 +542,7 @@ char *compile(ast_node *node /* the top level node */, size_t *len) {
 	ctx.globals = NULL;
 	ctx.locals = NGS_MALLOC(COMPILE_MAX_FUNC_DEPTH * sizeof(SYMBOL_TABLE *));
 	ctx.n_locals = NGS_MALLOC(COMPILE_MAX_FUNC_DEPTH * sizeof(LOCAL_VAR_INDEX *));
+	ctx.n_uplevels = NGS_MALLOC(COMPILE_MAX_FUNC_DEPTH * sizeof(UPVAR_INDEX *));
 	ctx.locals_ptr = 0;
 	// ctx.n_locals = 0;
 	ctx.in_function = 0;

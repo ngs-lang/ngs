@@ -28,7 +28,7 @@ enum identifier_type {
 typedef struct identifier_info {
 	enum identifier_type type;
 	unsigned int index; // assuming sizeof(unsigned int) > max(sizeof(GLOBAL_VAR_INDEX), sizeof(LOCAL_VAR_INDEX))
-	unsigned int uplevel;
+	UPVAR_INDEX uplevel;
 } IDENTIFIER_INFO;
 
 typedef struct compilation_context {
@@ -36,6 +36,7 @@ typedef struct compilation_context {
 	SYMBOL_TABLE *globals;
 	SYMBOL_TABLE **locals;
 	LOCAL_VAR_INDEX *n_locals;
+	UPVAR_INDEX *n_uplevels;
 	int locals_ptr;
 	int in_function; /* as opposed to global scope */
 } COMPILATION_CONTEXT;

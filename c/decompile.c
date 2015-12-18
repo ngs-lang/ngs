@@ -25,8 +25,15 @@ void decompile(const char *buf, const size_t start, const size_t end) {
 				idx+=sizeof(JUMP_OFFSET);
 				break;
 			case OP_MAKE_CLOSURE:
-				sprintf(info_buf, " %+05d (%04zu), %d", *(JUMP_OFFSET *)&buf[idx], idx + *(JUMP_OFFSET *)&buf[idx] + sizeof(JUMP_OFFSET) + sizeof(LOCAL_VAR_INDEX), *(LOCAL_VAR_INDEX *)&buf[idx+sizeof(JUMP_OFFSET)]);
-				idx+=sizeof(JUMP_OFFSET)+sizeof(LOCAL_VAR_INDEX);
+				sprintf(info_buf, " code=%+05d (%04zu), n_params_required=%d, n_params_optional=%d, n_locals=%d, n_uplevels=%d",
+						*(JUMP_OFFSET *)&buf[idx],
+						idx + *(JUMP_OFFSET *)&buf[idx] + sizeof(JUMP_OFFSET) + 3*sizeof(LOCAL_VAR_INDEX) + sizeof(UPVAR_INDEX),
+						*(LOCAL_VAR_INDEX *)&buf[idx+sizeof(JUMP_OFFSET)],
+						*(LOCAL_VAR_INDEX *)&buf[idx+sizeof(JUMP_OFFSET)+1*sizeof(LOCAL_VAR_INDEX)],
+						*(LOCAL_VAR_INDEX *)&buf[idx+sizeof(JUMP_OFFSET)+2*sizeof(LOCAL_VAR_INDEX)],
+						*(UPVAR_INDEX *)&buf[idx+sizeof(JUMP_OFFSET)+3*sizeof(LOCAL_VAR_INDEX)]
+				);
+				idx+=sizeof(JUMP_OFFSET) + 3*sizeof(LOCAL_VAR_INDEX) + sizeof(UPVAR_INDEX);
 				break;
 			case OP_PATCH:
 				sprintf(info_buf, " %+05d (%04zu)", *(PATCH_OFFSET *)&buf[idx], idx + *(PATCH_OFFSET *)&buf[idx] + sizeof(PATCH_OFFSET));
@@ -42,6 +49,11 @@ void decompile(const char *buf, const size_t start, const size_t end) {
 			case OP_LOCAL_DEF_P:
 			case OP_DEF_LOCAL_FUNC:
 				sprintf(info_buf, " %d", *(LOCAL_VAR_INDEX *)&buf[idx]); idx+=sizeof(LOCAL_VAR_INDEX); break;
+			case OP_FETCH_UPVAR:
+			case OP_STORE_UPVAR:
+			case OP_UPVAR_DEF_P:
+			case OP_DEF_UPVAR_FUNC:
+				sprintf(info_buf, " uplevel=%d, index=%d", *(UPVAR_INDEX *)&buf[idx], *(LOCAL_VAR_INDEX *)&buf[idx+sizeof(UPVAR_INDEX)]); idx+=sizeof(UPVAR_INDEX)+sizeof(LOCAL_VAR_INDEX); break;
 			case OP_PUSH_INT:
 				sprintf(info_buf, " %d", *(int32_t *)&buf[idx]); idx+=4; break;
 			case OP_PUSH_L_STR:

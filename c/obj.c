@@ -35,11 +35,12 @@ static void _dump(VALUE v, int level) {
 	}
 
 	if(IS_CLOSURE(v)) {
-		printf("%*s* closure ip=%zu locals_including_params=%d req_params=%d opt_params=%d\n", level << 1, "",
+		printf("%*s* closure ip=%zu locals_including_params=%d req_params=%d opt_params=%d n_uplevels=%d\n", level << 1, "",
 			CLOSURE_OBJ_IP(v),
 			CLOSURE_OBJ_N_LOCALS(v),
 			CLOSURE_OBJ_N_REQ_PAR(v),
-			CLOSURE_OBJ_N_OPT_PAR(v)
+			CLOSURE_OBJ_N_OPT_PAR(v),
+			CLOSURE_OBJ_N_UPLEVELS(v)
 		);
 		for(i=0; i<CLOSURE_OBJ_N_REQ_PAR(v); i++) {
 			printf("%*s* required parameter %zu\n", (level+1) << 1, "", i+1);
@@ -147,7 +148,7 @@ void array_push(VALUE arr, VALUE v) {
 	arr_items[o->len++] = v;
 }
 
-VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, VALUE *params) {
+VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, VALUE *params) {
 
 	VALUE v;
 	CLOSURE_OBJECT *c;
@@ -164,6 +165,7 @@ VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX 
 	c->params.params = NGS_MALLOC(params_size);
 	assert(c->params.params);
 	memcpy(c->params.params, params, params_size);
+	c->n_uplevels = n_uplevels;
 
 	SET_OBJ(v, c);
 
@@ -224,4 +226,15 @@ void dump(VALUE v) {
 void dump_titled(char *title, VALUE v) {
 	printf("=== [ dump %s ] ===\n", title);
 	dump(v);
+}
+
+// XXX is it safe?
+char *obj_to_cstring(VALUE v) {
+	char *ret;
+	assert(IS_STRING(v));
+	ret = NGS_MALLOC(OBJ_LEN(v) + 1);
+	assert(ret);
+	memcpy(ret, OBJ_DATA_PTR(v), OBJ_LEN(v));
+	ret[OBJ_LEN(v)] = '\0';
+	return ret;
 }

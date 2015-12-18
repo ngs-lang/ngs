@@ -7,6 +7,7 @@
 typedef uint16_t GLOBAL_VAR_INDEX;
 #define GLOBAL_VAR_INDEX_FMT "%d"
 typedef uint8_t LOCAL_VAR_INDEX;
+typedef uint8_t UPVAR_INDEX;
 #define MAX_GLOBALS         (65535)
 #define MAX_LOCALS            (255)
 #define INITITAL_ARRAY_SIZE     (8)
@@ -43,6 +44,8 @@ typedef struct closure {
 	OBJECT base;
 	size_t ip;
 	PARAMS_DESC params;
+	VALUE **uplevels;
+	UPVAR_INDEX n_uplevels;
 } CLOSURE_OBJECT;
 
 typedef struct native_method {
@@ -146,10 +149,12 @@ enum IMMEDIATE_VALUES {
 #define OBJ_LEN(v)                ((VAR_LEN_OBJECT *) v.ptr)->len
 #define OBJ_ALLOCATED(v)          ((VAR_LEN_OBJECT *) v.ptr)->allocated
 #define CLOSURE_OBJ_IP(v)         ((CLOSURE_OBJECT *) v.ptr)->ip
-#define CLOSURE_OBJ_N_LOCALS(v)   ((CLOSURE_OBJECT *) v.ptr)->params.n_local_vars
-#define CLOSURE_OBJ_N_REQ_PAR(v)  ((CLOSURE_OBJECT *) v.ptr)->params.n_params_required
-#define CLOSURE_OBJ_N_OPT_PAR(v)  ((CLOSURE_OBJECT *) v.ptr)->params.n_params_optional
+#define CLOSURE_OBJ_N_LOCALS(v)   (((CLOSURE_OBJECT *) v.ptr)->params.n_local_vars)
+#define CLOSURE_OBJ_N_REQ_PAR(v)  (((CLOSURE_OBJECT *) v.ptr)->params.n_params_required)
+#define CLOSURE_OBJ_N_OPT_PAR(v)  (((CLOSURE_OBJECT *) v.ptr)->params.n_params_optional)
 #define CLOSURE_OBJ_PARAMS(v)     (((CLOSURE_OBJECT *) v.ptr)->params.params)
+#define CLOSURE_OBJ_N_UPLEVELS(v) (((CLOSURE_OBJECT *) v.ptr)->n_uplevels)
+#define CLOSURE_OBJ_UPLEVELS(v)   (((CLOSURE_OBJECT *) v.ptr)->uplevels)
 #define NATIVE_METHOD_OBJ_N_REQ_PAR(v)  ((NATIVE_METHOD_OBJECT *) v.ptr)->params.n_params_required
 #define NATIVE_METHOD_OBJ_N_OPT_PAR(v)  ((NATIVE_METHOD_OBJECT *) v.ptr)->params.n_params_optional
 #define NATIVE_METHOD_OBJ_PARAMS(v)     (((NATIVE_METHOD_OBJECT *) v.ptr)->params.params)
@@ -176,10 +181,11 @@ VALUE make_array_with_values(size_t len, VALUE *values);
 VALUE make_string(const char *s);
 void vlo_ensure_additional_space(VALUE v, size_t n);
 void array_push(VALUE arr, VALUE v);
-VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, VALUE *params);
+VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, VALUE *params);
 VALUE join_strings(int argc, VALUE *argv);
 int obj_is_of_type(VALUE obj, VALUE t);
 void dump(VALUE v);
 void dump_titled(char *title, VALUE v);
+char *obj_to_cstring(VALUE v);
 
 #endif
