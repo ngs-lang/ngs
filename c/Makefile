@@ -86,6 +86,9 @@ tags: *.c *.h *.lex *.y
 parser.output: parser.y ngs.h compile.h
 	bison --report=lookahead --report=solved --report=state --defines=parser.h -o parser.c parser.y
 
+ngs.1: ngs.1.md
+	pandoc -f markdown -t man -s $< -o $@
+
 test: ngs
 	@ echo "[ Starting tests ]"
 	@ cd tests/ && \
