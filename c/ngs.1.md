@@ -21,7 +21,9 @@ This project contains the language part which is under development. This manual 
 
 # MOTIVATION
 
-The circumstances have changed greatly since the development of the conventional shells such as **bash**. Conventional shells are not fit for the job anymore. Here I will point out things that can be improved and suggest better (IMHO) alternatives.
+The circumstances have changed greatly since the development of the conventional shells such as **bash** but the shells haven't. There are vast opportunities for improvement. These are in two main areas: syntax and functionality.
+
+Today we do know that shells became programming languages apparently that was not expected when shells were first written.
 
 ## Syntax
 
@@ -87,7 +89,7 @@ Exit code 0.
 	* **my\_array.my\_prop** does **array.map(F(elem) elem.my\_prop)** because that's probably what you would like to get when using **.my\_prop** on array of hashes, get that property of each element of the array. Kind of **jq .[].my\_prop**.
 
 * Have types x methods matrix.
-	* The idea here is that the programmer will have to minimize the guess work about the names of methods (functions). Same method should work on maximum number of types. Example: if you have **1+2** which adds the numbers, you will have **arr1+arr2** which will add (concatenate) the arrays, rather than **arr1.concat(arr2)** and **hash1+hash2** will produce merged hash rather than **hash1.merge(hash2)**.
+	* Less guess work about the names of methods (functions). Same method should work on maximum number of types. Example: if you have **1+2** which adds the numbers, you will have **arr1+arr2** which will add (concatenate) the arrays, rather than **arr1.concat(arr2)** and **hash1+hash2** will produce merged hash rather than **hash1.merge(hash2)**.
 	* If you have a data type and a method that can do remotely expected thing on that data type, it should work. Example of "remotely" expected is: **number.map(mapper)** runs the **mapper** function for each number in range of 0 to the *number* - 1.
 
 * Extensibility.
@@ -114,7 +116,7 @@ Exit code 0.
 
 ## Syntax
 
-A notable difference between say JavaScript, Ruby, Perl, Python and NGS is that there are two syntaxes in the language. One is called **command syntax** and the other is called **code syntax**. The **command syntax** covers the tasks of running programs and i/o redirection. The **code syntax** is a full blown language. The decision to have two syntaxes was made because I don't see another way to provide both good interactive experience and a complete, normal programming language. What I mean is that typing **system('ls')** or even **\`ls\`** is not a good interactive experience. On the other hand having syntax for full blown language based on interactive syntax is not a good thing either. See control structures in bash. It's horrible. **if ... ;then ...; fi**.
+A notable difference between say JavaScript, Ruby, Perl, Python and NGS is that there are two syntaxes in the language. The **command syntax** and the **code syntax**. The **command syntax** covers the tasks of running programs and i/o redirection. The **code syntax** is a full blown language. The decision to have two syntaxes was made because I don't see another way to provide both good interactive experience and a complete, normal programming language. What I mean is that typing **system('ls')** or even **\`ls\`** is not a good interactive experience. On the other hand having syntax for full blown language based on interactive syntax is not a good thing either. See control structures in bash. It's horrible. **if ... ;then ...; fi**.
 
 **Command syntax**
 
@@ -126,6 +128,14 @@ This is the syntax at top level of the file or when you start an interactive she
 * **ls $my\_file**
 * **ls $\*my\_files**
 
+**Code syntax**
+
+This is the syntax inside **{...}**.
+
+**Code syntax examples**
+
+* **{ for(i;10) dump(i) }**
+* **{ for(i;10) { j=i\*2; dump(j); } }**
 
 
 # THANKS
