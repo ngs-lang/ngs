@@ -25,7 +25,8 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 	"while",
 	"args",
 	"arg",
-	"local"
+	"local",
+	"hash"
 };
 
 
