@@ -21,6 +21,15 @@
 #define MAKE_REQ_ARG_NODE(name, val) MAKE_NODE(name, ARG_NODE); name->first_child = val; val->next_sibling = NULL;
 #define PREPEND_NODE(list, elt) elt->next_sibling = list->first_child; list->first_child = elt;
 
+ast_node *mkstring(char *s) {
+	MAKE_NODE(ret, STR_COMPS_NODE);
+	MAKE_NODE(content, STR_COMP_IMM_NODE);
+	content->name = strdup(s);
+	ret->first_child = content;
+	ret->last_child = content;
+	return ret;
+}
+
 
 %}
 
@@ -66,6 +75,8 @@ curly-code-block =
 		$$ = code;
 	}
 
+code-block = curly-code-block | expression
+
 expressions =
 	e:expression expression-delimiter es:expressions {
 		if(e) {
@@ -96,8 +107,20 @@ set-item-expression =
 	binop-expression
 
 binop-expression =
-	e:chain-expression (binop chain-expression)* {
-		$$ = e;
+	e1:chain-expression (b:binop e2:chain-expression {
+		// XXX: operators priorities
+		MAKE_NODE(ret, CALL_NODE);
+		ret->first_child = b;
+		MAKE_NODE(args, ARGS_NODE);
+			MAKE_REQ_ARG_NODE(a1, e1);
+			MAKE_REQ_ARG_NODE(a2, e2);
+			a1->next_sibling = a2;
+			args->first_child = a1;
+		b->next_sibling = args;
+		e1 = ret;
+	} )* {
+		// XXX
+		$$ = e1;
 	}
 
 binop = binop1 | binop2
@@ -124,6 +147,8 @@ call-expression =
 	basic-expression
 
 basic-expression =
+	defined
+	|
 	comment
 	|
 	"null"  { MAKE_NODE(ret, NULL_NODE); $$ = ret; }
@@ -134,7 +159,13 @@ basic-expression =
 	|
 	number
 	|
+	string
+	|
 	assignment
+	|
+	local-declaration
+	|
+	function-definition
 	|
 	identifier
 	|
@@ -150,6 +181,54 @@ assignment =
 		$$ = ret;
 	}
 
+function-definition =
+	"F" space+ name:function-definition-name space? "(" space? params:function-definition-parameters space? ")" space? body:code-block {
+		MAKE_NODE(ret, FUNC_NODE);
+		ret->first_child = params;
+		params->next_sibling = body;
+		body->next_sibling = name;
+		$$ = ret;
+	}
+
+function-definition-name = i:identifier { $$ = i; } | { $$ = NULL; }
+
+function-definition-parameters =
+	param:function-definition-parameter space? "," space? params:function-definition-parameters {
+		PREPEND_NODE(params, param);
+		$$ = params;
+	}
+	|
+	param:function-definition-parameter {
+		MAKE_NODE(ret, PARAMS_NODE);
+		ret->first_child = param;
+		ret->last_child = param;
+		$$ = ret;
+	}
+	|
+	{
+		MAKE_NODE(ret, PARAMS_NODE);
+		ret->first_child = NULL;
+		ret->last_child = NULL;
+		$$ = ret;
+	}
+
+function-definition-parameter =
+	i:identifier t:function-definition-parameter-type {
+		MAKE_NODE(ret, PARAM_NODE);
+		i->next_sibling = t;
+		ret->first_child = i;
+		$$ = ret;
+	}
+
+function-definition-parameter-type =
+	space? ":" space? c:code-block { $$ = c; }
+	|
+	{
+		MAKE_NODE(ret, IDENTIFIER_NODE);
+		ret->name = "Any";
+		$$ = ret;
+	}
+
 function-call-expression =
 	f:basic-expression inline_space? "(" space? args:function_call_arguments space? ")" {
 		MAKE_NODE(ret, CALL_NODE);
@@ -160,9 +239,7 @@ function-call-expression =
 
 function-call-arguments =
 	arg:function-call-argument space? "," space? args:function-call-arguments {
-		if(arg) {
-			PREPEND_NODE(args, arg);
-		}
+		PREPEND_NODE(args, arg);
 		$$ = args;
 	}
 	|
@@ -179,7 +256,6 @@ function-call-arguments =
 		ret->last_child = NULL;
 		$$ = ret;
 	}
-
 
 function-call-argument =
 	i:identifier space? "=" space? e:expression {
@@ -202,7 +278,7 @@ array-literal =
 				ret->first_child = NULL; // not needed because of calloc but want to be explicit
 				$$ = ret;
 		}
-		| "[" items:array_items space? ","? space? "]" {
+		| "[" items:array-items space? ","? space? "]" {
 				MAKE_NODE(ret, ARR_LIT_NODE);
 				ret->first_child = items->first_child;
 				$$ = ret;
@@ -236,6 +312,25 @@ identifier =
 		 ret->name = strdup(yytext);
 		 $$ = ret;
 	}
+
+defined =
+	"defined" space i:identifier {
+		MAKE_NODE(ret, DEFINED_NODE);
+		ret->first_child = i;
+		$$ = ret;
+	}
+
+local-declaration =
+	"local" space i:identifier {
+		MAKE_NODE(ret, LOCAL_NODE);
+		ret->first_child = i;
+		$$ = ret;
+	}
+
+string =
+	# XXX Continue here. This is temporary.
+	"'" <[-a-zA-Z0-9 ()=,.]*> "'" { $$ = mkstring(yytext); } |
+	'"' <[-a-zA-Z0-9 ()=,.]*> '"' { $$ = mkstring(yytext); }
 
 %%
 #undef ALLOC_NODE
