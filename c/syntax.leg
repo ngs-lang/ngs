@@ -1,0 +1,148 @@
+%{
+#include <string.h>
+#include "ngs.h"
+#include "ast.h"
+
+#define YY_CTX_LOCAL 1
+
+#define YYSTYPE ast_node*
+
+#define YYMALLOC(size)        NGS_MALLOC(size)
+#define YYREALLOC(ptr, size)  NGS_REALLOC(ptr, size)
+#define YYCALLOC(nelem, size) assert(0=="YYCALLOC is not implemented")
+#define YYFREE(ptr)           (void)(ptr)
+
+#define ALLOC_NODE(dst, type_) (dst) = NGS_MALLOC(sizeof(ast_node)); dst->type=type_
+#define MAKE_NODE(name, type_) \
+	ast_node *name = NGS_MALLOC(sizeof(*name)); name->type = type_; \
+	DEBUG_PARSER("[ast_node] at %p type %3d (%-12s)\n", name, name->type, NGS_AST_NODE_TYPES_NAMES[name->type]);
+// TODO: check whether it's appropriate to use Boehm's "atomic" allocation.
+#define COPY_NODE(dst, src) (dst) = NGS_MALLOC(sizeof(ast_node)); memcpy((dst), (src), sizeof(ast_node))
+#define MAKE_REQ_ARG_NODE(name, val) MAKE_NODE(name, ARG_NODE); name->first_child = val; val->next_sibling = NULL;
+#define PREPEND_NODE(list, elt) elt->next_sibling = list->first_child; list->first_child = elt;
+
+
+%}
+
+start = 
+	commands
+
+space = [ \t\n]+
+inline_space = [ \t]+
+newline_space = (inline_space? [\n]+ inline_space?)+
+
+commands =
+	space? c:command commands_separator cs:commands {
+		// TODO
+		$$ = c;
+	}
+	|
+	c:command commands_separator? space? { $$ = c; }
+
+commands_separator =
+	newline_space 
+	|
+	inline_space? [;] inline_space?
+
+comment =
+  "#" [^\n]+ { $$ = NULL; }
+  |
+  "//" [^\n]+ { $$ = NULL; }
+
+command =
+
+	curly-code-block
+
+	|
+
+	"cmd" {
+		MAKE_NODE(ret, NUMBER_NODE);
+		ret->number = 1000;
+		$$ = ret;
+	}
+
+curly-code-block =
+	space? '{' space? code:expressions space? ";"? space? '}' {
+		$$ = code;
+	}
+
+expressions =
+	e:expression expression-delimiter es:expressions {
+		if(e) {
+			PREPEND_NODE(es, e);
+		}
+		$$ = es;
+	}
+	|
+	e:expression {
+		MAKE_NODE(ret, EXPRESSIONS_NODE);
+		ret->first_child = e;
+		ret->last_child = e;
+		$$ = ret;
+	}
+
+expression-delimiter =
+	newline_space
+	|
+	inline_space? ";" space?
+
+expression =
+	be:basic-expression args:function-call-arguments? {
+		if(args) {
+			MAKE_NODE(ret, CALL_NODE);
+			ret->first_child = be;
+			ret->first_child->next_sibling = args;
+			$$ = ret;
+		} else {
+			$$ = be;
+		}
+	}
+
+basic-expression =
+	comment
+	|
+	"null"  { MAKE_NODE(ret, NULL_NODE); $$ = ret; }
+	|
+	"true"  { MAKE_NODE(ret, TRUE_NODE); $$ = ret; }
+	|
+	"false" { MAKE_NODE(ret, FALSE_NODE); $$ = ret; }
+	|
+	number
+	|
+	assignment
+	|
+	identifier
+
+assignment =
+	i:identifier space? "=" space? e:expression {
+		MAKE_NODE(ret, ASSIGNMENT_NODE);
+		i->next_sibling = e;
+		ret->first_child = i;
+		$$ = ret;
+	}
+
+function-call-arguments =
+	"(" ")" { MAKE_NODE(ret, NULL_NODE); $$ = ret; }
+
+
+number = 
+	<[0-9]+> {
+		MAKE_NODE(ret, NUMBER_NODE);
+		ret->number = atoi(yytext);
+		ret->next_sibling = NULL;
+		$$ = ret;
+	}
+
+identifier =
+	<[_a-zA-Z]+[_a-zA-Z0-9]*> {
+		 MAKE_NODE(ret, IDENTIFIER_NODE);
+		 ret->name = strdup(yytext);
+		 $$ = ret;
+	}
+
+%%
+#undef ALLOC_NODE
+#undef MAKE_NODE
+#undef COPY_NODE
+#undef MAKE_REQ_ARG_NODE
+#undef PREPEND_NODE

@@ -2,19 +2,13 @@
 // uthash - http://stackoverflow.com/questions/18197825/looking-for-hash-table-c-library. using version 1.9.7
 // libgc-dev - 1:7.2d-6.4
 #include <assert.h>
-#include "parser.c"
-#include "scanner.c"
 #include "ngs.h"
+#include "syntax.c"
+#undef __
 #include "compile.h"
 #include "decompile.h"
 #include "vm.h"
 
-
-void yyerror(struct YYLTYPE * loc, void *scanner, ast_node **result, const char *s) {
-	(void)(scanner);
-	(void)(result);
-	fprintf (stderr, "Parse error: %s at %d:%d - %d:%d\n", s, loc->first_line, loc->first_column, loc->last_line, loc->last_column);
-}
 
 int main()
 {
@@ -24,19 +18,24 @@ int main()
 	char *bytecode;
 	size_t len;
 	VALUE result;
+	int parse_ok;
 
 	NGS_GC_INIT();
 	// (causes warning) // NGS_GC_THR_INIT();
 
-	int ret = 0;
-	yyscan_t scanner;
-	yylex_init(&scanner);
+	yycontext yyctx;
+	memset(&yyctx, 0, sizeof(yycontext));
+	parse_ok = yyparse(&yyctx);
+	printf("DONE\n");
+	printf("parse_ok %d\n", parse_ok);
 
-	ret = yyparse(scanner, &tree);
-	assert(ret == 0);
-	yylex_destroy(scanner);
-
+	tree = yyctx.__;
+	printf("tree %p\n", tree);
 	IF_DEBUG(COMPILER, print_ast(tree, 0);)
+
+	yyrelease(&yyctx);
+
+	exit(1);
 
 	bytecode = compile(tree, &len);
 	IF_DEBUG(COMPILER, decompile(bytecode, 0, len);)
@@ -44,6 +43,4 @@ int main()
 	vm_load_bytecode(&vm, bytecode, len);
 	ctx_init(&ctx);
 	vm_run(&vm, &ctx, 0, &result);
-
-	return ret;
 }
