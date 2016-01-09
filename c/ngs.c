@@ -26,16 +26,16 @@ int main()
 	yycontext yyctx;
 	memset(&yyctx, 0, sizeof(yycontext));
 	parse_ok = yyparse(&yyctx);
-	printf("DONE\n");
-	printf("parse_ok %d\n", parse_ok);
+	// printf("parse_ok %d\n", parse_ok);
+	if(!parse_ok) {
+		fprintf(stderr, "NGS: Failed to parse. Exiting.\n");
+		exit(2);
+	}
 
 	tree = yyctx.__;
-	printf("tree %p\n", tree);
 	IF_DEBUG(COMPILER, print_ast(tree, 0);)
 
 	yyrelease(&yyctx);
-
-	exit(1);
 
 	bytecode = compile(tree, &len);
 	IF_DEBUG(COMPILER, decompile(bytecode, 0, len);)
@@ -43,4 +43,5 @@ int main()
 	vm_load_bytecode(&vm, bytecode, len);
 	ctx_init(&ctx);
 	vm_run(&vm, &ctx, 0, &result);
+	return 0;
 }

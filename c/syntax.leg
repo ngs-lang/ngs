@@ -87,16 +87,41 @@ expression-delimiter =
 	inline_space? ";" space?
 
 expression =
-	be:basic-expression args:function-call-arguments? {
-		if(args) {
-			MAKE_NODE(ret, CALL_NODE);
-			ret->first_child = be;
-			ret->first_child->next_sibling = args;
-			$$ = ret;
-		} else {
-			$$ = be;
-		}
+	comment
+	|
+	e:set-item-expression comment? { $$ = e; }
+
+
+set-item-expression =
+	binop-expression
+
+binop-expression =
+	e:chain-expression (binop chain-expression)* {
+		$$ = e;
 	}
+
+binop = binop1 | binop2
+
+binop1 = space? <("@?" | "@" | "|" | "==" | "!=" | "<" | ">" | "~" | "+" | "-" | "*" | "/")> space? {
+		MAKE_NODE(ret, IDENTIFIER_NODE);
+		ret->name = strdup(yytext);
+		$$ = ret;
+	}
+binop2 = space <("throws" | "returns" | "or" | "and" | "in" | "not in")> space {
+		MAKE_NODE(ret, IDENTIFIER_NODE);
+		ret->name = strdup(yytext);
+		$$ = ret;
+	}
+
+chain-expression =
+	e:call-expression {
+		$$ = e;
+	}
+
+call-expression =
+	function-call-expression
+	|
+	basic-expression
 
 basic-expression =
 	comment
@@ -112,6 +137,10 @@ basic-expression =
 	assignment
 	|
 	identifier
+	|
+	array-literal
+	|
+	"(" space? e:expression space? ")" { $$ = e; }
 
 assignment =
 	i:identifier space? "=" space? e:expression {
@@ -121,8 +150,76 @@ assignment =
 		$$ = ret;
 	}
 
+function-call-expression =
+	f:basic-expression inline_space? "(" space? args:function_call_arguments space? ")" {
+		MAKE_NODE(ret, CALL_NODE);
+		ret->first_child = f;
+		ret->first_child->next_sibling = args;
+		$$ = ret;
+	}
+
 function-call-arguments =
-	"(" ")" { MAKE_NODE(ret, NULL_NODE); $$ = ret; }
+	arg:function-call-argument space? "," space? args:function-call-arguments {
+		if(arg) {
+			PREPEND_NODE(args, arg);
+		}
+		$$ = args;
+	}
+	|
+	arg:function-call-argument {
+		MAKE_NODE(ret, ARGS_NODE);
+		ret->first_child = arg;
+		ret->last_child = arg;
+		$$ = ret;
+	}
+	|
+	{
+		MAKE_NODE(ret, ARGS_NODE);
+		ret->first_child = NULL;
+		ret->last_child = NULL;
+		$$ = ret;
+	}
+
+
+function-call-argument =
+	i:identifier space? "=" space? e:expression {
+		MAKE_NODE(ret, ARG_NODE);
+		ret->first_child = e;
+		e->next_sibling = i;
+		$$ = ret;
+	}
+	|
+	e:expression {
+		MAKE_NODE(ret, ARG_NODE);
+		ret->first_child = e;
+		e->next_sibling = NULL;
+		$$ = ret;
+	}
+
+array-literal =
+		"[" space? "]" {
+				MAKE_NODE(ret, ARR_LIT_NODE);
+				ret->first_child = NULL; // not needed because of calloc but want to be explicit
+				$$ = ret;
+		}
+		| "[" items:array_items space? ","? space? "]" {
+				MAKE_NODE(ret, ARR_LIT_NODE);
+				ret->first_child = items->first_child;
+				$$ = ret;
+		}
+
+array-items =
+		e:expression space? "," space? items:array-items {
+			PREPEND_NODE(items, e);
+			$$ = items;
+		}
+		|
+		e:expression {
+			MAKE_NODE(ret, EXPRESSIONS_NODE);
+			ret->first_child = e;
+			ret->last_child = e;
+			$$ = ret;
+		};
 
 
 number = 
