@@ -52,11 +52,25 @@ newline_space = (inline_space? [\n]+ inline_space?)+
 
 commands =
 	space? c:command commands_separator cs:commands {
-		// TODO
-		$$ = c;
+		if(c) {
+			PREPEND_NODE(cs, c);
+		}
+		$$ = cs;
 	}
 	|
-	c:command commands_separator? space? { $$ = c; }
+	c:command commands_separator? space? {
+		MAKE_NODE(ret, EXPRESSIONS_NODE);
+		ret->first_child = c;
+		ret->last_child = c;
+		$$ = ret;
+	}
+	|
+	{
+		MAKE_NODE(ret, EXPRESSIONS_NODE);
+		ret->first_child = NULL;
+		ret->last_child = NULL;
+		$$ = ret;
+	}
 
 commands_separator =
 	newline_space 
@@ -69,16 +83,22 @@ comment =
   "//" [^\n]+ { $$ = NULL; }
 
 command =
-
 	curly-code-block
-
 	|
-
-	"cmd" {
-		MAKE_NODE(ret, NUMBER_NODE);
-		ret->number = 1000;
-		$$ = ret;
-	}
+	assignment
+	|
+	function-definition
+	|
+	function-call
+	|
+	if
+	|
+	while
+	|
+	for
+	|
+	comment
+	# | execute_external_prog
 
 curly-code-block =
 	space? '{' space? code:expressions space? ";"? space? '}' {
@@ -152,7 +172,7 @@ chain-expression =
 	}
 
 call-expression =
-	function-call-expression
+	function-call
 	|
 	basic-expression
 
@@ -245,7 +265,7 @@ function-definition-parameter-type =
 		$$ = ret;
 	}
 
-function-call-expression =
+function-call =
 	f:basic-expression inline_space? "(" space? args:function_call_arguments space? ")" {
 		MAKE_NODE(ret, CALL_NODE);
 		ret->first_child = f;
