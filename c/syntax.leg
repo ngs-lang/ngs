@@ -30,6 +30,16 @@ ast_node *mkstring(char *s) {
 	return ret;
 }
 
+append_ast_node_child(ast_node *target, ast_node *child) {
+	// printf("TARGET %p, CHILD %p\n", target, child);
+	if(!target->first_child) {
+		target->first_child = child;
+		target->last_child = child;
+		return;
+	}
+	target->last_child->next_sibling = child;
+	target->last_child = child;
+}
 
 %}
 
@@ -305,6 +315,18 @@ array-items =
 
 for =
 	for-i-n
+	|
+	for-start-cond-incr
+
+for-start-cond-incr =
+	"for" space? "(" init:code-block ";" space? cond:code-block space? ";" space? incr:code-block space? ")" space? body:code-block {
+		MAKE_NODE(ret, FOR_NODE);
+		init->next_sibling = cond;
+		cond->next_sibling = incr;
+		incr->next_sibling = body;
+		ret->first_child = init;
+		$$ = ret;
+	}
 
 for-i-n =
 	"for" space? "(" space? i:identifier space? ";" space? e:code-block space? ")" space? body:code-block {
@@ -410,9 +432,39 @@ local-declaration =
 	}
 
 string =
-	# XXX Continue here. This is temporary.
-	"'" <[-_a-zA-Z0-9 ()=,.]*> "'" { $$ = mkstring(yytext); } |
-	'"' <[-_a-zA-Z0-9 ()=,.]*> '"' { $$ = mkstring(yytext); }
+	# TODO: backslash sequences
+	string-sq | string-dq
+
+string-sq =
+	"'" acc:str-comps-node (string-sq-imm { append_ast_node_child(acc, $$); })* "'" {
+		$$ = acc;
+	}
+
+string-dq =
+	"\"" acc:str-comps-node (string-dq-imm { append_ast_node_child(acc, $$); } | string-dq-dollar-expansion { append_ast_node_child(acc, $$); })* "\"" {
+		$$ = acc;
+	}
+
+string-sq-imm =
+	<[^\']+> {
+		MAKE_NODE(content, STR_COMP_IMM_NODE);
+		content->name = strdup(yytext);
+		$$ = content;
+	}
+
+string-dq-imm =
+	<[^$\"]+> {
+		MAKE_NODE(content, STR_COMP_IMM_NODE);
+		content->name = strdup(yytext);
+		$$ = content;
+	}
+
+string-dq-dollar-expansion = "$" c:code-block { $$ = c; }
+
+str-comps-node = {
+		MAKE_NODE(ret, STR_COMPS_NODE);
+		$$ = ret;
+}
 
 %%
 #undef ALLOC_NODE
