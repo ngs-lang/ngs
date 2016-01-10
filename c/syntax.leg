@@ -130,7 +130,7 @@ binop1 = space? <("@?" | "@" | "|" | "==" | "!=" | "<" | ">" | "~" | "+" | "-" |
 		ret->name = strdup(yytext);
 		$$ = ret;
 	}
-binop2 = space <("throws" | "returns" | "or" | "and" | "in" | "not in")> space {
+binop2 = space <("is" | "throws" | "returns" | "or" | "and" | "in" | "not in")> space {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = strdup(yytext);
 		$$ = ret;
@@ -147,7 +147,13 @@ call-expression =
 	basic-expression
 
 basic-expression =
+	if
+	|
+	while
+	|
 	defined
+	|
+	for
 	|
 	comment
 	|
@@ -297,6 +303,82 @@ array-items =
 			$$ = ret;
 		};
 
+for =
+	for-i-n
+
+for-i-n =
+	"for" space? "(" space? i:identifier space? ";" space? e:code-block space? ")" space? body:code-block {
+		MAKE_NODE(ret, FOR_NODE);
+
+			MAKE_NODE(init_node, ASSIGNMENT_NODE);
+			ret->first_child = init_node;
+				COPY_NODE(init_node->first_child, i);
+				ALLOC_NODE(init_node->first_child->next_sibling, NUMBER_NODE);
+				init_node->first_child->next_sibling->number = 0;
+
+			MAKE_NODE(cond_node, CALL_NODE);
+			init_node->next_sibling = cond_node;
+				ALLOC_NODE(cond_node->first_child, IDENTIFIER_NODE);
+				cond_node->first_child->name = "<";
+				MAKE_NODE(cond_args, ARGS_NODE);
+					MAKE_NODE(cond_arg1, ARG_NODE);
+						COPY_NODE(cond_arg1->first_child, i);
+						cond_arg1->first_child->next_sibling = NULL;
+					MAKE_NODE(cond_arg2, ARG_NODE);
+						COPY_NODE(cond_arg2->first_child, e);
+						cond_arg2->first_child->next_sibling = NULL;
+					cond_arg1->next_sibling = cond_arg2;
+					cond_args->first_child = cond_arg1;
+				cond_node->first_child->next_sibling = cond_args;
+
+			MAKE_NODE(incr_node, ASSIGNMENT_NODE);
+			cond_node->next_sibling = incr_node;
+
+				COPY_NODE(incr_node->first_child, i);
+
+				MAKE_NODE(incr_plus_node, CALL_NODE);
+				incr_node->first_child->next_sibling = incr_plus_node;
+					ALLOC_NODE(incr_plus_node->first_child, IDENTIFIER_NODE);
+					incr_plus_node->first_child->name = "+";
+
+					MAKE_NODE(incr_plus_args, ARGS_NODE);
+						MAKE_NODE(incr_plus_arg1, ARG_NODE);
+							COPY_NODE(incr_plus_arg1->first_child, i);
+							incr_plus_arg1->first_child->next_sibling = NULL;
+						MAKE_NODE(incr_plus_arg2, ARG_NODE);
+							ALLOC_NODE(incr_plus_arg2->first_child, NUMBER_NODE);
+							incr_plus_arg2->first_child->number = 1;
+							incr_plus_arg2->first_child->next_sibling = NULL;
+						incr_plus_arg1->next_sibling = incr_plus_arg2;
+						incr_plus_args->first_child = incr_plus_arg1;
+					incr_plus_node->first_child->next_sibling = incr_plus_args;
+
+			incr_node->next_sibling = body;
+
+		$$ = ret;
+	}
+
+if =
+	"if" space? cond:code-block space? yes:code-block no:if-optional-else-block {
+		MAKE_NODE(ret, IF_NODE);
+		ret->first_child = cond;
+		cond->next_sibling = yes;
+		yes->next_sibling = no;
+		$$ = ret;
+	}
+
+if-optional-else-block =
+	space? c:code-block { $$ = c; }
+	|
+	{ MAKE_NODE(ret, NULL_NODE); $$ = ret; }
+
+while =
+	"while" space? cond:code-block space? body:code-block {
+		MAKE_NODE(ret, WHILE_NODE);
+		ret->first_child = cond;
+		cond->next_sibling = body;
+		$$ = ret;
+	}
 
 number = 
 	<[0-9]+> {
@@ -329,8 +411,8 @@ local-declaration =
 
 string =
 	# XXX Continue here. This is temporary.
-	"'" <[-a-zA-Z0-9 ()=,.]*> "'" { $$ = mkstring(yytext); } |
-	'"' <[-a-zA-Z0-9 ()=,.]*> '"' { $$ = mkstring(yytext); }
+	"'" <[-_a-zA-Z0-9 ()=,.]*> "'" { $$ = mkstring(yytext); } |
+	'"' <[-_a-zA-Z0-9 ()=,.]*> '"' { $$ = mkstring(yytext); }
 
 %%
 #undef ALLOC_NODE
