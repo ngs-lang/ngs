@@ -3,6 +3,12 @@
 #include "ngs.h"
 #include "ast.h"
 
+// gcc still warns about unused yymatchDot() and yyAccept(). clang does not.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-label"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
 #define YY_CTX_LOCAL 1
 
 #define YYSTYPE ast_node*
@@ -30,7 +36,7 @@ ast_node *mkstring(char *s) {
 	return ret;
 }
 
-append_ast_node_child(ast_node *target, ast_node *child) {
+void append_ast_node_child(ast_node *target, ast_node *child) {
 	// printf("TARGET %p, CHILD %p\n", target, child);
 	if(!target->first_child) {
 		target->first_child = child;
@@ -492,3 +498,4 @@ str-comps-node = {
 #undef COPY_NODE
 #undef MAKE_REQ_ARG_NODE
 #undef PREPEND_NODE
+#pragma GCC diagnostic pop
