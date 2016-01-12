@@ -27,15 +27,6 @@
 #define MAKE_REQ_ARG_NODE(name, val) MAKE_NODE(name, ARG_NODE); name->first_child = val; val->next_sibling = NULL;
 #define PREPEND_NODE(list, elt) elt->next_sibling = list->first_child; list->first_child = elt;
 
-ast_node *mkstring(char *s) {
-	MAKE_NODE(ret, STR_COMPS_NODE);
-	MAKE_NODE(content, STR_COMP_IMM_NODE);
-	content->name = strdup(s);
-	ret->first_child = content;
-	ret->last_child = content;
-	return ret;
-}
-
 void append_ast_node_child(ast_node *target, ast_node *child) {
 	// printf("TARGET %p, CHILD %p\n", target, child);
 	if(!target->first_child) {
