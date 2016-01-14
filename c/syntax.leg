@@ -11,12 +11,32 @@
 
 #define YY_CTX_LOCAL 1
 
+#define YY_MAX_LINES (10000)
+
 #define YYSTYPE ast_node*
+#define YY_CTX_MEMBERS int fail_pos, seq_pos; char *fail_rule; int lines, lines_postions[YY_MAX_LINES];
 
 #define YYMALLOC(size)        NGS_MALLOC(size)
 #define YYREALLOC(ptr, size)  NGS_REALLOC(ptr, size)
-#define YYCALLOC(nelem, size) assert(0=="YYCALLOC is not implemented")
 #define YYFREE(ptr)           (void)(ptr)
+
+#define YY_INPUT(yy, buf, result, max_size)		\
+  { \
+    int yyc = getchar(); \
+	if(yyc == EOF) { \
+		result = 0; \
+	} else { \
+		*(buf) = yyc; \
+		yy->seq_pos++; \
+		if(yyc == '\n') { \
+			yy->lines++; \
+			assert(yy->lines < YY_MAX_LINES); \
+			yy->lines_postions[yy->lines] = yy->seq_pos; \
+		} \
+		yyprintf((stderr, "<%c>", yyc)); \
+		result = 1; \
+	} \
+  }
 
 #define ALLOC_NODE(dst, type_) (dst) = NGS_MALLOC(sizeof(ast_node)); dst->type=type_
 #define MAKE_NODE(name, type_) \
@@ -26,6 +46,13 @@
 #define COPY_NODE(dst, src) (dst) = NGS_MALLOC(sizeof(ast_node)); memcpy((dst), (src), sizeof(ast_node))
 #define MAKE_REQ_ARG_NODE(name, val) MAKE_NODE(name, ARG_NODE); name->first_child = val; val->next_sibling = NULL;
 #define PREPEND_NODE(list, elt) elt->next_sibling = list->first_child; list->first_child = elt;
+
+#define HANDLE_FAILED_MATCH(rule_name) \
+	if(yy->__pos > yy->fail_pos) {\
+		yy->fail_pos = yy->__pos; \
+		yy->fail_rule = rule_name; \
+	}
+
 
 void append_ast_node_child(ast_node *target, ast_node *child) {
 	// printf("TARGET %p, CHILD %p\n", target, child);
@@ -41,7 +68,9 @@ void append_ast_node_child(ast_node *target, ast_node *child) {
 %}
 
 start = 
-	commands
+	commands eof
+
+eof = !.
 
 space = [ \t\n]+
 inline_space = [ \t]+
@@ -489,4 +518,5 @@ str-comps-node = {
 #undef COPY_NODE
 #undef MAKE_REQ_ARG_NODE
 #undef PREPEND_NODE
+#undef HANDLE_FAILED_MATCH
 #pragma GCC diagnostic pop

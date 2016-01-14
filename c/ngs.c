@@ -9,6 +9,17 @@
 #include "decompile.h"
 #include "vm.h"
 
+char *sprintf_position(yycontext *yy, int pos) {
+	int line;
+	char *ret = NGS_MALLOC(1024);
+	for(line=yy->lines; line>=0; line--) {
+		if(yy->lines_postions[line] <= pos) {
+			snprintf(ret, 1024, "%d:%d", line+1, pos-yy->lines_postions[line]+1);
+			return ret;
+		}
+	}
+	return "(fail to find line/col)";
+}
 
 int main()
 {
@@ -20,15 +31,22 @@ int main()
 	VALUE result;
 	int parse_ok;
 
+	// Silence GCC -Wunused-function
+	if(0) { yymatchDot(NULL); yyAccept(NULL, 0); }
+
 	NGS_GC_INIT();
 	// (causes warning) // NGS_GC_THR_INIT();
 
 	yycontext yyctx;
 	memset(&yyctx, 0, sizeof(yycontext));
+	yyctx.fail_pos = -1;
+	yyctx.fail_rule = "(unknown)";
+	yyctx.lines = 0;
+	yyctx.lines_postions[0] = 0;
 	parse_ok = yyparse(&yyctx);
 	// printf("parse_ok %d\n", parse_ok);
 	if(!parse_ok) {
-		fprintf(stderr, "NGS: Failed to parse. Exiting.\n");
+		fprintf(stderr, "NGS: Failed to parse at position %d (%s), rule %s. Exiting.\n", yyctx.fail_pos, sprintf_position(&yyctx, yyctx.fail_pos), yyctx.fail_rule);
 		exit(2);
 	}
 
