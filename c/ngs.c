@@ -10,15 +10,11 @@
 #include "vm.h"
 
 char *sprintf_position(yycontext *yy, int pos) {
-	int line;
+	int linecol[2];
 	char *ret = NGS_MALLOC(1024);
-	for(line=yy->lines; line>=0; line--) {
-		if(yy->lines_postions[line] <= pos) {
-			snprintf(ret, 1024, "%d:%d", line+1, pos-yy->lines_postions[line]+1);
-			return ret;
-		}
-	}
-	return "(fail to find line/col)";
+	position_to_line_col(yy, pos, linecol);
+	snprintf(ret, 1024, "%d:%d", linecol[0], linecol[1]);
+	return ret;
 }
 
 int main()

@@ -17,15 +17,9 @@ SRC := debug.o ast.o obj.o compile.o decompile.o vm.o ngs.o
 
 all: ngs ngs-prof ngs-debug
 
-syntax.c: syntax.leg Makefile
-	leg $< | awk '\
-		{print}\
-		/RULE.*yy_([a-zA-Z0-9_]+)/ { match($$0, /yy_([a-zA-Z0-9_]+)/, r); f=r[1]; }\
-		/YY_LOCAL.*yymatchChar/    { f="(a character)"; }\
-		/YY_LOCAL.*yymatchClass/   { f="(a class)"; }\
-		/YY_LOCAL.*yymatchString/  { f="(a string)"; }\
-		/yyprintf.*fail/ {print "  HANDLE_FAILED_MATCH(\"" f "\");"}\
-	' >$@
+# Built for peg/leg v 0.1.15
+syntax.c: syntax.leg patch-leg-output.sed patch-leg-output.awk
+	leg $< | sed -f patch-leg-output.sed | awk -f patch-leg-output.awk >$@
 
 %.o: %.c $(COMMON_DEPS)
 	$(CC) -c $(CFLAGS) $< -o $@

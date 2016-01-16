@@ -24,3 +24,4 @@ scanner.c
 tags
 parser.output
 *.o
+syntax.c

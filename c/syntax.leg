@@ -14,7 +14,10 @@
 #define YY_MAX_LINES (10000)
 
 #define YYSTYPE ast_node*
-#define YY_CTX_MEMBERS int fail_pos, seq_pos; char *fail_rule; int lines, lines_postions[YY_MAX_LINES];
+#define YY_CTX_MEMBERS \
+	int fail_pos, seq_pos; \
+	char *fail_rule; \
+	int lines, lines_postions[YY_MAX_LINES];
 
 #define YYMALLOC(size)        NGS_MALLOC(size)
 #define YYREALLOC(ptr, size)  NGS_REALLOC(ptr, size)
@@ -38,10 +41,19 @@
 	} \
   }
 
+void position_to_line_col();
+
 #define ALLOC_NODE(dst, type_) (dst) = NGS_MALLOC(sizeof(ast_node)); dst->type=type_
+#define CAPTURE_LOCATION(name) { \
+	name->location.first_line = location[0]; \
+	name->location.first_column = location[1]; \
+	name->location.last_line = location[2]; \
+	name->location.last_column = location[3]; \
+}
 #define MAKE_NODE(name, type_) \
 	ast_node *name = NGS_MALLOC(sizeof(*name)); name->type = type_; \
-	DEBUG_PARSER("[ast_node] at %p type %3d (%-12s)\n", name, name->type, NGS_AST_NODE_TYPES_NAMES[name->type]);
+	CAPTURE_LOCATION(name) \
+	DEBUG_PARSER("[ast_node] at %p type %3d (%-12s) %d:%d-%d:%d\n", name, name->type, NGS_AST_NODE_TYPES_NAMES[name->type], name->location.first_line, name->location.first_column, name->location.last_line, name->location.last_column);
 // TODO: check whether it's appropriate to use Boehm's "atomic" allocation.
 #define COPY_NODE(dst, src) (dst) = NGS_MALLOC(sizeof(ast_node)); memcpy((dst), (src), sizeof(ast_node))
 #define MAKE_REQ_ARG_NODE(name, val) MAKE_NODE(name, ARG_NODE); name->first_child = val; val->next_sibling = NULL;
@@ -82,6 +94,7 @@ commands =
 			PREPEND_NODE(cs, c);
 		}
 		$$ = cs;
+		CAPTURE_LOCATION($$);
 	}
 	|
 	c:command commands_separator? space? {
@@ -89,6 +102,7 @@ commands =
 		ret->first_child = c;
 		ret->last_child = c;
 		$$ = ret;
+		CAPTURE_LOCATION($$);
 	}
 	|
 	{
@@ -139,6 +153,7 @@ expressions =
 			PREPEND_NODE(es, e);
 		}
 		$$ = es;
+		CAPTURE_LOCATION($$);
 	}
 	|
 	e:expression {
@@ -258,6 +273,7 @@ function-definition-parameters =
 	param:function-definition-parameter space? "," space? params:function-definition-parameters {
 		PREPEND_NODE(params, param);
 		$$ = params;
+		CAPTURE_LOCATION($$);
 	}
 	|
 	param:function-definition-parameter {
@@ -303,6 +319,7 @@ function-call-arguments =
 	arg:function-call-argument space? "," space? args:function-call-arguments {
 		PREPEND_NODE(args, arg);
 		$$ = args;
+		CAPTURE_LOCATION($$);
 	}
 	|
 	arg:function-call-argument {
@@ -350,6 +367,7 @@ array-items =
 		e:expression space? "," space? items:array-items {
 			PREPEND_NODE(items, e);
 			$$ = items;
+			CAPTURE_LOCATION($$);
 		}
 		|
 		e:expression {
@@ -520,3 +538,17 @@ str-comps-node = {
 #undef PREPEND_NODE
 #undef HANDLE_FAILED_MATCH
 #pragma GCC diagnostic pop
+
+// TODO: more efficient implementation
+void position_to_line_col(yycontext *yy, int pos, int result[]) {
+	int line;
+	result[0] = -1;
+	result[1] = -1;
+	for(line=yy->lines; line>=0; line--) {
+		if(yy->lines_postions[line] <= pos) {
+			result[0] = line+1;
+			result[1] = pos-yy->lines_postions[line]+1;
+			return;
+		}
+	}
+}
