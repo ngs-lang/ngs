@@ -18,10 +18,6 @@ ngs-prof
 ngs-debug
 scratch.txt
 
-parser.c
-parser.h
-scanner.c
 tags
-parser.output
 *.o
 syntax.c
