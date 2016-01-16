@@ -89,7 +89,7 @@ inline_space = [ \t]+
 newline_space = (inline_space? [\n]+ inline_space?)+
 
 commands =
-	space? c:command commands_separator cs:commands {
+	space? c:command commands-separator cs:commands {
 		if(c) {
 			PREPEND_NODE(cs, c);
 		}
@@ -97,7 +97,7 @@ commands =
 		CAPTURE_LOCATION($$);
 	}
 	|
-	c:command commands_separator? space? {
+	c:command commands-separator? space? {
 		MAKE_NODE(ret, EXPRESSIONS_NODE);
 		ret->first_child = c;
 		ret->last_child = c;
@@ -112,10 +112,8 @@ commands =
 		$$ = ret;
 	}
 
-commands_separator =
-	newline_space 
-	|
-	inline_space? [;] inline_space?
+commands-separator = newline_space | inline_space? [;] inline_space?
+items-separator = newline_space | inline_space? [,] space?
 
 comment =
   "#" [^\n]+ { $$ = NULL; }
@@ -248,6 +246,8 @@ basic-expression =
 	|
 	array-literal
 	|
+	hash-literal
+	|
 	"(" space? e:expression space? ")" { $$ = e; }
 
 assignment =
@@ -358,24 +358,52 @@ array-literal =
 				$$ = ret;
 		}
 		| "[" items:array-items space? ","? space? "]" {
-				MAKE_NODE(ret, ARR_LIT_NODE);
-				ret->first_child = items->first_child;
-				$$ = ret;
+				$$ = items;
+				CAPTURE_LOCATION($$);
 		}
 
 array-items =
-		e:expression space? "," space? items:array-items {
-			PREPEND_NODE(items, e);
-			$$ = items;
+		acc:array-literal-node expression { append_ast_node_child(acc, $$); } (items-separator expression { append_ast_node_child(acc, $$); })* {
+			$$ = acc;
 			CAPTURE_LOCATION($$);
 		}
-		|
-		e:expression {
+
+array-literal-node = {
+		MAKE_NODE(ret, ARR_LIT_NODE);
+		ret->first_child = NULL;
+		$$ = ret;
+}
+
+hash-literal =
+		"{" space? "}" {
+				MAKE_NODE(ret, HASH_LIT_NODE);
+				ret->first_child = NULL;
+				$$ = ret;
+		}
+		| "{" space? items:hash-items space? ","? space? "}" {
+				$$ = items;
+		}
+
+hash-items =
+		acc:hash-literal-node hash-item { append_ast_node_child(acc, $$); } (items-separator hash-item { append_ast_node_child(acc, $$); })* {
+			$$ = acc;
+			CAPTURE_LOCATION($$);
+		}
+
+hash-item =
+		k:expression space? ":" space? v:expression {
 			MAKE_NODE(ret, EXPRESSIONS_NODE);
-			ret->first_child = e;
-			ret->last_child = e;
+			ret->first_child = k;
+			ret->last_child = v;
+			k->next_sibling = v;
 			$$ = ret;
-		};
+		}
+
+hash-literal-node = {
+		MAKE_NODE(ret, HASH_LIT_NODE);
+		ret->first_child = NULL;
+		$$ = ret;
+}
 
 for =
 	for-i-n
