@@ -14,6 +14,11 @@ typedef uint8_t UPVAR_INDEX;
 #define MAX_INT_TO_STR_LEN    (256)
 typedef uint16_t NATIVE_TYPE_ID;
 
+typedef enum {
+	RESIZE_HASH_AFTER_SHRINK = 0,
+	RESIZE_HASH_AFTER_GROW   = 1,
+} RESIZE_HASH_AFTER;
+
 // On problems with `uintptr_t` change here according to Ruby source in `include/ruby/ruby.h`
 // uintptr_t format for printf - PRIXPTR - printf("Blah %" PRIXPTR "\n", VALUE.num);
 typedef union value_union {
@@ -32,6 +37,24 @@ typedef struct var_len_object_struct {
 	size_t allocated;
 	size_t item_size;
 } VAR_LEN_OBJECT;
+
+// https://www.igvita.com/2009/02/04/ruby-19-internals-ordered-hash/
+typedef struct hash_object_entry {
+	VALUE key;
+	VALUE val;
+	struct hash_object_entry *bucket_next;
+	struct hash_object_entry *insertion_order_prev;
+	struct hash_object_entry *insertion_order_next;
+	uint32_t hash;
+} HASH_OBJECT_ENTRY;
+
+typedef struct hash_object_struct {
+	OBJECT base;
+	size_t len;
+	size_t n_buckets;
+	HASH_OBJECT_ENTRY *head;
+	HASH_OBJECT_ENTRY *tail;
+} HASH_OBJECT;
 
 typedef struct params {
 	LOCAL_VAR_INDEX n_local_vars; // number of local variables including arguments
@@ -115,6 +138,7 @@ enum IMMEDIATE_VALUES {
 	T_ANY   = 42,
 	T_SEQ   = 46,
 	T_TYPE  = 50,
+	T_HASH  = 54,
 	T_NATIVE_METHOD = (1 << 8) | T_FUN,
 	T_CLOSURE       = (2 << 8) | T_FUN,
 };
@@ -170,7 +194,11 @@ enum IMMEDIATE_VALUES {
 #define IS_ARRAY(v)               (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_ARR)
 #define IS_NGS_TYPE(v)            (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_TYPE)
 #define IS_VLO(v)                 (IS_ARRAY(v) || IS_STRING(v))
+#define IS_HASH(v)                (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_HASH)
 #define ARRAY_ITEMS(v)            ((VALUE *)(OBJ_DATA_PTR(v)))
+#define HASH_BUCKETS_N(v)         (((HASH_OBJECT *)(OBJ_DATA_PTR(v)))->n_buckets)
+#define HASH_HEAD(v)              (((HASH_OBJECT *)(OBJ_DATA_PTR(v)))->head)
+#define HASH_TAIL(v)              (((HASH_OBJECT *)(OBJ_DATA_PTR(v)))->tail)
 
 // Boolean 00001X10
 #define GET_INVERTED_BOOL(v)      ((VALUE){.num = (v).num ^= 4})

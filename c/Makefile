@@ -69,7 +69,7 @@ clean:
 	-rm ngs ngs-prof ngs-debug
 	-rm *.o
 
-tags: *.c *.h *.lex *.y
+tags: *.c *.h
 	ctags $^
 
 ngs.1: ngs.1.md

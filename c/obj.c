@@ -108,6 +108,129 @@ VALUE make_array_with_values(size_t len, VALUE *values) {
 	return ret;
 }
 
+VALUE make_hash(size_t start_buckets) {
+	VALUE ret;
+	HASH_OBJECT *hash;
+	hash = NGS_MALLOC(sizeof(*hash));
+	assert(hash);
+
+	SET_OBJ(ret, hash);
+	OBJ_TYPE(ret) = T_HASH;
+
+	if(start_buckets) {
+		OBJ_DATA_PTR(ret) = NGS_MALLOC(start_buckets * sizeof(HASH_OBJECT_ENTRY *));
+	} else {
+		OBJ_DATA_PTR(ret) = NULL;
+	}
+	HASH_BUCKETS_N(ret) = start_buckets;
+	HASH_HEAD(ret) = NULL;
+	HASH_TAIL(ret) = NULL;
+	OBJ_LEN(ret) = 0;
+	return ret;
+}
+
+int is_equal(VALUE a, VALUE b) {
+	// XXX: must implement
+	if(IS_INT(a) && IS_INT(b)) {
+		return GET_INT(a) == GET_INT(b);
+	}
+	return 0;
+}
+
+uint32_t hash(VALUE v) {
+	// XXX: to implement
+	if(IS_INT(v)) {
+		// XXX: check how exactly the casting is done
+		return (uint32_t)(GET_INT(v));
+	}
+	return 0;
+}
+
+void resize_hash_for_new_len(VALUE h, RESIZE_HASH_AFTER after) {
+
+	size_t new_buckets_n;
+	uint32_t n;
+	HASH_OBJECT_ENTRY *e;
+	HASH_OBJECT_ENTRY **buckets;
+
+	new_buckets_n = HASH_BUCKETS_N(h);
+
+	if(after == RESIZE_HASH_AFTER_GROW) {
+		if(new_buckets_n == 0) {
+			new_buckets_n = 8;
+		}
+		while(new_buckets_n <= OBJ_LEN(h)) {
+			new_buckets_n <<= 1;
+		}
+	} else {
+		while(new_buckets_n > OBJ_LEN(h)) {
+			new_buckets_n >>= 1;
+		}
+	}
+	if(HASH_BUCKETS_N(h) == new_buckets_n) {
+		return;
+	}
+
+	if(!new_buckets_n) {
+		OBJ_DATA_PTR(h) = NULL;
+		return;
+	}
+
+	buckets = NGS_MALLOC(new_buckets_n * sizeof(HASH_OBJECT_ENTRY *));
+	assert(buckets);
+	memset(buckets, 0, new_buckets_n * sizeof(HASH_OBJECT_ENTRY *));
+	for(e=HASH_HEAD(h); e; e=e->insertion_order_next) {
+		n = e->hash % new_buckets_n;
+		e->bucket_next = buckets[n];
+		buckets[n] = e;
+	}
+
+	OBJ_DATA_PTR(h) = buckets;
+
+	return;
+}
+
+HASH_OBJECT_ENTRY *get_hash_key(VALUE h, VALUE k) {
+	HASH_OBJECT_ENTRY *e;
+	HASH_OBJECT_ENTRY **buckets = OBJ_DATA_PTR(h);
+	uint32_t n = hash(k) % HASH_BUCKETS_N(h);
+	for(e=buckets[n]; e; e=e->bucket_next) {
+		if(is_equal(e->key, k)) {
+			return e;
+		}
+	}
+	return NULL;
+}
+
+void set_hash_key(VALUE h, VALUE k, VALUE v) {
+	HASH_OBJECT_ENTRY *e;
+	HASH_OBJECT_ENTRY **buckets;
+	uint32_t n;
+
+	e = get_hash_key(h, k);
+
+	if(e) {
+		e->val = v;
+		return;
+	}
+
+	OBJ_LEN(h) += 1;
+	resize_hash_for_new_len(h, RESIZE_HASH_AFTER_GROW);
+	buckets = OBJ_DATA_PTR(h);
+	e = NGS_MALLOC(sizeof(*e));
+	assert(e);
+	n = hash(k) % HASH_BUCKETS_N(h);
+	e->key = k;
+	e->val = v;
+	e->bucket_next = buckets[n];
+	e->insertion_order_prev = HASH_TAIL(h);
+	e->insertion_order_next = NULL;
+	buckets[n] = e;
+	HASH_TAIL(h)->insertion_order_next = e;
+	HASH_TAIL(h) = e;
+
+}
+
 VALUE make_string(const char *s) {
 	VALUE v;
 	VAR_LEN_OBJECT *vlo;
