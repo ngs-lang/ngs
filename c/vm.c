@@ -133,6 +133,12 @@ METHOD_RESULT native_in_any_hash METHOD_PARAMS {
 	return METHOD_OK;
 }
 
+METHOD_RESULT native_hash METHOD_PARAMS {
+	// METHOD_RETURN(MAKE_INT(hash(argv[0])));
+	SET_INT(*result, hash(argv[0]));
+	return METHOD_OK;
+}
+
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
 	HASH_FIND(hh, vm->globals_indexes, name, name_len, var);
@@ -254,6 +260,7 @@ void vm_init(VM *vm) {
 	register_global_func(vm, "is",   &native_is_any_type,   2, "obj", vm->Any, "t", vm->Type);
 	register_global_func(vm, "not",  &native_not_any,       1, "x",   vm->Any);
 	register_global_func(vm, "in",   &native_in_any_hash,   2, "x",   vm->Any, "h", vm->Hash);
+	register_global_func(vm, "hash", &native_hash,          1, "x",   vm->Any);
 }
 
 void ctx_init(CTX *ctx) {

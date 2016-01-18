@@ -208,6 +208,7 @@ VALUE make_var_len_obj(uintptr_t type, const size_t item_size, const size_t len)
 VALUE make_array(size_t len);
 VALUE make_array_with_values(size_t len, VALUE *values);
 VALUE make_hash(size_t start_buckets);
+uint32_t hash(VALUE v);
 HASH_OBJECT_ENTRY *get_hash_key(VALUE h, VALUE k);
 void set_hash_key(VALUE h, VALUE k, VALUE v);
 VALUE make_string(const char *s);

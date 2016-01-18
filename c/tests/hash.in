@@ -5,8 +5,12 @@
 		"xy1": 12
 		"xy2": 13
 	}
+
 	echo("Test: in")
 	dump("xyz" in h)
 	dump("xyz1" in h)
 	dump("1xyz" in h)
+
+	echo("Test: hash() is int")
+	dump(hash("xyz") is Int)
 }

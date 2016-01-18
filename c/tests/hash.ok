@@ -2,3 +2,5 @@ Test: in
 * true
 * false
 * false
+Test: hash() is int
+* true

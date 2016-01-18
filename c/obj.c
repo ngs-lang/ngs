@@ -182,7 +182,7 @@ uint32_t hash(VALUE v) {
 	if(IS_STRING(v)) {
 		unsigned char *c;
 		size_t i, len=OBJ_LEN(v);
-		ret = 0;
+		ret = FNV_OFFSET_BASIS;
 		for(i=0, c=OBJ_DATA_PTR(v); i<len; i++, c++) {
 			ret *= FNV_PRIME;
 			ret ^= *c;
