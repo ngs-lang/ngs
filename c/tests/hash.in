@@ -1,0 +1,12 @@
+{
+	h = {
+		"xyz": 10
+		"xyw": 11
+		"xy1": 12
+		"xy2": 13
+	}
+	echo("Test: in")
+	dump("xyz" in h)
+	dump("xyz1" in h)
+	dump("1xyz" in h)
+}

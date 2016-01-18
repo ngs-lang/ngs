@@ -9,6 +9,8 @@ static void _dump(VALUE v, int level) {
 	void *symbols_buffer[1];
 	VALUE *ptr;
 	size_t i;
+	HASH_OBJECT_ENTRY *e;
+	HASH_OBJECT_ENTRY **buckets;
 
 	if(IS_NULL(v))  { printf("%*s* null\n",    level << 1, ""); goto exit; }
 	if(IS_TRUE(v))  { printf("%*s* true\n",    level << 1, ""); goto exit; }
@@ -59,6 +61,21 @@ static void _dump(VALUE v, int level) {
 			_dump(*ptr, level+1);
 		}
 		goto exit;
+	}
+
+	if(IS_HASH(v)) {
+		printf("%*s* hash with total of %zu items in %zu buckets at %p\n", level << 1, "", OBJ_LEN(v), HASH_BUCKETS_N(v), OBJ_DATA_PTR(v));
+		buckets = OBJ_DATA_PTR(v);
+		for(i=0; i<HASH_BUCKETS_N(v); i++) {
+			printf("%*s* bucket # %zu\n", (level+1) << 1, "", i);
+			for(e=buckets[i]; e; e=e->bucket_next) {
+				printf("%*s* item at %p with hash() of %u insertion_order_prev=%p insertion_order_next=%p \n", (level+2) << 1, "", e, e->hash, e->insertion_order_prev, e->insertion_order_next);
+				printf("%*s* key\n", (level+3) << 1, "");
+				_dump(e->key, level+4);
+				printf("%*s* value\n", (level+3) << 1, "");
+				_dump(e->val, level+4);
+			}
+		}
 	}
 
 	if(IS_NGS_TYPE(v)) {
@@ -119,6 +136,7 @@ VALUE make_hash(size_t start_buckets) {
 
 	if(start_buckets) {
 		OBJ_DATA_PTR(ret) = NGS_MALLOC(start_buckets * sizeof(HASH_OBJECT_ENTRY *));
+		memset(OBJ_DATA_PTR(ret), 0, start_buckets * sizeof(HASH_OBJECT_ENTRY *)); // XXX check if needed
 	} else {
 		OBJ_DATA_PTR(ret) = NULL;
 	}
@@ -126,24 +144,67 @@ VALUE make_hash(size_t start_buckets) {
 	HASH_HEAD(ret) = NULL;
 	HASH_TAIL(ret) = NULL;
 	OBJ_LEN(ret) = 0;
+
 	return ret;
 }
 
+// TODO: implement comparison of the rest of the types
 int is_equal(VALUE a, VALUE b) {
-	// XXX: must implement
 	if(IS_INT(a) && IS_INT(b)) {
 		return GET_INT(a) == GET_INT(b);
+	}
+	if(IS_STRING(a) && IS_STRING(b)) {
+		if(OBJ_LEN(a) != OBJ_LEN(b)) {
+			return 0;
+		}
+		return !memcmp(OBJ_DATA_PTR(a), OBJ_DATA_PTR(b), OBJ_LEN(a));
+	}
+	if(IS_OBJ(a) && IS_OBJ(b)) {
+		return a.num == b.num;
 	}
 	return 0;
 }
 
+// https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
+// http://www.isthe.com/chongo/tech/comp/fnv/index.html#FNV-param
+#define FNV_PRIME (16777619)
+#define FNV_OFFSET_BASIS (2166136261)
 uint32_t hash(VALUE v) {
-	// XXX: to implement
+	uint32_t ret;
+	union {
+		uint32_t i;
+		unsigned char c[4];
+	} t;
 	if(IS_INT(v)) {
 		// XXX: check how exactly the casting is done
 		return (uint32_t)(GET_INT(v));
 	}
-	return 0;
+	if(IS_STRING(v)) {
+		unsigned char *c;
+		size_t i, len=OBJ_LEN(v);
+		ret = 0;
+		for(i=0, c=OBJ_DATA_PTR(v); i<len; i++, c++) {
+			ret *= FNV_PRIME;
+			ret ^= *c;
+		}
+		return ret;
+	}
+	if(IS_OBJ(v)) {
+		t.i = v.num >> 4; // I think it's 16 bytes aligned so we can discard the non-significant bits. TODO: check alignment.
+		ret = FNV_OFFSET_BASIS;
+		ret *= FNV_PRIME;
+		ret ^= t.c[3];
+		ret *= FNV_PRIME;
+		ret ^= t.c[2];
+		ret *= FNV_PRIME;
+		ret ^= t.c[1];
+		ret *= FNV_PRIME;
+		ret ^= t.c[0];
+		return ret;
+	}
+	// XXX: to implement hashing of the rest
+	// Not sure whether to degrade performance by returning a constant or abort here or warn.
+	return 1020304050;
 }
 
 void resize_hash_for_new_len(VALUE h, RESIZE_HASH_AFTER after) {
@@ -159,7 +220,7 @@ void resize_hash_for_new_len(VALUE h, RESIZE_HASH_AFTER after) {
 		if(new_buckets_n == 0) {
 			new_buckets_n = 8;
 		}
-		while(new_buckets_n <= OBJ_LEN(h)) {
+		while(new_buckets_n < OBJ_LEN(h)) {
 			new_buckets_n <<= 1;
 		}
 	} else {
@@ -184,10 +245,8 @@ void resize_hash_for_new_len(VALUE h, RESIZE_HASH_AFTER after) {
 		e->bucket_next = buckets[n];
 		buckets[n] = e;
 	}
-
 	OBJ_DATA_PTR(h) = buckets;
-
-	return;
+	HASH_BUCKETS_N(h) = new_buckets_n;
 }
 
 HASH_OBJECT_ENTRY *get_hash_key(VALUE h, VALUE k) {
@@ -219,14 +278,17 @@ void set_hash_key(VALUE h, VALUE k, VALUE v) {
 	buckets = OBJ_DATA_PTR(h);
 	e = NGS_MALLOC(sizeof(*e));
 	assert(e);
-	n = hash(k) % HASH_BUCKETS_N(h);
+	e->hash = hash(k);
+	n = e->hash % HASH_BUCKETS_N(h);
 	e->key = k;
 	e->val = v;
 	e->bucket_next = buckets[n];
 	e->insertion_order_prev = HASH_TAIL(h);
 	e->insertion_order_next = NULL;
 	buckets[n] = e;
-	HASH_TAIL(h)->insertion_order_next = e;
+	if(HASH_TAIL(h)) {
+		HASH_TAIL(h)->insertion_order_next = e;
+	}
 	HASH_TAIL(h) = e;
 
 }
@@ -337,6 +399,7 @@ int obj_is_of_type(VALUE obj, VALUE t) {
 	OBJ_C_OBJ_IS_OF_TYPE(T_STR, IS_STRING);
 	OBJ_C_OBJ_IS_OF_TYPE(T_ARR, IS_ARRAY);
 	OBJ_C_OBJ_IS_OF_TYPE(T_TYPE, IS_NGS_TYPE);
+	OBJ_C_OBJ_IS_OF_TYPE(T_HASH, IS_HASH);
 
 	dump_titled("Unimplemented type to check", t);
 	assert(0=="native_is(): Unimplemented check against builtin type");

@@ -188,6 +188,7 @@ enum IMMEDIATE_VALUES {
 #define OBJ_DATA_PTR(v)           (((OBJECT *)(v).ptr)->val.ptr)
 #define OBJ_TYPE(v)               (((OBJECT *)(v).ptr)->type.num)
 #define OBJ_TYPE_PTR(v)           (((OBJECT *)(v).ptr)->type.ptr)
+#define IS_OBJ(v)                 ((v.num & TAG_AND) == 0)
 #define IS_STRING(v)              (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_STR)
 #define IS_NATIVE_METHOD(v)       (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_NATIVE_METHOD)
 #define IS_CLOSURE(v)             (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_CLOSURE)
@@ -196,9 +197,9 @@ enum IMMEDIATE_VALUES {
 #define IS_VLO(v)                 (IS_ARRAY(v) || IS_STRING(v))
 #define IS_HASH(v)                (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_HASH)
 #define ARRAY_ITEMS(v)            ((VALUE *)(OBJ_DATA_PTR(v)))
-#define HASH_BUCKETS_N(v)         (((HASH_OBJECT *)(OBJ_DATA_PTR(v)))->n_buckets)
-#define HASH_HEAD(v)              (((HASH_OBJECT *)(OBJ_DATA_PTR(v)))->head)
-#define HASH_TAIL(v)              (((HASH_OBJECT *)(OBJ_DATA_PTR(v)))->tail)
+#define HASH_BUCKETS_N(v)         (((HASH_OBJECT *)(v).ptr)->n_buckets)
+#define HASH_HEAD(v)              (((HASH_OBJECT *)(v).ptr)->head)
+#define HASH_TAIL(v)              (((HASH_OBJECT *)(v).ptr)->tail)
 
 // Boolean 00001X10
 #define GET_INVERTED_BOOL(v)      ((VALUE){.num = (v).num ^= 4})
@@ -206,6 +207,9 @@ enum IMMEDIATE_VALUES {
 VALUE make_var_len_obj(uintptr_t type, const size_t item_size, const size_t len);
 VALUE make_array(size_t len);
 VALUE make_array_with_values(size_t len, VALUE *values);
+VALUE make_hash(size_t start_buckets);
+HASH_OBJECT_ENTRY *get_hash_key(VALUE h, VALUE k);
+void set_hash_key(VALUE h, VALUE k, VALUE v);
 VALUE make_string(const char *s);
 void vlo_ensure_additional_space(VALUE v, size_t n);
 void array_push(VALUE arr, VALUE v);

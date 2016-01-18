@@ -60,6 +60,7 @@ typedef struct vm_struct {
 	NGS_TYPE *Any;
 	NGS_TYPE *Seq;
 	NGS_TYPE *Type;
+	NGS_TYPE *Hash;
 } VM;
 
 enum opcodes {
@@ -97,6 +98,7 @@ enum opcodes {
 	OP_STORE_UPVAR,
 	OP_UPVAR_DEF_P,
 	OP_DEF_UPVAR_FUNC,
+	OP_MAKE_HASH,
 	NUMBER_OF_OPCODES,
 };
 

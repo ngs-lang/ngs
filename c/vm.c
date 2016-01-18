@@ -38,6 +38,7 @@ char *opcodes_names[] = {
 	/* 31 */ "STORE_UPVAR",
 	/* 32 */ "UPVAR_DEF_P",
 	/* 33 */ "DEF_UPVAR_FUNC",
+	/* 34 */ "MAKE_HASH",
 };
 
 
@@ -125,6 +126,11 @@ METHOD_RESULT native_not_any METHOD_PARAMS {
 		assert(IS_BOOL(argv[0]));
 	}
 	METHOD_RETURN(GET_INVERTED_BOOL(argv[0]));
+}
+
+METHOD_RESULT native_in_any_hash METHOD_PARAMS {
+	SET_BOOL(*result, get_hash_key(argv[1], argv[0]));
+	return METHOD_OK;
 }
 
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
@@ -236,6 +242,7 @@ void vm_init(VM *vm) {
 	vm->Any  = register_builtin_type(vm, "Any",  T_ANY);
 	vm->Seq  = register_builtin_type(vm, "Seq",  T_SEQ);
 	vm->Type = register_builtin_type(vm, "Type", T_TYPE);
+	vm->Hash = register_builtin_type(vm, "Hash", T_HASH);
 	register_global_func(vm, "+",    &native_plus_arr_arr,  2, "a",   vm->Arr, "b", vm->Arr);
 	register_global_func(vm, "+",    &native_plus_int_int,  2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "-",    &native_minus_int_int, 2, "a",   vm->Int, "b", vm->Int);
@@ -246,6 +253,7 @@ void vm_init(VM *vm) {
 	register_global_func(vm, "Str",  &native_Str_int,       1, "n",   vm->Int);
 	register_global_func(vm, "is",   &native_is_any_type,   2, "obj", vm->Any, "t", vm->Type);
 	register_global_func(vm, "not",  &native_not_any,       1, "x",   vm->Any);
+	register_global_func(vm, "in",   &native_in_any_hash,   2, "x",   vm->Any, "h", vm->Hash);
 }
 
 void ctx_init(CTX *ctx) {
@@ -374,7 +382,7 @@ METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result) {
 	PATCH_OFFSET po;
 	JUMP_OFFSET jo;
 	LOCAL_VAR_INDEX lvi;
-	size_t vlo_len;
+	size_t vlo_len, j;
 	METHOD_RESULT mr;
 	size_t saved_stack_ptr = ctx->stack_ptr;
 	size_t string_components_count;
@@ -681,6 +689,16 @@ do_jump:
 							} else {
 								array_push(UPLEVELS[uvi][lvi], TOP);
 							}
+							goto main_loop;
+		case OP_MAKE_HASH:
+							POP(v);
+							vlo_len = GET_INT(v);
+							v = make_hash(vlo_len);
+							ctx->stack_ptr -= vlo_len * 2;
+							for(j=0; j<vlo_len;j++) {
+								set_hash_key(v, ctx->stack[ctx->stack_ptr+j*2], ctx->stack[ctx->stack_ptr+j*2+1]);
+							}
+							PUSH(v);
 							goto main_loop;
 
 		default:

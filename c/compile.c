@@ -407,6 +407,17 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			// "local my_var"
 			// Used for register_local_var, does not produce any code
 			break;
+		case HASH_LIT_NODE:
+			DEBUG_COMPILER("COMPILER: %s %zu\n", "HASH NODE", *idx);
+			for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
+				compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+				compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+				// XXX
+			}
+			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, argc);
+			OPCODE(*buf, OP_MAKE_HASH);
+			POP_IF_DONT_NEED_RESULT(*buf);
+			break;
 		default:
 			assert(0=="compile_main_section(): unknown node type");
 	}
