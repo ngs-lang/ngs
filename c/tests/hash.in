@@ -13,4 +13,10 @@
 
 	echo("Test: hash() is int")
 	dump(hash("xyz") is Int)
+
+	echo("Test: keys order")
+	dump(keys(h))
+
+	echo("Test: values order")
+	dump(values(h))
 }

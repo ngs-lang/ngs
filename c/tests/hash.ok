@@ -4,3 +4,15 @@ Test: in
 * false
 Test: hash() is int
 * true
+Test: keys order
+* array of length 4
+  * string(len=3) xyz
+  * string(len=3) xyw
+  * string(len=3) xy1
+  * string(len=3) xy2
+Test: values order
+* array of length 4
+  * int 10
+  * int 11
+  * int 12
+  * int 13

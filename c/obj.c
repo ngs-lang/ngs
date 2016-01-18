@@ -286,6 +286,9 @@ void set_hash_key(VALUE h, VALUE k, VALUE v) {
 	e->insertion_order_prev = HASH_TAIL(h);
 	e->insertion_order_next = NULL;
 	buckets[n] = e;
+	if(!HASH_HEAD(h)) {
+		HASH_HEAD(h) = e;
+	}
 	if(HASH_TAIL(h)) {
 		HASH_TAIL(h)->insertion_order_next = e;
 	}

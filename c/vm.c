@@ -133,9 +133,29 @@ METHOD_RESULT native_in_any_hash METHOD_PARAMS {
 	return METHOD_OK;
 }
 
-METHOD_RESULT native_hash METHOD_PARAMS {
+METHOD_RESULT native_hash_any METHOD_PARAMS {
 	// METHOD_RETURN(MAKE_INT(hash(argv[0])));
 	SET_INT(*result, hash(argv[0]));
+	return METHOD_OK;
+}
+
+METHOD_RESULT native_keys_hash METHOD_PARAMS {
+	size_t i;
+	HASH_OBJECT_ENTRY *e;
+	*result = make_array(OBJ_LEN(argv[0]));
+	for(e=HASH_HEAD(argv[0]), i=0; e; e=e->insertion_order_next, i++) {
+		*(VALUE *)(ARRAY_ITEMS(*result)+i) = e->key;
+	}
+	return METHOD_OK;
+}
+
+METHOD_RESULT native_values_hash METHOD_PARAMS {
+	size_t i;
+	HASH_OBJECT_ENTRY *e;
+	*result = make_array(OBJ_LEN(argv[0]));
+	for(e=HASH_HEAD(argv[0]), i=0; e; e=e->insertion_order_next, i++) {
+		*(VALUE *)(ARRAY_ITEMS(*result)+i) = e->val;
+	}
 	return METHOD_OK;
 }
 
@@ -249,18 +269,20 @@ void vm_init(VM *vm) {
 	vm->Seq  = register_builtin_type(vm, "Seq",  T_SEQ);
 	vm->Type = register_builtin_type(vm, "Type", T_TYPE);
 	vm->Hash = register_builtin_type(vm, "Hash", T_HASH);
-	register_global_func(vm, "+",    &native_plus_arr_arr,  2, "a",   vm->Arr, "b", vm->Arr);
-	register_global_func(vm, "+",    &native_plus_int_int,  2, "a",   vm->Int, "b", vm->Int);
-	register_global_func(vm, "-",    &native_minus_int_int, 2, "a",   vm->Int, "b", vm->Int);
-	register_global_func(vm, "<",    &native_less_int_int,  2, "a",   vm->Int, "b", vm->Int);
-	register_global_func(vm, "dump", &native_dump_any,      1, "obj", vm->Any);
-	register_global_func(vm, "echo", &native_echo_str,      1, "s",   vm->Str);
-	register_global_func(vm, "Bool", &native_Bool_any,      1, "x",   vm->Any);
-	register_global_func(vm, "Str",  &native_Str_int,       1, "n",   vm->Int);
-	register_global_func(vm, "is",   &native_is_any_type,   2, "obj", vm->Any, "t", vm->Type);
-	register_global_func(vm, "not",  &native_not_any,       1, "x",   vm->Any);
-	register_global_func(vm, "in",   &native_in_any_hash,   2, "x",   vm->Any, "h", vm->Hash);
-	register_global_func(vm, "hash", &native_hash,          1, "x",   vm->Any);
+	register_global_func(vm, "+",        &native_plus_arr_arr,      2, "a",   vm->Arr, "b", vm->Arr);
+	register_global_func(vm, "+",        &native_plus_int_int,      2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, "-",        &native_minus_int_int,     2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, "<",        &native_less_int_int,      2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, "dump",     &native_dump_any,          1, "obj", vm->Any);
+	register_global_func(vm, "echo",     &native_echo_str,          1, "s",   vm->Str);
+	register_global_func(vm, "Bool",     &native_Bool_any,          1, "x",   vm->Any);
+	register_global_func(vm, "Str",      &native_Str_int,           1, "n",   vm->Int);
+	register_global_func(vm, "is",       &native_is_any_type,       2, "obj", vm->Any, "t", vm->Type);
+	register_global_func(vm, "not",      &native_not_any,           1, "x",   vm->Any);
+	register_global_func(vm, "in",       &native_in_any_hash,       2, "x",   vm->Any, "h", vm->Hash);
+	register_global_func(vm, "hash",     &native_hash_any,          1, "x",   vm->Any);
+	register_global_func(vm, "keys",     &native_keys_hash,         1, "h",   vm->Hash);
+	register_global_func(vm, "values",   &native_values_hash,       1, "h",   vm->Hash);
 }
 
 void ctx_init(CTX *ctx) {
