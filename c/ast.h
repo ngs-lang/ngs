@@ -45,6 +45,7 @@ enum ast_node_type {
 	ARG_NODE,
 	LOCAL_NODE,
 	HASH_LIT_NODE,
+	INDEX_NODE,
 	NUMBER_OF_AST_NODE_TYPES
 };
 

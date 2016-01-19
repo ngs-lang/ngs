@@ -234,6 +234,16 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_CALL);
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
+		case INDEX_NODE:
+			DEBUG_COMPILER("COMPILER: %s %zu\n", "INDEX NODE", *idx);
+			OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
+			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 2);
+			compile_identifier(ctx, buf, idx, "[]", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
+			OPCODE(*buf, OP_CALL);
+			POP_IF_DONT_NEED_RESULT(*buf);
+			break;
 		case NUMBER_NODE:
 			/*printf("Compiling tNUMBER @ %d\n", *idx);*/
 			if(need_result) {
@@ -247,12 +257,21 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 		case ASSIGNMENT_NODE:
 			ptr = node->first_child;
 			compile_main_section(ctx, ptr->next_sibling, buf, idx, allocated, NEED_RESULT);
-			DUP_IF_NEED_RESULT(*buf);
 			switch(ptr->type) {
 				case IDENTIFIER_NODE:
 					// TODO: handle local vs global
 					DEBUG_COMPILER("COMPILER: %s %zu\n", "identifier <- expression", *idx);
+					DUP_IF_NEED_RESULT(*buf);
 					compile_identifier(ctx, buf, idx, ptr->name, OP_STORE_LOCAL, OP_STORE_UPVAR, OP_STORE_GLOBAL);
+					break;
+				case INDEX_NODE:
+					OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
+					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+					compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+					compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+					OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 3);
+					compile_identifier(ctx, buf, idx, "[]=", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
+					OPCODE(*buf, OP_CALL);
 					break;
 				default:
 					assert(0=="compile_main_section(): assignment to unknown node type");

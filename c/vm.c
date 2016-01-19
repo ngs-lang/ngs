@@ -159,6 +159,27 @@ METHOD_RESULT native_values_hash METHOD_PARAMS {
 	return METHOD_OK;
 }
 
+METHOD_RESULT native_len_hash METHOD_PARAMS {
+	*result = MAKE_INT(OBJ_LEN(argv[0]));
+	return METHOD_OK;
+}
+
+METHOD_RESULT native_index_get_hash_any METHOD_PARAMS {
+	HASH_OBJECT_ENTRY *e;
+	e = get_hash_key(argv[0], argv[1]);
+	if(!e) {
+		assert(0=="Don't know how to throw KeyNotFound exception yet");
+	}
+	*result = e->val;
+	return METHOD_OK;
+}
+
+METHOD_RESULT native_index_set_hash_any_any METHOD_PARAMS {
+	set_hash_key(argv[0], argv[1], argv[2]);
+	*result = argv[2];
+	return METHOD_OK;
+}
+
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
 	HASH_FIND(hh, vm->globals_indexes, name, name_len, var);
@@ -283,6 +304,9 @@ void vm_init(VM *vm) {
 	register_global_func(vm, "hash",     &native_hash_any,          1, "x",   vm->Any);
 	register_global_func(vm, "keys",     &native_keys_hash,         1, "h",   vm->Hash);
 	register_global_func(vm, "values",   &native_values_hash,       1, "h",   vm->Hash);
+	register_global_func(vm, "len",      &native_len_hash,          1, "h",   vm->Hash);
+	register_global_func(vm, "[]",       &native_index_get_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
+	register_global_func(vm, "[]=",      &native_index_set_hash_any_any,    3, "h",   vm->Hash,"k", vm->Any, "v", vm->Any);
 }
 
 void ctx_init(CTX *ctx) {

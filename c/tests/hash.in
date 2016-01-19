@@ -19,4 +19,12 @@
 
 	echo("Test: values order")
 	dump(values(h))
+
+	echo("Test: replace value")
+	dump(h["xyw"])
+	h["xyw"] = 1122;
+	dump(h["xyw"])
+
+	echo("Test: len")
+	dump(len(h))
 }

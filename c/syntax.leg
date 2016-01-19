@@ -205,15 +205,32 @@ binop2 = space <("is" | "throws" | "returns" | "or" | "and" | "in" | "not in")> 
 		$$ = ret;
 	}
 
-chain-expression =
-	e:call-expression {
-		$$ = e;
+chain-expression = b:basic-expression (
+		inline_space? "(" space? args:function_call_arguments space? ")" {
+			MAKE_NODE(ret, CALL_NODE);
+			ret->first_child = b;
+			ret->first_child->next_sibling = args;
+			b = ret;
+		}
+		|
+		inline_space? "[" space? idx:expression space? "]" {
+			MAKE_NODE(ret, INDEX_NODE);
+			ret->first_child = b;
+			ret->first_child->next_sibling = idx;
+			b = ret;
+		}
+		|
+		inline_space? "=" space? e:expression {
+			MAKE_NODE(ret, ASSIGNMENT_NODE);
+			b->next_sibling = e;
+			ret->first_child = b;
+			b = ret;
+		}
+	)*
+	{
+		$$ = b;
+		CAPTURE_LOCATION($$)
 	}
-
-call-expression =
-	function-call
-	|
-	basic-expression
 
 basic-expression =
 	if
