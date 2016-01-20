@@ -190,7 +190,9 @@ uint32_t hash(VALUE v) {
 		return ret;
 	}
 	if(IS_OBJ(v)) {
-		t.i = v.num >> 4; // I think it's 16 bytes aligned so we can discard the non-significant bits. TODO: check alignment.
+		// Warning: only using lower 32 significant bits out of 60 significan bits on x86_64.
+		// Observed to be 16 bytes aligned on x86_64 Linux. Discarding zero bits.
+		t.i = v.num >> 4;
 		ret = FNV_OFFSET_BASIS;
 		ret *= FNV_PRIME;
 		ret ^= t.c[3];
@@ -273,7 +275,7 @@ void set_hash_key(VALUE h, VALUE k, VALUE v) {
 		return;
 	}
 
-	OBJ_LEN(h) += 1;
+	OBJ_LEN(h)++;
 	resize_hash_for_new_len(h, RESIZE_HASH_AFTER_GROW);
 	buckets = OBJ_DATA_PTR(h);
 	e = NGS_MALLOC(sizeof(*e));
@@ -294,6 +296,33 @@ void set_hash_key(VALUE h, VALUE k, VALUE v) {
 	}
 	HASH_TAIL(h) = e;
 
+}
+
+int del_hash_key(VALUE h, VALUE k) {
+	HASH_OBJECT_ENTRY *e, **prev;
+	HASH_OBJECT_ENTRY **buckets = OBJ_DATA_PTR(h);
+	uint32_t n = hash(k) % HASH_BUCKETS_N(h);
+	for(e=buckets[n], prev=&buckets[n]; e; prev=&e->bucket_next, e=e->bucket_next) {
+		if(is_equal(e->key, k)) {
+			if(HASH_HEAD(h) == e) {
+				HASH_HEAD(h) = e->insertion_order_next;
+			}
+			if(HASH_TAIL(h) == e) {
+				HASH_TAIL(h) = e->insertion_order_prev;
+			}
+			if(e->insertion_order_prev) {
+				e->insertion_order_prev->insertion_order_next = e->insertion_order_next;
+			}
+			if(e->insertion_order_next) {
+				e->insertion_order_next->insertion_order_prev = e->insertion_order_prev;
+			}
+			*prev = e->bucket_next;
+			OBJ_LEN(h)--;
+			resize_hash_for_new_len(h, RESIZE_HASH_AFTER_SHRINK);
+			return 1;
+		}
+	}
+	return 0;
 }
 
 VALUE make_string(const char *s) {

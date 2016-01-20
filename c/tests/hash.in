@@ -27,4 +27,9 @@
 
 	echo("Test: len")
 	dump(len(h))
+
+	echo("Test: del")
+	del(h, "xy1")
+	del(h, "xy2")
+	dump(len(h))
 }

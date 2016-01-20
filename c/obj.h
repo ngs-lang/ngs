@@ -211,6 +211,7 @@ VALUE make_hash(size_t start_buckets);
 uint32_t hash(VALUE v);
 HASH_OBJECT_ENTRY *get_hash_key(VALUE h, VALUE k);
 void set_hash_key(VALUE h, VALUE k, VALUE v);
+int del_hash_key(VALUE h, VALUE k);
 VALUE make_string(const char *s);
 void vlo_ensure_additional_space(VALUE v, size_t n);
 void array_push(VALUE arr, VALUE v);

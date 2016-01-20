@@ -21,3 +21,5 @@ Test: replace value
 * int 1122
 Test: len
 * int 4
+Test: del
+* int 2

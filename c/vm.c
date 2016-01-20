@@ -180,6 +180,12 @@ METHOD_RESULT native_index_set_hash_any_any METHOD_PARAMS {
 	return METHOD_OK;
 }
 
+METHOD_RESULT native_index_del_hash_any METHOD_PARAMS {
+	del_hash_key(argv[0], argv[1]);
+	*result = argv[0];
+	return METHOD_OK;
+}
+
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
 	HASH_FIND(hh, vm->globals_indexes, name, name_len, var);
@@ -307,6 +313,7 @@ void vm_init(VM *vm) {
 	register_global_func(vm, "len",      &native_len_hash,          1, "h",   vm->Hash);
 	register_global_func(vm, "[]",       &native_index_get_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
 	register_global_func(vm, "[]=",      &native_index_set_hash_any_any,    3, "h",   vm->Hash,"k", vm->Any, "v", vm->Any);
+	register_global_func(vm, "del",      &native_index_del_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
 }
 
 void ctx_init(CTX *ctx) {
