@@ -167,8 +167,8 @@ int is_equal(VALUE a, VALUE b) {
 
 // https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
 // http://www.isthe.com/chongo/tech/comp/fnv/index.html#FNV-param
-#define FNV_PRIME (16777619)
-#define FNV_OFFSET_BASIS (2166136261)
+#define FNV_PRIME (16777619U)
+#define FNV_OFFSET_BASIS (2166136261U)
 uint32_t hash(VALUE v) {
 	uint32_t ret;
 	union {

@@ -7,7 +7,7 @@ CC := gcc
 # -rdynamic -- for backtrace_symbols() to work
 CFLAGS := -Wall -Wextra -gdwarf-2 -g3 -g -O1
 CFLAGS_DEBUG=-DNGS_DEBUG_FLAGS=0xFFFF -DYY_DEBUG=1
-LDLIBS := -lfl -lpthread -lgc
+LDLIBS := -lpthread -lgc
 LDFLAGS := -rdynamic
 # -pg - for gprof profiler
 LDFLAGS_PROFILER := -pg
