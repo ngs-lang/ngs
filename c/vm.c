@@ -214,6 +214,7 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	var->index = vm->globals_len++;
 	HASH_ADD_KEYPTR(hh, vm->globals_indexes, var->name, name_len, var);
 	GLOBALS[var->index].num = V_UNDEF;
+	vm->globals_names[var->index] = var->name;
 	DEBUG_VM_RUN("leaving get_global_index() status=new vm=%p name=%.*s -> index=" GLOBAL_VAR_INDEX_FMT "\n", vm, (int)name_len, name, var->index);
 	return var->index;
 }
@@ -280,9 +281,10 @@ NGS_TYPE *register_builtin_type(VM *vm, const char *name, NATIVE_TYPE_ID native_
 
 void vm_init(VM *vm) {
 	vm->bytecode = NULL;
-	vm->globals_indexes = NULL;
+	vm->globals_indexes = NULL; // UT_hash_table
 	vm->globals_len = 0;
 	vm->globals = NGS_MALLOC(sizeof(*(vm->globals)) * MAX_GLOBALS);
+	vm->globals_names = NGS_MALLOC(sizeof(char *) * MAX_GLOBALS);
 	// Keep global functions registration in order.
 	// This way the compiler can use globals_indexes as the beginning of
 	// it's symbol table for globals.
@@ -540,7 +542,7 @@ main_loop:
 #endif
 							// TODO: report error here instead of crashing
 							if(IS_UNDEF(GLOBALS[gvi])) {
-								printf("Global %d not found\n", gvi);
+								fprintf(stderr, "Global '%s' (index %d) not found\n", vm->globals_names[gvi], gvi);
 								assert(0=="Global not found");
 							}
 							// dump_titled("FETCH_GLOBAL", GLOBALS[gvi]);

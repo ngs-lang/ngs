@@ -50,6 +50,7 @@ typedef struct vm_struct {
 	VALUE *globals;
 	size_t globals_len;
 	VAR_INDEX *globals_indexes;
+	char **globals_names;
 
 	NGS_TYPE *Null;
 	NGS_TYPE *Bool;
