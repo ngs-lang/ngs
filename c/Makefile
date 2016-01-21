@@ -18,8 +18,8 @@ SRC := debug.o ast.o obj.o compile.o decompile.o vm.o ngs.o
 all: ngs ngs-prof ngs-debug
 
 # Built for peg/leg v 0.1.15
-syntax.c: syntax.leg patch-leg-output.sed patch-leg-output.awk
-	leg $< | sed -f patch-leg-output.sed | awk -f patch-leg-output.awk >$@
+syntax.c: syntax.leg patch-leg-input.sed patch-leg-output.sed patch-leg-output.awk
+	cat $< | sed -f patch-leg-input.sed | leg  | sed -f patch-leg-output.sed | awk -f patch-leg-output.awk >$@
 
 %.o: %.c $(COMMON_DEPS)
 	$(CC) -c $(CFLAGS) $< -o $@

@@ -40,6 +40,7 @@ void print_ast(ast_node *node, int level) {
 	char info[AST_NODE_INFO_STR_LEN] = "(n/a)";
 
 	switch(node->type) {
+		case CALL_NODE:
 		case NUMBER_NODE: snprintf(info, AST_NODE_INFO_STR_LEN-1, "%d", node->number); break;
 	}
 

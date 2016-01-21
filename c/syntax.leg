@@ -177,15 +177,30 @@ set-item-expression =
 
 binop-expression =
 	e1:chain-expression (b:binop e2:chain-expression {
-		// XXX: operators priorities
+		// TODO: cleaner code and better naming
+		MAKE_NODE(args, ARGS_NODE);
+		b->next_sibling = args;
+		if(e1->type == CALL_NODE && e1->number && e1->number < b->number) {
+			MAKE_NODE(next_node, CALL_NODE);
+			next_node->first_child = b;
+			next_node->number = b->number;
+			MAKE_REQ_ARG_NODE(a2, e2);
+			// printf("AHA TAKING\n");
+			// print_ast(e1->first_child->next_sibling->first_child->next_sibling, 0);
+			args->first_child = e1->first_child->next_sibling->first_child->next_sibling;
+			args->first_child->next_sibling = a2;
+			MAKE_REQ_ARG_NODE(arg_for_next_node, next_node);
+			e1->first_child->next_sibling->first_child->next_sibling = arg_for_next_node;
+			return;
+		}
 		MAKE_NODE(ret, CALL_NODE);
 		ret->first_child = b;
-		MAKE_NODE(args, ARGS_NODE);
+		ret->number = b->number;
+		// args
 			MAKE_REQ_ARG_NODE(a1, e1);
 			MAKE_REQ_ARG_NODE(a2, e2);
 			a1->next_sibling = a2;
 			args->first_child = a1;
-		b->next_sibling = args;
 		e1 = ret;
 	} )* {
 		// XXX
@@ -194,11 +209,21 @@ binop-expression =
 
 binop = binop1 | binop2
 
-binop1 = space? <("@?" | "@" | "|" | "==" | "!=" | "<" | ">" | "~" | "+" | "-" | "*" | "/")> space? {
-		MAKE_NODE(ret, IDENTIFIER_NODE);
-		ret->name = strdup(yytext);
-		$$ = ret;
-	}
+binop1 = space? (
+	  <"|">  @@ 120 @@
+	| <"=="> @@ 130 @@
+	| <"!="> @@ 130 @@
+	| <"@?"> @@ 140 @@
+	| <"@">  @@ 140 @@
+	| <"<">  @@ 150 @@
+	| <">">  @@ 150 @@
+	| <"~">  @@ 150 @@
+	| <"+">  @@ 190 @@
+	| <"-">  @@ 190 @@
+	| <"*">  @@ 200 @@
+	| <"/">  @@ 200 @@
+	) space?
+
 binop2 = space <("is" | "throws" | "returns" | "or" | "and" | "in" | "not in")> space {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = strdup(yytext);
@@ -302,8 +327,6 @@ function-definition-parameters =
 	|
 	{
 		MAKE_NODE(ret, PARAMS_NODE);
-		ret->first_child = NULL;
-		ret->last_child = NULL;
 		$$ = ret;
 	}
 
@@ -348,8 +371,6 @@ function-call-arguments =
 	|
 	{
 		MAKE_NODE(ret, ARGS_NODE);
-		ret->first_child = NULL;
-		ret->last_child = NULL;
 		$$ = ret;
 	}
 
@@ -371,7 +392,6 @@ function-call-argument =
 array-literal =
 		"[" space? "]" {
 				MAKE_NODE(ret, ARR_LIT_NODE);
-				ret->first_child = NULL; // not needed because of calloc but want to be explicit
 				$$ = ret;
 		}
 		| "[" items:array-items space? ","? space? "]" {
@@ -387,14 +407,12 @@ array-items =
 
 array-literal-node = {
 		MAKE_NODE(ret, ARR_LIT_NODE);
-		ret->first_child = NULL;
 		$$ = ret;
 }
 
 hash-literal =
 		"{" space? "}" {
 				MAKE_NODE(ret, HASH_LIT_NODE);
-				ret->first_child = NULL;
 				$$ = ret;
 		}
 		| "{" space? items:hash-items space? ","? space? "}" {
@@ -418,7 +436,6 @@ hash-item =
 
 hash-literal-node = {
 		MAKE_NODE(ret, HASH_LIT_NODE);
-		ret->first_child = NULL;
 		$$ = ret;
 }
 
@@ -515,7 +532,6 @@ number =
 	<[0-9]+> {
 		MAKE_NODE(ret, NUMBER_NODE);
 		ret->number = atoi(yytext);
-		ret->next_sibling = NULL;
 		$$ = ret;
 	}
 

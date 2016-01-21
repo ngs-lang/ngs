@@ -77,6 +77,9 @@ METHOD_RESULT native_ ## name ## _int_int METHOD_PARAMS { \
 
 INT_METHOD(plus, +);
 INT_METHOD(minus, -);
+INT_METHOD(mul, *);
+INT_METHOD(div, /);
+INT_METHOD(mod, %);
 INT_CMP_METHOD(less, <);
 
 METHOD_RESULT native_dump_any METHOD_PARAMS {
@@ -300,6 +303,9 @@ void vm_init(VM *vm) {
 	vm->Hash = register_builtin_type(vm, "Hash", T_HASH);
 	register_global_func(vm, "+",        &native_plus_arr_arr,      2, "a",   vm->Arr, "b", vm->Arr);
 	register_global_func(vm, "+",        &native_plus_int_int,      2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, "*",        &native_mul_int_int,       2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, "/",        &native_div_int_int,       2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, "%",        &native_mod_int_int,       2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "-",        &native_minus_int_int,     2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "<",        &native_less_int_int,      2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "dump",     &native_dump_any,          1, "obj", vm->Any);
