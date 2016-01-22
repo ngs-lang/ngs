@@ -437,6 +437,14 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_MAKE_HASH);
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
+		case RETURN_NODE:
+			if(node->first_child) {
+				compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			} else {
+				OPCODE(*buf, OP_PUSH_NULL);
+			}
+			OPCODE(*buf, OP_RET);
+			break;
 		default:
 			assert(0=="compile_main_section(): unknown node type");
 	}

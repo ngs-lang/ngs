@@ -242,7 +242,8 @@ binop1 = space? (
 	) space?
 
 binop2 = space (
-	  <"is">      @@ 90 @@
+	  <"is not">  @@ 90 @@
+	| <"is">      @@ 90 @@
 	| <"throws">  @@ 50 @@
 	| <"returns"> @@ 50 @@
 	| <"or">      @@ 60 @@
@@ -308,6 +309,8 @@ basic-expression =
 	local-declaration
 	|
 	function-definition
+	|
+	return
 	|
 	identifier
 	|
@@ -615,6 +618,9 @@ str-comps-node = {
 		MAKE_NODE(ret, STR_COMPS_NODE);
 		$$ = ret;
 }
+
+return = "return" r:return-node (inline_space e:expression { r->first_child = e; }) { $$ = r; }
+return-node = { MAKE_NODE(ret, RETURN_NODE); $$ = ret; }
 
 %%
 #undef ALLOC_NODE

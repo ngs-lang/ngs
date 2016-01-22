@@ -27,7 +27,8 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 	"arg",
 	"local",
 	"hash",
-	"index"
+	"index",
+	"return"
 };
 
 
