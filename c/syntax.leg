@@ -532,7 +532,7 @@ while =
 	}
 
 number = 
-	<[0-9]+> {
+	<[-+]?[0-9]+> {
 		MAKE_NODE(ret, NUMBER_NODE);
 		ret->number = atoi(yytext);
 		$$ = ret;
