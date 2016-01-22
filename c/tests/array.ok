@@ -1,0 +1,6 @@
+Test: push
+* array of length 1
+  * int 10
+* array of length 2
+  * int 10
+  * int 20

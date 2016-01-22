@@ -1,0 +1,9 @@
+{
+	echo('Test: push')
+	a = [10]
+	dump(a)
+	a.push(20)
+	dump(a)
+
+
+}
