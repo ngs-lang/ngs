@@ -81,6 +81,10 @@ INT_METHOD(mul, *);
 INT_METHOD(div, /);
 INT_METHOD(mod, %);
 INT_CMP_METHOD(less, <);
+INT_CMP_METHOD(less_eq, <=);
+INT_CMP_METHOD(greater, >);
+INT_CMP_METHOD(greater_eq, >=);
+INT_CMP_METHOD(eq, ==);
 
 METHOD_RESULT native_dump_any METHOD_PARAMS {
 	dump(argv[0]);
@@ -308,6 +312,10 @@ void vm_init(VM *vm) {
 	register_global_func(vm, "%",        &native_mod_int_int,       2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "-",        &native_minus_int_int,     2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "<",        &native_less_int_int,      2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, "<=",       &native_less_eq_int_int,   2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, ">",        &native_greater_int_int,   2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, ">=",       &native_greater_eq_int_int,2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, "==",       &native_eq_int_int,        2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "dump",     &native_dump_any,          1, "obj", vm->Any);
 	register_global_func(vm, "echo",     &native_echo_str,          1, "s",   vm->Str);
 	register_global_func(vm, "Bool",     &native_Bool_any,          1, "x",   vm->Any);

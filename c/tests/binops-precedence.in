@@ -1,0 +1,9 @@
+{
+	echo('Test: simple precedence')
+	dump(1+2*3)
+	dump(1*2+3)
+	dump(10*20+5*10)
+
+	echo('Test: same precedence associativity')
+	dump(10-3-2)
+}

@@ -1,0 +1,14 @@
+{
+	dump('Test: integers math')
+	dump([10+20, 10-20, 10*20, 10/2, 20 % 7])
+
+	dump('Test: integers comparison 1 and 2')
+	dump([1<2, 1>2, 1<=2, 1>=2, 1==2])
+
+	dump('Test: integers comparison 2 and 1')
+	dump([2<1, 2>1, 2<=1, 2>=1, 2==1])
+
+	dump('Test: integers comparison 1 and 1')
+	dump([1<1, 1>1, 1<=1, 1>=1, 1==1])
+
+}

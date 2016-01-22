@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <execinfo.h>
+#include <inttypes.h>
 #include <string.h>
 #include "ngs.h"
 #include "obj.h"
@@ -17,7 +18,7 @@ static void _dump(VALUE v, int level) {
 	if(IS_FALSE(v)) { printf("%*s* false\n",   level << 1, ""); goto exit; }
 	if(IS_UNDEF(v)) { printf("%*s* undef\n",   level << 1, ""); goto exit; }
 
-	if(IS_INT(v))   { printf("%*s* int %ld\n", level << 1, "", GET_INT(v)); goto exit; }
+	if(IS_INT(v))   { printf("%*s* int %" PRIdPTR "\n", level << 1, "", GET_INT(v)); goto exit; }
 
 	if(IS_STRING(v)) {
 		printf("%*s* string(len=%zu) %.*s\n", level << 1, "", OBJ_LEN(v), (int) OBJ_LEN(v), (char *)OBJ_DATA_PTR(v));

@@ -1,0 +1,6 @@
+Test: simple precedence
+* int 7
+* int 5
+* int 250
+Test: same precedence associativity
+* int 5

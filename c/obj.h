@@ -19,10 +19,10 @@ typedef enum {
 	RESIZE_HASH_AFTER_GROW   = 1,
 } RESIZE_HASH_AFTER;
 
-// On problems with `uintptr_t` change here according to Ruby source in `include/ruby/ruby.h`
+// On problems with `intptr_t` change here according to Ruby source in `include/ruby/ruby.h`
 // uintptr_t format for printf - PRIXPTR - printf("Blah %" PRIXPTR "\n", VALUE.num);
 typedef union value_union {
-	uintptr_t num;
+	intptr_t num;
 	void * ptr;
 } VALUE;
 
