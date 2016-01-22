@@ -39,6 +39,7 @@ char *opcodes_names[] = {
 	/* 32 */ "UPVAR_DEF_P",
 	/* 33 */ "DEF_UPVAR_FUNC",
 	/* 34 */ "MAKE_HASH",
+	/* 35 */ "TO_BOOL",
 };
 
 
@@ -121,6 +122,8 @@ METHOD_RESULT native_is_any_type METHOD_PARAMS {
 }
 
 METHOD_RESULT native_Bool_any METHOD_PARAMS {
+	// printf("Bool()\n");
+	// dump(argv[0]);
 	if(IS_BOOL(argv[0])) METHOD_RETURN(argv[0])
 	if(IS_INT(argv[0])) METHOD_RETURN(MAKE_BOOL(GET_INT(argv[0])))
 	if(IS_STRING(argv[0]) || IS_ARRAY(argv[0])) METHOD_RETURN(MAKE_BOOL(OBJ_LEN(argv[0])))
@@ -363,12 +366,8 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, c
 	METHOD_RESULT mr;
 	VALUE *callable_items;
 
-	// IF_DEBUG(VM_RUN, dump_titled("_vm_call/callable", callable); );
-	// DEBUG_VM_RUN("_vm_call/argc = %d\n", argc);
-
 	if(IS_ARRAY(callable)) {
 		for(i=OBJ_LEN(callable)-1, callable_items = OBJ_DATA_PTR(callable); i>=0; i--) {
-			// IF_DEBUG(VM_RUN, dump_titled("_vm_call/will_call", callable_items[i]); );
 			mr = _vm_call(vm, ctx, callable_items[i], argc, argv);
 			if(mr == METHOD_OK) {
 				return METHOD_OK;
@@ -498,6 +497,7 @@ main_loop:
 							PUSH(v);
 							goto main_loop;
 		case OP_PUSH_UNDEF:
+							assert(0 == "Should not be used");
 							SET_UNDEF(v);
 							PUSH(v);
 							goto main_loop;
@@ -677,10 +677,12 @@ do_jump:
 							PUSH(v);
 							goto main_loop;
 		case OP_TO_STR:
-							assert(ctx->stack_ptr);
-							if(IS_STRING(ctx->stack[ctx->stack_ptr-1])) {
+							assert(ctx->stack_ptr >= 2);
+							v = TOP;
+							if(IS_STRING(v)) {
 								goto main_loop;
 							}
+							PUSH(v);
 							mr = _vm_call(vm, ctx, (VALUE){.ptr = vm->Str}, 1, &ctx->stack[ctx->stack_ptr-1]);
 							assert(mr == METHOD_OK);
 							goto main_loop;
@@ -785,7 +787,16 @@ do_jump:
 							}
 							PUSH(v);
 							goto main_loop;
-
+		case OP_TO_BOOL:
+							assert(ctx->stack_ptr);
+							v = TOP;
+							if(IS_BOOL(v)) {
+								goto main_loop;
+							}
+							PUSH(v);
+							mr = _vm_call(vm, ctx, (VALUE){.ptr = vm->Bool}, 1, &ctx->stack[ctx->stack_ptr-1]);
+							assert(mr == METHOD_OK);
+							goto main_loop;
 		default:
 							// TODO: exception
 							printf("ERROR: Unknown opcode %d\n", opcode);

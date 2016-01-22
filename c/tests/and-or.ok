@@ -1,0 +1,6 @@
+Test: and
+* int 0
+* int 2
+Test: or
+* int 2
+* int 1

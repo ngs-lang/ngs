@@ -366,9 +366,6 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			break;
 		case STR_COMPS_NODE:
 			for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
-				if(ptr->type != STR_COMP_IMM_NODE) {
-					OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value of OP_TO_STR
-				}
 				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
 				if(ptr->type != STR_COMP_IMM_NODE) {
 					OPCODE(*buf, OP_TO_STR);
@@ -400,6 +397,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			break;
 		case IF_NODE:
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			OPCODE(*buf, OP_TO_BOOL);
 			if_jump = *idx;
 			OPCODE(*buf, OP_JMP_FALSE);
 			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
@@ -444,6 +442,21 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				OPCODE(*buf, OP_PUSH_NULL);
 			}
 			OPCODE(*buf, OP_RET);
+			break;
+		case AND_NODE:
+		case OR_NODE:
+			// TODO: optimize more for DONT_NEED_RESULT case
+			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			OPCODE(*buf, OP_DUP);
+			OPCODE(*buf, OP_TO_BOOL);
+			if_jump = *idx;
+			OPCODE(*buf, node->type == AND_NODE ? OP_JMP_FALSE : OP_JMP_TRUE);
+			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
+			OPCODE(*buf, OP_POP);
+			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+			*(JUMP_OFFSET *)&(*buf)[if_jump+1] = *idx - if_jump - 1 - sizeof(JUMP_OFFSET); // Jump is OP_JMP_FALSE JUMP_OFFSET shorter
+			if_jump = *idx - 1 - sizeof(JUMP_OFFSET);
+			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 		default:
 			assert(0=="compile_main_section(): unknown node type");

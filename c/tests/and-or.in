@@ -1,0 +1,10 @@
+{
+	echo('Test: and')
+	dump(0 and 2)
+	dump(1 and 2)
+
+	echo('Test: or')
+	dump(0 or 2)
+	dump(1 or 2)
+
+}

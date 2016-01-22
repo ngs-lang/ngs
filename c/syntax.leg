@@ -191,17 +191,30 @@ binop-expression =
 			args->first_child->next_sibling = a2;
 			MAKE_REQ_ARG_NODE(arg_for_next_node, next_node);
 			e1->first_child->next_sibling->first_child->next_sibling = arg_for_next_node;
-			return;
+		} else {
+			MAKE_NODE(ret, CALL_NODE);
+			ret->first_child = b;
+			ret->number = b->number;
+			// args
+				MAKE_REQ_ARG_NODE(a1, e1);
+				MAKE_REQ_ARG_NODE(a2, e2);
+				a1->next_sibling = a2;
+				args->first_child = a1;
+			e1 = ret;
 		}
-		MAKE_NODE(ret, CALL_NODE);
-		ret->first_child = b;
-		ret->number = b->number;
-		// args
-			MAKE_REQ_ARG_NODE(a1, e1);
-			MAKE_REQ_ARG_NODE(a2, e2);
-			a1->next_sibling = a2;
-			args->first_child = a1;
-		e1 = ret;
+		if(e1->first_child && e1->first_child->type == IDENTIFIER_NODE) {
+			ast_node *ret = NULL;
+			if(!strcmp("and", e1->first_child->name)) { ALLOC_NODE(ret, AND_NODE); }
+			if(!strcmp("or", e1->first_child->name)) { ALLOC_NODE(ret, OR_NODE); }
+			if(ret) {
+				//                                              identifier      args         arg0
+				ret->first_child               = e1->first_child->next_sibling->first_child->first_child;
+				//                                              identifier      args         arg0          arg1
+				ret->first_child->next_sibling = e1->first_child->next_sibling->first_child->next_sibling->first_child;
+				CAPTURE_LOCATION(ret);
+				e1 = ret;
+			}
+		}
 	}
 	|
 	"." i:identifier "(" space? fcall_args:function-call-arguments space? ")" {
