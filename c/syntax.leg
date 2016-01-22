@@ -202,7 +202,21 @@ binop-expression =
 			a1->next_sibling = a2;
 			args->first_child = a1;
 		e1 = ret;
-	} )* {
+	}
+	|
+	"." i:identifier "(" space? fcall_args:function-call-arguments space? ")" {
+		MAKE_NODE(ret, CALL_NODE);
+		ret->first_child = i;
+		ret->first_child->next_sibling = fcall_args;
+
+		// Prepend first argument
+		MAKE_REQ_ARG_NODE(a1, e1);
+		a1->next_sibling = fcall_args->first_child;
+		fcall_args->first_child = a1;
+
+		e1 = ret;
+	}
+	)* {
 		// XXX
 		$$ = e1;
 	}
@@ -227,14 +241,22 @@ binop1 = space? (
 	| <"%">  @@ 200 @@
 	) space?
 
-binop2 = space <("is" | "throws" | "returns" | "or" | "and" | "in" | "not in")> space {
+binop2 = space (
+	  <"is">      @@ 90 @@
+	| <"throws">  @@ 50 @@
+	| <"returns"> @@ 50 @@
+	| <"or">      @@ 60 @@
+	| <"and">     @@ 60 @@
+	| <"in">      @@ 70 @@
+	| <"not in">  @@ 70 @@
+) space {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = strdup(yytext);
 		$$ = ret;
 	}
 
 chain-expression = b:basic-expression (
-		inline_space? "(" space? args:function_call_arguments space? ")" {
+		inline_space? "(" space? args:function-call-arguments space? ")" {
 			MAKE_NODE(ret, CALL_NODE);
 			ret->first_child = b;
 			ret->first_child->next_sibling = args;
@@ -351,7 +373,7 @@ function-definition-parameter-type =
 	}
 
 function-call =
-	f:basic-expression inline_space? "(" space? args:function_call_arguments space? ")" {
+	f:basic-expression inline_space? "(" space? args:function-call-arguments space? ")" {
 		MAKE_NODE(ret, CALL_NODE);
 		ret->first_child = f;
 		ret->first_child->next_sibling = args;

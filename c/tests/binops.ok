@@ -1,4 +1,4 @@
-* string(len=19) Test: integers math
+Test: integers math
 * array of length 6
   * int 30
   * int -10
@@ -6,21 +6,21 @@
   * int -200
   * int 5
   * int 6
-* string(len=33) Test: integers comparison 1 and 2
+Test: integers comparison 1 and 2
 * array of length 5
   * true
   * false
   * true
   * false
   * false
-* string(len=33) Test: integers comparison 2 and 1
+Test: integers comparison 2 and 1
 * array of length 5
   * false
   * true
   * false
   * true
   * false
-* string(len=33) Test: integers comparison 1 and 1
+Test: integers comparison 1 and 1
 * array of length 5
   * false
   * false
