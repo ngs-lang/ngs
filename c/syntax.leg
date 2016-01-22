@@ -205,6 +205,7 @@ binop-expression =
 	}
 	|
 	"." i:identifier "(" space? fcall_args:function-call-arguments space? ")" {
+		// e1.method(...) => method(e1, ...)
 		MAKE_NODE(ret, CALL_NODE);
 		ret->first_child = i;
 		ret->first_child->next_sibling = fcall_args;
@@ -214,6 +215,18 @@ binop-expression =
 		a1->next_sibling = fcall_args->first_child;
 		fcall_args->first_child = a1;
 
+		e1 = ret;
+	}
+	|
+	space "returns" space e2:expression {
+		// e1 returns e2 => if e1 { return e2 }
+		MAKE_NODE(ret, IF_NODE);
+			ret->first_child = e1;
+			MAKE_NODE(yes, RETURN_NODE);
+				yes->first_child = e2;
+			e1->next_sibling = yes;
+			MAKE_NODE(no, NULL_NODE);
+			yes->next_sibling = no;
 		e1 = ret;
 	}
 	)* {
@@ -245,7 +258,6 @@ binop2 = space (
 	  <"is not">  @@ 90 @@
 	| <"is">      @@ 90 @@
 	| <"throws">  @@ 50 @@
-	| <"returns"> @@ 50 @@
 	| <"or">      @@ 60 @@
 	| <"and">     @@ 60 @@
 	| <"in">      @@ 70 @@

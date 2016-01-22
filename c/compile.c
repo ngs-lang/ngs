@@ -391,9 +391,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_PUSH_L_STR);
 			L_STR(*buf, node->name);
 			break;
-		case NULL_NODE:  OPCODE(*buf, OP_PUSH_NULL); break;
-		case TRUE_NODE:  OPCODE(*buf, OP_PUSH_TRUE); break;
-		case FALSE_NODE: OPCODE(*buf, OP_PUSH_FALSE); break;
+		case NULL_NODE:  if(need_result) { OPCODE(*buf, OP_PUSH_NULL); } break;
+		case TRUE_NODE:  if(need_result) { OPCODE(*buf, OP_PUSH_TRUE); } break;
+		case FALSE_NODE: if(need_result) { OPCODE(*buf, OP_PUSH_FALSE); } break;
 		case DEFINED_NODE:
 			compile_identifier(ctx, buf, idx, node->first_child->name, OP_LOCAL_DEF_P, OP_UPVAR_DEF_P, OP_GLOBAL_DEF_P);
 			POP_IF_DONT_NEED_RESULT(*buf);

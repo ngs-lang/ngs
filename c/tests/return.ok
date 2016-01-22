@@ -1,0 +1,5 @@
+Test: return
+* int 1
+Test: returns
+* int 10
+* int 20

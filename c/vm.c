@@ -611,11 +611,13 @@ main_loop:
 							goto main_loop;
 		case OP_RET:
 							// TODO: check stack length
-							// TODO: return value
 							assert(saved_stack_ptr <= ctx->stack_ptr);
 							if(saved_stack_ptr < ctx->stack_ptr) {
 								POP(*result);
 								// dump_titled("RESULT", *result);
+							} else {
+								assert(0=="Function does not have result value");
+
 							}
 							return METHOD_OK;
 		case OP_JMP:

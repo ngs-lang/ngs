@@ -1,0 +1,18 @@
+{
+	echo('Test: return')
+	F f() {
+		return 1
+		2
+	}
+
+	f().dump()
+
+	echo('Test: returns')
+	F g(b:Bool) {
+		b returns 10
+		20
+	}
+
+	g(true).dump()
+	g(false).dump()
+}
