@@ -104,6 +104,8 @@ METHOD_RESULT native_plus_arr_arr METHOD_PARAMS {
 	return METHOD_OK;
 }
 
+METHOD_RESULT native_push_arr_any METHOD_PARAMS { array_push(argv[0], argv[1]); METHOD_RETURN(argv[0]); }
+
 METHOD_RESULT native_Str_int METHOD_PARAMS {
 	char s[MAX_INT_TO_STR_LEN];
 	size_t len;
@@ -305,7 +307,10 @@ void vm_init(VM *vm) {
 	vm->Seq  = register_builtin_type(vm, "Seq",  T_SEQ);
 	vm->Type = register_builtin_type(vm, "Type", T_TYPE);
 	vm->Hash = register_builtin_type(vm, "Hash", T_HASH);
+	// array
 	register_global_func(vm, "+",        &native_plus_arr_arr,      2, "a",   vm->Arr, "b", vm->Arr);
+	register_global_func(vm, "push",     &native_push_arr_any,      2, "arr", vm->Arr, "v", vm->Any);
+	// int
 	register_global_func(vm, "+",        &native_plus_int_int,      2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "*",        &native_mul_int_int,       2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "/",        &native_div_int_int,       2, "a",   vm->Int, "b", vm->Int);
@@ -316,12 +321,14 @@ void vm_init(VM *vm) {
 	register_global_func(vm, ">",        &native_greater_int_int,   2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, ">=",       &native_greater_eq_int_int,2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "==",       &native_eq_int_int,        2, "a",   vm->Int, "b", vm->Int);
+	// misc
 	register_global_func(vm, "dump",     &native_dump_any,          1, "obj", vm->Any);
 	register_global_func(vm, "echo",     &native_echo_str,          1, "s",   vm->Str);
 	register_global_func(vm, "Bool",     &native_Bool_any,          1, "x",   vm->Any);
 	register_global_func(vm, "Str",      &native_Str_int,           1, "n",   vm->Int);
 	register_global_func(vm, "is",       &native_is_any_type,       2, "obj", vm->Any, "t", vm->Type);
 	register_global_func(vm, "not",      &native_not_any,           1, "x",   vm->Any);
+	// hash
 	register_global_func(vm, "in",       &native_in_any_hash,       2, "x",   vm->Any, "h", vm->Hash);
 	register_global_func(vm, "hash",     &native_hash_any,          1, "x",   vm->Any);
 	register_global_func(vm, "keys",     &native_keys_hash,         1, "h",   vm->Hash);
