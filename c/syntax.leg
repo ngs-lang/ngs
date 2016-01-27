@@ -17,15 +17,17 @@
 #define YY_CTX_MEMBERS \
 	int fail_pos, seq_pos; \
 	char *fail_rule; \
-	int lines, lines_postions[YY_MAX_LINES];
+	int lines, lines_postions[YY_MAX_LINES]; \
+	FILE *input_file;
 
 #define YYMALLOC(size)        NGS_MALLOC(size)
 #define YYREALLOC(ptr, size)  NGS_REALLOC(ptr, size)
 #define YYFREE(ptr)           (void)(ptr)
 
+// TODO: use read()
 #define YY_INPUT(yy, buf, result, max_size)		\
   { \
-    int yyc = getchar(); \
+    int yyc = getc(yy->input_file); \
 	if(yyc == EOF) { \
 		result = 0; \
 	} else { \

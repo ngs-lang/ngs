@@ -539,7 +539,7 @@ char *compile(ast_node *node /* the top level node */, size_t *len) {
 
 	char *result_buf;
 
-	vm_init(&(ctx.vm));
+	vm_init(&(ctx.vm), 0, NULL);
 	ctx.globals = NULL;
 	ctx.locals = NGS_MALLOC(COMPILE_MAX_FUNC_DEPTH * sizeof(SYMBOL_TABLE *));
 	ctx.n_locals = NGS_MALLOC(COMPILE_MAX_FUNC_DEPTH * sizeof(LOCAL_VAR_INDEX *));

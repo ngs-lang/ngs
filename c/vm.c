@@ -1,7 +1,10 @@
 #include <assert.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include "ngs.h"
 #include "vm.h"
+
+extern char **environ;
 
 char *opcodes_names[] = {
 	/*  0 */ "HALT",
@@ -106,6 +109,8 @@ METHOD_RESULT native_plus_arr_arr METHOD_PARAMS {
 }
 
 METHOD_RESULT native_push_arr_any METHOD_PARAMS { array_push(argv[0], argv[1]); METHOD_RETURN(argv[0]); }
+
+METHOD_RESULT native_shift_arr METHOD_PARAMS { METHOD_RETURN(array_shift(argv[0])); }
 
 METHOD_RESULT native_Str_int METHOD_PARAMS {
 	char s[MAX_INT_TO_STR_LEN];
@@ -272,6 +277,12 @@ void register_global_func(VM *vm, char *name, void *func_ptr, LOCAL_VAR_INDEX ar
 	assert(0 == "register_global_func fail");
 }
 
+void set_global(VM *vm, const char *name, VALUE v) {
+	size_t index;
+	index = get_global_index(vm, name, strlen(name));
+	GLOBALS[index] = v;
+}
+
 NGS_TYPE *register_builtin_type(VM *vm, const char *name, NATIVE_TYPE_ID native_type_id) {
 	size_t index;
 	NGS_TYPE *t;
@@ -291,7 +302,11 @@ NGS_TYPE *register_builtin_type(VM *vm, const char *name, NATIVE_TYPE_ID native_
 	return t;
 }
 
-void vm_init(VM *vm) {
+void vm_init(VM *vm, int argc, char **argv) {
+	char **env, *equal_sign;
+	VALUE env_hash, k, v;
+	VALUE argv_array;
+	int i;
 	vm->bytecode = NULL;
 	vm->globals_indexes = NULL; // UT_hash_table
 	vm->globals_len = 0;
@@ -313,6 +328,7 @@ void vm_init(VM *vm) {
 	// array
 	register_global_func(vm, "+",        &native_plus_arr_arr,      2, "a",   vm->Arr, "b", vm->Arr);
 	register_global_func(vm, "push",     &native_push_arr_any,      2, "arr", vm->Arr, "v", vm->Any);
+	register_global_func(vm, "shift",    &native_shift_arr,         1, "arr", vm->Arr);
 	// int
 	register_global_func(vm, "+",        &native_plus_int_int,      2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "*",        &native_mul_int_int,       2, "a",   vm->Int, "b", vm->Int);
@@ -340,6 +356,26 @@ void vm_init(VM *vm) {
 	register_global_func(vm, "[]",       &native_index_get_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
 	register_global_func(vm, "[]=",      &native_index_set_hash_any_any,    3, "h",   vm->Hash,"k", vm->Any, "v", vm->Any);
 	register_global_func(vm, "del",      &native_index_del_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
+
+	// http://stackoverflow.com/questions/3473692/list-environment-variables-with-c-in-unix
+	env_hash = make_hash(32);
+	for (env = environ; *env; ++env) {
+		equal_sign = strchr(*env, '=');
+		if(equal_sign) {
+			// should be there but ...
+			k = make_string_of_len(*env, equal_sign-*env);
+			v = make_string(equal_sign+1);
+			set_hash_key(env_hash, k, v);
+		}
+	}
+	set_global(vm, "ENV", env_hash);
+
+	argv_array = make_array(argc);
+	for(i=0; i<argc; i++) {
+		v = make_string(argv[i]);
+		ARRAY_ITEMS(argv_array)[i] = v;
+	}
+	set_global(vm, "ARGV", argv_array);
 }
 
 void ctx_init(CTX *ctx) {

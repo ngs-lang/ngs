@@ -80,7 +80,7 @@ test: ngs
 	@ cd tests/ && \
 	for f in *.in;do \
 		echo "+ $${f%.in}"; \
-		out=$$(../ngs <$$f); \
+		out=$$(NGS_BOOTSTRAP=- ../ngs <$$f); \
 		diff -u <(echo "$$out") $${f%.in}.ok || exit 1; \
 	done; \
 	echo "ALL TESTS OK"

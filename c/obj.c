@@ -97,6 +97,7 @@ VALUE make_var_len_obj(uintptr_t type, const size_t item_size, const size_t len)
 	VAR_LEN_OBJECT *vlo;
 
 	vlo = NGS_MALLOC(sizeof(*vlo));
+	assert(vlo);
 	vlo->base.type.num = type;
 	vlo->len = len;
 	vlo->allocated = len;
@@ -338,6 +339,18 @@ VALUE make_string(const char *s) {
 	return v;
 }
 
+VALUE make_string_of_len(const char *s, size_t len) {
+	VALUE v;
+	VAR_LEN_OBJECT *vlo;
+	vlo = NGS_MALLOC(sizeof(*vlo));
+	vlo->len = len;
+	vlo->base.type.num = T_STR;
+	vlo->base.val.ptr = NGS_MALLOC_ATOMIC(vlo->len);
+	memcpy(vlo->base.val.ptr, s, vlo->len);
+	SET_OBJ(v, vlo);
+	return v;
+}
+
 
 // Very not thread safe
 // Inspired by utarray.h
@@ -364,6 +377,16 @@ void array_push(VALUE arr, VALUE v) {
 	o = arr.ptr;
 	arr_items = o->base.val.ptr;
 	arr_items[o->len++] = v;
+}
+
+// TODO: shring allocated memory
+VALUE array_shift(VALUE arr) {
+	VALUE ret;
+	assert(OBJ_LEN(arr));
+	ret = ARRAY_ITEMS(arr)[0];
+	OBJ_LEN(arr)--;
+	memcpy(&ARRAY_ITEMS(arr)[0], &ARRAY_ITEMS(arr)[1], OBJ_LEN(arr)*sizeof(ARRAY_ITEMS(arr)[0]));
+	return ret;
 }
 
 VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, VALUE *params) {

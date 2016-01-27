@@ -114,7 +114,7 @@ typedef enum method_result_enum {
 } METHOD_RESULT;
 
 typedef METHOD_RESULT (*VM_FUNC)(const VALUE *argv, VALUE *result);
-void vm_init(VM *vm);
+void vm_init(VM *vm, int argc, char **argv);
 void vm_load_bytecode(VM *vm, char *bc, size_t len);
 void ctx_init(CTX *ctx);
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found);
