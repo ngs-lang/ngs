@@ -3,6 +3,7 @@
 #define OBJ_H
 #include <stdint.h>
 #include <stddef.h>
+#include <ffi.h>
 
 typedef uint16_t GLOBAL_VAR_INDEX;
 #define GLOBAL_VAR_INDEX_FMT "%d"
@@ -84,6 +85,17 @@ typedef struct ngs_type {
 	NATIVE_TYPE_ID native_type_id;
 } NGS_TYPE;
 
+typedef struct {
+	OBJECT base;
+	VALUE name;
+} CLIB_OBJECT;
+
+typedef struct {
+	OBJECT base;
+	VALUE name;
+	VALUE lib;
+} CSYM_OBJECT;
+
 // malloc() / NGS_MALLOC() memory is 8 bytes aligned, should be at least 4 bytes aligned
 // .....000 - *OBJECT
 // .....001 - int number
@@ -139,6 +151,8 @@ enum IMMEDIATE_VALUES {
 	T_SEQ   = 46,
 	T_TYPE  = 50,
 	T_HASH  = 54,
+	T_CLIB  = 58,
+	T_CSYM  = 62,
 	T_NATIVE_METHOD = (1 << 8) | T_FUN,
 	T_CLOSURE       = (2 << 8) | T_FUN,
 };
@@ -165,11 +179,6 @@ enum IMMEDIATE_VALUES {
 #define SET_BOOL(v, b)  (v).num = b ? V_TRUE : V_FALSE
 #define SET_UNDEF(v)    (v).num = V_UNDEF
 
-// TODO: some saner numbering maybe
-#define OBJ_TYPE_NATIVE_METHOD (2)
-#define OBJ_TYPE_CLOSURE       (3)
-#define OBJ_TYPE_ARRAY         (4)
-
 #define OBJ_LEN(v)                ((VAR_LEN_OBJECT *) v.ptr)->len
 #define OBJ_ALLOCATED(v)          ((VAR_LEN_OBJECT *) v.ptr)->allocated
 #define CLOSURE_OBJ_IP(v)         ((CLOSURE_OBJECT *) v.ptr)->ip
@@ -179,6 +188,9 @@ enum IMMEDIATE_VALUES {
 #define CLOSURE_OBJ_PARAMS(v)     (((CLOSURE_OBJECT *) v.ptr)->params.params)
 #define CLOSURE_OBJ_N_UPLEVELS(v) (((CLOSURE_OBJECT *) v.ptr)->n_uplevels)
 #define CLOSURE_OBJ_UPLEVELS(v)   (((CLOSURE_OBJECT *) v.ptr)->uplevels)
+#define CLIB_OBJECT_NAME(v)       ((CLIB_OBJECT *) v.ptr)->name
+#define CSYM_OBJECT_NAME(v)       ((CSYM_OBJECT *) v.ptr)->name
+#define CSYM_OBJECT_LIB(v)        ((CSYM_OBJECT *) v.ptr)->lib
 #define NATIVE_METHOD_OBJ_N_REQ_PAR(v)  ((NATIVE_METHOD_OBJECT *) v.ptr)->params.n_params_required
 #define NATIVE_METHOD_OBJ_N_OPT_PAR(v)  ((NATIVE_METHOD_OBJECT *) v.ptr)->params.n_params_optional
 #define NATIVE_METHOD_OBJ_PARAMS(v)     (((NATIVE_METHOD_OBJECT *) v.ptr)->params.params)
@@ -196,6 +208,8 @@ enum IMMEDIATE_VALUES {
 #define IS_NGS_TYPE(v)            (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_TYPE)
 #define IS_VLO(v)                 (IS_ARRAY(v) || IS_STRING(v))
 #define IS_HASH(v)                (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_HASH)
+#define IS_CLIB(v)                (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_CLIB)
+#define IS_CSYM(v)                (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_CSYM)
 #define ARRAY_ITEMS(v)            ((VALUE *)(OBJ_DATA_PTR(v)))
 #define HASH_BUCKETS_N(v)         (((HASH_OBJECT *)(v).ptr)->n_buckets)
 #define HASH_HEAD(v)              (((HASH_OBJECT *)(v).ptr)->head)

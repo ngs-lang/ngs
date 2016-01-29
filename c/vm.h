@@ -62,6 +62,8 @@ typedef struct vm_struct {
 	NGS_TYPE *Seq;
 	NGS_TYPE *Type;
 	NGS_TYPE *Hash;
+	NGS_TYPE *CLib;
+	NGS_TYPE *CSym;
 } VM;
 
 enum opcodes {

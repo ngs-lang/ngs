@@ -1,6 +1,7 @@
-// apt-get install flex bison uthash-dev libgc-dev
+// apt-get install uthash-dev libgc-dev libffi6
 // uthash - http://stackoverflow.com/questions/18197825/looking-for-hash-table-c-library. using version 1.9.7
 // libgc-dev - 1:7.2d-6.4
+// libffi6 - 3.2.1-4
 #include <assert.h>
 #include <errno.h>
 #include <unistd.h>

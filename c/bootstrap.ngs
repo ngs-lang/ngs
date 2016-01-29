@@ -6,9 +6,6 @@
 		ARGV0 = null
 	}
 
-	echo('ARGV0');
-	dump(ARGV0);
-	echo('ARGV');
-	dump(ARGV);
+	dump(CLib("libc.so.6")["printf"])
 
 }

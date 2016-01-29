@@ -86,6 +86,19 @@ static void _dump(VALUE v, int level) {
 		goto exit;
 	}
 
+	if(IS_CLIB(v)) {
+		printf("%*s* C library (name follows) ptr=%p\n", level << 1, "", OBJ_DATA_PTR(v));
+		_dump(CLIB_OBJECT_NAME(v), level + 1);
+		goto exit;
+	}
+
+	if(IS_CSYM(v)) {
+		printf("%*s* C symbol (name and libraray follow) ptr=%p\n", level << 1, "", OBJ_DATA_PTR(v));
+		_dump(CSYM_OBJECT_NAME(v), level + 1);
+		_dump(CSYM_OBJECT_LIB(v), level + 1);
+		goto exit;
+	}
+
 exit:
 	return;
 }
@@ -256,7 +269,9 @@ void resize_hash_for_new_len(VALUE h, RESIZE_HASH_AFTER after) {
 HASH_OBJECT_ENTRY *get_hash_key(VALUE h, VALUE k) {
 	HASH_OBJECT_ENTRY *e;
 	HASH_OBJECT_ENTRY **buckets = OBJ_DATA_PTR(h);
-	uint32_t n = hash(k) % HASH_BUCKETS_N(h);
+	uint32_t n;
+	assert(IS_HASH(h));
+	n = hash(k) % HASH_BUCKETS_N(h);
 	for(e=buckets[n]; e; e=e->bucket_next) {
 		if(is_equal(e->key, k)) {
 			return e;
@@ -456,6 +471,8 @@ int obj_is_of_type(VALUE obj, VALUE t) {
 	OBJ_C_OBJ_IS_OF_TYPE(T_ARR, IS_ARRAY);
 	OBJ_C_OBJ_IS_OF_TYPE(T_TYPE, IS_NGS_TYPE);
 	OBJ_C_OBJ_IS_OF_TYPE(T_HASH, IS_HASH);
+	OBJ_C_OBJ_IS_OF_TYPE(T_CLIB, IS_CLIB);
+	OBJ_C_OBJ_IS_OF_TYPE(T_CSYM, IS_CSYM);
 
 	dump_titled("Unimplemented type to check", t);
 	assert(0=="native_is(): Unimplemented check against builtin type");

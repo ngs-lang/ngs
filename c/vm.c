@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <dlfcn.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include "ngs.h"
@@ -203,6 +204,46 @@ METHOD_RESULT native_index_del_hash_any METHOD_PARAMS {
 	return METHOD_OK;
 }
 
+// TODO: Support other dlopen() flags?
+METHOD_RESULT native_CLib_str METHOD_PARAMS {
+	VALUE v;
+	CLIB_OBJECT *o;
+	void *out;
+	out = dlopen(obj_to_cstring(argv[0]), RTLD_NOW);
+	if(!out) {
+		fprintf(stderr, "dlopen() failed: %s\n", dlerror());
+		assert(0=="Fail to dlopen()");
+	}
+	o = NGS_MALLOC(sizeof(*o));
+	assert(o);
+	o->base.type.num = T_CLIB;
+	o->base.val.ptr = out;
+	o->name = argv[0];
+	SET_OBJ(v, o);
+	METHOD_RETURN(v);
+}
+
+METHOD_RESULT native_in_str_clib METHOD_PARAMS {
+	METHOD_RETURN(MAKE_BOOL(dlsym(OBJ_DATA_PTR(argv[1]), obj_to_cstring(argv[0]))));
+}
+
+METHOD_RESULT native_index_get_clib_str METHOD_PARAMS {
+	VALUE v;
+	CSYM_OBJECT *o;
+	o = NGS_MALLOC(sizeof(*o));
+	assert(o);
+	o->base.type.num = T_CSYM;
+	o->base.val.ptr = dlsym(OBJ_DATA_PTR(argv[0]), obj_to_cstring(argv[1]));
+	assert(o->base.val.ptr);
+	o->lib = argv[0];
+	o->name = argv[1];
+	SET_OBJ(v, o);
+	METHOD_RETURN(v);
+}
+
+// TODO: locking for dlerror
+// METHOD_RESULT native_c_dlysm METHOD_PARAMS
+
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
 	HASH_FIND(hh, vm->globals_indexes, name, name_len, var);
@@ -248,7 +289,7 @@ void register_global_func(VM *vm, char *name, void *func_ptr, LOCAL_VAR_INDEX ar
 	o->params.n_params_required = argc;
 	o->params.n_params_optional = 0; /* currently none of builtins uses optional parameters */
 	if(argc) {
-		argv = NGS_MALLOC(sizeof(VALUE) * 2);
+		argv = NGS_MALLOC(argc * sizeof(VALUE) * 2);
 		assert(argv);
 		va_start(varargs, argc);
 		for(i=0; i<argc; i++) {
@@ -271,7 +312,6 @@ void register_global_func(VM *vm, char *name, void *func_ptr, LOCAL_VAR_INDEX ar
 	}
 	if(IS_UNDEF(GLOBALS[index])) {
 		GLOBALS[index] = make_array_with_values(1, &MAKE_OBJ(o));
-		// dump_titled("register_global_func", GLOBALS[index]);
 		return;
 	}
 	assert(0 == "register_global_func fail");
@@ -325,6 +365,14 @@ void vm_init(VM *vm, int argc, char **argv) {
 	vm->Seq  = register_builtin_type(vm, "Seq",  T_SEQ);
 	vm->Type = register_builtin_type(vm, "Type", T_TYPE);
 	vm->Hash = register_builtin_type(vm, "Hash", T_HASH);
+	vm->CLib = register_builtin_type(vm, "CLib", T_CLIB);
+	vm->CSym = register_builtin_type(vm, "CSym", T_CSYM);
+
+	// CLib and c calls
+	register_global_func(vm, "CLib",     &native_CLib_str,          1, "name",   vm->Str);
+	register_global_func(vm, "in",       &native_in_str_clib,       2, "symbol", vm->Str, "lib", vm->CLib);
+	register_global_func(vm, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
+
 	// array
 	register_global_func(vm, "+",        &native_plus_arr_arr,      2, "a",   vm->Arr, "b", vm->Arr);
 	register_global_func(vm, "push",     &native_push_arr_any,      2, "arr", vm->Arr, "v", vm->Any);
@@ -516,6 +564,7 @@ main_loop:
 		DEBUG_VM_RUN("main_loop IP=%i OP=%s\n", ip-1, opcodes_names[opcode]);
 	}
 #endif
+
 	// Guidelines
 	// * increase ip as soon as arguments extraction is finished
 	switch(opcode) {
