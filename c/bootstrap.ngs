@@ -1,14 +1,19 @@
 {
-	bootstrap_debug = if 'NGS_BOOTSTRAP_DEBUG' in ENV then echo else F(x) {}
+	# *** Define bootstrap_debug function ***
+	bootstrap_debug =
+		if 'NGS_BOOTSTRAP_DEBUG' in ENV
+			F(s) echo("+ [BOOSTRAP DEBUG] $s")
+		else
+			F(s) {}
 
-	bootstrap_debug('+ bootstrap.ngs active')
+	bootstrap_debug('bootstrap.ngs begin')
 
 	# *** Prepare ARGV ***
 	# first_item = shift(array, default_value_if_array_is_empty)
 	ARGV0 = ARGV.shift(null)
 
 	if 'NGS_STDLIB' in ENV {
-		bootstrap_debug('+ Using NGS_STDLIB environment variable')
+		bootstrap_debug('Using NGS_STDLIB environment variable')
 	}
 
 	# *** WIP: Load the main program ***

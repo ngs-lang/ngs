@@ -571,7 +571,7 @@ if =
 	}
 
 if-optional-else-block =
-	(space? "else")? inline_space? c:code-block { $$ = c; }
+	(space? "else" space?)? inline_space? c:code-block { $$ = c; }
 	|
 	{ MAKE_NODE(ret, NULL_NODE); $$ = ret; }
 
