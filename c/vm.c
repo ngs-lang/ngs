@@ -2,6 +2,12 @@
 #include <dlfcn.h>
 #include <stdarg.h>
 #include <stdio.h>
+
+// OPEN(2)
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 #include "ngs.h"
 #include "vm.h"
 
@@ -113,6 +119,13 @@ METHOD_RESULT native_push_arr_any METHOD_PARAMS { array_push(argv[0], argv[1]); 
 
 METHOD_RESULT native_shift_arr METHOD_PARAMS { METHOD_RETURN(array_shift(argv[0])); }
 
+METHOD_RESULT native_shift_arr_any METHOD_PARAMS {
+	if(!OBJ_LEN(argv[0])) {
+		METHOD_RETURN(argv[1]);
+	}
+	METHOD_RETURN(array_shift(argv[0]));
+}
+
 METHOD_RESULT native_Str_int METHOD_PARAMS {
 	char s[MAX_INT_TO_STR_LEN];
 	size_t len;
@@ -204,6 +217,7 @@ METHOD_RESULT native_index_del_hash_any METHOD_PARAMS {
 	return METHOD_OK;
 }
 
+// TODO: locking for dlerror?
 // TODO: Support other dlopen() flags?
 METHOD_RESULT native_CLib_str METHOD_PARAMS {
 	VALUE v;
@@ -241,8 +255,19 @@ METHOD_RESULT native_index_get_clib_str METHOD_PARAMS {
 	METHOD_RETURN(v);
 }
 
-// TODO: locking for dlerror
-// METHOD_RESULT native_c_dlysm METHOD_PARAMS
+// OPEN(2)
+// TODO: support more flags
+// TODO: a  way to return errno. Exception maybe?
+METHOD_RESULT native_c_open_str_str METHOD_PARAMS {
+	const char *pathname = obj_to_cstring(argv[0]);
+	const char *flags_str = obj_to_cstring(argv[1]);
+	int flags = 0;
+	if(!flags && !strcmp(flags_str, "r"))  { flags = O_RDONLY; }
+	if(!flags && !strcmp(flags_str, "w"))  { flags = O_WRONLY; }
+	if(!flags && !strcmp(flags_str, "rw")) { flags = O_RDWR; }
+	SET_INT(*result, open(pathname, flags));
+	return METHOD_OK;
+}
 
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
@@ -373,10 +398,14 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, "in",       &native_in_str_clib,       2, "symbol", vm->Str, "lib", vm->CLib);
 	register_global_func(vm, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
 
+	// file
+	register_global_func(vm, "c_open",   &native_c_open_str_str,    2, "a",   vm->Str, "b", vm->Str);
+
 	// array
 	register_global_func(vm, "+",        &native_plus_arr_arr,      2, "a",   vm->Arr, "b", vm->Arr);
 	register_global_func(vm, "push",     &native_push_arr_any,      2, "arr", vm->Arr, "v", vm->Any);
 	register_global_func(vm, "shift",    &native_shift_arr,         1, "arr", vm->Arr);
+	register_global_func(vm, "shift",    &native_shift_arr_any,     2, "arr", vm->Arr, "dflt", vm->Any);
 	// int
 	register_global_func(vm, "+",        &native_plus_int_int,      2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "*",        &native_mul_int_int,       2, "a",   vm->Int, "b", vm->Int);

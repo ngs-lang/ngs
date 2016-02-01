@@ -5,5 +5,13 @@
 	a.push(20)
 	dump(a)
 
+	echo('Test: shift')
+	v = a.shift()
+	dump(v)
+	v = a.shift(1000)
+	dump(v)
+	v = a.shift(2000)
+	dump(v)
+
 
 }

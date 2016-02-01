@@ -1,11 +1,21 @@
 {
-	echo("+ bootstrap.ngs active");
-	if ARGV {
-		ARGV0 = ARGV.shift()
-	} {
-		ARGV0 = null
+	bootstrap_debug = if 'NGS_BOOTSTRAP_DEBUG' in ENV then echo else F(x) {}
+
+	bootstrap_debug('+ bootstrap.ngs active')
+
+	# *** Prepare ARGV ***
+	# first_item = shift(array, default_value_if_array_is_empty)
+	ARGV0 = ARGV.shift(null)
+
+	if 'NGS_STDLIB' in ENV {
+		bootstrap_debug('+ Using NGS_STDLIB environment variable')
 	}
 
-	dump(CLib("libc.so.6")["printf"])
+	# *** WIP: Load the main program ***
+	if ARGV {
+		fname = ARGV.shift()
+		f = c_open(fname, 'r')
+		dump(f)
+	}
 
 }

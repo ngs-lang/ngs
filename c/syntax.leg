@@ -356,7 +356,7 @@ assignment =
 	}
 
 function-definition =
-	"F" space+ name:function-definition-name space? "(" space? params:function-definition-parameters space? ")" space? body:code-block {
+	"F" name:function-definition-name space? "(" space? params:function-definition-parameters space? ")" space? body:code-block {
 		MAKE_NODE(ret, FUNC_NODE);
 		ret->first_child = params;
 		params->next_sibling = body;
@@ -364,7 +364,7 @@ function-definition =
 		$$ = ret;
 	}
 
-function-definition-name = i:identifier { $$ = i; } | { $$ = NULL; }
+function-definition-name = space+ i:identifier { $$ = i; } | { $$ = NULL; }
 
 function-definition-parameters =
 	param:function-definition-parameter space? "," space? params:function-definition-parameters {
@@ -562,7 +562,7 @@ for-i-n =
 	}
 
 if =
-	"if" space? cond:code-block space? yes:code-block no:if-optional-else-block {
+	"if" space? cond:code-block (space "then")? space? yes:code-block no:if-optional-else-block {
 		MAKE_NODE(ret, IF_NODE);
 		ret->first_child = cond;
 		cond->next_sibling = yes;
@@ -571,7 +571,7 @@ if =
 	}
 
 if-optional-else-block =
-	space? c:code-block { $$ = c; }
+	(space? "else")? inline_space? c:code-block { $$ = c; }
 	|
 	{ MAKE_NODE(ret, NULL_NODE); $$ = ret; }
 

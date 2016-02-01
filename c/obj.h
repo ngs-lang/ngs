@@ -96,6 +96,13 @@ typedef struct {
 	VALUE lib;
 } CSYM_OBJECT;
 
+typedef struct {
+	OBJECT base;
+	VALUE rtype;
+	VALUE atypes;
+	ffi_cif cif;
+} CCIF_OBJECT;
+
 // malloc() / NGS_MALLOC() memory is 8 bytes aligned, should be at least 4 bytes aligned
 // .....000 - *OBJECT
 // .....001 - int number
