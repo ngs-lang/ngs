@@ -491,7 +491,7 @@ void dump_titled(char *title, VALUE v) {
 char *obj_to_cstring(VALUE v) {
 	char *ret;
 	assert(IS_STRING(v));
-	ret = NGS_MALLOC(OBJ_LEN(v) + 1);
+	ret = NGS_MALLOC_ATOMIC(OBJ_LEN(v) + 1);
 	assert(ret);
 	memcpy(ret, OBJ_DATA_PTR(v), OBJ_LEN(v));
 	ret[OBJ_LEN(v)] = '\0';

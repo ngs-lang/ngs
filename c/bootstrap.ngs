@@ -12,6 +12,7 @@
 	# first_item = shift(array, default_value_if_array_is_empty)
 	ARGV0 = ARGV.shift(null)
 
+	# *** WIP: Load stdlib ***
 	if 'NGS_STDLIB' in ENV {
 		bootstrap_debug('Using NGS_STDLIB environment variable')
 	}
@@ -20,6 +21,11 @@
 	if ARGV {
 		fname = ARGV.shift()
 		f = c_open(fname, 'r')
+		if f > 0 {
+			s = c_read(f, 4096)
+			dump(s)
+
+		}
 		dump(f)
 	}
 

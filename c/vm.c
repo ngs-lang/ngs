@@ -8,6 +8,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+// READ(2)
+#include <unistd.h>
+
 #include "ngs.h"
 #include "vm.h"
 
@@ -269,6 +272,27 @@ METHOD_RESULT native_c_open_str_str METHOD_PARAMS {
 	return METHOD_OK;
 }
 
+// READ(2)
+// TODO: error handling support
+METHOD_RESULT native_c_read_int_int METHOD_PARAMS {
+	// Params: fd, count
+	char *buf;
+	size_t count = GET_INT(argv[1]);
+	ssize_t ret;
+	assert(count <= SSIZE_MAX);
+	buf = NGS_MALLOC_ATOMIC(count);
+	assert(buf);
+	ret = read(GET_INT(argv[0]), buf, count);
+
+	if(ret < 0) {
+		SET_INT(*result, ret);
+		return METHOD_OK;
+	}
+
+	*result = make_string_of_len(buf, ret);
+	return METHOD_OK;
+}
+
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
 	HASH_FIND(hh, vm->globals_indexes, name, name_len, var);
@@ -400,6 +424,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// file
 	register_global_func(vm, "c_open",   &native_c_open_str_str,    2, "a",   vm->Str, "b", vm->Str);
+	register_global_func(vm, "c_read",   &native_c_read_int_int,    2, "fd",  vm->Int, "count", vm->Int);
 
 	// array
 	register_global_func(vm, "+",        &native_plus_arr_arr,      2, "a",   vm->Arr, "b", vm->Arr);
