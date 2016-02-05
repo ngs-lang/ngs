@@ -176,7 +176,7 @@ enum IMMEDIATE_VALUES {
 
 #define SET_INT(v,n)    (v).num = ((n) << TAG_BITS) | TAG_INT
 #define MAKE_INT(n)     ((VALUE){.num=((n) << TAG_BITS) | TAG_INT})
-#define MAKE_BOOL(b)    ((VALUE){.num=(b ? V_TRUE : V_FALSE)})
+#define MAKE_BOOL(b)    ((VALUE){.num=((b) ? V_TRUE : V_FALSE)})
 #define MAKE_OBJ(o)     ((VALUE){.ptr=(o)})
 #define GET_INT(v)      ((v).num >> TAG_BITS)
 #define SET_OBJ(v,o)    (v).ptr = o

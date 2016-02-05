@@ -5,6 +5,10 @@
 	a.push(20)
 	dump(a)
 
+	echo('Test: []')
+	dump(a[0] == 10)
+	dump(a[1] == 20)
+
 	echo('Test: shift')
 	v = a.shift()
 	dump(v)

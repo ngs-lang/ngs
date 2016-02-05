@@ -11,6 +11,9 @@
 // READ(2)
 #include <unistd.h>
 
+// BCMP(3)
+#include <strings.h>
+
 #include "ngs.h"
 #include "vm.h"
 
@@ -128,6 +131,17 @@ METHOD_RESULT native_shift_arr_any METHOD_PARAMS {
 	}
 	METHOD_RETURN(array_shift(argv[0]));
 }
+
+METHOD_RESULT native_index_get_arr_int METHOD_PARAMS {
+	int idx, len;
+	idx = GET_INT(argv[1]);
+	assert(idx>=0);
+	len = OBJ_LEN(argv[0]);
+	assert(idx<len); // TODO: Throw exception
+	*result = ARRAY_ITEMS(argv[0])[idx];
+	return METHOD_OK;
+}
+
 
 METHOD_RESULT native_Str_int METHOD_PARAMS {
 	char s[MAX_INT_TO_STR_LEN];
@@ -293,6 +307,14 @@ METHOD_RESULT native_c_read_int_int METHOD_PARAMS {
 	return METHOD_OK;
 }
 
+METHOD_RESULT native_eq_str_str METHOD_PARAMS {
+	size_t len;
+	if(OBJ_LEN(argv[0]) != OBJ_LEN(argv[1])) { METHOD_RETURN(MAKE_BOOL(0)); }
+	if(OBJ_DATA_PTR(argv[0]) == OBJ_DATA_PTR(argv[1])) { METHOD_RETURN(MAKE_BOOL(1)); }
+	len = OBJ_LEN(argv[0]);
+	METHOD_RETURN(MAKE_BOOL(!bcmp(OBJ_DATA_PTR(argv[0]), OBJ_DATA_PTR(argv[1]), len)));
+}
+
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
 	HASH_FIND(hh, vm->globals_indexes, name, name_len, var);
@@ -431,6 +453,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, "push",     &native_push_arr_any,      2, "arr", vm->Arr, "v", vm->Any);
 	register_global_func(vm, "shift",    &native_shift_arr,         1, "arr", vm->Arr);
 	register_global_func(vm, "shift",    &native_shift_arr_any,     2, "arr", vm->Arr, "dflt", vm->Any);
+	register_global_func(vm, "[]",       &native_index_get_arr_int, 2, "arr", vm->Arr, "idx", vm->Int);
+	// string
+	// TODO: other string comparison operators
+	register_global_func(vm, "==",       &native_eq_str_str,        2, "a",   vm->Str, "b", vm->Str);
 	// int
 	register_global_func(vm, "+",        &native_plus_int_int,      2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "*",        &native_mul_int_int,       2, "a",   vm->Int, "b", vm->Int);
@@ -729,6 +755,7 @@ main_loop:
 							LOCALS[lvi] = v;
 							goto main_loop;
 		case OP_CALL:
+							// TODO: print arguments of failed call, not just the callable
 							// In (current): ... result_placeholder (null), arg1, ..., argN, argc, callable
 							// In (WIP): ...
 							//     result_placeholder (null),
@@ -745,6 +772,7 @@ main_loop:
 							// POP(n_params_optional);
 							mr = _vm_call(vm, ctx, callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
 							if(mr != METHOD_OK) {
+								dump_titled("Failed callable", callable);
 								assert(0=="Handling failed method calls is not implemented yet");
 							}
 							goto main_loop;

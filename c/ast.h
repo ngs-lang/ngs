@@ -10,7 +10,7 @@ typedef struct ast_node_location {
 } ast_node_location;
 
 typedef struct ast_node {
-	int type;
+	unsigned int type;
 	char *name;
 	int number;
 	// Chidren
@@ -20,7 +20,7 @@ typedef struct ast_node {
 	struct ast_node_location location;
 } ast_node;
 
-enum ast_node_type {
+typedef enum ast_node_type {
 	ASSIGNMENT_NODE=1,
 	IDENTIFIER_NODE,
 	NUMBER_NODE,
@@ -50,7 +50,7 @@ enum ast_node_type {
 	AND_NODE,
 	OR_NODE,
 	NUMBER_OF_AST_NODE_TYPES
-};
+} ast_node_type;
 
 extern char *NGS_AST_NODE_TYPES_NAMES[NUMBER_OF_AST_NODE_TYPES];
 

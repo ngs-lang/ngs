@@ -1,0 +1,5 @@
+{
+	echo('Test: equality')
+	dump("aaa" == "aaa")
+	dump("aaa" == "bbb")
+}

@@ -1,10 +1,18 @@
-{
-	# *** Define bootstrap_debug function ***
-	bootstrap_debug =
-		if 'NGS_BOOTSTRAP_DEBUG' in ENV
-			F(s) echo("+ [BOOSTRAP DEBUG] $s")
-		else
-			F(s) {}
+F to_exit_code(x) 0
+F to_exit_code(b:Bool) if b 0 1
+F to_exit_code(n:Int) n
+
+
+# *** Define bootstrap_debug function ***
+bootstrap_debug =
+	if 'NGS_BOOTSTRAP_DEBUG' in ENV
+		F(s) echo("+ [BOOSTRAP DEBUG] $s")
+	else
+		F(s) {}
+
+F bootstrap() {
+	do_load_stdlib = true
+	code_to_run = null
 
 	bootstrap_debug('bootstrap.ngs begin')
 
@@ -12,9 +20,25 @@
 	# first_item = shift(array, default_value_if_array_is_empty)
 	ARGV0 = ARGV.shift(null)
 
+	# *** Parse switches ***
+	if ARGV and (ARGV[0] == '-e' or ARGV[0] == '-E') {
+		sw = ARGV.shift()
+		code_to_run = ARGV.shift()
+		bootstrap_debug("Got $sw switch, using command line provided code")
+		if sw == '-E' {
+			bootstrap_debug('Will skip loading stdlib because of -E flag')
+			do_load_stdlib = false
+		}
+	}
+
+	if 'NGS_SKIP_STDLIB' in ENV {
+		bootstrap_debug('Will skip loading stdlib because of set NGS_SKIP_STDLIB environment variable')
+		do_load_stdlib = false
+	}
+
 	# *** WIP: Load stdlib ***
-	if 'NGS_STDLIB' in ENV {
-		bootstrap_debug('Using NGS_STDLIB environment variable')
+	if do_load_stdlib {
+		bootstrap_debug('Will load stdlib')
 	}
 
 	# *** WIP: Load the main program ***
@@ -30,3 +54,5 @@
 	}
 
 }
+
+bootstrap()

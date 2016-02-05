@@ -4,3 +4,5 @@ Test: simple precedence
 * int 250
 Test: same precedence associativity
 * int 5
+Test: and/or
+* int 2

@@ -9,6 +9,12 @@
 #pragma GCC diagnostic ignored "-Wunused-label"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
+typedef struct ast_node_ll {
+	ast_node *node;
+	ast_node_type type;
+	struct ast_node_ll *next;
+} AST_NODE_TYPE_LL;
+
 #define YY_CTX_LOCAL 1
 
 #define YY_MAX_LINES (10000)
@@ -18,7 +24,8 @@
 	int fail_pos, seq_pos; \
 	char *fail_rule; \
 	int lines, lines_postions[YY_MAX_LINES]; \
-	FILE *input_file;
+	FILE *input_file; \
+	AST_NODE_TYPE_LL *nodes_for_type_change;
 
 #define YYMALLOC(size)        NGS_MALLOC(size)
 #define YYREALLOC(ptr, size)  NGS_REALLOC(ptr, size)
@@ -177,7 +184,29 @@ expression =
 set-item-expression =
 	binop-expression
 
-binop-expression =
+binop-expression = e:binop-expression-inner {
+	// Handle special "and" and "or" nodes.
+	AST_NODE_TYPE_LL *ll;
+	ast_node *cur, *arg0_node;
+
+	for(ll = yy->nodes_for_type_change; ll; ll=ll->next) {
+		cur = ll->node;
+		if(cur->type == ll->type) {
+			// Already processed this node
+			// Warn here maybe? Duplicates should not appear here.
+			continue;
+		}
+		assert(cur->type == CALL_NODE);
+		arg0_node = cur->first_child->next_sibling->first_child;
+		cur->type = ll->type;
+		cur->first_child = arg0_node->first_child;
+		cur->first_child->next_sibling = arg0_node->next_sibling->first_child;
+	}
+	yy->nodes_for_type_change = NULL;
+	$$ = e;
+}
+
+binop-expression-inner =
 	e1:chain-expression (b:binop e2:chain-expression {
 		// TODO: cleaner code and better naming
 		MAKE_NODE(args, ARGS_NODE);
@@ -187,8 +216,6 @@ binop-expression =
 			next_node->first_child = b;
 			next_node->number = b->number;
 			MAKE_REQ_ARG_NODE(a2, e2);
-			// printf("AHA TAKING\n");
-			// print_ast(e1->first_child->next_sibling->first_child->next_sibling, 0);
 			args->first_child = e1->first_child->next_sibling->first_child->next_sibling;
 			args->first_child->next_sibling = a2;
 			MAKE_REQ_ARG_NODE(arg_for_next_node, next_node);
@@ -205,16 +232,18 @@ binop-expression =
 			e1 = ret;
 		}
 		if(e1->first_child && e1->first_child->type == IDENTIFIER_NODE) {
-			ast_node *ret = NULL;
-			if(!strcmp("and", e1->first_child->name)) { ALLOC_NODE(ret, AND_NODE); }
-			if(!strcmp("or", e1->first_child->name)) { ALLOC_NODE(ret, OR_NODE); }
-			if(ret) {
-				//                                              identifier      args         arg0
-				ret->first_child               = e1->first_child->next_sibling->first_child->first_child;
-				//                                              identifier      args         arg0          arg1
-				ret->first_child->next_sibling = e1->first_child->next_sibling->first_child->next_sibling->first_child;
-				CAPTURE_LOCATION(ret);
-				e1 = ret;
+			ast_node_type t=0;
+			AST_NODE_TYPE_LL *ll;
+			if(!strcmp("and", e1->first_child->name)) { t = AND_NODE; }
+			if(!strcmp("or", e1->first_child->name))  { t = OR_NODE; }
+			if(t) {
+				// TODO: dedup. Somehow "or" node in 'echo("a" == "a" or "b" == "b")' is registered twice
+				ll = NGS_MALLOC(sizeof(*ll));
+				assert(ll);
+				ll->node = e1;
+				ll->type = t;
+				ll->next = yy->nodes_for_type_change;
+				yy->nodes_for_type_change = ll;
 			}
 		}
 	}
@@ -269,19 +298,16 @@ binop1 = space? (
 	| <"%">  @@ 200 @@
 	) space?
 
-binop2 = space (
+binop2 = space op:binop2op space { $$ = op; }
+
+binop2op =
 	  <"is not">  @@ 90 @@
 	| <"is">      @@ 90 @@
 	| <"throws">  @@ 50 @@
 	| <"or">      @@ 60 @@
-	| <"and">     @@ 60 @@
+	| <"and">     @@ 65 @@
 	| <"in">      @@ 70 @@
 	| <"not in">  @@ 70 @@
-) space {
-		MAKE_NODE(ret, IDENTIFIER_NODE);
-		ret->name = strdup(yytext);
-		$$ = ret;
-	}
 
 chain-expression = b:basic-expression (
 		inline_space? "(" space? args:function-call-arguments space? ")" {

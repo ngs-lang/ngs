@@ -6,4 +6,7 @@
 
 	echo('Test: same precedence associativity')
 	dump(10-3-2)
+
+	echo('Test: and/or')
+	dump(1 and 2 or 3 and 4)
 }
