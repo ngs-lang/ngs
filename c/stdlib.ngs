@@ -1,0 +1,11 @@
+F in(x, arr:Arr) {
+	local i
+	local l
+	l = arr.len()
+	for(i;l) {
+		if arr[i] == x {
+			return true
+		}
+	}
+	false
+}

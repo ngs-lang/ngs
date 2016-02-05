@@ -3,12 +3,12 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-// OPEN(2)
+// OPEN(2), LSEEK(2)
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 
-// READ(2)
+// READ(2), LSEEK(2)
 #include <unistd.h>
 
 // BCMP(3)
@@ -207,7 +207,7 @@ METHOD_RESULT native_values_hash METHOD_PARAMS {
 	return METHOD_OK;
 }
 
-METHOD_RESULT native_len_hash METHOD_PARAMS {
+METHOD_RESULT native_len METHOD_PARAMS {
 	*result = MAKE_INT(OBJ_LEN(argv[0]));
 	return METHOD_OK;
 }
@@ -305,6 +305,28 @@ METHOD_RESULT native_c_read_int_int METHOD_PARAMS {
 
 	*result = make_string_of_len(buf, ret);
 	return METHOD_OK;
+}
+
+METHOD_RESULT native_c_lseek_int_int_str METHOD_PARAMS {
+	off_t offset;
+	const char *whence_str = obj_to_cstring(argv[2]);
+	int whence = 0;
+	if(!strcmp(whence_str, "set")) {
+		whence = SEEK_SET;
+	} else {
+		if(!strcmp(whence_str, "cur")) {
+			whence = SEEK_CUR;
+		} else {
+			if(!strcmp(whence_str, "end")) {
+				whence = SEEK_END;
+			} else {
+				// TODO: Exception
+				assert(0 == "c_lseek(): Invalid whence");
+			}
+		}
+	}
+	offset = lseek(GET_INT(argv[0]), GET_INT(argv[1]), whence);
+	METHOD_RETURN(MAKE_INT(offset));
 }
 
 METHOD_RESULT native_eq_str_str METHOD_PARAMS {
@@ -444,19 +466,23 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, "in",       &native_in_str_clib,       2, "symbol", vm->Str, "lib", vm->CLib);
 	register_global_func(vm, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
 
-	// file
-	register_global_func(vm, "c_open",   &native_c_open_str_str,    2, "a",   vm->Str, "b", vm->Str);
-	register_global_func(vm, "c_read",   &native_c_read_int_int,    2, "fd",  vm->Int, "count", vm->Int);
+	// low level file operations
+	register_global_func(vm, "c_open",   &native_c_open_str_str,    2, "pathname", vm->Str, "flags", vm->Str);
+	register_global_func(vm, "c_read",   &native_c_read_int_int,    2, "fd",       vm->Int, "count", vm->Int);
+	register_global_func(vm, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
 
 	// array
 	register_global_func(vm, "+",        &native_plus_arr_arr,      2, "a",   vm->Arr, "b", vm->Arr);
 	register_global_func(vm, "push",     &native_push_arr_any,      2, "arr", vm->Arr, "v", vm->Any);
 	register_global_func(vm, "shift",    &native_shift_arr,         1, "arr", vm->Arr);
 	register_global_func(vm, "shift",    &native_shift_arr_any,     2, "arr", vm->Arr, "dflt", vm->Any);
+	register_global_func(vm, "len",      &native_len,               1, "arr", vm->Arr);
 	register_global_func(vm, "[]",       &native_index_get_arr_int, 2, "arr", vm->Arr, "idx", vm->Int);
+
 	// string
 	// TODO: other string comparison operators
 	register_global_func(vm, "==",       &native_eq_str_str,        2, "a",   vm->Str, "b", vm->Str);
+
 	// int
 	register_global_func(vm, "+",        &native_plus_int_int,      2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "*",        &native_mul_int_int,       2, "a",   vm->Int, "b", vm->Int);
@@ -468,6 +494,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, ">",        &native_greater_int_int,   2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, ">=",       &native_greater_eq_int_int,2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, "==",       &native_eq_int_int,        2, "a",   vm->Int, "b", vm->Int);
+
 	// misc
 	register_global_func(vm, "dump",     &native_dump_any,          1, "obj", vm->Any);
 	register_global_func(vm, "echo",     &native_echo_str,          1, "s",   vm->Str);
@@ -475,12 +502,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, "Str",      &native_Str_int,           1, "n",   vm->Int);
 	register_global_func(vm, "is",       &native_is_any_type,       2, "obj", vm->Any, "t", vm->Type);
 	register_global_func(vm, "not",      &native_not_any,           1, "x",   vm->Any);
+
 	// hash
 	register_global_func(vm, "in",       &native_in_any_hash,       2, "x",   vm->Any, "h", vm->Hash);
 	register_global_func(vm, "hash",     &native_hash_any,          1, "x",   vm->Any);
 	register_global_func(vm, "keys",     &native_keys_hash,         1, "h",   vm->Hash);
 	register_global_func(vm, "values",   &native_values_hash,       1, "h",   vm->Hash);
-	register_global_func(vm, "len",      &native_len_hash,          1, "h",   vm->Hash);
+	register_global_func(vm, "len",      &native_len,               1, "h",   vm->Hash);
 	register_global_func(vm, "[]",       &native_index_get_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
 	register_global_func(vm, "[]=",      &native_index_set_hash_any_any,    3, "h",   vm->Hash,"k", vm->Any, "v", vm->Any);
 	register_global_func(vm, "del",      &native_index_del_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
@@ -547,15 +575,19 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, c
 		if(NATIVE_METHOD_OBJ_N_OPT_PAR(callable)) {
 			assert(0=="Optional parameters are not implemented yet");
 		}
+		// dump_titled("Native callable", callable);
 		if(argc != NATIVE_METHOD_OBJ_N_REQ_PAR(callable)) {
 			return METHOD_ARGS_MISMATCH;
 		}
+		// printf("PT 0\n");
 		for(lvi=0; lvi<NATIVE_METHOD_OBJ_N_REQ_PAR(callable); lvi++) {
 			// TODO: make sure second argument is type durng closure creation
+			// dump_titled("ARGV[lvi]", argv[lvi]);
 			if(!obj_is_of_type(argv[lvi], NATIVE_METHOD_OBJ_PARAMS(callable)[lvi*2+1])) {
 				return METHOD_ARGS_MISMATCH;
 			}
 		}
+		// printf("PT 2\n");
 		mr = ((VM_FUNC)OBJ_DATA_PTR(callable))(argv, &ctx->stack[ctx->stack_ptr-argc-1]);
 		// Will actually be needed if/when builtins start using guards
 		if(mr != METHOD_ARGS_MISMATCH) {
@@ -585,6 +617,7 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, c
 		// Setup call frame
 		assert(ctx->frame_ptr < MAX_FRAMES);
 		lvi = CLOSURE_OBJ_N_LOCALS(callable);
+		// printf("N LOCALS %d\n", lvi);
 		if(lvi) {
 			ctx->frames[ctx->frame_ptr].locals = NGS_MALLOC(lvi * sizeof(VALUE));
 			assert(ctx->frames[ctx->frame_ptr].locals);
@@ -598,8 +631,10 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, c
 			ctx->frames[ctx->frame_ptr].locals = NULL;
 		}
 		ctx->frames[ctx->frame_ptr].closure = callable;
+		// printf("INCREASING FRAME PTR\n");
 		ctx->frame_ptr++;
 		mr = vm_run(vm, ctx, CLOSURE_OBJ_IP(callable), &ctx->stack[ctx->stack_ptr-argc-1]);
+		ctx->frame_ptr--;
 		// TODO: dedup
 		if(mr != METHOD_ARGS_MISMATCH) {
 			ctx->stack_ptr -= argc;
@@ -748,6 +783,8 @@ main_loop:
 							ARG_LVI;
 							assert(IS_NOT_UNDEF(LOCALS[lvi]));
 							PUSH(LOCALS[lvi]);
+							// printf("LVI %d FRAME_PTR %d\n", lvi, ctx->frame_ptr-1);
+							// dump_titled("OP_FETCH_LOCAL", LOCALS[lvi]);
 							goto main_loop;
 		case OP_STORE_LOCAL:
 							ARG_LVI;

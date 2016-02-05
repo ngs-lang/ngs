@@ -10,7 +10,33 @@ bootstrap_debug =
 	else
 		F(s) {}
 
+F bootstrap_find_ngs_dir() {
+	if 'NGS_DIR' in ENV {
+		return ENV['NGS_DIR']
+	}
+	'.'
+}
+
+F require(fname) {
+	local fd
+	local stdlib_file_len
+	local stdlib_text
+	fd = c_open(fname, 'r')
+	if fd > 0 {
+		bootstrap_debug("require(): opened file ${fname} as fd ${fd}")
+		stdlib_file_len = c_lseek(fd, 0, "end")
+		c_lseek(fd, 0, "set")
+		bootstrap_debug("require(): file size of ${fname} is ${stdlib_file_len}")
+		stdlib_text = c_read(fd, stdlib_file_len)
+	} else {
+		bootstrap_debug("require(): failed to open file $fname")
+		exit(1)
+	}
+}
+
 F bootstrap() {
+	local do_load_stdlib
+	local code_to_run
 	do_load_stdlib = true
 	code_to_run = null
 
@@ -39,19 +65,12 @@ F bootstrap() {
 	# *** WIP: Load stdlib ***
 	if do_load_stdlib {
 		bootstrap_debug('Will load stdlib')
+		stdlib_file = "${bootstrap_find_ngs_dir()}/stdlib.ngs"
+		bootstrap_debug("Stdlib is at $stdlib_file")
+		require(stdlib_file)
 	}
 
 	# *** WIP: Load the main program ***
-	if ARGV {
-		fname = ARGV.shift()
-		f = c_open(fname, 'r')
-		if f > 0 {
-			s = c_read(f, 4096)
-			dump(s)
-
-		}
-		dump(f)
-	}
 
 }
 

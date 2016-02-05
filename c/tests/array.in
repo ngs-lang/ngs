@@ -9,6 +9,9 @@
 	dump(a[0] == 10)
 	dump(a[1] == 20)
 
+	echo('Test: len')
+	dump(a.len())
+
 	echo('Test: shift')
 	v = a.shift()
 	dump(v)
