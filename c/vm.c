@@ -1,6 +1,8 @@
 #include <assert.h>
 #include <dlfcn.h>
 #include <stdarg.h>
+
+// ..., FMEMOPEN(3)
 #include <stdio.h>
 
 // OPEN(2), LSEEK(2)
@@ -16,6 +18,10 @@
 
 #include "ngs.h"
 #include "vm.h"
+#include "ast.h"
+#include "compile.h"
+#include "syntax.h"
+#include "syntax.auto.h"
 
 extern char **environ;
 
@@ -358,6 +364,30 @@ METHOD_RESULT native_eq_str_str METHOD_PARAMS {
 	METHOD_RETURN(MAKE_BOOL(!bcmp(OBJ_DATA_PTR(argv[0]), OBJ_DATA_PTR(argv[1]), len)));
 }
 
+METHOD_RESULT native_compile_str_str METHOD_PARAMS {
+	ast_node *tree = NULL;
+	char *bytecode;
+	size_t len;
+	yycontext yyctx;
+	int parse_ok;
+	memset(&yyctx, 0, sizeof(yycontext));
+	yyctx.fail_pos = -1;
+	yyctx.fail_rule = "(unknown)";
+	yyctx.lines = 0;
+	yyctx.lines_postions[0] = 0;
+	// printf("PT 1 %p\n", OBJ_DATA_PTR(argv[0]));
+	yyctx.input_file = fmemopen(OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]), "r");
+	parse_ok = yyparse(&yyctx);
+	if(!parse_ok) {
+		// TODO: error message and/or exception
+		assert(0 == "compile() failed");
+	}
+	tree = yyctx.__;
+	yyrelease(&yyctx);
+	bytecode = compile(tree, &len);
+	METHOD_RETURN(make_string_of_len(bytecode, len));
+}
+
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
 	HASH_FIND(hh, vm->globals_indexes, name, name_len, var);
@@ -503,6 +533,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// string
 	// TODO: other string comparison operators
+	register_global_func(vm, "len",      &native_len,               1, "s",   vm->Str);
 	register_global_func(vm, "==",       &native_eq_str_str,        2, "a",   vm->Str, "b", vm->Str);
 
 	// int
@@ -524,6 +555,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, "Str",      &native_Str_int,           1, "n",   vm->Int);
 	register_global_func(vm, "is",       &native_is_any_type,       2, "obj", vm->Any, "t", vm->Type);
 	register_global_func(vm, "not",      &native_not_any,           1, "x",   vm->Any);
+	register_global_func(vm, "compile",  &native_compile_str_str,   2, "code",vm->Str, "fname", vm->Str);
 
 	// hash
 	register_global_func(vm, "in",       &native_in_any_hash,       2, "x",   vm->Any, "h", vm->Hash);

@@ -21,3 +21,4 @@ scratch.txt
 tags
 *.o
 syntax.c
+syntax.auto.h

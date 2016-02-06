@@ -2,6 +2,7 @@
 #include <string.h>
 #include "ngs.h"
 #include "ast.h"
+#include "syntax.h"
 
 // gcc still warns about unused yymatchDot() and yyAccept(). clang does not.
 #pragma GCC diagnostic push
@@ -9,23 +10,9 @@
 #pragma GCC diagnostic ignored "-Wunused-label"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
-typedef struct ast_node_ll {
-	ast_node *node;
-	ast_node_type type;
-	struct ast_node_ll *next;
-} AST_NODE_TYPE_LL;
-
 #define YY_CTX_LOCAL 1
 
 #define YY_MAX_LINES (10000)
-
-#define YYSTYPE ast_node*
-#define YY_CTX_MEMBERS \
-	int fail_pos, seq_pos; \
-	char *fail_rule; \
-	int lines, lines_postions[YY_MAX_LINES]; \
-	FILE *input_file; \
-	AST_NODE_TYPE_LL *nodes_for_type_change;
 
 #define YYMALLOC(size)        NGS_MALLOC(size)
 #define YYREALLOC(ptr, size)  NGS_REALLOC(ptr, size)

@@ -11,7 +11,7 @@ LDLIBS := -lpthread -lgc -lffi -ldl
 LDFLAGS := -rdynamic
 # -pg - for gprof profiler
 LDFLAGS_PROFILER := -pg
-COMMON_DEPS := *.h Makefile syntax.c
+COMMON_DEPS := *.h Makefile syntax.c syntax.auto.h
 SRC := debug.o ast.o obj.o compile.o decompile.o vm.o ngs.o
 # SRC := *.c
 
@@ -20,6 +20,9 @@ all: ngs ngs-prof ngs-debug
 # Built for peg/leg v 0.1.15
 syntax.c: syntax.leg patch-leg-input.sed patch-leg-output.sed patch-leg-output.awk
 	cat $< | sed -f patch-leg-input.sed | leg  | sed -f patch-leg-output.sed | awk -f patch-leg-output.awk >$@
+
+syntax.auto.h: syntax.c Makefile
+	cat $< | (sed -n '/^typedef/p; /^struct/,/^$$/p; /define YY_MAX_LINES/p;'; echo 'int yyparse(yycontext *yyctx);'; echo 'yycontext * yyrelease(yycontext *yyctx);') >$@
 
 %.o: %.c $(COMMON_DEPS)
 	$(CC) -c $(CFLAGS) $< -o $@
