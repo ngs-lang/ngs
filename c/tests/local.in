@@ -1,0 +1,12 @@
+{
+	shadow1 = 1
+	shadow2 = 2
+
+	F test() {
+		local shadow1, shadow2=20
+		dump(defined shadow1)
+		dump(shadow2)
+	}
+
+	test()
+}

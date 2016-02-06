@@ -18,9 +18,7 @@ F bootstrap_find_ngs_dir() {
 }
 
 F require(fname) {
-	local fd
-	local stdlib_file_len
-	local stdlib_text
+	local fd, stdlib_file_len, stdlib_text
 	fd = c_open(fname, 'r')
 	if fd > 0 {
 		bootstrap_debug("require(): opened file ${fname} as fd ${fd}")
@@ -35,10 +33,8 @@ F require(fname) {
 }
 
 F bootstrap() {
-	local do_load_stdlib
-	local code_to_run
-	do_load_stdlib = true
-	code_to_run = null
+	local do_load_stdlib = true
+	local code_to_run = null
 
 	bootstrap_debug('bootstrap.ngs begin')
 

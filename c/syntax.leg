@@ -631,11 +631,25 @@ defined =
 	}
 
 local-declaration =
-	"local" space i:identifier {
-		MAKE_NODE(ret, LOCAL_NODE);
+	"local" space l:local-node local-declaration-item { append_ast_node_child(l, $$); } (space? "," space? local-declaration-item { append_ast_node_child(l, $$); })* {
+		$$ = l;
+		CAPTURE_LOCATION($$);
+	}
+
+local-node = { MAKE_NODE(ret, LOCAL_NODE); $$ = ret }
+
+local-declaration-item = i:identifier e:local-declaration-item-optional-value {
+		if(!e) {
+			$$ = i;
+			return;
+		}
+		MAKE_NODE(ret, ASSIGNMENT_NODE);
+		i->next_sibling = e;
 		ret->first_child = i;
 		$$ = ret;
 	}
+
+local-declaration-item-optional-value = (space? "=" space? e:expression) { $$ = e } | { $$ = NULL; }
 
 string =
 	# TODO: backslash sequences

@@ -166,8 +166,9 @@ void register_local_var(COMPILATION_CONTEXT *ctx, char *name) {
 	HASH_ADD_KEYPTR(hh, LOCALS, s->name, strlen(s->name), s);
 }
 
+// TODO: maybe do it at parse time? That might be more complex but probably faster
 void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
-	ast_node *ptr;
+	ast_node *ptr, *ptr2;
 	switch(node->type) {
 		case FUNC_NODE:
 			if(node->first_child->next_sibling->next_sibling) {
@@ -176,7 +177,22 @@ void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 			}
 			return;
 		case LOCAL_NODE:
-			register_local_var(ctx, node->first_child->name);
+			for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
+				switch(ptr->type) {
+					case IDENTIFIER_NODE:
+						register_local_var(ctx, ptr->name);
+						break;
+					case ASSIGNMENT_NODE:
+						assert(ptr->first_child->type == IDENTIFIER_NODE);
+						register_local_var(ctx, ptr->first_child->name);
+						for(ptr2=ptr->first_child->next_sibling; ptr2; ptr2=ptr2->next_sibling) {
+							register_local_vars(ctx, ptr2);
+						}
+						break;
+					default:
+						assert(0 == "Unexpected node type under LOCAL_NODE");
+				}
+			}
 			return;
 	}
 	for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
@@ -421,8 +437,12 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			*(JUMP_OFFSET *)&(*buf)[while_jump+1] = *idx - while_jump - 1 - sizeof(JUMP_OFFSET);
 			break;
 		case LOCAL_NODE:
-			// "local my_var"
-			// Used for register_local_var, does not produce any code
+			for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
+				if(ptr->type != IDENTIFIER_NODE) {
+					compile_main_section(ctx, ptr, buf, idx, allocated, DONT_NEED_RESULT);
+				}
+			}
+			if(need_result) { OPCODE(*buf, OP_PUSH_NULL); }
 			break;
 		case HASH_LIT_NODE:
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "HASH NODE", *idx);
