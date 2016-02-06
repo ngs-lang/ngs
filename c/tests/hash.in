@@ -25,6 +25,10 @@
 	h["xyw"] = 1122;
 	dump(h["xyw"])
 
+	echo("Test: get")
+	dump(h.get("xyw", 2000))
+	dump(h.get("xyw-does-not-exist", 2001))
+
 	echo("Test: len")
 	dump(len(h))
 

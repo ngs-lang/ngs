@@ -10,12 +10,7 @@ bootstrap_debug =
 	else
 		F(s) {}
 
-F bootstrap_find_ngs_dir() {
-	if 'NGS_DIR' in ENV {
-		return ENV['NGS_DIR']
-	}
-	'.'
-}
+F bootstrap_find_ngs_dir() ENV.get('NGS_DIR', '.')
 
 F require(fname) {
 	local fd, stdlib_file_len, stdlib_text

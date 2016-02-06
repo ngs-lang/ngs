@@ -9,6 +9,10 @@
 	dump(a[0] == 10)
 	dump(a[1] == 20)
 
+	echo('Test: get')
+	dump(a.get(1, 'blah1'))
+	dump(a.get(2, 'blah2'))
+
 	echo('Test: len')
 	dump(a.len())
 

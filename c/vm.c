@@ -132,6 +132,17 @@ METHOD_RESULT native_shift_arr_any METHOD_PARAMS {
 	METHOD_RETURN(array_shift(argv[0]));
 }
 
+METHOD_RESULT native_index_get_arr_int_any METHOD_PARAMS {
+	int idx, len;
+	idx = GET_INT(argv[1]);
+	assert(idx>=0);
+	len = OBJ_LEN(argv[0]);
+	if(idx<len) {
+		METHOD_RETURN(ARRAY_ITEMS(argv[0])[idx]);
+	}
+	METHOD_RETURN(argv[2]);
+}
+
 METHOD_RESULT native_index_get_arr_int METHOD_PARAMS {
 	int idx, len;
 	idx = GET_INT(argv[1]);
@@ -209,6 +220,16 @@ METHOD_RESULT native_values_hash METHOD_PARAMS {
 
 METHOD_RESULT native_len METHOD_PARAMS {
 	*result = MAKE_INT(OBJ_LEN(argv[0]));
+	return METHOD_OK;
+}
+
+METHOD_RESULT native_index_get_hash_any_any METHOD_PARAMS {
+	HASH_OBJECT_ENTRY *e;
+	e = get_hash_key(argv[0], argv[1]);
+	if(!e) {
+		METHOD_RETURN(argv[2]);
+	}
+	*result = e->val;
 	return METHOD_OK;
 }
 
@@ -477,6 +498,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, "shift",    &native_shift_arr,         1, "arr", vm->Arr);
 	register_global_func(vm, "shift",    &native_shift_arr_any,     2, "arr", vm->Arr, "dflt", vm->Any);
 	register_global_func(vm, "len",      &native_len,               1, "arr", vm->Arr);
+	register_global_func(vm, "get",      &native_index_get_arr_int_any, 3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
 	register_global_func(vm, "[]",       &native_index_get_arr_int, 2, "arr", vm->Arr, "idx", vm->Int);
 
 	// string
@@ -509,6 +531,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, "keys",     &native_keys_hash,         1, "h",   vm->Hash);
 	register_global_func(vm, "values",   &native_values_hash,       1, "h",   vm->Hash);
 	register_global_func(vm, "len",      &native_len,               1, "h",   vm->Hash);
+	register_global_func(vm, "get",      &native_index_get_hash_any_any,    3, "h",   vm->Hash,"k", vm->Any, "dflt", vm->Any);
 	register_global_func(vm, "[]",       &native_index_get_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
 	register_global_func(vm, "[]=",      &native_index_set_hash_any_any,    3, "h",   vm->Hash,"k", vm->Any, "v", vm->Any);
 	register_global_func(vm, "del",      &native_index_del_hash_any,        2, "h",   vm->Hash,"k", vm->Any);

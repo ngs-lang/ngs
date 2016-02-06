@@ -7,6 +7,9 @@ Test: push
 Test: []
 * true
 * true
+Test: get
+* int 20
+* string(len=5) blah2
 Test: len
 * int 2
 Test: shift

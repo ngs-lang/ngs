@@ -19,6 +19,9 @@ Test: values order
 Test: replace value
 * int 11
 * int 1122
+Test: get
+* int 1122
+* int 2001
 Test: len
 * int 4
 Test: del
