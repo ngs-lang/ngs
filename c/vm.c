@@ -20,6 +20,7 @@
 #include "vm.h"
 #include "ast.h"
 #include "compile.h"
+#include "decompile.h"
 #include "syntax.h"
 #include "syntax.auto.h"
 
@@ -734,10 +735,10 @@ main_loop:
 	opcode = vm->bytecode[ip++];
 #ifdef DO_NGS_DEBUG
 	if(opcode <= sizeof(opcodes_names) / sizeof(char *)) {
-		DEBUG_VM_RUN("main_loop IP=%i OP=%s STACK_LEN=%d\n", ip-1, opcodes_names[opcode], ctx->stack_ptr);
+		DEBUG_VM_RUN("main_loop IP=%i OP=%s STACK_LEN=%zu\n", ip-1, opcodes_names[opcode], ctx->stack_ptr);
 		decompile(vm->bytecode, ip-1, ip);
 		for(j=ctx->stack_ptr; j>0; j--) {
-			printf("Stack @ %d\n", j-1);
+			printf("Stack @ %zu\n", j-1);
 			dump(ctx->stack[j-1]);
 		}
 	}
