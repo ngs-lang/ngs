@@ -356,6 +356,8 @@ METHOD_RESULT native_c_lseek_int_int_str METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(offset));
 }
 
+METHOD_RESULT native_c_close_int METHOD_PARAMS { METHOD_RETURN(MAKE_INT(close(GET_INT(argv[0])))); }
+
 METHOD_RESULT native_eq_str_str METHOD_PARAMS {
 	size_t len;
 	if(OBJ_LEN(argv[0]) != OBJ_LEN(argv[1])) { METHOD_RETURN(MAKE_BOOL(0)); }
@@ -519,6 +521,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// low level file operations
 	register_global_func(vm, "c_open",   &native_c_open_str_str,    2, "pathname", vm->Str, "flags", vm->Str);
+	register_global_func(vm, "c_close",  &native_c_close_int,       1, "fd",       vm->Int);
 	register_global_func(vm, "c_read",   &native_c_read_int_int,    2, "fd",       vm->Int, "count", vm->Int);
 	register_global_func(vm, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
 
@@ -731,7 +734,12 @@ main_loop:
 	opcode = vm->bytecode[ip++];
 #ifdef DO_NGS_DEBUG
 	if(opcode <= sizeof(opcodes_names) / sizeof(char *)) {
-		DEBUG_VM_RUN("main_loop IP=%i OP=%s\n", ip-1, opcodes_names[opcode]);
+		DEBUG_VM_RUN("main_loop IP=%i OP=%s STACK_LEN=%d\n", ip-1, opcodes_names[opcode], ctx->stack_ptr);
+		decompile(vm->bytecode, ip-1, ip);
+		for(j=ctx->stack_ptr; j>0; j--) {
+			printf("Stack @ %d\n", j-1);
+			dump(ctx->stack[j-1]);
+		}
 	}
 #endif
 
@@ -950,6 +958,8 @@ do_jump:
 							POP(v);
 							string_components_count = GET_INT(v);
 							v = join_strings(string_components_count, &(ctx->stack[ctx->stack_ptr-string_components_count]));
+							assert(ctx->stack_ptr >= string_components_count);
+							ctx->stack_ptr -= string_components_count;
 							PUSH(v);
 							goto main_loop;
 		case OP_PUSH_EMPTY_STR:

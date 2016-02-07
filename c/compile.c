@@ -379,6 +379,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				// Function has a name
 				compile_identifier(ctx, buf, idx, node->first_child->next_sibling->next_sibling->name, OP_DEF_LOCAL_FUNC, OP_DEF_UPVAR_FUNC, OP_DEF_GLOBAL_FUNC);
 			}
+			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 		case STR_COMPS_NODE:
 			for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {

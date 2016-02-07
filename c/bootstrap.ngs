@@ -12,22 +12,30 @@ bootstrap_debug =
 
 F bootstrap_find_ngs_dir() ENV.get('NGS_DIR', '.')
 
-F require(fname) {
-	local fd, file_len, program_text, program_bytecode
+# *** fetch - abstraction above low level c io primitives ***
+F fetch(fname) {
+	local fd, file_len, data
 	fd = c_open(fname, 'r')
 	if fd <= 0 {
-		bootstrap_debug("require(): failed to open file ${fname}")
+		bootstrap_debug("fetch(): failed to open file ${fname}")
 		exit(50)
 	}
-	bootstrap_debug("require(): opened file ${fname} as fd ${fd}")
+	bootstrap_debug("fetch(): opened file ${fname} as fd ${fd}")
 	file_len = c_lseek(fd, 0, "end")
 	if file_len < 0 {
-		bootstrap_debug("require(): failed to get the size of file ${fname}")
+		bootstrap_debug("fetch(): failed to get the size of file ${fname}")
 		exit(51)
 	}
 	c_lseek(fd, 0, "set")
-	bootstrap_debug("require(): file size of ${fname} is ${file_len}")
-	program_text = c_read(fd, file_len)
+	bootstrap_debug("fetch(): file size of ${fname} is ${file_len}")
+	data = c_read(fd, file_len)
+	c_close(fd)
+	data
+}
+
+F require(fname) {
+	local program_text, program_bytecode
+	program_text = fetch(fname)
 	program_bytecode = compile(program_text, fname)
 	bootstrap_debug("require(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
 }
@@ -67,6 +75,7 @@ F bootstrap() {
 	}
 
 	# *** WIP: Load the main program ***
+	0
 
 }
 
