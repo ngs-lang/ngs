@@ -27,34 +27,25 @@ F has(container, element) element in container
 # Checks whether element x is in array arr
 F in(x, arr:Arr) {
 	local l = arr.len()
-	for(i;l) {
-		if arr[i] == x {
-			return true
-		}
-	}
+	for(i;l) arr[i] == x returns true
 	false
 }
 
 # Tested by has() tests
 
 
+# XXX BUG: the dot precedence is incorrect
+# temporary workaround - parenthesis
 F '=='(a:Arr, b:Arr) {
 	local l = a.len()
-	# XXX BUG: the dot precedence is incorrect
-	# temporary workaround - parenthesis
-	if l != (b.len()) {
-		return false
-	}
-	for(i;l) {
-		if a[i] != b[i] {
-			return false
-		}
-	}
+	l != (b.len()) returns false
+	for(i;l) a[i] != b[i] returns false
 	true
 }
 
 # TEST: [1, 2] == [1, 2]
 # TEST: [1, 3] != [1, 2]
+# TEST: [1] != [1, 2]
 
 
 F collect(arr:Arr, x) arr.push(x)
@@ -63,7 +54,6 @@ F collect(arr:Arr, x) arr.push(x)
 # === Integer ====================================
 
 
-# 10.map(identity) -> [0,1,...,9]
 F map(n:Int, mapper) {
 	local ret = []
 	for(i;n) ret.push(mapper(i))
@@ -73,4 +63,9 @@ F map(n:Int, mapper) {
 # TEST: 3.map(identity) == [0, 1, 2]
 
 
+# Collector (implicit Array and .push()) syntax thoughts for the above function
 # F map(n:Int, mapper) for(i;n) fcollect mapper(i)
+# F map(n:Int, mapper) collector for(i;n) collect mapper(i)
+# F map(n:Int, mapper) [collector] for(i;n) collect mapper(i)
+# F map(n:Int, mapper) ^ for(i;n) ^mapper(i)
+# F map(n:Int, mapper) [^] for(i;n) ^mapper(i)

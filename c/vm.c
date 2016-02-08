@@ -181,7 +181,7 @@ METHOD_RESULT native_Bool_any METHOD_PARAMS {
 	// dump(argv[0]);
 	if(IS_BOOL(argv[0])) METHOD_RETURN(argv[0])
 	if(IS_INT(argv[0])) METHOD_RETURN(MAKE_BOOL(GET_INT(argv[0])))
-	if(IS_STRING(argv[0]) || IS_ARRAY(argv[0])) METHOD_RETURN(MAKE_BOOL(OBJ_LEN(argv[0])))
+	if(IS_STRING(argv[0]) || IS_ARRAY(argv[0]) || IS_HASH(argv[0])) METHOD_RETURN(MAKE_BOOL(OBJ_LEN(argv[0])))
 	return METHOD_ARGS_MISMATCH;
 }
 

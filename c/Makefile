@@ -96,4 +96,4 @@ test-stdlib: ngs
 	done < stdlib.ngs
 
 test: test-no-bootstrap-no-stdlib test-stdlib
-	echo "ALL TESTS OK"
+	@ echo "ALL TESTS OK"
