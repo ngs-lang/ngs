@@ -42,9 +42,9 @@ ngs-debug: $(patsubst %.o, %_debug.o, $(SRC))
 # Micro bechmark but it's still something
 time-sum: ngs
 
-	# About 2.9 seconds on my laptop with gcc -O1
-	# About 2.2 seconds on my laptop with clang -O1
-	NGS_BOOTSTRAP=- time ./ngs < <(echo '{s=0;for(i=0;i<10000000;i=i+1) {s=s+i}}')
+	# About 2.5 seconds on my laptop with gcc -O1
+	# About 1.7 seconds on my laptop with clang -O1
+	NGS_BOOTSTRAP=bootstrap.ngs time ./ngs -e 's=0;for(i=0;i<10000000;i=i+1) {s=s+i}'
 
 	# About 1.1 seconds / perl 5.20.2
 	time perl -e '$$s=0; for($$i=0; $$i<10000000; $$i++) { $$s+=$$i}'
@@ -83,7 +83,7 @@ test: ngs
 	@ cd tests/ && \
 	for f in *.in;do \
 		echo "+ $${f%.in}"; \
-		out=$$(NGS_BOOTSTRAP=- ../ngs <$$f); \
+		out=$$(NGS_BOOTSTRAP=- ../ngs <$$f) && \
 		diff -u <(echo "$$out") $${f%.in}.ok || exit 1; \
 	done; \
 	echo "ALL TESTS OK"

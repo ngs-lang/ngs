@@ -360,6 +360,8 @@ METHOD_RESULT native_c_lseek_int_int_str METHOD_PARAMS {
 
 METHOD_RESULT native_c_close_int METHOD_PARAMS { METHOD_RETURN(MAKE_INT(close(GET_INT(argv[0])))); }
 
+METHOD_RESULT native_c_exit_int METHOD_PARAMS { (void)result; exit(GET_INT(argv[0])); }
+
 METHOD_RESULT native_eq_str_str METHOD_PARAMS {
 	size_t len;
 	if(OBJ_LEN(argv[0]) != OBJ_LEN(argv[1])) { METHOD_RETURN(MAKE_BOOL(0)); }
@@ -389,7 +391,7 @@ METHOD_RESULT native_compile_str_str METHOD_PARAMS {
 	tree = yyctx.__;
 	yyrelease(&yyctx);
 	bytecode = compile(tree, &len);
-	// should be later // bytecode[len-1] = OP_RET;
+	IF_DEBUG(COMPILER, decompile(bytecode, 0, len);)
 	METHOD_RETURN(make_string_of_len(bytecode, len));
 }
 
@@ -531,11 +533,14 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "in",       &native_in_str_clib,       2, "symbol", vm->Str, "lib", vm->CLib);
 	register_global_func(vm, 0, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
 
-	// low level file operati0, ons
+	// low level file operations
 	register_global_func(vm, 0, "c_open",   &native_c_open_str_str,    2, "pathname", vm->Str, "flags", vm->Str);
 	register_global_func(vm, 0, "c_close",  &native_c_close_int,       1, "fd",       vm->Int);
 	register_global_func(vm, 0, "c_read",   &native_c_read_int_int,    2, "fd",       vm->Int, "count", vm->Int);
 	register_global_func(vm, 0, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
+
+	// low level misc
+	register_global_func(vm, 0, "c_exit",   &native_c_exit_int,        1, "status",   vm->Int);
 
 	// array
 	register_global_func(vm, 0, "+",        &native_plus_arr_arr,      2, "a",   vm->Arr, "b", vm->Arr);
@@ -617,8 +622,7 @@ size_t vm_load_bytecode(VM *vm, char *bc, size_t len) {
 	size_t ip;
 	DEBUG_VM_API("vm_load_bytecode() VM=%p bytecode=%p\n", vm, bc);
 	assert(len);
-	assert(bc[len-1] == OP_HALT);
-	// should be later // assert(bc[len-1] == (vm->bytecode? OP_RET : OP_HALT));
+	assert(bc[len-1] == OP_RET);
 	if(vm->bytecode) {
 		vm->bytecode = NGS_REALLOC(vm->bytecode, vm->bytecode_len + len);
 	} else {
@@ -910,7 +914,6 @@ main_loop:
 								// dump_titled("RESULT", *result);
 							} else {
 								assert(0=="Function does not have result value");
-
 							}
 							return METHOD_OK;
 		case OP_JMP:

@@ -232,6 +232,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 
 	ensure_room(buf, *idx, allocated, 1024); // XXX - magic number
 
+	// printf("compile_main_section() node=%p type=%s last_child=%p need_result=%d\n", node, NGS_AST_NODE_TYPES_NAMES[node->type], node->last_child, need_result);
 	switch(node->type) {
 		case CALL_NODE:
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "CALL NODE", *idx);
@@ -295,6 +296,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			break;
 		case EXPRESSIONS_NODE:
 			for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
+				// printf("EXPRESSIONS_NODE ptr=%p type=%s need_result=%d will_do_result=%d\n", ptr, NGS_AST_NODE_TYPES_NAMES[ptr->type], need_result, (ptr == node->last_child) && need_result);
 				compile_main_section(ctx, ptr, buf, idx, allocated, (ptr == node->last_child) && need_result);
 			}
 			break;
@@ -572,7 +574,7 @@ char *compile(ast_node *node /* the top level node */, size_t *len) {
 	*len = 0;
 	compile_main_section(&ctx, node, &main_buf, &main_len, &main_allocated, NEED_RESULT);
 	ensure_room(&main_buf, main_len, &main_allocated, 1);
-	main_buf[(main_len)++] = OP_HALT;
+	main_buf[(main_len)++] = OP_RET;
 
 	compile_init_section(&ctx, &init_buf, &init_len);
 

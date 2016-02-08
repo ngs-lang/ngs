@@ -53,7 +53,7 @@ void position_to_line_col();
 // TODO: check whether it's appropriate to use Boehm's "atomic" allocation.
 #define COPY_NODE(dst, src) (dst) = NGS_MALLOC(sizeof(ast_node)); memcpy((dst), (src), sizeof(ast_node))
 #define MAKE_REQ_ARG_NODE(name, val) MAKE_NODE(name, ARG_NODE); name->first_child = val; val->next_sibling = NULL;
-#define PREPEND_NODE(list, elt) elt->next_sibling = list->first_child; list->first_child = elt;
+#define PREPEND_NODE(list, elt) elt->next_sibling = list->first_child; list->first_child = elt; if(!list->last_child) { list->last_child=elt; };
 
 #define HANDLE_FAILED_MATCH(rule_name) \
 	if(yy->__pos > yy->fail_pos) {\
@@ -103,8 +103,6 @@ commands =
 	|
 	{
 		MAKE_NODE(ret, EXPRESSIONS_NODE);
-		ret->first_child = NULL;
-		ret->last_child = NULL;
 		$$ = ret;
 	}
 

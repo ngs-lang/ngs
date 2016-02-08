@@ -1,3 +1,4 @@
+# *** Convert values returned by the program (or -e/-E expression) to exit codes ***
 F to_exit_code(x) 0
 F to_exit_code(b:Bool) if b 0 1
 F to_exit_code(n:Int) n
@@ -18,13 +19,13 @@ F fetch(fname) {
 	fd = c_open(fname, 'r')
 	if fd <= 0 {
 		bootstrap_debug("fetch(): failed to open file ${fname}")
-		exit(50)
+		c_exit(102)
 	}
 	bootstrap_debug("fetch(): opened file ${fname} as fd ${fd}")
 	file_len = c_lseek(fd, 0, "end")
 	if file_len < 0 {
 		bootstrap_debug("fetch(): failed to get the size of file ${fname}")
-		exit(51)
+		c_exit(103)
 	}
 	c_lseek(fd, 0, "set")
 	bootstrap_debug("fetch(): file size of ${fname} is ${file_len}")
@@ -46,6 +47,7 @@ F require(fname) {
 F bootstrap() {
 	local do_load_stdlib = true
 	local code_to_run = null
+	local fname
 
 	bootstrap_debug('bootstrap.ngs begin')
 
@@ -55,13 +57,14 @@ F bootstrap() {
 
 	# *** Parse switches ***
 	if ARGV and (ARGV[0] == '-e' or ARGV[0] == '-E') {
-		sw = ARGV.shift()
-		code_to_run = ARGV.shift()
+		local sw = ARGV.shift()
+		code_to_run = "{ ${ARGV.shift()} }"
 		bootstrap_debug("Got $sw switch, using command line provided code")
 		if sw == '-E' {
 			bootstrap_debug('Will skip loading stdlib because of -E flag')
 			do_load_stdlib = false
 		}
+		fname = sw
 	}
 
 	if 'NGS_SKIP_STDLIB' in ENV {
@@ -78,8 +81,19 @@ F bootstrap() {
 	}
 
 	# *** WIP: Load the main program ***
-	0
+	# XXX: not() is not defined yet. Change 'code_to_run is Null' to 'not(code_to_run)' later.
 
+	if code_to_run is Null {
+		bootstrap_debug('No -e or -E switch was passed, will load the program from a file')
+		fname = ARGV.shift()
+		code_to_run = fetch(fname)
+	}
+
+	local program_bytecode = compile(code_to_run, fname)
+	bootstrap_debug("bootstrap(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
+	local program_func = load(program_bytecode, "bootstrap()ped file: $fname")
+	local result = program_func()
+	c_exit(result.to_exit_code())
 }
 
 bootstrap()

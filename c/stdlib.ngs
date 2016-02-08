@@ -26,5 +26,3 @@ F map(n:Int, mapper) {
 }
 
 # F map(n:Int, mapper) for(i;n) fcollect mapper(i)
-
-{ 1 }
