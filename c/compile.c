@@ -193,7 +193,16 @@ void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 						assert(0 == "Unexpected node type under LOCAL_NODE");
 				}
 			}
-			return;
+			break;
+		case FOR_NODE:
+			// In expression `for(i=...)` the `i` is automatically local. Never seen cases where it should be otherwise.
+			// TODO: Lint that will warn about redundant `local i` if it is present in addition.
+			if(node->first_child->type == ASSIGNMENT_NODE) {
+				if(node->first_child->first_child->type == IDENTIFIER_NODE) {
+					register_local_var(ctx, node->first_child->first_child->name);
+				}
+			}
+			break;
 	}
 	for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
 		register_local_vars(ctx, ptr);

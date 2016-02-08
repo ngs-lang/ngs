@@ -10,7 +10,6 @@ F has(container, element) element in container
 
 # Checks whether element x is in array arr
 F in(x, arr:Arr) {
-	local i
 	local l = arr.len()
 	for(i;l) {
 		if arr[i] == x {
@@ -24,7 +23,7 @@ F in(x, arr:Arr) {
 
 # 10.map(identity) -> 0,1,...,9
 F map(n:Int, mapper) {
-	ret = []
+	local ret = []
 	for(i;n) ret.push(mapper(i))
 	ret
 }
