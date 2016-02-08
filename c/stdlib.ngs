@@ -21,7 +21,7 @@ F in(x, arr:Arr) {
 
 # === Integer ====================================
 
-# 10.map(identity) -> 0,1,...,9
+# 10.map(identity) -> [0,1,...,9]
 F map(n:Int, mapper) {
 	local ret = []
 	for(i;n) ret.push(mapper(i))
