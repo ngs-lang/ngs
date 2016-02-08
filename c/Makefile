@@ -1,12 +1,12 @@
 # TODO: maybe do it with usual .o intermediate files
 
-SHELL := /bin/bash
+SHELL := /bin/bash -e
 
 CC := gcc
 # -gdwarf-2 -g3 -- for debugging macros
 # -rdynamic -- for backtrace_symbols() to work
 CFLAGS := -Wall -Wextra -gdwarf-2 -g3 -g -O1
-CFLAGS_DEBUG=-DNGS_DEBUG_FLAGS=0xFFFF -DYY_DEBUG=1
+CFLAGS_DEBUG=-DNGS_DEBUG_FLAGS=0xFFFF
 LDLIBS := -lpthread -lgc -lffi -ldl
 LDFLAGS := -rdynamic
 # -pg - for gprof profiler
@@ -78,12 +78,22 @@ tags: *.c *.h
 ngs.1: ngs.1.md
 	pandoc -f markdown -t man -s $< -o $@
 
-test: ngs
+test-no-bootstrap-no-stdlib: ngs
 	@ echo "[ Starting tests ]"
 	@ cd tests/ && \
 	for f in *.in;do \
-		echo "+ $${f%.in}"; \
+		echo "+ Bare test: $${f%.in}"; \
 		out=$$(NGS_BOOTSTRAP=- ../ngs <$$f) && \
 		diff -u <(echo "$$out") $${f%.in}.ok || exit 1; \
-	done; \
+	done;
+
+test-stdlib: ngs
+	@ while read line;do \
+		if [[ $$line =~ ^\#\ TEST:\ (.*) ]];then \
+			echo "+ Stdlib test: $${BASH_REMATCH[1]}" ; \
+			NGS_BOOTSTRAP=bootstrap.ngs ./ngs -e "($${BASH_REMATCH[1]}) == true" ; \
+		fi; \
+	done < stdlib.ngs
+
+test: test-no-bootstrap-no-stdlib test-stdlib
 	echo "ALL TESTS OK"

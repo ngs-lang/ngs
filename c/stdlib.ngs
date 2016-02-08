@@ -1,12 +1,28 @@
 # === Misc functional ============================
 
+
 F identity(x) x
+
+# TEST: identity(10) == 10
+
 
 # === Syntactic sugar ============================
 
+
+F '!='(a,b) not(a==b)
+
+# TEST: 1 != 2
+# TEST: (1 != 1) == false
+
+
 F has(container, element) element in container
 
+# TEST: [1,2,3].has(1)
+# TEST: [1,2,3].has(10) == false
+
+
 # === Array ======================================
+
 
 # Checks whether element x is in array arr
 F in(x, arr:Arr) {
@@ -19,7 +35,33 @@ F in(x, arr:Arr) {
 	false
 }
 
+# Tested by has() tests
+
+
+F '=='(a:Arr, b:Arr) {
+	local l = a.len()
+	# XXX BUG: the dot precedence is incorrect
+	# temporary workaround - parenthesis
+	if l != (b.len()) {
+		return false
+	}
+	for(i;l) {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	true
+}
+
+# TEST: [1, 2] == [1, 2]
+# TEST: [1, 3] != [1, 2]
+
+
+F collect(arr:Arr, x) arr.push(x)
+
+
 # === Integer ====================================
+
 
 # 10.map(identity) -> [0,1,...,9]
 F map(n:Int, mapper) {
@@ -27,5 +69,8 @@ F map(n:Int, mapper) {
 	for(i;n) ret.push(mapper(i))
 	ret
 }
+
+# TEST: 3.map(identity) == [0, 1, 2]
+
 
 # F map(n:Int, mapper) for(i;n) fcollect mapper(i)

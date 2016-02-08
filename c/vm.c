@@ -370,6 +370,10 @@ METHOD_RESULT native_eq_str_str METHOD_PARAMS {
 	METHOD_RETURN(MAKE_BOOL(!bcmp(OBJ_DATA_PTR(argv[0]), OBJ_DATA_PTR(argv[1]), len)));
 }
 
+METHOD_RESULT native_eq_bool_bool METHOD_PARAMS { METHOD_RETURN(MAKE_BOOL(argv[0].num == argv[1].num)); }
+METHOD_RESULT native_not_bool METHOD_PARAMS { METHOD_RETURN(MAKE_BOOL(argv[0].num == V_FALSE)); }
+
+// XXX: glibc specific fmemopen()
 METHOD_RESULT native_compile_str_str METHOD_PARAMS {
 	ast_node *tree = NULL;
 	char *bytecode;
@@ -389,6 +393,7 @@ METHOD_RESULT native_compile_str_str METHOD_PARAMS {
 		assert(0 == "compile() failed");
 	}
 	tree = yyctx.__;
+	IF_DEBUG(COMPILER, print_ast(tree, 0);)
 	yyrelease(&yyctx);
 	bytecode = compile(tree, &len);
 	IF_DEBUG(COMPILER, decompile(bytecode, 0, len);)
@@ -541,6 +546,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// low level misc
 	register_global_func(vm, 0, "c_exit",   &native_c_exit_int,        1, "status",   vm->Int);
+
+	// boolean
+	register_global_func(vm, 0, "==",       &native_eq_bool_bool,      2, "a",   vm->Bool, "b", vm->Bool);
+	register_global_func(vm, 0, "not",      &native_not_bool,          1, "x",   vm->Bool);
 
 	// array
 	register_global_func(vm, 0, "+",        &native_plus_arr_arr,      2, "a",   vm->Arr, "b", vm->Arr);

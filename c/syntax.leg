@@ -375,7 +375,14 @@ function-definition =
 		$$ = ret;
 	}
 
-function-definition-name = space+ i:identifier { $$ = i; } | { $$ = NULL; }
+function-definition-name =
+	space+ i:identifier { $$ = i; }
+	| space? "'" <[-|=!@?<>~+*/%]+> "'" {
+		MAKE_NODE(ret, IDENTIFIER_NODE);
+		ret->name = strdup(yytext);
+		$$ = ret;
+	}
+	| { $$ = NULL; }
 
 function-definition-parameters =
 	param:function-definition-parameter space? "," space? params:function-definition-parameters {
