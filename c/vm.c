@@ -82,6 +82,7 @@ char *opcodes_names[] = {
 #define ARG_UVI ARG(uvi, UPVAR_INDEX);
 
 #define METHOD_PARAMS (VALUE *argv, VALUE *result)
+#define EXT_METHOD_PARAMS (VM *vm, CTX *ctx, VALUE *argv, VALUE *result)
 #define METHOD_RETURN(v) { *result = (v); return METHOD_OK; }
 
 #define INT_METHOD(name, op) \
@@ -388,7 +389,15 @@ METHOD_RESULT native_compile_str_str METHOD_PARAMS {
 	tree = yyctx.__;
 	yyrelease(&yyctx);
 	bytecode = compile(tree, &len);
+	// should be later // bytecode[len-1] = OP_RET;
 	METHOD_RETURN(make_string_of_len(bytecode, len));
+}
+
+METHOD_RESULT native_load_str_str EXT_METHOD_PARAMS {
+	size_t ip;
+	(void) ctx;
+	ip = vm_load_bytecode(vm, OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]));
+	METHOD_RETURN(make_closure_obj(ip, 0, 0, 0, 0, NULL));
 }
 
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
@@ -424,7 +433,7 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	return var->index;
 }
 
-void register_global_func(VM *vm, char *name, void *func_ptr, LOCAL_VAR_INDEX argc, ...) {
+void register_global_func(VM *vm, int pass_extra_params, char *name, void *func_ptr, LOCAL_VAR_INDEX argc, ...) {
 	size_t index;
 	int i;
 	va_list varargs;
@@ -435,6 +444,7 @@ void register_global_func(VM *vm, char *name, void *func_ptr, LOCAL_VAR_INDEX ar
 	o->base.val.ptr = func_ptr;
 	o->params.n_params_required = argc;
 	o->params.n_params_optional = 0; /* currently none of builtins uses optional parameters */
+	o->pass_extra_params = pass_extra_params;
 	if(argc) {
 		argv = NGS_MALLOC(argc * sizeof(VALUE) * 2);
 		assert(argv);
@@ -495,6 +505,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	VALUE argv_array;
 	int i;
 	vm->bytecode = NULL;
+	vm->bytecode_len = 0;
 	vm->globals_indexes = NULL; // UT_hash_table
 	vm->globals_len = 0;
 	vm->globals = NGS_MALLOC(sizeof(*(vm->globals)) * MAX_GLOBALS);
@@ -516,61 +527,62 @@ void vm_init(VM *vm, int argc, char **argv) {
 	vm->CSym = register_builtin_type(vm, "CSym", T_CSYM);
 
 	// CLib and c calls
-	register_global_func(vm, "CLib",     &native_CLib_str,          1, "name",   vm->Str);
-	register_global_func(vm, "in",       &native_in_str_clib,       2, "symbol", vm->Str, "lib", vm->CLib);
-	register_global_func(vm, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
+	register_global_func(vm, 0, "CLib",     &native_CLib_str,          1, "name",   vm->Str);
+	register_global_func(vm, 0, "in",       &native_in_str_clib,       2, "symbol", vm->Str, "lib", vm->CLib);
+	register_global_func(vm, 0, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
 
-	// low level file operations
-	register_global_func(vm, "c_open",   &native_c_open_str_str,    2, "pathname", vm->Str, "flags", vm->Str);
-	register_global_func(vm, "c_close",  &native_c_close_int,       1, "fd",       vm->Int);
-	register_global_func(vm, "c_read",   &native_c_read_int_int,    2, "fd",       vm->Int, "count", vm->Int);
-	register_global_func(vm, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
+	// low level file operati0, ons
+	register_global_func(vm, 0, "c_open",   &native_c_open_str_str,    2, "pathname", vm->Str, "flags", vm->Str);
+	register_global_func(vm, 0, "c_close",  &native_c_close_int,       1, "fd",       vm->Int);
+	register_global_func(vm, 0, "c_read",   &native_c_read_int_int,    2, "fd",       vm->Int, "count", vm->Int);
+	register_global_func(vm, 0, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
 
 	// array
-	register_global_func(vm, "+",        &native_plus_arr_arr,      2, "a",   vm->Arr, "b", vm->Arr);
-	register_global_func(vm, "push",     &native_push_arr_any,      2, "arr", vm->Arr, "v", vm->Any);
-	register_global_func(vm, "shift",    &native_shift_arr,         1, "arr", vm->Arr);
-	register_global_func(vm, "shift",    &native_shift_arr_any,     2, "arr", vm->Arr, "dflt", vm->Any);
-	register_global_func(vm, "len",      &native_len,               1, "arr", vm->Arr);
-	register_global_func(vm, "get",      &native_index_get_arr_int_any, 3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
-	register_global_func(vm, "[]",       &native_index_get_arr_int, 2, "arr", vm->Arr, "idx", vm->Int);
+	register_global_func(vm, 0, "+",        &native_plus_arr_arr,      2, "a",   vm->Arr, "b", vm->Arr);
+	register_global_func(vm, 0, "push",     &native_push_arr_any,      2, "arr", vm->Arr, "v", vm->Any);
+	register_global_func(vm, 0, "shift",    &native_shift_arr,         1, "arr", vm->Arr);
+	register_global_func(vm, 0, "shift",    &native_shift_arr_any,     2, "arr", vm->Arr, "dflt", vm->Any);
+	register_global_func(vm, 0, "len",      &native_len,               1, "arr", vm->Arr);
+	register_global_func(vm, 0, "get",      &native_index_get_arr_int_any, 3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
+	register_global_func(vm, 0, "[]",       &native_index_get_arr_int, 2, "arr", vm->Arr, "idx", vm->Int);
 
 	// string
-	// TODO: other string comparison operators
-	register_global_func(vm, "len",      &native_len,               1, "s",   vm->Str);
-	register_global_func(vm, "==",       &native_eq_str_str,        2, "a",   vm->Str, "b", vm->Str);
+	// TODO: other string com0, parison operators
+	register_global_func(vm, 0, "len",      &native_len,               1, "s",   vm->Str);
+	register_global_func(vm, 0, "==",       &native_eq_str_str,        2, "a",   vm->Str, "b", vm->Str);
 
 	// int
-	register_global_func(vm, "+",        &native_plus_int_int,      2, "a",   vm->Int, "b", vm->Int);
-	register_global_func(vm, "*",        &native_mul_int_int,       2, "a",   vm->Int, "b", vm->Int);
-	register_global_func(vm, "/",        &native_div_int_int,       2, "a",   vm->Int, "b", vm->Int);
-	register_global_func(vm, "%",        &native_mod_int_int,       2, "a",   vm->Int, "b", vm->Int);
-	register_global_func(vm, "-",        &native_minus_int_int,     2, "a",   vm->Int, "b", vm->Int);
-	register_global_func(vm, "<",        &native_less_int_int,      2, "a",   vm->Int, "b", vm->Int);
-	register_global_func(vm, "<=",       &native_less_eq_int_int,   2, "a",   vm->Int, "b", vm->Int);
-	register_global_func(vm, ">",        &native_greater_int_int,   2, "a",   vm->Int, "b", vm->Int);
-	register_global_func(vm, ">=",       &native_greater_eq_int_int,2, "a",   vm->Int, "b", vm->Int);
-	register_global_func(vm, "==",       &native_eq_int_int,        2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, 0, "+",        &native_plus_int_int,      2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, 0, "*",        &native_mul_int_int,       2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, 0, "/",        &native_div_int_int,       2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, 0, "%",        &native_mod_int_int,       2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, 0, "-",        &native_minus_int_int,     2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, 0, "<",        &native_less_int_int,      2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, 0, "<=",       &native_less_eq_int_int,   2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, 0, ">",        &native_greater_int_int,   2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, 0, ">=",       &native_greater_eq_int_int,2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, 0, "==",       &native_eq_int_int,        2, "a",   vm->Int, "b", vm->Int);
 
 	// misc
-	register_global_func(vm, "dump",     &native_dump_any,          1, "obj", vm->Any);
-	register_global_func(vm, "echo",     &native_echo_str,          1, "s",   vm->Str);
-	register_global_func(vm, "Bool",     &native_Bool_any,          1, "x",   vm->Any);
-	register_global_func(vm, "Str",      &native_Str_int,           1, "n",   vm->Int);
-	register_global_func(vm, "is",       &native_is_any_type,       2, "obj", vm->Any, "t", vm->Type);
-	register_global_func(vm, "not",      &native_not_any,           1, "x",   vm->Any);
-	register_global_func(vm, "compile",  &native_compile_str_str,   2, "code",vm->Str, "fname", vm->Str);
+	register_global_func(vm, 0, "dump",     &native_dump_any,          1, "obj", vm->Any);
+	register_global_func(vm, 0, "echo",     &native_echo_str,          1, "s",   vm->Str);
+	register_global_func(vm, 0, "Bool",     &native_Bool_any,          1, "x",   vm->Any);
+	register_global_func(vm, 0, "Str",      &native_Str_int,           1, "n",   vm->Int);
+	register_global_func(vm, 0, "is",       &native_is_any_type,       2, "obj", vm->Any, "t", vm->Type);
+	register_global_func(vm, 0, "not",      &native_not_any,           1, "x",   vm->Any);
+	register_global_func(vm, 0, "compile",  &native_compile_str_str,   2, "code",vm->Str, "fname", vm->Str);
+	register_global_func(vm, 1, "load",     &native_load_str_str,      2, "bytecode", vm->Str, "func_name", vm->Str);
 
 	// hash
-	register_global_func(vm, "in",       &native_in_any_hash,       2, "x",   vm->Any, "h", vm->Hash);
-	register_global_func(vm, "hash",     &native_hash_any,          1, "x",   vm->Any);
-	register_global_func(vm, "keys",     &native_keys_hash,         1, "h",   vm->Hash);
-	register_global_func(vm, "values",   &native_values_hash,       1, "h",   vm->Hash);
-	register_global_func(vm, "len",      &native_len,               1, "h",   vm->Hash);
-	register_global_func(vm, "get",      &native_index_get_hash_any_any,    3, "h",   vm->Hash,"k", vm->Any, "dflt", vm->Any);
-	register_global_func(vm, "[]",       &native_index_get_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
-	register_global_func(vm, "[]=",      &native_index_set_hash_any_any,    3, "h",   vm->Hash,"k", vm->Any, "v", vm->Any);
-	register_global_func(vm, "del",      &native_index_del_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
+	register_global_func(vm, 0, "in",       &native_in_any_hash,       2, "x",   vm->Any, "h", vm->Hash);
+	register_global_func(vm, 0, "hash",     &native_hash_any,          1, "x",   vm->Any);
+	register_global_func(vm, 0, "keys",     &native_keys_hash,         1, "h",   vm->Hash);
+	register_global_func(vm, 0, "values",   &native_values_hash,       1, "h",   vm->Hash);
+	register_global_func(vm, 0, "len",      &native_len,               1, "h",   vm->Hash);
+	register_global_func(vm, 0, "get",      &native_index_get_hash_any_any,    3, "h",   vm->Hash,"k", vm->Any, "dflt", vm->Any);
+	register_global_func(vm, 0, "[]",       &native_index_get_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
+	register_global_func(vm, 0, "[]=",      &native_index_set_hash_any_any,    3, "h",   vm->Hash,"k", vm->Any, "v", vm->Any);
+	register_global_func(vm, 0, "del",      &native_index_del_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
 
 	// http://stackoverflow.com/questions/3473692/list-environment-variables-with-c-in-unix
 	env_hash = make_hash(32);
@@ -601,13 +613,22 @@ void ctx_init(CTX *ctx) {
 	memset(ctx->frames, 0, sizeof(ctx->frames));
 }
 
-void vm_load_bytecode(VM *vm, char *bc, size_t len) {
-	// TODO: make it append, not replace. Meanwhile, make sure vm_load_bytecode() works only once.
+size_t vm_load_bytecode(VM *vm, char *bc, size_t len) {
+	size_t ip;
 	DEBUG_VM_API("vm_load_bytecode() VM=%p bytecode=%p\n", vm, bc);
 	assert(len);
-	assert(!vm->bytecode);
 	assert(bc[len-1] == OP_HALT);
-	vm->bytecode = bc;
+	// should be later // assert(bc[len-1] == (vm->bytecode? OP_RET : OP_HALT));
+	if(vm->bytecode) {
+		vm->bytecode = NGS_REALLOC(vm->bytecode, vm->bytecode_len + len);
+	} else {
+		vm->bytecode = NGS_MALLOC(len);
+	}
+	assert(vm->bytecode);
+	memcpy(vm->bytecode + vm->bytecode_len, bc, len);
+	ip = vm->bytecode_len;
+	vm->bytecode_len += len;
+	return ip;
 }
 
 METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, const VALUE *argv) {
@@ -647,7 +668,11 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, c
 			}
 		}
 		// printf("PT 2\n");
-		mr = ((VM_FUNC)OBJ_DATA_PTR(callable))(argv, &ctx->stack[ctx->stack_ptr-argc-1]);
+		if(NATIVE_METHOD_EXTRA_PARAMS(callable)) {
+			mr = ((VM_EXT_FUNC)OBJ_DATA_PTR(callable))(vm, ctx, argv, &ctx->stack[ctx->stack_ptr-argc-1]);
+		} else {
+			mr = ((VM_FUNC)OBJ_DATA_PTR(callable))(argv, &ctx->stack[ctx->stack_ptr-argc-1]);
+		}
 		// Will actually be needed if/when builtins start using guards
 		if(mr != METHOD_ARGS_MISMATCH) {
 			ctx->stack_ptr -= argc;

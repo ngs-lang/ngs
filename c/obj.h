@@ -75,6 +75,7 @@ typedef struct closure {
 typedef struct native_method {
 	OBJECT base;
 	PARAMS_DESC params;
+	int_fast8_t pass_extra_params;
 } NATIVE_METHOD_OBJECT;
 
 typedef struct ngs_type {
@@ -201,6 +202,7 @@ enum IMMEDIATE_VALUES {
 #define NATIVE_METHOD_OBJ_N_REQ_PAR(v)  ((NATIVE_METHOD_OBJECT *) v.ptr)->params.n_params_required
 #define NATIVE_METHOD_OBJ_N_OPT_PAR(v)  ((NATIVE_METHOD_OBJECT *) v.ptr)->params.n_params_optional
 #define NATIVE_METHOD_OBJ_PARAMS(v)     (((NATIVE_METHOD_OBJECT *) v.ptr)->params.params)
+#define NATIVE_METHOD_EXTRA_PARAMS(v)   (((NATIVE_METHOD_OBJECT *) v.ptr)->pass_extra_params)
 #define NGS_TYPE_CONSTRUCTORS(v)  ((NGS_TYPE *) v.ptr)->constructors
 #define NGS_TYPE_NAME(v)          ((NGS_TYPE *) v.ptr)->name
 #define NGS_TYPE_ID(v)            ((NGS_TYPE *) v.ptr)->native_type_id

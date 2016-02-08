@@ -1,7 +1,13 @@
+# === Misc functional ============================
+
+F identity(x) x
+
+# === Array ======================================
+
+# Checks whether element x is in array arr
 F in(x, arr:Arr) {
 	local i
-	local l
-	l = arr.len()
+	local l = arr.len()
 	for(i;l) {
 		if arr[i] == x {
 			return true
@@ -9,3 +15,16 @@ F in(x, arr:Arr) {
 	}
 	false
 }
+
+# === Integer ====================================
+
+# 10.map(identity) -> 0,1,...,9
+F map(n:Int, mapper) {
+	ret = []
+	for(i;n) ret.push(mapper(i))
+	ret
+}
+
+# F map(n:Int, mapper) for(i;n) fcollect mapper(i)
+
+{ 1 }

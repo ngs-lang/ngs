@@ -34,10 +34,13 @@ F fetch(fname) {
 }
 
 F require(fname) {
-	local program_text, program_bytecode
-	program_text = fetch(fname)
-	program_bytecode = compile(program_text, fname)
+	local program_text = fetch(fname)
+	local program_bytecode = compile(program_text, fname)
 	bootstrap_debug("require(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
+	local program_func = load(program_bytecode, "require()d file: $fname")
+	local ret = program_func()
+	bootstrap_debug("require(): done requiring ${fname}")
+	ret
 }
 
 F bootstrap() {
