@@ -2,6 +2,10 @@
 
 F identity(x) x
 
+# === Syntactic sugar ============================
+
+F has(container, element) element in container
+
 # === Array ======================================
 
 # Checks whether element x is in array arr
