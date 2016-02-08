@@ -48,6 +48,15 @@ F '=='(a:Arr, b:Arr) {
 # TEST: [1] != [1, 2]
 
 
+F map(arr:Arr, mapper) {
+	local ret = [], l = arr.len()
+	for(i;l) ret.push(mapper(arr[i]))
+	ret
+}
+
+# TEST: [1,2,3].map(F(x) x*3) == [3,6,9]
+
+
 F collect(arr:Arr, x) arr.push(x)
 
 
