@@ -323,40 +323,25 @@ chain-expression = b:basic-expression (
 
 basic-expression =
 	if
-	|
-	while
-	|
-	defined
-	|
-	for
-	|
-	comment
-	|
-	"null"  { MAKE_NODE(ret, NULL_NODE); $$ = ret; }
-	|
-	"true"  { MAKE_NODE(ret, TRUE_NODE); $$ = ret; }
-	|
-	"false" { MAKE_NODE(ret, FALSE_NODE); $$ = ret; }
-	|
-	number
-	|
-	string
-	|
-	assignment
-	|
-	local-declaration
-	|
-	function-definition
-	|
-	return
-	|
-	identifier
-	|
-	array-literal
-	|
-	hash-literal
-	|
-	"(" space? e:expression space? ")" { $$ = e; }
+	| while
+	| defined
+	| for
+	| comment
+	| "null"  { MAKE_NODE(ret, NULL_NODE); $$ = ret; }
+	| "true"  { MAKE_NODE(ret, TRUE_NODE); $$ = ret; }
+	| "false" { MAKE_NODE(ret, FALSE_NODE); $$ = ret; }
+	| number
+	| string
+	| assignment
+	| local-declaration
+	| function-definition
+	| return
+	| collector
+	| collect
+	| identifier
+	| array-literal
+	| hash-literal
+	| "(" space? e:expression space? ")" { $$ = e; }
 
 assignment =
 	i:identifier space? "=" space? e:expression {
@@ -680,6 +665,54 @@ str-comps-node = {
 
 return = "return" r:return-node (inline_space e:expression { r->first_child = e; }) { $$ = r; }
 return-node = { MAKE_NODE(ret, RETURN_NODE); $$ = ret; }
+
+collector = "collector" space {
+		int var_name_len;
+		assert(yy->collector_ptr < MAX_COLLECTOR_PTR);
+		yy->collector_var_name[yy->collector_ptr] = NGS_MALLOC(64);
+		var_name_len = snprintf(yy->collector_var_name[yy->collector_ptr], 64, "$collector$%d", yy->collector_var_num++);
+		assert(var_name_len < 63);
+		yy->collector_ptr++;
+	} c:code-block {
+		assert(yy->collector_ptr);
+		yy->collector_ptr--;
+		MAKE_NODE(ret, EXPRESSIONS_NODE);
+			MAKE_NODE(decl, LOCAL_NODE);
+				MAKE_NODE(assign, ASSIGNMENT_NODE);
+					MAKE_NODE(identifier, IDENTIFIER_NODE);
+					identifier->name = strdup(yy->collector_var_name[yy->collector_ptr]);
+					MAKE_NODE(arr, ARR_LIT_NODE);
+					assign->first_child = identifier;
+					identifier->next_sibling = arr;
+				decl->first_child = assign;
+			ret->name = "collector";
+			ret->first_child = decl;
+			decl->next_sibling = c;
+			MAKE_NODE(ret_identifier, IDENTIFIER_NODE);
+			ret_identifier->name = strdup(yy->collector_var_name[yy->collector_ptr]);
+			c->next_sibling = ret_identifier;
+			ret->last_child = ret_identifier;
+		$$ = ret;
+		CAPTURE_LOCATION($$);
+	};
+
+collect = "collect" space c:code-block {
+	assert(yy->collector_ptr);
+	MAKE_NODE(ret, CALL_NODE);
+		MAKE_NODE(push_identifier, IDENTIFIER_NODE);
+		push_identifier->name = "push";
+		ret->first_child = push_identifier;
+		MAKE_NODE(args, ARGS_NODE);
+			MAKE_NODE(identifier, IDENTIFIER_NODE);
+			identifier->name = strdup(yy->collector_var_name[yy->collector_ptr-1]);
+			MAKE_REQ_ARG_NODE(a1, identifier);
+			MAKE_REQ_ARG_NODE(a2, c);
+			a1->next_sibling = a2;
+			args->first_child = a1;
+		push_identifier->next_sibling = args;
+	$$ = ret;
+	CAPTURE_LOCATION($$);
+}
 
 %%
 #undef ALLOC_NODE

@@ -49,32 +49,20 @@ F '=='(a:Arr, b:Arr) {
 
 
 F map(arr:Arr, mapper) {
-	local ret = [], l = arr.len()
-	for(i;l) ret.push(mapper(arr[i]))
-	ret
+	local l = arr.len()
+	collector
+		for(i;l) collect mapper(arr[i])
 }
 
 # TEST: [1,2,3].map(F(x) x*3) == [3,6,9]
 
 
-F collect(arr:Arr, x) arr.push(x)
-
-
 # === Integer ====================================
 
 
-F map(n:Int, mapper) {
-	local ret = []
-	for(i;n) ret.push(mapper(i))
-	ret
-}
+F map(n:Int, mapper)
+	collector
+		for(i;n) collect mapper(i)
 
 # TEST: 3.map(identity) == [0, 1, 2]
-
-
-# Collector (implicit Array and .push()) syntax thoughts for the above function
-# F map(n:Int, mapper) for(i;n) fcollect mapper(i)
-# F map(n:Int, mapper) collector for(i;n) collect mapper(i)
-# F map(n:Int, mapper) [collector] for(i;n) collect mapper(i)
-# F map(n:Int, mapper) ^ for(i;n) ^mapper(i)
-# F map(n:Int, mapper) [^] for(i;n) ^mapper(i)
+# TEST: 3.map(F(x) x*2) == [0, 2, 4]

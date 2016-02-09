@@ -304,6 +304,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			}
 			break;
 		case EXPRESSIONS_NODE:
+			if(node->first_child) {
+				assert(node->last_child);
+			}
 			for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
 				// printf("EXPRESSIONS_NODE ptr=%p type=%s need_result=%d will_do_result=%d\n", ptr, NGS_AST_NODE_TYPES_NAMES[ptr->type], need_result, (ptr == node->last_child) && need_result);
 				compile_main_section(ctx, ptr, buf, idx, allocated, (ptr == node->last_child) && need_result);
