@@ -473,6 +473,16 @@ int obj_is_of_type(VALUE obj, VALUE t) {
 	OBJ_C_OBJ_IS_OF_TYPE(T_HASH, IS_HASH);
 	OBJ_C_OBJ_IS_OF_TYPE(T_CLIB, IS_CLIB);
 	OBJ_C_OBJ_IS_OF_TYPE(T_CSYM, IS_CSYM);
+	if(tid == T_FUN) {
+		if(IS_ARRAY(obj)) {
+			if(OBJ_LEN(obj)) {
+				return obj_is_of_type(ARRAY_ITEMS(obj)[0], t);
+			} else {
+				return 0;
+			}
+		}
+		return IS_NATIVE_METHOD(obj) || IS_CLOSURE(obj) || IS_NGS_TYPE(obj);
+	}
 
 	dump_titled("Unimplemented type to check", t);
 	assert(0=="native_is(): Unimplemented check against builtin type");

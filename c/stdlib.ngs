@@ -48,7 +48,7 @@ F '=='(a:Arr, b:Arr) {
 # TEST: [1] != [1, 2]
 
 
-F map(arr:Arr, mapper) {
+F map(arr:Arr, mapper:Fun) {
 	local l = arr.len()
 	collector
 		for(i;l) collect mapper(arr[i])
@@ -60,7 +60,7 @@ F map(arr:Arr, mapper) {
 # === Integer ====================================
 
 
-F map(n:Int, mapper)
+F map(n:Int, mapper:Fun)
 	collector
 		for(i;n) collect mapper(i)
 
