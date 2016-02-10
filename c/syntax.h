@@ -16,4 +16,5 @@ typedef struct ast_node_ll {
 	\
 	int collector_var_num; \
 	char *collector_var_name[MAX_COLLECTOR_PTR]; \
+	char *collector_func_name[MAX_COLLECTOR_PTR]; \
 	size_t collector_ptr;

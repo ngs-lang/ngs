@@ -337,7 +337,6 @@ basic-expression =
 	| function-definition
 	| return
 	| collector
-	| collect
 	| identifier
 	| array-literal
 	| hash-literal
@@ -595,9 +594,14 @@ number =
 
 identifier =
 	<[_a-zA-Z]+[_a-zA-Z0-9]*> {
-		 MAKE_NODE(ret, IDENTIFIER_NODE);
-		 ret->name = strdup(yytext);
-		 $$ = ret;
+		MAKE_NODE(ret, IDENTIFIER_NODE);
+		if(!strcmp(yytext, "collect")) {
+			assert(yy->collector_ptr);
+			ret->name = strdup(yy->collector_func_name[yy->collector_ptr-1]);
+		} else {
+			ret->name = strdup(yytext);
+		}
+		$$ = ret;
 	}
 
 defined =
@@ -666,25 +670,47 @@ str-comps-node = {
 return = "return" r:return-node (inline_space e:expression { r->first_child = e; }) { $$ = r; }
 return-node = { MAKE_NODE(ret, RETURN_NODE); $$ = ret; }
 
-collector = "collector" space {
-		int var_name_len;
+collector = "collector" init:collector-init space {
+		int var_name_len, func_name_len;
 		assert(yy->collector_ptr < MAX_COLLECTOR_PTR);
+
 		yy->collector_var_name[yy->collector_ptr] = NGS_MALLOC(64);
-		var_name_len = snprintf(yy->collector_var_name[yy->collector_ptr], 64, "$collector$%d", yy->collector_var_num++);
+		var_name_len = snprintf(yy->collector_var_name[yy->collector_ptr], 64, "collector_var$%d", yy->collector_var_num);
 		assert(var_name_len < 63);
+
+		yy->collector_func_name[yy->collector_ptr] = NGS_MALLOC(64);
+		func_name_len = snprintf(yy->collector_func_name[yy->collector_ptr], 64, "collector_func$%d", yy->collector_var_num);
+		assert(func_name_len < 63);
+
+		yy->collector_var_num++;
 		yy->collector_ptr++;
 	} c:code-block {
 		assert(yy->collector_ptr);
 		yy->collector_ptr--;
 		MAKE_NODE(ret, EXPRESSIONS_NODE);
 			MAKE_NODE(decl, LOCAL_NODE);
-				MAKE_NODE(assign, ASSIGNMENT_NODE);
-					MAKE_NODE(identifier, IDENTIFIER_NODE);
-					identifier->name = strdup(yy->collector_var_name[yy->collector_ptr]);
-					MAKE_NODE(arr, ARR_LIT_NODE);
-					assign->first_child = identifier;
-					identifier->next_sibling = arr;
-				decl->first_child = assign;
+				MAKE_NODE(assign_var, ASSIGNMENT_NODE);
+					MAKE_NODE(var_identifier, IDENTIFIER_NODE);
+					var_identifier->name = strdup(yy->collector_var_name[yy->collector_ptr]);
+					assign_var->first_child = var_identifier;
+					var_identifier->next_sibling = init;
+				decl->first_child = assign_var;
+				MAKE_NODE(assign_func, ASSIGNMENT_NODE);
+					MAKE_NODE(func_identifier, IDENTIFIER_NODE);
+					func_identifier->name = strdup(yy->collector_func_name[yy->collector_ptr]);
+					assign_func->first_child = func_identifier;
+					MAKE_NODE(func_call, CALL_NODE);
+						MAKE_NODE(collector_identifier, IDENTIFIER_NODE);
+						collector_identifier->name = "collector";
+						func_call->first_child = collector_identifier;
+						MAKE_NODE(args, ARGS_NODE);
+							MAKE_NODE(var_identifier2, IDENTIFIER_NODE);
+							var_identifier2->name = strdup(yy->collector_var_name[yy->collector_ptr]);
+							MAKE_REQ_ARG_NODE(a1, var_identifier2);
+							args->first_child = a1;
+						collector_identifier->next_sibling = args;
+					func_identifier->next_sibling = func_call;
+				decl->first_child->next_sibling = assign_func;
 			ret->name = "collector";
 			ret->first_child = decl;
 			decl->next_sibling = c;
@@ -696,23 +722,12 @@ collector = "collector" space {
 		CAPTURE_LOCATION($$);
 	};
 
-collect = "collect" space c:code-block {
-	assert(yy->collector_ptr);
-	MAKE_NODE(ret, CALL_NODE);
-		MAKE_NODE(push_identifier, IDENTIFIER_NODE);
-		push_identifier->name = "push";
-		ret->first_child = push_identifier;
-		MAKE_NODE(args, ARGS_NODE);
-			MAKE_NODE(identifier, IDENTIFIER_NODE);
-			identifier->name = strdup(yy->collector_var_name[yy->collector_ptr-1]);
-			MAKE_REQ_ARG_NODE(a1, identifier);
-			MAKE_REQ_ARG_NODE(a2, c);
-			a1->next_sibling = a2;
-			args->first_child = a1;
-		push_identifier->next_sibling = args;
-	$$ = ret;
-	CAPTURE_LOCATION($$);
-}
+collector-init =
+	"/" e:expression { $$ = e; }
+	| {
+		MAKE_NODE(arr, ARR_LIT_NODE);
+		$$ = arr;
+	}
 
 %%
 #undef ALLOC_NODE

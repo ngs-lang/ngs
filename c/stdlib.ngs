@@ -21,6 +21,11 @@ F has(container, element) element in container
 # TEST: [1,2,3].has(10) == false
 
 
+# Return the "collect" function for the given initial object (defaults to [])
+F collector(a:Arr)  F(x) a.push(x)
+F collector(h:Hash) F(k, v) h[k] = v
+
+
 # === Array ======================================
 
 
@@ -51,7 +56,7 @@ F '=='(a:Arr, b:Arr) {
 F map(arr:Arr, mapper:Fun) {
 	local l = arr.len()
 	collector
-		for(i;l) collect mapper(arr[i])
+		for(i;l) collect(mapper(arr[i]))
 }
 
 # TEST: [1,2,3].map(F(x) x*3) == [3,6,9]
@@ -68,7 +73,7 @@ F each(arr:Arr, cb:Fun) {
 F flatten(arr:Arr)
 	collector
 		arr.each(F(subarr) {
-			subarr.each(F(x) collect x)
+			subarr.each(collect)
 		})
 
 # TEST: [[1], [2,3]].flatten() == [1,2,3]
@@ -102,31 +107,25 @@ F map(h:Hash, mapper:Fun)
 # TEST: {'a': 1, 'b': 2}.map(F(k, v) "${k}-$v") == ['a-1', 'b-2']
 
 
-F filter(h:Hash, predicate:Fun) {
-	ret = {}
-	h.each(F(k,v) {
-		if predicate(k, v)
-			ret[k] = v
-	})
-	ret
-}
+F filter(h:Hash, predicate:Fun)
+	collector/{}
+		h.each(F(k,v) {
+			if predicate(k, v)
+				collect(k, v)
+		})
 
 # --- Conversions ---
 
-F Hash(a:Arr) {
-	ret = {}
-	a.each(F(x) ret[x[0]] = x[1])
-	ret
-}
+F Hash(a:Arr)
+	collector/{}
+		a.each(F(x) collect(x[0], x[1]))
 
 # TEST: Hash([['a', 1], ['c', 3]]) == {'a': 1, 'c': 3}
 
 
-F Hash(a:Arr, v) {
-	ret = {}
-	a.each(F(k) ret[k] = v)
-	ret
-}
+F Hash(a:Arr, v)
+	collector/{}
+		a.each(F(k) collect(k, v))
 
 # TEST: Hash([1,2], 'x') == {1: 'x', 2: 'x'}
 
@@ -148,7 +147,7 @@ F each(n:Int, cb:Fun) for(i;n) cb(i)
 
 F map(n:Int, mapper:Fun)
 	collector
-		for(i;n) collect mapper(i)
+		for(i;n) collect(mapper(i))
 
 # TEST: 3.map(identity) == [0, 1, 2]
 # TEST: 3.map(F(x) x*2) == [0, 2, 4]
