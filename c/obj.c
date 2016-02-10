@@ -80,9 +80,11 @@ static void _dump(VALUE v, int level) {
 	}
 
 	if(IS_NGS_TYPE(v)) {
-		printf("%*s* type (name and constructors follow) id=%d\n", level << 1, "", NGS_TYPE_ID(v));
+		printf("%*s* type (name and optionally constructors follow) id=%d\n", level << 1, "", NGS_TYPE_ID(v));
 		_dump(NGS_TYPE_NAME(v), level + 1);
-		_dump(NGS_TYPE_CONSTRUCTORS(v), level + 1);
+		if(level < 3) {
+			_dump(NGS_TYPE_CONSTRUCTORS(v), level + 1);
+		}
 		goto exit;
 	}
 
@@ -271,6 +273,9 @@ HASH_OBJECT_ENTRY *get_hash_key(VALUE h, VALUE k) {
 	HASH_OBJECT_ENTRY **buckets = OBJ_DATA_PTR(h);
 	uint32_t n;
 	assert(IS_HASH(h));
+	if(!OBJ_LEN(h)) {
+		return NULL;
+	}
 	n = hash(k) % HASH_BUCKETS_N(h);
 	for(e=buckets[n]; e; e=e->bucket_next) {
 		if(is_equal(e->key, k)) {

@@ -80,6 +80,7 @@ char *opcodes_names[] = {
 #define ARG_LVI ARG(lvi, LOCAL_VAR_INDEX);
 #define ARG_GVI ARG(gvi, GLOBAL_VAR_INDEX);
 #define ARG_UVI ARG(uvi, UPVAR_INDEX);
+#define PUSH_FUNC(dst, fn) if(IS_NGS_TYPE(dst)) { array_push(NGS_TYPE_CONSTRUCTORS(dst), (fn)); } else { array_push(dst, fn); };
 
 #define METHOD_PARAMS (VALUE *argv, VALUE *result)
 #define EXT_METHOD_PARAMS (VM *vm, CTX *ctx, VALUE *argv, VALUE *result)
@@ -1026,7 +1027,7 @@ do_jump:
 							if(IS_UNDEF(GLOBALS[gvi])) {
 								GLOBALS[gvi] = make_array_with_values(1, &TOP);
 							} else {
-								array_push(GLOBALS[gvi], TOP);
+								PUSH_FUNC(GLOBALS[gvi], TOP);
 							}
 							goto main_loop;
 		case OP_DEF_LOCAL_FUNC:
@@ -1038,7 +1039,7 @@ do_jump:
 							if(IS_UNDEF(LOCALS[lvi])) {
 								LOCALS[lvi] = make_array_with_values(1, &TOP);
 							} else {
-								array_push(LOCALS[lvi], TOP);
+								PUSH_FUNC(LOCALS[lvi], TOP);
 							}
 							goto main_loop;
 		case OP_FETCH_UPVAR:
@@ -1081,7 +1082,7 @@ do_jump:
 							if(IS_UNDEF(UPLEVELS[uvi][lvi])) {
 								UPLEVELS[uvi][lvi] = make_array_with_values(1, &TOP);
 							} else {
-								array_push(UPLEVELS[uvi][lvi], TOP);
+								PUSH_FUNC(UPLEVELS[uvi][lvi], TOP);
 							}
 							goto main_loop;
 		case OP_MAKE_HASH:

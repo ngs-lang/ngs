@@ -57,6 +57,40 @@ F map(arr:Arr, mapper:Fun) {
 # TEST: [1,2,3].map(F(x) x*3) == [3,6,9]
 
 
+F each(arr:Arr, cb:Fun) {
+	local l = arr.len()
+	for(i;l) cb(arr[i])
+}
+
+
+F Arr(h:Hash)
+	h.keys().map(F(k) [k, h[k]])
+
+# TEST: Arr({'x': 7, 'y': 8}) == [['x', 7], ['y', 8]]
+
+
+# === Hash =======================================
+
+
+# Make it built in for speed?
+F map(h:Hash, mapper:Fun)
+	h.keys().map(F(k) mapper(k, h[k]))
+
+# TEST: {'a': 1, 'b': 2}.map(F(k, v) "${k}-$v") == ['a-1', 'b-2']
+
+
+F '=='(a:Hash, b:Hash) Arr(a) == Arr(b)
+
+
+F Hash(a:Arr) {
+	ret = {}
+	a.each(F(x) ret[x[0]] = x[1])
+	ret
+}
+
+# TEST: Hash([['a', 1], ['c', 3]]) == {'a': 1, 'c': 3}
+
+
 # === Integer ====================================
 
 

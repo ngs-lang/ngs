@@ -282,11 +282,11 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			break;
 		case ASSIGNMENT_NODE:
 			ptr = node->first_child;
-			compile_main_section(ctx, ptr->next_sibling, buf, idx, allocated, NEED_RESULT);
 			switch(ptr->type) {
 				case IDENTIFIER_NODE:
 					// TODO: handle local vs global
 					DEBUG_COMPILER("COMPILER: %s %zu\n", "identifier <- expression", *idx);
+					compile_main_section(ctx, ptr->next_sibling, buf, idx, allocated, NEED_RESULT);
 					DUP_IF_NEED_RESULT(*buf);
 					compile_identifier(ctx, buf, idx, ptr->name, OP_STORE_LOCAL, OP_STORE_UPVAR, OP_STORE_GLOBAL);
 					break;
@@ -298,6 +298,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 3);
 					compile_identifier(ctx, buf, idx, "[]=", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 					OPCODE(*buf, OP_CALL);
+					POP_IF_DONT_NEED_RESULT(*buf);
 					break;
 				default:
 					assert(0=="compile_main_section(): assignment to unknown node type");
