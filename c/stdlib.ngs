@@ -62,6 +62,17 @@ F each(arr:Arr, cb:Fun) {
 	for(i;l) cb(arr[i])
 }
 
+# Tested by flatten() tests
+
+
+F flatten(arr:Arr)
+	collector
+		arr.each(F(subarr) {
+			subarr.each(F(x) collect x)
+		})
+
+# TEST: [[1], [2,3]].flatten() == [1,2,3]
+
 
 F Arr(h:Hash)
 	h.keys().map(F(k) [k, h[k]])
@@ -72,6 +83,18 @@ F Arr(h:Hash)
 # === Hash =======================================
 
 
+# --- Comparisons ---
+
+F '=='(a:Hash, b:Hash) Arr(a) == Arr(b)
+
+
+# --- Functional ---
+
+F each(h:Hash, cb:Fun) {
+	h.keys().each(F(k) cb(k, h[k]))
+	h
+}
+
 # Make it built in for speed?
 F map(h:Hash, mapper:Fun)
 	h.keys().map(F(k) mapper(k, h[k]))
@@ -79,8 +102,16 @@ F map(h:Hash, mapper:Fun)
 # TEST: {'a': 1, 'b': 2}.map(F(k, v) "${k}-$v") == ['a-1', 'b-2']
 
 
-F '=='(a:Hash, b:Hash) Arr(a) == Arr(b)
+F filter(h:Hash, predicate:Fun) {
+	ret = {}
+	h.each(F(k,v) {
+		if predicate(k, v)
+			ret[k] = v
+	})
+	ret
+}
 
+# --- Conversions ---
 
 F Hash(a:Arr) {
 	ret = {}
@@ -91,8 +122,29 @@ F Hash(a:Arr) {
 # TEST: Hash([['a', 1], ['c', 3]]) == {'a': 1, 'c': 3}
 
 
+F Hash(a:Arr, v) {
+	ret = {}
+	a.each(F(k) ret[k] = v)
+	ret
+}
+
+# TEST: Hash([1,2], 'x') == {1: 'x', 2: 'x'}
+
+
+# --- Misc ---
+
+
+F without(h:Hash, without_k)
+	h.filter(F(k, v) k != without_k)
+
+# TEST: {'a': 1, 'b': 2, 'c': 3}.without('a') == {'b': 2, 'c': 3}
+
+
 # === Integer ====================================
 
+# --- Functional ---
+
+F each(n:Int, cb:Fun) for(i;n) cb(i)
 
 F map(n:Int, mapper:Fun)
 	collector
