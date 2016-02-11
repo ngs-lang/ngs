@@ -470,6 +470,14 @@ function-call-argument =
 		$$ = ret;
 	}
 	|
+	"*" space? e:expression {
+		MAKE_NODE(ret, ARG_NODE);
+			MAKE_NODE(splat, ARR_SPLAT_NODE);
+				splat->first_child = e;
+			ret->first_child = splat;
+		$$ = ret;
+	}
+	|
 	e:expression {
 		MAKE_NODE(ret, ARG_NODE);
 		ret->first_child = e;

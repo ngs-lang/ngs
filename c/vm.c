@@ -44,33 +44,39 @@ char *opcodes_names[] = {
 	/* 14 */ "FETCH_LOCAL",
 	/* 15 */ "STORE_LOCAL",
 	/* 16 */ "CALL",
-	/* 17 */ "RET",
-	/* 18 */ "JMP",
-	/* 19 */ "JMP_TRUE",
-	/* 20 */ "JMP_FALSE",
-	/* 21 */ "MAKE_ARR",
-	/* 22 */ "MAKE_CLOSURE",
-	/* 23 */ "TO_STR",
-	/* 24 */ "MAKE_STR",
-	/* 25 */ "PUSH_EMPTY_STR",
-	/* 26 */ "GLOBAL_DEF_P",
-	/* 27 */ "LOCAL_DEF_P",
-	/* 28 */ "DEF_GLOBAL_FUNC",
-	/* 29 */ "DEF_LOCAL_FUNC",
-	/* 30 */ "FETCH_UPVAR",
-	/* 31 */ "STORE_UPVAR",
-	/* 32 */ "UPVAR_DEF_P",
-	/* 33 */ "DEF_UPVAR_FUNC",
-	/* 34 */ "MAKE_HASH",
-	/* 35 */ "TO_BOOL",
+	/* 17 */ "CALL_ARR",
+	/* 18 */ "RET",
+	/* 19 */ "JMP",
+	/* 20 */ "JMP_TRUE",
+	/* 21 */ "JMP_FALSE",
+	/* 22 */ "MAKE_ARR",
+	/* 23 */ "MAKE_CLOSURE",
+	/* 24 */ "TO_STR",
+	/* 25 */ "MAKE_STR",
+	/* 26 */ "PUSH_EMPTY_STR",
+	/* 27 */ "GLOBAL_DEF_P",
+	/* 28 */ "LOCAL_DEF_P",
+	/* 29 */ "DEF_GLOBAL_FUNC",
+	/* 30 */ "DEF_LOCAL_FUNC",
+	/* 31 */ "FETCH_UPVAR",
+	/* 32 */ "STORE_UPVAR",
+	/* 33 */ "UPVAR_DEF_P",
+	/* 34 */ "DEF_UPVAR_FUNC",
+	/* 35 */ "MAKE_HASH",
+	/* 36 */ "TO_BOOL",
+	/* 37 */ "TO_ARR",
+	/* 38 */ "ARR_APPEND",
+	/* 39 */ "ARR_CONCAT",
 };
 
 
+#define EXPECT_STACK_DEPTH(n) assert(ctx->stack_ptr > (n));
 #define PUSH(v) assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr++] = v
 #define POP(dst) assert(ctx->stack_ptr); ctx->stack_ptr--; dst = ctx->stack[ctx->stack_ptr]
 #define TOP (ctx->stack[ctx->stack_ptr-1])
 #define DUP assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr] = ctx->stack[ctx->stack_ptr-1]; ctx->stack_ptr++;
-#define REMOVE_TOP assert(ctx->stack_ptr); ctx->stack_ptr--; 
+#define REMOVE_TOP assert(ctx->stack_ptr); ctx->stack_ptr--;
+#define REMOVE_N(n) DEBUG_VM_RUN("Popping %d argument(s) after call from stack\n", (int)n); assert(ctx->stack_ptr >= (unsigned int)n); ctx->stack_ptr-=n;
 #define PUSH_NULL PUSH((VALUE){.num=V_NULL})
 #define GLOBALS (vm->globals)
 #define LOCALS (ctx->frames[ctx->frame_ptr-1].locals)
@@ -81,6 +87,17 @@ char *opcodes_names[] = {
 #define ARG_GVI ARG(gvi, GLOBAL_VAR_INDEX);
 #define ARG_UVI ARG(uvi, UPVAR_INDEX);
 #define PUSH_FUNC(dst, fn) if(IS_NGS_TYPE(dst)) { array_push(NGS_TYPE_CONSTRUCTORS(dst), (fn)); } else { array_push(dst, fn); };
+#define CONVERTING_OP(test, type) \
+	assert(ctx->stack_ptr); \
+	v = TOP; \
+	if(test(v)) { \
+		goto main_loop; \
+	} \
+	PUSH(v); \
+	mr = _vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-2], (VALUE){.ptr = vm->type}, 1, &ctx->stack[ctx->stack_ptr-1]); \
+	REMOVE_N(1); \
+	assert(mr == METHOD_OK); \
+	goto main_loop;
 
 #define METHOD_PARAMS (VALUE *argv, VALUE *result)
 #define EXT_METHOD_PARAMS (VM *vm, CTX *ctx, VALUE *argv, VALUE *result)
@@ -645,7 +662,7 @@ size_t vm_load_bytecode(VM *vm, char *bc, size_t len) {
 	return ip;
 }
 
-METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, const VALUE *argv) {
+METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR_INDEX argc, const VALUE *argv) {
 	VALUE *local_var_ptr;
 	LOCAL_VAR_INDEX lvi;
 	int i;
@@ -654,7 +671,7 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, c
 
 	if(IS_ARRAY(callable)) {
 		for(i=OBJ_LEN(callable)-1, callable_items = OBJ_DATA_PTR(callable); i>=0; i--) {
-			mr = _vm_call(vm, ctx, callable_items[i], argc, argv);
+			mr = _vm_call(vm, ctx, result, callable_items[i], argc, argv);
 			if(mr == METHOD_OK) {
 				return METHOD_OK;
 			}
@@ -683,13 +700,9 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, c
 		}
 		// printf("PT 2\n");
 		if(NATIVE_METHOD_EXTRA_PARAMS(callable)) {
-			mr = ((VM_EXT_FUNC)OBJ_DATA_PTR(callable))(vm, ctx, argv, &ctx->stack[ctx->stack_ptr-argc-1]);
+			mr = ((VM_EXT_FUNC)OBJ_DATA_PTR(callable))(vm, ctx, argv, result);
 		} else {
-			mr = ((VM_FUNC)OBJ_DATA_PTR(callable))(argv, &ctx->stack[ctx->stack_ptr-argc-1]);
-		}
-		// Will actually be needed if/when builtins start using guards
-		if(mr != METHOD_ARGS_MISMATCH) {
-			ctx->stack_ptr -= argc;
+			mr = ((VM_FUNC)OBJ_DATA_PTR(callable))(argv, result);
 		}
 		return mr;
 	}
@@ -720,7 +733,7 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, c
 			ctx->frames[ctx->frame_ptr].locals = NGS_MALLOC(lvi * sizeof(VALUE));
 			assert(ctx->frames[ctx->frame_ptr].locals);
 			assert(argc <= lvi);
-			memcpy(ctx->frames[ctx->frame_ptr].locals, &ctx->stack[ctx->stack_ptr-argc], sizeof(VALUE) * argc);
+			memcpy(ctx->frames[ctx->frame_ptr].locals, argv, sizeof(VALUE) * argc);
 			lvi -= argc;
 			for(local_var_ptr=&ctx->frames[ctx->frame_ptr].locals[argc];lvi;lvi--,local_var_ptr++) {
 				SET_UNDEF(*local_var_ptr);
@@ -731,17 +744,13 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE callable, LOCAL_VAR_INDEX argc, c
 		ctx->frames[ctx->frame_ptr].closure = callable;
 		// printf("INCREASING FRAME PTR\n");
 		ctx->frame_ptr++;
-		mr = vm_run(vm, ctx, CLOSURE_OBJ_IP(callable), &ctx->stack[ctx->stack_ptr-argc-1]);
+		mr = vm_run(vm, ctx, CLOSURE_OBJ_IP(callable), result);
 		ctx->frame_ptr--;
-		// TODO: dedup
-		if(mr != METHOD_ARGS_MISMATCH) {
-			ctx->stack_ptr -= argc;
-		}
 		return mr;
 	}
 
 	if(IS_NGS_TYPE(callable)) {
-		return _vm_call(vm, ctx, NGS_TYPE_CONSTRUCTORS(callable), argc, argv);
+		return _vm_call(vm, ctx, result, NGS_TYPE_CONSTRUCTORS(callable), argc, argv);
 	}
 
 	// TODO: allow handling of calling of undefined methods by the NGS language
@@ -910,7 +919,17 @@ main_loop:
 							POP(v); // number of arguments
 							// POP(n_params_required); // number of arguments
 							// POP(n_params_optional);
-							mr = _vm_call(vm, ctx, callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
+							mr = _vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-GET_INT(v)-1], callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
+							REMOVE_N(GET_INT(v));
+							if(mr != METHOD_OK) {
+								dump_titled("Failed callable", callable);
+								assert(0=="Handling failed method calls is not implemented yet");
+							}
+							goto main_loop;
+		case OP_CALL_ARR:
+							POP(callable);
+							mr = _vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-2], callable, OBJ_LEN(ctx->stack[ctx->stack_ptr-1]), ARRAY_ITEMS(ctx->stack[ctx->stack_ptr-1]));
+							REMOVE_N(1);
 							if(mr != METHOD_OK) {
 								dump_titled("Failed callable", callable);
 								assert(0=="Handling failed method calls is not implemented yet");
@@ -983,15 +1002,7 @@ do_jump:
 							PUSH(v);
 							goto main_loop;
 		case OP_TO_STR:
-							assert(ctx->stack_ptr >= 2);
-							v = TOP;
-							if(IS_STRING(v)) {
-								goto main_loop;
-							}
-							PUSH(v);
-							mr = _vm_call(vm, ctx, (VALUE){.ptr = vm->Str}, 1, &ctx->stack[ctx->stack_ptr-1]);
-							assert(mr == METHOD_OK);
-							goto main_loop;
+							CONVERTING_OP(IS_STRING, Str);
 		case OP_MAKE_STR:
 							// TODO: (optimization) update top of the stack instead of POP and PUSH
 							POP(v);
@@ -1096,14 +1107,19 @@ do_jump:
 							PUSH(v);
 							goto main_loop;
 		case OP_TO_BOOL:
-							assert(ctx->stack_ptr);
-							v = TOP;
-							if(IS_BOOL(v)) {
-								goto main_loop;
-							}
+							CONVERTING_OP(IS_BOOL, Bool);
+		case OP_TO_ARR:
+							CONVERTING_OP(IS_ARRAY, Arr);
+		case OP_ARR_APPEND:
+							EXPECT_STACK_DEPTH(2);
+							array_push(ctx->stack[ctx->stack_ptr-2], ctx->stack[ctx->stack_ptr-1]);
+							REMOVE_N(1);
+							goto main_loop;
+		case OP_ARR_CONCAT:
+							EXPECT_STACK_DEPTH(2);
+							native_plus_arr_arr(&ctx->stack[ctx->stack_ptr-2], &v);
+							REMOVE_N(2);
 							PUSH(v);
-							mr = _vm_call(vm, ctx, (VALUE){.ptr = vm->Bool}, 1, &ctx->stack[ctx->stack_ptr-1]);
-							assert(mr == METHOD_OK);
 							goto main_loop;
 		default:
 							// TODO: exception

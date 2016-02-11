@@ -234,7 +234,7 @@ void compile_identifier(COMPILATION_CONTEXT *ctx, char **buf, size_t *idx, char 
 
 void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
 	ast_node *ptr;
-	int argc = 0;
+	int argc, have_arr_splat;
 	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
 	UPVAR_INDEX n_uplevels;
 	size_t loop_beg, cond_jump, func_jump, end_of_func_idx, if_jump, while_jump;
@@ -248,16 +248,38 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
 			// print_ast(node, 0);
 			assert(node->first_child->next_sibling->type == ARGS_NODE);
+			for(ptr=node->first_child->next_sibling->first_child, have_arr_splat=0; ptr; ptr=ptr->next_sibling) {
+				assert(ptr->type == ARG_NODE);
+				if(ptr->first_child->type == ARR_SPLAT_NODE) {
+					have_arr_splat = 1;
+					break;
+				}
+			}
+			if(have_arr_splat) {
+				OPCODE(*buf, OP_PUSH_INT);
+				DATA_INT(*buf, 0);
+				OPCODE(*buf, OP_MAKE_ARR);
+			}
 			for(ptr=node->first_child->next_sibling->first_child, argc=0; ptr; ptr=ptr->next_sibling, argc++) {
 				assert(ptr->type == ARG_NODE);
 				if(ptr->first_child->next_sibling) {
 					assert(0=="Compiling keyword arguments is not implemented yet");
 				}
-				compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+				if(ptr->first_child->type == ARR_SPLAT_NODE) {
+					compile_main_section(ctx, ptr->first_child->first_child, buf, idx, allocated, NEED_RESULT);
+					OPCODE(*buf, OP_TO_ARR);
+				} else {
+					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+				}
+				if(have_arr_splat) {
+					OPCODE(*buf, ptr->first_child->type == ARR_SPLAT_NODE ? OP_ARR_CONCAT : OP_ARR_APPEND);
+				}
 			}
-			OPCODE(*buf, OP_PUSH_INT); DATA(*buf, argc);
+			if(!have_arr_splat) {
+				OPCODE(*buf, OP_PUSH_INT); DATA(*buf, argc);
+			}
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
-			OPCODE(*buf, OP_CALL);
+			OPCODE(*buf, have_arr_splat ? OP_CALL_ARR : OP_CALL);
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 		case INDEX_NODE:
