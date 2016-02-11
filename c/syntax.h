@@ -12,9 +12,4 @@ typedef struct ast_node_ll {
 	char *fail_rule; \
 	int lines, lines_postions[YY_MAX_LINES]; \
 	FILE *input_file; \
-	AST_NODE_TYPE_LL *nodes_for_type_change; \
-	\
-	int collector_var_num; \
-	char *collector_var_name[MAX_COLLECTOR_PTR]; \
-	char *collector_func_name[MAX_COLLECTOR_PTR]; \
-	size_t collector_ptr;
+	AST_NODE_TYPE_LL *nodes_for_type_change;
