@@ -9,7 +9,7 @@ F identity(x) x
 # === Syntactic sugar ============================
 
 
-F '!='(a,b) not(a==b)
+F !=(a,b) not(a==b)
 
 # TEST: 1 != 2
 # TEST: (1 != 1) == false
@@ -53,7 +53,7 @@ F in(x, arr:Arr) {
 
 # XXX BUG: the dot precedence is incorrect
 # temporary workaround - parenthesis
-F '=='(a:Arr, b:Arr) {
+F ==(a:Arr, b:Arr) {
 	local l = a.len()
 	l != (b.len()) returns false
 	for(i;l) a[i] != b[i] returns false
@@ -102,7 +102,7 @@ F Arr(h:Hash)
 
 # --- Comparisons ---
 
-F '=='(a:Hash, b:Hash) Arr(a) == Arr(b)
+F ==(a:Hash, b:Hash) Arr(a) == Arr(b)
 
 
 # --- Functional ---
@@ -151,7 +151,7 @@ F without(h:Hash, without_k)
 # TEST: {'a': 1, 'b': 2, 'c': 3}.without('a') == {'b': 2, 'c': 3}
 
 
-F '+'(a:Hash, b:Hash)
+F +(a:Hash, b:Hash)
 	collector/{} {
 		a.each(collect)
 		b.each(collect)
@@ -159,6 +159,13 @@ F '+'(a:Hash, b:Hash)
 
 
 # TEST: {'a': 1, 'b': 2, 'c': 3} + {'b': 20, 'd': 40} == {'a': 1, 'b': 20, 'c': 3, 'd': 40}
+
+
+F update(dst:Hash, src:Hash)
+	collector/dst
+		src.each(collect)
+
+# TEST: F() { local h={'a': 1, 'b': 2, 'c': 3}; h.update({'b': 20, 'd': 40}); h == {'a': 1, 'b': 20, 'c': 3, 'd': 40} }()
 
 
 # === Integer ====================================

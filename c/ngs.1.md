@@ -109,8 +109,8 @@ Exit code 0.
 	* **expr1 @ expr2** is equivalent to **expr1.map(F(X=null, Y=null, Z=null) expr2)**. Producing a new array with each element mapped to plus one of the original is hence **old\_array @ X+1**. Another example with using **number.map()** to build an array with element of 0 to 9 would be **10 @ X**
 	* **expr1 @? expr2** is equivalent to **expr1.filter(F(X=null, Y=null, Z=null) expr2)**.
 	* **for(i;n) ...** is equivalent to **for(i=0;i<n;i=i+1) ...**
-	* **collector ... collect(x) ...** is equivalent to **{ local uniq\_var=[], uniq\_func=collector(uniq\_var); ... uniq\_func(x) ...; uniq\_var }**
-	* **collector/expr ... collect(x) ...** is equivalent to **{ local uniq\_var=expr, uniq\_func=collector(uniq\_var); ... uniq\_func(x) ...; uniq\_var }**
+	* **collector ... collect(x) ...** is equivalent to **collector([], code)**. The expression after **collector** is wrapped as **F(collect) { code }**
+	* **collector/expr ... collect(x) ...** is equivalent to **collector(expr, code)**. The expression after **collector** is wrapped as **F(collect) { code }**
 
 * Simplicity
 	* No classes. Only types, methods and multi-dispatch.
