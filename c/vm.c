@@ -937,14 +937,13 @@ main_loop:
 							}
 							goto main_loop;
 		case OP_RET:
-							// TODO: check stack length
-							assert(saved_stack_ptr <= ctx->stack_ptr);
 							if(saved_stack_ptr < ctx->stack_ptr) {
 								POP(*result);
 								// dump_titled("RESULT", *result);
 							} else {
 								assert(0=="Function does not have result value");
 							}
+							assert(saved_stack_ptr == ctx->stack_ptr);
 							return METHOD_OK;
 		case OP_JMP:
 do_jump:
@@ -1124,10 +1123,12 @@ do_jump:
 							goto main_loop;
 		case OP_GUARD:
 							EXPECT_STACK_DEPTH(1);
-							assert(IS_BOOL(TOP));
-							if(IS_TRUE(TOP)) {
+							POP(v);
+							assert(IS_BOOL(v));
+							if(IS_TRUE(v)) {
 								goto main_loop;
 							}
+							assert(saved_stack_ptr == ctx->stack_ptr);
 							return METHOD_ARGS_MISMATCH;
 		default:
 							// TODO: exception
