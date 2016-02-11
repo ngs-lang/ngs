@@ -15,6 +15,18 @@ F !=(a,b) not(a==b)
 # TEST: (1 != 1) == false
 
 
+F 'not in'(a,b) not(a in b)
+
+# TEST: (1 not in [1,2,3]) == false
+# TEST: (10 not in [1,2,3])
+
+
+F 'is not'(a,b) not(a is b)
+
+# TEST: 1 is not Null
+# TEST: (null is not Null) == false
+
+
 F has(container, element) element in container
 
 # TEST: [1,2,3].has(1)
@@ -180,3 +192,22 @@ F map(n:Int, mapper:Fun)
 
 # TEST: 3.map(identity) == [0, 1, 2]
 # TEST: 3.map(F(x) x*2) == [0, 2, 4]
+
+
+# === Logging and status reporting ===============
+
+# TODO: allow control by facility and severity and maybe source component or file.
+
+F log(s:Str) {
+	echo("[LOG   ] $s")
+}
+
+F debug(s:Str) {
+	ENV.get('DEBUG', '') == '' returns null
+	echo("[DEBUG ] $s")
+}
+
+F status(s:Str) {
+	echo(s)
+	log("(status) $s")
+}

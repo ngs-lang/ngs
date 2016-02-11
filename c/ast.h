@@ -51,6 +51,7 @@ typedef enum ast_node_type {
 	OR_NODE,
 	ARR_SPLAT_NODE,
 	HASH_SPLAT_NODE,
+	GUARD_NODE,
 	NUMBER_OF_AST_NODE_TYPES
 } ast_node_type;
 

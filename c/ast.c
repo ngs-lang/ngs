@@ -33,6 +33,7 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 	"or",
 	"arr_splat",
 	"hash_splat",
+	"guard",
 };
 
 

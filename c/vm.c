@@ -67,6 +67,7 @@ char *opcodes_names[] = {
 	/* 37 */ "TO_ARR",
 	/* 38 */ "ARR_APPEND",
 	/* 39 */ "ARR_CONCAT",
+	/* 40 */ "GUARD",
 };
 
 
@@ -1121,6 +1122,13 @@ do_jump:
 							REMOVE_N(2);
 							PUSH(v);
 							goto main_loop;
+		case OP_GUARD:
+							EXPECT_STACK_DEPTH(1);
+							assert(IS_BOOL(TOP));
+							if(IS_TRUE(TOP)) {
+								goto main_loop;
+							}
+							return METHOD_ARGS_MISMATCH;
 		default:
 							// TODO: exception
 							printf("ERROR: Unknown opcode %d\n", opcode);

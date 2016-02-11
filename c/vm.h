@@ -108,6 +108,7 @@ enum opcodes {
 	OP_TO_ARR,
 	OP_ARR_APPEND,
 	OP_ARR_CONCAT,
+	OP_GUARD,
 	NUMBER_OF_OPCODES,
 };
 

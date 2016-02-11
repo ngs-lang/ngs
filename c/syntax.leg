@@ -368,10 +368,11 @@ basic-expression =
 	| function-definition
 	| return
 	| collector
+	| guard
 	| identifier
 	| array-literal
 	| hash-literal
-	| "(" space? e:expression space? ")" { $$ = e; }
+	| "(" space? e:expression space? ")" { MAKE_NODE(ret, EXPRESSIONS_NODE); ret->name = "()"; ret->first_child = e; ret->last_child = e; $$ = ret; }
 
 assignment =
 	i:identifier space? "=" space? e:expression {
@@ -392,7 +393,7 @@ function-definition =
 
 function-definition-name =
 	space+ i:identifier { $$ = i; }
-	| space? "'" <[-|=!@?<>~+*/%()$]+> "'" {
+	| space? "'" <[-|=!@?<>~+*/%()$a-zA-Z0-9 ]+> "'" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = strdup(yytext);
 		$$ = ret;
@@ -738,6 +739,12 @@ collector-init =
 		MAKE_NODE(arr, ARR_LIT_NODE);
 		$$ = arr;
 	}
+
+guard = "guard" space c:code-block {
+	MAKE_NODE(ret, GUARD_NODE);
+	ret->first_child = c;
+	$$ = ret;
+}
 
 %%
 #undef ALLOC_NODE

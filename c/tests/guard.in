@@ -1,0 +1,10 @@
+{
+	F f(x:Int) echo('default')
+	F f(x:Int) { guard x == 1; echo('one') }
+	F f(x:Int) { guard x == 2; echo('two') }
+
+	f(1)
+	f(2)
+	f(3)
+
+}

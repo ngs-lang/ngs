@@ -534,6 +534,11 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			if_jump = *idx - 1 - sizeof(JUMP_OFFSET);
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
+		case GUARD_NODE:
+			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			OPCODE(*buf, OP_TO_BOOL);
+			OPCODE(*buf, OP_GUARD);
+			break;
 		default:
 			assert(0=="compile_main_section(): unknown node type");
 	}
