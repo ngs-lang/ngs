@@ -151,6 +151,16 @@ F without(h:Hash, without_k)
 # TEST: {'a': 1, 'b': 2, 'c': 3}.without('a') == {'b': 2, 'c': 3}
 
 
+F '+'(a:Hash, b:Hash)
+	collector/{} {
+		a.each(collect)
+		b.each(collect)
+	}
+
+
+# TEST: {'a': 1, 'b': 2, 'c': 3} + {'b': 20, 'd': 40} == {'a': 1, 'b': 20, 'c': 3, 'd': 40}
+
+
 # === Integer ====================================
 
 # --- Functional ---
