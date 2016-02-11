@@ -143,7 +143,7 @@ items-separator = newline_space | inline_space? [,] space?
 comment =
   "#" [^\n]+ { $$ = NULL; }
   |
-  "TEST" [^\n]+ { $$ = NULL; }
+  "TEST " [^\n]+ { $$ = NULL; }
 
 command =
 	curly-code-block
