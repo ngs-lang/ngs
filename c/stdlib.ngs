@@ -22,8 +22,20 @@ F has(container, element) element in container
 
 
 # Return the "collect" function for the given initial object (defaults to [])
-F collector(a:Arr)  F(x) a.push(x)
-F collector(h:Hash) F(k, v) h[k] = v
+F collector(a:Arr, code:Fun) {
+	code(F(elt) a.push(elt))
+	a
+}
+
+F collector(h:Hash, code:Fun) {
+	code(F(k, v) h[k] = v)
+	h
+}
+
+F collector(n:Int, code:Fun) {
+	code(F(incr) n=n+incr)
+	n
+}
 
 
 # === Array ======================================

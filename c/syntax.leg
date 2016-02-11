@@ -1,4 +1,5 @@
 %{
+#include <stdarg.h>
 #include <string.h>
 #include "ngs.h"
 #include "ast.h"
@@ -55,6 +56,8 @@ void position_to_line_col();
 #define MAKE_REQ_ARG_NODE(name, val) MAKE_NODE(name, ARG_NODE); name->first_child = val; val->next_sibling = NULL;
 #define PREPEND_NODE(list, elt) elt->next_sibling = list->first_child; list->first_child = elt; if(!list->last_child) { list->last_child=elt; };
 
+#define MAKE_IDENTIFIER_NODE(var_name, s) MAKE_NODE(var_name, IDENTIFIER_NODE); var_name->name = strdup(s);
+
 #define HANDLE_FAILED_MATCH(rule_name) \
 	if(yy->__pos > yy->fail_pos) {\
 		yy->fail_pos = yy->__pos; \
@@ -71,6 +74,34 @@ void append_ast_node_child(ast_node *target, ast_node *child) {
 	}
 	target->last_child->next_sibling = child;
 	target->last_child = child;
+}
+
+ast_node *wrap_in_func(ast_node *node, int location[4], int argc, ...) {
+	int i;
+	va_list varargs;
+	ast_node *p;
+	MAKE_NODE(func, FUNC_NODE);
+	MAKE_NODE(params, PARAMS_NODE);
+
+	func->first_child = params;
+	params->next_sibling = node;
+
+	va_start(varargs, argc);
+	for(i=0, p=NULL; i<argc; i++) {
+		MAKE_NODE(param, PARAM_NODE);
+		MAKE_IDENTIFIER_NODE(param_name, va_arg(varargs, char *))
+		MAKE_IDENTIFIER_NODE(param_type, va_arg(varargs, char *))
+		param->first_child = param_name;
+		param_name->next_sibling = param_type;
+		if(p) {
+			p->next_sibling = param;
+		} else {
+			params->first_child = param;
+		}
+		p = param;
+	}
+	va_end(varargs);
+	return func;
 }
 
 %}
@@ -595,12 +626,7 @@ number =
 identifier =
 	<[_a-zA-Z]+[_a-zA-Z0-9]*> {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
-		if(!strcmp(yytext, "collect")) {
-			assert(yy->collector_ptr);
-			ret->name = strdup(yy->collector_func_name[yy->collector_ptr-1]);
-		} else {
-			ret->name = strdup(yytext);
-		}
+		ret->name = strdup(yytext);
 		$$ = ret;
 	}
 
@@ -670,54 +696,16 @@ str-comps-node = {
 return = "return" r:return-node (inline_space e:expression { r->first_child = e; }) { $$ = r; }
 return-node = { MAKE_NODE(ret, RETURN_NODE); $$ = ret; }
 
-collector = "collector" init:collector-init space {
-		int var_name_len, func_name_len;
-		assert(yy->collector_ptr < MAX_COLLECTOR_PTR);
-
-		yy->collector_var_name[yy->collector_ptr] = NGS_MALLOC(64);
-		var_name_len = snprintf(yy->collector_var_name[yy->collector_ptr], 64, "collector_var$%d", yy->collector_var_num);
-		assert(var_name_len < 63);
-
-		yy->collector_func_name[yy->collector_ptr] = NGS_MALLOC(64);
-		func_name_len = snprintf(yy->collector_func_name[yy->collector_ptr], 64, "collector_func$%d", yy->collector_var_num);
-		assert(func_name_len < 63);
-
-		yy->collector_var_num++;
-		yy->collector_ptr++;
-	} c:code-block {
-		assert(yy->collector_ptr);
-		yy->collector_ptr--;
-		MAKE_NODE(ret, EXPRESSIONS_NODE);
-			MAKE_NODE(decl, LOCAL_NODE);
-				MAKE_NODE(assign_var, ASSIGNMENT_NODE);
-					MAKE_NODE(var_identifier, IDENTIFIER_NODE);
-					var_identifier->name = strdup(yy->collector_var_name[yy->collector_ptr]);
-					assign_var->first_child = var_identifier;
-					var_identifier->next_sibling = init;
-				decl->first_child = assign_var;
-				MAKE_NODE(assign_func, ASSIGNMENT_NODE);
-					MAKE_NODE(func_identifier, IDENTIFIER_NODE);
-					func_identifier->name = strdup(yy->collector_func_name[yy->collector_ptr]);
-					assign_func->first_child = func_identifier;
-					MAKE_NODE(func_call, CALL_NODE);
-						MAKE_NODE(collector_identifier, IDENTIFIER_NODE);
-						collector_identifier->name = "collector";
-						func_call->first_child = collector_identifier;
-						MAKE_NODE(args, ARGS_NODE);
-							MAKE_NODE(var_identifier2, IDENTIFIER_NODE);
-							var_identifier2->name = strdup(yy->collector_var_name[yy->collector_ptr]);
-							MAKE_REQ_ARG_NODE(a1, var_identifier2);
-							args->first_child = a1;
-						collector_identifier->next_sibling = args;
-					func_identifier->next_sibling = func_call;
-				decl->first_child->next_sibling = assign_func;
-			ret->name = "collector";
-			ret->first_child = decl;
-			decl->next_sibling = c;
-			MAKE_NODE(ret_identifier, IDENTIFIER_NODE);
-			ret_identifier->name = strdup(yy->collector_var_name[yy->collector_ptr]);
-			c->next_sibling = ret_identifier;
-			ret->last_child = ret_identifier;
+collector = "collector" init:collector-init space c:code-block {
+		MAKE_NODE(ret, CALL_NODE);
+			MAKE_IDENTIFIER_NODE(collector_identifier, "collector");
+			MAKE_NODE(args, ARGS_NODE);
+				MAKE_REQ_ARG_NODE(a1, init);
+				MAKE_REQ_ARG_NODE(a2, wrap_in_func(c, location, 1, "collect", "Any"));
+				a1->next_sibling = a2;
+				args->first_child = a1;
+			ret->first_child = collector_identifier;
+			collector_identifier->next_sibling = args;
 		$$ = ret;
 		CAPTURE_LOCATION($$);
 	};
