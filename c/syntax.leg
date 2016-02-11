@@ -502,10 +502,18 @@ array-literal =
 		}
 
 array-items =
-		acc:array-literal-node expression { append_ast_node_child(acc, $$); } (items-separator expression { append_ast_node_child(acc, $$); })* {
+		acc:array-literal-node array-item { append_ast_node_child(acc, $$); } (items-separator array-item { append_ast_node_child(acc, $$); })* {
 			$$ = acc;
 			CAPTURE_LOCATION($$);
 		}
+
+array-item =
+	"*" space? e:expression {
+		MAKE_NODE(ret, ARR_SPLAT_NODE);
+			ret->first_child = e;
+		$$ = ret;
+	}
+	| expression
 
 array-literal-node = {
 		MAKE_NODE(ret, ARR_LIT_NODE);

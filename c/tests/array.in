@@ -24,5 +24,9 @@
 	v = a.shift(2000)
 	dump(v)
 
+	echo('Test: splat syntax')
+	subarr = [10,20,30]
+	dump([1, *subarr, 2])
+
 
 }

@@ -256,8 +256,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				}
 			}
 			if(have_arr_splat) {
-				OPCODE(*buf, OP_PUSH_INT);
-				DATA_INT(*buf, 0);
+				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0);
 				OPCODE(*buf, OP_MAKE_ARR);
 			}
 			for(ptr=node->first_child->next_sibling->first_child, argc=0; ptr; ptr=ptr->next_sibling, argc++) {
@@ -359,12 +358,31 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			break;
 		case ARR_LIT_NODE:
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "ARRAY NODE", *idx);
-			for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
-				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
+			for(ptr=node->first_child, have_arr_splat=0; ptr; ptr=ptr->next_sibling) {
+				if(ptr->type == ARR_SPLAT_NODE) {
+					have_arr_splat = 1;
+					break;
+				}
 			}
-			OPCODE(*buf, OP_PUSH_INT);
-			DATA_INT(*buf, argc);
-			OPCODE(*buf, OP_MAKE_ARR);
+			if(have_arr_splat) {
+				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0);
+				OPCODE(*buf, OP_MAKE_ARR);
+			}
+			for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
+				if(ptr->type == ARR_SPLAT_NODE) {
+					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+					OPCODE(*buf, OP_TO_ARR);
+				} else {
+					compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
+				}
+				if(have_arr_splat) {
+					OPCODE(*buf, ptr->type == ARR_SPLAT_NODE ? OP_ARR_CONCAT : OP_ARR_APPEND);
+				}
+			}
+			if(!have_arr_splat) {
+				OPCODE(*buf, OP_PUSH_INT); DATA(*buf, argc);
+				OPCODE(*buf, OP_MAKE_ARR);
+			}
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 		case FUNC_NODE:
