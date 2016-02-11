@@ -12,8 +12,8 @@
 setf ngs
 syn match   ngsOperator "[-~!^&|*/%+=<>]\+"
 syn match   ngsComment "#.*" contains=ngsTodo
-syn match   ngsTest "^# TEST: .*"
-syn keyword ngsKeyword F guard local return returns collector collect
+"syn match   ngsTest "^TEST .*"
+syn keyword ngsKeyword F guard local return returns TEST collector collect
 syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
 syn keyword ngsType Any Arr Bool CLib CSym Fun Hash Int Null Seq Str Type
