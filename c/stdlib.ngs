@@ -89,6 +89,7 @@ TEST [1,2,3].map(F(x) x*3) == [3,6,9]
 F each(arr:Arr, cb:Fun) {
 	local l = arr.len()
 	for(i;l) cb(arr[i])
+	arr
 }
 
 # Tested by flatten() tests
@@ -184,7 +185,10 @@ TEST F() { local h={'a': 1, 'b': 2, 'c': 3}; h.update({'b': 20, 'd': 40}); h == 
 
 # --- Functional ---
 
-F each(n:Int, cb:Fun) for(i;n) cb(i)
+F each(n:Int, cb:Fun) {
+	for(i;n) cb(i)
+	n
+}
 
 F map(n:Int, mapper:Fun)
 	collector
@@ -194,9 +198,10 @@ TEST 3.map(identity) == [0, 1, 2]
 TEST 3.map(F(x) x*2) == [0, 2, 4]
 
 
-# === Logging and status reporting ===============
+# === Logging and status reporting (WIP) =========
 
-# TODO: allow control by facility and severity and maybe source component or file.
+# TODO: allow control by facility and severity
+#       and maybe source component or file.
 
 F log(s:Str) {
 	echo("[LOG   ] $s")
@@ -205,6 +210,10 @@ F log(s:Str) {
 F debug(s:Str) {
 	ENV.get('DEBUG', '') == '' returns null
 	echo("[DEBUG ] $s")
+}
+
+F error(s:Str) {
+	echo("[ERROR ] $s")
 }
 
 F status(s:Str) {

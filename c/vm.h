@@ -12,7 +12,7 @@
 typedef uint16_t PATCH_OFFSET;
 typedef int16_t JUMP_OFFSET;
 
-typedef int IP;
+typedef size_t IP;
 
 typedef struct var_index {
 	char *name;
