@@ -13,7 +13,7 @@ setf ngs
 syn match   ngsOperator "[-~!^&|*/%+=<>]\+"
 syn match   ngsComment "#.*" contains=ngsTodo
 "syn match   ngsTest "^TEST .*"
-syn keyword ngsKeyword F guard local return returns TEST collector collect
+syn keyword ngsKeyword collector collect F guard local return returns TEST with
 syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
 syn keyword ngsType Any Arr Bool CLib CSym Fun Hash Int Null Seq Str Type
@@ -33,7 +33,7 @@ syn keyword ngsFunction c_close c_exit c_lseek c_open c_read compile del dump ec
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction fetch require to_exit_code
 " stdlib functions
-syn keyword ngsFunction each error debug flatten identity in len log map status update
+syn keyword ngsFunction each error debug filter flatten identity in len log map status update without
 
 hi def link ngsComment Comment
 hi def link ngsConditional Conditional

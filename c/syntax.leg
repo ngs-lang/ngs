@@ -450,7 +450,12 @@ function-call =
 		$$ = ret;
 	}
 
-function-call-arguments = "(" space? a:function-call-arguments-with-parens space? ")" {
+# NOTE: the "with" syntax is experimental
+function-call-arguments = "(" space? a:function-call-arguments-with-parens space? ")" (space? "with" space? expression {
+		MAKE_NODE(ret, ARG_NODE);
+		ret->first_child = $$;
+		append_ast_node_child(a, ret);
+	})* {
 	$$ = a;
 }
 

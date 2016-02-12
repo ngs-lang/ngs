@@ -35,17 +35,17 @@ TEST [1,2,3].has(10) == false
 
 # Return the "collect" function for the given initial object (defaults to [])
 F collector(a:Arr, code:Fun) {
-	code(F(elt) a.push(elt))
+	code() with F(elt) a.push(elt)
 	a
 }
 
 F collector(h:Hash, code:Fun) {
-	code(F(k, v) h[k] = v)
+	code() with F(k, v) h[k] = v
 	h
 }
 
 F collector(n:Int, code:Fun) {
-	code(F(incr) n=n+incr)
+	code() with F(incr) n=n+incr
 	n
 }
 
@@ -77,11 +77,10 @@ TEST [1, 3] != [1, 2]
 TEST [1] != [1, 2]
 
 
-F map(arr:Arr, mapper:Fun) {
-	local l = arr.len()
+F map(arr:Arr, mapper:Fun)
 	collector
-		for(i;l) collect(mapper(arr[i]))
-}
+		arr.each() with F(elt)
+			collect(mapper(elt))
 
 TEST [1,2,3].map(F(x) x*3) == [3,6,9]
 
@@ -92,20 +91,36 @@ F each(arr:Arr, cb:Fun) {
 	arr
 }
 
+
 # Tested by flatten() tests
+
+F filter(arr:Arr, predicate:Fun)
+	collector
+		arr.each() with F(elt) {
+			if predicate(elt)
+				collect(elt)
+		}
+
+# Tested by without() tests
+
+
+F without(arr:Arr, without_elt)
+	arr.filter(F(elt) elt != without_elt)
+
+TEST [1,2,3,2].without(2) == [1,3]
 
 
 F flatten(arr:Arr)
 	collector
-		arr.each(F(subarr) {
+		arr.each() with F(subarr)
 			subarr.each(collect)
-		})
 
 TEST [[1], [2,3]].flatten() == [1,2,3]
 
 
 F Arr(h:Hash)
-	h.keys().map(F(k) [k, h[k]])
+	h.map() with F(k, v)
+		[k, v]
 
 TEST Arr({'x': 7, 'y': 8}) == [['x', 7], ['y', 8]]
 
@@ -120,37 +135,41 @@ F ==(a:Hash, b:Hash) Arr(a) == Arr(b)
 
 # --- Functional ---
 
+# Make it built in for speed?
 F each(h:Hash, cb:Fun) {
 	h.keys().each(F(k) cb(k, h[k]))
 	h
 }
 
-# Make it built in for speed?
 F map(h:Hash, mapper:Fun)
-	h.keys().map(F(k) mapper(k, h[k]))
+	collector
+		h.each() with F(k, v)
+			collect(mapper(k, v))
 
 TEST {'a': 1, 'b': 2}.map(F(k, v) "${k}-$v") == ['a-1', 'b-2']
 
 
 F filter(h:Hash, predicate:Fun)
 	collector/{}
-		h.each(F(k,v) {
+		h.each() with F(k,v) {
 			if predicate(k, v)
 				collect(k, v)
-		})
+		}
 
 # --- Conversions ---
 
 F Hash(a:Arr)
 	collector/{}
-		a.each(F(x) collect(x[0], x[1]))
+		a.each() with F(x)
+			collect(x[0], x[1])
 
 TEST Hash([['a', 1], ['c', 3]]) == {'a': 1, 'c': 3}
 
 
 F Hash(a:Arr, v)
 	collector/{}
-		a.each(F(k) collect(k, v))
+		a.each() with F(k)
+			collect(k, v)
 
 TEST Hash([1,2], 'x') == {1: 'x', 2: 'x'}
 
