@@ -264,7 +264,7 @@ binop-expression-inner =
 		}
 	}
 	|
-	"." i:identifier "(" space? fcall_args:function-call-arguments space? ")" {
+	"." i:identifier fcall_args:function-call-arguments {
 		// e1.method(...) => method(e1, ...)
 		MAKE_NODE(ret, CALL_NODE);
 		ret->first_child = i;
@@ -326,7 +326,7 @@ binop2op =
 	| <"not in">  @@ 70 @@
 
 chain-expression = b:basic-expression (
-		inline_space? "(" space? args:function-call-arguments space? ")" {
+		inline_space? args:function-call-arguments {
 			MAKE_NODE(ret, CALL_NODE);
 			ret->first_child = b;
 			ret->first_child->next_sibling = args;
@@ -443,15 +443,19 @@ function-definition-parameter-type =
 	}
 
 function-call =
-	f:basic-expression inline_space? "(" space? args:function-call-arguments space? ")" {
+	f:basic-expression inline_space? args:function-call-arguments {
 		MAKE_NODE(ret, CALL_NODE);
 		ret->first_child = f;
 		ret->first_child->next_sibling = args;
 		$$ = ret;
 	}
 
-function-call-arguments =
-	arg:function-call-argument space? "," space? args:function-call-arguments {
+function-call-arguments = "(" space? a:function-call-arguments-with-parens space? ")" {
+	$$ = a;
+}
+
+function-call-arguments-with-parens =
+	arg:function-call-argument space? "," space? args:function-call-arguments-with-parens {
 		PREPEND_NODE(args, arg);
 		$$ = args;
 		CAPTURE_LOCATION($$);
@@ -488,7 +492,6 @@ function-call-argument =
 	e:expression {
 		MAKE_NODE(ret, ARG_NODE);
 		ret->first_child = e;
-		e->next_sibling = NULL;
 		$$ = ret;
 	}
 
