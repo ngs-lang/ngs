@@ -6,6 +6,14 @@ F identity(x) x
 TEST identity(10) == 10
 
 
+# TODO: Add more info about the newly created function - useful for debugging
+#       See https://docs.python.org/2/library/functools.html#partial-objects
+F partial(f, *bind_args)
+	F(*args) f(*[*bind_args, *args])
+
+TEST F() { local p = partial((-), 10); p(7) }() == 3
+
+
 # === Syntactic sugar ============================
 
 
@@ -77,28 +85,29 @@ TEST [1, 3] != [1, 2]
 TEST [1] != [1, 2]
 
 
-F map(arr:Arr, mapper:Fun)
+F map(arr:Arr, mapper:Fun, *args)
 	collector
 		arr.each(F(elt) {
-			collect(mapper(elt))
+			collect(mapper(elt, *args))
 		})
 
 TEST [1,2,3].map(F(x) x*3) == [3,6,9]
+TEST [1,2,3].map((*), 4) == [4,8,12]
 
 
-F each(arr:Arr, cb:Fun) {
+F each(arr:Arr, cb:Fun, *args) {
 	local l = arr.len()
-	for(i;l) cb(arr[i])
+	for(i;l) cb(arr[i], *args)
 	arr
 }
 
 
 # Tested by flatten() tests
 
-F filter(arr:Arr, predicate:Fun)
+F filter(arr:Arr, predicate:Fun, *args)
 	collector
 		arr.each(F(elt) {
-			if predicate(elt)
+			if predicate(elt, *args)
 				collect(elt)
 		})
 
@@ -121,7 +130,7 @@ TEST [[1], [2,3]].flatten() == [1,2,3]
 
 
 F Arr(h:Hash)
-	h.map(F(k, v) [k, v])
+	h.map(F(*pair) pair)
 
 TEST Arr({'x': 7, 'y': 8}) == [['x', 7], ['y', 8]]
 
@@ -137,26 +146,29 @@ F ==(a:Hash, b:Hash) Arr(a) == Arr(b)
 # --- Functional ---
 
 # Make it built in for speed?
-F each(h:Hash, cb:Fun) {
-	h.keys().each(F(k) cb(k, h[k]))
+F each(h:Hash, cb:Fun, *args) {
+	h.keys().each(F(k) cb(k, h[k], *args))
 	h
 }
 
-F map(h:Hash, mapper:Fun)
+F map(h:Hash, mapper:Fun, *args)
 	collector
 		h.each(F(k, v) {
-			collect(mapper(k, v))
+			collect(mapper(k, v, *args))
 		})
 
 TEST {'a': 1, 'b': 2}.map(F(k, v) "${k}-$v") == ['a-1', 'b-2']
+TEST {'a': 1, 'b': 2}.map(F(k, v, sep) "${k}${sep}${v}", '+') == ['a+1', 'b+2']
 
 
-F filter(h:Hash, predicate:Fun)
+F filter(h:Hash, predicate:Fun, *args)
 	collector/{}
 		h.each(F(k,v) {
-			if predicate(k, v)
+			if predicate(k, v, *args)
 				collect(k, v)
 		})
+
+TEST {'a': 1, 'b': 2}.filter(F(k, v, k_eq) k == k_eq, 'a') == {'a': 1}
 
 # --- Conversions ---
 
@@ -206,17 +218,18 @@ TEST F() { local h={'a': 1, 'b': 2, 'c': 3}; h.update({'b': 20, 'd': 40}); h == 
 
 # --- Functional ---
 
-F each(n:Int, cb:Fun) {
-	for(i;n) cb(i)
+F each(n:Int, cb:Fun, *args) {
+	for(i;n) cb(i, *args)
 	n
 }
 
-F map(n:Int, mapper:Fun)
+F map(n:Int, mapper:Fun, *args)
 	collector
-		for(i;n) collect(mapper(i))
+		for(i;n) collect(mapper(i, *args))
 
 TEST 3.map(identity) == [0, 1, 2]
 TEST 3.map(F(x) x*2) == [0, 2, 4]
+TEST 3.map((*), 3) == [0, 3, 6]
 
 
 # === Logging and status reporting (WIP) =========
