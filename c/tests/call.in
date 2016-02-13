@@ -11,5 +11,14 @@
 	dump_3(*one_two, 3)
 	dump_3(*one_two_three)
 
+	echo('Test: array splat parameter')
+
+	F f() "nope"
+	F f(x, *y) [x, y]
+	dump(f())
+	dump(f(10))
+	dump(f(10, 20))
+	dump(f(10, 20, 30))
+
 
 }

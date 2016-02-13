@@ -15,6 +15,9 @@ typedef uint8_t UPVAR_INDEX;
 #define MAX_INT_TO_STR_LEN    (256)
 typedef uint16_t NATIVE_TYPE_ID;
 
+#define PARAMS_FLAG_ARR_SPLAT   (1)
+#define ADDITIONAL_PARAMS_COUNT ((params_flags & PARAMS_FLAG_ARR_SPLAT) != 0)
+
 typedef enum {
 	RESIZE_HASH_AFTER_SHRINK = 0,
 	RESIZE_HASH_AFTER_GROW   = 1,
@@ -61,6 +64,7 @@ typedef struct params {
 	LOCAL_VAR_INDEX n_local_vars; // number of local variables including arguments
 	LOCAL_VAR_INDEX n_params_required;
 	LOCAL_VAR_INDEX n_params_optional;
+	int flags;
 	VALUE *params;
 } PARAMS_DESC;
 
@@ -196,6 +200,7 @@ enum IMMEDIATE_VALUES {
 #define CLOSURE_OBJ_PARAMS(v)     (((CLOSURE_OBJECT *) v.ptr)->params.params)
 #define CLOSURE_OBJ_N_UPLEVELS(v) (((CLOSURE_OBJECT *) v.ptr)->n_uplevels)
 #define CLOSURE_OBJ_UPLEVELS(v)   (((CLOSURE_OBJECT *) v.ptr)->uplevels)
+#define CLOSURE_OBJ_PARAMS_FLAGS(v) (((CLOSURE_OBJECT *) v.ptr)->params.flags)
 #define CLIB_OBJECT_NAME(v)       ((CLIB_OBJECT *) v.ptr)->name
 #define CSYM_OBJECT_NAME(v)       ((CSYM_OBJECT *) v.ptr)->name
 #define CSYM_OBJECT_LIB(v)        ((CSYM_OBJECT *) v.ptr)->lib
@@ -229,7 +234,7 @@ enum IMMEDIATE_VALUES {
 
 VALUE make_var_len_obj(uintptr_t type, const size_t item_size, const size_t len);
 VALUE make_array(size_t len);
-VALUE make_array_with_values(size_t len, VALUE *values);
+VALUE make_array_with_values(size_t len, const VALUE *values);
 VALUE make_hash(size_t start_buckets);
 uint32_t hash(VALUE v);
 HASH_OBJECT_ENTRY *get_hash_key(VALUE h, VALUE k);
@@ -240,7 +245,7 @@ VALUE make_string_of_len(const char *s, size_t len);
 void vlo_ensure_additional_space(VALUE v, size_t n);
 void array_push(VALUE arr, VALUE v);
 VALUE array_shift(VALUE arr);
-VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, VALUE *params);
+VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, int params_flags, VALUE *params);
 VALUE join_strings(int argc, VALUE *argv);
 int obj_is_of_type(VALUE obj, VALUE t);
 void dump(VALUE v);

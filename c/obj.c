@@ -38,12 +38,13 @@ static void _dump(VALUE v, int level) {
 	}
 
 	if(IS_CLOSURE(v)) {
-		printf("%*s* closure ip=%zu locals_including_params=%d req_params=%d opt_params=%d n_uplevels=%d\n", level << 1, "",
+		printf("%*s* closure ip=%zu locals_including_params=%d req_params=%d opt_params=%d n_uplevels=%d params_flags=%d\n", level << 1, "",
 			CLOSURE_OBJ_IP(v),
 			CLOSURE_OBJ_N_LOCALS(v),
 			CLOSURE_OBJ_N_REQ_PAR(v),
 			CLOSURE_OBJ_N_OPT_PAR(v),
-			CLOSURE_OBJ_N_UPLEVELS(v)
+			CLOSURE_OBJ_N_UPLEVELS(v),
+			CLOSURE_OBJ_PARAMS_FLAGS(v)
 		);
 		for(i=0; i<CLOSURE_OBJ_N_REQ_PAR(v); i++) {
 			printf("%*s* required parameter %zu\n", (level+1) << 1, "", i+1);
@@ -52,6 +53,11 @@ static void _dump(VALUE v, int level) {
 		}
 		if(CLOSURE_OBJ_N_OPT_PAR(v)) {
 			printf("%*s* dumping optional parameters is not implemented yet\n", (level+1) << 1, "");
+		}
+		if(CLOSURE_OBJ_PARAMS_FLAGS(v) & PARAMS_FLAG_ARR_SPLAT) {
+			printf("%*s* array splat parameter %zu\n", (level+1) << 1, "", i+1);
+			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+0], level+2);
+			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+1], level+2);
 		}
 		goto exit;
 	}
@@ -135,7 +141,7 @@ VALUE make_array(size_t len) {
 	return ret;
 }
 
-VALUE make_array_with_values(size_t len, VALUE *values) {
+VALUE make_array_with_values(size_t len, const VALUE *values) {
 	VALUE ret;
 	ret = make_array(len);
 	memcpy(OBJ_DATA_PTR(ret), values, sizeof(VALUE)*len);
@@ -409,7 +415,7 @@ VALUE array_shift(VALUE arr) {
 	return ret;
 }
 
-VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, VALUE *params) {
+VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, int params_flags, VALUE *params) {
 
 	VALUE v;
 	CLOSURE_OBJECT *c;
@@ -422,7 +428,8 @@ VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX 
 	c->params.n_local_vars = n_local_vars;
 	c->params.n_params_required = n_params_required;
 	c->params.n_params_optional = n_params_optional;
-	params_size = (n_params_required*2 + n_params_optional*3) * sizeof(VALUE);
+	c->params.flags = params_flags;
+	params_size = ((n_params_required + ADDITIONAL_PARAMS_COUNT)*2 + n_params_optional*3) * sizeof(VALUE);
 	c->params.params = NGS_MALLOC(params_size);
 	assert(c->params.params);
 	memcpy(c->params.params, params, params_size);

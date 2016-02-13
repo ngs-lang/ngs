@@ -423,7 +423,7 @@ METHOD_RESULT native_load_str_str EXT_METHOD_PARAMS {
 	size_t ip;
 	(void) ctx;
 	ip = vm_load_bytecode(vm, OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]));
-	METHOD_RETURN(make_closure_obj(ip, 0, 0, 0, 0, NULL));
+	METHOD_RETURN(make_closure_obj(ip, 0, 0, 0, 0, 0, NULL));
 }
 
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
@@ -669,6 +669,7 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VA
 	int i;
 	METHOD_RESULT mr;
 	VALUE *callable_items;
+	int args_to_use;
 
 	if(IS_ARRAY(callable)) {
 		for(i=OBJ_LEN(callable)-1, callable_items = OBJ_DATA_PTR(callable); i>=0; i--) {
@@ -716,11 +717,14 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VA
 		if(argc < CLOSURE_OBJ_N_REQ_PAR(callable)) {
 			return METHOD_ARGS_MISMATCH;
 		}
-		if(argc > CLOSURE_OBJ_N_REQ_PAR(callable) + CLOSURE_OBJ_N_OPT_PAR(callable)) {
-			return METHOD_ARGS_MISMATCH;
+		args_to_use = CLOSURE_OBJ_N_REQ_PAR(callable);
+		if(!(CLOSURE_OBJ_PARAMS_FLAGS(callable) & PARAMS_FLAG_ARR_SPLAT)) {
+			if(argc > args_to_use) {
+				return METHOD_ARGS_MISMATCH;
+			}
 		}
 		for(lvi=0; lvi<CLOSURE_OBJ_N_REQ_PAR(callable); lvi++) {
-			// TODO: make sure second argument is type durng closure creation
+			// TODO: make sure second argument is a type (when creating a closure)
 			if(!obj_is_of_type(argv[lvi], CLOSURE_OBJ_PARAMS(callable)[lvi*2+1])) {
 				return METHOD_ARGS_MISMATCH;
 			}
@@ -733,10 +737,15 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VA
 		if(lvi) {
 			ctx->frames[ctx->frame_ptr].locals = NGS_MALLOC(lvi * sizeof(VALUE));
 			assert(ctx->frames[ctx->frame_ptr].locals);
-			assert(argc <= lvi);
-			memcpy(ctx->frames[ctx->frame_ptr].locals, argv, sizeof(VALUE) * argc);
-			lvi -= argc;
-			for(local_var_ptr=&ctx->frames[ctx->frame_ptr].locals[argc];lvi;lvi--,local_var_ptr++) {
+			assert(argc >= args_to_use);
+			memcpy(ctx->frames[ctx->frame_ptr].locals, argv, sizeof(VALUE) * args_to_use);
+			if(CLOSURE_OBJ_PARAMS_FLAGS(callable) & PARAMS_FLAG_ARR_SPLAT) {
+				ctx->frames[ctx->frame_ptr].locals[args_to_use] = make_array_with_values(argc - args_to_use, &argv[args_to_use]);
+				args_to_use++; // from this point on: as opposed to number of all locals, used in calculation of how much locals to SET_UNDEF()
+			}
+			lvi -= args_to_use;
+			// printf("LVI %d\n", lvi);
+			for(local_var_ptr=&ctx->frames[ctx->frame_ptr].locals[args_to_use];lvi;lvi--,local_var_ptr++) {
 				SET_UNDEF(*local_var_ptr);
 			}
 		} else {
@@ -779,12 +788,13 @@ METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result) {
 	// for OP_MAKE_CLOSURE
 	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
 	UPVAR_INDEX n_uplevels, uvi;
+	int params_flags;
 
 main_loop:
 	opcode = vm->bytecode[ip++];
 #ifdef DO_NGS_DEBUG
 	if(opcode <= sizeof(opcodes_names) / sizeof(char *)) {
-		DEBUG_VM_RUN("main_loop IP=%i OP=%s STACK_LEN=%zu\n", ip-1, opcodes_names[opcode], ctx->stack_ptr);
+		DEBUG_VM_RUN("main_loop IP=%zu OP=%s STACK_LEN=%zu\n", ip-1, opcodes_names[opcode], ctx->stack_ptr);
 		decompile(vm->bytecode, ip-1, ip);
 		for(j=ctx->stack_ptr; j>0; j--) {
 			printf("Stack @ %zu\n", j-1);
@@ -859,7 +869,7 @@ main_loop:
 							POP(v);
 							ARG(po, PATCH_OFFSET);
 #ifdef DO_NGS_DEBUG
-							DEBUG_VM_RUN("OP_PATCH dst_idx=%d v=%d\n", ip+po, *(GLOBAL_VAR_INDEX *)&vm->bytecode[ip+po]);
+							DEBUG_VM_RUN("OP_PATCH dst_idx=%zu v=%d\n", ip+po, *(GLOBAL_VAR_INDEX *)&vm->bytecode[ip+po]);
 							assert(*(GLOBAL_VAR_INDEX *)&vm->bytecode[ip+po] == 0); // try to catch patching at invalid offset
 #endif
 							*(GLOBAL_VAR_INDEX *)&vm->bytecode[ip+po] = GET_INT(v);
@@ -985,12 +995,13 @@ do_jump:
 							ARG(n_params_optional, LOCAL_VAR_INDEX);
 							ARG(n_locals, LOCAL_VAR_INDEX);
 							ARG(n_uplevels, UPVAR_INDEX);
+							ARG(params_flags, int);
 							v = make_closure_obj(
 									ip+jo,
-									n_locals, n_params_required, n_params_optional, n_uplevels,
-									&ctx->stack[ctx->stack_ptr - n_params_required*2 - n_params_optional*3]
+									n_locals, n_params_required, n_params_optional, n_uplevels, params_flags,
+									&ctx->stack[ctx->stack_ptr - (n_params_required + ADDITIONAL_PARAMS_COUNT)*2 - n_params_optional*3]
 							);
-							ctx->stack_ptr -= n_params_required*2 - n_params_optional*3;
+							ctx->stack_ptr -= (n_params_required + ADDITIONAL_PARAMS_COUNT)*2 - n_params_optional*3;
 							if(n_uplevels) {
 								assert(CLOSURE_OBJ_N_UPLEVELS(THIS_FRAME_CLOSURE) >= n_uplevels-1);
 								CLOSURE_OBJ_UPLEVELS(v) = NGS_MALLOC(sizeof(CLOSURE_OBJ_UPLEVELS(v)[0]) * n_uplevels);

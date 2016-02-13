@@ -10,9 +10,6 @@
 #define L_STR(buf, x) { int l = strlen(x); assert(l<256); OPCODE(buf, l); memcpy((buf)+(*idx), x, l); (*idx) += l; }
 #define DATA(buf, x) { memcpy((buf)+(*idx), &(x), sizeof(x)); (*idx) += sizeof(x); }
 #define DATA_INT(buf, x) { *(int *)&(buf)[*idx] = x; (*idx)+=sizeof(int); }
-#define DATA_UINT16(buf, x) { *(uint16_t *)&(buf)[*idx] = x; (*idx)+=2; }
-#define DATA_INT16(buf, x) { *(int16_t *)&(buf)[*idx] = x; (*idx)+=2; }
-#define DATA_INT16_AT(buf, loc, x) { *(int16_t *)&(buf)[loc] = x; }
 #define DATA_JUMP_OFFSET(buf, x) { *(JUMP_OFFSET *)&(buf)[*idx] = x; (*idx)+=sizeof(JUMP_OFFSET); }
 #define DATA_JUMP_OFFSET_PLACEHOLDER(buf) DATA_JUMP_OFFSET(buf, 1024)
 #define DATA_PATCH_OFFSET(buf, x) { *(PATCH_OFFSET *)&(buf)[*idx] = x; (*idx)+=sizeof(PATCH_OFFSET); }
@@ -234,7 +231,7 @@ void compile_identifier(COMPILATION_CONTEXT *ctx, char **buf, size_t *idx, char 
 
 void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
 	ast_node *ptr;
-	int argc, have_arr_splat;
+	int argc, have_arr_splat, params_flags;
 	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
 	UPVAR_INDEX n_uplevels;
 	size_t loop_beg, cond_jump, func_jump, end_of_func_idx, if_jump, while_jump;
@@ -386,7 +383,6 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 		case FUNC_NODE:
-			/* Work in progress */
 			// FUNC_NODE children: arguments, body
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "FUNC NODE", *idx);
 			OPCODE(*buf, OP_JMP);
@@ -397,9 +393,10 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			LOCALS = NULL;
 			N_LOCALS = 0;
 			N_UPLEVELS = 0;
+			params_flags = 0;
 			// Arguments
 			for(ptr=node->first_child->first_child; ptr; ptr=ptr->next_sibling) {
-				// ptr: identifier, type, default value
+				// ptr children: identifier, type, (default value | splat indicator)
 				register_local_var(ctx, ptr->first_child->name);
 			}
 			// Body
@@ -413,22 +410,31 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 
 			// Arguments' types and default values
 			for(ptr=node->first_child->first_child, n_params_required=0; ptr; ptr=ptr->next_sibling) {
-				// ptr: identifier, type, default value
+				// ptr children: identifier, type, (default value | splat indicator)
 				OPCODE(*buf, OP_PUSH_L_STR);
 				L_STR(*buf, ptr->first_child->name);
+				// printf("PT 0 %s\n", ptr->first_child->name);
 				compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
-				n_params_required++;
+				if(ptr->first_child->next_sibling->next_sibling && ptr->first_child->next_sibling->next_sibling->type == ARR_SPLAT_NODE) {
+					if(ptr->next_sibling) {
+						assert(0 == "splat function parameter must be the last one");
+					}
+					params_flags |= PARAMS_FLAG_ARR_SPLAT;
+				} else {
+					n_params_required++;
+				}
 			}
 
 			n_params_optional = 0; // Not implemented yet
 
 			*(JUMP_OFFSET *)&(*buf)[func_jump] = (end_of_func_idx - func_jump - sizeof(JUMP_OFFSET));
 			OPCODE(*buf, OP_MAKE_CLOSURE);
-			DATA_JUMP_OFFSET(*buf, -(*idx - func_jump + 3*sizeof(LOCAL_VAR_INDEX) + sizeof(UPVAR_INDEX)));
+			DATA_JUMP_OFFSET(*buf, -(*idx - func_jump + 3*sizeof(LOCAL_VAR_INDEX) + sizeof(UPVAR_INDEX) + sizeof(int)));
 			DATA_N_LOCAL_VARS(*buf, n_params_required);
 			DATA_N_LOCAL_VARS(*buf, n_params_optional);
 			DATA_N_LOCAL_VARS(*buf, n_locals);
 			DATA_N_UPVAR_INDEX(*buf, n_uplevels);
+			DATA_INT(*buf, params_flags);
 
 			if(node->first_child->next_sibling->next_sibling) {
 				// Function has a name

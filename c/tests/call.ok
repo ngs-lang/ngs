@@ -11,3 +11,17 @@ Test: array splat argument
   * int 1
   * int 2
   * int 3
+Test: array splat parameter
+* string(len=4) nope
+* array of length 2
+  * int 10
+  * array of length 0
+* array of length 2
+  * int 10
+  * array of length 1
+    * int 20
+* array of length 2
+  * int 10
+  * array of length 2
+    * int 20
+    * int 30

@@ -425,7 +425,20 @@ function-definition-parameters =
 		$$ = ret;
 	}
 
+# TODO: make sure it's the last one (or the last ones are *args, **kwargs later)
+# *args at any other positon is a syntax error for now
 function-definition-parameter =
+	"*" space? i:identifier {
+		MAKE_NODE(ret, PARAM_NODE);
+			MAKE_NODE(arr, IDENTIFIER_NODE);
+			arr->name = "Arr";
+			MAKE_NODE(splat, ARR_SPLAT_NODE);
+			ret->first_child = i;
+			i->next_sibling = arr;
+			arr->next_sibling = splat;
+		$$ = ret;
+	}
+	|
 	i:identifier t:function-definition-parameter-type {
 		MAKE_NODE(ret, PARAM_NODE);
 		i->next_sibling = t;
@@ -434,7 +447,7 @@ function-definition-parameter =
 	}
 
 function-definition-parameter-type =
-	space? ":" space? c:code-block { $$ = c; }
+	space? ":" space? c:expression { $$ = c; }
 	|
 	{
 		MAKE_NODE(ret, IDENTIFIER_NODE);
