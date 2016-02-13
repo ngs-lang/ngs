@@ -9,7 +9,7 @@ TEST identity(10) == 10
 # TODO: Add more info about the newly created function - useful for debugging
 #       See https://docs.python.org/2/library/functools.html#partial-objects
 F partial(f, *bind_args)
-	F(*args) f(*[*bind_args, *args])
+	F(*args) f(*bind_args, *args)
 
 TEST F() { local p = partial((-), 10); p(7) }() == 3
 
