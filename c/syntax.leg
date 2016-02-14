@@ -111,9 +111,6 @@ start =
 
 eof = !.
 
-# Don't want any kind of left or right brackets or other symbols that should come in pairs
-operators-symbols = [-|=!@?~+*/%$]+
-
 space = [ \t\n]+
 inline_space = [ \t]+
 newline_space = (inline_space? [\n]+ inline_space?)+
@@ -401,7 +398,7 @@ function-definition-name =
 		ret->name = strdup(yytext);
 		$$ = ret;
 	}
-	| space? <operators-symbols+> {
+	| space? <[-|=!@?~+*/%$]+> {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = strdup(yytext);
 		$$ = ret;
@@ -664,13 +661,24 @@ number =
 		$$ = ret;
 	}
 
+# TODO: refactor last 3 stanzas to one. Simply ("(" <[-|=!@?~+*/%$<>]+ | "is not" | "not in"> ")" does not work.
 identifier =
 	<[_a-zA-Z]+[_a-zA-Z0-9]*> {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = strdup(yytext);
 		$$ = ret;
 	}
-	| "(" <operators-symbols> ")" {
+	| "(" <[-|=!@?~+*/%$<>]+> ")" {
+		MAKE_NODE(ret, IDENTIFIER_NODE);
+		ret->name = strdup(yytext);
+		$$ = ret;
+	}
+	| "(" <"is not"> ")" {
+		MAKE_NODE(ret, IDENTIFIER_NODE);
+		ret->name = strdup(yytext);
+		$$ = ret;
+	}
+	| "(" <"not in"> ")" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = strdup(yytext);
 		$$ = ret;

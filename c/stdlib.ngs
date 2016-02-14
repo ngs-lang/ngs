@@ -32,7 +32,7 @@ TEST (1 != 1) == false
 F 'not in'(a,b) not(a in b)
 
 TEST (1 not in [1,2,3]) == false
-TEST (10 not in [1,2,3])
+TEST 10 not in [1,2,3]
 
 
 F 'is not'(a,b) not(a is b)
@@ -44,7 +44,7 @@ TEST (null is not Null) == false
 F has(container, element) element in container
 
 TEST [1,2,3].has(1)
-TEST [1,2,3].has(10) == false
+TEST [1,2,3].has(10).not()
 
 
 # Return the "collect" function for the given initial object (defaults to [])
@@ -109,8 +109,9 @@ F all(arr:Arr, mapper:Fun, *args) {
 	true
 }
 
-TEST [1,2,3].all(F(elt) elt < 10)
-TEST [1,2,10].all(F(elt) elt > 5).not()
+TEST [1,2,3].all((<), 10)
+TEST [1,2,10].all((>), 5).not()
+
 
 F map(arr:Arr, mapper:Fun, *args)
 	collector
@@ -118,7 +119,6 @@ F map(arr:Arr, mapper:Fun, *args)
 			collect(mapper(elt, *args))
 		})
 
-TEST [1,2,3].map(F(x) x*3) == [3,6,9]
 TEST [1,2,3].map((*), 4) == [4,8,12]
 
 
@@ -142,14 +142,14 @@ F filter(arr:Arr, predicate:Fun, *args)
 
 
 F without(arr:Arr, without_elt)
-	arr.filter(F(elt) elt != without_elt)
+	arr.filter((!=), without_elt)
 
 TEST [1,2,3,2].without(2) == [1,3]
 
 
-F filter(arr:Arr) filter(arr, F(elt) elt is not null)
+F filter(arr:Arr) filter(arr, (is not), Null)
 
-# [1,2,null,3].filter() = [1,2,3]
+TEST [1,2,null,3].filter() == [1,2,3]
 
 
 F flatten(arr:Arr)
@@ -163,7 +163,7 @@ TEST [[1], [2,3]].flatten() == [1,2,3]
 
 F uniq(arr:Arr)
 	(collector/{}
-		arr.each(F(elt) collect(elt, 1))
+		arr.each(collect, 1)
 	).keys()
 
 TEST [1,2,2,3,4,4].uniq() == [1,2,3,4]
@@ -191,7 +191,8 @@ F zip(*args) {
 TEST zip([1,2,3], [4,5,6]) == [[1,4], [2,5], [3,6]]
 
 
-# --- Access to elements ---
+# --- Access elements ---
+
 F '[]'(arr:Arr, indexes:Arr)
 	collector
 		indexes.each(F(idx) collect(arr[idx]))
@@ -243,7 +244,7 @@ TEST {'a': 1, 'b': 2}.map(F(k, v, sep) "${k}${sep}${v}", '+') == ['a+1', 'b+2']
 
 F filter(h:Hash, predicate:Fun, *args)
 	collector/{}
-		h.each(F(k,v) {
+		h.each(F(k, v) {
 			if predicate(k, v, *args)
 				collect(k, v)
 		})
@@ -252,18 +253,18 @@ TEST {'a': 1, 'b': 2}.filter(F(k, v, k_eq) k == k_eq, 'a') == {'a': 1}
 
 # --- Conversions ---
 
-F Hash(a:Arr)
+F Hash(arr:Arr)
 	collector/{}
-		a.each(F(pair) {
+		arr.each(F(pair) {
 			collect(*pair)
 		})
 
 TEST Hash([['a', 1], ['c', 3]]) == {'a': 1, 'c': 3}
 
 
-F Hash(a:Arr, v)
+F Hash(arr:Arr, v)
 	collector/{}
-		a.each(F(k) collect(k, v))
+		arr.each(collect, v)
 
 TEST Hash([1,2], 'x') == {1: 'x', 2: 'x'}
 
@@ -308,7 +309,6 @@ F map(n:Int, mapper:Fun, *args)
 		for(i;n) collect(mapper(i, *args))
 
 TEST 3.map(identity) == [0, 1, 2]
-TEST 3.map(F(x) x*2) == [0, 2, 4]
 TEST 3.map((*), 3) == [0, 3, 6]
 
 
