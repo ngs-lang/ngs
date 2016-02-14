@@ -11,7 +11,13 @@ TEST identity(10) == 10
 F partial(f, *bind_args)
 	F(*args) f(*bind_args, *args)
 
-TEST F() { local p = partial((-), 10); p(7) }() == 3
+TEST local p = partial((-), 10); p(7) == 3
+
+
+F partial_tail(f, *bind_args)
+	F(*args) f(*args, *bind_args)
+
+TEST local p = partial_tail((-), 10); p(7) == -3
 
 
 # === Syntactic sugar ============================
@@ -174,8 +180,8 @@ TEST {'a': 1, 'b': 2}.filter(F(k, v, k_eq) k == k_eq, 'a') == {'a': 1}
 
 F Hash(a:Arr)
 	collector/{}
-		a.each(F(x) {
-			collect(x[0], x[1])
+		a.each(F(pair) {
+			collect(*pair)
 		})
 
 TEST Hash([['a', 1], ['c', 3]]) == {'a': 1, 'c': 3}
@@ -211,7 +217,7 @@ F update(dst:Hash, src:Hash)
 	collector/dst
 		src.each(collect)
 
-TEST F() { local h={'a': 1, 'b': 2, 'c': 3}; h.update({'b': 20, 'd': 40}); h == {'a': 1, 'b': 20, 'c': 3, 'd': 40} }()
+TEST local h={'a': 1, 'b': 2, 'c': 3}; h.update({'b': 20, 'd': 40}); h == {'a': 1, 'b': 20, 'c': 3, 'd': 40}
 
 
 # === Integer ====================================
