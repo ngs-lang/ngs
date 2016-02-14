@@ -11,13 +11,13 @@ TEST identity(10) == 10
 F partial(f, *bind_args)
 	F(*args) f(*bind_args, *args)
 
-TEST local p = partial((-), 10); p(7) == 3
+TEST p = partial((-), 10); p(7) == 3
 
 
 F partial_tail(f, *bind_args)
 	F(*args) f(*args, *bind_args)
 
-TEST local p = partial_tail((-), 10); p(7) == -3
+TEST p = partial_tail((-), 10); p(7) == -3
 
 
 # === Syntactic sugar ============================
@@ -217,7 +217,7 @@ F update(dst:Hash, src:Hash)
 	collector/dst
 		src.each(collect)
 
-TEST local h={'a': 1, 'b': 2, 'c': 3}; h.update({'b': 20, 'd': 40}); h == {'a': 1, 'b': 20, 'c': 3, 'd': 40}
+TEST h={'a': 1, 'b': 2, 'c': 3}; h.update({'b': 20, 'd': 40}); h == {'a': 1, 'b': 20, 'c': 3, 'd': 40}
 
 
 # === Integer ====================================
