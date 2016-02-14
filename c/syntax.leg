@@ -396,7 +396,7 @@ function-definition =
 
 function-definition-name =
 	space+ i:identifier { $$ = i; }
-	| space? "'" <[-|=!@?<>~+*/%()$a-zA-Z0-9 ]+> "'" {
+	| space? "'" <([-|=!@?<>~+*/%()$a-zA-Z0-9 ]|"["|"]")+> "'" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = strdup(yytext);
 		$$ = ret;

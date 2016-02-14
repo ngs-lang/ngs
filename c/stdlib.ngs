@@ -8,13 +8,13 @@ TEST identity(10) == 10
 
 # TODO: Add more info about the newly created function - useful for debugging
 #       See https://docs.python.org/2/library/functools.html#partial-objects
-F partial(f, *bind_args)
+F partial(f:Fun, *bind_args)
 	F(*args) f(*bind_args, *args)
 
 TEST p = partial((-), 10); p(7) == 3
 
 
-F partial_tail(f, *bind_args)
+F partial_tail(f:Fun, *bind_args)
 	F(*args) f(*args, *bind_args)
 
 TEST p = partial_tail((-), 10); p(7) == -3
@@ -91,6 +91,27 @@ TEST [1, 3] != [1, 2]
 TEST [1] != [1, 2]
 
 
+F any(arr:Arr, mapper:Fun, *args) {
+	local l = arr.len()
+	for(i;l)
+		mapper(arr[i], *args) returns true
+	false
+}
+
+TEST [1,2,10].any(F(elt) elt > 5)
+TEST [1,2,3].any(F(elt) elt > 5).not()
+
+
+F all(arr:Arr, mapper:Fun, *args) {
+	local l = arr.len()
+	for(i;l)
+		not(mapper(arr[i], *args)) returns false
+	true
+}
+
+TEST [1,2,3].all(F(elt) elt < 10)
+TEST [1,2,10].all(F(elt) elt > 5).not()
+
 F map(arr:Arr, mapper:Fun, *args)
 	collector
 		arr.each(F(elt) {
@@ -126,6 +147,11 @@ F without(arr:Arr, without_elt)
 TEST [1,2,3,2].without(2) == [1,3]
 
 
+F filter(arr:Arr) filter(arr, F(elt) elt is not null)
+
+# [1,2,null,3].filter() = [1,2,3]
+
+
 F flatten(arr:Arr)
 	collector
 		arr.each(F(subarr) {
@@ -135,10 +161,58 @@ F flatten(arr:Arr)
 TEST [[1], [2,3]].flatten() == [1,2,3]
 
 
+F uniq(arr:Arr)
+	(collector/{}
+		arr.each(F(elt) collect(elt, 1))
+	).keys()
+
+TEST [1,2,2,3,4,4].uniq() == [1,2,3,4]
+
+
+# --- Conversions ---
+
 F Arr(h:Hash)
 	h.map(F(*pair) pair)
 
 TEST Arr({'x': 7, 'y': 8}) == [['x', 7], ['y', 8]]
+
+
+F Arr(arr:Arr) arr
+
+
+F zip(*args) {
+	local arrays = args.map(Arr)
+	local max_len = arrays.map(len).max()
+	collector
+		for(i;max_len)
+			collect(arrays.map(get, i, null))
+}
+
+TEST zip([1,2,3], [4,5,6]) == [[1,4], [2,5], [3,6]]
+
+
+# --- Access to elements ---
+F '[]'(arr:Arr, indexes:Arr)
+	collector
+		indexes.each(F(idx) collect(arr[idx]))
+
+TEST [10,20,30,40][[0,3]] == [10, 40]
+
+# --- Misc ---
+
+F min(arr:Arr) {
+	guard arr
+	ret = arr[0]
+	arr.each(F(elt) if elt < ret { ret = elt })
+	ret
+}
+
+F max(arr:Arr) {
+	guard arr
+	ret = arr[0]
+	arr.each(F(elt) if elt > ret { ret = elt })
+	ret
+}
 
 
 # === Hash =======================================
