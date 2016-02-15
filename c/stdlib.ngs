@@ -201,18 +201,22 @@ TEST [10,20,30,40][[0,3]] == [10, 40]
 
 # --- Misc ---
 
-F min(arr:Arr) {
-	guard arr
-	ret = arr[0]
-	arr.each(F(elt) if elt < ret { ret = elt })
-	ret
-}
+{
+	F() {
+		F most(arr:Arr, f:Fun) {
+			guard arr
+			ret = arr[0]
+			arr.each(F(elt) if f(elt, ret) { ret = elt })
+			ret
+		}
 
-F max(arr:Arr) {
-	guard arr
-	ret = arr[0]
-	arr.each(F(elt) if elt > ret { ret = elt })
-	ret
+		# XXX: find something that looks better. options:
+		#      global F min() ...
+		#      F global min() ...
+		#      ?
+		min = F(arr:Arr) most(arr, (<))
+		max = F(arr:Arr) most(arr, (>))
+	}()
 }
 
 
