@@ -509,6 +509,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 		case HASH_LIT_NODE:
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "HASH NODE", *idx);
 			for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
+				if(ptr->type == HASH_SPLAT_NODE) {
+					assert(0=="Hash splat is not implemented yet");
+				}
 				compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
 				compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 				// XXX

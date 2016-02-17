@@ -315,6 +315,9 @@ F map(n:Int, mapper:Fun, *args)
 TEST 3.map(identity) == [0, 1, 2]
 TEST 3.map((*), 3) == [0, 3, 6]
 
+# === RegExp =====================================
+
+# TODO
 
 # === Logging and status reporting (WIP) =========
 

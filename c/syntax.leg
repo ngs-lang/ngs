@@ -552,6 +552,12 @@ hash-items =
 		}
 
 hash-item =
+		"**" space? e:expression {
+			MAKE_NODE(ret, HASH_SPLAT_NODE);
+			ret->first_child = e;
+			$$ = ret;
+		}
+		|
 		k:expression space? ":" space? v:expression {
 			MAKE_NODE(ret, EXPRESSIONS_NODE);
 			ret->first_child = k;
