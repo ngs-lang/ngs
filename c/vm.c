@@ -125,8 +125,8 @@ METHOD_RESULT native_ ## name ## _int_int METHOD_PARAMS { \
 	*(type *) ptr = val; \
 	ptr += sizeof(type);
 
-#define BYTECODE_GET(ptr, type, val) \
-	*(type *) ptr = val; \
+#define BYTECODE_GET(dst, ptr, type) \
+	dst = *(type *) ptr; \
 	ptr += sizeof(type);
 
 INT_METHOD(plus, +);
@@ -697,22 +697,16 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 				break;
 			case BYTECODE_SECTION_TYPE_GLOBALS:
 				p = data;
-				g_max = *(BYTECODE_GLOBALS_COUNT *)p;
-				p += sizeof(BYTECODE_GLOBALS_COUNT);
+				BYTECODE_GET(g_max, p, BYTECODE_GLOBALS_COUNT);
 				for(g=0; g<g_max; g++) {
-					// printf("vm_load_bytecode() processing global patching num=%i/%i p=%p\n", g, g_max, p);
-					global_name_len = *p; // XXX - check what happens with len 128 and more (unsigned char = char)
+					BYTECODE_GET(global_name_len, p, unsigned char); // XXX - check what happens with len 128 and more (unsigned char = char)
 					assert(global_name_len);
-					p++;
 					memcpy(global_name, p, global_name_len);
 					global_name[global_name_len] = 0;
-					// printf("vm_load_bytecode() processing global patching num=%i/%i p=%p name=%s\n", g, g_max, p, global_name);
 					p += global_name_len;
-					l_max = *(BYTECODE_GLOBALS_LOC_COUNT *) p;
-					p += sizeof(BYTECODE_GLOBALS_LOC_COUNT);
+					BYTECODE_GET(l_max, p, BYTECODE_GLOBALS_LOC_COUNT);
 					for(l=0; l<l_max; l++) {
-						o = *(BYTECODE_GLOBALS_OFFSET *) p;
-						p += sizeof(BYTECODE_GLOBALS_OFFSET);
+						BYTECODE_GET(o, p, BYTECODE_GLOBALS_OFFSET);
 						gvi = get_global_index(vm, global_name, global_name_len);
 						DEBUG_VM_API("vm_load_bytecode() processing global patching num=%i name=%s offset=%i resolved_index=%i\n", g, global_name, o, gvi);
 						*(GLOBAL_VAR_INDEX *)(&vm->bytecode[ip + o]) = gvi;
@@ -1304,3 +1298,4 @@ void ngs_fetch_bytecode_section(BYTECODE_HANDLE *h, BYTECODE_SECTION_TYPE *type,
 }
 
 #undef BYTECODE_ADD
+#undef BYTECODE_GET
