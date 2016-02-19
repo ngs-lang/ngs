@@ -620,14 +620,11 @@ void compile_init_section(COMPILATION_CONTEXT *ctx, char **init_buf, size_t *idx
 
 char *compile(ast_node *node /* the top level node */, size_t *len) {
 
-	char *main_buf = NGS_MALLOC(COMPILE_INITIAL_BUF_SIZE);
+	char *buf = NGS_MALLOC(COMPILE_INITIAL_BUF_SIZE);
 	size_t main_allocated = COMPILE_INITIAL_BUF_SIZE;
-	size_t main_len = 0;
+	size_t l;
 	COMPILATION_CONTEXT ctx;
 	BYTECODE_HANDLE *bytecode;
-
-	char *init_buf;
-	size_t init_len = 0;
 
 	vm_init(&(ctx.vm), 0, NULL);
 	ctx.globals = NULL;
@@ -635,20 +632,21 @@ char *compile(ast_node *node /* the top level node */, size_t *len) {
 	ctx.n_locals = NGS_MALLOC(COMPILE_MAX_FUNC_DEPTH * sizeof(LOCAL_VAR_INDEX *));
 	ctx.n_uplevels = NGS_MALLOC(COMPILE_MAX_FUNC_DEPTH * sizeof(UPVAR_INDEX *));
 	ctx.locals_ptr = 0;
-	// ctx.n_locals = 0;
 	ctx.in_function = 0;
 
 	bytecode = ngs_create_bytecode();
 
-	*len = 0;
-	compile_main_section(&ctx, node, &main_buf, &main_len, &main_allocated, NEED_RESULT);
-	ensure_room(&main_buf, main_len, &main_allocated, 1);
-	main_buf[(main_len)++] = OP_RET;
-	ngs_add_bytecode_section(bytecode, BYTECODE_SECTION_TYPE_CODE, main_len, main_buf);
+	// CODE SECTION
+	l = 0;
+	compile_main_section(&ctx, node, &buf, &l, &main_allocated, NEED_RESULT);
+	ensure_room(&buf, l, &main_allocated, 1);
+	buf[l++] = OP_RET;
+	ngs_add_bytecode_section(bytecode, BYTECODE_SECTION_TYPE_CODE, l, buf);
 
-	compile_init_section(&ctx, &init_buf, &init_len);
-
-	ngs_add_bytecode_section(bytecode, BYTECODE_SECTION_TYPE_GLOBALS, init_len, init_buf);
+	// GLOBALS SECTION
+	l = 0;
+	compile_init_section(&ctx, &buf, &l);
+	ngs_add_bytecode_section(bytecode, BYTECODE_SECTION_TYPE_GLOBALS, l, buf);
 
 	*len = bytecode->len;
 
