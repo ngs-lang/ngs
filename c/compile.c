@@ -10,6 +10,8 @@
 #define L_STR(buf, x) { int l = strlen(x); assert(l<256); OPCODE(buf, l); memcpy((buf)+(*idx), x, l); (*idx) += l; }
 #define DATA(buf, x) { memcpy((buf)+(*idx), &(x), sizeof(x)); (*idx) += sizeof(x); }
 #define DATA_INT(buf, x) { *(int *)&(buf)[*idx] = x; (*idx)+=sizeof(int); }
+#define DATA_UINT16(buf, x) { *(uint16_t *)&(buf)[*idx] = x; (*idx)+=sizeof(uint16_t); }
+#define DATA_UINT32(buf, x) { *(uint32_t *)&(buf)[*idx] = x; (*idx)+=sizeof(uint32_t); }
 #define DATA_JUMP_OFFSET(buf, x) { *(JUMP_OFFSET *)&(buf)[*idx] = x; (*idx)+=sizeof(JUMP_OFFSET); }
 #define DATA_JUMP_OFFSET_PLACEHOLDER(buf) DATA_JUMP_OFFSET(buf, 1024)
 #define DATA_PATCH_OFFSET(buf, x) { *(PATCH_OFFSET *)&(buf)[*idx] = x; (*idx)+=sizeof(PATCH_OFFSET); }
@@ -561,57 +563,56 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 		} \
 	}
 
+//		section type 2 data: globals patching
+//			uint16 - number of items
+//			item:
+//				Lstr
+//				uint16 - number of locations
+//				uint32[] - locations
+
 size_t calculate_init_section_size(COMPILATION_CONTEXT *ctx) {
-	size_t ret = 0;
+	size_t ret = sizeof(BYTECODE_GLOBALS_COUNT);
 	SYMBOL_TABLE *globals;
 	DEBUG_COMPILER("%s", "entering calculate_init_section_size()\n");
 	FOR_GLOBALS(
-			// OP_PUSH_L_STR - 1
-			// LEN - 1
-			// STRING - ?
-			// OP_RESOLVE_GLOBAL - 1
-			// 1st till Nth-1 offsets: [OP_DUP, OP_PATCH, DATA0, DATA1] - 4
-			// Nth offset:             [OP_PATCH, DATA0, DATA1] - 3
-			ret += 1 + 1 + strlen(globals->name) + 1 + utarray_len(globals->offsets) * 4 - 1 /* last one has no OP_DUP */;
+			// Lstr
+			// uint16 - number of locations
+			// uint32[] - locations
+			ret += 1 + strlen(globals->name) + sizeof(BYTECODE_GLOBALS_LOC_COUNT) + utarray_len(globals->offsets) * sizeof(BYTECODE_GLOBALS_OFFSET);
 	)
 
-	ret += 1; // OP_INIT_DONE
 	DEBUG_COMPILER("leaving calculate_init_section_size() -> %zu\n", ret);
 	return ret;
 }
 
+// TODO: DATA_UINT.. -> DATA_GLOBALS_...
 void compile_init_section(COMPILATION_CONTEXT *ctx, char **init_buf, size_t *idx) {
 	// TODO: check that all offsets are really in UINT16 range.
 	char *buf = NULL;
 	SYMBOL_TABLE *globals;
 	size_t init_section_size;
+	size_t i = 0;
 	DEBUG_COMPILER("%s", "entering compile_init_section()\n");
 	init_section_size = calculate_init_section_size(ctx);
-	buf = NGS_MALLOC(COMPILE_INITIAL_BUF_SIZE);
+	buf = NGS_MALLOC(init_section_size);
 	FOR_GLOBALS(
-			// OP_PUSH_L_STR - 1
-			// LEN - 1
-			// STRING - ?
-			// OP_RESOLVE_GLOBAL - 1
-			// 1st till Nth-1 offsets: [OP_DUP, OP_PATCH, DATA0, DATA1] - 4
-			// Nth offset:             [OP_PATCH, DATA0, DATA1] - 3
-			size_t i;
+		i++;
+	)
+	// printf("number of globals to patch: %zu, section size %zu\n", i, init_section_size);
+	DATA_UINT16(buf, i);
+	FOR_GLOBALS(
+			// Lstr
+			// uint16 - number of locations
+			// uint32[] - locations
 			size_t len;
-			OPCODE(buf, OP_PUSH_L_STR);
 			L_STR(buf, globals->name);
-			OPCODE(buf, OP_RESOLVE_GLOBAL);
 			len = utarray_len(globals->offsets);
+			DATA_UINT16(buf, len);
 			for(i = 0; i < len; i++) {
-				if(i < len - 1) {
-					DEBUG_COMPILER("%s", "compile_init_section() dup\n");
-					OPCODE(buf, OP_DUP);
-				}
-				OPCODE(buf, OP_PATCH);
-				DEBUG_COMPILER("compile_init_section() global i=%zu name=%s offset=%d idx=%zu\n", i, globals->name, *(int *)utarray_eltptr(globals->offsets, i), *idx);
-				DATA_PATCH_OFFSET(buf, *(int *)utarray_eltptr(globals->offsets, i) + init_section_size - *idx - sizeof(PATCH_OFFSET));
+				// printf("compile_init_section() global i=%zu name=%s offset=%d idx=%zu\n", i, globals->name, *(int *)utarray_eltptr(globals->offsets, i), *idx);
+				DATA_UINT32(buf, *(uint32_t *)utarray_eltptr(globals->offsets, i))
 			}
 	);
-	OPCODE(buf, OP_INIT_DONE);
 	assert(*idx == init_section_size); // the init section size calculations must be correct
 	DEBUG_COMPILER("%s", "leaving compile_init_section()\n");
 	*init_buf = buf;
@@ -627,8 +628,6 @@ char *compile(ast_node *node /* the top level node */, size_t *len) {
 
 	char *init_buf;
 	size_t init_len = 0;
-
-	char *result_buf;
 
 	vm_init(&(ctx.vm), 0, NULL);
 	ctx.globals = NULL;
@@ -651,11 +650,8 @@ char *compile(ast_node *node /* the top level node */, size_t *len) {
 
 	ngs_add_bytecode_section(bytecode, BYTECODE_SECTION_TYPE_GLOBALS, init_len, init_buf);
 
-	*len = init_len + main_len;
-	result_buf = NGS_MALLOC(*len);
-	memcpy(&result_buf[0], init_buf, init_len);
-	memcpy(&result_buf[init_len], main_buf, main_len);
+	*len = bytecode->len;
 
-	return result_buf;
+	return bytecode->data;
 }
 #undef LOCALS

@@ -11,9 +11,9 @@
 
 //	* bytecode format
 //
-//		"NGS BYTECODE" (12)
+//		"NGS BYTECODE" (String of length 12, not zero-terminated)
 //
-//		0x0102030405060708 for byte ordering check
+//		0x0102030405060708 - 8 bytes for byte ordering check
 //
 //		uint16 - number of sections
 //
@@ -35,15 +35,21 @@ typedef uint16_t BYTECODE_SECTIONS_COUNT;
 typedef uint16_t BYTECODE_SECTION_TYPE;
 typedef uint32_t BYTECODE_SECTION_LEN;
 
+typedef uint16_t BYTECODE_GLOBALS_COUNT;
+typedef uint16_t BYTECODE_GLOBALS_LOC_COUNT;
+typedef uint32_t BYTECODE_GLOBALS_OFFSET;
+
 extern char BYTECODE_SIGNATURE[];
 
-#define BYTECODE_SECTION_TYPE_CODE (1)
+#define BYTECODE_SECTION_TYPE_CODE    (1)
 #define BYTECODE_SECTION_TYPE_GLOBALS (2)
-#define BYTECODE_ORDER_CHECK_VAL (0x0102030405060708)
+#define BYTECODE_ORDER_CHECK_VAL      (0x0102030405060708)
 
 typedef struct {
 	char *data;
 	size_t len;
+	BYTECODE_SECTIONS_COUNT sections_count, next_section_num;
+	char *next_section_ptr;
 } BYTECODE_HANDLE;
 
 
@@ -166,7 +172,7 @@ typedef enum method_result_enum {
 typedef METHOD_RESULT (*VM_FUNC)(const VALUE *argv, VALUE *result);
 typedef METHOD_RESULT (*VM_EXT_FUNC)(VM *vm, CTX *ctx, const VALUE *argv, VALUE *result);
 void vm_init(VM *vm, int argc, char **argv);
-size_t vm_load_bytecode(VM *vm, char *bc, size_t len);
+size_t vm_load_bytecode(VM *vm, char *bc);
 void ctx_init(CTX *ctx);
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found);
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len);
@@ -176,4 +182,6 @@ static const UT_icd ut_value_icd _UNUSED_ = {sizeof(VALUE),NULL,NULL,NULL};
 METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result);
 BYTECODE_HANDLE *ngs_create_bytecode();
 void ngs_add_bytecode_section(BYTECODE_HANDLE *h, BYTECODE_SECTION_TYPE type, BYTECODE_SECTION_LEN len, char *data);
+BYTECODE_HANDLE *ngs_start_unserializing_bytecode(char *data);
+void ngs_fetch_bytecode_section(BYTECODE_HANDLE *h, BYTECODE_SECTION_TYPE *type, BYTECODE_SECTION_LEN *len, char **data);
 #endif

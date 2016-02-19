@@ -102,9 +102,9 @@ int main(int argc, char **argv)
 	yyrelease(&yyctx);
 
 	bytecode = compile(tree, &len);
-	IF_DEBUG(COMPILER, decompile(bytecode, 0, len);)
+	// BROKEN SINCE BYTECODE FORMAT CHANGE // IF_DEBUG(COMPILER, decompile(bytecode, 0, len);)
 	vm_init(&vm, argc, argv);
-	vm_load_bytecode(&vm, bytecode, len);
+	vm_load_bytecode(&vm, bytecode);
 	ctx_init(&ctx);
 	vm_run(&vm, &ctx, 0, &result);
 	return 0;

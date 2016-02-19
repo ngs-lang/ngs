@@ -125,6 +125,10 @@ METHOD_RESULT native_ ## name ## _int_int METHOD_PARAMS { \
 	*(type *) ptr = val; \
 	ptr += sizeof(type);
 
+#define BYTECODE_GET(ptr, type, val) \
+	*(type *) ptr = val; \
+	ptr += sizeof(type);
+
 INT_METHOD(plus, +);
 INT_METHOD(minus, -);
 INT_METHOD(mul, *);
@@ -421,14 +425,14 @@ METHOD_RESULT native_compile_str_str METHOD_PARAMS {
 	IF_DEBUG(COMPILER, print_ast(tree, 0);)
 	yyrelease(&yyctx);
 	bytecode = compile(tree, &len);
-	IF_DEBUG(COMPILER, decompile(bytecode, 0, len);)
+	// BROKEN SINCE BYTECODE FORMAT CHANGE // IF_DEBUG(COMPILER, decompile(bytecode, 0, len);)
 	METHOD_RETURN(make_string_of_len(bytecode, len));
 }
 
 METHOD_RESULT native_load_str_str EXT_METHOD_PARAMS {
 	size_t ip;
 	(void) ctx;
-	ip = vm_load_bytecode(vm, OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]));
+	ip = vm_load_bytecode(vm, OBJ_DATA_PTR(argv[0]));
 	METHOD_RETURN(make_closure_obj(ip, 0, 0, 0, 0, 0, NULL));
 }
 
@@ -652,20 +656,76 @@ void ctx_init(CTX *ctx) {
 	memset(ctx->frames, 0, sizeof(ctx->frames));
 }
 
-size_t vm_load_bytecode(VM *vm, char *bc, size_t len) {
-	size_t ip;
+size_t vm_load_bytecode(VM *vm, char *bc) {
+
+	// For BYTECODE_SECTION_TYPE_CODE
+	BYTECODE_HANDLE *bytecode;
+	BYTECODE_SECTION_TYPE type;
+	BYTECODE_SECTION_LEN len;
+	BYTECODE_SECTIONS_COUNT i;
+	char *data;
+	char *p;
+
+	// For BYTECODE_SECTION_TYPE_GLOBALS
+	BYTECODE_GLOBALS_COUNT g, g_max;
+	BYTECODE_GLOBALS_LOC_COUNT l, l_max;
+	BYTECODE_GLOBALS_OFFSET o;
+	GLOBAL_VAR_INDEX gvi;
+	unsigned char global_name_len;
+	char global_name[257];
+
+	size_t ip = 0;
 	DEBUG_VM_API("vm_load_bytecode() VM=%p bytecode=%p\n", vm, bc);
-	assert(len);
-	assert(bc[len-1] == OP_RET);
-	if(vm->bytecode) {
-		vm->bytecode = NGS_REALLOC(vm->bytecode, vm->bytecode_len + len);
-	} else {
-		vm->bytecode = NGS_MALLOC(len);
+
+	bytecode = ngs_start_unserializing_bytecode(bc);
+
+
+	for(i=0; i<bytecode->sections_count; i++) {
+		ngs_fetch_bytecode_section(bytecode, &type, &len, &data);
+		switch(type) {
+			case BYTECODE_SECTION_TYPE_CODE:
+				assert(data[len-1] == OP_RET);
+				if(vm->bytecode) {
+					vm->bytecode = NGS_REALLOC(vm->bytecode, vm->bytecode_len + len);
+				} else {
+					vm->bytecode = NGS_MALLOC(len);
+				}
+				assert(vm->bytecode);
+				memcpy(vm->bytecode + vm->bytecode_len, data, len);
+				ip = vm->bytecode_len;
+				vm->bytecode_len += len;
+				break;
+			case BYTECODE_SECTION_TYPE_GLOBALS:
+				p = data;
+				g_max = *(BYTECODE_GLOBALS_COUNT *)p;
+				p += sizeof(BYTECODE_GLOBALS_COUNT);
+				for(g=0; g<g_max; g++) {
+					// printf("vm_load_bytecode() processing global patching num=%i/%i p=%p\n", g, g_max, p);
+					global_name_len = *p; // XXX - check what happens with len 128 and more (unsigned char = char)
+					assert(global_name_len);
+					p++;
+					memcpy(global_name, p, global_name_len);
+					global_name[global_name_len] = 0;
+					// printf("vm_load_bytecode() processing global patching num=%i/%i p=%p name=%s\n", g, g_max, p, global_name);
+					p += global_name_len;
+					l_max = *(BYTECODE_GLOBALS_LOC_COUNT *) p;
+					p += sizeof(BYTECODE_GLOBALS_LOC_COUNT);
+					for(l=0; l<l_max; l++) {
+						o = *(BYTECODE_GLOBALS_OFFSET *) p;
+						p += sizeof(BYTECODE_GLOBALS_OFFSET);
+						gvi = get_global_index(vm, global_name, global_name_len);
+						DEBUG_VM_API("vm_load_bytecode() processing global patching num=%i name=%s offset=%i resolved_index=%i\n", g, global_name, o, gvi);
+						*(GLOBAL_VAR_INDEX *)(&vm->bytecode[ip + o]) = gvi;
+					}
+				}
+				break;
+			default:
+				// Types 0-255 are a must. Types above that are optional.
+				if(type < 0x100) {
+					assert(0 == "vm_load_bytecode(): Unknwon section type");
+				}
+		}
 	}
-	assert(vm->bytecode);
-	memcpy(vm->bytecode + vm->bytecode_len, bc, len);
-	ip = vm->bytecode_len;
-	vm->bytecode_len += len;
 	return ip;
 }
 
@@ -1157,6 +1217,7 @@ end_main_loop:
 #undef GLOBALS
 #undef LOCALS
 
+// For composing bytecode
 BYTECODE_HANDLE *ngs_create_bytecode() {
 	BYTECODE_HANDLE *h;
 	BYTECODE_SECTION_LEN len;
@@ -1177,6 +1238,7 @@ BYTECODE_HANDLE *ngs_create_bytecode() {
 	return h;
 }
 
+// For composing bytecode
 void ngs_add_bytecode_section(BYTECODE_HANDLE *h, BYTECODE_SECTION_TYPE type, BYTECODE_SECTION_LEN len, char *data) {
 	char *p;
 	size_t alloc_incr;
@@ -1193,4 +1255,52 @@ void ngs_add_bytecode_section(BYTECODE_HANDLE *h, BYTECODE_SECTION_TYPE type, BY
 	p = &h->data[strlen(BYTECODE_SIGNATURE) + sizeof(BYTECODE_ORDER_CHECK)];
 	(*(BYTECODE_SECTIONS_COUNT *) p)++;
 }
+
+BYTECODE_HANDLE *ngs_start_unserializing_bytecode(char *data) {
+	BYTECODE_HANDLE *h;
+	char *p;
+	h = NGS_MALLOC(sizeof(*h));
+	assert(h);
+	p = data;
+	h->data = data;
+	h->next_section_num = 0;
+
+	if(memcmp(p, BYTECODE_SIGNATURE, strlen(BYTECODE_SIGNATURE))) {
+		assert(0 == "Bytecode has invalid signature");
+	}
+	p += strlen(BYTECODE_SIGNATURE);
+
+	if(*(BYTECODE_ORDER_CHECK *)p != BYTECODE_ORDER_CHECK_VAL) {
+		assert(0 == "Bytecode has invalid byte order");
+	}
+	p += sizeof(BYTECODE_ORDER_CHECK);
+
+	h->sections_count = *(BYTECODE_SECTIONS_COUNT *)p;
+	p += sizeof(BYTECODE_SECTIONS_COUNT);
+
+	h->next_section_ptr = p;
+
+	return h;
+}
+
+void ngs_fetch_bytecode_section(BYTECODE_HANDLE *h, BYTECODE_SECTION_TYPE *type, BYTECODE_SECTION_LEN *len, char **data) {
+	char *p;
+	if(h->next_section_num >= h->sections_count) {
+		*type = 0;
+		*len = 0;
+		*data = NULL;
+		return;
+	}
+	p = h->next_section_ptr;
+	*type = *(BYTECODE_SECTION_TYPE *) p;
+	p += sizeof(BYTECODE_SECTION_TYPE);
+	*len = *(BYTECODE_SECTION_LEN *) p;
+	p += sizeof(BYTECODE_SECTION_LEN);
+	*data = p;
+	p += *len;
+
+	h->next_section_ptr = p;
+	h->next_section_num++;
+}
+
 #undef BYTECODE_ADD
