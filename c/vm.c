@@ -33,43 +33,41 @@ char *opcodes_names[] = {
 	/*  1 */ "PUSH_NULL",
 	/*  2 */ "PUSH_FALSE",
 	/*  3 */ "PUSH_TRUE",
-	/*  4 */ "PUSH_UNDEF",
-	/*  5 */ "PUSH_INT",
-	/*  6 */ "PUSH_L_STR",
-	/*  7 */ "DUP",
-	/*  8 */ "POP",
-	/*  9 */ "RESOLVE_GLOBAL",
-	/* 10 */ "PATCH",
-	/* 11 */ "INIT_DONE",
-	/* 12 */ "FETCH_GLOBAL",
-	/* 13 */ "STORE_GLOBAL",
-	/* 14 */ "FETCH_LOCAL",
-	/* 15 */ "STORE_LOCAL",
-	/* 16 */ "CALL",
-	/* 17 */ "CALL_ARR",
-	/* 18 */ "RET",
-	/* 19 */ "JMP",
-	/* 20 */ "JMP_TRUE",
-	/* 21 */ "JMP_FALSE",
-	/* 22 */ "MAKE_ARR",
-	/* 23 */ "MAKE_CLOSURE",
-	/* 24 */ "TO_STR",
-	/* 25 */ "MAKE_STR",
-	/* 26 */ "PUSH_EMPTY_STR",
-	/* 27 */ "GLOBAL_DEF_P",
-	/* 28 */ "LOCAL_DEF_P",
-	/* 29 */ "DEF_GLOBAL_FUNC",
-	/* 30 */ "DEF_LOCAL_FUNC",
-	/* 31 */ "FETCH_UPVAR",
-	/* 32 */ "STORE_UPVAR",
-	/* 33 */ "UPVAR_DEF_P",
-	/* 34 */ "DEF_UPVAR_FUNC",
-	/* 35 */ "MAKE_HASH",
-	/* 36 */ "TO_BOOL",
-	/* 37 */ "TO_ARR",
-	/* 38 */ "ARR_APPEND",
-	/* 39 */ "ARR_CONCAT",
-	/* 40 */ "GUARD",
+	/*  4 */ "PUSH_INT",
+	/*  5 */ "PUSH_L_STR",
+	/*  6 */ "DUP",
+	/*  7 */ "POP",
+	/*  8 */ "RESOLVE_GLOBAL",
+	/*  9 */ "PATCH",
+	/* 10 */ "FETCH_GLOBAL",
+	/* 11 */ "STORE_GLOBAL",
+	/* 12 */ "FETCH_LOCAL",
+	/* 13 */ "STORE_LOCAL",
+	/* 14 */ "CALL",
+	/* 15 */ "CALL_ARR",
+	/* 16 */ "RET",
+	/* 17 */ "JMP",
+	/* 18 */ "JMP_TRUE",
+	/* 19 */ "JMP_FALSE",
+	/* 20 */ "MAKE_ARR",
+	/* 21 */ "MAKE_CLOSURE",
+	/* 22 */ "TO_STR",
+	/* 23 */ "MAKE_STR",
+	/* 24 */ "PUSH_EMPTY_STR",
+	/* 25 */ "GLOBAL_DEF_P",
+	/* 26 */ "LOCAL_DEF_P",
+	/* 27 */ "DEF_GLOBAL_FUNC",
+	/* 28 */ "DEF_LOCAL_FUNC",
+	/* 29 */ "FETCH_UPVAR",
+	/* 30 */ "STORE_UPVAR",
+	/* 31 */ "UPVAR_DEF_P",
+	/* 32 */ "DEF_UPVAR_FUNC",
+	/* 33 */ "MAKE_HASH",
+	/* 34 */ "TO_BOOL",
+	/* 35 */ "TO_ARR",
+	/* 36 */ "ARR_APPEND",
+	/* 37 */ "ARR_CONCAT",
+	/* 38 */ "GUARD",
 };
 
 
@@ -879,11 +877,6 @@ main_loop:
 							SET_TRUE(v);
 							PUSH(v);
 							goto main_loop;
-		case OP_PUSH_UNDEF:
-							assert(0 == "Should not be used");
-							SET_UNDEF(v);
-							PUSH(v);
-							goto main_loop;
 		case OP_PUSH_INT:
 							// Arg: n
 							// In ...
@@ -933,10 +926,6 @@ main_loop:
 							assert(*(GLOBAL_VAR_INDEX *)&vm->bytecode[ip+po] == 0); // try to catch patching at invalid offset
 #endif
 							*(GLOBAL_VAR_INDEX *)&vm->bytecode[ip+po] = GET_INT(v);
-							goto main_loop;
-		case OP_INIT_DONE:
-							// Do nothing at top level
-							// TODO: handle included/required bytecode here
 							goto main_loop;
 		case OP_FETCH_GLOBAL:
 							ARG_GVI;
