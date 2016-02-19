@@ -7,6 +7,48 @@
 
 #define NGS_UNUSED __attribute__((unused))
 
+// --- BYTECODE ---------------------------------
+
+//	* bytecode format
+//
+//		"NGS BYTECODE" (12)
+//
+//		0x0102030405060708 for byte ordering check
+//
+//		uint16 - number of sections
+//
+//		section:
+//			uint16 - type
+//			uint32 - data len
+//			data
+//
+//		section type 1 data: code
+//		section type 2 data: globals patching
+//			uint16 - number of items
+//			item:
+//				Lstr
+//				uint16 - number of locations
+//				uint32[] - locations
+
+typedef uint64_t BYTECODE_ORDER_CHECK;
+typedef uint16_t BYTECODE_SECTIONS_COUNT;
+typedef uint16_t BYTECODE_SECTION_TYPE;
+typedef uint32_t BYTECODE_SECTION_LEN;
+
+extern char BYTECODE_SIGNATURE[];
+
+#define BYTECODE_SECTION_TYPE_CODE (1)
+#define BYTECODE_SECTION_TYPE_GLOBALS (2)
+#define BYTECODE_ORDER_CHECK_VAL (0x0102030405060708)
+
+typedef struct {
+	char *data;
+	size_t len;
+} BYTECODE_HANDLE;
+
+
+// --- VM ---------------------------------------
+
 #define MAX_STACK     (1024)
 #define MAX_FRAMES      (64)
 typedef uint16_t PATCH_OFFSET;
@@ -132,4 +174,6 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len);
 static const UT_icd ut_value_icd _UNUSED_ = {sizeof(VALUE),NULL,NULL,NULL};
 // typedef int VM_INT;
 METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result);
+BYTECODE_HANDLE *ngs_create_bytecode();
+void ngs_add_bytecode_section(BYTECODE_HANDLE *h, BYTECODE_SECTION_TYPE type, BYTECODE_SECTION_LEN len, char *data);
 #endif

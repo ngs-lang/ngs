@@ -26,6 +26,8 @@
 
 extern char **environ;
 
+char BYTECODE_SIGNATURE[] = "NGS BYTECODE";
+
 char *opcodes_names[] = {
 	/*  0 */ "HALT",
 	/*  1 */ "PUSH_NULL",
@@ -118,6 +120,10 @@ METHOD_RESULT native_ ## name ## _int_int METHOD_PARAMS { \
 
 #define ARG_LEN(n) OBJ_LEN(argv[n])
 #define ARG_DATA_PTR(n) OBJ_DATA_PTR(argv[n])
+
+#define BYTECODE_ADD(ptr, type, val) \
+	*(type *) ptr = val; \
+	ptr += sizeof(type);
 
 INT_METHOD(plus, +);
 INT_METHOD(minus, -);
@@ -1148,4 +1154,43 @@ do_jump:
 end_main_loop:
 	return METHOD_OK;
 }
+#undef GLOBALS
 #undef LOCALS
+
+BYTECODE_HANDLE *ngs_create_bytecode() {
+	BYTECODE_HANDLE *h;
+	BYTECODE_SECTION_LEN len;
+	char *p;
+	h = NGS_MALLOC(sizeof(*h));
+	assert(h);
+	len = strlen(BYTECODE_SIGNATURE) + sizeof(BYTECODE_ORDER_CHECK) + sizeof(BYTECODE_SECTIONS_COUNT);
+	h->data = NGS_MALLOC(len);
+	h->len = len;
+	p = h->data;
+
+	memcpy(p, BYTECODE_SIGNATURE, strlen(BYTECODE_SIGNATURE));
+	p += strlen(BYTECODE_SIGNATURE);
+
+	BYTECODE_ADD(p, BYTECODE_ORDER_CHECK, BYTECODE_ORDER_CHECK_VAL);
+	BYTECODE_ADD(p, BYTECODE_SECTIONS_COUNT, 0);
+
+	return h;
+}
+
+void ngs_add_bytecode_section(BYTECODE_HANDLE *h, BYTECODE_SECTION_TYPE type, BYTECODE_SECTION_LEN len, char *data) {
+	char *p;
+	size_t alloc_incr;
+	alloc_incr = sizeof(BYTECODE_SECTION_TYPE) + sizeof(BYTECODE_SECTION_LEN) + len;
+	h->data = NGS_REALLOC(h->data, h->len + alloc_incr);
+	assert(h->data);
+	p = &h->data[h->len];
+	h->len += alloc_incr;
+
+	BYTECODE_ADD(p, BYTECODE_SECTION_TYPE, type);
+	BYTECODE_ADD(p, BYTECODE_SECTION_LEN, len);
+	memcpy(p, data, len);
+
+	p = &h->data[strlen(BYTECODE_SIGNATURE) + sizeof(BYTECODE_ORDER_CHECK)];
+	(*(BYTECODE_SECTIONS_COUNT *) p)++;
+}
+#undef BYTECODE_ADD

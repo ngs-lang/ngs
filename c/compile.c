@@ -623,6 +623,7 @@ char *compile(ast_node *node /* the top level node */, size_t *len) {
 	size_t main_allocated = COMPILE_INITIAL_BUF_SIZE;
 	size_t main_len = 0;
 	COMPILATION_CONTEXT ctx;
+	BYTECODE_HANDLE *bytecode;
 
 	char *init_buf;
 	size_t init_len = 0;
@@ -638,12 +639,17 @@ char *compile(ast_node *node /* the top level node */, size_t *len) {
 	// ctx.n_locals = 0;
 	ctx.in_function = 0;
 
+	bytecode = ngs_create_bytecode();
+
 	*len = 0;
 	compile_main_section(&ctx, node, &main_buf, &main_len, &main_allocated, NEED_RESULT);
 	ensure_room(&main_buf, main_len, &main_allocated, 1);
 	main_buf[(main_len)++] = OP_RET;
+	ngs_add_bytecode_section(bytecode, BYTECODE_SECTION_TYPE_CODE, main_len, main_buf);
 
 	compile_init_section(&ctx, &init_buf, &init_len);
+
+	ngs_add_bytecode_section(bytecode, BYTECODE_SECTION_TYPE_GLOBALS, init_len, init_buf);
 
 	*len = init_len + main_len;
 	result_buf = NGS_MALLOC(*len);
