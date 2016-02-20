@@ -91,10 +91,10 @@ TEST [1, 3] != [1, 2]
 TEST [1] != [1, 2]
 
 
-F any(arr:Arr, mapper:Fun, *args) {
+F any(arr:Arr, predicate:Fun, *args) {
 	local l = arr.len()
 	for(i;l)
-		mapper(arr[i], *args) returns true
+		predicate(arr[i], *args) returns true
 	false
 }
 
@@ -102,10 +102,10 @@ TEST [1,2,10].any(F(elt) elt > 5)
 TEST [1,2,3].any(F(elt) elt > 5).not()
 
 
-F all(arr:Arr, mapper:Fun, *args) {
+F all(arr:Arr, predicate:Fun, *args) {
 	local l = arr.len()
 	for(i;l)
-		not(mapper(arr[i], *args)) returns false
+		not(predicate(arr[i], *args)) returns false
 	true
 }
 
@@ -150,6 +150,17 @@ TEST [1,2,3,2].without(2) == [1,3]
 F filter(arr:Arr) filter(arr, (is not), Null)
 
 TEST [1,2,null,3].filter() == [1,2,3]
+
+
+F count(arr:Arr, predicate:Fun, *args) {
+	collector/0
+		arr.each(F(elt) {
+			if predicate(elt, *args)
+				collect(1)
+		})
+}
+
+TEST [1,2,3,11,12].count((>), 10) == 2
 
 
 F flatten(arr:Arr)
@@ -260,6 +271,16 @@ F filter(h:Hash, predicate:Fun, *args)
 		})
 
 TEST {'a': 1, 'b': 2}.filter(F(k, v, k_eq) k == k_eq, 'a') == {'a': 1}
+
+
+F count(h:Hash, predicate:Fun, *args)
+	collector/0
+		h.each(F(k, v) {
+			if predicate(k, v, *args)
+				collect(1)
+		})
+
+TEST {'a': 1, 'b': 2, 'c': 11}.count(F(k, v) v>10) == 1
 
 # --- Conversions ---
 

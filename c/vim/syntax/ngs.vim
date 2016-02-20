@@ -33,7 +33,7 @@ syn keyword ngsFunction c_close c_exit c_lseek c_open c_read compile del dump ec
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction fetch require to_exit_code
 " stdlib functions
-syn keyword ngsFunction all any each error debug filter flatten has identity in len log map max min partial partial_tail status uniq update without zip
+syn keyword ngsFunction all any count each error debug filter flatten has identity in len log map max min partial partial_tail status uniq update without zip
 
 hi def link ngsComment Comment
 hi def link ngsConditional Conditional
