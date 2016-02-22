@@ -33,7 +33,7 @@
 
 	echo('Test: catching exceptions of called functions - f2/g2')
 	F g2() {
-		try throw "mystr" catch(n:Int) "should not happen -- g caught integer exception"
+		try throw "mystr" catch(n:Int) "should not happen -- g2 caught integer exception"
 	}
 
 	F f2() {
