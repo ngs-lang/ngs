@@ -1,0 +1,46 @@
+{
+	# TODO: update when exceptions become special types, not strings. Strings are temporarily used for exceptions.
+
+	arr = [10,20]
+
+	echo('Test: try, good expression, no catch')
+	dump(try arr[0])
+
+	echo('Test: try, bad expression, no catch')
+	dump(try arr[3])
+
+	echo('Test: try, bad expression, catch-all')
+	dump(try arr[3] catch(e) "top level exception")
+
+	echo('Test: try, bad expression, catch string')
+	dump(try arr[3] catch(e:Str) "top level exception - string")
+	dump(
+		try arr[3]
+		catch(n:Int) "should not happen"
+		catch(e:Str) "top level exception - string"
+	)
+
+	echo('Test: catching exceptions of called functions - f/g')
+	F g() {
+		arr[3]
+	}
+
+	F f() {
+		dump(try g() catch(e) "f caught exception")
+	}
+
+	f()
+
+	echo('Test: catching exceptions of called functions - f2/g2')
+	F g2() {
+		try throw "mystr" catch(n:Int) "should not happen -- g caught integer exception"
+	}
+
+	F f2() {
+		dump(try g2() catch(e) "f2 caught exception: $e")
+	}
+
+	f2()
+
+
+}

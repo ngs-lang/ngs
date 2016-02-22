@@ -245,6 +245,7 @@ VALUE make_string_of_len(const char *s, size_t len);
 void vlo_ensure_additional_space(VALUE v, size_t n);
 void array_push(VALUE arr, VALUE v);
 VALUE array_shift(VALUE arr);
+void array_reverse(VALUE arr);
 VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, int params_flags, VALUE *params);
 VALUE join_strings(int argc, VALUE *argv);
 int obj_is_of_type(VALUE obj, VALUE t);

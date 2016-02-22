@@ -369,6 +369,8 @@ basic-expression =
 	| return
 	| collector
 	| guard
+	| try-catch
+	| throw
 	| identifier
 	| array-literal
 	| hash-literal
@@ -782,6 +784,22 @@ guard = "guard" space c:code-block {
 	ret->first_child = c;
 	$$ = ret;
 }
+
+try-catch = "try" space acc:try-catch-node c:code-block { append_ast_node_child(acc, $$); }
+	(space? "catch" space? "(" space? params:function-definition-parameters space? ")" space? body:code-block {
+		MAKE_NODE(ret, FUNC_NODE);
+		ret->first_child = params;
+		params->next_sibling = body;
+		append_ast_node_child(acc, ret);
+	})*
+	{
+	$$ = acc;
+	CAPTURE_LOCATION($$);
+}
+
+try-catch-node = { MAKE_NODE(ret, TRY_CATCH_NODE); $$ = ret; }
+
+throw = "throw" space e:expression { MAKE_NODE(ret, THROW_NODE); ret->first_child = e; $$ = ret; }
 
 %%
 #undef ALLOC_NODE

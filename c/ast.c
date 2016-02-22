@@ -34,6 +34,8 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 	"arr_splat",
 	"hash_splat",
 	"guard",
+	"try_catch",
+	"throw",
 };
 
 

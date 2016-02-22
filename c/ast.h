@@ -52,6 +52,8 @@ typedef enum ast_node_type {
 	ARR_SPLAT_NODE,
 	HASH_SPLAT_NODE,
 	GUARD_NODE,
+	TRY_CATCH_NODE,
+	THROW_NODE,
 	NUMBER_OF_AST_NODE_TYPES
 } ast_node_type;
 

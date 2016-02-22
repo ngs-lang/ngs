@@ -59,9 +59,11 @@ int main(int argc, char **argv)
 	CTX ctx;
 	char *bytecode;
 	size_t len;
-	VALUE result;
+	IP ip;
+	VALUE closure, result;
 	int parse_ok;
 	char *bootstrap_file_name;
+	METHOD_RESULT mr;
 
 	// Silence GCC -Wunused-function
 	if(0) { yymatchDot(NULL); yyAccept(NULL, 0); }
@@ -101,11 +103,20 @@ int main(int argc, char **argv)
 
 	yyrelease(&yyctx);
 
+	// TODO: use native_... methods to load and run the code
 	bytecode = compile(tree, &len);
 	// BROKEN SINCE BYTECODE FORMAT CHANGE // IF_DEBUG(COMPILER, decompile(bytecode, 0, len);)
 	vm_init(&vm, argc, argv);
-	vm_load_bytecode(&vm, bytecode);
 	ctx_init(&ctx);
-	vm_run(&vm, &ctx, 0, &result);
-	return 0;
+	ip = vm_load_bytecode(&vm, bytecode);
+	closure = make_closure_obj(ip, 0, 0, 0, 0, 0, NULL);
+	mr = vm_call(&vm, &ctx, &result, closure, 0, NULL);
+	if(mr == METHOD_OK) {
+		return 0;
+	}
+	if(mr == METHOD_EXCEPTION) {
+		dump_titled("Uncaught exception", result);
+		return 1;
+	}
+	assert(0 == "Unexpected exit from bootstrap code");
 }

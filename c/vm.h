@@ -55,8 +55,10 @@ typedef struct {
 
 // --- VM ---------------------------------------
 
-#define MAX_STACK     (1024)
-#define MAX_FRAMES      (64)
+#define MAX_STACK          (1024)
+#define MAX_FRAMES           (64)
+#define MAX_TRIES_PER_FRAME   (8)
+
 typedef uint16_t PATCH_OFFSET;
 typedef int16_t JUMP_OFFSET;
 
@@ -74,14 +76,21 @@ typedef struct interned_string {
 	UT_hash_handle hh;
 } INTERNED_STRING;
 
-typedef struct frame {
+typedef struct {
+	IP catch_ip;
+	size_t saved_stack_ptr;
+} TRY_INFO;
+
+typedef struct {
 	IP prev_ip;
-	size_t prev_stack_ptr;
 	// TODO: smarter allocation of locals when can't be captured by clousre,
 	//       probably on stack.
 	VALUE *locals;
 	VALUE closure;
-	// int n_local_vars; // needed
+
+	TRY_INFO try_info[MAX_TRIES_PER_FRAME];
+	int try_info_ptr;
+
 } FRAME;
 
 // Plan: have exactly one context per thread.
@@ -124,6 +133,7 @@ enum opcodes {
 	OP_PUSH_L_STR,
 	OP_DUP,
 	OP_POP,
+	OP_XCHG,
 	OP_RESOLVE_GLOBAL,
 	OP_PATCH,
 	OP_FETCH_GLOBAL,
@@ -131,6 +141,7 @@ enum opcodes {
 	OP_FETCH_LOCAL,
 	OP_STORE_LOCAL,
 	OP_CALL,
+	OP_CALL_EXC,
 	OP_CALL_ARR,
 	OP_RET,
 	OP_JMP,
@@ -155,6 +166,10 @@ enum opcodes {
 	OP_ARR_APPEND,
 	OP_ARR_CONCAT,
 	OP_GUARD,
+	OP_TRY_START,
+	OP_TRY_END,
+	OP_ARR_REVERSE,
+	OP_THROW,
 	NUMBER_OF_OPCODES,
 };
 
@@ -164,7 +179,7 @@ typedef enum method_result_enum {
 	METHOD_OK,
 	METHOD_ARGS_MISMATCH,
 	METHOD_IMPL_MISSING,
-	METHOD_EXCEPTION_OCCURED,
+	METHOD_EXCEPTION,
 } METHOD_RESULT;
 
 typedef METHOD_RESULT (*VM_FUNC)(const VALUE *argv, VALUE *result);
@@ -178,6 +193,7 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len);
 static const UT_icd ut_value_icd _UNUSED_ = {sizeof(VALUE),NULL,NULL,NULL};
 // typedef int VM_INT;
 METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result);
+METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR_INDEX argc, const VALUE *argv);
 BYTECODE_HANDLE *ngs_create_bytecode();
 void ngs_add_bytecode_section(BYTECODE_HANDLE *h, BYTECODE_SECTION_TYPE type, BYTECODE_SECTION_LEN len, char *data);
 BYTECODE_HANDLE *ngs_start_unserializing_bytecode(char *data);

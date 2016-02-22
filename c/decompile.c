@@ -21,6 +21,8 @@ void decompile(const char *buf, const size_t start, const size_t end) {
 			case OP_JMP:
 			case OP_JMP_TRUE:
 			case OP_JMP_FALSE:
+			case OP_TRY_START:
+			case OP_TRY_END:
 				sprintf(info_buf, " %+05d (%04zu)", *(JUMP_OFFSET *)&buf[idx], idx + *(JUMP_OFFSET *)&buf[idx] + sizeof(JUMP_OFFSET));
 				idx+=sizeof(JUMP_OFFSET);
 				break;

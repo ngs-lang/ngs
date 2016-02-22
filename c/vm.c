@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <dlfcn.h>
+#include <inttypes.h>
 #include <stdarg.h>
 
 // ..., FMEMOPEN(3)
@@ -37,37 +38,43 @@ char *opcodes_names[] = {
 	/*  5 */ "PUSH_L_STR",
 	/*  6 */ "DUP",
 	/*  7 */ "POP",
-	/*  8 */ "RESOLVE_GLOBAL",
-	/*  9 */ "PATCH",
-	/* 10 */ "FETCH_GLOBAL",
-	/* 11 */ "STORE_GLOBAL",
-	/* 12 */ "FETCH_LOCAL",
-	/* 13 */ "STORE_LOCAL",
-	/* 14 */ "CALL",
-	/* 15 */ "CALL_ARR",
-	/* 16 */ "RET",
-	/* 17 */ "JMP",
-	/* 18 */ "JMP_TRUE",
-	/* 19 */ "JMP_FALSE",
-	/* 20 */ "MAKE_ARR",
-	/* 21 */ "MAKE_CLOSURE",
-	/* 22 */ "TO_STR",
-	/* 23 */ "MAKE_STR",
-	/* 24 */ "PUSH_EMPTY_STR",
-	/* 25 */ "GLOBAL_DEF_P",
-	/* 26 */ "LOCAL_DEF_P",
-	/* 27 */ "DEF_GLOBAL_FUNC",
-	/* 28 */ "DEF_LOCAL_FUNC",
-	/* 29 */ "FETCH_UPVAR",
-	/* 30 */ "STORE_UPVAR",
-	/* 31 */ "UPVAR_DEF_P",
-	/* 32 */ "DEF_UPVAR_FUNC",
-	/* 33 */ "MAKE_HASH",
-	/* 34 */ "TO_BOOL",
-	/* 35 */ "TO_ARR",
-	/* 36 */ "ARR_APPEND",
-	/* 37 */ "ARR_CONCAT",
-	/* 38 */ "GUARD",
+	/*  8 */ "XCHG",
+	/*  9 */ "RESOLVE_GLOBAL",
+	/* 10 */ "PATCH",
+	/* 11 */ "FETCH_GLOBAL",
+	/* 12 */ "STORE_GLOBAL",
+	/* 13 */ "FETCH_LOCAL",
+	/* 14 */ "STORE_LOCAL",
+	/* 15 */ "CALL",
+	/* 16 */ "CALL_EXC",
+	/* 17 */ "CALL_ARR",
+	/* 18 */ "RET",
+	/* 19 */ "JMP",
+	/* 20 */ "JMP_TRUE",
+	/* 21 */ "JMP_FALSE",
+	/* 22 */ "MAKE_ARR",
+	/* 23 */ "MAKE_CLOSURE",
+	/* 24 */ "TO_STR",
+	/* 25 */ "MAKE_STR",
+	/* 26 */ "PUSH_EMPTY_STR",
+	/* 27 */ "GLOBAL_DEF_P",
+	/* 28 */ "LOCAL_DEF_P",
+	/* 29 */ "DEF_GLOBAL_FUNC",
+	/* 30 */ "DEF_LOCAL_FUNC",
+	/* 31 */ "FETCH_UPVAR",
+	/* 32 */ "STORE_UPVAR",
+	/* 33 */ "UPVAR_DEF_P",
+	/* 34 */ "DEF_UPVAR_FUNC",
+	/* 35 */ "MAKE_HASH",
+	/* 36 */ "TO_BOOL",
+	/* 37 */ "TO_ARR",
+	/* 38 */ "ARR_APPEND",
+	/* 39 */ "ARR_CONCAT",
+	/* 40 */ "GUARD",
+	/* 41 */ "TRY_START",
+	/* 42 */ "TRY_END",
+	/* 43 */ "ARR_REVERSE",
+	/* 44 */ "THROW",
 };
 
 
@@ -75,13 +82,15 @@ char *opcodes_names[] = {
 #define PUSH(v) assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr++] = v
 #define POP(dst) assert(ctx->stack_ptr); ctx->stack_ptr--; dst = ctx->stack[ctx->stack_ptr]
 #define TOP (ctx->stack[ctx->stack_ptr-1])
+#define SECOND (ctx->stack[ctx->stack_ptr-2])
 #define DUP assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr] = ctx->stack[ctx->stack_ptr-1]; ctx->stack_ptr++;
 #define REMOVE_TOP assert(ctx->stack_ptr); ctx->stack_ptr--;
 #define REMOVE_N(n) DEBUG_VM_RUN("Popping %d argument(s) after call from stack\n", (int)n); assert(ctx->stack_ptr >= (unsigned int)n); ctx->stack_ptr-=n;
 #define PUSH_NULL PUSH((VALUE){.num=V_NULL})
 #define GLOBALS (vm->globals)
-#define LOCALS (ctx->frames[ctx->frame_ptr-1].locals)
-#define THIS_FRAME_CLOSURE (ctx->frames[ctx->frame_ptr-1].closure)
+#define THIS_FRAME (ctx->frames[ctx->frame_ptr-1])
+#define THIS_FRAME_CLOSURE (THIS_FRAME.closure)
+#define LOCALS (THIS_FRAME.locals)
 #define UPLEVELS CLOSURE_OBJ_UPLEVELS(THIS_FRAME_CLOSURE)
 #define ARG(name, type) name = *(type *) &vm->bytecode[ip]; ip += sizeof(type);
 #define ARG_LVI ARG(lvi, LOCAL_VAR_INDEX);
@@ -95,7 +104,7 @@ char *opcodes_names[] = {
 		goto main_loop; \
 	} \
 	PUSH(v); \
-	mr = _vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-2], (VALUE){.ptr = vm->type}, 1, &ctx->stack[ctx->stack_ptr-1]); \
+	mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-2], (VALUE){.ptr = vm->type}, 1, &ctx->stack[ctx->stack_ptr-1]); \
 	REMOVE_N(1); \
 	assert(mr == METHOD_OK); \
 	goto main_loop;
@@ -103,6 +112,7 @@ char *opcodes_names[] = {
 #define METHOD_PARAMS (VALUE *argv, VALUE *result)
 #define EXT_METHOD_PARAMS (VM *vm, CTX *ctx, VALUE *argv, VALUE *result)
 #define METHOD_RETURN(v) { *result = (v); return METHOD_OK; }
+#define THROW_EXCEPTION(t) { *result = make_string(t); return METHOD_EXCEPTION; }
 
 #define INT_METHOD(name, op) \
 METHOD_RESULT native_ ## name ## _int_int METHOD_PARAMS { \
@@ -170,7 +180,9 @@ METHOD_RESULT native_shift_arr_any METHOD_PARAMS {
 METHOD_RESULT native_index_get_arr_int_any METHOD_PARAMS {
 	int idx, len;
 	idx = GET_INT(argv[1]);
-	assert(idx>=0);
+	if(idx < 0) {
+		METHOD_RETURN(argv[2]);
+	}
 	len = OBJ_LEN(argv[0]);
 	if(idx<len) {
 		METHOD_RETURN(ARRAY_ITEMS(argv[0])[idx]);
@@ -181,9 +193,13 @@ METHOD_RESULT native_index_get_arr_int_any METHOD_PARAMS {
 METHOD_RESULT native_index_get_arr_int METHOD_PARAMS {
 	int idx, len;
 	idx = GET_INT(argv[1]);
-	assert(idx>=0);
+	if(idx < 0) {
+		THROW_EXCEPTION("IndexNotFound");
+	}
 	len = OBJ_LEN(argv[0]);
-	assert(idx<len); // TODO: Throw exception
+	if(idx >= len) {
+		THROW_EXCEPTION("IndexNotFound");
+	}
 	*result = ARRAY_ITEMS(argv[0])[idx];
 	return METHOD_OK;
 }
@@ -193,7 +209,9 @@ METHOD_RESULT native_Str_int METHOD_PARAMS {
 	char s[MAX_INT_TO_STR_LEN];
 	size_t len;
 	len = snprintf(s, sizeof(s), "%" PRIiPTR, GET_INT(argv[0]));
-	assert(len<sizeof(s)); // Or we might haver truncated represnetation
+	if(len >= sizeof(s)) {
+		THROW_EXCEPTION("ResultTooLarge");
+	}
 	*result = make_string(s);
 	return METHOD_OK;
 }
@@ -214,10 +232,9 @@ METHOD_RESULT native_Bool_any METHOD_PARAMS {
 
 METHOD_RESULT native_not_any METHOD_PARAMS {
 	if(!IS_BOOL(argv[0])) {
-		assert(0=="not() on non-booleans is not implemented yet");
+		THROW_EXCEPTION("NotImplemented");
 		// TODO: Call Bool() on the value, then continue with not() on the returned value
 		// ...
-		assert(IS_BOOL(argv[0]));
 	}
 	METHOD_RETURN(GET_INVERTED_BOOL(argv[0]));
 }
@@ -272,7 +289,8 @@ METHOD_RESULT native_index_get_hash_any METHOD_PARAMS {
 	HASH_OBJECT_ENTRY *e;
 	e = get_hash_key(argv[0], argv[1]);
 	if(!e) {
-		assert(0=="Don't know how to throw KeyNotFound exception yet");
+		// TODO: Throw value of type KeyNotFound
+		THROW_EXCEPTION("KeyNotFound");
 	}
 	*result = e->val;
 	return METHOD_OK;
@@ -376,8 +394,7 @@ METHOD_RESULT native_c_lseek_int_int_str METHOD_PARAMS {
 			if(!strcmp(whence_str, "end")) {
 				whence = SEEK_END;
 			} else {
-				// TODO: Exception
-				assert(0 == "c_lseek(): Invalid whence");
+				THROW_EXCEPTION("InvalidParameter");
 			}
 		}
 	}
@@ -721,7 +738,7 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 	return ip;
 }
 
-METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR_INDEX argc, const VALUE *argv) {
+METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR_INDEX argc, const VALUE *argv) {
 	VALUE *local_var_ptr;
 	LOCAL_VAR_INDEX lvi;
 	int i;
@@ -731,9 +748,9 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VA
 
 	if(IS_ARRAY(callable)) {
 		for(i=OBJ_LEN(callable)-1, callable_items = OBJ_DATA_PTR(callable); i>=0; i--) {
-			mr = _vm_call(vm, ctx, result, callable_items[i], argc, argv);
-			if(mr == METHOD_OK) {
-				return METHOD_OK;
+			mr = vm_call(vm, ctx, result, callable_items[i], argc, argv);
+			if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION)) {
+				return mr;
 			}
 			// Don't know how to handle other conditions yet
 			assert(mr == METHOD_ARGS_MISMATCH);
@@ -810,6 +827,7 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VA
 			ctx->frames[ctx->frame_ptr].locals = NULL;
 		}
 		ctx->frames[ctx->frame_ptr].closure = callable;
+		ctx->frames[ctx->frame_ptr].try_info_ptr = 0;
 		// printf("INCREASING FRAME PTR\n");
 		ctx->frame_ptr++;
 		mr = vm_run(vm, ctx, CLOSURE_OBJ_IP(callable), result);
@@ -818,14 +836,14 @@ METHOD_RESULT _vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VA
 	}
 
 	if(IS_NGS_TYPE(callable)) {
-		return _vm_call(vm, ctx, result, NGS_TYPE_CONSTRUCTORS(callable), argc, argv);
+		return vm_call(vm, ctx, result, NGS_TYPE_CONSTRUCTORS(callable), argc, argv);
 	}
 
 	// TODO: allow handling of calling of undefined methods by the NGS language
-	dump_titled("_vm_call(): Don't know how to call", callable);
+	dump_titled("vm_call(): Don't know how to call", callable);
 	abort();
 	// TODO: return the exception
-	return METHOD_EXCEPTION_OCCURED;
+	return METHOD_EXCEPTION;
 
 }
 
@@ -852,7 +870,7 @@ main_loop:
 	opcode = vm->bytecode[ip++];
 #ifdef DO_NGS_DEBUG
 	if(opcode <= sizeof(opcodes_names) / sizeof(char *)) {
-		DEBUG_VM_RUN("main_loop IP=%zu OP=%s STACK_LEN=%zu\n", ip-1, opcodes_names[opcode], ctx->stack_ptr);
+		DEBUG_VM_RUN("main_loop FRAME_PTR=%zu IP=%zu OP=%s STACK_LEN=%zu TRY_LEN=%i\n", ctx->frame_ptr, ip-1, opcodes_names[opcode], ctx->stack_ptr, THIS_FRAME.try_info_ptr);
 		decompile(vm->bytecode, ip-1, ip);
 		for(j=ctx->stack_ptr; j>0; j--) {
 			printf("Stack @ %zu\n", j-1);
@@ -906,6 +924,12 @@ main_loop:
 							goto main_loop;
 		case OP_POP:
 							REMOVE_TOP;
+							goto main_loop;
+		case OP_XCHG:
+							EXPECT_STACK_DEPTH(2);
+							v = TOP;
+							TOP = SECOND;
+							SECOND = v;
 							goto main_loop;
 		case OP_RESOLVE_GLOBAL:
 							// Probably not worh optimizing
@@ -979,21 +1003,52 @@ main_loop:
 							POP(v); // number of arguments
 							// POP(n_params_required); // number of arguments
 							// POP(n_params_optional);
-							mr = _vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-GET_INT(v)-1], callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
-							REMOVE_N(GET_INT(v));
+							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-GET_INT(v)-1], callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
+							// assert(ctx->stack[ctx->stack_ptr-GET_INT(v)-1].num);
+							if(mr == METHOD_EXCEPTION) {
+								*result = ctx->stack[ctx->stack_ptr-GET_INT(v)-1];
+								// dump_titled("E1", *result);
+								goto exception;
+							}
 							if(mr != METHOD_OK) {
 								dump_titled("Failed callable", callable);
 								assert(0=="Handling failed method calls is not implemented yet");
 							}
+							REMOVE_N(GET_INT(v));
+							goto main_loop;
+		case OP_CALL_EXC:
+							// Calls exception handler, METHOD_IMPL_MISSING means we should re-throw the exception
+							POP(callable);
+							POP(v); // number of arguments
+							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-GET_INT(v)-1], callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
+							if(mr == METHOD_EXCEPTION) {
+								// TODO: special handling? Exception during exception handling.
+								*result = ctx->stack[ctx->stack_ptr-GET_INT(v)-1];
+								goto exception;
+							}
+							if(mr == METHOD_IMPL_MISSING) {
+								goto exception_return;
+							}
+							if(mr != METHOD_OK) {
+								dump_titled("Failed callable", callable);
+								assert(0=="Handling failed method calls is not implemented yet");
+							}
+							REMOVE_N(GET_INT(v));
 							goto main_loop;
 		case OP_CALL_ARR:
 							POP(callable);
-							mr = _vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-2], callable, OBJ_LEN(ctx->stack[ctx->stack_ptr-1]), ARRAY_ITEMS(ctx->stack[ctx->stack_ptr-1]));
-							REMOVE_N(1);
+							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-2], callable, OBJ_LEN(ctx->stack[ctx->stack_ptr-1]), ARRAY_ITEMS(ctx->stack[ctx->stack_ptr-1]));
+							// assert(ctx->stack[ctx->stack_ptr-2].num);
+							if(mr == METHOD_EXCEPTION) {
+								// printf("E2\n");
+								*result = ctx->stack[ctx->stack_ptr-2];
+								goto exception;
+							}
 							if(mr != METHOD_OK) {
 								dump_titled("Failed callable", callable);
 								assert(0=="Handling failed method calls is not implemented yet");
 							}
+							REMOVE_N(1);
 							goto main_loop;
 		case OP_RET:
 							if(saved_stack_ptr < ctx->stack_ptr) {
@@ -1190,12 +1245,50 @@ do_jump:
 							}
 							assert(saved_stack_ptr == ctx->stack_ptr);
 							return METHOD_ARGS_MISMATCH;
+		case OP_TRY_START:
+							// printf("TRY START %i\n", THIS_FRAME.try_info_ptr);
+							assert(THIS_FRAME.try_info_ptr < MAX_TRIES_PER_FRAME);
+							ARG(jo, JUMP_OFFSET);
+							THIS_FRAME.try_info[THIS_FRAME.try_info_ptr].catch_ip = ip + jo;
+							THIS_FRAME.try_info[THIS_FRAME.try_info_ptr].saved_stack_ptr = ctx->stack_ptr;
+							THIS_FRAME.try_info_ptr++;
+							// printf("TRY START %i\n", THIS_FRAME.try_info_ptr);
+							goto main_loop;
+		case OP_TRY_END:
+							assert(THIS_FRAME.try_info_ptr);
+							THIS_FRAME.try_info_ptr--;
+							// printf("TRY END %i\n", THIS_FRAME.try_info_ptr);
+							goto do_jump;
+		case OP_ARR_REVERSE:
+							EXPECT_STACK_DEPTH(1);
+							array_reverse(TOP);
+							goto main_loop;
+		case OP_THROW:
+							POP(*result);
+							goto exception;
 		default:
 							// TODO: exception
 							printf("ERROR: Unknown opcode %d\n", opcode);
 	}
+
 end_main_loop:
 	return METHOD_OK;
+
+exception:
+	// TOP is the excepion value
+	if (THIS_FRAME.try_info_ptr) {
+		// We have local exception handler
+		THIS_FRAME.try_info_ptr--;
+		ip = THIS_FRAME.try_info[THIS_FRAME.try_info_ptr].catch_ip;
+		ctx->stack_ptr = THIS_FRAME.try_info[THIS_FRAME.try_info_ptr].saved_stack_ptr;
+		PUSH(*result);
+		goto main_loop;
+	}
+
+exception_return:
+	// We don't handle the exception
+	ctx->stack_ptr = saved_stack_ptr;
+	return METHOD_EXCEPTION;
 }
 #undef GLOBALS
 #undef LOCALS

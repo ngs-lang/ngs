@@ -550,7 +550,53 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_TO_BOOL);
 			OPCODE(*buf, OP_GUARD);
 			break;
+
+		case TRY_CATCH_NODE:
+
+			if_jump = *idx;
+			OPCODE(*buf, OP_TRY_START);
+				DATA_JUMP_OFFSET_PLACEHOLDER(*buf); // Set handler code location
+
+			compile_main_section(ctx, node->first_child, buf, idx, allocated, need_result);
+
+			end_of_func_idx = *idx;
+			OPCODE(*buf, OP_TRY_END);
+				DATA_JUMP_OFFSET_PLACEHOLDER(*buf); // Jump over handler code
+
+			*(JUMP_OFFSET *)&(*buf)[if_jump+1] = *idx - if_jump - 1 - sizeof(JUMP_OFFSET); // Jump is OP_TRY_START JUMP_OFFSET shorter
+
+			if(node->first_child->next_sibling) {
+				// Room for return value
+				OPCODE(*buf, OP_PUSH_NULL);
+				OPCODE(*buf, OP_XCHG);
+
+				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 1); // One argument for the call of handler function(s)
+				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0); // Make array with zero elements
+				OPCODE(*buf, OP_MAKE_ARR);
+				for(ptr=node->first_child->next_sibling; ptr; ptr=ptr->next_sibling) {
+					compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
+					OPCODE(*buf, OP_ARR_APPEND);
+				}
+				OPCODE(*buf, OP_ARR_REVERSE);
+				OPCODE(*buf, OP_CALL_EXC);
+				POP_IF_DONT_NEED_RESULT(*buf);
+			} else {
+				// No handlers, return null
+				OPCODE(*buf, OP_POP); // Ignore the exception value
+				if(need_result) {
+					OPCODE(*buf, OP_PUSH_NULL);
+				}
+			}
+			*(JUMP_OFFSET *)&(*buf)[end_of_func_idx+1] = *idx - end_of_func_idx - 1 - sizeof(JUMP_OFFSET); // Jump is OP_TRY_START JUMP_OFFSET shorter
+			break;
+
+		case THROW_NODE:
+			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			OPCODE(*buf, OP_THROW);
+			break;
+
 		default:
+			fprintf(stderr, "Node type %i\n", node->type);
 			assert(0=="compile_main_section(): unknown node type");
 	}
 }

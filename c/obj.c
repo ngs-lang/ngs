@@ -415,6 +415,19 @@ VALUE array_shift(VALUE arr) {
 	return ret;
 }
 
+void array_reverse(VALUE arr) {
+	VALUE *p1, *p2, tmp;
+	assert(IS_ARRAY(arr));
+	if(OBJ_LEN(arr) < 2) {
+		return;
+	}
+	for(p1 = &ARRAY_ITEMS(arr)[0], p2 = &ARRAY_ITEMS(arr)[OBJ_LEN(arr)-1]; p1 < p2; p1++, p2--) {
+		tmp = *p1;
+		*p1 = *p2;
+		*p2 = tmp;
+	}
+}
+
 VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, int params_flags, VALUE *params) {
 
 	VALUE v;
