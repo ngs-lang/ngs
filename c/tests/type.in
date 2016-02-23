@@ -1,0 +1,16 @@
+{
+	type T
+
+	t1 = T()
+	t1.x = 1
+
+	t2 = T()
+	t2.y = 2
+
+	dump(t1.x)
+	dump(try t1.y)
+
+	dump(try t2.x)
+	dump(t2.y)
+
+}
