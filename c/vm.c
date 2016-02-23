@@ -451,6 +451,10 @@ METHOD_RESULT native_load_str_str EXT_METHOD_PARAMS {
 	METHOD_RETURN(make_closure_obj(ip, 0, 0, 0, 0, 0, NULL));
 }
 
+METHOD_RESULT native_type_str METHOD_PARAMS {
+	METHOD_RETURN(make_user_type(argv[0]));
+}
+
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
 	HASH_FIND(hh, vm->globals_indexes, name, name_len, var);
@@ -581,6 +585,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "CLib",     &native_CLib_str,          1, "name",   vm->Str);
 	register_global_func(vm, 0, "in",       &native_in_str_clib,       2, "symbol", vm->Str, "lib", vm->CLib);
 	register_global_func(vm, 0, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
+
+	// Type
+	register_global_func(vm, 0, "Type",     &native_type_str          ,1, "name",   vm->Str);
 
 	// low level file operations
 	register_global_func(vm, 0, "c_open",   &native_c_open_str_str,    2, "pathname", vm->Str, "flags", vm->Str);
@@ -839,6 +846,15 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR
 		return vm_call(vm, ctx, result, NGS_TYPE_CONSTRUCTORS(callable), argc, argv);
 	}
 
+	if(IS_USER_TYPE(callable)) {
+		return vm_call(vm, ctx, result, UT_CONSTRUCTORS(callable), argc, argv);
+	}
+
+	if(IS_USERT_CTR(callable)) {
+		*result = make_user_type_instance(UT_CONSTRUCTOR_UT(callable));
+		return METHOD_OK;
+	}
+
 	// TODO: allow handling of calling of undefined methods by the NGS language
 	dump_titled("vm_call(): Don't know how to call", callable);
 	abort();
@@ -934,7 +950,7 @@ main_loop:
 		case OP_RESOLVE_GLOBAL:
 							// Probably not worh optimizing
 							POP(v);
-							assert(OBJ_TYPE(v) == T_STR);
+							assert(IS_STRING(v));
 							SET_INT(v, get_global_index(vm, OBJ_DATA_PTR(v), OBJ_LEN(v)));
 							PUSH(v);
 							goto main_loop;

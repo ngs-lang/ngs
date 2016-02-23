@@ -237,6 +237,12 @@ F *(arr:Arr, n:Int)
 
 TEST [10,20] * 2 == [10,20,10,20]
 
+
+F echo(x) {
+	guard x is not Str
+	echo(Str(x))
+}
+
 # === Hash =======================================
 
 
@@ -341,6 +347,23 @@ F map(n:Int, mapper:Fun, *args)
 
 TEST 3.map(identity) == [0, 1, 2]
 TEST 3.map((*), 3) == [0, 3, 6]
+
+# === String =====================================
+
+
+# --- Constructors ---
+
+
+F Str(n:Null) "null"
+
+TEST Str(null) == "null"
+
+
+F Str(b:Bool) if b "true" "false"
+
+TEST Str(true) == "true"
+TEST Str(false) == "false"
+
 
 # === RegExp =====================================
 

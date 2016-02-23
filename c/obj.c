@@ -21,6 +21,9 @@ static void _dump(VALUE v, int level) {
 	if(IS_INT(v))   { printf("%*s* int %" PRIdPTR "\n", level << 1, "", GET_INT(v)); goto exit; }
 
 	if(IS_STRING(v)) {
+		// TODO: properly handle
+		//       1. non-printable characters
+		//       2. zero character
 		printf("%*s* string(len=%zu) %.*s\n", level << 1, "", OBJ_LEN(v), (int) OBJ_LEN(v), (char *)OBJ_DATA_PTR(v));
 		goto exit;
 	}
@@ -83,6 +86,7 @@ static void _dump(VALUE v, int level) {
 				_dump(e->val, level+4);
 			}
 		}
+		goto exit;
 	}
 
 	if(IS_NGS_TYPE(v)) {
@@ -106,6 +110,35 @@ static void _dump(VALUE v, int level) {
 		_dump(CSYM_OBJECT_LIB(v), level + 1);
 		goto exit;
 	}
+
+	if(IS_USER_TYPE(v)) {
+		printf("%*s* user type (name and optionally fields and constructors follow)\n", level << 1, "");
+		_dump(UT_NAME(v), level + 1);
+		if(level < 3) {
+			_dump(UT_FIELDS(v), level + 1);
+			_dump(UT_CONSTRUCTORS(v), level + 1);
+		}
+		goto exit;
+	}
+
+	if(IS_USERT_CTR(v)) {
+		printf("%*s* user type constructor (type optionally follows)\n", level << 1, "");
+		if(level < 3) {
+			_dump(OBJ_DATA(v), level + 1);
+		}
+		goto exit;
+	}
+
+	if(IS_USERT_INST(v)) {
+		printf("%*s* user type instance (type and fields optionally follow)\n", level << 1, "");
+		if(level < 3) {
+			_dump(OBJ_TYPE(v), level + 1);
+			_dump(OBJ_DATA(v), level + 1);
+		}
+		goto exit;
+	}
+
+	printf("%*s* (dump not implemented for the object at %p)\n", level << 1, "", OBJ_DATA_PTR(v));
 
 exit:
 	return;
@@ -155,7 +188,7 @@ VALUE make_hash(size_t start_buckets) {
 	assert(hash);
 
 	SET_OBJ(ret, hash);
-	OBJ_TYPE(ret) = T_HASH;
+	OBJ_TYPE_NUM(ret) = T_HASH;
 
 	if(start_buckets) {
 		OBJ_DATA_PTR(ret) = NGS_MALLOC(start_buckets * sizeof(HASH_OBJECT_ENTRY *));
@@ -170,6 +203,52 @@ VALUE make_hash(size_t start_buckets) {
 
 	return ret;
 }
+
+VALUE make_user_type(VALUE name) {
+	VALUE ret;
+	USER_TYPE_OBJECT *ut;
+	ut = NGS_MALLOC(sizeof(*ut));
+	assert(ut);
+
+	SET_OBJ(ret, ut);
+	OBJ_TYPE_NUM(ret) = T_UTYPE;
+
+	UT_NAME(ret) = name;
+	UT_FIELDS(ret) = make_hash(8); // Hash: name->index
+	UT_CONSTRUCTORS(ret) = make_array(1);
+
+	VALUE ctr = make_user_type_constructor(ret);
+	ARRAY_ITEMS(UT_CONSTRUCTORS(ret))[0] = ctr;
+
+	return ret;
+}
+
+VALUE make_user_type_constructor(VALUE user_type) {
+	VALUE ret;
+	OBJECT *user_type_constructor;
+	user_type_constructor = NGS_MALLOC(sizeof(*user_type_constructor));
+	assert(user_type_constructor);
+
+	SET_OBJ(ret, user_type_constructor);
+	OBJ_TYPE_NUM(ret) = T_UTCTR;
+	UT_CONSTRUCTOR_UT(ret) = user_type;
+
+	return ret;
+}
+
+VALUE make_user_type_instance(VALUE user_type) {
+
+	VALUE ret;
+	USER_TYPE_INSTANCE_OBJECT *user_type_instance;
+	user_type_instance = NGS_MALLOC(sizeof(*user_type_instance));
+	assert(user_type_instance);
+
+	SET_OBJ(ret, user_type_instance);
+	OBJ_TYPE(ret) = user_type;
+	OBJ_DATA(ret) = make_array(0);
+
+	return ret;
+};
 
 // TODO: implement comparison of the rest of the types
 int is_equal(VALUE a, VALUE b) {
@@ -415,6 +494,8 @@ VALUE array_shift(VALUE arr) {
 	return ret;
 }
 
+// TODO: expose as native_reverse_arr() ?
+//       It's in-place, not sure about exposing.
 void array_reverse(VALUE arr) {
 	VALUE *p1, *p2, tmp;
 	assert(IS_ARRAY(arr));

@@ -371,6 +371,7 @@ basic-expression =
 	| guard
 	| try-catch
 	| throw
+	| type
 	| identifier
 	| array-literal
 	| hash-literal
@@ -800,6 +801,27 @@ try-catch = "try" space acc:try-catch-node c:code-block { append_ast_node_child(
 try-catch-node = { MAKE_NODE(ret, TRY_CATCH_NODE); $$ = ret; }
 
 throw = "throw" space e:expression { MAKE_NODE(ret, THROW_NODE); ret->first_child = e; $$ = ret; }
+
+# type MyType => MyType = Type('MyType')
+# TODO: Style warning for identifiers starting with lower case letter
+type = "type" space i:identifier {
+	MAKE_NODE(ret, ASSIGNMENT_NODE);
+		MAKE_NODE(call, CALL_NODE);
+			MAKE_IDENTIFIER_NODE(type_identifier, "Type");
+			MAKE_NODE(args, ARGS_NODE);
+				MAKE_NODE(type_string, STR_COMPS_NODE);
+					MAKE_NODE(type_string_comp, STR_COMP_IMM_NODE);
+					type_string_comp->name = strdup(i->name);
+					append_ast_node_child(type_string, type_string_comp);
+				MAKE_REQ_ARG_NODE(a1, type_string);
+				args->first_child = a1;
+			call->first_child = type_identifier;
+			type_identifier->next_sibling = args;
+		ret->first_child = i;
+		i->next_sibling = call;
+	$$ = ret;
+	CAPTURE_LOCATION($$);
+}
 
 %%
 #undef ALLOC_NODE

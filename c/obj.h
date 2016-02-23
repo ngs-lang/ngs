@@ -25,17 +25,17 @@ typedef enum {
 
 // On problems with `intptr_t` change here according to Ruby source in `include/ruby/ruby.h`
 // uintptr_t format for printf - PRIXPTR - printf("Blah %" PRIXPTR "\n", VALUE.num);
-typedef union value_union {
+typedef union {
 	intptr_t num;
 	void * ptr;
 } VALUE;
 
-typedef struct object_struct {
+typedef struct {
 	VALUE type;
 	VALUE val;
 } OBJECT;
 
-typedef struct var_len_object_struct {
+typedef struct {
 	OBJECT base;
 	size_t len;
 	size_t allocated;
@@ -52,13 +52,26 @@ typedef struct hash_object_entry {
 	uint32_t hash;
 } HASH_OBJECT_ENTRY;
 
-typedef struct hash_object_struct {
+typedef struct {
 	OBJECT base;
 	size_t len;
 	size_t n_buckets;
 	HASH_OBJECT_ENTRY *head;
 	HASH_OBJECT_ENTRY *tail;
 } HASH_OBJECT;
+
+typedef struct {
+	OBJECT base;
+	VALUE name;
+	VALUE fields; // Hash: name->index
+	VALUE constructors; // Arr[F]
+	VALUE parents; // Arr[USER_TYPE_OBJECT]
+	// TODO: maybe cached transitive parents
+} USER_TYPE_OBJECT;
+
+typedef struct {
+	OBJECT base; // Type points to the type, data to fields array
+} USER_TYPE_INSTANCE_OBJECT;
 
 typedef struct params {
 	LOCAL_VAR_INDEX n_local_vars; // number of local variables including arguments
@@ -165,6 +178,8 @@ enum IMMEDIATE_VALUES {
 	T_HASH  = 54,
 	T_CLIB  = 58,
 	T_CSYM  = 62,
+	T_UTYPE = 66,
+	T_UTCTR = 70,
 	T_NATIVE_METHOD = (1 << 8) | T_FUN,
 	T_CLOSURE       = (2 << 8) | T_FUN,
 };
@@ -211,23 +226,33 @@ enum IMMEDIATE_VALUES {
 #define NGS_TYPE_CONSTRUCTORS(v)  ((NGS_TYPE *) v.ptr)->constructors
 #define NGS_TYPE_NAME(v)          ((NGS_TYPE *) v.ptr)->name
 #define NGS_TYPE_ID(v)            ((NGS_TYPE *) v.ptr)->native_type_id
+// TODO: reanme OBJ_DATA to OBJ_VAL
+#define OBJ_DATA(v)               (((OBJECT *)(v).ptr)->val)
 #define OBJ_DATA_PTR(v)           (((OBJECT *)(v).ptr)->val.ptr)
-#define OBJ_TYPE(v)               (((OBJECT *)(v).ptr)->type.num)
+#define OBJ_TYPE(v)               (((OBJECT *)(v).ptr)->type)
+#define OBJ_TYPE_NUM(v)           (((OBJECT *)(v).ptr)->type.num)
 #define OBJ_TYPE_PTR(v)           (((OBJECT *)(v).ptr)->type.ptr)
 #define IS_OBJ(v)                 ((v.num & TAG_AND) == 0)
-#define IS_STRING(v)              (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_STR)
-#define IS_NATIVE_METHOD(v)       (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_NATIVE_METHOD)
-#define IS_CLOSURE(v)             (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_CLOSURE)
-#define IS_ARRAY(v)               (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_ARR)
-#define IS_NGS_TYPE(v)            (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_TYPE)
+#define IS_STRING(v)              (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_STR)
+#define IS_NATIVE_METHOD(v)       (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_NATIVE_METHOD)
+#define IS_CLOSURE(v)             (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_CLOSURE)
+#define IS_ARRAY(v)               (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_ARR)
+#define IS_NGS_TYPE(v)            (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_TYPE)
+#define IS_USER_TYPE(v)           (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_UTYPE)
+#define IS_USERT_CTR(v)           (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_UTCTR)
+#define IS_USERT_INST(v)          (((v.num & TAG_AND) == 0) && ((OBJ_TYPE_NUM(v) & TAG_AND) == 0))
 #define IS_VLO(v)                 (IS_ARRAY(v) || IS_STRING(v))
-#define IS_HASH(v)                (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_HASH)
-#define IS_CLIB(v)                (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_CLIB)
-#define IS_CSYM(v)                (((v.num & TAG_AND) == 0) && OBJ_TYPE(v) == T_CSYM)
+#define IS_HASH(v)                (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_HASH)
+#define IS_CLIB(v)                (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_CLIB)
+#define IS_CSYM(v)                (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_CSYM)
 #define ARRAY_ITEMS(v)            ((VALUE *)(OBJ_DATA_PTR(v)))
 #define HASH_BUCKETS_N(v)         (((HASH_OBJECT *)(v).ptr)->n_buckets)
 #define HASH_HEAD(v)              (((HASH_OBJECT *)(v).ptr)->head)
 #define HASH_TAIL(v)              (((HASH_OBJECT *)(v).ptr)->tail)
+#define UT_NAME(v)                (((USER_TYPE_OBJECT *)(v).ptr)->name)
+#define UT_FIELDS(v)              (((USER_TYPE_OBJECT *)(v).ptr)->fields)
+#define UT_CONSTRUCTORS(v)        (((USER_TYPE_OBJECT *)(v).ptr)->constructors)
+#define UT_CONSTRUCTOR_UT(v)      OBJ_DATA(v)
 
 // Boolean 00001X10
 #define GET_INVERTED_BOOL(v)      ((VALUE){.num = (v).num ^= 4})
@@ -236,6 +261,9 @@ VALUE make_var_len_obj(uintptr_t type, const size_t item_size, const size_t len)
 VALUE make_array(size_t len);
 VALUE make_array_with_values(size_t len, const VALUE *values);
 VALUE make_hash(size_t start_buckets);
+VALUE make_user_type(VALUE name);
+VALUE make_user_type_constructor(VALUE user_type);
+VALUE make_user_type_instance(VALUE user_type);
 uint32_t hash(VALUE v);
 HASH_OBJECT_ENTRY *get_hash_key(VALUE h, VALUE k);
 void set_hash_key(VALUE h, VALUE k, VALUE v);
