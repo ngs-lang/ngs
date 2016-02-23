@@ -24,4 +24,11 @@
 
 #include "debug.h"
 
+typedef enum {
+	METHOD_OK,
+	METHOD_ARGS_MISMATCH,
+	METHOD_IMPL_MISSING,
+	METHOD_EXCEPTION,
+} METHOD_RESULT;
+
 #endif

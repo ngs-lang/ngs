@@ -4,6 +4,7 @@
 #include <string.h>
 #include "ngs.h"
 #include "obj.h"
+#include "vm.h"
 
 static void _dump(VALUE v, int level) {
 	char **symbols;
@@ -132,8 +133,8 @@ static void _dump(VALUE v, int level) {
 	if(IS_USERT_INST(v)) {
 		printf("%*s* user type instance (type and fields optionally follow)\n", level << 1, "");
 		if(level < 3) {
-			_dump(OBJ_TYPE(v), level + 1);
-			_dump(OBJ_DATA(v), level + 1);
+			_dump(UT_INSTANCE_TYPE(v), level + 1);
+			_dump(UT_INSTANCE_FIELDS(v), level + 1);
 		}
 		goto exit;
 	}
@@ -248,6 +249,52 @@ VALUE make_user_type_instance(VALUE user_type) {
 	OBJ_DATA(ret) = make_array(0);
 
 	return ret;
+};
+
+METHOD_RESULT get_user_type_instace_attribute(VALUE obj, VALUE attr, VALUE *result) {
+	VALUE ut;
+	HASH_OBJECT_ENTRY *e;
+	size_t n;
+	ut = UT_INSTANCE_TYPE(obj);
+	e = get_hash_key(UT_FIELDS(ut), attr);
+	if(!e) {
+		*result = make_string("AttributeNotFound::TypeHasNoSuchAttribute");
+		return METHOD_EXCEPTION;
+	}
+	n = GET_INT(e->val);
+	if(n >= OBJ_LEN(UT_INSTANCE_FIELDS(obj))) {
+		*result = make_string("AttributeNotFound::InstanceHasNoSuchAttribute::NotEnoughFields");
+		return METHOD_EXCEPTION;
+	}
+	*result = ARRAY_ITEMS(UT_INSTANCE_FIELDS(obj))[n];
+	if(IS_UNDEF(*result)) {
+		*result = make_string("AttributeNotFound::InstanceHasNoSuchAttribute::FieldNotSet");
+		return METHOD_EXCEPTION;
+	}
+	return METHOD_OK;
+};
+
+void set_user_type_instance_attribute(VALUE obj, VALUE attr, VALUE v) {
+	VALUE ut;
+	HASH_OBJECT_ENTRY *e;
+	size_t n;
+	ut = UT_INSTANCE_TYPE(obj);
+	e = get_hash_key(UT_FIELDS(ut), attr);
+	if(e) {
+		n = GET_INT(e->val);
+	} else {
+		n = OBJ_LEN(UT_FIELDS(ut));
+		set_hash_key(UT_FIELDS(ut), attr, MAKE_INT(n));
+	}
+	// TODO: more optimized
+	while(OBJ_LEN(UT_INSTANCE_FIELDS(obj)) < n) {
+		array_push(UT_INSTANCE_FIELDS(obj), (VALUE){.num = V_UNDEF});
+	}
+	if(OBJ_LEN(UT_INSTANCE_FIELDS(obj)) == n) {
+		array_push(UT_INSTANCE_FIELDS(obj), v);
+		return;
+	}
+	ARRAY_ITEMS(UT_INSTANCE_FIELDS(obj))[n] = v;
 };
 
 // TODO: implement comparison of the rest of the types

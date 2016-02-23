@@ -175,13 +175,6 @@ enum opcodes {
 
 extern char *opcodes_names[NUMBER_OF_OPCODES];
 
-typedef enum method_result_enum {
-	METHOD_OK,
-	METHOD_ARGS_MISMATCH,
-	METHOD_IMPL_MISSING,
-	METHOD_EXCEPTION,
-} METHOD_RESULT;
-
 typedef METHOD_RESULT (*VM_FUNC)(const VALUE *argv, VALUE *result);
 typedef METHOD_RESULT (*VM_EXT_FUNC)(VM *vm, CTX *ctx, const VALUE *argv, VALUE *result);
 void vm_init(VM *vm, int argc, char **argv);

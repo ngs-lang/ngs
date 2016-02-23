@@ -57,6 +57,11 @@ void position_to_line_col();
 #define PREPEND_NODE(list, elt) elt->next_sibling = list->first_child; list->first_child = elt; if(!list->last_child) { list->last_child=elt; };
 
 #define MAKE_IDENTIFIER_NODE(var_name, s) MAKE_NODE(var_name, IDENTIFIER_NODE); var_name->name = strdup(s);
+#define MAKE_STRING_NODE(var_name, s) \
+	MAKE_NODE(var_name, STR_COMPS_NODE); \
+		MAKE_NODE(var_name##_comp, STR_COMP_IMM_NODE); \
+		var_name##_comp->name = strdup(s); \
+		append_ast_node_child(var_name, var_name##_comp);
 
 #define HANDLE_FAILED_MATCH(rule_name) \
 	if(yy->__pos > yy->fail_pos) {\
@@ -274,6 +279,38 @@ binop-expression-inner =
 		MAKE_REQ_ARG_NODE(a1, e1);
 		a1->next_sibling = fcall_args->first_child;
 		fcall_args->first_child = a1;
+
+		e1 = ret;
+	}
+	|
+	"." i:identifier space? "=" space? e:expression {
+		MAKE_NODE(ret, CALL_NODE);
+			MAKE_IDENTIFIER_NODE(get_attr_identifier, ".=");
+			MAKE_NODE(args, ARGS_NODE);
+				MAKE_STRING_NODE(attr_name_string, i->name);
+				MAKE_REQ_ARG_NODE(a1, e1);
+				MAKE_REQ_ARG_NODE(a2, attr_name_string);
+				MAKE_REQ_ARG_NODE(a3, e);
+				args->first_child = a1;
+				a1->next_sibling = a2;
+				a2->next_sibling = a3;
+			ret->first_child = get_attr_identifier;
+			get_attr_identifier->next_sibling = args;
+
+		e1 = ret;
+	}
+	|
+	"." i:identifier {
+		MAKE_NODE(ret, CALL_NODE);
+			MAKE_IDENTIFIER_NODE(get_attr_identifier, ".");
+			MAKE_NODE(args, ARGS_NODE);
+				MAKE_REQ_ARG_NODE(a1, e1);
+				MAKE_STRING_NODE(attr_name_string, i->name);
+				MAKE_REQ_ARG_NODE(a2, attr_name_string);
+				a1->next_sibling = a2;
+				args->first_child = a1;
+			ret->first_child = get_attr_identifier;
+			get_attr_identifier->next_sibling = args;
 
 		e1 = ret;
 	}

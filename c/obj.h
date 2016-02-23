@@ -185,11 +185,11 @@ enum IMMEDIATE_VALUES {
 };
 
 // TODO: handle situation when n is wider than size_t - TAG_BITS bits
-#define IS_NULL(v)      (v.num == V_NULL)
-#define IS_TRUE(v)      (v.num == V_TRUE)
-#define IS_FALSE(v)     (v.num == V_FALSE)
-#define IS_UNDEF(v)     (v.num == V_UNDEF)
-#define IS_NOT_UNDEF(v) (v.num != V_UNDEF)
+#define IS_NULL(v)      ((v).num == V_NULL)
+#define IS_TRUE(v)      ((v).num == V_TRUE)
+#define IS_FALSE(v)     ((v).num == V_FALSE)
+#define IS_UNDEF(v)     ((v).num == V_UNDEF)
+#define IS_NOT_UNDEF(v) ((v).num != V_UNDEF)
 // Boolean 00001X10
 #define IS_BOOL(v)      ((v.num & 0xFB) == 10)
 #define IS_INT(v)       ((v.num & TAG_AND) == TAG_INT)
@@ -253,6 +253,8 @@ enum IMMEDIATE_VALUES {
 #define UT_FIELDS(v)              (((USER_TYPE_OBJECT *)(v).ptr)->fields)
 #define UT_CONSTRUCTORS(v)        (((USER_TYPE_OBJECT *)(v).ptr)->constructors)
 #define UT_CONSTRUCTOR_UT(v)      OBJ_DATA(v)
+#define UT_INSTANCE_TYPE(v)       OBJ_TYPE(v)
+#define UT_INSTANCE_FIELDS(v)     OBJ_DATA(v)
 
 // Boolean 00001X10
 #define GET_INVERTED_BOOL(v)      ((VALUE){.num = (v).num ^= 4})
@@ -264,6 +266,8 @@ VALUE make_hash(size_t start_buckets);
 VALUE make_user_type(VALUE name);
 VALUE make_user_type_constructor(VALUE user_type);
 VALUE make_user_type_instance(VALUE user_type);
+METHOD_RESULT get_user_type_instace_attribute(VALUE obj, VALUE attr, VALUE *result);
+void set_user_type_instance_attribute(VALUE obj, VALUE attr, VALUE v);
 uint32_t hash(VALUE v);
 HASH_OBJECT_ENTRY *get_hash_key(VALUE h, VALUE k);
 void set_hash_key(VALUE h, VALUE k, VALUE v);
