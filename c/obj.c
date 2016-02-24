@@ -607,38 +607,51 @@ VALUE join_strings(int argc, VALUE *argv) {
 
 #define OBJ_C_OBJ_IS_OF_TYPE(type, check) if(tid == type) { return check(obj); }
 
+int ut_is_ut(VALUE ut_child, VALUE ut_parent) {
+	if(ut_child.ptr == ut_parent.ptr) { return 1; }
+	// TODO: traverse parents
+	return 0;
+}
+
 // TODO: make it faster, probably using vector of NATIVE_TYPE_IDs and how to detect them
 //       maybe re-work tagged types so the check would be VALUE & TYPE_VAL == TYPE_VAL
 // WARNING: t must be IS_NGS_TYPE(t)
 // WARNING: only for builtin types!
 int obj_is_of_type(VALUE obj, VALUE t) {
 	NATIVE_TYPE_ID tid;
-	assert(IS_NGS_TYPE(t)); // XXX: Performance hit
-	tid = NGS_TYPE_ID(t);
-	assert(tid); // XXX: Performance hit
-	if(tid == T_ANY) { return 1; }
-	OBJ_C_OBJ_IS_OF_TYPE(T_NULL, IS_NULL);
-	OBJ_C_OBJ_IS_OF_TYPE(T_BOOL, IS_BOOL);
-	OBJ_C_OBJ_IS_OF_TYPE(T_INT, IS_INT);
-	OBJ_C_OBJ_IS_OF_TYPE(T_STR, IS_STRING);
-	OBJ_C_OBJ_IS_OF_TYPE(T_ARR, IS_ARRAY);
-	OBJ_C_OBJ_IS_OF_TYPE(T_TYPE, IS_NGS_TYPE);
-	OBJ_C_OBJ_IS_OF_TYPE(T_HASH, IS_HASH);
-	OBJ_C_OBJ_IS_OF_TYPE(T_CLIB, IS_CLIB);
-	OBJ_C_OBJ_IS_OF_TYPE(T_CSYM, IS_CSYM);
-	if(tid == T_FUN) {
-		if(IS_ARRAY(obj)) {
-			if(OBJ_LEN(obj)) {
-				return obj_is_of_type(ARRAY_ITEMS(obj)[0], t);
-			} else {
-				return 0;
+	if(IS_NGS_TYPE(t)) {
+		tid = NGS_TYPE_ID(t);
+		assert(tid); // XXX: Performance hit
+		if(tid == T_ANY) { return 1; }
+		OBJ_C_OBJ_IS_OF_TYPE(T_NULL, IS_NULL);
+		OBJ_C_OBJ_IS_OF_TYPE(T_BOOL, IS_BOOL);
+		OBJ_C_OBJ_IS_OF_TYPE(T_INT, IS_INT);
+		OBJ_C_OBJ_IS_OF_TYPE(T_STR, IS_STRING);
+		OBJ_C_OBJ_IS_OF_TYPE(T_ARR, IS_ARRAY);
+		OBJ_C_OBJ_IS_OF_TYPE(T_TYPE, IS_NGS_TYPE);
+		OBJ_C_OBJ_IS_OF_TYPE(T_HASH, IS_HASH);
+		OBJ_C_OBJ_IS_OF_TYPE(T_CLIB, IS_CLIB);
+		OBJ_C_OBJ_IS_OF_TYPE(T_CSYM, IS_CSYM);
+		if(tid == T_FUN) {
+			if(IS_ARRAY(obj)) {
+				if(OBJ_LEN(obj)) {
+					return obj_is_of_type(ARRAY_ITEMS(obj)[0], t);
+				} else {
+					return 0;
+				}
 			}
+			return IS_NATIVE_METHOD(obj) || IS_CLOSURE(obj) || IS_NGS_TYPE(obj);
 		}
-		return IS_NATIVE_METHOD(obj) || IS_CLOSURE(obj) || IS_NGS_TYPE(obj);
+		if(IS_USERT_INST(obj)) { return 0; }
+		dump_titled("Unimplemented type to check", t);
+		assert(0=="native_is(): Unimplemented check against builtin type");
 	}
-
+	if(IS_USER_TYPE(t)) {
+		if(!IS_USERT_INST(obj)) { return 0; }
+		return ut_is_ut(UT_INSTANCE_TYPE(obj), t);
+	}
 	dump_titled("Unimplemented type to check", t);
-	assert(0=="native_is(): Unimplemented check against builtin type");
+	assert(0=="native_is(): Unimplemented check");
 }
 
 void dump(VALUE v) {

@@ -1,5 +1,6 @@
 {
 	type T
+	type U
 
 	t1 = T()
 	t1.x = 1
@@ -7,10 +8,17 @@
 	t2 = T()
 	t2.y = 2
 
+	echo('Test: t1 - x and y')
 	dump(t1.x)
 	dump(try t1.y)
 
+	echo('Test: t2 - x and y')
 	dump(try t2.x)
 	dump(t2.y)
+
+	echo('Test: T is T')
+	dump(t1 is T)
+	echo('Test: T is U')
+	dump(t1 is U)
 
 }

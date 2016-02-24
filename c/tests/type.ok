@@ -1,4 +1,10 @@
+Test: t1 - x and y
 * int 1
 * null
+Test: t2 - x and y
 * null
 * int 2
+Test: T is T
+* true
+Test: T is U
+* false

@@ -221,6 +221,14 @@ METHOD_RESULT native_is_any_type METHOD_PARAMS {
 	return METHOD_OK;
 }
 
+METHOD_RESULT native_is_any_any METHOD_PARAMS {
+	if(!IS_USER_TYPE(argv[1])) {
+		return METHOD_ARGS_MISMATCH;
+	}
+	SET_BOOL(*result, obj_is_of_type(argv[0], argv[1]));
+	return METHOD_OK;
+}
+
 METHOD_RESULT native_Bool_any METHOD_PARAMS {
 	// printf("Bool()\n");
 	// dump(argv[0]);
@@ -602,8 +610,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
 
 	// User defined types
-	register_global_func(vm, 0, ".",        &native_get_attr_any_str      ,2, "obj", vm->Any, "attr", vm->Str);
-	register_global_func(vm, 0, ".=",       &native_set_attr_any_str_any  ,3, "obj", vm->Any, "attr", vm->Str, "v", vm->Any);
+	register_global_func(vm, 0, ".",        &native_get_attr_any_str,      2, "obj", vm->Any, "attr", vm->Str);
+	register_global_func(vm, 0, ".=",       &native_set_attr_any_str_any,  3, "obj", vm->Any, "attr", vm->Str, "v", vm->Any);
+	register_global_func(vm, 0, "is",       &native_is_any_any,            2, "obj", vm->Any, "t", vm->Any);
 
 	// Type
 	register_global_func(vm, 0, "Type",     &native_type_str          ,1, "name",   vm->Str);
