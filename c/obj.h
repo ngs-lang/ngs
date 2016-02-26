@@ -266,12 +266,12 @@ VALUE make_var_len_obj(uintptr_t type, const size_t item_size, const size_t len)
 VALUE make_array(size_t len);
 VALUE make_array_with_values(size_t len, const VALUE *values);
 VALUE make_hash(size_t start_buckets);
-VALUE make_user_type(VALUE name);
-VALUE make_user_type_constructor(VALUE user_type);
-VALUE make_user_type_instance(VALUE user_type);
-METHOD_RESULT get_user_type_instace_attribute(VALUE obj, VALUE attr, VALUE *result);
-void set_user_type_instance_attribute(VALUE obj, VALUE attr, VALUE v);
-void add_user_type_inheritance(VALUE type, VALUE parent_type);
+VALUE make_normal_type(VALUE name);
+VALUE make_normal_type_constructor(VALUE normal_type);
+VALUE make_normal_type_instance(VALUE normal_type);
+METHOD_RESULT get_normal_type_instace_attribute(VALUE obj, VALUE attr, VALUE *result);
+void set_normal_type_instance_attribute(VALUE obj, VALUE attr, VALUE v);
+void add_normal_type_inheritance(VALUE type, VALUE parent_type);
 uint32_t hash(VALUE v);
 HASH_OBJECT_ENTRY *get_hash_key(VALUE h, VALUE k);
 void set_hash_key(VALUE h, VALUE k, VALUE v);

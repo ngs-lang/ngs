@@ -198,7 +198,7 @@ VALUE make_hash(size_t start_buckets) {
 	return ret;
 }
 
-VALUE make_user_type(VALUE name) {
+VALUE make_normal_type(VALUE name) {
 	VALUE ret;
 	NGS_TYPE *t;
 	t = NGS_MALLOC(sizeof(*t));
@@ -212,40 +212,40 @@ VALUE make_user_type(VALUE name) {
 	NGS_TYPE_CONSTRUCTIRS(ret) = make_array(1);
 	NGS_TYPE_PARENTS(ret) = make_array(0);
 
-	VALUE ctr = make_user_type_constructor(ret);
+	VALUE ctr = make_normal_type_constructor(ret);
 	ARRAY_ITEMS(NGS_TYPE_CONSTRUCTIRS(ret))[0] = ctr;
 
 	return ret;
 }
 
-VALUE make_user_type_constructor(VALUE user_type) {
+VALUE make_normal_type_constructor(VALUE normal_type) {
 	VALUE ret;
-	OBJECT *user_type_constructor;
-	user_type_constructor = NGS_MALLOC(sizeof(*user_type_constructor));
-	assert(user_type_constructor);
+	OBJECT *normal_type_constructor;
+	normal_type_constructor = NGS_MALLOC(sizeof(*normal_type_constructor));
+	assert(normal_type_constructor);
 
-	SET_OBJ(ret, user_type_constructor);
+	SET_OBJ(ret, normal_type_constructor);
 	OBJ_TYPE_NUM(ret) = T_UTCTR;
-	UT_CONSTRUCTOR_UT(ret) = user_type;
+	UT_CONSTRUCTOR_UT(ret) = normal_type;
 
 	return ret;
 }
 
-VALUE make_user_type_instance(VALUE user_type) {
+VALUE make_normal_type_instance(VALUE normal_type) {
 
 	VALUE ret;
-	USER_TYPE_INSTANCE_OBJECT *user_type_instance;
-	user_type_instance = NGS_MALLOC(sizeof(*user_type_instance));
-	assert(user_type_instance);
+	USER_TYPE_INSTANCE_OBJECT *normal_type_instance;
+	normal_type_instance = NGS_MALLOC(sizeof(*normal_type_instance));
+	assert(normal_type_instance);
 
-	SET_OBJ(ret, user_type_instance);
-	OBJ_TYPE(ret) = user_type;
+	SET_OBJ(ret, normal_type_instance);
+	OBJ_TYPE(ret) = normal_type;
 	OBJ_DATA(ret) = make_array(0);
 
 	return ret;
 };
 
-METHOD_RESULT get_user_type_instace_attribute(VALUE obj, VALUE attr, VALUE *result) {
+METHOD_RESULT get_normal_type_instace_attribute(VALUE obj, VALUE attr, VALUE *result) {
 	VALUE ut;
 	HASH_OBJECT_ENTRY *e;
 	size_t n;
@@ -268,7 +268,7 @@ METHOD_RESULT get_user_type_instace_attribute(VALUE obj, VALUE attr, VALUE *resu
 	return METHOD_OK;
 };
 
-void set_user_type_instance_attribute(VALUE obj, VALUE attr, VALUE v) {
+void set_normal_type_instance_attribute(VALUE obj, VALUE attr, VALUE v) {
 	VALUE ut;
 	HASH_OBJECT_ENTRY *e;
 	size_t n;
@@ -291,7 +291,7 @@ void set_user_type_instance_attribute(VALUE obj, VALUE attr, VALUE v) {
 	ARRAY_ITEMS(UT_INSTANCE_FIELDS(obj))[n] = v;
 };
 
-void add_user_type_inheritance(VALUE type, VALUE parent_type) {
+void add_normal_type_inheritance(VALUE type, VALUE parent_type) {
 	assert(IS_NORMAL_TYPE(type));
 	assert(IS_NORMAL_TYPE(parent_type));
 	array_push(NGS_TYPE_PARENTS(type), parent_type);

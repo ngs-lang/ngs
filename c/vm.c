@@ -451,10 +451,10 @@ METHOD_RESULT native_load_str_str EXT_METHOD_PARAMS {
 	METHOD_RETURN(make_closure_obj(ip, 0, 0, 0, 0, 0, NULL));
 }
 
-METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_user_type(argv[0])); }
-METHOD_RESULT native_get_attr_nti_str METHOD_PARAMS { return get_user_type_instace_attribute(argv[0], argv[1], result); }
-METHOD_RESULT native_set_attr_nti_str_any METHOD_PARAMS { set_user_type_instance_attribute(argv[0], argv[1], argv[2]); METHOD_RETURN(argv[2]); }
-METHOD_RESULT native_inherit_nt_nt METHOD_PARAMS { add_user_type_inheritance(argv[0], argv[1]); METHOD_RETURN(argv[0]); }
+METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_normal_type(argv[0])); }
+METHOD_RESULT native_get_attr_nti_str METHOD_PARAMS { return get_normal_type_instace_attribute(argv[0], argv[1], result); }
+METHOD_RESULT native_set_attr_nti_str_any METHOD_PARAMS { set_normal_type_instance_attribute(argv[0], argv[1], argv[2]); METHOD_RETURN(argv[2]); }
+METHOD_RESULT native_inherit_nt_nt METHOD_PARAMS { add_normal_type_inheritance(argv[0], argv[1]); METHOD_RETURN(argv[0]); }
 
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
@@ -539,7 +539,7 @@ void set_global(VM *vm, const char *name, VALUE v) {
 NGS_TYPE *register_builtin_type(VM *vm, const char *name, IMMEDIATE_TYPE native_type_id) {
 	size_t index;
 	VALUE t;
-	t = make_user_type(make_string(name));
+	t = make_normal_type(make_string(name));
 	// Fixes for built-ins - start
 	NGS_TYPE_ID(t) = native_type_id;
 	OBJ_LEN(NGS_TYPE_CONSTRUCTORS(t)) = 0;
@@ -852,7 +852,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR
 	}
 
 	if(IS_NORMAL_TYPE_CONSTRUCTOR(callable)) {
-		*result = make_user_type_instance(UT_CONSTRUCTOR_UT(callable));
+		*result = make_normal_type_instance(UT_CONSTRUCTOR_UT(callable));
 		return METHOD_OK;
 	}
 
