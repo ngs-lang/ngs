@@ -221,14 +221,6 @@ METHOD_RESULT native_is_any_type METHOD_PARAMS {
 	return METHOD_OK;
 }
 
-METHOD_RESULT native_is_any_any METHOD_PARAMS {
-	if(!IS_USER_TYPE(argv[1])) {
-		return METHOD_ARGS_MISMATCH;
-	}
-	SET_BOOL(*result, obj_is_of_type(argv[0], argv[1]));
-	return METHOD_OK;
-}
-
 METHOD_RESULT native_Bool_any METHOD_PARAMS {
 	// printf("Bool()\n");
 	// dump(argv[0]);
@@ -558,23 +550,18 @@ void set_global(VM *vm, const char *name, VALUE v) {
 	GLOBALS[index] = v;
 }
 
-NGS_TYPE *register_builtin_type(VM *vm, const char *name, NATIVE_TYPE_ID native_type_id) {
+NGS_TYPE *register_builtin_type(VM *vm, const char *name, IMMEDIATE_TYPE native_type_id) {
 	size_t index;
-	NGS_TYPE *t;
-	t = NGS_MALLOC(sizeof(*t));
-	assert(t);
-	t->base.type.num = T_TYPE;
-	t->base.val.ptr = NULL; /* unused */
-	t->name = make_string(name);
-	t->constructors = make_array(0);
-	t->meta = make_array(0); /* unused for now */
-	t->native_type_id = native_type_id;
-
-
+	VALUE t;
+	t = make_user_type(make_string(name));
+	// Fixes for built-ins - start
+	NGS_TYPE_ID(t) = native_type_id;
+	OBJ_LEN(NGS_TYPE_CONSTRUCTORS(t)) = 0;
+	// Fixes for built-ins - end
 	index = get_global_index(vm, name, strlen(name));
 	assert(IS_UNDEF(GLOBALS[index]));
-	SET_OBJ(GLOBALS[index], t);
-	return t;
+	GLOBALS[index] = t;
+	return t.ptr;
 }
 
 void vm_init(VM *vm, int argc, char **argv) {
@@ -612,7 +599,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// User defined types
 	register_global_func(vm, 0, ".",        &native_get_attr_any_str,      2, "obj", vm->Any, "attr", vm->Str);
 	register_global_func(vm, 0, ".=",       &native_set_attr_any_str_any,  3, "obj", vm->Any, "attr", vm->Str, "v", vm->Any);
-	register_global_func(vm, 0, "is",       &native_is_any_any,            2, "obj", vm->Any, "t", vm->Any);
 
 	// Type
 	register_global_func(vm, 0, "Type",     &native_type_str          ,1, "name",   vm->Str);
@@ -872,10 +858,6 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR
 
 	if(IS_NGS_TYPE(callable)) {
 		return vm_call(vm, ctx, result, NGS_TYPE_CONSTRUCTORS(callable), argc, argv);
-	}
-
-	if(IS_USER_TYPE(callable)) {
-		return vm_call(vm, ctx, result, UT_CONSTRUCTORS(callable), argc, argv);
 	}
 
 	if(IS_USERT_CTR(callable)) {

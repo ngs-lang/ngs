@@ -19,7 +19,7 @@ static void _dump(VALUE v, int level) {
 	if(IS_FALSE(v)) { printf("%*s* false\n",   level << 1, ""); goto exit; }
 	if(IS_UNDEF(v)) { printf("%*s* undef\n",   level << 1, ""); goto exit; }
 
-	if(IS_INT(v))   { printf("%*s* int %" PRIdPTR "\n", level << 1, "", GET_INT(v)); goto exit; }
+	if(IS_INT(v))   { printf("%*s* int %" VALUE_NUM_FMT "\n", level << 1, "", GET_INT(v)); goto exit; }
 
 	if(IS_STRING(v)) {
 		// TODO: properly handle
@@ -78,6 +78,7 @@ static void _dump(VALUE v, int level) {
 		printf("%*s* hash with total of %zu items in %zu buckets at %p\n", level << 1, "", OBJ_LEN(v), HASH_BUCKETS_N(v), OBJ_DATA_PTR(v));
 		buckets = OBJ_DATA_PTR(v);
 		for(i=0; i<HASH_BUCKETS_N(v); i++) {
+			if(!buckets[i]) { continue; }
 			printf("%*s* bucket # %zu\n", (level+1) << 1, "", i);
 			for(e=buckets[i]; e; e=e->bucket_next) {
 				printf("%*s* item at %p with hash() of %u insertion_order_prev=%p insertion_order_next=%p \n", (level+2) << 1, "", e, e->hash, e->insertion_order_prev, e->insertion_order_next);
@@ -91,9 +92,10 @@ static void _dump(VALUE v, int level) {
 	}
 
 	if(IS_NGS_TYPE(v)) {
-		printf("%*s* type (name and optionally constructors follow) id=%d\n", level << 1, "", NGS_TYPE_ID(v));
+		printf("%*s* type (name and optionally constructors follow) id=%" PRIdPTR "\n", level << 1, "", NGS_TYPE_ID(v));
 		_dump(NGS_TYPE_NAME(v), level + 1);
 		if(level < 3) {
+			_dump(NGS_TYPE_FIELDS(v), level + 1);
 			_dump(NGS_TYPE_CONSTRUCTORS(v), level + 1);
 		}
 		goto exit;
@@ -109,16 +111,6 @@ static void _dump(VALUE v, int level) {
 		printf("%*s* C symbol (name and libraray follow) ptr=%p\n", level << 1, "", OBJ_DATA_PTR(v));
 		_dump(CSYM_OBJECT_NAME(v), level + 1);
 		_dump(CSYM_OBJECT_LIB(v), level + 1);
-		goto exit;
-	}
-
-	if(IS_USER_TYPE(v)) {
-		printf("%*s* user type (name and optionally fields and constructors follow)\n", level << 1, "");
-		_dump(UT_NAME(v), level + 1);
-		if(level < 3) {
-			_dump(UT_FIELDS(v), level + 1);
-			_dump(UT_CONSTRUCTORS(v), level + 1);
-		}
 		goto exit;
 	}
 
@@ -207,19 +199,19 @@ VALUE make_hash(size_t start_buckets) {
 
 VALUE make_user_type(VALUE name) {
 	VALUE ret;
-	USER_TYPE_OBJECT *ut;
-	ut = NGS_MALLOC(sizeof(*ut));
-	assert(ut);
+	NGS_TYPE *t;
+	t = NGS_MALLOC(sizeof(*t));
+	assert(t);
 
-	SET_OBJ(ret, ut);
-	OBJ_TYPE_NUM(ret) = T_UTYPE;
+	SET_OBJ(ret, t);
+	OBJ_TYPE_NUM(ret) = T_TYPE;
 
-	UT_NAME(ret) = name;
-	UT_FIELDS(ret) = make_hash(8); // Hash: name->index
-	UT_CONSTRUCTORS(ret) = make_array(1);
+	NGS_TYPE_NAME(ret) = name;
+	NGS_TYPE_FIELDS(ret) = make_hash(8); // Hash: name->index
+	NGS_TYPE_CONSTRUCTIRS(ret) = make_array(1);
 
 	VALUE ctr = make_user_type_constructor(ret);
-	ARRAY_ITEMS(UT_CONSTRUCTORS(ret))[0] = ctr;
+	ARRAY_ITEMS(NGS_TYPE_CONSTRUCTIRS(ret))[0] = ctr;
 
 	return ret;
 }
@@ -256,7 +248,7 @@ METHOD_RESULT get_user_type_instace_attribute(VALUE obj, VALUE attr, VALUE *resu
 	HASH_OBJECT_ENTRY *e;
 	size_t n;
 	ut = UT_INSTANCE_TYPE(obj);
-	e = get_hash_key(UT_FIELDS(ut), attr);
+	e = get_hash_key(NGS_TYPE_FIELDS(ut), attr);
 	if(!e) {
 		*result = make_string("AttributeNotFound::TypeHasNoSuchAttribute");
 		return METHOD_EXCEPTION;
@@ -279,12 +271,12 @@ void set_user_type_instance_attribute(VALUE obj, VALUE attr, VALUE v) {
 	HASH_OBJECT_ENTRY *e;
 	size_t n;
 	ut = UT_INSTANCE_TYPE(obj);
-	e = get_hash_key(UT_FIELDS(ut), attr);
+	e = get_hash_key(NGS_TYPE_FIELDS(ut), attr);
 	if(e) {
 		n = GET_INT(e->val);
 	} else {
-		n = OBJ_LEN(UT_FIELDS(ut));
-		set_hash_key(UT_FIELDS(ut), attr, MAKE_INT(n));
+		n = OBJ_LEN(NGS_TYPE_FIELDS(ut));
+		set_hash_key(NGS_TYPE_FIELDS(ut), attr, MAKE_INT(n));
 	}
 	// TODO: more optimized
 	while(OBJ_LEN(UT_INSTANCE_FIELDS(obj)) < n) {
@@ -618,10 +610,10 @@ int ut_is_ut(VALUE ut_child, VALUE ut_parent) {
 // WARNING: t must be IS_NGS_TYPE(t)
 // WARNING: only for builtin types!
 int obj_is_of_type(VALUE obj, VALUE t) {
-	NATIVE_TYPE_ID tid;
-	if(IS_NGS_TYPE(t)) {
-		tid = NGS_TYPE_ID(t);
-		assert(tid); // XXX: Performance hit
+	VALUE_NUM tid;
+	assert(IS_NGS_TYPE(t));
+	tid = NGS_TYPE_ID(t);
+	if(tid) {
 		if(tid == T_ANY) { return 1; }
 		OBJ_C_OBJ_IS_OF_TYPE(T_NULL, IS_NULL);
 		OBJ_C_OBJ_IS_OF_TYPE(T_BOOL, IS_BOOL);
@@ -645,8 +637,7 @@ int obj_is_of_type(VALUE obj, VALUE t) {
 		if(IS_USERT_INST(obj)) { return 0; }
 		dump_titled("Unimplemented type to check", t);
 		assert(0=="native_is(): Unimplemented check against builtin type");
-	}
-	if(IS_USER_TYPE(t)) {
+	} else {
 		if(!IS_USERT_INST(obj)) { return 0; }
 		return ut_is_ut(UT_INSTANCE_TYPE(obj), t);
 	}

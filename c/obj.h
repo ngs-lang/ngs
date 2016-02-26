@@ -13,7 +13,6 @@ typedef uint8_t UPVAR_INDEX;
 #define MAX_LOCALS            (255)
 #define INITITAL_ARRAY_SIZE     (8)
 #define MAX_INT_TO_STR_LEN    (256)
-typedef uint16_t NATIVE_TYPE_ID;
 
 #define PARAMS_FLAG_ARR_SPLAT   (1)
 #define ADDITIONAL_PARAMS_COUNT ((params_flags & PARAMS_FLAG_ARR_SPLAT) != 0)
@@ -29,6 +28,9 @@ typedef union {
 	intptr_t num;
 	void * ptr;
 } VALUE;
+
+typedef intptr_t VALUE_NUM;
+#define VALUE_NUM_FMT PRIdPTR
 
 typedef struct {
 	VALUE type;
@@ -61,15 +63,6 @@ typedef struct {
 } HASH_OBJECT;
 
 typedef struct {
-	OBJECT base;
-	VALUE name;
-	VALUE fields; // Hash: name->index
-	VALUE constructors; // Arr[F]
-	VALUE parents; // Arr[USER_TYPE_OBJECT]
-	// TODO: maybe cached transitive parents
-} USER_TYPE_OBJECT;
-
-typedef struct {
 	OBJECT base; // Type points to the type, data to fields array
 } USER_TYPE_INSTANCE_OBJECT;
 
@@ -97,10 +90,12 @@ typedef struct native_method {
 
 typedef struct ngs_type {
 	OBJECT base;
+	// base.val - NULL for normal types
+	//          - type ID for built-in types
 	VALUE name;
-	VALUE constructors;
-	VALUE meta;
-	NATIVE_TYPE_ID native_type_id;
+	VALUE fields; // Hash: name->index
+	VALUE constructors; // Arr[F]
+	VALUE parents; // Arr[NGS_TYPE]
 } NGS_TYPE;
 
 typedef struct {
@@ -161,11 +156,14 @@ typedef struct {
 #define TAG_INT     (1)
 #define TYPE_AND (0xFF)
 
-enum IMMEDIATE_VALUES {
+typedef enum {
 	V_NULL  = 2,
 	V_UNDEF = 6,
 	V_FALSE = 10,
 	V_TRUE  = 14,
+} IMMEDIATE_VALUE;
+
+typedef enum {
 	T_NULL  = 18,
 	T_BOOL  = 22,
 	T_INT   = 26,
@@ -178,11 +176,11 @@ enum IMMEDIATE_VALUES {
 	T_HASH  = 54,
 	T_CLIB  = 58,
 	T_CSYM  = 62,
-	T_UTYPE = 66,
 	T_UTCTR = 70,
+	T_ANYU  = 74,
 	T_NATIVE_METHOD = (1 << 8) | T_FUN,
 	T_CLOSURE       = (2 << 8) | T_FUN,
-};
+} IMMEDIATE_TYPE;
 
 // TODO: handle situation when n is wider than size_t - TAG_BITS bits
 #define IS_NULL(v)      ((v).num == V_NULL)
@@ -223,9 +221,11 @@ enum IMMEDIATE_VALUES {
 #define NATIVE_METHOD_OBJ_N_OPT_PAR(v)  ((NATIVE_METHOD_OBJECT *) v.ptr)->params.n_params_optional
 #define NATIVE_METHOD_OBJ_PARAMS(v)     (((NATIVE_METHOD_OBJECT *) v.ptr)->params.params)
 #define NATIVE_METHOD_EXTRA_PARAMS(v)   (((NATIVE_METHOD_OBJECT *) v.ptr)->pass_extra_params)
-#define NGS_TYPE_CONSTRUCTORS(v)  ((NGS_TYPE *) v.ptr)->constructors
-#define NGS_TYPE_NAME(v)          ((NGS_TYPE *) v.ptr)->name
-#define NGS_TYPE_ID(v)            ((NGS_TYPE *) v.ptr)->native_type_id
+#define NGS_TYPE_CONSTRUCTORS(v)  (((NGS_TYPE *) v.ptr)->constructors)
+#define NGS_TYPE_NAME(v)          (((NGS_TYPE *) v.ptr)->name)
+#define NGS_TYPE_ID(v)            (((NGS_TYPE *) v.ptr)->base.val.num)
+#define NGS_TYPE_FIELDS(v)        (((NGS_TYPE *)(v).ptr)->fields)
+#define NGS_TYPE_CONSTRUCTIRS(v)  (((NGS_TYPE *)(v).ptr)->constructors)
 // TODO: reanme OBJ_DATA to OBJ_VAL
 #define OBJ_DATA(v)               (((OBJECT *)(v).ptr)->val)
 #define OBJ_DATA_PTR(v)           (((OBJECT *)(v).ptr)->val.ptr)
@@ -238,7 +238,6 @@ enum IMMEDIATE_VALUES {
 #define IS_CLOSURE(v)             (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_CLOSURE)
 #define IS_ARRAY(v)               (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_ARR)
 #define IS_NGS_TYPE(v)            (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_TYPE)
-#define IS_USER_TYPE(v)           (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_UTYPE)
 #define IS_USERT_CTR(v)           (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_UTCTR)
 #define IS_USERT_INST(v)          (((v.num & TAG_AND) == 0) && ((OBJ_TYPE_NUM(v) & TAG_AND) == 0))
 #define IS_VLO(v)                 (IS_ARRAY(v) || IS_STRING(v))
@@ -249,9 +248,6 @@ enum IMMEDIATE_VALUES {
 #define HASH_BUCKETS_N(v)         (((HASH_OBJECT *)(v).ptr)->n_buckets)
 #define HASH_HEAD(v)              (((HASH_OBJECT *)(v).ptr)->head)
 #define HASH_TAIL(v)              (((HASH_OBJECT *)(v).ptr)->tail)
-#define UT_NAME(v)                (((USER_TYPE_OBJECT *)(v).ptr)->name)
-#define UT_FIELDS(v)              (((USER_TYPE_OBJECT *)(v).ptr)->fields)
-#define UT_CONSTRUCTORS(v)        (((USER_TYPE_OBJECT *)(v).ptr)->constructors)
 #define UT_CONSTRUCTOR_UT(v)      OBJ_DATA(v)
 #define UT_INSTANCE_TYPE(v)       OBJ_TYPE(v)
 #define UT_INSTANCE_FIELDS(v)     OBJ_DATA(v)
