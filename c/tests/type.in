@@ -16,9 +16,12 @@
 	dump(try t2.x)
 	dump(t2.y)
 
-	echo('Test: T is T')
+	echo('Test: instance of T is T')
 	dump(t1 is T)
-	echo('Test: T is U')
+	echo('Test: instance of T is U (before inheritance)')
+	dump(t1 is U)
+	T.inherit(U)
+	echo('Test: instance of T is U (after inheritance)')
 	dump(t1 is U)
 
 }

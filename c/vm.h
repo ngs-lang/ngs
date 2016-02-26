@@ -117,8 +117,12 @@ typedef struct vm_struct {
 	NGS_TYPE *Arr;
 	NGS_TYPE *Fun;
 	NGS_TYPE *Any;
+		NGS_TYPE *BasicTypeInstance;
+		NGS_TYPE *NormalTypeInstance;
 	NGS_TYPE *Seq;
 	NGS_TYPE *Type;
+		NGS_TYPE *BasicType;
+		NGS_TYPE *NormalType;
 	NGS_TYPE *Hash;
 	NGS_TYPE *CLib;
 	NGS_TYPE *CSym;

@@ -92,11 +92,12 @@ static void _dump(VALUE v, int level) {
 	}
 
 	if(IS_NGS_TYPE(v)) {
-		printf("%*s* type (name and optionally constructors follow) id=%" PRIdPTR "\n", level << 1, "", NGS_TYPE_ID(v));
+		printf("%*s* type (name and optionally constructors and parents follow) id=%" PRIdPTR "\n", level << 1, "", NGS_TYPE_ID(v));
 		_dump(NGS_TYPE_NAME(v), level + 1);
 		if(level < 3) {
 			_dump(NGS_TYPE_FIELDS(v), level + 1);
 			_dump(NGS_TYPE_CONSTRUCTORS(v), level + 1);
+			_dump(NGS_TYPE_PARENTS(v), level + 1);
 		}
 		goto exit;
 	}
@@ -114,7 +115,7 @@ static void _dump(VALUE v, int level) {
 		goto exit;
 	}
 
-	if(IS_USERT_CTR(v)) {
+	if(IS_NORMAL_TYPE_CONSTRUCTOR(v)) {
 		printf("%*s* user type constructor (type optionally follows)\n", level << 1, "");
 		if(level < 3) {
 			_dump(OBJ_DATA(v), level + 1);
@@ -122,7 +123,7 @@ static void _dump(VALUE v, int level) {
 		goto exit;
 	}
 
-	if(IS_USERT_INST(v)) {
+	if(IS_NORMAL_TYPE_INSTANCE(v)) {
 		printf("%*s* user type instance (type and fields optionally follow)\n", level << 1, "");
 		if(level < 3) {
 			_dump(UT_INSTANCE_TYPE(v), level + 1);
@@ -209,6 +210,7 @@ VALUE make_user_type(VALUE name) {
 	NGS_TYPE_NAME(ret) = name;
 	NGS_TYPE_FIELDS(ret) = make_hash(8); // Hash: name->index
 	NGS_TYPE_CONSTRUCTIRS(ret) = make_array(1);
+	NGS_TYPE_PARENTS(ret) = make_array(0);
 
 	VALUE ctr = make_user_type_constructor(ret);
 	ARRAY_ITEMS(NGS_TYPE_CONSTRUCTIRS(ret))[0] = ctr;
@@ -288,6 +290,14 @@ void set_user_type_instance_attribute(VALUE obj, VALUE attr, VALUE v) {
 	}
 	ARRAY_ITEMS(UT_INSTANCE_FIELDS(obj))[n] = v;
 };
+
+void add_user_type_inheritance(VALUE type, VALUE parent_type) {
+	assert(IS_NORMAL_TYPE(type));
+	assert(IS_NORMAL_TYPE(parent_type));
+	array_push(NGS_TYPE_PARENTS(type), parent_type);
+	// TODO: check for circularity (and/or depth?)
+	// TODO: invalidate cached "is" results for the types involved, when such caching is implemented
+}
 
 // TODO: implement comparison of the rest of the types
 int is_equal(VALUE a, VALUE b) {
@@ -601,14 +611,18 @@ VALUE join_strings(int argc, VALUE *argv) {
 
 int ut_is_ut(VALUE ut_child, VALUE ut_parent) {
 	if(ut_child.ptr == ut_parent.ptr) { return 1; }
-	// TODO: traverse parents
+	size_t len, i;
+	for(i=0, len=OBJ_LEN(NGS_TYPE_PARENTS(ut_child)); i<len; i++) {
+		if(ut_is_ut(ARRAY_ITEMS(NGS_TYPE_PARENTS(ut_child))[i], ut_parent)) {
+			return 1;
+		}
+	}
 	return 0;
 }
 
 // TODO: make it faster, probably using vector of NATIVE_TYPE_IDs and how to detect them
 //       maybe re-work tagged types so the check would be VALUE & TYPE_VAL == TYPE_VAL
-// WARNING: t must be IS_NGS_TYPE(t)
-// WARNING: only for builtin types!
+// TODO: profiling before optimizations
 int obj_is_of_type(VALUE obj, VALUE t) {
 	VALUE_NUM tid;
 	assert(IS_NGS_TYPE(t));
@@ -622,6 +636,8 @@ int obj_is_of_type(VALUE obj, VALUE t) {
 		OBJ_C_OBJ_IS_OF_TYPE(T_ARR, IS_ARRAY);
 		OBJ_C_OBJ_IS_OF_TYPE(T_TYPE, IS_NGS_TYPE);
 		OBJ_C_OBJ_IS_OF_TYPE(T_HASH, IS_HASH);
+		OBJ_C_OBJ_IS_OF_TYPE(T_NORMTI, IS_NORMAL_TYPE_INSTANCE);
+		OBJ_C_OBJ_IS_OF_TYPE(T_BASICTI, IS_BASIC_TYPE_INSTANCE);
 		OBJ_C_OBJ_IS_OF_TYPE(T_CLIB, IS_CLIB);
 		OBJ_C_OBJ_IS_OF_TYPE(T_CSYM, IS_CSYM);
 		if(tid == T_FUN) {
@@ -634,11 +650,13 @@ int obj_is_of_type(VALUE obj, VALUE t) {
 			}
 			return IS_NATIVE_METHOD(obj) || IS_CLOSURE(obj) || IS_NGS_TYPE(obj);
 		}
-		if(IS_USERT_INST(obj)) { return 0; }
+		OBJ_C_OBJ_IS_OF_TYPE(T_NORMT, IS_NORMAL_TYPE);
+		OBJ_C_OBJ_IS_OF_TYPE(T_BASICT, IS_BASIC_TYPE);
+		if(IS_NORMAL_TYPE_INSTANCE(obj)) { return 0; }
 		dump_titled("Unimplemented type to check", t);
 		assert(0=="native_is(): Unimplemented check against builtin type");
 	} else {
-		if(!IS_USERT_INST(obj)) { return 0; }
+		if(!IS_NORMAL_TYPE_INSTANCE(obj)) { return 0; }
 		return ut_is_ut(UT_INSTANCE_TYPE(obj), t);
 	}
 	dump_titled("Unimplemented type to check", t);

@@ -451,24 +451,10 @@ METHOD_RESULT native_load_str_str EXT_METHOD_PARAMS {
 	METHOD_RETURN(make_closure_obj(ip, 0, 0, 0, 0, 0, NULL));
 }
 
-METHOD_RESULT native_type_str METHOD_PARAMS {
-	METHOD_RETURN(make_user_type(argv[0]));
-}
-
-METHOD_RESULT native_get_attr_any_str METHOD_PARAMS {
-	if(!IS_USERT_INST(argv[0])) {
-		return METHOD_ARGS_MISMATCH;
-	}
-	return get_user_type_instace_attribute(argv[0], argv[1], result);
-}
-
-METHOD_RESULT native_set_attr_any_str_any METHOD_PARAMS {
-	if(!IS_USERT_INST(argv[0])) {
-		return METHOD_ARGS_MISMATCH;
-	}
-	set_user_type_instance_attribute(argv[0], argv[1], argv[2]);
-	METHOD_RETURN(argv[2]);
-}
+METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_user_type(argv[0])); }
+METHOD_RESULT native_get_attr_nti_str METHOD_PARAMS { return get_user_type_instace_attribute(argv[0], argv[1], result); }
+METHOD_RESULT native_set_attr_nti_str_any METHOD_PARAMS { set_user_type_instance_attribute(argv[0], argv[1], argv[2]); METHOD_RETURN(argv[2]); }
+METHOD_RESULT native_inherit_nt_nt METHOD_PARAMS { add_user_type_inheritance(argv[0], argv[1]); METHOD_RETURN(argv[0]); }
 
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
@@ -585,8 +571,12 @@ void vm_init(VM *vm, int argc, char **argv) {
 	vm->Arr  = register_builtin_type(vm, "Arr",  T_ARR);
 	vm->Fun  = register_builtin_type(vm, "Fun",  T_FUN);
 	vm->Any  = register_builtin_type(vm, "Any",  T_ANY);
+		vm->BasicTypeInstance  = register_builtin_type(vm, "BasicTypeInstance",  T_BASICTI);
+		vm->NormalTypeInstance = register_builtin_type(vm, "NormalTypeInstance", T_NORMTI);
 	vm->Seq  = register_builtin_type(vm, "Seq",  T_SEQ);
 	vm->Type = register_builtin_type(vm, "Type", T_TYPE);
+		vm->BasicType  = register_builtin_type(vm, "BasicType",  T_BASICT);
+		vm->NormalType = register_builtin_type(vm, "NormalType", T_NORMT);
 	vm->Hash = register_builtin_type(vm, "Hash", T_HASH);
 	vm->CLib = register_builtin_type(vm, "CLib", T_CLIB);
 	vm->CSym = register_builtin_type(vm, "CSym", T_CSYM);
@@ -596,9 +586,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "in",       &native_in_str_clib,       2, "symbol", vm->Str, "lib", vm->CLib);
 	register_global_func(vm, 0, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
 
-	// User defined types
-	register_global_func(vm, 0, ".",        &native_get_attr_any_str,      2, "obj", vm->Any, "attr", vm->Str);
-	register_global_func(vm, 0, ".=",       &native_set_attr_any_str_any,  3, "obj", vm->Any, "attr", vm->Str, "v", vm->Any);
+	// NormalType
+	register_global_func(vm, 0, ".",        &native_get_attr_nti_str,      2, "obj", vm->NormalTypeInstance, "attr", vm->Str);
+	register_global_func(vm, 0, ".=",       &native_set_attr_nti_str_any,  3, "obj", vm->NormalTypeInstance, "attr", vm->Str, "v", vm->Any);
+	register_global_func(vm, 0, "inherit",  &native_inherit_nt_nt,         2, "t",   vm->NormalType,         "parent", vm->NormalType);
 
 	// Type
 	register_global_func(vm, 0, "Type",     &native_type_str          ,1, "name",   vm->Str);
@@ -860,7 +851,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR
 		return vm_call(vm, ctx, result, NGS_TYPE_CONSTRUCTORS(callable), argc, argv);
 	}
 
-	if(IS_USERT_CTR(callable)) {
+	if(IS_NORMAL_TYPE_CONSTRUCTOR(callable)) {
 		*result = make_user_type_instance(UT_CONSTRUCTOR_UT(callable));
 		return METHOD_OK;
 	}

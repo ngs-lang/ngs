@@ -164,20 +164,23 @@ typedef enum {
 } IMMEDIATE_VALUE;
 
 typedef enum {
-	T_NULL  = 18,
-	T_BOOL  = 22,
-	T_INT   = 26,
-	T_STR   = 30,
-	T_ARR   = 34,
-	T_FUN   = 38,
-	T_ANY   = 42,
-	T_SEQ   = 46,
-	T_TYPE  = 50,
-	T_HASH  = 54,
-	T_CLIB  = 58,
-	T_CSYM  = 62,
-	T_UTCTR = 70,
-	T_ANYU  = 74,
+	T_NULL    = 18,
+	T_BOOL    = 22,
+	T_INT     = 26,
+	T_STR     = 30,
+	T_ARR     = 34,
+	T_FUN     = 38,
+	T_ANY     = 42,
+	T_SEQ     = 46,
+	T_TYPE    = 50,
+	T_HASH    = 54,
+	T_CLIB    = 58,
+	T_CSYM    = 62,
+	T_NORMT   = 66,
+	T_UTCTR   = 70,
+	T_BASICT  = 74,
+	T_BASICTI = 78,
+	T_NORMTI  = 82,
 	T_NATIVE_METHOD = (1 << 8) | T_FUN,
 	T_CLOSURE       = (2 << 8) | T_FUN,
 } IMMEDIATE_TYPE;
@@ -226,6 +229,7 @@ typedef enum {
 #define NGS_TYPE_ID(v)            (((NGS_TYPE *) v.ptr)->base.val.num)
 #define NGS_TYPE_FIELDS(v)        (((NGS_TYPE *)(v).ptr)->fields)
 #define NGS_TYPE_CONSTRUCTIRS(v)  (((NGS_TYPE *)(v).ptr)->constructors)
+#define NGS_TYPE_PARENTS(v)       (((NGS_TYPE *)(v).ptr)->parents)
 // TODO: reanme OBJ_DATA to OBJ_VAL
 #define OBJ_DATA(v)               (((OBJECT *)(v).ptr)->val)
 #define OBJ_DATA_PTR(v)           (((OBJECT *)(v).ptr)->val.ptr)
@@ -238,8 +242,11 @@ typedef enum {
 #define IS_CLOSURE(v)             (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_CLOSURE)
 #define IS_ARRAY(v)               (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_ARR)
 #define IS_NGS_TYPE(v)            (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_TYPE)
-#define IS_USERT_CTR(v)           (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_UTCTR)
-#define IS_USERT_INST(v)          (((v.num & TAG_AND) == 0) && ((OBJ_TYPE_NUM(v) & TAG_AND) == 0))
+#define IS_BASIC_TYPE(v)          (IS_NGS_TYPE(v) && NGS_TYPE_ID(v))
+#define IS_NORMAL_TYPE(v)         (IS_NGS_TYPE(v) && !NGS_TYPE_ID(v))
+#define IS_NORMAL_TYPE_CONSTRUCTOR(v)           (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_UTCTR)
+#define IS_NORMAL_TYPE_INSTANCE(v)(((v.num & TAG_AND) == 0) && ((OBJ_TYPE_NUM(v) & TAG_AND) == 0))
+#define IS_BASIC_TYPE_INSTANCE(v) (!IS_NORMAL_TYPE_INSTANCE(v))
 #define IS_VLO(v)                 (IS_ARRAY(v) || IS_STRING(v))
 #define IS_HASH(v)                (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_HASH)
 #define IS_CLIB(v)                (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_CLIB)
@@ -264,6 +271,7 @@ VALUE make_user_type_constructor(VALUE user_type);
 VALUE make_user_type_instance(VALUE user_type);
 METHOD_RESULT get_user_type_instace_attribute(VALUE obj, VALUE attr, VALUE *result);
 void set_user_type_instance_attribute(VALUE obj, VALUE attr, VALUE v);
+void add_user_type_inheritance(VALUE type, VALUE parent_type);
 uint32_t hash(VALUE v);
 HASH_OBJECT_ENTRY *get_hash_key(VALUE h, VALUE k);
 void set_hash_key(VALUE h, VALUE k, VALUE v);
