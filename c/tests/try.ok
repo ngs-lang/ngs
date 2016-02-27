@@ -4,9 +4,9 @@ Test: try, bad expression, no catch
 * null
 Test: try, bad expression, catch-all
 * string(len=19) top level exception
-Test: try, bad expression, catch string
-* string(len=28) top level exception - string
-* string(len=28) top level exception - string
+Test: try, bad expression, catch IndexNotFound
+* string(len=35) top level exception - IndexNotFound
+* string(len=35) top level exception - IndexNotFound
 Test: catching exceptions of called functions - f/g
 * string(len=18) f caught exception
 Test: catching exceptions of called functions - f2/g2

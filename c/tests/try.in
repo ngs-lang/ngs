@@ -12,12 +12,12 @@
 	echo('Test: try, bad expression, catch-all')
 	dump(try arr[3] catch(e) "top level exception")
 
-	echo('Test: try, bad expression, catch string')
-	dump(try arr[3] catch(e:Str) "top level exception - string")
+	echo('Test: try, bad expression, catch IndexNotFound')
+	dump(try arr[3] catch(e:IndexNotFound) "top level exception - IndexNotFound")
 	dump(
 		try arr[3]
 		catch(n:Int) "should not happen"
-		catch(e:Str) "top level exception - string"
+		catch(e:IndexNotFound) "top level exception - IndexNotFound"
 	)
 
 	echo('Test: catching exceptions of called functions - f/g')

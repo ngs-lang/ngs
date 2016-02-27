@@ -113,6 +113,7 @@ char *opcodes_names[] = {
 #define EXT_METHOD_PARAMS (VM *vm, CTX *ctx, VALUE *argv, VALUE *result)
 #define METHOD_RETURN(v) { *result = (v); return METHOD_OK; }
 #define THROW_EXCEPTION(t) { *result = make_string(t); return METHOD_EXCEPTION; }
+#define THROW_EXCEPTION_INSTANCE(e) { *result = e; return METHOD_EXCEPTION; }
 
 #define INT_METHOD(name, op) \
 METHOD_RESULT native_ ## name ## _int_int METHOD_PARAMS { \
@@ -190,15 +191,17 @@ METHOD_RESULT native_index_get_arr_int_any METHOD_PARAMS {
 	METHOD_RETURN(argv[2]);
 }
 
-METHOD_RESULT native_index_get_arr_int METHOD_PARAMS {
+METHOD_RESULT native_index_get_arr_int EXT_METHOD_PARAMS {
 	int idx, len;
-	idx = GET_INT(argv[1]);
-	if(idx < 0) {
-		THROW_EXCEPTION("IndexNotFound");
-	}
+	(void) ctx;
 	len = OBJ_LEN(argv[0]);
-	if(idx >= len) {
-		THROW_EXCEPTION("IndexNotFound");
+	idx = GET_INT(argv[1]);
+	if((idx < 0) || (idx >= len)) {
+		VALUE e;
+		e = make_normal_type_instance(vm->IndexNotFound);
+		set_normal_type_instance_attribute(e, make_string("container"), argv[0]);
+		set_normal_type_instance_attribute(e, make_string("key"), argv[1]);
+		THROW_EXCEPTION_INSTANCE(e);
 	}
 	*result = ARRAY_ITEMS(argv[0])[idx];
 	return METHOD_OK;
@@ -228,15 +231,6 @@ METHOD_RESULT native_Bool_any METHOD_PARAMS {
 	if(IS_INT(argv[0])) METHOD_RETURN(MAKE_BOOL(GET_INT(argv[0])))
 	if(IS_STRING(argv[0]) || IS_ARRAY(argv[0]) || IS_HASH(argv[0])) METHOD_RETURN(MAKE_BOOL(OBJ_LEN(argv[0])))
 	return METHOD_ARGS_MISMATCH;
-}
-
-METHOD_RESULT native_not_any METHOD_PARAMS {
-	if(!IS_BOOL(argv[0])) {
-		THROW_EXCEPTION("NotImplemented");
-		// TODO: Call Bool() on the value, then continue with not() on the returned value
-		// ...
-	}
-	METHOD_RETURN(GET_INVERTED_BOOL(argv[0]));
 }
 
 METHOD_RESULT native_in_any_hash METHOD_PARAMS {
@@ -285,12 +279,16 @@ METHOD_RESULT native_index_get_hash_any_any METHOD_PARAMS {
 	return METHOD_OK;
 }
 
-METHOD_RESULT native_index_get_hash_any METHOD_PARAMS {
+METHOD_RESULT native_index_get_hash_any EXT_METHOD_PARAMS {
 	HASH_OBJECT_ENTRY *e;
+	(void) ctx;
 	e = get_hash_key(argv[0], argv[1]);
 	if(!e) {
-		// TODO: Throw value of type KeyNotFound
-		THROW_EXCEPTION("KeyNotFound");
+		VALUE exc;
+		exc = make_normal_type_instance(vm->KeyNotFound);
+		set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
+		set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	*result = e->val;
 	return METHOD_OK;
@@ -381,10 +379,11 @@ METHOD_RESULT native_c_read_int_int METHOD_PARAMS {
 	return METHOD_OK;
 }
 
-METHOD_RESULT native_c_lseek_int_int_str METHOD_PARAMS {
+METHOD_RESULT native_c_lseek_int_int_str EXT_METHOD_PARAMS {
 	off_t offset;
 	const char *whence_str = obj_to_cstring(argv[2]);
 	int whence = 0;
+	(void) ctx;
 	if(!strcmp(whence_str, "set")) {
 		whence = SEEK_SET;
 	} else {
@@ -394,7 +393,13 @@ METHOD_RESULT native_c_lseek_int_int_str METHOD_PARAMS {
 			if(!strcmp(whence_str, "end")) {
 				whence = SEEK_END;
 			} else {
-				THROW_EXCEPTION("InvalidParameter");
+				VALUE exc;
+				exc = make_normal_type_instance(vm->InvalidParameter);
+				set_normal_type_instance_attribute(exc, make_string("which"), make_string("Third parameter to c_lseek(), 'whence'"));
+				set_normal_type_instance_attribute(exc, make_string("given"), argv[2]);
+				// TODO: Array of expected values maybe?
+				set_normal_type_instance_attribute(exc, make_string("expected"), make_string("One of: 'set', 'cur', 'end'"));
+				THROW_EXCEPTION_INSTANCE(exc);
 			}
 		}
 	}
@@ -554,6 +559,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	char **env, *equal_sign;
 	VALUE env_hash, k, v;
 	VALUE argv_array;
+	VALUE exception_type, error_type, lookup_fail_type, key_not_found_type, index_not_found_type, attr_not_found_type, invalid_param_type;
 	int i;
 	vm->bytecode = NULL;
 	vm->bytecode_len = 0;
@@ -598,7 +604,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_open",   &native_c_open_str_str,    2, "pathname", vm->Str, "flags", vm->Str);
 	register_global_func(vm, 0, "c_close",  &native_c_close_int,       1, "fd",       vm->Int);
 	register_global_func(vm, 0, "c_read",   &native_c_read_int_int,    2, "fd",       vm->Int, "count", vm->Int);
-	register_global_func(vm, 0, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
+	register_global_func(vm, 1, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
 
 	// low level misc
 	register_global_func(vm, 0, "c_exit",   &native_c_exit_int,        1, "status",   vm->Int);
@@ -614,7 +620,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "shift",    &native_shift_arr_any,     2, "arr", vm->Arr, "dflt", vm->Any);
 	register_global_func(vm, 0, "len",      &native_len,               1, "arr", vm->Arr);
 	register_global_func(vm, 0, "get",      &native_index_get_arr_int_any, 3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
-	register_global_func(vm, 0, "[]",       &native_index_get_arr_int, 2, "arr", vm->Arr, "idx", vm->Int);
+	register_global_func(vm, 1, "[]",       &native_index_get_arr_int, 2, "arr", vm->Arr, "idx", vm->Int);
 
 	// string
 	// TODO: other string com0, parison operators
@@ -639,7 +645,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "Bool",     &native_Bool_any,          1, "x",   vm->Any);
 	register_global_func(vm, 0, "Str",      &native_Str_int,           1, "n",   vm->Int);
 	register_global_func(vm, 0, "is",       &native_is_any_type,       2, "obj", vm->Any, "t", vm->Type);
-	register_global_func(vm, 0, "not",      &native_not_any,           1, "x",   vm->Any);
 	register_global_func(vm, 0, "compile",  &native_compile_str_str,   2, "code",vm->Str, "fname", vm->Str);
 	register_global_func(vm, 1, "load",     &native_load_str_str,      2, "bytecode", vm->Str, "func_name", vm->Str);
 
@@ -650,7 +655,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "values",   &native_values_hash,       1, "h",   vm->Hash);
 	register_global_func(vm, 0, "len",      &native_len,               1, "h",   vm->Hash);
 	register_global_func(vm, 0, "get",      &native_index_get_hash_any_any,    3, "h",   vm->Hash,"k", vm->Any, "dflt", vm->Any);
-	register_global_func(vm, 0, "[]",       &native_index_get_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
+	register_global_func(vm, 1, "[]",       &native_index_get_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
 	register_global_func(vm, 0, "[]=",      &native_index_set_hash_any_any,    3, "h",   vm->Hash,"k", vm->Any, "v", vm->Any);
 	register_global_func(vm, 0, "del",      &native_index_del_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
 
@@ -673,6 +678,43 @@ void vm_init(VM *vm, int argc, char **argv) {
 		ARRAY_ITEMS(argv_array)[i] = v;
 	}
 	set_global(vm, "ARGV", argv_array);
+
+#define E(var_name, name) \
+	var_name = make_normal_type(make_string(name)); \
+	set_global(vm, name, var_name);
+
+	E(exception_type, "Exception");
+
+		E(error_type, "Error");
+
+			E(lookup_fail_type, "LookupFail");
+
+				E(key_not_found_type, "KeyNotFound");
+				add_normal_type_inheritance(key_not_found_type, lookup_fail_type);
+				vm->KeyNotFound = key_not_found_type;
+
+				E(index_not_found_type, "IndexNotFound");
+				add_normal_type_inheritance(index_not_found_type, lookup_fail_type);
+				vm->IndexNotFound = index_not_found_type;
+
+				E(attr_not_found_type, "AttrNotFound");
+				add_normal_type_inheritance(attr_not_found_type, lookup_fail_type);
+				vm->AttrNotFound = attr_not_found_type;
+
+			add_normal_type_inheritance(lookup_fail_type, error_type);
+			vm->LookupFail = lookup_fail_type;
+
+			E(invalid_param_type, "InvalidParameter");
+			add_normal_type_inheritance(invalid_param_type, error_type);
+			vm->InvalidParameter = invalid_param_type;
+
+		add_normal_type_inheritance(error_type, exception_type);
+		vm->Error = error_type;
+
+	vm->Exception = exception_type;
+
+#undef E
+
 }
 
 void ctx_init(CTX *ctx) {

@@ -20,6 +20,7 @@ syn keyword ngsType Any Arr Bool CLib CSym Fun Hash Int Null Seq Str Type
 syn keyword ngsTodo TODO FIXME XXX NOTE
 syn keyword ngsConstant true false null
 syn keyword ngsPredefinedVariable ARGV ENV
+syn keyword ngsPredefinedVariable Error Exception LookupFail KeyNotFound IndexNotFound AttrNotFound InvalidParameter
 
 " strings
 syn match   ngsSpecial contained #\$#

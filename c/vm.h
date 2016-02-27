@@ -126,6 +126,14 @@ typedef struct vm_struct {
 	NGS_TYPE *Hash;
 	NGS_TYPE *CLib;
 	NGS_TYPE *CSym;
+
+	VALUE Exception;
+		VALUE Error;
+			VALUE LookupFail;
+				VALUE KeyNotFound;
+				VALUE IndexNotFound;
+				VALUE AttrNotFound;
+			VALUE InvalidParameter;
 } VM;
 
 enum opcodes {
