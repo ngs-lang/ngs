@@ -44,6 +44,11 @@ typedef struct {
 	size_t item_size;
 } VAR_LEN_OBJECT;
 
+typedef struct {
+	OBJECT base;
+	double val;
+} REAL_OBJECT;
+
 // https://www.igvita.com/2009/02/04/ruby-19-internals-ordered-hash/
 typedef struct hash_object_entry {
 	VALUE key;
@@ -181,6 +186,7 @@ typedef enum {
 	T_BASICT  = 74,
 	T_BASICTI = 78,
 	T_NORMTI  = 82,
+	T_REAL    = 86,
 	T_NATIVE_METHOD = (1 << 8) | T_FUN,
 	T_CLOSURE       = (2 << 8) | T_FUN,
 } IMMEDIATE_TYPE;
@@ -238,6 +244,7 @@ typedef enum {
 #define OBJ_TYPE_PTR(v)           (((OBJECT *)(v).ptr)->type.ptr)
 #define IS_OBJ(v)                 ((v.num & TAG_AND) == 0)
 #define IS_STRING(v)              (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_STR)
+#define IS_REAL(v)                (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_REAL)
 #define IS_NATIVE_METHOD(v)       (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_NATIVE_METHOD)
 #define IS_CLOSURE(v)             (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_CLOSURE)
 #define IS_ARRAY(v)               (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_ARR)
@@ -258,6 +265,7 @@ typedef enum {
 #define UT_CONSTRUCTOR_UT(v)      OBJ_DATA(v)
 #define UT_INSTANCE_TYPE(v)       OBJ_TYPE(v)
 #define UT_INSTANCE_FIELDS(v)     OBJ_DATA(v)
+#define REAL_OBJECT_VAL(v)        (((REAL_OBJECT *) (v).ptr)->val)
 
 // Boolean 00001X10
 #define GET_INVERTED_BOOL(v)      ((VALUE){.num = (v).num ^= 4})
@@ -278,6 +286,7 @@ void set_hash_key(VALUE h, VALUE k, VALUE v);
 int del_hash_key(VALUE h, VALUE k);
 VALUE make_string(const char *s);
 VALUE make_string_of_len(const char *s, size_t len);
+VALUE make_real(double n);
 void vlo_ensure_additional_space(VALUE v, size_t n);
 void array_push(VALUE arr, VALUE v);
 VALUE array_shift(VALUE arr);
@@ -288,5 +297,6 @@ int obj_is_of_type(VALUE obj, VALUE t);
 void dump(VALUE v);
 void dump_titled(char *title, VALUE v);
 char *obj_to_cstring(VALUE v);
+METHOD_RESULT parse_json(VALUE s, VALUE *result);
 
 #endif

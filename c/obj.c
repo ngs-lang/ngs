@@ -2,6 +2,9 @@
 #include <execinfo.h>
 #include <inttypes.h>
 #include <string.h>
+
+#include <json-c/json.h>
+
 #include "ngs.h"
 #include "obj.h"
 #include "vm.h"
@@ -20,6 +23,7 @@ static void _dump(VALUE v, int level) {
 	if(IS_UNDEF(v)) { printf("%*s* undef\n",   level << 1, ""); goto exit; }
 
 	if(IS_INT(v))   { printf("%*s* int %" VALUE_NUM_FMT "\n", level << 1, "", GET_INT(v)); goto exit; }
+	if(IS_REAL(v))  { printf("%*s* real %g\n", level << 1, "", REAL_OBJECT_VAL(v)); goto exit; }
 
 	if(IS_STRING(v)) {
 		// TODO: properly handle
@@ -502,6 +506,16 @@ VALUE make_string_of_len(const char *s, size_t len) {
 	return v;
 }
 
+VALUE make_real(double n) {
+	VALUE v;
+	REAL_OBJECT *r;
+	r = NGS_MALLOC(sizeof(*r));
+	r->base.type.num = T_REAL;
+	SET_OBJ(v, r);
+	REAL_OBJECT_VAL(v) = n;
+	return v;
+}
+
 
 // Very not thread safe
 // Inspired by utarray.h
@@ -678,4 +692,83 @@ char *obj_to_cstring(VALUE v) {
 	memcpy(ret, OBJ_DATA_PTR(v), OBJ_LEN(v));
 	ret[OBJ_LEN(v)] = '\0';
 	return ret;
+}
+
+VALUE _parse_json_kern(json_object *obj) {
+	VALUE ret;
+	size_t i, len;
+	json_type type;
+	struct json_object_iterator iter, iter_end;
+
+	type = json_object_get_type(obj);
+	switch(type) {
+	    case json_type_null:    return (VALUE){.num = V_NULL};
+	    case json_type_boolean: return MAKE_BOOL(json_object_get_boolean(obj)); // TODO: check out-of-range
+		case json_type_int:     return MAKE_INT(json_object_get_int64(obj));
+		case json_type_double:  return make_real(json_object_get_double(obj));
+		case json_type_string:  return make_string_of_len(json_object_get_string(obj), json_object_get_string_len(obj));
+	    case json_type_array:
+			len = json_object_array_length(obj);
+			ret = make_array(len);
+			for(i=0; i<len; i++) {
+				ARRAY_ITEMS(ret)[i] = _parse_json_kern(json_object_array_get_idx(obj, i));
+			}
+			return ret;
+	    case json_type_object:
+			ret = make_hash(0);
+			iter = json_object_iter_begin(obj);
+			iter_end = json_object_iter_end(obj);
+
+			while (!json_object_iter_equal(&iter, &iter_end)) {
+				set_hash_key(
+					ret,
+					make_string(json_object_iter_peek_name(&iter)),
+					_parse_json_kern(json_object_iter_peek_value(&iter))
+				);
+				json_object_iter_next(&iter);
+			}
+			return ret;
+	}
+	assert(0 == "Internal error while parsing JSON");
+}
+
+METHOD_RESULT parse_json(VALUE s, VALUE *result) {
+	json_tokener *tok;
+	json_object  *jobj;
+	enum json_tokener_error jerr;
+
+	tok = json_tokener_new();
+	if(!tok) {
+		*result = make_string("Failed to allocate parser");
+		return METHOD_EXCEPTION;
+	} // TODO: Throw more specific exception
+
+	jobj = json_tokener_parse_ex(tok, OBJ_DATA_PTR(s), OBJ_LEN(s));
+	jerr = json_tokener_get_error(tok);
+
+	if(jerr == json_tokener_continue) {
+		// See php_json_decode_ex() in php-json-1.3.7/jsonc-1.3.7/json.c
+		jobj = json_tokener_parse_ex(tok, "", -1);
+		jerr = json_tokener_get_error(tok);
+	}
+
+	if(jerr != json_tokener_success) {
+		*result = make_string(json_tokener_error_desc(jerr));
+		goto error;
+	} // TODO: Throw more specific exception
+
+	if(!jobj) {
+		*result = make_string("Failed to parse - no resulting object");
+		goto error;
+	}
+
+	*result = _parse_json_kern(jobj);
+
+	json_tokener_free(tok);
+	return METHOD_OK;
+
+error:
+	json_tokener_free(tok);
+	return METHOD_EXCEPTION;
+
 }

@@ -456,6 +456,20 @@ METHOD_RESULT native_load_str_str EXT_METHOD_PARAMS {
 	METHOD_RETURN(make_closure_obj(ip, 0, 0, 0, 0, 0, NULL));
 }
 
+METHOD_RESULT native_parse_json_str EXT_METHOD_PARAMS {
+	METHOD_RESULT mr;
+	(void) ctx;
+	mr = parse_json(argv[0], result);
+	if(mr == METHOD_EXCEPTION) {
+		VALUE exc;
+		// TODO: more specific error
+		exc = make_normal_type_instance(vm->Error);
+		set_normal_type_instance_attribute(exc, make_string("message"), *result);
+		*result = exc;
+	}
+	return mr;
+}
+
 METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_normal_type(argv[0])); }
 METHOD_RESULT native_get_attr_nti_str EXT_METHOD_PARAMS {
 	// WARNING: for now get_normal_type_instace_attribute can only throw AttrNotFound
@@ -664,6 +678,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "is",       &native_is_any_type,       2, "obj", vm->Any, "t", vm->Type);
 	register_global_func(vm, 0, "compile",  &native_compile_str_str,   2, "code",vm->Str, "fname", vm->Str);
 	register_global_func(vm, 1, "load",     &native_load_str_str,      2, "bytecode", vm->Str, "func_name", vm->Str);
+	register_global_func(vm, 1, "parse_json",&native_parse_json_str,   1, "s", vm->Str);
 
 	// hash
 	register_global_func(vm, 0, "in",       &native_in_any_hash,       2, "x",   vm->Any, "h", vm->Hash);

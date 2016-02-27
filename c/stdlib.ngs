@@ -63,6 +63,10 @@ F collector(n:Int, code:Fun) {
 	n
 }
 
+F ==(a:Null, b) false
+F ==(a, b:Null) false
+F ==(a:Null, b:Null) true
+
 
 # === Array ======================================
 
@@ -391,3 +395,8 @@ F status(s:Str) {
 	echo(s)
 	log("(status) $s")
 }
+
+
+# === Misc tests =================================
+
+TEST parse_json('{"a": 1, "b": [null, false, true]}') == {'a': 1, 'b': [null, false, true]}

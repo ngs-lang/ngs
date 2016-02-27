@@ -1,7 +1,8 @@
-// apt-get install uthash-dev libgc-dev libffi6
-// uthash - http://stackoverflow.com/questions/18197825/looking-for-hash-table-c-library. using version 1.9.7
-// libgc-dev - 1:7.2d-6.4
+// apt-get install uthash-dev libgc-dev libffi6 libjson-c2
+// uthash - http://stackoverflow.com/questions/18197825/looking-for-hash-table-c-library. using version 1.9.7, 1.9.9.1+git20151125-1
+// libgc-dev - 1:7.2d-6.4, 1:7.4.2-7.3
 // libffi6 - 3.2.1-4
+// libjson-c2, libjson-c-dev - 0.11-4
 #include <assert.h>
 #include <errno.h>
 #include <unistd.h>
