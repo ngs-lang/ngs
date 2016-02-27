@@ -12,3 +12,6 @@ Test: instance of T is U (after inheritance)
 * true
 Test: AttrNotFound
 * string(len=2) OK
+Test: Custom constructor
+* true
+* true

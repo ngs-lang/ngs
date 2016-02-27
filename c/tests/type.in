@@ -27,4 +27,15 @@
 	echo('Test: AttrNotFound')
 	dump(try T().x catch(AttrNotFound) "OK")
 
+	echo('Test: Custom constructor')
+	F T(n:Int) {
+		ret = T()
+		ret.number = n
+		ret
+	}
+
+	customT = T(10)
+	dump(customT is T)
+	dump(customT.number == 10)
+
 }
