@@ -457,7 +457,24 @@ METHOD_RESULT native_load_str_str EXT_METHOD_PARAMS {
 }
 
 METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_normal_type(argv[0])); }
-METHOD_RESULT native_get_attr_nti_str METHOD_PARAMS { return get_normal_type_instace_attribute(argv[0], argv[1], result); }
+METHOD_RESULT native_get_attr_nti_str EXT_METHOD_PARAMS {
+	// WARNING: for now get_normal_type_instace_attribute can only throw AttrNotFound
+	//          if it changes in future the calling convention below should be changed
+	//          The reason for such calling convention is not to pass the VM to
+	//          get_normal_type_instace_attribute() just so it will have access to the
+	//          exceptions.
+	METHOD_RESULT mr;
+	(void) ctx;
+	mr = get_normal_type_instace_attribute(argv[0], argv[1], result);
+	if(mr == METHOD_EXCEPTION) {
+		VALUE exc;
+		exc = make_normal_type_instance(vm->AttrNotFound);
+		set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
+		set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+		*result = exc;
+	}
+	return mr;
+}
 METHOD_RESULT native_set_attr_nti_str_any METHOD_PARAMS { set_normal_type_instance_attribute(argv[0], argv[1], argv[2]); METHOD_RETURN(argv[2]); }
 METHOD_RESULT native_inherit_nt_nt METHOD_PARAMS { add_normal_type_inheritance(argv[0], argv[1]); METHOD_RETURN(argv[0]); }
 
@@ -593,7 +610,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
 
 	// NormalType
-	register_global_func(vm, 0, ".",        &native_get_attr_nti_str,      2, "obj", vm->NormalTypeInstance, "attr", vm->Str);
+	register_global_func(vm, 1, ".",        &native_get_attr_nti_str,      2, "obj", vm->NormalTypeInstance, "attr", vm->Str);
 	register_global_func(vm, 0, ".=",       &native_set_attr_nti_str_any,  3, "obj", vm->NormalTypeInstance, "attr", vm->Str, "v", vm->Any);
 	register_global_func(vm, 0, "inherit",  &native_inherit_nt_nt,         2, "t",   vm->NormalType,         "parent", vm->NormalType);
 

@@ -24,4 +24,7 @@
 	echo('Test: instance of T is U (after inheritance)')
 	dump(t1 is U)
 
+	echo('Test: AttrNotFound')
+	dump(try T().x catch(AttrNotFound) "OK")
+
 }

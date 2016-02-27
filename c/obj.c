@@ -252,17 +252,14 @@ METHOD_RESULT get_normal_type_instace_attribute(VALUE obj, VALUE attr, VALUE *re
 	ut = UT_INSTANCE_TYPE(obj);
 	e = get_hash_key(NGS_TYPE_FIELDS(ut), attr);
 	if(!e) {
-		*result = make_string("AttributeNotFound::TypeHasNoSuchAttribute");
 		return METHOD_EXCEPTION;
 	}
 	n = GET_INT(e->val);
 	if(n >= OBJ_LEN(UT_INSTANCE_FIELDS(obj))) {
-		*result = make_string("AttributeNotFound::InstanceHasNoSuchAttribute::NotEnoughFields");
 		return METHOD_EXCEPTION;
 	}
 	*result = ARRAY_ITEMS(UT_INSTANCE_FIELDS(obj))[n];
 	if(IS_UNDEF(*result)) {
-		*result = make_string("AttributeNotFound::InstanceHasNoSuchAttribute::FieldNotSet");
 		return METHOD_EXCEPTION;
 	}
 	return METHOD_OK;

@@ -10,3 +10,5 @@ Test: instance of T is U (before inheritance)
 * false
 Test: instance of T is U (after inheritance)
 * true
+Test: AttrNotFound
+* string(len=2) OK
