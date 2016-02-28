@@ -134,6 +134,9 @@ typedef struct vm_struct {
 				VALUE IndexNotFound;
 				VALUE AttrNotFound;
 			VALUE InvalidParameter;
+
+	VALUE Command;
+
 } VM;
 
 enum opcodes {
@@ -182,6 +185,7 @@ enum opcodes {
 	OP_TRY_END,
 	OP_ARR_REVERSE,
 	OP_THROW,
+	OP_MAKE_CMD,
 	NUMBER_OF_OPCODES,
 };
 

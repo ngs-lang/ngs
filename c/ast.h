@@ -54,6 +54,7 @@ typedef enum ast_node_type {
 	GUARD_NODE,
 	TRY_CATCH_NODE,
 	THROW_NODE,
+	COMMAND_NODE,
 	NUMBER_OF_AST_NODE_TYPES
 } ast_node_type;
 

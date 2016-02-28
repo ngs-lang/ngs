@@ -501,7 +501,9 @@ VALUE make_string_of_len(const char *s, size_t len) {
 	vlo->len = len;
 	vlo->base.type.num = T_STR;
 	vlo->base.val.ptr = NGS_MALLOC_ATOMIC(vlo->len);
-	memcpy(vlo->base.val.ptr, s, vlo->len);
+	if(s) {
+		memcpy(vlo->base.val.ptr, s, vlo->len);
+	}
 	SET_OBJ(v, vlo);
 	return v;
 }

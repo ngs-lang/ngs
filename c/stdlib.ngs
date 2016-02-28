@@ -357,6 +357,9 @@ TEST 3.map((*), 3) == [0, 3, 6]
 
 # --- Constructors ---
 
+# TODO: escaping?
+F Str(s:Str) "'$s'"
+
 
 F Str(n:Null) "null"
 
@@ -369,20 +372,51 @@ TEST Str(true) == "true"
 TEST Str(false) == "false"
 
 
+F Str(a:Arr) "[${a.map(Str).join(',')}]"
+
 # === RegExp =====================================
 
 # TODO
+
+# === Ring buffer (WIP) ==========================
+
+{ type RingBuffer }
+
+F RingBuffer(max_size:Int) {
+	r = RingBuffer()
+	r.data = [null] * max_size
+	r.max_size = max_size
+	r.head = 0
+	r.tail = 0
+	r
+}
+
+F push(r:RingBuffer) {
+	LATER
+}
+
+F len(r:RingBuffer) {
+	if r.head > r.tail { r.head - r.tail } else { LATER }
+}
+
+F values(r:RingBuffer) {
+	LATER
+}
 
 # === Logging and status reporting (WIP) =========
 
 # TODO: allow control by facility and severity
 #       and maybe source component or file.
 
+# TODO: consider sending log, debug and error to stderr
+
 F log(s:Str) {
 	echo("[LOG   ] $s")
 }
 
 F debug(s:Str) {
+	# TODO: Use RingBuffer when debug is off and
+	#       show last N debug messages on uncaught exception
 	ENV.get('DEBUG', '') == '' returns null
 	echo("[DEBUG ] $s")
 }
@@ -394,6 +428,55 @@ F error(s:Str) {
 F status(s:Str) {
 	echo(s)
 	log("(status) $s")
+}
+
+# === Commands and processes (WIP) ===============
+
+{ type Process }
+
+F Process(c:Command) {
+	local p = Process()
+	p.command = c
+	p.pid = null
+	p.exit_code = null
+	p
+}
+
+F to_exit_code(p:Process) {
+	LATER
+	if p.exit_code is Null {
+		p.wait()
+	}
+	p.exit_code
+}
+
+# TODO: better exceptions (use correct type, not string)
+# TODO: c_waitpid() - handle signals
+# TODO: capture output
+F '$()'(c:Command) {
+
+	local debug_pfx = '[stdlib $()]', process, pid
+	debug("$debug_pfx Parsed command: ${c.argv}")
+
+	process = Process(c)
+	pid = c_fork()
+
+	if pid == -1 { throw "Failed to fork()" }
+
+	debug("$debug_pfx PID after fork: $pid")
+
+	if pid == 0 {
+		debug("$debug_pfx child will execve()")
+		# CONTINUE HERE
+		c_exit(0)
+	}
+
+	if pid > 0 {
+		debug("$debug_pfx parent will waitpid($pid)")
+		local w = c_waitpid(pid)
+		debug("$debug_pfx waitpid($pid) -> $w")
+	}
+
 }
 
 

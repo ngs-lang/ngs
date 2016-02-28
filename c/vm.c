@@ -6,12 +6,13 @@
 // ..., FMEMOPEN(3)
 #include <stdio.h>
 
-// OPEN(2), LSEEK(2)
+// OPEN(2), LSEEK(2), WAIT(2)
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 
-// READ(2), LSEEK(2)
+// READ(2), LSEEK(2), FORK(2)
 #include <unistd.h>
 
 // BCMP(3)
@@ -75,6 +76,7 @@ char *opcodes_names[] = {
 	/* 42 */ "TRY_END",
 	/* 43 */ "ARR_REVERSE",
 	/* 44 */ "THROW",
+	/* 45 */ "MAKE_CMD",
 };
 
 
@@ -492,6 +494,57 @@ METHOD_RESULT native_get_attr_nti_str EXT_METHOD_PARAMS {
 METHOD_RESULT native_set_attr_nti_str_any METHOD_PARAMS { set_normal_type_instance_attribute(argv[0], argv[1], argv[2]); METHOD_RETURN(argv[2]); }
 METHOD_RESULT native_inherit_nt_nt METHOD_PARAMS { add_normal_type_inheritance(argv[0], argv[1]); METHOD_RETURN(argv[0]); }
 
+// Consider moving to obj.c
+METHOD_RESULT native_join_arr_str METHOD_PARAMS {
+	size_t i, len=OBJ_LEN(argv[0]), dst_len, l, sep_l;
+	char *p, *sep_p;
+	if(!len) {
+		METHOD_RETURN(make_string(""));
+	}
+	for(i=0, dst_len=0; i<len; i++) {
+		dst_len += OBJ_LEN(ARRAY_ITEMS(argv[0])[i]);
+	}
+	dst_len += (OBJ_LEN(argv[1]) * (len-1));
+
+	*result = make_string_of_len(NULL, dst_len);
+	OBJ_LEN(*result) = dst_len;
+	p = OBJ_DATA_PTR(*result);
+
+	l = OBJ_LEN(ARRAY_ITEMS(argv[0])[0]);
+	memcpy(p, OBJ_DATA_PTR(ARRAY_ITEMS(argv[0])[0]), l);
+	p += l;
+
+	sep_p = OBJ_DATA_PTR(argv[1]);
+	sep_l = OBJ_LEN(argv[1]);
+
+	for(i=1; i<len; i++) {
+		memcpy(p, sep_p, sep_l);
+		p += sep_l;
+
+		l = OBJ_LEN(ARRAY_ITEMS(argv[0])[i]);
+		memcpy(p, OBJ_DATA_PTR(ARRAY_ITEMS(argv[0])[i]), l);
+		p += l;
+	}
+	return METHOD_OK;
+}
+
+METHOD_RESULT native_c_fork METHOD_PARAMS {
+	pid_t pid;
+	pid = fork();
+	METHOD_RETURN(MAKE_INT(pid));
+}
+
+METHOD_RESULT native_c_waitpid METHOD_PARAMS {
+	VALUE ret;
+	pid_t pid;
+	int status;
+	pid = waitpid(GET_INT(argv[0]), &status, 0);
+	ret = make_array(2);
+	ARRAY_ITEMS(ret)[0] = MAKE_INT(pid);
+	ARRAY_ITEMS(ret)[1] = MAKE_INT(status);
+	METHOD_RETURN(ret);
+}
+
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
 	HASH_FIND(hh, vm->globals_indexes, name, name_len, var);
@@ -591,6 +644,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	VALUE env_hash, k, v;
 	VALUE argv_array;
 	VALUE exception_type, error_type, lookup_fail_type, key_not_found_type, index_not_found_type, attr_not_found_type, invalid_param_type;
+	VALUE command_type;
 	int i;
 	vm->bytecode = NULL;
 	vm->bytecode_len = 0;
@@ -639,6 +693,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// low level misc
 	register_global_func(vm, 0, "c_exit",   &native_c_exit_int,        1, "status",   vm->Int);
+	register_global_func(vm, 0, "c_fork",   &native_c_fork,            0);
+	register_global_func(vm, 0, "c_waitpid",&native_c_waitpid,         1, "pid",      vm->Int);
 
 	// boolean
 	register_global_func(vm, 0, "==",       &native_eq_bool_bool,      2, "a",   vm->Bool, "b", vm->Bool);
@@ -652,9 +708,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "len",      &native_len,               1, "arr", vm->Arr);
 	register_global_func(vm, 0, "get",      &native_index_get_arr_int_any, 3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
 	register_global_func(vm, 1, "[]",       &native_index_get_arr_int, 2, "arr", vm->Arr, "idx", vm->Int);
+	register_global_func(vm, 0, "join",     &native_join_arr_str,      2, "arr", vm->Arr, "s", vm->Str);
 
 	// string
-	// TODO: other string com0, parison operators
+	// TODO: other string comparison operators
 	register_global_func(vm, 0, "len",      &native_len,               1, "s",   vm->Str);
 	register_global_func(vm, 0, "==",       &native_eq_str_str,        2, "a",   vm->Str, "b", vm->Str);
 
@@ -711,32 +768,32 @@ void vm_init(VM *vm, int argc, char **argv) {
 	}
 	set_global(vm, "ARGV", argv_array);
 
-#define E(var_name, name) \
+#define MKTYPE(var_name, name) \
 	var_name = make_normal_type(make_string(name)); \
 	set_global(vm, name, var_name);
 
-	E(exception_type, "Exception");
+	MKTYPE(exception_type, "Exception");
 
-		E(error_type, "Error");
+		MKTYPE(error_type, "Error");
 
-			E(lookup_fail_type, "LookupFail");
+			MKTYPE(lookup_fail_type, "LookupFail");
 
-				E(key_not_found_type, "KeyNotFound");
+				MKTYPE(key_not_found_type, "KeyNotFound");
 				add_normal_type_inheritance(key_not_found_type, lookup_fail_type);
 				vm->KeyNotFound = key_not_found_type;
 
-				E(index_not_found_type, "IndexNotFound");
+				MKTYPE(index_not_found_type, "IndexNotFound");
 				add_normal_type_inheritance(index_not_found_type, lookup_fail_type);
 				vm->IndexNotFound = index_not_found_type;
 
-				E(attr_not_found_type, "AttrNotFound");
+				MKTYPE(attr_not_found_type, "AttrNotFound");
 				add_normal_type_inheritance(attr_not_found_type, lookup_fail_type);
 				vm->AttrNotFound = attr_not_found_type;
 
 			add_normal_type_inheritance(lookup_fail_type, error_type);
 			vm->LookupFail = lookup_fail_type;
 
-			E(invalid_param_type, "InvalidParameter");
+			MKTYPE(invalid_param_type, "InvalidParameter");
 			add_normal_type_inheritance(invalid_param_type, error_type);
 			vm->InvalidParameter = invalid_param_type;
 
@@ -745,7 +802,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	vm->Exception = exception_type;
 
-#undef E
+	MKTYPE(command_type, "Command");
+	vm->Command = command_type;
+
+#undef MKTYPE
 
 }
 
@@ -939,7 +999,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR
 }
 
 METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result) {
-	VALUE v, callable;
+	VALUE v, callable, command;
 	VAR_LEN_OBJECT *vlo;
 	int i;
 	unsigned char opcode;
@@ -1357,6 +1417,13 @@ do_jump:
 		case OP_THROW:
 							POP(*result);
 							goto exception;
+		case OP_MAKE_CMD:
+							EXPECT_STACK_DEPTH(1);
+							command = make_normal_type_instance(vm->Command);
+							POP(v);
+							set_normal_type_instance_attribute(command, make_string("argv"), v);
+							PUSH(command);
+							goto main_loop;
 		default:
 							// TODO: exception
 							printf("ERROR: Unknown opcode %d\n", opcode);

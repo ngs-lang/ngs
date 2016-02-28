@@ -213,9 +213,9 @@ typedef enum {
 #define SET_BOOL(v, b)  (v).num = b ? V_TRUE : V_FALSE
 #define SET_UNDEF(v)    (v).num = V_UNDEF
 
-#define OBJ_LEN(v)                ((VAR_LEN_OBJECT *) v.ptr)->len
-#define OBJ_ALLOCATED(v)          ((VAR_LEN_OBJECT *) v.ptr)->allocated
-#define CLOSURE_OBJ_IP(v)         ((CLOSURE_OBJECT *) v.ptr)->ip
+#define OBJ_LEN(v)                ((VAR_LEN_OBJECT *) (v).ptr)->len
+#define OBJ_ALLOCATED(v)          ((VAR_LEN_OBJECT *) (v).ptr)->allocated
+#define CLOSURE_OBJ_IP(v)         ((CLOSURE_OBJECT *) (v).ptr)->ip
 #define CLOSURE_OBJ_N_LOCALS(v)   (((CLOSURE_OBJECT *) v.ptr)->params.n_local_vars)
 #define CLOSURE_OBJ_N_REQ_PAR(v)  (((CLOSURE_OBJECT *) v.ptr)->params.n_params_required)
 #define CLOSURE_OBJ_N_OPT_PAR(v)  (((CLOSURE_OBJECT *) v.ptr)->params.n_params_optional)

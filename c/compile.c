@@ -595,6 +595,23 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_THROW);
 			break;
 
+		case COMMAND_NODE:
+			OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
+			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0); // Make array with zero elements
+			OPCODE(*buf, OP_MAKE_ARR);
+			for(ptr=node->first_child->next_sibling; ptr; ptr=ptr->next_sibling) {
+				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
+				OPCODE(*buf, OP_ARR_APPEND);
+			}
+			OPCODE(*buf, OP_MAKE_CMD);
+
+			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 1);
+			compile_identifier(ctx, buf, idx, node->first_child->name, OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
+			OPCODE(*buf, OP_CALL);
+			POP_IF_DONT_NEED_RESULT(*buf);
+
+			break;
+
 		default:
 			fprintf(stderr, "Node type %i\n", node->type);
 			assert(0=="compile_main_section(): unknown node type");

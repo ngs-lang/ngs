@@ -166,7 +166,9 @@ command =
 	for
 	|
 	comment
-	# | execute_external_prog
+	|
+	command-words
+
 
 curly-code-block =
 	space? '{' space? code:expressions space? ";"? space? '}' {
@@ -409,6 +411,7 @@ basic-expression =
 	| try-catch
 	| throw
 	| type
+	| "$(" cmd:command-words ")" { $$ = cmd; }
 	| identifier
 	| array-literal
 	| hash-literal
@@ -858,6 +861,23 @@ type = "type" space i:identifier {
 		i->next_sibling = call;
 	$$ = ret;
 	CAPTURE_LOCATION($$);
+}
+
+command-words = acc:command-node (inline_space? command-word {append_ast_node_child(acc, $$);})+ {
+	$$ = acc;
+	CAPTURE_LOCATION($$);
+}
+
+command-node = {
+	MAKE_NODE(ret, COMMAND_NODE);
+		MAKE_IDENTIFIER_NODE(f, "$()");
+		append_ast_node_child(ret, f);
+	$$ = ret;
+}
+
+command-word = <[a-zA-Z0-9/]+> {
+	MAKE_STRING_NODE(ret, yytext);
+	$$ = ret;
 }
 
 %%
