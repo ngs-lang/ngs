@@ -213,11 +213,11 @@ VALUE make_normal_type(VALUE name) {
 
 	NGS_TYPE_NAME(ret) = name;
 	NGS_TYPE_FIELDS(ret) = make_hash(8); // Hash: name->index
-	NGS_TYPE_CONSTRUCTIRS(ret) = make_array(1);
+	NGS_TYPE_CONSTRUCTORS(ret) = make_array(1);
 	NGS_TYPE_PARENTS(ret) = make_array(0);
 
 	VALUE ctr = make_normal_type_constructor(ret);
-	ARRAY_ITEMS(NGS_TYPE_CONSTRUCTIRS(ret))[0] = ctr;
+	ARRAY_ITEMS(NGS_TYPE_CONSTRUCTORS(ret))[0] = ctr;
 
 	return ret;
 }

@@ -495,10 +495,11 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			while_jump = *idx;
 			OPCODE(*buf, OP_JMP_FALSE);
 			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
-			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, need_result);
+			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
 			OPCODE(*buf, OP_JMP);
 			DATA_JUMP_OFFSET(*buf, -(*idx - loop_beg + sizeof(JUMP_OFFSET)));
 			*(JUMP_OFFSET *)&(*buf)[while_jump+1] = *idx - while_jump - 1 - sizeof(JUMP_OFFSET);
+			if(need_result) { OPCODE(*buf, OP_PUSH_NULL); }
 			break;
 		case LOCAL_NODE:
 			for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {

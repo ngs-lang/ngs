@@ -391,8 +391,11 @@ F RingBuffer(max_size:Int) {
 	r
 }
 
-F push(r:RingBuffer) {
-	LATER
+F push(r:RingBuffer, x) {
+	# (r.data)[r.head] = x
+	# r.head = r.head + 1
+	# (r.head) = (r.head) % (r.max_size)
+	r
 }
 
 F len(r:RingBuffer) {
@@ -414,11 +417,13 @@ F log(s:Str) {
 	echo("[LOG   ] $s")
 }
 
+# Set DEBUG environment variable to any non-empty string to activate
 F debug(s:Str) {
 	# TODO: Use RingBuffer when debug is off and
 	#       show last N debug messages on uncaught exception
-	ENV.get('DEBUG', '') == '' returns null
-	echo("[DEBUG ] $s")
+	if try ENV['DEBUG'] {
+		echo("[DEBUG ] $s")
+	}
 }
 
 F error(s:Str) {
@@ -431,6 +436,63 @@ F status(s:Str) {
 }
 
 # === Commands and processes (WIP) ===============
+
+F dup2(oldfd:Int, newfd:Int) {
+	while true {
+		local status = c_dup2(oldfd, newfd)
+		if status != -1 { return newfd; }
+		if get_errno() != C_EINTR { throw "dup2() failed" }
+	}
+}
+
+# Reads all
+# TODO: detect and process errors, throw exception(s)
+# TODO: better exceptions (use correct type, not string, maybe use errno)
+F read(fd:Int) {
+	debug("[read] will read from fd $fd")
+	local ret = []
+	while true {
+		local result = c_read(fd, 4096)
+		debug("[read] read from fd $fd : <<${result}>>")
+		if (result is Str) {
+			if result {
+				ret.push(result)
+			} else {
+				return ret.join('')
+			}
+		} else {
+			throw "[read] failed to c_read()"
+		}
+	}
+}
+
+# --- Pipe
+
+# http://www.microhowto.info/howto/capture_the_output_of_a_child_process_in_c.html
+
+{ type Pipe }
+
+# TODO: better exceptions (use correct type, not string, maybe use errno)
+F Pipe() {
+	# XXX: Pipe.constructors needs parenthesis because of a parser bug
+	local pipe = (Pipe.constructors)[0]()
+	local result = c_pipe()
+	# result: [result_code, read_end, write_end]
+	if result[0] != 0 { throw "Failed to create Pipe" }
+	pipe.read_fd = result[1]
+	pipe.write_fd = result[2]
+	debug("[Pipe] created pipe with read_fd=${pipe.read_fd} and write_fd=${pipe.write_fd}")
+	pipe
+}
+
+F close_writing_end(p:Pipe) p.write_fd.c_close()
+F close_reading_end(p:Pipe) p.read_fd.c_close()
+F write(p:Pipe, s:Str) p.write_fd.c_write(s)
+F read(p:Pipe) p.read_fd.read()
+F dup2_writing_end(p:Pipe, newfd:Int) dup2(p.write_fd, newfd)
+F dup2_reading_end(p:Pipe, newfd:Int) dup2(p.read_fd, newfd)
+
+# --- Process
 
 { type Process }
 
@@ -452,13 +514,16 @@ F to_exit_code(p:Process) {
 
 # TODO: better exceptions (use correct type, not string)
 # TODO: c_waitpid() - handle signals
-# TODO: capture output
+# TODO: capture stdout
+# TODO: capture stderr
+# TODO: provide additional communication channel on additional fd?
 F '$()'(c:Command) {
 
 	local debug_pfx = '[stdlib $()]', process, pid
 	debug("$debug_pfx Parsed command: ${c.argv}")
 
 	process = Process(c)
+	local pipe = Pipe()
 	pid = c_fork()
 
 	if pid == -1 { throw "Failed to fork()" }
@@ -467,16 +532,24 @@ F '$()'(c:Command) {
 
 	if pid == 0 {
 		debug("$debug_pfx child will execve()")
+		pipe.close_reading_end()
+		pipe.dup2_writing_end(1)
+		echo('TEST 1')
+		echo('TEST 2')
 		# CONTINUE HERE
 		c_exit(0)
 	}
 
 	if pid > 0 {
 		debug("$debug_pfx parent will waitpid($pid)")
+		pipe.close_writing_end()
+		process.stdout = pipe.read()
+		debug("$debug_pfx child output was <<${process.stdout}>>")
 		local w = c_waitpid(pid)
 		debug("$debug_pfx waitpid($pid) -> $w")
 	}
 
+	process
 }
 
 

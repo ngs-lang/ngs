@@ -18,6 +18,8 @@
 // BCMP(3)
 #include <strings.h>
 
+#include <errno.h>
+
 #include "ngs.h"
 #include "vm.h"
 #include "ast.h"
@@ -529,6 +531,7 @@ METHOD_RESULT native_join_arr_str METHOD_PARAMS {
 }
 
 METHOD_RESULT native_c_fork METHOD_PARAMS {
+	(void) argv;
 	pid_t pid;
 	pid = fork();
 	METHOD_RETURN(MAKE_INT(pid));
@@ -543,6 +546,44 @@ METHOD_RESULT native_c_waitpid METHOD_PARAMS {
 	ARRAY_ITEMS(ret)[0] = MAKE_INT(pid);
 	ARRAY_ITEMS(ret)[1] = MAKE_INT(status);
 	METHOD_RETURN(ret);
+}
+
+METHOD_RESULT native_get_attr_nt_str EXT_METHOD_PARAMS {
+	VALUE exc;
+	char *attr = obj_to_cstring(argv[1]);
+	(void) ctx;
+	if(!strcmp(attr, "constructors")) {
+		// dump_titled("constructors", NGS_TYPE_CONSTRUCTORS(argv[0]));
+		METHOD_RETURN(NGS_TYPE_CONSTRUCTORS(argv[0]));
+	}
+
+	exc = make_normal_type_instance(vm->AttrNotFound);
+	set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
+	set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+	*result = exc;
+	return METHOD_EXCEPTION;
+}
+
+METHOD_RESULT native_c_pipe METHOD_PARAMS {
+	VALUE ret;
+	int status;
+	int pipefd[2];
+	(void) argv;
+	status = pipe(pipefd);
+	ret = make_array(3);
+	ARRAY_ITEMS(ret)[0] = MAKE_INT(status);
+	ARRAY_ITEMS(ret)[1] = MAKE_INT(pipefd[0]);
+	ARRAY_ITEMS(ret)[2] = MAKE_INT(pipefd[1]);
+	METHOD_RETURN(ret);
+}
+
+METHOD_RESULT native_c_dup2_int_int METHOD_PARAMS {
+	METHOD_RETURN(MAKE_INT(dup2(GET_INT(argv[0]), GET_INT(argv[1]))));
+}
+
+METHOD_RESULT native_get_c_errno METHOD_PARAMS {
+	(void) argv;
+	METHOD_RETURN(MAKE_INT(errno));
 }
 
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
@@ -678,6 +719,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
 
 	// NormalType
+	register_global_func(vm, 1, ".",        &native_get_attr_nt_str,       2, "obj", vm->NormalType,         "attr", vm->Str);
 	register_global_func(vm, 1, ".",        &native_get_attr_nti_str,      2, "obj", vm->NormalTypeInstance, "attr", vm->Str);
 	register_global_func(vm, 0, ".=",       &native_set_attr_nti_str_any,  3, "obj", vm->NormalTypeInstance, "attr", vm->Str, "v", vm->Any);
 	register_global_func(vm, 0, "inherit",  &native_inherit_nt_nt,         2, "t",   vm->NormalType,         "parent", vm->NormalType);
@@ -686,6 +728,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "Type",     &native_type_str          ,1, "name",   vm->Str);
 
 	// low level file operations
+	register_global_func(vm, 0, "c_dup2",   &native_c_dup2_int_int,    2, "oldfd",    vm->Int, "newfd", vm->Int);
 	register_global_func(vm, 0, "c_open",   &native_c_open_str_str,    2, "pathname", vm->Str, "flags", vm->Str);
 	register_global_func(vm, 0, "c_close",  &native_c_close_int,       1, "fd",       vm->Int);
 	register_global_func(vm, 0, "c_read",   &native_c_read_int_int,    2, "fd",       vm->Int, "count", vm->Int);
@@ -694,7 +737,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// low level misc
 	register_global_func(vm, 0, "c_exit",   &native_c_exit_int,        1, "status",   vm->Int);
 	register_global_func(vm, 0, "c_fork",   &native_c_fork,            0);
+	register_global_func(vm, 0, "c_pipe",   &native_c_pipe,            0);
 	register_global_func(vm, 0, "c_waitpid",&native_c_waitpid,         1, "pid",      vm->Int);
+
+	register_global_func(vm, 0, "get_c_errno", &native_get_c_errno,    0);
 
 	// boolean
 	register_global_func(vm, 0, "==",       &native_eq_bool_bool,      2, "a",   vm->Bool, "b", vm->Bool);
@@ -767,6 +813,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 		ARRAY_ITEMS(argv_array)[i] = v;
 	}
 	set_global(vm, "ARGV", argv_array);
+
+	// TODO: Some good solution for many defines
+	set_global(vm, "C_EINTR", MAKE_INT(EINTR));
 
 #define MKTYPE(var_name, name) \
 	var_name = make_normal_type(make_string(name)); \

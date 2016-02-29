@@ -234,7 +234,6 @@ typedef enum {
 #define NGS_TYPE_NAME(v)          (((NGS_TYPE *) v.ptr)->name)
 #define NGS_TYPE_ID(v)            (((NGS_TYPE *) v.ptr)->base.val.num)
 #define NGS_TYPE_FIELDS(v)        (((NGS_TYPE *)(v).ptr)->fields)
-#define NGS_TYPE_CONSTRUCTIRS(v)  (((NGS_TYPE *)(v).ptr)->constructors)
 #define NGS_TYPE_PARENTS(v)       (((NGS_TYPE *)(v).ptr)->parents)
 // TODO: reanme OBJ_DATA to OBJ_VAL
 #define OBJ_DATA(v)               (((OBJECT *)(v).ptr)->val)
