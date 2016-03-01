@@ -595,6 +595,9 @@ METHOD_RESULT native_c_execve METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(execve(exec_filename, exec_argv, exec_envp)));
 }
 
+METHOD_RESULT native_C_WEXITSTATUS METHOD_PARAMS { METHOD_RETURN(MAKE_INT(WEXITSTATUS(GET_INT(argv[0])))); }
+METHOD_RESULT native_C_WTERMSIG METHOD_PARAMS { METHOD_RETURN(MAKE_INT(WTERMSIG(GET_INT(argv[0])))); }
+
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
 	HASH_FIND(hh, vm->globals_indexes, name, name_len, var);
@@ -749,6 +752,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_pipe",   &native_c_pipe,            0);
 	register_global_func(vm, 0, "c_waitpid",&native_c_waitpid,         1, "pid",      vm->Int);
 	register_global_func(vm, 0, "c_execve", &native_c_execve,          3, "filename", vm->Str, "argv", vm->Arr, "envp", vm->Arr);
+	register_global_func(vm, 0, "C_WEXITSTATUS", &native_C_WEXITSTATUS,1, "status",   vm->Int);
+	register_global_func(vm, 0, "C_WTERMSIG", &native_C_WTERMSIG,      1, "status",   vm->Int);
 
 	register_global_func(vm, 0, "get_c_errno", &native_get_c_errno,    0);
 

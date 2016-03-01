@@ -508,7 +508,18 @@ F Process(c:Command) {
 	p.command = c
 	p.pid = null
 	p.exit_code = null
+	p.exit_signal = null
 	p
+}
+
+# TODO: better exceptions (use correct type, not string)
+F wait(p:Process) {
+	if p.pid is Null { throw "Can not wait() on Process without PID" }
+	debug("[wait] will waitpid($p.pid)")
+	local w = c_waitpid(p.pid)
+	debug("[wait] waitpid($p.pid) -> $w")
+	p.exit_code = C_WEXITSTATUS(w[1])
+	p.exit_signal = C_WTERMSIG(w[1])
 }
 
 F to_exit_code(p:Process) {
@@ -556,11 +567,8 @@ F '$()'(c:Command) {
 		pipe.close_writing_end()
 		debug("$debug_pfx reading all output of the child process")
 		process.stdout = pipe.read()
-		debug("$debug_pfx child output was <<${process.stdout}>>")
-		debug("$debug_pfx will waitpid($pid)")
-		local w = c_waitpid(pid)
-		debug("$debug_pfx waitpid($pid) -> $w")
-		# TODO: capture exit code, check against list of valid exit codes
+		# debug("$debug_pfx child output was <<${process.stdout}>>")
+		process.wait()
 	}
 
 	process
