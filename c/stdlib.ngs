@@ -501,7 +501,23 @@ F dup2_reading_end(p:Pipe, newfd:Int) dup2(p.read_fd, newfd)
 
 # --- Process ---
 
+{ type ProcessFailed }
+
 { type Process }
+
+# TODO: Inherit from Exception or a subtype of it
+F ProcessFailed(p:Process) {
+	pf = ProcessFailed()
+	pf.process = p
+	pf
+}
+
+F finished_ok(p:Process) p.exit_code == 0
+
+F finished_ok(p:Process) {
+	guard ((p.command).argv)[0] == 'false'
+	p.exit_code == 1
+}
 
 F Process(c:Command) {
 	local p = Process()
@@ -513,20 +529,24 @@ F Process(c:Command) {
 }
 
 # TODO: better exceptions (use correct type, not string)
+# TODO: better exceptions (use correct type, not string)
 F wait(p:Process) {
-	if p.pid is Null { throw "Can not wait() on Process without PID" }
+
+	p.pid is Null throws "Can not wait() on Process without PID"
+
+	p.exit_code is Int returns p.exit_code
+
 	debug("[wait] will waitpid($p.pid)")
 	local w = c_waitpid(p.pid)
 	debug("[wait] waitpid($p.pid) -> $w")
 	p.exit_code = C_WEXITSTATUS(w[1])
 	p.exit_signal = C_WTERMSIG(w[1])
+	not(finished_ok(p)) throws ProcessFailed(p)
+	p
 }
 
 F to_exit_code(p:Process) {
-	LATER
-	if p.exit_code is Null {
-		p.wait()
-	}
+	p.wait()
 	p.exit_code
 }
 
@@ -545,11 +565,10 @@ F '$()'(c:Command) {
 	debug("$debug_pfx Parsed command: ${c.argv}")
 
 	process = Process(c)
-	process.command = c
 	local pipe = Pipe()
 	pid = c_fork()
 
-	if pid == -1 { throw "Failed to fork()" }
+	pid == -1 throws "Failed to fork()"
 
 	debug("$debug_pfx PID after fork: $pid")
 

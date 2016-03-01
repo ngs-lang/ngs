@@ -328,6 +328,18 @@ binop-expression-inner =
 			yes->next_sibling = no;
 		e1 = ret;
 	}
+	|
+	space "throws" space e2:expression {
+		// e1 throws e2 => if e1 { return e2 }
+		MAKE_NODE(ret, IF_NODE);
+			ret->first_child = e1;
+			MAKE_NODE(yes, THROW_NODE);
+				yes->first_child = e2;
+			e1->next_sibling = yes;
+			MAKE_NODE(no, NULL_NODE);
+			yes->next_sibling = no;
+		e1 = ret;
+	}
 	)* {
 		// XXX
 		$$ = e1;
@@ -358,7 +370,6 @@ binop2 = space op:binop2op space { $$ = op; }
 binop2op =
 	  <"is not">  @@ 90 @@
 	| <"is">      @@ 90 @@
-	| <"throws">  @@ 50 @@
 	| <"or">      @@ 60 @@
 	| <"and">     @@ 65 @@
 	| <"in">      @@ 70 @@
