@@ -696,6 +696,20 @@ char *obj_to_cstring(VALUE v) {
 	return ret;
 }
 
+// TODO: exceptions instead of assert()s?
+char **obj_to_cstring_array(VALUE v) {
+	size_t i, l;
+	char **ret;
+	assert(IS_ARRAY(v));
+	l = OBJ_LEN(v);
+	ret = NGS_MALLOC(sizeof(char *) * (l+1));
+	for(i=0; i<l; i++) {
+		ret[i] = obj_to_cstring(ARRAY_ITEMS(v)[i]);
+	}
+	ret[l] = NULL;
+	return ret;
+}
+
 VALUE _parse_json_kern(json_object *obj) {
 	VALUE ret;
 	size_t i, len;

@@ -437,6 +437,7 @@ F status(s:Str) {
 
 # === Commands and processes (WIP) ===============
 
+# TODO: better exceptions (use correct type, not string, maybe use errno)
 F dup2(oldfd:Int, newfd:Int) {
 	while true {
 		local status = c_dup2(oldfd, newfd)
@@ -444,6 +445,12 @@ F dup2(oldfd:Int, newfd:Int) {
 		if get_errno() != C_EINTR { throw "dup2() failed" }
 	}
 }
+
+# TODO: Use some thread-local copy of the environment?
+#       This would allow simple handling of modifications
+#       for exec'ed processes.
+# TODO: better and consistent naming for this function?
+F get_env_strings() ENV.map(F(k, v) "${k}=${v}")
 
 # Reads all
 # TODO: detect and process errors, throw exception(s)
@@ -454,7 +461,7 @@ F read(fd:Int) {
 	while true {
 		local result = c_read(fd, 4096)
 		debug("[read] read from fd $fd : <<${result}>>")
-		if (result is Str) {
+		if result is Str {
 			if result {
 				ret.push(result)
 			} else {
@@ -466,7 +473,7 @@ F read(fd:Int) {
 	}
 }
 
-# --- Pipe
+# --- Pipe ---
 
 # http://www.microhowto.info/howto/capture_the_output_of_a_child_process_in_c.html
 
@@ -492,7 +499,7 @@ F read(p:Pipe) p.read_fd.read()
 F dup2_writing_end(p:Pipe, newfd:Int) dup2(p.write_fd, newfd)
 F dup2_reading_end(p:Pipe, newfd:Int) dup2(p.read_fd, newfd)
 
-# --- Process
+# --- Process ---
 
 { type Process }
 
@@ -512,6 +519,10 @@ F to_exit_code(p:Process) {
 	p.exit_code
 }
 
+F Str(p:Process) p.stdout
+
+# --- $() ---
+
 # TODO: better exceptions (use correct type, not string)
 # TODO: c_waitpid() - handle signals
 # TODO: capture stdout
@@ -523,6 +534,7 @@ F '$()'(c:Command) {
 	debug("$debug_pfx Parsed command: ${c.argv}")
 
 	process = Process(c)
+	process.command = c
 	local pipe = Pipe()
 	pid = c_fork()
 
@@ -534,19 +546,21 @@ F '$()'(c:Command) {
 		debug("$debug_pfx child will execve()")
 		pipe.close_reading_end()
 		pipe.dup2_writing_end(1)
-		echo('TEST 1')
-		echo('TEST 2')
-		# CONTINUE HERE
-		c_exit(0)
+		local result = c_execve((c.argv)[0], c.argv, get_env_strings())
+		throw "$debug_pfx failed to execve()"
 	}
 
 	if pid > 0 {
-		debug("$debug_pfx parent will waitpid($pid)")
+		process.pid = pid
+		debug("$debug_pfx closing writing end of the pipe")
 		pipe.close_writing_end()
+		debug("$debug_pfx reading all output of the child process")
 		process.stdout = pipe.read()
 		debug("$debug_pfx child output was <<${process.stdout}>>")
+		debug("$debug_pfx will waitpid($pid)")
 		local w = c_waitpid(pid)
 		debug("$debug_pfx waitpid($pid) -> $w")
+		# TODO: capture exit code, check against list of valid exit codes
 	}
 
 	process

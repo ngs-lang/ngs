@@ -296,6 +296,7 @@ int obj_is_of_type(VALUE obj, VALUE t);
 void dump(VALUE v);
 void dump_titled(char *title, VALUE v);
 char *obj_to_cstring(VALUE v);
+char **obj_to_cstring_array(VALUE v);
 METHOD_RESULT parse_json(VALUE s, VALUE *result);
 
 #endif
