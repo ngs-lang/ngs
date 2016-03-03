@@ -81,11 +81,9 @@ F in(x, arr:Arr) {
 # Tested by has() tests
 
 
-# XXX BUG: the dot precedence is incorrect
-# temporary workaround - parenthesis
 F ==(a:Arr, b:Arr) {
 	local l = a.len()
-	l != (b.len()) returns false
+	l != b.len() returns false
 	for(i;l) a[i] != b[i] returns false
 	true
 }
@@ -481,8 +479,7 @@ F read(fd:Int) {
 
 # TODO: better exceptions (use correct type, not string, maybe use errno)
 F Pipe() {
-	# XXX: Pipe.constructors needs parenthesis because of a parser bug
-	local pipe = (Pipe.constructors)[0]()
+	local pipe = Pipe.constructors[0]()
 	local result = c_pipe()
 	# result: [result_code, read_end, write_end]
 	if result[0] != 0 { throw "Failed to create Pipe" }
@@ -515,7 +512,7 @@ F ProcessFailed(p:Process) {
 F finished_ok(p:Process) p.exit_code == 0
 
 F finished_ok(p:Process) {
-	guard ((p.command).argv)[0] == 'false'
+	guard p.command.argv[0] == '/bin/false'
 	p.exit_code == 1
 }
 
@@ -528,6 +525,11 @@ F Process(c:Command) {
 	p
 }
 
+F Bool(p:Process) {
+	p.wait()
+	p.exit_code == 0
+}
+
 # TODO: better exceptions (use correct type, not string)
 # TODO: better exceptions (use correct type, not string)
 F wait(p:Process) {
@@ -536,9 +538,9 @@ F wait(p:Process) {
 
 	p.exit_code is Int returns p.exit_code
 
-	debug("[wait] will waitpid($p.pid)")
+	debug("[wait] will waitpid(${p.pid})")
 	local w = c_waitpid(p.pid)
-	debug("[wait] waitpid($p.pid) -> $w")
+	debug("[wait] waitpid(${p.pid}) -> ${w}")
 	p.exit_code = C_WEXITSTATUS(w[1])
 	p.exit_signal = C_WTERMSIG(w[1])
 	not(finished_ok(p)) throws ProcessFailed(p)
@@ -576,7 +578,7 @@ F '$()'(c:Command) {
 		debug("$debug_pfx child will execve()")
 		pipe.close_reading_end()
 		pipe.dup2_writing_end(1)
-		local result = c_execve((c.argv)[0], c.argv, get_env_strings())
+		local result = c_execve(c.argv[0], c.argv, get_env_strings())
 		throw "$debug_pfx failed to execve()"
 	}
 
@@ -592,6 +594,10 @@ F '$()'(c:Command) {
 
 	process
 }
+
+TEST $(/bin/true).Bool()
+TEST $(/bin/false).Bool() == false
+TEST "$(/bin/echo -n abc)" == 'abc'
 
 
 # === Misc tests =================================

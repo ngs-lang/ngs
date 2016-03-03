@@ -271,52 +271,6 @@ binop-expression-inner =
 		}
 	}
 	|
-	"." i:identifier fcall_args:function-call-arguments {
-		// e1.method(...) => method(e1, ...)
-		MAKE_NODE(ret, CALL_NODE);
-		ret->first_child = i;
-		ret->first_child->next_sibling = fcall_args;
-
-		// Prepend first argument
-		MAKE_REQ_ARG_NODE(a1, e1);
-		a1->next_sibling = fcall_args->first_child;
-		fcall_args->first_child = a1;
-
-		e1 = ret;
-	}
-	|
-	"." i:identifier space? "=" space? e:expression {
-		MAKE_NODE(ret, CALL_NODE);
-			MAKE_IDENTIFIER_NODE(get_attr_identifier, ".=");
-			MAKE_NODE(args, ARGS_NODE);
-				MAKE_STRING_NODE(attr_name_string, i->name);
-				MAKE_REQ_ARG_NODE(a1, e1);
-				MAKE_REQ_ARG_NODE(a2, attr_name_string);
-				MAKE_REQ_ARG_NODE(a3, e);
-				args->first_child = a1;
-				a1->next_sibling = a2;
-				a2->next_sibling = a3;
-			ret->first_child = get_attr_identifier;
-			get_attr_identifier->next_sibling = args;
-
-		e1 = ret;
-	}
-	|
-	"." i:identifier {
-		MAKE_NODE(ret, CALL_NODE);
-			MAKE_IDENTIFIER_NODE(get_attr_identifier, ".");
-			MAKE_NODE(args, ARGS_NODE);
-				MAKE_REQ_ARG_NODE(a1, e1);
-				MAKE_STRING_NODE(attr_name_string, i->name);
-				MAKE_REQ_ARG_NODE(a2, attr_name_string);
-				a1->next_sibling = a2;
-				args->first_child = a1;
-			ret->first_child = get_attr_identifier;
-			get_attr_identifier->next_sibling = args;
-
-		e1 = ret;
-	}
-	|
 	space "returns" space e2:expression {
 		// e1 returns e2 => if e1 { return e2 }
 		MAKE_NODE(ret, IF_NODE);
@@ -376,10 +330,11 @@ binop2op =
 	| <"not in">  @@ 70 @@
 
 chain-expression = b:basic-expression (
-		inline_space? args:function-call-arguments {
+		inline_space? a:function-call-arguments {
+			// printf("CHAIN/FCALL\n");
 			MAKE_NODE(ret, CALL_NODE);
 			ret->first_child = b;
-			ret->first_child->next_sibling = args;
+			ret->first_child->next_sibling = a;
 			b = ret;
 		}
 		|
@@ -394,6 +349,55 @@ chain-expression = b:basic-expression (
 			MAKE_NODE(ret, ASSIGNMENT_NODE);
 			b->next_sibling = e;
 			ret->first_child = b;
+			b = ret;
+		}
+		|
+		"." i:identifier fcall_args:function-call-arguments {
+			// b.method(...) => method(b, ...)
+			MAKE_NODE(ret, CALL_NODE);
+			ret->number = 900;
+			ret->first_child = i;
+			ret->first_child->next_sibling = fcall_args;
+
+			// Prepend first argument
+			MAKE_REQ_ARG_NODE(a1, b);
+			a1->next_sibling = fcall_args->first_child;
+			fcall_args->first_child = a1;
+
+			b = ret;
+		}
+		|
+		"." i:identifier space? "=" space? e:expression {
+			MAKE_NODE(ret, CALL_NODE);
+				ret->number = 900;
+				MAKE_IDENTIFIER_NODE(get_attr_identifier, ".=");
+				MAKE_NODE(args, ARGS_NODE);
+					MAKE_STRING_NODE(attr_name_string, i->name);
+					MAKE_REQ_ARG_NODE(a1, b);
+					MAKE_REQ_ARG_NODE(a2, attr_name_string);
+					MAKE_REQ_ARG_NODE(a3, e);
+					args->first_child = a1;
+					a1->next_sibling = a2;
+					a2->next_sibling = a3;
+				ret->first_child = get_attr_identifier;
+				get_attr_identifier->next_sibling = args;
+
+			b = ret;
+		}
+		|
+		"." i:identifier {
+			MAKE_NODE(ret, CALL_NODE);
+			ret->number = 900;
+				MAKE_IDENTIFIER_NODE(get_attr_identifier, ".");
+				MAKE_NODE(args, ARGS_NODE);
+					MAKE_REQ_ARG_NODE(a1, b);
+					MAKE_STRING_NODE(attr_name_string, i->name);
+					MAKE_REQ_ARG_NODE(a2, attr_name_string);
+					a1->next_sibling = a2;
+					args->first_child = a1;
+				ret->first_child = get_attr_identifier;
+				get_attr_identifier->next_sibling = args;
+
 			b = ret;
 		}
 	)*
@@ -422,7 +426,7 @@ basic-expression =
 	| try-catch
 	| throw
 	| type
-	| "$(" cmd:command-words ")" { $$ = cmd; }
+	| subshell
 	| identifier
 	| array-literal
 	| hash-literal
@@ -800,7 +804,9 @@ string-dq-imm =
 		$$ = content;
 	}
 
-string-dq-dollar-expansion = "$" c:code-block { $$ = c; }
+string-dq-dollar-expansion =
+	"$" c:code-block { $$ = c; }
+	| subshell
 
 str-comps-node = {
 		MAKE_NODE(ret, STR_COMPS_NODE);
@@ -874,6 +880,8 @@ type = "type" space i:identifier {
 	CAPTURE_LOCATION($$);
 }
 
+subshell = "$(" cmd:command-words ")" { $$ = cmd; }
+
 command-words = acc:command-node (inline_space? command-word {append_ast_node_child(acc, $$);})+ {
 	$$ = acc;
 	CAPTURE_LOCATION($$);
@@ -886,7 +894,7 @@ command-node = {
 	$$ = ret;
 }
 
-command-word = <[a-zA-Z0-9/]+> {
+command-word = <[-a-zA-Z0-9/]+> {
 	MAKE_STRING_NODE(ret, yytext);
 	$$ = ret;
 }
