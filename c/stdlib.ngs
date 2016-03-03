@@ -433,14 +433,29 @@ F status(s:Str) {
 	log("(status) $s")
 }
 
+# === Path =======================================
+
+{ type Path }
+
+F Path(s:Str) {
+	p = Path()
+	p.path = s
+	p
+}
+
+F Bool(p:Path) $(/usr/bin/test -e ${p.path}).Bool()
+
+TEST Path('/').Bool()
+TEST Path('/no-such-file').Bool() == false
+
 # === Commands and processes (WIP) ===============
 
 # TODO: better exceptions (use correct type, not string, maybe use errno)
 F dup2(oldfd:Int, newfd:Int) {
 	while true {
 		local status = c_dup2(oldfd, newfd)
-		if status != -1 { return newfd; }
-		if get_errno() != C_EINTR { throw "dup2() failed" }
+		status != -1 returns newfd
+		get_errno() != C_EINTR throws "dup2() failed"
 	}
 }
 
@@ -482,7 +497,7 @@ F Pipe() {
 	local pipe = Pipe.constructors[0]()
 	local result = c_pipe()
 	# result: [result_code, read_end, write_end]
-	if result[0] != 0 { throw "Failed to create Pipe" }
+	result[0] != 0 throws "Failed to create Pipe"
 	pipe.read_fd = result[1]
 	pipe.write_fd = result[2]
 	debug("[Pipe] created pipe with read_fd=${pipe.read_fd} and write_fd=${pipe.write_fd}")
@@ -514,6 +529,11 @@ F finished_ok(p:Process) p.exit_code == 0
 F finished_ok(p:Process) {
 	guard p.command.argv[0] == '/bin/false'
 	p.exit_code == 1
+}
+
+F finished_ok(p:Process) {
+	guard p.command.argv[0] == '/usr/bin/test'
+	p.exit_code in [0, 1]
 }
 
 F Process(c:Command) {

@@ -894,10 +894,13 @@ command-node = {
 	$$ = ret;
 }
 
-command-word = <[-a-zA-Z0-9/]+> {
-	MAKE_STRING_NODE(ret, yytext);
-	$$ = ret;
-}
+command-word =
+	<[-a-zA-Z0-9/]+> {
+		MAKE_STRING_NODE(ret, yytext);
+		$$ = ret;
+	}
+	| "$" c:code-block { $$ = c; }
+	| string
 
 %%
 #undef ALLOC_NODE
