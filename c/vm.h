@@ -133,9 +133,12 @@ typedef struct vm_struct {
 				VALUE KeyNotFound;
 				VALUE IndexNotFound;
 				VALUE AttrNotFound;
-			VALUE InvalidParameter;
+			VALUE InvalidArgument;
 
 	VALUE Command;
+	VALUE Range;
+		VALUE InclusiveRange;
+		VALUE ExclusiveRange;
 
 } VM;
 

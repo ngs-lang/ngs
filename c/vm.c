@@ -401,7 +401,7 @@ METHOD_RESULT native_c_lseek_int_int_str EXT_METHOD_PARAMS {
 				whence = SEEK_END;
 			} else {
 				VALUE exc;
-				exc = make_normal_type_instance(vm->InvalidParameter);
+				exc = make_normal_type_instance(vm->InvalidArgument);
 				set_normal_type_instance_attribute(exc, make_string("which"), make_string("Third parameter to c_lseek(), 'whence'"));
 				set_normal_type_instance_attribute(exc, make_string("given"), argv[2]);
 				// TODO: Array of expected values maybe?
@@ -426,13 +426,48 @@ METHOD_RESULT native_eq_str_str METHOD_PARAMS {
 	METHOD_RETURN(MAKE_BOOL(!bcmp(OBJ_DATA_PTR(argv[0]), OBJ_DATA_PTR(argv[1]), len)));
 }
 
-METHOD_RESULT native_pos_str_str METHOD_PARAMS {
+METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 	void *p;
-	p = ngs_memmem(OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]), OBJ_DATA_PTR(argv[1]), OBJ_LEN(argv[1]));
+	int start = GET_INT(argv[2]);
+	p = ngs_memmem(OBJ_DATA_PTR(argv[0])+start, OBJ_LEN(argv[0]), OBJ_DATA_PTR(argv[1]), OBJ_LEN(argv[1]));
 	if(p) {
 		METHOD_RETURN(MAKE_INT(p - OBJ_DATA_PTR(argv[0])));
 	}
 	METHOD_RETURN(MAKE_NULL);
+}
+
+METHOD_RESULT native_index_get_str_range EXT_METHOD_PARAMS {
+	size_t len;
+	VALUE start, end, exc;
+	(void) ctx;
+	if(OBJ_LEN(UT_INSTANCE_FIELDS(argv[1])) < 2) return METHOD_ARGS_MISMATCH;
+	start = ARRAY_ITEMS(UT_INSTANCE_FIELDS(argv[1]))[0];
+	if(!IS_INT(start)) return METHOD_ARGS_MISMATCH;
+	if(GET_INT(start) < 0) {
+		exc = make_normal_type_instance(vm->InvalidArgument);
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Negative range start when calling [](s:Str, r:Range)"));
+		THROW_EXCEPTION_INSTANCE(exc);
+	}
+	end = ARRAY_ITEMS(UT_INSTANCE_FIELDS(argv[1]))[1];
+	if(IS_NULL(end)) {
+		len = OBJ_LEN(argv[0]) - GET_INT(start);
+		*result = make_string_of_len(NULL, len);
+		memcpy(OBJ_DATA_PTR(*result), OBJ_DATA_PTR(argv[0]) + GET_INT(start), len);
+		return METHOD_OK;
+	}
+	if(!IS_INT(end)) return METHOD_ARGS_MISMATCH;
+	if(GET_INT(end) < GET_INT(start)) {
+		exc = make_normal_type_instance(vm->InvalidArgument);
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range end smaller than range start calling [](s:Str, r:Range)"));
+		THROW_EXCEPTION_INSTANCE(exc);
+	}
+	len = GET_INT(end) - GET_INT(start);
+	if(obj_is_of_type(argv[1], vm->InclusiveRange)) {
+		len++;
+	}
+	*result = make_string_of_len(NULL, len);
+	memcpy(OBJ_DATA_PTR(*result), OBJ_DATA_PTR(argv[0]) + GET_INT(start), len);
+	return METHOD_OK;
 }
 
 METHOD_RESULT native_eq_bool_bool METHOD_PARAMS { METHOD_RETURN(MAKE_BOOL(argv[0].num == argv[1].num)); }
@@ -708,8 +743,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	char **env, *equal_sign;
 	VALUE env_hash, k, v;
 	VALUE argv_array;
-	VALUE exception_type, error_type, lookup_fail_type, key_not_found_type, index_not_found_type, attr_not_found_type, invalid_param_type;
+	VALUE exception_type, error_type, lookup_fail_type, key_not_found_type, index_not_found_type, attr_not_found_type, invalid_arg_type;
 	VALUE command_type;
+	VALUE range_type, inclusive_range_type, exclusive_range_type;
 	int i;
 	vm->bytecode = NULL;
 	vm->bytecode_len = 0;
@@ -736,6 +772,67 @@ void vm_init(VM *vm, int argc, char **argv) {
 	vm->Hash = register_builtin_type(vm, "Hash", T_HASH);
 	vm->CLib = register_builtin_type(vm, "CLib", T_CLIB);
 	vm->CSym = register_builtin_type(vm, "CSym", T_CSYM);
+
+#define MKTYPE(var_name, name) \
+	var_name = make_normal_type(make_string(name)); \
+	set_global(vm, name, var_name);
+
+	MKTYPE(exception_type, "Exception");
+
+		MKTYPE(error_type, "Error");
+
+			MKTYPE(lookup_fail_type, "LookupFail");
+
+				MKTYPE(key_not_found_type, "KeyNotFound");
+				add_normal_type_inheritance(key_not_found_type, lookup_fail_type);
+				vm->KeyNotFound = key_not_found_type;
+
+				MKTYPE(index_not_found_type, "IndexNotFound");
+				add_normal_type_inheritance(index_not_found_type, lookup_fail_type);
+				vm->IndexNotFound = index_not_found_type;
+
+				MKTYPE(attr_not_found_type, "AttrNotFound");
+				add_normal_type_inheritance(attr_not_found_type, lookup_fail_type);
+				vm->AttrNotFound = attr_not_found_type;
+
+			add_normal_type_inheritance(lookup_fail_type, error_type);
+			vm->LookupFail = lookup_fail_type;
+
+			MKTYPE(invalid_arg_type, "InvalidArgument");
+			add_normal_type_inheritance(invalid_arg_type, error_type);
+			vm->InvalidArgument = invalid_arg_type;
+
+		add_normal_type_inheritance(error_type, exception_type);
+		vm->Error = error_type;
+
+	vm->Exception = exception_type;
+
+
+	MKTYPE(command_type, "Command");
+	vm->Command = command_type;
+
+
+	// XXX: changing NGS_TYPE_FIELDS of InclusiveRange or ExclusiveRange
+	//      in such a way that "start" is not 0 or "end" is not 1
+	//      will break everything. TODO: make sure this can not be done by
+	//      an NGS script.
+	MKTYPE(range_type, "Range");
+
+		MKTYPE(inclusive_range_type, "InclusiveRange");
+		vm->InclusiveRange = inclusive_range_type;
+		add_normal_type_inheritance(inclusive_range_type, range_type);
+		set_hash_key(NGS_TYPE_FIELDS(inclusive_range_type), make_string("start"), MAKE_INT(0));
+		set_hash_key(NGS_TYPE_FIELDS(inclusive_range_type), make_string("end"), MAKE_INT(1));
+
+		MKTYPE(exclusive_range_type, "ExclusiveRange");
+		vm->ExclusiveRange = exclusive_range_type;
+		add_normal_type_inheritance(exclusive_range_type, range_type);
+		set_hash_key(NGS_TYPE_FIELDS(exclusive_range_type), make_string("start"), MAKE_INT(0));
+		set_hash_key(NGS_TYPE_FIELDS(exclusive_range_type), make_string("end"), MAKE_INT(1));
+
+	vm->Range = range_type;
+
+#undef MKTYPE
 
 	// CLib and c calls
 	register_global_func(vm, 0, "CLib",     &native_CLib_str,          1, "name",   vm->Str);
@@ -787,7 +884,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// TODO: other string comparison operators
 	register_global_func(vm, 0, "len",      &native_len,               1, "s",   vm->Str);
 	register_global_func(vm, 0, "==",       &native_eq_str_str,        2, "a",   vm->Str, "b", vm->Str);
-	register_global_func(vm, 0, "pos",      &native_pos_str_str,       2, "haystack", vm->Str, "needle", vm->Str);
+	register_global_func(vm, 0, "pos",      &native_pos_str_str_int,   3, "haystack", vm->Str, "needle", vm->Str, "start", vm->Int);
+	register_global_func(vm, 1, "[]",       &native_index_get_str_range, 2, "s", vm->Str, "range", vm->Range);
 
 	// int
 	register_global_func(vm, 0, "+",        &native_plus_int_int,      2, "a",   vm->Int, "b", vm->Int);
@@ -844,45 +942,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// TODO: Some good solution for many defines
 	set_global(vm, "C_EINTR", MAKE_INT(EINTR));
-
-#define MKTYPE(var_name, name) \
-	var_name = make_normal_type(make_string(name)); \
-	set_global(vm, name, var_name);
-
-	MKTYPE(exception_type, "Exception");
-
-		MKTYPE(error_type, "Error");
-
-			MKTYPE(lookup_fail_type, "LookupFail");
-
-				MKTYPE(key_not_found_type, "KeyNotFound");
-				add_normal_type_inheritance(key_not_found_type, lookup_fail_type);
-				vm->KeyNotFound = key_not_found_type;
-
-				MKTYPE(index_not_found_type, "IndexNotFound");
-				add_normal_type_inheritance(index_not_found_type, lookup_fail_type);
-				vm->IndexNotFound = index_not_found_type;
-
-				MKTYPE(attr_not_found_type, "AttrNotFound");
-				add_normal_type_inheritance(attr_not_found_type, lookup_fail_type);
-				vm->AttrNotFound = attr_not_found_type;
-
-			add_normal_type_inheritance(lookup_fail_type, error_type);
-			vm->LookupFail = lookup_fail_type;
-
-			MKTYPE(invalid_param_type, "InvalidParameter");
-			add_normal_type_inheritance(invalid_param_type, error_type);
-			vm->InvalidParameter = invalid_param_type;
-
-		add_normal_type_inheritance(error_type, exception_type);
-		vm->Error = error_type;
-
-	vm->Exception = exception_type;
-
-	MKTYPE(command_type, "Command");
-	vm->Command = command_type;
-
-#undef MKTYPE
 
 }
 

@@ -314,6 +314,8 @@ binop1 = space? (
 	| <"*">  @@ 200 @@
 	| <"/">  @@ 200 @@
 	| <"%">  @@ 200 @@
+	| <"...">@@ 300 @@
+	| <".."> @@ 300 @@
 	) space?
 
 binop2 = space op:binop2op space { $$ = op; }
@@ -450,12 +452,12 @@ function-definition =
 
 function-definition-name =
 	space+ i:identifier { $$ = i; }
-	| space? "'" <([-|=!@?<>~+*/%()$a-zA-Z0-9 ]|"["|"]")+> "'" {
+	| space? "'" <([-|=!@?<>~+*/%()$a-zA-Z0-9. ]|"["|"]")+> "'" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
-	| space? <[-|=!@?~+*/%$]+> {
+	| space? <[-|=!@?~+*/%$.]+> {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
