@@ -655,7 +655,6 @@ F Bool(p:Process) {
 }
 
 # TODO: better exceptions (use correct type, not string)
-# TODO: better exceptions (use correct type, not string)
 F wait(p:Process) {
 
 	p.pid is Null throws "Can not wait() on Process without PID"
