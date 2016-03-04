@@ -13,7 +13,7 @@ setf ngs
 syn match   ngsOperator "[-~!^&|*/%+=<>]\+"
 syn match   ngsComment "#.*" contains=ngsTodo
 "syn match   ngsTest "^TEST .*"
-syn keyword ngsKeyword catch collector collect F guard local return returns TEST throw throws try type while with
+syn keyword ngsKeyword and catch collector collect F guard local or return returns TEST throw throws try type while with
 syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
 syn keyword ngsType Any Arr Bool CLib Command CSym Fun Hash Int Null Pipe Process Seq Str Type
@@ -30,7 +30,7 @@ syn region  ngsString start=+"+ end=+"+ skip=+\\\\\|\\"+ contains=ngsSpecial
 syn match   ngsNumber "\<\d\+\>"
 
 " builtin functions
-syn keyword ngsFunction c_close c_exit c_fork c_lseek c_open c_read c_waitpid compile del dump echo get hash in is keys len load not push shift values
+syn keyword ngsFunction c_close c_exit c_fork c_lseek c_open c_read c_waitpid compile del dump echo get get_c_errno hash in is keys len load not push shift values
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction fetch require to_exit_code
 " stdlib functions

@@ -369,19 +369,21 @@ METHOD_RESULT native_c_read_int_int METHOD_PARAMS {
 	// Params: fd, count
 	char *buf;
 	size_t count = GET_INT(argv[1]);
-	ssize_t ret;
+	ssize_t len;
 	assert(count <= SSIZE_MAX);
 	buf = NGS_MALLOC_ATOMIC(count);
 	assert(buf);
-	ret = read(GET_INT(argv[0]), buf, count);
+	len = read(GET_INT(argv[0]), buf, count);
 
-	if(ret < 0) {
-		SET_INT(*result, ret);
-		return METHOD_OK;
+	*result = make_array(2);
+	ARRAY_ITEMS(*result)[0] = MAKE_INT(len);
+	if(len >= 0) {
+		ARRAY_ITEMS(*result)[1] = make_string_of_len(buf, len);
+	} else {
+		ARRAY_ITEMS(*result)[1] = (VALUE){.num=V_NULL};
 	}
 
-	*result = make_string_of_len(buf, ret);
-	return METHOD_OK;
+	METHOD_RETURN(*result);
 }
 
 METHOD_RESULT native_c_lseek_int_int_str EXT_METHOD_PARAMS {

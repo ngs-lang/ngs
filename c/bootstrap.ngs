@@ -31,7 +31,7 @@ F fetch(fname) {
 	bootstrap_debug("fetch(): file size of ${fname} is ${file_len}")
 	data = c_read(fd, file_len)
 	c_close(fd)
-	data
+	data[1]
 }
 
 F require(fname) {
