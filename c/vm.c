@@ -426,6 +426,15 @@ METHOD_RESULT native_eq_str_str METHOD_PARAMS {
 	METHOD_RETURN(MAKE_BOOL(!bcmp(OBJ_DATA_PTR(argv[0]), OBJ_DATA_PTR(argv[1]), len)));
 }
 
+METHOD_RESULT native_pos_str_str METHOD_PARAMS {
+	void *p;
+	p = ngs_memmem(OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]), OBJ_DATA_PTR(argv[1]), OBJ_LEN(argv[1]));
+	if(p) {
+		METHOD_RETURN(MAKE_INT(p - OBJ_DATA_PTR(argv[0])));
+	}
+	METHOD_RETURN(MAKE_NULL);
+}
+
 METHOD_RESULT native_eq_bool_bool METHOD_PARAMS { METHOD_RETURN(MAKE_BOOL(argv[0].num == argv[1].num)); }
 METHOD_RESULT native_not_bool METHOD_PARAMS { METHOD_RETURN(MAKE_BOOL(argv[0].num == V_FALSE)); }
 
@@ -778,6 +787,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// TODO: other string comparison operators
 	register_global_func(vm, 0, "len",      &native_len,               1, "s",   vm->Str);
 	register_global_func(vm, 0, "==",       &native_eq_str_str,        2, "a",   vm->Str, "b", vm->Str);
+	register_global_func(vm, 0, "pos",      &native_pos_str_str,       2, "haystack", vm->Str, "needle", vm->Str);
 
 	// int
 	register_global_func(vm, 0, "+",        &native_plus_int_int,      2, "a",   vm->Int, "b", vm->Int);

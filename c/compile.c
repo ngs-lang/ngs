@@ -67,7 +67,7 @@ SYMBOL_TABLE *get_symbol_table_entry(SYMBOL_TABLE **st, char *name, int create_i
 		return NULL;
 	}
 	s = NGS_MALLOC(sizeof(*s));
-	s->name = strdup(name);
+	s->name = ngs_strdup(name);
 	s->is_predefinded_global = 0;
 	// HASH_ADD_STR(*st, name /* field */, s);
 	HASH_ADD_KEYPTR(hh, *st, s->name, strlen(s->name), s);
@@ -160,7 +160,7 @@ void register_local_var(COMPILATION_CONTEXT *ctx, char *name) {
 	}
 	assert(N_LOCALS < MAX_LOCALS);
 	s = NGS_MALLOC(sizeof(*s));
-	s->name = strdup(name);
+	s->name = ngs_strdup(name);
 	s->index = N_LOCALS++;
 	HASH_ADD_KEYPTR(hh, LOCALS, s->name, strlen(s->name), s);
 }

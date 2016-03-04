@@ -20,6 +20,11 @@
 #define NGS_MALLOC_UNCOLLECTALE(n) GC_MALLOC_UNCOLLECTABLE(n)
 #define NGS_MALLOC_ATOMIC(n) GC_MALLOC_ATOMIC(n)
 #define NGS_GCOLLECT() GC_gcollect()
+
+#define YY_MALLOC(ctx, size)        NGS_MALLOC(size)
+#define YY_REALLOC(ctx, ptr, size)  NGS_REALLOC(ptr, size)
+#define YY_FREE(ctx, ptr)           (void)(ptr)
+
 // GC - end
 
 #include "debug.h"

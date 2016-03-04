@@ -205,6 +205,7 @@ typedef enum {
 #define MAKE_INT(n)     ((VALUE){.num=((n) << TAG_BITS) | TAG_INT})
 #define MAKE_BOOL(b)    ((VALUE){.num=((b) ? V_TRUE : V_FALSE)})
 #define MAKE_OBJ(o)     ((VALUE){.ptr=(o)})
+#define MAKE_NULL       ((VALUE){.num=V_NULL})
 #define GET_INT(v)      ((v).num >> TAG_BITS)
 #define SET_OBJ(v,o)    (v).ptr = o
 #define SET_NULL(v)     (v).num = V_NULL
@@ -298,5 +299,7 @@ void dump_titled(char *title, VALUE v);
 char *obj_to_cstring(VALUE v);
 char **obj_to_cstring_array(VALUE v);
 METHOD_RESULT parse_json(VALUE s, VALUE *result);
+void *ngs_memmem(const void *haystack_start, size_t haystack_len, const void *needle_start, size_t needle_len);
+char *ngs_strdup(const char *src);
 
 #endif

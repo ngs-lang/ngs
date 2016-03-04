@@ -4,6 +4,7 @@
 #include "ngs.h"
 #include "ast.h"
 #include "syntax.h"
+#include "obj.h"
 
 // gcc still warns about unused yymatchDot() and yyAccept(). clang does not.
 #pragma GCC diagnostic push
@@ -14,10 +15,6 @@
 #define YY_CTX_LOCAL 1
 
 #define YY_MAX_LINES (10000)
-
-#define YYMALLOC(size)        NGS_MALLOC(size)
-#define YYREALLOC(ptr, size)  NGS_REALLOC(ptr, size)
-#define YYFREE(ptr)           (void)(ptr)
 
 // TODO: use read()
 #define YY_INPUT(yy, buf, result, max_size)		\
@@ -56,11 +53,11 @@ void position_to_line_col();
 #define MAKE_REQ_ARG_NODE(name, val) MAKE_NODE(name, ARG_NODE); name->first_child = val; val->next_sibling = NULL;
 #define PREPEND_NODE(list, elt) elt->next_sibling = list->first_child; list->first_child = elt; if(!list->last_child) { list->last_child=elt; };
 
-#define MAKE_IDENTIFIER_NODE(var_name, s) MAKE_NODE(var_name, IDENTIFIER_NODE); var_name->name = strdup(s);
+#define MAKE_IDENTIFIER_NODE(var_name, s) MAKE_NODE(var_name, IDENTIFIER_NODE); var_name->name = ngs_strdup(s);
 #define MAKE_STRING_NODE(var_name, s) \
 	MAKE_NODE(var_name, STR_COMPS_NODE); \
 		MAKE_NODE(var_name##_comp, STR_COMP_IMM_NODE); \
-		var_name##_comp->name = strdup(s); \
+		var_name##_comp->name = ngs_strdup(s); \
 		append_ast_node_child(var_name, var_name##_comp);
 
 #define HANDLE_FAILED_MATCH(rule_name) \
@@ -369,7 +366,7 @@ chain-expression = b:basic-expression (
 		|
 		"." i:identifier space? "=" space? e:expression {
 			MAKE_NODE(ret, CALL_NODE);
-				ret->number = 900;
+				ret->number = 901;
 				MAKE_IDENTIFIER_NODE(get_attr_identifier, ".=");
 				MAKE_NODE(args, ARGS_NODE);
 					MAKE_STRING_NODE(attr_name_string, i->name);
@@ -387,8 +384,10 @@ chain-expression = b:basic-expression (
 		|
 		"." i:identifier {
 			MAKE_NODE(ret, CALL_NODE);
-			ret->number = 900;
+			ret->number = 902;
+
 				MAKE_IDENTIFIER_NODE(get_attr_identifier, ".");
+
 				MAKE_NODE(args, ARGS_NODE);
 					MAKE_REQ_ARG_NODE(a1, b);
 					MAKE_STRING_NODE(attr_name_string, i->name);
@@ -453,12 +452,12 @@ function-definition-name =
 	space+ i:identifier { $$ = i; }
 	| space? "'" <([-|=!@?<>~+*/%()$a-zA-Z0-9 ]|"["|"]")+> "'" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
-		ret->name = strdup(yytext);
+		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
 	| space? <[-|=!@?~+*/%$]+> {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
-		ret->name = strdup(yytext);
+		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
 	| { $$ = NULL; }
@@ -729,22 +728,22 @@ number =
 identifier =
 	<[_a-zA-Z]+[_a-zA-Z0-9]*> {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
-		ret->name = strdup(yytext);
+		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
 	| "(" <[-|=!@?~+*/%$<>]+> ")" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
-		ret->name = strdup(yytext);
+		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
 	| "(" <"is not"> ")" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
-		ret->name = strdup(yytext);
+		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
 	| "(" <"not in"> ")" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
-		ret->name = strdup(yytext);
+		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
 
@@ -793,14 +792,14 @@ string-dq =
 string-sq-imm =
 	<[^\']+> {
 		MAKE_NODE(content, STR_COMP_IMM_NODE);
-		content->name = strdup(yytext);
+		content->name = ngs_strdup(yytext);
 		$$ = content;
 	}
 
 string-dq-imm =
 	<[^$\"]+> {
 		MAKE_NODE(content, STR_COMP_IMM_NODE);
-		content->name = strdup(yytext);
+		content->name = ngs_strdup(yytext);
 		$$ = content;
 	}
 
@@ -868,7 +867,7 @@ type = "type" space i:identifier {
 			MAKE_NODE(args, ARGS_NODE);
 				MAKE_NODE(type_string, STR_COMPS_NODE);
 					MAKE_NODE(type_string_comp, STR_COMP_IMM_NODE);
-					type_string_comp->name = strdup(i->name);
+					type_string_comp->name = ngs_strdup(i->name);
 					append_ast_node_child(type_string, type_string_comp);
 				MAKE_REQ_ARG_NODE(a1, type_string);
 				args->first_child = a1;

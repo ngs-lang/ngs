@@ -552,7 +552,7 @@ VALUE array_shift(VALUE arr) {
 	assert(OBJ_LEN(arr));
 	ret = ARRAY_ITEMS(arr)[0];
 	OBJ_LEN(arr)--;
-	memcpy(&ARRAY_ITEMS(arr)[0], &ARRAY_ITEMS(arr)[1], OBJ_LEN(arr)*sizeof(ARRAY_ITEMS(arr)[0]));
+	memmove(&ARRAY_ITEMS(arr)[0], &ARRAY_ITEMS(arr)[1], OBJ_LEN(arr)*sizeof(ARRAY_ITEMS(arr)[0]));
 	return ret;
 }
 
@@ -787,4 +787,30 @@ error:
 	json_tokener_free(tok);
 	return METHOD_EXCEPTION;
 
+}
+
+
+void *ngs_memmem(const void *haystack_start, size_t haystack_len, const void *needle_start, size_t needle_len) {
+	const unsigned char *haystack = (const unsigned char *) haystack_start;
+	const unsigned char *needle = (const unsigned char *) needle_start;
+	const unsigned char *last;
+
+	if (needle_len == 0) return (void *) haystack;
+	if (haystack_len < needle_len) return NULL;
+	if (needle_len == 1) return memchr(haystack_start, needle[0], haystack_len);
+
+	for (last = haystack_start + haystack_len - needle_len; haystack <= last; haystack++)
+		if (haystack[0] == needle[0] && memcmp(haystack, needle, needle_len) == 0)
+			return (void *)haystack;
+
+	return NULL;
+
+}
+
+char *ngs_strdup(const char *src) {
+	size_t len = strlen(src) + 1;
+	char *ret = NGS_MALLOC_ATOMIC(len);
+	if (ret == NULL) { return ret; }
+	memcpy(ret, src, len);
+	return ret;
 }
