@@ -109,6 +109,10 @@ char *opcodes_names[] = {
 	} \
 	PUSH(v); \
 	mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-2], (VALUE){.ptr = vm->type}, 1, &ctx->stack[ctx->stack_ptr-1]); \
+	if(mr != METHOD_OK) { \
+		dump_titled("Failed to convert to type", (VALUE){.ptr = vm->type}); \
+		dump_titled("Failed to convert value", ctx->stack[ctx->stack_ptr-1]); \
+	} \
 	REMOVE_N(1); \
 	assert(mr == METHOD_OK); \
 	goto main_loop;
@@ -429,13 +433,14 @@ METHOD_RESULT native_eq_str_str METHOD_PARAMS {
 METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 	void *p;
 	int start = GET_INT(argv[2]);
-	p = ngs_memmem(OBJ_DATA_PTR(argv[0])+start, OBJ_LEN(argv[0]), OBJ_DATA_PTR(argv[1]), OBJ_LEN(argv[1]));
+	p = ngs_memmem(OBJ_DATA_PTR(argv[0])+start, OBJ_LEN(argv[0])-start, OBJ_DATA_PTR(argv[1]), OBJ_LEN(argv[1]));
 	if(p) {
 		METHOD_RETURN(MAKE_INT(p - OBJ_DATA_PTR(argv[0])));
 	}
 	METHOD_RETURN(MAKE_NULL);
 }
 
+// TODO: LookupFail-child-type exceptions?
 METHOD_RESULT native_index_get_str_range EXT_METHOD_PARAMS {
 	size_t len;
 	VALUE start, end, exc;
@@ -448,6 +453,11 @@ METHOD_RESULT native_index_get_str_range EXT_METHOD_PARAMS {
 		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Negative range start when calling [](s:Str, r:Range)"));
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
+	if(GET_INT(start) > OBJ_LEN(argv[0])) {
+		exc = make_normal_type_instance(vm->InvalidArgument);
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range starts after string end when calling [](s:Str, r:Range)"));
+		THROW_EXCEPTION_INSTANCE(exc);
+	}
 	end = ARRAY_ITEMS(UT_INSTANCE_FIELDS(argv[1]))[1];
 	if(IS_NULL(end)) {
 		len = OBJ_LEN(argv[0]) - GET_INT(start);
@@ -458,14 +468,20 @@ METHOD_RESULT native_index_get_str_range EXT_METHOD_PARAMS {
 	if(!IS_INT(end)) return METHOD_ARGS_MISMATCH;
 	if(GET_INT(end) < GET_INT(start)) {
 		exc = make_normal_type_instance(vm->InvalidArgument);
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range end smaller than range start calling [](s:Str, r:Range)"));
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range end smaller than range start when calling [](s:Str, r:Range)"));
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	len = GET_INT(end) - GET_INT(start);
 	if(obj_is_of_type(argv[1], vm->InclusiveRange)) {
 		len++;
 	}
+	if(GET_INT(start) + len > OBJ_LEN(argv[0])) {
+		exc = make_normal_type_instance(vm->InvalidArgument);
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range ends after string end [](s:Str, r:Range)"));
+		THROW_EXCEPTION_INSTANCE(exc);
+	}
 	*result = make_string_of_len(NULL, len);
+
 	memcpy(OBJ_DATA_PTR(*result), OBJ_DATA_PTR(argv[0]) + GET_INT(start), len);
 	return METHOD_OK;
 }

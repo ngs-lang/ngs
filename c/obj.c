@@ -799,9 +799,11 @@ void *ngs_memmem(const void *haystack_start, size_t haystack_len, const void *ne
 	if (haystack_len < needle_len) return NULL;
 	if (needle_len == 1) return memchr(haystack_start, needle[0], haystack_len);
 
-	for (last = haystack_start + haystack_len - needle_len; haystack <= last; haystack++)
+	for (last = haystack_start + haystack_len - needle_len; haystack <= last; haystack++) {
+		// printf("start=%p haystack=%p last=%p\n", haystack_start, haystack, last);
 		if (haystack[0] == needle[0] && memcmp(haystack, needle, needle_len) == 0)
 			return (void *)haystack;
+	}
 
 	return NULL;
 

@@ -218,6 +218,21 @@ F uniq(arr:Arr)
 TEST [1,2,2,3,4,4].uniq() == [1,2,3,4]
 
 
+F first(arr:Arr) first(arr, identity)
+
+TEST [null, false, 10, 20].first() == 10
+
+
+F first(arr:Arr, predicate:Fun, *args) {
+	local l = arr.len()
+	for(i;l)
+		predicate(arr[i], *args) returns arr[i]
+	null
+}
+
+TEST [5,10,15].first((>), 7) == 10
+TEST [5,10,15].first((>), 20) == null
+
 # --- Conversions ---
 
 F Arr(h:Hash)
@@ -425,6 +440,11 @@ TEST pos("abcdef", "cd") == 2
 TEST pos("a:b:c", ":") == 1
 TEST pos("a:b:c", ":", 2) == 3
 
+F in(needle:Str, haystack:Str) pos(haystack, needle) is not Null
+
+TEST "bc" in "abcd"
+TEST "x" not in "abcd"
+
 # --- Misc utilities ---
 
 F split(s:Str, delim:Str) {
@@ -515,6 +535,24 @@ F Bool(p:Path) $(/usr/bin/test -e ${p.path}).Bool()
 
 TEST Path('/').Bool()
 TEST Path('/no-such-file').Bool() == false
+
+# TODO: better exceptions (use correct type, not string, maybe use errno)
+F find_in_path(executable_name:Str) {
+	debug("[find_in_path] enter ${executable_name}")
+	if "/" in executable_name {
+		debug("[find_in_path] leave unprocessed ${executable_name}")
+		return Path(executable_name)
+	}
+	local path = ENV.get('PATH', '/usr/local/bin:/usr/bin:/bin:/sbin:/usr/sbin').split(':')
+	debug('[find_in_path] will search')
+	local ret = path.map(F(elt) Path("${elt}/${executable_name}")).first()
+	debug("[find_in_path] ret is ${executable_name} -> ${ret}")
+	ret is Null throws "Executable '${executable_name}' was not found in path ${path}"
+	debug("[find_in_path] leave ${executable_name} -> ${ret}")
+	ret
+}
+
+F Str(p:Path) p.path
 
 # === Commands and processes (WIP) ===============
 
@@ -648,6 +686,9 @@ F '$()'(c:Command) {
 	local debug_pfx = '[stdlib $()]', process, pid
 	debug("$debug_pfx Parsed command: ${c.argv}")
 
+	local executable = find_in_path(c.argv[0])
+	debug("$debug_pfx resolved executable '${c.argv[0]}' to '${executable}'")
+
 	process = Process(c)
 	local pipe = Pipe()
 	pid = c_fork()
@@ -660,7 +701,7 @@ F '$()'(c:Command) {
 		debug("$debug_pfx child will execve()")
 		pipe.close_reading_end()
 		pipe.dup2_writing_end(1)
-		local result = c_execve(c.argv[0], c.argv, ENV.Strs())
+		local result = c_execve(executable.path, c.argv, ENV.Strs())
 		throw "$debug_pfx failed to execve()"
 	}
 
@@ -670,6 +711,7 @@ F '$()'(c:Command) {
 		pipe.close_writing_end()
 		debug("$debug_pfx reading all output of the child process")
 		process.stdout = pipe.read()
+		pipe.close_reading_end()
 		# debug("$debug_pfx child output was <<${process.stdout}>>")
 		process.wait()
 	}
