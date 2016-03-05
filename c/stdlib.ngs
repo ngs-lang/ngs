@@ -58,6 +58,7 @@ TEST (1...3).map((*), 2) == [2, 4, 6]
 
 # === Syntactic sugar ============================
 
+F not(x) { guard (x is Bool) == false; x.Bool().not() }
 
 F !=(a,b) not(a==b)
 
@@ -469,6 +470,41 @@ F split(s:Str, delim:Str) {
 
 TEST ":a:bc:d:".split(":") == ["", "a", "bc", "d", ""]
 
+
+F *(s:Str, n:Int) ([s]*n).join('')
+
+# Tested with Str(Str,Int)
+
+F Str(x, target_width:Int) x.Str().Str(target_width)
+
+F Str(s:Str, target_width:Int) {
+	local l = s.len()
+	local pad_on_left = if target_width < 0 {
+		target_width = 0 - target_width
+		true
+	} else {
+		false
+	}
+
+	l >= target_width returns s
+
+	local padding = ' ' * (target_width - l)
+	if pad_on_left {
+		padding + s
+	} else {
+		s + padding
+	}
+}
+
+# Not sure about this, might be confusing behaviour
+F Str(n:Int, target_width:Int) n.Str().Str(0-target_width)
+
+TEST Str(10,  4) == '  10'
+TEST Str(10, -4) == '10  '
+TEST Str("x", 3) == 'x  '
+TEST Str("x",-3) == '  x'
+
+
 # === RegExp =====================================
 
 # TODO
@@ -787,9 +823,27 @@ F parse(s:Str, hints:Hash) {
 	data
 }
 
-# === Table ===
+# === config =====================================
+
+F config(s:Str) {
+	# TODO: think, organize
+	#       what about structured data? JSON?
+	# TODO: read from config files
+	# TODO: read from command line switches
+	debug("Getting config for key '$s'")
+	local v = try ENV["NGS_$s"]
+	not(v) returns null
+	debug("Parsing config for key '$s', value '$v'")
+	parse(v)
+}
+
+
+# === Table ======================================
 
 { type Table }
+
+# TODO: handle errors, throw exceptions
+F write(fd:Int, s:Str) fd.c_write(s)
 
 F Table() {
 	t = Table.constructors[0]()
@@ -806,7 +860,22 @@ F Table() {
 F Table(rows_hashes:Arr) {
 	# TODO: read a config for columns order and which columns to display?
 	guard rows_hashes.all(is, Hash)
-	local t = Table()
+	t = Table()
+	t.init(rows_hashes)
+	t
+}
+
+F Table(name:Str, rows_hashes:Arr) {
+	guard rows_hashes.all(is, Hash)
+	t = Table()
+	t.name = name
+	t.init(rows_hashes)
+	t
+}
+
+F init(t:Table, rows_hashes:Arr) {
+	local conf = config(if t.name "table_${t.name}" "table")
+	debug("Table config is $conf")
 	local idx = 0
 	# Build table info
 	rows_hashes.each(F(row_hash) {
@@ -818,12 +887,11 @@ F Table(rows_hashes:Arr) {
 			}
 		})
 	})
+	debug("Table created with fields: ${t.col_idx_to_name}")
 	# hashes to arrays
 	rows_hashes.each(partial(push, t))
 	t
 }
-
-F Table(name:Str, rows_hashes:Arr) { t=Table(rows_hashes); t.name = name; t }
 
 F push(t:Table, row_arr:Arr) {
 	# TODO: handle mismatch in number of columns
@@ -862,13 +930,29 @@ F Hashes(t:Table) {
 # --- Misc utils ---
 F echo(t:Table) {
 	guard 1.isatty()
-	# TODO: get and use tty width
+	# TODO: get and use tty width?
 	# TODO: special treatment for tmux? can print any width and tmux can be adjusted later.
-	local max_colums_widths = t.columns().map(F(column) {
-		column.map(Str).map(len).max()
+	local max_colums_widths = t.col_idx_to_name.map(F(idx, k) {
+		local col = t.column(idx)
+		([k] + (col.map(Str))).map(len).max()
 	})
-	echo(max_colums_widths)
-	echo('CONTINUE HERE')
+
+	# Title
+	if t.name echo(t.name)
+
+	# Headers
+	t.col_idx_to_name.each(F(idx, k) {
+		1.write(Str(k, max_colums_widths[idx]) + " ")
+	})
+	echo('')
+
+	# Rows
+	t.rows.each(F(row) {
+		t.col_idx_to_name.each(F(idx, k) {
+			1.write(Str(row[idx], max_colums_widths[idx]) + " ")
+		})
+		echo('')
+	})
 
 }
 

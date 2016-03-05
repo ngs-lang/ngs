@@ -3,4 +3,5 @@
 # TODO: config regarding which tags should be columns
 
 instances=``aws ec2 describe-instances``
-echo(instances)
+t=Table('Instances', instances)
+echo(t)

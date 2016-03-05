@@ -390,6 +390,10 @@ METHOD_RESULT native_c_read_int_int METHOD_PARAMS {
 	METHOD_RETURN(*result);
 }
 
+// WRITE(2)
+// TODO: error handling support
+METHOD_RESULT native_c_write_int_str METHOD_PARAMS { METHOD_RETURN(MAKE_INT(write(GET_INT(argv[0]), OBJ_DATA_PTR(argv[1]), OBJ_LEN(argv[1])))); }
+
 METHOD_RESULT native_c_lseek_int_int_str EXT_METHOD_PARAMS {
 	off_t offset;
 	const char *whence_str = obj_to_cstring(argv[2]);
@@ -871,6 +875,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_open",   &native_c_open_str_str,    2, "pathname", vm->Str, "flags", vm->Str);
 	register_global_func(vm, 0, "c_close",  &native_c_close_int,       1, "fd",       vm->Int);
 	register_global_func(vm, 0, "c_read",   &native_c_read_int_int,    2, "fd",       vm->Int, "count", vm->Int);
+	register_global_func(vm, 0, "c_write",  &native_c_write_int_str,   2, "fd",       vm->Int, "s",     vm->Str);
 	register_global_func(vm, 1, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
 	register_global_func(vm, 0, "c_isatty", &native_c_isatty,           1,"fd",       vm->Int);
 
