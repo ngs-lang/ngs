@@ -1,4 +1,6 @@
 #!/usr/bin/env ngs
 
+# TODO: config regarding which tags should be columns
+
 instances=``aws ec2 describe-instances``
 echo(instances)

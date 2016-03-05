@@ -418,6 +418,8 @@ METHOD_RESULT native_c_lseek_int_int_str EXT_METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(offset));
 }
 
+METHOD_RESULT native_c_isatty METHOD_PARAMS { METHOD_RETURN(MAKE_INT(isatty(GET_INT(argv[0])))); }
+
 METHOD_RESULT native_c_close_int METHOD_PARAMS { METHOD_RETURN(MAKE_INT(close(GET_INT(argv[0])))); }
 
 METHOD_RESULT native_c_exit_int METHOD_PARAMS { (void)result; exit(GET_INT(argv[0])); }
@@ -870,6 +872,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_close",  &native_c_close_int,       1, "fd",       vm->Int);
 	register_global_func(vm, 0, "c_read",   &native_c_read_int_int,    2, "fd",       vm->Int, "count", vm->Int);
 	register_global_func(vm, 1, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
+	register_global_func(vm, 0, "c_isatty", &native_c_isatty,           1,"fd",       vm->Int);
 
 	// low level misc
 	register_global_func(vm, 0, "c_exit",   &native_c_exit_int,        1, "status",   vm->Int);
@@ -957,7 +960,23 @@ void vm_init(VM *vm, int argc, char **argv) {
 	set_global(vm, "ARGV", argv_array);
 
 	// TODO: Some good solution for many defines
-	set_global(vm, "C_EINTR", MAKE_INT(EINTR));
+#define E(name) set_global(vm, "C_" #name, MAKE_INT(name))
+	// errno -ls | awk '{print "E("$1");"}' | xargs -n10
+	E(EPERM); E(ENOENT); E(ESRCH); E(EINTR); E(EIO); E(ENXIO); E(E2BIG); E(ENOEXEC); E(EBADF); E(ECHILD);
+	E(EAGAIN); E(ENOMEM); E(EACCES); E(EFAULT); E(ENOTBLK); E(EBUSY); E(EEXIST); E(EXDEV); E(ENODEV); E(ENOTDIR);
+	E(EISDIR); E(EINVAL); E(ENFILE); E(EMFILE); E(ENOTTY); E(ETXTBSY); E(EFBIG); E(ENOSPC); E(ESPIPE); E(EROFS);
+	E(EMLINK); E(EPIPE); E(EDOM); E(ERANGE); E(EDEADLK); E(ENAMETOOLONG); E(ENOLCK); E(ENOSYS); E(ENOTEMPTY); E(ELOOP);
+	E(EWOULDBLOCK); E(ENOMSG); E(EIDRM); E(ECHRNG); E(EL2NSYNC); E(EL3HLT); E(EL3RST); E(ELNRNG); E(EUNATCH); E(ENOCSI);
+	E(EL2HLT); E(EBADE); E(EBADR); E(EXFULL); E(ENOANO); E(EBADRQC); E(EBADSLT); E(EDEADLOCK); E(EBFONT); E(ENOSTR);
+	E(ENODATA); E(ETIME); E(ENOSR); E(ENONET); E(ENOPKG); E(EREMOTE); E(ENOLINK); E(EADV); E(ESRMNT); E(ECOMM);
+	E(EPROTO); E(EMULTIHOP); E(EDOTDOT); E(EBADMSG); E(EOVERFLOW); E(ENOTUNIQ); E(EBADFD); E(EREMCHG); E(ELIBACC); E(ELIBBAD);
+	E(ELIBSCN); E(ELIBMAX); E(ELIBEXEC); E(EILSEQ); E(ERESTART); E(ESTRPIPE); E(EUSERS); E(ENOTSOCK); E(EDESTADDRREQ); E(EMSGSIZE);
+	E(EPROTOTYPE); E(ENOPROTOOPT); E(EPROTONOSUPPORT); E(ESOCKTNOSUPPORT); E(EOPNOTSUPP); E(EPFNOSUPPORT); E(EAFNOSUPPORT); E(EADDRINUSE); E(EADDRNOTAVAIL); E(ENETDOWN);
+	E(ENETUNREACH); E(ENETRESET); E(ECONNABORTED); E(ECONNRESET); E(ENOBUFS); E(EISCONN); E(ENOTCONN); E(ESHUTDOWN); E(ETOOMANYREFS); E(ETIMEDOUT);
+	E(ECONNREFUSED); E(EHOSTDOWN); E(EHOSTUNREACH); E(EALREADY); E(EINPROGRESS); E(ESTALE); E(EUCLEAN); E(ENOTNAM); E(ENAVAIL); E(EISNAM);
+	E(EREMOTEIO); E(EDQUOT); E(ENOMEDIUM); E(EMEDIUMTYPE); E(ECANCELED); E(ENOKEY); E(EKEYEXPIRED); E(EKEYREVOKED); E(EKEYREJECTED); E(EOWNERDEAD);
+	E(ENOTRECOVERABLE); E(ERFKILL); E(EHWPOISON); E(ENOTSUP);
+#undef E
 
 }
 
