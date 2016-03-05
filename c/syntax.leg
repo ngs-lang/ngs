@@ -452,12 +452,12 @@ function-definition =
 
 function-definition-name =
 	space+ i:identifier { $$ = i; }
-	| space? "'" <([-|=!@?<>~+*/%()$a-zA-Z0-9. ]|"["|"]")+> "'" {
+	| space? "'" <([-|=!@?<>~+*/%()$a-zA-Z0-9.` ]|"["|"]")+> "'" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
-	| space? <[-|=!@?~+*/%$.]+> {
+	| space? <[-|=!@?~+*/%$.`]+> {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
@@ -726,24 +726,18 @@ number =
 		$$ = ret;
 	}
 
-# TODO: refactor last 3 stanzas to one. Simply ("(" <[-|=!@?~+*/%$<>]+ | "is not" | "not in"> ")" does not work.
 identifier =
 	<[_a-zA-Z]+[_a-zA-Z0-9]*> {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
-	| "(" <[-|=!@?~+*/%$<>]+> ")" {
+	| "('" <([-|=!@?<>~+*/%()$a-zA-Z0-9.` ]|"["|"]")+> "')" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
-	| "(" <"is not"> ")" {
-		MAKE_NODE(ret, IDENTIFIER_NODE);
-		ret->name = ngs_strdup(yytext);
-		$$ = ret;
-	}
-	| "(" <"not in"> ")" {
+	| "(" <([-|=!@?~+*/%$<>.]+ | "is not" | "not in")> ")" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
@@ -881,7 +875,10 @@ type = "type" space i:identifier {
 	CAPTURE_LOCATION($$);
 }
 
-subshell = "$(" cmd:command-words ")" { $$ = cmd; }
+subshell =
+	"$(" cmd:command-words ")" { $$ = cmd; }
+	| "``" cmd:command-words "``" { cmd->first_child->name = ngs_strdup("````"); $$ = cmd; }
+	| "`" cmd:command-words "`" { cmd->first_child->name = ngs_strdup("``");  $$ = cmd; }
 
 command-words = acc:command-node (inline_space? command-word {append_ast_node_child(acc, $$);})+ {
 	$$ = acc;

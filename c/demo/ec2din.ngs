@@ -1,0 +1,4 @@
+#!/usr/bin/env ngs
+
+instances=``aws ec2 describe-instances``
+echo(instances)

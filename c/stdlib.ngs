@@ -103,6 +103,14 @@ F ==(a:Null, b) false
 F ==(a, b:Null) false
 F ==(a:Null, b:Null) true
 
+F .(h:Hash, attr:Str) h[attr]
+F .(a:Arr, attr:Str) a.map((.), attr)
+
+TEST [{"x": 1}, {"x": 2}].x == [1, 2]
+
+F +(s1:Str, s2:Str) "${s1}${s2}"
+
+TEST "ab" + "cd" == "abcd"
 
 # === Array ======================================
 
@@ -429,6 +437,7 @@ TEST Str(false) == "false"
 
 
 F Str(a:Arr) "[${a.map(Str).join(',')}]"
+F Str(h:Hash) "{" + h.map(F(k, v) "${k}=${v}").join(", ") + "}"
 
 # --- Sugar ---
 
@@ -681,6 +690,7 @@ F Str(p:Process) p.wait().stdout
 # TODO: capture stdout
 # TODO: capture stderr
 # TODO: provide additional communication channel on additional fd?
+# TODO: handle built-in commands: do not execve,
 F '$()'(c:Command) {
 
 	local debug_pfx = '[stdlib $()]', process, pid
@@ -720,6 +730,49 @@ F '$()'(c:Command) {
 TEST $(true).Bool()
 TEST $(false).Bool() == false
 TEST "$(/bin/echo -n abc)" == 'abc'
+
+F ``(c:Command) ('$()')(c).Str()
+
+F ````(c:Command) {
+	p = ('$()')(c)
+	p.stdout.parse({'process': p})
+}
+
+F parse(s:Str) parse(s, {})
+
+F parse(s:Str, hints:Hash) s
+
+F parse(s:Str, hints:Hash) {
+	local ret
+	try
+		ret = parse_json(s)
+	catch(e)
+		guard false
+	ret
+}
+
+# === Parse aws output ===========================
+# TODO: move to separate auto-loaded file maybe?
+
+F stdlib_aws_straighten_tags(a:Arr) a.each(stdlib_aws_straighten_tags)
+
+F stdlib_aws_straighten_tags(h:Hash) {
+	h['Tags'] = h.get('Tags', []).map(
+		F(tag_pair) [tag_pair.Key, tag_pair.Value]
+	).Hash()
+}
+
+TEST instances = [{"Tags": [{"Key": "k", "Value": "v"},{"Key": "k2", "Value": "v2"}]}]; stdlib_aws_straighten_tags(instances); instances.Tags == [{"k": "v", "k2": "v2"}]
+
+F parse(s:Str, hints:Hash) {
+	guard try hints['process'].command.argv[0] == 'aws'
+	data = parse_json(s)
+	if (try data.Reservations.Instances) is not Null {
+		data = data.Reservations.Instances.flatten()
+		data = data.stdlib_aws_straighten_tags()
+	}
+	data
+}
 
 
 # === Misc tests =================================

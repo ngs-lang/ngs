@@ -204,6 +204,7 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len);
 
 static const UT_icd ut_value_icd _UNUSED_ = {sizeof(VALUE),NULL,NULL,NULL};
 // typedef int VM_INT;
+void set_global(VM *vm, const char *name, VALUE v);
 METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result);
 METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR_INDEX argc, const VALUE *argv);
 BYTECODE_HANDLE *ngs_create_bytecode();

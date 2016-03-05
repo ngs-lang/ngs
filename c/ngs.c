@@ -108,6 +108,7 @@ int main(int argc, char **argv)
 	bytecode = compile(tree, &len);
 	// BROKEN SINCE BYTECODE FORMAT CHANGE // IF_DEBUG(COMPILER, decompile(bytecode, 0, len);)
 	vm_init(&vm, argc, argv);
+	set_global(&vm, "BOOTSTRAP_FILE", make_string(bootstrap_file_name));
 	ctx_init(&ctx);
 	ip = vm_load_bytecode(&vm, bytecode);
 	closure = make_closure_obj(ip, 0, 0, 0, 0, 0, NULL);

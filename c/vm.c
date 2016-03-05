@@ -164,8 +164,8 @@ METHOD_RESULT native_dump_any METHOD_PARAMS {
 }
 
 METHOD_RESULT native_echo_str METHOD_PARAMS {
-	SET_INT(*result, printf("%s\n", obj_to_cstring(argv[0])));
-	return METHOD_OK;
+	printf("%s\n", obj_to_cstring(argv[0]));
+	METHOD_RETURN(MAKE_NULL);
 }
 
 METHOD_RESULT native_plus_arr_arr METHOD_PARAMS {
@@ -1151,7 +1151,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR
 }
 
 METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result) {
-	VALUE v, callable, command;
+	VALUE v, callable, command, *v_ptr;
 	VAR_LEN_OBJECT *vlo;
 	int i;
 	unsigned char opcode;
@@ -1314,7 +1314,10 @@ main_loop:
 								goto exception;
 							}
 							if(mr != METHOD_OK) {
-								dump_titled("Failed callable", callable);
+								for(v_ptr=&ctx->stack[ctx->stack_ptr-GET_INT(v)];v_ptr < &ctx->stack[ctx->stack_ptr];v_ptr++) {
+									dump_titled("Failed argument", *v_ptr);
+								}
+								dump_titled("Failed callable / 1", callable);
 								assert(0=="Handling failed method calls is not implemented yet");
 							}
 							REMOVE_N(GET_INT(v));
@@ -1333,7 +1336,7 @@ main_loop:
 								goto exception_return;
 							}
 							if(mr != METHOD_OK) {
-								dump_titled("Failed callable", callable);
+								dump_titled("Failed callable / 2", callable);
 								assert(0=="Handling failed method calls is not implemented yet");
 							}
 							REMOVE_N(GET_INT(v));
@@ -1348,7 +1351,8 @@ main_loop:
 								goto exception;
 							}
 							if(mr != METHOD_OK) {
-								dump_titled("Failed callable", callable);
+								dump_titled("Failed argument array", ctx->stack[ctx->stack_ptr-1]);
+								dump_titled("Failed callable / 3", callable);
 								assert(0=="Handling failed method calls is not implemented yet");
 							}
 							REMOVE_N(1);

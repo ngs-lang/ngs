@@ -11,7 +11,7 @@ bootstrap_debug =
 	else
 		F(s) {}
 
-F bootstrap_find_ngs_dir() ENV.get('NGS_DIR', '.')
+F bootstrap_find_ngs_dir() ENV.get('NGS_DIR', '/usr/share/ngs')
 
 # *** fetch - abstraction above low level c io primitives ***
 F fetch(fname) {
@@ -50,6 +50,7 @@ F bootstrap() {
 	local fname
 
 	bootstrap_debug('bootstrap.ngs begin')
+	bootstrap_debug("BOOTSTRAP_FILE=$BOOTSTRAP_FILE")
 
 	# *** Prepare ARGV ***
 	# first_item = shift(array, default_value_if_array_is_empty)
@@ -72,10 +73,12 @@ F bootstrap() {
 		do_load_stdlib = false
 	}
 
+	NGS_DIR = bootstrap_find_ngs_dir()
+
 	# *** WIP: Load stdlib ***
 	if do_load_stdlib {
 		bootstrap_debug('Will load stdlib')
-		stdlib_file = "${bootstrap_find_ngs_dir()}/stdlib.ngs"
+		stdlib_file = "${NGS_DIR}/stdlib.ngs"
 		bootstrap_debug("Stdlib is at $stdlib_file")
 		require(stdlib_file)
 	}
@@ -85,7 +88,8 @@ F bootstrap() {
 
 	if code_to_run is Null {
 		bootstrap_debug('No -e or -E switch was passed, will load the program from a file')
-		fname = ARGV.shift()
+		fname = ARGV.shift(null)
+		fname is Null throws "Interactive mode is not implemented yet. Please specifiy a file to run"
 		code_to_run = fetch(fname)
 	}
 
