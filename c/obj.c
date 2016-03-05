@@ -130,8 +130,8 @@ static void _dump(VALUE v, int level) {
 	if(IS_NORMAL_TYPE_INSTANCE(v)) {
 		printf("%*s* user type instance (type and fields optionally follow)\n", level << 1, "");
 		if(level < 3) {
-			_dump(UT_INSTANCE_TYPE(v), level + 1);
-			_dump(UT_INSTANCE_FIELDS(v), level + 1);
+			_dump(NORMAL_TYPE_INSTANCE_TYPE(v), level + 1);
+			_dump(NORMAL_TYPE_INSTANCE_FIELDS(v), level + 1);
 		}
 		goto exit;
 	}
@@ -230,7 +230,7 @@ VALUE make_normal_type_constructor(VALUE normal_type) {
 
 	SET_OBJ(ret, normal_type_constructor);
 	OBJ_TYPE_NUM(ret) = T_UTCTR;
-	UT_CONSTRUCTOR_UT(ret) = normal_type;
+	NORMAL_TYPE_CONSTRUCTOR_TYPE(ret) = normal_type;
 
 	return ret;
 }
@@ -253,16 +253,16 @@ METHOD_RESULT get_normal_type_instace_attribute(VALUE obj, VALUE attr, VALUE *re
 	VALUE ut;
 	HASH_OBJECT_ENTRY *e;
 	size_t n;
-	ut = UT_INSTANCE_TYPE(obj);
+	ut = NORMAL_TYPE_INSTANCE_TYPE(obj);
 	e = get_hash_key(NGS_TYPE_FIELDS(ut), attr);
 	if(!e) {
 		return METHOD_EXCEPTION;
 	}
 	n = GET_INT(e->val);
-	if(n >= OBJ_LEN(UT_INSTANCE_FIELDS(obj))) {
+	if(n >= OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(obj))) {
 		return METHOD_EXCEPTION;
 	}
-	*result = ARRAY_ITEMS(UT_INSTANCE_FIELDS(obj))[n];
+	*result = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(obj))[n];
 	if(IS_UNDEF(*result)) {
 		return METHOD_EXCEPTION;
 	}
@@ -273,7 +273,7 @@ void set_normal_type_instance_attribute(VALUE obj, VALUE attr, VALUE v) {
 	VALUE ut;
 	HASH_OBJECT_ENTRY *e;
 	size_t n;
-	ut = UT_INSTANCE_TYPE(obj);
+	ut = NORMAL_TYPE_INSTANCE_TYPE(obj);
 	e = get_hash_key(NGS_TYPE_FIELDS(ut), attr);
 	if(e) {
 		n = GET_INT(e->val);
@@ -282,14 +282,14 @@ void set_normal_type_instance_attribute(VALUE obj, VALUE attr, VALUE v) {
 		set_hash_key(NGS_TYPE_FIELDS(ut), attr, MAKE_INT(n));
 	}
 	// TODO: more optimized
-	while(OBJ_LEN(UT_INSTANCE_FIELDS(obj)) < n) {
-		array_push(UT_INSTANCE_FIELDS(obj), (VALUE){.num = V_UNDEF});
+	while(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(obj)) < n) {
+		array_push(NORMAL_TYPE_INSTANCE_FIELDS(obj), (VALUE){.num = V_UNDEF});
 	}
-	if(OBJ_LEN(UT_INSTANCE_FIELDS(obj)) == n) {
-		array_push(UT_INSTANCE_FIELDS(obj), v);
+	if(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(obj)) == n) {
+		array_push(NORMAL_TYPE_INSTANCE_FIELDS(obj), v);
 		return;
 	}
-	ARRAY_ITEMS(UT_INSTANCE_FIELDS(obj))[n] = v;
+	ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(obj))[n] = v;
 };
 
 void add_normal_type_inheritance(VALUE type, VALUE parent_type) {
@@ -670,7 +670,7 @@ int obj_is_of_type(VALUE obj, VALUE t) {
 		assert(0=="native_is(): Unimplemented check against builtin type");
 	} else {
 		if(!IS_NORMAL_TYPE_INSTANCE(obj)) { return 0; }
-		return ut_is_ut(UT_INSTANCE_TYPE(obj), t);
+		return ut_is_ut(NORMAL_TYPE_INSTANCE_TYPE(obj), t);
 	}
 	dump_titled("Unimplemented type to check", t);
 	assert(0=="native_is(): Unimplemented check");

@@ -262,9 +262,9 @@ typedef enum {
 #define HASH_BUCKETS_N(v)         (((HASH_OBJECT *)(v).ptr)->n_buckets)
 #define HASH_HEAD(v)              (((HASH_OBJECT *)(v).ptr)->head)
 #define HASH_TAIL(v)              (((HASH_OBJECT *)(v).ptr)->tail)
-#define UT_CONSTRUCTOR_UT(v)      OBJ_DATA(v)
-#define UT_INSTANCE_TYPE(v)       OBJ_TYPE(v)
-#define UT_INSTANCE_FIELDS(v)     OBJ_DATA(v)
+#define NORMAL_TYPE_CONSTRUCTOR_TYPE(v)      OBJ_DATA(v)
+#define NORMAL_TYPE_INSTANCE_TYPE(v)       OBJ_TYPE(v)
+#define NORMAL_TYPE_INSTANCE_FIELDS(v)     OBJ_DATA(v)
 #define REAL_OBJECT_VAL(v)        (((REAL_OBJECT *) (v).ptr)->val)
 
 // Boolean 00001X10

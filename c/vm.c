@@ -445,20 +445,20 @@ METHOD_RESULT native_index_get_str_range EXT_METHOD_PARAMS {
 	size_t len;
 	VALUE start, end, exc;
 	(void) ctx;
-	if(OBJ_LEN(UT_INSTANCE_FIELDS(argv[1])) < 2) return METHOD_ARGS_MISMATCH;
-	start = ARRAY_ITEMS(UT_INSTANCE_FIELDS(argv[1]))[0];
+	if(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(argv[1])) < 2) return METHOD_ARGS_MISMATCH;
+	start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[0];
 	if(!IS_INT(start)) return METHOD_ARGS_MISMATCH;
 	if(GET_INT(start) < 0) {
 		exc = make_normal_type_instance(vm->InvalidArgument);
 		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Negative range start when calling [](s:Str, r:Range)"));
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
-	if(GET_INT(start) > OBJ_LEN(argv[0])) {
+	if(((size_t) GET_INT(start)) > OBJ_LEN(argv[0])) {
 		exc = make_normal_type_instance(vm->InvalidArgument);
 		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range starts after string end when calling [](s:Str, r:Range)"));
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
-	end = ARRAY_ITEMS(UT_INSTANCE_FIELDS(argv[1]))[1];
+	end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[1];
 	if(IS_NULL(end)) {
 		len = OBJ_LEN(argv[0]) - GET_INT(start);
 		*result = make_string_of_len(NULL, len);
@@ -1138,7 +1138,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR
 	}
 
 	if(IS_NORMAL_TYPE_CONSTRUCTOR(callable)) {
-		*result = make_normal_type_instance(UT_CONSTRUCTOR_UT(callable));
+		*result = make_normal_type_instance(NORMAL_TYPE_CONSTRUCTOR_TYPE(callable));
 		return METHOD_OK;
 	}
 
