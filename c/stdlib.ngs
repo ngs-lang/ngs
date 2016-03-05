@@ -105,6 +105,8 @@ F ==(a, b:Null) false
 F ==(a:Null, b:Null) true
 
 F .(h:Hash, attr:Str) h[attr]
+F .=(h:Hash, attr:Str, v) h[attr] = v
+
 F .(a:Arr, attr:Str) a.map((.), attr)
 
 TEST [{"x": 1}, {"x": 2}].x == [1, 2]
@@ -878,15 +880,23 @@ F init(t:Table, rows_hashes:Arr) {
 	debug("Table config is $conf")
 	local idx = 0
 	# Build table info
-	rows_hashes.each(F(row_hash) {
-		row_hash.keys().each(F(k) {
-			if k not in t.col_name_to_idx {
-				t.col_name_to_idx[k] = idx
-				t.col_idx_to_name[idx] = k
-				idx = idx + 1
-			}
+	if conf {
+		conf.each(F(k) {
+			t.col_name_to_idx[k] = idx
+			t.col_idx_to_name[idx] = k
+			idx = idx + 1
 		})
-	})
+	} else {
+		rows_hashes.each(F(row_hash) {
+			row_hash.keys().each(F(k) {
+				if k not in t.col_name_to_idx {
+					t.col_name_to_idx[k] = idx
+					t.col_idx_to_name[idx] = k
+					idx = idx + 1
+				}
+			})
+		})
+	}
 	debug("Table created with fields: ${t.col_idx_to_name}")
 	# hashes to arrays
 	rows_hashes.each(partial(push, t))
@@ -928,30 +938,75 @@ F Hashes(t:Table) {
 }
 
 # --- Misc utils ---
+
+F cell_display_width(x) Str(x).len()
+F cell_display_width(x:Arr) x.map(Str).map(len).max()
+F cell_display_width(x:Arr) { guard x.len()==0; 0 }
+
 F echo(t:Table) {
 	guard 1.isatty()
+	# TODO: display vertically elements of an array (for array which is a cell).
 	# TODO: get and use tty width?
 	# TODO: special treatment for tmux? can print any width and tmux can be adjusted later.
+	# TODO: support Arr in headers
+	# TODO: handle Hash type of cell (maybe allow configuring order of keys etc)
+	# TODO: handle limiting width of a cell
+	# TODO: support displaying something (like '-') for empty spaces instead of ''
 	local max_colums_widths = t.col_idx_to_name.map(F(idx, k) {
 		local col = t.column(idx)
-		([k] + (col.map(Str))).map(len).max()
+		([k] + col).map(cell_display_width).max()
 	})
 
+	# Setup line spacing
+	local do_line_spacing = t.rows.any(F(row) {
+		row.any(F(cell) cell is Arr and len(cell)>1)
+	})
+	do_line_spacing = if do_line_spacing F() echo('') else F() null
+
 	# Title
-	if t.name echo(t.name)
+	if t.name echo("=== ${t.name} ===")
+	do_line_spacing()
 
 	# Headers
 	t.col_idx_to_name.each(F(idx, k) {
 		1.write(Str(k, max_colums_widths[idx]) + " ")
 	})
 	echo('')
+	do_line_spacing()
 
 	# Rows
 	t.rows.each(F(row) {
-		t.col_idx_to_name.each(F(idx, k) {
-			1.write(Str(row[idx], max_colums_widths[idx]) + " ")
-		})
-		echo('')
+		local done = false
+		local subrow_idx = 0
+		local subrow_content_arr
+		while not(done) {
+			done = true
+			subrow_content_arr = t.col_idx_to_name.map(F(idx, k) {
+				local subrow_content = if row[idx] is Arr {
+					if len(row[idx]) > subrow_idx {
+						done = false
+						row[idx][subrow_idx]
+					} else {
+						''
+					}
+				} else {
+					if subrow_idx == 0 {
+						done = false
+						row[idx]
+					} else {
+						''
+					}
+				}
+				# Format later maybe? Just before printing?
+				Str(subrow_content, max_colums_widths[idx]) + " "
+			})
+			if not(done) {
+				subrow_content_arr.each(partial(write, 1))
+				echo('')
+			}
+			subrow_idx = subrow_idx + 1
+		}
+		do_line_spacing()
 	})
 
 }

@@ -1,7 +1,27 @@
 #!/usr/bin/env ngs
 
-# TODO: config regarding which tags should be columns
+# Running example: NGS_table_Instances='["InstanceId", "PublicIpAddress", "PrivateIpAddress", "InstanceType", "State", "KeyName", "SecurityGroups", "Placement", "Tags"]' ./demo/ec2din.ngs
 
-instances=``aws ec2 describe-instances``
-t=Table('Instances', instances)
-echo(t)
+{
+	F limit_len(s:Str, l:Int) {
+		s.len() <= l returns s
+		s[0..(l-3)] + '...'
+	}
+
+	# TODO: tags order: "Name" and then all others sorted
+	# TODO: move limit_len() functionlity to stdlib so it could be
+	#       centrally configured and be affected by
+	#       displaying conditions such as available console width
+
+	instances = ``aws ec2 describe-instances``
+	instances.each(F(i) {
+		i.State = i.State.Name
+		i.SecurityGroups = i.SecurityGroups.map(F(sg) "${limit_len(sg.GroupName, 15)}(${sg.GroupId})")
+		# TODO: something more intelligent than discarding rarely used GroupName and Tenancy
+		i.Placement = i.Placement.AvailabilityZone
+		# Tags here is a Hash (after straightening by stdlib)
+		i.Tags = i.Tags.map(F(k, v) "${limit_len(k, 10)}=${limit_len(v, 15)}")
+	})
+	t = Table('Instances', instances)
+	echo(t)
+}
