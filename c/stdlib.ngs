@@ -24,8 +24,10 @@ TEST p = partial_tail((-), 10); p(7) == -3
 
 STDLIB_EXPOSE = {}
 
+# TODO: better exceptions (use correct type, not string, provide offending type and attribute)
 F expose(child:NormalType, attr:Str) {
 	STDLIB_EXPOSE[child] = STDLIB_EXPOSE.get(child, []).push(attr)
+	STDLIB_EXPOSE[child].len() > 1 throws "expose() does not support more than one attribute at this time"
 	child
 }
 

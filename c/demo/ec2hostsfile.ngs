@@ -1,5 +1,7 @@
 #!/usr/bin/env ngs
 
+# Minimalistic output: NGS_table_ec2hosts='["PrivateIpAddress", "HostName"]' ./demo/ec2hostsfile.ngs
+
 {
 	# TODO: sorting of the instances
 
@@ -17,26 +19,22 @@
 	# sequential numbering for instances with same "env" and "role" tags
 	numbering = Stats()
 
-	rows = instances.map(F(i) {
+	# Preparing the table
+	instances.each(F(i) {
 		local hostname_base = HostnameBase(i)
-		local hostname = if stats[hostname_base] == 1 hostname_base else {
+		i.HostName = if stats[hostname_base] == 1 hostname_base else {
 			numbering.push(hostname_base)
 			"${hostname_base}-${numbering[hostname_base]}"
 		}
-		[i.PrivateIpAddress, hostname, '#', i.InstanceId, i.PublicIpAddress, i.Tags.get('Name', '-')]
+		i.Comment = '#'
+		i.Name = i.Tags.get('Name', '-')
 	})
 
-	# * Name the fields in each row: array of arrays -> array of hashes.
-	# * This will be more straighforward when Table supports more appropriate API,
-	#   such as Table('ec2_instances', [columns names], [rows])
-	rows = rows.map(Hash, ["PrivateIpAddress", "HostName", "Comment", "InstanceId", "PublicIpAddress", "Name"])
-
-	debug("Rows: $rows")
-
-	t = Table('ec2_instances', rows)
+	config('table_ec2hosts', ["PrivateIpAddress", "HostName", "Comment", "InstanceId", "PublicIpAddress", "Name"])
 	config('output_format', 'text')
 	config('output_title', false)
 	config('output_headers', false)
+	t = Table('ec2hosts', instances)
 	echo(t)
 
 }
