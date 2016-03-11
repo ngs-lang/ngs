@@ -772,9 +772,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 	char **env, *equal_sign;
 	VALUE env_hash, k, v;
 	VALUE argv_array;
-	VALUE exception_type, error_type, lookup_fail_type, key_not_found_type, index_not_found_type, attr_not_found_type, invalid_arg_type;
-	VALUE command_type;
-	VALUE range_type, inclusive_range_type, exclusive_range_type;
 	int i;
 	vm->bytecode = NULL;
 	vm->bytecode_len = 0;
@@ -802,66 +799,47 @@ void vm_init(VM *vm, int argc, char **argv) {
 	vm->CLib = register_builtin_type(vm, "CLib", T_CLIB);
 	vm->CSym = register_builtin_type(vm, "CSym", T_CSYM);
 
-#define MKTYPE(var_name, name) \
-	var_name = make_normal_type(make_string(name)); \
-	set_global(vm, name, var_name);
+#define MKTYPE(name) \
+	VALUE name; \
+	name = make_normal_type(make_string(#name)); \
+	set_global(vm, #name, name); \
+	vm->name = name;
 
-	MKTYPE(exception_type, "Exception");
+#define MKSUBTYPE(name, parent) \
+	MKTYPE(name); \
+	add_normal_type_inheritance(name, parent);
 
-		MKTYPE(error_type, "Error");
+#define SETUP_RANGE_TYPE(name) \
+	set_hash_key(NGS_TYPE_FIELDS(name), make_string("start"), MAKE_INT(0)); \
+	set_hash_key(NGS_TYPE_FIELDS(name), make_string("end"), MAKE_INT(1));
 
-			MKTYPE(lookup_fail_type, "LookupFail");
+	MKTYPE(Exception);
+		MKSUBTYPE(Error, Exception);
+			MKSUBTYPE(LookupFail, Error);
+				MKSUBTYPE(KeyNotFound, LookupFail);
+				MKSUBTYPE(IndexNotFound, LookupFail);
+				MKSUBTYPE(AttrNotFound, LookupFail);
+			MKSUBTYPE(InvalidArgument, Error);
 
-				MKTYPE(key_not_found_type, "KeyNotFound");
-				add_normal_type_inheritance(key_not_found_type, lookup_fail_type);
-				vm->KeyNotFound = key_not_found_type;
-
-				MKTYPE(index_not_found_type, "IndexNotFound");
-				add_normal_type_inheritance(index_not_found_type, lookup_fail_type);
-				vm->IndexNotFound = index_not_found_type;
-
-				MKTYPE(attr_not_found_type, "AttrNotFound");
-				add_normal_type_inheritance(attr_not_found_type, lookup_fail_type);
-				vm->AttrNotFound = attr_not_found_type;
-
-			add_normal_type_inheritance(lookup_fail_type, error_type);
-			vm->LookupFail = lookup_fail_type;
-
-			MKTYPE(invalid_arg_type, "InvalidArgument");
-			add_normal_type_inheritance(invalid_arg_type, error_type);
-			vm->InvalidArgument = invalid_arg_type;
-
-		add_normal_type_inheritance(error_type, exception_type);
-		vm->Error = error_type;
-
-	vm->Exception = exception_type;
-
-
-	MKTYPE(command_type, "Command");
-	vm->Command = command_type;
+	MKTYPE(Command);
 
 
 	// XXX: changing NGS_TYPE_FIELDS of InclusiveRange or ExclusiveRange
 	//      in such a way that "start" is not 0 or "end" is not 1
 	//      will break everything. TODO: make sure this can not be done by
 	//      an NGS script.
-	MKTYPE(range_type, "Range");
+	MKTYPE(Range);
 
-		MKTYPE(inclusive_range_type, "InclusiveRange");
-		vm->InclusiveRange = inclusive_range_type;
-		add_normal_type_inheritance(inclusive_range_type, range_type);
-		set_hash_key(NGS_TYPE_FIELDS(inclusive_range_type), make_string("start"), MAKE_INT(0));
-		set_hash_key(NGS_TYPE_FIELDS(inclusive_range_type), make_string("end"), MAKE_INT(1));
+		MKSUBTYPE(InclusiveRange, Range);
+		SETUP_RANGE_TYPE(InclusiveRange);
 
-		MKTYPE(exclusive_range_type, "ExclusiveRange");
-		vm->ExclusiveRange = exclusive_range_type;
-		add_normal_type_inheritance(exclusive_range_type, range_type);
-		set_hash_key(NGS_TYPE_FIELDS(exclusive_range_type), make_string("start"), MAKE_INT(0));
-		set_hash_key(NGS_TYPE_FIELDS(exclusive_range_type), make_string("end"), MAKE_INT(1));
+		MKSUBTYPE(ExclusiveRange, Range);
+		SETUP_RANGE_TYPE(ExclusiveRange);
 
-	vm->Range = range_type;
-
+#undef SETUP_RANGE_TYPE
+#undef MKSUBTYPE
 #undef MKTYPE
+
 
 	// CLib and c calls
 	register_global_func(vm, 0, "CLib",     &native_CLib_str,          1, "name",   vm->Str);
