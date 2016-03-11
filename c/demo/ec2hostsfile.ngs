@@ -1,6 +1,19 @@
 #!/usr/bin/env ngs
 
-# Minimalistic output: NGS_table_ec2hosts='["PrivateIpAddress", "HostName"]' ./demo/ec2hostsfile.ngs
+# Builds a section of /etc/hosts file listing EC2 instances.
+# Naming is based on "env" and "role" tags of the instances.
+
+### sample output
+### 172.XX.XX.XX     staging-api-gateway               #   i-b2XXXXXX   5X.XXX.XXX.XXX   api-gateway/66                                
+### 172.XX.XX.XX     prod-compositor-1                 #   i-83XXXXXX   5X.XXX.XXX.XXX   compositor/978-1-7                            
+### 172.XX.XX.XX     prod-compositor-2                 #   i-84XXXXXX   1XX.XX.XX.XXX    compositor/978-1-7                            
+### 172.XX.XX.XX     prod-vdr-manager-1                #   i-90XXXXXX   5X.XX.XX.XXX     vdr-manager-vpc/683-4                         
+### 172.XX.XX.XX     prod-vdr-manager-2                #   i-97XXXXXX   5X.XX.XXX.XX     vdr-manager-vpc/683-4                         
+### 172.XX.XX.XX     staging-store                     #   i-79XXXXXX   5X.XX.XXX.XXX    store/257                                     
+### 172.XX.XX.XX     staging-dsp-manager               #   i-acXXXXXX   5X.X.XX.XXX      dsp-manager/707-1-7                           
+### ...
+
+# For minimalistic output: NGS_table_ec2hosts='["PrivateIpAddress", "HostName"]' ./demo/ec2hostsfile.ngs
 
 {
 	# TODO: sorting of the instances
@@ -38,13 +51,3 @@
 	echo(t)
 
 }
-
-### (sample output)
-### 172.XX.XX.XX     staging-api-gateway               #   i-b2XXXXXX   5X.XXX.XXX.XXX   api-gateway/66                                
-### 172.XX.XX.XX     prod-compositor-1                 #   i-83XXXXXX   5X.XXX.XXX.XXX   compositor/978-1-7                            
-### 172.XX.XX.XX     prod-compositor-2                 #   i-84XXXXXX   1XX.XX.XX.XXX    compositor/978-1-7                            
-### 172.XX.XX.XX     prod-vdr-manager-1                #   i-90XXXXXX   5X.XX.XX.XXX     vdr-manager-vpc/683-4                         
-### 172.XX.XX.XX     prod-vdr-manager-2                #   i-97XXXXXX   5X.XX.XXX.XX     vdr-manager-vpc/683-4                         
-### 172.XX.XX.XX     staging-store                     #   i-79XXXXXX   5X.XX.XXX.XXX    store/257                                     
-### 172.XX.XX.XX     staging-dsp-manager               #   i-acXXXXXX   5X.X.XX.XXX      dsp-manager/707-1-7                           
-### ...
