@@ -337,7 +337,7 @@ chain-expression = b:basic-expression (
 			b = ret;
 		}
 		|
-		inline_space? "[" space? idx:expression space? "]" {
+		"[" space? idx:expression space? "]" {
 			MAKE_NODE(ret, INDEX_NODE);
 			ret->first_child = b;
 			ret->first_child->next_sibling = idx;

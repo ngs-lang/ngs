@@ -418,6 +418,13 @@ F Hash(arr:Arr, v)
 TEST Hash([1,2], 'x') == {1: 'x', 2: 'x'}
 
 
+F Hash(tuple:Arr, names:Arr)
+	collector/{}
+		tuple.len().each(F(idx) collect(names[idx], tuple[idx]))
+
+TEST [1,2,3].Hash(["a", "b", "c"]) == {"a": 1, "b": 2, "c": 3}
+
+
 # --- Misc ---
 
 
@@ -870,16 +877,27 @@ F parse(s:Str, hints:Hash) {
 
 # === config =====================================
 
-F config(s:Str) {
+STDLIB_CONFIG = {}
+
+F config(k:Str) {
 	# TODO: think, organize
 	#       what about structured data? JSON?
 	# TODO: read from config files
 	# TODO: read from command line switches
-	debug("Getting config for key '$s'")
-	local v = try ENV["NGS_$s"]
-	not(v) returns null
-	debug("Parsing config for key '$s', value '$v'")
-	parse(v)
+	local v
+	debug("Getting config for key '$k'")
+	v = try ENV["NGS_$k"]
+	if v {
+		debug("Parsing config for key '$k', value '$v'")
+		return parse(v)
+	}
+	v = try STDLIB_CONFIG[k]
+	v
+}
+
+F config(s:Str, x) {
+	debug("Configuring ${s}=${x}")
+	STDLIB_CONFIG[s] = x
 }
 
 
@@ -987,7 +1005,7 @@ F cell_display_width(x:Arr) x.map(Str).map(len).max()
 F cell_display_width(x:Arr) { guard x.len()==0; 0 }
 
 F echo(t:Table) {
-	guard 1.isatty()
+	guard 1.isatty() or (config('output_format') == 'text')
 	# TODO: display vertically elements of an array (for array which is a cell).
 	# TODO: get and use tty width?
 	# TODO: special treatment for tmux? can print any width and tmux can be adjusted later.
@@ -995,9 +1013,10 @@ F echo(t:Table) {
 	# TODO: handle Hash type of cell (maybe allow configuring order of keys etc)
 	# TODO: handle limiting width of a cell
 	# TODO: support displaying something (like '-') for empty spaces instead of ''
+	local do_output_headers = config('output_headers') in [null, true]
 	local max_colums_widths = t.col_idx_to_name.map(F(idx, k) {
 		local col = t.column(idx)
-		([k] + col).map(cell_display_width).max()
+		((if do_output_headers [k] [])+ col).map(cell_display_width).max()
 	})
 
 	# Setup line spacing
@@ -1007,15 +1026,19 @@ F echo(t:Table) {
 	do_line_spacing = if do_line_spacing F() echo('') else F() null
 
 	# Title
-	if t.name echo("=== ${t.name} ===")
-	do_line_spacing()
+	if t.name and (config('output_title') in [null, true]) {
+		echo("=== ${t.name} ===")
+		do_line_spacing()
+	}
 
 	# Headers
-	t.col_idx_to_name.each(F(idx, k) {
-		1.write(Str(k, max_colums_widths[idx]) + " ")
-	})
-	echo('')
-	do_line_spacing()
+	if(do_output_headers) {
+		t.col_idx_to_name.each(F(idx, k) {
+			1.write(Str(k, max_colums_widths[idx]) + " ")
+		})
+		echo('')
+		do_line_spacing()
+	}
 
 	# Rows
 	t.rows.each(F(row) {
@@ -1064,6 +1087,12 @@ F echo(t:Table) {
 F Stats() {
 	s = Stats.constructors[0]()
 	s.h = {}
+	s
+}
+
+F Stats(a:Arr) {
+	s = Stats()
+	a.each(partial(push, s))
 	s
 }
 

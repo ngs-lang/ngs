@@ -1,0 +1,52 @@
+#!/usr/bin/env ngs
+
+{
+	# TODO: sorting of the instances
+
+	F HostnameBase(i:Hash) "${i.Tags.env}-${i.Tags.role}"
+
+	instances = ``aws ec2 describe-instances --filters Name=instance-state-name,Values=running``
+
+	# Only look at instances with "env" and "role" tags
+	instances = instances.filter(F(i) try HostnameBase(i))
+
+	# stats - know which instances to suffix with sequential number and which not
+	stats = instances.map(HostnameBase).Stats()
+	debug("Names stats: ${stats}")
+
+	# sequential numbering for instances with same "env" and "role" tags
+	numbering = Stats()
+
+	local rows = instances.map(F(i) {
+		local hostname_base = HostnameBase(i)
+		local hostname = if stats[hostname_base] == 1 hostname_base else {
+			numbering.push(hostname_base)
+			"${hostname_base}-${numbering[hostname_base]}"
+		}
+		[i.PrivateIpAddress, hostname, '#', i.InstanceId, i.PublicIpAddress, i.Tags.get('Name', '-')]
+	})
+
+	# * Name the fields in each row: array of arrays -> array of hashes.
+	# * This will be more straighforward when Table supports more appropriate API,
+	#   such as Table('ec2_instances', [columns names], [rows])
+	rows = rows.map(Hash, ["PrivateIpAddress", "HostName", "Comment", "InstanceId", "PublicIpAddress", "Name"])
+
+	debug("Rows: $rows")
+
+	t = Table('ec2_instances', rows)
+	config('output_format', 'text')
+	config('output_title', false)
+	config('output_headers', false)
+	echo(t)
+
+}
+
+### (sample output)
+### 172.XX.XX.XX     staging-api-gateway               #   i-b2XXXXXX   5X.XXX.XXX.XXX   api-gateway/66                                
+### 172.XX.XX.XX     prod-compositor-1                 #   i-83XXXXXX   5X.XXX.XXX.XXX   compositor/978-1-7                            
+### 172.XX.XX.XX     prod-compositor-2                 #   i-84XXXXXX   1XX.XX.XX.XXX    compositor/978-1-7                            
+### 172.XX.XX.XX     prod-vdr-manager-1                #   i-90XXXXXX   5X.XX.XX.XXX     vdr-manager-vpc/683-4                         
+### 172.XX.XX.XX     prod-vdr-manager-2                #   i-97XXXXXX   5X.XX.XXX.XX     vdr-manager-vpc/683-4                         
+### 172.XX.XX.XX     staging-store                     #   i-79XXXXXX   5X.XX.XXX.XXX    store/257                                     
+### 172.XX.XX.XX     staging-dsp-manager               #   i-acXXXXXX   5X.X.XX.XXX      dsp-manager/707-1-7                           
+### ...

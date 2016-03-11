@@ -16,7 +16,7 @@ syn match   ngsComment "#.*" contains=ngsTodo
 syn keyword ngsKeyword and catch collector collect F guard local or return returns TEST throw throws try type while with .. ...
 syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
-syn keyword ngsType Any Arr BasicType Bool CLib Command CSym ExclusiveRange Fun Hash InclusiveRange Int NormalType Null Path Pipe Process ProcessFailed Range Seq Str Type
+syn keyword ngsType Any Arr BasicType Bool CLib Command CSym ExclusiveRange Fun Hash InclusiveRange Int NormalType Null Path Pipe Process ProcessFailed Range Seq Stats Str Type
 syn keyword ngsTodo TODO FIXME XXX NOTE
 syn keyword ngsConstant true false null
 syn keyword ngsPredefinedVariable ARGV ENV

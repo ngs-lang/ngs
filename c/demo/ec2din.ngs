@@ -1,8 +1,11 @@
 #!/usr/bin/env ngs
 
-# Running example: NGS_table_Instances='["InstanceId", "PublicIpAddress", "PrivateIpAddress", "InstanceType", "State", "KeyName", "SecurityGroups", "Placement", "Tags"]' ./demo/ec2din.ngs
+# Running example: ./demo/ec2din.ngs
+# Running example: NGS_table_Instances='["InstanceId", "PublicIpAddress", "PrivateIpAddress", "State", "KeyName", "SecurityGroups"]' ./demo/ec2din.ngs
 
 {
+	config('table_Instances', ['InstanceId', 'PublicIpAddress', 'PrivateIpAddress', 'InstanceType', 'State', 'KeyName', 'SecurityGroups', 'Placement', 'Tags'])
+
 	F limit_len(s:Str, l:Int) {
 		s.len() <= l returns s
 		s[0..(l-3)] + '...'
