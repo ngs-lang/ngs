@@ -20,6 +20,46 @@ F partial_tail(f:Fun, *bind_args)
 TEST p = partial_tail((-), 10); p(7) == -3
 
 
+# === Type =======================================
+
+STDLIB_EXPOSE = {}
+
+F expose(child:NormalType, attr:Str) {
+	STDLIB_EXPOSE[child] = STDLIB_EXPOSE.get(child, []).push(attr)
+	child
+}
+
+# TODO: better exceptions (use correct type, not string)
+# TODO: do not output the details here.
+F impl_not_found(callable:Fun, *args) {
+	echo('Call failed / callable')
+	dump(callable)
+	echo('Call failed / args')
+	dump(args)
+	throw "Call failed"
+}
+
+# TODO: make it faster
+# TODO: support trying all attributes listed in STDLIB_EXPOSE, not just first
+F impl_not_found(callable:Fun, *args) {
+	local l = args.len()
+	local exposed_attr_name = null, change_idx, arg
+	for(i;l) {
+		arg = args[i]
+		if not(exposed_attr_name) and (typeof(arg) in STDLIB_EXPOSE) {
+			exposed_attr_name = STDLIB_EXPOSE[typeof(arg)][0]
+			change_idx = i
+			# TODO: break
+		}
+	}
+	guard exposed_attr_name
+	local new_args = []
+	for(i;l) {
+		new_args.push(if i == change_idx { (.)(args[i], exposed_attr_name) } else args[i])
+	}
+	callable(*new_args)
+}
+
 # === Range ======================================
 
 F stdlib_mkrange(t:Type, start, end) {
@@ -104,9 +144,12 @@ F ==(a:Null, b) false
 F ==(a, b:Null) false
 F ==(a:Null, b:Null) true
 
+# --- Hash ---
 F .(h:Hash, attr:Str) h[attr]
 F .=(h:Hash, attr:Str, v) h[attr] = v
+F get(h:Hash, k) get(h, k, null)
 
+# --- Arr ---
 F .(a:Arr, attr:Str) a.map((.), attr)
 
 TEST [{"x": 1}, {"x": 2}].x == [1, 2]
@@ -1010,6 +1053,26 @@ F echo(t:Table) {
 	})
 
 }
+
+# === Stats ===
+
+{
+	type Stats
+	Stats.expose('h')
+}
+
+F Stats() {
+	s = Stats.constructors[0]()
+	s.h = {}
+	s
+}
+
+F push(s:Stats, k) {
+	s.h[k] = s.h.get(k, 0) + 1
+	s
+}
+
+TEST Stats().push('a').push('a').push('b') == {'a': 2, 'b': 1}
 
 
 # === Misc tests =================================

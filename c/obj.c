@@ -96,7 +96,7 @@ static void _dump(VALUE v, int level) {
 	}
 
 	if(IS_NGS_TYPE(v)) {
-		printf("%*s* type (name and optionally constructors and parents follow) id=%" PRIdPTR "\n", level << 1, "", NGS_TYPE_ID(v));
+		printf("%*s* type (name and optionally constructors and parents follow) id=%" PRIdPTR " ptr=%p\n", level << 1, "", NGS_TYPE_ID(v), IS_NORMAL_TYPE(v) ? v.ptr : 0);
 		_dump(NGS_TYPE_NAME(v), level + 1);
 		if(level < 3) {
 			_dump(NGS_TYPE_FIELDS(v), level + 1);

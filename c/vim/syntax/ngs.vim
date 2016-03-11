@@ -16,7 +16,7 @@ syn match   ngsComment "#.*" contains=ngsTodo
 syn keyword ngsKeyword and catch collector collect F guard local or return returns TEST throw throws try type while with .. ...
 syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
-syn keyword ngsType Any Arr Bool CLib Command CSym ExclusiveRange Fun Hash InclusiveRange Int Null Path Pipe Process ProcessFailed Range Seq Str Type
+syn keyword ngsType Any Arr BasicType Bool CLib Command CSym ExclusiveRange Fun Hash InclusiveRange Int NormalType Null Path Pipe Process ProcessFailed Range Seq Str Type
 syn keyword ngsTodo TODO FIXME XXX NOTE
 syn keyword ngsConstant true false null
 syn keyword ngsPredefinedVariable ARGV ENV
@@ -30,11 +30,11 @@ syn region  ngsString start=+"+ end=+"+ skip=+\\\\\|\\"+ contains=ngsSpecial
 syn match   ngsNumber "\<\d\+\>"
 
 " builtin functions
-syn keyword ngsFunction c_close c_execve c_exit c_fork c_lseek c_open c_read c_waitpid C_WEXITSTATUS C_WTERMSIG compile del dump echo get get_c_errno hash in is keys len load not parse_json push shift values
+syn keyword ngsFunction c_close c_execve c_exit c_fork c_lseek c_open c_read c_waitpid C_WEXITSTATUS C_WTERMSIG compile del dump echo get get_c_errno hash impl_not_found in inherit is keys len load not parse_json push shift values
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction fetch require to_exit_code
 " stdlib functions
-syn keyword ngsFunction all any close_reading_end close_writing_end count dup2 dup2_reading_end dup2_writing_end each error debug filter find_in_path first flatten has identity in len log map max min partial partial_tail pos read split status Strs uniq update wait without write zip
+syn keyword ngsFunction all any close_reading_end close_writing_end count dup2 dup2_reading_end dup2_writing_end each error expose debug filter find_in_path first flatten has identity in len log map max min partial partial_tail pos read split status Strs uniq update wait without write zip
 
 hi def link ngsComment Comment
 hi def link ngsConditional Conditional

@@ -544,6 +544,13 @@ METHOD_RESULT native_parse_json_str EXT_METHOD_PARAMS {
 }
 
 METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_normal_type(argv[0])); }
+METHOD_RESULT native_typeof_any METHOD_PARAMS {
+	if(IS_NORMAL_TYPE_INSTANCE(argv[0])) {
+		METHOD_RETURN(NORMAL_TYPE_INSTANCE_TYPE(argv[0]));
+	}
+	// XXX: Not implemented yet
+	METHOD_RETURN(MAKE_NULL);
+}
 METHOD_RESULT native_get_attr_nti_str EXT_METHOD_PARAMS {
 	// WARNING: for now get_normal_type_instace_attribute can only throw AttrNotFound
 	//          if it changes in future the calling convention below should be changed
@@ -869,6 +876,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// Type
 	register_global_func(vm, 0, "Type",     &native_type_str          ,1, "name",   vm->Str);
+	register_global_func(vm, 0, "typeof",   &native_typeof_any        ,1, "x",      vm->Any);
 
 	// low level file operations
 	register_global_func(vm, 0, "c_dup2",   &native_c_dup2_int_int,    2, "oldfd",    vm->Int, "newfd", vm->Int);
@@ -963,6 +971,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 		ARRAY_ITEMS(argv_array)[i] = v;
 	}
 	set_global(vm, "ARGV", argv_array);
+	set_global(vm, "impl_not_found", vm->impl_not_found = make_array(0)); // There must be a catch-all in stdlib
 
 	// TODO: Some good solution for many defines
 #define E(name) set_global(vm, "C_" #name, MAKE_INT(name))
@@ -1068,6 +1077,9 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR
 	VALUE *callable_items;
 	int args_to_use;
 
+	VALUE new_argv;
+
+	// TODO: Check what happens when callable == []
 	if(IS_ARRAY(callable)) {
 		for(i=OBJ_LEN(callable)-1, callable_items = OBJ_DATA_PTR(callable); i>=0; i--) {
 			mr = vm_call(vm, ctx, result, callable_items[i], argc, argv);
@@ -1077,6 +1089,18 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR
 			// Don't know how to handle other conditions yet
 			assert(mr == METHOD_ARGS_MISMATCH);
 		}
+		// --- impl_not_found() - start ---
+		// impl_not_found == [] when stdlib is not loaded (-E bootstrap switch / during basic tests)
+		if(OBJ_LEN(vm->impl_not_found)) {
+			new_argv = make_array(argc+1);
+			ARRAY_ITEMS(new_argv)[0] = callable;
+			memcpy(&ARRAY_ITEMS(new_argv)[1], argv, sizeof(VALUE)*argc);
+			mr = vm_call(vm, ctx, result, vm->impl_not_found, argc+1, ARRAY_ITEMS(new_argv));
+			if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION)) {
+				return mr;
+			}
+		}
+		// --- impl_not_found() - end ---
 		return METHOD_IMPL_MISSING;
 	}
 

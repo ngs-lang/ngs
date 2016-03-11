@@ -140,6 +140,8 @@ typedef struct vm_struct {
 		VALUE InclusiveRange;
 		VALUE ExclusiveRange;
 
+	VALUE impl_not_found;
+
 } VM;
 
 enum opcodes {
