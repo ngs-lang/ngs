@@ -885,13 +885,17 @@ F config(k:Str) {
 	# TODO: read from config files
 	# TODO: read from command line switches
 	local v
-	debug("Getting config for key '$k'")
+	debug("[config] getting key '$k'")
 	v = try ENV["NGS_$k"]
 	if v {
-		debug("Parsing config for key '$k', value '$v'")
+		debug("[config] Value config for key '$k' found in the environment variable 'NGS_${k}': '$v'")
 		return parse(v)
 	}
 	v = try STDLIB_CONFIG[k]
+	if v is not Null {
+		debug("Value config for key '$k' found in STDLIB_CONFIG: $v")
+		return v
+	}
 	v
 }
 
@@ -1033,10 +1037,7 @@ F echo(t:Table) {
 
 	# Headers
 	if(do_output_headers) {
-		t.col_idx_to_name.each(F(idx, k) {
-			1.write(Str(k, max_colums_widths[idx]) + " ")
-		})
-		echo('')
+		t.col_idx_to_name.map(F(idx, k) Str(k, max_colums_widths[idx])).join(' ').echo()
 		do_line_spacing()
 	}
 
@@ -1064,11 +1065,10 @@ F echo(t:Table) {
 					}
 				}
 				# Format later maybe? Just before printing?
-				Str(subrow_content, max_colums_widths[idx]) + " "
+				Str(subrow_content, max_colums_widths[idx])
 			})
 			if not(done) {
-				subrow_content_arr.each(partial(write, 1))
-				echo('')
+				subrow_content_arr.join(' ').echo()
 			}
 			subrow_idx = subrow_idx + 1
 		}
