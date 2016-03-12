@@ -1084,14 +1084,26 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR
 		}
 		// --- impl_not_found() - start ---
 		// impl_not_found == [] when stdlib is not loaded (-E bootstrap switch / during basic tests)
-		if(OBJ_LEN(vm->impl_not_found) && THIS_FRAME.do_call_impl_not_found) {
-			new_argv = make_array(argc+1);
-			ARRAY_ITEMS(new_argv)[0] = callable;
-			memcpy(&ARRAY_ITEMS(new_argv)[1], argv, sizeof(VALUE)*argc);
-			mr = vm_call(vm, ctx, result, vm->impl_not_found, argc+1, ARRAY_ITEMS(new_argv));
-			if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION)) {
-				return mr;
+		if(THIS_FRAME.do_call_impl_not_found) {
+			if(OBJ_LEN(vm->impl_not_found)) {
+				new_argv = make_array(argc+1);
+				ARRAY_ITEMS(new_argv)[0] = callable;
+				memcpy(&ARRAY_ITEMS(new_argv)[1], argv, sizeof(VALUE)*argc);
+				THIS_FRAME.do_call_impl_not_found = 0;
+				mr = vm_call(vm, ctx, result, vm->impl_not_found, argc+1, ARRAY_ITEMS(new_argv));
+				THIS_FRAME.do_call_impl_not_found = 1;
+				if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION)) {
+					return mr;
+				}
+				assert(mr == METHOD_IMPL_MISSING);
 			}
+			// Either we called impl_not_found and it resulted METHOD_IMPL_MISSING
+			// or we don't have impl_not_found
+			VALUE exc;
+			exc = make_normal_type_instance(vm->ImplNotFound);
+			set_normal_type_instance_attribute(exc, make_string("callable"), callable);
+			set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values(argc, argv));
+			THROW_EXCEPTION_INSTANCE(exc);
 		}
 		// --- impl_not_found() - end ---
 		return METHOD_IMPL_MISSING;

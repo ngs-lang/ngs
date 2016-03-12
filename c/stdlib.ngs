@@ -31,15 +31,6 @@ F expose(child:NormalType, attr:Str) {
 	child
 }
 
-# TODO: better exceptions (use correct type, not string)
-# TODO: do not output the details here.
-F impl_not_found(callable:Fun, *args) {
-	local e = ImplNotFound()
-	e.callable = callable
-	e.args = args
-	throw e
-}
-
 # TODO: make it faster
 # TODO: support trying all attributes listed in STDLIB_EXPOSE, not just first
 F impl_not_found(callable:Fun, *args) {
