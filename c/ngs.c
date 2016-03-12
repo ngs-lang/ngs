@@ -15,7 +15,7 @@
 
 char *sprintf_position(yycontext *yy, int pos) {
 	int linecol[2];
-	char *ret = NGS_MALLOC(1024);
+	char *ret = NGS_MALLOC_ATOMIC(1024);
 	position_to_line_col(yy, pos, linecol);
 	snprintf(ret, 1024, "%d:%d", linecol[0], linecol[1]);
 	return ret;

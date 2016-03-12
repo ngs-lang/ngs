@@ -30,6 +30,9 @@
 
 extern char **environ;
 
+// in ngs.c:
+char *sprintf_position(yycontext *yy, int pos);
+
 char BYTECODE_SIGNATURE[] = "NGS BYTECODE";
 
 char *opcodes_names[] = {
@@ -496,12 +499,13 @@ METHOD_RESULT native_eq_bool_bool METHOD_PARAMS { METHOD_RETURN(MAKE_BOOL(argv[0
 METHOD_RESULT native_not_bool METHOD_PARAMS { METHOD_RETURN(MAKE_BOOL(argv[0].num == V_FALSE)); }
 
 // XXX: glibc specific fmemopen()
-METHOD_RESULT native_compile_str_str METHOD_PARAMS {
+METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 	ast_node *tree = NULL;
 	char *bytecode;
 	size_t len;
 	yycontext yyctx;
 	int parse_ok;
+	(void) ctx;
 	memset(&yyctx, 0, sizeof(yycontext));
 	yyctx.fail_pos = -1;
 	yyctx.fail_rule = "(unknown)";
@@ -512,7 +516,13 @@ METHOD_RESULT native_compile_str_str METHOD_PARAMS {
 	parse_ok = yyparse(&yyctx);
 	if(!parse_ok) {
 		// TODO: error message and/or exception
-		assert(0 == "compile() failed");
+		VALUE exc;
+		char *err = NGS_MALLOC_ATOMIC(1024);
+		exc = make_normal_type_instance(vm->CompileFail);
+		set_normal_type_instance_attribute(exc, make_string("given"), argv[0]);
+		snprintf(err, 1024, "Failed to parse at position %d (%s), rule %s", yyctx.fail_pos, sprintf_position(&yyctx, yyctx.fail_pos), yyctx.fail_rule);
+		set_normal_type_instance_attribute(exc, make_string("info"), make_string(err));
+		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	tree = yyctx.__;
 	IF_DEBUG(COMPILER, print_ast(tree, 0);)
@@ -819,7 +829,12 @@ void vm_init(VM *vm, int argc, char **argv) {
 				MKSUBTYPE(KeyNotFound, LookupFail);
 				MKSUBTYPE(IndexNotFound, LookupFail);
 				MKSUBTYPE(AttrNotFound, LookupFail);
+				MKSUBTYPE(GlobalNotFound, LookupFail);
 			MKSUBTYPE(InvalidArgument, Error);
+			MKSUBTYPE(CompileFail, Error);
+			MKSUBTYPE(CallFail, Error);
+				MKSUBTYPE(DontKnowHowToCall, CallFail);
+				MKSUBTYPE(ImplNotFound, CallFail);
 
 	MKTYPE(Command);
 
@@ -915,7 +930,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "Bool",     &native_Bool_any,          1, "x",   vm->Any);
 	register_global_func(vm, 0, "Str",      &native_Str_int,           1, "n",   vm->Int);
 	register_global_func(vm, 0, "is",       &native_is_any_type,       2, "obj", vm->Any, "t", vm->Type);
-	register_global_func(vm, 0, "compile",  &native_compile_str_str,   2, "code",vm->Str, "fname", vm->Str);
+	register_global_func(vm, 1, "compile",  &native_compile_str_str,   2, "code",vm->Str, "fname", vm->Str);
 	register_global_func(vm, 1, "load",     &native_load_str_str,      2, "bytecode", vm->Str, "func_name", vm->Str);
 	register_global_func(vm, 1, "parse_json",&native_parse_json_str,   1, "s", vm->Str);
 
@@ -1040,7 +1055,7 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 			default:
 				// Types 0-255 are a must. Types above that are optional.
 				if(type < 0x100) {
-					assert(0 == "vm_load_bytecode(): Unknwon section type");
+					assert(0 == "vm_load_bytecode(): Unknown section type");
 				}
 		}
 	}
@@ -1168,12 +1183,11 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR
 		return METHOD_OK;
 	}
 
-	// TODO: allow handling of calling of undefined methods by the NGS language
-	dump_titled("vm_call(): Don't know how to call", callable);
-	abort();
-	// TODO: return the exception
-	return METHOD_EXCEPTION;
-
+	VALUE exc;
+	exc = make_normal_type_instance(vm->DontKnowHowToCall);
+	set_normal_type_instance_attribute(exc, make_string("callable"), callable);
+	set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values(argc, argv));
+	THROW_EXCEPTION_INSTANCE(exc);
 }
 
 METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result) {
@@ -1288,8 +1302,12 @@ main_loop:
 #endif
 							// TODO: report error here instead of crashing
 							if(IS_UNDEF(GLOBALS[gvi])) {
-								fprintf(stderr, "Global '%s' (index %d) not found\n", vm->globals_names[gvi], gvi);
-								assert(0=="Global not found");
+								VALUE exc;
+								exc = make_normal_type_instance(vm->GlobalNotFound);
+								set_normal_type_instance_attribute(exc, make_string("name"), make_string(vm->globals_names[gvi]));
+								set_normal_type_instance_attribute(exc, make_string("index"), MAKE_INT(gvi));
+								*result = exc;
+								goto exception;
 							}
 							// dump_titled("FETCH_GLOBAL", GLOBALS[gvi]);
 							PUSH(GLOBALS[gvi]);
@@ -1388,6 +1406,11 @@ main_loop:
 								POP(*result);
 								// dump_titled("RESULT", *result);
 							} else {
+								// TODO: fix the compiler. Example:
+								// F f() {
+								// 	# x
+								// }
+								// f()
 								assert(0=="Function does not have result value");
 							}
 							assert(saved_stack_ptr == ctx->stack_ptr);
@@ -1580,6 +1603,7 @@ do_jump:
 							return METHOD_ARGS_MISMATCH;
 		case OP_TRY_START:
 							// printf("TRY START %i\n", THIS_FRAME.try_info_ptr);
+							// TODO: statical analysis and compile-time error when "try"s are nested more than MAX_TRIES_PER_FRAME
 							assert(THIS_FRAME.try_info_ptr < MAX_TRIES_PER_FRAME);
 							ARG(jo, JUMP_OFFSET);
 							THIS_FRAME.try_info[THIS_FRAME.try_info_ptr].catch_ip = ip + jo;
@@ -1609,6 +1633,7 @@ do_jump:
 		default:
 							// TODO: exception
 							printf("ERROR: Unknown opcode %d\n", opcode);
+							assert(0 == "Unknown opcode");
 	}
 
 end_main_loop:

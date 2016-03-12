@@ -129,7 +129,8 @@ static void _dump(VALUE v, int level) {
 
 	if(IS_NORMAL_TYPE_INSTANCE(v)) {
 		printf("%*s* user type instance (type and fields optionally follow)\n", level << 1, "");
-		if(level < 3) {
+		// level < 4 so that uncaught exception ImplNotFound could display the type of the arguments
+		if(level < 4) {
 			_dump(NORMAL_TYPE_INSTANCE_TYPE(v), level + 1);
 			_dump(NORMAL_TYPE_INSTANCE_FIELDS(v), level + 1);
 		}

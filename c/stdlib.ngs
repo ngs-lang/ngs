@@ -34,11 +34,10 @@ F expose(child:NormalType, attr:Str) {
 # TODO: better exceptions (use correct type, not string)
 # TODO: do not output the details here.
 F impl_not_found(callable:Fun, *args) {
-	echo('Call failed / callable')
-	dump(callable)
-	echo('Call failed / args')
-	dump(args)
-	throw "Call failed"
+	local e = ImplNotFound()
+	e.callable = callable
+	e.args = args
+	throw e
 }
 
 # TODO: make it faster
@@ -667,8 +666,6 @@ F dup2(oldfd:Int, newfd:Int) {
 # TODO: Use some thread-local copy of the environment?
 #       This would allow simple handling of modifications
 #       for exec'ed processes.
-# TODO: better and consistent naming for this function?
-F get_env_strings() ENV.map(F(k, v) "${k}=${v}")
 
 # Reads all
 # TODO: detect and process errors, throw exception(s)
