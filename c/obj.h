@@ -122,18 +122,6 @@ typedef struct {
 } CCIF_OBJECT;
 
 // malloc() / NGS_MALLOC() memory is 8 bytes aligned, should be at least 4 bytes aligned
-// .....000 - *OBJECT
-// .....001 - int number
-// OLD:
-// .....000 - *OBJECT
-// .....001 - int number
-// .....010 - false
-// .....011 - true
-// .....100 - null
-// .....101 - built_in_type (WIP)
-// .....110 - reserved
-// .....111 - undef
-// NEW:
 // ...... 00 - *OBJECT
 // ...... 01 - int number
 // XXXXXX 10 - misc values
@@ -159,7 +147,6 @@ typedef struct {
 #define TAG_BITS    (2)
 #define TAG_AND     (3)
 #define TAG_INT     (1)
-#define TYPE_AND (0xFF)
 
 typedef enum {
 	V_NULL  = 2,
