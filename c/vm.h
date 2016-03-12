@@ -82,7 +82,6 @@ typedef struct {
 } TRY_INFO;
 
 typedef struct {
-	IP prev_ip;
 	// TODO: smarter allocation of locals when can't be captured by clousre,
 	//       probably on stack.
 	VALUE *locals;
@@ -215,7 +214,7 @@ static const UT_icd ut_value_icd _UNUSED_ = {sizeof(VALUE),NULL,NULL,NULL};
 // typedef int VM_INT;
 void set_global(VM *vm, const char *name, VALUE v);
 METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result);
-METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR_INDEX argc, const VALUE *argv);
+METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, const LOCAL_VAR_INDEX argc, const VALUE *argv);
 BYTECODE_HANDLE *ngs_create_bytecode();
 void ngs_add_bytecode_section(BYTECODE_HANDLE *h, BYTECODE_SECTION_TYPE type, BYTECODE_SECTION_LEN len, char *data);
 BYTECODE_HANDLE *ngs_start_unserializing_bytecode(char *data);

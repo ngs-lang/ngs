@@ -3,14 +3,14 @@
 SHELL := /bin/bash -e
 
 CC := gcc
-# -gdwarf-2 -g3 -- for debugging macros
+# -gdwarf-4 -g3 -- for debugging macros
 # -rdynamic -- for backtrace_symbols() to work
-CFLAGS := -Wall -Wextra -gdwarf-2 -g3 -g -O1
+CFLAGS := -Wall -Wextra -gdwarf-4 -g3 -g -O1
 CFLAGS_DEBUG=-DNGS_DEBUG_FLAGS=0xFFFF
 LDLIBS := -lpthread -lgc -lffi -ldl -ljson-c
 LDFLAGS := -rdynamic
 # -pg - for gprof profiler
-LDFLAGS_PROFILER := -pg
+LDFLAGS_PROFILER := -pg -g
 COMMON_DEPS := *.h Makefile syntax.c syntax.auto.h
 SRC := debug.o ast.o obj.o compile.o decompile.o vm.o ngs.o
 # SRC := *.c

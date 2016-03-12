@@ -817,3 +817,13 @@ char *ngs_strdup(const char *src) {
 	memcpy(ret, src, len);
 	return ret;
 }
+
+// WIP
+VALUE make_backtrace(VM *vm, CTX *ctx) {
+	VALUE ret;
+	size_t i;
+	ret = make_array(ctx->frame_ptr);
+	for(i=0; i<ctx->frame_ptr; i++) {
+
+	}
+}

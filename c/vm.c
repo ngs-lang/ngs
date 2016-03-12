@@ -85,15 +85,19 @@ char *opcodes_names[] = {
 };
 
 
-#define EXPECT_STACK_DEPTH(n) assert(ctx->stack_ptr > (n));
+#define EXPECT_STACK_DEPTH(n) assert(ctx->stack_ptr >= (n));
 #define PUSH(v) assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr++] = v
+#define PUSH_NOCHECK(v) ctx->stack[ctx->stack_ptr++] = v
 #define POP(dst) assert(ctx->stack_ptr); ctx->stack_ptr--; dst = ctx->stack[ctx->stack_ptr]
+#define POP_NOCHECK(dst) ctx->stack_ptr--; dst = ctx->stack[ctx->stack_ptr]
 #define TOP (ctx->stack[ctx->stack_ptr-1])
 #define SECOND (ctx->stack[ctx->stack_ptr-2])
 #define DUP assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr] = ctx->stack[ctx->stack_ptr-1]; ctx->stack_ptr++;
-#define REMOVE_TOP assert(ctx->stack_ptr); ctx->stack_ptr--;
-#define REMOVE_N(n) DEBUG_VM_RUN("Popping %d argument(s) after call from stack\n", (int)n); assert(ctx->stack_ptr >= (unsigned int)n); ctx->stack_ptr-=n;
-#define PUSH_NULL PUSH((VALUE){.num=V_NULL})
+#define REMOVE_TOP assert(ctx->stack_ptr); ctx->stack_ptr--
+#define REMOVE_TOP_NOCHECK ctx->stack_ptr--
+#define REMOVE_TOP_N(n) DEBUG_VM_RUN("Popping %d argument(s) after call from stack\n", (int)n); assert(ctx->stack_ptr >= (unsigned int)n); ctx->stack_ptr-=n;
+#define REMOVE_TOP_N_NOCHECK(n) DEBUG_VM_RUN("Popping %d argument(s) after call from stack\n", (int)n); ctx->stack_ptr-=n;
+#define PUSH_NULL PUSH(MAKE_NULL)
 #define GLOBALS (vm->globals)
 #define THIS_FRAME (ctx->frames[ctx->frame_ptr-1])
 #define THIS_FRAME_CLOSURE (THIS_FRAME.closure)
@@ -104,6 +108,7 @@ char *opcodes_names[] = {
 #define ARG_GVI ARG(gvi, GLOBAL_VAR_INDEX);
 #define ARG_UVI ARG(uvi, UPVAR_INDEX);
 #define PUSH_FUNC(dst, fn) if(IS_NGS_TYPE(dst)) { array_push(NGS_TYPE_CONSTRUCTORS(dst), (fn)); } else { array_push(dst, fn); };
+// TODO: Exception
 #define CONVERTING_OP(test, type) \
 	assert(ctx->stack_ptr); \
 	v = TOP; \
@@ -115,9 +120,9 @@ char *opcodes_names[] = {
 	if(mr != METHOD_OK) { \
 		dump_titled("Failed to convert to type", (VALUE){.ptr = vm->type}); \
 		dump_titled("Failed to convert value", ctx->stack[ctx->stack_ptr-1]); \
+		assert(0 == "Failed to convert"); \
 	} \
-	REMOVE_N(1); \
-	assert(mr == METHOD_OK); \
+	REMOVE_TOP_N(1); \
 	goto main_loop;
 
 #define METHOD_PARAMS (VALUE *argv, VALUE *result)
@@ -1062,7 +1067,7 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 	return ip;
 }
 
-METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR_INDEX argc, const VALUE *argv) {
+METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, const LOCAL_VAR_INDEX argc, const VALUE *argv) {
 	VALUE *local_var_ptr;
 	LOCAL_VAR_INDEX lvi;
 	int i;
@@ -1070,7 +1075,6 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR
 	VALUE *callable_items;
 	int args_to_use;
 
-	VALUE new_argv;
 
 	// TODO: Check what happens when callable == []
 	if(IS_ARRAY(callable)) {
@@ -1086,6 +1090,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR
 		// impl_not_found == [] when stdlib is not loaded (-E bootstrap switch / during basic tests)
 		if(THIS_FRAME.do_call_impl_not_found) {
 			if(OBJ_LEN(vm->impl_not_found)) {
+				VALUE new_argv;
 				new_argv = make_array(argc+1);
 				ARRAY_ITEMS(new_argv)[0] = callable;
 				memcpy(&ARRAY_ITEMS(new_argv)[1], argv, sizeof(VALUE)*argc);
@@ -1244,12 +1249,10 @@ main_loop:
 							PUSH_NULL;
 							goto main_loop;
 		case OP_PUSH_FALSE:
-							SET_FALSE(v);
-							PUSH(v);
+							PUSH(MAKE_FALSE);
 							goto main_loop;
 		case OP_PUSH_TRUE:
-							SET_TRUE(v);
-							PUSH(v);
+							PUSH(MAKE_TRUE);
 							goto main_loop;
 		case OP_PUSH_INT:
 							// Arg: n
@@ -1258,8 +1261,7 @@ main_loop:
 							// TODO: make it push_intSIZE maybe?
 							i = *(int *) &vm->bytecode[ip];
 							ip += sizeof(i);
-							SET_INT(v, i);
-							PUSH(v);
+							PUSH(MAKE_INT(i));
 							goto main_loop;
 		case OP_PUSH_L_STR:
 							// Arg: LEN + string
@@ -1288,11 +1290,9 @@ main_loop:
 							SECOND = v;
 							goto main_loop;
 		case OP_RESOLVE_GLOBAL:
-							// Probably not worh optimizing
 							POP(v);
 							assert(IS_STRING(v));
-							SET_INT(v, get_global_index(vm, OBJ_DATA_PTR(v), OBJ_LEN(v)));
-							PUSH(v);
+							PUSH_NOCHECK(MAKE_INT(get_global_index(vm, OBJ_DATA_PTR(v), OBJ_LEN(v))));
 							goto main_loop;
 		case OP_PATCH:
 							// Arg: offset
@@ -1327,13 +1327,14 @@ main_loop:
 							goto main_loop;
 		case OP_STORE_GLOBAL:
 							ARG_GVI;
-							POP(v);
+							EXPECT_STACK_DEPTH(1);
 #ifdef DO_NGS_DEBUG
 							// DEBUG_VM_RUN("OP_STORE_GLOBAL gvi=%d len=%zu\n", gvi, vm->globals_len);
 							assert(gvi < vm->globals_len);
 							// TODO: report error here instead of crashing
 #endif
-							GLOBALS[gvi] = v;
+							GLOBALS[gvi] = TOP;
+							REMOVE_TOP;
 							goto main_loop;
 		case OP_FETCH_LOCAL:
 							ARG_LVI;
@@ -1344,8 +1345,7 @@ main_loop:
 							goto main_loop;
 		case OP_STORE_LOCAL:
 							ARG_LVI;
-							POP(v);
-							LOCALS[lvi] = v;
+							POP(LOCALS[lvi]);
 							goto main_loop;
 		case OP_CALL:
 							// TODO: print arguments of failed call, not just the callable
@@ -1358,9 +1358,10 @@ main_loop:
 							//     n_params_optional,
 							//     callable
 							// Out: ... result
-							POP(callable);
+							EXPECT_STACK_DEPTH(2);
+							POP_NOCHECK(callable);
 							// dump_titled("CALLABLE", callable);
-							POP(v); // number of arguments
+							POP_NOCHECK(v); // number of arguments
 							// POP(n_params_required); // number of arguments
 							// POP(n_params_optional);
 							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-GET_INT(v)-1], callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
@@ -1377,12 +1378,13 @@ main_loop:
 								dump_titled("Failed callable / 1", callable);
 								assert(0=="Handling failed method calls is not implemented yet");
 							}
-							REMOVE_N(GET_INT(v));
+							REMOVE_TOP_N(GET_INT(v));
 							goto main_loop;
 		case OP_CALL_EXC:
 							// Calls exception handler, METHOD_IMPL_MISSING means we should re-throw the exception
-							POP(callable);
-							POP(v); // number of arguments
+							EXPECT_STACK_DEPTH(2);
+							POP_NOCHECK(callable);
+							POP_NOCHECK(v); // number of arguments
 							THIS_FRAME.do_call_impl_not_found = 0;
 							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-GET_INT(v)-1], callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
 							THIS_FRAME.do_call_impl_not_found = 1;
@@ -1398,7 +1400,7 @@ main_loop:
 								dump_titled("Failed callable / 2", callable);
 								assert(0=="Handling failed method calls is not implemented yet");
 							}
-							REMOVE_N(GET_INT(v));
+							REMOVE_TOP_N(GET_INT(v));
 							goto main_loop;
 		case OP_CALL_ARR:
 							POP(callable);
@@ -1414,7 +1416,7 @@ main_loop:
 								dump_titled("Failed callable / 3", callable);
 								assert(0=="Handling failed method calls is not implemented yet");
 							}
-							REMOVE_N(1);
+							REMOVE_TOP_N(1);
 							goto main_loop;
 		case OP_RET:
 							if(saved_stack_ptr < ctx->stack_ptr) {
@@ -1456,7 +1458,7 @@ do_jump:
 							vlo_len = GET_INT(v);
 							v = make_array_with_values(vlo_len, &(ctx->stack[ctx->stack_ptr-vlo_len]));
 							ctx->stack_ptr -= vlo_len;
-							PUSH(v);
+							PUSH_NOCHECK(v);
 							goto main_loop;
 		case OP_MAKE_CLOSURE:
 							// Arg: code_jump_offset, number_of_locals
@@ -1496,11 +1498,10 @@ do_jump:
 							v = join_strings(string_components_count, &(ctx->stack[ctx->stack_ptr-string_components_count]));
 							assert(ctx->stack_ptr >= string_components_count);
 							ctx->stack_ptr -= string_components_count;
-							PUSH(v);
+							PUSH_NOCHECK(v);
 							goto main_loop;
 		case OP_PUSH_EMPTY_STR:
-							v = make_var_len_obj(T_STR, 1, 0);
-							PUSH(v);
+							PUSH(make_var_len_obj(T_STR, 1, 0));
 							goto main_loop;
 		case OP_GLOBAL_DEF_P:
 							ARG_GVI;
@@ -1588,9 +1589,10 @@ do_jump:
 							v = make_hash(vlo_len);
 							ctx->stack_ptr -= vlo_len * 2;
 							for(j=0; j<vlo_len;j++) {
+								// Use pointer maybe instead of ctx->stack[ctx->stack_ptr...]
 								set_hash_key(v, ctx->stack[ctx->stack_ptr+j*2], ctx->stack[ctx->stack_ptr+j*2+1]);
 							}
-							PUSH(v);
+							PUSH_NOCHECK(v);
 							goto main_loop;
 		case OP_TO_BOOL:
 							CONVERTING_OP(IS_BOOL, Bool);
@@ -1599,16 +1601,15 @@ do_jump:
 		case OP_ARR_APPEND:
 							EXPECT_STACK_DEPTH(2);
 							array_push(ctx->stack[ctx->stack_ptr-2], ctx->stack[ctx->stack_ptr-1]);
-							REMOVE_N(1);
+							REMOVE_TOP_NOCHECK;
 							goto main_loop;
 		case OP_ARR_CONCAT:
 							EXPECT_STACK_DEPTH(2);
 							native_plus_arr_arr(&ctx->stack[ctx->stack_ptr-2], &v);
-							REMOVE_N(2);
-							PUSH(v);
+							REMOVE_TOP_N_NOCHECK(2);
+							PUSH_NOCHECK(v);
 							goto main_loop;
 		case OP_GUARD:
-							EXPECT_STACK_DEPTH(1);
 							POP(v);
 							assert(IS_BOOL(v));
 							if(IS_TRUE(v)) {
@@ -1641,9 +1642,9 @@ do_jump:
 		case OP_MAKE_CMD:
 							EXPECT_STACK_DEPTH(1);
 							command = make_normal_type_instance(vm->Command);
-							POP(v);
+							POP_NOCHECK(v);
 							set_normal_type_instance_attribute(command, make_string("argv"), v);
-							PUSH(command);
+							PUSH_NOCHECK(command);
 							goto main_loop;
 		default:
 							// TODO: exception
