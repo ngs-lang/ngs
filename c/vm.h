@@ -91,6 +91,8 @@ typedef struct {
 	TRY_INFO try_info[MAX_TRIES_PER_FRAME];
 	int try_info_ptr;
 
+	int do_call_impl_not_found;
+
 } FRAME;
 
 // Plan: have exactly one context per thread.

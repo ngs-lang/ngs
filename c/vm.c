@@ -1084,7 +1084,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR
 		}
 		// --- impl_not_found() - start ---
 		// impl_not_found == [] when stdlib is not loaded (-E bootstrap switch / during basic tests)
-		if(OBJ_LEN(vm->impl_not_found)) {
+		if(OBJ_LEN(vm->impl_not_found) && THIS_FRAME.do_call_impl_not_found) {
 			new_argv = make_array(argc+1);
 			ARRAY_ITEMS(new_argv)[0] = callable;
 			memcpy(&ARRAY_ITEMS(new_argv)[1], argv, sizeof(VALUE)*argc);
@@ -1167,6 +1167,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, LOCAL_VAR
 		}
 		ctx->frames[ctx->frame_ptr].closure = callable;
 		ctx->frames[ctx->frame_ptr].try_info_ptr = 0;
+		ctx->frames[ctx->frame_ptr].do_call_impl_not_found = 1;
 		// printf("INCREASING FRAME PTR\n");
 		ctx->frame_ptr++;
 		mr = vm_run(vm, ctx, CLOSURE_OBJ_IP(callable), result);
@@ -1370,7 +1371,9 @@ main_loop:
 							// Calls exception handler, METHOD_IMPL_MISSING means we should re-throw the exception
 							POP(callable);
 							POP(v); // number of arguments
+							THIS_FRAME.do_call_impl_not_found = 0;
 							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-GET_INT(v)-1], callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
+							THIS_FRAME.do_call_impl_not_found = 1;
 							if(mr == METHOD_EXCEPTION) {
 								// TODO: special handling? Exception during exception handling.
 								*result = ctx->stack[ctx->stack_ptr-GET_INT(v)-1];
