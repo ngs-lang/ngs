@@ -31,6 +31,8 @@ F expose(child:NormalType, attr:Str) {
 	child
 }
 
+# * This is called by the VM when a method was called but none of the implementations matched
+#   the parameters (or failed "guard" statements).
 # TODO: make it faster
 # TODO: support trying all attributes listed in STDLIB_EXPOSE, not just first
 F impl_not_found(callable:Fun, *args) {
@@ -45,10 +47,8 @@ F impl_not_found(callable:Fun, *args) {
 		}
 	}
 	guard exposed_attr_name
-	local new_args = []
-	for(i;l) {
-		new_args.push(if i == change_idx { (.)(args[i], exposed_attr_name) } else args[i])
-	}
+	local new_args = copy(args)
+	new_args[change_idx] = (.)(new_args[change_idx], exposed_attr_name)
 	callable(*new_args)
 }
 

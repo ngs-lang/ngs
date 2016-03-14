@@ -91,7 +91,7 @@ typedef struct {
 	int try_info_ptr;
 
 	int do_call_impl_not_found;
-
+	IP last_ip;
 } FRAME;
 
 // Plan: have exactly one context per thread.
@@ -219,4 +219,6 @@ BYTECODE_HANDLE *ngs_create_bytecode();
 void ngs_add_bytecode_section(BYTECODE_HANDLE *h, BYTECODE_SECTION_TYPE type, BYTECODE_SECTION_LEN len, char *data);
 BYTECODE_HANDLE *ngs_start_unserializing_bytecode(char *data);
 void ngs_fetch_bytecode_section(BYTECODE_HANDLE *h, BYTECODE_SECTION_TYPE *type, BYTECODE_SECTION_LEN *len, char **data);
+// In obj.c
+VALUE make_backtrace(VM *vm, CTX *ctx);
 #endif

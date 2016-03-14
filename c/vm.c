@@ -116,6 +116,7 @@ char *opcodes_names[] = {
 		goto main_loop; \
 	} \
 	PUSH(v); \
+	THIS_FRAME.last_ip = ip; \
 	mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-2], (VALUE){.ptr = vm->type}, 1, &ctx->stack[ctx->stack_ptr-1]); \
 	if(mr != METHOD_OK) { \
 		dump_titled("Failed to convert to type", (VALUE){.ptr = vm->type}); \
@@ -129,7 +130,11 @@ char *opcodes_names[] = {
 #define EXT_METHOD_PARAMS (VM *vm, CTX *ctx, VALUE *argv, VALUE *result)
 #define METHOD_RETURN(v) { *result = (v); return METHOD_OK; }
 #define THROW_EXCEPTION(t) { *result = make_string(t); return METHOD_EXCEPTION; }
-#define THROW_EXCEPTION_INSTANCE(e) { *result = e; return METHOD_EXCEPTION; }
+#define THROW_EXCEPTION_INSTANCE(e) { \
+	set_normal_type_instance_attribute(e, make_string("backtrace"), make_backtrace(vm, ctx)); \
+	*result = e; \
+	return METHOD_EXCEPTION; \
+}
 
 #define INT_METHOD(name, op) \
 METHOD_RESULT native_ ## name ## _int_int METHOD_PARAMS { \
@@ -221,6 +226,22 @@ METHOD_RESULT native_index_get_arr_int EXT_METHOD_PARAMS {
 	}
 	*result = ARRAY_ITEMS(argv[0])[idx];
 	return METHOD_OK;
+}
+
+METHOD_RESULT native_index_set_arr_int_any EXT_METHOD_PARAMS {
+	int idx, len;
+	(void) ctx;
+	len = OBJ_LEN(argv[0]);
+	idx = GET_INT(argv[1]);
+	if((idx < 0) || (idx >= len)) {
+		VALUE e;
+		e = make_normal_type_instance(vm->IndexNotFound);
+		set_normal_type_instance_attribute(e, make_string("container"), argv[0]);
+		set_normal_type_instance_attribute(e, make_string("key"), argv[1]);
+		THROW_EXCEPTION_INSTANCE(e);
+	}
+	ARRAY_ITEMS(argv[0])[idx] = argv[2];
+	METHOD_RETURN(argv[2]);
 }
 
 
@@ -621,6 +642,8 @@ METHOD_RESULT native_join_arr_str METHOD_PARAMS {
 	return METHOD_OK;
 }
 
+METHOD_RESULT native_copy_arr METHOD_PARAMS { METHOD_RETURN(make_array_with_values(OBJ_LEN(argv[0]), ARRAY_ITEMS(argv[0]))); }
+
 METHOD_RESULT native_c_fork METHOD_PARAMS {
 	(void) argv;
 	pid_t pid;
@@ -908,7 +931,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "len",      &native_len,               1, "arr", vm->Arr);
 	register_global_func(vm, 0, "get",      &native_index_get_arr_int_any, 3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
 	register_global_func(vm, 1, "[]",       &native_index_get_arr_int, 2, "arr", vm->Arr, "idx", vm->Int);
+	register_global_func(vm, 1, "[]=",      &native_index_set_arr_int_any, 3, "arr", vm->Arr, "idx", vm->Int, "v", vm->Any);
 	register_global_func(vm, 0, "join",     &native_join_arr_str,      2, "arr", vm->Arr, "s", vm->Str);
+	register_global_func(vm, 0, "copy",     &native_copy_arr,          1, "arr", vm->Arr);
 
 	// string
 	// TODO: other string comparison operators
@@ -1095,6 +1120,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, con
 				ARRAY_ITEMS(new_argv)[0] = callable;
 				memcpy(&ARRAY_ITEMS(new_argv)[1], argv, sizeof(VALUE)*argc);
 				THIS_FRAME.do_call_impl_not_found = 0;
+				// last_ip should have been already set up before calling vm_call()
 				mr = vm_call(vm, ctx, result, vm->impl_not_found, argc+1, ARRAY_ITEMS(new_argv));
 				THIS_FRAME.do_call_impl_not_found = 1;
 				if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION)) {
@@ -1185,6 +1211,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, con
 		ctx->frames[ctx->frame_ptr].closure = callable;
 		ctx->frames[ctx->frame_ptr].try_info_ptr = 0;
 		ctx->frames[ctx->frame_ptr].do_call_impl_not_found = 1;
+		ctx->frames[ctx->frame_ptr].last_ip = 0;
 		// printf("INCREASING FRAME PTR\n");
 		ctx->frame_ptr++;
 		mr = vm_run(vm, ctx, CLOSURE_OBJ_IP(callable), result);
@@ -1364,6 +1391,7 @@ main_loop:
 							POP_NOCHECK(v); // number of arguments
 							// POP(n_params_required); // number of arguments
 							// POP(n_params_optional);
+							THIS_FRAME.last_ip = ip;
 							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-GET_INT(v)-1], callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
 							// assert(ctx->stack[ctx->stack_ptr-GET_INT(v)-1].num);
 							if(mr == METHOD_EXCEPTION) {
@@ -1386,6 +1414,7 @@ main_loop:
 							POP_NOCHECK(callable);
 							POP_NOCHECK(v); // number of arguments
 							THIS_FRAME.do_call_impl_not_found = 0;
+							THIS_FRAME.last_ip = ip;
 							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-GET_INT(v)-1], callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
 							THIS_FRAME.do_call_impl_not_found = 1;
 							if(mr == METHOD_EXCEPTION) {
@@ -1404,6 +1433,7 @@ main_loop:
 							goto main_loop;
 		case OP_CALL_ARR:
 							POP(callable);
+							THIS_FRAME.last_ip = ip;
 							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-2], callable, OBJ_LEN(ctx->stack[ctx->stack_ptr-1]), ARRAY_ITEMS(ctx->stack[ctx->stack_ptr-1]));
 							// assert(ctx->stack[ctx->stack_ptr-2].num);
 							if(mr == METHOD_EXCEPTION) {
@@ -1638,6 +1668,9 @@ do_jump:
 							goto main_loop;
 		case OP_THROW:
 							POP(*result);
+							// if(obj_is_of_type(*result, vm->Exception)) {
+							// 	set_normal_type_instance_attribute(*result, make_string("thrown_backtrace?"), make_backtrace(vm, ctx));
+							// }
 							goto exception;
 		case OP_MAKE_CMD:
 							EXPECT_STACK_DEPTH(1);

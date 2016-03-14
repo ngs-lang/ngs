@@ -819,11 +819,18 @@ char *ngs_strdup(const char *src) {
 }
 
 // WIP
+// INFO: Backtrace is always needed to throw an exception
+//       but it's rarely used so snapshot here whatever is needed
+//       so it will be just enough to enable resolving later
+// TODO: consider snapshotting local variables of each frame
+//       plus arguments info
 VALUE make_backtrace(VM *vm, CTX *ctx) {
 	VALUE ret;
 	size_t i;
+	(void) vm;
 	ret = make_array(ctx->frame_ptr);
 	for(i=0; i<ctx->frame_ptr; i++) {
-
+		ARRAY_ITEMS(ret)[i] = MAKE_INT(ctx->frames[i].last_ip);
 	}
+	return ret;
 }
