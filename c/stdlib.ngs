@@ -1102,6 +1102,7 @@ TEST parse_json('{"a": 1, "b": [null, false, true]}') == {'a': 1, 'b': [null, fa
 # === Exceptions tests ===========================
 TEST h={}; try h["a"] catch(e:KeyNotFound) true
 TEST a=[]; try a[0] catch(e:IndexNotFound) true
+TEST a=[]; try a[0]=1 catch(e:IndexNotFound) true
 TEST type T; try T().xyz catch(e:AttrNotFound) true
 TEST try NO_SUCH_GLOBAL catch(e:GlobalNotFound) true
 TEST try c_lseek(0, 0, "bad arg") catch(e:InvalidArgument) true
