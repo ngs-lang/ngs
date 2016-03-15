@@ -31,6 +31,8 @@ F expose(child:NormalType, attr:Str) {
 	child
 }
 
+# * if there is no appropriate mymethod(...,my_type_instance,...) and the type of my_type_instance
+#   has expose()d attribute, retry the call with mymethod(...,my_type_instance.exposed_attribute,...)
 # * This is called by the VM when a method was called but none of the implementations matched
 #   the parameters (or failed "guard" statements).
 # TODO: make it faster
