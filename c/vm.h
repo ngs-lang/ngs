@@ -90,7 +90,7 @@ typedef struct {
 	TRY_INFO try_info[MAX_TRIES_PER_FRAME];
 	int try_info_ptr;
 
-	int do_call_impl_not_found;
+	int do_call_impl_not_found_hook;
 	IP last_ip;
 } FRAME;
 
@@ -146,7 +146,7 @@ typedef struct vm_struct {
 		VALUE InclusiveRange;
 		VALUE ExclusiveRange;
 
-	VALUE impl_not_found;
+	VALUE impl_not_found_hook;
 
 } VM;
 

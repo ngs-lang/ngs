@@ -994,7 +994,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 		ARRAY_ITEMS(argv_array)[i] = v;
 	}
 	set_global(vm, "ARGV", argv_array);
-	set_global(vm, "impl_not_found", vm->impl_not_found = make_array(0)); // There must be a catch-all in stdlib
+	set_global(vm, "impl_not_found_hook", vm->impl_not_found_hook = make_array(0)); // There must be a catch-all in stdlib
 
 	// TODO: Some good solution for many defines
 #define E(name) set_global(vm, "C_" #name, MAKE_INT(name))
@@ -1111,32 +1111,32 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, con
 			// Don't know how to handle other conditions yet
 			assert(mr == METHOD_ARGS_MISMATCH);
 		}
-		// --- impl_not_found() - start ---
-		// impl_not_found == [] when stdlib is not loaded (-E bootstrap switch / during basic tests)
-		if(THIS_FRAME.do_call_impl_not_found) {
-			if(OBJ_LEN(vm->impl_not_found)) {
+		// --- impl_not_found_hook() - start ---
+		// impl_not_found_hook == [] when stdlib is not loaded (-E bootstrap switch / during basic tests)
+		if(THIS_FRAME.do_call_impl_not_found_hook) {
+			if(OBJ_LEN(vm->impl_not_found_hook)) {
 				VALUE new_argv;
 				new_argv = make_array(argc+1);
 				ARRAY_ITEMS(new_argv)[0] = callable;
 				memcpy(&ARRAY_ITEMS(new_argv)[1], argv, sizeof(VALUE)*argc);
-				THIS_FRAME.do_call_impl_not_found = 0;
+				THIS_FRAME.do_call_impl_not_found_hook = 0;
 				// last_ip should have been already set up before calling vm_call()
-				mr = vm_call(vm, ctx, result, vm->impl_not_found, argc+1, ARRAY_ITEMS(new_argv));
-				THIS_FRAME.do_call_impl_not_found = 1;
+				mr = vm_call(vm, ctx, result, vm->impl_not_found_hook, argc+1, ARRAY_ITEMS(new_argv));
+				THIS_FRAME.do_call_impl_not_found_hook = 1;
 				if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION)) {
 					return mr;
 				}
 				assert(mr == METHOD_IMPL_MISSING);
 			}
-			// Either we called impl_not_found and it resulted METHOD_IMPL_MISSING
-			// or we don't have impl_not_found
+			// Either we called impl_not_found_hook and it resulted METHOD_IMPL_MISSING
+			// or we don't have impl_not_found_hook
 			VALUE exc;
 			exc = make_normal_type_instance(vm->ImplNotFound);
 			set_normal_type_instance_attribute(exc, make_string("callable"), callable);
 			set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values(argc, argv));
 			THROW_EXCEPTION_INSTANCE(exc);
 		}
-		// --- impl_not_found() - end ---
+		// --- impl_not_found_hook() - end ---
 		return METHOD_IMPL_MISSING;
 	}
 
@@ -1210,7 +1210,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, con
 		}
 		ctx->frames[ctx->frame_ptr].closure = callable;
 		ctx->frames[ctx->frame_ptr].try_info_ptr = 0;
-		ctx->frames[ctx->frame_ptr].do_call_impl_not_found = 1;
+		ctx->frames[ctx->frame_ptr].do_call_impl_not_found_hook = 1;
 		ctx->frames[ctx->frame_ptr].last_ip = 0;
 		// printf("INCREASING FRAME PTR\n");
 		ctx->frame_ptr++;
@@ -1413,10 +1413,10 @@ main_loop:
 							EXPECT_STACK_DEPTH(2);
 							POP_NOCHECK(callable);
 							POP_NOCHECK(v); // number of arguments
-							THIS_FRAME.do_call_impl_not_found = 0;
+							THIS_FRAME.do_call_impl_not_found_hook = 0;
 							THIS_FRAME.last_ip = ip;
 							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-GET_INT(v)-1], callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
-							THIS_FRAME.do_call_impl_not_found = 1;
+							THIS_FRAME.do_call_impl_not_found_hook = 1;
 							if(mr == METHOD_EXCEPTION) {
 								// TODO: special handling? Exception during exception handling.
 								*result = ctx->stack[ctx->stack_ptr-GET_INT(v)-1];

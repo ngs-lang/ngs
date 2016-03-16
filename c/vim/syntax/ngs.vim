@@ -30,7 +30,7 @@ syn region  ngsString start=+"+ end=+"+ skip=+\\\\\|\\"+ contains=ngsSpecial
 syn match   ngsNumber "\<\d\+\>"
 
 " builtin functions
-syn keyword ngsFunction c_close c_execve c_exit c_fork c_lseek c_open c_read c_waitpid C_WEXITSTATUS C_WTERMSIG compile del dump echo get get_c_errno hash impl_not_found in inherit is keys len load not parse_json push shift values
+syn keyword ngsFunction c_close c_execve c_exit c_fork c_lseek c_open c_read c_waitpid C_WEXITSTATUS C_WTERMSIG compile del dump echo get get_c_errno hash impl_not_found_hook in inherit is keys len load not parse_json push shift values
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction fetch require to_exit_code
 " stdlib functions
