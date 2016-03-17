@@ -20,6 +20,12 @@ F partial_tail(f:Fun, *bind_args)
 TEST p = partial_tail((-), 10); p(7) == -3
 
 
+# === Exception ==================================
+
+F init(e:Exception) {
+	e.backtrace = Backtrace()
+}
+
 # === Type =======================================
 
 STDLIB_EXPOSE = {}
@@ -1076,10 +1082,8 @@ F echo(t:Table) {
 	Stats.expose('h')
 }
 
-F Stats() {
-	s = Stats.constructors[0]()
+F init(s:Stats) {
 	s.h = {}
-	s
 }
 
 F Stats(a:Arr) {

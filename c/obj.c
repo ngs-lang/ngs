@@ -825,12 +825,17 @@ char *ngs_strdup(const char *src) {
 // TODO: consider snapshotting local variables of each frame
 //       plus arguments info
 VALUE make_backtrace(VM *vm, CTX *ctx) {
-	VALUE ret;
+	VALUE ret, frames, h;
 	size_t i;
 	(void) vm;
-	ret = make_array(ctx->frame_ptr);
+	frames = make_array(ctx->frame_ptr);
 	for(i=0; i<ctx->frame_ptr; i++) {
-		ARRAY_ITEMS(ret)[i] = MAKE_INT(ctx->frames[i].last_ip);
+		h = make_hash(4);
+		set_hash_key(h, make_string("ip"), MAKE_INT(ctx->frames[i].last_ip));
+		set_hash_key(h, make_string("closure"), ctx->frames[i].closure);
+		ARRAY_ITEMS(frames)[i] = h;
 	}
+	ret = make_normal_type_instance(vm->Backtrace);
+	set_normal_type_instance_attribute(ret, make_string("frames"), frames);
 	return ret;
 }

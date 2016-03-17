@@ -90,8 +90,12 @@ typedef struct {
 	TRY_INFO try_info[MAX_TRIES_PER_FRAME];
 	int try_info_ptr;
 
+	// Enable/disable using impl_not_found_hook
 	int do_call_impl_not_found_hook;
+
+	// For stack trace
 	IP last_ip;
+
 } FRAME;
 
 // Plan: have exactly one context per thread.
@@ -141,12 +145,15 @@ typedef struct vm_struct {
 				VALUE DontKnowHowToCall;
 				VALUE ImplNotFound;
 
+	VALUE Backtrace;
+
 	VALUE Command;
 	VALUE Range;
 		VALUE InclusiveRange;
 		VALUE ExclusiveRange;
 
 	VALUE impl_not_found_hook;
+	VALUE init;
 
 } VM;
 

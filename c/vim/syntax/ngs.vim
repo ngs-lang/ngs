@@ -21,6 +21,8 @@ syn keyword ngsTodo TODO FIXME XXX NOTE
 syn keyword ngsConstant true false null
 syn keyword ngsPredefinedVariable ARGV ENV
 syn keyword ngsPredefinedVariable Error Exception CompileFail DontKnowHowToCall GlobalNotFound InvalidArgument ImplNotFound LookupFail KeyNotFound IndexNotFound AttrNotFound InvalidParameter
+" Special methods
+syn keyword ngsPredefinedVariable init
 
 " strings
 syn match   ngsSpecial contained #\$#

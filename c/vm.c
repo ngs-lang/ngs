@@ -579,6 +579,8 @@ METHOD_RESULT native_parse_json_str EXT_METHOD_PARAMS {
 	return mr;
 }
 
+METHOD_RESULT native_backtrace EXT_METHOD_PARAMS { (void) argv; METHOD_RETURN(make_backtrace(vm, ctx)); }
+
 METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_normal_type(argv[0])); }
 METHOD_RESULT native_typeof_any METHOD_PARAMS {
 	if(IS_NORMAL_TYPE_INSTANCE(argv[0])) {
@@ -864,6 +866,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 				MKSUBTYPE(DontKnowHowToCall, CallFail);
 				MKSUBTYPE(ImplNotFound, CallFail);
 
+	MKTYPE(Backtrace);
+
 	MKTYPE(Command);
 
 
@@ -963,6 +967,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, "compile",  &native_compile_str_str,   2, "code",vm->Str, "fname", vm->Str);
 	register_global_func(vm, 1, "load",     &native_load_str_str,      2, "bytecode", vm->Str, "func_name", vm->Str);
 	register_global_func(vm, 1, "parse_json",&native_parse_json_str,   1, "s", vm->Str);
+	register_global_func(vm, 1, "Backtrace",&native_backtrace,         0);
 
 	// hash
 	register_global_func(vm, 0, "in",       &native_in_any_hash,       2, "x",   vm->Any, "h", vm->Hash);
@@ -990,11 +995,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	argv_array = make_array(argc);
 	for(i=0; i<argc; i++) {
-		v = make_string(argv[i]);
-		ARRAY_ITEMS(argv_array)[i] = v;
+		ARRAY_ITEMS(argv_array)[i] = make_string(argv[i]);
 	}
 	set_global(vm, "ARGV", argv_array);
 	set_global(vm, "impl_not_found_hook", vm->impl_not_found_hook = make_array(0)); // There must be a catch-all in stdlib
+	set_global(vm, "init", vm->init = make_array(0));
 
 	// TODO: Some good solution for many defines
 #define E(name) set_global(vm, "C_" #name, MAKE_INT(name))
@@ -1100,20 +1105,17 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, con
 	VALUE *callable_items;
 	int args_to_use;
 
-
-	// TODO: Check what happens when callable == []
 	if(IS_ARRAY(callable)) {
 		for(i=OBJ_LEN(callable)-1, callable_items = OBJ_DATA_PTR(callable); i>=0; i--) {
 			mr = vm_call(vm, ctx, result, callable_items[i], argc, argv);
 			if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION)) {
 				return mr;
 			}
-			// Don't know how to handle other conditions yet
 			assert(mr == METHOD_ARGS_MISMATCH);
 		}
 		// --- impl_not_found_hook() - start ---
-		// impl_not_found_hook == [] when stdlib is not loaded (-E bootstrap switch / during basic tests)
 		if(THIS_FRAME.do_call_impl_not_found_hook) {
+			// impl_not_found_hook == [] when stdlib is not loaded (-E bootstrap switch / during basic tests)
 			if(OBJ_LEN(vm->impl_not_found_hook)) {
 				VALUE new_argv;
 				new_argv = make_array(argc+1);
@@ -1225,7 +1227,21 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, con
 
 	if(IS_NORMAL_TYPE_CONSTRUCTOR(callable)) {
 		*result = make_normal_type_instance(NORMAL_TYPE_CONSTRUCTOR_TYPE(callable));
-		return METHOD_OK;
+		// init() is optional
+		// --- init() - start ---
+		VALUE v;
+		THIS_FRAME.do_call_impl_not_found_hook = 0;
+		mr = vm_call(vm, ctx, &v, vm->init, 1, result);
+		THIS_FRAME.do_call_impl_not_found_hook = 1;
+		if((mr == METHOD_OK) || (mr == METHOD_IMPL_MISSING)) {
+			return METHOD_OK;
+		}
+		if(mr == METHOD_EXCEPTION) {
+			*result = v;
+			return mr;
+		}
+		assert(0 == "Unexpected init() result");
+		// --- init() - end ---
 	}
 
 	VALUE exc;
