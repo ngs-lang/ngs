@@ -85,6 +85,7 @@ typedef struct closure {
 	PARAMS_DESC params;
 	VALUE **uplevels;
 	UPVAR_INDEX n_uplevels;
+	VALUE name;
 } CLOSURE_OBJECT;
 
 typedef struct native_method {
@@ -211,6 +212,7 @@ typedef enum {
 #define CLOSURE_OBJ_N_OPT_PAR(v)  (((CLOSURE_OBJECT *) v.ptr)->params.n_params_optional)
 #define CLOSURE_OBJ_PARAMS(v)     (((CLOSURE_OBJECT *) v.ptr)->params.params)
 #define CLOSURE_OBJ_N_UPLEVELS(v) (((CLOSURE_OBJECT *) v.ptr)->n_uplevels)
+#define CLOSURE_OBJ_NAME(v)       (((CLOSURE_OBJECT *) v.ptr)->name)
 #define CLOSURE_OBJ_UPLEVELS(v)   (((CLOSURE_OBJECT *) v.ptr)->uplevels)
 #define CLOSURE_OBJ_PARAMS_FLAGS(v) (((CLOSURE_OBJECT *) v.ptr)->params.flags)
 #define CLIB_OBJECT_NAME(v)       ((CLIB_OBJECT *) v.ptr)->name

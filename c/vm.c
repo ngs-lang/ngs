@@ -82,6 +82,7 @@ char *opcodes_names[] = {
 	/* 43 */ "ARR_REVERSE",
 	/* 44 */ "THROW",
 	/* 45 */ "MAKE_CMD",
+	/* 46 */ "SET_CLOSURE_NAME",
 };
 
 
@@ -189,6 +190,18 @@ METHOD_RESULT native_plus_arr_arr METHOD_PARAMS {
 }
 
 METHOD_RESULT native_push_arr_any METHOD_PARAMS { array_push(argv[0], argv[1]); METHOD_RETURN(argv[0]); }
+METHOD_RESULT native_pop_arr EXT_METHOD_PARAMS {
+	if(!OBJ_LEN(argv[0])) {
+		VALUE e;
+		e = make_normal_type_instance(vm->IndexNotFound);
+		set_normal_type_instance_attribute(e, make_string("container"), argv[0]);
+		set_normal_type_instance_attribute(e, make_string("key"), make_string("<last element in the array>"));
+		THROW_EXCEPTION_INSTANCE(e);
+	}
+	*result = ARRAY_ITEMS(argv[0])[OBJ_LEN(argv[0])-1];
+	OBJ_LEN(argv[0])--;
+	return METHOD_OK;
+}
 
 METHOD_RESULT native_shift_arr METHOD_PARAMS { METHOD_RETURN(array_shift(argv[0])); }
 
@@ -934,6 +947,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// array
 	register_global_func(vm, 0, "+",        &native_plus_arr_arr,      2, "a",   vm->Arr, "b", vm->Arr);
 	register_global_func(vm, 0, "push",     &native_push_arr_any,      2, "arr", vm->Arr, "v", vm->Any);
+	register_global_func(vm, 1, "pop",      &native_pop_arr,           1, "arr", vm->Arr);
 	register_global_func(vm, 0, "shift",    &native_shift_arr,         1, "arr", vm->Arr);
 	register_global_func(vm, 0, "shift",    &native_shift_arr_any,     2, "arr", vm->Arr, "dflt", vm->Any);
 	register_global_func(vm, 0, "len",      &native_len,               1, "arr", vm->Arr);
@@ -1278,18 +1292,26 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, con
 
 	if(IS_NORMAL_TYPE_CONSTRUCTOR(callable)) {
 		*result = make_normal_type_instance(NORMAL_TYPE_CONSTRUCTOR_TYPE(callable));
-		// init() is optional
+		// init() is optional when constructor is called without arguments
 		// --- init() - start ---
 		VALUE v;
-		THIS_FRAME.do_call_impl_not_found_hook = 0;
-		mr = vm_call(vm, ctx, &v, vm->init, 1, result);
-		THIS_FRAME.do_call_impl_not_found_hook = 1;
-		if((mr == METHOD_OK) || (mr == METHOD_IMPL_MISSING)) {
-			return METHOD_OK;
+		VALUE *new_argv;
+		if(argc) {
+			new_argv = NGS_MALLOC((argc + 1) * sizeof(*new_argv));
+			new_argv[0] = *result;
+			memcpy(&new_argv[1], argv, argc * sizeof(*argv));
+		} else {
+			new_argv = result;
 		}
-		if(mr == METHOD_EXCEPTION) {
+		THIS_FRAME.do_call_impl_not_found_hook = 0;
+		mr = vm_call(vm, ctx, &v, vm->init, argc+1, new_argv);
+		THIS_FRAME.do_call_impl_not_found_hook = 1;
+		if((mr == METHOD_EXCEPTION) || (argc && (mr == METHOD_IMPL_MISSING))) {
 			*result = v;
 			return mr;
+		}
+		if((mr == METHOD_OK) || (mr == METHOD_IMPL_MISSING)) {
+			return METHOD_OK;
 		}
 		assert(0 == "Unexpected init() result");
 		// --- init() - end ---
@@ -1745,6 +1767,13 @@ do_jump:
 							POP_NOCHECK(v);
 							set_normal_type_instance_attribute(command, make_string("argv"), v);
 							PUSH_NOCHECK(command);
+							goto main_loop;
+		case OP_SET_CLOSURE_NAME:
+							EXPECT_STACK_DEPTH(1);
+							assert(IS_CLOSURE(TOP));
+							v = make_string_of_len(&vm->bytecode[ip+1], vm->bytecode[ip]);
+							ip += 1 + vm->bytecode[ip];
+							CLOSURE_OBJ_NAME(TOP) = v;
 							goto main_loop;
 		default:
 							// TODO: exception

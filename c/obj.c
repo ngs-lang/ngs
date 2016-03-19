@@ -46,7 +46,8 @@ static void _dump(VALUE v, int level) {
 	}
 
 	if(IS_CLOSURE(v)) {
-		printf("%*s* closure ip=%zu locals_including_params=%d req_params=%d opt_params=%d n_uplevels=%d params_flags=%d\n", level << 1, "",
+		printf("%*s* closure name=%s ip=%zu locals_including_params=%d req_params=%d opt_params=%d n_uplevels=%d params_flags=%d\n", level << 1, "",
+			IS_NULL(CLOSURE_OBJ_NAME(v)) ? "(none)" : obj_to_cstring(CLOSURE_OBJ_NAME(v)),
 			CLOSURE_OBJ_IP(v),
 			CLOSURE_OBJ_N_LOCALS(v),
 			CLOSURE_OBJ_N_REQ_PAR(v),
@@ -591,6 +592,7 @@ VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX 
 	assert(c->params.params);
 	memcpy(c->params.params, params, params_size);
 	c->n_uplevels = n_uplevels;
+	c->name = MAKE_NULL;
 
 	SET_OBJ(v, c);
 
@@ -861,6 +863,7 @@ VALUE resolve_ip(VM *vm, IP ip) {
 		// The section is optional
 		return MAKE_NULL;
 	}
+	ip = ip - region->start_ip;
 	for(ste = region->source_tracking_entries + region->source_tracking_entries_count - 1; ste >= region->source_tracking_entries; ste--) {
 		if(ip >= ste->ip) {
 			found = 1;

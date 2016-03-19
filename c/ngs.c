@@ -129,6 +129,7 @@ int main(int argc, char **argv)
 			HASH_OBJECT_ENTRY *e;
 			for(e=HASH_HEAD(fields); e; e=e->insertion_order_next) {
 				if(obj_is_of_type(ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)], vm.Backtrace)) {
+					printf("=== [ backtrace ] ===\n");
 					// Backtrace.frames = [{"closure": ..., "ip": ...}, ...]
 					VALUE backtrace = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)];
 					VALUE frames;
@@ -137,20 +138,25 @@ int main(int argc, char **argv)
 					for(i = 0; i < OBJ_LEN(frames); i++) {
 						VALUE frame, resolved_ip, ip;
 						frame = ARRAY_ITEMS(frames)[i];
-						printf("=== Frame #%u ===\n", i);
 						H(ip, frame, "ip");
 						resolved_ip = resolve_ip(&vm, (IP)(GET_INT(ip) - 1));
 						if(IS_HASH(resolved_ip)) {
 							VALUE file, first_line, first_column, last_line, last_column;
+							HASH_OBJECT_ENTRY *closure_entry;
+							char *closure_name = "<anonymous>";
 							H(file, resolved_ip, "file");
 							H(first_line, resolved_ip, "first_line");
 							H(first_column, resolved_ip, "first_column");
 							H(last_line, resolved_ip, "last_line");
 							H(last_column, resolved_ip, "last_column");
+							closure_entry = get_hash_key(frame, make_string("closure"));
+							if(closure_entry && IS_CLOSURE(closure_entry->val) && (!IS_NULL(CLOSURE_OBJ_NAME(closure_entry->val)))) {
+								closure_name = obj_to_cstring(CLOSURE_OBJ_NAME(closure_entry->val));
+							}
 							// TODO: fix types
-							printf("%s : %d:%d - %d:%d\n", obj_to_cstring(file), (int) GET_INT(first_line), (int) GET_INT(first_column), (int) GET_INT(last_line), (int) GET_INT(last_column));
+							printf("[Frame #%u] %s:%d:%d - %d:%d [in %s]\n", i, obj_to_cstring(file), (int) GET_INT(first_line), (int) GET_INT(first_column), (int) GET_INT(last_line), (int) GET_INT(last_column), closure_name);
 						} else {
-							printf("(no source location)\n");
+							printf("[Frame #%u] (no source location)\n", i);
 						}
 					}
 					continue;

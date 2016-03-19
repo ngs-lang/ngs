@@ -23,8 +23,26 @@ TEST p = partial_tail((-), 10); p(7) == -3
 # === Exception ==================================
 
 F init(e:Exception) {
-	e.backtrace = Backtrace()
+	# Last entry in backtrace would be this init() invocation
+	local b = Backtrace()
+	pop(b.frames)
+	e.backtrace = b
 }
+
+TEST Exception().backtrace is Backtrace
+
+
+F init(e:Exception, s:Str) {
+	# Last entry in backtrace would be this Exception() invocation
+	init(e)
+	e.info = s
+	e.backtrace.frames.pop()
+	e
+}
+
+TEST Exception("xyz").info == "xyz"
+
+{ type NotImplemented; NotImplemented.inherit(Exception); }
 
 # === Type =======================================
 
@@ -33,7 +51,12 @@ STDLIB_EXPOSE = {}
 # TODO: better exceptions (use correct type, not string, provide offending type and attribute)
 F expose(child:NormalType, attr:Str) {
 	STDLIB_EXPOSE[child] = STDLIB_EXPOSE.get(child, []).push(attr)
-	STDLIB_EXPOSE[child].len() > 1 throws "expose() does not support more than one attribute at this time"
+	if STDLIB_EXPOSE[child].len() > 1 {
+		local e = NotImplemented("expose() does not support exposing more than one attribute at this time")
+		e.type = child
+		e.attr = attr
+		throw e
+	}
 	child
 }
 

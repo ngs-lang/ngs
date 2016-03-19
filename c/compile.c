@@ -466,6 +466,8 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			if(node->first_child->next_sibling->next_sibling) {
 				// Function has a name
 				compile_identifier(ctx, buf, idx, node->first_child->next_sibling->next_sibling->name, OP_DEF_LOCAL_FUNC, OP_DEF_UPVAR_FUNC, OP_DEF_GLOBAL_FUNC);
+				OPCODE(*buf, OP_SET_CLOSURE_NAME);
+				L_STR(*buf, node->first_child->next_sibling->next_sibling->name);
 			}
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
