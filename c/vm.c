@@ -1432,9 +1432,11 @@ main_loop:
 							// TODO: report error here instead of crashing
 							if(IS_UNDEF(GLOBALS[gvi])) {
 								VALUE exc;
+								THIS_FRAME.last_ip = ip;
 								exc = make_normal_type_instance(vm->GlobalNotFound);
 								set_normal_type_instance_attribute(exc, make_string("name"), make_string(vm->globals_names[gvi]));
 								set_normal_type_instance_attribute(exc, make_string("index"), MAKE_INT(gvi));
+								set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 								*result = exc;
 								goto exception;
 							}
