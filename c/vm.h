@@ -29,6 +29,16 @@
 //				Lstr
 //				uint16 - number of locations
 //				uint32[] - locations
+//		section type 0x101 data: source tracking
+//			* Files names
+//				uint16 - N files
+//				Lstring - file name
+//			* IP positions
+//				uint32 - N entries
+//				N entries:
+//					uint32 - ip
+//					uint32 x 4 - location
+//					uint16 - file number
 
 typedef uint64_t BYTECODE_ORDER_CHECK;
 typedef uint16_t BYTECODE_SECTIONS_COUNT;
