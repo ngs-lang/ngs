@@ -38,9 +38,14 @@ typedef struct compilation_context {
 	LOCAL_VAR_INDEX *n_locals;
 	UPVAR_INDEX *n_uplevels;
 	int locals_ptr;
-	int in_function; /* as opposed to global scope */
+
+	char *source_file_name;
+	source_tracking_entry *source_tracking_entries;
+	int source_tracking_entries_allocated;
+	int source_tracking_entries_count;
+
 } COMPILATION_CONTEXT;
 
 SYMBOL_TABLE *get_symbol_table_entry(SYMBOL_TABLE **st, char *name, int create_if_not_exists, int *created);
-char *compile(ast_node *node /* the top level node */, size_t *len);
+char *compile(ast_node *node, char *source_file_name, size_t *len);
 #endif

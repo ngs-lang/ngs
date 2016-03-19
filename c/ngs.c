@@ -64,6 +64,7 @@ int main(int argc, char **argv)
 	VALUE closure, result;
 	int parse_ok;
 	char *bootstrap_file_name;
+	char *source_file_name;
 	METHOD_RESULT mr;
 
 	// Silence GCC -Wunused-function
@@ -84,8 +85,10 @@ int main(int argc, char **argv)
 		exit(100);
 	}
 	if(!strcmp(bootstrap_file_name, "-")) {
+		source_file_name = ngs_strdup("<stdin>");
 		yyctx.input_file = stdin;
 	} else {
+		source_file_name = bootstrap_file_name;
 		yyctx.input_file = fopen(bootstrap_file_name, "r");
 	}
 	if(!yyctx.input_file) {
@@ -105,7 +108,7 @@ int main(int argc, char **argv)
 	yyrelease(&yyctx);
 
 	// TODO: use native_... methods to load and run the code
-	bytecode = compile(tree, &len);
+	bytecode = compile(tree, source_file_name, &len);
 	// BROKEN SINCE BYTECODE FORMAT CHANGE // IF_DEBUG(COMPILER, decompile(bytecode, 0, len);)
 	vm_init(&vm, argc, argv);
 	set_global(&vm, "BOOTSTRAP_FILE", make_string(bootstrap_file_name));
@@ -117,8 +120,55 @@ int main(int argc, char **argv)
 		return 0;
 	}
 	if(mr == METHOD_EXCEPTION) {
-		dump_titled("Uncaught exception", result);
+#define H(result, obj, key) { HASH_OBJECT_ENTRY *e; assert(IS_HASH(obj)); e = get_hash_key(obj, make_string(key)); assert(e); result = e->val; }
+		if(obj_is_of_type(result, vm.Exception)) {
+			// TODO: fprintf to stderr and teach dump_titled to optionally fprintf to stderr too
+			printf("====== Uncaught exception of type '%s' ======\n", obj_to_cstring(NGS_TYPE_NAME(NORMAL_TYPE_INSTANCE_TYPE(result))));
+			// TODO: maybe macro to iterate attributes
+			VALUE fields = NGS_TYPE_FIELDS(NORMAL_TYPE_INSTANCE_TYPE(result));
+			HASH_OBJECT_ENTRY *e;
+			for(e=HASH_HEAD(fields); e; e=e->insertion_order_next) {
+				if(obj_is_of_type(ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)], vm.Backtrace)) {
+					// Backtrace.frames = [{"closure": ..., "ip": ...}, ...]
+					VALUE backtrace = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)];
+					VALUE frames;
+					assert(get_normal_type_instace_attribute(backtrace, make_string("frames"), &frames) == METHOD_OK);
+					unsigned int i;
+					for(i = 0; i < OBJ_LEN(frames); i++) {
+						VALUE frame, resolved_ip, ip;
+						frame = ARRAY_ITEMS(frames)[i];
+						printf("=== Frame #%u ===\n", i);
+						H(ip, frame, "ip");
+						resolved_ip = resolve_ip(&vm, (IP)(GET_INT(ip) - 1));
+						if(IS_HASH(resolved_ip)) {
+							VALUE file, first_line, first_column, last_line, last_column;
+							H(file, resolved_ip, "file");
+							H(first_line, resolved_ip, "first_line");
+							H(first_column, resolved_ip, "first_column");
+							H(last_line, resolved_ip, "last_line");
+							H(last_column, resolved_ip, "last_column");
+							// TODO: fix types
+							printf("%s : %d:%d - %d:%d\n", obj_to_cstring(file), (int) GET_INT(first_line), (int) GET_INT(first_column), (int) GET_INT(last_line), (int) GET_INT(last_column));
+						} else {
+							printf("(no source location)\n");
+						}
+					}
+					continue;
+				}
+				if(IS_STRING(e->key)) {
+					dump_titled(obj_to_cstring(e->key), ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
+				} else {
+					// Should not happen
+					dump_titled("attribute key", e->key);
+					dump_titled("attribute value", ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
+				}
+			}
+
+		} else {
+			dump_titled("Uncaught exception", result);
+		}
 		return 1;
+#undef H
 	}
 	assert(0 == "Unexpected exit from bootstrap code");
 }

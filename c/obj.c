@@ -839,3 +839,44 @@ VALUE make_backtrace(VM *vm, CTX *ctx) {
 	set_normal_type_instance_attribute(ret, make_string("frames"), frames);
 	return ret;
 }
+
+VALUE resolve_ip(VM *vm, IP ip) {
+	// Find region
+	// TODO: Something faster then sequential scan
+	VALUE ret;
+	VM_REGION *region;
+	source_tracking_entry *ste;
+	int found = 0;
+	for(region=vm->regions; region < vm->regions + vm->regions_len; region++) {
+		if((ip >= region->start_ip) && (ip < region->start_ip + region->len)) {
+			found = 1;
+			break;
+		}
+	}
+	if(!found) {
+		return MAKE_NULL;
+	}
+	found = 0;
+	if(!region->source_tracking_entries) {
+		// The section is optional
+		return MAKE_NULL;
+	}
+	for(ste = region->source_tracking_entries + region->source_tracking_entries_count - 1; ste >= region->source_tracking_entries; ste--) {
+		if(ip >= ste->ip) {
+			found = 1;
+			break;
+		}
+	}
+	if(!found) {
+		return MAKE_NULL;
+	}
+	ret = make_hash(8);
+	set_hash_key(ret, make_string("ip"), MAKE_INT(ip));
+	set_hash_key(ret, make_string("file"), make_string(region->files_names[ste->source_file_name_idx]));
+	set_hash_key(ret, make_string("first_line"), MAKE_INT(ste->source_location[0]));
+	set_hash_key(ret, make_string("first_column"), MAKE_INT(ste->source_location[1]));
+	set_hash_key(ret, make_string("last_line"), MAKE_INT(ste->source_location[2]));
+	set_hash_key(ret, make_string("last_column"), MAKE_INT(ste->source_location[3]));
+	return ret;
+
+}

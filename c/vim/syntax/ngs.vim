@@ -17,10 +17,10 @@ syn keyword ngsKeyword and catch collector collect F guard local or return retur
 syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
 syn keyword ngsType Any Arr BasicType Bool CLib Command CSym ExclusiveRange Fun Hash InclusiveRange Int NormalType Null Path Pipe Process ProcessFailed Range Seq Stats Str Type
+syn keyword ngsType Error Exception CompileFail DontKnowHowToCall GlobalNotFound InvalidArgument ImplNotFound LookupFail KeyNotFound IndexNotFound AttrNotFound InvalidParameter
 syn keyword ngsTodo TODO FIXME XXX NOTE
 syn keyword ngsConstant true false null
 syn keyword ngsPredefinedVariable ARGV ENV
-syn keyword ngsPredefinedVariable Error Exception CompileFail DontKnowHowToCall GlobalNotFound InvalidArgument ImplNotFound LookupFail KeyNotFound IndexNotFound AttrNotFound InvalidParameter
 " Special methods
 syn keyword ngsPredefinedVariable init
 

@@ -553,7 +553,7 @@ METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 	tree = yyctx.__;
 	IF_DEBUG(COMPILER, print_ast(tree, 0);)
 	yyrelease(&yyctx);
-	bytecode = compile(tree, &len);
+	bytecode = compile(tree, obj_to_cstring(argv[1]), &len);
 	// BROKEN SINCE BYTECODE FORMAT CHANGE // IF_DEBUG(COMPILER, decompile(bytecode, 0, len);)
 	METHOD_RETURN(make_string_of_len(bytecode, len));
 }
@@ -580,6 +580,7 @@ METHOD_RESULT native_parse_json_str EXT_METHOD_PARAMS {
 }
 
 METHOD_RESULT native_backtrace EXT_METHOD_PARAMS { (void) argv; METHOD_RETURN(make_backtrace(vm, ctx)); }
+METHOD_RESULT native_resolve_ip EXT_METHOD_PARAMS { (void) ctx; METHOD_RETURN(resolve_ip(vm, GET_INT(argv[0]))); }
 
 METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_normal_type(argv[0])); }
 METHOD_RESULT native_typeof_any METHOD_PARAMS {
@@ -819,6 +820,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	vm->globals_len = 0;
 	vm->globals = NGS_MALLOC(sizeof(*(vm->globals)) * MAX_GLOBALS);
 	vm->globals_names = NGS_MALLOC(sizeof(char *) * MAX_GLOBALS);
+	vm->regions = NULL;
+	vm->regions_len = 0;
+	vm->regions_allocated = 0;
 	// Keep global functions registration in order.
 	// This way the compiler can use globals_indexes as the beginning of
 	// it's symbol table for globals.
@@ -968,6 +972,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, "load",     &native_load_str_str,      2, "bytecode", vm->Str, "func_name", vm->Str);
 	register_global_func(vm, 1, "parse_json",&native_parse_json_str,   1, "s", vm->Str);
 	register_global_func(vm, 1, "Backtrace",&native_backtrace,         0);
+	register_global_func(vm, 1, "resolve_ip",&native_resolve_ip,       1, "ip", vm->Int);
 
 	// hash
 	register_global_func(vm, 0, "in",       &native_in_any_hash,       2, "x",   vm->Any, "h", vm->Hash);
@@ -1051,6 +1056,9 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 	size_t ip = 0;
 	DEBUG_VM_API("vm_load_bytecode() VM=%p bytecode=%p\n", vm, bc);
 
+	VM_REGION *region = NULL;
+
+
 	bytecode = ngs_start_unserializing_bytecode(bc);
 
 
@@ -1058,6 +1066,16 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 		ngs_fetch_bytecode_section(bytecode, &type, &len, &data);
 		switch(type) {
 			case BYTECODE_SECTION_TYPE_CODE:
+
+				NGS_MALLOC_OBJ(region);
+				ENSURE_ARRAY_ROOM(vm->regions, vm->regions_allocated, vm->regions_len, 8);
+				PUSH_ARRAY_ELT(vm->regions, vm->regions_len, *region);
+				region = &vm->regions[vm->regions_len-1];
+				region->start_ip = vm->bytecode_len;
+				region->len = len;
+				region->source_tracking_entries_count = 0;
+				region->source_tracking_entries = NULL;
+
 				assert(data[len-1] == OP_RET);
 				if(vm->bytecode) {
 					vm->bytecode = NGS_REALLOC(vm->bytecode, vm->bytecode_len + len);
@@ -1085,6 +1103,39 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 						DEBUG_VM_API("vm_load_bytecode() processing global patching num=%i name=%s offset=%i resolved_index=%i\n", g, global_name, o, gvi);
 						*(GLOBAL_VAR_INDEX *)(&vm->bytecode[ip + o]) = gvi;
 					}
+				}
+				break;
+			case BYTECODE_SECTION_TYPE_SRCLOC:
+				// TODO: types
+				{
+					uint16_t i, files_names_count;
+					uint8_t file_name_len;
+					char *file_name;
+
+					uint32_t entries_count;
+
+					assert(region); // SRCLOC section must come after code section, which allocated region
+					assert(!region->source_tracking_entries); // At most one SRCLOC per code section
+					assert(!region->files_names); // At most one SRCLOC per code section
+
+
+					p = data;
+					BYTECODE_GET(files_names_count, p, uint16_t);
+					for(i=0; i<files_names_count; i++) {
+						// PUSH_ARRAY_ELT(vm->regions, vm->regions_len, *region);
+						BYTECODE_GET(file_name_len, p, uint8_t);
+						file_name = NGS_MALLOC_ATOMIC(file_name_len+1);
+						memcpy(file_name, p, file_name_len);
+						file_name[file_name_len] = '\0';
+						p += file_name_len;
+						ENSURE_ARRAY_ROOM(region->files_names, region->files_names_allocated, region->files_names_len, 8);
+						PUSH_ARRAY_ELT(region->files_names, region->files_names_len, file_name);
+					}
+
+					BYTECODE_GET(entries_count, p, uint32_t);
+					region->source_tracking_entries_count = entries_count;
+					region->source_tracking_entries = NGS_MALLOC(entries_count * sizeof(source_tracking_entry));
+					memcpy(region->source_tracking_entries, p, entries_count * sizeof(source_tracking_entry));
 				}
 				break;
 			default:

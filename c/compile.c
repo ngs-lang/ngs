@@ -241,6 +241,31 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 	ensure_room(buf, *idx, allocated, 1024); // XXX - magic number
 
 	// printf("compile_main_section() node=%p type=%s last_child=%p need_result=%d\n", node, NGS_AST_NODE_TYPES_NAMES[node->type], node->last_child, need_result);
+	if(node->location.first_line) {
+		source_tracking_entry *ste = NULL;
+		// printf("LOC: ip=%lu\n %d:%d %d:%d\n", *idx, node->location.first_line, node->location.first_column, node->location.last_line, node->location.last_column);
+		if(ctx->source_tracking_entries_count) {
+			if(ctx->source_tracking_entries[ctx->source_tracking_entries_count-1].ip == *idx) {
+				// Override because deeper ast nodes have more precise location
+				ste = &ctx->source_tracking_entries[ctx->source_tracking_entries_count-1];
+			} else {
+				ste = NULL;
+			}
+		}
+		if(!ste) {
+			if (ctx->source_tracking_entries_count == ctx->source_tracking_entries_allocated) {
+				ctx->source_tracking_entries_allocated *= 2;
+				ctx->source_tracking_entries = NGS_REALLOC(ctx->source_tracking_entries, ctx->source_tracking_entries_allocated * sizeof(source_tracking_entry));
+			}
+			ste = &ctx->source_tracking_entries[ctx->source_tracking_entries_count++];
+		}
+		ste->source_file_name_idx = 0; // XXX: currently only one source file per compile() is supported
+		ste->ip = *idx;
+		ste->source_location[0] = node->location.first_line;
+		ste->source_location[1] = node->location.first_column;
+		ste->source_location[2] = node->location.last_line;
+		ste->source_location[3] = node->location.last_column;
+	}
 	switch(node->type) {
 		case CALL_NODE:
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "CALL NODE", *idx);
@@ -682,7 +707,20 @@ void compile_init_section(COMPILATION_CONTEXT *ctx, char **init_buf, size_t *idx
 	*init_buf = buf;
 }
 
-char *compile(ast_node *node /* the top level node */, size_t *len) {
+void compile_source_location_section(COMPILATION_CONTEXT *ctx, char **buf, size_t *idx) {
+	*buf = NGS_MALLOC_ATOMIC(2 + 1 + strlen(ctx->source_file_name) + 4 + ctx->source_tracking_entries_count * sizeof(source_tracking_entry));
+	*idx = 0;
+	// Number of files' names. Currently just one is supported
+	// More than one file could be result of compiling something to NGS language
+	DATA_UINT16(*buf, 1);
+	L_STR(*buf, ctx->source_file_name);
+	DATA_UINT32(*buf, ctx->source_tracking_entries_count);
+	memcpy(*buf + *idx, ctx->source_tracking_entries, ctx->source_tracking_entries_count * sizeof(source_tracking_entry));
+	*idx += ctx->source_tracking_entries_count * sizeof(source_tracking_entry);
+}
+
+// ast_node - the top level node
+char *compile(ast_node *node, char *source_file_name, size_t *len) {
 
 	char *buf = NGS_MALLOC(COMPILE_INITIAL_BUF_SIZE);
 	size_t main_allocated = COMPILE_INITIAL_BUF_SIZE;
@@ -696,7 +734,10 @@ char *compile(ast_node *node /* the top level node */, size_t *len) {
 	ctx.n_locals = NGS_MALLOC(COMPILE_MAX_FUNC_DEPTH * sizeof(LOCAL_VAR_INDEX *));
 	ctx.n_uplevels = NGS_MALLOC(COMPILE_MAX_FUNC_DEPTH * sizeof(UPVAR_INDEX *));
 	ctx.locals_ptr = 0;
-	ctx.in_function = 0;
+	ctx.source_file_name = source_file_name;
+	ctx.source_tracking_entries_count = 0;
+	ctx.source_tracking_entries_allocated = 1024;
+	ctx.source_tracking_entries = NGS_MALLOC(sizeof(source_tracking_entry) * ctx.source_tracking_entries_allocated);
 
 	bytecode = ngs_create_bytecode();
 
@@ -711,6 +752,11 @@ char *compile(ast_node *node /* the top level node */, size_t *len) {
 	l = 0;
 	compile_init_section(&ctx, &buf, &l);
 	ngs_add_bytecode_section(bytecode, BYTECODE_SECTION_TYPE_GLOBALS, l, buf);
+
+	// SOURCE LOCATION TRACKING SECTION
+	l = 0;
+	compile_source_location_section(&ctx, &buf, &l);
+	ngs_add_bytecode_section(bytecode, BYTECODE_SECTION_TYPE_SRCLOC, l, buf);
 
 	*len = bytecode->len;
 

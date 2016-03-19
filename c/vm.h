@@ -43,6 +43,7 @@ extern char BYTECODE_SIGNATURE[];
 
 #define BYTECODE_SECTION_TYPE_CODE    (1)
 #define BYTECODE_SECTION_TYPE_GLOBALS (2)
+#define BYTECODE_SECTION_TYPE_SRCLOC  (0x101)
 #define BYTECODE_ORDER_CHECK_VAL      (0x0102030405060708)
 
 typedef struct {
@@ -107,13 +108,33 @@ typedef struct context {
 	size_t frame_ptr;
 } CTX;
 
-typedef struct vm_struct {
+typedef struct {
+	uint32_t ip;
+	uint32_t source_location[4]; // start line+col, end line+col
+	uint16_t source_file_name_idx;
+} source_tracking_entry;
+
+typedef struct {
+	size_t start_ip, len;
+
+	char **files_names;
+	size_t files_names_allocated, files_names_len;
+
+	size_t source_tracking_entries_count;
+	source_tracking_entry *source_tracking_entries;
+
+} VM_REGION;
+
+typedef struct {
 	char *bytecode;
 	size_t bytecode_len;
 	VALUE *globals;
 	size_t globals_len;
 	VAR_INDEX *globals_indexes;
 	char **globals_names;
+
+	VM_REGION *regions;
+	size_t regions_len, regions_allocated;
 
 	NGS_TYPE *Null;
 	NGS_TYPE *Bool;
@@ -228,4 +249,5 @@ BYTECODE_HANDLE *ngs_start_unserializing_bytecode(char *data);
 void ngs_fetch_bytecode_section(BYTECODE_HANDLE *h, BYTECODE_SECTION_TYPE *type, BYTECODE_SECTION_LEN *len, char **data);
 // In obj.c
 VALUE make_backtrace(VM *vm, CTX *ctx);
+VALUE resolve_ip(VM *vm, IP ip);
 #endif

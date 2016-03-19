@@ -65,7 +65,7 @@ F bootstrap() {
 			bootstrap_debug('Will skip loading stdlib because of -E flag')
 			do_load_stdlib = false
 		}
-		fname = sw
+		fname = "<command line ${sw} switch>"
 	}
 
 	if 'NGS_SKIP_STDLIB' in ENV {
