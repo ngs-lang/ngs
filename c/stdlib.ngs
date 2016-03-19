@@ -605,11 +605,11 @@ F push(r:RingBuffer, x) {
 }
 
 F len(r:RingBuffer) {
-	if r.head > r.tail { r.head - r.tail } else { LATER }
+	if r.head > r.tail { r.head - r.tail } else { throw NotImplemented() }
 }
 
 F values(r:RingBuffer) {
-	LATER
+	throw NotImplemented()
 }
 
 # === Logging and status reporting (WIP) =========
@@ -933,8 +933,7 @@ F config(s:Str, x) {
 # TODO: handle errors, throw exceptions
 F write(fd:Int, s:Str) fd.c_write(s)
 
-F Table() {
-	t = Table.constructors[0]()
+F init(t:Table) {
 	t.name = null
 	# name -> column number
 	t.col_name_to_idx = {}
@@ -942,11 +941,10 @@ F Table() {
 	t.col_idx_to_name = {}
 	# data
 	t.rows = []
-	t
 }
 
+# TODO: rewrite all Table() to init() ?
 F Table(rows_hashes:Arr) {
-	# TODO: read a config for columns order and which columns to display?
 	guard rows_hashes.all(is, Hash)
 	t = Table()
 	t.init(rows_hashes)
@@ -1007,7 +1005,7 @@ F column(t:Table, k:Str) t.column(t.col_name_to_idx[k])
 F column(t:Table, n:Int) t.rows.map(([]), n)
 F columns(t:Table) t.width().map(F(idx) t.column(idx))
 F each(t:Table, cb:Fun, *args) {
-	LATER
+	throw NotImplemented()
 }
 
 # --- Conversions ---
@@ -1016,11 +1014,11 @@ F len(t:Table) t.rows.len()
 F Bool(t:Table) t.len().Bool()
 
 F Hash(t:Table, row_number:Int) {
-	LATER
+	throw NotImplemented()
 }
 
 F Hashes(t:Table) {
-	LATER
+	throw NotImplemented()
 }
 
 # --- Misc utils ---
