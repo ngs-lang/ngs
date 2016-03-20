@@ -292,7 +292,7 @@ binop-expression-inner =
 	}
 	|
 	space "continues" {
-		// e1 continues => if e1 { break }
+		// e1 continues => if e1 { continue }
 		MAKE_NODE(ret, IF_NODE);
 			ret->first_child = e1;
 			MAKE_NODE(yes, CONTINUE_NODE);
