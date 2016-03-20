@@ -66,6 +66,7 @@ F expose(child:NormalType, attr:Str) {
 #   the parameters (or failed "guard" statements).
 # TODO: make it faster
 # TODO: support trying all attributes listed in STDLIB_EXPOSE, not just first
+# TODO: check and solve usage by inheriting types
 F impl_not_found_hook(callable:Fun, *args) {
 	local l = args.len()
 	local exposed_attr_name = null, change_idx, arg

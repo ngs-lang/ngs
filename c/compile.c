@@ -4,6 +4,8 @@
 #include "compile.h"
 #include "obj.h"
 
+// TODO: disabllow break/continue outside of loops
+
 // TODO: abstract UINT16
 
 #define OPCODE(buf, x) { (buf)[*idx]=x; (*idx)++; }
