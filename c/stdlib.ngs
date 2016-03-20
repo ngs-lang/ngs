@@ -71,10 +71,10 @@ F impl_not_found_hook(callable:Fun, *args) {
 	local exposed_attr_name = null, change_idx, arg
 	for(i;l) {
 		arg = args[i]
-		if not(exposed_attr_name) and (typeof(arg) in STDLIB_EXPOSE) {
+		if typeof(arg) in STDLIB_EXPOSE {
 			exposed_attr_name = STDLIB_EXPOSE[typeof(arg)][0]
 			change_idx = i
-			# TODO: break
+			break
 		}
 	}
 	guard exposed_attr_name

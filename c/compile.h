@@ -3,7 +3,8 @@
 
 #define SYMBOL_OFFSETS_INITIAL_SIZE (16)
 #define COMPILE_INITIAL_BUF_SIZE (16384)
-#define COMPILE_MAX_FUNC_DEPTH (16)
+#define COMPILE_MAX_FUNC_DEPTH      (16)
+#define COMPILE_MAX_FILL_IN_LEN     (16)
 
 #include <utarray.h>
 #include "vm.h"
@@ -43,6 +44,11 @@ typedef struct compilation_context {
 	source_tracking_entry *source_tracking_entries;
 	int source_tracking_entries_allocated;
 	int source_tracking_entries_count;
+
+	size_t fill_in_break_addrs[COMPILE_MAX_FILL_IN_LEN];
+	int fill_in_break_addrs_ptr;
+	size_t fill_in_continue_addrs[COMPILE_MAX_FILL_IN_LEN];
+	int fill_in_continue_addrs_ptr;
 
 } COMPILATION_CONTEXT;
 

@@ -1,4 +1,8 @@
 {
-	n=5
-	for(i;n) { dump(i); }
+	n=10
+	for(i;n) {
+		if(i == 3) continue;
+		if(i > 5) break;
+		dump(i);
+	}
 }

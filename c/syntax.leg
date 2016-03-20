@@ -422,6 +422,8 @@ basic-expression =
 	| local-declaration
 	| function-definition
 	| return
+	| break
+	| continue
 	| collector
 	| guard
 	| try-catch
@@ -810,6 +812,9 @@ str-comps-node = {
 
 return = "return" r:return-node (inline_space e:expression { r->first_child = e; }) { $$ = r; }
 return-node = { MAKE_NODE(ret, RETURN_NODE); $$ = ret; }
+
+break = "break" { MAKE_NODE(ret, BREAK_NODE); $$ = ret; }
+continue = "continue" { MAKE_NODE(ret, CONTINUE_NODE); $$ = ret; }
 
 collector = "collector" init:collector-init space c:code-block {
 		MAKE_NODE(ret, CALL_NODE);

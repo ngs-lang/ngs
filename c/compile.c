@@ -236,7 +236,8 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 	int argc, have_arr_splat, params_flags;
 	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
 	UPVAR_INDEX n_uplevels;
-	size_t loop_beg, cond_jump, func_jump, end_of_func_idx, if_jump, while_jump;
+	size_t loop_beg, cond_jump, incr_jump, func_jump, end_of_func_idx, if_jump, while_jump;
+	int old_break_addrs_ptr, old_continue_addrs_ptr;
 
 	ensure_room(buf, *idx, allocated, 1024); // XXX - magic number
 
@@ -368,14 +369,31 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_JMP_FALSE);
 			DATA_JUMP_OFFSET(*buf, 1024);
 			// body
+			old_break_addrs_ptr = ctx->fill_in_break_addrs_ptr;
+			old_continue_addrs_ptr = ctx->fill_in_continue_addrs_ptr;
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
 			// increment
+			incr_jump = *idx;
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
 			assert(*idx - cond_jump < 0x7FFF);
 			*(JUMP_OFFSET *)&(*buf)[cond_jump+1] = *idx - cond_jump;
+			// jump to condition
 			OPCODE(*buf, OP_JMP);
 			assert((*idx - loop_beg) < 0x7FFF);
 			DATA_JUMP_OFFSET(*buf, -(*idx - loop_beg + sizeof(JUMP_OFFSET)));
+			// fill in continue/break jumps
+#define A (ctx->fill_in_break_addrs[ctx->fill_in_break_addrs_ptr-1])
+			while(ctx->fill_in_break_addrs_ptr > old_break_addrs_ptr) {
+				*(JUMP_OFFSET *)&(*buf)[A] = *idx - (A + sizeof(JUMP_OFFSET)) ;
+				ctx->fill_in_break_addrs_ptr--;
+			}
+#undef A
+#define A (ctx->fill_in_continue_addrs[ctx->fill_in_continue_addrs_ptr-1])
+			while(ctx->fill_in_continue_addrs_ptr > old_continue_addrs_ptr) {
+				*(JUMP_OFFSET *)&(*buf)[A] = incr_jump - (A + sizeof(JUMP_OFFSET));
+				ctx->fill_in_continue_addrs_ptr--;
+			}
+#undef A
 			if(need_result) OPCODE(*buf, OP_PUSH_NULL);
 			break;
 		case EMPTY_NODE:
@@ -640,6 +658,21 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 
 			break;
 
+		case BREAK_NODE:
+			assert(ctx->fill_in_break_addrs_ptr < COMPILE_MAX_FILL_IN_LEN);
+			OPCODE(*buf, OP_JMP);
+			ctx->fill_in_break_addrs[ctx->fill_in_break_addrs_ptr++] = *idx;
+			DATA_JUMP_OFFSET(*buf, 1024);
+			break;
+
+		case CONTINUE_NODE:
+			assert(ctx->fill_in_continue_addrs_ptr < COMPILE_MAX_FILL_IN_LEN);
+			OPCODE(*buf, OP_JMP);
+			ctx->fill_in_continue_addrs[ctx->fill_in_continue_addrs_ptr++] = *idx;
+			DATA_JUMP_OFFSET(*buf, 1024);
+			break;
+
+
 		default:
 			fprintf(stderr, "Node type %i\n", node->type);
 			assert(0=="compile_main_section(): unknown node type");
@@ -740,6 +773,8 @@ char *compile(ast_node *node, char *source_file_name, size_t *len) {
 	ctx.source_tracking_entries_count = 0;
 	ctx.source_tracking_entries_allocated = 1024;
 	ctx.source_tracking_entries = NGS_MALLOC(sizeof(source_tracking_entry) * ctx.source_tracking_entries_allocated);
+	ctx.fill_in_break_addrs_ptr = 0;
+	ctx.fill_in_continue_addrs_ptr = 0;
 
 	bytecode = ngs_create_bytecode();
 

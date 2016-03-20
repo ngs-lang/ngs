@@ -37,6 +37,8 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 	"try_catch",
 	"throw",
 	"command",
+	"break",
+	"continue",
 };
 
 
