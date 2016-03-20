@@ -236,7 +236,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 	int argc, have_arr_splat, params_flags;
 	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
 	UPVAR_INDEX n_uplevels;
-	size_t loop_beg, cond_jump, incr_jump, func_jump, end_of_func_idx, if_jump, while_jump;
+	size_t loop_beg_idx, cond_jump, incr_idx, func_jump, end_of_func_idx, if_jump, while_jump;
 	int old_break_addrs_ptr, old_continue_addrs_ptr;
 
 	ensure_room(buf, *idx, allocated, 1024); // XXX - magic number
@@ -363,24 +363,24 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			// setup
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, DONT_NEED_RESULT);
 			// condition
-			loop_beg = *idx;
+			loop_beg_idx = *idx;
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
-			cond_jump = *idx;
 			OPCODE(*buf, OP_JMP_FALSE);
-			DATA_JUMP_OFFSET(*buf, 1024);
+			cond_jump = *idx;
+			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
 			// body
 			old_break_addrs_ptr = ctx->fill_in_break_addrs_ptr;
 			old_continue_addrs_ptr = ctx->fill_in_continue_addrs_ptr;
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
 			// increment
-			incr_jump = *idx;
+			incr_idx = *idx;
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
-			assert(*idx - cond_jump < 0x7FFF);
-			*(JUMP_OFFSET *)&(*buf)[cond_jump+1] = *idx - cond_jump;
 			// jump to condition
 			OPCODE(*buf, OP_JMP);
-			assert((*idx - loop_beg) < 0x7FFF);
-			DATA_JUMP_OFFSET(*buf, -(*idx - loop_beg + sizeof(JUMP_OFFSET)));
+			assert(*idx - cond_jump < 0x7FFF);
+			*(JUMP_OFFSET *)&(*buf)[cond_jump] = *idx - cond_jump;
+			assert((*idx - loop_beg_idx) < 0x7FFF);
+			DATA_JUMP_OFFSET(*buf, -(*idx - loop_beg_idx + sizeof(JUMP_OFFSET)));
 			// fill in continue/break jumps
 #define A (ctx->fill_in_break_addrs[ctx->fill_in_break_addrs_ptr-1])
 			while(ctx->fill_in_break_addrs_ptr > old_break_addrs_ptr) {
@@ -390,7 +390,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 #undef A
 #define A (ctx->fill_in_continue_addrs[ctx->fill_in_continue_addrs_ptr-1])
 			while(ctx->fill_in_continue_addrs_ptr > old_continue_addrs_ptr) {
-				*(JUMP_OFFSET *)&(*buf)[A] = incr_jump - (A + sizeof(JUMP_OFFSET));
+				*(JUMP_OFFSET *)&(*buf)[A] = incr_idx - (A + sizeof(JUMP_OFFSET));
 				ctx->fill_in_continue_addrs_ptr--;
 			}
 #undef A
@@ -432,7 +432,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "FUNC NODE", *idx);
 			OPCODE(*buf, OP_JMP);
 			func_jump = *idx;
-			DATA_JUMP_OFFSET(*buf, 0);
+			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
 			ctx->locals_ptr++;
 			assert(ctx->locals_ptr < COMPILE_MAX_FUNC_DEPTH);
 			LOCALS = NULL;
@@ -523,27 +523,27 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 		case IF_NODE:
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
 			OPCODE(*buf, OP_TO_BOOL);
-			if_jump = *idx;
 			OPCODE(*buf, OP_JMP_FALSE);
+			if_jump = *idx;
 			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, need_result);
 			OPCODE(*buf, OP_JMP);
 			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
-			*(JUMP_OFFSET *)&(*buf)[if_jump+1] = *idx - if_jump - 1 - sizeof(JUMP_OFFSET); // Jump is OP_JMP_FALSE JUMP_OFFSET shorter
-			if_jump = *idx - 1 - sizeof(JUMP_OFFSET);
+			*(JUMP_OFFSET *)&(*buf)[if_jump] = *idx - if_jump - sizeof(JUMP_OFFSET); // Jump is OP_JMP_FALSE JUMP_OFFSET shorter
+			if_jump = *idx - sizeof(JUMP_OFFSET);
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling, buf, idx, allocated, need_result);
-			*(JUMP_OFFSET *)&(*buf)[if_jump+1] = *idx - if_jump - 1 - sizeof(JUMP_OFFSET);
+			*(JUMP_OFFSET *)&(*buf)[if_jump] = *idx - if_jump - sizeof(JUMP_OFFSET);
 			break;
 		case WHILE_NODE:
-			loop_beg = *idx;
+			loop_beg_idx = *idx;
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
-			while_jump = *idx;
 			OPCODE(*buf, OP_JMP_FALSE);
+			while_jump = *idx;
 			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
 			OPCODE(*buf, OP_JMP);
-			DATA_JUMP_OFFSET(*buf, -(*idx - loop_beg + sizeof(JUMP_OFFSET)));
-			*(JUMP_OFFSET *)&(*buf)[while_jump+1] = *idx - while_jump - 1 - sizeof(JUMP_OFFSET);
+			DATA_JUMP_OFFSET(*buf, -(*idx - loop_beg_idx + sizeof(JUMP_OFFSET)));
+			*(JUMP_OFFSET *)&(*buf)[while_jump] = *idx - while_jump - sizeof(JUMP_OFFSET);
 			if(need_result) { OPCODE(*buf, OP_PUSH_NULL); }
 			break;
 		case LOCAL_NODE:
@@ -662,14 +662,14 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			assert(ctx->fill_in_break_addrs_ptr < COMPILE_MAX_FILL_IN_LEN);
 			OPCODE(*buf, OP_JMP);
 			ctx->fill_in_break_addrs[ctx->fill_in_break_addrs_ptr++] = *idx;
-			DATA_JUMP_OFFSET(*buf, 1024);
+			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
 			break;
 
 		case CONTINUE_NODE:
 			assert(ctx->fill_in_continue_addrs_ptr < COMPILE_MAX_FILL_IN_LEN);
 			OPCODE(*buf, OP_JMP);
 			ctx->fill_in_continue_addrs[ctx->fill_in_continue_addrs_ptr++] = *idx;
-			DATA_JUMP_OFFSET(*buf, 1024);
+			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
 			break;
 
 
