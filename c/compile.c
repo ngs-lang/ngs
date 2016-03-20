@@ -38,6 +38,21 @@ typedef enum identifier_resolution_type {
 #define N_UPLEVELS (ctx->n_uplevels[ctx->locals_ptr-1])
 // #define IN_FUNCTION (ctx->locals_ptr)
 
+#define BREAK_ADDR (ctx->fill_in_break_addrs[ctx->fill_in_break_addrs_ptr-1])
+#define CONTINUE_ADDR (ctx->fill_in_continue_addrs[ctx->fill_in_continue_addrs_ptr-1])
+#define SETUP_ADDRESS_FILLING() \
+			old_break_addrs_ptr = ctx->fill_in_break_addrs_ptr; \
+			old_continue_addrs_ptr = ctx->fill_in_continue_addrs_ptr;
+#define HANDLE_ADDRESS_FILLING() \
+			while(ctx->fill_in_break_addrs_ptr > old_break_addrs_ptr) { \
+				*(JUMP_OFFSET *)&(*buf)[BREAK_ADDR] = *idx - (BREAK_ADDR + sizeof(JUMP_OFFSET)) ; \
+				ctx->fill_in_break_addrs_ptr--; \
+			} \
+			while(ctx->fill_in_continue_addrs_ptr > old_continue_addrs_ptr) { \
+				*(JUMP_OFFSET *)&(*buf)[CONTINUE_ADDR] = continue_target_idx - (CONTINUE_ADDR + sizeof(JUMP_OFFSET)); \
+				ctx->fill_in_continue_addrs_ptr--; \
+			}
+
 /* static here makes `clang` compiler happy and not "undefined reference to `ensure_room'"*/
 static inline void ensure_room(char **buf, const size_t cur_len, size_t *allocated, size_t room) {
 	size_t new_size;
@@ -236,7 +251,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 	int argc, have_arr_splat, params_flags;
 	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
 	UPVAR_INDEX n_uplevels;
-	size_t loop_beg_idx, cond_jump, incr_idx, func_jump, end_of_func_idx, if_jump, while_jump;
+	size_t loop_beg_idx, cond_jump, continue_target_idx, func_jump, end_of_func_idx, if_jump, while_jump;
 	int old_break_addrs_ptr, old_continue_addrs_ptr;
 
 	ensure_room(buf, *idx, allocated, 1024); // XXX - magic number
@@ -369,11 +384,10 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			cond_jump = *idx;
 			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
 			// body
-			old_break_addrs_ptr = ctx->fill_in_break_addrs_ptr;
-			old_continue_addrs_ptr = ctx->fill_in_continue_addrs_ptr;
+			SETUP_ADDRESS_FILLING();
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
 			// increment
-			incr_idx = *idx;
+			continue_target_idx = *idx;
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
 			// jump to condition
 			OPCODE(*buf, OP_JMP);
@@ -381,19 +395,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			*(JUMP_OFFSET *)&(*buf)[cond_jump] = *idx - cond_jump;
 			assert((*idx - loop_beg_idx) < 0x7FFF);
 			DATA_JUMP_OFFSET(*buf, -(*idx - loop_beg_idx + sizeof(JUMP_OFFSET)));
-			// fill in continue/break jumps
-#define A (ctx->fill_in_break_addrs[ctx->fill_in_break_addrs_ptr-1])
-			while(ctx->fill_in_break_addrs_ptr > old_break_addrs_ptr) {
-				*(JUMP_OFFSET *)&(*buf)[A] = *idx - (A + sizeof(JUMP_OFFSET)) ;
-				ctx->fill_in_break_addrs_ptr--;
-			}
-#undef A
-#define A (ctx->fill_in_continue_addrs[ctx->fill_in_continue_addrs_ptr-1])
-			while(ctx->fill_in_continue_addrs_ptr > old_continue_addrs_ptr) {
-				*(JUMP_OFFSET *)&(*buf)[A] = incr_idx - (A + sizeof(JUMP_OFFSET));
-				ctx->fill_in_continue_addrs_ptr--;
-			}
-#undef A
+			HANDLE_ADDRESS_FILLING();
 			if(need_result) OPCODE(*buf, OP_PUSH_NULL);
 			break;
 		case EMPTY_NODE:
@@ -540,10 +542,13 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_JMP_FALSE);
 			while_jump = *idx;
 			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
+			SETUP_ADDRESS_FILLING();
+			continue_target_idx = *idx; // For HANDLE_ADDRESS_FILLING
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
 			OPCODE(*buf, OP_JMP);
 			DATA_JUMP_OFFSET(*buf, -(*idx - loop_beg_idx + sizeof(JUMP_OFFSET)));
 			*(JUMP_OFFSET *)&(*buf)[while_jump] = *idx - while_jump - sizeof(JUMP_OFFSET);
+			HANDLE_ADDRESS_FILLING();
 			if(need_result) { OPCODE(*buf, OP_PUSH_NULL); }
 			break;
 		case LOCAL_NODE:
