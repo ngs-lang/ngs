@@ -5,18 +5,10 @@
 *.html
 node_modules
 small-poc/ssl
-ze_syntax.js
-syntax.js
-syntax.txt
-*_archive
 TAGS
-JUNK
-profiling
-trace.txt
 ngs
 ngs-prof
 ngs-debug
-scratch.txt
 
 tags
 *.o
