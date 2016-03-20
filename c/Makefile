@@ -88,12 +88,12 @@ test-no-bootstrap-no-stdlib: ngs
 	done;
 
 test-stdlib: ngs
-	@ while read line;do \
+	@ cat bootstrap.ngs stdlib.ngs autoload/*.ngs | while read line;do \
 		if [[ $$line =~ ^TEST\ (.*) ]];then \
 			echo "+ Stdlib test: $${BASH_REMATCH[1]}" ; \
 			NGS_BOOTSTRAP=bootstrap.ngs ./ngs -e "F() { $${BASH_REMATCH[1]} }() == true" ; \
 		fi; \
-	done < stdlib.ngs
+	done
 
 test: test-no-bootstrap-no-stdlib test-stdlib
 	@ echo "ALL TESTS OK"

@@ -184,6 +184,7 @@ typedef struct {
 		VALUE ExclusiveRange;
 
 	VALUE impl_not_found_hook;
+	VALUE global_not_found_hook;
 	VALUE init;
 
 } VM;

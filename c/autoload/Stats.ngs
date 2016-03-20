@@ -1,0 +1,24 @@
+# === Stats ===
+
+{
+	type Stats
+	Stats.expose('h')
+}
+
+F init(s:Stats) {
+	s.h = {}
+}
+
+F Stats(a:Arr) {
+	s = Stats()
+	a.each(partial(push, s))
+	s
+}
+
+F push(s:Stats, k) {
+	s.h[k] = s.h.get(k, 0) + 1
+	s
+}
+
+TEST Stats().push('a').push('a').push('b') == {'a': 2, 'b': 1}
+TEST Stats(['a', 'a', 'b']) == {'a': 2, 'b': 1}

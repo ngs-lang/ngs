@@ -1,0 +1,169 @@
+# === Table ======================================
+
+{ type Table }
+
+F cell_display_width(x) Str(x).len()
+F cell_display_width(x:Arr) x.map(Str).map(len).max()
+F cell_display_width(x:Arr) { guard x.len()==0; 0 }
+
+# TODO: handle errors, throw exceptions
+F write(fd:Int, s:Str) fd.c_write(s)
+
+F init(t:Table) {
+	t.name = null
+	# name -> column number
+	t.col_name_to_idx = {}
+	# column number -> name
+	t.col_idx_to_name = {}
+	# data
+	t.rows = []
+}
+
+# TODO: rewrite all Table() to init() ?
+F Table(rows_hashes:Arr) {
+	guard rows_hashes.all(is, Hash)
+	t = Table()
+	t.init(rows_hashes)
+	t
+}
+
+F Table(name:Str, rows_hashes:Arr) {
+	guard rows_hashes.all(is, Hash)
+	t = Table()
+	t.name = name
+	t.init(rows_hashes)
+	t
+}
+
+F init(t:Table, rows_hashes:Arr) {
+	local conf = config(if t.name "table_${t.name}" "table")
+	debug("Table config is $conf")
+	local idx = 0
+	# Build table info
+	if conf {
+		conf.each(F(k) {
+			t.col_name_to_idx[k] = idx
+			t.col_idx_to_name[idx] = k
+			idx = idx + 1
+		})
+	} else {
+		rows_hashes.each(F(row_hash) {
+			row_hash.keys().each(F(k) {
+				if k not in t.col_name_to_idx {
+					t.col_name_to_idx[k] = idx
+					t.col_idx_to_name[idx] = k
+					idx = idx + 1
+				}
+			})
+		})
+	}
+	debug("Table created with fields: ${t.col_idx_to_name}")
+	# hashes to arrays
+	rows_hashes.each(partial(push, t))
+	t
+}
+
+F push(t:Table, row_arr:Arr) {
+	# TODO: handle mismatch in number of columns
+	t.rows.push(row_arr)
+	t
+}
+
+F push(t:Table, row_hash:Hash) {
+	# TODO: handle mismatch of columns
+	local row = t.col_idx_to_name.map(F(idx, k) row_hash.get(k, null))
+	t.push(row)
+	t
+}
+
+F width(t:Table) t.col_idx_to_name.len()
+F column(t:Table, k:Str) t.column(t.col_name_to_idx[k])
+F column(t:Table, n:Int) t.rows.map(([]), n)
+F columns(t:Table) t.width().map(F(idx) t.column(idx))
+F each(t:Table, cb:Fun, *args) {
+	throw NotImplemented()
+}
+
+# --- Conversions ---
+
+F len(t:Table) t.rows.len()
+F Bool(t:Table) t.len().Bool()
+
+F Hash(t:Table, row_number:Int) {
+	throw NotImplemented()
+}
+
+F Hashes(t:Table) {
+	throw NotImplemented()
+}
+
+F echo(t:Table) {
+	guard 1.isatty() or (config('output_format') == 'text')
+	# TODO: display vertically elements of an array (for array which is a cell).
+	# TODO: get and use tty width?
+	# TODO: special treatment for tmux? can print any width and tmux can be adjusted later.
+	# TODO: support Arr in headers
+	# TODO: handle Hash type of cell (maybe allow configuring order of keys etc)
+	# TODO: handle limiting width of a cell
+	# TODO: support displaying something (like '-') for empty spaces instead of ''
+	local do_output_headers = config('output_headers') in [null, true]
+	local max_colums_widths = t.col_idx_to_name.map(F(idx, k) {
+		local col = t.column(idx)
+		((if do_output_headers [k] [])+ col).map(cell_display_width).max()
+	})
+
+	# Setup line spacing
+	local do_line_spacing = t.rows.any(F(row) {
+		row.any(F(cell) cell is Arr and len(cell)>1)
+	})
+	do_line_spacing = if do_line_spacing F() echo('') else F() null
+
+	# Title
+	if t.name and (config('output_title') in [null, true]) {
+		echo("=== ${t.name} ===")
+		do_line_spacing()
+	}
+
+	# Headers
+	if(do_output_headers) {
+		t.col_idx_to_name.map(F(idx, k) Str(k, max_colums_widths[idx])).join(' ').echo()
+		do_line_spacing()
+	}
+
+	# Rows
+	t.rows.each(F(row) {
+		local done = false
+		local subrow_idx = 0
+		local subrow_content_arr
+		while not(done) {
+			done = true
+			subrow_content_arr = t.col_idx_to_name.map(F(idx, k) {
+				local subrow_content = if row[idx] is Arr {
+					if len(row[idx]) > subrow_idx {
+						done = false
+						row[idx][subrow_idx]
+					} else {
+						''
+					}
+				} else {
+					if subrow_idx == 0 {
+						done = false
+						row[idx]
+					} else {
+						''
+					}
+				}
+				# Format later maybe? Just before printing?
+				Str(subrow_content, max_colums_widths[idx])
+			})
+			if not(done) {
+				subrow_content_arr.join(' ').echo()
+			}
+			subrow_idx = subrow_idx + 1
+		}
+		do_line_spacing()
+	})
+}
+
+TEST Table([{"a": 1}, {"a": 2}]).column("a") == [1,2]
+TEST Table([{"a": 1}, {"a": 2}]).len() == 2

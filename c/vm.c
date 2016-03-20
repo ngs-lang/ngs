@@ -1018,6 +1018,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	}
 	set_global(vm, "ARGV", argv_array);
 	set_global(vm, "impl_not_found_hook", vm->impl_not_found_hook = make_array(0)); // There must be a catch-all in stdlib
+	set_global(vm, "global_not_found_hook", vm->global_not_found_hook = make_array(0));
 	set_global(vm, "init", vm->init = make_array(0));
 
 	// TODO: Some good solution for many defines
@@ -1431,14 +1432,29 @@ main_loop:
 #endif
 							// TODO: report error here instead of crashing
 							if(IS_UNDEF(GLOBALS[gvi])) {
-								VALUE exc;
 								THIS_FRAME.last_ip = ip;
-								exc = make_normal_type_instance(vm->GlobalNotFound);
-								set_normal_type_instance_attribute(exc, make_string("name"), make_string(vm->globals_names[gvi]));
-								set_normal_type_instance_attribute(exc, make_string("index"), MAKE_INT(gvi));
-								set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
-								*result = exc;
-								goto exception;
+
+								THIS_FRAME.do_call_impl_not_found_hook = 0;
+								// last_ip should have been already set up before calling vm_call()
+								v = make_string(vm->globals_names[gvi]);
+								mr = vm_call(vm, ctx, result, vm->global_not_found_hook, 1, &v);
+								THIS_FRAME.do_call_impl_not_found_hook = 1;
+								if(IS_UNDEF(GLOBALS[gvi])) {
+									VALUE exc;
+									exc = make_normal_type_instance(vm->GlobalNotFound);
+									set_normal_type_instance_attribute(exc, make_string("name"), make_string(vm->globals_names[gvi]));
+									set_normal_type_instance_attribute(exc, make_string("index"), MAKE_INT(gvi));
+									set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+									if(mr == METHOD_EXCEPTION) {
+										set_normal_type_instance_attribute(exc, make_string("cause"), *result);
+									} else {
+										if (mr != METHOD_IMPL_MISSING) {
+											set_normal_type_instance_attribute(exc, make_string("info"), make_string("Additionally, global_not_found_hook() failed to provide the global"));
+										}
+									}
+									*result = exc;
+									goto exception;
+								}
 							}
 							// dump_titled("FETCH_GLOBAL", GLOBALS[gvi]);
 							PUSH(GLOBALS[gvi]);

@@ -53,6 +53,65 @@ char *find_bootstrap_file() {
 	return NULL;
 }
 
+#define H(result, obj, key) { HASH_OBJECT_ENTRY *e; assert(IS_HASH(obj)); e = get_hash_key(obj, make_string(key)); assert(e); result = e->val; }
+void print_exception(VM *vm, VALUE result) {
+	// TODO: fprintf to stderr and teach dump_titled to optionally fprintf to stderr too
+	printf("====== Exception of type '%s' ======\n", obj_to_cstring(NGS_TYPE_NAME(NORMAL_TYPE_INSTANCE_TYPE(result))));
+	// TODO: maybe macro to iterate attributes
+	VALUE fields = NGS_TYPE_FIELDS(NORMAL_TYPE_INSTANCE_TYPE(result));
+	HASH_OBJECT_ENTRY *e;
+	for(e=HASH_HEAD(fields); e; e=e->insertion_order_next) {
+		if(obj_is_of_type(ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)], vm->Backtrace)) {
+			printf("=== [ backtrace ] ===\n");
+			// Backtrace.frames = [{"closure": ..., "ip": ...}, ...]
+			VALUE backtrace = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)];
+			VALUE frames;
+			assert(get_normal_type_instace_attribute(backtrace, make_string("frames"), &frames) == METHOD_OK);
+			unsigned int i;
+			for(i = 0; i < OBJ_LEN(frames); i++) {
+				VALUE frame, resolved_ip, ip;
+				frame = ARRAY_ITEMS(frames)[i];
+				H(ip, frame, "ip");
+				resolved_ip = resolve_ip(vm, (IP)(GET_INT(ip) - 1));
+				if(IS_HASH(resolved_ip)) {
+					VALUE file, first_line, first_column, last_line, last_column;
+					HASH_OBJECT_ENTRY *closure_entry;
+					char *closure_name = "<anonymous>";
+					H(file, resolved_ip, "file");
+					H(first_line, resolved_ip, "first_line");
+					H(first_column, resolved_ip, "first_column");
+					H(last_line, resolved_ip, "last_line");
+					H(last_column, resolved_ip, "last_column");
+					closure_entry = get_hash_key(frame, make_string("closure"));
+					if(closure_entry && IS_CLOSURE(closure_entry->val) && (!IS_NULL(CLOSURE_OBJ_NAME(closure_entry->val)))) {
+						closure_name = obj_to_cstring(CLOSURE_OBJ_NAME(closure_entry->val));
+					}
+					// TODO: fix types
+					printf("[Frame #%u] %s:%d:%d - %d:%d [in %s]\n", i, obj_to_cstring(file), (int) GET_INT(first_line), (int) GET_INT(first_column), (int) GET_INT(last_line), (int) GET_INT(last_column), closure_name);
+				} else {
+					printf("[Frame #%u] (no source location)\n", i);
+				}
+			}
+			continue;
+		}
+		if(obj_is_of_type(ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)], vm->Exception)) {
+			assert(IS_STRING(e->key));
+			printf("---8<--- %s - start ---8<---\n", obj_to_cstring(e->key));
+			print_exception(vm, ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
+			printf("---8<--- %s - end ---8<---\n", obj_to_cstring(e->key));
+			continue;
+		}
+		if(IS_STRING(e->key)) {
+			dump_titled(obj_to_cstring(e->key), ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
+		} else {
+			// Should not happen
+			dump_titled("attribute key", e->key);
+			dump_titled("attribute value", ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
+		}
+	}
+}
+#undef H
+
 int main(int argc, char **argv)
 {
 	ast_node *tree = NULL;
@@ -120,61 +179,13 @@ int main(int argc, char **argv)
 		return 0;
 	}
 	if(mr == METHOD_EXCEPTION) {
-#define H(result, obj, key) { HASH_OBJECT_ENTRY *e; assert(IS_HASH(obj)); e = get_hash_key(obj, make_string(key)); assert(e); result = e->val; }
 		if(obj_is_of_type(result, vm.Exception)) {
-			// TODO: fprintf to stderr and teach dump_titled to optionally fprintf to stderr too
-			printf("====== Uncaught exception of type '%s' ======\n", obj_to_cstring(NGS_TYPE_NAME(NORMAL_TYPE_INSTANCE_TYPE(result))));
-			// TODO: maybe macro to iterate attributes
-			VALUE fields = NGS_TYPE_FIELDS(NORMAL_TYPE_INSTANCE_TYPE(result));
-			HASH_OBJECT_ENTRY *e;
-			for(e=HASH_HEAD(fields); e; e=e->insertion_order_next) {
-				if(obj_is_of_type(ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)], vm.Backtrace)) {
-					printf("=== [ backtrace ] ===\n");
-					// Backtrace.frames = [{"closure": ..., "ip": ...}, ...]
-					VALUE backtrace = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)];
-					VALUE frames;
-					assert(get_normal_type_instace_attribute(backtrace, make_string("frames"), &frames) == METHOD_OK);
-					unsigned int i;
-					for(i = 0; i < OBJ_LEN(frames); i++) {
-						VALUE frame, resolved_ip, ip;
-						frame = ARRAY_ITEMS(frames)[i];
-						H(ip, frame, "ip");
-						resolved_ip = resolve_ip(&vm, (IP)(GET_INT(ip) - 1));
-						if(IS_HASH(resolved_ip)) {
-							VALUE file, first_line, first_column, last_line, last_column;
-							HASH_OBJECT_ENTRY *closure_entry;
-							char *closure_name = "<anonymous>";
-							H(file, resolved_ip, "file");
-							H(first_line, resolved_ip, "first_line");
-							H(first_column, resolved_ip, "first_column");
-							H(last_line, resolved_ip, "last_line");
-							H(last_column, resolved_ip, "last_column");
-							closure_entry = get_hash_key(frame, make_string("closure"));
-							if(closure_entry && IS_CLOSURE(closure_entry->val) && (!IS_NULL(CLOSURE_OBJ_NAME(closure_entry->val)))) {
-								closure_name = obj_to_cstring(CLOSURE_OBJ_NAME(closure_entry->val));
-							}
-							// TODO: fix types
-							printf("[Frame #%u] %s:%d:%d - %d:%d [in %s]\n", i, obj_to_cstring(file), (int) GET_INT(first_line), (int) GET_INT(first_column), (int) GET_INT(last_line), (int) GET_INT(last_column), closure_name);
-						} else {
-							printf("[Frame #%u] (no source location)\n", i);
-						}
-					}
-					continue;
-				}
-				if(IS_STRING(e->key)) {
-					dump_titled(obj_to_cstring(e->key), ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
-				} else {
-					// Should not happen
-					dump_titled("attribute key", e->key);
-					dump_titled("attribute value", ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
-				}
-			}
-
+			printf("========= Uncaught exception of type '%s' =========\n", obj_to_cstring(NGS_TYPE_NAME(NORMAL_TYPE_INSTANCE_TYPE(result))));
+			print_exception(&vm, result);
 		} else {
 			dump_titled("Uncaught exception", result);
 		}
 		return 1;
-#undef H
 	}
 	assert(0 == "Unexpected exit from bootstrap code");
 }

@@ -1,3 +1,40 @@
+# === Exception ==================================
+
+F init(e:Exception) {
+	# Last entry in backtrace would be this init() invocation
+	local b = Backtrace()
+	pop(b.frames)
+	e.backtrace = b
+}
+
+
+F init(e:Exception, s:Str) {
+	# Last entry in backtrace would be this Exception() invocation
+	init(e)
+	e.info = s
+	e.backtrace.frames.pop()
+}
+
+F init(e:Exception, cause:Exception) {
+	# Last entry in backtrace would be this Exception() invocation
+	init(e)
+	e.cause = cause
+	e.backtrace.frames.pop()
+}
+
+TEST Exception().backtrace is Backtrace
+TEST Exception("xyz").info == "xyz"
+TEST Exception(Exception()).cause is Exception
+
+
+{
+	type NotImplemented; NotImplemented.inherit(Exception);
+	type FetchFail; FetchFail.inherit(Exception);
+	type RequreFail; RequreFail.inherit(Exception);
+}
+
+# === bootstrap ==================================
+
 # *** Convert values returned by the program (or -e/-E expression) to exit codes ***
 F to_exit_code(x) 0
 F to_exit_code(b:Bool) if b 0 1
@@ -14,34 +51,37 @@ bootstrap_debug =
 F bootstrap_find_ngs_dir() ENV.get('NGS_DIR', '/usr/share/ngs')
 
 # *** fetch - abstraction above low level c io primitives ***
+# TODO: Better exceptions
 F fetch(fname) {
-	local fd, file_len, data
-	fd = c_open(fname, 'r')
-	if fd <= 0 {
-		bootstrap_debug("fetch(): failed to open file ${fname}")
-		c_exit(102)
+	try {
+		local fd, file_len, data
+		fd = c_open(fname, 'r')
+		fd <= 0 throws Exception("fetch(): failed to open file ${fname}")
+		bootstrap_debug("fetch(): opened file ${fname} as fd ${fd}")
+		file_len = c_lseek(fd, 0, "end")
+		file_len < 0 throws Exception("fetch(): failed to get the size of file ${fname}")
+		c_lseek(fd, 0, "set")
+		bootstrap_debug("fetch(): file size of ${fname} is ${file_len}")
+		data = c_read(fd, file_len)
+		c_close(fd)
+		data[1]
+	} catch(e) {
+		throw FetchFail(e)
 	}
-	bootstrap_debug("fetch(): opened file ${fname} as fd ${fd}")
-	file_len = c_lseek(fd, 0, "end")
-	if file_len < 0 {
-		bootstrap_debug("fetch(): failed to get the size of file ${fname}")
-		c_exit(103)
-	}
-	c_lseek(fd, 0, "set")
-	bootstrap_debug("fetch(): file size of ${fname} is ${file_len}")
-	data = c_read(fd, file_len)
-	c_close(fd)
-	data[1]
 }
 
 F require(fname) {
-	local program_text = fetch(fname)
-	local program_bytecode = compile(program_text, fname)
-	bootstrap_debug("require(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
-	local program_func = load(program_bytecode, "require()d file: $fname")
-	local ret = program_func()
-	bootstrap_debug("require(): done requiring ${fname}")
-	ret
+	try {
+		local program_text = fetch(fname)
+		local program_bytecode = compile(program_text, fname)
+		bootstrap_debug("require(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
+		local program_func = load(program_bytecode, "require()d file: $fname")
+		local ret = program_func()
+		bootstrap_debug("require(): done requiring ${fname}")
+		ret
+	} catch(e) {
+		throw RequreFail(e)
+	}
 }
 
 F bootstrap() {
