@@ -280,6 +280,28 @@ binop-expression-inner =
 		e1 = ret;
 	}
 	|
+	space "breaks" {
+		// e1 breaks => if e1 { break }
+		MAKE_NODE(ret, IF_NODE);
+			ret->first_child = e1;
+			MAKE_NODE(yes, BREAK_NODE);
+			e1->next_sibling = yes;
+			MAKE_NODE(no, NULL_NODE);
+			yes->next_sibling = no;
+		e1 = ret;
+	}
+	|
+	space "continues" {
+		// e1 continues => if e1 { break }
+		MAKE_NODE(ret, IF_NODE);
+			ret->first_child = e1;
+			MAKE_NODE(yes, CONTINUE_NODE);
+			e1->next_sibling = yes;
+			MAKE_NODE(no, NULL_NODE);
+			yes->next_sibling = no;
+		e1 = ret;
+	}
+	|
 	space "throws" space e2:expression {
 		// e1 throws e2 => if e1 { return e2 }
 		MAKE_NODE(ret, IF_NODE);

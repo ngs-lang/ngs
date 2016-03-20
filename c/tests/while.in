@@ -4,8 +4,8 @@
 	# 2,4
 	while i<10 {
 		i=i+1
-		if i == 3 continue
-		if i >= 5 break
+		i == 3 continues
+		i >= 5 breaks
 		sum=sum+i
 	}
 	dump(sum)
