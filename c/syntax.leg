@@ -871,6 +871,19 @@ try-catch = "try" space acc:try-catch-node c:code-block { append_ast_node_child(
 		ret->first_child = params;
 		params->next_sibling = body;
 		append_ast_node_child(acc, ret);
+
+		// --- Name the catch clause - start ---
+		// Assumption: there will not be a lot of catch() clauses so it will work reasonably fast
+		char name_buf[256];
+		int n;
+		ast_node *p;
+		for(p=acc->first_child, n=0; p; p=p->next_sibling) {
+			n++;
+		}
+		snprintf(name_buf, sizeof(name_buf)-1, "<catch-clause-%d>", n-1);
+		MAKE_IDENTIFIER_NODE(catch_identifier, name_buf);
+		body->next_sibling = catch_identifier;
+		// --- Name the catch clause - end ---
 	})*
 	{
 	$$ = acc;
