@@ -250,7 +250,7 @@ void compile_identifier(COMPILATION_CONTEXT *ctx, char **buf, size_t *idx, char 
 
 void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
 	ast_node *ptr;
-	int argc, have_arr_splat, params_flags;
+	int argc, have_arr_splat, have_hash_splat, params_flags;
 	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
 	UPVAR_INDEX n_uplevels;
 	size_t loop_beg_idx, cond_jump, continue_target_idx, func_jump, end_of_func_idx, if_jump, while_jump;
@@ -563,16 +563,34 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			break;
 		case HASH_LIT_NODE:
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "HASH NODE", *idx);
-			for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
+			for(ptr=node->first_child, have_hash_splat=0; ptr; ptr=ptr->next_sibling) {
 				if(ptr->type == HASH_SPLAT_NODE) {
-					assert(0=="Hash splat is not implemented yet");
+					have_hash_splat = 1;
+					break;
 				}
-				compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
-				compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
-				// XXX
 			}
-			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, argc);
-			OPCODE(*buf, OP_MAKE_HASH);
+			if(have_hash_splat) {
+				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0);
+				OPCODE(*buf, OP_MAKE_HASH);
+				for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
+					if(ptr->type == HASH_SPLAT_NODE) {
+						compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+						OPCODE(*buf, OP_TO_HASH);
+						OPCODE(*buf, OP_HASH_UPDATE);
+					} else {
+						compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+						compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+						OPCODE(*buf, OP_HASH_SET);
+					}
+				}
+			} else {
+				for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
+					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+					compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+				}
+				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, argc);
+				OPCODE(*buf, OP_MAKE_HASH);
+			}
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 		case RETURN_NODE:

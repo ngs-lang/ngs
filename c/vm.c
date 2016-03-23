@@ -74,15 +74,18 @@ char *opcodes_names[] = {
 	/* 35 */ "MAKE_HASH",
 	/* 36 */ "TO_BOOL",
 	/* 37 */ "TO_ARR",
-	/* 38 */ "ARR_APPEND",
-	/* 39 */ "ARR_CONCAT",
-	/* 40 */ "GUARD",
-	/* 41 */ "TRY_START",
-	/* 42 */ "TRY_END",
-	/* 43 */ "ARR_REVERSE",
-	/* 44 */ "THROW",
-	/* 45 */ "MAKE_CMD",
-	/* 46 */ "SET_CLOSURE_NAME",
+	/* 38 */ "TO_HASH",
+	/* 39 */ "ARR_APPEND",
+	/* 40 */ "ARR_CONCAT",
+	/* 41 */ "GUARD",
+	/* 42 */ "TRY_START",
+	/* 43 */ "TRY_END",
+	/* 44 */ "ARR_REVERSE",
+	/* 45 */ "THROW",
+	/* 46 */ "MAKE_CMD",
+	/* 47 */ "SET_CLOSURE_NAME",
+	/* 48 */ "HASH_SET",
+	/* 49 */ "HASH_UPDATE",
 };
 
 
@@ -91,8 +94,10 @@ char *opcodes_names[] = {
 #define PUSH_NOCHECK(v) ctx->stack[ctx->stack_ptr++] = v
 #define POP(dst) assert(ctx->stack_ptr); ctx->stack_ptr--; dst = ctx->stack[ctx->stack_ptr]
 #define POP_NOCHECK(dst) ctx->stack_ptr--; dst = ctx->stack[ctx->stack_ptr]
-#define TOP (ctx->stack[ctx->stack_ptr-1])
+#define FIRST (ctx->stack[ctx->stack_ptr-1])
+#define TOP FIRST
 #define SECOND (ctx->stack[ctx->stack_ptr-2])
+#define THIRD (ctx->stack[ctx->stack_ptr-3])
 #define DUP assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr] = ctx->stack[ctx->stack_ptr-1]; ctx->stack_ptr++;
 #define REMOVE_TOP assert(ctx->stack_ptr); ctx->stack_ptr--
 #define REMOVE_TOP_NOCHECK ctx->stack_ptr--
@@ -314,6 +319,8 @@ METHOD_RESULT native_values_hash METHOD_PARAMS {
 	}
 	return METHOD_OK;
 }
+
+METHOD_RESULT native_update_hash_hash METHOD_PARAMS { update_hash(argv[0], argv[1]); METHOD_RETURN(argv[0]); }
 
 METHOD_RESULT native_len METHOD_PARAMS {
 	*result = MAKE_INT(OBJ_LEN(argv[0]));
@@ -993,6 +1000,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "hash",     &native_hash_any,          1, "x",   vm->Any);
 	register_global_func(vm, 0, "keys",     &native_keys_hash,         1, "h",   vm->Hash);
 	register_global_func(vm, 0, "values",   &native_values_hash,       1, "h",   vm->Hash);
+	register_global_func(vm, 0, "update",   &native_update_hash_hash,  2, "dst", vm->Hash, "src", vm->Hash);
 	register_global_func(vm, 0, "len",      &native_len,               1, "h",   vm->Hash);
 	register_global_func(vm, 0, "get",      &native_index_get_hash_any_any,    3, "h",   vm->Hash,"k", vm->Any, "dflt", vm->Any);
 	register_global_func(vm, 1, "[]",       &native_index_get_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
@@ -1735,6 +1743,8 @@ do_jump:
 							CONVERTING_OP(IS_BOOL, Bool);
 		case OP_TO_ARR:
 							CONVERTING_OP(IS_ARRAY, Arr);
+		case OP_TO_HASH:
+							CONVERTING_OP(IS_HASH, Hash);
 		case OP_ARR_APPEND:
 							EXPECT_STACK_DEPTH(2);
 							array_push(ctx->stack[ctx->stack_ptr-2], ctx->stack[ctx->stack_ptr-1]);
@@ -1792,6 +1802,16 @@ do_jump:
 							v = make_string_of_len(&vm->bytecode[ip+1], vm->bytecode[ip]);
 							ip += 1 + vm->bytecode[ip];
 							CLOSURE_OBJ_NAME(TOP) = v;
+							goto main_loop;
+		case OP_HASH_SET:
+							EXPECT_STACK_DEPTH(3);
+							set_hash_key(THIRD, SECOND, FIRST);
+							REMOVE_TOP_N_NOCHECK(2);
+							goto main_loop;
+		case OP_HASH_UPDATE:
+							EXPECT_STACK_DEPTH(2);
+							update_hash(SECOND, FIRST);
+							REMOVE_TOP_NOCHECK;
 							goto main_loop;
 		default:
 							// TODO: exception

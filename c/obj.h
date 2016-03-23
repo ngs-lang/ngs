@@ -275,6 +275,7 @@ uint32_t hash(VALUE v);
 HASH_OBJECT_ENTRY *get_hash_key(VALUE h, VALUE k);
 void set_hash_key(VALUE h, VALUE k, VALUE v);
 int del_hash_key(VALUE h, VALUE k);
+void update_hash(VALUE dst, VALUE src);
 VALUE make_string(const char *s);
 VALUE make_string_of_len(const char *s, size_t len);
 VALUE make_real(double n);

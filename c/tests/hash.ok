@@ -26,3 +26,8 @@ Test: len
 * int 4
 Test: del
 * int 2
+Test: splat
+* int 3
+* int 1
+* int 2
+* int 3

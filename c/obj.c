@@ -484,6 +484,17 @@ int del_hash_key(VALUE h, VALUE k) {
 	return 0;
 }
 
+// TODO: do it without rehashing again, assuming (currently true) it's the same hashing function
+void update_hash(VALUE dst, VALUE src) {
+	assert(IS_HASH(dst));
+	assert(IS_HASH(src));
+	HASH_OBJECT_ENTRY *e;
+	for(e=HASH_HEAD(src); e; e=e->insertion_order_next) {
+		set_hash_key(dst, e->key, e->val);
+	}
+}
+
+
 VALUE make_string(const char *s) {
 	VALUE v;
 	VAR_LEN_OBJECT *vlo;

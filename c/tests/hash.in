@@ -36,4 +36,12 @@
 	del(h, "xy1")
 	del(h, "xy2")
 	dump(len(h))
+
+	echo("Test: splat")
+	h = {"b": 2}
+	hh = {"a": 1, "b": "overridden", **h, "c": 3}
+	dump(hh.len())
+	dump(hh["a"])
+	dump(hh["b"])
+	dump(hh["c"])
 }
