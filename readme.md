@@ -1,40 +1,50 @@
 Next generation UNIX shell
 
+The problem with current state
+==============================
+
+Shells are [Domain Specific Languages](https://en.wikipedia.org/wiki/Domain-specific_language).  The domain has changed greatly since the shells we use today were conceived.  The shells never caught up.
+
+What I see is a void. There is no good language for system tasks (and no good shell). What's near this void is outdated shells on one hand and generic (non-DSL) programming languages on the other. Both are being (ab)used for system tasks.
+
+The problem with outdated shells looks pretty clear: they were made with one kind of tasks in mind but are used for other, bigger and more complex tasks. Such scripts usually look as a fight against the language and working around it much more than using it to solve the problem.
+
+The problem of using general purpose programming languages (Python, Ruby, Perl, Go) is not so obvious. Domain-specific language makes your life much easier when solving the tasks that the language was built for.  Of course you can write to a file in any language but probably not as easy as `echo something >my_file`. You can run a program but it's probably won't be a simple `ls`. The scripts that I've seen (and written in Python and Ruby) look too verbose. Such scripts do not look an optimal solution (at the very least).
+
 Vision
 ======
 
-* The vision is to make a shell which will significantly increase the productivity of system guys and girls.
-
-* Current shells are outdated. They are not as powerful as we'd like them to be.
-
-* Manage cloud/VMs with this shell.
-
-* Programs are written in shells but "stop and think" was not made till now. NGS will have two modes: `commands` and `code`. In `code` mode there will be a "normal" programming language while in `commands` mode we'll have something like current shells.
+* Create a language that will be domain-specific for system tasks.
+* Create a shell (in that language) that is up to date with today's tasks - cloud, remote execution on a group of hosts.
 
 About this document
 ===================
+
 This document started as internal draft. Some sections might not be clear. Still exposing it as per "release early" policy. Feel free to open a GitHub issue or email me directly: ilya (DOT) sher (AT) coding (DASH) knight (DOT) com
 
 Project status
 ==============
 
-Early development. Help is welcome.
+Development. Help is welcome.
 
 Running
 =======
 
+	apt-get install uthash-dev libgc-dev libffi6 libjson-c2 libjson-c-dev
+	cd c
 	make
 	./ngs SCRIPT_NAME.ngs
 
 Running tests
 =============
 
+	cd c
 	make test
 
 Contributing
 ============
 
-Fork on GitHub, work on whatever you like or what's in `doc/todo.org`, make a pull request.
+Fork on GitHub, work on whatever you like, make a pull request. If the change is big, it's better to coordinate with Ilya before you start.
 
 Features
 ========
@@ -48,17 +58,11 @@ UI
 
 * Provide good feedback. In GUI for example, this can be green / red icon near a completed command to show exit status. Tweaking prompt to include such info or typing `echo $?` all the time is not what I dream about.
 
-* All operations made via a UI, including mouse operations in GUI _must_ have and display textual representation, allowing to copy / paste / save to a file/ send to friend.
+* All operations made via a UI, including mouse operations in GUI _must_ have and display textual representation, allowing to copy / paste / save to a file / send to friend.
 
 * Different UI modules must exist. In the beginning we can start with these:
-  * Web (allow multiple users to collaborate, some rw, some ro)
   * Console (use pty)
-
-* Different syntax modules
-	* With parse / construct features. Think an operation is done in a GUI, API called to
-	  construct the command or whatever that is. Call `construct` on this to create textual
-	  representation of the command / whatever.
-	* On-the-fly syntax validation and errors reporting.
+  * Web (allow multiple users to collaborate, some rw, some ro)
 
 * Commands scroll up, new commands are added at the bottom. When a command that haven't
   completed yet, reaches top of the screen, it can be converted to a mini-area at the
@@ -69,16 +73,15 @@ UI
   another user must approve the command for execution.
 
 * Display structured results as real f\*cking structures (JSON, Yaml, ...)
+	* Most of the data dealt with is tables. List of files, list of instances in a cloud, list of load balancers. Amazing that none of current shell tools (I heard of) don't treat the data as such. The closest you get is set of records in `awk`. Well, if the fields in records are the same it's actually a table. `$1` in awk could be `id` or `name`, referencing the data by column name and not by field number. Yes, you have `jq` and it's close but it still works (in best case) with list of records with same fields.
 	* (Maybe) Allow editing it and saving to file.
 	* (Maybe) Allow write jq filters in (G)UI by selecting the elements
 
-* GUI
-	* Underline red/green for existing/non-existing files?
+* Underline red/green for existing/non-existing files?
 
 * Actions on objects that are on screen. Think right click / context menu.
 
-* Commands history: among duplicate commands all but last should be grayed out,
-  so that non-grayed out commands are unique.
+* Commands history: among duplicate commands all but last should be grayed out, so that non-grayed out commands are unique.
 
 * When hover over an object, highlight the same object everywhere it appears.
 
@@ -162,17 +165,6 @@ Cross-system
 	  sockets, pipes, resource usage (CPU, disk, network), process running time, accumulative
 	  CPU time, ...
 
-Jobs
-----
-
-A job is either a running script or external process (which was run by a script).
-
-The intention here is to give full transparency regarding what's happening.
-
-* Each job has it's own status, progress, etc.
-* External process is a "sub job" (should be shown under the script that it was running)
-* Sub job for each host that the script runs on
-
 History
 -------
 
@@ -218,19 +210,19 @@ The NGS language
 
 Two languages actually.
 
-* Current-shells-like but simplified (called "commands"), `(...)` syntax
+* Current-shells-like but simplified (called "commands"), `$(...)` syntax
 * Scripting language, "normal" programming language (called "code"), `{...}` syntax
 
 ### The NGS "code" language ###
 
 * Functional
-* Types (File, Host, Group, String, Number, ...)
+* Types (File, Host, Group, Str, Num, ...)
 * Multi-dispatch with guards (trying to avoid "regular" full-blown OO to minimize the work)
 	* For example:
-		* `replace(String orig, String a, String b) -> String`
-		* `replace(Array orig, String a, String b) -> Array` - replaces in all strings in the `orig` array
-			* This may have a guard something like: `all(orig, isString)`
-		* `replace(File f, String a, String b)` - will `sed` the file, possibly backing it up.
+		* `replace(Str orig, Str a, Str b)`
+		* `replace(Array orig, Str a, Str b)` - replaces in all strings in the `orig` array
+			* This may have a guard something like: `all(orig, isStr)`
+		* `replace(File f, Str a, Str b)` - will `sed` the file, possibly backing it up.
 * Lots of functions for data manipulation (TODO: list them)
 * File, Host, Group literals:
 	* f'/tmp/my-temp.txt'
@@ -238,7 +230,7 @@ Two languages actually.
 Later / unformed / unfinished thoughts
 --------------------------------------
 
-* Measure and graph pipes throughput
+* Measure and graph pipes throughput (and/or process performance for example by how fast it reads an input file)
 
 * In a job, per process state / title
 
