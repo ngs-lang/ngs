@@ -7,6 +7,8 @@
 // TODO: disabllow break/continue outside of loops
 
 // TODO: abstract UINT16
+//
+// TODO: Use exceptions instead of asserts
 
 #define OPCODE(buf, x) { (buf)[*idx]=x; (*idx)++; }
 #define L_STR(buf, x) { int l = strlen(x); assert(l<256); OPCODE(buf, l); memcpy((buf)+(*idx), x, l); (*idx) += l; }
@@ -297,7 +299,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					have_arr_splat = 1;
 				}
 				if(ptr->first_child->type == HASH_SPLAT_NODE) {
-					have_arr_splat = 1;
+					have_hash_splat = 1;
 				}
 			}
 			if(have_arr_splat) {
@@ -305,34 +307,44 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				OPCODE(*buf, OP_MAKE_ARR);
 			}
 			doing_named_args = 0;
-			for(ptr=node->first_child->next_sibling->first_child, argc=0; ptr; ptr=ptr->next_sibling, argc++) {
+			argc = 0;
+			for(ptr=node->first_child->next_sibling->first_child; ptr; ptr=ptr->next_sibling) {
 				assert(ptr->type == ARG_NODE);
 				if(ptr->first_child->next_sibling) {
+					// Got named argument
 					if(!doing_named_args) {
 						// Setup named arguments
-						OPCODE(*buf, OP_MAKE_HASH);
 						doing_named_args = 1;
+						// TODO: maybe special opcode for creating an empty hash?
+						OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0);
+						OPCODE(*buf, OP_MAKE_HASH);
+						argc++;
 					}
 					// argument name
 					compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 					// argument value
 					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
 					OPCODE(*buf, OP_HASH_SET);
-					assert(0=="Compiling keyword arguments is not implemented yet");
-					break;
+					continue;
 				}
 				if(ptr->first_child->type == ARR_SPLAT_NODE) {
 					compile_main_section(ctx, ptr->first_child->first_child, buf, idx, allocated, NEED_RESULT);
 					OPCODE(*buf, OP_TO_ARR);
-				} else {
-					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+					OPCODE(*buf, OP_ARR_CONCAT);
+					continue;
 				}
+				assert(!doing_named_args);
+				compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+				argc++;
 				if(have_arr_splat) {
 					OPCODE(*buf, ptr->first_child->type == ARR_SPLAT_NODE ? OP_ARR_CONCAT : OP_ARR_APPEND);
 				}
 			}
 			if(!have_arr_splat) {
 				OPCODE(*buf, OP_PUSH_INT); DATA(*buf, argc);
+			}
+			if(doing_named_args && have_arr_splat) {
+				OPCODE(*buf, OP_ARR_APPEND);
 			}
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
 			OPCODE(*buf, have_arr_splat ? OP_CALL_ARR : OP_CALL);

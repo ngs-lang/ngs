@@ -151,10 +151,11 @@ typedef struct {
 #define TAG_INT     (1)
 
 typedef enum {
-	V_NULL  = 2,
-	V_UNDEF = 6,
-	V_FALSE = 10,
-	V_TRUE  = 14,
+	V_NULL   =  2,
+	V_UNDEF  =  6,
+	V_FALSE  = 10,
+	V_TRUE   = 14,
+	V_KWARGS = 90,
 } IMMEDIATE_VALUE;
 
 typedef enum {

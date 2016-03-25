@@ -1509,20 +1509,10 @@ main_loop:
 		case OP_CALL:
 							// TODO: print arguments of failed call, not just the callable
 							// In (current): ... result_placeholder (null), arg1, ..., argN, argc, callable
-							// In (WIP): ...
-							//     result_placeholder (null),
-							//     pos_arg1, ..., pos_argN,
-							//     opt_arg1, ..., opt_argN,
-							//     n_params_required,
-							//     n_params_optional,
-							//     callable
 							// Out: ... result
 							EXPECT_STACK_DEPTH(2);
 							POP_NOCHECK(callable);
-							// dump_titled("CALLABLE", callable);
 							POP_NOCHECK(v); // number of arguments
-							// POP(n_params_required); // number of arguments
-							// POP(n_params_optional);
 							THIS_FRAME.last_ip = ip;
 							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-GET_INT(v)-1], callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
 							// assert(ctx->stack[ctx->stack_ptr-GET_INT(v)-1].num);
@@ -1564,6 +1554,8 @@ main_loop:
 							REMOVE_TOP_N(GET_INT(v));
 							goto main_loop;
 		case OP_CALL_ARR:
+							// In (current): ... result_placeholder (null), argv, callable
+							// Out: ... result
 							POP(callable);
 							THIS_FRAME.last_ip = ip;
 							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-2], callable, OBJ_LEN(ctx->stack[ctx->stack_ptr-1]), ARRAY_ITEMS(ctx->stack[ctx->stack_ptr-1]));
