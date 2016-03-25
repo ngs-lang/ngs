@@ -904,6 +904,9 @@ F config(s:Str, x) {
 
 TEST parse_json('{"a": 1, "b": [null, false, true]}') == {'a': 1, 'b': [null, false, true]}
 TEST h={'a': 1, 'b': 2, 'c': 3}; h.update({'b': 20, 'd': 40}); h == {'a': 1, 'b': 20, 'c': 3, 'd': 40}
+TEST F opt(a, b=10, *rest) [b, rest]; opt(1) == [10, []]
+TEST F opt(a, b=10, *rest) [b, rest]; opt(1, 2) == [2, []]
+TEST F opt(a, b=10, *rest) [b, rest]; opt(1, 2, 3) == [2, [3]]
 
 # === Exceptions tests ===========================
 TEST h={}; try h["a"] catch(e:KeyNotFound) true

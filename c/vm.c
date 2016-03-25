@@ -768,7 +768,7 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	return var->index;
 }
 
-void register_global_func(VM *vm, int pass_extra_params, char *name, void *func_ptr, LOCAL_VAR_INDEX argc, ...) {
+void register_global_func(VM *vm, int pass_extra_params, char *name, void *func_ptr, int argc, ...) {
 	size_t index;
 	int i;
 	va_list varargs;
@@ -1171,13 +1171,12 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 	return ip;
 }
 
-METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, const LOCAL_VAR_INDEX argc, const VALUE *argv) {
+METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int argc, const VALUE *argv) {
 	VALUE *local_var_ptr;
 	LOCAL_VAR_INDEX lvi;
 	int i;
 	METHOD_RESULT mr;
 	VALUE *callable_items;
-	int args_to_use;
 
 	if(IS_ARRAY(callable)) {
 		for(i=OBJ_LEN(callable)-1, callable_items = OBJ_DATA_PTR(callable); i>=0; i--) {
@@ -1219,7 +1218,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, con
 	if(IS_NATIVE_METHOD(callable)) {
 		// None of native method uses optional parameters for now
 		if(NATIVE_METHOD_OBJ_N_OPT_PAR(callable)) {
-			assert(0=="Optional parameters are not implemented yet");
+			assert(0=="Optional parameters for native methods are not implemented yet");
 		}
 		// dump_titled("Native callable", callable);
 		if(argc != NATIVE_METHOD_OBJ_N_REQ_PAR(callable)) {
@@ -1244,41 +1243,60 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, con
 
 	if(IS_CLOSURE(callable)) {
 		// Check parameters type matching
-		if(CLOSURE_OBJ_N_OPT_PAR(callable)) {
-			assert(0=="Optional parameters are not implemented yet");
-		}
-		if(argc < CLOSURE_OBJ_N_REQ_PAR(callable)) {
+		int reqc = CLOSURE_OBJ_N_REQ_PAR(callable), optc = CLOSURE_OBJ_N_OPT_PAR(callable), given_optc, rest_idx;
+		if(argc < reqc) {
 			return METHOD_ARGS_MISMATCH;
 		}
-		args_to_use = CLOSURE_OBJ_N_REQ_PAR(callable);
 		if(!(CLOSURE_OBJ_PARAMS_FLAGS(callable) & PARAMS_FLAG_ARR_SPLAT)) {
-			if(argc > args_to_use) {
+			if(argc > reqc + optc) {
 				return METHOD_ARGS_MISMATCH;
 			}
 		}
-		for(lvi=0; lvi<CLOSURE_OBJ_N_REQ_PAR(callable); lvi++) {
+		for(lvi=0; lvi<reqc; lvi++) {
 			// TODO: make sure second argument is a type (when creating a closure)
 			if(!obj_is_of_type(argv[lvi], CLOSURE_OBJ_PARAMS(callable)[lvi*2+1])) {
 				return METHOD_ARGS_MISMATCH;
 			}
 		}
 
-		// Setup call frame
+		// There is probably some neat trick to make this faster
+		given_optc = argc - reqc;
+		if(given_optc > optc) {
+			given_optc = optc;
+			rest_idx = reqc + optc;
+		} else {
+			rest_idx = argc;
+		}
+
+		for(lvi=0; lvi<given_optc; lvi++) {
+			// TODO: make sure second argument is a type (when creating a closure)
+			if(!obj_is_of_type(argv[reqc + lvi], CLOSURE_OBJ_PARAMS(callable)[reqc*2+lvi*3+1])) {
+				return METHOD_ARGS_MISMATCH;
+			}
+		}
+
+		// Setup a call frame
 		assert(ctx->frame_ptr < MAX_FRAMES);
 		lvi = CLOSURE_OBJ_N_LOCALS(callable);
 		// printf("N LOCALS %d\n", lvi);
 		if(lvi) {
+			int undef_filler_count;
 			ctx->frames[ctx->frame_ptr].locals = NGS_MALLOC(lvi * sizeof(VALUE));
 			assert(ctx->frames[ctx->frame_ptr].locals);
-			assert(argc >= args_to_use);
-			memcpy(ctx->frames[ctx->frame_ptr].locals, argv, sizeof(VALUE) * args_to_use);
+			memcpy(ctx->frames[ctx->frame_ptr].locals, argv, sizeof(VALUE) * (reqc + given_optc));
+			undef_filler_count = lvi - reqc - given_optc;
 			if(CLOSURE_OBJ_PARAMS_FLAGS(callable) & PARAMS_FLAG_ARR_SPLAT) {
-				ctx->frames[ctx->frame_ptr].locals[args_to_use] = make_array_with_values(argc - args_to_use, &argv[args_to_use]);
-				args_to_use++; // from this point on: as opposed to number of all locals, used in calculation of how much locals to SET_UNDEF()
+				ctx->frames[ctx->frame_ptr].locals[reqc + optc] = make_array_with_values(argc - rest_idx, &argv[rest_idx]);
+				undef_filler_count--;
 			}
-			lvi -= args_to_use;
-			// printf("LVI %d\n", lvi);
-			for(local_var_ptr=&ctx->frames[ctx->frame_ptr].locals[args_to_use];lvi;lvi--,local_var_ptr++) {
+
+			// TODO: something faster
+			for(i=given_optc; i<optc; i++) {
+				ctx->frames[ctx->frame_ptr].locals[reqc + i] = CLOSURE_OBJ_PARAMS(callable)[reqc*2+i*3+2];
+				undef_filler_count--;
+			}
+
+			for(local_var_ptr=&ctx->frames[ctx->frame_ptr].locals[lvi - undef_filler_count];undef_filler_count;undef_filler_count--,local_var_ptr++) {
 				SET_UNDEF(*local_var_ptr);
 			}
 		} else {
@@ -1288,7 +1306,6 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, con
 		ctx->frames[ctx->frame_ptr].try_info_ptr = 0;
 		ctx->frames[ctx->frame_ptr].do_call_impl_not_found_hook = 1;
 		ctx->frames[ctx->frame_ptr].last_ip = 0;
-		// printf("INCREASING FRAME PTR\n");
 		ctx->frame_ptr++;
 		mr = vm_run(vm, ctx, CLOSURE_OBJ_IP(callable), result);
 		ctx->frame_ptr--;
@@ -1623,7 +1640,7 @@ do_jump:
 									n_locals, n_params_required, n_params_optional, n_uplevels, params_flags,
 									&ctx->stack[ctx->stack_ptr - (n_params_required + ADDITIONAL_PARAMS_COUNT)*2 - n_params_optional*3]
 							);
-							ctx->stack_ptr -= (n_params_required + ADDITIONAL_PARAMS_COUNT)*2 - n_params_optional*3;
+							ctx->stack_ptr -= (n_params_required + ADDITIONAL_PARAMS_COUNT)*2 + n_params_optional*3;
 							if(n_uplevels) {
 								assert(CLOSURE_OBJ_N_UPLEVELS(THIS_FRAME_CLOSURE) >= n_uplevels-1);
 								CLOSURE_OBJ_UPLEVELS(v) = NGS_MALLOC(sizeof(CLOSURE_OBJ_UPLEVELS(v)[0]) * n_uplevels);

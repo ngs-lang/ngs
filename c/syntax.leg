@@ -510,6 +510,17 @@ function-definition-parameters =
 # TODO: make sure it's the last one (or the last ones are *args, **kwargs later)
 # *args at any other positon is a syntax error for now
 function-definition-parameter =
+	"**" space? i:identifier {
+		MAKE_NODE(ret, PARAM_NODE);
+			MAKE_NODE(arr, IDENTIFIER_NODE);
+			arr->name = "Hash";
+			MAKE_NODE(splat, HASH_SPLAT_NODE);
+			ret->first_child = i;
+			i->next_sibling = arr;
+			arr->next_sibling = splat;
+		$$ = ret;
+	}
+	|
 	"*" space? i:identifier {
 		MAKE_NODE(ret, PARAM_NODE);
 			MAKE_NODE(arr, IDENTIFIER_NODE);
@@ -521,20 +532,32 @@ function-definition-parameter =
 		$$ = ret;
 	}
 	|
-	i:identifier t:function-definition-parameter-type {
+	i:identifier t:function-definition-parameter-type d:function-definition-default-value {
 		MAKE_NODE(ret, PARAM_NODE);
-		i->next_sibling = t;
 		ret->first_child = i;
+		i->next_sibling = t;
+		t->next_sibling = d;
 		$$ = ret;
 	}
 
+# TODO: check if we can remove c:identifier limitation and let it be something
+#       like expression. Currently the problem with expression is that it
+#       captures assignment so you can't do "x:Int=10". It gives var "x" and type "10"
+#       when evaluated.
 function-definition-parameter-type =
-	space? ":" space? c:expression { $$ = c; }
+	space? ":" space? c:identifier { $$ = c; }
 	|
 	{
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = "Any";
 		$$ = ret;
+	}
+
+function-definition-default-value =
+	space? "=" c:expression { $$ = c; }
+	|
+	{
+		$$ = NULL;
 	}
 
 function-call =
@@ -572,7 +595,8 @@ function-call-argument =
 	i:identifier space? "=" space? e:expression {
 		MAKE_NODE(ret, ARG_NODE);
 		ret->first_child = e;
-		e->next_sibling = i;
+		MAKE_STRING_NODE(arg_name, i->name);
+		e->next_sibling = arg_name;
 		$$ = ret;
 	}
 	|

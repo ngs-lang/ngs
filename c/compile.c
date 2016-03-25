@@ -251,6 +251,7 @@ void compile_identifier(COMPILATION_CONTEXT *ctx, char **buf, size_t *idx, char 
 void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
 	ast_node *ptr;
 	int argc, have_arr_splat, have_hash_splat, params_flags;
+	int doing_named_args = 0;
 	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
 	UPVAR_INDEX n_uplevels;
 	size_t loop_beg_idx, cond_jump, continue_target_idx, func_jump, end_of_func_idx, if_jump, while_jump;
@@ -290,21 +291,35 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
 			// print_ast(node, 0);
 			assert(node->first_child->next_sibling->type == ARGS_NODE);
-			for(ptr=node->first_child->next_sibling->first_child, have_arr_splat=0; ptr; ptr=ptr->next_sibling) {
+			for(ptr=node->first_child->next_sibling->first_child, have_arr_splat=0, have_hash_splat=0; ptr; ptr=ptr->next_sibling) {
 				assert(ptr->type == ARG_NODE);
 				if(ptr->first_child->type == ARR_SPLAT_NODE) {
 					have_arr_splat = 1;
-					break;
+				}
+				if(ptr->first_child->type == HASH_SPLAT_NODE) {
+					have_arr_splat = 1;
 				}
 			}
 			if(have_arr_splat) {
 				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0);
 				OPCODE(*buf, OP_MAKE_ARR);
 			}
+			doing_named_args = 0;
 			for(ptr=node->first_child->next_sibling->first_child, argc=0; ptr; ptr=ptr->next_sibling, argc++) {
 				assert(ptr->type == ARG_NODE);
 				if(ptr->first_child->next_sibling) {
+					if(!doing_named_args) {
+						// Setup named arguments
+						OPCODE(*buf, OP_MAKE_HASH);
+						doing_named_args = 1;
+					}
+					// argument name
+					compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+					// argument value
+					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+					OPCODE(*buf, OP_HASH_SET);
 					assert(0=="Compiling keyword arguments is not implemented yet");
+					break;
 				}
 				if(ptr->first_child->type == ARR_SPLAT_NODE) {
 					compile_main_section(ctx, ptr->first_child->first_child, buf, idx, allocated, NEED_RESULT);
@@ -458,23 +473,37 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			end_of_func_idx = *idx;
 
 			// Arguments' types and default values
-			for(ptr=node->first_child->first_child, n_params_required=0; ptr; ptr=ptr->next_sibling) {
+			for(ptr=node->first_child->first_child, n_params_required=0, n_params_optional=0; ptr; ptr=ptr->next_sibling) {
 				// ptr children: identifier, type, (default value | splat indicator)
 				OPCODE(*buf, OP_PUSH_L_STR);
 				L_STR(*buf, ptr->first_child->name);
 				// printf("PT 0 %s\n", ptr->first_child->name);
 				compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
-				if(ptr->first_child->next_sibling->next_sibling && ptr->first_child->next_sibling->next_sibling->type == ARR_SPLAT_NODE) {
-					if(ptr->next_sibling) {
-						assert(0 == "splat function parameter must be the last one");
+				if(ptr->first_child->next_sibling->next_sibling) {
+					// Either array/hash splat or default value
+					if(ptr->first_child->next_sibling->next_sibling->type == ARR_SPLAT_NODE) {
+						if(ptr->next_sibling && (ptr->next_sibling->first_child->next_sibling->next_sibling->type != HASH_SPLAT_NODE)) {
+							assert(0 == "splat function parameter must be the last one or followed by keyword splat only");
+						}
+						params_flags |= PARAMS_FLAG_ARR_SPLAT;
+						continue;
 					}
-					params_flags |= PARAMS_FLAG_ARR_SPLAT;
-				} else {
-					n_params_required++;
+					if(ptr->first_child->next_sibling->next_sibling->type == HASH_SPLAT_NODE) {
+						if(ptr->next_sibling) {
+							assert(0 == "keyword splat function parameter must be the last one");
+						}
+						params_flags |= PARAMS_FLAG_HASH_SPLAT;
+						continue;
+					}
+					// Splat's handled, we have default value
+					compile_main_section(ctx, ptr->first_child->next_sibling->next_sibling, buf, idx, allocated, NEED_RESULT);
+					n_params_optional++;
+					continue;
 				}
+				// Optional parameters can not be followed by required parameters
+				assert(n_params_optional == 0);
+				n_params_required++;
 			}
-
-			n_params_optional = 0; // Not implemented yet
 
 			*(JUMP_OFFSET *)&(*buf)[func_jump] = (end_of_func_idx - func_jump - sizeof(JUMP_OFFSET));
 			OPCODE(*buf, OP_MAKE_CLOSURE);

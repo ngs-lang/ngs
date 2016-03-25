@@ -15,7 +15,8 @@ typedef uint8_t UPVAR_INDEX;
 #define MAX_INT_TO_STR_LEN    (256)
 
 #define PARAMS_FLAG_ARR_SPLAT   (1)
-#define ADDITIONAL_PARAMS_COUNT ((params_flags & PARAMS_FLAG_ARR_SPLAT) != 0)
+#define PARAMS_FLAG_HASH_SPLAT  (2)
+#define ADDITIONAL_PARAMS_COUNT (((params_flags & PARAMS_FLAG_ARR_SPLAT) != 0) + ((params_flags & PARAMS_FLAG_HASH_SPLAT) != 0))
 
 typedef enum {
 	RESIZE_HASH_AFTER_SHRINK = 0,

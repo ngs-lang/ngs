@@ -56,15 +56,23 @@ static void _dump(VALUE v, int level) {
 			CLOSURE_OBJ_PARAMS_FLAGS(v)
 		);
 		for(i=0; i<CLOSURE_OBJ_N_REQ_PAR(v); i++) {
-			printf("%*s* required parameter %zu\n", (level+1) << 1, "", i+1);
+			printf("%*s* required parameter %zu (name and type follow)\n", (level+1) << 1, "", i+1);
 			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+0], level+2);
 			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+1], level+2);
 		}
-		if(CLOSURE_OBJ_N_OPT_PAR(v)) {
-			printf("%*s* dumping optional parameters is not implemented yet\n", (level+1) << 1, "");
+		for(i=0; i<CLOSURE_OBJ_N_OPT_PAR(v); i++) {
+			printf("%*s* required parameter %zu (name, type and default value follow)\n", (level+1) << 1, "", i+1);
+			_dump(CLOSURE_OBJ_PARAMS(v)[CLOSURE_OBJ_N_REQ_PAR(v)*2 + i*3 + 0], level+2);
+			_dump(CLOSURE_OBJ_PARAMS(v)[CLOSURE_OBJ_N_REQ_PAR(v)*2 + i*3 + 1], level+2);
+			_dump(CLOSURE_OBJ_PARAMS(v)[CLOSURE_OBJ_N_REQ_PAR(v)*2 + i*3 + 2], level+2);
 		}
 		if(CLOSURE_OBJ_PARAMS_FLAGS(v) & PARAMS_FLAG_ARR_SPLAT) {
-			printf("%*s* array splat parameter %zu\n", (level+1) << 1, "", i+1);
+			printf("%*s* array splat parameter\n", (level+1) << 1, "");
+			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+0], level+2);
+			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+1], level+2);
+		}
+		if(CLOSURE_OBJ_PARAMS_FLAGS(v) & PARAMS_FLAG_HASH_SPLAT) {
+			printf("%*s* hash splat parameter\n", (level+1) << 1, "");
 			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+0], level+2);
 			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+1], level+2);
 		}
