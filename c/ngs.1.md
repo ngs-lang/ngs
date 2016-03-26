@@ -4,40 +4,38 @@
 
 # NAME
 
-ngs - Next Generation Shell. This documentation is work in progress. Most of it covers yet unimplemented parts. This documentation was mostly applicable to previous implementation (in Lisp). Current implementation is a rewrite (now in C) and it's in early stages.
+ngs - Next Generation Shell.
 
 # SYNOPSIS
 
-ngs *script_name* \
-ngs [**-e**|**-E**] *expression*
-
-Temporary, run as **./ngs <** *your_script*
+**ngs** *script_name* \
+**ngs** [**-e**|**-E**] *expression*
 
 # DESCRIPTION
 
 **ngs** is a Next Generation Shell. It has two main parts: the language and the interactive shell.
 
-This project contains the language part which is under development. This manual covers both implemented and unimplemented parts.
+This project contains the language part which is under development. The interactive part will be dealt with later. This manual covers both implemented and unimplemented parts.
 
-# MOTIVATION
+# MOTIVATION AND BACKGROUND
 
-The circumstances have changed greatly since the development of the conventional shells such as **bash** but the shells haven't. There are vast opportunities for improvement. These are in two main areas: syntax and functionality.
+NGS tries to fill the void between outdated shells such as **bash** and generic programming languages such as **Ruby**, **Python**, **Perl**, **Go**. The shells are domain-specific languages but the domain has changed so they are not a good fit for the job. Generic languages on the other hand are not domain-specific so they are not good as shells and too verbose for system tasks scripting, also not a good fit.
 
-Today we do know that shells became programming languages apparently that was not expected when shells were first written.
-
-## Syntax
+## Motivation - fix current shell syntax
 
 Since conventional shells were first designed just to run commands and only later extended to be a programming languages while keeping syntax compatibility, the syntax is inconvenient.
 Examples:
 
-* bash - **while some command;do ... done**. NGS - **while $(some command) { ... }**
-* bash - while running **my_command \$var**, the number of arguments passed to **my_command** is not known from syntax due to expansion rules. bash - **my_command "\$var"**, ngs - **my_command \$var**. bash - **my_command \$var**, ngs - **my_command \$\*var** (zero or more arguments, equals to the number of elements in the **\$var** array).
+* bash - **while some command;do ... done**. NGS - **while $(some command) ...**
+* bash - while running **my_command \$var**, the number of arguments passed to **my_command** is not known from syntax due to expansion rules.
+* bash - **my_command "\$var"**, ngs - **my_command \$var**.
+* bash - **my_command \$var**, ngs - **my_command \$\*var** (zero or more arguments, equals to the number of elements in the **\$var** array).
 
-## Language design
+## Motivation - fix current language design
 
 * For example, one can not simply set a variable defined outside while with code inside the while (because of sub-shell): **a=1; cat /dev/null | while true;do a=2;break; done; echo $a** - prints **1**.
 
-## Cloud
+## Motivation - Cloud support
 
 Bash was meant to manage one machine.
 
@@ -78,9 +76,29 @@ Exit code 0.
 # FILES
 
 
-# LANGUAGE OVERVIEW
+# LANGUAGE GOTCHAS - READ FIRST
 
-## Principles
+## Gotchas - keyword arguments
+
+	# Keyword arguments are silently ignored if corresponding positional argument is passed.
+	kwargs = {"a": 10}
+	F f(a, **kw) a; f(1, **kwargs) == 1
+
+	# Keyword arguments for existing named attributes cause parameters not to match
+	kwargs = {"a": 10}
+	F f(a) a; f(1, **kwargs) == 1
+
+	# **kwargs silently override (consistent with literal hash) previous named arguments
+	kwargs = {"a": 10}
+	F f(a=1) a; f(a=10, **kwargs) == 1
+
+	# For speed and implementation simplicity reasons, the **kw parameter has all keys,
+	# even if some of them matched and used for parameters. 
+	# This is somewhat likely to change in the future.
+	kwargs = {"a": 10}
+	F f(a=1, **kw) [a, kw]; f(**kwargs) == [10, {"a": 10}]
+
+# LANGUAGE PRINCIPLES OVERVIEW
 
 * Do the most practical thing
 	* **read('myfile.json')** will parse the JSON and return the data structure. If you read a JSON file, most probably you want to look at the data, not handle it as a binary or a string.
@@ -105,24 +123,36 @@ Exit code 0.
 * Short syntax for common cases. **F (a,b) a+b** is equivalent to JavaScript's **function(a,b) { return a+b; }** (last expression's value is returned, like in Ruby).
 
 * Syntax sugar for common cases.
-	* **@ expr** is equivalent to **F(X=null, Y=null, Z=null) expr**. So if you want to pass a function that just adds to numbers this is how you can do it: **my\_super\_two\_arrays\_mapper(@X+Y)**.
-	* **expr1 @ expr2** is equivalent to **expr1.map(F(X=null, Y=null, Z=null) expr2)**. Producing a new array with each element mapped to plus one of the original is hence **old\_array @ X+1**. Another example with using **number.map()** to build an array with element of 0 to 9 would be **10 @ X**
-	* **expr1 @? expr2** is equivalent to **expr1.filter(F(X=null, Y=null, Z=null) expr2)**.
 	* **for(i;n) ...** is equivalent to **for(i=0;i<n;i=i+1) ...**
-	* **collector ... collect(x) ...** is equivalent to **collector([], code)**. The expression after **collector** is wrapped as **F(collect) { code }**
-	* **collector/expr ... collect(x) ...** is equivalent to **collector(expr, code)**. The expression after **collector** is wrapped as **F(collect) { code }**
+	* **collector ... collect(x) ...** - for collecting items
 
 * Simplicity
 	* No classes. Only types, methods and multi-dispatch.
 	* Simple type system.
 
-## Syntax
+# LANGUAGE CONCEPTS
+
+## Data types
+
+In NGS, each value is of some type. Example of such types are: **Int**, **Str**, **Arr**. **1** for examples is of type **Int**eger, **"xyz"** is an **Str**ing and **[1,2,3]** is an **Arr**ay. Check datatype examples from **stdlib.ngs** using **is** operator:
+
+	while (p = pos(s, delim, start)) is not Null { ... }
+	ret is Null throws ...
+	p.exit_code is Int returns p
+
+## Methods, implementations and calling
+
+A method in NGS is a collection (techincally **Arr**ay) of functions. Each such function implements the indended operation for some data type.
+
+TODO
+
+# LANGUAGE SYNTAX
 
 A notable difference between say JavaScript, Ruby, Perl, Python and NGS is that there are two syntaxes in the language. The **command syntax** and the **code syntax**. The **command syntax** covers the tasks of running programs and i/o redirection. The **code syntax** is a full blown language. The decision to have two syntaxes was made because I don't see another way to provide both good interactive experience and a complete, normal programming language. What I mean is that typing **system('ls')** or even **\`ls\`** is not a good interactive experience. On the other hand having syntax for full blown language based on interactive syntax is not a good thing either. See control structures in bash. It's horrible. **if ... ;then ...; fi**.
 
-**Command syntax**
+## Command syntax
 
-This is the syntax at top level of the file or when you start an interactive shell. When in **code syntax** you can embed **command syntax** within **\$(...)**, which returns the **Process** object (or a list of these, if **\$(...)** contains pipes).
+This is the syntax at top level of the file or when you start an interactive shell. When in **code syntax** you can embed **command syntax** within **\$(...)**, which returns the **Command** object (or a list of these, if **\$(...)** contains pipes).
 
 **Command syntax examples**
 
@@ -130,7 +160,7 @@ This is the syntax at top level of the file or when you start an interactive she
 * **ls $my\_file**
 * **ls $\*my\_files**
 
-**Code syntax**
+## Code syntax
 
 This is the syntax inside **{...}**.
 
@@ -139,6 +169,99 @@ This is the syntax inside **{...}**.
 * **{ for(i;10) dump(i) }**
 * **{ for(i;10) { j=i\*2; dump(j); } }**
 
+## Code syntax - try ... catch ...
+
+TODO
+
+## Code syntax - for(i;n) syntactic sugar
+
+TODO
+
+## Code syntax - collector syntactic sugar
+
+* **collector ... collect(x) ...** is equivalent to **collector([], code)**. The expression after **collector** is wrapped as **F(collect) { code }**
+* **collector/expr ... collect(x) ...** is equivalent to **collector(expr, code)**. The expression after **collector** is wrapped as **F(collect) { code }**
+
+Sample usage:
+
+	collector
+		[1,2,3,4,5].each(F(elt) {
+			collect(elt)
+			if elt > 2 collect(elt * 2)
+		})
+
+The expression evaluates to the array **[1,2,3,6,4,8,5,10]**. See **stdlib.ngs** for more **collector** usage examples.
+
+## Code syntax - throws, returns, continues, breaks syntactic sugar
+
+* *expr1* **throws** *expr2* -> if *expr1* throw *expr2*
+
+	fd <= 0 throws Exception("fetch(): failed to open file ${fname}")
+
+* *expr1* **returns** *expr2* -> if *expr1* return *expr2*
+
+	a.len() != b.len() returns false
+
+* *expr* **continues** -> if *expr* continue
+
+	for(i;5) { i == 3 continues; echo(i) }
+	# Outputs one per line: 0, 1, 2, 4
+
+* *expr* **breaks** -> if *expr* break
+
+	for(i;5) { i == 3 breaks; echo(i) }
+	# Outputs one per line: 0, 1, 2
+
+# LANGUAGE DATA TYPES
+
+## Basic data types
+
+Basic data types are implemented in C. User-defined types *can not* inherit from a basic data type.
+
+	Null
+	Bool
+	Int
+	Str
+	Arr
+	Fun
+	Any
+		BasicTypeInstance
+		NormalTypeInstance
+	Seq
+	Type
+		BasicType
+		NormalType
+	Hash
+	CLib
+	CSym
+
+
+## Normal data types
+
+User-defined types *can* inherit from a basic data type.
+
+	Exception
+		Error
+			LookupFail
+				KeyNotFound
+				IndexNotFound
+				AttrNotFound
+				GlobalNotFound
+			InvalidArgument
+			CompileFail
+			CallFail
+				DontKnowHowToCall
+				ImplNotFound
+
+	Backtrace
+
+	Command
+	Range
+		InclusiveRange
+		ExclusiveRange
+
+## Defining your data types
 
 # THANKS
+
 Thanks to Guy Egozy, Avishai Ish-Shalom and other friends for ideas and feedback.
