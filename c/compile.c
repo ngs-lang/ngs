@@ -328,9 +328,23 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					continue;
 				}
 				if(ptr->first_child->type == ARR_SPLAT_NODE) {
+					assert(!doing_named_args);
 					compile_main_section(ctx, ptr->first_child->first_child, buf, idx, allocated, NEED_RESULT);
 					OPCODE(*buf, OP_TO_ARR);
 					OPCODE(*buf, OP_ARR_CONCAT);
+					continue;
+				}
+				if(ptr->first_child->type == HASH_SPLAT_NODE) {
+					if(!doing_named_args) {
+						// Setup named arguments
+						doing_named_args = 1;
+						// TODO: maybe special opcode for creating an empty hash?
+						OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0);
+						OPCODE(*buf, OP_MAKE_HASH);
+						argc++;
+					}
+					compile_main_section(ctx, ptr->first_child->first_child, buf, idx, allocated, NEED_RESULT);
+					OPCODE(*buf, OP_HASH_UPDATE);
 					continue;
 				}
 				assert(!doing_named_args);

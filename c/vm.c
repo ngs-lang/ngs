@@ -1355,7 +1355,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 				ctx->frames[ctx->frame_ptr].locals[n_params_required + n_params_optional] = make_array_with_values(argc - j, &argv[j]);
 			}
 			if(have_hash_splat) {
-				ctx->frames[ctx->frame_ptr].locals[n_params_required + n_params_optional + have_arr_splat] = kw;
+				ctx->frames[ctx->frame_ptr].locals[n_params_required + n_params_optional + have_arr_splat] = IS_UNDEF(kw) ? make_hash(0) : kw;
 			}
 			for(i = n_params_required + n_params_optional + have_arr_splat + have_hash_splat; i < CLOSURE_OBJ_N_LOCALS(callable); i++) {
 				ctx->frames[ctx->frame_ptr].locals[i] = MAKE_UNDEF;
