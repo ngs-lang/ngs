@@ -142,7 +142,7 @@ In NGS, each value is of some type. Example of such types are: **Int**, **Str**,
 
 ## Methods, implementations and calling
 
-A method in NGS is a collection (techincally **Arr**ay) of functions. Each such function implements the indended operation for some data type.
+A method in NGS is a collection (techincally **Arr**ay) of functions. Each such function implements the intended operation for some data type.
 
 TODO
 
