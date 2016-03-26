@@ -342,7 +342,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			}
 			if(doing_named_args) {
 				// Marker at the end
-				OPCODE(*buf, OP_PUSH_KWARGS);
+				OPCODE(*buf, OP_PUSH_KWARGS_MARKER);
 				argc++;
 				if(have_arr_splat) {
 					OPCODE(*buf, OP_ARR_APPEND);

@@ -21,7 +21,7 @@ static void _dump(VALUE v, int level) {
 	if(IS_TRUE(v))  { printf("%*s* true\n",    level << 1, ""); goto exit; }
 	if(IS_FALSE(v)) { printf("%*s* false\n",   level << 1, ""); goto exit; }
 	if(IS_UNDEF(v)) { printf("%*s* undef\n",   level << 1, ""); goto exit; }
-	if(IS_KWARGS(v)){ printf("%*s* kwargs marker\n",   level << 1, ""); goto exit; }
+	if(IS_KWARGS_MARKER(v)){ printf("%*s* kwargs marker\n",   level << 1, ""); goto exit; }
 
 	if(IS_INT(v))   { printf("%*s* int %" VALUE_NUM_FMT "\n", level << 1, "", GET_INT(v)); goto exit; }
 	if(IS_REAL(v))  { printf("%*s* real %g\n", level << 1, "", REAL_OBJECT_VAL(v)); goto exit; }

@@ -155,7 +155,7 @@ typedef enum {
 	V_UNDEF  =  6,
 	V_FALSE  = 10,
 	V_TRUE   = 14,
-	V_KWARGS = 90,
+	V_KWARGS_MARKER = 90,
 } IMMEDIATE_VALUE;
 
 typedef enum {
@@ -190,7 +190,7 @@ typedef enum {
 // Boolean 00001X10
 #define IS_BOOL(v)      ((v.num & 0xFB) == 10)
 #define IS_INT(v)       ((v.num & TAG_AND) == TAG_INT)
-#define IS_KWARGS(v)    ((v).num == V_KWARGS)
+#define IS_KWARGS_MARKER(v)    ((v).num == V_KWARGS_MARKER)
 
 #define SET_INT(v,n)    (v).num = ((n) << TAG_BITS) | TAG_INT
 #define MAKE_INT(n)     ((VALUE){.num=((n) << TAG_BITS) | TAG_INT})
@@ -200,7 +200,7 @@ typedef enum {
 #define MAKE_UNDEF      ((VALUE){.num=V_UNDEF})
 #define MAKE_FALSE      ((VALUE){.num=V_FALSE})
 #define MAKE_TRUE       ((VALUE){.num=V_TRUE})
-#define MAKE_KWARGS     ((VALUE){.num=V_KWARGS})
+#define MAKE_KWARGS_MARKER     ((VALUE){.num=V_KWARGS_MARKER})
 #define GET_INT(v)      ((v).num >> TAG_BITS)
 #define SET_OBJ(v,o)    (v).ptr = o
 #define SET_NULL(v)     (v).num = V_NULL

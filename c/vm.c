@@ -86,7 +86,7 @@ char *opcodes_names[] = {
 	/* 47 */ "SET_CLOSURE_NAME",
 	/* 48 */ "HASH_SET",
 	/* 49 */ "HASH_UPDATE",
-	/* 50 */ "PUSH_KWARGS",
+	/* 50 */ "PUSH_KWARGS_MARKER",
 };
 
 
@@ -1172,7 +1172,7 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 }
 
 // XXX: Factor out to "define"s access to parameters. Coupling to this data structure is all over.
-#define HAVE_KWARGS ((argc >= 2) && IS_KWARGS(argv[argc-1]))
+#define HAVE_KWARGS_MARKER ((argc >= 2) && IS_KWARGS_MARKER(argv[argc-1]))
 METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int argc, const VALUE *argv) {
 	LOCAL_VAR_INDEX lvi;
 	int i;
@@ -1221,7 +1221,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		if(NATIVE_METHOD_OBJ_N_OPT_PAR(callable)) {
 			assert(0=="Optional parameters for native methods are not implemented yet");
 		}
-		if(HAVE_KWARGS) {
+		if(HAVE_KWARGS_MARKER) {
 			return METHOD_ARGS_MISMATCH;
 		}
 		// dump_titled("Native callable", callable);
@@ -1250,7 +1250,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		int n_params_optional = CLOSURE_OBJ_N_OPT_PAR(callable);
 		int have_arr_splat = CLOSURE_OBJ_PARAMS_FLAGS(callable) & PARAMS_FLAG_ARR_SPLAT;
 		int have_hash_splat = CLOSURE_OBJ_PARAMS_FLAGS(callable) & PARAMS_FLAG_HASH_SPLAT;
-		int have_kwargs = HAVE_KWARGS;
+		int have_kwargs = HAVE_KWARGS_MARKER;
 		int n_kwargs_used = 0;
 		int i, j;
 		VALUE kw, *params;
@@ -1411,7 +1411,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 	set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values(argc, argv));
 	THROW_EXCEPTION_INSTANCE(exc);
 }
-#undef HAVE_KWARGS
+#undef HAVE_KWARGS_MARKER
 
 METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result) {
 	VALUE v, callable, command, *v_ptr;
@@ -1885,8 +1885,8 @@ do_jump:
 							update_hash(SECOND, FIRST);
 							REMOVE_TOP_NOCHECK;
 							goto main_loop;
-		case OP_PUSH_KWARGS:
-							PUSH(MAKE_KWARGS);
+		case OP_PUSH_KWARGS_MARKER:
+							PUSH(MAKE_KWARGS_MARKER);
 							goto main_loop;
 		default:
 							// TODO: exception
