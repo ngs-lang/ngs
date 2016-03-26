@@ -165,16 +165,16 @@ METHOD_RESULT native_ ## name ## _int_int METHOD_PARAMS { \
 	dst = *(type *) ptr; \
 	ptr += sizeof(type);
 
-INT_METHOD(plus, +);
-INT_METHOD(minus, -);
-INT_METHOD(mul, *);
-INT_METHOD(div, /);
-INT_METHOD(mod, %);
-INT_CMP_METHOD(less, <);
-INT_CMP_METHOD(less_eq, <=);
-INT_CMP_METHOD(greater, >);
-INT_CMP_METHOD(greater_eq, >=);
-INT_CMP_METHOD(eq, ==);
+INT_METHOD(plus, +)
+INT_METHOD(minus, -)
+INT_METHOD(mul, *)
+INT_METHOD(div, /)
+INT_METHOD(mod, %)
+INT_CMP_METHOD(less, <)
+INT_CMP_METHOD(less_eq, <=)
+INT_CMP_METHOD(greater, >)
+INT_CMP_METHOD(greater_eq, >=)
+INT_CMP_METHOD(eq, ==)
 
 METHOD_RESULT native_dump_any METHOD_PARAMS {
 	dump(argv[0]);
@@ -488,7 +488,7 @@ METHOD_RESULT native_eq_str_str METHOD_PARAMS {
 METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 	void *p;
 	int start = GET_INT(argv[2]);
-	p = ngs_memmem(OBJ_DATA_PTR(argv[0])+start, OBJ_LEN(argv[0])-start, OBJ_DATA_PTR(argv[1]), OBJ_LEN(argv[1]));
+	p = ngs_memmem((char *)OBJ_DATA_PTR(argv[0])+start, OBJ_LEN(argv[0])-start, OBJ_DATA_PTR(argv[1]), OBJ_LEN(argv[1]));
 	if(p) {
 		METHOD_RETURN(MAKE_INT(p - OBJ_DATA_PTR(argv[0])));
 	}

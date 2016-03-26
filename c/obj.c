@@ -98,7 +98,7 @@ static void _dump(VALUE v, int level) {
 			if(!buckets[i]) { continue; }
 			printf("%*s* bucket # %zu\n", (level+1) << 1, "", i);
 			for(e=buckets[i]; e; e=e->bucket_next) {
-				printf("%*s* item at %p with hash() of %u insertion_order_prev=%p insertion_order_next=%p \n", (level+2) << 1, "", e, e->hash, e->insertion_order_prev, e->insertion_order_next);
+				printf("%*s* item at %p with hash() of %u insertion_order_prev=%p insertion_order_next=%p \n", (level+2) << 1, "", (void *)e, e->hash, (void *)e->insertion_order_prev, (void *)e->insertion_order_next);
 				printf("%*s* key\n", (level+3) << 1, "");
 				_dump(e->key, level+4);
 				printf("%*s* value\n", (level+3) << 1, "");
@@ -261,7 +261,7 @@ VALUE make_normal_type_instance(VALUE normal_type) {
 	OBJ_DATA(ret) = make_array(0);
 
 	return ret;
-};
+}
 
 METHOD_RESULT get_normal_type_instace_attribute(VALUE obj, VALUE attr, VALUE *result) {
 	VALUE ut;
@@ -281,7 +281,7 @@ METHOD_RESULT get_normal_type_instace_attribute(VALUE obj, VALUE attr, VALUE *re
 		return METHOD_EXCEPTION;
 	}
 	return METHOD_OK;
-};
+}
 
 void set_normal_type_instance_attribute(VALUE obj, VALUE attr, VALUE v) {
 	VALUE ut;
@@ -304,7 +304,7 @@ void set_normal_type_instance_attribute(VALUE obj, VALUE attr, VALUE v) {
 		return;
 	}
 	ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(obj))[n] = v;
-};
+}
 
 void add_normal_type_inheritance(VALUE type, VALUE parent_type) {
 	assert(IS_NORMAL_TYPE(type));
@@ -626,7 +626,7 @@ VALUE join_strings(int argc, VALUE *argv) {
 	size_t len;
 	int i;
 	VALUE ret;
-	void *dst;
+	char *dst;
 
 	// printf("JOIN ARGC %d\n", argc);
 	for(i=0, len=0; i<argc; i++) {
@@ -825,7 +825,7 @@ void *ngs_memmem(const void *haystack_start, size_t haystack_len, const void *ne
 	if (haystack_len < needle_len) return NULL;
 	if (needle_len == 1) return memchr(haystack_start, needle[0], haystack_len);
 
-	for (last = haystack_start + haystack_len - needle_len; haystack <= last; haystack++) {
+	for (last = (unsigned char *)haystack_start + haystack_len - needle_len; haystack <= last; haystack++) {
 		// printf("start=%p haystack=%p last=%p\n", haystack_start, haystack, last);
 		if (haystack[0] == needle[0] && memcmp(haystack, needle, needle_len) == 0)
 			return (void *)haystack;
