@@ -1319,7 +1319,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		}
 
 		// Check optional parameters given as keyword arguments
-		i = j;
+		i = MAX(j, n_params_required);
 		j = n_params_required + n_params_optional;
 		for(; i<j; i++) {
 			if(!IS_UNDEF(kw)) {
