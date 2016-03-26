@@ -69,6 +69,7 @@ typedef struct {
 #define MAX_STACK          (1024)
 #define MAX_FRAMES           (64)
 #define MAX_TRIES_PER_FRAME   (8)
+#define MAX_ARGS             (16)
 
 typedef uint16_t PATCH_OFFSET;
 typedef int16_t JUMP_OFFSET;
@@ -240,6 +241,7 @@ enum opcodes {
 	OP_SET_CLOSURE_NAME,
 	OP_HASH_SET,
 	OP_HASH_UPDATE,
+	OP_PUSH_KWARGS,
 	NUMBER_OF_OPCODES,
 };
 

@@ -21,6 +21,7 @@ static void _dump(VALUE v, int level) {
 	if(IS_TRUE(v))  { printf("%*s* true\n",    level << 1, ""); goto exit; }
 	if(IS_FALSE(v)) { printf("%*s* false\n",   level << 1, ""); goto exit; }
 	if(IS_UNDEF(v)) { printf("%*s* undef\n",   level << 1, ""); goto exit; }
+	if(IS_KWARGS(v)){ printf("%*s* kwargs marker\n",   level << 1, ""); goto exit; }
 
 	if(IS_INT(v))   { printf("%*s* int %" VALUE_NUM_FMT "\n", level << 1, "", GET_INT(v)); goto exit; }
 	if(IS_REAL(v))  { printf("%*s* real %g\n", level << 1, "", REAL_OBJECT_VAL(v)); goto exit; }
@@ -61,20 +62,23 @@ static void _dump(VALUE v, int level) {
 			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+1], level+2);
 		}
 		for(i=0; i<CLOSURE_OBJ_N_OPT_PAR(v); i++) {
-			printf("%*s* required parameter %zu (name, type and default value follow)\n", (level+1) << 1, "", i+1);
+			printf("%*s* optional parameter %zu (name, type and default value follow)\n", (level+1) << 1, "", i+1);
 			_dump(CLOSURE_OBJ_PARAMS(v)[CLOSURE_OBJ_N_REQ_PAR(v)*2 + i*3 + 0], level+2);
 			_dump(CLOSURE_OBJ_PARAMS(v)[CLOSURE_OBJ_N_REQ_PAR(v)*2 + i*3 + 1], level+2);
 			_dump(CLOSURE_OBJ_PARAMS(v)[CLOSURE_OBJ_N_REQ_PAR(v)*2 + i*3 + 2], level+2);
 		}
+		i = CLOSURE_OBJ_N_REQ_PAR(v)*2 + CLOSURE_OBJ_N_OPT_PAR(v)*3;
 		if(CLOSURE_OBJ_PARAMS_FLAGS(v) & PARAMS_FLAG_ARR_SPLAT) {
 			printf("%*s* array splat parameter\n", (level+1) << 1, "");
-			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+0], level+2);
-			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+1], level+2);
+			_dump(CLOSURE_OBJ_PARAMS(v)[i+0], level+2);
+			_dump(CLOSURE_OBJ_PARAMS(v)[i+1], level+2);
+			i+=3;
 		}
 		if(CLOSURE_OBJ_PARAMS_FLAGS(v) & PARAMS_FLAG_HASH_SPLAT) {
 			printf("%*s* hash splat parameter\n", (level+1) << 1, "");
-			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+0], level+2);
-			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+1], level+2);
+			_dump(CLOSURE_OBJ_PARAMS(v)[i+0], level+2);
+			_dump(CLOSURE_OBJ_PARAMS(v)[i+1], level+2);
+			i+=3;
 		}
 		goto exit;
 	}

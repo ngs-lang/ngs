@@ -86,6 +86,7 @@ char *opcodes_names[] = {
 	/* 47 */ "SET_CLOSURE_NAME",
 	/* 48 */ "HASH_SET",
 	/* 49 */ "HASH_UPDATE",
+	/* 50 */ "PUSH_KWARGS",
 };
 
 
@@ -103,7 +104,6 @@ char *opcodes_names[] = {
 #define REMOVE_TOP_NOCHECK ctx->stack_ptr--
 #define REMOVE_TOP_N(n) DEBUG_VM_RUN("Popping %d argument(s) after call from stack\n", (int)n); assert(ctx->stack_ptr >= (unsigned int)n); ctx->stack_ptr-=n;
 #define REMOVE_TOP_N_NOCHECK(n) DEBUG_VM_RUN("Popping %d argument(s) after call from stack\n", (int)n); ctx->stack_ptr-=n;
-#define PUSH_NULL PUSH(MAKE_NULL)
 #define GLOBALS (vm->globals)
 #define THIS_FRAME (ctx->frames[ctx->frame_ptr-1])
 #define THIS_FRAME_CLOSURE (THIS_FRAME.closure)
@@ -762,7 +762,7 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	memcpy(var->name, name, name_len);
 	var->index = vm->globals_len++;
 	HASH_ADD_KEYPTR(hh, vm->globals_indexes, var->name, name_len, var);
-	GLOBALS[var->index].num = V_UNDEF;
+	GLOBALS[var->index] = MAKE_UNDEF;
 	vm->globals_names[var->index] = var->name;
 	DEBUG_VM_RUN("leaving get_global_index() status=new vm=%p name=%.*s -> index=" GLOBAL_VAR_INDEX_FMT "\n", vm, (int)name_len, name, var->index);
 	return var->index;
@@ -1171,8 +1171,9 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 	return ip;
 }
 
+// XXX: Factor out to "define"s access to parameters. Coupling to this data structure is all over.
+#define HAVE_KWARGS ((argc >= 2) && IS_KWARGS(argv[argc-1]))
 METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int argc, const VALUE *argv) {
-	VALUE *local_var_ptr;
 	LOCAL_VAR_INDEX lvi;
 	int i;
 	METHOD_RESULT mr;
@@ -1220,6 +1221,9 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		if(NATIVE_METHOD_OBJ_N_OPT_PAR(callable)) {
 			assert(0=="Optional parameters for native methods are not implemented yet");
 		}
+		if(HAVE_KWARGS) {
+			return METHOD_ARGS_MISMATCH;
+		}
 		// dump_titled("Native callable", callable);
 		if(argc != NATIVE_METHOD_OBJ_N_REQ_PAR(callable)) {
 			return METHOD_ARGS_MISMATCH;
@@ -1242,66 +1246,124 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 	}
 
 	if(IS_CLOSURE(callable)) {
-		// Check parameters type matching
-		int reqc = CLOSURE_OBJ_N_REQ_PAR(callable), optc = CLOSURE_OBJ_N_OPT_PAR(callable), given_optc, rest_idx;
-		if(argc < reqc) {
+		int n_params_required = CLOSURE_OBJ_N_REQ_PAR(callable);
+		int n_params_optional = CLOSURE_OBJ_N_OPT_PAR(callable);
+		int have_arr_splat = CLOSURE_OBJ_PARAMS_FLAGS(callable) & PARAMS_FLAG_ARR_SPLAT;
+		int have_hash_splat = CLOSURE_OBJ_PARAMS_FLAGS(callable) & PARAMS_FLAG_HASH_SPLAT;
+		int have_kwargs = HAVE_KWARGS;
+		int n_kwargs_used = 0;
+		int i, j;
+		VALUE kw, *params;
+		HASH_OBJECT_ENTRY *e;
+		VALUE named_arguments[MAX_ARGS];
+
+		// TODO: handle (exception?) keyword arguments providing required parameter which was also given as positional argument
+
+		if(have_kwargs) {
+			kw = argv[argc-2];
+			argc -= 2;
+		} else {
+			kw = MAKE_UNDEF;
+		}
+
+		if(argc < n_params_required) {
+			// Some of the required parameters missing, might be in keyword arguments
+			if(!have_kwargs) {
+				return METHOD_ARGS_MISMATCH;
+			}
+			if(argc + (int)OBJ_LEN(kw) < n_params_required) {
+				// Not enough of keyword arguments to provide all required parameters
+				return METHOD_ARGS_MISMATCH;
+			}
+			// We have some required parameters missing which might me in the keyword arguments
+		}
+
+		if((argc > n_params_required + n_params_optional) && (!have_arr_splat)) {
 			return METHOD_ARGS_MISMATCH;
 		}
-		if(!(CLOSURE_OBJ_PARAMS_FLAGS(callable) & PARAMS_FLAG_ARR_SPLAT)) {
-			if(argc > reqc + optc) {
-				return METHOD_ARGS_MISMATCH;
-			}
-		}
-		for(lvi=0; lvi<reqc; lvi++) {
-			// TODO: make sure second argument is a type (when creating a closure)
-			if(!obj_is_of_type(argv[lvi], CLOSURE_OBJ_PARAMS(callable)[lvi*2+1])) {
-				return METHOD_ARGS_MISMATCH;
-			}
-		}
 
-		// There is probably some neat trick to make this faster
-		given_optc = argc - reqc;
-		if(given_optc > optc) {
-			given_optc = optc;
-			rest_idx = reqc + optc;
-		} else {
-			rest_idx = argc;
-		}
-
-		for(lvi=0; lvi<given_optc; lvi++) {
-			// TODO: make sure second argument is a type (when creating a closure)
-			if(!obj_is_of_type(argv[reqc + lvi], CLOSURE_OBJ_PARAMS(callable)[reqc*2+lvi*3+1])) {
+		// Check the required arguments given as positional arguments
+		params = CLOSURE_OBJ_PARAMS(callable);
+		j = MIN(argc, n_params_required);
+		for(i=0; i<j; i++) {
+			if(!obj_is_of_type(argv[i], params[i*2+1])) {
 				return METHOD_ARGS_MISMATCH;
 			}
 		}
 
-		// Setup a call frame
-		assert(ctx->frame_ptr < MAX_FRAMES);
-		lvi = CLOSURE_OBJ_N_LOCALS(callable);
-		// printf("N LOCALS %d\n", lvi);
-		if(lvi) {
-			int undef_filler_count;
-			ctx->frames[ctx->frame_ptr].locals = NGS_MALLOC(lvi * sizeof(VALUE));
-			assert(ctx->frames[ctx->frame_ptr].locals);
-			memcpy(ctx->frames[ctx->frame_ptr].locals, argv, sizeof(VALUE) * (reqc + given_optc));
-			undef_filler_count = lvi - reqc - given_optc;
-			if(CLOSURE_OBJ_PARAMS_FLAGS(callable) & PARAMS_FLAG_ARR_SPLAT) {
-				ctx->frames[ctx->frame_ptr].locals[reqc + optc] = make_array_with_values(argc - rest_idx, &argv[rest_idx]);
-				undef_filler_count--;
+		// Check the required arguments given as keyword arguments
+		if(argc < n_params_required) {
+			// We have some required parameters missing which might me in the keyword arguments
+			assert(n_params_required < MAX_ARGS);
+			for(i=argc; i<n_params_required; i++) {
+				e = get_hash_key(kw, params[i*2 + 0]);
+				if(!e) {
+					// Required parameter is not in keyword arguments
+					return METHOD_ARGS_MISMATCH;
+				}
+				if(!obj_is_of_type(e->val, params[i*2+1])) {
+					return METHOD_ARGS_MISMATCH;
+				}
+				named_arguments[i] = e->val;
+				n_kwargs_used++;
 			}
+		}
 
-			// TODO: something faster
-			for(i=given_optc; i<optc; i++) {
-				ctx->frames[ctx->frame_ptr].locals[reqc + i] = CLOSURE_OBJ_PARAMS(callable)[reqc*2+i*3+2];
-				undef_filler_count--;
+		// Check optional parameters given as positional arguments
+		j = MIN(argc, n_params_required + n_params_optional);
+		for(i=n_params_required; i < j; i++) {
+			if(!obj_is_of_type(argv[i], params[n_params_required*2 + (i-n_params_required)*3 + 1])) {
+				return METHOD_ARGS_MISMATCH;
 			}
+			named_arguments[i] = params[n_params_required*2 + (i-n_params_required)*3 + 2];
+		}
 
-			for(local_var_ptr=&ctx->frames[ctx->frame_ptr].locals[lvi - undef_filler_count];undef_filler_count;undef_filler_count--,local_var_ptr++) {
-				SET_UNDEF(*local_var_ptr);
+		// Check optional parameters given as keyword arguments
+		i = j;
+		j = n_params_required + n_params_optional;
+		for(; i<j; i++) {
+			if(!IS_UNDEF(kw)) {
+				e = get_hash_key(kw, params[n_params_required*2 + (i-n_params_required)*3 + 0]);
+			} else {
+				e = NULL;
+			}
+			if(!e) {
+				// Required parameter is not in keyword arguments, use default value
+				named_arguments[i] = params[n_params_required*2 + (i-n_params_required)*3+2];
+				continue;
+			}
+			if(!obj_is_of_type(e->val, params[n_params_required*2 + (i-n_params_required)*3+1])) {
+				return METHOD_ARGS_MISMATCH;
+			}
+			named_arguments[i] = e->val;
+			n_kwargs_used++;
+		}
+
+		if((!have_hash_splat) && (!IS_UNDEF(kw)) && (n_kwargs_used < (int)OBJ_LEN(kw))) {
+			return METHOD_ARGS_MISMATCH;
+		}
+
+		if(CLOSURE_OBJ_N_LOCALS(callable)) {
+			ctx->frames[ctx->frame_ptr].locals = NGS_MALLOC(CLOSURE_OBJ_N_LOCALS(callable) * sizeof(VALUE));
+			j = MIN(argc, n_params_required + n_params_optional);
+			memcpy(ctx->frames[ctx->frame_ptr].locals, argv, (j + have_arr_splat + have_hash_splat) * sizeof(*argv));
+			// TODO: memcpy?
+			for(i = j; i < n_params_required + n_params_optional; i++) {
+				ctx->frames[ctx->frame_ptr].locals[i] = named_arguments[i];
+			}
+			if(have_arr_splat) {
+				ctx->frames[ctx->frame_ptr].locals[n_params_required + n_params_optional] = make_array_with_values(argc - j, &argv[j]);
+			}
+			if(have_hash_splat) {
+				ctx->frames[ctx->frame_ptr].locals[n_params_required + n_params_optional + have_arr_splat] = kw;
+			}
+			for(i = n_params_required + n_params_optional + have_arr_splat + have_hash_splat; i < CLOSURE_OBJ_N_LOCALS(callable); i++) {
+				ctx->frames[ctx->frame_ptr].locals[i] = MAKE_UNDEF;
 			}
 		} else {
 			ctx->frames[ctx->frame_ptr].locals = NULL;
 		}
+
 		ctx->frames[ctx->frame_ptr].closure = callable;
 		ctx->frames[ctx->frame_ptr].try_info_ptr = 0;
 		ctx->frames[ctx->frame_ptr].do_call_impl_not_found_hook = 1;
@@ -1349,6 +1411,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 	set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values(argc, argv));
 	THROW_EXCEPTION_INSTANCE(exc);
 }
+#undef HAVE_KWARGS
 
 METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result) {
 	VALUE v, callable, command, *v_ptr;
@@ -1388,7 +1451,7 @@ main_loop:
 		case OP_HALT:
 							goto end_main_loop;
 		case OP_PUSH_NULL:
-							PUSH_NULL;
+							PUSH(MAKE_NULL);
 							goto main_loop;
 		case OP_PUSH_FALSE:
 							PUSH(MAKE_FALSE);
@@ -1821,6 +1884,9 @@ do_jump:
 							EXPECT_STACK_DEPTH(2);
 							update_hash(SECOND, FIRST);
 							REMOVE_TOP_NOCHECK;
+							goto main_loop;
+		case OP_PUSH_KWARGS:
+							PUSH(MAKE_KWARGS);
 							goto main_loop;
 		default:
 							// TODO: exception

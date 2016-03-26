@@ -190,14 +190,17 @@ typedef enum {
 // Boolean 00001X10
 #define IS_BOOL(v)      ((v.num & 0xFB) == 10)
 #define IS_INT(v)       ((v.num & TAG_AND) == TAG_INT)
+#define IS_KWARGS(v)    ((v).num == V_KWARGS)
 
 #define SET_INT(v,n)    (v).num = ((n) << TAG_BITS) | TAG_INT
 #define MAKE_INT(n)     ((VALUE){.num=((n) << TAG_BITS) | TAG_INT})
 #define MAKE_BOOL(b)    ((VALUE){.num=((b) ? V_TRUE : V_FALSE)})
 #define MAKE_OBJ(o)     ((VALUE){.ptr=(o)})
 #define MAKE_NULL       ((VALUE){.num=V_NULL})
+#define MAKE_UNDEF      ((VALUE){.num=V_UNDEF})
 #define MAKE_FALSE      ((VALUE){.num=V_FALSE})
 #define MAKE_TRUE       ((VALUE){.num=V_TRUE})
+#define MAKE_KWARGS     ((VALUE){.num=V_KWARGS})
 #define GET_INT(v)      ((v).num >> TAG_BITS)
 #define SET_OBJ(v,o)    (v).ptr = o
 #define SET_NULL(v)     (v).num = V_NULL

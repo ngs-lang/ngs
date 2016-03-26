@@ -47,6 +47,9 @@
 
 #include "debug.h"
 
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
+
 typedef enum {
 	METHOD_OK,
 	METHOD_ARGS_MISMATCH,

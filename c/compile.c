@@ -340,11 +340,17 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					OPCODE(*buf, ptr->first_child->type == ARR_SPLAT_NODE ? OP_ARR_CONCAT : OP_ARR_APPEND);
 				}
 			}
-			if(!have_arr_splat) {
-				OPCODE(*buf, OP_PUSH_INT); DATA(*buf, argc);
+			if(doing_named_args) {
+				// Marker at the end
+				OPCODE(*buf, OP_PUSH_KWARGS);
+				argc++;
+				if(have_arr_splat) {
+					OPCODE(*buf, OP_ARR_APPEND);
+				}
 			}
-			if(doing_named_args && have_arr_splat) {
-				OPCODE(*buf, OP_ARR_APPEND);
+			if(!have_arr_splat) {
+				assert(argc <= MAX_ARGS); // TODO: Exception
+				OPCODE(*buf, OP_PUSH_INT); DATA(*buf, argc);
 			}
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
 			OPCODE(*buf, have_arr_splat ? OP_CALL_ARR : OP_CALL);
@@ -374,7 +380,6 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			ptr = node->first_child;
 			switch(ptr->type) {
 				case IDENTIFIER_NODE:
-					// TODO: handle local vs global
 					DEBUG_COMPILER("COMPILER: %s %zu\n", "identifier <- expression", *idx);
 					compile_main_section(ctx, ptr->next_sibling, buf, idx, allocated, NEED_RESULT);
 					DUP_IF_NEED_RESULT(*buf);
