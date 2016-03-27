@@ -218,47 +218,45 @@ The expression evaluates to the array **[1,2,3,6,4,8,5,10]**. See **stdlib.ngs**
 
 Basic data types are implemented in C. User-defined types *can not* inherit from a basic data type.
 
-	Null
-	Bool
-	Int
-	Str
-	Arr
-	Fun
-	Any
-		BasicTypeInstance
-		NormalTypeInstance
-	Seq
-	Type
-		BasicType
-		NormalType
-	Hash
-	CLib
-	CSym
+* Null
+* Bool
+* Int
+* Str
+* Arr
+* Fun
+* Any
+	* BasicTypeInstance
+	* NormalTypeInstance
+* Seq
+* Type
+	* BasicType
+	* NormalType
+* Hash
+* CLib
+* CSym
 
 
 ## Normal data types
 
 User-defined types *can* inherit from a basic data type.
 
-	Exception
-		Error
-			LookupFail
-				KeyNotFound
-				IndexNotFound
-				AttrNotFound
-				GlobalNotFound
-			InvalidArgument
-			CompileFail
-			CallFail
-				DontKnowHowToCall
-				ImplNotFound
-
-	Backtrace
-
-	Command
-	Range
-		InclusiveRange
-		ExclusiveRange
+* Exception
+	* Error
+		* LookupFail
+			* KeyNotFound
+			* IndexNotFound
+			* AttrNotFound
+			* GlobalNotFound
+		* InvalidArgument
+		* CompileFail
+		* CallFail
+			* DontKnowHowToCall
+			* ImplNotFound
+* Backtrace
+* Command
+* Range
+	* InclusiveRange
+	* ExclusiveRange
 
 ## Defining your data types
 
