@@ -108,13 +108,13 @@ Exit code 0.
 
 * Have types x methods matrix.
 	* Less guess work about the names of methods (functions). Same method should work on maximum number of types. Example: if you have **1+2** which adds the numbers, you will have **arr1+arr2** which will add (concatenate) the arrays, rather than **arr1.concat(arr2)** and **hash1+hash2** will produce merged hash rather than **hash1.merge(hash2)**.
-	* If you have a data type and a method that can do remotely expected thing on that data type, it should work. Example of "remotely" expected is: **number.map(mapper)** runs the **mapper** function for each number in range of 0 to the *number* - 1.
+	* If you have a type and a method that can do remotely expected thing on that type, it should work. Example of "remotely" expected is: **number.map(mapper)** runs the **mapper** function for each number in range of 0 to the *number* - 1.
 
 * Extensibility.
 	* Have custom data format? There is no reason that **read('your\_file.super-format')** will not return the parsed data structure.
 	* Have your custom software that returns non-zero exit code but it's OK? Extend NGS so that running that command will not produce a fatal error. NGS always runs in a mode that is equivalent to **bash -e**, saving many tears.
 	* Want **read('http://example.com/my-resource')** to work? Extend NGS to be able to fetch HTTP or S3.
-	* Define any operator on your custom data types.
+	* Define any operator on your custom types.
 
 * Consistent syntax.
 	* No more **do ... done** and **if ... fi** in the same language. Blocks are **{ ... }**.
@@ -122,7 +122,7 @@ Exit code 0.
 
 * Short syntax for common cases. **F (a,b) a+b** is equivalent to JavaScript's **function(a,b) { return a+b; }** (last expression's value is returned, like in Ruby).
 
-* Syntax sugar for common cases.
+* Syntactic sugar for common cases.
 	* **for(i;n) ...** is equivalent to **for(i=0;i<n;i=i+1) ...**
 	* **collector ... collect(x) ...** - for collecting items
 
@@ -130,21 +130,95 @@ Exit code 0.
 	* No classes. Only types, methods and multi-dispatch.
 	* Simple type system.
 
-# LANGUAGE CONCEPTS
+# MAIN LANGUAGE CONCEPTS
 
-## Data types
+## Types
 
-In NGS, each value is of some type. Example of such types are: **Int**, **Str**, **Arr**. **1** for examples is of type **Int**eger, **"xyz"** is an **Str**ing and **[1,2,3]** is an **Arr**ay. Check datatype examples from **stdlib.ngs** using **is** operator:
+In NGS, each value is of some type. Example of such types are: **Int**, **Str**, **Arr**. **1** for examples is of type **Int**eger, **"xyz"** is an **Str**ing and **[1,2,3]** is an **Arr**ay.
 
-	while (p = pos(s, delim, start)) is not Null { ... }
-	ret is Null throws ...
-	p.exit_code is Int returns p
+Types in NGS plus methods that work with these types are rough equivalent of classes and their methods in languages such as Python and Ruby. Let's start with an example of roughly equivalent code:
 
-## Methods, implementations and calling
+Python:
 
-A method in NGS is a collection (techincally **Arr**ay) of functions. Each such function implements the intended operation for some data type.
+	class Counter:
 
-TODO
+		def __init__(self):
+			self.counter = 0
+
+		def incr(self):
+			self.counter += 1
+			return self.counter
+
+		def get(self):
+			return self.counter
+
+	c = Counter()
+	c.incr()
+	print(c.get())
+
+NGS (code syntax):
+
+	type Counter
+
+	F init(c:Counter) c.counter = 0
+
+	F incr(c:Counter) {
+		c.counter = c.counter + 1
+		c
+	}
+
+	F get(c:Counter) c.counter
+
+	c = Counter()
+	c.incr()
+	echo(c.get())
+
+**c.incr()** and **incr(c)** are syntactically equivalent.
+
+Note that in NGS, the class is "open" so you can add methods that work with the **Counter** type any time after the definition of the type (**type Counter**).
+
+
+## Methods, method implementations and calling
+
+A method in NGS is a collection (techincally **Arr**ay) of functions. Each such function implements the intended operation for some type. Example (NGS code syntax):
+
+	F bigger(x:Int) x+1
+	F bigger(s:Str) "+${s}+"
+
+Here **bigger** is a method. Each **F** definition defines a **method implementation**. When calling in **Arr**ay, NGS scans from the last to first element and invokes the **method implementation** that matches the given arguments. Example:
+
+	echo(bigger("x"))
+	# Output: +x+
+	echo(bigger(1))
+	# Output: 2
+
+
+When the array search is finished and no matching **method implementation** is found, **ImplNotFound** exception occurs.
+
+	echo(bigger(true))
+	# Causes ImplNotFound exception
+
+## Customizaion using methods
+
+Most language syntax constructs are actually function calls. For example **1 + 2** is **+(1,2)** . The method named **+** is called with 1 and 2 as arguments. This means you can customize what a **+** does when applied to your types. Since types are "open", you can also define what a **+** means for existing types too.
+
+Note that the array is specifically scanned from last element to first to allow later code (your code as opposed to previously loaded library for example) to override the behaviour. This override can be narrowed to specific cases using the **guard** clause. Continuing the example above:
+
+	F bigger(x:Int) {
+		guard x >= 100
+		x + 10
+	}
+	echo(bigger(1))
+	echo(bigger(100))
+
+	# Outputs one per line: 2, 110
+
+When the condition following the **guard** clause is true,the execution continues. When the condition is false, method implementation execution is terminated and the search in the array of method implementations continues as if this implementation did not match the types of the arguments. I suggest not to cause any side effects inside the method implementation in statements above **guard**, if you have any.
+
+Such scanning behaviour allows for example to extend native **fetch** method, which can read a file to be able to fetch a URL.
+
+Customizaion using methods is also used for the command syntax. When a command is mentioned in your program, NGS just parses it into a **Command** type instance. After such parsing, NGS passes it to one of appropriate methods, depending on the context where the command was mentioned: **\`\`**, **\`\`\`\`** (other methods will probably be added later). Since these methods can be customized, one can control how external programs are run (or replaced by built-ins for example). Note that the implementations of the **``** and similar methods in **stdlib.ngs** are calling other methods. Each such call is a potential extension point, opportunity for more customization.
+
 
 # LANGUAGE SYNTAX
 
@@ -171,7 +245,9 @@ This is the syntax inside **{...}**.
 
 ## Code syntax - try ... catch ...
 
-TODO
+Try to execute *expr*. If no excepion occurs, return the value of *expr*. If an error of type **E1** occurs, execute **result1**. If an error of type **E2** occurs, execute **result2** and so on. **catch** clauses are converted to a method which is then called. When the method is constructed, the implementations are reversed in order so the scan is from first to last **catch** clause.
+
+**try** *expr* **catch(***e:E1***)** *result1* **catch(***e:E2***)** *result2* ...
 
 ## Code syntax - for(i;n) syntactic sugar
 
@@ -214,9 +290,9 @@ The expression evaluates to the array **[1,2,3,6,4,8,5,10]**. See **stdlib.ngs**
 
 # LANGUAGE DATA TYPES
 
-## Basic data types
+## Basic types
 
-Basic data types are implemented in C. User-defined types *can not* inherit from a basic data type.
+Basic types are implemented in C. User-defined types *can not* inherit from a basic type.
 
 * Null
 * Bool
@@ -236,9 +312,9 @@ Basic data types are implemented in C. User-defined types *can not* inherit from
 * CSym
 
 
-## Normal data types
+## Normal types
 
-User-defined types *can* inherit from a basic data type.
+User-defined types *can* inherit from a basic type.
 
 * Exception
 	* Error
@@ -258,7 +334,9 @@ User-defined types *can* inherit from a basic data type.
 	* InclusiveRange
 	* ExclusiveRange
 
-## Defining your data types
+## Defining your types
+
+TODO
 
 # THANKS
 
