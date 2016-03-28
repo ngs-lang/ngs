@@ -1,0 +1,29 @@
+html {
+    font-family: sans-serif;
+}
+
+body {
+    margin: 1em;
+	line-height: 1.5;
+}
+
+.title {
+	text-align: center;
+}
+
+.author, .date {
+	display: none;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	color: brown;
+}
+
+pre {
+	background-color: #EEE;
+	padding: 1em;
+}
+
+q {
+    quotes: "\201C" "\201D" "\2018" "\2019";
+}
