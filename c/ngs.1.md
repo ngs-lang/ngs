@@ -48,7 +48,8 @@ The language was inspired by Python, JavaScript, Ruby. Also lifted good parts fr
 
 # OPTIONS
 
-Given *script_name* runs the script.\
+Given *script_name* runs the script.
+
 Using *expression* is equivalent to running a script that consists of **{** *expression* **}**. **-e** loads stdlib.ngs before evaluating the expression, **-E** skips the loading of stdlib.ngs.
 
 # EXIT CODE
