@@ -75,8 +75,8 @@ clean:
 tags: *.c *.h
 	ctags $^
 
-ngs.1.html: ngs.1.md
-	pandoc -f markdown -t html -s $< -o $@
+ngs.1.html: ngs.1.md pandoc.css
+	pandoc -f markdown -t html -c pandoc.css -s $< -o $@
 ngs.1: ngs.1.md
 	pandoc -f markdown -t man -s $< -o $@
 
