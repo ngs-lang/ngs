@@ -186,10 +186,11 @@ A method in NGS is a collection (techincally **Arr**ay) of functions. Each such 
 	F bigger(x:Int) x+1
 	F bigger(s:Str) "+${s}+"
 
-Here **bigger** is a method. Each **F** definition defines a **method implementation**. When calling in **Arr**ay, NGS scans from the last to first element and invokes the **method implementation** that matches the given arguments. Example:
+Here **bigger** is a method. Each **F** definition defines a **method implementation**. When calling an **Arr**ay, NGS scans from the last element to first element and invokes the **method implementation** that matches the given arguments. Example:
 
 	echo(bigger("x"))
 	# Output: +x+
+
 	echo(bigger(1))
 	# Output: 2
 
@@ -201,7 +202,7 @@ When the array search is finished and no matching **method implementation** is f
 
 ## Customizaion using methods
 
-Most language syntax constructs are actually function calls. For example **1 + 2** is **+(1,2)** . The method named **+** is called with 1 and 2 as arguments. This means you can customize what a **+** does when applied to your types. Since types are "open", you can also define what a **+** means for existing types too.
+Most language syntax constructs are actually a method calls. For example **1 + 2** is **+(1,2)** . The method named **+** is called with 1 and 2 as arguments. This means you can customize what a **+** does when applied to your types. Since types are "open", you can also define what a **+** means for existing types too.
 
 Note that the array is specifically scanned from last element to first to allow later code (your code as opposed to previously loaded library for example) to override the behaviour. This override can be narrowed to specific cases using the **guard** clause. Continuing the example above:
 
@@ -214,7 +215,7 @@ Note that the array is specifically scanned from last element to first to allow 
 
 	# Outputs one per line: 2, 110
 
-When the condition following the **guard** clause is true,the execution continues. When the condition is false, method implementation execution is terminated and the search in the array of method implementations continues as if this implementation did not match the types of the arguments. I suggest not to cause any side effects inside the method implementation in statements above **guard**, if you have any.
+When the condition following the **guard** clause is true, the execution continues. When the condition is false, method implementation execution is terminated and the search in the array of method implementations continues as if this implementation did not match the types of the arguments. I recommend not to cause any side effects inside the method implementation in statements above **guard**, if you have any.
 
 Such scanning behaviour allows for example to extend native **fetch** method, which can read a file to be able to fetch a URL.
 
