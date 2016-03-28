@@ -224,7 +224,7 @@ Customizaion using methods is also used for the command syntax. When a command i
 
 # LANGUAGE SYNTAX
 
-A notable difference between say JavaScript, Ruby, Perl, Python and NGS is that there are two syntaxes in the language. The **command syntax** and the **code syntax**. The **command syntax** covers the tasks of running programs and i/o redirection. The **code syntax** is a full blown language. The decision to have two syntaxes was made because I don't see another way to provide both good interactive experience and a complete, normal programming language. What I mean is that typing **system('ls')** or even **\`ls\`** is not a good interactive experience. On the other hand having syntax for full blown language based on interactive syntax is not a good thing either. See control structures in bash. It's horrible. **if ... ;then ...; fi**.
+A notable difference between say JavaScript, Ruby, Perl, Python and NGS is that there are two syntaxes in the language. The **command syntax** and the **code syntax**. The **command syntax** covers the tasks of running programs and i/o redirection. The **code syntax** is a full blown language. The decision to have two syntaxes was made because I did not see another way to provide both good interactive experience and a complete, normal programming language. What I mean is that typing **system('ls')** or even **\`ls\`** is not a good interactive experience. On the other hand having syntax for full blown language based on interactive syntax (extending the **command syntax** till it becomes a real language) is not a good thing either, it will look bad. See control structures in bash. It's horrible. **if ... ;then ...; fi**.
 
 ## Command syntax
 
