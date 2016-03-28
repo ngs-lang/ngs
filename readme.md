@@ -1,4 +1,4 @@
-Next generation UNIX shell
+Next generation UNIX shell. See the [man page](https://ilyash.github.io/ngs/ngs.1.html).
 
 The problem with current state
 ==============================

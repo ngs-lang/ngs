@@ -11,6 +11,12 @@ ngs - Next Generation Shell.
 **ngs** *script_name* \
 **ngs** [**-e**|**-E**] *expression*
 
+# OPTIONS
+
+Given *script_name* runs the script.
+
+Using *expression* is equivalent to running a script that consists of **{** *expression* **}**. **-e** loads stdlib.ngs before evaluating the expression, **-E** skips the loading of stdlib.ngs.
+
 # DESCRIPTION
 
 **ngs** is a Next Generation Shell. It has two main parts: the language and the interactive shell.
@@ -45,12 +51,6 @@ Bash was meant to manage one machine.
 ## Inspired by
 
 The language was inspired by Python, JavaScript, Ruby. Also lifted good parts from bash.
-
-# OPTIONS
-
-Given *script_name* runs the script.
-
-Using *expression* is equivalent to running a script that consists of **{** *expression* **}**. **-e** loads stdlib.ngs before evaluating the expression, **-E** skips the loading of stdlib.ngs.
 
 # EXIT CODE
 
