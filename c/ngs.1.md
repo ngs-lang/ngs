@@ -27,7 +27,7 @@ This project contains the language part which is under development. The interact
 
 NGS tries to fill the void between outdated shells such as **bash** and generic programming languages such as **Ruby**, **Python**, **Perl**, **Go**. The shells are domain-specific languages but the domain has changed so they are not a good fit for the job. Generic languages on the other hand are not domain-specific so they are not good as shells and too verbose for system tasks scripting, also not a good fit.
 
-## Motivation - fix current shell syntax
+## Fix current shell syntax
 
 Since conventional shells were first designed just to run commands and only later extended to be a programming languages while keeping syntax compatibility, the syntax is inconvenient.
 Examples:
@@ -37,11 +37,11 @@ Examples:
 * bash - `my_command "$var"`, ngs - `my_command $var`.
 * bash - `my_command $var`, ngs - `my_command $*var` (zero or more arguments, equals to the number of elements in the `$var` array).
 
-## Motivation - fix current language design
+## Fix current language design
 
 * For example, one can not simply set a variable defined outside while with code inside the while (because of sub-shell): `a=1; cat /dev/null | while true;do a=2;break; done; echo $a` - prints **1**.
 
-## Motivation - Cloud support
+## Cloud support
 
 Bash was meant to manage one machine.
 
