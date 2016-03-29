@@ -132,7 +132,7 @@ TODO
 
 ## Types
 
-In NGS, each value is of some type. Example of such types are: `Int`, `Str`, `Arr`. `1` for examples is of type `Int`, `"xyz"` is an `Str` and `[1,2,3]` is an `Arr`.
+In NGS, each value is of some type. Example of such types are: `Int`, `Str`, `Arr`. `1` for example is an `Int`, `"xyz"` is a `Str` and `[1,2,3]` is an `Arr`.
 
 Types in NGS plus methods that work with these types are rough equivalent of classes and their methods in languages such as Python and Ruby. Let's start with an example of roughly equivalent code:
 
