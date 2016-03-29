@@ -132,7 +132,7 @@ TODO
 
 ## Types
 
-In NGS, each value is of some type. Example of such types are: `Int`, `Str`, `Arr`. `1` for examples is of type `Int`eger, `"xyz"` is an `Str`ing and `[1,2,3]` is an `Arr`ay.
+In NGS, each value is of some type. Example of such types are: `Int`, `Str`, `Arr`. `1` for examples is of type `Int`, `"xyz"` is an `Str` and `[1,2,3]` is an `Arr`.
 
 Types in NGS plus methods that work with these types are rough equivalent of classes and their methods in languages such as Python and Ruby. Let's start with an example of roughly equivalent code:
 
@@ -178,12 +178,12 @@ Note that in NGS, the class is "open" so you can add methods that work with the 
 
 ## Methods, method implementations and calling
 
-A method in NGS is a collection (techincally `Arr`ay) of functions. Each such function implements the intended operation for some type. Example (NGS code syntax):
+A method in NGS is a collection (techincally `Arr`) of functions. Each such function implements the intended operation for some type. Example (NGS code syntax):
 
 	F bigger(x:Int) x+1
 	F bigger(s:Str) "+${s}+"
 
-Here `bigger` is a method. Each `F` definition defines a **method implementation**. When calling an `Arr`ay, NGS scans from the last element to first element and invokes the **method implementation** that matches the given arguments. Example:
+Here `bigger` is a method. Each `F` definition defines a **method implementation**. When calling an `Arr`, NGS scans from the last element to first element and invokes the **method implementation** that matches the given arguments. Example:
 
 	echo(bigger("x"))
 	# Output: +x+
@@ -378,8 +378,9 @@ TODO, WIP
 	type T2
 	T2.inherit(T1)
 	t2 = T2()
-	echo(t2 is t2)
-	echo(t2 is t1)
+	echo(t2 is T2)
+	echo(t2 is T1)
+	# Outputs one per line: true, true
 
 # THANKS
 
