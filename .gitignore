@@ -3,6 +3,7 @@
 .#*
 *~
 *.html
+*.1
 node_modules
 small-poc/ssl
 TAGS
