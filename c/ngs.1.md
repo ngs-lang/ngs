@@ -23,34 +23,9 @@ Using *expression* is equivalent to running a script that consists of `{` *expre
 
 This project contains the language part which is under development. The interactive part will be dealt with later. This manual covers both implemented and unimplemented parts.
 
-# MOTIVATION AND BACKGROUND
+## MOTIVATION
 
-NGS tries to fill the void between outdated shells such as **bash** and generic programming languages such as **Ruby**, **Python**, **Perl**, **Go**. The shells are domain-specific languages but the domain has changed so they are not a good fit for the job. Generic languages on the other hand are not domain-specific so they are not good as shells and too verbose for system tasks scripting, also not a good fit.
-
-## Fix current shell syntax
-
-Since conventional shells were first designed just to run commands and only later extended to be a programming languages while keeping syntax compatibility, the syntax is inconvenient.
-Examples:
-
-* bash - `while some command;do ... done`. NGS - `while $(some command) ...`
-* bash - while running `my_command $var`, the number of arguments passed to `my_command` is not known from syntax due to expansion rules.
-* bash - `my_command "$var"`, ngs - `my_command $var`.
-* bash - `my_command $var`, ngs - `my_command $*var` (zero or more arguments, equals to the number of elements in the `$var` array).
-
-## Fix current language design
-
-* For example, one can not simply set a variable defined outside while with code inside the while (because of sub-shell): `a=1; cat /dev/null | while true;do a=2;break; done; echo $a` - prints **1**.
-
-## Cloud support
-
-Bash was meant to manage one machine.
-
-* There is no built-in support for managing multiple servers.
-* There is no convenient way to work with cloud services APIs. This is mostly due to unsupported nested data structures.
-
-## Inspired by
-
-The language was inspired by Python, JavaScript, Ruby. Also lifted good parts from bash.
+NGS tries to fill the void between classical shells such as **bash** and general-purpose programming languages such as **Ruby**, **Python**, **Perl**, **Go**. The shells are domain-specific languages but the domain has changed so classical shells are not optimal for today's tasks. General-purpose languages on the other hand are not domain-specific so they are not good as shells and too verbose for system tasks scripting, not a good fit.
 
 # EXIT CODE
 
@@ -61,17 +36,33 @@ The exit code is whatever the running code (*script_name* or *expression*) retur
 * `T` (a user-defined type) - The exit code can be customized by `to_exit_code(x:T)` method.
 * Anything else, including user-defined types without `to_exit_code(x:T)` method will result 0.
 
+In case of an uncaught exception, the exit code is 1.
+
 # ENVIRONMENT
 
-TODO
-
-* `DEBUG`
-* `HOME`
-* `NGS_BOOTSTRAP`
-* `NGS_BOOTSTRAP_DEBUG`
+* `DEBUG` - when non-empty string, switches on `debug` method output (default is off). It's recommended to use `debug("my debug info")` in your scripts for easily be turning on/off.
+* `NGS_BOOTSTRAP` points to the bootstrap NGS file. On NGS startup this file is always run. Defaults to first of:
+	* `$HOME/.bootstrap.ngs`
+	* `/etc/ngs/bootstrap.ngs`
+	* `/var/lib/ngs/bootstrap.ngs`
+	* `/usr/share/ngs/bootstrap.ngs`
+* `NGS_BOOTSTRAP_DEBUG` - if defined, show **bootstrap.ngs** debugging information.
+* `NGS_DIR` (defaults to `/usr/share/ngs`) - location of **stdlib.ngs** file and the **autoload** directory. Files are automatically loaded from this directory when an undefined global variable is used.
 
 
 # FILES
+
+## bootstrap.ngs
+
+Typically located in `NGS_DIR`. Responsible for bootstrapping NGS.
+
+* Loads **stdlib.ngs** if needed
+* Handles **-e** and **-E** switches 
+* Runs the script specified in the command line.
+
+## stdlib.ngs
+
+Located in `NGS_DIR`. Standard library. Defines many methods and autoloading behaviour.
 
 
 # LANGUAGE GOTCHAS - READ FIRST
@@ -99,62 +90,28 @@ TODO
 # LANGUAGE PRINCIPLES OVERVIEW
 
 * Do the most practical thing
-	* `read('myfile.json')` will parse the JSON and return the data structure. If you read a JSON file, most probably you want to look at the data, not handle it as a binary or a string.
-	* If you run a command with ```` ``my_command`` ````, (which is a syntax for run and parse output) and it returns JSON, the expression evaluates to the parsed data structure.
-	* If you `map` or `each` a hash, the callback function will be called with two arguments: key and value.
-	* `my_array.my_prop` does `array.map(F(elem) elem.my_prop)` because that's probably what you would like to get when using `.my_prop` on array of hashes, get that property of each element of the array. Kind of `jq .[].my_prop`.
+	* `read('myfile.json')` will parse the JSON and return the data structure.
+	* The ```` ``my_command`` ```` will parse the command output (JSON for example) and return the data structure.
+	* `my_array.my_prop` returns an array of `.my_prop` properties of each element.
 
-* Have types x methods matrix.
-	* Less guess work about the names of methods (functions). Same method should work on maximum number of types. Example: if you have `1+2` which adds the numbers, you will have `arr1+arr2` which will add (concatenate) the arrays, rather than `arr1.concat(arr2)` and `hash1+hash2` will produce merged hash rather than `hash1.merge(hash2)`.
-	* If you have a type and a method that can do remotely expected thing on that type, it should work. Example of "remotely" expected is: `number.map(mapper)` runs the `mapper` function for each number in range of 0 to the *number* - 1.
+* Simple methods naming for less guess work. `1+2` adds the numbers (method name `+`), `arr1+arr2` adds (concatenates) arrays and `hash1+hash2` produces merged hash.
 
-* Extensibility.
-	* Have custom data format? There is no reason that `read('your_file.super-format')` will not return the parsed data structure.
-	* Have your custom software that returns non-zero exit code but it's OK? Extend NGS so that running that command will not produce a fatal error. NGS always runs in a mode that is equivalent to `bash -e`, saving many tears.
-	* Want `read('http://example.com/my-resource')` to work? Extend NGS to be able to fetch HTTP or S3.
-	* Define any operator on your custom types.
-
-* Consistent syntax.
-	* No more `do ... done` and `if ... fi` in the same language. Blocks are `{ ... }`.
-	* If you can call a function, `my_func(*args)` and have "splat" effect (`args` array becomes several arguments when calling the function), there is no reason why it would not work when you create an array: `[1, 2, *args, 3, 4]`, same for `**kwargs` and `{my_hash_default: 7, **user_supplied_options, my_override: 8}`.
-
-* Short syntax for common cases. `F (a,b) a+b` is equivalent to JavaScript's `function(a,b) { return a+b; }` (last expression's value is returned, like in Ruby).
-
-* Syntactic sugar for common cases.
-	* `for(i;n) ...` is equivalent to `for(i=0;i<n;i=i+1) ...`
-	* `collector ... collect(x) ...` - for collecting items
+* Extensibility
+	* `read('your_file.super-format')` can be extended to parse your format.
+	* `fetch`, which reads from a file, can be extended to support HTTP or S3.
+	* Define any operator on your custom types or for existing types.
 
 * Simplicity
-	* No classes. Only types, methods and multi-dispatch.
+	* No classes. Only types, methods and multiple dispatch (picking the right method implementation by matching types of parameters and arguments)
 	* Simple type system.
 
 # MAIN LANGUAGE CONCEPTS
 
 ## Types
 
-In NGS, each value is of some type. Example of such types are: `Int`, `Str`, `Arr`. `1` for example is an `Int`, `"xyz"` is a `Str` and `[1,2,3]` is an `Arr`.
+In NGS, each value is of some type. `1` for example is an `Int`, `"xyz"` is a `Str` and `[1,2,3]` is an `Arr`.
 
-Types in NGS plus methods that work with these types are rough equivalent of classes and their methods in languages such as Python and Ruby. Let's start with an example of roughly equivalent code:
-
-Python:
-
-	class Counter:
-
-		def __init__(self):
-			self.counter = 0
-
-		def incr(self):
-			self.counter += 1
-			return self.counter
-
-		def get(self):
-			return self.counter
-
-	c = Counter()
-	c.incr()
-	print(c.get())
-
-NGS (code syntax):
+Define `Counter` type and a few methods for it (code syntax):
 
 	type Counter
 
@@ -167,23 +124,22 @@ NGS (code syntax):
 
 	F get(c:Counter) c.counter
 
+Using the `Counter` type:
+
 	c = Counter()
 	c.incr()
 	echo(c.get())
 
 `c.incr()` and `incr(c)` are syntactically equivalent.
 
-Note that in NGS, the class is "open" so you can add methods that work with the `Counter` type any time after the definition of the type (`type Counter`).
-
-
 ## Methods, method implementations and calling
 
-A method in NGS is a collection (techincally `Arr`) of functions. Each such function implements the intended operation for some type. Example (NGS code syntax):
+A method in NGS is an `Arr` of functions. Each function is called **method implementation**.
 
 	F bigger(x:Int) x+1
 	F bigger(s:Str) "+${s}+"
 
-Here `bigger` is a method. Each `F` definition defines a **method implementation**. When calling an `Arr`, NGS scans from the last element to first element and invokes the **method implementation** that matches the given arguments. Example:
+`bigger` is now an `Arr` with two elements, the functions defined by `F`. When calling an `Arr`, NGS scans the array backwards and invokes the **method implementation** that matches the given arguments (this matching is called multiple dispatch). Example:
 
 	echo(bigger("x"))
 	# Output: +x+
@@ -192,7 +148,7 @@ Here `bigger` is a method. Each `F` definition defines a **method implementation
 	# Output: 2
 
 
-When the array search is finished and no matching **method implementation** is found, `ImplNotFound` exception occurs.
+No matching **method implementation** causes `ImplNotFound` exception.
 
 	echo(bigger(true))
 	# Causes ImplNotFound exception
@@ -201,7 +157,7 @@ When the array search is finished and no matching **method implementation** is f
 
 Most language syntax constructs are actually a method calls. For example `1 + 2` is `+(1,2)` . The method named `+` is called with 1 and 2 as arguments. This means you can customize what a `+` does when applied to your types. Since types are "open", you can also define what a `+` means for existing types too.
 
-Note that the array is specifically scanned from last element to first to allow later code (your code as opposed to previously loaded library for example) to override the behaviour. This override can be narrowed to specific cases using the `guard` clause. Continuing the example above:
+Backwards array scanning allows later code (your code as opposed to previously loaded library for example) to override the behaviour. This override can be narrowed to specific cases using the `guard` clause. Continuing the example above:
 
 	F bigger(x:Int) {
 		guard x >= 100
@@ -214,33 +170,74 @@ Note that the array is specifically scanned from last element to first to allow 
 
 When the condition following the `guard` clause is true, the execution continues. When the condition is false, method implementation execution is terminated and the search in the array of method implementations continues as if this implementation did not match the types of the arguments. I recommend not to cause any side effects inside the method implementation in statements above `guard`, if you have any.
 
-Such scanning behaviour allows for example to extend native `fetch` method, which can read a file to be able to fetch a URL.
-
-Customizaion using methods is also used for the command syntax. When a command is mentioned in your program, NGS just parses it into a `Command` type instance. After such parsing, NGS passes it to one of appropriate methods, depending on the context where the command was mentioned: ```` `` ````, `````` ```` `````` (other methods will probably be added later). Since these methods can be customized, one can control how external programs are run (or replaced by built-ins for example). Note that the implementations of the ```` `` ```` and similar methods in stdlib.ngs are calling other methods. Each such call is a potential extension point, opportunity for more customization.
-
-
 # LANGUAGE SYNTAX
 
-A notable difference between say JavaScript, Ruby, Perl, Python and NGS is that there are two syntaxes in the language. The **command syntax** and the **code syntax**. The **command syntax** covers the tasks of running programs and i/o redirection. The **code syntax** is a full blown language. The decision to have two syntaxes was made because I did not see another way to provide both good interactive experience and a complete, normal programming language. What I mean is that typing `system('ls')` or even `` `ls` `` is not a good interactive experience. On the other hand having syntax for full blown language based on interactive syntax (extending the **command syntax** till it becomes a real language) is not a good thing either, it will look bad. See control structures in bash. It's horrible. `if ... ;then ...; fi`.
+NGS has two syntaxes. The **command syntax** covers the tasks of running programs and i/o redirection, mainly for good interactive (and simple scripting) experience. The **code syntax** is for everything else, giving access to a complete programming language.
 
 ## Command syntax
 
-This is the syntax at top level of the file or when you start an interactive shell. When in **code syntax** you can embed **command syntax** within `$(...)`, which returns the `Command` object (or a list of these, if `$(...)` contains pipes).
+	ls
+	ls $my_file
+	ls $*my_files
 
-**Command syntax examples**
-
-* `ls`
-* `ls $my_file`
-* `ls $*my_files`
+This is the syntax at top level of the file or when you start an interactive shell. When in **code syntax** you can embed **command syntax** within `$(...)` and serveral other constructs.
 
 ## Code syntax
 
+	{
+		type T
+		# unrelated
+		for(i;10) dump(i)
+	}
+
+
 This is the syntax inside `{...}`.
 
-**Code syntax examples**
+## Commands separators
 
-* `{ for(i;10) dump(i) }`
-* `{ for(i;10) { j=i*2; dump(j); } }`
+In both syntaxes, commands are separated by a new line or by `;` (semicolon).
+
+## Command syntax - `{...}`
+
+Embed **code syntax**.
+
+	{ my_code }
+	ls ${ name = "${prefix}${main}${suffix}"; name }
+
+## Code syntax - `{...}`
+
+Where code block is expected - code block (`{ code }` in this manual).
+
+	if a == b {
+		x = x + 1
+		y = y + x
+	}
+	# Single expression does not need {...} where code block is expected.
+	z = if a 7 8
+
+Literal hash anywhere else (`Hash` type):
+
+	inner_hash = {"b": 2}
+	h = {"a": 1, **inner_hash, "c": 3}
+	# h is now {"a": 1, "b": 2, "c": 3}
+
+## Code syntax - `[...]`
+
+Literal array (`Arr` type):
+
+	inner_arr = [2,3]
+	arr = [1, *inner_arr, 4]
+	# arr is now [1, 2, 3, 4]
+
+## Command and code syntax - assignment
+
+	var_name=expression
+
+## Command and code syntax - `F`
+
+	F myfunc(required_arg, optional_arg=default_value, *rest_args, **rest_kw_args) {
+		...
+	}
 
 ## Code syntax - try ... catch ...
 
@@ -251,7 +248,7 @@ This is the syntax inside `{...}`.
 	catch(e:E2) { result2 }
 	...
 
-Try to execute the *code*. If no excepion occurs, return the value of *code*. If an error of type `E1` occurs, execute `result1`. If an error of type `E2` occurs, execute `result2` and so on. `catch` clauses are converted to a method which is then called. When the method is constructed, the implementations are reversed in order so the scan is from first to last `catch` clause. 
+Try to execute the *code*. If no excepion occurs, return the value of *code*. If an error of type `E1` occurs, execute `result1`. If an error of type `E2` occurs, execute `result2` and so on.
 
 	try {
 		code
@@ -282,9 +279,7 @@ The expression evaluates to the array **[1,2,3,6,4,8,5,10]**. See stdlib.ngs for
 * `collector ... collect(x) ...` is equivalent to `collector([], code)`. The expression after `collector` is wrapped as `F(collect) { code }`
 * `collector/expr ... collect(x) ...` is equivalent to `collector(expr, code)`. The expression after `collector` is wrapped as `F(collect) { code }`
 
-## Code syntax - throws, returns, continues, breaks syntactic sugar
-
-### Throws
+## Code syntax - throws syntactic sugar
 
 	expr1 throws expr2
 	# fd <= 0 throws Exception("fetch(): failed to open file ${fname}")
@@ -293,7 +288,7 @@ is
 
 	if expr1 throw expr2
 
-### Returns
+## Code syntax - returns syntactic sugar
 
 	expr1 returns expr2
 	# a.len() != b.len() returns false
@@ -302,7 +297,7 @@ is
 
 	if expr1 return expr2
 
-### Continues
+## Code syntax - continues syntactic sugar
 
 	expr continues
 	# for(i;5) { i == 3 continues; echo(i) }
@@ -313,7 +308,7 @@ is
 	if expr continue
 
 
-### Breaks
+## Code syntax - breaks syntactic sugar
 
 	expr breaks
 	# for(i;5) { i == 3 breaks; echo(i) }
@@ -370,6 +365,8 @@ User-defined types *can* inherit from a normal type.
 	* InclusiveRange
 	* ExclusiveRange
 
+... and all types defined with `type`.
+
 ## Defining your types
 
 TODO, WIP
@@ -381,6 +378,18 @@ TODO, WIP
 	echo(t2 is T2)
 	echo(t2 is T1)
 	# Outputs one per line: true, true
+
+# LANGUAGE HOOKS
+
+## `impl_not_found_hook`
+... is called when a method was called but no **method implementation** matched the arguments. Use `F impl_not_found_hook(callable:Fun, *args) ...` to add your behaviours.
+
+## `global_not_found_hook`
+... is called on attempt to read from an undefined global variable. Sample usage from **stdlib.ngs**
+
+	F global_not_found_hook(name:Str) {
+		require("${NGS_DIR}/autoload/${name}.ngs")
+	}
 
 # THANKS
 
