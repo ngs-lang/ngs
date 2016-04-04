@@ -16,7 +16,7 @@ NGS has two syntaxes. The **command syntax** covers the tasks of running program
 	ls $my_file
 	ls $*my_files
 
-This is the syntax at top level of the file or when you start an interactive shell. When in **code syntax** you can embed **command syntax** within `$(...)` and serveral other constructs.
+This is the syntax at top level of the file or when you start an interactive shell. When in **code syntax** you can embed **command syntax** within `$(...)` and several other constructs.
 
 ## Code syntax
 
@@ -32,6 +32,29 @@ This is the syntax inside `{...}`.
 ## Commands separators
 
 In both syntaxes, commands are separated by a new line or by `;` (semicolon).
+
+## Comments
+
+	# comment at the beginning of line
+	some code # comments after code are not implemented yet
+
+## Truth / Falsehood
+
+In `if`, `while`, etc. conditions if given expression is not `Bool` (i.e. not `true` or `false`). It is converted to `Bool` by applying the `Bool()` method to it. Built in conversion is as follows:
+
+False: null, 0, empty string, empty array, empty hash.
+True: everything else.
+Not implemented yet: truth of real numbers
+
+Defining truth for your types:
+
+	{
+		type T
+		F init(t:T) t.wheels_count = 0
+		F Bool(t:T) t.wheels_count >= 4
+	}
+
+
 
 ## Command syntax - `{...}`
 
@@ -68,23 +91,49 @@ Literal array (`Arr` type):
 ## Command and code syntax - assignment
 
 	var_name=expression
+	var_name = expression
 
 ## Command and code syntax - `F`
 
 	F myfunc(required_arg, optional_arg=default_value, *rest_args, **rest_kw_args) {
 		...
+
+		if e1 { return e2 }
+
+		# syntactic sugar, same as above
+		e1 returns e2
+
+		...
 	}
 
-## Code syntax - try ... catch ...
+`*rest_args` gets any excessive positional arguments (or `[]` if there are none)
+`*rest_kw_args` gets all passed keyword arguments (or `{}` if there are none)
+
+## Command and code syntax - function call
+
+	myfunc(required_arg, optional_arg=myval, *rest_args, **rest_kw_args)
+
+`*rest_args` - pass additional positional arguments
+`*rest_kw_args` - pass additional keyword arguments
+
+## Code syntax - try/throw/catch
 
 	try {
-		code
+		# Try to execude this code - start
+		...
+
+		if e1 { throw e2 }
+
+		# syntactic sugar, same as above
+		e1 throws e2
+		...
+		# Try to execude this code - end
 	}
 	catch(e:E1) { result1 }
 	catch(e:E2) { result2 }
 	...
 
-Try to execute the *code*. If no excepion occurs, return the value of *code*. If an error of type `E1` occurs, execute `result1`. If an error of type `E2` occurs, execute `result2` and so on.
+Try to execute the code. If no exception occurs, return the value of the code. If an error of type `E1` occurs, execute `result1`. If an error of type `E2` occurs, execute `result2` and so on.
 
 	try {
 		code
@@ -94,62 +143,53 @@ If there are no `catch` clauses following the `try`, if any exception occurs in 
 
 	v = try myhash['maybe-such-key-exists']['and-then-some']
 
-## Code syntax - for(i;n) syntactic sugar
-
-	for(i;n) { code }
-
-is same as
+## Command and code syntax - loops
 
 	for(i=0; i<n; i=i+1) { code }
 
+	# This is syntax sugar and is exactly as above
+	for(i;n) { code }
+
+	while cond_expr {
+		# following loop controls work in for too
+
+		if e1 { continue }
+
+		# syntactic sugar, same as above
+		e1 continues
+
+		if e2 { break }
+		# syntactic sugar, same as above
+		e2 breaks
+
+	}
+
 ## Code syntax - collector syntactic sugar
 
+	# Example 1
 	collector
 		[1,2,3,4,5].each(F(elt) {
 			collect(elt)
 			if elt > 2 collect(elt * 2)
 		})
 
-The expression evaluates to the array **[1,2,3,6,4,8,5,10]**. See stdlib.ngs for more `collector` usage examples.
+The expression evaluates to the array **[1,2,3,6,4,8,5,10]**.
 
-* `collector ... collect(x) ...` is equivalent to `collector([], code)`. The expression after `collector` is wrapped as `F(collect) { code }`
-* `collector/expr ... collect(x) ...` is equivalent to `collector(expr, code)`. The expression after `collector` is wrapped as `F(collect) { code }`
+	# Example 2, from stdlib
+	F flatten(arr:Arr)
+		collector
+			arr.each(F(subarr) {
+				subarr.each(collect)
+			})
 
-## Code syntax - throws syntactic sugar
+See **stdlib.ngs** for more `collector` usage examples.
 
-	expr1 throws expr2
-	# fd <= 0 throws Exception("fetch(): failed to open file ${fname}")
+* `collector ... collect(x) ...` is equivalent to `collector([], F(collect) { ... collect(x) ... })`.
+* `collector/expr ... collect(x) ...` is equivalent to `collector(expr, F(collect) { ... collect(x) ... })`.
 
-is
+Sample definition for `Arr` (array) collector from **stdlib.ngs**:
 
-	if expr1 throw expr2
-
-## Code syntax - returns syntactic sugar
-
-	expr1 returns expr2
-	# a.len() != b.len() returns false
-
-is
-
-	if expr1 return expr2
-
-## Code syntax - continues syntactic sugar
-
-	expr continues
-	# for(i;5) { i == 3 continues; echo(i) }
-	# Outputs one per line: 0, 1, 2, 4
-
-is
-
-	if expr continue
-
-
-## Code syntax - breaks syntactic sugar
-
-	expr breaks
-	# for(i;5) { i == 3 breaks; echo(i) }
-	# Outputs one per line: 0, 1, 2
-
-is
-
-	if expr break
+	F collector(a:Arr, code:Fun) {
+		code(F(elt) a.push(elt))
+		a
+	}
