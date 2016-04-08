@@ -747,6 +747,9 @@ GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, i
 }
 
 METHOD_RESULT native_same_any_any METHOD_PARAMS {
+	if(argv[0].num & TAG_AND) {
+		METHOD_RETURN(MAKE_BOOL(argv[0].num == argv[1].num));
+	}
 	METHOD_RETURN(MAKE_BOOL(argv[0].ptr == argv[1].ptr));
 }
 
