@@ -710,7 +710,7 @@ for-i-n =
 			MAKE_NODE(init_node, ASSIGNMENT_NODE);
 			ret->first_child = init_node;
 				COPY_NODE(init_node->first_child, i);
-				ALLOC_NODE(init_node->first_child->next_sibling, NUMBER_NODE);
+				ALLOC_NODE(init_node->first_child->next_sibling, INT_NODE);
 				init_node->first_child->next_sibling->number = 0;
 
 			MAKE_NODE(cond_node, CALL_NODE);
@@ -743,7 +743,7 @@ for-i-n =
 							COPY_NODE(incr_plus_arg1->first_child, i);
 							incr_plus_arg1->first_child->next_sibling = NULL;
 						MAKE_NODE(incr_plus_arg2, ARG_NODE);
-							ALLOC_NODE(incr_plus_arg2->first_child, NUMBER_NODE);
+							ALLOC_NODE(incr_plus_arg2->first_child, INT_NODE);
 							incr_plus_arg2->first_child->number = 1;
 							incr_plus_arg2->first_child->next_sibling = NULL;
 						incr_plus_arg1->next_sibling = incr_plus_arg2;
@@ -778,8 +778,15 @@ while =
 	}
 
 number = 
+	<[-+]?[0-9]+[.][0-9]+> {
+		MAKE_NODE(ret, REAL_NODE);
+		ret->data = NGS_MALLOC(sizeof(NGS_REAL));
+		*(NGS_REAL *)ret->data = strtod(yytext, NULL);
+		$$ = ret;
+	}
+	|
 	<[-+]?[0-9]+> {
-		MAKE_NODE(ret, NUMBER_NODE);
+		MAKE_NODE(ret, INT_NODE);
 		ret->number = atoi(yytext);
 		$$ = ret;
 	}

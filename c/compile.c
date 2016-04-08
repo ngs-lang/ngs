@@ -380,10 +380,15 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_CALL);
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
-		case NUMBER_NODE:
+		case INT_NODE:
 			/*printf("Compiling tNUMBER @ %d\n", *idx);*/
 			if(need_result) {
 				OPCODE(*buf, OP_PUSH_INT); DATA(*buf, node->number);
+			}
+			break;
+		case REAL_NODE:
+			if(need_result) {
+				OPCODE(*buf, OP_PUSH_REAL); DATA(*buf, *(NGS_REAL *)node->data);
 			}
 			break;
 		case IDENTIFIER_NODE:

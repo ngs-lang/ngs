@@ -41,52 +41,53 @@ char *opcodes_names[] = {
 	/*  2 */ "PUSH_FALSE",
 	/*  3 */ "PUSH_TRUE",
 	/*  4 */ "PUSH_INT",
-	/*  5 */ "PUSH_L_STR",
-	/*  6 */ "DUP",
-	/*  7 */ "POP",
-	/*  8 */ "XCHG",
-	/*  9 */ "RESOLVE_GLOBAL",
-	/* 10 */ "PATCH",
-	/* 11 */ "FETCH_GLOBAL",
-	/* 12 */ "STORE_GLOBAL",
-	/* 13 */ "FETCH_LOCAL",
-	/* 14 */ "STORE_LOCAL",
-	/* 15 */ "CALL",
-	/* 16 */ "CALL_EXC",
-	/* 17 */ "CALL_ARR",
-	/* 18 */ "RET",
-	/* 19 */ "JMP",
-	/* 20 */ "JMP_TRUE",
-	/* 21 */ "JMP_FALSE",
-	/* 22 */ "MAKE_ARR",
-	/* 23 */ "MAKE_CLOSURE",
-	/* 24 */ "TO_STR",
-	/* 25 */ "MAKE_STR",
-	/* 26 */ "PUSH_EMPTY_STR",
-	/* 27 */ "GLOBAL_DEF_P",
-	/* 28 */ "LOCAL_DEF_P",
-	/* 29 */ "DEF_GLOBAL_FUNC",
-	/* 30 */ "DEF_LOCAL_FUNC",
-	/* 31 */ "FETCH_UPVAR",
-	/* 32 */ "STORE_UPVAR",
-	/* 33 */ "UPVAR_DEF_P",
-	/* 34 */ "DEF_UPVAR_FUNC",
-	/* 35 */ "MAKE_HASH",
-	/* 36 */ "TO_BOOL",
-	/* 37 */ "TO_ARR",
-	/* 38 */ "TO_HASH",
-	/* 39 */ "ARR_APPEND",
-	/* 40 */ "ARR_CONCAT",
-	/* 41 */ "GUARD",
-	/* 42 */ "TRY_START",
-	/* 43 */ "TRY_END",
-	/* 44 */ "ARR_REVERSE",
-	/* 45 */ "THROW",
-	/* 46 */ "MAKE_CMD",
-	/* 47 */ "SET_CLOSURE_NAME",
-	/* 48 */ "HASH_SET",
-	/* 49 */ "HASH_UPDATE",
-	/* 50 */ "PUSH_KWARGS_MARKER",
+	/*  5 */ "PUSH_REAL",
+	/*  6 */ "PUSH_L_STR",
+	/*  7 */ "DUP",
+	/*  8 */ "POP",
+	/*  9 */ "XCHG",
+	/* 10 */ "RESOLVE_GLOBAL",
+	/* 11 */ "PATCH",
+	/* 12 */ "FETCH_GLOBAL",
+	/* 13 */ "STORE_GLOBAL",
+	/* 14 */ "FETCH_LOCAL",
+	/* 15 */ "STORE_LOCAL",
+	/* 16 */ "CALL",
+	/* 17 */ "CALL_EXC",
+	/* 18 */ "CALL_ARR",
+	/* 19 */ "RET",
+	/* 20 */ "JMP",
+	/* 21 */ "JMP_TRUE",
+	/* 22 */ "JMP_FALSE",
+	/* 23 */ "MAKE_ARR",
+	/* 24 */ "MAKE_CLOSURE",
+	/* 25 */ "TO_STR",
+	/* 26 */ "MAKE_STR",
+	/* 27 */ "PUSH_EMPTY_STR",
+	/* 28 */ "GLOBAL_DEF_P",
+	/* 29 */ "LOCAL_DEF_P",
+	/* 30 */ "DEF_GLOBAL_FUNC",
+	/* 31 */ "DEF_LOCAL_FUNC",
+	/* 32 */ "FETCH_UPVAR",
+	/* 33 */ "STORE_UPVAR",
+	/* 34 */ "UPVAR_DEF_P",
+	/* 35 */ "DEF_UPVAR_FUNC",
+	/* 36 */ "MAKE_HASH",
+	/* 37 */ "TO_BOOL",
+	/* 38 */ "TO_ARR",
+	/* 39 */ "TO_HASH",
+	/* 40 */ "ARR_APPEND",
+	/* 41 */ "ARR_CONCAT",
+	/* 42 */ "GUARD",
+	/* 43 */ "TRY_START",
+	/* 44 */ "TRY_END",
+	/* 45 */ "ARR_REVERSE",
+	/* 46 */ "THROW",
+	/* 47 */ "MAKE_CMD",
+	/* 48 */ "SET_CLOSURE_NAME",
+	/* 49 */ "HASH_SET",
+	/* 50 */ "HASH_UPDATE",
+	/* 51 */ "PUSH_KWARGS_MARKER",
 };
 
 
@@ -154,6 +155,17 @@ METHOD_RESULT native_ ## name ## _int_int METHOD_PARAMS { \
 	return METHOD_OK; \
 }
 
+#define REAL_METHOD(name, op) \
+METHOD_RESULT native_ ## name ## _real_real METHOD_PARAMS { \
+	METHOD_RETURN(make_real(GET_REAL(argv[0]) op GET_REAL(argv[1]))); \
+}
+
+#define REAL_CMP_METHOD(name, op) \
+METHOD_RESULT native_ ## name ## _real_real METHOD_PARAMS { \
+	SET_BOOL(*result, GET_REAL(argv[0]) op GET_REAL(argv[1])); \
+	return METHOD_OK; \
+}
+
 #define ARG_LEN(n) OBJ_LEN(argv[n])
 #define ARG_DATA_PTR(n) OBJ_DATA_PTR(argv[n])
 
@@ -175,6 +187,16 @@ INT_CMP_METHOD(less_eq, <=)
 INT_CMP_METHOD(greater, >)
 INT_CMP_METHOD(greater_eq, >=)
 INT_CMP_METHOD(eq, ==)
+
+REAL_METHOD(plus, +)
+REAL_METHOD(minus, -)
+REAL_METHOD(mul, *)
+REAL_METHOD(div, /)
+REAL_CMP_METHOD(less, <)
+REAL_CMP_METHOD(less_eq, <=)
+REAL_CMP_METHOD(greater, >)
+REAL_CMP_METHOD(greater_eq, >=)
+REAL_CMP_METHOD(eq, ==)
 
 METHOD_RESULT native_dump_any METHOD_PARAMS {
 	dump(argv[0]);
@@ -272,6 +294,40 @@ METHOD_RESULT native_Str_int METHOD_PARAMS {
 	}
 	*result = make_string(s);
 	return METHOD_OK;
+}
+
+// XXX: Not sure about this whole formatting thing
+METHOD_RESULT native_Str_real METHOD_PARAMS {
+	char s[MAX_REAL_TO_STR_LEN];
+	char *cut_after=NULL, *p;
+	size_t len;
+	len = snprintf(s, sizeof(s), NGS_REAL_FMT, GET_REAL(argv[0]));
+	if(len >= sizeof(s)) {
+		THROW_EXCEPTION("ResultTooLarge");
+	}
+	p=s;
+	while(1) {
+		if(*p==0) {
+			if(cut_after) {
+				*(cut_after+1) = '\0';
+			}
+			break;
+		}
+		if(*p!='0') {
+			cut_after=p;
+		}
+		if(*p=='.') {
+			cut_after++;
+		}
+		p++;
+	}
+
+	*result = make_string(s);
+	return METHOD_OK;
+}
+
+METHOD_RESULT native_Real_int METHOD_PARAMS {
+	METHOD_RETURN(make_real((NGS_REAL) GET_INT(argv[0])));
 }
 
 METHOD_RESULT native_is_any_type METHOD_PARAMS {
@@ -856,6 +912,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	vm->Null = register_builtin_type(vm, "Null", T_NULL);
 	vm->Bool = register_builtin_type(vm, "Bool", T_BOOL);
 	vm->Int  = register_builtin_type(vm, "Int",  T_INT);
+	vm->Real = register_builtin_type(vm, "Real", T_REAL);
 	vm->Str  = register_builtin_type(vm, "Str",  T_STR);
 	vm->Arr  = register_builtin_type(vm, "Arr",  T_ARR);
 	vm->Fun  = register_builtin_type(vm, "Fun",  T_FUN);
@@ -927,6 +984,19 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// Closure
 	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->Closure, "b", vm->Closure);
+
+	// Real
+	register_global_func(vm, 0, "+",        &native_plus_real_real,      2, "a",   vm->Real, "b", vm->Real);
+	register_global_func(vm, 0, "*",        &native_mul_real_real,       2, "a",   vm->Real, "b", vm->Real);
+	register_global_func(vm, 0, "/",        &native_div_real_real,       2, "a",   vm->Real, "b", vm->Real);
+	register_global_func(vm, 0, "-",        &native_minus_real_real,     2, "a",   vm->Real, "b", vm->Real);
+	register_global_func(vm, 0, "<",        &native_less_real_real,      2, "a",   vm->Real, "b", vm->Real);
+	register_global_func(vm, 0, "<=",       &native_less_eq_real_real,   2, "a",   vm->Real, "b", vm->Real);
+	register_global_func(vm, 0, ">",        &native_greater_real_real,   2, "a",   vm->Real, "b", vm->Real);
+	register_global_func(vm, 0, ">=",       &native_greater_eq_real_real,2, "a",   vm->Real, "b", vm->Real);
+	register_global_func(vm, 0, "==",       &native_eq_real_real,        2, "a",   vm->Real, "b", vm->Real);
+	register_global_func(vm, 0, "Str",      &native_Str_real,            1, "r",   vm->Real);
+	register_global_func(vm, 0, "Real",     &native_Real_int,            1, "n",   vm->Int);
 
 	// NormalType
 	register_global_func(vm, 1, ".",        &native_get_attr_nt_str,       2, "obj", vm->NormalType,         "attr", vm->Str);
@@ -1479,6 +1549,14 @@ main_loop:
 							i = *(int *) &vm->bytecode[ip];
 							ip += sizeof(i);
 							PUSH(MAKE_INT(i));
+							goto main_loop;
+		case OP_PUSH_REAL:
+							// Arg: n
+							// In ...
+							// Out: ... n
+							// TODO: make it push_intSIZE maybe?
+							PUSH(make_real(*(NGS_REAL *) &vm->bytecode[ip]));
+							ip += sizeof(NGS_REAL);
 							goto main_loop;
 		case OP_PUSH_L_STR:
 							// Arg: LEN + string

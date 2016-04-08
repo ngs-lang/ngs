@@ -13,6 +13,7 @@ typedef struct ast_node {
 	unsigned int type;
 	char *name;
 	int number;
+	void *data;
 	// Chidren
 	struct ast_node *first_child;
 	struct ast_node *last_child;
@@ -23,7 +24,8 @@ typedef struct ast_node {
 typedef enum {
 	ASSIGNMENT_NODE=1,
 	IDENTIFIER_NODE,
-	NUMBER_NODE,
+	INT_NODE,
+	REAL_NODE,
 	EXPRESSIONS_NODE,
 	FOR_NODE,
 	CALL_NODE,

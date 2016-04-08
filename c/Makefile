@@ -69,6 +69,7 @@ time-sum: ngs
 
 clean:
 	-rm syntax.c
+	-rm syntax.auto.h
 	-rm ngs ngs-prof ngs-debug
 	-rm *.o
 

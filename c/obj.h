@@ -9,10 +9,13 @@ typedef uint16_t GLOBAL_VAR_INDEX;
 #define GLOBAL_VAR_INDEX_FMT "%d"
 typedef uint8_t LOCAL_VAR_INDEX;
 typedef uint8_t UPVAR_INDEX;
+typedef double NGS_REAL;
+#define NGS_REAL_FMT "%.10f"
 #define MAX_GLOBALS         (65535)
 #define MAX_LOCALS            (255)
 #define INITITAL_ARRAY_SIZE     (8)
 #define MAX_INT_TO_STR_LEN    (256)
+#define MAX_REAL_TO_STR_LEN    (256)
 
 #define PARAMS_FLAG_ARR_SPLAT   (1)
 #define PARAMS_FLAG_HASH_SPLAT  (2)
@@ -47,7 +50,7 @@ typedef struct {
 
 typedef struct {
 	OBJECT base;
-	double val;
+	NGS_REAL val;
 } REAL_OBJECT;
 
 // https://www.igvita.com/2009/02/04/ruby-19-internals-ordered-hash/
@@ -202,6 +205,7 @@ typedef enum {
 #define MAKE_TRUE       ((VALUE){.num=V_TRUE})
 #define MAKE_KWARGS_MARKER     ((VALUE){.num=V_KWARGS_MARKER})
 #define GET_INT(v)      ((v).num >> TAG_BITS)
+#define GET_REAL(v)     (((REAL_OBJECT *) v.ptr)->val)
 #define SET_OBJ(v,o)    (v).ptr = o
 #define SET_NULL(v)     (v).num = V_NULL
 #define SET_FALSE(v)    (v).num = V_FALSE

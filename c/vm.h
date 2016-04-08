@@ -150,6 +150,7 @@ typedef struct {
 	NGS_TYPE *Null;
 	NGS_TYPE *Bool;
 	NGS_TYPE *Int;
+	NGS_TYPE *Real;
 	NGS_TYPE *Str;
 	NGS_TYPE *Arr;
 	NGS_TYPE *Fun;
@@ -197,6 +198,7 @@ enum opcodes {
 	OP_PUSH_FALSE,
 	OP_PUSH_TRUE,
 	OP_PUSH_INT,
+	OP_PUSH_REAL,
 	OP_PUSH_L_STR,
 	OP_DUP,
 	OP_POP,
