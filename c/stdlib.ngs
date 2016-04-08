@@ -918,6 +918,8 @@ TEST F opt(a, b=10, *rest, **kw) [a, b, rest, kw]; opt(1, 100, 200, **{"b": 20},
 TEST F f(a) a; f(**{"a": 10}) == 10
 TEST F f(a=7) a; f(**{"a": 10}) == 10
 
+TEST F construct(x:Int) F() x; f1=construct(1); f2=construct(2); (f1==f1) and (f1!=f2)
+
 # === Exceptions tests ===========================
 TEST h={}; try h["a"] catch(e:KeyNotFound) true
 TEST a=[]; try a[0] catch(e:IndexNotFound) true

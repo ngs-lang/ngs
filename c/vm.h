@@ -153,6 +153,7 @@ typedef struct {
 	NGS_TYPE *Str;
 	NGS_TYPE *Arr;
 	NGS_TYPE *Fun;
+		NGS_TYPE *Closure;
 	NGS_TYPE *Any;
 		NGS_TYPE *BasicTypeInstance;
 		NGS_TYPE *NormalTypeInstance;

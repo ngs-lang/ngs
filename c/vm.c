@@ -746,6 +746,10 @@ GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, i
 	return 0;
 }
 
+METHOD_RESULT native_eq_closure_closure METHOD_PARAMS {
+	METHOD_RETURN(MAKE_BOOL(argv[0].ptr == argv[1].ptr));
+}
+
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
 	GLOBAL_VAR_INDEX index;
@@ -852,6 +856,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	vm->Str  = register_builtin_type(vm, "Str",  T_STR);
 	vm->Arr  = register_builtin_type(vm, "Arr",  T_ARR);
 	vm->Fun  = register_builtin_type(vm, "Fun",  T_FUN);
+		vm->Closure  = register_builtin_type(vm, "Closure",  T_CLOSURE);
 	vm->Any  = register_builtin_type(vm, "Any",  T_ANY);
 		vm->BasicTypeInstance  = register_builtin_type(vm, "BasicTypeInstance",  T_BASICTI);
 		vm->NormalTypeInstance = register_builtin_type(vm, "NormalTypeInstance", T_NORMTI);
@@ -916,6 +921,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "CLib",     &native_CLib_str,          1, "name",   vm->Str);
 	register_global_func(vm, 0, "in",       &native_in_str_clib,       2, "symbol", vm->Str, "lib", vm->CLib);
 	register_global_func(vm, 0, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
+
+	// Closure
+	register_global_func(vm, 0, "==",       &native_eq_closure_closure,2, "a",      vm->Closure, "b", vm->Closure);
 
 	// NormalType
 	register_global_func(vm, 1, ".",        &native_get_attr_nt_str,       2, "obj", vm->NormalType,         "attr", vm->Str);
