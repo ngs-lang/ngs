@@ -107,9 +107,13 @@ TEST (1...3).map((*), 2) == [2, 4, 6]
 F not(x) { guard (x is Bool) == false; x.Bool().not() }
 
 F !=(a,b) not(a==b)
+F !==(a,b) not(a===b)
 
 TEST 1 != 2
 TEST (1 != 1) == false
+
+TEST 1 !== 2
+TEST (1 !== 1) == false
 
 
 F 'not in'(a,b) not(a in b)

@@ -746,7 +746,7 @@ GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, i
 	return 0;
 }
 
-METHOD_RESULT native_eq_closure_closure METHOD_PARAMS {
+METHOD_RESULT native_same_any_any METHOD_PARAMS {
 	METHOD_RETURN(MAKE_BOOL(argv[0].ptr == argv[1].ptr));
 }
 
@@ -923,7 +923,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
 
 	// Closure
-	register_global_func(vm, 0, "==",       &native_eq_closure_closure,2, "a",      vm->Closure, "b", vm->Closure);
+	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->Closure, "b", vm->Closure);
 
 	// NormalType
 	register_global_func(vm, 1, ".",        &native_get_attr_nt_str,       2, "obj", vm->NormalType,         "attr", vm->Str);
@@ -992,6 +992,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "==",       &native_eq_int_int,        2, "a",   vm->Int, "b", vm->Int);
 
 	// misc
+	register_global_func(vm, 0, "===",      &native_same_any_any,      2, "a",   vm->Any, "b", vm->Any);
 	register_global_func(vm, 0, "dump",     &native_dump_any,          1, "obj", vm->Any);
 	register_global_func(vm, 0, "echo",     &native_echo_str,          1, "s",   vm->Str);
 	register_global_func(vm, 0, "Bool",     &native_Bool_any,          1, "x",   vm->Any);
