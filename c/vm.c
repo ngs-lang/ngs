@@ -641,15 +641,32 @@ METHOD_RESULT native_load_str_str EXT_METHOD_PARAMS {
 	METHOD_RETURN(make_closure_obj(ip, 0, 0, 0, 0, 0, NULL));
 }
 
-METHOD_RESULT native_parse_json_str EXT_METHOD_PARAMS {
+METHOD_RESULT native_decode_json_str EXT_METHOD_PARAMS {
 	METHOD_RESULT mr;
 	(void) ctx;
-	mr = parse_json(argv[0], result);
+	mr = decode_json(argv[0], result);
 	if(mr == METHOD_EXCEPTION) {
 		VALUE exc;
 		// TODO: more specific error
 		exc = make_normal_type_instance(vm->Error);
 		set_normal_type_instance_attribute(exc, make_string("message"), *result);
+		set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+		*result = exc;
+	}
+	return mr;
+}
+
+METHOD_RESULT native_encode_json_obj EXT_METHOD_PARAMS {
+	METHOD_RESULT mr;
+	(void) ctx;
+	mr = encode_json(argv[0], result);
+	if(mr == METHOD_EXCEPTION) {
+		VALUE exc;
+		// TODO: more specific error
+		exc = make_normal_type_instance(vm->Error);
+		// could be big... // set_normal_type_instance_attribute(exc, make_string("data"), argv[0]);
+		set_normal_type_instance_attribute(exc, make_string("message"), *result);
+		set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 		*result = exc;
 	}
 	return mr;
@@ -1073,7 +1090,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "is",       &native_is_any_type,       2, "obj", vm->Any, "t", vm->Type);
 	register_global_func(vm, 1, "compile",  &native_compile_str_str,   2, "code",vm->Str, "fname", vm->Str);
 	register_global_func(vm, 1, "load",     &native_load_str_str,      2, "bytecode", vm->Str, "func_name", vm->Str);
-	register_global_func(vm, 1, "parse_json",&native_parse_json_str,   1, "s", vm->Str);
+	register_global_func(vm, 1, "decode_json",&native_decode_json_str, 1, "s", vm->Str);
+	register_global_func(vm, 1, "encode_json",&native_encode_json_obj, 1, "obj", vm->Any);
 	register_global_func(vm, 1, "Backtrace",&native_backtrace,         0);
 	register_global_func(vm, 1, "resolve_ip",&native_resolve_ip,       1, "ip", vm->Int);
 

@@ -846,7 +846,7 @@ F parse(s:Str, hints:Hash) s
 F parse(s:Str, hints:Hash) {
 	local ret
 	try
-		ret = parse_json(s)
+		ret = decode_json(s)
 	catch(e)
 		guard false
 	ret
@@ -867,7 +867,7 @@ TEST instances = [{"Tags": [{"Key": "k", "Value": "v"},{"Key": "k2", "Value": "v
 
 F parse(s:Str, hints:Hash) {
 	guard try hints['process'].command.argv[0] == 'aws'
-	data = parse_json(s)
+	data = decode_json(s)
 	if (try data.Reservations.Instances) is not Null {
 		data = data.Reservations.Instances.flatten()
 		data = data.stdlib_aws_straighten_tags()
@@ -906,7 +906,7 @@ F config(s:Str, x) {
 
 # === Misc tests =================================
 
-TEST parse_json('{"a": 1, "b": [null, false, true]}') == {'a': 1, 'b': [null, false, true]}
+TEST o = {'a': 1, 'b': [null, false, true, 3.14], 'nothing': null}; decode_json(encode_json(o)) == o
 TEST h={'a': 1, 'b': 2, 'c': 3}; h.update({'b': 20, 'd': 40}); h == {'a': 1, 'b': 20, 'c': 3, 'd': 40}
 
 TEST F opt(a, b=10, *rest) [b, rest]; opt(1) == [10, []]

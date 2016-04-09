@@ -738,7 +738,7 @@ char **obj_to_cstring_array(VALUE v) {
 	return ret;
 }
 
-VALUE _parse_json_kern(json_object *obj) {
+VALUE _decode_json_kern(json_object *obj) {
 	VALUE ret;
 	size_t i, len;
 	json_type type;
@@ -755,7 +755,7 @@ VALUE _parse_json_kern(json_object *obj) {
 			len = json_object_array_length(obj);
 			ret = make_array(len);
 			for(i=0; i<len; i++) {
-				ARRAY_ITEMS(ret)[i] = _parse_json_kern(json_object_array_get_idx(obj, i));
+				ARRAY_ITEMS(ret)[i] = _decode_json_kern(json_object_array_get_idx(obj, i));
 			}
 			return ret;
 	    case json_type_object:
@@ -767,7 +767,7 @@ VALUE _parse_json_kern(json_object *obj) {
 				set_hash_key(
 					ret,
 					make_string(json_object_iter_peek_name(&iter)),
-					_parse_json_kern(json_object_iter_peek_value(&iter))
+					_decode_json_kern(json_object_iter_peek_value(&iter))
 				);
 				json_object_iter_next(&iter);
 			}
@@ -776,7 +776,8 @@ VALUE _parse_json_kern(json_object *obj) {
 	assert(0 == "Internal error while parsing JSON");
 }
 
-METHOD_RESULT parse_json(VALUE s, VALUE *result) {
+// TODO: more meaningful exceptions
+METHOD_RESULT decode_json(VALUE s, VALUE *result) {
 	json_tokener *tok;
 	json_object  *jobj;
 	enum json_tokener_error jerr;
@@ -802,11 +803,11 @@ METHOD_RESULT parse_json(VALUE s, VALUE *result) {
 	} // TODO: Throw more specific exception
 
 	if(!jobj) {
-		*result = make_string("Failed to parse - no resulting object");
+		*result = make_string("Failed to decode JSON - no resulting object");
 		goto error;
 	}
 
-	*result = _parse_json_kern(jobj);
+	*result = _decode_json_kern(jobj);
 
 	json_tokener_free(tok);
 	return METHOD_OK;
@@ -817,6 +818,54 @@ error:
 
 }
 
+// TODO: include the object and/or it's type in the exception info
+// TODO: handle libjson errors
+// XXX: free the memory on fails
+json_object *_encode_json_kern(VALUE obj, VALUE *result) {
+	if(IS_NULL(obj)) { return NULL; }
+	if(IS_STRING(obj)) { return json_object_new_string_len(OBJ_DATA_PTR(obj), OBJ_LEN(obj)); }
+	if(IS_INT(obj)) { return json_object_new_int64(GET_INT(obj)); }
+	if(IS_BOOL(obj)) { return json_object_new_boolean(IS_TRUE(obj)); }
+	if(IS_REAL(obj)) { return json_object_new_double(GET_REAL(obj)); }
+	if(IS_ARRAY(obj)) {
+		json_object *t, *arr = json_object_new_array();
+		// TODO: replace unsigned int with something more appropriate
+		for(unsigned int i=0; i<OBJ_LEN(obj); i++) {
+			t = _encode_json_kern(ARRAY_ITEMS(obj)[i], result);
+			if(!IS_UNDEF(*result)) return NULL; // Exception occured
+			json_object_array_add(arr, t);
+		}
+		return arr;
+	}
+	if(IS_HASH(obj)) {
+		json_object *v, *hash = json_object_new_object();
+		HASH_OBJECT_ENTRY *e;
+		for(e=HASH_HEAD(obj); e; e=e->insertion_order_next) {
+			if(!IS_STRING(e->key)) {
+				*result = make_string("Hash keys must be strings");
+			}
+			v = _encode_json_kern(e->val, result);
+			if(!IS_UNDEF(*result)) return NULL; // Exception occured
+			json_object_object_add(hash, obj_to_cstring(e->key), v);
+		}
+		return hash;
+	}
+	*result = make_string("Don't know how to encode to JSON given object");
+	return NULL;
+}
+
+// TODO: consider checking that json_object_put() returns 1
+METHOD_RESULT encode_json(VALUE obj, VALUE *result) {
+	json_object * jobj;
+	*result = MAKE_UNDEF;
+	jobj = _encode_json_kern(obj, result);
+	if(!IS_UNDEF(*result)) {
+		return METHOD_EXCEPTION;
+	}
+	*result = make_string(json_object_to_json_string(jobj));
+	json_object_put(jobj);
+	return METHOD_OK;
+}
 
 void *ngs_memmem(const void *haystack_start, size_t haystack_len, const void *needle_start, size_t needle_len) {
 	const unsigned char *haystack = (const unsigned char *) haystack_start;

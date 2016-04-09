@@ -299,7 +299,8 @@ void dump(VALUE v);
 void dump_titled(char *title, VALUE v);
 char *obj_to_cstring(VALUE v);
 char **obj_to_cstring_array(VALUE v);
-METHOD_RESULT parse_json(VALUE s, VALUE *result);
+METHOD_RESULT decode_json(VALUE s, VALUE *result);
+METHOD_RESULT encode_json(VALUE obj, VALUE *result);
 void *ngs_memmem(const void *haystack_start, size_t haystack_len, const void *needle_start, size_t needle_len);
 char *ngs_strdup(const char *src);
 
