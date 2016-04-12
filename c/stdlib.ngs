@@ -485,6 +485,13 @@ F map(n:Int, mapper:Fun, *args)
 TEST 3.map(identity) == [0, 1, 2]
 TEST 3.map((*), 3) == [0, 3, 6]
 
+F times(n:Int, cb:Fun, *args) {
+	for(i;n) cb(*args)
+	n
+}
+
+TEST r=0; 5.times(F() r=r+2); r==10
+
 # === String =====================================
 
 
