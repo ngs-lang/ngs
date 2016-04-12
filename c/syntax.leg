@@ -629,7 +629,7 @@ array-literal =
 				MAKE_NODE(ret, ARR_LIT_NODE);
 				$$ = ret;
 		}
-		| "[" items:array-items space? ","? space? "]" {
+		| "[" space? items:array-items space? ","? space? "]" {
 				$$ = items;
 				CAPTURE_LOCATION($$);
 		}
