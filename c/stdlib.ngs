@@ -78,21 +78,19 @@ F stdlib_mkrange(t:Type, start, end) {
 F ..(start, end)  stdlib_mkrange(ExclusiveRange, start, end)
 F ...(start, end) stdlib_mkrange(InclusiveRange, start, end)
 
-F each(r:ExclusiveRange, cb:Fun, *args)
-	for(i=r.start; i<r.end; i=i+1)
-		cb(i, *args)
-
-F each(r:InclusiveRange, cb:Fun, *args)
-	for(i=r.start; i<=r.end; i=i+1)
-		cb(i, *args)
-
-# Needed? Maybe provide some exception to stop the iteration?
 F each(r:Range, cb:Fun, *args) {
-	guard r.end is Null
-	local i=r.start
-	while true {
-		cb(i, *args)
+	local step, cmp
+	if r.start <= r.end {
+		step = 1
+		cmp = if r is ExclusiveRange (<) (<=)
+	} else {
+		step = -1
+		cmp = if r is ExclusiveRange (>) (>=)
+
 	}
+	for(i=r.start; cmp(i, r.end); i=i+step)
+		cb(i, *args)
+	r
 }
 
 F map(r:Range, mapper:Fun, *args)
@@ -101,6 +99,22 @@ F map(r:Range, mapper:Fun, *args)
 
 TEST (1..3).map((*), 2) == [2, 4]
 TEST (1...3).map((*), 2) == [2, 4, 6]
+
+{ type StdlibFirstFound }
+
+F init(ff:StdlibFirstFound, i:Int) ff.val = i
+
+F first(r:Range, predicate:Fun, *args) {
+	try {
+		r.each(F(i) {
+			predicate(i, *args) throws StdlibFirstFound(i)
+		})
+		null
+	}
+	catch(ff:StdlibFirstFound) ff.val
+}
+
+TEST (10..20).first(F(x) x % 3 == 0) == 12
 
 # === Syntactic sugar ============================
 
@@ -557,6 +571,18 @@ TEST Str(10,  4) == '  10'
 TEST Str(10, -4) == '10  '
 TEST Str("x", 3) == 'x  '
 TEST Str("x",-3) == '  x'
+
+F starts_with(haystack:Str, needle:Str) {
+	haystack[0..needle.len()] == needle
+}
+
+F starts_with(haystack:Str, needle:Str) {
+	guard needle.len() > haystack.len()
+	false
+}
+
+TEST "abcd".starts_with("ab")
+TEST "ab".starts_with("abcd") == false
 
 
 # === RegExp =====================================
