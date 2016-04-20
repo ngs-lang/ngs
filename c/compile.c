@@ -40,6 +40,7 @@ typedef enum identifier_resolution_type {
 #define LOCALS (ctx->locals[ctx->locals_ptr-1])
 #define N_LOCALS (ctx->n_locals[ctx->locals_ptr-1])
 #define N_UPLEVELS (ctx->n_uplevels[ctx->locals_ptr-1])
+#define STACK_DEPTH (ctx->stack_depth[ctx->locals_ptr])
 // #define IN_FUNCTION (ctx->locals_ptr)
 
 #define BREAK_ADDR (ctx->fill_in_break_addrs[ctx->fill_in_break_addrs_ptr-1])
@@ -493,6 +494,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			LOCALS = NULL;
 			N_LOCALS = 0;
 			N_UPLEVELS = 0;
+			STACK_DEPTH = 0;
 			params_flags = 0;
 			// Arguments
 			for(ptr=node->first_child->first_child; ptr; ptr=ptr->next_sibling) {
@@ -733,9 +735,17 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 
 		case COMMAND_NODE:
 			OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
+			// argv
 			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0); // Make array with zero elements
 			OPCODE(*buf, OP_MAKE_ARR);
-			for(ptr=node->first_child->next_sibling; ptr; ptr=ptr->next_sibling) {
+			for(ptr=node->first_child->next_sibling->first_child; ptr; ptr=ptr->next_sibling) {
+				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
+				OPCODE(*buf, OP_ARR_APPEND);
+			}
+			// redirects
+			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0); // Make array with zero elements
+			OPCODE(*buf, OP_MAKE_ARR);
+			for(ptr=node->first_child->next_sibling->next_sibling->first_child; ptr; ptr=ptr->next_sibling) {
 				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
 				OPCODE(*buf, OP_ARR_APPEND);
 			}
@@ -762,6 +772,55 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
 			break;
 
+		case REDIR_NODE:
+			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+			OPCODE(*buf, OP_MAKE_REDIR);
+			break;
+
+		case SWITCH_NODE:
+			// XXX: Check for/while { ... case { ... break } ... } situation because break addresses are used in switch too.
+			// TODO: assert jump ranges
+			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			SETUP_ADDRESS_FILLING();
+			continue_target_idx = 0; // Should not appear there!
+			// TODO: make sure that leaving the section pops the switch value from the stack
+			cond_jump = 0;
+			for(ptr=node->first_child->next_sibling; ptr; ptr=ptr->next_sibling) {
+				if(cond_jump) {
+					// Jump to next comparison
+					*(JUMP_OFFSET *)&(*buf)[cond_jump] = *idx - (cond_jump + sizeof(JUMP_OFFSET));
+					cond_jump = 0;
+				}
+				OPCODE(*buf, OP_DUP);
+				OPCODE(*buf, OP_PUSH_NULL); // Result placeholder
+				OPCODE(*buf, OP_XCHG);
+				// The value to compare to
+				compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+				OPCODE(*buf, OP_CMP);
+				OPCODE(*buf, OP_JMP_FALSE);
+				cond_jump = *idx;
+				DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
+				// Code block to execute when values match
+				compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+				// Get rid of original value, preserving the match result
+				OPCODE(*buf, OP_XCHG);
+				OPCODE(*buf, OP_POP);
+				// Break
+				assert(ctx->fill_in_break_addrs_ptr < COMPILE_MAX_FILL_IN_LEN);
+				OPCODE(*buf, OP_JMP);
+				ctx->fill_in_break_addrs[ctx->fill_in_break_addrs_ptr++] = *idx;
+				DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
+			}
+			if(cond_jump) {
+				// Jump to next comparison
+				*(JUMP_OFFSET *)&(*buf)[cond_jump] = *idx - (cond_jump + sizeof(JUMP_OFFSET));
+			}
+			OPCODE(*buf, OP_POP);
+			OPCODE(*buf, OP_PUSH_NULL);
+			HANDLE_ADDRESS_FILLING();
+			POP_IF_DONT_NEED_RESULT(*buf);
+			break;
 
 		default:
 			fprintf(stderr, "Node type %i\n", node->type);
@@ -855,10 +914,9 @@ char *compile(ast_node *node, char *source_file_name, size_t *len) {
 
 	vm_init(&(ctx.vm), 0, NULL);
 	ctx.globals = NULL;
-	ctx.locals = NGS_MALLOC(COMPILE_MAX_FUNC_DEPTH * sizeof(SYMBOL_TABLE *));
-	ctx.n_locals = NGS_MALLOC(COMPILE_MAX_FUNC_DEPTH * sizeof(LOCAL_VAR_INDEX *));
-	ctx.n_uplevels = NGS_MALLOC(COMPILE_MAX_FUNC_DEPTH * sizeof(UPVAR_INDEX *));
+	// TODO: assert that got memory?
 	ctx.locals_ptr = 0;
+	ctx.stack_depth[0] = 0;
 	ctx.source_file_name = source_file_name;
 	ctx.source_tracking_entries_count = 0;
 	ctx.source_tracking_entries_allocated = 1024;

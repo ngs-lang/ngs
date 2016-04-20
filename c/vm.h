@@ -182,6 +182,8 @@ typedef struct {
 	VALUE Backtrace;
 
 	VALUE Command;
+	VALUE Redir;
+
 	VALUE Range;
 		VALUE InclusiveRange;
 		VALUE ExclusiveRange;
@@ -189,6 +191,8 @@ typedef struct {
 	VALUE impl_not_found_hook;
 	VALUE global_not_found_hook;
 	VALUE init;
+
+	VALUE eqeq;
 
 } VM;
 
@@ -245,6 +249,8 @@ enum opcodes {
 	OP_HASH_SET,
 	OP_HASH_UPDATE,
 	OP_PUSH_KWARGS_MARKER,
+	OP_MAKE_REDIR,
+	OP_CMP,
 	NUMBER_OF_OPCODES,
 };
 

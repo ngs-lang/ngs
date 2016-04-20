@@ -88,6 +88,8 @@ char *opcodes_names[] = {
 	/* 49 */ "HASH_SET",
 	/* 50 */ "HASH_UPDATE",
 	/* 51 */ "PUSH_KWARGS_MARKER",
+	/* 52 */ "MAKE_REDIR",
+	/* 53 */ "CMP",
 };
 
 
@@ -975,6 +977,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MKTYPE(Backtrace);
 
 	MKTYPE(Command);
+	MKTYPE(Redir);
 
 
 	// XXX: changing NGS_TYPE_FIELDS of InclusiveRange or ExclusiveRange
@@ -992,6 +995,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 #undef SETUP_RANGE_TYPE
 #undef MKSUBTYPE
 #undef MKTYPE
+
+	vm->eqeq = make_array(0);
+	set_global(vm, "==", vm->eqeq);
 
 
 	// CLib and c calls
@@ -1970,8 +1976,10 @@ do_jump:
 							// }
 							goto exception;
 		case OP_MAKE_CMD:
-							EXPECT_STACK_DEPTH(1);
+							EXPECT_STACK_DEPTH(2);
 							command = make_normal_type_instance(vm->Command);
+							POP_NOCHECK(v);
+							set_normal_type_instance_attribute(command, make_string("redirects"), v);
 							POP_NOCHECK(v);
 							set_normal_type_instance_attribute(command, make_string("argv"), v);
 							PUSH_NOCHECK(command);
@@ -1995,6 +2003,34 @@ do_jump:
 							goto main_loop;
 		case OP_PUSH_KWARGS_MARKER:
 							PUSH(MAKE_KWARGS_MARKER);
+							goto main_loop;
+		case OP_MAKE_REDIR:
+							EXPECT_STACK_DEPTH(2);
+							command = make_normal_type_instance(vm->Redir);
+							POP_NOCHECK(v);
+							set_normal_type_instance_attribute(command, make_string("datum"), v);
+							POP_NOCHECK(v);
+							set_normal_type_instance_attribute(command, make_string("marker"), v);
+							PUSH_NOCHECK(command);
+							goto main_loop;
+		case OP_CMP:
+							// XXX: Refactor, there will be more functions calls, differing only by callable and number of arguments
+							EXPECT_STACK_DEPTH(3);
+							THIS_FRAME.last_ip = ip;
+							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-3], vm->eqeq, 2, &ctx->stack[ctx->stack_ptr-2]);
+							// assert(ctx->stack[ctx->stack_ptr-GET_INT(v)-1].num);
+							if(mr == METHOD_EXCEPTION) {
+								*result = ctx->stack[ctx->stack_ptr-3];
+								goto exception;
+							}
+							if(mr != METHOD_OK) {
+								for(v_ptr=&ctx->stack[ctx->stack_ptr-GET_INT(v)];v_ptr < &ctx->stack[ctx->stack_ptr];v_ptr++) {
+									dump_titled("Failed argument", *v_ptr);
+								}
+								dump_titled("Failed callable / 1", callable);
+								assert(0=="Handling failed method calls is not implemented yet");
+							}
+							REMOVE_TOP_N(2);
 							goto main_loop;
 		default:
 							// TODO: exception

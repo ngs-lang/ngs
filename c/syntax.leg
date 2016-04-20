@@ -434,6 +434,7 @@ chain-expression = b:basic-expression (
 basic-expression =
 	if
 	| while
+	| switch
 	| defined
 	| for
 	| comment
@@ -777,6 +778,22 @@ while =
 		$$ = ret;
 	}
 
+switch =
+	"switch" acc:switch-node space? datum:code-block { append_ast_node_child(acc, datum) } space? "{"
+		(
+			space? e:expression space? c:code-block {
+				MAKE_NODE(case_node, EXPRESSIONS_NODE);
+				append_ast_node_child(case_node, e);
+				append_ast_node_child(case_node, c);
+				append_ast_node_child(acc, case_node);
+			}
+		)+
+	space? "}" {
+		$$ = acc;
+	}
+
+switch-node = { MAKE_NODE(ret, SWITCH_NODE); $$ = ret }
+
 number = 
 	<[-+]?[0-9]+[.][0-9]+> {
 		MAKE_NODE(ret, REAL_NODE);
@@ -865,8 +882,8 @@ string-dq-imm =
 	}
 
 string-dq-dollar-expansion =
-	"$" c:code-block { $$ = c; }
-	| subshell
+	subshell
+	| "$" c:code-block { $$ = c; }
 
 str-comps-node = {
 		MAKE_NODE(ret, STR_COMPS_NODE);
@@ -961,7 +978,18 @@ subshell =
 	| "``" cmd:command-words "``" { cmd->first_child->name = ngs_strdup("````"); $$ = cmd; }
 	| "`" cmd:command-words "`" { cmd->first_child->name = ngs_strdup("``");  $$ = cmd; }
 
-command-words = acc:command-node (inline_space? command-word {append_ast_node_child(acc, $$);})+ {
+command-words = acc:command-node (
+		inline_space?
+		(
+			command-word {
+				append_ast_node_child(acc->first_child->next_sibling, $$);
+			}
+		|
+			command-redirect {
+				append_ast_node_child(acc->first_child->next_sibling->next_sibling, $$);
+			}
+		)
+	)+ {
 	$$ = acc;
 	CAPTURE_LOCATION($$);
 }
@@ -970,6 +998,10 @@ command-node = {
 	MAKE_NODE(ret, COMMAND_NODE);
 		MAKE_IDENTIFIER_NODE(f, "$()");
 		append_ast_node_child(ret, f);
+		MAKE_NODE(argv, EXPRESSIONS_NODE);
+		append_ast_node_child(ret, argv);
+		MAKE_NODE(redirects, EXPRESSIONS_NODE);
+		append_ast_node_child(ret, redirects);
 	$$ = ret;
 }
 
@@ -980,6 +1012,17 @@ command-word =
 	}
 	| "$" c:code-block { $$ = c; }
 	| string
+
+command-redirect =
+	rm:redir-marker inline_space? w:command-word {
+		MAKE_NODE(ret, REDIR_NODE);
+		append_ast_node_child(ret, rm);
+		append_ast_node_child(ret, w);
+		$$ = ret;
+	}
+
+redir-marker =
+	<(">>" | ">" | "<<" | "<")> { MAKE_STRING_NODE(ret, yytext); $$ = ret; }
 
 %%
 #undef ALLOC_NODE

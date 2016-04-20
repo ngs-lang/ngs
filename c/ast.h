@@ -59,13 +59,13 @@ typedef enum {
 	COMMAND_NODE,
 	BREAK_NODE,
 	CONTINUE_NODE,
+	REDIR_NODE,
+	SWITCH_NODE,
 	NUMBER_OF_AST_NODE_TYPES
 } ast_node_type;
 
 extern char *NGS_AST_NODE_TYPES_NAMES[NUMBER_OF_AST_NODE_TYPES];
 
-#ifdef DO_NGS_DEBUG
 void print_ast(ast_node *node, int level);
-#endif
 
 #endif
