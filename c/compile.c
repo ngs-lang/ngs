@@ -672,7 +672,6 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 		case RETURN_NODE:
-			printf("DEPTH %d\n", STACK_DEPTH);
 			for(i=0; i<STACK_DEPTH; i++) {
 				OPCODE(*buf, OP_POP);
 			}
