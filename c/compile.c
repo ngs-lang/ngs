@@ -381,9 +381,13 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 		case INDEX_NODE:
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "INDEX NODE", *idx);
 			OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
+			STACK_DEPTH++;
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			STACK_DEPTH++;
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+			STACK_DEPTH++;
 			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 2);
+			STACK_DEPTH++;
 			compile_identifier(ctx, buf, idx, "[]", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 			OPCODE(*buf, OP_CALL);
 			POP_IF_DONT_NEED_RESULT(*buf);
