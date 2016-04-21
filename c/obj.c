@@ -822,6 +822,7 @@ error:
 // TODO: handle libjson errors
 // XXX: free the memory on fails
 json_object *_encode_json_kern(VALUE obj, VALUE *result) {
+	unsigned int i;
 	if(IS_NULL(obj)) { return NULL; }
 	if(IS_STRING(obj)) { return json_object_new_string_len(OBJ_DATA_PTR(obj), OBJ_LEN(obj)); }
 	if(IS_INT(obj)) { return json_object_new_int64(GET_INT(obj)); }
@@ -830,7 +831,7 @@ json_object *_encode_json_kern(VALUE obj, VALUE *result) {
 	if(IS_ARRAY(obj)) {
 		json_object *t, *arr = json_object_new_array();
 		// TODO: replace unsigned int with something more appropriate
-		for(unsigned int i=0; i<OBJ_LEN(obj); i++) {
+		for(i=0; i<OBJ_LEN(obj); i++) {
 			t = _encode_json_kern(ARRAY_ITEMS(obj)[i], result);
 			if(!IS_UNDEF(*result)) return NULL; // Exception occured
 			json_object_array_add(arr, t);
