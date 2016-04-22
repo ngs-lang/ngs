@@ -34,13 +34,15 @@ Running
 	# On Ubuntu 14.04 (maybe others) # apt-get install gawk
 	cd c
 	make
-	./ngs SCRIPT_NAME.ngs
+	# NGS_DIR, where stdlib.ngs resides defaults to /usr/share/ngs . Either link it to the "c" folder or run with NGS_DIR=.
+	NGS_DIR=. ./ngs SCRIPT_NAME.ngs
 
 Running tests
 =============
 
 	cd c
-	make test
+	# NGS_DIR, where stdlib.ngs resides defaults to /usr/share/ngs . Either link it to the "c" folder or run with NGS_DIR=.
+	NGS_DIR=. make test
 
 Contributing
 ============
