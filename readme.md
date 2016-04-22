@@ -30,7 +30,8 @@ Development. Help is welcome.
 Running
 =======
 
-	apt-get install uthash-dev libgc-dev libffi6 libjson-c2 libjson-c-dev
+	apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg
+	# On Ubuntu 14.04 (maybe others) # apt-get install gawk
 	cd c
 	make
 	./ngs SCRIPT_NAME.ngs
