@@ -1,0 +1,157 @@
+Note that this started as internal document so things here are unformed, not final and fluid.
+
+[inbox]
+	* close_on_exec - not to leak fds
+		~ilya/tmp/bash-4.3/execute_cmd.c:1478:0-1
+
+	* callable name hint in error messages
+	* $func(call) in command syntax
+
+[todo by priority]
+	* switch, eswitch, match, ematch, cond, econd, nobreak
+	* commands syntax
+		* top level $()
+		* io redirection
+		* pipes
+	* without(s:Str, del:Str)
+	* without(s:Str, r:Regex)
+	* split(s:Str, r:Regex)
+	* filter(a:Arr, r:Regex)
+	* unify and document where {} is Hash (expression) and where it's code
+	* K M G suffixes for numbers
+	* compile
+		* exceptions
+		* disallow duplicate name for an argument
+	* doc
+		* remove "outdated"
+		* shorten everything, give example, make it tldr-compliant :)
+		* "local" and for() auto-local
+		* constructors and init(), does not feel right. constructors as type convertors.
+		* which exceptions are thrown where and their meanings
+		* config()
+		* other projects
+	* benchmarks - different tasks and languages
+	* unary - syntax
+	* maybe syntax: f(...) = v
+	* +=, -=, etc syntax
+	* tracing
+	* threads
+		* Thread()
+		* Lock()
+		* check by runnig multi-threaded program
+	* think about serialization and remote execution
+	* push/pop/shift/unshift for Hash
+	* decorators / wrappers ?
+	* "local x" at top level - check behaviour
+	* solve the inheritance (also for "expose")
+	* "doc" directive
+	* comments that begin not at beginning of line
+	* OP_PUSH_INT - check limits of the number
+	* text templates (stdlib I guess)
+	* compile asserts to exceptions
+	* RegExp synatx thoughts
+
+		m = s ~ /zzz/
+		if m { ... }
+
+		if m = s ~ /zzz/ { ... m[1] ... }
+
+		s ~ /zzz/ { ... M[1] ... }
+
+		s ~ /zzz/ F(m) { ... m[1] ... }
+
+		s ~ /zzzz/ -> { ... $1 ... }
+
+		s ~ /zzz/ -> m { m[1] }
+
+	* yaml
+		* parse
+		* generate
+
+	* strings / mb_strings
+
+	* data structure walk / data query language
+		+ See
+			+ jq
+			+ jmespath
+
+	* Local variables values in backtrace
+
+	* Compile time stack depth check?
+
+[debt]
+
+	* break / continue - disable when not in for
+
+	* -pedantic
+
+	* check integer overflows everywhere
+
+[consider]
+	* include * (glob)
+	* Enull type - expected null (another, simpler take on same problem that Option in Scala solves)
+		f(x:Enull) -> Enull
+		Bool(x:Enull) -> false
+
+[syntax]
+	* $() for command execution
+	* %() for command building -- %(ls *)
+	* %[] for bare words array -- %[v1 v2]
+	* %{} for bare words hash -- %{k1: v1, k2: v2}
+	* BreakException?
+
+[types]
+	* Bin (or Bytes, later, after Str is multibyte)
+	* Cloud / Compute / etc ?
+	* Host
+		+ ip?, public_ip, private_ip, other ips?
+		+ image_id
+		+ instance_id
+		+ ssh_user()
+		+ ssh_key()
+		+ cloud type / endpoint / ... ?
+	* HostsGroup
+		+ refresh() or get()?
+	* FSObject
+		* File
+		* Dir
+	* Widget
+		+ Command
+		+ Status
+		+ Progress
+		+ Pipes
+	* HistoryEntry
+
+[functions]
+	* read()
+		+ allow auto-load missing implementations by extension and mime type
+	* write()
+	* now() - timestamp, time functions
+	* stat(), mtime(), ...
+	* file.relative_to(root)
+
+[later / safety]
+	* assert n_globals
+	* integer VALUE overflows check
+	* green threads?
+
+[design]
+	* symbol table
+		* bytecode layout
+			network order integers?
+			+ signature "NGSB"
+			+ format version - 4 bytes: 0 0 0 1
+			+ code start offset
+			[symbol table]
+			+ n_entries - 2 bytes
+			+ entry N
+				+ symbol - Lstring
+				+ m_places - 2 bytes
+					[later - start]
+					+ entry M
+						+ {1,2,3,4} - number of pending offsets size
+					[later - end]
+					+ entry M
+						+ 4 bytes offset
+	* make platform-independent bytecode?
+		* maybe platform signature to detect whether it's compatible
