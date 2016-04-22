@@ -134,24 +134,3 @@ Note that this started as internal document so things here are unformed, not fin
 	* assert n_globals
 	* integer VALUE overflows check
 	* green threads?
-
-[design]
-	* symbol table
-		* bytecode layout
-			network order integers?
-			+ signature "NGSB"
-			+ format version - 4 bytes: 0 0 0 1
-			+ code start offset
-			[symbol table]
-			+ n_entries - 2 bytes
-			+ entry N
-				+ symbol - Lstring
-				+ m_places - 2 bytes
-					[later - start]
-					+ entry M
-						+ {1,2,3,4} - number of pending offsets size
-					[later - end]
-					+ entry M
-						+ 4 bytes offset
-	* make platform-independent bytecode?
-		* maybe platform signature to detect whether it's compatible
