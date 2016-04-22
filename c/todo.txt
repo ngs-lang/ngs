@@ -23,7 +23,6 @@ Note that this started as internal document so things here are unformed, not fin
 		* exceptions
 		* disallow duplicate name for an argument
 	* doc
-		* remove "outdated"
 		* shorten everything, give example, make it tldr-compliant :)
 		* "local" and for() auto-local
 		* constructors and init(), does not feel right. constructors as type convertors.
