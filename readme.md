@@ -47,7 +47,7 @@ Running tests
 Contributing
 ============
 
-Fork on GitHub, work on whatever you like, preferably from the top of (the todo)[c/todo.txt], make a pull request. If the change is big, it's better to coordinate with Ilya before you start.
+Fork on GitHub, work on whatever you like, preferably from the top of [the todo](c/todo.txt), make a pull request. If the change is big, it's better to coordinate with Ilya before you start.
 
 Features
 ========
