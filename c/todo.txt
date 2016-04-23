@@ -8,7 +8,8 @@ Note that this started as internal document so things here are unformed, not fin
 	* $func(call) in command syntax
 
 [todo by priority]
-	* switch, eswitch, match, ematch, cond, econd, nobreak
+	* switch, eswitch, match, ematch - nobreak
+	* match, ematch - some way to get the match object?
 	* doc
 		* list of methods & with arguments types
 		* each method documentation
