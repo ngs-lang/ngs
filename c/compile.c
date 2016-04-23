@@ -795,6 +795,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			break;
 
 		case SWITCH_NODE:
+			// XXX: Fix and test STACK_DEPTH
 			// XXX: Check for/while { ... case { ... break } ... } situation because break addresses are used in switch too.
 			// TODO: assert jump ranges
 			IF_NOT_SWITCH_COND {
