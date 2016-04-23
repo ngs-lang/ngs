@@ -8,11 +8,35 @@ Note that this started as internal document so things here are unformed, not fin
 	* $func(call) in command syntax
 
 [todo by priority]
-	* switch, eswitch, match, ematch - nobreak
+
+	* switch, eswitch, match, ematch - add "nobreak"
+
+		Currently the switch/eswitch and alikes behave like C switch that has "break" after each clause.
+		Add "nobreak" keyword that could be added after a clause which would mean the fall-through behaviour.
+
 	* match, ematch - some way to get the match object?
-	* doc
-		* list of methods & with arguments types
-		* each method documentation
+
+		For example when Regex is implmeneted in the code
+
+			match mystring {
+				/my_regex(.*)/ { my_code }
+			}
+
+		in my_code there should be access to the match object
+		The syntax might be
+
+			match mystring {
+				/my_regex(.*)/ -> my_match { my_code }
+			}
+
+		or something alike, not sure yet.
+
+	* documentation
+		* "doc" directive that could be used above/inside (see how it looks like and decide which) a functon somewhat similar to Python docstring
+		* Add enough introspection to implement the following points:
+			* list of methods & with arguments types
+			* each method documentation
+
 	* commands syntax
 		* top level $() fix
 		* io redirection
@@ -47,7 +71,6 @@ Note that this started as internal document so things here are unformed, not fin
 	* decorators / wrappers ?
 	* "local x" at top level - check behaviour
 	* solve the inheritance (also for "expose")
-	* "doc" directive
 	* comments that begin not at beginning of line
 	* OP_PUSH_INT - check limits of the number
 	* text templates (stdlib I guess)
