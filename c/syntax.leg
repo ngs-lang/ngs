@@ -435,6 +435,7 @@ basic-expression =
 	if
 	| while
 	| switch
+	| cond
 	| defined
 	| for
 	| comment
@@ -779,7 +780,7 @@ while =
 	}
 
 switch =
-	"switch" acc:switch-node space? datum:code-block { append_ast_node_child(acc, datum) } space? "{"
+	acc:any-switch space? datum:code-block { append_ast_node_child(acc, datum) } space? "{"
 		(
 			space? e:expression space? c:code-block {
 				MAKE_NODE(case_node, EXPRESSIONS_NODE);
@@ -792,7 +793,32 @@ switch =
 		$$ = acc;
 	}
 
-switch-node = { MAKE_NODE(ret, SWITCH_NODE); $$ = ret }
+cond =
+	acc:any-cond { MAKE_NODE(dummy, NULL_NODE); append_ast_node_child(acc, dummy) } space? "{"
+		(
+			space? e:expression space? c:code-block {
+				MAKE_NODE(case_node, EXPRESSIONS_NODE);
+				append_ast_node_child(case_node, e);
+				append_ast_node_child(case_node, c);
+				append_ast_node_child(acc, case_node);
+			}
+		)+
+	space? "}" {
+        // First element of acc is NULL_NODE for unifority of data layout inside acc with "swicth"
+		$$ = acc;
+	}
+
+any-switch = switch-keyword | eswitch-keyword | match-keyword | ematch-keyword
+
+switch-keyword  = "switch"  { MAKE_NODE(ret, SWITCH_NODE); ret->number = SWITCH_NODE_SWITCH;  $$ = ret; }
+eswitch-keyword = "eswitch" { MAKE_NODE(ret, SWITCH_NODE); ret->number = SWITCH_NODE_ESWITCH; $$ = ret; }
+match-keyword   = "match"   { MAKE_NODE(ret, SWITCH_NODE); ret->number = SWITCH_NODE_MATCH;   $$ = ret; }
+ematch-keyword  = "ematch"  { MAKE_NODE(ret, SWITCH_NODE); ret->number = SWITCH_NODE_EMATCH;  $$ = ret; }
+
+any-cond =  cond-keyword | econd-keyword
+cond-keyword    = "cond"    { MAKE_NODE(ret, SWITCH_NODE); ret->number = SWITCH_NODE_COND;    $$ = ret; }
+econd-keyword   = "econd"   { MAKE_NODE(ret, SWITCH_NODE); ret->number = SWITCH_NODE_ECOND;   $$ = ret; }
+
 
 number = 
 	<[-+]?[0-9]+[.][0-9]+> {

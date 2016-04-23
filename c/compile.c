@@ -32,6 +32,8 @@
 #define DONT_NEED_RESULT (0)
 #define NEED_RESULT (1)
 
+#define IF_NOT_SWITCH_COND if(node->number != SWITCH_NODE_COND && node->number != SWITCH_NODE_ECOND)
+
 typedef enum identifier_resolution_type {
 	RESOLVE_ANY_IDENTFIER=0,
 	RESOLVE_GLOBAL_IDENTFIER=1,
@@ -795,8 +797,10 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 		case SWITCH_NODE:
 			// XXX: Check for/while { ... case { ... break } ... } situation because break addresses are used in switch too.
 			// TODO: assert jump ranges
-			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
-			STACK_DEPTH++;
+			IF_NOT_SWITCH_COND {
+				compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+				STACK_DEPTH++;
+			}
 			SETUP_ADDRESS_FILLING();
 			continue_target_idx = 0; // Should not appear there!
 			// TODO: make sure that leaving the section pops the switch value from the stack
@@ -807,20 +811,43 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					*(JUMP_OFFSET *)&(*buf)[cond_jump] = *idx - (cond_jump + sizeof(JUMP_OFFSET));
 					cond_jump = 0;
 				}
-				OPCODE(*buf, OP_DUP);
-				OPCODE(*buf, OP_PUSH_NULL); // Result placeholder
-				OPCODE(*buf, OP_XCHG);
+				IF_NOT_SWITCH_COND {
+					OPCODE(*buf, OP_DUP);
+					OPCODE(*buf, OP_PUSH_NULL); // Result placeholder
+					OPCODE(*buf, OP_XCHG);
+				}
 				// The value to compare to
 				compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
-				OPCODE(*buf, OP_CMP);
+				switch((switch_node_subtype)node->number) {
+					case SWITCH_NODE_SWITCH:
+					case SWITCH_NODE_ESWITCH:
+						OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 2);
+						compile_identifier(ctx, buf, idx, "==", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
+						OPCODE(*buf, OP_CALL);
+						break;
+					case SWITCH_NODE_MATCH:
+					case SWITCH_NODE_EMATCH:
+						OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 2);
+						compile_identifier(ctx, buf, idx, "match", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
+						OPCODE(*buf, OP_CALL);
+					case SWITCH_NODE_COND:
+					case SWITCH_NODE_ECOND:
+						OPCODE(*buf, OP_TO_BOOL);
+						break;
+					default:
+						fprintf(stderr, "ERROR: SWITCH_NODE subtype %i %i\n", node->number, SWITCH_NODE_COND);
+						assert(0 == "Unsupported SWITCH_NODE subtype");
+				}
 				OPCODE(*buf, OP_JMP_FALSE);
 				cond_jump = *idx;
 				DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
 				// Code block to execute when values match
 				compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
-				// Get rid of original value, preserving the match result
-				OPCODE(*buf, OP_XCHG);
-				OPCODE(*buf, OP_POP);
+				IF_NOT_SWITCH_COND {
+					// Get rid of original value, preserving the match result
+					OPCODE(*buf, OP_XCHG);
+					OPCODE(*buf, OP_POP);
+				}
 				// Break
 				assert(ctx->fill_in_break_addrs_ptr < COMPILE_MAX_FILL_IN_LEN);
 				OPCODE(*buf, OP_JMP);
@@ -832,8 +859,18 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				*(JUMP_OFFSET *)&(*buf)[cond_jump] = *idx - (cond_jump + sizeof(JUMP_OFFSET));
 			}
 			// TOOD: optimize - OP_PUSH_NULL is not needed if result is not needed
-			OPCODE(*buf, OP_POP);
-			OPCODE(*buf, OP_PUSH_NULL);
+			if(node->number & 1) {
+				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0);
+				compile_identifier(ctx, buf, idx, "SwitchFail", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
+				// TODO: attribute with offending value
+				OPCODE(*buf, OP_CALL);
+				OPCODE(*buf, OP_THROW);
+			} else {
+				IF_NOT_SWITCH_COND {
+					OPCODE(*buf, OP_POP); // Get rid of original value
+				}
+				OPCODE(*buf, OP_PUSH_NULL);
+			}
 			HANDLE_ADDRESS_FILLING();
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;

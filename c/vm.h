@@ -178,6 +178,7 @@ typedef struct {
 			VALUE CallFail;
 				VALUE DontKnowHowToCall;
 				VALUE ImplNotFound;
+			VALUE SwitchFail;
 
 	VALUE Backtrace;
 
@@ -250,7 +251,6 @@ enum opcodes {
 	OP_HASH_UPDATE,
 	OP_PUSH_KWARGS_MARKER,
 	OP_MAKE_REDIR,
-	OP_CMP,
 	NUMBER_OF_OPCODES,
 };
 

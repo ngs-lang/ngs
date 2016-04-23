@@ -9,8 +9,11 @@ Note that this started as internal document so things here are unformed, not fin
 
 [todo by priority]
 	* switch, eswitch, match, ematch, cond, econd, nobreak
+	* doc
+		* list of methods & with arguments types
+		* each method documentation
 	* commands syntax
-		* top level $()
+		* top level $() fix
 		* io redirection
 		* pipes
 	* without(s:Str, del:Str)

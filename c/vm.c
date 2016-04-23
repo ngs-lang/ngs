@@ -89,7 +89,6 @@ char *opcodes_names[] = {
 	/* 50 */ "HASH_UPDATE",
 	/* 51 */ "PUSH_KWARGS_MARKER",
 	/* 52 */ "MAKE_REDIR",
-	/* 53 */ "CMP",
 };
 
 
@@ -973,6 +972,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 			MKSUBTYPE(CallFail, Error);
 				MKSUBTYPE(DontKnowHowToCall, CallFail);
 				MKSUBTYPE(ImplNotFound, CallFail);
+			MKSUBTYPE(SwitchFail, Error);
 
 	MKTYPE(Backtrace);
 
@@ -2012,25 +2012,6 @@ do_jump:
 							POP_NOCHECK(v);
 							set_normal_type_instance_attribute(command, make_string("marker"), v);
 							PUSH_NOCHECK(command);
-							goto main_loop;
-		case OP_CMP:
-							// XXX: Refactor, there will be more functions calls, differing only by callable and number of arguments
-							EXPECT_STACK_DEPTH(3);
-							THIS_FRAME.last_ip = ip;
-							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-3], vm->eqeq, 2, &ctx->stack[ctx->stack_ptr-2]);
-							// assert(ctx->stack[ctx->stack_ptr-GET_INT(v)-1].num);
-							if(mr == METHOD_EXCEPTION) {
-								*result = ctx->stack[ctx->stack_ptr-3];
-								goto exception;
-							}
-							if(mr != METHOD_OK) {
-								for(v_ptr=&ctx->stack[ctx->stack_ptr-GET_INT(v)];v_ptr < &ctx->stack[ctx->stack_ptr];v_ptr++) {
-									dump_titled("Failed argument", *v_ptr);
-								}
-								dump_titled("Failed callable / 1", callable);
-								assert(0=="Handling failed method calls is not implemented yet");
-							}
-							REMOVE_TOP_N(2);
 							goto main_loop;
 		default:
 							// TODO: exception

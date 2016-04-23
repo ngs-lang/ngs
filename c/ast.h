@@ -64,6 +64,15 @@ typedef enum {
 	NUMBER_OF_AST_NODE_TYPES
 } ast_node_type;
 
+typedef enum {
+	SWITCH_NODE_SWITCH  = 2,
+	SWITCH_NODE_ESWITCH = 3,
+	SWITCH_NODE_MATCH   = 4,
+	SWITCH_NODE_EMATCH  = 5,
+	SWITCH_NODE_COND    = 6,
+	SWITCH_NODE_ECOND   = 7,
+} switch_node_subtype;
+
 extern char *NGS_AST_NODE_TYPES_NAMES[NUMBER_OF_AST_NODE_TYPES];
 
 void print_ast(ast_node *node, int level);
