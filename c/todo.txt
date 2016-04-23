@@ -39,8 +39,31 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* commands syntax
 		* top level $() fix
-		* io redirection
+			+ Currently the top-level behaves like $(), which captures stdout but should actually
+			  send stdout directly to the parent process stdout.
+			+ Note that after CLI is ready, the commands which are syntactically at the top-level
+			  will need to behave as $() because the output of the results will be handled by the CLI.
+		* io redirection - see F '$()'(c:Command) { ... } in stdlib.ngs [task is in progress]
 		* pipes
+	* RegExp
+		+ The syntax for the regexp literal will be the usual /regexp/flags
+		+ The match operator is ~ (tilde)
+		+ synatx thoughts
+
+			m = s ~ /zzz/
+			if m { ... }
+
+			if m = s ~ /zzz/ { ... m[1] ... }
+
+			# Magic M variable scoped to the following { code }
+			s ~ /zzz/ { ... M[1] ... }
+
+			s ~ /zzz/ F(m) { ... m[1] ... }
+
+			s ~ /zzzz/ -> { ... $1 ... }
+
+			s ~ /zzz/ -> m { m[1] }
+
 	* without(s:Str, del:Str)
 	* without(s:Str, r:Regex)
 	* split(s:Str, r:Regex)
@@ -48,18 +71,41 @@ Note that this started as internal document so things here are unformed, not fin
 	* unify and document where {} is Hash (expression) and where it's code
 	* K M G suffixes for numbers
 	* compile
-		* exceptions
+		* exceptions instead of asserts
 		* disallow duplicate name for an argument
 	* doc
 		* shorten everything, give example, make it tldr-compliant :)
 		* "local" and for() auto-local
+			Describe the "local myvar" behavior and make it clear that
+			for(i=0;i<n;i=i+1) will automatically declare i as local.
 		* constructors and init(), does not feel right. constructors as type convertors.
 		* which exceptions are thrown where and their meanings
 		* config()
 		* other projects
+			Explain how this project is different from other projects:
+				+ rc shell https://swtch.com/plan9port/man/man1/rc.html
+				+ There is a shell in Python, don't remember the name.
+				( add more projects here )
 	* benchmarks - different tasks and languages
 	* unary - syntax
-	* maybe syntax: f(...) = v
+	* consider syntax: f(...) = v
+
+		This could be used for example as follows:
+
+			s = "abcd"
+			len(s) = 2
+			# s is now "ab"
+
+		Function definitions might look like:
+
+			F len(s:Str, =n:Int) ...
+
+		or maybe
+
+			F len(s:Str) = n:Int ...
+
+		I like the first more but it still doesn't feel very right.
+
 	* +=, -=, etc syntax
 	* tracing
 	* threads
@@ -67,29 +113,23 @@ Note that this started as internal document so things here are unformed, not fin
 		* Lock()
 		* check by runnig multi-threaded program
 	* think about serialization and remote execution
+		Probably pushing a bytecode (which we already have because the code was compiled)
+		of a function that does not reference any upper-level variables, only locals and globals,
+		maybe like this:
+
+			RF myfunc(param1:Str, param2:Int, ...)
+
+		RF means remote function and compiler checks for absence of upper-level variables references.
+
 	* push/pop/shift/unshift for Hash
+		To be consistent with Arr, which has all of these.
+		The push is regular h[k] = v while others need additional vm functionality.
 	* decorators / wrappers ?
 	* "local x" at top level - check behaviour
 	* solve the inheritance (also for "expose")
 	* comments that begin not at beginning of line
 	* OP_PUSH_INT - check limits of the number
 	* text templates (stdlib I guess)
-	* compile asserts to exceptions
-	* RegExp synatx thoughts
-
-		m = s ~ /zzz/
-		if m { ... }
-
-		if m = s ~ /zzz/ { ... m[1] ... }
-
-		s ~ /zzz/ { ... M[1] ... }
-
-		s ~ /zzz/ F(m) { ... m[1] ... }
-
-		s ~ /zzzz/ -> { ... $1 ... }
-
-		s ~ /zzz/ -> m { m[1] }
-
 	* yaml
 		* parse
 		* generate
