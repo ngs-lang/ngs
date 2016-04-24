@@ -94,6 +94,7 @@ Note that this started as internal document so things here are unformed, not fin
 				+ There is a shell in Python, don't remember the name.
 				( add more projects here )
 	* benchmarks - different tasks and languages
+		There is one task benchmark in the Makefile (time-sum target)
 	* unary - syntax
 	* consider syntax: f(...) = v
 

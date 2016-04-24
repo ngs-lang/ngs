@@ -383,6 +383,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 		case INDEX_NODE:
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "INDEX NODE", *idx);
 			OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
+			saved_stack_depth = STACK_DEPTH;
 			STACK_DEPTH++;
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
 			STACK_DEPTH++;
@@ -393,6 +394,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			compile_identifier(ctx, buf, idx, "[]", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 			OPCODE(*buf, OP_CALL);
 			POP_IF_DONT_NEED_RESULT(*buf);
+			STACK_DEPTH = saved_stack_depth;
 			break;
 		case INT_NODE:
 			/*printf("Compiling tNUMBER @ %d\n", *idx);*/
@@ -874,6 +876,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			}
 			HANDLE_ADDRESS_FILLING();
 			POP_IF_DONT_NEED_RESULT(*buf);
+			IF_NOT_SWITCH_COND {
+				STACK_DEPTH--;
+			}
 			break;
 
 		default:
