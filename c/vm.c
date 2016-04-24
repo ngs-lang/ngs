@@ -468,6 +468,7 @@ METHOD_RESULT native_c_open_str_str METHOD_PARAMS {
 	int flags = 0;
 	if(!flags && !strcmp(flags_str, "r"))  { flags = O_RDONLY; }
 	if(!flags && !strcmp(flags_str, "w"))  { flags = O_WRONLY; }
+	if(!flags && !strcmp(flags_str, "a"))  { flags = O_APPEND; }
 	if(!flags && !strcmp(flags_str, "rw")) { flags = O_RDWR; }
 	SET_INT(*result, open(pathname, flags));
 	return METHOD_OK;

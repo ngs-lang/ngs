@@ -757,6 +757,40 @@ F read(p:Pipe) p.read_fd.read()
 F dup2_writing_end(p:Pipe, newfd:Int) dup2(p.write_fd, newfd)
 F dup2_reading_end(p:Pipe, newfd:Int) dup2(p.read_fd, newfd)
 
+# --- File ---
+
+{ type FileIOFail }
+
+F init(fail:FileIOFail, name:Str, errno:Int, message:Str) {
+	fail.name = name
+	fail.errno = errno
+	fail.message = message
+}
+
+{ type File }
+
+F init(f:File, name:Str) {
+	f.name = name
+	f.fd = null
+}
+
+F init(f:File, fd:Int) {
+	f.name = null
+	f.fd = fd
+}
+
+F Str(f:File) "<File name=${f.name} fd=${f.fd}>"
+
+TEST File('xy').Str() == 'xy'
+
+F open(f:File, flags:Str) {
+	f.fd throws FileIOFail(null, "open(f:File, flags:Str): file is already open")
+	fd = c_open(f.name, flags)
+	fd <= 0 throws FileIOFail(f.name, get_c_errno(), "Failed to open the file ${f.name}")
+	f.fd = fd
+	f
+}
+
 # --- Redir ---
 
 F Str(r:Redir) "<Redirect ${r.marker} ${r.datum}>"
@@ -848,11 +882,15 @@ F '$()'(c:Command) {
 		pipe.close_reading_end()
 		pipe.dup2_writing_end(1)
 		# Redirections (WIP) - start
+		echo(c.redirects)
 		c.redirects.each(F(r:Redir) {
-			# CONTINUE HERE
-			# local mode = switch r.marker {
-			# 	'<' 'r'
-			# }
+			local flags, target_fd, f
+			eswitch r.marker {
+				'<'  { flags = 'r'; target_fd = 0; }
+				'>'  { flags = 'w'; target_fd = 1; }
+				'>>' { flags = 'a'; target_fd = 1; }
+			}
+			f = File(r.datum).open(flags)
 		})
 		# Redirections (WIP) - end
 		local result = c_execve(process.executable.path, c.argv, ENV.Strs())
