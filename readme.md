@@ -47,7 +47,7 @@ Running tests
 Contributing
 ============
 
-Fork on GitHub, work on whatever you like, preferably from the top of [the todo](c/todo.txt), make a pull request. If the change is big, it's better to coordinate with Ilya before you start.
+Fork on GitHub, work on whatever you like, preferably from the top of [the todo](c/todo.txt), make a pull request. If the change is big or involves modifying the syntax, it's better to coordinate with Ilya before you start.
 
 Features
 ========
@@ -340,6 +340,13 @@ Following instructions should work (tested on Debian)
 		* `pr` - a long process with progress bar
 		* `sleep` - a process that sleeps for 5 seconds
 		* `fail` - a process that fails
+
+Have you heard of project X? How it compares to NGS?
+====================================================
+
+* [fish shell](http://fishshell.com/) has very nice features and improvements but is still more bash-like. For example it doesn't have nested data structures nor a full-featured programming language.
+* [Plumbum](https://github.com/tomerfiliba/plumbum) makes it easier to call shell commands from python. Too verbose to be used as a shell or shell script. It helps when you need to use python and call external programs. Primary target audience seems to be Python developers, not system engineers.
+* [rc shell](https://swtch.com/plan9port/man/man1/rc.html) is much closer to Bash than to NGS.
 
 Discussion / requests / comments
 ================================

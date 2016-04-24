@@ -91,7 +91,6 @@ Note that this started as internal document so things here are unformed, not fin
 		* config()
 		* other projects
 			Explain how this project is different from other projects:
-				+ rc shell https://swtch.com/plan9port/man/man1/rc.html
 				+ There is a shell in Python, don't remember the name.
 				( add more projects here )
 	* benchmarks - different tasks and languages
