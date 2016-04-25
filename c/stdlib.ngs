@@ -894,7 +894,7 @@ F '$()'(c:Command) {
 			f = File(r.datum).open(flags)
 			local ok = c_dup2(f.fd, target_fd)
 			# TODO: better exception
-			ok < 0 throws "Failed to dup2(${f.fd}, ${target_fd}"
+			ok < 0 throws "Failed to dup2(${f.fd}, ${target_fd}). Errno ${get_c_errno()}"
 		})
 		# Redirections (WIP) - end
 		local result = c_execve(process.executable.path, c.argv, ENV.Strs())
