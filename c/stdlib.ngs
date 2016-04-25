@@ -863,6 +863,7 @@ F Str(p:Process) p.wait().stdout
 # TODO: capture stderr
 # TODO: provide additional communication channel on additional fd?
 # TODO: handle built-in commands: do not execve,
+# INFO: bash - redir.c
 F '$()'(c:Command) {
 
 	local debug_pfx = '[stdlib $()]', process, pid
@@ -891,6 +892,9 @@ F '$()'(c:Command) {
 				'>>' { flags = 'a'; target_fd = 1; }
 			}
 			f = File(r.datum).open(flags)
+			local ok = c_dup2(f.fd, target_fd)
+			# TODO: better exception
+			ok < 0 throws "Failed to dup2(${f.fd}, ${target_fd}"
 		})
 		# Redirections (WIP) - end
 		local result = c_execve(process.executable.path, c.argv, ENV.Strs())

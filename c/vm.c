@@ -12,7 +12,7 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 
-// READ(2), LSEEK(2), FORK(2), EXECVE(2)
+// READ(2), LSEEK(2), FORK(2), EXECVE(2), DUP2(2)
 #include <unistd.h>
 
 // BCMP(3)
@@ -461,16 +461,16 @@ METHOD_RESULT native_index_get_clib_str METHOD_PARAMS {
 
 // OPEN(2)
 // TODO: support more flags
-// TODO: a  way to return errno. Exception maybe?
+// TODO: support providing mode instead of hard-coded 0666
 METHOD_RESULT native_c_open_str_str METHOD_PARAMS {
 	const char *pathname = obj_to_cstring(argv[0]);
 	const char *flags_str = obj_to_cstring(argv[1]);
 	int flags = 0;
 	if(!flags && !strcmp(flags_str, "r"))  { flags = O_RDONLY; }
-	if(!flags && !strcmp(flags_str, "w"))  { flags = O_WRONLY; }
-	if(!flags && !strcmp(flags_str, "a"))  { flags = O_APPEND; }
-	if(!flags && !strcmp(flags_str, "rw")) { flags = O_RDWR; }
-	SET_INT(*result, open(pathname, flags));
+	if(!flags && !strcmp(flags_str, "w"))  { flags = O_WRONLY | O_CREAT | O_TRUNC; }
+	if(!flags && !strcmp(flags_str, "a"))  { flags = O_WRONLY | O_CREAT | O_APPEND; }
+	// if(!flags && !strcmp(flags_str, "rw")) { flags = O_RDWR; }
+	SET_INT(*result, open(pathname, flags, 0666)); // Mode same as in bash
 	return METHOD_OK;
 }
 
@@ -500,6 +500,11 @@ METHOD_RESULT native_c_read_int_int METHOD_PARAMS {
 // WRITE(2)
 // TODO: error handling support
 METHOD_RESULT native_c_write_int_str METHOD_PARAMS { METHOD_RETURN(MAKE_INT(write(GET_INT(argv[0]), OBJ_DATA_PTR(argv[1]), OBJ_LEN(argv[1])))); }
+
+// DUP2(2)
+METHOD_RESULT native_c_dup2 METHOD_PARAMS {
+	METHOD_RETURN(MAKE_INT(dup2(GET_INT(argv[0]), GET_INT(argv[1]))));
+}
 
 METHOD_RESULT native_c_lseek_int_int_str EXT_METHOD_PARAMS {
 	off_t offset;
@@ -1038,6 +1043,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_close",  &native_c_close_int,       1, "fd",       vm->Int);
 	register_global_func(vm, 0, "c_read",   &native_c_read_int_int,    2, "fd",       vm->Int, "count", vm->Int);
 	register_global_func(vm, 0, "c_write",  &native_c_write_int_str,   2, "fd",       vm->Int, "s",     vm->Str);
+	register_global_func(vm, 0, "c_dup2",   &native_c_dup2,            2, "oldfd",    vm->Int, "newfd", vm->Int);
 	register_global_func(vm, 1, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
 	register_global_func(vm, 0, "c_isatty", &native_c_isatty,           1,"fd",       vm->Int);
 

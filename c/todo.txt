@@ -51,7 +51,11 @@ Note that this started as internal document so things here are unformed, not fin
 			  send stdout directly to the parent process stdout.
 			+ Note that after CLI is ready, the commands which are syntactically at the top-level
 			  will need to behave as $() because the output of the results will be handled by the CLI.
-		* io redirection - see F '$()'(c:Command) { ... } in stdlib.ngs [task is in progress]
+		* io redirection - see F '$()'(c:Command) { ... } in stdlib.ngs [task is in hold]
+			* basic redirections ( <x , >y , >>z ) [done]
+			* tests for basic redirections
+			* advanced redirections ( N>x , N<y, N>>z ), think of more
+			* document redirections
 		* pipes
 	* RegExp
 		+ The syntax for the regexp literal will be the usual /regexp/flags
