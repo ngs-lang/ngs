@@ -17,10 +17,12 @@ Note that this started as internal document so things here are unformed, not fin
 
 [todo by priority]
 
-	* switch, eswitch, match, ematch - add "nobreak"
+	* Consider "nobreak" behaviour to skip next condition
+
+	* Document switch, eswitch, match, ematch, cond, econd, "nobreak"
 
 		Currently the switch/eswitch and alikes behave like C switch that has "break" after each clause.
-		Add "nobreak" keyword that could be added after a clause which would mean the fall-through behaviour.
+		"nobreak" after a clause means fall-through behaviour.
 
 	* match, ematch - some way to get the match object?
 
@@ -156,6 +158,8 @@ Note that this started as internal document so things here are unformed, not fin
 	* Local variables values in backtrace
 
 	* Compile time stack depth check?
+
+	* bitwise operations? "bor", "band", "bxor", ...
 
 [debt]
 
