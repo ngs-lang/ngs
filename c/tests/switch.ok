@@ -22,10 +22,3 @@ econd
 * int 10
 * int 20
 * string(len=2) OK
-nobreak
-* int 10
-* int 20
-* null
-* int 10
-* int 20
-* null

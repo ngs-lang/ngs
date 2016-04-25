@@ -17,12 +17,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 [todo by priority]
 
-	* Consider "nobreak" behaviour to skip next condition
+	* Document switch, eswitch, match, ematch, cond, econd
 
-	* Document switch, eswitch, match, ematch, cond, econd, "nobreak"
-
-		Currently the switch/eswitch and alikes behave like C switch that has "break" after each clause.
-		"nobreak" after a clause means fall-through behaviour.
+		switch/eswitch and alikes behave like C switch that has "break" after each clause.
 
 	* match, ematch - some way to get the match object?
 

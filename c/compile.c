@@ -800,7 +800,6 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			// XXX: Fix and test STACK_DEPTH
 			// XXX: Check for/while { ... case { ... break } ... } situation because break addresses are used in switch too.
 			// TODO: assert jump ranges
-			// TODO: refactor for simplification?
 			IF_NOT_SWITCH_COND {
 				compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
 				STACK_DEPTH++;
@@ -848,23 +847,15 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				// Code block to execute when values match
 				compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 				IF_NOT_SWITCH_COND {
-					if(ptr->first_child->next_sibling->next_sibling->number) {
-						// Get rid of original value, preserving the match result
-						OPCODE(*buf, OP_XCHG);
-						OPCODE(*buf, OP_POP);
-					}
-				}
-				if(ptr->first_child->next_sibling->next_sibling->number) {
-					// Break
-					assert(ctx->fill_in_break_addrs_ptr < COMPILE_MAX_FILL_IN_LEN);
-					OPCODE(*buf, OP_JMP);
-					ctx->fill_in_break_addrs[ctx->fill_in_break_addrs_ptr++] = *idx;
-					DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
-				} else {
-					// Fall-through
-					// Discard the result then
+					// Get rid of original value, preserving the match result
+					OPCODE(*buf, OP_XCHG);
 					OPCODE(*buf, OP_POP);
 				}
+				// Break
+				assert(ctx->fill_in_break_addrs_ptr < COMPILE_MAX_FILL_IN_LEN);
+				OPCODE(*buf, OP_JMP);
+				ctx->fill_in_break_addrs[ctx->fill_in_break_addrs_ptr++] = *idx;
+				DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
 			}
 			if(cond_jump) {
 				// Jump to next comparison

@@ -782,11 +782,10 @@ while =
 switch =
 	acc:any-switch space? datum:code-block { append_ast_node_child(acc, datum) } space? "{"
 		(
-			space? e:expression space? c:code-block nb:optional-nobreak {
+			space? e:expression space? c:code-block {
 				MAKE_NODE(case_node, EXPRESSIONS_NODE);
 					append_ast_node_child(case_node, e);
 					append_ast_node_child(case_node, c);
-					append_ast_node_child(case_node, nb); // nb->number is bool "do_break"
 				append_ast_node_child(acc, case_node);
 			}
 		)+
@@ -797,11 +796,10 @@ switch =
 cond =
 	acc:any-cond { MAKE_NODE(dummy, NULL_NODE); append_ast_node_child(acc, dummy) } space? "{"
 		(
-			space? e:expression space? c:code-block nb:optional-nobreak {
+			space? e:expression space? c:code-block {
 				MAKE_NODE(case_node, EXPRESSIONS_NODE);
 					append_ast_node_child(case_node, e);
 					append_ast_node_child(case_node, c);
-					append_ast_node_child(case_node, nb); // nb->number is bool "do_break"
 				append_ast_node_child(acc, case_node);
 			}
 		)+
@@ -809,11 +807,6 @@ cond =
         // First element of acc is NULL_NODE for unifority of data layout inside acc with "swicth"
 		$$ = acc;
 	}
-
-optional-nobreak =
-	space? "nobreak" { MAKE_NODE(ret, INT_NODE); ret->number = 0; $$ = ret; }
-	|
-	{ MAKE_NODE(ret, INT_NODE); ret->number = 1; $$ = ret; }
 
 any-switch = switch-keyword | eswitch-keyword | match-keyword | ematch-keyword
 
