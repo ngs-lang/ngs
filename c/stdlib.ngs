@@ -781,7 +781,7 @@ F init(f:File, fd:Int) {
 
 F Str(f:File) "<File name=${f.name} fd=${f.fd}>"
 
-TEST File('xy').Str() == 'xy'
+TEST File('xy').Str() == '<File name=xy fd=null>'
 
 F open(f:File, flags:Str) {
 	f.fd throws FileIOFail(null, "open(f:File, flags:Str): file is already open")
