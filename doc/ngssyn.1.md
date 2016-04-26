@@ -164,6 +164,51 @@ If there are no `catch` clauses following the `try`, if any exception occurs in 
 
 	}
 
+## Command and code syntax - switch, match, cond
+
+	switch value_expr {
+		expr1 code1
+		expr2 code2
+		...
+	}
+
+	# Example:
+	r = switch 1 {
+		1  2
+		10 20
+	}
+	# r is now 2
+
+Evaluates code1 if `value_expr == expr1`, code2 if `value_expr==expr2` and so on. `value_expr` is computed only once. 
+
+	match value_expr {
+		expr1 code1
+		expr2 code2
+		...
+	}
+
+Similar to `switch` but the code is evaluated when `match(value_expr, exprN)` is true.
+
+	cond {
+		expr1 code1
+		expr2 code2
+		...
+
+	}
+
+	# Example:
+	r = cond {
+		a == b  1
+		b == c  2
+	}
+
+
+Similar to `switch` but the code is evaluated when `exprN` is true.
+
+`switch`, `match` and `cond` do *not* have C-style fall-through semantics. They behave like there is a "break" after each `codeN`.
+
+`eswitch`, `ematch` and `econd` work the same but if none of the clauses is matched (and no code is evaluated) the `SwitchFail` exception is thrown.
+
 ## Code syntax - collector syntactic sugar
 
 	# Example 1

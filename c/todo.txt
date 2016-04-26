@@ -17,9 +17,11 @@ Note that this started as internal document so things here are unformed, not fin
 
 [todo by priority]
 
-	* Document switch, eswitch, match, ematch, cond, econd
-
-		switch/eswitch and alikes behave like C switch that has "break" after each clause.
+	* documentation
+		* "doc" directive that could be used above/inside (see how it looks like and decide which) a functon somewhat similar to Python docstring
+		* Add enough introspection to implement the following points:
+			* list of methods & with arguments types
+			* each method documentation
 
 	* match, ematch - some way to get the match object?
 
@@ -37,12 +39,6 @@ Note that this started as internal document so things here are unformed, not fin
 			}
 
 		or something alike, not sure yet.
-
-	* documentation
-		* "doc" directive that could be used above/inside (see how it looks like and decide which) a functon somewhat similar to Python docstring
-		* Add enough introspection to implement the following points:
-			* list of methods & with arguments types
-			* each method documentation
 
 	* commands syntax
 		* top level $() fix
