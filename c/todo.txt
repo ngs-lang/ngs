@@ -18,8 +18,8 @@ Note that this started as internal document so things here are unformed, not fin
 [todo by priority]
 
 	* documentation [in progress]
-		* Add enough introspection to implement the following points:
-			* list of methods arguments and their types
+		* Add introspection for methods parameters and their types
+		* Create builtins documentation infrastructure
 		* Create auto-generated methods documentation infrastructure
 
 	* match, ematch - some way to get the match object?

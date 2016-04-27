@@ -859,6 +859,15 @@ METHOD_RESULT native_attrs_closure_any METHOD_PARAMS {
 	METHOD_RETURN(argv[1]);
 }
 
+METHOD_RESULT native_attrs_nm METHOD_PARAMS {
+	METHOD_RETURN(NATIVE_METHOD_ATTRS(argv[0]));
+}
+
+METHOD_RESULT native_attrs_nm_any METHOD_PARAMS {
+	NATIVE_METHOD_ATTRS(argv[0]) = argv[1];
+	METHOD_RETURN(argv[1]);
+}
+
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
 	GLOBAL_VAR_INDEX index;
@@ -893,6 +902,8 @@ void register_global_func(VM *vm, int pass_extra_params, char *name, void *func_
 	o->params.n_params_required = argc;
 	o->params.n_params_optional = 0; /* currently none of builtins uses optional parameters */
 	o->pass_extra_params = pass_extra_params;
+	o->attrs = make_hash(8);
+		set_hash_key(o->attrs, make_string("name"), make_string(name));
 	if(argc) {
 		argv = NGS_MALLOC(argc * sizeof(VALUE) * 2);
 		assert(argv);
@@ -967,6 +978,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	vm->Arr  = register_builtin_type(vm, "Arr",  T_ARR);
 	vm->Fun  = register_builtin_type(vm, "Fun",  T_FUN);
 		vm->Closure  = register_builtin_type(vm, "Closure",  T_CLOSURE);
+		vm->NativeMethod  = register_builtin_type(vm, "NativeMethod",  T_NATIVE_METHOD);
 	vm->Any  = register_builtin_type(vm, "Any",  T_ANY);
 		vm->BasicTypeInstance  = register_builtin_type(vm, "BasicTypeInstance",  T_BASICTI);
 		vm->NormalTypeInstance = register_builtin_type(vm, "NormalTypeInstance", T_NORMTI);
@@ -1036,6 +1048,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "CLib",     &native_CLib_str,          1, "name",   vm->Str);
 	register_global_func(vm, 0, "in",       &native_in_str_clib,       2, "symbol", vm->Str, "lib", vm->CLib);
 	register_global_func(vm, 0, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
+
+	// Native methods
+	register_global_func(vm, 0, "attrs",    &native_attrs_nm,          1, "m",      vm->NativeMethod);
+	register_global_func(vm, 0, "attrs",    &native_attrs_nm_any,      2, "m",      vm->NativeMethod, "datum", vm->Any);
 
 	// Closure
 	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->Closure, "b", vm->Closure);
