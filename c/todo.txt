@@ -17,8 +17,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 [todo by priority]
 
-	* documentation
-		* "doc" directive that could be used above/inside (see how it looks like and decide which) a functon somewhat similar to Python docstring
+	* documentation [in progress]
 		* Add enough introspection to implement the following points:
 			* list of methods & with arguments types
 			* each method documentation
