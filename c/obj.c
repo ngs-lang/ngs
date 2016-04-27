@@ -73,13 +73,13 @@ static void _dump(VALUE v, int level) {
 			printf("%*s* array splat parameter\n", (level+1) << 1, "");
 			_dump(CLOSURE_OBJ_PARAMS(v)[i+0], level+2);
 			_dump(CLOSURE_OBJ_PARAMS(v)[i+1], level+2);
-			i+=3;
+			i+=2;
 		}
 		if(CLOSURE_OBJ_PARAMS_FLAGS(v) & PARAMS_FLAG_HASH_SPLAT) {
 			printf("%*s* hash splat parameter\n", (level+1) << 1, "");
 			_dump(CLOSURE_OBJ_PARAMS(v)[i+0], level+2);
 			_dump(CLOSURE_OBJ_PARAMS(v)[i+1], level+2);
-			i+=3;
+			i+=2;
 		}
 		goto exit;
 	}

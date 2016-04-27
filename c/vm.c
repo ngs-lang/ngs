@@ -859,6 +859,54 @@ METHOD_RESULT native_attrs_closure_any METHOD_PARAMS {
 	METHOD_RETURN(argv[1]);
 }
 
+// TODO: consider returning Hash instead of Arr
+VALUE _native_params(VALUE *params, int n_params_required, int n_params_optional, int params_flags) {
+	// See vm_call()
+	VALUE ret;
+	VALUE param;
+	int have_arr_splat = params_flags & PARAMS_FLAG_ARR_SPLAT;
+	int have_hash_splat = params_flags & PARAMS_FLAG_HASH_SPLAT;
+	int i;
+	ret = make_array(0);
+	for(i=0; i < n_params_required; i++) {
+		param = make_hash(2);
+		set_hash_key(param, make_string("name"), params[i*2 + 0]);
+		set_hash_key(param, make_string("type"), params[i*2 + 1]);
+		array_push(ret, param);
+	}
+	for(i = n_params_required; i < n_params_required + n_params_optional; i++) {
+		param = make_hash(4);
+		set_hash_key(param, make_string("name"), params[n_params_required*2 + (i-n_params_required)*3 + 0]);
+		set_hash_key(param, make_string("type"), params[n_params_required*2 + (i-n_params_required)*3 + 1]);
+		set_hash_key(param, make_string("dflt"), params[n_params_required*2 + (i-n_params_required)*3 + 2]);
+		array_push(ret, param);
+	}
+	i = n_params_required*2 + n_params_optional*3;
+	if(have_arr_splat) {
+		param = make_hash(4);
+		set_hash_key(param, make_string("name"), params[i + 0]);
+		set_hash_key(param, make_string("type"), params[i + 1]);
+		set_hash_key(param, make_string("splat"), make_string("*"));
+		array_push(ret, param);
+		i+=2;
+	}
+	if(have_hash_splat) {
+		param = make_hash(1);
+		set_hash_key(param, make_string("name"), params[i + 0]);
+		set_hash_key(param, make_string("type"), params[i + 1]);
+		set_hash_key(param, make_string("splat"), make_string("**"));
+		array_push(ret, param);
+	}
+	return ret;
+}
+
+#define callable (argv[0])
+METHOD_RESULT native_params_closure METHOD_PARAMS {
+	// See vm_call()
+	METHOD_RETURN(_native_params(CLOSURE_OBJ_PARAMS(callable), CLOSURE_OBJ_N_REQ_PAR(callable), CLOSURE_OBJ_N_OPT_PAR(callable), CLOSURE_OBJ_PARAMS_FLAGS(callable)));
+}
+#undef callable
+
 METHOD_RESULT native_attrs_nm METHOD_PARAMS {
 	METHOD_RETURN(NATIVE_METHOD_ATTRS(argv[0]));
 }
@@ -867,6 +915,17 @@ METHOD_RESULT native_attrs_nm_any METHOD_PARAMS {
 	NATIVE_METHOD_ATTRS(argv[0]) = argv[1];
 	METHOD_RETURN(argv[1]);
 }
+
+#define callable (argv[0])
+METHOD_RESULT native_params_nm METHOD_PARAMS {
+	METHOD_RETURN(_native_params(
+		NATIVE_METHOD_OBJ_PARAMS(callable),
+		NATIVE_METHOD_OBJ_N_REQ_PAR(callable),
+		NATIVE_METHOD_OBJ_N_OPT_PAR(callable),
+		0
+	));
+}
+#undef callable
 
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
@@ -1052,11 +1111,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// Native methods
 	register_global_func(vm, 0, "attrs",    &native_attrs_nm,          1, "m",      vm->NativeMethod);
 	register_global_func(vm, 0, "attrs",    &native_attrs_nm_any,      2, "m",      vm->NativeMethod, "datum", vm->Any);
+	register_global_func(vm, 0, "params",   &native_params_nm,         1, "m",      vm->NativeMethod);
 
 	// Closure
 	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->Closure, "b", vm->Closure);
 	register_global_func(vm, 0, "attrs",    &native_attrs_closure,     1, "c",      vm->Closure);
 	register_global_func(vm, 0, "attrs",    &native_attrs_closure_any, 2, "c",      vm->Closure, "datum", vm->Any);
+	register_global_func(vm, 0, "params",   &native_params_closure,    1, "c",      vm->Closure);
 
 	// Real
 	register_global_func(vm, 0, "+",        &native_plus_real_real,      2, "a",   vm->Real, "b", vm->Real);

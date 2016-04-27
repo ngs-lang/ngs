@@ -18,9 +18,9 @@ Note that this started as internal document so things here are unformed, not fin
 [todo by priority]
 
 	* documentation [in progress]
-		* Add introspection for methods parameters and their types
+		* Add introspection for method source locations
 		* Create builtins documentation infrastructure
-		* Create auto-generated methods documentation infrastructure
+		* Create methods' auto-generated documentation infrastructure
 
 	* match, ematch - some way to get the match object?
 
