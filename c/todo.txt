@@ -18,9 +18,10 @@ Note that this started as internal document so things here are unformed, not fin
 [todo by priority]
 
 	* documentation [in progress]
-		* Add introspection for method source locations
-		* Create builtins documentation infrastructure
+
 		* Create methods' auto-generated documentation infrastructure
+
+		* Document that innner functions are declared local
 
 	* match, ematch - some way to get the match object?
 
@@ -153,6 +154,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* bitwise operations? "bor", "band", "bxor", ...
 
+	* documentation
+		* Add introspection for method source locations
 [debt]
 
 	* break / continue - disable when not in for

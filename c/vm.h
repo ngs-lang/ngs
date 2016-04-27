@@ -147,6 +147,8 @@ typedef struct {
 	VM_REGION *regions;
 	size_t regions_len, regions_allocated;
 
+	VALUE last_doc_hash;
+
 	NGS_TYPE *Null;
 	NGS_TYPE *Bool;
 	NGS_TYPE *Int;

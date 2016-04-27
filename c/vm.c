@@ -961,8 +961,10 @@ void register_global_func(VM *vm, int pass_extra_params, char *name, void *func_
 	o->params.n_params_required = argc;
 	o->params.n_params_optional = 0; /* currently none of builtins uses optional parameters */
 	o->pass_extra_params = pass_extra_params;
+	vm->last_doc_hash = make_hash(4);
 	o->attrs = make_hash(8);
 		set_hash_key(o->attrs, make_string("name"), make_string(name));
+		set_hash_key(o->attrs, make_string("doc"), vm->last_doc_hash);
 	if(argc) {
 		argv = NGS_MALLOC(argc * sizeof(VALUE) * 2);
 		assert(argv);
@@ -990,6 +992,11 @@ void register_global_func(VM *vm, int pass_extra_params, char *name, void *func_
 		return;
 	}
 	assert(0 == "register_global_func fail");
+}
+
+// TODO: consider array values (for sepatate lines or list items)
+void _doc(VM *vm, char *k, char *v) {
+	set_hash_key(vm->last_doc_hash, make_string(k), make_string(v));
 }
 
 void set_global(VM *vm, const char *name, VALUE v) {
@@ -1110,7 +1117,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// Native methods
 	register_global_func(vm, 0, "attrs",    &native_attrs_nm,          1, "m",      vm->NativeMethod);
+	_doc(vm, "", "Gets native method attribues. Usually a Hash with name and doc keys.");
 	register_global_func(vm, 0, "attrs",    &native_attrs_nm_any,      2, "m",      vm->NativeMethod, "datum", vm->Any);
+	_doc(vm, "", "Sets native method attribues. Should be a Hash.");
 	register_global_func(vm, 0, "params",   &native_params_nm,         1, "m",      vm->NativeMethod);
 
 	// Closure
@@ -1141,15 +1150,19 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// Type
 	register_global_func(vm, 0, "Type",     &native_type_str          ,1, "name",   vm->Str);
 	register_global_func(vm, 0, "typeof",   &native_typeof_any        ,1, "x",      vm->Any);
+	_doc(vm, "", "Returns type of the given instance");
+	_doc(vm, "x", "Instance (an object)");
 
 	// low level file operations
 	register_global_func(vm, 0, "c_dup2",   &native_c_dup2_int_int,    2, "oldfd",    vm->Int, "newfd", vm->Int);
 	register_global_func(vm, 0, "c_open",   &native_c_open_str_str,    2, "pathname", vm->Str, "flags", vm->Str);
+	_doc(vm, "flags", "r - O_RDONLY; w - O_WRONLY | O_CREAT | O_TRUNC; a - O_WRONLY | O_CREAT | O_APPEND");
 	register_global_func(vm, 0, "c_close",  &native_c_close_int,       1, "fd",       vm->Int);
 	register_global_func(vm, 0, "c_read",   &native_c_read_int_int,    2, "fd",       vm->Int, "count", vm->Int);
 	register_global_func(vm, 0, "c_write",  &native_c_write_int_str,   2, "fd",       vm->Int, "s",     vm->Str);
 	register_global_func(vm, 0, "c_dup2",   &native_c_dup2,            2, "oldfd",    vm->Int, "newfd", vm->Int);
 	register_global_func(vm, 1, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
+	_doc(vm, "whence", "One of: set, cur, end");
 	register_global_func(vm, 0, "c_isatty", &native_c_isatty,           1,"fd",       vm->Int);
 
 	// low level misc
