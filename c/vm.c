@@ -683,6 +683,22 @@ METHOD_RESULT native_encode_json_obj EXT_METHOD_PARAMS {
 METHOD_RESULT native_backtrace EXT_METHOD_PARAMS { (void) argv; METHOD_RETURN(make_backtrace(vm, ctx)); }
 METHOD_RESULT native_resolve_ip EXT_METHOD_PARAMS { (void) ctx; METHOD_RETURN(resolve_ip(vm, GET_INT(argv[0]))); }
 
+METHOD_RESULT native_globals EXT_METHOD_PARAMS {
+	VALUE ret;
+	size_t i;
+	(void) ctx;
+	(void) argv;
+
+	ret = make_hash(256);
+	for(i=0; i<vm->globals_len; i++) {
+		if(IS_NOT_UNDEF(vm->globals[i])) {
+			set_hash_key(ret, make_string(vm->globals_names[i]), vm->globals[i]);
+		}
+	}
+
+	METHOD_RETURN(ret);
+}
+
 METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_normal_type(argv[0])); }
 METHOD_RESULT native_typeof_any METHOD_PARAMS {
 	if(IS_NORMAL_TYPE_INSTANCE(argv[0])) {
@@ -1119,6 +1135,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, "encode_json",&native_encode_json_obj, 1, "obj", vm->Any);
 	register_global_func(vm, 1, "Backtrace",&native_backtrace,         0);
 	register_global_func(vm, 1, "resolve_ip",&native_resolve_ip,       1, "ip", vm->Int);
+	register_global_func(vm, 1, "globals",  &native_globals,           0);
 
 	// hash
 	register_global_func(vm, 0, "in",       &native_in_any_hash,       2, "x",   vm->Any, "h", vm->Hash);

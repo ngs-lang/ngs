@@ -19,8 +19,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* documentation [in progress]
 		* Add enough introspection to implement the following points:
-			* list of methods & with arguments types
-			* each method documentation
+			* list of methods arguments and their types
+		* Create auto-generated methods documentation infrastructure
 
 	* match, ematch - some way to get the match object?
 

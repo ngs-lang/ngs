@@ -1020,6 +1020,7 @@ TEST 1.1 < 1.11
 TEST 1.1 + 1.1 == 2.2
 TEST F uniq_doc_func() doc {"a": 1} { "some body" }; uniq_doc_func[0].attrs()['doc'] == {"a": 1}
 TEST F uniq_attrs_func() "some body"; uniq_attrs_func[0].attrs({"a": 1}); uniq_attrs_func[0].attrs() == {"a": 1}
+TEST "config" in globals()
 
 # === Exceptions tests ===========================
 TEST h={}; try h["a"] catch(e:KeyNotFound) true
