@@ -83,8 +83,12 @@ void print_exception(VM *vm, VALUE result) {
 					H(last_line, resolved_ip, "last_line");
 					H(last_column, resolved_ip, "last_column");
 					closure_entry = get_hash_key(frame, make_string("closure"));
-					if(closure_entry && IS_CLOSURE(closure_entry->val) && (!IS_NULL(CLOSURE_OBJ_NAME(closure_entry->val)))) {
-						closure_name = obj_to_cstring(CLOSURE_OBJ_NAME(closure_entry->val));
+					if(closure_entry && IS_CLOSURE(closure_entry->val) && (IS_HASH(CLOSURE_OBJ_ATTRS(closure_entry->val)))) {
+						HASH_OBJECT_ENTRY *name_entry;
+						name_entry = get_hash_key(CLOSURE_OBJ_ATTRS(closure_entry->val), make_string("name"));
+						if(name_entry) {
+							closure_name = obj_to_cstring(name_entry->val);
+						}
 					}
 					// TODO: fix types
 					printf("[Frame #%u] %s:%d:%d - %d:%d [in %s]\n", i, obj_to_cstring(file), (int) GET_INT(first_line), (int) GET_INT(first_column), (int) GET_INT(last_line), (int) GET_INT(last_column), closure_name);

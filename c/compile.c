@@ -192,9 +192,9 @@ void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 	ast_node *ptr, *ptr2;
 	switch(node->type) {
 		case FUNC_NODE:
-			if(node->first_child->next_sibling->next_sibling) {
+			if(node->first_child->next_sibling->next_sibling->next_sibling) {
 				// Function has a name
-				register_local_var(ctx, node->first_child->next_sibling->next_sibling->name);
+				register_local_var(ctx, node->first_child->next_sibling->next_sibling->next_sibling->name);
 			}
 			return;
 		case LOCAL_NODE:
@@ -567,11 +567,16 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			DATA_N_UPVAR_INDEX(*buf, n_uplevels);
 			DATA_INT(*buf, params_flags);
 
-			if(node->first_child->next_sibling->next_sibling) {
+			// Doc
+			compile_main_section(ctx, node->first_child->next_sibling->next_sibling, buf, idx, allocated, NEED_RESULT);
+			OPCODE(*buf, OP_SET_CLOSURE_DOC);
+
+			// Name
+			if(node->first_child->next_sibling->next_sibling->next_sibling) {
 				// Function has a name
-				compile_identifier(ctx, buf, idx, node->first_child->next_sibling->next_sibling->name, OP_DEF_LOCAL_FUNC, OP_DEF_UPVAR_FUNC, OP_DEF_GLOBAL_FUNC);
+				compile_identifier(ctx, buf, idx, node->first_child->next_sibling->next_sibling->next_sibling->name, OP_DEF_LOCAL_FUNC, OP_DEF_UPVAR_FUNC, OP_DEF_GLOBAL_FUNC);
 				OPCODE(*buf, OP_SET_CLOSURE_NAME);
-				L_STR(*buf, node->first_child->next_sibling->next_sibling->name);
+				L_STR(*buf, node->first_child->next_sibling->next_sibling->next_sibling->name);
 			}
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;

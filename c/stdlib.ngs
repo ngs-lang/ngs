@@ -9,6 +9,11 @@ TEST identity(10) == 10
 # TODO: Add more info about the newly created function - useful for debugging
 #       See https://docs.python.org/2/library/functools.html#partial-objects
 F partial(f:Fun, *bind_args)
+	doc {
+		"": "Returns partially-applied function"
+		"f": "The base function"
+		"bind_args": "The arguments to bind the function to"
+	}
 	F(*args) f(*bind_args, *args)
 
 TEST p = partial((-), 10); p(7) == 3
@@ -1013,6 +1018,8 @@ TEST F f(a=7) a; f(**{"a": 10}) == 10
 TEST F construct(x:Int) F() x; f1=construct(1); f2=construct(2); (f1==f1) and (f1!=f2)
 TEST 1.1 < 1.11
 TEST 1.1 + 1.1 == 2.2
+TEST F uniq_doc_func() doc {"a": 1} { "some body" }; uniq_doc_func[0].attrs()['doc'] == {"a": 1}
+TEST F uniq_attrs_func() "some body"; uniq_attrs_func[0].attrs({"a": 1}); uniq_attrs_func[0].attrs() == {"a": 1}
 
 # === Exceptions tests ===========================
 TEST h={}; try h["a"] catch(e:KeyNotFound) true

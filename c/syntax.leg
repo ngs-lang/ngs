@@ -78,15 +78,17 @@ void append_ast_node_child(ast_node *target, ast_node *child) {
 	target->last_child = child;
 }
 
-ast_node *wrap_in_func(ast_node *node, int location[4], int argc, ...) {
+ast_node *wrap_in_func(ast_node *node, int location[4], char *docstring, int argc, ...) {
 	int i;
 	va_list varargs;
 	ast_node *p;
 	MAKE_NODE(func, FUNC_NODE);
 	MAKE_NODE(params, PARAMS_NODE);
+	MAKE_STRING_NODE(doc, docstring);
 
 	func->first_child = params;
 	params->next_sibling = node;
+	node->next_sibling = doc;
 
 	va_start(varargs, argc);
 	for(i=0, p=NULL; i<argc; i++) {
@@ -472,11 +474,12 @@ assignment =
 	}
 
 function-definition =
-	"F" name:function-definition-name space? "(" space? params:function-definition-parameters space? ")" space? body:code-block {
+	"F" name:function-definition-name space? "(" space? params:function-definition-parameters space? ")" doc:function-definition-optional-doc space? body:code-block {
 		MAKE_NODE(ret, FUNC_NODE);
 		ret->first_child = params;
 		params->next_sibling = body;
-		body->next_sibling = name;
+		body->next_sibling = doc;
+		doc->next_sibling = name;
 		$$ = ret;
 	}
 
@@ -565,6 +568,11 @@ function-definition-default-value =
 	{
 		$$ = NULL;
 	}
+
+function-definition-optional-doc =
+	space? "doc" space? e:expression { $$ = e; }
+	|
+	{ MAKE_NODE(ret, NULL_NODE); $$ = ret; }
 
 function-call =
 	f:basic-expression inline_space? args:function-call-arguments {
@@ -929,7 +937,7 @@ collector = "collector" init:collector-init space c:code-block {
 			MAKE_IDENTIFIER_NODE(collector_identifier, "collector");
 			MAKE_NODE(args, ARGS_NODE);
 				MAKE_REQ_ARG_NODE(a1, init);
-				MAKE_REQ_ARG_NODE(a2, wrap_in_func(c, location, 1, "collect", "Any"));
+				MAKE_REQ_ARG_NODE(a2, wrap_in_func(c, location, "Wrapping function for collector expression", 1, "collect", "Any"));
 				a1->next_sibling = a2;
 				args->first_child = a1;
 			ret->first_child = collector_identifier;
@@ -954,6 +962,7 @@ guard = "guard" space c:code-block {
 try-catch = "try" space acc:try-catch-node c:code-block { append_ast_node_child(acc, $$); }
 	(space? "catch" space? "(" space? params:function-definition-parameters space? ")" space? body:code-block {
 		MAKE_NODE(ret, FUNC_NODE);
+		MAKE_STRING_NODE(doc, "Generated catch() function");
 		ret->first_child = params;
 		params->next_sibling = body;
 		append_ast_node_child(acc, ret);
@@ -968,7 +977,8 @@ try-catch = "try" space acc:try-catch-node c:code-block { append_ast_node_child(
 		}
 		snprintf(name_buf, sizeof(name_buf)-1, "<catch-clause-%d>", n-1);
 		MAKE_IDENTIFIER_NODE(catch_identifier, name_buf);
-		body->next_sibling = catch_identifier;
+		body->next_sibling = doc;
+		doc->next_sibling = catch_identifier;
 		// --- Name the catch clause - end ---
 	})*
 	{

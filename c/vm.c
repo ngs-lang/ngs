@@ -85,10 +85,11 @@ char *opcodes_names[] = {
 	/* 46 */ "THROW",
 	/* 47 */ "MAKE_CMD",
 	/* 48 */ "SET_CLOSURE_NAME",
-	/* 49 */ "HASH_SET",
-	/* 50 */ "HASH_UPDATE",
-	/* 51 */ "PUSH_KWARGS_MARKER",
-	/* 52 */ "MAKE_REDIR",
+	/* 49 */ "SET_CLOSURE_DOC",
+	/* 50 */ "HASH_SET",
+	/* 51 */ "HASH_UPDATE",
+	/* 52 */ "PUSH_KWARGS_MARKER",
+	/* 53 */ "MAKE_REDIR",
 };
 
 
@@ -833,6 +834,15 @@ METHOD_RESULT native_same_any_any METHOD_PARAMS {
 	METHOD_RETURN(MAKE_BOOL(argv[0].ptr == argv[1].ptr));
 }
 
+METHOD_RESULT native_attrs_closure METHOD_PARAMS {
+	METHOD_RETURN(CLOSURE_OBJ_ATTRS(argv[0]));
+}
+
+METHOD_RESULT native_attrs_closure_any METHOD_PARAMS {
+	CLOSURE_OBJ_ATTRS(argv[0]) = argv[1];
+	METHOD_RETURN(argv[1]);
+}
+
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
 	GLOBAL_VAR_INDEX index;
@@ -1013,6 +1023,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// Closure
 	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->Closure, "b", vm->Closure);
+	register_global_func(vm, 0, "attrs",    &native_attrs_closure,     1, "c",      vm->Closure);
+	register_global_func(vm, 0, "attrs",    &native_attrs_closure_any, 2, "c",      vm->Closure, "datum", vm->Any);
 
 	// Real
 	register_global_func(vm, 0, "+",        &native_plus_real_real,      2, "a",   vm->Real, "b", vm->Real);
@@ -1996,7 +2008,20 @@ do_jump:
 							assert(IS_CLOSURE(TOP));
 							v = make_string_of_len(&vm->bytecode[ip+1], vm->bytecode[ip]);
 							ip += 1 + vm->bytecode[ip];
-							CLOSURE_OBJ_NAME(TOP) = v;
+							// CLOSURE_OBJ_NAME(TOP) = v;
+							if(!IS_HASH(CLOSURE_OBJ_ATTRS(TOP))) {
+								goto main_loop;
+							}
+							set_hash_key(CLOSURE_OBJ_ATTRS(TOP), make_string("name"), v);
+							goto main_loop;
+		case OP_SET_CLOSURE_DOC:
+							EXPECT_STACK_DEPTH(2);
+							assert(IS_CLOSURE(SECOND));
+							if(!IS_HASH(CLOSURE_OBJ_ATTRS(SECOND))) {
+								goto main_loop;
+							}
+							set_hash_key(CLOSURE_OBJ_ATTRS(SECOND), make_string("doc"), FIRST);
+							REMOVE_TOP_NOCHECK;
 							goto main_loop;
 		case OP_HASH_SET:
 							EXPECT_STACK_DEPTH(3);

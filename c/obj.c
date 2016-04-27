@@ -47,8 +47,7 @@ static void _dump(VALUE v, int level) {
 	}
 
 	if(IS_CLOSURE(v)) {
-		printf("%*s* closure name=%s ip=%zu locals_including_params=%d req_params=%d opt_params=%d n_uplevels=%d params_flags=%d\n", level << 1, "",
-			IS_NULL(CLOSURE_OBJ_NAME(v)) ? "(none)" : obj_to_cstring(CLOSURE_OBJ_NAME(v)),
+		printf("%*s* ip=%zu locals_including_params=%d req_params=%d opt_params=%d n_uplevels=%d params_flags=%d\n", level << 1, "",
 			CLOSURE_OBJ_IP(v),
 			CLOSURE_OBJ_N_LOCALS(v),
 			CLOSURE_OBJ_N_REQ_PAR(v),
@@ -56,6 +55,8 @@ static void _dump(VALUE v, int level) {
 			CLOSURE_OBJ_N_UPLEVELS(v),
 			CLOSURE_OBJ_PARAMS_FLAGS(v)
 		);
+		printf("%*s* closure attributes\n", (level+1) << 1, "");
+		_dump(CLOSURE_OBJ_ATTRS(v), level+2);
 		for(i=0; i<CLOSURE_OBJ_N_REQ_PAR(v); i++) {
 			printf("%*s* required parameter %zu (name and type follow)\n", (level+1) << 1, "", i+1);
 			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+0], level+2);
@@ -615,7 +616,7 @@ VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX 
 	assert(c->params.params);
 	memcpy(c->params.params, params, params_size);
 	c->n_uplevels = n_uplevels;
-	c->name = MAKE_NULL;
+	c->attrs = make_hash(8);
 
 	SET_OBJ(v, c);
 
