@@ -61,16 +61,23 @@
 				local header_name = escape_markdown("${name}(${params_strings.join(', ')})")
 				echo("## $header_name")
 				if doc_has_key(doc, "") {
+					echo("### Description")
 					print_doc_key(doc, "    ", "")
-					echo("    ")
 				}
+				# if method_implementation.params().any(F(param) {doc_has_key(doc, param.name)}) {
+				# 	echo("### Parameters")
+				# }
 				method_implementation.params().each(F(param) {
 					local param_string = param_to_str(param)
 					if doc_has_key(doc, param.name) {
-						echo("    ${param_string}")
-						print_doc_key(doc, "        ", param.name)
+						echo("### Parameter ${param_string}")
+						print_doc_key(doc, "    ", param.name)
 					}
 				})
+				if doc_has_key(doc, '%RET') {
+					echo("### Returns")
+					print_doc_key(doc, "    ", '%RET')
+				}
 			})
 		}
 

@@ -1,6 +1,6 @@
 # === Exception ==================================
 
-F init(e:Exception) {
+F init(e:Exception) doc {'%RET': 'Exception with .backtrace attribute'} {
 	# Last entry in backtrace would be this init() invocation
 	local b = Backtrace()
 	pop(b.frames)
@@ -8,14 +8,14 @@ F init(e:Exception) {
 }
 
 
-F init(e:Exception, s:Str) {
+F init(e:Exception, s:Str) doc {'%RET': 'Exception with .backtrace and .info', 's': 'Goes into .info'} {
 	# Last entry in backtrace would be this Exception() invocation
 	init(e)
 	e.info = s
 	e.backtrace.frames.pop()
 }
 
-F init(e:Exception, cause:Exception) {
+F init(e:Exception, cause:Exception) doc {'%RET': 'Exception with .backtrace and .cause'} {
 	# Last entry in backtrace would be this Exception() invocation
 	init(e)
 	e.cause = cause
@@ -36,9 +36,9 @@ TEST Exception(Exception()).cause is Exception
 # === bootstrap ==================================
 
 # *** Convert values returned by the program (or -e/-E expression) to exit codes ***
-F to_exit_code(x) 0
-F to_exit_code(b:Bool) if b 0 1
-F to_exit_code(n:Int) n
+F to_exit_code(x) doc {'%RET': 'Always 0'} 0
+F to_exit_code(b:Bool) doc {'%RET': '0 for true, 1 for false '} if b 0 1
+F to_exit_code(n:Int) doc {'%RET': 'n'} n
 
 
 # *** Define bootstrap_debug function ***
@@ -52,7 +52,7 @@ F bootstrap_find_ngs_dir() ENV.get('NGS_DIR', '/usr/share/ngs')
 
 # *** fetch - abstraction above low level c io primitives ***
 # TODO: Better exceptions
-F fetch(fname) {
+F fetch(fname:Str) doc {'': 'Fetches whole file', 'fname': 'File name to fetch', '%RET': 'Whole file as a string'} {
 	try {
 		local fd, file_len, data
 		fd = c_open(fname, 'r')
@@ -70,7 +70,7 @@ F fetch(fname) {
 	}
 }
 
-F require(fname) {
+F require(fname:Str) doc {'': 'Runs the given file', '%RET': 'Typically whatever the last expression in the file evaluates to'} {
 	try {
 		local program_text = fetch(fname)
 		local program_bytecode = compile(program_text, fname)
@@ -84,7 +84,7 @@ F require(fname) {
 	}
 }
 
-F bootstrap() {
+F bootstrap() doc {'': 'Main entry point. Executed on NGS boot.'} {
 	local do_load_stdlib = true
 	local code_to_run = null
 	local fname

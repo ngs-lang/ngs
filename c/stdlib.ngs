@@ -21,9 +21,9 @@ TEST identity(10) == 10
 #       See https://docs.python.org/2/library/functools.html#partial-objects
 F partial(f:Fun, *bind_args)
 	doc {
-		"": "Returns partially-applied function"
-		"f": "The base function"
-		"bind_args": "The arguments to bind the function to"
+		'': 'Returns partially-applied function'
+		'f': 'The base function'
+		'BUG IN DOC, DO NOT USE YET / bind_args': 'The arguments to bind the function to'
 	}
 	F(*args) f(*bind_args, *args)
 
@@ -31,6 +31,7 @@ TEST p = partial((-), 10); p(7) == 3
 
 
 F partial_tail(f:Fun, *bind_args)
+	doc {'': 'Same as partial() but the bound arguments are last ones'}
 	F(*args) f(*args, *bind_args)
 
 TEST p = partial_tail((-), 10); p(7) == -3
