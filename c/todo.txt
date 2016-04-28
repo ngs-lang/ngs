@@ -27,6 +27,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Document that innner functions are declared local
 
+		* Types documentation
+
 	* match, ematch - some way to get the match object?
 
 		For example when Regex is implmeneted in the code

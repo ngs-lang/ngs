@@ -1,69 +1,89 @@
 #!/usr/bin/env ngs
 {
-	# TODO: consider introducing Param type
-	# TODO: improve escaping
-	F escape_markdown(s:Str) s
-	F escape_markdown(s:Str) {
-		guard s == '``'
-		'```` `` ````'
-	}
-	F escape_markdown(s:Str) {
-		guard s == '````'
-		'```````` ```` ````````'
-	}
+	# Autoload
+	Table
+	Stats
 
-	F param_to_str(p:Hash) {
-		ret = "${p.name}:${p.type.name}"
-		if 'splat' in p
-			ret = "${p.splat}${ret}"
-		if 'dflt' in p
-			ret = "${ret}=${p.dflt}"
-		ret
-	}
+	# Use anonymous function to exclude methods in this file
+	# The inner functions are local
+	F(){
 
-	F print_doc_val(v:Str, pfx:Str) {
-		echo("${pfx}${v}")
-	}
 
-	F print_doc_key(doc:Hash, pfx:Str, k:Str) {
-		econd {
-			k not in doc
-				null
-			doc[k] is Arr
-				doc[k].each(print_doc_val, pfx)
-			doc[k] is Str
-				print_doc_val(doc[k], pfx)
+		# TODO: consider introducing Param type
+		# TODO: improve escaping
+		F escape_markdown(s:Str) "`$s`"
+		F escape_markdown(s:Str) {
+			guard s == '``'
+			'```` `` ````'
 		}
-	}
+		F escape_markdown(s:Str) {
+			guard s == '````'
+			'```````` ```` ````````'
+		}
 
-	F print_doc_key(doc:Null, pfx:Str, k:Str) null
+		F param_to_str(p:Hash) {
+			ret = "${p.name}:${p.type.name}"
+			if 'splat' in p
+				ret = "${p.splat}${ret}"
+			if 'dflt' in p
+				ret = "${ret}=${p.dflt}"
+			ret
+		}
 
-	F print_method_doc(name:Str, value) {
-		guard value is Arr
-		guard value.all((is), Fun)
-		not(value) returns null
-		echo("## ${name.escape_markdown()}")
-		value.each(F(method_implementation) {
-			local doc = method_implementation.attrs().doc
-			local params_strings = method_implementation.params().map(param_to_str)
-			echo("### ${name.escape_markdown()}(${params_strings.join(', ')})")
-			print_doc_key(doc, "    ", "")
-			method_implementation.params().each(F(param) {
-				local param_string = param_to_str(param)
-				echo("    ${param_string}")
-				print_doc_key(doc, "        ", param.name)
+		F print_doc_val(v:Str, pfx:Str) {
+			echo("${pfx}${v}")
+		}
+
+		F doc_has_key(doc:Hash, k:Str) k in doc
+		F doc_has_key(doc:Null, k:Str) false
+
+		F print_doc_key(doc:Hash, pfx:Str, k:Str) {
+			econd {
+				k not in doc
+					null
+				doc[k] is Arr
+					doc[k].each(print_doc_val, pfx)
+				doc[k] is Str
+					print_doc_val(doc[k], pfx)
+			}
+		}
+
+		F print_doc_key(doc:Null, pfx:Str, k:Str) null
+
+		F print_method_doc(name:Str, value) {
+			guard value is Arr
+			guard value.all((is), Fun)
+			not(value) returns null
+			echo("# ${name.escape_markdown()}")
+			value.each(F(method_implementation) {
+				local doc = method_implementation.attrs().doc
+				local params_strings = method_implementation.params().map(param_to_str)
+				local header_name = escape_markdown("${name}(${params_strings.join(', ')})")
+				echo("## $header_name")
+				if doc_has_key(doc, "") {
+					print_doc_key(doc, "    ", "")
+					echo("    ")
+				}
+				method_implementation.params().each(F(param) {
+					local param_string = param_to_str(param)
+					if doc_has_key(doc, param.name) {
+						echo("    ${param_string}")
+						print_doc_key(doc, "        ", param.name)
+					}
+				})
 			})
-		})
-	}
-
-	globals().each(F(name, value) {
-		cond {
-			value is Arr
-				print_method_doc(name, value)
-			value is BasicType
-				print_method_doc(name, value.constructors)
-			value is NormalType
-				print_method_doc(name, value.constructors[1..null])
 		}
-	})
+
+		globals().each(F(name, value) {
+			cond {
+				value is Arr
+					print_method_doc(name, value)
+				value is BasicType
+					print_method_doc(name, value.constructors)
+				value is NormalType
+					print_method_doc(name, value.constructors[1..null])
+			}
+		})
+
+	}()
 }
