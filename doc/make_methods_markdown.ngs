@@ -81,7 +81,11 @@
 			})
 		}
 
-		globals().each(F(name, value) {
+		local g = globals()
+		g.keys().sort(lte).each(F(name) {
+			value = g[name]
+			echo(name)
+			return null
 			cond {
 				value is Arr
 					print_method_doc(name, value)

@@ -441,6 +441,37 @@ F echo(x) {
 	echo(Str(x))
 }
 
+# Can be more efficent I guess
+F merge_sorted(a:Arr, b:Arr, lte:Fun) {
+	local al = a.len(), bl = b.len()
+	local ai = 0, bi = 0
+	collector
+		while ai < al or bi < bl
+			econd {
+				ai >= al { collect(b[bi]); bi = bi + 1 }
+				bi >= bl { collect(a[ai]); ai = ai + 1 }
+				lte(a[ai], b[bi]) { collect(a[ai]); ai = ai + 1 }
+				true { collect(b[bi]); bi = bi + 1 }
+			}
+}
+
+TEST merge_sorted([1,3,10], [0, 7], (<=)) == [0, 1, 3, 7, 10]
+
+F sort(a:Arr) sort(a, (<=))
+
+# Current implemetation: https://en.wikipedia.org/wiki/Merge_sort
+# TODO: replacte with Timsort https://en.wikipedia.org/wiki/Timsort
+F sort(a:Arr, lte:Fun) {
+	# XXX: Not copied!
+	a.len() <= 1 returns a
+	local mid = a.len() / 2
+	local l = a[0..mid], r = a[mid..null]
+	merge_sorted(sort(l, lte), sort(r, lte), lte)
+}
+
+TEST sort([0,5,3,-1], (<=)) == [-1, 0, 3, 5]
+
+
 # === Hash =======================================
 
 
@@ -652,6 +683,11 @@ F starts_with(haystack:Str, needle:Str) {
 
 TEST "abcd".starts_with("ab")
 TEST "ab".starts_with("abcd") == false
+
+
+F lte(a:Str, b:Str)
+	doc {'': 'Case-insensitive LessThan or Equal comparison for strings'}
+	c_strcasecmp(a, b) <= 0
 
 
 # === RegExp =====================================

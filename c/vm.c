@@ -961,6 +961,11 @@ METHOD_RESULT native_params_nm METHOD_PARAMS {
 }
 #undef callable
 
+// TODO: Something more efficient than obj_to_cstring. Maybe use strncasecmp?
+METHOD_RESULT native_c_strcasecmp METHOD_PARAMS {
+	METHOD_RETURN(MAKE_INT(strcasecmp(obj_to_cstring(argv[0]), obj_to_cstring(argv[1]))));
+}
+
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
 	GLOBAL_VAR_INDEX index;
@@ -1212,6 +1217,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "C_WTERMSIG", &native_C_WTERMSIG,      1, "status",   vm->Int);
 
 	register_global_func(vm, 0, "get_c_errno", &native_get_c_errno,    0);
+
+	register_global_func(vm, 0, "c_strcasecmp", &native_c_strcasecmp,  2, "a",   vm->Str,  "b", vm->Str);
 
 	// boolean
 	register_global_func(vm, 0, "==",       &native_eq_bool_bool,      2, "a",   vm->Bool, "b", vm->Bool);
