@@ -1,3 +1,14 @@
+# === Exceptions ===
+
+F init(e:IndexNotFound, message:Str, container, key) {
+	init(e)
+	e.message = message
+	e.container = container
+	e.key = key
+	e.backtrace.frames.pop()
+}
+
+
 # === Misc functional ============================
 
 
@@ -65,6 +76,8 @@ F impl_not_found_hook(callable:Fun, *args) {
 	callable(*new_args)
 }
 
+F Str(t:Type) doc {"": "Unfinished"} "<Type ${t.name}>"
+
 # === auto-load ==================================
 
 F global_not_found_hook(name:Str) {
@@ -73,25 +86,29 @@ F global_not_found_hook(name:Str) {
 
 # === Range ======================================
 
-F stdlib_mkrange(t:Type, start, end) {
-	r = t()
+F init(r:Range, start, end) {
 	r.start = start
 	r.end = end
-	r
 }
 
-F ..(start, end)  stdlib_mkrange(ExclusiveRange, start, end)
-F ...(start, end) stdlib_mkrange(InclusiveRange, start, end)
+F ..(start, end)  ExclusiveRange(start, end)
+F ...(start, end) InclusiveRange(start, end)
 
 F each(r:Range, cb:Fun, *args) {
 	local step, cmp
-	if r.start <= r.end {
-		step = 1
-		cmp = if r is ExclusiveRange (<) (<=)
-	} else {
-		step = -1
-		cmp = if r is ExclusiveRange (>) (>=)
-
+	econd {
+		r.end is Null {
+			step = 1
+			cmp = F(a,b) true
+		}
+		r.start <= r.end {
+			step = 1
+			cmp = if r is ExclusiveRange (<) (<=)
+		}
+		r.start > r.end {
+			step = -1
+			cmp = if r is ExclusiveRange (>) (>=)
+		}
 	}
 	for(i=r.start; cmp(i, r.end); i=i+step)
 		cb(i, *args)
@@ -120,6 +137,9 @@ F first(r:Range, predicate:Fun, *args) {
 }
 
 TEST (10..20).first(F(x) x % 3 == 0) == 12
+
+F Str(r:ExclusiveRange) "<InclusiveRange ${r.start}..${r.end}>"
+F Str(r:InclusiveRange) "<InclusiveRange ${r.start}...${r.end}>"
 
 # === Syntactic sugar ============================
 
@@ -350,6 +370,42 @@ F '[]'(arr:Arr, indexes:Arr)
 		indexes.each(F(idx) collect(arr[idx]))
 
 TEST [10,20,30,40][[0,3]] == [10, 40]
+
+F '[]'(arr:Arr, range:Range) {
+	local start = econd {
+		range.start is Null
+			0
+		range.start > arr.len()
+			throw IndexNotFound("Range start ${range.start} is too high for array of length ${arr.len()}", arr, range.end)
+		range.start >= 0
+			range.start
+		range.start < 0
+			throw IndexNotFound("Range start ${range.start} is too low", arr, range.start)
+	}
+	local end = econd {
+		range.end is Null
+			arr.len()
+		range.end < start
+			throw IndexNotFound("Range end ${range.end} is lower than selection start ${start}", arr, range.end)
+		not(range.end < arr.len())
+			throw IndexNotFound("Range end ${range.end} is too high for array of length ${arr.len()}", arr, range.end)
+		range is InclusiveRange
+			range.end + 1
+		range is ExclusiveRange
+			range.end
+	}
+	collector
+		(start..end).each(F(idx) collect(arr[idx]))
+}
+
+TEST [10,20,30,40][null..2] == [10,20]
+TEST [10,20,30,40][1..2] == [20]
+TEST (try [10,20,30,40][-1..2] catch(e:IndexNotFound) "OK") == "OK"
+TEST [10,20,30,40][2..null] == [30, 40]
+TEST (try [10,20,30,40][2..1] catch(e:IndexNotFound) "OK") == "OK"
+TEST (try [10,20,30,40][2..10] catch(e:IndexNotFound) "OK") == "OK"
+TEST [10,20,30,40][1...2] == [20, 30]
+TEST [10,20,30,40][4..null] == []
 
 # --- Misc ---
 
@@ -934,9 +990,9 @@ F ````(c:Command) {
 
 F parse(s:Str) parse(s, {})
 
-F parse(s:Str, hints:Hash) s
+F parse(s:Str, hints:Hash) doc {"": "Returns the string as is"} s
 
-F parse(s:Str, hints:Hash) {
+F parse(s:Str, hints:Hash) doc {"": "Parses JSON, continues with other implementations if fails."} {
 	local ret
 	try
 		ret = decode_json(s)

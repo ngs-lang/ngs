@@ -17,9 +17,13 @@ Note that this started as internal document so things here are unformed, not fin
 
 [todo by priority]
 
+	* fix
+		make ngs && ./ngs -e '([10,20,30,40][1..3]).dump()'
+
 	* documentation [in progress]
 
 		* Create methods' auto-generated documentation infrastructure
+		* Make auto-generated documentation alphabetically sorted
 
 		* Document that innner functions are declared local
 

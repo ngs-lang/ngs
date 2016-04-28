@@ -729,13 +729,22 @@ METHOD_RESULT native_set_attr_nti_str_any METHOD_PARAMS { set_normal_type_instan
 METHOD_RESULT native_inherit_nt_nt METHOD_PARAMS { add_normal_type_inheritance(argv[0], argv[1]); METHOD_RETURN(argv[0]); }
 
 // Consider moving to obj.c
-METHOD_RESULT native_join_arr_str METHOD_PARAMS {
+// Maybe return METHOD_ARGS_MISMATCH insted of InvalidArgument?
+METHOD_RESULT native_join_arr_str EXT_METHOD_PARAMS {
 	size_t i, len=OBJ_LEN(argv[0]), dst_len, l, sep_l;
 	char *p, *sep_p;
+	(void) ctx;
 	if(!len) {
 		METHOD_RETURN(make_string(""));
 	}
 	for(i=0, dst_len=0; i<len; i++) {
+		if(!IS_STRING(ARRAY_ITEMS(argv[0])[i])) {
+			VALUE exc;
+			exc = make_normal_type_instance(vm->InvalidArgument);
+			set_normal_type_instance_attribute(exc, make_string("message"), make_string("join - array must contains only strings"));
+			set_normal_type_instance_attribute(exc, make_string("given"), ARRAY_ITEMS(argv[0])[i]);
+			THROW_EXCEPTION_INSTANCE(exc);
+		}
 		dst_len += OBJ_LEN(ARRAY_ITEMS(argv[0])[i]);
 	}
 	dst_len += (OBJ_LEN(argv[1]) * (len-1));
@@ -782,6 +791,27 @@ METHOD_RESULT native_c_waitpid METHOD_PARAMS {
 	METHOD_RETURN(ret);
 }
 
+// TODO: dedup native_get_attr_bt_str / native_get_attr_nt_str
+METHOD_RESULT native_get_attr_bt_str EXT_METHOD_PARAMS {
+	VALUE exc;
+	char *attr = obj_to_cstring(argv[1]);
+	(void) ctx;
+	if(!strcmp(attr, "constructors")) {
+		// dump_titled("constructors", NGS_TYPE_CONSTRUCTORS(argv[0]));
+		METHOD_RETURN(NGS_TYPE_CONSTRUCTORS(argv[0]));
+	}
+	if(!strcmp(attr, "name")) {
+		// dump_titled("constructors", NGS_TYPE_CONSTRUCTORS(argv[0]));
+		METHOD_RETURN(NGS_TYPE_NAME(argv[0]));
+	}
+
+	exc = make_normal_type_instance(vm->AttrNotFound);
+	set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
+	set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+	*result = exc;
+	return METHOD_EXCEPTION;
+}
+
 METHOD_RESULT native_get_attr_nt_str EXT_METHOD_PARAMS {
 	VALUE exc;
 	char *attr = obj_to_cstring(argv[1]);
@@ -789,6 +819,10 @@ METHOD_RESULT native_get_attr_nt_str EXT_METHOD_PARAMS {
 	if(!strcmp(attr, "constructors")) {
 		// dump_titled("constructors", NGS_TYPE_CONSTRUCTORS(argv[0]));
 		METHOD_RETURN(NGS_TYPE_CONSTRUCTORS(argv[0]));
+	}
+	if(!strcmp(attr, "name")) {
+		// dump_titled("constructors", NGS_TYPE_CONSTRUCTORS(argv[0]));
+		METHOD_RETURN(NGS_TYPE_NAME(argv[0]));
 	}
 
 	exc = make_normal_type_instance(vm->AttrNotFound);
@@ -1141,6 +1175,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "Str",      &native_Str_real,            1, "r",   vm->Real);
 	register_global_func(vm, 0, "Real",     &native_Real_int,            1, "n",   vm->Int);
 
+	// BasicType
+	register_global_func(vm, 1, ".",        &native_get_attr_bt_str,       2, "obj", vm->BasicType,          "attr", vm->Str);
+
 	// NormalType
 	register_global_func(vm, 1, ".",        &native_get_attr_nt_str,       2, "obj", vm->NormalType,         "attr", vm->Str);
 	register_global_func(vm, 1, ".",        &native_get_attr_nti_str,      2, "obj", vm->NormalTypeInstance, "attr", vm->Str);
@@ -1190,7 +1227,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "get",      &native_index_get_arr_int_any, 3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
 	register_global_func(vm, 1, "[]",       &native_index_get_arr_int, 2, "arr", vm->Arr, "idx", vm->Int);
 	register_global_func(vm, 1, "[]=",      &native_index_set_arr_int_any, 3, "arr", vm->Arr, "idx", vm->Int, "v", vm->Any);
-	register_global_func(vm, 0, "join",     &native_join_arr_str,      2, "arr", vm->Arr, "s", vm->Str);
+	register_global_func(vm, 1, "join",     &native_join_arr_str,      2, "arr", vm->Arr, "s", vm->Str);
 	register_global_func(vm, 0, "copy",     &native_copy_arr,          1, "arr", vm->Arr);
 
 	// string
@@ -1411,13 +1448,27 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 	METHOD_RESULT mr;
 	VALUE *callable_items;
 
+	// dump_titled("CALLABLE", callable);
+	// if(argc) {
+	// 	dump_titled("ARGV0", argv[0]);
+	// }
 	if(IS_ARRAY(callable)) {
 		for(i=OBJ_LEN(callable)-1, callable_items = OBJ_DATA_PTR(callable); i>=0; i--) {
 			mr = vm_call(vm, ctx, result, callable_items[i], argc, argv);
-			if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION)) {
+			if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION) || (mr == METHOD_IMPL_MISSING)) {
 				return mr;
 			}
 			assert(mr == METHOD_ARGS_MISMATCH);
+			if(mr != METHOD_ARGS_MISMATCH) {
+				dump_titled("RESULT", *result);
+				VALUE exc;
+				// TODO: Appropriate exception type, not Exception
+				exc = make_normal_type_instance(vm->Exception);
+				set_normal_type_instance_attribute(exc, make_string("message"), make_string("Internal: mr != METHOD_ARGS_MISMATCH"));
+				set_normal_type_instance_attribute(exc, make_string("callable"), callable_items[i]);
+				set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values(argc, argv));
+				THROW_EXCEPTION_INSTANCE(exc);
+			}
 		}
 		// --- impl_not_found_hook() - start ---
 		if(THIS_FRAME.do_call_impl_not_found_hook) {
@@ -1626,7 +1677,15 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		THIS_FRAME.do_call_impl_not_found_hook = 0;
 		mr = vm_call(vm, ctx, &v, vm->init, argc+1, new_argv);
 		THIS_FRAME.do_call_impl_not_found_hook = 1;
-		if((mr == METHOD_EXCEPTION) || (argc && (mr == METHOD_IMPL_MISSING))) {
+		if(argc && (mr == METHOD_IMPL_MISSING)) {
+			VALUE exc;
+			exc = make_normal_type_instance(vm->ImplNotFound);
+			set_normal_type_instance_attribute(exc, make_string("message"), make_string("Normal type constructor: init() not found"));
+			set_normal_type_instance_attribute(exc, make_string("callable"), vm->init);
+			set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values(argc, new_argv));
+			THROW_EXCEPTION_INSTANCE(exc);
+		}
+		if(mr == METHOD_EXCEPTION) {
 			*result = v;
 			return mr;
 		}
@@ -1825,6 +1884,8 @@ main_loop:
 								goto exception;
 							}
 							if(mr != METHOD_OK) {
+								// printf("MR %d\n", mr);
+								// dump_titled("RESULT", *result);
 								for(v_ptr=&ctx->stack[ctx->stack_ptr-GET_INT(v)];v_ptr < &ctx->stack[ctx->stack_ptr];v_ptr++) {
 									dump_titled("Failed argument", *v_ptr);
 								}
