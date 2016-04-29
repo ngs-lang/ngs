@@ -1,7 +1,7 @@
 all: html man
 
-ngsmethods.1.md: ../c/vm.c ../c/bootstrap.ngs ../c/stdlib.ngs ngsmethods.header  make_methods_markdown.ngs
-	(cat ngsmethods.header ; ./make_methods_markdown.ngs) >$@
+ngsmet.1.md: ../c/vm.c ../c/bootstrap.ngs ../c/stdlib.ngs ngsmet.header  make_methods_markdown.ngs
+	(cat ngsmet.header ; ./make_methods_markdown.ngs) >$@
 
 html: $(patsubst %.1.md,%.1.html,$(wildcard *.1.md))
 man: $(patsubst %.1.md,%.1,$(wildcard *.1.md))
