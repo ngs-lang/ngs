@@ -139,7 +139,7 @@ F first(r:Range, predicate:Fun, *args) {
 
 TEST (10..20).first(F(x) x % 3 == 0) == 12
 
-F Str(r:ExclusiveRange) "<InclusiveRange ${r.start}..${r.end}>"
+F Str(r:ExclusiveRange) "<ExclusiveRange ${r.start}..${r.end}>"
 F Str(r:InclusiveRange) "<InclusiveRange ${r.start}...${r.end}>"
 
 # === Syntactic sugar ============================
