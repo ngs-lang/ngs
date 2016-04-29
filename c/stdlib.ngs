@@ -12,7 +12,7 @@ F init(e:IndexNotFound, message:Str, container, key) {
 # === Misc functional ============================
 
 
-F identity(x) x
+F identity(x) doc {'%RET': 'The given argument'} x
 
 TEST identity(10) == 10
 
@@ -42,15 +42,50 @@ TEST p = partial_tail((-), 10); p(7) == -3
 STDLIB_EXPOSE = {}
 
 # TODO: better exceptions (use correct type, not string, provide offending type and attribute)
-F expose(child:NormalType, attr:Str) {
-	STDLIB_EXPOSE[child] = STDLIB_EXPOSE.get(child, []).push(attr)
-	if STDLIB_EXPOSE[child].len() > 1 {
+F expose(typ:NormalType, attr:Str) doc {
+	'': [
+		'Exposes the given attribute so when there is ImplNotFound'
+		'when the original call had instance of the given type as an argument'
+		'the call is retried with the instance replaced by the given argument'
+	]
+	'typ': 'ImplNotFound with instance of this type will cause retry with the given attribute'
+	'attr': 'The exposed attribute that will be used on call retry'
+	'%RET': 'typ'
+	'%EX': [
+		'{'
+		'	type Stats'
+		"	Stats.expose('h')"
+		'}'
+		''
+		'F init(s:Stats) {'
+		'	s.h = {}'
+		'}'
+		''
+		'F Stats(a:Arr) {'
+		'	s = Stats()'
+		'	a.each(partial(push, s))'
+		'	s'
+		'}'
+		''
+		'F push(s:Stats, k) {'
+		'	s.h[k] = s.h.get(k, 0) + 1'
+		'	s'
+		'}'
+		''
+		'# Usage:'
+		'numbering = Stats()'
+		'numbering.push(hostname_base)'
+		'... numbering[hostname_base]} ...'
+	]
+	} {
+	STDLIB_EXPOSE[typ] = STDLIB_EXPOSE.get(typ, []).push(attr)
+	if STDLIB_EXPOSE[typ].len() > 1 {
 		local e = NotImplemented("expose() does not support exposing more than one attribute at this time")
-		e.type = child
+		e.type = typ
 		e.attr = attr
 		throw e
 	}
-	child
+	typ
 }
 
 # * if there is no appropriate mymethod(...,my_type_instance,...) and the type of my_type_instance
@@ -60,7 +95,12 @@ F expose(child:NormalType, attr:Str) {
 # TODO: make it faster
 # TODO: support trying all attributes listed in STDLIB_EXPOSE, not just first
 # TODO: check and solve usage by inheriting types
-F impl_not_found_hook(callable:Fun, *args) {
+# TODO: support keword arguments?
+F impl_not_found_hook(callable:Fun, *args) doc {
+	'': [
+		'Called on ImplNotFound'
+		'Implements expose() behaviour'
+	] } {
 	local l = args.len()
 	local exposed_attr_name = null, change_idx, arg
 	for(i;l) {
@@ -77,11 +117,15 @@ F impl_not_found_hook(callable:Fun, *args) {
 	callable(*new_args)
 }
 
-F Str(t:Type) doc {"": "Unfinished"} "<Type ${t.name}>"
+F Str(t:Type) "<Type ${t.name}>"
 
 # === auto-load ==================================
 
-F global_not_found_hook(name:Str) {
+F global_not_found_hook(name:Str) doc {
+	'': [
+		'Called when reading undefined global'
+		'Implements autoloading'
+	] } {
 	require("${NGS_DIR}/autoload/${name}.ngs")
 }
 

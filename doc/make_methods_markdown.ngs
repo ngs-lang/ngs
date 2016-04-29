@@ -78,6 +78,10 @@
 					echo("### Returns")
 					print_doc_key(doc, "    ", '%RET')
 				}
+				if doc_has_key(doc, '%EX') {
+					echo("### Example")
+					print_doc_key(doc, "    ", '%EX')
+				}
 			})
 		}
 
