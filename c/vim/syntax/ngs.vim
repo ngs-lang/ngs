@@ -12,6 +12,7 @@
 setf ngs
 syn match   ngsOperator "[-~!^&|*/%+=<>]\+"
 syn match   ngsComment "#.*" contains=ngsTodo
+syn match   ngsComment "^doc.*" contains=ngsTodo
 "syn match   ngsTest "^TEST .*"
 syn keyword ngsKeyword and break breaks catch collector collect cond continue continues econd ematch eswitch F guard local match or return returns switch TEST throw throws try type while with .. ...
 syn keyword ngsConditional if then else

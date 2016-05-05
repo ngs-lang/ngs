@@ -474,7 +474,7 @@ assignment =
 	}
 
 function-definition =
-	"F" name:function-definition-name space? "(" space? params:function-definition-parameters space? ")" doc:function-definition-optional-doc space? body:code-block {
+	doc:function-definition-optional-doc inline_space? "F" name:function-definition-name space? "(" space? params:function-definition-parameters space? ")" space? body:code-block {
 		MAKE_NODE(ret, FUNC_NODE);
 		ret->first_child = params;
 		params->next_sibling = body;
@@ -569,8 +569,68 @@ function-definition-default-value =
 		$$ = NULL;
 	}
 
+identifier-as-text = <[%_a-zA-Z]+[_a-zA-Z0-9]*> {
+		MAKE_STRING_NODE(s, yytext);
+		$$ = s;
+	}
+
+text-till-eol = <[^\n]+> [\n] {
+		MAKE_STRING_NODE(s, yytext);
+		$$ = s;
+	}
+
+
+doc-line =
+	inline_space? "doc " id:identifier-as-text " -" inline_space? [\n] {
+		MAKE_NODE(kv, EXPRESSIONS_NODE);
+			MAKE_STRING_NODE(v, "");
+			append_ast_node_child(kv, id);
+			append_ast_node_child(kv, v);
+		$$ = kv;
+	}
+	|
+	inline_space? "doc " id:identifier-as-text " - " txt:text-till-eol {
+		MAKE_NODE(kv, EXPRESSIONS_NODE);
+			append_ast_node_child(kv, id);
+			append_ast_node_child(kv, txt);
+		$$ = kv;
+	}
+	|
+	inline_space? "doc " txt:text-till-eol {
+		MAKE_NODE(kv, EXPRESSIONS_NODE);
+			MAKE_STRING_NODE(k, "");
+			append_ast_node_child(kv, k);
+			append_ast_node_child(kv, txt);
+		$$ = kv;
+	}
+	|
+	inline_space? "doc" inline_space? [\n] {
+		$$ = NULL;
+	}
+
+
+doc-lines = acc:doc-node (l:doc-line {
+	if(l) {
+		//                                kv-pair     STR_COMPS_NODE STR_COMP_IMM_NODE
+		if(acc->last_child && (!strcmp(acc->last_child->first_child->first_child->name, l->first_child->first_child->name))) {
+			// Same key as above - append the text to existing array
+			append_ast_node_child(acc->last_child->first_child->next_sibling, l->first_child->next_sibling);
+		} else {
+			// New key - make new array
+			MAKE_NODE(kv, EXPRESSIONS_NODE);
+				MAKE_NODE(arr, ARR_LIT_NODE);
+					append_ast_node_child(arr, l->first_child->next_sibling);
+				append_ast_node_child(kv, l->first_child);
+				append_ast_node_child(kv, arr);
+			append_ast_node_child(acc, kv);
+		}
+	}
+})+ { $$ = acc; }
+
+doc-node = { MAKE_NODE(ret, HASH_LIT_NODE); $$ = ret; }
+
 function-definition-optional-doc =
-	space? "doc" space? e:expression { $$ = e; }
+	e:doc-lines { $$ = e; }
 	|
 	{ MAKE_NODE(ret, NULL_NODE); $$ = ret; }
 

@@ -17,12 +17,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 [todo by priority]
 
-	* fix
-		make ngs && ./ngs -e '([10,20,30,40][1..3]).dump()'
-
 	* documentation [in progress]
 
-		* Documentation syntax looks bad, think of something else
 		* Make it look better in both man and html
 		* Document that innner functions are declared local
 		* Types documentation

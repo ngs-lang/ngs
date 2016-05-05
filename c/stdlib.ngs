@@ -12,26 +12,25 @@ F init(e:IndexNotFound, message:Str, container, key) {
 # === Misc functional ============================
 
 
-F identity(x) doc {'%RET': 'The given argument'} x
+doc %RET - The given argument
+F identity(x)  x
 
 TEST identity(10) == 10
 
 
 # TODO: Add more info about the newly created function - useful for debugging
 #       See https://docs.python.org/2/library/functools.html#partial-objects
+doc Returns partially-applied function
+doc f - The base function
+doc Xunderscore_unsupportedXbind_args - The arguments to bind the function to
 F partial(f:Fun, *bind_args)
-	doc {
-		'': 'Returns partially-applied function'
-		'f': 'The base function'
-		'BUG IN DOC, DO NOT USE YET / bind_args': 'The arguments to bind the function to'
-	}
 	F(*args) f(*bind_args, *args)
 
 TEST p = partial((-), 10); p(7) == 3
 
 
+doc Same as partial() but the bound arguments are last ones
 F partial_tail(f:Fun, *bind_args)
-	doc {'': 'Same as partial() but the bound arguments are last ones'}
 	F(*args) f(*args, *bind_args)
 
 TEST p = partial_tail((-), 10); p(7) == -3
@@ -42,42 +41,38 @@ TEST p = partial_tail((-), 10); p(7) == -3
 STDLIB_EXPOSE = {}
 
 # TODO: better exceptions (use correct type, not string, provide offending type and attribute)
-F expose(typ:NormalType, attr:Str) doc {
-	'': [
-		'Exposes the given attribute so when there is ImplNotFound'
-		'when the original call had instance of the given type as an argument'
-		'the call is retried with the instance replaced by the given argument'
-	]
-	'typ': 'ImplNotFound with instance of this type will cause retry with the given attribute'
-	'attr': 'The exposed attribute that will be used on call retry'
-	'%RET': 'typ'
-	'%EX': [
-		'{'
-		'	type Stats'
-		"	Stats.expose('h')"
-		'}'
-		''
-		'F init(s:Stats) {'
-		'	s.h = {}'
-		'}'
-		''
-		'F Stats(a:Arr) {'
-		'	s = Stats()'
-		'	a.each(partial(push, s))'
-		'	s'
-		'}'
-		''
-		'F push(s:Stats, k) {'
-		'	s.h[k] = s.h.get(k, 0) + 1'
-		'	s'
-		'}'
-		''
-		'# Usage:'
-		'numbering = Stats()'
-		'numbering.push(hostname_base)'
-		'... numbering[hostname_base]} ...'
-	]
-	} {
+doc Exposes the given attribute so when there is ImplNotFound
+doc when the original call had instance of the given type as an argument
+doc the call is retried with the instance replaced by the given argument
+doc
+doc typ - ImplNotFound with instance of this type will cause retry with the given attribute
+doc attr - The exposed attribute that will be used on call retry
+doc %RET - typ
+doc %EX - {
+doc %EX - 	type Stats
+doc %EX - 	Stats.expose(h)
+doc %EX - }
+doc %EX -
+doc %EX - F init(s:Stats) {
+doc %EX - 	s.h = {}
+doc %EX - }
+doc %EX -
+doc %EX - F Stats(a:Arr) {
+doc %EX - 	s = Stats()
+doc %EX - 	a.each(partial(push, s))
+doc %EX - 	s
+doc %EX - }
+doc %EX -
+doc %EX - F push(s:Stats, k) {
+doc %EX - 	s.h[k] = s.h.get(k, 0) + 1
+doc %EX - 	s
+doc %EX - }
+doc %EX -
+doc %EX - # Usage:
+doc %EX - numbering = Stats()
+doc %EX - numbering.push(hostname_base)
+doc %EX - ... numbering[hostname_base]} ...
+F expose(typ:NormalType, attr:Str) {
 	STDLIB_EXPOSE[typ] = STDLIB_EXPOSE.get(typ, []).push(attr)
 	if STDLIB_EXPOSE[typ].len() > 1 {
 		local e = NotImplemented("expose() does not support exposing more than one attribute at this time")
@@ -96,11 +91,9 @@ F expose(typ:NormalType, attr:Str) doc {
 # TODO: support trying all attributes listed in STDLIB_EXPOSE, not just first
 # TODO: check and solve usage by inheriting types
 # TODO: support keword arguments?
-F impl_not_found_hook(callable:Fun, *args) doc {
-	'': [
-		'Called on ImplNotFound'
-		'Implements expose() behaviour'
-	] } {
+doc Called on ImplNotFound
+doc Implements expose() behaviour
+F impl_not_found_hook(callable:Fun, *args) {
 	local l = args.len()
 	local exposed_attr_name = null, change_idx, arg
 	for(i;l) {
@@ -121,11 +114,9 @@ F Str(t:Type) "<Type ${t.name}>"
 
 # === auto-load ==================================
 
-F global_not_found_hook(name:Str) doc {
-	'': [
-		'Called when reading undefined global'
-		'Implements autoloading'
-	] } {
+doc Called when reading undefined global
+doc Implements autoloading
+F global_not_found_hook(name:Str) {
 	require("${NGS_DIR}/autoload/${name}.ngs")
 }
 
@@ -729,8 +720,8 @@ TEST "abcd".starts_with("ab")
 TEST "ab".starts_with("abcd") == false
 
 
+doc Case-insensitive LessThan or Equal comparison for strings
 F lte(a:Str, b:Str)
-	doc {'': 'Case-insensitive LessThan or Equal comparison for strings'}
 	c_strcasecmp(a, b) <= 0
 
 
@@ -1071,9 +1062,9 @@ F ````(c:Command) {
 
 F parse(s:Str) parse(s, {})
 
-F parse(s:Str, hints:Hash) doc {"": "Returns the string as is"} s
+F parse(s:Str, hints:Hash) s
 
-F parse(s:Str, hints:Hash) doc {"": "Parses JSON, continues with other implementations if fails."} {
+F parse(s:Str, hints:Hash) {
 	local ret
 	try
 		ret = decode_json(s)
@@ -1155,7 +1146,6 @@ TEST F f(a=7) a; f(**{"a": 10}) == 10
 TEST F construct(x:Int) F() x; f1=construct(1); f2=construct(2); (f1==f1) and (f1!=f2)
 TEST 1.1 < 1.11
 TEST 1.1 + 1.1 == 2.2
-TEST F uniq_doc_func() doc {"a": 1} { "some body" }; uniq_doc_func[0].attrs()['doc'] == {"a": 1}
 TEST F uniq_attrs_func() "some body"; uniq_attrs_func[0].attrs({"a": 1}); uniq_attrs_func[0].attrs() == {"a": 1}
 TEST attrs((+)[0])['name'] == '+'
 # TODO: more introspection tests

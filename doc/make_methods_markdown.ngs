@@ -35,6 +35,7 @@
 		}
 
 		F doc_has_key(doc:Hash, k:Str) k in doc
+
 		F doc_has_key(doc:Null, k:Str) false
 
 		F print_doc_key(doc:Hash, pfx:Str, k:Str) {
