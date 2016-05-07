@@ -1069,6 +1069,10 @@ NGS_TYPE *register_builtin_type(VM *vm, const char *name, IMMEDIATE_TYPE native_
 	index = get_global_index(vm, name, strlen(name));
 	assert(IS_UNDEF(GLOBALS[index]));
 	GLOBALS[index] = t;
+	vm->last_doc_hash = make_hash(4);
+	NGS_TYPE_ATTRS(t) = make_hash(8);
+		// set_hash_key(NGS_TYPE_ATTRS(t), make_string("name"), make_string(name));
+		set_hash_key(NGS_TYPE_ATTRS(t), make_string("doc"), vm->last_doc_hash);
 	return t.ptr;
 }
 
@@ -1090,7 +1094,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// This way the compiler can use globals_indexes as the beginning of
 	// it's symbol table for globals.
 	vm->Null = register_builtin_type(vm, "Null", T_NULL);
+	_doc(vm, "", "Has only one instance, null");
 	vm->Bool = register_builtin_type(vm, "Bool", T_BOOL);
+	_doc(vm, "", "The only instances are true and false");
 	vm->Int  = register_builtin_type(vm, "Int",  T_INT);
 	vm->Real = register_builtin_type(vm, "Real", T_REAL);
 	vm->Str  = register_builtin_type(vm, "Str",  T_STR);
@@ -1107,7 +1113,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 		vm->NormalType = register_builtin_type(vm, "NormalType", T_NORMT);
 	vm->Hash = register_builtin_type(vm, "Hash", T_HASH);
 	vm->CLib = register_builtin_type(vm, "CLib", T_CLIB);
+	_doc(vm, "", "C library (unfinished, do not use)");
 	vm->CSym = register_builtin_type(vm, "CSym", T_CSYM);
+	_doc(vm, "", "C symbol (unfinished, do not use)");
 
 #define MKTYPE(name) \
 	VALUE name; \

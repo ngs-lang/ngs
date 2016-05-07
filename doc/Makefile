@@ -1,4 +1,4 @@
-all: html man
+all: ngsmet.1.md html man
 
 ngsmet.1.md: ../c/vm.c ../c/bootstrap.ngs ../c/stdlib.ngs ngsmet.header  make_methods_markdown.ngs
 	(cat ngsmet.header ; ./make_methods_markdown.ngs) >$@
@@ -15,3 +15,4 @@ man: $(patsubst %.1.md,%.1,$(wildcard *.1.md))
 clean:
 	-rm *.1
 	-rm *.1.html
+	-rm ngsmet.1.md

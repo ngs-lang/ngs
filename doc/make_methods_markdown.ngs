@@ -87,9 +87,9 @@
 		}
 
 		F print_type_doc(name:Str, value) {
+			echo("# Type: ${name.escape_markdown()}")
 			local doc = try value.attrs().doc
 			not(doc) returns null
-			echo("# Type: ${name.escape_markdown()}")
 			if doc_has_key(doc, "") {
 				echo("## Description")
 				print_doc_key(doc, "    ", "")
@@ -110,11 +110,15 @@
 			cond {
 				value is Arr
 					print_method_doc(name, value)
-				value is BasicType
-					print_method_doc(name, value.constructors)
-				value is NormalType {
+				value is Type {
 					print_type_doc(name, value)
-					print_method_doc(name, value.constructors[1..null])
+					local c = value.constructors
+					if value is NormalType {
+						# NormalType has special constructor which we can't handle for now
+						# so skipping that one
+						c = c[1..null]
+					}
+					print_method_doc(name, c)
 				}
 			}
 		})

@@ -24,7 +24,7 @@ Note that this started as internal document so things here are unformed, not fin
 		* Fix markdown escaping, including underscore
 		* Make it look better in both man and html
 		* Document that innner functions are declared local
-		* Types documentation
+		* Types documentation [in progress]
 
 	* match, ematch - some way to get the match object?
 

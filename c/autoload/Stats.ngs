@@ -19,6 +19,7 @@ F Stats(a:Arr) {
 }
 
 doc Increment the named counter
+doc K - the name of the counter to increment
 F push(s:Stats, k) {
 	s.h[k] = s.h.get(k, 0) + 1
 	s
