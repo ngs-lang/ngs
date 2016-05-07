@@ -230,6 +230,7 @@ VALUE make_normal_type(VALUE name) {
 	NGS_TYPE_FIELDS(ret) = make_hash(8); // Hash: name->index
 	NGS_TYPE_CONSTRUCTORS(ret) = make_array(1);
 	NGS_TYPE_PARENTS(ret) = make_array(0);
+	NGS_TYPE_ATTRS(ret) = make_hash(2);
 
 	VALUE ctr = make_normal_type_constructor(ret);
 	ARRAY_ITEMS(NGS_TYPE_CONSTRUCTORS(ret))[0] = ctr;
@@ -616,7 +617,7 @@ VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX 
 	assert(c->params.params);
 	memcpy(c->params.params, params, params_size);
 	c->n_uplevels = n_uplevels;
-	c->attrs = make_hash(8);
+	c->attrs = make_hash(2);
 
 	SET_OBJ(v, c);
 

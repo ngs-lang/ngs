@@ -474,7 +474,7 @@ assignment =
 	}
 
 function-definition =
-	doc:function-definition-optional-doc inline_space? "F" name:function-definition-name space? "(" space? params:function-definition-parameters space? ")" space? body:code-block {
+	doc:optional-doc inline_space? "F" name:function-definition-name space? "(" space? params:function-definition-parameters space? ")" space? body:code-block {
 		MAKE_NODE(ret, FUNC_NODE);
 		ret->first_child = params;
 		params->next_sibling = body;
@@ -629,7 +629,7 @@ doc-lines = acc:doc-node (l:doc-line {
 
 doc-node = { MAKE_NODE(ret, HASH_LIT_NODE); $$ = ret; }
 
-function-definition-optional-doc =
+optional-doc =
 	e:doc-lines { $$ = e; }
 	|
 	{ MAKE_NODE(ret, NULL_NODE); $$ = ret; }
@@ -1052,17 +1052,18 @@ throw = "throw" space e:expression { MAKE_NODE(ret, THROW_NODE); ret->first_chil
 
 # type MyType => MyType = Type('MyType')
 # TODO: Style warning for identifiers starting with lower case letter
-type = "type" space i:identifier {
+type = doc:optional-doc inline_space? "type" space i:identifier {
 	MAKE_NODE(ret, ASSIGNMENT_NODE);
 		MAKE_NODE(call, CALL_NODE);
 			MAKE_IDENTIFIER_NODE(type_identifier, "Type");
 			MAKE_NODE(args, ARGS_NODE);
-				MAKE_NODE(type_string, STR_COMPS_NODE);
-					MAKE_NODE(type_string_comp, STR_COMP_IMM_NODE);
-					type_string_comp->name = ngs_strdup(i->name);
-					append_ast_node_child(type_string, type_string_comp);
+				MAKE_STRING_NODE(type_string, ngs_strdup(i->name));
 				MAKE_REQ_ARG_NODE(a1, type_string);
 				args->first_child = a1;
+				if(doc->type != NULL_NODE) {
+					MAKE_REQ_ARG_NODE(a2, doc);
+					a1->next_sibling = a2;
+				}
 			call->first_child = type_identifier;
 			type_identifier->next_sibling = args;
 		ret->first_child = i;

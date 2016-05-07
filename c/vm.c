@@ -700,6 +700,11 @@ METHOD_RESULT native_globals EXT_METHOD_PARAMS {
 }
 
 METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_normal_type(argv[0])); }
+METHOD_RESULT native_type_str_doc METHOD_PARAMS {
+	*result = make_normal_type(argv[0]);
+	set_hash_key(NGS_TYPE_ATTRS(*result), make_string("doc"), argv[1]);
+	return METHOD_OK;
+}
 METHOD_RESULT native_typeof_any METHOD_PARAMS {
 	if(IS_NORMAL_TYPE_INSTANCE(argv[0])) {
 		METHOD_RETURN(NORMAL_TYPE_INSTANCE_TYPE(argv[0]));
@@ -890,6 +895,15 @@ METHOD_RESULT native_attrs_closure METHOD_PARAMS {
 
 METHOD_RESULT native_attrs_closure_any METHOD_PARAMS {
 	CLOSURE_OBJ_ATTRS(argv[0]) = argv[1];
+	METHOD_RETURN(argv[1]);
+}
+
+METHOD_RESULT native_attrs_type METHOD_PARAMS {
+	METHOD_RETURN(NGS_TYPE_ATTRS(argv[0]));
+}
+
+METHOD_RESULT native_attrs_type_any METHOD_PARAMS {
+	NGS_TYPE_ATTRS(argv[0]) = argv[1];
 	METHOD_RETURN(argv[1]);
 }
 
@@ -1191,9 +1205,12 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// Type
 	register_global_func(vm, 0, "Type",     &native_type_str          ,1, "name",   vm->Str);
+	register_global_func(vm, 0, "Type",     &native_type_str_doc      ,2, "name",   vm->Str, "doc", vm->Any);
 	register_global_func(vm, 0, "typeof",   &native_typeof_any        ,1, "x",      vm->Any);
 	_doc(vm, "", "Returns type of the given instance");
 	_doc(vm, "x", "Instance (an object)");
+	register_global_func(vm, 0, "attrs",    &native_attrs_type,        1, "t",      vm->Type);
+	register_global_func(vm, 0, "attrs",    &native_attrs_type_any,    2, "t",      vm->Type, "datum", vm->Any);
 
 	// low level file operations
 	register_global_func(vm, 0, "c_dup2",   &native_c_dup2_int_int,    2, "oldfd",    vm->Int, "newfd", vm->Int);

@@ -1,6 +1,8 @@
 # === Stats ===
 
 {
+	doc A group of named counters
+	doc s - The underlying Hash, expose()d
 	type Stats
 	Stats.expose('h')
 }
@@ -9,12 +11,14 @@ F init(s:Stats) {
 	s.h = {}
 }
 
+doc Makes Stats, with each element in the array counted as if push()ed
 F Stats(a:Arr) {
 	s = Stats()
 	a.each(partial(push, s))
 	s
 }
 
+doc Increment the named counter
 F push(s:Stats, k) {
 	s.h[k] = s.h.get(k, 0) + 1
 	s

@@ -17,6 +17,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 [todo by priority]
 
+	* command syntax - $* expansion syntax
+
 	* documentation [in progress]
 
 		* Fix markdown escaping, including underscore

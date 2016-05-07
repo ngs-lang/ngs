@@ -55,7 +55,7 @@
 			guard value is Arr
 			guard value.all((is), Fun)
 			not(value) returns null
-			echo("# ${name.escape_markdown()}")
+			echo("# Methods: ${name.escape_markdown()}")
 			value.each(F(method_implementation) {
 				local doc = method_implementation.attrs().doc
 				local params_strings = method_implementation.params().map(param_to_str)
@@ -86,6 +86,24 @@
 			})
 		}
 
+		F print_type_doc(name:Str, value) {
+			local doc = try value.attrs().doc
+			not(doc) returns null
+			echo("# Type: ${name.escape_markdown()}")
+			if doc_has_key(doc, "") {
+				echo("## Description")
+				print_doc_key(doc, "    ", "")
+			}
+			if doc is Hash {
+				doc.keys().each(F(k) {
+					if k != "" {
+						echo("## Field ${k.escape_markdown()}")
+						print_doc_key(doc, "    ", k)
+					}
+				})
+			}
+		}
+
 		local g = globals()
 		g.keys().sort(lte).each(F(name) {
 			value = g[name]
@@ -94,8 +112,10 @@
 					print_method_doc(name, value)
 				value is BasicType
 					print_method_doc(name, value.constructors)
-				value is NormalType
+				value is NormalType {
+					print_type_doc(name, value)
 					print_method_doc(name, value.constructors[1..null])
+				}
 			}
 		})
 
