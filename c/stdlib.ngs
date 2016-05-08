@@ -852,6 +852,9 @@ F read(fd:Int) {
 	}
 }
 
+# TODO: handle errors, throw exceptions
+F write(fd:Int, s:Str) fd.c_write(s)
+
 F isatty(fd:Int) {
 	local ret = c_isatty(fd)
 	local errno = get_c_errno()

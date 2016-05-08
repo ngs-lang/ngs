@@ -1,14 +1,23 @@
 # === Table ======================================
 
-{ type Table }
+{
+	doc Manipulates tabular data
+	doc name - Table name to display and for configuratio lookup
+	doc col_name_to_idx - Columns names' indexes (ex: id:0, name:1, age:2)
+	doc col_idx_to_name - Columns indexes' names (ex: 0:id, 1:name, 2:age)
+	type Table
+}
 
+doc Calculate cell display width - any Str()-able instance
 F cell_display_width(x) Str(x).len()
+
+doc Calculate cell display width for an array
 F cell_display_width(x:Arr) x.map(Str).map(len).max()
+
+doc Calculate cell display width for an empty array
 F cell_display_width(x:Arr) { guard x.len()==0; 0 }
 
-# TODO: handle errors, throw exceptions
-F write(fd:Int, s:Str) fd.c_write(s)
-
+doc Initialize rows to an empty array
 F init(t:Table) {
 	t.name = null
 	# name -> column number
@@ -20,6 +29,8 @@ F init(t:Table) {
 }
 
 # TODO: rewrite all Table() to init() ?
+doc Create table containing provided rows
+doc rows_hashes - rows, each row is a Hash
 F Table(rows_hashes:Arr) {
 	guard rows_hashes.all(is, Hash)
 	t = Table()
@@ -27,6 +38,9 @@ F Table(rows_hashes:Arr) {
 	t
 }
 
+doc Create named table containing provided rows
+doc name - name of the table for display and for configuration purposes
+doc rows_hashes - rows, each row is a Hash
 F Table(name:Str, rows_hashes:Arr) {
 	guard rows_hashes.all(is, Hash)
 	t = Table()
