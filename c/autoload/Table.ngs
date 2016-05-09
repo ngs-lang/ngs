@@ -111,6 +111,7 @@ F Hashes(t:Table) {
 	throw NotImplemented()
 }
 
+doc Displays a table. Implemented only for tty output (or output_format=text configuration)
 F echo(t:Table) {
 	guard 1.isatty() or (config('output_format') == 'text')
 	# TODO: display vertically elements of an array (for array which is a cell).

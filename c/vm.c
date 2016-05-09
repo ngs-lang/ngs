@@ -1261,10 +1261,12 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, "[]=",      &native_index_set_arr_int_any, 3, "arr", vm->Arr, "idx", vm->Int, "v", vm->Any);
 	register_global_func(vm, 1, "join",     &native_join_arr_str,      2, "arr", vm->Arr, "s", vm->Str);
 	register_global_func(vm, 0, "copy",     &native_copy_arr,          1, "arr", vm->Arr);
+	_doc(vm, "%RET", "Shallow copy of arr");
 
 	// string
 	// TODO: other string comparison operators
 	register_global_func(vm, 0, "len",      &native_len,               1, "s",   vm->Str);
+	_doc(vm, "%RET", "Length in bytes");
 	register_global_func(vm, 0, "==",       &native_eq_str_str,        2, "a",   vm->Str, "b", vm->Str);
 	register_global_func(vm, 0, "pos",      &native_pos_str_str_int,   3, "haystack", vm->Str, "needle", vm->Str, "start", vm->Int);
 	register_global_func(vm, 1, "[]",       &native_index_get_str_range, 2, "s", vm->Str, "range", vm->Range);
@@ -1294,6 +1296,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, "encode_json",&native_encode_json_obj, 1, "obj", vm->Any);
 	register_global_func(vm, 1, "Backtrace",&native_backtrace,         0);
 	register_global_func(vm, 1, "resolve_ip",&native_resolve_ip,       1, "ip", vm->Int);
+	_doc(vm, "", "Resolves Instruction Pointer to source location");
+	_doc(vm, "%RET", "Hash with keys: file, first_line, first_column, last_line, last_column, ip");
 	register_global_func(vm, 1, "globals",  &native_globals,           0);
 
 	// hash
