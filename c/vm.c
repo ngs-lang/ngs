@@ -1093,29 +1093,35 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// Keep global functions registration in order.
 	// This way the compiler can use globals_indexes as the beginning of
 	// it's symbol table for globals.
-	vm->Null = register_builtin_type(vm, "Null", T_NULL);
-	_doc(vm, "", "Has only one instance, null");
-	vm->Bool = register_builtin_type(vm, "Bool", T_BOOL);
-	_doc(vm, "", "The only instances are true and false");
-	vm->Int  = register_builtin_type(vm, "Int",  T_INT);
-	vm->Real = register_builtin_type(vm, "Real", T_REAL);
-	vm->Str  = register_builtin_type(vm, "Str",  T_STR);
-	vm->Arr  = register_builtin_type(vm, "Arr",  T_ARR);
-	vm->Fun  = register_builtin_type(vm, "Fun",  T_FUN);
-		vm->Closure  = register_builtin_type(vm, "Closure",  T_CLOSURE);
-		vm->NativeMethod  = register_builtin_type(vm, "NativeMethod",  T_NATIVE_METHOD);
-	vm->Any  = register_builtin_type(vm, "Any",  T_ANY);
-		vm->BasicTypeInstance  = register_builtin_type(vm, "BasicTypeInstance",  T_BASICTI);
-		vm->NormalTypeInstance = register_builtin_type(vm, "NormalTypeInstance", T_NORMTI);
-	vm->Seq  = register_builtin_type(vm, "Seq",  T_SEQ);
-	vm->Type = register_builtin_type(vm, "Type", T_TYPE);
-		vm->BasicType  = register_builtin_type(vm, "BasicType",  T_BASICT);
-		vm->NormalType = register_builtin_type(vm, "NormalType", T_NORMT);
-	vm->Hash = register_builtin_type(vm, "Hash", T_HASH);
-	vm->CLib = register_builtin_type(vm, "CLib", T_CLIB);
-	_doc(vm, "", "C library (unfinished, do not use)");
-	vm->CSym = register_builtin_type(vm, "CSym", T_CSYM);
-	_doc(vm, "", "C symbol (unfinished, do not use)");
+#define MK_BUILTIN_TYPE(name, id) \
+	vm->name = register_builtin_type(vm, #name, id);
+
+#define MK_BUILTIN_TYPE_DOC(name, id, doc) \
+	MK_BUILTIN_TYPE(name, id) \
+	_doc(vm, "", doc);
+
+	MK_BUILTIN_TYPE_DOC(Null, T_NULL, "Has only one instance, null");
+	MK_BUILTIN_TYPE_DOC(Bool, T_BOOL, "The only instances are true and false");
+	MK_BUILTIN_TYPE(Int, T_INT);
+	MK_BUILTIN_TYPE(Real, T_REAL);
+	MK_BUILTIN_TYPE(Str, T_STR);
+	MK_BUILTIN_TYPE(Arr, T_ARR);
+	MK_BUILTIN_TYPE(Fun, T_FUN);
+		MK_BUILTIN_TYPE(Closure, T_CLOSURE);
+		MK_BUILTIN_TYPE(NativeMethod, T_NATIVE_METHOD);
+	MK_BUILTIN_TYPE(Any, T_ANY);
+		MK_BUILTIN_TYPE(BasicTypeInstance, T_BASICTI);
+		MK_BUILTIN_TYPE(NormalTypeInstance, T_NORMTI);
+	MK_BUILTIN_TYPE(Seq, T_SEQ);
+	MK_BUILTIN_TYPE(Type, T_TYPE);
+		MK_BUILTIN_TYPE(BasicType, T_BASICT);
+		MK_BUILTIN_TYPE(NormalType, T_NORMT);
+	MK_BUILTIN_TYPE(Hash, T_HASH);
+	MK_BUILTIN_TYPE_DOC(CLib, T_CLIB, "C library (unfinished, do not use)");
+	MK_BUILTIN_TYPE_DOC(CSym, T_CSYM, "C symbol (unfinished, do not use)");
+	MK_BUILTIN_TYPE(Pthread, T_PTHREAD);
+	MK_BUILTIN_TYPE(PthreadAttr, T_PTHREADATTR);
+#undef MK_BUILTIN_TYPE
 
 #define MKTYPE(name) \
 	VALUE name; \
@@ -1175,6 +1181,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "CLib",     &native_CLib_str,          1, "name",   vm->Str);
 	register_global_func(vm, 0, "in",       &native_in_str_clib,       2, "symbol", vm->Str, "lib", vm->CLib);
 	register_global_func(vm, 0, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
+
+	// threads
+	// register_global_func(vm, 0, "c_pthread_create",   &native_c_pthread_create,          1, "runnable", vm->Closure);
 
 	// Native methods
 	register_global_func(vm, 0, "attrs",    &native_attrs_nm,          1, "m",      vm->NativeMethod);

@@ -182,6 +182,8 @@ typedef enum {
 	T_BASICTI = 78,
 	T_NORMTI  = 82,
 	T_REAL    = 86,
+	T_PTHREAD = 90,
+	T_PTHREADATTR   = 94,
 	T_NATIVE_METHOD = (1 << 8) | T_FUN,
 	T_CLOSURE       = (2 << 8) | T_FUN,
 } IMMEDIATE_TYPE;

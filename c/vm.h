@@ -169,6 +169,10 @@ typedef struct {
 	NGS_TYPE *CLib;
 	NGS_TYPE *CSym;
 
+	// Not sure about naming convention
+	NGS_TYPE *Pthread;
+	NGS_TYPE *PthreadAttr;
+
 	VALUE Exception;
 		VALUE Error;
 			VALUE LookupFail;

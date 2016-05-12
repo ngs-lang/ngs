@@ -119,7 +119,7 @@ Note that this started as internal document so things here are unformed, not fin
 	* +=, -=, etc syntax
 	* tracing
 	* threads
-		* Thread()
+		* Thread() [in progress]
 		* Lock()
 		* check by runnig multi-threaded program
 	* think about serialization and remote execution
