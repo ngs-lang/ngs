@@ -1,6 +1,7 @@
 Note that this started as internal document so things here are unformed, not final and fluid.
 
 [inbox]
+	* Fix segfault F f(x:UndefinedType)
 	* close_on_exec - not to leak fds
 		~ilya/tmp/bash-4.3/execute_cmd.c:1478:0-1
 
@@ -19,12 +20,18 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* command syntax - $* expansion syntax
 
-	* documentation [in progress]
+	* threads
+		* Thread() [in progress]
+			* Make pthread_attr_t accessible - get/set attributes
+		* Lock()
+		* check by runnig multi-threaded program
+
+	* documentation [on hold]
 
 		* Fix markdown escaping, including underscore
 		* Make it look better in both man and html
 		* Document that innner functions are declared local
-		* Types documentation [in progress]
+		* Types documentation [on hold]
 
 	* match, ematch - some way to get the match object?
 
@@ -118,10 +125,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* +=, -=, etc syntax
 	* tracing
-	* threads
-		* Thread() [in progress]
-		* Lock()
-		* check by runnig multi-threaded program
 	* think about serialization and remote execution
 		Probably pushing a bytecode (which we already have because the code was compiled)
 		of a function that does not reference any upper-level variables, only locals and globals,

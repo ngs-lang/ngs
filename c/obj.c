@@ -920,6 +920,25 @@ VALUE make_backtrace(VM *vm, CTX *ctx) {
 	return ret;
 }
 
+VALUE make_pthread() {
+	VALUE v;
+	PTHREAD_OBJECT *p;
+	p = NGS_MALLOC(sizeof(*p));
+	p->base.type.num = T_PTHREAD;
+	SET_OBJ(v, p);
+	return v;
+}
+
+VALUE make_pthread_attr() {
+	VALUE v;
+	PTHREAD_OBJECT *pa;
+	pa = NGS_MALLOC(sizeof(*pa));
+	pa->base.type.num = T_PTHREADATTR;
+	SET_OBJ(v, pa);
+	pthread_attr_init(&GET_PTHREADATTR(v));
+	return v;
+}
+
 VALUE resolve_ip(VM *vm, IP ip) {
 	// Find region
 	// TODO: Something faster then sequential scan

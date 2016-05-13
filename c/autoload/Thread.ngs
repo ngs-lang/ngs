@@ -1,0 +1,11 @@
+{
+	type Thread
+
+	# WORK IN PROGRESS, DO NOT USE
+	F init(t:Thread, f:Fun, arg) {
+		local thread_attr = PthreadAttr()
+		local create_result = c_pthread_create(thread_attr, f, arg)
+		local code = create_result[0]
+		t.thread = create_result[1]
+	}
+}

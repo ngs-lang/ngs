@@ -53,6 +53,16 @@ typedef struct {
 	NGS_REAL val;
 } REAL_OBJECT;
 
+typedef struct {
+	OBJECT base;
+	pthread_t val;
+} PTHREAD_OBJECT;
+
+typedef struct {
+	OBJECT base;
+	pthread_attr_t val;
+} PTHREADATTR_OBJECT;
+
 // https://www.igvita.com/2009/02/04/ruby-19-internals-ordered-hash/
 typedef struct hash_object_entry {
 	VALUE key;
@@ -210,6 +220,8 @@ typedef enum {
 #define MAKE_KWARGS_MARKER     ((VALUE){.num=V_KWARGS_MARKER})
 #define GET_INT(v)      ((v).num >> TAG_BITS)
 #define GET_REAL(v)     (((REAL_OBJECT *) v.ptr)->val)
+#define GET_PTHREAD(v)  (((PTHREAD_OBJECT *) v.ptr)->val)
+#define GET_PTHREADATTR(v)  (((PTHREADATTR_OBJECT *) v.ptr)->val)
 #define SET_OBJ(v,o)    (v).ptr = o
 #define SET_NULL(v)     (v).num = V_NULL
 #define SET_FALSE(v)    (v).num = V_FALSE
@@ -264,6 +276,8 @@ typedef enum {
 #define IS_HASH(v)                (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_HASH)
 #define IS_CLIB(v)                (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_CLIB)
 #define IS_CSYM(v)                (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_CSYM)
+#define IS_PTHREAD(v)             (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_PTHREAD)
+#define IS_PTHREADATTR(v)         (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_PTHREADATTR)
 #define ARRAY_ITEMS(v)            ((VALUE *)(OBJ_DATA_PTR(v)))
 #define HASH_BUCKETS_N(v)         (((HASH_OBJECT *)(v).ptr)->n_buckets)
 #define HASH_HEAD(v)              (((HASH_OBJECT *)(v).ptr)->head)
@@ -309,5 +323,7 @@ METHOD_RESULT decode_json(VALUE s, VALUE *result);
 METHOD_RESULT encode_json(VALUE obj, VALUE *result);
 void *ngs_memmem(const void *haystack_start, size_t haystack_len, const void *needle_start, size_t needle_len);
 char *ngs_strdup(const char *src);
+VALUE make_pthread();
+VALUE make_pthread_attr();
 
 #endif

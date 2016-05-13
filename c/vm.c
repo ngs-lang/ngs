@@ -980,6 +980,11 @@ METHOD_RESULT native_c_strcasecmp METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(strcasecmp(obj_to_cstring(argv[0]), obj_to_cstring(argv[1]))));
 }
 
+METHOD_RESULT native_pthread_attr METHOD_PARAMS {
+	(void) argv;
+	METHOD_RETURN(make_pthread_attr());
+}
+
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
 	GLOBAL_VAR_INDEX index;
@@ -1183,7 +1188,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
 
 	// threads
-	// register_global_func(vm, 0, "c_pthread_create",   &native_c_pthread_create,          1, "runnable", vm->Closure);
+	register_global_func(vm, 0, "PthreadAttr", &native_pthread_attr,   0);
 
 	// Native methods
 	register_global_func(vm, 0, "attrs",    &native_attrs_nm,          1, "m",      vm->NativeMethod);
