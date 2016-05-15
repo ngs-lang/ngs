@@ -985,6 +985,18 @@ METHOD_RESULT native_pthread_attr METHOD_PARAMS {
 	METHOD_RETURN(make_pthread_attr());
 }
 
+METHOD_RESULT native_attr_pthreadattr METHOD_PARAMS {
+	char *attr = obj_to_cstring(argv[1]);
+	size_t stacksize;
+	if(!strcmp(attr, "stacksize")) {
+		pthread_attr_getstacksize((pthread_attr_t * restrict)&GET_PTHREAD(argv[0]), &stacksize);
+		// TODO: check range - stacksize might be larger than supported MAKE_INT() argument
+		METHOD_RETURN(MAKE_INT(stacksize));
+	}
+	// TODO: Throw exception
+	METHOD_RETURN(MAKE_NULL);
+}
+
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
 	GLOBAL_VAR_INDEX index;
@@ -1188,7 +1200,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
 
 	// threads
-	register_global_func(vm, 0, "PthreadAttr", &native_pthread_attr,   0);
+	register_global_func(vm, 0, "PthreadAttr", &native_pthread_attr,      0);
+	register_global_func(vm, 0, ".",           &native_attr_pthreadattr,  2, "pa", vm->PthreadAttr,          "attr", vm->Str);
 
 	// Native methods
 	register_global_func(vm, 0, "attrs",    &native_attrs_nm,          1, "m",      vm->NativeMethod);

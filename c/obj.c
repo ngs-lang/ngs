@@ -696,6 +696,8 @@ int obj_is_of_type(VALUE obj, VALUE t) {
 		OBJ_C_OBJ_IS_OF_TYPE(T_BASICT, IS_BASIC_TYPE);
 		OBJ_C_OBJ_IS_OF_TYPE(T_CLOSURE, IS_CLOSURE);
 		OBJ_C_OBJ_IS_OF_TYPE(T_REAL, IS_REAL);
+		OBJ_C_OBJ_IS_OF_TYPE(T_PTHREAD, IS_PTHREAD);
+		OBJ_C_OBJ_IS_OF_TYPE(T_PTHREADATTR, IS_PTHREADATTR);
 		if(IS_NORMAL_TYPE_INSTANCE(obj)) { return 0; }
 		dump_titled("Unimplemented type to check", t);
 		assert(0=="obj_is_of_type(): Unimplemented check against builtin type");
