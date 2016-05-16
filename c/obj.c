@@ -925,6 +925,7 @@ VALUE make_backtrace(VM *vm, CTX *ctx) {
 VALUE make_pthread() {
 	VALUE v;
 	PTHREAD_OBJECT *p;
+	// TODO: NGS_MALLOC_ATOMIC maybe?
 	p = NGS_MALLOC(sizeof(*p));
 	p->base.type.num = T_PTHREAD;
 	SET_OBJ(v, p);

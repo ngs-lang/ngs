@@ -989,12 +989,44 @@ METHOD_RESULT native_attr_pthreadattr METHOD_PARAMS {
 	char *attr = obj_to_cstring(argv[1]);
 	size_t stacksize;
 	if(!strcmp(attr, "stacksize")) {
-		pthread_attr_getstacksize((pthread_attr_t * restrict)&GET_PTHREAD(argv[0]), &stacksize);
+		pthread_attr_getstacksize((pthread_attr_t * restrict)&GET_PTHREADATTR(argv[0]), &stacksize);
 		// TODO: check range - stacksize might be larger than supported MAKE_INT() argument
 		METHOD_RETURN(MAKE_INT(stacksize));
 	}
 	// TODO: Throw exception
 	METHOD_RETURN(MAKE_NULL);
+}
+
+void *_pthread_start_routine(void *arg) {
+	NGS_PTHREAD_INIT_INFO *init;
+	CTX ctx;
+	VALUE *result;
+	// METHOD_RESULT mr;
+	result = NGS_MALLOC(sizeof(*result));
+	*result = MAKE_NULL;
+	init = (NGS_PTHREAD_INIT_INFO *)arg;
+	ctx_init(&ctx);
+	// mr = vm_call(init->vm, &ctx, result, init->f, 1, &init->arg);
+	vm_call(init->vm, &ctx, result, init->f, 1, &init->arg);
+	return result;
+}
+
+METHOD_RESULT native_pthreadcreate_pthreadattr_startroutine_arg EXT_METHOD_PARAMS {
+	VALUE pthread;
+	VALUE ret;
+	NGS_PTHREAD_INIT_INFO *init;
+	int status;
+	(void) ctx;
+	init = NGS_MALLOC(sizeof(*init));
+	init->vm = vm;
+	init->f = argv[1];
+	init->arg = argv[2];
+	pthread = make_pthread();
+	status = pthread_create(&GET_PTHREAD(pthread), &GET_PTHREADATTR(argv[0]), &_pthread_start_routine, init);
+	ret = make_array(2);
+	ARRAY_ITEMS(ret)[0] = MAKE_INT(status);
+	ARRAY_ITEMS(ret)[1] = pthread;
+	METHOD_RETURN(ret);
 }
 
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {

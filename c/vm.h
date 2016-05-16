@@ -204,6 +204,12 @@ typedef struct {
 
 } VM;
 
+typedef struct {
+	VM *vm;
+	VALUE f;
+	VALUE arg;
+} NGS_PTHREAD_INIT_INFO;
+
 enum opcodes {
 	OP_HALT,
 	OP_PUSH_NULL,
