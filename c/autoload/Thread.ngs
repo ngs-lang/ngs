@@ -1,11 +1,34 @@
 {
+	# ./ngs -e 't = c_pthread_create(PthreadAttr(), F(x) {echo(x); x+1} , 7); c_pthread_join(t[1]).dump()'
+
 	type Thread
 
 	# WORK IN PROGRESS, DO NOT USE
 	F init(t:Thread, f:Fun, arg) {
+		# Have some race condition and segfault, need this delay here
+		echo(1)
 		local thread_attr = PthreadAttr()
 		local create_result = c_pthread_create(thread_attr, f, arg)
 		local code = create_result[0]
+		if code {
+			# XXX better exception ... and include code in it
+			throw Error("Failed to c_pthread_create")
+		}
 		t.thread = create_result[1]
 	}
+
+	F wait(t:Thread) {
+		local join_result = c_pthread_join(t.thread)
+		join_result[1]
+	}
+
+	# TODO: maybe limit number of concurrent threads (default to cores count?)
+	F pmap(a:Arr, mapper:Fun) {
+		local threads = a.map(F(elt) Thread(mapper, elt))
+		# dump(threads)
+		threads.map(wait)
+	}
+
+TEST (1..3).Arr().pmap(F(x) x*10) == [10, 20]
+
 }

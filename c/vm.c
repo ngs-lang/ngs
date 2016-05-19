@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <dlfcn.h>
 #include <inttypes.h>
+#include <pthread.h>
 #include <stdarg.h>
 
 // ..., FMEMOPEN(3)
@@ -1011,7 +1012,7 @@ void *_pthread_start_routine(void *arg) {
 	return result;
 }
 
-METHOD_RESULT native_pthreadcreate_pthreadattr_startroutine_arg EXT_METHOD_PARAMS {
+METHOD_RESULT native_c_pthreadcreate_pthreadattr_startroutine_arg EXT_METHOD_PARAMS {
 	VALUE pthread;
 	VALUE ret;
 	NGS_PTHREAD_INIT_INFO *init;
@@ -1026,6 +1027,17 @@ METHOD_RESULT native_pthreadcreate_pthreadattr_startroutine_arg EXT_METHOD_PARAM
 	ret = make_array(2);
 	ARRAY_ITEMS(ret)[0] = MAKE_INT(status);
 	ARRAY_ITEMS(ret)[1] = pthread;
+	METHOD_RETURN(ret);
+}
+
+METHOD_RESULT native_c_pthreadjoin METHOD_PARAMS {
+	VALUE ret;
+	int status;
+	VALUE *p;
+	ret = make_array(2);
+	status = pthread_join(GET_PTHREAD(argv[0]), (void **)&p);
+	ARRAY_ITEMS(ret)[1] = *p;
+	ARRAY_ITEMS(ret)[0] = MAKE_INT(status);
 	METHOD_RETURN(ret);
 }
 
@@ -1232,6 +1244,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
 
 	// threads
+	register_global_func(vm, 1, "c_pthread_create", &native_c_pthreadcreate_pthreadattr_startroutine_arg, 3, "attr", vm->PthreadAttr, "start_routine", vm->Closure, "arg", vm->Any);
+	register_global_func(vm, 0, "c_pthread_join", &native_c_pthreadjoin, 1, "thread", vm->Pthread);
 	register_global_func(vm, 0, "PthreadAttr", &native_pthread_attr,      0);
 	register_global_func(vm, 0, ".",           &native_attr_pthreadattr,  2, "pa", vm->PthreadAttr,          "attr", vm->Str);
 

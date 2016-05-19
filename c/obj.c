@@ -151,6 +151,16 @@ static void _dump(VALUE v, int level) {
 		goto exit;
 	}
 
+	if(IS_PTHREAD(v)) {
+		printf("%*s* pthread_t at %p\n", level << 1, "", &GET_PTHREAD(v));
+		goto exit;
+	}
+
+	if(IS_PTHREADATTR(v)) {
+		printf("%*s* pthread_attr_t at %p\n", level << 1, "", &GET_PTHREADATTR(v));
+		goto exit;
+	}
+
 	printf("%*s* (dump not implemented for the object at %p)\n", level << 1, "", OBJ_DATA_PTR(v));
 
 exit:
