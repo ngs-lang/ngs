@@ -986,18 +986,40 @@ METHOD_RESULT native_pthread_attr METHOD_PARAMS {
 	METHOD_RETURN(make_pthread_attr());
 }
 
+#define ATTR ((pthread_attr_t * restrict)&GET_PTHREADATTR(argv[0]))
+// TODO: check range - i might be larger than supported MAKE_INT() argument
+#define INT_ATTR(name) \
+	if(!strcmp(attr, #name)) { \
+		pthread_attr_get ## name(ATTR, &i); \
+		METHOD_RETURN(MAKE_INT(i)); \
+	}
+#define SIZE_ATTR(name) \
+	if(!strcmp(attr, #name)) { \
+		pthread_attr_get ## name(ATTR, &size); \
+		METHOD_RETURN(MAKE_INT(size)); \
+	}
 METHOD_RESULT native_attr_pthreadattr METHOD_PARAMS {
 	char *attr = obj_to_cstring(argv[1]);
-	size_t stacksize;
-	if(!strcmp(attr, "stacksize")) {
-		pthread_attr_getstacksize((pthread_attr_t * restrict)&GET_PTHREADATTR(argv[0]), &stacksize);
-		// TODO: check range - stacksize might be larger than supported MAKE_INT() argument
-		METHOD_RETURN(MAKE_INT(stacksize));
-	}
+	size_t size;
+	int i;
+	// TODO: check exit statuses maybe?
+	// TODO: other attributes
+	// TODO: PTHREAD_INHERIT_SCHED and PTHREAD_EXPLICIT_SCHED constants
+	// TODO: PTHREAD_SCOPE_SYSTEM and PTHREAD_SCOPE_PROCESS constants
+	INT_ATTR (detachstate);
+	SIZE_ATTR(guardsize);
+	INT_ATTR (inheritsched);
+	INT_ATTR (scope);
+	SIZE_ATTR(stacksize);
 	// TODO: Throw exception
 	METHOD_RETURN(MAKE_NULL);
 }
+#undef SIZE_ATTR
+#undef INT_ATTR
+#undef ATTR
 
+// TODO: use vm_call METHOD_RESULT ?
+// TODO: how to handle exceptions in the thread?
 void *_pthread_start_routine(void *arg) {
 	NGS_PTHREAD_INIT_INFO *init;
 	CTX ctx;
