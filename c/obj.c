@@ -944,7 +944,7 @@ VALUE make_pthread() {
 
 VALUE make_pthread_attr() {
 	VALUE v;
-	PTHREAD_OBJECT *pa;
+	PTHREADATTR_OBJECT *pa;
 	pa = NGS_MALLOC(sizeof(*pa));
 	pa->base.type.num = T_PTHREADATTR;
 	SET_OBJ(v, pa);

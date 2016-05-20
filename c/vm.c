@@ -1036,8 +1036,8 @@ METHOD_RESULT native_c_pthreadjoin METHOD_PARAMS {
 	VALUE *p;
 	ret = make_array(2);
 	status = pthread_join(GET_PTHREAD(argv[0]), (void **)&p);
-	ARRAY_ITEMS(ret)[1] = *p;
 	ARRAY_ITEMS(ret)[0] = MAKE_INT(status);
+	ARRAY_ITEMS(ret)[1] = status ? MAKE_NULL : *p;
 	METHOD_RETURN(ret);
 }
 
