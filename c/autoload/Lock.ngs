@@ -1,0 +1,24 @@
+{
+	# WIP, don't use yet
+
+	type Lock
+
+	F init(l:Lock) {
+		l.lock = PthreadMutex()
+		local code = c_pthread_mutex_init(l.lock)
+		if code {
+			# XXX better exception ... and include code in it
+			throw Error("Failed to c_pthread_mutex_init")
+		}
+	}
+
+	F acquire(l:Lock) {
+
+	}
+
+	F release(l:Lock) {
+
+	}
+
+	TEST Lock() is Lock
+}

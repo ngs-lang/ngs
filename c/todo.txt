@@ -23,7 +23,7 @@ Note that this started as internal document so things here are unformed, not fin
 	* threads
 		* Thread() [in progress]
 			* Make pthread_attr_t accessible - get/set attributes
-		* Lock() based on pthread_mutex_t
+		* Lock() based on pthread_mutex_t [in progress]
 		* check by runnig multi-threaded program
 
 	* documentation [on hold]

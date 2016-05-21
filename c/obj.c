@@ -161,6 +161,11 @@ static void _dump(VALUE v, int level) {
 		goto exit;
 	}
 
+	if(IS_PTHREADMUTEX(v)) {
+		printf("%*s* pthread_mutex_t at %p\n", level << 1, "", &GET_PTHREADMUTEX(v));
+		goto exit;
+	}
+
 	printf("%*s* (dump not implemented for the object at %p)\n", level << 1, "", OBJ_DATA_PTR(v));
 
 exit:
@@ -708,6 +713,7 @@ int obj_is_of_type(VALUE obj, VALUE t) {
 		OBJ_C_OBJ_IS_OF_TYPE(T_REAL, IS_REAL);
 		OBJ_C_OBJ_IS_OF_TYPE(T_PTHREAD, IS_PTHREAD);
 		OBJ_C_OBJ_IS_OF_TYPE(T_PTHREADATTR, IS_PTHREADATTR);
+		OBJ_C_OBJ_IS_OF_TYPE(T_PTHREADMUTEX, IS_PTHREADMUTEX);
 		if(IS_NORMAL_TYPE_INSTANCE(obj)) { return 0; }
 		dump_titled("Unimplemented type to check", t);
 		assert(0=="obj_is_of_type(): Unimplemented check against builtin type");
@@ -948,7 +954,16 @@ VALUE make_pthread_attr() {
 	pa = NGS_MALLOC(sizeof(*pa));
 	pa->base.type.num = T_PTHREADATTR;
 	SET_OBJ(v, pa);
-	pthread_attr_init(&GET_PTHREADATTR(v));
+	return v;
+}
+
+VALUE make_pthread_mutex() {
+	VALUE v;
+	PTHREADMUTEX_OBJECT *pm;
+	// TODO: NGS_MALLOC_ATOMIC maybe?
+	pm = NGS_MALLOC(sizeof(*pm));
+	pm->base.type.num = T_PTHREADMUTEX;
+	SET_OBJ(v, pm);
 	return v;
 }
 

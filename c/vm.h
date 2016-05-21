@@ -172,6 +172,8 @@ typedef struct {
 	// Not sure about naming convention
 	NGS_TYPE *Pthread;
 	NGS_TYPE *PthreadAttr;
+	NGS_TYPE *PthreadMutex;
+	// TODO: NGS_TYPE *PthreadMutexAttr;
 
 	VALUE Exception;
 		VALUE Error;

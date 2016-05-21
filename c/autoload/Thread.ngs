@@ -5,6 +5,7 @@
 
 	F init(t:Thread, f:Fun, arg) {
 		local thread_attr = PthreadAttr()
+		c_pthread_attr_init(thread_attr)
 		local create_result = c_pthread_create(thread_attr, f, arg)
 		local code = create_result[0]
 		if code {
