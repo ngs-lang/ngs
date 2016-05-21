@@ -15,6 +15,10 @@
 		t.thread = create_result[1]
 	}
 
+	F init(t:Thread, f:Fun) {
+		init(t, F(discard) f(), null)
+	}
+
 	F join(t:Thread) {
 		local join_result = c_pthread_join(t.thread)
 		if join_result[0] {

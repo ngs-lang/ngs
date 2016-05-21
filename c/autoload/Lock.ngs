@@ -3,22 +3,45 @@
 
 	type Lock
 
+	type LockError
+	LockError.inherit(Exception)
+
+	F init(e:LockError, op:Str, code:Int, msg:Str) {
+		init(e)
+		e.op = op
+		e.code = code
+		e.msg = msg
+		e.backtrace.frames.pop()
+	}
+
 	F init(l:Lock) {
 		l.lock = PthreadMutex()
 		local code = c_pthread_mutex_init(l.lock)
-		if code {
-			# XXX better exception ... and include code in it
-			throw Error("Failed to c_pthread_mutex_init")
-		}
+		code throws LockError("c_pthread_attr_init", code, "Call to underlying API failed")
 	}
 
 	F acquire(l:Lock) {
-
+		c_pthread_mutex_lock(l.lock)
+		l
 	}
 
 	F release(l:Lock) {
-
+		c_pthread_mutex_unlock(l.lock)
+		l
 	}
 
-	TEST Lock() is Lock
+	F acquire(l:Lock, cb:Fun) {
+		l.acquire()
+		try {
+			local ret = cb()
+			l.release()
+			ret
+		} catch(e:Exception) {
+			l.release()
+			throw e
+		}
+	}
+
+
+	TEST Lock().acquire(F() 1) == 1
 }
