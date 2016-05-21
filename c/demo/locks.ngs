@@ -1,28 +1,22 @@
 #!/usr/bin/env ngs
 {
-	l=Lock()
+	l = Lock()
 	THREADS = 100
 	ITERATIONS = 100
 
 	# Bad implementation
 	i=0
-	threads = THREADS.map(F(dummy) {
-		Thread(F() {
-			for(j;ITERATIONS)
-				i=i+1
-		})
+	THREADS.ptimes(F() {
+		for(j;ITERATIONS)
+			i=i+1
 	})
-	threads.each(join)
 	echo(i)
 
 	# Good implementation
 	i=0
-	threads = THREADS.map(F(dummy) {
-		Thread(F() {
-			for(j;ITERATIONS)
-				l.acquire(F() i=i+1)
-		})
+	THREADS.ptimes(F() {
+		for(j;ITERATIONS)
+			l.acquire(F() i=i+1)
 	})
-	threads.each(join)
 	echo(i)
 }

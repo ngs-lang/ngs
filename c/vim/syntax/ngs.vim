@@ -39,7 +39,7 @@ syn keyword ngsFunction c_close c_execve c_exit c_fork c_lseek c_open c_read c_w
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction fetch require to_exit_code
 " stdlib functions
-syn keyword ngsFunction acquire all any close_reading_end close_writing_end count dup2 dup2_reading_end dup2_writing_end each error expose debug filter find_in_path first flatten has identity in join len log map max min partial partial_tail pmap pos read release split status Strs uniq update wait without write zip
+syn keyword ngsFunction acquire all any close_reading_end close_writing_end count dup2 dup2_reading_end dup2_writing_end each error expose debug filter find_in_path first flatten has identity in join len log map max min partial partial_tail pmap pos ptimes read release split status Strs uniq update wait without write zip
 
 hi def link ngsComment Comment
 hi def link ngsConditional Conditional
