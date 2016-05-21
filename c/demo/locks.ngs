@@ -1,3 +1,4 @@
+#!/usr/bin/env ngs
 {
 	l=Lock()
 	THREADS = 100
