@@ -19,7 +19,8 @@ syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
 syn keyword ngsType Any Arr BasicType Bool CLib Command CSym ExclusiveRange Fun Hash InclusiveRange Int NormalType Null Path Pipe Process ProcessFailed Range Seq Stats Str Table Type
 syn keyword ngsType Error Exception CompileFail DontKnowHowToCall GlobalNotFound InvalidArgument ImplNotFound LookupFail KeyNotFound IndexNotFound AttrNotFound InvalidParameter
-syn keyword ngsType Pthread PthreadAttr Thread
+syn keyword ngsType Lock Pthread PthreadAttr Thread
+syn keyword ngsType LockFail
 syn keyword ngsTodo TODO FIXME XXX NOTE
 syn keyword ngsConstant true false null
 syn keyword ngsPredefinedVariable ARGV ENV
@@ -38,7 +39,7 @@ syn keyword ngsFunction c_close c_execve c_exit c_fork c_lseek c_open c_read c_w
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction fetch require to_exit_code
 " stdlib functions
-syn keyword ngsFunction all any close_reading_end close_writing_end count dup2 dup2_reading_end dup2_writing_end each error expose debug filter find_in_path first flatten has identity in join len log map max min partial partial_tail pmap pos read split status Strs uniq update wait without write zip
+syn keyword ngsFunction acquire all any close_reading_end close_writing_end count dup2 dup2_reading_end dup2_writing_end each error expose debug filter find_in_path first flatten has identity in join len log map max min partial partial_tail pmap pos read release split status Strs uniq update wait without write zip
 
 hi def link ngsComment Comment
 hi def link ngsConditional Conditional
