@@ -1109,6 +1109,11 @@ command-word =
 		MAKE_STRING_NODE(ret, yytext);
 		$$ = ret;
 	}
+	| "$*" c:code-block {
+		MAKE_NODE(splat, ARR_SPLAT_NODE);
+			splat->first_child = c;
+		$$ = splat;
+	}
 	| "$" c:code-block { $$ = c; }
 	| string
 

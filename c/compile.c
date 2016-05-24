@@ -762,6 +762,12 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0); // Make array with zero elements
 			OPCODE(*buf, OP_MAKE_ARR);
 			for(ptr=node->first_child->next_sibling->first_child; ptr; ptr=ptr->next_sibling) {
+				if(ptr->type == ARR_SPLAT_NODE) {
+					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+					OPCODE(*buf, OP_TO_ARR);
+					OPCODE(*buf, OP_ARR_CONCAT);
+					continue;
+				}
 				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
 				OPCODE(*buf, OP_ARR_APPEND);
 			}
