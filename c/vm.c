@@ -2311,8 +2311,10 @@ do_jump:
 							// }
 							goto exception;
 		case OP_MAKE_CMD:
-							EXPECT_STACK_DEPTH(2);
+							EXPECT_STACK_DEPTH(3);
 							command = make_normal_type_instance(vm->Command);
+							POP_NOCHECK(v);
+							set_normal_type_instance_attribute(command, make_string("is_top_level"), v);
 							POP_NOCHECK(v);
 							set_normal_type_instance_attribute(command, make_string("redirects"), v);
 							POP_NOCHECK(v);

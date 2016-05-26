@@ -168,7 +168,11 @@ command =
 	|
 	comment
 	|
-	command-words
+	cw:command-words {
+		// TODO: constants for flags
+		cw->number = 1;
+		$$ = cw;
+	}
 
 
 curly-code-block =

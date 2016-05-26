@@ -778,6 +778,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
 				OPCODE(*buf, OP_ARR_APPEND);
 			}
+			OPCODE(*buf, node->number ? OP_PUSH_TRUE : OP_PUSH_FALSE);
 			OPCODE(*buf, OP_MAKE_CMD);
 
 			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 1);

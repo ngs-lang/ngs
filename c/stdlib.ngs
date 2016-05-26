@@ -1020,10 +1020,11 @@ F '$()'(c:Command) {
 
 	if pid == 0 {
 		debug("$debug_pfx child will execve()")
-		pipe.close_reading_end()
-		pipe.dup2_writing_end(1)
+		if not(c.is_top_level) {
+			pipe.close_reading_end()
+			pipe.dup2_writing_end(1)
+		}
 		# Redirections (WIP) - start
-		echo(c.redirects)
 		c.redirects.each(F(r:Redir) {
 			local flags, target_fd, f
 			eswitch r.marker {
@@ -1044,11 +1045,13 @@ F '$()'(c:Command) {
 
 	if pid > 0 {
 		process.pid = pid
-		debug("$debug_pfx closing writing end of the pipe")
-		pipe.close_writing_end()
-		debug("$debug_pfx reading all output of the child process")
-		process.stdout = pipe.read()
-		pipe.close_reading_end()
+		if not(c.is_top_level) {
+			debug("$debug_pfx closing writing end of the pipe")
+			pipe.close_writing_end()
+			debug("$debug_pfx reading all output of the child process")
+			process.stdout = pipe.read()
+			pipe.close_reading_end()
+		}
 		# debug("$debug_pfx child output was <<${process.stdout}>>")
 		process.wait()
 	}
