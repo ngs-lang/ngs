@@ -2078,6 +2078,14 @@ main_loop:
 								goto exception;
 							}
 							if(mr != METHOD_OK) {
+								if(mr == METHOD_ARGS_MISMATCH) {
+									VALUE exc;
+									exc = make_normal_type_instance(vm->ImplNotFound);
+									set_normal_type_instance_attribute(exc, make_string("callable"), callable);
+									set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values(OBJ_LEN(ctx->stack[ctx->stack_ptr-1]), ARRAY_ITEMS(ctx->stack[ctx->stack_ptr-1])));
+									*result = exc;
+									goto exception;
+								}
 								dump_titled("Failed argument array", ctx->stack[ctx->stack_ptr-1]);
 								dump_titled("Failed callable / 3", callable);
 								assert(0=="Handling failed method calls is not implemented yet");

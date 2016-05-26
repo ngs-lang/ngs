@@ -6,7 +6,28 @@
 	doc col_name_to_idx - Columns names' indexes (ex: id:0, name:1, age:2)
 	doc col_idx_to_name - Columns indexes' names (ex: 0:id, 1:name, 2:age)
 	type Table
+
+	doc Additional information to be used when processing a Table
+	doc data - underlying data
+	type TableMeta
+
+	doc Do not show the data below if the named column is present
+	type TableMetaNotIfCol
+	TableMetaNotIfCol.inherit(TableMeta)
 }
+
+F init(x:TableMetaNotIfCol, col_name:Str, data) {
+	x.col_names = [col_name]
+	x.data = data
+}
+
+F init(x:TableMetaNotIfCol, col_names:Arr, data) {
+	guard col_names.all(is, Str)
+	x.col_names = col_names
+	x.data = data
+}
+
+F Str(x:TableMetaNotIfCol) x.data.Str()
 
 doc Calculate cell display width - any Str()-able instance
 F cell_display_width(x) Str(x).len()
@@ -111,16 +132,35 @@ F Hashes(t:Table) {
 	throw NotImplemented()
 }
 
+F should_display_cell_item(t:Table, item) true
+
+F should_display_cell_item(t:Table, item:TableMetaNotIfCol) {
+	item.col_names.none(in, t.col_name_to_idx)
+}
+
+doc Preprocess a Table just before output
+F preprocess(t:Table) {
+	t.rows.each(F(row) {
+		row.each_idx_val(F(idx, cell) {
+			if cell is Arr {
+				row[idx] = cell.filter(should_display_cell_item.partial(t))
+			}
+		})
+	})
+}
+
 doc Displays a table. Implemented only for tty output (or output_format=text configuration)
 F echo(t:Table) {
 	guard 1.isatty() or (config('output_format') == 'text')
-	# TODO: display vertically elements of an array (for array which is a cell).
 	# TODO: get and use tty width?
 	# TODO: special treatment for tmux? can print any width and tmux can be adjusted later.
 	# TODO: support Arr in headers
 	# TODO: handle Hash type of cell (maybe allow configuring order of keys etc)
-	# TODO: handle limiting width of a cell
+	# TODO: handle limiting width of a cell, probably using subtype of TableMeta
 	# TODO: support displaying something (like '-') for empty spaces instead of ''
+
+	preprocess(t)
+
 	local do_output_headers = config('output_headers') in [null, true]
 	local max_colums_widths = t.col_idx_to_name.map(F(idx, k) {
 		local col = t.column(idx)

@@ -4,7 +4,9 @@
 # Running example: NGS_table_Instances='["InstanceId", "PublicIpAddress", "PrivateIpAddress", "State", "KeyName", "SecurityGroups"]' ./demo/ec2din.ngs
 
 {
-	config('table_Instances', ['InstanceId', 'PublicIpAddress', 'PrivateIpAddress', 'InstanceType', 'State', 'KeyName', 'SecurityGroups', 'Placement', 'Tags'])
+	Table
+
+	config('table_Instances', ['InstanceId', 'tag_Name', 'tag_env', 'tag_role', 'IPs', 'InstanceType', 'State', 'KeyName', 'SecurityGroups', 'Placement', 'RestOfTags'])
 
 	F limit_len(s:Str, l:Int) {
 		s.len() <= l returns s
@@ -23,7 +25,14 @@
 		# TODO: something more intelligent than discarding rarely used GroupName and Tenancy
 		i.Placement = i.Placement.AvailabilityZone
 		# Tags here is a Hash (after straightening by stdlib)
-		i.Tags = i.Tags.map(F(k, v) "${limit_len(k, 10)}=${limit_len(v, 15)}")
+		i.Name = i.Tags.get('Name', '-').limit_len(20)
+		i.IPs = [i.PublicIpAddress, i.PrivateIpAddress]
+		i.Tags.each(F(k, v) {
+			i["full_tag_${k}"] = v
+			i["tag_${k}"] = v.limit_len(20)
+		})
+		# TODO: Move layout management to Table, don't limit_len() here
+		i.RestOfTags = i.Tags.map(F(k, v) TableMetaNotIfCol(["full_tag_$k", "tag_$k"], KV(k.limit_len(10), v.limit_len(15))))
 	})
 	t = Table('Instances', instances)
 	echo(t)

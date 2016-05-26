@@ -1,0 +1,10 @@
+{
+	type KV
+
+	F init(kv:KV, k, v) {
+		kv.k = k
+		kv.v = v
+	}
+
+	F Str(kv:KV) "${kv.k}=${kv.v}"
+}
