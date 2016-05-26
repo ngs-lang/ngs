@@ -170,10 +170,10 @@ typedef struct {
 	NGS_TYPE *CSym;
 
 	// Not sure about naming convention
-	NGS_TYPE *Pthread;
-	NGS_TYPE *PthreadAttr;
-	NGS_TYPE *PthreadMutex;
-	// TODO: NGS_TYPE *PthreadMutexAttr;
+	NGS_TYPE *c_pthread_t;
+	NGS_TYPE *c_pthread_attr_t;
+	NGS_TYPE *c_pthread_mutex_t;
+	// TODO: NGS_TYPE *c_pthread_mutex_tAttr;
 
 	VALUE Exception;
 		VALUE Error;

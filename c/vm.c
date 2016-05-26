@@ -1213,9 +1213,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MK_BUILTIN_TYPE(Hash, T_HASH);
 	MK_BUILTIN_TYPE_DOC(CLib, T_CLIB, "C library (unfinished, do not use)");
 	MK_BUILTIN_TYPE_DOC(CSym, T_CSYM, "C symbol (unfinished, do not use)");
-	MK_BUILTIN_TYPE(Pthread, T_PTHREAD);
-	MK_BUILTIN_TYPE(PthreadAttr, T_PTHREADATTR);
-	MK_BUILTIN_TYPE(PthreadMutex, T_PTHREADMUTEX);
+	MK_BUILTIN_TYPE(c_pthread_t, T_PTHREAD);
+	MK_BUILTIN_TYPE(c_pthread_attr_t, T_PTHREADATTR);
+	MK_BUILTIN_TYPE(c_pthread_mutex_t, T_PTHREADMUTEX);
 #undef MK_BUILTIN_TYPE
 
 #define MKTYPE(name) \
@@ -1278,15 +1278,15 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
 
 	// threads
-	register_global_func(vm, 1, "c_pthread_create",       &native_c_pthreadcreate_pthreadattr_startroutine_arg, 3, "attr", vm->PthreadAttr, "start_routine", vm->Closure, "arg", vm->Any);
-	register_global_func(vm, 0, "c_pthread_join",         &native_c_pthreadjoin,        1, "thread", vm->Pthread);
-	register_global_func(vm, 0, "c_pthread_attr_init",    &native_c_pthreadattrinit,    1, "attr",   vm->PthreadAttr);
-	register_global_func(vm, 0, "c_pthread_mutex_init",   &native_c_pthreadmutexinit,   1, "mutex",  vm->PthreadMutex);
-	register_global_func(vm, 0, "c_pthread_mutex_lock",   &native_c_pthreadmutexlock,   1, "mutex",  vm->PthreadMutex);
-	register_global_func(vm, 0, "c_pthread_mutex_unlock", &native_c_pthreadmutexunlock, 1, "mutex",  vm->PthreadMutex);
-	register_global_func(vm, 0, "PthreadAttr",            &native_pthread_attr,         0);
-	register_global_func(vm, 0, "PthreadMutex",           &native_pthread_mutex,        0);
-	register_global_func(vm, 0, ".",                      &native_attr_pthreadattr,     2, "pa", vm->PthreadAttr,    "attr", vm->Str);
+	register_global_func(vm, 1, "c_pthread_create",       &native_c_pthreadcreate_pthreadattr_startroutine_arg, 3, "attr", vm->c_pthread_attr_t, "start_routine", vm->Closure, "arg", vm->Any);
+	register_global_func(vm, 0, "c_pthread_join",         &native_c_pthreadjoin,        1, "thread", vm->c_pthread_t);
+	register_global_func(vm, 0, "c_pthread_attr_init",    &native_c_pthreadattrinit,    1, "attr",   vm->c_pthread_attr_t);
+	register_global_func(vm, 0, "c_pthread_mutex_init",   &native_c_pthreadmutexinit,   1, "mutex",  vm->c_pthread_mutex_t);
+	register_global_func(vm, 0, "c_pthread_mutex_lock",   &native_c_pthreadmutexlock,   1, "mutex",  vm->c_pthread_mutex_t);
+	register_global_func(vm, 0, "c_pthread_mutex_unlock", &native_c_pthreadmutexunlock, 1, "mutex",  vm->c_pthread_mutex_t);
+	register_global_func(vm, 0, "c_pthread_attr_t",       &native_pthread_attr,         0);
+	register_global_func(vm, 0, "c_pthread_mutex_t",      &native_pthread_mutex,        0);
+	register_global_func(vm, 0, ".",                      &native_attr_pthreadattr,     2, "pa", vm->c_pthread_attr_t,    "attr", vm->Str);
 
 	// Native methods
 	register_global_func(vm, 0, "attrs",    &native_attrs_nm,          1, "m",      vm->NativeMethod);

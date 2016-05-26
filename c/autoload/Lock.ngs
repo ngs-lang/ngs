@@ -15,7 +15,7 @@
 	}
 
 	F init(l:Lock) {
-		l.lock = PthreadMutex()
+		l.lock = c_pthread_mutex_t()
 		local code = c_pthread_mutex_init(l.lock)
 		code throws LockFail("c_pthread_attr_init", code, "Call to underlying API failed")
 	}
