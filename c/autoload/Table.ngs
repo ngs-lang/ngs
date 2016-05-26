@@ -16,6 +16,11 @@
 	TableMetaNotIfCol.inherit(TableMeta)
 }
 
+F StrForTable(x) Str(x)
+F StrForTable(x, width:Int) Str(x, width)
+F StrForTable(x:Null) "-"
+F StrForTable(x:Null, width:Int) Str("-", width)
+
 F init(x:TableMetaNotIfCol, col_name:Str, data) {
 	x.col_names = [col_name]
 	x.data = data
@@ -30,10 +35,10 @@ F init(x:TableMetaNotIfCol, col_names:Arr, data) {
 F Str(x:TableMetaNotIfCol) x.data.Str()
 
 doc Calculate cell display width - any Str()-able instance
-F cell_display_width(x) Str(x).len()
+F cell_display_width(x) StrForTable(x).len()
 
 doc Calculate cell display width for an array
-F cell_display_width(x:Arr) x.map(Str).map(len).max()
+F cell_display_width(x:Arr) x.map(StrForTable).map(len).max()
 
 doc Calculate cell display width for an empty array
 F cell_display_width(x:Arr) { guard x.len()==0; 0 }
@@ -181,7 +186,7 @@ F echo(t:Table) {
 
 	# Headers
 	if(do_output_headers) {
-		t.col_idx_to_name.map(F(idx, k) Str(k, max_colums_widths[idx])).join(' ').echo()
+		t.col_idx_to_name.map(F(idx, k) StrForTable(k, max_colums_widths[idx])).join(' ').echo()
 		do_line_spacing()
 	}
 
@@ -209,7 +214,7 @@ F echo(t:Table) {
 					}
 				}
 				# Format later maybe? Just before printing?
-				Str(subrow_content, max_colums_widths[idx])
+				StrForTable(subrow_content, max_colums_widths[idx])
 			})
 			if not(done) {
 				subrow_content_arr.join(' ').echo()
