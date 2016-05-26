@@ -1,6 +1,4 @@
 {
-	# WIP, don't use yet
-
 	type Lock
 
 	type LockFail
