@@ -18,6 +18,10 @@ Note that this started as internal document so things here are unformed, not fin
 
 [todo by priority]
 
+	* Consider https://github.com/ilyash/ngs/issues/8
+		* F vs Fun naming inconsistency is a major issue
+		* "local" is a minor issue, should probably stay
+
 	* threads
 		* Thread() [in progress]
 			* Make pthread_attr_t accessible - get/set attributes
@@ -45,6 +49,11 @@ Note that this started as internal document so things here are unformed, not fin
 			}
 
 		or something alike, not sure yet.
+		Maybe
+
+			match my_string my_match {
+				/my_regex(.*)/ { my_code }
+			}
 
 	* commands syntax
 		* top level $() fix
