@@ -933,9 +933,13 @@ F Str(r:Redir) "<Redirect ${r.marker} ${r.datum}>"
 
 # --- Process ---
 
-{ type ProcessFailed }
+{
+	type Process
 
-{ type Process }
+	type ProcessFailed
+	ProcessFailed.inherit(Exception)
+}
+
 
 # TODO: Inherit from Exception or a subtype of it
 F ProcessFailed(p:Process) {
