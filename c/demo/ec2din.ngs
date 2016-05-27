@@ -13,19 +13,16 @@
 		s[0..(l-3)] + '...'
 	}
 
-	# TODO: tags order: "Name" and then all others sorted
 	# TODO: move limit_len() functionlity to stdlib so it could be
 	#       centrally configured and be affected by
 	#       displaying conditions such as available console width
 
-	filters = []
-
-	ARGV.each(F(arg) {
+	filters = ARGV.map(F(arg) {
 		kv = arg.split('=')
-		cond {
-			arg.starts_with('vpc-') filters.push("Name=vpc-id,Values=$arg")
-			arg.starts_with('i-')   filters.push("Name=instance-id,Values=$arg")
-			kv.len() == 2           filters.push("Name=tag-key,Values=${kv[0]},Name=tag-value,Values=${kv[1]}")
+		econd {
+			arg.starts_with('vpc-') "Name=vpc-id,Values=$arg"
+			arg.starts_with('i-')   "Name=instance-id,Values=$arg"
+			kv.len() == 2           "Name=tag-key,Values=${kv[0]},Name=tag-value,Values=${kv[1]}"
 		}
 	})
 
