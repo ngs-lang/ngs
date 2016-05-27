@@ -958,24 +958,29 @@ string =
 	string-sq | string-dq
 
 string-sq =
-	"'" acc:str-comps-node (string-sq-imm { append_ast_node_child(acc, $$); })* "'" {
+	"'" acc:str-comps-node (
+		string-sq-imm { append_ast_node_child(acc, $$); } |
+		string-escape { append_ast_node_child(acc, $$); } )* "'" {
 		$$ = acc;
 	}
 
 string-dq =
-	"\"" acc:str-comps-node (string-dq-imm { append_ast_node_child(acc, $$); } | string-dq-dollar-expansion { append_ast_node_child(acc, $$); })* "\"" {
+	"\"" acc:str-comps-node (
+		string-dq-imm { append_ast_node_child(acc, $$); } |
+		string-escape { append_ast_node_child(acc, $$); } |
+		string-dq-dollar-expansion { append_ast_node_child(acc, $$); })* "\"" {
 		$$ = acc;
 	}
 
 string-sq-imm =
-	<[^\']+> {
+	<[^\'\\]+> {
 		MAKE_NODE(content, STR_COMP_IMM_NODE);
 		content->name = ngs_strdup(yytext);
 		$$ = content;
 	}
 
 string-dq-imm =
-	<[^$\"]+> {
+	<[^$\"\\]+> {
 		MAKE_NODE(content, STR_COMP_IMM_NODE);
 		content->name = ngs_strdup(yytext);
 		$$ = content;
@@ -984,6 +989,19 @@ string-dq-imm =
 string-dq-dollar-expansion =
 	subshell
 	| "$" c:code-block { $$ = c; }
+
+# https://en.wikipedia.org/wiki/Escape_sequences_in_C
+string-escape = "\\" (
+		"a"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\a"); $$ = content; } |
+		"b"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\b"); $$ = content; } |
+		"f"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\f"); $$ = content; } |
+		"n"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\n"); $$ = content; } |
+		"r"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\r"); $$ = content; } |
+		"t"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\t"); $$ = content; } |
+		"\\" { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\\"); $$ = content; } |
+		"'"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\'"); $$ = content; } |
+		"\"" { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\""); $$ = content; }
+	)
 
 str-comps-node = {
 		MAKE_NODE(ret, STR_COMPS_NODE);
