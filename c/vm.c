@@ -997,12 +997,12 @@ METHOD_RESULT native_c_strcasecmp METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(strcasecmp(obj_to_cstring(argv[0]), obj_to_cstring(argv[1]))));
 }
 
-METHOD_RESULT native_pthread_attr METHOD_PARAMS {
+METHOD_RESULT native_c_pthreadattrt METHOD_PARAMS {
 	(void) argv;
 	METHOD_RETURN(make_pthread_attr());
 }
 
-METHOD_RESULT native_pthread_mutex METHOD_PARAMS {
+METHOD_RESULT native_c_pthreadmutext METHOD_PARAMS {
 	(void) argv;
 	METHOD_RETURN(make_pthread_mutex());
 }
@@ -1089,6 +1089,12 @@ METHOD_RESULT native_c_pthreadattrinit METHOD_PARAMS  { METHOD_RETURN(MAKE_INT(p
 METHOD_RESULT native_c_pthreadmutexinit METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_mutex_init(&GET_PTHREADMUTEX(argv[0]), NULL))); }
 METHOD_RESULT native_c_pthreadmutexlock METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_mutex_lock(&GET_PTHREADMUTEX(argv[0])))); }
 METHOD_RESULT native_c_pthreadmutexunlock METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_mutex_unlock(&GET_PTHREADMUTEX(argv[0])))); }
+METHOD_RESULT native_c_pthreadself METHOD_PARAMS {
+	VALUE pthread = make_pthread();
+	(void) argv;
+	GET_PTHREAD(pthread) = pthread_self();
+	METHOD_RETURN(pthread);
+}
 
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
@@ -1300,8 +1306,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_pthread_mutex_init",   &native_c_pthreadmutexinit,   1, "mutex",  vm->c_pthread_mutex_t);
 	register_global_func(vm, 0, "c_pthread_mutex_lock",   &native_c_pthreadmutexlock,   1, "mutex",  vm->c_pthread_mutex_t);
 	register_global_func(vm, 0, "c_pthread_mutex_unlock", &native_c_pthreadmutexunlock, 1, "mutex",  vm->c_pthread_mutex_t);
-	register_global_func(vm, 0, "c_pthread_attr_t",       &native_pthread_attr,         0);
-	register_global_func(vm, 0, "c_pthread_mutex_t",      &native_pthread_mutex,        0);
+	register_global_func(vm, 0, "c_pthread_self",         &native_c_pthreadself,        0);
+	register_global_func(vm, 0, "c_pthread_attr_t",       &native_c_pthreadattrt,         0);
+	register_global_func(vm, 0, "c_pthread_mutex_t",      &native_c_pthreadmutext,        0);
 	register_global_func(vm, 0, ".",                      &native_attr_pthreadattr,     2, "pa", vm->c_pthread_attr_t,    "attr", vm->Str);
 
 	// Native methods
