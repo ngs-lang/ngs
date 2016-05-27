@@ -154,10 +154,21 @@ F preprocess(t:Table) {
 	})
 }
 
+F calculate_num_cols_to_show(t:Table, max_colums_widths:Arr, available_cols:Int) {
+	local cols_to_show = 0
+	for(i; max_colums_widths.len()) {
+		# TODO: unhardcode the "+1" spacing width
+		cols_to_show = cols_to_show + max_colums_widths[i] + 1
+		cols_to_show > available_cols returns i
+	}
+	i
+}
+
 doc Displays a table. Implemented only for tty output (or output_format=text configuration)
 F echo(t:Table) {
 	guard 1.isatty() or (config('output_format') == 'text')
-	# TODO: get and use tty width?
+	local lines = (ENV.get('LINES')   or $(tput lines).Str()).Int()
+	local cols  = (ENV.get('COLUMNS') or $(tput cols).Str()).Int()
 	# TODO: special treatment for tmux? can print any width and tmux can be adjusted later.
 	# TODO: support Arr in headers
 	# TODO: handle Hash type of cell (maybe allow configuring order of keys etc)
@@ -171,6 +182,9 @@ F echo(t:Table) {
 		local col = t.column(idx)
 		((if do_output_headers [k] [])+ col).map(cell_display_width).max()
 	})
+
+	# How much full table columns fit on the screen
+	local showing_n_columns = t.calculate_num_cols_to_show(max_colums_widths, cols)
 
 	# Setup line spacing
 	local do_line_spacing = t.rows.any(F(row) {
@@ -186,7 +200,7 @@ F echo(t:Table) {
 
 	# Headers
 	if(do_output_headers) {
-		t.col_idx_to_name.map(F(idx, k) StrForTable(k, max_colums_widths[idx])).join(' ').echo()
+		t.col_idx_to_name.limit(showing_n_columns).map(F(idx, k) StrForTable(k, max_colums_widths[idx])).join(' ').echo()
 		do_line_spacing()
 	}
 
@@ -197,7 +211,7 @@ F echo(t:Table) {
 		local subrow_content_arr
 		while not(done) {
 			done = true
-			subrow_content_arr = t.col_idx_to_name.map(F(idx, k) {
+			subrow_content_arr = t.col_idx_to_name.limit(showing_n_columns).map(F(idx, k) {
 				local subrow_content = if row[idx] is Arr {
 					if len(row[idx]) > subrow_idx {
 						done = false

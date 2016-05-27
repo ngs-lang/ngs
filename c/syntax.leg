@@ -994,6 +994,7 @@ string-dq-dollar-expansion =
 string-escape = "\\" (
 		"a"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\a"); $$ = content; } |
 		"b"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\b"); $$ = content; } |
+		"e"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\x1B"); $$ = content; } |
 		"f"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\f"); $$ = content; } |
 		"n"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\n"); $$ = content; } |
 		"r"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\r"); $$ = content; } |

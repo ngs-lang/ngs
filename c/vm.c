@@ -333,6 +333,22 @@ METHOD_RESULT native_Real_int METHOD_PARAMS {
 	METHOD_RETURN(make_real((NGS_REAL) GET_INT(argv[0])));
 }
 
+METHOD_RESULT native_Int_str_int EXT_METHOD_PARAMS {
+	char *nptr, *endptr;
+	long long r;
+	nptr = obj_to_cstring(argv[0]);
+	r = strtoll(nptr, &endptr, GET_INT(argv[1]));
+	if(nptr == endptr) {
+		VALUE e;
+		e = make_normal_type_instance(vm->InvalidArgument);
+		set_normal_type_instance_attribute(e, make_string("which"), make_string("First argument to Int(s:Str, base:Int)"));
+		set_normal_type_instance_attribute(e, make_string("given"), argv[0]);
+		set_normal_type_instance_attribute(e, make_string("expected"), make_string("Integer in the specified base"));
+		THROW_EXCEPTION_INSTANCE(e);
+	}
+	METHOD_RETURN(MAKE_INT(r));
+}
+
 METHOD_RESULT native_is_any_type METHOD_PARAMS {
 	SET_BOOL(*result, obj_is_of_type(argv[0], argv[1]));
 	return METHOD_OK;
@@ -1300,6 +1316,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "attrs",    &native_attrs_closure,     1, "c",      vm->Closure);
 	register_global_func(vm, 0, "attrs",    &native_attrs_closure_any, 2, "c",      vm->Closure, "datum", vm->Any);
 	register_global_func(vm, 0, "params",   &native_params_closure,    1, "c",      vm->Closure);
+
+	// Int
+	register_global_func(vm, 1, "Int",      &native_Int_str_int,        2, "s",    vm->Str,  "base", vm->Int);
 
 	// Real
 	register_global_func(vm, 0, "+",        &native_plus_real_real,      2, "a",   vm->Real, "b", vm->Real);

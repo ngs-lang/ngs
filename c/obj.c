@@ -145,8 +145,16 @@ static void _dump(VALUE v, int level) {
 		printf("%*s* user type instance (type and fields optionally follow)\n", level << 1, "");
 		// level < 4 so that uncaught exception ImplNotFound could display the type of the arguments
 		if(level < 4) {
+			HASH_OBJECT_ENTRY *e;
+			VALUE fields = NGS_TYPE_FIELDS(NORMAL_TYPE_INSTANCE_TYPE(v));
+			assert(IS_HASH(fields));
 			_dump(NORMAL_TYPE_INSTANCE_TYPE(v), level + 1);
-			_dump(NORMAL_TYPE_INSTANCE_FIELDS(v), level + 1);
+			for(e=HASH_HEAD(fields); e; e=e->insertion_order_next) {
+				printf("%*s* key:\n", (level+1) << 1, "");
+				_dump(e->key, level + 2);
+				printf("%*s* value:\n", (level+1) << 1, "");
+				_dump(ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(v))[GET_INT(e->val)], level + 2);
+			}
 		}
 		goto exit;
 	}

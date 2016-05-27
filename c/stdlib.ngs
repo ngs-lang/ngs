@@ -457,6 +457,16 @@ TEST (try [10,20,30,40][2..10] catch(e:IndexNotFound) "OK") == "OK"
 TEST [10,20,30,40][1...2] == [20, 30]
 TEST [10,20,30,40][4..null] == []
 
+F limit(a:Arr, l:Int) a[0..l]
+
+F limit(a:Arr, l:Int) {
+	guard a.len() <= l
+	a
+}
+
+TEST [10,11,12].limit(10) == [10,11,12]
+TEST [10,11,12].limit(2) == [10,11]
+
 # --- Misc ---
 
 {
@@ -611,6 +621,28 @@ TEST {'a': 1, 'b': 2, 'c': 3} + {'b': 20, 'd': 40} == {'a': 1, 'b': 20, 'c': 3, 
 F Strs(h:Hash) h.map(F(k, v) "${k}=${v}")
 
 
+{ type LimitReached }
+
+F limit(h:Hash, l:Int) {
+	idx = 0
+	collector/{}
+		try
+			h.each(F(k, v) {
+				idx >= l throws LimitReached()
+				idx = idx + 1
+				collect(k, v)
+			})
+		catch(e:LimitReached) null
+}
+
+F limit(h:Hash, l:Int) {
+	guard h.len() <= l
+	h
+}
+
+TEST {"a": 1, "b": 2}.limit(3) == {"a": 1, "b": 2}
+TEST {"a": 1, "b": 2}.limit(1) == {"a": 1}
+
 # === Integer ====================================
 
 # --- Functional ---
@@ -633,6 +665,13 @@ F times(n:Int, cb:Fun, *args) {
 }
 
 TEST r=0; 5.times(F() r=r+2); r==10
+
+
+F Int(s:Str) Int(s, 10)
+
+TEST Int(" 100 ") == 100
+TEST try Int(" XX ") catch(e:InvalidArgument) true
+TEST Int(" XX ", 36) == 1221
 
 # === String =====================================
 
