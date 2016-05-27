@@ -291,6 +291,9 @@ TEST [1,2,10].all((>), 5).not()
 
 F none(arr:Arr, predicate:Fun, *args) not(any(arr, predicate, *args))
 
+TEST [0,1,2].none((>), 2)
+TEST [0,1,2].none((<), 2).not()
+
 
 F map(arr:Arr, mapper:Fun, *args)
 	collector
