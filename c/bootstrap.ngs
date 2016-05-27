@@ -142,7 +142,9 @@ F bootstrap() {
 	if code_to_run is Null {
 		bootstrap_debug('No -e or -E switch was passed, will load the program from a file')
 		fname = ARGV.shift(null)
-		fname is Null throws "Interactive mode is not implemented yet. Please specifiy a file to run"
+		if fname is Null {
+			fname = ENV.get('NGS_CLI', "${NGS_DIR}/cli.ngs")
+		}
 		code_to_run = fetch(fname)
 	}
 

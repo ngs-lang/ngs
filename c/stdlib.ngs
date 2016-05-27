@@ -1,5 +1,10 @@
 # === Exceptions ===
 
+{
+	type AssertFail
+	AssertFail.inherit(Exception)
+}
+
 F init(e:IndexNotFound, message:Str, container, key) {
 	init(e)
 	e.message = message
@@ -8,6 +13,8 @@ F init(e:IndexNotFound, message:Str, container, key) {
 	e.backtrace.frames.pop()
 }
 
+F assert(condition:Bool, msg:Str) not(condition) throws AssertFail(msg)
+F assert(condition:Bool) assert(condition, "Assertion failed")
 
 # === Misc functional ============================
 

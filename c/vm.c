@@ -441,14 +441,18 @@ METHOD_RESULT native_index_del_hash_any METHOD_PARAMS {
 
 // TODO: locking for dlerror?
 // TODO: Support other dlopen() flags?
-METHOD_RESULT native_CLib_str METHOD_PARAMS {
+// TODO: expose c_dlopen ?
+METHOD_RESULT native_CLib_str EXT_METHOD_PARAMS {
 	VALUE v;
 	CLIB_OBJECT *o;
 	void *out;
 	out = dlopen(obj_to_cstring(argv[0]), RTLD_NOW);
 	if(!out) {
-		fprintf(stderr, "dlopen() failed: %s\n", dlerror());
-		assert(0=="Fail to dlopen()");
+		VALUE e;
+		e = make_normal_type_instance(vm->Error);
+		set_normal_type_instance_attribute(e, make_string("message"), make_string("Failed to dlopen()"));
+		set_normal_type_instance_attribute(e, make_string("filename"), argv[0]);
+		THROW_EXCEPTION_INSTANCE(e);
 	}
 	o = NGS_MALLOC(sizeof(*o));
 	assert(o);
@@ -463,14 +467,21 @@ METHOD_RESULT native_in_str_clib METHOD_PARAMS {
 	METHOD_RETURN(MAKE_BOOL(dlsym(OBJ_DATA_PTR(argv[1]), obj_to_cstring(argv[0]))));
 }
 
-METHOD_RESULT native_index_get_clib_str METHOD_PARAMS {
+METHOD_RESULT native_index_get_clib_str EXT_METHOD_PARAMS {
 	VALUE v;
 	CSYM_OBJECT *o;
 	o = NGS_MALLOC(sizeof(*o));
 	assert(o);
 	o->base.type.num = T_CSYM;
 	o->base.val.ptr = dlsym(OBJ_DATA_PTR(argv[0]), obj_to_cstring(argv[1]));
-	assert(o->base.val.ptr);
+	if(!o->base.val.ptr) {
+		VALUE e;
+		e = make_normal_type_instance(vm->Error);
+		set_normal_type_instance_attribute(e, make_string("message"), make_string("Failed to dlsym()"));
+		set_normal_type_instance_attribute(e, make_string("handle"), argv[0]);
+		set_normal_type_instance_attribute(e, make_string("symbol"), argv[1]);
+		THROW_EXCEPTION_INSTANCE(e);
+	}
 	o->lib = argv[0];
 	o->name = argv[1];
 	SET_OBJ(v, o);
@@ -1295,9 +1306,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 
 	// CLib and c calls
-	register_global_func(vm, 0, "CLib",     &native_CLib_str,          1, "name",   vm->Str);
+	register_global_func(vm, 1, "CLib",     &native_CLib_str,          1, "name",   vm->Str);
 	register_global_func(vm, 0, "in",       &native_in_str_clib,       2, "symbol", vm->Str, "lib", vm->CLib);
-	register_global_func(vm, 0, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
+	register_global_func(vm, 1, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
 
 	// threads
 	register_global_func(vm, 1, "c_pthread_create",       &native_c_pthreadcreate_pthreadattr_startroutine_arg, 3, "attr", vm->c_pthread_attr_t, "start_routine", vm->Closure, "arg", vm->Any);
