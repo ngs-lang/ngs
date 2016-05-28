@@ -174,6 +174,11 @@ static void _dump(VALUE v, int level) {
 		goto exit;
 	}
 
+	if(IS_FFI_TYPE(v)) {
+		printf("%*s* ffi_type at %p\n", level << 1, "", &GET_FFI_TYPE(v));
+		goto exit;
+	}
+
 	printf("%*s* (dump not implemented for the object at %p)\n", level << 1, "", OBJ_DATA_PTR(v));
 
 exit:
@@ -964,6 +969,17 @@ VALUE make_pthread_mutex() {
 	pm = NGS_MALLOC(sizeof(*pm));
 	pm->base.type.num = T_PTHREADMUTEX;
 	SET_OBJ(v, pm);
+	return v;
+}
+
+VALUE make_ffi_type(ffi_type t) {
+	VALUE v;
+	FFI_TYPE_OBJECT *tmp;
+	// TODO: NGS_MALLOC_ATOMIC maybe?
+	tmp = NGS_MALLOC(sizeof(*tmp));
+	tmp->base.type.num = T_FFI_TYPE;
+	SET_OBJ(v, tmp);
+	GET_FFI_TYPE(v) = t;
 	return v;
 }
 

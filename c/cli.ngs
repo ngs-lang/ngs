@@ -13,7 +13,7 @@ F cli_show_prompt() {
 
 F cli() {
 	local readline_lib = CLib(cli_readline_lib)
-	local readline = readline_lib['readline']
+	local readline_c_func = readline_lib['readline']
 
 	while true {
 		cli_show_prompt()

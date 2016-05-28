@@ -175,6 +175,9 @@ typedef struct {
 	NGS_TYPE *c_pthread_mutex_t;
 	// TODO: NGS_TYPE *c_pthread_mutex_tAttr;
 
+	NGS_TYPE *c_ffi_type;
+	NGS_TYPE *c_ffi_cif;
+
 	VALUE Exception;
 		VALUE Error;
 			VALUE LookupFail;
@@ -204,6 +207,24 @@ typedef struct {
 	VALUE init;
 
 	VALUE eqeq;
+
+	// awk -F '[ ;]' '$1 == "FFI_EXTERN" {print "VALUE c_" $3 ";"}' /usr/include/x86_64-linux-gnu/ffi.h
+	VALUE c_ffi_type_void;
+	VALUE c_ffi_type_uint8;
+	VALUE c_ffi_type_sint8;
+	VALUE c_ffi_type_uint16;
+	VALUE c_ffi_type_sint16;
+	VALUE c_ffi_type_uint32;
+	VALUE c_ffi_type_sint32;
+	VALUE c_ffi_type_uint64;
+	VALUE c_ffi_type_sint64;
+	VALUE c_ffi_type_float;
+	VALUE c_ffi_type_double;
+	VALUE c_ffi_type_pointer;
+	VALUE c_ffi_type_longdouble;
+	VALUE c_ffi_type_complex_float;
+	VALUE c_ffi_type_complex_double;
+	VALUE c_ffi_type_complex_longdouble;
 
 } VM;
 

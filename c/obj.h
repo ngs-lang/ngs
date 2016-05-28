@@ -68,6 +68,11 @@ typedef struct {
 	pthread_mutex_t val;
 } PTHREADMUTEX_OBJECT;
 
+typedef struct {
+	OBJECT base;
+	ffi_type val;
+} FFI_TYPE_OBJECT;
+
 // https://www.igvita.com/2009/02/04/ruby-19-internals-ordered-hash/
 typedef struct hash_object_entry {
 	VALUE key;
@@ -203,6 +208,8 @@ typedef enum {
 	T_PTHREADMUTEX  = (11 << 8) + T_OBJ,
 	T_NATIVE_METHOD = (12 << 8) + T_OBJ,
 	T_CLOSURE       = (13 << 8) + T_OBJ,
+	T_FFI_TYPE      = (14 << 8) + T_OBJ,
+	T_FFI_CIF       = (15 << 8) + T_OBJ,
 } IMMEDIATE_TYPE;
 
 // TODO: handle situation when n is wider than size_t - TAG_BITS bits
@@ -230,6 +237,7 @@ typedef enum {
 #define GET_PTHREAD(v)      (((PTHREAD_OBJECT *) v.ptr)->val)
 #define GET_PTHREADATTR(v)  (((PTHREADATTR_OBJECT *) v.ptr)->val)
 #define GET_PTHREADMUTEX(v) (((PTHREADMUTEX_OBJECT *) v.ptr)->val)
+#define GET_FFI_TYPE(v) (((FFI_TYPE_OBJECT *) v.ptr)->val)
 #define SET_OBJ(v,o)    (v).ptr = o
 #define SET_NULL(v)     (v).num = V_NULL
 #define SET_FALSE(v)    (v).num = V_FALSE
@@ -287,6 +295,7 @@ typedef enum {
 #define IS_PTHREAD(v)             (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_PTHREAD)
 #define IS_PTHREADATTR(v)         (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_PTHREADATTR)
 #define IS_PTHREADMUTEX(v)        (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_PTHREADMUTEX)
+#define IS_FFI_TYPE(v)            (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_FFI_TYPE)
 #define ARRAY_ITEMS(v)            ((VALUE *)(OBJ_DATA_PTR(v)))
 #define HASH_BUCKETS_N(v)         (((HASH_OBJECT *)(v).ptr)->n_buckets)
 #define HASH_HEAD(v)              (((HASH_OBJECT *)(v).ptr)->head)
@@ -335,5 +344,6 @@ char *ngs_strdup(const char *src);
 VALUE make_pthread();
 VALUE make_pthread_attr();
 VALUE make_pthread_mutex();
+VALUE make_ffi_type(ffi_type t);
 
 #endif

@@ -1242,11 +1242,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 		MK_BUILTIN_TYPE(BasicType, T_BASICT);
 		MK_BUILTIN_TYPE(NormalType, T_NORMT);
 	MK_BUILTIN_TYPE(Hash, T_HASH);
-	MK_BUILTIN_TYPE_DOC(CLib, T_CLIB, "C library (unfinished, do not use)");
-	MK_BUILTIN_TYPE_DOC(CSym, T_CSYM, "C symbol (unfinished, do not use)");
+	MK_BUILTIN_TYPE_DOC(CLib, T_CLIB, "C library, result of dlopen()");
+	MK_BUILTIN_TYPE_DOC(CSym, T_CSYM, "C symbol, result of dlsym()");
 	MK_BUILTIN_TYPE(c_pthread_t, T_PTHREAD);
 	MK_BUILTIN_TYPE(c_pthread_attr_t, T_PTHREADATTR);
 	MK_BUILTIN_TYPE(c_pthread_mutex_t, T_PTHREADMUTEX);
+	MK_BUILTIN_TYPE(c_ffi_type, T_FFI_TYPE);
+	MK_BUILTIN_TYPE(c_ffi_cif, T_FFI_CIF);
 #undef MK_BUILTIN_TYPE
 
 #define MKTYPE(name) \
@@ -1502,6 +1504,30 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// awk '/^#define RTLD_/ {print "E("$2");"}' /usr/include/x86_64-linux-gnu/bits/dlfcn.h | xargs -n10
 	E(RTLD_LAZY); E(RTLD_NOW); E(RTLD_NOLOAD); E(RTLD_DEEPBIND); E(RTLD_GLOBAL); E(RTLD_LOCAL); E(RTLD_NODELETE);
 #undef E
+
+#define FFI_TYPE(name) \
+	vm->c_ ## name = make_ffi_type(name); \
+	set_global(vm, "c_" #name, vm->c_ ## name)
+
+	// awk -F '[ ;]' '$1 == "FFI_EXTERN" {print "FFI_TYPE(" $3 ");"}' /usr/include/x86_64-linux-gnu/ffi.h
+	FFI_TYPE(ffi_type_void);
+	FFI_TYPE(ffi_type_uint8);
+	FFI_TYPE(ffi_type_sint8);
+	FFI_TYPE(ffi_type_uint16);
+	FFI_TYPE(ffi_type_sint16);
+	FFI_TYPE(ffi_type_uint32);
+	FFI_TYPE(ffi_type_sint32);
+	FFI_TYPE(ffi_type_uint64);
+	FFI_TYPE(ffi_type_sint64);
+	FFI_TYPE(ffi_type_float);
+	FFI_TYPE(ffi_type_double);
+	FFI_TYPE(ffi_type_pointer);
+	FFI_TYPE(ffi_type_longdouble);
+	FFI_TYPE(ffi_type_complex_float);
+	FFI_TYPE(ffi_type_complex_double);
+	FFI_TYPE(ffi_type_complex_longdouble);
+
+#undef FFI_TYPE
 
 }
 
