@@ -143,10 +143,8 @@ typedef struct {
 
 typedef struct {
 	OBJECT base;
-	VALUE rtype;
-	VALUE atypes;
-	ffi_cif cif;
-} CCIF_OBJECT;
+	ffi_cif val;
+} FFI_CIF_OBJECT;
 
 // malloc() / NGS_MALLOC() memory is 8 bytes aligned, should be at least 4 bytes aligned
 // ...... 00 - *OBJECT
@@ -238,6 +236,7 @@ typedef enum {
 #define GET_PTHREADATTR(v)  (((PTHREADATTR_OBJECT *) v.ptr)->val)
 #define GET_PTHREADMUTEX(v) (((PTHREADMUTEX_OBJECT *) v.ptr)->val)
 #define GET_FFI_TYPE(v) (((FFI_TYPE_OBJECT *) v.ptr)->val)
+#define GET_FFI_CIF(v)  (((FFI_CIF_OBJECT *) v.ptr)->val)
 #define SET_OBJ(v,o)    (v).ptr = o
 #define SET_NULL(v)     (v).num = V_NULL
 #define SET_FALSE(v)    (v).num = V_FALSE
@@ -296,6 +295,7 @@ typedef enum {
 #define IS_PTHREADATTR(v)         (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_PTHREADATTR)
 #define IS_PTHREADMUTEX(v)        (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_PTHREADMUTEX)
 #define IS_FFI_TYPE(v)            (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_FFI_TYPE)
+#define IS_FFI_CIF(v)             (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_FFI_CIF)
 #define ARRAY_ITEMS(v)            ((VALUE *)(OBJ_DATA_PTR(v)))
 #define HASH_BUCKETS_N(v)         (((HASH_OBJECT *)(v).ptr)->n_buckets)
 #define HASH_HEAD(v)              (((HASH_OBJECT *)(v).ptr)->head)
@@ -345,5 +345,6 @@ VALUE make_pthread();
 VALUE make_pthread_attr();
 VALUE make_pthread_mutex();
 VALUE make_ffi_type(ffi_type t);
+VALUE make_ffi_cif();
 
 #endif

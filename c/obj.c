@@ -179,6 +179,11 @@ static void _dump(VALUE v, int level) {
 		goto exit;
 	}
 
+	if(IS_FFI_CIF(v)) {
+		printf("%*s* ffi_cif at %p\n", level << 1, "", &GET_FFI_CIF(v));
+		goto exit;
+	}
+
 	printf("%*s* (dump not implemented for the object at %p)\n", level << 1, "", OBJ_DATA_PTR(v));
 
 exit:
@@ -980,6 +985,16 @@ VALUE make_ffi_type(ffi_type t) {
 	tmp->base.type.num = T_FFI_TYPE;
 	SET_OBJ(v, tmp);
 	GET_FFI_TYPE(v) = t;
+	return v;
+}
+
+VALUE make_ffi_cif() {
+	VALUE v;
+	FFI_CIF_OBJECT *tmp;
+	// TODO: NGS_MALLOC_ATOMIC maybe?
+	tmp = NGS_MALLOC(sizeof(*tmp));
+	tmp->base.type.num = T_FFI_CIF;
+	SET_OBJ(v, tmp);
 	return v;
 }
 

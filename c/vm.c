@@ -4,6 +4,8 @@
 #include <pthread.h>
 #include <stdarg.h>
 
+#include <ffi.h>
+
 // ..., FMEMOPEN(3)
 #include <stdio.h>
 
@@ -1105,6 +1107,30 @@ METHOD_RESULT native_c_pthreadself METHOD_PARAMS {
 	METHOD_RETURN(pthread);
 }
 
+// TODO: add ABI parameter
+// TODO: better exception
+METHOD_RESULT native_c_ffi_prep_cif EXT_METHOD_PARAMS {
+	VALUE ret;
+	size_t i;
+	ffi_type **args;
+	ffi_status status;
+
+	ret = make_ffi_cif();
+
+	args = NGS_MALLOC(sizeof(**args) * OBJ_LEN(argv[1]));
+	for(i=0; i<OBJ_LEN(argv[1]); i++) {
+		args[i] = &GET_FFI_TYPE(ARRAY_ITEMS(argv[1])[i]);
+	}
+	if(FFI_OK != (status = ffi_prep_cif(&GET_FFI_CIF(ret), FFI_DEFAULT_ABI, OBJ_LEN(argv[1]), &GET_FFI_TYPE(argv[0]), args))) {
+		VALUE e;
+		e = make_normal_type_instance(vm->Error);
+		set_normal_type_instance_attribute(e, make_string("message"), make_string("Failed to ffi_prep_cif()"));
+		set_normal_type_instance_attribute(e, make_string("status"), MAKE_INT(status));
+		THROW_EXCEPTION_INSTANCE(e);
+	}
+	METHOD_RETURN(ret);
+}
+
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
 	GLOBAL_VAR_INDEX index;
@@ -1307,9 +1333,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 
 	// CLib and c calls
-	register_global_func(vm, 1, "c_dlopen", &native_c_dlopen_str_int,  2, "filename", vm->Str, "flags", vm->Int);
-	register_global_func(vm, 0, "in",       &native_in_str_clib,       2, "symbol", vm->Str, "lib", vm->CLib);
-	register_global_func(vm, 1, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
+	register_global_func(vm, 1, "c_dlopen",        &native_c_dlopen_str_int,   2, "filename", vm->Str,        "flags",  vm->Int);
+	register_global_func(vm, 0, "in",              &native_in_str_clib,        2, "symbol",   vm->Str,        "lib",    vm->CLib);
+	register_global_func(vm, 1, "[]",              &native_index_get_clib_str, 2, "lib",      vm->CLib,       "symbol", vm->Str);
+	register_global_func(vm, 1, "c_ffi_prep_cif",  &native_c_ffi_prep_cif ,    2, "rtype",    vm->c_ffi_type, "atypes", vm->Arr);
 
 	// threads
 	register_global_func(vm, 1, "c_pthread_create",       &native_c_pthreadcreate_pthreadattr_startroutine_arg, 3, "attr", vm->c_pthread_attr_t, "start_routine", vm->Closure, "arg", vm->Any);
