@@ -440,16 +440,14 @@ METHOD_RESULT native_index_del_hash_any METHOD_PARAMS {
 }
 
 // TODO: locking for dlerror?
-// TODO: Support other dlopen() flags?
-// TODO: expose c_dlopen ?
-METHOD_RESULT native_CLib_str EXT_METHOD_PARAMS {
+METHOD_RESULT native_c_dlopen_str_int EXT_METHOD_PARAMS {
 	VALUE v;
 	CLIB_OBJECT *o;
 	void *out;
-	out = dlopen(obj_to_cstring(argv[0]), RTLD_NOW);
+	out = dlopen(obj_to_cstring(argv[0]), GET_INT(argv[1]));
 	if(!out) {
 		VALUE e;
-		e = make_normal_type_instance(vm->Error);
+		e = make_normal_type_instance(vm->DlopenFail);
 		set_normal_type_instance_attribute(e, make_string("message"), make_string("Failed to dlopen()"));
 		set_normal_type_instance_attribute(e, make_string("filename"), argv[0]);
 		THROW_EXCEPTION_INSTANCE(e);
@@ -1278,6 +1276,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 				MKSUBTYPE(DontKnowHowToCall, CallFail);
 				MKSUBTYPE(ImplNotFound, CallFail);
 			MKSUBTYPE(SwitchFail, Error);
+			MKSUBTYPE(DlopenFail, Error);
 
 	MKTYPE(Backtrace);
 
@@ -1306,7 +1305,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 
 	// CLib and c calls
-	register_global_func(vm, 1, "CLib",     &native_CLib_str,          1, "name",   vm->Str);
+	register_global_func(vm, 1, "c_dlopen", &native_c_dlopen_str_int,  2, "filename", vm->Str, "flags", vm->Int);
 	register_global_func(vm, 0, "in",       &native_in_str_clib,       2, "symbol", vm->Str, "lib", vm->CLib);
 	register_global_func(vm, 1, "[]",       &native_index_get_clib_str,2, "lib",    vm->CLib,"symbol", vm->Str);
 
@@ -1500,6 +1499,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	E(ECONNREFUSED); E(EHOSTDOWN); E(EHOSTUNREACH); E(EALREADY); E(EINPROGRESS); E(ESTALE); E(EUCLEAN); E(ENOTNAM); E(ENAVAIL); E(EISNAM);
 	E(EREMOTEIO); E(EDQUOT); E(ENOMEDIUM); E(EMEDIUMTYPE); E(ECANCELED); E(ENOKEY); E(EKEYEXPIRED); E(EKEYREVOKED); E(EKEYREJECTED); E(EOWNERDEAD);
 	E(ENOTRECOVERABLE); E(ERFKILL); E(EHWPOISON); E(ENOTSUP);
+	// awk '/^#define RTLD_/ {print "E("$2");"}' /usr/include/x86_64-linux-gnu/bits/dlfcn.h | xargs -n10
+	E(RTLD_LAZY); E(RTLD_NOW); E(RTLD_NOLOAD); E(RTLD_DEEPBIND); E(RTLD_GLOBAL); E(RTLD_LOCAL); E(RTLD_NODELETE);
 #undef E
 
 }

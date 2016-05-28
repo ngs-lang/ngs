@@ -188,6 +188,7 @@ typedef struct {
 				VALUE DontKnowHowToCall;
 				VALUE ImplNotFound;
 			VALUE SwitchFail;
+			VALUE DlopenFail;
 
 	VALUE Backtrace;
 

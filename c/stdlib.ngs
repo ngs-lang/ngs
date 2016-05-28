@@ -1195,6 +1195,15 @@ F config(s:Str, x) {
 	STDLIB_CONFIG[s] = x
 }
 
+# === CLib =======================================
+
+F CLib(filename:Str) {
+	c_dlopen(filename, C_RTLD_NOW);
+}
+
+TEST c_dlopen('libc.so.6', C_RTLD_NOW) is CLib
+TEST try c_dlopen('nosuchlib', C_RTLD_NOW) catch(e:DlopenFail) true
+
 # === Misc tests =================================
 
 TEST o = {'a': 1, 'b': [null, false, true, 3.14], 'nothing': null}; decode_json(encode_json(o)) == o
