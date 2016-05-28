@@ -1,0 +1,36 @@
+# WIP, don't use!
+
+debug("Starting NGS CLI")
+
+echo("*** NGS CLI is under construction ***")
+
+F cli_show_prompt() {
+	local p = cli_prompt.map(F(k, v) {
+		v()
+	}).join(' ')
+	echo(p)
+}
+
+F cli() {
+	local readline_lib = CLib(cli_readline_lib)
+	local readline = readline_lib['readline']
+
+	while true {
+		cli_show_prompt()
+		break
+
+	}
+}
+
+# --- Start ---
+
+cli_readline_lib = 'libreadline.so.6'
+
+# TODO: make it object, not a string
+cli_prompt = {
+	'ngs': F() "NGS"
+	'dir': F() { local p = $(pwd).Str(); p[0..len(p)-1] }
+	'gt': F() ">"
+}
+
+cli()
