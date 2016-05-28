@@ -15,7 +15,7 @@ Vision
 ======
 
 * Create a language that will be domain-specific for system tasks.
-* Create a shell (in that language) that is up to date with today's tasks - cloud, remote execution on a group of hosts.
+* Create a shell (in that language) that is up to date with today's tasks - working with APIs, cloud, remote execution on a group of hosts.
 
 About this document
 ===================
@@ -66,6 +66,10 @@ UI
 * Different UI modules must exist. In the beginning we can start with these:
   * Console (use pty)
   * Web (allow multiple users to collaborate, some rw, some ro)
+
+* Commands' outputs displayed below the commands up to max N lines then scroll the output in
+  a small window below the command. When there is more output than a human can process -
+  don't display it and suggest saving it to a file (maybe).
 
 * Commands scroll up, new commands are added at the bottom. When a command that haven't
   completed yet, reaches top of the screen, it can be converted to a mini-area at the
