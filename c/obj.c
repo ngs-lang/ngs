@@ -693,18 +693,15 @@ int obj_is_of_type(VALUE obj, VALUE t) {
 	tid = NGS_TYPE_ID(t);
 	if(tid) {
 		if(tid == T_ANY) { return 1; }
+		// printf("TID %d\n", tid);
+		if((tid & 0xff) == T_OBJ) {
+			return IS_OBJ(obj) && OBJ_TYPE_NUM(obj) == tid;
+		}
 		OBJ_C_OBJ_IS_OF_TYPE(T_NULL, IS_NULL);
 		OBJ_C_OBJ_IS_OF_TYPE(T_BOOL, IS_BOOL);
 		OBJ_C_OBJ_IS_OF_TYPE(T_INT, IS_INT);
-		OBJ_C_OBJ_IS_OF_TYPE(T_STR, IS_STRING);
-		OBJ_C_OBJ_IS_OF_TYPE(T_ARR, IS_ARRAY);
-		OBJ_C_OBJ_IS_OF_TYPE(T_TYPE, IS_NGS_TYPE);
-		OBJ_C_OBJ_IS_OF_TYPE(T_HASH, IS_HASH);
 		OBJ_C_OBJ_IS_OF_TYPE(T_NORMTI, IS_NORMAL_TYPE_INSTANCE);
 		OBJ_C_OBJ_IS_OF_TYPE(T_BASICTI, IS_BASIC_TYPE_INSTANCE);
-		OBJ_C_OBJ_IS_OF_TYPE(T_CLIB, IS_CLIB);
-		OBJ_C_OBJ_IS_OF_TYPE(T_CSYM, IS_CSYM);
-		OBJ_C_OBJ_IS_OF_TYPE(T_NATIVE_METHOD, IS_NATIVE_METHOD);
 		if(tid == T_FUN) {
 			if(IS_ARRAY(obj)) {
 				if(OBJ_LEN(obj)) {
@@ -717,11 +714,6 @@ int obj_is_of_type(VALUE obj, VALUE t) {
 		}
 		OBJ_C_OBJ_IS_OF_TYPE(T_NORMT, IS_NORMAL_TYPE);
 		OBJ_C_OBJ_IS_OF_TYPE(T_BASICT, IS_BASIC_TYPE);
-		OBJ_C_OBJ_IS_OF_TYPE(T_CLOSURE, IS_CLOSURE);
-		OBJ_C_OBJ_IS_OF_TYPE(T_REAL, IS_REAL);
-		OBJ_C_OBJ_IS_OF_TYPE(T_PTHREAD, IS_PTHREAD);
-		OBJ_C_OBJ_IS_OF_TYPE(T_PTHREADATTR, IS_PTHREADATTR);
-		OBJ_C_OBJ_IS_OF_TYPE(T_PTHREADMUTEX, IS_PTHREADMUTEX);
 		if(IS_NORMAL_TYPE_INSTANCE(obj)) { return 0; }
 		dump_titled("Unimplemented type to check", t);
 		assert(0=="obj_is_of_type(): Unimplemented check against builtin type");
