@@ -29,9 +29,9 @@ Development. Help is welcome.
 
 The bigger part of the language is implemented to the point that some useful scripts can be written. See [the demo folder](c/demo).
 
-	* Demo 1: [describe ec2 instances](c/demo/ec2din.ngs). The script has nicely aligned output for humans. It uses `stdlib`'s `Table` to do output layout and columns configuration. `Table` handles columns presence and order and it can be configured via environment variable.
-	* Demo 2: [build chunk of hosts file](c/demo/ec2hostsfile.ngs) for a management machine. Hosts named `env-role` or `env-role-N`, depending on whether you have one or more machines of specific role in the environment.
-	* Demo 3: [demonstrates race condition](c/demo/locks.ngs) and locks.
+* Demo 1: [describe ec2 instances](c/demo/ec2din.ngs). The script has nicely aligned output for humans. It uses `stdlib`'s `Table` to do output layout and columns configuration. `Table` handles columns presence and order and it can be configured via environment variable.
+* Demo 2: [build chunk of hosts file](c/demo/ec2hostsfile.ngs) for a management machine. Hosts named `env-role` or `env-role-N`, depending on whether you have one or more machines of specific role in the environment.
+* Demo 3: [demonstrates race condition](c/demo/locks.ngs) and locks.
 
 
 Running
