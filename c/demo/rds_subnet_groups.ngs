@@ -1,0 +1,17 @@
+#!/usr/bin/env ngs
+
+# Running example: ./demo/rds_subnet_groups.ngs
+# Running example: NGS_table_SubnetGroups='["VpcId", "DBSubnetGroupName", "Subnets"]' ./demo/rds_subnet_groups.ngs
+
+{
+	config('table_SubnetGroups', ['VpcId', 'DBSubnetGroupName', 'DBSubnetGroupDescription', 'Subnets'])
+
+	groups = ``aws rds describe-db-subnet-groups``.DBSubnetGroups
+	groups.each(F(group) {
+		group.Subnets = group.Subnets.map(F(subnet) "${subnet.SubnetIdentifier} / ${subnet.SubnetAvailabilityZone.Name} / ${subnet.SubnetStatus}")
+	})
+
+	t = Table('SubnetGroups', groups)
+	echo(t)
+}
+
