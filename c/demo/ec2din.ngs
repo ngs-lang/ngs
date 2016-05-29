@@ -37,7 +37,7 @@
 		i.AZ = i.Placement.AvailabilityZone
 		# Tags here is a Hash (after straightening by stdlib)
 		i.Name = i.Tags.get('Name', '-').limit_len(20)
-		i.IPs = [i.PublicIpAddress, i.PrivateIpAddress]
+		i.IPs = [try i.PublicIpAddress, try i.PrivateIpAddress]
 		i.Tags.each(F(k, v) {
 			i["full_tag_${k}"] = v
 			i["tag_${k}"] = v.limit_len(20)
