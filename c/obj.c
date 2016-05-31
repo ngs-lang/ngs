@@ -150,10 +150,12 @@ static void _dump(VALUE v, int level) {
 			assert(IS_HASH(fields));
 			_dump(NORMAL_TYPE_INSTANCE_TYPE(v), level + 1);
 			for(e=HASH_HEAD(fields); e; e=e->insertion_order_next) {
-				printf("%*s* key:\n", (level+1) << 1, "");
-				_dump(e->key, level + 2);
-				printf("%*s* value:\n", (level+1) << 1, "");
-				_dump(ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(v))[GET_INT(e->val)], level + 2);
+				if(ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(v))[GET_INT(e->val)].num) {
+					printf("%*s* key:\n", (level+1) << 1, "");
+					_dump(e->key, level + 2);
+					printf("%*s* value:\n", (level+1) << 1, "");
+					_dump(ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(v))[GET_INT(e->val)], level + 2);
+				}
 			}
 		}
 		goto exit;
