@@ -29,7 +29,7 @@
 		}
 	}
 
-	sgs = ``aws ec2 describe-security-groups``.SecurityGroups
+	sgs = ``aws ec2 describe-security-groups``
 	sgs.each(F(sg) {
 		sg.GroupName = sg.GroupName.limit_len(20)
 		sg.Description = sg.Description.limit_len(20)

@@ -67,7 +67,7 @@ typedef struct {
 // --- VM ---------------------------------------
 
 #define MAX_STACK          (1024)
-#define MAX_FRAMES           (64)
+#define MAX_FRAMES          (256)
 #define MAX_TRIES_PER_FRAME   (8)
 #define MAX_ARGS             (16)
 
@@ -190,6 +190,7 @@ typedef struct {
 			VALUE CallFail;
 				VALUE DontKnowHowToCall;
 				VALUE ImplNotFound;
+				VALUE StackDepthFail;
 			VALUE SwitchFail;
 			VALUE DlopenFail;
 

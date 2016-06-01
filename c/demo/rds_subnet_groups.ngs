@@ -6,7 +6,7 @@
 {
 	config('table_SubnetGroups', ['VpcId', 'DBSubnetGroupName', 'DBSubnetGroupDescription', 'Subnets'])
 
-	groups = ``aws rds describe-db-subnet-groups``.DBSubnetGroups
+	groups = ``aws rds describe-db-subnet-groups``
 	groups.each(F(group) {
 		group.Subnets = group.Subnets.map(F(subnet) "${subnet.SubnetIdentifier} / ${subnet.SubnetAvailabilityZone.Name} / ${subnet.SubnetStatus}")
 	})

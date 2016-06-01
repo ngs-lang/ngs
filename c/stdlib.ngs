@@ -1149,9 +1149,11 @@ F parse(s:Str, hints:Hash) {
 F stdlib_aws_straighten_tags(a:Arr) a.each(stdlib_aws_straighten_tags)
 
 F stdlib_aws_straighten_tags(h:Hash) {
-	h['Tags'] = h.get('Tags', []).map(
-		F(tag_pair) [tag_pair.Key, tag_pair.Value]
-	).Hash()
+	if 'Tags' in h {
+		h.Tags = h.get('Tags', []).map(
+			F(tag_pair) [tag_pair.Key, tag_pair.Value]
+		).Hash()
+	}
 }
 
 TEST instances = [{"Tags": [{"Key": "k", "Value": "v"},{"Key": "k2", "Value": "v2"}]}]; stdlib_aws_straighten_tags(instances); instances.Tags == [{"k": "v", "k2": "v2"}]
@@ -1159,11 +1161,14 @@ TEST instances = [{"Tags": [{"Key": "k", "Value": "v"},{"Key": "k2", "Value": "v
 F parse(s:Str, hints:Hash) {
 	guard try hints['process'].command.argv[0] == 'aws'
 	data = decode_json(s)
-	if (try data.Reservations.Instances) is not Null {
-		data = data.Reservations.Instances.flatten()
-		data = data.stdlib_aws_straighten_tags()
+	guard (data is Hash) and (data.len() == 1)
+	data = data[data.keys()[0]]
+
+	# Anyone cares about Reservations? Certainly it's not the common case so...
+	if data.all(has, 'ReservationId') {
+		data = data.Instances.flatten()
 	}
-	data
+	data.stdlib_aws_straighten_tags()
 }
 
 # === config =====================================
@@ -1243,3 +1248,4 @@ TEST try c_lseek(0, 0, "bad arg") catch(e:InvalidArgument) true
 TEST try compile("xyz(", "something") catch(e:CompileFail) true
 TEST try 1(2, 3) catch(e:DontKnowHowToCall) true
 TEST type T; try echo(T()) catch(e:ImplNotFound) true
+TEST try F f() f(); try f() catch(e:StackDepthFail) true

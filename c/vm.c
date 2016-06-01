@@ -130,6 +130,10 @@ char *opcodes_names[] = {
 	PUSH(v); \
 	THIS_FRAME.last_ip = ip; \
 	mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-2], (VALUE){.ptr = vm->type}, 1, &ctx->stack[ctx->stack_ptr-1]); \
+	if(mr == METHOD_EXCEPTION) { \
+		*result = ctx->stack[ctx->stack_ptr-2]; \
+		goto exception; \
+	} \
 	if(mr != METHOD_OK) { \
 		dump_titled("Failed to convert to type", (VALUE){.ptr = vm->type}); \
 		dump_titled("Failed to convert value", ctx->stack[ctx->stack_ptr-1]); \
@@ -1303,6 +1307,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 			MKSUBTYPE(CallFail, Error);
 				MKSUBTYPE(DontKnowHowToCall, CallFail);
 				MKSUBTYPE(ImplNotFound, CallFail);
+				MKSUBTYPE(StackDepthFail, CallFail);
 			MKSUBTYPE(SwitchFail, Error);
 			MKSUBTYPE(DlopenFail, Error);
 
@@ -1891,6 +1896,15 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		ctx->frames[ctx->frame_ptr].do_call_impl_not_found_hook = 1;
 		ctx->frames[ctx->frame_ptr].last_ip = 0;
 		ctx->frame_ptr++;
+		if(ctx->frame_ptr >= MAX_FRAMES) {
+			// Off by one (on the safe side)?
+			ctx->frame_ptr--;
+			// TODO: Appropriate exception type, not Exception
+			VALUE exc;
+			exc = make_normal_type_instance(vm->StackDepthFail);
+			set_normal_type_instance_attribute(exc, make_string("message"), make_string("Max stack depth reached"));
+			THROW_EXCEPTION_INSTANCE(exc);
+		}
 		mr = vm_run(vm, ctx, CLOSURE_OBJ_IP(callable), result);
 		ctx->frame_ptr--;
 		return mr;
