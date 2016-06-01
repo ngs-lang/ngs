@@ -1,0 +1,42 @@
+#!/usr/bin/env ngs
+{
+	config('table_SecurityGroups', ['VpcId', 'GroupId', 'GroupName', 'Description', 'IpPermissions', 'IpPermissionsEgress'])
+
+	F limit_len(s:Str, l:Int) {
+		s.len() <= l returns s
+		s[0..(l-3)] + '...'
+	}
+
+	F process_ip_perms_elt(elt) {
+		local ranges = elt.IpRanges.map((.), 'CidrIp').join(',')
+		local from_groups = elt.UserIdGroupPairs.map(F(u) "${u.GroupId}(${u.UserId})").join(',')
+
+		local from = econd {
+			ranges == '0.0.0.0/0' ""
+			ranges                " $ranges"
+			from_groups           " $from_groups"
+		}
+
+		econd {
+			(elt.IpProtocol == "-1") and (elt.IpRanges == [{'CidrIp': '0.0.0.0/0'}])
+				"all"
+			elt.IpProtocol == "-1"
+				"all_protos$from"
+			elt.FromPort == elt.ToPort
+				"${elt.FromPort}/${elt.IpProtocol}$from"
+			true
+				"${elt.FromPort}-${elt.ToPort}/${elt.IpProtocol}$from"
+		}
+	}
+
+	sgs = ``aws ec2 describe-security-groups``.SecurityGroups
+	sgs.each(F(sg) {
+		sg.GroupName = sg.GroupName.limit_len(20)
+		sg.Description = sg.Description.limit_len(20)
+		sg.IpPermissions = sg.IpPermissions.map(process_ip_perms_elt)
+		sg.IpPermissionsEgress = sg.IpPermissionsEgress.map(process_ip_perms_elt)
+	})
+	t = Table('SecurityGroups', sgs)
+	echo(t)
+}
+
