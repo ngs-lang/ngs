@@ -37,6 +37,8 @@ The bigger part of the language is implemented to the point that some useful scr
 Running
 =======
 
+Tested with gcc version 5.3.1 and clang 3.6
+
 	apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg
 	# On Ubuntu 14.04 (maybe others) # apt-get install gawk
 	cd c
