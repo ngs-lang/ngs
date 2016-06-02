@@ -1022,7 +1022,8 @@ METHOD_RESULT native_c_pthreadmutext METHOD_PARAMS {
 	METHOD_RETURN(make_pthread_mutex());
 }
 
-#define ATTR ((pthread_attr_t * restrict)&GET_PTHREADATTR(argv[0]))
+// TODO: For gcc-5 and on consider: #define ATTR ((pthread_attr_t * restrict)&GET_PTHREADATTR(argv[0]))
+#define ATTR ((pthread_attr_t *)&GET_PTHREADATTR(argv[0]))
 // TODO: check range - i might be larger than supported MAKE_INT() argument
 #define INT_ATTR(name) \
 	if(!strcmp(attr, #name)) { \
@@ -1555,9 +1556,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	FFI_TYPE(ffi_type_double);
 	FFI_TYPE(ffi_type_pointer);
 	FFI_TYPE(ffi_type_longdouble);
+#ifdef FFI_TARGET_HAS_COMPLEX_TYPE
 	FFI_TYPE(ffi_type_complex_float);
 	FFI_TYPE(ffi_type_complex_double);
 	FFI_TYPE(ffi_type_complex_longdouble);
+#endif
 
 #undef FFI_TYPE
 
