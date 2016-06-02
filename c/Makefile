@@ -95,3 +95,22 @@ test-stdlib: ngs
 
 test: test-no-bootstrap-no-stdlib test-stdlib
 	@ echo "ALL TESTS OK"
+
+test-on-jessie:
+	make clean
+	make CC=gcc-4.8
+	make test
+	make clean
+	make CC=gcc-4.9
+	make test
+	make clean
+	make CC=clang-3.5
+	make test
+
+test-on-stretch:
+	make clean
+	make CC=gcc-5
+	make test
+	make clean
+	make CC=clang-3.6
+	make test
