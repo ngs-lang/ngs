@@ -37,10 +37,14 @@ The bigger part of the language is implemented to the point that some useful scr
 Running
 =======
 
-Tested with gcc versions 4.8.4, 4.9.2, 5.3.1 and clang versions 3.5, 3.6
+Tested as follows:
+
+* Debian Stretch: gcc 5, clang 3.6
+* Debian Jessie: gcc 4.8.4 + 4.9.2, clang 3.5
+* Ubunty Trusty: gcc 4.8.4, clang 3.4
 
 	apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg
-	# On Ubuntu 14.04 (maybe others) # apt-get install gawk
+	# On Ubuntu 14.04 (maybe others) # apt-get install gawk make
 	cd c
 	make
 	# NGS_DIR, where stdlib.ngs resides defaults to /usr/share/ngs . Either link it to the "c" folder or run with NGS_DIR=.

@@ -109,8 +109,23 @@ test-on-jessie:
 
 test-on-stretch:
 	make clean
+	make CC=gcc-4.8
+	NGS_DIR=. make test
+	make clean
+	make CC=gcc-4.9
+	NGS_DIR=. make test
+	make clean
 	make CC=gcc-5
 	NGS_DIR=. make test
 	make clean
 	make CC=clang-3.6
 	NGS_DIR=. make test
+
+test-on-trusty:
+	make clean
+	make CC=gcc-4.8
+	NGS_DIR=. make test
+	make clean
+	make CC=clang
+	NGS_DIR=. make test
+
