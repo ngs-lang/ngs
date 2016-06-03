@@ -5,13 +5,20 @@ debug('Starting NGS CLI')
 echo('*** NGS CLI is under construction ***')
 
 F make_prompt() {
-	cli_prompt.map(F(k, v) {
-		v()
-	}).join(' ')
+	cli_prompt.map(F(k, v) v()).join(' ')
+}
+
+# XXX: Ugly hack to prevent direct output to stdout.
+#      It's okayish because since we are in CLI mode
+#      none of the commands can be "top level".
+#      A real fix would be somehow let compiler know it's not a top-level.
+F '$()'(c:Command) {
+	c.is_top_level = false
+	guard false
 }
 
 F cli() {
-	local line, had_error, rl = FFI(cli_readline_lib, 'readline', c_ffi_type_string, [c_ffi_type_string]);
+	local line, had_error, s, rl = FFI(cli_readline_lib, 'readline', c_ffi_type_string, [c_ffi_type_string]);
 
 	while true {
 		line = rl(make_prompt())
@@ -20,13 +27,13 @@ F cli() {
 			echo('BYE')
 			break
 		}
+		line == "" continues
 
 
 		had_error = false
 		try {
 			local program_bytecode = compile(line, '<cli-entered-line>')
 			local program_func = load(program_bytecode, 'cli_entered_line')
-			dump(program_func)
 			local result = program_func()
 		} catch(e:Exception) {
 			echo("ERROR: $e")
@@ -37,7 +44,17 @@ F cli() {
 		if(result is Process) {
 			result.wait()
 		}
-		echo("RESULT: $result")
+
+		R = result
+		s = Str(result)
+		if('\n' in s) {
+			echo("RESULT:")
+			s.split('\n').each(F(line) {
+				echo("  $line")
+			})
+		} else {
+			echo("RESULT: $s")
+		}
 
 	}
 }
