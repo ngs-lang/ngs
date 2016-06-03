@@ -979,7 +979,7 @@ VALUE make_pthread_mutex() {
 	return v;
 }
 
-VALUE make_ffi_type(ffi_type t) {
+VALUE make_ffi_type(ffi_type *t) {
 	VALUE v;
 	FFI_TYPE_OBJECT *tmp;
 	// TODO: NGS_MALLOC_ATOMIC maybe?

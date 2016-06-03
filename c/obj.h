@@ -70,7 +70,6 @@ typedef struct {
 
 typedef struct {
 	OBJECT base;
-	ffi_type val;
 } FFI_TYPE_OBJECT;
 
 // https://www.igvita.com/2009/02/04/ruby-19-internals-ordered-hash/
@@ -235,7 +234,7 @@ typedef enum {
 #define GET_PTHREAD(v)      (((PTHREAD_OBJECT *) v.ptr)->val)
 #define GET_PTHREADATTR(v)  (((PTHREADATTR_OBJECT *) v.ptr)->val)
 #define GET_PTHREADMUTEX(v) (((PTHREADMUTEX_OBJECT *) v.ptr)->val)
-#define GET_FFI_TYPE(v) (((FFI_TYPE_OBJECT *) v.ptr)->val)
+#define GET_FFI_TYPE(v) (((FFI_TYPE_OBJECT *) v.ptr)->base.val.ptr)
 #define GET_FFI_CIF(v)  (((FFI_CIF_OBJECT *) v.ptr)->val)
 #define SET_OBJ(v,o)    (v).ptr = o
 #define SET_NULL(v)     (v).num = V_NULL
@@ -344,7 +343,7 @@ char *ngs_strdup(const char *src);
 VALUE make_pthread();
 VALUE make_pthread_attr();
 VALUE make_pthread_mutex();
-VALUE make_ffi_type(ffi_type t);
+VALUE make_ffi_type(ffi_type *t);
 VALUE make_ffi_cif();
 
 #endif

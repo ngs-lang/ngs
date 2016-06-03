@@ -1124,9 +1124,9 @@ METHOD_RESULT native_c_ffi_prep_cif EXT_METHOD_PARAMS {
 
 	args = NGS_MALLOC(sizeof(**args) * OBJ_LEN(argv[1]));
 	for(i=0; i<OBJ_LEN(argv[1]); i++) {
-		args[i] = &GET_FFI_TYPE(ARRAY_ITEMS(argv[1])[i]);
+		args[i] = GET_FFI_TYPE(ARRAY_ITEMS(argv[1])[i]);
 	}
-	if(FFI_OK != (status = ffi_prep_cif(&GET_FFI_CIF(ret), FFI_DEFAULT_ABI, OBJ_LEN(argv[1]), &GET_FFI_TYPE(argv[0]), args))) {
+	if(FFI_OK != (status = ffi_prep_cif(&GET_FFI_CIF(ret), FFI_DEFAULT_ABI, OBJ_LEN(argv[1]), GET_FFI_TYPE(argv[0]), args))) {
 		VALUE e;
 		e = make_normal_type_instance(vm->Error);
 		set_normal_type_instance_attribute(e, make_string("message"), make_string("Failed to ffi_prep_cif()"));
@@ -1136,6 +1136,42 @@ METHOD_RESULT native_c_ffi_prep_cif EXT_METHOD_PARAMS {
 	METHOD_RETURN(ret);
 }
 
+// WIP - start
+// TODO: Exceptions instead of asserts
+METHOD_RESULT native_c_ffi_call EXT_METHOD_PARAMS {
+	// args:
+	//   0 - cif
+	//   1 - function
+	//   2 - argv
+	ffi_cif *cif;
+	void **avalue;
+	void *rvalue;
+	unsigned i;
+	void *tmp_ptr;
+	(void) vm;
+	(void) ctx;
+	cif = &GET_FFI_CIF(argv[0]);
+	assert(cif->nargs == OBJ_LEN(argv[2]));
+	avalue = NGS_MALLOC(sizeof(*avalue) * cif->nargs);
+	for(i=0; i<cif->nargs; i++) {
+		avalue[i] = NGS_MALLOC(cif->arg_types[i]->size);
+		if(cif->arg_types[i] == &ffi_type_pointer) {
+			tmp_ptr = NGS_MALLOC(sizeof(*tmp_ptr));
+			if(IS_STRING(ARRAY_ITEMS(argv[2])[i])) {
+				tmp_ptr = obj_to_cstring(ARRAY_ITEMS(argv[2])[i]);
+				avalue[i] = &tmp_ptr;
+				continue;
+			}
+			assert(0 == "ffi_call() - dunno how to make pointer");
+		}
+		assert(0 == "ffi_call() - dunno how to handle non-pointer types yet");
+	}
+	rvalue = NGS_MALLOC(cif->rtype->size);
+	// o->base.val.ptr = dlsym(OBJ_DATA_PTR(argv[0]), obj_to_cstring(argv[1]));
+	ffi_call(cif, ((CSYM_OBJECT *) argv[1].ptr)->base.val.ptr, rvalue, avalue);
+	METHOD_RETURN(MAKE_NULL);
+}
+// WIP - end
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
 	GLOBAL_VAR_INDEX index;
@@ -1343,6 +1379,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "in",              &native_in_str_clib,        2, "symbol",   vm->Str,        "lib",    vm->CLib);
 	register_global_func(vm, 1, "[]",              &native_index_get_clib_str, 2, "lib",      vm->CLib,       "symbol", vm->Str);
 	register_global_func(vm, 1, "c_ffi_prep_cif",  &native_c_ffi_prep_cif ,    2, "rtype",    vm->c_ffi_type, "atypes", vm->Arr);
+	register_global_func(vm, 1, "c_ffi_call",      &native_c_ffi_call,         3, "cif",      vm->c_ffi_cif,  "fn",     vm->CSym, "argv", vm->Arr);
 
 	// threads
 	register_global_func(vm, 1, "c_pthread_create",       &native_c_pthreadcreate_pthreadattr_startroutine_arg, 3, "attr", vm->c_pthread_attr_t, "start_routine", vm->Closure, "arg", vm->Any);
@@ -1539,7 +1576,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 #undef E
 
 #define FFI_TYPE(name) \
-	vm->c_ ## name = make_ffi_type(name); \
+	vm->c_ ## name = make_ffi_type(&name); \
 	set_global(vm, "c_" #name, vm->c_ ## name)
 
 	// awk -F '[ ;]' '$1 == "FFI_EXTERN" {print "FFI_TYPE(" $3 ");"}' /usr/include/x86_64-linux-gnu/ffi.h
