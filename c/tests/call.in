@@ -20,5 +20,10 @@
 	dump(f(10, 20))
 	dump(f(10, 20, 30))
 
+	echo('Test: user-defined call')
+	type T
+	F call(t:T) 100
+	t = T()
+	dump(t())
 
 }

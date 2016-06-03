@@ -1553,6 +1553,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	set_global(vm, "impl_not_found_hook", vm->impl_not_found_hook = make_array(0)); // There must be a catch-all in stdlib
 	set_global(vm, "global_not_found_hook", vm->global_not_found_hook = make_array(0));
 	set_global(vm, "init", vm->init = make_array(0));
+	set_global(vm, "call", vm->call = make_array(0));
 
 	// TODO: Some good solution for many defines
 #define E(name) set_global(vm, "C_" #name, MAKE_INT(name))
@@ -1934,6 +1935,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		ctx->frames[ctx->frame_ptr].closure = callable;
 		ctx->frames[ctx->frame_ptr].try_info_ptr = 0;
 		ctx->frames[ctx->frame_ptr].do_call_impl_not_found_hook = 1;
+		ctx->frames[ctx->frame_ptr].do_call_call = 1;
 		ctx->frames[ctx->frame_ptr].last_ip = 0;
 		ctx->frame_ptr++;
 		if(ctx->frame_ptr >= MAX_FRAMES) {
@@ -1989,11 +1991,32 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		// --- init() - end ---
 	}
 
+	if(THIS_FRAME.do_call_call) {
+		if(OBJ_LEN(vm->call)) {
+			VALUE new_argv;
+			new_argv = make_array(argc+1);
+			ARRAY_ITEMS(new_argv)[0] = callable;
+			memcpy(&ARRAY_ITEMS(new_argv)[1], argv, sizeof(VALUE)*argc);
+			THIS_FRAME.do_call_call = 0;
+			// last_ip should have been already set up before calling vm_call()
+			mr = vm_call(vm, ctx, result, vm->call, argc+1, ARRAY_ITEMS(new_argv));
+			THIS_FRAME.do_call_call = 1;
+			if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION)) {
+				return mr;
+			}
+			assert(mr == METHOD_IMPL_MISSING);
+		}
+		// Either we called call and it resulted METHOD_IMPL_MISSING
+		// or we don't have call
+	}
+
 	VALUE exc;
 	exc = make_normal_type_instance(vm->DontKnowHowToCall);
+	set_normal_type_instance_attribute(exc, make_string("message"), make_string("No matching call() found"));
 	set_normal_type_instance_attribute(exc, make_string("callable"), callable);
 	set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values(argc, argv));
 	THROW_EXCEPTION_INSTANCE(exc);
+
 }
 #undef HAVE_KWARGS_MARKER
 

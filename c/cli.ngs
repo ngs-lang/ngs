@@ -12,9 +12,7 @@ F cli_show_prompt() {
 }
 
 F cli() {
-	local readline_lib = CLib(cli_readline_lib)
-	local readline_c_func = readline_lib['readline']
-	local readline_cif = c_ffi_prep_cif(c_ffi_type_pointer, [c_ffi_type_pointer])
+	rl = FFI(cli_readline_lib, 'readline', c_ffi_type_string(Str), [c_ffi_type_string(Str)]);
 
 	while true {
 		cli_show_prompt()

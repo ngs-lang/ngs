@@ -25,3 +25,5 @@ Test: array splat parameter
   * array of length 2
     * int 20
     * int 30
+Test: user-defined call
+* int 100

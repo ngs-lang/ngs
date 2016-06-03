@@ -104,6 +104,7 @@ typedef struct {
 
 	// Enable/disable using impl_not_found_hook
 	int do_call_impl_not_found_hook;
+	int do_call_call;
 
 	// For stack trace
 	IP last_ip;
@@ -206,6 +207,7 @@ typedef struct {
 	VALUE impl_not_found_hook;
 	VALUE global_not_found_hook;
 	VALUE init;
+	VALUE call;
 
 	VALUE eqeq;
 
