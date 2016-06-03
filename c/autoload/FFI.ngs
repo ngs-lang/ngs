@@ -1,0 +1,45 @@
+{
+
+	# === CLib =======================================
+
+	stdlib_cached_clibs = {}
+
+	F CLib(filename:Str) {
+		if filename in stdlib_cached_clibs then
+			stdlib_cached_clibs[filename]
+		else
+			stdlib_cached_clibs[filename] = c_dlopen(filename, C_RTLD_NOW)
+	}
+
+	TEST c_dlopen('libc.so.6', C_RTLD_NOW) is CLib
+	TEST try c_dlopen('nosuchlib', C_RTLD_NOW) catch(e:DlopenFail) true
+
+	# === FFI =======================================
+
+	type FFI
+
+	ffi_cached_clibs = {}
+
+	F init(f:FFI, lib:Str, func:Str, rtype:c_ffi_type, atypes:Arr) {
+		guard atypes.all(is, c_ffi_type)
+		f.lib = CLib(lib)
+		f.func = f.lib[func]
+		f.cif = c_ffi_prep_cif(rtype, atypes)
+		# Informative
+		f.lib_name = lib
+		f.func_name = func
+		f.rtype = rtype
+		f.atypes = atypes
+	}
+
+	F call(f:FFI, *args) {
+		# echo("CALL FFI: ${args}")
+		c_ffi_call(f.cif, f.func, args)
+	}
+
+	# TODO: improve
+	F Str(ft:c_ffi_type) "<FFI type>"
+
+	F Str(f:FFI) "<FFI ${f.lib_name}:${f.func_name}(${f.atypes.map(Str).join(',')}):${f.rtype}>"
+
+}

@@ -229,6 +229,8 @@ typedef struct {
 	VALUE c_ffi_type_complex_double;
 	VALUE c_ffi_type_complex_longdouble;
 
+	VALUE c_ffi_type_string;
+
 } VM;
 
 typedef struct {

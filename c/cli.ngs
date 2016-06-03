@@ -1,22 +1,43 @@
 # WIP, don't use!
 
-debug("Starting NGS CLI")
+debug('Starting NGS CLI')
 
-echo("*** NGS CLI is under construction ***")
+echo('*** NGS CLI is under construction ***')
 
-F cli_show_prompt() {
-	local p = cli_prompt.map(F(k, v) {
+F make_prompt() {
+	cli_prompt.map(F(k, v) {
 		v()
 	}).join(' ')
-	echo(p)
 }
 
 F cli() {
-	rl = FFI(cli_readline_lib, 'readline', c_ffi_type_string(Str), [c_ffi_type_string(Str)]);
+	local line, had_error, rl = FFI(cli_readline_lib, 'readline', c_ffi_type_string, [c_ffi_type_string]);
 
 	while true {
-		cli_show_prompt()
-		c_ffi_call(readline_cif, readline_c_func, ["NGS> "])
+		line = rl(make_prompt())
+		if line is Null {
+			echo('')
+			echo('BYE')
+			break
+		}
+
+
+		had_error = false
+		try {
+			local program_bytecode = compile(line, '<cli-entered-line>')
+			local program_func = load(program_bytecode, 'cli_entered_line')
+			dump(program_func)
+			local result = program_func()
+		} catch(e:Exception) {
+			echo("ERROR: $e")
+			had_error = true
+		}
+		had_error continues
+
+		if(result is Process) {
+			result.wait()
+		}
+		echo("RESULT: $result")
 
 	}
 }
@@ -27,9 +48,9 @@ cli_readline_lib = 'libreadline.so.6'
 
 # TODO: make it object, not a string
 cli_prompt = {
-	'ngs': F() "NGS"
+	'ngs': F() 'NGS'
 	'dir': F() { local p = $(pwd).Str(); p[0..len(p)-1] }
-	'gt': F() ">"
+	'gt': F() '> '
 }
 
 cli()

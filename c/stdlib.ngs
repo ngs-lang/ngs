@@ -119,6 +119,13 @@ F impl_not_found_hook(callable:Fun, *args) {
 
 F Str(t:Type) "<Type ${t.name}>"
 
+# === NormalType =================================
+
+# XXX: must improve
+F Str(i:NormalTypeInstance) {
+	"<${i.typeof().name}>"
+}
+
 # === auto-load ==================================
 
 doc Called when reading undefined global
@@ -1200,15 +1207,6 @@ F config(s:Str, x) {
 	STDLIB_CONFIG[s] = x
 }
 
-# === CLib =======================================
-
-F CLib(filename:Str) {
-	c_dlopen(filename, C_RTLD_NOW);
-}
-
-TEST c_dlopen('libc.so.6', C_RTLD_NOW) is CLib
-TEST try c_dlopen('nosuchlib', C_RTLD_NOW) catch(e:DlopenFail) true
-
 # === Misc tests =================================
 
 TEST o = {'a': 1, 'b': [null, false, true, 3.14], 'nothing': null}; decode_json(encode_json(o)) == o
@@ -1247,5 +1245,5 @@ TEST try NO_SUCH_GLOBAL catch(e:GlobalNotFound) true
 TEST try c_lseek(0, 0, "bad arg") catch(e:InvalidArgument) true
 TEST try compile("xyz(", "something") catch(e:CompileFail) true
 TEST try 1(2, 3) catch(e:DontKnowHowToCall) true
-TEST type T; try echo(T()) catch(e:ImplNotFound) true
+TEST type T; try echo(T(), T()) catch(e:ImplNotFound) true
 TEST try F f() f(); try f() catch(e:StackDepthFail) true

@@ -1155,7 +1155,7 @@ METHOD_RESULT native_c_ffi_call EXT_METHOD_PARAMS {
 	avalue = NGS_MALLOC(sizeof(*avalue) * cif->nargs);
 	for(i=0; i<cif->nargs; i++) {
 		avalue[i] = NGS_MALLOC(cif->arg_types[i]->size);
-		if(cif->arg_types[i] == &ffi_type_pointer) {
+		if(cif->arg_types[i] == GET_FFI_TYPE(vm->c_ffi_type_string)) {
 			tmp_ptr = NGS_MALLOC(sizeof(*tmp_ptr));
 			if(IS_STRING(ARRAY_ITEMS(argv[2])[i])) {
 				tmp_ptr = obj_to_cstring(ARRAY_ITEMS(argv[2])[i]);
@@ -1169,6 +1169,15 @@ METHOD_RESULT native_c_ffi_call EXT_METHOD_PARAMS {
 	rvalue = NGS_MALLOC(cif->rtype->size);
 	// o->base.val.ptr = dlsym(OBJ_DATA_PTR(argv[0]), obj_to_cstring(argv[1]));
 	ffi_call(cif, ((CSYM_OBJECT *) argv[1].ptr)->base.val.ptr, rvalue, avalue);
+	if(cif->rtype == GET_FFI_TYPE(vm->c_ffi_type_string)) {
+		if(*(const char **)rvalue) {
+			METHOD_RETURN(make_string(*(const char **)rvalue));
+		} else {
+			METHOD_RETURN(MAKE_NULL);
+		}
+	} else {
+		assert(0 == "ffi_call() - dunno how to handle non-string types");
+	}
 	METHOD_RETURN(MAKE_NULL);
 }
 // WIP - end
@@ -1599,6 +1608,14 @@ void vm_init(VM *vm, int argc, char **argv) {
 	FFI_TYPE(ffi_type_complex_double);
 	FFI_TYPE(ffi_type_complex_longdouble);
 #endif
+	{
+		ffi_type *t;
+		t = NGS_MALLOC(sizeof(*t));
+		assert(t);
+		memcpy(t, &ffi_type_pointer, sizeof(*t));
+		vm->c_ffi_type_string = make_ffi_type(t);
+		set_global(vm, "c_ffi_type_string", vm->c_ffi_type_string);
+	}
 
 #undef FFI_TYPE
 

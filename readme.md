@@ -50,6 +50,8 @@ Tested as follows:
 * Debian Jessie: gcc 4.8.4 + 4.9.2, clang 3.5
 * Ubunty Trusty: gcc 4.8.4, clang 3.4
 
+If you have troubles compiling, please try to compile the commit tagged `tested`.
+
 Running tests
 =============
 
