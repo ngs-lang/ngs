@@ -608,6 +608,13 @@ F Hash(arr:Arr, v)
 TEST Hash([1,2], 'x') == {1: 'x', 2: 'x'}
 
 
+F Hash(arr:Arr, cb:Fun)
+	collector/{}
+		arr.each(F(elt) collect(elt, cb(elt)))
+
+TEST Hash([1,2], F(x) x*2) == {1: 2, 2: 4}
+
+
 F Hash(tuple:Arr, names:Arr)
 	collector/{}
 		tuple.len().each(F(idx) collect(names[idx], tuple[idx]))
@@ -870,22 +877,21 @@ TEST Path('/no-such-file').Bool() == false
 
 # TODO: better exceptions (use correct type, not string, maybe use errno)
 F find_in_path(executable_name:Str) {
-	debug("[find_in_path] enter ${executable_name}")
+	debug("[find_in_path] got ${executable_name}")
 	if "/" in executable_name {
-		debug("[find_in_path] leave unprocessed ${executable_name}")
+		debug("[find_in_path] leaving unprocessed ${executable_name}")
 		return Path(executable_name)
 	}
 	local path = ENV.get('PATH', '/usr/local/bin:/usr/bin:/bin:/sbin:/usr/sbin').split(':')
 	debug('[find_in_path] will search')
 	local ret = path.map(F(elt) Path("${elt}/${executable_name}")).first()
-	debug("[find_in_path] ret is ${executable_name} -> ${ret}")
+	debug("[find_in_path] ${executable_name} found at ${ret}")
 	if ret is Null {
 		local e = ExecutableNotFound()
 		e.path = path
 		e.name = executable_name
 		throw e
 	}
-	debug("[find_in_path] leave ${executable_name} -> ${ret}")
 	ret
 }
 

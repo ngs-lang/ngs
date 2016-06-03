@@ -3,6 +3,8 @@
 debug('Starting NGS CLI')
 
 echo('*** NGS CLI is under construction ***')
+echo('| After successful command, R variable contains the result')
+echo('| After unsuccessful command, E variable contains the exception')
 
 F make_prompt() {
 	cli_prompt.map(F(k, v) v()).join(' ')
@@ -12,13 +14,29 @@ F make_prompt() {
 #      It's okayish because since we are in CLI mode
 #      none of the commands can be "top level".
 #      A real fix would be somehow let compiler know it's not a top-level.
+# XXX: Do this after rc files are executed !
 F '$()'(c:Command) {
 	c.is_top_level = false
 	guard false
 }
 
+F run_cli_rc_files() {
+	local rc_files = ['/etc/ngs/cli.rc.ngs']
+	if 'HOME' in ENV {
+		rc_files.push("${ENV['HOME']}/.ngs/cli.rc.ngs")
+	}
+	rc_files.filter(Path).each(F(f) {
+		debug("[CLI] Loading RC file $f")
+		require(f)
+	})
+}
+
 F cli() {
 	not(0.isatty() and 1.isatty()) throws Error("CLI only runs when attached to a TTY")
+
+	screen_renderer = ScreenRenderer()
+
+	run_cli_rc_files()
 
 	local line, had_error, s, rl = FFI(cli_readline_lib, 'readline', c_ffi_type_string, [c_ffi_type_string]);
 
