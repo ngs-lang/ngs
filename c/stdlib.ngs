@@ -879,7 +879,12 @@ F find_in_path(executable_name:Str) {
 	debug('[find_in_path] will search')
 	local ret = path.map(F(elt) Path("${elt}/${executable_name}")).first()
 	debug("[find_in_path] ret is ${executable_name} -> ${ret}")
-	ret is Null throws "Executable '${executable_name}' was not found in path ${path}"
+	if ret is Null {
+		local e = ExecutableNotFound()
+		e.path = path
+		e.name = executable_name
+		throw e
+	}
 	debug("[find_in_path] leave ${executable_name} -> ${ret}")
 	ret
 }
@@ -1003,14 +1008,17 @@ F Str(r:Redir) "<Redirect ${r.marker} ${r.datum}>"
 {
 	type Process
 
-	type ProcessFailed
-	ProcessFailed.inherit(Exception)
+	type ProcessFail
+	ProcessFail.inherit(Exception)
+
+	type ExecutableNotFound
+	ExecutableNotFound.inherit(Exception)
 }
 
 
 # TODO: Inherit from Exception or a subtype of it
-F ProcessFailed(p:Process) {
-	pf = ProcessFailed()
+F ProcessFail(p:Process) {
+	pf = ProcessFail()
 	pf.process = p
 	pf
 }
@@ -1054,7 +1062,7 @@ F wait(p:Process) {
 	debug("[wait] waitpid(${p.pid}) -> ${w}")
 	p.exit_code = C_WEXITSTATUS(w[1])
 	p.exit_signal = C_WTERMSIG(w[1])
-	not(finished_ok(p)) throws ProcessFailed(p)
+	not(finished_ok(p)) throws ProcessFail(p)
 	p
 }
 
@@ -1073,11 +1081,17 @@ F Str(p:Process) p.wait().stdout
 # INFO: bash - redir.c
 F '$()'(c:Command) {
 
-	local debug_pfx = '[stdlib $()]', process, pid
+	local debug_pfx = '[stdlib $()]', process, pid, e
 	debug("$debug_pfx Parsed command: ${c.argv}")
 
 	process = Process(c)
-	process.executable = find_in_path(c.argv[0])
+	try {
+		process.executable = find_in_path(c.argv[0])
+	} catch(nf:ExecutableNotFound) {
+		e = ProcessFail(process)
+		e.cause = nf
+		throw e
+	}
 	local pipe = Pipe()
 	pid = c_fork()
 

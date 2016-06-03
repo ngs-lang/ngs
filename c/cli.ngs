@@ -18,6 +18,8 @@ F '$()'(c:Command) {
 }
 
 F cli() {
+	not(0.isatty() and 1.isatty()) throws Error("CLI only runs when attached to a TTY")
+
 	local line, had_error, s, rl = FFI(cli_readline_lib, 'readline', c_ffi_type_string, [c_ffi_type_string]);
 
 	while true {
@@ -36,6 +38,7 @@ F cli() {
 			local program_func = load(program_bytecode, 'cli_entered_line')
 			local result = program_func()
 		} catch(e:Exception) {
+			E = e
 			echo("ERROR: $e")
 			had_error = true
 		}
