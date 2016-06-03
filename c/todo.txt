@@ -1,6 +1,7 @@
 Note that this started as internal document so things here are unformed, not final and fluid.
 
 [inbox]
+	* Delimited string, such as PATH
 	* Fix segfault F f(x:UndefinedType)
 	* close_on_exec - not to leak fds
 		~ilya/tmp/bash-4.3/execute_cmd.c:1478:0-1
