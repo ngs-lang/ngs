@@ -1,0 +1,9 @@
+language: c
+compiler:
+  - gcc
+  - clang
+before_script:
+  - sudo apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg gawk make
+script:
+  - cd c && make CC=$CC ngs
+  - cd c && make test
