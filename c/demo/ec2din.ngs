@@ -6,7 +6,7 @@
 {
 	Table
 
-	config('table_Instances', ['InstanceId', 'tag_Name', 'tag_env', 'tag_role', 'IPs', 'InstanceType', 'State', 'KeyName', 'SecurityGroups', 'AZ', 'RestOfTags'])
+	config('table_Instances', %[InstanceId tag_Name tag_env tag_role IPs InstanceType State KeyName SecurityGroups AZ RestOfTags])
 
 	F limit_len(s:Str, l:Int) {
 		s.len() <= l returns s

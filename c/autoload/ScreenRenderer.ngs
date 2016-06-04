@@ -12,7 +12,7 @@
 
 	F init(sr:ScreenRenderer) {
 		sr.lock = Lock()
-		sr.tput_cache = 'el sc rc smso rmso sgr0'.split(' ').Hash(F(capname) `tput $capname`)
+		sr.tput_cache = %[el sc rc smso rmso sgr0].Hash(F(capname) `tput $capname`)
 		# TODO: make colors customizable, somewhat CSS-like.
 		# red
 		sr.tput_cache.error_color = `tput setaf 1`

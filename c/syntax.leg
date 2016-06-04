@@ -466,7 +466,9 @@ basic-expression =
 	| subshell
 	| identifier
 	| array-literal
+	| imm-array-literal
 	| hash-literal
+	| imm-hash-literal
 	| "(" space? e:expression space? ")" { MAKE_NODE(ret, EXPRESSIONS_NODE); ret->name = "()"; ret->first_child = e; ret->last_child = e; $$ = ret; }
 
 assignment =
@@ -729,6 +731,31 @@ array-literal-node = {
 		$$ = ret;
 }
 
+imm-array-literal =
+		"%[" space? "]" {
+				MAKE_NODE(ret, ARR_LIT_NODE);
+				$$ = ret;
+		}
+		| "%[" ws:imm-array-words "]" {
+				MAKE_NODE(ret, ARR_LIT_NODE);
+				ret->first_child = ws->first_child->next_sibling->first_child;
+				$$ = ret;
+				CAPTURE_LOCATION($$);
+		}
+
+imm-array-words = acc:command-node (
+		inline_space?
+		(
+			command-word {
+				append_ast_node_child(acc->first_child->next_sibling, $$);
+			}
+		)
+	)+ {
+	$$ = acc;
+	CAPTURE_LOCATION($$);
+}
+
+
 hash-literal =
 		"{" space? "}" {
 				MAKE_NODE(ret, HASH_LIT_NODE);
@@ -762,6 +789,46 @@ hash-item =
 hash-literal-node = {
 		MAKE_NODE(ret, HASH_LIT_NODE);
 		$$ = ret;
+}
+
+imm-hash-literal =
+		"%{" space? "}" {
+				MAKE_NODE(ret, HASH_LIT_NODE);
+				$$ = ret;
+		}
+		| "%{" ws:imm-hash-words "}" {
+				MAKE_NODE(ret, HASH_LIT_NODE);
+				ast_node *p, *kv;
+				(void) kv; // "Unused variable warning". Dunno why.
+				for(p = ws->first_child->next_sibling->first_child; p; p=p->next_sibling) {
+					if(p->type == HASH_SPLAT_NODE) {
+						append_ast_node_child(ret, p);
+						continue;
+					}
+					MAKE_NODE(kv, EXPRESSIONS_NODE);
+					append_ast_node_child(kv, p);
+					p = p->next_sibling;
+					if(p) {
+						append_ast_node_child(kv, p);
+						append_ast_node_child(ret, kv);
+					} else {
+						// TODO: exception
+					}
+				}
+				$$ = ret;
+				CAPTURE_LOCATION($$);
+		}
+
+imm-hash-words = acc:command-node (
+		inline_space?
+		(
+			hash-command-word {
+				append_ast_node_child(acc->first_child->next_sibling, $$);
+			}
+		)
+	)+ {
+	$$ = acc;
+	CAPTURE_LOCATION($$);
 }
 
 for =
@@ -1097,6 +1164,7 @@ type = doc:optional-doc inline_space? "type" space i:identifier {
 
 subshell =
 	"$(" cmd:command-words ")" { $$ = cmd; }
+	| "%(" cmd:command-words ")" { cmd->first_child->name = ngs_strdup("%()"); $$ = cmd; }
 	| "``" cmd:command-words "``" { cmd->first_child->name = ngs_strdup("````"); $$ = cmd; }
 	| "`" cmd:command-words "`" { cmd->first_child->name = ngs_strdup("``");  $$ = cmd; }
 
@@ -1127,18 +1195,29 @@ command-node = {
 	$$ = ret;
 }
 
-command-word =
-	<[-a-zA-Z0-9/=,.]+> {
+basic-command-word =
+	<[-a-zA-Z0-9/=,._]+> {
 		MAKE_STRING_NODE(ret, yytext);
 		$$ = ret;
 	}
+	| "$" c:code-block { $$ = c; }
+	| string
+
+command-word =
+	basic-command-word
 	| "$*" c:code-block {
 		MAKE_NODE(splat, ARR_SPLAT_NODE);
 			splat->first_child = c;
 		$$ = splat;
 	}
-	| "$" c:code-block { $$ = c; }
-	| string
+
+hash-command-word =
+	basic-command-word
+	| "$**" c:code-block {
+		MAKE_NODE(splat, HASH_SPLAT_NODE);
+			splat->first_child = c;
+		$$ = splat;
+	}
 
 command-redirect =
 	rm:redir-marker inline_space? w:command-word {

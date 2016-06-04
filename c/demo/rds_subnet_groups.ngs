@@ -4,7 +4,7 @@
 # Running example: NGS_table_SubnetGroups='["VpcId", "DBSubnetGroupName", "Subnets"]' ./demo/rds_subnet_groups.ngs
 
 {
-	config('table_SubnetGroups', ['VpcId', 'DBSubnetGroupName', 'DBSubnetGroupDescription', 'Subnets'])
+	config('table_SubnetGroups', %[VpcId DBSubnetGroupName DBSubnetGroupDescription Subnets])
 
 	groups = ``aws rds describe-db-subnet-groups``
 	groups.each(F(group) {

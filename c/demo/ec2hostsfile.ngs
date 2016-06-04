@@ -43,7 +43,7 @@
 		i.Name = i.Tags.get('Name', '-')
 	})
 
-	config('table_ec2hosts', ["PrivateIpAddress", "HostName", "Comment", "InstanceId", "PublicIpAddress", "Name"])
+	config('table_ec2hosts', %[PrivateIpAddress HostName Comment InstanceId PublicIpAddress Name])
 	config('output_format', 'text')
 	config('output_title', false)
 	config('output_headers', false)
