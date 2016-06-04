@@ -1,0 +1,12 @@
+F bootstrap_invoke_main() {
+	# TODO: convert the arguments to the specified types
+	# TODO: filter out all main()s that were defined not at top-level file
+	#       (the one require()d by bootstrap)
+	if main is not Arr {
+		throw MainFail("'main' is not an array")
+	}
+	if main.any((is not), Fun) {
+		throw MainFail("'main' is not a function")
+	}
+	main(*ARGV)
+}

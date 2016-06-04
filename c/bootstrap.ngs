@@ -35,6 +35,7 @@ TEST Exception(Exception()).cause is Exception
 	type NotImplemented; NotImplemented.inherit(Exception);
 	type FetchFail; FetchFail.inherit(Exception);
 	type RequreFail; RequreFail.inherit(Exception);
+	type MainFail; MainFail.inherit(Exception);
 }
 
 # === bootstrap ==================================
@@ -152,6 +153,14 @@ F bootstrap() {
 	bootstrap_debug("bootstrap(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
 	local program_func = load(program_bytecode, "bootstrap()ped file: $fname")
 	local result = program_func()
+	if not(defined main) {
+		bootstrap_debug("main() not defined, exiting")
+		c_exit(result.to_exit_code())
+	}
+	bootstrap_debug("main() defined, using bootstrap_invoke_main()")
+
+	require("${NGS_DIR}/bootstrap_invoke_main.ngs")
+	result = bootstrap_invoke_main()
 	c_exit(result.to_exit_code())
 }
 
