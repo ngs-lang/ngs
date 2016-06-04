@@ -1,4 +1,4 @@
-Next generation UNIX shell. See the [man page](https://ilyash.github.io/ngs/ngs.1.html).
+Next generation UNIX shell. See the [man page](https://ilyash.github.io/ngs/ngs.1.html). [![Build Status](https://travis-ci.org/ilyash/ngs.svg?branch=master)](https://travis-ci.org/ilyash/ngs)
 
 The problem with current state
 ==============================
