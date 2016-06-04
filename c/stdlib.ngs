@@ -400,6 +400,15 @@ F first(arr:Arr, predicate:Fun, *args) {
 TEST [5,10,15].first((>), 7) == 10
 TEST [5,10,15].first((>), 20) == null
 
+
+F reverse(arr:Arr) {
+	local l = arr.len()
+	collector
+		for(i;l) collect(arr[l-i-1])
+}
+
+TEST [1,2,3].reverse() == [3,2,1]
+
 # --- Conversions ---
 
 F Arr(h:Hash)
