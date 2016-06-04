@@ -1128,7 +1128,7 @@ command-node = {
 }
 
 command-word =
-	<[-a-zA-Z0-9/=,]+> {
+	<[-a-zA-Z0-9/=,.]+> {
 		MAKE_STRING_NODE(ret, yytext);
 		$$ = ret;
 	}

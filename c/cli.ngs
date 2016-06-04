@@ -87,7 +87,11 @@ cli_readline_lib = 'libreadline.so.6'
 # TODO: make it object, not a string
 cli_prompt = {
 	'ngs': F() 'NGS'
-	'dir': F() { local p = $(pwd).Str(); p[0..len(p)-1] }
+	'dir': F() {
+		# TODO: replace HOME dir with ~
+		local p = $(pwd).Str()
+		p[0..len(p)-1]
+	}
 	'gt': F() '> '
 }
 

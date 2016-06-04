@@ -1,5 +1,14 @@
 {
 	type ScreenRenderer
+	type ScreenItemsContainer
+	type ScreenItemsVerticalContainer; ScreenItemsVerticalContainer.inherit(ScreenItemsContainer)
+	type ScreenItemsHorizontalContainer; ScreenItemsHorizontalContainer.inherit(ScreenItemsContainer)
+
+	F init(sic:ScreenItemsContainer) {
+		sic.items = []
+		sic.spacing = 1
+	}
+
 
 	F init(sr:ScreenRenderer) {
 		sr.lock = Lock()
@@ -9,6 +18,11 @@
 		sr.tput_cache.error_color = `tput setaf 1`
 		# green
 		sr.tput_cache.success_color = `tput setaf 2`
+		sr.top_level = ScreenItemsVerticalContainer()
+	}
+
+	F dimensions(sr:ScreenRenderer) {
+
 	}
 
 	# sr = ScreenRenderer()

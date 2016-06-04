@@ -22,6 +22,7 @@ syn keyword ngsType Error Exception CompileFail DontKnowHowToCall GlobalNotFound
 syn keyword ngsType IndexNotFound AttrNotFound InvalidParameter
 syn keyword ngsType Lock Pthread PthreadAttr Thread
 syn keyword ngsType LockFail
+syn keyword ngsType ScreenRenderer ScreenItemsContainer ScreenItemsVerticalContainer ScreenItemsHorizontalContainer
 syn keyword ngsTodo TODO FIXME XXX NOTE
 syn keyword ngsConstant true false null
 syn keyword ngsPredefinedVariable ARGV ENV
