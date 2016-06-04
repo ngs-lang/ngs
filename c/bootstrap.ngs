@@ -158,8 +158,10 @@ F bootstrap() {
 		c_exit(result.to_exit_code())
 	}
 	bootstrap_debug("main() defined, using bootstrap_invoke_main()")
+	if global_not_found_hook.len() == 0 {
+		throw MainFail("Autoloading (usually defined in stdlib) is not present but the main() invoking mechanism requires it")
+	}
 
-	require("${NGS_DIR}/bootstrap_invoke_main.ngs")
 	result = bootstrap_invoke_main()
 	c_exit(result.to_exit_code())
 }
