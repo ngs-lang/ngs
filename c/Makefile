@@ -76,6 +76,19 @@ clean:
 tags: *.c *.h
 	ctags $^
 
+prefix=/usr/share/ngs/
+    
+.PHONY: install
+install: ngs
+	mkdir -p $(prefix)
+	cp bootstrap.ngs $(prefix)
+	cp stdlib.ngs $(prefix)
+	cp -r autoload  $(prefix)
+
+.PHONY: uninstall
+uninstall:
+	rm -rf $(prefix)
+
 test-no-bootstrap-no-stdlib: ngs
 	@ echo "[ Starting tests ]"
 	@ cd tests/ && \
