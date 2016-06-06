@@ -99,7 +99,7 @@ UI
 	* (Maybe) Allow editing it and saving to file.
 	* (Maybe) Allow write jq filters in (G)UI by selecting the elements
 
-* Underline red/green for existing/non-existing files?
+* Underline red/green for existing/non-existing files? Fish shell does it for the commands.
 
 * Actions on objects that are on screen. Think right click / context menu.
 
