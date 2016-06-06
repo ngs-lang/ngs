@@ -14,6 +14,77 @@ Note that this started as internal document so things here are unformed, not fin
 [roadmap]
 
 	* Phase 1 - the language [in progress]
+
+		* Milestone "programming"
+
+			* +=, -=, etc syntax. Consider .= for a.b.c = a.b.c.method() -> a.b.c .= method()
+
+			* A way to declare global function in another function
+				F f()  { F g() 100 }
+				g is now defined locally and there is no way to decare it globally.
+				It is the common case but still the global declaration is needed sometimes.
+
+			* commands syntax
+				* io redirection - see F '$()'(c:Command) { ... } in stdlib.ngs [task is in hold]
+					* basic redirections ( <x , >y , >>z ) [done]
+					* tests for basic redirections
+					* advanced redirections ( N>x , N<y, N>>z ), think of more
+					* document redirections
+				* pipes
+
+			* RegExp
+				+ The syntax for the regexp literal will be the usual /regexp/flags
+				+ The match operator is ~ (tilde)
+				+ synatx thoughts
+
+					if m = s ~ /zzz/ { ... m[1] ... }
+
+				* without(s:Str, r:Regex)
+				* split(s:Str, r:Regex)
+				* filter(a:Arr, r:Regex)
+
+			* match, ematch - some way to get the match object?
+
+				For example when Regex is implmeneted in the code
+
+					match mystring {
+						/my_regex(.*)/ { my_code }
+					}
+
+				in my_code there should be access to the match object
+				The syntax might be
+
+					match mystring {
+						/my_regex(.*)/ -> my_match { my_code }
+					}
+
+				or something alike, not sure yet.
+				Maybe
+
+					match my_string my_match {
+						/my_regex(.*)/ { my_code }
+					}
+
+			* without(s:Str, del:Str)
+
+			* consider syntax: f(...) = v
+				This could be used for example as follows:
+					s = "abcd"
+					len(s) = 2
+					# s is now "ab"
+				Function definitions might look like:
+					F len(s:Str, =n:Int) ...
+				or maybe
+					F len(s:Str) = n:Int ...
+				I like the first more but it still doesn't feel very right.
+
+			* documentation [on hold]
+
+				* Fix markdown escaping, including underscore
+				* Make it look better in both man and html
+				* Document that innner functions are declared local
+				* Types documentation [on hold]
+
 	* Phase 2 - the shell [not started]
 		Starts and runs in parallel with Phase 1 as soon as the language is mature enough
 		to implement the shell in it. See beginning of CLI implementation in previous NGS implementation:
@@ -29,65 +100,6 @@ Note that this started as internal document so things here are unformed, not fin
 		* Thread() [in progress]
 			* Make pthread_attr_t accessible - get/set attributes
 
-	* documentation [on hold]
-
-		* Fix markdown escaping, including underscore
-		* Make it look better in both man and html
-		* Document that innner functions are declared local
-		* Types documentation [on hold]
-
-	* match, ematch - some way to get the match object?
-
-		For example when Regex is implmeneted in the code
-
-			match mystring {
-				/my_regex(.*)/ { my_code }
-			}
-
-		in my_code there should be access to the match object
-		The syntax might be
-
-			match mystring {
-				/my_regex(.*)/ -> my_match { my_code }
-			}
-
-		or something alike, not sure yet.
-		Maybe
-
-			match my_string my_match {
-				/my_regex(.*)/ { my_code }
-			}
-
-	* commands syntax
-		* io redirection - see F '$()'(c:Command) { ... } in stdlib.ngs [task is in hold]
-			* basic redirections ( <x , >y , >>z ) [done]
-			* tests for basic redirections
-			* advanced redirections ( N>x , N<y, N>>z ), think of more
-			* document redirections
-		* pipes
-	* RegExp
-		+ The syntax for the regexp literal will be the usual /regexp/flags
-		+ The match operator is ~ (tilde)
-		+ synatx thoughts
-
-			m = s ~ /zzz/
-			if m { ... }
-
-			if m = s ~ /zzz/ { ... m[1] ... }
-
-			# Magic M variable scoped to the following { code }
-			s ~ /zzz/ { ... M[1] ... }
-
-			s ~ /zzz/ F(m) { ... m[1] ... }
-
-			s ~ /zzzz/ -> { ... $1 ... }
-
-			s ~ /zzz/ -> m { m[1] }
-
-	* without(s:Str, del:Str)
-	* without(s:Str, r:Regex)
-	* split(s:Str, r:Regex)
-	* filter(a:Arr, r:Regex)
 	* unify and document where {} is Hash (expression) and where it's code
 	* K M G suffixes for numbers
 	* compile
@@ -107,26 +119,6 @@ Note that this started as internal document so things here are unformed, not fin
 				( add more projects here )
 	* benchmarks - different tasks and languages
 		There is one task benchmark in the Makefile (time-sum target)
-	* unary - syntax
-	* consider syntax: f(...) = v
-
-		This could be used for example as follows:
-
-			s = "abcd"
-			len(s) = 2
-			# s is now "ab"
-
-		Function definitions might look like:
-
-			F len(s:Str, =n:Int) ...
-
-		or maybe
-
-			F len(s:Str) = n:Int ...
-
-		I like the first more but it still doesn't feel very right.
-
-	* +=, -=, etc syntax
 	* tracing
 	* think about serialization and remote execution
 		Probably pushing a bytecode (which we already have because the code was compiled)
@@ -178,13 +170,6 @@ Note that this started as internal document so things here are unformed, not fin
 	* Enull type - expected null (another, simpler take on same problem that Option in Scala solves)
 		f(x:Enull) -> Enull
 		Bool(x:Enull) -> false
-
-[syntax]
-	* $() for command execution
-	* %() for command building -- %(ls *)
-	* %[] for bare words array -- %[v1 v2]
-	* %{} for bare words hash -- %{k1: v1, k2: v2}
-	* BreakException?
 
 [types]
 	* Bin (or Bytes, later, after Str is multibyte)

@@ -95,7 +95,7 @@ UI
   another user must approve the command for execution.
 
 * Display structured results as real f\*cking structures (JSON, Yaml, ...)
-	* Most of the data dealt with is tables. List of files, list of instances in a cloud, list of load balancers. Amazing that none of current shell tools (I heard of) don't treat the data as such. The closest you get is set of records in `awk`. Well, if the fields in records are the same it's actually a table. `$1` in awk could be `id` or `name`, referencing the data by column name and not by field number. Yes, you have `jq` and it's close but it still works (in best case) with list of records with same fields.
+	* Most of the data dealt with is tables. List of files, list of instances in a cloud, list of load balancers. Amazing that none of current UNIX shell tools (I heard of) don't treat the data as such. The closest you get is set of records in `awk`. Well, if the fields in records are the same it's actually a table. `$1` in awk could be `id` or `name`, referencing the data by column name and not by field number. Yes, you have `jq` and it's close but it still works (in best case) with list of records with same fields. PowerShell has something in that direction (`Get-Process | Where-Object {$_.handles -gt 200}`)[https://technet.microsoft.com/en-us/library/ee177028.aspx] + `Format-Table`.
 	* (Maybe) Allow editing it and saving to file.
 	* (Maybe) Allow write jq filters in (G)UI by selecting the elements
 
