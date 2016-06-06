@@ -365,6 +365,7 @@ Have you heard of project X? How it compares to NGS?
 
 * [fish shell](http://fishshell.com/) has very nice features and improvements but is still more bash-like. For example it doesn't have nested data structures nor a full-featured programming language.
 * [Plumbum](https://github.com/tomerfiliba/plumbum) makes it easier to call shell commands from python. Too verbose to be used as a shell or shell script. It helps when you need to use python and call external programs. Primary target audience seems to be Python developers, not system engineers.
+* [Xonsh](http://xon.sh/) Python with bash-like additions. Python is not a domain specific language, making bash-like additions can not bring it to be optimal for system tasks.
 * [rc shell](https://swtch.com/plan9port/man/man1/rc.html) is much closer to Bash than to NGS.
 * [Es: A shell with higher-order functions](https://wryun.github.io/es-shell/paper.html) . ES and NGS share quite a bit of common ideas. NGS goes further with making a shell a real programming language. ES vs NGS would probably be a matter of personal preference. ES is simpler and been here for a while.
 
