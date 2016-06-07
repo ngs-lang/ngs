@@ -1199,9 +1199,19 @@ TEST instances = [{"Tags": [{"Key": "k", "Value": "v"},{"Key": "k2", "Value": "v
 
 F parse(s:Str, hints:Hash) {
 	guard try hints['process'].command.argv[0] == 'aws'
-	data = decode_json(s)
-	guard (data is Hash) and (data.len() == 1)
-	data = data[data.keys()[0]]
+	local data = decode_json(s)
+	guard data is Hash
+
+	# Use the only top-level key that has array as it's value
+	# Thanks goes to Elastic Beanstalk which complicates this,
+	# all other APIs seem to return only one top-level key.
+	# ( aws elasticbeanstalk describe-configuration-options )
+
+	local top_level_vals = data.map(F(k, v) v).filter(is, Arr)
+
+	guard top_level_vals.len() == 1
+
+	data = top_level_vals[0]
 
 	# Anyone cares about Reservations? Certainly it's not the common case so...
 	if data.all(has, 'ReservationId') {
