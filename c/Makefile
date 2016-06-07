@@ -3,7 +3,7 @@
 SHELL := /bin/bash -e
 
 PKG_NAME := ngs
-
+SHARE_FILES := bootstrap.ngs stdlib.ngs cli.ngs autoload
 CC := gcc
 # -gdwarf-4 -g3 -- for debugging macros
 # -rdynamic -- for backtrace_symbols() to work
@@ -90,9 +90,7 @@ install: ngs
 	# TODO: use "install" instead of "cp"
 	mkdir -p $(datadir)/$(PKG_NAME)
 	cp ngs $(bindir)/
-	cp bootstrap.ngs $(datadir)/$(PKG_NAME)/
-	cp stdlib.ngs $(datadir)/$(PKG_NAME)/
-	cp -r autoload  $(datadir)/$(PKG_NAME)/
+	cp -a $(SHARE_FILES) $(datadir)/$(PKG_NAME)/
 
 .PHONY: uninstall
 uninstall:
