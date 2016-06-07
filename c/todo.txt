@@ -67,6 +67,14 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* without(s:Str, del:Str)
 
+			* Destructuring. Automatically declare the variables local, as for does.
+				* [a,b=default,*some,c] or without [] ?
+				* {'a','b':newvar,**some,'c'=default}
+				+ Not sure about the syntax.
+				+ Nested?
+				+ Pattern matching like [a, *other1, 100, b, *other2] ?
+				+ "xyz${myvar}www" = myvar syntax for regexes? ... for consistency.
+
 			* consider syntax: f(...) = v
 				This could be used for example as follows:
 					s = "abcd"
