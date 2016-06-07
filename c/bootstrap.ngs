@@ -56,7 +56,25 @@ bootstrap_debug =
 	else
 		F(s) {}
 
-F bootstrap_find_ngs_dir() ENV.get('NGS_DIR', '/usr/share/ngs')
+bootstrap_ngs_dir_candidates = [
+	'/usr/local/etc/ngs'
+	'/usr/local/share/ngs'
+	'/etc/ngs'
+	'/usr/share/ngs'
+]
+
+F bootstrap_find_ngs_dir() {
+	local l = bootstrap_ngs_dir_candidates.len()
+	for(i;l) {
+		c_access("${bootstrap_ngs_dir_candidates[i]}/stdlib.ngs", C_F_OK) == 0 returns bootstrap_ngs_dir_candidates[i]
+	}
+	null
+}
+
+F bootstrap_find_ngs_dir() {
+	guard 'NGS_DIR' in ENV
+	ENV['NGS_DIR']
+}
 
 # *** fetch - abstraction above low level c io primitives ***
 # TODO: Better exceptions
@@ -128,6 +146,8 @@ F bootstrap() {
 	}
 
 	NGS_DIR = bootstrap_find_ngs_dir()
+
+	NGS_DIR is Null throws Exception("Could not find NGS_DIR")
 
 	# *** WIP: Load stdlib ***
 	if do_load_stdlib {

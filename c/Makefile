@@ -2,6 +2,8 @@
 
 SHELL := /bin/bash -e
 
+PKG_NAME := ngs
+
 CC := gcc
 # -gdwarf-4 -g3 -- for debugging macros
 # -rdynamic -- for backtrace_symbols() to work
@@ -75,6 +77,27 @@ clean:
 
 tags: *.c *.h
 	ctags $^
+
+# https://www.gnu.org/prep/standards/html_node/Directory-Variables.html
+prefix = /usr/local
+datarootdir = $(prefix)/share
+datadir = $(datarootdir)
+exec_prefix = $(prefix)
+bindir = $(exec_prefix)/bin
+
+.PHONY: install
+install: ngs
+	# TODO: use "install" instead of "cp"
+	mkdir -p $(datadir)
+	cp ngs $(bindir)/
+	cp bootstrap.ngs $(datadir)/$(PKG_NAME)/
+	cp stdlib.ngs $(datadir)/$(PKG_NAME)/
+	cp -r autoload  $(datadir)/$(PKG_NAME)/
+
+.PHONY: uninstall
+uninstall:
+	rm -rf $(datadir)/$(PKG_NAME)/
+	rm $(bindir)/ngs
 
 test-no-bootstrap-no-stdlib: ngs
 	@ echo "[ Starting tests ]"

@@ -1181,6 +1181,11 @@ METHOD_RESULT native_c_ffi_call EXT_METHOD_PARAMS {
 	METHOD_RETURN(MAKE_NULL);
 }
 // WIP - end
+
+METHOD_RESULT native_c_access METHOD_PARAMS {
+	METHOD_RETURN(MAKE_INT(access(obj_to_cstring(argv[0]), GET_INT(argv[1]))));
+}
+
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
 	GLOBAL_VAR_INDEX index;
@@ -1462,6 +1467,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_isatty", &native_c_isatty,           1,"fd",       vm->Int);
 
 	// low level misc
+	register_global_func(vm, 0, "c_access", &native_c_access,          2, "pathname", vm->Str, "mode", vm->Int);
 	register_global_func(vm, 0, "c_exit",   &native_c_exit_int,        1, "status",   vm->Int);
 	register_global_func(vm, 0, "c_fork",   &native_c_fork,            0);
 	register_global_func(vm, 0, "c_pipe",   &native_c_pipe,            0);
@@ -1583,6 +1589,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	E(ENOTRECOVERABLE); E(ERFKILL); E(EHWPOISON); E(ENOTSUP);
 	// awk '/^#define RTLD_/ {print "E("$2");"}' /usr/include/x86_64-linux-gnu/bits/dlfcn.h | xargs -n10
 	E(RTLD_LAZY); E(RTLD_NOW); E(RTLD_NOLOAD); E(RTLD_DEEPBIND); E(RTLD_GLOBAL); E(RTLD_LOCAL); E(RTLD_NODELETE);
+	// man access(2)
+	E(F_OK);
+	E(R_OK);
+	E(W_OK);
+	E(X_OK);
 #undef E
 
 #define FFI_TYPE(name) \
