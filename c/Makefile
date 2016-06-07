@@ -76,12 +76,14 @@ clean:
 tags: *.c *.h
 	ctags $^
 
-prefix=/usr
-datadir=$(prefix)/share/ngs
+prefix = /usr/local
+exec_prefix = $(prefix)/bin
+datadir = $(prefix)/ngs
 
 .PHONY: install
 install: ngs
 	mkdir -p $(datadir)
+	cp ngs $(exec_prefix)
 	cp bootstrap.ngs $(datadir)
 	cp stdlib.ngs $(datadir)
 	cp -r autoload  $(datadir)
@@ -89,6 +91,7 @@ install: ngs
 .PHONY: uninstall
 uninstall:
 	rm -rf $(datadir)
+	rm $(exec_prefix)/ngs
 
 test-no-bootstrap-no-stdlib: ngs
 	@ echo "[ Starting tests ]"

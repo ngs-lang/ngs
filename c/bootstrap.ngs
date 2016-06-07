@@ -56,7 +56,7 @@ bootstrap_debug =
 	else
 		F(s) {}
 
-F bootstrap_find_ngs_dir() ENV.get('NGS_DIR', '/usr/share/ngs')
+F bootstrap_find_ngs_dir() ENV.get('NGS_DIR', '/usr/local/ngs')
 
 # *** fetch - abstraction above low level c io primitives ***
 # TODO: Better exceptions

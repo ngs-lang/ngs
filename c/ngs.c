@@ -22,7 +22,7 @@ char *sprintf_position(yycontext *yy, int pos) {
 }
 
 char *find_bootstrap_file() {
-	static char *places[] = {"/etc/ngs/bootstrap.ngs", "/var/lib/ngs/bootstrap.ngs", "/usr/share/ngs/bootstrap.ngs", NULL};
+	static char *places[] = {"/etc/ngs/bootstrap.ngs", "/var/lib/ngs/bootstrap.ngs", "/usr/share/ngs/bootstrap.ngs", "/usr/local/ngs/bootstrap.ngs",  NULL};
 	char *fname;
 	char *home_dir;
 	int len;
