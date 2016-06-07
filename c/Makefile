@@ -88,7 +88,7 @@ bindir = $(exec_prefix)/bin
 .PHONY: install
 install: ngs
 	# TODO: use "install" instead of "cp"
-	mkdir -p $(datadir)
+	mkdir -p $(datadir)/$(PKG_NAME)
 	cp ngs $(bindir)/
 	cp bootstrap.ngs $(datadir)/$(PKG_NAME)/
 	cp stdlib.ngs $(datadir)/$(PKG_NAME)/
