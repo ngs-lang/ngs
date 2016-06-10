@@ -1207,7 +1207,7 @@ F parse(s:Str, hints:Hash) {
 	# all other APIs seem to return only one top-level key.
 	# ( aws elasticbeanstalk describe-configuration-options )
 
-	local top_level_vals = data.map(F(k, v) v).filter(is, Arr)
+	local top_level_vals = data.values().filter(is, Arr)
 
 	guard top_level_vals.len() == 1
 
