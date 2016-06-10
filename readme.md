@@ -5,7 +5,7 @@ The problem with current state
 
 Shells are [Domain Specific Languages](https://en.wikipedia.org/wiki/Domain-specific_language).  The domain has changed greatly since the shells we use today were conceived.  The shells never caught up.
 
-What I see is a void. There is no good language for system tasks (and no good shell). What's near this void is classical shells on one hand and generic (non-DSL) programming languages on the other. Both are being (ab)used for system tasks.
+What I see is a void. There is no good language for system tasks (and no good shell). What's near this void is classical shells on one hand and general-purpose (non-DSL) programming languages on the other. Both are being (ab)used for system tasks.
 
 The problem with classical shells looks pretty clear: they were made with one kind of tasks in mind but are used for other, bigger and more complex tasks. Such scripts usually look as a fight against the language and working around it much more than using it to solve the problem.
 
