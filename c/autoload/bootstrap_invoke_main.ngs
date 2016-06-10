@@ -1,12 +1,31 @@
-F bootstrap_invoke_main() {
-	# TODO: convert the arguments to the specified types
-	# TODO: filter out all main()s that were defined not at top-level file
-	#       (the one require()d by bootstrap)
-	if main is not Arr {
-		throw MainFail("'main' is not an array")
+{ type BootstrapMainDone }
+
+F bootstrap_try_main(c:Closure, args:Arr) {
+	bootstrap_debug("Trying main() candidate $c")
+	try {
+		# TODO: convert the arguments to the specified types
+		local v = c(*args)
+		local done = BootstrapMainDone()
+		done.value = v
+		throw done
+	} catch(inf:ImplNotFound) {
+		# That's fine
 	}
-	if main.any((is not), Fun) {
-		throw MainFail("'main' is not a function")
+}
+
+F bootstrap_invoke_main(default) {
+	main is not Arr returns default
+	not(main) returns default
+	if main.any((is not), Closure) {
+		return default
 	}
-	main(*ARGV)
+	local candidate_mains = main.filter(F(m) m.ip().resolve_instruction_pointer().file == bootstrap_main_file).reverse()
+	not(candidate_mains) returns default
+	bootstrap_debug("Candidate main() functions: $candidate_mains")
+
+	try {
+		candidate_mains.each(bootstrap_try_main, ARGV)
+	} catch(done:BootstrapMainDone) {
+		done.value
+	}
 }

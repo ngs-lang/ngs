@@ -1000,7 +1000,7 @@ VALUE make_ffi_cif() {
 	return v;
 }
 
-VALUE resolve_ip(VM *vm, IP ip) {
+VALUE resolve_instruction_pointer(VM *vm, IP ip) {
 	// Find region
 	// TODO: Something faster then sequential scan
 	VALUE ret;

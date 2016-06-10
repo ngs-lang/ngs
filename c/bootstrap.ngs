@@ -48,6 +48,7 @@ F to_exit_code(b:Bool) if b 0 1
 doc %RET - n
 F to_exit_code(n:Int) n
 
+main = []
 
 # *** Define bootstrap_debug function ***
 bootstrap_debug =
@@ -75,6 +76,8 @@ F bootstrap_find_ngs_dir() {
 	guard 'NGS_DIR' in ENV
 	ENV['NGS_DIR']
 }
+
+bootstrap_main_file = null
 
 # *** fetch - abstraction above low level c io primitives ***
 # TODO: Better exceptions
@@ -172,9 +175,10 @@ F bootstrap() {
 	local program_bytecode = compile(code_to_run, fname)
 	bootstrap_debug("bootstrap(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
 	local program_func = load(program_bytecode, "bootstrap()ped file: $fname")
+	bootstrap_main_file = fname
 	local result = program_func()
-	if not(defined main) {
-		bootstrap_debug("main() not defined, exiting")
+	if main.len() == 0 {
+		bootstrap_debug("main() is not used, exiting")
 		c_exit(result.to_exit_code())
 	}
 	bootstrap_debug("main() defined, using bootstrap_invoke_main()")
@@ -182,7 +186,7 @@ F bootstrap() {
 		throw MainFail("Autoloading (usually defined in stdlib) is not present but the main() invoking mechanism requires it")
 	}
 
-	result = bootstrap_invoke_main()
+	result = bootstrap_invoke_main(result)
 	c_exit(result.to_exit_code())
 }
 

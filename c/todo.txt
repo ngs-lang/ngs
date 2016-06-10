@@ -17,6 +17,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "programming"
 
+			* main() - support require()d files
+
 			* +=, -=, etc syntax. Consider .= for a.b.c = a.b.c.method() -> a.b.c .= method()
 
 			* A way to declare global function in another function
@@ -31,6 +33,9 @@ Note that this started as internal document so things here are unformed, not fin
 					* advanced redirections ( N>x , N<y, N>>z ), think of more
 					* document redirections
 				* pipes
+					* between external commands
+					* between internal commands/functions
+					* between integer and external commands
 
 			* RegExp
 				+ The syntax for the regexp literal will be the usual /regexp/flags

@@ -78,7 +78,7 @@ void print_exception(VM *vm, VALUE result) {
 				VALUE frame, resolved_ip, ip;
 				frame = ARRAY_ITEMS(frames)[i];
 				H(ip, frame, "ip");
-				resolved_ip = resolve_ip(vm, (IP)(GET_INT(ip) - 1));
+				resolved_ip = resolve_instruction_pointer(vm, (IP)(GET_INT(ip) - 1));
 				if(IS_HASH(resolved_ip)) {
 					VALUE file, first_line, first_column, last_line, last_column;
 					HASH_OBJECT_ENTRY *closure_entry;

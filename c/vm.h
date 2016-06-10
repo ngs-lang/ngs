@@ -318,5 +318,5 @@ BYTECODE_HANDLE *ngs_start_unserializing_bytecode(char *data);
 void ngs_fetch_bytecode_section(BYTECODE_HANDLE *h, BYTECODE_SECTION_TYPE *type, BYTECODE_SECTION_LEN *len, char **data);
 // In obj.c
 VALUE make_backtrace(VM *vm, CTX *ctx);
-VALUE resolve_ip(VM *vm, IP ip);
+VALUE resolve_instruction_pointer(VM *vm, IP ip);
 #endif

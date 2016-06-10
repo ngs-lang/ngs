@@ -43,6 +43,18 @@ F partial_tail(f:Fun, *bind_args)
 TEST p = partial_tail((-), 10); p(7) == -3
 
 
+# === Closure ====================================
+
+F Str(c:Closure) {
+	local info = c.ip().resolve_instruction_pointer()
+	local location = if info {
+		"${info.file}:${info.first_line}"
+	} else {
+		"<unknown location>"
+	}
+	"<Closure ${(try c.attrs().name) or "<anonymous>"} at ${location}>"
+}
+
 # === Type =======================================
 
 STDLIB_EXPOSE = {}

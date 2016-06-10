@@ -713,7 +713,7 @@ METHOD_RESULT native_encode_json_obj EXT_METHOD_PARAMS {
 }
 
 METHOD_RESULT native_backtrace EXT_METHOD_PARAMS { (void) argv; METHOD_RETURN(make_backtrace(vm, ctx)); }
-METHOD_RESULT native_resolve_ip EXT_METHOD_PARAMS { (void) ctx; METHOD_RETURN(resolve_ip(vm, GET_INT(argv[0]))); }
+METHOD_RESULT native_resolve_instruction_pointer EXT_METHOD_PARAMS { (void) ctx; METHOD_RETURN(resolve_instruction_pointer(vm, GET_INT(argv[0]))); }
 
 METHOD_RESULT native_globals EXT_METHOD_PARAMS {
 	VALUE ret;
@@ -986,6 +986,8 @@ METHOD_RESULT native_params_closure METHOD_PARAMS {
 	METHOD_RETURN(_native_params(CLOSURE_OBJ_PARAMS(callable), CLOSURE_OBJ_N_REQ_PAR(callable), CLOSURE_OBJ_N_OPT_PAR(callable), CLOSURE_OBJ_PARAMS_FLAGS(callable)));
 }
 #undef callable
+
+METHOD_RESULT native_ip_closure METHOD_PARAMS { METHOD_RETURN(MAKE_INT(CLOSURE_OBJ_IP(argv[0]))); }
 
 METHOD_RESULT native_attrs_nm METHOD_PARAMS {
 	METHOD_RETURN(NATIVE_METHOD_ATTRS(argv[0]));
@@ -1419,6 +1421,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "attrs",    &native_attrs_closure,     1, "c",      vm->Closure);
 	register_global_func(vm, 0, "attrs",    &native_attrs_closure_any, 2, "c",      vm->Closure, "datum", vm->Any);
 	register_global_func(vm, 0, "params",   &native_params_closure,    1, "c",      vm->Closure);
+	register_global_func(vm, 0, "ip",       &native_ip_closure,        1, "c",      vm->Closure);
 
 	// Int
 	register_global_func(vm, 1, "Int",      &native_Int_str_int,        2, "s",    vm->Str,  "base", vm->Int);
@@ -1530,7 +1533,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, "decode_json",&native_decode_json_str, 1, "s", vm->Str);
 	register_global_func(vm, 1, "encode_json",&native_encode_json_obj, 1, "obj", vm->Any);
 	register_global_func(vm, 1, "Backtrace",&native_backtrace,         0);
-	register_global_func(vm, 1, "resolve_ip",&native_resolve_ip,       1, "ip", vm->Int);
+	register_global_func(vm, 1, "resolve_instruction_pointer", &native_resolve_instruction_pointer,       1, "ip", vm->Int);
 	_doc(vm, "", "Resolves Instruction Pointer to source location");
 	_doc(vm, "%RET", "Hash with keys: file, first_line, first_column, last_line, last_column, ip");
 	register_global_func(vm, 1, "globals",  &native_globals,           0);
