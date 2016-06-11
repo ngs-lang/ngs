@@ -17,6 +17,13 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "programming"
 
+			* automatically make the variables that are assigned to in a closure "local"s
+				+ Check how it's done in Python
+				* add "upvar" declaration
+				* add "global" declaration
+
+			* syntax for inheritance (extend "type" syntax)
+
 			* main() - support require()d files
 
 			* +=, -=, etc syntax. Consider .= for a.b.c = a.b.c.method() -> a.b.c .= method()

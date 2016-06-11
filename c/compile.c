@@ -34,11 +34,6 @@
 
 #define IF_NOT_SWITCH_COND if(node->number != SWITCH_NODE_COND && node->number != SWITCH_NODE_ECOND)
 
-typedef enum identifier_resolution_type {
-	RESOLVE_ANY_IDENTFIER=0,
-	RESOLVE_GLOBAL_IDENTFIER=1,
-} IDENTIFIER_RESOLUTION_TYPE;
-
 #define LOCALS (ctx->locals[ctx->locals_ptr-1])
 #define N_LOCALS (ctx->n_locals[ctx->locals_ptr-1])
 #define N_UPLEVELS (ctx->n_uplevels[ctx->locals_ptr-1])
@@ -122,12 +117,12 @@ GLOBAL_VAR_INDEX get_global_var_index(COMPILATION_CONTEXT *ctx, char *name, size
 	return 0;
 }
 
-IDENTIFIER_INFO resolve_identifier(COMPILATION_CONTEXT *ctx, const char *name, IDENTIFIER_RESOLUTION_TYPE res_type) {
+IDENTIFIER_INFO resolve_identifier(COMPILATION_CONTEXT *ctx, const char *name) {
 	IDENTIFIER_INFO ret;
 	SYMBOL_TABLE *s;
 	int locals_idx;
 
-	if(res_type==RESOLVE_ANY_IDENTFIER && ctx->locals_ptr) {
+	if(ctx->locals_ptr) {
 		HASH_FIND(hh, LOCALS, name, strlen(name), s);
 		if(s) {
 			ret.type = LOCAL_IDENTIFIER;
@@ -233,7 +228,7 @@ void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 void compile_identifier(COMPILATION_CONTEXT *ctx, char **buf, size_t *idx, char *name, int opcode_local, int opcode_upvar, int opcode_global) {
 	IDENTIFIER_INFO identifier_info;
 	GLOBAL_VAR_INDEX gvi;
-	identifier_info = resolve_identifier(ctx, name, RESOLVE_ANY_IDENTFIER);
+	identifier_info = resolve_identifier(ctx, name);
 	switch(identifier_info.type) {
 		case LOCAL_IDENTIFIER:
 			OPCODE(*buf, opcode_local);
