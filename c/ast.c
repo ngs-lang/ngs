@@ -28,6 +28,8 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 	"args",
 	"arg",
 	"local",
+	"upvar",
+	"global",
 	"hash",
 	"index",
 	"return",

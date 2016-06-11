@@ -8,7 +8,7 @@
 	i=0
 	THREADS.ptimes(F() {
 		for(j;ITERATIONS)
-			i=i+1
+			global i=i+1
 	})
 	echo(i)
 
@@ -16,7 +16,7 @@
 	i=0
 	THREADS.ptimes(F() {
 		for(j;ITERATIONS)
-			l.acquire(F() i=i+1)
+			l.acquire(F() global i=i+1)
 	})
 	echo(i)
 }

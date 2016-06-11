@@ -6,10 +6,10 @@
 	type Thread
 
 	F init(t:Thread, f:Fun, arg) {
-		local thread_attr = c_pthread_attr_t()
+		thread_attr = c_pthread_attr_t()
 		c_pthread_attr_init(thread_attr)
-		local create_result = c_pthread_create(thread_attr, f, arg)
-		local code = create_result[0]
+		create_result = c_pthread_create(thread_attr, f, arg)
+		code = create_result[0]
 		if code {
 			# XXX better exception ... and include code in it
 			throw Error("Failed to c_pthread_create")
@@ -27,7 +27,7 @@
 	}
 
 	F join(t:Thread) {
-		local join_result = c_pthread_join(t.thread)
+		join_result = c_pthread_join(t.thread)
 		if join_result[0] {
 			# XXX better exception ... and include code in it
 			throw Error("Failed to c_pthread_join")
@@ -37,12 +37,12 @@
 
 	# TODO: maybe limit number of concurrent threads (default to cores count?)
 	F pmap(a:Arr, mapper:Fun) {
-		local threads = a.map(F(elt) Thread(mapper, elt))
+		threads = a.map(F(elt) Thread(mapper, elt))
 		threads.join()
 	}
 
 	F pmap(n:Int, mapper:Fun) {
-		local threads = collector
+		threads = collector
 			for(i;n) {
 				collect(Thread(mapper, i))
 			}
@@ -50,7 +50,7 @@
 	}
 
 	F ptimes(n:Int, cb:Fun) {
-		local threads = collector
+		threads = collector
 			for(i;n) {
 				collect(Thread(cb))
 			}

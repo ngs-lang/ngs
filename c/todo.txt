@@ -17,14 +17,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "programming"
 
-			* automatically make the variables that are assigned to in a closure "local"s
-				+ Check how it's done in Python
-				* add "upvar" declaration
-				* add "global" declaration
+			* main() - support require()d files
 
 			* syntax for inheritance (extend "type" syntax)
-
-			* main() - support require()d files
 
 			* +=, -=, etc syntax. Consider .= for a.b.c = a.b.c.method() -> a.b.c .= method()
 
@@ -104,6 +99,17 @@ Note that this started as internal document so things here are unformed, not fin
 				* Make it look better in both man and html
 				* Document that innner functions are declared local
 				* Types documentation [on hold]
+
+		* Milestone "correct programming"
+
+			* Implement missing local/upvar/global functionality and add tests
+
+			* Make sure local/upvar cause exceptions when used at top-level code
+
+			* Check what happends with misplaced local/upvar/global. Example: "F f(); global f" - function declaration causes f to be local
+
+			* Replace all compile asserts with exceptions
+
 
 	* Phase 2 - the shell [not started]
 		Starts and runs in parallel with Phase 1 as soon as the language is mature enough

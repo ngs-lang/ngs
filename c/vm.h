@@ -186,6 +186,7 @@ typedef struct {
 				VALUE IndexNotFound;
 				VALUE AttrNotFound;
 				VALUE GlobalNotFound;
+			VALUE UndefinedLocalVar;
 			VALUE InvalidArgument;
 			VALUE CompileFail;
 			VALUE CallFail;

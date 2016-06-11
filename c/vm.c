@@ -1355,6 +1355,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 				MKSUBTYPE(IndexNotFound, LookupFail);
 				MKSUBTYPE(AttrNotFound, LookupFail);
 				MKSUBTYPE(GlobalNotFound, LookupFail);
+			MKSUBTYPE(UndefinedLocalVar, Exception);
 			MKSUBTYPE(InvalidArgument, Error);
 			MKSUBTYPE(CompileFail, Error);
 			MKSUBTYPE(CallFail, Error);
@@ -2206,10 +2207,17 @@ main_loop:
 							goto main_loop;
 		case OP_FETCH_LOCAL:
 							ARG_LVI;
-							assert(IS_NOT_UNDEF(LOCALS[lvi]));
+							if(IS_UNDEF(LOCALS[lvi])) {
+								VALUE exc;
+								exc = make_normal_type_instance(vm->UndefinedLocalVar);
+								// TODO: variable name
+								// set_normal_type_instance_attribute(exc, make_string("name"), make_string(vm->globals_names[gvi]));
+								set_normal_type_instance_attribute(exc, make_string("index"), MAKE_INT(lvi));
+								set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+								*result = exc;
+								goto exception;
+							}
 							PUSH(LOCALS[lvi]);
-							// printf("LVI %d FRAME_PTR %d\n", lvi, ctx->frame_ptr-1);
-							// dump_titled("OP_FETCH_LOCAL", LOCALS[lvi]);
 							goto main_loop;
 		case OP_STORE_LOCAL:
 							ARG_LVI;

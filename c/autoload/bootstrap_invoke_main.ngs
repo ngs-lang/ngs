@@ -4,8 +4,8 @@ F bootstrap_try_main(c:Closure, args:Arr) {
 	bootstrap_debug("Trying main() candidate $c")
 	try {
 		# TODO: convert the arguments to the specified types
-		local v = c(*args)
-		local done = BootstrapMainDone()
+		v = c(*args)
+		done = BootstrapMainDone()
 		done.value = v
 		throw done
 	} catch(inf:ImplNotFound) {
@@ -19,7 +19,7 @@ F bootstrap_invoke_main(default) {
 	if main.any((is not), Closure) {
 		return default
 	}
-	local candidate_mains = main.filter(F(m) m.ip().resolve_instruction_pointer().file == bootstrap_main_file).reverse()
+	candidate_mains = main.filter(F(m) m.ip().resolve_instruction_pointer().file == bootstrap_main_file).reverse()
 	not(candidate_mains) returns default
 	bootstrap_debug("Candidate main() functions: $candidate_mains")
 

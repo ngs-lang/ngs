@@ -36,6 +36,7 @@ typedef struct compilation_context {
 	VM vm;
 	SYMBOL_TABLE *globals;
 	SYMBOL_TABLE *locals[COMPILE_MAX_FUNC_DEPTH];
+	SYMBOL_TABLE *identifiers_scopes[COMPILE_MAX_FUNC_DEPTH];
 	LOCAL_VAR_INDEX n_locals[COMPILE_MAX_FUNC_DEPTH];
 	UPVAR_INDEX n_uplevels[COMPILE_MAX_FUNC_DEPTH];
 	int stack_depth[COMPILE_MAX_FUNC_DEPTH];

@@ -46,8 +46,8 @@ TEST p = partial_tail((-), 10); p(7) == -3
 # === Closure ====================================
 
 F Str(c:Closure) {
-	local info = c.ip().resolve_instruction_pointer()
-	local location = if info {
+	info = c.ip().resolve_instruction_pointer()
+	location = if info {
 		"${info.file}:${info.first_line}"
 	} else {
 		"<unknown location>"
@@ -94,7 +94,7 @@ doc %EX - ... numbering[hostname_base]} ...
 F expose(typ:NormalType, attr:Str) {
 	STDLIB_EXPOSE[typ] = STDLIB_EXPOSE.get(typ, []).push(attr)
 	if STDLIB_EXPOSE[typ].len() > 1 {
-		local e = NotImplemented("expose() does not support exposing more than one attribute at this time")
+		e = NotImplemented("expose() does not support exposing more than one attribute at this time")
 		e.type = typ
 		e.attr = attr
 		throw e
@@ -113,8 +113,8 @@ F expose(typ:NormalType, attr:Str) {
 doc Called on ImplNotFound
 doc Implements expose() behaviour
 F impl_not_found_hook(callable:Fun, *args) {
-	local l = args.len()
-	local exposed_attr_name = null, change_idx, arg
+	l = args.len()
+	exposed_attr_name = null
 	for(i;l) {
 		arg = args[i]
 		if typeof(arg) in STDLIB_EXPOSE {
@@ -124,7 +124,7 @@ F impl_not_found_hook(callable:Fun, *args) {
 		}
 	}
 	guard exposed_attr_name
-	local new_args = copy(args)
+	new_args = copy(args)
 	new_args[change_idx] = (.)(new_args[change_idx], exposed_attr_name)
 	callable(*new_args)
 }
@@ -157,7 +157,6 @@ F ..(start, end)  ExclusiveRange(start, end)
 F ...(start, end) InclusiveRange(start, end)
 
 F each(r:Range, cb:Fun, *args) {
-	local step, cmp
 	econd {
 		r.end is Null {
 			step = 1
@@ -274,7 +273,7 @@ TEST "ab" + "cd" == "abcd"
 
 # Checks whether element x is in array arr
 F in(x, arr:Arr) {
-	local l = arr.len()
+	l = arr.len()
 	for(i;l) arr[i] == x returns true
 	false
 }
@@ -283,7 +282,7 @@ F in(x, arr:Arr) {
 
 
 F ==(a:Arr, b:Arr) {
-	local l = a.len()
+	l = a.len()
 	l != b.len() returns false
 	for(i;l) a[i] != b[i] returns false
 	true
@@ -295,7 +294,7 @@ TEST [1] != [1, 2]
 
 
 F any(arr:Arr, predicate:Fun, *args) {
-	local l = arr.len()
+	l = arr.len()
 	for(i;l)
 		predicate(arr[i], *args) returns true
 	false
@@ -306,7 +305,7 @@ TEST [1,2,3].any(F(elt) elt > 5).not()
 
 
 F all(arr:Arr, predicate:Fun, *args) {
-	local l = arr.len()
+	l = arr.len()
 	for(i;l)
 		not(predicate(arr[i], *args)) returns false
 	true
@@ -331,14 +330,14 @@ TEST [1,2,3].map((*), 4) == [4,8,12]
 
 
 F each(arr:Arr, cb:Fun, *args) {
-	local l = arr.len()
+	l = arr.len()
 	for(i;l) cb(arr[i], *args)
 	arr
 }
 
 # TODO: map_idx_val, each_idx_val for other types
 F each_idx_val(arr:Arr, cb:Fun, *args) {
-	local l = arr.len()
+	l = arr.len()
 	for(i;l) cb(i, arr[i], *args)
 	arr
 }
@@ -403,7 +402,7 @@ TEST [null, false, 10, 20].first() == 10
 
 
 F first(arr:Arr, predicate:Fun, *args) {
-	local l = arr.len()
+	l = arr.len()
 	for(i;l)
 		predicate(arr[i], *args) returns arr[i]
 	null
@@ -414,7 +413,7 @@ TEST [5,10,15].first((>), 20) == null
 
 
 F reverse(arr:Arr) {
-	local l = arr.len()
+	l = arr.len()
 	collector
 		for(i;l) collect(arr[l-i-1])
 }
@@ -433,8 +432,8 @@ F Arr(arr:Arr) arr
 
 
 F zip(*args) {
-	local arrays = args.map(Arr)
-	local max_len = arrays.map(len).max()
+	arrays = args.map(Arr)
+	max_len = arrays.map(len).max()
 	collector
 		for(i;max_len)
 			collect(arrays.map(get, i, null))
@@ -457,7 +456,7 @@ F '[]'(arr:Arr, indexes:Arr)
 TEST [10,20,30,40][[0,3]] == [10, 40]
 
 F '[]'(arr:Arr, range:Range) {
-	local start = econd {
+	start = econd {
 		range.start is Null
 			0
 		range.start > arr.len()
@@ -467,7 +466,7 @@ F '[]'(arr:Arr, range:Range) {
 		range.start < 0
 			throw IndexNotFound("Range start ${range.start} is too low", arr, range.start)
 	}
-	local end = econd {
+	end = econd {
 		range.end is Null
 			arr.len()
 		range.end < start
@@ -506,6 +505,7 @@ TEST [10,11,12].limit(2) == [10,11]
 
 {
 	F() {
+		global min, max
 		F most(arr:Arr, f:Fun) {
 			guard arr
 			ret = arr[0]
@@ -513,12 +513,8 @@ TEST [10,11,12].limit(2) == [10,11]
 			ret
 		}
 
-		# XXX: find something that looks better. options:
-		#      global F min() ...
-		#      F global min() ...
-		#      ?
-		min = F(arr:Arr) most(arr, (<))
-		max = F(arr:Arr) most(arr, (>))
+		F min(arr:Arr) most(arr, (<))
+		F max(arr:Arr) most(arr, (>))
 	}()
 }
 
@@ -537,8 +533,10 @@ F echo(x) {
 
 # Can be more efficent I guess
 F merge_sorted(a:Arr, b:Arr, lte:Fun) {
-	local al = a.len(), bl = b.len()
-	local ai = 0, bi = 0
+	al = a.len()
+	bl = b.len()
+	ai = 0
+	bi = 0
 	collector
 		while ai < al or bi < bl
 			econd {
@@ -558,8 +556,9 @@ F sort(a:Arr) sort(a, (<=))
 F sort(a:Arr, lte:Fun) {
 	# XXX: Not copied!
 	a.len() <= 1 returns a
-	local mid = a.len() / 2
-	local l = a[0..mid], r = a[mid..null]
+	mid = a.len() / 2
+	l = a[0..mid]
+	r = a[mid..null]
 	merge_sorted(sort(l, lte), sort(r, lte), lte)
 }
 
@@ -756,7 +755,7 @@ TEST "x" not in "abcd"
 # --- Misc utilities ---
 
 F split(s:Str, delim:Str) {
-	local start = 0, p
+	start = 0
 	collector {
 		while (p = pos(s, delim, start)) is not Null {
 			collect(s[start..p])
@@ -776,8 +775,8 @@ F *(s:Str, n:Int) ([s]*n).join('')
 F Str(x, target_width:Int) x.Str().Str(target_width)
 
 F Str(s:Str, target_width:Int) {
-	local l = s.len()
-	local pad_on_left = if target_width < 0 {
+	l = s.len()
+	pad_on_left = if target_width < 0 {
 		target_width = 0 - target_width
 		true
 	} else {
@@ -786,7 +785,7 @@ F Str(s:Str, target_width:Int) {
 
 	l >= target_width returns s
 
-	local padding = ' ' * (target_width - l)
+	padding = ' ' * (target_width - l)
 	if pad_on_left {
 		padding + s
 	} else {
@@ -903,12 +902,12 @@ F find_in_path(executable_name:Str) {
 		debug("[find_in_path] leaving unprocessed ${executable_name}")
 		return Path(executable_name)
 	}
-	local path = ENV.get('PATH', '/usr/local/bin:/usr/bin:/bin:/sbin:/usr/sbin').split(':')
+	path = ENV.get('PATH', '/usr/local/bin:/usr/bin:/bin:/sbin:/usr/sbin').split(':')
 	debug('[find_in_path] will search')
-	local ret = path.map(F(elt) Path("${elt}/${executable_name}")).first()
+	ret = path.map(F(elt) Path("${elt}/${executable_name}")).first()
 	debug("[find_in_path] ${executable_name} found at ${ret}")
 	if ret is Null {
-		local e = ExecutableNotFound()
+		e = ExecutableNotFound()
 		e.path = path
 		e.name = executable_name
 		throw e
@@ -923,7 +922,7 @@ F Str(p:Path) p.path
 # TODO: better exceptions (use correct type, not string, maybe use errno)
 F dup2(oldfd:Int, newfd:Int) {
 	while true {
-		local status = c_dup2(oldfd, newfd)
+		status = c_dup2(oldfd, newfd)
 		status != -1 returns newfd
 		get_c_errno() != C_EINTR throws "dup2() failed"
 	}
@@ -938,9 +937,9 @@ F dup2(oldfd:Int, newfd:Int) {
 # TODO: better exceptions (use correct type, not string, maybe use errno)
 F read(fd:Int) {
 	debug("[read] will read from fd $fd")
-	local ret = []
+	ret = []
 	while true {
-		local result = c_read(fd, 4096)
+		result = c_read(fd, 4096)
 		debug("[read] read from fd $fd : <<${result}>>")
 		result[0] == 0 returns ret.join('')
 		if result[0] > 0 {
@@ -955,8 +954,8 @@ F read(fd:Int) {
 F write(fd:Int, s:Str) fd.c_write(s)
 
 F isatty(fd:Int) {
-	local ret = c_isatty(fd)
-	local errno = get_c_errno()
+	ret = c_isatty(fd)
+	errno = get_c_errno()
 
 	ret == 1 returns true
 	ret != 0 throws "c_isatty($fd) - unknown response code $ret"
@@ -975,8 +974,8 @@ F isatty(fd:Int) {
 
 # TODO: better exceptions (use correct type, not string, maybe use errno)
 F Pipe() {
-	local pipe = Pipe.constructors[0]()
-	local result = c_pipe()
+	pipe = Pipe.constructors[0]()
+	result = c_pipe()
 	# result: [result_code, read_end, write_end]
 	result[0] != 0 throws "Failed to create Pipe"
 	pipe.read_fd = result[1]
@@ -1063,7 +1062,7 @@ F finished_ok(p:Process) {
 }
 
 F Process(c:Command) {
-	local p = Process()
+	p = Process()
 	p.command = c
 	p.executable = null
 	p.pid = null
@@ -1085,7 +1084,7 @@ F wait(p:Process) {
 	p.exit_code is Int returns p
 
 	debug("[wait] will waitpid(${p.pid})")
-	local w = c_waitpid(p.pid)
+	w = c_waitpid(p.pid)
 	debug("[wait] waitpid(${p.pid}) -> ${w}")
 	p.exit_code = C_WEXITSTATUS(w[1])
 	p.exit_signal = C_WTERMSIG(w[1])
@@ -1108,7 +1107,7 @@ F Str(p:Process) p.wait().stdout
 # INFO: bash - redir.c
 F '$()'(c:Command) {
 
-	local debug_pfx = '[stdlib $()]', process, pid, e
+	debug_pfx = '[stdlib $()]'
 	debug("$debug_pfx Parsed command: ${c.argv}")
 
 	process = Process(c)
@@ -1119,7 +1118,7 @@ F '$()'(c:Command) {
 		e.cause = nf
 		throw e
 	}
-	local pipe = Pipe()
+	pipe = Pipe()
 	pid = c_fork()
 
 	pid == -1 throws "Failed to fork()"
@@ -1134,19 +1133,18 @@ F '$()'(c:Command) {
 		}
 		# Redirections (WIP) - start
 		c.redirects.each(F(r:Redir) {
-			local flags, target_fd, f
 			eswitch r.marker {
 				'<'  { flags = 'r'; target_fd = 0; }
 				'>'  { flags = 'w'; target_fd = 1; }
 				'>>' { flags = 'a'; target_fd = 1; }
 			}
 			f = File(r.datum).open(flags)
-			local ok = c_dup2(f.fd, target_fd)
+			ok = c_dup2(f.fd, target_fd)
 			# TODO: better exception
 			ok < 0 throws "Failed to dup2(${f.fd}, ${target_fd}). Errno ${get_c_errno()}"
 		})
 		# Redirections (WIP) - end
-		local result = c_execve(process.executable.path, c.argv, ENV.Strs())
+		result = c_execve(process.executable.path, c.argv, ENV.Strs())
 		# TODO: propagate this error to parent, don't know how yet
 		throw "$debug_pfx failed to execve()"
 	}
@@ -1183,7 +1181,6 @@ F parse(s:Str) parse(s, {})
 F parse(s:Str, hints:Hash) s
 
 F parse(s:Str, hints:Hash) {
-	local ret
 	try
 		ret = decode_json(s)
 	catch(e)
@@ -1211,7 +1208,7 @@ TEST instances = [{"Tags": [{"Key": "k", "Value": "v"},{"Key": "k2", "Value": "v
 
 F parse(s:Str, hints:Hash) {
 	guard try hints['process'].command.argv[0] == 'aws'
-	local data = decode_json(s)
+	data = decode_json(s)
 	guard data is Hash
 
 	# Use the only top-level key that has array as it's value
@@ -1219,7 +1216,7 @@ F parse(s:Str, hints:Hash) {
 	# all other APIs seem to return only one top-level key.
 	# ( aws elasticbeanstalk describe-configuration-options )
 
-	local top_level_vals = data.values().filter(is, Arr)
+	top_level_vals = data.values().filter(is, Arr)
 
 	guard top_level_vals.len() == 1
 
@@ -1241,7 +1238,6 @@ F config(k:Str) {
 	#       what about structured data? JSON?
 	# TODO: read from config files
 	# TODO: read from command line switches
-	local v
 	debug("[config] getting key '$k'")
 	v = try ENV["NGS_$k"]
 	if v {

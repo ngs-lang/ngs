@@ -35,6 +35,7 @@
 #define IF_NOT_SWITCH_COND if(node->number != SWITCH_NODE_COND && node->number != SWITCH_NODE_ECOND)
 
 #define LOCALS (ctx->locals[ctx->locals_ptr-1])
+#define IDENTIFIERS_SCOPES (ctx->identifiers_scopes[ctx->locals_ptr-1])
 #define N_LOCALS (ctx->n_locals[ctx->locals_ptr-1])
 #define N_UPLEVELS (ctx->n_uplevels[ctx->locals_ptr-1])
 #define STACK_DEPTH (ctx->stack_depth[ctx->locals_ptr])
@@ -169,6 +170,18 @@ exit:
 	return ret;
 }
 
+#define REGISTER_IDENTIFIER(t) \
+	SYMBOL_TABLE *s; \
+	s = NGS_MALLOC(sizeof(*s)); \
+	s->name = ngs_strdup(name); \
+	s->is_predefinded_global = 0; \
+	s->index = t; \
+	HASH_ADD_KEYPTR(hh, IDENTIFIERS_SCOPES, s->name, strlen(s->name), s); \
+
+void register_local_identifier(COMPILATION_CONTEXT *ctx, char *name) { REGISTER_IDENTIFIER(LOCAL_IDENTIFIER); }
+void register_upvar_identifier(COMPILATION_CONTEXT *ctx, char *name) { REGISTER_IDENTIFIER(UPVAR_IDENTIFIER); }
+void register_global_identifier(COMPILATION_CONTEXT *ctx, char *name) { REGISTER_IDENTIFIER(GLOBAL_IDENTIFIER); }
+
 void register_local_var(COMPILATION_CONTEXT *ctx, char *name) {
 	SYMBOL_TABLE *s;
 	HASH_FIND(hh, LOCALS, name, strlen(name), s);
@@ -180,16 +193,22 @@ void register_local_var(COMPILATION_CONTEXT *ctx, char *name) {
 	s->name = ngs_strdup(name);
 	s->index = N_LOCALS++;
 	HASH_ADD_KEYPTR(hh, LOCALS, s->name, strlen(s->name), s);
+	register_local_identifier(ctx, s->name);
 }
 
 // TODO: maybe do it at parse time? That might be more complex but probably faster
+// TODO: refactor for code deduplication
 void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
+	SYMBOL_TABLE *s;
 	ast_node *ptr, *ptr2;
 	switch(node->type) {
 		case FUNC_NODE:
 			if(node->first_child->next_sibling->next_sibling->next_sibling) {
 				// Function has a name
-				register_local_var(ctx, node->first_child->next_sibling->next_sibling->next_sibling->name);
+				HASH_FIND(hh, IDENTIFIERS_SCOPES, node->first_child->next_sibling->next_sibling->next_sibling->name, strlen(node->first_child->next_sibling->next_sibling->next_sibling->name), s);
+				if(!s) {
+					register_local_var(ctx, node->first_child->next_sibling->next_sibling->next_sibling->name);
+				}
 			}
 			return;
 		case LOCAL_NODE:
@@ -210,13 +229,86 @@ void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 				}
 			}
 			break;
-		case FOR_NODE:
-			// In expression `for(i=...)` the `i` is automatically local. Never seen cases where it should be otherwise.
-			// TODO: Lint that will warn about redundant `local i` if it is present in addition.
-			if(node->first_child->type == ASSIGNMENT_NODE) {
-				if(node->first_child->first_child->type == IDENTIFIER_NODE) {
-					register_local_var(ctx, node->first_child->first_child->name);
+		case UPVAR_NODE:
+			for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
+				switch(ptr->type) {
+					case IDENTIFIER_NODE:
+						{
+							// TEMP
+							IDENTIFIER_INFO identifier_info;
+							identifier_info = resolve_identifier(ctx, ptr->name);
+							assert(identifier_info.type == UPVAR_IDENTIFIER);
+						}
+						register_upvar_identifier(ctx, ptr->name);
+						break;
+					case ASSIGNMENT_NODE:
+						assert(ptr->first_child->type == IDENTIFIER_NODE);
+						{
+							// TEMP
+							IDENTIFIER_INFO identifier_info;
+							identifier_info = resolve_identifier(ctx, ptr->first_child->name);
+							assert(identifier_info.type == UPVAR_IDENTIFIER);
+						}
+						register_upvar_identifier(ctx, ptr->first_child->name);
+						for(ptr2=ptr->first_child->next_sibling; ptr2; ptr2=ptr2->next_sibling) {
+							register_local_vars(ctx, ptr2);
+						}
+						break;
+					default:
+						assert(0 == "Unexpected node type under UPVAR_NODE");
 				}
+			}
+			break;
+		case GLOBAL_NODE:
+			for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
+				switch(ptr->type) {
+					case IDENTIFIER_NODE:
+						{
+							// TEMP
+							IDENTIFIER_INFO identifier_info;
+							identifier_info = resolve_identifier(ctx, ptr->name);
+							assert(identifier_info.type == GLOBAL_IDENTIFIER || identifier_info.type == NO_IDENTIFIER);
+						}
+						register_global_identifier(ctx, ptr->name);
+						break;
+					case ASSIGNMENT_NODE:
+						assert(ptr->first_child->type == IDENTIFIER_NODE);
+						{
+							// TEMP
+							IDENTIFIER_INFO identifier_info;
+							identifier_info = resolve_identifier(ctx, ptr->first_child->name);
+							assert(identifier_info.type == GLOBAL_IDENTIFIER || identifier_info.type == NO_IDENTIFIER);
+						}
+						register_global_identifier(ctx, ptr->first_child->name);
+						for(ptr2=ptr->first_child->next_sibling; ptr2; ptr2=ptr2->next_sibling) {
+							register_local_vars(ctx, ptr2);
+						}
+						break;
+					default:
+						assert(0 == "Unexpected node type under GLOBAL_NODE");
+				}
+			}
+			break;
+		case ASSIGNMENT_NODE:
+			if(node->first_child->type == IDENTIFIER_NODE) {
+				HASH_FIND(hh, IDENTIFIERS_SCOPES, node->first_child->name, strlen(node->first_child->name), s);
+				if(!s) {
+					IDENTIFIER_INFO identifier_info;
+					identifier_info = resolve_identifier(ctx, node->first_child->name);
+					if(identifier_info.type == UPVAR_IDENTIFIER) {
+						s = NGS_MALLOC(sizeof(*s));
+						s->name = ngs_strdup(node->first_child->name);
+						s->is_predefinded_global = 0;
+						s->index = UPVAR_IDENTIFIER;
+						HASH_ADD_KEYPTR(hh, IDENTIFIERS_SCOPES, s->name, strlen(s->name), s);
+					}
+				}
+				if(!s) {
+					register_local_var(ctx, node->first_child->name);
+				}
+			}
+			for(ptr=node->first_child->next_sibling; ptr; ptr=ptr->next_sibling) {
+				register_local_vars(ctx, ptr);
 			}
 			break;
 	}
@@ -502,6 +594,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			ctx->locals_ptr++;
 			assert(ctx->locals_ptr < COMPILE_MAX_FUNC_DEPTH);
 			LOCALS = NULL;
+			IDENTIFIERS_SCOPES = NULL;
 			N_LOCALS = 0;
 			N_UPLEVELS = 0;
 			STACK_DEPTH = 0;
@@ -636,6 +729,8 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			if(need_result) { OPCODE(*buf, OP_PUSH_NULL); }
 			break;
 		case LOCAL_NODE:
+		case UPVAR_NODE:
+		case GLOBAL_NODE:
 			for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
 				if(ptr->type != IDENTIFIER_NODE) {
 					compile_main_section(ctx, ptr, buf, idx, allocated, DONT_NEED_RESULT);

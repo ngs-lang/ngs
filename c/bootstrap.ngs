@@ -3,7 +3,7 @@
 doc %RET - Exception with .backtrace attribute
 F init(e:Exception) {
 	# Last entry in backtrace would be this init() invocation
-	local b = Backtrace()
+	b = Backtrace()
 	pop(b.frames)
 	e.backtrace = b
 }
@@ -65,7 +65,7 @@ bootstrap_ngs_dir_candidates = [
 ]
 
 F bootstrap_find_ngs_dir() {
-	local l = bootstrap_ngs_dir_candidates.len()
+	l = bootstrap_ngs_dir_candidates.len()
 	for(i;l) {
 		c_access("${bootstrap_ngs_dir_candidates[i]}/stdlib.ngs", C_F_OK) == 0 returns bootstrap_ngs_dir_candidates[i]
 	}
@@ -86,7 +86,6 @@ doc fname - File name to fetch
 doc %RET - Whole file as a string
 F fetch(fname:Str) {
 	try {
-		local fd, file_len, data
 		fd = c_open(fname, 'r')
 		fd <= 0 throws Exception("fetch(): failed to open file ${fname}")
 		bootstrap_debug("fetch(): opened file ${fname} as fd ${fd}")
@@ -106,11 +105,11 @@ doc Runs the given file
 doc %RET - Typically whatever the last expression in the file evaluates to
 F require(fname:Str) {
 	try {
-		local program_text = fetch(fname)
-		local program_bytecode = compile(program_text, fname)
+		program_text = fetch(fname)
+		program_bytecode = compile(program_text, fname)
 		bootstrap_debug("require(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
-		local program_func = load(program_bytecode, "require()d file: $fname")
-		local ret = program_func()
+		program_func = load(program_bytecode, "require()d file: $fname")
+		ret = program_func()
 		bootstrap_debug("require(): done requiring ${fname}")
 		ret
 	} catch(e) {
@@ -120,9 +119,8 @@ F require(fname:Str) {
 
 doc Main entry point. Executed on NGS boot.
 F bootstrap() {
-	local do_load_stdlib = true
-	local code_to_run = null
-	local fname
+	do_load_stdlib = true
+	code_to_run = null
 
 	bootstrap_debug('bootstrap.ngs begin')
 	bootstrap_debug("BOOTSTRAP_FILE=$BOOTSTRAP_FILE")
@@ -133,7 +131,7 @@ F bootstrap() {
 
 	# *** Parse switches ***
 	if ARGV and (ARGV[0] == '-e' or ARGV[0] == '-E') {
-		local sw = ARGV.shift()
+		sw = ARGV.shift()
 		code_to_run = "{ ${ARGV.shift()} }"
 		bootstrap_debug("Got $sw switch, using command line provided code")
 		if sw == '-E' {
@@ -148,7 +146,7 @@ F bootstrap() {
 		do_load_stdlib = false
 	}
 
-	NGS_DIR = bootstrap_find_ngs_dir()
+	global NGS_DIR = bootstrap_find_ngs_dir()
 
 	NGS_DIR is Null throws Exception("Could not find NGS_DIR")
 
@@ -172,11 +170,11 @@ F bootstrap() {
 		code_to_run = fetch(fname)
 	}
 
-	local program_bytecode = compile(code_to_run, fname)
+	program_bytecode = compile(code_to_run, fname)
 	bootstrap_debug("bootstrap(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
-	local program_func = load(program_bytecode, "bootstrap()ped file: $fname")
-	bootstrap_main_file = fname
-	local result = program_func()
+	program_func = load(program_bytecode, "bootstrap()ped file: $fname")
+	global bootstrap_main_file = fname
+	result = program_func()
 	if main.len() == 0 {
 		bootstrap_debug("main() is not used, exiting")
 		c_exit(result.to_exit_code())

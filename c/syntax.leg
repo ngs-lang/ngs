@@ -453,7 +453,7 @@ basic-expression =
 	| number
 	| string
 	| assignment
-	| local-declaration
+	| var-scope-declaration
 	| function-definition
 	| return
 	| break
@@ -999,15 +999,20 @@ defined =
 		$$ = ret;
 	}
 
-local-declaration =
-	"local" space l:local-node local-declaration-item { append_ast_node_child(l, $$); } (space? "," space? local-declaration-item { append_ast_node_child(l, $$); })* {
+var-scope-declaration-keyword =
+	"local" { MAKE_NODE(ret, LOCAL_NODE); $$ = ret }
+	|
+	"upvar" { MAKE_NODE(ret, UPVAR_NODE); $$ = ret }
+	|
+	"global" { MAKE_NODE(ret, GLOBAL_NODE); $$ = ret }
+
+var-scope-declaration =
+	l:var-scope-declaration-keyword space var-scope-declaration-item { append_ast_node_child(l, $$); } (space? "," space? var-scope-declaration-item { append_ast_node_child(l, $$); })* {
 		$$ = l;
 		CAPTURE_LOCATION($$);
 	}
 
-local-node = { MAKE_NODE(ret, LOCAL_NODE); $$ = ret }
-
-local-declaration-item = i:identifier e:local-declaration-item-optional-value {
+var-scope-declaration-item = i:identifier e:var-scope-declaration-item-optional-value {
 		if(!e) {
 			$$ = i;
 			return;
@@ -1018,7 +1023,7 @@ local-declaration-item = i:identifier e:local-declaration-item-optional-value {
 		$$ = ret;
 	}
 
-local-declaration-item-optional-value = (space? "=" space? e:expression) { $$ = e } | { $$ = NULL; }
+var-scope-declaration-item-optional-value = (space? "=" space? e:expression) { $$ = e } | { $$ = NULL; }
 
 string =
 	# TODO: backslash sequences

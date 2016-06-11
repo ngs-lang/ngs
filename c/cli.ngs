@@ -21,7 +21,7 @@ F '$()'(c:Command) {
 }
 
 F run_cli_rc_files() {
-	local rc_files = ['/etc/ngs/cli.rc.ngs']
+	rc_files = ['/etc/ngs/cli.rc.ngs']
 	if 'HOME' in ENV {
 		rc_files.push("${ENV['HOME']}/.ngs/cli.rc.ngs")
 	}
@@ -38,7 +38,7 @@ F cli() {
 
 	run_cli_rc_files()
 
-	local line, had_error, s, rl = FFI(cli_readline_lib, 'readline', c_ffi_type_string, [c_ffi_type_string]);
+	rl = FFI(cli_readline_lib, 'readline', c_ffi_type_string, [c_ffi_type_string])
 
 	while true {
 		line = rl(make_prompt())
@@ -52,9 +52,9 @@ F cli() {
 
 		had_error = false
 		try {
-			local program_bytecode = compile(line, '<cli-entered-line>')
-			local program_func = load(program_bytecode, 'cli_entered_line')
-			local result = program_func()
+			program_bytecode = compile(line, '<cli-entered-line>')
+			program_func = load(program_bytecode, 'cli_entered_line')
+			result = program_func()
 		} catch(e:Exception) {
 			E = e
 			echo("ERROR: $e")
@@ -89,7 +89,7 @@ cli_prompt = {
 	'ngs': F() 'NGS'
 	'dir': F() {
 		# TODO: replace HOME dir with ~
-		local p = $(pwd).Str()
+		p = $(pwd).Str()
 		p[0..len(p)-1]
 	}
 	'gt': F() '> '

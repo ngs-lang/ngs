@@ -14,7 +14,7 @@ syn match   ngsOperator "[-~!^&|*/%+=<>]\+"
 syn match   ngsComment "#.*" contains=ngsTodo
 syn match   ngsComment "^[ \t]*doc .*" contains=ngsTodo
 "syn match   ngsTest "^TEST .*"
-syn keyword ngsKeyword and break breaks catch collector collect cond continue continues econd ematch eswitch F guard local match or return returns switch TEST throw throws try type while with .. ...
+syn keyword ngsKeyword and break breaks catch collector collect cond continue continues econd ematch eswitch F global guard local match or return returns switch TEST throw throws try type upvar while with .. ...
 syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
 syn keyword ngsType Any Arr BasicType Bool CLib Closure Command CSym ExclusiveRange ExecutableNotFound FFI Fun Hash InclusiveRange Int NormalType NormalTypeInstance Null Path Pipe Process ProcessFail Range Seq Stats Str Table TableMeta TableMetaNotIfCol Type

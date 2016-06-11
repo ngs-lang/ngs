@@ -14,7 +14,7 @@
 
 	F init(l:Lock) {
 		l.lock = c_pthread_mutex_t()
-		local code = c_pthread_mutex_init(l.lock)
+		code = c_pthread_mutex_init(l.lock)
 		code throws LockFail("c_pthread_attr_init", code, "Call to underlying API failed")
 	}
 
@@ -31,7 +31,7 @@
 	F acquire(l:Lock, cb:Fun) {
 		l.acquire()
 		try {
-			local ret = cb()
+			ret = cb()
 			l.release()
 			ret
 		} catch(e:Exception) {

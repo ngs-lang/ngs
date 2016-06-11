@@ -76,9 +76,9 @@ F Table(name:Str, rows_hashes:Arr) {
 }
 
 F init(t:Table, rows_hashes:Arr) {
-	local conf = config(if t.name "table_${t.name}" "table")
+	conf = config(if t.name "table_${t.name}" "table")
 	debug("Table config is $conf")
-	local idx = 0
+	idx = 0
 	# Build table info
 	if conf {
 		conf.each(F(k) {
@@ -111,7 +111,7 @@ F push(t:Table, row_arr:Arr) {
 
 F push(t:Table, row_hash:Hash) {
 	# TODO: handle mismatch of columns
-	local row = t.col_idx_to_name.map(F(idx, k) row_hash.get(k, null))
+	row = t.col_idx_to_name.map(F(idx, k) row_hash.get(k, null))
 	t.push(row)
 	t
 }
@@ -155,7 +155,7 @@ F preprocess(t:Table) {
 }
 
 F calculate_num_cols_to_show(t:Table, max_colums_widths:Arr, available_cols:Int) {
-	local cols_to_show = 0
+	cols_to_show = 0
 	for(i; max_colums_widths.len()) {
 		# TODO: unhardcode the "+1" spacing width
 		cols_to_show = cols_to_show + max_colums_widths[i] + 1
@@ -167,8 +167,8 @@ F calculate_num_cols_to_show(t:Table, max_colums_widths:Arr, available_cols:Int)
 doc Displays a table. Implemented only for tty output (or output_format=text configuration)
 F echo(t:Table) {
 	guard 1.isatty() or (config('output_format') == 'text')
-	local lines = (ENV.get('LINES')   or $(tput lines).Str()).Int()
-	local cols  = (ENV.get('COLUMNS') or $(tput cols).Str()).Int()
+	lines = (ENV.get('LINES')   or $(tput lines).Str()).Int()
+	cols  = (ENV.get('COLUMNS') or $(tput cols).Str()).Int()
 	# TODO: special treatment for tmux? can print any width and tmux can be adjusted later.
 	# TODO: support Arr in headers
 	# TODO: handle Hash type of cell (maybe allow configuring order of keys etc)
@@ -177,17 +177,17 @@ F echo(t:Table) {
 
 	preprocess(t)
 
-	local do_output_headers = config('output_headers') in [null, true]
-	local max_colums_widths = t.col_idx_to_name.map(F(idx, k) {
-		local col = t.column(idx)
+	do_output_headers = config('output_headers') in [null, true]
+	max_colums_widths = t.col_idx_to_name.map(F(idx, k) {
+		col = t.column(idx)
 		((if do_output_headers [k] [])+ col).map(cell_display_width).max()
 	})
 
 	# How much full table columns fit on the screen
-	local showing_n_columns = t.calculate_num_cols_to_show(max_colums_widths, cols)
+	showing_n_columns = t.calculate_num_cols_to_show(max_colums_widths, cols)
 
 	# Setup line spacing
-	local do_line_spacing = t.rows.any(F(row) {
+	do_line_spacing = t.rows.any(F(row) {
 		row.any(F(cell) cell is Arr and len(cell)>1)
 	})
 	do_line_spacing = if do_line_spacing F() echo('') else F() null
@@ -206,13 +206,12 @@ F echo(t:Table) {
 
 	# Rows
 	t.rows.each(F(row) {
-		local done = false
-		local subrow_idx = 0
-		local subrow_content_arr
+		done = false
+		subrow_idx = 0
 		while not(done) {
 			done = true
 			subrow_content_arr = t.col_idx_to_name.limit(showing_n_columns).map(F(idx, k) {
-				local subrow_content = if row[idx] is Arr {
+				subrow_content = if row[idx] is Arr {
 					if len(row[idx]) > subrow_idx {
 						done = false
 						row[idx][subrow_idx]
