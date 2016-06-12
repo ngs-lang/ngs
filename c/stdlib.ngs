@@ -43,6 +43,21 @@ F partial_tail(f:Fun, *bind_args)
 TEST p = partial_tail((-), 10); p(7) == -3
 
 
+# === Real =======================================
+
+# TODO: something more efficient
+F Real(s:Str) {
+	parts = s.split('.')
+	parts.len() == 1 returns Real(Int(parts[0]))
+	parts.len() != 2 throws InvalidArgument("Invalid argument ${s}")
+	l = parts[1].len()
+	frac = Real(Int(parts[1]))
+	for(i;l) frac = frac / 10.0
+	Real(Int(parts[0])) + frac
+}
+
+TEST Real('1.1') == 1.1
+
 # === Closure ====================================
 
 F Str(c:Closure) {
@@ -401,11 +416,17 @@ F first(arr:Arr) first(arr, identity)
 TEST [null, false, 10, 20].first() == 10
 
 
-F first(arr:Arr, predicate:Fun, *args) {
+F index(arr:Arr, predicate:Fun, *args) {
 	l = arr.len()
 	for(i;l)
-		predicate(arr[i], *args) returns arr[i]
+		predicate(arr[i], *args) returns i
 	null
+}
+
+F first(arr:Arr, predicate:Fun, *args) {
+	i = arr.index(predicate, *args)
+	i is Null returns null
+	arr[i]
 }
 
 TEST [5,10,15].first((>), 7) == 10
