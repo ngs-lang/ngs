@@ -921,7 +921,7 @@ while =
 	}
 
 switch =
-	acc:any-switch space? datum:expression { append_ast_node_child(acc, datum) } space? "{"
+	acc:any-switch space datum:expression { append_ast_node_child(acc, datum) } space? "{"
 		(
 			space? e:expression space? c:code-block {
 				MAKE_NODE(case_node, EXPRESSIONS_NODE);
