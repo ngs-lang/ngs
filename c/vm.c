@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <dlfcn.h>
 #include <inttypes.h>
+#include <math.h>
 #include <pthread.h>
 #include <stdarg.h>
 
@@ -338,6 +339,11 @@ METHOD_RESULT native_Str_real METHOD_PARAMS {
 METHOD_RESULT native_Real_int METHOD_PARAMS {
 	METHOD_RETURN(make_real((NGS_REAL) GET_INT(argv[0])));
 }
+
+METHOD_RESULT native_round_real METHOD_PARAMS { METHOD_RETURN(make_real((NGS_REAL) round(GET_REAL(argv[0])))); }
+METHOD_RESULT native_trunc_real METHOD_PARAMS { METHOD_RETURN(make_real((NGS_REAL) trunc(GET_REAL(argv[0])))); }
+METHOD_RESULT native_floor_real METHOD_PARAMS { METHOD_RETURN(make_real((NGS_REAL) floor(GET_REAL(argv[0])))); }
+METHOD_RESULT native_ceil_real METHOD_PARAMS { METHOD_RETURN(make_real((NGS_REAL) ceil(GET_REAL(argv[0])))); }
 
 METHOD_RESULT native_Int_str_int EXT_METHOD_PARAMS {
 	char *nptr, *endptr;
@@ -1443,6 +1449,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "==",       &native_eq_real_real,        2, "a",   vm->Real, "b", vm->Real);
 	register_global_func(vm, 0, "Str",      &native_Str_real,            1, "r",   vm->Real);
 	register_global_func(vm, 0, "Real",     &native_Real_int,            1, "n",   vm->Int);
+	register_global_func(vm, 0, "round",    &native_round_real,          1, "r",   vm->Real);
+	register_global_func(vm, 0, "trunc",    &native_trunc_real,          1, "r",   vm->Real);
+	register_global_func(vm, 0, "floor",    &native_floor_real,          1, "r",   vm->Real);
+	register_global_func(vm, 0, "ceil",     &native_ceil_real,           1, "r",   vm->Real);
 
 	// BasicType
 	register_global_func(vm, 1, ".",        &native_get_attr_bt_str,       2, "obj", vm->BasicType,          "attr", vm->Str);
