@@ -17,7 +17,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "programming"
 
-			* main() - match arguments and make it usable
+			* main() - match arguments and make it usable [in progress]
+
+			* a way to return from f in: F f() { ... each(F(x) { ... return_from_f ... }}
 
 			* document scoping rules
 
@@ -101,6 +103,8 @@ Note that this started as internal document so things here are unformed, not fin
 				* Make it look better in both man and html
 				* Document that innner functions are declared local
 				* Types documentation [on hold]
+
+			* consider making return value optional
 
 		* Milestone "correct programming"
 
