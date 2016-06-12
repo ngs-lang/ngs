@@ -1417,6 +1417,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Sets native method attribues. Should be a Hash.");
 	register_global_func(vm, 0, "params",   &native_params_nm,         1, "m",      vm->NativeMethod);
 
+	// Type
+	// needed for switch
+	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->Type, "b", vm->Type);
+
 	// Closure
 	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->Closure, "b", vm->Closure);
 	register_global_func(vm, 0, "attrs",    &native_attrs_closure,     1, "c",      vm->Closure);
