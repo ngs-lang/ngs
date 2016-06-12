@@ -621,11 +621,11 @@ F Hash(arr:Arr)
 TEST Hash([['a', 1], ['c', 3]]) == {'a': 1, 'c': 3}
 
 
-F Hash(arr:Arr, v)
+F Hash(arr:Arr, attr:Str)
 	collector/{}
-		arr.each(collect, v)
+		arr.each(F(v) collect(v[attr], v))
 
-TEST Hash([1,2], 'x') == {1: 'x', 2: 'x'}
+TEST Hash([{'x': 1}, {'x': 2}], 'x') == {1: {'x': 1}, 2: {'x': 2}}
 
 
 F Hash(arr:Arr, cb:Fun)
