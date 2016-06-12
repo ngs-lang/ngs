@@ -1,0 +1,16 @@
+{ type ArrConsumer }
+
+F init(ac:ArrConsumer, arr:Arr) {
+	ac.val = arr
+	ac.idx = 0
+}
+
+F Bool(ac:ArrConsumer) ac.idx < ac.val.len()
+
+# F peek(ac:ArrConsumer) ac.val[ac.idx]
+
+F get(ac:ArrConsumer) {
+	ret = ac.val[ac.idx]
+	ac.idx = ac.idx + 1
+	ret
+}
