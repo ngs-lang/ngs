@@ -784,7 +784,7 @@ METHOD_RESULT native_join_arr_str EXT_METHOD_PARAMS {
 		if(!IS_STRING(ARRAY_ITEMS(argv[0])[i])) {
 			VALUE exc;
 			exc = make_normal_type_instance(vm->InvalidArgument);
-			set_normal_type_instance_attribute(exc, make_string("message"), make_string("join - array must contains only strings"));
+			set_normal_type_instance_attribute(exc, make_string("message"), make_string("join - array must contain only strings"));
 			set_normal_type_instance_attribute(exc, make_string("given"), ARRAY_ITEMS(argv[0])[i]);
 			THROW_EXCEPTION_INSTANCE(exc);
 		}

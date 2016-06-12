@@ -552,6 +552,12 @@ F echo(x) {
 	echo(Str(x))
 }
 
+# Built-in join() can only handle Str elements
+F join(a:Arr, s:Str) {
+	guard a.any((is not), Str)
+	a.map(Str).join(s)
+}
+
 # Can be more efficent I guess
 F merge_sorted(a:Arr, b:Arr, lte:Fun) {
 	al = a.len()
