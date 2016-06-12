@@ -1,15 +1,79 @@
-{ type BootstrapMainDone }
+# WIP, don't use!
+{
+	type BootstrapMainDone
+	type BootstrapNoMatchingMain; BootstrapNoMatchingMain.inherit(Exception)
 
-F bootstrap_try_main(c:Closure, args:Arr) {
+}
+
+# TODO: *args, **kwargs
+# TODO: handle case when the last element in argv is --some-name
+# TODO: replace '-' in argv parameters names with '_' when matching
+F match_argv_params(c:Closure, argv:Arr) {
+	counter = Counter()
+	params_by_name = c.params().Hash('name')
+	params_by_name.each(F(k, v) params_by_name[k].pos = counter.get())
+	# [ [true/false, value], ... ]
+	matched = params_by_name.len().map(F(idx) [false, null])
+
+	# matched.dump()
+
+	accepting_named_arguments = true
+	ac = ArrConsumer(argv)
+	while(ac) {
+		param_name = null
+		arg = ac.get()
+		cond {
+			arg == '--' {
+				accepting_named_arguments = false
+				continue
+			}
+			accepting_named_arguments and arg.starts_with('--') {
+				# long switch
+				param_name = arg[2..null]
+			}
+			accepting_named_arguments and arg.starts_with('-') and arg.len() == 2 {
+				# short switch
+				param_name = arg[1..null]
+			}
+		}
+		if param_name {
+			negated = param_name.starts_with('no-')
+			if negated {
+				param_name = param_name[3..null]
+			}
+			param_name not in params_by_name returns null
+			# TODO: error if negated for any type except Bool
+			eswitch params_by_name[param_name].type {
+				Bool matched[params_by_name[param_name].pos] = [true, not(negated)]
+				Int matched[params_by_name[param_name].pos] = [true, Int(ac.get())]
+				Str matched[params_by_name[param_name].pos] = [true, ac.get()]
+			}
+		} else {
+			# positional parameter
+
+		}
+	}
+
+	# TODO: check for unmatched parameters, fill default values, check again
+
+	matched
+}
+
+F bootstrap_try_main(c:Closure, argv:Arr) {
 	bootstrap_debug("Trying main() candidate $c")
 	try {
 		# TODO: convert the arguments to the specified types
-		v = c(*args)
+		matched_params = match_argv_params(c, argv)
+		echo("Matched: $matched_params")
+		v = c(*argv)
+		bootstrap_debug("Trying main() candidate ${c} - matched")
 		done = BootstrapMainDone()
 		done.value = v
 		throw done
 	} catch(inf:ImplNotFound) {
 		# That's fine
+		inf.callable !== c throws inf
+		bootstrap_debug("Trying main() candidate ${c} - no match")
 	}
 }
 
@@ -28,4 +92,6 @@ F bootstrap_invoke_main(default) {
 	} catch(done:BootstrapMainDone) {
 		done.value
 	}
+	# TODO: print usage examples here and exit with error code
+	throw BootstrapNoMatchingMain("No matching main() found")
 }

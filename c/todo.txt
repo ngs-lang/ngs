@@ -17,7 +17,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "programming"
 
-			* main() - support require()d files
+			* main() - match arguments and make it usable
+
+			* document scoping rules
 
 			* syntax for inheritance (extend "type" syntax)
 
