@@ -525,6 +525,10 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			if(node->first_child) {
 				assert(node->last_child);
 			}
+			if(!node->first_child && need_result) {
+				OPCODE(*buf, OP_PUSH_NULL);
+				break;
+			}
 			for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
 				// printf("EXPRESSIONS_NODE ptr=%p type=%s need_result=%d will_do_result=%d\n", ptr, NGS_AST_NODE_TYPES_NAMES[ptr->type], need_result, (ptr == node->last_child) && need_result);
 				compile_main_section(ctx, ptr, buf, idx, allocated, (ptr == node->last_child) && need_result);
@@ -716,6 +720,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 		case WHILE_NODE:
 			loop_beg_idx = *idx;
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			OPCODE(*buf, OP_TO_BOOL);
 			OPCODE(*buf, OP_JMP_FALSE);
 			while_jump = *idx;
 			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
