@@ -119,6 +119,7 @@ F require(fname:Str) {
 
 doc Main entry point. Executed on NGS boot.
 F bootstrap() {
+	global ARGV0
 	do_load_stdlib = true
 	code_to_run = null
 

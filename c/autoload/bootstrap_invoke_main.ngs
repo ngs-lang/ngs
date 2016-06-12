@@ -6,7 +6,7 @@
 }
 
 # TODO: *args, **kwargs
-# TODO: handle case when the last element in argv is --some-name
+# TODO: handle case when the last element in argv is --some-name and it's not a Bool
 # TODO: replace '-' in argv parameters names with '_' when matching
 F match_argv_params(c:Closure, argv:Arr) {
 	counter = Counter()
@@ -16,6 +16,18 @@ F match_argv_params(c:Closure, argv:Arr) {
 	matched = params_by_name.len().map(F(idx) [false, null])
 
 	# matched.dump()
+
+	F is_unmatched_param(p) not(p[0])
+
+	F set_match(v) {
+		matched[params_by_name[param_name].pos] = [true, v]
+	}
+
+	F convert(v:Str, t:Type) {
+		t is Bool returns not(negated)
+		t in [Int, Real, Str] returns t(v)
+		throw InvalidArgument("Don't know how to convert string to type ${t} for main()")
+	}
 
 	accepting_named_arguments = true
 	ac = ArrConsumer(argv)
@@ -43,20 +55,20 @@ F match_argv_params(c:Closure, argv:Arr) {
 			}
 			param_name not in params_by_name returns null
 			# TODO: error if negated for any type except Bool
-			eswitch params_by_name[param_name].type {
-				Bool matched[params_by_name[param_name].pos] = [true, not(negated)]
-				Int matched[params_by_name[param_name].pos] = [true, Int(ac.get())]
-				Str matched[params_by_name[param_name].pos] = [true, ac.get()]
-			}
+			set_match(ac.get().convert(params_by_name[param_name].type))
 		} else {
 			# positional parameter
-
+			idx = matched.index(is_unmatched_param)
+			idx is Null returns null
+			matched[idx] = [true, arg.convert(c.params()[idx].type)]
 		}
 	}
 
 	# TODO: check for unmatched parameters, fill default values, check again
 
-	matched
+	matched.any(is_unmatched_param) returns null
+
+	matched.map(F(p) p[1])
 }
 
 F bootstrap_try_main(c:Closure, argv:Arr) {
@@ -64,8 +76,12 @@ F bootstrap_try_main(c:Closure, argv:Arr) {
 	try {
 		# TODO: convert the arguments to the specified types
 		matched_params = match_argv_params(c, argv)
-		echo("Matched: $matched_params")
-		v = c(*argv)
+		if matched_params is Null {
+			bootstrap_debug("Trying main() candidate ${c} - no match before calling")
+			return null
+		}
+		# echo("Matched: $matched_params")
+		v = c(*matched_params)
 		bootstrap_debug("Trying main() candidate ${c} - matched")
 		done = BootstrapMainDone()
 		done.value = v
@@ -73,7 +89,7 @@ F bootstrap_try_main(c:Closure, argv:Arr) {
 	} catch(inf:ImplNotFound) {
 		# That's fine
 		inf.callable !== c throws inf
-		bootstrap_debug("Trying main() candidate ${c} - no match")
+		bootstrap_debug("Trying main() candidate ${c} - no match after calling")
 	}
 }
 
@@ -89,9 +105,9 @@ F bootstrap_invoke_main(default) {
 
 	try {
 		candidate_mains.each(bootstrap_try_main, ARGV)
+		# TODO: print usage examples here and exit with error code
+		throw BootstrapNoMatchingMain("No matching main() found")
 	} catch(done:BootstrapMainDone) {
 		done.value
 	}
-	# TODO: print usage examples here and exit with error code
-	throw BootstrapNoMatchingMain("No matching main() found")
 }

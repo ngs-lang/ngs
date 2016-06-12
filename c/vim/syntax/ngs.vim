@@ -17,7 +17,7 @@ syn match   ngsComment "^[ \t]*doc .*" contains=ngsTodo
 syn keyword ngsKeyword and break breaks catch collector collect cond continue continues econd ematch eswitch F global guard local match or return returns switch TEST throw throws try type upvar while with .. ...
 syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
-syn keyword ngsType Any Arr ArrConsumer BasicType Bool CLib Closure Command Counter CSym ExclusiveRange ExecutableNotFound FFI Fun Hash InclusiveRange Int NormalType NormalTypeInstance Null Path Pipe Process ProcessFail Range Seq Stats Str Table TableMeta TableMetaNotIfCol Type
+syn keyword ngsType Any Arr ArrConsumer BasicType Bool CLib Closure Command Counter CSym ExclusiveRange ExecutableNotFound FFI Fun Hash InclusiveRange Int NormalType NormalTypeInstance Null Path Pipe Process ProcessFail Range Real Seq Stats Str Table TableMeta TableMetaNotIfCol Type
 syn keyword ngsType Error Exception CompileFail DontKnowHowToCall GlobalNotFound InvalidArgument ImplNotFound LookupFail KeyNotFound StackDepthFail
 syn keyword ngsType IndexNotFound AttrNotFound InvalidParameter
 syn keyword ngsType Lock Pthread PthreadAttr Thread
@@ -39,9 +39,9 @@ syn match   ngsNumber "\<\d\+\>"
 " builtin functions
 syn keyword ngsFunction c_close c_execve c_exit c_fork c_lseek c_open c_read c_waitpid C_WEXITSTATUS C_WTERMSIG compile del dump echo get get_c_errno globals hash impl_not_found_hook in inherit is keys len load not decode_json push shift values
 " bootstrap functions (only the ones that are relevant for later usage)
-syn keyword ngsFunction fetch require to_exit_code
+syn keyword ngsFunction fetch main require to_exit_code
 " stdlib functions
-syn keyword ngsFunction acquire all any close_reading_end close_writing_end count dup2 dup2_reading_end dup2_writing_end each each_idx_val error expose debug filter find_in_path first flatten has identity in join len log map max min none partial partial_tail pmap pos ptimes read release reverse split status Strs uniq update wait without write zip
+syn keyword ngsFunction acquire all any close_reading_end close_writing_end count dup2 dup2_reading_end dup2_writing_end each each_idx_val error expose debug filter find_in_path first flatten has identity in index join len log map max min none partial partial_tail pmap pos ptimes read release reverse split status Strs uniq update wait without write zip
 
 hi def link ngsComment Comment
 hi def link ngsConditional Conditional

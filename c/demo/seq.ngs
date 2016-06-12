@@ -1,0 +1,27 @@
+#!/usr/bin/env ngs
+
+# Demonstrates main() usage.
+# Note that main() facility is work in progress
+
+# Depending on the number of command line arguments,
+# the appropriate main() will be invoked by the bootstrap process.
+# This behaviour is consistent with multi-dispatch
+# everywhere else in the language.
+
+
+F is_round(r:Real) r == round(r)
+
+F main(first:Real, increment:Real, last:Real) {
+
+	fmt = if is_round(first) and is_round(increment)
+		F(r:Real) Str(r).split('.')[0]
+	else
+		Str
+
+	for(r = first; r <= last; r = r + increment) {
+		r.fmt().echo()
+	}
+}
+
+F main(first:Real, last:Real) main(first, 1.0, last)
+F main(last:Real) main(1.0, 1.0, last)
