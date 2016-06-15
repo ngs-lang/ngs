@@ -27,11 +27,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* +=, -=, etc syntax. Consider .= for a.b.c = a.b.c.method() -> a.b.c .= method()
 
-			* A way to declare global function in another function
-				F f()  { F g() 100 }
-				g is now defined locally and there is no way to decare it globally.
-				It is the common case but still the global declaration is needed sometimes.
-
 			* commands syntax
 				* io redirection - see F '$()'(c:Command) { ... } in stdlib.ngs [task is in hold]
 					* basic redirections ( <x , >y , >>z ) [done]
