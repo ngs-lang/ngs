@@ -603,6 +603,11 @@ F sort(a:Arr, lte:Fun) {
 TEST sort([0,5,3,-1], (<=)) == [-1, 0, 3, 5]
 
 
+F sort(a:Arr, attr:Str) a.sort(F(a, b) (.)(a, attr) <= (.)(b, attr))
+
+TEST [{'x': 1}, {'x': 5}, {'x': 3}].sort('x') == [{'x': 1}, {'x': 3}, {'x': 5}]
+
+
 # === Hash =======================================
 
 
@@ -855,6 +860,9 @@ TEST "ab".starts_with("abcd") == false
 doc Case-insensitive LessThan or Equal comparison for strings
 F lte(a:Str, b:Str)
 	c_strcasecmp(a, b) <= 0
+
+F '<='(a:Str, b:Str)
+	c_strcmp(a, b) <= 0
 
 
 # === RegExp =====================================

@@ -31,7 +31,7 @@
 	}
 
 	instances = ``aws ec2 describe-instances $*filters``
-	# instances = instances.sort(F(a,b) a.LaunchTime <= b.LaunchTime)
+	instances = instances.sort('LaunchTime')
 	instances.each(F(i) {
 		i.State = i.State.Name
 		i.SecurityGroups = i.SecurityGroups.map(F(sg) "${limit_len(sg.GroupName, 15)}(${sg.GroupId})")

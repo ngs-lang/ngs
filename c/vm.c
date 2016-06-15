@@ -1020,6 +1020,10 @@ METHOD_RESULT native_c_strcasecmp METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(strcasecmp(obj_to_cstring(argv[0]), obj_to_cstring(argv[1]))));
 }
 
+METHOD_RESULT native_c_strcmp METHOD_PARAMS {
+	METHOD_RETURN(MAKE_INT(strcmp(obj_to_cstring(argv[0]), obj_to_cstring(argv[1]))));
+}
+
 METHOD_RESULT native_c_pthreadattrt METHOD_PARAMS {
 	(void) argv;
 	METHOD_RETURN(make_pthread_attr());
@@ -1496,6 +1500,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "get_c_errno", &native_get_c_errno,    0);
 
 	register_global_func(vm, 0, "c_strcasecmp", &native_c_strcasecmp,  2, "a",   vm->Str,  "b", vm->Str);
+	register_global_func(vm, 0, "c_strcmp",     &native_c_strcmp,      2, "a",   vm->Str,  "b", vm->Str);
 
 	// boolean
 	register_global_func(vm, 0, "==",       &native_eq_bool_bool,      2, "a",   vm->Bool, "b", vm->Bool);
