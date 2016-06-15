@@ -25,8 +25,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* document scoping rules
 
-			* syntax for inheritance (extend "type" syntax)
-
 			* +=, -=, etc syntax. Consider .= for a.b.c = a.b.c.method() -> a.b.c .= method()
 
 			* A way to declare global function in another function
