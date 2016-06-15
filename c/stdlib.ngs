@@ -72,6 +72,17 @@ F Str(c:Closure) {
 
 # === Type =======================================
 
+F Type(t:Str, doc, parent:Type) Type(t, doc, [parent])
+
+F Type(t:Str, doc, parents:Arr) {
+	ret = Type(t, doc)
+	parents.each(F(p) ret.inherit(p))
+	ret
+}
+
+TEST type T1; type T2(T1); T2() is T1
+
+
 STDLIB_EXPOSE = {}
 
 # TODO: better exceptions (use correct type, not string, provide offending type and attribute)
@@ -1060,12 +1071,8 @@ F Str(r:Redir) "<Redirect ${r.marker} ${r.datum}>"
 
 {
 	type Process
-
-	type ProcessFail
-	ProcessFail.inherit(Exception)
-
-	type ExecutableNotFound
-	ExecutableNotFound.inherit(Exception)
+	type ProcessFail(Exception)
+	type ExecutableNotFound(Exception)
 }
 
 

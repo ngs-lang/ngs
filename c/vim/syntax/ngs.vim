@@ -18,7 +18,7 @@ syn keyword ngsKeyword and break breaks catch collector collect cond continue co
 syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
 syn keyword ngsType Any Arr ArrConsumer BasicType Bool CLib Closure Command Counter CSym ExclusiveRange ExecutableNotFound FFI Fun Hash InclusiveRange Int NormalType NormalTypeInstance Null Path Pipe Process ProcessFail Range Real Seq Stats Str Table TableMeta TableMetaNotIfCol Type
-syn keyword ngsType Error Exception CompileFail DontKnowHowToCall GlobalNotFound InvalidArgument ImplNotFound LookupFail KeyNotFound StackDepthFail
+syn keyword ngsType AssertFail Error Exception CompileFail DontKnowHowToCall GlobalNotFound InvalidArgument ImplNotFound LookupFail KeyNotFound StackDepthFail
 syn keyword ngsType IndexNotFound AttrNotFound InvalidParameter
 syn keyword ngsType Lock Pthread PthreadAttr Thread
 syn keyword ngsType LockFail

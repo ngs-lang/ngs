@@ -1,8 +1,8 @@
 {
 	type ScreenRenderer
 	type ScreenItemsContainer
-	type ScreenItemsVerticalContainer; ScreenItemsVerticalContainer.inherit(ScreenItemsContainer)
-	type ScreenItemsHorizontalContainer; ScreenItemsHorizontalContainer.inherit(ScreenItemsContainer)
+	type ScreenItemsVerticalContainer(ScreenItemsContainer)
+	type ScreenItemsHorizontalContainer(ScreenItemsContainer)
 
 	F init(sic:ScreenItemsContainer) {
 		sic.items = []

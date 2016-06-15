@@ -1464,7 +1464,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "inherit",  &native_inherit_nt_nt,         2, "t",   vm->NormalType,         "parent", vm->NormalType);
 
 	// Type
-	register_global_func(vm, 0, "Type",     &native_type_str          ,1, "name",   vm->Str);
 	register_global_func(vm, 0, "Type",     &native_type_str_doc      ,2, "name",   vm->Str, "doc", vm->Any);
 	register_global_func(vm, 0, "typeof",   &native_typeof_any        ,1, "x",      vm->Any);
 	_doc(vm, "", "Returns type of the given instance");

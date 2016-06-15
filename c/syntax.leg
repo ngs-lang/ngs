@@ -1147,25 +1147,37 @@ throw = "throw" space e:expression { MAKE_NODE(ret, THROW_NODE); ret->first_chil
 
 # type MyType => MyType = Type('MyType')
 # TODO: Style warning for identifiers starting with lower case letter
-type = doc:optional-doc inline_space? "type" space i:identifier {
+type = doc:optional-doc inline_space? "type" space i:identifier inline_space? opt_args:optional-function-call-arguments {
 	MAKE_NODE(ret, ASSIGNMENT_NODE);
 		MAKE_NODE(call, CALL_NODE);
 			MAKE_IDENTIFIER_NODE(type_identifier, "Type");
-			MAKE_NODE(args, ARGS_NODE);
-				MAKE_STRING_NODE(type_string, ngs_strdup(i->name));
-				MAKE_REQ_ARG_NODE(a1, type_string);
-				args->first_child = a1;
-				if(doc->type != NULL_NODE) {
-					MAKE_REQ_ARG_NODE(a2, doc);
-					a1->next_sibling = a2;
-				}
 			call->first_child = type_identifier;
-			type_identifier->next_sibling = args;
+			MAKE_STRING_NODE(type_string, ngs_strdup(i->name));
+			MAKE_REQ_ARG_NODE(a1, type_string);
+				MAKE_REQ_ARG_NODE(a2, doc);
+				a1->next_sibling = a2;
+			if(opt_args->type != NULL_NODE) {
+				a2->next_sibling = opt_args->first_child;
+				opt_args->first_child = a1;
+				type_identifier->next_sibling = opt_args;
+			} else {
+				MAKE_NODE(args, ARGS_NODE);
+					args->first_child = a1;
+					type_identifier->next_sibling = args;
+			}
 		ret->first_child = i;
 		i->next_sibling = call;
 	$$ = ret;
 	CAPTURE_LOCATION($$);
 }
+
+optional-function-call-arguments =
+	function-call-arguments
+	|
+	{
+		MAKE_NODE(no, NULL_NODE);
+		$$ = no;
+	}
 
 subshell =
 	"$(" cmd:command-words ")" { $$ = cmd; }
