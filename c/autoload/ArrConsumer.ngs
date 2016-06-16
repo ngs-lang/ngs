@@ -14,3 +14,5 @@ F get(ac:ArrConsumer) {
 	ac.idx = ac.idx + 1
 	ret
 }
+
+TEST ac = ArrConsumer([1,2]); [ac.get(), ac.get()] == [1,2]

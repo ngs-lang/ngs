@@ -578,10 +578,10 @@ F merge_sorted(a:Arr, b:Arr, lte:Fun) {
 	collector
 		while ai < al or bi < bl
 			econd {
-				ai >= al { collect(b[bi]); bi = bi + 1 }
-				bi >= bl { collect(a[ai]); ai = ai + 1 }
-				lte(a[ai], b[bi]) { collect(a[ai]); ai = ai + 1 }
-				true { collect(b[bi]); bi = bi + 1 }
+				ai >= al { collect(b[bi]); bi += 1 }
+				bi >= bl { collect(a[ai]); ai += 1 }
+				lte(a[ai], b[bi]) { collect(a[ai]); ai += 1 }
+				true { collect(b[bi]); bi += 1 }
 			}
 }
 
@@ -713,7 +713,7 @@ F limit(h:Hash, l:Int) {
 		try
 			h.each(F(k, v) {
 				idx >= l throws LimitReached()
-				idx = idx + 1
+				idx += 1
 				collect(k, v)
 			})
 		catch(e:LimitReached) null

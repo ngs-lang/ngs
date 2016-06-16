@@ -108,6 +108,22 @@ ast_node *wrap_in_func(ast_node *node, int location[4], char *docstring, int arg
 	return func;
 }
 
+// TODO: more efficient than two scans
+ast_node *copy_ast_tree(ast_node *src) {
+	ast_node *dst, *p;
+	if(!src) return NULL;
+	dst = NGS_MALLOC(sizeof(*dst));
+	assert(dst);
+	memcpy(dst, src, sizeof(*dst));
+	dst->first_child = copy_ast_tree(dst->first_child);
+	dst->next_sibling = copy_ast_tree(dst->next_sibling);
+	for(p = dst->first_child; p; p=p->next_sibling) {
+		// nothing
+	}
+	dst->last_child = p;
+	return dst;
+}
+
 %}
 
 start = 
@@ -153,6 +169,8 @@ command =
 	curly-code-block
 	|
 	assignment
+	|
+	inplace-assignment
 	|
 	function-definition
 	|
@@ -360,6 +378,12 @@ binop2op =
 	| <"in">      @@ 70 @@
 	| <"not in">  @@ 70 @@
 
+inplace-assignment-op = <[-+*/%]> {
+	MAKE_NODE(ret, IDENTIFIER_NODE);
+	ret->name = ngs_strdup(yytext);
+	$$ = ret;
+}
+
 chain-expression = b:basic-expression (
 		inline_space? a:function-call-arguments {
 			// printf("CHAIN/FCALL\n");
@@ -453,6 +477,7 @@ basic-expression =
 	| number
 	| string
 	| assignment
+	| inplace-assignment
 	| var-scope-declaration
 	| function-definition
 	| return
@@ -478,6 +503,27 @@ assignment =
 		ret->first_child = i;
 		$$ = ret;
 	}
+
+inplace-assignment = i:identifier space? op:inplace-assignment-op "=" space? e:expression {
+	MAKE_NODE(ret, ASSIGNMENT_NODE);
+
+	MAKE_NODE(call_node, CALL_NODE);
+		call_node->first_child = op;
+		MAKE_NODE(call_args, ARGS_NODE);
+			MAKE_NODE(call_arg1, ARG_NODE);
+				call_arg1->first_child = copy_ast_tree(i);
+				call_arg1->first_child->next_sibling = NULL;
+			MAKE_NODE(call_arg2, ARG_NODE);
+				call_arg2->first_child = e;
+				call_arg2->first_child->next_sibling = NULL;
+			call_arg1->next_sibling = call_arg2;
+			call_args->first_child = call_arg1;
+		call_node->first_child->next_sibling = call_args;
+
+	ret->first_child = i;
+	i->next_sibling = call_node;
+	$$ = ret;
+}
 
 function-definition =
 	doc:optional-doc inline_space? "F" name:function-definition-name space? "(" space? params:function-definition-parameters space? ")" space? body:code-block {
