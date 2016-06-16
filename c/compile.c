@@ -468,6 +468,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			STACK_DEPTH = saved_stack_depth;
 			break;
 		case INDEX_NODE:
+		case ATTR_NODE:
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "INDEX NODE", *idx);
 			OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
 			saved_stack_depth = STACK_DEPTH;
@@ -478,7 +479,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			STACK_DEPTH++;
 			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 2);
 			STACK_DEPTH++;
-			compile_identifier(ctx, buf, idx, "[]", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
+			compile_identifier(ctx, buf, idx, node->type == INDEX_NODE ? "[]" : ".", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 			OPCODE(*buf, OP_CALL);
 			POP_IF_DONT_NEED_RESULT(*buf);
 			STACK_DEPTH = saved_stack_depth;
@@ -514,6 +515,16 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 					OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 3);
 					compile_identifier(ctx, buf, idx, "[]=", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
+					OPCODE(*buf, OP_CALL);
+					POP_IF_DONT_NEED_RESULT(*buf);
+					break;
+				case ATTR_NODE:
+					OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
+					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+					compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+					compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+					OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 3);
+					compile_identifier(ctx, buf, idx, ".=", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 					OPCODE(*buf, OP_CALL);
 					POP_IF_DONT_NEED_RESULT(*buf);
 					break;

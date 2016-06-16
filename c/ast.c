@@ -32,6 +32,7 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 	"global",
 	"hash",
 	"index",
+	"attr",
 	"return",
 	"and",
 	"or",

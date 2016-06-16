@@ -422,39 +422,12 @@ chain-expression = b:basic-expression (
 			b = ret;
 		}
 		|
-		"." i:identifier space? "=" space? e:expression {
-			MAKE_NODE(ret, CALL_NODE);
-				ret->number = 901;
-				MAKE_IDENTIFIER_NODE(get_attr_identifier, ".=");
-				MAKE_NODE(args, ARGS_NODE);
-					MAKE_STRING_NODE(attr_name_string, i->name);
-					MAKE_REQ_ARG_NODE(a1, b);
-					MAKE_REQ_ARG_NODE(a2, attr_name_string);
-					MAKE_REQ_ARG_NODE(a3, e);
-					args->first_child = a1;
-					a1->next_sibling = a2;
-					a2->next_sibling = a3;
-				ret->first_child = get_attr_identifier;
-				get_attr_identifier->next_sibling = args;
-
-			b = ret;
-		}
-		|
 		"." i:identifier {
-			MAKE_NODE(ret, CALL_NODE);
-			ret->number = 902;
-
-				MAKE_IDENTIFIER_NODE(get_attr_identifier, ".");
-
-				MAKE_NODE(args, ARGS_NODE);
-					MAKE_REQ_ARG_NODE(a1, b);
-					MAKE_STRING_NODE(attr_name_string, i->name);
-					MAKE_REQ_ARG_NODE(a2, attr_name_string);
-					a1->next_sibling = a2;
-					args->first_child = a1;
-				ret->first_child = get_attr_identifier;
-				get_attr_identifier->next_sibling = args;
-
+			MAKE_STRING_NODE(identifier_string, ngs_strdup(i->name));
+			MAKE_NODE(ret, ATTR_NODE);
+				ret->number = 902;
+				ret->first_child = b;
+				ret->first_child->next_sibling = identifier_string;
 			b = ret;
 		}
 	)*
