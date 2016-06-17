@@ -481,6 +481,11 @@ TEST Arr(1...3) == [1,2,3]
 
 # --- Access elements ---
 
+F '[]'(arr:Arr, idx:Int) {
+	guard idx < 0
+	arr[arr.len() + idx]
+}
+
 F '[]'(arr:Arr, indexes:Arr)
 	collector
 		indexes.each(F(idx) collect(arr[idx]))
@@ -726,6 +731,16 @@ F limit(h:Hash, l:Int) {
 
 TEST {"a": 1, "b": 2}.limit(3) == {"a": 1, "b": 2}
 TEST {"a": 1, "b": 2}.limit(1) == {"a": 1}
+
+F group(a:Arr, cb:Fun, *args) {
+	ret = {}
+	a.each(F(elt) {
+		k = cb(elt, *args)
+		if k not in ret { ret[k] = [] }
+		ret[k].push(elt)
+	})
+	ret
+}
 
 # === Integer ====================================
 
