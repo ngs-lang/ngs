@@ -1,0 +1,8 @@
+#!/usr/bin/env ngs
+
+{
+	config('table_Snapshots', %[SnapshotId VolumeId State VolumeSize StartTime Description Progress OwnerId])
+	snapshots = ``aws ec2 describe-snapshots --owner self``
+	t = Table('Snapshots', snapshots)
+	echo(t)
+}

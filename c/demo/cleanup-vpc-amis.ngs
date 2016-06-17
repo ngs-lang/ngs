@@ -1,0 +1,49 @@
+#!/usr/bin/env ngs
+
+{
+	# Problem: The old AMIs naming convention was to use '-vpc' in the name.
+	#          Such names were used during migration to a VPC.
+	#          The migration is long over. The new convention is without '-vpc' in AMIs names.
+	#          The task is to remove the old '-vpc' named AMIs when they have the newer alternatives.
+
+	stats = Stats()
+
+	# All AMI's that have a role tag are of interest
+	# ---
+	# It's convenient to have all of them sorted by CreationDate
+	# ---
+	# The standard library converts the Tags array to a Hash,
+	# so it is not a nightmare to work with.
+	# ---
+	# ``command`` - runs the command and parses the output to a data structure
+	images = ``aws ec2 describe-images --owner self``.filter(F(i) try i.Tags.role).sort('CreationDate')
+
+	images_by_role = images.group(F(i) i.Tags.role)
+	# images_by_role is now { role1: [amis1], role2: [amis2], ... }
+
+	# Only cleanup images for the same role which have both names
+	# containing '-vpc' and names not containing '-vpc'.
+	# The last one has to be without '-vpc' (the new convention)
+	images_by_role = images_by_role.filter(F(role, images) {
+		images.any(F(i) '-vpc' in i.Name) and
+		images.any(F(i) '-vpc' not in i.Name) and
+		('-vpc' not in images[-1].Name)
+	})
+
+	images_by_role.each(F(role, images) {
+		echo(role)
+		images.each(F(i) {
+			echo("  ${i.Name} ${i.CreationDate}")
+			if '-vpc' in i.Name {
+				echo("    Deleting")
+				$(aws ec2 deregister-image --image-id ${i.ImageId})
+				stats.push("deleted")
+			} else {
+				echo("    Keeping")
+				stats.push("kept")
+			}
+		})
+	})
+
+	echo("Stats: ${stats}")
+}
