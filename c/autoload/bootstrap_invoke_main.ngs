@@ -1,8 +1,7 @@
 # WIP, don't use!
 {
 	type BootstrapMainDone
-	type BootstrapNoMatchingMain; BootstrapNoMatchingMain.inherit(Exception)
-
+	type BootstrapNoMatchingMain(Exception)
 }
 
 # TODO: *args, **kwargs

@@ -11,7 +11,7 @@ F Bool(ac:ArrConsumer) ac.idx < ac.val.len()
 
 F get(ac:ArrConsumer) {
 	ret = ac.val[ac.idx]
-	ac.idx = ac.idx + 1
+	ac.idx += 1
 	ret
 }
 

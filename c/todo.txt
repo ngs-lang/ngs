@@ -13,7 +13,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 [roadmap]
 
-	* Phase 1 - the language [in progress]
+	* Phase 1 - the language (will be v0.1.0) [in progress]
 
 		* Milestone "programming"
 
@@ -101,7 +101,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* files globbing
 
-		* Milestone "correct programming"
+		* Milestone "correct programming" (will be v0.2.0)
+
+			* Make sure STACK_DEPTH is correct everywhere and add tests
 
 			* Refactor syntax so that =, +=, .=, etc are binops
 
@@ -115,9 +117,20 @@ Note that this started as internal document so things here are unformed, not fin
 
 
 	* Phase 2 - the shell [not started]
+
 		Starts and runs in parallel with Phase 1 as soon as the language is mature enough
 		to implement the shell in it. See beginning of CLI implementation in previous NGS implementation:
 		https://github.com/ilyash/ngs/blob/0ed8455efe851e3c5a275290a71c38c4e718f15c/cli.ngs
+
+		* Milestone "screen layout"
+
+			* Processes have their own area on the screen
+				+ Truncated stdout/stderr
+				+ Option to view full stdout/stderr in a pager
+
+		* Milestone "semantic output"
+
+			* Allow navigation on the screen, choosing operations from a menu for the objects
 
 [todo by priority]
 
