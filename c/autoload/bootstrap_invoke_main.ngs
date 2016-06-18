@@ -18,9 +18,7 @@ F match_argv_params(c:Closure, argv:Arr) {
 
 	F is_unmatched_param(p) not(p[0])
 
-	F set_match(v) {
-		matched[params_by_name[param_name].pos] = [true, v]
-	}
+	F set_match(v) matched[params_by_name[param_name].pos] = [true, v]
 
 	F convert(v:Str, t:Type) {
 		t is Bool returns not(negated)

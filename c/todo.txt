@@ -1,7 +1,6 @@
 Note that this started as internal document so things here are unformed, not final and fluid.
 
 [inbox]
-	* Fix segfault or disallow "continue" inside "catch"
 	* Fix "Function does not have result value" when compiling and running empty string
 	* Delimited string, such as PATH
 	* Fix segfault F f(x:UndefinedType)
