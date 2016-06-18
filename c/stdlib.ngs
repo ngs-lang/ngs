@@ -1316,6 +1316,11 @@ F config(s:Str, x) {
 
 # === Misc tests =================================
 
+# op=
+TEST a = 1; a+=1 ; a*=10; a == 20
+TEST a=[{"x": 7}, {"x": 8}]; a .= x; a == [7, 8]
+TEST a=[1,2]; a .= map(F(x) x*2); a[0]+=10; a == [12,4]
+
 TEST o = {'a': 1, 'b': [null, false, true, 3.14], 'nothing': null}; decode_json(encode_json(o)) == o
 TEST h={'a': 1, 'b': 2, 'c': 3}; h.update({'b': 20, 'd': 40}); h == {'a': 1, 'b': 20, 'c': 3, 'd': 40}
 

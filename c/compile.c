@@ -56,6 +56,8 @@
 				ctx->fill_in_continue_addrs_ptr--; \
 			}
 
+void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result);
+
 /* static here makes `clang` compiler happy and not "undefined reference to `ensure_room'"*/
 static inline void ensure_room(char **buf, const size_t cur_len, size_t *allocated, size_t room) {
 	size_t new_size;
@@ -340,6 +342,18 @@ void compile_identifier(COMPILATION_CONTEXT *ctx, char **buf, size_t *idx, char 
 	}
 }
 
+void compile_attr_name(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
+	if(!need_result) {
+		return;
+	}
+	if(node->type != IDENTIFIER_NODE) {
+		compile_main_section(ctx, node, buf, idx, allocated, NEED_RESULT);
+		return;
+	}
+	OPCODE(*buf, OP_PUSH_L_STR);
+	L_STR(*buf, node->name);
+}
+
 void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
 	ast_node *ptr;
 	int argc, have_arr_splat, have_hash_splat, params_flags;
@@ -401,6 +415,13 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			}
 			doing_named_args = 0;
 			argc = 0;
+			if(node->first_child->type == ATTR_NODE) {
+				compile_main_section(ctx, node->first_child->first_child, buf, idx, allocated, NEED_RESULT);
+				if(have_arr_splat) {
+					OPCODE(*buf, OP_ARR_APPEND);
+				}
+				argc++;
+			}
 			for(ptr=node->first_child->next_sibling->first_child; ptr; ptr=ptr->next_sibling) {
 				assert(ptr->type == ARG_NODE);
 				if(ptr->first_child->next_sibling) {
@@ -462,7 +483,13 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				OPCODE(*buf, OP_PUSH_INT); DATA(*buf, argc);
 				STACK_DEPTH++;
 			}
-			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			if(node->first_child->type == ATTR_NODE) {
+				// printf("---\n");
+				// print_ast(node->first_child->first_child->next_sibling, 0);
+				compile_main_section(ctx, node->first_child->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+			} else {
+				compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			}
 			OPCODE(*buf, have_arr_splat ? OP_CALL_ARR : OP_CALL);
 			POP_IF_DONT_NEED_RESULT(*buf);
 			STACK_DEPTH = saved_stack_depth;
@@ -475,7 +502,11 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			STACK_DEPTH++;
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
 			STACK_DEPTH++;
-			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+			if(node->type == ATTR_NODE) {
+				compile_attr_name(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+			} else {
+				compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+			}
 			STACK_DEPTH++;
 			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 2);
 			STACK_DEPTH++;
@@ -521,7 +552,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				case ATTR_NODE:
 					OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
 					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
-					compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+					compile_attr_name(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 					compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 					OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 3);
 					compile_identifier(ctx, buf, idx, ".=", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);

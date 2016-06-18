@@ -25,8 +25,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* document scoping rules
 
-			* +=, -=, etc syntax. Consider .= for a.b.c = a.b.c.method() -> a.b.c .= method()
-
 			* commands syntax
 				* io redirection - see F '$()'(c:Command) { ... } in stdlib.ngs [task is in hold]
 					* basic redirections ( <x , >y , >>z ) [done]
@@ -104,6 +102,8 @@ Note that this started as internal document so things here are unformed, not fin
 			* files globbing
 
 		* Milestone "correct programming"
+
+			* Refactor syntax so that =, +=, .=, etc are binops
 
 			* Implement missing local/upvar/global functionality and add tests
 

@@ -400,6 +400,49 @@ chain-expression = b:basic-expression (
 			b = ret;
 		}
 		|
+		inline_space? op:inplace-assignment-op "=" space? e:expression {
+			MAKE_NODE(ret, ASSIGNMENT_NODE);
+			ret->number = 950; // XXX: needed?
+
+			MAKE_NODE(call_node, CALL_NODE);
+				call_node->first_child = op;
+				MAKE_NODE(call_args, ARGS_NODE);
+					MAKE_NODE(call_arg1, ARG_NODE);
+						call_arg1->first_child = copy_ast_tree(b);
+						call_arg1->first_child->next_sibling = NULL;
+					MAKE_NODE(call_arg2, ARG_NODE);
+						call_arg2->first_child = e;
+						call_arg2->first_child->next_sibling = NULL;
+					call_arg1->next_sibling = call_arg2;
+					call_args->first_child = call_arg1;
+				call_node->first_child->next_sibling = call_args;
+
+			ret->first_child = b;
+			b->next_sibling = call_node;
+			b = ret;
+		}
+		|
+		inline_space? ".=" space? e:expression {
+			MAKE_NODE(ret, ASSIGNMENT_NODE);
+			ret->number = 950; // XXX: needed?
+			ret->first_child = b;
+
+			if(e->type == CALL_NODE) {
+				MAKE_NODE(call_arg1, ARG_NODE);
+					call_arg1->first_child = copy_ast_tree(b);
+					call_arg1->next_sibling = e->first_child->next_sibling->first_child;
+				e->first_child->next_sibling->first_child = call_arg1;
+				b->next_sibling = e;
+			} else {
+				MAKE_NODE(attr_node, ATTR_NODE);
+					append_ast_node_child(attr_node, copy_ast_tree(b));
+					append_ast_node_child(attr_node, e);
+				b->next_sibling = attr_node;
+			}
+
+			b = ret;
+		}
+		|
 		inline_space? "=" space? e:expression {
 			MAKE_NODE(ret, ASSIGNMENT_NODE);
 			b->next_sibling = e;
@@ -407,27 +450,11 @@ chain-expression = b:basic-expression (
 			b = ret;
 		}
 		|
-		"." i:identifier fcall_args:function-call-arguments {
-			// b.method(...) => method(b, ...)
-			MAKE_NODE(ret, CALL_NODE);
-			ret->number = 900;
-			ret->first_child = i;
-			ret->first_child->next_sibling = fcall_args;
-
-			// Prepend first argument
-			MAKE_REQ_ARG_NODE(a1, b);
-			a1->next_sibling = fcall_args->first_child;
-			fcall_args->first_child = a1;
-
-			b = ret;
-		}
-		|
 		"." i:identifier {
-			MAKE_STRING_NODE(identifier_string, ngs_strdup(i->name));
 			MAKE_NODE(ret, ATTR_NODE);
 				ret->number = 902;
 				ret->first_child = b;
-				ret->first_child->next_sibling = identifier_string;
+				ret->first_child->next_sibling = i;
 			b = ret;
 		}
 	)*

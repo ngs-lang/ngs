@@ -4,6 +4,8 @@ F init(c:Counter) c.val = 0
 
 F get(c:Counter) {
 	ret = c.val
-	c.val = c.val + 1
+	c.val += 1
 	ret
 }
+
+TEST c=Counter(); [c.get(), c.get()] == [0, 1]
