@@ -556,7 +556,6 @@ TEST [10,11,12].limit(2) == [10,11]
 			ret_cb = cb(ret)
 			arr.each(F(elt) {
 				elt_cb = cb(elt)
-				echo("elt_cb: ${elt_cb}, ret_cb: ${ret_cb}")
 				if f(elt_cb, ret_cb) {
 					ret = elt
 					ret_cb = elt_cb
