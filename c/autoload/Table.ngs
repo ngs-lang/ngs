@@ -38,7 +38,7 @@ doc Calculate cell display width - any Str()-able instance
 F cell_display_width(x) StrForTable(x).len()
 
 doc Calculate cell display width for an array
-F cell_display_width(x:Arr) x.map(StrForTable).map(len).max()
+F cell_display_width(x:Arr) x.map(StrForTable).max(len)
 
 doc Calculate cell display width for an empty array
 F cell_display_width(x:Arr) { guard x.len()==0; 0 }
@@ -80,21 +80,19 @@ F init(t:Table, rows_hashes:Arr) {
 	debug("Table config is $conf")
 	idx = 0
 	# Build table info
+	F register_column(k) {
+		t.col_name_to_idx[k] = idx
+		t.col_idx_to_name[idx] = k
+		idx += 1
+	}
+	F register_column(k) {
+		guard k in t.col_name_to_idx
+	}
 	if conf {
-		conf.each(F(k) {
-			t.col_name_to_idx[k] = idx
-			t.col_idx_to_name[idx] = k
-			idx += 1
-		})
+		conf.each(register_column)
 	} else {
 		rows_hashes.each(F(row_hash) {
-			row_hash.keys().each(F(k) {
-				if k not in t.col_name_to_idx {
-					t.col_name_to_idx[k] = idx
-					t.col_idx_to_name[idx] = k
-					idx += 1
-				}
-			})
+			row_hash.keys().each(register_column)
 		})
 	}
 	debug("Table created with fields: ${t.col_idx_to_name}")
@@ -180,7 +178,7 @@ F echo(t:Table) {
 	do_output_headers = config('output_headers') in [null, true]
 	max_colums_widths = t.col_idx_to_name.map(F(idx, k) {
 		col = t.column(idx)
-		((if do_output_headers [k] [])+ col).map(cell_display_width).max()
+		((if do_output_headers [k] [])+ col).max(cell_display_width)
 	})
 
 	# How much full table columns fit on the screen

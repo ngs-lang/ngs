@@ -550,8 +550,28 @@ TEST [10,11,12].limit(2) == [10,11]
 			ret
 		}
 
+		F most_by_cb(arr:Arr, f:Fun, cb:Fun) {
+			guard arr
+			ret = arr[0]
+			ret_cb = cb(ret)
+			arr.each(F(elt) {
+				elt_cb = cb(elt)
+				echo("elt_cb: ${elt_cb}, ret_cb: ${ret_cb}")
+				if f(elt_cb, ret_cb) {
+					ret = elt
+					ret_cb = elt_cb
+				}
+			})
+			ret_cb
+		}
+
 		F min(arr:Arr) most(arr, (<))
 		F max(arr:Arr) most(arr, (>))
+
+		# TODO: *args for consistency?
+		# EXPERIMENTAL!
+		F min(arr:Arr, cb:Fun) most_by_cb(arr, (<), cb)
+		F max(arr:Arr, cb:Fun) most_by_cb(arr, (>), cb)
 	}()
 }
 
