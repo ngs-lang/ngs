@@ -37,6 +37,9 @@
 		i.SecurityGroups = i.SecurityGroups.map(F(sg) "${limit_len(sg.GroupName, 15)}(${sg.GroupId})")
 		i.AZ = i.Placement.AvailabilityZone
 		# Tags here is a Hash (after straightening by stdlib)
+		if 'Tags' not in i {
+			i.Tags = {}
+		}
 		i.Name = i.Tags.get('Name', '-').limit_len(20)
 		i.IPs = [try i.PublicIpAddress, try i.PrivateIpAddress]
 		i.Tags.each(F(k, v) {
