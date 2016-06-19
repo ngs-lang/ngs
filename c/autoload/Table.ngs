@@ -87,6 +87,7 @@ F init(t:Table, rows_hashes:Arr) {
 	}
 	F register_column(k) {
 		guard k in t.col_name_to_idx
+		null
 	}
 	if conf {
 		conf.each(register_column)
