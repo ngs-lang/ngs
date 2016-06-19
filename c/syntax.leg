@@ -792,7 +792,7 @@ imm-array-literal =
 imm-array-words = acc:command-node (
 		inline_space?
 		(
-			command-word {
+			array-command-word {
 				append_ast_node_child(acc->first_child->next_sibling, $$);
 			}
 		)
@@ -842,7 +842,7 @@ imm-hash-literal =
 				MAKE_NODE(ret, HASH_LIT_NODE);
 				$$ = ret;
 		}
-		| "%{" ws:imm-hash-words "}" {
+		| "%{" ws:imm-hash-words space? "}" {
 				MAKE_NODE(ret, HASH_LIT_NODE);
 				ast_node *p, *kv;
 				(void) kv; // "Unused variable warning". Dunno why.
@@ -866,7 +866,7 @@ imm-hash-literal =
 		}
 
 imm-hash-words = acc:command-node (
-		inline_space?
+		space?
 		(
 			hash-command-word {
 				append_ast_node_child(acc->first_child->next_sibling, $$);
@@ -1259,7 +1259,7 @@ command-node = {
 }
 
 basic-command-word =
-	<[-a-zA-Z0-9/=,._]+> {
+	<[-a-zA-Z0-9/=,._@]+> {
 		MAKE_STRING_NODE(ret, yytext);
 		$$ = ret;
 	}
@@ -1274,8 +1274,15 @@ command-word =
 		$$ = splat;
 	}
 
+array-command-word =
+	command-word
+	| imm-array-literal
+	| imm-hash-literal
+
 hash-command-word =
 	basic-command-word
+	| imm-array-literal
+	| imm-hash-literal
 	| "$**" c:code-block {
 		MAKE_NODE(splat, HASH_SPLAT_NODE);
 			splat->first_child = c;
