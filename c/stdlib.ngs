@@ -631,6 +631,21 @@ F sort(a:Arr, attr:Str) a.sort(F(a, b) (.)(a, attr) <= (.)(b, attr))
 
 TEST [{'x': 1}, {'x': 5}, {'x': 3}].sort('x') == [{'x': 1}, {'x': 3}, {'x': 5}]
 
+F split(a:Arr, delim) {
+	ret = []
+	cur = []
+	a.each(F(elt) {
+		if elt == delim {
+			ret.push(cur)
+			cur = []
+		} else {
+			cur.push(elt)
+		}
+	})
+	ret.push(cur)
+	ret
+}
+
 
 # === Hash =======================================
 
