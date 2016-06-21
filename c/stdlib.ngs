@@ -913,6 +913,23 @@ F lte(a:Str, b:Str)
 F '<='(a:Str, b:Str)
 	c_strcmp(a, b) <= 0
 
+F lines(a:Str) {
+	# TODO: win and mac style
+	not(a) returns []
+	l = a.split('\n')
+	if a[a.len()-1..a.len()] == '\n' {
+		l[0..(l.len()-1)]
+	} else {
+		l
+	}
+}
+
+F lines(a:Str, cb:Fun, *args) {
+	lines(a).each(cb, *args)
+}
+
+# TEST "xx\nyy".lines() == %[xx yy]
+
 
 # === RegExp =====================================
 
@@ -1158,6 +1175,11 @@ F finished_ok(p:Process) {
 
 F finished_ok(p:Process) {
 	guard p.executable.path == '/usr/bin/test'
+	p.exit_code in [0, 1]
+}
+
+F finished_ok(p:Process) {
+	guard p.executable.path == '/bin/ping'
 	p.exit_code in [0, 1]
 }
 
