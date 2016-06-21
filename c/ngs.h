@@ -3,14 +3,13 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <pthread.h>
 
 // GC - start
 // http://www.hboehm.info/gc/scale.html
 #define GC_THREADS
 #define PARALLEL_MARK
 #define THREAD_LOCAL_ALLOC
-
-#define GC_REDIRECT_TO_LOCAL
 
 #include <gc.h>
 #define NGS_GC_INIT() GC_INIT()

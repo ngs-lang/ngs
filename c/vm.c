@@ -4,6 +4,7 @@
 #include <math.h>
 #include <pthread.h>
 #include <stdarg.h>
+#include <sys/select.h>
 
 #include <ffi.h>
 
@@ -819,7 +820,13 @@ METHOD_RESULT native_copy_arr METHOD_PARAMS { METHOD_RETURN(make_array_with_valu
 METHOD_RESULT native_c_fork METHOD_PARAMS {
 	(void) argv;
 	pid_t pid;
+	GC_atfork_prepare();
 	pid = fork();
+	if(pid) {
+		GC_atfork_parent();
+	} else {
+		GC_atfork_child();
+	}
 	METHOD_RETURN(MAKE_INT(pid));
 }
 
@@ -1198,6 +1205,49 @@ METHOD_RESULT native_c_access METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(access(obj_to_cstring(argv[0]), GET_INT(argv[1]))));
 }
 
+
+
+#define SETUP_FD_SET(name, arg_idx) \
+	FD_ZERO (&name); \
+	for(i=0; i<OBJ_LEN(argv[arg_idx]); i++) { \
+		tmp = GET_INT(ARRAY_ITEMS(argv[arg_idx])[i]); \
+		FD_SET(tmp, &name); \
+		if(tmp > nfds) { \
+			nfds = tmp; \
+		} \
+	};
+
+// METHOD_RESULT native_c_select METHOD_PARAMS {
+// 	fd_set readfds, writefds, errorfds;
+// 	struct timeval timeout;
+// 	int i, tmp, nfds = 0;
+// 	SETUP_FD_SET(readfds, 0);
+// 	SETUP_FD_SET(writefds, 1);
+// 	SETUP_FD_SET(errorfds, 2);
+// 	nfds++;
+// 	select(nfds, &readfds, &writefds, &errorfds, &timeout);
+// }
+
+METHOD_RESULT native_id_pthread METHOD_PARAMS {
+	unsigned char *p;
+	char buf[1024];
+	size_t i;
+	p = (unsigned char *)&((PTHREAD_OBJECT *) argv[0].ptr)->val;
+	for(i=0; i<sizeof(((PTHREAD_OBJECT *) argv[0].ptr)->val) && i<500; i++) {
+		buf[i*2+0] = 'a' + ((p[i]) >> 4);
+		buf[i*2+1] = 'a' + ((p[i]) & 0x0F);
+	}
+	buf[i*2] = '\0';
+	METHOD_RETURN(make_string(buf));
+}
+
+METHOD_RESULT native_c_getpid METHOD_PARAMS {
+	(void) argv;
+	pid_t pid;
+	pid = getpid();
+	METHOD_RETURN(MAKE_INT(pid));
+}
+
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
 	GLOBAL_VAR_INDEX index;
@@ -1418,6 +1468,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_pthread_self",         &native_c_pthreadself,        0);
 	register_global_func(vm, 0, "c_pthread_attr_t",       &native_c_pthreadattrt,         0);
 	register_global_func(vm, 0, "c_pthread_mutex_t",      &native_c_pthreadmutext,        0);
+	register_global_func(vm, 0, "id",                     &native_id_pthread,           1, "thread", vm->c_pthread_t);
 	register_global_func(vm, 0, ".",                      &native_attr_pthreadattr,     2, "pa", vm->c_pthread_attr_t,    "attr", vm->Str);
 
 	// Native methods
@@ -1491,6 +1542,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_access", &native_c_access,          2, "pathname", vm->Str, "mode", vm->Int);
 	register_global_func(vm, 0, "c_exit",   &native_c_exit_int,        1, "status",   vm->Int);
 	register_global_func(vm, 0, "c_fork",   &native_c_fork,            0);
+	register_global_func(vm, 0, "c_getpid", &native_c_getpid,          0);
 	register_global_func(vm, 0, "c_pipe",   &native_c_pipe,            0);
 	register_global_func(vm, 0, "c_waitpid",&native_c_waitpid,         1, "pid",      vm->Int);
 	register_global_func(vm, 0, "c_execve", &native_c_execve,          3, "filename", vm->Str, "argv", vm->Arr, "envp", vm->Arr);

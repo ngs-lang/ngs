@@ -962,7 +962,7 @@ F debug(s:Str) {
 	# TODO: Use RingBuffer when debug is off and
 	#       show last N debug messages on uncaught exception
 	if try ENV['DEBUG'] {
-		echo("[DEBUG ] $s")
+		echo("[DEBUG ${c_getpid()} ${c_pthread_self().id()}] $s")
 	}
 }
 
@@ -985,7 +985,7 @@ F Path(s:Str) {
 	p
 }
 
-F Bool(p:Path) $(/usr/bin/test -e ${p.path}).Bool()
+F Bool(p:Path) c_access(p.path, C_F_OK) == 0
 
 TEST Path('/').Bool()
 TEST Path('/no-such-file').Bool() == false
@@ -1031,16 +1031,20 @@ F dup2(oldfd:Int, newfd:Int) {
 # TODO: detect and process errors, throw exception(s)
 # TODO: better exceptions (use correct type, not string, maybe use errno)
 F read(fd:Int) {
-	debug("[read] will read from fd $fd")
 	ret = []
 	while true {
+		debug("[read] will read from fd $fd")
 		result = c_read(fd, 4096)
 		debug("[read] read from fd $fd : <<${result}>>")
 		result[0] == 0 returns ret.join('')
 		if result[0] > 0 {
 			ret.push(result[1])
 		} else {
-			get_c_errno() != C_EINTR throws "[read] failed to c_read()"
+			e = get_c_errno()
+			if e != C_EINTR {
+				debug("[read] read from fd $fd failed, errno $e")
+				throw "[read] failed to c_read()"
+			}
 		}
 	}
 }
@@ -1067,6 +1071,8 @@ F isatty(fd:Int) {
 
 { type Pipe }
 
+stdlib_fork_lock = Lock()
+
 # TODO: better exceptions (use correct type, not string, maybe use errno)
 F Pipe() {
 	pipe = Pipe.constructors[0]()
@@ -1079,6 +1085,9 @@ F Pipe() {
 	pipe
 }
 
+F Str(p:Pipe) "<Pipe read_fd=${p.read_fd} write_fd=${p.write_fd}>"
+
+# TODO: exception on fail, maybe close() wrapper for c_close()
 F close_writing_end(p:Pipe) p.write_fd.c_close()
 F close_reading_end(p:Pipe) p.read_fd.c_close()
 F write(p:Pipe, s:Str) p.write_fd.c_write(s)
@@ -1217,7 +1226,11 @@ F '$()'(c:Command) {
 	debug("$debug_pfx PID after fork: $pid")
 
 	if pid == 0 {
-		debug("$debug_pfx child will execve()")
+		# for(i=3;i<100;i+=1)
+		# 	if i not in [pipe.write_fd] {
+		# 		# echo("CLOSING $i")
+		# 		i.c_close()
+		# 	}
 		if not(c.is_top_level) {
 			pipe.close_reading_end()
 			pipe.dup2_writing_end(1)
@@ -1247,7 +1260,9 @@ F '$()'(c:Command) {
 			pipe.close_writing_end()
 			debug("$debug_pfx reading all output of the child process")
 			process.stdout = pipe.read()
+			debug("$debug_pfx read all output of the child process")
 			pipe.close_reading_end()
+			debug("$debug_pfx closed pipe reading end")
 		}
 		# debug("$debug_pfx child output was <<${process.stdout}>>")
 		process.wait()

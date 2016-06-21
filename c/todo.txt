@@ -102,6 +102,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "correct programming" (will be v0.2.0)
 
+			* Make sure not to leak FDs to processes that NGS runs
+
 			* Make sure STACK_DEPTH is correct everywhere and add tests
 
 			* Refactor syntax so that =, +=, .=, etc are binops

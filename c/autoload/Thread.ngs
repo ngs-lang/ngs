@@ -27,6 +27,7 @@
 	}
 
 	F join(t:Thread) {
+		debug("[Thread] joining thread ${t.thread.id()}")
 		join_result = c_pthread_join(t.thread)
 		if join_result[0] {
 			# XXX better exception ... and include code in it
