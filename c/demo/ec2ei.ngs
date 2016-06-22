@@ -1,0 +1,28 @@
+#!/usr/bin/env ngs
+
+if not(ARGV) {
+	die([
+		"Usage: ${ARGV0} your command"
+		"       ${ARGV0} will run your command in parallel for all instances in all regions"
+		"       with PublicIpAddress as last argument"
+	])
+}
+
+regions = ``aws ec2 describe-regions``.RegionName.sort()
+
+echo("# Regions: ${regions.join(',')}")
+
+instances = regions.pmap(F(r) {
+	``aws ec2 describe-instances --region $r --filter Name=instance-state-name,Values=running``
+}).flatten().filter(F(i) try i.PublicIpAddress)
+
+echo("# Found ${instances.len()} instances in ${instances.group(F(i) i.Placement.AvailabilityZone).len()} AZs")
+
+results = instances.pmap(F(i) {
+	[i, `$*ARGV ${i.PublicIpAddress}`]
+})
+
+each(results, F(r) {
+	echo("==================== ${r[0].PublicIpAddress} - ${r[0].Placement.AvailabilityZone} ====================")
+	("[${r[0].PublicIpAddress}] " + r[1].lines()).each(echo)
+})

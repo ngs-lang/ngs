@@ -930,6 +930,20 @@ F lines(a:Str, cb:Fun, *args) {
 
 # TEST "xx\nyy".lines() == %[xx yy]
 
+doc Prepend each line in a with s
+F +(s:Str, a:Arr) {
+	guard a.all(is, Str)
+	a.map(F(elt) s+elt)
+}
+# TEST "a " + ["1", "2"] == ["a 1", "a 2"]
+
+doc Append s to each line in a
+F +(a:Arr, s:Str) {
+	guard a.all(is, Str)
+	a.map(F(elt) elt+s)
+}
+# TEST ["1", "2"] + " a" == ["1 a", "2 a"]
+
 
 # === RegExp =====================================
 
@@ -990,6 +1004,17 @@ F error(s:Str) {
 F status(s:Str) {
 	echo(s)
 	log("(status) $s")
+}
+
+F die(a:Arr) {
+	guard a.all(is, Str)
+	a.each(echo)
+	c_exit(1)
+}
+
+F die(s:Str) {
+	echo(s)
+	c_exit(1)
 }
 
 # === Path =======================================

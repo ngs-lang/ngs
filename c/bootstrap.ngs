@@ -120,6 +120,8 @@ F require(fname:Str) {
 doc Main entry point. Executed on NGS boot.
 F bootstrap() {
 	global ARGV0
+	global ORIG_ARGV = copy(ARGV)
+
 	do_load_stdlib = true
 	code_to_run = null
 
@@ -167,6 +169,8 @@ F bootstrap() {
 		fname = ARGV.shift(null)
 		if fname is Null {
 			fname = ENV.get('NGS_CLI', "${NGS_DIR}/cli.ngs")
+		} else {
+			ARGV0 = fname
 		}
 		code_to_run = fetch(fname)
 	}
