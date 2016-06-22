@@ -806,6 +806,11 @@ TEST Int(" 100 ") == 100
 TEST try Int(" XX ") catch(e:InvalidArgument) true
 TEST Int(" XX ", 36) == 1221
 
+F Int(b:Bool) if b 1 0
+
+TEST true.Int() == 1
+TEST false.Int() == 0
+
 # === String =====================================
 
 
