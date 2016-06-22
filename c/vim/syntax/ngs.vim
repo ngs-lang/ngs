@@ -17,7 +17,7 @@ syn match   ngsComment "^[ \t]*doc .*" contains=ngsTodo
 syn keyword ngsKeyword and break breaks catch collector collect cond continue continues econd ematch eswitch F global guard local match or return returns switch TEST throw throws try type upvar while with .. ...
 syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
-syn keyword ngsType Any Arr ArrConsumer BasicType Bool CLib Closure Command Counter CSym ExclusiveRange ExecutableNotFound FFI Fun Hash InclusiveRange Int NormalType NormalTypeInstance Null Path Pipe Process ProcessFail Range Real Seq Stats Str Table TableMeta TableMetaNotIfCol Type
+syn keyword ngsType Any Arr ArrIter BasicType Bool CLib Closure Command Counter CSym ExclusiveRange ExecutableNotFound FFI Fun Hash InclusiveRange Int Iter NormalType NormalTypeInstance Null Path Pipe Process ProcessFail Range Real Seq Stats Str Table TableMeta TableMetaNotIfCol Type
 syn keyword ngsType AssertFail Error Exception CompileFail DontKnowHowToCall GlobalNotFound InvalidArgument ImplNotFound LookupFail KeyNotFound StackDepthFail
 syn keyword ngsType IndexNotFound AttrNotFound InvalidParameter
 syn keyword ngsType Lock Pthread PthreadAttr Thread
@@ -41,7 +41,7 @@ syn keyword ngsFunction c_close c_execve c_exit c_fork c_lseek copy c_open c_rea
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction fetch main require to_exit_code
 " stdlib functions
-syn keyword ngsFunction acquire all any close_reading_end close_writing_end count dup2 dup2_reading_end dup2_writing_end each each_idx_val error expose debug die filter find_in_path first flatten has identity in index join len log map max min none partial partial_tail pmap pos ptimes read release reverse split status Strs uniq update wait without write zip
+syn keyword ngsFunction acquire all any close_reading_end close_writing_end count dup2 dup2_reading_end dup2_writing_end each each_idx_val error expose debug die filter find_in_path first flatten has identity in index join len log map max min next none partial partial_tail pmap pos ptimes read release reverse split status Strs uniq update wait without write zip
 
 hi def link ngsComment Comment
 hi def link ngsConditional Conditional

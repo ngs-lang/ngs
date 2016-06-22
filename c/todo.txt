@@ -16,6 +16,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "programming"
 
+			* Exit object: e = Exit(); ... e(value)
+
 			* check .. and ... priority
 
 			* main() - match arguments and make it usable [in progress]

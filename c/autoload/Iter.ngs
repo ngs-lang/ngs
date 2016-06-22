@@ -1,0 +1,24 @@
+{
+	type Iter
+	type ArrIter(Iter)
+}
+
+F Iter(arr:Arr) ArrIter(arr)
+
+F init(i:ArrIter, arr:Arr) {
+	i.val = arr
+	i.idx = 0
+}
+
+F Str(i:ArrIter) "<ArrIter ${i.idx}/${i.val.len()}>"
+
+F Bool(i:ArrIter) i.idx < i.val.len()
+
+F next(i:ArrIter) {
+	ret = i.val[i.idx]
+	i.idx += 1
+	ret
+}
+
+TEST i = Iter([1,2]); [i.next(), i.next()] == [1,2]
+

@@ -27,10 +27,10 @@ F match_argv_params(c:Closure, argv:Arr) {
 	}
 
 	accepting_named_arguments = true
-	ac = ArrConsumer(argv)
+	ac = Iter(argv)
 	while(ac) {
 		param_name = null
-		arg = ac.get()
+		arg = ac.next()
 		cond {
 			arg == '--' {
 				accepting_named_arguments = false
@@ -52,7 +52,7 @@ F match_argv_params(c:Closure, argv:Arr) {
 			}
 			param_name not in params_by_name returns null
 			# TODO: error if negated for any type except Bool
-			set_match(ac.get().convert(params_by_name[param_name].type))
+			set_match(ac.next().convert(params_by_name[param_name].type))
 		} else {
 			# positional parameter
 			idx = matched.index(is_unmatched_param)
