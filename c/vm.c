@@ -820,13 +820,7 @@ METHOD_RESULT native_copy_arr METHOD_PARAMS { METHOD_RETURN(make_array_with_valu
 METHOD_RESULT native_c_fork METHOD_PARAMS {
 	(void) argv;
 	pid_t pid;
-	GC_atfork_prepare();
 	pid = fork();
-	if(pid) {
-		GC_atfork_parent();
-	} else {
-		GC_atfork_child();
-	}
 	METHOD_RETURN(MAKE_INT(pid));
 }
 

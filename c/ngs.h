@@ -12,7 +12,7 @@
 #define THREAD_LOCAL_ALLOC
 
 #include <gc.h>
-#define NGS_GC_INIT() GC_INIT()
+#define NGS_GC_INIT() GC_set_handle_fork(1); GC_INIT()
 #define NGS_GC_THR_INIT() GC_thr_init()
 #define NGS_MALLOC(n) GC_MALLOC(n)
 #define NGS_REALLOC(p, n) GC_REALLOC(p, n)
