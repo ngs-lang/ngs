@@ -1,6 +1,5 @@
 # WIP, don't use!
 {
-	type BootstrapMainDone
 	type BootstrapNoMatchingMain(Exception)
 }
 
@@ -68,7 +67,7 @@ F match_argv_params(c:Closure, argv:Arr) {
 	matched.map(F(p) p[1])
 }
 
-F bootstrap_try_main(c:Closure, argv:Arr) {
+F bootstrap_try_main(c:Closure, argv:Arr, finish:Type) {
 	bootstrap_debug("Trying main() candidate $c")
 	try {
 		# TODO: convert the arguments to the specified types
@@ -80,9 +79,7 @@ F bootstrap_try_main(c:Closure, argv:Arr) {
 		# echo("Matched: $matched_params")
 		v = c(*matched_params)
 		bootstrap_debug("Trying main() candidate ${c} - matched")
-		done = BootstrapMainDone()
-		done.value = v
-		throw done
+		throw finish(v)
 	} catch(inf:ImplNotFound) {
 		# That's fine
 		inf.callable !== c throws inf
@@ -100,11 +97,8 @@ F bootstrap_invoke_main(default) {
 	not(candidate_mains) returns default
 	bootstrap_debug("Candidate main() functions: $candidate_mains")
 
-	try {
-		candidate_mains.each(bootstrap_try_main, ARGV)
-		# TODO: print usage examples here and exit with error code
-		throw BootstrapNoMatchingMain("No matching main() found")
-	} catch(done:BootstrapMainDone) {
-		done.value
-	}
+	finish = Return()
+	candidate_mains.each(bootstrap_try_main, ARGV, finish)
+	# TODO: print usage examples here and exit with error code
+	throw BootstrapNoMatchingMain("No matching main() found")
 }

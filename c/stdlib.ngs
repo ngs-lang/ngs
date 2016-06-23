@@ -816,6 +816,7 @@ F Int(b:Bool) if b 1 0
 TEST true.Int() == 1
 TEST false.Int() == 0
 
+
 # === String =====================================
 
 
