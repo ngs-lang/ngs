@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <stdarg.h>
 #include <sys/select.h>
+#include <time.h>
 
 #include <ffi.h>
 
@@ -754,6 +755,8 @@ METHOD_RESULT native_globals EXT_METHOD_PARAMS {
 
 	METHOD_RETURN(ret);
 }
+
+METHOD_RESULT native_time METHOD_PARAMS { (void) argv; METHOD_RETURN(MAKE_INT((long int)time(NULL))); }
 
 METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_normal_type(argv[0])); }
 METHOD_RESULT native_type_str_doc METHOD_PARAMS {
@@ -1623,6 +1626,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Resolves Instruction Pointer to source location");
 	_doc(vm, "%RET", "Hash with keys: file, first_line, first_column, last_line, last_column, ip");
 	register_global_func(vm, 1, "globals",  &native_globals,           0);
+	register_global_func(vm, 0, "time",     &native_time,         0);
 
 	// hash
 	register_global_func(vm, 0, "in",       &native_in_any_hash,       2, "x",   vm->Any, "h", vm->Hash);
