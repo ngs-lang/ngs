@@ -16,6 +16,16 @@ F init(e:IndexNotFound, message:Str, container, key) {
 F assert(condition:Bool, msg:Str) not(condition) throws AssertFail(msg)
 F assert(condition:Bool) assert(condition, "Assertion failed")
 
+# === Return =====================================
+
+F init(r:Return, v) {
+	r.val = v
+}
+
+F init(r:Return) {
+	r.val = null
+}
+
 # === Misc functional ============================
 
 
@@ -209,18 +219,12 @@ F map(r:Range, mapper:Fun, *args)
 TEST (1..3).map((*), 2) == [2, 4]
 TEST (1...3).map((*), 2) == [2, 4, 6]
 
-{ type StdlibFirstFound }
-
-F init(ff:StdlibFirstFound, i:Int) ff.val = i
-
 F first(r:Range, predicate:Fun, *args) {
-	try {
-		r.each(F(i) {
-			predicate(i, *args) throws StdlibFirstFound(i)
-		})
-		null
-	}
-	catch(ff:StdlibFirstFound) ff.val
+	finish = Return()
+	r.each(F(i) {
+		predicate(i, *args) throws finish(i)
+	})
+	null
 }
 
 TEST (10..20).first(F(x) x % 3 == 0) == 12
@@ -663,6 +667,11 @@ F each(h:Hash, cb:Fun, *args) {
 	h
 }
 
+F each_idx_key_val(h:Hash, cb:Fun, *args) {
+	h.keys().each_idx_val(F(idx, k) cb(idx, k, h[k], *args))
+	h
+}
+
 F map(h:Hash, mapper:Fun, *args)
 	collector
 		h.each(F(k, v) {
@@ -743,19 +752,15 @@ TEST {'a': 1, 'b': 2, 'c': 3} + {'b': 20, 'd': 40} == {'a': 1, 'b': 20, 'c': 3, 
 
 F Strs(h:Hash) h.map(F(k, v) "${k}=${v}")
 
-
-{ type LimitReached }
-
 F limit(h:Hash, l:Int) {
-	idx = 0
-	collector/{}
-		try
-			h.each(F(k, v) {
-				idx >= l throws LimitReached()
-				idx += 1
-				collect(k, v)
-			})
-		catch(e:LimitReached) null
+	finish = Return()
+	result = {}
+	h.each_idx_key_val(F(idx, k, v) {
+		idx >= l throws finish(result)
+		result[k] = v
+	})
+	# Should not reach
+	result
 }
 
 F limit(h:Hash, l:Int) {

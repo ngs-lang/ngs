@@ -109,6 +109,8 @@ typedef struct {
 	// For stack trace
 	IP last_ip;
 
+	NGS_TYPE *ReturnSubtype;
+
 } FRAME;
 
 // Plan: have exactly one context per thread.
@@ -195,6 +197,8 @@ typedef struct {
 				VALUE StackDepthFail;
 			VALUE SwitchFail;
 			VALUE DlopenFail;
+
+	VALUE Return;
 
 	VALUE Backtrace;
 

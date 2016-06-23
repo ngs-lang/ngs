@@ -220,6 +220,23 @@ METHOD_RESULT native_echo_str METHOD_PARAMS {
 	METHOD_RETURN(MAKE_NULL);
 }
 
+METHOD_RESULT native_Return EXT_METHOD_PARAMS {
+	(void) vm;
+	if(THIS_FRAME.ReturnSubtype) {
+		VALUE cached;
+		SET_OBJ(cached, THIS_FRAME.ReturnSubtype);
+		METHOD_RETURN(cached);
+	}
+	*result = make_normal_type(argv[0]);
+	NGS_TYPE_NAME(*result) = make_string("UniqPerFramePerClosureReturn");
+	NGS_TYPE_PARENTS(*result) = make_array_with_values(1, &vm->Return);
+	set_hash_key(NGS_TYPE_ATTRS(*result), make_string("doc"), make_string("Generated Builtin sub-type of Return"));
+	set_hash_key(NGS_TYPE_ATTRS(*result), make_string("closure"), THIS_FRAME.closure);
+	set_hash_key(NGS_TYPE_ATTRS(*result), make_string("depth"), MAKE_INT(ctx->stack_ptr-1));
+	THIS_FRAME.ReturnSubtype = (NGS_TYPE *) (result->ptr);
+	METHOD_RETURN(*result);
+}
+
 METHOD_RESULT native_plus_arr_arr METHOD_PARAMS {
 	*result = make_array(ARG_LEN(0) + ARG_LEN(1));
 	memcpy(ARRAY_ITEMS(*result)+0, ARG_DATA_PTR(0), sizeof(VALUE)*ARG_LEN(0));
@@ -1419,6 +1436,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 			MKSUBTYPE(SwitchFail, Error);
 			MKSUBTYPE(DlopenFail, Error);
 
+	MKTYPE(Return);
+
 	MKTYPE(Backtrace);
 
 	MKTYPE(Command);
@@ -1444,6 +1463,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	vm->eqeq = make_array(0);
 	set_global(vm, "==", vm->eqeq);
 
+	// Return
+	register_global_func(vm, 1, "Return",          &native_Return,   0);
 
 	// CLib and c calls
 	register_global_func(vm, 1, "c_dlopen",        &native_c_dlopen_str_int,   2, "filename", vm->Str,        "flags",  vm->Int);
@@ -2033,6 +2054,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		ctx->frames[ctx->frame_ptr].do_call_impl_not_found_hook = 1;
 		ctx->frames[ctx->frame_ptr].do_call_call = 1;
 		ctx->frames[ctx->frame_ptr].last_ip = 0;
+		ctx->frames[ctx->frame_ptr].ReturnSubtype = NULL;
 		ctx->frame_ptr++;
 		if(ctx->frame_ptr >= MAX_FRAMES) {
 			// Off by one (on the safe side)?
@@ -2652,7 +2674,12 @@ end_main_loop:
 	return METHOD_OK;
 
 exception:
-	// TOP is the excepion value
+	// *result is the exception
+	if (IS_NORMAL_TYPE_INSTANCE(*result) && (NORMAL_TYPE_INSTANCE_TYPE(*result).ptr == THIS_FRAME.ReturnSubtype)) {
+		mr = get_normal_type_instace_attribute(*result, make_string("val"), result);
+		ctx->stack_ptr = saved_stack_ptr;
+		return mr;
+	}
 	if (THIS_FRAME.try_info_ptr) {
 		// We have local exception handler
 		THIS_FRAME.try_info_ptr--;

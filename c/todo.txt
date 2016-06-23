@@ -16,8 +16,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "programming"
 
-			* Exit object: e = Exit(); ... e(value)
-
 			* check .. and ... priority
 
 			* main() - match arguments and make it usable [in progress]
@@ -103,6 +101,8 @@ Note that this started as internal document so things here are unformed, not fin
 			* files globbing
 
 		* Milestone "correct programming" (will be v0.2.0)
+
+			* Check what happens when Return subtype is used but it does not have the "val" property.
 
 			* Make sure not to leak FDs to processes that NGS runs
 
