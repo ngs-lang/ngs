@@ -368,6 +368,7 @@ Have you heard of project X? How it compares to NGS?
 * [Xonsh](http://xon.sh/) Python with bash-like additions. Python is not a domain specific language, making bash-like additions can not bring it to be optimal for system tasks.
 * [rc shell](https://swtch.com/plan9port/man/man1/rc.html) is much closer to Bash than to NGS.
 * [Es: A shell with higher-order functions](https://wryun.github.io/es-shell/paper.html) . ES and NGS share quite a bit of common ideas. NGS goes further with making a shell a real programming language. ES vs NGS would probably be a matter of personal preference. ES is simpler and been here for a while.
+* [elvish](https://github.com/elves/elvish/) aims to extend instead of revolutionize traditional shells; the core syntax is very close to bash. It has nested data structures, and rich pipes to carry such complex data. It also has some neat interactive features, but is still terminal-oriented.
 
 Discussion / requests / comments
 ================================
