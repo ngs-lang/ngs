@@ -20,8 +20,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* main() - match arguments and make it usable [in progress]
 
-			* a way to return from f in: F f() { ... each(F(x) { ... return_from f ... }}
-
 			* document scoping rules
 
 			* commands syntax
