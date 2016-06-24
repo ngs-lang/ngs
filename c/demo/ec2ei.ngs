@@ -10,13 +10,13 @@ if not(ARGV) {
 
 regions = ``aws ec2 describe-regions``.RegionName.sort()
 
-echo("# Regions: ${regions.join(',')}")
+echo "# Regions: ${regions.join(',')}"
 
 instances = regions.pmap(F(r) {
 	``aws ec2 describe-instances --region $r --filter Name=instance-state-name,Values=running``
 }).flatten().filter(F(i) try i.PublicIpAddress)
 
-echo("# Found ${instances.len()} instances in ${instances.group(F(i) i.Placement.AvailabilityZone).len()} AZs")
+echo "# Found ${instances.len()} instances in ${instances.group(F(i) i.Placement.AvailabilityZone).len()} AZs"
 
 results = instances.pmap(F(i) {
 	[i, `$*ARGV ${i.PublicIpAddress}`]

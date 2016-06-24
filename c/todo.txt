@@ -94,8 +94,6 @@ Note that this started as internal document so things here are unformed, not fin
 				* Document that innner functions are declared local
 				* Types documentation [on hold]
 
-			* consider making return value optional
-
 			* files globbing
 
 		* Milestone "correct programming" (will be v0.2.0)

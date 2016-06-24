@@ -398,6 +398,19 @@ F filter(arr:Arr) filter(arr, (is not), Null)
 TEST [1,2,null,3].filter() == [1,2,3]
 
 
+F -(a:Arr, b:Arr) {
+	h = if b.len() > 10 {
+		collector/{} b.each(collect, true)
+	} else {
+		b
+	}
+	a.filter((not in), h)
+}
+
+TEST [1,2,3] - [5,6,1] == [2,3]
+TEST [1,2,3] - [5,6,1,1,1,1,1,1,1,1,1,1,1,2] == [3]
+
+
 F count(arr:Arr, predicate:Fun, *args) {
 	collector/0
 		arr.each(F(elt) {
@@ -916,6 +929,19 @@ F starts_with(haystack:Str, needle:Str) {
 TEST "abcd".starts_with("ab")
 TEST "ab".starts_with("abcd") == false
 
+F ends_with(haystack:Str, needle:Str) {
+	l = haystack.len()
+	haystack[l - needle.len()..l] == needle
+}
+
+F ends_with(haystack:Str, needle:Str) {
+	guard needle.len() > haystack.len()
+	false
+}
+
+TEST "abcd".ends_with("cd")
+TEST "ab".ends_with("cdab") == false
+
 
 doc Case-insensitive LessThan or Equal comparison for strings
 F lte(a:Str, b:Str)
@@ -932,7 +958,14 @@ F lines(a:Str) {
 		l[0..(l.len()-1)]
 	} else {
 		l
-	}
+	}.map(F(line) {
+		# XXX
+		if line[line.len()-1..line.len()] == '\r' {
+			line[0..(line.len()-1)]
+		} else {
+			line
+		}
+	})
 }
 
 F lines(a:Str, cb:Fun, *args) {
@@ -954,6 +987,24 @@ F +(a:Arr, s:Str) {
 	a.map(F(elt) elt+s)
 }
 # TEST ["1", "2"] + " a" == ["1 a", "2 a"]
+
+F '-$'(a:Str, b:Str) {
+	if not(a.ends_with(b)) {
+		e = Exception('a does not ends with b in -$')
+		e.a = a
+		e.b = b
+		throw e
+	}
+	a[0..a.len() - b.len()]
+}
+
+F limit(s:Str, n:Int) s[0..n]
+
+F limit(s:Str, n:Int) {
+	guard s.len() <= n
+	s
+
+}
 
 
 # === RegExp =====================================
@@ -1182,6 +1233,8 @@ F open(f:File, flags:Str) {
 	f
 }
 
+F basename(s:Str) $(basename $s).Str() -$ '\n'
+
 # --- Redir ---
 
 F Str(r:Redir) "<Redirect ${r.marker} ${r.datum}>"
@@ -1355,6 +1408,16 @@ F parse(s:Str, hints:Hash) {
 # Just the command, no processing
 F '%()'(c:Command) c
 
+F lines(p:Process) {
+	p.wait()
+	p.stdout.lines()
+}
+
+F lines(p:Process, cb:Fun, *args) {
+	p.wait()
+	p.stdout.lines(cb, *args)
+}
+
 # === Parse aws output ===========================
 # TODO: move to separate auto-loaded file maybe?
 
@@ -1423,7 +1486,7 @@ F config(s:Str, x) {
 
 # === Misc tests =================================
 
-# op=
+# expr1 op= expr2
 TEST a = 1; a+=1 ; a*=10; a == 20
 TEST a=[{"x": 7}, {"x": 8}]; a .= x; a == [7, 8]
 TEST a=[1,2]; a .= map(F(x) x*2); a[0]+=10; a == [12,4]

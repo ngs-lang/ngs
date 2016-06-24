@@ -13,8 +13,6 @@ F match_argv_params(c:Closure, argv:Arr) {
 	# [ [true/false, value], ... ]
 	matched = params_by_name.len().map(F(idx) [false, null])
 
-	# matched.dump()
-
 	F is_unmatched_param(p) not(p[0])
 
 	F set_match(v) matched[params_by_name[param_name].pos] = [true, v]
