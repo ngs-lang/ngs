@@ -16,21 +16,6 @@ F init(e:IndexNotFound, message:Str, container, key) {
 F assert(condition:Bool, msg:Str) not(condition) throws AssertFail(msg)
 F assert(condition:Bool) assert(condition, "Assertion failed")
 
-# === Box ========================================
-
-{
-	type Box
-		type FullBox
-		type EmptyBox
-}
-
-F init(b:FullBox, val) {
-	b.val = val
-}
-
-F Bool(fb:FullBox) true
-F Bool(eb:EmptyBox) false
-
 # === Return =====================================
 
 F init(r:Return, v) {
@@ -810,6 +795,21 @@ F group(a:Arr, cb:Fun, *args) {
 	})
 	ret
 }
+
+# === Box ========================================
+
+{
+	type Box
+		type FullBox(Box)
+		type EmptyBox(Box)
+}
+
+F init(b:FullBox, *args) throw InvalidArgument("FullBox must be initialized with exactly one value")
+F init(b:FullBox, val) b.val = val
+
+F Bool(fb:FullBox) true
+F Bool(eb:EmptyBox) false
+F to_exit_code(b:Box) b.Bool().to_exit_code()
 
 # === Integer ====================================
 
