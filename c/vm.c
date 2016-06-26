@@ -785,7 +785,7 @@ METHOD_RESULT native_get_attr_nti_str EXT_METHOD_PARAMS {
 		exc = make_normal_type_instance(vm->AttrNotFound);
 		set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
 		set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
-		*result = exc;
+		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	return mr;
 }
@@ -872,8 +872,7 @@ METHOD_RESULT native_get_attr_bt_str EXT_METHOD_PARAMS {
 	exc = make_normal_type_instance(vm->AttrNotFound);
 	set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
 	set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
-	*result = exc;
-	return METHOD_EXCEPTION;
+	THROW_EXCEPTION_INSTANCE(exc);
 }
 
 METHOD_RESULT native_get_attr_nt_str EXT_METHOD_PARAMS {
@@ -892,8 +891,7 @@ METHOD_RESULT native_get_attr_nt_str EXT_METHOD_PARAMS {
 	exc = make_normal_type_instance(vm->AttrNotFound);
 	set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
 	set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
-	*result = exc;
-	return METHOD_EXCEPTION;
+	THROW_EXCEPTION_INSTANCE(exc);
 }
 
 METHOD_RESULT native_c_pipe METHOD_PARAMS {
