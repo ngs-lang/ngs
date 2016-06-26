@@ -16,29 +16,31 @@ F ~(argv:Arr, c:Closure) {
 	SHORT_SW_PFX = Pfx('-')
 	NEG_PFX = Pfx('no-')
 
-	counter = Counter()
 	params_by_pos = c.params()
 	params_by_name = params_by_pos.Hash('name')
-	params_by_name.each(F(k, v) params_by_name[k].pos = counter.get())
+	params_by_name.each_idx_key_val(F(idx, k, v) v.idx = idx)
 	matches = UnmatchedParam * params_by_name.len()
 
-	F set_match(v) matches[params_by_name[param_name].pos] = MatchedParam(v)
+	F set_match(v) matches[params_by_name[param_name].idx] = MatchedParam(v)
 
 	F convert(v:Str, t:Type) {
-		t is Bool returns not(negated)
 		t in [Int, Real, Str] returns t(v)
 		throw InvalidArgument("Don't know how to convert string to type ${t} for main()")
 	}
 
 	accepting_named_arguments = true
-	ac = Iter(argv)
-	while(ac) {
+	argv_iter = Iter(argv)
+	while(argv_iter) {
 		param_name = null
-		arg = ac.next()
-		cond {
-			arg == '--' { accepting_named_arguments = false; continue }
-			accepting_named_arguments and (m = arg ~ LONG_SW_PFX) { param_name = m.after }
-			accepting_named_arguments and (m = arg ~ SHORT_SW_PFX) and arg.len() == 2 { param_name = m.after }
+		arg = argv_iter.next()
+		# TODO: process -xyz arg as -x -y -z ?
+		# TODO: SHORT_SW_PFX & handle len() != 2
+		if accepting_named_arguments {
+			cond {
+				arg == '--' { accepting_named_arguments = false; continue }
+				(m = arg ~ LONG_SW_PFX) { param_name = m.after }
+				(m = arg ~ SHORT_SW_PFX) and arg.len() == 2 { param_name = m.after }
+			}
 		}
 		if param_name {
 			# named parameter
@@ -48,11 +50,18 @@ F ~(argv:Arr, c:Closure) {
 
 			param_name not in params_by_name returns MatchN().set('message', "Unknown parameter '${param_name}'")
 
-			if negated and params_by_name[param_name].type is not Bool {
-				 return MatchN().set('message', "Parameter '${param_name}' is not a boolean but used with 'no-'")
+			if params_by_name[param_name].type == Bool {
+				set_match(not(negated))
+			} else {
+				if negated  {
+					return MatchN().set('message', "Parameter '${param_name}' is not a boolean but used with 'no-'")
+				}
+				try
+					arg = argv_iter.next()
+				catch(nn:NoNext)
+					throw InvalidArgument("Parameter name was not followed by parameter value").set('cause', nn).set('param', param_name)
+				set_match(arg.convert(params_by_name[param_name].type))
 			}
-
-			set_match(ac.next().convert(params_by_name[param_name].type))
 		} else {
 			# positional parameter
 			idx = matches.index(is, UnmatchedParam)

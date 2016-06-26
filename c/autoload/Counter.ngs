@@ -2,10 +2,10 @@
 
 F init(c:Counter) c.val = 0
 
-F get(c:Counter) {
+F next(c:Counter) {
 	ret = c.val
 	c.val += 1
 	ret
 }
 
-TEST c=Counter(); [c.get(), c.get()] == [0, 1]
+TEST c=Counter(); [c.next(), c.next()] == [0, 1]

@@ -1,6 +1,7 @@
 {
 	type Iter
 	type ArrIter(Iter)
+	type NoNext(Exception)
 }
 
 F Iter(arr:Arr) ArrIter(arr)
@@ -15,6 +16,7 @@ F Str(i:ArrIter) "<ArrIter ${i.idx}/${i.val.len()}>"
 F Bool(i:ArrIter) i.idx < i.val.len()
 
 F next(i:ArrIter) {
+	not(i) throws NoNext("No next element in array").set('ArrIter', i)
 	ret = i.val[i.idx]
 	i.idx += 1
 	ret
