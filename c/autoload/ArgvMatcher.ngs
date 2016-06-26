@@ -59,7 +59,7 @@ F ~(argv:Arr, c:Closure) {
 				try
 					arg = argv_iter.next()
 				catch(nn:NoNext)
-					throw InvalidArgument("Parameter name was not followed by parameter value").set('cause', nn).set('param', param_name)
+					throw MatchN().set('message', "Parameter '${param_name}' was not followed by parameter value")
 				set_match(arg.convert(params_by_name[param_name].type))
 			}
 		} else {
