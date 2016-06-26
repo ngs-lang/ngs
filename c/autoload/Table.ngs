@@ -45,7 +45,9 @@ F cell_display_width(x:Arr) { guard x.len()==0; 0 }
 
 doc Initialize rows to an empty array
 F init(t:Table) {
-	t.name = null
+	if not(try t.name) {
+		t.name = null
+	}
 	# name -> column number
 	t.col_name_to_idx = {}
 	# column number -> name
@@ -54,28 +56,17 @@ F init(t:Table) {
 	t.rows = []
 }
 
-# TODO: rewrite all Table() to init() ?
-doc Create table containing provided rows
-doc rows_hashes - rows, each row is a Hash
-F Table(rows_hashes:Arr) {
-	guard rows_hashes.all(is, Hash)
-	t = Table()
-	t.init(rows_hashes)
-	t
-}
-
 doc Create named table containing provided rows
 doc name - name of the table for display and for configuration purposes
 doc rows_hashes - rows, each row is a Hash
-F Table(name:Str, rows_hashes:Arr) {
+F init(t:Table, name:Str, rows_hashes:Arr) {
 	guard rows_hashes.all(is, Hash)
-	t = Table()
 	t.name = name
 	t.init(rows_hashes)
-	t
 }
 
 F init(t:Table, rows_hashes:Arr) {
+	t.init()
 	conf = config(if t.name "table_${t.name}" "table")
 	debug("Table config is $conf")
 	idx = 0
@@ -99,7 +90,6 @@ F init(t:Table, rows_hashes:Arr) {
 	debug("Table created with fields: ${t.col_idx_to_name}")
 	# hashes to arrays
 	rows_hashes.each(partial(push, t))
-	t
 }
 
 F push(t:Table, row_arr:Arr) {
