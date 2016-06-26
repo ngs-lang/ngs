@@ -1,0 +1,66 @@
+# For autoload
+ArgvMatcher = true
+
+{
+	type MatchedParam(FullBox)
+	type UnmatchedParam(EmptyBox)
+}
+
+# TODO: *args, **kwargs
+# TODO: handle case when the last element in argv is --some-name and it's not a Bool
+# TODO: replace '-' in argv parameters names with '_' when matching
+# TODO: handle non-string argv that could come from $($myfunc $arg)
+F ~(argv:Arr, c:Closure) {
+
+	LONG_SW_PFX = Pfx('--')
+	SHORT_SW_PFX = Pfx('-')
+	NEG_PFX = Pfx('no-')
+
+	counter = Counter()
+	params_by_pos = c.params()
+	params_by_name = params_by_pos.Hash('name')
+	params_by_name.each(F(k, v) params_by_name[k].pos = counter.get())
+	matches = UnmatchedParam * params_by_name.len()
+
+	F set_match(v) matches[params_by_name[param_name].pos] = MatchedParam(v)
+
+	F convert(v:Str, t:Type) {
+		t is Bool returns not(negated)
+		t in [Int, Real, Str] returns t(v)
+		throw InvalidArgument("Don't know how to convert string to type ${t} for main()")
+	}
+
+	accepting_named_arguments = true
+	ac = Iter(argv)
+	while(ac) {
+		param_name = null
+		arg = ac.next()
+		cond {
+			arg == '--' { accepting_named_arguments = false; continue }
+			accepting_named_arguments and (m = arg ~ LONG_SW_PFX) { param_name = m.after }
+			accepting_named_arguments and (m = arg ~ SHORT_SW_PFX) and arg.len() == 2 { param_name = m.after }
+		}
+		if param_name {
+			if (negated = param_name ~ NEG_PFX) {
+				param_name = negated.after
+			}
+			param_name not in params_by_name returns MatchN().set('message', "Unknown parameter '${param_name}'")
+			# TODO: error if negated for any type except Bool
+			set_match(ac.next().convert(params_by_name[param_name].type))
+		} else {
+			# positional parameter
+			idx = matches.index(is, UnmatchedParam)
+			idx is Null returns MatchN().set('message', "Too many arguments")
+			matches[idx] = MatchedParam(arg.convert(c.params()[idx].type))
+		}
+	}
+
+	for(i;matches.len()) {
+		matches[i] is not UnmatchedParam continues
+		p = params_by_pos[i]
+		'dflt' not in p returns MatchN().set('message', "Parameter '${p.name}' missing")
+		matches[i] = MatchedParam(p.dflt)
+	}
+
+	MatchY().set('matches', matches.val)
+}

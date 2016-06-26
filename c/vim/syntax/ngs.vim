@@ -17,14 +17,17 @@ syn match   ngsComment "^[ \t]*doc .*" contains=ngsTodo
 syn keyword ngsKeyword and break breaks catch collector collect cond continue continues econd ematch eswitch F global guard local match or return returns switch TEST throw throws try type upvar while with .. ...
 syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
-syn keyword ngsType Any Arr ArrIter BasicType Bool CLib Closure Command Counter CSym ExclusiveRange ExecutableNotFound FFI Fun Hash InclusiveRange Int Iter NormalType NormalTypeInstance Null Path Pipe Process ProcessFail Range Real Seq Stats Str Table TableMeta TableMetaNotIfCol Type
+" bootstrap types
+syn keyword ngsType NotImplemented FetchFail RequreFail MainFail
+" other types
+syn keyword ngsType Any Arr ArrIter BasicType Bool Box CLib Closure Command Counter CSym EmptyBox ExclusiveRange ExecutableNotFound FFI FullBox Fun Hash InclusiveRange Int Iter NormalType NormalTypeInstance Null Path Pipe Process ProcessFail Range Real Seq Stats Str Table TableMeta TableMetaNotIfCol Type
 syn keyword ngsType AssertFail Error Exception CompileFail DontKnowHowToCall GlobalNotFound InvalidArgument ImplNotFound LookupFail KeyNotFound StackDepthFail
 syn keyword ngsType IndexNotFound AttrNotFound InvalidParameter
 syn keyword ngsType Lock Pthread PthreadAttr Thread
 syn keyword ngsType LockFail
 syn keyword ngsType Return
 syn keyword ngsType ScreenRenderer ScreenItemsContainer ScreenItemsVerticalContainer ScreenItemsHorizontalContainer
-syn keyword ngsType Match MatchFail SubSeq Pfx MaybePfx MustPfx Sfx MaybeSfx MustSfx
+syn keyword ngsType Match MatchY MatchN MatchFail SubSeq Pfx MaybePfx MustPfx Sfx MaybeSfx MustSfx
 syn keyword ngsTodo TODO FIXME XXX NOTE
 syn keyword ngsConstant true false null
 syn keyword ngsPredefinedVariable ARGV ARGV0 ENV ORIG_ARGV
@@ -43,7 +46,7 @@ syn keyword ngsFunction c_close c_execve c_exit c_fork c_lseek copy c_open c_rea
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction fetch main require to_exit_code
 " stdlib functions
-syn keyword ngsFunction acquire all any assert basename close_reading_end close_writing_end count dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error expose debug die filter find_in_path first flatten group has identity in index join len limit log map max min next none partial partial_tail pmap pos ptimes read release reverse split starts_with status Strs uniq update wait without write zip
+syn keyword ngsFunction acquire all any assert basename close_reading_end close_writing_end count dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error expose debug die filter find_in_path first flatten group has identity in index join len limit log map max min next none partial partial_tail pmap pos ptimes read release reverse set split starts_with status Strs uniq update wait without write zip
 
 hi def link ngsComment Comment
 hi def link ngsConditional Conditional

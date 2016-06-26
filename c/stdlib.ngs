@@ -16,6 +16,21 @@ F init(e:IndexNotFound, message:Str, container, key) {
 F assert(condition:Bool, msg:Str) not(condition) throws AssertFail(msg)
 F assert(condition:Bool) assert(condition, "Assertion failed")
 
+# === Box ========================================
+
+{
+	type Box
+		type FullBox
+		type EmptyBox
+}
+
+F init(b:FullBox, val) {
+	b.val = val
+}
+
+F Bool(fb:FullBox) true
+F Bool(eb:EmptyBox) false
+
 # === Return =====================================
 
 F init(r:Return, v) {
@@ -51,6 +66,11 @@ F partial_tail(f:Fun, *bind_args)
 	F(*args) f(*args, *bind_args)
 
 TEST p = partial_tail((-), 10); p(7) == -3
+
+F set(obj, attr:Str, val) {
+	(.=)(obj, attr, val)
+	obj
+}
 
 
 # === Real =======================================
@@ -130,10 +150,7 @@ doc %EX - ... numbering[hostname_base]} ...
 F expose(typ:NormalType, attr:Str) {
 	STDLIB_EXPOSE[typ] = STDLIB_EXPOSE.get(typ, []).push(attr)
 	if STDLIB_EXPOSE[typ].len() > 1 {
-		e = NotImplemented("expose() does not support exposing more than one attribute at this time")
-		e.type = typ
-		e.attr = attr
-		throw e
+		throw NotImplemented("expose() does not support exposing more than one attribute at this time").set('type', typ).set('attr', attr)
 	}
 	typ
 }
@@ -990,34 +1007,6 @@ F limit(s:Str, n:Int) {
 
 # TODO
 
-# === Ring buffer (WIP) ==========================
-
-{ type RingBuffer }
-
-F RingBuffer(max_size:Int) {
-	r = RingBuffer()
-	r.data = [null] * max_size
-	r.max_size = max_size
-	r.head = 0
-	r.tail = 0
-	r
-}
-
-F push(r:RingBuffer, x) {
-	# (r.data)[r.head] = x
-	# r.head = r.head + 1
-	# (r.head) = (r.head) % (r.max_size)
-	r
-}
-
-F len(r:RingBuffer) {
-	if r.head > r.tail { r.head - r.tail } else { throw NotImplemented() }
-}
-
-F values(r:RingBuffer) {
-	throw NotImplemented()
-}
-
 # === Logging and status reporting (WIP) =========
 
 # TODO: allow control by facility and severity
@@ -1084,12 +1073,7 @@ F find_in_path(executable_name:Str) {
 	debug('[find_in_path] will search')
 	ret = path.map(F(elt) Path("${elt}/${executable_name}")).first()
 	debug("[find_in_path] ${executable_name} found at ${ret}")
-	if ret is Null {
-		e = ExecutableNotFound()
-		e.path = path
-		e.name = executable_name
-		throw e
-	}
+	ret is Null throws ExecutableNotFound().set('path', path).set('name', executable_name)
 	ret
 }
 
@@ -1304,9 +1288,7 @@ F '$()'(c:Command) {
 	try {
 		process.executable = find_in_path(c.argv[0])
 	} catch(nf:ExecutableNotFound) {
-		e = ProcessFail(process)
-		e.cause = nf
-		throw e
+		throw ProcessFail(process).set('cause', nf)
 	}
 	pipe = Pipe()
 	pid = c_fork()
@@ -1467,6 +1449,8 @@ F config(s:Str, x) {
 
 {
 	type Match
+		type MatchY(Match)
+		type MatchN(Match)
 	type MatchFail(Exception)
 	type SubSeq
 	# XXX: Consider: SubSeq.expose('val')
@@ -1479,6 +1463,10 @@ F config(s:Str, x) {
 			type MaybeSfx(Sfx)
 			type MustSfx(Sfx)
 }
+
+F Bool(my:MatchY) true
+F Bool(my:MatchN) false
+F to_exit_code(m:Match) m.Bool().to_exit_code()
 
 F init(mf:MatchFail, msg:Str, container, pattern) {
 	init(mf, msg)
@@ -1517,6 +1505,20 @@ TEST "abc" - Sfx("c") == "ab"
 TEST try "abc" - Sfx("cd") catch(mf:MatchFail) true
 TEST "abc" - MaybeSfx("cd") == "abc"
 
+F ~(s:Str, pfx:Pfx) {
+	not(s.starts_with(pfx.val)) returns MatchN()
+	ret = MatchY()
+	ret.matches = [pfx.val]
+	ret.before = null
+	ret.after = s[pfx.val.len()..null]
+	ret
+}
+
+# === Fun ========================================
+
+F *(cb:Fun, n:Int, *args) n.map(F(idx) cb(*args))
+
+# TEST a = Box * 2; a[0] is Box and a[1] is Box and a[0] != a[1]
 
 # === Misc tests =================================
 
