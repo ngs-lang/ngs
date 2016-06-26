@@ -41,22 +41,28 @@ F ~(argv:Arr, c:Closure) {
 			accepting_named_arguments and (m = arg ~ SHORT_SW_PFX) and arg.len() == 2 { param_name = m.after }
 		}
 		if param_name {
+			# named parameter
 			if (negated = param_name ~ NEG_PFX) {
 				param_name = negated.after
 			}
+
 			param_name not in params_by_name returns MatchN().set('message', "Unknown parameter '${param_name}'")
-			# TODO: error if negated for any type except Bool
+
+			if negated and params_by_name[param_name].type is not Bool {
+				 return MatchN().set('message', "Parameter '${param_name}' is not a boolean but used with 'no-'")
+			}
+
 			set_match(ac.next().convert(params_by_name[param_name].type))
 		} else {
 			# positional parameter
 			idx = matches.index(is, UnmatchedParam)
 			idx is Null returns MatchN().set('message', "Too many arguments")
-			matches[idx] = MatchedParam(arg.convert(c.params()[idx].type))
+			matches[idx] = MatchedParam(arg.convert(params_by_pos[idx].type))
 		}
 	}
 
 	for(i;matches.len()) {
-		matches[i] is not UnmatchedParam continues
+		matches[i] continues
 		p = params_by_pos[i]
 		'dflt' not in p returns MatchN().set('message', "Parameter '${p.name}' missing")
 		matches[i] = MatchedParam(p.dflt)
