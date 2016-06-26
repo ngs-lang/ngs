@@ -7,9 +7,7 @@ ArgvMatcher = true
 }
 
 # TODO: *args, **kwargs
-# TODO: handle case when the last element in argv is --some-name and it's not a Bool
 # TODO: replace '-' in argv parameters names with '_' when matching
-# TODO: handle non-string argv that could come from $($myfunc $arg)
 F ~(argv:Arr, c:Closure) {
 
 	LONG_SW_PFX = Pfx('--')
@@ -23,9 +21,18 @@ F ~(argv:Arr, c:Closure) {
 
 	F set_match(v) matches[params_by_name[param_name].idx] = MatchedParam(v)
 
+	F convert(v, t:Type) {
+		throw InvalidArgument("Don't know how to convert value ${v} to type ${t}")
+	}
+
 	F convert(v:Str, t:Type) {
-		t in [Int, Real, Str] returns t(v)
-		throw InvalidArgument("Don't know how to convert string to type ${t} for main()")
+		guard t in [Int, Real]
+		t(v)
+	}
+
+	F convert(v, t:Type) {
+		guard v is t
+		v
 	}
 
 	accepting_named_arguments = true

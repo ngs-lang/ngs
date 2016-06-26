@@ -23,4 +23,4 @@ F next(i:ArrIter) {
 }
 
 TEST i = Iter([1,2]); [i.next(), i.next()] == [1,2]
-
+TEST try [].Iter().next() catch(nn:NoNext) true
