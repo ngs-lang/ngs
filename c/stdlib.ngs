@@ -950,22 +950,11 @@ F lte(a:Str, b:Str)
 F '<='(a:Str, b:Str)
 	c_strcmp(a, b) <= 0
 
-F lines(a:Str) {
-	# TODO: win and mac style
-	not(a) returns []
-	l = a.split('\n')
-	if a[a.len()-1..a.len()] == '\n' {
-		l[0..(l.len()-1)]
-	} else {
-		l
-	}.map(F(line) {
-		# XXX
-		if line[line.len()-1..line.len()] == '\r' {
-			line[0..(line.len()-1)]
-		} else {
-			line
-		}
-	})
+F lines(s:Str) {
+	# Note: Max OS <= 9 line separation of CR (\r) is not supported
+	not(s) returns []
+	s -= MaybeSfx('\n')
+	s.split('\n').map((-), MaybeSfx('\r'))
 }
 
 F lines(a:Str, cb:Fun, *args) {
@@ -987,16 +976,6 @@ F +(a:Arr, s:Str) {
 	a.map(F(elt) elt+s)
 }
 # TEST ["1", "2"] + " a" == ["1 a", "2 a"]
-
-F '-$'(a:Str, b:Str) {
-	if not(a.ends_with(b)) {
-		e = Exception('a does not ends with b in -$')
-		e.a = a
-		e.b = b
-		throw e
-	}
-	a[0..a.len() - b.len()]
-}
 
 F limit(s:Str, n:Int) s[0..n]
 
@@ -1233,7 +1212,7 @@ F open(f:File, flags:Str) {
 	f
 }
 
-F basename(s:Str) $(basename $s).Str() -$ '\n'
+F basename(s:Str) $(basename $s).Str() - Sfx('\n')
 
 # --- Redir ---
 
@@ -1483,6 +1462,61 @@ F config(s:Str, x) {
 	debug("Configuring ${s}=${x}")
 	STDLIB_CONFIG[s] = x
 }
+
+# === Match, Pfx, Sfx ============================
+
+{
+	type Match
+	type MatchFail(Exception)
+	type SubSeq
+	# XXX: Consider: SubSeq.expose('val')
+		doc Prefix subsequence of a sequence
+		type Pfx(SubSeq)
+			type MaybePfx(Pfx)
+			type MustPfx(Pfx)
+		doc Suffix subsequence of a sequence
+		type Sfx(SubSeq)
+			type MaybeSfx(Sfx)
+			type MustSfx(Sfx)
+}
+
+F init(mf:MatchFail, msg:Str, container, pattern) {
+	init(mf, msg)
+	mf.container = container
+	mf.pattern = pattern
+	mf.backtrace.frames.pop()
+}
+
+F init(s:SubSeq, *args) throw Exception("${s.typeof().name} must be initialized with a single argument - value, given: $args")
+F init(s:SubSeq, val) s.val = val
+
+# The common case
+F Pfx(val) MustPfx(val)
+F Sfx(val) MustSfx(val)
+
+F Str(s:SubSeq) "<${s.typeof().name} ${s.val}>"
+
+F -(s:Str, pfx:Pfx) {
+	s.starts_with(pfx.val) returns s[pfx.val.len()..null]
+	pfx is MustPfx throws MatchFail("Given string '$s' does not start with prefix '$pfx.val'", s, pfx)
+	s
+}
+
+TEST "abc" - Pfx("a") == "bc"
+TEST try "abc" - Pfx("wa") catch(mf:MatchFail) true
+TEST "abc" - MaybePfx("wa") == "abc"
+
+
+F -(s:Str, sfx:Sfx) {
+	s.ends_with(sfx.val) returns s[0 .. (s.len() - sfx.val.len())]
+	sfx is MustSfx throws MatchFail("Given string '$s' does not end with suffix '$sfx.val'", s, sfx)
+	s
+}
+
+TEST "abc" - Sfx("c") == "ab"
+TEST try "abc" - Sfx("cd") catch(mf:MatchFail) true
+TEST "abc" - MaybeSfx("cd") == "abc"
+
 
 # === Misc tests =================================
 
