@@ -1,0 +1,149 @@
+{
+	# WIP, don't use!
+
+	# TODO: order res_instances so that for example delete() dry run and real run would be consistent
+
+	AWS = true
+
+	F stdlib_aws_tags(h:Hash) h.map(F(k, v) "Key=${k},Value=${v}")
+
+	# --------------------------------------------------
+	type AWSCommand
+
+	F init(c:AWSCommand, cmd:Arr, supports_filters:Bool) {
+		c.cmd = cmd
+		c.supports_filters = supports_filters
+	}
+
+
+	# --------------------------------------------------
+	type AWSResource
+
+	F init(r:AWSResource, ancor, props:Hash) {
+		assert(ancor.Bool(), "Ancor must contain something")
+		r.ancor = ancor
+		r.props = props
+		r.res_instances = null
+		r.desired_count = try r.props.META.count catch(e) 1
+		r.dry_run = try props.META.dry_run catch(e) false
+		if 'DRY_RUN' in ENV {
+			r.dry_run = true
+		}
+	}
+
+	F init(r:AWSResource, ancor) init(r, ancor, {})
+
+	F expect(r:AWSResource, e:Int) {
+		r.find()
+		assert(r.len() == e, "Expected exactly ${e} ${r.typeof().name} resource instances but found ${r.len()}")
+		r
+	}
+
+	F find(r:AWSResource) {
+		cmd = _find_cmd(r)
+		c = cmd.cmd
+		filters = if cmd.supports_filters {
+			['--filters', *(r.ancor.map(F(k, v) "Name=tag-key,Values=${k},Name=tag-value,Values=${v}"))]
+		} else {
+			[]
+		}
+		debug("Filters: $filters")
+		res_instances = ``$*c $*filters``
+
+		# echo("res_instances $res_instances")
+		if not(cmd.supports_filters) {
+			# manual filter then
+			res_instances .= filter(F(x) r.ancor.all(F(k, v) try r.Tags[k] == v))
+		}
+		log("[find] found ${res_instances.len()} res_instances for ancor ${r.ancor}")
+
+		r.res_instances = res_instances
+		r.res_instances
+	}
+
+	F converge(r:AWSResource) {
+		r.validate()
+		r.find()
+		n = r.desired_count
+		log("[converge] desired count of ${r.typeof().name}: ${n}")
+		if n < r.res_instances.len() {
+			log("[converge] deleting extra res_instances")
+			r.res_instances[n..null].each(F(x) r.delete(x))
+			r.res_instances = r.res_instances[0..n]
+		}
+		if n > r.res_instances.len() {
+			for(i=r.res_instances.len(); i<n; i+=1) {
+				log("[converge] creating resource instance ${r.typeof().name} #${i+1}")
+				create(r)
+			}
+		}
+	}
+
+	F len(r:AWSResource) r.res_instances.len()
+
+	# --------------------------------------------------
+	type AWS_ELB(AWSResource)
+
+	# F _find_cmd(r:AWS_ELB) AWSCommand(%[aws elb describe-load-balancers], false)
+	F find(r:AWS_ELB) {
+		r.res_instances = ``aws elb describe-load-balancers``.filter(F(desc) desc.LoadBalancerName == r.ancor)
+	}
+
+	F validate(r:AWS_ELB) {
+		r.ancor is not Str throws InvalidArgument("AWS_ELB is the ELB name and must be a string, not ${r.ancor}")
+		r.desired_count > 1 throws InvalidArgument("AWS_ELB can only handle one instance at a time while desired count is ${r.desired_count}")
+		'listeners' not in r.props throws InvalidArgument("AWS_ELB must have 'listeners' property")
+
+		('azs' not in r.props) and ('subnets' not in r.props) throws InvalidArgument("Either 'azs' or 'subnets' must be in AWS_ELB properties")
+		'azs' in r.props throws NotImplemented("'azs' AWS_ELB property")
+	}
+
+	F create(r:AWS_ELB) {
+		guard not(r.dry_run)
+		log("[create] creating instance resource")
+		subnets = try r.props.subnets
+		if subnets {
+			subnets = ['--subnets', *subnets]
+		}
+		ret = ``aws elb create-load-balancer --load-balancer-name ${r.ancor} --listeners ${r.props.listeners.encode_json()} $*subnets``
+		log("[create] AWS_ELB created")
+		r.tag()
+	}
+
+	F create(r:AWS_ELB) {
+		guard r.dry_run
+		log("[create] would create resource instance")
+	}
+
+	F tag(r:AWS_ELB) {
+		guard not(r.dry_run)
+		tags = stdlib_aws_tags(r.props.get('tags', {}))
+		log("[tag] Tagging AWS_ELB with $tags")
+		$(aws elb add-tags --load-balancer-names ${r.ancor} --tags $*tags)
+	}
+
+	F tag(r:AWS_ELB) {
+		guard r.dry_run
+		log("[tag] would tag ${r} with ${k}=${v}")
+	}
+
+
+	F delete(r:AWS_ELB, resource:Hash) {
+		guard not(r.dry_run)
+		log("[delete] deleting load balancer ${r.ancor}")
+		$(aws elb delete-load-balancer --load-balancer-name ${r.ancor})
+	}
+
+	F delete(r:AWS_ELB, resource:Hash) {
+		guard r.dry_run
+		log("[delete] would delete load balancer ${r.ancor}")
+	}
+
+	# --------------------------------------------------
+	type AWS_SUBNET(AWSResource)
+
+	F _find_cmd(r:AWS_SUBNET) AWSCommand(%[aws ec2 describe-subnets], true)
+	# Add sort()?
+	F ids(r:AWS_SUBNET) r.res_instances.SubnetId
+
+}
