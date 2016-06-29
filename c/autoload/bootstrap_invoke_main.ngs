@@ -9,7 +9,7 @@
 F match_argv_params(c:Closure, argv:Arr) {
 	counter = Counter()
 	params_by_name = c.params().Hash('name')
-	params_by_name.each(F(k, v) params_by_name[k].pos = counter.get())
+	params_by_name.each(F(k, v) params_by_name[k].pos = counter.next())
 	# [ [true/false, value], ... ]
 	matched = params_by_name.len().map(F(idx) [false, null])
 

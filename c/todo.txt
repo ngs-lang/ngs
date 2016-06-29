@@ -13,6 +13,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Fix .info vs .message in exceptions
 
+			* Capture stderr in $() and friends
+
 			* Fix Return to be able to F f(r:Return). Currenty F f(r:Type).
 
 			* main() - match arguments and make it usable [in progress]

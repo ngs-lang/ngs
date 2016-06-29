@@ -150,7 +150,10 @@ static void _dump(VALUE v, int level) {
 			assert(IS_HASH(fields));
 			_dump(NORMAL_TYPE_INSTANCE_TYPE(v), level + 1);
 			for(e=HASH_HEAD(fields); e; e=e->insertion_order_next) {
-				if(ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(v))[GET_INT(e->val)].num) {
+				if(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(v)) <= (size_t)GET_INT(e->val)) {
+					continue;
+				}
+				if(!IS_UNDEF(ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(v))[GET_INT(e->val)])) {
 					printf("%*s* key:\n", (level+1) << 1, "");
 					_dump(e->key, level + 2);
 					printf("%*s* value:\n", (level+1) << 1, "");
@@ -334,7 +337,7 @@ void set_normal_type_instance_attribute(VALUE obj, VALUE attr, VALUE v) {
 	}
 	// TODO: more optimized
 	while(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(obj)) < n) {
-		array_push(NORMAL_TYPE_INSTANCE_FIELDS(obj), (VALUE){.num = V_UNDEF});
+		array_push(NORMAL_TYPE_INSTANCE_FIELDS(obj), MAKE_UNDEF);
 	}
 	if(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(obj)) == n) {
 		array_push(NORMAL_TYPE_INSTANCE_FIELDS(obj), v);

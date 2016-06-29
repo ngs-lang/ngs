@@ -470,6 +470,29 @@ METHOD_RESULT native_index_del_hash_any METHOD_PARAMS {
 	return METHOD_OK;
 }
 
+METHOD_RESULT native_Hash_nti METHOD_PARAMS {
+	VALUE ut, item;
+	HASH_OBJECT_ENTRY *e;
+
+	ut = NORMAL_TYPE_INSTANCE_TYPE(argv[0]);
+	// TODO: round to nearest power of 2?
+	*result = make_hash(OBJ_LEN(NGS_TYPE_FIELDS(ut)));
+	for(e=HASH_HEAD(NGS_TYPE_FIELDS(ut)); e; e=e->insertion_order_next) {
+		if(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(argv[0])) <= (size_t)GET_INT(e->val)) {
+			continue;
+		}
+		item = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[0]))[(size_t)GET_INT(e->val)];
+		if(!IS_UNDEF(item)) {
+			printf("IDX %i / %i\n", GET_INT(e->val), OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(argv[0])));
+			dump_titled("KEY", e->key);
+			dump_titled("ITEM", item);
+			set_hash_key(*result, e->key, item);
+		}
+	}
+	dump_titled("native_Hash_nti", *result);
+	return METHOD_OK;
+}
+
 // TODO: locking for dlerror?
 METHOD_RESULT native_c_dlopen_str_int EXT_METHOD_PARAMS {
 	VALUE v;
@@ -1637,6 +1660,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, "[]",       &native_index_get_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
 	register_global_func(vm, 0, "[]=",      &native_index_set_hash_any_any,    3, "h",   vm->Hash,"k", vm->Any, "v", vm->Any);
 	register_global_func(vm, 0, "del",      &native_index_del_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
+	register_global_func(vm, 0, "Hash",     &native_Hash_nti,                  1, "obj", vm->NormalTypeInstance);
+	_doc(vm, "", "Returns all fields of the type instance");
 
 	// http://stackoverflow.com/questions/3473692/list-environment-variables-with-c-in-unix
 	env_hash = make_hash(32);

@@ -15,6 +15,15 @@ F ~(argv:Arr, c:Closure) {
 	NEG_PFX = Pfx('no-')
 
 	params_by_pos = c.params()
+
+	have_arr_splat = false
+	rest = []
+	if 'splat' in params_by_pos[-1] {
+		assert(params_by_pos[-1].splat == '*', 'ArgvMatcher does not support **kwargs')
+		have_arr_splat = true
+		params_by_pos.pop()
+	}
+
 	params_by_name = params_by_pos.Hash('name')
 	params_by_name.each_idx_key_val(F(idx, k, v) v.idx = idx)
 	matches = UnmatchedParam * params_by_name.len()
@@ -72,7 +81,13 @@ F ~(argv:Arr, c:Closure) {
 		} else {
 			# positional parameter
 			idx = matches.index(is, UnmatchedParam)
-			idx is Null returns MatchN().set('message', "Too many arguments")
+			if idx is Null {
+				if have_arr_splat {
+					matches.push(MatchedParam(arg))
+				} else {
+					return MatchN().set('message', "Too many arguments")
+				}
+			}
 			matches[idx] = MatchedParam(arg.convert(params_by_pos[idx].type))
 		}
 	}

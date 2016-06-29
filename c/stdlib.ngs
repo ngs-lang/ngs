@@ -171,9 +171,16 @@ F Str(t:Type) "<Type ${t.name}>"
 
 # === NormalType =================================
 
-# XXX: must improve
 F Str(i:NormalTypeInstance) {
-	"<${i.typeof().name}>"
+	h = Hash(i)
+	truncated = len(h) > 10
+	if truncated {
+		h .= limit(10)
+	}
+	# TODO limit key and value lengths
+	h .= Strs()
+
+	"<${i.typeof().name} ${h.join(' ')}${if truncated ' ...' else ''}>"
 }
 
 # === auto-load ==================================
@@ -706,6 +713,16 @@ F filter(h:Hash, predicate:Fun, *args)
 
 TEST {'a': 1, 'b': 2}.filter(F(k, v, k_eq) k == k_eq, 'a') == {'a': 1}
 
+F all(h:Hash, predicate:Fun, *args) {
+	arr = h.keys()
+	l = arr.len()
+	for(i;l)
+		not(predicate(arr[i], h[arr[i]], *args)) returns false
+	true
+}
+
+TEST {"x": 1, "y": 2}.all(F(k, v) v is Int)
+
 
 F count(h:Hash, predicate:Fun, *args)
 	collector/0
@@ -1015,7 +1032,7 @@ F limit(s:Str, n:Int) {
 # TODO: consider sending log, debug and error to stderr
 
 F log(s:Str) {
-	echo("[LOG   ] $s")
+	echo("[LOG] $s")
 }
 
 # Set DEBUG environment variable to any non-empty string to activate
