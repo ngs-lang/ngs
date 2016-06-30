@@ -40,6 +40,12 @@
 		r
 	}
 
+	F expect(r:AWSResource) {
+		r.find()
+		assert(r.len() > 0, "Expected one or more ${r.typeof().name} resource instances but found none")
+		r
+	}
+
 	F find(r:AWSResource) {
 		# XXX: invalid code because misses straightening
 		cmd = _find_cmd(r)
@@ -57,7 +63,7 @@
 			# manual filter then
 			cur_props .= filter(F(x) r.ancor.all(F(k, v) try r.Tags[k] == v))
 		}
-		log("[find] found ${cur_props.len()} resource instances for ancor ${r.ancor}")
+		log("[find] found ${cur_props.len()} ${r.typeof().name} resource instances for ancor ${r.ancor}")
 
 		r.cur_props = cur_props
 		r.cur_props
@@ -96,7 +102,6 @@
 	# --------------------------------------------------
 	type AWS_ELB(AWSResource)
 
-	# F _find_cmd(r:AWS_ELB) AWSCommand(%[aws elb describe-load-balancers], false)
 	F find(r:AWS_ELB) {
 		log("[find] load balancer ${r.ancor}")
 		r.cur_props = ``aws elb describe-load-balancers``.filter(F(desc) desc.LoadBalancerName == r.ancor)
@@ -135,7 +140,7 @@
 	}
 
 	F create(r:AWS_ELB) {
-		log("[create] creating instance resource")
+		log("[create] creating resource instance")
 		subnets = try r.desired_props.subnets
 		if subnets is AWSResource {
 			subnets .= ids()
@@ -191,5 +196,9 @@
 	F _find_cmd(r:AWS_SUBNET) AWSCommand(%[aws ec2 describe-subnets], true)
 	# Add sort()?
 	F ids(r:AWS_SUBNET) r.cur_props.SubnetId
+
+	# --------------------------------------------------
+	type AWS_INSTANCE(AWSResource)
+	F _find_cmd(r:AWS_INSTANCE) AWSCommand(%[aws ec2 describe-instances], true)
 
 }
