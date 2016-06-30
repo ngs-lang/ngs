@@ -483,13 +483,9 @@ METHOD_RESULT native_Hash_nti METHOD_PARAMS {
 		}
 		item = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[0]))[(size_t)GET_INT(e->val)];
 		if(!IS_UNDEF(item)) {
-			printf("IDX %i / %i\n", GET_INT(e->val), OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(argv[0])));
-			dump_titled("KEY", e->key);
-			dump_titled("ITEM", item);
 			set_hash_key(*result, e->key, item);
 		}
 	}
-	dump_titled("native_Hash_nti", *result);
 	return METHOD_OK;
 }
 

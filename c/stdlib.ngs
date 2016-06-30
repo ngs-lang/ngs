@@ -680,6 +680,25 @@ F split(a:Arr, delim) {
 
 F ==(a:Hash, b:Hash) Arr(a) == Arr(b)
 
+F cmp(a:Hash, b:Hash) {
+	ret = {'add': {}, 'remove': [], 'change': {}}
+	a.each(F(k, v) {
+		if k in b {
+			if v != b[k] {
+				ret.change[k] = b[k]
+			}
+		} else {
+			ret.remove.push(k)
+		}
+	})
+	b.each(F(k, v) {
+		if k not in a {
+			ret.add[k] = v
+		}
+	})
+	ret
+}
+
 
 # --- Functional ---
 
@@ -1297,6 +1316,11 @@ F Str(p:Process) p.wait().stdout
 # TODO: handle built-in commands: do not execve,
 # INFO: bash - redir.c
 F '$()'(c:Command) {
+
+	# Special case: $($cmd)
+	if (c.argv.len() == 1) and (c.argv[0] is Command) {
+		c = c.argv[0]
+	}
 
 	debug_pfx = '[stdlib $()]'
 	debug("$debug_pfx Parsed command: ${c.argv}")
