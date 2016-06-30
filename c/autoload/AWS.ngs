@@ -104,13 +104,15 @@
 		r.cur_props .= map(F(props) {
 			# Straighten AWS output to match CLI arguments
 			translation = %{
+				LoadBalancerName name
+
 				AvailabilityZones availability-zones
 				SecurityGroups security-groups
 				Instances instances
 				ListenerDescriptions listeners
 				Subnets subnets
 				Scheme scheme
-				LoadBalancerName name
+				HealthCheck health-check
 			}
 			ret = collector/{}
 				translation.each(F(k, v) {
@@ -144,13 +146,15 @@
 		r.run('create ELB', %(aws elb create-load-balancer --load-balancer-name ${r.ancor} --listeners ${r.desired_props.listeners.encode_json()} $*subnets))
 		if not(r.dry_run) {
 			r.find()
-			r.tag()
 		}
 	}
 
-	F tag(r:AWS_ELB) {
-		diff = cmp(r.cur_props[0].tags, r.desired_props.get('tags', {}))
-		# echo("DIFF: $diff")
+
+	F update(r:AWS_ELB, cur_props:Hash) {
+		log("[update ELB] updating load balancer ${r.ancor}")
+
+		# Tags
+		diff = cmp(cur_props.tags, r.desired_props.get('tags', {}))
 
 		if (tags = stdlib_aws_tags(diff.add + diff.change)) {
 			r.run('add ELB tags', %(aws elb add-tags --load-balancer-names ${r.ancor} --tags $*tags))
@@ -159,11 +163,22 @@
 		if (tags = diff.remove) {
 			r.run('remove ELB tags', %(aws elb remove-tags --load-balancer-names ${r.ancor} --tags $*tags))
 		}
-	}
 
-	F update(r:AWS_ELB, res_instance:Hash) {
-		log("[update ELB] updating load balancer ${res_instance.name}")
-		r.tag()
+		# Health check. Note: only updates given properties and keeps the rest as they were.
+		if 'health-check' in r.desired_props {
+			diff = cmp(cur_props['health-check'], r.desired_props['health-check'])
+			assert(not(diff.add), "Can't handle additional health check properties ${diff.add}")
+			if diff.change {
+				log("[update ELB health check] change: ${diff.change}")
+				t = cur_props['health-check'] + diff.change
+				r.run(
+					'update ELB health check',
+					%(aws elb configure-health-check --load-balancer-name ${r.ancor} --health-check ${t.encode_json()})
+				)
+			}
+		}
+
+		# TODO: listeners
 	}
 
 	F delete(r:AWS_ELB, resource:Hash) {
