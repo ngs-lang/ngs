@@ -103,7 +103,7 @@
 	type AWS_ELB(AWSResource)
 
 	F find(r:AWS_ELB) {
-		log("[find] load balancer ${r.ancor}")
+		log("[find] load balancer '${r.ancor}'")
 		r.cur_props = ``aws elb describe-load-balancers``.filter(F(desc) desc.LoadBalancerName == r.ancor)
 		assert(r.cur_props.len() <= 1, "Can only work with one load balancer at a time")
 		r.cur_props .= map(F(props) {
@@ -113,7 +113,6 @@
 
 				AvailabilityZones availability-zones
 				SecurityGroups security-groups
-				Instances instances
 				ListenerDescriptions listeners
 				Subnets subnets
 				Scheme scheme
@@ -125,6 +124,8 @@
 						collect(v, props[k])
 					}
 				})
+			ret.instances = props.Instances.InstanceId
+			log("[find] load balancer '${r.ancor}' tags")
 			ret.tags = ``aws elb describe-tags --load-balancer-names ${r.ancor}``[0].Tags
 			ret
 		})
@@ -183,6 +184,27 @@
 			}
 		}
 
+		# Instances
+		if 'instances' in r.desired_props {
+			instances = r.desired_props.instances
+			if instances is AWSResource {
+				instances .= ids()
+			}
+			diff = cmp(cur_props['instances'], instances)
+			if diff.add {
+				r.run(
+					'register instances with ELB',
+					%(aws elb register-instances-with-load-balancer --load-balancer-name ${r.ancor} --instances $*{diff.add})
+				)
+			}
+			if diff.remove {
+				r.run(
+					'deregister instances from ELB',
+					%(aws elb deregister-instances-from-load-balancer --load-balancer-name ${r.ancor} --instances $*{diff.remove})
+				)
+			}
+		}
+
 		# TODO: listeners
 	}
 
@@ -200,5 +222,6 @@
 	# --------------------------------------------------
 	type AWS_INSTANCE(AWSResource)
 	F _find_cmd(r:AWS_INSTANCE) AWSCommand(%[aws ec2 describe-instances], true)
+	F ids(r:AWS_INSTANCE) r.cur_props.InstanceId
 
 }

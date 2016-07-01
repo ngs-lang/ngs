@@ -673,6 +673,17 @@ F split(a:Arr, delim) {
 }
 
 
+F cmp(a:Arr, b:Arr) {
+	ah = collector/{} a.each(collect, true)
+	bh = collector/{} b.each(collect, true)
+	{
+		'add': bh.filter(F(k, v) k not in ah).keys()
+		'remove': ah.filter(F(k, v) k not in bh).keys()
+	}
+}
+
+TEST cmp([1,2], [2,3]) == {'add': [3], 'remove': [1]}
+
 # === Hash =======================================
 
 
