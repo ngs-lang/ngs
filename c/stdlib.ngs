@@ -297,6 +297,9 @@ F ==(a:Null, b:Null) true
 F .(h:Hash, attr:Str) h[attr]
 F .=(h:Hash, attr:Str, v) h[attr] = v
 F get(h:Hash, k) get(h, k, null)
+F n(h:Hash) h.map(F(k, v) [k, try Int(v) catch(ia:InvalidArgument) v]).Hash()
+
+TEST %{k 7}.n() == {'k': 7}
 
 # --- Arr ---
 F .(a:Arr, attr:Str) a.map((.), attr)

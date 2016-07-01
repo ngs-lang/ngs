@@ -8,18 +8,18 @@
 	F stdlib_aws_tags(h:Hash) h.map(F(k, v) "Key=${k},Value=${v}")
 
 	# --------------------------------------------------
-	type AWSCommand
+	type AwsCommand
 
-	F init(c:AWSCommand, cmd:Arr, supports_filters:Bool) {
+	F init(c:AwsCommand, cmd:Arr, supports_filters:Bool) {
 		c.cmd = cmd
 		c.supports_filters = supports_filters
 	}
 
 
 	# --------------------------------------------------
-	type AWSResource
+	type AwsResource
 
-	F init(r:AWSResource, ancor, desired_props:Hash) {
+	F init(r:AwsResource, ancor, desired_props:Hash) {
 		# TODO: special case: ancor is Null - always create the resource?
 		assert(ancor.Bool(), "Ancor must contain something")
 		r.ancor = ancor
@@ -32,21 +32,21 @@
 		}
 	}
 
-	F init(r:AWSResource, ancor) init(r, ancor, {})
+	F init(r:AwsResource, ancor) init(r, ancor, {})
 
-	F expect(r:AWSResource, e:Int) {
+	F expect(r:AwsResource, e:Int) {
 		r.find()
 		assert(r.len() == e, "Expected exactly ${e} ${r.typeof().name} resource instances but found ${r.len()}")
 		r
 	}
 
-	F expect(r:AWSResource) {
+	F expect(r:AwsResource) {
 		r.find()
 		assert(r.len() > 0, "Expected one or more ${r.typeof().name} resource instances but found none")
 		r
 	}
 
-	F find(r:AWSResource) {
+	F find(r:AwsResource) {
 		# XXX: invalid code because misses straightening
 		cmd = _find_cmd(r)
 		c = cmd.cmd
@@ -69,7 +69,7 @@
 		r.cur_props
 	}
 
-	F converge(r:AWSResource) {
+	F converge(r:AwsResource) {
 		r.validate()
 		r.find()
 		n = r.desired_count
@@ -88,7 +88,7 @@
 		r.cur_props.each(F(x) r.update(x))
 	}
 
-	F run(r:AWSResource, log_pfx:Str, cmd:Command) {
+	F run(r:AwsResource, log_pfx:Str, cmd:Command) {
 		if r.dry_run {
 			log("[${log_pfx}] would run: ${cmd.argv.join(' ')}")
 		} else {
@@ -97,17 +97,17 @@
 		}
 	}
 
-	F len(r:AWSResource) r.cur_props.len()
+	F len(r:AwsResource) r.cur_props.len()
 
 	# --------------------------------------------------
-	type AWS_ELB(AWSResource)
+	type AwsElb(AwsResource)
 
-	F find(r:AWS_ELB) {
+	F find(r:AwsElb) {
 		log("[find] load balancer '${r.ancor}'")
 		r.cur_props = ``aws elb describe-load-balancers``.filter(F(desc) desc.LoadBalancerName == r.ancor)
 		assert(r.cur_props.len() <= 1, "Can only work with one load balancer at a time")
 		r.cur_props .= map(F(props) {
-			# Straighten AWS output to match CLI arguments
+			# Straighten Aws output to match CLI arguments
 			translation = %{
 				LoadBalancerName name
 
@@ -131,19 +131,19 @@
 		})
 	}
 
-	F validate(r:AWS_ELB) {
-		r.ancor is not Str throws InvalidArgument("AWS_ELB is the ELB name and must be a string, not ${r.ancor}")
-		r.desired_count > 1 throws InvalidArgument("AWS_ELB can only handle one instance at a time while desired count is ${r.desired_count}")
-		'listeners' not in r.desired_props throws InvalidArgument("AWS_ELB must have 'listeners' property")
+	F validate(r:AwsElb) {
+		r.ancor is not Str throws InvalidArgument("AwsElb is the ELB name and must be a string, not ${r.ancor}")
+		r.desired_count > 1 throws InvalidArgument("AwsElb can only handle one instance at a time while desired count is ${r.desired_count}")
+		'listeners' not in r.desired_props throws InvalidArgument("AwsElb must have 'listeners' property")
 
-		('azs' not in r.desired_props) and ('subnets' not in r.desired_props) throws InvalidArgument("Either 'azs' or 'subnets' must be in AWS_ELB properties")
-		'azs' in r.desired_props throws NotImplemented("'azs' AWS_ELB property")
+		('azs' not in r.desired_props) and ('subnets' not in r.desired_props) throws InvalidArgument("Either 'azs' or 'subnets' must be in AwsElb properties")
+		'azs' in r.desired_props throws NotImplemented("'azs' AwsElb property")
 	}
 
-	F create(r:AWS_ELB) {
+	F create(r:AwsElb) {
 		log("[create] creating resource instance")
 		subnets = try r.desired_props.subnets
-		if subnets is AWSResource {
+		if subnets is AwsResource {
 			subnets .= ids()
 		}
 		if subnets {
@@ -156,7 +156,7 @@
 	}
 
 
-	F update(r:AWS_ELB, cur_props:Hash) {
+	F update(r:AwsElb, cur_props:Hash) {
 		log("[update ELB] updating load balancer ${r.ancor}")
 
 		# Tags
@@ -187,7 +187,7 @@
 		# Instances
 		if 'instances' in r.desired_props {
 			instances = r.desired_props.instances
-			if instances is AWSResource {
+			if instances is AwsResource {
 				instances .= ids()
 			}
 			diff = cmp(cur_props['instances'], instances)
@@ -205,23 +205,32 @@
 			}
 		}
 
+		# TODO: Security groups
+
 		# TODO: listeners
+		diff = cmp(cur_props['listeners'], r.desired_props.listeners)
+		echo("DIFF $diff")
 	}
 
-	F delete(r:AWS_ELB, resource:Hash) {
+	F delete(r:AwsElb, resource:Hash) {
 		r.run('delete ELB', %(aws elb delete-load-balancer --load-balancer-name ${r.ancor}))
 	}
 
 	# --------------------------------------------------
-	type AWS_SUBNET(AWSResource)
+	type AwsSubnet(AwsResource)
 
-	F _find_cmd(r:AWS_SUBNET) AWSCommand(%[aws ec2 describe-subnets], true)
+	F _find_cmd(r:AwsSubnet) AwsCommand(%[aws ec2 describe-subnets], true)
 	# Add sort()?
-	F ids(r:AWS_SUBNET) r.cur_props.SubnetId
+	F ids(r:AwsSubnet) r.cur_props.SubnetId
 
 	# --------------------------------------------------
-	type AWS_INSTANCE(AWSResource)
-	F _find_cmd(r:AWS_INSTANCE) AWSCommand(%[aws ec2 describe-instances], true)
-	F ids(r:AWS_INSTANCE) r.cur_props.InstanceId
+	type AwsInstance(AwsResource)
+	F _find_cmd(r:AwsInstance) AwsCommand(%[aws ec2 describe-instances], true)
+	F ids(r:AwsInstance) r.cur_props.InstanceId
+
+	# --------------------------------------------------
+	type AwsSecGroup(AwsResource)
+	F _find_cmd(r:AwsSecGroup) AwsCommand(%[aws ec2 describe-security-groups], true)
+	F ids(r:AwsSecGroup) r.cur_props.GroupId
 
 }
