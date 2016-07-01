@@ -622,6 +622,18 @@ F join(a:Arr, s:Str) {
 	a.map(Str).join(s)
 }
 
+doc Used for command line arguments such as ['--vpc-id', my_vpc_id()].nuke_null()
+doc If my_vpc_id() is null the whole array is not needed
+F nuke_null(a:Arr) a
+
+F nuke_null(a:Arr) {
+	guard a.any(is, Null)
+	[]
+}
+
+TEST [1,2].nuke_null() == [1,2]
+TEST [1,null].nuke_null() == []
+
 # Can be more efficent I guess
 F merge_sorted(a:Arr, b:Arr, lte:Fun) {
 	al = a.len()

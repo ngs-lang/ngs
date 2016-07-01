@@ -2399,6 +2399,7 @@ main_loop:
 									exc = make_normal_type_instance(vm->ImplNotFound);
 									set_normal_type_instance_attribute(exc, make_string("callable"), callable);
 									set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values(OBJ_LEN(ctx->stack[ctx->stack_ptr-1]), ARRAY_ITEMS(ctx->stack[ctx->stack_ptr-1])));
+									set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 									*result = exc;
 									goto exception;
 								}

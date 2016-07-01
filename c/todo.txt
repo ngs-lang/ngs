@@ -97,6 +97,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "correct programming" (will be v0.2.0)
 
+			* Usage of undefined local variable - add name of the variable in exception
+
 			* Fix segfault in case of comments between cond clauses
 
 			* Better uncaught exception output, using stdlib's or user-defined hook.

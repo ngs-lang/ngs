@@ -2,12 +2,16 @@
 	# WIP, don't use!
 
 	# TODO: order res_instances so that for example delete() dry run and real run would be consistent
+	# TODO: correct interaction of dry_run when a resource A would be created and
+	#       resource B references resource A in properties.
 
 	AWS = true
 
+	doc Converts tags hash to AWS command line arguments
 	F stdlib_aws_tags(h:Hash) h.map(F(k, v) "Key=${k},Value=${v}")
 
 	# --------------------------------------------------
+	doc Command used to find resource instances
 	type AwsCommand
 
 	F init(c:AwsCommand, cmd:Arr, supports_filters:Bool) {
@@ -17,8 +21,11 @@
 
 
 	# --------------------------------------------------
+	doc Represents any AWS resource such as an instance, an ELB or a security group
 	type AwsResource
 
+	doc ancor - how to find a resource if it exists
+	doc desired_props - properties to set on new or existing resource instances
 	F init(r:AwsResource, ancor, desired_props:Hash) {
 		# TODO: special case: ancor is Null - always create the resource?
 		assert(ancor.Bool(), "Ancor must contain something")
@@ -141,7 +148,7 @@
 	}
 
 	F create(r:AwsElb) {
-		log("[create] creating resource instance")
+		log("[create ELB] creating an ELB")
 		subnets = try r.desired_props.subnets
 		if subnets is AwsResource {
 			subnets .= ids()
@@ -205,11 +212,24 @@
 			}
 		}
 
-		# TODO: Security groups
+		# Security groups
+		if 'security-groups' in r.desired_props {
+			sgs = r.desired_props['security-groups']
+			if sgs is AwsResource {
+				sgs .= ids()
+			}
+			diff = cmp(cur_props['security-groups'], sgs)
+			if diff.add or diff.remove {
+				r.run(
+					'update ELB SGs',
+					%(aws elb apply-security-groups-to-load-balancer --load-balancer-name ${r.ancor} --security-groups $*{sgs})
+				)
+			}
+		}
 
 		# TODO: listeners
 		diff = cmp(cur_props['listeners'], r.desired_props.listeners)
-		echo("DIFF $diff")
+		# echo("DIFF $diff")
 	}
 
 	F delete(r:AwsElb, resource:Hash) {
@@ -229,8 +249,89 @@
 	F ids(r:AwsInstance) r.cur_props.InstanceId
 
 	# --------------------------------------------------
+	doc Ancor is [group_name, vpc_id]
 	type AwsSecGroup(AwsResource)
 	F _find_cmd(r:AwsSecGroup) AwsCommand(%[aws ec2 describe-security-groups], true)
-	F ids(r:AwsSecGroup) r.cur_props.GroupId
+	F ids(r:AwsSecGroup) r.cur_props.id
+
+	F validate(r:AwsSecGroup) {
+		(r.ancor is not Arr) throws InvalidArgument("AwsSecGroup's ancor must be an array")
+		('description' not in r.desired_props) throws InvalidArgument("AwsSecGroup must have the 'description' property")
+	}
+
+	F vpc_id(r:AwsSecGroup) {
+		if r.ancor[1] is not AwsResource returns r.ancor[1]
+		assert(r.ancor[1].len() == 1, "AwsSecGroup expects exactly one vpc-id but passed resource ${r.ancor[1]} has zero or more than one")
+		r.ancor[1].ids()[0]
+	}
+
+	F vpc_id_args(r:AwsSecGroup) ['--vpc-id', vpc_id(r)].nuke_null()
+
+	F vpc_id_filter(r:AwsSecGroup) ['--filters', "Name=vpc-id,Values=${vpc_id(r)}"]
+
+	F vpc_id_filter(r:AwsSecGroup) {
+		guard vpc_id(r) is Null
+		[]
+	}
+
+	F find(r:AwsSecGroup) {
+		log("[find] security group '${r.ancor}'")
+		# XXX: check with default VPC / EC2 classic
+		# Can not use --group-names as it will assume default VPC / EC2 classic
+		r.cur_props = ``aws ec2 describe-security-groups $*{vpc_id_filter(r)}``.filter(F(sg) sg.GroupName == r.ancor[0])
+		assert(r.cur_props.len() <= 1, "Can only work with one security group at a time")
+		r.cur_props .= map(F(props) {
+			# Straighten Aws output to match CLI arguments
+			translation = %{
+				GroupName name
+				GroupId id
+				Description description
+
+				IpPermissions ip-permissions-ingress
+				IpPermissionsEgress ip-permissions-egress
+
+				Tags tags
+			}
+			ret = collector/{}
+				translation.each(F(k, v) {
+					if k in props {
+						collect(v, props[k])
+					}
+				})
+			ret
+		})
+	}
+
+	F create(r:AwsSecGroup) {
+		log("[create SF] creating security group ${r.ancor[0]} in VPC ${r.ancor[1]}")
+		r.run('create SG', %(aws ec2 create-security-group --group-name ${r.ancor[0]} --description ${r.desired_props.description} $*{vpc_id_args(r)}))
+		if not(r.dry_run) {
+			r.find()
+		}
+	}
+
+	F update(r:AwsSecGroup, cur_props:Hash) {
+		log("[update SG] updating security group ${r.ancor[0]} in VPC ${r.ancor[1]}")
+		# CONTINUE HERE
+	}
+
+	F delete(r:AwsSecGroup, resource:Hash) {
+		# TODO: handle EC2 classic / default vpc - deletion by group name, not by id
+		r.run('delete SG', %(aws ec2 delete-security-group --group-id ${r.cur_props[0].id}))
+	}
+
+	# --------------------------------------------------
+	type AwsVpc(AwsResource)
+	F _find_cmd(r:AwsVpc) AwsCommand(%[aws ec2 describe-vpcs], true)
+	F ids(r:AwsVpc) r.cur_props.VpcId
+
+	F Str(r:AwsVpc) {
+		t = if r.cur_props is Null {
+			''
+		} else {
+			" ids=${r.ids().join(',')}"
+		}
+		"<AwsVpc ancor=${r.ancor}${t}>"
+	}
 
 }
