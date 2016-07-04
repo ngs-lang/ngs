@@ -699,6 +699,8 @@ F cmp(a:Arr, b:Arr) {
 
 TEST cmp([1,2], [2,3]) == {'add': [3], 'remove': [1]}
 
+F code(a:Arr) "[" + a.map(code).join(', ') + "]"
+
 # === Hash =======================================
 
 
@@ -858,6 +860,10 @@ F group(a:Arr, cb:Fun, *args) {
 	ret
 }
 
+F code(h:Hash) {
+	'{' + h.map(F(k, v) "${k.code()}: ${v.code()}").join(', ') + '}'
+}
+
 # === Box ========================================
 
 {
@@ -907,6 +913,8 @@ F Int(b:Bool) if b 1 0
 
 TEST true.Int() == 1
 TEST false.Int() == 0
+
+F code(n:Int) Str(n)
 
 
 # === String =====================================
@@ -1062,6 +1070,11 @@ F limit(s:Str, n:Int) {
 	guard s.len() <= n
 	s
 
+}
+
+F code(s:Str) {
+	# XXX TODO: escaping
+	"'${s}'"
 }
 
 
@@ -1586,6 +1599,10 @@ F ~(s:Str, pfx:Pfx) {
 F *(cb:Fun, n:Int, *args) n.map(F(idx) cb(*args))
 
 # TEST a = Box * 2; a[0] is Box and a[1] is Box and a[0] != a[1]
+
+# === Null =======================================
+
+F code(n:Null) "null"
 
 # === Misc tests =================================
 

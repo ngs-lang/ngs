@@ -1,9 +1,11 @@
 {
 	# WIP, don't use!
 
-	# TODO: order res_instances so that for example delete() dry run and real run would be consistent
+	# TODO: order cur_props so that for example delete() dry run and real run would be consistent
 	# TODO: correct interaction of dry_run when a resource A would be created and
 	#       resource B references resource A in properties.
+	# TODO: point to an existing resource and get the code for it
+	# TODO: generate code for given resource type with all possible properties - makes good starting point
 
 	AWS = true
 
@@ -33,13 +35,17 @@
 		r.desired_props = desired_props
 		r.cur_props = null
 		r.desired_count = try r.desired_props.META.count catch(e) 1
-		r.dry_run = try desired_props.META.dry_run catch(e) false
+		r.dry_run = try r.desired_props.META.dry_run catch(e) false
 		if 'DRY_RUN' in ENV {
 			r.dry_run = true
 		}
 	}
 
 	F init(r:AwsResource, ancor) init(r, ancor, {})
+
+	F log(r:AwsResource, method:Str, s:Str) {
+		log("[${r.typeof().name} ancor=${r.ancor}] [${method}] $s")
+	}
 
 	F expect(r:AwsResource, e:Int) {
 		r.find()
@@ -70,7 +76,7 @@
 			# manual filter then
 			cur_props .= filter(F(x) r.ancor.all(F(k, v) try r.Tags[k] == v))
 		}
-		log("[find] found ${cur_props.len()} ${r.typeof().name} resource instances for ancor ${r.ancor}")
+		r.log('find', "found ${cur_props.len()} ${r.typeof().name} resource instances")
 
 		r.cur_props = cur_props
 		r.cur_props
@@ -80,15 +86,15 @@
 		r.validate()
 		r.find()
 		n = r.desired_count
-		log("[converge] desired count of ${r.typeof().name}: ${n}")
+		r.log('converge', "desired count of ${r.typeof().name}: ${n}")
 		if n < r.cur_props.len() {
-			log("[converge] deleting extra resource instances")
+			r.log('converge', 'deleting extra resource instances')
 			r.cur_props[n..null].each(F(x) r.delete(x))
 			r.cur_props = r.cur_props[0..n]
 		}
 		if n > r.cur_props.len() {
 			for(i=r.cur_props.len(); i<n; i+=1) {
-				log("[converge] creating resource instance ${r.typeof().name} #${i+1}")
+				r.log('converge', "creating resource instance ${r.typeof().name} #${i+1}")
 				create(r)
 			}
 		}
@@ -97,20 +103,28 @@
 
 	F run(r:AwsResource, log_pfx:Str, cmd:Command) {
 		if r.dry_run {
-			log("[${log_pfx}] would run: ${cmd.argv.join(' ')}")
+			r.log("run - $log_pfx", "would run: ${cmd.argv.join(' ')}")
 		} else {
-			log("[${log_pfx}] running: ${cmd.argv.join(' ')}")
+			r.log("run - $log_pfx", "running: ${cmd.argv.join(' ')}")
 			$($cmd)
 		}
 	}
 
 	F len(r:AwsResource) r.cur_props.len()
 
+	F code(r:AwsResource) {
+		ret = r.cur_props.map(F(props) r.code(props))
+		if ret.len() == 1 {
+			ret = ret[0]
+		}
+		ret.code()
+	}
+
 	# --------------------------------------------------
 	type AwsElb(AwsResource)
 
 	F find(r:AwsElb) {
-		log("[find] load balancer '${r.ancor}'")
+		r.log('find', "ELB")
 		r.cur_props = ``aws elb describe-load-balancers``.filter(F(desc) desc.LoadBalancerName == r.ancor)
 		assert(r.cur_props.len() <= 1, "Can only work with one load balancer at a time")
 		r.cur_props .= map(F(props) {
@@ -132,7 +146,7 @@
 					}
 				})
 			ret.instances = props.Instances.InstanceId
-			log("[find] load balancer '${r.ancor}' tags")
+			r.log('find', "ELB tags")
 			ret.tags = ``aws elb describe-tags --load-balancer-names ${r.ancor}``[0].Tags
 			ret
 		})
@@ -148,7 +162,7 @@
 	}
 
 	F create(r:AwsElb) {
-		log("[create ELB] creating an ELB")
+		r.log('create', "creating an ELB")
 		subnets = try r.desired_props.subnets
 		if subnets is AwsResource {
 			subnets .= ids()
@@ -164,7 +178,7 @@
 
 
 	F update(r:AwsElb, cur_props:Hash) {
-		log("[update ELB] updating load balancer ${r.ancor}")
+		r.log('update', 'ELB')
 
 		# Tags
 		diff = cmp(cur_props.tags, r.desired_props.get('tags', {}))
@@ -182,7 +196,7 @@
 			diff = cmp(cur_props['health-check'], r.desired_props['health-check'])
 			assert(not(diff.add), "Can't handle additional health check properties ${diff.add}")
 			if diff.change {
-				log("[update ELB health check] change: ${diff.change}")
+				r.log('update', "ELB health check change: ${diff.change}")
 				t = cur_props['health-check'] + diff.change
 				r.run(
 					'update ELB health check',
@@ -275,7 +289,7 @@
 	}
 
 	F find(r:AwsSecGroup) {
-		log("[find] security group '${r.ancor}'")
+		r.log('find', 'SG')
 		# XXX: check with default VPC / EC2 classic
 		# Can not use --group-names as it will assume default VPC / EC2 classic
 		r.cur_props = ``aws ec2 describe-security-groups $*{vpc_id_filter(r)}``.filter(F(sg) sg.GroupName == r.ancor[0])
@@ -298,12 +312,13 @@
 						collect(v, props[k])
 					}
 				})
+			# echo("RET $ret")
 			ret
 		})
 	}
 
 	F create(r:AwsSecGroup) {
-		log("[create SF] creating security group ${r.ancor[0]} in VPC ${r.ancor[1]}")
+		r.log('create', 'SG')
 		r.run('create SG', %(aws ec2 create-security-group --group-name ${r.ancor[0]} --description ${r.desired_props.description} $*{vpc_id_args(r)}))
 		if not(r.dry_run) {
 			r.find()
@@ -311,14 +326,17 @@
 	}
 
 	F update(r:AwsSecGroup, cur_props:Hash) {
-		log("[update SG] updating security group ${r.ancor[0]} in VPC ${r.ancor[1]}")
+		r.log('update', 'SG')
 		# CONTINUE HERE
 	}
 
 	F delete(r:AwsSecGroup, resource:Hash) {
 		# TODO: handle EC2 classic / default vpc - deletion by group name, not by id
+		r.log('delete', 'SG')
 		r.run('delete SG', %(aws ec2 delete-security-group --group-id ${r.cur_props[0].id}))
 	}
+
+	F code(r:AwsSecGroup, resource:Hash) "AwsSecGroup(\n\t${r.ancor.code()},\n\t${resource.code()}\n).converge()"
 
 	# --------------------------------------------------
 	type AwsVpc(AwsResource)
