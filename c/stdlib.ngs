@@ -58,12 +58,15 @@ F set(obj, attr:Str, val) {
 }
 
 doc EXPERIMENTAL Filter operator
+doc Syntax: ? represents filter
 F ?(x, predicate:Fun) x.filter(predicate)
 
 doc EXPERIMENTAL Mapping operator
+doc Syntax: / is on same key as ? and similar to |
 F /(x, mapper:Fun) x.map(mapper)
 
 doc EXPERIMENTAL Each operator
+doc Syntax: % is similar to /
 F %(x, cb:Fun) x.each(cb)
 
 doc EXPERIMENTAL Call operator
