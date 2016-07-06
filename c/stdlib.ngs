@@ -57,6 +57,18 @@ F set(obj, attr:Str, val) {
 	obj
 }
 
+doc EXPERIMENTAL Filter operator
+F ?(x, predicate:Fun) x.filter(predicate)
+
+doc EXPERIMENTAL Mapping operator
+F /(x, mapper:Fun) x.map(mapper)
+
+doc EXPERIMENTAL Each operator
+F %(x, cb:Fun) x.each(cb)
+
+doc EXPERIMENTAL Call operator
+F \(x, f:Fun) f(x)
+
 
 # === Real =======================================
 
