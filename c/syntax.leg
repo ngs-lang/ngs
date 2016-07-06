@@ -78,7 +78,7 @@ void append_ast_node_child(ast_node *target, ast_node *child) {
 	target->last_child = child;
 }
 
-ast_node *wrap_in_func(ast_node *node, int location[4], char *docstring, int argc, ...) {
+ast_node *wrap_in_func(ast_node *node, int location[4], char *docstring, int args_are_optional, int argc, ...) {
 	int i;
 	va_list varargs;
 	ast_node *p;
@@ -97,6 +97,10 @@ ast_node *wrap_in_func(ast_node *node, int location[4], char *docstring, int arg
 		MAKE_IDENTIFIER_NODE(param_type, va_arg(varargs, char *))
 		param->first_child = param_name;
 		param_name->next_sibling = param_type;
+		if(args_are_optional) {
+			MAKE_NODE(dflt, NULL_NODE);
+			param_type->next_sibling = dflt;
+		}
 		if(p) {
 			p->next_sibling = param;
 		} else {
@@ -106,6 +110,42 @@ ast_node *wrap_in_func(ast_node *node, int location[4], char *docstring, int arg
 	}
 	va_end(varargs);
 	return func;
+}
+
+// TODO: name the function
+ast_node *call_node_partial_application(ast_node *orig, int location[4]) {
+	ast_node *p, *arg;
+	// first_child - callable
+	// first_child->next_sibling - args
+	// first_child->next_sibling children - [arg]
+	for(p=orig->first_child->next_sibling->first_child; p; p=p->next_sibling) {
+		arg = p->first_child;
+		if(arg->type == IDENTIFIER_NODE && strlen(arg->name) == 1) {
+			if(arg->name[0] == 'X' || arg->name[0] == 'Y' || arg->name[0] == 'Z') {
+				// wrap_in_func(ast_node *node, int location[4], char *docstring, int argc, ...) {
+				return wrap_in_func(orig, location, "Partial application syntax", 1, 3, "X", "Any", "Y", "Any", "Z", "Any");
+			}
+		}
+	}
+	return orig;
+}
+
+// TODO: name the function
+ast_node *string_node_partial_application(ast_node *orig, int location[4]) {
+	ast_node *p;
+	assert(orig->type == STR_COMPS_NODE);
+	for(p=orig->first_child; p; p=p->next_sibling) {
+		if(p->type == EXPRESSIONS_NODE && p->first_child && !p->first_child->next_sibling && p->first_child->type == IDENTIFIER_NODE) {
+			p = p->first_child;
+		}
+		if(p->type == IDENTIFIER_NODE && strlen(p->name) == 1) {
+			if(p->name[0] == 'X' || p->name[0] == 'Y' || p->name[0] == 'Z') {
+				// wrap_in_func(ast_node *node, int location[4], char *docstring, int argc, ...) {
+				return wrap_in_func(orig, location, "Partial application syntax", 1, 3, "X", "Any", "Y", "Any", "Z", "Any");
+			}
+		}
+	}
+	return orig;
 }
 
 // TODO: more efficient than two scans
@@ -275,6 +315,7 @@ binop-expression-inner =
 				MAKE_REQ_ARG_NODE(a2, e2);
 				a1->next_sibling = a2;
 				args->first_child = a1;
+			ret = call_node_partial_application(ret, location);
 			e1 = ret;
 		}
 		if(e1->first_child && e1->first_child->type == IDENTIFIER_NODE) {
@@ -392,6 +433,7 @@ chain-expression = b:basic-expression (
 			MAKE_NODE(ret, CALL_NODE);
 			ret->first_child = b;
 			ret->first_child->next_sibling = a;
+			ret = call_node_partial_application(ret, location);
 			b = ret;
 		}
 		|
@@ -693,6 +735,7 @@ function-call =
 		MAKE_NODE(ret, CALL_NODE);
 		ret->first_child = f;
 		ret->first_child->next_sibling = args;
+		ret = call_node_partial_application(ret, location);
 		$$ = ret;
 	}
 
@@ -1089,6 +1132,7 @@ string-dq =
 		string-dq-imm { append_ast_node_child(acc, $$); } |
 		string-escape { append_ast_node_child(acc, $$); } |
 		string-dq-dollar-expansion { append_ast_node_child(acc, $$); })* "\"" {
+		acc = string_node_partial_application(acc, location);
 		$$ = acc;
 	}
 
@@ -1140,7 +1184,7 @@ collector = "collector" init:collector-init space c:code-block {
 			MAKE_IDENTIFIER_NODE(collector_identifier, "collector");
 			MAKE_NODE(args, ARGS_NODE);
 				MAKE_REQ_ARG_NODE(a1, init);
-				MAKE_REQ_ARG_NODE(a2, wrap_in_func(c, location, "Wrapping function for collector expression", 1, "collect", "Any"));
+				MAKE_REQ_ARG_NODE(a2, wrap_in_func(c, location, "Wrapping function for collector expression", 0, 1, "collect", "Any"));
 				a1->next_sibling = a2;
 				args->first_child = a1;
 			ret->first_child = collector_identifier;

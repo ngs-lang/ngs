@@ -240,8 +240,8 @@ F map(r:Range, mapper:Fun, *args)
 	collector
 		r.each(F(elt) collect(mapper(elt, *args)))
 
-TEST (1..3).map((*), 2) == [2, 4]
-TEST (1...3).map((*), 2) == [2, 4, 6]
+TEST (1..3).map(X*2) == [2, 4]
+TEST (1...3).map(X*2) == [2, 4, 6]
 
 F first(r:Range, predicate:Fun, *args) {
 	finish = Return()
@@ -853,7 +853,9 @@ F +(a:Hash, b:Hash) {
 TEST {'a': 1, 'b': 2, 'c': 3} + {'b': 20, 'd': 40} == {'a': 1, 'b': 20, 'c': 3, 'd': 40}
 
 
-F Strs(h:Hash) h.map(F(k, v) "${k}=${v}")
+F Strs(h:Hash) h.map("${X}=${Y}")
+
+TEST {'a': 1, 'b': 2}.Strs() == ['a=1', 'b=2']
 
 F limit(h:Hash, l:Int) {
 	finish = Return()

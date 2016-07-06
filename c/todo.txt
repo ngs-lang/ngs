@@ -99,6 +99,10 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Usage of undefined local variable - add name of the variable in exception
 
+			* Partial application syntax
+				* Make sure it works correct in expressions such as 10 + X * 2
+				* Check that this works: f(X, *something, **some_kw)
+
 			* Fix segfault in case of comments between cond clauses
 
 			* Better uncaught exception output, using stdlib's or user-defined hook.
