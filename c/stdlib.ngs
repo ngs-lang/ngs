@@ -699,6 +699,15 @@ F cmp(a:Arr, b:Arr) {
 
 TEST cmp([1,2], [2,3]) == {'add': [3], 'remove': [1]}
 
+doc Compare arrays without using Hash so that '==' is used for comparison
+doc and not internal '===' for Hash keys.
+F compare(a:Arr, b:Arr) {
+	{
+		'add': b.filter(F(v) v not in a)
+		'remove': a.filter(F(v) v not in b)
+	}
+}
+
 F code(a:Arr) "[" + a.map(code).join(', ') + "]"
 
 # === Hash =======================================

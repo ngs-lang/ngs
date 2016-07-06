@@ -27,5 +27,5 @@ F push(s:Stats, k) {
 
 F Str(s:Stats) "<Stats: ${s.h}>"
 
-TEST Stats().push('a').push('a').push('b') == {'a': 2, 'b': 1}
-TEST Stats(['a', 'a', 'b']) == {'a': 2, 'b': 1}
+TEST Stats().push('a').push('a').push('b').h == {'a': 2, 'b': 1}
+TEST Stats(['a', 'a', 'b']).h == {'a': 2, 'b': 1}

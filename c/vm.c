@@ -221,6 +221,11 @@ METHOD_RESULT native_echo_str METHOD_PARAMS {
 	METHOD_RETURN(MAKE_NULL);
 }
 
+METHOD_RESULT native_false METHOD_PARAMS {
+	(void) argv;
+	METHOD_RETURN(MAKE_FALSE);
+}
+
 METHOD_RESULT native_Return EXT_METHOD_PARAMS {
 	(void) vm;
 	if(THIS_FRAME.ReturnSubtype) {
@@ -1463,7 +1468,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MKTYPE(Command);
 	MKTYPE(Redir);
 
-
 	// XXX: changing NGS_TYPE_FIELDS of InclusiveRange or ExclusiveRange
 	//      in such a way that "start" is not 0 or "end" is not 1
 	//      will break everything. TODO: make sure this can not be done by
@@ -1482,6 +1486,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	vm->eqeq = make_array(0);
 	set_global(vm, "==", vm->eqeq);
+
+	register_global_func(vm, 0, "==",              &native_false,    2, "a", vm->Any, "b", vm->Any);
 
 	// Return
 	register_global_func(vm, 1, "Return",          &native_Return,   0);
