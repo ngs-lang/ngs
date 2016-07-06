@@ -325,9 +325,37 @@
 		}
 	}
 
+	type IpPermBox(FullBox)
+
+	F empty_array(a) false
+	F empty_array(a:Arr) not(a)
+
+	F ==(a:IpPermBox, b:IpPermBox) {
+		# echo("CMP1 a=${a} b=${b}")
+		a = a.val.filter(F(k, v) not(empty_array(v)))
+		b = b.val.filter(F(k, v) not(empty_array(v)))
+		a.len() != b.len() returns false
+		diff = cmp(a, b)
+		not(diff.add or diff.remove or diff.change)
+	}
+
 	F update(r:AwsSecGroup, cur_props:Hash) {
 		r.log('update', 'SG')
-		# CONTINUE HERE
+		# echo("CUR: $cur_props")
+
+		if 'ip-permissions-ingress' in r.desired_props {
+			diff = compare(cur_props['ip-permissions-ingress'].map(IpPermBox), r.desired_props['ip-permissions-ingress'].map(IpPermBox))
+			# echo("DIFF: $diff")
+			diff.add.each(F(perm) {
+				r.run('add SG ingress rule', %(aws ec2 authorize-security-group-ingress --group-id ${cur_props.id} --ip-permissions $*{diff.add.val.map(encode_json)}))
+
+			})
+			diff.remove.each(F(perm) {
+				r.run('remove SG ingress rule', %(aws ec2 revoke-security-group-ingress --group-id ${cur_props.id} --ip-permissions $*{diff.remove.val.map(encode_json)}))
+
+			})
+
+		}
 	}
 
 	F delete(r:AwsSecGroup, resource:Hash) {
