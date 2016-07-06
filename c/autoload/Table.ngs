@@ -100,7 +100,8 @@ F push(t:Table, row_arr:Arr) {
 
 F push(t:Table, row_hash:Hash) {
 	# TODO: handle mismatch of columns
-	row = t.col_idx_to_name.map(F(idx, k) row_hash.get(k, null))
+	# row = t.col_idx_to_name.map(F(idx, k) row_hash.get(k, null))
+	row = t.col_idx_to_name / get(row_hash, Y, null)
 	t.push(row)
 	t
 }
@@ -108,7 +109,8 @@ F push(t:Table, row_hash:Hash) {
 F width(t:Table) t.col_idx_to_name.len()
 F column(t:Table, k:Str) t.column(t.col_name_to_idx[k])
 F column(t:Table, n:Int) t.rows.map(([]), n)
-F columns(t:Table) t.width().map(F(idx) t.column(idx))
+# F columns(t:Table) t.width().map(F(idx) t.column(idx))
+F columns(t:Table) t.width() / t.column(X)
 F each(t:Table, cb:Fun, *args) {
 	throw NotImplemented()
 }
@@ -137,7 +139,8 @@ F preprocess(t:Table) {
 	t.rows.each(F(row) {
 		row.each_idx_val(F(idx, cell) {
 			if cell is Arr {
-				row[idx] = cell.filter(should_display_cell_item.partial(t))
+				# row[idx] = cell.filter(should_display_cell_item.partial(t))
+				row[idx] = cell ? should_display_cell_item(t, X)
 			}
 		})
 	})
@@ -228,4 +231,5 @@ F echo(t:Table) {
 }
 
 TEST Table([{"a": 1}, {"a": 2}]).column("a") == [1,2]
+TEST Table([{"a": 1}, {"a": 2}]).columns() == [[1,2]]
 TEST Table([{"a": 1}, {"a": 2}]).len() == 2

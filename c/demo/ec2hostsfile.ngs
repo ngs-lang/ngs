@@ -26,7 +26,8 @@
 	instances = instances.filter(F(i) try HostnameBase(i))
 
 	# stats - know which instances to suffix with sequential number and which not
-	stats = instances.map(HostnameBase).Stats()
+	# stats = instances.map(HostnameBase).Stats()
+	stats = Stats(instances / HostnameBase)
 	debug("Names stats: ${stats}")
 
 	# sequential numbering for instances with same "env" and "role" tags

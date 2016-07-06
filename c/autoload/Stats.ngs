@@ -14,7 +14,8 @@ F init(s:Stats) {
 doc Makes Stats, with each element in the array counted as if push()ed
 F Stats(a:Arr) {
 	s = Stats()
-	a.each(partial(push, s))
+	# a.each(partial(push, s))
+	a % push(s, X)
 	s
 }
 

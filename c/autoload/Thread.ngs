@@ -38,15 +38,17 @@
 
 	# TODO: maybe limit number of concurrent threads (default to cores count?)
 	F pmap(a:Arr, mapper:Fun) {
-		threads = a.map(F(elt) Thread(mapper, elt))
+		# threads = a.map(F(elt) Thread(mapper, elt))
+		threads = a / Thread(mapper, X)
 		threads.join()
 	}
 
 	F pmap(n:Int, mapper:Fun) {
-		threads = collector
-			for(i;n) {
-				collect(Thread(mapper, i))
-			}
+		# threads = collector
+		# 	for(i;n) {
+		# 		collect(Thread(mapper, i))
+		# 	}
+		threads = n / Thread(mapper, X)
 		threads.join()
 	}
 
@@ -58,6 +60,7 @@
 		threads.join()
 	}
 
-	TEST (1..3).Arr().pmap(F(x) x*10) == [10, 20]
+	TEST (1..3).Arr().pmap(X*10) == [10, 20]
+	TEST 3.pmap(X*10) == [0, 10, 20]
 
 }
