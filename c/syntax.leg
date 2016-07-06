@@ -1152,7 +1152,8 @@ string-dq-imm =
 
 string-dq-dollar-expansion =
 	subshell
-	| "$" c:code-block { $$ = c; }
+	| "$" v:identifier { $$ = v; }
+	| "$" c:curly-code-block { $$ = c; }
 
 # https://en.wikipedia.org/wiki/Escape_sequences_in_C
 string-escape = "\\" (

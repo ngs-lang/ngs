@@ -853,7 +853,7 @@ F +(a:Hash, b:Hash) {
 TEST {'a': 1, 'b': 2, 'c': 3} + {'b': 20, 'd': 40} == {'a': 1, 'b': 20, 'c': 3, 'd': 40}
 
 
-F Strs(h:Hash) h.map("${X}=${Y}")
+F Strs(h:Hash) h.map("$X=$Y")
 
 TEST {'a': 1, 'b': 2}.Strs() == ['a=1', 'b=2']
 
