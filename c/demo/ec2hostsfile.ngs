@@ -35,7 +35,7 @@
 
 	# Preparing the table
 	instances.each(F(i) {
-		local hostname_base = HostnameBase(i)
+		hostname_base = HostnameBase(i)
 		i.HostName = if stats[hostname_base] == 1 hostname_base else {
 			numbering.push(hostname_base)
 			"${hostname_base}-${numbering[hostname_base]}"

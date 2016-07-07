@@ -509,7 +509,8 @@ F Arr(arr:Arr) arr
 
 F zip(*args) {
 	arrays = args.map(Arr)
-	max_len = arrays.map(len).max()
+	# max_len = arrays.map(len).max()
+	max_len = arrays / len \ max
 	collector
 		for(i;max_len)
 			collect(arrays.map(get, i, null))
@@ -517,7 +518,7 @@ F zip(*args) {
 
 TEST zip([1,2,3], [4,5,6]) == [[1,4], [2,5], [3,6]]
 
-F Arr(r:Range) r.map(identity)
+F Arr(r:Range) r / identity
 
 TEST Arr(1..3) == [1,2]
 TEST Arr(1...3) == [1,2,3]

@@ -113,11 +113,12 @@
 	F len(r:AwsResource) r.cur_props.len()
 
 	F code(r:AwsResource) {
-		ret = r.cur_props.map(F(props) r.code(props))
+		# ret = r.cur_props.map(F(props) r.code(props))
+		ret = r.cur_props / r.code(X)
 		if ret.len() == 1 {
 			ret = ret[0]
 		}
-		ret.code()
+		ret
 	}
 
 	# --------------------------------------------------
