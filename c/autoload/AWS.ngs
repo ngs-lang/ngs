@@ -10,7 +10,8 @@
 	AWS = true
 
 	doc Converts tags hash to AWS command line arguments
-	F stdlib_aws_tags(h:Hash) h.map(F(k, v) "Key=${k},Value=${v}")
+	F stdlib_aws_tags(h:Hash) h / "Key=$X,Value=$Y"
+	# F stdlib_aws_tags(h:Hash) h.map(F(k, v) "Key=${k},Value=${v}")
 
 	# --------------------------------------------------
 	doc Command used to find resource instances
