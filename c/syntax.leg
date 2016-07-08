@@ -148,6 +148,18 @@ ast_node *string_node_partial_application(ast_node *orig, int location[4]) {
 	return orig;
 }
 
+ast_node *binary_node_partial_application(ast_node *orig, int location[4]) {
+	ast_node *p;
+	for(p=orig->first_child; p; p=p->next_sibling) {
+		if(p->type == IDENTIFIER_NODE && strlen(p->name) == 1) {
+			if(p->name[0] == 'X' || p->name[0] == 'Y' || p->name[0] == 'Z') {
+				return wrap_in_func(orig, location, "Partial application syntax", 1, 3, "X", "Any", "Y", "Any", "Z", "Any");
+			}
+		}
+	}
+	return orig;
+}
+
 // TODO: more efficient than two scans
 ast_node *copy_ast_tree(ast_node *src) {
 	ast_node *dst, *p;
@@ -441,6 +453,7 @@ chain-expression = b:basic-expression (
 			MAKE_NODE(ret, INDEX_NODE);
 			ret->first_child = b;
 			ret->first_child->next_sibling = idx;
+			ret = binary_node_partial_application(ret, location);
 			b = ret;
 		}
 		|
