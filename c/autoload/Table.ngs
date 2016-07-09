@@ -81,15 +81,18 @@ F init(t:Table, rows_hashes:Arr) {
 		null
 	}
 	if conf {
-		conf.each(register_column)
+		# conf.each(register_column)
+		conf % register_column
 	} else {
 		rows_hashes.each(F(row_hash) {
-			row_hash.keys().each(register_column)
+			# row_hash.keys().each(register_column)
+			row_hash.keys() % register_column
 		})
 	}
 	debug("Table created with fields: ${t.col_idx_to_name}")
 	# hashes to arrays
-	rows_hashes.each(partial(push, t))
+	# rows_hashes.each(partial(push, t))
+	rows_hashes % push(t, X)
 }
 
 F push(t:Table, row_arr:Arr) {
@@ -165,7 +168,6 @@ F echo(t:Table) {
 	# TODO: support Arr in headers
 	# TODO: handle Hash type of cell (maybe allow configuring order of keys etc)
 	# TODO: handle limiting width of a cell, probably using subtype of TableMeta
-	# TODO: support displaying something (like '-') for empty spaces instead of ''
 
 	preprocess(t)
 
