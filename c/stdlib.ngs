@@ -845,6 +845,11 @@ F without(h:Hash, without_k)
 
 TEST {'a': 1, 'b': 2, 'c': 3}.without('a') == {'b': 2, 'c': 3}
 
+F without(h:Hash, without_k, without_v)
+	h.filter(F(k, v) not((k == without_k) and (v == without_v)))
+
+TEST {'a': 1, 'b': 2, 'c': 3}.without('a', 1).without('b', 22) == {'b': 2, 'c': 3}
+
 
 F +(a:Hash, b:Hash) {
 	{**a, **b}
