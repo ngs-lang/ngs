@@ -269,6 +269,7 @@
 	type AwsSecGroup(AwsResource)
 	F _find_cmd(r:AwsSecGroup) AwsCommand(%[aws ec2 describe-security-groups], true)
 	F ids(r:AwsSecGroup) r.cur_props.id
+	F users_ids(r:AwsSecGroup) r.cur_props / F(props) { {'GroupId': props.id, 'UserId': props['owner-id']} }
 
 	F validate(r:AwsSecGroup) {
 		(r.ancor is not Arr) throws InvalidArgument("AwsSecGroup's ancor must be an array")
@@ -301,6 +302,7 @@
 			translation = %{
 				GroupName name
 				GroupId id
+				OwnerId owner-id
 				Description description
 
 				IpPermissions ip-permissions-ingress
@@ -332,12 +334,28 @@
 	F empty_array(a) false
 	F empty_array(a:Arr) not(a)
 
+	# Cleans up AWS Security Group IpPermissions so it's possible to compare current and desired states of IpPermissions
+	F cleanup(x:IpPermBox) {
+		ret = x.val
+		ret .= filter(F(k, v) not(empty_array(v)))
+		ret .= without('IpRanges', [{"CidrIp": "0.0.0.0/0"}])
+		if 'UserIdGroupPairs' in ret {
+			# Hash is ordered. The right order for comparison is GroupId and then UserId
+			ret.UserIdGroupPairs .= map(F(pair) { {'GroupId': pair.GroupId, 'UserId': pair.UserId } })
+		}
+		# echo("Cleanup out: $ret")
+		ret
+	}
+
 	F ==(a:IpPermBox, b:IpPermBox) {
 		# echo("CMP1 a=${a} b=${b}")
-		a = a.val.filter(F(k, v) not(empty_array(v)))
-		b = b.val.filter(F(k, v) not(empty_array(v)))
+		a .= cleanup()
+		b .= cleanup()
+		# echo("A=$a B=$b")
 		a.len() != b.len() returns false
+		# echo("LEN OK")
 		diff = cmp(a, b)
+		# echo("DIFF 1 $diff")
 		not(diff.add or diff.remove or diff.change)
 	}
 
@@ -347,7 +365,7 @@
 
 		if 'ip-permissions-ingress' in r.desired_props {
 			diff = compare(cur_props['ip-permissions-ingress'].map(IpPermBox), r.desired_props['ip-permissions-ingress'].map(IpPermBox))
-			# echo("DIFF: $diff")
+			# echo("DIFF 2 $diff")
 			diff.add.each(F(perm) {
 				r.run('add SG ingress rule', %(aws ec2 authorize-security-group-ingress --group-id ${cur_props.id} --ip-permissions $*{diff.add.val.map(encode_json)}))
 
