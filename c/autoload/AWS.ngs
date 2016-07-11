@@ -122,6 +122,19 @@
 		ret
 	}
 
+	F update_tags(r:AwsResource, cur_props:Hash) {
+		# Tags
+		diff = cmp(cur_props.get('Tags', {}), r.desired_props.get('Tags', {}))
+
+		if (tags = stdlib_aws_tags(diff.add + diff.change)) {
+			r.run('Add tags', %(aws ec2 create-tags --resources ${r.id(cur_props)} --tags $*tags))
+		}
+
+		if (tags = diff.remove) {
+			r.run('Remove tags', %(aws ec2 remove-tags --resources ${r.id(cur_props)} --tags $*tags))
+		}
+	}
+
 	# --------------------------------------------------
 	type AwsElb(AwsResource)
 
@@ -129,27 +142,13 @@
 		r.log('find', "ELB")
 		r.cur_props = ``aws elb describe-load-balancers``.filter(F(desc) desc.LoadBalancerName == r.ancor)
 		assert(r.cur_props.len() <= 1, "Can only work with one load balancer at a time")
+		known_props = %[LoadBalancerName AvailabilityZones SecurityGroups ListenerDescriptions Subnets Scheme HealthCheck Instances]
 		r.cur_props .= map(F(props) {
 			# Straighten Aws output to match CLI arguments
-			translation = %{
-				LoadBalancerName name
-
-				AvailabilityZones availability-zones
-				SecurityGroups security-groups
-				ListenerDescriptions listeners
-				Subnets subnets
-				Scheme scheme
-				HealthCheck health-check
-			}
-			ret = collector/{}
-				translation.each(F(k, v) {
-					if k in props {
-						collect(v, props[k])
-					}
-				})
-			ret.instances = props.Instances.InstanceId
+			ret = props ? known_props.has(X)
+			ret.Instances = props.Instances.InstanceId
 			r.log('find', "ELB tags")
-			ret.tags = ``aws elb describe-tags --load-balancer-names ${r.ancor}``[0].Tags
+			ret.Tags = ``aws elb describe-tags --load-balancer-names ${r.ancor}``[0].Tags
 			ret
 		})
 	}
@@ -157,22 +156,22 @@
 	F validate(r:AwsElb) {
 		r.ancor is not Str throws InvalidArgument("AwsElb is the ELB name and must be a string, not ${r.ancor}")
 		r.desired_count > 1 throws InvalidArgument("AwsElb can only handle one instance at a time while desired count is ${r.desired_count}")
-		'listeners' not in r.desired_props throws InvalidArgument("AwsElb must have 'listeners' property")
+		'ListenerDescriptions' not in r.desired_props throws InvalidArgument("AwsElb must have 'listeners' property")
 
-		('azs' not in r.desired_props) and ('subnets' not in r.desired_props) throws InvalidArgument("Either 'azs' or 'subnets' must be in AwsElb properties")
-		'azs' in r.desired_props throws NotImplemented("'azs' AwsElb property")
+		('AvailabilityZones' not in r.desired_props) and ('Subnets' not in r.desired_props) throws InvalidArgument("Either 'azs' or 'subnets' must be in AwsElb properties")
+		'AvailabilityZones' in r.desired_props throws NotImplemented("'AvailabilityZones' AwsElb property")
 	}
 
 	F create(r:AwsElb) {
 		r.log('create', "creating an ELB")
-		subnets = try r.desired_props.subnets
+		subnets = try r.desired_props.Subnets
 		if subnets is AwsResource {
 			subnets .= ids()
 		}
 		if subnets {
 			subnets = ['--subnets', *subnets]
 		}
-		r.run('create ELB', %(aws elb create-load-balancer --load-balancer-name ${r.ancor} --listeners ${r.desired_props.listeners.encode_json()} $*subnets))
+		r.run('create ELB', %(aws elb create-load-balancer --load-balancer-name ${r.ancor} --listeners ${r.desired_props.ListenerDescriptions.encode_json()} $*subnets))
 		if not(r.dry_run) {
 			r.find()
 		}
@@ -183,7 +182,7 @@
 		r.log('update', 'ELB')
 
 		# Tags
-		diff = cmp(cur_props.tags, r.desired_props.get('tags', {}))
+		diff = cmp(cur_props.get('Tags', {}), r.desired_props.get('Tags', {}))
 
 		if (tags = stdlib_aws_tags(diff.add + diff.change)) {
 			r.run('add ELB tags', %(aws elb add-tags --load-balancer-names ${r.ancor} --tags $*tags))
@@ -194,12 +193,12 @@
 		}
 
 		# Health check. Note: only updates given properties and keeps the rest as they were.
-		if 'health-check' in r.desired_props {
-			diff = cmp(cur_props['health-check'], r.desired_props['health-check'])
+		if 'HealthCheck' in r.desired_props {
+			diff = cmp(cur_props['HealthCheck'], r.desired_props['HealthCheck'])
 			assert(not(diff.add), "Can't handle additional health check properties ${diff.add}")
 			if diff.change {
 				r.log('update', "ELB health check change: ${diff.change}")
-				t = cur_props['health-check'] + diff.change
+				t = cur_props['HealthCheck'] + diff.change
 				r.run(
 					'update ELB health check',
 					%(aws elb configure-health-check --load-balancer-name ${r.ancor} --health-check ${t.encode_json()})
@@ -208,12 +207,12 @@
 		}
 
 		# Instances
-		if 'instances' in r.desired_props {
-			instances = r.desired_props.instances
+		if 'Instances' in r.desired_props {
+			instances = r.desired_props.Instances
 			if instances is AwsResource {
 				instances .= ids()
 			}
-			diff = cmp(cur_props['instances'], instances)
+			diff = cmp(cur_props.Instances, instances)
 			if diff.add {
 				r.run(
 					'register instances with ELB',
@@ -229,12 +228,12 @@
 		}
 
 		# Security groups
-		if 'security-groups' in r.desired_props {
-			sgs = r.desired_props['security-groups']
+		if 'SecurityGroups' in r.desired_props {
+			sgs = r.desired_props.SecurityGroups
 			if sgs is AwsResource {
 				sgs .= ids()
 			}
-			diff = cmp(cur_props['security-groups'], sgs)
+			diff = cmp(cur_props.SecurityGroups, sgs)
 			if diff.add or diff.remove {
 				r.run(
 					'update ELB SGs',
@@ -244,7 +243,7 @@
 		}
 
 		# TODO: listeners
-		diff = cmp(cur_props['listeners'], r.desired_props.listeners)
+		diff = cmp(cur_props.ListenerDescriptions, r.desired_props.ListenerDescriptions)
 		# echo("DIFF $diff")
 	}
 
@@ -260,6 +259,7 @@
 	F ids(r:AwsSubnet) r.cur_props.SubnetId
 
 	# --------------------------------------------------
+	# TODO: exclude terminated and terminating instances
 	type AwsInstance(AwsResource)
 	F _find_cmd(r:AwsInstance) AwsCommand(%[aws ec2 describe-instances], true)
 	F ids(r:AwsInstance) r.cur_props.InstanceId
@@ -268,12 +268,13 @@
 	doc Ancor is [group_name, vpc_id]
 	type AwsSecGroup(AwsResource)
 	F _find_cmd(r:AwsSecGroup) AwsCommand(%[aws ec2 describe-security-groups], true)
-	F ids(r:AwsSecGroup) r.cur_props.id
-	F users_ids(r:AwsSecGroup) r.cur_props / F(props) { {'GroupId': props.id, 'UserId': props['owner-id']} }
+	F ids(r:AwsSecGroup) r.cur_props.GroupId
+	F id(r:AwsSecGroup, cur_props:Hash) cur_props.GroupId
+	F users_ids(r:AwsSecGroup) r.cur_props / F(props) { {'GroupId': props.GroupId, 'UserId': props.OwnerId} }
 
 	F validate(r:AwsSecGroup) {
 		(r.ancor is not Arr) throws InvalidArgument("AwsSecGroup's ancor must be an array")
-		('description' not in r.desired_props) throws InvalidArgument("AwsSecGroup must have the 'description' property")
+		('Description' not in r.desired_props) throws InvalidArgument("AwsSecGroup must have the 'description' property")
 	}
 
 	F vpc_id(r:AwsSecGroup) {
@@ -297,33 +298,15 @@
 		# Can not use --group-names as it will assume default VPC / EC2 classic
 		r.cur_props = ``aws ec2 describe-security-groups $*{vpc_id_filter(r)}``.filter(F(sg) sg.GroupName == r.ancor[0])
 		assert(r.cur_props.len() <= 1, "Can only work with one security group at a time")
+		known_props = %[GroupName GroupId OwnerId Description IpPermissions IpPermissionsEgress Tags]
 		r.cur_props .= map(F(props) {
-			# Straighten Aws output to match CLI arguments
-			translation = %{
-				GroupName name
-				GroupId id
-				OwnerId owner-id
-				Description description
-
-				IpPermissions ip-permissions-ingress
-				IpPermissionsEgress ip-permissions-egress
-
-				Tags tags
-			}
-			ret = collector/{}
-				translation.each(F(k, v) {
-					if k in props {
-						collect(v, props[k])
-					}
-				})
-			# echo("RET $ret")
-			ret
+			props ? known_props.has(X)
 		})
 	}
 
 	F create(r:AwsSecGroup) {
 		r.log('create', 'SG')
-		r.run('create SG', %(aws ec2 create-security-group --group-name ${r.ancor[0]} --description ${r.desired_props.description} $*{vpc_id_args(r)}))
+		r.run('create SG', %(aws ec2 create-security-group --group-name ${r.ancor[0]} --description ${r.desired_props.Description} $*{vpc_id_args(r)}))
 		if not(r.dry_run) {
 			r.find()
 		}
@@ -363,25 +346,27 @@
 		r.log('update', 'SG')
 		# echo("CUR: $cur_props")
 
-		if 'ip-permissions-ingress' in r.desired_props {
-			diff = compare(cur_props['ip-permissions-ingress'].map(IpPermBox), r.desired_props['ip-permissions-ingress'].map(IpPermBox))
+		if 'IpPermissions' in r.desired_props {
+			diff = compare(cur_props.IpPermissions/IpPermBox, r.desired_props.IpPermissions/IpPermBox)
 			# echo("DIFF 2 $diff")
 			diff.add.each(F(perm) {
-				r.run('add SG ingress rule', %(aws ec2 authorize-security-group-ingress --group-id ${cur_props.id} --ip-permissions $*{diff.add.val.map(encode_json)}))
+				r.run('add SG ingress rule', %(aws ec2 authorize-security-group-ingress --group-id ${cur_props.GroupId} --ip-permissions $*{diff.add.val.map(encode_json)}))
 
 			})
 			diff.remove.each(F(perm) {
-				r.run('remove SG ingress rule', %(aws ec2 revoke-security-group-ingress --group-id ${cur_props.id} --ip-permissions $*{diff.remove.val.map(encode_json)}))
+				r.run('remove SG ingress rule', %(aws ec2 revoke-security-group-ingress --group-id ${cur_props.GroupId} --ip-permissions $*{diff.remove.val.map(encode_json)}))
 
 			})
-
 		}
+
+		r.update_tags(cur_props)
+
 	}
 
 	F delete(r:AwsSecGroup, resource:Hash) {
 		# TODO: handle EC2 classic / default vpc - deletion by group name, not by id
 		r.log('delete', 'SG')
-		r.run('delete SG', %(aws ec2 delete-security-group --group-id ${r.cur_props[0].id}))
+		r.run('delete SG', %(aws ec2 delete-security-group --group-id ${r.cur_props[0].GroupId}))
 	}
 
 	F code(r:AwsSecGroup, resource:Hash) "AwsSecGroup(\n\t${r.ancor.code()},\n\t${resource.code()}\n).converge()"
