@@ -11,7 +11,7 @@
 
 	doc Converts tags hash to AWS command line arguments
 	F stdlib_aws_tags(h:Hash) h / "Key=$X,Value=$Y"
-	# F stdlib_aws_tags(h:Hash) h.map(F(k, v) "Key=${k},Value=${v}")
+	# Same as: F stdlib_aws_tags(h:Hash) h.map(F(k, v) "Key=${k},Value=${v}")
 
 	# --------------------------------------------------
 	doc Command used to find resource instances
@@ -65,7 +65,7 @@
 		cmd = _find_cmd(r)
 		c = cmd.cmd
 		filters = if cmd.supports_filters {
-			['--filters', *(r.ancor.map(F(k, v) "Name=tag-key,Values=${k},Name=tag-value,Values=${v}"))]
+			['--filters', *(r.ancor / "Name=tag-key,Values=$X,Name=tag-value,Values=$Y")]
 		} else {
 			[]
 		}
@@ -75,6 +75,7 @@
 		# echo("cur_props $cur_props")
 		if not(cmd.supports_filters) {
 			# manual filter then
+			# XXX: Fix! 'x' is unused below
 			cur_props .= filter(F(x) r.ancor.all(F(k, v) try r.Tags[k] == v))
 		}
 		r.log('find', "found ${cur_props.len()} ${r.typeof().name} resource instances")
@@ -90,16 +91,14 @@
 		r.log('converge', "desired count of ${r.typeof().name}: ${n}")
 		if n < r.cur_props.len() {
 			r.log('converge', 'deleting extra resource instances')
-			r.cur_props[n..null].each(F(x) r.delete(x))
+			r.cur_props[n..null] % r.delete(X)
 			r.cur_props = r.cur_props[0..n]
 		}
-		if n > r.cur_props.len() {
-			for(i=r.cur_props.len(); i<n; i+=1) {
-				r.log('converge', "creating resource instance ${r.typeof().name} #${i+1}")
-				create(r)
-			}
+		for(i=r.cur_props.len(); i<n; i+=1) {
+			r.log('converge', "creating resource instance ${r.typeof().name} #${i+1}")
+			create(r)
 		}
-		r.cur_props.each(F(x) r.update(x))
+		r.cur_props % r.update(X)
 	}
 
 	F run(r:AwsResource, log_pfx:Str, cmd:Command) {
@@ -114,7 +113,6 @@
 	F len(r:AwsResource) r.cur_props.len()
 
 	F code(r:AwsResource) {
-		# ret = r.cur_props.map(F(props) r.code(props))
 		ret = r.cur_props / r.code(X)
 		if ret.len() == 1 {
 			ret = ret[0]
@@ -144,11 +142,13 @@
 		assert(r.cur_props.len() <= 1, "Can only work with one load balancer at a time")
 		known_props = %[LoadBalancerName AvailabilityZones SecurityGroups ListenerDescriptions Subnets Scheme HealthCheck Instances]
 		r.cur_props .= map(F(props) {
-			# Straighten Aws output to match CLI arguments
 			ret = props ? known_props.has(X)
 			ret.Instances = props.Instances.InstanceId
+			# TODO: make it lazy
 			r.log('find', "ELB tags")
-			ret.Tags = ``aws elb describe-tags --load-balancer-names ${r.ancor}``[0].Tags
+			# if('Tags' in r.desired_props) {
+				ret.Tags = ``aws elb describe-tags --load-balancer-names ${r.ancor}``[0].Tags
+			# }
 			ret
 		})
 	}
@@ -380,9 +380,9 @@
 		t = if r.cur_props is Null {
 			''
 		} else {
-			" ids=${r.ids().join(',')}"
+			" ${r.ids().join(',')}"
 		}
-		"<AwsVpc ancor=${r.ancor}${t}>"
+		"<AwsVpc$t ancor=${r.ancor}>"
 	}
 
 }
