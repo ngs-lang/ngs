@@ -2289,7 +2289,7 @@ main_loop:
 								v = make_string(vm->globals_names[gvi]);
 								mr = vm_call(vm, ctx, result, vm->global_not_found_hook, 1, &v);
 								THIS_FRAME.do_call_impl_not_found_hook = 1;
-								if(IS_UNDEF(GLOBALS[gvi])) {
+								if(IS_UNDEF(GLOBALS[gvi]) || mr == METHOD_EXCEPTION) {
 									VALUE exc;
 									exc = make_normal_type_instance(vm->GlobalNotFound);
 									set_normal_type_instance_attribute(exc, make_string("name"), make_string(vm->globals_names[gvi]));
@@ -2298,7 +2298,9 @@ main_loop:
 									if(mr == METHOD_EXCEPTION) {
 										set_normal_type_instance_attribute(exc, make_string("cause"), *result);
 									} else {
-										if (mr != METHOD_IMPL_MISSING) {
+										if (mr == METHOD_IMPL_MISSING) {
+											set_normal_type_instance_attribute(exc, make_string("info"), make_string("Additionally, no appropriate global_not_found_hook() found"));
+										} else {
 											set_normal_type_instance_attribute(exc, make_string("info"), make_string("Additionally, global_not_found_hook() failed to provide the global"));
 										}
 									}
