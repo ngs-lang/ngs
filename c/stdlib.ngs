@@ -1410,11 +1410,13 @@ F '$()'(c:Command) {
 	debug("$debug_pfx PID after fork: $pid")
 
 	if pid == 0 {
-		# for(i=3;i<100;i+=1)
-		# 	if i not in [pipe.write_fd] {
-		# 		# echo("CLOSING $i")
-		# 		i.c_close()
-		# 	}
+		# TODO: -------------------- test - start --------------------
+		for(i=3;i<100;i+=1)
+			if i not in [pipe.read_fd, pipe.write_fd] {
+				# echo("CLOSING $i")
+				i.c_close()
+			}
+		# TODO: -------------------- test - end --------------------
 		if not(c.is_top_level) {
 			pipe.close_reading_end()
 			pipe.dup2_writing_end(1)
