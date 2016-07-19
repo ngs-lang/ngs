@@ -340,8 +340,8 @@ Later / unformed / unfinished thoughts
 * Hosts group will be ordered. When running commands, one could specify to run in order or async.
 	* When commands run in order there should be an option to stop on first fail.
 
-How to run POC
-==============
+How to run the POC
+==================
 
 Following instructions should work (tested on Debian)
 
@@ -363,12 +363,21 @@ Following instructions should work (tested on Debian)
 Have you heard of project X? How it compares to NGS?
 ====================================================
 
+None of the shells below provide interaction with objects on the screen: if you run a command to describe EC2 instances for example, there is no way to interact with the shown list. Such interaction is a planned feature in NGS.
+
 * [fish shell](http://fishshell.com/) has very nice features and improvements but is still more bash-like. For example it doesn't have nested data structures nor a full-featured programming language.
 * [Plumbum](https://github.com/tomerfiliba/plumbum) makes it easier to call shell commands from python. Too verbose to be used as a shell or shell script. It helps when you need to use python and call external programs. Primary target audience seems to be Python developers, not system engineers.
 * [Xonsh](http://xon.sh/) Python with bash-like additions. Python is not a domain specific language, making bash-like additions can not bring it to be optimal for system tasks.
 * [rc shell](https://swtch.com/plan9port/man/man1/rc.html) is much closer to Bash than to NGS.
 * [Es: A shell with higher-order functions](https://wryun.github.io/es-shell/paper.html) . ES and NGS share quite a bit of common ideas. NGS goes further with making a shell a real programming language. ES vs NGS would probably be a matter of personal preference. ES is simpler and been here for a while.
 * [elvish](https://github.com/elves/elvish/) aims to extend instead of revolutionize traditional shells; the core syntax is very close to bash. It has nested data structures, and rich pipes to carry such complex data. It also has some neat interactive features, but is still terminal-oriented.
+* [Windows PowerShell](https://en.wikipedia.org/wiki/Windows_PowerShell) is probably the best thing that ever happened to Windows. I'm not familiar with it enough but here are my points
+	* PowerShell is built on top of .NET while NGS is a standalone language (as of writing, NGS will be a shell). In my opinion, PowerShell is an adaptation of .NET for scripting while NGS is built from ground up for scripting. I wrote some bootstrapping script in PowerShell and it felt very inconvenient and weird compared to bash or NGS.
+	* Syntax
+		* PowerShell has also two syntaxes. They are called [parsing modes](https://technet.microsoft.com/en-us/library/hh847892.aspx). These roughly correspond to commands and expression mode of NGS. Compared to NGS, the rules of switching between the two parsing modes are numerous and complex.
+		* PowerShell is too verbose by default.
+	* PowerShell is only available for Windows.
+	* PowerShell got some things right compared to other shells: structured data and consistent `$` in front of variables come to mind.
 
 Discussion / requests / comments
 ================================
