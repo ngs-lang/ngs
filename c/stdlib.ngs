@@ -1471,11 +1471,9 @@ F parse(s:Str) parse(s, {})
 F parse(s:Str, hints:Hash) s
 
 F parse(s:Str, hints:Hash) {
-	try
-		ret = decode_json(s)
-	catch(e)
-		guard false
-	ret
+	ret = try FullBox(decode_json(s)) or EmptyBox()
+	guard ret
+	ret.val
 }
 
 # Just the command, no processing
