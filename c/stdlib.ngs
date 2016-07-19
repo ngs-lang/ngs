@@ -448,6 +448,9 @@ F count(arr:Arr, predicate:Fun, *args) {
 
 TEST [1,2,3,11,12].count((>), 10) == 2
 
+F count(arr:Arr) count(arr, identity)
+
+TEST [0,1,2,null,false].count() == 2
 
 F flatten(arr:Arr)
 	collector
