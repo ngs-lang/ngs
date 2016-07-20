@@ -752,12 +752,12 @@ function-call =
 		$$ = ret;
 	}
 
-function-call-arguments = "(" space? a:function-call-arguments-with-parens space? ")" {
+function-call-arguments = "(" space? a:function-call-arguments-without-parens space? ")" {
 	$$ = a;
 }
 
-function-call-arguments-with-parens =
-	arg:function-call-argument space? "," space? args:function-call-arguments-with-parens {
+function-call-arguments-without-parens =
+	arg:function-call-argument space? "," space? args:function-call-arguments-without-parens {
 		PREPEND_NODE(args, arg);
 		$$ = args;
 		CAPTURE_LOCATION($$);
