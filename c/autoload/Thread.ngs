@@ -23,7 +23,7 @@
 
 	F join(threads:Arr) {
 		guard threads.all(is, Thread)
-		threads.map(join)
+		threads / join
 	}
 
 	F join(t:Thread) {

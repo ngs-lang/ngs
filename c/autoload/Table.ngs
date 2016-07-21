@@ -183,6 +183,8 @@ F echo(t:Table) {
 	# Setup line spacing
 	do_line_spacing = t.rows.any(F(row) {
 		row.any(F(cell) cell is Arr and len(cell)>1)
+		# row.any({A is Arr and len(A)>1})
+		# row.any(A is Arr and len(A)>1)
 	})
 	do_line_spacing = if do_line_spacing F() echo('') else F() null
 

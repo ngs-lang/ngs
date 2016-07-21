@@ -550,6 +550,7 @@ basic-expression =
 	| array-literal
 	| imm-array-literal
 	| hash-literal
+	| abc-function-literal
 	| imm-hash-literal
 	| "(" space? e:expression space? ")" { MAKE_NODE(ret, EXPRESSIONS_NODE); ret->name = "()"; ret->first_child = e; ret->last_child = e; $$ = ret; }
 
@@ -933,6 +934,10 @@ imm-hash-words = acc:command-node (
 	)+ {
 	$$ = acc;
 	CAPTURE_LOCATION($$);
+}
+
+abc-function-literal = c:curly-code-block {
+	$$ = wrap_in_func(c, location, "ABC function literal", 1, 3, "A", "Any", "B", "Any", "C", "Any");
 }
 
 for =
