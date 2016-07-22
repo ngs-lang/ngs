@@ -48,6 +48,11 @@ syn keyword ngsFunction fetch main require to_exit_code
 " stdlib functions
 syn keyword ngsFunction acquire all any assert basename close_reading_end close_writing_end cmp count dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error expose debug die filter find_in_path first flatten group has identity in index join len limit log map max min n next none partial partial_tail pmap pos ptimes read release reverse set split starts_with status Strs uniq update wait without write zip
 
+" resources types
+syn keyword ngsType Res ResDef AwsRes AwsResDef AwsVpc AwsVpcRes AwsSecGroup AwsSecGroupRes
+" stdlib resources functions
+syn keyword ngsFunction converge create delete find validate
+
 hi def link ngsComment Comment
 hi def link ngsConditional Conditional
 hi def link ngsConstant Constant

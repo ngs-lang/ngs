@@ -1,0 +1,188 @@
+{
+	AWS2 = true
+
+	# --------------------------------------------------
+	# Misc utilities
+	# --------------------------------------------------
+	F stdlib_aws_tags(h:Hash) h / "Key=$X,Value=$Y"
+
+	# --------------------------------------------------
+	# AwsResFindCommand
+	# --------------------------------------------------
+
+	type AwsResFindCommand
+
+	F init(c:AwsResFindCommand, cmd:Arr, supports_filters:Bool) {
+		c.cmd = cmd
+		c.supports_filters = supports_filters
+	}
+
+	# --------------------------------------------------
+	# AwsRes
+	# --------------------------------------------------
+
+	type AwsRes(Res)
+
+	F run(r:AwsRes, log_pfx:Str, cmd:Command) r.def.run(log_pfx, cmd)
+
+	F update_tags(r:AwsRes) {
+		# Tags
+		diff = cmp(r.props.get('Tags', {}), r.def.props.get('Tags', {}))
+
+		if (tags = stdlib_aws_tags(diff.add + diff.change)) {
+			r.run('Add tags', %(aws ec2 create-tags --resources ${r.id()} --tags $*tags))
+		}
+
+		if (tags = diff.remove) {
+			tags = tags / "Key=$X"
+			r.run('Remove tags', %(aws ec2 delete-tags --resources ${r.id()} --tags $*tags))
+		}
+	}
+
+	# --------------------------------------------------
+	# AwsResDef
+	# --------------------------------------------------
+
+	type AwsResDef(ResDef)
+
+	F run(rd:AwsResDef, log_pfx:Str, cmd:Command) {
+		if rd.dry_run {
+			rd.log("run - $log_pfx", "would run: ${cmd.argv.join(' ')}")
+		} else {
+			rd.log("run - $log_pfx", "running: ${cmd.argv.join(' ')}")
+			$($cmd)
+		}
+	}
+
+	F find(rd:AwsResDef) {
+		# XXX: invalid code because misses straightening
+		cmd = _get_find_command(rd)
+		c = cmd.cmd
+		filters = if cmd.supports_filters {
+			['--filters', *(rd.ancor / "Name=tag-key,Values=$X,Name=tag-value,Values=$Y")]
+		} else {
+			[]
+		}
+		debug("Filters: $filters")
+		resources = ``$*c $*filters``
+
+		# echo("resources $resources")
+		if not(cmd.supports_filters) {
+			throw NotImplemented("AwsResFindCommand with supports_filters=false is not implemented yet")
+		}
+		rd.log('find', "found ${resources.len()} ${rd.typeof().name} resources")
+
+		t = rd._get_res_type()
+		rd.resources = resources / t(rd, X)
+		rd.resources
+	}
+
+	# --------------------------------------------------
+	# AwsVpc
+	# --------------------------------------------------
+
+	type AwsVpc(AwsResDef)
+	type AwsVpcRes(AwsRes)
+
+	F _get_res_type(r:AwsVpc) AwsVpcRes
+
+	F _get_find_command(r:AwsVpc) {
+		AwsResFindCommand(%[aws ec2 describe-vpcs], true)
+	}
+
+	F ids(r:AwsVpc) r.resources.props.VpcId
+
+	# --------------------------------------------------
+	# AwsSecGroup
+	# --------------------------------------------------
+
+	type AwsSecGroup(AwsResDef)
+	type AwsSecGroupRes(AwsRes)
+
+	F _get_res_type(r:AwsSecGroup) AwsSecGroupRes
+
+	F _get_find_command(r:AwsSecGroup) {
+		AwsResFindCommand(%[aws ec2 describe-security-groups], true)
+	}
+
+	F validate(rd:AwsSecGroup) {
+		(rd.ancor is not Arr) throws
+			InvalidArgument("AwsSecGroup's ancor must be an array")
+		('Description' not in rd.props) throws
+			InvalidArgument("AwsSecGroup must have the 'description' property")
+	}
+
+	F vpc_id(r:AwsSecGroup) r.ancor[1]
+
+	F vpc_id(r:AwsSecGroup) {
+		guard r.ancor[1] is AwsResDef
+		assert(r.ancor[1].len() == 1, "AwsSecGroup expects exactly one vpc-id but passed resource ${r.ancor[1]} has zero or more than one")
+		r.ancor[1].ids()[0]
+	}
+
+	F vpc_id_args(r:AwsSecGroup) ['--vpc-id', vpc_id(r)].nuke_null()
+
+	F vpc_id_filter(r:AwsSecGroup) ['--filters', "Name=vpc-id,Values=${vpc_id(r)}"]
+
+	F vpc_id_filter(r:AwsSecGroup) {
+		guard vpc_id(r) is Null
+		[]
+	}
+
+	F id(r:AwsSecGroupRes) r.props.GroupId
+
+	F find(r:AwsSecGroup) {
+		r.log('find', 'SG')
+		# XXX: check with default VPC / EC2 classic
+		# Can not use --group-names as it will assume default VPC / EC2 classic
+		resources = ``aws ec2 describe-security-groups $*{vpc_id_filter(r)}``.filter(F(sg) sg.GroupName == r.ancor[0])
+		assert(resources.len() <= 1, "Can only work with one security group at a time")
+		known_props = %[GroupName GroupId OwnerId Description IpPermissions IpPermissionsEgress Tags]
+		resources .= map(F(res) {
+			AwsSecGroupRes(r, res ? known_props.has(X))
+		})
+		r.resources = resources
+		r.resources
+	}
+
+	type IpPermBox(FullBox)
+
+	# Cleans up AWS Security Group IpPermissions so it's possible to compare current and desired states of IpPermissions
+	F cleanup(x:IpPermBox) {
+		ret = x.val
+		ret .= filter(F(k, v) (v is not Arr) or v)
+		ret .= without('IpRanges', [{"CidrIp": "0.0.0.0/0"}])
+		if 'UserIdGroupPairs' in ret {
+			# Hash is ordered. The right order for comparison is GroupId and then UserId
+			ret.UserIdGroupPairs .= map(F(pair) { {'GroupId': pair.GroupId, 'UserId': pair.UserId } })
+		}
+		ret
+	}
+
+	F ==(a:IpPermBox, b:IpPermBox) {
+		a .= cleanup()
+		b .= cleanup()
+		a.len() != b.len() returns false
+		diff = cmp(a, b)
+		not(diff.add or diff.remove or diff.change)
+	}
+
+	F update(sg:AwsSecGroupRes) {
+
+		sg.def.log('update', 'SG')
+
+		if 'IpPermissions' in sg.def.props {
+			diff = compare(sg.props.IpPermissions/IpPermBox, sg.def.props.IpPermissions/IpPermBox)
+			diff.add.each(F(perm) {
+				sg.run('add SG ingress rule', %(aws ec2 authorize-security-group-ingress --group-id ${sg.props.GroupId} --ip-permissions $*{diff.add.val / encode_json}))
+
+			})
+			diff.remove.each(F(perm) {
+				sg.run('remove SG ingress rule', %(aws ec2 revoke-security-group-ingress --group-id ${sg.props.GroupId} --ip-permissions $*{diff.remove.val / encode_json}))
+			})
+		}
+
+		sg.update_tags()
+	}
+
+}

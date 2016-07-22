@@ -1645,62 +1645,6 @@ F *(cb:Fun, n:Int, *args) n.map(F(idx) cb(*args))
 
 F code(n:Null) "null"
 
-# === Resource & friends =========================
-
-{
-	type ResDef
-
-	type ResNotFound(Exception)
-
-	F init(rnf:ResNotFound, rd:ResDef) {
-		init(rnf)
-		rnf.def = rd
-		rnf.backtrace.frames.pop()
-	}
-
-	F init(rd:ResDef, ancor, props:Hash) {
-		rd.ancor = ancor
-		rd.props = props
-		rd.resources = null
-		META = rd.props.get('META', {})
-		rd.count = META.get('count', 1)
-		rd.dry_run = META.get('dry_run', false)
-		uk = META.keys() - %[count dry_run]
-		assert(not(uk), "Unknown key(s) in META: ${uk.join(',')}")
-	}
-
-	F init(rd:ResDef, ancor) init(rd, ancor, {})
-
-	F Str(rd:ResDef) {
-		multi = if rd.count != 1 then " x${rd.count}" else ""
-		dry_run = if rd.dry_run " (dry run)" else ""
-		props = rd.props.without('META')
-		resources = if rd.resources is Null "" else " resources=${rd.resources}"
-		"<${rd.typeof().name} ancor=${rd.ancor} props=$props$multi$dry_run$resources>"
-	}
-
-	F log(rd:ResDef, method:Str, s:Str) {
-		log("[${rd.typeof().name} ancor=${rd.ancor}] [${method}] $s")
-	}
-
-	F expect(rd:ResDef, e:Int) {
-		rd.find()
-		rd.resources.len() != e throws
-		assert(rd.resources.len() == e, "Expected exactly ${e} ${rd.typeof().name} resource instances but found ${rd.resources.len()}")
-		rd
-	}
-
-
-	type Res
-
-	F init(r:Res, rd:ResDef, props:Hash) {
-		r.def = rd
-		r.props = props
-	}
-
-	F Str(r:Res) "<Res props=${r.props}>"
-}
-
 # === Misc tests =================================
 
 # expr1 op= expr2
