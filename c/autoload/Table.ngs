@@ -103,8 +103,7 @@ F push(t:Table, row_arr:Arr) {
 
 F push(t:Table, row_hash:Hash) {
 	# TODO: handle mismatch of columns
-	# row = t.col_idx_to_name.map(F(idx, k) row_hash.get(k, null))
-	row = t.col_idx_to_name / get(row_hash, Y, null)
+	row = t.col_name_to_idx / get(row_hash, X, null)
 	t.push(row)
 	t
 }
@@ -142,7 +141,6 @@ F preprocess(t:Table) {
 	t.rows.each(F(row) {
 		row.each_idx_val(F(idx, cell) {
 			if cell is Arr {
-				# row[idx] = cell.filter(should_display_cell_item.partial(t))
 				row[idx] = cell ? should_display_cell_item(t, X)
 			}
 		})
@@ -183,8 +181,6 @@ F echo(t:Table) {
 	# Setup line spacing
 	do_line_spacing = t.rows.any(F(row) {
 		row.any(F(cell) cell is Arr and len(cell)>1)
-		# row.any({A is Arr and len(A)>1})
-		# row.any(A is Arr and len(A)>1)
 	})
 	do_line_spacing = if do_line_spacing F() echo('') else F() null
 

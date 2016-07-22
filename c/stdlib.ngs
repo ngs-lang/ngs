@@ -446,7 +446,7 @@ F count(arr:Arr, predicate:Fun, *args) {
 		})
 }
 
-TEST [1,2,3,11,12].count((>), 10) == 2
+TEST [1,2,3,11,12].count(X>10) == 2
 
 F count(arr:Arr) count(arr, identity)
 
@@ -455,7 +455,7 @@ TEST [0,1,2,null,false].count() == 2
 F flatten(arr:Arr)
 	collector
 		arr.each(F(subarr) {
-			subarr.each(collect)
+			subarr % collect
 		})
 
 TEST [[1], [2,3]].flatten() == [1,2,3]
@@ -487,8 +487,8 @@ F first(arr:Arr, predicate:Fun, *args) {
 	arr[i]
 }
 
-TEST [5,10,15].first((>), 7) == 10
-TEST [5,10,15].first((>), 20) == null
+TEST [5,10,15].first(X>7) == 10
+TEST [5,10,15].first(X>20) == null
 
 
 F reverse(arr:Arr) {
@@ -625,7 +625,7 @@ TEST [10,11,12].limit(2) == [10,11]
 F *(arr:Arr, n:Int)
 	collector
 		for(i;n)
-			arr.each(collect)
+			arr % collect
 
 TEST [10,20] * 2 == [10,20,10,20]
 
@@ -862,7 +862,7 @@ F +(a:Hash, b:Hash) {
 TEST {'a': 1, 'b': 2, 'c': 3} + {'b': 20, 'd': 40} == {'a': 1, 'b': 20, 'c': 3, 'd': 40}
 
 
-F Strs(h:Hash) h.map("$X=$Y")
+F Strs(h:Hash) h / "$X=$Y"
 
 TEST {'a': 1, 'b': 2}.Strs() == ['a=1', 'b=2']
 
@@ -1088,16 +1088,16 @@ F lines(a:Str, cb:Fun, *args) {
 doc Prepend each line in a with s
 F +(s:Str, a:Arr) {
 	guard a.all(is, Str)
-	a.map(F(elt) s+elt)
+	a.map(s+X)
 }
-# TEST "a " + ["1", "2"] == ["a 1", "a 2"]
+TEST "a " + ["1", "2"] == ["a 1", "a 2"]
 
 doc Append s to each line in a
 F +(a:Arr, s:Str) {
 	guard a.all(is, Str)
-	a.map(F(elt) elt+s)
+	a.map(X+s)
 }
-# TEST ["1", "2"] + " a" == ["1 a", "2 a"]
+TEST ["1", "2"] + " a" == ["1 a", "2 a"]
 
 F limit(s:Str, n:Int) s[0..n]
 
