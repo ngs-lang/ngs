@@ -55,6 +55,7 @@ syn keyword ngsType AwsRes AwsResDef
 
 syn keyword ngsType AwsElb AwsElbRes
 syn keyword ngsType AwsInstance AwsInstanceRes
+syn keyword ngsType AwsRecordSet AwsRecordSetRes
 syn keyword ngsType AwsSecGroup AwsSecGroupRes
 syn keyword ngsType AwsVpc AwsVpcRes
 

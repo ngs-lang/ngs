@@ -1,11 +1,35 @@
 {
 	AWS = true
 
+	# TODO: separate validation just on ancor so it could be used for find()
+	#       currently validate() can only be used for converge() because it
+	#       check properties.
+
 	# --------------------------------------------------
 	# Misc utilities
 	# --------------------------------------------------
 
 	F stdlib_aws_tags(h:Hash) h / "Key=$X,Value=$Y"
+
+	aws_cached_regions = null
+
+	F aws_regions() aws_cached_regions = ``aws ec2 describe-regions``.RegionName.sort()
+
+	F aws_regions() {
+		guard aws_cached_regions
+		aws_cached_regions
+	}
+
+	# --------------------------------------------------
+	# AwsAncor
+	# --------------------------------------------------
+
+	type AwsAncor
+
+	F init(a:AwsAncor, regions=null, tags=null)  {
+		a.regions = regions
+		a.tags = if tags tags {}
+	}
 
 	# --------------------------------------------------
 	# AwsResFindCommand
@@ -233,10 +257,38 @@
 	type AwsInstance(AwsResDef)
 	type AwsInstanceRes(AwsRes)
 
-	F _get_res_type(rd:AwsInstance) AwsInstanceRes
+	F find(rd:AwsInstance) {
+		# XXX: invalid code because misses straightening
+		ancor = econd {
+			rd.ancor is AwsAncor { rd.ancor }
+			rd.ancor is Hash { AwsAncor(tags=rd.ancor) }
+		}
 
-	F _get_find_command(rd:AwsInstance) {
-		AwsResFindCommand(%[aws ec2 describe-instances], true)
+		filters = ['--filters', 'Name=instance-state-name,Values=running']
+
+		if ancor.tags {
+			filters += ancor.tags / "Name=tag-key,Values=$X,Name=tag-value,Values=$Y"
+		}
+		debug("Filters: $filters")
+
+		regions = cond {
+			ancor.regions is Arr { ancor.regions }
+			ancor.regions == '*' { aws_regions() }
+		}
+
+		resources = if regions {
+			instances = regions.pmap(F(r) {
+				``aws ec2 describe-instances --region $r $*filters``
+			}).flatten()
+			# .filter(F(i) try i.PublicIpAddress)
+		} else {
+			``aws ec2 describe-instances $*filters``
+		}
+
+		rd.log('find', "found ${resources.len()} ${rd.typeof().name} resources")
+
+		rd.resources = resources / AwsInstanceRes(rd, X)
+		rd.resources
 	}
 
 	F ids(rd:AwsInstance) rd.resources.props.InstanceId
@@ -361,6 +413,61 @@
 
 	F delete(elb:AwsElb) {
 		elb.run('delete ELB', %(aws elb delete-load-balancer --load-balancer-name ${elb.ancor}))
+	}
+
+	# --------------------------------------------------
+	# AwsRecordSet
+	# --------------------------------------------------
+
+	# http://docs.aws.amazon.com/cli/latest/reference/route53/change-resource-record-sets.html
+
+	# Ancor: [record_name, domain_name]. Most specific first to be unifrom with Subnet
+	# Maybe support array or *-style wildcard for record_name?
+	# Maybe support ancor hosted-zone-id in the future? Don't currently see how this could be useful.
+
+	type AwsRecordSet(AwsResDef)
+	type AwsRecordSetRes(AwsRes)
+
+	F parse_ancor(rd:AwsRecordSet) {
+		guard rd.ancor.len() == 3
+		{
+			'name': rd.ancor[0]
+			'type': rd.ancor[1]
+			'domain': rd.ancor[2]
+		}
+	}
+
+	F parse_ancor(rd:AwsRecordSet) {
+		guard rd.ancor.len() == 2
+		{
+			'name': rd.ancor[0]
+			'type': null
+			'domain': rd.ancor[1]
+		}
+	}
+
+	F validate(rd:AwsRecordSet) {
+		ancor = parse_ancor(rd)
+		not(ancor.domain ~ Sfx('.')) throws InvalidArgument("RecordSet zone name (${ancor.domain}) must end with a dot")
+		"todo"
+	}
+
+	F find(rd:AwsRecordSet) {
+		rd.log('find', 'RecordSet')
+		ancor = parse_ancor(rd)
+		record_name = "${ancor.name}.${ancor.domain}"
+		zones = ``aws route53 list-hosted-zones-by-name --dns-name ${ancor.domain} --max-items 1``
+
+		assert(zones.len() == 1 and zones[0].Name == ancor.domain, "Zone ${ancor.domain} not found when trying to create an AwsRecordSet in it")
+		zone_id = zones[0].Id
+
+		# Note: { body } is shortcut for F(a=null, b=null, c=null) { body } and is an experimental feature
+		rrs = ``aws route53 list-resource-record-sets --hosted-zone-id $zone_id --start-record-name $record_name``.filter({A.Name == record_name})
+		echo(rrs)
+
+		resources = []
+		rd.resources = resources
+		rd.resources
 	}
 
 }

@@ -1630,8 +1630,17 @@ F ~(s:Str, pfx:Pfx) {
 	not(s.starts_with(pfx.val)) returns MatchN()
 	ret = MatchY()
 	ret.matches = [pfx.val]
-	ret.before = null
+	ret.before = ''
 	ret.after = s[pfx.val.len()..null]
+	ret
+}
+
+F ~(s:Str, sfx:Sfx) {
+	not(s.ends_with(sfx.val)) returns MatchN()
+	ret = MatchY()
+	ret.matches = [sfx.val]
+	ret.before = s[0..(s.len() - sfx.val.len())]
+	ret.after = ''
 	ret
 }
 
