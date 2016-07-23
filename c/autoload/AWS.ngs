@@ -133,7 +133,12 @@
 		rd.ancor[1].ids()[0]
 	}
 
-	F vpc_id_args(rd:AwsSecGroup) ['--vpc-id', vpc_id(rd)].nuke_null()
+	F vpc_id_args(rd:AwsSecGroup) ['--vpc-id', vpc_id(rd)]
+
+	F vpc_id_args(rd:AwsSecGroup) {
+		guard vpc_id(rd) is Null
+		[]
+	}
 
 	F vpc_id_filter(rd:AwsSecGroup) ['--filters', "Name=vpc-id,Values=${vpc_id(rd)}"]
 
