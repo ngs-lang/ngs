@@ -51,6 +51,12 @@
 		rd
 	}
 
+	F expect(rd:ResDef) {
+		rd.find()
+		assert(rd.len() > 0, "Expected one or more ${rd.typeof().name} resource instances but found none")
+		rd
+	}
+
 	F Str(r:ResDef) "<${r.typeof().name} ancor=${r.ancor}>"
 
 	type Res
