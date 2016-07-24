@@ -461,7 +461,7 @@
 		assert(zones.len() == 1 and zones[0].Name == ancor.domain, "Zone ${ancor.domain} not found when trying to create an AwsRecordSet in it")
 		zone_id = zones[0].Id
 
-		# Note: { body } is shortcut for F(a=null, b=null, c=null) { body } and is an experimental feature
+		# Note: { body } is shortcut for F(A=null, B=null, C=null) { body } and is an experimental feature. Used in filter():
 		rrs = ``aws route53 list-resource-record-sets --hosted-zone-id $zone_id --start-record-name $record_name``.filter({A.Name == record_name})
 		echo(rrs)
 
