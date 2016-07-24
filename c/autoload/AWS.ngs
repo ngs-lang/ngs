@@ -278,14 +278,16 @@
 
 		resources = if regions {
 			instances = regions.pmap(F(r) {
-				``aws ec2 describe-instances --region $r $*filters``
+				ins = ``aws ec2 describe-instances --region $r $*filters``
+				ins % F(i) i.Region = r
+				ins
 			}).flatten()
 			# .filter(F(i) try i.PublicIpAddress)
 		} else {
 			``aws ec2 describe-instances $*filters``
 		}
 
-		rd.log('find', "found ${resources.len()} ${rd.typeof().name} resources")
+		rd.log('find', "found ${resources.len()} ${rd.typeof().name} resources in ${resources.group({A.Region}).len()} regions (${resources.group({A.Placement.AvailabilityZone}).len()} zones)")
 
 		rd.resources = resources / AwsInstanceRes(rd, X)
 		rd.resources
@@ -428,46 +430,80 @@
 	type AwsRecordSet(AwsResDef)
 	type AwsRecordSetRes(AwsRes)
 
-	F parse_ancor(rd:AwsRecordSet) {
-		guard rd.ancor.len() == 3
-		{
-			'name': rd.ancor[0]
-			'type': rd.ancor[1]
-			'domain': rd.ancor[2]
-		}
-	}
-
-	F parse_ancor(rd:AwsRecordSet) {
-		guard rd.ancor.len() == 2
-		{
-			'name': rd.ancor[0]
-			'type': null
-			'domain': rd.ancor[1]
-		}
-	}
-
 	F validate(rd:AwsRecordSet) {
-		ancor = parse_ancor(rd)
-		not(ancor.domain ~ Sfx('.')) throws InvalidArgument("RecordSet zone name (${ancor.domain}) must end with a dot")
+		%[Name ZoneName].each(F(prop_name) {
+			prop_name not in rd.ancor throws InvalidArgument("Ancor must contain $prop_name")
+			not(rd.ancor[prop_name] ~ Sfx('.')) throws InvalidArgument("$prop_name (${rd.ancor[prop_name]}) must end with a dot")
+		})
 		"todo"
 	}
 
 	F find(rd:AwsRecordSet) {
 		rd.log('find', 'RecordSet')
-		ancor = parse_ancor(rd)
-		record_name = "${ancor.name}.${ancor.domain}"
-		zones = ``aws route53 list-hosted-zones-by-name --dns-name ${ancor.domain} --max-items 1``
+		ancor = rd.ancor
+		zones = ``aws route53 list-hosted-zones-by-name --dns-name ${ancor.ZoneName} --max-items 1``
 
-		assert(zones.len() == 1 and zones[0].Name == ancor.domain, "Zone ${ancor.domain} not found when trying to create an AwsRecordSet in it")
+		assert(zones.len() == 1 and zones[0].Name == ancor.ZoneName, "Zone ${ancor.ZoneName} not found when trying to create an AwsRecordSet in it")
 		zone_id = zones[0].Id
+		rd.zone_id = zone_id
 
-		# Note: { body } is shortcut for F(A=null, B=null, C=null) { body } and is an experimental feature. Used in filter():
-		rrs = ``aws route53 list-resource-record-sets --hosted-zone-id $zone_id --start-record-name $record_name``.filter({A.Name == record_name})
-		echo(rrs)
+		type_args = if 'Type' in ancor {
+			['--start-record-type', ancor.Type]
+		} else {
+			[]
+		}
 
-		resources = []
-		rd.resources = resources
+		rrs = ``aws route53 list-resource-record-sets --hosted-zone-id $zone_id --start-record-name ${ancor.Name} $*type_args``
+
+		rrs .= filter({A.Name == ancor.Name})
+
+		if 'Type' in ancor {
+			rrs .= filter({A.Type == ancor.Type})
+		}
+
+		if 'SetIdentifier' in ancor {
+			rrs .= filter({A.SetIdentifier == ancor.SetIdentifier})
+		}
+
+		rd.resources = rrs / AwsRecordSetRes(rd, X)
 		rd.resources
+	}
+
+	F _get_props(rd:AwsRecordSet) {
+		ret = {}
+		ret.update(rd.props)
+		%[Name Type SetIdentifier].each(F(prop) {
+			if prop in rd.ancor and prop not in ret {
+				ret[prop] = rd.ancor[prop]
+			}
+		})
+		ret
+	}
+
+	F create(rd:AwsRecordSet) {
+		change_batch = {
+			'Comment': rd.props.get('Comment', "Updated by AWS.ngs")
+			'Changes': [{
+				'Action': 'CREATE'
+				'ResourceRecordSet': _get_props(rd)
+			}]
+		}
+		rd.run('create AwsRecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${rd.zone_id} --change-batch ${change_batch.encode_json()}))
+		if not(rd.dry_run) {
+			rd.find()
+		}
+	}
+
+	F update(rrset:AwsRecordSetRes) {
+		props = _get_props(rrset.def)
+		diff = cmp(rrset.props, props)
+		# NOT DONE AND NOT SURE!
+		if diff.add or diff.change or diff.remove {
+			rd.run('update AwsRecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${rd.zone_id} --change-batch ${change_batch.encode_json()}))
+			if not(rd.dry_run) {
+				rd.find()
+			}
+		}
 	}
 
 }

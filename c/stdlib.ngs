@@ -452,11 +452,13 @@ F count(arr:Arr) count(arr, identity)
 
 TEST [0,1,2,null,false].count() == 2
 
-F flatten(arr:Arr)
+F flatten(arr:Arr) {
+	guard arr.all(is, Arr)
 	collector
 		arr.each(F(subarr) {
 			subarr % collect
 		})
+}
 
 TEST [[1], [2,3]].flatten() == [1,2,3]
 
