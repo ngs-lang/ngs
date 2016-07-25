@@ -287,7 +287,11 @@
 			``aws ec2 describe-instances $*filters``
 		}
 
-		rd.log('find', "found ${resources.len()} ${rd.typeof().name} resources in ${resources.group({A.Region}).len()} regions (${resources.group({A.Placement.AvailabilityZone}).len()} zones)")
+		if regions {
+			rd.log('find', "found ${resources.len()} ${rd.typeof().name} resources in ${resources.group({A.Region}).len()} regions (${resources.group({A.Placement.AvailabilityZone}).len()} zones)")
+		} else {
+			rd.log('find', "found ${resources.len()} ${rd.typeof().name} resources in ${resources.group({A.Placement.AvailabilityZone}).len()} zones)")
+		}
 
 		rd.resources = resources / AwsInstanceRes(rd, X)
 		rd.resources
@@ -482,7 +486,7 @@
 
 	F create(rd:AwsRecordSet) {
 		change_batch = {
-			'Comment': rd.props.get('Comment', "Updated by AWS.ngs")
+			'Comment': rd.props.get('Comment', "Added by AWS.ngs")
 			'Changes': [{
 				'Action': 'CREATE'
 				'ResourceRecordSet': _get_props(rd)
@@ -499,10 +503,14 @@
 		diff = cmp(rrset.props, props)
 		# NOT DONE AND NOT SURE!
 		if diff.add or diff.change or diff.remove {
-			rd.run('update AwsRecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${rd.zone_id} --change-batch ${change_batch.encode_json()}))
-			if not(rd.dry_run) {
-				rd.find()
+			change_batch = {
+				'Comment': rrset.def.props.get('Comment', "Updated by AWS.ngs")
+				'Changes': [{
+					'Action': 'UPSERT'
+					'ResourceRecordSet': _get_props(rrset.def)
+				}]
 			}
+			rrset.run('update AwsRecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${rrset.def.zone_id} --change-batch ${change_batch.encode_json()}))
 		}
 	}
 
