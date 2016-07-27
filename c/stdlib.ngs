@@ -59,17 +59,21 @@ F set(obj, attr:Str, val) {
 
 doc Filter operator
 doc Syntax mnemonic: ? for predicate
+doc %EX - [1,2,3,4] ? F(x) x > 2
 F ?(x, predicate:Fun) x.filter(predicate)
 
 doc Map operator
 doc Syntax: / is on same key as ? and similar to |
+doc %EX - [1,2,3,4] / F(x) x * 10
 F /(x, mapper:Fun) x.map(mapper)
 
 doc Each operator
 doc Syntax: % is similar to /
+doc %EX - [1,2,3,4] % echo
 F %(x, cb:Fun) x.each(cb)
 
 doc Call operator
+doc %EX - [1,2,3,4] \ echo
 F \(x, f:Fun) f(x)
 
 
