@@ -108,7 +108,7 @@
 		g.keys().sort(lte).each(F(name) {
 			value = g[name]
 			cond {
-				value is Arr
+				(value is Arr) and value.all(is, Fun)
 					print_method_doc(name, value)
 				value is Type {
 					print_type_doc(name, value)
