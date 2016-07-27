@@ -9,12 +9,12 @@ F init(e:Exception) {
 }
 
 
-doc %RET - Exception with .backtrace and .info
-doc s - Goes into .info
+doc %RET - Exception with .backtrace and .message
+doc s - Goes into .message
 F init(e:Exception, s:Str) {
 	# Last entry in backtrace would be this Exception() invocation
 	init(e)
-	e.info = s
+	e.message = s
 	e.backtrace.frames.pop()
 }
 
@@ -27,7 +27,7 @@ F init(e:Exception, cause:Exception) {
 }
 
 TEST Exception().backtrace is Backtrace
-TEST Exception("xyz").info == "xyz"
+TEST Exception("xyz").message == "xyz"
 TEST Exception(Exception()).cause is Exception
 
 

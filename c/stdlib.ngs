@@ -1575,12 +1575,19 @@ F config(s:Str, x) {
 # === Match, Pfx, Sfx ============================
 
 {
+	doc Sucessfull or unsucessfull match result
 	type Match
+
+		doc Sucessfull match result
+		doc matches - succsessfull matches
 		type MatchY(Match)
+
+		doc Unsucessfull match result
 		type MatchN(Match)
+
 	type MatchFail(Exception)
+
 	type SubSeq
-	# XXX: Consider: SubSeq.expose('val')
 		doc Prefix subsequence of a sequence
 		type Pfx(SubSeq)
 			type MaybePfx(Pfx)

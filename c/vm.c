@@ -712,7 +712,7 @@ METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 		exc = make_normal_type_instance(vm->CompileFail);
 		set_normal_type_instance_attribute(exc, make_string("given"), argv[0]);
 		snprintf(err, 1024, "Failed to parse at position %d (%s), rule %s", yyctx.fail_pos, sprintf_position(&yyctx, yyctx.fail_pos), yyctx.fail_rule);
-		set_normal_type_instance_attribute(exc, make_string("info"), make_string(err));
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string(err));
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	tree = yyctx.__;
@@ -2299,9 +2299,9 @@ main_loop:
 										set_normal_type_instance_attribute(exc, make_string("cause"), *result);
 									} else {
 										if (mr == METHOD_IMPL_MISSING) {
-											set_normal_type_instance_attribute(exc, make_string("info"), make_string("Additionally, no appropriate global_not_found_hook() found"));
+											set_normal_type_instance_attribute(exc, make_string("message"), make_string("Additionally, no appropriate global_not_found_hook() found"));
 										} else {
-											set_normal_type_instance_attribute(exc, make_string("info"), make_string("Additionally, global_not_found_hook() failed to provide the global"));
+											set_normal_type_instance_attribute(exc, make_string("message"), make_string("Additionally, global_not_found_hook() failed to provide the global"));
 										}
 									}
 									*result = exc;

@@ -10,7 +10,7 @@
 " endif
 
 setf ngs
-syn match   ngsOperator "[-~!^&|*/%+=<>]\+"
+syn match   ngsOperator "[-~!^&|*/%+=<>`]\+"
 syn match   ngsComment "#.*" contains=ngsTodo
 syn match   ngsComment "^[ \t]*doc .*" contains=ngsTodo
 "syn match   ngsTest "^TEST .*"
