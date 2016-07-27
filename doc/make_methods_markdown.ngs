@@ -1,8 +1,17 @@
 #!/usr/bin/env ngs
 {
 	# Autoload
-	Table
+	AWS
+	ArgvMatcher
+	Counter
+	Iter
+	KV
+	Lock
+	Res
+	ResDef
 	Stats
+	Table
+	Thread
 
 	# Use anonymous function to exclude methods in this file
 	# The inner functions are local
