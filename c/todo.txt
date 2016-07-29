@@ -20,11 +20,15 @@ Note that this started as internal document so things here are unformed, not fin
 			* document scoping rules
 
 			* commands syntax
+
+				* & for background execution
+
 				* io redirection - see F '$()'(c:Command) { ... } in stdlib.ngs [task is in hold]
 					* basic redirections ( <x , >y , >>z ) [done]
 					* tests for basic redirections
 					* advanced redirections ( N>x , N<y, N>>z ), think of more
 					* document redirections
+
 				* pipes
 					* between external commands
 					* between internal commands/functions
@@ -93,7 +97,11 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* files globbing
 
-		* Milestone "correct programming" (will be v0.2.0)
+		* Milestone "Mac OS support" (will be v0.2.0)
+
+			+ Issue #15
+
+		* Milestone "correct programming" (will be v0.3.0)
 
 			* Usage of undefined local variable - add name of the variable in exception
 
@@ -130,7 +138,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Make sure (uncaught) exceptions go to stderr, not stdout
 
-		* Milestone "threads" (will be v0.3.0)
+		* Milestone "threads" (will be v0.4.0)
 
 			* Thread - Make pthread_attr_t accessible - get/set attributes
 
