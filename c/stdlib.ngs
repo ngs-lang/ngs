@@ -18,12 +18,14 @@ F assert(condition:Bool) assert(condition, "Assertion failed")
 
 # === Return =====================================
 
-F init(r:Return, v) {
+F call(r:Return, v) {
 	r.val = v
+	r
 }
 
-F init(r:Return) {
+F call(r:Return) {
 	r.val = null
+	r
 }
 
 # === Misc functional ============================

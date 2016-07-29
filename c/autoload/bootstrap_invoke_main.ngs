@@ -4,7 +4,7 @@
 	type BootstrapNoMatchingMain(Exception)
 }
 
-F bootstrap_try_main(c:Closure, argv:Arr, finish:Type) {
+F bootstrap_try_main(c:Closure, argv:Arr, finish:Return) {
 	bootstrap_debug("Trying main() candidate $c")
 	try {
 		m = argv ~ c

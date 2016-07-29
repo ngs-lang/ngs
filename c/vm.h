@@ -109,7 +109,7 @@ typedef struct {
 	// For stack trace
 	IP last_ip;
 
-	NGS_TYPE *ReturnSubtype;
+	VALUE ReturnInstance;
 
 } FRAME;
 

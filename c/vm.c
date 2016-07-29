@@ -228,18 +228,15 @@ METHOD_RESULT native_false METHOD_PARAMS {
 
 METHOD_RESULT native_Return EXT_METHOD_PARAMS {
 	(void) vm;
-	if(THIS_FRAME.ReturnSubtype) {
-		VALUE cached;
-		SET_OBJ(cached, THIS_FRAME.ReturnSubtype);
-		METHOD_RETURN(cached);
+	(void) argv;
+	if(!IS_NULL(THIS_FRAME.ReturnInstance)) {
+		METHOD_RETURN(THIS_FRAME.ReturnInstance);
 	}
-	*result = make_normal_type(argv[0]);
-	NGS_TYPE_NAME(*result) = make_string("UniqPerFramePerClosureReturn");
-	NGS_TYPE_PARENTS(*result) = make_array_with_values(1, &vm->Return);
-	set_hash_key(NGS_TYPE_ATTRS(*result), make_string("doc"), make_string("Generated Builtin sub-type of Return"));
-	set_hash_key(NGS_TYPE_ATTRS(*result), make_string("closure"), THIS_FRAME.closure);
-	set_hash_key(NGS_TYPE_ATTRS(*result), make_string("depth"), MAKE_INT(ctx->stack_ptr-1));
-	THIS_FRAME.ReturnSubtype = (NGS_TYPE *) (result->ptr);
+	*result = make_normal_type_instance(vm->Return);
+	set_normal_type_instance_attribute(*result, make_string("closure"), THIS_FRAME.closure);
+	set_normal_type_instance_attribute(*result, make_string("depth"), MAKE_INT(ctx->stack_ptr-1));
+	set_normal_type_instance_attribute(*result, make_string("val"), MAKE_NULL);
+	THIS_FRAME.ReturnInstance = *result;
 	METHOD_RETURN(*result);
 }
 
@@ -2083,7 +2080,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		ctx->frames[ctx->frame_ptr].do_call_impl_not_found_hook = 1;
 		ctx->frames[ctx->frame_ptr].do_call_call = 1;
 		ctx->frames[ctx->frame_ptr].last_ip = 0;
-		ctx->frames[ctx->frame_ptr].ReturnSubtype = NULL;
+		ctx->frames[ctx->frame_ptr].ReturnInstance = MAKE_NULL;
 		ctx->frame_ptr++;
 		if(ctx->frame_ptr >= MAX_FRAMES) {
 			// Off by one (on the safe side)?
@@ -2148,8 +2145,22 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			// last_ip should have been already set up before calling vm_call()
 			mr = vm_call(vm, ctx, result, vm->call, argc+1, ARRAY_ITEMS(new_argv));
 			THIS_FRAME.do_call_call = 1;
-			if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION)) {
+			if(mr == METHOD_OK) {
 				return mr;
+			}
+			if(mr == METHOD_EXCEPTION) {
+				VALUE r = MAKE_NULL;
+				if(obj_is_of_type(*result, vm->ImplNotFound)) {
+					get_normal_type_instace_attribute(*result, make_string("callable"), &r);
+					if(r.ptr == vm->call.ptr) {
+						// Don't know how to call
+						mr = METHOD_IMPL_MISSING;
+					} else {
+						return mr;
+					}
+				} else {
+					return mr;
+				}
 			}
 			assert(mr == METHOD_IMPL_MISSING);
 		}
@@ -2707,7 +2718,7 @@ end_main_loop:
 
 exception:
 	// *result is the exception
-	if (IS_NORMAL_TYPE_INSTANCE(*result) && (NORMAL_TYPE_INSTANCE_TYPE(*result).ptr == THIS_FRAME.ReturnSubtype)) {
+	if (IS_NORMAL_TYPE_INSTANCE(*result) && (result->ptr == THIS_FRAME.ReturnInstance.ptr)) {
 		mr = get_normal_type_instace_attribute(*result, make_string("val"), result);
 		ctx->stack_ptr = saved_stack_ptr;
 		return mr;
