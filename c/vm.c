@@ -1254,16 +1254,16 @@ METHOD_RESULT native_c_access METHOD_PARAMS {
 METHOD_RESULT native_c_poll METHOD_PARAMS {
 	VALUE ret, revents;
 	struct pollfd *fds;
-	unsigned int len = OBJ_LEN(argv[0]);
+	unsigned int i, len = OBJ_LEN(argv[0]);
 	fds = NGS_MALLOC(sizeof(*fds) * len);
-	for(unsigned int i = 0; i<len; i++) {
+	for(i = 0; i<len; i++) {
 		// TODO: assert ARRAY_ITEMS(argv[0])[i] has exactly two items
 		fds[i].fd = GET_INT(ARRAY_ITEMS(ARRAY_ITEMS(argv[0])[i])[0]);
 		fds[i].events = GET_INT(ARRAY_ITEMS(ARRAY_ITEMS(argv[0])[i])[1]);
 	}
 	int status = poll(fds, len, GET_INT(argv[1]));
 	revents = make_array(len);
-	for(unsigned int i = 0; i<len; i++) {
+	for(i = 0; i<len; i++) {
 		ARRAY_ITEMS(revents)[i] = MAKE_INT(fds[i].revents);
 	}
 	ret = make_array(2);
