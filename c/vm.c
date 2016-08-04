@@ -4,7 +4,7 @@
 #include <math.h>
 #include <pthread.h>
 #include <stdarg.h>
-#include <sys/select.h>
+#include <sys/poll.h>
 #include <time.h>
 
 #include <ffi.h>
@@ -1250,16 +1250,27 @@ METHOD_RESULT native_c_access METHOD_PARAMS {
 		} \
 	};
 
-// METHOD_RESULT native_c_select METHOD_PARAMS {
-// 	fd_set readfds, writefds, errorfds;
-// 	struct timeval timeout;
-// 	int i, tmp, nfds = 0;
-// 	SETUP_FD_SET(readfds, 0);
-// 	SETUP_FD_SET(writefds, 1);
-// 	SETUP_FD_SET(errorfds, 2);
-// 	nfds++;
-// 	select(nfds, &readfds, &writefds, &errorfds, &timeout);
-// }
+// WIP
+METHOD_RESULT native_c_poll METHOD_PARAMS {
+	VALUE ret, revents;
+	struct pollfd *fds;
+	unsigned int len = OBJ_LEN(argv[0]);
+	fds = NGS_MALLOC(sizeof(*fds) * len);
+	for(unsigned int i = 0; i<len; i++) {
+		// TODO: assert ARRAY_ITEMS(argv[0])[i] has exactly two items
+		fds[i].fd = GET_INT(ARRAY_ITEMS(ARRAY_ITEMS(argv[0])[i])[0]);
+		fds[i].events = GET_INT(ARRAY_ITEMS(ARRAY_ITEMS(argv[0])[i])[1]);
+	}
+	int status = poll(fds, len, GET_INT(argv[1]));
+	revents = make_array(len);
+	for(unsigned int i = 0; i<len; i++) {
+		ARRAY_ITEMS(revents)[i] = MAKE_INT(fds[i].revents);
+	}
+	ret = make_array(2);
+	ARRAY_ITEMS(ret)[0] = MAKE_INT(status);
+	ARRAY_ITEMS(ret)[1] = revents;
+	METHOD_RETURN(ret);
+}
 
 METHOD_RESULT native_id_pthread METHOD_PARAMS {
 	unsigned char *p;
@@ -1571,6 +1582,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_close",  &native_c_close_int,       1, "fd",       vm->Int);
 	register_global_func(vm, 0, "c_read",   &native_c_read_int_int,    2, "fd",       vm->Int, "count", vm->Int);
 	register_global_func(vm, 0, "c_write",  &native_c_write_int_str,   2, "fd",       vm->Int, "s",     vm->Str);
+	register_global_func(vm, 0, "c_poll",   &native_c_poll,            2, "fds_evs",  vm->Arr, "timeout", vm->Int);
 	register_global_func(vm, 0, "c_dup2",   &native_c_dup2,            2, "oldfd",    vm->Int, "newfd", vm->Int);
 	register_global_func(vm, 1, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
 	_doc(vm, "whence", "One of: set, cur, end");
@@ -1709,6 +1721,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 	E(R_OK);
 	E(W_OK);
 	E(X_OK);
+	// man poll(2);
+	E(POLLIN);
+	E(POLLPRI);
+	E(POLLOUT);
+	E(POLLERR);
+	E(POLLHUP);
+	E(POLLNVAL);
 #undef E
 
 #define FFI_TYPE(name) \

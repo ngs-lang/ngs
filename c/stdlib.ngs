@@ -1398,7 +1398,7 @@ F Str(p:Process) p.wait().stdout
 
 # TODO: better exceptions (use correct type, not string)
 # TODO: c_waitpid() - handle signals
-# TODO: capture stdout
+# TODO: split to methods for easy behaviour modification
 # TODO: capture stderr
 # TODO: provide additional communication channel on additional fd?
 # TODO: handle built-in commands: do not execve,
@@ -1419,7 +1419,8 @@ F '$()'(c:Command) {
 	} catch(nf:ExecutableNotFound) {
 		throw ProcessFail(process).set('cause', nf)
 	}
-	pipe = Pipe()
+	stdout_pipe = Pipe()
+	stderr_pipe = Pipe()
 	pid = c_fork()
 
 	pid == -1 throws "Failed to fork()"
@@ -1429,14 +1430,16 @@ F '$()'(c:Command) {
 	if pid == 0 {
 		# TODO: -------------------- test - start --------------------
 		for(i=3;i<100;i+=1)
-			if i not in [pipe.read_fd, pipe.write_fd] {
+			if i not in [stdout_pipe.read_fd, stdout_pipe.write_fd, stderr_pipe.read_fd, stderr_pipe.write_fd] {
 				# echo("CLOSING $i")
 				i.c_close()
 			}
 		# TODO: -------------------- test - end --------------------
 		if not(c.is_top_level) {
-			pipe.close_reading_end()
-			pipe.dup2_writing_end(1)
+			stdout_pipe.close_reading_end()
+			stdout_pipe.dup2_writing_end(1)
+			stderr_pipe.close_reading_end()
+			stderr_pipe.dup2_writing_end(2)
 		}
 		# Redirections (WIP) - start
 		c.redirects.each(F(r:Redir) {
@@ -1459,13 +1462,21 @@ F '$()'(c:Command) {
 	if pid > 0 {
 		process.pid = pid
 		if not(c.is_top_level) {
-			debug("$debug_pfx closing writing end of the pipe")
-			pipe.close_writing_end()
+			debug("$debug_pfx closing writing end of the stdout_pipe")
+			stdout_pipe.close_writing_end()
+			debug("$debug_pfx closing writing end of the stderr_pipe")
+			stderr_pipe.close_writing_end()
 			debug("$debug_pfx reading all output of the child process")
-			process.stdout = pipe.read()
+			# XXX: maybe make it chunk based with c_poll() and single thread
+			[
+				Thread({ process.stdout = stdout_pipe.read() })
+				Thread({ process.stderr = stderr_pipe.read() })
+			].join()
 			debug("$debug_pfx read all output of the child process")
-			pipe.close_reading_end()
-			debug("$debug_pfx closed pipe reading end")
+			stdout_pipe.close_reading_end()
+			debug("$debug_pfx closed stdout_pipe reading end")
+			stderr_pipe.close_reading_end()
+			debug("$debug_pfx closed stderr_pipe reading end")
 		}
 		# debug("$debug_pfx child output was <<${process.stdout}>>")
 		process.wait()
