@@ -133,7 +133,9 @@ F bootstrap() {
 	ARGV0 = ARGV.shift(null)
 
 	# *** Parse switches ***
-	if ARGV and (ARGV[0] == '-e' or ARGV[0] == '-E') {
+	sw = null
+	a = ARGV[0]
+	if ARGV and (a == '-e' or a == '-E' or a == '-p' or a == '-pj') {
 		sw = ARGV.shift()
 		code_to_run = "{ ${ARGV.shift()} }"
 		bootstrap_debug("Got $sw switch, using command line provided code")
@@ -180,16 +182,24 @@ F bootstrap() {
 	program_func = load(program_bytecode, "bootstrap()ped file: $fname")
 	global bootstrap_main_file = fname
 	result = program_func()
-	if main.len() == 0 {
-		bootstrap_debug("main() is not used, exiting")
-		c_exit(result.to_exit_code())
-	}
-	bootstrap_debug("main() defined, using bootstrap_invoke_main()")
-	if global_not_found_hook.len() == 0 {
-		throw MainFail("Autoloading (usually defined in stdlib) is not present but the main() invoking mechanism requires it")
-	}
 
-	result = bootstrap_invoke_main(result)
+	# Handle main() - start
+	if main.len() != 0 {
+		bootstrap_debug("main() defined, using bootstrap_invoke_main()")
+		if global_not_found_hook.len() == 0 {
+			throw MainFail("Autoloading (usually defined in stdlib) is not present but the main() invoking mechanism requires it")
+		}
+		result = bootstrap_invoke_main(result)
+	}
+	# Handle main() - end
+
+	if sw == '-p' or sw == '-pj' {
+		if sw == '-pj' {
+			result = encode_json(result)
+		}
+		echo(result)
+		c_exit(0)
+	}
 	c_exit(result.to_exit_code())
 }
 
