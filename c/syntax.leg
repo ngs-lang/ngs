@@ -673,7 +673,7 @@ function-definition-parameter-type =
 	}
 
 function-definition-default-value =
-	space? "=" c:expression { $$ = c; }
+	space? "=" space? c:expression { $$ = c; }
 	|
 	{
 		$$ = NULL;
