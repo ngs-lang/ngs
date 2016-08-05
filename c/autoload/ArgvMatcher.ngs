@@ -18,7 +18,7 @@ F ~(argv:Arr, c:Closure) {
 
 	have_arr_splat = false
 	rest = []
-	if 'splat' in params_by_pos[-1] {
+	if params_by_pos and ('splat' in params_by_pos[-1]) {
 		assert(params_by_pos[-1].splat == '*', 'ArgvMatcher does not support **kwargs')
 		have_arr_splat = true
 		params_by_pos.pop()
