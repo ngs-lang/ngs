@@ -211,6 +211,7 @@ typedef struct {
 
 	VALUE impl_not_found_hook;
 	VALUE global_not_found_hook;
+	VALUE uncaught_exception_hook;
 	VALUE init;
 	VALUE call;
 

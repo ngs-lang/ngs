@@ -94,6 +94,12 @@ F Real(s:Str) {
 
 TEST Real('1.1') == 1.1
 
+# === NativeMethod ===============================
+
+F Str(c:NativeMethod) {
+	"<Native method ${c.attrs().name}>"
+}
+
 # === Closure ====================================
 
 F Str(c:Closure) {
@@ -1132,7 +1138,7 @@ F code(s:Str) {
 # TODO: allow control by facility and severity
 #       and maybe source component or file.
 
-# TODO: consider sending log, debug and error to stderr
+stdlib_error_fd = (try ENV.NGS_ERR_FD.Int()) or 2
 
 F log(s:Str) {
 	echo("[LOG] $s")
@@ -1148,22 +1154,22 @@ F debug(s:Str) {
 }
 
 F error(s:Str) {
-	echo("[ERROR ] $s")
+	echo(stdlib_error_fd, "[ERROR ] $s")
 }
 
 F status(s:Str) {
-	echo(s)
+	echo(stdlib_error_fd, s)
 	log("(status) $s")
 }
 
 F die(a:Arr) {
 	guard a.all(is, Str)
-	a.each(echo)
+	a.each(echo, stdlib_error_fd)
 	c_exit(1)
 }
 
 F die(s:Str) {
-	echo(s)
+	echo(stdlib_error_fd, s)
 	c_exit(1)
 }
 
@@ -1681,6 +1687,84 @@ F *(cb:Fun, n:Int, *args) n.map(F(idx) cb(*args))
 # === Null =======================================
 
 F code(n:Null) "null"
+
+
+# === uncaught_exception_hook ====================
+
+F exception_specific_message(e:Exception) null
+
+F exception_specific_message(gnf:GlobalNotFound) "Global '${gnf.name}' not found"
+
+F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
+
+	F err(message:Str) error("$pfx$message")
+
+	pfx = "  " * level
+	h = Hash(e)
+
+	err("Exception of type ${e.typeof().name} occured")
+
+	if esm = exception_specific_message(e) {
+		err(esm)
+	}
+
+	if 'message' in h {
+		err("Message: ${h.message}")
+	}
+
+	info_keys = h.keys() - %[message backtrace cause]
+
+	F print_info(k) err("Info: $k = ${h[k]}")
+
+	# TODO: limit number of items to print
+	F print_info(k) {
+		guard h[k] is Arr
+		err("Info: $k is an array of size ${h[k].len()}")
+		h[k].each_idx_val(F(idx, val) {
+			err("Info: $k[$idx] = $val")
+		})
+	}
+
+	F print_info(k) {
+		guard h[k] is Hash
+		err("Info: $k is hash of size ${h[k].len()}")
+		h[k].each(F(idx, val) {
+			err("Info: $k[$idx] = $val")
+		})
+	}
+
+	info_keys % print_info
+
+	if 'backtrace' in h {
+
+		parent_frames = if try {parent.backtrace; true} { parent.backtrace.frames } []
+
+		h.backtrace.frames.each_idx_val(F(idx, frame) {
+
+			# Don't print frames that overlap with parent exception
+			frame.ip == try parent_frames[idx].ip returns null
+
+			l = resolve_instruction_pointer(frame.ip)
+			closure = if try frame.closure.attrs().name then
+				" [in ${frame.closure.attrs().name}]"
+			else
+				''
+
+			err("Frame $idx: ${l.file}:${l.first_line}:${l.first_column} - ${l.last_line}:${l.last_column}$closure")
+		})
+	}
+
+	if 'cause' in h {
+		err("Cause:")
+		print_exception(e.cause, level+1, e)
+	}
+
+}
+
+F uncaught_exception_hook(e:Exception) {
+	print_exception(e)
+	c_exit(1)
+}
 
 # === Misc tests =================================
 

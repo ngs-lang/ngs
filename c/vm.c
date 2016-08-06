@@ -221,6 +221,11 @@ METHOD_RESULT native_echo_str METHOD_PARAMS {
 	METHOD_RETURN(MAKE_NULL);
 }
 
+METHOD_RESULT native_echo_int_str METHOD_PARAMS {
+	dprintf(GET_INT(argv[0]), "%s\n", obj_to_cstring(argv[1]));
+	METHOD_RETURN(MAKE_NULL);
+}
+
 METHOD_RESULT native_false METHOD_PARAMS {
 	(void) argv;
 	METHOD_RETURN(MAKE_FALSE);
@@ -1646,6 +1651,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "===",      &native_same_any_any,      2, "a",   vm->Any, "b", vm->Any);
 	register_global_func(vm, 0, "dump",     &native_dump_any,          1, "obj", vm->Any);
 	register_global_func(vm, 0, "echo",     &native_echo_str,          1, "s",   vm->Str);
+	register_global_func(vm, 0, "echo",     &native_echo_int_str,      2, "fd",  vm->Int, "s", vm->Str);
 	register_global_func(vm, 0, "Bool",     &native_Bool_any,          1, "x",   vm->Any);
 	register_global_func(vm, 0, "Str",      &native_Str_int,           1, "n",   vm->Int);
 	register_global_func(vm, 0, "is",       &native_is_any_type,       2, "obj", vm->Any, "t", vm->Type);
@@ -1694,6 +1700,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	set_global(vm, "ARGV", argv_array);
 	set_global(vm, "impl_not_found_hook", vm->impl_not_found_hook = make_array(0)); // There must be a catch-all in stdlib
 	set_global(vm, "global_not_found_hook", vm->global_not_found_hook = make_array(0));
+	set_global(vm, "uncaught_exception_hook", vm->uncaught_exception_hook = make_array(0));
 	set_global(vm, "init", vm->init = make_array(0));
 	set_global(vm, "call", vm->call = make_array(0));
 
