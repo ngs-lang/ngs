@@ -1476,6 +1476,8 @@ F '$()'(c:Command) {
 			stderr_pipe.close_writing_end()
 			debug("$debug_pfx reading all output of the child process")
 			# XXX: maybe make it chunk based with c_poll() and single thread
+			process.stdout = null
+			process.stderr = null
 			[
 				Thread({ process.stdout = stdout_pipe.read() })
 				Thread({ process.stderr = stderr_pipe.read() })
