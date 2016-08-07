@@ -1524,6 +1524,7 @@ F lines(p:Process) {
 	p.stdout.lines()
 }
 
+# TODO: ability to handle running process & it's streaming stdout
 F lines(p:Process, cb:Fun, *args) {
 	p.wait()
 	p.stdout.lines(cb, *args)
