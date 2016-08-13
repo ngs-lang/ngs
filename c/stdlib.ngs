@@ -1135,9 +1135,12 @@ F code(s:Str) {
 
 # === Logging and status reporting (WIP) =========
 
+# TODO: timestamps
+
 # TODO: allow control by facility and severity
 #       and maybe source component or file.
 
+# Not sure such flexibility is needed (NGS_ERR_FD)
 stdlib_error_fd = (try ENV.NGS_ERR_FD.Int()) or 2
 
 F log(s:Str) {
@@ -1197,7 +1200,7 @@ F find_in_path(executable_name:Str) {
 	}
 	path = ENV.get('PATH', '/usr/local/bin:/usr/bin:/bin:/sbin:/usr/sbin').split(':')
 	debug('[find_in_path] will search')
-	ret = path.map(F(elt) Path("${elt}/${executable_name}")).first()
+	ret = path.map(F(dir) Path(dir / executable_name)).first()
 	debug("[find_in_path] ${executable_name} found at ${ret}")
 	ret is Null throws ExecutableNotFound().set('path', path).set('name', executable_name)
 	ret
@@ -1698,6 +1701,49 @@ F exception_specific_message(e:Exception) null
 
 F exception_specific_message(gnf:GlobalNotFound) "Global '${gnf.name}' not found"
 
+F inspect(val) ["$val"]
+
+F inspect(a:Arr) {
+	collector {
+		collect("Array of size ${a.len()}")
+		a.each_idx_val(F(idx, val) {
+			collect("[$idx] = $val")
+		})
+	}
+}
+
+F inspect(h:Hash) {
+	collector {
+		collect("Hash of size ${h.len()}")
+		h.each(F(idx, val) {
+			collect("[$idx] = $val")
+		})
+	}
+}
+
+F inspect(p:Process) {
+	collector {
+		collect("Process")
+		collect("command = ${p.command}")
+		collect("pid = ${p.pid}")
+		collect("exit_code = ${p.exit_code}")
+		collect("exit_signal = ${p.exit_signal}")
+		%[stdout stderr].each(F(attr) {
+			val = (.)(p, attr)
+			val_lines = if val is not Null {
+				val.lines()
+			} else {
+				[]
+			}
+			collect("$attr (${val_lines.len()} lines):")
+			if val_lines {
+				("  " + val_lines) % collect
+			}
+		})
+	}
+}
+
+
 F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 
 	F err(message:Str) error("$pfx$message")
@@ -1717,23 +1763,17 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 
 	info_keys = h.keys() - %[message backtrace cause]
 
-	F print_info(k) err("Info: $k = ${h[k]}")
-
-	# TODO: limit number of items to print
 	F print_info(k) {
-		guard h[k] is Arr
-		err("Info: $k is an array of size ${h[k].len()}")
-		h[k].each_idx_val(F(idx, val) {
-			err("Info: $k[$idx] = $val")
-		})
-	}
+		out = inspect(h[k])
+		assert(out.len() > 0)
+		if out.len() == 1 {
+			err("Info: $k = ${out[0]}")
+		} else {
+			err("Info: $k:")
+			("  " + out) % err
+		}
 
-	F print_info(k) {
-		guard h[k] is Hash
-		err("Info: $k is hash of size ${h[k].len()}")
-		h[k].each(F(idx, val) {
-			err("Info: $k[$idx] = $val")
-		})
+		# err("Info: $k is hash of size ${h[k].len()}")
 	}
 
 	info_keys % print_info
