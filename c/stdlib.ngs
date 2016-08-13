@@ -1370,14 +1370,14 @@ F finished_ok(p:Process) {
 	p.exit_code in [0, 1]
 }
 
-F Process(c:Command) {
-	p = Process()
+F init(p:Process, c:Command) {
 	p.command = c
 	p.executable = null
 	p.pid = null
 	p.exit_code = null
 	p.exit_signal = null
-	p
+	p.stdout = null
+	p.stderr = null
 }
 
 F Bool(p:Process) {
@@ -1479,8 +1479,6 @@ F '$()'(c:Command) {
 			stderr_pipe.close_writing_end()
 			debug("$debug_pfx reading all output of the child process")
 			# XXX: maybe make it chunk based with c_poll() and single thread
-			process.stdout = null
-			process.stderr = null
 			[
 				Thread({ process.stdout = stdout_pipe.read() })
 				Thread({ process.stderr = stderr_pipe.read() })
@@ -1765,6 +1763,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 
 	F print_info(k) {
 		out = inspect(h[k])
+		assert(out is Arr)
 		assert(out.len() > 0)
 		if out.len() == 1 {
 			err("Info: $k = ${out[0]}")
