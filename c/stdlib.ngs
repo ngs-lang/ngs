@@ -1511,7 +1511,7 @@ F parse(s:Str) parse(s, {})
 F parse(s:Str, hints:Hash) s
 
 F parse(s:Str, hints:Hash) {
-	ret = try FullBox(decode_json(s)) or EmptyBox()
+	ret = (try FullBox(decode_json(s))) or EmptyBox()
 	guard ret
 	ret.val
 }
@@ -1778,12 +1778,12 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 
 	if 'backtrace' in h {
 
-		parent_frames = if try {parent.backtrace; true} { parent.backtrace.frames } []
+		parent_frames = (try parent.backtrace.frames) or []
 
 		h.backtrace.frames.each_idx_val(F(idx, frame) {
 
 			# Don't print frames that overlap with parent exception
-			frame.ip == try parent_frames[idx].ip returns null
+			frame.ip == (try parent_frames[idx].ip) returns null
 
 			l = resolve_instruction_pointer(frame.ip)
 			closure = (try " [in ${frame.closure.attrs().name}]") or ''
