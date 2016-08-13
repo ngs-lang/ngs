@@ -135,7 +135,7 @@ F bootstrap() {
 	# *** Parse switches ***
 	sw = null
 	a = ARGV[0]
-	if ARGV and (a == '-e' or a == '-E' or a == '-p' or a == '-pj') {
+	if ARGV and (a == '-e' or a == '-E' or a == '-p' or a == '-pj' or a == '-pi' or a == '-pc') {
 		sw = ARGV.shift()
 		code_to_run = "{ ${ARGV.shift()} }"
 		bootstrap_debug("Got $sw switch, using command line provided code")
@@ -193,9 +193,17 @@ F bootstrap() {
 	}
 	# Handle main() - end
 
-	if sw == '-p' or sw == '-pj' {
+	if sw == '-pi' {
+		inspect(result) % echo
+		c_exit(0)
+	}
+
+	if sw == '-p' or sw == '-pj' or sw == '-pc' {
 		if sw == '-pj' {
 			result = encode_json(result)
+		}
+		if sw == '-pc' {
+			result = code(result)
 		}
 		echo(result)
 		c_exit(0)
