@@ -1346,11 +1346,10 @@ F Str(r:Redir) "<Redirect ${r.marker} ${r.datum}>"
 }
 
 
-# TODO: Inherit from Exception or a subtype of it
-F ProcessFail(p:Process) {
-	pf = ProcessFail()
+F init(pf:ProcessFail, p:Process) {
+	init(pf)
 	pf.process = p
-	pf
+	pf.backtrace.frames.pop()
 }
 
 F finished_ok(p:Process) p.exit_code == 0
@@ -1428,7 +1427,7 @@ F '$()'(c:Command) {
 	try {
 		process.executable = find_in_path(c.argv[0])
 	} catch(nf:ExecutableNotFound) {
-		throw ProcessFail(process).set('cause', nf)
+		throw ProcessFail(process).set('cause', nf).set('message', 'Executable not found')
 	}
 	stdout_pipe = Pipe()
 	stderr_pipe = Pipe()
