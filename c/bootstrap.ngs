@@ -155,7 +155,6 @@ F bootstrap() {
 
 	NGS_DIR is Null throws Exception("Could not find NGS_DIR")
 
-	# *** WIP: Load stdlib ***
 	if do_load_stdlib {
 		bootstrap_debug('Will load stdlib')
 		stdlib_file = "${NGS_DIR}/stdlib.ngs"
@@ -163,8 +162,7 @@ F bootstrap() {
 		require(stdlib_file)
 	}
 
-	# *** WIP: Load the main program ***
-	# XXX: not() is not defined yet. Change 'code_to_run is Null' to 'not(code_to_run)' later.
+	# Note: not() is not defined yet
 
 	if code_to_run is Null {
 		bootstrap_debug('No -e or -E switch was passed, will load the program from a file')
