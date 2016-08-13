@@ -1786,11 +1786,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 			frame.ip == try parent_frames[idx].ip returns null
 
 			l = resolve_instruction_pointer(frame.ip)
-			closure = if try frame.closure.attrs().name then
-				" [in ${frame.closure.attrs().name}]"
-			else
-				''
-
+			closure = (try " [in ${frame.closure.attrs().name}]") or ''
 			err("Frame $idx: ${l.file}:${l.first_line}:${l.first_column} - ${l.last_line}:${l.last_column}$closure")
 		})
 	}
