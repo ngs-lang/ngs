@@ -74,17 +74,6 @@ Note that this started as internal document so things here are unformed, not fin
 				+ Pattern matching like [a, *other1, 100, b, *other2] ?
 				+ "xyz${myvar}www" = myvar syntax for regexes? ... for consistency.
 
-			* consider syntax: f(...) = v
-				This could be used for example as follows:
-					s = "abcd"
-					len(s) = 2
-					# s is now "ab"
-				Function definitions might look like:
-					F len(s:Str, =n:Int) ...
-				or maybe
-					F len(s:Str) = n:Int ...
-				I like the first more but it still doesn't feel very right.
-
 			* documentation [on hold]
 
 				* Fix markdown escaping, including underscore

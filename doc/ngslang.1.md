@@ -98,7 +98,7 @@ No matching **method implementation** causes `ImplNotFound` exception.
 
 ## Customizaion using methods
 
-Most language syntax constructs are actually a method calls. For example `1 + 2` is `+(1,2)` . The method named `+` is called with 1 and 2 as arguments. This means you can customize what a `+` does when applied to your types. Since types are "open", you can also define what a `+` means for existing types too.
+Most language syntax constructs are actually method calls. For example `1 + 2` is `+(1,2)` . The method named `+` is called with 1 and 2 as arguments. This means you can customize what a `+` does when applied to your types. Since types are "open", you can also define what a `+` means for existing types too.
 
 Backwards array scanning allows later code (your code as opposed to previously loaded library for example) to override the behaviour. This override can be narrowed to specific cases using the `guard` clause. Continuing the example above:
 
@@ -116,11 +116,23 @@ When the condition following the `guard` clause is true, the execution continues
 # LANGUAGE HOOKS
 
 ## `impl_not_found_hook`
-... is called when a method was called but no **method implementation** matched the arguments. Use `F impl_not_found_hook(callable:Fun, *args) ...` to add your behaviours.
+
+`impl_not_found_hook` is called when a method was called but no **method implementation** matched the arguments. Use `F impl_not_found_hook(callable:Fun, *args) ...` to add your behaviours.
+
 
 ## `global_not_found_hook`
-... is called on attempt to read from an undefined global variable. Sample usage from **stdlib.ngs**
+
+`global_not_found_hook` is called on attempt to read from an undefined global variable. Sample usage from **stdlib.ngs**
 
 	F global_not_found_hook(name:Str) {
 		require("${NGS_DIR}/autoload/${name}.ngs")
 	}
+
+
+## `uncaught_exception_hook`
+
+`uncaught_exception_hook` is called when `throw` is invoked and no matching `catch` is found. Standard implementation (in **stdlib.ngs**) prints information about the exception and exits with code 1. Method signature: `uncaught_exception_hook(e:Exception)`
+
+# Variables scoping
+
+By default any variable in a method that is assigned to is `local` (including the `i` in constuct `for(i;10) ...`). To override this behaviour one can use `global v`.

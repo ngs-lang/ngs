@@ -365,6 +365,9 @@ Have you heard of project X? How it compares to NGS?
 
 None of the shells below provide interaction with objects on the screen: if you run a command to describe EC2 instances for example, there is no way to interact with the shown list. Such interaction is a planned feature in NGS.
 
+None of the shells below have built-in interaction with a cloud. In NGS the work on ["declarative primitives for the cloud"](https://ilya-sher.org/2016/07/06/declarative-primitives-or-mkdir-p-for-the-cloud/) has already started. Declarative primitives are somewhat similar to Chef or Puppet resources. The main difference between declarative primitives and a configuration management resource is that I'm proposing just a library function which can be called when you need it and not a control-grabbing framework. So for example `AwsElb(...)` function call will make sure the load balancer exists and is configured as described.
+
+
 * [fish shell](http://fishshell.com/) has very nice features and improvements but is still more bash-like. For example it doesn't have nested data structures nor a full-featured programming language.
 * [Plumbum](https://github.com/tomerfiliba/plumbum) makes it easier to call shell commands from python. Too verbose to be used as a shell or shell script. It helps when you need to use python and call external programs. Primary target audience seems to be Python developers, not system engineers.
 * [Xonsh](http://xon.sh/) Python with bash-like additions. Python is not a domain specific language, making bash-like additions can not bring it to be optimal for system tasks.
@@ -376,8 +379,10 @@ None of the shells below provide interaction with objects on the screen: if you 
 	* Syntax
 		* PowerShell has also two syntaxes. They are called [parsing modes](https://technet.microsoft.com/en-us/library/hh847892.aspx). These roughly correspond to commands and expression mode of NGS. Compared to NGS, the rules of switching between the two parsing modes are numerous and complex.
 		* PowerShell is too verbose by default.
-	* PowerShell is only available for Windows.
+		* NGS syntax is much better in my opinion than syntax of PowerShell.
+	* Extending PowerShell is either inconvenient because you have to write in PowerShell which is inconvenient by itself or you have to know C#.
 	* PowerShell got some things right compared to other shells: structured data and consistent `$` in front of variables come to mind.
+	* Despite some similarities, writing a script in PowerShell and NGS is a completely different experience. You should try both and pick NGS without any doubt :)
 
 Discussion / requests / comments
 ================================
