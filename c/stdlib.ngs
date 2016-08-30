@@ -1341,21 +1341,7 @@ F Str(r:Redir) "<Redirect ${r.marker} ${r.datum}>"
 
 {
 	type Process
-	type ProcessFail(Exception)
 	type ExecutableNotFound(Exception)
-}
-
-
-F init(pf:ProcessFail, p:Process) {
-	init(pf)
-	pf.process = p
-	pf.backtrace.frames.pop()
-}
-
-F Str(pf:ProcessFail) {
-	p = pf.process
-	F fmt(s:Str) s.lines().join('\\n')
-	"<ProcessFail command=${p.command} pid=${p.pid} exit_code=${p.exit_code} exit_signal=${p.exit_signal} out=${p.stdout.fmt()} err=${p.stderr.fmt()}>"
 }
 
 F finished_ok(p:Process) p.exit_code == 0
