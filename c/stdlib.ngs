@@ -1276,15 +1276,21 @@ F isatty(fd:Int) {
 stdlib_fork_lock = Lock()
 
 # TODO: better exceptions (use correct type, not string, maybe use errno)
-F Pipe() {
-	pipe = Pipe.constructors[0]()
+F init(pipe:Pipe) {
 	result = c_pipe()
 	# result: [result_code, read_end, write_end]
 	result[0] != 0 throws "Failed to create Pipe"
 	pipe.read_fd = result[1]
 	pipe.write_fd = result[2]
 	debug("[Pipe] created pipe with read_fd=${pipe.read_fd} and write_fd=${pipe.write_fd}")
-	pipe
+}
+
+STDLIB_CHILD_TO_PARENT_PIPE_DIR = 1
+STDLIB_PARENT_TO_CHILD_PIPE_DIR = 2
+
+F init(pipe:Pipe, direction:Int) {
+	init(pipe)
+	pipe.direction = direction
 }
 
 F Str(p:Pipe) "<Pipe read_fd=${p.read_fd} write_fd=${p.write_fd}>"
@@ -1296,6 +1302,26 @@ F write(p:Pipe, s:Str) p.write_fd.c_write(s)
 F read(p:Pipe) p.read_fd.read()
 F dup2_writing_end(p:Pipe, newfd:Int) dup2(p.write_fd, newfd)
 F dup2_reading_end(p:Pipe, newfd:Int) dup2(p.read_fd, newfd)
+
+F child_fd(p:Pipe) {
+	guard p.direction == STDLIB_CHILD_TO_PARENT_PIPE_DIR
+	p.write_fd
+}
+
+F child_fd(p:Pipe) {
+	guard p.direction == STDLIB_PARENT_TO_CHILD_PIPE_DIR
+	p.read_fd
+}
+
+F parent_fd(p:Pipe) {
+	guard p.direction == STDLIB_CHILD_TO_PARENT_PIPE_DIR
+	p.read_fd
+}
+
+F parent_fd(p:Pipe) {
+	guard p.direction == STDLIB_PARENT_TO_CHILD_PIPE_DIR
+	p.write_fd
+}
 
 # --- File ---
 
@@ -1344,6 +1370,26 @@ F Str(r:Redir) "<Redirect ${r.fd} ${r.marker} ${r.datum}>"
 	type ExecutableNotFound(Exception)
 }
 
+F '.'(p:Process, attr:Str) {
+	guard attr == 'stdout'
+	p.outputs[1]
+}
+
+F '.='(p:Process, attr:Str, v) {
+	guard attr == 'stdout'
+	p.outputs[1] = v
+}
+
+F '.'(p:Process, attr:Str) {
+	guard attr == 'stderr'
+	p.outputs[2]
+}
+
+F '.='(p:Process, attr:Str, v) {
+	guard attr == 'stderr'
+	p.outputs[2] = v
+}
+
 F finished_ok(p:Process) p.exit_code == 0
 
 F finished_ok(p:Process) {
@@ -1367,8 +1413,9 @@ F init(p:Process, c:Command) {
 	p.pid = null
 	p.exit_code = null
 	p.exit_signal = null
-	p.stdout = null
-	p.stderr = null
+	p.pipes = {}
+	p.outputs = {1:null, 2:null}
+	# p.lock = Lock()
 }
 
 F Bool(p:Process) {
@@ -1421,41 +1468,60 @@ F '$()'(c:Command) {
 	} catch(nf:ExecutableNotFound) {
 		throw ProcessFail(process).set('cause', nf).set('message', 'Executable not found')
 	}
-	stdout_pipe = Pipe()
-	stderr_pipe = Pipe()
+	# child fd -> Pipe
+	pipes = process.pipes
+	if not(c.is_top_level) {
+		pipes[1] = Pipe(STDLIB_CHILD_TO_PARENT_PIPE_DIR)
+	}
+
+	c.redirects.each(F(r:Redir) {
+		# WIP. Continue here: support functions and Pipe objects
+	})
+
+	pipes % { process.outputs[A] = null }
+
 	pid = c_fork()
 
 	pid == -1 throws "Failed to fork()"
 
 	debug("$debug_pfx PID after fork: $pid")
 
+	child_fds = pipes / child_fd(Y)
+	parent_fds = pipes / parent_fd(Y)
+
 	if pid == 0 {
 		# === Child ===
 		# TODO: -------------------- test - start --------------------
-		for(i=3;i<100;i+=1)
-			if i not in [stdout_pipe.write_fd, stderr_pipe.write_fd] {
+
+		for(i=3;i<100;i+=1) {
+			if i not in child_fds {
 				i.c_close()
 			}
+		}
 		# TODO: -------------------- test - end --------------------
-		if not(c.is_top_level) {
-			stdout_pipe.close_reading_end()
-			stdout_pipe.dup2_writing_end(1)
-			stderr_pipe.close_reading_end()
-			stderr_pipe.dup2_writing_end(2)
+		parent_fds % c_close
+		pipes % F(fd, pipe) {
+			dup2(pipe.child_fd(), fd)
 		}
 		# Redirections (WIP) - start
 		c.redirects.each(F(r:Redir) {
+
 			F fd_or_dflt(fd:Int, dflt) fd
 			F fd_or_dflt(fd:Null, dflt) dflt
+
 			eswitch r.marker {
 				'<'  { flags = 'r'; target_fd = fd_or_dflt(r.fd, 0); }
 				'>'  { flags = 'w'; target_fd = fd_or_dflt(r.fd, 1); }
 				'>>' { flags = 'a'; target_fd = fd_or_dflt(r.fd, 1); }
 			}
-			f = File(r.datum).open(flags)
-			ok = c_dup2(f.fd, target_fd)
-			# TODO: better exception
-			ok < 0 throws "Failed to dup2(${f.fd}, ${target_fd}). Errno ${get_c_errno()}"
+
+			# TODO: Maybe support File or some other datum types later?
+			if r.datum is Str {
+				f = File(r.datum).open(flags)
+				ok = c_dup2(f.fd, target_fd)
+				# TODO: better exception
+				ok < 0 throws "Failed to dup2(${f.fd}, ${target_fd}). Errno ${get_c_errno()}"
+			}
 		})
 		# Redirections (WIP) - end
 		result = c_execve(process.executable.path, c.argv, ENV.Strs())
@@ -1466,23 +1532,18 @@ F '$()'(c:Command) {
 	if pid > 0 {
 		# === Parent ===
 		process.pid = pid
-		if not(c.is_top_level) {
-			debug("$debug_pfx closing writing end of the stdout_pipe")
-			stdout_pipe.close_writing_end()
-			debug("$debug_pfx closing writing end of the stderr_pipe")
-			stderr_pipe.close_writing_end()
-			debug("$debug_pfx reading all output of the child process")
-			# XXX: maybe make it chunk based with c_poll() and single thread
-			[
-				Thread({ process.stdout = stdout_pipe.read() })
-				Thread({ process.stderr = stderr_pipe.read() })
-			].join()
-			debug("$debug_pfx read all output of the child process")
-			stdout_pipe.close_reading_end()
-			debug("$debug_pfx closed stdout_pipe reading end")
-			stderr_pipe.close_reading_end()
-			debug("$debug_pfx closed stderr_pipe reading end")
+		child_fds % c_close
+		debug("$debug_pfx reading all output of the child process")
+		# XXX: maybe make it chunk based with c_poll() and single thread
+		pipes_to_read_from = pipes ? F(fd, pipe) { pipe.direction == STDLIB_CHILD_TO_PARENT_PIPE_DIR }
+		reading_threads = pipes_to_read_from.map(F(fd, pipe) {
+			Thread({ process.outputs[fd] = pipe.read() })
+		})
+		if reading_threads {
+			reading_threads.join()
 		}
+		debug("$debug_pfx read all output of the child process")
+		parent_fds % c_close
 		# debug("$debug_pfx child output was <<${process.stdout}>>")
 		process.wait()
 	}
