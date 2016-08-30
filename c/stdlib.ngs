@@ -1335,7 +1335,7 @@ F basename(s:Str) $(basename $s).Str() - Sfx('\n')
 
 # --- Redir ---
 
-F Str(r:Redir) "<Redirect ${r.marker} ${r.datum}>"
+F Str(r:Redir) "<Redirect ${r.fd} ${r.marker} ${r.datum}>"
 
 # --- Process ---
 
@@ -1430,10 +1430,10 @@ F '$()'(c:Command) {
 	debug("$debug_pfx PID after fork: $pid")
 
 	if pid == 0 {
+		# === Child ===
 		# TODO: -------------------- test - start --------------------
 		for(i=3;i<100;i+=1)
-			if i not in [stdout_pipe.read_fd, stdout_pipe.write_fd, stderr_pipe.read_fd, stderr_pipe.write_fd] {
-				# echo("CLOSING $i")
+			if i not in [stdout_pipe.write_fd, stderr_pipe.write_fd] {
 				i.c_close()
 			}
 		# TODO: -------------------- test - end --------------------
@@ -1445,10 +1445,12 @@ F '$()'(c:Command) {
 		}
 		# Redirections (WIP) - start
 		c.redirects.each(F(r:Redir) {
+			F fd_or_dflt(fd:Int, dflt) fd
+			F fd_or_dflt(fd:Null, dflt) dflt
 			eswitch r.marker {
-				'<'  { flags = 'r'; target_fd = 0; }
-				'>'  { flags = 'w'; target_fd = 1; }
-				'>>' { flags = 'a'; target_fd = 1; }
+				'<'  { flags = 'r'; target_fd = fd_or_dflt(r.fd, 0); }
+				'>'  { flags = 'w'; target_fd = fd_or_dflt(r.fd, 1); }
+				'>>' { flags = 'a'; target_fd = fd_or_dflt(r.fd, 1); }
 			}
 			f = File(r.datum).open(flags)
 			ok = c_dup2(f.fd, target_fd)
@@ -1462,6 +1464,7 @@ F '$()'(c:Command) {
 	}
 
 	if pid > 0 {
+		# === Parent ===
 		process.pid = pid
 		if not(c.is_top_level) {
 			debug("$debug_pfx closing writing end of the stdout_pipe")
@@ -1483,6 +1486,8 @@ F '$()'(c:Command) {
 		# debug("$debug_pfx child output was <<${process.stdout}>>")
 		process.wait()
 	}
+
+	# TODO: pid < 0 => throw exception with errno
 
 	process
 }

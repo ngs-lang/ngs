@@ -2725,12 +2725,14 @@ do_jump:
 							PUSH(MAKE_KWARGS_MARKER);
 							goto main_loop;
 		case OP_MAKE_REDIR:
-							EXPECT_STACK_DEPTH(2);
+							EXPECT_STACK_DEPTH(3);
 							command = make_normal_type_instance(vm->Redir);
 							POP_NOCHECK(v);
 							set_normal_type_instance_attribute(command, make_string("datum"), v);
 							POP_NOCHECK(v);
 							set_normal_type_instance_attribute(command, make_string("marker"), v);
+							POP_NOCHECK(v);
+							set_normal_type_instance_attribute(command, make_string("fd"), v);
 							PUSH_NOCHECK(command);
 							goto main_loop;
 		default:
