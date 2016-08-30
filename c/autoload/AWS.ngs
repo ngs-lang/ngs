@@ -299,6 +299,8 @@
 
 	F ids(rd:AwsInstance) rd.resources.props.InstanceId
 
+	# TODO: Launching instance(s)
+
 	# --------------------------------------------------
 	# AwsElb
 	# --------------------------------------------------
@@ -513,5 +515,11 @@
 			rrset.run('update AwsRecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${rrset.def.zone_id} --change-batch ${change_batch.encode_json()}))
 		}
 	}
+
+	# --------------------------------------------------
+	# AwsBucket
+	# --------------------------------------------------
+
+	# TODO
 
 }

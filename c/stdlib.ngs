@@ -1352,6 +1352,12 @@ F init(pf:ProcessFail, p:Process) {
 	pf.backtrace.frames.pop()
 }
 
+F Str(pf:ProcessFail) {
+	p = pf.process
+	F fmt(s:Str) s.lines().join('\\n')
+	"<ProcessFail command=${p.command} pid=${p.pid} exit_code=${p.exit_code} exit_signal=${p.exit_signal} out=${p.stdout.fmt()} err=${p.stderr.fmt()}>"
+}
+
 F finished_ok(p:Process) p.exit_code == 0
 
 F finished_ok(p:Process) {
@@ -1712,9 +1718,9 @@ F inspect(a:Arr) {
 F inspect(h:Hash) {
 	collector {
 		collect("Hash of size ${h.len()}")
-		h.each(F(idx, val) {
-			collect("[$idx] = $val")
-		})
+		h % {
+			collect("[$A] = $B")
+		}
 	}
 }
 
