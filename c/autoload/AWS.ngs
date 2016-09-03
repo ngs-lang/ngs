@@ -28,7 +28,7 @@
 
 	F init(a:AwsAncor, regions=null, tags=null)  {
 		a.regions = regions
-		a.tags = if tags tags {}
+		a.tags = tags or {}
 	}
 
 	# --------------------------------------------------
