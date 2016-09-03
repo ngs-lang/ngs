@@ -592,11 +592,9 @@ TEST (try [10,20,30,40][2..10] catch(e:IndexNotFound) "OK") == "OK"
 TEST [10,20,30,40][1...2] == [20, 30]
 TEST [10,20,30,40][4..null] == []
 
-F limit(a:Arr, l:Int) a[0..l]
-
 F limit(a:Arr, l:Int) {
-	guard a.len() <= l
-	a
+	a.len() <= l returns a
+	a[0..l]
 }
 
 TEST [10,11,12].limit(10) == [10,11,12]
@@ -659,11 +657,9 @@ F join(a:Arr, s:Str) {
 
 doc Used for command line arguments such as ['--vpc-id', my_vpc_id()].nuke_null()
 doc If my_vpc_id() is null the whole array is not needed
-F nuke_null(a:Arr) a
-
 F nuke_null(a:Arr) {
-	guard a.any(is, Null)
-	[]
+	a.any(is, Null) returns []
+	a
 }
 
 TEST [1,2].nuke_null() == [1,2]
@@ -883,6 +879,7 @@ F Strs(h:Hash) h / "$X=$Y"
 TEST {'a': 1, 'b': 2}.Strs() == ['a=1', 'b=2']
 
 F limit(h:Hash, l:Int) {
+	h.len() <= l returns h
 	finish = Return()
 	result = {}
 	h.each_idx_key_val(F(idx, k, v) {
@@ -891,11 +888,6 @@ F limit(h:Hash, l:Int) {
 	})
 	# Should not reach
 	result
-}
-
-F limit(h:Hash, l:Int) {
-	guard h.len() <= l
-	h
 }
 
 TEST {"a": 1, "b": 2}.limit(3) == {"a": 1, "b": 2}
@@ -1056,25 +1048,17 @@ TEST Str("x", 3) == 'x  '
 TEST Str("x",-3) == '  x'
 
 F starts_with(haystack:Str, needle:Str) {
+	needle.len() > haystack.len() returns false
 	haystack[0..needle.len()] == needle
-}
-
-F starts_with(haystack:Str, needle:Str) {
-	guard needle.len() > haystack.len()
-	false
 }
 
 TEST "abcd".starts_with("ab")
 TEST "ab".starts_with("abcd") == false
 
 F ends_with(haystack:Str, needle:Str) {
+	needle.len() > haystack.len() returns false
 	l = haystack.len()
 	haystack[l - needle.len()..l] == needle
-}
-
-F ends_with(haystack:Str, needle:Str) {
-	guard needle.len() > haystack.len()
-	false
 }
 
 TEST "abcd".ends_with("cd")
@@ -1115,12 +1099,9 @@ F +(a:Arr, s:Str) {
 }
 TEST ["1", "2"] + " a" == ["1 a", "2 a"]
 
-F limit(s:Str, n:Int) s[0..n]
-
 F limit(s:Str, n:Int) {
-	guard s.len() <= n
-	s
-
+	s.len() <= n returns s
+	s[0..n]
 }
 
 F code(s:Str) {
