@@ -308,7 +308,7 @@
 	type AwsElb(AwsResDef)
 	type AwsElbRes(AwsRes)
 
-	F ids(rd:AwsElb) rd.resources.props.XXX
+	F ids(rd:AwsElb) throw NotImplemented("ids() method for AwsElb is not implemented")
 
 	F validate(rd:AwsElb) {
 		rd.ancor is not Str throws InvalidArgument("AwsElb is the ELB name and must be a string, not ${rd.ancor}")

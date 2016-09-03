@@ -1099,10 +1099,19 @@ F +(a:Arr, s:Str) {
 }
 TEST ["1", "2"] + " a" == ["1 a", "2 a"]
 
-F limit(s:Str, n:Int) {
+F limit(s:Str, n:Int, marker:Str='') {
 	s.len() <= n returns s
-	s[0..n]
+	if marker {
+		lim = n - len(marker)
+		s[0..lim] + marker
+	} else {
+		s[0..n]
+	}
 }
+
+TEST "abc".limit(5, "...") == "abc"
+TEST "abcdef".limit(5, "...") == "ab..."
+TEST "abcdef".limit(2) == "ab"
 
 F code(s:Str) {
 	# XXX TODO: escaping
