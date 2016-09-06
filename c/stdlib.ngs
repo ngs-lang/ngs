@@ -998,6 +998,8 @@ F in(needle:Str, haystack:Str) pos(haystack, needle) is not Null
 TEST "bc" in "abcd"
 TEST "x" not in "abcd"
 
+F '[]'(s:Str, i:Int) s[i..i+1]
+
 # --- Misc utilities ---
 
 F split(s:Str, delim:Str) {
