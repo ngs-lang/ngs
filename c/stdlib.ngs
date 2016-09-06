@@ -210,6 +210,14 @@ F Str(i:NormalTypeInstance) {
 	"<${i.typeof().name} ${h.join(' ')}${if truncated ' ...' else ''}>"
 }
 
+F dflt(i:NormalTypeInstance, k, v) {
+	if k not in i {
+		(.=)(i, k, v)
+	}
+	i
+}
+
+
 # === auto-load ==================================
 
 doc Called when reading undefined global
@@ -905,6 +913,13 @@ F group(a:Arr, cb:Fun, *args) {
 
 F code(h:Hash) {
 	'{' + h.map(F(k, v) "${k.code()}: ${v.code()}").join(', ') + '}'
+}
+
+F dflt(h:Hash, k, v) {
+	if k not in h {
+		h[k] = v
+	}
+	h
 }
 
 # === Box ========================================
