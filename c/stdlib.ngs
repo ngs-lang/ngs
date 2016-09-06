@@ -1000,6 +1000,9 @@ TEST "x" not in "abcd"
 
 F '[]'(s:Str, i:Int) s[i..i+1]
 
+TEST ("abc"[0] == "a") and ("abc"[2] == "c")
+TEST try "abc"[3] == "a" catch(e:InvalidArgument) true
+
 # --- Misc utilities ---
 
 F split(s:Str, delim:Str) {
