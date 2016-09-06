@@ -1001,7 +1001,16 @@ TEST "x" not in "abcd"
 F '[]'(s:Str, i:Int) s[i..i+1]
 
 TEST ("abc"[0] == "a") and ("abc"[2] == "c")
-TEST try "abc"[3] == "a" catch(e:InvalidArgument) true
+TEST try "abc"[3] == "x" catch(e:InvalidArgument) true
+
+F '[]'(s:Str, i:Int) {
+	guard i < 0
+	i < 0-s.len() throws InvalidArgument("Negative index into string as (abs) larger than the string")
+	s[s.len()+i]
+}
+
+TEST ("abc"[-1] == "c") and ("abc"[-3] == "a")
+TEST try "abc"[-4] == "x" catch(e:InvalidArgument) true
 
 # --- Misc utilities ---
 
