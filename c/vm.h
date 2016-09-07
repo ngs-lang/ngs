@@ -99,6 +99,9 @@ typedef struct {
 	VALUE *locals;
 	VALUE closure;
 
+	const VALUE *arr_callable;
+	int *arr_callable_idx;
+
 	TRY_INFO try_info[MAX_TRIES_PER_FRAME];
 	int try_info_ptr;
 
@@ -300,6 +303,7 @@ enum opcodes {
 	OP_HASH_UPDATE,
 	OP_PUSH_KWARGS_MARKER,
 	OP_MAKE_REDIR,
+	OP_SUPER,
 	NUMBER_OF_OPCODES,
 };
 

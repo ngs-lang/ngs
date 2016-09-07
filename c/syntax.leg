@@ -507,6 +507,14 @@ chain-expression = b:basic-expression (
 			b = ret;
 		}
 		|
+		"." i:super {
+			MAKE_NODE(ret, ATTR_NODE);
+				ret->number = 902;
+				ret->first_child = b;
+				ret->first_child->next_sibling = i;
+			b = ret;
+		}
+		|
 		"." i:identifier {
 			MAKE_NODE(ret, ATTR_NODE);
 				ret->number = 902;
@@ -546,6 +554,7 @@ basic-expression =
 	| throw
 	| type
 	| subshell
+	| super
 	| identifier
 	| array-literal
 	| imm-array-literal
@@ -1081,6 +1090,12 @@ number =
 	<[-+]?[0-9]+> {
 		MAKE_NODE(ret, INT_NODE);
 		ret->number = atoi(yytext);
+		$$ = ret;
+	}
+
+super =
+	"super" {
+		MAKE_NODE(ret, SUPER_NODE);
 		$$ = ret;
 	}
 

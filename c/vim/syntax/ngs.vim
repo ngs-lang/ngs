@@ -33,6 +33,7 @@ syn keyword ngsConstant true false null
 syn keyword ngsPredefinedVariable ARGV ARGV0 ENV ORIG_ARGV
 " Special methods
 syn keyword ngsPredefinedVariable init call
+syn keyword ngsKeyword super
 
 " strings
 syn match   ngsSpecial contained #\$#
@@ -49,11 +50,13 @@ syn keyword ngsFunction fetch main require to_exit_code
 syn keyword ngsFunction acquire all any assert basename close_reading_end close_writing_end cmp count dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error expose debug die filter find_in_path first flatten group has identity in index join len limit log map max min n next none partial partial_tail pmap pos ptimes read release reverse set split starts_with status Strs uniq update wait without write zip
 
 " resources types
-syn keyword ngsType Res ResDef
+syn keyword ngsType Ancor Res ResDef ResNotFound
 
 syn keyword ngsType AwsRes AwsResDef
+syn keyword ngsType AwsAncor
 
 syn keyword ngsType AwsElb AwsElbRes
+syn keyword ngsType AwsImage AwsImageRes
 syn keyword ngsType AwsInstance AwsInstanceRes
 syn keyword ngsType AwsRecordSet AwsRecordSetRes
 syn keyword ngsType AwsSecGroup AwsSecGroupRes

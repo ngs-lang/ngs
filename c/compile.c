@@ -355,7 +355,7 @@ void compile_attr_name(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, siz
 }
 
 void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
-	ast_node *ptr;
+	ast_node *ptr, *callable;
 	int argc, have_arr_splat, have_hash_splat, params_flags;
 	int doing_named_args = 0;
 	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
@@ -484,12 +484,11 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				STACK_DEPTH++;
 			}
 			if(node->first_child->type == ATTR_NODE) {
-				// printf("---\n");
-				// print_ast(node->first_child->first_child->next_sibling, 0);
-				compile_main_section(ctx, node->first_child->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+				callable = node->first_child->first_child->next_sibling;
 			} else {
-				compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+				callable = node->first_child;
 			}
+			compile_main_section(ctx, callable, buf, idx, allocated, NEED_RESULT);
 			OPCODE(*buf, have_arr_splat ? OP_CALL_ARR : OP_CALL);
 			POP_IF_DONT_NEED_RESULT(*buf);
 			STACK_DEPTH = saved_stack_depth;
@@ -1025,6 +1024,13 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			POP_IF_DONT_NEED_RESULT(*buf);
 			IF_NOT_SWITCH_COND {
 				STACK_DEPTH--;
+			}
+			break;
+
+		case SUPER_NODE:
+			if(need_result) {
+				OPCODE(*buf, OP_SUPER);
+				STACK_DEPTH++;
 			}
 			break;
 

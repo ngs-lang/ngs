@@ -96,6 +96,7 @@ char *opcodes_names[] = {
 	/* 51 */ "HASH_UPDATE",
 	/* 52 */ "PUSH_KWARGS_MARKER",
 	/* 53 */ "MAKE_REDIR",
+	/* 54 */ "SUPER",
 };
 
 
@@ -116,6 +117,7 @@ char *opcodes_names[] = {
 #define GLOBALS (vm->globals)
 #define THIS_FRAME (ctx->frames[ctx->frame_ptr-1])
 #define THIS_FRAME_CLOSURE (THIS_FRAME.closure)
+#define UPPER_FRAME (ctx->frames[ctx->frame_ptr-2])
 #define LOCALS (THIS_FRAME.locals)
 #define UPLEVELS CLOSURE_OBJ_UPLEVELS(THIS_FRAME_CLOSURE)
 #define ARG(name, type) name = *(type *) &vm->bytecode[ip]; ip += sizeof(type);
@@ -816,6 +818,13 @@ METHOD_RESULT native_get_attr_nti_str EXT_METHOD_PARAMS {
 	return mr;
 }
 METHOD_RESULT native_set_attr_nti_str_any METHOD_PARAMS { set_normal_type_instance_attribute(argv[0], argv[1], argv[2]); METHOD_RETURN(argv[2]); }
+
+METHOD_RESULT native_in_nti_str METHOD_PARAMS {
+	METHOD_RESULT mr;
+	mr = get_normal_type_instace_attribute(argv[1], argv[0], result);
+	METHOD_RETURN(MAKE_BOOL(mr != METHOD_EXCEPTION));
+}
+
 METHOD_RESULT native_inherit_nt_nt METHOD_PARAMS { add_normal_type_inheritance(argv[0], argv[1]); METHOD_RETURN(argv[0]); }
 
 // Consider moving to obj.c
@@ -1570,6 +1579,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, ".",        &native_get_attr_nt_str,       2, "obj", vm->NormalType,         "attr", vm->Str);
 	register_global_func(vm, 1, ".",        &native_get_attr_nti_str,      2, "obj", vm->NormalTypeInstance, "attr", vm->Str);
 	register_global_func(vm, 0, ".=",       &native_set_attr_nti_str_any,  3, "obj", vm->NormalTypeInstance, "attr", vm->Str, "v", vm->Any);
+	register_global_func(vm, 0, "in",       &native_in_nti_str,            2, "attr", vm->Str,               "obj", vm->NormalTypeInstance);
 	register_global_func(vm, 0, "inherit",  &native_inherit_nt_nt,         2, "t",   vm->NormalType,         "parent", vm->NormalType);
 
 	// Type
@@ -1907,13 +1917,16 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 	// 	dump_titled("ARGV0", argv[0]);
 	// }
 	if(IS_ARRAY(callable)) {
+		THIS_FRAME.arr_callable = &callable;
+		THIS_FRAME.arr_callable_idx = &i;
 		for(i=OBJ_LEN(callable)-1, callable_items = OBJ_DATA_PTR(callable); i>=0; i--) {
 			mr = vm_call(vm, ctx, result, callable_items[i], argc, argv);
 			if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION) || (mr == METHOD_IMPL_MISSING)) {
+				THIS_FRAME.arr_callable = NULL;
 				return mr;
 			}
-			assert(mr == METHOD_ARGS_MISMATCH);
 			if(mr != METHOD_ARGS_MISMATCH) {
+				THIS_FRAME.arr_callable = NULL;
 				dump_titled("RESULT", *result);
 				VALUE exc;
 				// TODO: Appropriate exception type, not Exception
@@ -1924,6 +1937,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 				THROW_EXCEPTION_INSTANCE(exc);
 			}
 		}
+		THIS_FRAME.arr_callable = NULL;
 		// --- impl_not_found_hook() - start ---
 		if(THIS_FRAME.do_call_impl_not_found_hook) {
 			// impl_not_found_hook == [] when stdlib is not loaded (-E bootstrap switch / during basic tests)
@@ -2107,6 +2121,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		ctx->frames[ctx->frame_ptr].do_call_call = 1;
 		ctx->frames[ctx->frame_ptr].last_ip = 0;
 		ctx->frames[ctx->frame_ptr].ReturnInstance = MAKE_NULL;
+		ctx->frames[ctx->frame_ptr].arr_callable = NULL;
 		ctx->frame_ptr++;
 		if(ctx->frame_ptr >= MAX_FRAMES) {
 			// Off by one (on the safe side)?
@@ -2735,6 +2750,20 @@ do_jump:
 							set_normal_type_instance_attribute(command, make_string("fd"), v);
 							PUSH_NOCHECK(command);
 							goto main_loop;
+		case OP_SUPER:
+							if(ctx->frame_ptr > 1 && UPPER_FRAME.arr_callable) {
+								assert(IS_ARRAY((*UPPER_FRAME.arr_callable))); // probably not needed
+								PUSH(make_array_with_values(*UPPER_FRAME.arr_callable_idx, OBJ_DATA_PTR(*UPPER_FRAME.arr_callable)));
+								goto main_loop;
+							} else {
+								VALUE exc;
+								// TODO: better exception type than ImplNotFound
+								exc = make_normal_type_instance(vm->ImplNotFound);
+								set_normal_type_instance_attribute(exc, make_string("message"), make_string("Using super where callable is not an array"));
+								set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+								*result = exc;
+								goto exception;
+							}
 		default:
 							// TODO: exception
 							printf("ERROR: Unknown opcode %d\n", opcode);

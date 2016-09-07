@@ -10,6 +10,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "programming"
 
+			* fix segfault when
+				F f(a:Int) { 1 }; f(b=2)
+
 			* fix $(tput ...) that does not work as expected when both stdout and stderr are captured
 
 			* main() - match arguments and make it usable [in progress]
