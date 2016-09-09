@@ -839,6 +839,23 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			if_jump = *idx - 1 - sizeof(JUMP_OFFSET);
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
+		case TAND_NODE:
+			if_jump = *idx;
+			OPCODE(*buf, OP_TRY_START);
+				DATA_JUMP_OFFSET_PLACEHOLDER(*buf); // Set handler code location
+
+			compile_main_section(ctx, node->first_child, buf, idx, allocated, DONT_NEED_RESULT);
+
+			end_of_func_idx = *idx;
+			OPCODE(*buf, OP_TRY_END);
+				DATA_JUMP_OFFSET_PLACEHOLDER(*buf); // Jump over handler code
+			*(JUMP_OFFSET *)&(*buf)[if_jump+1] = *idx - if_jump - 1 - sizeof(JUMP_OFFSET); // Jump is OP_TRY_START JUMP_OFFSET shorter
+			// Exception handler - start
+			OPCODE(*buf, OP_THROW); // Ignore the exception value
+			// Exception handler - end
+			*(JUMP_OFFSET *)&(*buf)[end_of_func_idx+1] = *idx - end_of_func_idx - 1 - sizeof(JUMP_OFFSET); // Jump is OP_TRY_START JUMP_OFFSET shorter
+			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, need_result);
+			break;
 		case TOR_NODE:
 			if_jump = *idx;
 			OPCODE(*buf, OP_TRY_START);

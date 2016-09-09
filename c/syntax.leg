@@ -333,9 +333,10 @@ binop-expression-inner =
 		if(e1->first_child && e1->first_child->type == IDENTIFIER_NODE) {
 			ast_node_type t=0;
 			AST_NODE_TYPE_LL *ll;
-			if(!strcmp("and", e1->first_child->name)) { t = AND_NODE; }
-			if(!strcmp("or", e1->first_child->name))  { t = OR_NODE; }
-			if(!strcmp("tor", e1->first_child->name))  { t = TOR_NODE; }
+			if(!strcmp("and",  e1->first_child->name)) { t = AND_NODE; }
+			if(!strcmp("or",   e1->first_child->name)) { t = OR_NODE; }
+			if(!strcmp("tand", e1->first_child->name)) { t = TAND_NODE; }
+			if(!strcmp("tor",  e1->first_child->name)) { t = TOR_NODE; }
 			if(t) {
 				// TODO: dedup. Somehow "or" node in 'echo("a" == "a" or "b" == "b")' is registered twice
 				ll = NGS_MALLOC(sizeof(*ll));
@@ -429,11 +430,12 @@ binop2 = space op:binop2op space { $$ = op; }
 binop2op =
 	  <"is not">  @@ 90 @@
 	| <"is">      @@ 90 @@
-	| <"or">      @@ 60 @@
 	| <"and">     @@ 65 @@
+	| <"or">      @@ 60 @@
 	| <"in">      @@ 70 @@
 	| <"not in">  @@ 70 @@
-	| <"tor">     @@ 50 @@
+	| <"tand">    @@ 50 @@
+	| <"tor">     @@ 40 @@
 
 inplace-assignment-op = <[-+*/%]> {
 	MAKE_NODE(ret, IDENTIFIER_NODE);
