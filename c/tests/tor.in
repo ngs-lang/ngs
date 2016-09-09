@@ -1,0 +1,2 @@
+dump(1+2 tor 10)
+dump(no_such_var tor 20)

@@ -14,7 +14,7 @@ syn match   ngsOperator "[-~!^&|*/%+=<>`]\+"
 syn match   ngsComment "#.*" contains=ngsTodo
 syn match   ngsComment "^[ \t]*doc .*" contains=ngsTodo
 "syn match   ngsTest "^TEST .*"
-syn keyword ngsKeyword A B C and break breaks catch collector collect cond continue continues econd ematch eswitch F global guard local match or return returns switch TEST throw throws try type upvar while with X Y Z .. ...
+syn keyword ngsKeyword A B C and break breaks catch collector collect cond continue continues econd ematch eswitch F global guard local match or return returns switch TEST throw throws tor try type upvar while with X Y Z .. ...
 syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
 " bootstrap types
@@ -28,6 +28,7 @@ syn keyword ngsType LockFail
 syn keyword ngsType Return
 syn keyword ngsType ScreenRenderer ScreenItemsContainer ScreenItemsVerticalContainer ScreenItemsHorizontalContainer
 syn keyword ngsType Match MatchY MatchN MatchFail SubSeq Pfx MaybePfx MustPfx Sfx MaybeSfx MustSfx
+syn keyword ngsType Props
 syn keyword ngsTodo TODO FIXME XXX NOTE
 syn keyword ngsConstant true false null
 syn keyword ngsPredefinedVariable ARGV ARGV0 ENV ORIG_ARGV
@@ -50,7 +51,7 @@ syn keyword ngsFunction fetch main require to_exit_code
 syn keyword ngsFunction acquire all any assert basename close_reading_end close_writing_end cmp count dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error expose debug die filter find_in_path first flatten group has identity in index join len limit log map max min n next none partial partial_tail pmap pos ptimes read release reverse set split starts_with status Strs uniq update wait without write zip
 
 " resources types
-syn keyword ngsType Ancor Res ResDef ResNotFound
+syn keyword ngsType Res ResDef ResNotFound
 
 syn keyword ngsType AwsRes AwsResDef
 syn keyword ngsType AwsAncor

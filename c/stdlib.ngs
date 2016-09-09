@@ -109,7 +109,7 @@ F Str(c:Closure) {
 	} else {
 		"<unknown location>"
 	}
-	"<Closure ${(try c.attrs().name) or "<anonymous>"} at ${location}>"
+	"<Closure ${c.attrs().name tor "<anonymous>"} at ${location}>"
 }
 
 # === Type =======================================
@@ -332,9 +332,9 @@ F ==(a:Null, b:Null) true
 F .(h:Hash, attr:Str) h[attr]
 F .=(h:Hash, attr:Str, v) h[attr] = v
 F get(h:Hash, k) get(h, k, null)
-F n(h:Hash) h.map(F(k, v) [k, try Int(v) catch(ia:InvalidArgument) v]).Hash()
+F n(h:Hash) h.map(F(k, v) [k, Int(v) tor v]).Hash()
 
-TEST %{k 7}.n() == {'k': 7}
+TEST %{k 7 kk "a"}.n() == {'k': 7, 'kk': 'a'}
 
 # --- Arr ---
 F .(a:Arr, attr:Str) a.map((.), attr)
@@ -1160,7 +1160,7 @@ F code(s:Str) {
 #       and maybe source component or file.
 
 # Not sure such flexibility is needed (NGS_ERR_FD)
-stdlib_error_fd = (try ENV.NGS_ERR_FD.Int()) or 2
+stdlib_error_fd = ENV.NGS_ERR_FD.Int() tor 2
 
 F log(s:Str) {
 	echo("[LOG] $s")
@@ -1588,7 +1588,7 @@ F parse(s:Str) parse(s, {})
 F parse(s:Str, hints:Hash) s
 
 F parse(s:Str, hints:Hash) {
-	ret = (try FullBox(decode_json(s))) or EmptyBox()
+	ret = FullBox(decode_json(s)) tor EmptyBox()
 	guard ret
 	ret.val
 }
@@ -1855,7 +1855,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 
 	if 'backtrace' in h {
 
-		parent_frames = (try parent.backtrace.frames) or []
+		parent_frames = parent.backtrace.frames tor []
 
 		h.backtrace.frames.each_idx_val(F(idx, frame) {
 
@@ -1863,7 +1863,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 			frame.ip == (try parent_frames[idx].ip) returns null
 
 			l = resolve_instruction_pointer(frame.ip)
-			closure = (try " [in ${frame.closure.attrs().name}]") or ''
+			closure = " [in ${frame.closure.attrs().name}]" tor ''
 			err("Frame $idx: ${l.file}:${l.first_line}:${l.first_column} - ${l.last_line}:${l.last_column}$closure")
 		})
 	}
