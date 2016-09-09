@@ -1,0 +1,18 @@
+{
+	type T1
+	type T2
+	T2.inherit(T1)
+}
+
+F init(t1:T1, n:Int) {
+	t1.n = n
+}
+
+F init(t2:T2, n:Int) {
+	super(t2, n)
+	t2.m = 10
+}
+
+t = T2(1)
+dump(t.n)
+dump(t.m)
