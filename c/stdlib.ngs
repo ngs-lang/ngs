@@ -558,9 +558,7 @@ F '[]'(arr:Arr, idx:Int) {
 	arr[i]
 }
 
-F '[]'(arr:Arr, indexes:Arr)
-	collector
-		indexes.each(F(idx) collect(arr[idx]))
+F '[]'(arr:Arr, indexes:Arr) indexes.map(arr[X])
 
 TEST [10,20,30,40][[0,3]] == [10, 40]
 
@@ -731,8 +729,8 @@ F cmp(a:Arr, b:Arr) {
 	ah = collector/{} a.each(collect, true)
 	bh = collector/{} b.each(collect, true)
 	{
-		'add': bh.filter(F(k, v) k not in ah).keys()
-		'remove': ah.filter(F(k, v) k not in bh).keys()
+		'add': bh.filter(X not in ah).keys()
+		'remove': ah.filter(X not in bh).keys()
 	}
 }
 
@@ -742,8 +740,8 @@ doc Compare arrays without using Hash so that '==' is used for comparison
 doc and not internal '===' for Hash keys.
 F compare(a:Arr, b:Arr) {
 	{
-		'add': b.filter(F(v) v not in a)
-		'remove': a.filter(F(v) v not in b)
+		'add': b.filter(X not in a)
+		'remove': a.filter(X not in b)
 	}
 }
 
@@ -864,7 +862,7 @@ TEST [1,2,3].Hash(["a", "b", "c"]) == {"a": 1, "b": 2, "c": 3}
 
 
 F without(h:Hash, without_k)
-	h.filter(F(k, v) k != without_k)
+	h.filter(X != without_k)
 
 TEST {'a': 1, 'b': 2, 'c': 3}.without('a') == {'b': 2, 'c': 3}
 
@@ -905,7 +903,7 @@ F group(a:Arr, cb:Fun, *args) {
 	ret = {}
 	a.each(F(elt) {
 		k = cb(elt, *args)
-		if k not in ret { ret[k] = [] }
+		ret.dflt(k, [])
 		ret[k].push(elt)
 	})
 	ret
@@ -1020,7 +1018,7 @@ TEST try "abc"[3] == "x" catch(e:InvalidArgument) true
 
 F '[]'(s:Str, i:Int) {
 	guard i < 0
-	i < 0-s.len() throws InvalidArgument("Negative index into string as (abs) larger than the string")
+	i < 0-s.len() throws InvalidArgument("Negative index into string is (abs) larger than the string")
 	s[s.len()+i]
 }
 
@@ -1248,9 +1246,10 @@ F dup2(oldfd:Int, newfd:Int) {
 #       This would allow simple handling of modifications
 #       for exec'ed processes.
 
-# Reads all
 # TODO: detect and process errors, throw exception(s)
 # TODO: better exceptions (use correct type, not string, maybe use errno)
+doc Read all data
+doc fd - file descriptor to read from
 F read(fd:Int) {
 	ret = []
 	while true {
@@ -1369,7 +1368,7 @@ F Str(f:File) "<File name=${f.name} fd=${f.fd}>"
 TEST File('xy').Str() == '<File name=xy fd=null>'
 
 F open(f:File, flags:Str) {
-	f.fd throws FileIOFail(null, "open(f:File, flags:Str): file is already open")
+	f.fd is not Null throws FileIOFail(null, "open(f:File, flags:Str): file is already open")
 	fd = c_open(f.name, flags)
 	fd <= 0 throws FileIOFail(f.name, get_c_errno(), "Failed to open the file ${f.name}")
 	f.fd = fd
@@ -1776,6 +1775,9 @@ F exception_specific_message(e:Exception) null
 F exception_specific_message(gnf:GlobalNotFound) "Global '${gnf.name}' not found"
 
 F inspect(val) ["$val"]
+F inspect(r:Real) ["Real: $r"]
+F inspect(i:Int) ["Int: $i"]
+F inspect(s:Str) ["String: $s"]
 
 F inspect(a:Arr) {
 	collector {

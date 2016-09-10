@@ -2671,19 +2671,15 @@ do_jump:
 							assert(saved_stack_ptr == ctx->stack_ptr);
 							return METHOD_ARGS_MISMATCH;
 		case OP_TRY_START:
-							// printf("TRY START %i\n", THIS_FRAME.try_info_ptr);
-							// TODO: statical analysis and compile-time error when "try"s are nested more than MAX_TRIES_PER_FRAME
 							assert(THIS_FRAME.try_info_ptr < MAX_TRIES_PER_FRAME);
 							ARG(jo, JUMP_OFFSET);
 							THIS_FRAME.try_info[THIS_FRAME.try_info_ptr].catch_ip = ip + jo;
 							THIS_FRAME.try_info[THIS_FRAME.try_info_ptr].saved_stack_ptr = ctx->stack_ptr;
 							THIS_FRAME.try_info_ptr++;
-							// printf("TRY START %i\n", THIS_FRAME.try_info_ptr);
 							goto main_loop;
 		case OP_TRY_END:
 							assert(THIS_FRAME.try_info_ptr);
 							THIS_FRAME.try_info_ptr--;
-							// printf("TRY END %i\n", THIS_FRAME.try_info_ptr);
 							goto do_jump;
 		case OP_ARR_REVERSE:
 							EXPECT_STACK_DEPTH(1);
@@ -2691,9 +2687,8 @@ do_jump:
 							goto main_loop;
 		case OP_THROW:
 							POP(*result);
-							// if(obj_is_of_type(*result, vm->Exception)) {
-							// 	set_normal_type_instance_attribute(*result, make_string("thrown_backtrace?"), make_backtrace(vm, ctx));
-							// }
+							// The place that Exception is created is the right place to set backtrace, not where it is thrown
+							// so not setting *result backtrace property here.
 							goto exception;
 		case OP_MAKE_CMD:
 							EXPECT_STACK_DEPTH(3);
