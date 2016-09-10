@@ -2143,6 +2143,9 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 
 	if(IS_NORMAL_TYPE_CONSTRUCTOR(callable)) {
 		*result = make_normal_type_instance(NORMAL_TYPE_CONSTRUCTOR_TYPE(callable));
+		if(obj_is_of_type(*result, vm->Exception)) {
+			set_normal_type_instance_attribute(*result, make_string("backtrace"), make_backtrace(vm, ctx));
+		}
 		// init() is optional when constructor is called without arguments
 		// --- init() - start ---
 		VALUE v;

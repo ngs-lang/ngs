@@ -1,14 +1,12 @@
 { type ProcessFail(Exception) }
 
-F init(pf:ProcessFail, p:Process) {
-	init(pf)
-	pf.process = p
-	pf.backtrace.frames.pop()
+F init(pf:ProcessFail, process:Process) {
+	pf.process = process
 }
 
 F Str(pf:ProcessFail) {
 	p = pf.process
 	F fmt(s:Str) s.lines().join('\\n')
-  F fmt(n:Null) "(none)"
+	F fmt(n:Null) "(none)"
 	"<ProcessFail command=${p.command} pid=${p.pid} exit_code=${p.exit_code} exit_signal=${p.exit_signal} out=${p.stdout.fmt()} err=${p.stderr.fmt()}>"
 }

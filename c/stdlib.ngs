@@ -6,11 +6,9 @@
 }
 
 F init(e:IndexNotFound, message:Str, container, key) {
-	init(e)
 	e.message = message
 	e.container = container
 	e.key = key
-	e.backtrace.frames.pop()
 }
 
 F assert(condition:Bool, msg:Str) not(condition) throws AssertFail(msg)
@@ -1703,10 +1701,8 @@ F Bool(my:MatchN) false
 F to_exit_code(m:Match) m.Bool().to_exit_code()
 
 F init(mf:MatchFail, msg:Str, container, pattern) {
-	init(mf, msg)
 	mf.container = container
 	mf.pattern = pattern
-	mf.backtrace.frames.pop()
 }
 
 F init(s:SubSeq, *args) throw Exception("${s.typeof().name} must be initialized with a single argument - value, given: $args")

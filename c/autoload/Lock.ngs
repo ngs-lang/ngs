@@ -5,11 +5,9 @@
 	LockFail.inherit(Exception)
 
 	F init(e:LockFail, op:Str, code:Int, msg:Str) {
-		init(e)
 		e.op = op
 		e.code = code
 		e.msg = msg
-		e.backtrace.frames.pop()
 	}
 
 	F init(l:Lock) {

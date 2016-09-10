@@ -1,29 +1,14 @@
 # === Exception ==================================
 
-doc %RET - Exception with .backtrace attribute
-F init(e:Exception) {
-	# Last entry in backtrace would be this init() invocation
-	b = Backtrace()
-	pop(b.frames)
-	e.backtrace = b
-}
-
-
 doc %RET - Exception with .backtrace and .message
-doc s - Goes into .message
-F init(e:Exception, s:Str) {
-	# Last entry in backtrace would be this Exception() invocation
-	init(e)
-	e.message = s
-	e.backtrace.frames.pop()
+doc message - Goes into .message
+F init(e:Exception, message:Str) {
+	e.message = message
 }
 
 doc %RET - Exception with .backtrace and .cause
 F init(e:Exception, cause:Exception) {
-	# Last entry in backtrace would be this Exception() invocation
-	init(e)
 	e.cause = cause
-	e.backtrace.frames.pop()
 }
 
 TEST Exception().backtrace is Backtrace

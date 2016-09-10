@@ -4,9 +4,7 @@
 	type ResNotFound(Exception)
 
 	F init(rnf:ResNotFound, rd:ResDef) {
-		init(rnf)
 		rnf.def = rd
-		rnf.backtrace.frames.pop()
 	}
 
 	F init(rd:ResDef, ancor, props:Hash) {
