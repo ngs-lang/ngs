@@ -4,11 +4,7 @@
 	type LockFail
 	LockFail.inherit(Exception)
 
-	F init(e:LockFail, op:Str, code:Int, msg:Str) {
-		e.op = op
-		e.code = code
-		e.msg = msg
-	}
+	F init(e:LockFail, op:Str, code:Int, msg:Str) init(args())
 
 	F init(l:Lock) {
 		l.lock = c_pthread_mutex_t()

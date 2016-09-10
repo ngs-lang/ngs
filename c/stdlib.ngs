@@ -1,3 +1,16 @@
+# === Trivial init() helper ===
+
+doc Trivial initialization helper for init(o, ...)
+doc Sets object fields from the supplied parameters
+doc %EX - # sets t.a and t.b
+doc %EX - F init(t:MyType, a, b) init(args())
+F init(h:Hash) {
+	args = Arr(h)
+	dst = args.shift()[1]
+	args.each(F(field_name_value) (.=)(dst, field_name_value[0], field_name_value[1]))
+	dst
+}
+
 # === Exceptions ===
 
 {
@@ -5,11 +18,7 @@
 	AssertFail.inherit(Exception)
 }
 
-F init(e:IndexNotFound, message:Str, container, key) {
-	e.message = message
-	e.container = container
-	e.key = key
-}
+F init(e:IndexNotFound, message:Str, container, key) init(args())
 
 F assert(condition:Bool, msg:Str) not(condition) throws AssertFail(msg)
 F assert(condition:Bool) assert(condition, "Assertion failed")
@@ -226,10 +235,7 @@ F global_not_found_hook(name:Str) {
 
 # === Range ======================================
 
-F init(r:Range, start, end) {
-	r.start = start
-	r.end = end
-}
+F init(r:Range, start, end) init(args())
 
 F ..(start, end)  ExclusiveRange(start, end)
 F ...(start, end) InclusiveRange(start, end)
@@ -1306,7 +1312,7 @@ STDLIB_PARENT_TO_CHILD_PIPE_DIR = 2
 
 F init(pipe:Pipe, direction:Int) {
 	init(pipe)
-	pipe.direction = direction
+	init(args())
 }
 
 F Str(p:Pipe) "<Pipe read_fd=${p.read_fd} write_fd=${p.write_fd}>"
@@ -1343,22 +1349,18 @@ F parent_fd(p:Pipe) {
 
 { type FileIOFail }
 
-F init(fail:FileIOFail, name:Str, errno:Int, message:Str) {
-	fail.name = name
-	fail.errno = errno
-	fail.message = message
-}
+F init(fail:FileIOFail, name:Str, errno:Int, message:Str) init(args())
 
 { type File }
 
 F init(f:File, name:Str) {
-	f.name = name
 	f.fd = null
+	init(args())
 }
 
 F init(f:File, fd:Int) {
-	f.name = null
 	f.fd = fd
+	init(args())
 }
 
 F Str(f:File) "<File name=${f.name} fd=${f.fd}>"
@@ -1700,10 +1702,7 @@ F Bool(my:MatchY) true
 F Bool(my:MatchN) false
 F to_exit_code(m:Match) m.Bool().to_exit_code()
 
-F init(mf:MatchFail, msg:Str, container, pattern) {
-	mf.container = container
-	mf.pattern = pattern
-}
+F init(mf:MatchFail, msg:Str, container, pattern) init(args())
 
 F init(s:SubSeq, *args) throw Exception("${s.typeof().name} must be initialized with a single argument - value, given: $args")
 F init(s:SubSeq, val) s.val = val

@@ -8,8 +8,7 @@
 	}
 
 	F init(rd:ResDef, ancor, props:Hash) {
-		rd.ancor = ancor
-		rd.props = props
+		init(args())
 		rd.resources = null
 		META = rd.props.get('META', {})
 		rd.count = META.get('count', 1)
@@ -59,10 +58,7 @@
 
 	type Res
 
-	F init(r:Res, rd:ResDef, props:Hash) {
-		r.def = rd
-		r.props = props
-	}
+	F init(r:Res, def:ResDef, props:Hash) init(args())
 
 	F Str(r:Res) "<${r.typeof().name} props=${r.props}>"
 

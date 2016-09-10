@@ -33,7 +33,7 @@ syn keyword ngsTodo TODO FIXME XXX NOTE
 syn keyword ngsConstant true false null
 syn keyword ngsPredefinedVariable ARGV ARGV0 ENV ORIG_ARGV
 " Special methods
-syn keyword ngsPredefinedVariable init call
+syn keyword ngsPredefinedVariable init call args
 syn keyword ngsKeyword super
 
 " strings

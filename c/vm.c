@@ -1306,6 +1306,33 @@ METHOD_RESULT native_c_getpid METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(pid));
 }
 
+METHOD_RESULT native_args EXT_METHOD_PARAMS {
+	(void) vm;
+	(void) argv;
+	int i;
+	int locals_idx = 0;
+	int n = CLOSURE_OBJ_N_REQ_PAR(THIS_FRAME_CLOSURE) + CLOSURE_OBJ_N_OPT_PAR(THIS_FRAME_CLOSURE) + 2;
+	VALUE closure = THIS_FRAME_CLOSURE;
+	*result = make_hash(n);
+	for(i=0; i<CLOSURE_OBJ_N_REQ_PAR(closure); i++) {
+		set_hash_key(*result, CLOSURE_OBJ_PARAMS(closure)[i*2+0], LOCALS[locals_idx++]);
+	}
+	for(i=0; i<CLOSURE_OBJ_N_OPT_PAR(closure); i++) {
+		set_hash_key(*result, CLOSURE_OBJ_PARAMS(closure)[CLOSURE_OBJ_N_REQ_PAR(closure)*2 + i*3 + 0], LOCALS[locals_idx++]);
+	}
+	i = CLOSURE_OBJ_N_REQ_PAR(closure)*2 + CLOSURE_OBJ_N_OPT_PAR(closure)*3;
+	if(CLOSURE_OBJ_PARAMS_FLAGS(closure) & PARAMS_FLAG_ARR_SPLAT) {
+		set_hash_key(*result, CLOSURE_OBJ_PARAMS(closure)[i+0], LOCALS[locals_idx++]);
+		i+=2;
+	}
+	if(CLOSURE_OBJ_PARAMS_FLAGS(closure) & PARAMS_FLAG_HASH_SPLAT) {
+		set_hash_key(*result, CLOSURE_OBJ_PARAMS(closure)[i+0], LOCALS[locals_idx++]);
+		i+=2;
+	}
+	METHOD_RETURN(*result);
+}
+
+
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
 	GLOBAL_VAR_INDEX index;
@@ -1510,6 +1537,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	set_global(vm, "==", vm->eqeq);
 
 	register_global_func(vm, 0, "==",              &native_false,    2, "a", vm->Any, "b", vm->Any);
+
+	// special
+	register_global_func(vm, 1, "args",            &native_args,     0);
 
 	// Return
 	register_global_func(vm, 1, "Return",          &native_Return,   0);
