@@ -167,7 +167,7 @@ F bootstrap() {
 	result = program_func()
 
 	# Handle main() - start
-	if main.len() != 0 {
+	if main.len() > 0 {
 		bootstrap_debug("main() defined, using bootstrap_invoke_main()")
 		if global_not_found_hook.len() == 0 {
 			throw MainFail("Autoloading (usually defined in stdlib) is not present but the main() invoking mechanism requires it")
