@@ -10,9 +10,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "programming"
 
-			* fix "$x - y" y is undefined
-				should behave as "${x} - y"
-
 			* fix super() not working in uncaught_exception_hook
 
 			* fix segfault when
