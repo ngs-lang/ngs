@@ -1,6 +1,13 @@
 {
 	AWS = true
 
+	# --------------------------------------------------
+	# Constants
+	# --------------------------------------------------
+
+	# From https://wiki.debian.org/Cloud/AmazonEC2Image/Jessie
+	AWS_AMI_OWNER_DEBIAN = '379101102735'
+
 	# TODO: separate validation just on ancor so it could be used for find()
 	#       currently validate() can only be used for converge() because it
 	#       check properties.
@@ -20,15 +27,25 @@
 		aws_cached_regions
 	}
 
+	F aws_regions(cb:Fun) {
+		regions = aws_regions()
+		regions.pmap(F(r) {
+			data = cb(r)
+			data % { A.Region = r }
+			data
+		}).flatten()
+	}
+
 	# --------------------------------------------------
 	# AwsAncor
 	# --------------------------------------------------
 
-	type AwsAncor
+	type AwsAncor(Props)
 
-	F init(a:AwsAncor, regions=null, tags=null)  {
-		a.regions = regions
-		a.tags = tags or {}
+	F init(a:AwsAncor, **kw)  {
+		a.super(**kw)
+		a.dflt('regions', null)
+		a.dflt('tags', {})
 	}
 
 	# --------------------------------------------------
@@ -37,10 +54,7 @@
 
 	type AwsResFindCommand
 
-	F init(c:AwsResFindCommand, cmd:Arr, supports_filters:Bool) {
-		c.cmd = cmd
-		c.supports_filters = supports_filters
-	}
+	F init(c:AwsResFindCommand, cmd:Arr, supports_filters:Bool) init(args())
 
 	# --------------------------------------------------
 	# AwsRes
@@ -251,18 +265,44 @@
 	}
 
 	# --------------------------------------------------
+	# AwsImage
+	# --------------------------------------------------
+
+	type AwsImage(AwsResDef)
+	type AwsImageRes(AwsRes)
+
+	# debian-jessie-amd64-hvm
+	F find(rd:AwsImage) {
+		owners = ['--owners', rd.ancor.OwnerId] tor []
+		# vol_type = block-device-mapping.volume-type BlockDeviceMappings Ebs VolumeType
+		images = ``aws ec2 describe-images $*owners``
+		if 'Name' in rd.ancor {
+			images .= filter({A.Name ~ rd.ancor.Name})
+		}
+	}
+
+
+	# --------------------------------------------------
 	# AwsInstance
 	# --------------------------------------------------
 
 	type AwsInstance(AwsResDef)
 	type AwsInstanceRes(AwsRes)
 
+	F stdlib_aws_instance_ancor(rd:AwsInstance) {
+		econd {
+			rd.ancor is AwsAncor { rd.ancor }
+			rd.ancor is Hash     { AwsAncor(tags=rd.ancor) }
+		}
+	}
+
+	F validate(rd:AwsInstance) {
+		ancor = rd.stdlib_aws_instance_ancor()
+	}
+
 	F find(rd:AwsInstance) {
 		# XXX: invalid code because misses straightening
-		ancor = econd {
-			rd.ancor is AwsAncor { rd.ancor }
-			rd.ancor is Hash { AwsAncor(tags=rd.ancor) }
-		}
+		ancor = rd.stdlib_aws_instance_ancor()
 
 		filters = ['--filters', 'Name=instance-state-name,Values=running']
 
@@ -299,7 +339,25 @@
 
 	F ids(rd:AwsInstance) rd.resources.props.InstanceId
 
-	# TODO: Launching instance(s)
+	F create(rd:AwsInstance) {
+		rd.log('create', 'Instance')
+		rd.run('create Instance', %(aws ec2 run-instances --image-id ${rd.props.ImageId}))
+		if not(rd.dry_run) {
+			rd.find()
+		}
+	}
+
+	# WIP
+	F image_id(rd:AwsInstance) {
+		guard rd.props.ImageId is AwsImage
+		rd.props.ImageId
+	}
+
+	# WIP
+	F image_id(rd:AwsInstance) {
+		guard rd.props.ImageId is Str
+		rd.props.ImageId
+	}
 
 	# --------------------------------------------------
 	# AwsElb

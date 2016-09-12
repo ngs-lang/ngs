@@ -1,0 +1,22 @@
+#!/usr/bin/env ngs
+{
+	# TODO: Add Pfx('Windows'). Add other Linux platforms.
+	prod2platform = {
+		'Linux/UNIX': 'linux'
+		'Windows': 'windows'
+	}
+
+	AWS
+	echo("Warning: re-check the results. No warranties!")
+
+	instances = aws_regions({ ``aws ec2 describe-instances --filters 'Name=instance-state-name,Values=running' --region $A`` })
+	needed = instances.group({"az=${A.Placement.AvailabilityZone},tenancy=${A.Placement.Tenancy},type=${A.InstanceType},platform=${A.Platform tor 'linux'}"}).map({[A, B.len()]}) \ Hash
+
+	ris = aws_regions({ ``aws ec2 describe-reserved-instances --region $A --filters Name=state,Values=active`` })
+	have = ris / {["az=${A.AvailabilityZone},tenancy=${A.InstanceTenancy},type=${A.InstanceType},platform=${prod2platform[A.ProductDescription]}", A.InstanceCount]} \ Hash
+
+	diff = cmp(have, needed)
+	diff.add / "Add $X - $Y" % echo
+	diff.remove / "Unused $X - $Y" % echo
+	diff.change / {"Change $A - ${have[A]} -> ${needed[A]}"} % echo
+}
