@@ -310,6 +310,8 @@
 		rd
 	}
 
+	F ids(rd:AwsImage) rd.resources.props.ImageId
+
 
 	# --------------------------------------------------
 	# AwsInstance
@@ -319,14 +321,19 @@
 	type AwsInstanceRes(AwsRes)
 
 	F stdlib_aws_instance_ancor(rd:AwsInstance) {
-		econd {
+		ancor = econd {
 			rd.ancor is AwsAncor { rd.ancor }
 			rd.ancor is Hash     { AwsAncor(tags=rd.ancor) }
 		}
+		ancor
 	}
 
+	# TODO: setting rd.ancor is wrong, should be in some other place
 	F validate(rd:AwsInstance) {
-		ancor = rd.stdlib_aws_instance_ancor()
+		rd.ancor = rd.stdlib_aws_instance_ancor();
+		%[ImageId].each(F(prop_name) {
+			prop_name not in rd.ancor throws InvalidArgument("Ancor must contain $prop_name")
+		})
 	}
 
 	F find(rd:AwsInstance) {
@@ -370,22 +377,21 @@
 
 	F create(rd:AwsInstance) {
 		rd.log('create', 'Instance')
-		rd.run('create Instance', %(aws ec2 run-instances --image-id ${rd.props.ImageId}))
+		rd.run('create Instance', %(aws ec2 run-instances --image-id ${rd.image_id()}))
 		if not(rd.dry_run) {
 			rd.find()
 		}
 	}
 
-	# WIP
 	F image_id(rd:AwsInstance) {
-		guard rd.props.ImageId is AwsImage
-		rd.props.ImageId
+		guard rd.ancor.ImageId is AwsImage
+		assert(rd.ancor.ImageId.resources.len() == 1, "Expecting exacty one image described by AwsImage resource defeinition")
+		rd.ancor.ImageId.ids()[0]
 	}
 
-	# WIP
 	F image_id(rd:AwsInstance) {
-		guard rd.props.ImageId is Str
-		rd.props.ImageId
+		guard rd.ancor.ImageId is Str
+		rd.ancor.ImageId
 	}
 
 	# --------------------------------------------------
