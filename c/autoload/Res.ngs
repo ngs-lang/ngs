@@ -30,11 +30,10 @@
 	F init(rd:ResDef, ancor) init(rd, ancor, {})
 
 	F Str(rd:ResDef) {
+		props = rd.props.without('META')
 		multi = if rd.count != 1 then " x${rd.count}" else ""
 		dry_run = if rd.dry_run " (dry run)" else ""
-		props = rd.props.without('META')
-		resources = if rd.resources is Null "" else " resources=${rd.resources}"
-		"<${rd.typeof().name} ancor=${rd.ancor} props=$props$multi$dry_run$resources>"
+		"<${rd.typeof().name} ancor=${rd.ancor} props=$props$multi$dry_run resources:${rd.resources.len()}>"
 	}
 
 	F log(rd:ResDef, method:Str, s:Str) {
@@ -53,8 +52,6 @@
 		assert(rd.len() > 0, "Expected one or more ${rd.typeof().name} resource instances but found none")
 		rd
 	}
-
-	F Str(r:ResDef) "<${r.typeof().name} ancor=${r.ancor}>"
 
 	type Res
 

@@ -111,11 +111,7 @@ F Str(c:NativeMethod) {
 
 F Str(c:Closure) {
 	info = c.ip().resolve_instruction_pointer()
-	location = if info {
-		"${info.file}:${info.first_line}"
-	} else {
-		"<unknown location>"
-	}
+	location = "${info.file}:${info.first_line}" tor "<unknown location>"
 	"<Closure ${c.attrs().name tor "<anonymous>"} at ${location}>"
 }
 
@@ -793,12 +789,31 @@ F each_idx_key_val(h:Hash, cb:Fun, *args) {
 
 F map(h:Hash, mapper:Fun, *args)
 	collector
-		h.each(F(k, v) {
-			collect(mapper(k, v, *args))
-		})
+		h % { collect(mapper(A, B, *args)) }
 
 TEST {'a': 1, 'b': 2}.map(F(k, v) "${k}-$v") == ['a-1', 'b-2']
 TEST {'a': 1, 'b': 2}.map(F(k, v, sep) "${k}${sep}${v}", '+') == ['a+1', 'b+2']
+
+
+F mapk(h:Hash, mapper:Fun, *args)
+	collector/{}
+		h % { collect(mapper(A, *args), B) }
+
+TEST mapk({"a": 1}, X+"z") == {"az": 1}
+
+
+F mapv(h:Hash, mapper:Fun, *args)
+	collector/{}
+		h % { collect(A, mapper(B, *args)) }
+
+TEST mapv({"a": 1}, X+1) == {"a": 2}
+
+
+F mapkv(h:Hash, mapper:Fun, *args)
+	collector/{}
+		h % { collect(*mapper(A, B, *args)) }
+
+TEST mapkv({"a": 1}, {[A+"zz", B+10]}) == {"azz": 11}
 
 
 F filter(h:Hash, predicate:Fun, *args)
@@ -1143,6 +1158,10 @@ F limit(s:Str, n:Int, marker:Str='') {
 TEST "abc".limit(5, "...") == "abc"
 TEST "abcdef".limit(5, "...") == "ab..."
 TEST "abcdef".limit(2) == "ab"
+
+# EXPERIMENTAL. For use with AWS Ancors.
+F ~(a:Str, b:Str) a==b
+
 
 F code(s:Str) {
 	# XXX TODO: escaping

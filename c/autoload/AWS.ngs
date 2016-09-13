@@ -18,6 +18,12 @@
 
 	F stdlib_aws_tags(h:Hash) h / "Key=$X,Value=$Y"
 
+	F stdlib_aws_filters(h:Hash) {
+		ret = h / "Name=$X,Values=$Y"
+		ret returns ['--filters'] + ret
+		[]
+	}
+
 	aws_cached_regions = null
 
 	F aws_regions() aws_cached_regions = ``aws ec2 describe-regions``.RegionName.sort()
@@ -113,7 +119,7 @@
 
 		t = rd._get_res_type()
 		rd.resources = resources / t(rd, X)
-		rd.resources
+		rd
 	}
 
 	# --------------------------------------------------
@@ -198,7 +204,7 @@
 			AwsSecGroupRes(rd, res ? known_props.has(X))
 		})
 		rd.resources = resources
-		rd.resources
+		rd
 	}
 
 	type IpPermBox(FullBox)
@@ -274,11 +280,34 @@
 	# debian-jessie-amd64-hvm
 	F find(rd:AwsImage) {
 		owners = ['--owners', rd.ancor.OwnerId] tor []
-		# vol_type = block-device-mapping.volume-type BlockDeviceMappings Ebs VolumeType
-		images = ``aws ec2 describe-images $*owners``
-		if 'Name' in rd.ancor {
-			images .= filter({A.Name ~ rd.ancor.Name})
+		filters = %{
+			state available
+			virtualization-type hvm
 		}
+		if try rd.ancor.Name is Str {
+			filters.name = rd.ancor.Name
+		}
+		if try rd.ancor.State is Str {
+			filters.state = rd.ancor.State
+		}
+		try filters['root-device-type'] = rd.ancor.RootDeviceType
+		try filters['block-device-mapping.volume-type'] = rd.ancor.VolumeType
+		filters .= stdlib_aws_filters()
+		resources = ``aws ec2 describe-images $*owners $*filters``
+		if 'Name' in rd.ancor {
+			resources .= filter({A.Name ~ rd.ancor.Name})
+		}
+		rd.resources = resources / AwsImageRes(rd, X)
+		rd
+	}
+
+	F latest(rd:AwsImage) {
+		if rd.resources is Null {
+			rd.find()
+		}
+		assert(rd.resources.len() >= 1, "Can not find latest() image because there are no images")
+		rd.resources = [rd.resources.sort({ A.props.CreationDate })[-1]]
+		rd
 	}
 
 
@@ -334,7 +363,7 @@
 		}
 
 		rd.resources = resources / AwsInstanceRes(rd, X)
-		rd.resources
+		rd
 	}
 
 	F ids(rd:AwsInstance) rd.resources.props.InstanceId
@@ -390,7 +419,7 @@
 			ret.Tags = ``aws elb describe-tags --load-balancer-names ${rd.ancor}``[0].Tags
 			AwsElbRes(rd, ret)
 		})
-		rd.resources
+		rd
 	}
 
 	F create(rd:AwsElb) {
@@ -530,7 +559,7 @@
 		}
 
 		rd.resources = rrs / AwsRecordSetRes(rd, X)
-		rd.resources
+		rd
 	}
 
 	F _get_props(rd:AwsRecordSet) {

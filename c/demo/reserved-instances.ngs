@@ -10,7 +10,7 @@
 	echo("Warning: re-check the results. No warranties!")
 
 	instances = aws_regions({ ``aws ec2 describe-instances --filters 'Name=instance-state-name,Values=running' --region $A`` })
-	needed = instances.group({"az=${A.Placement.AvailabilityZone},tenancy=${A.Placement.Tenancy},type=${A.InstanceType},platform=${A.Platform tor 'linux'}"}).map({[A, B.len()]}) \ Hash
+	needed = instances.group({ "az=${A.Placement.AvailabilityZone},tenancy=${A.Placement.Tenancy},type=${A.InstanceType},platform=${A.Platform tor 'linux'}" }).mapv(len)
 
 	ris = aws_regions({ ``aws ec2 describe-reserved-instances --region $A --filters Name=state,Values=active`` })
 	have = ris / {["az=${A.AvailabilityZone},tenancy=${A.InstanceTenancy},type=${A.InstanceType},platform=${prod2platform[A.ProductDescription]}", A.InstanceCount]} \ Hash
