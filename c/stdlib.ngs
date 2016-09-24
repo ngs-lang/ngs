@@ -1642,6 +1642,10 @@ TEST instances = [{"Tags": [{"Key": "k", "Value": "v"},{"Key": "k2", "Value": "v
 
 F parse(s:Str, hints:Hash) {
 	guard try hints['process'].command.argv[0] == 'aws'
+
+	# aws ec2 create-tags/delete-tags
+	s == '' returns null
+
 	data = decode_json(s)
 	guard data is Hash
 

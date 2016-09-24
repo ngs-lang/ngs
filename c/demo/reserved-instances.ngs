@@ -1,5 +1,7 @@
 #!/usr/bin/env ngs
 {
+	# TODO: VPC / classic
+
 	# TODO: Add Pfx('Windows'). Add other Linux platforms.
 	prod2platform = {
 		'Linux/UNIX': 'linux'

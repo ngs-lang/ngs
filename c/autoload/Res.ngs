@@ -76,5 +76,7 @@
 		r.resources % update
 	}
 
+	F ids(r:Res) r.resources.map(id)
+
 }
 

@@ -72,7 +72,12 @@
 
 	F update_tags(r:AwsRes) {
 		# Tags
-		diff = cmp(r.props.get('Tags', {}), r.def.props.get('Tags', {}))
+		target_tags = r.def.props.get('Tags', {});
+		if r.def.ancor is AwsAncor {
+			# Definition props tags override ancor tags
+			target_tags = r.def.ancor.tags + target_tags
+		}
+		diff = cmp(r.props.get('Tags', {}), target_tags)
 
 		if (tags = stdlib_aws_tags(diff.add + diff.change)) {
 			r.run('Add tags', %(aws ec2 create-tags --resources ${r.id()} --tags $*tags))
@@ -95,7 +100,7 @@
 			rd.log("run - $log_pfx", "would run: ${cmd.argv.join(' ')}")
 		} else {
 			rd.log("run - $log_pfx", "running: ${cmd.argv.join(' ')}")
-			$($cmd)
+			``$cmd``
 		}
 	}
 
@@ -375,21 +380,70 @@
 
 	F ids(rd:AwsInstance) rd.resources.props.InstanceId
 
+	# TODO: Support multiple NICs?
 	F create(rd:AwsInstance) {
 		rd.log('create', 'Instance')
-		rd.run('create Instance', %(aws ec2 run-instances --image-id ${rd.image_id()}))
+		assert(rd.resources is not Null, "Creating an instance assumes find() already run")
+		args = []
+		args += ['--key-name', rd.props.KeyName] tor []
+
+		sgs = _sgs(rd)
+		if sgs {
+			args += ['--security-group-ids', *sgs]
+		}
+
+		# TODO: Support AwsRes SubnetId?
+		args += ['--subnet-id', rd.props.SubnetId] tor []
+
+		if rd.props.get('PublicIpAddress', null) is Bool {
+			args += [if rd.props.PublicIpAddress '--associate-public-ip-address' '--no-associate-public-ip-address']
+		}
+
+
+		result = rd.run('create Instance', %(aws ec2 run-instances --image-id ${rd._image_id()} $*args))
 		if not(rd.dry_run) {
-			rd.find()
+			rd.resources += result.Instances / AwsInstanceRes(rd, X)
 		}
 	}
 
-	F image_id(rd:AwsInstance) {
+	# TODO: Support EC2 classic?
+	F update(instance:AwsInstanceRes) {
+		instance.def.log('update', 'Instance')
+		instance.update_tags()
+
+		current_sgs = instance.props.SecurityGroups.GroupId
+		target_sgs = _sgs(instance.def)
+		diff = cmp(current_sgs, target_sgs)
+		if diff.add or diff.remove {
+			diff.add    % { instance.def.log('update', "${instance.id()} - Adding SG $A") }
+			diff.remove % { instance.def.log('update', "${instance.id()} - Removing SG $A") }
+			instance.def.run('Set security groups', %(aws ec2 modify-instance-attribute --instance-id ${instance.id()} --groups $*target_sgs))
+		}
+	}
+
+	# Needed for update_tags()
+	F id(instance:AwsInstanceRes) instance.props.InstanceId
+
+	# TODO: Support EC2 classic?
+	# TODO: Handle SGS in Ancor?
+	F _sgs(rd:AwsInstance) {
+		if 'SecurityGroups' in rd.props {
+			ret = rd.props.SecurityGroups
+			if ret is AwsResDef {
+				ret .= ids()
+			}
+			return ret
+		}
+		[]
+	}
+
+	F _image_id(rd:AwsInstance) {
 		guard rd.ancor.ImageId is AwsImage
 		assert(rd.ancor.ImageId.resources.len() == 1, "Expecting exacty one image described by AwsImage resource defeinition")
 		rd.ancor.ImageId.ids()[0]
 	}
 
-	F image_id(rd:AwsInstance) {
+	F _image_id(rd:AwsInstance) {
 		guard rd.ancor.ImageId is Str
 		rd.ancor.ImageId
 	}
