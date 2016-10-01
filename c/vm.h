@@ -186,6 +186,7 @@ typedef struct {
 
 	VALUE Exception;
 		VALUE Error;
+			VALUE InternalError;
 			VALUE LookupFail;
 				VALUE KeyNotFound;
 				VALUE IndexNotFound;
@@ -198,6 +199,7 @@ typedef struct {
 				VALUE DontKnowHowToCall;
 				VALUE ImplNotFound;
 				VALUE StackDepthFail;
+				VALUE ArgsMismatch;
 			VALUE SwitchFail;
 			VALUE DlopenFail;
 

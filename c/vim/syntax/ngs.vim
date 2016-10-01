@@ -21,7 +21,7 @@ syn keyword ngsRepeat for
 syn keyword ngsType NotImplemented FetchFail RequreFail MainFail
 " other types
 syn keyword ngsType Any ArgvMatcher Arr ArrIter BasicType Bool Box CLib Closure Command Counter CSym EmptyBox ExclusiveRange ExecutableNotFound FFI FullBox Fun Hash InclusiveRange Int Iter KV NormalType NormalTypeInstance Null Path Pipe Process ProcessFail Range Real Seq Stats Str Table TableMeta TableMetaNotIfCol Type
-syn keyword ngsType AssertFail Error Exception CompileFail DontKnowHowToCall GlobalNotFound InvalidArgument ImplNotFound LookupFail KeyNotFound StackDepthFail
+syn keyword ngsType AssertFail ArgsMismatch Error Exception CompileFail DontKnowHowToCall GlobalNotFound InvalidArgument ImplNotFound InternalError LookupFail KeyNotFound StackDepthFail
 syn keyword ngsType IndexNotFound AttrNotFound InvalidParameter NoNext
 syn keyword ngsType Lock Pthread PthreadAttr Thread
 syn keyword ngsType LockFail
@@ -29,6 +29,7 @@ syn keyword ngsType Return
 syn keyword ngsType ScreenRenderer ScreenItemsContainer ScreenItemsVerticalContainer ScreenItemsHorizontalContainer
 syn keyword ngsType Match MatchY MatchN MatchFail SubSeq Pfx MaybePfx MustPfx Sfx MaybeSfx MustSfx
 syn keyword ngsType Props
+syn keyword ngsType PubSub
 syn keyword ngsTodo TODO FIXME XXX NOTE
 syn keyword ngsConstant true false null
 syn keyword ngsPredefinedVariable ARGV ARGV0 ENV ORIG_ARGV
@@ -44,11 +45,11 @@ syn region  ngsString start=+"+ end=+"+ skip=+\\\\\|\\"+ contains=ngsSpecial
 syn match   ngsNumber "\<\d\+\>"
 
 " builtin functions
-syn keyword ngsFunction c_close c_execve c_exit c_fork c_lseek copy c_open c_read c_waitpid C_WEXITSTATUS C_WTERMSIG compile del dump echo encode_json get get_c_errno globals hash impl_not_found_hook in inherit is keys len load not decode_json push shift values
+syn keyword ngsFunction c_close c_execve c_exit c_fork c_lseek copy c_open c_read c_waitpid C_WEXITSTATUS C_WTERMSIG compile del dump echo encode_json get get_c_errno globals hash impl_not_found_hook in inherit is keys len load not decode_json push shift typeof values
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction fetch main require to_exit_code
 " stdlib functions
-syn keyword ngsFunction acquire all any assert basename close_reading_end close_writing_end cmp count dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error expose debug die filter find_in_path first flatten group has identity in index join len limit log map mapk mapv mapkv max min n next none partial partial_tail pmap pos ptimes read release reverse set split starts_with status Strs uniq update wait without write zip
+syn keyword ngsFunction acquire all any assert basename close_reading_end close_writing_end cmp count dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error expose debug die filter find_in_path first flatten group has identity in index join len limit log map mapk mapv mapkv max min n next none partial partial_tail pmap pos ptimes publish read release reverse set split starts_with status Strs subscribe uniq update wait without write zip
 
 " resources types
 syn keyword ngsType Res ResDef ResNotFound

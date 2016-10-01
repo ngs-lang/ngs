@@ -1495,6 +1495,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	MKTYPE(Exception);
 		MKSUBTYPE(Error, Exception);
+			MKSUBTYPE(InternalError, Error);
 			MKSUBTYPE(LookupFail, Error);
 				MKSUBTYPE(KeyNotFound, LookupFail);
 				MKSUBTYPE(IndexNotFound, LookupFail);
@@ -1507,6 +1508,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 				MKSUBTYPE(DontKnowHowToCall, CallFail);
 				MKSUBTYPE(ImplNotFound, CallFail);
 				MKSUBTYPE(StackDepthFail, CallFail);
+				MKSUBTYPE(ArgsMismatch, CallFail);
 			MKSUBTYPE(SwitchFail, Error);
 			MKSUBTYPE(DlopenFail, Error);
 
@@ -1936,10 +1938,10 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 
 #define SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv) \
 { \
-	int minus = ((argc >= 2) && IS_KWARGS_MARKER(argv[argc-1])) ? 2 : 0; \
-	set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values(argc-minus, argv)); \
+	int minus = (((argc) >= 2) && IS_KWARGS_MARKER((argv)[(argc)-1])) ? 2 : 0; \
+	set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values((argc)-minus, (argv))); \
 	if(minus) { \
-		set_normal_type_instance_attribute(exc, make_string("kwargs"), argv[argc-2]); \
+		set_normal_type_instance_attribute(exc, make_string("kwargs"), (argv)[(argc)-2]); \
 	} \
 }
 
@@ -1968,9 +1970,8 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 				THIS_FRAME.arr_callable = NULL;
 				dump_titled("RESULT", *result);
 				VALUE exc;
-				// TODO: Appropriate exception type, not Exception
-				exc = make_normal_type_instance(vm->Exception);
-				set_normal_type_instance_attribute(exc, make_string("message"), make_string("Internal: mr != METHOD_ARGS_MISMATCH"));
+				exc = make_normal_type_instance(vm->InternalError);
+				set_normal_type_instance_attribute(exc, make_string("message"), make_string("Unexpected method result"));
 				set_normal_type_instance_attribute(exc, make_string("callable"), callable_items[i]);
 				SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv);
 				THROW_EXCEPTION_INSTANCE(exc);
@@ -2053,8 +2054,8 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			kw = argv[argc-2];
 			if(!IS_HASH(kw)) {
 				VALUE exc;
-				exc = make_normal_type_instance(vm->Error);
-				set_normal_type_instance_attribute(exc, make_string("message"), make_string("INTERNAL ERROR: kwargs is not a hash"));
+				exc = make_normal_type_instance(vm->InternalError);
+				set_normal_type_instance_attribute(exc, make_string("message"), make_string("Kwargs is not a hash"));
 				THROW_EXCEPTION_INSTANCE(exc);
 			}
 			argc -= 2;
@@ -2268,7 +2269,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 #undef HAVE_KWARGS_MARKER
 
 METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result) {
-	VALUE v, callable, command, *v_ptr;
+	VALUE v, callable, command;
 	VAR_LEN_OBJECT *vlo;
 	int i;
 	unsigned char opcode;
@@ -2455,14 +2456,19 @@ main_loop:
 								// dump_titled("E1", *result);
 								goto exception;
 							}
+							if(mr == METHOD_ARGS_MISMATCH) {
+								*result = make_normal_type_instance(vm->ArgsMismatch);
+								set_normal_type_instance_attribute(*result, make_string("message"), make_string("Arguments did not match"));
+								set_normal_type_instance_attribute(*result, make_string("callable"), callable);
+								SET_EXCEPTION_ARGS_KWARGS(*result, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
+								goto exception;
+							}
 							if(mr != METHOD_OK) {
-								// printf("MR %d\n", mr);
-								// dump_titled("RESULT", *result);
-								for(v_ptr=&ctx->stack[ctx->stack_ptr-GET_INT(v)];v_ptr < &ctx->stack[ctx->stack_ptr];v_ptr++) {
-									dump_titled("Failed argument", *v_ptr);
-								}
-								dump_titled("Failed callable / 1", callable);
-								assert(0=="Handling failed method calls is not implemented yet");
+								*result = make_normal_type_instance(vm->InternalError);
+								set_normal_type_instance_attribute(*result, make_string("message"), make_string("Unexpected method result"));
+								set_normal_type_instance_attribute(*result, make_string("callable"), callable);
+								SET_EXCEPTION_ARGS_KWARGS(*result, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
+								goto exception;
 							}
 							REMOVE_TOP_N(GET_INT(v));
 							goto main_loop;
