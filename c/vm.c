@@ -1934,6 +1934,15 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 	return ip;
 }
 
+#define SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv) \
+{ \
+	int minus = ((argc >= 2) && IS_KWARGS_MARKER(argv[argc-1])) ? 2 : 0; \
+	set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values(argc-minus, argv)); \
+	if(minus) { \
+		set_normal_type_instance_attribute(exc, make_string("kwargs"), argv[argc-2]); \
+	} \
+}
+
 // XXX: Factor out to "define"s access to parameters. Coupling to this data structure is all over.
 #define HAVE_KWARGS_MARKER ((argc >= 2) && IS_KWARGS_MARKER(argv[argc-1]))
 METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int argc, const VALUE *argv) {
@@ -1963,7 +1972,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 				exc = make_normal_type_instance(vm->Exception);
 				set_normal_type_instance_attribute(exc, make_string("message"), make_string("Internal: mr != METHOD_ARGS_MISMATCH"));
 				set_normal_type_instance_attribute(exc, make_string("callable"), callable_items[i]);
-				set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values(argc, argv));
+				SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv);
 				THROW_EXCEPTION_INSTANCE(exc);
 			}
 		}
@@ -1990,7 +1999,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			VALUE exc;
 			exc = make_normal_type_instance(vm->ImplNotFound);
 			set_normal_type_instance_attribute(exc, make_string("callable"), callable);
-			set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values(argc, argv));
+			SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv);
 			THROW_EXCEPTION_INSTANCE(exc);
 		}
 		// --- impl_not_found_hook() - end ---
@@ -2029,8 +2038,8 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 	if(IS_CLOSURE(callable)) {
 		int n_params_required = CLOSURE_OBJ_N_REQ_PAR(callable);
 		int n_params_optional = CLOSURE_OBJ_N_OPT_PAR(callable);
-		int have_arr_splat = CLOSURE_OBJ_PARAMS_FLAGS(callable) & PARAMS_FLAG_ARR_SPLAT;
-		int have_hash_splat = CLOSURE_OBJ_PARAMS_FLAGS(callable) & PARAMS_FLAG_HASH_SPLAT;
+		int have_arr_splat = (CLOSURE_OBJ_PARAMS_FLAGS(callable) & PARAMS_FLAG_ARR_SPLAT) ? 1 : 0;
+		int have_hash_splat = (CLOSURE_OBJ_PARAMS_FLAGS(callable) & PARAMS_FLAG_HASH_SPLAT) ? 1 : 0;
 		int have_kwargs = HAVE_KWARGS_MARKER;
 		int n_kwargs_used = 0;
 		int i, j;
@@ -2042,6 +2051,12 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 
 		if(have_kwargs) {
 			kw = argv[argc-2];
+			if(!IS_HASH(kw)) {
+				VALUE exc;
+				exc = make_normal_type_instance(vm->Error);
+				set_normal_type_instance_attribute(exc, make_string("message"), make_string("INTERNAL ERROR: kwargs is not a hash"));
+				THROW_EXCEPTION_INSTANCE(exc);
+			}
 			argc -= 2;
 		} else {
 			kw = MAKE_UNDEF;
@@ -2074,7 +2089,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 
 		// Check the required arguments given as keyword arguments
 		if(argc < n_params_required) {
-			// We have some required parameters missing which might me in the keyword arguments
+			// We have some required parameters missing which might be in the keyword arguments
 			assert(n_params_required < MAX_ARGS);
 			for(i=argc; i<n_params_required; i++) {
 				e = get_hash_key(kw, params[i*2 + 0]);
@@ -2195,7 +2210,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			exc = make_normal_type_instance(vm->ImplNotFound);
 			set_normal_type_instance_attribute(exc, make_string("message"), make_string("Normal type constructor: init() not found"));
 			set_normal_type_instance_attribute(exc, make_string("callable"), vm->init);
-			set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values(argc, new_argv));
+			SET_EXCEPTION_ARGS_KWARGS(exc, argc, new_argv);
 			THROW_EXCEPTION_INSTANCE(exc);
 		}
 		if(mr == METHOD_EXCEPTION) {
@@ -2246,7 +2261,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 	exc = make_normal_type_instance(vm->DontKnowHowToCall);
 	set_normal_type_instance_attribute(exc, make_string("message"), make_string("No matching call() found"));
 	set_normal_type_instance_attribute(exc, make_string("callable"), callable);
-	set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values(argc, argv));
+	SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv);
 	THROW_EXCEPTION_INSTANCE(exc);
 
 }
@@ -2491,7 +2506,7 @@ main_loop:
 									VALUE exc;
 									exc = make_normal_type_instance(vm->ImplNotFound);
 									set_normal_type_instance_attribute(exc, make_string("callable"), callable);
-									set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values(OBJ_LEN(ctx->stack[ctx->stack_ptr-1]), ARRAY_ITEMS(ctx->stack[ctx->stack_ptr-1])));
+									SET_EXCEPTION_ARGS_KWARGS(exc, OBJ_LEN(ctx->stack[ctx->stack_ptr-1]), ARRAY_ITEMS(ctx->stack[ctx->stack_ptr-1]));
 									set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 									*result = exc;
 									goto exception;
@@ -2765,6 +2780,7 @@ do_jump:
 							REMOVE_TOP_NOCHECK;
 							goto main_loop;
 		case OP_PUSH_KWARGS_MARKER:
+							assert(IS_HASH(TOP));
 							PUSH(MAKE_KWARGS_MARKER);
 							goto main_loop;
 		case OP_MAKE_REDIR:

@@ -12,9 +12,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* fix super() not working in uncaught_exception_hook
 
-			* fix segfault when
-				F f(a:Int) { 1 }; f(b=2)
-
 			* immediate values as function parameters
 
 			* exit hooks for both normal exit and exceptions (and generic pubsub?)
