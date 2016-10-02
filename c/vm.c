@@ -2461,6 +2461,7 @@ main_loop:
 								set_normal_type_instance_attribute(*result, make_string("message"), make_string("Arguments did not match"));
 								set_normal_type_instance_attribute(*result, make_string("callable"), callable);
 								SET_EXCEPTION_ARGS_KWARGS(*result, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
+								set_normal_type_instance_attribute(*result, make_string("backtrace"), make_backtrace(vm, ctx));
 								goto exception;
 							}
 							if(mr != METHOD_OK) {
@@ -2468,6 +2469,7 @@ main_loop:
 								set_normal_type_instance_attribute(*result, make_string("message"), make_string("Unexpected method result"));
 								set_normal_type_instance_attribute(*result, make_string("callable"), callable);
 								SET_EXCEPTION_ARGS_KWARGS(*result, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
+								set_normal_type_instance_attribute(*result, make_string("backtrace"), make_backtrace(vm, ctx));
 								goto exception;
 							}
 							REMOVE_TOP_N(GET_INT(v));
