@@ -1638,7 +1638,12 @@ F stdlib_aws_straighten_tags(h:Hash) {
 	}
 }
 
+# For the case of { "SecurityGroups": [ "sg-XXXXXXXX" ] }
+# Which is output of aws elb apply-security-groups-to-load-balancer --load-balancer-name SOMETHING -beame-servers-authz --security-groups sg-XXXXXXXX
+F stdlib_aws_straighten_tags(s:Str) null
+
 TEST instances = [{"Tags": [{"Key": "k", "Value": "v"},{"Key": "k2", "Value": "v2"}]}]; stdlib_aws_straighten_tags(instances); instances.Tags == [{"k": "v", "k2": "v2"}]
+TEST instances = ["something"]; stdlib_aws_straighten_tags(instances); instances == ["something"]
 
 F parse(s:Str, hints:Hash) {
 	guard try hints['process'].command.argv[0] == 'aws'
