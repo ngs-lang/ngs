@@ -13,8 +13,6 @@ Note that this started as internal document so things here are unformed, not fin
 			* exit hooks for both normal exit and exceptions (and generic pubsub?)
 				* using decorators?
 
-			* fix $(tput ...) that does not work as expected when both stdout and stderr are captured
-
 			* main() - match arguments and make it usable [in progress]
 
 			* document scoping rules
