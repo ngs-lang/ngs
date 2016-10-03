@@ -131,6 +131,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Make sure (uncaught) exceptions go to stderr, not stdout
 
+			* Consider using some wrapping-all-code try...catch for/instead of uncaught_exception_hook implementation
+				+ Currently having two different mechanisms (try...catch and uncaught_exception_hook) for roughly the same functionality
+
 		* Milestone "threads" (will be v0.4.0)
 
 			* Thread - Make pthread_attr_t accessible - get/set attributes

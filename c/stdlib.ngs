@@ -419,6 +419,12 @@ F each_idx_val(arr:Arr, cb:Fun, *args) {
 	arr
 }
 
+F map_idx_val(arr:Arr, cb:Fun, *args) {
+	l = arr.len()
+	collector
+		for(i;l) collect(cb(i, arr[i], *args))
+}
+
 TEST r=[]; ["a", "b"].each_idx_val(F(idx, val) r.push([idx, val])); r == [[0, "a"], [1, "b"]]
 
 
@@ -1801,24 +1807,8 @@ F inspect(val) ["$val"]
 F inspect(r:Real) ["Real: $r"]
 F inspect(i:Int) ["Int: $i"]
 F inspect(s:Str) ["String: $s"]
-
-F inspect(a:Arr) {
-	collector {
-		collect("Array of size ${a.len()}")
-		a.each_idx_val(F(idx, val) {
-			collect("[$idx] = $val")
-		})
-	}
-}
-
-F inspect(h:Hash) {
-	collector {
-		collect("Hash of size ${h.len()}")
-		h % {
-			collect("[$A] = $B")
-		}
-	}
-}
+F inspect(a:Arr) ["Array of size ${a.len()}"] + a.map_idx_val("[$X] = $Y")
+F inspect(h:Hash) ["Hash of size ${h.len()}"] + h.map("[$X] = $Y")
 
 F inspect(p:Process) {
 	collector {
