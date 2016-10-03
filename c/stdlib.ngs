@@ -1812,22 +1812,17 @@ F inspect(h:Hash) ["Hash of size ${h.len()}"] + h.map("[$X] = $Y")
 
 F inspect(p:Process) {
 	collector {
-		collect("Process")
-		collect("command = ${p.command}")
-		collect("pid = ${p.pid}")
-		collect("exit_code = ${p.exit_code}")
-		collect("exit_signal = ${p.exit_signal}")
+		c = collect
+		c("Process")
+		c("command = ${p.command}")
+		c("pid = ${p.pid}")
+		c("exit_code = ${p.exit_code}")
+		c("exit_signal = ${p.exit_signal}")
 		%[stdout stderr].each(F(attr) {
 			val = (.)(p, attr)
-			val_lines = if val is not Null {
-				val.lines()
-			} else {
-				[]
-			}
-			collect("$attr (${val_lines.len()} lines):")
-			if val_lines {
-				("  " + val_lines) % collect
-			}
+			val_lines = if val is Null [] else val.lines()
+			c("$attr (${val_lines.len()} lines):")
+			("  " + val_lines) % collect
 		})
 	}
 }
