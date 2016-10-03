@@ -1822,7 +1822,7 @@ F inspect(p:Process) {
 			val = (.)(p, attr)
 			val_lines = if val is Null [] else val.lines()
 			c("$attr (${val_lines.len()} lines):")
-			("  " + val_lines) % collect
+			("  " + val_lines) % c
 		})
 	}
 }
