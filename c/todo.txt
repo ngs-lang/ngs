@@ -10,8 +10,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "programming"
 
-			* fix super() not working in uncaught_exception_hook
-
 			* immediate values as function parameters
 
 			* exit hooks for both normal exit and exceptions (and generic pubsub?)

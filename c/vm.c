@@ -118,6 +118,7 @@ char *opcodes_names[] = {
 #define THIS_FRAME (ctx->frames[ctx->frame_ptr-1])
 #define THIS_FRAME_CLOSURE (THIS_FRAME.closure)
 #define UPPER_FRAME (ctx->frames[ctx->frame_ptr-2])
+#define DEEPER_FRAME (ctx->frames[ctx->frame_ptr])
 #define LOCALS (THIS_FRAME.locals)
 #define UPLEVELS CLOSURE_OBJ_UPLEVELS(THIS_FRAME_CLOSURE)
 #define ARG(name, type) name = *(type *) &vm->bytecode[ip]; ip += sizeof(type);
@@ -1818,9 +1819,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 void ctx_init(CTX *ctx) {
 	ctx->stack_ptr = 0;
 	ctx->frame_ptr = 0;
-	// XXX: correct sizeof?
 	memset(ctx->stack, 0, sizeof(ctx->stack));
 	memset(ctx->frames, 0, sizeof(ctx->frames));
+	// Probably not needed but conveys the message
+	ctx->frames[ctx->frame_ptr].arr_callable = NULL;
 }
 
 size_t vm_load_bytecode(VM *vm, char *bc) {
@@ -1953,21 +1955,17 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 	METHOD_RESULT mr;
 	VALUE *callable_items;
 
-	// dump_titled("CALLABLE", callable);
-	// if(argc) {
-	// 	dump_titled("ARGV0", argv[0]);
-	// }
 	if(IS_ARRAY(callable)) {
-		THIS_FRAME.arr_callable = &callable;
-		THIS_FRAME.arr_callable_idx = &i;
+		DEEPER_FRAME.arr_callable = &callable;
+		DEEPER_FRAME.arr_callable_idx = &i;
 		for(i=OBJ_LEN(callable)-1, callable_items = OBJ_DATA_PTR(callable); i>=0; i--) {
 			mr = vm_call(vm, ctx, result, callable_items[i], argc, argv);
 			if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION) || (mr == METHOD_IMPL_MISSING)) {
-				THIS_FRAME.arr_callable = NULL;
+				DEEPER_FRAME.arr_callable = NULL;
 				return mr;
 			}
 			if(mr != METHOD_ARGS_MISMATCH) {
-				THIS_FRAME.arr_callable = NULL;
+				DEEPER_FRAME.arr_callable = NULL;
 				dump_titled("RESULT", *result);
 				VALUE exc;
 				exc = make_normal_type_instance(vm->InternalError);
@@ -1977,7 +1975,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 				THROW_EXCEPTION_INSTANCE(exc);
 			}
 		}
-		THIS_FRAME.arr_callable = NULL;
+		DEEPER_FRAME.arr_callable = NULL;
 		// --- impl_not_found_hook() - start ---
 		if(THIS_FRAME.do_call_impl_not_found_hook) {
 			// impl_not_found_hook == [] when stdlib is not loaded (-E bootstrap switch / during basic tests)
@@ -2167,10 +2165,9 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		ctx->frames[ctx->frame_ptr].do_call_call = 1;
 		ctx->frames[ctx->frame_ptr].last_ip = 0;
 		ctx->frames[ctx->frame_ptr].ReturnInstance = MAKE_NULL;
-		ctx->frames[ctx->frame_ptr].arr_callable = NULL;
 		ctx->frame_ptr++;
-		if(ctx->frame_ptr >= MAX_FRAMES) {
-			// Off by one (on the safe side)?
+		// MAX_FRAMES - 1 to allow DEEPER_FRAME to always work without checks
+		if(ctx->frame_ptr >= MAX_FRAMES-1) {
 			ctx->frame_ptr--;
 			// TODO: Appropriate exception type, not Exception
 			VALUE exc;
@@ -2803,9 +2800,9 @@ do_jump:
 							PUSH_NOCHECK(command);
 							goto main_loop;
 		case OP_SUPER:
-							if(ctx->frame_ptr > 1 && UPPER_FRAME.arr_callable) {
-								assert(IS_ARRAY((*UPPER_FRAME.arr_callable))); // probably not needed
-								PUSH(make_array_with_values(*UPPER_FRAME.arr_callable_idx, OBJ_DATA_PTR(*UPPER_FRAME.arr_callable)));
+							if(THIS_FRAME.arr_callable) {
+								assert(IS_ARRAY(*THIS_FRAME.arr_callable));
+								PUSH(make_array_with_values(*THIS_FRAME.arr_callable_idx, OBJ_DATA_PTR(*THIS_FRAME.arr_callable)));
 								goto main_loop;
 							} else {
 								VALUE exc;
