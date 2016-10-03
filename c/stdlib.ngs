@@ -25,13 +25,8 @@ F assert(condition:Bool) assert(condition, "Assertion failed")
 
 # === Return =====================================
 
-F call(r:Return, v) {
+F call(r:Return, v=null) {
 	r.val = v
-	r
-}
-
-F call(r:Return) {
-	r.val = null
 	r
 }
 
