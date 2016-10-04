@@ -68,12 +68,14 @@ Note that this started as internal document so things here are unformed, not fin
 			* without(s:Str, del:Str)
 
 			* Destructuring. Automatically declare the variables local, as for does.
-				* [a,b=default,*some,c] or without [] ?
+				* [a,b=default,*some,c]
 				* {'a','b':newvar,**some,'c'=default}
 				+ Not sure about the syntax.
 				+ Nested?
 				+ Pattern matching like [a, *other1, 100, b, *other2] ?
+					+ If yes, shouldn't the syntax be tilde (~) as for RegExp/Pfx/Sfx/... ?
 				+ "xyz${myvar}www" = myvar syntax for regexes? ... for consistency.
+				+ {[_, dst], **args} = h means also changing function arguments?
 
 			* documentation [on hold]
 
@@ -129,6 +131,15 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Consider using some wrapping-all-code try...catch for/instead of uncaught_exception_hook implementation
 				+ Currently having two different mechanisms (try...catch and uncaught_exception_hook) for roughly the same functionality
+
+			* get rid of expose() ?
+				+ Used in Stats
+				+ Probably needs inheritance from builtin types
+
+			* get rid of nuke_null() ?
+				+ Not used in current stdlib
+				+ Think of use cases justifying existence of nuke_null()
+
 
 		* Milestone "threads" (will be v0.4.0)
 

@@ -37,7 +37,7 @@ The bigger part of the language is implemented to the point that some useful scr
 Running
 =======
 
-	apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg
+	apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre2-dev
 	# On Ubuntu 14.04 (maybe others) # apt-get install gawk make
 	cd c
 	make

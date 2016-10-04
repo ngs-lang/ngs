@@ -174,6 +174,7 @@ typedef struct {
 	NGS_TYPE *Hash;
 	NGS_TYPE *CLib;
 	NGS_TYPE *CSym;
+	NGS_TYPE *RegExp;
 
 	// Not sure about naming convention
 	NGS_TYPE *c_pthread_t;
