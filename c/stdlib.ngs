@@ -1733,7 +1733,6 @@ F to_exit_code(m:Match) m.Bool().to_exit_code()
 
 F init(mf:MatchFail, msg:Str, container, pattern) init(args())
 
-F init(s:SubSeq, *args) throw Exception("${s.typeof().name} must be initialized with a single argument - value, given: $args")
 F init(s:SubSeq, val) s.val = val
 
 # The common case
@@ -1798,11 +1797,14 @@ F exception_specific_message(e:Exception) null
 
 F exception_specific_message(gnf:GlobalNotFound) "Global '${gnf.name}' not found"
 
-F inspect(val) ["$val"]
+doc Don't use, subject to change, including name
+F SafeStr(val) Str(val) tor "(Failed to inspect <${val.typeof().name tor '(unknown type)'}>)"
+
+F inspect(val) SafeStr(val)
 F inspect(r:Real) ["Real: $r"]
 F inspect(i:Int) ["Int: $i"]
 F inspect(s:Str) ["String: $s"]
-F inspect(a:Arr) ["Array of size ${a.len()}"] + a.map_idx_val("[$X] = $Y")
+F inspect(a:Arr) ["Array of size ${a.len()}"] + a.map_idx_val({"[${SafeStr(A)}] = ${SafeStr(B)}"})
 F inspect(h:Hash) ["Hash of size ${h.len()}"] + h.map("[$X] = $Y")
 
 F inspect(p:Process) {
@@ -1843,7 +1845,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 	info_keys = h.keys() - %[message backtrace cause]
 
 	F print_info(k) {
-		out = inspect(h[k])
+		out = inspect(h[k]) tor ["(Failed to inspect)"]
 		assert(out is Arr)
 		assert(out.len() > 0)
 		if out.len() == 1 {
