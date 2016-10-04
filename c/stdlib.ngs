@@ -756,23 +756,14 @@ F code(a:Arr) "[" + a.map(code).join(', ') + "]"
 F ==(a:Hash, b:Hash) Arr(a) == Arr(b)
 
 F cmp(a:Hash, b:Hash) {
-	ret = {'add': {}, 'remove': [], 'change': {}}
-	a.each(F(k, v) {
-		if k in b {
-			if v != b[k] {
-				ret.change[k] = b[k]
-			}
-		} else {
-			ret.remove.push(k)
-		}
-	})
-	b.each(F(k, v) {
-		if k not in a {
-			ret.add[k] = v
-		}
-	})
-	ret
+	{
+		'add': b.filter(X not in a)
+		'change': b.filter(X in a).filter(F(k, v) a[k] != v)
+		'remove': a.filter(X not in b).keys()
+	}
 }
+
+TEST cmp({"a": 1, "b":2}, {"b": 3, "d": 4}) == {"add":{"d":4}, "change":{"b":3}, "remove":["a"]}
 
 
 # --- Functional ---
