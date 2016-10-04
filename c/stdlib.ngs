@@ -895,17 +895,7 @@ F Strs(h:Hash) h / "$X=$Y"
 
 TEST {'a': 1, 'b': 2}.Strs() == ['a=1', 'b=2']
 
-F limit(h:Hash, l:Int) {
-	h.len() <= l returns h
-	finish = Return()
-	result = {}
-	h.each_idx_key_val(F(idx, k, v) {
-		idx >= l throws finish(result)
-		result[k] = v
-	})
-	# Should not reach
-	result
-}
+F limit(h:Hash, l:Int) h.keys().limit(l).Hash(F(k) h[k])
 
 TEST {"a": 1, "b": 2}.limit(3) == {"a": 1, "b": 2}
 TEST {"a": 1, "b": 2}.limit(1) == {"a": 1}
