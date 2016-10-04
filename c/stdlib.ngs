@@ -1798,14 +1798,14 @@ F exception_specific_message(e:Exception) null
 F exception_specific_message(gnf:GlobalNotFound) "Global '${gnf.name}' not found"
 
 doc Don't use, subject to change, including name
-F SafeStr(val) Str(val) tor "(Failed to inspect <${val.typeof().name tor '(unknown type)'}>)"
+F SafeStr(val) "$val" tor "(Failed to inspect <${val.typeof().name tor '(unknown type)'}>)"
 
 F inspect(val) SafeStr(val)
 F inspect(r:Real) ["Real: $r"]
 F inspect(i:Int) ["Int: $i"]
 F inspect(s:Str) ["String: $s"]
 F inspect(a:Arr) ["Array of size ${a.len()}"] + a.map_idx_val({"[${SafeStr(A)}] = ${SafeStr(B)}"})
-F inspect(h:Hash) ["Hash of size ${h.len()}"] + h.map("[$X] = $Y")
+F inspect(h:Hash) ["Hash of size ${h.len()}"] + h.map({"[${SafeStr(A)}] = ${SafeStr(B)}"})
 
 F inspect(p:Process) {
 	collector {
