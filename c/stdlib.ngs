@@ -448,7 +448,7 @@ TEST [1,2,null,3].filter() == [1,2,3]
 
 F -(a:Arr, b:Arr) {
 	h = if b.len() > 10 {
-		collector/{} b.each(collect, true)
+		b.Hash({true})
 	} else {
 		b
 	}
@@ -484,10 +484,7 @@ F flatten(arr:Arr) {
 TEST [[1], [2,3]].flatten() == [1,2,3]
 
 
-F uniq(arr:Arr)
-	(collector/{}
-		arr.each(collect, 1)
-	).keys()
+F uniq(arr:Arr) arr.Hash({true}).keys()
 
 TEST [1,2,2,3,4,4].uniq() == [1,2,3,4]
 
@@ -504,6 +501,13 @@ F index(arr:Arr, predicate:Fun, *args) {
 	null
 }
 
+F indexes(arr:Arr, predicate:Fun, *args) {
+	l = arr.len()
+	l.filter({ predicate(arr[A], *args) })
+}
+
+TEST [1,5,1,10].indexes(X>2) == [1,3]
+
 F first(arr:Arr, predicate:Fun, *args) {
 	i = arr.index(predicate, *args)
 	i is Null returns null
@@ -516,8 +520,7 @@ TEST [5,10,15].first(X>20) == null
 
 F reverse(arr:Arr) {
 	l = arr.len()
-	collector
-		for(i;l) collect(arr[l-i-1])
+	l.map({ arr[l-A-1] })
 }
 
 TEST [1,2,3].reverse() == [3,2,1]
@@ -535,14 +538,12 @@ F Arr(arr:Arr) arr
 
 F zip(*args) {
 	arrays = args.map(Arr)
-	# max_len = arrays.map(len).max()
 	max_len = arrays / len \ max
-	collector
-		for(i;max_len)
-			collect(arrays.map(get, i, null))
+	max_len.map({ arrays.map(get, A, null) })
 }
 
 TEST zip([1,2,3], [4,5,6]) == [[1,4], [2,5], [3,6]]
+TEST zip([1,2,3], [4,5,6], [7,8,9,10]) == [[1,4,7], [2,5,8], [3,6,9], [null, null, 10]]
 
 F Arr(r:Range) r / identity
 
@@ -586,8 +587,7 @@ F '[]'(arr:Arr, range:Range) {
 		range is ExclusiveRange
 			range.end
 	}
-	collector
-		(start..end).each(F(idx) collect(arr[idx]))
+	(start..end).map(arr[X])
 }
 
 TEST [10,20,30,40][null..2] == [10,20]
@@ -958,6 +958,14 @@ F times(n:Int, cb:Fun, *args) {
 }
 
 TEST r=0; 5.times(F() r=r+2); r==10
+
+F filter(n:Int, predicate:Fun, *args)
+	collector
+		for(i;n)
+			if (predicate(i, *args))
+				collect(i)
+
+# Tested by indexes(Arr,...)
 
 
 F Int(s:Str) Int(s, 10)

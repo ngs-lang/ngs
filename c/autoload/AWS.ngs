@@ -72,20 +72,25 @@
 
 	F update_tags(r:AwsRes) {
 		# Tags
-		target_tags = r.def.props.get('Tags', {});
+		if 'Tags' not in r.def.props {
+			r.def.log('update_tags/skip', 'Not updating tags - no tags specified in properties')
+			return null
+		}
+		target_tags = r.def.props.Tags
 		if r.def.ancor is AwsAncor {
 			# Definition props tags override ancor tags
 			target_tags = r.def.ancor.tags + target_tags
 		}
-		diff = cmp(r.props.get('Tags', {}), target_tags)
+		current_tags = r.props.get('Tags', {})
+		r.def.log('update_tags/info', "Current tags: $current_tags. Target tags: $target_tags")
+		diff = cmp(current_tags, target_tags)
 
 		if (tags = stdlib_aws_tags(diff.add + diff.change)) {
-			r.run('Add tags', %(aws ec2 create-tags --resources ${r.id()} --tags $*tags))
+			r.run('update_tags/add', %(aws ec2 create-tags --resources ${r.id()} --tags $*tags))
 		}
 
-		if (diff.remove) {
-			tags = diff.remove / "Key=$X"
-			r.run('Remove tags', %(aws ec2 delete-tags --resources ${r.id()} --tags $*tags))
+		if (tags = diff.remove / "Key=$X") {
+			r.run('update_tags/remove', %(aws ec2 delete-tags --resources ${r.id()} --tags $*tags))
 		}
 	}
 
@@ -97,9 +102,9 @@
 
 	F run(rd:AwsResDef, log_pfx:Str, cmd:Command) {
 		if rd.dry_run {
-			rd.log("run - $log_pfx", "would run: ${cmd.argv.join(' ')}")
+			rd.log("run/$log_pfx", "would run: ${cmd.argv.join(' ')}")
 		} else {
-			rd.log("run - $log_pfx", "running: ${cmd.argv.join(' ')}")
+			rd.log("run/$log_pfx", "running: ${cmd.argv.join(' ')}")
 			``$cmd``
 		}
 	}
