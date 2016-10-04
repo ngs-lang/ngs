@@ -49,7 +49,7 @@ syn keyword ngsFunction c_close c_execve c_exit c_fork c_lseek copy c_open c_rea
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction fetch main require to_exit_code
 " stdlib functions
-syn keyword ngsFunction acquire all any assert basename close_reading_end close_writing_end cmp code compare count dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error expose debug die filter find_in_path first flatten group has identity in index join len limit log map mapk mapv mapkv max merge_sorted min n next none partial partial_tail peek pmap pos ptimes publish read release reverse set sort split starts_with status Strs subscribe uniq update wait without write zip
+syn keyword ngsFunction acquire all any assert basename close_reading_end close_writing_end cmp code compare count dflt dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error expose debug die filter find_in_path first flatten group has identity in index join len limit log map mapk mapv mapkv max merge_sorted min n next none partial partial_tail peek pmap pos ptimes publish read release reverse set sort split starts_with status Strs subscribe uniq update wait without write zip
 
 " resources types
 syn keyword ngsType Res ResDef ResNotFound
