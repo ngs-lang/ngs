@@ -22,5 +22,10 @@ F next(i:ArrIter) {
 	ret
 }
 
-TEST i = Iter([1,2]); [i.next(), i.next()] == [1,2]
+F peek(i:ArrIter) {
+	not(i) throws NoNext("No next element in array").set('ArrIter', i)
+	i.val[i.idx]
+}
+
+TEST i = Iter([1,2]); [i.next(), i.peek()] == [1,2]
 TEST try [].Iter().next() catch(nn:NoNext) true
