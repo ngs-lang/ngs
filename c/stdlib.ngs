@@ -1050,11 +1050,9 @@ F Str(x, target_width:Int) x.Str().Str(target_width)
 
 F Str(s:Str, target_width:Int) {
 	l = s.len()
-	pad_on_left = if target_width < 0 {
+	pad_on_left = target_width < 0
+	if pad_on_left {
 		target_width = 0 - target_width
-		true
-	} else {
-		false
 	}
 
 	l >= target_width returns s
