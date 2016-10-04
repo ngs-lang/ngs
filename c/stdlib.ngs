@@ -727,8 +727,8 @@ F split(a:Arr, delim) {
 
 
 F cmp(a:Arr, b:Arr) {
-	ah = collector/{} a.each(collect, true)
-	bh = collector/{} b.each(collect, true)
+	ah = Hash(a, {true})
+	bh = Hash(b, {true})
 	{
 		'add': bh.filter(X not in ah).keys()
 		'remove': ah.filter(X not in bh).keys()
