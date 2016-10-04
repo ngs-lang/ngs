@@ -1,9 +1,9 @@
-// apt-get install uthash-dev libgc-dev libffi6 libjson-c2 build-essential libpcre2-dev
+// apt-get install uthash-dev libgc-dev libffi6 libjson-c2 build-essential libpcre3-dev
 // uthash - http://stackoverflow.com/questions/18197825/looking-for-hash-table-c-library. using version 1.9.7, 1.9.9.1+git20151125-1
 // libgc-dev - 1:7.2d-6.4, 1:7.4.2-7.3
 // libffi6 - 3.2.1-4
 // libjson-c2, libjson-c-dev - 0.11-4
-// libpcre2-dev - 10.22-2
+// libpcre3-dev - 2:8.39-2
 #include <assert.h>
 #include <errno.h>
 #include <unistd.h>
