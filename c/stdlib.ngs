@@ -1187,7 +1187,7 @@ F status(s:Str) {
 
 F die(a:Arr) {
 	guard a.all(is, Str)
-	a.each(echo, stdlib_error_fd)
+	a % echo(stdlib_error_fd, X)
 	c_exit(1)
 }
 
