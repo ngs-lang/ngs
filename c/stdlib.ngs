@@ -1037,17 +1037,20 @@ TEST try "abc"[-4] == "x" catch(e:InvalidArgument) true
 # --- Misc utilities ---
 
 F split(s:Str, delim:Str) {
+	l = delim.len()
+	guard l > 0
 	start = 0
 	collector {
 		while (p = pos(s, delim, start)) is not Null {
 			collect(s[start..p])
-			start = p + 1
+			start = p + l
 		}
 		collect(s[start..null])
 	}
 }
 
 TEST ":a:bc:d:".split(":") == ["", "a", "bc", "d", ""]
+TEST ":a:bc:d:".split("bc") == [":a:", ":d:"]
 
 
 F *(s:Str, n:Int) ([s]*n).join('')
