@@ -1790,7 +1790,7 @@ F exception_specific_message(gnf:GlobalNotFound) "Global '${gnf.name}' not found
 doc Don't use, subject to change, including name
 F SafeStr(val) "$val" tor "(Failed to inspect <${val.typeof().name tor '(unknown type)'}>)"
 
-F inspect(val) SafeStr(val)
+F inspect(val) [SafeStr(val)]
 F inspect(r:Real) ["Real: $r"]
 F inspect(i:Int) ["Int: $i"]
 F inspect(s:Str) ["String: $s"]
