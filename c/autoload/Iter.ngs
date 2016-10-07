@@ -1,10 +1,17 @@
 {
 	type Iter
-	type ArrIter(Iter)
 	type NoNext(Exception)
+	type HashIter(Iter)
 }
 
+F throw_if_no_next(i:Iter) {
+	not(i) throws NoNext("No next element in iterator").set('iter', i)
+}
+
+# ---------- ArrIter ----------
+{ type ArrIter(Iter) }
 F Iter(arr:Arr) ArrIter(arr)
+F Iter(h:Hash) HashIter(h)
 
 F init(i:ArrIter, arr:Arr) {
 	i.val = arr
@@ -16,16 +23,33 @@ F Str(i:ArrIter) "<ArrIter ${i.idx}/${i.val.len()}>"
 F Bool(i:ArrIter) i.idx < i.val.len()
 
 F next(i:ArrIter) {
-	not(i) throws NoNext("No next element in array").set('ArrIter', i)
+	throw_if_no_next(i)
 	ret = i.val[i.idx]
 	i.idx += 1
 	ret
 }
 
 F peek(i:ArrIter) {
-	not(i) throws NoNext("No next element in array").set('ArrIter', i)
+	throw_if_no_next(i)
 	i.val[i.idx]
 }
 
 TEST i = Iter([1,2]); [i.next(), i.peek()] == [1,2]
 TEST try [].Iter().next() catch(nn:NoNext) true
+
+# EXPERIMENTAL
+# Not sure it's needed but it's good to have it for completeness
+# ---------- HashIter ----------
+F init(i:HashIter, h:Hash) {
+	i.val = h
+	i._iter = h.keys().Iter()
+}
+
+# Don't like accessing kind-of-private ArrIter#idx
+F Str(i:HashIter) "<HashIter ${i._iter.idx}/${i._iter.val.len()}>"
+F Bool(i:HashIter) Bool(i._iter)
+F next(i:HashIter) { throw_if_no_next(i); k = i._iter.next(); [k, i.val[k]] }
+F peek(i:HashIter) { throw_if_no_next(i); k = i._iter.peek(); [k, i.val[k]] }
+
+TEST i = Iter({"a": 1, "b": 2}); [i.next(), i.peek()] == [["a", 1], ["b", 2]]
+TEST try {}.Iter().next() catch(nn:NoNext) true
