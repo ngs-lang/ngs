@@ -1350,7 +1350,7 @@ METHOD_RESULT native_c_pcre_compile EXT_METHOD_PARAMS {
 		NULL                        /* use default character tables */
 	);
 
-	if(error) {
+	if(re == NULL) {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->RegExpCompileFail);
 		set_normal_type_instance_attribute(exc, make_string("message"), make_string(error));
@@ -1365,13 +1365,40 @@ METHOD_RESULT native_c_pcre_compile EXT_METHOD_PARAMS {
 	return METHOD_OK;
 }
 
-// http://www.pcre.org/original/doc/html/pcredemo.html
 METHOD_RESULT native_Str_RegExp METHOD_PARAMS {
 	(void) argv;
 	*result = make_string("<RegExp>");
 	return METHOD_OK;
 }
 
+#define OVECCOUNT 60 /* should be a multiple of 3 */
+METHOD_RESULT native_c_pcre_exec METHOD_PARAMS {
+
+	int rc;
+	int ovector[OVECCOUNT];
+
+	rc = pcre_exec(
+		REGEXP_OBJECT_RE(argv[0]), /* the compiled pattern */
+		NULL,                      /* no extra data - we didn't study the pattern */
+		OBJ_DATA_PTR(argv[1]),     /* the subject string */
+		OBJ_LEN(argv[1]),          /* the length of the subject */
+		GET_INT(argv[2]),          /* start offset */
+		GET_INT(argv[3]),          /* options */
+		ovector,                   /* output vector for substring information */
+		OVECCOUNT                  /* number of elements in the output vector */
+	);
+
+	if(rc < 0) {
+		METHOD_RETURN(MAKE_INT(rc));
+	}
+
+	*result = make_array(rc*2);
+	for(int i=0; i < rc * 2; i++) {
+		ARRAY_ITEMS(*result)[i] = MAKE_INT(ovector[i]);
+	}
+
+	return METHOD_OK;
+}
 
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
@@ -1583,8 +1610,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "==",              &native_false,    2, "a", vm->Any, "b", vm->Any);
 
 	// Regex
-	register_global_func(vm, 1, "c_pcre_compile",        &native_c_pcre_compile,   1, "regex", vm->Str);
-	register_global_func(vm, 0, "Str",                   &native_Str_RegExp,       1, "regex", vm->RegExp);
+	register_global_func(vm, 1, "c_pcre_compile", &native_c_pcre_compile,   1, "regex", vm->Str);
+	register_global_func(vm, 0, "c_pcre_exec",    &native_c_pcre_exec,      4, "regex", vm->RegExp, "subject", vm->Str, "offset", vm->Int, "options", vm->Int);
+	register_global_func(vm, 0, "Str",            &native_Str_RegExp,       1, "regex", vm->RegExp);
 
 	// special
 	register_global_func(vm, 1, "args",            &native_args,     0);

@@ -407,6 +407,8 @@ F each(arr:Arr, cb:Fun, *args) {
 	arr
 }
 
+# Tested by flatten() tests
+
 # TODO: map_idx_val, each_idx_val for other types
 F each_idx_val(arr:Arr, cb:Fun, *args) {
 	l = arr.len()
@@ -423,7 +425,23 @@ F map_idx_val(arr:Arr, cb:Fun, *args) {
 TEST r=[]; ["a", "b"].each_idx_val(F(idx, val) r.push([idx, val])); r == [[0, "a"], [1, "b"]]
 
 
-# Tested by flatten() tests
+doc Process each N elements of an Array at a time
+F each(arr:Arr, n:Int, cb:Fun, *args) {
+	arr.len() % n != 0 throws InvalidArgument("Can not iterate elements in groups of $n of array of size ${arr.len()}")
+	chunks = arr.len() / n
+	for(chunk_number; chunks) {
+		cb(*arr[chunk_number*n..chunk_number*n+n], *args)
+	}
+}
+
+# Tested by map(arr:Arr, n:Int, cb:Fun, *args)
+
+
+doc Map each N elements of an Array at a time
+F map(arr:Arr, n:Int, cb:Fun, *args) collector arr.each(n, F(*a) collect(cb(*a, *args)))
+
+# Tested by ~(s:Str, r:RegExp)
+
 
 F filter(arr:Arr, predicate:Fun, *args)
 	collector
@@ -580,13 +598,12 @@ F '[]'(arr:Arr, range:Range) {
 			arr.len()
 		range.end < start
 			throw IndexNotFound("Range end ${range.end} is lower than selection start ${start}", arr, range.end)
-		not(range.end < arr.len())
-			throw IndexNotFound("Range end ${range.end} is too high for array of length ${arr.len()}", arr, range.end)
 		range is InclusiveRange
 			range.end + 1
 		range is ExclusiveRange
 			range.end
 	}
+	end > arr.len() throws IndexNotFound("Range end ${range.end} is too high for array of length ${arr.len()}", arr, range.end)
 	(start..end).map(arr[X])
 }
 
@@ -1159,10 +1176,6 @@ F code(s:Str) {
 	"'${s}'"
 }
 
-
-# === RegExp =====================================
-
-# TODO
 
 # === Logging and status reporting (WIP) =========
 
@@ -1769,6 +1782,29 @@ F ~(s:Str, sfx:Sfx) {
 	ret.after = ''
 	ret
 }
+
+# === RegExp =====================================
+
+# TODO: better exceptions
+F ~(s:Str, r:RegExp) {
+	result = c_pcre_exec(r, s, 0, 0)
+	if result is Int {
+		result == -1 returns MatchN()
+		result == 0 throws Error("Too many captures. Max 20")
+		# TODO: -1 -> PCRE_ERROR_NOMATCH
+		result < 0 throws Error("RegExp matching error in c_pcre_exec").set('code', result)
+		assert(false, "Unexpected integer result from c_pcre_exec")
+	}
+	assert(result is Arr, "c_pcre_exec must return either integer or an array")
+	ret = MatchY()
+	ret.matches = result.map(2, { s[A..B] })
+	ret.before = s[0..result[0]]
+	ret.after = s[result[1]..null]
+	ret
+}
+
+TEST r=c_pcre_compile("a(.)c"); m = "xabcy" ~ r; m.matches == ["abc", "b"] and m.before == 'x' and m.after == 'y'
+
 
 # === Fun ========================================
 
