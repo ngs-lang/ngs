@@ -1789,9 +1789,8 @@ F ~(s:Str, sfx:Sfx) {
 F ~(s:Str, r:RegExp) {
 	result = c_pcre_exec(r, s, 0, 0)
 	if result is Int {
-		result == -1 returns MatchN()
+		result == C_PCRE_ERROR_NOMATCH returns MatchN()
 		result == 0 throws Error("Too many captures. Max 20")
-		# TODO: -1 -> PCRE_ERROR_NOMATCH
 		result < 0 throws Error("RegExp matching error in c_pcre_exec").set('code', result)
 		assert(false, "Unexpected integer result from c_pcre_exec")
 	}
@@ -1804,6 +1803,7 @@ F ~(s:Str, r:RegExp) {
 }
 
 TEST r=c_pcre_compile("a(.)c"); m = "xabcy" ~ r; m.matches == ["abc", "b"] and m.before == 'x' and m.after == 'y'
+TEST r=c_pcre_compile("a(.)c"); m = "xAbcy" ~ r; m is MatchN
 
 
 # === Fun ========================================
