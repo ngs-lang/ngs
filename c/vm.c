@@ -1335,6 +1335,43 @@ METHOD_RESULT native_args EXT_METHOD_PARAMS {
 	METHOD_RETURN(*result);
 }
 
+// http://www.pcre.org/original/doc/html/pcredemo.html
+METHOD_RESULT native_c_pcre_compile EXT_METHOD_PARAMS {
+
+	pcre *re;
+	const char *error;
+	int erroffset;
+
+	re = pcre_compile(
+		obj_to_cstring(argv[0]),    /* the pattern */
+		0,                          /* default options */
+		&error,                     /* for error message */
+		&erroffset,                 /* for error offset */
+		NULL                        /* use default character tables */
+	);
+
+	if(error) {
+		VALUE exc;
+		exc = make_normal_type_instance(vm->RegExpCompileFail);
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string(error));
+		set_normal_type_instance_attribute(exc, make_string("regex"), argv[0]);
+		set_normal_type_instance_attribute(exc, make_string("offset"), MAKE_INT(erroffset));
+		THROW_EXCEPTION_INSTANCE(exc);
+	}
+
+	*result = make_regexp();
+	REGEXP_OBJECT_RE(*result) = re;
+
+	return METHOD_OK;
+}
+
+// http://www.pcre.org/original/doc/html/pcredemo.html
+METHOD_RESULT native_Str_RegExp METHOD_PARAMS {
+	(void) argv;
+	*result = make_string("<RegExp>");
+	return METHOD_OK;
+}
+
 
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
@@ -1480,6 +1517,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MK_BUILTIN_TYPE(c_pthread_mutex_t, T_PTHREADMUTEX);
 	MK_BUILTIN_TYPE(c_ffi_type, T_FFI_TYPE);
 	MK_BUILTIN_TYPE(c_ffi_cif, T_FFI_CIF);
+	MK_BUILTIN_TYPE(RegExp, T_REGEXP);
 #undef MK_BUILTIN_TYPE
 
 #define MKTYPE(name) \
@@ -1507,6 +1545,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 			MKSUBTYPE(UndefinedLocalVar, Exception);
 			MKSUBTYPE(InvalidArgument, Error);
 			MKSUBTYPE(CompileFail, Error);
+			MKSUBTYPE(RegExpCompileFail, Error);
 			MKSUBTYPE(CallFail, Error);
 				MKSUBTYPE(DontKnowHowToCall, CallFail);
 				MKSUBTYPE(ImplNotFound, CallFail);
@@ -1542,6 +1581,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	set_global(vm, "==", vm->eqeq);
 
 	register_global_func(vm, 0, "==",              &native_false,    2, "a", vm->Any, "b", vm->Any);
+
+	// Regex
+	register_global_func(vm, 1, "c_pcre_compile",        &native_c_pcre_compile,   1, "regex", vm->Str);
+	register_global_func(vm, 0, "Str",                   &native_Str_RegExp,       1, "regex", vm->RegExp);
 
 	// special
 	register_global_func(vm, 1, "args",            &native_args,     0);

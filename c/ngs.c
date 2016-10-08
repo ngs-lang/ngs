@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <unistd.h>
+#include <pcre.h>
 #include "ngs.h"
 #include "syntax.c"
 #undef __
@@ -141,6 +142,9 @@ int main(int argc, char **argv)
 	if(0) { yymatchDot(NULL); yyAccept(NULL, 0); }
 
 	NGS_GC_INIT();
+
+	pcre_malloc = GC_malloc;
+	pcre_free = GC_free;
 	// (causes warning) // NGS_GC_THR_INIT();
 
 	yycontext yyctx;

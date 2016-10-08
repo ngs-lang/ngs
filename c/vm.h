@@ -196,6 +196,7 @@ typedef struct {
 			VALUE UndefinedLocalVar;
 			VALUE InvalidArgument;
 			VALUE CompileFail;
+			VALUE RegExpCompileFail;
 			VALUE CallFail;
 				VALUE DontKnowHowToCall;
 				VALUE ImplNotFound;

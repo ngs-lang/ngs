@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <ffi.h>
+#include <pcre.h>
 
 typedef uint16_t GLOBAL_VAR_INDEX;
 #define GLOBAL_VAR_INDEX_FMT "%d"
@@ -89,6 +90,12 @@ typedef struct {
 	HASH_OBJECT_ENTRY *head;
 	HASH_OBJECT_ENTRY *tail;
 } HASH_OBJECT;
+
+typedef struct {
+	OBJECT base;
+	// Or maybe use base.val for the pointer?
+	pcre *re;
+} REGEXP_OBJECT;
 
 typedef struct {
 	OBJECT base; // Type points to the type, data to fields array
@@ -207,6 +214,7 @@ typedef enum {
 	T_CLOSURE       = (13 << 8) + T_OBJ,
 	T_FFI_TYPE      = (14 << 8) + T_OBJ,
 	T_FFI_CIF       = (15 << 8) + T_OBJ,
+	T_REGEXP        = (16 << 8) + T_OBJ,
 } IMMEDIATE_TYPE;
 
 // TODO: handle situation when n is wider than size_t - TAG_BITS bits
@@ -295,6 +303,7 @@ typedef enum {
 #define IS_PTHREADMUTEX(v)        ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_PTHREADMUTEX)
 #define IS_FFI_TYPE(v)            ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_FFI_TYPE)
 #define IS_FFI_CIF(v)             ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_FFI_CIF)
+#define IS_REGEXP(v)              ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_REGEXP)
 #define ARRAY_ITEMS(v)            ((VALUE *)(OBJ_DATA_PTR(v)))
 #define HASH_BUCKETS_N(v)         (((HASH_OBJECT *)(v).ptr)->n_buckets)
 #define HASH_HEAD(v)              (((HASH_OBJECT *)(v).ptr)->head)
@@ -303,6 +312,7 @@ typedef enum {
 #define NORMAL_TYPE_INSTANCE_TYPE(v)       OBJ_TYPE(v)
 #define NORMAL_TYPE_INSTANCE_FIELDS(v)     OBJ_DATA(v)
 #define REAL_OBJECT_VAL(v)        (((REAL_OBJECT *) (v).ptr)->val)
+#define REGEXP_OBJECT_RE(v)       (((REGEXP_OBJECT *) (v).ptr)->re)
 
 // Boolean 00001X10
 #define GET_INVERTED_BOOL(v)      ((VALUE){.num = (v).num ^= 4})
@@ -345,5 +355,6 @@ VALUE make_pthread_attr();
 VALUE make_pthread_mutex();
 VALUE make_ffi_type(ffi_type *t);
 VALUE make_ffi_cif();
+VALUE make_regexp();
 
 #endif

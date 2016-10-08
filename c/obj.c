@@ -583,6 +583,15 @@ VALUE make_real(double n) {
 	return v;
 }
 
+VALUE make_regexp() {
+	VALUE v;
+	REGEXP_OBJECT *regexp;
+	regexp = NGS_MALLOC(sizeof(*regexp));
+	regexp->base.type.num = T_REGEXP;
+	SET_OBJ(v, regexp);
+	return v;
+}
+
 
 // Very not thread safe
 // Inspired by utarray.h
