@@ -13,8 +13,9 @@ LDLIBS := -lm -lpthread -lgc -lffi -ldl -ljson-c -lpcre
 LDFLAGS := -rdynamic
 # -pg - for gprof profiler
 LDFLAGS_PROFILER := -pg -g
-COMMON_DEPS := *.h Makefile syntax.c syntax.auto.h
+COMMON_DEPS := *.h Makefile syntax.c syntax.auto.h pcre_constants.c
 SRC := debug.o ast.o obj.o compile.o decompile.o vm.o ngs.o
+PCRE_H := /usr/include/pcre.h
 # SRC := *.c
 
 all: ngs ngs-prof ngs-debug
@@ -25,6 +26,9 @@ syntax.c: syntax.leg patch-leg-input.sed patch-leg-output.sed patch-leg-output.a
 
 syntax.auto.h: syntax.c Makefile
 	cat $< | (sed -n '/^typedef/p; /^struct/,/^$$/p; /define YY_MAX_LINES/p;'; echo 'int yyparse(yycontext *yyctx);'; echo 'yycontext * yyrelease(yycontext *yyctx);') >$@
+
+pcre_constants.c: $(PCRE_H)
+	awk '/^#define PCRE/ && $$3 {print "E("$$2");"}' $(PCRE_H) | grep -v 'PCRE_UCHAR\|PCRE_SPTR' | sort | xargs -n5 >$@
 
 %.o: %.c $(COMMON_DEPS)
 	$(CC) -c $(CFLAGS) $< -o $@
@@ -70,7 +74,7 @@ time-sum: ngs
 	time echo 'set s 0; for {set i 0} {$$i < 10000000} {incr i} {set s [expr {$$s + $$i}]}' | tclsh8.6
 
 clean:
-	-rm syntax.c
+	-rm syntax.c pcre_constants.c
 	-rm syntax.auto.h
 	-rm ngs ngs-prof ngs-debug
 	-rm *.o
