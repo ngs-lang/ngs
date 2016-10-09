@@ -15,3 +15,4 @@ tags
 *.o
 syntax.c
 syntax.auto.h
+pcre_constants.c
