@@ -543,6 +543,13 @@ F reverse(arr:Arr) {
 
 TEST [1,2,3].reverse() == [3,2,1]
 
+F sum(arr:Arr) {
+	guard arr.all(is, Int)
+	collector/0
+		arr % collect
+
+}
+
 # --- Conversions ---
 
 F Arr(h:Hash)
@@ -1802,11 +1809,22 @@ F ~(s:Str, r:RegExp) {
 	ret
 }
 
-TEST r=c_pcre_compile("a(.)c"); m = "xabcy" ~ r; m.matches == ["abc", "b"] and m.before == 'x' and m.after == 'y'
-TEST r=c_pcre_compile("a(.)c"); m = "xAbcy" ~ r; m is MatchN
+TEST r=c_pcre_compile("a(.)c", 0); m = "xabcy" ~ r; m.matches == ["abc", "b"] and m.before == 'x' and m.after == 'y'
+TEST r=c_pcre_compile("a(.)c", 0); m = "xAbcy" ~ r; m is MatchN
+
+STDLIB_REGEXP_FLAGS = {
+	'i': C_PCRE_CASELESS
+}
 
 F //(regexp:Str, flags:Str) {
-	c_pcre_compile(regexp)
+	# Maybe add each(Str,Fun) ?
+	# TOOD: bitwise or instead of sum()
+	numerical_flags = flags.len().map({
+		flag = flags[A]
+		STDLIB_REGEXP_FLAGS[flag] tor throw RegExpCompileFail("Unknown flag $flag").set('regexp', regexp).set('flags', flags)
+	}).sum()
+
+	c_pcre_compile(regexp, numerical_flags)
 }
 
 

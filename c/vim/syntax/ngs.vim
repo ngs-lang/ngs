@@ -45,11 +45,11 @@ syn region  ngsString start=+"+ end=+"+ skip=+\\\\\|\\"+ contains=ngsSpecial
 syn match   ngsNumber "\<\d\+\>"
 
 " builtin functions
-syn keyword ngsFunction c_close c_execve c_exit c_fork c_lseek copy c_open c_read c_waitpid C_WEXITSTATUS C_WTERMSIG compile del dump echo encode_json get get_c_errno globals hash impl_not_found_hook in inherit is keys len load not decode_json push shift typeof values
+syn keyword ngsFunction c_close c_execve c_exit c_fork c_lseek copy c_open c_pcre_compile c_pcre_exec c_read c_waitpid C_WEXITSTATUS C_WTERMSIG compile del dump echo encode_json get get_c_errno globals hash impl_not_found_hook in inherit is keys len load not decode_json push shift typeof values
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction fetch main require to_exit_code
 " stdlib functions
-syn keyword ngsFunction acquire all any assert basename close_reading_end close_writing_end cmp code compare count dflt dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error expose debug die filter find_in_path first flatten group has identity in index join len limit log map mapk mapv mapkv max merge_sorted min n next none partial partial_tail peek pmap pos ptimes publish read release reverse set sort split starts_with status Strs subscribe uniq update wait without write zip
+syn keyword ngsFunction acquire all any assert basename close_reading_end close_writing_end cmp code compare count dflt dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error expose debug die filter find_in_path first flatten group has identity in index join len limit log map mapk mapv mapkv max merge_sorted min n next none partial partial_tail peek pmap pos ptimes publish read release reverse set sort split starts_with status Strs subscribe sum uniq update wait without write zip
 
 " resources types
 syn keyword ngsType Res ResDef ResNotFound

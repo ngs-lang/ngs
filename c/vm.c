@@ -1344,7 +1344,7 @@ METHOD_RESULT native_c_pcre_compile EXT_METHOD_PARAMS {
 
 	re = pcre_compile(
 		obj_to_cstring(argv[0]),    /* the pattern */
-		0,                          /* default options */
+		GET_INT(argv[1]),           /* options */
 		&error,                     /* for error message */
 		&erroffset,                 /* for error offset */
 		NULL                        /* use default character tables */
@@ -1354,7 +1354,7 @@ METHOD_RESULT native_c_pcre_compile EXT_METHOD_PARAMS {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->RegExpCompileFail);
 		set_normal_type_instance_attribute(exc, make_string("message"), make_string(error));
-		set_normal_type_instance_attribute(exc, make_string("regex"), argv[0]);
+		set_normal_type_instance_attribute(exc, make_string("regexp"), argv[0]);
 		set_normal_type_instance_attribute(exc, make_string("offset"), MAKE_INT(erroffset));
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
@@ -1611,7 +1611,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "==",              &native_false,    2, "a", vm->Any, "b", vm->Any);
 
 	// Regex
-	register_global_func(vm, 1, "c_pcre_compile", &native_c_pcre_compile,   1, "regex", vm->Str);
+	register_global_func(vm, 1, "c_pcre_compile", &native_c_pcre_compile,   2, "regex", vm->Str,    "flags",   vm->Int);
 	register_global_func(vm, 0, "c_pcre_exec",    &native_c_pcre_exec,      4, "regex", vm->RegExp, "subject", vm->Str, "offset", vm->Int, "options", vm->Int);
 	register_global_func(vm, 0, "Str",            &native_Str_RegExp,       1, "regex", vm->RegExp);
 
