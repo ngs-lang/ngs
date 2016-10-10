@@ -1066,6 +1066,16 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			}
 			break;
 
+		case REGEXP_NODE:
+			OPCODE(*buf, OP_PUSH_NULL);
+			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 2);
+			compile_identifier(ctx, buf, idx, "//", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
+			OPCODE(*buf, OP_CALL);
+			POP_IF_DONT_NEED_RESULT(*buf);
+			break;
+
 		default:
 			fprintf(stderr, "Node type %i\n", node->type);
 			assert(0=="compile_main_section(): unknown node type");

@@ -1805,6 +1805,10 @@ F ~(s:Str, r:RegExp) {
 TEST r=c_pcre_compile("a(.)c"); m = "xabcy" ~ r; m.matches == ["abc", "b"] and m.before == 'x' and m.after == 'y'
 TEST r=c_pcre_compile("a(.)c"); m = "xAbcy" ~ r; m is MatchN
 
+F //(regexp:Str, flags:Str) {
+	c_pcre_compile(regexp)
+}
+
 
 # === Fun ========================================
 

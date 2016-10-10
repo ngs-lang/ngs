@@ -545,6 +545,7 @@ basic-expression =
 	| "false" { MAKE_NODE(ret, FALSE_NODE); $$ = ret; }
 	| number
 	| string
+	| regexp
 	| assignment
 	| inplace-assignment
 	| var-scope-declaration
@@ -1210,6 +1211,38 @@ str-comps-node = {
 		MAKE_NODE(ret, STR_COMPS_NODE);
 		$$ = ret;
 }
+
+regexp =
+	"/" acc:str-comps-node (
+		regexp-imm { append_ast_node_child(acc, $$); } |
+		regexp-escape { append_ast_node_child(acc, $$); } )* "/" flags:regexp-flags {
+		MAKE_NODE(ret, REGEXP_NODE);
+			append_ast_node_child(ret, acc);
+			append_ast_node_child(ret, flags);
+		$$ = ret;
+	}
+
+regexp-imm =
+	<[^/\\]+> {
+		MAKE_NODE(content, STR_COMP_IMM_NODE);
+		content->name = ngs_strdup(yytext);
+		$$ = content;
+	}
+
+regexp-escape = "\\" (
+		"/"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("/"); $$ = content; } |
+		"\\" { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\\"); $$ = content; }
+	)
+
+regexp-flags = <[a-zA-Z0-9]*> {
+		MAKE_NODE(ret, STR_COMPS_NODE);
+			MAKE_NODE(content, STR_COMP_IMM_NODE);
+			content->name = ngs_strdup(yytext);
+			append_ast_node_child(ret, content);
+		$$ = ret;
+	}
+
+
 
 return = "return" r:return-node (inline_space e:expression { r->first_child = e; }) { $$ = r; }
 return-node = { MAKE_NODE(ret, RETURN_NODE); $$ = ret; }

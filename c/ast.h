@@ -67,6 +67,7 @@ typedef enum {
 	REDIR_NODE,
 	SWITCH_NODE,
 	SUPER_NODE,
+	REGEXP_NODE,
 	NUMBER_OF_AST_NODE_TYPES,
 } ast_node_type;
 
