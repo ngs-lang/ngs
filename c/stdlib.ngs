@@ -23,6 +23,12 @@ F init(e:IndexNotFound, message:Str, container, key) init(args())
 F assert(condition:Bool, msg:Str) not(condition) throws AssertFail(msg)
 F assert(condition:Bool) assert(condition, "Assertion failed")
 
+# === Functional =================================
+
+F map(something, mapper:Fun, *args)
+	collector
+		something.each(F(elt) collect(mapper(elt, *args)))
+
 # === Return =====================================
 
 F call(r:Return, v=null) {
@@ -251,10 +257,6 @@ F each(r:Range, cb:Fun, *args) {
 	r
 }
 
-F map(r:Range, mapper:Fun, *args)
-	collector
-		r.each(F(elt) collect(mapper(elt, *args)))
-
 TEST (1..3).map(X*2) == [2, 4]
 TEST (1...3).map(X*2) == [2, 4, 6]
 
@@ -391,15 +393,7 @@ F none(arr:Arr, predicate:Fun, *args) not(any(arr, predicate, *args))
 TEST [0,1,2].none((>), 2)
 TEST [0,1,2].none((<), 2).not()
 
-
-F map(arr:Arr, mapper:Fun, *args)
-	collector
-		arr.each(F(elt) {
-			collect(mapper(elt, *args))
-		})
-
 TEST [1,2,3].map((*), 4) == [4,8,12]
-
 
 F each(arr:Arr, cb:Fun, *args) {
 	l = arr.len()
@@ -547,7 +541,6 @@ F sum(arr:Arr) {
 	guard arr.all(is, Int)
 	collector/0
 		arr % collect
-
 }
 
 # --- Conversions ---
@@ -969,10 +962,6 @@ F each(n:Int, cb:Fun, *args) {
 	n
 }
 
-F map(n:Int, mapper:Fun, *args)
-	collector
-		for(i;n) collect(mapper(i, *args))
-
 TEST 3.map(identity) == [0, 1, 2]
 TEST 3.map((*), 3) == [0, 3, 6]
 
@@ -1028,6 +1017,14 @@ TEST Str(false) == "false"
 
 F Str(a:Arr) "[${a.map(Str).join(',')}]"
 F Str(h:Hash) "{" + h.map(F(k, v) "${k}=${v}").join(", ") + "}"
+
+# --- Functional ---
+
+F each(s:Str, cb:Fun, *args) {
+	s.len().each(F(idx) {
+		cb(s[idx], *args)
+	})
+}
 
 # --- Sugar ---
 
@@ -1819,8 +1816,7 @@ STDLIB_REGEXP_FLAGS = {
 F //(regexp:Str, flags:Str) {
 	# Maybe add each(Str,Fun) ?
 	# TOOD: bitwise or instead of sum()
-	numerical_flags = flags.len().map({
-		flag = flags[A]
+	numerical_flags = flags.map(F(flag) {
 		STDLIB_REGEXP_FLAGS[flag] tor throw RegExpCompileFail("Unknown flag $flag").set('regexp', regexp).set('flags', flags)
 	}).sum()
 
