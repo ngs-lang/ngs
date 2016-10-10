@@ -1827,6 +1827,8 @@ F //(regexp:Str, flags:Str) {
 	c_pcre_compile(regexp, numerical_flags)
 }
 
+TEST Bool("A" ~ /a/i)
+
 
 # === Fun ========================================
 
