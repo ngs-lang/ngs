@@ -105,8 +105,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "correct programming" (will be v0.3.0)
 
-			* Fix division by zero crash
-
 			* Usage of undefined local variable - add name of the variable in exception
 
 			* Partial application syntax

@@ -166,6 +166,17 @@ METHOD_RESULT native_ ## name ## _int_int METHOD_PARAMS { \
 	return METHOD_OK; \
 }
 
+#define INT_DIV_METHOD(name, op) \
+METHOD_RESULT native_ ## name ## _int_int EXT_METHOD_PARAMS { \
+	if(GET_INT(argv[1]) == 0) { \
+		VALUE exc; \
+		exc = make_normal_type_instance(vm->DivisionByZero); \
+		THROW_EXCEPTION_INSTANCE(exc); \
+	} \
+	SET_INT(*result, GET_INT(argv[0]) op GET_INT(argv[1])); \
+	return METHOD_OK; \
+}
+
 #define INT_CMP_METHOD(name, op) \
 METHOD_RESULT native_ ## name ## _int_int METHOD_PARAMS { \
 	SET_BOOL(*result, GET_INT(argv[0]) op GET_INT(argv[1])); \
@@ -197,8 +208,8 @@ METHOD_RESULT native_ ## name ## _real_real METHOD_PARAMS { \
 INT_METHOD(plus, +)
 INT_METHOD(minus, -)
 INT_METHOD(mul, *)
-INT_METHOD(div, /)
-INT_METHOD(mod, %)
+INT_DIV_METHOD(div, /)
+INT_DIV_METHOD(mod, %)
 INT_CMP_METHOD(less, <)
 INT_CMP_METHOD(less_eq, <=)
 INT_CMP_METHOD(greater, >)
@@ -1572,6 +1583,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 				MKSUBTYPE(GlobalNotFound, LookupFail);
 			MKSUBTYPE(UndefinedLocalVar, Exception);
 			MKSUBTYPE(InvalidArgument, Error);
+				MKSUBTYPE(DivisionByZero, InvalidArgument);
 			MKSUBTYPE(CompileFail, Error);
 			MKSUBTYPE(RegExpCompileFail, Error);
 			MKSUBTYPE(CallFail, Error);
@@ -1755,8 +1767,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// int
 	register_global_func(vm, 0, "+",        &native_plus_int_int,      2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, 0, "*",        &native_mul_int_int,       2, "a",   vm->Int, "b", vm->Int);
-	register_global_func(vm, 0, "/",        &native_div_int_int,       2, "a",   vm->Int, "b", vm->Int);
-	register_global_func(vm, 0, "%",        &native_mod_int_int,       2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, 1, "/",        &native_div_int_int,       2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, 1, "%",        &native_mod_int_int,       2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, 0, "-",        &native_minus_int_int,     2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, 0, "<",        &native_less_int_int,      2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, 0, "<=",       &native_less_eq_int_int,   2, "a",   vm->Int, "b", vm->Int);
