@@ -29,6 +29,21 @@ F map(something, mapper:Fun, *args)
 	collector
 		something.each(F(elt) collect(mapper(elt, *args)))
 
+
+F filter(something, like) filter(something, (~), like)
+
+F filter(something, predicate:Fun, *args)
+	collector
+		something.each(F(elt) {
+			if predicate(elt, *args)
+				collect(elt)
+		})
+
+F filter(something) filter(something, (is not), Null)
+
+TEST [1,2,null,3].filter() == [1,2,3]
+
+
 # === Return =====================================
 
 F call(r:Return, v=null) {
@@ -437,25 +452,11 @@ F map(arr:Arr, n:Int, cb:Fun, *args) collector arr.each(n, F(*a) collect(cb(*a, 
 # Tested by ~(s:Str, r:RegExp)
 
 
-F filter(arr:Arr, predicate:Fun, *args)
-	collector
-		arr.each(F(elt) {
-			if predicate(elt, *args)
-				collect(elt)
-		})
-
-# Tested by without() tests
-
-
 F without(arr:Arr, without_elt)
 	arr.filter((!=), without_elt)
 
 TEST [1,2,3,2].without(2) == [1,3]
 
-
-F filter(arr:Arr) filter(arr, (is not), Null)
-
-TEST [1,2,null,3].filter() == [1,2,3]
 
 
 F -(a:Arr, b:Arr) {
@@ -971,15 +972,6 @@ F times(n:Int, cb:Fun, *args) {
 }
 
 TEST r=0; 5.times(F() r=r+2); r==10
-
-F filter(n:Int, predicate:Fun, *args)
-	collector
-		for(i;n)
-			if (predicate(i, *args))
-				collect(i)
-
-# Tested by indexes(Arr,...)
-
 
 F Int(s:Str) Int(s, 10)
 
