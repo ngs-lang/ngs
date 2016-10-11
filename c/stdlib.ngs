@@ -23,27 +23,6 @@ F init(e:IndexNotFound, message:Str, container, key) init(args())
 F assert(condition:Bool, msg:Str) not(condition) throws AssertFail(msg)
 F assert(condition:Bool) assert(condition, "Assertion failed")
 
-# === Functional =================================
-
-F map(something, mapper:Fun, *args)
-	collector
-		something.each(F(elt) collect(mapper(elt, *args)))
-
-
-F filter(something, like) filter(something, (~), like)
-
-F filter(something, predicate:Fun, *args)
-	collector
-		something.each(F(elt) {
-			if predicate(elt, *args)
-				collect(elt)
-		})
-
-F filter(something) filter(something, (is not), Null)
-
-TEST [1,2,null,3].filter() == [1,2,3]
-
-
 # === Return =====================================
 
 F call(r:Return, v=null) {
@@ -81,6 +60,24 @@ F set(obj, attr:Str, val) {
 	(.=)(obj, attr, val)
 	obj
 }
+
+F map(something, mapper:Fun, *args)
+	collector
+		something.each(F(elt) collect(mapper(elt, *args)))
+
+
+F filter(something, like) filter(something, (~), like)
+
+F filter(something, predicate:Fun, *args)
+	collector
+		something.each(F(elt) {
+			if predicate(elt, *args)
+				collect(elt)
+		})
+
+F filter(something) filter(something, (is not), Null)
+
+TEST [1,2,null,3].filter() == [1,2,3]
 
 doc Filter operator
 doc Syntax mnemonic: ? for predicate
@@ -339,6 +336,24 @@ F collector(n:Int, code:Fun) {
 F ==(a:Null, b) false
 F ==(a, b:Null) false
 F ==(a:Null, b:Null) true
+
+doc EXPERIMENTAL
+F finally(body:Fun, cleanup:Fun) {
+	exc = null
+	have_exception = false
+	try {
+		ret = body()
+	} catch(e) {
+		have_exception = true
+		exc = e
+	}
+	cleanup()
+	have_exception throws exc
+	ret
+}
+
+TEST a=0; {1/1}.finally({a=10}) == 1 and a == 10
+TEST a=0; (try finally({1/0}, {a=10}) catch(e:DivisionByZero) "OK") == "OK" and a == 10
 
 # --- Hash ---
 F .(h:Hash, attr:Str) h[attr]
