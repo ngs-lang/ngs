@@ -33,19 +33,31 @@ Note that this started as internal document so things here are unformed, not fin
 					* between internal and external commands
 
 			* RegExp [in progress]
-				+ The syntax for the regexp literal will be the usual /regexp/flags
-				+ The match operator is ~ (tilde)
-				+ synatx thoughts
+				+ The syntax for the regexp literal will be the usual /regexp/flags [done]
+				+ The match operator is ~ (tilde) [done]
 
-					if m = s ~ /zzz/ { ... m[1] ... }
+				* -(s:Str, r:RegExp) [done]
+				* without(s:Str, r:RegExp)
+				* split(s:Str, r:RegExp)
+				* filter(a:Arr, r:RegExp)
 
-				* without(s:Str, r:Regex)
-				* split(s:Str, r:Regex)
-				* filter(a:Arr, r:Regex)
+				* c_pcre_exec() - support options?
+					PCRE_NOTBOL
+					PCRE_NOTEOL
+				* c_pcre_study()
+				* c_pcre_fullinfo()?
+					PCRE_INFO_NAMECOUNT
+					PCRE_INFO_NAMEENTRYSIZE
+					PCRE_INFO_NAMETABLE
+					PCRE_INFO_OPTIONS
+				* c_pcre_get_named_substring()
+
+				* Acess via MatchY instance index m[idx] ...
+					+ Needs option to define low prioroty methods
 
 			* match, ematch - some way to get the match object?
 
-				For example when Regex is implmeneted in the code
+				For example when RegExp is implmeneted in the code
 
 					match mystring {
 						/my_regex(.*)/ { my_code }

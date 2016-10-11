@@ -1801,6 +1801,7 @@ F ~(s:Str, r:RegExp) {
 	assert(result is Arr, "c_pcre_exec must return either integer or an array")
 	ret = MatchY()
 	ret.matches = result.map(2, { s[A..B] })
+	ret.positions = result.map(2, { [A,B] })
 	ret.before = s[0..result[0]]
 	ret.after = s[result[1]..null]
 	ret
@@ -1811,6 +1812,9 @@ TEST r=c_pcre_compile("a(.)c", 0); m = "xAbcy" ~ r; m is MatchN
 
 STDLIB_REGEXP_FLAGS = {
 	'i': C_PCRE_CASELESS
+	'm': C_PCRE_MULTILINE
+	's': C_PCRE_DOTALL
+	'x': C_PCRE_EXTENDED
 }
 
 F //(regexp:Str, flags:Str) {
@@ -1825,12 +1829,21 @@ F //(regexp:Str, flags:Str) {
 
 TEST Bool("A" ~ /a/i)
 
+doc Returns the string with the regexp cut out of it.
+F -(s:Str, r:RegExp) {
+	m = s ~ r
+	not(m) throws InvalidArgument('String does not contain the RegExp').set('string', s).set('regexp', r)
+	s[0..m.positions[0][0]] + s[m.positions[0][1]..null]
+}
+
+TEST "abc01def23" - /[0-9]+/ == "abcdef23"
+
 
 # === Fun ========================================
 
-F *(cb:Fun, n:Int, *args) n.map(F(idx) cb(*args))
+F *(cb:Fun, n:Int, *args) n.map({ cb(*args) })
 
-# TEST a = Box * 2; a[0] is Box and a[1] is Box and a[0] != a[1]
+TEST a = Box * 2; a[0] is Box and a[1] is Box and a[0] != a[1]
 
 # === Null =======================================
 
