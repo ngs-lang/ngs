@@ -113,13 +113,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Fix segfault in case of comments between cond clauses
 
-			* Better uncaught exception output, using stdlib's or user-defined hook.
-
 			* Go over naming convention, making sure it's consistent and can be easily described in the manual
 
 			* Binary safe strings
-
-			* Check what happens when Return subtype is used but it does not have the "val" property.
 
 			* Make sure not to leak FDs to processes that NGS runs
 				+ See bash-4.3/execute_cmd.c, execute_in_subshell(), "fds_to_close"
@@ -127,8 +123,6 @@ Note that this started as internal document so things here are unformed, not fin
 			* Make sure STACK_DEPTH is correct everywhere and add tests
 
 			* Fix "Function does not have result value" when compiling and running an empty string
-
-			* Refactor syntax so that =, +=, .=, etc are binops
 
 			* Implement missing local/upvar/global functionality and add tests
 
