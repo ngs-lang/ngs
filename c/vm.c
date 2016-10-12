@@ -1376,7 +1376,7 @@ METHOD_RESULT native_c_pcre_compile EXT_METHOD_PARAMS {
 	return METHOD_OK;
 }
 
-METHOD_RESULT native_Str_RegExp METHOD_PARAMS {
+METHOD_RESULT native_Str_regexp METHOD_PARAMS {
 	(void) argv;
 	*result = make_string("<RegExp>");
 	return METHOD_OK;
@@ -1410,6 +1410,62 @@ METHOD_RESULT native_c_pcre_exec METHOD_PARAMS {
 	}
 
 	return METHOD_OK;
+}
+
+// http://www.pcre.org/original/doc/html/pcredemo.html
+METHOD_RESULT native_attr_regexp EXT_METHOD_PARAMS {
+	char *attr = obj_to_cstring(argv[1]);
+	pcre *re;
+	re = REGEXP_OBJECT_RE(argv[0]);
+	if(!strcmp(attr, "options")) {
+		unsigned int option_bits;
+		(void)pcre_fullinfo(re, NULL, PCRE_INFO_OPTIONS, &option_bits);
+		METHOD_RETURN(MAKE_INT(option_bits));
+	}
+
+	if(!strcmp(attr, "names")) {
+		VALUE ret;
+		int namecount, name_entry_size, i;
+		unsigned char *name_table;
+
+		(void)pcre_fullinfo(
+			re,                   /* the compiled pattern */
+			NULL,                 /* no extra data - we didn't study the pattern */
+			PCRE_INFO_NAMECOUNT,  /* number of named substrings */
+			&namecount            /* where to put the answer */
+		);
+		if(namecount <= 0) {
+			METHOD_RETURN(make_hash(0));
+		}
+		ret = make_array(namecount);
+
+		(void)pcre_fullinfo(
+			re,                       /* the compiled pattern */
+			NULL,                     /* no extra data - we didn't study the pattern */
+			PCRE_INFO_NAMETABLE,      /* address of the table */
+			&name_table               /* where to put the answer */
+		);
+
+		(void)pcre_fullinfo(
+			re,                       /* the compiled pattern */
+			NULL,                     /* no extra data - we didn't study the pattern */
+			PCRE_INFO_NAMEENTRYSIZE,  /* size of each entry in the table */
+			&name_entry_size          /* where to put the answer */
+		);
+
+		ret = make_hash(namecount);
+		for(i=0; i < namecount; i++, name_table += name_entry_size) {
+			int n = (name_table[0] << 8) | name_table[1];
+			set_hash_key(ret, make_string((const char *)&name_table[2]), MAKE_INT(n));
+		}
+		METHOD_RETURN(ret);
+	}
+
+	VALUE exc;
+	exc = make_normal_type_instance(vm->InvalidArgument);
+	set_normal_type_instance_attribute(exc, make_string("message"), make_string("RegExp does not have given attribute"));
+	set_normal_type_instance_attribute(exc, make_string("attr"), argv[1]);
+	THROW_EXCEPTION_INSTANCE(exc);
 }
 
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
@@ -1623,9 +1679,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "==",              &native_false,    2, "a", vm->Any, "b", vm->Any);
 
 	// Regex
-	register_global_func(vm, 1, "c_pcre_compile", &native_c_pcre_compile,   2, "regex", vm->Str,    "flags",   vm->Int);
-	register_global_func(vm, 0, "c_pcre_exec",    &native_c_pcre_exec,      4, "regex", vm->RegExp, "subject", vm->Str, "offset", vm->Int, "options", vm->Int);
-	register_global_func(vm, 0, "Str",            &native_Str_RegExp,       1, "regex", vm->RegExp);
+	register_global_func(vm, 1, "c_pcre_compile", &native_c_pcre_compile,   2, "regexp", vm->Str,    "flags",   vm->Int);
+	register_global_func(vm, 0, "c_pcre_exec",    &native_c_pcre_exec,      4, "regexp", vm->RegExp, "subject", vm->Str, "offset", vm->Int, "options", vm->Int);
+	register_global_func(vm, 0, "Str",            &native_Str_regexp,       1, "regexp", vm->RegExp);
+	register_global_func(vm, 1, ".",              &native_attr_regexp,      2, "regexp", vm->RegExp, "attr", vm->Str);
 
 	// special
 	register_global_func(vm, 1, "args",            &native_args,     0);

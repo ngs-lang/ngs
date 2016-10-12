@@ -1797,8 +1797,8 @@ F ~(s:Str, sfx:Sfx) {
 # === RegExp =====================================
 
 # TODO: better exceptions
-F ~(s:Str, r:RegExp) {
-	result = c_pcre_exec(r, s, 0, 0)
+F ~(s:Str, r:RegExp, offset:Int=0, options:Int=0) {
+	result = c_pcre_exec(r, s, offset, options)
 	if result is Int {
 		result == C_PCRE_ERROR_NOMATCH returns MatchN()
 		result == 0 throws Error("Too many captures. Max 20")
@@ -1807,31 +1807,58 @@ F ~(s:Str, r:RegExp) {
 	}
 	assert(result is Arr, "c_pcre_exec must return either integer or an array")
 	ret = MatchY()
-	ret.matches = result.map(2, { s[A..B] })
-	ret.positions = result.map(2, { [A,B] })
+	ret.matches = result.map(2, F(start_pos, end_pos) {
+		if start_pos >= 0
+			s[start_pos..end_pos]
+		else
+			null
+	})
+	ret.named = r.names.mapv(F(capture_num) try ret.matches[capture_num])
+	ret.positions = result.map(2, F(start_pos, end_pos) [start_pos, end_pos])
+	ret.whole = ret.matches[0]
 	ret.before = s[0..result[0]]
 	ret.after = s[result[1]..null]
 	ret
 }
 
-TEST r=c_pcre_compile("a(.)c", 0); m = "xabcy" ~ r; m.matches == ["abc", "b"] and m.before == 'x' and m.after == 'y'
+TEST r=c_pcre_compile("a(.)c", 0); m = "xabcy" ~ r; m.matches == ["abc", "b"] and m.before == 'x' and m.after == 'y' and m.whole == 'abc'
 TEST r=c_pcre_compile("a(.)c", 0); m = "xAbcy" ~ r; m is MatchN
 
+F ~~(s:Str, r:RegExp) {
+	start_position = 0
+	collector {
+		m = (~)(s, r, start_position)
+		not(m) returns null
+		collect(m)
+		options = r.options
+		while true {
+			start_position = m.positions[0][1]
+			m = (~)(s, r, start_position)
+			not(m) breaks
+			collect(m)
+		}
+	}
+}
+
+# Last two are for repeated searches
 STDLIB_REGEXP_FLAGS = {
 	'i': C_PCRE_CASELESS
 	'm': C_PCRE_MULTILINE
 	's': C_PCRE_DOTALL
 	'x': C_PCRE_EXTENDED
+
+	'a': C_PCRE_ANCHORED
+	'n': C_PCRE_NOTEMPTY_ATSTART
 }
 
 F //(regexp:Str, flags:Str) {
 	# Maybe add each(Str,Fun) ?
 	# TOOD: bitwise or instead of sum()
-	numerical_flags = flags.map(F(flag) {
+	options = flags.map(F(flag) {
 		STDLIB_REGEXP_FLAGS[flag] tor throw RegExpCompileFail("Unknown flag $flag").set('regexp', regexp).set('flags', flags)
 	}).sum()
 
-	c_pcre_compile(regexp, numerical_flags)
+	c_pcre_compile(regexp, options)
 }
 
 TEST Bool("A" ~ /a/i)
