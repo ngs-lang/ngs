@@ -56,6 +56,8 @@ Note that this started as internal document so things here are unformed, not fin
 				* Acess via MatchY instance index m[idx] ...
 					+ Needs option to define low prioroty methods
 
+			* array/string splice - check existing x[Range] methods
+
 			* match, ematch - some way to get the match object?
 
 				For example when RegExp is implmeneted in the code

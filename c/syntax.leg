@@ -1086,6 +1086,12 @@ econd-keyword   = "econd"   { MAKE_NODE(ret, SWITCH_NODE); ret->number = SWITCH_
 
 
 number = 
+	<[-+]?"0x"[0-9a-fA-F]+> {
+		MAKE_NODE(ret, INT_NODE);
+		ret->number = strtol(yytext, NULL, 16);
+		$$ = ret;
+	}
+	|
 	<[-+]?[0-9]+[.][0-9]+> {
 		MAKE_NODE(ret, REAL_NODE);
 		ret->data = NGS_MALLOC(sizeof(NGS_REAL));

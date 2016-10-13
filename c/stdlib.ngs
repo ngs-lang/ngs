@@ -1006,7 +1006,7 @@ TEST false.Int() == 0
 F code(n:Int) Str(n)
 
 
-# === String =====================================
+# === Str ========================================
 
 
 # --- Constructors ---
@@ -1152,7 +1152,7 @@ F lines(a:Str, cb:Fun, *args) {
 	lines(a).each(cb, *args)
 }
 
-# TEST "xx\nyy".lines() == %[xx yy]
+TEST "xx\nyy".lines() == %[xx yy]
 
 doc Prepend each line in a with s
 F +(s:Str, a:Arr) {
@@ -1181,6 +1181,11 @@ F limit(s:Str, n:Int, marker:Str='') {
 TEST "abc".limit(5, "...") == "abc"
 TEST "abcdef".limit(5, "...") == "ab..."
 TEST "abcdef".limit(2) == "ab"
+
+F ord(s:Str) {
+	s.len() != 1 throws InvalidArgument("ord() argument must be of length 1 exactly").set('given', s)
+	ord(s, 0)
+}
 
 # EXPERIMENTAL. For use with AWS Ancors.
 F ~(a:Str, b:Str) a==b
@@ -1829,49 +1834,59 @@ TEST r=c_pcre_compile("a(.)c", 0); m = "xabcy" ~ r; m.matches == ["abc", "b"] an
 TEST r=c_pcre_compile("a(.)c", 0); m = "xAbcy" ~ r; m is MatchN
 
 PCRE_NEWLINE_TO_OPTIONS = {
-	         13: C_PCRE_NEWLINE_CR
-	         10: C_PCRE_NEWLINE_LF
-	13*256 + 10: C_PCRE_NEWLINE_CRLF
-	        0-2: C_PCRE_NEWLINE_ANYCRLF
-	        0-1: C_PCRE_NEWLINE_ANY
+	         13: C_PCRE_NEWLINE_CR,
+	         10: C_PCRE_NEWLINE_LF,
+	13*256 + 10: C_PCRE_NEWLINE_CRLF,
+	         -2: C_PCRE_NEWLINE_ANYCRLF,
+	         -1: C_PCRE_NEWLINE_ANY,
 }
 
 F ~~(s:Str, r:RegExp) {
 	collector {
 		m = (~)(s, r, 0)
 		not(m) returns null
+		start_offset = m.positions[0][0]
+		next_offset = m.positions[0][1]
 		collect(m)
 		option_bits = r.options
-		utf8 = option_bits.band(C_PCRE_UTF8)
+		utf8 = option_bits.band(C_PCRE_UTF8).Bool()
 		option_bits = option_bits.band([C_PCRE_NEWLINE_CR, C_PCRE_NEWLINE_LF, C_PCRE_NEWLINE_CRLF, C_PCRE_NEWLINE_ANY, C_PCRE_NEWLINE_ANYCRLF].reduce(0, bor))
 		option_bits = option_bits or PCRE_NEWLINE_TO_OPTIONS.get(PCRE_NEWLINE, 0)
 		crlf_is_newline = option_bits in [C_PCRE_NEWLINE_ANY, C_PCRE_NEWLINE_CRLF, C_PCRE_NEWLINE_ANYCRLF]
 		while true {
 			options = 0
-			start_offset = m.positions[0][1]
-			if m.positions[0][0] == m.positions[0][1] {
-				start_offset == len(s) breaks
+			if start_offset == next_offset {
+				next_offset == len(s) breaks
 				options = bor(C_PCRE_NOTEMPTY_ATSTART, C_PCRE_ANCHORED)
 			}
-			m = (~)(s, r, start_offset, options)
-			if not(m) {
-				options == 0 breaks
-				m.positions[0][1] = start_offset + 1
-				if (crlf_is_newline) and (start_offset < len(s) - 1) and (s[start_offset] == '\r') and (s[start_offset + 1] == '\n') {
-					m.positions[0][1] += 1
-					continue
-				}
-				if utf8 {
-					while m.positions[0][1] < len(s) {
-						"CONTINUE HERE"
-						break
-					}
-				}
+			m = (~)(s, r, next_offset, options)
+			if m {
+				start_offset = m.positions[0][0]
+				next_offset = m.positions[0][1]
+				collect(m)
+				continue
 			}
-			collect(m)
+			options == 0 breaks
+			next_offset += 1
+			if (crlf_is_newline) and (try s[next_offset-1..next_offset+1] == '\r\n') {
+				next_offset += 1
+				continue
+			}
+			if utf8 {
+				while (next_offset < len(s)) and (s[next_offset].ord().band(0xC0) == 0x80) {
+					next_offset += 1
+				}
+				continue
+			}
 		}
 	}
 }
+
+# TODO: test ~~() \r\n skipping
+TEST ("ab\r\ncd" ~~ /(*CRLF)|./m).whole.filter(len) == ['a', 'b', 'c', 'd']
+TEST ("ab\r\ncd" ~~ /|./m).whole.filter(len) == ['a', 'b', '\r', 'c', 'd']
+# UTF-8 of "я" is 209(D1), 143(8F)
+TEST ("aяb" ~~ /(*UTF)|\\x8F|b/).whole.filter(len) == ['b']
 
 # Last two are for repeated searches
 STDLIB_REGEXP_FLAGS = {

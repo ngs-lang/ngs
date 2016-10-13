@@ -1471,6 +1471,19 @@ METHOD_RESULT native_attr_regexp EXT_METHOD_PARAMS {
 	THROW_EXCEPTION_INSTANCE(exc);
 }
 
+METHOD_RESULT native_ord_str_int EXT_METHOD_PARAMS {
+	int idx;
+	idx = GET_INT(argv[1]);
+	if(idx < 0 || idx >= (int) OBJ_LEN(argv[0])) {
+		VALUE exc;
+		exc = make_normal_type_instance(vm->InvalidArgument);
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("String index out of range"));
+		set_normal_type_instance_attribute(exc, make_string("idx"), argv[1]);
+		THROW_EXCEPTION_INSTANCE(exc);
+	}
+	METHOD_RETURN(MAKE_INT(((unsigned char *)OBJ_DATA_PTR(argv[0]))[idx]));
+}
+
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
 	GLOBAL_VAR_INDEX index;
@@ -1823,6 +1836,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "==",       &native_eq_str_str,        2, "a",   vm->Str, "b", vm->Str);
 	register_global_func(vm, 0, "pos",      &native_pos_str_str_int,   3, "haystack", vm->Str, "needle", vm->Str, "start", vm->Int);
 	register_global_func(vm, 1, "[]",       &native_index_get_str_range, 2, "s", vm->Str, "range", vm->Range);
+	register_global_func(vm, 1, "ord",      &native_ord_str_int,       2, "s", vm->Str, "idx", vm->Int);
 
 	// int
 	register_global_func(vm, 0, "+",        &native_plus_int_int,      2, "a",   vm->Int, "b", vm->Int);
