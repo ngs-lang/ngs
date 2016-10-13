@@ -38,8 +38,8 @@ Note that this started as internal document so things here are unformed, not fin
 				+ Match all operator ~~ [done]
 
 				* -(s:Str, r:RegExp) [done]
-				* without(s:Str, r:RegExp)
-				* split(s:Str, r:RegExp)
+				* without(s:Str, r:RegExp) [done]
+				* split(s:Str, r:RegExp) [done]
 				* filter(a:Arr, r:RegExp) [done]
 
 				* c_pcre_exec() - support options?
