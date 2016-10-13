@@ -79,6 +79,14 @@ F filter(something) filter(something, (is not), Null)
 
 TEST [1,2,null,3].filter() == [1,2,3]
 
+F reduce(something, start, f:Fun, *args) {
+	ret = start
+	something.each(F(elt) ret = f(ret, elt))
+	ret
+}
+
+TEST [1,2,3].reduce(0, (+)) == 6
+
 doc Filter operator
 doc Syntax mnemonic: ? for predicate
 doc %EX - [1,2,3,4] ? F(x) x > 2
@@ -553,11 +561,7 @@ F reverse(arr:Arr) {
 
 TEST [1,2,3].reverse() == [3,2,1]
 
-F sum(arr:Arr) {
-	guard arr.all(is, Int)
-	collector/0
-		arr % collect
-}
+F sum(arr:Arr) arr.reduce(0, (+))
 
 # --- Conversions ---
 
@@ -1824,17 +1828,46 @@ F ~(s:Str, r:RegExp, offset:Int=0, options:Int=0) {
 TEST r=c_pcre_compile("a(.)c", 0); m = "xabcy" ~ r; m.matches == ["abc", "b"] and m.before == 'x' and m.after == 'y' and m.whole == 'abc'
 TEST r=c_pcre_compile("a(.)c", 0); m = "xAbcy" ~ r; m is MatchN
 
+PCRE_NEWLINE_TO_OPTIONS = {
+	         13: C_PCRE_NEWLINE_CR
+	         10: C_PCRE_NEWLINE_LF
+	13*256 + 10: C_PCRE_NEWLINE_CRLF
+	        0-2: C_PCRE_NEWLINE_ANYCRLF
+	        0-1: C_PCRE_NEWLINE_ANY
+}
+
 F ~~(s:Str, r:RegExp) {
-	start_position = 0
 	collector {
-		m = (~)(s, r, start_position)
+		m = (~)(s, r, 0)
 		not(m) returns null
 		collect(m)
-		options = r.options
+		option_bits = r.options
+		utf8 = option_bits.band(C_PCRE_UTF8)
+		option_bits = option_bits.band([C_PCRE_NEWLINE_CR, C_PCRE_NEWLINE_LF, C_PCRE_NEWLINE_CRLF, C_PCRE_NEWLINE_ANY, C_PCRE_NEWLINE_ANYCRLF].reduce(0, bor))
+		option_bits = option_bits or PCRE_NEWLINE_TO_OPTIONS.get(PCRE_NEWLINE, 0)
+		crlf_is_newline = option_bits in [C_PCRE_NEWLINE_ANY, C_PCRE_NEWLINE_CRLF, C_PCRE_NEWLINE_ANYCRLF]
 		while true {
-			start_position = m.positions[0][1]
-			m = (~)(s, r, start_position)
-			not(m) breaks
+			options = 0
+			start_offset = m.positions[0][1]
+			if m.positions[0][0] == m.positions[0][1] {
+				start_offset == len(s) breaks
+				options = bor(C_PCRE_NOTEMPTY_ATSTART, C_PCRE_ANCHORED)
+			}
+			m = (~)(s, r, start_offset, options)
+			if not(m) {
+				options == 0 breaks
+				m.positions[0][1] = start_offset + 1
+				if (crlf_is_newline) and (start_offset < len(s) - 1) and (s[start_offset] == '\r') and (s[start_offset + 1] == '\n') {
+					m.positions[0][1] += 1
+					continue
+				}
+				if utf8 {
+					while m.positions[0][1] < len(s) {
+						"CONTINUE HERE"
+						break
+					}
+				}
+			}
 			collect(m)
 		}
 	}

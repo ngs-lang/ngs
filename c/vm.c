@@ -208,6 +208,9 @@ METHOD_RESULT native_ ## name ## _real_real METHOD_PARAMS { \
 INT_METHOD(plus, +)
 INT_METHOD(minus, -)
 INT_METHOD(mul, *)
+INT_METHOD(band, &)
+INT_METHOD(bor, |)
+INT_METHOD(bxor, ^)
 INT_DIV_METHOD(div, /)
 INT_DIV_METHOD(mod, %)
 INT_CMP_METHOD(less, <)
@@ -1832,6 +1835,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, ">",        &native_greater_int_int,   2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, 0, ">=",       &native_greater_eq_int_int,2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, 0, "==",       &native_eq_int_int,        2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, 0, "band",     &native_band_int_int,      2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, 0, "bor",      &native_bor_int_int,       2, "a",   vm->Int, "b", vm->Int);
+	register_global_func(vm, 0, "bxor",     &native_bxor_int_int,      2, "a",   vm->Int, "b", vm->Int);
 
 	// misc
 	register_global_func(vm, 0, "===",      &native_same_any_any,      2, "a",   vm->Any, "b", vm->Any);
@@ -1934,6 +1940,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	#pragma GCC diagnostic pop
 
 #undef E
+	{
+		int d;
+		(void)pcre_config(PCRE_CONFIG_NEWLINE, &d);
+		set_global(vm, "PCRE_NEWLINE", MAKE_INT(d));
+	}
 
 #define FFI_TYPE(name) \
 	vm->c_ ## name = make_ffi_type(&name); \
