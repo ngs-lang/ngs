@@ -35,7 +35,7 @@ Note that this started as internal document so things here are unformed, not fin
 			* RegExp [in progress]
 				+ The syntax for the regexp literal will be the usual /regexp/flags [done]
 				+ The match operator is ~ (tilde) [done]
-				+ Match all operator ~~
+				+ Match all operator ~~ [done]
 
 				* -(s:Str, r:RegExp) [done]
 				* without(s:Str, r:RegExp)
