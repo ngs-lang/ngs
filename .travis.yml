@@ -10,4 +10,4 @@ before_script:
 script:
   - cd c
   - make CC=$CC ngs
-  - make test
+  - make CC=$CC test
