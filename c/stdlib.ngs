@@ -1886,7 +1886,8 @@ F ~~(s:Str, r:RegExp) {
 TEST ("ab\r\ncd" ~~ /(*CRLF)|./m).whole.filter(len) == ['a', 'b', 'c', 'd']
 TEST ("ab\r\ncd" ~~ /|./m).whole.filter(len) == ['a', 'b', '\r', 'c', 'd']
 # UTF-8 of "я" is 209(D1), 143(8F)
-TEST ("aяb" ~~ /(*UTF)|\\x8F|b/).whole.filter(len) == ['b']
+# Skip for older library using try ... catch
+TEST try ("aяb" ~~ /(*UTF)|\\x8F|b/).whole.filter(len) == ['b'] catch(e:RegExpCompileFail) 'not recognized' in e.message
 
 # Last two are for repeated searches
 STDLIB_REGEXP_FLAGS = {
