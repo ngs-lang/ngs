@@ -1831,12 +1831,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// string
 	// TODO: other string comparison operators
-	register_global_func(vm, 0, "len",      &native_len,               1, "s",   vm->Str);
+	register_global_func(vm, 0, "len",      &native_len,                     1, "s",   vm->Str);
 	_doc(vm, "%RET", "Length in bytes");
-	register_global_func(vm, 0, "==",       &native_eq_str_str,        2, "a",   vm->Str, "b", vm->Str);
-	register_global_func(vm, 0, "pos",      &native_pos_str_str_int,   3, "haystack", vm->Str, "needle", vm->Str, "start", vm->Int);
-	register_global_func(vm, 1, "[]",       &native_index_get_str_range, 2, "s", vm->Str, "range", vm->Range);
-	register_global_func(vm, 1, "ord",      &native_ord_str_int,       2, "s", vm->Str, "idx", vm->Int);
+	register_global_func(vm, 0, "==",       &native_eq_str_str,              2, "a",   vm->Str, "b", vm->Str);
+	register_global_func(vm, 0, "pos",      &native_pos_str_str_int,         3, "haystack", vm->Str, "needle", vm->Str, "start", vm->Int);
+	register_global_func(vm, 1, "[]",       &native_index_get_str_range,     2, "s", vm->Str, "range", vm->Range);
+	// register_global_func(vm, 1, "[]=",      &native_index_set_str_range_str, 2, "s", vm->Str, "range", vm->Range, "replacement", vm->Str);
+	register_global_func(vm, 1, "ord",      &native_ord_str_int,             2, "s", vm->Str, "idx", vm->Int);
 
 	// int
 	register_global_func(vm, 0, "+",        &native_plus_int_int,      2, "a",   vm->Int, "b", vm->Int);
