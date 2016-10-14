@@ -33,26 +33,6 @@ Note that this started as internal document so things here are unformed, not fin
 					* between internal and external commands
 
 			* RegExp [in progress]
-				+ The syntax for the regexp literal will be the usual /regexp/flags [done]
-				+ The match operator is ~ (tilde) [done]
-				+ Match all operator ~~ [done]
-
-				* -(s:Str, r:RegExp) [done]
-				* without(s:Str, r:RegExp) [done]
-				* split(s:Str, r:RegExp) [done]
-				* filter(a:Arr, r:RegExp) [done]
-
-				* c_pcre_exec() - support options?
-					PCRE_NOTBOL
-					PCRE_NOTEOL
-				* c_pcre_study()
-				* c_pcre_fullinfo()?
-					PCRE_INFO_NAMECOUNT
-					PCRE_INFO_NAMEENTRYSIZE
-					PCRE_INFO_NAMETABLE
-					PCRE_INFO_OPTIONS
-				* c_pcre_get_named_substring()
-
 				* Acess via MatchY instance index m[idx] ...
 					+ Needs option to define low prioroty methods
 
@@ -175,6 +155,14 @@ Note that this started as internal document so things here are unformed, not fin
 			* Allow navigation on the screen, choosing operations from a menu for the objects
 
 	* Phase 3 - running code remotely
+
+	* Phase 4 - nice to have
+
+		* RegExp
+			* c_pcre_exec() - support options?
+				PCRE_NOTBOL
+				PCRE_NOTEOL
+			* c_pcre_study()
 
 [todo by priority]
 
