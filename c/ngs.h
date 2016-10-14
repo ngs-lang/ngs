@@ -38,6 +38,7 @@
 		allocated *= 2; \
 		dst = NGS_REALLOC(dst, sizeof(*dst) * allocated); \
 	} \
+	assert(dst); \
 }
 
 #define PUSH_ARRAY_ELT(dst, len, elt) { \

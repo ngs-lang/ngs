@@ -87,6 +87,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "correct programming" (will be v0.3.0)
 
+			* Fix test.ngs crash
+
 			* Go over methods and make sure the method X types matrix is as full as possible
 
 			* Usage of undefined local variable - add name of the variable in exception
