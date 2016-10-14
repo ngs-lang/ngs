@@ -32,10 +32,6 @@ Note that this started as internal document so things here are unformed, not fin
 					* between internal commands/functions
 					* between internal and external commands
 
-			* RegExp [in progress]
-				* Acess via MatchY instance index m[idx] ...
-					+ Needs option to define low prioroty methods
-
 			* array/string splice - check existing x[Range] methods
 
 			* match, ematch - some way to get the match object?
@@ -131,6 +127,7 @@ Note that this started as internal document so things here are unformed, not fin
 				+ Not used in current stdlib
 				+ Think of use cases justifying existence of nuke_null()
 
+			* Low prioroty method MatchY[]
 
 		* Milestone "threads" (will be v0.4.0)
 

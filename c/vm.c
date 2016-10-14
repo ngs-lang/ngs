@@ -2051,6 +2051,7 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 				if(vm->bytecode) {
 					vm->bytecode = NGS_REALLOC(vm->bytecode, vm->bytecode_len + len);
 				} else {
+					// XXX if a large number (1G) is given here, test.ngs runs successfully
 					vm->bytecode = NGS_MALLOC(len);
 				}
 				assert(vm->bytecode);
