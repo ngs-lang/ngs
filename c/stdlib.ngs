@@ -1420,6 +1420,20 @@ F open(f:File, flags:Str) {
 
 F basename(s:Str) $(basename $s).Str() - Sfx('\n')
 
+# TODO: something more efficient than reading all of it. Some kind of streaming.
+F lines(f:File, cb:Fun, *args) {
+	finally({
+		f.open('r')
+		f.fd.read().lines(cb, *args)
+	}, { f.close() })
+}
+
+F close(f:File) {
+	f.fd is Null throws InvalidArgument("File is not open. close() expects an open file").set('file', f)
+	ret = c_close(f.fd)
+	ret < 0 throws FileIOFail(f.name, get_c_errno(), "Failed to close the file $f")
+}
+
 # --- Redir ---
 
 F Str(r:Redir) "<Redirect ${r.fd} ${r.marker} ${r.datum}>"
@@ -1803,6 +1817,12 @@ F ~(s:Str, sfx:Sfx) {
 	ret
 }
 
+# TODO: make it a low priority method imlementation
+F '[]'(my:MatchY, idx:Int) my.matches[idx]
+
+TEST ("abc" ~ /a(.)c/)[1] == 'b'
+
+
 # === RegExp =====================================
 
 # TODO: better exceptions
@@ -1943,13 +1963,14 @@ F without(s:Str, r:RegExp) s.split(r).join('')
 
 TEST (try ENV.TRAVIS and ENV.CC == "clang") returns true; "ab01de12f".without(/[0-9]+/) == 'abdef'
 
-# TODO: Put it first in the '[]' array
+# TODO: make it a low priority method imlementation
 F '[]'(s:Str, r:RegExp) {
 	not((m = s ~ r)) throws InvalidArgument("String does not contain the given RegExp").set('container', s).set('regexp', r)
 	m.whole
 }
 
 TEST "ab01de12f"[/[0-9]+/] == '01'
+
 
 
 # === Fun ========================================

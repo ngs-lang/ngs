@@ -1,0 +1,23 @@
+{
+	# Do not use! Crashes!
+	# TODO: Fix the crash. Looks like memory corruption.
+
+	F perform_test(test_code:Str) {
+		echo("+ Test: $test_code")
+		c = "{ F() { $test_code }() }"
+		program_bytecode = compile(c, '<test>')
+		program_func = load(program_bytecode, '<test>')
+		result = program_func()
+		result != true throws Error("Test failed: $test_code. Returned $result")
+	}
+
+	# TODO: also other files
+	File('stdlib.ngs').lines(F(line) {
+		# dump(line)
+		if m = line ~ /^TEST (.*)/ {
+			perform_test(m[1])
+		}
+	})
+
+	echo("OK")
+}

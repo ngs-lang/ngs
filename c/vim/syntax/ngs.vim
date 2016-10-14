@@ -22,11 +22,13 @@ syn keyword ngsType NotImplemented FetchFail RequreFail MainFail
 " other types
 syn keyword ngsType Any ArgvMatcher Arr ArrIter BasicType Bool Box CLib Closure Command Counter CSym EmptyBox ExclusiveRange ExecutableNotFound FFI FullBox Fun Hash InclusiveRange Int Iter KV NormalType NormalTypeInstance Null Path Pipe Process ProcessFail Range Real Seq Stats Str Table TableMeta TableMetaNotIfCol Type
 syn keyword ngsType AssertFail ArgsMismatch Error Exception CompileFail DontKnowHowToCall GlobalNotFound ImplNotFound InternalError LookupFail KeyNotFound StackDepthFail
+syn keyword ngsType File FileIOFail
 syn keyword ngsType IndexNotFound AttrNotFound InvalidParameter NoNext
 syn keyword ngsType InvalidArgument DivisionByZero
 syn keyword ngsType Lock Pthread PthreadAttr Thread
 syn keyword ngsType LockFail
 syn keyword ngsType RegExp RegExpCompileFail
+syn keyword ngsType Redir
 syn keyword ngsType Return
 syn keyword ngsType ScreenRenderer ScreenItemsContainer ScreenItemsVerticalContainer ScreenItemsHorizontalContainer
 syn keyword ngsType Match MatchY MatchN MatchFail SubSeq Pfx MaybePfx MustPfx Sfx MaybeSfx MustSfx
@@ -51,7 +53,7 @@ syn keyword ngsFunction c_close c_execve c_exit c_fork c_lseek copy c_open c_pcr
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction fetch main require to_exit_code
 " stdlib functions
-syn keyword ngsFunction acquire all any assert basename close_reading_end close_writing_end cmp code compare count dflt dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error expose debug die filter find_in_path first flatten group has identity in index join len limit log map mapk mapv mapkv max merge_sorted min n next none partial partial_tail peek pmap pos ptimes publish read release reverse set sort split starts_with status Strs subscribe sum uniq update wait without write zip
+syn keyword ngsFunction acquire all any assert basename close close_reading_end close_writing_end cmp code compare count dflt dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error expose debug die filter finally find_in_path first flatten group has identity in index join len limit lines log map mapk mapv mapkv max merge_sorted min n next none open partial partial_tail peek pmap pos ptimes publish read release reverse set sort split starts_with status Strs subscribe sum uniq update wait without write zip
 
 " resources types
 syn keyword ngsType Res ResDef ResNotFound

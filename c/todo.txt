@@ -158,6 +158,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* Phase 4 - nice to have
 
+		* benchmarks - different tasks and languages
+			+ There is one task benchmark in the Makefile (time-sum target)
+
 		* RegExp
 			* c_pcre_exec() - support options?
 				PCRE_NOTBOL
@@ -183,8 +186,6 @@ Note that this started as internal document so things here are unformed, not fin
 			Explain how this project is different from other projects:
 				+ There is a shell in Python, don't remember the name.
 				( add more projects here )
-	* benchmarks - different tasks and languages
-		There is one task benchmark in the Makefile (time-sum target)
 	* tracing
 	* think about serialization and remote execution
 		Probably pushing a bytecode (which we already have because the code was compiled)
