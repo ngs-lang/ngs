@@ -661,50 +661,62 @@ METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 	METHOD_RETURN(MAKE_NULL);
 }
 
-// TODO: LookupFail-child-type exceptions?
+// TODO: make "start" and "end" size_t to simplify the code
+#define NATIVE_INDEX_STR_RANGE_SETUP \
+	if(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(argv[1])) < 2) return METHOD_ARGS_MISMATCH; \
+	start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[0]; \
+	if(!IS_INT(start)) return METHOD_ARGS_MISMATCH; \
+	if(GET_INT(start) < 0) { \
+		exc = make_normal_type_instance(vm->InvalidArgument); \
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Negative range start")); \
+		THROW_EXCEPTION_INSTANCE(exc); \
+	} \
+	if(((size_t) GET_INT(start)) > OBJ_LEN(argv[0])) { \
+		exc = make_normal_type_instance(vm->InvalidArgument); \
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range starts after string end")); \
+		THROW_EXCEPTION_INSTANCE(exc); \
+	} \
+	end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[1]; \
+	if(IS_NULL(end)) { \
+		end = MAKE_INT(OBJ_LEN(argv[0])); \
+	} \
+	if(!IS_INT(end)) return METHOD_ARGS_MISMATCH; \
+	if(GET_INT(end) < GET_INT(start)) { \
+		exc = make_normal_type_instance(vm->InvalidArgument); \
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range end smaller than range start when calling [](s:Str, r:Range)")); \
+		THROW_EXCEPTION_INSTANCE(exc); \
+	} \
+	len = GET_INT(end) - GET_INT(start); \
+	if(GET_INT(start) + len > OBJ_LEN(argv[0])) { \
+		exc = make_normal_type_instance(vm->InvalidArgument); \
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range ends after string end")); \
+		THROW_EXCEPTION_INSTANCE(exc); \
+	}
+
 METHOD_RESULT native_index_get_str_range EXT_METHOD_PARAMS {
 	size_t len;
 	VALUE start, end, exc;
 	(void) ctx;
-	if(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(argv[1])) < 2) return METHOD_ARGS_MISMATCH;
-	start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[0];
-	if(!IS_INT(start)) return METHOD_ARGS_MISMATCH;
-	if(GET_INT(start) < 0) {
-		exc = make_normal_type_instance(vm->InvalidArgument);
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Negative range start when calling [](s:Str, r:Range)"));
-		THROW_EXCEPTION_INSTANCE(exc);
-	}
-	if(((size_t) GET_INT(start)) > OBJ_LEN(argv[0])) {
-		exc = make_normal_type_instance(vm->InvalidArgument);
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range starts after string end when calling [](s:Str, r:Range)"));
-		THROW_EXCEPTION_INSTANCE(exc);
-	}
-	end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[1];
-	if(IS_NULL(end)) {
-		len = OBJ_LEN(argv[0]) - GET_INT(start);
-		*result = make_string_of_len(NULL, len);
-		memcpy(OBJ_DATA_PTR(*result), OBJ_DATA_PTR(argv[0]) + GET_INT(start), len);
-		return METHOD_OK;
-	}
-	if(!IS_INT(end)) return METHOD_ARGS_MISMATCH;
-	if(GET_INT(end) < GET_INT(start)) {
-		exc = make_normal_type_instance(vm->InvalidArgument);
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range end smaller than range start when calling [](s:Str, r:Range)"));
-		THROW_EXCEPTION_INSTANCE(exc);
-	}
-	len = GET_INT(end) - GET_INT(start);
-	if(obj_is_of_type(argv[1], vm->InclusiveRange)) {
-		len++;
-	}
-	if(GET_INT(start) + len > OBJ_LEN(argv[0])) {
-		exc = make_normal_type_instance(vm->InvalidArgument);
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range ends after string end [](s:Str, r:Range)"));
-		THROW_EXCEPTION_INSTANCE(exc);
-	}
+	NATIVE_INDEX_STR_RANGE_SETUP;
 	*result = make_string_of_len(NULL, len);
-
 	memcpy(OBJ_DATA_PTR(*result), OBJ_DATA_PTR(argv[0]) + GET_INT(start), len);
 	return METHOD_OK;
+}
+
+METHOD_RESULT native_index_set_str_range_str EXT_METHOD_PARAMS {
+	size_t len, new_total_len;
+	VALUE start, end, exc;
+	char *old_data;
+	(void) ctx;
+	NATIVE_INDEX_STR_RANGE_SETUP;
+	new_total_len = GET_INT(start) + OBJ_LEN(argv[2]) + (OBJ_LEN(argv[0]) - GET_INT(end));
+	old_data = OBJ_DATA_PTR(argv[0]);
+	OBJ_DATA_PTR(argv[0]) = NGS_MALLOC_ATOMIC(new_total_len);
+	memcpy(OBJ_DATA_PTR(argv[0]), old_data, GET_INT(start));
+	memcpy(OBJ_DATA_PTR(argv[0]) + GET_INT(start), OBJ_DATA_PTR(argv[2]), OBJ_LEN(argv[2]));
+	memcpy(OBJ_DATA_PTR(argv[0]) + GET_INT(start) + OBJ_LEN(argv[2]), old_data + GET_INT(end), OBJ_LEN(argv[0]) - GET_INT(end));
+	OBJ_LEN(argv[0]) = new_total_len;
+	METHOD_RETURN(argv[2]);
 }
 
 METHOD_RESULT native_eq_bool_bool METHOD_PARAMS { METHOD_RETURN(MAKE_BOOL(argv[0].num == argv[1].num)); }
@@ -1835,8 +1847,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "Length in bytes");
 	register_global_func(vm, 0, "==",       &native_eq_str_str,              2, "a",   vm->Str, "b", vm->Str);
 	register_global_func(vm, 0, "pos",      &native_pos_str_str_int,         3, "haystack", vm->Str, "needle", vm->Str, "start", vm->Int);
-	register_global_func(vm, 1, "[]",       &native_index_get_str_range,     2, "s", vm->Str, "range", vm->Range);
-	// register_global_func(vm, 1, "[]=",      &native_index_set_str_range_str, 2, "s", vm->Str, "range", vm->Range, "replacement", vm->Str);
+	register_global_func(vm, 1, "[]",       &native_index_get_str_range,     2, "s", vm->Str, "range", vm->ExclusiveRange);
+	register_global_func(vm, 1, "[]=",      &native_index_set_str_range_str, 3, "s", vm->Str, "range", vm->ExclusiveRange, "replacement", vm->Str);
 	register_global_func(vm, 1, "ord",      &native_ord_str_int,             2, "s", vm->Str, "idx", vm->Int);
 
 	// int

@@ -12,9 +12,11 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* hooks
 				+ use cases
-					+ prompt hook - returns prompt pieces
-					+ exit hook - might modify exit code
+					+ prompt hook - independent execution, returns prompt pieces, potentially with color and other metadata such as attached menus etc
+					+ exit hook - independent execution of cleanup handlers, might modify exit code
 					+ uncaught exception hook - might modify exit code
+					+ global_not_found_hook - try one solution (method implementation) at a time
+					+ impl_not_found_hook - also one at a time
 
 			* main() - match arguments and make it usable [in progress]
 
@@ -36,6 +38,7 @@ Note that this started as internal document so things here are unformed, not fin
 					* between internal and external commands
 
 			* array/string splice - check existing x[Range] methods
+				+ shift, unshift etc for array (also for string?) can be implemented on top of this
 
 			* match, ematch - some way to get the match object?
 

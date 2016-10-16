@@ -130,6 +130,8 @@ F Str(c:NativeMethod) {
 
 # === Closure ====================================
 
+# TODO: show arguments:
+#   "<Closure ${c.attrs().name tor "<anonymous>"}(HERE) at ${location}>"
 F Str(c:Closure) {
 	info = c.ip().resolve_instruction_pointer()
 	location = "${info.file}:${info.first_line}" tor "<unknown location>"
@@ -2116,6 +2118,10 @@ TEST args=['1', '+', '2']; $(expr $*args).Str()[0..1] == '3'
 TEST time() > 1466662171
 TEST a=[10,20,30]; f=a[X]; f(1) == 20
 TEST a=[10,20,30]; f=X[1]; f(a) == 20
+
+# === Str tests ==================================
+TEST "abcd"[1..3] == "bc"
+TEST s="abcd"; s[4..4]="END"; s[2..2]="MIDDLE"; s[0..0]="START"; s[0..1] = "s"; s == "sTARTabMIDDLEcdEND"
 
 # === Exceptions tests ===========================
 TEST h={}; try h["a"] catch(e:KeyNotFound) true
