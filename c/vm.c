@@ -733,7 +733,7 @@ METHOD_RESULT native_index_get_arr_range EXT_METHOD_PARAMS {
 }
 
 // TODO: maybe use vlo->item_size and unify Str and Arr methods
-METHOD_RESULT native_index_set_arr_range_str EXT_METHOD_PARAMS {
+METHOD_RESULT native_index_set_arr_range_arr EXT_METHOD_PARAMS {
 	size_t len, new_total_len;
 	VALUE start, end, exc;
 	char *old_data;
@@ -1868,7 +1868,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "len",      &native_len,                     1, "arr", vm->Arr);
 	register_global_func(vm, 0, "get",      &native_index_get_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
 	register_global_func(vm, 1, "[]",       &native_index_get_arr_range,     2, "arr", vm->Arr, "range", vm->ExclusiveRange);
-	register_global_func(vm, 1, "[]=",      &native_index_set_arr_range_str, 3, "arr", vm->Arr, "range", vm->ExclusiveRange, "replacement", vm->Arr);
+	register_global_func(vm, 1, "[]=",      &native_index_set_arr_range_arr, 3, "arr", vm->Arr, "range", vm->ExclusiveRange, "replacement", vm->Arr);
 	register_global_func(vm, 1, "[]",       &native_index_get_arr_int,       2, "arr", vm->Arr, "idx", vm->Int);
 	register_global_func(vm, 1, "[]=",      &native_index_set_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "v", vm->Any);
 	register_global_func(vm, 1, "join",     &native_join_arr_str,            2, "arr", vm->Arr, "s", vm->Str);
