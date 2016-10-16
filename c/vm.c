@@ -713,7 +713,9 @@ METHOD_RESULT native_index_set_str_range_str EXT_METHOD_PARAMS {
 	old_data = OBJ_DATA_PTR(argv[0]);
 	OBJ_DATA_PTR(argv[0]) = NGS_MALLOC_ATOMIC(new_total_len);
 	memcpy(OBJ_DATA_PTR(argv[0]), old_data, GET_INT(start));
-	memcpy(OBJ_DATA_PTR(argv[0]) + GET_INT(start), OBJ_DATA_PTR(argv[2]), OBJ_LEN(argv[2]));
+	if(OBJ_LEN(argv[2])) {
+		memcpy(OBJ_DATA_PTR(argv[0]) + GET_INT(start), OBJ_DATA_PTR(argv[2]), OBJ_LEN(argv[2]));
+	}
 	memcpy(OBJ_DATA_PTR(argv[0]) + GET_INT(start) + OBJ_LEN(argv[2]), old_data + GET_INT(end), OBJ_LEN(argv[0]) - GET_INT(end));
 	OBJ_LEN(argv[0]) = new_total_len;
 	METHOD_RETURN(argv[2]);
@@ -741,7 +743,9 @@ METHOD_RESULT native_index_set_arr_range_str EXT_METHOD_PARAMS {
 	old_data = OBJ_DATA_PTR(argv[0]);
 	OBJ_DATA_PTR(argv[0]) = NGS_MALLOC(new_total_len * sizeof(VALUE));
 	memcpy(&ARRAY_ITEMS(argv[0])[0], old_data, GET_INT(start) * sizeof(VALUE));
-	memcpy(&ARRAY_ITEMS(argv[0])[GET_INT(start)], OBJ_DATA_PTR(argv[2]), OBJ_LEN(argv[2]) * sizeof(VALUE));
+	if(OBJ_LEN(argv[2])) {
+		memcpy(&ARRAY_ITEMS(argv[0])[GET_INT(start)], OBJ_DATA_PTR(argv[2]), OBJ_LEN(argv[2]) * sizeof(VALUE));
+	}
 	memcpy(&ARRAY_ITEMS(argv[0])[GET_INT(start) + OBJ_LEN(argv[2])], old_data + GET_INT(end) * sizeof(VALUE), (OBJ_LEN(argv[0]) - GET_INT(end)) * sizeof(VALUE));
 	OBJ_LEN(argv[0]) = new_total_len;
 	METHOD_RETURN(argv[2]);
