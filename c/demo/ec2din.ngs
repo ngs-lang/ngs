@@ -19,9 +19,20 @@
 	filters = ARGV.map(F(arg) {
 		kv = arg.split('=')
 		econd {
-			arg.starts_with('vpc-') "Name=vpc-id,Values=$arg"
-			arg.starts_with('i-')   "Name=instance-id,Values=$arg"
-			kv.len() == 2           "Name=tag-key,Values=${kv[0]},Name=tag-value,Values=${kv[1]}"
+
+			arg.starts_with('vpc-')
+				"Name=vpc-id,Values=$arg"
+
+			arg.starts_with('i-')
+				"Name=instance-id,Values=$arg"
+
+			arg ~ /^[0-9.]+$/ {
+				filter_name = if IPAddr(arg).is_private() then 'private-ip-address' else 'ip-address'
+				"Name=$filter_name,Values=$arg"
+			}
+
+			kv.len() == 2
+				"Name=tag-key,Values=${kv[0]},Name=tag-value,Values=${kv[1]}"
 		}
 	})
 

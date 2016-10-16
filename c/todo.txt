@@ -10,8 +10,11 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "programming"
 
-			* exit hooks for both normal exit and exceptions (and generic pubsub?)
-				* using decorators?
+			* hooks
+				+ use cases
+					+ prompt hook - returns prompt pieces
+					+ exit hook - might modify exit code
+					+ uncaught exception hook - might modify exit code
 
 			* main() - match arguments and make it usable [in progress]
 

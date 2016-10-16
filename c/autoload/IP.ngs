@@ -1,0 +1,47 @@
+{
+	type IP
+	type IPAddr(IP)
+	type IPNet(IP)
+}
+
+# TODO: support immediate values larger than 32 bits in parser
+STDLIB_BIT_31 = 128*256*256*256
+
+# WARNING: Will not work on 32 bit system with current bit tagging for integers !!!
+
+# TODO: input validation checks
+F init(addr:IPAddr, s:Str) {
+	addr.ip = s.split('.').map(Int).reduce(0, { A*256 + B })
+}
+
+# TODO: input validation checks
+F init(net:IPNet, s:Str) {
+	t = s.split('/')
+	len(t) != 2 throws InvalidArgument('IPNet expects 1.2.3.4/8 format').set('given', s)
+	net.ip = t[0].split('.').map(Int).reduce(0, { A*256 + B })
+	net.mask = Int(t[1])
+	# TODO: add to language and use here bit shift operations
+	net.bit_mask = (0..net.mask).reduce(0, { A / 2 + STDLIB_BIT_31})
+}
+
+STDLIB_PRIVATE_IP_NETWORKS = %[10.0.0.0/8 172.16.0.0/12 192.168.0.0/16] / IPNet
+
+doc Check whether the IP address is in one of the given IP networks
+F in(addr:IPAddr, networks:Arr) {
+	guard networks.all(is, IPNet)
+	networks.any(addr in X)
+}
+
+F in(addr:IPAddr, net:IPNet) addr.ip.band(net.bit_mask) == net.ip.band(net.bit_mask)
+
+TEST IPAddr("10.1.2.20") in IPNet("10.1.2.3/8")
+TEST IPAddr("11.1.2.20") not in IPNet("10.1.2.3/8")
+
+F is_private(addr:IPAddr) addr in STDLIB_PRIVATE_IP_NETWORKS
+
+TEST IPAddr("10.1.2.3").is_private()
+TEST IPAddr("192.168.1.100").is_private()
+TEST IPAddr("172.31.255.255").is_private()
+TEST IPAddr("172.32.0.1").is_private().not()
+
+# TODO: consider parse() for ipcalc output for "deaggregate" operation for example
