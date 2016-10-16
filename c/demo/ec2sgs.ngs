@@ -26,10 +26,10 @@
 
 	sgs = ``aws ec2 describe-security-groups``
 	sgs.each(F(sg) {
-		sg.GroupName = sg.GroupName.limit(20, '...')
-		sg.Description = sg.Description.limit(20, '...')
-		sg.IpPermissions = sg.IpPermissions.map(process_ip_perms_elt)
-		sg.IpPermissionsEgress = sg.IpPermissionsEgress.map(process_ip_perms_elt)
+		sg.GroupName .= limit(20, '...')
+		sg.Description .= limit(20, '...')
+		sg.IpPermissions .= map(process_ip_perms_elt)
+		sg.IpPermissionsEgress .= map(process_ip_perms_elt)
 	})
 	t = Table('SecurityGroups', sgs)
 	echo(t)
