@@ -673,7 +673,7 @@ METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 	} \
 	if(((size_t) GET_INT(start)) > OBJ_LEN(argv[0])) { \
 		exc = make_normal_type_instance(vm->InvalidArgument); \
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range starts after string end")); \
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range starts after string/array end")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	} \
 	end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[1]; \
@@ -715,6 +715,34 @@ METHOD_RESULT native_index_set_str_range_str EXT_METHOD_PARAMS {
 	memcpy(OBJ_DATA_PTR(argv[0]), old_data, GET_INT(start));
 	memcpy(OBJ_DATA_PTR(argv[0]) + GET_INT(start), OBJ_DATA_PTR(argv[2]), OBJ_LEN(argv[2]));
 	memcpy(OBJ_DATA_PTR(argv[0]) + GET_INT(start) + OBJ_LEN(argv[2]), old_data + GET_INT(end), OBJ_LEN(argv[0]) - GET_INT(end));
+	OBJ_LEN(argv[0]) = new_total_len;
+	METHOD_RETURN(argv[2]);
+}
+
+// TODO: maybe use vlo->item_size and unify Str and Arr methods
+METHOD_RESULT native_index_get_arr_range EXT_METHOD_PARAMS {
+	size_t len;
+	VALUE start, end, exc;
+	(void) ctx;
+	NATIVE_INDEX_STR_RANGE_SETUP;
+	*result = make_array(len);
+	memcpy(OBJ_DATA_PTR(*result), &ARRAY_ITEMS(argv[0])[GET_INT(start)], len*sizeof(VALUE));
+	return METHOD_OK;
+}
+
+// TODO: maybe use vlo->item_size and unify Str and Arr methods
+METHOD_RESULT native_index_set_arr_range_str EXT_METHOD_PARAMS {
+	size_t len, new_total_len;
+	VALUE start, end, exc;
+	char *old_data;
+	(void) ctx;
+	NATIVE_INDEX_STR_RANGE_SETUP;
+	new_total_len = GET_INT(start) + OBJ_LEN(argv[2]) + (OBJ_LEN(argv[0]) - GET_INT(end));
+	old_data = OBJ_DATA_PTR(argv[0]);
+	OBJ_DATA_PTR(argv[0]) = NGS_MALLOC(new_total_len * sizeof(VALUE));
+	memcpy(&ARRAY_ITEMS(argv[0])[0], old_data, GET_INT(start) * sizeof(VALUE));
+	memcpy(&ARRAY_ITEMS(argv[0])[GET_INT(start)], OBJ_DATA_PTR(argv[2]), OBJ_LEN(argv[2]) * sizeof(VALUE));
+	memcpy(&ARRAY_ITEMS(argv[0])[GET_INT(start) + OBJ_LEN(argv[2])], old_data + GET_INT(end) * sizeof(VALUE), (OBJ_LEN(argv[0]) - GET_INT(end)) * sizeof(VALUE));
 	OBJ_LEN(argv[0]) = new_total_len;
 	METHOD_RETURN(argv[2]);
 }
@@ -1828,17 +1856,19 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "not",      &native_not_bool,          1, "x",   vm->Bool);
 
 	// array
-	register_global_func(vm, 0, "+",        &native_plus_arr_arr,      2, "a",   vm->Arr, "b", vm->Arr);
-	register_global_func(vm, 0, "push",     &native_push_arr_any,      2, "arr", vm->Arr, "v", vm->Any);
-	register_global_func(vm, 1, "pop",      &native_pop_arr,           1, "arr", vm->Arr);
-	register_global_func(vm, 0, "shift",    &native_shift_arr,         1, "arr", vm->Arr);
-	register_global_func(vm, 0, "shift",    &native_shift_arr_any,     2, "arr", vm->Arr, "dflt", vm->Any);
-	register_global_func(vm, 0, "len",      &native_len,               1, "arr", vm->Arr);
-	register_global_func(vm, 0, "get",      &native_index_get_arr_int_any, 3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
-	register_global_func(vm, 1, "[]",       &native_index_get_arr_int, 2, "arr", vm->Arr, "idx", vm->Int);
-	register_global_func(vm, 1, "[]=",      &native_index_set_arr_int_any, 3, "arr", vm->Arr, "idx", vm->Int, "v", vm->Any);
-	register_global_func(vm, 1, "join",     &native_join_arr_str,      2, "arr", vm->Arr, "s", vm->Str);
-	register_global_func(vm, 0, "copy",     &native_copy_arr,          1, "arr", vm->Arr);
+	register_global_func(vm, 0, "+",        &native_plus_arr_arr,            2, "a",   vm->Arr, "b", vm->Arr);
+	register_global_func(vm, 0, "push",     &native_push_arr_any,            2, "arr", vm->Arr, "v", vm->Any);
+	register_global_func(vm, 1, "pop",      &native_pop_arr,                 1, "arr", vm->Arr);
+	register_global_func(vm, 0, "shift",    &native_shift_arr,               1, "arr", vm->Arr);
+	register_global_func(vm, 0, "shift",    &native_shift_arr_any,           2, "arr", vm->Arr, "dflt", vm->Any);
+	register_global_func(vm, 0, "len",      &native_len,                     1, "arr", vm->Arr);
+	register_global_func(vm, 0, "get",      &native_index_get_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
+	register_global_func(vm, 1, "[]",       &native_index_get_arr_range,     2, "arr", vm->Arr, "range", vm->ExclusiveRange);
+	register_global_func(vm, 1, "[]=",      &native_index_set_arr_range_str, 3, "arr", vm->Arr, "range", vm->ExclusiveRange, "replacement", vm->Arr);
+	register_global_func(vm, 1, "[]",       &native_index_get_arr_int,       2, "arr", vm->Arr, "idx", vm->Int);
+	register_global_func(vm, 1, "[]=",      &native_index_set_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "v", vm->Any);
+	register_global_func(vm, 1, "join",     &native_join_arr_str,            2, "arr", vm->Arr, "s", vm->Str);
+	register_global_func(vm, 0, "copy",     &native_copy_arr,                1, "arr", vm->Arr);
 	_doc(vm, "%RET", "Shallow copy of arr");
 
 	// string

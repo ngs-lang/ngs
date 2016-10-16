@@ -604,40 +604,6 @@ F '[]'(arr:Arr, indexes:Arr) indexes.map(arr[X])
 
 TEST [10,20,30,40][[0,3]] == [10, 40]
 
-F '[]'(arr:Arr, range:Range) {
-	start = econd {
-		range.start is Null
-			0
-		range.start > arr.len()
-			throw IndexNotFound("Range start ${range.start} is too high for array of length ${arr.len()}", arr, range.end)
-		range.start >= 0
-			range.start
-		range.start < 0
-			throw IndexNotFound("Range start ${range.start} is too low", arr, range.start)
-	}
-	end = econd {
-		range.end is Null
-			arr.len()
-		range.end < start
-			throw IndexNotFound("Range end ${range.end} is lower than selection start ${start}", arr, range.end)
-		range is InclusiveRange
-			range.end + 1
-		range is ExclusiveRange
-			range.end
-	}
-	end > arr.len() throws IndexNotFound("Range end ${range.end} is too high for array of length ${arr.len()}", arr, range.end)
-	(start..end).map(arr[X])
-}
-
-TEST [10,20,30,40][null..2] == [10,20]
-TEST [10,20,30,40][1..2] == [20]
-TEST (try [10,20,30,40][-1..2] catch(e:IndexNotFound) "OK") == "OK"
-TEST [10,20,30,40][2..null] == [30, 40]
-TEST (try [10,20,30,40][2..1] catch(e:IndexNotFound) "OK") == "OK"
-TEST (try [10,20,30,40][2..10] catch(e:IndexNotFound) "OK") == "OK"
-TEST [10,20,30,40][1...2] == [20, 30]
-TEST [10,20,30,40][4..null] == []
-
 F limit(a:Arr, l:Int) {
 	a.len() <= l returns a
 	a[0..l]
@@ -2118,6 +2084,16 @@ TEST args=['1', '+', '2']; $(expr $*args).Str()[0..1] == '3'
 TEST time() > 1466662171
 TEST a=[10,20,30]; f=a[X]; f(1) == 20
 TEST a=[10,20,30]; f=X[1]; f(a) == 20
+
+# === Arr tests ==================================
+TEST [10,20,30,40][0..2] == [10,20]
+TEST [10,20,30,40][1..2] == [20]
+TEST (try [10,20,30,40][-1..2] catch(e:InvalidArgument) "OK") == "OK"
+TEST [10,20,30,40][2..null] == [30, 40]
+TEST (try [10,20,30,40][2..1] catch(e:InvalidArgument) "OK") == "OK"
+TEST (try [10,20,30,40][2..10] catch(e:InvalidArgument) "OK") == "OK"
+TEST [10,20,30,40][4..null] == []
+TEST a=[1,2,3,4]; a[4..4]=["END"]; a[2..2]=["MIDDLE"]; a[0..0]=["START"]; a[0..1] = ["start"]; a == ["start", 1, 2, "MIDDLE", 3, 4, "END"]
 
 # === Str tests ==================================
 TEST "abcd"[1..3] == "bc"
