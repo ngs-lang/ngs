@@ -10,8 +10,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "programming"
 
-			* Add replace() method to allow "@e1 e2" expression to replace the method declared in e2
-
 			* main() - match arguments and make it usable [in progress]
 
 			* commands syntax
