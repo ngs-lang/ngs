@@ -508,6 +508,7 @@ F map_idx_val(arr:Arr, cb:Fun, *args) {
 TEST r=[]; ["a", "b"].each_idx_val(F(idx, val) r.push([idx, val])); r == [[0, "a"], [1, "b"]]
 
 
+# TODO: make it work with anything that has each() method
 doc Process each N elements of an Array at a time
 F each(arr:Arr, n:Int, cb:Fun, *args) {
 	arr.len() % n != 0 throws InvalidArgument("Can not iterate elements in groups of $n of array of size ${arr.len()}")
@@ -612,7 +613,15 @@ F reverse(arr:Arr) {
 
 TEST [1,2,3].reverse() == [3,2,1]
 
+# TODO: check whether it can work with anything that has each()
 F sum(arr:Arr) arr.reduce(0, (+))
+
+F unshift(arr:Arr, elt) {
+	arr[0..0] = [elt]
+	arr
+}
+
+TEST x=[1,2]; x.unshift(3); x == [3, 1, 2]
 
 # --- Conversions ---
 
@@ -1206,7 +1215,6 @@ F ord(s:Str) {
 
 # EXPERIMENTAL. For use with AWS Ancors.
 F ~(a:Str, b:Str) a==b
-
 
 F code(s:Str) {
 	# XXX TODO: escaping

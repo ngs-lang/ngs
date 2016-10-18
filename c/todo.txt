@@ -31,9 +31,6 @@ Note that this started as internal document so things here are unformed, not fin
 					* between internal commands/functions
 					* between internal and external commands
 
-			* array/string splice - check existing x[Range] methods
-				+ shift, unshift etc for array (also for string?) can be implemented on top of this
-
 			* match, ematch - some way to get the match object?
 
 				For example when RegExp is implmeneted in the code
