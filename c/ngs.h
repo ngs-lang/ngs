@@ -19,6 +19,7 @@
 #define NGS_MALLOC_UNCOLLECTALE(n) GC_MALLOC_UNCOLLECTABLE(n)
 #define NGS_MALLOC_ATOMIC(n) GC_MALLOC_ATOMIC(n)
 #define NGS_GCOLLECT() GC_gcollect()
+#define NGS_SIZE(p) GC_size(p)
 
 #define NGS_MALLOC_OBJ(dst) dst = NGS_MALLOC(sizeof(*dst)); assert(dst);
 

@@ -154,6 +154,7 @@ F @(hd:HookDecorator, handler:Closure) {
 F hook(h:Hook, *args) HookDecorator(h, *args)
 
 TEST h = Hook(); a=1; h["my1"] = F() a+=1; @h { a*=2 }; @hook(h, "my2") { a*=3 }; h(); a==12 and h.handlers.keys() == ["my1", "pushed-0", "my2"]
+TEST h = Hook(); F @(hook, ovr) ovr.replace({"B"}); @h F f() "A"; f() == "B"
 
 
 # === Real =======================================

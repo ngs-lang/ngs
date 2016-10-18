@@ -1393,6 +1393,44 @@ METHOD_RESULT native_args EXT_METHOD_PARAMS {
 	METHOD_RETURN(*result);
 }
 
+// Hackish
+// TODO: something cleaner
+METHOD_RESULT native_replace EXT_METHOD_PARAMS {
+	(void) vm;
+	(void) argv;
+	size_t dst_size, src_size;
+	if(!IS_OBJ(argv[0]) || !IS_OBJ(argv[1])) {
+		VALUE exc;
+		exc = make_normal_type_instance(vm->InvalidArgument);
+		// TODO: better message phrasing
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Both replace() arguments must be objects, not tagged values"));
+		set_normal_type_instance_attribute(exc, make_string("dst"), argv[0]);
+		set_normal_type_instance_attribute(exc, make_string("src"), argv[1]);
+		THROW_EXCEPTION_INSTANCE(exc);
+	}
+	if(IS_NORMAL_TYPE_INSTANCE(argv[0]) && IS_NORMAL_TYPE_INSTANCE(argv[1])) {
+		memcpy(argv[0].ptr, argv[1].ptr, sizeof(OBJECT));
+		METHOD_RETURN(argv[1]);
+	}
+	// TODO: throw InvalidArgument if only one IS_NORMAL_TYPE_INSTANCE
+	if(OBJ_TYPE_NUM(argv[0]) != OBJ_TYPE_NUM(argv[1])) {
+		VALUE exc;
+		exc = make_normal_type_instance(vm->InvalidArgument);
+		// TODO: better message phrasing
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Current implementation of replace() is limited to dst and src of same type when replacing a builtin type instance"));
+		set_normal_type_instance_attribute(exc, make_string("dst"), argv[0]);
+		set_normal_type_instance_attribute(exc, make_string("src"), argv[1]);
+		THROW_EXCEPTION_INSTANCE(exc);
+	}
+	dst_size = NGS_SIZE(argv[0].ptr);
+	src_size = NGS_SIZE(argv[1].ptr);
+	// Not very clean but should be safe
+	// TODO: review safety of such copy
+	memcpy(argv[0].ptr, argv[1].ptr, MIN(dst_size, src_size));
+
+	METHOD_RETURN(argv[1]);
+}
+
 // http://www.pcre.org/original/doc/html/pcredemo.html
 METHOD_RESULT native_c_pcre_compile EXT_METHOD_PARAMS {
 
@@ -1745,7 +1783,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, ".",              &native_attr_regexp,      2, "regexp", vm->RegExp, "attr", vm->Str);
 
 	// special
-	register_global_func(vm, 1, "args",            &native_args,     0);
+	register_global_func(vm, 1, "args",            &native_args,            0);
+	register_global_func(vm, 1, "replace",         &native_replace,         2, "dst",    vm->Any,    "src", vm->Any);
 
 	// Return
 	register_global_func(vm, 1, "Return",          &native_Return,   0);
