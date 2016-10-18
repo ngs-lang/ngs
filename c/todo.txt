@@ -11,6 +11,9 @@ Note that this started as internal document so things here are unformed, not fin
 		* Milestone "programming"
 
 			* main() - match arguments and make it usable [in progress]
+				* allow positional parameters as in ec2din.ngs [done]
+				* allow documentation of parameters for displaying help
+				* display help when no matching main or when --help is given
 
 			* commands syntax
 

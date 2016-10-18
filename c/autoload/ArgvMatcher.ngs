@@ -14,6 +14,8 @@ F ~(argv:Arr, c:Closure) {
 	SHORT_SW_PFX = Pfx('-')
 	NEG_PFX = Pfx('no-')
 
+	match_ret = Return()
+
 	params_by_pos = c.params()
 
 	have_arr_splat = false
@@ -46,6 +48,7 @@ F ~(argv:Arr, c:Closure) {
 
 	accepting_named_arguments = true
 	argv_iter = Iter(argv)
+	positionals = []
 	while(argv_iter) {
 		param_name = null
 		arg = argv_iter.next()
@@ -69,7 +72,7 @@ F ~(argv:Arr, c:Closure) {
 			if params_by_name[param_name].type == Bool {
 				set_match(not(negated))
 			} else {
-				if negated  {
+				if negated {
 					return MatchN().set('message', "Parameter '${param_name}' is not a boolean but used with 'no-'")
 				}
 				try
@@ -80,17 +83,22 @@ F ~(argv:Arr, c:Closure) {
 			}
 		} else {
 			# positional parameter
-			idx = matches.index(is, UnmatchedParam)
-			if idx is Null {
-				if have_arr_splat {
-					matches.push(MatchedParam(arg))
-				} else {
-					return MatchN().set('message', "Too many arguments")
-				}
-			}
-			matches[idx] = MatchedParam(arg.convert(params_by_pos[idx].type))
+			positionals.push(arg)
 		}
 	}
+
+	positionals.each(F(arg) {
+		idx = matches.index(is, UnmatchedParam)
+		if idx is Null {
+			if have_arr_splat {
+				matches.push(MatchedParam(arg))
+				return null
+			} else {
+				throw match_ret(MatchN().set('message', "Too many arguments"))
+			}
+		}
+		matches[idx] = MatchedParam(arg.convert(params_by_pos[idx].type))
+	})
 
 	for(i;matches.len()) {
 		matches[i] continues
@@ -101,3 +109,8 @@ F ~(argv:Arr, c:Closure) {
 
 	MatchY().set('matches', matches.val)
 }
+
+TEST ArgvMatcher; (["--b", "B", "A", "C"] ~ F(a,b,c) 7).matches == %[A B C]
+TEST ArgvMatcher; (["--b", "B", "A", "C", "D"] ~ F(a,b,c) 7) is MatchN
+TEST ArgvMatcher; (["--b", "B", "A", "C", "D"] ~ F(a,b,c, *d) 7).matches == %[A B C D]
+TEST ArgvMatcher; (["A", "C", "D", "--b", "B"] ~ F(a,b,c, *d) 7).matches == %[A B C D]
