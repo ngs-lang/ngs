@@ -10,11 +10,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "programming"
 
+			* Add replace() method to allow "@e1 e2" expression to replace the method declared in e2
+
 			* main() - match arguments and make it usable [in progress]
-
-			* document scoping rules
-
-			* document handlers, hooks and specifically exit_hook
 
 			* commands syntax
 
@@ -31,42 +29,10 @@ Note that this started as internal document so things here are unformed, not fin
 					* between internal commands/functions
 					* between internal and external commands
 
-			* match, ematch - some way to get the match object?
-
-				For example when RegExp is implmeneted in the code
-
-					match mystring {
-						/my_regex(.*)/ { my_code }
-					}
-
-				in my_code there should be access to the match object
-				The syntax might be
-
-					match mystring {
-						/my_regex(.*)/ -> my_match { my_code }
-					}
-
-				or something alike, not sure yet.
-				Maybe
-
-					match my_string my_match {
-						/my_regex(.*)/ { my_code }
-					}
-
-			* without(s:Str, del:Str)
-
-			* Destructuring. Automatically declare the variables local, as for does.
-				* [a,b=default,*some,c]
-				* {'a','b':newvar,**some,'c'=default}
-				+ Not sure about the syntax.
-				+ Nested?
-				+ Pattern matching like [a, *other1, 100, b, *other2] ?
-					+ If yes, shouldn't the syntax be tilde (~) as for RegExp/Pfx/Sfx/... ?
-				+ "xyz${myvar}www" = myvar syntax for regexes? ... for consistency.
-				+ {[_, dst], **args} = h means also changing function arguments?
-
 			* documentation [on hold]
-
+				* scoping rules
+				* handlers, hooks and specifically exit_hook
+				* unify and document where {} is Hash (expression) and where it's code
 				* Fix markdown escaping, including underscore
 				* Make it look better in both man and html
 				* Document that innner functions are declared local
@@ -79,6 +45,10 @@ Note that this started as internal document so things here are unformed, not fin
 			+ Issue #15
 
 		* Milestone "correct programming" (will be v0.3.0)
+
+			* OP_PUSH_INT - check limits of the number
+
+			* Make comments that begin not at beginning of line work
 
 			* Fix test.ngs crash
 
@@ -123,6 +93,16 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Low prioroty method MatchY[]
 
+			* break / continue - disable when not in for
+
+			* -pedantic
+
+			* check integer overflows everywhere
+
+			* compile
+				* exceptions instead of asserts
+				* disallow duplicate name for an argument
+
 		* Milestone "threads" (will be v0.4.0)
 
 			* Thread - Make pthread_attr_t accessible - get/set attributes
@@ -149,7 +129,24 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* Phase 3 - running code remotely
 
-	* Phase 4 - nice to have
+		* think about serialization and remote execution
+			Probably pushing a bytecode (which we already have because the code was compiled)
+			of a function that does not reference any upper-level variables, only locals and globals,
+			maybe like this:
+
+				RF myfunc(param1:Str, param2:Int, ...)
+
+			RF means remote function and compiler checks for absence of upper-level variables references.
+
+	* Phase 4 - assist developing
+
+		* Local variables values in backtrace
+
+		* tracing / debug
+
+	* Phase 5 - nice to have
+
+		* Go over "TODO"s in all *.ngs files
 
 		* benchmarks - different tasks and languages
 			+ There is one task benchmark in the Makefile (time-sum target)
@@ -164,74 +161,77 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* implement parse() wherever possible (example: IPAddr, IPNet)
 
+		* push/pop/shift/unshift for Hash
+			To be consistent with Arr, which has all of these.
+			The push is regular h[k] = v while others need additional vm functionality.
+
+		* match, ematch - some way to get the match object?
+
+			+ Check if match is used before doing this task. Currently there is not single usage of match construct.
+
+			For example when RegExp is implmeneted in the code
+
+				match mystring {
+					/my_regex(.*)/ { my_code }
+				}
+
+			in my_code there should be access to the match object
+			The syntax might be
+
+				match mystring {
+					/my_regex(.*)/ -> my_match { my_code }
+				}
+
+			or something alike, not sure yet.
+			Maybe
+
+				match my_string my_match {
+					/my_regex(.*)/ { my_code }
+				}
+
+		* Destructuring. Automatically declare the variables local, as for does.
+			+ Check whether really needed. Currently would fit OK in several places in stdlib when returning few values from C calls:
+				result = c_something(...)
+				... result[0] ...
+				... result[1] ...
+				...
+			* [a,b=default,*some,c]
+			* {'a','b':newvar,**some,'c'=default}
+			+ Not sure about the syntax.
+			+ Nested?
+			+ Pattern matching like [a, *other1, 100, b, *other2] ?
+				+ If yes, shouldn't the syntax be tilde (~) as for RegExp/Pfx/Sfx/... ?
+			+ "xyz${myvar}www" = myvar syntax for regexes? ... for consistency.
+			+ {[_, dst], **args} = h means also changing function arguments?
+
+		* text templates (stdlib with builtin parse I guess)
+
+		* Nfile - NGS version of Makefile
+
+		* Compile time stack depth check?
+
+		* yaml
+			* parse
+			* generate
+
+		* K M G suffixes for numbers
+
+
 [todo by priority]
 
-	* unify and document where {} is Hash (expression) and where it's code
-	* K M G suffixes for numbers
-	* compile
-		* exceptions instead of asserts
-		* disallow duplicate name for an argument
 	* doc
 		* shorten everything, give example, make it tldr-compliant :)
 		* "local" and for() auto-local
 			Describe the "local myvar" behavior and make it clear that
 			for(i=0;i<n;i=i+1) will automatically declare i as local.
-		* constructors and init(), does not feel right. constructors as type convertors.
 		* which exceptions are thrown where and their meanings
 		* config()
 		* other projects
 			Explain how this project is different from other projects:
 				+ There is a shell in Python, don't remember the name.
 				( add more projects here )
-	* tracing
-	* think about serialization and remote execution
-		Probably pushing a bytecode (which we already have because the code was compiled)
-		of a function that does not reference any upper-level variables, only locals and globals,
-		maybe like this:
-
-			RF myfunc(param1:Str, param2:Int, ...)
-
-		RF means remote function and compiler checks for absence of upper-level variables references.
-
-	* push/pop/shift/unshift for Hash
-		To be consistent with Arr, which has all of these.
-		The push is regular h[k] = v while others need additional vm functionality.
-	* decorators / wrappers ?
-		+ Add replace() method to allow "@e1 e2" expression to replace the method declared in e2
-	* "local x" at top level - check behaviour
 	* solve the inheritance (also for "expose")
-	* comments that begin not at beginning of line
-	* OP_PUSH_INT - check limits of the number
-	* text templates (stdlib I guess)
-	* yaml
-		* parse
-		* generate
-
 	* strings / mb_strings
-
-	* data structure walk / data query language
-		+ See
-			+ jq
-			+ jmespath
-
-	* Local variables values in backtrace
-
-	* Compile time stack depth check?
-
-	* bitwise operations? "bor", "band", "bxor", ...
-
-	* documentation
-		* Add introspection for method source locations
-[debt]
-
-	* break / continue - disable when not in for
-
-	* -pedantic
-
-	* check integer overflows everywhere
-
-[consider]
-	* include * (glob)
 
 [types]
 	* Bin (or Bytes, later, after Str is multibyte)
@@ -260,10 +260,5 @@ Note that this started as internal document so things here are unformed, not fin
 	* parse()
 		+ allow auto-load missing implementations by extension and mime type
 	* write()
-	* now() - timestamp, time functions
 	* stat(), mtime(), ...
 	* file.relative_to(root)
-
-[later / safety]
-	* assert n_globals
-	* integer VALUE overflows check
