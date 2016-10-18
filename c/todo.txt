@@ -14,6 +14,7 @@ Note that this started as internal document so things here are unformed, not fin
 				* allow positional parameters as in ec2din.ngs [done]
 				* allow documentation of parameters for displaying help
 				* display help when no matching main or when --help is given
+				+ think of @table_args decorator for main()
 
 			* commands syntax
 
@@ -46,6 +47,8 @@ Note that this started as internal document so things here are unformed, not fin
 			+ Issue #15
 
 		* Milestone "correct programming" (will be v0.3.0)
+
+			* Move everything in "c" directory one level up
 
 			* OP_PUSH_INT - check limits of the number
 

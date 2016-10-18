@@ -29,6 +29,8 @@ Development. Help is welcome.
 
 The bigger part of the language is implemented to the point that some useful scripts can be written. See [the demo folder](c/demo).
 
+The language feels (to me) like a mix of Python, bash and a bit less Ruby and Perl 6 with saner syntax, all of it taken to a more functional direction. Unique features are rare but contribute a lot toward solving domain-specific solutions. Most useful of the unique features (in my opinion) is the ```````` ``command`` ```````` syntax which runs the command and parses the output.
+
 * Demo 1: [describe ec2 instances](c/demo/ec2din.ngs). The script has nicely aligned output for humans. It uses `stdlib`'s `Table` to do output layout and columns configuration. `Table` handles columns presence and order and it can be configured via environment variable.
 * Demo 2: [build chunk of hosts file](c/demo/ec2hostsfile.ngs) for a management machine. Hosts named `env-role` or `env-role-N`, depending on whether you have one or more machines of specific role in the environment.
 * Demo 3: [demonstrates race condition](c/demo/locks.ngs) and locks.
@@ -64,8 +66,8 @@ Contributing
 
 Fork on GitHub, work on whatever you like, preferably from the top of [the todo](c/todo.txt), make a pull request. If the change is big or involves modifying the syntax, it's better to coordinate with Ilya before you start.
 
-Features
-========
+Planned Features
+================
 
 UI
 --
