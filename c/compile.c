@@ -763,7 +763,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			while_jump = *idx;
 			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
 			SETUP_ADDRESS_FILLING();
-			continue_target_idx = *idx; // For HANDLE_ADDRESS_FILLING
+			continue_target_idx = loop_beg_idx; // For HANDLE_ADDRESS_FILLING
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
 			OPCODE(*buf, OP_JMP);
 			DATA_JUMP_OFFSET(*buf, -(*idx - loop_beg_idx + sizeof(JUMP_OFFSET)));
