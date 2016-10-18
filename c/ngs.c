@@ -194,25 +194,11 @@ int main(int argc, char **argv)
 		return 0;
 	}
 	if(mr == METHOD_EXCEPTION) {
-		VALUE orig_exception = result;
-		mr = vm_call(&vm, &ctx, &result, vm.uncaught_exception_hook, 1, &orig_exception);
-		if(mr == METHOD_OK) {
-			return 1;
+		if(obj_is_of_type(result, vm.Exception)) {
+			printf("========= Uncaught exception of type '%s' =========\n", obj_to_cstring(NGS_TYPE_NAME(NORMAL_TYPE_INSTANCE_TYPE(result))));
+			print_exception(&vm, result);
 		} else {
-			if(mr == METHOD_EXCEPTION) {
-				if(obj_is_of_type(result, vm.Exception)) {
-					printf("========= Uncaught exception of type '%s' in uncaught_exception_hook =========\n", obj_to_cstring(NGS_TYPE_NAME(NORMAL_TYPE_INSTANCE_TYPE(result))));
-					print_exception(&vm, result);
-				} else {
-					dump_titled("Uncaught exception in uncaught_exception_hook", result);
-				}
-			}
-		}
-		if(obj_is_of_type(orig_exception, vm.Exception)) {
-			printf("========= Uncaught original exception of type '%s' =========\n", obj_to_cstring(NGS_TYPE_NAME(NORMAL_TYPE_INSTANCE_TYPE(orig_exception))));
-			print_exception(&vm, orig_exception);
-		} else {
-			dump_titled("Uncaught original exception", orig_exception);
+			dump_titled("Uncaught exception", result);
 		}
 		return 1;
 	}

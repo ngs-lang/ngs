@@ -107,6 +107,55 @@ doc %EX - [1,2,3,4] \ echo
 F \(x, f:Fun) f(x)
 
 
+# === Hook =======================================
+
+{
+	type Hook
+	type HookDecorator
+}
+
+F init(hook:Hook, combiner=values) {
+	init(args())
+	hook.handlers = {}
+	hook.idx = 0
+}
+
+F '[]'(hook:Hook, name:Str) hook.handlers[name]
+F '[]='(hook:Hook, name:Str, handler:Closure) hook.handlers[name] = handler
+
+F push(hook:Hook, handler:Closure) {
+	name = "pushed-${hook.idx}"
+	hook.idx += 1
+	hook[name] = handler
+	name
+}
+
+# TODO: consider optional? try/catch isolation
+F call(hook:Hook, *args) {
+	result = hook.handlers.mapv(F(handler) handler(*args))
+	(hook.combiner)(result)
+}
+
+
+# === HookDecorator ==============================
+
+F init(hd:HookDecorator, hook:Hook) init(args())
+F init(hd:HookDecorator, hook:Hook, name:Str) init(args())
+
+F @(hook:Hook, handler:Closure) hook.push(handler)
+
+F @(hd:HookDecorator, handler:Closure) {
+	if 'name' in hd
+		hd.hook[hd.name] = handler
+	else
+		hd.hook.push(handler)
+}
+
+F hook(h:Hook, *args) HookDecorator(h, *args)
+
+TEST h = Hook(); a=1; h["my1"] = F() a+=1; @h { a*=2 }; @hook(h, "my2") { a*=3 }; h(); a==12 and h.handlers.keys() == ["my1", "pushed-0", "my2"]
+
+
 # === Real =======================================
 
 # TODO: something more efficient
@@ -203,7 +252,7 @@ F expose(typ:NormalType, attr:Str) {
 # TODO: support keword arguments?
 doc Called on ImplNotFound
 doc Implements expose() behaviour
-F impl_not_found_hook(callable:Fun, *args) {
+F impl_not_found_handler(callable:Fun, *args) {
 	l = args.len()
 	exposed_attr_name = null
 	for(i;l) {
@@ -248,7 +297,7 @@ F dflt(i:NormalTypeInstance, k, v) {
 
 doc Called when reading undefined global
 doc Implements autoloading
-F global_not_found_hook(name:Str) {
+F global_not_found_handler(name:Str) {
 	require("${NGS_DIR}/autoload/${name}.ngs")
 }
 
@@ -1952,7 +2001,7 @@ TEST a = Box * 2; a[0] is Box and a[1] is Box and a[0] != a[1]
 F code(n:Null) "null"
 
 
-# === uncaught_exception_hook ====================
+# === exit_hook - Print uncaught exception =======
 
 F exception_specific_message(e:Exception) null
 
@@ -2043,9 +2092,15 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 
 }
 
-F uncaught_exception_hook(e:Exception) {
-	print_exception(e)
-	c_exit(1)
+exit_hook = Hook()
+
+# TODO: consider running this hook item last.
+#       If it has exception, it could prevent
+#       user-defined cleanups.
+@exit_hook F(exit_info:Hash) {
+	if exit_info.exception is not Null {
+		print_exception(exit_info.exception)
+	}
 }
 
 # === Misc tests =================================

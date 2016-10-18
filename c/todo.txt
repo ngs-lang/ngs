@@ -10,17 +10,11 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "programming"
 
-			* hooks
-				+ use cases
-					+ prompt hook - independent execution, returns prompt pieces, potentially with color and other metadata such as attached menus etc
-					+ exit hook - independent execution of cleanup handlers, might modify exit code
-					+ uncaught exception hook - might modify exit code
-					+ global_not_found_hook - try one solution (method implementation) at a time
-					+ impl_not_found_hook - also one at a time
-
 			* main() - match arguments and make it usable [in progress]
 
 			* document scoping rules
+
+			* document handlers, hooks and specifically exit_hook
 
 			* commands syntax
 
@@ -122,9 +116,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Make sure (uncaught) exceptions go to stderr, not stdout
 
-			* Consider using some wrapping-all-code try...catch for/instead of uncaught_exception_hook implementation
-				+ Currently having two different mechanisms (try...catch and uncaught_exception_hook) for roughly the same functionality
-
 			* get rid of expose() ?
 				+ Used in Stats
 				+ Probably needs inheritance from builtin types
@@ -172,6 +163,10 @@ Note that this started as internal document so things here are unformed, not fin
 				PCRE_NOTEOL
 			* c_pcre_study()
 
+		* modules / namespaces
+
+		* implement parse() wherever possible (example: IPAddr, IPNet)
+
 [todo by priority]
 
 	* unify and document where {} is Hash (expression) and where it's code
@@ -205,6 +200,7 @@ Note that this started as internal document so things here are unformed, not fin
 		To be consistent with Arr, which has all of these.
 		The push is regular h[k] = v while others need additional vm functionality.
 	* decorators / wrappers ?
+		+ Add replace() method to allow "@e1 e2" expression to replace the method declared in e2
 	* "local x" at top level - check behaviour
 	* solve the inheritance (also for "expose")
 	* comments that begin not at beginning of line

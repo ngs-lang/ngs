@@ -164,12 +164,13 @@ F bootstrap() {
 	bootstrap_debug("bootstrap(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
 	program_func = load(program_bytecode, "bootstrap()ped file: $fname")
 	global bootstrap_main_file = fname
+
 	result = program_func()
 
 	# Handle main() - start
 	if main.len() > 0 {
 		bootstrap_debug("main() defined, using bootstrap_invoke_main()")
-		if global_not_found_hook.len() == 0 {
+		if global_not_found_handler.len() == 0 {
 			throw MainFail("Autoloading (usually defined in stdlib) is not present but the main() invoking mechanism requires it")
 		}
 		result = bootstrap_invoke_main(result)
@@ -178,7 +179,7 @@ F bootstrap() {
 
 	if sw == '-pi' {
 		inspect(result) % echo
-		c_exit(0)
+		return 0
 	}
 
 	if sw == '-p' or sw == '-pj' or sw == '-pc' {
@@ -188,9 +189,46 @@ F bootstrap() {
 			'-pc': code
 		}
 		echo(transformation[sw](result))
-		c_exit(0)
+		return 0
 	}
-	c_exit(result.to_exit_code())
+	result.to_exit_code()
 }
 
-bootstrap()
+F bootstrap_exception_catch_wrapper() {
+	exception = null
+	exit_code = null
+	try {
+		exit_code = bootstrap()
+	} catch(e:Exception) {
+		exception = e
+	}
+	t = {'exit_code': exit_code, 'exception': exception}
+
+	if defined exit_hook {
+		try {
+			exit_hook(t)
+		} catch(e:Exception) {
+			if exception is Null {
+				exception = e
+			} else {
+				exception.additional_exit_hook_exception = e
+			}
+		}
+	} else {
+		# stdlib was not loaded
+		echo("Uncaught exception occured:")
+		dump(exception)
+		c_exit(201)
+	}
+
+	if exception is Null {
+		"nop"
+	} else {
+		if not(t['exit_code']) {
+			c_exit(200)
+		}
+	}
+	c_exit(t['exit_code'])
+}
+
+bootstrap_exception_catch_wrapper()

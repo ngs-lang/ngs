@@ -105,8 +105,8 @@ typedef struct {
 	TRY_INFO try_info[MAX_TRIES_PER_FRAME];
 	int try_info_ptr;
 
-	// Enable/disable using impl_not_found_hook
-	int do_call_impl_not_found_hook;
+	// Enable/disable using impl_not_found_handler
+	int do_call_impl_not_found_handler;
 	int do_call_call;
 
 	// For stack trace
@@ -217,9 +217,8 @@ typedef struct {
 		VALUE InclusiveRange;
 		VALUE ExclusiveRange;
 
-	VALUE impl_not_found_hook;
-	VALUE global_not_found_hook;
-	VALUE uncaught_exception_hook;
+	VALUE impl_not_found_handler;
+	VALUE global_not_found_handler;
 	VALUE init;
 	VALUE call;
 

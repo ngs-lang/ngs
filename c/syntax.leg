@@ -224,6 +224,8 @@ command =
 	|
 	inplace-assignment
 	|
+	wrapper
+	|
 	function-definition
 	|
 	function-call
@@ -407,8 +409,6 @@ binop1 = space? (
 	| <"!=="> @@ 130 @@
 	| <"=="> @@ 130 @@
 	| <"!="> @@ 130 @@
-	| <"@?"> @@ 140 @@
-	| <"@">  @@ 140 @@
 	| <"<="> @@ 150 @@
 	| <"<">  @@ 150 @@
 	| <">="> @@ 150 @@
@@ -555,6 +555,7 @@ basic-expression =
 	| break
 	| continue
 	| collector
+	| wrapper
 	| guard
 	| try-catch
 	| throw
@@ -1277,6 +1278,20 @@ collector-init =
 		MAKE_NODE(arr, ARR_LIT_NODE);
 		$$ = arr;
 	}
+
+wrapper = "@" space? e1:expression space? e2:expression {
+	MAKE_NODE(ret, CALL_NODE);
+		MAKE_IDENTIFIER_NODE(wrapper_identifier, "@");
+		MAKE_NODE(args, ARGS_NODE);
+			MAKE_REQ_ARG_NODE(a1, e1);
+			MAKE_REQ_ARG_NODE(a2, e2)
+			a1->next_sibling = a2;
+			args->first_child = a1;
+		ret->first_child = wrapper_identifier;
+		wrapper_identifier->next_sibling = args;
+	$$ = ret;
+	CAPTURE_LOCATION($$);
+}
 
 guard = "guard" space c:code-block {
 	MAKE_NODE(ret, GUARD_NODE);

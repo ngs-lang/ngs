@@ -113,25 +113,25 @@ Backwards array scanning allows later code (your code as opposed to previously l
 
 When the condition following the `guard` clause is true, the execution continues. When the condition is false, method implementation execution is terminated and the search in the array of method implementations continues as if this implementation did not match the types of the arguments. I recommend not to cause any side effects inside the method implementation in statements above `guard`, if you have any.
 
-# LANGUAGE HOOKS
+# LANGUAGE HANDLERS AND HOOKS
 
-## `impl_not_found_hook`
+## `impl_not_found_handler`
 
-`impl_not_found_hook` is called when a method was called but no **method implementation** matched the arguments. Use `F impl_not_found_hook(callable:Fun, *args) ...` to add your behaviours.
+`impl_not_found_handler` is called when a method was called but no **method implementation** matched the arguments. Use `F impl_not_found_handler(callable:Fun, *args) ...` to add your behaviours.
 
 
-## `global_not_found_hook`
+## `global_not_found_handler`
 
-`global_not_found_hook` is called on attempt to read from an undefined global variable. Sample usage from **stdlib.ngs**
+`global_not_found_handler` is called on attempt to read from an undefined global variable. Sample usage from **stdlib.ngs**
 
-	F global_not_found_hook(name:Str) {
+	F global_not_found_handler(name:Str) {
 		require("${NGS_DIR}/autoload/${name}.ngs")
 	}
 
 
-## `uncaught_exception_hook`
+## `exit_hook`
 
-`uncaught_exception_hook` is called when `throw` is invoked and no matching `catch` is found. Standard implementation (in **stdlib.ngs**) prints information about the exception and exits with code 1. Method signature: `uncaught_exception_hook(e:Exception)`
+`exit_hook` is called when `throw` is invoked and no matching `catch` is found. Standard implementation (in **stdlib.ngs**) prints information about the exception and exits with code 200. Method signature: `exit_hook(exit_info:Hash)`. `exit_info` currently has two keys: `exit_code` and `exception`.
 
 # Variables scoping
 
