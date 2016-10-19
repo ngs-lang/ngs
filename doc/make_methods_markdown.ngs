@@ -93,15 +93,20 @@
 				method_implementation.params().each(F(param) {
 					param_string = param_to_str(param)
 					if doc_has_key(doc, param.name) {
-						echo("        * Parameter ${param_string}:")
+						echo("")
+						echo("        *Parameter* **${param_string}**")
+						echo("")
 						print_doc_key(doc, "        ", param.name)
 					}
 				})
 				if doc_has_key(doc, '%RET') {
+					echo("")
 					echo("        *Returns*")
-					print_doc_key(doc, "    ", '%RET')
+					echo("")
+					print_doc_key(doc, "        ", '%RET')
 				}
 				if doc_has_key(doc, '%EX') {
+					echo("")
 					echo("        *Example*")
 					echo("")
 					print_doc_key(doc, "            ", '%EX')

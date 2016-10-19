@@ -204,9 +204,10 @@ TEST type T1; type T2(T1); T2() is T1
 STDLIB_EXPOSE = {}
 
 # TODO: better exceptions (use correct type, not string, provide offending type and attribute)
-doc Exposes the given attribute so when there is ImplNotFound
+doc Exposes the given attribute so when ImplNotFound exception occurs and
 doc when the original call had instance of the given type as an argument
 doc the call is retried with the instance replaced by the given argument
+doc Currently only used in Stats type. Safe to ignore for beginners.
 doc
 doc typ - ImplNotFound with instance of this type will cause retry with the given attribute
 doc attr - The exposed attribute that will be used on call retry
