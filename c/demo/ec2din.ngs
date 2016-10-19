@@ -10,7 +10,8 @@
 
 	F limit_len(s:Str, l:Int) limit(s, l, '...')
 
-	F main(allreg:Bool=false, *filters) {
+	@ArgvMatcher('positionals', 'filters')
+	F main(filters:Arr, allreg:Bool=false) {
 
 		filters .= map(F(arg) {
 			kv = arg.split('=')

@@ -1,10 +1,24 @@
-# For autoload
-ArgvMatcher = true
-
 {
 	type MatchedParam(FullBox)
 	type UnmatchedParam(EmptyBox)
+	type ArgvMatcherDecorator
 }
+
+# --- Decorator ---
+F init(amd:ArgvMatcherDecorator, option:Str, value) init(args())
+
+F ArgvMatcher(option:Str, value) ArgvMatcherDecorator(option, value)
+
+F @(amd:ArgvMatcherDecorator, f:Closure) {
+	h = f.attrs()
+	assert(h is Hash)
+	h.dflt('ArgvMatcher', {})
+	h.ArgvMatcher[amd.option] = amd.value
+	f
+}
+
+
+# --- "~" matcher ---
 
 # TODO: *args, **kwargs
 # TODO: replace '-' in argv parameters names with '_' when matching
@@ -87,6 +101,11 @@ F ~(argv:Arr, c:Closure) {
 		}
 	}
 
+	if (param_name = try c.attrs().ArgvMatcher.positionals) {
+		set_match(positionals)
+		positionals = []
+	}
+
 	positionals.each(F(arg) {
 		idx = matches.index(is, UnmatchedParam)
 		if idx is Null {
@@ -107,10 +126,11 @@ F ~(argv:Arr, c:Closure) {
 		matches[i] = MatchedParam(p.dflt)
 	}
 
-	MatchY().set('matches', matches.val)
+	MatchY(matches.val)
 }
 
 TEST ArgvMatcher; (["--b", "B", "A", "C"] ~ F(a,b,c) 7).matches == %[A B C]
 TEST ArgvMatcher; (["--b", "B", "A", "C", "D"] ~ F(a,b,c) 7) is MatchN
 TEST ArgvMatcher; (["--b", "B", "A", "C", "D"] ~ F(a,b,c, *d) 7).matches == %[A B C D]
 TEST ArgvMatcher; (["A", "C", "D", "--b", "B"] ~ F(a,b,c, *d) 7).matches == %[A B C D]
+TEST (["A", "C", "D", "--b", "B"] ~ @ArgvMatcher("positionals", "a") F(a,b) 7).matches == %[%[A C D] B]

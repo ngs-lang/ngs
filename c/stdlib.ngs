@@ -1790,6 +1790,7 @@ F config(s:Str, x) {
 			type MustSfx(Sfx)
 }
 
+F init(my:MatchY, matches:Arr) init(args())
 F Bool(my:MatchY) true
 F Bool(my:MatchN) false
 F to_exit_code(m:Match) m.Bool().to_exit_code()
@@ -1827,8 +1828,7 @@ TEST "abc" - MaybeSfx("cd") == "abc"
 
 F ~(s:Str, pfx:Pfx) {
 	not(s.starts_with(pfx.val)) returns MatchN()
-	ret = MatchY()
-	ret.matches = [pfx.val]
+	ret = MatchY([pfx.val])
 	ret.before = ''
 	ret.after = s[pfx.val.len()..null]
 	ret
@@ -1836,8 +1836,7 @@ F ~(s:Str, pfx:Pfx) {
 
 F ~(s:Str, sfx:Sfx) {
 	not(s.ends_with(sfx.val)) returns MatchN()
-	ret = MatchY()
-	ret.matches = [sfx.val]
+	ret = MatchY([sfx.val])
 	ret.before = s[0..(s.len() - sfx.val.len())]
 	ret.after = ''
 	ret
@@ -1861,13 +1860,14 @@ F ~(s:Str, r:RegExp, offset:Int=0, options:Int=0) {
 		assert(false, "Unexpected integer result from c_pcre_exec")
 	}
 	assert(result is Arr, "c_pcre_exec must return either integer or an array")
-	ret = MatchY()
-	ret.matches = result.map(2, F(start_pos, end_pos) {
-		if start_pos >= 0
-			s[start_pos..end_pos]
-		else
-			null
-	})
+	ret = MatchY(
+		result.map(2, F(start_pos, end_pos) {
+			if start_pos >= 0
+				s[start_pos..end_pos]
+			else
+				null
+		})
+	)
 	ret.named = r.names.mapv(F(capture_num) try ret.matches[capture_num])
 	ret.positions = result.map(2, F(start_pos, end_pos) [start_pos, end_pos])
 	ret.whole = ret.matches[0]
