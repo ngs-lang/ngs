@@ -17,10 +17,13 @@
 	# The inner functions are local
 	F(){
 
+		# http://pandoc.org/MANUAL.html#pandocs-markdown
+		characters_to_escape = '\\`*_{}[]()>#+-.!'
+
 
 		# TODO: consider introducing Param type
 		# TODO: improve escaping
-		F escape_markdown(s:Str) "`$s`"
+		F escape_markdown(s:Str) s.map({ if A in characters_to_escape "\\$A" else A }).join('')
 		F escape_markdown(s:Str) {
 			guard s == '``'
 			'```` `` ````'
@@ -64,15 +67,25 @@
 			guard value is Arr
 			guard value.all((is), Fun)
 			not(value) returns null
-			# echo("# Methods: ${name.escape_markdown()}")
+			if ARGV[0] == 'methods' {
+				echo("* **${name.escape_markdown()}**")
+			}
+			if ARGV[0] == 'types' {
+				echo("")
+				echo("    *Constructors*")
+				echo("")
+			}
 			value.each(F(method_implementation) {
 				local doc = method_implementation.attrs().doc
 				params_strings = method_implementation.params().map(param_to_str)
 				header_name = escape_markdown("${name}(${params_strings.join(', ')})")
-				echo("## $header_name")
+				echo("    * $header_name")
 				if doc_has_key(doc, "") {
-					echo("### Description")
-					print_doc_key(doc, "    ", "")
+					echo("")
+					echo("        *Description*")
+					echo("")
+					print_doc_key(doc, "        ", "")
+					echo("")
 				}
 				# if method_implementation.params().any(F(param) {doc_has_key(doc, param.name)}) {
 				# 	echo("### Parameters")
@@ -80,38 +93,45 @@
 				method_implementation.params().each(F(param) {
 					param_string = param_to_str(param)
 					if doc_has_key(doc, param.name) {
-						echo("### Parameter ${param_string}")
-						print_doc_key(doc, "    ", param.name)
+						echo("        * Parameter ${param_string}:")
+						print_doc_key(doc, "        ", param.name)
 					}
 				})
 				if doc_has_key(doc, '%RET') {
-					echo("### Returns")
+					echo("        *Returns*")
 					print_doc_key(doc, "    ", '%RET')
 				}
 				if doc_has_key(doc, '%EX') {
-					echo("### Example")
-					print_doc_key(doc, "    ", '%EX')
+					echo("        *Example*")
+					echo("")
+					print_doc_key(doc, "            ", '%EX')
 				}
 				echo("")
 			})
 		}
 
 		F print_type_doc(name:Str, value) {
-			echo("# Type: ${name.escape_markdown()}")
+			echo("* **${name.escape_markdown()}**")
 			local doc = try value.attrs().doc
 			not(doc) returns null
 			if doc_has_key(doc, "") {
-				echo("## Description")
+				echo("")
+				echo("    *Description*")
+				echo("    ")
 				print_doc_key(doc, "    ", "")
+				echo("")
 			}
 			if doc is Hash {
 				doc.keys().each(F(k) {
 					if k != "" {
-						echo("## Field ${k.escape_markdown()}")
+						echo("")
+						echo("    *Field* **${k.escape_markdown()}**")
+						echo("")
 						print_doc_key(doc, "    ", k)
 					}
 				})
 			}
+			echo("")
 		}
 
 		F is_private_name(name:Str) name ~ Pfx('_')
