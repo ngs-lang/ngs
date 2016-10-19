@@ -128,13 +128,16 @@ IDENTIFIER_INFO resolve_identifier(COMPILATION_CONTEXT *ctx, const char *name) {
 	if(ctx->locals_ptr) {
 		HASH_FIND(hh, LOCALS, name, strlen(name), s);
 		if(s) {
+			// printf("xxx-1-1 %s\n", name);
 			ret.type = LOCAL_IDENTIFIER;
 			ret.index = s->index;
 			goto exit;
 		}
+		// printf("xxx-1-2 %s\n", name);
 		for(locals_idx = ctx->locals_ptr-1; locals_idx > 0; locals_idx--) {
 			HASH_FIND(hh, ctx->locals[locals_idx-1], name, strlen(name), s);
 			if(s) {
+				// printf("xxx-2 %s\n", name);
 				UPVAR_INDEX u = locals_idx;
 				ret.type = UPVAR_IDENTIFIER;
 				ret.index = s->index;
@@ -235,22 +238,10 @@ void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 			for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
 				switch(ptr->type) {
 					case IDENTIFIER_NODE:
-						{
-							// TEMP
-							IDENTIFIER_INFO identifier_info;
-							identifier_info = resolve_identifier(ctx, ptr->name);
-							assert(identifier_info.type == UPVAR_IDENTIFIER);
-						}
 						register_upvar_identifier(ctx, ptr->name);
 						break;
 					case ASSIGNMENT_NODE:
 						assert(ptr->first_child->type == IDENTIFIER_NODE);
-						{
-							// TEMP
-							IDENTIFIER_INFO identifier_info;
-							identifier_info = resolve_identifier(ctx, ptr->first_child->name);
-							assert(identifier_info.type == UPVAR_IDENTIFIER);
-						}
 						register_upvar_identifier(ctx, ptr->first_child->name);
 						for(ptr2=ptr->first_child->next_sibling; ptr2; ptr2=ptr2->next_sibling) {
 							register_local_vars(ctx, ptr2);
@@ -265,22 +256,11 @@ void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 			for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
 				switch(ptr->type) {
 					case IDENTIFIER_NODE:
-						{
-							// TEMP
-							IDENTIFIER_INFO identifier_info;
-							identifier_info = resolve_identifier(ctx, ptr->name);
-							assert(identifier_info.type == GLOBAL_IDENTIFIER || identifier_info.type == NO_IDENTIFIER);
-						}
+						// printf("REG GLOB %s\n", ptr->name);
 						register_global_identifier(ctx, ptr->name);
 						break;
 					case ASSIGNMENT_NODE:
 						assert(ptr->first_child->type == IDENTIFIER_NODE);
-						{
-							// TEMP
-							IDENTIFIER_INFO identifier_info;
-							identifier_info = resolve_identifier(ctx, ptr->first_child->name);
-							assert(identifier_info.type == GLOBAL_IDENTIFIER || identifier_info.type == NO_IDENTIFIER);
-						}
 						register_global_identifier(ctx, ptr->first_child->name);
 						for(ptr2=ptr->first_child->next_sibling; ptr2; ptr2=ptr2->next_sibling) {
 							register_local_vars(ctx, ptr2);
@@ -323,18 +303,22 @@ void compile_identifier(COMPILATION_CONTEXT *ctx, char **buf, size_t *idx, char 
 	IDENTIFIER_INFO identifier_info;
 	GLOBAL_VAR_INDEX gvi;
 	identifier_info = resolve_identifier(ctx, name);
+	// printf("NAME %s\n", name);
 	switch(identifier_info.type) {
 		case LOCAL_IDENTIFIER:
+			// printf(" LOCAL\n");
 			OPCODE(*buf, opcode_local);
 			DATA_N_LOCAL_VARS(*buf, identifier_info.index);
 			break;
 		case UPVAR_IDENTIFIER:
+			// printf(" UPVAR\n");
 			OPCODE(*buf, opcode_upvar);
 			DATA_N_UPVAR_INDEX(*buf, identifier_info.uplevel);
 			DATA_N_LOCAL_VARS(*buf, identifier_info.index);
 			break;
 		case NO_IDENTIFIER:
 		case GLOBAL_IDENTIFIER:
+			// printf(" GLOBAL\n");
 			OPCODE(*buf, opcode_global);
 			gvi = get_global_var_index(ctx, name, idx);
 			DATA_N_GLOBAL_VARS(*buf, gvi);
@@ -648,6 +632,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			}
 			// Body
 			register_local_vars(ctx, node->first_child->next_sibling);
+			// if(N_UPLEVELS) printf("UPLEVELS %d\n", N_UPLEVELS);
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 			n_locals = N_LOCALS;
 			n_uplevels = N_UPLEVELS;

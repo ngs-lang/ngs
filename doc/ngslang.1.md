@@ -43,7 +43,7 @@ Keyword arguments implementation is preliminary so:
 	F f(a=1) a; f(a=10, **kwargs) == 1
 
 	# For speed and implementation simplicity reasons, the **kw parameter has all keys,
-	# even if some of them matched and used for parameters. 
+	# even if some of them matched and used for parameters.
 	# This is somewhat likely to change in the future.
 	kwargs = {"a": 10}
 	F f(a=1, **kw) [a, kw]; f(**kwargs) == [10, {"a": 10}]
@@ -131,8 +131,98 @@ When the condition following the `guard` clause is true, the execution continues
 
 ## `exit_hook`
 
-`exit_hook` is called when `throw` is invoked and no matching `catch` is found. Standard implementation (in **stdlib.ngs**) prints information about the exception and exits with code 200. Method signature: `exit_hook(exit_info:Hash)`. `exit_info` currently has two keys: `exit_code` and `exception`.
+`exit_hook` is called when `throw` is invoked and no matching `catch` is found. Method signature: `exit_hook(exit_info:Hash)`. `exit_info` currently has two keys: `exit_code` and `exception`. **stdlib.ngs** defines two standard hooks.
 
-# Variables scoping
+	# ngs -pi 'exit_hook.handlers'
+	Hash of size 2
+	[print_exception] = <Closure <anonymous> at /usr/share/ngs/stdlib.ngs:2110>
+	[exception_to_exit_code] = <Closure <anonymous> at /usr/share/ngs/stdlib.ngs:2117>
 
-By default any variable in a method that is assigned to is `local` (including the `i` in constuct `for(i;10) ...`). To override this behaviour one can use `global v`.
+* `print_exception` prints exception details if an exception occured.
+* `exception_to_exit_code` sets the exit code using `to_exit_code`. Unless defined for your specific exception, `to_exit_code` of an `Exception` returns **200**.
+
+# VARIABLES SCOPING RULES
+
+## Default scoping rules
+
+In a function, any variable that is not assigned to inside the function is looked up as an **upvar** (enclosing functions) and as **global**.
+
+	a = 1
+	F f() {
+		echo(a)
+	}
+	f()
+	# Output: 1
+
+	a = 1
+	F f() {
+		a = 2
+		F g() {
+			echo(a)
+		}
+		g()
+	}
+	f()
+	# Output: 2
+
+In a function, any identifier that is mentioned in any of the enclosing functions is automatically `upvar` - references the variable in the outer scope.
+
+	a = 1
+	F f() {
+		a = 2
+		F g() {
+			a = 10
+		}
+		g()
+		echo(a)
+	}
+	f()
+	echo(a)
+	# Output: 10
+	# Output: 1
+
+In a function, any variable that is assigned to (including the `i` in constuct `for(i;10) ...`) in the function is automatically `local` unless it's an `upvar` as described above.
+
+	a = 1
+	F f() {
+		a = 2
+		echo(a)
+	}
+	f()
+	echo(a)
+	# Output: 2
+	# Output: 1
+
+## Modifying variables' scoping
+
+You can modify default scoping using the `global` and `local` keywords.
+
+	a = 1
+	F f() {
+		a = 2
+		F g() {
+			# local instead of upvar
+			local a
+			a = 3
+		}
+		g()
+		echo(a)
+	}
+	f()
+	# Output: 2
+
+	a = 1
+	F f() {
+		a = 2
+		F g() {
+			# global instead of upvar
+			global a
+			a = 3
+		}
+		g()
+		echo(a)
+	}
+	f()
+	# Does not work yet due to a bug, "a" stays upvar
+	# Output: 3
+

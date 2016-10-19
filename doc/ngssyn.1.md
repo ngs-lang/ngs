@@ -8,7 +8,13 @@ ngssyn - Next Generation Shell language syntax
 
 # DESCRIPTION
 
-NGS has two syntaxes. The **command syntax** covers the tasks of running programs and i/o redirection, mainly for good interactive (and simple scripting) experience. The **code syntax** is for everything else, giving access to a complete programming language.
+NGS has two syntaxes.
+
+The **command syntax** covers the tasks of running programs and i/o redirection, mainly for good interactive (and simple scripting) experience. It resembles closesly the syntax of `bash`. Example: `ls a.txt`
+
+The **code syntax** is for everything else, giving access to a complete, "normal" programming language. Example: `1 + 2 * 3`.
+
+See **command syntax** and **code syntax** descriptions below.
 
 ## Command syntax
 
@@ -16,7 +22,7 @@ NGS has two syntaxes. The **command syntax** covers the tasks of running program
 	ls $my_file
 	ls $*my_files
 
-This is the syntax at top level of the file or when you start an interactive shell. When in **code syntax** you can embed **command syntax** within `$(...)` and several other constructs.
+This is the syntax at the top level of your file or when you start an interactive shell. Additionally, when in **code syntax** you can embed **command syntax** within `$(...)` and several other constructs.
 
 ## Code syntax
 
@@ -27,7 +33,7 @@ This is the syntax at top level of the file or when you start an interactive she
 	}
 
 
-This is the syntax inside `{...}`.
+This is the syntax inside `{...}`. Additionally, when in **command syntax** you can switch to **code syntax** using keywords such as `if`, for example in `if e1 e2` both `e1` and `e2` are expcted to be in **code syntax**.
 
 ## Commands separators
 
@@ -40,7 +46,7 @@ In both syntaxes, commands are separated by a new line or by `;` (semicolon).
 
 ## Truth / Falsehood
 
-In `if`, `while`, etc. conditions if given expression is not `Bool` (i.e. not `true` or `false`). It is converted to `Bool` by applying the `Bool()` method to it. Built in conversion is as follows:
+In `if`, `while`, etc. conditions if given expression that is not a `Bool` (i.e. not `true` or `false`), it is converted to `Bool` by applying the `Bool()` method to it. Built in conversion is as follows:
 
 False: null, 0, empty string, empty array, empty hash.
 True: everything else.
@@ -58,27 +64,36 @@ Defining truth for your types:
 
 ## Command syntax - `{...}`
 
-Embed **code syntax**.
-
 	{ my_code }
 	ls ${ name = "${prefix}${main}${suffix}"; name }
 
+Embed / switch to **code syntax**.
+
 ## Code syntax - `{...}`
 
-Where code block is expected - code block (`{ code }` in this manual).
+`{ ... }` groups expressions. This is called a **code block**. Usually used in constructs such as `if`, `while`, etc.
 
 	if a == b {
 		x = x + 1
 		y = y + x
 	}
-	# Single expression does not need {...} where code block is expected.
+	# Single expression does not need {...} where a code block is expected.
 	z = if a 7 8
 
-Literal hash anywhere else (`Hash` type):
+`{ ... }` syntax is used for literal hash (see `Hash` type):
 
 	inner_hash = {"b": 2}
 	h = {"a": 1, **inner_hash, "c": 3}
 	# h is now {"a": 1, "b": 2, "c": 3}
+
+`{ ... }` creates anonymous function with three optional parameters `A`, `B` and `C` all defaulting to `null`.
+
+	[1, 2, 3].map({ A * 2 + 1})
+	# 3, 5, 7
+
+	# Same as
+	[1, 2, 3].map(F(A=null, B=null, C=null) { A * 2 + 1 })
+	# 3, 5, 7
 
 ## Code syntax - `[...]`
 
@@ -106,8 +121,23 @@ Literal array (`Arr` type):
 		...
 	}
 
-`*rest_args` gets any excessive positional arguments (or `[]` if there are none)
-`*rest_kw_args` gets all passed keyword arguments (or `{}` if there are none)
+`*rest_args` gets any excessive positional arguments (or `[]`, the empty array if there are none)
+`*rest_kw_args` gets all passed keyword arguments (or `{}`, the empty hash if there are none)
+
+## Code syntax - `... X ...` (or `Y` or `Z`)
+
+	[1, 2, 3].map(X*3)
+	# 3, 6, 9
+
+	# Same as
+	[1, 2, 3].map(F(x=null, y=null, z=null) x * 3)
+	# 3, 6, 9
+
+	F mymath(a,b,c) a*b+c
+	[1, 2, 3].map(mymath(X, 2, 3))
+	# 5, 7, 9
+
+Any mention of `X`, `Y` or `Z` wraps the closest function call (to which the `X`, `Y` or `Z` is an argument) with anonymous function with three optional parameters `X`, `Y` and `Z` all defaulting to `null`. Since operators are essentailly functions with two arguments so the example above works.
 
 ## Command and code syntax - function call
 
@@ -147,7 +177,7 @@ If there are no `catch` clauses following the `try`, if any exception occurs in 
 
 	for(i=0; i<n; i=i+1) { code }
 
-	# This is syntax sugar and is exactly as above
+	# This is syntax sugar and works exactly as above
 	for(i;n) { code }
 
 	while cond_expr {

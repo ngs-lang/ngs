@@ -32,9 +32,6 @@ Note that this started as internal document so things here are unformed, not fin
 					* between internal and external commands
 
 			* documentation [on hold]
-				* scoping rules
-				* handlers, hooks and specifically exit_hook
-				* unify and document where {} is Hash (expression) and where it's code
 				* Fix markdown escaping, including underscore
 				* Make it look better in both man and html
 				* Document that innner functions are declared local
