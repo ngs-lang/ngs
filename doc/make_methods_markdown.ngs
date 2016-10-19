@@ -64,11 +64,11 @@
 			guard value is Arr
 			guard value.all((is), Fun)
 			not(value) returns null
-			echo("# Methods: ${name.escape_markdown()}")
+			# echo("# Methods: ${name.escape_markdown()}")
 			value.each(F(method_implementation) {
 				local doc = method_implementation.attrs().doc
-				local params_strings = method_implementation.params().map(param_to_str)
-				local header_name = escape_markdown("${name}(${params_strings.join(', ')})")
+				params_strings = method_implementation.params().map(param_to_str)
+				header_name = escape_markdown("${name}(${params_strings.join(', ')})")
 				echo("## $header_name")
 				if doc_has_key(doc, "") {
 					echo("### Description")
@@ -78,7 +78,7 @@
 				# 	echo("### Parameters")
 				# }
 				method_implementation.params().each(F(param) {
-					local param_string = param_to_str(param)
+					param_string = param_to_str(param)
 					if doc_has_key(doc, param.name) {
 						echo("### Parameter ${param_string}")
 						print_doc_key(doc, "    ", param.name)
@@ -92,6 +92,7 @@
 					echo("### Example")
 					print_doc_key(doc, "    ", '%EX')
 				}
+				echo("")
 			})
 		}
 
@@ -113,15 +114,18 @@
 			}
 		}
 
-		local g = globals()
-		g.keys().sort(lte).each(F(name) {
+		F is_private_name(name:Str) name ~ Pfx('_')
+		F is_public_name(name:Str) not(is_private_name(name))
+
+		g = globals()
+		g.keys().filter(is_public_name).sort(lte).each(F(name) {
 			value = g[name]
 			cond {
-				(value is Arr) and value.all(is, Fun)
+				(ARGV[0] == 'methods') and (value is Arr) and value.all(is, Fun)
 					print_method_doc(name, value)
-				value is Type {
+				(ARGV[0] == 'types') and (value is Type) {
 					print_type_doc(name, value)
-					local c = value.constructors
+					c = value.constructors
 					if value is NormalType {
 						# NormalType has special constructor which we can't handle for now
 						# so skipping that one
