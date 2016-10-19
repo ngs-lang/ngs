@@ -2106,9 +2106,21 @@ exit_hook = Hook()
 # TODO: consider running this hook item last.
 #       If it has exception, it could prevent
 #       user-defined cleanups.
-@exit_hook F(exit_info:Hash) {
+@hook(exit_hook, 'print_exception') F(exit_info:Hash) {
 	if exit_info.exception is not Null {
+		error("--- Exception during execution of main code ---")
 		print_exception(exit_info.exception)
+	}
+}
+
+@hook(exit_hook, 'exception_to_exit_code') F(exit_info:Hash) {
+	if exit_info.exception is not Null {
+		try {
+			exit_info.exit_code = exit_info.exception.to_exit_code()
+		} catch(e:Exception) {
+			error("--- Exception during converting exception to exit code ---")
+			print_exception(e)
+		}
 	}
 }
 

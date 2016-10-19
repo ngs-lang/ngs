@@ -12,7 +12,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* main() - match arguments and make it usable [in progress]
 				* allow positional parameters as in ec2din.ngs [done]
-				* allow documentation of parameters for displaying help
+				* allow documentation of parameters for displaying help [already have it]
 				* display help when no matching main or when --help is given
 				+ think of @table_args decorator for main()
 
@@ -39,6 +39,7 @@ Note that this started as internal document so things here are unformed, not fin
 				* Make it look better in both man and html
 				* Document that innner functions are declared local
 				* Types documentation [on hold]
+				* Exit codes (see bootstrap.ngs)
 
 			* files globbing
 
@@ -49,6 +50,8 @@ Note that this started as internal document so things here are unformed, not fin
 		* Milestone "correct programming" (will be v0.3.0)
 
 			* Move everything in "c" directory one level up
+
+			* Make sure attrs() are implemented on all possible types
 
 			* OP_PUSH_INT - check limits of the number
 
@@ -219,6 +222,12 @@ Note that this started as internal document so things here are unformed, not fin
 			* generate
 
 		* K M G suffixes for numbers
+
+		* Optimize calling speed
+			* Optimize obj_is_of_type()
+			* Optimize vm_call matching algorithm
+			* Optimize calling of unrelated methods
+				+ such as F f(t:T1) and F f(t:T2) when T1 and T2 are unrelated types
 
 
 [todo by priority]

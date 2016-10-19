@@ -11,6 +11,11 @@
 	F limit_len(s:Str, l:Int) limit(s, l, '...')
 
 	@ArgvMatcher('positionals', 'filters')
+	doc filters - Show only instances matching the given filters. Possible filter forms are:
+	doc filters - vpc-xxxyyyzz - for specific vpc
+	doc filters - i-xxxyyyzz - for specific instance id
+	doc filters - 1.2.3.4 - for instance having given IP
+	doc filters - kkk=vvv - for instances having given tag value
 	F main(filters:Arr, allreg:Bool=false) {
 
 		filters .= map(F(arg) {

@@ -33,6 +33,9 @@ F to_exit_code(b:Bool) if b 0 1
 doc %RET - n
 F to_exit_code(n:Int) n
 
+doc %RET - Always 200
+F to_exit_code(e:Exception) 200
+
 main = []
 
 # *** Define bootstrap_debug function ***
