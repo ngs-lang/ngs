@@ -31,12 +31,11 @@ Note that this started as internal document so things here are unformed, not fin
 					* between internal commands/functions
 					* between internal and external commands
 
-			* documentation [on hold]
-				* Fix markdown escaping, including underscore
-				* Make it look better in both man and html
-				* Document that innner functions are declared local
-				* Types documentation [on hold]
+			* documentation [in progress]
+				* All types documentation
+				* All methods documentation
 				* Exit codes (see bootstrap.ngs)
+				* Document that innner functions are declared local
 
 			* files globbing
 
