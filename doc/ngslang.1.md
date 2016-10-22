@@ -247,7 +247,7 @@ Method signature: `exit_hook(exit_info:Hash)`. `exit_info` currently has two key
 	[print_exception] = <Closure <anonymous> at /usr/share/ngs/stdlib.ngs:2110>
 	[exception_to_exit_code] = <Closure <anonymous> at /usr/share/ngs/stdlib.ngs:2117>
 
-* `print_exception` prints exception details if an exception occured.
+* `print_exception` prints exception details if an exception occurred.
 * `exception_to_exit_code` sets the exit code using `to_exit_code`. Unless defined for your specific exception, `to_exit_code` of an `Exception` returns **200**.
 
 # VARIABLES SCOPING RULES

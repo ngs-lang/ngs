@@ -157,6 +157,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Go over "TODO"s in all *.ngs files
 
+		* Better start time
+
 		* benchmarks - different tasks and languages
 			+ There is one task benchmark in the Makefile (time-sum target)
 
