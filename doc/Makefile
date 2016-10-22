@@ -6,7 +6,7 @@ ngsmet.1.md: ../c/vm.c ../c/bootstrap.ngs ../c/stdlib.ngs ../c/autoload/* ngsmet
 ngstyp.1.md: ../c/vm.c ../c/bootstrap.ngs ../c/stdlib.ngs ../c/autoload/* ngstyp.header make_methods_markdown.ngs
 	(cat ngstyp.header ; ./make_methods_markdown.ngs types) >$@
 
-html: $(patsubst %.1.md,%.1.html,$(wildcard *.1.md))
+html: $(patsubst %.1.md,%.1.html,$(wildcard *.1.md)) ngsmet.1.md ngstyp.1.md
 man: $(patsubst %.1.md,%.1,$(wildcard *.1.md))
 
 %.1.html: %.1.md pandoc.css

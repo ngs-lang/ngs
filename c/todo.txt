@@ -32,6 +32,10 @@ Note that this started as internal document so things here are unformed, not fin
 					* between internal and external commands
 
 			* documentation [in progress]
+				* Tutorial
+					+ Data structures, common types and common operations
+					+ Control structures
+					+ Build an app - decide which
 				* All types documentation
 				* All methods documentation
 				* Exit codes (see bootstrap.ngs)
@@ -46,6 +50,8 @@ Note that this started as internal document so things here are unformed, not fin
 		* Milestone "correct programming" (will be v0.3.0)
 
 			* Move everything in "c" directory one level up
+
+			* locals() - to complete globals()
 
 			* Make sure attrs() are implemented on all possible types
 

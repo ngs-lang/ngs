@@ -9,7 +9,7 @@ ngs - Next Generation Shell.
 # SYNOPSIS
 
 **ngs** *script_name* \
-**ngs** [**-e**|**-E**] *expression*
+**ngs** [**-e**|**-E**|**-p**|**-pi**|**-pj**] *expression*
 
 # DESCRIPTION
 
@@ -21,7 +21,17 @@ This project contains the language part which is under development. The interact
 
 Given *script_name* runs the script.
 
-Using *expression* is equivalent to running a script that consists of `{` *expression* `}`. **-e** loads stdlib.ngs before evaluating the expression, **-E** skips the loading of stdlib.ngs.
+Using *expression* is equivalent to running a script that consists of `{` *expression* `}`.
+
+**-e** evaluates the *expression*.
+
+**-E** prevents loading of **stdlib.ngs** and evaluates the *expression*.
+
+**-p** prints the resulting *expression* value in a human readable NGS format.
+
+**-pi** prints `inspect(...)` (detailed information) of the resulting *expression* value.
+
+**-pj** prints the resulting *expression* value as JSON.
 
 ## MOTIVATION
 
@@ -56,9 +66,9 @@ In case of an uncaught exception, the exit code is 1.
 
 Typically located in `NGS_DIR`. Responsible for bootstrapping NGS.
 
-* Loads **stdlib.ngs** if needed
-* Handles **-e** and **-E** switches 
-* Runs the script specified in the command line.
+* Loads **stdlib.ngs** if needed.
+* Runs the script specified in the command line or exectes *expression* according to swithces.
+* Prints *expression* value if needed.
 
 ## stdlib.ngs
 
