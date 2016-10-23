@@ -33,13 +33,30 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* documentation [in progress]
 				* Tutorial
-					+ Data structures, common types and common operations
-					+ Control structures
+					+ What is NGS?
+					+ Running
+					+ Basic syntax
+					+ Common types and common operations
+						+ Scalars
+						+ Arr
+						+ Hash
+						+ RegExp
+						+ Other common types
+					+ Variable scoping
+					+ Control structures (if, loops, cond)
+					+ Common methods
+						+ Boolean
+						+ Math
+						+ Strings
+						+ Functional
+					+ Defining own methods
+					+ Inheritance
 					+ Build an app - decide which
 				* All types documentation
 				* All methods documentation
 				* Exit codes (see bootstrap.ngs)
 				* Document that innner functions are declared local
+				* Language reference, good example: https://golang.org/ref/spec
 
 			* files globbing
 
