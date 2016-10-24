@@ -70,6 +70,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* locals() - to complete globals()
 
+			* Consider Eachable or alike for methods like F map(something, mapper:Fun, *args)
+
 			* Make sure attrs() are implemented on all possible types
 
 			* OP_PUSH_INT - check limits of the number

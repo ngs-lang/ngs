@@ -219,9 +219,13 @@ F bootstrap_exception_catch_wrapper() {
 		}
 	} else {
 		# stdlib was not loaded
-		echo("Uncaught exception occured:")
-		dump(exception)
-		c_exit(201)
+		if exception is Null {
+			"nop"
+		} else {
+			echo("Uncaught exception occured:")
+			dump(exception)
+			c_exit(201)
+		}
 	}
 
 	if exception is Null {
