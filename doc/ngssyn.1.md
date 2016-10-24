@@ -10,7 +10,7 @@ ngssyn - Next Generation Shell language syntax
 
 NGS has two syntaxes.
 
-The **command syntax** covers the tasks of running programs and i/o redirection, mainly for good interactive (and simple scripting) experience. It resembles closesly the syntax of `bash`. Example: `ls a.txt`
+The **command syntax** covers the tasks of running programs and i/o redirection, mainly for good interactive (and simple scripting) experience. It resembles closely the syntax of `bash`. Example: `ls a.txt`
 
 The **code syntax** is for everything else, giving access to a complete, "normal" programming language. Example: `1 + 2 * 3`.
 
