@@ -78,7 +78,7 @@ Located in `NGS_DIR`. Standard library. Defines many methods and autoloading beh
 
 |||
 |-|-|
-|[ngslang(1)](ngslang.1.html)| NGS language overview and starting point |
+|[ngslang(1)](ngslang.1.html)| NGS language tutorial |
 |[ngssyn(1)](ngssyn.1.html)| NGS language syntax|
 |[ngstyp(1)](ngstyp.1.html)| NGS language pre-defined types|
 |[ngsmet(1)](ngsmet.1.html)| NGS language pre-defined methods|

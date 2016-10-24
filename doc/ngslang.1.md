@@ -4,7 +4,76 @@
 
 # NAME
 
-ngslang - Next Generation Shell language overview.
+ngslang - Next Generation Shell language tutorial.
+
+# WHY NGS?
+
+## Best fit for systems administration tasks
+
+NGS is optimized by design to perform easily typical systems administration tasks. The following tasks are common so NGS either has a syntax or features to make these tasks easy:
+
+* Running external commands
+* Manipulating data
+* Simple remote execution (not implemented yet)
+
+Example of running external command + data manipulation (detailed explanation later):
+
+	ngs -pi '``aws ec2 describe-instances``.InstanceId'
+
+	# Output:
+	Array of size 37
+	[0] = i-0a0xxxxxxxxxxxxxx
+	[1] = i-04dxxxxxxxxxxxxxx
+	...
+
+You might want to process the output above with an external tool but it's in a human-readable and not-machine-parseble format. No problem, use the **-pj** (print JSON) switch:
+
+	ngs -pj '``aws ec2 describe-instances``.InstanceId'
+
+	# Output:
+	[ "i-0a0xxxxxxxxxxxxxx", "i-04dxxxxxxxxxxxxxx", ... ]
+
+We all know that life is not that simple so here is a bit more complex situation where the field might or might not appear in the data (also outputting space delimited items):
+
+	ngs -p '``aws ec2 describe-instances``.map({A.PublicIpAddress tor "-"}).join(" ")'
+
+	# Output:
+	52.58.XXX.XX 52.59.XX.XX 52.29.XXX.XX 52.57.XXX.XXX - 52.57.XX.XXX ...
+
+
+
+## Your current situation with languages sucks
+
+Currently, as a systems engineer you are probably using bash with combination of one or more high-level languages.
+
+**bash**
+
+You are using bash because it's domain-specific and allows you to get some tasks done easily. On the other hand, bash can not manipulate nested data structures in a sane way. So you need an external tool:
+
+	aws ec2 describe-instances | jq -r '.Reservations[].Instances[].PublicIpAddress'
+
+	# Output:
+	52.58.XXX.XX
+	52.59.XX.XX
+	52.29.XXX.XX
+	52.57.XXX.XXX
+	null
+	...
+
+`jq` is fine till you need to work with tags (thanks AWS for list instead of hash!) or do something more complex. It starts looking bad really fast. It probably can be done with `jq` but why get yourself into this instead of using a normal programming language. You can do chess in `sed` too (actually done) but it doesn't mean you should unless it's for fun and not to get the job done quickly.
+
+Yes, there is also built-in `jmespath` in `awscli`. It won't be much better than `jq` - OK for simple cases. Why bother then? I've read the specs once and decided it was not worth the trouble if you already know how to use `jq`.
+
+**"normal" languages**
+
+You are probably using Python or Ruby or Perl (and if you are like me, Perl is out of the question because of it's syntax horror). You use one of the above languages because bash is not powerful enough / not convenient enough to do the tasks that these languages do. On the other hand something as simple as `echo mystring >myfile` or run an external program is not as convenient to do in these languages. Yes all of the languages above support system tasks to some degree. None of these languages support system tasks as a language that was built ground-up for system tasks. See the double-backtick examples above... for example.
+
+## You use configuration management tools
+
+I've seen unjustified usage of these tools too much. Yes, these "Cool Shiny New DevOps" hype tools: Chef, Puppet, Ansible and friends. I assume that in many situations it would be better to script tasks instead of using these systems. They are too complex and they take control away from you. The price of complexity is too high in my opinion. Any system beyond the most simple will need customization/wrapping/forking ready-made modules for these configuration management systems to such degree that usage of such systems will be at least questionable TCO-wise.
+
+So why not make your own clean solution that matches your own needs exactly? I mean except for being unpopular. The issue is that currently there is no good language to make these scripts. I hope NGS will be such language.
+
 
 # LANGUAGE PRINCIPLES OVERVIEW
 
@@ -27,6 +96,7 @@ ngslang - Next Generation Shell language overview.
 	* Define any operator on your custom types or for existing types.
 
 * Simplicity
+	* Minimal possible number of concepts in the language
 	* No classes. Only types, methods and multiple dispatch (picking the right method implementation by matching types of parameters and arguments)
 	* Simple type system.
 
