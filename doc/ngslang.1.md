@@ -44,7 +44,7 @@ We all know that life is not that simple so here is a bit more complex situation
 
 ## Your current situation with languages sucks
 
-Currently, as a systems engineer you are probably using bash with combination of one or more high-level languages.
+Currently, as a systems engineer you are probably using bash combined with of one or more high-level languages.
 
 **bash**
 
