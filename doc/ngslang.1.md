@@ -119,12 +119,12 @@ Many concepts and syntax constructs come from other languages.
 
 # SYNTAX OVERVIEW
 
-NGS has two syntaxes.
+NGS has two syntaxes: **command syntax** and **code syntax**.
 
 ## Command syntax
 
 This is the close-to-bash syntax geared towards running external programs and i/o redirection.
-Command syntax is the default syntax at the top level of every NGS script. The most simple NGS scripts might look very similar to bash scripts. Commands are separated by either newlines or by semicolon (`;`).
+Command syntax is the syntax at the top level of every NGS script. The most simple NGS scripts might look very similar to bash scripts. Commands are separated by either newlines or by semicolon (`;`).
 
 Example:
 
@@ -148,11 +148,24 @@ TODO: redirection syntax
 
 ## Code syntax
 
-Code syntax resembles other high-level languages such as Python or Ruby. Example:
+Code syntax resembles other high-level languages such as Python or Ruby.
 
-	1 + 2 * 3
+Example:
+
+	1 + 2 * 3; %[abc def ghi].without('ghi').each(echo)
 
 Expressions are separated by either newlines or by semicolon (`;`).
+
+**code syntax** is the syntax of **-e**, **-E**, **-p**, **-pi** and **-pj** switches to `ngs` interpreter. Example:
+
+	ngs -p '(1...10).filter(F(num) num % 2 == 0)'
+
+	# Output:
+	[2,4,6,8,10]
+
+If the above example looks too verbose, here is the shorter and uglier alternative:
+
+	ngs -p '(1...10)?{A%2==0}'
 
 ## Switching between syntaxes
 
