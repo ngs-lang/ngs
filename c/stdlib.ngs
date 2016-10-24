@@ -615,8 +615,7 @@ F reverse(arr:Arr) {
 
 TEST [1,2,3].reverse() == [3,2,1]
 
-# TODO: check whether it can work with anything that has each()
-F sum(arr:Arr) arr.reduce(0, (+))
+F sum(something) something.reduce(0, (+))
 
 F unshift(arr:Arr, elt) {
 	arr[0..0] = [elt]
