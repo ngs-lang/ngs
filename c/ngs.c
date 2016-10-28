@@ -155,7 +155,7 @@ int main(int argc, char **argv)
 	yyctx.lines_postions[0] = 0;
 	bootstrap_file_name = find_bootstrap_file();
 	if(!bootstrap_file_name) {
-		fprintf(stderr, "Cold not find bootstrap file\n");
+		fprintf(stderr, "Could not find bootstrap file\n");
 		exit(100);
 	}
 	if(!strcmp(bootstrap_file_name, "-")) {
