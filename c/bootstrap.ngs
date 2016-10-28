@@ -122,16 +122,18 @@ F bootstrap() {
 
 	# *** Parse switches ***
 	sw = null
-	a = ARGV[0]
-	if ARGV and (a == '-e' or a == '-E' or a == '-p' or a == '-pj' or a == '-pi' or a == '-pc') {
-		sw = ARGV.shift()
-		code_to_run = "{ ${ARGV.shift()} }"
-		bootstrap_debug("Got $sw switch, using command line provided code")
-		if sw == '-E' {
-			bootstrap_debug('Will skip loading stdlib because of -E flag')
-			do_load_stdlib = false
+	if ARGV {
+		a = ARGV[0]
+		if (a == '-e' or a == '-E' or a == '-p' or a == '-pj' or a == '-pi' or a == '-pc') {
+			sw = ARGV.shift()
+			code_to_run = "{ ${ARGV.shift()} }"
+			bootstrap_debug("Got $sw switch, using command line provided code")
+			if sw == '-E' {
+				bootstrap_debug('Will skip loading stdlib because of -E flag')
+				do_load_stdlib = false
+			}
+			fname = "<command line ${sw} switch>"
 		}
-		fname = "<command line ${sw} switch>"
 	}
 
 	if 'NGS_SKIP_STDLIB' in ENV {
