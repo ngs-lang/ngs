@@ -8,7 +8,8 @@ ngs - Next Generation Shell.
 
 # SYNOPSIS
 
-**ngs** *script_name* \
+**ngs** *script_name.ngs*
+
 **ngs** [**-e**|**-E**|**-p**|**-pi**|**-pj**] *expression*
 
 # DESCRIPTION

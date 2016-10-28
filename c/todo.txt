@@ -3,6 +3,9 @@ Note that this started as internal document so things here are unformed, not fin
 [inbox]
 
 	* Delimited string, such as PATH
+	* digits() function?
+	* completion-safe marker in scripts + completion protocol
+	* Eachable type?
 
 [roadmap]
 
@@ -33,8 +36,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* documentation [in progress]
 				* Tutorial
-					+ What is NGS?
-					+ Running
+					+ What is NGS? [done]
+					+ Running [done]
+					+ Reserved words
 					+ Basic syntax
 					+ Common types and common operations
 						+ Scalars

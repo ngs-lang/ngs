@@ -6,9 +6,29 @@
 
 ngslang - Next Generation Shell language tutorial.
 
+# WHAT IS NGS?
+
+NGS is an alternative shell. At it's core is a domain-specific language that was specifically designed to be a shell language.
+
+NGS is under development. The language part is already good enough to write some useful scripts. CLI does not exist yet. It will be written using the same language.
+
+# RUNNING NGS
+
+**ngs** *script_name.ngs*
+
+You can put the following line as first line of your script:
+
+	#!/usr/bin/env ngs
+
+If you do, you can run the script as `./script_name.ngs` or `/full/path/to/script_name.ngs` (you must make your script executable, `chmod 655 script_name.ngs`.
+
+See more about running NGS in [ngs(1)](ngs.1.html).
+
 # WHY NGS?
 
-## Best fit for systems administration tasks
+If your attitude towards system tools is like mine, NGS would resonate better with how you think than bash, Python, Ruby, Perl or any other language for systems administration tasks.
+
+## NGS was built for systems administration tasks
 
 NGS is optimized by design to perform easily typical systems administration tasks. The following tasks are common so NGS either has a syntax or features to make these tasks easy:
 
@@ -86,7 +106,7 @@ NGS is a domain-specific language. It is aimed to solve common system tasks in a
 ## Do the most practical thing
 
 * `read('myfile.json')` will parse the JSON and return the data structure. (Use `fetch()` to get raw contents).
-* The ```` ``my_command`` ```` will parse the command output (JSON for example) and return the data structure. Note that ```` ``aws ...`` ```` will be parsed even further (not just JSON) to become more usable data structures.
+* The ```` ``my_command`` ```` will parse the command output (JSON for example) and return the data structure. Note that ```` ``aws ...`` ```` will be parsed even further (not just JSON) to return more usable data structures.
 * `my_array.my_prop` returns an array of `.my_prop` properties of each element.
 
 ## Uniformity
@@ -99,7 +119,9 @@ Trade-offs between power and not allowing to shoot yourself in the foot are usua
 
 ## Simple methods naming for less guess work
 
-`1+2` adds the numbers (method name `+`), `arr1+arr2` adds (concatenates) arrays and `hash1+hash2` produces merged hash.
+* `1+2` adds the numbers (method name `+`)
+* `arr1+arr2` adds (concatenates) arrays
+* `hash1+hash2` produces merged hash.
 
 ## Extensibility
 
@@ -117,7 +139,7 @@ Trade-offs between power and not allowing to shoot yourself in the foot are usua
 
 Many concepts and syntax constructs come from other languages.
 
-# SYNTAX OVERVIEW
+# SYNTAX
 
 NGS has two syntaxes: **command syntax** and **code syntax**.
 
@@ -211,6 +233,101 @@ In **code syntax** it is possible to switch to **command syntax** in one of the 
 
 	my_process = $( commands syntax )
 
+## Quick dive into syntax
+
+	# comment
+
+	# Function call
+	echo('Hello world')
+
+	# Function call, alternative syntax:
+	#   something.method_name(optionally_more_args)
+	# Whatever is before the dot is used first parameter
+	'Hello world'.echo()
+
+	# Assignment
+	a = 1 + 2
+
+	# String interpolation. Two expressions on same line
+	echo("A is now $a"); echo('... and additional statement after semicolon')
+
+	# String interpolation with ${...}
+	echo("expr=${10+20}")
+	# Outputs: expr=30
+
+	# Switch to code syntax inside { ... }.
+	{
+		# Define type
+		type Vehicle
+
+		# Define sub-type
+		type Car(Vehicle)
+
+		# Define method
+		# c - parameter name
+		# Car - parameter type
+		F drive(c:Car) {
+			expression1
+			expression2
+			...
+			last_expression_is_the_return_value
+		}
+
+		# Array literal, x is Arr type
+		x = [1, 2, 'x']
+
+		# Array literal, alternative syntax
+		x = [
+			"blah"
+			2
+			'x'
+		]
+
+		# Hash literal, x is Hash type
+		x = {"a": 1, "b": 2}
+
+		# Hash literal, alternative syntax
+		x = {
+			"a": 1
+			"b": 2
+		}
+
+		# Define method
+		# Omitting { ... } for method body code when it's just a single expression
+		F my_summ1(a:Int, b:Int) a+b
+
+		# Define method, all extra arguments go to the "rest" array
+		F my_rest_method(a:Int, *rest) sum(rest) - a
+
+		# Define method, all extra keyword arguments go to the "kw_args" hash
+		F my_kw_method(a:Int, **kw_args) sum(kw_args.values()) - a
+
+		# Define method, b has default value
+		F my_summ2(a:Int, b:Int=100) a+b
+
+		# Anonymous function literal
+		f = F(a,b) a+b
+
+		# Anonymous function literal, alternative syntax 1
+		# Logically same as f = F(x=null, y=null, z=null) x > y
+		# Using X or Y or Z wraps nearest function call in
+		# anonymous function. With X, Y and Z arguments which
+		# all default to null. Nearest function call in this case
+		# is the > operator.
+		[1,2,3,11,12].count(X>10).echo()
+		# Output: 2
+
+		# Anonymous function literal, alternative syntax 1 (additional example)
+		# f is now partially applied my_two_args_func.
+		# Logically same as f = F(x=null, y=null, z=null) my_two_args_func(x, 10)
+		f = my_two_args_func(X, 10)
+
+		# Anonymous function literal, alternative syntax 2
+		# Logically same as f = F(A=null, B=null, C=null) A+B+1
+		f = { A + B + 1 }
+
+	}
+
 # LANGUAGE GOTCHAS
 
 This section will be expanded as I get feedback :)
@@ -245,91 +362,128 @@ Keyword arguments implementation is preliminary so:
 	kwargs = {"a": 10}
 	F f(a=1, **kw) [a, kw]; f(**kwargs) == [10, {"a": 10}]
 
-# MAIN LANGUAGE CONCEPTS
+# TYPES
 
-## Types
+NGS is dynamically typed language: values (and not variables) have types.
 
-In NGS, each value is of some type. `1` for example is an `Int`, `"xyz"` is a `Str` and `[1,2,3]` is an `Arr`.
+	a = 1
+	a = "ok"
+	# 'a' had value of one type and then value of another type
 
-Define `Counter` type and a few methods for it (code syntax, must be inside `{...}`):
+NGS is a "strongly typed" language: values are not implicitly converted to unrelated types. This makes the language more verbose but prevents some bugs.
 
-	type Counter
+	echo(1+"2")
+	# ... Exception of type ImplNotFound occured ...
+	# That means that NGS has no method implementation that "knows" how to add an Int and a Str
 
-	F init(c:Counter) c.counter = 0
+	echo(1+Int("2"))
+	# Outputs: 3
 
-	F incr(c:Counter) {
-		c.counter = c.counter + 1
-		c
+# BUILT-IN TYPES
+
+There are several built-in types. Sample types and values:
+
+* `Bool` - true, false
+* `Int` - 1,2,3
+* `Str` - 'a', "bc"
+* `Arr` - `[1, true, 'x']`
+* `Any` - any value in NGS is of type `Any` :)
+
+Checking types:
+
+	echo(1 is Int)
+	# Output: true
+
+	echo(1 is Str)
+	# Output: false
+
+	echo(1 is not Str)
+	# Output: true
+
+See types reference: [ngstyp(1)](ngstyp.1.html).
+
+# DEFINE YOUR OWN TYPES
+
+You can define your own types. Let's define `Counter` type and a few methods that can operate on values of the `Counter` type. Then we'll define `MyCounter` sub-type and it's `incr` method:
+
+	{
+		# Declare that we have a new type
+		type Counter
+
+		# * Define constructor which is called when Counter() is invoked.
+		# * First argument of constructor, named "c" is the newly-created value of type Counter
+		# * The value that the constructor returns is discarded,
+		#   Counter() returns the newly-created value of type Counter
+
+		F init(c:Counter) {
+			# Initialize the counter_value attribute
+			c.counter_value = 0
+		}
+
+		# Define increment method implementation
+		F incr(c:Counter) {
+			c.counter_value = c.counter_value + 1
+			# Return the Counter itself, allowing chaining such as c.incr().incr()...
+			c
+		}
+
+		# Define get method implemetation
+		F get(c:Counter) c.counter_value
+
+		c = Counter()
+		# c.incr() and incr(c) are syntactically equivalent
+		c.incr()
+		echo(c.get())
+		# Output: 1
+
+		# Declare MyCounter type, a sub-type of Counter
+		# MyCounter inherits from Counter meaning that any method that works with Counter also works with MyCounter
+		type MyCounter(Counter)
+
+		# Define incr method implementation for MyCounter type
+		F incr(c:MyCounter) {
+			c.counter_value = c.counter_value + 10
+			c
+		}
+		# incr method has now two different implementations: one for Counter type and one for MyCounter type.
+
+		# Instantiate new MyCounter
+		c = MyCounter()
+
+		# * Will run incr(c:MyCounter) method implementation.
+		# * Both incr(c:Counter) and incr(c:MyCounter) implementations match the arguments,
+		#   the second implementation wins because it was declared last and search is perfomed
+		#   from last to first.
+		c.incr()
+
+		# c.get() will run get(c:Counter) because
+		# parameter of type Counter and argument of type MyCounter will match
+		echo(c.get())
+		# Output: 10
 	}
 
-	F get(c:Counter) c.counter
+# METHODS, METHOD IMPLEMENTATIONS AND CALLING
 
-Use the `Counter` type:
+Each value in NGS has a type, similar to many other languages. One of the main features of NGS is choosing the correct **method implementation** based on types of the arguments:
+Let's start with the following snippet:
 
-	c = Counter()
-	c.incr()
-	echo(c.get())
-	# Output: 1
-
-`c.incr()` and `incr(c)` are syntactically equivalent.
-
-Inheritance:
-
-	type MyCounter(Counter)
-
-`MyCounter` inherits from `Counter` meaning that any method that works with `Counter` also works with `MyCounter`:
-
-	F incr(c:MyCounter) {
-		c.counter = c.counter + 10
-		c
+	F +(a:Int, b:Int) {
+		...
 	}
 
-	c = MyCounter()
-	c.incr()
-	echo(c.get())
-	# Output: 10
-
-`incr` method now has two **method implementations**: one for `Counter` and one for `MyCounter` so `incr` method behaves differently for these types.
-
-`get` method still has one **method implementation** which is handling both `Counter` and `MyCounter` types.
-
-## Methods, method implementations and calling
-
-A method in NGS is an `Arr` (array) of functions. Each function in such array is called **method implementation**.
-
-	F bigger(x:Int) x+1
-	F bigger(s:Str) "+${s}+"
-
-`bigger` is now an `Arr` with two elements, the functions defined by `F`. When calling an `Arr`, NGS scans the array backwards and invokes the **method implementation** that matches the given arguments (this matching process is called multiple dispatch). Example:
-
-	echo(bigger("x"))
-	# Output: +x+
-
-	echo(bigger(1))
-	# Output: 2
-
-
-No matching **method implementation** causes `ImplNotFound` exception.
-
-	echo(bigger(true))
-	# ImplNotFound exception
-
-## Customization using methods
-
-Sometimes, like in the `Counter` and `MyCounter` example above, it's enough to define a new **method implementation** and let the arguments matching do the work of figuring out which **method implementation** to run.
-
-In other cases, a finer-grained approach is needed. That's when a `guard` is needed. If `guard` condition evaluates to true, it tells NGS that this **method implementation** is the correct one. If `guard` condition evaluates to false, it tells NGS to keep searching for the correct **method implementation** up the `Arr` it was looking at. Note that using guards does not cancel argument matching done by NGS. Regarding the `guard`, a **method implementation** is only invoked when arguments matched the parameters.
-
-	F bigger(x:Int) {
-		guard x >= 100
-		x + 10
+	F +(s1:Str, s2:Str) {
+		...
 	}
-	echo(bigger(1))
-	echo(bigger(100))
 
-	# Outputs one per line: 2, 110
+	{
+		1 + 1
+		# -> 2
 
-The example above added second **method implementation** with the `x:Int` argument.
+		'a' + 'b'
+		# -> 'ab'
+	}
+
+The `+` in NGS is a method. It has few **method implementations**. You can see definitions of two of the implementations in the example above. One implementation can add numbers. Another implementation concatenates strings. How NGS knows which one of them to run? The decision is made based on arguments' types. NGS scans the **method imlementations** array backwards and invokes the **method implementation** that matches the given arguments (this matching process is called multiple dispatch).
 
 # HANDLERS AND HOOKS
 
