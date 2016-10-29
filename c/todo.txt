@@ -5,7 +5,9 @@ Note that this started as internal document so things here are unformed, not fin
 	* Delimited string, such as PATH
 	* digits() function?
 	* completion-safe marker in scripts + completion protocol
-	* Eachable type? Matchable type?
+	* Eachable type?
+	* Fix inspect() and maybe others to display special symbols in strings as \x.. or alike
+	* Consider Syntax for stripping last newline character in `cmd`
 
 [roadmap]
 
@@ -61,6 +63,7 @@ Note that this started as internal document so things here are unformed, not fin
 				* Exit codes (see bootstrap.ngs)
 				* Document that innner functions are declared local
 				* Language reference, good example: https://golang.org/ref/spec
+				* Internals
 
 			* files globbing
 
@@ -264,7 +267,6 @@ Note that this started as internal document so things here are unformed, not fin
 [todo by priority]
 
 	* doc
-		* shorten everything, give example, make it tldr-compliant :)
 		* "local" and for() auto-local
 			Describe the "local myvar" behavior and make it clear that
 			for(i=0;i<n;i=i+1) will automatically declare i as local.

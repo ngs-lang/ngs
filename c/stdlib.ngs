@@ -66,8 +66,6 @@ F map(something, mapper:Fun, *args)
 		something.each(F(elt) collect(mapper(elt, *args)))
 
 
-F filter(something, like) filter(something, (~), like)
-
 F filter(something, predicate:Fun, *args)
 	collector
 		something.each(F(elt) {
@@ -1997,6 +1995,13 @@ F '[]'(s:Str, r:RegExp) {
 
 TEST "ab01de12f"[/[0-9]+/] == '01'
 
+# Something - eachable
+F filter(something, r:RegExp) {
+	guard all(something, is, Str)
+	something.filter((~), r)
+}
+
+TEST %[w1 w2].filter(/1/) == %[w1]
 
 
 # === Fun ========================================
