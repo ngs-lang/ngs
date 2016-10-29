@@ -126,7 +126,9 @@ F bootstrap() {
 		a = ARGV[0]
 		if (a == '-e' or a == '-E' or a == '-p' or a == '-pj' or a == '-pi' or a == '-pc') {
 			sw = ARGV.shift()
-			code_to_run = "{ ${ARGV.shift()} }"
+			# Newline at the end is for avoiding # commenting out the closing }
+			# Newline at the beginning is for symmetry
+			code_to_run = "{\n${ARGV.shift()}\n}"
 			bootstrap_debug("Got $sw switch, using command line provided code")
 			if sw == '-E' {
 				bootstrap_debug('Will skip loading stdlib because of -E flag')

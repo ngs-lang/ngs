@@ -278,7 +278,7 @@ expression-delimiter =
 expression =
 	comment
 	|
-	e:set-item-expression comment? { $$ = e; }
+	e:set-item-expression (inline_space comment)? { $$ = e; }
 
 
 set-item-expression =

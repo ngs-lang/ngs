@@ -5,7 +5,7 @@ Note that this started as internal document so things here are unformed, not fin
 	* Delimited string, such as PATH
 	* digits() function?
 	* completion-safe marker in scripts + completion protocol
-	* Eachable type?
+	* Eachable type? Matchable type?
 
 [roadmap]
 

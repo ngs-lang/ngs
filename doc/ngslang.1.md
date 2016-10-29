@@ -269,7 +269,11 @@ In **code syntax** it is possible to switch to **command syntax** in one of the 
 		F drive(c:Car) {
 			expression1
 			expression2
-			...
+
+			# Same as:
+			#   if condition1 { return expr1 }
+			condition1 returns expr1
+
 			last_expression_is_the_return_value
 		}
 
@@ -325,6 +329,24 @@ In **code syntax** it is possible to switch to **command syntax** in one of the 
 		# Anonymous function literal, alternative syntax 2
 		# Logically same as f = F(A=null, B=null, C=null) A+B+1
 		f = { A + B + 1 }
+
+		# Short circuit binary operators
+		a = 1 and 2                    # a = 2
+		a = null and 2                 # a = null
+		a = 1 or 2                     # a = 1
+		a = null or 2                  # a = 2
+		a = code_with_exception tor 3  # a = 3, exception discarded
+
+		# Exceptions
+		a = try code_with_exception       # a = null, exception discarded
+		a = try { code_with_exception }   # a = null, exception discarded
+
+		type MyError
+		try {
+
+		} catch(e) {
+
+		}
 
 	}
 
