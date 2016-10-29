@@ -409,20 +409,33 @@ Higher numbers mean higher precedence.
 	<      150  "Less than"
 	>=     150  "Greater or equals"
 	>      150  "Greater"
-	~~     150  "Match all"                   "a1b2c" ~~ /[0-9]/
 	~      150  "Match"                       "a1b2c" ~ /[0-9]/
+	~~     150  "Match all"                   "a1b2c" ~~ /[0-9]/
 	...    160  "Inclusive range"             0...5               # 0,1,2,3,4,5
 	..     160  "Exclusive range"             0..5                # 0,1,2,3,4
 	+      190  "Plus"
 	-      190  "Minus"
-	*      200  "Multipy" or "repeat"         3 * 5               # 15
+	*      200  "Multiply" or "repeat"        3 * 5               # 15
 	                                          "ab" * 3            # "ababab"
 	                                          EmptyBox * 2        # two values of EmptyBox type
 	%      200  "Modulus" or "each"           3 % 2               # 1
 	                                          ['a', 'b'] % echo   # Outputs a and b on different lines
-	/      200  "Divide" or "map"
-	?      200  "Filter"
-	\      200  "Call"
+	/      200  "Divide" or "map"             10 / 5
+	                                          [1, 2, 3] / F(x) x * 2
+	?      200  "Filter"                      [1, 2, 3] ? F(x) x > 1
+	\      200  "Call"                        [1, 2, 3] \ echo
+
+## Assignment shortcuts
+
+Syntactically equivalent expressions
+
+	a = a + 1      a += 1
+	a = a - 1      a -= 1
+	a = a * 1      a *= 1
+	a = a / 1      a /= 1
+	a = a % 1      a %= 1
+	a = a.f()      a .= f()    a = f(a)
+	a = a.f(b)     a .= f(b    a = f(a, b))
 
 # LANGUAGE GOTCHAS
 
