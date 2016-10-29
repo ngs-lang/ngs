@@ -386,7 +386,7 @@ binop-expression-inner =
 	}
 	|
 	space "throws" space e2:expression {
-		// e1 throws e2 => if e1 { return e2 }
+		// e1 throws e2 => if e1 { throw e2 }
 		MAKE_NODE(ret, IF_NODE);
 			ret->first_child = e1;
 			MAKE_NODE(yes, THROW_NODE);

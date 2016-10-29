@@ -330,25 +330,99 @@ In **code syntax** it is possible to switch to **command syntax** in one of the 
 		# Logically same as f = F(A=null, B=null, C=null) A+B+1
 		f = { A + B + 1 }
 
-		# Short circuit binary operators
+		# --- Short circuit binary operators ----------
 		a = 1 and 2                    # a = 2
 		a = null and 2                 # a = null
 		a = 1 or 2                     # a = 1
 		a = null or 2                  # a = 2
 		a = code_with_exception tor 3  # a = 3, exception discarded
 
-		# Exceptions
-		a = try code_with_exception       # a = null, exception discarded
-		a = try { code_with_exception }   # a = null, exception discarded
+		# --- Ignoring exceptions with "try" without "catch" ----------
+		a = try one_expression_code_with_exception   # a = null, exception discarded
+		a = try { code; with; exception }            # a = null, exception discarded
+		my_data = try my_parsed_json.optional_field  # could be useful in real life
 
-		type MyError
+		# --- Exceptions ----------
+		# Define our exception type
+		# You can throw anything but Error has a nice constructor
+		# that takes a message argument so inheriting it.
+		type MyError(Error)
+
 		try {
+			# "e1 throws e2" is same as "if e1 { throw(e2) }"
+			1 == 2 throws Error("This can't be!")
+			throw MyError("As usual, very helpful message")
+		} catch(e:MyError) {
+			echo("[Exceptions] This error was expected: $e")
+		} catch(e:Error) {
+			echo("[Exceptions] Unexpected error: $e")
+			throw e
+		}
 
-		} catch(e) {
+		# --- Loops ----------
+		for(i=0; i<5; i+=1) {
+			if i == 3 {
+				continue
+			}
+			echo("Regular loop, iteration $i")
+		}
 
+		# Same as above
+		for(i;5) {
+			i == 3 continues
+			echo("Shorthand loop, iteration $i")
+		}
+
+		# While loop and "breaks" demonstration
+		i = 0
+		while i<10 {
+			echo("While loop, iteration $i")
+			i += 1
+			# "e1 breaks" is same as "if e1 { break }"
+			i == 2 breaks
 		}
 
 	}
+
+## Binary operators and precedence
+
+Higher numbers mean higher precedence.
+
+	tor     40  "Try ... or", short-circuit   questionable_code tor default_value
+	tand    50  "Try ... and", short-circuit  (not sure when it's needed, don't use it)
+	or      60  Logical or, short-circuit
+	and     65  Logical and, short-circuit
+	in      70  Value-in-container check      1 in [1, 2, 3]
+	                                          "a" in {"a": 1}
+	not in  70  Value-not-in-container check  10 not in [1, 2, 3]
+	                                          "b" not in {"a": 1}
+	is      90  Instance-of check             1 is Int
+	is not  90  Not-instance-of check         1 is not Str
+
+
+	|      120  "Pipe", currenty not used
+	===    130  "Same as" for object sameness
+	!==    130  "Not same as",                [1, 2] !== [1, 2]
+	==     130  "Equals",                     [1, 2] ==  [1, 2]
+	!=     130  "Not equals"
+	<=     150  "Less than or equals"
+	<      150  "Less than"
+	>=     150  "Greater or equals"
+	>      150  "Greater"
+	~~     150  "Match all"                   "a1b2c" ~~ /[0-9]/
+	~      150  "Match"                       "a1b2c" ~ /[0-9]/
+	...    160  "Inclusive range"             0...5               # 0,1,2,3,4,5
+	..     160  "Exclusive range"             0..5                # 0,1,2,3,4
+	+      190  "Plus"
+	-      190  "Minus"
+	*      200  "Multipy" or "repeat"         3 * 5               # 15
+	                                          "ab" * 3            # "ababab"
+	                                          EmptyBox * 2        # two values of EmptyBox type
+	%      200  "Modulus" or "each"           3 % 2               # 1
+	                                          ['a', 'b'] % echo   # Outputs a and b on different lines
+	/      200  "Divide" or "map"
+	?      200  "Filter"
+	\      200  "Call"
 
 # LANGUAGE GOTCHAS
 
