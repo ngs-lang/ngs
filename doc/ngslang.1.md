@@ -382,6 +382,39 @@ In **code syntax** it is possible to switch to **command syntax** in one of the 
 			i == 2 breaks
 		}
 
+		# --- Accessing items in arrays, hashes and other containers ----------
+		arr = [10, 20, 30]
+		item_1 = arr[1]
+		echo("Arr item 1 is $item_1") # "... 20"
+
+		myhash = {"a": 1, "b": 2}
+		item_b = myhash["b"]
+		item_b_alt = myhash.b
+		echo("Hash item 'b' is $item_b / $item_b_alt") # "... 2 / 2"
+
+		# --- switch and switch-like statements ----------
+
+		# switch
+		a = 10
+		result = switch a {
+			10 "ten"
+			20 "twenty"
+			30 { my_complex_code; "thirty" }
+		}
+		echo("Switch result for $a is $result") # "... ten"
+
+		# cond
+		a = 12
+		result = cond {
+			a > 10
+				"Excellent"
+			a > 5 {
+				my_complex_code; "Good enough"
+			}
+			a > 3
+				"so so"
+		}
+		echo("Cond result for $a is $result") # "... Excellent"
 	}
 
 ## Binary operators and precedence
@@ -401,10 +434,10 @@ Higher numbers mean higher precedence.
 
 
 	|      120  "Pipe", currenty not used
-	===    130  "Same as" for object sameness
+	===    130  "Same as"                     v = [1, 2]; v === v
 	!==    130  "Not same as",                [1, 2] !== [1, 2]
-	==     130  "Equals",                     [1, 2] ==  [1, 2]
-	!=     130  "Not equals"
+	==     130  "Equals",                     [1, 2] == [1, 2]
+	!=     130  "Not equals"                  [1, 3] != [1, 2]
 	<=     150  "Less than or equals"
 	<      150  "Less than"
 	>=     150  "Greater or equals"
@@ -427,7 +460,7 @@ Higher numbers mean higher precedence.
 
 ## Assignment shortcuts
 
-Syntactically equivalent expressions
+These are syntactically equivalent expressions:
 
 	a = a + 1      a += 1
 	a = a - 1      a -= 1
