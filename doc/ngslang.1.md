@@ -255,6 +255,11 @@ In **code syntax** it is possible to switch to **command syntax** in one of the 
 	echo("expr=${10+20}")
 	# Outputs: expr=30
 
+	# Basic constants: true, false, null
+	a = true
+	a = false
+	a = null
+
 	# Switch to code syntax inside { ... }.
 	{
 		# Define type
@@ -415,6 +420,35 @@ In **code syntax** it is possible to switch to **command syntax** in one of the 
 				"so so"
 		}
 		echo("Cond result for $a is $result") # "... Excellent"
+
+		# There are also eswitch and econd which throw an exception
+		# when no match is found as opposed to swicth and cond which
+		# return null when no match is found.
+
+		F will_throw_exception1() {
+			a = "bad value"
+			result = eswitch a {
+				1 "one"
+				2 "two"
+			}
+		}
+
+		F will_throw_exception2() {
+			a = 10
+			result = econd {
+				a > 15 "one"
+				a > 20 "two"
+			}
+		}
+
+		# --- "defined" keyword ----------
+		F show_defined() {
+			echo(defined a) # false
+			a = 1
+			echo(defined a) # true
+		}
+		echo("Defined:")
+		show_defined()
 	}
 
 ## Binary operators and precedence
