@@ -435,7 +435,7 @@ Syntactically equivalent expressions
 	a = a / 1      a /= 1
 	a = a % 1      a %= 1
 	a = a.f()      a .= f()    a = f(a)
-	a = a.f(b)     a .= f(b    a = f(a, b))
+	a = a.f(b)     a .= f(b)   a = f(a, b)
 
 # LANGUAGE GOTCHAS
 
