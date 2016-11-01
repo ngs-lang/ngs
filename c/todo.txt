@@ -9,6 +9,7 @@ Note that this started as internal document so things here are unformed, not fin
 	* Fix inspect() and maybe others to display special symbols in strings as \x.. or alike
 	* Consider Syntax for stripping last newline character in `cmd`
 	* Document catch/guard combination
+	* Suggested commands ("Command ... did not find any results. Try ..." - CLI menu)
 
 [roadmap]
 

@@ -233,124 +233,345 @@ In **code syntax** it is possible to switch to **command syntax** in one of the 
 
 	my_process = $( commands syntax )
 
-## Quick dive into syntax
+## Quick dive into syntax and basic functionality
 
-	# comment
+Comment
 
-	# Function call
+	# comment till end of line
+
+Calling a function
+
 	echo('Hello world')
+	{
+		'Hello world'.echo()
+	}
 
-	# Function call, alternative syntax:
-	#   something.method_name(optionally_more_args)
-	# Whatever is before the dot is used first parameter
-	'Hello world'.echo()
+	# Output:
+	#   Hello world
+	#   Hello world
 
-	# Assignment
+Variables
+
+	echo(defined a)
 	a = 1 + 2
+	echo(defined a)
+	echo(a)
+
+	# Output:
+	#   false
+	#   true
+	#   3
+
+String interpolation
 
 	# String interpolation. Two expressions on same line
-	echo("A is now $a"); echo('... and additional statement after semicolon')
+	a = 1
+	echo("A is now $a")
+	echo('A is now $a')
+	# Output:
+	#   A is now 1
+	#   A is now $a
 
-	# String interpolation with ${...}
-	echo("expr=${10+20}")
-	# Outputs: expr=30
+	# String interpolation with ${ arbitrary expression here }
+	echo("Calculation result A: ${10+20}")
+	echo("Calculation result B: ${ [1,2,3].map((*), 10).join(',') }")
+	# Output:
+	#   Calculation result A: 30
+	#   Calculation result B: 10,20,30
 
-	# Basic constants: true, false, null
-	a = true
-	a = false
-	a = null
 
-	# Switch to code syntax inside { ... }.
+Basic constants: true, false, null
+
+	if true echo("if true")
+	if false echo("if false")
+	if null echo("if null")
+	# Output:
+	#   if true
+
+	echo(1 == 1)
+	# Output:
+	#   true
+
+	echo(1 == 2)
+	# Output:
+	#   false
+
+	echo("abcd".pos("c"))
+	echo("abcd".pos("x"))
+	# Output:
+	#   2
+	#   null
+
+Arrays
+
+	x = ["first", "second", "third", "fourth"]
+
+	echo(x)
+	# Output:
+	#   ['first','second','third','fourth']
+
+	echo(x.len())
+	# Output:
+	#   4
+
+	echo('first' in x)
+	# Output:
+	#   true
+
+	echo('fifth' in x)
+	# Output:
+	#   false
+
+	echo(x[1])
+	# Output:
+	#   second
+
+	echo(x[1..3])
+	# Output:
+	# ['second','third']
+
+	echo(x == %[first second third fourth])
+	# Output:
+	#   true
+
+	x = [
+		"blah"
+		2
+		'some text'
+	]
+	echo(x)
+	# Output:
+	#   ['blah',2,'some text']
+
+	echo(x[10])
+	# ... Exception of type IndexNotFound occured ...
+
+Hashes
+
+	x = {"a": 1, "b": 2}
+
+	echo(x)
+	# Output:
+	#   {a=1, b=2}
+
+	echo(x['a'])
+	echo(x.a)
+	# Output:
+	#   1
+	#   1
+
+	{
+		x.b = 20
+	}
+
+	echo(x.len())
+	# Output:
+	#   2
+
+	echo(x.keys())
+	# Output:
+	#   ['a','b']
+
+	echo(x.values())
+	# Output:
+	#   [1,20]
+
+	x = {
+		"c": 1
+		"d": 2
+	}
+
+	echo(x)
+	# Output:
+	#   {c=1, d=2}
+
+	echo('c' in x)
+	# Output:
+	#   true
+
+	echo(1 in x)
+	# Output:
+	#   false
+
+	echo(x.get('d'))
+	# Output:
+	#   2
+
+	echo(x.get('e'))
+	# Output:
+	#   null
+
+	echo(x.get('e', 'my_default'))
+	# Output:
+	#   my_default
+
+	echo(x.e)
+	# ... Exception of type KeyNotFound occured ...
+
+Defining a type
+
+	# Switch to code syntax inside { ... }. "type" currently does not work in command syntax
 	{
 		# Define type
 		type Vehicle
 
 		# Define sub-type
 		type Car(Vehicle)
+	}
+	echo(Vehicle)
+	echo(Car)
 
-		# Define method
-		# c - parameter name
-		# Car - parameter type
-		F drive(c:Car) {
-			expression1
-			expression2
+	# Output:
+	#   <Type Vehicle>
+	#   <Type Car>
 
-			# Same as:
-			#   if condition1 { return expr1 }
-			condition1 returns expr1
+	v = Vehicle()
+	c = Car()
+	echo("v is Vehicle: ${v is Vehicle}")
+	echo("v is Car: ${v is Car}")
+	echo("c is Vehicle: ${c is Vehicle}")
+	echo("c is Car: ${c is Car}")
 
-			last_expression_is_the_return_value
-		}
+	# Output:
+	#   v is Vehicle: true
+	#   v is Car: false
+	#   c is Vehicle: true
+	#   c is Car: true
 
-		# Array literal, x is Arr type
-		x = [1, 2, 'x']
 
-		# Array literal, alternative syntax
-		x = [
-			"blah"
-			2
-			'x'
-		]
+Defining a method
 
-		# Hash literal, x is Hash type
-		x = {"a": 1, "b": 2}
+	{
+		type Vehicle
+		type Car(Vehicle)
+	}
 
-		# Hash literal, alternative syntax
-		x = {
-			"a": 1
-			"b": 2
-		}
+	# c - parameter name
+	# Car - parameter type
+	F drive(c:Car) {
+		echo("Driving the car")
+	}
 
-		# Define method
-		# Omitting { ... } for method body code when it's just a single expression
-		F my_summ1(a:Int, b:Int) a+b
+	mycar = Car()
+	drive(mycar)
+	# Output: Driving the car
 
-		# Define method, all extra arguments go to the "rest" array
-		F my_rest_method(a:Int, *rest) sum(rest) - a
 
-		# Define method, all extra keyword arguments go to the "kw_args" hash
-		F my_kw_method(a:Int, **kw_args) sum(kw_args.values()) - a
+	# Defining method with single expression as body
+	# does not require { ... } around the method body
+	F park(c:Car) echo("Parking the car")
 
-		# Define method, b has default value
-		F my_summ2(a:Int, b:Int=100) a+b
+	park(mycar)
+	# Output: Parking the car
 
-		# Anonymous function literal
-		f = F(a,b) a+b
+	drive("well...")
+	# ... Exception of type ImplNotFound occured ...
 
-		# Anonymous function literal, alternative syntax 1
-		# Logically same as f = F(x=null, y=null, z=null) x > y
-		# Using X or Y or Z wraps nearest function call in
-		# anonymous function. With X, Y and Z arguments which
-		# all default to null. Nearest function call in this case
-		# is the > operator.
-		[1,2,3,11,12].count(X>10).echo()
-		# Output: 2
+Method optional parameters
 
-		# Anonymous function literal, alternative syntax 1 (additional example)
-		# f is now partially applied my_two_args_func.
-		# Logically same as f = F(x=null, y=null, z=null) my_two_args_func(x, 10)
-		f = my_two_args_func(X, 10)
+	F mysum(a:Int, b:Int=100) a+b
 
-		# Anonymous function literal, alternative syntax 2
-		# Logically same as f = F(A=null, B=null, C=null) A+B+1
-		f = { A + B + 1 }
+	echo(mysum(5))
+	# Output: 105
 
-		# --- Short circuit binary operators ----------
-		a = 1 and 2                    # a = 2
-		a = null and 2                 # a = null
-		a = 1 or 2                     # a = 1
-		a = null or 2                  # a = 2
-		a = code_with_exception tor 3  # a = 3, exception discarded
+	echo(mysum(5, 200))
+	# Output: 205
 
-		# --- Ignoring exceptions with "try" without "catch" ----------
-		a = try one_expression_code_with_exception   # a = null, exception discarded
-		a = try { code; with; exception }            # a = null, exception discarded
-		my_data = try my_parsed_json.optional_field  # could be useful in real life
+Method "rest" parameter
 
-		# --- Exceptions ----------
-		# Define our exception type
-		# You can throw anything but Error has a nice constructor
-		# that takes a message argument so inheriting it.
+	F print_with_prefix(prefix:Str, *strings) {
+		strings.each(F(s) {
+			echo("$prefix$s")
+		})
+		echo("Printed ${strings.len()} lines with prefix")
+	}
+
+	print_with_prefix('-> ', 'abc', 'def')
+	# Output:
+	#   -> abc
+	#   -> def
+	#   Printed 2 lines with prefix
+
+Method "rest keywords" parameter
+
+	F print_properties(separator:Str, **kw_args) {
+		kw_args.each(F(name, value) {
+			echo("$name$separator$value")
+		})
+	}
+
+	print_properties(' => ', a=10, b=20)
+
+	# Output:
+	#   a => 10
+	#   b => 20
+
+Anonymous function (method) literal
+
+	f = F(item) { echo("Item: $item") }
+	echo("F is $f")
+	# Output: F is <Closure <anonymous> at 1.ngs:1>
+
+	each([10,20,30], f)
+	# Output:
+	#   Item: 10
+	#   Item: 20
+	#   Item: 30
+
+	echo([1,2,3].map(F(x) x*5))
+	# Output: [5,10,15]
+
+Anonymous function literal using magical X, Y or Z variables
+
+	echo([1,2,3].map(X*5))
+	# Output: [5,10,15]
+
+	echo({"a": "one", "b": "two"}.map("Key:" + X))
+	# Output: ['Key:a','Key:b']
+
+	echo({"a": "one", "b": "two"}.map("Val:" + Y))
+	# Output: ['Val:one','Val:two']
+
+	echo({"a": 1, "b": 2}.map("Key $X, Value $Y"))
+	# Output: ['Key a, Value 1','Key b, Value 2']
+
+	echo([1,2,3,11,12].count(X>10))
+	# Output: 2
+
+Anonymous function literal using magical A, B or C variables
+
+	# X*5 + 1 would not work as X*5 itself would be anonymous function
+	echo([1,2,3].map({ A*5 + 1 }))
+	# Output: [6,11,16]
+
+
+Short circuit binary operators
+
+	a = 1 and 2                    # a = 2
+	a = null and 2                 # a = null
+	a = 1 or 2                     # a = 1
+	a = null or 2                  # a = 2
+	a = code_with_exception tor 3  # a = 3, exception discarded
+
+Ignoring exceptions using "try" without "catch"
+
+	myhash = {"a": 1, "b": 2}
+
+	v = try myhash.a
+	echo(v)
+	# Output: 1
+
+	v = try myhash.c
+	echo(v)
+	# Output: null
+
+	v = try { unrelated = 1+2; myhash.c }
+	echo(v)
+	# Output: null
+
+Exceptions
+
+	{
 		type MyError(Error)
 
 		try {
@@ -363,93 +584,87 @@ In **code syntax** it is possible to switch to **command syntax** in one of the 
 			echo("[Exceptions] Unexpected error: $e")
 			throw e
 		}
-
-		# --- Loops ----------
-		for(i=0; i<5; i+=1) {
-			if i == 3 {
-				continue
-			}
-			echo("Regular loop, iteration $i")
-		}
-
-		# Same as above
-		for(i;5) {
-			i == 3 continues
-			echo("Shorthand loop, iteration $i")
-		}
-
-		# While loop and "breaks" demonstration
-		i = 0
-		while i<10 {
-			echo("While loop, iteration $i")
-			i += 1
-			# "e1 breaks" is same as "if e1 { break }"
-			i == 2 breaks
-		}
-
-		# --- Accessing items in arrays, hashes and other containers ----------
-		arr = [10, 20, 30]
-		item_1 = arr[1]
-		echo("Arr item 1 is $item_1") # "... 20"
-
-		myhash = {"a": 1, "b": 2}
-		item_b = myhash["b"]
-		item_b_alt = myhash.b
-		echo("Hash item 'b' is $item_b / $item_b_alt") # "... 2 / 2"
-
-		# --- switch and switch-like statements ----------
-
-		# switch
-		a = 10
-		result = switch a {
-			10 "ten"
-			20 "twenty"
-			30 { my_complex_code; "thirty" }
-		}
-		echo("Switch result for $a is $result") # "... ten"
-
-		# cond
-		a = 12
-		result = cond {
-			a > 10
-				"Excellent"
-			a > 5 {
-				my_complex_code; "Good enough"
-			}
-			a > 3
-				"so so"
-		}
-		echo("Cond result for $a is $result") # "... Excellent"
-
-		# There are also eswitch and econd which throw an exception
-		# when no match is found as opposed to swicth and cond which
-		# return null when no match is found.
-
-		F will_throw_exception1() {
-			a = "bad value"
-			result = eswitch a {
-				1 "one"
-				2 "two"
-			}
-		}
-
-		F will_throw_exception2() {
-			a = 10
-			result = econd {
-				a > 15 "one"
-				a > 20 "two"
-			}
-		}
-
-		# --- "defined" keyword ----------
-		F show_defined() {
-			echo(defined a) # false
-			a = 1
-			echo(defined a) # true
-		}
-		echo("Defined:")
-		show_defined()
+		# Output: [Exceptions] This error was expected: ...
 	}
+
+Loops
+
+	for(i=0; i<5; i+=1) {
+		if i == 3 {
+			continue
+		}
+		echo("Regular loop, iteration $i")
+	}
+	# Output:
+	#   Regular loop, iteration 0
+	#   Regular loop, iteration 1
+	#   Regular loop, iteration 2
+	#   Regular loop, iteration 4
+
+	for(i;5) {
+		i == 3 continues
+		echo("Shorthand loop, iteration $i")
+	}
+	# Output:
+	#   Shorthand loop, iteration 0
+	#   Shorthand loop, iteration 1
+	#   Shorthand loop, iteration 2
+	#   Shorthand loop, iteration 4
+
+	i = 0
+	while i<10 {
+		echo("While loop, iteration $i")
+		i += 1
+		i == 2 breaks
+	}
+	# Output:
+	#   While loop, iteration 0
+	#   While loop, iteration 1
+
+Switch and switch-like expressions
+
+	a = 10
+	result = switch a {
+		10 "ten"
+		20 "twenty"
+		30 { my_complex_code; "thirty" }
+	}
+	echo("Switch result for $a is $result")
+	# Output: Switch result for 10 is ten
+
+	a = 12
+	result = cond {
+		a > 10
+			"Excellent"
+		a > 5 {
+			my_complex_code; "Good enough"
+		}
+		a > 3
+			"so so"
+	}
+	echo("Cond result for $a is $result")
+	# Output: Cond result for 12 is Excellent
+
+	# There are also eswitch and econd which throw an exception
+	# when no match is found as opposed to swicth and cond which
+	# return null when no match is found.
+
+	F will_throw_exception1() {
+		a = "bad value"
+		result = eswitch a {
+			1 "one"
+			2 "two"
+		}
+	}
+
+	F will_throw_exception2() {
+		a = 10
+		result = econd {
+			a > 15 "one"
+			a > 20 "two"
+		}
+	}
+
 
 ## Binary operators and precedence
 
@@ -553,7 +768,7 @@ NGS is a "strongly typed" language: values are not implicitly converted to unrel
 	# That means that NGS has no method implementation that "knows" how to add an Int and a Str
 
 	echo(1+Int("2"))
-	# Outputs: 3
+	# Output: 3
 
 # BUILT-IN TYPES
 
