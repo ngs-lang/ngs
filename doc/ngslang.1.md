@@ -264,7 +264,6 @@ Variables
 
 String interpolation
 
-	# String interpolation. Two expressions on same line
 	a = 1
 	echo("A is now $a")
 	echo('A is now $a')
@@ -272,7 +271,6 @@ String interpolation
 	#   A is now 1
 	#   A is now $a
 
-	# String interpolation with ${ arbitrary expression here }
 	echo("Calculation result A: ${10+20}")
 	echo("Calculation result B: ${ [1,2,3].map((*), 10).join(',') }")
 	# Output:
@@ -464,6 +462,7 @@ Defining a method
 	park(mycar)
 	# Output: Parking the car
 
+	# There is no method drive() that takes a string as an argument
 	drive("well...")
 	# ... Exception of type ImplNotFound occured ...
 
@@ -664,6 +663,32 @@ Switch and switch-like expressions
 			a > 20 "two"
 		}
 	}
+
+Regular expressions
+
+	myregex = /^begin/
+	echo(myregex)
+	# Output: <RegExp>
+
+	mymatch = "beginABC" ~ myregex
+	echo(mymatch)
+	# Output: <MatchY matches=['begin'] named={} positions=[[0,5]] whole=begin before= after=ABC>
+
+	echo(mymatch.matches[0])
+	# Output: begin
+
+	echo(mymatch.after)
+	# Output: ABC
+
+	all_matches = "1a2bcd3efg" ~~ /([0-9])(.)/
+	each(all_matches, F(match) {
+		echo("The character after the digit ${match.matches[1]} is ${match.matches[2]}")
+	})
+	# Output:
+	#   The character after the digit 1 is a
+	#   The character after the digit 2 is b
+	#   The character after the digit 3 is e
+
 
 
 ## Binary operators and precedence
