@@ -139,7 +139,7 @@ Trade-offs between power and not allowing to shoot yourself in the foot are usua
 
 Many concepts and syntax constructs come from other languages.
 
-# SYNTAX
+# SYNTAX AND BASIC FUNCTIONALITY
 
 NGS has two syntaxes: **command syntax** and **code syntax**.
 
@@ -505,6 +505,45 @@ Method "rest keywords" parameter
 	#   a => 10
 	#   b => 20
 
+Method guard
+
+	F gg(i:Int) {
+		echo("First gg active")
+		echo(i*10)
+	}
+	gg(1)
+	gg(5)
+	# Output:
+	#   First gg active
+	#   10
+	#   First gg active
+	#   50
+
+	F gg(i:Int) {
+		echo("Second gg checking guard")
+		guard i > 3
+		echo("Second gg active")
+		echo(i*100)
+	}
+	gg(1)
+	gg(5)
+	# Output:
+	#   Second gg checking guard
+	#   First gg active
+	#   10
+	#   Second gg checking guard
+	#   Second gg active
+	#   500
+
+Call super methods
+
+	F sup(x) x+1
+
+	F sup(x) super(x) * 10
+
+	echo(sup(5))
+	# Output: 60
+
 Anonymous function (method) literal
 
 	f = F(item) { echo("Item: $item") }
@@ -543,6 +582,39 @@ Anonymous function literal using magical A, B or C variables
 	echo([1,2,3].map({ A*5 + 1 }))
 	# Output: [6,11,16]
 
+Method-related flow control
+
+	F flow_ret(x) {
+		if x < 0 {
+			unrelated_calculation = 1
+			return "negative"
+		}
+		x == 0 returns "zero"
+		"positive"
+	}
+	echo(flow_ret(-1))
+	echo(flow_ret( 0))
+	echo(flow_ret( 1))
+	# Output:
+	#   negative
+	#   zero
+	#   positive
+
+	F find_the_one(haystack:Arr, needle) {
+		ret_from_find_the_one = Return()
+		echo(ret_from_find_the_one)
+		haystack.each(F(elt) {
+			elt == needle throws ret_from_find_the_one("Found it!")
+		})
+		"Not found"
+	}
+	echo([10,20].find_the_one(20))
+	echo([10,20].find_the_one(30))
+	# Output:
+	#   <Return closure=<Closure find_the_one at 1.ngs:2> depth=7 val=null>
+	#   Found it!
+	#   <Return closure=<Closure find_the_one at 1.ngs:2> depth=7 val=null>
+	#   Not found
 
 Short circuit binary operators
 
@@ -614,6 +686,7 @@ Loops
 	while i<10 {
 		echo("While loop, iteration $i")
 		i += 1
+		# Same as "if i == 2 { break }"
 		i == 2 breaks
 	}
 	# Output:
@@ -689,7 +762,64 @@ Regular expressions
 	#   The character after the digit 2 is b
 	#   The character after the digit 3 is e
 
+Collector facility
 
+	mylist = collector {
+		collect("HEADER")
+		[10,20].each(collect)
+		collect("FOOTER")
+	}
+	echo(mylist)
+	# Output: ['HEADER',10,20,'FOOTER']
+
+	myhash = collector/{} {
+		collect("first", -1)
+		{"a": 1, "b": 2, "c":100}.each(F(k, v) {
+			if v < 100 {
+				collect("($k)", v*10)
+			}
+		})
+		collect("last", -2)
+	}
+	echo(myhash)
+	# Output: {first=-1, (a)=10, (b)=20, last=-2}
+
+	mysumm = collector/0 [1,10,100].each(collect)
+	echo(mysumm)
+	# Output: 111
+
+Running external programs
+
+	t = `echo -n text1`
+	echo("[ $t ]")
+	# Output: [ text1 ]
+
+	seq = `seq 5`.lines()
+	echo(seq)
+	# Output: ['1','2','3','4','5']
+
+	proc = $(seq 3)
+	each(inspect(proc), echo)
+	# Output:
+	#   Process
+	#   command = <Command is_top_level=false redirects=[] argv=['seq','3']>
+	#   pid = NNNNN
+	#   exit_code = 0
+	#   exit_signal = 0
+	#   stdout (3 lines):
+	#     1
+	#     2
+	#     3
+	#   stderr (0 lines):
+
+	data = ``echo '{"a": 1}'``
+	echo("Parsed data: $data, a is ${data.a}")
+	# Output: Parsed data: {a=1}, a is 1
+
+
+TODO: `@e1 e2` wrapper syntax
+
+TODO: `%{k1 v1 k2 v2 ...}` hash literal syntax
 
 ## Binary operators and precedence
 
