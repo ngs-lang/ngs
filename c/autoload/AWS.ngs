@@ -253,13 +253,12 @@
 
 		if 'IpPermissions' in sg.def.props {
 			diff = compare(sg.props.IpPermissions/IpPermBox, sg.def.props.IpPermissions/IpPermBox)
-			diff.add.each(F(perm) {
-				sg.run('add SG ingress rule', %(aws ec2 authorize-security-group-ingress --group-id ${sg.props.GroupId} --ip-permissions $*{diff.add.val / encode_json}))
-
-			})
-			diff.remove.each(F(perm) {
-				sg.run('remove SG ingress rule', %(aws ec2 revoke-security-group-ingress --group-id ${sg.props.GroupId} --ip-permissions $*{diff.remove.val / encode_json}))
-			})
+			if diff.add {
+				sg.run('add SG ingress rules', %(aws ec2 authorize-security-group-ingress --group-id ${sg.props.GroupId} --ip-permissions $*{diff.add.val / encode_json}))
+			}
+			if diff.remove {
+				sg.run('remove SG ingress rules', %(aws ec2 revoke-security-group-ingress --group-id ${sg.props.GroupId} --ip-permissions $*{diff.remove.val / encode_json}))
+			}
 		}
 
 		sg.update_tags()

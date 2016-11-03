@@ -43,26 +43,26 @@ Note that this started as internal document so things here are unformed, not fin
 					+ What is NGS? [done]
 					+ Running [done]
 					+ Reserved words
-					+ Basic syntax
+					+ Basic syntax [done]
 					+ Common types and common operations
-						+ Scalars
-						+ Arr
-						+ Hash
-						+ RegExp
+						+ Scalars [done]
+						+ Arr [done]
+						+ Hash [done]
+						+ RegExp [done]
 						+ Other common types
-					+ Variable scoping
+					+ Variable scoping [done]
 					+ Control structures (if, loops, cond)
 					+ Common methods
 						+ Boolean
 						+ Math
 						+ Strings
 						+ Functional
-					+ Defining own methods
-					+ Inheritance
+					+ Defining own methods [done]
+					+ Inheritance [done]
 					+ Build an app - decide which
 				* All types documentation
 				* All methods documentation
-				* Exit codes (see bootstrap.ngs)
+				* Exit codes (see bootstrap.ngs and ngs.c)
 				* Document that innner functions are declared local
 				* Language reference, good example: https://golang.org/ref/spec
 				* Internals
