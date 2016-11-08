@@ -289,7 +289,7 @@ F dflt(i:NormalTypeInstance, k, v) {
 	if k not in i {
 		(.=)(i, k, v)
 	}
-	i
+	(.)(i, k)
 }
 
 
@@ -722,6 +722,8 @@ F echo(x) {
 F join(a:Arr, s:Str) {
 	guard a.any((is not), Str)
 	a.map(Str).join(s)
+	# TODO: maybe a.map({if A is Str then A else Str(A)}).join(s)
+	# TODO: consider making Str(x) == x
 }
 
 doc Used for command line arguments such as ['--vpc-id', my_vpc_id()].nuke_null()
@@ -966,8 +968,7 @@ F group(a:Arr, cb:Fun, *args) {
 	ret = {}
 	a.each(F(elt) {
 		k = cb(elt, *args)
-		ret.dflt(k, [])
-		ret[k].push(elt)
+		ret.dflt(k, []).push(elt)
 	})
 	ret
 }
@@ -980,7 +981,7 @@ F dflt(h:Hash, k, v) {
 	if k not in h {
 		h[k] = v
 	}
-	h
+	h[k]
 }
 
 # === Box ========================================

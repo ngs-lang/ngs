@@ -118,6 +118,18 @@ ast_node *call_node_partial_application(ast_node *orig, int location[4]) {
 	// first_child - callable
 	// first_child->next_sibling - args
 	// first_child->next_sibling children - [arg]
+	p = orig->first_child;
+	if(p->type == ATTR_NODE) {
+		// arg1.method(...) syntax
+		// TODO: apply call_node_partial_application later so it will not be a special case?
+		p = p->first_child;
+	}
+	if(p->type == IDENTIFIER_NODE && strlen(p->name) == 1) {
+		if(p->name[0] == 'X' || p->name[0] == 'Y' || p->name[0] == 'Z') {
+			// wrap_in_func(ast_node *node, int location[4], char *docstring, int argc, ...) {
+			return wrap_in_func(orig, location, "Partial application syntax", 1, 3, "X", "Any", "Y", "Any", "Z", "Any");
+		}
+	}
 	for(p=orig->first_child->next_sibling->first_child; p; p=p->next_sibling) {
 		arg = p->first_child;
 		if(arg->type == IDENTIFIER_NODE && strlen(arg->name) == 1) {
