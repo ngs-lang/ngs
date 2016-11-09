@@ -293,6 +293,24 @@ F dflt(i:NormalTypeInstance, k, v) {
 }
 
 
+# === Exceptions =================================
+
+{
+	# TODO: Investigate why type CException(Error) does not work at this point
+	type CException
+	CException.inherit(Error)
+
+	F init(e:CException, message:Str) {
+		errno = get_c_errno()
+		super(e, message)
+		e.errno = errno
+		e.errno_name = c_strerror(e.errno)
+	}
+
+	type KillFail
+	KillFail.inherit(CException)
+}
+
 # === auto-load ==================================
 
 doc Called when reading undefined global
@@ -651,7 +669,7 @@ TEST Arr(1...3) == [1,2,3]
 F '[]'(arr:Arr, idx:Int) {
 	guard idx < 0
 	i = arr.len() + idx
-	i < 0 throws IndexNotFound("[](Arr, Int): Index $idx is illegal for array of size ${arr.len()}").set('container', arr).set('key', idx)
+	i < 0 throws IndexNotFound("[](Arr, Int): Index $idx is illegal for array of size ${arr.len()}", arr, idx)
 	arr[i]
 }
 
@@ -1672,6 +1690,18 @@ F ````(c:Command) {
 	p.stdout.parse({'process': p})
 }
 
+F kill(pid:Int, sig:Int=SIGNALS.TERM) {
+	ret = c_kill(pid, sig)
+	ret == -1 throws KillFail("Failed to kill pid $pid with signal $sig")
+	ret != 0 throws Error("c_kill() did not return 0 or -1")
+	ret
+}
+
+F kill(p:Process, sig:Int=SIGNALS.TERM) {
+	p.pid is Null throws InvalidArgument("Can't kill() a process that does not have a pid")
+	kill(p.pid, sig)
+}
+
 F parse(s:Str) parse(s, {})
 
 F parse(s:Str, hints:Hash) s
@@ -1703,7 +1733,7 @@ F stdlib_aws_straighten_tags(a:Arr) a.each(stdlib_aws_straighten_tags)
 
 F stdlib_aws_straighten_tags(h:Hash) {
 	if 'Tags' in h {
-		h.Tags = h.get('Tags', []).map(
+		h.Tags = h.Tags.map(
 			F(tag_pair) [tag_pair.Key, tag_pair.Value]
 		).Hash()
 	}

@@ -25,7 +25,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* commands syntax
 
-				* & for background execution
+				* & for background execution [done]
 
 				* io redirection - see F '$()'(c:Command) { ... } in stdlib.ngs [task is on hold]
 					* basic redirections ( <x , >y , >>z ) [done]

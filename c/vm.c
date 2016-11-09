@@ -1016,6 +1016,10 @@ METHOD_RESULT native_get_c_errno METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(errno));
 }
 
+METHOD_RESULT native_c_strerror METHOD_PARAMS {
+	METHOD_RETURN(make_string(strerror(GET_INT(argv[0]))));
+}
+
 METHOD_RESULT native_c_execve METHOD_PARAMS {
 	char *exec_filename;
 	char **exec_argv, **exec_envp;
@@ -1584,6 +1588,10 @@ METHOD_RESULT native_srand METHOD_PARAMS {
 	METHOD_RETURN(MAKE_NULL);
 }
 
+METHOD_RESULT native_c_kill METHOD_PARAMS {
+	METHOD_RETURN(MAKE_INT(kill(GET_INT(argv[0]), GET_INT(argv[1]))));
+}
+
 
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
@@ -1910,9 +1918,12 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "C_WTERMSIG", &native_C_WTERMSIG,      1, "status",   vm->Int);
 
 	register_global_func(vm, 0, "get_c_errno", &native_get_c_errno,    0);
+	register_global_func(vm, 0, "c_strerror",  &native_c_strerror,     1, "errnum",   vm->Int);
 
-	register_global_func(vm, 0, "c_strcasecmp", &native_c_strcasecmp,  2, "a",   vm->Str,  "b", vm->Str);
-	register_global_func(vm, 0, "c_strcmp",     &native_c_strcmp,      2, "a",   vm->Str,  "b", vm->Str);
+	register_global_func(vm, 0, "c_strcasecmp", &native_c_strcasecmp,  2, "a",   vm->Str,  "b",   vm->Str);
+	register_global_func(vm, 0, "c_strcmp",     &native_c_strcmp,      2, "a",   vm->Str,  "b",   vm->Str);
+
+	register_global_func(vm, 0, "c_kill",       &native_c_kill,        2, "pid", vm->Int,  "sig", vm->Int);
 
 	// boolean
 	register_global_func(vm, 0, "==",       &native_eq_bool_bool,      2, "a",   vm->Bool, "b", vm->Bool);
@@ -2063,6 +2074,30 @@ void vm_init(VM *vm, int argc, char **argv) {
 	#pragma GCC diagnostic pop
 
 #undef E
+
+
+	// based on procps/proc/sig.c - start
+	VALUE signals = make_hash(64);
+
+#define S(name) { \
+		set_hash_key(signals, make_string(&(#name)[3]), MAKE_INT(name)); \
+		set_hash_key(signals, MAKE_INT(name), make_string(&(#name)[3])); \
+	}
+
+	S(SIGABRT); S(SIGALRM); S(SIGBUS); S(SIGCHLD); S(SIGCONT);
+#ifdef SIGEMT
+	S(SIGEMT);
+#endif
+	S(SIGFPE); S(SIGHUP); S(SIGILL); S(SIGINT); S(SIGKILL); S(SIGPIPE); S(SIGPOLL); S(SIGPROF); S(SIGPWR); S(SIGQUIT); S(SIGSEGV);
+#ifdef SIGSTKFLT
+	S(SIGSTKFLT);
+#endif
+	S(SIGSTOP); S(SIGSYS); S(SIGTERM); S(SIGTRAP); S(SIGTSTP); S(SIGTTIN); S(SIGTTOU); S(SIGURG); S(SIGUSR1); S(SIGUSR2);
+	S(SIGVTALRM); S(SIGWINCH); S(SIGXCPU); S(SIGXFSZ);
+#undef S
+	set_global(vm, "SIGNALS", signals);
+	// based on procps/proc/sig.c - end
+
 	{
 		int d;
 		(void)pcre_config(PCRE_CONFIG_NEWLINE, &d);
