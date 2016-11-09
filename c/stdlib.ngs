@@ -65,6 +65,11 @@ F map(something, mapper:Fun, *args)
 	collector
 		something.each(F(elt) collect(mapper(elt, *args)))
 
+# EXPERIMENTAL, name might change
+F map_to_hash(something, mapper:Fun, *args)
+	collector/{}
+		something % { collect(*mapper(A, *args)) }
+
 
 F filter(something, predicate:Fun, *args)
 	collector
@@ -727,6 +732,16 @@ F *(arr:Arr, n:Int)
 			arr % collect
 
 TEST [10,20] * 2 == [10,20,10,20]
+
+F *(a:Arr, b:Arr)
+	collector
+		a.each(F(elt_a) {
+			b.each(F(elt_b) {
+				collect([elt_a, elt_b])
+			})
+		})
+
+TEST [10,20] * [30,40] == [[10, 30], [10, 40], [20, 30], [20, 40]]
 
 
 F echo(x) {
@@ -1733,9 +1748,7 @@ F stdlib_aws_straighten_tags(a:Arr) a.each(stdlib_aws_straighten_tags)
 
 F stdlib_aws_straighten_tags(h:Hash) {
 	if 'Tags' in h {
-		h.Tags = h.Tags.map(
-			F(tag_pair) [tag_pair.Key, tag_pair.Value]
-		).Hash()
+		h.Tags .= map_to_hash(F(tag_pair) [tag_pair.Key, tag_pair.Value])
 	}
 }
 
