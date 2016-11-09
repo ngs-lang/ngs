@@ -65,12 +65,6 @@ F map(something, mapper:Fun, *args)
 	collector
 		something.each(F(elt) collect(mapper(elt, *args)))
 
-# EXPERIMENTAL, name might change
-F map_to_hash(something, mapper:Fun, *args)
-	collector/{}
-		something % { collect(*mapper(A, *args)) }
-
-
 F filter(something, predicate:Fun, *args)
 	collector
 		something.each(F(elt) {
@@ -957,11 +951,11 @@ F Hash(arr:Arr, cb:Fun)
 TEST Hash([1,2], F(x) x*2) == {1: 2, 2: 4}
 
 
-F Hash(tuple:Arr, names:Arr)
+F Hash(keys:Arr, values:Arr)
 	collector/{}
-		tuple.len().each(F(idx) collect(names[idx], tuple[idx]))
+		keys.len().each(F(idx) collect(keys[idx], values[idx]))
 
-TEST [1,2,3].Hash(["a", "b", "c"]) == {"a": 1, "b": 2, "c": 3}
+TEST Hash(["a", "b", "c"], [1,2,3]) == {"a": 1, "b": 2, "c": 3}
 
 
 # --- Misc ---
@@ -1748,7 +1742,7 @@ F stdlib_aws_straighten_tags(a:Arr) a.each(stdlib_aws_straighten_tags)
 
 F stdlib_aws_straighten_tags(h:Hash) {
 	if 'Tags' in h {
-		h.Tags .= map_to_hash(F(tag_pair) [tag_pair.Key, tag_pair.Value])
+		h.Tags = Hash(h.Tags.Key, h.Tags.Value)
 	}
 }
 
