@@ -1513,6 +1513,8 @@ F init(p:Process, c:Command) {
 	p.exit_signal = null
 	p.pipes = {}
 	p.outputs = {1:null, 2:null}
+	p.reading_threads = []
+	p.writing_threads = []
 	# p.lock = Lock()
 }
 
@@ -1527,6 +1529,12 @@ F wait(p:Process) {
 	p.pid is Null throws "Can not wait() on Process without PID"
 
 	p.exit_code is Int returns p
+
+	debug("[wait] joining reading and writing threads")
+	p.reading_threads.join()
+	p.reading_threads = []
+	p.writing_threads.join()
+	p.writing_threads = []
 
 	debug("[wait] will waitpid(${p.pid})")
 	w = c_waitpid(p.pid)
@@ -1568,7 +1576,7 @@ F '$()'(c:Command) {
 	}
 	# child fd -> Pipe
 	pipes = process.pipes
-	if not(c.is_top_level) {
+	if 'top_level' not in c.options {
 		pipes[1] = Pipe(STDLIB_CHILD_TO_PARENT_PIPE_DIR)
 	}
 
@@ -1634,16 +1642,18 @@ F '$()'(c:Command) {
 		debug("$debug_pfx reading all output of the child process")
 		# XXX: maybe make it chunk based with c_poll() and single thread
 		pipes_to_read_from = pipes ? F(fd, pipe) { pipe.direction == STDLIB_CHILD_TO_PARENT_PIPE_DIR }
-		reading_threads = pipes_to_read_from.map(F(fd, pipe) {
-			Thread({ process.outputs[fd] = pipe.read() })
+		# TODO: some error handling inside these threads and after joining them
+		process.reading_threads = pipes_to_read_from.map(F(fd, pipe) {
+			Thread({
+				process.outputs[fd] = pipe.read()
+				pipe.close_reading_end()
+				debug("$debug_pfx read all output of the child process for descriptor $fd, closing reading/parent end")
+			})
 		})
-		if reading_threads {
-			reading_threads.join()
+		# echo("R ${c.reading_threads}")
+		if '&' not in c.options {
+			process.wait()
 		}
-		debug("$debug_pfx read all output of the child process")
-		parent_fds % c_close
-		# debug("$debug_pfx child output was <<${process.stdout}>>")
-		process.wait()
 	}
 
 	# TODO: pid < 0 => throw exception with errno

@@ -16,7 +16,7 @@ F make_prompt() {
 #      A real fix would be somehow let compiler know it's not a top-level.
 # XXX: Do this after rc files are executed !
 F '$()'(c:Command) {
-	c.is_top_level = false
+	c.options .= without('top_level')
 	guard false
 }
 

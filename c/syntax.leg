@@ -254,6 +254,8 @@ command =
 	|
 	cw:command-words {
 		// TODO: constants for flags
+		MAKE_STRING_NODE(option, "top_level")
+		append_ast_node_child($$->first_child->next_sibling->next_sibling->next_sibling, option);
 		cw->number = 1;
 		$$ = cw;
 	}
@@ -1393,7 +1395,10 @@ command-words = acc:command-node (
 				append_ast_node_child(acc->first_child->next_sibling, $$);
 			}
 		)
-	)+ {
+	)+ (inline_space? "&" {
+		MAKE_STRING_NODE(option, "&");
+		append_ast_node_child(acc->first_child->next_sibling->next_sibling->next_sibling, option);
+	})? {
 	$$ = acc;
 	CAPTURE_LOCATION($$);
 }
@@ -1406,6 +1411,8 @@ command-node = {
 		append_ast_node_child(ret, argv);
 		MAKE_NODE(redirects, EXPRESSIONS_NODE);
 		append_ast_node_child(ret, redirects);
+		MAKE_NODE(options, EXPRESSIONS_NODE);
+		append_ast_node_child(ret, options);
 	$$ = ret;
 }
 
