@@ -179,6 +179,15 @@ typedef struct {
 #define TAG_AND     (3)
 #define TAG_INT     (1)
 
+// TODO: Make sure it's correct on all architectures - start
+#define NGS_INT_MIN (INTPTR_MIN >> TAG_BITS)
+#define NGS_INT_MAX (INTPTR_MAX >> TAG_BITS)
+#define NGS_RAND_MAX ((NGS_INT_MAX < RAND_MAX) ? NGS_INT_MAX : RAND_MAX)
+
+#define NGS_INT_MIN_VALUE (VALUE){.num = ((INTPTR_MIN & ~TAG_AND) | TAG_INT)}
+#define NGS_INT_MAX_VALUE (VALUE){.num = ((INTPTR_MAX & ~TAG_AND) | TAG_INT)}
+// Make sure it's correct on all architectures - end
+
 typedef enum {
 	V_NULL   =  2,
 	V_UNDEF  =  6,

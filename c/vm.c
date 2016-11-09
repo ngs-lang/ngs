@@ -390,6 +390,10 @@ METHOD_RESULT native_trunc_real METHOD_PARAMS { METHOD_RETURN(make_real((NGS_REA
 METHOD_RESULT native_floor_real METHOD_PARAMS { METHOD_RETURN(make_real((NGS_REAL) floor(GET_REAL(argv[0])))); }
 METHOD_RESULT native_ceil_real METHOD_PARAMS { METHOD_RETURN(make_real((NGS_REAL) ceil(GET_REAL(argv[0])))); }
 
+METHOD_RESULT native_Int_real METHOD_PARAMS {
+	METHOD_RETURN(MAKE_INT((int) GET_REAL(argv[0])));
+}
+
 METHOD_RESULT native_Int_str_int EXT_METHOD_PARAMS {
 	char *nptr, *endptr;
 	long long r;
@@ -1566,6 +1570,21 @@ METHOD_RESULT native_ord_str_int EXT_METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(((unsigned char *)OBJ_DATA_PTR(argv[0]))[idx]));
 }
 
+METHOD_RESULT native_rand METHOD_PARAMS {
+	(void) argv;
+#if NGS_RAND_MAX < RAND_MAX
+	METHOD_RETURN(MAKE_INT(random() % NGS_RAND_MAX));
+#else
+	METHOD_RETURN(MAKE_INT(random()));
+#endif
+}
+
+METHOD_RESULT native_srand METHOD_PARAMS {
+	srandom(GET_INT(argv[0]));
+	METHOD_RETURN(MAKE_NULL);
+}
+
+
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
 	GLOBAL_VAR_INDEX index;
@@ -1828,6 +1847,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "ip",       &native_ip_closure,        1, "c",      vm->Closure);
 
 	// Int
+	register_global_func(vm, 0, "Int",      &native_Int_real,           1, "r",    vm->Real);
 	register_global_func(vm, 1, "Int",      &native_Int_str_int,        2, "s",    vm->Str,  "base", vm->Int);
 
 	// Real
@@ -1938,6 +1958,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "band",     &native_band_int_int,      2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, 0, "bor",      &native_bor_int_int,       2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, 0, "bxor",     &native_bxor_int_int,      2, "a",   vm->Int, "b", vm->Int);
+
+	// random
+	register_global_func(vm, 0, "rand",     &native_rand,            0);
+	register_global_func(vm, 0, "srand",    &native_srand,           1, "seed", vm->Int);
 
 	// misc
 	register_global_func(vm, 0, "===",      &native_same_any_any,      2, "a",   vm->Any, "b", vm->Any);
@@ -2078,6 +2102,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 	}
 
 #undef FFI_TYPE
+
+	// // "left shift of negative value" warning
+	// set_global(vm, "INT_MIN", MAKE_INT(NGS_INT_MIN));
+	// set_global(vm, "INT_MAX", MAKE_INT(NGS_INT_MAX));
+	set_global(vm, "INT_MIN", NGS_INT_MIN_VALUE);
+	set_global(vm, "INT_MAX", NGS_INT_MAX_VALUE);
+	set_global(vm, "RAND_MAX", MAKE_INT(NGS_RAND_MAX));
 
 }
 

@@ -303,27 +303,25 @@ F global_not_found_handler(name:Str) {
 
 # === Range ======================================
 
-F init(r:Range, start, end) init(args())
+F init(r:Range, start, end, step=1) init(args())
 
 F ..(start, end)  ExclusiveRange(start, end)
 F ...(start, end) InclusiveRange(start, end)
 
 F each(r:Range, cb:Fun, *args) {
+	# TODO: support Real step
 	econd {
-		r.end is Null {
-			step = 1
+		(r.end is Null) or (r.step == 0) {
 			cmp = F(a,b) true
 		}
-		r.start <= r.end {
-			step = 1
+		r.step > 0 {
 			cmp = if r is ExclusiveRange (<) (<=)
 		}
-		r.start > r.end {
-			step = -1
+		r.step < 0 {
 			cmp = if r is ExclusiveRange (>) (>=)
 		}
 	}
-	for(i=r.start; cmp(i, r.end); i=i+step)
+	for(i=r.start; cmp(i, r.end); i=i+r.step)
 		cb(i, *args)
 	r
 }
@@ -341,8 +339,8 @@ F first(r:Range, predicate:Fun, *args) {
 
 TEST (10..20).first(F(x) x % 3 == 0) == 12
 
-F Str(r:ExclusiveRange) "<ExclusiveRange ${r.start}..${r.end}>"
-F Str(r:InclusiveRange) "<InclusiveRange ${r.start}...${r.end}>"
+F Str(r:ExclusiveRange) "<ExclusiveRange ${r.start}..${r.end} step ${r.step}>"
+F Str(r:InclusiveRange) "<InclusiveRange ${r.start}...${r.end} step ${r.step}>"
 
 # === Syntactic sugar ============================
 
@@ -2128,6 +2126,56 @@ exit_hook = Hook()
 			print_exception(e)
 		}
 	}
+}
+
+# === Random =====================================
+# This is _not_ crypto safe random!
+
+srand(time())
+
+STDLIB_MAX_RAND_REAL = Real(RAND_MAX)
+STDLIB_RAND_SAFETY_MAX = 100
+
+F rand_uniq(something, n:Int) {
+	# TODO: Fix the guard - it does not work with Range currently
+	# guard n <= something.len()
+	result = []
+	safety_counter = 0
+	while len(result) < n {
+		r = rand(something)
+		if r in result {
+			safety_counter += 1
+			safety_counter == STDLIB_RAND_SAFETY_MAX throws Error("Not making progress in rand_uniq(something, n:Int)")
+		} else {
+			result.push(r)
+			safety_counter = 0
+		}
+	}
+	result
+}
+
+F rand(something, n:Int) n.map({ rand(something) })
+
+F rand(n:Int) {
+	r = rand()
+	(RAND_MAX+1) % n == 0 returns r % n
+	scale = Real(n) / STDLIB_MAX_RAND_REAL
+	Real(r) * scale \ floor \ Int
+}
+
+# TODO: Sequence super-type?
+
+F rand(a:Arr) a[rand(a.len())]
+
+F rand(a:Str) a[rand(a.len())]
+
+F rand(a:Str, n:Int) super(a, n).join('')
+
+F rand(r:Range) {
+	guard r.step == 1
+	points = r.end - r.start
+	if r is InclusiveRange points += 1
+	rand(points) + r.start
 }
 
 # === Misc tests =================================
