@@ -39,6 +39,11 @@ Note that this started as internal document so things here are unformed, not fin
 		* Not sure about the star, maybe:
 			~All
 			X ~ All
+	* Dynamic file names for use cases such as logger
+		logger = DynFile('/var/log/...%h')
+		logger.echo('my log event')
+	* think about read/write vs read/echo methods naming
+	* f'file literals'
 
 [roadmap]
 

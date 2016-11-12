@@ -1484,6 +1484,11 @@ F close(f:File) {
 	ret < 0 throws FileIOFail(f.name, get_c_errno(), "Failed to close the file $f")
 }
 
+F read(filename:Str) {
+	data = fetch(filename)
+	parse(data, {'filename': filename})
+}
+
 # --- Redir ---
 
 F Str(r:Redir) "<Redirect ${r.fd} ${r.marker} ${r.datum}>"
