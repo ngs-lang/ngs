@@ -2,7 +2,10 @@ Note that this started as internal document so things here are unformed, not fin
 
 [inbox]
 
-	* Delimited string, such as PATH
+	Unsorted and undecided things go here
+
+	* Delimited string type, such as PATH
+		+ ds = DelimStr(ENV.PATH, ':'); ds.each(echo); ds.push('mypath_element')
 	* digits() function?
 	* completion-safe marker in scripts + completion protocol
 	* Eachable type?
@@ -10,6 +13,32 @@ Note that this started as internal document so things here are unformed, not fin
 	* Consider Syntax for stripping last newline character in `cmd`
 	* Document catch/guard combination
 	* Suggested commands ("Command ... did not find any results. Try ..." - CLI menu)
+	* filterk / filterv
+	* Sub-typing built-in types
+		* Subclass Fun? For mapper for example to know which arguments to pass and what to construct
+	* method to push a value into Arr if it's not there already
+	* add profiling info to ngs-debug
+		+ memory allocations - where and how much
+		+ opcodes stats
+		+ method calls: scanned / not scanned (where in Arr the method was found)
+		+ something about call sites?
+	* intern strings automatically (see Python algorithm)
+		+ do profiling first
+	* Possible syntax of Arr[ElementsType]
+		F +(s:Str, a:Arr[Str]) { ... }
+		instead of
+		F +(s:Str, a:Arr) { guard a.all(is, Str); ... }
+		don't see any use now but for completeness: Hash[KeysType, ValuesType]
+	* ASN1 parser
+	* Function static variables
+		F parse(s:Str, ...)
+		?static? re = /myregex/
+		guard s ~ re
+		...
+	* dig with data_struct['a', 10, *, ...]
+		* Not sure about the star, maybe:
+			~All
+			X ~ All
 
 [roadmap]
 
