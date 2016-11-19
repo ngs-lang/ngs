@@ -76,6 +76,36 @@ F filter(something) filter(something, (is not), Null)
 
 TEST [1,2,null,3].filter() == [1,2,3]
 
+doc EXPERIMENTAL! Do not use!
+F take_while(something, predicate:Fun, *args)
+	collector {
+		r = Return()
+		something.each(F(elt) {
+			if predicate(elt, *args)
+				collect(elt)
+			else
+				throw r()
+		})
+	}
+
+TEST [1,2,3,1,2].take_while(X<3) == [1,2]
+
+# Would look much better with an iterator of "something"
+doc EXPERIMENTAL! Do not use!
+F drop_while(something, predicate:Fun, *args)
+	collector {
+		found = false
+		something.each(F(elt) {
+			if found { collect(elt); return null; }
+			if not(predicate(elt, *args)) {
+				collect(elt)
+				found = true
+			}
+		})
+	}
+
+TEST [1,2,3,1,2].drop_while(X<3) == [3,1,2]
+
 F reduce(something, start, f:Fun, *args) {
 	ret = start
 	something.each(F(elt) ret = f(ret, elt))
@@ -636,6 +666,18 @@ F unshift(arr:Arr, elt) {
 }
 
 TEST x=[1,2]; x.unshift(3); x == [3, 1, 2]
+
+doc EXPERIMENTAL! Do not use!
+F join(a:Arr, sep:Arr) {
+	guard a.all(is, Arr)
+	collector
+		a.each_idx_val(F(idx, subarr) {
+			subarr % collect
+			if idx < a.len() - 1 {
+				sep % collect
+			}
+		})
+}
 
 # --- Conversions ---
 
@@ -1724,6 +1766,11 @@ F parse(s:Str, hints:Hash) {
 	ret = FullBox(decode_json(s)) tor EmptyBox()
 	guard ret
 	ret.val
+}
+
+# WIP
+F unparse(data, hints:Hash) {
+	1
 }
 
 # Just the command, no processing

@@ -40,6 +40,7 @@ TEST try [].Iter().next() catch(nn:NoNext) true
 # EXPERIMENTAL
 # Not sure it's needed but it's good to have it for completeness
 # ---------- HashIter ----------
+doc EXPERIMENTAL! Do not use!
 F init(i:HashIter, h:Hash) {
 	i.val = h
 	i._iter = h.keys().Iter()

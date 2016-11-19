@@ -44,6 +44,12 @@ Note that this started as internal document so things here are unformed, not fin
 		logger.echo('my log event')
 	* think about read/write vs read/echo methods naming
 	* f'file literals'
+	* arbitrary length integers
+	* Consider shortcut syntax for ENV.MYVAR
+		maybe %MYVAR ?
+	* Consider shortcut syntax for ARGV[n]
+		feels like less needed than ENV.MYVAR
+	* Make each(), filter() and friends be able to work on endless lists
 
 [roadmap]
 
@@ -59,8 +65,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* commands syntax
 
-				* & for background execution [done]
-
 				* io redirection - see F '$()'(c:Command) { ... } in stdlib.ngs [task is on hold]
 					* basic redirections ( <x , >y , >>z ) [done]
 					* tests for basic redirections
@@ -74,34 +78,28 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* documentation [in progress]
 				* Tutorial
-					+ What is NGS? [done]
-					+ Running [done]
-					+ Reserved words
-					+ Basic syntax [done]
 					+ Common types and common operations
 						+ Scalars [done]
 						+ Arr [done]
 						+ Hash [done]
 						+ RegExp [done]
 						+ Other common types
-					+ Variable scoping [done]
 					+ Control structures (if, loops, cond)
 					+ Common methods
 						+ Boolean
 						+ Math
 						+ Strings
 						+ Functional
-					+ Defining own methods [done]
-					+ Inheritance [done]
 					+ Build an app - decide which
 				* All types documentation
 				* All methods documentation
 				* Exit codes (see bootstrap.ngs and ngs.c)
-				* Document that innner functions are declared local
+				* Document that inner functions are declared local
 				* Language reference, good example: https://golang.org/ref/spec
 				* Internals
 
 			* files globbing
+				consider special syntax such as <foo*bar>
 
 		* Milestone "Mac OS support" (will be v0.2.0)
 
