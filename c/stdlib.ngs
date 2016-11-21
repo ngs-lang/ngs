@@ -592,6 +592,11 @@ TEST [1,2,3] - [5,6,1] == [2,3]
 TEST [1,2,3] - [5,6,1,1,1,1,1,1,1,1,1,1,1,2] == [3]
 
 
+F count(arr:Arr, val) arr.count(X==val)
+
+TEST [1,2,1,3].count(1) == 2
+
+
 F count(arr:Arr, predicate:Fun, *args) {
 	collector/0
 		arr.each(F(elt) {
@@ -601,6 +606,7 @@ F count(arr:Arr, predicate:Fun, *args) {
 }
 
 TEST [1,2,3,11,12].count(X>10) == 2
+
 
 F count(arr:Arr) count(arr, identity)
 
@@ -1526,10 +1532,14 @@ F close(f:File) {
 	ret < 0 throws FileIOFail(f.name, get_c_errno(), "Failed to close the file $f")
 }
 
+doc fetch() and parse() the given file
 F read(filename:Str) {
 	data = fetch(filename)
 	parse(data, {'filename': filename})
 }
+
+doc read standard input and parse() it
+F read() read(0).parse({'source': 'stdin'})
 
 # --- Redir ---
 
@@ -2339,3 +2349,6 @@ TEST try compile("xyz(", "something") catch(e:CompileFail) true
 TEST try 1(2, 3) catch(e:DontKnowHowToCall) true
 TEST type T; try echo(T(), T()) catch(e:ImplNotFound) true
 TEST try F f() f(); try f() catch(e:StackDepthFail) true
+
+# === Partial application tests ==================
+TEST [{"val": 10, "flag": false}, {"val": 20, "flag": true}].filter(X.flag).val == [20]
