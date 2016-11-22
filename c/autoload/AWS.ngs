@@ -7,6 +7,7 @@
 
 	# From https://wiki.debian.org/Cloud/AmazonEC2Image/Jessie
 	AWS_AMI_OWNER_DEBIAN = '379101102735'
+	AWS_AMI_OWNER_AMAZON = '801119661308'
 
 	# TODO: separate validation just on ancor so it could be used for find()
 	#       currently validate() can only be used for converge() because it
@@ -19,7 +20,13 @@
 	F stdlib_aws_tags(h:Hash) h / "Key=$X,Value=$Y"
 
 	F stdlib_aws_filters(h:Hash) {
-		ret = h / "Name=$X,Values=$Y"
+		hh = h.mapv(F(v) {
+			econd {
+				v is Pfx "${v.val}*"
+				true v
+			}
+		})
+		ret = hh / "Name=$X,Values=$Y"
 		ret returns ['--filters'] + ret
 		[]
 	}
@@ -293,7 +300,7 @@
 			state available
 			virtualization-type hvm
 		}
-		if try rd.ancor.Name is Str {
+		if (try rd.ancor.Name is Str) or (try rd.ancor.Name is Pfx) {
 			filters.name = rd.ancor.Name
 		}
 		if try rd.ancor.State is Str {
@@ -307,6 +314,7 @@
 			resources .= filter({A.Name ~ rd.ancor.Name})
 		}
 		rd.resources = resources / AwsImageRes(rd, X)
+		rd.log('find', "found ${resources.len()} ${rd.typeof().name} resources")
 		rd
 	}
 
@@ -315,7 +323,7 @@
 			rd.find()
 		}
 		assert(rd.resources.len() >= 1, "Can not find latest() image because there are no images")
-		rd.resources = [rd.resources.sort({ A.props.CreationDate })[-1]]
+		rd.resources = [rd.resources.sort({ A.props.CreationDate <= B.props.CreationDate })[-1]]
 		rd
 	}
 

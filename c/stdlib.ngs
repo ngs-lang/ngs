@@ -1342,10 +1342,8 @@ F die(s:Str) {
 
 { type Path }
 
-F Path(s:Str) {
-	p = Path()
+F init(p:Path, s:Str) {
 	p.path = s
-	p
 }
 
 F Bool(p:Path) c_access(p.path, C_F_OK) == 0
@@ -1370,11 +1368,34 @@ F find_in_path(executable_name:Str) {
 
 F Str(p:Path) p.path
 
+# TODO: generic field-by-field objects comparison
+F ==(a:Path, b:Path) a.path == b.path
+
 STDLIB_PATH_SEP = '/'
 
 F /(a:Str, b:Str) "$a$STDLIB_PATH_SEP$b"
 
 F /(a:Path, b:Path) Path(a.path / b.path)
+
+{ type DirFail(CException) }
+
+F dir(dirname) collector dir(dirname, collect)
+
+F dir(dirname:Str, cb:Fun, *args) {
+	d = c_opendir(dirname)
+	d is Null throws DirFail('Failed to list directory contents').set('dir', dirname)
+	finally({
+		while entry = c_readdir(d) {
+			cb(Path(entry.d_name))
+		}
+	}, {
+		r = c_closedir(d)
+		r != 0 throws DirFail('Failed to close directory after listing').set('dir', dirname)
+	})
+}
+
+# XXX: might not be correct on all platforms
+TEST dir("/").path.has("var")
 
 # === Commands and processes (WIP) ===============
 

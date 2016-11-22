@@ -127,7 +127,7 @@ static void _dump(VALUE v, int level) {
 	}
 
 	if(IS_CSYM(v)) {
-		printf("%*s* C symbol (name and libraray follow) ptr=%p\n", level << 1, "", OBJ_DATA_PTR(v));
+		printf("%*s* C symbol (name and library follow) ptr=%p\n", level << 1, "", OBJ_DATA_PTR(v));
 		_dump(CSYM_OBJECT_NAME(v), level + 1);
 		_dump(CSYM_OBJECT_LIB(v), level + 1);
 		goto exit;
@@ -759,6 +759,7 @@ void dump_titled(char *title, VALUE v) {
 }
 
 // XXX is it safe?
+// XXX not binary safe, check and fix all call sites
 char *obj_to_cstring(VALUE v) {
 	char *ret;
 	assert(IS_STRING(v));
@@ -1009,6 +1010,15 @@ VALUE make_ffi_cif() {
 	tmp = NGS_MALLOC(sizeof(*tmp));
 	tmp->base.type.num = T_FFI_CIF;
 	SET_OBJ(v, tmp);
+	return v;
+}
+
+VALUE make_DIR() {
+	VALUE v;
+	DIR_OBJECT *tmp = NGS_MALLOC(sizeof(*tmp));
+	tmp->base.type.num = T_DIR;
+	SET_OBJ(v, tmp);
+	DIR_OBJECT_DIR(v) = NULL;
 	return v;
 }
 

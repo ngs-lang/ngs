@@ -3,6 +3,7 @@
 #define OBJ_H
 #include <stdint.h>
 #include <stddef.h>
+#include <dirent.h>
 #include <ffi.h>
 #include <pcre.h>
 
@@ -152,6 +153,13 @@ typedef struct {
 	ffi_cif val;
 } FFI_CIF_OBJECT;
 
+typedef struct {
+	OBJECT base;
+	DIR *dir;
+} DIR_OBJECT;
+
+// *** Add new ..._OBJECT typedefs above this line ***
+
 // malloc() / NGS_MALLOC() memory is 8 bytes aligned, should be at least 4 bytes aligned
 // ...... 00 - *OBJECT
 // ...... 01 - int number
@@ -224,6 +232,8 @@ typedef enum {
 	T_FFI_TYPE      = (14 << 8) + T_OBJ,
 	T_FFI_CIF       = (15 << 8) + T_OBJ,
 	T_REGEXP        = (16 << 8) + T_OBJ,
+	T_DIR           = (17 << 8) + T_OBJ,
+	// *** Add new T_ itmes above this line ***
 } IMMEDIATE_TYPE;
 
 // TODO: handle situation when n is wider than size_t - TAG_BITS bits
@@ -313,6 +323,8 @@ typedef enum {
 #define IS_FFI_TYPE(v)            ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_FFI_TYPE)
 #define IS_FFI_CIF(v)             ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_FFI_CIF)
 #define IS_REGEXP(v)              ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_REGEXP)
+#define IS_DIR(v)                 ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_DIR)
+// *** Add new IS_... macros above this line ***
 #define ARRAY_ITEMS(v)            ((VALUE *)(OBJ_DATA_PTR(v)))
 #define HASH_BUCKETS_N(v)         (((HASH_OBJECT *)(v).ptr)->n_buckets)
 #define HASH_HEAD(v)              (((HASH_OBJECT *)(v).ptr)->head)
@@ -322,6 +334,7 @@ typedef enum {
 #define NORMAL_TYPE_INSTANCE_FIELDS(v)     OBJ_DATA(v)
 #define REAL_OBJECT_VAL(v)        (((REAL_OBJECT *) (v).ptr)->val)
 #define REGEXP_OBJECT_RE(v)       (((REGEXP_OBJECT *) (v).ptr)->re)
+#define DIR_OBJECT_DIR(v)         (((DIR_OBJECT *) (v).ptr)->dir)
 
 // Boolean 00001X10
 #define GET_INVERTED_BOOL(v)      ((VALUE){.num = (v).num ^= 4})
@@ -365,5 +378,7 @@ VALUE make_pthread_mutex();
 VALUE make_ffi_type(ffi_type *t);
 VALUE make_ffi_cif();
 VALUE make_regexp();
+VALUE make_DIR();
+// *** Add new make_MYTPE(...) functions above this line ***
 
 #endif

@@ -24,6 +24,9 @@
 // BCMP(3)
 #include <strings.h>
 
+// DIR
+#include <dirent.h>
+
 #include <errno.h>
 
 #include <pcre.h>
@@ -1592,6 +1595,35 @@ METHOD_RESULT native_c_kill METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(kill(GET_INT(argv[0]), GET_INT(argv[1]))));
 }
 
+// TOOD: fdopendir() on supported platforms
+METHOD_RESULT native_c_opendir METHOD_PARAMS {
+	VALUE v;
+	DIR *d = opendir(obj_to_cstring(argv[0]));
+	if(!d) {
+		METHOD_RETURN(MAKE_NULL);
+	}
+	v = make_DIR();
+	DIR_OBJECT_DIR(v) = d;
+	METHOD_RETURN(v);
+}
+
+METHOD_RESULT native_c_readdir METHOD_PARAMS {
+	VALUE ret;
+	struct dirent *e;
+	e = readdir(DIR_OBJECT_DIR(argv[0]));
+	if(!e) {
+		METHOD_RETURN(MAKE_NULL);
+	}
+	ret = make_hash(4);
+	set_hash_key(ret, make_string("d_ino"), MAKE_INT(e->d_ino));
+	set_hash_key(ret, make_string("d_name"), make_string(e->d_name));
+	METHOD_RETURN(ret);
+}
+
+METHOD_RESULT native_c_closedir METHOD_PARAMS {
+	METHOD_RETURN(MAKE_INT(closedir(DIR_OBJECT_DIR(argv[0]))));
+}
+
 
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
@@ -1738,6 +1770,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MK_BUILTIN_TYPE(c_ffi_type, T_FFI_TYPE);
 	MK_BUILTIN_TYPE(c_ffi_cif, T_FFI_CIF);
 	MK_BUILTIN_TYPE(RegExp, T_REGEXP);
+	MK_BUILTIN_TYPE(C_DIR, T_DIR);
+
+	// *** Add new MKTYPE / MKSUBTYPE above this line ***
+
 #undef MK_BUILTIN_TYPE
 
 #define MKTYPE(name) \
@@ -1905,6 +1941,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
 	_doc(vm, "whence", "One of: set, cur, end");
 	register_global_func(vm, 0, "c_isatty", &native_c_isatty,           1,"fd",       vm->Int);
+	register_global_func(vm, 0, "c_opendir", &native_c_opendir,         1,"name",     vm->Str);
+	register_global_func(vm, 0, "c_readdir", &native_c_readdir,         1,"dirp",     vm->C_DIR);
+	register_global_func(vm, 0, "c_closedir",&native_c_closedir,        1,"dirp",     vm->C_DIR);
 
 	// low level misc
 	register_global_func(vm, 0, "c_access", &native_c_access,          2, "pathname", vm->Str, "mode", vm->Int);

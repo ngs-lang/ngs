@@ -185,6 +185,10 @@ typedef struct {
 	NGS_TYPE *c_ffi_type;
 	NGS_TYPE *c_ffi_cif;
 
+	NGS_TYPE *C_DIR;
+
+	// *** Add new NGS_TYPE *MyType above this line ***
+
 	VALUE Exception;
 		VALUE Error;
 			VALUE InternalError;
