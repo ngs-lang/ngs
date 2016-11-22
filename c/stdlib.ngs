@@ -2370,6 +2370,8 @@ TEST try compile("xyz(", "something") catch(e:CompileFail) true
 TEST try 1(2, 3) catch(e:DontKnowHowToCall) true
 TEST type T; try echo(T(), T()) catch(e:ImplNotFound) true
 TEST try F f() f(); try f() catch(e:StackDepthFail) true
+TEST try [].pop() catch(e:EmptyArrayFail) true
+TEST try [].shift() catch(e:EmptyArrayFail) true
 
 # === Partial application tests ==================
 TEST [{"val": 10, "flag": false}, {"val": 20, "flag": true}].filter(X.flag).val == [20]

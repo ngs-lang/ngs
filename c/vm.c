@@ -278,9 +278,8 @@ METHOD_RESULT native_push_arr_any METHOD_PARAMS { array_push(argv[0], argv[1]); 
 METHOD_RESULT native_pop_arr EXT_METHOD_PARAMS {
 	if(!OBJ_LEN(argv[0])) {
 		VALUE e;
-		e = make_normal_type_instance(vm->IndexNotFound);
-		set_normal_type_instance_attribute(e, make_string("container"), argv[0]);
-		set_normal_type_instance_attribute(e, make_string("key"), make_string("<last element in the array>"));
+		e = make_normal_type_instance(vm->EmptyArrayFail);
+		set_normal_type_instance_attribute(e, make_string("message"), make_string("pop(arr:Arr) failed because of empty array"));
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	*result = ARRAY_ITEMS(argv[0])[OBJ_LEN(argv[0])-1];
@@ -288,7 +287,15 @@ METHOD_RESULT native_pop_arr EXT_METHOD_PARAMS {
 	return METHOD_OK;
 }
 
-METHOD_RESULT native_shift_arr METHOD_PARAMS { METHOD_RETURN(array_shift(argv[0])); }
+METHOD_RESULT native_shift_arr EXT_METHOD_PARAMS {
+	if(!OBJ_LEN(argv[0])) {
+		VALUE e;
+		e = make_normal_type_instance(vm->EmptyArrayFail);
+		set_normal_type_instance_attribute(e, make_string("message"), make_string("shift(arr:Arr) failed because of empty array"));
+		THROW_EXCEPTION_INSTANCE(e);
+	}
+	METHOD_RETURN(array_shift(argv[0]));
+}
 
 METHOD_RESULT native_shift_arr_any METHOD_PARAMS {
 	if(!OBJ_LEN(argv[0])) {
@@ -1796,6 +1803,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 			MKSUBTYPE(LookupFail, Error);
 				MKSUBTYPE(KeyNotFound, LookupFail);
 				MKSUBTYPE(IndexNotFound, LookupFail);
+					MKSUBTYPE(EmptyArrayFail, IndexNotFound);
 				MKSUBTYPE(AttrNotFound, LookupFail);
 				MKSUBTYPE(GlobalNotFound, LookupFail);
 			MKSUBTYPE(UndefinedLocalVar, Exception);
@@ -1972,7 +1980,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "+",        &native_plus_arr_arr,            2, "a",   vm->Arr, "b", vm->Arr);
 	register_global_func(vm, 0, "push",     &native_push_arr_any,            2, "arr", vm->Arr, "v", vm->Any);
 	register_global_func(vm, 1, "pop",      &native_pop_arr,                 1, "arr", vm->Arr);
-	register_global_func(vm, 0, "shift",    &native_shift_arr,               1, "arr", vm->Arr);
+	register_global_func(vm, 1, "shift",    &native_shift_arr,               1, "arr", vm->Arr);
 	register_global_func(vm, 0, "shift",    &native_shift_arr_any,           2, "arr", vm->Arr, "dflt", vm->Any);
 	register_global_func(vm, 0, "len",      &native_len,                     1, "arr", vm->Arr);
 	register_global_func(vm, 0, "get",      &native_index_get_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
