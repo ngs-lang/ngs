@@ -1540,7 +1540,6 @@ METHOD_RESULT native_attr_regexp EXT_METHOD_PARAMS {
 		if(namecount <= 0) {
 			METHOD_RETURN(make_hash(0));
 		}
-		ret = make_array(namecount);
 
 		(void)pcre_fullinfo(
 			re,                       /* the compiled pattern */
@@ -1651,6 +1650,34 @@ METHOD_RESULT native_c_closedir EXT_METHOD_PARAMS {
 	}
 	METHOD_RETURN(MAKE_INT(ret));
 }
+
+#define ELT(value) *p = MAKE_INT(value); p++;
+METHOD_RESULT native_c_stat EXT_METHOD_PARAMS {
+	VALUE v;
+	VALUE *p;
+	struct stat buf;
+	int status;
+	(void) ctx;
+	status = stat(obj_to_cstring(argv[0]), &buf);
+	if(status != 0) {
+		METHOD_RETURN(MAKE_NULL);
+	}
+	v = make_normal_type_instance(vm->Stat);
+	OBJ_DATA(v) = make_array(10); // Make sure to update this number if you add more ELT()s. Also add SETUP_TYPE_FIELD(Stat, ..., ...) below
+	p = ARRAY_ITEMS(OBJ_DATA(v));
+	ELT(buf.st_dev);
+	ELT(buf.st_ino);
+	ELT(buf.st_mode);
+	ELT(buf.st_nlink);
+	ELT(buf.st_uid);
+	ELT(buf.st_gid);
+	ELT(buf.st_rdev);
+	ELT(buf.st_size);
+	ELT(buf.st_blksize);
+	ELT(buf.st_blocks);
+	METHOD_RETURN(v);
+}
+#undef ELT
 
 
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
@@ -1814,9 +1841,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MKTYPE(name); \
 	add_normal_type_inheritance(name, parent);
 
+#define SETUP_TYPE_FIELD(name, field, idx) set_hash_key(NGS_TYPE_FIELDS(name), make_string(#field), MAKE_INT(idx));
 #define SETUP_RANGE_TYPE(name) \
-	set_hash_key(NGS_TYPE_FIELDS(name), make_string("start"), MAKE_INT(0)); \
-	set_hash_key(NGS_TYPE_FIELDS(name), make_string("end"), MAKE_INT(1));
+	SETUP_TYPE_FIELD(name, start, 0); \
+	SETUP_TYPE_FIELD(name, end, 1); \
+	SETUP_TYPE_FIELD(name, step, 2);
 
 	MKTYPE(Exception);
 		MKSUBTYPE(Error, Exception);
@@ -1859,7 +1888,20 @@ void vm_init(VM *vm, int argc, char **argv) {
 		MKSUBTYPE(ExclusiveRange, Range);
 		SETUP_RANGE_TYPE(ExclusiveRange);
 
+	MKTYPE(Stat);
+	SETUP_TYPE_FIELD(Stat, st_dev, 0);
+	SETUP_TYPE_FIELD(Stat, st_ino, 1);
+	SETUP_TYPE_FIELD(Stat, st_mode, 2);
+	SETUP_TYPE_FIELD(Stat, st_nlink, 3);
+	SETUP_TYPE_FIELD(Stat, st_uid, 4);
+	SETUP_TYPE_FIELD(Stat, st_gid, 5);
+	SETUP_TYPE_FIELD(Stat, st_rdev, 6);
+	SETUP_TYPE_FIELD(Stat, st_size, 7);
+	SETUP_TYPE_FIELD(Stat, st_blksize, 8);
+	SETUP_TYPE_FIELD(Stat, st_blocks, 9);
+
 #undef SETUP_RANGE_TYPE
+#undef SETUP_TYPE_FIELD
 #undef MKSUBTYPE
 #undef MKTYPE
 
@@ -1973,6 +2015,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_opendir", &native_c_opendir,         1,"name",     vm->Str);
 	register_global_func(vm, 1, "c_readdir", &native_c_readdir,         1,"dirp",     vm->C_DIR);
 	register_global_func(vm, 1, "c_closedir",&native_c_closedir,        1,"dirp",     vm->C_DIR);
+	register_global_func(vm, 1, "c_stat",    &native_c_stat,            1,"pathname", vm->Str);
 
 	// low level misc
 	register_global_func(vm, 0, "c_access", &native_c_access,          2, "pathname", vm->Str, "mode", vm->Int);

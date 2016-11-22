@@ -1382,14 +1382,14 @@ F dir(dirname) collector dir(dirname, collect)
 
 F dir(dirname:Str, cb:Fun, *args) {
 	d = c_opendir(dirname)
-	d is Null throws DirFail('Failed to list directory contents').set('dir', dirname)
+	d is Null throws DirFail('Failed to list directory contents').set('dirname', dirname)
 	finally({
 		while entry = c_readdir(d) {
 			cb(Path(entry.d_name))
 		}
 	}, {
 		r = c_closedir(d)
-		r != 0 throws DirFail('Failed to close directory after listing').set('dir', dirname)
+		r != 0 throws DirFail('Failed to close directory after listing').set('dirname', dirname)
 	})
 }
 

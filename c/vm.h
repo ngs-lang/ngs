@@ -222,6 +222,8 @@ typedef struct {
 		VALUE InclusiveRange;
 		VALUE ExclusiveRange;
 
+	VALUE Stat;
+
 	VALUE impl_not_found_handler;
 	VALUE global_not_found_handler;
 	VALUE init;
