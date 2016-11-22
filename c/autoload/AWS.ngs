@@ -152,7 +152,7 @@
 		AwsResFindCommand(%[aws ec2 describe-vpcs], true)
 	}
 
-	F ids(rd:AwsVpc) rd.resources.props.VpcId
+	F id(r:AwsVpcRes) r.props.VpcId
 
 	F Str(r:AwsVpc) {
 		t = if r.resources is Null {
@@ -170,7 +170,8 @@
 	type AwsSecGroup(AwsResDef)
 	type AwsSecGroupRes(AwsRes)
 
-	F ids(rd:AwsSecGroup) rd.resources.props.GroupId
+	F id(r:AwsSecGroupRes) r.props.GroupId
+
 	F users_ids(r:AwsSecGroup) r.resources / F(res) { {'GroupId': res.props.GroupId, 'UserId': res.props.OwnerId} }
 
 	F _get_res_type(rd:AwsSecGroup) AwsSecGroupRes
@@ -207,8 +208,6 @@
 		guard vpc_id(rd) is Null
 		[]
 	}
-
-	F id(sg:AwsSecGroupRes) sg.props.GroupId
 
 	F find(rd:AwsSecGroup) {
 		rd.log('find', 'SG')
@@ -278,7 +277,7 @@
 	type AwsSubnet(AwsResDef)
 	type AwsSubnetRes(AwsRes)
 
-	F ids(rd:AwsSubnet) rd.resources.props.SubnetId
+	F id(r:AwsSubnetRes) r.props.SubnetId
 
 	F _get_res_type(rd:AwsSubnet) AwsSubnetRes
 
@@ -327,7 +326,7 @@
 		rd
 	}
 
-	F ids(rd:AwsImage) rd.resources.props.ImageId
+	F id(r:AwsImageRes) r.props.ImageId
 
 
 	# --------------------------------------------------
@@ -390,7 +389,7 @@
 		rd
 	}
 
-	F ids(rd:AwsInstance) rd.resources.props.InstanceId
+	F id(r:AwsInstanceRes) r.props.InstanceId
 
 	# TODO: Support multiple NICs?
 	F create(rd:AwsInstance) {

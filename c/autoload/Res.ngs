@@ -76,7 +76,7 @@
 		r.resources % update
 	}
 
-	F ids(r:Res) r.resources.map(id)
+	F ids(r:ResDef) r.resources.map(id)
 
 }
 

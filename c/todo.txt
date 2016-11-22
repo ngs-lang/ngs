@@ -52,8 +52,6 @@ Note that this started as internal document so things here are unformed, not fin
 	* Make each(), filter() and friends be able to work on endless lists
 	* ==(a:NormalType, b:NormalType)
 	* ngs: obj.c:626: array_shift: Assertion `OBJ_LEN(arr)' failed.
-	* AWS resources id()
-
 
 [roadmap]
 
