@@ -156,6 +156,7 @@ typedef struct {
 typedef struct {
 	OBJECT base;
 	DIR *dir;
+	int_fast8_t is_open;
 } DIR_OBJECT;
 
 // *** Add new ..._OBJECT typedefs above this line ***
@@ -335,6 +336,7 @@ typedef enum {
 #define REAL_OBJECT_VAL(v)        (((REAL_OBJECT *) (v).ptr)->val)
 #define REGEXP_OBJECT_RE(v)       (((REGEXP_OBJECT *) (v).ptr)->re)
 #define DIR_OBJECT_DIR(v)         (((DIR_OBJECT *) (v).ptr)->dir)
+#define DIR_OBJECT_IS_OPEN(v)     (((DIR_OBJECT *) (v).ptr)->is_open)
 
 // Boolean 00001X10
 #define GET_INVERTED_BOOL(v)      ((VALUE){.num = (v).num ^= 4})

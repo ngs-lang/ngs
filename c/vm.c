@@ -1611,12 +1611,21 @@ METHOD_RESULT native_c_opendir METHOD_PARAMS {
 	}
 	v = make_DIR();
 	DIR_OBJECT_DIR(v) = d;
+	DIR_OBJECT_IS_OPEN(v) = 1;
 	METHOD_RETURN(v);
 }
 
-METHOD_RESULT native_c_readdir METHOD_PARAMS {
+// TODO: Special exception type
+METHOD_RESULT native_c_readdir EXT_METHOD_PARAMS {
 	VALUE ret;
 	struct dirent *e;
+	if(!DIR_OBJECT_IS_OPEN(argv[0])) {
+		VALUE e;
+		e = make_normal_type_instance(vm->InvalidArgument);
+		set_normal_type_instance_attribute(e, make_string("message"), make_string("Tried to c_readdir() on closed directory"));
+		set_normal_type_instance_attribute(e, make_string("dirp"), argv[0]);
+		THROW_EXCEPTION_INSTANCE(e);
+	}
 	e = readdir(DIR_OBJECT_DIR(argv[0]));
 	if(!e) {
 		METHOD_RETURN(MAKE_NULL);
@@ -1627,8 +1636,20 @@ METHOD_RESULT native_c_readdir METHOD_PARAMS {
 	METHOD_RETURN(ret);
 }
 
-METHOD_RESULT native_c_closedir METHOD_PARAMS {
-	METHOD_RETURN(MAKE_INT(closedir(DIR_OBJECT_DIR(argv[0]))));
+// TODO: Special exception type
+METHOD_RESULT native_c_closedir EXT_METHOD_PARAMS {
+	if(!DIR_OBJECT_IS_OPEN(argv[0])) {
+		VALUE e;
+		e = make_normal_type_instance(vm->InvalidArgument);
+		set_normal_type_instance_attribute(e, make_string("message"), make_string("Tried to c_closedir() on closed directory"));
+		set_normal_type_instance_attribute(e, make_string("dirp"), argv[0]);
+		THROW_EXCEPTION_INSTANCE(e);
+	}
+	int ret = closedir(DIR_OBJECT_DIR(argv[0]));
+	if(ret == 0) {
+		DIR_OBJECT_IS_OPEN(argv[0]) = 0;
+	}
+	METHOD_RETURN(MAKE_INT(ret));
 }
 
 
@@ -1950,8 +1971,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "whence", "One of: set, cur, end");
 	register_global_func(vm, 0, "c_isatty", &native_c_isatty,           1,"fd",       vm->Int);
 	register_global_func(vm, 0, "c_opendir", &native_c_opendir,         1,"name",     vm->Str);
-	register_global_func(vm, 0, "c_readdir", &native_c_readdir,         1,"dirp",     vm->C_DIR);
-	register_global_func(vm, 0, "c_closedir",&native_c_closedir,        1,"dirp",     vm->C_DIR);
+	register_global_func(vm, 1, "c_readdir", &native_c_readdir,         1,"dirp",     vm->C_DIR);
+	register_global_func(vm, 1, "c_closedir",&native_c_closedir,        1,"dirp",     vm->C_DIR);
 
 	// low level misc
 	register_global_func(vm, 0, "c_access", &native_c_access,          2, "pathname", vm->Str, "mode", vm->Int);
