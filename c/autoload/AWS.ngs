@@ -9,7 +9,7 @@
 	AWS_AMI_OWNER_DEBIAN = '379101102735'
 	AWS_AMI_OWNER_AMAZON = '801119661308'
 
-	# TODO: separate validation just on ancor so it could be used for find()
+	# TODO: separate validation just on anchor so it could be used for find()
 	#       currently validate() can only be used for converge() because it
 	#       check properties.
 
@@ -50,12 +50,12 @@
 	}
 
 	# --------------------------------------------------
-	# AwsAncor
+	# AwsAnchor
 	# --------------------------------------------------
 
-	type AwsAncor(Props)
+	type AwsAnchor(Props)
 
-	F init(a:AwsAncor, **kw)  {
+	F init(a:AwsAnchor, **kw)  {
 		a.super(**kw)
 		a.dflt('regions', null)
 		a.dflt('tags', {})
@@ -84,9 +84,9 @@
 			return null
 		}
 		target_tags = r.def.props.Tags
-		if r.def.ancor is AwsAncor {
-			# Definition props tags override ancor tags
-			target_tags = r.def.ancor.tags + target_tags
+		if r.def.anchor is AwsAnchor {
+			# Definition props tags override anchor tags
+			target_tags = r.def.anchor.tags + target_tags
 		}
 		current_tags = r.props.get('Tags', {})
 		r.def.log('update_tags/info', "Current tags: $current_tags. Target tags: $target_tags")
@@ -121,7 +121,7 @@
 		cmd = _get_find_command(rd)
 		c = cmd.cmd
 		filters = if cmd.supports_filters {
-			['--filters', *(rd.ancor / "Name=tag-key,Values=$X,Name=tag-value,Values=$Y")]
+			['--filters', *(rd.anchor / "Name=tag-key,Values=$X,Name=tag-value,Values=$Y")]
 		} else {
 			[]
 		}
@@ -160,7 +160,7 @@
 		} else {
 			" ${r.ids().join(',')}"
 		}
-		"<AwsVpc$t ancor=${r.ancor}>"
+		"<AwsVpc$t anchor=${r.anchor}>"
 	}
 
 	# --------------------------------------------------
@@ -180,18 +180,18 @@
 	}
 
 	F validate(rd:AwsSecGroup) {
-		(rd.ancor is not Arr) throws
-			InvalidArgument("AwsSecGroup's ancor must be an array")
+		(rd.anchor is not Arr) throws
+			InvalidArgument("AwsSecGroup's anchor must be an array")
 		('Description' not in rd.props) throws
 			InvalidArgument("AwsSecGroup must have the 'description' property")
 	}
 
-	F vpc_id(rd:AwsSecGroup) rd.ancor[1]
+	F vpc_id(rd:AwsSecGroup) rd.anchor[1]
 
 	F vpc_id(rd:AwsSecGroup) {
-		guard rd.ancor[1] is AwsResDef
-		assert(rd.ancor[1].len() == 1, "AwsSecGroup expects exactly one vpc-id but passed resource ${rd.ancor[1]} has zero or more than one")
-		rd.ancor[1].ids()[0]
+		guard rd.anchor[1] is AwsResDef
+		assert(rd.anchor[1].len() == 1, "AwsSecGroup expects exactly one vpc-id but passed resource ${rd.anchor[1]} has zero or more than one")
+		rd.anchor[1].ids()[0]
 	}
 
 	F vpc_id_args(rd:AwsSecGroup) ['--vpc-id', vpc_id(rd)]
@@ -214,7 +214,7 @@
 		rd.log('find', 'SG')
 		# XXX: check with default VPC / EC2 classic
 		# Can not use --group-names as it will assume default VPC / EC2 classic
-		resources = ``aws ec2 describe-security-groups $*{vpc_id_filter(rd)}``.filter(F(sg) sg.GroupName == rd.ancor[0])
+		resources = ``aws ec2 describe-security-groups $*{vpc_id_filter(rd)}``.filter(F(sg) sg.GroupName == rd.anchor[0])
 		assert(resources.len() <= 1, "Can only work with one security group at a time")
 		known_props = %[GroupName GroupId OwnerId Description IpPermissions IpPermissionsEgress Tags]
 		resources .= map(F(res) {
@@ -248,7 +248,7 @@
 
 	F create(rd:AwsSecGroup) {
 		rd.log('create', 'SG')
-		rd.run('create SG', %(aws ec2 create-security-group --group-name ${rd.ancor[0]} --description ${rd.props.Description} $*{vpc_id_args(rd)}))
+		rd.run('create SG', %(aws ec2 create-security-group --group-name ${rd.anchor[0]} --description ${rd.props.Description} $*{vpc_id_args(rd)}))
 		if not(rd.dry_run) {
 			rd.find()
 		}
@@ -295,23 +295,23 @@
 
 	# debian-jessie-amd64-hvm
 	F find(rd:AwsImage) {
-		owners = ['--owners', rd.ancor.OwnerId] tor []
+		owners = ['--owners', rd.anchor.OwnerId] tor []
 		filters = %{
 			state available
 			virtualization-type hvm
 		}
-		if (try rd.ancor.Name is Str) or (try rd.ancor.Name is Pfx) {
-			filters.name = rd.ancor.Name
+		if (try rd.anchor.Name is Str) or (try rd.anchor.Name is Pfx) {
+			filters.name = rd.anchor.Name
 		}
-		if try rd.ancor.State is Str {
-			filters.state = rd.ancor.State
+		if try rd.anchor.State is Str {
+			filters.state = rd.anchor.State
 		}
-		try filters['root-device-type'] = rd.ancor.RootDeviceType
-		try filters['block-device-mapping.volume-type'] = rd.ancor.VolumeType
+		try filters['root-device-type'] = rd.anchor.RootDeviceType
+		try filters['block-device-mapping.volume-type'] = rd.anchor.VolumeType
 		filters .= stdlib_aws_filters()
 		resources = ``aws ec2 describe-images $*owners $*filters``
-		if 'Name' in rd.ancor {
-			resources .= filter({A.Name ~ rd.ancor.Name})
+		if 'Name' in rd.anchor {
+			resources .= filter({A.Name ~ rd.anchor.Name})
 		}
 		rd.resources = resources / AwsImageRes(rd, X)
 		rd.log('find', "found ${resources.len()} ${rd.typeof().name} resources")
@@ -337,36 +337,36 @@
 	type AwsInstance(AwsResDef)
 	type AwsInstanceRes(AwsRes)
 
-	F stdlib_aws_instance_ancor(rd:AwsInstance) {
-		ancor = econd {
-			rd.ancor is AwsAncor { rd.ancor }
-			rd.ancor is Hash     { AwsAncor(tags=rd.ancor) }
+	F stdlib_aws_instance_anchor(rd:AwsInstance) {
+		anchor = econd {
+			rd.anchor is AwsAnchor { rd.anchor }
+			rd.anchor is Hash     { AwsAnchor(tags=rd.anchor) }
 		}
-		ancor
+		anchor
 	}
 
-	# TODO: setting rd.ancor is wrong, should be in some other place
+	# TODO: setting rd.anchor is wrong, should be in some other place
 	F validate(rd:AwsInstance) {
-		rd.ancor = rd.stdlib_aws_instance_ancor();
+		rd.anchor = rd.stdlib_aws_instance_anchor();
 		%[ImageId].each(F(prop_name) {
-			prop_name not in rd.ancor throws InvalidArgument("Ancor must contain $prop_name")
+			prop_name not in rd.anchor throws InvalidArgument("Anchor must contain $prop_name")
 		})
 	}
 
 	F find(rd:AwsInstance) {
 		# XXX: invalid code because misses straightening
-		ancor = rd.stdlib_aws_instance_ancor()
+		anchor = rd.stdlib_aws_instance_anchor()
 
 		filters = ['--filters', 'Name=instance-state-name,Values=running']
 
-		if ancor.tags {
-			filters += ancor.tags / "Name=tag-key,Values=$X,Name=tag-value,Values=$Y"
+		if anchor.tags {
+			filters += anchor.tags / "Name=tag-key,Values=$X,Name=tag-value,Values=$Y"
 		}
 		debug("Filters: $filters")
 
 		regions = cond {
-			ancor.regions is Arr { ancor.regions }
-			ancor.regions == '*' { aws_regions() }
+			anchor.regions is Arr { anchor.regions }
+			anchor.regions == '*' { aws_regions() }
 		}
 
 		resources = if regions {
@@ -437,7 +437,7 @@
 	F id(instance:AwsInstanceRes) instance.props.InstanceId
 
 	# TODO: Support EC2 classic?
-	# TODO: Handle SGS in Ancor?
+	# TODO: Handle SGS in Anchor?
 	F _sgs(rd:AwsInstance) {
 		if 'SecurityGroups' in rd.props {
 			ret = rd.props.SecurityGroups
@@ -450,14 +450,14 @@
 	}
 
 	F _image_id(rd:AwsInstance) {
-		guard rd.ancor.ImageId is AwsImage
-		assert(rd.ancor.ImageId.resources.len() == 1, "Expecting exacty one image described by AwsImage resource defeinition")
-		rd.ancor.ImageId.ids()[0]
+		guard rd.anchor.ImageId is AwsImage
+		assert(rd.anchor.ImageId.resources.len() == 1, "Expecting exacty one image described by AwsImage resource defeinition")
+		rd.anchor.ImageId.ids()[0]
 	}
 
 	F _image_id(rd:AwsInstance) {
-		guard rd.ancor.ImageId is Str
-		rd.ancor.ImageId
+		guard rd.anchor.ImageId is Str
+		rd.anchor.ImageId
 	}
 
 	# --------------------------------------------------
@@ -470,7 +470,7 @@
 	F ids(rd:AwsElb) throw NotImplemented("ids() method for AwsElb is not implemented")
 
 	F validate(rd:AwsElb) {
-		rd.ancor is not Str throws InvalidArgument("AwsElb is the ELB name and must be a string, not ${rd.ancor}")
+		rd.anchor is not Str throws InvalidArgument("AwsElb is the ELB name and must be a string, not ${rd.anchor}")
 		rd.count > 1 throws InvalidArgument("AwsElb can only handle one instance at a time while desired count is ${rd.count}")
 		'ListenerDescriptions' not in rd.props throws InvalidArgument("AwsElb must have 'listeners' property")
 
@@ -480,7 +480,7 @@
 
 	F find(rd:AwsElb) {
 		rd.log('find', "ELB")
-		resources = ``aws elb describe-load-balancers``.filter(F(desc) desc.LoadBalancerName == rd.ancor)
+		resources = ``aws elb describe-load-balancers``.filter(F(desc) desc.LoadBalancerName == rd.anchor)
 		assert(resources.len() <= 1, "Can only work with one load balancer at a time")
 		known_props = %[LoadBalancerName AvailabilityZones SecurityGroups ListenerDescriptions Subnets Scheme HealthCheck Instances]
 		rd.resources = resources.map(F(props) {
@@ -488,7 +488,7 @@
 			ret.Instances = props.Instances.InstanceId
 			# TODO: make it lazy
 			rd.log('find', "ELB tags")
-			ret.Tags = ``aws elb describe-tags --load-balancer-names ${rd.ancor}``[0].Tags
+			ret.Tags = ``aws elb describe-tags --load-balancer-names ${rd.anchor}``[0].Tags
 			AwsElbRes(rd, ret)
 		})
 		rd
@@ -503,7 +503,7 @@
 		if subnets {
 			subnets = ['--subnets', *subnets]
 		}
-		rd.run('create ELB', %(aws elb create-load-balancer --load-balancer-name ${rd.ancor} --listeners ${rd.props.ListenerDescriptions.encode_json()} $*subnets))
+		rd.run('create ELB', %(aws elb create-load-balancer --load-balancer-name ${rd.anchor} --listeners ${rd.props.ListenerDescriptions.encode_json()} $*subnets))
 		if not(rd.dry_run) {
 			rd.find()
 		}
@@ -516,11 +516,11 @@
 		diff = cmp(elb.props.get('Tags', {}), elb.def.props.get('Tags', {}))
 
 		if (tags = stdlib_aws_tags(diff.add + diff.change)) {
-			elb.run('add ELB tags', %(aws elb add-tags --load-balancer-names ${elb.def.ancor} --tags $*tags))
+			elb.run('add ELB tags', %(aws elb add-tags --load-balancer-names ${elb.def.anchor} --tags $*tags))
 		}
 
 		if (tags = diff.remove) {
-			elb.run('remove ELB tags', %(aws elb remove-tags --load-balancer-names ${elb.def.ancor} --tags $*tags))
+			elb.run('remove ELB tags', %(aws elb remove-tags --load-balancer-names ${elb.def.anchor} --tags $*tags))
 		}
 
 		# Health check. Note: only updates given properties and keeps the rest as they were.
@@ -532,7 +532,7 @@
 				t = elb.props['HealthCheck'] + diff.change
 				elb.run(
 					'update ELB health check',
-					%(aws elb configure-health-check --load-balancer-name ${elb.def.ancor} --health-check ${t.encode_json()})
+					%(aws elb configure-health-check --load-balancer-name ${elb.def.anchor} --health-check ${t.encode_json()})
 				)
 			}
 		}
@@ -547,13 +547,13 @@
 			if diff.add {
 				elb.run(
 					'register instances with ELB',
-					%(aws elb register-instances-with-load-balancer --load-balancer-name ${elb.def.ancor} --instances $*{diff.add})
+					%(aws elb register-instances-with-load-balancer --load-balancer-name ${elb.def.anchor} --instances $*{diff.add})
 				)
 			}
 			if diff.remove {
 				elb.run(
 					'deregister instances from ELB',
-					%(aws elb deregister-instances-from-load-balancer --load-balancer-name ${elb.def.ancor} --instances $*{diff.remove})
+					%(aws elb deregister-instances-from-load-balancer --load-balancer-name ${elb.def.anchor} --instances $*{diff.remove})
 				)
 			}
 		}
@@ -568,7 +568,7 @@
 			if diff.add or diff.remove {
 				elb.run(
 					'update ELB SGs',
-					%(aws elb apply-security-groups-to-load-balancer --load-balancer-name ${elb.def.ancor} --security-groups $*{sgs})
+					%(aws elb apply-security-groups-to-load-balancer --load-balancer-name ${elb.def.anchor} --security-groups $*{sgs})
 				)
 			}
 		}
@@ -579,7 +579,7 @@
 	}
 
 	F delete(elb:AwsElb) {
-		elb.run('delete ELB', %(aws elb delete-load-balancer --load-balancer-name ${elb.ancor}))
+		elb.run('delete ELB', %(aws elb delete-load-balancer --load-balancer-name ${elb.anchor}))
 	}
 
 	# --------------------------------------------------
@@ -588,46 +588,46 @@
 
 	# http://docs.aws.amazon.com/cli/latest/reference/route53/change-resource-record-sets.html
 
-	# Ancor: [record_name, domain_name]. Most specific first to be unifrom with Subnet
+	# Anchor: [record_name, domain_name]. Most specific first to be unifrom with Subnet
 	# Maybe support array or *-style wildcard for record_name?
-	# Maybe support ancor hosted-zone-id in the future? Don't currently see how this could be useful.
+	# Maybe support anchor hosted-zone-id in the future? Don't currently see how this could be useful.
 
 	type AwsRecordSet(AwsResDef)
 	type AwsRecordSetRes(AwsRes)
 
 	F validate(rd:AwsRecordSet) {
 		%[Name ZoneName].each(F(prop_name) {
-			prop_name not in rd.ancor throws InvalidArgument("Ancor must contain $prop_name")
-			not(rd.ancor[prop_name] ~ Sfx('.')) throws InvalidArgument("$prop_name (${rd.ancor[prop_name]}) must end with a dot")
+			prop_name not in rd.anchor throws InvalidArgument("Anchor must contain $prop_name")
+			not(rd.anchor[prop_name] ~ Sfx('.')) throws InvalidArgument("$prop_name (${rd.anchor[prop_name]}) must end with a dot")
 		})
 		"todo"
 	}
 
 	F find(rd:AwsRecordSet) {
 		rd.log('find', 'RecordSet')
-		ancor = rd.ancor
-		zones = ``aws route53 list-hosted-zones-by-name --dns-name ${ancor.ZoneName} --max-items 1``
+		anchor = rd.anchor
+		zones = ``aws route53 list-hosted-zones-by-name --dns-name ${anchor.ZoneName} --max-items 1``
 
-		assert(zones.len() == 1 and zones[0].Name == ancor.ZoneName, "Zone ${ancor.ZoneName} not found when trying to create an AwsRecordSet in it")
+		assert(zones.len() == 1 and zones[0].Name == anchor.ZoneName, "Zone ${anchor.ZoneName} not found when trying to create an AwsRecordSet in it")
 		zone_id = zones[0].Id
 		rd.zone_id = zone_id
 
-		type_args = if 'Type' in ancor {
-			['--start-record-type', ancor.Type]
+		type_args = if 'Type' in anchor {
+			['--start-record-type', anchor.Type]
 		} else {
 			[]
 		}
 
-		rrs = ``aws route53 list-resource-record-sets --hosted-zone-id $zone_id --start-record-name ${ancor.Name} $*type_args``
+		rrs = ``aws route53 list-resource-record-sets --hosted-zone-id $zone_id --start-record-name ${anchor.Name} $*type_args``
 
-		rrs .= filter({A.Name == ancor.Name})
+		rrs .= filter({A.Name == anchor.Name})
 
-		if 'Type' in ancor {
-			rrs .= filter({A.Type == ancor.Type})
+		if 'Type' in anchor {
+			rrs .= filter({A.Type == anchor.Type})
 		}
 
-		if 'SetIdentifier' in ancor {
-			rrs .= filter({A.SetIdentifier == ancor.SetIdentifier})
+		if 'SetIdentifier' in anchor {
+			rrs .= filter({A.SetIdentifier == anchor.SetIdentifier})
 		}
 
 		rd.resources = rrs / AwsRecordSetRes(rd, X)
@@ -638,8 +638,8 @@
 		ret = {}
 		ret.update(rd.props)
 		%[Name Type SetIdentifier].each(F(prop) {
-			if prop in rd.ancor and prop not in ret {
-				ret[prop] = rd.ancor[prop]
+			if prop in rd.anchor and prop not in ret {
+				ret[prop] = rd.anchor[prop]
 			}
 		})
 		ret

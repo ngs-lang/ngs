@@ -7,7 +7,7 @@
 		rnf.def = rd
 	}
 
-	F init(rd:ResDef, ancor, props:Hash) {
+	F init(rd:ResDef, anchor, props:Hash) {
 		init(args())
 		rd.resources = null
 		META = rd.props.get('META', {})
@@ -27,17 +27,17 @@
 		throw Error("Programming error. find() was not run before len()")
 	}
 
-	F init(rd:ResDef, ancor) init(rd, ancor, {})
+	F init(rd:ResDef, anchor) init(rd, anchor, {})
 
 	F Str(rd:ResDef) {
 		props = rd.props.without('META')
 		multi = if rd.count != 1 then " x${rd.count}" else ""
 		dry_run = if rd.dry_run " (dry run)" else ""
-		"<${rd.typeof().name} ancor=${rd.ancor} props=$props$multi$dry_run resources:${rd.resources.len()}>"
+		"<${rd.typeof().name} anchor=${rd.anchor} props=$props$multi$dry_run resources:${rd.resources.len()}>"
 	}
 
 	F log(rd:ResDef, method:Str, s:Str) {
-		log("[${rd.typeof().name} ancor=${rd.ancor}] [$method] $s")
+		log("[${rd.typeof().name} anchor=${rd.anchor}] [$method] $s")
 	}
 
 	F expect(rd:ResDef, e:Int) {

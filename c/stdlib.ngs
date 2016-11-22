@@ -1286,7 +1286,7 @@ F ord(s:Str) {
 	ord(s, 0)
 }
 
-# EXPERIMENTAL. For use with AWS Ancors.
+# EXPERIMENTAL. For use with AWS Anchors.
 F ~(a:Str, b:Str) a==b
 
 F code(s:Str) {

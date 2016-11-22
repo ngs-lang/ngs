@@ -53,7 +53,6 @@ Note that this started as internal document so things here are unformed, not fin
 	* ==(a:NormalType, b:NormalType)
 	* ngs: obj.c:626: array_shift: Assertion `OBJ_LEN(arr)' failed.
 	* AWS resources id()
-	* Fix typo: Ancor -> Anchor
 
 
 [roadmap]
