@@ -50,7 +50,6 @@ Note that this started as internal document so things here are unformed, not fin
 	* Consider shortcut syntax for ARGV[n]
 		feels like less needed than ENV.MYVAR
 	* Make each(), filter() and friends be able to work on endless lists
-	* ==(a:NormalType, b:NormalType)
 
 [roadmap]
 
