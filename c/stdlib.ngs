@@ -65,12 +65,16 @@ F map(something, mapper:Fun, *args)
 	collector
 		something.each(F(elt) collect(mapper(elt, *args)))
 
-F filter(something, predicate:Fun, *args)
+F filter(something, matcher) something.filter((~), matcher)
+
+F filter(something, predicate:Fun, *args) {
+	guard predicate is not Type
 	collector
 		something.each(F(elt) {
 			if predicate(elt, *args)
 				collect(elt)
 		})
+}
 
 F filter(something) filter(something, (is not), Null)
 
@@ -226,6 +230,8 @@ F Type(t:Str, doc, parents:Arr) {
 }
 
 TEST type T1; type T2(T1); T2() is T1
+
+F ~(something, t:Type) something is t
 
 
 STDLIB_EXPOSE = {}
@@ -1342,10 +1348,63 @@ F die(s:Str) {
 
 # === Path =======================================
 
-{ type Path }
+{
+	type Path
+	type SocketFile(Path)  # S_IFSOCK
+	type Symlink(Path)     # S_IFLNK
+	type File(Path)        # S_IFREG
+	type BlockDevice(Path) # S_IFBLK
+	type Dir(Path)         # S_IFDIR
+	type CharDevice(Path)  # S_IFCHR
+	type FifoFile(Path)    # S_IFIFO
+
+	type StatFail(CException)
+
+}
+
+# TODO: reconsider naming
+STDLIB_FILE_TYPE = {
+	C_S_IFSOCK: SocketFile
+	C_S_IFLNK:  Symlink
+	C_S_IFREG:  File
+	C_S_IFBLK:  BlockDevice
+	C_S_IFDIR:  Dir
+	C_S_IFCHR:  CharDevice
+	C_S_IFIFO:  FifoFile
+}
+
+F stat(pathname:Str) {
+	ret = c_stat(pathname)
+	ret is Null throws StatFail("Failed to c_stat()").set('pathname', pathname)
+	ret
+}
+
+F stat(p:Path) super(p.path)
+
+# TODO: better name
+F specific(p:Path) {
+	s = stat(p)
+	file_type = s.st_mode.band(C_S_IFMT)
+	STDLIB_FILE_TYPE[file_type](p.path).set('stat', s)
+}
+
+
+F Path(s:Str, subtype=false) {
+	ret = Path()
+	ret.path = s
+	if subtype {
+		ret.specific()
+	} else {
+		ret
+	}
+}
 
 F init(p:Path, s:Str) {
 	p.path = s
+}
+
+F init(p:Path, other:Path) {
+	p.path = other.path
 }
 
 F Bool(p:Path) c_access(p.path, C_F_OK) == 0
@@ -1368,24 +1427,34 @@ F find_in_path(executable_name:Str) {
 	ret
 }
 
-F Str(p:Path) p.path
+F Str(p:Path) "<${p.typeof().name} path=${p.path}>"
 
 STDLIB_PATH_SEP = '/'
 
 F /(a:Str, b:Str) "$a$STDLIB_PATH_SEP$b"
 
+F /(a:Str, b:Str) {
+	guard a and (a[-1] == STDLIB_PATH_SEP)
+	"$a$b"
+}
+
+F /(a:Str, b:Str) {
+	guard (a == '.') or (a == './')
+	b
+}
+
 F /(a:Path, b:Path) Path(a.path / b.path)
 
 { type DirFail(CException) }
 
-F dir(dirname) collector dir(dirname, collect)
+F dir(dirname, subtype=false) collector dir(dirname, collect, subtype)
 
-F dir(dirname:Str, cb:Fun, *args) {
+F dir(dirname:Str, cb:Fun, subtype=false) {
 	d = c_opendir(dirname)
 	d is Null throws DirFail('Failed to list directory contents').set('dirname', dirname)
 	finally({
 		while entry = c_readdir(d) {
-			cb(Path(entry.d_name))
+			cb(Path(dirname / entry.d_name, subtype=subtype))
 		}
 	}, {
 		r = c_closedir(d)
@@ -1394,7 +1463,9 @@ F dir(dirname:Str, cb:Fun, *args) {
 }
 
 # XXX: might not be correct on all platforms
-TEST dir("/").path.has("var")
+TEST dir("/").path.has("/var")
+TEST dir("/").all({A.typeof().name == 'Path'})
+TEST dir("/", subtype=true).all({ (A is Path) and (A.typeof().name != 'Path') })
 
 # === Commands and processes (WIP) ===============
 
@@ -1512,9 +1583,7 @@ F parent_fd(p:Pipe) {
 
 F init(fail:FileIOFail, name:Str, errno:Int, message:Str) init(args())
 
-{ type File }
-
-F init(f:File, name:Str) {
+F init(f:File, path:Str) {
 	f.fd = null
 	init(args())
 }
@@ -1524,14 +1593,14 @@ F init(f:File, fd:Int) {
 	init(args())
 }
 
-F Str(f:File) "<File name=${f.name} fd=${f.fd}>"
+F Str(f:File) "<File path=${f.path} fd=${f.fd}>"
 
-TEST File('xy').Str() == '<File name=xy fd=null>'
+TEST File('xy').Str() == '<File path=xy fd=null>'
 
 F open(f:File, flags:Str) {
 	f.fd is not Null throws FileIOFail(null, "open(f:File, flags:Str): file is already open")
-	fd = c_open(f.name, flags)
-	fd <= 0 throws FileIOFail(f.name, get_c_errno(), "Failed to open the file ${f.name}")
+	fd = c_open(f.path, flags)
+	fd <= 0 throws FileIOFail(f.path, get_c_errno(), "Failed to open the file ${f.path}")
 	f.fd = fd
 	f
 }
@@ -1549,7 +1618,7 @@ F lines(f:File, cb:Fun, *args) {
 F close(f:File) {
 	f.fd is Null throws InvalidArgument("File is not open. close() expects an open file").set('file', f)
 	ret = c_close(f.fd)
-	ret < 0 throws FileIOFail(f.name, get_c_errno(), "Failed to close the file $f")
+	ret < 0 throws FileIOFail(f.path, get_c_errno(), "Failed to close the file $f")
 }
 
 doc fetch() and parse() the given file

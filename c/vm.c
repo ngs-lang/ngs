@@ -2161,17 +2161,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// awk '/^#define RTLD_/ {print "E("$2");"}' /usr/include/x86_64-linux-gnu/bits/dlfcn.h | xargs -n10
 	E(RTLD_LAZY); E(RTLD_NOW); E(RTLD_NOLOAD); E(RTLD_DEEPBIND); E(RTLD_GLOBAL); E(RTLD_LOCAL); E(RTLD_NODELETE);
 	// man access(2)
-	E(F_OK);
-	E(R_OK);
-	E(W_OK);
-	E(X_OK);
+	E(F_OK); E(R_OK); E(W_OK); E(X_OK);
 	// man poll(2);
-	E(POLLIN);
-	E(POLLPRI);
-	E(POLLOUT);
-	E(POLLERR);
-	E(POLLHUP);
-	E(POLLNVAL);
+	E(POLLIN); E(POLLPRI); E(POLLOUT); E(POLLERR); E(POLLHUP); E(POLLNVAL);
+	// man 2 stat
+	E(S_IFMT); E(S_IFSOCK); E(S_IFLNK); E(S_IFREG); E(S_IFBLK); E(S_IFDIR); E(S_IFCHR); E(S_IFIFO);
 
 	// awk '/^#define PCRE/ && $3 {print "E("$2");"}' /usr/include/pcre.h | grep -v 'PCRE_UCHAR\|PCRE_SPTR' | sort | xargs -n5
 	#pragma GCC diagnostic push

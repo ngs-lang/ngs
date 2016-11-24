@@ -22,7 +22,8 @@ syn keyword ngsType NotImplemented FetchFail RequreFail MainFail
 " other types
 syn keyword ngsType Any ArgvMatcher ArgvMatcherDecorator Arr ArrIter BasicType Bool Box CLib Closure Command Counter CSym EmptyBox ExclusiveRange ExecutableNotFound FFI FullBox Fun Hash InclusiveRange Int Iter KillFail KV NormalType NormalTypeInstance Null Path Pipe Process ProcessFail Range Real Seq Stats Str Table TableMeta TableMetaNotIfCol Type
 syn keyword ngsType AssertFail ArgsMismatch EmptyArrayFail Error Exception CompileFail DontKnowHowToCall GlobalNotFound ImplNotFound InternalError LookupFail KeyNotFound StackDepthFail
-syn keyword ngsType File FileIOFail
+syn keyword ngsType File SocketFile Symlink BlockDevice Dir CharDevice FifoFile
+syn keyword ngsType FileIOFail StatFail
 syn keyword ngsType Hook HookDecorator
 syn keyword ngsType IndexNotFound AttrNotFound InvalidParameter NoNext
 syn keyword ngsType InvalidArgument DivisionByZero
@@ -49,11 +50,11 @@ syn region  ngsString start=+"+ end=+"+ skip=+\\\\\|\\"+ contains=ngsSpecial
 syn match   ngsNumber "\<\d\+\>"
 
 " builtin functions
-syn keyword ngsFunction c_close c_execve c_exit c_fork c_lseek copy c_open c_pcre_compile c_pcre_exec c_read c_waitpid C_WEXITSTATUS C_WTERMSIG compile defined del dump echo encode_json get get_c_errno globals hash impl_not_found_handler in inherit is keys len load not decode_json pop push shift typeof values
+syn keyword ngsFunction c_access c_close c_closedir c_execve c_exit c_fork c_lseek copy c_open c_opendir c_stat c_pcre_compile c_pcre_exec c_read c_readdir c_waitpid C_WEXITSTATUS C_WTERMSIG compile defined del dump echo encode_json get get_c_errno globals hash impl_not_found_handler in inherit is keys len load not decode_json pop push shift typeof values
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction fetch main require to_exit_code
 " stdlib functions
-syn keyword ngsFunction acquire all any assert basename close close_reading_end close_writing_end cmp code compare count dflt dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error exit_hook expose debug die filter finally find_in_path first flatten group has identity in index indexes join kill len limit lines log map map_idx_val mapk mapv mapkv max merge_sorted min n next none open parse partial partial_tail peek pmap pos ptimes publish read release reverse set sort split starts_with status Strs subscribe sum uniq unshift update wait without write zip
+syn keyword ngsFunction acquire all any assert basename close close_reading_end close_writing_end cmp code compare count dflt dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error exit_hook expose debug die filter finally find_in_path first flatten group has identity in index indexes join kill len limit lines log map map_idx_val mapk mapv mapkv max merge_sorted min n next none open parse partial partial_tail peek pmap pos ptimes publish read release reverse set sort split starts_with stat status Strs subscribe sum uniq unshift update wait without write zip
 
 " resources types
 syn keyword ngsType Res ResDef ResNotFound
