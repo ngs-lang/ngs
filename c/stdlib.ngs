@@ -61,17 +61,20 @@ F set(obj, attr:Str, val) {
 	obj
 }
 
+# TODO: Some time make it Predicate, subtype of Fun
+F Pred(anything) F(x) x == anything
+F Pred(f:Fun) f
+F Pred(t:Type) F(x) x is t
+
 F map(something, mapper:Fun, *args)
 	collector
 		something.each(F(elt) collect(mapper(elt, *args)))
 
-F filter(something, matcher) something.filter((~), matcher)
-
-F filter(something, predicate:Fun, *args) {
-	guard predicate is not Type
+F filter(something, predicate, *args) {
+	p = Pred(predicate)
 	collector
 		something.each(F(elt) {
-			if predicate(elt, *args)
+			if p(elt, *args)
 				collect(elt)
 		})
 }
@@ -81,11 +84,12 @@ F filter(something) filter(something, (is not), Null)
 TEST [1,2,null,3].filter() == [1,2,3]
 
 doc EXPERIMENTAL! Do not use!
-F take_while(something, predicate:Fun, *args)
+F take_while(something, predicate, *args)
 	collector {
+		p = Pred(predicate)
 		r = Return()
 		something.each(F(elt) {
-			if predicate(elt, *args)
+			if p(elt, *args)
 				collect(elt)
 			else
 				throw r()
@@ -96,12 +100,13 @@ TEST [1,2,3,1,2].take_while(X<3) == [1,2]
 
 # Would look much better with an iterator of "something"
 doc EXPERIMENTAL! Do not use!
-F drop_while(something, predicate:Fun, *args)
+F drop_while(something, predicate, *args)
 	collector {
+		p = Pred(predicate)
 		found = false
 		something.each(F(elt) {
 			if found { collect(elt); return null; }
-			if not(predicate(elt, *args)) {
+			if not(p(elt, *args)) {
 				collect(elt)
 				found = true
 			}
@@ -509,10 +514,11 @@ TEST [1, 3] != [1, 2]
 TEST [1] != [1, 2]
 
 
-F any(arr:Arr, predicate:Fun, *args) {
+F any(arr:Arr, predicate, *args) {
+	p = Pred(predicate)
 	l = arr.len()
 	for(i;l)
-		predicate(arr[i], *args) returns true
+		p(arr[i], *args) returns true
 	false
 }
 
@@ -520,10 +526,11 @@ TEST [1,2,10].any(F(elt) elt > 5)
 TEST [1,2,3].any(F(elt) elt > 5).not()
 
 
-F all(arr:Arr, predicate:Fun, *args) {
+F all(arr:Arr, predicate, *args) {
+	p = Pred(predicate)
 	l = arr.len()
 	for(i;l)
-		not(predicate(arr[i], *args)) returns false
+		not(p(arr[i], *args)) returns false
 	true
 }
 
@@ -600,15 +607,11 @@ TEST [1,2,3] - [5,6,1] == [2,3]
 TEST [1,2,3] - [5,6,1,1,1,1,1,1,1,1,1,1,1,2] == [3]
 
 
-F count(arr:Arr, val) arr.count(X==val)
-
-TEST [1,2,1,3].count(1) == 2
-
-
-F count(arr:Arr, predicate:Fun, *args) {
+F count(arr:Arr, predicate, *args) {
+	p = Pred(predicate)
 	collector/0
 		arr.each(F(elt) {
-			if predicate(elt, *args)
+			if p(elt, *args)
 				collect(1)
 		})
 }
@@ -641,16 +644,18 @@ F first(arr:Arr) first(arr, identity)
 TEST [null, false, 10, 20].first() == 10
 
 
-F index(arr:Arr, predicate:Fun, *args) {
+F index(arr:Arr, predicate, *args) {
+	p = Pred(predicate)
 	l = arr.len()
 	for(i;l)
-		predicate(arr[i], *args) returns i
+		p(arr[i], *args) returns i
 	null
 }
 
-F indexes(arr:Arr, predicate:Fun, *args) {
+F indexes(arr:Arr, predicate, *args) {
+	p = Pred(predicate)
 	l = arr.len()
-	l.filter({ predicate(arr[A], *args) })
+	l.filter({ p(arr[A], *args) })
 }
 
 TEST [1,5,1,10].indexes(X>2) == [1,3]
@@ -953,32 +958,37 @@ F mapkv(h:Hash, mapper:Fun, *args)
 TEST mapkv({"a": 1}, {[A+"zz", B+10]}) == {"azz": 11}
 
 
-F filter(h:Hash, predicate:Fun, *args)
+F filter(h:Hash, predicate, *args) {
+	p = Pred(predicate)
 	collector/{}
 		h.each(F(k, v) {
-			if predicate(k, v, *args)
+			if p(k, v, *args)
 				collect(k, v)
 		})
+}
 
 TEST {'a': 1, 'b': 2}.filter(F(k, v, k_eq) k == k_eq, 'a') == {'a': 1}
 
-F all(h:Hash, predicate:Fun, *args) {
+F all(h:Hash, predicate, *args) {
+	p = Pred(predicate)
 	arr = h.keys()
 	l = arr.len()
 	for(i;l)
-		not(predicate(arr[i], h[arr[i]], *args)) returns false
+		not(p(arr[i], h[arr[i]], *args)) returns false
 	true
 }
 
 TEST {"x": 1, "y": 2}.all(F(k, v) v is Int)
 
 
-F count(h:Hash, predicate:Fun, *args)
+F count(h:Hash, predicate, *args) {
+	p = Pred(predicate)
 	collector/0
 		h.each(F(k, v) {
-			if predicate(k, v, *args)
+			if p(k, v, *args)
 				collect(1)
 		})
+}
 
 TEST {'a': 1, 'b': 2, 'c': 11}.count(F(k, v) v>10) == 1
 
@@ -2192,11 +2202,7 @@ F '[]'(s:Str, r:RegExp) {
 
 TEST "ab01de12f"[/[0-9]+/] == '01'
 
-# Something - eachable
-F filter(something, r:RegExp) {
-	guard all(something, is, Str)
-	something.filter((~), r)
-}
+F Pred(r:RegExp) F regexp_filter(x) x ~ r
 
 TEST %[w1 w2].filter(/1/) == %[w1]
 
