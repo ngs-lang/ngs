@@ -51,6 +51,7 @@ Note that this started as internal document so things here are unformed, not fin
 		feels like less needed than ENV.MYVAR
 	* Make each(), filter() and friends be able to work on endless lists
 	* Some read()s do not parse() - fix or rethink
+	* Bool(subtypes of Path)
 
 [roadmap]
 

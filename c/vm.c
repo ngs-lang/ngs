@@ -1652,31 +1652,36 @@ METHOD_RESULT native_c_closedir EXT_METHOD_PARAMS {
 }
 
 #define ELT(value) *p = MAKE_INT(value); p++;
-METHOD_RESULT native_c_stat EXT_METHOD_PARAMS {
-	VALUE v;
-	VALUE *p;
-	struct stat buf;
-	int status;
-	(void) ctx;
-	status = stat(obj_to_cstring(argv[0]), &buf);
-	if(status != 0) {
-		METHOD_RETURN(MAKE_NULL);
-	}
-	v = make_normal_type_instance(vm->Stat);
-	OBJ_DATA(v) = make_array(10); // Make sure to update this number if you add more ELT()s. Also add SETUP_TYPE_FIELD(Stat, ..., ...) below
-	p = ARRAY_ITEMS(OBJ_DATA(v));
-	ELT(buf.st_dev);
-	ELT(buf.st_ino);
-	ELT(buf.st_mode);
-	ELT(buf.st_nlink);
-	ELT(buf.st_uid);
-	ELT(buf.st_gid);
-	ELT(buf.st_rdev);
-	ELT(buf.st_size);
-	ELT(buf.st_blksize);
-	ELT(buf.st_blocks);
-	METHOD_RETURN(v);
+#define MAKE_STAT_METHOD(cmd, arg_transform) \
+METHOD_RESULT native_c_ ## cmd EXT_METHOD_PARAMS { \
+	VALUE v; \
+	VALUE *p; \
+	struct stat buf; \
+	int status; \
+	(void) ctx; \
+	status = cmd(arg_transform(argv[0]), &buf); \
+	if(status != 0) { \
+		METHOD_RETURN(MAKE_NULL); \
+	} \
+	v = make_normal_type_instance(vm->Stat); \
+	OBJ_DATA(v) = make_array(10); /* Make sure to update this number if you add more ELT()s. Also add SETUP_TYPE_FIELD(Stat, ..., ...) below */ \
+	p = ARRAY_ITEMS(OBJ_DATA(v)); \
+	ELT(buf.st_dev); \
+	ELT(buf.st_ino); \
+	ELT(buf.st_mode); \
+	ELT(buf.st_nlink); \
+	ELT(buf.st_uid); \
+	ELT(buf.st_gid); \
+	ELT(buf.st_rdev); \
+	ELT(buf.st_size); \
+	ELT(buf.st_blksize); \
+	ELT(buf.st_blocks); \
+	METHOD_RETURN(v); \
 }
+MAKE_STAT_METHOD(stat, obj_to_cstring)
+MAKE_STAT_METHOD(lstat, obj_to_cstring)
+MAKE_STAT_METHOD(fstat, GET_INT)
+#undef MAKE_STAT_METHOD
 #undef ELT
 
 
@@ -2016,6 +2021,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, "c_readdir", &native_c_readdir,         1,"dirp",     vm->C_DIR);
 	register_global_func(vm, 1, "c_closedir",&native_c_closedir,        1,"dirp",     vm->C_DIR);
 	register_global_func(vm, 1, "c_stat",    &native_c_stat,            1,"pathname", vm->Str);
+	register_global_func(vm, 1, "c_lstat",   &native_c_lstat,           1,"pathname", vm->Str);
+	register_global_func(vm, 1, "c_fstat",   &native_c_fstat,           1,"fd",       vm->Int);
 
 	// low level misc
 	register_global_func(vm, 0, "c_access", &native_c_access,          2, "pathname", vm->Str, "mode", vm->Int);
@@ -2164,8 +2171,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 	E(F_OK); E(R_OK); E(W_OK); E(X_OK);
 	// man poll(2);
 	E(POLLIN); E(POLLPRI); E(POLLOUT); E(POLLERR); E(POLLHUP); E(POLLNVAL);
+
 	// man 2 stat
 	E(S_IFMT); E(S_IFSOCK); E(S_IFLNK); E(S_IFREG); E(S_IFBLK); E(S_IFDIR); E(S_IFCHR); E(S_IFIFO);
+
+	E(S_ISUID); E(S_ISGID); E(S_ISVTX); E(S_IRWXU); E(S_IRUSR); E(S_IWUSR); E(S_IXUSR); E(S_IRWXG); E(S_IRGRP); E(S_IWGRP);
+	E(S_IXGRP); E(S_IRWXO); E(S_IROTH); E(S_IWOTH); E(S_IXOTH);
+
 
 	// awk '/^#define PCRE/ && $3 {print "E("$2");"}' /usr/include/pcre.h | grep -v 'PCRE_UCHAR\|PCRE_SPTR' | sort | xargs -n5
 	#pragma GCC diagnostic push

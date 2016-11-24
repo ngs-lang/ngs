@@ -1391,7 +1391,16 @@ F stat(pathname:Str) {
 
 F stat(p:Path) super(p.path)
 
+F lstat(pathname:Str) {
+	ret = c_lstat(pathname)
+	ret is Null throws StatFail("Failed to c_lstat()").set('pathname', pathname)
+	ret
+}
+
+F lstat(p:Path) super(p.path)
+
 # TODO: better name
+doc EXPERIMENTAL, do not use outside of stdlib!
 F specific(p:Path) {
 	s = stat(p)
 	file_type = s.st_mode.band(C_S_IFMT)
@@ -1421,6 +1430,7 @@ F Bool(p:Path) c_access(p.path, C_F_OK) == 0
 
 TEST Path('/').Bool()
 TEST Path('/no-such-file').Bool() == false
+TEST Path('/', true) is Dir
 
 # TODO: better exceptions (use correct type, not string, maybe use errno)
 F find_in_path(executable_name:Str) {
