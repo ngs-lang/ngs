@@ -62,9 +62,9 @@ F set(obj, attr:Str, val) {
 }
 
 # TODO: Some time make it Predicate, subtype of Fun
-F Pred(anything) F(x) x == anything
+F Pred(anything) F eq_pred(x) x == anything
 F Pred(f:Fun) f
-F Pred(t:Type) F(x) x is t
+F Pred(t:Type) F is_pred(x) x is t
 
 F map(something, mapper:Fun, *args)
 	collector
@@ -2202,7 +2202,7 @@ F '[]'(s:Str, r:RegExp) {
 
 TEST "ab01de12f"[/[0-9]+/] == '01'
 
-F Pred(r:RegExp) F regexp_filter(x) x ~ r
+F Pred(r:RegExp) F regexp_pred(x) x ~ r
 
 TEST %[w1 w2].filter(/1/) == %[w1]
 
