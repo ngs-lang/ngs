@@ -2781,13 +2781,12 @@ main_loop:
 							// Arg: LEN + string
 							// In: ...
 							// Out: ... string
-							// printf("LSTR @ %p\n", &vm->bytecode[ip]);
 							vlo = NGS_MALLOC(sizeof(*vlo));
-							vlo->len = (size_t) vm->bytecode[ip];
+							vlo->len = (size_t) (unsigned char) vm->bytecode[ip];
 							vlo->base.type.num = T_STR;
 							vlo->base.val.ptr = NGS_MALLOC_ATOMIC(vlo->len);
 							memcpy(vlo->base.val.ptr, &(vm->bytecode[ip+1]), vlo->len);
-							ip += 1 + vm->bytecode[ip];
+							ip += 1 + (unsigned char) vm->bytecode[ip];
 							SET_OBJ(v, vlo);
 							PUSH(v);
 							goto main_loop;
