@@ -28,18 +28,36 @@ To minimize my efforts I use external library ( http://www.hboehm.info/gc/ ) for
 
 # COMPILATION
 
-NGS parses the sources to AST and then compiles to bytecode.
+(WIP)
 
+NGS parses the sources to AST and then compiles to bytecode. Compilation is done in `compile.c`. Functions of interest:
 
-TODO
+## compile()
+
+	char *compile(ast_node *node, char *source_file_name, size_t *len)
+
+* `ast_node *node` - top-level AST node
+* `char *source_file_name` - name of the compiled file
+
 
 # BYTECODE
 
-TODO
+(WIP)
+
+`BYTECODE_HANDLE` typedef'ed struct. Although reading/writing bytecode to a file is not implemented yet, bytecode layout in memory was designed to be easy to write to or read from a file.
+
+`ngs_add_bytecode_section(bytecode, BYTECODE_SECTION_TYPE_..., l, buf)` function
 
 # VM
 
-TODO
+NGS runs a [stack-based VM](https://en.wikipedia.org/wiki/Stack_machine).
+
+`VM` typedef'ed struct represents the VM.
+
+`CTX` typedef'ed struct represents an ngs-thread of execution. Currently only one ngs-thread runs per thread. This might change in future if green threads are implemented.
+
+The unusual solution is that call frames are not allocated on the stack. It simplifies creating of closures later as stack data should not be copied to heap when a closure is created.
+
 
 # ADDING NEW BUILT-IN TYPE 
 

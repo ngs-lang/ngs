@@ -14,17 +14,34 @@ F init(h:Hash) {
 # === Exceptions ===
 
 {
+	doc Represents failed asserttion, thrown by assert()
 	type AssertFail
 	AssertFail.inherit(Exception)
 }
 
+doc IndexNotFound exception constructor
+doc %RET - IndexNotFound type instance with the given message, container and key attributes
 F init(e:IndexNotFound, message:Str, container, key) init(args())
 
+doc Throws AssertFail with givens message if condition is false
+doc %RET - unspecified, do not count on this value
 F assert(condition:Bool, msg:Str) not(condition) throws AssertFail(msg)
+
+doc Throws AssertFail if condition is false
+doc %RET - unspecified, do not count on this value
 F assert(condition:Bool) assert(condition, "Assertion failed")
 
 # === Return =====================================
 
+doc Implements calling of Return type instances
+doc like the finish(i) call in the example below
+doc %EX F first(r:Range, predicate:Fun, *args) {
+doc %EX 	finish = Return()
+doc %EX 	r.each(F(i) {
+doc %EX 		predicate(i, *args) throws finish(i)
+doc %EX 	})
+doc %EX 	null
+doc %EX }
 F call(r:Return, v=null) {
 	r.val = v
 	r
@@ -43,7 +60,7 @@ TEST identity(10) == 10
 #       See https://docs.python.org/2/library/functools.html#partial-objects
 doc Returns partially-applied function
 doc f - The base function
-doc Xunderscore_unsupportedXbind_args - The arguments to bind the function to
+doc Xunderscore_unsupportedXbind_args - The arguments to partiall apply (bind the function to)
 F partial(f:Fun, *bind_args)
 	F(*args) f(*bind_args, *args)
 
@@ -56,20 +73,48 @@ F partial_tail(f:Fun, *bind_args)
 
 TEST p = partial_tail((-), 10); p(7) == -3
 
+doc Sets the given attribute to the given value
+doc %RET - the modified obj
+doc %EX - s.len() != 1 throws InvalidArgument("ord() argument must be of length 1 exactly").set('given', s)
+doc %EX - # Would else be written as
+doc %EX - if s.len() != 1 {
+doc %EX - 	e = InvalidArgument("ord() argument must be of length 1 exactly")
+doc %EX - 	e.given = s
+doc %EX - 	throw e
+doc %EX - }
 F set(obj, attr:Str, val) {
 	(.=)(obj, attr, val)
 	obj
 }
 
-# TODO: Some time make it Predicate, subtype of Fun
+doc Convert anything to a predicate
+doc anything - the value to compare to
+doc %RET - A function that compares the only argument to the given value
 F Pred(anything) F eq_pred(x) x == anything
+
+doc Convert a function to predicate
+doc %RET - the given function, without any transformation
 F Pred(f:Fun) f
+
+doc Convert a type to a predicate
+doc t - A type
+doc %RET - A function that checks whether the only argument is of type t
 F Pred(t:Type) F is_pred(x) x is t
 
+doc Map something to an Arr (array) of values using mapper
+doc something - instance of any type that has each(something, callback) implemented
+doc %RET - Arr
 F map(something, mapper:Fun, *args)
 	collector
 		something.each(F(elt) collect(mapper(elt, *args)))
 
+doc Filter something to an Arr (array) of values using predicate
+doc predicate - decision function to be called with each item as first argument and *args as the rest of the arguments
+doc predicate - when predicate(item) returns true, the item will appear in the resulting array
+doc something - instance of any type that has each(something, callback) implemented
+doc %EX - (1...10).filter(F(num) num % 2 == 0)  # Gives [2,4,6,8,10]
+doc %EX - (1...10).filter((<), 5)  # Gives [1,2,3,4], predicate called as predicate(item, 5)
+doc %RET - Arr
 F filter(something, predicate, *args) {
 	p = Pred(predicate)
 	collector
@@ -79,9 +124,27 @@ F filter(something, predicate, *args) {
 		})
 }
 
+doc Filter nulls out
+doc CONSIDERED FOR REMOVAL, DO NOT USE, USE something.without(null) INSTEAD
+doc something - instance of any type that has each(something, callback) implemented
+doc %RET - Arr (array) of original items without nulls
 F filter(something) filter(something, (is not), Null)
 
 TEST [1,2,null,3].filter() == [1,2,3]
+
+doc Filter something to an Arr (array) of values using predicate
+doc EXPERIMENTAL! Do not use!
+doc predicate - decision function to be called with each item as first argument and *args as the rest of the arguments
+doc predicate - when predicate(item) returns true, the item will not appear in the resulting array
+doc something - instance of any type that has each(something, callback) implemented
+doc %EX - (1...10).reject(F(num) num % 2 == 0)  # Gives [1,3,5,7,9]
+doc %EX - (1...10).reject((<), 5)  # Gives [5,6,7,8,9,10], predicate called as predicate(item, 5)
+doc %RET - Arr
+F reject(something, predicate, *args) {
+	p = Pred(predicate)
+	something.filter({ p(A, *args).not() })
+}
+
 
 doc EXPERIMENTAL! Do not use!
 F take_while(something, predicate, *args)
@@ -115,7 +178,15 @@ F drop_while(something, predicate, *args)
 
 TEST [1,2,3,1,2].drop_while(X<3) == [3,1,2]
 
-F reduce(something, start, f:Fun, *args) {
+doc Combine items to a single value using the supplied binary function
+doc First f is applied to start and the first element of something
+doc then on each step f is applied to previous result and next element
+doc of something.
+doc start - first argument of f, for the first call of f
+doc something - instance of any type that has each(something, callback) implemented
+doc f - the combining function
+doc %EX - F sum(something) something.reduce(0, (+))
+F reduce(something, start, f:Fun) {
 	ret = start
 	something.each(F(elt) ret = f(ret, elt))
 	ret
@@ -124,21 +195,22 @@ F reduce(something, start, f:Fun, *args) {
 TEST [1,2,3].reduce(0, (+)) == 6
 
 doc Filter operator
-doc Syntax mnemonic: ? for predicate
-doc %EX - [1,2,3,4] ? F(x) x > 2
+doc Same as calling x.filter(predicate)
+doc %EX - [1,2,3,4] ? F(x) x > 2  # [3,4]
 F ?(x, predicate:Fun) x.filter(predicate)
 
 doc Map operator
-doc Syntax: / is on same key as ? and similar to |
+doc Same as calling x.map(mapper)
 doc %EX - [1,2,3,4] / F(x) x * 10
 F /(x, mapper:Fun) x.map(mapper)
 
 doc Each operator
-doc Syntax: % is similar to /
+doc Same as calling x.each(cb)
 doc %EX - [1,2,3,4] % echo
 F %(x, cb:Fun) x.each(cb)
 
 doc Call operator
+doc Same as calling f(x)
 doc %EX - [1,2,3,4] \ echo
 F \(x, f:Fun) f(x)
 
@@ -146,19 +218,32 @@ F \(x, f:Fun) f(x)
 # === Hook =======================================
 
 {
+	doc Hook is a simple pub-sub
 	type Hook
+
+	doc TODO
 	type HookDecorator
 }
 
+doc Hook constructor
+doc combiner - A function for processing results from all handlers.
+doc combiner - The outputs are passed as a Hash. Keys are handlers names and values are what handlers return when they run.
+doc %RET - Hook
 F init(hook:Hook, combiner=values) {
 	init(args())
 	hook.handlers = {}
 	hook.idx = 0
 }
 
+doc Get hook handler
 F '[]'(hook:Hook, name:Str) hook.handlers[name]
+
+doc Set hook handler
 F '[]='(hook:Hook, name:Str, handler:Closure) hook.handlers[name] = handler
 
+doc Add unnamed handler
+doc The hook is automatically named "pushed-N" where N is sequential integer
+doc %RET - new hook name
 F push(hook:Hook, handler:Closure) {
 	name = "pushed-${hook.idx}"
 	hook.idx += 1
@@ -167,6 +252,9 @@ F push(hook:Hook, handler:Closure) {
 }
 
 # TODO: consider optional? try/catch isolation
+doc Runs all handlers passing all args
+doc args - arguments to pass to handlers
+doc %RET - output of the combiner function applied to all handlers' results
 F call(hook:Hook, *args) {
 	result = hook.handlers.mapv(F(handler) handler(*args))
 	(hook.combiner)(result)
@@ -456,17 +544,14 @@ F ==(a:Null, b:Null) true
 
 doc EXPERIMENTAL
 F finally(body:Fun, cleanup:Fun) {
-	exc = null
-	have_exception = false
 	try {
 		ret = body()
+		cleanup()
+		ret
 	} catch(e) {
-		have_exception = true
-		exc = e
+		cleanup()
+		throw e
 	}
-	cleanup()
-	have_exception throws exc
-	ret
 }
 
 TEST a=0; {1/1}.finally({a=10}) == 1 and a == 10
@@ -1486,6 +1571,12 @@ F dir(dirname:Str, cb:Fun, subtype=false) {
 TEST dir("/").path.has("/var")
 TEST dir("/").all({A.typeof().name == 'Path'})
 TEST dir("/", subtype=true).all({ (A is Path) and (A.typeof().name != 'Path') })
+
+doc Work in progress, do not use!
+F glob(pattern:Str, start_dir='.') {
+
+
+}
 
 # === Commands and processes (WIP) ===============
 

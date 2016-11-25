@@ -22,6 +22,7 @@
 		l
 	}
 
+	# TODO: use finally()
 	F acquire(l:Lock, cb:Fun) {
 		l.acquire()
 		try {
