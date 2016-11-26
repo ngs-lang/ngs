@@ -54,6 +54,24 @@ Note that this started as internal document so things here are unformed, not fin
 	* Bool(subtypes of Path) - kind of object (File, Dir, etc) must match to what's on disk
 	* while/for should return a value?
 	* Consider having chunk() method as in Ruby
+	* Channels - Chan type & syntax
+		Initial syntax thoughts:
+
+		1..10 | map(X*2) | sum | echo
+
+		a = Chan()
+		b = Chan()
+		1..10 | group({A % 2 ==0 }, a, b)
+		a | { echo("Even number $A") }
+		b | sum | { echo("Sum of odd numbers: $A") }
+
+		F map(in:Chan, out:Chan, mapper:Fun) {
+			# while in(&item) ?
+			while in -> item {
+				# out(mapper(item)) ?
+				out <- mapper(item)
+			}
+		}
 
 [roadmap]
 

@@ -226,8 +226,7 @@ F \(x, f:Fun) f(x)
 }
 
 doc Hook constructor
-doc combiner - A function for processing results from all handlers.
-doc combiner - The outputs are passed as a Hash. Keys are handlers names and values are what handlers return when they run.
+doc combiner - A function for processing results from all handlers. The outputs are passed as a Hash. Keys are handlers names and values are what handlers return when they run.
 doc %RET - Hook
 F init(hook:Hook, combiner=values) {
 	init(args())
@@ -263,7 +262,10 @@ F call(hook:Hook, *args) {
 
 # === HookDecorator ==============================
 
+doc TODO
 F init(hd:HookDecorator, hook:Hook) init(args())
+
+doc TODO
 F init(hd:HookDecorator, hook:Hook, name:Str) init(args())
 
 F @(hook:Hook, handler:Closure) hook.push(handler)
@@ -275,6 +277,7 @@ F @(hd:HookDecorator, handler:Closure) {
 		hd.hook.push(handler)
 }
 
+doc TODO
 F hook(h:Hook, *args) HookDecorator(h, *args)
 
 TEST h = Hook(); a=1; h["my1"] = F() a+=1; @h { a*=2 }; @hook(h, "my2") { a*=3 }; h(); a==12 and h.handlers.keys() == ["my1", "pushed-0", "my2"]
@@ -284,6 +287,8 @@ TEST h = Hook(); F @(hook, ovr) ovr.replace({"B"}); @h F f() "A"; f() == "B"
 # === Real =======================================
 
 # TODO: something more efficient
+doc Convert a string to real (floating) number, inefficiently
+doc %RET - Real
 F Real(s:Str) {
 	parts = s.split('.')
 	parts.len() == 1 returns Real(Int(parts[0]))
@@ -298,6 +303,8 @@ TEST Real('1.1') == 1.1
 
 # === NativeMethod ===============================
 
+doc String representation of native method
+doc %RET - "<Native method NAME>"
 F Str(c:NativeMethod) {
 	"<Native method ${c.attrs().name}>"
 }
@@ -306,6 +313,7 @@ F Str(c:NativeMethod) {
 
 # TODO: show arguments:
 #   "<Closure ${c.attrs().name tor "<anonymous>"}(HERE) at ${location}>"
+doc String representation of a closure
 F Str(c:Closure) {
 	info = c.ip().resolve_instruction_pointer()
 	location = "${info.file}:${info.first_line}" tor "<unknown location>"
@@ -314,8 +322,15 @@ F Str(c:Closure) {
 
 # === Type =======================================
 
+doc Type constructor
+doc %EX - type MyType1
+doc %EX - type MyType2(MyType1)
 F Type(t:Str, doc, parent:Type) Type(t, doc, [parent])
 
+doc Type constructor
+doc %EX - type MyType1
+doc %EX - type MyType2
+doc %EX - type MyType3([MyType1, MyType2])
 F Type(t:Str, doc, parents:Arr) {
 	ret = Type(t, doc)
 	parents % ret.inherit(X)
@@ -380,6 +395,7 @@ F expose(typ:NormalType, attr:Str) {
 # TODO: support keword arguments?
 doc Called on ImplNotFound
 doc Implements expose() behaviour
+doc %RET - result of calling the callable with modified argument
 F impl_not_found_handler(callable:Fun, *args) {
 	l = args.len()
 	exposed_attr_name = null
@@ -397,10 +413,23 @@ F impl_not_found_handler(callable:Fun, *args) {
 	callable(*new_args)
 }
 
+doc String representation of a type
+doc %RET - "<Type NAME>"
 F Str(t:Type) "<Type ${t.name}>"
 
 # === NormalType =================================
 
+doc String representation of normal type instance i
+doc Normal type is a user defined type. In addition some types defined by NGS are also normal types.
+doc %EX - {
+doc %EX -   type T
+doc %EX -   # nti - Normal type instance
+doc %EX -   nti = T()
+doc %EX -   nti.a = 1
+doc %EX -   nti.b = 2
+doc %EX -   echo(Str(nti)) # <T a=1 b=2>
+doc %EX - }
+doc %RET - "<TYPE_NAME attr1=val1 attr2=val2 ...>"
 F Str(i:NormalTypeInstance) {
 	h = Hash(i)
 	truncated = len(h) > 10
@@ -413,6 +442,9 @@ F Str(i:NormalTypeInstance) {
 	"<${i.typeof().name} ${h.join(' ')}${if truncated ' ...' else ''}>"
 }
 
+doc Set an attribute in an instance if it's not already set
+doc %EX - myhash.dflt(k, []).push(elt)
+doc %RET - attrbute value, the already-existed or new
 F dflt(i:NormalTypeInstance, k, v) {
 	if k not in i {
 		(.=)(i, k, v)
@@ -420,16 +452,23 @@ F dflt(i:NormalTypeInstance, k, v) {
 	(.)(i, k)
 }
 
-F ==(a:NormalTypeInstance, b:NormalTypeInstance) Hash(a) == Hash(b)
+doc Equaity test for normal type instances: must be of same type and have same attributes and their values
+doc %RET - Bool
+F ==(a:NormalTypeInstance, b:NormalTypeInstance) {
+	typeof(a) != typeof(b) returns false
+	Hash(a) == Hash(b)
+}
 
 
 # === Exceptions =================================
 
 {
 	# TODO: Investigate why type CException(Error) does not work at this point
+	doc Base type for exceptions arising from errors returned by calling C functions
 	type CException
 	CException.inherit(Error)
 
+	doc CException constructor. In addition to storing message attribute, adds errno and errno_name attributes.
 	F init(e:CException, message:Str) {
 		errno = get_c_errno()
 		super(e, message)
@@ -437,6 +476,7 @@ F ==(a:NormalTypeInstance, b:NormalTypeInstance) Hash(a) == Hash(b)
 		e.errno_name = c_strerror(e.errno)
 	}
 
+	doc Exception representing a failure to kill() a process
 	type KillFail
 	KillFail.inherit(CException)
 }
@@ -453,9 +493,14 @@ F global_not_found_handler(name:Str) {
 
 F init(r:Range, start, end, step=1) init(args())
 
+doc ExclusiveRange constructor
 F ..(start, end)  ExclusiveRange(start, end)
+
+doc InclusiveRange constructor
 F ...(start, end) InclusiveRange(start, end)
 
+doc Iterates over the elements of r, passing each in turn to cb.
+doc %RET - r
 F each(r:Range, cb:Fun, *args) {
 	# TODO: support Real step
 	econd {
@@ -477,6 +522,8 @@ F each(r:Range, cb:Fun, *args) {
 TEST (1..3).map(X*2) == [2, 4]
 TEST (1...3).map(X*2) == [2, 4, 6]
 
+doc Find first element in r that satisfies predicate.
+doc The predicate is called with each one of the elements plus the args: predicate(i, *args)
 F first(r:Range, predicate:Fun, *args) {
 	finish = Return()
 	r.each(F(i) {
@@ -492,9 +539,14 @@ F Str(r:InclusiveRange) "<InclusiveRange ${r.start}...${r.end} step ${r.step}>"
 
 # === Syntactic sugar ============================
 
+doc Boolean negation for non-boolean values. Converts to boolean first.
+doc %RET - Bool
 F not(x) { guard (x is Bool) == false; x.Bool().not() }
 
+doc Inequality operator
 F !=(a,b) not(a==b)
+
+doc Non-sameness operator
 F !==(a,b) not(a===b)
 
 TEST 1 != 2
@@ -504,45 +556,78 @@ TEST 1 !== 2
 TEST (1 !== 1) == false
 
 
+doc "not in" operator
 F 'not in'(a,b) not(a in b)
 
 TEST (1 not in [1,2,3]) == false
 TEST 10 not in [1,2,3]
 
-
+doc "is not" operator
 F 'is not'(a,b) not(a is b)
 
 TEST 1 is not Null
 TEST (null is not Null) == false
 
 
+doc Alternative to "element in container" syntax
+doc %EX - [1,2,3].has(2)  # true
+doc %RET - Bool
 F has(container, element) element in container
 
 TEST [1,2,3].has(1)
 TEST [1,2,3].has(10).not()
 
 
-# Return the "collect" function for the given initial object (defaults to [])
+doc Defines collector { ... collect(...) ... } behaviour for arrays
+doc a - initial array
+doc code - The code after collector keyword and possible initial value, wrapped in a function
+doc code - "collector THIS_CODE" or "collector/my_init THIS_CODE"
+doc %RET - constructed array
 F collector(a:Arr, code:Fun) {
 	code(F(elt) a.push(elt))
 	a
 }
 
+doc Defines collector { ... collect(...) ... } behaviour for hashes
+doc h - initial hash
+doc code - The code after collector keyword and initial value, wrapped in a function
+doc code - "collector/{'my': 'hash'} THIS_CODE"
+doc %RET - constructed array
 F collector(h:Hash, code:Fun) {
 	code(F(k, v) h[k] = v)
 	h
 }
 
+doc Defines collector { ... collect(...) ... } behaviour for integers
+doc n - initial number
+doc code - The code after collector keyword and initial value, wrapped in a function
+doc code - "collector/100 THIS_CODE"
+doc %RET - constructed array
 F collector(n:Int, code:Fun) {
 	code(F(incr) n=n+incr)
 	n
 }
 
+doc Comparison to null
+doc %RET - false
 F ==(a:Null, b) false
+
+doc Comparison to null
+doc %RET - false
 F ==(a, b:Null) false
+
+doc Comparison to null
+doc %RET - true
 F ==(a:Null, b:Null) true
 
-doc EXPERIMENTAL
+doc Run cleanup after successful execution of body or exception in body
+doc body - main code to execute
+doc cleanup - cleanup code to execute
+doc %EX - finally(
+doc %EX -   { while entry = c_readdir(d) { ... } },
+doc %EX -   { ... c_closedir(d) ...}
+doc %EX - )
+doc %RET - whatever body call returns
 F finally(body:Fun, cleanup:Fun) {
 	try {
 		ret = body()
@@ -558,18 +643,32 @@ TEST a=0; {1/1}.finally({a=10}) == 1 and a == 10
 TEST a=0; (try finally({1/0}, {a=10}) catch(e:DivisionByZero) "OK") == "OK" and a == 10
 
 # --- Hash ---
+
+doc Get hash key
 F .(h:Hash, attr:Str) h[attr]
+
+doc Set hash key
 F .=(h:Hash, attr:Str, v) h[attr] = v
+
+doc Get hash key or null if it does not exist
 F get(h:Hash, k) get(h, k, null)
-F n(h:Hash) h.map(F(k, v) [k, Int(v) tor v]).Hash()
+
+doc Convert hash values to integers where possible
+doc %RET - new Hash
+F n(h:Hash) h.mapv({Int(A) tor A})
 
 TEST %{k 7 kk "a"}.n() == {'k': 7, 'kk': 'a'}
 
 # --- Arr ---
+doc Return array made of given attribute of each element of given array
+doc %EX - [{"x": 1}, {"x": 2}].x  # [1, 2]
+doc %RET - Arr
 F .(a:Arr, attr:Str) a.map((.), attr)
 
 TEST [{"x": 1}, {"x": 2}].x == [1, 2]
 
+doc Concatenate strings
+doc %RET - new Str
 F +(s1:Str, s2:Str) "${s1}${s2}"
 
 TEST "ab" + "cd" == "abcd"
@@ -577,7 +676,8 @@ TEST "ab" + "cd" == "abcd"
 # === Array ======================================
 
 
-# Checks whether element x is in array arr
+doc Checks whether element x is in array arr
+doc %RET - Bool
 F in(x, arr:Arr) {
 	l = arr.len()
 	for(i;l) arr[i] == x returns true
@@ -586,7 +686,9 @@ F in(x, arr:Arr) {
 
 # Tested by has() tests
 
-
+doc Arrays equality test
+doc True if arrays are of the same length and all elements are equal (==)
+doc %RET - Bool
 F ==(a:Arr, b:Arr) {
 	l = a.len()
 	l != b.len() returns false
@@ -599,6 +701,9 @@ TEST [1, 3] != [1, 2]
 TEST [1] != [1, 2]
 
 
+doc Check whether there is any element in arr that satisfies the given predicate
+doc TODO: Make it work on anything with each() method
+doc %RET - Bool
 F any(arr:Arr, predicate, *args) {
 	p = Pred(predicate)
 	l = arr.len()
@@ -610,7 +715,9 @@ F any(arr:Arr, predicate, *args) {
 TEST [1,2,10].any(F(elt) elt > 5)
 TEST [1,2,3].any(F(elt) elt > 5).not()
 
-
+doc Check whether there all elements in arr that satisfy the given predicate
+doc TODO: Make it work on anything with each() method
+doc %RET - Bool
 F all(arr:Arr, predicate, *args) {
 	p = Pred(predicate)
 	l = arr.len()
@@ -622,6 +729,9 @@ F all(arr:Arr, predicate, *args) {
 TEST [1,2,3].all((<), 10)
 TEST [1,2,10].all((>), 5).not()
 
+doc Check that there is no element in arr that satisfies the given predicate
+doc TODO: Make it work on anything with each() method
+doc %RET - Bool
 F none(arr:Arr, predicate:Fun, *args) not(any(arr, predicate, *args))
 
 TEST [0,1,2].none((>), 2)
@@ -629,6 +739,8 @@ TEST [0,1,2].none((<), 2).not()
 
 TEST [1,2,3].map((*), 4) == [4,8,12]
 
+doc Iterates over the elements of arr, passing each in turn to cb along with args: cb(ITEM, *args)
+doc %RET - arr
 F each(arr:Arr, cb:Fun, *args) {
 	l = arr.len()
 	for(i;l) cb(arr[i], *args)
@@ -638,16 +750,20 @@ F each(arr:Arr, cb:Fun, *args) {
 # Tested by flatten() tests
 
 # TODO: map_idx_val, each_idx_val for other types
+doc Iterates over the elements of arr, passing each in turn to cb along with index and args: cb(INDEX, ITEM, *args)
+doc %RET - arr
 F each_idx_val(arr:Arr, cb:Fun, *args) {
 	l = arr.len()
 	for(i;l) cb(i, arr[i], *args)
 	arr
 }
 
-F map_idx_val(arr:Arr, cb:Fun, *args) {
+doc Map something Arr to an Arr (array) of values using mapper
+doc %RET - new Arr
+F map_idx_val(arr:Arr, mapper:Fun, *args) {
 	l = arr.len()
 	collector
-		for(i;l) collect(cb(i, arr[i], *args))
+		for(i;l) collect(mapper(i, arr[i], *args))
 }
 
 TEST r=[]; ["a", "b"].each_idx_val(F(idx, val) r.push([idx, val])); r == [[0, "a"], [1, "b"]]
