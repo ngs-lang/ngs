@@ -758,7 +758,8 @@ F each_idx_val(arr:Arr, cb:Fun, *args) {
 	arr
 }
 
-doc Map something Arr to an Arr (array) of values using mapper
+doc Map an Arr to an Arr (array) of values using mapper
+doc mapper is called as mapper(INDEX, ITEM, *args)
 doc %RET - new Arr
 F map_idx_val(arr:Arr, mapper:Fun, *args) {
 	l = arr.len()
@@ -771,6 +772,8 @@ TEST r=[]; ["a", "b"].each_idx_val(F(idx, val) r.push([idx, val])); r == [[0, "a
 
 # TODO: make it work with anything that has each() method
 doc Process each N elements of an Array at a time
+doc cb is called as cb(eltI, ..., eltJ, *args) where I is multiple of n and J is I+n-1
+doc %RET - Arr
 F each(arr:Arr, n:Int, cb:Fun, *args) {
 	arr.len() % n != 0 throws InvalidArgument("Can not iterate elements in groups of $n of array of size ${arr.len()}")
 	chunks = arr.len() / n
@@ -783,18 +786,21 @@ F each(arr:Arr, n:Int, cb:Fun, *args) {
 
 
 doc Map each N elements of an Array at a time
-F map(arr:Arr, n:Int, cb:Fun, *args) collector arr.each(n, F(*a) collect(cb(*a, *args)))
+doc mapper is called as cb(eltI, ..., eltJ, *args) where I is multiple of n and J is I+n-1
+F map(arr:Arr, n:Int, mapper:Fun, *args) collector arr.each(n, F(*a) collect(mapper(*a, *args)))
 
 # Tested by ~(s:Str, r:RegExp)
 
-
+doc Filter out all occurencies of specific value
+doc without_elt - the value to filter out
+doc %RET - Arr
 F without(arr:Arr, without_elt)
 	arr.filter((!=), without_elt)
 
 TEST [1,2,3,2].without(2) == [1,3]
 
-
-
+doc Filter out all values in a that are also in b
+doc %RET - Arr
 F -(a:Arr, b:Arr) {
 	h = if b.len() > 10 {
 		b.Hash({true})
@@ -807,7 +813,10 @@ F -(a:Arr, b:Arr) {
 TEST [1,2,3] - [5,6,1] == [2,3]
 TEST [1,2,3] - [5,6,1,1,1,1,1,1,1,1,1,1,1,2] == [3]
 
-
+doc Count number of items that satisfy the predicate
+doc TODO: Make it work on anything with each() method
+doc args - additional arguments for the predicate
+doc %RET - Int
 F count(arr:Arr, predicate, *args) {
 	p = Pred(predicate)
 	collector/0
@@ -819,11 +828,14 @@ F count(arr:Arr, predicate, *args) {
 
 TEST [1,2,3,11,12].count(X>10) == 2
 
-
+doc Count all true values
+doc %RET - Int
 F count(arr:Arr) count(arr, identity)
 
 TEST [0,1,2,null,false].count() == 2
 
+doc Flatten one level
+doc %RET - Arr
 F flatten(arr:Arr) {
 	guard arr.all(is, Arr)
 	collector
@@ -834,17 +846,22 @@ F flatten(arr:Arr) {
 
 TEST [[1], [2,3]].flatten() == [1,2,3]
 
-
+doc Return unique values
+doc Warning - uses Hash so comparison is not using == but a built-in hash keys comparison
+doc %RET - Arr
 F uniq(arr:Arr) arr.Hash({true}).keys()
 
 TEST [1,2,2,3,4,4].uniq() == [1,2,3,4]
 
-
+doc Find first true value
 F first(arr:Arr) first(arr, identity)
 
 TEST [null, false, 10, 20].first() == 10
 
-
+doc Find index of first value that satisfies the predicate
+doc TODO: Make it work on anything with each() method
+doc args - additional arguments for the predicate
+doc %RET - Int or null
 F index(arr:Arr, predicate, *args) {
 	p = Pred(predicate)
 	l = arr.len()
@@ -853,6 +870,10 @@ F index(arr:Arr, predicate, *args) {
 	null
 }
 
+doc Find all indexes of values that satisfy the predicate
+doc TODO: Make it work on anything with each() method
+doc args - additional arguments for the predicate
+doc %RET - Arr of Int
 F indexes(arr:Arr, predicate, *args) {
 	p = Pred(predicate)
 	l = arr.len()
@@ -861,6 +882,10 @@ F indexes(arr:Arr, predicate, *args) {
 
 TEST [1,5,1,10].indexes(X>2) == [1,3]
 
+doc Find first value that satisfies the predicate
+doc TODO: Make it work on anything with each() method
+doc args - additional arguments for the predicate
+doc %RET - Arr of Int
 F first(arr:Arr, predicate:Fun, *args) {
 	i = arr.index(predicate, *args)
 	i is Null returns null
@@ -870,7 +895,8 @@ F first(arr:Arr, predicate:Fun, *args) {
 TEST [5,10,15].first(X>7) == 10
 TEST [5,10,15].first(X>20) == null
 
-
+doc Make new array which is a reversed given array
+doc %RET - Arr
 F reverse(arr:Arr) {
 	l = arr.len()
 	l.map({ arr[l-A-1] })
@@ -878,8 +904,11 @@ F reverse(arr:Arr) {
 
 TEST [1,2,3].reverse() == [3,2,1]
 
+doc Calculate sum of the elements
 F sum(something) something.reduce(0, (+))
 
+doc Prepend one element to the given array
+doc %RET - arr
 F unshift(arr:Arr, elt) {
 	arr[0..0] = [elt]
 	arr
@@ -901,15 +930,23 @@ F join(a:Arr, sep:Arr) {
 
 # --- Conversions ---
 
+doc Make Arr from Hash. Each key/value pair becomes two-items array:
+doc %RET - Arr of form [[k1, v1], [k2, v2], ...]
 F Arr(h:Hash)
 	h.map(F(*pair) pair)
 
 TEST Arr({'x': 7, 'y': 8}) == [['x', 7], ['y', 8]]
 
-
+doc Make Arr from Arr. A no-op.
+doc %RET - arr
 F Arr(arr:Arr) arr
 
-
+doc Make new array which aggregates elements from each of the args arrays
+doc n-th element of the new array is an array that contains n-th element of each of the given arrays
+doc If some of the arrays in args are shorter than others, they will be logically padded with null
+doc %EX - zip([1,2,3], [4,5,6])  # [[1,4], [2,5], [3,6]]
+doc %EX - zip([1,2,3], [4,5])    # [[1,4], [2,5], [3,null]]
+doc %RET - Arr of form [[arg[0][0], arg[1][0], ... arg[i][0]], [arg[0][1], arg[1][1], ... arg[i][1]], ...]
 F zip(*args) {
 	arrays = args.map(Arr)
 	max_len = arrays / len \ max
@@ -919,6 +956,7 @@ F zip(*args) {
 TEST zip([1,2,3], [4,5,6]) == [[1,4], [2,5], [3,6]]
 TEST zip([1,2,3], [4,5,6], [7,8,9,10]) == [[1,4,7], [2,5,8], [3,6,9], [null, null, 10]]
 
+doc Convert range to an array
 F Arr(r:Range) r / identity
 
 TEST Arr(1..3) == [1,2]

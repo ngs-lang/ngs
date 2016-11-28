@@ -72,6 +72,8 @@ Note that this started as internal document so things here are unformed, not fin
 				out <- mapper(item)
 			}
 		}
+	* Copy stderr to both stderr and to captured .stderr of the process
+	* Run exit_hook on CTRL+C (Throw exception)
 
 [roadmap]
 
@@ -113,6 +115,8 @@ Note that this started as internal document so things here are unformed, not fin
 						+ Strings
 						+ Functional
 					+ Build an app - decide which
+				* True values - make sure it's in
+				* Hash keys comparison
 				* All types documentation
 				* All methods documentation
 				* Exit codes (see bootstrap.ngs and ngs.c)
