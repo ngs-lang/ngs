@@ -23,10 +23,10 @@ F log_test_ok(s:Str) {
 
 }
 
-F assert_base(actual, expected, comparison, display_comparison, title) {
+F assert_base(actual, expected, comparison, display_comparison, title, ok_prefix='') {
 	ok = comparison(actual, expected)
 	if ok {
-		log_test_ok("$title: OK ($expected)")
+		log_test_ok("$title: OK ($ok_prefix$expected)")
 	} else {
 		throw TestFail("$title: actual value is $actual while expected $display_comparison $expected")
 	}
@@ -67,6 +67,11 @@ F assert_hash_keys_values(actual, expected:Hash, title=null) {
 	expected.each(F(k, v) {
 		assert_base(actual, "key '$k' with value '$v'", {has(actual, k) and actual[k] == v}, "to have", title or "Must be a hash with keys and values")
 	})
+	actual
+}
+
+F assert_min_len(actual, expected, title=null) {
+	assert_base(actual, expected, { len(A) >= expected }, "to have at least", title or "Data items count", ok_prefix="at least ")
 	actual
 }
 
