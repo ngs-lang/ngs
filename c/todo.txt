@@ -74,6 +74,7 @@ Note that this started as internal document so things here are unformed, not fin
 		}
 	* Copy stderr to both stderr and to captured .stderr of the process
 	* Run exit_hook on CTRL+C (Throw exception)
+	* Replace Command#options with Hash (currently Arr)
 
 [roadmap]
 

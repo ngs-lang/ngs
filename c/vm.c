@@ -2657,7 +2657,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			exc = make_normal_type_instance(vm->ImplNotFound);
 			set_normal_type_instance_attribute(exc, make_string("message"), make_string("Normal type constructor: init() not found"));
 			set_normal_type_instance_attribute(exc, make_string("callable"), vm->init);
-			SET_EXCEPTION_ARGS_KWARGS(exc, argc, new_argv);
+			SET_EXCEPTION_ARGS_KWARGS(exc, argc+1, new_argv);
 			THROW_EXCEPTION_INSTANCE(exc);
 		}
 		if(mr == METHOD_EXCEPTION) {
