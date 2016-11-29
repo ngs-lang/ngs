@@ -1934,12 +1934,7 @@ F finished_ok(p:Process) {
 }
 
 F finished_ok(p:Process) {
-	guard p.executable.path == '/usr/bin/test'
-	p.exit_code in [0, 1]
-}
-
-F finished_ok(p:Process) {
-	guard p.executable.path == '/bin/ping'
+	guard p.executable.path in ['/usr/bin/test', '/bin/fuser', '/bin/ping']
 	p.exit_code in [0, 1]
 }
 
@@ -2635,6 +2630,45 @@ F rand(r:Range) {
 	points = r.end - r.start
 	if r is InclusiveRange points += 1
 	rand(points) + r.start
+}
+
+# === retry facility =============================
+
+{
+	type RetryFail(Error)
+}
+
+F code_missing_in_retry() throw InvalidArgument("'code' argument missing in retry()")
+
+F retry(
+	times=60,
+	sleep=1,
+	logger=debug,
+	success_predicate=Bool,
+	catch_exceptions=true,
+	title="<retry>",
+	progress_cb={null},
+	code:Fun=code_missing_in_retry
+) {
+	for(i;times) {
+		n = i + 1
+		progress_cb(n, times)
+		logger("$title Attempt $n out of ${times}")
+		try {
+			result = code()
+		} catch(e:Exception) {
+			logger("$title Exception $e")
+			not(catch_exceptions) throws e
+		}
+		if success_predicate(result) {
+			return result
+		}
+		if(i < times - 1) {
+			logger("$title Sleeping ${sleep} seconds")
+			$(sleep "${sleep}")
+		}
+	}
+	throw RetryFail()
 }
 
 # === Misc tests =================================
