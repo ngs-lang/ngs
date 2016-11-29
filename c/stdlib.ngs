@@ -2648,6 +2648,8 @@ F retry(
 	catch_exceptions=true,
 	title="<retry>",
 	progress_cb={null},
+	success_cb={A},
+	fail_cb=null,
 	code:Fun=code_missing_in_retry
 ) {
 	for(i;times) {
@@ -2661,14 +2663,15 @@ F retry(
 			not(catch_exceptions) throws e
 		}
 		if success_predicate(result) {
-			return result
+			return success_cb(result)
 		}
 		if(i < times - 1) {
 			logger("$title Sleeping ${sleep} seconds")
 			$(sleep "${sleep}")
 		}
 	}
-	throw RetryFail()
+	not(fail_cb) throws RetryFail()
+	fail_cb()
 }
 
 # === Misc tests =================================
