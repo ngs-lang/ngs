@@ -785,12 +785,25 @@ function-call =
 		$$ = ret;
 	}
 
-# NOTE: the "with" syntax is experimental
-function-call-arguments = "(" space? a:function-call-arguments-without-parens space? ")" (space? "with" space? w:function-call-argument {
+function-call-arguments = "(" space? a:function-call-arguments-without-parens space? ")" (space? w:function-call-external-argument {
 		append_ast_node_child(a, w);
 	})* {
 	$$ = a;
 }
+
+# NOTE: the "=>" syntax is experimental
+function-call-external-argument =
+	("with" | "=>") space? a:function-call-argument {
+		$$ = a;
+	}
+	|
+	i:identifier space? "=>" space? e:expression {
+		MAKE_NODE(ret, ARG_NODE);
+		ret->first_child = e;
+		MAKE_STRING_NODE(arg_name, i->name);
+		e->next_sibling = arg_name;
+		$$ = ret;
+	}
 
 function-call-arguments-without-parens =
 	arg:function-call-argument space? "," space? args:function-call-arguments-without-parens {

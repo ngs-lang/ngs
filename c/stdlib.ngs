@@ -2657,14 +2657,14 @@ F retry(
 	progress_cb={null},
 	success_cb={A},
 	fail_cb=null,
-	code:Fun=code_missing_in_retry
+	body:Fun=code_missing_in_retry
 ) {
 	for(i;times) {
 		n = i + 1
 		progress_cb(n, times)
 		logger("$title Attempt $n out of ${times}")
 		try {
-			result = code()
+			result = body()
 		} catch(e:Exception) {
 			logger("$title Exception $e")
 			not(catch_exceptions) throws e

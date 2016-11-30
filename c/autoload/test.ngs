@@ -94,9 +94,9 @@ F assert_has(actual, expected, title=null) {
 
 F assert_resolvable(h:Str, title="Resolve host", times=45, sleep=2) {
 	retry(times=times, sleep=sleep, title=title)
-		with code =       { `dig "+short" $h`.lines() }
-		with success_cb = { log_test_ok("$title: $h resolves to ${A[-1]}") }
-		with fail_cb =    { throw TestFail("$title: no resolve for $h").set('host', h) }
+		body       => { `dig "+short" $h`.lines() }
+		success_cb => { log_test_ok("$title: $h resolves to ${A[-1]}") }
+		fail_cb    => { throw TestFail("$title: no resolve for $h").set('host', h) }
 }
 
 F assert_path_exists(p, title="Path exists") {
