@@ -623,6 +623,7 @@ F ==(a:Null, b:Null) true
 doc Run cleanup after successful execution of body or exception in body
 doc body - main code to execute
 doc cleanup - cleanup code to execute
+doc TODO: make sure cleanup() is not run twice in case of exception in cleanup() itself
 doc %EX - finally(
 doc %EX -   { while entry = c_readdir(d) { ... } },
 doc %EX -   { ... c_closedir(d) ...}
@@ -640,7 +641,7 @@ F finally(body:Fun, cleanup:Fun) {
 }
 
 TEST a=0; {1/1}.finally({a=10}) == 1 and a == 10
-TEST a=0; (try finally({1/0}, {a=10}) catch(e:DivisionByZero) "OK") == "OK" and a == 10
+TEST a=0; (try finally() with {1/0} with {a=10} catch(e:DivisionByZero) "OK") == "OK" and a == 10
 
 # --- Hash ---
 
@@ -1711,14 +1712,16 @@ F dir(dirname, subtype=false) collector dir(dirname, collect, subtype)
 F dir(dirname:Str, cb:Fun, subtype=false) {
 	d = c_opendir(dirname)
 	d is Null throws DirFail('Failed to list directory contents').set('dirname', dirname)
-	finally({
-		while entry = c_readdir(d) {
-			cb(Path(dirname / entry.d_name, subtype=subtype))
+	finally()
+		with body = {
+			while entry = c_readdir(d) {
+				cb(Path(dirname / entry.d_name, subtype=subtype))
+			}
 		}
-	}, {
-		r = c_closedir(d)
-		r != 0 throws DirFail('Failed to close directory after listing').set('dirname', dirname)
-	})
+		with cleanup = {
+			r = c_closedir(d)
+			r != 0 throws DirFail('Failed to close directory after listing').set('dirname', dirname)
+		}
 }
 
 # XXX: might not be correct on all platforms
@@ -1874,10 +1877,14 @@ F basename(s:Str) $(basename $s).Str() - Sfx('\n')
 
 # TODO: something more efficient than reading all of it. Some kind of streaming.
 F lines(f:File, cb:Fun, *args) {
-	finally({
-		f.open('r')
-		f.fd.read().lines(cb, *args)
-	}, { f.close() })
+	finally()
+		with body = {
+			f.open('r')
+			f.fd.read().lines(cb, *args)
+		}
+		with cleanup = {
+			f.close()
+		}
 }
 
 F close(f:File) {
