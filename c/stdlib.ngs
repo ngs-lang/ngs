@@ -1713,12 +1713,12 @@ F dir(dirname:Str, cb:Fun, subtype=false) {
 	d = c_opendir(dirname)
 	d is Null throws DirFail('Failed to list directory contents').set('dirname', dirname)
 	finally()
-		with body = {
+		body => {
 			while entry = c_readdir(d) {
 				cb(Path(dirname / entry.d_name, subtype=subtype))
 			}
 		}
-		with cleanup = {
+		cleanup => {
 			r = c_closedir(d)
 			r != 0 throws DirFail('Failed to close directory after listing').set('dirname', dirname)
 		}
@@ -1878,11 +1878,11 @@ F basename(s:Str) $(basename $s).Str() - Sfx('\n')
 # TODO: something more efficient than reading all of it. Some kind of streaming.
 F lines(f:File, cb:Fun, *args) {
 	finally()
-		with body = {
+		body => {
 			f.open('r')
 			f.fd.read().lines(cb, *args)
 		}
-		with cleanup = {
+		cleanup => {
 			f.close()
 		}
 }
