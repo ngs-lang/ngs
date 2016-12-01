@@ -29,13 +29,15 @@
 
 // GC - end
 
+// XXX: don't do NGS_REALLOC all the time. Maybe re-use some
+//      other code here instead of reinventing the wheel
 #define ENSURE_ARRAY_ROOM(dst, allocated, len, min_len) { \
 	assert(min_len); \
 	if(!len) { \
 		allocated = min_len; \
 		dst = NGS_MALLOC(sizeof(*dst) * allocated); \
 	} \
-	if(len == min_len) { \
+	while(allocated < len) { \
 		allocated *= 2; \
 		dst = NGS_REALLOC(dst, sizeof(*dst) * allocated); \
 	} \

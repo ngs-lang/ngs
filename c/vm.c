@@ -2306,7 +2306,7 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 			case BYTECODE_SECTION_TYPE_CODE:
 
 				NGS_MALLOC_OBJ(region);
-				ENSURE_ARRAY_ROOM(vm->regions, vm->regions_allocated, vm->regions_len, 8);
+				ENSURE_ARRAY_ROOM(vm->regions, vm->regions_allocated, vm->regions_len+1, 8);
 				PUSH_ARRAY_ELT(vm->regions, vm->regions_len, *region);
 				region = &vm->regions[vm->regions_len-1];
 				region->start_ip = vm->bytecode_len;
@@ -2716,7 +2716,6 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 
 METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result) {
 	VALUE v, callable, command;
-	VAR_LEN_OBJECT *vlo;
 	int i;
 	unsigned char opcode;
 	GLOBAL_VAR_INDEX gvi;
@@ -2781,13 +2780,8 @@ main_loop:
 							// Arg: LEN + string
 							// In: ...
 							// Out: ... string
-							vlo = NGS_MALLOC(sizeof(*vlo));
-							vlo->len = (size_t) (unsigned char) vm->bytecode[ip];
-							vlo->base.type.num = T_STR;
-							vlo->base.val.ptr = NGS_MALLOC_ATOMIC(vlo->len);
-							memcpy(vlo->base.val.ptr, &(vm->bytecode[ip+1]), vlo->len);
+							v = make_string_of_len(&(vm->bytecode[ip+1]), (unsigned char) vm->bytecode[ip]);
 							ip += 1 + (unsigned char) vm->bytecode[ip];
-							SET_OBJ(v, vlo);
 							PUSH(v);
 							goto main_loop;
 		case OP_DUP:

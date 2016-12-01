@@ -966,6 +966,8 @@ TEST Arr(1...3) == [1,2,3]
 
 # --- Access elements ---
 
+doc Get array element by index from the end
+doc %EX - [10,20,30][-1]  # 30
 F '[]'(arr:Arr, idx:Int) {
 	guard idx < 0
 	i = arr.len() + idx
@@ -973,6 +975,9 @@ F '[]'(arr:Arr, idx:Int) {
 	arr[i]
 }
 
+doc Get array elements at specified indexes
+doc %EX - [10,20,30,40][[0,3]]  # [10, 40]
+doc %RET - Arr
 F '[]'(arr:Arr, indexes:Arr) indexes.map(arr[X])
 
 TEST [10,20,30,40][[0,3]] == [10, 40]
@@ -1585,15 +1590,15 @@ F status(s:Str) {
 	log("(status) $s")
 }
 
-F die(a:Arr) {
+F die(a:Arr, exit_code=1) {
 	guard a.all(is, Str)
 	a % echo(stdlib_error_fd, X)
-	c_exit(1)
+	c_exit(exit_code)
 }
 
-F die(s:Str) {
+F die(s:Str, exit_code=1) {
 	echo(stdlib_error_fd, s)
-	c_exit(1)
+	c_exit(exit_code)
 }
 
 # === Path =======================================
@@ -2119,6 +2124,7 @@ F kill(pid:Int, sig:Int=SIGNALS.TERM) {
 	ret
 }
 
+# XXX: Must join reader/writer threads!
 F kill(p:Process, sig:Int=SIGNALS.TERM) {
 	p.pid is Null throws InvalidArgument("Can't kill() a process that does not have a pid")
 	kill(p.pid, sig)
