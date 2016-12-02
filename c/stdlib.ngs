@@ -2651,7 +2651,7 @@ F rand(r:Range) {
 	type RetryFail(Error)
 }
 
-F code_missing_in_retry() throw InvalidArgument("'code' argument missing in retry()")
+F body_missing_in_retry() throw InvalidArgument("'body' argument missing in retry()")
 
 F retry(
 	times=60,
@@ -2663,7 +2663,7 @@ F retry(
 	progress_cb={null},
 	success_cb={A},
 	fail_cb=null,
-	body:Fun=code_missing_in_retry
+	body:Fun=body_missing_in_retry
 ) {
 	for(i;times) {
 		n = i + 1
