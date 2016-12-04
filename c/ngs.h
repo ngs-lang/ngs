@@ -33,7 +33,7 @@
 //      other code here instead of reinventing the wheel
 #define ENSURE_ARRAY_ROOM(dst, allocated, len, min_len) { \
 	assert(min_len); \
-	if(!len) { \
+	if(!allocated) { \
 		allocated = min_len; \
 		dst = NGS_MALLOC(sizeof(*dst) * allocated); \
 	} \

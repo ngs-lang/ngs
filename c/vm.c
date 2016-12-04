@@ -2367,7 +2367,7 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 						memcpy(file_name, p, file_name_len);
 						file_name[file_name_len] = '\0';
 						p += file_name_len;
-						ENSURE_ARRAY_ROOM(region->files_names, region->files_names_allocated, region->files_names_len, 8);
+						ENSURE_ARRAY_ROOM(region->files_names, region->files_names_allocated, region->files_names_len+1, 8);
 						PUSH_ARRAY_ELT(region->files_names, region->files_names_len, file_name);
 					}
 
