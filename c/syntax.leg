@@ -785,7 +785,7 @@ function-call =
 		$$ = ret;
 	}
 
-function-call-arguments = "(" space? a:function-call-arguments-without-parens space? ")" (space? w:function-call-external-argument {
+function-call-arguments = "(" space? a:function-call-arguments-without-parens space? ")" (space w:function-call-external-argument {
 		append_ast_node_child(a, w);
 	})* {
 	$$ = a;
@@ -793,7 +793,7 @@ function-call-arguments = "(" space? a:function-call-arguments-without-parens sp
 
 # NOTE: the "=>" syntax is experimental
 function-call-external-argument =
-	("with" | "=>") space? a:function-call-argument {
+	("with" | "do" | "=>") space a:function-call-argument {
 		$$ = a;
 	}
 	|
