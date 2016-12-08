@@ -124,6 +124,38 @@ F filter(something, predicate, *args) {
 		})
 }
 
+doc EXPERIMENTAL! Do not use!
+F the_one(something, predicate, *args) {
+	p = Pred(predicate)
+	ret = EmptyBox()
+	something.each(F(elt) {
+		if p(elt, *args) {
+			ret throws InvalidArgument("theone() had more than one match")
+			ret = FullBox(elt)
+		}
+	})
+	not(ret) throws InvalidArgument("theone() had no matches")
+	ret.val
+}
+
+doc EXPERIMENTAL! Do not use!
+F the_one(something, predicate, body:Fun, not_found:Fun={null}) {
+	p = Pred(predicate)
+	ret = EmptyBox()
+	r = Return()
+	something.each(F(elt) {
+		if p(elt) {
+			if ret {
+				throw r(not_found())
+			}
+			ret = FullBox(elt)
+		}
+	})
+	if ret {
+		body(ret.val)
+	}
+}
+
 doc Filter nulls out
 doc CONSIDERED FOR REMOVAL, DO NOT USE, USE something.without(null) INSTEAD
 doc something - instance of any type that has each(something, callback) implemented
@@ -194,22 +226,22 @@ F reduce(something, start, f:Fun) {
 
 TEST [1,2,3].reduce(0, (+)) == 6
 
-doc Filter operator
+doc Filter operator.
 doc Same as calling x.filter(predicate)
 doc %EX - [1,2,3,4] ? F(x) x > 2  # [3,4]
 F ?(x, predicate:Fun) x.filter(predicate)
 
-doc Map operator
+doc Map operator.
 doc Same as calling x.map(mapper)
 doc %EX - [1,2,3,4] / F(x) x * 10
 F /(x, mapper:Fun) x.map(mapper)
 
-doc Each operator
+doc Each operator.
 doc Same as calling x.each(cb)
 doc %EX - [1,2,3,4] % echo
 F %(x, cb:Fun) x.each(cb)
 
-doc Call operator
+doc Call operator.
 doc Same as calling f(x)
 doc %EX - [1,2,3,4] \ echo
 F \(x, f:Fun) f(x)
@@ -225,7 +257,7 @@ F \(x, f:Fun) f(x)
 	type HookDecorator
 }
 
-doc Hook constructor
+doc Hook constructor.
 doc combiner - A function for processing results from all handlers. The outputs are passed as a Hash. Keys are handlers names and values are what handlers return when they run.
 doc %RET - Hook
 F init(hook:Hook, combiner=values) {
@@ -240,8 +272,8 @@ F '[]'(hook:Hook, name:Str) hook.handlers[name]
 doc Set hook handler
 F '[]='(hook:Hook, name:Str, handler:Closure) hook.handlers[name] = handler
 
-doc Add unnamed handler
-doc The hook is automatically named "pushed-N" where N is sequential integer
+doc Add unnamed handler.
+doc The hook is automatically named "pushed-N" where N is sequential integer.
 doc %RET - new hook name
 F push(hook:Hook, handler:Closure) {
 	name = "pushed-${hook.idx}"
@@ -251,7 +283,7 @@ F push(hook:Hook, handler:Closure) {
 }
 
 # TODO: consider optional? try/catch isolation
-doc Runs all handlers passing all args
+doc Runs all handlers passing all args.
 doc args - arguments to pass to handlers
 doc %RET - output of the combiner function applied to all handlers' results
 F call(hook:Hook, *args) {
@@ -303,7 +335,7 @@ TEST Real('1.1') == 1.1
 
 # === NativeMethod ===============================
 
-doc String representation of native method
+doc String representation of native method.
 doc %RET - "<Native method NAME>"
 F Str(c:NativeMethod) {
 	"<Native method ${c.attrs().name}>"
@@ -920,6 +952,7 @@ TEST x=[1,2]; x.unshift(3); x == [3, 1, 2]
 doc EXPERIMENTAL! Do not use!
 doc a - Array of arrays to join
 doc sep - Separator elements
+doc %EX - [[1,2], [3,4]].join([10,20])  # [1,2,10,20,3,4]
 F join(a:Arr, sep:Arr) {
 	guard a.all(is, Arr)
 	collector

@@ -25,15 +25,13 @@
 
 		type TextCollector
 
-		F init(t:TextCollector, pfx='', pfx_inc='\t') {
+		F init(t:TextCollector, pfx='', pfx_inc='\t', heading_level=1) {
 			init(args())
 			t.pfx_stack = []
 			t.acc = []
 		}
 
-		F push(t:TextCollector, s:Str) {
-			t.acc.push(t.pfx + s)
-		}
+		F push(t:TextCollector, s:Str) t.acc.push(t.pfx + s)
 
 		F indent(t:TextCollector) {
 			t.pfx_stack.push(t.pfx)
@@ -50,6 +48,16 @@
 			t.pfx = t.pfx_stack.pop()
 		}
 
+		F heading_inc(t:TextCollector) t.heading_level+=1
+		F heading_dec(t:TextCollector) t.heading_level-=1
+
+		F heading_inc(t:TextCollector, body:Fun) {
+			t.heading_inc()
+			body()
+			t.heading_dec()
+		}
+
+
 		F Arr(t:TextCollector) t.acc
 		F Str(t:TextCollector) t.acc.join('\n')
 		F each(t:TextCollector, *args) t.acc.each(*args)
@@ -57,33 +65,45 @@
 		tc = TextCollector()
 
 
+		# --- DocNode ---
 
 		type DocNode
 		type TextDocNode(DocNode)
-		type NameDocNode(TextDocNode)
 			type TopDocNode(DocNode)
-				type TypeDocNode(DocNode)
-				type MethodDocNode(DocNode)
-					type MethodImplDocNode(DocNode)
-						type DescDocNode(TextDocNode)
-						type ParamsDocNode(DocNode)
-							type ParamDocNode(DocNode)
-								type ParamTypeDocNode(TextDocNode)
-								type ParamDfltDocNode(TextDocNode)
-						type RetDocNode(TextDocNode)
-						type ExampleDocNode(TextDocNode)
+				type MethodsDocNode(DocNode)
+					type TypeDocNode(DocNode)
+					type MethodDocNode(DocNode)
+						type MethodNameDocNode(TextDocNode)
+						type MethodImplDocNode(DocNode)
+							type DescDocNode(TextDocNode)
+							type ParamsDocNode(DocNode)
+								type ParamDocNode(DocNode)
+									type ParamNameDocNode(TextDocNode)
+									type ParamTypeDocNode(TextDocNode)
+									type ParamDfltDocNode(TextDocNode)
+							type RetDocNode(TextDocNode)
+							type ExampleDocNode(TextDocNode)
 
-
-		F init(dn:DocNode, children:Arr=[], **attrs) init(args())
+		F init(dn:DocNode, children:Arr=[]) init(args())
 
 		F init(tdn:TextDocNode, text:Arr) init(args())
 		F init(tdn:TextDocNode, text:Str) super(tdn, [text])
 
 		F push(dn:DocNode, child:DocNode) dn.children.push(child)
 
-		F process_children(dn:DocNode, options:Hash) {
-			tc.indent({ dn.children.Html(options) })
+		F process_children(dn:DocNode, options:Hash, filt={true}) {
+			tc.indent({ dn.children.filter(filt).Html(options) })
 		}
+
+		F name(dn:MethodDocNode) {
+			dn.children.the_one(MethodNameDocNode).text[0]
+		}
+
+		F name(dn:ParamDocNode) {
+			dn.children.the_one(ParamNameDocNode).text[0]
+		}
+
+		# --- Html ---
 
 		F Html(a:Arr, options:Hash) a.each(Html, options)
 
@@ -91,12 +111,60 @@
 			tc.push('<html>')
 			dn.process_children(options)
 			tc.push('</html>')
+			tc
 		}
 
-		F Html(dn:TypeDocNode, options:Hash) {
-			tc.push('<type>')
-			dn.process_children(options)
-			tc.push('</type>')
+		F Html(dn:MethodsDocNode, options:Hash) {
+			tc.push("<!-- methods start -->")
+			tc.push("<h${tc.heading_level}>Methods</h${tc.heading_level}>")
+			tc.heading_inc() do {
+				dn.process_children(options)
+			}
+			tc.push("<!-- methods end -->")
+		}
+
+		# TODO: HTML escaping
+		F Html(dn:MethodDocNode, options:Hash) {
+			tc.push("<!-- method start -->")
+			tc.push("<h${tc.heading_level} id=\"method-${dn.name()}\">${dn.name()}</h${tc.heading_level}>")
+			tc.heading_inc() do {
+				dn.process_children(options + {'method': dn.name()}, MethodImplDocNode)
+			}
+			tc.push("<!-- method end -->")
+		}
+
+		F Html(dn:MethodImplDocNode, options) {
+			tc.push("<!-- method impl start -->")
+
+			params_dn = dn.children.the_one(ParamsDocNode)
+			# echo(pdn)
+			params = params_dn.children.map() with F(param_dn) {
+				html = name(param_dn)
+				typ = param_dn.children.the_one(ParamTypeDocNode).text[0]
+				html += ":$typ"
+				param_dn.children.the_one(ParamDfltDocNode) do F(dflt) {
+					html += "=${dflt.text[0]}"
+				}
+
+				html
+			}
+
+			p = params.join(', ')
+
+			tc.push("<h${tc.heading_level} id=\"impl-${options.method}\">${options.method}($p)</h${tc.heading_level}>")
+			tc.indent() do {
+				dn.children.the_one(DescDocNode) do F(dn) {
+					tc.push('<!-- method impl example start -->')
+					dn.text.each(tc.push(X))
+					tc.push('<!-- method impl example end -->')
+				}
+				dn.children.the_one(ExampleDocNode) do F(dn) {
+					tc.push('<!-- method impl example start -->')
+					tc.push('<pre>' + dn.text.join('\n') + '</pre>')
+					tc.push('<!-- method impl example end -->')
+				}
+			}
+			tc.push("<!-- method impl end -->")
 		}
 
 		F is_public_name(s:Str) s ~ /^[^_]/
@@ -106,7 +174,7 @@
 
 		F process_param(param:Hash, doc:Hash) {
 			# echo("P $param")
-			dn = ParamDocNode([ NameDocNode(param.name) ])
+			dn = ParamDocNode([ ParamNameDocNode(param.name) ])
 			if 'type' in param {
 				dn.push(ParamTypeDocNode(param.type.name))
 			}
@@ -136,11 +204,11 @@
 		}
 
 		F process_method(name, value) {
-			dn = MethodDocNode([NameDocNode(name)] + value.map(process_method_impl))
+			dn = MethodDocNode([MethodNameDocNode(name)] + value.map(process_method_impl))
 			dn
 		}
 
-		methods = TopDocNode()
+		methods = MethodsDocNode()
 
 		g = globals()
 		g.keys().filter(is_public_name).sort(lte).each(F(name) {
@@ -161,7 +229,11 @@
 			}
 		})
 
-		echo(methods.children[-100])
+		page = TopDocNode([methods])
+
+		echo(Html(page))
+
+		# echo(methods.children[-100])
 	}()
 }
 
