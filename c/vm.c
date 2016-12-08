@@ -2556,6 +2556,17 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		// Check optional parameters given as positional arguments
 		j = MIN(argc, n_params_required + n_params_optional);
 		for(i=n_params_required; i < j; i++) {
+			// XXX temp - start
+			if(!IS_NGS_TYPE(params[n_params_required*2 + (i-n_params_required)*3 + 1])) {
+				VALUE exc;
+				exc = make_normal_type_instance(vm->InvalidArgument);
+				set_normal_type_instance_attribute(exc, make_string("message"), make_string("Parameter type expected"));
+				set_normal_type_instance_attribute(exc, make_string("callable"), callable);
+				set_normal_type_instance_attribute(exc, make_string("parameter_index"), MAKE_INT(i));
+				set_normal_type_instance_attribute(exc, make_string("got"), params[n_params_required*2 + (i-n_params_required)*3 + 1]);
+				THROW_EXCEPTION_INSTANCE(exc);
+			}
+			// XXX temp - end
 			if(!obj_is_of_type(argv[i], params[n_params_required*2 + (i-n_params_required)*3 + 1])) {
 				return METHOD_ARGS_MISMATCH;
 			}

@@ -1,0 +1,167 @@
+#!/usr/bin/env ngs
+{
+
+	# WORK IN PROGRESS! DO NOT USE YET!
+
+	# Autoload
+	AWS
+	ArgvMatcher
+	Counter
+	Iter
+	KV
+	Lock
+	Res
+	ResDef
+	Stats
+	Table
+	Thread
+	test
+
+	# Use anonymous function to exclude methods in this file
+	# The inner functions are local
+	F(){
+
+		global Arr, Str, init, push, each
+
+		type TextCollector
+
+		F init(t:TextCollector, pfx='', pfx_inc='\t') {
+			init(args())
+			t.pfx_stack = []
+			t.acc = []
+		}
+
+		F push(t:TextCollector, s:Str) {
+			t.acc.push(t.pfx + s)
+		}
+
+		F indent(t:TextCollector) {
+			t.pfx_stack.push(t.pfx)
+			t.pfx += t.pfx_inc
+		}
+
+		F indent(t:TextCollector, body:Fun) {
+			t.indent()
+			body()
+			t.outdent()
+		}
+
+		F outdent(t:TextCollector) {
+			t.pfx = t.pfx_stack.pop()
+		}
+
+		F Arr(t:TextCollector) t.acc
+		F Str(t:TextCollector) t.acc.join('\n')
+		F each(t:TextCollector, *args) t.acc.each(*args)
+
+		tc = TextCollector()
+
+
+
+		type DocNode
+		type TextDocNode(DocNode)
+		type NameDocNode(TextDocNode)
+			type TopDocNode(DocNode)
+				type TypeDocNode(DocNode)
+				type MethodDocNode(DocNode)
+					type MethodImplDocNode(DocNode)
+						type DescDocNode(TextDocNode)
+						type ParamsDocNode(DocNode)
+							type ParamDocNode(DocNode)
+								type ParamTypeDocNode(TextDocNode)
+								type ParamDfltDocNode(TextDocNode)
+						type RetDocNode(TextDocNode)
+						type ExampleDocNode(TextDocNode)
+
+
+		F init(dn:DocNode, children:Arr=[], **attrs) init(args())
+
+		F init(tdn:TextDocNode, text:Arr) init(args())
+		F init(tdn:TextDocNode, text:Str) super(tdn, [text])
+
+		F push(dn:DocNode, child:DocNode) dn.children.push(child)
+
+		F process_children(dn:DocNode, options:Hash) {
+			tc.indent({ dn.children.Html(options) })
+		}
+
+		F Html(a:Arr, options:Hash) a.each(Html, options)
+
+		F Html(dn:TopDocNode, options:Hash={'pfx': '', 'do_pfx': true}) {
+			tc.push('<html>')
+			dn.process_children(options)
+			tc.push('</html>')
+		}
+
+		F Html(dn:TypeDocNode, options:Hash) {
+			tc.push('<type>')
+			dn.process_children(options)
+			tc.push('</type>')
+		}
+
+		F is_public_name(s:Str) s ~ /^[^_]/
+
+		F to_lines(s:Str) [s]
+		F to_lines(a:Arr) a
+
+		F process_param(param:Hash, doc:Hash) {
+			# echo("P $param")
+			dn = ParamDocNode([ NameDocNode(param.name) ])
+			if 'type' in param {
+				dn.push(ParamTypeDocNode(param.type.name))
+			}
+			if 'dflt' in param {
+				dn.push(ParamDfltDocNode(param.dflt.Str()))
+			}
+			if param.name in doc {
+				dn.push(DescDocNode(doc[param.name]))
+			}
+			dn
+		}
+
+		F process_method_impl_doc_attr(mi:Fun, dn:DocNode, doc_attr:Str, doc_node_type:Type) {
+			d = mi.attrs().doc or {}
+			if doc_attr in d {
+				dn.push(doc_node_type(d[doc_attr].to_lines()))
+			}
+		}
+
+		F process_method_impl(mi:Fun) {
+			dn = MethodImplDocNode([])
+			process_method_impl_doc_attr(mi, dn, '', DescDocNode)
+			dn.push(ParamsDocNode(mi.params().map(process_param, mi.attrs().doc or {})))
+			process_method_impl_doc_attr(mi, dn, '%EX', ExampleDocNode)
+			process_method_impl_doc_attr(mi, dn, '%RET', RetDocNode)
+			dn
+		}
+
+		F process_method(name, value) {
+			dn = MethodDocNode([NameDocNode(name)] + value.map(process_method_impl))
+			dn
+		}
+
+		methods = TopDocNode()
+
+		g = globals()
+		g.keys().filter(is_public_name).sort(lte).each(F(name) {
+			value = g[name]
+			cond {
+				(value is Arr) and value.all(is, Fun)
+					methods.push(process_method(name, value))
+				value is Type {
+					# process_type(name, value)
+					c = value.constructors
+					if value is NormalType {
+						# NormalType has special constructor which we can't handle for now
+						# so skipping that one
+						c = c[1..null]
+					}
+					process_method(name, c)
+				}
+			}
+		})
+
+		echo(methods.children[-100])
+	}()
+}
+

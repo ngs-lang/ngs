@@ -918,6 +918,8 @@ F unshift(arr:Arr, elt) {
 TEST x=[1,2]; x.unshift(3); x == [3, 1, 2]
 
 doc EXPERIMENTAL! Do not use!
+doc a - Array of arrays to join
+doc sep - Separator elements
 F join(a:Arr, sep:Arr) {
 	guard a.all(is, Arr)
 	collector
@@ -2685,6 +2687,33 @@ F retry(
 	}
 	not(fail_cb) throws RetryFail()
 	fail_cb()
+}
+
+# === Misc =======================================
+
+STDLIB_HEX_DIGITS='0123456789ABCDEF'
+
+# XXX: If Str will ever include Unicode, fix here
+doc EXPERIMENTAL! Do not use!
+F hex(s:Str) {
+	s.map(F(char) {
+		n = ord(char)
+		STDLIB_HEX_DIGITS[n / 16] + STDLIB_HEX_DIGITS[n % 16]
+	}).join('')
+}
+
+STDLIB_VALID_URI_CHAR_RE = /^[-a-zA-Z0-9_.!~*'()]$/
+#'
+
+# TODO: efficient way
+doc EXPERIMENTAL! Do not use!
+F encode_uri_component(s:Str) {
+	s.map(F(char)
+		if char ~ STDLIB_VALID_URI_CHAR_RE then
+			char
+		else
+			'%' + hex(char)
+	).join('')
 }
 
 # === Misc tests =================================
