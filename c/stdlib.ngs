@@ -1304,6 +1304,13 @@ F Hash(keys:Arr, values:Arr)
 TEST Hash(["a", "b", "c"], [1,2,3]) == {"a": 1, "b": 2, "c": 3}
 
 
+F Hash(arr:Arr, key_attr:Str, val_attr:Str)
+	collector/{}
+		arr.each(F(elt) collect((.)(elt, key_attr), (.)(elt, val_attr)))
+
+TEST Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}], "Name", "Value") == {"n1": "v1", "n2": "v2"}
+
+
 # --- Misc ---
 
 
