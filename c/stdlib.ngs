@@ -35,13 +35,13 @@ F assert(condition:Bool) assert(condition, "Assertion failed")
 
 doc Implements calling of Return type instances
 doc like the finish(i) call in the example below
-doc %EX F first(r:Range, predicate:Fun, *args) {
-doc %EX 	finish = Return()
-doc %EX 	r.each(F(i) {
-doc %EX 		predicate(i, *args) throws finish(i)
-doc %EX 	})
-doc %EX 	null
-doc %EX }
+doc %EX - F first(r:Range, predicate:Fun, *args) {
+doc %EX - 	finish = Return()
+doc %EX - 	r.each(F(i) {
+doc %EX - 		predicate(i, *args) throws finish(i)
+doc %EX - 	})
+doc %EX - 	null
+doc %EX - }
 F call(r:Return, v=null) {
 	r.val = v
 	r
@@ -748,7 +748,7 @@ F any(arr:Arr, predicate, *args) {
 TEST [1,2,10].any(F(elt) elt > 5)
 TEST [1,2,3].any(F(elt) elt > 5).not()
 
-doc Check whether there all elements in arr that satisfy the given predicate
+doc Check whether all elements in arr satisfy the given predicate
 doc TODO: Make it work on anything with each() method
 doc %RET - Bool
 F all(arr:Arr, predicate, *args) {

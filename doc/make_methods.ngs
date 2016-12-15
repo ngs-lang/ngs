@@ -84,7 +84,10 @@
 							type RetDocNode(TextDocNode)
 							type ExampleDocNode(TextDocNode)
 
-		F init(dn:DocNode, children:Arr=[]) init(args())
+		F init(dn:DocNode, children:Arr=null) {
+			if not(children) children = []
+			init(args())
+		}
 
 		F init(tdn:TextDocNode, text:Arr) init(args())
 		F init(tdn:TextDocNode, text:Str) super(tdn, [text])
@@ -105,11 +108,20 @@
 
 		# --- Html ---
 
+		F permalink(s:Str) '<a class="section-link" title="Permalink to this definition" href="#' + s.encode_html_attr() + '">¶</a>'
+
 		F Html(a:Arr, options:Hash) a.each(Html, options)
 
 		F Html(dn:TopDocNode, options:Hash={'pfx': '', 'do_pfx': true}) {
+			tc.push('<!DOCTYPE html>')
 			tc.push('<html>')
+			tc.push('<head>')
+			tc.push('<meta charset="UTF-8">')
+			tc.push('<link rel="stylesheet" href="methods.css" type="text/css" />')
+			tc.push('</head>')
+			tc.push('<body>')
 			dn.process_children(options)
+			tc.push('</body>')
 			tc.push('</html>')
 			tc
 		}
@@ -125,45 +137,57 @@
 
 		# TODO: HTML escaping
 		F Html(dn:MethodDocNode, options:Hash) {
+			not(dn.children.filter(MethodImplDocNode)) returns null
 			tc.push("<!-- method start -->")
-			tc.push("<h${tc.heading_level} id=\"method-${dn.name()}\">${dn.name()}</h${tc.heading_level}>")
+			tc.push('<section class="method">')
+			link = permalink('method-' + dn.name())
+			tc.push("<h${tc.heading_level} id=\"method-${dn.name().encode_html_attr()}\" class=\"method-header\">${dn.name().encode_html()}$link</h${tc.heading_level}>")
 			tc.heading_inc() do {
 				dn.process_children(options + {'method': dn.name()}, MethodImplDocNode)
 			}
+			tc.push('</section>')
 			tc.push("<!-- method end -->")
 		}
 
 		F Html(dn:MethodImplDocNode, options) {
 			tc.push("<!-- method impl start -->")
+			tc.push('<section class="method-impl">')
 
 			params_dn = dn.children.the_one(ParamsDocNode)
 			# echo(pdn)
 			params = params_dn.children.map() with F(param_dn) {
-				html = name(param_dn)
+				html = name(param_dn).encode_html()
 				typ = param_dn.children.the_one(ParamTypeDocNode).text[0]
-				html += ":$typ"
+				html += ":${typ.encode_html()}"
 				param_dn.children.the_one(ParamDfltDocNode) do F(dflt) {
-					html += "=${dflt.text[0]}"
+					html += "=${dflt.text[0].encode_html()}"
 				}
-
 				html
 			}
 
 			p = params.join(', ')
 
-			tc.push("<h${tc.heading_level} id=\"impl-${options.method}\">${options.method}($p)</h${tc.heading_level}>")
+			types = ('-' + params_dn.children.map(F(param_dn) param_dn.children.the_one(ParamTypeDocNode).text[0])).join('')
+			link = permalink('impl-' + options.method.encode_html_attr() + types)
+			tc.push("<h${tc.heading_level} id=\"impl-${options.method.encode_html_attr()}$types\" class=\"method-impl-header\">${options.method.encode_html()}($p)$link</h${tc.heading_level}>")
 			tc.indent() do {
-				dn.children.the_one(DescDocNode) do F(dn) {
-					tc.push('<!-- method impl example start -->')
-					dn.text.each(tc.push(X))
-					tc.push('<!-- method impl example end -->')
+				tc.push('<section class="method-impl-content">')
+				tc.heading_inc() do {
+					dn.children.the_one(DescDocNode) do F(dn) {
+						tc.push('<!-- method impl example start -->')
+						dn.text / encode_html % tc.push(X)
+						tc.push('<!-- method impl example end -->')
+					}
+					dn.children.the_one(ExampleDocNode) do F(dn) {
+						tc.push('<!-- method impl example start -->')
+						tc.push("<h${tc.heading_level} id=\"impl-${options.method.encode_html_attr()}-example\">Example</h${tc.heading_level}>")
+						tc.push('<pre class="example">' + dn.text.map(encode_html).join('\n') + '</pre>')
+						tc.push('<!-- method impl example end -->')
+					}
 				}
-				dn.children.the_one(ExampleDocNode) do F(dn) {
-					tc.push('<!-- method impl example start -->')
-					tc.push('<pre>' + dn.text.join('\n') + '</pre>')
-					tc.push('<!-- method impl example end -->')
-				}
+				tc.push('</section>')
 			}
+			tc.push('</section>')
 			tc.push("<!-- method impl end -->")
 		}
 
