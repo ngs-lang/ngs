@@ -138,7 +138,6 @@
 		# TODO: HTML escaping
 		F Html(dn:MethodDocNode, options:Hash) {
 			not(dn.children.filter(MethodImplDocNode)) returns null
-			tc.push("<!-- method start -->")
 			tc.push('<section class="method">')
 			link = permalink('method-' + dn.name())
 			tc.push("<h${tc.heading_level} id=\"method-${dn.name().encode_html_attr()}\" class=\"method-header\">${dn.name().encode_html()}$link</h${tc.heading_level}>")
@@ -146,11 +145,9 @@
 				dn.process_children(options + {'method': dn.name()}, MethodImplDocNode)
 			}
 			tc.push('</section>')
-			tc.push("<!-- method end -->")
 		}
 
 		F Html(dn:MethodImplDocNode, options) {
-			tc.push("<!-- method impl start -->")
 			tc.push('<section class="method-impl">')
 
 			params_dn = dn.children.the_one(ParamsDocNode)
@@ -174,21 +171,24 @@
 				tc.push('<section class="method-impl-content">')
 				tc.heading_inc() do {
 					dn.children.the_one(DescDocNode) do F(dn) {
-						tc.push('<!-- method impl example start -->')
 						dn.text / encode_html % tc.push(X)
-						tc.push('<!-- method impl example end -->')
 					}
+					dn.children.the_one(ParamsDocNode).children.each(F(param_dn:ParamDocNode) {
+						if param_dn.children.any(DescDocNode) {
+							tc.push('<section class="method-param">')
+							tc.push("<h${tc.heading_level}>${param_dn.children.the_one(ParamNameDocNode).text[0].encode_html()}</h${tc.heading_level}>")
+							param_dn.children.the_one(DescDocNode).text / encode_html % tc.push(X)
+							tc.push('</section>') # method-param
+						}
+					})
 					dn.children.the_one(ExampleDocNode) do F(dn) {
-						tc.push('<!-- method impl example start -->')
 						tc.push("<h${tc.heading_level} id=\"impl-${options.method.encode_html_attr()}-example\">Example</h${tc.heading_level}>")
 						tc.push('<pre class="example">' + dn.text.map(encode_html).join('\n') + '</pre>')
-						tc.push('<!-- method impl example end -->')
 					}
 				}
-				tc.push('</section>')
+				tc.push('</section>') # method-impl-content
 			}
-			tc.push('</section>')
-			tc.push("<!-- method impl end -->")
+			tc.push('</section>') # method-impl
 		}
 
 		F is_public_name(s:Str) s ~ /^[^_]/

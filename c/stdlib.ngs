@@ -109,9 +109,9 @@ F map(something, mapper:Fun, *args)
 		something.each(F(elt) collect(mapper(elt, *args)))
 
 doc Filter something to an Arr (array) of values using predicate
+doc something - instance of any type that has each(something, callback) implemented
 doc predicate - decision function to be called with each item as first argument and *args as the rest of the arguments
 doc predicate - when predicate(item) returns true, the item will appear in the resulting array
-doc something - instance of any type that has each(something, callback) implemented
 doc %EX - (1...10).filter(F(num) num % 2 == 0)  # Gives [2,4,6,8,10]
 doc %EX - (1...10).filter((<), 5)  # Gives [1,2,3,4], predicate called as predicate(item, 5)
 doc %RET - Arr
