@@ -111,7 +111,7 @@ test-no-bootstrap-no-stdlib: ngs
 	done;
 
 test-stdlib: ngs
-	@ ./ngs test.ngs
+	@ NGS_BOOTSTRAP=bootstrap.ngs ./ngs test.ngs
 
 test: test-no-bootstrap-no-stdlib test-stdlib
 	@ echo "ALL TESTS OK"
