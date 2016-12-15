@@ -1,12 +1,17 @@
 #!/usr/bin/env ngs
 {
+
+	tests_counter = 0
+
 	F perform_test(test_code:Str) {
+		global tests_counter
 		echo("+ Test: $test_code")
 		c = "{ F() { $test_code }() }"
 		program_bytecode = compile(c, '<test>')
 		program_func = load(program_bytecode, '<test>')
 		result = program_func()
 		result != true throws Error("Test failed: $test_code. Returned $result")
+		tests_counter += 1
 	}
 
 	F perform_tests_in_file(file:Str) {
@@ -23,5 +28,5 @@
 
 	files.each(perform_tests_in_file)
 
-	echo("OK")
+	echo("OK. Tests: ${tests_counter}")
 }

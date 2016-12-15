@@ -2383,6 +2383,7 @@ TEST ("abc" ~ /a(.)c/)[1] == 'b'
 
 # TODO: better exceptions
 F ~(s:Str, r:RegExp, offset:Int=0, options:Int=0) {
+	not(options) and not(s) returns MatchN()
 	result = c_pcre_exec(r, s, offset, options)
 	if result is Int {
 		result == C_PCRE_ERROR_NOMATCH returns MatchN()
@@ -2418,12 +2419,16 @@ PCRE_NEWLINE_TO_OPTIONS = {
 	         -1: C_PCRE_NEWLINE_ANY,
 }
 
-F ~~(s:Str, r:RegExp) {
+F ~~(s:Str, r:RegExp, collect_unmatched:Bool=false) {
 	collector {
 		m = (~)(s, r, 0)
-		not(m) returns null
+		if not(m) {
+			if collect_unmatched collect(s)
+			return null
+		}
 		start_offset = m.positions[0][0]
 		next_offset = m.positions[0][1]
+		if collect_unmatched and start_offset then collect(s[0..start_offset])
 		collect(m)
 		option_bits = r.options
 		utf8 = option_bits.band(C_PCRE_UTF8).Bool()
@@ -2438,6 +2443,11 @@ F ~~(s:Str, r:RegExp) {
 			}
 			m = (~)(s, r, next_offset, options)
 			if m {
+				if collect_unmatched {
+					if next_offset != m.positions[0][0] {
+						collect(s[next_offset..m.positions[0][0]])
+					}
+				}
 				start_offset = m.positions[0][0]
 				next_offset = m.positions[0][1]
 				collect(m)
@@ -2455,6 +2465,9 @@ F ~~(s:Str, r:RegExp) {
 				}
 				continue
 			}
+		}
+		if collect_unmatched and (next_offset < len(s)) {
+			collect(s[next_offset..null])
 		}
 	}
 }
@@ -2500,17 +2513,7 @@ F -(s:Str, r:RegExp) {
 
 TEST "abc01def23" - /[0-9]+/ == "abcdef23"
 
-F split(s:Str, r:RegExp) {
-	ret = s
-	prev_match_end = 0
-	collector {
-		(s ~~ r).each(F(m:MatchY) {
-			collect(s[prev_match_end..m.positions[0][0]])
-			prev_match_end = m.positions[0][1]
-		})
-		collect(s[prev_match_end..null])
-	}
-}
+F split(s:Str, r:RegExp) (~~)(s, r, true).filter(Str)
 
 # Crashes on Ubuntu 14.04 clang 3.5.0 (Travis CI)
 TEST (try ENV.TRAVIS and ENV.CC == "clang") returns true; "ab01de12f".split(/[0-9]+/) == ['ab', 'de', 'f']
@@ -2532,6 +2535,9 @@ F Pred(r:RegExp) F regexp_pred(x) x ~ r
 
 TEST %[w1 w2].filter(/1/) == %[w1]
 
+F replace(s:Str, r:RegExp, mapper:Fun, *args) {
+	(~~)(s, r, true).map([ F(m:MatchY) mapper(m.whole, *args), F(s:Str) s ]).join('')
+}
 
 # === Fun ========================================
 
@@ -2754,28 +2760,34 @@ F retry(
 
 STDLIB_HEX_DIGITS='0123456789ABCDEF'
 
-# XXX: If Str will ever include Unicode, fix here
-doc EXPERIMENTAL! Do not use!
-F hex(s:Str) {
+doc Encodes each character in a string as two uppercase hexadecimal digits
+F encode_hex(s:Str) {
 	s.map(F(char) {
 		n = ord(char)
 		STDLIB_HEX_DIGITS[n / 16] + STDLIB_HEX_DIGITS[n % 16]
 	}).join('')
 }
 
-STDLIB_VALID_URI_CHAR_RE = /^[-a-zA-Z0-9_.!~*'()]$/
+STDLIB_INVALID_URI_CHAR_RE = /[^-a-zA-Z0-9_.!~*'()]/
 #'
 
-# TODO: efficient way
-doc EXPERIMENTAL! Do not use!
-F encode_uri_component(s:Str) {
-	s.map(F(char)
-		if char ~ STDLIB_VALID_URI_CHAR_RE then
-			char
-		else
-			'%' + hex(char)
-	).join('')
-}
+F encode_uri_component(s:Str) s.replace(STDLIB_INVALID_URI_CHAR_RE, F(char) '%' + encode_hex(char))
+
+TEST encode_uri_component("ab+c%") == "ab%2Bc%25"
+
+
+STDLIB_HTML_ESCAPE = {'&': '&amp;', '<': '&lt;', '>': '&gt;'}
+
+F encode_html(s:Str) s.map(F(char) STDLIB_HTML_ESCAPE.get(char, char)).join('')
+
+TEST "ab>+c%&'".encode_html() == "ab&gt;+c%&amp;'"
+
+
+STDLIB_HTML_ATTR_ESCAPE = STDLIB_HTML_ESCAPE + {'"': '&quot;', "'": '&#39;'}
+
+F encode_html_attr(s:Str) s.map(F(char) STDLIB_HTML_ATTR_ESCAPE.get(char, char)).join('')
+
+TEST "ab>+c%&'".encode_html_attr() == "ab&gt;+c%&amp;&#39;"
 
 # === Misc tests =================================
 
