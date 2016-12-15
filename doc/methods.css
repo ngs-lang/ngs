@@ -7,10 +7,6 @@ body {
 	line-height: 1.5;
 }
 
-h1, h2, h3, h4, h5, h6 {
-	color: brown;
-}
-
 pre.example {
 	background-color: #F0FFE0;
 	padding: 1em;
@@ -41,17 +37,16 @@ h4:hover > a.section-link
 	padding-left: 4em;
 }
 .method-header {
-	opacity: 0.4;
+	color: #888;
 
-}
-.method-header:hover {
-	opacity: 1;
-
-}
-.method-impl {
-	padding-left: 4em;
 }
 .method-impl-content {
-	padding-left: 4em;
 	padding-bottom: 1em;
+}
+.method-impl, .method-impl-content, .method-param-content, .method-example-content {
+	padding-left: 4ex;
+}
+.example-header {
+	color: #208020;
+
 }

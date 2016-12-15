@@ -69,7 +69,7 @@ bootstrap_main_file = null
 
 # *** fetch - abstraction above low level c io primitives ***
 # TODO: Better exceptions
-doc Fetches whole file
+doc Fetches the whole file
 doc fname - File name to fetch
 doc %RET - Whole file as a string
 F fetch(fname:Str) {

@@ -109,9 +109,9 @@ F map(something, mapper:Fun, *args)
 		something.each(F(elt) collect(mapper(elt, *args)))
 
 doc Filter something to an Arr (array) of values using predicate
-doc something - instance of any type that has each(something, callback) implemented
-doc predicate - decision function to be called with each item as first argument and *args as the rest of the arguments
-doc predicate - when predicate(item) returns true, the item will appear in the resulting array
+doc something - Instance of any type that has each(something, callback) implemented.
+doc predicate - Decision function to be called with each item as first argument and *args as the rest of the arguments.
+doc predicate - When predicate(item) returns true, the item will appear in the resulting array.
 doc %EX - (1...10).filter(F(num) num % 2 == 0)  # Gives [2,4,6,8,10]
 doc %EX - (1...10).filter((<), 5)  # Gives [1,2,3,4], predicate called as predicate(item, 5)
 doc %RET - Arr
@@ -130,34 +130,36 @@ F the_one(something, predicate, *args) {
 	ret = EmptyBox()
 	something.each(F(elt) {
 		if p(elt, *args) {
-			ret throws InvalidArgument("theone() had more than one match")
+			ret throws InvalidArgument("the_one() had more than one match")
 			ret = FullBox(elt)
 		}
 	})
-	not(ret) throws InvalidArgument("theone() had no matches")
+	not(ret) throws InvalidArgument("the_one() had no matches")
 	ret.val
 }
 
 doc EXPERIMENTAL! Do not use!
-F the_one(something, predicate, body:Fun, not_found:Fun={null}) {
+F the_one(something, predicate, body:Fun, found_more:Fun={null}, not_found:Fun={null}) {
 	p = Pred(predicate)
 	ret = EmptyBox()
 	r = Return()
 	something.each(F(elt) {
 		if p(elt) {
 			if ret {
-				throw r(not_found())
+				throw r(found_more())
 			}
 			ret = FullBox(elt)
 		}
 	})
 	if ret {
 		body(ret.val)
+	} else {
+		not_found()
 	}
 }
 
-doc Filter nulls out
-doc CONSIDERED FOR REMOVAL, DO NOT USE, USE something.without(null) INSTEAD
+doc Filter nulls out.
+doc CONSIDERED FOR REMOVAL, DO NOT USE, USE something.without(null) INSTEAD.
 doc something - instance of any type that has each(something, callback) implemented
 doc %RET - Arr (array) of original items without nulls
 F filter(something) filter(something, (is not), Null)
