@@ -1010,6 +1010,13 @@ F '[]'(arr:Arr, idx:Int) {
 	arr[i]
 }
 
+F '[]'(arr:Arr, r:ExclusiveRange) {
+	guard r.end is Int and r.end < 0
+	r.end < 0 - arr.len() throws IndexNotFound("[](Arr, ExclusiveRange): Index ${r.end} (range end) is illegal for array of size ${arr.len()}", arr, idx)
+	arr[r.start..arr.len() + r.end]
+}
+
+
 doc Get array elements at specified indexes
 doc %EX - [10,20,30,40][[0,3]]  # [10, 40]
 doc %RET - Arr
@@ -1469,6 +1476,12 @@ F '[]'(s:Str, i:Int) {
 
 TEST ("abc"[-1] == "c") and ("abc"[-3] == "a")
 TEST try "abc"[-4] == "x" catch(e:InvalidArgument) true
+
+F '[]'(s:Str, r:ExclusiveRange) {
+	guard r.end is Int and r.end < 0
+	r.end < 0 - s.len() throws InvalidArgument("Negative index (range end) into string is (abs) larger than the string")
+	s[r.start..s.len() + r.end]
+}
 
 # --- Misc utilities ---
 
@@ -2244,6 +2257,14 @@ F parse(s:Str, hints:Hash) {
 		data = data.Instances.flatten()
 	}
 	data.stdlib_aws_straighten_tags()
+}
+
+F parse(s:Str, hints:Hash) {
+	guard try hints['process'].command.argv[0] == 'find'
+	argv = hints['process'].command.argv
+	guard '-printf' not in argv
+	zero_sep = '-print0' in argv
+	if zero_sep then s.split(chr(0))[0..-1] else s.lines()
 }
 
 # === config =====================================

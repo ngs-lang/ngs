@@ -1,7 +1,5 @@
+#!/usr/bin/env ngs
 {
-	# Do not use! Crashes!
-	# TODO: Fix the crash. Looks like memory corruption.
-
 	F perform_test(test_code:Str) {
 		echo("+ Test: $test_code")
 		c = "{ F() { $test_code }() }"
@@ -11,13 +9,19 @@
 		result != true throws Error("Test failed: $test_code. Returned $result")
 	}
 
-	# TODO: also other files
-	File('stdlib.ngs').lines(F(line) {
-		# dump(line)
-		if m = line ~ /^TEST (.*)/ {
-			perform_test(m[1])
-		}
-	})
+	F perform_tests_in_file(file:Str) {
+		# TODO: also other files
+		File(file).lines(F(line) {
+			# dump(line)
+			if m = line ~ /^TEST (.*)/ {
+				perform_test(m[1])
+			}
+		})
+	}
+
+	files = ['bootstrap.ngs', 'stdlib.ngs'] + ``find autoload -name '*.ngs'``
+
+	files.each(perform_tests_in_file)
 
 	echo("OK")
 }

@@ -1583,6 +1583,11 @@ METHOD_RESULT native_ord_str_int EXT_METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(((unsigned char *)OBJ_DATA_PTR(argv[0]))[idx]));
 }
 
+METHOD_RESULT native_chr_int_str METHOD_PARAMS {
+	char c = (unsigned char) GET_INT(argv[0]);
+	METHOD_RETURN(make_string_of_len(&c, 1));
+}
+
 METHOD_RESULT native_rand METHOD_PARAMS {
 	(void) argv;
 #if NGS_RAND_MAX < RAND_MAX
@@ -2072,6 +2077,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, "[]",       &native_index_get_str_range,     2, "s", vm->Str, "range", vm->ExclusiveRange);
 	register_global_func(vm, 1, "[]=",      &native_index_set_str_range_str, 3, "s", vm->Str, "range", vm->ExclusiveRange, "replacement", vm->Str);
 	register_global_func(vm, 1, "ord",      &native_ord_str_int,             2, "s", vm->Str, "idx", vm->Int);
+	register_global_func(vm, 0, "chr",      &native_chr_int_str,             1, "code", vm->Int);
 
 	// int
 	register_global_func(vm, 0, "+",        &native_plus_int_int,      2, "a",   vm->Int, "b", vm->Int);

@@ -77,6 +77,16 @@ Note that this started as internal document so things here are unformed, not fin
 	* Replace Command#options with Hash (currently Arr)
 	* FIX F f(optional=[], **attrs) {...}; f(name=name)
 
+	* Fix - ngs: vm.c:2988: vm_run: Assertion `0=="Function does not have result value"' failed.
+		F parse(s:Str, hints:Hash) {
+			guard try hints['process'].command.argv[0] == 'find'
+			# argv = hints['process'].command.argv
+			# guard '-printf' not in argv
+			# zero_sep = '-print0' in argv
+			# if zero_sep then s.split('\0') else s.lines()
+		}
+
+
 [roadmap]
 
 	* Phase 1 - the language (will be v0.1.0) [in progress]
