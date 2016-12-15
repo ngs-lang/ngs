@@ -2778,14 +2778,14 @@ TEST encode_uri_component("ab+c%") == "ab%2Bc%25"
 
 STDLIB_HTML_ESCAPE = {'&': '&amp;', '<': '&lt;', '>': '&gt;'}
 
-F encode_html(s:Str) s.map(F(char) STDLIB_HTML_ESCAPE.get(char, char)).join('')
+F encode_html(s:Str) s.map(STDLIB_HTML_ESCAPE.get(X, X)).join('')
 
 TEST "ab>+c%&'".encode_html() == "ab&gt;+c%&amp;'"
 
 
 STDLIB_HTML_ATTR_ESCAPE = STDLIB_HTML_ESCAPE + {'"': '&quot;', "'": '&#39;'}
 
-F encode_html_attr(s:Str) s.map(F(char) STDLIB_HTML_ATTR_ESCAPE.get(char, char)).join('')
+F encode_html_attr(s:Str) s.map(STDLIB_HTML_ATTR_ESCAPE.get(X, X)).join('')
 
 TEST "ab>+c%&'".encode_html_attr() == "ab&gt;+c%&amp;&#39;"
 
