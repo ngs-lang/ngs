@@ -43,8 +43,11 @@ h4:hover > a.section-link
 .method-impl-content {
 	padding-bottom: 1em;
 }
-.method-impl, .method-impl-content, .method-param-content, .method-example-content {
+.method-impl, .method-impl-content, .method-param-content, .method-returns-content, .method-example-content {
 	padding-left: 4ex;
+}
+.returns-header {
+	font-style: italic;
 }
 .example-header {
 	color: #208020;

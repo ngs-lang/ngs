@@ -24,11 +24,11 @@ doc %RET - IndexNotFound type instance with the given message, container and key
 F init(e:IndexNotFound, message:Str, container, key) init(args())
 
 doc Throws AssertFail with givens message if condition is false
-doc %RET - unspecified, do not count on this value
+doc %RET - Unspecified, do not count on this value
 F assert(condition:Bool, msg:Str) not(condition) throws AssertFail(msg)
 
 doc Throws AssertFail if condition is false
-doc %RET - unspecified, do not count on this value
+doc %RET - Unspecified, do not count on this value
 F assert(condition:Bool) assert(condition, "Assertion failed")
 
 # === Return =====================================
@@ -74,7 +74,7 @@ F partial_tail(f:Fun, *bind_args)
 TEST p = partial_tail((-), 10); p(7) == -3
 
 doc Sets the given attribute to the given value
-doc %RET - the modified obj
+doc %RET - The modified obj
 doc %EX - s.len() != 1 throws InvalidArgument("ord() argument must be of length 1 exactly").set('given', s)
 doc %EX - # Would else be written as
 doc %EX - if s.len() != 1 {
@@ -88,12 +88,12 @@ F set(obj, attr:Str, val) {
 }
 
 doc Convert anything to a predicate
-doc anything - the value to compare to
+doc anything - The value to compare to
 doc %RET - A function that compares the only argument to the given value
 F Pred(anything) F eq_pred(x) x == anything
 
 doc Convert a function to predicate
-doc %RET - the given function, without any transformation
+doc %RET - The given function, without any transformation
 F Pred(f:Fun) f
 
 doc Convert a type to a predicate
@@ -102,7 +102,7 @@ doc %RET - A function that checks whether the only argument is of type t
 F Pred(t:Type) F is_pred(x) x is t
 
 doc Map something to an Arr (array) of values using mapper
-doc something - instance of any type that has each(something, callback) implemented
+doc something - Instance of any type that has each(something, callback) implemented
 doc %RET - Arr
 F map(something, mapper:Fun, *args)
 	collector
@@ -152,12 +152,13 @@ TEST try [1,2,3,4].the_one(X>10) catch(e:TheOneFail) true
 
 doc Find the only element that satisfies the predicate and execute given code with the value
 doc body - The code to execute when exactly one element that satisfies the predicate was found. Executed with the found value. It's value will be returned as result of the_one().
-doc found_more - The code to execute when more than one element satisfies the predicate. It's value will be returned as result of the_one(). Defaults to null.
-doc not_found - The code to execute when none of the elements satisfy the predicate. It's value will be returned as result of the_one(). Defaults to null.
+doc found_more - The code to execute when more than one element satisfies the predicate. It's value will be returned as result of the_one(). Defaults to function returning null.
+doc found_none - The code to execute when none of the elements satisfy the predicate. It's value will be returned as result of the_one(). Defaults to function returning null.
+doc %RET - Result of running on of the following: body, found_more, found_none
 doc %EX - F name(dn:MethodDocNode) {
 doc %EX - 	dn.children.the_one(MethodNameDocNode).text[0]
 doc %EX - }
-F the_one(something, predicate, body:Fun, found_more:Fun={null}, not_found:Fun={null}) {
+F the_one(something, predicate, body:Fun, found_more:Fun={null}, found_none:Fun={null}) {
 	p = Pred(predicate)
 	ret = EmptyBox()
 	r = Return()
@@ -172,15 +173,17 @@ F the_one(something, predicate, body:Fun, found_more:Fun={null}, not_found:Fun={
 	if ret {
 		body(ret.val)
 	} else {
-		not_found()
+		found_none()
 	}
 }
 
 TEST ok = false; [1,2,11,3,4].the_one(X>10, F(the_value) { if(the_value == 11) ok = true });
+TEST ok = false; [1,2,11,3,4].the_one(X>20, { does_not_matter }, found_none = { ok = true }); ok
+TEST ok = false; [1,2,11,3,4].the_one(Int, { does_not_matter }, found_more = { ok = true }); ok
 
 doc Filter nulls out.
 doc DEPRECATED, USE something.without(null) INSTEAD.
-doc something - instance of any type that has each(something, callback) implemented
+doc something - Instance of any type that has each(something, callback) implemented
 doc %RET - Arr (array) of original items without nulls
 F filter(something) {
 	error("USING DEPRECATED filter(something)")
@@ -190,9 +193,9 @@ F filter(something) {
 TEST [1,2,null,3].filter() == [1,2,3]
 
 doc Filter something to an Arr (array) of values using predicate
-doc predicate - decision function to be called with each item as first argument and *args as the rest of the arguments
-doc predicate - when predicate(item) returns true, the item will not appear in the resulting array
-doc something - instance of any type that has each(something, callback) implemented
+doc predicate - Decision function to be called with each item as first argument and *args as the rest of the arguments.
+doc predicate - When predicate(item) returns true, the item will not appear in the resulting array
+doc something - Instance of any type that has each(something, callback) implemented
 doc %EX - (1...10).reject(F(num) num % 2 == 0)  # Gives [1,3,5,7,9]
 doc %EX - (1...10).reject((<), 5)  # Gives [5,6,7,8,9,10], predicate called as predicate(item, 5)
 doc %RET - Arr
@@ -238,9 +241,9 @@ doc Combine items to a single value using the supplied binary function
 doc First f is applied to start and the first element of something
 doc then on each step f is applied to previous result and next element
 doc of something.
-doc start - first argument of f, for the first call of f
-doc something - instance of any type that has each(something, callback) implemented
-doc f - the combining function
+doc start - First argument of f, for the first call of f
+doc something - Instance of any type that has each(something, callback) implemented
+doc f - The combining function
 doc %EX - F sum(something) something.reduce(0, (+))
 F reduce(something, start, f:Fun) {
 	ret = start
@@ -277,7 +280,7 @@ F \(x, f:Fun) f(x)
 	doc Hook is a simple pub-sub
 	type Hook
 
-	doc TODO
+	doc CONSIDERED FOR REMOVAL
 	type HookDecorator
 }
 
@@ -298,7 +301,7 @@ F '[]='(hook:Hook, name:Str, handler:Closure) hook.handlers[name] = handler
 
 doc Add unnamed handler.
 doc The hook is automatically named "pushed-N" where N is sequential integer.
-doc %RET - new hook name
+doc %RET - New hook name
 F push(hook:Hook, handler:Closure) {
 	name = "pushed-${hook.idx}"
 	hook.idx += 1
@@ -308,8 +311,8 @@ F push(hook:Hook, handler:Closure) {
 
 # TODO: consider optional? try/catch isolation
 doc Runs all handlers passing all args.
-doc args - arguments to pass to handlers
-doc %RET - output of the combiner function applied to all handlers' results
+doc args - Arguments to pass to handlers
+doc %RET - Output of the combiner function applied to all handlers' results
 F call(hook:Hook, *args) {
 	result = hook.handlers.mapv(F(handler) handler(*args))
 	(hook.combiner)(result)
@@ -345,6 +348,7 @@ TEST h = Hook(); F @(hook, ovr) ovr.replace({"B"}); @h F f() "A"; f() == "B"
 # TODO: something more efficient
 doc Convert a string to real (floating) number, inefficiently
 doc %RET - Real
+doc %EX - Real("1.1")  # 1.1
 F Real(s:Str) {
 	parts = s.split('.')
 	parts.len() == 1 returns Real(Int(parts[0]))
@@ -361,6 +365,7 @@ TEST Real('1.1') == 1.1
 
 doc String representation of native method.
 doc %RET - "<Native method NAME>"
+doc %EX - (%)[0].Str().echo()  # Outputs: <Native method %>
 F Str(c:NativeMethod) {
 	"<Native method ${c.attrs().name}>"
 }
@@ -370,6 +375,8 @@ F Str(c:NativeMethod) {
 # TODO: show arguments:
 #   "<Closure ${c.attrs().name tor "<anonymous>"}(HERE) at ${location}>"
 doc String representation of a closure
+doc %RET - Str
+doc %EX - Real.constructors[-1].Str().echo()  # Outputs: <Closure Real at /usr/share/ngs/stdlib.ngs:350>
 F Str(c:Closure) {
 	info = c.ip().resolve_instruction_pointer()
 	location = "${info.file}:${info.first_line}" tor "<unknown location>"
@@ -395,6 +402,9 @@ F Type(t:Str, doc, parents:Arr) {
 
 TEST type T1; type T2(T1); T2() is T1
 
+doc Match a type. Same as "something is t".
+doc %EX 1 ~ Int  # true
+doc %EX "a" ~ Int  # false
 F ~(something, t:Type) something is t
 
 
@@ -449,9 +459,11 @@ F expose(typ:NormalType, attr:Str) {
 # TODO: support trying all attributes listed in STDLIB_EXPOSE, not just first
 # TODO: check and solve usage by inheriting types
 # TODO: support keword arguments?
-doc Called on ImplNotFound
-doc Implements expose() behaviour
-doc %RET - result of calling the callable with modified argument
+doc Called on ImplNotFound.
+doc Implements expose() behaviour.
+doc callable - The method being called.
+doc args - Call arguments.
+doc %RET - Result of calling the callable with modified argument.
 F impl_not_found_handler(callable:Fun, *args) {
 	l = args.len()
 	exposed_attr_name = null
@@ -471,6 +483,7 @@ F impl_not_found_handler(callable:Fun, *args) {
 
 doc String representation of a type
 doc %RET - "<Type NAME>"
+doc %EX - Real.Str().echo()  # Outputs: <Type Real>
 F Str(t:Type) "<Type ${t.name}>"
 
 # === NormalType =================================
@@ -499,8 +512,8 @@ F Str(i:NormalTypeInstance) {
 }
 
 doc Set an attribute in an instance if it's not already set
-doc %EX - myhash.dflt(k, []).push(elt)
-doc %RET - attrbute value, the already-existed or new
+doc %EX - Myhash.dflt(k, []).push(elt)
+doc %RET - Attribute value, the already-existed or new.
 F dflt(i:NormalTypeInstance, k, v) {
 	if k not in i {
 		(.=)(i, k, v)
@@ -510,6 +523,12 @@ F dflt(i:NormalTypeInstance, k, v) {
 
 doc Equaity test for normal type instances: must be of same type and have same attributes and their values
 doc %RET - Bool
+doc %EX - type T
+doc %EX - t1 = T()
+doc %EX - t1.a = 1
+doc %EX - t2 = T()
+doc %EX - t2.a = 1
+doc %EX - echo(t1 == t2)  # Outputs: true
 F ==(a:NormalTypeInstance, b:NormalTypeInstance) {
 	typeof(a) != typeof(b) returns false
 	Hash(a) == Hash(b)
@@ -539,14 +558,18 @@ F ==(a:NormalTypeInstance, b:NormalTypeInstance) {
 
 # === auto-load ==================================
 
-doc Called when reading undefined global
-doc Implements autoloading
+doc Called when reading undefined global.
+doc Implements autoloading.
+doc Searches in $NGS_DIR/autoload/NAME.ngs
+doc WARNING: May have security implications when looking up a name from untrusted source.
+doc %EX - test("My web server runs") do { .... }  # $NGS_DIR/autoload/test.ngs is automatically loaded.
 F global_not_found_handler(name:Str) {
 	require("${NGS_DIR}/autoload/${name}.ngs")
 }
 
 # === Range ======================================
 
+doc Range constructor
 F init(r:Range, start, end, step=1) init(args())
 
 doc ExclusiveRange constructor
@@ -555,8 +578,13 @@ F ..(start, end)  ExclusiveRange(start, end)
 doc InclusiveRange constructor
 F ...(start, end) InclusiveRange(start, end)
 
-doc Iterates over the elements of r, passing each in turn to cb.
+doc Iterates over the elements of r, passing each in turn to cb along with *args.
+doc cb - Function to be called with values from r
+doc args - Additional arguments for calling r
 doc %RET - r
+doc %EX - s=0
+doc %EX - (1...10).each(F(i) { global s; s+=i })
+doc %EX - echo(s)  # Outputs: 55
 F each(r:Range, cb:Fun, *args) {
 	# TODO: support Real step
 	econd {
@@ -578,8 +606,11 @@ F each(r:Range, cb:Fun, *args) {
 TEST (1..3).map(X*2) == [2, 4]
 TEST (1...3).map(X*2) == [2, 4, 6]
 
-doc Find first element in r that satisfies predicate.
+doc Find first element in r that satisfies the predicate.
+doc args - Additional arguments for calling the predicate.
 doc The predicate is called with each one of the elements plus the args: predicate(i, *args)
+doc %RET - Either the element or null if element was not found.
+doc %EX - (10..20).first(F(x) x % 3 == 0)  # 12 - first item divisible by 3
 F first(r:Range, predicate:Fun, *args) {
 	finish = Return()
 	r.each(F(i) {
@@ -590,7 +621,10 @@ F first(r:Range, predicate:Fun, *args) {
 
 TEST (10..20).first(F(x) x % 3 == 0) == 12
 
+doc TODO
 F Str(r:ExclusiveRange) "<ExclusiveRange ${r.start}..${r.end} step ${r.step}>"
+
+doc TODO
 F Str(r:InclusiveRange) "<InclusiveRange ${r.start}...${r.end} step ${r.step}>"
 
 # === Syntactic sugar ============================
@@ -617,21 +651,26 @@ TEST 1 !== 2
 TEST (1 !== 1) == false
 
 
-doc "not in" operator
+doc "not in" operator. Exactly same as "not(a in b)"
+doc %EX - 10 not in [1,2]  # true
+doc %EX - 1  not in [1,2]  # false
 F 'not in'(a,b) not(a in b)
 
 TEST (1 not in [1,2,3]) == false
 TEST 10 not in [1,2,3]
 
-doc "is not" operator
+doc "is not" operator. Exactly same as "not(a is b)".
+doc %EX - 1    is not Null  # true
+doc %EX - null is not Null  # false
 F 'is not'(a,b) not(a is b)
 
 TEST 1 is not Null
 TEST (null is not Null) == false
 
 
-doc Alternative to "element in container" syntax
+doc Exactly same as "element in container". It's just more convenient in specific cases.
 doc %EX - [1,2,3].has(2)  # true
+doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(has, 1)  # [ [1,2,3], [1,20,30] ]
 doc %RET - Bool
 F has(container, element) element in container
 
@@ -640,30 +679,30 @@ TEST [1,2,3].has(10).not()
 
 
 doc Defines collector { ... collect(...) ... } behaviour for arrays
-doc a - initial array
+doc a - Initial array
 doc code - The code after collector keyword and possible initial value, wrapped in a function
 doc code - "collector THIS_CODE" or "collector/my_init THIS_CODE"
-doc %RET - constructed array
+doc %RET - Constructed array
 F collector(a:Arr, code:Fun) {
 	code(F(elt) a.push(elt))
 	a
 }
 
 doc Defines collector { ... collect(...) ... } behaviour for hashes
-doc h - initial hash
+doc h - Initial hash
 doc code - The code after collector keyword and initial value, wrapped in a function
 doc code - "collector/{'my': 'hash'} THIS_CODE"
-doc %RET - constructed array
+doc %RET - Constructed array
 F collector(h:Hash, code:Fun) {
 	code(F(k, v) h[k] = v)
 	h
 }
 
 doc Defines collector { ... collect(...) ... } behaviour for integers
-doc n - initial number
+doc n - Initial number
 doc code - The code after collector keyword and initial value, wrapped in a function
 doc code - "collector/100 THIS_CODE"
-doc %RET - constructed array
+doc %RET - Constructed array
 F collector(n:Int, code:Fun) {
 	code(F(incr) n=n+incr)
 	n
@@ -682,14 +721,14 @@ doc %RET - true
 F ==(a:Null, b:Null) true
 
 doc Run cleanup after successful execution of body or exception in body
-doc body - main code to execute
-doc cleanup - cleanup code to execute
+doc body - Main code to execute
+doc cleanup - Cleanup code to execute
 doc TODO: make sure cleanup() is not run twice in case of exception in cleanup() itself
 doc %EX - finally(
 doc %EX -   { while entry = c_readdir(d) { ... } },
 doc %EX -   { ... c_closedir(d) ...}
 doc %EX - )
-doc %RET - whatever body call returns
+doc %RET - Whatever body call returns
 F finally(body:Fun, cleanup:Fun) {
 	try {
 		ret = body()
@@ -716,7 +755,7 @@ doc Get hash key or null if it does not exist
 F get(h:Hash, k) get(h, k, null)
 
 doc Convert hash values to integers where possible
-doc %RET - new Hash
+doc %RET - New Hash
 F n(h:Hash) h.mapv({Int(A) tor A})
 
 TEST %{k 7 kk "a"}.n() == {'k': 7, 'kk': 'a'}
@@ -730,7 +769,7 @@ F .(a:Arr, attr:Str) a.map((.), attr)
 TEST [{"x": 1}, {"x": 2}].x == [1, 2]
 
 doc Concatenate strings
-doc %RET - new Str
+doc %RET - New Str
 F +(s1:Str, s2:Str) "${s1}${s2}"
 
 TEST "ab" + "cd" == "abcd"
@@ -822,7 +861,7 @@ F each_idx_val(arr:Arr, cb:Fun, *args) {
 
 doc Map an Arr to an Arr (array) of values using mapper
 doc mapper is called as mapper(INDEX, ITEM, *args)
-doc %RET - new Arr
+doc %RET - New Arr
 F map_idx_val(arr:Arr, mapper:Fun, *args) {
 	l = arr.len()
 	collector
@@ -854,7 +893,7 @@ F map(arr:Arr, n:Int, mapper:Fun, *args) collector arr.each(n, F(*a) collect(map
 # Tested by ~(s:Str, r:RegExp)
 
 doc Filter out all occurencies of specific value
-doc without_elt - the value to filter out
+doc without_elt - The value to filter out
 doc %RET - Arr
 F without(arr:Arr, without_elt)
 	arr.filter((!=), without_elt)
@@ -877,7 +916,7 @@ TEST [1,2,3] - [5,6,1,1,1,1,1,1,1,1,1,1,1,2] == [3]
 
 doc Count number of items that satisfy the predicate
 doc TODO: Make it work on anything with each() method
-doc args - additional arguments for the predicate
+doc args - Additional arguments for the predicate
 doc %RET - Int
 F count(arr:Arr, predicate, *args) {
 	p = Pred(predicate)
@@ -909,7 +948,7 @@ F flatten(arr:Arr) {
 TEST [[1], [2,3]].flatten() == [1,2,3]
 
 doc Return unique values
-doc Warning - uses Hash so comparison is not using == but a built-in hash keys comparison
+doc Warning - Uses Hash so comparison is not using == but a built-in hash keys comparison
 doc %RET - Arr
 F uniq(arr:Arr) arr.Hash({true}).keys()
 
@@ -922,7 +961,7 @@ TEST [null, false, 10, 20].first() == 10
 
 doc Find index of first value that satisfies the predicate
 doc TODO: Make it work on anything with each() method
-doc args - additional arguments for the predicate
+doc args - Additional arguments for the predicate
 doc %RET - Int or null
 F index(arr:Arr, predicate, *args) {
 	p = Pred(predicate)
@@ -934,7 +973,7 @@ F index(arr:Arr, predicate, *args) {
 
 doc Find all indexes of values that satisfy the predicate
 doc TODO: Make it work on anything with each() method
-doc args - additional arguments for the predicate
+doc args - Additional arguments for the predicate
 doc %RET - Arr of Int
 F indexes(arr:Arr, predicate, *args) {
 	p = Pred(predicate)
@@ -946,7 +985,7 @@ TEST [1,5,1,10].indexes(X>2) == [1,3]
 
 doc Find first value that satisfies the predicate
 doc TODO: Make it work on anything with each() method
-doc args - additional arguments for the predicate
+doc args - Additional arguments for the predicate
 doc %RET - Arr of Int
 F first(arr:Arr, predicate:Fun, *args) {
 	i = arr.index(predicate, *args)
@@ -1842,7 +1881,7 @@ F dup2(oldfd:Int, newfd:Int) {
 # TODO: detect and process errors, throw exception(s)
 # TODO: better exceptions (use correct type, not string, maybe use errno)
 doc Read all data
-doc fd - file descriptor to read from
+doc fd - File descriptor to read from
 F read(fd:Int) {
 	ret = []
 	while true {
@@ -2342,7 +2381,7 @@ F config(s:Str, x) {
 	type Match
 
 		doc Sucessfull match result
-		doc matches - succsessfull matches
+		doc matches - Succsessfull matches
 		type MatchY(Match)
 
 		doc Unsucessfull match result
@@ -2763,14 +2802,14 @@ F rand(r:Range) {
 F body_missing_in_retry() throw InvalidArgument("'body' argument missing in retry()")
 
 F retry(
-	times=60,
+	times:Int=60,
 	sleep=1,
-	logger=debug,
+	logger:Fun=debug,
 	success_predicate=Bool,
 	catch_exceptions=true,
 	title="<retry>",
-	progress_cb={null},
-	success_cb={A},
+	progress_cb:Fun={null},
+	success_cb:Fun={A},
 	fail_cb=null,
 	body:Fun=body_missing_in_retry
 ) {

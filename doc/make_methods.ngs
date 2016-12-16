@@ -189,6 +189,12 @@
 							tc.push('</section>') # method-param-content
 						}
 					})
+					dn.children.the_one(RetDocNode) do F(dn) {
+						tc.push("<h${tc.heading_level} id=\"impl-${options.method.encode_html_attr()}-returns\" class=\"returns-header\">Returns</h${tc.heading_level}>")
+						tc.push('<section class="method-returns-content">')
+						tc.push(dn.text.map(encode_html).join('\n'))
+						tc.push('</section>') # method-example-content
+					}
 					dn.children.the_one(ExampleDocNode) do F(dn) {
 						tc.push("<h${tc.heading_level} id=\"impl-${options.method.encode_html_attr()}-example\" class=\"example-header\">Example</h${tc.heading_level}>")
 						tc.push('<section class="method-example-content">')
