@@ -404,8 +404,8 @@ F Type(t:Str, doc, parents:Arr) {
 TEST type T1; type T2(T1); T2() is T1
 
 doc Match a type. Same as "something is t".
-doc %EX 1 ~ Int  # true
-doc %EX "a" ~ Int  # false
+doc %EX -   1 ~ Int  # true
+doc %EX - "a" ~ Int  # false
 F ~(something, t:Type) something is t
 
 
@@ -928,29 +928,46 @@ TEST r=[]; ["a", "b"].each_idx_val(F(idx, val) r.push([idx, val])); r == [[0, "a
 
 
 # TODO: make it work with anything that has each() method
-doc Process each N elements of an Array at a time
+doc Process each N elements of an Array at a time.
+doc Throws InvalidArgument if number of items in arr is not divisible by n.
 doc cb is called as cb(eltI, ..., eltJ, *args) where I is multiple of n and J is I+n-1
-doc %RET - Arr
+doc arr - Items to iterate in chunks of n
+doc n - Number of items in chunk
+doc cb - Function to be called with values from arr
+doc args - Additional arguments for calling cb
+doc %RET - arr
+doc %EX - [1,2,3,4].each(2, F(a, b) echo("$a - $b"))  # Outputs: "1 - 2" and on the next line "3 - 4"
 F each(arr:Arr, n:Int, cb:Fun, *args) {
 	arr.len() % n != 0 throws InvalidArgument("Can not iterate elements in groups of $n of array of size ${arr.len()}")
 	chunks = arr.len() / n
 	for(chunk_number; chunks) {
 		cb(*arr[chunk_number*n..chunk_number*n+n], *args)
 	}
+	arr
 }
 
 # Tested by map(arr:Arr, n:Int, cb:Fun, *args)
 
 
-doc Map each N elements of an Array at a time
+doc Map each N elements of an Array at a time.
 doc mapper is called as cb(eltI, ..., eltJ, *args) where I is multiple of n and J is I+n-1
+doc Throws InvalidArgument if number of items in arr is not divisible by n.
+doc mapper is called as mapper(eltI, ..., eltJ, *args) where I is multiple of n and J is I+n-1
+doc arr - Items to iterate in chunks of n
+doc n - Number of items in chunk
+doc mapper - Function to be called with values from arr
+doc args - Additional arguments for calling mapper
+doc %RET - Arr
+doc %EX - [1,2,3,4].map(2, F(a,b) "$a=$b").join("&")  # Outputs: 1=2&3=4
 F map(arr:Arr, n:Int, mapper:Fun, *args) collector arr.each(n, F(*a) collect(mapper(*a, *args)))
 
 # Tested by ~(s:Str, r:RegExp)
 
 doc Filter out all occurencies of specific value
+doc arr - items to filter
 doc without_elt - The value to filter out
 doc %RET - Arr
+doc %EX - [1,2,3,2].without(2)  # [1,3]
 F without(arr:Arr, without_elt)
 	arr.filter((!=), without_elt)
 
@@ -958,6 +975,7 @@ TEST [1,2,3,2].without(2) == [1,3]
 
 doc Filter out all values in a that are also in b
 doc %RET - Arr
+doc %EX - [1,2,3] - [5,6,1]  # [2,3]
 F -(a:Arr, b:Arr) {
 	h = if b.len() > 10 {
 		b.Hash({true})
@@ -970,10 +988,13 @@ F -(a:Arr, b:Arr) {
 TEST [1,2,3] - [5,6,1] == [2,3]
 TEST [1,2,3] - [5,6,1,1,1,1,1,1,1,1,1,1,1,2] == [3]
 
-doc Count number of items that satisfy the predicate
-doc TODO: Make it work on anything with each() method
+doc Count number of items that satisfy the predicate.
+doc TODO: Make it work on anything with each() method.
+doc arr - Items to look at
+doc predicate - Test function
 doc args - Additional arguments for the predicate
 doc %RET - Int
+doc %EX - [1,2,3,11,12].count(X>10)  # 2
 F count(arr:Arr, predicate, *args) {
 	p = Pred(predicate)
 	collector/0
@@ -985,14 +1006,18 @@ F count(arr:Arr, predicate, *args) {
 
 TEST [1,2,3,11,12].count(X>10) == 2
 
-doc Count all true values
+doc Count all true values.
+doc arr - Items to look at
 doc %RET - Int
+doc %EX - [0,1,2,null,false].count()  # 2 (Only 1 and 2 count as true values)
 F count(arr:Arr) count(arr, identity)
 
 TEST [0,1,2,null,false].count() == 2
 
-doc Flatten one level
+doc Flatten one level.
+doc arr - Array of arrays
 doc %RET - Arr
+doc %EX - [[1], [2,3]].flatten()  # [1,2,3]
 F flatten(arr:Arr) {
 	guard arr.all(is, Arr)
 	collector
@@ -1003,22 +1028,26 @@ F flatten(arr:Arr) {
 
 TEST [[1], [2,3]].flatten() == [1,2,3]
 
-doc Return unique values
-doc Warning - Uses Hash so comparison is not using == but a built-in hash keys comparison
+doc Return unique values.
+doc Warning: uses Hash so comparison is not using == but a built-in hash keys comparison.
 doc %RET - Arr
+doc %EX - [1,2,2,3,4,4].uniq()  # [1,2,3,4]
 F uniq(arr:Arr) arr.Hash({true}).keys()
 
 TEST [1,2,2,3,4,4].uniq() == [1,2,3,4]
 
-doc Find first true value
+doc DEPRECATED. Find first true value
 F first(arr:Arr) first(arr, identity)
 
 TEST [null, false, 10, 20].first() == 10
 
-doc Find index of first value that satisfies the predicate
-doc TODO: Make it work on anything with each() method
+doc Find index of first value that satisfies the predicate.
+doc TODO: Make it work on anything with each() method.
+doc arr - Items to look at
+doc predicate - Test function
 doc args - Additional arguments for the predicate
 doc %RET - Int or null
+doc %EX - [1,2,11,3,4].index(X>10)  # 2
 F index(arr:Arr, predicate, *args) {
 	p = Pred(predicate)
 	l = arr.len()
@@ -1029,8 +1058,11 @@ F index(arr:Arr, predicate, *args) {
 
 doc Find all indexes of values that satisfy the predicate
 doc TODO: Make it work on anything with each() method
+doc arr - Items to look at
+doc predicate - Test function
 doc args - Additional arguments for the predicate
 doc %RET - Arr of Int
+doc %EX - [1,5,1,10].indexes(X>2)  # [1,3]
 F indexes(arr:Arr, predicate, *args) {
 	p = Pred(predicate)
 	l = arr.len()
@@ -1039,10 +1071,13 @@ F indexes(arr:Arr, predicate, *args) {
 
 TEST [1,5,1,10].indexes(X>2) == [1,3]
 
-doc Find first value that satisfies the predicate
+doc Find first value that satisfies the predicate.
 doc TODO: Make it work on anything with each() method
+doc arr - Items to look at
+doc predicate - Test function
 doc args - Additional arguments for the predicate
-doc %RET - Arr of Int
+doc %RET - Int or null
+doc %EX - [1,2,11,3,4].first(X>10)  # 11
 F first(arr:Arr, predicate:Fun, *args) {
 	i = arr.index(predicate, *args)
 	i is Null returns null
@@ -1054,6 +1089,7 @@ TEST [5,10,15].first(X>20) == null
 
 doc Make new array which is a reversed given array
 doc %RET - Arr
+doc %EX - [1,2,3].reverse()  # [3,2,1]
 F reverse(arr:Arr) {
 	l = arr.len()
 	l.map({ arr[l-A-1] })
@@ -1062,10 +1098,14 @@ F reverse(arr:Arr) {
 TEST [1,2,3].reverse() == [3,2,1]
 
 doc Calculate sum of the elements
+doc %EX - [1,2,3].sum()  # 6
 F sum(something) something.reduce(0, (+))
 
 doc Prepend one element to the given array
-doc %RET - arr
+doc %RET - Modified arr
+doc %EX - x=[1,2]
+doc %EX - x.unshift(3)
+doc %EX - echo(x)  # Outputs: [3,1,2]
 F unshift(arr:Arr, elt) {
 	arr[0..0] = [elt]
 	arr
@@ -1092,6 +1132,7 @@ F join(a:Arr, sep:Arr) {
 
 doc Make Arr from Hash. Each key/value pair becomes two-items array:
 doc %RET - Arr of form [[k1, v1], [k2, v2], ...]
+doc %EX - Arr({'x': 7, 'y': 8})  # [['x', 7], ['y', 8]]
 F Arr(h:Hash)
 	h.map(F(*pair) pair)
 
@@ -1117,6 +1158,8 @@ TEST zip([1,2,3], [4,5,6]) == [[1,4], [2,5], [3,6]]
 TEST zip([1,2,3], [4,5,6], [7,8,9,10]) == [[1,4,7], [2,5,8], [3,6,9], [null, null, 10]]
 
 doc Convert range to an array
+doc %EX - Arr(1..3)   # [1,2]
+doc %EX - Arr(1...3)  # [1,2,3]
 F Arr(r:Range) r / identity
 
 TEST Arr(1..3) == [1,2]
@@ -1126,6 +1169,7 @@ TEST Arr(1...3) == [1,2,3]
 # --- Access elements ---
 
 doc Get array element by index from the end
+doc idx - Negative index
 doc %EX - [10,20,30][-1]  # 30
 F '[]'(arr:Arr, idx:Int) {
 	guard idx < 0
@@ -1134,20 +1178,34 @@ F '[]'(arr:Arr, idx:Int) {
 	arr[i]
 }
 
+doc Get array elements at specified indexes. Indexes specified by ExclusiveRange.
+doc r - ExclusiveRange with negatve .end
+doc %EX - [10,20,30,40][1..-1]  # [20,30]
+doc %RET - Arr
 F '[]'(arr:Arr, r:ExclusiveRange) {
 	guard r.end is Int and r.end < 0
 	r.end < 0 - arr.len() throws IndexNotFound("[](Arr, ExclusiveRange): Index ${r.end} (range end) is illegal for array of size ${arr.len()}", arr, idx)
 	arr[r.start..arr.len() + r.end]
 }
 
+TEST [10,20,30,40][1..-1] == [20,30]
 
-doc Get array elements at specified indexes
+
+doc Get array elements at specified indexes.
+doc arr - Array to pick items from
+doc indexes - Indexes of items to pick
 doc %EX - [10,20,30,40][[0,3]]  # [10, 40]
 doc %RET - Arr
 F '[]'(arr:Arr, indexes:Arr) indexes.map(arr[X])
 
 TEST [10,20,30,40][[0,3]] == [10, 40]
 
+doc Truncate an array if necessary so it would have maximum l elements.
+doc a - Array to (possibly) truncate.
+doc l - Maximum elements
+doc %RET - Either a or new Arr of length l
+doc %EX - [10,11,12].limit(2)   # [10,11]
+doc %EX - [10,11,12].limit(10)  # [10,11,12]
 F limit(a:Arr, l:Int) {
 	a.len() <= l returns a
 	a[0..l]
@@ -1182,16 +1240,25 @@ TEST [10,11,12].limit(2) == [10,11]
 			ret_cb
 		}
 
+		doc TODO
 		F min(arr:Arr) most(arr, (<))
+		doc TODO
 		F max(arr:Arr) most(arr, (>))
 
 		# TODO: *args for consistency?
 		# EXPERIMENTAL!
+		doc TODO
 		F min(arr:Arr, cb:Fun) most_by_cb(arr, (<), cb)
+		doc TODO
 		F max(arr:Arr, cb:Fun) most_by_cb(arr, (>), cb)
 	}()
 }
 
+doc Repeat all elements in arr n times
+doc arr - Elements to repeat
+doc n - Number of times to repeat the elements
+doc %RET - Arr
+doc %EX - [10,20] * 2  # [10,20,10,20]
 F *(arr:Arr, n:Int)
 	collector
 		for(i;n)
@@ -1199,6 +1266,9 @@ F *(arr:Arr, n:Int)
 
 TEST [10,20] * 2 == [10,20,10,20]
 
+doc Cartesian product
+doc %RET - Arr of Arr[2]
+doc %EX - [10,20] * [30,40]  # [[10, 30], [10, 40], [20, 30], [20, 40]]
 F *(a:Arr, b:Arr)
 	collector
 		a.each(F(elt_a) {
@@ -1209,13 +1279,22 @@ F *(a:Arr, b:Arr)
 
 TEST [10,20] * [30,40] == [[10, 30], [10, 40], [20, 30], [20, 40]]
 
-
+doc Echo non-string. Converts x to string first, using Str()
+doc x - Anything but Str
+doc %RET - null
+doc %EX - echo(1)
 F echo(x) {
 	guard x is not Str
 	echo(Str(x))
 }
 
 # Built-in join() can only handle Str elements
+doc Join non-strings. Converts a elements to string first, then uses built-in join().
+doc Warning - behaviour subject to change!
+doc a - Array to join
+doc s - Delimiter
+doc %RET - Str
+doc %EX - [1,2,3].join("::")  # The string 1::2::3
 F join(a:Arr, s:Str) {
 	guard a.any((is not), Str)
 	a.map(Str).join(s)
@@ -1225,6 +1304,8 @@ F join(a:Arr, s:Str) {
 
 doc Used for command line arguments such as ['--vpc-id', my_vpc_id()].nuke_null()
 doc If my_vpc_id() is null the whole array is not needed
+doc %EX - [1,2].nuke_null()  # [1,2]
+doc %EX - [1,null].nuke_null()  # []
 F nuke_null(a:Arr) {
 	a.any(is, Null) returns []
 	a
@@ -1234,6 +1315,10 @@ TEST [1,2].nuke_null() == [1,2]
 TEST [1,null].nuke_null() == []
 
 # Can be more efficent I guess
+doc Merge sorted arrays.
+doc lte - Less-then-or-equal function to use for comparison of items in a and b
+doc %RET - Arr
+doc %EX - merge_sorted([1,3,10], [0, 7], (<=))  # [0, 1, 3, 7, 10]
 F merge_sorted(a:Arr, b:Arr, lte:Fun) {
 	ai = Iter(a)
 	bi = Iter(b)
@@ -1251,11 +1336,13 @@ F merge_sorted(a:Arr, b:Arr, lte:Fun) {
 
 TEST merge_sorted([1,3,10], [0, 7], (<=)) == [0, 1, 3, 7, 10]
 
-F sort(a:Arr) sort(a, (<=))
-
 # Current implemetation: https://en.wikipedia.org/wiki/Merge_sort
 # TODO: replacte with Timsort https://en.wikipedia.org/wiki/Timsort
-F sort(a:Arr, lte:Fun) {
+doc Sort an array.
+doc lte - Less-then-or-equal function to use for comparison of the items in a
+doc %RET - Arr
+doc %EX - sort([0,5,3,-1], (<=))  # [-1, 0, 3, 5]
+F sort(a:Arr, lte:Fun=(<=)) {
 	# XXX: Not copied!
 	a.len() <= 1 returns a
 	mid = a.len() / 2
@@ -1266,11 +1353,15 @@ F sort(a:Arr, lte:Fun) {
 
 TEST sort([0,5,3,-1], (<=)) == [-1, 0, 3, 5]
 
-
-F sort(a:Arr, attr:Str) a.sort(F(a, b) (.)(a, attr) <= (.)(b, attr))
+doc Sort an array based on attribute value
+doc lte - Less-then-or-equal function to use for comparison of the items' attributes
+doc %RET - Arr
+doc %EX - [{'x': 1}, {'x': 5}, {'x': 3}].sort('x')  # [{'x': 1}, {'x': 3}, {'x': 5}]
+F sort(a:Arr, attr:Str, lte:Fun=(<=)) a.sort(F(a, b) lte((.)(a, attr), (.)(b, attr)))
 
 TEST [{'x': 1}, {'x': 5}, {'x': 3}].sort('x') == [{'x': 1}, {'x': 3}, {'x': 5}]
 
+doc TODO. Is it used even?
 F split(a:Arr, delim) {
 	ret = []
 	cur = []
@@ -1287,6 +1378,8 @@ F split(a:Arr, delim) {
 }
 
 
+doc Compare arrays. Warning: Hash is used so internal Hash keys comparison is used, not ==
+doc %EX - cmp([1,2], [2,3])  # {'add': [3], 'remove': [1]}
 F cmp(a:Arr, b:Arr) {
 	ah = Hash(a, {true})
 	bh = Hash(b, {true})
@@ -1298,8 +1391,8 @@ F cmp(a:Arr, b:Arr) {
 
 TEST cmp([1,2], [2,3]) == {'add': [3], 'remove': [1]}
 
-doc Compare arrays without using Hash so that '==' is used for comparison
-doc and not internal '===' for Hash keys.
+doc Like cmp() but compare arrays without using Hash so that '==' is used for comparison
+doc and not internal '===' for Hash keys. Much slower than cmp().
 F compare(a:Arr, b:Arr) {
 	{
 		'add': b.filter(X not in a)
@@ -1307,6 +1400,8 @@ F compare(a:Arr, b:Arr) {
 	}
 }
 
+doc Convert an array to NGS code that would produce the array when executed. Not fully functional yet.
+doc %RET - Str
 F code(a:Arr) "[" + a.map(code).join(', ') + "]"
 
 # === Hash =======================================
@@ -1314,8 +1409,18 @@ F code(a:Arr) "[" + a.map(code).join(', ') + "]"
 
 # --- Comparisons ---
 
+doc Compare two Hashes. Hashes must have same keys with same values in same order to return true.
+doc %RET - Bool
 F ==(a:Hash, b:Hash) Arr(a) == Arr(b)
 
+doc Compare hashes
+doc %EX - diff = cmp(current_tags, target_tags)
+doc %EX - if (tags = stdlib_aws_tags(diff.add + diff.change)) {
+doc %EX - 	r.run('update_tags/add', %(aws ec2 create-tags --resources ${r.id()} --tags $*tags))
+doc %EX - }
+doc %EX - if (tags = diff.remove / "Key=$X") {
+doc %EX - 	r.run('update_tags/remove', %(aws ec2 delete-tags --resources ${r.id()} --tags $*tags))
+doc %EX - }
 F cmp(a:Hash, b:Hash) {
 	{
 		'add': b.filter(X not in a)
@@ -1330,16 +1435,35 @@ TEST cmp({"a": 1, "b":2}, {"b": 3, "d": 4}) == {"add":{"d":4}, "change":{"b":3},
 # --- Functional ---
 
 # Make it built in for speed?
+doc Iterate a Hash.
+doc h - Hash to iterate
+doc cb - Function to call with successive keys and values
+doc args - Additional arguments for calling cb
+doc %RET - h
+doc %EX - {"a": 1, "b": 2}.each(F(k, v) echo("$k=$v"))  # Outputs: "a=1" and on the next line "b=2"
 F each(h:Hash, cb:Fun, *args) {
 	h.keys().each(F(k) cb(k, h[k], *args))
 	h
 }
 
+doc Iterate a Hash.
+doc h - Hash to iterate
+doc cb - Function to call with successive indexes, keys and values
+doc args - Additional arguments for calling cb
+doc %RET - h
+doc %EX - {"a": 1, "b": 2}.each_idx_key_val(F(idx, k, v) echo("[$idx] $k=$v"))
+doc %EX - # Outputs: "[0] a=1" and on the next line "[1] b=2"
 F each_idx_key_val(h:Hash, cb:Fun, *args) {
 	h.keys().each_idx_val(F(idx, k) cb(idx, k, h[k], *args))
 	h
 }
 
+doc Map a Hash
+doc h - Hash with source keys and values
+doc mapper - Function to be called with keys and values from h
+doc args - Additional arguments for calling mapper
+doc %RET - Arr
+doc %EX - {'a': 1, 'b': 2}.map(F(k, v) "${k}-$v")  # ['a-1', 'b-2']
 F map(h:Hash, mapper:Fun, *args)
 	collector
 		h % { collect(mapper(A, B, *args)) }
@@ -1347,14 +1471,31 @@ F map(h:Hash, mapper:Fun, *args)
 TEST {'a': 1, 'b': 2}.map(F(k, v) "${k}-$v") == ['a-1', 'b-2']
 TEST {'a': 1, 'b': 2}.map(F(k, v, sep) "${k}${sep}${v}", '+') == ['a+1', 'b+2']
 
-
+doc Map Hash keys
+doc h - Source hash
+doc mapper - Function to be called with keys
+doc args - Additional arguments for calling mapper
+doc %RET - Hash
+doc %EX - mapk({"a": 1}, F(k) k+"z")  # {"az": 1}
 F mapk(h:Hash, mapper:Fun, *args)
 	collector/{}
 		h % { collect(mapper(A, *args), B) }
 
 TEST mapk({"a": 1}, X+"z") == {"az": 1}
 
-
+doc Map Hash values
+doc h - Source hash
+doc mapper - Function to be called with values
+doc args - Additional arguments for calling mapper
+doc %RET - Hash
+doc %EX - LEN = 3
+doc %EX - lines_ = fetch("/usr/share/dict/words").lines()
+doc %EX - long_lines = lines_.filter({A.len()>LEN})
+doc %EX - prefix_to_lines = long_lines.group(F(line) line[0..LEN])  # {"pfx1": ["pfx1a", "pfx1b", ...], "pfx2": ["pfx2a", "pfx2b", ...], ...}
+doc %EX - prefix_to_count = prefix_to_lines.mapv(len)  # {"pfx1": 30, "pfx2": 35, ...}
+doc %EX - top = prefix_to_count.Arr().sort(F(a, b) b[1] <= a[1]).Hash()
+doc %EX - top .= limit(10)
+doc %EX - echo(top)  # Outputs: {con=1219, dis=1001, pro=808, pre=607, com=600, int=543, tra=498, ove=431, per=422, imp=421}
 F mapv(h:Hash, mapper:Fun, *args)
 	collector/{}
 		h % { collect(A, mapper(B, *args)) }

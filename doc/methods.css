@@ -46,6 +46,9 @@ h4:hover > a.section-link
 .method-impl, .method-impl-content, .method-param-content, .method-returns-content, .method-example-content {
 	padding-left: 4ex;
 }
+.method-impl-content {
+	border-bottom: 1px solid #DDD;
+}
 .returns-header {
 	font-style: italic;
 }
