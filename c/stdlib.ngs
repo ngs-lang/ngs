@@ -513,7 +513,7 @@ F Str(i:NormalTypeInstance) {
 }
 
 doc Set an attribute in an instance if it's not already set
-doc %EX - Myhash.dflt(k, []).push(elt)
+doc %EX - mysomething.dflt(k, []).push(elt)
 doc %RET - Attribute value, the already-existed or new.
 F dflt(i:NormalTypeInstance, k, v) {
 	if k not in i {
@@ -1471,7 +1471,7 @@ F map(h:Hash, mapper:Fun, *args)
 TEST {'a': 1, 'b': 2}.map(F(k, v) "${k}-$v") == ['a-1', 'b-2']
 TEST {'a': 1, 'b': 2}.map(F(k, v, sep) "${k}${sep}${v}", '+') == ['a+1', 'b+2']
 
-doc Map Hash keys
+doc Map Hash keys. Build new Hash with same values as in h but keys mapped by mapper.
 doc h - Source hash
 doc mapper - Function to be called with keys
 doc args - Additional arguments for calling mapper
@@ -1483,7 +1483,7 @@ F mapk(h:Hash, mapper:Fun, *args)
 
 TEST mapk({"a": 1}, X+"z") == {"az": 1}
 
-doc Map Hash values
+doc Map Hash values. Build new Hash with same keys as in h but values mapped by mapper.
 doc h - Source hash
 doc mapper - Function to be called with values
 doc args - Additional arguments for calling mapper
@@ -1503,13 +1503,22 @@ F mapv(h:Hash, mapper:Fun, *args)
 TEST mapv({"a": 1}, X+1) == {"a": 2}
 
 
+doc Map Hash keys and values. Build new Hash with keys and values mapped by mapper.
+doc h - Source hash
+doc mapper - Function to be called with keys and values
+doc args - Additional arguments for calling mapper
+doc %EX - mapkv({"a": 1}, {[A+"zz", B+10]})  # {"azz": 11}
 F mapkv(h:Hash, mapper:Fun, *args)
 	collector/{}
 		h % { collect(*mapper(A, B, *args)) }
 
 TEST mapkv({"a": 1}, {[A+"zz", B+10]}) == {"azz": 11}
 
-
+doc Filter hash. Build new hash with kev-value pairs selected by predicate.
+doc h - Source hash
+doc predicate - Test function to be called with one key and one value at a time
+doc args - Additional arguments for calling the predicate
+doc %EX - {'a': 1, 'b': 2}.filter(F(k, v) k == 'a')  # {'a': 1}
 F filter(h:Hash, predicate, *args) {
 	p = Pred(predicate)
 	collector/{}
@@ -1519,8 +1528,14 @@ F filter(h:Hash, predicate, *args) {
 		})
 }
 
-TEST {'a': 1, 'b': 2}.filter(F(k, v, k_eq) k == k_eq, 'a') == {'a': 1}
+TEST {'a': 1, 'b': 2}.filter(F(k, v) k == 'a') == {'a': 1}
 
+doc Check whether all key-value pairs in Hash satisfy the given predicate
+doc h - Hash to check
+doc predicate - Test function to be called with one key and one value at a time
+doc args - Additional arguments for calling the predicate.
+doc %RET - Bool
+doc %EX - {"x": 1, "y": 2}.all(F(k, v) v is Int)  # true
 F all(h:Hash, predicate, *args) {
 	p = Pred(predicate)
 	arr = h.keys()
@@ -1533,6 +1548,12 @@ F all(h:Hash, predicate, *args) {
 TEST {"x": 1, "y": 2}.all(F(k, v) v is Int)
 
 
+doc Count number of key-value pairs in Hash that satisfy the predicate.
+doc h - Hash to check
+doc predicate - Test function to be called with one key and one value at a time
+doc args - Additional arguments for calling the predicate.
+doc %RET - Int
+doc %EX - {'a': 1, 'b': 2, 'c': 11}.count(F(k, v) v>10)  # 1
 F count(h:Hash, predicate, *args) {
 	p = Pred(predicate)
 	collector/0
@@ -1546,6 +1567,10 @@ TEST {'a': 1, 'b': 2, 'c': 11}.count(F(k, v) v>10) == 1
 
 # --- Conversions ---
 
+doc Create a Hash from Arr of Arr[2]
+doc arr - Array of Arrays. Each one of the sub-arrays must have exactly two elements.
+doc %RET - Hash
+doc %EX - Hash([['a', 1], ['c', 3]])  # {'a': 1, 'c': 3}
 F Hash(arr:Arr)
 	collector/{}
 		arr.each(F(pair) {
@@ -1554,14 +1579,18 @@ F Hash(arr:Arr)
 
 TEST Hash([['a', 1], ['c', 3]]) == {'a': 1, 'c': 3}
 
-
+doc TODO. Not sure it's used anywhere. Maybe remove?
 F Hash(arr:Arr, attr:Str)
 	collector/{}
 		arr.each(F(v) collect(v[attr], v))
 
 TEST Hash([{'x': 1}, {'x': 2}], 'x') == {1: {'x': 1}, 2: {'x': 2}}
 
-
+doc Create a Hash from keys in arr using cb for values calculation
+doc arr - Keys of the hash to build
+doc cb - Function to be called with one key at a time. Should calculate a value for the given key.
+doc %RET - Hash
+doc %EX - Hash([1,2], F(x) x*2)  # {1: 2, 2: 4}
 F Hash(arr:Arr, cb:Fun)
 	collector/{}
 		arr.each(F(elt) collect(elt, cb(elt)))
@@ -1569,13 +1598,22 @@ F Hash(arr:Arr, cb:Fun)
 TEST Hash([1,2], F(x) x*2) == {1: 2, 2: 4}
 
 
+doc Create a Hash from keys in "keys" and corresponding values in "values"
+doc keys - Keys for the new Hash
+doc values - Values for the new Hash
+doc %RET - Hash
+doc %EX - Hash(["a", "b", "c"], [1,2,3])  # {"a": 1, "b": 2, "c": 3}
 F Hash(keys:Arr, values:Arr)
 	collector/{}
 		keys.len().each(F(idx) collect(keys[idx], values[idx]))
 
 TEST Hash(["a", "b", "c"], [1,2,3]) == {"a": 1, "b": 2, "c": 3}
 
-
+doc Create Hash from Arr of something that has key and value attribute
+doc arr - Arr with all the keys and values
+doc key_attr - Name of the attribute holding the keys of newly created Hash
+doc val_attr - Name of the attribute holding the values of newly created Hash
+doc %EX - Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}], "Name", "Value")  # {"n1": "v1", "n2": "v2"}
 F Hash(arr:Arr, key_attr:Str, val_attr:Str)
 	collector/{}
 		arr.each(F(elt) collect((.)(elt, key_attr), (.)(elt, val_attr)))
@@ -1585,18 +1623,29 @@ TEST Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}], "Name",
 
 # --- Misc ---
 
-
-F without(h:Hash, without_k)
-	h.filter(X != without_k)
+doc Filter out specific key
+doc h - Source hash
+doc without_k - The key to filter out
+doc %RET - Hash
+doc %EX - {'a': 1, 'b': 2, 'c': 3}.without('a')  # {'b': 2, 'c': 3}
+F without(h:Hash, without_k) h.filter(X != without_k)
 
 TEST {'a': 1, 'b': 2, 'c': 3}.without('a') == {'b': 2, 'c': 3}
 
+doc Filter out specific key-value pair
+doc h - Source hash
+doc without_k - The key to filter out
+doc without_v - The value to filter out
+doc %RET - Hash
+doc %EX - {'a': 1, 'b': 2, 'c': 3}.without('a', 1).without('b', 22)  # {'b': 2, 'c': 3}
 F without(h:Hash, without_k, without_v)
 	h.filter(F(k, v) not((k == without_k) and (v == without_v)))
 
 TEST {'a': 1, 'b': 2, 'c': 3}.without('a', 1).without('b', 22) == {'b': 2, 'c': 3}
 
-
+doc Add Hashes. Builds new hash with key-value pairs from both a and b. If same key is present in both a and b, the value from b is used.
+doc %RET - Hash
+doc %EX - {'a': 1, 'b': 2, 'c': 3} + {'b': 20, 'd': 40}  # {'a': 1, 'b': 20, 'c': 3, 'd': 40}
 F +(a:Hash, b:Hash) {
 	{**a, **b}
 }
@@ -1604,16 +1653,28 @@ F +(a:Hash, b:Hash) {
 
 TEST {'a': 1, 'b': 2, 'c': 3} + {'b': 20, 'd': 40} == {'a': 1, 'b': 20, 'c': 3, 'd': 40}
 
-
+doc Build array of Str where each resulting string is of the form "KEY=VALUE"
+doc h - Source hash
+doc %RET - Arr of Str
+doc %EX - {'a': 1, 'b': 2}.Strs()  # ['a=1', 'b=2']
 F Strs(h:Hash) h / "$X=$Y"
 
 TEST {'a': 1, 'b': 2}.Strs() == ['a=1', 'b=2']
 
+doc Truncate a Hash if necessary so it would have maximum l key-value pairs.
+doc h - Source hash
+doc l - Maximum elements
+doc %RET - Hash
+doc %EX - {"a": 1, "b": 2}.limit(1)  # {"a": 1}
 F limit(h:Hash, l:Int) h.keys().limit(l).Hash(h[X])
 
 TEST {"a": 1, "b": 2}.limit(3) == {"a": 1, "b": 2}
 TEST {"a": 1, "b": 2}.limit(1) == {"a": 1}
 
+doc TODO.
+doc Group items from a by key returned by cb
+doc args - Additional arguments for calling cb
+doc %RET - Hash
 F group(a:Arr, cb:Fun, *args) {
 	ret = {}
 	a.each(F(elt) {
@@ -1623,10 +1684,15 @@ F group(a:Arr, cb:Fun, *args) {
 	ret
 }
 
+doc Convert a Hash to NGS code that would produce the given Hash when executed. Not fully functional yet.
+doc %RET - Str
 F code(h:Hash) {
 	'{' + h.map(F(k, v) "${k.code()}: ${v.code()}").join(', ') + '}'
 }
 
+doc Set an key in a Hash if it's not already set
+doc %EX - Myhash.dflt(k, []).push(elt)
+doc %RET - Hash value, the already-existed or new.
 F dflt(h:Hash, k, v) {
 	if k not in h {
 		h[k] = v
@@ -1637,22 +1703,51 @@ F dflt(h:Hash, k, v) {
 # === Box ========================================
 
 {
+	doc Parent type of FullBox and EmptyBox
 	type Box
+		doc Represents available value
+		doc val - The value
 		type FullBox(Box)
+		doc Represents no value
 		type EmptyBox(Box)
 }
 
+doc Do not use directly!
+doc Helper constructor that throws InvalidArgument when
+doc FullBox is created with zero or more than one argument.
 F init(b:FullBox, *args) throw InvalidArgument("FullBox must be initialized with exactly one value")
+
+doc FullBox constructor. Saves val into .val
+doc %EX - # Simplified code from the_one() method:
+doc %EX - ret = EmptyBox()
+doc %EX - something.each(F(elt) {
+doc %EX - 	if predicate(elt) {
+doc %EX - 		ret throws TheOneFail("the_one() had more than one match")
+doc %EX - 		ret = FullBox(elt)
+doc %EX - 	}
+doc %EX - })
+doc %EX - not(ret) throws TheOneFail("the_one() had no matches")
+doc %EX - ret.val # Has the value
 F init(b:FullBox, val) b.val = val
 
+doc Always true
 F Bool(fb:FullBox) true
+
+doc Always false
 F Bool(eb:EmptyBox) false
+
+doc Zero for FullBox and one for EmptyBox
 F to_exit_code(b:Box) b.Bool().to_exit_code()
 
 # === Integer ====================================
 
 # --- Functional ---
 
+doc Iterate from zero up to but not including n
+doc cb - Function to call with current number
+doc args - Additional arguments for calling cb
+doc %EX - 10.each(echo)  # Outputs numbers from 0 to 9 inclusive, one on each line
+doc %RET - n
 F each(n:Int, cb:Fun, *args) {
 	for(i;n) cb(i, *args)
 	n
@@ -1661,6 +1756,10 @@ F each(n:Int, cb:Fun, *args) {
 TEST 3.map(identity) == [0, 1, 2]
 TEST 3.map((*), 3) == [0, 3, 6]
 
+doc Call cb n times with *args arguments
+doc cb - Function to call
+doc args - Arguments for calling cb
+doc %EX - r=0; 5.times(F() r=r+2);  # r is now 10
 F times(n:Int, cb:Fun, *args) {
 	for(i;n) cb(*args)
 	n
@@ -1668,17 +1767,27 @@ F times(n:Int, cb:Fun, *args) {
 
 TEST r=0; 5.times(F() r=r+2); r==10
 
+doc Convert base-10 string to Int.
+doc Throws InvalidArgument if the number in s is not well-formatted.
+doc %RET - Int
+doc %EX - Int(" 100 ")  # 100
 F Int(s:Str) Int(s, 10)
 
 TEST Int(" 100 ") == 100
 TEST try Int(" XX ") catch(e:InvalidArgument) true
 TEST Int(" XX ", 36) == 1221
 
+doc Convert Bool to int.
+doc %RET - Int
+doc %EX - true.Int()   # 1
+doc %EX - false.Int()  # 0
 F Int(b:Bool) if b 1 0
 
 TEST true.Int() == 1
 TEST false.Int() == 0
 
+doc Convert an Int to NGS code that would produce the integer when executed. Not fully functional yet.
+doc %RET - Str
 F code(n:Int) Str(n)
 
 
@@ -1688,33 +1797,44 @@ F code(n:Int) Str(n)
 # --- Constructors ---
 
 # TODO: escaping?
+doc TODO
 F Str(s:Str) "'$s'"
 
-
+doc Convert Null to string
+doc %RET - the string "null"
 F Str(n:Null) "null"
-
-TEST Str(null) == "null"
-
-
 F Str(b:Bool) if b "true" "false"
 
-TEST Str(true) == "true"
-TEST Str(false) == "false"
-
-
+doc Convert Arr to string
+doc %RET - Str
 F Str(a:Arr) "[${a.map(Str).join(',')}]"
+
+doc Convert Hash to string
+doc %RET - Str
 F Str(h:Hash) "{" + h.map(F(k, v) "${k}=${v}").join(", ") + "}"
 
 # --- Functional ---
 
+doc Iterates over all string characters (currently bytes).
+doc TODO: example.
+doc cb - Function to be called with each character from s
+doc args - Additional arguments for calling cb
+doc %RET - s
 F each(s:Str, cb:Fun, *args) {
 	s.len().each(F(idx) {
 		cb(s[idx], *args)
 	})
+	s
 }
 
 # --- Sugar ---
 
+doc Find substring in a string.
+doc haystack - The string to search in
+doc needle - The string to find
+doc %RET - Int or null
+doc %EX - pos("abc", "cd")     # null
+doc %EX - pos("abcdef", "cd")  # 2
 F pos(haystack:Str, needle:Str) pos(haystack, needle, 0)
 
 TEST pos("abc", "cd") == null
@@ -1723,16 +1843,31 @@ TEST pos("abcdef", "cd") == 2
 TEST pos("a:b:c", ":") == 1
 TEST pos("a:b:c", ":", 2) == 3
 
+doc Determin if needle substring occurs at least once in haystack
+doc haystack - The string to search in
+doc needle - The string to find
+doc %RET - Bool
+doc %EX - "bc" in "abcd"
+doc %EX - "x" not in "abcd"
 F in(needle:Str, haystack:Str) pos(haystack, needle) is not Null
 
 TEST "bc" in "abcd"
 TEST "x" not in "abcd"
 
+doc Get given character (currently byte) of the string
+doc s - Original string
+doc i - Index of the character to return
+doc %EX - "abc"[0]  # "a"
 F '[]'(s:Str, i:Int) s[i..i+1]
 
 TEST ("abc"[0] == "a") and ("abc"[2] == "c")
 TEST try "abc"[3] == "x" catch(e:InvalidArgument) true
 
+doc Get given character (currently byte) of the string.
+doc TODO: Document InvalidArgument exception.
+doc s - Original string
+doc i - Negative index of the character to return
+doc %EX - "abc"[-1]  # "c"
 F '[]'(s:Str, i:Int) {
 	guard i < 0
 	i < 0-s.len() throws InvalidArgument("Negative index into string is (abs) larger than the string")
@@ -1742,6 +1877,11 @@ F '[]'(s:Str, i:Int) {
 TEST ("abc"[-1] == "c") and ("abc"[-3] == "a")
 TEST try "abc"[-4] == "x" catch(e:InvalidArgument) true
 
+doc Get a substring. Indexes in s are specified by ExclusiveRange.
+doc s - Original string
+doc r - ExclusiveRange with negatve .end
+doc %EX - "(Look ma, no parens)"[1..-1]  # "Look ma, no parens"
+doc %RET - Str
 F '[]'(s:Str, r:ExclusiveRange) {
 	guard r.end is Int and r.end < 0
 	r.end < 0 - s.len() throws InvalidArgument("Negative index (range end) into string is (abs) larger than the string")
@@ -1750,6 +1890,10 @@ F '[]'(s:Str, r:ExclusiveRange) {
 
 # --- Misc utilities ---
 
+doc Split string by substring
+doc %RET - Arr of Str
+doc %EX - ":a:bc:d:".split(":")   # ["", "a", "bc", "d", ""]
+doc %EX - ":a:bc:d:".split("bc")  # [":a:", ":d:"]
 F split(s:Str, delim:Str) {
 	l = delim.len()
 	guard l > 0
@@ -1766,13 +1910,19 @@ F split(s:Str, delim:Str) {
 TEST ":a:bc:d:".split(":") == ["", "a", "bc", "d", ""]
 TEST ":a:bc:d:".split("bc") == [":a:", ":d:"]
 
-
+doc Repeat string n times
+doc %EX - "abc" * 3  # "abcabcabc"
 F *(s:Str, n:Int) ([s]*n).join('')
 
 # Tested with Str(Str,Int)
 
+doc Convert anything to Str of a given width
 F Str(x, target_width:Int) x.Str().Str(target_width)
 
+doc Pad a string to given width with spaces
+doc target_width - Positive pads on right, negative pads on left
+doc %EX - Str("x", 3)  # 'x  '
+doc %EX - Str("x",-3)  # '  x'
 F Str(s:Str, target_width:Int) {
 	l = s.len()
 	pad_on_left = target_width < 0
@@ -1791,6 +1941,10 @@ F Str(s:Str, target_width:Int) {
 }
 
 # Not sure about this, might be confusing behaviour
+doc Convert a number to a string and pad it
+doc target_width - Positive pads on left, negative pads on right
+doc %EX - Str(10,  4)  # '  10'
+doc %EX - Str(10, -4)  # '10  '
 F Str(n:Int, target_width:Int) n.Str().Str(0-target_width)
 
 TEST Str(10,  4) == '  10'
@@ -1798,6 +1952,10 @@ TEST Str(10, -4) == '10  '
 TEST Str("x", 3) == 'x  '
 TEST Str("x",-3) == '  x'
 
+doc Check whether a string starts with another string
+doc %RET - Bool
+doc %EX - "abcd".starts_with("ab")  # true
+doc %EX - "ab".starts_with("abcd")  # false
 F starts_with(haystack:Str, needle:Str) {
 	needle.len() > haystack.len() returns false
 	haystack[0..needle.len()] == needle
@@ -1806,6 +1964,10 @@ F starts_with(haystack:Str, needle:Str) {
 TEST "abcd".starts_with("ab")
 TEST "ab".starts_with("abcd") == false
 
+doc Check whether a string ends with another string
+doc %RET - Bool
+doc %EX - "abcd".ends_with("cd")  # true
+doc %EX - "ab".ends_with("cdab")  # false
 F ends_with(haystack:Str, needle:Str) {
 	needle.len() > haystack.len() returns false
 	l = haystack.len()
@@ -1817,12 +1979,19 @@ TEST "ab".ends_with("cdab") == false
 
 
 doc Case-insensitive LessThan or Equal comparison for strings
+doc %RET - Bool
 F lte(a:Str, b:Str)
 	c_strcasecmp(a, b) <= 0
 
+doc Case sensitive LessThan or Equal comparison for strings
+doc %RET - Bool
 F '<='(a:Str, b:Str)
 	c_strcmp(a, b) <= 0
 
+doc Split s to strings using end-of-line separators.
+doc UNIX and Windows line endings supported (Windows - not tested yet).
+doc Warning: Max OS <= 9 line separation of CR (\r) is not supported
+doc %EX - "xx\nyy".lines()  # %[xx yy]
 F lines(s:Str) {
 	# Note: Max OS <= 9 line separation of CR (\r) is not supported
 	not(s) returns []
@@ -1830,13 +1999,18 @@ F lines(s:Str) {
 	s.split('\n').map((-), MaybeSfx('\r'))
 }
 
-F lines(a:Str, cb:Fun, *args) {
-	lines(a).each(cb, *args)
+doc Split s to strings using end-of-line separators and call cb for each one of the lines.
+doc TODO: More efficient implementation, which would not have temporary array of all lines.
+doc cb - Function to be called with each line
+doc args - Additional arguments for calling cb
+F lines(s:Str, cb:Fun, *args) {
+	lines(s).each(cb, *args)
 }
 
 TEST "xx\nyy".lines() == %[xx yy]
 
 doc Prepend each line in a with s
+doc %EX - "a " + ["1", "2"]  # ["a 1", "a 2"]
 F +(s:Str, a:Arr) {
 	guard a.all(is, Str)
 	a.map(s+X)
@@ -1844,12 +2018,21 @@ F +(s:Str, a:Arr) {
 TEST "a " + ["1", "2"] == ["a 1", "a 2"]
 
 doc Append s to each line in a
+doc %EX - ["1", "2"] + " a"  # ["1 a", "2 a"]
 F +(a:Arr, s:Str) {
 	guard a.all(is, Str)
 	a.map(X+s)
 }
 TEST ["1", "2"] + " a" == ["1 a", "2 a"]
 
+doc Truncate a string if necessary so it would have maximum n characters (currently bytes).
+doc s - The string to (possibly) truncate.
+doc n - Maximum characters
+doc marker - The truncation marker
+doc %RET - Either s or new Str of length n
+doc %EX - "abc".limit(5, "...")     # "abc"
+doc %EX - "abcdef".limit(5, "...")  # "ab..."
+doc %EX - "abcdef".limit(2)         # "ab"
 F limit(s:Str, n:Int, marker:Str='') {
 	s.len() <= n returns s
 	if marker {
@@ -1864,14 +2047,19 @@ TEST "abc".limit(5, "...") == "abc"
 TEST "abcdef".limit(5, "...") == "ab..."
 TEST "abcdef".limit(2) == "ab"
 
+doc Get character (currently byte) code. Throws InvalidArgument if s is not of length 1.
+doc %EX - ord("A")  # 65 on my machine
 F ord(s:Str) {
 	s.len() != 1 throws InvalidArgument("ord() argument must be of length 1 exactly").set('given', s)
 	ord(s, 0)
 }
 
-# EXPERIMENTAL. For use with AWS Anchors.
+doc EXPERIMENTAL. For use with AWS Anchors.
 F ~(a:Str, b:Str) a==b
 
+doc Convert a Str to NGS code that would produce the string when executed. Not fully functional yet.
+doc BUG: Does not do escaping.
+doc %RET - Str
 F code(s:Str) {
 	# XXX TODO: escaping
 	"'${s}'"
@@ -1888,34 +2076,41 @@ F code(s:Str) {
 # Not sure such flexibility is needed (NGS_ERR_FD)
 stdlib_error_fd = ENV.NGS_ERR_FD.Int() tor 2
 
+doc Log to standard output. Later log output will be treated specially by the shell. It will have suitable representation in the UI. Use log() when it's semantically a log.
 F log(s:Str) {
 	echo("[LOG] $s")
 }
 
-# Set DEBUG environment variable to any non-empty string to activate
+doc Debug to standard error.
+doc "DEBUG" environment variable must be non-empty string to activate. Otherwise nothing is outputted.
+doc TODO: Not output thread ID if there is only one thread.
+doc TODO: Timestamps?
 F debug(s:Str) {
 	# TODO: Use RingBuffer when debug is off and
 	#       show last N debug messages on uncaught exception
 	if try ENV['DEBUG'] {
-		echo("[DEBUG ${c_getpid()} ${c_pthread_self().id()}] $s")
+		echo(stdlib_error_fd, "[DEBUG ${c_getpid()} ${c_pthread_self().id()}] $s")
 	}
 }
 
+doc Write error message to standard error.
 F error(s:Str) {
 	echo(stdlib_error_fd, "[ERROR ] $s")
 }
 
+doc Send status to standard error. Later status output will be treated specially by the shell. It will have suitable representation in the UI. Use status() when it's semantically a status - a task that's being done.
 F status(s:Str) {
-	echo(stdlib_error_fd, s)
-	log("(status) $s")
+	echo(stdlib_error_fd, "(status) $s")
 }
 
+doc Write messages in a to standard error and exit
 F die(a:Arr, exit_code=1) {
 	guard a.all(is, Str)
 	a % echo(stdlib_error_fd, X)
 	c_exit(exit_code)
 }
 
+doc Write message in s to standard error and exit
 F die(s:Str, exit_code=1) {
 	echo(stdlib_error_fd, s)
 	c_exit(exit_code)
