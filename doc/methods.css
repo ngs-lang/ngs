@@ -53,3 +53,6 @@ h4:hover > a.section-link
 	color: #208020;
 
 }
+.param-header {
+	margin-bottom: 0;
+}

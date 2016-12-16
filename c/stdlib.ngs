@@ -104,6 +104,7 @@ F Pred(t:Type) F is_pred(x) x is t
 doc Map something to an Arr (array) of values using mapper
 doc something - Instance of any type that has each(something, callback) implemented
 doc %RET - Arr
+doc %EX - [1,2,3].map((*), 4)  # [4,8,12]
 F map(something, mapper:Fun, *args)
 	collector
 		something.each(F(elt) collect(mapper(elt, *args)))
@@ -580,7 +581,7 @@ F ...(start, end) InclusiveRange(start, end)
 
 doc Iterates over the elements of r, passing each in turn to cb along with *args.
 doc cb - Function to be called with values from r
-doc args - Additional arguments for calling r
+doc args - Additional arguments for calling cb
 doc %RET - r
 doc %EX - s=0
 doc %EX - (1...10).each(F(i) { global s; s+=i })
@@ -680,31 +681,50 @@ TEST [1,2,3].has(10).not()
 
 doc Defines collector { ... collect(...) ... } behaviour for arrays
 doc a - Initial array
-doc code - The code after collector keyword and possible initial value, wrapped in a function
-doc code - "collector THIS_CODE" or "collector/my_init THIS_CODE"
+doc body - The body after collector keyword and possible initial value, wrapped in a function
+doc body - "collector THIS_CODE" or "collector/my_init THIS_CODE"
 doc %RET - Constructed array
-F collector(a:Arr, code:Fun) {
-	code(F(elt) a.push(elt))
+doc %EX - items = collector {
+doc %EX -   collect(10)
+doc %EX -   for(i;2) collect(i)
+doc %EX -   collect(20)
+doc %EX - }
+doc %EX - echo(items)  # Outputs: [10,0,1,20]
+doc %EX -
+doc %EX - # Or start with few items:
+doc %EX - items = collector/[100,200] {
+doc %EX -   collect(10)
+doc %EX -   for(i;2) collect(i)
+doc %EX -   collect(20)
+doc %EX - }
+doc %EX - echo(items)  # Outputs: [100,200,10,0,1,20]
+F collector(a:Arr, body:Fun) {
+	body(F(elt) a.push(elt))
 	a
 }
 
 doc Defines collector { ... collect(...) ... } behaviour for hashes
 doc h - Initial hash
-doc code - The code after collector keyword and initial value, wrapped in a function
-doc code - "collector/{'my': 'hash'} THIS_CODE"
+doc body - The body after collector keyword and initial value, wrapped in a function
+doc body - "collector/{'my': 'hash'} THIS_CODE"
 doc %RET - Constructed array
-F collector(h:Hash, code:Fun) {
-	code(F(k, v) h[k] = v)
+doc %EX - arr = [{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}]
+doc %EX - my_hash = collector/{}
+doc %EX - 	arr.each(F(elt) collect(elt.Name, elt.Value))
+doc %EX - echo(my_hash)  # Outputs: {n1=v1, n2=v2}
+F collector(h:Hash, body:Fun) {
+	body(F(k, v) h[k] = v)
 	h
 }
 
-doc Defines collector { ... collect(...) ... } behaviour for integers
+doc Defines collector { ... collect(...) ... } behaviour for integers (summarizes collected items).
 doc n - Initial number
-doc code - The code after collector keyword and initial value, wrapped in a function
-doc code - "collector/100 THIS_CODE"
+doc body - The body after collector keyword and initial value, wrapped in a function
+doc body - "collector/100 THIS_CODE"
 doc %RET - Constructed array
-F collector(n:Int, code:Fun) {
-	code(F(incr) n=n+incr)
+doc %EX - collector/0 { (1...10).each(collect) }  # 55
+F collector(n:Int, body:Fun) {
+	body(F(incr) n=n+incr)
 	n
 }
 
@@ -745,17 +765,28 @@ TEST a=0; (try finally() with {1/0} with {a=10} catch(e:DivisionByZero) "OK") ==
 
 # --- Hash ---
 
-doc Get hash key
+doc Get hash key.
+doc %EX - h = {"a": 1}
+doc %EX - h.a  # 1, Same as h["a"]
 F .(h:Hash, attr:Str) h[attr]
 
-doc Set hash key
+doc Set hash key.
+doc %EX - h = {"a": 1}
+doc %EX - h.a = 2  # 2, Same as h["a"] = 2
+doc %RET - v
 F .=(h:Hash, attr:Str, v) h[attr] = v
 
 doc Get hash key or null if it does not exist
+doc %EX - h = {"a": 1}
+doc %EX - h.get("a")  # 1
+doc %EX - h.get("b")  # null
 F get(h:Hash, k) get(h, k, null)
 
 doc Convert hash values to integers where possible
 doc %RET - New Hash
+doc %EX - %{k 7 kk "a"}["k"] is Str      # true
+doc %EX - %{k 7 kk "a"}.n()              # {'k': 7, 'kk': 'a'}
+doc %EX - %{k 7 kk "a"}.n()["k"] is Int  # true
 F n(h:Hash) h.mapv({Int(A) tor A})
 
 TEST %{k 7 kk "a"}.n() == {'k': 7, 'kk': 'a'}
@@ -769,6 +800,7 @@ F .(a:Arr, attr:Str) a.map((.), attr)
 TEST [{"x": 1}, {"x": 2}].x == [1, 2]
 
 doc Concatenate strings
+doc %EX - "ab" + "cd"  # "abcd"
 doc %RET - New Str
 F +(s1:Str, s2:Str) "${s1}${s2}"
 
@@ -778,6 +810,10 @@ TEST "ab" + "cd" == "abcd"
 
 
 doc Checks whether element x is in array arr
+doc x - Needle
+doc arr - Haystack
+doc %EX -  1 in [1,2,3]  # true
+doc %EX - 10 in [1,2,3]  # false
 doc %RET - Bool
 F in(x, arr:Arr) {
 	l = arr.len()
@@ -802,8 +838,13 @@ TEST [1, 3] != [1, 2]
 TEST [1] != [1, 2]
 
 
-doc Check whether there is any element in arr that satisfies the given predicate
+doc Check whether there is any element in arr that satisfies the given predicate.
 doc TODO: Make it work on anything with each() method
+doc arr - Haystack
+doc predicate - Test function
+doc args - Additional arguments for calling the predicate.
+doc %EX - [1,2,10].any(F(elt) elt > 5)   # true
+doc %EX - [1,2,10].any(F(elt) elt > 15)  # false
 doc %RET - Bool
 F any(arr:Arr, predicate, *args) {
 	p = Pred(predicate)
@@ -818,7 +859,12 @@ TEST [1,2,3].any(F(elt) elt > 5).not()
 
 doc Check whether all elements in arr satisfy the given predicate
 doc TODO: Make it work on anything with each() method
+doc arr - Array to check
+doc predicate - Test function
+doc args - Additional arguments for calling the predicate.
 doc %RET - Bool
+doc %EX - [1,2,3].all((<), 10)   # true
+doc %EX - [1,2,10].all((>), 5)   # false
 F all(arr:Arr, predicate, *args) {
 	p = Pred(predicate)
 	l = arr.len()
@@ -830,9 +876,11 @@ F all(arr:Arr, predicate, *args) {
 TEST [1,2,3].all((<), 10)
 TEST [1,2,10].all((>), 5).not()
 
-doc Check that there is no element in arr that satisfies the given predicate
+doc Check that there is no element in arr that satisfies the given predicate. Exactly same as  not(any(arr, predicate, *args)) .
 doc TODO: Make it work on anything with each() method
 doc %RET - Bool
+doc %EX - [0,1,2].none((>), 2)  # true
+doc %EX - [0,1,2].none((<), 2)  # false
 F none(arr:Arr, predicate:Fun, *args) not(any(arr, predicate, *args))
 
 TEST [0,1,2].none((>), 2)
@@ -841,7 +889,12 @@ TEST [0,1,2].none((<), 2).not()
 TEST [1,2,3].map((*), 4) == [4,8,12]
 
 doc Iterates over the elements of arr, passing each in turn to cb along with args: cb(ITEM, *args)
+doc cb - Function to be called with values from arr
+doc args - Additional arguments for calling cb
 doc %RET - arr
+doc %EX - s=0
+doc %EX - [1,2,3].each(F(i) { global s; s+=i })
+doc %EX - echo(s)  # Outputs: 6
 F each(arr:Arr, cb:Fun, *args) {
 	l = arr.len()
 	for(i;l) cb(arr[i], *args)
@@ -853,6 +906,7 @@ F each(arr:Arr, cb:Fun, *args) {
 # TODO: map_idx_val, each_idx_val for other types
 doc Iterates over the elements of arr, passing each in turn to cb along with index and args: cb(INDEX, ITEM, *args)
 doc %RET - arr
+doc %EX - [10,20,30].each_idx_val(F(idx, val) echo("Element #$idx equals to $val"))
 F each_idx_val(arr:Arr, cb:Fun, *args) {
 	l = arr.len()
 	for(i;l) cb(i, arr[i], *args)
@@ -862,6 +916,8 @@ F each_idx_val(arr:Arr, cb:Fun, *args) {
 doc Map an Arr to an Arr (array) of values using mapper
 doc mapper is called as mapper(INDEX, ITEM, *args)
 doc %RET - New Arr
+doc %EX - echo("Array items: " + [10,20,30].map_idx_val(F(idx, val) "[$idx]=$val").join(", "))
+doc %EX - # Outputs: Array items: [0]=10, [1]=20, [2]=30
 F map_idx_val(arr:Arr, mapper:Fun, *args) {
 	l = arr.len()
 	collector

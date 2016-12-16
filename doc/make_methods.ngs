@@ -183,7 +183,7 @@
 					}
 					dn.children.the_one(ParamsDocNode).children.each(F(param_dn:ParamDocNode) {
 						if param_dn.children.any(DescDocNode) {
-							tc.push("<h${tc.heading_level}>${param_dn.name().encode_html()}</h${tc.heading_level}>")
+							tc.push("<h${tc.heading_level} class=\"param-header\">${param_dn.name().encode_html()}</h${tc.heading_level}>")
 							tc.push('<section class="method-param-content">')
 							param_dn.children.the_one(DescDocNode).text / encode_html % tc.push(X)
 							tc.push('</section>') # method-param-content
