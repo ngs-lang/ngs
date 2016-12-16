@@ -119,6 +119,9 @@ F finished_ok(p:Process) {
 	true
 }
 
+doc Enables "nofail" command prefix.
+doc %EX - test
+doc %EX - $(nofail ./NONE).exit_code.echo()  # Would cause exception without "nofail"
 F '$()'(c:Command) {
 	guard c.argv[0] == 'nofail'
 	c.options.push('nofail')

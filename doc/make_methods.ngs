@@ -81,6 +81,7 @@
 									type ParamNameDocNode(TextDocNode)
 									type ParamTypeDocNode(TextDocNode)
 									type ParamDfltDocNode(TextDocNode)
+									type ParamSpecialDfltDocNode(TextDocNode)
 									type ParamSplatDocNode(TextDocNode)
 							type RetDocNode(TextDocNode)
 							type ExampleDocNode(TextDocNode)
@@ -163,6 +164,9 @@
 				param_dn.children.the_one(ParamDfltDocNode) do F(dflt) {
 					html += "=${dflt.text[0].encode_html()}"
 				}
+				param_dn.children.the_one(ParamSpecialDfltDocNode) do F(dflt) {
+					html += "=<em>${dflt.text[0].encode_html()}</em>"
+				}
 				html
 			}
 
@@ -209,7 +213,11 @@
 				dn.push(ParamTypeDocNode(param.type.name))
 			}
 			if 'dflt' in param {
-				dn.push(ParamDfltDocNode(param.dflt.Str()))
+				dn.push() do
+					ematch param.dflt {
+						Fun ParamSpecialDfltDocNode('(a function)')
+						Any ParamDfltDocNode(param.dflt.Str())
+					}
 			}
 			if 'splat' in param {
 				dn.push(ParamSplatDocNode(param.splat))

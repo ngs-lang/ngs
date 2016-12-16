@@ -2084,6 +2084,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "*",        &native_mul_int_int,       2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, 1, "/",        &native_div_int_int,       2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, 1, "%",        &native_mod_int_int,       2, "a",   vm->Int, "b", vm->Int);
+	_doc(vm, "", "Modulus");
+	_doc(vm, "%RET", "Int");
+	_doc(vm, "%EX", "10 % 3  # 1");
 	register_global_func(vm, 0, "-",        &native_minus_int_int,     2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, 0, "<",        &native_less_int_int,      2, "a",   vm->Int, "b", vm->Int);
 	register_global_func(vm, 0, "<=",       &native_less_eq_int_int,   2, "a",   vm->Int, "b", vm->Int);

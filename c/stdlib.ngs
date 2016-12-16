@@ -124,21 +124,39 @@ F filter(something, predicate, *args) {
 		})
 }
 
-doc EXPERIMENTAL! Do not use!
+{
+	type TheOneFail
+	TheOneFail.inherit(InvalidArgument)
+}
+
+doc Find the only element that satisfies the predicate.
+doc Throws TheOneFail exception if there are no elements that satisfy the predicate or if there is more than one element that satisfies the predicate.
+doc %RET - The only element that satisfies the predicate.
 F the_one(something, predicate, *args) {
 	p = Pred(predicate)
 	ret = EmptyBox()
 	something.each(F(elt) {
 		if p(elt, *args) {
-			ret throws InvalidArgument("the_one() had more than one match")
+			ret throws TheOneFail("the_one() had more than one match")
 			ret = FullBox(elt)
 		}
 	})
-	not(ret) throws InvalidArgument("the_one() had no matches")
+	not(ret) throws TheOneFail("the_one() had no matches")
 	ret.val
 }
 
-doc EXPERIMENTAL! Do not use!
+TEST [1,2,11,3,4].the_one(X>10) == 11
+TEST [1,2,11,3,4].the_one((>), 10) == 11
+TEST try [1,2,11,12,4].the_one(X>10) catch(e:TheOneFail) true
+TEST try [1,2,3,4].the_one(X>10) catch(e:TheOneFail) true
+
+doc Find the only element that satisfies the predicate and execute given code with the value
+doc body - The code to execute when exactly one element that satisfies the predicate was found. Executed with the found value. It's value will be returned as result of the_one().
+doc found_more - The code to execute when more than one element satisfies the predicate. It's value will be returned as result of the_one(). Defaults to null.
+doc not_found - The code to execute when none of the elements satisfy the predicate. It's value will be returned as result of the_one(). Defaults to null.
+doc %EX - F name(dn:MethodDocNode) {
+doc %EX - 	dn.children.the_one(MethodNameDocNode).text[0]
+doc %EX - }
 F the_one(something, predicate, body:Fun, found_more:Fun={null}, not_found:Fun={null}) {
 	p = Pred(predicate)
 	ret = EmptyBox()
@@ -158,16 +176,20 @@ F the_one(something, predicate, body:Fun, found_more:Fun={null}, not_found:Fun={
 	}
 }
 
+TEST ok = false; [1,2,11,3,4].the_one(X>10, F(the_value) { if(the_value == 11) ok = true });
+
 doc Filter nulls out.
-doc CONSIDERED FOR REMOVAL, DO NOT USE, USE something.without(null) INSTEAD.
+doc DEPRECATED, USE something.without(null) INSTEAD.
 doc something - instance of any type that has each(something, callback) implemented
 doc %RET - Arr (array) of original items without nulls
-F filter(something) filter(something, (is not), Null)
+F filter(something) {
+	error("USING DEPRECATED filter(something)")
+	filter(something, (is not), Null)
+}
 
 TEST [1,2,null,3].filter() == [1,2,3]
 
 doc Filter something to an Arr (array) of values using predicate
-doc EXPERIMENTAL! Do not use!
 doc predicate - decision function to be called with each item as first argument and *args as the rest of the arguments
 doc predicate - when predicate(item) returns true, the item will not appear in the resulting array
 doc something - instance of any type that has each(something, callback) implemented
@@ -578,9 +600,14 @@ doc %RET - Bool
 F not(x) { guard (x is Bool) == false; x.Bool().not() }
 
 doc Inequality operator
+doc %EX - 1 !=2  # true, same as not(1==2)
 F !=(a,b) not(a==b)
 
 doc Non-sameness operator
+doc %EX - h1 = {"a": 1}
+doc %EX - h2 = {"a": 1}
+doc %EX - h1 !== h2  # true, same as not(h1===h2)
+doc %EX - h1 == h2   # true
 F !==(a,b) not(a===b)
 
 TEST 1 != 2
@@ -2060,6 +2087,14 @@ F Str(p:Process) p.wait().stdout
 # TODO: provide additional communication channel on additional fd?
 # TODO: handle built-in commands: do not execve,
 # INFO: bash - redir.c
+doc Execute an external command and wait for it to finish.
+doc c - Command type instance, typically constructed by NGS when parsing the contents of $(...) .
+doc %EX - if $(test -f /myfile) { ... }
+doc %EX - # or
+doc %EX - p = $(node main.js serve &)
+doc %EX - YOUR_TESTS_OF_NODE_SERVER_HERE
+doc %EX - p.kill()
+doc %RET - Process
 F '$()'(c:Command) {
 
 	# Special case: $($cmd)
@@ -2202,7 +2237,10 @@ F unparse(data, hints:Hash) {
 	1
 }
 
-# Just the command, no processing
+doc Returns c, wihout any processing. Convenient way to pass ready-to-run Command as an argument
+doc %EX - F run_when_needed(c:Command) { ... $(c) ... }
+doc %EX - ...
+doc %EX - run_when_needed(%(ls >/tmp/my_ls))
 F '%()'(c:Command) c
 
 F lines(p:Process) {
@@ -2790,6 +2828,10 @@ STDLIB_HTML_ATTR_ESCAPE = STDLIB_HTML_ESCAPE + {'"': '&quot;', "'": '&#39;'}
 F encode_html_attr(s:Str) s.map(STDLIB_HTML_ATTR_ESCAPE.get(X, X)).join('')
 
 TEST "ab>+c%&'".encode_html_attr() == "ab&gt;+c%&amp;&#39;"
+
+doc Uset by match EXPR { ... } construct
+doc %RET - a ~ b
+F match(a,b) a ~ b
 
 # === Misc tests =================================
 
