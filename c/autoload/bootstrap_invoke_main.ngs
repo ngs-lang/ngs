@@ -26,7 +26,7 @@ F bootstrap_try_main(c:Closure, argv:Arr, finish:Return) {
 F bootstrap_invoke_main(default) {
 	main is not Arr returns default
 	not(main) returns default
-	if main.any((is not), Closure) {
+	if main.any(X is not Closure) {
 		return default
 	}
 	candidate_mains = main.filter(F(m) m.ip().resolve_instruction_pointer().file == bootstrap_main_file).reverse()
@@ -34,7 +34,7 @@ F bootstrap_invoke_main(default) {
 	bootstrap_debug("Candidate main() functions: $candidate_mains")
 
 	finish = Return()
-	candidate_mains.each(bootstrap_try_main, ARGV, finish)
+	candidate_mains.each(bootstrap_try_main(X, ARGV, finish))
 	# TODO: print usage examples here and exit with error code
 	throw BootstrapNoMatchingMain("No matching main() found")
 }

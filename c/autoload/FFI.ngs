@@ -21,7 +21,7 @@
 	ffi_cached_clibs = {}
 
 	F init(f:FFI, lib:Str, func:Str, rtype:c_ffi_type, atypes:Arr) {
-		guard atypes.all(is, c_ffi_type)
+		guard atypes.all(c_ffi_type)
 		f.lib = CLib(lib)
 		f.func = f.lib[func]
 		f.cif = c_ffi_prep_cif(rtype, atypes)

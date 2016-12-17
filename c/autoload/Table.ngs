@@ -27,7 +27,7 @@ F init(x:TableMetaNotIfCol, col_name:Str, data) {
 }
 
 F init(x:TableMetaNotIfCol, col_names:Arr, data) {
-	guard col_names.all(is, Str)
+	guard col_names.all(Str)
 	x.col_names = col_names
 	x.data = data
 }
@@ -60,7 +60,7 @@ doc Create named table containing provided rows
 doc name - name of the table for display and for configuration purposes
 doc rows_hashes - rows, each row is a Hash
 F init(t:Table, name:Str, rows_hashes:Arr) {
-	guard rows_hashes.all(is, Hash)
+	guard rows_hashes.all(Hash)
 	t.name = name
 	t.init(rows_hashes)
 }
@@ -110,7 +110,7 @@ F push(t:Table, row_hash:Hash) {
 
 F width(t:Table) t.col_idx_to_name.len()
 F column(t:Table, k:Str) t.column(t.col_name_to_idx[k])
-F column(t:Table, n:Int) t.rows.map(([]), n)
+F column(t:Table, n:Int) t.rows.map(X[n])
 # F columns(t:Table) t.width().map(F(idx) t.column(idx))
 F columns(t:Table) t.width() / t.column(X)
 F each(t:Table, cb:Fun, *args) {
@@ -133,7 +133,7 @@ F Hashes(t:Table) {
 F should_display_cell_item(t:Table, item) true
 
 F should_display_cell_item(t:Table, item:TableMetaNotIfCol) {
-	item.col_names.none(in, t.col_name_to_idx)
+	item.col_names.none(X in t.col_name_to_idx)
 }
 
 doc Preprocess a Table just before output

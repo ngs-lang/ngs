@@ -28,7 +28,7 @@ STDLIB_PRIVATE_IP_NETWORKS = %[10.0.0.0/8 172.16.0.0/12 192.168.0.0/16] / IPNet
 
 doc Check whether the IP address is in one of the given IP networks
 F in(addr:IPAddr, networks:Arr) {
-	guard networks.all(is, IPNet)
+	guard networks.all(IPNet)
 	networks.any(addr in X)
 }
 

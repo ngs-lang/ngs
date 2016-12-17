@@ -107,7 +107,7 @@ F ~(argv:Arr, c:Closure) {
 	}
 
 	positionals.each(F(arg) {
-		idx = matches.index(is, UnmatchedParam)
+		idx = matches.index(UnmatchedParam)
 		if idx is Null {
 			if have_arr_splat {
 				matches.push(MatchedParam(arg))

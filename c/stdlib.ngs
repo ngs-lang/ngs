@@ -110,22 +110,22 @@ doc Map something to an Arr (array) of values using mapper
 doc something - Instance of any type that has each(something, callback) implemented
 doc %RET - Arr
 doc %EX - [1,2,3].map((*), 4)  # [4,8,12]
-F map(something, mapper:Fun, *args)
+F map(something, mapper:Fun)
 	collector
-		something.each(F(elt) collect(mapper(elt, *args)))
+		something.each(F(elt) collect(mapper(elt)))
 
 doc Filter something to an Arr (array) of values using predicate
 doc something - Instance of any type that has each(something, callback) implemented.
 doc predicate - Decision function to be called with each item as first argument and *args as the rest of the arguments.
 doc predicate - When predicate(item) returns true, the item will appear in the resulting array.
 doc %EX - (1...10).filter(F(num) num % 2 == 0)  # Gives [2,4,6,8,10]
-doc %EX - (1...10).filter((<), 5)  # Gives [1,2,3,4], predicate called as predicate(item, 5)
+doc %EX - (1...10).filter(X<5)  # Gives [1,2,3,4], predicate called as predicate(item, 5)
 doc %RET - Arr
-F filter(something, predicate, *args) {
+F filter(something, predicate) {
 	p = Pred(predicate)
 	collector
 		something.each(F(elt) {
-			if p(elt, *args)
+			if p(elt)
 				collect(elt)
 		})
 }
@@ -138,11 +138,11 @@ F filter(something, predicate, *args) {
 doc Find the only element that satisfies the predicate.
 doc Throws TheOneFail exception if there are no elements that satisfy the predicate or if there is more than one element that satisfies the predicate.
 doc %RET - The only element that satisfies the predicate.
-F the_one(something, predicate, *args) {
+F the_one(something, predicate) {
 	p = Pred(predicate)
 	ret = EmptyBox()
 	something.each(F(elt) {
-		if p(elt, *args) {
+		if p(elt) {
 			ret throws TheOneFail("the_one() had more than one match")
 			ret = FullBox(elt)
 		}
@@ -152,7 +152,6 @@ F the_one(something, predicate, *args) {
 }
 
 TEST [1,2,11,3,4].the_one(X>10) == 11
-TEST [1,2,11,3,4].the_one((>), 10) == 11
 TEST try [1,2,11,12,4].the_one(X>10) catch(e:TheOneFail) true
 TEST try [1,2,3,4].the_one(X>10) catch(e:TheOneFail) true
 
@@ -193,7 +192,7 @@ doc something - Instance of any type that has each(something, callback) implemen
 doc %RET - Arr (array) of original items without nulls
 F filter(something) {
 	error("USING DEPRECATED filter(something)")
-	filter(something, (is not), Null)
+	filter(something, X is not Null)
 }
 
 TEST [1,2,null,3].filter() == [1,2,3]
@@ -205,19 +204,19 @@ doc something - Instance of any type that has each(something, callback) implemen
 doc %EX - (1...10).reject(F(num) num % 2 == 0)  # Gives [1,3,5,7,9]
 doc %EX - (1...10).reject((<), 5)  # Gives [5,6,7,8,9,10], predicate called as predicate(item, 5)
 doc %RET - Arr
-F reject(something, predicate, *args) {
+F reject(something, predicate) {
 	p = Pred(predicate)
-	something.filter({ p(A, *args).not() })
+	something.filter({ p(A).not() })
 }
 
 
 doc EXPERIMENTAL! Do not use!
-F take_while(something, predicate, *args)
+F take_while(something, predicate)
 	collector {
 		p = Pred(predicate)
 		r = Return()
 		something.each(F(elt) {
-			if p(elt, *args)
+			if p(elt)
 				collect(elt)
 			else
 				throw r()
@@ -228,13 +227,13 @@ TEST [1,2,3,1,2].take_while(X<3) == [1,2]
 
 # Would look much better with an iterator of "something"
 doc EXPERIMENTAL! Do not use!
-F drop_while(something, predicate, *args)
+F drop_while(something, predicate)
 	collector {
 		p = Pred(predicate)
 		found = false
 		something.each(F(elt) {
 			if found { collect(elt); return null; }
-			if not(p(elt, *args)) {
+			if not(p(elt)) {
 				collect(elt)
 				found = true
 			}
@@ -591,7 +590,7 @@ doc %RET - r
 doc %EX - s=0
 doc %EX - (1...10).each(F(i) { global s; s+=i })
 doc %EX - echo(s)  # Outputs: 55
-F each(r:Range, cb:Fun, *args) {
+F each(r:Range, cb:Fun) {
 	# TODO: support Real step
 	econd {
 		(r.end is Null) or (r.step == 0) {
@@ -605,7 +604,7 @@ F each(r:Range, cb:Fun, *args) {
 		}
 	}
 	for(i=r.start; cmp(i, r.end); i=i+r.step)
-		cb(i, *args)
+		cb(i)
 	r
 }
 
@@ -614,13 +613,13 @@ TEST (1...3).map(X*2) == [2, 4, 6]
 
 doc Find first element in r that satisfies the predicate.
 doc args - Additional arguments for calling the predicate.
-doc The predicate is called with each one of the elements plus the args: predicate(i, *args)
+doc The predicate is called with each one of the elements plus the args: predicate(i)
 doc %RET - Either the element or null if element was not found.
 doc %EX - (10..20).first(F(x) x % 3 == 0)  # 12 - first item divisible by 3
-F first(r:Range, predicate:Fun, *args) {
+F first(r:Range, predicate:Fun) {
 	finish = Return()
 	r.each(F(i) {
-		predicate(i, *args) throws finish(i)
+		predicate(i) throws finish(i)
 	})
 	null
 }
@@ -676,7 +675,7 @@ TEST (null is not Null) == false
 
 doc Exactly same as "element in container". It's just more convenient in specific cases.
 doc %EX - [1,2,3].has(2)  # true
-doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(has, 1)  # [ [1,2,3], [1,20,30] ]
+doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(X.has(1))  # [ [1,2,3], [1,20,30] ]
 doc %RET - Bool
 F has(container, element) element in container
 
@@ -800,7 +799,7 @@ TEST %{k 7 kk "a"}.n() == {'k': 7, 'kk': 'a'}
 doc Return array made of given attribute of each element of given array
 doc %EX - [{"x": 1}, {"x": 2}].x  # [1, 2]
 doc %RET - Arr
-F .(a:Arr, attr:Str) a.map((.), attr)
+F .(a:Arr, attr:Str) a.map((.)(X, attr))
 
 TEST [{"x": 1}, {"x": 2}].x == [1, 2]
 
@@ -851,11 +850,11 @@ doc args - Additional arguments for calling the predicate.
 doc %EX - [1,2,10].any(F(elt) elt > 5)   # true
 doc %EX - [1,2,10].any(F(elt) elt > 15)  # false
 doc %RET - Bool
-F any(arr:Arr, predicate, *args) {
+F any(arr:Arr, predicate) {
 	p = Pred(predicate)
 	l = arr.len()
 	for(i;l)
-		p(arr[i], *args) returns true
+		p(arr[i]) returns true
 	false
 }
 
@@ -868,65 +867,65 @@ doc arr - Array to check
 doc predicate - Test function
 doc args - Additional arguments for calling the predicate.
 doc %RET - Bool
-doc %EX - [1,2,3].all((<), 10)   # true
-doc %EX - [1,2,10].all((>), 5)   # false
-F all(arr:Arr, predicate, *args) {
+doc %EX - [1,2,3].all(X<10)   # true
+doc %EX - [1,2,10].all(X>5)   # false
+F all(arr:Arr, predicate) {
 	p = Pred(predicate)
 	l = arr.len()
 	for(i;l)
-		not(p(arr[i], *args)) returns false
+		not(p(arr[i])) returns false
 	true
 }
 
-TEST [1,2,3].all((<), 10)
-TEST [1,2,10].all((>), 5).not()
+TEST [1,2,3].all(X<10)
+TEST [1,2,10].all(X>5).not()
 
-doc Check that there is no element in arr that satisfies the given predicate. Exactly same as  not(any(arr, predicate, *args)) .
+doc Check that there is no element in arr that satisfies the given predicate. Exactly same as  not(any(arr, predicate)) .
 doc TODO: Make it work on anything with each() method
 doc %RET - Bool
-doc %EX - [0,1,2].none((>), 2)  # true
-doc %EX - [0,1,2].none((<), 2)  # false
-F none(arr:Arr, predicate:Fun, *args) not(any(arr, predicate, *args))
+doc %EX - [0,1,2].none(X>2)  # true
+doc %EX - [0,1,2].none(X<2)  # false
+F none(arr:Arr, predicate:Fun) not(any(arr, predicate))
 
-TEST [0,1,2].none((>), 2)
-TEST [0,1,2].none((<), 2).not()
+TEST [0,1,2].none(X>2)
+TEST [0,1,2].none(X<2).not()
 
-TEST [1,2,3].map((*), 4) == [4,8,12]
+TEST [1,2,3].map(X*4) == [4,8,12]
 
-doc Iterates over the elements of arr, passing each in turn to cb along with args: cb(ITEM, *args)
+doc Iterates over the elements of arr, passing each in turn to cb along with args: cb(ITEM)
 doc cb - Function to be called with values from arr
 doc args - Additional arguments for calling cb
 doc %RET - arr
 doc %EX - s=0
 doc %EX - [1,2,3].each(F(i) { global s; s+=i })
 doc %EX - echo(s)  # Outputs: 6
-F each(arr:Arr, cb:Fun, *args) {
+F each(arr:Arr, cb:Fun) {
 	l = arr.len()
-	for(i;l) cb(arr[i], *args)
+	for(i;l) cb(arr[i])
 	arr
 }
 
 # Tested by flatten() tests
 
 # TODO: map_idx_val, each_idx_val for other types
-doc Iterates over the elements of arr, passing each in turn to cb along with index and args: cb(INDEX, ITEM, *args)
+doc Iterates over the elements of arr, passing each in turn to cb along with index and args: cb(INDEX, ITEM)
 doc %RET - arr
 doc %EX - [10,20,30].each_idx_val(F(idx, val) echo("Element #$idx equals to $val"))
-F each_idx_val(arr:Arr, cb:Fun, *args) {
+F each_idx_val(arr:Arr, cb:Fun) {
 	l = arr.len()
-	for(i;l) cb(i, arr[i], *args)
+	for(i;l) cb(i, arr[i])
 	arr
 }
 
 doc Map an Arr to an Arr (array) of values using mapper
-doc mapper is called as mapper(INDEX, ITEM, *args)
+doc mapper is called as mapper(INDEX, ITEM)
 doc %RET - New Arr
 doc %EX - echo("Array items: " + [10,20,30].map_idx_val(F(idx, val) "[$idx]=$val").join(", "))
 doc %EX - # Outputs: Array items: [0]=10, [1]=20, [2]=30
-F map_idx_val(arr:Arr, mapper:Fun, *args) {
+F map_idx_val(arr:Arr, mapper:Fun) {
 	l = arr.len()
 	collector
-		for(i;l) collect(mapper(i, arr[i], *args))
+		for(i;l) collect(mapper(i, arr[i]))
 }
 
 TEST r=[]; ["a", "b"].each_idx_val(F(idx, val) r.push([idx, val])); r == [[0, "a"], [1, "b"]]
@@ -935,36 +934,36 @@ TEST r=[]; ["a", "b"].each_idx_val(F(idx, val) r.push([idx, val])); r == [[0, "a
 # TODO: make it work with anything that has each() method
 doc Process each N elements of an Array at a time.
 doc Throws InvalidArgument if number of items in arr is not divisible by n.
-doc cb is called as cb(eltI, ..., eltJ, *args) where I is multiple of n and J is I+n-1
+doc cb is called as cb(eltI, ..., eltJ) where I is multiple of n and J is I+n-1
 doc arr - Items to iterate in chunks of n
 doc n - Number of items in chunk
 doc cb - Function to be called with values from arr
 doc args - Additional arguments for calling cb
 doc %RET - arr
 doc %EX - [1,2,3,4].each(2, F(a, b) echo("$a - $b"))  # Outputs: "1 - 2" and on the next line "3 - 4"
-F each(arr:Arr, n:Int, cb:Fun, *args) {
+F each(arr:Arr, n:Int, cb:Fun) {
 	arr.len() % n != 0 throws InvalidArgument("Can not iterate elements in groups of $n of array of size ${arr.len()}")
 	chunks = arr.len() / n
 	for(chunk_number; chunks) {
-		cb(*arr[chunk_number*n..chunk_number*n+n], *args)
+		cb(*arr[chunk_number*n..chunk_number*n+n])
 	}
 	arr
 }
 
-# Tested by map(arr:Arr, n:Int, cb:Fun, *args)
+# Tested by map(arr:Arr, n:Int, cb:Fun)
 
 
 doc Map each N elements of an Array at a time.
-doc mapper is called as cb(eltI, ..., eltJ, *args) where I is multiple of n and J is I+n-1
+doc mapper is called as cb(eltI, ..., eltJ) where I is multiple of n and J is I+n-1
 doc Throws InvalidArgument if number of items in arr is not divisible by n.
-doc mapper is called as mapper(eltI, ..., eltJ, *args) where I is multiple of n and J is I+n-1
+doc mapper is called as mapper(eltI, ..., eltJ) where I is multiple of n and J is I+n-1
 doc arr - Items to iterate in chunks of n
 doc n - Number of items in chunk
 doc mapper - Function to be called with values from arr
 doc args - Additional arguments for calling mapper
 doc %RET - Arr
 doc %EX - [1,2,3,4].map(2, F(a,b) "$a=$b").join("&")  # Outputs: 1=2&3=4
-F map(arr:Arr, n:Int, mapper:Fun, *args) collector arr.each(n, F(*a) collect(mapper(*a, *args)))
+F map(arr:Arr, n:Int, mapper:Fun) collector arr.each(n, F(*a) collect(mapper(*a)))
 
 # Tested by ~(s:Str, r:RegExp)
 
@@ -973,8 +972,7 @@ doc arr - items to filter
 doc without_elt - The value to filter out
 doc %RET - Arr
 doc %EX - [1,2,3,2].without(2)  # [1,3]
-F without(arr:Arr, without_elt)
-	arr.filter((!=), without_elt)
+F without(arr:Arr, without_elt) arr.filter(X != without_elt)
 
 TEST [1,2,3,2].without(2) == [1,3]
 
@@ -987,7 +985,7 @@ F -(a:Arr, b:Arr) {
 	} else {
 		b
 	}
-	a.filter((not in), h)
+	a.filter(X not in h)
 }
 
 TEST [1,2,3] - [5,6,1] == [2,3]
@@ -1000,11 +998,11 @@ doc predicate - Test function
 doc args - Additional arguments for the predicate
 doc %RET - Int
 doc %EX - [1,2,3,11,12].count(X>10)  # 2
-F count(arr:Arr, predicate, *args) {
+F count(arr:Arr, predicate) {
 	p = Pred(predicate)
 	collector/0
 		arr.each(F(elt) {
-			if p(elt, *args)
+			if p(elt)
 				collect(1)
 		})
 }
@@ -1024,7 +1022,7 @@ doc arr - Array of arrays
 doc %RET - Arr
 doc %EX - [[1], [2,3]].flatten()  # [1,2,3]
 F flatten(arr:Arr) {
-	guard arr.all(is, Arr)
+	guard arr.all(Arr)
 	collector
 		arr.each(F(subarr) {
 			subarr % collect
@@ -1053,11 +1051,11 @@ doc predicate - Test function
 doc args - Additional arguments for the predicate
 doc %RET - Int or null
 doc %EX - [1,2,11,3,4].index(X>10)  # 2
-F index(arr:Arr, predicate, *args) {
+F index(arr:Arr, predicate) {
 	p = Pred(predicate)
 	l = arr.len()
 	for(i;l)
-		p(arr[i], *args) returns i
+		p(arr[i]) returns i
 	null
 }
 
@@ -1068,10 +1066,10 @@ doc predicate - Test function
 doc args - Additional arguments for the predicate
 doc %RET - Arr of Int
 doc %EX - [1,5,1,10].indexes(X>2)  # [1,3]
-F indexes(arr:Arr, predicate, *args) {
+F indexes(arr:Arr, predicate) {
 	p = Pred(predicate)
 	l = arr.len()
-	l.filter({ p(arr[A], *args) })
+	l.filter({ p(arr[A]) })
 }
 
 TEST [1,5,1,10].indexes(X>2) == [1,3]
@@ -1083,8 +1081,8 @@ doc predicate - Test function
 doc args - Additional arguments for the predicate
 doc %RET - Int or null
 doc %EX - [1,2,11,3,4].first(X>10)  # 11
-F first(arr:Arr, predicate:Fun, *args) {
-	i = arr.index(predicate, *args)
+F first(arr:Arr, predicate:Fun) {
+	i = arr.index(predicate)
 	i is Null returns null
 	arr[i]
 }
@@ -1123,7 +1121,7 @@ doc a - Array of arrays to join
 doc sep - Separator elements
 doc %EX - [[1,2], [3,4]].join([10,20])  # [1,2,10,20,3,4]
 F join(a:Arr, sep:Arr) {
-	guard a.all(is, Arr)
+	guard a.all(Arr)
 	collector
 		a.each_idx_val(F(idx, subarr) {
 			subarr % collect
@@ -1156,7 +1154,7 @@ doc %RET - Arr of form [[arg[0][0], arg[1][0], ... arg[i][0]], [arg[0][1], arg[1
 F zip(*args) {
 	arrays = args.map(Arr)
 	max_len = arrays / len \ max
-	max_len.map({ arrays.map(get, A, null) })
+	max_len.map({ arrays.map(X.get(A, null)) })
 }
 
 TEST zip([1,2,3], [4,5,6]) == [[1,4], [2,5], [3,6]]
@@ -1301,7 +1299,7 @@ doc s - Delimiter
 doc %RET - Str
 doc %EX - [1,2,3].join("::")  # The string 1::2::3
 F join(a:Arr, s:Str) {
-	guard a.any((is not), Str)
+	guard a.any(X is not Str)
 	a.map(Str).join(s)
 	# TODO: maybe a.map({if A is Str then A else Str(A)}).join(s)
 	# TODO: consider making Str(x) == x
@@ -1312,7 +1310,7 @@ doc If my_vpc_id() is null the whole array is not needed
 doc %EX - [1,2].nuke_null()  # [1,2]
 doc %EX - [1,null].nuke_null()  # []
 F nuke_null(a:Arr) {
-	a.any(is, Null) returns []
+	a.any(Null) returns []
 	a
 }
 
@@ -1446,8 +1444,8 @@ doc cb - Function to call with successive keys and values
 doc args - Additional arguments for calling cb
 doc %RET - h
 doc %EX - {"a": 1, "b": 2}.each(F(k, v) echo("$k=$v"))  # Outputs: "a=1" and on the next line "b=2"
-F each(h:Hash, cb:Fun, *args) {
-	h.keys().each(F(k) cb(k, h[k], *args))
+F each(h:Hash, cb:Fun) {
+	h.keys().each(F(k) cb(k, h[k]))
 	h
 }
 
@@ -1458,8 +1456,8 @@ doc args - Additional arguments for calling cb
 doc %RET - h
 doc %EX - {"a": 1, "b": 2}.each_idx_key_val(F(idx, k, v) echo("[$idx] $k=$v"))
 doc %EX - # Outputs: "[0] a=1" and on the next line "[1] b=2"
-F each_idx_key_val(h:Hash, cb:Fun, *args) {
-	h.keys().each_idx_val(F(idx, k) cb(idx, k, h[k], *args))
+F each_idx_key_val(h:Hash, cb:Fun) {
+	h.keys().each_idx_val(F(idx, k) cb(idx, k, h[k]))
 	h
 }
 
@@ -1469,12 +1467,11 @@ doc mapper - Function to be called with keys and values from h
 doc args - Additional arguments for calling mapper
 doc %RET - Arr
 doc %EX - {'a': 1, 'b': 2}.map(F(k, v) "${k}-$v")  # ['a-1', 'b-2']
-F map(h:Hash, mapper:Fun, *args)
+F map(h:Hash, mapper:Fun)
 	collector
-		h % { collect(mapper(A, B, *args)) }
+		h % { collect(mapper(A, B)) }
 
 TEST {'a': 1, 'b': 2}.map(F(k, v) "${k}-$v") == ['a-1', 'b-2']
-TEST {'a': 1, 'b': 2}.map(F(k, v, sep) "${k}${sep}${v}", '+') == ['a+1', 'b+2']
 
 doc Map Hash keys. Build new Hash with same values as in h but keys mapped by mapper.
 doc h - Source hash
@@ -1482,9 +1479,9 @@ doc mapper - Function to be called with keys
 doc args - Additional arguments for calling mapper
 doc %RET - Hash
 doc %EX - mapk({"a": 1}, F(k) k+"z")  # {"az": 1}
-F mapk(h:Hash, mapper:Fun, *args)
+F mapk(h:Hash, mapper:Fun)
 	collector/{}
-		h % { collect(mapper(A, *args), B) }
+		h % { collect(mapper(A), B) }
 
 TEST mapk({"a": 1}, X+"z") == {"az": 1}
 
@@ -1501,9 +1498,9 @@ doc %EX - prefix_to_count = prefix_to_lines.mapv(len)  # {"pfx1": 30, "pfx2": 35
 doc %EX - top = prefix_to_count.Arr().sort(F(a, b) b[1] <= a[1]).Hash()
 doc %EX - top .= limit(10)
 doc %EX - echo(top)  # Outputs: {con=1219, dis=1001, pro=808, pre=607, com=600, int=543, tra=498, ove=431, per=422, imp=421}
-F mapv(h:Hash, mapper:Fun, *args)
+F mapv(h:Hash, mapper:Fun)
 	collector/{}
-		h % { collect(A, mapper(B, *args)) }
+		h % { collect(A, mapper(B)) }
 
 TEST mapv({"a": 1}, X+1) == {"a": 2}
 
@@ -1513,9 +1510,9 @@ doc h - Source hash
 doc mapper - Function to be called with keys and values
 doc args - Additional arguments for calling mapper
 doc %EX - mapkv({"a": 1}, {[A+"zz", B+10]})  # {"azz": 11}
-F mapkv(h:Hash, mapper:Fun, *args)
+F mapkv(h:Hash, mapper:Fun)
 	collector/{}
-		h % { collect(*mapper(A, B, *args)) }
+		h % { collect(*mapper(A, B)) }
 
 TEST mapkv({"a": 1}, {[A+"zz", B+10]}) == {"azz": 11}
 
@@ -1524,11 +1521,11 @@ doc h - Source hash
 doc predicate - Test function to be called with one key and one value at a time
 doc args - Additional arguments for calling the predicate
 doc %EX - {'a': 1, 'b': 2}.filter(F(k, v) k == 'a')  # {'a': 1}
-F filter(h:Hash, predicate, *args) {
+F filter(h:Hash, predicate) {
 	p = Pred(predicate)
 	collector/{}
 		h.each(F(k, v) {
-			if p(k, v, *args)
+			if p(k, v)
 				collect(k, v)
 		})
 }
@@ -1541,12 +1538,12 @@ doc predicate - Test function to be called with one key and one value at a time
 doc args - Additional arguments for calling the predicate.
 doc %RET - Bool
 doc %EX - {"x": 1, "y": 2}.all(F(k, v) v is Int)  # true
-F all(h:Hash, predicate, *args) {
+F all(h:Hash, predicate) {
 	p = Pred(predicate)
 	arr = h.keys()
 	l = arr.len()
 	for(i;l)
-		not(p(arr[i], h[arr[i]], *args)) returns false
+		not(p(arr[i], h[arr[i]])) returns false
 	true
 }
 
@@ -1559,11 +1556,11 @@ doc predicate - Test function to be called with one key and one value at a time
 doc args - Additional arguments for calling the predicate.
 doc %RET - Int
 doc %EX - {'a': 1, 'b': 2, 'c': 11}.count(F(k, v) v>10)  # 1
-F count(h:Hash, predicate, *args) {
+F count(h:Hash, predicate) {
 	p = Pred(predicate)
 	collector/0
 		h.each(F(k, v) {
-			if p(k, v, *args)
+			if p(k, v)
 				collect(1)
 		})
 }
@@ -1680,10 +1677,10 @@ doc TODO.
 doc Group items from a by key returned by cb
 doc args - Additional arguments for calling cb
 doc %RET - Hash
-F group(a:Arr, cb:Fun, *args) {
+F group(a:Arr, cb:Fun) {
 	ret = {}
 	a.each(F(elt) {
-		k = cb(elt, *args)
+		k = cb(elt)
 		ret.dflt(k, []).push(elt)
 	})
 	ret
@@ -1753,20 +1750,20 @@ doc cb - Function to call with current number
 doc args - Additional arguments for calling cb
 doc %EX - 10.each(echo)  # Outputs numbers from 0 to 9 inclusive, one on each line
 doc %RET - n
-F each(n:Int, cb:Fun, *args) {
-	for(i;n) cb(i, *args)
+F each(n:Int, cb:Fun) {
+	for(i;n) cb(i)
 	n
 }
 
 TEST 3.map(identity) == [0, 1, 2]
-TEST 3.map((*), 3) == [0, 3, 6]
+TEST 3.map(X*3) == [0, 3, 6]
 
 doc Call cb n times with *args arguments
 doc cb - Function to call
 doc args - Arguments for calling cb
 doc %EX - r=0; 5.times(F() r=r+2);  # r is now 10
-F times(n:Int, cb:Fun, *args) {
-	for(i;n) cb(*args)
+F times(n:Int, cb:Fun) {
+	for(i;n) cb()
 	n
 }
 
@@ -1825,9 +1822,9 @@ doc TODO: example.
 doc cb - Function to be called with each character from s
 doc args - Additional arguments for calling cb
 doc %RET - s
-F each(s:Str, cb:Fun, *args) {
+F each(s:Str, cb:Fun) {
 	s.len().each(F(idx) {
-		cb(s[idx], *args)
+		cb(s[idx])
 	})
 	s
 }
@@ -2001,15 +1998,15 @@ F lines(s:Str) {
 	# Note: Max OS <= 9 line separation of CR (\r) is not supported
 	not(s) returns []
 	s -= MaybeSfx('\n')
-	s.split('\n').map((-), MaybeSfx('\r'))
+	s.split('\n').map(X - MaybeSfx('\r'))
 }
 
 doc Split s to strings using end-of-line separators and call cb for each one of the lines.
 doc TODO: More efficient implementation, which would not have temporary array of all lines.
 doc cb - Function to be called with each line
 doc args - Additional arguments for calling cb
-F lines(s:Str, cb:Fun, *args) {
-	lines(s).each(cb, *args)
+F lines(s:Str, cb:Fun) {
+	lines(s).each(cb)
 }
 
 TEST "xx\nyy".lines() == %[xx yy]
@@ -2017,7 +2014,7 @@ TEST "xx\nyy".lines() == %[xx yy]
 doc Prepend each line in a with s
 doc %EX - "a " + ["1", "2"]  # ["a 1", "a 2"]
 F +(s:Str, a:Arr) {
-	guard a.all(is, Str)
+	guard a.all(Str)
 	a.map(s+X)
 }
 TEST "a " + ["1", "2"] == ["a 1", "a 2"]
@@ -2025,7 +2022,7 @@ TEST "a " + ["1", "2"] == ["a 1", "a 2"]
 doc Append s to each line in a
 doc %EX - ["1", "2"] + " a"  # ["1 a", "2 a"]
 F +(a:Arr, s:Str) {
-	guard a.all(is, Str)
+	guard a.all(Str)
 	a.map(X+s)
 }
 TEST ["1", "2"] + " a" == ["1 a", "2 a"]
@@ -2110,7 +2107,7 @@ F status(s:Str) {
 
 doc Write messages in a to standard error and exit
 F die(a:Arr, exit_code=1) {
-	guard a.all(is, Str)
+	guard a.all(Str)
 	a % echo(stdlib_error_fd, X)
 	c_exit(exit_code)
 }
@@ -2472,11 +2469,11 @@ F open(f:File, flags:Str) {
 F basename(s:Str) $(basename $s).Str() - Sfx('\n')
 
 # TODO: something more efficient than reading all of it. Some kind of streaming.
-F lines(f:File, cb:Fun, *args) {
+F lines(f:File, cb:Fun) {
 	finally()
 		body => {
 			f.open('r')
-			f.fd.read().lines(cb, *args)
+			f.fd.read().lines(cb)
 		}
 		cleanup => {
 			f.close()
@@ -2756,9 +2753,9 @@ F lines(p:Process) {
 }
 
 # TODO: ability to handle running process & it's streaming stdout
-F lines(p:Process, cb:Fun, *args) {
+F lines(p:Process, cb:Fun) {
 	p.wait()
-	p.stdout.lines(cb, *args)
+	p.stdout.lines(cb)
 }
 
 # === Parse aws output ===========================
@@ -2793,14 +2790,14 @@ F parse(s:Str, hints:Hash) {
 	# all other APIs seem to return only one top-level key.
 	# ( aws elasticbeanstalk describe-configuration-options )
 
-	top_level_vals = data.values().filter(is, Arr)
+	top_level_vals = data.values().filter(Arr)
 
 	guard top_level_vals.len() == 1
 
 	data = top_level_vals[0]
 
 	# Anyone cares about Reservations? Certainly it's not the common case so...
-	if data.all(has, 'ReservationId') {
+	if data.all('ReservationId' in X) {
 		data = data.Instances.flatten()
 	}
 	data.stdlib_aws_straighten_tags()
@@ -3082,13 +3079,13 @@ F Pred(r:RegExp) F regexp_pred(x) x ~ r
 
 TEST %[w1 w2].filter(/1/) == %[w1]
 
-F replace(s:Str, r:RegExp, mapper:Fun, *args) {
-	(~~)(s, r, true).map([ F(m:MatchY) mapper(m.whole, *args), F(s:Str) s ]).join('')
+F replace(s:Str, r:RegExp, mapper:Fun) {
+	(~~)(s, r, true).map([ F(m:MatchY) mapper(m.whole), F(s:Str) s ]).join('')
 }
 
 # === Fun ========================================
 
-F *(cb:Fun, n:Int, *args) n.map({ cb(*args) })
+F *(cb:Fun, n:Int) n.map({ cb() })
 
 TEST a = Box * 2; a[0] is Box and a[1] is Box and a[0] !== a[1]
 
@@ -3419,3 +3416,6 @@ TEST try [].shift() catch(e:EmptyArrayFail) true
 
 # === Partial application tests ==================
 TEST [{"val": 10, "flag": false}, {"val": 20, "flag": true}].filter(X.flag).val == [20]
+TEST [[1, 10], [2,20]].map(X[0]) == [1, 2]
+TEST [1,2].map([10,20,30][X]) == [20, 30]
+TEST [[1],[2,3]].filter(X.has(1)) == [[1]]

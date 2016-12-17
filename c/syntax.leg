@@ -45,7 +45,7 @@ void position_to_line_col();
 	name->location.last_column = location[3]; \
 }
 #define MAKE_NODE(name, type_) \
-	ast_node *name = NGS_MALLOC(sizeof(*name)); name->type = type_; \
+	ast_node *name = NGS_MALLOC(sizeof(*name)); name->type = type_; name->data = NULL; \
 	CAPTURE_LOCATION(name) \
 	DEBUG_PARSER("[ast_node] at %p type %3d (%-12s) %d:%d-%d:%d\n", name, name->type, NGS_AST_NODE_TYPES_NAMES[name->type], name->location.first_line, name->location.first_column, name->location.last_line, name->location.last_column);
 // TODO: check whether it's appropriate to use Boehm's "atomic" allocation.
@@ -87,6 +87,7 @@ ast_node *wrap_in_func(ast_node *node, int location[4], char *docstring, int arg
 	MAKE_STRING_NODE(doc, docstring);
 
 	func->first_child = params;
+	func->data = (void *)node; // Save original node for possible unwrapping
 	params->next_sibling = node;
 	node->next_sibling = doc;
 
@@ -118,6 +119,14 @@ ast_node *call_node_partial_application(ast_node *orig, int location[4]) {
 	// first_child - callable
 	// first_child->next_sibling - args
 	// first_child->next_sibling children - [arg]
+
+	// Handle erroneously wrapped X.something when it's actually X.something(blah)
+	if(orig->type == CALL_NODE && orig->first_child->type == FUNC_NODE && orig->first_child->data) {
+		((ast_node *)(orig->first_child->data))->next_sibling = orig->first_child->next_sibling;
+		orig->first_child = orig->first_child->data;
+		return wrap_in_func(orig, location, "Partial application syntax", 1, 3, "X", "Any", "Y", "Any", "Z", "Any");
+	}
+
 	p = orig->first_child;
 	if(p->type == ATTR_NODE) {
 		// arg1.method(...) syntax
