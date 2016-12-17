@@ -19,7 +19,7 @@ F take(i:Iter, n:Int) n.map({ i.next() })
 F init(i:ConstIter, val) init(args())
 F next(i:ConstIter) i.val
 F peek(i:ConstIter) i.val
-F Bool(i:ConstIter) false
+F Bool(i:ConstIter) true
 
 # ---------- RangeIter ----------
 F Iter(r:Range) RangeIter(r)
