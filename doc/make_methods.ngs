@@ -85,6 +85,7 @@
 									type ParamSplatDocNode(TextDocNode)
 							type RetDocNode(TextDocNode)
 							type ExampleDocNode(TextDocNode)
+							type LocationDocNode(DocNode)
 
 		F init(dn:DocNode, children:Arr=null) {
 			if not(children) children = []
@@ -111,6 +112,16 @@
 		# --- Html ---
 
 		F permalink(s:Str) '<a class="section-link" title="Permalink to this definition" href="#' + s.encode_html_attr() + '">¶</a>'
+
+		commit = `git rev-parse HEAD`.lines()[0]
+		# https://github.com/ilyash/ngs/blob/00e547caf492e3ac42d2aca8ef32a28f302c7287/c/stdlib.ngs#L3197
+		F make_location_link(dn:LocationDocNode) {
+			{
+				'text': "${dn.file[1..null]}:${dn.line}"
+				'link': "https://github.com/ilyash/ngs/blob/$commit/c/${dn.file}#L${dn.line}"
+			}
+		}
+
 
 		F Html(a:Arr, options:Hash) a.each(Html, options)
 
@@ -175,6 +186,11 @@
 			types = ('-' + params_dn.children.map(F(param_dn) param_dn.children.the_one(ParamTypeDocNode).text[0])).join('')
 			link = permalink('impl-' + options.method.encode_html_attr() + types)
 			tc.push("<h${tc.heading_level} id=\"impl-${options.method.encode_html_attr()}$types\" class=\"method-impl-header\">${options.method.encode_html()}($p)$link</h${tc.heading_level}>")
+			dn.children.the_one(LocationDocNode) do F(dn) {
+				# dn.text / encode_html % tc.push(X)
+				l = make_location_link(dn)
+				tc.push("Source: <a href=\"${l.link.encode_html()}\" style=\"source-link\">${l.text.encode_html()}</a>")
+			}
 			tc.indent() do {
 				tc.push('<section class="method-impl-content">')
 				tc.heading_inc() do {
@@ -242,12 +258,22 @@
 			}
 		}
 
+		pfx = Pfx(NGS_DIR)
 		F process_method_impl(mi:Fun) {
 			dn = MethodImplDocNode([])
 			process_method_impl_doc_attr(mi, dn, '', DescDocNode)
 			dn.push(ParamsDocNode(mi.params().map(process_param, mi.attrs().doc or {})))
 			process_method_impl_doc_attr(mi, dn, '%EX', ExampleDocNode)
 			process_method_impl_doc_attr(mi, dn, '%RET', RetDocNode)
+
+			if mi is Closure {
+				# Handling Closure, not handling built-ins yet
+				location_info = mi.ip().resolve_instruction_pointer()
+				if m = location_info.file ~ pfx {
+					dn.push(LocationDocNode().set('file', m.after).set('line', location_info.first_line))
+				}
+			}
+
 			dn
 		}
 

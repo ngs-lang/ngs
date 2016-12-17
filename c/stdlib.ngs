@@ -31,6 +31,11 @@ doc Throws AssertFail if condition is false
 doc %RET - Unspecified, do not count on this value
 F assert(condition:Bool) assert(condition, "Assertion failed")
 
+F assert(condition, *args) {
+	guard condition is not Bool
+	super(Bool(condition), *args)
+}
+
 # === Return =====================================
 
 doc Implements calling of Return type instances
@@ -2143,31 +2148,49 @@ STDLIB_FILE_TYPE = {
 	C_S_IFIFO:  FifoFile
 }
 
+doc Issue stat() system call. Throws StatFail if the call fails.
+doc %RET - Stat
+doc %EX - stat("/tmp")  # <Stat st_dev=51714 st_ino=25 st_mode=17407 ...>
 F stat(pathname:Str) {
 	ret = c_stat(pathname)
 	ret is Null throws StatFail("Failed to c_stat()").set('pathname', pathname)
 	ret
 }
 
+doc Issue stat() system call. Throws StatFail if the call fails.
+doc %RET - Stat
 F stat(p:Path) super(p.path)
 
+doc Issue lstat() system call. Throws StatFail if the call fails.
+doc %RET - Stat
+doc %EX - stat("/usr/bin/cal").st_mode   # 33261
+doc %EX - lstat("/usr/bin/cal").st_mode  # 41471
 F lstat(pathname:Str) {
 	ret = c_lstat(pathname)
 	ret is Null throws StatFail("Failed to c_lstat()").set('pathname', pathname)
 	ret
 }
 
+doc Issue lstat() system call. Throws StatFail if the call fails.
+doc %RET - Stat
 F lstat(p:Path) super(p.path)
 
 # TODO: better name
 doc EXPERIMENTAL, do not use outside of stdlib!
+doc Instanciates Path sub-type, depending on what p is
 F specific(p:Path) {
-	s = stat(p)
+	s = lstat(p)
 	file_type = s.st_mode.band(C_S_IFMT)
 	STDLIB_FILE_TYPE[file_type](p.path).set('stat', s)
 }
 
-
+doc Path constructor
+doc s - path
+doc subtype - Return Path sub-type, depending on lstat() call
+doc %RET - Path or sub-type of Path
+doc %EX - Path(".")  # <Path path=.>
+doc %EX - Path(".", true)  # <Dir path=.>
+doc %EX - ``find tmp/v8``.map(Path(X, true)).map(typeof).name.Stats()  # <Stats: {Dir=287, File=9220}>
 F Path(s:Str, subtype=false) {
 	ret = Path()
 	ret.path = s
@@ -2178,14 +2201,20 @@ F Path(s:Str, subtype=false) {
 	}
 }
 
+doc Path constructor
+doc s - path
 F init(p:Path, s:Str) {
 	p.path = s
 }
 
+doc Path constructor. Duplicates other Path.
+doc other - Path to duplicate
 F init(p:Path, other:Path) {
 	p.path = other.path
 }
 
+doc Checks whether the path is accessible using access(2) and F_OK.
+doc %RET - Bool
 F Bool(p:Path) c_access(p.path, C_F_OK) == 0
 
 TEST Path('/').Bool()
@@ -2193,6 +2222,14 @@ TEST Path('/no-such-file').Bool() == false
 TEST Path('/', true) is Dir
 
 # TODO: better exceptions (use correct type, not string, maybe use errno)
+# TODO: support platforms with non ":" path delimiter?
+doc Finds given binary and returns it's full path.
+doc Throws ExecutableNotFound if the binary was not found.
+doc Search strategy: "/" in the name of the binary means that given executable_name is a path so it's returned as-is (wrapped in Path).
+doc If PATH environment variable exists, the given directories are searched.
+doc If PATH is not set built-in value for PATH is used to search: /usr/local/bin:/usr/bin:/bin:/sbin:/usr/sbin
+doc %RET - Path
+doc %EX - find_in_path("ls")  # <Path path=/bin/ls>
 F find_in_path(executable_name:Str) {
 	debug("[find_in_path] got ${executable_name}")
 	if "/" in executable_name {
@@ -2207,28 +2244,57 @@ F find_in_path(executable_name:Str) {
 	ret
 }
 
+doc String representation of a Path (or it's sub-type)
+doc %RET - Str
+doc %EX - find_in_path("ls").Str()  # The string: <Path path=/bin/ls>
 F Str(p:Path) "<${p.typeof().name} path=${p.path}>"
 
 STDLIB_PATH_SEP = '/'
 
+doc Concatenate two path parts using STDLIB_PATH_SEP (currently "/") but should be platform-specific later.
+doc %RET - Str
+doc %EX - mydir="tmp"
+doc %EX - mydir / "myfile"  # "tmp/myfile"
 F /(a:Str, b:Str) "$a$STDLIB_PATH_SEP$b"
 
+doc Concatenate two path parts using STDLIB_PATH_SEP (currently "/") but should be platform-specific later.
+doc %RET - Str
+doc %EX - mydir="tmp/"
+doc %EX - mydir / "myfile"  # "tmp/myfile"
 F /(a:Str, b:Str) {
 	guard a and (a[-1] == STDLIB_PATH_SEP)
 	"$a$b"
 }
 
+doc Concatenate two path parts using STDLIB_PATH_SEP (currently "/") but should be platform-specific later.
+doc %RET - Str
+doc %EX - mydir="./"
+doc %EX - mydir / "myfile"  # "myfile"
 F /(a:Str, b:Str) {
 	guard (a == '.') or (a == './')
 	b
 }
 
+doc Concatenate two Path-s using /(a:Str, b:Str)
+doc %RET - Path
+doc %EX - Path("tmp") / Path("v8")  # <Path path=tmp/v8>
 F /(a:Path, b:Path) Path(a.path / b.path)
 
 { type DirFail(CException) }
 
-F dir(dirname, subtype=false) collector dir(dirname, collect, subtype)
+doc List directory contents. Warning: "." and ".." are included.
+doc Throws DirFail when directory can not be listed.
+doc subtype - Select type of returned items: true for Path sub-type, false for Path type
+doc %RET - Arr of Path or it's sub-type
+doc %EX - dir("tmp/v8", true).filter(File)  # [ ..., <File path=tmp/v8/README.md fd=null>, <File path=tmp/v8/LICENSE.valgrind fd=null>, ... ]
+doc %EX - dir("tmp/v8", true).filter(Dir)   # [ ..., <Dir path=tmp/v8/tools>, <Dir path=tmp/v8/infra>, ... ]
+F dir(dirname:Str, subtype=false) collector dir(dirname, collect, subtype)
 
+# TODO: recurse ?
+# TODO: filter out "." and ".." ?
+doc List directory contents and call cb with Path() of each found item. Warning: "." and ".." are included.
+doc %RET - unspecified at this time, do not count on it
+doc %EX - 's=Stats(); dir("tmp/v8", {s.push(A.typeof().name)}, true); s  # <Stats: {File=23, Dir=16}>'
 F dir(dirname:Str, cb:Fun, subtype=false) {
 	d = c_opendir(dirname)
 	d is Null throws DirFail('Failed to list directory contents').set('dirname', dirname)
@@ -2272,8 +2338,10 @@ F dup2(oldfd:Int, newfd:Int) {
 
 # TODO: detect and process errors, throw exception(s)
 # TODO: better exceptions (use correct type, not string, maybe use errno)
-doc Read all data
+doc Read all data from a file referenced by file descriptor.
 doc fd - File descriptor to read from
+doc %RET - Str
+doc %EX - read(0)  # All data from stdin
 F read(fd:Int) {
 	ret = []
 	while true {
@@ -2293,20 +2361,28 @@ F read(fd:Int) {
 	}
 }
 
-# TODO: handle errors, throw exceptions
-F write(fd:Int, s:Str) fd.c_write(s)
+doc Write data to a file referenced by file descriptor.
+doc WARNING: Incomplete implementation.
+doc TODO: handle errors, throw exceptions.
+doc TODO: handle possible EINTR.
+doc fd - File descriptor to write to
+doc %RET - unspecified at this time, do not count on it
+F write(s:Str, fd:Int) fd.c_write(s)
 
+{ type TtyCheckFail(CException) }
+
+doc Check whether given fd represents a TTY. Uses ISATTY(3).
+doc Throws TtyCheckFail.
+doc %RET - Bool
 F isatty(fd:Int) {
 	ret = c_isatty(fd)
 	errno = get_c_errno()
 
 	ret == 1 returns true
-	ret != 0 throws "c_isatty($fd) - unknown response code $ret"
+	ret != 0 throws TtyCheckFail("c_isatty($fd) - unknown response code $ret").set('fd', fd).set('isatty_returned', ret)
 
 	errno in [C_EINVAL, C_ENOTTY] returns false
-	errno == C_EBADF returns "c_isatty($fd) - invalid file descriptor"
-
-	throw "c_isatty($fd) - unknown errno $errno"
+	throw TtyCheckFail("c_isatty() - failed").set('fd', fd)
 }
 
 # --- Pipe ---
