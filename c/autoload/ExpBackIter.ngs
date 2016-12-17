@@ -18,7 +18,7 @@
 		(eb.fuzz)(eb.current*eb.factor)
 	}
 
-	F Bool(eb:ExpBackIter) false
+	F Bool(eb:ExpBackIter) true
 
 }
 TEST ExpBackIter(fuzz=identity).drop(5).take(3) == [64, 128, 256]
