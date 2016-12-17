@@ -3193,6 +3193,7 @@ F rand(r:Range) {
 
 F body_missing_in_retry() throw InvalidArgument("'body' argument missing in retry()")
 
+# TODO: Hande NoNext that could occur in sleep iterator
 F retry(
 	times:Int=60,
 	sleep=1,
