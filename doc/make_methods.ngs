@@ -71,18 +71,14 @@
 		type TextDocNode(DocNode)
 			type TopDocNode(DocNode)
 				type MethodsDocNode(DocNode)
-					type TypeDocNode(DocNode)
 					type MethodDocNode(DocNode)
-						type MethodNameDocNode(TextDocNode)
 						type MethodImplDocNode(DocNode)
 							type DescDocNode(TextDocNode)
 							type ParamsDocNode(DocNode)
 								type ParamDocNode(DocNode)
-									type ParamNameDocNode(TextDocNode)
 									type ParamTypeDocNode(TextDocNode)
 									type ParamDfltDocNode(TextDocNode)
 									type ParamSpecialDfltDocNode(TextDocNode)
-									type ParamSplatDocNode(TextDocNode)
 							type RetDocNode(TextDocNode)
 							type ExampleDocNode(TextDocNode)
 							type LocationDocNode(DocNode)
@@ -101,14 +97,6 @@
 			tc.indent({ dn.children.filter(filt).Html(options) })
 		}
 
-		F name(dn:MethodDocNode) {
-			dn.children.the_one(MethodNameDocNode).text[0]
-		}
-
-		F name(dn:ParamDocNode) {
-			dn.children.the_one(ParamNameDocNode).text[0]
-		}
-
 		# --- Html ---
 
 		F permalink(s:Str) '<a class="section-link" title="Permalink to this definition" href="#' + s.encode_html_attr() + '">¶</a>'
@@ -117,7 +105,7 @@
 		# https://github.com/ilyash/ngs/blob/00e547caf492e3ac42d2aca8ef32a28f302c7287/c/stdlib.ngs#L3197
 		F make_location_link(dn:LocationDocNode) {
 			{
-				'text': "${dn.file[1..null]}:${dn.line}"
+				'text': "${dn.file}:${dn.line}"
 				'link': "https://github.com/ilyash/ngs/blob/$commit/c/${dn.file}#L${dn.line}"
 			}
 		}
@@ -151,10 +139,10 @@
 		F Html(dn:MethodDocNode, options:Hash) {
 			not(dn.children.filter(MethodImplDocNode)) returns null
 			tc.push('<section class="method">')
-			link = permalink('method-' + dn.name())
-			tc.push("<h${tc.heading_level} id=\"method-${dn.name().encode_html_attr()}\" class=\"method-header\">${dn.name().encode_html()}$link</h${tc.heading_level}>")
+			link = permalink('method-' + dn.name)
+			tc.push("<h${tc.heading_level} id=\"method-${dn.name.encode_html_attr()}\" class=\"method-header\">${dn.name.encode_html()}$link</h${tc.heading_level}>")
 			tc.heading_inc() do {
-				dn.process_children(options + {'method': dn.name()}, MethodImplDocNode)
+				dn.process_children(options + {'method': dn.name}, MethodImplDocNode)
 			}
 			tc.push('</section>')
 		}
@@ -166,10 +154,10 @@
 			# echo(pdn)
 			params = params_dn.children.map() with F(param_dn) {
 				html = ''
-				param_dn.children.the_one(ParamSplatDocNode) do F(psdn) {
-					html += psdn.text[0]
+				if 'splat' in param_dn {
+					html += param_dn.splat
 				}
-				html += name(param_dn).encode_html()
+				html += param_dn.name.encode_html()
 				typ = param_dn.children.the_one(ParamTypeDocNode).text[0]
 				html += ":${typ.encode_html()}"
 				param_dn.children.the_one(ParamDfltDocNode) do F(dflt) {
@@ -186,20 +174,19 @@
 			types = ('-' + params_dn.children.map(F(param_dn) param_dn.children.the_one(ParamTypeDocNode).text[0])).join('')
 			link = permalink('impl-' + options.method.encode_html_attr() + types)
 			tc.push("<h${tc.heading_level} id=\"impl-${options.method.encode_html_attr()}$types\" class=\"method-impl-header\">${options.method.encode_html()}($p)$link</h${tc.heading_level}>")
-			dn.children.the_one(LocationDocNode) do F(dn) {
-				# dn.text / encode_html % tc.push(X)
-				l = make_location_link(dn)
-				tc.push("Source: <a href=\"${l.link.encode_html()}\" style=\"source-link\">${l.text.encode_html()}</a>")
-			}
 			tc.indent() do {
 				tc.push('<section class="method-impl-content">')
 				tc.heading_inc() do {
 					dn.children.the_one(DescDocNode) do F(dn) {
 						dn.text / encode_html % tc.push(X)
 					}
+					dn.children.the_one(LocationDocNode) do F(dn) {
+						l = make_location_link(dn)
+						tc.push("<section class=\"method-source\">Source: <a href=\"${l.link.encode_html_attr()}\" style=\"source-link\">${l.text.encode_html()}</a></section>")
+					}
 					dn.children.the_one(ParamsDocNode).children.each(F(param_dn:ParamDocNode) {
 						if param_dn.children.any(DescDocNode) {
-							tc.push("<h${tc.heading_level} class=\"param-header\">${param_dn.name().encode_html()}</h${tc.heading_level}>")
+							tc.push("<h${tc.heading_level} class=\"param-header\">${param_dn.name.encode_html()}</h${tc.heading_level}>")
 							tc.push('<section class="method-param-content">')
 							param_dn.children.the_one(DescDocNode).text / encode_html % tc.push(X)
 							tc.push('</section>') # method-param-content
@@ -230,7 +217,8 @@
 
 		F process_param(param:Hash, doc:Hash) {
 			# echo("P $param")
-			dn = ParamDocNode([ ParamNameDocNode(param.name) ])
+			dn = ParamDocNode()
+			dn.name = param.name
 			if 'type' in param {
 				dn.push(ParamTypeDocNode(param.type.name))
 			}
@@ -242,8 +230,7 @@
 					}
 			}
 			if 'splat' in param {
-				dn.push(ParamSplatDocNode(param.splat))
-
+				dn.splat = param.splat
 			}
 			if param.name in doc {
 				dn.push(DescDocNode(doc[param.name]))
@@ -258,7 +245,7 @@
 			}
 		}
 
-		pfx = Pfx(NGS_DIR)
+		pfx = Pfx("$NGS_DIR/")
 		F process_method_impl(mi:Fun) {
 			dn = MethodImplDocNode([])
 			process_method_impl_doc_attr(mi, dn, '', DescDocNode)
@@ -278,7 +265,8 @@
 		}
 
 		F process_method(name, value) {
-			dn = MethodDocNode([MethodNameDocNode(name)] + value.map(process_method_impl))
+			dn = MethodDocNode(value.map(process_method_impl))
+			dn.name = name
 			dn
 		}
 
