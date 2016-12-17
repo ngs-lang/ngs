@@ -1,17 +1,33 @@
 {
 	type Iter
 	type NoNext(Exception)
+	type ArrIter(Iter)
 	type HashIter(Iter)
+	type ConstIter(Iter)
+	type RangeIter(Iter)
 }
 
 F throw_if_no_next(i:Iter) {
 	not(i) throws NoNext("No next element in iterator").set('iter', i)
 }
 
+F drop(i:Iter, n:Int) { n.times({ i.next()}); i }
+F take(i:Iter, n:Int) n.map({ i.next() })
+# F destroy(i:Iter) null # no-op
+
+# ---------- ConstIter ----------
+F init(i:ConstIter, val) init(args())
+F next(i:ConstIter) i.val
+F peek(i:ConstIter) i.val
+F Bool(i:ConstIter) false
+
+# ---------- RangeIter ----------
+F Iter(r:Range) RangeIter(r)
+doc NOT IMPLEMENTED YEY
+F init(i:RangeIter, r:Range) throw NotImplemented("Range iteration is not implemented yet")
+
 # ---------- ArrIter ----------
-{ type ArrIter(Iter) }
 F Iter(arr:Arr) ArrIter(arr)
-F Iter(h:Hash) HashIter(h)
 
 F init(i:ArrIter, arr:Arr) {
 	i.val = arr
@@ -40,6 +56,7 @@ TEST try [].Iter().next() catch(nn:NoNext) true
 # EXPERIMENTAL
 # Not sure it's needed but it's good to have it for completeness
 # ---------- HashIter ----------
+F Iter(h:Hash) HashIter(h)
 doc EXPERIMENTAL! Do not use!
 F init(i:HashIter, h:Hash) {
 	i.val = h
