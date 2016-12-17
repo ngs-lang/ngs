@@ -3207,6 +3207,7 @@ F retry(
 ) {
 	guard sleep is Int or sleep is Iter
 	sleep_iter = if sleep is Int then ConstIter(sleep) else sleep
+	result = null  # otherwise it will be local to try { ... }
 	for(i;times) {
 		n = i + 1
 		progress_cb(n, times)
