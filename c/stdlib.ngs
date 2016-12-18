@@ -2385,15 +2385,20 @@ F isatty(fd:Int) {
 
 # http://www.microhowto.info/howto/capture_the_output_of_a_child_process_in_c.html
 
-{ type Pipe }
+{
+	type Pipe
+	type PipeCreateFail(CException)
+}
 
 stdlib_fork_lock = Lock()
 
 # TODO: better exceptions (use correct type, not string, maybe use errno)
+doc Pipe constructor. Create UNIX pipe using PIPE(2). Throws PipeCreateFail if pipe can not be created.
+doc %EX - p = Pipe()
 F init(pipe:Pipe) {
 	result = c_pipe()
 	# result: [result_code, read_end, write_end]
-	result[0] != 0 throws "Failed to create Pipe"
+	result[0] != 0 throws PipeCreateFail("Failed to create Pipe")
 	pipe.read_fd = result[1]
 	pipe.write_fd = result[2]
 	debug("[Pipe] created pipe with read_fd=${pipe.read_fd} and write_fd=${pipe.write_fd}")
@@ -2402,6 +2407,9 @@ F init(pipe:Pipe) {
 STDLIB_CHILD_TO_PARENT_PIPE_DIR = 1
 STDLIB_PARENT_TO_CHILD_PIPE_DIR = 2
 
+doc Pipe constructor. Create UNIX pipe using PIPE(2). Throws PipeCreateFail if pipe can not be created.
+doc direction - One of: STDLIB_CHILD_TO_PARENT_PIPE_DIR or STDLIB_PARENT_TO_CHILD_PIPE_DIR
+doc %EX - p = Pipe(STDLIB_PARENT_TO_CHILD_PIPE_DIR)
 F init(pipe:Pipe, direction:Int) {
 	init(pipe)
 	init(args())
@@ -2410,28 +2418,47 @@ F init(pipe:Pipe, direction:Int) {
 F Str(p:Pipe) "<Pipe read_fd=${p.read_fd} write_fd=${p.write_fd}>"
 
 # TODO: exception on fail, maybe close() wrapper for c_close()
+
+doc Close writing end of the Pipe
 F close_writing_end(p:Pipe) p.write_fd.c_close()
+
+doc Close reading end of the Pipe
 F close_reading_end(p:Pipe) p.read_fd.c_close()
+
+doc Write to Pipe. TODO: document if it throws.
+doc %RET - unspecified at this time, do not count on it
 F write(p:Pipe, s:Str) p.write_fd.c_write(s)
+
+doc Read from Pipe. TODO: document if it throws.
+doc %RET - read data
+doc %EX - data = read(myipe)
 F read(p:Pipe) p.read_fd.read()
+
+doc DUP2(2) writing file descriptor
 F dup2_writing_end(p:Pipe, newfd:Int) dup2(p.write_fd, newfd)
+
+doc DUP2(2) reading file descriptor
 F dup2_reading_end(p:Pipe, newfd:Int) dup2(p.read_fd, newfd)
 
+doc Get child process end file descriptor of Pipe. It's the writing end for Pipe(STDLIB_CHILD_TO_PARENT_PIPE_DIR).
 F child_fd(p:Pipe) {
 	guard p.direction == STDLIB_CHILD_TO_PARENT_PIPE_DIR
 	p.write_fd
 }
 
+doc Get child process end file descriptor of Pipe. It's the reading end for Pipe(STDLIB_PARENT_TO_CHILD_PIPE_DIR).
 F child_fd(p:Pipe) {
 	guard p.direction == STDLIB_PARENT_TO_CHILD_PIPE_DIR
 	p.read_fd
 }
 
+doc Get parent process end file descriptor of Pipe. It's the reading end for Pipe(STDLIB_CHILD_TO_PARENT_PIPE_DIR).
 F parent_fd(p:Pipe) {
 	guard p.direction == STDLIB_CHILD_TO_PARENT_PIPE_DIR
 	p.read_fd
 }
 
+doc Get parent process end file descriptor of Pipe. It's the writing end for Pipe(STDLIB_PARENT_TO_CHILD_PIPE_DIR).
 F parent_fd(p:Pipe) {
 	guard p.direction == STDLIB_PARENT_TO_CHILD_PIPE_DIR
 	p.write_fd
@@ -2453,6 +2480,8 @@ F init(f:File, fd:Int) {
 	init(args())
 }
 
+doc String representation of File
+doc %EX - open(File("tmp/v8/LICENSE"), "r").Str().echo()  # Output: <File path=tmp/v8/LICENSE fd=4>
 F Str(f:File) "<File path=${f.path} fd=${f.fd}>"
 
 TEST File('xy').Str() == '<File path=xy fd=null>'
