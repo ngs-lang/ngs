@@ -40,10 +40,10 @@ F assert(condition, *args) {
 
 doc Implements calling of Return type instances
 doc like the finish(i) call in the example below
-doc %EX - F first(r:Range, predicate:Fun, *args) {
+doc %EX - F first(r:Range, predicate:Fun) {
 doc %EX - 	finish = Return()
 doc %EX - 	r.each(F(i) {
-doc %EX - 		predicate(i, *args) throws finish(i)
+doc %EX - 		predicate(i) throws finish(i)
 doc %EX - 	})
 doc %EX - 	null
 doc %EX - }
@@ -116,7 +116,7 @@ F map(something, mapper:Fun)
 
 doc Filter something to an Arr (array) of values using predicate
 doc something - Instance of any type that has each(something, callback) implemented.
-doc predicate - Decision function to be called with each item as first argument and *args as the rest of the arguments.
+doc predicate - Decision function to be called with each item as first argument.
 doc predicate - When predicate(item) returns true, the item will appear in the resulting array.
 doc %EX - (1...10).filter(F(num) num % 2 == 0)  # Gives [2,4,6,8,10]
 doc %EX - (1...10).filter(X<5)  # Gives [1,2,3,4], predicate called as predicate(item, 5)
@@ -198,7 +198,7 @@ F filter(something) {
 TEST [1,2,null,3].filter() == [1,2,3]
 
 doc Filter something to an Arr (array) of values using predicate
-doc predicate - Decision function to be called with each item as first argument and *args as the rest of the arguments.
+doc predicate - Decision function to be called with each item as first argument.
 doc predicate - When predicate(item) returns true, the item will not appear in the resulting array
 doc something - Instance of any type that has each(something, callback) implemented
 doc %EX - (1...10).reject(F(num) num % 2 == 0)  # Gives [1,3,5,7,9]
@@ -583,7 +583,7 @@ F ..(start, end)  ExclusiveRange(start, end)
 doc InclusiveRange constructor
 F ...(start, end) InclusiveRange(start, end)
 
-doc Iterates over the elements of r, passing each in turn to cb along with *args.
+doc Iterates over the elements of r, passing each in turn to cb.
 doc cb - Function to be called with values from r
 doc args - Additional arguments for calling cb
 doc %RET - r
@@ -1248,7 +1248,6 @@ TEST [10,11,12].limit(2) == [10,11]
 		doc TODO
 		F max(arr:Arr) most(arr, (>))
 
-		# TODO: *args for consistency?
 		# EXPERIMENTAL!
 		doc TODO
 		F min(arr:Arr, cb:Fun) most_by_cb(arr, (<), cb)
@@ -1758,7 +1757,7 @@ F each(n:Int, cb:Fun) {
 TEST 3.map(identity) == [0, 1, 2]
 TEST 3.map(X*3) == [0, 3, 6]
 
-doc Call cb n times with *args arguments
+doc Call cb n times without arguments.
 doc cb - Function to call
 doc args - Arguments for calling cb
 doc %EX - r=0; 5.times(F() r=r+2);  # r is now 10

@@ -113,9 +113,7 @@ F column(t:Table, k:Str) t.column(t.col_name_to_idx[k])
 F column(t:Table, n:Int) t.rows.map(X[n])
 # F columns(t:Table) t.width().map(F(idx) t.column(idx))
 F columns(t:Table) t.width() / t.column(X)
-F each(t:Table, cb:Fun, *args) {
-	throw NotImplemented()
-}
+F each(t:Table, cb:Fun) throw NotImplemented()
 
 # --- Conversions ---
 
