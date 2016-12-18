@@ -111,7 +111,7 @@
 		}
 
 
-		F Html(a:Arr, options:Hash) a.each(Html, options)
+		F Html(a:Arr, options:Hash) a.each(Html(X, options))
 
 		F Html(dn:TopDocNode, options:Hash={'pfx': '', 'do_pfx': true}) {
 			tc.push('<!DOCTYPE html>')
@@ -249,7 +249,7 @@
 		F process_method_impl(mi:Fun) {
 			dn = MethodImplDocNode([])
 			process_method_impl_doc_attr(mi, dn, '', DescDocNode)
-			dn.push(ParamsDocNode(mi.params().map(process_param, mi.attrs().doc or {})))
+			dn.push(ParamsDocNode(mi.params().map(process_param(X, mi.attrs().doc or {}))))
 			process_method_impl_doc_attr(mi, dn, '%EX', ExampleDocNode)
 			process_method_impl_doc_attr(mi, dn, '%RET', RetDocNode)
 
@@ -276,7 +276,7 @@
 		g.keys().filter(is_public_name).sort(lte).each(F(name) {
 			value = g[name]
 			cond {
-				(value is Arr) and value.all(is, Fun)
+				(value is Arr) and value.all(Fun)
 					methods.push(process_method(name, value))
 				value is Type {
 					# process_type(name, value)
