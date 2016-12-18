@@ -109,7 +109,7 @@ F Pred(t:Type) F is_pred(x) x is t
 doc Map something to an Arr (array) of values using mapper
 doc something - Instance of any type that has each(something, callback) implemented
 doc %RET - Arr
-doc %EX - [1,2,3].map((*), 4)  # [4,8,12]
+doc %EX - [1,2,3].map(X*4)  # [4,8,12]
 F map(something, mapper:Fun)
 	collector
 		something.each(F(elt) collect(mapper(elt)))
@@ -124,10 +124,10 @@ doc %RET - Arr
 F filter(something, predicate) {
 	p = Pred(predicate)
 	collector
-		something.each(F(elt) {
+		something.each() do F(elt) {
 			if p(elt)
 				collect(elt)
-		})
+		}
 }
 
 {
@@ -141,12 +141,12 @@ doc %RET - The only element that satisfies the predicate.
 F the_one(something, predicate) {
 	p = Pred(predicate)
 	ret = EmptyBox()
-	something.each(F(elt) {
+	something.each() do F(elt) {
 		if p(elt) {
 			ret throws TheOneFail("the_one() had more than one match")
 			ret = FullBox(elt)
 		}
-	})
+	}
 	not(ret) throws TheOneFail("the_one() had no matches")
 	ret.val
 }
