@@ -92,21 +92,21 @@ F set(obj, attr:Str, val) {
 	obj
 }
 
-doc Convert anything to a predicate
+doc Convert anything to a predicate.
 doc anything - The value to compare to
 doc %RET - A function that compares the only argument to the given value
 F Pred(anything) F eq_pred(x) x == anything
 
-doc Convert a function to predicate
+doc Convert a function to predicate.
 doc %RET - The given function, without any transformation
 F Pred(f:Fun) f
 
-doc Convert a type to a predicate
+doc Convert a type to a predicate.
 doc t - A type
 doc %RET - A function that checks whether the only argument is of type t
 F Pred(t:Type) F is_pred(x) x is t
 
-doc Map something to an Arr (array) of values using mapper
+doc Map something to an Arr (array) of values using mapper.
 doc something - Instance of any type that has each(something, callback) implemented
 doc %RET - Arr
 doc %EX - [1,2,3].map(X*4)  # [4,8,12]
@@ -114,7 +114,7 @@ F map(something, mapper:Fun)
 	collector
 		something.each(collect + mapper)
 
-doc Filter something to an Arr (array) of values using predicate
+doc Filter something to an Arr (array) of values using predicate.
 doc something - Instance of any type that has each(something, callback) implemented.
 doc predicate - Decision function to be called with each item as first argument.
 doc predicate - When predicate(item) returns true, the item will appear in the resulting array.
@@ -176,7 +176,7 @@ F the_one(something, predicate, body:Fun, found_more:Fun={null}, found_none:Fun=
 		}
 	})
 	if ret {
-		body(ret.val)
+		body(ret.get())
 	} else {
 		found_none()
 	}
@@ -967,7 +967,7 @@ F map(arr:Arr, n:Int, mapper:Fun) collector arr.each(n, collect + mapper)
 
 # Tested by ~(s:Str, r:RegExp)
 
-doc Filter out all occurencies of specific value
+doc Filter out all occurrences of specific value
 doc arr - items to filter
 doc without_elt - The value to filter out
 doc %RET - Arr
@@ -1718,6 +1718,8 @@ F dflt(h:Hash, k, v) {
 
 # === Box ========================================
 
+# Inspired by Option from Scala. http://www.scala-lang.org/api/2.12.x/scala/Option.html
+
 {
 	doc Parent type of FullBox and EmptyBox
 	type Box
@@ -1754,6 +1756,94 @@ F Bool(eb:EmptyBox) false
 
 doc Zero for FullBox and one for EmptyBox
 F to_exit_code(b:Box) b.Bool().to_exit_code()
+
+doc Map FullBox value
+doc mapper - mapper to be called with the FullBox value
+doc %RET - FullBox with value returned by mapper
+F map(fb:FullBox, mapper:Fun) FullBox(mapper(fb.val))
+
+doc Do nothing
+doc %RET - eb
+F map(eb:EmptyBox, mapper:Fun) eb
+
+doc Call cb with the value of the FullBox
+doc %RET - fb
+F each(fb:FullBox, cb:Fun) { cb(fb.val); fb }
+
+doc Do nothing
+doc %RET - eb
+F each(eb:EmptyBox, cb:Fun) eb
+
+doc Test FullBox value
+doc predicate - Test function to be called with the value of the FullBox
+doc %RET - Box. fb if predicate succeeds, EmptyBox if not.
+F filter(fb:FullBox, predicate) { p = Pred(predicate); if p(fb.val) fb else EmptyBox() }
+
+doc Do nothing
+doc %RET - eb
+F filter(eb:EmptyBox, predicate) eb
+
+doc Test Box value
+F any(b:Box, predicate) Bool(b.filter(predicate))
+
+doc Test Box value
+F none(b:Box, predicate) not(b.filter(predicate))
+
+doc Get FullBox value
+doc %RET - Any
+F get(fb:FullBox, dflt=null) fb.val
+
+doc Get EmptyBox value. Always throws InvalidArgument.
+F get(eb:EmptyBox) throw InvalidArgument("Can not get value from EmptyBox")
+
+doc Get EmptyBox value
+doc %RET - dflt
+F get(eb:EmptyBox, dflt) dflt
+
+doc Convert FullBox to array
+doc %RET - Arr of exactly one element, the value of FullBox
+F Arr(fb:FullBox) [fb.val]
+
+doc Convert EmptyBox to array
+doc %RET - Empty array
+F Arr(eb:EmptyBox) []
+
+doc Convert anything to Box
+doc x - value to enclose in a box
+doc %RET - FullBox with given value
+F Box(x) FullBox(x)
+
+doc Convert null to Box
+doc %RET - EmptyBox
+F Box(n:Null) EmptyBox()
+
+doc Convert array to a Box. Throws InvalidArgument if length of the array is not 0 or 1.
+doc %RET - Box. FullBox if the array has one element, EmptyBox otherwise.
+F Box(a:Arr) {
+	l = a.len()
+	econd {
+		l == 0 EmptyBox()
+		l == 1 FullBox(a[0])
+		true   throw InvalidArgument("Box(a:Arr) only handles arrays of length of 0 or 1")
+	}
+}
+
+doc Convert container value indexed by the given key to a Box
+doc k - key to look in container
+doc %RET - Box. FullBox if the container has the element referenced by k, EmptyBox otherwise.
+F Box(container, k) {
+	guard container is Hash or container is Arr
+	k not in container returns EmptyBox()
+	FullBox(container[k])
+}
+
+doc Do nothing
+doc %RET - fb
+F dflt(fb: FullBox, x) fb
+
+doc Wrap x in a Box
+doc %RET - FullBox with the value x
+F dflt(eb: EmptyBox, x) FullBox(x)
 
 # === Integer ====================================
 
@@ -3227,6 +3317,9 @@ STDLIB_REGEXP_FLAGS = {
 	'n': C_PCRE_NOTEMPTY_ATSTART
 }
 
+doc Regular expression constructor. Called by NGS when /myregex/ syntax is used.
+doc %RET - RegExp
+doc %EX - my_re = /blah/
 F //(regexp:Str, flags:Str) {
 	# Maybe add each(Str,Fun) ?
 	# TOOD: bitwise or instead of sum()
@@ -3239,7 +3332,9 @@ F //(regexp:Str, flags:Str) {
 
 TEST Bool("A" ~ /a/i)
 
-doc Returns the string with the regexp cut out of it.
+doc Returns the string with one occurrence of regexp cut out of it. Throws InvalidArgument if s does not contain r.
+doc %EX - "abc01def23" - /[0-9]+/  # "abcdef23"
+doc %RET - Str
 F -(s:Str, r:RegExp) {
 	m = s ~ r
 	not(m) throws InvalidArgument('String does not contain the RegExp').set('string', s).set('regexp', r)
@@ -3248,17 +3343,24 @@ F -(s:Str, r:RegExp) {
 
 TEST "abc01def23" - /[0-9]+/ == "abcdef23"
 
+doc Split string by regexp
+doc %RET - Arr of Str
+doc %EX "x10ab20c30y".split(/[0-9]+/).join(" :: ")  # "x :: ab :: c :: y"
 F split(s:Str, r:RegExp) (~~)(s, r, true).filter(Str)
 
 # Crashes on Ubuntu 14.04 clang 3.5.0 (Travis CI)
 TEST (try ENV.TRAVIS and ENV.CC == "clang") returns true; "ab01de12f".split(/[0-9]+/) == ['ab', 'de', 'f']
 
-
+doc Get string with all occurrences of r removed
+doc %RET - Str
+doc %EX - "x10ab20c30y".without(/[0-9]+/)  # "xabcy"
 F without(s:Str, r:RegExp) s.split(r).join('')
 
 TEST (try ENV.TRAVIS and ENV.CC == "clang") returns true; "ab01de12f".without(/[0-9]+/) == 'abdef'
 
-# TODO: make it a low priority method imlementation
+# TODO: make it a low priority method implementation
+doc Get substring of a string that corresponds to first match of given regular expression
+doc %EX "x10ab20c30y"[/[0-9]+/]  # "10"
 F '[]'(s:Str, r:RegExp) {
 	not((m = s ~ r)) throws InvalidArgument("String does not contain the given RegExp").set('container', s).set('regexp', r)
 	m.whole
@@ -3266,41 +3368,77 @@ F '[]'(s:Str, r:RegExp) {
 
 TEST "ab01de12f"[/[0-9]+/] == '01'
 
+doc Convert regular expression to a predicate.
+doc %RET - A function that checks whether the only argument matches r
+doc %EX - %[w1 w2].filter(/1/)  # %[w1]
 F Pred(r:RegExp) F regexp_pred(x) x ~ r
 
 TEST %[w1 w2].filter(/1/) == %[w1]
 
+doc Replace all occurrences of r
+doc mapper - Function that will be called with one matching string at a time that provides the replacement
+doc %RET - Str
+doc %EX - "x10ab20c30y".replace(/[0-9]+/, F(match_text) "[$match_text]")  # "x[10]ab[20]c[30]y"
 F replace(s:Str, r:RegExp, mapper:Fun) {
 	(~~)(s, r, true).map([ F(m:MatchY) mapper(m.whole), F(s:Str) s ]).join('')
 }
 
+TEST "x10ab20c30y".replace(/[0-9]+/, F(match_text) "[$match_text]") == "x[10]ab[20]c[30]y"
+
 # === Fun ========================================
 
+doc Call cb n times without any parameters and accumulate the results.
+doc %EX - a = Box * 2; a[0] is Box and a[1] is Box and a[0] !== a[1]  # true
 F *(cb:Fun, n:Int) n.map({ cb() })
 
 TEST a = Box * 2; a[0] is Box and a[1] is Box and a[0] !== a[1]
 
 # === Null =======================================
 
+doc Convert null to NGS code that would produce null when executed.
+doc %RET - Str
 F code(n:Null) "null"
 
 
 # === exit_hook - Print uncaught exception =======
 
-F exception_specific_message(e:Exception) null
+doc Do nothing. Catch-all for exception_specific_message().
+doc %RET - EmptyBox
+F exception_specific_message(e:Exception) EmptyBox()
 
-F exception_specific_message(gnf:GlobalNotFound) "Global '${gnf.name}' not found"
+doc Format GlobalNotFound exception message.
+doc %RET - FullBox with Str
+F exception_specific_message(gnf:GlobalNotFound) FullBox("Global '${gnf.name}' not found")
 
 doc Don't use, subject to change, including name
 F SafeStr(val) "$val" tor "(Failed to inspect <${val.typeof().name tor '(unknown type)'}>)"
 
+doc Inspect any value.
+doc %RET - Arr with one element, Str
 F inspect(val) [SafeStr(val)]
+
+doc Inspect Real
+doc %RET - Arr with one element, Str
 F inspect(r:Real) ["Real: $r"]
+
+doc Inspect Int
+doc %RET - Arr with one element, Str
 F inspect(i:Int) ["Int: $i"]
+
+doc Inspect Str
+doc %RET - Arr with one element, Str
 F inspect(s:Str) ["String: $s"]
+
+doc Inspect Arr
+doc %RET - Arr of Str
 F inspect(a:Arr) ["Array of size ${a.len()}"] + a.map_idx_val({"[${SafeStr(A)}] = ${SafeStr(B)}"})
+
+doc Inspect Hash
+doc %RET - Arr of Str
 F inspect(h:Hash) ["Hash of size ${h.len()}"] + h.map({"[${SafeStr(A)}] = ${SafeStr(B)}"})
 
+doc Inspect Process
+doc %RET - Arr of Str
 F inspect(p:Process) {
 	collector {
 		c = collect
@@ -3318,7 +3456,9 @@ F inspect(p:Process) {
 	}
 }
 
-
+doc Print exception to stderr. Uses inspect().
+doc level - indentation level to use (two spaces for each level)
+doc parent - parent exception if print_exception() was called for .cause exception
 F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 
 	F err(message:Str) error("$pfx$message")
@@ -3328,13 +3468,9 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 
 	err("Exception of type ${e.typeof().name} occured")
 
-	if esm = exception_specific_message(e) {
-		err(esm)
-	}
+	exception_specific_message(e).each(err)
 
-	if 'message' in h {
-		err("Message: ${h.message}")
-	}
+	h.Box('message').map("Message: $X").each(err)
 
 	info_keys = h.keys() - %[message backtrace cause]
 
@@ -3407,6 +3543,8 @@ srand(time())
 STDLIB_MAX_RAND_REAL = Real(RAND_MAX)
 STDLIB_RAND_SAFETY_MAX = 100
 
+doc Pick n random unique elements from something
+doc %RET - Arr
 F rand_uniq(something, n:Int) {
 	# TODO: Fix the guard - it does not work with Range currently
 	# guard n <= something.len()
@@ -3425,9 +3563,14 @@ F rand_uniq(something, n:Int) {
 	result
 }
 
+doc Pick n elements from something. Uniqueness of picked elements is not guaranteed.
+doc %RET - Any
 F rand(something, n:Int) n.map({ rand(something) })
 
+doc Pick random number from 0 up to but not including n
+doc %RET - Int
 F rand(n:Int) {
+	n <= 0 throws InvalidArgument("rand(n:Int) - n must be 1 or greater")
 	r = rand()
 	(RAND_MAX+1) % n == 0 returns r % n
 	scale = Real(n) / STDLIB_MAX_RAND_REAL
@@ -3436,12 +3579,18 @@ F rand(n:Int) {
 
 # TODO: Sequence super-type?
 
+doc Pick one random element from array
+doc %RET - Any
 F rand(a:Arr) a[rand(a.len())]
 
+doc Pick random character from a string
+doc %RET - Str of length 1
 F rand(a:Str) a[rand(a.len())]
 
 F rand(a:Str, n:Int) super(a, n).join('')
 
+doc Pick one random element from a range
+doc %RET - Any
 F rand(r:Range) {
 	guard r.step == 1
 	points = r.end - r.start
@@ -3452,12 +3601,25 @@ F rand(r:Range) {
 # === retry facility =============================
 
 {
+	doc Represents failure on all retries
 	type RetryFail(Error)
 }
 
 F body_missing_in_retry() throw InvalidArgument("'body' argument missing in retry()")
 
-# TODO: Hande NoNext that could occur in sleep iterator
+# TODO: Handle NoNext that could occur in sleep iterator
+doc Retry. Executes given "body" "times" times. Throws RetryFail if all calls fail and fail_cb is not provided.
+doc times - Limit of times to run "body"
+doc sleep - Either sleep in seconds between tries or Iter that returns successive sleep times in seconds
+doc logger - Function to use to log attempts, caught body exceptions and sleep times. Defaults to stdlib's debug.
+doc success_predicate - CANDIDATE FOR REMOVAL. Run against body results to. Says whether the attempt succeeded. Defaults to Bool.
+doc catch_exceptions - Catch exceptions that might occur in body and treat them as if body returned failure.
+doc title - Prefix strings sent to logger with this string. Defaults to "<retry>".
+doc progress_cb - Called before each attempt with (1) current attempt number and (2) limit of attempts ("times"). Defaults to do nothing.
+doc success_cb - Called when body succeeds with the result that comes from body. Defaults to identity function.
+doc fail_cb - If passed, called if all attempts fail. Defaults to null.
+doc %RET - Any. Result of success_cb or result of fail_cb.
+doc %EX - page = retry(times=10, sleep=ExpBackIter(), body={ `curl "http://flaky-site.com"` })
 F retry(
 	times:Int=60,
 	sleep=1,
@@ -3466,7 +3628,7 @@ F retry(
 	catch_exceptions=true,
 	title="<retry>",
 	progress_cb:Fun={null},
-	success_cb:Fun={A},
+	success_cb:Fun=identity,
 	fail_cb=null,
 	body:Fun=body_missing_in_retry
 ) {
@@ -3504,6 +3666,7 @@ TEST t = 0; retry(body={t+=1; "OK"}, fail_cb={"NOTOK"}, sleep=0) == "OK" and t =
 STDLIB_HEX_DIGITS='0123456789ABCDEF'
 
 doc Encodes each character in a string as two uppercase hexadecimal digits
+doc %RET - Str
 F encode_hex(s:Str) {
 	s.map(F(char) {
 		n = ord(char)
@@ -3514,6 +3677,8 @@ F encode_hex(s:Str) {
 STDLIB_INVALID_URI_CHAR_RE = /[^-a-zA-Z0-9_.!~*'()]/
 #'
 
+doc Encodes URI component, escaping with %XX hexadecimal codes.
+doc %RET - Str
 F encode_uri_component(s:Str) s.replace(STDLIB_INVALID_URI_CHAR_RE, F(char) '%' + encode_hex(char))
 
 TEST encode_uri_component("ab+c%") == "ab%2Bc%25"
@@ -3521,6 +3686,8 @@ TEST encode_uri_component("ab+c%") == "ab%2Bc%25"
 
 STDLIB_HTML_ESCAPE = {'&': '&amp;', '<': '&lt;', '>': '&gt;'}
 
+doc Encodes HTML. Escapes &, < and > .
+doc %RET - Str
 F encode_html(s:Str) s.map(STDLIB_HTML_ESCAPE.get(X, X)).join('')
 
 TEST "ab>+c%&'".encode_html() == "ab&gt;+c%&amp;'"
@@ -3528,11 +3695,13 @@ TEST "ab>+c%&'".encode_html() == "ab&gt;+c%&amp;'"
 
 STDLIB_HTML_ATTR_ESCAPE = STDLIB_HTML_ESCAPE + {'"': '&quot;', "'": '&#39;'}
 
+doc Encodes HTML attribute. Escapes &, <, >, " and ' .
+doc %RET - Str
 F encode_html_attr(s:Str) s.map(STDLIB_HTML_ATTR_ESCAPE.get(X, X)).join('')
 
 TEST "ab>+c%&'".encode_html_attr() == "ab&gt;+c%&amp;&#39;"
 
-doc Uset by match EXPR { ... } construct
+doc Used by match EXPR { ... } construct.
 doc %RET - a ~ b
 F match(a,b) a ~ b
 
