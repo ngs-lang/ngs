@@ -1,0 +1,65 @@
+#!/usr/bin/env ngs
+
+{
+	# TODO: Other fields
+	# TODO: Tags
+	# TODO: Fix filters, AWS CLI does not have --filters for ELBs
+
+	config('table_ELBs', %[LoadBalancerName DNSName ListenerDescriptions AvailabilityZones Instances])
+	# CanonicalHostedZoneName CanonicalHostedZoneNameID SecurityGroups SourceSecurityGroup Subnets Policies BackendServerDescriptions HealthCheck Scheme VPCId
+
+	F limit_len(s:Str, l:Int) limit(s, l, '...')
+
+	@ArgvMatcher('positionals', 'filters')
+	doc filters - Show only instances matching the given filters. Possible filter forms are:
+	doc filters - vpc-xxxyyyzz - for specific vpc
+	doc filters - i-xxxyyyzz - for specific instance id
+	doc filters - 1.2.3.4 - for instance having given IP
+	doc filters - kkk=vvv - for instances having given tag value
+	F main(filters:Arr, allreg:Bool=false) {
+
+		filters .= map(F(arg) {
+			kv = arg.split('=')
+			econd {
+
+				arg.starts_with('vpc-')
+					"Name=vpc-id,Values=$arg"
+
+				arg ~ /^[0-9.]+$/ {
+					filter_name = if IPAddr(arg).is_private() then 'private-ip-address' else 'ip-address'
+					"Name=$filter_name,Values=$arg"
+				}
+
+				kv.len() == 2
+					"Name=tag-key,Values=${kv[0]},Name=tag-value,Values=${kv[1]}"
+			}
+		})
+
+		elbs = if allreg {
+			AWS
+			# AZ is now important so moving it to be first
+			# xxx config('table_ELBs', ['AZ'] + config('table_ELBs').without('AZ'))
+			# aws_regions({ ``aws elb $A $*filters`` })
+			aws_regions({``aws elb describe-load-balancers``})
+		} else {
+			``aws elb describe-load-balancers``
+		}
+		elbs % F(elb) {
+			elb.ListenerDescriptions = elb.ListenerDescriptions.map(F(ld) {
+				inspect(ld) % echo
+				collector {
+					inspect(ld.PolicyNames) % echo
+					ld.PolicyNames % collect
+					l = ld.Listener
+					collect("${l.LoadBalancerPort}/${l.Protocol} -> ${l.InstancePort}/${l.InstanceProtocol}")
+				}
+			}).flatten()
+			elb.Instances .= InstanceId
+			elb.CreatedTime .= split('T')
+			# inspect(elb.ListenerDescriptions) % echo
+		}
+		t = Table('ELBs', elbs)
+		echo(t)
+	}
+}
+
