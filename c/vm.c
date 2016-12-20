@@ -1564,9 +1564,10 @@ METHOD_RESULT native_attr_regexp EXT_METHOD_PARAMS {
 	}
 
 	VALUE exc;
-	exc = make_normal_type_instance(vm->InvalidArgument);
+	exc = make_normal_type_instance(vm->AttrNotFound);
 	set_normal_type_instance_attribute(exc, make_string("message"), make_string("RegExp does not have given attribute"));
-	set_normal_type_instance_attribute(exc, make_string("attr"), argv[1]);
+	set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
+	set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
 	THROW_EXCEPTION_INSTANCE(exc);
 }
 
@@ -1919,16 +1920,39 @@ void vm_init(VM *vm, int argc, char **argv) {
 	set_global(vm, "==", vm->eqeq);
 
 	register_global_func(vm, 0, "==",              &native_false,    2, "a", vm->Any, "b", vm->Any);
+	_doc(vm, "%RET", "false");
 
 	// Regex
 	register_global_func(vm, 1, "c_pcre_compile", &native_c_pcre_compile,   2, "regexp", vm->Str,    "flags",   vm->Int);
+	_doc(vm, "", "Compile regular expression. Uses PCRE_COMPILE(3). Do not use this function directly!");
+	_doc(vm, "", "Throws RegExpCompileFail on errors.");
+	_doc(vm, "%RET", "RegExp");
+
 	register_global_func(vm, 0, "c_pcre_exec",    &native_c_pcre_exec,      4, "regexp", vm->RegExp, "subject", vm->Str, "offset", vm->Int, "options", vm->Int);
+	_doc(vm, "", "Search string for regular expression. Uses PCRE_EXEC(3). Do not use this function directly!");
+	_doc(vm, "%RET", "Int or Arr of Int");
+
 	register_global_func(vm, 0, "Str",            &native_Str_regexp,       1, "regexp", vm->RegExp);
+	_doc(vm, "", "Represents RegExp");
+	_doc(vm, "%RET", "The string <RegExp>");
+
 	register_global_func(vm, 1, ".",              &native_attr_regexp,      2, "regexp", vm->RegExp, "attr", vm->Str);
+	_doc(vm, "", "Get attributes of a RegExp. Throws AttrNotFound if attr is not one of the allowed values.");
+	_doc(vm, "attr", "\"options\" or \"names\"");
+	_doc(vm, "%RET", "Int for \"options\". Hash of names/indexes of named groups for \"names\".");
 
 	// special
 	register_global_func(vm, 1, "args",            &native_args,            0);
+	_doc(vm, "", "Get function arguments");
+	_doc(vm, "%RET", "Hash");
+	_doc(vm, "%EX", "F f(x,y,z=100) args()");
+	_doc(vm, "%EX", "f(1,2)  # {x=1, y=2, z=100}");
+
 	register_global_func(vm, 1, "replace",         &native_replace,         2, "dst",    vm->Any,    "src", vm->Any);
+	_doc(vm, "", "DISCOURAGED. Replace one object with another. dst and src must be of the same type.");
+	_doc(vm, "%EX", "a = [1,2,3]");
+	_doc(vm, "%EX", "a.replace([4,5])");
+	_doc(vm, "%EX", "a  # [4,5]");
 
 	// Return
 	register_global_func(vm, 1, "Return",          &native_Return,   0);
