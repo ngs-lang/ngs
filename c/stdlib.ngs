@@ -2481,19 +2481,14 @@ F parent_fd(p:Pipe) {
 
 # --- File ---
 
-{ type FileIOFail }
-
-F init(fail:FileIOFail, name:Str, errno:Int, message:Str) init(args())
+{ type FileIOFail(CException) }
 
 F init(f:File, path:Str) {
-	f.fd = null
 	init(args())
+	f.fd = null
 }
 
-F init(f:File, fd:Int) {
-	f.fd = fd
-	init(args())
-}
+F init(f:File, fd:Int) init(args())
 
 doc String representation of File
 doc %EX - open(File("tmp/v8/LICENSE"), "r").Str().echo()  # Output: <File path=tmp/v8/LICENSE fd=4>
@@ -2501,17 +2496,29 @@ F Str(f:File) "<File path=${f.path} fd=${f.fd}>"
 
 TEST File('xy').Str() == '<File path=xy fd=null>'
 
+doc Open a file and set the "fd" field to the file descriptor. Uses OPEN(2).
+doc Throws InvalidArgument if file is already open.
+doc Throws FileIOFail if an underlying error occurs.
+doc flags - Currently "r", "w" or "a" for read/write/append
+doc %RET - f
 F open(f:File, flags:Str) {
-	f.fd is not Null throws FileIOFail(null, "open(f:File, flags:Str): file is already open")
+	f.fd is not Null throws InvalidArgument("open(f:File, flags:Str): file is already open").set('file', f)
 	fd = c_open(f.path, flags)
-	fd <= 0 throws FileIOFail(f.path, get_c_errno(), "Failed to open the file ${f.path}")
+	fd <= 0 throws FileIOFail("Failed to open the file ${f.path}").set('file', f)
 	f.fd = fd
 	f
 }
 
+# XXX: might not be correct on all platforms
+TEST open(File("/etc/passwd"), "r").fd > 0
+
+doc Get basename of the file. Uses BASENAME(1).
 F basename(s:Str) $(basename $s).Str() - Sfx('\n')
 
 # TODO: something more efficient than reading all of it. Some kind of streaming.
+doc Iterate over lines of the file
+doc f - Closed File
+doc cb - function to call with successive lines from the file
 F lines(f:File, cb:Fun) {
 	finally()
 		body => {
@@ -2523,10 +2530,19 @@ F lines(f:File, cb:Fun) {
 		}
 }
 
+# XXX: might not be correct on all platforms
+TEST ok = false; File("/etc/passwd").lines({if ":" in A ok = true}); ok
+
+doc Close a file and sets the "fd" field to null. Uses CLOSE(2).
+doc Throws InvalidArgument if file is not open.
+doc Throws FileIOFail if an underlying error occurs.
+doc flags - Currently "r", "w" or "a" for read/write/append
+doc %RET - f
 F close(f:File) {
 	f.fd is Null throws InvalidArgument("File is not open. close() expects an open file").set('file', f)
 	ret = c_close(f.fd)
-	ret < 0 throws FileIOFail(f.path, get_c_errno(), "Failed to close the file $f")
+	ret < 0 throws FileIOFail("Failed to close the file $f").set('file', f)
+	f.fd = null
 }
 
 doc fetch() and parse() the given file
@@ -2535,52 +2551,80 @@ F read(filename:Str) {
 	parse(data, {'filename': filename})
 }
 
-doc read standard input and parse() it
+doc Read standard input and parse() it, passing "source" equals "stdin" hint.
 F read() read(0).parse({'source': 'stdin'})
 
 # --- Redir ---
 
+doc TODO
 F Str(r:Redir) "<Redirect ${r.fd} ${r.marker} ${r.datum}>"
 
 # --- Process ---
 
 {
+	doc Running or finished process
 	type Process
+	
+	doc Occurs when executable was not found in path or when executable was absolute or relative and was not found.
 	type ExecutableNotFound(Exception)
 }
 
+doc Get process "stdout"
+doc attr - "stdout"
+doc %RET - Str
 F '.'(p:Process, attr:Str) {
 	guard attr == 'stdout'
 	p.outputs[1]
 }
 
+doc Set process "stdout"
+doc attr - "stdout"
+doc %RET - Unspecified, do not count on this value
 F '.='(p:Process, attr:Str, v) {
 	guard attr == 'stdout'
 	p.outputs[1] = v
 }
 
+doc Get process "stderr"
+doc attr - "stderr"
+doc %RET - Str
 F '.'(p:Process, attr:Str) {
 	guard attr == 'stderr'
 	p.outputs[2]
 }
 
+doc Set process "stderr"
+doc attr - "stderr"
+doc %RET - Unspecified, do not count on this value
 F '.='(p:Process, attr:Str, v) {
 	guard attr == 'stderr'
 	p.outputs[2] = v
 }
 
+doc Decide whether process finished normally: exit code must be 0.
+doc p - any process
+doc %RET - bool
 F finished_ok(p:Process) p.exit_code == 0
 
+doc Decide whether /bin/false process finished normally: exit code must be 1.
+doc p - /bin/false process
+doc %RET - bool
 F finished_ok(p:Process) {
 	guard p.executable.path == '/bin/false'
 	p.exit_code == 1
 }
 
+doc Decide whether specific process finished normally: exit code must be 0 or 1.
+doc p - One of the processes: /usr/bin/test, /bin/fuser, /bin/ping
+doc %EX - # Exit code 1 on the line below but no exception thanks to this finished_ok().
+doc %EX - if $(test -f /) echo("/ is a file")  # Outputs nothing, / is a directory
+doc %RET - bool
 F finished_ok(p:Process) {
 	guard p.executable.path in ['/usr/bin/test', '/bin/fuser', '/bin/ping']
 	p.exit_code in [0, 1]
 }
 
+doc Process constructor
 F init(p:Process, c:Command) {
 	p.command = c
 	p.executable = null
@@ -2594,15 +2638,19 @@ F init(p:Process, c:Command) {
 	# p.lock = Lock()
 }
 
+doc Wait for process to finish and see whether exit code is 0
+doc %RET - Bool
 F Bool(p:Process) {
 	p.wait()
 	p.exit_code == 0
 }
 
 # TODO: better exceptions (use correct type, not string)
+doc Wait for the process to finish. Waits for reading and writing threads to finish first.
+doc %RET - p
 F wait(p:Process) {
 
-	p.pid is Null throws "Can not wait() on Process without PID"
+	p.pid is Null throws InvalidArgument("Can not wait() on Process without PID")
 
 	p.exit_code is Int returns p
 
@@ -2621,8 +2669,11 @@ F wait(p:Process) {
 	p
 }
 
+doc Convert Process to exit code. Waites for the process to finish and uses its exit code.
 F to_exit_code(p:Process) p.wait().exit_code
 
+doc Wait for the process to finish and return its standard output.
+doc %RET - Str
 F Str(p:Process) p.wait().stdout
 
 # --- $() ---
@@ -2634,7 +2685,7 @@ F Str(p:Process) p.wait().stdout
 # TODO: provide additional communication channel on additional fd?
 # TODO: handle built-in commands: do not execve,
 # INFO: bash - redir.c
-doc Execute an external command and wait for it to finish.
+doc Execute an external command. Waits for the command to finish unless "&" is specified.
 doc c - Command type instance, typically constructed by NGS when parsing the contents of $(...) .
 doc %EX - if $(test -f /myfile) { ... }
 doc %EX - # or
@@ -2749,13 +2800,21 @@ TEST $(true).Bool()
 TEST $(false).Bool() == false
 TEST "$(/bin/echo -n abc)" == 'abc'
 
+doc Get command standard output. Similar to bash.
 F ``(c:Command) ('$()')(c).Str()
 
+doc Get command standard output and parse() it.
+doc %RET - structured data when the output can be parsed.
+doc %EX - ``aws ec2 describe-instances`` is Arr  # true
+doc %EX - ``aws ec2 describe-instances``.InstanceId.map(X[0..3]).join(",")  # i-3, i-9, i-8, i-a, i-7, ...
 F ````(c:Command) {
 	p = ('$()')(c)
 	p.stdout.parse({'process': p})
 }
 
+doc Send signal to a process. Uses KILL(2). Throws KillFail on error.
+doc sig - Signal to send. Defaults to SIGNALS.TERM
+doc %RET - unspecified at this time, do not count on it
 F kill(pid:Int, sig:Int=SIGNALS.TERM) {
 	ret = c_kill(pid, sig)
 	ret == -1 throws KillFail("Failed to kill pid $pid with signal $sig")
@@ -2764,15 +2823,20 @@ F kill(pid:Int, sig:Int=SIGNALS.TERM) {
 }
 
 # XXX: Must join reader/writer threads!
+doc Send signal to a Process. Uses KILL(2).
+doc Throws InvalidArgument if Process does not have "pid".
+doc Throws KillFail on error.
+doc sig - Signal to send. Defaults to SIGNALS.TERM
+doc %RET - unspecified at this time, do not count on it
 F kill(p:Process, sig:Int=SIGNALS.TERM) {
 	p.pid is Null throws InvalidArgument("Can't kill() a process that does not have a pid")
 	kill(p.pid, sig)
 }
 
+doc Call parse(s, {})
 F parse(s:Str) parse(s, {})
 
-F parse(s:Str, hints:Hash) s
-
+doc Attempt to parse JSON. Uses decode_json().
 F parse(s:Str, hints:Hash) {
 	ret = FullBox(decode_json(s)) tor EmptyBox()
 	guard ret
@@ -2780,6 +2844,7 @@ F parse(s:Str, hints:Hash) {
 }
 
 # WIP
+doc Not implemented yet
 F unparse(data, hints:Hash) {
 	1
 }
@@ -2790,12 +2855,17 @@ doc %EX - ...
 doc %EX - run_when_needed(%(ls >/tmp/my_ls))
 F '%()'(c:Command) c
 
+doc Wait for the process and return lines of its stdout.
+doc %RET - Arr of Str
+doc %EX - $(seq 10 2 20).lines().map(Int)  # [10,12,14,16,18,20]
 F lines(p:Process) {
 	p.wait()
 	p.stdout.lines()
 }
 
-# TODO: ability to handle running process & it's streaming stdout
+# TODO: ability to handle running process & its streaming stdout
+doc Iterate lines of Process' stdout, calling cb with successive lines.
+doc Warning: current implementation waits for the process to finish and accumulates all its stdout.
 F lines(p:Process, cb:Fun) {
 	p.wait()
 	p.stdout.lines(cb)
@@ -2804,8 +2874,14 @@ F lines(p:Process, cb:Fun) {
 # === Parse aws output ===========================
 # TODO: move to separate auto-loaded file maybe?
 
+doc Convert "Tags" array in each element of AWS resources (typically returned by AWS CLI) into Hash.
+doc Makes "Tags" much more usable.
 F stdlib_aws_straighten_tags(a:Arr) a.each(stdlib_aws_straighten_tags)
 
+doc Convert "Tags" array in the given AWS resource (typically returned by AWS CLI) into Hash.
+doc %EX - t = {"Tags": [{"Key": "k", "Value": "v"},{"Key": "k2", "Value": "v2"}]}  # Not very convenient, is it?
+doc %EX - t.stdlib_aws_straighten_tags()
+doc %EX - t  # {Tags={k=v, k2=v2}}
 F stdlib_aws_straighten_tags(h:Hash) {
 	if 'Tags' in h {
 		h.Tags = Hash(h.Tags.Key, h.Tags.Value)
@@ -2814,11 +2890,16 @@ F stdlib_aws_straighten_tags(h:Hash) {
 
 # For the case of { "SecurityGroups": [ "sg-XXXXXXXX" ] }
 # Which is output of aws elb apply-security-groups-to-load-balancer --load-balancer-name SOMETHING -beame-servers-authz --security-groups sg-XXXXXXXX
+doc A no-op
 F stdlib_aws_straighten_tags(s:Str) null
 
 TEST instances = [{"Tags": [{"Key": "k", "Value": "v"},{"Key": "k2", "Value": "v2"}]}]; stdlib_aws_straighten_tags(instances); instances.Tags == [{"k": "v", "k2": "v2"}]
 TEST instances = ["something"]; stdlib_aws_straighten_tags(instances); instances == ["something"]
 
+doc Parse the output of "aws" command. Extracts the array (see "s" below"). For "describe-instances", flattens the instance list.
+doc s - Str containing JSON with a Hash at top level with exactly one Arr as value
+doc hints - hints.process.command.argv[0] must be 'aws'
+doc %RET - data structure, tyically an Arr at top level. If s is empty string - null.
 F parse(s:Str, hints:Hash) {
 	guard try hints['process'].command.argv[0] == 'aws'
 
@@ -2846,6 +2927,9 @@ F parse(s:Str, hints:Hash) {
 	data.stdlib_aws_straighten_tags()
 }
 
+doc Parse the output of "find" command which does not use "-printf". Handles "-print0".
+doc hints - hints.process.command.argv[0] must be 'find'
+doc %RET - Arr of Str
 F parse(s:Str, hints:Hash) {
 	guard try hints['process'].command.argv[0] == 'find'
 	argv = hints['process'].command.argv
@@ -2858,6 +2942,10 @@ F parse(s:Str, hints:Hash) {
 
 STDLIB_CONFIG = {}
 
+doc Get configuration for the given key. Lookup order / first wins: (1) Environment variable NGS_$k (2) previously set config(k, v)
+doc k - Configuration key
+doc %RET - Any. If data found in environment variable, it will be parse()d or returned as Str if parse() fails.
+doc %EX - conf = config("table_${t.name}")
 F config(k:Str) {
 	# TODO: think, organize
 	#       what about structured data? JSON?
@@ -2867,7 +2955,7 @@ F config(k:Str) {
 	v = try ENV["NGS_$k"]
 	if v {
 		debug("[config] Value config for key '$k' found in the environment variable 'NGS_${k}': '$v'")
-		return parse(v)
+		return parse(v) tor v
 	}
 	v = try STDLIB_CONFIG[k]
 	if v is not Null {
@@ -2877,52 +2965,80 @@ F config(k:Str) {
 	v
 }
 
-F config(s:Str, x) {
-	debug("Configuring ${s}=${x}")
-	STDLIB_CONFIG[s] = x
+doc Set configuration. To be used with config(k:Str).
+doc %EX - config('table_Instances', %[InstanceId tag_Name tag_env tag_role IPs InstanceType State KeyName SecurityGroups AZ RestOfTags])
+F config(k:Str, v) {
+	debug("Configuring ${k}=${v}")
+	STDLIB_CONFIG[k] = v
 }
 
 # === Match, Pfx, Sfx ============================
 
 {
-	doc Sucessfull or unsucessfull match result
+	doc Successful or unsuccessful match result
 	type Match
 
-		doc Sucessfull match result
-		doc matches - Succsessfull matches
+		doc Successful match result
+		doc matches - Successful matches
 		type MatchY(Match)
 
 		doc Unsucessfull match result
 		type MatchN(Match)
 
+	doc Matching failure
 	type MatchFail(Exception)
 
 	type SubSeq
 		doc Prefix subsequence of a sequence
 		type Pfx(SubSeq)
+			doc Prefix that might or might not be present for ~ matching to succeed
 			type MaybePfx(Pfx)
+			doc Prefix that must be present for ~ matching to succeed
 			type MustPfx(Pfx)
 		doc Suffix subsequence of a sequence
 		type Sfx(SubSeq)
+			doc Suffix that might or might not be present for ~ matching to succeed
 			type MaybeSfx(Sfx)
+			doc Suffix that must be present for ~ matching to succeed
 			type MustSfx(Sfx)
 }
 
+doc Successful match constructor
 F init(my:MatchY, matches:Arr) init(args())
+
+doc %RET - true
 F Bool(my:MatchY) true
+
+doc %RET - false
 F Bool(my:MatchN) false
+
+doc Convert Match to exit code.
+doc %RET - 0 for successful match (MatchY), 1 for unsuccessful match (MatchN).
 F to_exit_code(m:Match) m.Bool().to_exit_code()
 
 F init(mf:MatchFail, msg:Str, container, pattern) init(args())
 
+doc SubSec construcor
 F init(s:SubSeq, val) s.val = val
 
 # The common case
+doc Convenience method for creating MustPfx
+doc %RET - MustPfx
 F Pfx(val) MustPfx(val)
+
+doc Convenience method for creating MustSfx
+doc %RET - MustSfx
 F Sfx(val) MustSfx(val)
 
 F Str(s:SubSeq) "<${s.typeof().name} ${s.val}>"
 
+doc Return string without the prefix. Throws MatchFail if pfx is MustPfx but s does not start with it.
+doc s - original string
+doc pfx - prefix to get rid of
+doc %RET - s without pfx
+doc %EX - "abcde" - Pfx("ab")  # "cde"
+doc %EX - "abcde" - Pfx("xy")  # MatchFail exception
+doc %EX - "abcde" - MaybePfx("xy")  # "abcde"
 F -(s:Str, pfx:Pfx) {
 	s.starts_with(pfx.val) returns s[pfx.val.len()..null]
 	pfx is MustPfx throws MatchFail("Given string '$s' does not start with prefix '$pfx.val'", s, pfx)
@@ -2934,6 +3050,13 @@ TEST try "abc" - Pfx("wa") catch(mf:MatchFail) true
 TEST "abc" - MaybePfx("wa") == "abc"
 
 
+doc Return string without the suffix. Throws MatchFail if pfx is MustSfx but s does not end with it.
+doc s - original string
+doc sfx - suffix to get rid of
+doc %RET - s without pfx
+doc %EX - "abcde" - Sfx("de")  # "abc"
+doc %EX - "abcde" - Sfx("xy")  # MatchFail exception
+doc %EX - "abcde" - MaybeSfx("xy")  # "abcde"
 F -(s:Str, sfx:Sfx) {
 	s.ends_with(sfx.val) returns s[0 .. (s.len() - sfx.val.len())]
 	sfx is MustSfx throws MatchFail("Given string '$s' does not end with suffix '$sfx.val'", s, sfx)
@@ -2944,6 +3067,10 @@ TEST "abc" - Sfx("c") == "ab"
 TEST try "abc" - Sfx("cd") catch(mf:MatchFail) true
 TEST "abc" - MaybeSfx("cd") == "abc"
 
+doc Check whether s starts with pfx.
+doc %EX - "abcde" ~ Pfx("ab")  # <MatchY matches=['ab'] before= after=cde>
+doc %EX - "abcde" ~ Pfx("xy")  # <MatchN >
+doc %RET - Match
 F ~(s:Str, pfx:Pfx) {
 	not(s.starts_with(pfx.val)) returns MatchN()
 	ret = MatchY([pfx.val])
@@ -2952,6 +3079,10 @@ F ~(s:Str, pfx:Pfx) {
 	ret
 }
 
+doc Check whether s ends with pfx.
+doc %EX - "abcde" ~ Sfx("de")  # <MatchY matches=['de'] before=abc after=>
+doc %EX - "abcde" ~ Pfx("xy")  # <MatchN >
+doc %RET - Match
 F ~(s:Str, sfx:Sfx) {
 	not(s.ends_with(sfx.val)) returns MatchN()
 	ret = MatchY([sfx.val])
@@ -2960,15 +3091,25 @@ F ~(s:Str, sfx:Sfx) {
 	ret
 }
 
-# TODO: make it a low priority method imlementation
+# TODO: make it a low priority method implementation
+doc Convenience method to access matches in MatchY
+doc %EX - ("abc" ~ /a(.)c/)[1]  # "b"
 F '[]'(my:MatchY, idx:Int) my.matches[idx]
 
-TEST ("abc" ~ /a(.)c/)[1] == 'b'
+TEST ("abc" ~ /a(.)c/)[1] == "b"
 
 
 # === RegExp =====================================
 
 # TODO: better exceptions
+doc Find PCRE regular expression in s. Empty string without options returns MatchN. Throws Error if more than 20 captures are used or if there is an error during matching.
+doc offset - search start offset
+doc options - options to pass to underlying PCRE_EXEC(3).
+doc %RET - Match
+doc %EX - globals().keys().filter(/^C_PCRE/)  # lists possible options
+doc %EX - "xabcy" ~ /a(.)c/  # <MatchY matches=['abc','b'] named={} positions=[[1,4],[2,3]] whole=abc before=x after=y>
+doc %EX - m = ("xabcy" ~ /a(?P<mychar>.)c/)
+doc %EX - echo(m.named.mychar)  # Outputs: b
 F ~(s:Str, r:RegExp, offset:Int=0, options:Int=0) {
 	not(options) and not(s) returns MatchN()
 	result = c_pcre_exec(r, s, offset, options)
@@ -2995,8 +3136,8 @@ F ~(s:Str, r:RegExp, offset:Int=0, options:Int=0) {
 	ret
 }
 
-TEST r=c_pcre_compile("a(.)c", 0); m = "xabcy" ~ r; m.matches == ["abc", "b"] and m.before == 'x' and m.after == 'y' and m.whole == 'abc'
-TEST r=c_pcre_compile("a(.)c", 0); m = "xAbcy" ~ r; m is MatchN
+TEST m = "xabcy" ~ /a(.)c/; m.matches == ["abc", "b"] and m.before == 'x' and m.after == 'y' and m.whole == 'abc'
+TEST m = "xAbcy" ~ /a(.)c/; m is MatchN
 
 PCRE_NEWLINE_TO_OPTIONS = {
 	         13: C_PCRE_NEWLINE_CR,
@@ -3006,6 +3147,13 @@ PCRE_NEWLINE_TO_OPTIONS = {
 	         -1: C_PCRE_NEWLINE_ANY,
 }
 
+doc Find all non-overlapping matches of regular expression in a string.
+doc %RET - if collect_unmatched - Arr with each element being MatchY or Str, if not collect_unmatched - Arr of MatchY
+doc %EX - ("x10ab20c30y" ~~ /[0-9]+/).whole.map(Int).sum()  # 60
+doc %EX -
+doc %EX - arr = (~~)("x10ab20c30y", /[0-9]+/, true)
+doc %EX - arr .= map(F(elt) if elt is MatchY "[${elt.whole}]" else elt)
+doc %EX - arr.join("")  # "x[10]ab[20]c[30]y"
 F ~~(s:Str, r:RegExp, collect_unmatched:Bool=false) {
 	collector {
 		m = (~)(s, r, 0)

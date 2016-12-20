@@ -2,7 +2,7 @@
 
 {
 	doc Manipulates tabular data
-	doc name - Table name to display and for configuratio lookup
+	doc name - Table name to display and for configuration lookup
 	doc col_name_to_idx - Columns names' indexes (ex: id:0, name:1, age:2)
 	doc col_idx_to_name - Columns indexes' names (ex: 0:id, 1:name, 2:age)
 	type Table
