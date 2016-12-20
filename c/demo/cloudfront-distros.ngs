@@ -1,0 +1,11 @@
+#!/usr/bin/env ngs
+{
+	items = ``aws cloudfront list-distributions``.DistributionList.Items
+
+	rows = items.map(F(item) {
+		{"id": item.Id, "domains": item.Origins.Items.DomainName, "domain": item.DomainName}
+	})
+
+	t = Table('CloudfrontDistributions', rows)
+	t.echo()
+}
