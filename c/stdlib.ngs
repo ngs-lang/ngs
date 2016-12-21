@@ -482,7 +482,7 @@ F impl_not_found_handler(callable:Fun, *args) {
 	}
 	guard exposed_attr_name
 	new_args = copy(args)
-	new_args[change_idx] = (.)(new_args[change_idx], exposed_attr_name)
+	new_args[change_idx] = new_args[change_idx].(exposed_attr_name)
 	callable(*new_args)
 }
 
@@ -521,10 +521,13 @@ doc %EX - mysomething.dflt(k, []).push(elt)
 doc %RET - Attribute value, the already-existed or new.
 F dflt(i:NormalTypeInstance, k, v) {
 	if k not in i {
-		(.=)(i, k, v)
+		i.(k) = v
 	}
-	(.)(i, k)
+	i.(k)
 }
+
+TEST type T; t=T(); t.dflt("a", 1); t.a == 1
+TEST type T; t=T(); t.a = 2; t.dflt("a", 1); t.a == 2
 
 doc Equaity test for normal type instances: must be of same type and have same attributes and their values
 doc %RET - Bool
@@ -799,7 +802,7 @@ TEST %{k 7 kk "a"}.n() == {'k': 7, 'kk': 'a'}
 doc Return array made of given attribute of each element of given array
 doc %EX - [{"x": 1}, {"x": 2}].x  # [1, 2]
 doc %RET - Arr
-F .(a:Arr, attr:Str) a.map((.)(X, attr))
+F .(a:Arr, attr:Str) a.map(X.(attr))
 
 TEST [{"x": 1}, {"x": 2}].x == [1, 2]
 
@@ -1359,7 +1362,7 @@ doc Sort an array based on attribute value
 doc lte - Less-then-or-equal function to use for comparison of the items' attributes
 doc %RET - Arr
 doc %EX - [{'x': 1}, {'x': 5}, {'x': 3}].sort('x')  # [{'x': 1}, {'x': 3}, {'x': 5}]
-F sort(a:Arr, attr:Str, lte:Fun=(<=)) a.sort(F(a, b) lte((.)(a, attr), (.)(b, attr)))
+F sort(a:Arr, attr:Str, lte:Fun=(<=)) a.sort(F(a, b) lte(a.(attr), b.(attr)))
 
 TEST [{'x': 1}, {'x': 5}, {'x': 3}].sort('x') == [{'x': 1}, {'x': 3}, {'x': 5}]
 
@@ -1632,7 +1635,7 @@ doc val_attr - Name of the attribute holding the values of newly created Hash
 doc %EX - Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}], "Name", "Value")  # {"n1": "v1", "n2": "v2"}
 F Hash(arr:Arr, key_attr:Str, val_attr:Str)
 	collector/{}
-		arr.each(F(elt) collect((.)(elt, key_attr), (.)(elt, val_attr)))
+		arr.each(F(elt) collect(elt.(key_attr), elt.(val_attr)))
 
 TEST Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}], "Name", "Value") == {"n1": "v1", "n2": "v2"}
 
@@ -3448,7 +3451,7 @@ F inspect(p:Process) {
 		c("exit_code = ${p.exit_code}")
 		c("exit_signal = ${p.exit_signal}")
 		%[stdout stderr].each(F(attr) {
-			val = (.)(p, attr)
+			val = p.(attr)
 			val_lines = if val is Null [] else val.lines()
 			c("$attr (${val_lines.len()} lines):")
 			("  " + val_lines) % c
@@ -3776,6 +3779,7 @@ TEST try [].shift() catch(e:EmptyArrayFail) true
 
 # === Partial application tests ==================
 TEST [{"val": 10, "flag": false}, {"val": 20, "flag": true}].filter(X.flag).val == [20]
+TEST %[f1 f3].map({"f1": 1, "f2": 2, "f3": 3}.(X)) == [1, 3]
 TEST [[1, 10], [2,20]].map(X[0]) == [1, 2]
 TEST [1,2].map([10,20,30][X]) == [20, 30]
 TEST [[1],[2,3]].filter(X.has(1)) == [[1]]

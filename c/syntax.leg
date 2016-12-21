@@ -116,9 +116,13 @@ ast_node *wrap_in_func(ast_node *node, int location[4], char *docstring, int arg
 // TODO: name the function
 ast_node *call_node_partial_application(ast_node *orig, int location[4]) {
 	ast_node *p, *arg;
-	// first_child - callable
-	// first_child->next_sibling - args
-	// first_child->next_sibling children - [arg]
+	// Option 1:
+	//   orig - CALL_NODE
+	//   first_child - callable
+	//   first_child->next_sibling - args
+	//   first_child->next_sibling children - [arg]
+	// Option 2:
+	//   orig - ATTR_NODE (which is later treated as call node)
 
 	// Handle erroneously wrapped X.something when it's actually X.something(blah)
 	if(orig->type == CALL_NODE && orig->first_child->type == FUNC_NODE && orig->first_child->data) {
@@ -138,6 +142,15 @@ ast_node *call_node_partial_application(ast_node *orig, int location[4]) {
 			// wrap_in_func(ast_node *node, int location[4], char *docstring, int argc, ...) {
 			return wrap_in_func(orig, location, "Partial application syntax", 1, 3, "X", "Any", "Y", "Any", "Z", "Any");
 		}
+	}
+	if(orig->type == ATTR_NODE) {
+		if(orig->first_child->next_sibling->type == EXPRESSIONS_NODE) {
+			p = orig->first_child->next_sibling->first_child;
+			if(p->name[0] == 'X' || p->name[0] == 'Y' || p->name[0] == 'Z') {
+				return wrap_in_func(orig, location, "Partial application syntax", 1, 3, "X", "Any", "Y", "Any", "Z", "Any");
+			}
+		}
+		return orig;
 	}
 	for(p=orig->first_child->next_sibling->first_child; p; p=p->next_sibling) {
 		arg = p->first_child;
@@ -540,6 +553,19 @@ chain-expression = b:basic-expression (
 				ret->number = 902;
 				ret->first_child = b;
 				ret->first_child->next_sibling = i;
+				ret = call_node_partial_application(ret, location);
+			b = ret;
+		}
+		|
+		".(" space? e:expression space? ")" {
+			MAKE_NODE(ret, ATTR_NODE);
+				ret->number = 902;
+				ret->first_child = b;
+				// Expressions node is needed because otherwise if e is identifier
+				// x.(y) will be syntactically equivalent to x.y
+				MAKE_NODE(es, EXPRESSIONS_NODE);
+					append_ast_node_child(es, e);
+				ret->first_child->next_sibling = es;
 				ret = call_node_partial_application(ret, location);
 			b = ret;
 		}
