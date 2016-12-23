@@ -363,31 +363,6 @@ F call(hook:Hook, *args) {
 	(hook.combiner)(result)
 }
 
-
-# === HookDecorator ==============================
-
-doc TODO
-F init(hd:HookDecorator, hook:Hook) init(args())
-
-doc TODO
-F init(hd:HookDecorator, hook:Hook, name:Str) init(args())
-
-F @(hook:Hook, handler:Closure) hook.push(handler)
-
-F @(hd:HookDecorator, handler:Closure) {
-	if 'name' in hd
-		hd.hook[hd.name] = handler
-	else
-		hd.hook.push(handler)
-}
-
-doc TODO
-F hook(h:Hook, *args) HookDecorator(h, *args)
-
-TEST h = Hook(); a=1; h["my1"] = F() a+=1; @h { a*=2 }; @hook(h, "my2") { a*=3 }; h(); a==12 and h.handlers.keys() == ["my1", "pushed-0", "my2"]
-TEST h = Hook(); F @(hook, ovr) ovr.replace({"B"}); @h F f() "A"; f() == "B"
-
-
 # === Real =======================================
 
 # TODO: something more efficient
@@ -3455,7 +3430,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 	info_keys = h.keys() - %[message backtrace cause]
 
 	F print_info(k) {
-		out = inspect(h[k]) tor ["(Failed to inspect)"]
+		out = inspect(h[k]) tor ["Info: $k - (Failed to inspect)"]
 		assert(out is Arr)
 		assert(out.len() > 0)
 		if out.len() == 1 {
@@ -3494,23 +3469,25 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 
 exit_hook = Hook()
 
-# TODO: consider running this hook item last.
-#       If it has exception, it could prevent
-#       user-defined cleanups.
-@hook(exit_hook, 'print_exception') F(exit_info:Hash) {
-	if exit_info.exception is not Null {
-		error("--- Exception during execution of main code ---")
-		print_exception(exit_info.exception)
+{
+	# TODO: consider running this hook item last.
+	#       If it has exception, it could prevent
+	#       user-defined cleanups.
+	exit_hook['print_exception'] = F(exit_info:Hash) {
+		if exit_info.exception is not Null {
+			error("--- Exception during execution of main code ---")
+			print_exception(exit_info.exception)
+		}
 	}
-}
 
-@hook(exit_hook, 'exception_to_exit_code') F(exit_info:Hash) {
-	if exit_info.exception is not Null {
-		try {
-			exit_info.exit_code = exit_info.exception.to_exit_code()
-		} catch(e:Exception) {
-			error("--- Exception during converting exception to exit code ---")
-			print_exception(e)
+	exit_hook['exception_to_exit_code'] = F(exit_info:Hash) {
+		if exit_info.exception is not Null {
+			try {
+				exit_info.exit_code = exit_info.exception.to_exit_code()
+			} catch(e:Exception) {
+				error("--- Exception during converting exception to exit code ---")
+				print_exception(e)
+			}
 		}
 	}
 }
