@@ -1,3 +1,11 @@
+STDLIB_EOL = "\n"
+STDLIB_PATH_SEP = '/'
+STDLIB_CHILD_TO_PARENT_PIPE_DIR = 1
+STDLIB_PARENT_TO_CHILD_PIPE_DIR = 2
+STDLIB_MAX_RAND_REAL = Real(RAND_MAX)
+STDLIB_RAND_SAFETY_MAX = 100
+STDLIB_HEX_DIGITS='0123456789ABCDEF'
+
 # === Trivial init() helper ===
 
 doc Trivial initialization helper for init(o, ...)
@@ -185,6 +193,12 @@ F the_one(something, predicate, body:Fun, found_more:Fun={null}, found_none:Fun=
 TEST ok = false; [1,2,11,3,4].the_one(X>10, F(the_value) { if(the_value == 11) ok = true });
 TEST ok = false; [1,2,11,3,4].the_one(X>20, { does_not_matter }, found_none = { ok = true }); ok
 TEST ok = false; [1,2,11,3,4].the_one(Int, { does_not_matter }, found_more = { ok = true }); ok
+
+doc Extract the only element.
+doc Throws TheOneFail exception if there are no elements or if there is more than one element.
+doc %RET - The only element.
+doc %EX - ``aws ec2 describe-security-groups --group-ids $sg_id``.the_one()  # {OwnerId=..., VpcId=..., GroupId=..., ...}
+F the_one(something) something.the_one({true})
 
 doc Filter nulls out.
 doc DEPRECATED, USE something.without(null) INSTEAD.
@@ -872,7 +886,7 @@ doc args - Additional arguments for calling the predicate.
 doc %RET - Bool
 doc %EX - [1,2,3].all(X<10)   # true
 doc %EX - [1,2,10].all(X>5)   # false
-F all(arr:Arr, predicate) {
+F all(arr, predicate) {
 	p = Pred(predicate)
 	l = arr.len()
 	for(i;l)
@@ -2353,8 +2367,6 @@ doc %RET - Str
 doc %EX - find_in_path("ls").Str()  # The string: <Path path=/bin/ls>
 F Str(p:Path) "<${p.typeof().name} path=${p.path}>"
 
-STDLIB_PATH_SEP = '/'
-
 doc Concatenate two path parts using STDLIB_PATH_SEP (currently "/") but should be platform-specific later.
 doc %RET - Str
 doc %EX - mydir="tmp"
@@ -2512,9 +2524,6 @@ F init(pipe:Pipe) {
 	debug("[Pipe] created pipe with read_fd=${pipe.read_fd} and write_fd=${pipe.write_fd}")
 }
 
-STDLIB_CHILD_TO_PARENT_PIPE_DIR = 1
-STDLIB_PARENT_TO_CHILD_PIPE_DIR = 2
-
 doc Pipe constructor. Create UNIX pipe using PIPE(2). Throws PipeCreateFail if pipe can not be created.
 doc direction - One of: STDLIB_CHILD_TO_PARENT_PIPE_DIR or STDLIB_PARENT_TO_CHILD_PIPE_DIR
 doc %EX - p = Pipe(STDLIB_PARENT_TO_CHILD_PIPE_DIR)
@@ -2625,6 +2634,20 @@ F lines(f:File, cb:Fun) {
 
 # XXX: might not be correct on all platforms
 TEST ok = false; File("/etc/passwd").lines({if ":" in A ok = true}); ok
+
+F lines(f:File) collector f.lines(collect)
+
+F lines(f:File, lines_:Arr) {
+	finally()
+		body => {
+			f.open('w')
+			(lines_ + STDLIB_EOL).each(write(X, f.fd))
+		}
+		cleanup => {
+			f.close()
+		}
+
+}
 
 doc Close a file and sets the "fd" field to null. Uses CLOSE(2).
 doc Throws InvalidArgument if file is not open.
@@ -3191,6 +3214,8 @@ F '[]'(my:MatchY, idx:Int) my.matches[idx]
 
 TEST ("abc" ~ /a(.)c/)[1] == "b"
 
+F Pred(s:SubSeq) F subseq_pred(x) x ~ s
+
 
 # === RegExp =====================================
 
@@ -3543,9 +3568,6 @@ exit_hook = Hook()
 
 srand(time())
 
-STDLIB_MAX_RAND_REAL = Real(RAND_MAX)
-STDLIB_RAND_SAFETY_MAX = 100
-
 doc Pick n random unique elements from something
 doc %RET - Arr
 F rand_uniq(something, n:Int) {
@@ -3665,8 +3687,6 @@ TEST t = 0; retry(body={t+=1; false}, fail_cb={"OK"}, times=5, sleep=0) == "OK" 
 TEST t = 0; retry(body={t+=1; "OK"}, fail_cb={"NOTOK"}, sleep=0) == "OK" and t == 1
 
 # === Misc =======================================
-
-STDLIB_HEX_DIGITS='0123456789ABCDEF'
 
 doc Encodes each character in a string as two uppercase hexadecimal digits
 doc %RET - Str

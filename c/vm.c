@@ -1758,9 +1758,25 @@ void register_global_func(VM *vm, int pass_extra_params, char *name, void *func_
 	assert(0 == "register_global_func fail");
 }
 
-// TODO: consider array values (for sepatate lines or list items)
+// TODO: consider array values (for separate lines or list items)
 void _doc(VM *vm, char *k, char *v) {
 	set_hash_key(vm->last_doc_hash, make_string(k), make_string(v));
+}
+
+void _doc_arr(VM *vm, char *k, ...) {
+	va_list varargs;
+	VALUE v;
+	char *elt;
+	v = make_array(0);
+	va_start(varargs, k);
+	while(1) {
+		elt = va_arg(varargs, char *);
+		if(!elt) break;
+		// if(!elt[0]) break;
+		array_push(v, make_string(elt));
+	}
+	va_end(varargs);
+	set_hash_key(vm->last_doc_hash, make_string(k), v);
 }
 
 void set_global(VM *vm, const char *name, VALUE v) {
@@ -1945,28 +1961,78 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, "args",            &native_args,            0);
 	_doc(vm, "", "Get function arguments");
 	_doc(vm, "%RET", "Hash");
-	_doc(vm, "%EX", "F f(x,y,z=100) args()");
-	_doc(vm, "%EX", "f(1,2)  # {x=1, y=2, z=100}");
+	_doc_arr(vm, "%EX",
+		"F f(x,y,z=100) args()",
+		"f(1,2)  # {x=1, y=2, z=100}",
+		NULL
+	);
 
 	register_global_func(vm, 1, "replace",         &native_replace,         2, "dst",    vm->Any,    "src", vm->Any);
 	_doc(vm, "", "DISCOURAGED. Replace one object with another. dst and src must be of the same type.");
-	_doc(vm, "%EX", "a = [1,2,3]");
-	_doc(vm, "%EX", "a.replace([4,5])");
-	_doc(vm, "%EX", "a  # [4,5]");
+	_doc_arr(vm, "%EX",
+		"a = [1,2,3]",
+		"a.replace([4,5])",
+		"a  # [4,5]",
+		NULL
+	);
 
 	// Return
 	register_global_func(vm, 1, "Return",          &native_Return,   0);
+	_doc(vm, "", "Get closure-specific Return type. Throwing it, will return from the closure");
+	_doc(vm, "%EX", "F f() Return(); f()  # <Return closure=<Closure f at <command line -pi switch>:2> depth=4 val=null>");
+	_doc(vm, "%EX", "");
+	_doc(vm, "%EX", "F first(r:Range, predicate:Fun) {");
+	_doc(vm, "%EX", "	finish = Return()");
+	_doc(vm, "%EX", "	r.each(F(i) {");
+	_doc(vm, "%EX", "		predicate(i) throws finish(i)");
+	_doc(vm, "%EX", "	})");
+	_doc(vm, "%EX", "	null");
+	_doc(vm, "%EX", "}");
 
 	// CLib and c calls
 	register_global_func(vm, 1, "c_dlopen",        &native_c_dlopen_str_int,   2, "filename", vm->Str,        "flags",  vm->Int);
+	_doc(vm, "", "Unfinished feature. Don't use!");
 	register_global_func(vm, 0, "in",              &native_in_str_clib,        2, "symbol",   vm->Str,        "lib",    vm->CLib);
+	_doc(vm, "", "Unfinished feature. Don't use!");
 	register_global_func(vm, 1, "[]",              &native_index_get_clib_str, 2, "lib",      vm->CLib,       "symbol", vm->Str);
+	_doc(vm, "", "Unfinished feature. Don't use!");
 	register_global_func(vm, 1, "c_ffi_prep_cif",  &native_c_ffi_prep_cif ,    2, "rtype",    vm->c_ffi_type, "atypes", vm->Arr);
+	_doc(vm, "", "Unfinished feature. Don't use!");
 	register_global_func(vm, 1, "c_ffi_call",      &native_c_ffi_call,         3, "cif",      vm->c_ffi_cif,  "fn",     vm->CSym, "argv", vm->Arr);
+	_doc(vm, "", "Unfinished feature. Don't use!");
 
 	// threads
 	register_global_func(vm, 1, "c_pthread_create",       &native_c_pthreadcreate_pthreadattr_startroutine_arg, 3, "attr", vm->c_pthread_attr_t, "start_routine", vm->Closure, "arg", vm->Any);
+	_doc(vm, "", "Call PTHREAD_CREATE(3). Not recommended for direct calls, use Thread type instead.");
+	_doc(vm, "%RET", "Arr with [Int, c_pthread_t]. Int is the status returned by pthread_create(). c_pthread_t is a thin wrapper around underlying pthread_t, returned by PTHREAD_CREATE(3)");
+	_doc_arr(vm, "%EX",
+		"F init(t:Thread, f:Fun, arg) {",
+		"	thread_attr = c_pthread_attr_t()",
+		"	c_pthread_attr_init(thread_attr)",
+		"	create_result = c_pthread_create(thread_attr, f, arg)",
+		"	code = create_result[0]",
+		"	if code {",
+		"		throw Error(\"Failed to c_pthread_create\")",
+		"	}",
+		"	t.thread = create_result[1]",
+		"}",
+		NULL
+	);
+
 	register_global_func(vm, 0, "c_pthread_join",         &native_c_pthreadjoin,        1, "thread", vm->c_pthread_t);
+	_doc(vm, "", "Call PTHREAD_JOIN(3). Not recommended for direct calls, use Thread type instead.");
+	_doc(vm, "%RET", "Arr with [Int, Any]. Int is the status returned by pthread_join(). Any is the value returned by the thread of status is 0, Any is null if status is non-zero.");
+	_doc_arr(vm, "%EX",
+		"F join(t:Thread) {",
+		"	join_result = c_pthread_join(t.thread)",
+		"	if join_result[0] {",
+		"		throw Error(\"Failed to c_pthread_join\")",
+		"	}",
+		"	join_result[1]",
+		"}",
+		NULL
+	);
+
 	register_global_func(vm, 0, "c_pthread_attr_init",    &native_c_pthreadattrinit,    1, "attr",   vm->c_pthread_attr_t);
 	register_global_func(vm, 0, "c_pthread_mutex_init",   &native_c_pthreadmutexinit,   1, "mutex",  vm->c_pthread_mutex_t);
 	register_global_func(vm, 0, "c_pthread_mutex_lock",   &native_c_pthreadmutexlock,   1, "mutex",  vm->c_pthread_mutex_t);
