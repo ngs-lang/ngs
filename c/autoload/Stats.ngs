@@ -2,31 +2,28 @@
 
 {
 	doc A group of named counters
-	doc s - The underlying Hash, expose()d
-	type Stats
-	Stats.expose('h')
+	doc h - The underlying Hash, expose()d
+	type Stats(HashLike)
 }
 
-F init(s:Stats) {
-	s.h = {}
-}
+doc Stats constructor
+doc %EX - Stats().push('a').push('a').push('b').h  # {'a': 2, 'b': 1}
+F init(s:Stats) super(s, 'h')
 
 doc Makes Stats, with each element in the array counted as if push()ed
-F Stats(a:Arr) {
-	s = Stats()
-	# a.each(partial(push, s))
-	a % push(s, X)
-	s
+doc %EX - Stats(['a', 'a', 'b']).h  # {'a': 2, 'b': 1}
+F init(s:Stats, a:Arr) {
+	init(s)
+	a.each(push(s, X))
 }
 
 doc Increment the named counter
-doc K - the name of the counter to increment
+doc k - the name of the counter to increment
+doc %EX - Stats().push("a").push("a").push("b")["a"]  # 2
 F push(s:Stats, k) {
 	s.h[k] = s.h.get(k, 0) + 1
 	s
 }
-
-F Str(s:Stats) "<Stats: ${s.h}>"
 
 TEST Stats().push('a').push('a').push('b').h == {'a': 2, 'b': 1}
 TEST Stats(['a', 'a', 'b']).h == {'a': 2, 'b': 1}
