@@ -146,8 +146,10 @@ ast_node *call_node_partial_application(ast_node *orig, int location[4]) {
 	if(orig->type == ATTR_NODE) {
 		if(orig->first_child->next_sibling->type == EXPRESSIONS_NODE) {
 			p = orig->first_child->next_sibling->first_child;
-			if(p->name[0] == 'X' || p->name[0] == 'Y' || p->name[0] == 'Z') {
-				return wrap_in_func(orig, location, "Partial application syntax", 1, 3, "X", "Any", "Y", "Any", "Z", "Any");
+			if(p && !p->next_sibling && p->type == IDENTIFIER_NODE) {
+				if(p->name[0] == 'X' || p->name[0] == 'Y' || p->name[0] == 'Z') {
+					return wrap_in_func(orig, location, "Partial application syntax", 1, 3, "X", "Any", "Y", "Any", "Z", "Any");
+				}
 			}
 		}
 		return orig;

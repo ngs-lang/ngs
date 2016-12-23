@@ -1772,7 +1772,6 @@ void _doc_arr(VM *vm, char *k, ...) {
 	while(1) {
 		elt = va_arg(varargs, char *);
 		if(!elt) break;
-		// if(!elt[0]) break;
 		array_push(v, make_string(elt));
 	}
 	va_end(varargs);
