@@ -292,12 +292,44 @@ doc Same as calling f(x)
 doc %EX - [1,2,3,4] \ echo
 F \(x, f:Fun) f(x)
 
+# === ArrLike =======================================
+
+{ type ArrLike }
+
+F len(al:ArrLike)               al.(al.arr_like_attr).len()
+F '[]'(al:ArrLike, idx:Int)     al.(al.arr_like_attr)[idx]
+F '[]='(al:ArrLike, idx:Int, x) al.(al.arr_like_attr)[idx] = x
+
+F each(al:ArrLike, cb:Fun) al.(al.arr_like_attr).each(cb)
+
+F init(al:ArrLike, attr:Str='items') {
+	al.arr_like_attr = attr
+	al.(al.arr_like_attr) = []
+}
+
+# === HashLike =======================================
+
+{ type HashLike }
+
+F len(hl:HashLike)         hl.(hl.hash_like_attr).len()
+F '[]'(hl:HashLike, k)     hl.(hl.hash_like_attr)[k]
+F '[]='(hl:HashLike, k, v) hl.(hl.hash_like_attr)[k] = v
+
+F each(hl:HashLike, cb:Fun) hl.(hl.hash_like_attr).each(cb)
+# TODO: mapk, mapv and friends
+# TOOD: Hash() - copy or hash attribute?
+
+F init(hl:HashLike, attr:Str='items') {
+	hl.hash_like_attr = attr
+	hl.(hl.hash_like_attr) = {}
+}
 
 # === Hook =======================================
 
 {
 	doc Hook is a simple pub-sub
 	type Hook
+	Hook.inherit(HashLike)
 
 	doc CONSIDERED FOR REMOVAL
 	type HookDecorator
@@ -308,15 +340,9 @@ doc combiner - A function for processing results from all handlers. The outputs 
 doc %RET - Hook
 F init(hook:Hook, combiner=values) {
 	init(args())
-	hook.handlers = {}
+	super(hook, 'handlers')
 	hook.idx = 0
 }
-
-doc Get hook handler
-F '[]'(hook:Hook, name:Str) hook.handlers[name]
-
-doc Set hook handler
-F '[]='(hook:Hook, name:Str, handler:Closure) hook.handlers[name] = handler
 
 doc Add unnamed handler.
 doc The hook is automatically named "pushed-N" where N is sequential integer.

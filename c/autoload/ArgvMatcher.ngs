@@ -1,6 +1,10 @@
 {
+	doc ArgvMatcher internal type, do not use!
 	type MatchedParam(FullBox)
+
+	doc ArgvMatcher internal type, do not use!
 	type UnmatchedParam(EmptyBox)
+
 	type ArgvMatcherDecorator
 }
 
