@@ -3,36 +3,14 @@
 {
 	doc Manipulates tabular data
 	doc name - Table name to display and for configuration lookup
-	doc col_name_to_idx - Columns names' indexes (ex: id:0, name:1, age:2)
-	doc col_idx_to_name - Columns indexes' names (ex: 0:id, 1:name, 2:age)
+	doc cols_enum - Enum for columns names
 	type Table
-
-	doc Additional information to be used when processing a Table
-	doc data - underlying data
-	type TableMeta
-
-	doc Do not show the data below if the named column is present
-	type TableMetaNotIfCol
-	TableMetaNotIfCol.inherit(TableMeta)
 }
 
 F StrForTable(x) Str(x)
 F StrForTable(x, width:Int) Str(x, width)
 F StrForTable(x:Null) "-"
 F StrForTable(x:Null, width:Int) Str("-", width)
-
-F init(x:TableMetaNotIfCol, col_name:Str, data) {
-	x.col_names = [col_name]
-	x.data = data
-}
-
-F init(x:TableMetaNotIfCol, col_names:Arr, data) {
-	guard col_names.all(Str)
-	x.col_names = col_names
-	x.data = data
-}
-
-F Str(x:TableMetaNotIfCol) x.data.Str()
 
 doc Calculate cell display width - any Str()-able instance
 F cell_display_width(x) StrForTable(x).len()
@@ -44,16 +22,14 @@ doc Calculate cell display width for an empty array
 F cell_display_width(x:Arr) { guard x.len()==0; 0 }
 
 doc Initialize rows to an empty array
-F init(t:Table) {
-	if not(try t.name) {
-		t.name = null
-	}
-	# name -> column number
-	t.col_name_to_idx = {}
-	# column number -> name
-	t.col_idx_to_name = {}
-	# data
+F init(t:Table, name:Str=null) {
+	init(args())
+	t.cols_enum = Enum()
 	t.rows = []
+
+	conf = config(if t.name "table_${t.name}" "table") or []
+	debug("Table config is $conf")
+	conf % register_column(t, X)
 }
 
 doc Create named table containing provided rows
@@ -61,39 +37,24 @@ doc name - name of the table for display and for configuration purposes
 doc rows_hashes - rows, each row is a Hash
 F init(t:Table, name:Str, rows_hashes:Arr) {
 	guard rows_hashes.all(Hash)
-	t.name = name
-	t.init(rows_hashes)
-}
+	super(t, name)
 
-F init(t:Table, rows_hashes:Arr) {
-	t.init()
-	conf = config(if t.name "table_${t.name}" "table")
-	debug("Table config is $conf")
-	idx = 0
-	# Build table info
-	F register_column(k) {
-		t.col_name_to_idx[k] = idx
-		t.col_idx_to_name[idx] = k
-		idx += 1
-	}
-	F register_column(k) {
-		guard k in t.col_name_to_idx
-		null
-	}
-	if conf {
-		# conf.each(register_column)
-		conf % register_column
-	} else {
+	echo("E ${t.cols_enum} ${t.cols_enum.Bool()}")
+	if not(t.cols_enum) {
 		rows_hashes.each(F(row_hash) {
 			# row_hash.keys().each(register_column)
-			row_hash.keys() % register_column
+			row_hash.keys() % register_column(t, X)
 		})
 	}
-	debug("Table created with fields: ${t.col_idx_to_name}")
+	debug("Table created with fields: ${t.cols_enum}")
 	# hashes to arrays
 	# rows_hashes.each(partial(push, t))
 	rows_hashes % push(t, X)
 }
+
+F init(t:Table, rows_hashes:Arr) super(t, null, rows_hashes)
+
+F register_column(t:Table, k) t.cols_enum.push(k)
 
 F push(t:Table, row_arr:Arr) {
 	# TODO: handle mismatch in number of columns
@@ -103,47 +64,28 @@ F push(t:Table, row_arr:Arr) {
 
 F push(t:Table, row_hash:Hash) {
 	# TODO: handle mismatch of columns
-	row = t.col_name_to_idx / get(row_hash, X, null)
+	row = t.cols_enum / get(row_hash, X, null)
 	t.push(row)
 	t
 }
 
-F width(t:Table) t.col_idx_to_name.len()
-F column(t:Table, k:Str) t.column(t.col_name_to_idx[k])
+F width(t:Table) t.cols_enum.len()
+F column(t:Table, k:Str) t.column(t.cols_enum[k])
 F column(t:Table, n:Int) t.rows.map(X[n])
-# F columns(t:Table) t.width().map(F(idx) t.column(idx))
 F columns(t:Table) t.width() / t.column(X)
-F each(t:Table, cb:Fun) throw NotImplemented()
+F each(t:Table, cb:Fun) {
+	t.rows.each(F(row) {
+		row.each(F(cell) {
+			cb(cell)
+		})
+	})
+	t
+}
 
 # --- Conversions ---
 
 F len(t:Table) t.rows.len()
 F Bool(t:Table) t.len().Bool()
-
-F Hash(t:Table, row_number:Int) {
-	throw NotImplemented()
-}
-
-F Hashes(t:Table) {
-	throw NotImplemented()
-}
-
-F should_display_cell_item(t:Table, item) true
-
-F should_display_cell_item(t:Table, item:TableMetaNotIfCol) {
-	item.col_names.none(X in t.col_name_to_idx)
-}
-
-doc Preprocess a Table just before output
-F preprocess(t:Table) {
-	t.rows.each(F(row) {
-		row.each_idx_val(F(idx, cell) {
-			if cell is Arr {
-				row[idx] = cell ? should_display_cell_item(t, X)
-			}
-		})
-	})
-}
 
 F calculate_num_cols_to_show(t:Table, max_colums_widths:Arr, available_cols:Int) {
 	cols_to_show = 0
@@ -165,10 +107,8 @@ F echo(t:Table) {
 	# TODO: handle Hash type of cell (maybe allow configuring order of keys etc)
 	# TODO: handle limiting width of a cell, probably using subtype of TableMeta
 
-	preprocess(t)
-
 	do_output_headers = config('output_headers') in [null, true]
-	max_colums_widths = t.col_idx_to_name.map(F(idx, k) {
+	max_colums_widths = t.cols_enum.map(F(k, idx) {
 		col = t.column(idx)
 		((if do_output_headers [k] [])+ col).max(cell_display_width)
 	})
@@ -177,10 +117,8 @@ F echo(t:Table) {
 	showing_n_columns = t.calculate_num_cols_to_show(max_colums_widths, cols)
 
 	# Setup line spacing
-	do_line_spacing = t.rows.any(F(row) {
-		row.any(F(cell) cell is Arr and len(cell)>1)
-	})
-	do_line_spacing = if do_line_spacing F() echo('') else F() null
+	do_line_spacing = t.filter(Arr).map(len).any(X>1)
+	do_line_spacing = if do_line_spacing F() echo('') else nop
 
 	# Title
 	if t.name and (config('output_title') in [null, true]) {
@@ -190,7 +128,7 @@ F echo(t:Table) {
 
 	# Headers
 	if(do_output_headers) {
-		t.col_idx_to_name.limit(showing_n_columns).map(F(idx, k) StrForTable(k, max_colums_widths[idx])).join(' ').echo()
+		t.cols_enum.limit(showing_n_columns).map(F(k, idx) StrForTable(k, max_colums_widths[idx])).join(' ').echo()
 		do_line_spacing()
 	}
 
@@ -200,7 +138,7 @@ F echo(t:Table) {
 		subrow_idx = 0
 		while not(done) {
 			done = true
-			subrow_content_arr = t.col_idx_to_name.limit(showing_n_columns).map(F(idx, k) {
+			subrow_content_arr = t.cols_enum.limit(showing_n_columns).map(F(k, idx) {
 				subrow_content = if row[idx] is Arr {
 					if len(row[idx]) > subrow_idx {
 						done = false

@@ -1,0 +1,30 @@
+{ type Enum(HashLike) }
+
+F init(e:Enum) {
+	super(e, 'names_to_numbers')
+	e.names_to_numbers = {}
+	e.numbers_to_names = {}
+}
+
+F push(e:Enum, name:Str) {
+	name in e.names_to_numbers returns null
+	idx = e.names_to_numbers.len()
+	e.names_to_numbers[name] = idx
+	e.numbers_to_names[idx] = name
+}
+
+F limit(e:Enum, l:Int) {
+	ret = Enum()
+	ret.names_to_numbers = e.names_to_numbers.limit(l)
+	ret.numbers_to_names = e.numbers_to_names.limit(l)
+	ret
+}
+
+F '[]'(e:Enum, name:Str) e.names_to_numbers[name]
+F '[]'(e:Enum, number:Int) e.numbers_to_names[number]
+
+F Str(e:Enum) "<Enum ${e.names_to_numbers}>"
+F Bool(e:Enum) e.names_to_numbers.len().Bool()
+
+TEST e=Enum(); e.push("x"); e.push("x"); e.len() == 1 and "x" in e
+TEST e=Enum(); e.push("x"); e.push("y"); e = e.limit(1); e is Enum and e.len() == 1

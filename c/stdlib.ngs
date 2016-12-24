@@ -311,6 +311,8 @@ F init(al:ArrLike, attr:Str='items') {
 
 { type HashLike }
 
+F in(name:Str, hl:HashLike) name in hl.(hl.hash_like_attr)
+
 F len(hl:HashLike)         hl.(hl.hash_like_attr).len()
 F '[]'(hl:HashLike, k)     hl.(hl.hash_like_attr)[k]
 F '[]='(hl:HashLike, k, v) hl.(hl.hash_like_attr)[k] = v
@@ -794,30 +796,31 @@ doc args - Additional arguments for calling the predicate.
 doc %EX - [1,2,10].any(F(elt) elt > 5)   # true
 doc %EX - [1,2,10].any(F(elt) elt > 15)  # false
 doc %RET - Bool
-F any(arr:Arr, predicate) {
+F any(something, predicate) {
 	p = Pred(predicate)
-	l = arr.len()
-	for(i;l)
-		p(arr[i]) returns true
+	r = Return()
+	something.each(F(x) {
+		p(x) throws r(true)
+	})
 	false
 }
 
 TEST [1,2,10].any(F(elt) elt > 5)
 TEST [1,2,3].any(F(elt) elt > 5).not()
 
-doc Check whether all elements in arr satisfy the given predicate
-doc TODO: Make it work on anything with each() method
-doc arr - Array to check
+doc Check whether all elements in arr satisfy the given predicate.
+doc something - Instance of any type that has each(something, callback) implemented
 doc predicate - Test function
 doc args - Additional arguments for calling the predicate.
 doc %RET - Bool
 doc %EX - [1,2,3].all(X<10)   # true
 doc %EX - [1,2,10].all(X>5)   # false
-F all(arr, predicate) {
+F all(something, predicate) {
 	p = Pred(predicate)
-	l = arr.len()
-	for(i;l)
-		not(p(arr[i])) returns false
+	r = Return()
+	something.each(F(x) {
+		not(p(x)) throws r(false)
+	})
 	true
 }
 

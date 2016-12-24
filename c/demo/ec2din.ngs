@@ -4,9 +4,9 @@
 # Running example: NGS_table_Instances='["InstanceId", "PublicIpAddress", "PrivateIpAddress", "State", "KeyName", "SecurityGroups"]' ./demo/ec2din.ngs
 
 {
-	Table
-
 	config('table_Instances', %[InstanceId tag_Name tag_env tag_role IPs InstanceType State KeyName SecurityGroups AZ RestOfTags])
+
+	table = Table('Instances')
 
 	F limit_len(s:Str, l:Int) limit(s, l, '...')
 
@@ -51,6 +51,9 @@
 			``aws ec2 describe-instances $*filters``
 		}
 		instances .= sort('LaunchTime')
+
+		F tag_has_column(tag_name, _) ["full_tag_${tag_name}", "tag_${tag_name}"].any(X in table.cols_enum)
+
 		instances % F(i) {
 			i.State = i.State.Name
 			i.SecurityGroups = i.SecurityGroups.map(F(sg) "${limit_len(sg.GroupName, 15)}(${sg.GroupId})")
@@ -64,9 +67,10 @@
 				i["tag_${k}"] = v.limit_len(20)
 			})
 			# TODO: Move layout management to Table, don't limit_len() here
-			i.RestOfTags = i.Tags.map(F(k, v) TableMetaNotIfCol(["full_tag_$k", "tag_$k"], KV(k.limit_len(10), v.limit_len(15))))
+			i.RestOfTags = i.Tags.reject(tag_has_column).map({ "${A.limit_len(10)}=${B.limit_len(15)}" })
 		}
-		t = Table('Instances', instances)
-		echo(t)
+		# t = Table('Instances', instances)
+		instances % push(table, X)
+		echo(table)
 	}
 }
