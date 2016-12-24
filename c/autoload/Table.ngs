@@ -22,7 +22,8 @@ doc Calculate cell display width for an empty array
 F cell_display_width(x:Arr) { guard x.len()==0; 0 }
 
 doc Initialize rows to an empty array
-F init(t:Table, name:Str=null) {
+F init(t:Table, name=null) {
+	guard name is Str or name is Null
 	init(args())
 	t.cols_enum = Enum()
 	t.rows = []
@@ -35,11 +36,11 @@ F init(t:Table, name:Str=null) {
 doc Create named table containing provided rows
 doc name - name of the table for display and for configuration purposes
 doc rows_hashes - rows, each row is a Hash
-F init(t:Table, name:Str, rows_hashes:Arr) {
+F init(t:Table, name, rows_hashes:Arr) {
+	guard name is Str or name is Null
 	guard rows_hashes.all(Hash)
 	super(t, name)
 
-	echo("E ${t.cols_enum} ${t.cols_enum.Bool()}")
 	if not(t.cols_enum) {
 		rows_hashes.each(F(row_hash) {
 			# row_hash.keys().each(register_column)
