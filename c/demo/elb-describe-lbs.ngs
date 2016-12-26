@@ -10,7 +10,7 @@
 
 	F limit_len(s:Str, l:Int) limit(s, l, '...')
 
-	@ArgvMatcher('positionals', 'filters')
+	ArgvMatcher('positionals', 'filters') do
 	doc filters - Show only instances matching the given filters. Possible filter forms are:
 	doc filters - vpc-xxxyyyzz - for specific vpc
 	doc filters - i-xxxyyyzz - for specific instance id
@@ -46,7 +46,6 @@
 		}
 		elbs % F(elb) {
 			elb.ListenerDescriptions = elb.ListenerDescriptions.map(F(ld) {
-				inspect(ld) % echo
 				collector {
 					inspect(ld.PolicyNames) % echo
 					ld.PolicyNames % collect
