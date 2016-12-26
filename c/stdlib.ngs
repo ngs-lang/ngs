@@ -122,6 +122,23 @@ F map(something, mapper:Fun)
 	collector
 		something.each(collect + mapper)
 
+
+doc EXPERIMENTAL! Do not use!
+doc Transform mapper to handle only items matching predicate. Non-matching items will be returned as is.
+doc %EX - ["abc", 1, "def", 2].map(only(Int, X*2))  # ["abc", 2, "def", 4]
+F only(predicate, mapper:Fun) {
+	p = Pred(predicate)
+	F wrapped_in_only(elt) {
+		if p(elt) {
+			mapper(elt)
+		} else {
+			elt
+		}
+	}
+}
+
+TEST ["abc", 1, "def", 2].map(only(Int, X*2)) == ["abc", 2, "def", 4]
+
 doc Filter something to an Arr (array) of values using predicate.
 doc something - Instance of any type that has each(something, callback) implemented.
 doc predicate - Decision function to be called with each item as first argument.
@@ -318,6 +335,9 @@ F '[]'(hl:HashLike, k)     hl.(hl.hash_like_attr)[k]
 F '[]='(hl:HashLike, k, v) hl.(hl.hash_like_attr)[k] = v
 
 F each(hl:HashLike, cb:Fun) hl.(hl.hash_like_attr).each(cb)
+F keys(hl:HashLike) hl.(hl.hash_like_attr).keys()
+F values(hl:HashLike) hl.(hl.hash_like_attr).values()
+
 # TODO: mapk, mapv and friends
 # TOOD: Hash() - copy or hash attribute?
 
@@ -471,6 +491,14 @@ F dflt(i:NormalTypeInstance, k, v) {
 
 TEST type T; t=T(); t.dflt("a", 1); t.a == 1
 TEST type T; t=T(); t.a = 2; t.dflt("a", 1); t.a == 2
+
+doc Set an attribute on instances if it's not already set
+doc %RET - v
+F dflt(arr:Arr, k, v) {
+	guard arr.all({A is NormalTypeInstance or A is Hash})
+	arr.each(X.dflt(k, v))
+	v
+}
 
 doc Equaity test for normal type instances: must be of same type and have same attributes and their values
 doc %RET - Bool
@@ -839,6 +867,14 @@ TEST [0,1,2].none(X<2).not()
 
 TEST [1,2,3].map(X*4) == [4,8,12]
 
+doc Map when there is one more than one element. If there is exactly one element, it's left as is
+doc mapper - Will be called with zero based index and successive elements from arr
+doc %RET - Arr
+F map_base_idx(base, n:Int, mapper:Fun) {
+	n == 1 returns [base]
+	n.map(mapper(base, X))
+}
+
 doc Iterates over the elements of arr, passing each in turn to cb along with args: cb(ITEM)
 doc cb - Function to be called with values from arr
 doc args - Additional arguments for calling cb
@@ -1100,8 +1136,7 @@ doc %EX - zip([1,2,3], [4,5])    # [[1,4], [2,5], [3,null]]
 doc %RET - Arr of form [[arg[0][0], arg[1][0], ... arg[i][0]], [arg[0][1], arg[1][1], ... arg[i][1]], ...]
 F zip(*args) {
 	arrays = args.map(Arr)
-	max_len = arrays / len \ max
-	max_len.map({ arrays.map(X.get(A, null)) })
+	arrays.max(len).map({ arrays.map(X.get(A, null)) })
 }
 
 TEST zip([1,2,3], [4,5,6]) == [[1,4], [2,5], [3,6]]

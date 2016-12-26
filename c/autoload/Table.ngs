@@ -167,6 +167,32 @@ F echo(t:Table) {
 	})
 }
 
+doc Output (echo) CSV table with cells that contain arrays converted to columns.
+doc TODO: data escaping.
+F echo(t:Table) {
+	guard config('output_format') == 'csv-flat'
+	col_elts = t.cols_enum.values().Hash(F(col_name) {
+		col = t.column(col_name).map(only(X is not Arr, F(x) [x]))
+		(col.map(len) + [0]).max()
+	})
+	# echo(col_elts)
+	field_names = t.cols_enum.map(F(col_name, col_idx) {
+		field_names = map_base_idx(col_name, col_elts[col_idx], { "${A}_${B+1}" })
+	}).flatten()
+
+	# Headers
+	echo(field_names.join(','))
+
+	t.rows.each(F(row) {
+		cols_to_display = row.map_idx_val(F(col_idx, cell) {
+			val = if cell is Arr cell else [cell]
+			n = col_elts[col_idx]
+			val + ('' * (n - len(val)))
+		}).flatten()
+		echo(cols_to_display.join(','))
+	})
+}
+
 TEST Table([{"a": 1}, {"a": 2}]).column("a") == [1,2]
 TEST Table([{"a": 1}, {"a": 2}]).columns() == [[1,2]]
 TEST Table([{"a": 1}, {"a": 2}]).len() == 2
