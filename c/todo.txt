@@ -86,9 +86,10 @@ Note that this started as internal document so things here are unformed, not fin
 			# if zero_sep then s.split('\0') else s.lines()
 		}
 
-	* Consider killing *args in all higher-level functions
-		because once it was fine for [1,2,10].filter((>), 5)
-		but we now have convenient syntax [1,2,10].filter(X>5)
+	* pmap() - limit number of concurrent threads
+	* rethink exceptions in threads
+
+	* /think of eliminating \\ in regexp literals/
 
 [roadmap]
 

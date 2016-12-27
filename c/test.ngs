@@ -18,7 +18,7 @@
 		# TODO: also other files
 		File(file).lines(F(line) {
 			# dump(line)
-			if m = line ~ /^TEST (.*)/ {
+			if m = line ~ /^\\s*TEST (.*)/ {
 				perform_test(m[1])
 			}
 		})

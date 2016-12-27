@@ -19,17 +19,12 @@
 
 	F stdlib_aws_tags(h:Hash) h / "Key=$X,Value=$Y"
 
-	F stdlib_aws_filters(h:Hash) {
-		hh = h.mapv(F(v) {
-			econd {
-				v is Pfx "${v.val}*"
-				true v
-			}
-		})
-		ret = hh / "Name=$X,Values=$Y"
-		ret returns ['--filters'] + ret
-		[]
-	}
+	doc Convert Hash with AWS filters to command line arguments
+	F stdlib_aws_filters(h:Hash) h.mapv(only(Pfx, { "${A.val}*" })).map("Name=$X,Values=$Y").map_true(['--filters'] + X)
+
+	TEST AWS; stdlib_aws_filters({}) == []
+	TEST AWS; stdlib_aws_filters({"x": "y"}) == ['--filters', 'Name=x,Values=y']
+	TEST AWS; stdlib_aws_filters({"x": Pfx("aa")}) == ['--filters', 'Name=x,Values=aa*']
 
 	aws_cached_regions = null
 

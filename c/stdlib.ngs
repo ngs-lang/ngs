@@ -123,7 +123,6 @@ F map(something, mapper:Fun)
 		something.each(collect + mapper)
 
 
-doc EXPERIMENTAL! Do not use!
 doc Transform mapper to handle only items matching predicate. Non-matching items will be returned as is.
 doc %EX - ["abc", 1, "def", 2].map(only(Int, X*2))  # ["abc", 2, "def", 4]
 F only(predicate, mapper:Fun) {
@@ -288,6 +287,44 @@ F reduce(something, start, f:Fun) {
 }
 
 TEST [1,2,3].reduce(0, (+)) == 6
+
+doc Map when there is one more than one element. If there is exactly one element, it's left as is
+doc mapper - Will be called with zero based index and successive elements from arr
+doc %RET - Arr
+F map_base_idx(base, n:Int, mapper:Fun) {
+	n == 1 returns [base]
+	n.map(mapper(base, X))
+}
+
+doc EXPERIMENTAL! Do not use!
+doc Map val only when val is true in boolean context. Otherwise return the original val.
+F map_true(val, mapper:Fun) {
+	if val {
+		mapper(val)
+	} else {
+		val
+	}
+}
+
+doc EXPERIMENTAL! Do not use!
+doc Map val only when val is false in boolean context. Otherwise return the original val.
+F map_false(val, mapper:Fun) {
+	if val {
+		val
+	} else {
+		mapper(val)
+	}
+}
+
+doc Call cb with val
+doc %RET - val
+doc %EX - h.mapv(only(Pfx, { "${A.val}*" })).map("Name=$X,Values=$Y").tap(F(x) echo("DEBUG: $x")).map_true(['--filters'] + X)
+F tap(val, cb:Fun) {
+	cb(val)
+	val
+}
+
+TEST ok=false; (7.tap({ if A == 7 ok = true}) == 7) and ok
 
 doc Filter operator.
 doc Same as calling x.filter(predicate)
@@ -866,14 +903,6 @@ TEST [0,1,2].none(X>2)
 TEST [0,1,2].none(X<2).not()
 
 TEST [1,2,3].map(X*4) == [4,8,12]
-
-doc Map when there is one more than one element. If there is exactly one element, it's left as is
-doc mapper - Will be called with zero based index and successive elements from arr
-doc %RET - Arr
-F map_base_idx(base, n:Int, mapper:Fun) {
-	n == 1 returns [base]
-	n.map(mapper(base, X))
-}
 
 doc Iterates over the elements of arr, passing each in turn to cb along with args: cb(ITEM)
 doc cb - Function to be called with values from arr
