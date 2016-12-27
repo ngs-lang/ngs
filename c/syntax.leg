@@ -578,6 +578,26 @@ chain-expression = b:basic-expression (
 				ret = call_node_partial_application(ret, location);
 			b = ret;
 		}
+		|
+		"::(" space? e:expression space? ")" {
+			MAKE_NODE(ret, NS_NODE);
+				ret->number = 903;
+				ret->first_child = b;
+				MAKE_NODE(es, EXPRESSIONS_NODE);
+					append_ast_node_child(es, e);
+				ret->first_child->next_sibling = es;
+				ret = call_node_partial_application(ret, location);
+			b = ret;
+		}
+		|
+		"::" i:identifier {
+			MAKE_NODE(ret, NS_NODE);
+				ret->number = 903;
+				ret->first_child = b;
+				ret->first_child->next_sibling = i;
+				ret = call_node_partial_application(ret, location);
+			b = ret;
+		}
 	)*
 	{
 		$$ = b;
@@ -661,7 +681,7 @@ function-definition =
 
 function-definition-name =
 	space+ i:identifier { $$ = i; }
-	| space? "'" <([-|=!@?<>~+*/%()$a-zA-Z0-9.` ]|"["|"]")+> "'" {
+	| space? "'" <([-|=!@?<>~+*/%()$a-zA-Z0-9.`: ]|"["|"]")+> "'" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;

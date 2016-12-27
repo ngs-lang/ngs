@@ -33,6 +33,7 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 	"hash",
 	"index",
 	"attr",
+	"ns",
 	"return",
 	"and",
 	"or",

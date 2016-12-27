@@ -51,6 +51,7 @@ typedef enum {
 	HASH_LIT_NODE,
 	INDEX_NODE,
 	ATTR_NODE,
+	NS_NODE,
 	RETURN_NODE,
 	AND_NODE,
 	OR_NODE,

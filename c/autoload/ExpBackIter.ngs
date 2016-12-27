@@ -12,10 +12,10 @@
 	F next(eb:ExpBackIter) {
 		eb.cycle += 1
 		if eb.ceiling is not Null {
-			eb.cycle > eb.ceiling returns (eb.fuzz)(eb.current*eb.factor)
+			eb.cycle > eb.ceiling returns eb::fuzz(eb.current*eb.factor)
 		}
 		eb.current *= eb.base
-		(eb.fuzz)(eb.current*eb.factor)
+		eb::fuzz(eb.current*eb.factor)
 	}
 
 	F Bool(eb:ExpBackIter) true

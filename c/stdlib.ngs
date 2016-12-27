@@ -15,7 +15,7 @@ doc %EX - F init(t:MyType, a, b) init(args())
 F init(h:Hash) {
 	args = Arr(h)
 	dst = args.shift()[1]
-	args.each(F(field_name_value) (.=)(dst, field_name_value[0], field_name_value[1]))
+	args.each(F(field_name_value) dst.(field_name_value[0]) = field_name_value[1])
 	dst
 }
 
@@ -43,6 +43,14 @@ F assert(condition, *args) {
 	guard condition is not Bool
 	super(Bool(condition), *args)
 }
+
+# === Namespaces =================================
+
+F '::'(nti:NormalTypeInstance, k) nti.(k)
+F '::'(h:Hash, k) h[k]
+
+F '::='(nti:NormalTypeInstance, k, v) nti.(k) = v
+F '::='(h:Hash, k, v) h[k] = v
 
 # === Return =====================================
 
@@ -96,7 +104,7 @@ doc %EX - 	e.given = s
 doc %EX - 	throw e
 doc %EX - }
 F set(obj, attr:Str, val) {
-	(.=)(obj, attr, val)
+	obj.(attr) = val
 	obj
 }
 
@@ -419,7 +427,7 @@ doc args - Arguments to pass to handlers
 doc %RET - Output of the combiner function applied to all handlers' results
 F call(hook:Hook, *args) {
 	result = hook.handlers.mapv(F(handler) handler(*args))
-	(hook.combiner)(result)
+	hook::combiner(result)
 }
 
 # === Real =======================================
