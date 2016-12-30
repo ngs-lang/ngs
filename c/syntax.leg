@@ -789,7 +789,7 @@ namespace = "ns" c:curly-code-block {
 
 			// exports = {}
 			MAKE_NODE(set_exports, ASSIGNMENT_NODE);
-				MAKE_IDENTIFIER_NODE(exports_identifier, "exports")
+				MAKE_IDENTIFIER_NODE(exports_identifier, "_exports")
 				append_ast_node_child(set_exports, exports_identifier);
 				MAKE_NODE(empty_hash, HASH_LIT_NODE);
 				append_ast_node_child(set_exports, empty_hash);
@@ -799,7 +799,7 @@ namespace = "ns" c:curly-code-block {
 			append_ast_node_child(code, c);
 
 			// exports
-			MAKE_IDENTIFIER_NODE(exports_identifier2, "exports")
+			MAKE_IDENTIFIER_NODE(exports_identifier2, "_exports")
 			append_ast_node_child(code, exports_identifier2);
 
 		// F() { ... } ()
@@ -826,7 +826,7 @@ namespace = "ns" c:curly-code-block {
 			if(identifier_to_export && is_exportable(identifier_to_export)) {
 				MAKE_NODE(e, ASSIGNMENT_NODE);
 					MAKE_NODE(lhs, INDEX_NODE);
-						MAKE_IDENTIFIER_NODE(exports_identifier, "exports");
+						MAKE_IDENTIFIER_NODE(exports_identifier, "_exports");
 						append_ast_node_child(lhs, exports_identifier);
 						MAKE_STRING_NODE(exports_key, ngs_strdup(identifier_to_export->name));
 						append_ast_node_child(lhs, exports_key);

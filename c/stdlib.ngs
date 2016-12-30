@@ -3811,3 +3811,10 @@ TEST %[f1 f3].map({"f1": 1, "f2": 2, "f3": 3}.(X)) == [1, 3]
 TEST [[1, 10], [2,20]].map(X[0]) == [1, 2]
 TEST [1,2].map([10,20,30][X]) == [20, 30]
 TEST [[1],[2,3]].filter(X.has(1)) == [[1]]
+
+# === Namespaces tests ===========================
+TEST ns1 = ns { a = 1; _b = 2; a = 100 }; ns1 == {"a": 100}
+TEST ns1 = ns { F f(x) x+1; }; ns1::f(1) == 2
+TEST ns1 = ns { yes_one = 1; no_one = 11; no_two = 12; _exports.=reject(F(k, v) k ~ /^no/) }; ns1 == {"yes_one": 1}
+TEST ns1 = ns { return 10 }; ns1 == 10
+TEST ns1 = ns { _exports = 11 }; ns1 == 11
