@@ -91,6 +91,10 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* /think of eliminating \\ in regexp literals/
 
+	* history of operations in context menu
+
+	* Fix { a = 1 }() - it returns the closure for some reason, does not call it
+
 [roadmap]
 
 	* Phase 1 - the language (will be v0.1.0) [in progress]

@@ -1238,41 +1238,39 @@ TEST [10,11,12].limit(2) == [10,11]
 
 # --- Misc ---
 
-{
-	F() {
-		global min, max
-		F most(arr:Arr, f:Fun) {
-			guard arr
-			ret = arr[0]
-			arr.each(F(elt) if f(elt, ret) { ret = elt })
-			ret
-		}
+ns {
+	global min, max
+	F most(arr:Arr, f:Fun) {
+		guard arr
+		ret = arr[0]
+		arr.each(F(elt) if f(elt, ret) { ret = elt })
+		ret
+	}
 
-		F most_by_cb(arr:Arr, f:Fun, cb:Fun) {
-			guard arr
-			ret = arr[0]
-			ret_cb = cb(ret)
-			arr.each(F(elt) {
-				elt_cb = cb(elt)
-				if f(elt_cb, ret_cb) {
-					ret = elt
-					ret_cb = elt_cb
-				}
-			})
-			ret_cb
-		}
+	F most_by_cb(arr:Arr, f:Fun, cb:Fun) {
+		guard arr
+		ret = arr[0]
+		ret_cb = cb(ret)
+		arr.each(F(elt) {
+			elt_cb = cb(elt)
+			if f(elt_cb, ret_cb) {
+				ret = elt
+				ret_cb = elt_cb
+			}
+		})
+		ret_cb
+	}
 
-		doc TODO
-		F min(arr:Arr) most(arr, (<))
-		doc TODO
-		F max(arr:Arr) most(arr, (>))
+	doc TODO
+	F min(arr:Arr) most(arr, (<))
+	doc TODO
+	F max(arr:Arr) most(arr, (>))
 
-		# EXPERIMENTAL!
-		doc TODO
-		F min(arr:Arr, cb:Fun) most_by_cb(arr, (<), cb)
-		doc TODO
-		F max(arr:Arr, cb:Fun) most_by_cb(arr, (>), cb)
-	}()
+	# EXPERIMENTAL!
+	doc TODO
+	F min(arr:Arr, cb:Fun) most_by_cb(arr, (<), cb)
+	doc TODO
+	F max(arr:Arr, cb:Fun) most_by_cb(arr, (>), cb)
 }
 
 doc Repeat all elements in arr n times
@@ -3531,6 +3529,12 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 
 			l = resolve_instruction_pointer(frame.ip)
 			closure = " [in ${frame.closure.attrs().name}]" tor ''
+			try {
+				doc = frame.closure.attrs().doc
+				if doc is Str {
+					closure = "$closure (${doc.limit(50, '...')})"
+				}
+			}
 			err("Frame $idx: ${l.file}:${l.first_line}:${l.first_column} - ${l.last_line}:${l.last_column}$closure")
 		})
 	}

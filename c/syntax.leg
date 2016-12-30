@@ -212,6 +212,12 @@ ast_node *copy_ast_tree(ast_node *src) {
 	return dst;
 }
 
+int is_exportable(ast_node *node) {
+	assert(node->type == IDENTIFIER_NODE);
+	if(!node->name) return 0;
+	return node->name[0] != '_';
+}
+
 %}
 
 start = 
@@ -263,6 +269,8 @@ command =
 	function-definition
 	|
 	function-call
+	|
+	namespace
 	|
 	if
 	|
@@ -625,6 +633,7 @@ basic-expression =
 	| return
 	| break
 	| continue
+	| namespace
 	| collector
 	| guard
 	| try-catch
@@ -763,6 +772,73 @@ function-definition-default-value =
 	|
 	{
 		$$ = NULL;
+	}
+
+namespace = "ns" c:curly-code-block {
+
+		// ns { c }
+		// (transforms to)
+		// F() {
+		//   exports = {}
+		//   c
+		//   exports
+		// }()
+
+
+		MAKE_NODE(code, EXPRESSIONS_NODE);
+
+			// exports = {}
+			MAKE_NODE(set_exports, ASSIGNMENT_NODE);
+				MAKE_IDENTIFIER_NODE(exports_identifier, "exports")
+				append_ast_node_child(set_exports, exports_identifier);
+				MAKE_NODE(empty_hash, HASH_LIT_NODE);
+				append_ast_node_child(set_exports, empty_hash);
+			append_ast_node_child(code, set_exports);
+
+			// c, the original body
+			append_ast_node_child(code, c);
+
+			// exports
+			MAKE_IDENTIFIER_NODE(exports_identifier2, "exports")
+			append_ast_node_child(code, exports_identifier2);
+
+		// F() { ... } ()
+		MAKE_NODE(ret, CALL_NODE);
+			// TODO: better location. Currently points only to "ns" string.
+			ast_node *callable = wrap_in_func(code, location, "Namespace syntax", 0, 0);
+			append_ast_node_child(ret, callable);
+			MAKE_NODE(args, ARGS_NODE);
+			append_ast_node_child(ret, args);
+
+		// TODO: make "exports['var'] = var" conditional - only if "var" is local
+		ast_node *node, *identifier_to_export;
+		for(node = c->first_child; node ; node = node->next_sibling) {
+			identifier_to_export = NULL;
+			if(node->type == ASSIGNMENT_NODE && node->first_child->type == IDENTIFIER_NODE) {
+				identifier_to_export = node->first_child;
+			}
+			if(node->type == FUNC_NODE) {
+				if(node->first_child->next_sibling->next_sibling->next_sibling) {
+					// Function has a name
+					identifier_to_export = node->first_child->next_sibling->next_sibling->next_sibling;
+				}
+			}
+			if(identifier_to_export && is_exportable(identifier_to_export)) {
+				MAKE_NODE(e, ASSIGNMENT_NODE);
+					MAKE_NODE(lhs, INDEX_NODE);
+						MAKE_IDENTIFIER_NODE(exports_identifier, "exports");
+						append_ast_node_child(lhs, exports_identifier);
+						MAKE_STRING_NODE(exports_key, ngs_strdup(identifier_to_export->name));
+						append_ast_node_child(lhs, exports_key);
+					append_ast_node_child(e, lhs);
+					append_ast_node_child(e, copy_ast_tree(identifier_to_export));
+				e->next_sibling = node->next_sibling;
+				node->next_sibling = e;
+				node = e; // Skip over newly created node
+			}
+		}
+
+		$$ = ret;
 	}
 
 identifier-as-text = <[%_a-zA-Z]+[_a-zA-Z0-9]*> {
@@ -1349,7 +1425,7 @@ collector = "collector" init:collector-init space c:code-block {
 			MAKE_IDENTIFIER_NODE(collector_identifier, "collector");
 			MAKE_NODE(args, ARGS_NODE);
 				MAKE_REQ_ARG_NODE(a1, init);
-				MAKE_REQ_ARG_NODE(a2, wrap_in_func(c, location, "Wrapping function for collector expression", 0, 1, "collect", "Any"));
+				MAKE_REQ_ARG_NODE(a2, wrap_in_func(c, location, "Collector syntax body", 0, 1, "collect", "Any"));
 				a1->next_sibling = a2;
 				args->first_child = a1;
 			ret->first_child = collector_identifier;
@@ -1374,7 +1450,7 @@ guard = "guard" space c:code-block {
 try-catch = "try" space acc:try-catch-node c:code-block { append_ast_node_child(acc, $$); }
 	(space? "catch" space? "(" space? params:function-definition-parameters space? ")" space? body:code-block {
 		MAKE_NODE(ret, FUNC_NODE);
-		MAKE_STRING_NODE(doc, "Generated catch() function");
+		MAKE_STRING_NODE(doc, "Try ... catch syntax, catch clause");
 		ret->first_child = params;
 		params->next_sibling = body;
 		append_ast_node_child(acc, ret);
@@ -1384,9 +1460,12 @@ try-catch = "try" space acc:try-catch-node c:code-block { append_ast_node_child(
 		char name_buf[256];
 		int n;
 		ast_node *p;
+		// TODO: maybe something better than loop?
 		for(p=acc->first_child, n=0; p; p=p->next_sibling) {
 			n++;
 		}
+		// TODO: Check whether naming the wrapping function here causes it to be registered with it's name.
+		//       This is undesirable (and might lead to bugs?)
 		snprintf(name_buf, sizeof(name_buf)-1, "<catch-clause-%d>", n-1);
 		MAKE_IDENTIFIER_NODE(catch_identifier, name_buf);
 		body->next_sibling = doc;
