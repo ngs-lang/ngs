@@ -37,7 +37,7 @@ syn keyword ngsType Match MatchY MatchN MatchFail SubSeq Pfx MaybePfx MustPfx Sf
 syn keyword ngsType Props
 syn keyword ngsTodo TODO FIXME XXX NOTE
 syn keyword ngsConstant true false null
-syn keyword ngsPredefinedVariable ARGV ARGV0 ENV ORIG_ARGV
+syn keyword ngsPredefinedVariable ARGV ARGV0 ENV ORIG_ARGV _exports
 " Special methods
 syn keyword ngsPredefinedVariable init call args
 syn keyword ngsKeyword super

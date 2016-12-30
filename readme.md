@@ -385,6 +385,25 @@ None of the shells below have built-in interaction with a cloud. In NGS the work
 	* Extending PowerShell is either inconvenient because you have to write in PowerShell which is inconvenient by itself or you have to know C#.
 	* PowerShell got some things right compared to other shells: structured data and consistent `$` in front of variables come to mind.
 	* Despite some similarities, writing a script in PowerShell and NGS is a completely different experience. You should try both and pick NGS without any doubt :)
+* [Shill - Scripting with Least Privilege](http://shill.seas.harvard.edu/) . Security focused (capability-based), runs on FreeBSD only (looks like Shill kernel module is required), examples mostly show security features, written in Racket. Not much development since initial commit at 2014. Real world usability is unclear. At this point I assume NGS as a programming language is much more usable.
+* [the shok command shell](http://shok.io/)
+	* Similarity: opinion regarding current shells and status. I agree with most of the [motivation page](http://shok.io/info/motivation.html):
+		* We can do much better.
+		* Current attempts at solutions do not solve the problem.
+		* New shell is needed
+		* New programming languag
+	* Similarity: two-modes syntax. Apparently @nfomon also haven't figured out a way to have one syntax.
+	* Difference: Shok shell is in C++. NGS' shell is not implemented yet but it will be in NGS.
+	* Difference: Shok has [modular design](http://shok.io/info/implementation.html) .
+	* Status: as of 2016-12-30 the latest commit was over a year ago.
+* [Ammonite](http://www.lihaoyi.com/Ammonite/#Ammonite-Shell)
+	* Similarity: opinion that shells can be much better - "Replacing Bash for the 21st Century", "You think that technology has improved in the last 38 years and a modern systems shell should be better than the shells of our forefathers"
+	* Similarity: opinion that shell needs a full-featured programming language.
+	* Difference: Scala as the shell language. NGS uses new, domain-specific language. I don't think any amount of tinkering with existing languages (maybe except a lot of it with Lisp) can make these languages as usable for shell as new language that was specifically designed to be a shell language.
+	* Difference: Ammonite is JVM based. I think it would be really hard to convince anyone that manages systems to have JVM installed on the managed systems just to run a shell. NGS is written in C and compiles to native binary.
+	* Difference: Ammonite's REPL looks very good. NGS does not have a REPL yet.
+	* If you are OK with Scala, Ammonite is worth trying. I think Scala is too complicated, especially as a shell language. Looking at [HTTP request](http://www.lihaoyi.com/Ammonite/#HTTPRequests): `val resp = Http("https://api.github.com/repos/scala/scala").asString` and `val parsed = upickle.json.read(resp.body).asInstanceOf[upickle.Js.Obj]`. In NGS that would be ```````` parsed=``curl -s "https://api.github.com/repos/scala/scala"`` ````````. On the other hand [Ammonite-Ops](http://www.lihaoyi.com/Ammonite/#Ammonite-Ops) and [Ammonite-Shell](http://www.lihaoyi.com/Ammonite/#Ammonite-Shell) aim to make common "operations" tasks convenient to handle.
+
 
 Discussion / requests / comments
 ================================
