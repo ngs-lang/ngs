@@ -2,98 +2,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 [inbox]
 
-	Unsorted and undecided things go here
-
-	* Delimited string type, such as PATH
-		+ ds = DelimStr(ENV.PATH, ':'); ds.each(echo); ds.push('mypath_element')
-	* digits() function?
-	* completion-safe marker in scripts + completion protocol
-	* Eachable type?
-	* Fix inspect() and maybe others to display special symbols in strings as \x.. or alike
-	* Consider Syntax for stripping last newline character in `cmd`
-	* Document catch/guard combination
-	* Suggested commands ("Command ... did not find any results. Try ..." - CLI menu)
-	* filterk / filterv
-	* Sub-typing built-in types
-		* Subclass Fun? For mapper for example to know which arguments to pass and what to construct
-	* method to push a value into Arr if it's not there already
-	* add profiling info to ngs-debug
-		+ memory allocations - where and how much
-		+ opcodes stats
-		+ method calls: scanned / not scanned (where in Arr the method was found)
-		+ something about call sites?
-	* intern strings automatically (see Python algorithm)
-		+ do profiling first
-	* Possible syntax of Arr[ElementsType]
-		F +(s:Str, a:Arr[Str]) { ... }
-		instead of
-		F +(s:Str, a:Arr) { guard a.all(is, Str); ... }
-		don't see any use now but for completeness: Hash[KeysType, ValuesType]
-	* ASN1 parser
-	* Function static variables
-		F parse(s:Str, ...)
-		?static? re = /myregex/
-		guard s ~ re
-		...
-	* dig with data_struct['a', 10, *, ...]
-		* Not sure about the star, maybe:
-			~All
-			X ~ All
-	* Dynamic file names for use cases such as logger
-		logger = DynFile('/var/log/...%h')
-		logger.echo('my log event')
-	* think about read/write vs read/echo methods naming
-	* f'file literals'
-	* arbitrary length integers
-	* Consider shortcut syntax for ENV.MYVAR
-		maybe %MYVAR ?
-	* Consider shortcut syntax for ARGV[n]
-		feels like less needed than ENV.MYVAR
-	* Make each(), filter() and friends be able to work on endless lists
-	* Some read()s do not parse() - fix or rethink
-	* Bool(subtypes of Path) - kind of object (File, Dir, etc) must match to what's on disk
-	* while/for should return a value?
-	* Consider having chunk() method as in Ruby
-	* Channels - Chan type & syntax
-		Initial syntax thoughts:
-
-		1..10 | map(X*2) | sum | echo
-
-		a = Chan()
-		b = Chan()
-		1..10 | group({A % 2 ==0 }, a, b)
-		a | { echo("Even number $A") }
-		b | sum | { echo("Sum of odd numbers: $A") }
-
-		F map(in:Chan, out:Chan, mapper:Fun) {
-			# while in(&item) ?
-			while in -> item {
-				# out(mapper(item)) ?
-				out <- mapper(item)
-			}
-		}
-	* Copy stderr to both stderr and to captured .stderr of the process
-	* Run exit_hook on CTRL+C (Throw exception)
-	* Replace Command#options with Hash (currently Arr)
-	* FIX F f(optional=[], **attrs) {...}; f(name=name)
-
-	* Fix - ngs: vm.c:2988: vm_run: Assertion `0=="Function does not have result value"' failed.
-		F parse(s:Str, hints:Hash) {
-			guard try hints['process'].command.argv[0] == 'find'
-			# argv = hints['process'].command.argv
-			# guard '-printf' not in argv
-			# zero_sep = '-print0' in argv
-			# if zero_sep then s.split('\0') else s.lines()
-		}
-
-	* pmap() - limit number of concurrent threads
-	* rethink exceptions in threads
-
-	* /think of eliminating \\ in regexp literals/
-
-	* history of operations in context menu
-
-	* Fix { a = 1 }() - it returns the closure for some reason, does not call it
+	Unsorted and undecided things go here. The important sections is [roadmap] and it's just below this section.
 
 [roadmap]
 
@@ -151,7 +60,47 @@ Note that this started as internal document so things here are unformed, not fin
 
 			+ Issue #15
 
-		* Milestone "correct programming" (will be v0.3.0)
+		* Milestone "modules"
+			* require() - add search path
+			* require() - allow relative to caller require
+				* compile() - get list of "local" variables?
+				* load() - pass these "local" variables?
+				* require() - pass new require() function that knows base path?
+				* require() - pass __FILENAME and maybe __DIRNAME?
+			* consider pre- and post- require() hooks
+
+		* Milestone "correct programming"
+
+			* /think of eliminating \\ in regexp literals/
+
+			* c_stat() / stat() - return timestamps too
+
+			* Replace Command#options with Hash (currently Arr)
+
+			* FIX F f(optional=[], **attrs) {...}; f(name=name)
+
+			* Fix - ngs: vm.c:2988: vm_run: Assertion `0=="Function does not have result value"' failed.
+				F parse(s:Str, hints:Hash) {
+					guard try hints['process'].command.argv[0] == 'find'
+					# argv = hints['process'].command.argv
+					# guard '-printf' not in argv
+					# zero_sep = '-print0' in argv
+					# if zero_sep then s.split('\0') else s.lines()
+				}
+
+			* Fix { a = 1 }() - it returns the closure for some reason, does not call it
+
+			* Run exit_hook on CTRL+C (Throw exception)
+
+			* Copy stderr to both stderr and to captured .stderr of the process
+
+			* Bool(subtypes of Path) - kind of object (File, Dir, etc) must match to what's on disk
+
+			* think about read/write vs read/echo methods naming
+
+			* Some read()s do not parse() - fix or rethink
+
+			* Eachable type?
 
 			* Move everything in "c" directory one level up
 
@@ -216,13 +165,15 @@ Note that this started as internal document so things here are unformed, not fin
 				* exceptions instead of asserts
 				* disallow duplicate name for an argument
 
-		* Milestone "threads" (will be v0.4.0)
+			* Fix inspect() and maybe others to display special symbols in strings as \x.. or alike
 
-			* Thread - Make pthread_attr_t accessible - get/set attributes
+		* Milestone "threads"
 
-			* Thread local variables
-
+			* pmap() - limit number of concurrent threads
+			* rethink exceptions in threads
 			* Make ENV and current directory thread-local but allow access to the global ones
+			* Thread - Make pthread_attr_t accessible - get/set attributes
+			* Thread local variables
 
 
 	* Phase 2 - the shell [not started]
@@ -239,6 +190,7 @@ Note that this started as internal document so things here are unformed, not fin
 		* Milestone "semantic output"
 
 			* Allow navigation on the screen, choosing operations from a menu for the objects
+			* History of operations in context menu
 
 	* Phase 3 - running code remotely
 
@@ -257,11 +209,51 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* tracing / debug
 
+		* Add profiling info to ngs-debug
+			+ memory allocations - where and how much
+			+ opcodes stats
+			+ method calls: scanned / not scanned (where in Arr the method was found)
+			+ something about call sites?
+
 	* Phase 5 - nice to have
+
+		* Sub-typing built-in types
+			* Subclass Fun? For mapper for example to know which arguments to pass and what to construct
+		* dig with data_struct['a', 10, *, ...]
+			* Not sure about the star, maybe:
+				~All
+				X ~ All
+		* Method to push a value into Arr if it's not there already
+		* Function static variables
+			F parse(s:Str, ...)
+			?static? re = /myregex/
+			guard s ~ re
+			...
+		* Possible syntax of Arr[ElementsType]
+			F +(s:Str, a:Arr[Str]) { ... }
+			instead of
+			F +(s:Str, a:Arr) { guard a.all(is, Str); ... }
+			don't see any use now but for completeness: Hash[KeysType, ValuesType]
+		* Completion-safe marker in scripts + completion protocol
+		* Consider Syntax for stripping last newline character in `cmd`
+		* ASN1 parser
+		* while/for should return a value?
+		* Make each(), filter() and friends be able to work on endless lists
+		* Consider having chunk() method as in Ruby
+		* Delimited string type, such as PATH
+			+ ds = DelimStr(ENV.PATH, ':'); ds.each(echo); ds.push('mypath_element')
+
+		* f'file literals'
 
 		* Consider IP and subnet literals of the form:
 			1.2.3.4
 			1.2.3.4/8
+
+		* Consider shortcut syntax for ENV.MYVAR
+			maybe %MYVAR ?
+
+		* Consider shortcut syntax for ARGV[n]
+			feels like less needed than ENV.MYVAR
 
 		* Go over "TODO"s in all *.ngs files
 
@@ -279,6 +271,7 @@ Note that this started as internal document so things here are unformed, not fin
 		* modules / namespaces
 
 		* implement parse() wherever possible (example: IPAddr, IPNet)
+			+ allow auto-load missing implementations by extension and mime type
 
 		* push/pop/shift/unshift for Hash
 			To be consistent with Arr, which has all of these.
@@ -335,6 +328,38 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* K M G suffixes for numbers
 
+		* arbitrary length integers
+
+		* Dynamic file names for use cases such as logger
+			logger = DynFile('/var/log/...%h')
+			logger.echo('my log event')
+
+		* (UI) Suggested commands ("Command ... did not find any results. Try ..." - CLI menu)
+
+		* digits() function?
+
+		* Channels - Chan type & syntax
+			Initial syntax thoughts:
+
+			1..10 | map(X*2) | sum | echo
+
+			a = Chan()
+			b = Chan()
+			1..10 | group({A % 2 ==0 }, a, b)
+			a | { echo("Even number $A") }
+			b | sum | { echo("Sum of odd numbers: $A") }
+
+			F map(in:Chan, out:Chan, mapper:Fun) {
+				# while in(&item) ?
+				while in -> item {
+					# out(mapper(item)) ?
+					out <- mapper(item)
+				}
+			}
+
+		* Intern strings automatically (see Python algorithm)
+			+ do profiling first
+
 		* Optimize calling speed
 			* Optimize obj_is_of_type()
 			* Optimize vm_call matching algorithm
@@ -358,7 +383,6 @@ Note that this started as internal document so things here are unformed, not fin
 	* strings / mb_strings
 
 [types]
-	* Bin (or Bytes, later, after Str is multibyte)
 	* Cloud / Compute / etc ?
 	* Host
 		+ ip?, public_ip, private_ip, other ips?
@@ -369,10 +393,6 @@ Note that this started as internal document so things here are unformed, not fin
 		+ cloud type / endpoint / ... ?
 	* HostsGroup
 		+ refresh() or get()?
-	* FSObject
-		* Path
-			* File
-			* Dir
 	* Widget
 		+ Command
 		+ Status
@@ -381,8 +401,4 @@ Note that this started as internal document so things here are unformed, not fin
 	* HistoryEntry
 
 [functions]
-	* parse()
-		+ allow auto-load missing implementations by extension and mime type
-	* write()
-	* stat(), mtime(), ...
-	* file.relative_to(root)
+	* Path#relative_to(root)
