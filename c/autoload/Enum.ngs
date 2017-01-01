@@ -1,11 +1,21 @@
-{ type Enum(HashLike) }
+{
+	doc Mapping of names to numbers
+	type Enum(HashLike)
+}
 
+doc Enum constructor.
 F init(e:Enum) {
 	super(e, 'names_to_numbers')
 	e.names_to_numbers = {}
 	e.numbers_to_names = {}
 }
 
+doc Add new name to mapping. Names are mapped to consecutive zero-based integers.
+doc %EX - e = Enum()
+doc %EX - e.push("x")
+doc %EX - e["x"]  # 0
+doc %EX - e.push("y")
+doc %EX - e["y"]  # 1
 F push(e:Enum, name:Str) {
 	name in e.names_to_numbers returns null
 	idx = e.names_to_numbers.len()
@@ -13,6 +23,14 @@ F push(e:Enum, name:Str) {
 	e.numbers_to_names[idx] = name
 }
 
+doc Make new Enum with maximum of l (first) names from given Enum e.
+doc e - Source enum
+doc %RET - Enum
+doc %EX - e = Enum()
+doc %EX - e.push("x")
+doc %EX - e.push("y")
+doc %EX - e = e.limit(1)
+doc %EX - e is Enum and e.len() == 1  # true
 F limit(e:Enum, l:Int) {
 	ret = Enum()
 	ret.names_to_numbers = e.names_to_numbers.limit(l)
@@ -20,11 +38,14 @@ F limit(e:Enum, l:Int) {
 	ret
 }
 
+doc Get number for name
 F '[]'(e:Enum, name:Str) e.names_to_numbers[name]
+
+doc Get name of number
 F '[]'(e:Enum, number:Int) e.numbers_to_names[number]
 
+doc String representation of Enum
 F Str(e:Enum) "<Enum ${e.names_to_numbers}>"
-F Bool(e:Enum) e.names_to_numbers.len().Bool()
 
 TEST e=Enum(); e.push("x"); e.push("x"); e.len() == 1 and "x" in e
 TEST e=Enum(); e.push("x"); e.push("y"); e = e.limit(1); e is Enum and e.len() == 1

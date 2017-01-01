@@ -363,6 +363,7 @@ F '[]'(al:ArrLike, idx:Int)     al.(al.arr_like_attr)[idx]
 F '[]='(al:ArrLike, idx:Int, x) al.(al.arr_like_attr)[idx] = x
 
 F each(al:ArrLike, cb:Fun) al.(al.arr_like_attr).each(cb)
+F Bool(al:ArrLike) al.(al.arr_like_attr).Bool()
 
 F init(al:ArrLike, attr:Str='items') {
 	al.arr_like_attr = attr
@@ -382,6 +383,7 @@ F '[]='(hl:HashLike, k, v) hl.(hl.hash_like_attr)[k] = v
 F each(hl:HashLike, cb:Fun) hl.(hl.hash_like_attr).each(cb)
 F keys(hl:HashLike) hl.(hl.hash_like_attr).keys()
 F values(hl:HashLike) hl.(hl.hash_like_attr).values()
+F Bool(hl:HashLike) hl.(hl.hash_like_attr).Bool()
 
 # TODO: mapk, mapv and friends
 # TOOD: Hash() - copy or hash attribute?

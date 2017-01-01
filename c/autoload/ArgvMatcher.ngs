@@ -8,6 +8,12 @@
 }
 
 # Decorator. TODO: Consider generice attributes-setting decorator
+doc Sets ARGV matching option.
+doc option - Option name. The only supported option at this time is "positionals".
+doc value - Option value.
+doc %EX - # Any command line argument that is not "allreg" goes to "filters" parameters.
+doc %EX - ArgvMatcher('positionals', 'filters') do
+doc %EX - F main(filters:Arr, allreg:Bool=false) ...
 F ArgvMatcher(option:Str, value, f:Closure) {
 	h = f.attrs()
 	assert(h is Hash)
@@ -21,6 +27,12 @@ F ArgvMatcher(option:Str, value, f:Closure) {
 
 # TODO: *args, **kwargs
 # TODO: replace '-' in argv parameters names with '_' when matching
+doc Tries to match command line arguments with closure parameters.
+doc argv - Command line arguments, typically ARGV
+doc c - Closure to match with
+doc %RET - Match (MatchY on success, MatchN on failure). If MatchY is returned it has "matches" property with values is suitable order to call c. If MatchN is returned, it has "message" property explaining why there was no match. Currently it's not printed anywhere.
+doc %EX - ArgvMatcher; (["--b", "B", "A", "C"] ~ F(a,b,c) 7).matches  # %[A B C]
+doc %EX - (["A", "C", "D", "--b", "B"] ~ ArgvMatcher("positionals", "a") do F(a,b) 7).matches  # %[%[A C D] B]
 F ~(argv:Arr, c:Closure) {
 
 	LONG_SW_PFX = Pfx('--')

@@ -71,6 +71,14 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "correct programming"
 
+			* Standardize and explain naming convention: function/method, attribute/property.
+
+			* Check ArgvMatcher - why ec2din.ngs does not have F main(..., *filters) ?
+
+			* Namespace: "ns { F f() ... }" when f is global, namespace should only list f implementations defined in the namespace
+
+			* Check map* and filter* functions naming consistency
+
 			* /think of eliminating \\ in regexp literals/
 
 			* c_stat() / stat() - return timestamps too
@@ -99,8 +107,6 @@ Note that this started as internal document so things here are unformed, not fin
 			* think about read/write vs read/echo methods naming
 
 			* Some read()s do not parse() - fix or rethink
-
-			* Eachable type?
 
 			* Move everything in "c" directory one level up
 
@@ -366,6 +372,7 @@ Note that this started as internal document so things here are unformed, not fin
 			* Optimize calling of unrelated methods
 				+ such as F f(t:T1) and F f(t:T2) when T1 and T2 are unrelated types
 
+		* Optimize so that namespace items access ("namespace::item") will not have Hash lookups
 
 [todo by priority]
 

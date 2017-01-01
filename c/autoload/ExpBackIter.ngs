@@ -1,7 +1,16 @@
 {
 	# Based on https://en.wikipedia.org/wiki/Exponential_backoff
+	doc Exponential backoff iterator
+	doc %EX - ExpBackIter(fuzz=identity).drop(5).take(3)  # [64, 128, 256]
+	doc %EX - ExpBackIter(fuzz=identity, ceiling=3).drop(5).take(2)  # [8, 8]
+	doc %EX - ExpBackIter(fuzz=identity, ceiling=3).take(4)  # [2, 4, 8, 8]
 	type ExpBackIter(Iter)
 	
+	doc ExpBackIter constructor.
+	doc base - Exponentiation base, defaults to 2.
+	doc ceiling - Int or null, defaults to null. Number of iterations that the value can be increased.
+	doc factor - Scaling factor applied to.
+	doc fuzz - Function to apply to current value scaled by factor, defaults to "rand" function.
 	F init(eb:ExpBackIter, base=2, ceiling=null, factor=1, fuzz=rand) {
 		guard ceiling is Int or ceiling is Null
 		init(args())
@@ -9,17 +18,20 @@
 		eb.cycle = 0
 	}
 
+	doc Get next ExpBackIter value
+	doc %RET - Whatever fuzz functions
 	F next(eb:ExpBackIter) {
 		eb.cycle += 1
-		if eb.ceiling is not Null {
-			eb.cycle > eb.ceiling returns eb::fuzz(eb.current*eb.factor)
+		if eb.ceiling is Null or eb.cycle <= eb.ceiling {
+			eb.current *= eb.base
 		}
-		eb.current *= eb.base
 		eb::fuzz(eb.current*eb.factor)
 	}
 
+	doc Check whether ExpBackIter has more values
+	doc %RET - true
 	F Bool(eb:ExpBackIter) true
-
 }
 TEST ExpBackIter(fuzz=identity).drop(5).take(3) == [64, 128, 256]
 TEST ExpBackIter(fuzz=identity, ceiling=3).drop(5).take(2) == [8, 8]
+TEST ExpBackIter(fuzz=identity, ceiling=3).take(4) == [2, 4, 8, 8]
