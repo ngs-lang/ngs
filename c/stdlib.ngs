@@ -3820,3 +3820,4 @@ TEST ns1 = ns { F f(x) x+1; }; ns1::f(1) == 2
 TEST ns1 = ns { yes_one = 1; no_one = 11; no_two = 12; _exports.=reject(F(k, v) k ~ /^no/) }; ns1 == {"yes_one": 1}
 TEST ns1 = ns { return 10 }; ns1 == 10
 TEST ns1 = ns { _exports = 11 }; ns1 == 11
+TEST global a=110; ns1 = ns(outer_a=a) { a=outer_a+1 }; ns1::a == a+1

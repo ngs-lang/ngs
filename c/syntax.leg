@@ -779,7 +779,7 @@ function-definition-default-value =
 		$$ = NULL;
 	}
 
-namespace = "ns" c:curly-code-block {
+namespace = "ns" opt_params:namespace-optional-parameters c:curly-code-block {
 
 		// ns { c }
 		// (transforms to)
@@ -811,6 +811,11 @@ namespace = "ns" c:curly-code-block {
 		MAKE_NODE(ret, CALL_NODE);
 			// TODO: better location. Currently points only to "ns" string.
 			ast_node *callable = wrap_in_func(code, 0, location, "Namespace syntax", 0, 0);
+			if(opt_params->type == PARAMS_NODE) {
+				opt_params->next_sibling = callable->first_child->next_sibling;
+				callable->first_child = opt_params;
+			}
+
 			append_ast_node_child(ret, callable);
 			MAKE_NODE(args, ARGS_NODE);
 			append_ast_node_child(ret, args);
@@ -845,6 +850,11 @@ namespace = "ns" c:curly-code-block {
 
 		$$ = ret;
 	}
+
+namespace-optional-parameters =
+	space? "(" space? params:function-definition-parameters space? ")" { $$ = params; }
+	|
+	{ MAKE_NODE(ret, NULL_NODE); $$ = ret; }
 
 identifier-as-text = <[%_a-zA-Z]+[_a-zA-Z0-9]*> {
 		MAKE_STRING_NODE(s, yytext);
