@@ -641,6 +641,7 @@ basic-expression =
 	| type
 	| subshell
 	| super
+	| PRINT_AST
 	| identifier
 	| array-literal
 	| imm-array-literal
@@ -1607,6 +1608,12 @@ redir-fd = <[0-9]+> {
 
 redir-marker =
 	<(">>" | ">" | "<<" | "<")> { MAKE_STRING_NODE(ret, yytext); $$ = ret; }
+
+PRINT_AST = "PRINT_AST" space e:expression {
+	printf("PRINTING AST\n");
+	print_ast(e, 0);
+	$$ = e;
+}
 
 %%
 #undef ALLOC_NODE
