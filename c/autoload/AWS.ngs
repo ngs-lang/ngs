@@ -1,12 +1,15 @@
-{
+ns(GlobalRes=Res, GlobalResDef=ResDef) {
+
+	# Methods with added implementations
+	global Str, init, find, validate, create, update, users_ids, run, id, ids, (==)
 
 	# --------------------------------------------------
 	# Constants
 	# --------------------------------------------------
 
 	# From https://wiki.debian.org/Cloud/AmazonEC2Image/Jessie
-	AWS_AMI_OWNER_DEBIAN = '379101102735'
-	AWS_AMI_OWNER_AMAZON = '801119661308'
+	AMI_OWNER_DEBIAN = '379101102735'
+	AMI_OWNER_AMAZON = '801119661308'
 
 	# TODO: separate validation just on anchor so it could be used for find()
 	#       currently validate() can only be used for converge() because it
@@ -16,27 +19,33 @@
 	# Misc utilities
 	# --------------------------------------------------
 
-	F stdlib_aws_tags(h:Hash) h / "Key=$X,Value=$Y"
+	F cli_tags(h:Hash) h / "Key=$X,Value=$Y"
 
 	doc Convert Hash with AWS filters to command line arguments
-	F stdlib_aws_filters(h:Hash) h.mapv(only(Pfx, { "${A.val}*" })).map("Name=$X,Values=$Y").map_true(['--filters'] + X)
+	F cli_filters(h:Hash) h.mapv(only(Pfx, { "${A.val}*" })).map("Name=$X,Values=$Y").map_true(['--filters'] + X)
 
+	# New style
+	TEST AWS::cli_filters({}) == []
+	TEST AWS::cli_filters({"x": "y"}) == ['--filters', 'Name=x,Values=y']
+	TEST AWS::cli_filters({"x": Pfx("aa")}) == ['--filters', 'Name=x,Values=aa*']
+
+	# Old style, to be phased out
 	TEST AWS; stdlib_aws_filters({}) == []
 	TEST AWS; stdlib_aws_filters({"x": "y"}) == ['--filters', 'Name=x,Values=y']
 	TEST AWS; stdlib_aws_filters({"x": Pfx("aa")}) == ['--filters', 'Name=x,Values=aa*']
 
-	aws_cached_regions = null
+	_aws_cached_regions = null
 
-	F aws_regions() aws_cached_regions = ``aws ec2 describe-regions``.RegionName.sort()
+	F regions() _aws_cached_regions = ``aws ec2 describe-regions``.RegionName.sort()
 
-	F aws_regions() {
-		guard aws_cached_regions
-		aws_cached_regions
+	F regions() {
+		guard _aws_cached_regions
+		_aws_cached_regions
 	}
 
-	F aws_regions(cb:Fun) {
-		regions = aws_regions()
-		regions.pmap(F(r) {
+	F regions(cb:Fun) {
+		regs = regions()
+		regs.pmap(F(r) {
 			data = cb(r)
 			data % { A.Region = r }
 			data
@@ -44,41 +53,41 @@
 	}
 
 	# --------------------------------------------------
-	# AwsAnchor
+	# Anchor
 	# --------------------------------------------------
 
-	type AwsAnchor(Props)
+	type Anchor(Props)
 
-	F init(a:AwsAnchor, **kw)  {
+	F init(a:Anchor, **kw)  {
 		a.super(**kw)
 		a.dflt('regions', null)
 		a.dflt('tags', {})
 	}
 
 	# --------------------------------------------------
-	# AwsResFindCommand
+	# ResFindCommand
 	# --------------------------------------------------
 
-	type AwsResFindCommand
+	type ResFindCommand
 
-	F init(c:AwsResFindCommand, cmd:Arr, supports_filters:Bool) init(args())
+	F init(c:ResFindCommand, cmd:Arr, supports_filters:Bool) init(args())
 
 	# --------------------------------------------------
-	# AwsRes
+	# Res
 	# --------------------------------------------------
 
-	type AwsRes(Res)
+	type Res(GlobalRes)
 
-	F run(r:AwsRes, log_pfx:Str, cmd:Command) r.def.run(log_pfx, cmd)
+	F run(r:Res, log_pfx:Str, cmd:Command) r.def.run(log_pfx, cmd)
 
-	F update_tags(r:AwsRes) {
+	F update_tags(r:Res) {
 		# Tags
 		if 'Tags' not in r.def.props {
 			r.def.log('update_tags/skip', 'Not updating tags - no tags specified in properties')
 			return null
 		}
 		target_tags = r.def.props.Tags
-		if r.def.anchor is AwsAnchor {
+		if r.def.anchor is Anchor {
 			# Definition props tags override anchor tags
 			target_tags = r.def.anchor.tags + target_tags
 		}
@@ -86,7 +95,7 @@
 		r.def.log('update_tags/info', "Current tags: $current_tags. Target tags: $target_tags")
 		diff = cmp(current_tags, target_tags)
 
-		if (tags = stdlib_aws_tags(diff.add + diff.change)) {
+		if (tags = cli_tags(diff.add + diff.change)) {
 			r.run('update_tags/add', %(aws ec2 create-tags --resources ${r.id()} --tags $*tags))
 		}
 
@@ -96,12 +105,12 @@
 	}
 
 	# --------------------------------------------------
-	# AwsResDef
+	# ResDef
 	# --------------------------------------------------
 
-	type AwsResDef(ResDef)
+	type ResDef(GlobalResDef)
 
-	F run(rd:AwsResDef, log_pfx:Str, cmd:Command) {
+	F run(rd:ResDef, log_pfx:Str, cmd:Command) {
 		if rd.dry_run {
 			rd.log("run/$log_pfx", "would run: ${cmd.argv.join(' ')}")
 		} else {
@@ -110,7 +119,7 @@
 		}
 	}
 
-	F find(rd:AwsResDef) {
+	F find(rd:ResDef) {
 		# XXX: invalid code because misses straightening
 		cmd = _get_find_command(rd)
 		c = cmd.cmd
@@ -124,7 +133,7 @@
 
 		# echo("resources $resources")
 		if not(cmd.supports_filters) {
-			throw NotImplemented("AwsResFindCommand with supports_filters=false is not implemented yet")
+			throw NotImplemented("ResFindCommand with supports_filters=false is not implemented yet")
 		}
 		rd.log('find', "found ${resources.len()} ${rd.typeof().name} resources")
 
@@ -134,76 +143,76 @@
 	}
 
 	# --------------------------------------------------
-	# AwsVpc
+	# Vpc
 	# --------------------------------------------------
 
-	type AwsVpc(AwsResDef)
-	type AwsVpcRes(AwsRes)
+	type Vpc(ResDef)
+	type VpcRes(Res)
 
-	F _get_res_type(rd:AwsVpc) AwsVpcRes
+	F _get_res_type(rd:Vpc) VpcRes
 
-	F _get_find_command(rd:AwsVpc) {
-		AwsResFindCommand(%[aws ec2 describe-vpcs], true)
+	F _get_find_command(rd:Vpc) {
+		ResFindCommand(%[aws ec2 describe-vpcs], true)
 	}
 
-	F id(r:AwsVpcRes) r.props.VpcId
+	F id(r:VpcRes) r.props.VpcId
 
-	F Str(r:AwsVpc) {
+	F Str(r:Vpc) {
 		t = if r.resources is Null {
 			''
 		} else {
 			" ${r.ids().join(',')}"
 		}
-		"<AwsVpc$t anchor=${r.anchor}>"
+		"<Aws::Vpc$t anchor=${r.anchor}>"
 	}
 
 	# --------------------------------------------------
-	# AwsSecGroup
+	# SecGroup
 	# --------------------------------------------------
 
-	type AwsSecGroup(AwsResDef)
-	type AwsSecGroupRes(AwsRes)
+	type SecGroup(ResDef)
+	type SecGroupRes(Res)
 
-	F id(r:AwsSecGroupRes) r.props.GroupId
+	F id(r:SecGroupRes) r.props.GroupId
 
-	F users_ids(r:AwsSecGroup) r.resources / F(res) { {'GroupId': res.props.GroupId, 'UserId': res.props.OwnerId} }
+	F users_ids(r:SecGroup) r.resources / F(res) { {'GroupId': res.props.GroupId, 'UserId': res.props.OwnerId} }
 
-	F _get_res_type(rd:AwsSecGroup) AwsSecGroupRes
+	F _get_res_type(rd:SecGroup) SecGroupRes
 
-	F _get_find_command(rd:AwsSecGroup) {
-		AwsResFindCommand(%[aws ec2 describe-security-groups], true)
+	F _get_find_command(rd:SecGroup) {
+		ResFindCommand(%[aws ec2 describe-security-groups], true)
 	}
 
-	F validate(rd:AwsSecGroup) {
+	F validate(rd:SecGroup) {
 		(rd.anchor is not Arr) throws
-			InvalidArgument("AwsSecGroup's anchor must be an array")
+			InvalidArgument("SecGroup's anchor must be an array")
 		('Description' not in rd.props) throws
-			InvalidArgument("AwsSecGroup must have the 'description' property")
+			InvalidArgument("SecGroup must have the 'description' property")
 	}
 
-	F vpc_id(rd:AwsSecGroup) rd.anchor[1]
+	F vpc_id(rd:SecGroup) rd.anchor[1]
 
-	F vpc_id(rd:AwsSecGroup) {
-		guard rd.anchor[1] is AwsResDef
-		assert(rd.anchor[1].len() == 1, "AwsSecGroup expects exactly one vpc-id but passed resource ${rd.anchor[1]} has zero or more than one")
+	F vpc_id(rd:SecGroup) {
+		guard rd.anchor[1] is ResDef
+		assert(rd.anchor[1].len() == 1, "SecGroup expects exactly one vpc-id but passed resource ${rd.anchor[1]} has zero or more than one")
 		rd.anchor[1].ids()[0]
 	}
 
-	F vpc_id_args(rd:AwsSecGroup) ['--vpc-id', vpc_id(rd)]
+	F vpc_id_args(rd:SecGroup) ['--vpc-id', vpc_id(rd)]
 
-	F vpc_id_args(rd:AwsSecGroup) {
+	F vpc_id_args(rd:SecGroup) {
 		guard vpc_id(rd) is Null
 		[]
 	}
 
-	F vpc_id_filter(rd:AwsSecGroup) ['--filters', "Name=vpc-id,Values=${vpc_id(rd)}"]
+	F vpc_id_filter(rd:SecGroup) ['--filters', "Name=vpc-id,Values=${vpc_id(rd)}"]
 
-	F vpc_id_filter(rd:AwsSecGroup) {
+	F vpc_id_filter(rd:SecGroup) {
 		guard vpc_id(rd) is Null
 		[]
 	}
 
-	F find(rd:AwsSecGroup) {
+	F find(rd:SecGroup) {
 		rd.log('find', 'SG')
 		# XXX: check with default VPC / EC2 classic
 		# Can not use --group-names as it will assume default VPC / EC2 classic
@@ -211,7 +220,7 @@
 		assert(resources.len() <= 1, "Can only work with one security group at a time")
 		known_props = %[GroupName GroupId OwnerId Description IpPermissions IpPermissionsEgress Tags]
 		resources .= map(F(res) {
-			AwsSecGroupRes(rd, res ? known_props.has(X))
+			SecGroupRes(rd, res ? known_props.has(X))
 		})
 		rd.resources = resources
 		rd
@@ -239,7 +248,7 @@
 		not(diff.add or diff.remove or diff.change)
 	}
 
-	F create(rd:AwsSecGroup) {
+	F create(rd:SecGroup) {
 		rd.log('create', 'SG')
 		rd.run('create SG', %(aws ec2 create-security-group --group-name ${rd.anchor[0]} --description ${rd.props.Description} $*{vpc_id_args(rd)}))
 		if not(rd.dry_run) {
@@ -247,7 +256,7 @@
 		}
 	}
 
-	F update(sg:AwsSecGroupRes) {
+	F update(sg:SecGroupRes) {
 
 		sg.def.log('update', 'SG')
 
@@ -265,29 +274,29 @@
 	}
 
 	# --------------------------------------------------
-	# AwsSubnet
+	# Subnet
 	# --------------------------------------------------
 
-	type AwsSubnet(AwsResDef)
-	type AwsSubnetRes(AwsRes)
+	type Subnet(ResDef)
+	type SubnetRes(Res)
 
-	F id(r:AwsSubnetRes) r.props.SubnetId
+	F id(r:SubnetRes) r.props.SubnetId
 
-	F _get_res_type(rd:AwsSubnet) AwsSubnetRes
+	F _get_res_type(rd:Subnet) SubnetRes
 
-	F _get_find_command(rd:AwsSubnet) {
-		AwsResFindCommand(%[aws ec2 describe-subnets], true)
+	F _get_find_command(rd:Subnet) {
+		ResFindCommand(%[aws ec2 describe-subnets], true)
 	}
 
 	# --------------------------------------------------
-	# AwsImage
+	# Image
 	# --------------------------------------------------
 
-	type AwsImage(AwsResDef)
-	type AwsImageRes(AwsRes)
+	type Image(ResDef)
+	type ImageRes(Res)
 
 	# debian-jessie-amd64-hvm
-	F find(rd:AwsImage) {
+	F find(rd:Image) {
 		owners = ['--owners', rd.anchor.OwnerId] tor []
 		filters = %{
 			state available
@@ -306,12 +315,12 @@
 		if 'Name' in rd.anchor {
 			resources .= filter({A.Name ~ rd.anchor.Name})
 		}
-		rd.resources = resources / AwsImageRes(rd, X)
+		rd.resources = resources / ImageRes(rd, X)
 		rd.log('find', "found ${resources.len()} ${rd.typeof().name} resources")
 		rd
 	}
 
-	F latest(rd:AwsImage) {
+	F latest(rd:Image) {
 		if rd.resources is Null {
 			rd.find()
 		}
@@ -320,33 +329,33 @@
 		rd
 	}
 
-	F id(r:AwsImageRes) r.props.ImageId
+	F id(r:ImageRes) r.props.ImageId
 
 
 	# --------------------------------------------------
-	# AwsInstance
+	# Instance
 	# --------------------------------------------------
 
-	type AwsInstance(AwsResDef)
-	type AwsInstanceRes(AwsRes)
+	type Instance(ResDef)
+	type InstanceRes(Res)
 
-	F stdlib_aws_instance_anchor(rd:AwsInstance) {
+	F stdlib_aws_instance_anchor(rd:Instance) {
 		anchor = econd {
-			rd.anchor is AwsAnchor { rd.anchor }
-			rd.anchor is Hash     { AwsAnchor(tags=rd.anchor) }
+			rd.anchor is Anchor { rd.anchor }
+			rd.anchor is Hash     { Anchor(tags=rd.anchor) }
 		}
 		anchor
 	}
 
 	# TODO: setting rd.anchor is wrong, should be in some other place
-	F validate(rd:AwsInstance) {
+	F validate(rd:Instance) {
 		rd.anchor = rd.stdlib_aws_instance_anchor();
 		%[ImageId].each(F(prop_name) {
 			prop_name not in rd.anchor throws InvalidArgument("Anchor must contain $prop_name")
 		})
 	}
 
-	F find(rd:AwsInstance) {
+	F find(rd:Instance) {
 		# XXX: invalid code because misses straightening
 		anchor = rd.stdlib_aws_instance_anchor()
 
@@ -357,13 +366,13 @@
 		}
 		debug("Filters: $filters")
 
-		regions = cond {
+		regs = cond {
 			anchor.regions is Arr { anchor.regions }
-			anchor.regions == '*' { aws_regions() }
+			anchor.regions == '*' { regions() }
 		}
 
-		resources = if regions {
-			instances = regions.pmap(F(r) {
+		resources = if regs {
+			instances = regs.pmap(F(r) {
 				ins = ``aws ec2 describe-instances --region $r $*filters``
 				ins % F(i) i.Region = r
 				ins
@@ -373,20 +382,20 @@
 			``aws ec2 describe-instances $*filters``
 		}
 
-		if regions {
+		if regs {
 			rd.log('find', "found ${resources.len()} ${rd.typeof().name} resources in ${resources.group({A.Region}).len()} regions (${resources.group({A.Placement.AvailabilityZone}).len()} zones)")
 		} else {
 			rd.log('find', "found ${resources.len()} ${rd.typeof().name} resources in ${resources.group({A.Placement.AvailabilityZone}).len()} zones)")
 		}
 
-		rd.resources = resources / AwsInstanceRes(rd, X)
+		rd.resources = resources / InstanceRes(rd, X)
 		rd
 	}
 
-	F id(r:AwsInstanceRes) r.props.InstanceId
+	F id(r:InstanceRes) r.props.InstanceId
 
 	# TODO: Support multiple NICs?
-	F create(rd:AwsInstance) {
+	F create(rd:Instance) {
 		rd.log('create', 'Instance')
 		assert(rd.resources is not Null, "Creating an instance assumes find() already run")
 		args = []
@@ -397,7 +406,7 @@
 			args += ['--security-group-ids', *sgs]
 		}
 
-		# TODO: Support AwsRes SubnetId?
+		# TODO: Support Res SubnetId?
 		args += ['--subnet-id', rd.props.SubnetId] tor []
 
 		if rd.props.get('PublicIpAddress', null) is Bool {
@@ -407,12 +416,12 @@
 
 		result = rd.run('create Instance', %(aws ec2 run-instances --image-id ${rd._image_id()} $*args))
 		if not(rd.dry_run) {
-			rd.resources += result.Instances / AwsInstanceRes(rd, X)
+			rd.resources += result.Instances / InstanceRes(rd, X)
 		}
 	}
 
 	# TODO: Support EC2 classic?
-	F update(instance:AwsInstanceRes) {
+	F update(instance:InstanceRes) {
 		instance.def.log('update', 'Instance')
 		instance.update_tags()
 
@@ -427,14 +436,14 @@
 	}
 
 	# Needed for update_tags()
-	F id(instance:AwsInstanceRes) instance.props.InstanceId
+	F id(instance:InstanceRes) instance.props.InstanceId
 
 	# TODO: Support EC2 classic?
 	# TODO: Handle SGS in Anchor?
-	F _sgs(rd:AwsInstance) {
+	F _sgs(rd:Instance) {
 		if 'SecurityGroups' in rd.props {
 			ret = rd.props.SecurityGroups
-			if ret is AwsResDef {
+			if ret is ResDef {
 				ret .= ids()
 			}
 			return ret
@@ -442,36 +451,36 @@
 		[]
 	}
 
-	F _image_id(rd:AwsInstance) {
-		guard rd.anchor.ImageId is AwsImage
-		assert(rd.anchor.ImageId.resources.len() == 1, "Expecting exacty one image described by AwsImage resource defeinition")
+	F _image_id(rd:Instance) {
+		guard rd.anchor.ImageId is Image
+		assert(rd.anchor.ImageId.resources.len() == 1, "Expecting exacty one image described by Image resource defeinition")
 		rd.anchor.ImageId.ids()[0]
 	}
 
-	F _image_id(rd:AwsInstance) {
+	F _image_id(rd:Instance) {
 		guard rd.anchor.ImageId is Str
 		rd.anchor.ImageId
 	}
 
 	# --------------------------------------------------
-	# AwsElb
+	# Elb
 	# --------------------------------------------------
 
-	type AwsElb(AwsResDef)
-	type AwsElbRes(AwsRes)
+	type Elb(ResDef)
+	type ElbRes(Res)
 
-	F ids(rd:AwsElb) throw NotImplemented("ids() method for AwsElb is not implemented")
+	F ids(rd:Elb) throw NotImplemented("ids() method for Elb is not implemented")
 
-	F validate(rd:AwsElb) {
-		rd.anchor is not Str throws InvalidArgument("AwsElb is the ELB name and must be a string, not ${rd.anchor}")
-		rd.count > 1 throws InvalidArgument("AwsElb can only handle one instance at a time while desired count is ${rd.count}")
-		'ListenerDescriptions' not in rd.props throws InvalidArgument("AwsElb must have 'listeners' property")
+	F validate(rd:Elb) {
+		rd.anchor is not Str throws InvalidArgument("Elb is the ELB name and must be a string, not ${rd.anchor}")
+		rd.count > 1 throws InvalidArgument("Elb can only handle one instance at a time while desired count is ${rd.count}")
+		'ListenerDescriptions' not in rd.props throws InvalidArgument("Elb must have 'listeners' property")
 
-		('AvailabilityZones' not in rd.props) and ('Subnets' not in rd.props) throws InvalidArgument("Either 'azs' or 'subnets' must be in AwsElb properties")
-		'AvailabilityZones' in rd.props throws NotImplemented("'AvailabilityZones' AwsElb property")
+		('AvailabilityZones' not in rd.props) and ('Subnets' not in rd.props) throws InvalidArgument("Either 'azs' or 'subnets' must be in Elb properties")
+		'AvailabilityZones' in rd.props throws NotImplemented("'AvailabilityZones' Elb property")
 	}
 
-	F find(rd:AwsElb) {
+	F find(rd:Elb) {
 		rd.log('find', "ELB")
 		resources = ``aws elb describe-load-balancers``.filter(F(desc) desc.LoadBalancerName == rd.anchor)
 		assert(resources.len() <= 1, "Can only work with one load balancer at a time")
@@ -482,15 +491,15 @@
 			# TODO: make it lazy
 			rd.log('find', "ELB tags")
 			ret.Tags = ``aws elb describe-tags --load-balancer-names ${rd.anchor}``[0].Tags
-			AwsElbRes(rd, ret)
+			ElbRes(rd, ret)
 		})
 		rd
 	}
 
-	F create(rd:AwsElb) {
+	F create(rd:Elb) {
 		rd.log('create', "creating an ELB")
 		subnets = try rd.props.Subnets
-		if subnets is AwsResDef {
+		if subnets is ResDef {
 			subnets .= ids()
 		}
 		if subnets {
@@ -502,13 +511,13 @@
 		}
 	}
 
-	F update(elb:AwsElbRes) {
+	F update(elb:ElbRes) {
 		elb.def.log('update', 'ELB')
 
 		# Tags
 		diff = cmp(elb.props.get('Tags', {}), elb.def.props.get('Tags', {}))
 
-		if (tags = stdlib_aws_tags(diff.add + diff.change)) {
+		if (tags = cli_tags(diff.add + diff.change)) {
 			elb.run('add ELB tags', %(aws elb add-tags --load-balancer-names ${elb.def.anchor} --tags $*tags))
 		}
 
@@ -533,7 +542,7 @@
 		# Instances
 		if 'Instances' in elb.def.props {
 			instances = elb.def.props.Instances
-			if instances is AwsResDef {
+			if instances is ResDef {
 				instances .= ids()
 			}
 			diff = cmp(elb.props.Instances, instances)
@@ -554,7 +563,7 @@
 		# Security groups
 		if 'SecurityGroups' in elb.def.props {
 			sgs = elb.def.props.SecurityGroups
-			if sgs is AwsResDef {
+			if sgs is ResDef {
 				sgs .= ids()
 			}
 			diff = cmp(elb.props.SecurityGroups, sgs)
@@ -571,12 +580,12 @@
 		# echo("DIFF $diff")
 	}
 
-	F delete(elb:AwsElb) {
+	F delete(elb:Elb) {
 		elb.run('delete ELB', %(aws elb delete-load-balancer --load-balancer-name ${elb.anchor}))
 	}
 
 	# --------------------------------------------------
-	# AwsRecordSet
+	# RecordSet
 	# --------------------------------------------------
 
 	# http://docs.aws.amazon.com/cli/latest/reference/route53/change-resource-record-sets.html
@@ -585,10 +594,10 @@
 	# Maybe support array or *-style wildcard for record_name?
 	# Maybe support anchor hosted-zone-id in the future? Don't currently see how this could be useful.
 
-	type AwsRecordSet(AwsResDef)
-	type AwsRecordSetRes(AwsRes)
+	type RecordSet(ResDef)
+	type RecordSetRes(Res)
 
-	F validate(rd:AwsRecordSet) {
+	F validate(rd:RecordSet) {
 		%[Name ZoneName].each(F(prop_name) {
 			prop_name not in rd.anchor throws InvalidArgument("Anchor must contain $prop_name")
 			not(rd.anchor[prop_name] ~ Sfx('.')) throws InvalidArgument("$prop_name (${rd.anchor[prop_name]}) must end with a dot")
@@ -596,12 +605,12 @@
 		"todo"
 	}
 
-	F find(rd:AwsRecordSet) {
+	F find(rd:RecordSet) {
 		rd.log('find', 'RecordSet')
 		anchor = rd.anchor
 		zones = ``aws route53 list-hosted-zones-by-name --dns-name ${anchor.ZoneName} --max-items 1``
 
-		assert(zones.len() == 1 and zones[0].Name == anchor.ZoneName, "Zone ${anchor.ZoneName} not found when trying to create an AwsRecordSet in it")
+		assert(zones.len() == 1 and zones[0].Name == anchor.ZoneName, "Zone ${anchor.ZoneName} not found when trying to create an RecordSet in it")
 		zone_id = zones[0].Id
 		rd.zone_id = zone_id
 
@@ -623,11 +632,11 @@
 			rrs .= filter({A.SetIdentifier == anchor.SetIdentifier})
 		}
 
-		rd.resources = rrs / AwsRecordSetRes(rd, X)
+		rd.resources = rrs / RecordSetRes(rd, X)
 		rd
 	}
 
-	F _get_props(rd:AwsRecordSet) {
+	F _get_props(rd:RecordSet) {
 		ret = {}
 		ret.update(rd.props)
 		%[Name Type SetIdentifier].each(F(prop) {
@@ -638,7 +647,7 @@
 		ret
 	}
 
-	F create(rd:AwsRecordSet) {
+	F create(rd:RecordSet) {
 		change_batch = {
 			'Comment': rd.props.get('Comment', "Added by AWS.ngs")
 			'Changes': [{
@@ -646,13 +655,13 @@
 				'ResourceRecordSet': _get_props(rd)
 			}]
 		}
-		rd.run('create AwsRecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${rd.zone_id} --change-batch ${change_batch.encode_json()}))
+		rd.run('create RecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${rd.zone_id} --change-batch ${change_batch.encode_json()}))
 		if not(rd.dry_run) {
 			rd.find()
 		}
 	}
 
-	F update(rrset:AwsRecordSetRes) {
+	F update(rrset:RecordSetRes) {
 		props = _get_props(rrset.def)
 		diff = cmp(rrset.props, props)
 		# NOT DONE AND NOT SURE!
@@ -664,14 +673,35 @@
 					'ResourceRecordSet': _get_props(rrset.def)
 				}]
 			}
-			rrset.run('update AwsRecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${rrset.def.zone_id} --change-batch ${change_batch.encode_json()}))
+			rrset.run('update RecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${rrset.def.zone_id} --change-batch ${change_batch.encode_json()}))
 		}
 	}
 
 	# --------------------------------------------------
-	# AwsBucket
+	# Bucket
 	# --------------------------------------------------
 
 	# TODO
+
+	# ==================================================
+	# Backwards compatibility with bunch of global variables
+	# ==================================================
+
+	# "global x = y" is not exported as it's syntactically
+	# different from "x = y" (which is exported)
+	global AWS_AMI_OWNER_DEBIAN = AMI_OWNER_DEBIAN
+	global AWS_AMI_OWNER_AMAZON = AMI_OWNER_AMAZON
+	global stdlib_aws_tags = cli_tags
+	global stdlib_aws_filters = cli_filters
+	global aws_regions = regions
+	global AwsAnchor = Anchor
+	global AwsRes = Res, AwsResDef = ResDef
+	global AwsVpc = Vpc, AwsVpcRes = VpcRes
+	global AwsSecGroup = SecGroup, AwsSecGroupRes = SecGroupRes
+	global AwsSubnet = Subnet, AwsSubnetRes = SubnetRes
+	global AwsImage = Image, AwsImageRes = ImageRes
+	global AwsInstance = Instance, AwsInstanceRes = InstanceRes
+	global AwsElb = Elb, AwsElbRes = ElbRes
+	global AwsRecordSet = RecordSet, AwsRecordSetRes = RecordSetRes
 
 }
