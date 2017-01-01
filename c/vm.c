@@ -2239,20 +2239,25 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// boolean
 	register_global_func(vm, 0, "==",       &native_eq_bool_bool,      2, "a",   vm->Bool, "b", vm->Bool);
+	_doc(vm, "", "Compare booleans");
 	register_global_func(vm, 0, "not",      &native_not_bool,          1, "x",   vm->Bool);
+	_doc(vm, "", "Invert boolean");
 
 	// array
 	register_global_func(vm, 0, "+",        &native_plus_arr_arr,            2, "a",   vm->Arr, "b", vm->Arr);
-	_doc(vm, "", "Array concatenation");
+	_doc(vm, "", "Array concatenation.");
 	_doc(vm, "%RET", "Arr");
 	_doc(vm, "%EX", "[1,2]+[3,4]  # [1,2,3,4]");
 
 	register_global_func(vm, 0, "push",     &native_push_arr_any,            2, "arr", vm->Arr, "v", vm->Any);
-	_doc(vm, "", "Append item to an array");
+	_doc(vm, "", "Append item to an array.");
 	_doc(vm, "%RET", "arr");
 	_doc(vm, "%EX", "a=[1,2]; a.push(3)  # a is now [1,2,3]");
 
 	register_global_func(vm, 1, "pop",      &native_pop_arr,                 1, "arr", vm->Arr);
+	_doc(vm, "", "Pop item from an array. Removes last item in array and returns it. Throws EmptyArrayFail.");
+	_doc(vm, "%RET", "Any");
+	_doc(vm, "%EX", "a=[1,2]; a.pop()  # 2, a is now [1]");
 
 	register_global_func(vm, 1, "shift",    &native_shift_arr,               1, "arr", vm->Arr);
 	register_global_func(vm, 0, "shift",    &native_shift_arr_any,           2, "arr", vm->Arr, "dflt", vm->Any);
