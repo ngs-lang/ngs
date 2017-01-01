@@ -2044,60 +2044,160 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// Native methods
 	register_global_func(vm, 0, "attrs",    &native_attrs_nm,          1, "m",      vm->NativeMethod);
-	_doc(vm, "", "Gets native method attribues. Usually a Hash with name and doc keys.");
+	_doc(vm, "", "Get native method attributes. Usually a Hash with name and doc keys.");
+	_doc(vm, "%RET", "Any, typically a Hash");
+	_doc_arr(vm, "%EX",
+		"c_pthread_join[0].attrs()  # {name=c_pthread_join, doc={ ... }}",
+		NULL
+	);
 	register_global_func(vm, 0, "attrs",    &native_attrs_nm_any,      2, "m",      vm->NativeMethod, "datum", vm->Any);
-	_doc(vm, "", "Sets native method attribues. Should be a Hash.");
+	_doc(vm, "", "Set native method attributes. Should be a Hash.");
 	register_global_func(vm, 0, "params",   &native_params_nm,         1, "m",      vm->NativeMethod);
 
 	// Type
 	// needed for switch
 	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->Type, "b", vm->Type);
+	_doc(vm, "", "Types equality comparison. Implemented as sameness comparison.");
+	_doc(vm, "%EX", "type T; T==T  # true");
+	_doc(vm, "%EX", "type T1; type T2; T1==T2  # false");
 
 	// Closure
 	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->Closure, "b", vm->Closure);
+	_doc(vm, "", "Closure equality comparison. Implemented as sameness comparison.");
+	_doc_arr(vm, "%EX",
+		"F make_closure() { F(x) x + 1 }; make_closure()      == make_closure()       # false - different instances",
+		"F make_closure() { F(x) x + 1 }; make_closure().ip() == make_closure().ip()  # true - same code",
+		"f = F(x) x +1; f == f  # true - same instance",
+		NULL
+	);
 	register_global_func(vm, 0, "attrs",    &native_attrs_closure,     1, "c",      vm->Closure);
+	_doc(vm, "", "Get closure attributes. Usually a Hash with name and doc keys.");
+	_doc(vm, "%RET", "Any, typically a Hash");
+	_doc_arr(vm, "%EX",
+		"F make_closure() { F(x) x +1 }; make_closure[0].attrs()  # {doc=null, name=make_closure}",
+		NULL
+	);
 	register_global_func(vm, 0, "attrs",    &native_attrs_closure_any, 2, "c",      vm->Closure, "datum", vm->Any);
+	_doc(vm, "", "Set closure attributes. Should be a Hash.");
 	register_global_func(vm, 0, "params",   &native_params_closure,    1, "c",      vm->Closure);
+	_doc(vm, "", "Get closure parameters.");
+	_doc_arr(vm, "%EX",
+		"... F the_one(something, predicate, body:Fun, found_more:Fun={null}, found_none:Fun={null}) ...",
+		"the_one[1].params().each(echo)"
+		"# {name=something, type=<Type Any>}",
+		"# {name=predicate, type=<Type Any>}",
+		"# {name=body, type=<Type Fun>}",
+		"# {name=found_more, type=<Type Fun>, dflt=<Closure <anonymous> at /usr/share/ngs/stdlib.ngs:198>}",
+		"# {name=found_none, type=<Type Fun>, dflt=<Closure <anonymous> at /usr/share/ngs/stdlib.ngs:198>}",
+		NULL
+	);
+
 	register_global_func(vm, 0, "ip",       &native_ip_closure,        1, "c",      vm->Closure);
+	_doc(vm, "", "Get closure code instruction pointer.");
+	_doc(vm, "%RET", "Int");
+	_doc(vm, "%EX", "f=F(x) x+1; f.ip()  # 116506");
 
 	// Int
 	register_global_func(vm, 0, "Int",      &native_Int_real,           1, "r",    vm->Real);
+	_doc(vm, "", "Convert Real (floating) number to Int. Floating part is truncated.");
+	_doc(vm, "%RET", "Int");
+
 	register_global_func(vm, 1, "Int",      &native_Int_str_int,        2, "s",    vm->Str,  "base", vm->Int);
+	_doc(vm, "", "Convert Str to Int.");
+	_doc_arr(vm, "%EX",
+		"Int(\"100\", 2)  # 8",
+		"Int(\"80\", 16)  # 128",
+		NULL
+	);
 
 	// Real
 	register_global_func(vm, 0, "+",        &native_plus_real_real,      2, "a",   vm->Real, "b", vm->Real);
+	_doc(vm, "", "Addition");
 	register_global_func(vm, 0, "*",        &native_mul_real_real,       2, "a",   vm->Real, "b", vm->Real);
+	_doc(vm, "", "Multiplication");
 	register_global_func(vm, 0, "/",        &native_div_real_real,       2, "a",   vm->Real, "b", vm->Real);
+	_doc(vm, "", "Division");
 	register_global_func(vm, 0, "-",        &native_minus_real_real,     2, "a",   vm->Real, "b", vm->Real);
+	_doc(vm, "", "Subtraction");
 	register_global_func(vm, 0, "<",        &native_less_real_real,      2, "a",   vm->Real, "b", vm->Real);
+	_doc(vm, "", "Less-than comparison");
 	register_global_func(vm, 0, "<=",       &native_less_eq_real_real,   2, "a",   vm->Real, "b", vm->Real);
+	_doc(vm, "", "Less-than-or-equal comparison");
 	register_global_func(vm, 0, ">",        &native_greater_real_real,   2, "a",   vm->Real, "b", vm->Real);
+	_doc(vm, "", "Greater-than comparison");
 	register_global_func(vm, 0, ">=",       &native_greater_eq_real_real,2, "a",   vm->Real, "b", vm->Real);
+	_doc(vm, "", "Greater-than-or-equal comparison");
 	register_global_func(vm, 0, "==",       &native_eq_real_real,        2, "a",   vm->Real, "b", vm->Real);
+	_doc_arr(vm, "",
+		"Equality comparison. Using this operator/function is not recommended.",
+		"See http://how-to.wikia.com/wiki/Howto_compare_floating_point_numbers_in_the_C_programming_language .",
+		NULL
+	);
 	register_global_func(vm, 0, "Str",      &native_Str_real,            1, "r",   vm->Real);
+	_doc(vm, "", "Convert Real to Str");
 	register_global_func(vm, 0, "Real",     &native_Real_int,            1, "n",   vm->Int);
+	_doc(vm, "", "Convert Int to Real");
 	register_global_func(vm, 0, "round",    &native_round_real,          1, "r",   vm->Real);
+	_doc(vm, "", "Round a number");
 	register_global_func(vm, 0, "trunc",    &native_trunc_real,          1, "r",   vm->Real);
+	_doc(vm, "", "Truncate a number");
 	register_global_func(vm, 0, "floor",    &native_floor_real,          1, "r",   vm->Real);
+	_doc(vm, "", "Floor a number");
 	register_global_func(vm, 0, "ceil",     &native_ceil_real,           1, "r",   vm->Real);
+	_doc(vm, "", "Ceil a number");
 
 	// BasicType
 	register_global_func(vm, 1, ".",        &native_get_attr_bt_str,       2, "obj", vm->BasicType,          "attr", vm->Str);
+	_doc(vm, "", "Get BasicType (Int, Arr, Hash, ...) attribute. Throws AttrNotFound.");
+	_doc(vm, "attr", "Attribute to get. Currently only \"name\" and \"constructors\" are supported.");
+	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
 
 	// NormalType
 	register_global_func(vm, 1, ".",        &native_get_attr_nt_str,       2, "obj", vm->NormalType,         "attr", vm->Str);
+	_doc(vm, "", "Get NormalType (a type that is typically defined by user) attribute. Throws AttrNotFound.");
+	_doc(vm, "attr", "Attribute to get. Currently only \"name\" and \"constructors\" are supported.");
+	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
+
 	register_global_func(vm, 1, ".",        &native_get_attr_nti_str,      2, "obj", vm->NormalTypeInstance, "attr", vm->Str);
+	_doc(vm, "", "Get NormalType (a type that is typically defined by user) instance attribute. Throws AttrNotFound.");
+	_doc(vm, "%RET", "Any");
+	_doc(vm, "%EX", "type T; t=T(); t.x=1; t.x  # 1");
+
 	register_global_func(vm, 0, ".=",       &native_set_attr_nti_str_any,  3, "obj", vm->NormalTypeInstance, "attr", vm->Str, "v", vm->Any);
+	_doc(vm, "", "Set Normal type (a type that is typically defined by user) instance attribute. Throws AttrNotFound.");
+	_doc(vm, "%RET", "Any");
+	_doc(vm, "%EX", "type T; t=T(); t.x=1");
+
 	register_global_func(vm, 0, "in",       &native_in_nti_str,            2, "attr", vm->Str,               "obj", vm->NormalTypeInstance);
+	_doc(vm, "", "Check whether NormalType (a type that is typically defined by user) instance has an attribute.");
+	_doc(vm, "%RET", "Bool");
+	_doc(vm, "%EX", "type T; t=T(); t.x=1; \"x\" in t  # true");
+
 	register_global_func(vm, 0, "inherit",  &native_inherit_nt_nt,         2, "t",   vm->NormalType,         "parent", vm->NormalType);
+	_doc(vm, "", "Make t inherit from parent. Do not use directly. Use \"type MyType(parent)\".");
+	_doc(vm, "%RET", "t");
+	_doc_arr(vm, "%EX",
+		"type NotImplemented",
+		"NotImplemented.inherit(Exception)",
+		NULL
+	);
 
 	// Type
 	register_global_func(vm, 0, "Type",     &native_type_str_doc      ,2, "name",   vm->Str, "doc", vm->Any);
+	_doc(vm, "", "Create a new type. Do not use directly. Use \"type MyType\".");
+
 	register_global_func(vm, 0, "typeof",   &native_typeof_any        ,1, "x",      vm->Any);
 	_doc(vm, "", "Returns type of the given instance");
-	_doc(vm, "x", "Instance (an object)");
+	_doc(vm, "x", "Instance (an object). Currently only instances of NormalType are supported.");
 	register_global_func(vm, 0, "attrs",    &native_attrs_type,        1, "t",      vm->Type);
+	_doc(vm, "", "Get Type attributes. Usually a Hash with \"doc\" key.");
+	_doc(vm, "%RET", "Any, typically a Hash");
+	_doc_arr(vm, "%EX",
+		"Arr.attrs()  # {doc={=Array type}}",
+		NULL
+	);
 	register_global_func(vm, 0, "attrs",    &native_attrs_type_any,    2, "t",      vm->Type, "datum", vm->Any);
+	_doc(vm, "", "Set Type attributes. Usually a Hash with \"doc\" key.");
 
 	// low level file operations
 	register_global_func(vm, 0, "c_dup2",   &native_c_dup2_int_int,    2, "oldfd",    vm->Int, "newfd", vm->Int);
@@ -2143,8 +2243,17 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// array
 	register_global_func(vm, 0, "+",        &native_plus_arr_arr,            2, "a",   vm->Arr, "b", vm->Arr);
+	_doc(vm, "", "Array concatenation");
+	_doc(vm, "%RET", "Arr");
+	_doc(vm, "%EX", "[1,2]+[3,4]  # [1,2,3,4]");
+
 	register_global_func(vm, 0, "push",     &native_push_arr_any,            2, "arr", vm->Arr, "v", vm->Any);
+	_doc(vm, "", "Append item to an array");
+	_doc(vm, "%RET", "arr");
+	_doc(vm, "%EX", "a=[1,2]; a.push(3)  # a is now [1,2,3]");
+
 	register_global_func(vm, 1, "pop",      &native_pop_arr,                 1, "arr", vm->Arr);
+
 	register_global_func(vm, 1, "shift",    &native_shift_arr,               1, "arr", vm->Arr);
 	register_global_func(vm, 0, "shift",    &native_shift_arr_any,           2, "arr", vm->Arr, "dflt", vm->Any);
 	register_global_func(vm, 0, "len",      &native_len,                     1, "arr", vm->Arr);
