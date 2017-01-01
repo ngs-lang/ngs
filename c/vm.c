@@ -2274,44 +2274,117 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// string
 	// TODO: other string comparison operators
 	register_global_func(vm, 0, "len",      &native_len,                     1, "s",   vm->Str);
-	_doc(vm, "%RET", "Length in bytes");
+	_doc(vm, "", "Get Str length in bytes");
+	_doc(vm, "%RET", "Int");
+
 	register_global_func(vm, 0, "==",       &native_eq_str_str,              2, "a",   vm->Str, "b", vm->Str);
+	_doc(vm, "", "Equality comparison");
+
 	register_global_func(vm, 0, "pos",      &native_pos_str_str_int,         3, "haystack", vm->Str, "needle", vm->Str, "start", vm->Int);
+	_doc(vm, "", "Find substring position");
+	_doc(vm, "start", "Non-negative Int, position where the search starts");
+	_doc(vm, "%RET", "Int or null. Not -1 as in many languages");
+
 	register_global_func(vm, 1, "[]",       &native_index_get_str_range,     2, "s", vm->Str, "range", vm->ExclusiveRange);
+	_doc(vm, "", "Get substring");
+	_doc(vm, "%EX", "\"abcd\"[1..3]  # \"bc\"");
+
 	register_global_func(vm, 1, "[]=",      &native_index_set_str_range_str, 3, "s", vm->Str, "range", vm->ExclusiveRange, "replacement", vm->Str);
+	_doc(vm, "", "Change substring");
+	_doc(vm, "%RET", "replacement");
+	_doc(vm, "%EX", "s=\"abcd\"; s[1..3]=\"X\"; s  # \"aXd\"");
+
 	register_global_func(vm, 1, "ord",      &native_ord_str_int,             2, "s", vm->Str, "idx", vm->Int);
+	_doc(vm, "", "Get character (byte) ordinal value. Throws InvalidArgument if idx is not pointing into s.");
+	_doc(vm, "idx", "Index of the character to get value of");
+	_doc(vm, "%RET", "Int");
+	_doc(vm, "%EX", "ord(\"A\", 0)  # 65 on my machine");
+
 	register_global_func(vm, 0, "chr",      &native_chr_int_str,             1, "code", vm->Int);
+	_doc(vm, "", "Get character (byte) by it's ordinal value.");
+	_doc(vm, "%RET", "Str of length 1 (byte).");
+	_doc(vm, "%EX", "chr(65)  # \"A\" on my machine");
 
 	// int
 	register_global_func(vm, 0, "+",        &native_plus_int_int,      2, "a",   vm->Int, "b", vm->Int);
+	_doc(vm, "", "Addition");
 	register_global_func(vm, 0, "*",        &native_mul_int_int,       2, "a",   vm->Int, "b", vm->Int);
+	_doc(vm, "", "Multiplication");
 	register_global_func(vm, 1, "/",        &native_div_int_int,       2, "a",   vm->Int, "b", vm->Int);
+	_doc(vm, "", "Division");
 	register_global_func(vm, 1, "%",        &native_mod_int_int,       2, "a",   vm->Int, "b", vm->Int);
 	_doc(vm, "", "Modulus");
 	_doc(vm, "%RET", "Int");
 	_doc(vm, "%EX", "10 % 3  # 1");
 	register_global_func(vm, 0, "-",        &native_minus_int_int,     2, "a",   vm->Int, "b", vm->Int);
+	_doc(vm, "", "Subtraction");
 	register_global_func(vm, 0, "<",        &native_less_int_int,      2, "a",   vm->Int, "b", vm->Int);
+	_doc(vm, "", "Less-than comparison");
 	register_global_func(vm, 0, "<=",       &native_less_eq_int_int,   2, "a",   vm->Int, "b", vm->Int);
+	_doc(vm, "", "Less-than-or-equal comparison");
 	register_global_func(vm, 0, ">",        &native_greater_int_int,   2, "a",   vm->Int, "b", vm->Int);
+	_doc(vm, "", "Greater-than comparison");
 	register_global_func(vm, 0, ">=",       &native_greater_eq_int_int,2, "a",   vm->Int, "b", vm->Int);
+	_doc(vm, "", "Greater-than-or-equal comparison");
 	register_global_func(vm, 0, "==",       &native_eq_int_int,        2, "a",   vm->Int, "b", vm->Int);
+	_doc(vm, "", "Equality comparison");
 	register_global_func(vm, 0, "band",     &native_band_int_int,      2, "a",   vm->Int, "b", vm->Int);
+	_doc(vm, "", "Bitwise and");
+	_doc(vm, "%RET", "Int");
+	_doc(vm, "%EX", "7.band(5)  # 5");
 	register_global_func(vm, 0, "bor",      &native_bor_int_int,       2, "a",   vm->Int, "b", vm->Int);
+	_doc(vm, "", "Bitwise or");
+	_doc(vm, "%RET", "Int");
+	_doc(vm, "%EX", "1.bor(8)  # 9");
 	register_global_func(vm, 0, "bxor",     &native_bxor_int_int,      2, "a",   vm->Int, "b", vm->Int);
+	_doc(vm, "", "Bitwise xor");
+	_doc(vm, "%RET", "Int");
+	_doc(vm, "%EX", "15.bxor(1)  # 14");
 
 	// random
 	register_global_func(vm, 0, "rand",     &native_rand,            0);
+	_doc(vm, "", "Get random number between 0 and RAND_MAX-1. Uses RANDOM(3).");
+	_doc(vm, "%RET", "Int");
+
 	register_global_func(vm, 0, "srand",    &native_srand,           1, "seed", vm->Int);
+	_doc(vm, "%RET", "Unspecified");
+	_doc(vm, "", "Seed random generator. Uses SRANDOM(3).");
 
 	// misc
 	register_global_func(vm, 0, "===",      &native_same_any_any,      2, "a",   vm->Any, "b", vm->Any);
+	_doc(vm, "", "Sameness comparison.");
+
 	register_global_func(vm, 0, "dump",     &native_dump_any,          1, "obj", vm->Any);
+	_doc(vm, "", "Low-level data structure dump. Used for debugging NGS itself.");
+
 	register_global_func(vm, 0, "echo",     &native_echo_str,          1, "s",   vm->Str);
+	_doc(vm, "", "Print given string and a newline to stdout.");
+	_doc(vm, "%RET", "Unspecified");
+	_doc(vm, "%EX", "echo(\"blah\")  # Output: blah");
+
 	register_global_func(vm, 0, "echo",     &native_echo_int_str,      2, "fd",  vm->Int, "s", vm->Str);
+	_doc(vm, "", "Print given string and a newline to a file referenced by descriptor.");
+	_doc(vm, "%RET", "Unspecified");
+	_doc(vm, "%EX", "echo(2, \"blah\")  # Output on stderr: blah");
+
 	register_global_func(vm, 0, "Bool",     &native_Bool_any,          1, "x",   vm->Any);
+	_doc(vm, "", "Convert to Bool");
+	_doc(vm, "x", "Bool or Str or Arr or Hash or Null");
+	_doc(vm, "%RET", "Bool");
+
 	register_global_func(vm, 0, "Str",      &native_Str_int,           1, "n",   vm->Int);
+	_doc(vm, "", "Convert Int to Str");
+
 	register_global_func(vm, 0, "is",       &native_is_any_type,       2, "obj", vm->Any, "t", vm->Type);
+	_doc(vm, "", "Check whether obj is of type t. Uses same function that is used for matching arguments with method parameters when calling a method.");
+	_doc(vm, "%RET", "Bool");
+	_doc_arr(vm, "%EX",
+		"1 is Int  # true",
+		"[] is Arr  # true",
+		"[] is Int  # false",
+		NULL
+	);
+
 	register_global_func(vm, 1, "compile",  &native_compile_str_str,   2, "code",vm->Str, "fname", vm->Str);
 	register_global_func(vm, 1, "load",     &native_load_str_str,      2, "bytecode", vm->Str, "func_name", vm->Str);
 	register_global_func(vm, 1, "decode_json",&native_decode_json_str, 1, "s", vm->Str);

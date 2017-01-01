@@ -67,7 +67,14 @@ Note that this started as internal document so things here are unformed, not fin
 				* load() - pass these "local" variables?
 				* require() - pass new require() function that knows base path?
 				* require() - pass __FILENAME and maybe __DIRNAME?
+			* require() - support algorithm+signature: modules can theoretically be fetched over network
 			* consider pre- and post- require() hooks
+			* versioning
+				+ maybe "require('mymod', '=2.0.1')" like "use" in perl
+				+ maybe "require('mymod', '2.0.1'..'2.0.9')" similar to perl but range
+				+ maybe specifying methods' signatures
+				+ maybe methods should be versioned (like in .so files)
+				+ how different module versions can run alongside?
 
 		* Milestone "correct programming"
 
@@ -137,13 +144,11 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Make sure STACK_DEPTH is correct everywhere and add tests
 
-			* Fix "Function does not have result value" when compiling and running an empty string
-
 			* Implement missing local/upvar/global functionality and add tests
 
 			* Make sure local/upvar cause exceptions when used at top-level code
 
-			* Check what happends with misplaced local/upvar/global. Example: "F f(); global f" - function declaration causes f to be local
+			* Check what happens with misplaced local/upvar/global. Example: "F f(); global f" - function declaration causes f to be local
 
 			* Replace all compile asserts with exceptions
 
