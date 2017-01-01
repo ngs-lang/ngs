@@ -96,8 +96,6 @@ Note that this started as internal document so things here are unformed, not fin
 					# if zero_sep then s.split('\0') else s.lines()
 				}
 
-			* Fix { a = 1 }() - it returns the closure for some reason, does not call it
-
 			* Run exit_hook on CTRL+C (Throw exception)
 
 			* Copy stderr to both stderr and to captured .stderr of the process
