@@ -1449,6 +1449,36 @@ METHOD_RESULT native_replace EXT_METHOD_PARAMS {
 	METHOD_RETURN(argv[1]);
 }
 
+METHOD_RESULT native_resolve_global_variable EXT_METHOD_PARAMS {
+	(void) ctx;
+	METHOD_RETURN(MAKE_INT(get_global_index(vm, OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]))));
+}
+
+METHOD_RESULT native_is_global_variable_defined EXT_METHOD_PARAMS {
+	GLOBAL_VAR_INDEX gvi = GET_INT(argv[0]);
+	if(GET_INT(argv[0]) < 0 || gvi >= vm->globals_len) {
+		VALUE e;
+		e = make_normal_type_instance(vm->IndexNotFound);
+		set_normal_type_instance_attribute(e, make_string("message"), make_string("Global with given index was not found"));
+		set_normal_type_instance_attribute(e, make_string("key"), argv[0]);
+		THROW_EXCEPTION_INSTANCE(e);
+	}
+	METHOD_RETURN(MAKE_BOOL(IS_NOT_UNDEF(GLOBALS[gvi])));
+}
+
+METHOD_RESULT native_set_global_variable EXT_METHOD_PARAMS {
+	GLOBAL_VAR_INDEX gvi = GET_INT(argv[0]);
+	if(GET_INT(argv[0]) < 0 || gvi >= vm->globals_len) {
+		VALUE e;
+		e = make_normal_type_instance(vm->IndexNotFound);
+		set_normal_type_instance_attribute(e, make_string("message"), make_string("Global with given index was not found"));
+		set_normal_type_instance_attribute(e, make_string("key"), argv[0]);
+		THROW_EXCEPTION_INSTANCE(e);
+	}
+	GLOBALS[gvi] = argv[1];
+	METHOD_RETURN(argv[1]);
+}
+
 // http://www.pcre.org/original/doc/html/pcredemo.html
 METHOD_RESULT native_c_pcre_compile EXT_METHOD_PARAMS {
 
@@ -1974,6 +2004,14 @@ void vm_init(VM *vm, int argc, char **argv) {
 		"a  # [4,5]",
 		NULL
 	);
+
+	// global variables
+	register_global_func(vm, 1, "resolve_global_variable",    &native_resolve_global_variable,     1, "name",   vm->Str);
+	_doc(vm, "", "Do not use directly! Get global variable index by name.");
+	register_global_func(vm, 1, "is_global_variable_defined", &native_is_global_variable_defined,  1, "idx",    vm->Int);
+	_doc(vm, "", "Do not use directly! Check whether global variable is defined by index.");
+	register_global_func(vm, 1, "set_global_variable",        &native_set_global_variable,         2, "idx",    vm->Int,    "val", vm->Any);
+	_doc(vm, "", "Do not use directly! Set global variable by index.");
 
 	// Return
 	register_global_func(vm, 1, "Return",          &native_Return,   0);

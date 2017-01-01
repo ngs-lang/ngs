@@ -44,10 +44,10 @@ Note that this started as internal document so things here are unformed, not fin
 						+ Strings
 						+ Functional
 					+ Build an app - decide which
-				* True values - make sure it's in
+				* True values - make sure it's in [in ngssyn]
 				* Hash keys comparison
-				* All types documentation
-				* All methods documentation
+				* All types documentation [in progress]
+				* All methods documentation [in progress]
 				* Exit codes (see bootstrap.ngs and ngs.c)
 				* Document that inner functions are declared local
 				* Language reference, good example: https://golang.org/ref/spec

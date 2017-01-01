@@ -399,9 +399,6 @@ F init(hl:HashLike, attr:Str='items') {
 	doc Hook is a simple pub-sub
 	type Hook
 	Hook.inherit(HashLike)
-
-	doc CONSIDERED FOR REMOVAL
-	type HookDecorator
 }
 
 doc Hook constructor.
@@ -455,9 +452,7 @@ TEST Real('1.1') == 1.1
 doc String representation of native method.
 doc %RET - "<Native method NAME>"
 doc %EX - (%)[0].Str().echo()  # Outputs: <Native method %>
-F Str(c:NativeMethod) {
-	"<Native method ${c.attrs().name}>"
-}
+F Str(c:NativeMethod) "<Native method ${c.attrs().name}>"
 
 # === Closure ====================================
 
@@ -590,7 +585,12 @@ doc Searches in $NGS_DIR/autoload/NAME.ngs
 doc WARNING: May have security implications when looking up a name from untrusted source.
 doc %EX - test("My web server runs") do { .... }  # $NGS_DIR/autoload/test.ngs is automatically loaded.
 F global_not_found_handler(name:Str) {
-	require("${NGS_DIR}/autoload/${name}.ngs")
+	val = require("${NGS_DIR}/autoload/${name}.ngs")
+	idx = resolve_global_variable(name)
+	if not(is_global_variable_defined(idx)) {
+		# echo("IDX $name $idx")
+		set_global_variable(idx, val)
+	}
 }
 
 # === Range ======================================
@@ -2511,8 +2511,6 @@ F isatty(fd:Int) {
 	type Pipe
 	type PipeCreateFail(CException)
 }
-
-stdlib_fork_lock = Lock()
 
 # TODO: better exceptions (use correct type, not string, maybe use errno)
 doc Pipe constructor. Create UNIX pipe using PIPE(2). Throws PipeCreateFail if pipe can not be created.
