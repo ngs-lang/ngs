@@ -75,8 +75,9 @@ void print_ast(ast_node *node, int level) {
 		name = node->name;
 	}
 
-	printf("[DEBUG] %*s+ AST node at %p, type %s, name %s, info %s, source_location %d:%d-%d:%d%s\n", level*2, "", \
+	printf("[DEBUG] %*s+ AST node at %p, type %s, name %s, info %s, data %s, source_location %d:%d-%d:%d%s\n", level*2, "", \
 		node, NGS_AST_NODE_TYPES_NAMES[node->type], name, info, \
+		node->data ? "exists" : "does not exist", \
 		node->location.first_line, node->location.first_column, \
 		node->location.last_line,  node->location.last_column, \
 		node->location.is_generated ? " (generated)" : "");

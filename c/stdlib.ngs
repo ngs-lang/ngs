@@ -3814,6 +3814,7 @@ TEST [[1, 10], [2,20]].map(X[0]) == [1, 2]
 TEST [1,2].map([10,20,30][X]) == [20, 30]
 TEST [[1],[2,3]].filter(X.has(1)) == [[1]]
 TEST {true}()
+TEST f = F(x, y) x+y; f(X, 10)(20) == 30
 
 # === Namespaces tests ===========================
 TEST ns1 = ns { a = 1; _b = 2; a = 100 }; ns1 == {"a": 100}
