@@ -306,23 +306,17 @@ F map_base_idx(base, n:Int, mapper:Fun) {
 
 doc EXPERIMENTAL! Do not use!
 doc Map val only when val is true in boolean context. Otherwise return the original val.
-F map_true(val, mapper:Fun) {
-	if val {
-		mapper(val)
-	} else {
-		val
-	}
-}
+F map_true(val, mapper:Fun) only(identity, mapper)(val)
+
+TEST [].map_true(["--filters"] + X) == []
+TEST ["something"].map_true(["--filters"] + X) == ["--filters", "something"]
 
 doc EXPERIMENTAL! Do not use!
 doc Map val only when val is false in boolean context. Otherwise return the original val.
-F map_false(val, mapper:Fun) {
-	if val {
-		val
-	} else {
-		mapper(val)
-	}
-}
+F map_false(val, mapper:Fun) only(not + identity, mapper)(val)
+
+TEST [].map_false({ ["default"] }) == ["default"]
+TEST ["something"].map_false({ ["default"] }) == ["something"]
 
 doc Call cb with val
 doc %RET - val
