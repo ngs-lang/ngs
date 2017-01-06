@@ -111,8 +111,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* think about read/write vs read/echo methods naming
 
-			* Some read()s do not parse() - fix or rethink
-
 			* Move everything in "c" directory one level up
 
 			* locals() - to complete globals()

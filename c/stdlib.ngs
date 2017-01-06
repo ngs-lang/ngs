@@ -2456,11 +2456,11 @@ F dup2(oldfd:Int, newfd:Int) {
 
 # TODO: detect and process errors, throw exception(s)
 # TODO: better exceptions (use correct type, not string, maybe use errno)
-doc Read all data from a file referenced by file descriptor.
+doc Read all data from a file referenced by file descriptor without parsing it.
 doc fd - File descriptor to read from
 doc %RET - Str
-doc %EX - read(0)  # All data from stdin
-F read(fd:Int) {
+doc %EX - fetch(0)  # All data from stdin
+F fetch(fd:Int) {
 	ret = []
 	while true {
 		debug("[read] will read from fd $fd")
@@ -2546,10 +2546,10 @@ doc Write to Pipe. TODO: document if it throws.
 doc %RET - unspecified at this time, do not count on it
 F write(p:Pipe, s:Str) p.write_fd.c_write(s)
 
-doc Read from Pipe. TODO: document if it throws.
+doc Read from Pipe without parsing. TODO: document if it throws.
 doc %RET - read data
-doc %EX - data = read(myipe)
-F read(p:Pipe) p.read_fd.read()
+doc %EX - data = fetch(myipe)
+F fetch(p:Pipe) p.read_fd.fetch()
 
 doc DUP2(2) writing file descriptor
 F dup2_writing_end(p:Pipe, newfd:Int) dup2(p.write_fd, newfd)
@@ -2625,7 +2625,7 @@ F lines(f:File, cb:Fun) {
 	finally()
 		body => {
 			f.open('r')
-			f.fd.read().lines(cb)
+			f.fd.fetch().lines(cb)
 		}
 		cleanup => {
 			f.close()
@@ -2668,7 +2668,7 @@ F read(filename:Str) {
 }
 
 doc Read standard input and parse() it, passing "source" equals "stdin" hint.
-F read() read(0).parse({'source': 'stdin'})
+F read() fetch(0).parse({'source': 'stdin'})
 
 # --- Redir ---
 
@@ -2896,7 +2896,7 @@ F '$()'(c:Command) {
 		# TODO: some error handling inside these threads and after joining them
 		process.reading_threads = pipes_to_read_from.map(F(fd, pipe) {
 			Thread({
-				process.outputs[fd] = pipe.read()
+				process.outputs[fd] = pipe.fetch()
 				pipe.close_reading_end()
 				debug("$debug_pfx read all output of the child process for descriptor $fd, closing reading/parent end")
 			})
