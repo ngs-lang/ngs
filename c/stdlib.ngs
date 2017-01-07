@@ -4,7 +4,19 @@ STDLIB_CHILD_TO_PARENT_PIPE_DIR = 1
 STDLIB_PARENT_TO_CHILD_PIPE_DIR = 2
 STDLIB_MAX_RAND_REAL = Real(RAND_MAX)
 STDLIB_RAND_SAFETY_MAX = 100
-STDLIB_HEX_DIGITS='0123456789ABCDEF'
+
+# https://docs.python.org/2/library/string.html
+CHARS = ns {
+	ascii_lowercase = 'abcdefghijklmnopqrstuvwxyz'
+	ascii_uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+	ascii_letters = ascii_lowercase + ascii_uppercase
+	digits = '0123456789'
+	hexdigits_uppercase = '0123456789ABCDEF'
+	hexdigits_lowercase = '0123456789abcdef'
+	octdigits = '01234567'
+	base64 = ascii_uppercase + ascii_lowercase + digits + '+/'
+	base64url = ascii_uppercase + ascii_lowercase + digits + '-_'
+}
 
 # === Trivial init() helper ===
 
@@ -3695,9 +3707,11 @@ doc %RET - Str
 F encode_hex(s:Str) {
 	s.map(F(char) {
 		n = ord(char)
-		STDLIB_HEX_DIGITS[n / 16] + STDLIB_HEX_DIGITS[n % 16]
+		CHARS::hexdigits_uppercase[n / 16] + CHARS::hexdigits_uppercase[n % 16]
 	}).join('')
 }
+
+TEST encode_hex('ab') == '6162'
 
 STDLIB_INVALID_URI_CHAR_RE = /[^-a-zA-Z0-9_.!~*'()]/
 #'
