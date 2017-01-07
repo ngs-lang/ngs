@@ -4,6 +4,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 	Unsorted and undecided things go here. The important sections is [roadmap] and it's just below this section.
 
+	* C_PCRE_* - move to C_PCRE namespace
+	* Look for other sets of constants to move to namespaces
+
 [roadmap]
 
 	* Phase 1 - the language (will be v0.1.0) [in progress]

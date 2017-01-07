@@ -1973,9 +1973,15 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "The string <RegExp>");
 
 	register_global_func(vm, 1, ".",              &native_attr_regexp,      2, "regexp", vm->RegExp, "attr", vm->Str);
-	_doc(vm, "", "Get attributes of a RegExp. Throws AttrNotFound if attr is not one of the allowed values.");
+	_doc(vm, "", "Get attributes of a RegExp. Throws AttrNotFound if attr is not one of the allowed values. You should not use this directly. Use \"~\" and \"~~\" operators.");
 	_doc(vm, "attr", "\"options\" or \"names\"");
 	_doc(vm, "%RET", "Int for \"options\". Hash of names/indexes of named groups for \"names\".");
+	_doc_arr(vm, "%EX",
+		"/abc/i.options  # 1 - case insensitive (C_PCRE_CASELESS)",
+		"/(?P<name1>abc)/i.names  # Name to index Hash: {name1=1}",
+		NULL
+	);
+
 
 	// special
 	register_global_func(vm, 1, "args",            &native_args,            0);
@@ -2180,6 +2186,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Get BasicType (Int, Arr, Hash, ...) attribute. Throws AttrNotFound.");
 	_doc(vm, "attr", "Attribute to get. Currently only \"name\" and \"constructors\" are supported.");
 	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
+	_doc_arr(vm, "%EX",
+		"Hash.name  # String: Hash",
+		"Hash.constructors  # [<Native method Hash>,<Closure Hash at ...>,...]",
+		NULL
+	);
 
 	// NormalType
 	register_global_func(vm, 1, ".",        &native_get_attr_nt_str,       2, "obj", vm->NormalType,         "attr", vm->Str);
