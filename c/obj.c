@@ -512,7 +512,11 @@ void set_hash_key(VALUE h, VALUE k, VALUE v) {
 int del_hash_key(VALUE h, VALUE k) {
 	HASH_OBJECT_ENTRY *e, **prev;
 	HASH_OBJECT_ENTRY **buckets = OBJ_DATA_PTR(h);
-	uint32_t n = hash(k) % HASH_BUCKETS_N(h);
+	uint32_t n;
+	if(HASH_BUCKETS_N(h) == 0) {
+		return 0;
+	}
+	n = hash(k) % HASH_BUCKETS_N(h);
 	for(e=buckets[n], prev=&buckets[n]; e; prev=&e->bucket_next, e=e->bucket_next) {
 		if(is_equal(e->key, k)) {
 			if(HASH_HEAD(h) == e) {

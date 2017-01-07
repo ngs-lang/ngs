@@ -498,17 +498,8 @@ METHOD_RESULT native_index_get_hash_any EXT_METHOD_PARAMS {
 	return METHOD_OK;
 }
 
-METHOD_RESULT native_index_set_hash_any_any METHOD_PARAMS {
-	set_hash_key(argv[0], argv[1], argv[2]);
-	*result = argv[2];
-	return METHOD_OK;
-}
-
-METHOD_RESULT native_index_del_hash_any METHOD_PARAMS {
-	del_hash_key(argv[0], argv[1]);
-	*result = argv[0];
-	return METHOD_OK;
-}
+METHOD_RESULT native_index_set_hash_any_any METHOD_PARAMS { set_hash_key(argv[0], argv[1], argv[2]); METHOD_RETURN(argv[2]); }
+METHOD_RESULT native_index_del_hash_any METHOD_PARAMS { del_hash_key(argv[0], argv[1]); METHOD_RETURN(argv[0]); }
 
 METHOD_RESULT native_Hash_nti METHOD_PARAMS {
 	VALUE ut, item;
@@ -2424,29 +2415,190 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	register_global_func(vm, 1, "compile",  &native_compile_str_str,   2, "code",vm->Str, "fname", vm->Str);
+	_doc(vm, "", "Compile NGS source to bytecode.");
+	_doc(vm, "fname", "Source file name for backtraces and error messages.");
+	_doc(vm, "%RET", "Str - bytecode");
+	_doc_arr(vm, "%EX",
+		"# From bootstrap.ngs, require() definition",
+		"program_text = fetch(fname)",
+		"program_bytecode = compile(program_text, fname)",
+		"program_func = load(program_bytecode, \"require()d file: $fname\")",
+		"ret = program_func()",
+		NULL
+	);
+
 	register_global_func(vm, 1, "load",     &native_load_str_str,      2, "bytecode", vm->Str, "func_name", vm->Str);
+	_doc(vm, "", "Load compiled bytecode.");
+	_doc(vm, "bytecode", "compile() result.");
+	_doc(vm, "func_name", "Name of function to create. Used for backtraces and debugging purposes.");
+	_doc(vm, "%RET", "Fun - function with no parameters that runs the loaded bytecode when called.");
+	_doc_arr(vm, "%EX",
+		"# From bootstrap.ngs, require() definition",
+		"program_text = fetch(fname)",
+		"program_bytecode = compile(program_text, fname)",
+		"program_func = load(program_bytecode, \"require()d file: $fname\")",
+		"ret = program_func()",
+		NULL
+	);
+
 	register_global_func(vm, 1, "decode_json",&native_decode_json_str, 1, "s", vm->Str);
+	_doc(vm, "", "Decode (parse) JSON.");
+	_doc(vm, "%RET", "Any");
+	_doc_arr(vm, "%EX",
+		"decode_json('{\"a\": 1}')  # {a=1}",
+		NULL
+	);
+
 	register_global_func(vm, 1, "encode_json",&native_encode_json_obj, 1, "obj", vm->Any);
+	_doc(vm, "", "Encode JSON (serialize a data structure to JSON)");
+	_doc(vm, "%RET", "Str");
+	_doc_arr(vm, "%EX",
+		"encode_json({\"a\": 1+1})  # The string { \"a\": 2 }",
+		NULL
+	);
+
 	register_global_func(vm, 1, "Backtrace",&native_backtrace,         0);
+	_doc(vm, "", "Backtrace constructor");
+	_doc(vm, "%RET", "Backtrace. Backtrace has \"frames\" attribute which is in array. Each element of the array is a Hash with \"ip\" and \"closure\" properties.");
+	_doc_arr(vm, "%EX",
+		"Backtrace().frames.each(echo)",
+		"# {ip=4770, closure=<Closure <anonymous> at /etc/ngs/bootstrap.ngs:3>}",
+		"# {ip=4153, closure=<Closure bootstrap_exception_catch_wrapper at /etc/ngs/bootstrap.ngs:205>}",
+		"# {ip=3583, closure=<Closure bootstrap at /etc/ngs/bootstrap.ngs:111>}",
+		"# {ip=116587, closure=<Closure <anonymous> at <command line -pi switch>:2>}",
+		NULL
+	);
+
 	register_global_func(vm, 1, "resolve_instruction_pointer", &native_resolve_instruction_pointer,       1, "ip", vm->Int);
 	_doc(vm, "", "Resolves Instruction Pointer to source location");
+	_doc(vm, "ip", "Result of calling Backtrace(). Backtrace().frames[0].ip for example.");
 	_doc(vm, "%RET", "Hash with keys: file, first_line, first_column, last_line, last_column, ip");
+	_doc_arr(vm, "%EX",
+		"resolve_instruction_pointer(Backtrace().frames[0].ip)",
+		"# {ip=4770, file=/etc/ngs/bootstrap.ngs, first_line=245, first_column=1, last_line=245, last_column=34}",
+		NULL
+	);
+
 	register_global_func(vm, 1, "globals",  &native_globals,           0);
+	_doc(vm, "", "Get all global variables as Hash");
+	_doc(vm, "%RET", "Hash");
+	_doc_arr(vm, "%EX",
+		"globals().filterk(/^map/)  # {map=[...], ..., map_true=[...], ...}",
+		NULL
+	);
+
+	// TODO: check for errors, probably wrap in stdlib.
 	register_global_func(vm, 0, "time",     &native_time,         0);
+	_doc(vm, "", "Get time as the number of seconds since the Epoch, 1970-01-01 00:00:00 +0000 (UTC). Wraps TIME(2).");
+	_doc(vm, "%RET", "Int");
+	_doc_arr(vm, "%EX",
+		"time()  # 1483780368",
+		NULL
+	);
 
 	// hash
 	register_global_func(vm, 0, "in",       &native_in_any_hash,       2, "x",   vm->Any, "h", vm->Hash);
+	_doc(vm, "", "Check key presence in a Hash");
+	_doc(vm, "%RET", "Bool");
+	_doc_arr(vm, "%EX",
+		"time()  # 1483780368",
+		NULL
+	);
+
 	register_global_func(vm, 0, "hash",     &native_hash_any,          1, "x",   vm->Any);
+	_doc(vm, "", "Calculate hash value. Same function that Hash uses internally. Currently Fowler-Noll-Vo (FNV) hash function.");
+	_doc(vm, "%RET", "Int - unsigned 32 bit integer");
+	_doc_arr(vm, "%EX",
+		"hash(100)  # 100, Numbers are mapped to themselves.",
+		"hash(\"A\")  # 84696414",
+		"hash(\"AB\")  # 276232888",
+		NULL
+	);
+
 	register_global_func(vm, 0, "keys",     &native_keys_hash,         1, "h",   vm->Hash);
+	_doc(vm, "", "Get Hash keys as an array");
+	_doc(vm, "%RET", "Arr");
+	_doc_arr(vm, "%EX",
+		"{\"a\": 1, \"b\": 2}.keys()  # ['a','b']",
+		NULL
+	);
+
 	register_global_func(vm, 0, "values",   &native_values_hash,       1, "h",   vm->Hash);
+	_doc(vm, "", "Get Hash values as an array");
+	_doc(vm, "%RET", "Arr");
+	_doc_arr(vm, "%EX",
+		"{\"a\": 1, \"b\": 2}.values()  # [1,2]",
+		NULL
+	);
+
 	register_global_func(vm, 0, "update",   &native_update_hash_hash,  2, "dst", vm->Hash, "src", vm->Hash);
+	_doc(vm, "", "Update a Hash with key-value pairs from another Hash. For non destructive version use \"dst + src\".");
+	_doc(vm, "%RET", "dst");
+	_doc_arr(vm, "%EX",
+		"{\"a\": 1, \"b\": 2}.update({\"b\": 10, \"c\": 20})  # {a=1, b=10, c=20}",
+		NULL
+	);
+
 	register_global_func(vm, 0, "len",      &native_len,               1, "h",   vm->Hash);
+	_doc(vm, "", "Get number of key-value pairs in a Hash");
+	_doc(vm, "%RET", "Int");
+	_doc_arr(vm, "%EX",
+		"{\"a\": 1, \"b\": 2}.len()  # 2",
+		NULL
+	);
+
 	register_global_func(vm, 0, "get",      &native_index_get_hash_any_any,    3, "h",   vm->Hash,"k", vm->Any, "dflt", vm->Any);
+	_doc(vm, "", "Get hash value by key or dflt if it does not exist");
+	_doc(vm, "%RET", "Any");
+	_doc_arr(vm, "%EX",
+		"h = {\"a\": 1}",
+		"h.get(\"a\", 10)  # 1",
+		"h.get(\"b\", 10)  # 10",
+		NULL
+	);
+
 	register_global_func(vm, 1, "[]",       &native_index_get_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
+	_doc(vm, "", "Get hash value by key. Throws KeyNotFound.");
+	_doc(vm, "%RET", "Any");
+	_doc_arr(vm, "%EX",
+		"h = {\"a\": 1}",
+		"h[\"a\"]  # 1",
+		"h[\"b\"]  # KeyNotFound exception thrown",
+		NULL
+	);
+
 	register_global_func(vm, 0, "[]=",      &native_index_set_hash_any_any,    3, "h",   vm->Hash,"k", vm->Any, "v", vm->Any);
+	_doc(vm, "", "Set hash value.");
+	_doc(vm, "h", "Target hash");
+	_doc(vm, "k", "Key");
+	_doc(vm, "v", "Value");
+	_doc(vm, "%RET", "v");
+	_doc_arr(vm, "%EX",
+		"h = {\"a\": 1}",
+		"h[\"a\"] = 2",
+		"h[\"a\"]  # 2",
+		NULL
+	);
+
 	register_global_func(vm, 0, "del",      &native_index_del_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
+	_doc(vm, "", "Delete hash key. No exception is thrown if key is not found, the deletion is just skipped then.");
+	_doc(vm, "h", "Target hash");
+	_doc(vm, "k", "Key");
+	_doc(vm, "%RET", "h");
+	_doc_arr(vm, "%EX",
+		"h={\"a\": 1}; h.del(\"a\"); h  # {}",
+		"h={}; h.del(\"a\"); h  # {}",
+		"h={\"a\": 1, \"b\": 2}; h.del(\"a\"); h  # {\"b\": 2}",
+		NULL
+	);
+
 	register_global_func(vm, 0, "Hash",     &native_Hash_nti,                  1, "obj", vm->NormalTypeInstance);
-	_doc(vm, "", "Returns all fields of the type instance");
+	_doc(vm, "", "Get all attributes and their values as key-value pairs in the resulting Hash.");
+	_doc(vm, "%RET", "Hash");
+	_doc_arr(vm, "%EX",
+		"(1..10).Hash()  # Hash {start=1, end=10, step=1}",
+		NULL
+	);
 
 	// http://stackoverflow.com/questions/3473692/list-environment-variables-with-c-in-unix
 	env_hash = make_hash(32);

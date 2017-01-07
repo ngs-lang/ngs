@@ -794,7 +794,7 @@ doc %EX - h.a = 2  # 2, Same as h["a"] = 2
 doc %RET - v
 F .=(h:Hash, attr:Str, v) h[attr] = v
 
-doc Get hash key or null if it does not exist
+doc Get hash value by key or null if it does not exist
 doc %EX - h = {"a": 1}
 doc %EX - h.get("a")  # 1
 doc %EX - h.get("b")  # null
@@ -1557,6 +1557,12 @@ F filter(h:Hash, predicate) {
 }
 
 TEST {'a': 1, 'b': 2}.filter(F(k, v) k == 'a') == {'a': 1}
+
+doc Filter hash by keys
+F filterk(h:Hash, predicate) filter(h, Pred(predicate) + {A})
+
+doc Filter hash by values
+F filterv(h:Hash, predicate) filter(h, Pred(predicate) + {B})
 
 doc Check whether all key-value pairs in Hash satisfy the given predicate
 doc h - Hash to check
@@ -3789,6 +3795,11 @@ TEST (try [10,20,30,40][2..1] catch(e:InvalidArgument) "OK") == "OK"
 TEST (try [10,20,30,40][2..10] catch(e:InvalidArgument) "OK") == "OK"
 TEST [10,20,30,40][4..null] == []
 TEST a=[1,2,3,4]; a[4..4]=["END"]; a[2..2]=["MIDDLE"]; a[0..0]=["START"]; a[0..1] = ["start"]; a == ["start", 1, 2, "MIDDLE", 3, 4, "END"]
+
+# === Hash tests =================================
+TEST h={"a": 1}; h.del("a"); h == {}
+TEST h={}; h.del("a"); h == {}
+TEST h={"a": 1, "b": 2}; h.del("a"); h == {"b": 2}
 
 # === Str tests ==================================
 TEST "abcd"[1..3] == "bc"
