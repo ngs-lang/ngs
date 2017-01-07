@@ -5,19 +5,6 @@ STDLIB_PARENT_TO_CHILD_PIPE_DIR = 2
 STDLIB_MAX_RAND_REAL = Real(RAND_MAX)
 STDLIB_RAND_SAFETY_MAX = 100
 
-# https://docs.python.org/2/library/string.html
-CHARS = ns {
-	ascii_lowercase = 'abcdefghijklmnopqrstuvwxyz'
-	ascii_uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-	ascii_letters = ascii_lowercase + ascii_uppercase
-	digits = '0123456789'
-	hexdigits_uppercase = '0123456789ABCDEF'
-	hexdigits_lowercase = '0123456789abcdef'
-	octdigits = '01234567'
-	base64 = ascii_uppercase + ascii_lowercase + digits + '+/'
-	base64url = ascii_uppercase + ascii_lowercase + digits + '-_'
-}
-
 # === Trivial init() helper ===
 
 doc Trivial initialization helper for init(o, ...)
@@ -1924,6 +1911,18 @@ F code(n:Int) Str(n)
 
 # === Str ========================================
 
+# https://docs.python.org/2/library/string.html
+CHARS = ns {
+	ascii_lowercase = 'abcdefghijklmnopqrstuvwxyz'
+	ascii_uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+	ascii_letters = ascii_lowercase + ascii_uppercase
+	digits = '0123456789'
+	hexdigits_uppercase = '0123456789ABCDEF'
+	hexdigits_lowercase = '0123456789abcdef'
+	octdigits = '01234567'
+	base64 = ascii_uppercase + ascii_lowercase + digits + '+/'
+	base64url = ascii_uppercase + ascii_lowercase + digits + '-_'
+}
 
 # --- Constructors ---
 
