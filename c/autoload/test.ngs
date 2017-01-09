@@ -1,10 +1,8 @@
 {
-	Test = true
 	type TestFail(Error)
 	type TestMessage(FullBox)
 
 	F init(tf:TestFail, message:Str) init(args())
-
 }
 
 # TODO show standard error output on one changing line instead of occupying a lot of space
@@ -40,10 +38,6 @@ F assert_eq(actual, expected, title) {
 	# }
 }
 
-F assert_type(data, expected_type, title) {
-	assert_base(data, expected_type, is, "to be of type")
-}
-
 F assert_hash(actual, title=null) {
 	assert_base(actual, "a Hash", is(X, Hash), "to be", title or "Data type (mis)match")
 	actual
@@ -51,6 +45,11 @@ F assert_hash(actual, title=null) {
 
 F assert_array(actual, title=null) {
 	assert_base(actual, "an Arr", is(X, Arr), "to be", title or "Data type (mis)match")
+	actual
+}
+
+F assert_string(actual, title=null) {
+	assert_base(actual, "a Str", is(X, Str), "to be", title or "Data type (mis)match")
 	actual
 }
 
