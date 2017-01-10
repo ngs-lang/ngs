@@ -73,6 +73,8 @@
 			type TopDocNode(DocNode)
 				type TypesDocNode(DocNode)
 					type TypeDocNode(DocNode)
+				type ParentTypesDocNode(DocNode)
+					type ParentTypeDocNode(DocNode)
 				type MethodsDocNode(DocNode)
 					type MethodDocNode(DocNode)
 						type MethodImplDocNode(DocNode)
@@ -165,16 +167,52 @@
 
 		F Html(dn:TypeDocNode, options:Hash) {
 			tc.push('<section class="type">')
-			link = type_permalink('type-' + dn.name)
-			tc.push("<h${tc.heading_level} id=\"type-${dn.name.encode_html_attr()}\" class=\"method-header\">${dn.name.encode_html()}$link</h${tc.heading_level}>")
-			tc.heading_inc() do {
-				# dn.process_children(options + {'type': dn.name}, MethodImplDocNode)
-				dn.children.the_one(DescDocNode) do F(dn) {
-					dn.text / encode_html % tc.push(X)
+			tc.indent() do {
+				link = type_permalink('type-' + dn.name)
+				type_name = dn.name
+				tc.push("<h${tc.heading_level} id=\"type-${dn.name.encode_html_attr()}\" class=\"type-header\">${dn.name.encode_html()}$link</h${tc.heading_level}>")
+				tc.push('<section class="type-content">')
+				tc.indent() do {
+					tc.heading_inc() do {
+						dn.children.the_one(DescDocNode) do F(dn) {
+							dn.text / encode_html % tc.push(X)
+						}
+						dn.children.the_one(ParentTypesDocNode) do F(dn) {
+							tc.push("<h${tc.heading_level} id=\"type-${type_name.encode_html_attr()}-parents\" class=\"type-parents-header\">Parent types</h${tc.heading_level}>")
+							tc.push("<ul>")
+							tc.heading_inc() do {
+								dn.process_children(options + {'leaf': true}, TypeDocNode)
+							}
+							tc.push("</ul>")
+						}
+						dn.children.the_one(ExampleDocNode) do F(dn) {
+							tc.push("<h${tc.heading_level} id=\"type-${type_name.encode_html_attr()}-example\" class=\"example-header\">Example</h${tc.heading_level}>")
+							tc.push('<section class="type-example-content">')
+							tc.push('<pre class="example">' + dn.text.map(encode_html).join('\n') + '</pre>')
+							tc.push('</section>') # type-example-content
+						}
+						# dn.process_children(options)
+					}
 				}
-				# dn.process_children(options)
+				tc.push('</section>')
 			}
 			tc.push('</section>')
+		}
+
+		F Html(dn:TypeDocNode, options:Hash) {
+			guard options.get('leaf')
+			tc.indent() do {
+				tc.push("<li>${type_ref_link(dn.name)}")
+				tc.indent() do {
+					tc.heading_inc() do {
+						dn.children.the_one(DescDocNode) do F(dn) {
+							tc.push(" - ")
+							dn.text / encode_html % tc.push(X)
+						}
+					}
+				}
+				tc.push("</li>")
+			}
 		}
 
 		F Html(dn:MethodImplDocNode, options) {
@@ -339,12 +377,25 @@
 				page = TopDocNode([methods])
 			}
 			'types' {
-				types = g.filterv(Type).filterk(is_public_name).filterk(not + is_phased_out_type).sortk(lte).map(F(name, value) {
+				
+				F type_to_doc_node(value:Type, full:Bool) {
 					# echo("N $name")
+					# ret = TypeDocNode([ParentTypesDocNode(value.parents.map())])
 					ret = TypeDocNode()
-					ret.name = name
+					ret.name = value.name
+					# ret.full = full
 					process_type_impl_doc_attr(value, ret, '', DescDocNode)
+					if full {
+						process_type_impl_doc_attr(value, ret, '%EX', ExampleDocNode)
+						if value.parents {
+							ret.push(ParentTypesDocNode(value.parents.map(type_to_doc_node(X, false))))
+						}
+					}
 					ret
+				}
+
+				types = g.filterv(Type).filterk(is_public_name).filterk(not + is_phased_out_type).sortk(lte).map(F(name, value) {
+					type_to_doc_node(value, true)
 				})
 				tdn = TypesDocNode(types)
 				page = TopDocNode([tdn])

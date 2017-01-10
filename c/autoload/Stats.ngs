@@ -3,6 +3,14 @@
 {
 	doc A group of named counters
 	doc h - The underlying Hash, expose()d
+	doc %EX - s = Stats().push('a').push('a').push('b')
+	doc %EX - s["a"]  # 2
+	doc %EX - s["b"]  # 1
+	doc %EX -
+	doc %EX - a = ["x", "y", "y"]
+	doc %EX - s = Stats(a)
+	doc %EX - s["x"]  # 1
+	doc %EX - s["y"]  # 2
 	type Stats(HashLike)
 }
 

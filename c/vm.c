@@ -962,12 +962,13 @@ METHOD_RESULT native_get_attr_bt_str EXT_METHOD_PARAMS {
 	char *attr = obj_to_cstring(argv[1]);
 	(void) ctx;
 	if(!strcmp(attr, "constructors")) {
-		// dump_titled("constructors", NGS_TYPE_CONSTRUCTORS(argv[0]));
 		METHOD_RETURN(NGS_TYPE_CONSTRUCTORS(argv[0]));
 	}
 	if(!strcmp(attr, "name")) {
-		// dump_titled("constructors", NGS_TYPE_CONSTRUCTORS(argv[0]));
 		METHOD_RETURN(NGS_TYPE_NAME(argv[0]));
+	}
+	if(!strcmp(attr, "parents")) {
+		METHOD_RETURN(NGS_TYPE_PARENTS(argv[0]));
 	}
 
 	exc = make_normal_type_instance(vm->AttrNotFound);
@@ -976,17 +977,19 @@ METHOD_RESULT native_get_attr_bt_str EXT_METHOD_PARAMS {
 	THROW_EXCEPTION_INSTANCE(exc);
 }
 
+// TODO: Factor out "constructors", "name", ...
 METHOD_RESULT native_get_attr_nt_str EXT_METHOD_PARAMS {
 	VALUE exc;
 	char *attr = obj_to_cstring(argv[1]);
 	(void) ctx;
 	if(!strcmp(attr, "constructors")) {
-		// dump_titled("constructors", NGS_TYPE_CONSTRUCTORS(argv[0]));
 		METHOD_RETURN(NGS_TYPE_CONSTRUCTORS(argv[0]));
 	}
 	if(!strcmp(attr, "name")) {
-		// dump_titled("constructors", NGS_TYPE_CONSTRUCTORS(argv[0]));
 		METHOD_RETURN(NGS_TYPE_NAME(argv[0]));
+	}
+	if(!strcmp(attr, "parents")) {
+		METHOD_RETURN(NGS_TYPE_PARENTS(argv[0]));
 	}
 
 	exc = make_normal_type_instance(vm->AttrNotFound);
