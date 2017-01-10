@@ -180,9 +180,7 @@
 						dn.children.the_one(ParentTypesDocNode) do F(dn) {
 							tc.push("<h${tc.heading_level} id=\"type-${type_name.encode_html_attr()}-parents\" class=\"type-parents-header\">Parent types</h${tc.heading_level}>")
 							tc.push("<ul>")
-							tc.heading_inc() do {
-								dn.process_children(options + {'leaf': true}, TypeDocNode)
-							}
+							dn.process_children(options + {'leaf': true}, TypeDocNode)
 							tc.push("</ul>")
 						}
 						dn.children.the_one(ExampleDocNode) do F(dn) {
@@ -288,6 +286,25 @@
 		F to_lines(s:Str) [s]
 		F to_lines(a:Arr) a
 
+		F list_methods()
+			collector/{}
+				globals().filterk(is_public_name).sortk(lte).each(F(name, value) {
+					cond {
+						(value is Arr) and value.all(Fun) {
+							collect(name, value)
+						}
+						value is Type {
+							c = value.constructors
+							if value is NormalType {
+								# NormalType has special constructor which we can't handle for now
+								# so skipping that one
+								c = c[1..null]
+							}
+							collect(name, c)
+						}
+					}
+				})
+
 		F process_param(param:Hash, doc:Hash) {
 			# echo("P $param")
 			dn = ParamDocNode()
@@ -357,27 +374,18 @@
 		g = globals()
 
 		eswitch mode {
+
 			'methods' {
-					g.filterk(is_public_name).sortk(lte).each(F(name, value) {
-					cond {
-						(value is Arr) and value.all(Fun)
-							methods.push(process_method(name, value))
-						value is Type {
-							# process_type(name, value)
-							c = value.constructors
-							if value is NormalType {
-								# NormalType has special constructor which we can't handle for now
-								# so skipping that one
-								c = c[1..null]
-							}
-							methods.push(process_method(name, c))
-						}
-					}
-				})
-				page = TopDocNode([methods])
+				page = TopDocNode([ list_methods() / process_method ])
 			}
+
 			'types' {
-				
+
+				# We'll use it to list methods that have given
+				# type as type of one of the parameters.
+				methods = list_methods()
+
+				# TODO: straighten by using ParentTypeDocNode instead of 'full' / 'leaf' option.
 				F type_to_doc_node(value:Type, full:Bool) {
 					# echo("N $name")
 					# ret = TypeDocNode([ParentTypesDocNode(value.parents.map())])
@@ -400,6 +408,7 @@
 				tdn = TypesDocNode(types)
 				page = TopDocNode([tdn])
 			}
+
 		}
 
 		echo(Html(page))
