@@ -17,9 +17,12 @@
 
 	# Use anonymous function to exclude methods in this file
 	# The inner functions are local
-	F(){
+	ns {
 
 		global Arr, Str, init, push, each
+
+		mode = ARGV[0]
+		assert(mode == 'methods' or mode == 'types')
 
 		type TextCollector
 
@@ -98,6 +101,7 @@
 		# --- Html ---
 
 		F permalink(s:Str) '<a class="section-link" title="Permalink to this definition" href="#' + s.encode_html_attr() + '">¶</a>'
+		F typelink(s:Str) '<a class="type-link" title="See type" href="types#' + s.encode_html_attr() + '">' + s.encode_html() + '</a>'
 
 		commit = `git rev-parse HEAD`.lines()[0]
 		# https://github.com/ilyash/ngs/blob/00e547caf492e3ac42d2aca8ef32a28f302c7287/c/stdlib.ngs#L3197
@@ -157,7 +161,11 @@
 				}
 				html += param_dn.name.encode_html()
 				typ = param_dn.children.the_one(ParamTypeDocNode).text[0]
-				html += ":${typ.encode_html()}"
+				if typ == 'Any' {
+					html += ":${typ.encode_html()}"
+				} else {
+					html += ":${typelink(typ)}"
+				}
 				param_dn.children.the_one(ParamDfltDocNode) do F(dflt) {
 					html += "=${dflt.text[0].encode_html()}"
 				}
@@ -271,29 +279,37 @@
 		methods = MethodsDocNode()
 
 		g = globals()
-		g.keys().filter(is_public_name).sort(lte).each(F(name) {
-			value = g[name]
-			cond {
-				(value is Arr) and value.all(Fun)
-					methods.push(process_method(name, value))
-				value is Type {
-					# process_type(name, value)
-					c = value.constructors
-					if value is NormalType {
-						# NormalType has special constructor which we can't handle for now
-						# so skipping that one
-						c = c[1..null]
-					}
-					process_method(name, c)
-				}
-			}
-		})
 
-		page = TopDocNode([methods])
+		eswitch mode {
+			'methods' {
+					g.filterk(is_public_name).sortk(lte).each(F(name, value) {
+					cond {
+						(value is Arr) and value.all(Fun)
+							methods.push(process_method(name, value))
+						value is Type {
+							# process_type(name, value)
+							c = value.constructors
+							if value is NormalType {
+								# NormalType has special constructor which we can't handle for now
+								# so skipping that one
+								c = c[1..null]
+							}
+							methods.push(process_method(name, c))
+						}
+					}
+				})
+				page = TopDocNode([methods])
+			}
+			'types' {
+				g.filterv(Type).filterk(is_public_name).sortk(lte).each(F(name, value) {
+					echo("N $name")
+				})
+			}
+		}
 
 		echo(Html(page))
 
 		# echo(methods.children[-100])
-	}()
+	}
 }
 

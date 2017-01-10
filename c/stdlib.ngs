@@ -1599,6 +1599,14 @@ F count(h:Hash, predicate) {
 
 TEST {'a': 1, 'b': 2, 'c': 11}.count(F(k, v) v>10) == 1
 
+doc Sort Hash by keys
+doc %RET - Hash
+doc %EX - {'b': 2, 'c': 11, 'a': 1}.sortk()  # {'a': 1, 'b': 2, 'c': 11}
+F sortk(h:Hash, lte:Fun=(<=)) h.keys().sort(lte).Hash(h[X])
+
+TEST {'b': 2, 'c': 11, 'a': 1}.sortk() == {'a': 1, 'b': 2, 'c': 11}
+TEST {'a': 1, 'b': 2, 'c': 11}.sortk() == {'a': 1, 'b': 2, 'c': 11}
+
 # --- Conversions ---
 
 doc Create a Hash from Arr of Arr[2]
