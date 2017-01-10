@@ -71,6 +71,8 @@
 		type DocNode
 		type TextDocNode(DocNode)
 			type TopDocNode(DocNode)
+				type TypesDocNode(DocNode)
+					type TypeDocNode(DocNode)
 				type MethodsDocNode(DocNode)
 					type MethodDocNode(DocNode)
 						type MethodImplDocNode(DocNode)
@@ -100,8 +102,11 @@
 
 		# --- Html ---
 
-		F permalink(s:Str) '<a class="section-link" title="Permalink to this definition" href="#' + s.encode_html_attr() + '">¶</a>'
-		F typelink(s:Str) '<a class="type-link" title="See type" href="types#' + s.encode_html_attr() + '">' + s.encode_html() + '</a>'
+		F method_permalink(s:Str) '<a class="section-link" title="Permalink to this definition" href="#' + s.encode_html_attr() + '">¶</a>'
+
+		F type_permalink(s:Str) '<a class="type-link" title="Permalink to this type" href="#' + s.encode_html_attr() + '">¶</a>'
+
+		F type_ref_link(s:Str) '<a class="type-ref-link" title="See type" href="types.html#type-' + s.encode_html_attr() + '">' + s.encode_html() + '</a>'
 
 		commit = `git rev-parse HEAD`.lines()[0]
 		# https://github.com/ilyash/ngs/blob/00e547caf492e3ac42d2aca8ef32a28f302c7287/c/stdlib.ngs#L3197
@@ -138,13 +143,36 @@
 			tc.push("<!-- methods end -->")
 		}
 
+		F Html(dn:TypesDocNode, options:Hash) {
+			tc.push("<!-- types start -->")
+			tc.push("<h${tc.heading_level}>Types</h${tc.heading_level}>")
+			tc.heading_inc() do {
+				dn.process_children(options)
+			}
+			tc.push("<!-- types end -->")
+		}
+
 		F Html(dn:MethodDocNode, options:Hash) {
 			not(dn.children.filter(MethodImplDocNode)) returns null
 			tc.push('<section class="method">')
-			link = permalink('method-' + dn.name)
+			link = method_permalink('method-' + dn.name)
 			tc.push("<h${tc.heading_level} id=\"method-${dn.name.encode_html_attr()}\" class=\"method-header\">${dn.name.encode_html()}$link</h${tc.heading_level}>")
 			tc.heading_inc() do {
 				dn.process_children(options + {'method': dn.name}, MethodImplDocNode)
+			}
+			tc.push('</section>')
+		}
+
+		F Html(dn:TypeDocNode, options:Hash) {
+			tc.push('<section class="type">')
+			link = type_permalink('type-' + dn.name)
+			tc.push("<h${tc.heading_level} id=\"type-${dn.name.encode_html_attr()}\" class=\"method-header\">${dn.name.encode_html()}$link</h${tc.heading_level}>")
+			tc.heading_inc() do {
+				# dn.process_children(options + {'type': dn.name}, MethodImplDocNode)
+				dn.children.the_one(DescDocNode) do F(dn) {
+					dn.text / encode_html % tc.push(X)
+				}
+				# dn.process_children(options)
 			}
 			tc.push('</section>')
 		}
@@ -164,7 +192,7 @@
 				if typ == 'Any' {
 					html += ":${typ.encode_html()}"
 				} else {
-					html += ":${typelink(typ)}"
+					html += ":${type_ref_link(typ)}"
 				}
 				param_dn.children.the_one(ParamDfltDocNode) do F(dflt) {
 					html += "=${dflt.text[0].encode_html()}"
@@ -178,7 +206,7 @@
 			p = params.join(', ')
 
 			types = ('-' + params_dn.children.map(F(param_dn) param_dn.children.the_one(ParamTypeDocNode).text[0])).join('')
-			link = permalink('impl-' + options.method.encode_html_attr() + types)
+			link = method_permalink('impl-' + options.method.encode_html_attr() + types)
 			tc.push("<h${tc.heading_level} id=\"impl-${options.method.encode_html_attr()}$types\" class=\"method-impl-header\">${options.method.encode_html()}($p)$link</h${tc.heading_level}>")
 			tc.indent() do {
 				tc.push('<section class="method-impl-content">')
@@ -217,6 +245,7 @@
 		}
 
 		F is_public_name(s:Str) s ~ /^[^_]/
+		F is_phased_out_type(s:Str) s ~ Pfx('Aws')
 
 		F to_lines(s:Str) [s]
 		F to_lines(a:Arr) a
@@ -246,6 +275,15 @@
 
 		F process_method_impl_doc_attr(mi:Fun, dn:DocNode, doc_attr:Str, doc_node_type:Type) {
 			d = mi.attrs().doc or {}
+			if doc_attr in d {
+				dn.push(doc_node_type(d[doc_attr].to_lines()))
+			}
+		}
+
+		F process_type_impl_doc_attr(t:Type, dn:DocNode, doc_attr:Str, doc_node_type:Type) {
+			a = t.attrs()
+			'doc' not in a returns null
+			d = t.attrs().doc or {}
 			if doc_attr in d {
 				dn.push(doc_node_type(d[doc_attr].to_lines()))
 			}
@@ -301,9 +339,15 @@
 				page = TopDocNode([methods])
 			}
 			'types' {
-				g.filterv(Type).filterk(is_public_name).sortk(lte).each(F(name, value) {
-					echo("N $name")
+				types = g.filterv(Type).filterk(is_public_name).filterk(not + is_phased_out_type).sortk(lte).map(F(name, value) {
+					# echo("N $name")
+					ret = TypeDocNode()
+					ret.name = name
+					process_type_impl_doc_attr(value, ret, '', DescDocNode)
+					ret
 				})
+				tdn = TypesDocNode(types)
+				page = TopDocNode([tdn])
 			}
 		}
 

@@ -18,7 +18,7 @@ q {
     quotes: "\201C" "\201D" "\2018" "\2019";
 }
 
-a.section-link {
+a.section-link, a.type-link {
 	visibility: hidden;
 	font-size: 0.8em;
 	text-decoration: none;
@@ -28,12 +28,16 @@ a.section-link {
 h1:hover > a.section-link,
 h2:hover > a.section-link,
 h3:hover > a.section-link,
-h4:hover > a.section-link
+h4:hover > a.section-link,
+h1:hover > a.type-link,
+h2:hover > a.type-link,
+h3:hover > a.type-link,
+h4:hover > a.type-link
 {
 	visibility: visible;
 }
 
-.method {
+.method, .type {
 	padding-left: 4em;
 }
 .method-header {
