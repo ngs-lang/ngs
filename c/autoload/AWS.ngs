@@ -1,7 +1,7 @@
 ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	# Methods with added implementations
-	global Str, init, find, validate, create, update, users_ids, run, id, ids, (==)
+	global Str, init, find, latest, validate, create, update, users_ids, run, id, ids, (==)
 
 	# --------------------------------------------------
 	# Constants
@@ -185,7 +185,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	F validate(rd:SecGroup) {
 		(rd.anchor is not Arr) throws
-			InvalidArgument("SecGroup's anchor must be an array")
+			InvalidArgument("SecGroup's anchor must be an array: [name, vpc_id]")
 		('Description' not in rd.props) throws
 			InvalidArgument("SecGroup must have the 'description' property")
 	}
@@ -476,7 +476,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		rd.count > 1 throws InvalidArgument("Elb can only handle one instance at a time while desired count is ${rd.count}")
 		'ListenerDescriptions' not in rd.props throws InvalidArgument("Elb must have 'listeners' property")
 
-		('AvailabilityZones' not in rd.props) and ('Subnets' not in rd.props) throws InvalidArgument("Either 'azs' or 'subnets' must be in Elb properties")
+		('AvailabilityZones' not in rd.props) and ('Subnets' not in rd.props) throws InvalidArgument("Either 'AvailabilityZones' or 'Subnets' must be in Elb properties")
 		'AvailabilityZones' in rd.props throws NotImplemented("'AvailabilityZones' Elb property")
 	}
 

@@ -74,7 +74,7 @@ syn keyword ngsFunction converge create delete expect find validate
 
 " stdlib test library functions
 syn keyword ngsFunction log_test_ok
-syn keyword ngsFunction assert_base assert_eq assert_type assert_hash assert_array assert_hash_keys assert_hash_keys_values assert_min_len assert_exit_code assert_output_has assert_has assert_resolvable assert_path_exists
+syn keyword ngsFunction assert_base assert_eq assert_type assert_hash assert_array assert_string assert_hash_keys assert_hash_keys_values assert_min_len assert_exit_code assert_output_has assert_has assert_resolvable assert_path_exists
 
 hi def link ngsComment Comment
 hi def link ngsConditional Conditional
