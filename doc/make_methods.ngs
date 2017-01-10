@@ -293,14 +293,13 @@
 						(value is Arr) and value.all(Fun) {
 							collect(name, value)
 						}
+						value is NormalType {
+							# NormalType has special constructor which we can't handle for now
+							# so skipping that one
+							collect(name, value.constructors[1..null])
+						}
 						value is Type {
-							c = value.constructors
-							if value is NormalType {
-								# NormalType has special constructor which we can't handle for now
-								# so skipping that one
-								c = c[1..null]
-							}
-							collect(name, c)
+							collect(name, value.constructors)
 						}
 					}
 				})
