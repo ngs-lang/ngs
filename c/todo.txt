@@ -6,6 +6,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* C_PCRE_* - move to C_PCRE namespace
 	* Look for other sets of constants to move to namespaces
+	* address resolution functions
 
 [roadmap]
 
