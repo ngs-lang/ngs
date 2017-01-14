@@ -841,7 +841,7 @@ F in(x, arr:Arr) {
 
 # Tested by has() tests
 
-doc Arrays equality test
+doc Arrays equality test.
 doc True if arrays are of the same length and all elements are equal (==)
 doc %RET - Bool
 F ==(a:Arr, b:Arr) {

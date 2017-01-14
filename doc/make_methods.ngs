@@ -73,6 +73,9 @@
 			type TopDocNode(DocNode)
 				type TypesDocNode(DocNode)
 					type TypeDocNode(DocNode)
+						type TypeMethodsDocNode(DocNode)
+							type TypeMethodDocNode(DocNode)
+								type TypeMethodImplDocNode(DocNode)
 				type ParentTypesDocNode(DocNode)
 					type ParentTypeDocNode(DocNode)
 				type MethodsDocNode(DocNode)
@@ -108,6 +111,7 @@
 
 		F type_permalink(s:Str) '<a class="type-link" title="Permalink to this type" href="#' + s.encode_html_attr() + '">¶</a>'
 
+		F method_ref_link(display_name:Str, link_data:Str) '<a class="method-ref-link" title="See method" href="methods.html#impl-' + link_data.encode_html_attr() + '">' + display_name + '</a>'
 		F type_ref_link(s:Str) '<a class="type-ref-link" title="See type" href="types.html#type-' + s.encode_html_attr() + '">' + s.encode_html() + '</a>'
 
 		commit = `git rev-parse HEAD`.lines()[0]
@@ -145,6 +149,15 @@
 			tc.push("<!-- methods end -->")
 		}
 
+		F Html(dn:TypeMethodsDocNode, options:Hash) {
+			tc.push("<!-- type methods start -->")
+			tc.push("<h${tc.heading_level}>Methods</h${tc.heading_level}>")
+			tc.heading_inc() do {
+				dn.process_children(options)
+			}
+			tc.push("<!-- type methods end -->")
+		}
+
 		F Html(dn:TypesDocNode, options:Hash) {
 			tc.push("<!-- types start -->")
 			tc.push("<h${tc.heading_level}>Types</h${tc.heading_level}>")
@@ -163,6 +176,10 @@
 				dn.process_children(options + {'method': dn.name}, MethodImplDocNode)
 			}
 			tc.push('</section>')
+		}
+
+		F Html(dn:TypeMethodDocNode, options:Hash) {
+			dn.process_children(options + {'method': dn.name}, TypeMethodImplDocNode)
 		}
 
 		F Html(dn:TypeDocNode, options:Hash) {
@@ -189,7 +206,7 @@
 							tc.push('<pre class="example">' + dn.text.map(encode_html).join('\n') + '</pre>')
 							tc.push('</section>') # type-example-content
 						}
-						# dn.process_children(options)
+						dn.process_children(options, TypeMethodsDocNode)
 					}
 				}
 				tc.push('</section>')
@@ -280,6 +297,41 @@
 			tc.push('</section>') # method-impl
 		}
 
+		F Html(dn:TypeMethodImplDocNode, options) {
+			tc.push('<section class="type-method-impl">')
+
+			params_dn = dn.children.the_one(ParamsDocNode)
+			# echo(pdn)
+			params = params_dn.children.map() with F(param_dn) {
+				html = ''
+				if 'splat' in param_dn {
+					html += param_dn.splat
+				}
+				html += param_dn.name.encode_html()
+				typ = param_dn.children.the_one(ParamTypeDocNode).text[0]
+				html += ":${typ.encode_html()}"
+				param_dn.children.the_one(ParamDfltDocNode) do F(dflt) {
+					html += "=${dflt.text[0].encode_html()}"
+				}
+				param_dn.children.the_one(ParamSpecialDfltDocNode) do F(dflt) {
+					html += "=<em>${dflt.text[0].encode_html()}</em>"
+				}
+				html
+			}
+
+			p = params.join(', ')
+
+			types = ('-' + params_dn.children.map(F(param_dn) param_dn.children.the_one(ParamTypeDocNode).text[0])).join('')
+			link = method_ref_link("${options.method.encode_html()}($p)", options.method + types)
+			tc.push(link)
+			dn.children.the_one(DescDocNode) do F(dn) {
+				tc.push('<section class="type-method-impl-desc">')
+				dn.text / encode_html % tc.push(X)
+				tc.push('</section>') # type-method-impl
+			}
+			tc.push('</section>') # type-method-impl
+		}
+
 		F is_public_name(s:Str) s ~ /^[^_]/
 		F is_phased_out_type(s:Str) s ~ Pfx('Aws')
 
@@ -358,7 +410,6 @@
 					dn.push(LocationDocNode().set('file', m.after).set('line', location_info.first_line))
 				}
 			}
-
 			dn
 		}
 
@@ -380,6 +431,13 @@
 
 			'types' {
 
+				# TODO: methods with this type
+				# TODO: constructors
+				# TODO: child types
+
+				# Splat params will be Arr or Hash but they are not interesting
+				F method_impl_has_arg_of_type(mi:Fun, t:Type) mi.params().reject(X.get('splat')).type.has(t)
+
 				# We'll use it to list methods that have given
 				# type as type of one of the parameters.
 				methods = list_methods()
@@ -396,6 +454,23 @@
 						process_type_impl_doc_attr(value, ret, '%EX', ExampleDocNode)
 						if value.parents {
 							ret.push(ParentTypesDocNode(value.parents.map(type_to_doc_node(X, false))))
+						}
+						methods_of_type = collector
+							methods.each() do F(name, impls) {
+								relevant_impls = impls.filter(method_impl_has_arg_of_type(X, value)).map() do F(mi) {
+									dn = TypeMethodImplDocNode([])
+									process_method_impl_doc_attr(mi, dn, '', DescDocNode)
+									dn.push(ParamsDocNode(mi.params().map(process_param(X, mi.attrs().doc or {}))))
+									dn
+								}
+								if relevant_impls {
+									dn = TypeMethodDocNode(relevant_impls)
+									dn.name = name
+									collect(dn)
+								}
+							}
+						if methods_of_type {
+							ret.push(TypeMethodsDocNode(methods_of_type))
 						}
 					}
 					ret

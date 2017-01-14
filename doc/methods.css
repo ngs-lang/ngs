@@ -37,12 +37,14 @@ h4:hover > a.type-link
 	visibility: visible;
 }
 
-.method, .type {
+.method, .type, .type-method-impl, .type-method-impl-desc {
 	padding-left: 4em;
+}
+.type-method-impl {
+	padding-bottom: 1em;
 }
 .method-header {
 	color: #888;
-
 }
 .method-source {
 	opacity: 0.5;
