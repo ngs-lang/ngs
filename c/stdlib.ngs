@@ -510,8 +510,9 @@ F Str(i:NormalTypeInstance) {
 	}
 	# TODO limit key and value lengths
 	h .= Strs()
+	attrs = h.join(' ').map_true(' ' + X)
 
-	"<${i.typeof().name} ${h.join(' ')}${if truncated ' ...' else ''}>"
+	"<${i.typeof().name}${attrs}${if truncated ' ...' else ''}>"
 }
 
 doc Set an attribute in an instance if it's not already set
@@ -906,6 +907,18 @@ TEST [0,1,2].none(X>2)
 TEST [0,1,2].none(X<2).not()
 
 TEST [1,2,3].map(X*4) == [4,8,12]
+
+F subset(smaller:Arr, larger:Arr) {
+	h = if larger.len() > 10 {
+		larger.Hash({true})
+	} else {
+		larger
+	}
+	smaller.all(X in h)
+}
+
+TEST [1,2,3].subset([1,2,3,4])
+TEST [1].subset([2]) == false
 
 doc Iterates over the elements of arr, passing each in turn to cb along with args: cb(ITEM)
 doc cb - Function to be called with values from arr
@@ -1445,6 +1458,12 @@ F cmp(a:Hash, b:Hash) {
 
 TEST cmp({"a": 1, "b":2}, {"b": 3, "d": 4}) == {"add":{"d":4}, "change":{"b":3}, "remove":["a"]}
 
+F subset(smaller:Hash, larger:Hash) smaller.all(F(k, v) k in larger and larger[k] == v)
+
+TEST subset({}, {"a": 1})
+TEST subset({"a": 1}, {"a": 1})
+TEST subset({"a": 1, "b":2}, {"b": 3, "d": 4}) == false
+TEST subset({"a": 1}, {"a": 10}) == false
 
 # --- Functional ---
 

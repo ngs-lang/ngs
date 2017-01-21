@@ -248,6 +248,13 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		not(diff.add or diff.remove or diff.change)
 	}
 
+	# TOOD: continue here
+	F subset(smaller:IpPermBox, larger:IpPermBox) {
+		a .= cleanup()
+		b .= cleanup()
+
+	}
+
 	F create(rd:SecGroup) {
 		rd.log('create', 'SG')
 		rd.run('create SG', %(aws ec2 create-security-group --group-name ${rd.anchor[0]} --description ${rd.props.Description} $*{vpc_id_args(rd)}))
@@ -261,6 +268,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		sg.def.log('update', 'SG')
 
 		if 'IpPermissions' in sg.def.props {
+			# PrefixListIds - http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_IpPermission.html
+			# (Valid for AuthorizeSecurityGroupEgress, RevokeSecurityGroupEgress and DescribeSecurityGroups only)
+			# sg.props.IpPermissions.each(F(perm) perm.del('PrefixListIds'))
 			diff = compare(sg.props.IpPermissions/IpPermBox, sg.def.props.IpPermissions/IpPermBox)
 			if diff.add {
 				sg.run('add SG ingress rules', %(aws ec2 authorize-security-group-ingress --group-id ${sg.props.GroupId} --ip-permissions $*{diff.add.val / encode_json}))

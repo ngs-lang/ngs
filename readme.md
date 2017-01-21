@@ -370,6 +370,11 @@ None of the shells below provide interaction with objects on the screen: if you 
 None of the shells below have built-in interaction with a cloud. In NGS the work on ["declarative primitives for the cloud"](https://ilya-sher.org/2016/07/06/declarative-primitives-or-mkdir-p-for-the-cloud/) has already started. Declarative primitives are somewhat similar to Chef or Puppet resources. The main difference between declarative primitives and a configuration management resource is that I'm proposing just a library function which can be called when you need it and not a control-grabbing framework. So for example `AwsElb(...)` function call will make sure the load balancer exists and is configured as described.
 
 
+* [oil shell](http://www.oilshell.org/) is a very promising project with motiviation similar to that behind NGS. It's too early to tell the differences.
+	* [Oil goals](https://github.com/oilshell/oil/wiki/Project-Goals)
+	* Current (2017-01) work in the project is on the importer that could import existing bash scripts. NGS does not have such importer and it's not currently planned.
+	* The project also has a [good page listing other shells](https://github.com/oilshell/oil/wiki/ExternalResources)
+	* [Subreddit](https://www.reddit.com/r/oilshell/).
 * [fish shell](http://fishshell.com/) has very nice features and improvements but is still more bash-like. For example it doesn't have nested data structures nor a full-featured programming language.
 * [Plumbum](https://github.com/tomerfiliba/plumbum) makes it easier to call shell commands from python. Too verbose to be used as a shell or shell script. It helps when you need to use python and call external programs. Primary target audience seems to be Python developers, not system engineers.
 * [Xonsh](http://xon.sh/) Python with bash-like additions. Python is not a domain specific language, making bash-like additions can not bring it to be optimal for system tasks.
