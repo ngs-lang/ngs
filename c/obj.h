@@ -350,7 +350,7 @@ VALUE make_normal_type_constructor(VALUE normal_type);
 VALUE make_normal_type_instance(VALUE normal_type);
 METHOD_RESULT get_normal_type_instace_attribute(VALUE obj, VALUE attr, VALUE *result);
 void set_normal_type_instance_attribute(VALUE obj, VALUE attr, VALUE v);
-void add_normal_type_inheritance(VALUE type, VALUE parent_type);
+void add_type_inheritance(VALUE type, VALUE parent_type);
 uint32_t hash(VALUE v);
 HASH_OBJECT_ENTRY *get_hash_key(VALUE h, VALUE k);
 void set_hash_key(VALUE h, VALUE k, VALUE v);

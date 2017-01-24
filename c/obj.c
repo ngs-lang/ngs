@@ -346,9 +346,9 @@ void set_normal_type_instance_attribute(VALUE obj, VALUE attr, VALUE v) {
 	ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(obj))[n] = v;
 }
 
-void add_normal_type_inheritance(VALUE type, VALUE parent_type) {
-	assert(IS_NORMAL_TYPE(type));
-	assert(IS_NORMAL_TYPE(parent_type));
+void add_type_inheritance(VALUE type, VALUE parent_type) {
+	assert(IS_NGS_TYPE(type));
+	assert(IS_NGS_TYPE(parent_type));
 	array_push(NGS_TYPE_PARENTS(type), parent_type);
 	// TODO: check for circularity (and/or depth?)
 	// TODO: invalidate cached "is" results for the types involved, when such caching is implemented
@@ -699,8 +699,6 @@ VALUE join_strings(int argc, VALUE *argv) {
 	return ret;
 }
 
-#define OBJ_C_OBJ_IS_OF_TYPE(type, check) if(tid == type) { return check(obj); }
-
 int ut_is_ut(VALUE ut_child, VALUE ut_parent) {
 	if(ut_child.ptr == ut_parent.ptr) { return 1; }
 	size_t len, i;
@@ -711,6 +709,8 @@ int ut_is_ut(VALUE ut_child, VALUE ut_parent) {
 	}
 	return 0;
 }
+
+#define OBJ_C_OBJ_IS_OF_TYPE(type, check) if(tid == type) { return check(obj); }
 
 // TODO: make it faster, probably using vector of NATIVE_TYPE_IDs and how to detect them
 //       maybe re-work tagged types so the check would be VALUE & TYPE_VAL == TYPE_VAL
@@ -723,7 +723,15 @@ int obj_is_of_type(VALUE obj, VALUE t) {
 		if(tid == T_ANY) { return 1; }
 		// printf("TID %d\n", tid);
 		if((tid & 0xff) == T_OBJ) {
+			if(!IS_OBJ(obj)) {
+				return 0;
+			}
+			// dump_titled("OBJ", OBJ_TYPE(obj));
+			// dump_titled("T", t);
 			return IS_OBJ(obj) && OBJ_TYPE_NUM(obj) == tid;
+			// int r = ut_is_ut(OBJ_TYPE(obj), t);
+			// printf("-\n");
+			// return r;
 		}
 		OBJ_C_OBJ_IS_OF_TYPE(T_NULL, IS_NULL);
 		OBJ_C_OBJ_IS_OF_TYPE(T_BOOL, IS_BOOL);

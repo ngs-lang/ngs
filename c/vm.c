@@ -891,7 +891,7 @@ METHOD_RESULT native_in_nti_str METHOD_PARAMS {
 	METHOD_RETURN(MAKE_BOOL(mr != METHOD_EXCEPTION));
 }
 
-METHOD_RESULT native_inherit_nt_nt METHOD_PARAMS { add_normal_type_inheritance(argv[0], argv[1]); METHOD_RETURN(argv[0]); }
+METHOD_RESULT native_inherit_t_t METHOD_PARAMS { add_type_inheritance(argv[0], argv[1]); METHOD_RETURN(argv[0]); }
 
 // Consider moving to obj.c
 // Maybe return METHOD_ARGS_MISMATCH insted of InvalidArgument?
@@ -1889,7 +1889,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 #define MKSUBTYPE(name, parent) \
 	MKTYPE(name); \
-	add_normal_type_inheritance(name, parent);
+	add_type_inheritance(name, parent);
 
 #define SETUP_TYPE_FIELD(name, field, idx) set_hash_key(NGS_TYPE_FIELDS(name), make_string(#field), MAKE_INT(idx));
 #define SETUP_RANGE_TYPE(name) \
@@ -2216,7 +2216,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "Bool");
 	_doc(vm, "%EX", "type T; t=T(); t.x=1; \"x\" in t  # true");
 
-	register_global_func(vm, 0, "inherit",  &native_inherit_nt_nt,         2, "t",   vm->NormalType,         "parent", vm->NormalType);
+	register_global_func(vm, 0, "inherit",  &native_inherit_t_t,         2, "t",   vm->Type,         "parent", vm->Type);
 	_doc(vm, "", "Make t inherit from parent. Do not use directly. Use \"type MyType(parent)\".");
 	_doc(vm, "%RET", "t");
 	_doc_arr(vm, "%EX",

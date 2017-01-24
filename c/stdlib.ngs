@@ -69,6 +69,8 @@ F call(r:Return, v=null) {
 
 # === Misc functional ============================
 
+{ type Eachable }
+
 
 doc %RET - The given argument
 F identity(x)  x
