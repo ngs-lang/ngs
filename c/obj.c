@@ -722,6 +722,7 @@ VALUE value_type(VM *vm, VALUE val) {
 	if(otn) {
 		if((otn & T_OBJ) == T_OBJ) {
 			p = vm->type_by_t_obj_type_id[otn >> T_OBJ_TYPE_SHIFT_BITS];
+			// fprintf(stderr, "OTN %d\n", otn >> T_OBJ_TYPE_SHIFT_BITS);
 			assert(p);
 			return *p;
 		}
@@ -731,11 +732,12 @@ VALUE value_type(VM *vm, VALUE val) {
 	return NORMAL_TYPE_INSTANCE_TYPE(val);
 };
 
-int ut_is_ut(VALUE ut_child, VALUE ut_parent) {
+// TODO: T_ANY, maybe some other special cases
+int type_is_type(VALUE ut_child, VALUE ut_parent) {
 	if(ut_child.ptr == ut_parent.ptr) { return 1; }
 	size_t len, i;
 	for(i=0, len=OBJ_LEN(NGS_TYPE_PARENTS(ut_child)); i<len; i++) {
-		if(ut_is_ut(ARRAY_ITEMS(NGS_TYPE_PARENTS(ut_child))[i], ut_parent)) {
+		if(type_is_type(ARRAY_ITEMS(NGS_TYPE_PARENTS(ut_child))[i], ut_parent)) {
 			return 1;
 		}
 	}
@@ -755,15 +757,10 @@ int obj_is_of_type(VM *vm, VALUE obj, VALUE t) {
 		if(tid == T_ANY) { return 1; }
 		// printf("TID %d\n", tid);
 		if((tid & 0xff) == T_OBJ) {
-			// if(!IS_OBJ(obj)) {
-			// 	return 0;
-			// }
-			// dump_titled("OBJ", OBJ_TYPE(obj));
-			// dump_titled("T", t);
-			return IS_OBJ(obj) && OBJ_TYPE_NUM(obj) == tid;
-			// int r = ut_is_ut(OBJ_TYPE(obj), t);
-			// printf("-\n");
-			// return r;
+			if(!IS_OBJ(obj)) {
+				return 0;
+			}
+			return type_is_type(value_type(vm, obj), t);
 		}
 		OBJ_C_OBJ_IS_OF_TYPE(T_NULL, IS_NULL);
 		OBJ_C_OBJ_IS_OF_TYPE(T_BOOL, IS_BOOL);
@@ -782,15 +779,8 @@ int obj_is_of_type(VM *vm, VALUE obj, VALUE t) {
 		}
 		OBJ_C_OBJ_IS_OF_TYPE(T_NORMT, IS_NORMAL_TYPE);
 		OBJ_C_OBJ_IS_OF_TYPE(T_BASICT, IS_BASIC_TYPE);
-		if(IS_NORMAL_TYPE_INSTANCE(obj)) { return 0; }
-		dump_titled("Unimplemented type to check", t);
-		assert(0=="obj_is_of_type(): Unimplemented check against builtin type");
-	} else {
-		if(!IS_NORMAL_TYPE_INSTANCE(obj)) { return 0; }
-		return ut_is_ut(NORMAL_TYPE_INSTANCE_TYPE(obj), t);
 	}
-	dump_titled("Unimplemented type to check", t);
-	assert(0=="native_is(): Unimplemented check");
+	return type_is_type(value_type(vm, obj), t);
 }
 
 void dump(VALUE v) {
