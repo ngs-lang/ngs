@@ -70,8 +70,13 @@ F call(r:Return, v=null) {
 # === Misc functional ============================
 
 {
-	doc Work in progress, do not use!
+	doc Parent type of all types that have each() method
 	type Eachable
+	Int.inherit(Eachable)
+	Arr.inherit(Eachable)
+	Str.inherit(Eachable)
+	# TODO: Consider Eachable2 subtype for Hash (as callback has 2 arguments)
+	Hash.inherit(Eachable)
 }
 
 
@@ -130,7 +135,7 @@ doc Map something to an Arr (array) of values using mapper.
 doc something - Instance of any type that has each(something, callback) implemented
 doc %RET - Arr
 doc %EX - [1,2,3].map(X*4)  # [4,8,12]
-F map(something, mapper:Fun)
+F map(something:Eachable, mapper:Fun)
 	collector
 		something.each(collect + mapper)
 
@@ -157,7 +162,7 @@ doc predicate - When predicate(item) returns true, the item will appear in the r
 doc %EX - (1...10).filter(F(num) num % 2 == 0)  # Gives [2,4,6,8,10]
 doc %EX - (1...10).filter(X<5)  # Gives [1,2,3,4], predicate called as predicate(item, 5)
 doc %RET - Arr
-F filter(something, predicate) {
+F filter(something:Eachable, predicate) {
 	p = Pred(predicate)
 	collector
 		something.each() do F(elt) {
@@ -174,7 +179,7 @@ F filter(something, predicate) {
 doc Find the only element that satisfies the predicate.
 doc Throws TheOneFail exception if there are no elements that satisfy the predicate or if there is more than one element that satisfies the predicate.
 doc %RET - The only element that satisfies the predicate.
-F the_one(something, predicate) {
+F the_one(something:Eachable, predicate) {
 	p = Pred(predicate)
 	ret = EmptyBox()
 	something.each() do F(elt) {
@@ -199,7 +204,7 @@ doc %RET - Result of running on of the following: body, found_more, found_none
 doc %EX - F name(dn:MethodDocNode) {
 doc %EX - 	dn.children.the_one(MethodNameDocNode).text[0]
 doc %EX - }
-F the_one(something, predicate, body:Fun, found_more:Fun={null}, found_none:Fun={null}) {
+F the_one(something:Eachable, predicate, body:Fun, found_more:Fun={null}, found_none:Fun={null}) {
 	p = Pred(predicate)
 	ret = EmptyBox()
 	r = Return()
@@ -226,13 +231,13 @@ doc Extract the only element.
 doc Throws TheOneFail exception if there are no elements or if there is more than one element.
 doc %RET - The only element.
 doc %EX - ``aws ec2 describe-security-groups --group-ids $sg_id``.the_one()  # {OwnerId=..., VpcId=..., GroupId=..., ...}
-F the_one(something) something.the_one({true})
+F the_one(something:Eachable) something.the_one({true})
 
 doc Filter nulls out.
 doc DEPRECATED, USE something.without(null) INSTEAD.
 doc something - Instance of any type that has each(something, callback) implemented
 doc %RET - Arr (array) of original items without nulls
-F filter(something) {
+F filter(something:Eachable) {
 	error("USING DEPRECATED filter(something)")
 	filter(something, X is not Null)
 }
@@ -246,14 +251,14 @@ doc something - Instance of any type that has each(something, callback) implemen
 doc %EX - (1...10).reject(F(num) num % 2 == 0)  # Gives [1,3,5,7,9]
 doc %EX - (1...10).reject(X<5)  # Gives [5,6,7,8,9,10], predicate called as predicate(item, 5)
 doc %RET - Arr
-F reject(something, predicate) {
+F reject(something:Eachable, predicate) {
 	p = Pred(predicate)
 	something.filter(not + p)
 }
 
 
 doc EXPERIMENTAL! Do not use!
-F take_while(something, predicate)
+F take_while(something:Eachable, predicate)
 	collector {
 		p = Pred(predicate)
 		r = Return()
@@ -269,7 +274,7 @@ TEST [1,2,3,1,2].take_while(X<3) == [1,2]
 
 # Would look much better with an iterator of "something"
 doc EXPERIMENTAL! Do not use!
-F drop_while(something, predicate)
+F drop_while(something:Eachable, predicate)
 	collector {
 		p = Pred(predicate)
 		found = false
@@ -292,7 +297,7 @@ doc start - First argument of f, for the first call of f
 doc something - Instance of any type that has each(something, callback) implemented
 doc f - The combining function
 doc %EX - F sum(something) something.reduce(0, (+))
-F reduce(something, start, f:Fun) {
+F reduce(something:Eachable, start, f:Fun) {
 	ret = start
 	something.each(F(elt) ret = f(ret, elt))
 	ret
@@ -354,7 +359,10 @@ F \(x, f:Fun) f(x)
 
 # === ArrLike =======================================
 
-{ type ArrLike }
+{
+	type ArrLike
+	ArrLike.inherit(Eachable)
+}
 
 F len(al:ArrLike)               al.(al.arr_like_attr).len()
 F '[]'(al:ArrLike, idx:Int)     al.(al.arr_like_attr)[idx]
@@ -370,7 +378,10 @@ F init(al:ArrLike, attr:Str='items') {
 
 # === HashLike =======================================
 
-{ type HashLike }
+{
+	type HashLike
+	HashLike.inherit(Eachable)
+}
 
 F in(name:Str, hl:HashLike) name in hl.(hl.hash_like_attr)
 
@@ -593,6 +604,8 @@ F global_not_found_handler(name:Str) {
 }
 
 # === Range ======================================
+
+{ Range.inherit(Eachable) }
 
 doc Range constructor
 F init(r:Range, start, end, step=1) init(args())
