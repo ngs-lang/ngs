@@ -4,7 +4,7 @@
 	doc Manipulates tabular data
 	doc name - Table name to display and for configuration lookup
 	doc cols_enum - Enum for columns names
-	type Table
+	type Table(Eachable)
 }
 
 F StrForTable(x) Str(x)
