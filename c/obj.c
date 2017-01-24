@@ -699,6 +699,38 @@ VALUE join_strings(int argc, VALUE *argv) {
 	return ret;
 }
 
+VALUE value_type(VM *vm, VALUE val) {
+
+	VALUE *p;
+
+	// Tagged value
+	if(IS_INT(val)) {
+		return vm->Int;
+	}
+
+	// Immediate (kind of tagged) values
+	if(val.num & TAG_AND) {
+		int n = val.num >> TAG_BITS;
+		assert(n <= MAX_VALUE_TAG_VALUE);
+		p = vm->type_by_value_tag[n];
+		assert(p);
+		return *p;
+	}
+
+	// Built-in type
+	int otn = OBJ_TYPE_NUM(val);
+	if(otn) {
+		if((otn & T_OBJ) == T_OBJ) {
+			p = vm->type_by_t_obj_type_id[otn >> T_OBJ_TYPE_SHIFT_BITS];
+			assert(p);
+			return *p;
+		}
+	}
+
+	// Normal type (the only option that is left)
+	return NORMAL_TYPE_INSTANCE_TYPE(val);
+};
+
 int ut_is_ut(VALUE ut_child, VALUE ut_parent) {
 	if(ut_child.ptr == ut_parent.ptr) { return 1; }
 	size_t len, i;
@@ -715,7 +747,7 @@ int ut_is_ut(VALUE ut_child, VALUE ut_parent) {
 // TODO: make it faster, probably using vector of NATIVE_TYPE_IDs and how to detect them
 //       maybe re-work tagged types so the check would be VALUE & TYPE_VAL == TYPE_VAL
 // TODO: profiling before optimizations
-int obj_is_of_type(VALUE obj, VALUE t) {
+int obj_is_of_type(VM *vm, VALUE obj, VALUE t) {
 	VALUE_NUM tid;
 	assert(IS_NGS_TYPE(t));
 	tid = NGS_TYPE_ID(t);
@@ -741,7 +773,7 @@ int obj_is_of_type(VALUE obj, VALUE t) {
 		if(tid == T_FUN) {
 			if(IS_ARRAY(obj)) {
 				if(OBJ_LEN(obj)) {
-					return obj_is_of_type(ARRAY_ITEMS(obj)[0], t);
+					return obj_is_of_type(vm, ARRAY_ITEMS(obj)[0], t);
 				} else {
 					return 0;
 				}

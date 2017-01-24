@@ -69,7 +69,7 @@ void print_exception(VM *vm, VALUE result) {
 	VALUE fields = NGS_TYPE_FIELDS(NORMAL_TYPE_INSTANCE_TYPE(result));
 	HASH_OBJECT_ENTRY *e;
 	for(e=HASH_HEAD(fields); e; e=e->insertion_order_next) {
-		if(obj_is_of_type(ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)], vm->Backtrace)) {
+		if(obj_is_of_type(vm, ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)], vm->Backtrace)) {
 			printf("=== [ backtrace ] ===\n");
 			// Backtrace.frames = [{"closure": ..., "ip": ...}, ...]
 			VALUE backtrace = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)];
@@ -106,7 +106,7 @@ void print_exception(VM *vm, VALUE result) {
 			}
 			continue;
 		}
-		if(obj_is_of_type(ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)], vm->Exception)) {
+		if(obj_is_of_type(vm, ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)], vm->Exception)) {
 			assert(IS_STRING(e->key));
 			printf("---8<--- %s - start ---8<---\n", obj_to_cstring(e->key));
 			print_exception(vm, ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
@@ -194,7 +194,7 @@ int main(int argc, char **argv)
 		return 0;
 	}
 	if(mr == METHOD_EXCEPTION) {
-		if(obj_is_of_type(result, vm.Exception)) {
+		if(obj_is_of_type(&vm, result, vm.Exception)) {
 			printf("========= Uncaught exception of type '%s' =========\n", obj_to_cstring(NGS_TYPE_NAME(NORMAL_TYPE_INSTANCE_TYPE(result))));
 			print_exception(&vm, result);
 		} else {

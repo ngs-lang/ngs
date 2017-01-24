@@ -69,7 +69,10 @@ F call(r:Return, v=null) {
 
 # === Misc functional ============================
 
-{ type Eachable }
+{
+	doc Work in progress, do not use!
+	type Eachable
+}
 
 
 doc %RET - The given argument

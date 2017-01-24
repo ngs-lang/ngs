@@ -205,37 +205,42 @@ typedef enum {
 	V_KWARGS_MARKER = 90,
 } IMMEDIATE_VALUE;
 
+#define MAX_VALUE_TAG_VALUE (V_KWARGS_MARKER >> TAG_BITS)
+#define T_OBJ_TYPE_SHIFT_BITS (8)
+
 typedef enum {
 	T_OBJ           = 130,
 	T_NULL          = 18,
 	T_BOOL          = 22,
 	T_INT           = 26,
-	T_STR           = (1 << 8) + T_OBJ,
-	T_ARR           = (2 << 8) + T_OBJ,
+	T_STR           = (1 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_ARR           = (2 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_FUN           = 38,
 	T_ANY           = 42,
 	T_SEQ           = 46,
-	T_TYPE          = (3 << 8) + T_OBJ,
-	T_HASH          = (4 << 8) + T_OBJ,
-	T_CLIB          = (5 << 8) + T_OBJ,
-	T_CSYM          = (6 << 8) + T_OBJ,
+	T_TYPE          = (3 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_HASH          = (4 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_CLIB          = (5 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_CSYM          = (6 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_NORMT         = 66,
-	T_UTCTR         = (7 << 8) + T_OBJ,
+	T_UTCTR         = (7 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ, // TODO in vm->type_by_t_obj_type_id
 	T_BASICT        = 74,
 	T_BASICTI       = 78,
 	T_NORMTI        = 82,
-	T_REAL          = ( 8 << 8) + T_OBJ,
-	T_PTHREAD       = ( 9 << 8) + T_OBJ,
-	T_PTHREADATTR   = (10 << 8) + T_OBJ,
-	T_PTHREADMUTEX  = (11 << 8) + T_OBJ,
-	T_NATIVE_METHOD = (12 << 8) + T_OBJ,
-	T_CLOSURE       = (13 << 8) + T_OBJ,
-	T_FFI_TYPE      = (14 << 8) + T_OBJ,
-	T_FFI_CIF       = (15 << 8) + T_OBJ,
-	T_REGEXP        = (16 << 8) + T_OBJ,
-	T_DIR           = (17 << 8) + T_OBJ,
+	T_REAL          = ( 8 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_PTHREAD       = ( 9 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_PTHREADATTR   = (10 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_PTHREADMUTEX  = (11 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_NATIVE_METHOD = (12 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_CLOSURE       = (13 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_FFI_TYPE      = (14 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_FFI_CIF       = (15 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_REGEXP        = (16 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_DIR           = (17 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	// *** Add new T_ itmes above this line ***
 } IMMEDIATE_TYPE;
+
+#define MAX_T_OBJ_TYPE_ID (T_DIR >> T_OBJ_TYPE_SHIFT_BITS)
 
 // TODO: handle situation when n is wider than size_t - TAG_BITS bits
 #define IS_NULL(v)      ((v).num == V_NULL)
@@ -365,7 +370,8 @@ VALUE array_shift(VALUE arr);
 void array_reverse(VALUE arr);
 VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, int params_flags, VALUE *params);
 VALUE join_strings(int argc, VALUE *argv);
-int obj_is_of_type(VALUE obj, VALUE t);
+// VALUE value_type(VM *vm, VALUE val);
+// int obj_is_of_type(VM *vm, VALUE obj, VALUE t);
 void dump(VALUE v);
 void dump_titled(char *title, VALUE v);
 char *obj_to_cstring(VALUE v);

@@ -155,39 +155,42 @@ typedef struct {
 
 	VALUE last_doc_hash;
 
-	NGS_TYPE *Null;
-	NGS_TYPE *Bool;
-	NGS_TYPE *Int;
-	NGS_TYPE *Real;
-	NGS_TYPE *Str;
-	NGS_TYPE *Arr;
-	NGS_TYPE *Fun;
-		NGS_TYPE *Closure;
-		NGS_TYPE *NativeMethod;
-	NGS_TYPE *Any;
-		NGS_TYPE *BasicTypeInstance;
-		NGS_TYPE *NormalTypeInstance;
-	NGS_TYPE *Seq;
-	NGS_TYPE *Type;
-		NGS_TYPE *BasicType;
-		NGS_TYPE *NormalType;
-	NGS_TYPE *Hash;
-	NGS_TYPE *CLib;
-	NGS_TYPE *CSym;
-	NGS_TYPE *RegExp;
+	VALUE *type_by_value_tag[MAX_VALUE_TAG_VALUE+1];
+	VALUE *type_by_t_obj_type_id[MAX_T_OBJ_TYPE_ID+1]; // XXX
+
+	VALUE Null;
+	VALUE Bool;
+	VALUE Int;
+	VALUE Real;
+	VALUE Str;
+	VALUE Arr;
+	VALUE Fun;
+		VALUE Closure;
+		VALUE NativeMethod;
+	VALUE Any;
+		VALUE BasicTypeInstance;
+		VALUE NormalTypeInstance;
+	VALUE Seq;
+	VALUE Type;
+		VALUE BasicType;
+		VALUE NormalType;
+	VALUE Hash;
+	VALUE CLib;
+	VALUE CSym;
+	VALUE RegExp;
 
 	// Not sure about naming convention
-	NGS_TYPE *c_pthread_t;
-	NGS_TYPE *c_pthread_attr_t;
-	NGS_TYPE *c_pthread_mutex_t;
-	// TODO: NGS_TYPE *c_pthread_mutex_tAttr;
+	VALUE c_pthread_t;
+	VALUE c_pthread_attr_t;
+	VALUE c_pthread_mutex_t;
+	// TODO: VALUE c_pthread_mutex_tAttr;
 
-	NGS_TYPE *c_ffi_type;
-	NGS_TYPE *c_ffi_cif;
+	VALUE c_ffi_type;
+	VALUE c_ffi_cif;
 
-	NGS_TYPE *C_DIR;
+	VALUE C_DIR;
 
-	// *** Add new NGS_TYPE *MyType above this line ***
+	// *** Add new VALUE MyType above this line ***
 
 	VALUE Exception;
 		VALUE Error;
@@ -340,4 +343,6 @@ void ngs_fetch_bytecode_section(BYTECODE_HANDLE *h, BYTECODE_SECTION_TYPE *type,
 // In obj.c
 VALUE make_backtrace(VM *vm, CTX *ctx);
 VALUE resolve_instruction_pointer(VM *vm, IP ip);
+VALUE value_type(VM *vm, VALUE val);
+int obj_is_of_type(VM *vm, VALUE obj, VALUE t);
 #endif

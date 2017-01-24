@@ -44,6 +44,9 @@ extern char **environ;
 // in ngs.c:
 char *sprintf_position(yycontext *yy, int pos);
 
+// in obj.c:
+VALUE value_type(VM *vm, VALUE val);
+
 char BYTECODE_SIGNATURE[] = "NGS BYTECODE";
 
 char *opcodes_names[] = {
@@ -140,13 +143,13 @@ char *opcodes_names[] = {
 	} \
 	PUSH(v); \
 	THIS_FRAME.last_ip = ip; \
-	mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-2], (VALUE){.ptr = vm->type}, 1, &ctx->stack[ctx->stack_ptr-1]); \
+	mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-2], vm->type, 1, &ctx->stack[ctx->stack_ptr-1]); \
 	if(mr == METHOD_EXCEPTION) { \
 		*result = ctx->stack[ctx->stack_ptr-2]; \
 		goto exception; \
 	} \
 	if(mr != METHOD_OK) { \
-		dump_titled("Failed to convert to type", (VALUE){.ptr = vm->type}); \
+		dump_titled("Failed to convert to type", vm->type); \
 		dump_titled("Failed to convert value", ctx->stack[ctx->stack_ptr-1]); \
 		assert(0 == "Failed to convert"); \
 	} \
@@ -420,8 +423,9 @@ METHOD_RESULT native_Int_str_int EXT_METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(r));
 }
 
-METHOD_RESULT native_is_any_type METHOD_PARAMS {
-	SET_BOOL(*result, obj_is_of_type(argv[0], argv[1]));
+METHOD_RESULT native_is_any_type EXT_METHOD_PARAMS {
+	(void) ctx;
+	SET_BOOL(*result, obj_is_of_type(vm, argv[0], argv[1]));
 	return METHOD_OK;
 }
 
@@ -858,13 +862,12 @@ METHOD_RESULT native_type_str_doc METHOD_PARAMS {
 	set_hash_key(NGS_TYPE_ATTRS(*result), make_string("doc"), argv[1]);
 	return METHOD_OK;
 }
-METHOD_RESULT native_typeof_any METHOD_PARAMS {
-	if(IS_NORMAL_TYPE_INSTANCE(argv[0])) {
-		METHOD_RETURN(NORMAL_TYPE_INSTANCE_TYPE(argv[0]));
-	}
-	// XXX: Not implemented yet
-	METHOD_RETURN(MAKE_NULL);
+
+METHOD_RESULT native_typeof_any EXT_METHOD_PARAMS {
+	(void) ctx;
+	METHOD_RETURN(value_type(vm, argv[0]));
 }
+
 METHOD_RESULT native_get_attr_nti_str EXT_METHOD_PARAMS {
 	// WARNING: for now get_normal_type_instace_attribute can only throw AttrNotFound
 	//          if it changes in future the calling convention below should be changed
@@ -1808,22 +1811,22 @@ void set_global(VM *vm, const char *name, VALUE v) {
 	GLOBALS[index] = v;
 }
 
-NGS_TYPE *register_builtin_type(VM *vm, const char *name, IMMEDIATE_TYPE native_type_id) {
+ VALUE register_builtin_type(VM *vm, const char *name, IMMEDIATE_TYPE native_type_id) {
 	size_t index;
-	VALUE t;
-	t = make_normal_type(make_string(name));
+	VALUE ret;
+	ret = make_normal_type(make_string(name));
 	// Fixes for built-ins - start
-	NGS_TYPE_ID(t) = native_type_id;
-	OBJ_LEN(NGS_TYPE_CONSTRUCTORS(t)) = 0;
+	NGS_TYPE_ID(ret) = native_type_id;
+	OBJ_LEN(NGS_TYPE_CONSTRUCTORS(ret)) = 0;
 	// Fixes for built-ins - end
 	index = get_global_index(vm, name, strlen(name));
 	assert(IS_UNDEF(GLOBALS[index]));
-	GLOBALS[index] = t;
+	GLOBALS[index] = ret;
 	vm->last_doc_hash = make_hash(4);
-	NGS_TYPE_ATTRS(t) = make_hash(8);
-		// set_hash_key(NGS_TYPE_ATTRS(t), make_string("name"), make_string(name));
-		set_hash_key(NGS_TYPE_ATTRS(t), make_string("doc"), vm->last_doc_hash);
-	return t.ptr;
+	NGS_TYPE_ATTRS(ret) = make_hash(8);
+		// set_hash_key(NGS_TYPE_ATTRS(ret), make_string("name"), make_string(name));
+		set_hash_key(NGS_TYPE_ATTRS(ret), make_string("doc"), vm->last_doc_hash);
+	return ret;
 }
 
 void vm_init(VM *vm, int argc, char **argv) {
@@ -1850,32 +1853,79 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MK_BUILTIN_TYPE(name, id) \
 	_doc(vm, "", doc);
 
+	for(int i=0; i<=MAX_VALUE_TAG_VALUE; i++) {
+		vm->type_by_value_tag[i] = NULL;
+	}
+
+	for(int i=0; i<=MAX_T_OBJ_TYPE_ID; i++) {
+		vm->type_by_t_obj_type_id[i] = NULL;
+	}
+
 	MK_BUILTIN_TYPE_DOC(Null, T_NULL, "Null type. Has only one instance, null");
+	vm->type_by_value_tag[V_NULL >> TAG_BITS] = &vm->Null;
+
 	MK_BUILTIN_TYPE_DOC(Bool, T_BOOL, "Boolean type. The only instances are true and false");
+	vm->type_by_value_tag[V_TRUE >> TAG_BITS] = &vm->Bool;
+	vm->type_by_value_tag[V_FALSE >> TAG_BITS] = &vm->Bool;
+
 	MK_BUILTIN_TYPE_DOC(Int, T_INT, "Integer type. On 64 bit platforms it's a 61 bit signed integer");
+	// handled specially in value_type
+
 	MK_BUILTIN_TYPE_DOC(Real, T_REAL, "Real/Float type. Equivalent to the 'double' type in C");
+	vm->type_by_t_obj_type_id[T_REAL >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Real;
+
 	MK_BUILTIN_TYPE_DOC(Str, T_STR, "String type");
+	vm->type_by_t_obj_type_id[T_STR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Str;
+
 	MK_BUILTIN_TYPE_DOC(Arr, T_ARR, "Array type");
+	vm->type_by_t_obj_type_id[T_STR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Str;
+
 	MK_BUILTIN_TYPE_DOC(Fun, T_FUN, "Function type: an Array of Closures, a Closure, or a native method");
 		MK_BUILTIN_TYPE_DOC(Closure, T_CLOSURE, "Closure type. User-defined functions/methods are Closures");
+		vm->type_by_t_obj_type_id[T_CLOSURE >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Closure;
 		MK_BUILTIN_TYPE_DOC(NativeMethod, T_NATIVE_METHOD, "Native method type");
+		vm->type_by_t_obj_type_id[T_NATIVE_METHOD >> T_OBJ_TYPE_SHIFT_BITS] = &vm->NativeMethod;
+
 	MK_BUILTIN_TYPE_DOC(Any, T_ANY, "All instances in NGS are of type Any. F(x) ... is same as F(x:Any) ...");
 		MK_BUILTIN_TYPE_DOC(BasicTypeInstance, T_BASICTI, "A type for instances of builtin types");
 		MK_BUILTIN_TYPE_DOC(NormalTypeInstance, T_NORMTI, "A type for instances of user-defined types");
+
 	MK_BUILTIN_TYPE_DOC(Seq, T_SEQ, "Unused type");
+
 	MK_BUILTIN_TYPE_DOC(Type, T_TYPE, "Type for types. F f(t:Type) ...; f(Arr) ...");
+	vm->type_by_t_obj_type_id[T_TYPE >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Type;
 		MK_BUILTIN_TYPE_DOC(BasicType, T_BASICT, "Type for builtin types. F f(t:BasicType) ...; f(Arr)");
 		MK_BUILTIN_TYPE_DOC(NormalType, T_NORMT, "Type for user-defined types. type T1; F f(t:NormalType) ...; f(T1)");
+
 	MK_BUILTIN_TYPE_DOC(Hash, T_HASH, "Hash (dictionary) type");
+	vm->type_by_t_obj_type_id[T_HASH >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Hash;
+
 	MK_BUILTIN_TYPE_DOC(CLib, T_CLIB, "C library, result of dlopen(), not used yet");
+	vm->type_by_t_obj_type_id[T_CLIB >> T_OBJ_TYPE_SHIFT_BITS] = &vm->CLib;
+
 	MK_BUILTIN_TYPE_DOC(CSym, T_CSYM, "C symbol, result of dlsym(), not used yet");
+	vm->type_by_t_obj_type_id[T_CSYM >> T_OBJ_TYPE_SHIFT_BITS] = &vm->CSym;
+
 	MK_BUILTIN_TYPE(c_pthread_t, T_PTHREAD);
+	vm->type_by_t_obj_type_id[T_PTHREAD >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_pthread_t;
+
 	MK_BUILTIN_TYPE(c_pthread_attr_t, T_PTHREADATTR);
+	vm->type_by_t_obj_type_id[T_PTHREADATTR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_pthread_attr_t;
+
 	MK_BUILTIN_TYPE(c_pthread_mutex_t, T_PTHREADMUTEX);
+	vm->type_by_t_obj_type_id[T_PTHREADMUTEX >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_pthread_mutex_t;
+
 	MK_BUILTIN_TYPE(c_ffi_type, T_FFI_TYPE);
+	vm->type_by_t_obj_type_id[T_FFI_TYPE >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_ffi_type;
+
 	MK_BUILTIN_TYPE(c_ffi_cif, T_FFI_CIF);
+	vm->type_by_t_obj_type_id[T_FFI_CIF >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_ffi_cif;
+
 	MK_BUILTIN_TYPE(RegExp, T_REGEXP);
+	vm->type_by_t_obj_type_id[T_REGEXP >> T_OBJ_TYPE_SHIFT_BITS] = &vm->RegExp;
+
 	MK_BUILTIN_TYPE(C_DIR, T_DIR);
+	vm->type_by_t_obj_type_id[T_DIR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->C_DIR;
 
 	// *** Add new MKTYPE / MKSUBTYPE above this line ***
 
@@ -2229,7 +2279,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "Type",     &native_type_str_doc      ,2, "name",   vm->Str, "doc", vm->Any);
 	_doc(vm, "", "Create a new type. Do not use directly. Use \"type MyType\".");
 
-	register_global_func(vm, 0, "typeof",   &native_typeof_any        ,1, "x",      vm->Any);
+	register_global_func(vm, 1, "typeof",   &native_typeof_any        ,1, "x",      vm->Any);
 	_doc(vm, "", "Returns type of the given instance");
 	_doc(vm, "x", "Instance (an object). Currently only instances of NormalType are supported.");
 	register_global_func(vm, 0, "attrs",    &native_attrs_type,        1, "t",      vm->Type);
@@ -2418,7 +2468,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "Str",      &native_Str_int,           1, "n",   vm->Int);
 	_doc(vm, "", "Convert Int to Str");
 
-	register_global_func(vm, 0, "is",       &native_is_any_type,       2, "obj", vm->Any, "t", vm->Type);
+	register_global_func(vm, 1, "is",       &native_is_any_type,       2, "obj", vm->Any, "t", vm->Type);
 	_doc(vm, "", "Check whether obj is of type t. Uses same function that is used for matching arguments with method parameters when calling a method.");
 	_doc(vm, "%RET", "Bool");
 	_doc_arr(vm, "%EX",
@@ -2959,7 +3009,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		for(lvi=0; lvi<NATIVE_METHOD_OBJ_N_REQ_PAR(callable); lvi++) {
 			// TODO: make sure second argument is type durng closure creation
 			// dump_titled("ARGV[lvi]", argv[lvi]);
-			if(!obj_is_of_type(argv[lvi], NATIVE_METHOD_OBJ_PARAMS(callable)[lvi*2+1])) {
+			if(!obj_is_of_type(vm, argv[lvi], NATIVE_METHOD_OBJ_PARAMS(callable)[lvi*2+1])) {
 				return METHOD_ARGS_MISMATCH;
 			}
 		}
@@ -3019,7 +3069,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		params = CLOSURE_OBJ_PARAMS(callable);
 		j = MIN(argc, n_params_required);
 		for(i=0; i<j; i++) {
-			if(!obj_is_of_type(argv[i], params[i*2+1])) {
+			if(!obj_is_of_type(vm, argv[i], params[i*2+1])) {
 				return METHOD_ARGS_MISMATCH;
 			}
 		}
@@ -3034,7 +3084,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 					// Required parameter is not in keyword arguments
 					return METHOD_ARGS_MISMATCH;
 				}
-				if(!obj_is_of_type(e->val, params[i*2+1])) {
+				if(!obj_is_of_type(vm, e->val, params[i*2+1])) {
 					return METHOD_ARGS_MISMATCH;
 				}
 				named_arguments[i] = e->val;
@@ -3056,7 +3106,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 				THROW_EXCEPTION_INSTANCE(exc);
 			}
 			// XXX temp - end
-			if(!obj_is_of_type(argv[i], params[n_params_required*2 + (i-n_params_required)*3 + 1])) {
+			if(!obj_is_of_type(vm, argv[i], params[n_params_required*2 + (i-n_params_required)*3 + 1])) {
 				return METHOD_ARGS_MISMATCH;
 			}
 			named_arguments[i] = params[n_params_required*2 + (i-n_params_required)*3 + 2];
@@ -3076,7 +3126,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 				named_arguments[i] = params[n_params_required*2 + (i-n_params_required)*3+2];
 				continue;
 			}
-			if(!obj_is_of_type(e->val, params[n_params_required*2 + (i-n_params_required)*3+1])) {
+			if(!obj_is_of_type(vm, e->val, params[n_params_required*2 + (i-n_params_required)*3+1])) {
 				return METHOD_ARGS_MISMATCH;
 			}
 			named_arguments[i] = e->val;
@@ -3135,7 +3185,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 
 	if(IS_NORMAL_TYPE_CONSTRUCTOR(callable)) {
 		*result = make_normal_type_instance(NORMAL_TYPE_CONSTRUCTOR_TYPE(callable));
-		if(obj_is_of_type(*result, vm->Exception)) {
+		if(obj_is_of_type(vm, *result, vm->Exception)) {
 			set_normal_type_instance_attribute(*result, make_string("backtrace"), make_backtrace(vm, ctx));
 		}
 		// init() is optional when constructor is called without arguments
@@ -3186,7 +3236,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			}
 			if(mr == METHOD_EXCEPTION) {
 				VALUE r = MAKE_NULL;
-				if(obj_is_of_type(*result, vm->ImplNotFound)) {
+				if(obj_is_of_type(vm, *result, vm->ImplNotFound)) {
 					get_normal_type_instace_attribute(*result, make_string("callable"), &r);
 					if(r.ptr == vm->call.ptr) {
 						// Don't know how to call
