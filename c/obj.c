@@ -723,9 +723,9 @@ int obj_is_of_type(VALUE obj, VALUE t) {
 		if(tid == T_ANY) { return 1; }
 		// printf("TID %d\n", tid);
 		if((tid & 0xff) == T_OBJ) {
-			if(!IS_OBJ(obj)) {
-				return 0;
-			}
+			// if(!IS_OBJ(obj)) {
+			// 	return 0;
+			// }
 			// dump_titled("OBJ", OBJ_TYPE(obj));
 			// dump_titled("T", t);
 			return IS_OBJ(obj) && OBJ_TYPE_NUM(obj) == tid;
