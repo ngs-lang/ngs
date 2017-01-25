@@ -8,6 +8,11 @@ Note that this started as internal document so things here are unformed, not fin
 	* Look for other sets of constants to move to namespaces
 	* address resolution functions
 	* AWS fix SG rules (IpPermBox < IpPermBox)
+	* [stdlib] pid() - c_getpid() wrapper
+	* AMI, Folders layout
+		* lib - *.ngs libraries, NGS_DIR probably
+			* autoload
+		* bin - *.ngs tools
 
 [roadmap]
 
