@@ -1886,7 +1886,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 		MK_BUILTIN_TYPE_DOC(NativeMethod, T_NATIVE_METHOD, "Native method type");
 		vm->type_by_t_obj_type_id[T_NATIVE_METHOD >> T_OBJ_TYPE_SHIFT_BITS] = &vm->NativeMethod;
 
-	MK_BUILTIN_TYPE_DOC(Any, T_ANY, "All instances in NGS are of type Any. F(x) ... is same as F(x:Any) ...");
+	MK_BUILTIN_TYPE(Any, T_ANY);
+	_doc_arr(vm, "",
+		"Any type is parent type of all types. ",
+		"All instances in NGS are of type Any. ",
+		"F(x) ... is same as F(x:Any) ...",
+		NULL
+	);
 		MK_BUILTIN_TYPE_DOC(BasicTypeInstance, T_BASICTI, "A type for instances of builtin types");
 		MK_BUILTIN_TYPE_DOC(NormalTypeInstance, T_NORMTI, "A type for instances of user-defined types");
 

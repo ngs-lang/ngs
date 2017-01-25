@@ -1,5 +1,5 @@
 all: html man types.html methods.html
-TM_DEPS = ../vm.c ../lib/*.ngs ../lib/*/*.ngs make_methods.ngs
+TM_DEPS = ../ngs ../lib/*.ngs ../lib/*/*.ngs make_methods.ngs
 
 
 types.html: $(TM_DEPS)
