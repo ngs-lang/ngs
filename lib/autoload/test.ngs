@@ -111,19 +111,3 @@ F assert_path_exists(p, title="Path exists") {
 	throw TestFail("$title: Path ${path.path} does not exist").set('path', p)
 }
 
-# --- $(nofail ...) ---
-
-F finished_ok(p:Process) {
-	guard 'nofail' in p.command.options
-	true
-}
-
-doc Enables "nofail" command prefix.
-doc %EX - test
-doc %EX - $(nofail ./NONE).exit_code.echo()  # Would cause exception without "nofail"
-F '$()'(c:Command) {
-	guard c.argv[0] == 'nofail'
-	c.options.push('nofail')
-	c.argv.shift()
-	$($c)
-}
