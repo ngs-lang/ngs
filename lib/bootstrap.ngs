@@ -47,9 +47,9 @@ bootstrap_debug =
 
 bootstrap_ngs_dir_candidates = [
 	'/usr/local/etc/ngs'
-	'/usr/local/share/ngs'
+	'/usr/local/lib/ngs'
 	'/etc/ngs'
-	'/usr/share/ngs'
+	'/usr/lib/ngs'
 ]
 
 F bootstrap_find_ngs_dir() {
