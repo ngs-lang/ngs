@@ -25,17 +25,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* documentation [in progress]
 				* Tutorial
-					+ Common types and common operations
-						+ Scalars [done]
-						+ Arr [done]
-						+ Hash [done]
-						+ RegExp [done]
-						+ Other common types
-					+ Common methods
-						+ Boolean
-						+ Math
-						+ Strings
-						+ Functional
 					+ Build an app - decide which
 				* True values - make sure it's in [in ngssyn]
 				* Hash keys comparison

@@ -166,7 +166,6 @@ In addition to running commands and performing redirections, there are several e
 * `{ code }` - see **Switching between syntaxes** below
 * assignment: `myvar = code` (`myvar = 1 + 2`)
 * in-place assignment: `myvar += code` (`myvar += 10`)
-* wrapper (also called decorator): `@code code`
 * function definition: `F myfunc(params...) code` (`F myfunc(n:Int) echo(n*10)`)
 * function call: `myfunc(arguments...)` (`myfunc(7)`)
 * `if condition_code [then] yes_code [else] no_code`
@@ -268,22 +267,6 @@ Variables
 	#   true
 	#   3
 
-String interpolation
-
-	a = 1
-	echo("A is now $a")
-	echo('A is now $a')
-	# Output:
-	#   A is now 1
-	#   A is now $a
-
-	echo("Calculation result A: ${10+20}")
-	echo("Calculation result B: ${ [1,2,3].map((*), 10).join(',') }")
-	# Output:
-	#   Calculation result A: 30
-	#   Calculation result B: 10,20,30
-
-
 Basic constants: true, false, null
 
 	if true echo("if true")
@@ -306,7 +289,88 @@ Basic constants: true, false, null
 	#   2
 	#   null
 
-Arrays
+Booleans
+
+	echo(true and false)
+	# Output:
+	#   false
+
+	echo(true or false)
+	# Output:
+	#   true
+
+Integers
+
+	echo(1 + 2 * 3)
+	# Output:
+	#   7
+
+	{
+		3.each(echo)
+	}
+	# Output:
+	#   0
+	#   1
+	#   2
+
+	{
+		3.map(X*2).each(echo)
+	}
+	# Output:
+	#   0
+	#   2
+	#   4
+
+Strings - string interpolation
+
+	a = 1
+	echo("A is now $a")
+	echo('A is now $a')
+	# Output:
+	#   A is now 1
+	#   A is now $a
+
+	echo("Calculation result A: ${10+20}")
+	echo("Calculation result B: ${ [1,2,3].map((*), 10).join(',') }")
+	# Output:
+	#   Calculation result A: 30
+	#   Calculation result B: 10,20,30
+
+Strings - some basic methods that operate on strings
+
+	echo("abc" + "abc")
+	# Output:
+	#   abcabc
+
+	echo("abc:def:ggg".split(":"))
+	# Output:
+	#   ['abc','def','ggg']
+
+	echo("abc7def8ggg".split(/[0-9]/))
+	# Output:
+	#   ['abc','def','ggg']
+
+	echo("abc7def8ggg".without(/[0-9]/))
+	# Output:
+	#   abcdefggg
+
+	if "abc" ~ /^a/ {
+		echo("YES")
+	} else {
+		echo("NO")
+	}
+	# Output:
+	#   YES
+
+	m = "abc=120" ~ /=/
+	if m {
+		echo("Name=${m.before} Value=${m.after}")
+	}
+	# See RegExp type
+	# Output:
+	#   Name=abc Value=120
+
+Arrays - basics
 
 	x = ["first", "second", "third", "fourth"]
 
@@ -350,9 +414,45 @@ Arrays
 	echo(x[10])
 	# ... Exception of type IndexNotFound occured ...
 
-Hashes
+Arrays - some basic methods that operate on arrays
+
+	{
+		[1,2].each(echo)
+	}
+	# Output:
+	#   1
+	#   2
+
+	{
+		[1,2].each(F(item) {
+			echo("Item: $item")
+		})
+	}
+	# Output:
+	#   Item: 1
+	#   Item: 2
+
+	echo([1,2].map(X * 10))
+	# See "Anonymous function literal using magical X, Y or Z variables"
+	# Output:
+	#   [10,20]
+
+	echo(Hash([["a",1],["b",2]]))
+	# Converts array consisting of pairs into Hash
+	# Output:
+	#   {a=1, b=2}
+
+Hashes - basics
 
 	x = {"a": 1, "b": 2}
+	echo(x)
+	# Output:
+	#   {a=1, b=2}
+
+	x = %{akey avalue bkey bvalue}
+	echo(x)
+	# Output:
+	#   {akey=avalue, bkey=bvalue}
 
 	echo(x)
 	# Output:
@@ -411,6 +511,78 @@ Hashes
 
 	echo(x.e)
 	# ... Exception of type KeyNotFound occured ...
+
+Hashes - some basic methods that operate on Hashes
+
+	{
+		h = {"a": 1, "b": 2}
+		h.each(F(k, v) {
+			echo("$k = $v")
+		})
+	}
+	# Output:
+	#   a = 1
+	#   b = 2
+
+	h = {"a": 1, "b": 2}
+	echo(h.map(F(k, v) "key-$k value-$v"))
+	# Output:
+	#   ['key-a value-1','key-b value-2']
+
+	h = {"a": 1, "b": 2}
+	echo(h.mapk("key-${X}"))
+	# Output:
+	#   {key-a=1, key-b=2}
+
+	h = {"a": 1, "b": 2}
+	echo(h.mapv(X*10))
+	# Output:
+	#   {a=10, b=20}
+
+	h = {"a": 1, "b": 2}
+	echo(h.mapkv({ ["key-$A", B*100] }))
+	# Output:
+	#   {key-a=100, key-b=200}
+
+	h = {"a": 1, "b": 2}
+	echo(Arr(h))
+	# Converts Hash into array consisting of pairs
+	# Output:
+	#   [['a',1],['b',2]]
+
+Common higher-order methods (functions)
+
+	echo([1,2,3].all(Int))
+	# Output:
+	#   true
+
+	echo([1,2,3,"a","b"].all(Int))
+	# Output:
+	#   false
+
+	echo([1,2,3,"a","b"].any(Str))
+	# Output:
+	#   true
+
+	echo([1,2,11,12,3].none(X>100))
+	# Output:
+	#   true
+
+	echo([1,2,"a","b",3].filter(Int))
+	# Output:
+	#   [1,2,3]
+
+	echo([1,2,"a","b",3].reject(Int))
+	# Output:
+	#   ['a','b']
+
+	echo([1,2,11,12,3].reject(X>10))
+	# Output:
+	#   [1,2,3]
+
+	echo([1,2,11,12,3].count(X>10))
+	# Output:
+	#   2
 
 Defining a type
 
@@ -822,10 +994,6 @@ Running external programs
 	echo("Parsed data: $data, a is ${data.a}")
 	# Output: Parsed data: {a=1}, a is 1
 
-
-TODO: `@e1 e2` wrapper syntax
-
-TODO: `%{k1 v1 k2 v2 ...}` hash literal syntax
 
 ## Binary operators and precedence
 
