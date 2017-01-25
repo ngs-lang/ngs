@@ -3,7 +3,6 @@
 SHELL := /bin/bash -e
 
 PKG_NAME := ngs
-SHARE_FILES := bootstrap.ngs stdlib.ngs cli.ngs autoload
 CC := gcc
 # -gdwarf-4 -g3 -- for debugging macros
 # -rdynamic -- for backtrace_symbols() to work
@@ -88,18 +87,20 @@ datarootdir = $(prefix)/share
 datadir = $(datarootdir)
 exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
+libdir = $(exec_prefix)/lib
 
 .PHONY: install
 install: ngs
 	# TODO: use "install" instead of "cp"
-	mkdir -p $(datadir)/$(PKG_NAME)
 	cp ngs $(bindir)/
-	cp -a $(SHARE_FILES) $(datadir)/$(PKG_NAME)/
+	mkdir -p $(datadir)/$(PKG_NAME)
+	cp -a lib/* $(libdir)/$(PKG_NAME)/
 
 .PHONY: uninstall
 uninstall:
-	rm -rf $(datadir)/$(PKG_NAME)/
-	rm $(bindir)/ngs
+	rm -rf $(datadir)/$(PKG_NAME)/ || true
+	rm -rf $(libdir)/$(PKG_NAME)/ || true
+	rm $(bindir)/ngs || true
 
 test-no-bootstrap-no-stdlib: ngs
 	@ echo "[ Starting tests ]"
@@ -111,7 +112,7 @@ test-no-bootstrap-no-stdlib: ngs
 	done;
 
 test-stdlib: ngs
-	@ NGS_BOOTSTRAP=bootstrap.ngs ./ngs test.ngs
+	@ NGS_BOOTSTRAP=lib/bootstrap.ngs ./ngs test.ngs
 
 test: test-no-bootstrap-no-stdlib test-stdlib
 	@ echo "ALL TESTS OK"
@@ -119,33 +120,33 @@ test: test-no-bootstrap-no-stdlib test-stdlib
 test-on-jessie:
 	make clean
 	make CC=gcc-4.8
-	NGS_DIR=. make test
+	NGS_DIR=lib make test
 	make clean
 	make CC=gcc-4.9
-	NGS_DIR=. make test
+	NGS_DIR=lib make test
 	make clean
 	make CC=clang-3.5
-	NGS_DIR=. make test
+	NGS_DIR=lib make test
 
 test-on-stretch:
 	make clean
 	make CC=gcc-4.8
-	NGS_DIR=. make test
+	NGS_DIR=lib make test
 	make clean
 	make CC=gcc-4.9
-	NGS_DIR=. make test
+	NGS_DIR=lib make test
 	make clean
 	make CC=gcc-5
-	NGS_DIR=. make test
+	NGS_DIR=lib make test
 	make clean
 	make CC=clang-3.6
-	NGS_DIR=. make test
+	NGS_DIR=lib make test
 
 test-on-trusty:
 	make clean
 	make CC=gcc-4.8
-	NGS_DIR=. make test
+	NGS_DIR=lib make test
 	make clean
 	make CC=clang
-	NGS_DIR=. make test
+	NGS_DIR=lib make test
 

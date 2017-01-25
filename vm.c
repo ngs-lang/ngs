@@ -1853,11 +1853,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MK_BUILTIN_TYPE(name, id) \
 	_doc(vm, "", doc);
 
-	for(int i=0; i<=MAX_VALUE_TAG_VALUE; i++) {
+	for(i=0; i<=MAX_VALUE_TAG_VALUE; i++) {
 		vm->type_by_value_tag[i] = NULL;
 	}
 
-	for(int i=0; i<=MAX_T_OBJ_TYPE_ID; i++) {
+	for(i=0; i<=MAX_T_OBJ_TYPE_ID; i++) {
 		vm->type_by_t_obj_type_id[i] = NULL;
 	}
 

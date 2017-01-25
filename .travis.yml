@@ -1,7 +1,7 @@
 dist: trusty
 language: c
 env:
-  - NGS_DIR=.
+  - NGS_DIR=lib
 compiler:
   - gcc
   - clang
