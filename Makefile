@@ -92,9 +92,9 @@ libdir = $(exec_prefix)/lib
 .PHONY: install
 install: ngs
 	# TODO: use "install" instead of "cp"
-	cp ngs $(bindir)/
 	mkdir -p $(libdir)/$(PKG_NAME)
 	cp -a lib/* $(libdir)/$(PKG_NAME)/
+	cp ngs $(bindir)/
 
 .PHONY: uninstall
 uninstall:
