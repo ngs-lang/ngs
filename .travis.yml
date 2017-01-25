@@ -8,6 +8,5 @@ compiler:
 before_script:
   - sudo apt-get install -y uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg gawk make libpcre3-dev
 script:
-  - cd c
   - make CC=$CC ngs
   - make CC=$CC test
