@@ -95,12 +95,16 @@ install: ngs
 	mkdir -p $(libdir)/$(PKG_NAME)
 	cp -a lib/* $(libdir)/$(PKG_NAME)/
 	cp ngs $(bindir)/
+	# Making sure it's clear that these are NGS tools - keeping the .ngs suffix
+	cp bin/*.ngs $(bindir)/
 
 .PHONY: uninstall
 uninstall:
 	rm -rf $(datadir)/$(PKG_NAME)/ || true
 	rm -rf $(libdir)/$(PKG_NAME)/ || true
 	rm $(bindir)/ngs || true
+	# TODO: something better than this, it's too broad:
+	# rm $(bindir)/*.ngs || true
 
 test-no-bootstrap-no-stdlib: ngs
 	@ echo "[ Starting tests ]"
