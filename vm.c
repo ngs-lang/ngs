@@ -1897,7 +1897,42 @@ void vm_init(VM *vm, int argc, char **argv) {
 		MK_BUILTIN_TYPE_DOC(BasicType, T_BASICT, "Type for builtin types. F f(t:BasicType) ...; f(Arr)");
 		MK_BUILTIN_TYPE_DOC(NormalType, T_NORMT, "Type for user-defined types. type T1; F f(t:NormalType) ...; f(T1)");
 
-	MK_BUILTIN_TYPE_DOC(Hash, T_HASH, "Hash (dictionary) type");
+	MK_BUILTIN_TYPE(Hash, T_HASH);
+	_doc_arr(vm, "",
+		"Hash type. Maps unique keys to their values. ",
+		"Key-Value pairs are stored and iterated in insertion order.",
+		"Currently Hash type has several limitations: ",
+		"Hash keys are hashed using internal hash() function which can not be overwritten. ",
+		"The internal hash() function exposed to NGS code but adding implementations or setting \"hash\" to some other function ",
+		"will not affect operation of Hashes. ",
+		"Hash values are compared using internal is_equal() function which can not be overwritten. ",
+		"Both hash() and is_equal() currently handle only Int, Str and arbitrary objects. ",
+		"Comparison of arbitrary objects is done by comparing their addresses in memory.",
+		NULL
+	);
+	_doc_arr(vm, "%EX",
+		"x = {\"a\": 1, \"b\": 2}",
+		"echo(x)",
+		"# Output:",
+		"#   {a=1, b=2}",
+		"",
+		"echo(x.keys())",
+		"# Output:",
+		"#   ['a','b']",
+		"",
+		"echo(x.values())",
+		"# Output:",
+		"#   [1,2]",
+		"",
+		"x = {\"a\": 1, \"b\": 2}",
+		"x.a = 10",
+		"echo(x)",
+		"# Output:",
+		"#   {a=10, b=2}",
+		"",
+		NULL
+	);
+
 	vm->type_by_t_obj_type_id[T_HASH >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Hash;
 
 	MK_BUILTIN_TYPE_DOC(CLib, T_CLIB, "C library, result of dlopen(), not used yet");

@@ -27,7 +27,6 @@ Note that this started as internal document so things here are unformed, not fin
 				* Tutorial
 					+ Build an app - decide which
 				* True values - make sure it's in [in ngssyn]
-				* Hash keys comparison
 				* All types documentation [in progress]
 				* All methods documentation [in progress]
 				* Exit codes (see bootstrap.ngs and ngs.c)
