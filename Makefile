@@ -154,3 +154,9 @@ test-on-trusty:
 	make CC=clang
 	NGS_DIR=lib make test
 
+.PHONY: gh-pages-doc
+gh-pages-doc:
+	cd ../ngs-doc && git status | grep 'On branch gh-pages'
+	cd doc && make
+	cp -a doc/*.html doc/*.css ../ngs-doc/
+	cd ../ngs-doc && git add *.css *.html && git commit -m 1 && git push
