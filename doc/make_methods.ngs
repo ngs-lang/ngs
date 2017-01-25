@@ -179,7 +179,7 @@
 		}
 
 		F Html(dn:TypeMethodDocNode, options:Hash) {
-			dn.process_children(options + {'type': dn.type}, TypeMethodImplDocNode)
+			dn.process_children(options + {'method': dn.method}, TypeMethodImplDocNode)
 		}
 
 		F Html(dn:TypeDocNode, options:Hash) {
@@ -327,7 +327,7 @@
 			p = params.join(', ')
 
 			types = ('-' + params_dn.children.map(F(param_dn) param_dn.children.the_one(ParamTypeDocNode).text[0])).join('')
-			link = method_ref_link("${options.type.name.encode_html()}($p)", options.type.name + types)
+			link = method_ref_link("${options.method.encode_html()}($p)", options.method + types)
 			tc.push(link)
 			dn.children.the_one(DescDocNode) do F(dn) {
 				tc.push('<section class="type-method-impl-desc">')
@@ -470,7 +470,7 @@
 								}
 								if relevant_impls {
 									dn = TypeMethodDocNode(relevant_impls)
-									dn.type = value
+									dn.method = name
 									collect(dn)
 								}
 							}
