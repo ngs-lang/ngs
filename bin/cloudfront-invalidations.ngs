@@ -1,10 +1,7 @@
 #!/usr/bin/env ngs
 {
-	inv = ``aws cloudfront list-invalidations --distribution-id ${ARGV[0]}``
-
-	rows = if inv is not Null then inv.InvalidationList.Items.limit(10) else []
-
-	t = Table('CloudfrontInvalidations', rows)
+	inv = ``aws cloudfront list-invalidations --distribution-id ${ARGV[0]}`` or []
+	t = Table('CloudfrontInvalidations', inv.InvalidationList.Items.limit(10))
 	t.echo()
 }
 
