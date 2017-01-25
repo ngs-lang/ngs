@@ -31,7 +31,6 @@ Note that this started as internal document so things here are unformed, not fin
 						+ Hash [done]
 						+ RegExp [done]
 						+ Other common types
-					+ Control structures (if, loops, cond)
 					+ Common methods
 						+ Boolean
 						+ Math

@@ -952,6 +952,9 @@ Checking types:
 	echo(1 is not Str)
 	# Output: true
 
+	echo(typeof(1))
+	# Output: <Type Int>
+
 See types reference: [ngstyp(1)](ngstyp.1.html).
 
 # DEFINE YOUR OWN TYPES
@@ -1055,21 +1058,10 @@ User-defined hook example:
 	}
 	# Outputs one per line: A, B
 
-Same example using decorators syntax:
+Another way is to add named hook handlers (also a practical example):
 
-	h = Hook()
-	@h {
-		echo("A")
-	}
-	@h {
-		echo("B")
-	}
-	h()
-
-And finally practical example:
-
-	@exit_hook {
-		# Remove my temp files
+	exit_hook['cleanup_temp_files'] = F(exit_info:Hash) {
+		# remove my temp files
 	}
 
 
