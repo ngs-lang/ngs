@@ -190,7 +190,7 @@
 				tc.push("<h${tc.heading_level} id=\"type-${dn.type.name.encode_html_attr()}\" class=\"type-header\">${dn.type.name.encode_html()}$link</h${tc.heading_level}>")
 				tc.push('<section class="type-content">')
 				if not(options.get('detailed_type_page')) {
-					tc.push('<p>' + type_details_link(dn.type, dn.type.name.encode_html() + ' type details') + '</p>')
+					tc.push('<p>' + type_details_link(dn.type, ('"' + dn.type.name + '"').encode_html() + ' type details') + '</p>')
 				}
 				tc.indent() do {
 					tc.heading_inc() do {
