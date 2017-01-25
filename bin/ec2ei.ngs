@@ -8,16 +8,21 @@ if not(ARGV) {
 	])
 }
 
-{ AWS }
-
-instances = aws_regions(F(r) {
+instances = AWS::regions(F(r) {
 	``aws ec2 describe-instances --region $r --filter Name=instance-state-name,Values=running``
 }).filter(X.has('PublicIpAddress'))
 
 echo "# Found ${instances.len()} instances in ${instances.group(F(i) i.Placement.AvailabilityZone).len()} AZs"
 
+have_placeholder = 'IP' in ARGV
+
 results = instances.pmap(F(i) {
-	[i, `$*ARGV ${i.PublicIpAddress}`]
+	argv = if have_placeholder {
+		ARGV.replace('IP', i.PublicIpAddress)
+	} else {
+		ARGV + [i.PublicIpAddress]
+	}
+	[i, `$*argv`]
 })
 
 each(results, F(r) {

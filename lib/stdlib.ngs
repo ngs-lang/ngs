@@ -289,6 +289,12 @@ F drop_while(something:Eachable, predicate)
 
 TEST [1,2,3,1,2].drop_while(X<3) == [3,1,2]
 
+doc Replace all occurrences of src with dst
+doc something - Instance of any type that has each(something, callback) implemented
+doc %RET - Arr
+doc %EX - ["ssh", "IP", "w"].replace("IP", "10.0.0.100")  # ['ssh','10.0.0.100','w']
+F replace(something:Eachable, src, dst) map(something, only(X == src, {dst}))
+
 doc Combine items to a single value using the supplied binary function
 doc First f is applied to start and the first element of something
 doc then on each step f is applied to previous result and next element
