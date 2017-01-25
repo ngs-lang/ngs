@@ -20,8 +20,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 pre {
-	background-color: #EEE;
+	background-color: #F0FFE0;
 	padding: 1em;
+	border: 1px solid #A0C0A0;
+	border-radius: 0.5em;
 }
 
 q {

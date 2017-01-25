@@ -65,7 +65,6 @@
 
 		tc = TextCollector()
 
-
 		# --- DocNode ---
 
 		type DocNode
@@ -109,7 +108,8 @@
 
 		F method_permalink(s:Str) '<a class="section-link" title="Permalink to this definition" href="#' + s.encode_html_attr() + '">¶</a>'
 
-		F type_permalink(s:Str) '<a class="type-link" title="Permalink to this type" href="#' + s.encode_html_attr() + '">¶</a>'
+		F type_permalink(t:Type) '<a class="type-link" title="Permalink to this type" href="#type-' + t.name.encode_html_attr() + '">¶</a>'
+		F type_details_link(t:Type, title) '<a class="type-details-link" href="type-' + t.name.encode_html_attr() + '.html#type-' + t.name.encode_html_attr() + '">' + (title or t.name).encode_html() + '</a>'
 
 		F method_ref_link(display_name:Str, link_data:Str) '<a class="method-ref-link" title="See method" href="methods.html#impl-' + link_data.encode_html_attr() + '">' + display_name + '</a>'
 		F type_ref_link(s:Str) '<a class="type-ref-link" title="See type" href="types.html#type-' + s.encode_html_attr() + '">' + s.encode_html() + '</a>'
@@ -179,16 +179,19 @@
 		}
 
 		F Html(dn:TypeMethodDocNode, options:Hash) {
-			dn.process_children(options + {'method': dn.name}, TypeMethodImplDocNode)
+			dn.process_children(options + {'type': dn.type}, TypeMethodImplDocNode)
 		}
 
 		F Html(dn:TypeDocNode, options:Hash) {
 			tc.push('<section class="type">')
 			tc.indent() do {
-				link = type_permalink('type-' + dn.name)
-				type_name = dn.name
-				tc.push("<h${tc.heading_level} id=\"type-${dn.name.encode_html_attr()}\" class=\"type-header\">${dn.name.encode_html()}$link</h${tc.heading_level}>")
+				link = type_permalink(dn.type)
+				type_name = dn.type.name
+				tc.push("<h${tc.heading_level} id=\"type-${dn.type.name.encode_html_attr()}\" class=\"type-header\">${dn.type.name.encode_html()}$link</h${tc.heading_level}>")
 				tc.push('<section class="type-content">')
+				if not(options.get('detailed_type_page')) {
+					tc.push('<p>' + type_details_link(dn.type, dn.type.name.encode_html() + ' type details') + '</p>')
+				}
 				tc.indent() do {
 					tc.heading_inc() do {
 						dn.children.the_one(DescDocNode) do F(dn) {
@@ -206,7 +209,9 @@
 							tc.push('<pre class="example">' + dn.text.map(encode_html).join('\n') + '</pre>')
 							tc.push('</section>') # type-example-content
 						}
-						dn.process_children(options, TypeMethodsDocNode)
+						if options.get('detailed_type_page') {
+							dn.process_children(options, TypeMethodsDocNode)
+						}
 					}
 				}
 				tc.push('</section>')
@@ -217,7 +222,7 @@
 		F Html(dn:TypeDocNode, options:Hash) {
 			guard options.get('leaf')
 			tc.indent() do {
-				tc.push("<li>${type_ref_link(dn.name)}")
+				tc.push("<li>${type_ref_link(dn.type.name)}")
 				tc.indent() do {
 					tc.heading_inc() do {
 						dn.children.the_one(DescDocNode) do F(dn) {
@@ -322,7 +327,7 @@
 			p = params.join(', ')
 
 			types = ('-' + params_dn.children.map(F(param_dn) param_dn.children.the_one(ParamTypeDocNode).text[0])).join('')
-			link = method_ref_link("${options.method.encode_html()}($p)", options.method + types)
+			link = method_ref_link("${options.type.name.encode_html()}($p)", options.type.name + types)
 			tc.push(link)
 			dn.children.the_one(DescDocNode) do F(dn) {
 				tc.push('<section class="type-method-impl-desc">')
@@ -447,7 +452,7 @@
 					# echo("N $name")
 					# ret = TypeDocNode([ParentTypesDocNode(value.parents.map())])
 					ret = TypeDocNode()
-					ret.name = value.name
+					ret.type = value
 					# ret.full = full
 					process_type_impl_doc_attr(value, ret, '', DescDocNode)
 					if full {
@@ -465,7 +470,7 @@
 								}
 								if relevant_impls {
 									dn = TypeMethodDocNode(relevant_impls)
-									dn.name = name
+									dn.type = value
 									collect(dn)
 								}
 							}
@@ -481,10 +486,21 @@
 				})
 				tdn = TypesDocNode(types)
 				page = TopDocNode([tdn])
+
+				types.each(F(t) {
+					assert('/' not in t.type.name)
+					assert('.' not in t.type.name)
+					local tc = TextCollector()
+					local tdn = TypesDocNode([t])
+					local page = TopDocNode([tdn])
+					local html = Html(page, {'detailed_type_page': true})
+					html.Str().store("type-${t.type.name}.html")
+				})
 			}
 
 		}
 
+		tc = TextCollector()
 		echo(Html(page))
 
 		# echo(methods.children[-100])
