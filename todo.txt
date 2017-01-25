@@ -9,10 +9,6 @@ Note that this started as internal document so things here are unformed, not fin
 	* address resolution functions
 	* AWS fix SG rules (IpPermBox < IpPermBox)
 	* [stdlib] pid() - c_getpid() wrapper
-	* AMI, Folders layout
-		* lib - *.ngs libraries, NGS_DIR probably
-			* autoload
-		* bin - *.ngs tools
 
 [roadmap]
 
@@ -30,7 +26,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 				* io redirection - see F '$()'(c:Command) { ... } in stdlib.ngs [task is on hold]
 					* basic redirections ( <x , >y , >>z ) [done]
-					* tests for basic redirections
 					* advanced redirections ( N>x , N<y, N>>z ), think of more
 					* document redirections
 
@@ -121,11 +116,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* think about read/write vs read/echo methods naming
 
-			* Move everything in "c" directory one level up
-
 			* locals() - to complete globals()
-
-			* Consider Eachable or alike for methods like F map(something, mapper:Fun, *args)
 
 			* Make sure attrs() are implemented on all possible types
 
