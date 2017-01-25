@@ -41,10 +41,9 @@ Running
 
 	apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre2-dev
 	# On Ubuntu 14.04 (maybe others) # apt-get install gawk make
-	cd c
 	make
-	# NGS_DIR, where stdlib.ngs resides defaults to /usr/share/ngs . Either link it to the "c" folder or run with NGS_DIR=.
-	NGS_DIR=. ./ngs SCRIPT_NAME.ngs
+	# NGS_DIR, where stdlib.ngs resides defaults to /usr/local/lib/ngs . Either link it to the "lib" folder or run with NGS_DIR=lib
+	NGS_DIR=lib ./ngs SCRIPT_NAME.ngs
 
 Tested as follows:
 
@@ -57,14 +56,13 @@ If you have troubles compiling, please try to compile the commit tagged `tested`
 Running tests
 =============
 
-	cd c
-	# NGS_DIR, where stdlib.ngs resides defaults to /usr/share/ngs . Either link it to the "c" folder or run with NGS_DIR=.
-	NGS_DIR=. make test
+	# NGS_DIR, where stdlib.ngs resides defaults to /usr/local/lib/ngs . Either link it to the "lib" folder or run with NGS_DIR=lib
+	NGS_DIR=lib make test
 
 Contributing
 ============
 
-Fork on GitHub, work on whatever you like, preferably from the top of [the todo](c/todo.txt), make a pull request. If the change is big or involves modifying the syntax, it's better to coordinate with Ilya before you start.
+Fork on GitHub, work on whatever you like, preferably from the top of [the todo](todo.txt), make a pull request. If the change is big or involves modifying the syntax, it's better to coordinate with Ilya before you start.
 
 Planned Features
 ================
