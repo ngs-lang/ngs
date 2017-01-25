@@ -1,9 +1,11 @@
 all: html man types.html methods.html
+TM_DEPS = ../vm.c ../lib/*.ngs ../lib/*/*.ngs make_methods.ngs
 
-types.html: ../c/vm.c ../c/bootstrap.ngs ../c/stdlib.ngs ../c/autoload/* make_methods.ngs
+
+types.html: $(TM_DEPS)
 	./make_methods.ngs types >$@
 
-methods.html: ../c/vm.c ../c/bootstrap.ngs ../c/stdlib.ngs ../c/autoload/* make_methods.ngs
+methods.html: $(TM_DEPS)
 	./make_methods.ngs methods >$@
 
 html: $(patsubst %.1.md,%.1.html,$(wildcard *.1.md))
