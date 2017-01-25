@@ -153,6 +153,14 @@ Example:
 	cat a.txt; touch myfile
 	echo mystr >myfile
 
+Redirections syntax (based on bash syntax):
+
+* Ovewrite : `ls >myfile`
+* Append: `ls >>myfile`
+* Read from: `wc -l <myfile`
+* Specifiy file descriptor, overwrite: `cmd_writing_to_stderr 2>myfile`
+* Specifiy file descriptor, append: `cmd_writing_to_stderr 2>>myfile`
+
 In addition to running commands and performing redirections, there are several expressions that are also supported in the **commands syntax**. Note `code` below means **code syntax** expressions.
 
 * `{ code }` - see **Switching between syntaxes** below
@@ -165,8 +173,6 @@ In addition to running commands and performing redirections, there are several e
 * `while condition_code body_code`
 * `for(...) body_code`
 * comment: `#` and till end of line
-
-TODO: redirection syntax
 
 ## Code syntax
 

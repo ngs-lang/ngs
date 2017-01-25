@@ -24,11 +24,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* commands syntax
 
-				* io redirection - see F '$()'(c:Command) { ... } in stdlib.ngs [task is on hold]
-					* basic redirections ( <x , >y , >>z ) [done]
-					* advanced redirections ( N>x , N<y, N>>z ), think of more
-					* document redirections
-
 				* pipes
 					* between external commands
 					* between internal commands/functions
