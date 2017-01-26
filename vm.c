@@ -1976,7 +1976,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	VALUE name; \
 	name = make_normal_type(make_string(#name)); \
 	set_global(vm, #name, name); \
-	vm->name = name;
+	vm->name = name; \
+	vm->last_doc_hash = make_hash(4); \
+	NGS_TYPE_ATTRS(name) = make_hash(8); \
+	set_hash_key(NGS_TYPE_ATTRS(name), make_string("doc"), vm->last_doc_hash);
 
 #define MKSUBTYPE(name, parent) \
 	MKTYPE(name); \
@@ -1989,28 +1992,184 @@ void vm_init(VM *vm, int argc, char **argv) {
 	SETUP_TYPE_FIELD(name, step, 2);
 
 	MKTYPE(Exception);
+	_doc(vm, "", "Represents exceptional situaution. All thrown things shouhld inherit Exception.");
+
 		MKSUBTYPE(Error, Exception);
+		_doc(vm, "", "Represents an error. Usually more specific error types are used.");
+
 			MKSUBTYPE(InternalError, Error);
+			_doc(vm, "", "Represents an error which is likely to be NGS implementation bug.");
+
 			MKSUBTYPE(LookupFail, Error);
+			_doc(vm, "", "Represents an error of accessing non-existent element of a collection.");
+
 				MKSUBTYPE(KeyNotFound, LookupFail);
+				_doc(vm, "", "Represents an error of accessing non-existent key in a hash.");
+				_doc_arr(vm, "%EX",
+					"h = {}",
+					"echo(h[\"a\"])",
+					"# ... Exception of type KeyNotFound ...",
+					NULL
+				);
+
 				MKSUBTYPE(IndexNotFound, LookupFail);
+				_doc(vm, "", "Represents an error of out-of-bounds array index.");
+				_doc_arr(vm, "%EX",
+					"a = [10,20,30]",
+					"echo(a[100])",
+					"# ... Exception of type IndexNotFound ...",
+					NULL
+				);
+
 					MKSUBTYPE(EmptyArrayFail, IndexNotFound);
+					_doc(vm, "", "Represents an error of using an empty array for an operation that requires at least one element in the array.");
+					_doc_arr(vm, "%EX",
+						"a = []",
+						"echo(shift(a))",
+						"# ... Exception of type EmptyArrayFail ...",
+						NULL
+					);
+
 				MKSUBTYPE(AttrNotFound, LookupFail);
+				_doc(vm, "", "Represents an error of reading non-existent attribute of an object.");
+				_doc_arr(vm, "%EX",
+					"{",
+					"  type T",
+					"  t.a = 1",
+					"  echo(t.b)",
+					"}",
+					"# ... Exception of type AttrNotFound ...",
+					NULL
+				);
+
 				MKSUBTYPE(GlobalNotFound, LookupFail);
+				_doc(vm, "", "Represents an error of accessing undefined global variable.");
+				_doc_arr(vm, "%EX",
+					"{ NO_SUCH_VAR }",
+					"# ... Exception of type GlobalNotFound ...",
+					NULL
+				);
+
 			MKSUBTYPE(UndefinedLocalVar, Exception);
+			_doc(vm, "", "Represents an error of reading undefined local variable.");
+			_doc_arr(vm, "%EX",
+				"F f() {echo(a); a=1}",
+				"f()",
+				"# ... Exception of type UndefinedLocalVar ...",
+				NULL
+			);
+
 			MKSUBTYPE(InvalidArgument, Error);
+			_doc(vm, "", "Represents an error of calling a method with incorrect argument.");
+			_doc_arr(vm, "%EX",
+				"ord(\"ab\")",
+				"# ... Exception of type InvalidArgument ...",
+				NULL
+			);
+
 				MKSUBTYPE(DivisionByZero, InvalidArgument);
+				_doc(vm, "", "Represents an error of dividing by zero.");
+				_doc_arr(vm, "%EX",
+					"echo(1 / 0)",
+					"# ... Exception of type DivisionByZero ...",
+					NULL
+				);
+
 			MKSUBTYPE(CompileFail, Error);
+			_doc(vm, "", "Represents a compilation error.");
+			_doc_arr(vm, "%EX",
+				"compile(\"{ + }\", "")",
+				"# ... Exception of type CompileFail ...",
+				NULL
+			);
+
 			MKSUBTYPE(RegExpCompileFail, Error);
+			_doc(vm, "", "Represents a regulat expression compilation error.");
+			_doc_arr(vm, "%EX",
+				"\"aaa\" ~ /+/",
+				"# ... Exception of type RegExpCompileFail ...",
+				NULL
+			);
+
 			MKSUBTYPE(CallFail, Error);
+			_doc(vm, "", "Represents calling failure.");
+
 				MKSUBTYPE(DontKnowHowToCall, CallFail);
+				_doc(vm, "", "Represents calling failure when it is not known how to call the given object.");
+				_doc_arr(vm, "%EX",
+					"{ type T }",
+					"t = T()",
+					"t()",
+					"# ... Exception of type DontKnowHowToCall ...",
+					NULL
+				);
+
 				MKSUBTYPE(ImplNotFound, CallFail);
+				_doc(vm, "", "Represents calling failure when arguments do not match any method implementation.");
+				_doc_arr(vm, "%EX",
+					"F f(x:Int) 1"
+					"F f(x:Str) 2"
+					"f(true)",
+					"# ... Exception of type ImplNotFound ...",
+					NULL
+				);
+
 				MKSUBTYPE(StackDepthFail, CallFail);
+				_doc(vm, "", "Represents stack overflow error.");
+				_doc_arr(vm, "%EX",
+					"F f(x:Int) f(x+1)"
+					"f(0)",
+					"# ... Exception of type StackDepthFail ...",
+					NULL
+				);
+
 				MKSUBTYPE(ArgsMismatch, CallFail);
+				_doc(vm, "", "Represents calling failure due to arguments vs parameters mismatch.");
+				_doc_arr(vm, "%EX",
+					"f = F(x) \"blah\"",
+					"f(10, 20)",
+					"# ... Exception of type ArgsMismatch ...",
+					NULL
+				);
+
 			MKSUBTYPE(SwitchFail, Error);
+			_doc(vm, "", "Represents missing appropriate eswitch/econd/ematch clause.");
+			_doc_arr(vm, "%EX",
+				"{",
+				"    eswitch 10 {",
+				"        1 \"a\"",
+				"        2 \"b\"",
+				"    }",
+				"}",
+				"# ... Exception of type SwitchFail ...",
+				NULL
+			);
+
 			MKSUBTYPE(DlopenFail, Error);
+			_doc(vm, "", "Represents failure to open dynamically loaded library (feature is a work in progress).");
 
 	MKTYPE(Return);
+	_doc(vm, "", "Return instance types, when thrown, will exit the call frame where they were created returning given value.");
+	_doc_arr(vm, "%EX",
+		"{",
+        "    F find_the_one(haystack:Arr, needle) {",
+        "        ret_from_find_the_one = Return()",
+        "        echo(ret_from_find_the_one)",
+        "        haystack.each(F(elt) {",
+        "                elt == needle throws ret_from_find_the_one(\"Found it!\")",
+        "        })",
+        "        \"Not found\"",
+        "    }",
+        "    echo([10,20].find_the_one(20))",
+        "    echo([10,20].find_the_one(30))",
+		"}",
+        "# Output:",
+        "#   <Return closure=<Closure find_the_one at 1.ngs:2> depth=7 val=null>",
+        "#   Found it!",
+        "#   <Return closure=<Closure find_the_one at 1.ngs:2> depth=7 val=null>",
+        "#   Not found",
+		NULL
+	);
 
 	MKTYPE(Backtrace);
 

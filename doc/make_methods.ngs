@@ -187,29 +187,30 @@
 			tc.indent() do {
 				link = type_permalink(dn.type)
 				type_name = dn.type.name
-				tc.push("<h${tc.heading_level} id=\"type-${dn.type.name.encode_html_attr()}\" class=\"type-header\">${dn.type.name.encode_html()}$link</h${tc.heading_level}>")
-				tc.push('<section class="type-content">')
-				if not(options.get('detailed_type_page')) {
-					tc.push('<p>' + type_details_link(dn.type, ('"' + dn.type.name + '"').encode_html() + ' type details') + '</p>')
+				if options.get('detailed_type_page') {
+					tc.push("<h${tc.heading_level} id=\"type-${dn.type.name.encode_html_attr()}\" class=\"type-header\">${dn.type.name.encode_html()}$link</h${tc.heading_level}>")
+				} else {
+					tc.push("<h${tc.heading_level} id=\"type-${dn.type.name.encode_html_attr()}\" class=\"type-header\">${type_details_link(dn.type, dn.type.name.encode_html())}</h${tc.heading_level}>")
 				}
+				tc.push('<section class="type-content">')
 				tc.indent() do {
 					tc.heading_inc() do {
 						dn.children.the_one(DescDocNode) do F(dn) {
 							dn.text / encode_html % tc.push(X)
 						}
-						dn.children.the_one(ParentTypesDocNode) do F(dn) {
-							tc.push("<h${tc.heading_level} id=\"type-${type_name.encode_html_attr()}-parents\" class=\"type-parents-header\">Parent types</h${tc.heading_level}>")
-							tc.push("<ul>")
-							dn.process_children(options + {'leaf': true}, TypeDocNode)
-							tc.push("</ul>")
-						}
-						dn.children.the_one(ExampleDocNode) do F(dn) {
-							tc.push("<h${tc.heading_level} id=\"type-${type_name.encode_html_attr()}-example\" class=\"example-header\">Example</h${tc.heading_level}>")
-							tc.push('<section class="type-example-content">')
-							tc.push('<pre class="example">' + dn.text.map(encode_html).join('\n') + '</pre>')
-							tc.push('</section>') # type-example-content
-						}
 						if options.get('detailed_type_page') {
+							dn.children.the_one(ParentTypesDocNode) do F(dn) {
+								tc.push("<h${tc.heading_level} id=\"type-${type_name.encode_html_attr()}-parents\" class=\"type-parents-header\">Parent types</h${tc.heading_level}>")
+								tc.push("<ul>")
+								dn.process_children(options + {'leaf': true}, TypeDocNode)
+								tc.push("</ul>")
+							}
+							dn.children.the_one(ExampleDocNode) do F(dn) {
+								tc.push("<h${tc.heading_level} id=\"type-${type_name.encode_html_attr()}-example\" class=\"example-header\">Example</h${tc.heading_level}>")
+								tc.push('<section class="type-example-content">')
+								tc.push('<pre class="example">' + dn.text.map(encode_html).join('\n') + '</pre>')
+								tc.push('</section>') # type-example-content
+							}
 							dn.process_children(options, TypeMethodsDocNode)
 						}
 					}
@@ -490,7 +491,7 @@
 				types.each(F(t) {
 					assert('/' not in t.type.name)
 					assert('.' not in t.type.name)
-					local tc = TextCollector()
+					tc = TextCollector()
 					local tdn = TypesDocNode([t])
 					local page = TopDocNode([tdn])
 					local html = Html(page, {'detailed_type_page': true})
