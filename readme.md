@@ -1,7 +1,14 @@
-Next generation UNIX shell. See the [man page](https://ilyash.github.io/ngs-doc/ngs.1.html). [![Build Status](https://travis-ci.org/ilyash/ngs.svg?branch=master)](https://travis-ci.org/ilyash/ngs)
+Next generation UNIX-ish shell. [![Build Status](https://travis-ci.org/ilyash/ngs.svg?branch=master)](https://travis-ci.org/ilyash/ngs)
 
-The problem with current state
-==============================
+Quick documentation links
+=========================
+
+* [Language tutorial](https://ilyash.github.io/ngs-doc/ngslang.1.html)
+* [Built-in types](https://ilyash.github.io/ngs-doc/types.html) (WIP)
+* [Built-in methods](https://ilyash.github.io/ngs-doc/methods.html) (WIP)
+
+Motivation - The problem with current state
+===========================================
 
 Shells are [Domain Specific Languages](https://en.wikipedia.org/wiki/Domain-specific_language).  The domain has changed greatly since the shells we use today were conceived.  The shells never caught up.
 
