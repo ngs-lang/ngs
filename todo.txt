@@ -29,7 +29,7 @@ Note that this started as internal document so things here are unformed, not fin
 				* True values - make sure it's in [in ngssyn]
 				* All types documentation [in progress]
 					* List all parents, including transient
-					* List direct children types
+					* List direct children types [done]
 					* Change links-to-type from index page to details page
 					* Link %RET types
 				* All methods documentation [in progress]

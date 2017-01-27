@@ -183,6 +183,22 @@
 			dn.process_children(options + {'method': dn.method}, TypeMethodImplDocNode)
 		}
 
+		F Html(dn:ParentTypesDocNode, options:Hash) {
+			not(dn.children) returns null
+			tc.push("<h${tc.heading_level} class=\"type-parents-header\">Parent types</h${tc.heading_level}>")
+			tc.push("<ul>")
+			dn.process_children(options + {'leaf': true}, TypeDocNode)
+			tc.push("</ul>")
+		}
+
+		F Html(dn:ChildTypesDocNode, options:Hash) {
+			not(dn.children) returns null
+			tc.push("<h${tc.heading_level} class=\"type-parents-header\">Direct children types</h${tc.heading_level}>")
+			tc.push("<ul>")
+			dn.process_children(options + {'leaf': true}, TypeDocNode)
+			tc.push("</ul>")
+		}
+
 		F Html(dn:TypeDocNode, options:Hash) {
 			tc.push('<section class="type">')
 			tc.indent() do {
@@ -200,18 +216,8 @@
 							dn.text / encode_html % tc.push(X)
 						}
 						if options.get('detailed_type_page') {
-							dn.children.the_one(ParentTypesDocNode) do F(dn) {
-								tc.push("<h${tc.heading_level} id=\"type-${type_name.encode_html_attr()}-parents\" class=\"type-parents-header\">Parent types</h${tc.heading_level}>")
-								tc.push("<ul>")
-								dn.process_children(options + {'leaf': true}, TypeDocNode)
-								tc.push("</ul>")
-							}
-							dn.children.the_one(ChildTypesDocNode) do F(dn) {
-								tc.push("<h${tc.heading_level} id=\"type-${type_name.encode_html_attr()}-children\" class=\"type-parents-header\">Direct children types</h${tc.heading_level}>")
-								tc.push("<ul>")
-								dn.process_children(options + {'leaf': true}, TypeDocNode)
-								tc.push("</ul>")
-							}
+							dn.children.the_one(ParentTypesDocNode).Html(options)
+							dn.children.the_one(ChildTypesDocNode).Html(options)
 							dn.children.the_one(ExampleDocNode) do F(dn) {
 								tc.push("<h${tc.heading_level} id=\"type-${type_name.encode_html_attr()}-example\" class=\"example-header\">Example</h${tc.heading_level}>")
 								tc.push('<section class="type-example-content">')
@@ -230,7 +236,7 @@
 		F Html(dn:TypeDocNode, options:Hash) {
 			guard options.get('leaf')
 			tc.indent() do {
-				tc.push("<li>${type_ref_link(dn.type.name)}")
+				tc.push("<li>${type_details_link(dn.type, dn.type.name.encode_html())}")
 				tc.indent() do {
 					tc.heading_inc() do {
 						dn.children.the_one(DescDocNode) do F(dn) {
@@ -477,12 +483,8 @@
 					process_type_impl_doc_attr(value, ret, '', DescDocNode)
 					if full {
 						process_type_impl_doc_attr(value, ret, '%EX', ExampleDocNode)
-						if value.parents {
-							ret.push(ParentTypesDocNode(value.parents.map(type_to_doc_node(X, false))))
-						}
-						if types_direct_children[value] {
-							ret.push(ChildTypesDocNode(types_direct_children[value].map(type_to_doc_node(X, false))))
-						}
+						ret.push(ParentTypesDocNode(value.parents.map(type_to_doc_node(X, false))))
+						ret.push(ChildTypesDocNode(types_direct_children[value].map(type_to_doc_node(X, false))))
 						methods_of_type = collector
 							methods.each() do F(name, impls) {
 								relevant_impls = impls.filter(method_impl_has_arg_of_type(X, value)).map() do F(mi) {
