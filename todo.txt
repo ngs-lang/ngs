@@ -28,10 +28,16 @@ Note that this started as internal document so things here are unformed, not fin
 					+ Build an app - decide which
 				* True values - make sure it's in [in ngssyn]
 				* All types documentation [in progress]
+					* List all parents, including transient
+					* List direct children types
+					* Change links-to-type from index page to details page
+					* Link %RET types
 				* All methods documentation [in progress]
+					* Make index page
+					* Make one page per method
 				* Exit codes (see bootstrap.ngs and ngs.c)
 				* Document that inner functions are declared local
-				* Language reference, good example: https://golang.org/ref/spec
+				* Language reference, good example: https://golang.org/ref/spec [have most of it in ngslang]
 				* Internals
 
 			* files globbing

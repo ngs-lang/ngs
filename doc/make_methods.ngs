@@ -76,6 +76,7 @@
 							type TypeMethodDocNode(DocNode)
 								type TypeMethodImplDocNode(DocNode)
 				type ParentTypesDocNode(DocNode)
+				type ChildTypesDocNode(DocNode)
 					type ParentTypeDocNode(DocNode)
 				type MethodsDocNode(DocNode)
 					type MethodDocNode(DocNode)
@@ -201,6 +202,12 @@
 						if options.get('detailed_type_page') {
 							dn.children.the_one(ParentTypesDocNode) do F(dn) {
 								tc.push("<h${tc.heading_level} id=\"type-${type_name.encode_html_attr()}-parents\" class=\"type-parents-header\">Parent types</h${tc.heading_level}>")
+								tc.push("<ul>")
+								dn.process_children(options + {'leaf': true}, TypeDocNode)
+								tc.push("</ul>")
+							}
+							dn.children.the_one(ChildTypesDocNode) do F(dn) {
+								tc.push("<h${tc.heading_level} id=\"type-${type_name.encode_html_attr()}-children\" class=\"type-parents-header\">Direct children types</h${tc.heading_level}>")
 								tc.push("<ul>")
 								dn.process_children(options + {'leaf': true}, TypeDocNode)
 								tc.push("</ul>")
@@ -448,6 +455,18 @@
 				# type as type of one of the parameters.
 				methods = list_methods()
 
+				types = g.filterv(Type).filterk(is_public_name).filterk(not + is_phased_out_type).sortk(lte)
+
+				# Init with ( type -> [] ) pairs
+				types_direct_children = types.values().Hash({ [] })
+
+				types.values().each(F(t) {
+					t.parents.each(F(p) {
+						types_direct_children[p].push(t)
+					})
+				})
+
+
 				# TODO: straighten by using ParentTypeDocNode instead of 'full' / 'leaf' option.
 				F type_to_doc_node(value:Type, full:Bool) {
 					# echo("N $name")
@@ -460,6 +479,9 @@
 						process_type_impl_doc_attr(value, ret, '%EX', ExampleDocNode)
 						if value.parents {
 							ret.push(ParentTypesDocNode(value.parents.map(type_to_doc_node(X, false))))
+						}
+						if types_direct_children[value] {
+							ret.push(ChildTypesDocNode(types_direct_children[value].map(type_to_doc_node(X, false))))
 						}
 						methods_of_type = collector
 							methods.each() do F(name, impls) {
@@ -482,7 +504,7 @@
 					ret
 				}
 
-				types = g.filterv(Type).filterk(is_public_name).filterk(not + is_phased_out_type).sortk(lte).map(F(name, value) {
+				types .= map(F(name, value) {
 					type_to_doc_node(value, true)
 				})
 				tdn = TypesDocNode(types)

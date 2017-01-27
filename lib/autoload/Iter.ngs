@@ -1,24 +1,90 @@
 {
+	doc Iterator. Parent type for all specific iterator types.
 	type Iter
+
+	doc Represents attempt to fetch next value of an iterator when it's exhausted
+	doc %EX - { Iter([]).next() }
+	doc %EX - # ... Exception of type NoNext ...
 	type NoNext(Exception)
+
+	doc Arr (array) iterator.
+	doc %EX -
+	doc %EX - my_args = %[--switch val some other positional --sw2 val2]
+	doc %EX - i = Iter(my_args)
+	doc %EX -
+	doc %EX - named = {}
+	doc %EX - positional = []
+	doc %EX -
+	doc %EX - while i {
+	doc %EX - 	t = i.next()
+	doc %EX - 	m = t ~ Pfx('--')
+	doc %EX - 	if m {
+	doc %EX - 		named[m.after] = i.next()
+	doc %EX - 	} else {
+	doc %EX - 		positional.push(t)
+	doc %EX - 	}
+	doc %EX - }
+	doc %EX -
+	doc %EX - echo(named)
+	doc %EX - echo(positional)
+	doc %EX - # Output:
+	doc %EX - #   {switch=val, sw2=val2}
+	doc %EX - #   ['some','other','positional']
 	type ArrIter(Iter)
+
+	doc EXPERIMENTAL Hash iterator.
 	type HashIter(Iter)
+
+	doc Iterator that returns given value forever.
+	doc %EX - { Iter }
+	doc %EX - i = ConstIter(10)
+	doc %EX - echo(i.next())
+	doc %EX - echo(i.next())
+	doc %EX - # Output:
+	doc %EX - #   10
+	doc %EX - #   10
 	type ConstIter(Iter)
+
+	doc NOT IMPLEMENTED YET. Iterator that returns values in the given range
+	doc %EX - { Iter }
+	doc %EX - i = RangeIter(10..20)
+	doc %EX - echo(i.next())
+	doc %EX - echo(i.next())
+	doc %EX - # Output:
+	doc %EX - #   10
+	doc %EX - #   11
 	type RangeIter(Iter)
 }
 
+doc Private method of Iter.ngs, will be hidden in future.
 F throw_if_no_next(i:Iter) {
 	not(i) throws NoNext("No next element in iterator").set('iter', i)
 }
 
+doc Fetch and drop next n values from iterator i.
+doc %EX - i = Iter([10,20,30])
+doc %EX - drop(i, 1)
+doc %EX - echo(i.next())
+doc %EX - #   20
 F drop(i:Iter, n:Int) { n.times({ i.next()}); i }
+
+doc Fetch and convert to array next n values from iterator i.
+doc %EX - i = Iter([10,20,30])
+doc %EX - echo(i.take(2))
 F take(i:Iter, n:Int) n.map({ i.next() })
-# F destroy(i:Iter) null # no-op
 
 # ---------- ConstIter ----------
+doc Constant iterator constructor.
+doc val - the constant value to use in next() and peek()
 F init(i:ConstIter, val) init(args())
+
+doc Return the constant iterator value
 F next(i:ConstIter) i.val
+
+doc Return the constant iterator value
 F peek(i:ConstIter) i.val
+
+doc %RET - true
 F Bool(i:ConstIter) true
 
 # ---------- RangeIter ----------
@@ -27,17 +93,28 @@ doc NOT IMPLEMENTED YEY
 F init(i:RangeIter, r:Range) throw NotImplemented("Range iteration is not implemented yet")
 
 # ---------- ArrIter ----------
+doc Calls ArrIter constructor.
+doc %EX - i = Iter([10, 20, 30])
+doc %RET - ArrIter
 F Iter(arr:Arr) ArrIter(arr)
 
+doc ArrIter constructor.
+doc %EX - i = ArrIter([10, 20, 30])
 F init(i:ArrIter, arr:Arr) {
 	i.val = arr
 	i.idx = 0
 }
 
+doc Textual representation of ArrIter.
+doc %RET - Str
 F Str(i:ArrIter) "<ArrIter ${i.idx}/${i.val.len()}>"
 
+doc Check whether all array elements were iterated over.
+doc %RET - Bool
 F Bool(i:ArrIter) i.idx < i.val.len()
 
+doc Get value of the next element of the array iterated over.
+doc %RET - Any
 F next(i:ArrIter) {
 	throw_if_no_next(i)
 	ret = i.val[i.idx]
@@ -45,6 +122,9 @@ F next(i:ArrIter) {
 	ret
 }
 
+doc Preview value of the next element of the array iterated over.
+doc Does not affect internal pointer which means it does not affect of value returned by next().
+doc %RET - Any
 F peek(i:ArrIter) {
 	throw_if_no_next(i)
 	i.val[i.idx]
