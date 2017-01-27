@@ -28,13 +28,9 @@ Note that this started as internal document so things here are unformed, not fin
 					+ Build an app - decide which
 				* True values - make sure it's in [in ngssyn]
 				* All types documentation [in progress]
-					* List all parents, including transient
-					* List direct children types [done]
-					* Change links-to-type from index page to details page
 					* Link %RET types
 				* All methods documentation [in progress]
-					* Make index page
-					* Make one page per method
+					* Namespaced methods documentation? (Check if relevant)
 				* Exit codes (see bootstrap.ngs and ngs.c)
 				* Document that inner functions are declared local
 				* Language reference, good example: https://golang.org/ref/spec [have most of it in ngslang]
@@ -206,6 +202,8 @@ Note that this started as internal document so things here are unformed, not fin
 			+ something about call sites?
 
 	* Phase 5 - nice to have
+
+		* Generated types documentation - list all parents, including transient
 
 		* Sub-typing built-in types
 			* Subclass Fun? For mapper for example to know which arguments to pass and what to construct

@@ -1,6 +1,8 @@
 #!/usr/bin/env ngs
 {
 
+	# TODO: Get rid of global state (tc = TextCollector)
+
 	# Autoload
 	AWS
 	ArgvMatcher
@@ -104,15 +106,26 @@
 			tc.indent({ dn.children.filter(filt).Html(options) })
 		}
 
+		F encode_id(s:Str) s.replace(/[^-_a-zA-Z0-9]/, F(char) '%' + encode_hex(char))
+
 		# --- Html ---
 
-		F method_permalink(s:Str) '<a class="section-link" title="Permalink to this definition" href="#' + s.encode_html_attr() + '">¶</a>'
+		# Method permalink points to the index page
+		F method_permalink(s:Str) '<a class="section-link" title="Permalink to this definition" href="#method-' + s.encode_html_attr() + '">¶</a>'
 
-		F type_permalink(t:Type) '<a class="type-link" title="Permalink to this type" href="#type-' + t.name.encode_html_attr() + '">¶</a>'
-		F type_details_link(t:Type, title) '<a class="type-details-link" href="type-' + t.name.encode_html_attr() + '.html#type-' + t.name.encode_html_attr() + '">' + (title or t.name).encode_html() + '</a>'
+		# Note that id is not unique! There can be several implementations with same parameters types
+		F method_impl_id(name:Str, mi:Fun) (name + '-' + mi.params().type.name.join('-')).encode_id()
+
+		# Method implementation permalink points to the index page
+		F method_impl_permalink(name:Str, mi:Fun) {
+			id = method_impl_id(name, mi)
+			'<a class="method-impl-details-link" href="method-impl-' + id.encode_uri_component().encode_html_attr() + '.html">' + name.encode_html() + '</a>'
+		}
+
+		F type_permalink(t:Type)    '<a class="type-link" title="Permalink to this type" href="#type-' + t.name.encode_html_attr() + '">¶</a>'
+		F type_details_link(t:Type) '<a class="type-details-link" href="type-' + t.name.encode_html_attr() + '.html">' + t.name.encode_html() + '</a>'
 
 		F method_ref_link(display_name:Str, link_data:Str) '<a class="method-ref-link" title="See method" href="methods.html#impl-' + link_data.encode_html_attr() + '">' + display_name + '</a>'
-		F type_ref_link(s:Str) '<a class="type-ref-link" title="See type" href="types.html#type-' + s.encode_html_attr() + '">' + s.encode_html() + '</a>'
 
 		commit = `git rev-parse HEAD`.lines()[0]
 		# https://github.com/ilyash/ngs/blob/00e547caf492e3ac42d2aca8ef32a28f302c7287/c/stdlib.ngs#L3197
@@ -170,7 +183,7 @@
 		F Html(dn:MethodDocNode, options:Hash) {
 			not(dn.children.filter(MethodImplDocNode)) returns null
 			tc.push('<section class="method">')
-			link = method_permalink('method-' + dn.name)
+			link = method_permalink(dn.name)
 			tc.push("<h${tc.heading_level} id=\"method-${dn.name.encode_html_attr()}\" class=\"method-header\">${dn.name.encode_html()}$link</h${tc.heading_level}>")
 			tc.heading_inc() do {
 				dn.process_children(options + {'method': dn.name}, MethodImplDocNode)
@@ -201,12 +214,11 @@
 		F Html(dn:TypeDocNode, options:Hash) {
 			tc.push('<section class="type">')
 			tc.indent() do {
-				link = type_permalink(dn.type)
 				type_name = dn.type.name
 				if options.get('detailed_type_page') {
-					tc.push("<h${tc.heading_level} id=\"type-${dn.type.name.encode_html_attr()}\" class=\"type-header\">${dn.type.name.encode_html()}$link</h${tc.heading_level}>")
+					tc.push("<h${tc.heading_level} id=\"type-${dn.type.name.encode_html_attr()}\" class=\"type-header\">${dn.type.name.encode_html()}</h${tc.heading_level}>")
 				} else {
-					tc.push("<h${tc.heading_level} id=\"type-${dn.type.name.encode_html_attr()}\" class=\"type-header\">${type_details_link(dn.type, dn.type.name.encode_html())}</h${tc.heading_level}>")
+					tc.push("<h${tc.heading_level} id=\"type-${dn.type.name.encode_html_attr()}\" class=\"type-header\">${type_details_link(dn.type)}</h${tc.heading_level}>")
 				}
 				tc.push('<section class="type-content">')
 				tc.indent() do {
@@ -235,7 +247,7 @@
 		F Html(dn:TypeDocNode, options:Hash) {
 			guard options.get('leaf')
 			tc.indent() do {
-				tc.push("<li>${type_details_link(dn.type, dn.type.name.encode_html())}")
+				tc.push("<li>${type_details_link(dn.type)}")
 				tc.indent() do {
 					tc.heading_inc() do {
 						dn.children.the_one(DescDocNode) do F(dn) {
@@ -258,7 +270,7 @@
 				}
 				html += param_dn.name.encode_html()
 				html += ':'
-				html += type_details_link(param_dn.type, param_dn.type.name.encode_html())
+				html += type_details_link(param_dn.type)
 				param_dn.children.the_one(ParamDfltDocNode) do F(dflt) {
 					html += "=${dflt.text[0].encode_html()}"
 				}
@@ -267,57 +279,60 @@
 				}
 				html
 			}
-			ns {
-				types = ('-' + params_dn.children.map(F(param_dn) param_dn.type.name)).join('')
-				params = params.join(', ')
-			}
+			params.join(', ')
 		}
 
 		F Html(dn:MethodImplDocNode, options) {
 			tc.push('<section class="method-impl">')
-			tp = HtmlParams(dn)
-			link = method_permalink('impl-' + options.method.encode_html_attr() + tp.types)
-			tc.push("<h${tc.heading_level} id=\"impl-${options.method.encode_html_attr()}$types\" class=\"method-impl-header\">${options.method.encode_html()}(${tp.params})$link</h${tc.heading_level}>")
+			link = method_impl_permalink(options.method, dn.mi)
+
+			if options.get('detailed_method_page') {
+				tc.push("<h${tc.heading_level} class=\"method-impl-header\">${options.method.encode_html()}(${HtmlParams(dn)})</h${tc.heading_level}>")
+			} else {
+				tc.push("<h${tc.heading_level} class=\"method-impl-header\">$link(${HtmlParams(dn)})</h${tc.heading_level}>")
+			}
+
 			tc.indent() do {
 				tc.push('<section class="method-impl-content">')
 				tc.heading_inc() do {
 					dn.children.the_one(DescDocNode) do F(dn) {
 						dn.text / encode_html % tc.push(X)
 					}
-					dn.children.the_one(LocationDocNode) do F(dn) {
-						l = make_location_link(dn)
-						tc.push("<section class=\"method-source\">Source: <a href=\"${l.link.encode_html_attr()}\" style=\"source-link\">${l.text.encode_html()}</a></section>")
+					if options.get('detailed_method_page') {
+							dn.children.the_one(LocationDocNode) do F(dn) {
+								l = make_location_link(dn)
+								tc.push("<section class=\"method-source\">Source: <a href=\"${l.link.encode_html_attr()}\" style=\"source-link\">${l.text.encode_html()}</a></section>")
+							}
+							dn.children.the_one(ParamsDocNode).children.each(F(param_dn:ParamDocNode) {
+								if param_dn.children.any(DescDocNode) {
+									tc.push("<h${tc.heading_level} class=\"param-header\">${param_dn.name.encode_html()}</h${tc.heading_level}>")
+									tc.push('<section class="method-param-content">')
+									param_dn.children.the_one(DescDocNode).text / encode_html % tc.push(X)
+									tc.push('</section>') # method-param-content
+								}
+							})
+							dn.children.the_one(RetDocNode) do F(dn) {
+								tc.push("<h${tc.heading_level} id=\"impl-${options.method.encode_html_attr()}-returns\" class=\"returns-header\">Returns</h${tc.heading_level}>")
+								tc.push('<section class="method-returns-content">')
+								tc.push(dn.text.map(encode_html).join('\n'))
+								tc.push('</section>') # method-example-content
+							}
+							dn.children.the_one(ExampleDocNode) do F(dn) {
+								tc.push("<h${tc.heading_level} id=\"impl-${options.method.encode_html_attr()}-example\" class=\"example-header\">Example</h${tc.heading_level}>")
+								tc.push('<section class="method-example-content">')
+								tc.push('<pre class="example">' + dn.text.map(encode_html).join('\n') + '</pre>')
+								tc.push('</section>') # method-example-content
+							}
 					}
-					dn.children.the_one(ParamsDocNode).children.each(F(param_dn:ParamDocNode) {
-						if param_dn.children.any(DescDocNode) {
-							tc.push("<h${tc.heading_level} class=\"param-header\">${param_dn.name.encode_html()}</h${tc.heading_level}>")
-							tc.push('<section class="method-param-content">')
-							param_dn.children.the_one(DescDocNode).text / encode_html % tc.push(X)
-							tc.push('</section>') # method-param-content
-						}
-					})
-					dn.children.the_one(RetDocNode) do F(dn) {
-						tc.push("<h${tc.heading_level} id=\"impl-${options.method.encode_html_attr()}-returns\" class=\"returns-header\">Returns</h${tc.heading_level}>")
-						tc.push('<section class="method-returns-content">')
-						tc.push(dn.text.map(encode_html).join('\n'))
-						tc.push('</section>') # method-example-content
-					}
-					dn.children.the_one(ExampleDocNode) do F(dn) {
-						tc.push("<h${tc.heading_level} id=\"impl-${options.method.encode_html_attr()}-example\" class=\"example-header\">Example</h${tc.heading_level}>")
-						tc.push('<section class="method-example-content">')
-						tc.push('<pre class="example">' + dn.text.map(encode_html).join('\n') + '</pre>')
-						tc.push('</section>') # method-example-content
-					}
+					tc.push('</section>') # method-impl-content
 				}
-				tc.push('</section>') # method-impl-content
 			}
 			tc.push('</section>') # method-impl
 		}
 
 		F Html(dn:TypeMethodImplDocNode, options) {
 			tc.push('<section class="type-method-impl">')
-			tp = HtmlParams(dn)
-			tc.push(method_ref_link("${options.method.encode_html()}", options.method + tp.types) + "(${tp.params})")
+			tc.push(method_impl_permalink(options.method, dn.mi) + "(${HtmlParams(dn)})")
 			dn.children.the_one(DescDocNode) do F(dn) {
 				tc.push('<section class="type-method-impl-desc">')
 				dn.text / encode_html % tc.push(X)
@@ -387,9 +402,14 @@
 			}
 		}
 
+		method_impls_by_id = {}
+
 		pfx = Pfx("$NGS_DIR/")
-		F process_method_impl(mi:Fun) {
+		F process_method_impl(name:Str, mi:Fun) {
+			method_impls_by_id.dflt(method_impl_id(name, mi), [name]).push(mi)
+
 			dn = MethodImplDocNode([])
+			dn.mi = mi
 			process_method_impl_doc_attr(mi, dn, '', DescDocNode)
 			dn.push(ParamsDocNode(mi.params().map(process_param(X, mi.attrs().doc or {}))))
 			process_method_impl_doc_attr(mi, dn, '%EX', ExampleDocNode)
@@ -406,19 +426,29 @@
 		}
 
 		F process_method(name, value) {
-			dn = MethodDocNode(value.map(process_method_impl))
+			dn = MethodDocNode(value.map(process_method_impl(name, X)))
 			dn.name = name
 			dn
 		}
 
-		methods = MethodsDocNode()
-
-		g = globals()
-
 		eswitch mode {
 
 			'methods' {
-				page = TopDocNode([ list_methods() / process_method ])
+
+				# Index page
+				page = TopDocNode([ MethodsDocNode(list_methods() / process_method) ])
+
+				# Detailed method implementations pages
+				method_impls_by_id.each(F(id, impls) {
+					assert('/' not in id)
+					assert('.' not in id)
+					tc = TextCollector()
+					local mdn = MethodsDocNode([process_method(impls[0], impls[1..null])])
+					local page = TopDocNode([mdn])
+					local html = Html(page, {'detailed_method_page': true})
+					html.Str().store("method-impl-${id}.html")
+				})
+
 			}
 
 			'types' {
@@ -434,7 +464,7 @@
 				# type as type of one of the parameters.
 				methods = list_methods()
 
-				types = g.filterv(Type).filterk(is_public_name).filterk(not + is_phased_out_type).sortk(lte)
+				types = globals().filterv(Type).filterk(is_public_name).filterk(not + is_phased_out_type).sortk(lte)
 
 				# Init with ( type -> [] ) pairs
 				types_direct_children = types.values().Hash({ [] })
@@ -462,6 +492,7 @@
 							methods.each() do F(name, impls) {
 								relevant_impls = impls.filter(method_impl_has_arg_of_type(X, value)).map() do F(mi) {
 									dn = TypeMethodImplDocNode([])
+									dn.mi = mi
 									process_method_impl_doc_attr(mi, dn, '', DescDocNode)
 									dn.push(ParamsDocNode(mi.params().map(process_param(X, mi.attrs().doc or {}))))
 									dn
@@ -482,9 +513,12 @@
 				types .= map(F(name, value) {
 					type_to_doc_node(value, true)
 				})
+
+				# Index page
 				tdn = TypesDocNode(types)
 				page = TopDocNode([tdn])
 
+				# Detailed types pages
 				types.each(F(t) {
 					assert('/' not in t.type.name)
 					assert('.' not in t.type.name)

@@ -713,7 +713,13 @@ VALUE value_type(VM *vm, VALUE val) {
 		int n = val.num >> TAG_BITS;
 		assert(n <= MAX_VALUE_TAG_VALUE);
 		p = vm->type_by_value_tag[n];
-		assert(p);
+		if(!p) {
+			if(IS_UNDEF(val)) {
+				assert(0 == "value_type() - val is undefined");
+			}
+			fprintf(stderr, "N %d\n", n);
+			assert(0 == "value_type() - missing vm->type_by_value_tag");
+		}
 		return *p;
 	}
 
