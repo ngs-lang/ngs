@@ -132,7 +132,7 @@
 		F make_location_link(dn:LocationDocNode) {
 			{
 				'text': "${dn.file}:${dn.line}"
-				'link': "https://github.com/ilyash/ngs/blob/$commit/c/${dn.file}#L${dn.line}"
+				'link': "https://github.com/ilyash/ngs/blob/$commit/lib/${dn.file}#L${dn.line}"
 			}
 		}
 
