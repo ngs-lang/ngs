@@ -84,7 +84,6 @@
 							type DescDocNode(TextDocNode)
 							type ParamsDocNode(DocNode)
 								type ParamDocNode(DocNode)
-									type ParamTypeDocNode(TextDocNode)
 									type ParamDfltDocNode(TextDocNode)
 									type ParamSpecialDfltDocNode(TextDocNode)
 							type RetDocNode(TextDocNode)
@@ -249,9 +248,7 @@
 			}
 		}
 
-		F Html(dn:MethodImplDocNode, options) {
-			tc.push('<section class="method-impl">')
-
+		F HtmlParams(dn:DocNode) {
 			params_dn = dn.children.the_one(ParamsDocNode)
 			# echo(pdn)
 			params = params_dn.children.map() with F(param_dn) {
@@ -260,12 +257,8 @@
 					html += param_dn.splat
 				}
 				html += param_dn.name.encode_html()
-				typ = param_dn.children.the_one(ParamTypeDocNode).text[0]
-				if typ == 'Any' {
-					html += ":${typ.encode_html()}"
-				} else {
-					html += ":${type_ref_link(typ)}"
-				}
+				html += ':'
+				html += type_details_link(param_dn.type, param_dn.type.name.encode_html())
 				param_dn.children.the_one(ParamDfltDocNode) do F(dflt) {
 					html += "=${dflt.text[0].encode_html()}"
 				}
@@ -274,12 +267,17 @@
 				}
 				html
 			}
+			ns {
+				types = ('-' + params_dn.children.map(F(param_dn) param_dn.type.name)).join('')
+				params = params.join(', ')
+			}
+		}
 
-			p = params.join(', ')
-
-			types = ('-' + params_dn.children.map(F(param_dn) param_dn.children.the_one(ParamTypeDocNode).text[0])).join('')
-			link = method_permalink('impl-' + options.method.encode_html_attr() + types)
-			tc.push("<h${tc.heading_level} id=\"impl-${options.method.encode_html_attr()}$types\" class=\"method-impl-header\">${options.method.encode_html()}($p)$link</h${tc.heading_level}>")
+		F Html(dn:MethodImplDocNode, options) {
+			tc.push('<section class="method-impl">')
+			tp = HtmlParams(dn)
+			link = method_permalink('impl-' + options.method.encode_html_attr() + tp.types)
+			tc.push("<h${tc.heading_level} id=\"impl-${options.method.encode_html_attr()}$types\" class=\"method-impl-header\">${options.method.encode_html()}(${tp.params})$link</h${tc.heading_level}>")
 			tc.indent() do {
 				tc.push('<section class="method-impl-content">')
 				tc.heading_inc() do {
@@ -318,31 +316,8 @@
 
 		F Html(dn:TypeMethodImplDocNode, options) {
 			tc.push('<section class="type-method-impl">')
-
-			params_dn = dn.children.the_one(ParamsDocNode)
-			# echo(pdn)
-			params = params_dn.children.map() with F(param_dn) {
-				html = ''
-				if 'splat' in param_dn {
-					html += param_dn.splat
-				}
-				html += param_dn.name.encode_html()
-				typ = param_dn.children.the_one(ParamTypeDocNode).text[0]
-				html += ":${typ.encode_html()}"
-				param_dn.children.the_one(ParamDfltDocNode) do F(dflt) {
-					html += "=${dflt.text[0].encode_html()}"
-				}
-				param_dn.children.the_one(ParamSpecialDfltDocNode) do F(dflt) {
-					html += "=<em>${dflt.text[0].encode_html()}</em>"
-				}
-				html
-			}
-
-			p = params.join(', ')
-
-			types = ('-' + params_dn.children.map(F(param_dn) param_dn.children.the_one(ParamTypeDocNode).text[0])).join('')
-			link = method_ref_link("${options.method.encode_html()}($p)", options.method + types)
-			tc.push(link)
+			tp = HtmlParams(dn)
+			tc.push(method_ref_link("${options.method.encode_html()}", options.method + tp.types) + "(${tp.params})")
 			dn.children.the_one(DescDocNode) do F(dn) {
 				tc.push('<section class="type-method-impl-desc">')
 				dn.text / encode_html % tc.push(X)
@@ -379,9 +354,7 @@
 			# echo("P $param")
 			dn = ParamDocNode()
 			dn.name = param.name
-			if 'type' in param {
-				dn.push(ParamTypeDocNode(param.type.name))
-			}
+			dn.type = param.get('type', Any)
 			if 'dflt' in param {
 				dn.push() do
 					ematch param.dflt {
