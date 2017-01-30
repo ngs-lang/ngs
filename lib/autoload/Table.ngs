@@ -4,7 +4,7 @@
 	doc Manipulates tabular data
 	doc name - Table name to display and for configuration lookup
 	doc cols_enum - Enum for columns names
-	type Table(Eachable)
+	type Table(Eachable1)
 }
 
 F StrForTable(x) Str(x)
@@ -185,9 +185,13 @@ F echo(t:Table) {
 
 	t.rows.each(F(row) {
 		cols_to_display = row.map_idx_val(F(col_idx, cell) {
-			val = if cell is Arr cell else [cell]
+			val = ematch cell {
+				Arr  cell
+				Null ['']
+				Any  [cell]
+			}
 			n = col_elts[col_idx]
-			val + ('' * (n - len(val)))
+			val
 		}).flatten()
 		echo(cols_to_display.join(','))
 	})
