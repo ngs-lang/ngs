@@ -2734,13 +2734,13 @@ F close(f:File) {
 }
 
 doc fetch() and parse() the given file
-F read(filename:Str) {
+F read(filename:Str, parse_hints:Hash={}) {
 	data = fetch(filename)
-	parse(data, {'filename': filename})
+	parse(data, {'filename': filename} + parse_hints)
 }
 
 doc Read standard input and parse() it, passing "source" equals "stdin" hint.
-F read() fetch(0).parse({'source': 'stdin'})
+F read(parse_hints:Hash={}) fetch(0).parse({'source': 'stdin'} + parse_hints)
 
 # --- Redir ---
 
@@ -3045,6 +3045,12 @@ F parse(s:Str, hints:Hash) {
 	ret = FullBox(decode_json(s)) tor EmptyBox()
 	guard ret
 	ret.val
+}
+
+# TODO: handle more than one occurrence of kvsep in each line
+F parse(s:Str, hints:Hash) {
+	guard 'kvsep' in hints
+	s.lines().map(split(X, hints.kvsep)).Hash()
 }
 
 # WIP
