@@ -1877,8 +1877,29 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MK_BUILTIN_TYPE_DOC(Str, T_STR, "String type");
 	vm->type_by_t_obj_type_id[T_STR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Str;
 
-	MK_BUILTIN_TYPE_DOC(Arr, T_ARR, "Array type");
+	MK_BUILTIN_TYPE(Arr, T_ARR);
 	vm->type_by_t_obj_type_id[T_ARR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Arr;
+	_doc(vm, "", "Array - list of items accessed by zero-based index");
+	_doc_arr(vm, "%EX",
+		"x = [\"first\", \"second\", \"third\", \"fourth\"]",
+		"",
+		"echo(x)",
+		"# Output:",
+		"#   ['first','second','third','fourth']",
+		"",
+		"echo(x.len())",
+		"# Output:",
+		"#   4",
+		"",
+		"echo(x[1])",
+		"# Output:",
+		"#   second",
+		"",
+		"echo(x[10])",
+		"# ... Exception of type IndexNotFound occured ...",
+		NULL
+	);
+
 
 	MK_BUILTIN_TYPE_DOC(Fun, T_FUN, "Function type: an Array of Closures, a Closure, or a native method");
 		MK_BUILTIN_TYPE_DOC(Closure, T_CLOSURE, "Closure type. User-defined functions/methods are Closures");

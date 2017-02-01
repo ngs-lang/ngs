@@ -109,7 +109,8 @@ doc Textual representation of ArrIter.
 doc %RET - Str
 F Str(i:ArrIter) "<ArrIter ${i.idx}/${i.val.len()}>"
 
-doc Check whether all array elements were iterated over.
+doc Check whether there are more array elements to iterate over.
+doc true: next() will return next element. false: next() will throw NoNext
 doc %RET - Bool
 F Bool(i:ArrIter) i.idx < i.val.len()
 

@@ -375,26 +375,54 @@ doc Same as calling f(x)
 doc %EX - [1,2,3,4] \ echo
 F \(x, f:Fun) f(x)
 
-# === ArrLike =======================================
+# === ArrLike ====================================
 
 {
+	doc Parent type for user-defined types with array-like behaviour. Use in cases when you would like to inherit from built-in Arr. Inheriting from built-ins is not possible for now.
+	doc arr_like_attr - name of the attribute that holds the underlying array, defaults to "items"
+	doc items - default attribute for the underlying array
+	doc %EX - type T(ArrLike)
+	doc %EX - F Str(t:T) "<My array has ${len(t)} items totalling ${sum(t)}>"  # Override one of the Arr methods
+	doc %EX - a = T()
+	doc %EX - a.push(10)
+	doc %EX - a.push(20)
+	doc %EX - echo(a)  # <My array has 2 items totalling 30>
+	doc %EX -
+	doc %EX - # If you need init() you should have something like the following to allow ArrLike initialization:
+	doc %EX - init(t:T) {
+	doc %EX - 	super(t)
+	doc %EX - 	...
+	doc %EX - }
 	type ArrLike
 	ArrLike.inherit(Eachable1)
 }
 
-F len(al:ArrLike)               al.(al.arr_like_attr).len()
-F '[]'(al:ArrLike, idx:Int)     al.(al.arr_like_attr)[idx]
-F '[]='(al:ArrLike, idx:Int, x) al.(al.arr_like_attr)[idx] = x
-
-F each(al:ArrLike, cb:Fun) al.(al.arr_like_attr).each(cb)
-F Bool(al:ArrLike) al.(al.arr_like_attr).Bool()
-
+doc ArrLike constructor
+doc attr - name of the attribute that holds the underlying array
 F init(al:ArrLike, attr:Str='items') {
 	al.arr_like_attr = attr
 	al.(al.arr_like_attr) = []
 }
 
-# === HashLike =======================================
+doc Get length of the underlying array.
+F len(al:ArrLike)               al.(al.arr_like_attr).len()
+
+doc Set element in the underlying array.
+F '[]'(al:ArrLike, idx:Int)     al.(al.arr_like_attr)[idx]
+
+doc Get element from the underlying array.
+F '[]='(al:ArrLike, idx:Int, x) al.(al.arr_like_attr)[idx] = x
+
+doc Call cb for each element in the underlying array.
+F each(al:ArrLike, cb:Fun) al.(al.arr_like_attr).each(cb)
+
+doc Call Bool() on the underlying array.
+F Bool(al:ArrLike) al.(al.arr_like_attr).Bool()
+
+doc Push an element to the underlying array.
+F push(al:ArrLike, val) al.(al.arr_like_attr).push(val)
+
+# === HashLike ===================================
 
 {
 	type HashLike

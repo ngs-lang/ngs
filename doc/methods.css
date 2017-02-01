@@ -58,7 +58,7 @@ h4:hover > a.type-link
 .method-impl-content {
 	padding-bottom: 1em;
 }
-.method-impl, .method-impl-content, .method-param-content, .method-returns-content, .method-example-content, .type-example-content, .type-content {
+.method-impl, .method-impl-content, .method-param-content, .method-returns-content, .method-example-content, .type-example-content, .type-content, .type-attrs-content, .type-attr-content {
 	padding-left: 4ex;
 }
 .method-impl-content {

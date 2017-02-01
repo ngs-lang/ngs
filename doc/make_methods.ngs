@@ -7,6 +7,7 @@
 	AWS
 	ArgvMatcher
 	Counter
+	DelimStr
 	Iter
 	KV
 	Lock
@@ -74,6 +75,8 @@
 			type TopDocNode(DocNode)
 				type TypesDocNode(DocNode)
 					type TypeDocNode(DocNode)
+						type TypeAttrsDocNode(DocNode)
+							type TypeAttrDocNode(TextDocNode)
 						type TypeMethodsDocNode(DocNode)
 							type TypeMethodDocNode(DocNode)
 								type TypeMethodImplDocNode(DocNode)
@@ -195,6 +198,21 @@
 			dn.process_children(options + {'method': dn.method}, TypeMethodImplDocNode)
 		}
 
+		F Html(dn:TypeAttrsDocNode, options:Hash) {
+			not(dn.children) returns null
+			tc.push("<h${tc.heading_level} class=\"attrs-header\">Attributes</h${tc.heading_level}>")
+			tc.push('<section class="type-attrs-content">')
+			dn.process_children(options)
+			tc.push('</section>') # type-attr-content
+		}
+
+		F Html(dn:TypeAttrDocNode, options:Hash) {
+			tc.push("<h${tc.heading_level} class=\"param-header\">${dn.name.encode_html()}</h${tc.heading_level}>")
+			tc.push('<section class="type-attr-content">')
+			dn.text / encode_html % tc.push(X)
+			tc.push('</section>') # type-attr-content
+		}
+
 		F Html(dn:ParentTypesDocNode, options:Hash) {
 			not(dn.children) returns null
 			tc.push("<h${tc.heading_level} class=\"type-parents-header\">Parent types</h${tc.heading_level}>")
@@ -227,6 +245,7 @@
 							dn.text / encode_html % tc.push(X)
 						}
 						if options.get('detailed_type_page') {
+							dn.process_children(options, TypeAttrsDocNode)
 							dn.children.the_one(ParentTypesDocNode).Html(options)
 							dn.children.the_one(ChildTypesDocNode).Html(options)
 							dn.children.the_one(ExampleDocNode) do F(dn) {
@@ -484,6 +503,11 @@
 					ret.type = value
 					# ret.full = full
 					process_type_impl_doc_attr(value, ret, '', DescDocNode)
+					type_attrs_dns = ((try value.attrs().doc) or {}).without('').reject(X ~ /^%/).map(F(k, v) {
+						TypeAttrDocNode(v.to_lines()).set('name', k)
+					})
+					ret.push(TypeAttrsDocNode(type_attrs_dns))
+
 					if full {
 						process_type_impl_doc_attr(value, ret, '%EX', ExampleDocNode)
 						ret.push(ParentTypesDocNode(value.parents.map(type_to_doc_node(X, false))))

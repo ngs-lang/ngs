@@ -24,9 +24,9 @@ Note that this started as internal document so things here are unformed, not fin
 					* between internal and external commands
 
 			* documentation [in progress]
+				* { } in examples
 				* Tutorial
 					+ Build an app - decide which
-				* True values - make sure it's in [in ngssyn]
 				* All types documentation [in progress]
 					* Link %RET types
 				* All methods documentation [in progress]
