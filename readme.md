@@ -1,11 +1,12 @@
 Next generation UNIX-ish shell. [![Build Status](https://travis-ci.org/ilyash/ngs.svg?branch=master)](https://travis-ci.org/ilyash/ngs)
 
-Quick documentation links
-=========================
+Quick links
+===========
 
 * [Language tutorial](https://ilyash.github.io/ngs-doc/ngslang.1.html)
-* [Built-in types](https://ilyash.github.io/ngs-doc/types.html) (WIP)
-* [Built-in methods](https://ilyash.github.io/ngs-doc/methods.html) (WIP)
+* [Built-in types generated documentation](https://ilyash.github.io/ngs-doc/types.html) (WIP)
+* [Built-in method generated documentations](https://ilyash.github.io/ngs-doc/methods.html) (WIP)
+* [NGS Facebook group](https://www.facebook.com/groups/next.generation.shell/)
 
 Motivation - The problem with current state
 ===========================================
