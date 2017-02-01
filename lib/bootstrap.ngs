@@ -184,28 +184,31 @@ F bootstrap() {
 	}
 	# Handle main() - end
 
-	if sw == '-pi' {
-		inspect(result) % echo
-		return 0
-	}
+	if sw == '-E' {
+	} else {
+		if sw == '-pi' {
+			inspect(result) % echo
+			return 0
+		}
 
-	transformation = {
-		'-pl': identity
-		'-pjl': encode_json
-	}
-	if sw in transformation {
-		result.map(transformation[sw]).each(echo)
-		return 0
-	}
+		transformation = {
+			'-pl': identity
+			'-pjl': encode_json
+		}
+		if sw in transformation {
+			result.map(transformation[sw]).each(echo)
+			return 0
+		}
 
-	transformation = {
-		'-p': identity
-		'-pj': encode_json
-		'-pc': code
-	}
-	if sw in transformation {
-		echo(transformation[sw](result))
-		return 0
+		transformation = {
+			'-p': identity
+			'-pj': encode_json
+			'-pc': code
+		}
+		if sw in transformation {
+			echo(transformation[sw](result))
+			return 0
+		}
 	}
 	result.to_exit_code()
 }
