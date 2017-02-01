@@ -474,12 +474,22 @@ F Real(s:Str) {
 
 TEST Real('1.1') == 1.1
 
+# === Fun helpers ================================
+
+doc TODO: Defaut values
+F StrParams(f:Fun) {
+	guard f is Closure or f is NativeMethod
+	f.params().map(F(p) {
+		"${p.name}:${p.type.name}"
+	}).join(', ') \ "($X)"
+}
+
 # === NativeMethod ===============================
 
 doc String representation of native method.
 doc %RET - "<Native method NAME>"
 doc %EX - (%)[0].Str().echo()  # Outputs: <Native method %>
-F Str(c:NativeMethod) "<Native method ${c.attrs().name}>"
+F Str(c:NativeMethod) "<Native method ${c.attrs().name}${StrParams(c)}>"
 
 # === Closure ====================================
 
@@ -491,7 +501,7 @@ doc %EX - Real.constructors[-1].Str().echo()  # Outputs: <Closure Real at /usr/s
 F Str(c:Closure) {
 	info = c.ip().resolve_instruction_pointer()
 	location = "${info.file}:${info.first_line}" tor "<unknown location>"
-	"<Closure ${c.attrs().name tor "<anonymous>"} at ${location}>"
+	"<Closure ${c.attrs().name tor "<anonymous>"}${StrParams(c)} at ${location}>"
 }
 
 # === Type =======================================
@@ -1570,7 +1580,7 @@ doc mapper - Function to be called with values
 doc args - Additional arguments for calling mapper
 doc %RET - Hash
 doc %EX - LEN = 3
-doc %EX - lines_ = fetch("/usr/share/dict/words").lines()
+doc %EX - lines_ = read("/usr/share/dict/words").lines()
 doc %EX - long_lines = lines_.filter({A.len()>LEN})
 doc %EX - prefix_to_lines = long_lines.group(F(line) line[0..LEN])  # {"pfx1": ["pfx1a", "pfx1b", ...], "pfx2": ["pfx2a", "pfx2b", ...], ...}
 doc %EX - prefix_to_count = prefix_to_lines.mapv(len)  # {"pfx1": 30, "pfx2": 35, ...}
@@ -2531,8 +2541,8 @@ F dup2(oldfd:Int, newfd:Int) {
 doc Read all data from a file referenced by file descriptor without parsing it.
 doc fd - File descriptor to read from
 doc %RET - Str
-doc %EX - fetch(0)  # All data from stdin
-F fetch(fd:Int) {
+doc %EX - read(0)  # All data from stdin
+F read(fd:Int) {
 	ret = []
 	while true {
 		debug("[read] will read from fd $fd")
@@ -2620,8 +2630,8 @@ F store(s:Str, p:Pipe) p.write_fd.c_write(s)
 
 doc Read from Pipe without parsing. TODO: document if it throws.
 doc %RET - read data
-doc %EX - data = fetch(myipe)
-F fetch(p:Pipe) p.read_fd.fetch()
+doc %EX - data = read(myipe)
+F read(p:Pipe) p.read_fd.read()
 
 doc DUP2(2) writing file descriptor
 F dup2_writing_end(p:Pipe, newfd:Int) dup2(p.write_fd, newfd)
@@ -2697,7 +2707,7 @@ F lines(f:File, cb:Fun) {
 	finally()
 		body => {
 			f.open('r')
-			f.fd.fetch().lines(cb)
+			f.fd.read().lines(cb)
 		}
 		cleanup => {
 			f.close()
@@ -2733,14 +2743,14 @@ F close(f:File) {
 	f.fd = null
 }
 
-doc fetch() and parse() the given file
-F read(filename:Str, parse_hints:Hash={}) {
-	data = fetch(filename)
+doc read() and parse() the given file
+F fetch(filename:Str, parse_hints:Hash={}) {
+	data = read(filename)
 	parse(data, {'filename': filename} + parse_hints)
 }
 
 doc Read standard input and parse() it, passing "source" equals "stdin" hint.
-F read(parse_hints:Hash={}) fetch(0).parse({'source': 'stdin'} + parse_hints)
+F fetch(parse_hints:Hash={}) read(0).parse({'source': 'stdin'} + parse_hints)
 
 # --- Redir ---
 
@@ -2973,7 +2983,7 @@ F '$()'(c:Command) {
 		# TODO: some error handling inside these threads and after joining them
 		process.reading_threads = pipes_to_read_from.map(F(fd, pipe) {
 			Thread({
-				process.outputs[fd] = pipe.fetch()
+				process.outputs[fd] = pipe.read()
 				pipe.close_reading_end()
 				debug("$debug_pfx read all output of the child process for descriptor $fd, closing reading/parent end")
 			})
