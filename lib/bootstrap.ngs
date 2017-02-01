@@ -124,7 +124,7 @@ F bootstrap() {
 	sw = null
 	if ARGV {
 		a = ARGV[0]
-		if (a == '-e' or a == '-E' or a == '-p' or a == '-pj' or a == '-pi' or a == '-pl' or a == '-pc') {
+		if (a == '-e' or a == '-E' or a == '-p' or a == '-pj' or a == '-pi' or a == '-pl' or a == '-pjl' or a == '-pc') {
 			sw = ARGV.shift()
 			# Newline at the end is for avoiding # commenting out the closing }
 			# Newline at the beginning is for symmetry
@@ -189,17 +189,21 @@ F bootstrap() {
 		return 0
 	}
 
-	if sw == '-pl' {
-		result % echo
+	transformation = {
+		'-pl': identity
+		'-pjl': encode_json
+	}
+	if sw in transformation {
+		result.map(transformation[sw]).each(echo)
 		return 0
 	}
 
-	if sw == '-p' or sw == '-pj' or sw == '-pc' {
-		transformation = {
-			'-p': identity
-			'-pj': encode_json
-			'-pc': code
-		}
+	transformation = {
+		'-p': identity
+		'-pj': encode_json
+		'-pc': code
+	}
+	if sw in transformation {
 		echo(transformation[sw](result))
 		return 0
 	}

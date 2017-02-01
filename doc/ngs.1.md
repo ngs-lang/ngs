@@ -10,7 +10,7 @@ ngs - Next Generation Shell.
 
 **ngs** *script_name.ngs*
 
-**ngs** [**-e**|**-E**|**-p**|**-pi**|**-pj**] *expression*
+**ngs** [**-e**|**-E**|**-p**|**-pi**|**-pj**|**-pl**|**-pjl**] *expression*
 
 # DESCRIPTION
 
@@ -33,6 +33,10 @@ Using *expression* is equivalent to running a script that consists of `{` *expre
 **-pi** prints `inspect(...)` (detailed information) of the resulting *expression* value.
 
 **-pj** prints the resulting *expression* value as JSON.
+
+**-pl** prints elements of the result, one per line (mnemonic "print lines")
+
+**-pjl** prints elements of the result, one per line as JSON (mnemonic "print JSON lines")
 
 ## MOTIVATION
 
