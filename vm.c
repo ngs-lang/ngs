@@ -1977,16 +1977,16 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MK_BUILTIN_TYPE(c_pthread_mutex_t, T_PTHREADMUTEX);
 	vm->type_by_t_obj_type_id[T_PTHREADMUTEX >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_pthread_mutex_t;
 
-	MK_BUILTIN_TYPE(c_ffi_type, T_FFI_TYPE);
+	MK_BUILTIN_TYPE_DOC(c_ffi_type, T_FFI_TYPE, "Unfinished feature. Don't use!");
 	vm->type_by_t_obj_type_id[T_FFI_TYPE >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_ffi_type;
 
-	MK_BUILTIN_TYPE(c_ffi_cif, T_FFI_CIF);
+	MK_BUILTIN_TYPE_DOC(c_ffi_cif, T_FFI_CIF, "Unfinished feature. Don't use!");
 	vm->type_by_t_obj_type_id[T_FFI_CIF >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_ffi_cif;
 
 	MK_BUILTIN_TYPE(RegExp, T_REGEXP);
 	vm->type_by_t_obj_type_id[T_REGEXP >> T_OBJ_TYPE_SHIFT_BITS] = &vm->RegExp;
 
-	MK_BUILTIN_TYPE(C_DIR, T_DIR);
+	MK_BUILTIN_TYPE_DOC(C_DIR, T_DIR, "C language DIR type for low level directory operations. Please do not use directly unless you are extending stdlib.");
 	vm->type_by_t_obj_type_id[T_DIR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->C_DIR;
 
 	// *** Add new MKTYPE / MKSUBTYPE above this line ***
@@ -2758,6 +2758,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	register_global_func(vm, 1, "Backtrace", &native_backtrace,         0);
+	_doc(vm, "", "Backtrace constructor");
 
 	register_global_func(vm, 1, "resolve_instruction_pointer", &native_resolve_instruction_pointer,       1, "ip", vm->Int);
 	_doc(vm, "", "Resolves Instruction Pointer to source location");
