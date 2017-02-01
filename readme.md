@@ -7,6 +7,7 @@ Quick links
 * [Built-in types generated documentation](https://ilyash.github.io/ngs-doc/types.html) (WIP)
 * [Built-in method generated documentations](https://ilyash.github.io/ngs-doc/methods.html) (WIP)
 * [NGS Facebook group](https://www.facebook.com/groups/next.generation.shell/)
+* [Reddit](https://www.reddit.com/r/NextGenerationShell/)
 
 Motivation - The problem with current state
 ===========================================
