@@ -80,6 +80,7 @@
 						type TypeMethodsDocNode(DocNode)
 							type TypeMethodDocNode(DocNode)
 								type TypeMethodImplDocNode(DocNode)
+						type TypeConstructorsDocNode(DocNode)
 				type ParentTypesDocNode(DocNode)
 				type ChildTypesDocNode(DocNode)
 					type ParentTypeDocNode(DocNode)
@@ -166,12 +167,23 @@
 		}
 
 		F Html(dn:TypeMethodsDocNode, options:Hash) {
+			not(dn.children) returns null
 			tc.push("<!-- type methods start -->")
 			tc.push("<h${tc.heading_level}>Methods</h${tc.heading_level}>")
 			tc.heading_inc() do {
 				dn.process_children(options)
 			}
 			tc.push("<!-- type methods end -->")
+		}
+
+		F Html(dn:TypeConstructorsDocNode, options:Hash) {
+			not(dn.children) returns null
+			tc.push("<!-- type constructors start -->")
+			tc.push("<h${tc.heading_level}>Constructors</h${tc.heading_level}>")
+			tc.heading_inc() do {
+				dn.process_children(options + {'method': dn.method}, TypeMethodImplDocNode)
+			}
+			tc.push("<!-- type constructors end -->")
 		}
 
 		F Html(dn:TypesDocNode, options:Hash) {
@@ -254,6 +266,7 @@
 								tc.push('<pre class="example">' + dn.text.map(encode_html).join('\n') + '</pre>')
 								tc.push('</section>') # type-example-content
 							}
+							dn.process_children(options, TypeConstructorsDocNode)
 							dn.process_children(options, TypeMethodsDocNode)
 						}
 					}
@@ -512,7 +525,7 @@
 						process_type_impl_doc_attr(value, ret, '%EX', ExampleDocNode)
 						ret.push(ParentTypesDocNode(value.parents.map(type_to_doc_node(X, false))))
 						ret.push(ChildTypesDocNode(types_direct_children[value].map(type_to_doc_node(X, false))))
-						methods_of_type = collector
+						methods_of_type_dns = collector
 							methods.each() do F(name, impls) {
 								relevant_impls = impls.filter(method_impl_has_arg_of_type(X, value)).map() do F(mi) {
 									dn = TypeMethodImplDocNode([])
@@ -527,9 +540,16 @@
 									collect(dn)
 								}
 							}
-						if methods_of_type {
-							ret.push(TypeMethodsDocNode(methods_of_type))
+						constructors_dns = value.constructors.reject(NormalTypeConstructor).map() do F(c) {
+							dn = TypeMethodImplDocNode([])
+							# dn.method = value.name
+							dn.mi = c
+							process_method_impl_doc_attr(c, dn, '', DescDocNode)
+							dn.push(ParamsDocNode(c.params().map(process_param(X, c.attrs().doc or {}))))
+							dn
 						}
+						ret.push(TypeMethodsDocNode(methods_of_type_dns))
+						ret.push(TypeConstructorsDocNode(constructors_dns).set('method', value.name))
 					}
 					ret
 				}

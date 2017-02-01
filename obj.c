@@ -728,7 +728,10 @@ VALUE value_type(VM *vm, VALUE val) {
 	if(otn & TAG_BITS) {
 		if((otn & T_OBJ) == T_OBJ) {
 			p = vm->type_by_t_obj_type_id[otn >> T_OBJ_TYPE_SHIFT_BITS];
-			assert(p);
+			if(!p) {
+				fprintf(stderr, "OTN %d OTN with shift %d\n", otn, otn >> T_OBJ_TYPE_SHIFT_BITS);
+				assert(0 == "value_type() - unhandled built-in type, not present in vm->type_by_t_obj_type_id");
+			}
 			return *p;
 		}
 		fprintf(stderr, "OTN %d\n", otn);

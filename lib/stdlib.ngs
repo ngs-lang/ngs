@@ -21,7 +21,17 @@ F init(h:Hash) {
 # === Exceptions ===
 
 {
-	doc Represents failed asserttion, thrown by assert()
+	doc Represents failed asserttion, thrown by assert(). Should be used to catch programming errors.
+	doc %EXSYN - commands
+	doc %EX - F box_area(x:Int, y:Int) {
+	doc %EX - 	assert(x > 0)
+	doc %EX - 	assert(y > 0)
+	doc %EX - 	x * y
+	doc %EX - }
+	doc %EX - echo(box_area(5, 10))
+	doc %EX - # Output: 50
+	doc %EX - echo(box_area(-5, 10))
+	doc %EX - # ... Exception of type AssertFail ...
 	type AssertFail
 	AssertFail.inherit(Exception)
 }
@@ -1838,12 +1848,12 @@ F dflt(h:Hash, k, v) {
 # Inspired by Option from Scala. http://www.scala-lang.org/api/2.12.x/scala/Option.html
 
 {
-	doc Parent type of FullBox and EmptyBox
+	doc A box which might (FullBox) or might not (EmptyBox) contain a value
 	type Box
-		doc Represents available value
+		doc Represents presence of a value
 		doc val - The value
 		type FullBox(Box)
-		doc Represents no value
+		doc Represents absence of a value
 		type EmptyBox(Box)
 }
 
@@ -1901,10 +1911,24 @@ doc %RET - eb
 F filter(eb:EmptyBox, predicate) eb
 
 doc Test Box value
+doc %EX - Box(5).any(Int)      # true
+doc %EX - Box(5).any(Str)      # false
+doc %EX - EmptyBox().any(Int)  # false
 F any(b:Box, predicate) Bool(b.filter(predicate))
 
+TEST Box(5).any(Int)
+TEST EmptyBox().any(Str) == false
+TEST EmptyBox().any(Int) == false
+
 doc Test Box value
+doc %EX - Box(5).none(Int)      # false
+doc %EX - Box(5).none(Str)      # true
+doc %EX - EmptyBox().none(Int)  # true
 F none(b:Box, predicate) not(b.filter(predicate))
+
+TEST Box(5).none(Int) == false
+TEST Box(5).none(Str)
+TEST EmptyBox().none(Int)
 
 doc Get FullBox value
 doc %RET - Any
@@ -1925,12 +1949,12 @@ doc Convert EmptyBox to array
 doc %RET - Empty array
 F Arr(eb:EmptyBox) []
 
-doc Convert anything to Box
+doc Convert anything to Box (always FullBox)
 doc x - value to enclose in a box
 doc %RET - FullBox with given value
 F Box(x) FullBox(x)
 
-doc Convert null to Box
+doc Convert null to Box (always EmptyBox)
 doc %RET - EmptyBox
 F Box(n:Null) EmptyBox()
 
@@ -2354,15 +2378,24 @@ F die(s:Str, exit_code=1) {
 # === Path =======================================
 
 {
+	doc Represents file system path
 	type Path
+	doc Represents a socket file in a file system (S_IFSOCK)
 	type SocketFile(Path)  # S_IFSOCK
+	doc Represents a link in a file system (S_IFLNK)
 	type Symlink(Path)     # S_IFLNK
+	doc Represents a file in a file system (S_IFREG)
 	type File(Path)        # S_IFREG
+	doc Represents a block device in a file system (S_IFBLK)
 	type BlockDevice(Path) # S_IFBLK
+	doc Represents a directory in a file system (S_IFBLK)
 	type Dir(Path)         # S_IFDIR
+	doc Represents a character device in a file system (S_IFCHR)
 	type CharDevice(Path)  # S_IFCHR
+	doc Represents a fifo file in a file system (S_IFIFO)
 	type FifoFile(Path)    # S_IFIFO
 
+	doc Represents a failure in stat() system call.
 	type StatFail(CException)
 
 }

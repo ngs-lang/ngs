@@ -1914,8 +1914,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 		"F(x) ... is same as F(x:Any) ...",
 		NULL
 	);
-		MK_BUILTIN_TYPE_DOC(BasicTypeInstance, T_BASICTI, "A type for instances of builtin types");
-		MK_BUILTIN_TYPE_DOC(NormalTypeInstance, T_NORMTI, "A type for instances of user-defined types");
+		MK_BUILTIN_TYPE_DOC(BasicTypeInstance, T_BASICTI, "A type for instances of builtin types. Children types are not displayed as this type is specially optimized.");
+		MK_BUILTIN_TYPE_DOC(NormalTypeInstance, T_NORMTI, "A type for instances of user-defined types. Children types are not displayed as this type is specially optimized.");
 
 	MK_BUILTIN_TYPE_DOC(Seq, T_SEQ, "Unused type");
 
@@ -2012,8 +2012,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 	SETUP_TYPE_FIELD(name, end, 1); \
 	SETUP_TYPE_FIELD(name, step, 2);
 
+	MKTYPE(NormalTypeConstructor);
+	_doc(vm, "", "Default constructor for Normal types. Normal types are user-defined and some of the built-in types.");
+	vm->type_by_t_obj_type_id[T_UTCTR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->NormalTypeConstructor;
+
 	MKTYPE(Exception);
 	_doc(vm, "", "Represents exceptional situaution. All thrown things shouhld inherit Exception.");
+	_doc(vm, "backtrace", "Automatic attribute set when creating Exception type instances (including sub-types, as long as super() is called.");
 
 		MKSUBTYPE(Error, Exception);
 		_doc(vm, "", "Represents an error. Usually more specific error types are used.");
@@ -2193,6 +2198,16 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	MKTYPE(Backtrace);
+	_doc(vm, "", "Represents stack trace");
+	_doc(vm, "frames", "Array of locations. Each element of the array is a Hash with \"ip\" and \"closure\" properties.");
+	_doc_arr(vm, "%EX",
+		"Backtrace().frames.each(echo)",
+		"# {ip=4770, closure=<Closure <anonymous> at /etc/ngs/bootstrap.ngs:3>}",
+		"# {ip=4153, closure=<Closure bootstrap_exception_catch_wrapper at /etc/ngs/bootstrap.ngs:205>}",
+		"# {ip=3583, closure=<Closure bootstrap at /etc/ngs/bootstrap.ngs:111>}",
+		"# {ip=116587, closure=<Closure <anonymous> at <command line -pi switch>:2>}",
+		NULL
+	);
 
 	MKTYPE(Command);
 	MKTYPE(Redir);
@@ -2742,17 +2757,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 		NULL
 	);
 
-	register_global_func(vm, 1, "Backtrace",&native_backtrace,         0);
-	_doc(vm, "", "Backtrace constructor");
-	_doc(vm, "%RET", "Backtrace. Backtrace has \"frames\" attribute which is in array. Each element of the array is a Hash with \"ip\" and \"closure\" properties.");
-	_doc_arr(vm, "%EX",
-		"Backtrace().frames.each(echo)",
-		"# {ip=4770, closure=<Closure <anonymous> at /etc/ngs/bootstrap.ngs:3>}",
-		"# {ip=4153, closure=<Closure bootstrap_exception_catch_wrapper at /etc/ngs/bootstrap.ngs:205>}",
-		"# {ip=3583, closure=<Closure bootstrap at /etc/ngs/bootstrap.ngs:111>}",
-		"# {ip=116587, closure=<Closure <anonymous> at <command line -pi switch>:2>}",
-		NULL
-	);
+	register_global_func(vm, 1, "Backtrace", &native_backtrace,         0);
 
 	register_global_func(vm, 1, "resolve_instruction_pointer", &native_resolve_instruction_pointer,       1, "ip", vm->Int);
 	_doc(vm, "", "Resolves Instruction Pointer to source location");

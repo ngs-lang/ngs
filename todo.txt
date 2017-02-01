@@ -30,7 +30,7 @@ Note that this started as internal document so things here are unformed, not fin
 				* All types documentation [in progress]
 					* Link %RET types
 				* All methods documentation [in progress]
-					* Namespaced methods documentation? (Check if relevant)
+				* Namespaced types and methods
 				* Exit codes (see bootstrap.ngs and ngs.c)
 				* Document that inner functions are declared local
 				* Language reference, good example: https://golang.org/ref/spec [have most of it in ngslang]

@@ -179,6 +179,8 @@ typedef struct {
 	VALUE CSym;
 	VALUE RegExp;
 
+	VALUE NormalTypeConstructor;
+
 	// Not sure about naming convention
 	VALUE c_pthread_t;
 	VALUE c_pthread_attr_t;

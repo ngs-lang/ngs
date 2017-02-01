@@ -223,7 +223,7 @@ typedef enum {
 	T_CLIB          = (5 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_CSYM          = (6 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_NORMT         = 66,
-	T_UTCTR         = (7 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ, // TODO in vm->type_by_t_obj_type_id
+	T_UTCTR         = (7 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_BASICT        = 74,
 	T_BASICTI       = 78,
 	T_NORMTI        = 82,
