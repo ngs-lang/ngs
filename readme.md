@@ -48,8 +48,7 @@ The language feels (to me) like a mix of Python, bash and a bit less Ruby and Pe
 Running
 =======
 
-	apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre2-dev
-	# On Ubuntu 14.04 (maybe others) # apt-get install gawk make
+	apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre3-dev gawk make
 	make
 	# NGS_DIR, where stdlib.ngs resides defaults to /usr/local/lib/ngs . Either link it to the "lib" folder or run with NGS_DIR=lib
 	NGS_DIR=lib ./ngs SCRIPT_NAME.ngs

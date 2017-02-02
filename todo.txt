@@ -115,6 +115,8 @@ Note that this started as internal document so things here are unformed, not fin
 			* Go over naming convention, making sure it's consistent and can be easily described in the manual
 
 			* Binary safe strings
+				* echo()
+				* anywhere else?
 
 			* Make sure not to leak FDs to processes that NGS runs
 				+ See bash-4.3/execute_cmd.c, execute_in_subshell(), "fds_to_close"
