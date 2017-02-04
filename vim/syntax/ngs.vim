@@ -18,7 +18,7 @@ syn keyword ngsKeyword A B C and break breaks catch collector collect cond conti
 syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
 " bootstrap types
-syn keyword ngsType NotImplemented FetchFail RequreFail MainFail
+syn keyword ngsType NotImplemented ReadFail RequreFail MainFail
 " other types
 syn keyword ngsType Any ArgvMatcher ArgvMatcherDecorator Arr ArrIter ArrLike BasicType Bool Box CLib Closure Command ConstIter Counter CSym DelimStr Eachable Eachable1 Eachable2 EmptyBox ExclusiveRange ExecutableNotFound FFI FullBox Fun Hash HashIter HashLike InclusiveRange Int Iter KillFail KV NormalType NormalTypeInstance Null Path Pipe PipeCreateFail Process ProcessFail Range RangeIter Real Seq Stats Str Table TableMeta TableMetaNotIfCol TtyCheckFail Type
 syn keyword ngsType AssertFail ArgsMismatch CException EmptyArrayFail Error Exception CompileFail DontKnowHowToCall GlobalNotFound ImplNotFound InternalError LookupFail KeyNotFound StackDepthFail

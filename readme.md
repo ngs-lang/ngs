@@ -45,8 +45,19 @@ The language feels (to me) like a mix of Python, bash and a bit less Ruby and Pe
 * Demo 3: [demonstrates race condition](bin/locks.ngs) and locks.
 
 
-Running
-=======
+Running using docker
+====================
+
+	# Build the docker
+	docker build -t ngs
+	# Run the container
+	docker run -it --rm ngs
+	# Use NGS inside the container
+	ngs -pi 'sum(0..10)'
+
+
+Compile and run
+===============
 
 	sudo apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre3-dev make
 	sudo type awk || sudo apt-get install gawk

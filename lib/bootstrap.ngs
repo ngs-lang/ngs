@@ -18,7 +18,7 @@ TEST Exception(Exception()).cause is Exception
 
 {
 	type NotImplemented; NotImplemented.inherit(Exception);
-	type FetchFail; FetchFail.inherit(Exception);
+	type ReadFail; ReadFail.inherit(Exception);
 	type RequreFail; RequreFail.inherit(Exception);
 	type MainFail; MainFail.inherit(Exception);
 }
@@ -85,7 +85,7 @@ F read(fname:Str) {
 		c_close(fd)
 		data[1]
 	} catch(e) {
-		throw FetchFail(e)
+		throw ReadFail(e)
 	}
 }
 
