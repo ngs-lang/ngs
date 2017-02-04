@@ -2499,6 +2499,7 @@ F find_in_path(executable_name:Str) {
 		debug("[find_in_path] leaving unprocessed ${executable_name}")
 		return Path(executable_name)
 	}
+	# TODO: rethink default PATH
 	path = ENV.get('PATH', '/usr/local/bin:/usr/bin:/bin:/sbin:/usr/sbin').split(':')
 	debug('[find_in_path] will search')
 	ret = path.map(F(dir) Path(dir / executable_name)).first()
@@ -2621,6 +2622,9 @@ F read(fd:Int) {
 		}
 	}
 }
+
+doc Read all data from a file referenced by file descriptor 0 (stdin) without parsing it. Same as read(0)
+F read() read(0)
 
 doc Write data to a file referenced by file descriptor.
 doc WARNING: Incomplete implementation.
@@ -3917,6 +3921,14 @@ F store(s:Str, fname:Str) {
 		}
 }
 
+
+# === Networking =================================
+
+### F read(s:Str) {
+### 	# impl curl
+### 	guard s ~ /^http[s]?:\/\//i
+### 	guard "curl" found
+### }
 
 # === Misc tests =================================
 
