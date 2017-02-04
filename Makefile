@@ -1,6 +1,8 @@
 # TODO: maybe do it with usual .o intermediate files
 
 SHELL := /bin/bash -e
+NGS_DIR := lib
+export NGS_DIR
 
 PKG_NAME := ngs
 CC := gcc
@@ -122,37 +124,19 @@ test: test-no-bootstrap-no-stdlib test-stdlib
 	@ echo "ALL TESTS OK"
 
 test-on-jessie:
-	make clean
-	make CC=gcc-4.8
-	NGS_DIR=lib make test
-	make clean
-	make CC=gcc-4.9
-	NGS_DIR=lib make test
-	make clean
-	make CC=clang-3.5
-	NGS_DIR=lib make test
+	make CC=gcc-4.8 clean test
+	make CC=gcc-4.9 clean test
+	make CC=clang-3.5 clean test
 
 test-on-stretch:
-	make clean
-	make CC=gcc-4.8
-	NGS_DIR=lib make test
-	make clean
-	make CC=gcc-4.9
-	NGS_DIR=lib make test
-	make clean
-	make CC=gcc-5
-	NGS_DIR=lib make test
-	make clean
-	make CC=clang-3.6
-	NGS_DIR=lib make test
+	make CC=gcc-4.8 clean test
+	make CC=gcc-4.9 clean test
+	make CC=gcc-5 clean test
+	make CC=clang-3.6 clean test
 
 test-on-trusty:
-	make clean
-	make CC=gcc-4.8
-	NGS_DIR=lib make test
-	make clean
-	make CC=clang
-	NGS_DIR=lib make test
+	make CC=gcc-4.8 clean test
+	make CC=clang clean test
 
 .PHONY: gh-pages-doc
 gh-pages-doc:
