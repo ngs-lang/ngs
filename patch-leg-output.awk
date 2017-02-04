@@ -2,7 +2,8 @@
 
 # Track rule name for error messages
 /RULE.*yy_([a-zA-Z0-9_]+)/ {
-	match($0, /yy_([a-zA-Z0-9_]+)/, r); f=r[1];
+	match($0, /yy_([a-zA-Z0-9_]+)/);
+	f = substr($0, RSTART+3, RLENGTH-3);
 }
 /YY_LOCAL.*yymatchChar/ {
 	f="(a character)";
