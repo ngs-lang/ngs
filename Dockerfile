@@ -5,6 +5,6 @@ RUN apt-get update && apt-get -y install build-essential devscripts uthash-dev l
 ADD . /src
 WORKDIR /src
 
-RUN make test install
+RUN make clean test install
 
 CMD ["/bin/bash"]
