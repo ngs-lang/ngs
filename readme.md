@@ -48,7 +48,8 @@ The language feels (to me) like a mix of Python, bash and a bit less Ruby and Pe
 Running
 =======
 
-	apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre3-dev awk make
+	sudo apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre3-dev make
+	sudo type awk || sudo apt-get install gawk
 	make
 	# NGS_DIR, where stdlib.ngs resides defaults to /usr/local/lib/ngs . Either link it to the "lib" folder or run with NGS_DIR=lib
 	NGS_DIR=lib ./ngs SCRIPT_NAME.ngs
