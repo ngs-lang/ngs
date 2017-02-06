@@ -902,6 +902,23 @@ F .(a:Arr, attr:Str) a.map(X.(attr))
 
 TEST [{"x": 1}, {"x": 2}].x == [1, 2]
 
+doc Return array made of given attribute of each element of given Eachable1 where present
+doc %EX - [{"x": 1}, {"y": 2}].get("x")  # [1]
+doc %EX - ``aws ec2 describe-instances``.Tags.get("role").uniq()
+doc %EX - # Returns Arr of Str with roles. Does not crash if some machines do not have "role" tag.
+doc %RET - Arr
+F get(e:Eachable1, attr:Str)
+	collector
+		e.each(F(item) {
+			try collect(item.(attr))
+		})
+
+doc Return array made of given attribute of each element of given Eachable1 where present or default value where the attribute is not present
+doc Return array (? depends on map() ?) made of given attribute of each element of given Eachable1
+doc %EX - [{"x": 1}, {"y": 2}].get("x", null)  # [1, null]
+doc %RET - Arr
+F get(e:Eachable1, attr:Str, dflt) e.map(X.get(attr, dflt))
+
 doc Concatenate strings
 doc %EX - "ab" + "cd"  # "abcd"
 doc %RET - New Str
@@ -3123,9 +3140,31 @@ F parse(s:Str, hints:Hash) {
 }
 
 # TODO: handle more than one occurrence of kvsep in each line
+doc EXPERIMENTAL. KVS (key-value separator) hint for parse()
+doc %EX - parse('a b\nc d', {'KVS': ' '}) == {'a': 'b', 'c': 'd'}
 F parse(s:Str, hints:Hash) {
-	guard 'kvsep' in hints
-	s.lines().map(split(X, hints.kvsep)).Hash()
+	guard 'KVS' in hints
+	s.lines().map(split(X, hints.KVS)).Hash()
+}
+
+TEST parse('a b\nc d', {'KVS': ' '}) == {'a': 'b', 'c': 'd'}
+
+doc EXPERIMENTAL. FS (field separator) hint for parse()
+doc %EX - parse('a b\nc d', {'FS': ' '})  # [['a', 'b'], ['c', 'd']]
+F parse(s:Str, hints:Hash) {
+	guard 'FS' in hints
+	s.lines().map(split(X, hints.FS))
+}
+
+TEST parse('a b\nc d', {'FS': ' '}) == [['a', 'b'], ['c', 'd']]
+
+doc Handle fields_names hint - run parse() and make Arr[Hash] from Arr[Arr] using provided fields_names
+doc %EX - backup_list = fetch('backup.list', {'FS': ' ', 'fields_names': %[env role]})
+F parse(s:Str, hints:Hash) {
+	guard 'fields_names' in hints
+	parse(s, hints.without('fields_names')).map(F(row) {
+		zip(hints.fields_names, row).Hash()
+	})
 }
 
 # WIP
