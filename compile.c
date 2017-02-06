@@ -931,12 +931,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				OPCODE(*buf, OP_ARR_APPEND);
 			}
 			//options
-			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0);
-			OPCODE(*buf, OP_MAKE_ARR);
-			for(ptr=node->first_child->next_sibling->next_sibling->next_sibling->first_child; ptr; ptr=ptr->next_sibling) {
-				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
-				OPCODE(*buf, OP_ARR_APPEND);
-			}
+			compile_main_section(ctx, node->first_child->next_sibling->next_sibling->next_sibling, buf, idx, allocated, NEED_RESULT);
 
 			OPCODE(*buf, OP_MAKE_CMD);
 

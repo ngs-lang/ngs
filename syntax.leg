@@ -288,8 +288,12 @@ command =
 	|
 	cw:command-words {
 		// TODO: constants for flags
-		MAKE_STRING_NODE(option, "top_level")
-		append_ast_node_child($$->first_child->next_sibling->next_sibling->next_sibling, option);
+		MAKE_STRING_NODE(option_pair, "top_level")
+			MAKE_STRING_NODE(option_name, "top_level")
+			append_ast_node_child(option_pair, option_name);
+			MAKE_NODE(option_value, TRUE_NODE);
+			append_ast_node_child(option_pair, option_value);
+		append_ast_node_child($$->first_child->next_sibling->next_sibling->next_sibling, option_pair);
 		cw->number = 1;
 		$$ = cw;
 	}
@@ -1563,7 +1567,7 @@ command-node = {
 		append_ast_node_child(ret, argv);
 		MAKE_NODE(redirects, EXPRESSIONS_NODE);
 		append_ast_node_child(ret, redirects);
-		MAKE_NODE(options, EXPRESSIONS_NODE);
+		MAKE_NODE(options, HASH_LIT_NODE);
 		append_ast_node_child(ret, options);
 	$$ = ret;
 }

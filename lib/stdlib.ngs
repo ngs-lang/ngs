@@ -2905,7 +2905,7 @@ F finished_ok(p:Process) {
 }
 
 F finished_ok(p:Process) {
-	guard 'nofail' in p.command.options
+	guard p.command.options.get('nofail')
 	true
 }
 
@@ -2996,7 +2996,7 @@ F '$()'(c:Command) {
 	}
 	# child fd -> Pipe
 	pipes = process.pipes
-	if 'top_level' not in c.options {
+	if not(c.options.get('top_level')) {
 		pipes[1] = Pipe(STDLIB_CHILD_TO_PARENT_PIPE_DIR)
 	}
 
@@ -3071,7 +3071,7 @@ F '$()'(c:Command) {
 			})
 		})
 		# echo("R ${c.reading_threads}")
-		if '&' not in c.options {
+		if not(c.options.get('&')) {
 			process.wait()
 		}
 	}
@@ -3090,7 +3090,8 @@ doc %EX - test
 doc %EX - $(nofail ./NONE).exit_code.echo()  # Would cause exception without "nofail"
 F '$()'(c:Command) {
 	guard c.argv[0] == 'nofail'
-	c.options.push('nofail')
+	error("Using deprecated 'nofail'")
+	c.options.nofail = true
 	c.argv.shift()
 	$($c)
 }
@@ -4059,6 +4060,11 @@ TEST ns1 = ns { yes_one = 1; no_one = 11; no_two = 12; _exports.=reject(F(k, v) 
 TEST ns1 = ns { return 10 }; ns1 == 10
 TEST ns1 = ns { _exports = 11 }; ns1 == 11
 TEST global a=110; ns1 = ns(outer_a=a) { a=outer_a+1 }; ns1::a == a+1
+
+# === Process tests ================================
+
+TEST try $(cat NO_SUCH_FILE 2>/dev/null) catch(pf:ProcessFail) true
+TEST $(nofail cat NO_SUCH_FILE 2>/dev/null); true
 
 # === Redirections tests ===========================
 # Warning: file name is not unique
