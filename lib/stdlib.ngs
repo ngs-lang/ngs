@@ -1210,7 +1210,7 @@ doc %RET - Int or null
 doc %EX - [1,2,11,3,4].first(X>10)  # 11
 F first(arr:Arr, predicate:Fun) {
 	i = arr.index(predicate)
-	i is Null returns null
+	i is Null returns
 	arr[i]
 }
 
@@ -2672,7 +2672,9 @@ F isatty(fd:Int) {
 # http://www.microhowto.info/howto/capture_the_output_of_a_child_process_in_c.html
 
 {
+	doc Wrapper around file descriptors returned by PIPE(2)
 	type Pipe
+	doc Represents failure of creating a Pipe when calling PIPE(2)
 	type PipeCreateFail(CException)
 }
 
@@ -3734,7 +3736,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 		h.backtrace.frames.each_idx_val(F(idx, frame) {
 
 			# Don't print frames that overlap with parent exception
-			frame.ip == (try parent_frames[idx].ip) returns null
+			frame.ip == (try parent_frames[idx].ip) returns
 
 			l = resolve_instruction_pointer(frame.ip)
 			closure = " [in ${frame.closure.attrs().name}]" tor ''

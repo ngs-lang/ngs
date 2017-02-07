@@ -17,7 +17,7 @@ doc %EX - e["x"]  # 0
 doc %EX - e.push("y")
 doc %EX - e["y"]  # 1
 F push(e:Enum, name:Str) {
-	name in e.names_to_numbers returns null
+	name in e.names_to_numbers returns
 	idx = e.names_to_numbers.len()
 	e.names_to_numbers[name] = idx
 	e.numbers_to_names[idx] = name

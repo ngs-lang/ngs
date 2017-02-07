@@ -403,17 +403,21 @@ binop-expression-inner =
 		}
 	}
 	|
-	space "returns" space e2:expression {
+	space "returns" {
 		// e1 returns e2 => if e1 { return e2 }
 		MAKE_NODE(ret, IF_NODE);
 			ret->first_child = e1;
 			MAKE_NODE(yes, RETURN_NODE);
-				yes->first_child = e2;
+				MAKE_NODE(if_yes, NULL_NODE);
+				yes->first_child = if_yes;
 			e1->next_sibling = yes;
 			MAKE_NODE(no, NULL_NODE);
 			yes->next_sibling = no;
 		e1 = ret;
-	}
+	} (inline_space e2:expression {
+		// if -> old e1 -> return    -> return value
+		e1->first_child->next_sibling->first_child = e2;
+	})?
 	|
 	space "breaks" {
 		// e1 breaks => if e1 { break }
@@ -1433,8 +1437,13 @@ regexp-flags = <[a-zA-Z0-9]*> {
 
 
 
-return = "return" r:return-node (inline_space e:expression { r->first_child = e; }) { $$ = r; }
-return-node = { MAKE_NODE(ret, RETURN_NODE); $$ = ret; }
+return = "return" r:return-node (inline_space e:expression { r->first_child = e; })? { $$ = r; }
+return-node = {
+	MAKE_NODE(ret, RETURN_NODE);
+		MAKE_NODE(ret_value_null, NULL_NODE);
+		ret->first_child = ret_value_null;
+	$$ = ret;
+}
 
 break = "break" { MAKE_NODE(ret, BREAK_NODE); $$ = ret; }
 continue = "continue" { MAKE_NODE(ret, CONTINUE_NODE); $$ = ret; }
