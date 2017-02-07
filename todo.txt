@@ -9,6 +9,7 @@ Note that this started as internal document so things here are unformed, not fin
 	* address resolution functions
 	* AWS fix SG rules (IpPermBox < IpPermBox)
 	* [stdlib] pid() - c_getpid() wrapper
+	* Fix $(separate$item issue)
 
 [roadmap]
 

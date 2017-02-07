@@ -3905,6 +3905,12 @@ TEST t = 0; retry(body={t+=1; "OK"}, fail_cb={"NOTOK"}, sleep=0) == "OK" and t =
 
 # === Misc =======================================
 
+doc Get process ID
+F pid() c_getpid()
+
+doc Get parent process ID
+F ppid() c_getppid()
+
 doc Encodes each character in a string as two uppercase hexadecimal digits
 doc %RET - Str
 F encode_hex(s:Str) {

@@ -1382,6 +1382,13 @@ METHOD_RESULT native_c_getpid METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(pid));
 }
 
+METHOD_RESULT native_c_getppid METHOD_PARAMS {
+	(void) argv;
+	pid_t pid;
+	pid = getppid();
+	METHOD_RETURN(MAKE_INT(pid));
+}
+
 METHOD_RESULT native_args EXT_METHOD_PARAMS {
 	(void) vm;
 	(void) argv;
@@ -2543,16 +2550,36 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_opendir", &native_c_opendir,         1,"name",     vm->Str);
 	register_global_func(vm, 1, "c_readdir", &native_c_readdir,         1,"dirp",     vm->C_DIR);
 	register_global_func(vm, 1, "c_closedir",&native_c_closedir,        1,"dirp",     vm->C_DIR);
+
 	register_global_func(vm, 1, "c_stat",    &native_c_stat,            1,"pathname", vm->Str);
+	_doc(vm, "", "Call STAT(2)");
+
 	register_global_func(vm, 1, "c_lstat",   &native_c_lstat,           1,"pathname", vm->Str);
+	_doc(vm, "", "Call LSTAT(2)");
+
 	register_global_func(vm, 1, "c_fstat",   &native_c_fstat,           1,"fd",       vm->Int);
+	_doc(vm, "", "Call FSTAT(2)");
 
 	// low level misc
 	register_global_func(vm, 0, "c_access", &native_c_access,          2, "pathname", vm->Str, "mode", vm->Int);
+	_doc(vm, "", "Call ACCESS(2)");
+
 	register_global_func(vm, 0, "c_exit",   &native_c_exit_int,        1, "status",   vm->Int);
+	_doc(vm, "", "Call EXIT(3)");
+
 	register_global_func(vm, 0, "c_fork",   &native_c_fork,            0);
+	_doc(vm, "", "Call FORK(2)");
+
 	register_global_func(vm, 0, "c_getpid", &native_c_getpid,          0);
+	_doc(vm, "", "Call GETPID(2)");
+
+	register_global_func(vm, 0, "c_getppid",&native_c_getppid,         0);
+	_doc(vm, "", "Call GETPPID(2)");
+
 	register_global_func(vm, 0, "c_pipe",   &native_c_pipe,            0);
+	_doc(vm, "", "Call PIPE(2)");
+	_doc(vm, "%RET", "Array with 3 items: error code, reading end file descriptor, writing end file descriptor");
+
 	register_global_func(vm, 0, "c_waitpid",&native_c_waitpid,         1, "pid",      vm->Int);
 	register_global_func(vm, 0, "c_execve", &native_c_execve,          3, "filename", vm->Str, "argv", vm->Arr, "envp", vm->Arr);
 	register_global_func(vm, 0, "C_WEXITSTATUS", &native_C_WEXITSTATUS,1, "status",   vm->Int);
