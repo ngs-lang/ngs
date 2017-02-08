@@ -47,7 +47,6 @@
 		elbs % F(elb) {
 			elb.ListenerDescriptions = elb.ListenerDescriptions.map(F(ld) {
 				collector {
-					inspect(ld.PolicyNames) % echo
 					ld.PolicyNames % collect
 					l = ld.Listener
 					collect("${l.LoadBalancerPort}/${l.Protocol} -> ${l.InstancePort}/${l.InstanceProtocol}")

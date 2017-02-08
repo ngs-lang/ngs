@@ -1,6 +1,8 @@
 # TODO: maybe do it with usual .o intermediate files
 
 SHELL := /bin/bash -e
+INSTALL := /usr/bin/install
+
 NGS_DIR := lib
 export NGS_DIR
 
@@ -19,7 +21,7 @@ SRC := debug.o ast.o obj.o compile.o decompile.o vm.o ngs.o
 PCRE_H := /usr/include/pcre.h
 # SRC := *.c
 
-all: ngs ngs-prof ngs-debug
+all: ngs
 
 # Built for peg/leg v 0.1.15
 syntax.c: syntax.leg patch-leg-input.sed patch-leg-output.sed patch-leg-output.awk
@@ -93,12 +95,14 @@ libdir = $(exec_prefix)/lib
 
 .PHONY: install
 install: ngs
-	# TODO: use "install" instead of "cp"
-	mkdir -p $(libdir)/$(PKG_NAME)
-	cp -a lib/* $(libdir)/$(PKG_NAME)/
-	cp ngs $(bindir)/
+	env
+	# TODO: use "install" instead of "mkdir" and "cp"
+	mkdir -p $(DESTDIR)$(libdir)/$(PKG_NAME)
+	cp -a lib/*.ngs lib/*/*.ngs $(DESTDIR)$(libdir)/$(PKG_NAME)/
+	mkdir -p $(DESTDIR)$(bindir)
+	$(INSTALL) -m 755 ngs $(DESTDIR)$(bindir)/
 	# Making sure it's clear that these are NGS tools - keeping the .ngs suffix
-	cp bin/*.ngs $(bindir)/
+	cp bin/*.ngs $(DESTDIR)$(bindir)/
 
 .PHONY: uninstall
 uninstall:
