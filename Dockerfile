@@ -1,6 +1,6 @@
 FROM debian:jessie
 
-RUN apt-get update && apt-get -y install build-essential devscripts uthash-dev libgc-dev libffi-dev libjson-c-dev peg libpcre3-dev
+RUN apt-get update && apt-get -y install build-essential devscripts uthash-dev libgc-dev libffi-dev libjson-c-dev peg libpcre3-dev pandoc
 
 ADD . /src
 WORKDIR /src

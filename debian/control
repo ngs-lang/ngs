@@ -1,0 +1,28 @@
+Source: ngs
+Section: shells
+Priority: optional
+Maintainer: Ilya Sher <ilya.sher@coding-knight.com>
+Build-Depends:
+ make,
+ uthash-dev,
+ libgc-dev,
+ libffi-dev,
+ libjson-c-dev,
+ peg,
+ libpcre3-dev,
+ pandoc,
+Homepage: https://github.com/ilyash/ngs
+
+Package: ngs
+Architecture: any
+Depends:
+ libgc1c2,
+ libffi6,
+ libpcre3,
+ libjson-c3|libjson-c2,
+ ${shlibs:Depends},
+Description: Next Generation Shell (NGS)
+ NGS is an alternative shell. At it's core is a domain-specific language that
+ was specifically designed to be a shell language. NGS is under development.
+ The language part is already good enough to write some useful scripts. CLI
+ does not exist yet. It will be written using the NGS language.

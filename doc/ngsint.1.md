@@ -46,7 +46,7 @@ NGS parses the sources to AST and then compiles to bytecode. Compilation is done
 
 `BYTECODE_HANDLE` typedef'ed struct. Although reading/writing bytecode to a file is not implemented yet, bytecode layout in memory was designed to be easy to write to or read from a file.
 
-`ngs_add_bytecode_section(bytecode, BYTECODE_SECTION_TYPE_..., l, buf)` function
+`ngs_add_bytecode_section()` function
 
 # VM
 
@@ -66,7 +66,8 @@ This is procedure for adding ordinary (such as for `DIR` type used in `opendir()
 In `obj.h` - add something along these lines:
 
 	typedef struct {
-		OBJECT base;         // must be present and must be the first member of the structure
+		OBJECT base;         // must be present and
+		                     // must be the first member of the structure
 		VALUE my_field_1;    // free style fields here and below
 		VALUE my_field_2;
 		size_t my_data_len;

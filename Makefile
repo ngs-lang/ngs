@@ -2,6 +2,7 @@
 
 SHELL := /bin/bash -e
 INSTALL := /usr/bin/install
+MAKE := /usr/bin/make
 
 NGS_DIR := lib
 export NGS_DIR
@@ -92,20 +93,28 @@ datadir = $(datarootdir)
 exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 libdir = $(exec_prefix)/lib
+mandir = $(datarootdir)/man
+
+.PHONY: man
+man:
+	cd doc && $(MAKE) man
 
 .PHONY: install
-install: ngs
+install: ngs man
 	env
 	# TODO: use "install" instead of "mkdir" and "cp"
-	mkdir -p $(DESTDIR)$(libdir)/$(PKG_NAME)
+	$(INSTALL) -m 755 -d $(DESTDIR)$(libdir)/$(PKG_NAME)
 	cp -a lib/*.ngs lib/*/*.ngs $(DESTDIR)$(libdir)/$(PKG_NAME)/
-	mkdir -p $(DESTDIR)$(bindir)
+	$(INSTALL) -m 755 -d $(DESTDIR)$(bindir)
 	$(INSTALL) -m 755 ngs $(DESTDIR)$(bindir)/
 	# Making sure it's clear that these are NGS tools - keeping the .ngs suffix
 	cp bin/*.ngs $(DESTDIR)$(bindir)/
+	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man1
+	$(INSTALL) -m 644 doc/*.1 $(DESTDIR)$(mandir)/man1/
 
 .PHONY: uninstall
 uninstall:
+	# TODO: remove man
 	rm -rf $(datadir)/$(PKG_NAME)/ || true
 	rm -rf $(libdir)/$(PKG_NAME)/ || true
 	rm $(bindir)/ngs || true
@@ -128,23 +137,23 @@ test: test-no-bootstrap-no-stdlib test-stdlib
 	@ echo "ALL TESTS OK"
 
 test-on-jessie:
-	make CC=gcc-4.8 clean test
-	make CC=gcc-4.9 clean test
-	make CC=clang-3.5 clean test
+	$(MAKE) CC=gcc-4.8 clean test
+	$(MAKE) CC=gcc-4.9 clean test
+	$(MAKE) CC=clang-3.5 clean test
 
 test-on-stretch:
-	make CC=gcc-4.8 clean test
-	make CC=gcc-4.9 clean test
-	make CC=gcc-5 clean test
-	make CC=clang-3.6 clean test
+	$(MAKE) CC=gcc-4.8 clean test
+	$(MAKE) CC=gcc-4.9 clean test
+	$(MAKE) CC=gcc-5 clean test
+	$(MAKE) CC=clang-3.6 clean test
 
 test-on-trusty:
-	make CC=gcc-4.8 clean test
-	make CC=clang clean test
+	$(MAKE) CC=gcc-4.8 clean test
+	$(MAKE) CC=clang clean test
 
 .PHONY: gh-pages-doc
 gh-pages-doc:
 	cd ../ngs-doc && git status | grep 'On branch gh-pages'
-	cd doc && make
+	cd doc && $(MAKE)
 	cp -a doc/*.html doc/*.css ../ngs-doc/
 	cd ../ngs-doc && git add *.css *.html && git commit -m 1 && git push

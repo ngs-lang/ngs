@@ -1,0 +1,11 @@
+ngs (0.0.2-1) unstable; urgency=medium
+
+  * make new-package-should-close-itp-bug go
+
+ -- Ilya Sher <ilya.sher@coding-knight.com>  Wed, 8 Feb 2017 23:30:00 +0200
+
+ngs (0.0.1-1) unstable; urgency=medium
+
+  * Initial packaging
+
+ -- Ilya Sher <ilya.sher@coding-knight.com>  Sat, 4 Feb 2017 19:26:00 +0200

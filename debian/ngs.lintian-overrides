@@ -1,0 +1,2 @@
+ngs: binary-without-manpage *.ngs
+ngs: unusual-interpreter *.ngs #!ngs
