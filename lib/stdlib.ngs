@@ -2892,7 +2892,7 @@ doc Decide whether /bin/false process finished normally: exit code must be 1.
 doc p - /bin/false process
 doc %RET - bool
 F finished_ok(p:Process) {
-	guard p.executable.path == '/bin/false'
+	guard p.executable.path in ['/bin/false', '/usr/bin/false']
 	p.exit_code == 1
 }
 
@@ -2902,7 +2902,7 @@ doc %EX - # Exit code 1 on the line below but no exception thanks to this finish
 doc %EX - if $(test -f /) echo("/ is a file")  # Outputs nothing, / is a directory
 doc %RET - bool
 F finished_ok(p:Process) {
-	guard p.executable.path in ['/usr/bin/test', '/bin/fuser', '/bin/ping']
+	guard p.executable.path in ['/usr/bin/test', '/bin/fuser', '/usr/bin/fuser', '/bin/ping', '/usr/bin/ping']
 	p.exit_code in [0, 1]
 }
 

@@ -16,10 +16,6 @@ Homepage: https://github.com/ilyash/ngs
 Package: ngs
 Architecture: any
 Depends:
- libgc1c2,
- libffi6,
- libpcre3,
- libjson-c3|libjson-c2,
  ${shlibs:Depends},
 Description: Next Generation Shell (NGS)
  NGS is an alternative shell. At it's core is a domain-specific language that
