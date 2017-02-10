@@ -456,11 +456,11 @@ F Bool(hl:HashLike)          hl.attrs().HashLike.Bool()
 # TODO: mapk, mapv and friends
 # TOOD: Hash() - copy or hash attribute?
 
-F init(hl:HashLike) {
+F init(hl:HashLike, h:Hash=null) {
 	if hl.attrs() is not Hash {
 		hl.attrs({})
 	}
-	hl.attrs().HashLike = {}
+	hl.attrs().HashLike = h or {}
 }
 
 doc Get the underlying Hash with all the keys/values of the HashLike.

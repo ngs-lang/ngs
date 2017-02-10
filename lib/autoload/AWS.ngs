@@ -56,13 +56,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# Anchor
 	# --------------------------------------------------
 
-	type Anchor(Props)
+	type Anchor(HashLike)
 
-	F init(a:Anchor, **kw)  {
-		a.super(**kw)
-		a.dflt('regions', null)
-		a.dflt('tags', {})
-	}
+	doc Constructor for AWS resource anchor
+	F init(a:Anchor, **kw) a.super({'regions': null, 'tags': {}, **kw})
 
 	# --------------------------------------------------
 	# ResFindCommand
