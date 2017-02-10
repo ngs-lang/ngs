@@ -439,24 +439,34 @@ F push(al:ArrLike, val) al.(al.arr_like_attr).push(val)
 	HashLike.inherit(Eachable2)
 }
 
-F in(name:Str, hl:HashLike) name in hl.(hl.hash_like_attr)
+F in(name:Str, hl:HashLike)  name in hl.attrs().HashLike
 
-F len(hl:HashLike)         hl.(hl.hash_like_attr).len()
-F '[]'(hl:HashLike, k)     hl.(hl.hash_like_attr)[k]
-F '[]='(hl:HashLike, k, v) hl.(hl.hash_like_attr)[k] = v
+F len(hl:HashLike)           hl.attrs().HashLike.len()
+F '[]' (hl:HashLike, k)      hl.attrs().HashLike[k]
+F '[]='(hl:HashLike, k, v)   hl.attrs().HashLike[k] = v
 
-F each(hl:HashLike, cb:Fun) hl.(hl.hash_like_attr).each(cb)
-F keys(hl:HashLike) hl.(hl.hash_like_attr).keys()
-F values(hl:HashLike) hl.(hl.hash_like_attr).values()
-F Bool(hl:HashLike) hl.(hl.hash_like_attr).Bool()
+F .(hl:HashLike, k)          hl.attrs().HashLike[k]
+F .=(hl:HashLike, k, v)      hl.attrs().HashLike[k] = v
+
+F each(hl:HashLike, cb:Fun)  hl.attrs().HashLike.each(cb)
+F keys(hl:HashLike)          hl.attrs().HashLike.keys()
+F values(hl:HashLike)        hl.attrs().HashLike.values()
+F Bool(hl:HashLike)          hl.attrs().HashLike.Bool()
 
 # TODO: mapk, mapv and friends
 # TOOD: Hash() - copy or hash attribute?
 
-F init(hl:HashLike, attr:Str='items') {
-	hl.hash_like_attr = attr
-	hl.(hl.hash_like_attr) = {}
+F init(hl:HashLike) {
+	if hl.attrs() is not Hash {
+		hl.attrs({})
+	}
+	hl.attrs().HashLike = {}
 }
+
+doc Get the underlying Hash with all the keys/values of the HashLike.
+doc Note: the returned value is not a copy.
+doc %RET - Hash
+F Hash(hl:HashLike) hl.attrs().HashLike
 
 # === Hook =======================================
 
@@ -467,20 +477,18 @@ F init(hl:HashLike, attr:Str='items') {
 }
 
 doc Hook constructor.
-doc combiner - A function for processing results from all handlers. The outputs are passed as a Hash. Keys are handlers names and values are what handlers return when they run.
 doc %RET - Hook
-F init(hook:Hook, combiner=values) {
-	init(args())
-	super(hook, 'handlers')
-	hook.idx = 0
+F init(hook:Hook) {
+	super(hook)
+	hook.attrs().idx = 0
 }
 
 doc Add unnamed handler.
 doc The hook is automatically named "pushed-N" where N is sequential integer.
 doc %RET - New hook name
 F push(hook:Hook, handler:Closure) {
-	name = "pushed-${hook.idx}"
-	hook.idx += 1
+	name = "pushed-${hook.attrs().idx}"
+	hook.attrs().idx += 1
 	hook[name] = handler
 	name
 }
@@ -489,10 +497,7 @@ F push(hook:Hook, handler:Closure) {
 doc Runs all handlers passing all args.
 doc args - Arguments to pass to handlers
 doc %RET - Output of the combiner function applied to all handlers' results
-F call(hook:Hook, *args) {
-	result = hook.handlers.mapv(F(handler) handler(*args))
-	hook::combiner(result)
-}
+F call(hook:Hook, *args) hook.attrs().HashLike.mapv(X(*args))
 
 # === Real =======================================
 
@@ -631,6 +636,8 @@ F ==(a:NormalTypeInstance, b:NormalTypeInstance) {
 	Hash(a) == Hash(b)
 }
 
+# TODO: move to somewhere more appropriate, keep in mind - must be after dflt(NormalTypeInstance, ...)
+F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
 
 # === Exceptions =================================
 
