@@ -94,10 +94,11 @@ exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 libdir = $(exec_prefix)/lib
 mandir = $(datarootdir)/man
+docdir = $(datarootdir)/doc/$(PKG_NAME)
 
 .PHONY: man
 man:
-	cd doc && $(MAKE) man
+	$(MAKE) -C doc man
 
 .PHONY: install
 install: ngs man
@@ -111,6 +112,10 @@ install: ngs man
 	cp bin/*.ngs $(DESTDIR)$(bindir)/
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -m 644 doc/*.1 $(DESTDIR)$(mandir)/man1/
+	$(INSTALL) -m 755 -d $(DESTDIR)$(docdir)
+ifneq (yes,$(skip_license))
+	$(INSTALL) -m 644 LICENSE $(DESTDIR)$(docdir)/
+endif
 
 .PHONY: uninstall
 uninstall:
