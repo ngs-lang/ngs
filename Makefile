@@ -102,14 +102,14 @@ man:
 
 .PHONY: install
 install: ngs man
-	env
-	# TODO: use "install" instead of "mkdir" and "cp"
 	$(INSTALL) -m 755 -d $(DESTDIR)$(libdir)/$(PKG_NAME)
-	cp -a lib/*.ngs lib/*/*.ngs $(DESTDIR)$(libdir)/$(PKG_NAME)/
+	$(INSTALL) -m 644 lib/*.ngs $(DESTDIR)$(libdir)/$(PKG_NAME)/
+	$(INSTALL) -m 755 -d $(DESTDIR)$(libdir)/$(PKG_NAME)/autoload
+	$(INSTALL) -m 644 lib/autoload/*.ngs $(DESTDIR)$(libdir)/$(PKG_NAME)/autoload/
 	$(INSTALL) -m 755 -d $(DESTDIR)$(bindir)
 	$(INSTALL) -m 755 ngs $(DESTDIR)$(bindir)/
 	# Making sure it's clear that these are NGS tools - keeping the .ngs suffix
-	cp bin/*.ngs $(DESTDIR)$(bindir)/
+	$(INSTALL) -m 644 bin/*.ngs $(DESTDIR)$(bindir)/
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -m 644 doc/*.1 $(DESTDIR)$(mandir)/man1/
 	$(INSTALL) -m 755 -d $(DESTDIR)$(docdir)
