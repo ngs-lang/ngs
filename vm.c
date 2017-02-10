@@ -237,7 +237,7 @@ REAL_CMP_METHOD(eq, ==)
 
 METHOD_RESULT native_dump_any METHOD_PARAMS {
 	dump(argv[0]);
-	SET_NULL(*result);
+	*result = MAKE_NULL;
 	return METHOD_OK;
 }
 
@@ -859,7 +859,7 @@ METHOD_RESULT native_time METHOD_PARAMS { (void) argv; METHOD_RETURN(MAKE_INT((l
 METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_normal_type(argv[0])); }
 METHOD_RESULT native_type_str_doc METHOD_PARAMS {
 	*result = make_normal_type(argv[0]);
-	set_hash_key(NGS_TYPE_ATTRS(*result), make_string("doc"), argv[1]);
+	set_hash_key(OBJ_ATTRS(*result), make_string("doc"), argv[1]);
 	return METHOD_OK;
 }
 
@@ -1057,22 +1057,17 @@ METHOD_RESULT native_same_any_any METHOD_PARAMS {
 	METHOD_RETURN(MAKE_BOOL(argv[0].ptr == argv[1].ptr));
 }
 
-METHOD_RESULT native_attrs_closure METHOD_PARAMS {
-	METHOD_RETURN(CLOSURE_OBJ_ATTRS(argv[0]));
+METHOD_RESULT native_attrs METHOD_PARAMS {
+	if(!IS_OBJ(argv[0])) {
+		return METHOD_IMPL_MISSING;
+	}
+	METHOD_RETURN(OBJ_ATTRS(argv[0]));
 }
-
-METHOD_RESULT native_attrs_closure_any METHOD_PARAMS {
-	CLOSURE_OBJ_ATTRS(argv[0]) = argv[1];
-	METHOD_RETURN(argv[1]);
-}
-
-METHOD_RESULT native_attrs_type METHOD_PARAMS {
-	METHOD_RETURN(NGS_TYPE_ATTRS(argv[0]));
-}
-
-METHOD_RESULT native_attrs_type_any METHOD_PARAMS {
-	NGS_TYPE_ATTRS(argv[0]) = argv[1];
-	METHOD_RETURN(argv[1]);
+METHOD_RESULT native_attrs_any METHOD_PARAMS {
+	if(!IS_OBJ(argv[0])) {
+		return METHOD_IMPL_MISSING;
+	}
+	OBJ_ATTRS(argv[0]) = argv[1]; METHOD_RETURN(argv[1]);
 }
 
 // TODO: consider returning Hash instead of Arr
@@ -1124,15 +1119,6 @@ METHOD_RESULT native_params_closure METHOD_PARAMS {
 #undef callable
 
 METHOD_RESULT native_ip_closure METHOD_PARAMS { METHOD_RETURN(MAKE_INT(CLOSURE_OBJ_IP(argv[0]))); }
-
-METHOD_RESULT native_attrs_nm METHOD_PARAMS {
-	METHOD_RETURN(NATIVE_METHOD_ATTRS(argv[0]));
-}
-
-METHOD_RESULT native_attrs_nm_any METHOD_PARAMS {
-	NATIVE_METHOD_ATTRS(argv[0]) = argv[1];
-	METHOD_RETURN(argv[1]);
-}
 
 #define callable (argv[0])
 METHOD_RESULT native_params_nm METHOD_PARAMS {
@@ -1760,9 +1746,9 @@ void register_global_func(VM *vm, int pass_extra_params, char *name, void *func_
 	o->params.n_params_optional = 0; /* currently none of builtins uses optional parameters */
 	o->pass_extra_params = pass_extra_params;
 	vm->last_doc_hash = make_hash(4);
-	o->attrs = make_hash(8);
-		set_hash_key(o->attrs, make_string("name"), make_string(name));
-		set_hash_key(o->attrs, make_string("doc"), vm->last_doc_hash);
+	o->base.attrs = make_hash(8);
+		set_hash_key(o->base.attrs, make_string("name"), make_string(name));
+		set_hash_key(o->base.attrs, make_string("doc"), vm->last_doc_hash);
 	if(argc) {
 		argv = NGS_MALLOC(argc * sizeof(VALUE) * 2);
 		assert(argv);
@@ -1830,9 +1816,9 @@ void set_global(VM *vm, const char *name, VALUE v) {
 	assert(IS_UNDEF(GLOBALS[index]));
 	GLOBALS[index] = ret;
 	vm->last_doc_hash = make_hash(4);
-	NGS_TYPE_ATTRS(ret) = make_hash(8);
-		// set_hash_key(NGS_TYPE_ATTRS(ret), make_string("name"), make_string(name));
-		set_hash_key(NGS_TYPE_ATTRS(ret), make_string("doc"), vm->last_doc_hash);
+	OBJ_ATTRS(ret) = make_hash(8);
+		// set_hash_key(OBJ_ATTRS(ret), make_string("name"), make_string(name));
+		set_hash_key(OBJ_ATTRS(ret), make_string("doc"), vm->last_doc_hash);
 	return ret;
 }
 
@@ -2006,8 +1992,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	set_global(vm, #name, name); \
 	vm->name = name; \
 	vm->last_doc_hash = make_hash(4); \
-	NGS_TYPE_ATTRS(name) = make_hash(8); \
-	set_hash_key(NGS_TYPE_ATTRS(name), make_string("doc"), vm->last_doc_hash);
+	OBJ_ATTRS(name) = make_hash(8); \
+	set_hash_key(OBJ_ATTRS(name), make_string("doc"), vm->last_doc_hash);
 
 #define MKSUBTYPE(name, parent) \
 	MKTYPE(name); \
@@ -2374,15 +2360,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, ".",                      &native_attr_pthreadattr,     2, "pa", vm->c_pthread_attr_t,    "attr", vm->Str);
 
 	// Native methods
-	register_global_func(vm, 0, "attrs",    &native_attrs_nm,          1, "m",      vm->NativeMethod);
-	_doc(vm, "", "Get native method attributes. Usually a Hash with name and doc keys.");
-	_doc(vm, "%RET", "Any, typically a Hash");
-	_doc_arr(vm, "%EX",
-		"c_pthread_join[0].attrs()  # {name=c_pthread_join, doc={ ... }}",
-		NULL
-	);
-	register_global_func(vm, 0, "attrs",    &native_attrs_nm_any,      2, "m",      vm->NativeMethod, "datum", vm->Any);
-	_doc(vm, "", "Set native method attributes. Should be a Hash.");
 	register_global_func(vm, 0, "params",   &native_params_nm,         1, "m",      vm->NativeMethod);
 
 	// Type
@@ -2401,15 +2378,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 		"f = F(x) x +1; f == f  # true - same instance",
 		NULL
 	);
-	register_global_func(vm, 0, "attrs",    &native_attrs_closure,     1, "c",      vm->Closure);
-	_doc(vm, "", "Get closure attributes. Usually a Hash with name and doc keys.");
-	_doc(vm, "%RET", "Any, typically a Hash");
-	_doc_arr(vm, "%EX",
-		"F make_closure() { F(x) x +1 }; make_closure[0].attrs()  # {doc=null, name=make_closure}",
-		NULL
-	);
-	register_global_func(vm, 0, "attrs",    &native_attrs_closure_any, 2, "c",      vm->Closure, "datum", vm->Any);
-	_doc(vm, "", "Set closure attributes. Should be a Hash.");
 	register_global_func(vm, 0, "params",   &native_params_closure,    1, "c",      vm->Closure);
 	_doc(vm, "", "Get closure parameters.");
 	_doc_arr(vm, "%EX",
@@ -2477,6 +2445,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "ceil",     &native_ceil_real,           1, "r",   vm->Real);
 	_doc(vm, "", "Ceil a number");
 
+	// OBJECT
+	register_global_func(vm, 0, "attrs",    &native_attrs,               1, "obj",      vm->Any);
+	register_global_func(vm, 0, "attrs",    &native_attrs_any,           2, "obj",      vm->Any, "v", vm->Any);
+
 	// BasicType
 	register_global_func(vm, 1, ".",        &native_get_attr_bt_str,       2, "obj", vm->BasicType,          "attr", vm->Str);
 	_doc(vm, "", "Get BasicType (Int, Arr, Hash, ...) attribute. Throws AttrNotFound.");
@@ -2525,15 +2497,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, "typeof",   &native_typeof_any        ,1, "x",      vm->Any);
 	_doc(vm, "", "Returns type of the given instance");
 	_doc(vm, "x", "Instance (an object). Currently only instances of NormalType are supported.");
-	register_global_func(vm, 0, "attrs",    &native_attrs_type,        1, "t",      vm->Type);
-	_doc(vm, "", "Get Type attributes. Usually a Hash with \"doc\" key.");
-	_doc(vm, "%RET", "Any, typically a Hash");
-	_doc_arr(vm, "%EX",
-		"Arr.attrs()  # {doc={=Array type}}",
-		NULL
-	);
-	register_global_func(vm, 0, "attrs",    &native_attrs_type_any,    2, "t",      vm->Type, "datum", vm->Any);
-	_doc(vm, "", "Set Type attributes. Usually a Hash with \"doc\" key.");
 
 	// low level file operations
 	register_global_func(vm, 0, "c_dup2",   &native_c_dup2_int_int,    2, "oldfd",    vm->Int, "newfd", vm->Int);
@@ -4006,18 +3969,18 @@ do_jump:
 							v = make_string_of_len(&vm->bytecode[ip+1], vm->bytecode[ip]);
 							ip += 1 + vm->bytecode[ip];
 							// CLOSURE_OBJ_NAME(TOP) = v;
-							if(!IS_HASH(CLOSURE_OBJ_ATTRS(TOP))) {
+							if(!IS_HASH(OBJ_ATTRS(TOP))) {
 								goto main_loop;
 							}
-							set_hash_key(CLOSURE_OBJ_ATTRS(TOP), make_string("name"), v);
+							set_hash_key(OBJ_ATTRS(TOP), make_string("name"), v);
 							goto main_loop;
 		case OP_SET_CLOSURE_DOC:
 							EXPECT_STACK_DEPTH(2);
 							assert(IS_CLOSURE(SECOND));
-							if(!IS_HASH(CLOSURE_OBJ_ATTRS(SECOND))) {
+							if(!IS_HASH(OBJ_ATTRS(SECOND))) {
 								goto main_loop;
 							}
-							set_hash_key(CLOSURE_OBJ_ATTRS(SECOND), make_string("doc"), FIRST);
+							set_hash_key(OBJ_ATTRS(SECOND), make_string("doc"), FIRST);
 							REMOVE_TOP_NOCHECK;
 							goto main_loop;
 		case OP_HASH_SET:

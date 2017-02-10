@@ -56,7 +56,7 @@ static void _dump(VALUE v, int level) {
 			CLOSURE_OBJ_PARAMS_FLAGS(v)
 		);
 		printf("%*s* closure attributes\n", (level+1) << 1, "");
-		_dump(CLOSURE_OBJ_ATTRS(v), level+2);
+		_dump(OBJ_ATTRS(v), level+2);
 		for(i=0; i<CLOSURE_OBJ_N_REQ_PAR(v); i++) {
 			printf("%*s* required parameter %zu (name and type follow)\n", (level+1) << 1, "", i+1);
 			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+0], level+2);
@@ -268,7 +268,7 @@ VALUE make_normal_type(VALUE name) {
 	NGS_TYPE_FIELDS(ret) = make_hash(8); // Hash: name->index
 	NGS_TYPE_CONSTRUCTORS(ret) = make_array(1);
 	NGS_TYPE_PARENTS(ret) = make_array(0);
-	NGS_TYPE_ATTRS(ret) = make_hash(2);
+	OBJ_ATTRS(ret) = make_hash(2);
 
 	VALUE ctr = make_normal_type_constructor(ret);
 	ARRAY_ITEMS(NGS_TYPE_CONSTRUCTORS(ret))[0] = ctr;
@@ -668,9 +668,9 @@ VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX 
 	assert(c->params.params);
 	memcpy(c->params.params, params, params_size);
 	c->n_uplevels = n_uplevels;
-	c->attrs = make_hash(2);
 
 	SET_OBJ(v, c);
+	OBJ_ATTRS(v) = make_hash(2);
 
 	return v;
 }

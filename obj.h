@@ -41,6 +41,7 @@ typedef intptr_t VALUE_NUM;
 typedef struct {
 	VALUE type;
 	VALUE val;
+	VALUE attrs;
 } OBJECT;
 
 typedef struct {
@@ -116,14 +117,12 @@ typedef struct closure {
 	PARAMS_DESC params;
 	VALUE **uplevels;
 	UPVAR_INDEX n_uplevels;
-	VALUE attrs;
 } CLOSURE_OBJECT;
 
 typedef struct native_method {
 	OBJECT base;
 	PARAMS_DESC params;
 	int_fast8_t pass_extra_params;
-	VALUE attrs;
 } NATIVE_METHOD_OBJECT;
 
 typedef struct ngs_type {
@@ -134,7 +133,6 @@ typedef struct ngs_type {
 	VALUE fields; // Hash: name->index
 	VALUE constructors; // Arr[F]
 	VALUE parents; // Arr[NGS_TYPE]
-	VALUE attrs;
 } NGS_TYPE;
 
 typedef struct {
@@ -269,12 +267,8 @@ typedef enum {
 #define GET_PTHREADMUTEX(v) (((PTHREADMUTEX_OBJECT *) v.ptr)->val)
 #define GET_FFI_TYPE(v) (((FFI_TYPE_OBJECT *) v.ptr)->base.val.ptr)
 #define GET_FFI_CIF(v)  (((FFI_CIF_OBJECT *) v.ptr)->val)
-#define SET_OBJ(v,o)    (v).ptr = o
-#define SET_NULL(v)     (v).num = V_NULL
-#define SET_FALSE(v)    (v).num = V_FALSE
-#define SET_TRUE(v)     (v).num = V_TRUE
+#define SET_OBJ(v,o)    {(v).ptr = o; OBJ_ATTRS(v) = MAKE_NULL; }
 #define SET_BOOL(v, b)  (v).num = b ? V_TRUE : V_FALSE
-#define SET_UNDEF(v)    (v).num = V_UNDEF
 
 #define OBJ_LEN(v)                ((VAR_LEN_OBJECT *) (v).ptr)->len
 #define OBJ_ALLOCATED(v)          ((VAR_LEN_OBJECT *) (v).ptr)->allocated
@@ -284,7 +278,6 @@ typedef enum {
 #define CLOSURE_OBJ_N_OPT_PAR(v)  (((CLOSURE_OBJECT *) v.ptr)->params.n_params_optional)
 #define CLOSURE_OBJ_PARAMS(v)     (((CLOSURE_OBJECT *) v.ptr)->params.params)
 #define CLOSURE_OBJ_N_UPLEVELS(v) (((CLOSURE_OBJECT *) v.ptr)->n_uplevels)
-#define CLOSURE_OBJ_ATTRS(v)      (((CLOSURE_OBJECT *) v.ptr)->attrs)
 #define CLOSURE_OBJ_UPLEVELS(v)   (((CLOSURE_OBJECT *) v.ptr)->uplevels)
 #define CLOSURE_OBJ_PARAMS_FLAGS(v) (((CLOSURE_OBJECT *) v.ptr)->params.flags)
 #define CLIB_OBJECT_NAME(v)       ((CLIB_OBJECT *) v.ptr)->name
@@ -294,17 +287,16 @@ typedef enum {
 #define NATIVE_METHOD_OBJ_N_OPT_PAR(v)  ((NATIVE_METHOD_OBJECT *) v.ptr)->params.n_params_optional
 #define NATIVE_METHOD_OBJ_PARAMS(v)     (((NATIVE_METHOD_OBJECT *) v.ptr)->params.params)
 #define NATIVE_METHOD_EXTRA_PARAMS(v)   (((NATIVE_METHOD_OBJECT *) v.ptr)->pass_extra_params)
-#define NATIVE_METHOD_ATTRS(v)    (((NATIVE_METHOD_OBJECT *) v.ptr)->attrs)
 #define NGS_TYPE_CONSTRUCTORS(v)  (((NGS_TYPE *)(v).ptr)->constructors)
 #define NGS_TYPE_NAME(v)          (((NGS_TYPE *)(v).ptr)->name)
 #define NGS_TYPE_ID(v)            (((NGS_TYPE *)(v).ptr)->base.val.num)
 #define NGS_TYPE_FIELDS(v)        (((NGS_TYPE *)(v).ptr)->fields)
 #define NGS_TYPE_PARENTS(v)       (((NGS_TYPE *)(v).ptr)->parents)
-#define NGS_TYPE_ATTRS(v)         (((NGS_TYPE *)(v).ptr)->attrs)
 // TODO: reanme OBJ_DATA to OBJ_VAL
 #define OBJ_DATA(v)               (((OBJECT *)(v).ptr)->val)
 #define OBJ_DATA_PTR(v)           (((OBJECT *)(v).ptr)->val.ptr)
 #define OBJ_TYPE(v)               (((OBJECT *)(v).ptr)->type)
+#define OBJ_ATTRS(v)              (((OBJECT *)(v).ptr)->attrs)
 #define OBJ_TYPE_NUM(v)           (((OBJECT *)(v).ptr)->type.num)
 #define OBJ_TYPE_PTR(v)           (((OBJECT *)(v).ptr)->type.ptr)
 #define IS_OBJ(v)                 (((v).num & TAG_AND) == 0)
