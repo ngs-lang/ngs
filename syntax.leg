@@ -1582,7 +1582,7 @@ command-node = {
 }
 
 basic-command-word =
-	<[-a-zA-Z0-9/=,._@]+> {
+	<[-a-zA-Z0-9/=,._@:]+> {
 		MAKE_STRING_NODE(ret, yytext);
 		$$ = ret;
 	}
