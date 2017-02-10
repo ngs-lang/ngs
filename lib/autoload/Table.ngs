@@ -74,14 +74,8 @@ F width(t:Table) t.cols_enum.len()
 F column(t:Table, k:Str) t.column(t.cols_enum[k])
 F column(t:Table, n:Int) t.rows.map(X[n])
 F columns(t:Table) t.width() / t.column(X)
-F each(t:Table, cb:Fun) {
-	t.rows.each(F(row) {
-		row.each(F(cell) {
-			cb(cell)
-		})
-	})
-	t
-}
+
+F each(t:Table, cb:Fun) t.rows.each(cb)
 
 # --- Conversions ---
 
@@ -118,7 +112,12 @@ F echo(t:Table) {
 	showing_n_columns = t.calculate_num_cols_to_show(max_colums_widths, cols)
 
 	# Setup line spacing
-	do_line_spacing = t.filter(Arr).map(len).any(X>1)
+	do_line_spacing = t.any(F(row) {
+		row.any(F(cell) {
+			cell is Arr and len(cell)>1
+		})
+	})
+
 	do_line_spacing = if do_line_spacing F() echo('') else nop
 
 	# Title
