@@ -1,0 +1,6 @@
+F table(a:Arr) {
+	t = Table()
+	a[0].each(t.register_column(X))
+	a[1..null].each(t.push(X))
+	t
+}
