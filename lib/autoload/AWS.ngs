@@ -1,5 +1,8 @@
 ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
+	# TODO: Use JSON tags. Currently special symbols in tag name or value will cause problems.
+	# http://docs.aws.amazon.com/cli/latest/userguide/shorthand-syntax.html
+
 	# Methods with added implementations
 	global Str, init, find, latest, validate, create, update, users_ids, run, id, ids, (==)
 
@@ -22,17 +25,15 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	F cli_tags(h:Hash) h / "Key=$X,Value=$Y"
 
 	doc Convert Hash with AWS filters to command line arguments
-	F cli_filters(h:Hash) h.mapv(only(Pfx, { "${A.val}*" })).map("Name=$X,Values=$Y").map_true(['--filters'] + X)
+	F cli_filters(h:Hash) h.mapv(only(Pfx, { "${A.val}*" })).map("Name=$X,Values=$Y")
 
-	# New style
 	TEST AWS::cli_filters({}) == []
-	TEST AWS::cli_filters({"x": "y"}) == ['--filters', 'Name=x,Values=y']
-	TEST AWS::cli_filters({"x": Pfx("aa")}) == ['--filters', 'Name=x,Values=aa*']
+	TEST AWS::cli_filters({"x": "y"}) == ['Name=x,Values=y']
+	TEST AWS::cli_filters({"x": Pfx("aa")}) == ['Name=x,Values=aa*']
 
-	# Old style, to be phased out
-	TEST AWS; stdlib_aws_filters({}) == []
-	TEST AWS; stdlib_aws_filters({"x": "y"}) == ['--filters', 'Name=x,Values=y']
-	TEST AWS; stdlib_aws_filters({"x": Pfx("aa")}) == ['--filters', 'Name=x,Values=aa*']
+	F cli_tags_filters(h:Hash) h / "Name=tag-key,Values=$X,Name=tag-value,Values=$Y"
+	TEST AWS::cli_tags_filters({}) == []
+	TEST AWS::cli_tags_filters({"x": "y"}) == ['Name=tag-key,Values=x,Name=tag-value,Values=y']
 
 	_aws_cached_regions = null
 
@@ -107,6 +108,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	type ResDef(GlobalResDef)
 
+	F init(rd:ResDef, anchor, props:Hash) {
+		super(rd, anchor, props)
+		rd.anchor is Anchor returns
+		if rd.anchor is Hash {
+			rd.anchor = Anchor(tags=rd.anchor)
+		}
+	}
+
 	F run(rd:ResDef, log_pfx:Str, cmd:Command) {
 		if rd.dry_run {
 			rd.log("run/$log_pfx", "would run: ${cmd.argv.join(' ')}")
@@ -116,29 +125,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 	}
 
-	F find(rd:ResDef) {
-		# XXX: invalid code because misses straightening
-		cmd = _get_find_command(rd)
-		c = cmd.cmd
-		filters = if cmd.supports_filters {
-			['--filters', *(rd.anchor / "Name=tag-key,Values=$X,Name=tag-value,Values=$Y")]
-		} else {
-			[]
-		}
-		debug("Filters: $filters")
-		resources = ``$*c $*filters``
-
-		# echo("resources $resources")
-		if not(cmd.supports_filters) {
-			throw NotImplemented("ResFindCommand with supports_filters=false is not implemented yet")
-		}
-		rd.log('find', "found ${resources.len()} ${rd.typeof().name} resources")
-
-		t = rd._get_res_type()
-		rd.resources = resources / t(rd, X)
-		rd
-	}
-
 	# --------------------------------------------------
 	# Vpc
 	# --------------------------------------------------
@@ -146,13 +132,15 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	type Vpc(ResDef)
 	type VpcRes(Res)
 
-	F _get_res_type(rd:Vpc) VpcRes
-
-	F _get_find_command(rd:Vpc) {
-		ResFindCommand(%[aws ec2 describe-vpcs], true)
-	}
-
 	F id(r:VpcRes) r.props.VpcId
+
+	F find(rd:Vpc) {
+		rd.log('find', 'VPC')
+		filters = rd.anchor.tags.cli_tags_filters()
+		filters .= map_true(['--filters'] + X)
+		rd.resources = ``aws ec2 describe-vpcs $*filters``.map(VpcRes(rd, X))
+		rd
+	}
 
 	F Str(r:Vpc) {
 		t = if r.resources is Null {
@@ -173,12 +161,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	F id(r:SecGroupRes) r.props.GroupId
 
 	F users_ids(r:SecGroup) r.resources / F(res) { {'GroupId': res.props.GroupId, 'UserId': res.props.OwnerId} }
-
-	F _get_res_type(rd:SecGroup) SecGroupRes
-
-	F _get_find_command(rd:SecGroup) {
-		ResFindCommand(%[aws ec2 describe-security-groups], true)
-	}
 
 	F validate(rd:SecGroup) {
 		(rd.anchor is not Arr) throws
@@ -289,10 +271,12 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	F id(r:SubnetRes) r.props.SubnetId
 
-	F _get_res_type(rd:Subnet) SubnetRes
-
-	F _get_find_command(rd:Subnet) {
-		ResFindCommand(%[aws ec2 describe-subnets], true)
+	F find(rd:Subnet) {
+		rd.log('find', 'Subnet')
+		filters = rd.anchor.tags.cli_tags_filters()
+		filters .= map_true(['--filters'] + X)
+		rd.resources = ``aws ec2 describe-subnets $*filters``.map(SubnetRes(rd, X))
+		rd
 	}
 
 	# --------------------------------------------------
@@ -317,7 +301,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 		try filters['root-device-type'] = rd.anchor.RootDeviceType
 		try filters['block-device-mapping.volume-type'] = rd.anchor.VolumeType
-		filters .= stdlib_aws_filters()
+		filters .= cli_filters()
+		filters .= map_true(['--filters'] + X)
 		resources = ``aws ec2 describe-images $*owners $*filters``
 		if 'Name' in rd.anchor {
 			resources .= filter({A.Name ~ rd.anchor.Name})
@@ -346,36 +331,21 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	type Instance(ResDef)
 	type InstanceRes(Res)
 
-	F stdlib_aws_instance_anchor(rd:Instance) {
-		anchor = econd {
-			rd.anchor is Anchor { rd.anchor }
-			rd.anchor is Hash     { Anchor(tags=rd.anchor) }
-		}
-		anchor
-	}
-
 	# TODO: setting rd.anchor is wrong, should be in some other place
 	F validate(rd:Instance) {
-		rd.anchor = rd.stdlib_aws_instance_anchor();
 		%[ImageId].each(F(prop_name) {
 			prop_name not in rd.anchor throws InvalidArgument("Anchor must contain $prop_name")
 		})
 	}
 
 	F find(rd:Instance) {
-		# XXX: invalid code because misses straightening
-		anchor = rd.stdlib_aws_instance_anchor()
-
 		filters = ['--filters', 'Name=instance-state-name,Values=running']
-
-		if anchor.tags {
-			filters += anchor.tags / "Name=tag-key,Values=$X,Name=tag-value,Values=$Y"
-		}
+		filters += rd.anchor.tags.cli_tags_filters()
 		debug("Filters: $filters")
 
 		regs = cond {
-			anchor.regions is Arr { anchor.regions }
-			anchor.regions == '*' { regions() }
+			rd.anchor.regions is Arr { rd.anchor.regions }
+			rd.anchor.regions == '*' { regions() }
 		}
 
 		resources = if regs {
@@ -699,7 +669,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	global AWS_AMI_OWNER_DEBIAN = AMI_OWNER_DEBIAN
 	global AWS_AMI_OWNER_AMAZON = AMI_OWNER_AMAZON
 	global stdlib_aws_tags = cli_tags
-	global stdlib_aws_filters = cli_filters
 	global aws_regions = regions
 	global AwsAnchor = Anchor
 	global AwsRes = Res, AwsResDef = ResDef

@@ -2378,7 +2378,12 @@ F debug(s:Str) {
 
 doc Write error message to standard error.
 F error(s:Str) {
-	echo(stdlib_error_fd, "[ERROR ] $s")
+	echo(stdlib_error_fd, "[ERROR] $s")
+}
+
+doc Write error message to standard error.
+F warn(s:Str) {
+	echo(stdlib_error_fd, "[WARNING] $s")
 }
 
 doc Send status to standard error. Later status output will be treated specially by the shell. It will have suitable representation in the UI. Use status() when it's semantically a status - a task that's being done.
@@ -3099,7 +3104,7 @@ doc %EX - test
 doc %EX - $(nofail ./NONE).exit_code.echo()  # Would cause exception without "nofail"
 F '$()'(c:Command) {
 	guard c.argv[0] == 'nofail'
-	error("Using deprecated 'nofail'")
+	warn("Using deprecated 'nofail'")
 	c.options.nofail = true
 	c.argv.shift()
 	$($c)

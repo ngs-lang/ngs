@@ -28,6 +28,7 @@
 	}
 
 	F init(rd:ResDef, anchor) init(rd, anchor, {})
+	F init(rd:ResDef) init(rd, {}, {})
 
 	F Str(rd:ResDef) {
 		props = rd.props.without('META')
