@@ -1,30 +1,19 @@
 {
 	type ResDef
 
-	type ResNotFound(Exception)
-
-	F init(rnf:ResNotFound, rd:ResDef) {
-		rnf.def = rd
-	}
-
 	F init(rd:ResDef, anchor, props:Hash) {
 		init(args())
 		rd.resources = null
-		META = rd.props.get('META', {})
-		rd.count = META.get('count', 1)
-		rd.dry_run = META.get('dry_run', false)
-		if 'DRY_RUN' in ENV {
-			rd.dry_run = true
-		}
-		uk = META.keys() - %[count dry_run]
-		assert(not(uk), "Unknown key(s) in META: ${uk.join(',')}")
+		META              = rd.props.get('META', {})
+		rd.count          = META.get('count', 1)
+		rd.dry_run        = META.get('dry_run', false) or 'DRY_RUN' in ENV
+		unknown_meta_keys = META.keys() - %[count dry_run]
+		unknown_meta_keys throws InvalidArgument("Unknown key(s) in META: ${unknown_meta_keys.join(', ')}")
 	}
 
-	F len(rd:ResDef) rd.resources.len()
-
 	F len(rd:ResDef) {
-		guard rd.resources is Null
-		throw Error("Programming error. find() was not run before len()")
+		rd.resources is Null throws Error("Programming error. find() was not run before len()")
+		rd.resources.len()
 	}
 
 	F init(rd:ResDef, anchor) init(rd, anchor, {})
@@ -78,6 +67,4 @@
 	}
 
 	F ids(r:ResDef) r.resources.map(id)
-
 }
-
