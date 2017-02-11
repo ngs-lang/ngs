@@ -4,7 +4,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# http://docs.aws.amazon.com/cli/latest/userguide/shorthand-syntax.html
 
 	# Methods with added implementations
-	global Str, init, find, latest, validate, create, update, users_ids, run, id, ids, (==)
+	global Str, init, find, latest, validate, create, update, delete, users_ids, run, id, ids, (==)
 
 	# --------------------------------------------------
 	# Constants
@@ -62,6 +62,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc Constructor for AWS resource anchor
 	F init(a:Anchor, **kw) a.super({'regions': null, 'tags': {}, **kw})
 
+	F _assert_anchor_has_only_known_keys(a:Anchor, *known_keys) {
+		a.without('regions', null).without('tags', {}).each(F(k, v) {
+			k not in known_keys throws InvalidArgument("Anchor contains unknown key '$k'. Known keys are: $known_keys")
+
+
+		})
+	}
+
 	# --------------------------------------------------
 	# ResFindCommand
 	# --------------------------------------------------
@@ -79,13 +87,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	F run(r:Res, log_pfx:Str, cmd:Command) r.def.run(log_pfx, cmd)
 
 	F update_tags(r:Res) {
-		# Tags
-		if 'Tags' not in r.def.props {
-			r.def.log('update_tags/skip', 'Not updating tags - no tags specified in properties')
-			return null
-		}
-		target_tags = r.def.anchor.tags + r.def.props.Tags
+		target_tags = r.def.anchor.tags + r.def.props.get('Tags', {})
 		current_tags = r.props.get('Tags', {})
+
+		if current_tags == target_tags {
+			r.def.log('update_tags/info', "Current tags: $current_tags are same as target flags, not updating")
+			return
+		}
+
 		r.def.log('update_tags/info', "Current tags: $current_tags. Target tags: $target_tags")
 		diff = cmp(current_tags, target_tags)
 
@@ -115,6 +124,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	F run(rd:ResDef, log_pfx:Str, cmd:Command) {
 		if rd.dry_run {
 			rd.log("run/$log_pfx", "would run: ${cmd.argv.join(' ')}")
+			null
 		} else {
 			rd.log("run/$log_pfx", "running: ${cmd.argv.join(' ')}")
 			``$cmd``
@@ -131,11 +141,38 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	F id(r:VpcRes) r.props.VpcId
 
 	F find(rd:Vpc) {
-		rd.log('find', 'VPC')
+		rd.log('Find', 'VPC')
+		_assert_anchor_has_only_known_keys(rd.anchor, 'tags', 'CidrBlock')
 		filters = rd.anchor.tags.cli_tags_filters()
+		if 'CidrBlock' in rd.anchor {
+			filters += cli_filters({'cidr': rd.anchor.CidrBlock})
+		}
 		filters .= map_true(['--filters'] + X)
 		rd.resources = ``aws ec2 describe-vpcs $*filters``.map(VpcRes(rd, X))
 		rd
+	}
+
+	F validate(rd:Vpc) {
+		not('CidrBlock' in rd.anchor or 'CidrBlock' in rd.props) throws InvalidArgument("CidrBlock must be present in either anchor or props of a VPC")
+	}
+
+	F create(rd:Vpc) {
+		cidr = rd.props.get('CidrBlock', rd.anchor.get('CidrBlock'))
+		assert(cidr)
+		result = rd.run('Create VPC', %(aws ec2 create-vpc --cidr-block $cidr))
+		rd.resources = rd.resources or []
+		if not(rd.dry_run) {
+			filters = cli_filters({'vpc-id': result.Vpc.VpcId})
+			rd.resources += ``aws ec2 describe-vpcs --filters $*filters``.map(VpcRes(rd, X))
+		}
+	}
+
+	F update(r:VpcRes) {
+		r.update_tags()
+	}
+
+	F delete(r:VpcRes) {
+		r.def.run('Delete VPC', %(aws ec2 delete-vpc --vpc-id ${r.props.VpcId}))
 	}
 
 	F Str(r:Vpc) {

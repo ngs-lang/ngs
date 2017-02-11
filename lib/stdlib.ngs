@@ -447,6 +447,8 @@ F '[]='(hl:HashLike, k, v)   hl.attrs().HashLike[k] = v
 
 F .(hl:HashLike, k)          hl.attrs().HashLike[k]
 F .=(hl:HashLike, k, v)      hl.attrs().HashLike[k] = v
+F get(hl:HashLike, k, dflt)  hl.attrs().HashLike.get(k, dflt)
+F get(hl:HashLike, k)        hl.get(k, null)
 
 F each(hl:HashLike, cb:Fun)  hl.attrs().HashLike.each(cb)
 F keys(hl:HashLike)          hl.attrs().HashLike.keys()
@@ -455,6 +457,12 @@ F Bool(hl:HashLike)          hl.attrs().HashLike.Bool()
 
 # TODO: mapk, mapv and friends
 # TOOD: Hash() - copy or hash attribute?
+
+F filter(hl:HashLike, cb:Fun) {
+	ret = HashLike()
+	ret.attrs().HashLike = hl.attrs().HashLike.filter(cb)
+	ret
+}
 
 F init(hl:HashLike, h:Hash=null) {
 	if hl.attrs() is not Hash {
@@ -1791,22 +1799,20 @@ TEST Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}], "Name",
 # --- Misc ---
 
 doc Filter out specific key
-doc h - Source hash
+doc e - Source
 doc without_k - The key to filter out
-doc %RET - Hash
 doc %EX - {'a': 1, 'b': 2, 'c': 3}.without('a')  # {'b': 2, 'c': 3}
-F without(h:Hash, without_k) h.filter(X != without_k)
+F without(e:Eachable2, without_k) e.filter(X != without_k)
 
 TEST {'a': 1, 'b': 2, 'c': 3}.without('a') == {'b': 2, 'c': 3}
 
 doc Filter out specific key-value pair
-doc h - Source hash
+doc e - Source
 doc without_k - The key to filter out
 doc without_v - The value to filter out
-doc %RET - Hash
 doc %EX - {'a': 1, 'b': 2, 'c': 3}.without('a', 1).without('b', 22)  # {'b': 2, 'c': 3}
-F without(h:Hash, without_k, without_v)
-	h.filter(F(k, v) not((k == without_k) and (v == without_v)))
+F without(e:Eachable2, without_k, without_v)
+	e.reject(F(k, v) (k == without_k) and (v == without_v))
 
 TEST {'a': 1, 'b': 2, 'c': 3}.without('a', 1).without('b', 22) == {'b': 2, 'c': 3}
 

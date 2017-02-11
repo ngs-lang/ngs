@@ -56,6 +56,7 @@
 		r.log('converge', "${r.resources.len()} of $n ${r.typeof().name} resources exist")
 		if n < r.resources.len() {
 			r.log('converge', 'deleting extra resource instances')
+			# TODO: make sure that oldest resources are deleted first
 			r.resources[n..null] % r.delete(X)
 			r.resources = r.resources[0..n]
 		}
@@ -64,6 +65,11 @@
 			create(r)
 		}
 		r.resources % update
+	}
+
+	F delete(r:ResDef) {
+		r.find()
+		r.resources.each(delete)
 	}
 
 	F ids(r:ResDef) r.resources.map(id)
