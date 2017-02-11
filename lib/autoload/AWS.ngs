@@ -84,11 +84,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			r.def.log('update_tags/skip', 'Not updating tags - no tags specified in properties')
 			return null
 		}
-		target_tags = r.def.props.Tags
-		if r.def.anchor is Anchor {
-			# Definition props tags override anchor tags
-			target_tags = r.def.anchor.tags + target_tags
-		}
+		target_tags = r.def.anchor.tags + r.def.props.Tags
 		current_tags = r.props.get('Tags', {})
 		r.def.log('update_tags/info', "Current tags: $current_tags. Target tags: $target_tags")
 		diff = cmp(current_tags, target_tags)
@@ -197,11 +193,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		# Can not use --group-names as it will assume default VPC / EC2 classic
 		resources = ``aws ec2 describe-security-groups $*{vpc_id_filter(rd)}``.filter(F(sg) sg.GroupName == rd.anchor[0])
 		assert(resources.len() <= 1, "Can only work with one security group at a time")
-		known_props = %[GroupName GroupId OwnerId Description IpPermissions IpPermissionsEgress Tags]
-		resources .= map(F(res) {
-			SecGroupRes(rd, res ? known_props.has(X))
-		})
-		rd.resources = resources
+		rd.resources = resources.map(SecGroupRes(rd, X))
 		rd
 	}
 
@@ -446,7 +438,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	type Elb(ResDef)
 	type ElbRes(Res)
 
-	F ids(rd:Elb) throw NotImplemented("ids() method for Elb is not implemented")
+	F id(rd:Elb) rd.resource.LoadBalancerName
 
 	F validate(rd:Elb) {
 		rd.anchor is not Str throws InvalidArgument("Elb is the ELB name and must be a string, not ${rd.anchor}")
@@ -459,15 +451,16 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	F find(rd:Elb) {
 		rd.log('find', "ELB")
-		resources = ``aws elb describe-load-balancers``.filter(F(desc) desc.LoadBalancerName == rd.anchor)
-		assert(resources.len() <= 1, "Can only work with one load balancer at a time")
-		known_props = %[LoadBalancerName AvailabilityZones SecurityGroups ListenerDescriptions Subnets Scheme HealthCheck Instances]
-		rd.resources = resources.map(F(props) {
-			ret = props ? known_props.has(X)
+		resources = ``aws elb describe-load-balancers``
+		if rd.anchor is Str {
+			resources .= filter(F(desc) desc.LoadBalancerName == rd.anchor)
+		}
+		# TODO: make tags fetching lazy
+		rd.resources = resources.pmap(F(props) {
+			ret = props
 			ret.Instances = props.Instances.InstanceId
-			# TODO: make it lazy
-			rd.log('find', "ELB tags")
-			ret.Tags = ``aws elb describe-tags --load-balancer-names ${rd.anchor}``[0].Tags
+			rd.log('find', "ELB tags for LB ${props.LoadBalancerName}")
+			ret.Tags = ``aws elb describe-tags --load-balancer-names ${props.LoadBalancerName}``[0].Tags
 			ElbRes(rd, ret)
 		})
 		rd

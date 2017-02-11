@@ -27,7 +27,7 @@
 	}
 
 	F log(rd:ResDef, method:Str, s:Str) {
-		log("[${rd.typeof().name} anchor=${rd.anchor}] [$method] $s")
+		log("[${rd.typeof().name} ${rd.anchor}] [$method] $s")
 	}
 
 	F expect(rd:ResDef, e:Int) {
