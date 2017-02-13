@@ -37,12 +37,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	_aws_cached_regions = null
 
-	F regions() _aws_cached_regions = ``aws ec2 describe-regions``.RegionName.sort()
-
-	F regions() {
-		guard _aws_cached_regions
-		_aws_cached_regions
-	}
+	# --- regions ---
+	_regions = cached({ ``aws ec2 describe-regions``.RegionName.sort() })
+	F regions() _regions()
 
 	F regions(cb:Fun) {
 		regs = regions()
@@ -53,6 +50,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}).flatten()
 	}
 
+	# --- zones ---
+	# TODO: support regions
+	_zones = cached({ ``aws ec2 describe-availability-zones``.ZoneName.sort() })
+	F zones() _zones()
+
 	# --------------------------------------------------
 	# Anchor
 	# --------------------------------------------------
@@ -61,14 +63,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	doc Constructor for AWS resource anchor
 	F init(a:Anchor, **kw) a.super({'regions': null, 'tags': {}, **kw})
-
-	F _assert_anchor_has_only_known_keys(a:Anchor, *known_keys) {
-		a.without('regions', null).without('tags', {}).each(F(k, v) {
-			k not in known_keys throws InvalidArgument("Anchor contains unknown key '$k'. Known keys are: $known_keys")
-
-
-		})
-	}
 
 	# --------------------------------------------------
 	# ResFindCommand
@@ -98,12 +92,18 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		r.def.log('update_tags/info', "Current tags: $current_tags. Target tags: $target_tags")
 		diff = cmp(current_tags, target_tags)
 
+		# Tags might be only in Anchor
+		# so we should create them during first update
 		if (tags = cli_tags(diff.add + diff.change)) {
 			r.run('update_tags/add', %(aws ec2 create-tags --resources ${r.id()} --tags $*tags))
 		}
 
-		if (tags = diff.remove / "Key=$X") {
-			r.run('update_tags/remove', %(aws ec2 delete-tags --resources ${r.id()} --tags $*tags))
+		# Tags might be only in Anchor
+		# so we should not delete other tags
+		if 'Tags' in r.def.props {
+			if (tags = diff.remove / "Key=$X") {
+				r.run('update_tags/remove', %(aws ec2 delete-tags --resources ${r.id()} --tags $*tags))
+			}
 		}
 	}
 
@@ -134,6 +134,12 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 	}
 
+	F _assert_anchor_has_only_known_keys(rd:ResDef, *known_keys) {
+		rd.anchor.without('regions', null).without('tags', {}).each(F(k, v) {
+			k not in known_keys throws InvalidArgument("Anchor contains unknown key '$k'. Known keys are: $known_keys")
+		})
+	}
+
 	# --------------------------------------------------
 	# Vpc
 	# --------------------------------------------------
@@ -145,7 +151,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F find(rd:Vpc) {
 		rd.log('Find', 'VPC')
-		_assert_anchor_has_only_known_keys(rd.anchor, 'tags', 'CidrBlock')
+		rd._assert_anchor_has_only_known_keys('tags', 'CidrBlock')
 		filters = rd.anchor.tags.cli_tags_filters()
 		if 'CidrBlock' in rd.anchor {
 			filters += cli_filters({'cidr': rd.anchor.CidrBlock})
@@ -155,13 +161,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd
 	}
 
-	F validate(rd:Vpc) {
-	}
-
 	F create(rd:Vpc) {
-		cidr = rd.props.get('CidrBlock', rd.anchor.get('CidrBlock'))
-		not(cidr) throws InvalidArgument("CidrBlock must be present in either anchor or props of a VPC")
-		assert(cidr)
+		cidr = rd.req_prop('CidrBlock')
 		result = rd.run('Create VPC', %(aws ec2 create-vpc --cidr-block $cidr))
 		rd.resources = rd.resources or []
 		if not(rd.dry_run) {
@@ -195,19 +196,15 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	type SecGroupRes(Res)
 
 	F init(rd:SecGroup, anchor, props:Hash) {
-		anchor is not Arr throws InvalidArgument("SecGroup's anchor must be an array")
-		super(rd, anchor, props)
-		if rd.anchor is not Anchor {
-			rd.anchor = Anchor(name=anchor[0], vpc_id=anchor[1])
+		if anchor is Arr {
+			anchor = Anchor(name=anchor[0], vpc_id=anchor[1])
 		}
+		super(rd, anchor, props)
 	}
 
 	F id(r:SecGroupRes) r.props.GroupId
 
 	F users_ids(r:SecGroup) r.resources / F(res) { {'GroupId': res.props.GroupId, 'UserId': res.props.OwnerId} }
-
-	F validate(rd:SecGroup) {
-	}
 
 	F vpc_id(rd:SecGroup) rd.anchor.vpc_id
 
@@ -235,7 +232,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		# XXX: check with default VPC / EC2 classic
 		# Can not use --group-names as it will assume default VPC / EC2 classic
 		resources = ``aws ec2 describe-security-groups $*{vpc_id_filter(rd)}``.filter(F(sg) sg.GroupName == rd.anchor.name)
-		assert(resources.len() <= 1, "Can only work with one security group at a time")
 		rd.resources = resources.map(SecGroupRes(rd, X))
 		rd
 	}
@@ -270,10 +266,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F create(rd:SecGroup) {
-		('Description' not in rd.props) throws
-			InvalidArgument("SecGroup must have the 'description' property")
-		rd.log('create', 'SG')
-		rd.run('create SG', %(aws ec2 create-security-group --group-name ${rd.anchor.name} --description ${rd.props.Description} $*{vpc_id_args(rd)}))
+		rd.log('Create', 'SG')
+		rd.run('Create SG', %(aws ec2 create-security-group --group-name ${rd.anchor.name} --description ${rd.req_prop('Description')} $*{vpc_id_args(rd)}))
 		if not(rd.dry_run) {
 			rd.find()
 		}
@@ -308,12 +302,49 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F id(r:SubnetRes) r.props.SubnetId
 
+	F _vpcid(rd:Subnet) {
+		# VpcId property of either rd.props or rd.anchor, in this preference order.
+		vpcid = rd.req_prop('VpcId')
+		if vpcid is Vpc {
+			vpcid = ids(vpcid).the_one()
+		}
+		vpcid
+	}
+
 	F find(rd:Subnet) {
 		rd.log('find', 'Subnet')
+		rd._assert_anchor_has_only_known_keys('tags', 'VpcId', 'CidrBlock')
 		filters = rd.anchor.tags.cli_tags_filters()
+		if 'VpcId' in rd.anchor {
+			filters += cli_filters({'vpc-id': _vpcid(rd)})
+		}
+		if 'CidrBlock' in rd.anchor {
+			filters += cli_filters({'cidr': rd.anchor.CidrBlock})
+		}
 		filters .= map_true(['--filters'] + X)
 		rd.resources = ``aws ec2 describe-subnets $*filters``.map(SubnetRes(rd, X))
 		rd
+	}
+
+	F create(rd:Subnet) {
+		vpcid = _vpcid(rd)
+		cidr = rd.req_prop('CidrBlock')
+		result = rd.run('Create Subnet', %(aws ec2 create-subnet --vpc-id $vpcid --cidr-block $cidr))
+		rd.resources = rd.resources or []
+		if not(rd.dry_run) {
+			filters = cli_filters({'subnet-id': result.Subnet.SubnetId})
+			rd.resources += ``aws ec2 describe-subnets --filters $*filters``.map(SubnetRes(rd, X))
+		}
+		echo("R ${rd.resources}")
+	}
+
+	F update(r:SubnetRes) {
+		r.def.log('update', 'Subnet')
+		r.update_tags()
+	}
+
+	F delete(r:SubnetRes) {
+		r.def.run('Delete Subnet', %(aws ec2 delete-subnet --subnet-id ${r.props.SubnetId}))
 	}
 
 	# --------------------------------------------------
@@ -349,6 +380,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd
 	}
 
+	# TODO: convert it to something more uniform,
+	#       a property in Anchor for example, so one
+	#       could just select the latest image with Anchor
 	F latest(rd:Image) {
 		if rd.resources is Null {
 			rd.find()
@@ -412,13 +446,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F create(rd:Instance) {
 		rd.log('create', 'Instance')
 		assert(rd.resources is not Null, "Creating an instance assumes find() already run")
+
 		args = []
 		args += ['--key-name', rd.props.KeyName] tor []
 
-		sgs = _sgs(rd)
-		if sgs {
-			args += ['--security-group-ids', *sgs]
-		}
+		sgs = _sgs(rd).map_true(['--security-group-ids'] + X)
 
 		# TODO: Support Res SubnetId?
 		args += ['--subnet-id', rd.props.SubnetId] tor []
@@ -428,7 +460,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 
 
-		result = rd.run('create Instance', %(aws ec2 run-instances --image-id ${rd._image_id()} $*args))
+		result = rd.run('Create Instance', %(aws ec2 run-instances --image-id ${rd._image_id()} $*args))
 		if not(rd.dry_run) {
 			rd.resources += result.Instances / InstanceRes(rd, X)
 		}
@@ -510,20 +542,22 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F create(rd:Elb) {
 		rd.log('create', "creating an ELB")
-		rd.anchor.get('name') is not Str throws InvalidArgument("Elb is the ELB name and must be a string, not ${rd.anchor.get('name')}")
-		rd.count > 1 throws InvalidArgument("Elb can only handle one instance at a time while desired count is ${rd.count}")
+		rd.anchor.get('name') is not Str throws InvalidArgument("ELB name and must be a string, not ${rd.anchor.get('name')}")
 		'ListenerDescriptions' not in rd.props throws InvalidArgument("Elb must have 'listeners' property")
 
 		('AvailabilityZones' not in rd.props) and ('Subnets' not in rd.props) throws InvalidArgument("Either 'AvailabilityZones' or 'Subnets' must be in Elb properties")
 		'AvailabilityZones' in rd.props throws NotImplemented("'AvailabilityZones' Elb property")
 		subnets = try rd.props.Subnets
+		# TODO: subnets .= only(ResDef, ids)
 		if subnets is ResDef {
 			subnets .= ids()
 		}
+		# TODO: map_true()
 		if subnets {
 			subnets = ['--subnets', *subnets]
 		}
 		rd.run('create ELB', %(aws elb create-load-balancer --load-balancer-name ${rd.anchor.name} --listeners ${rd.props.ListenerDescriptions.encode_json()} $*subnets))
+		# TODO: Use specific find, with the name
 		if not(rd.dry_run) {
 			rd.find()
 		}
@@ -532,7 +566,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F update(elb:ElbRes) {
 		elb.def.log('update', 'ELB')
 		elb.def.anchor.get('name') is not Str throws InvalidArgument("Elb is the ELB name and must be a string, not ${elb.def.anchor.get('name')}")
-		elb.def.count > 1 throws InvalidArgument("Elb can only handle one instance at a time while desired count is ${elb.def.count}")
 
 		# Tags
 		diff = cmp(elb.props.get('Tags', {}), elb.def.props.get('Tags', {}))
@@ -554,7 +587,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 				t = elb.props['HealthCheck'] + diff.change
 				elb.run(
 					'update ELB health check',
-					%(aws elb configure-health-check --load-balancer-name ${elb.def.anchor} --health-check ${t.encode_json()})
+					%(aws elb configure-health-check --load-balancer-name ${elb.def.anchor.name} --health-check ${t.encode_json()})
 				)
 			}
 		}
@@ -569,13 +602,13 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			if diff.add {
 				elb.run(
 					'register instances with ELB',
-					%(aws elb register-instances-with-load-balancer --load-balancer-name ${elb.def.anchor} --instances $*{diff.add})
+					%(aws elb register-instances-with-load-balancer --load-balancer-name ${elb.def.anchor.name} --instances $*{diff.add})
 				)
 			}
 			if diff.remove {
 				elb.run(
 					'deregister instances from ELB',
-					%(aws elb deregister-instances-from-load-balancer --load-balancer-name ${elb.def.anchor} --instances $*{diff.remove})
+					%(aws elb deregister-instances-from-load-balancer --load-balancer-name ${elb.def.anchor.name} --instances $*{diff.remove})
 				)
 			}
 		}
@@ -590,7 +623,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			if diff.add or diff.remove {
 				elb.run(
 					'update ELB SGs',
-					%(aws elb apply-security-groups-to-load-balancer --load-balancer-name ${elb.def.anchor} --security-groups $*{sgs})
+					%(aws elb apply-security-groups-to-load-balancer --load-balancer-name ${elb.def.anchor.name} --security-groups $*{sgs})
 				)
 			}
 		}
@@ -601,7 +634,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F delete(elb:Elb) {
-		elb.run('delete ELB', %(aws elb delete-load-balancer --load-balancer-name ${elb.anchor}))
+		elb.run('delete ELB', %(aws elb delete-load-balancer --load-balancer-name ${elb.anchor.name}))
 	}
 
 	# --------------------------------------------------
@@ -699,17 +732,48 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F test() {
 		# TODO: test for all resources and all operations
-		global_test("Create VPC with Name tag 'ngs-test' and CIDR 192.168.11.0/24") with {
-			Vpc(Anchor(tags={"Name": "ngs-test"}, CidrBlock="192.168.11.0/24")).converge()
+		# TODO: test tags with spaces
+
+		# --- settings ---
+		cidr = ENV.get('NGS_AWS_TEST_CIDR', "192.168.11.0/24")
+		subnet_cidrs = [
+			ENV.get('NGS_AWS_TEST_CIDR1', "192.168.11.0/25")
+			ENV.get('NGS_AWS_TEST_CIDR2', "192.168.11.128/25")
+		]
+		name_tag = {"Name": "ngs-test"}
+
+		# --- vpc ---
+		global_test("Create VPC with Name tag 'ngs-test' and CIDR $cidr") with {
+			Vpc(name_tag, {"CidrBlock": cidr}).converge()
 		}
 		global_test("Update tags on VPCs with Name tag 'ngs-test'") with {
-			Vpc(Anchor(tags={"Name": "ngs-test"}), {'Tags': {'k1': 'v1'}}).converge()
+			Vpc(name_tag, {'Tags': {'k1': 'v1'}}).converge()
 		}
 		global_test("Find exactly one VPC with 'Name' tag 'ngs-test' and 'k1' tag 'v1'") with {
-			Vpc(Anchor(tags={"Name": "ngs-test", 'k1': 'v1'})).expect(1)
+			Vpc({"Name": "ngs-test", "k1": "v1"}).expect(1)
 		}
-		global_test("Delete all VPCs with Name tag 'ngs-test'") with {
-			Vpc({"Name": "ngs-test"}).delete()
+		global_test("Find exactly one VPC with CIDR $cidr") with {
+			Vpc(Anchor(CidrBlock=cidr)).expect(1)
+		}
+		# --- subnets ---
+		for(i;subnet_cidrs.len()) {
+			global_test("Create Subnet ${i+1}") with {
+				vpc = Vpc(Anchor(CidrBlock=cidr)).expect(1)
+				Subnet(Anchor(VpcId=vpc, CidrBlock=subnet_cidrs[i])).converge(AvailabilityZone=zones()[i])
+			}
+		}
+		global_test("Add Name tag to Subnets") with {
+			vpc = Vpc({"Name": "ngs-test"}).expect(1)
+			Subnet(Anchor(VpcId=vpc)).converge(Tags={'Name': 'ngs-test'})
+		}
+		# --- cleanup ---
+		if not(ENV.get('NGS_AWS_TEST_SKIP_DESTROY', false)) {
+			global_test("Delete all subnets with Name tag 'ngs-test'") with {
+				Subnet(name_tag).delete()
+			}
+			global_test("Delete all VPCs with Name tag 'ngs-test'") with {
+				Vpc(name_tag).delete()
+			}
 		}
 
 		echo("All tests passed.")

@@ -1181,7 +1181,8 @@ F uniq(arr:Arr) arr.Hash({true}).keys()
 
 TEST [1,2,2,3,4,4].uniq() == [1,2,3,4]
 
-doc DEPRECATED. Find first true value
+doc Find first true value
+doc %EX - [null, false, 10, 20].first()  # 10
 F first(arr:Arr) first(arr, identity)
 
 TEST [null, false, 10, 20].first() == 10
@@ -1999,13 +2000,21 @@ F Box(a:Arr) {
 	}
 }
 
-doc Convert container value indexed by the given key to a Box
-doc k - key to look in container
-doc %RET - Box. FullBox if the container has the element referenced by k, EmptyBox otherwise.
-F Box(container, k) {
-	guard container is Hash or container is Arr
-	k not in container returns EmptyBox()
-	FullBox(container[k])
+doc Convert array value indexed by the given index
+doc idx - key to look in hash
+doc %RET - Box. FullBox if the array has the element indexed by idx, EmptyBox otherwise.
+F Box(a:Arr, idx) {
+	l = a.len()
+	l <= idx returns EmptyBox()
+	Box(a[idx])
+}
+
+doc Convert hash value indexed by the given key to a Box
+doc k - key to look in hash
+doc %RET - Box. FullBox if the hash has the element referenced by k, EmptyBox otherwise.
+F Box(h:Hash, k) {
+	k not in h returns EmptyBox()
+	FullBox(h[k])
 }
 
 doc Do nothing
@@ -3995,6 +4004,19 @@ F store(s:Str, fname:Str) {
 ### 	guard s ~ /^http[s]?:\/\//i
 ### 	guard "curl" found
 ### }
+
+# === Caching ====================================
+
+# TODO: *args and per-args combination wrapping
+F cached(cb:Fun) {
+	result = EmptyBox()
+	F cached_function_wrapper() {
+		if not(result) {
+			result = FullBox(cb())
+		}
+		result.get()
+	}
+}
 
 # === Misc tests =================================
 

@@ -5,7 +5,7 @@
 		init(args())
 		rd.resources = null
 		META              = rd.props.get('META', {})
-		rd.count          = META.get('count', 1)
+		rd.count          = META.get('count')
 		rd.dry_run        = META.get('dry_run', false) or 'DRY_RUN' in ENV
 		unknown_meta_keys = META.keys() - %[count dry_run]
 		unknown_meta_keys throws InvalidArgument("Unknown key(s) in META: ${unknown_meta_keys.join(', ')}")
@@ -21,7 +21,7 @@
 
 	F Str(rd:ResDef) {
 		props = rd.props.without('META')
-		multi = if rd.count != 1 then " x${rd.count}" else ""
+		multi = if rd.count is not Null then " x${rd.count}" else ""
 		dry_run = if rd.dry_run " (dry run)" else ""
 		"<${rd.typeof().name} anchor=${rd.anchor} props=$props$multi$dry_run resources:${rd.resources.len()}>"
 	}
@@ -49,28 +49,59 @@
 
 	F Str(r:Res) "<${r.typeof().name} props=${r.props}>"
 
-	F converge(r:ResDef) {
-		r.validate()
-		r.find()
-		n = r.count
-		r.log('converge', "${r.resources.len()} of $n ${r.typeof().name} resources exist")
-		if n < r.resources.len() {
-			r.log('converge', 'deleting extra resource instances')
-			# TODO: make sure that oldest resources are deleted first
-			r.resources[n..null] % r.delete(X)
-			r.resources = r.resources[0..n]
+	F converge(rd:ResDef, **props) {
+		if props {
+			rd.props = props
 		}
-		for(i=r.resources.len(); i<n; i+=1) {
-			r.log('converge', "creating ${r.typeof().name} ${i+1} of $n")
-			create(r)
+		rd.find()
+		n = rd.count
+		if n is Null and rd.resources.len() == 0 {
+			rd.log('converge', "Count unspecified but there are no resources, assuming count to be 1")
+			n = 1
 		}
-		r.resources % update
+
+		if n is Null {
+			rd.log('converge', "Count unspecified, not creating or deleting resources")
+		} else {
+			rd.log('converge', "${rd.resources.len()} of $n ${rd.typeof().name} resources exist")
+			if n < rd.resources.len() {
+				rd.log('converge', 'deleting extra resource instances')
+				# TODO: make sure that oldest resources are deleted first
+				rd.resources[n..null].each(delete)
+				rd.resources = rd.resources[0..n]
+			}
+			if n > rd.resources.len() {
+				rd.create(n - rd.resources.len())
+			}
+		}
+		# TODO: pass props to update(), do not assign props to rd.props
+		rd.resources % update
 	}
 
-	F delete(r:ResDef) {
-		r.find()
-		r.resources.each(delete)
+	# TODO: pass props to create(), do not assign props to rd.props
+	# Methods that support bulk creating should implement this
+	F create(rd:ResDef, n:Int) {
+		for(i;n) {
+			rd.log('converge', "Creating ${rd.typeof().name} ${i+1} of $n")
+			create(rd)
+		}
 	}
 
-	F ids(r:ResDef) r.resources.map(id)
+	F delete(rd:ResDef) {
+		rd.find()
+		rd.resources.each(delete)
+	}
+
+	F ids(rd:ResDef) rd.resources.map(id)
+
+	doc %RET - Box
+	F opt_prop(rd:ResDef, name:Str) {
+		ret = [rd.props, rd.anchor].get(name).Box(0)
+	}
+
+	F req_prop(rd:ResDef, name:Str) {
+		ret = [rd.props, rd.anchor].get(name)
+		not(ret) throws InvalidArgument("$name must be present in either anchor or props of a ${rd.typeof().name}")
+		ret[0]
+	}
 }
