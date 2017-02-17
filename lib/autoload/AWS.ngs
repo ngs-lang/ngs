@@ -6,7 +6,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# TODO: log describe AWS CLI commands too
 
 	# Methods with added implementations
-	global Str, init, find, latest, validate, create, update, delete, users_ids, run, id, ids, (==), subset
+	global Str, init, find, latest, create, update, delete, users_ids, run, id, ids, (==), subset
 
 	# --------------------------------------------------
 	# Constants
@@ -15,10 +15,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# From https://wiki.debian.org/Cloud/AmazonEC2Image/Jessie
 	AMI_OWNER_DEBIAN = '379101102735'
 	AMI_OWNER_AMAZON = '801119661308'
-
-	# TODO: separate validation just on anchor so it could be used for find()
-	#       currently validate() can only be used for converge() because it
-	#       check properties.
 
 	# --------------------------------------------------
 	# Misc utilities
@@ -64,15 +60,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	type Anchor(HashLike)
 
 	doc Constructor for AWS resource anchor
-	F init(a:Anchor, **kw) a.super({'regions': null, 'tags': {}, **kw})
-
-	# --------------------------------------------------
-	# ResFindCommand
-	# --------------------------------------------------
-
-	type ResFindCommand
-
-	F init(c:ResFindCommand, cmd:Arr, supports_filters:Bool) init(args())
+	F init(a:Anchor, **kw) a.super({'regions': null, 'Tags': {}, **kw})
 
 	# --------------------------------------------------
 	# Res
@@ -83,7 +71,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F run(r:Res, log_pfx:Str, cmd:Command) r.def.run(log_pfx, cmd)
 
 	F update_tags(r:Res) {
-		target_tags = r.def.anchor.tags + r.def.props.get('Tags', {})
+		target_tags = r.def.anchor.Tags + r.def.props.get('Tags', {})
 		current_tags = r.props.get('Tags', {})
 
 		if current_tags == target_tags {
@@ -119,7 +107,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		super(rd, anchor, props)
 		rd.anchor is Anchor returns
 		if rd.anchor is Hash {
-			rd.anchor = Anchor(tags=rd.anchor)
+			rd.anchor = Anchor(Tags=rd.anchor)
 		}
 		if rd.anchor is Str {
 			rd.anchor = Anchor(name=rd.anchor)
@@ -137,7 +125,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F _assert_anchor_has_only_known_keys(rd:ResDef, *known_keys) {
-		rd.anchor.without('regions', null).without('tags', {}).each(F(k, v) {
+		rd.anchor.without('regions', null).without('Tags', {}).each(F(k, v) {
 			k not in known_keys throws InvalidArgument("Anchor contains unknown key '$k'. Known keys are: $known_keys")
 		})
 	}
@@ -159,8 +147,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F find(rd:Vpc) {
 		rd.log('Find', 'VPC')
-		rd._assert_anchor_has_only_known_keys('tags', 'CidrBlock')
-		filters = rd.anchor.tags.cli_tags_filters()
+		rd._assert_anchor_has_only_known_keys('Tags', 'CidrBlock')
+		filters = rd.anchor.Tags.cli_tags_filters()
 		if 'CidrBlock' in rd.anchor {
 			filters += cli_filters({'cidr': rd.anchor.CidrBlock})
 		}
@@ -211,8 +199,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F find(rd:Igw) {
 		rd.log('Find', 'IGW')
-		rd._assert_anchor_has_only_known_keys('tags', 'Attachments')
-		filters = rd.anchor.tags.cli_tags_filters()
+		rd._assert_anchor_has_only_known_keys('Tags', 'Attachments')
+		filters = rd.anchor.Tags.cli_tags_filters()
 		rd.anchor.get('Attachments', []).map(F(att) {
 			filters += cli_filters({'attachment.vpc-id': _eval_vpc_id(att.VpcId)})
 		})
@@ -306,8 +294,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F find(rd:SecGroup) {
 		rd.log('find', 'SG')
-		rd._assert_anchor_has_only_known_keys('vpc_id', 'name', 'tags')
-		filters = rd.anchor.tags.cli_tags_filters()
+		rd._assert_anchor_has_only_known_keys('vpc_id', 'name', 'Tags')
+		filters = rd.anchor.Tags.cli_tags_filters()
 		filters .= map_true(['--filters'] + X)
 		# XXX: check with default VPC / EC2 classic
 		# Can not use --group-names as it will assume default VPC / EC2 classic
@@ -400,8 +388,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F find(rd:Subnet) {
 		rd.log('find', 'Subnet')
-		rd._assert_anchor_has_only_known_keys('tags', 'VpcId', 'CidrBlock')
-		filters = rd.anchor.tags.cli_tags_filters()
+		rd._assert_anchor_has_only_known_keys('Tags', 'VpcId', 'CidrBlock')
+		filters = rd.anchor.Tags.cli_tags_filters()
 		if 'VpcId' in rd.anchor {
 			filters += cli_filters({'vpc-id': _vpcid(rd)})
 		}
@@ -492,16 +480,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	type Instance(ResDef)
 	type InstanceRes(Res)
 
-	# TODO: setting rd.anchor is wrong, should be in some other place
-	F validate(rd:Instance) {
-		%[ImageId].each(F(prop_name) {
-			prop_name not in rd.anchor throws InvalidArgument("Anchor must contain $prop_name")
-		})
-	}
-
 	F find(rd:Instance) {
 		filters = ['--filters', 'Name=instance-state-name,Values=running']
-		filters += rd.anchor.tags.cli_tags_filters()
+		filters += rd.anchor.Tags.cli_tags_filters()
 		debug("Filters: $filters")
 
 		regs = cond {
@@ -536,6 +517,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F create(rd:Instance) {
 		rd.log('create', 'Instance')
 		assert(rd.resources is not Null, "Creating an instance assumes find() already run")
+		%[ImageId].each(F(prop_name) {
+			prop_name not in rd.anchor throws InvalidArgument("Anchor must contain $prop_name")
+		})
 
 		args = []
 		args += ['--key-name', rd.props.KeyName] tor []
@@ -607,9 +591,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F id(rd:Elb) rd.resource.LoadBalancerName
 
-	F validate(rd:Elb) {
-	}
-
 	F find(rd:Elb) {
 		rd.log('find', "ELB")
 		resources = ``aws elb describe-load-balancers``
@@ -625,7 +606,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			ElbRes(rd, ret)
 		})
 		rd.resources .= reject(F(r) {
-			not(rd.anchor.tags.subset(r.props.Tags))
+			not(rd.anchor.Tags.subset(r.props.Tags))
 		})
 		rd
 	}
