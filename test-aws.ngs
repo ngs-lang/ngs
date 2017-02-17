@@ -1,0 +1,121 @@
+#!/usr/bin/env ngs
+ns(Anchor=AWS::Anchor, Igw=AWS::Igw, SecGroup=AWS::SecGroup, Subnet=AWS::Subnet, Vpc=AWS::Vpc, zones=AWS::zones) {
+	# TODO: test for all resources and all operations
+	# TODO: test tags with spaces
+
+	# --- settings ---
+	cidr = ENV.get('NGS_AWS_TEST_CIDR', "192.168.11.0/24")
+	subnet_cidrs = [
+		ENV.get('NGS_AWS_TEST_CIDR1', "192.168.11.0/25")
+		ENV.get('NGS_AWS_TEST_CIDR2', "192.168.11.128/25")
+	]
+	name_tag = {"Name": "ngs-test"}
+
+	# --- vpc ---
+	test("Create VPC with Name tag 'ngs-test' and CIDR $cidr") with {
+		Vpc(name_tag, {"CidrBlock": cidr}).converge()
+	}
+	test("Update tags on VPCs with Name tag 'ngs-test'") with {
+		Vpc(name_tag, {'Tags': {'k1': 'v1'}}).converge()
+	}
+	test("Find exactly one VPC with 'Name' tag 'ngs-test' and 'k1' tag 'v1'") with {
+		Vpc({"Name": "ngs-test", "k1": "v1"}).expect(1)
+	}
+	test("Find exactly one VPC with CIDR $cidr") with {
+		Vpc(Anchor(CidrBlock=cidr)).expect(1)
+	}
+	# --- subnets ---
+	for(i;subnet_cidrs.len()) {
+		test("Create Subnet ${i+1}") with {
+			vpc = Vpc(Anchor(CidrBlock=cidr)).expect(1)
+			Subnet(Anchor(VpcId=vpc, CidrBlock=subnet_cidrs[i])).converge(AvailabilityZone=zones()[i])
+		}
+	}
+	test("Add Name tag to Subnets") with {
+		vpc = Vpc({"Name": "ngs-test"}).expect(1)
+		Subnet(Anchor(VpcId=vpc)).converge(Tags={'Name': 'ngs-test'})
+	}
+	# --- security groups ---
+	vpc = Vpc({"Name": "ngs-test"}).expect(1)
+
+	test("Create security group") with {
+		SecGroup(["ngs-test-elb", vpc]).converge(
+			Description="NGS test ELB",
+			IpPermissions= [
+				{
+					'IpProtocol': 'tcp'
+					'FromPort': 443
+					'ToPort': 443
+					'IpRanges': [
+						{
+							'CidrIp': '0.0.0.0/0'
+						}
+					]
+				}
+			]
+		)
+	}
+	test("Add Name tag to ELB SG") with {
+		SecGroup(["ngs-test-elb", vpc]).converge(Tags=name_tag)
+	}
+	# --- Internet Gateway ---
+	test("Add Internet Gateway") with {
+		# Not tagging it, it's uncommon practice
+		Igw(AWS::Anchor(Attachments=[{'VpcId': vpc}])).converge()
+	}
+	test("Add Name tag to Gateway, remove attachment") with {
+		Igw(AWS::Anchor(Attachments=[{'VpcId': vpc}])).converge(Tags=name_tag, Attachments=[])
+	}
+	test("Re-attach gateway") with {
+		Igw(name_tag).converge(Attachments=[{'VpcId': vpc}])
+	}
+	# --- ELB ---
+	test("Add ELB") with {
+		elb = AWS::Elb("ngs-test-elb").converge(
+				Tags = name_tag,
+				ListenerDescriptions = [
+					%{
+						Protocol TCP
+						LoadBalancerPort 443
+						InstanceProtocol TCP
+						InstancePort 443
+					}.n()
+				],
+				Subnets = AWS::Subnet(name_tag).expect(2),
+				SecurityGroups = SecGroup(["ngs-test-elb", vpc]),
+				HealthCheck = %{
+					UnhealthyThreshold 5
+					Timeout 5
+					HealthyThreshold 3
+					Interval 10
+					Target 'SSL:443'
+				}.n()
+		)
+	}
+	# 'Instances': AWS::Instance({'env': env, 'role': role}).expect()
+
+	# --- cleanup ---
+	if not(ENV.get('NGS_AWS_TEST_SKIP_DESTROY', false)) {
+		test("Delete ELB") with {
+			AWS::Elb("ngs-test-elb").delete()
+		}
+		test("Delete all security groups with tag $name_tag") with {
+			SecGroup(name_tag).delete()
+		}
+		test("Delete all subnets with tag $name_tag") with {
+			Subnet(name_tag).delete()
+		}
+		test("Detach from all VPCs all internet-gateways with tag $name_tag") with {
+			Igw(name_tag).converge(Attachments=[])
+		}
+		test("Delete all internet-gateways with tag $name_tag") with {
+			Igw(name_tag).delete()
+		}
+		test("Delete all VPCs with tag $name_tag") with {
+			Vpc(name_tag).delete()
+		}
+	}
+
+	echo("All tests passed.")
+}
+

@@ -1,15 +1,21 @@
 {
 	type TestFail(Error)
 	type TestMessage(FullBox)
-
-	F init(tf:TestFail, message:Str) init(args())
 }
+
+F init(tf:TestFail, message:Str) init(args())
 
 # TODO show standard error output on one changing line instead of occupying a lot of space
 
 F test(name:Str, f:Fun) {
 	echo("")
 	echo("==================== TEST: $name ====================")
+	if ENV.get('NGS_ONLY_TEST') {
+		if ENV.NGS_ONLY_TEST != name {
+			echo("+ Skipping test ${name} as NGS_ONLY_TEST is '${ENV.NGS_ONLY_TEST}'")
+			return
+		}
+	}
 	msg = f()
 	if msg is TestMessage {
 		echo("  OK: ${msg.val}")

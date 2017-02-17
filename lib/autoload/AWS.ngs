@@ -3,6 +3,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# TODO: Use JSON tags. Currently special symbols in tag name or value will cause problems.
 	# http://docs.aws.amazon.com/cli/latest/userguide/shorthand-syntax.html
 
+	# TODO: log describe AWS CLI commands too
+
 	# Methods with added implementations
 	global Str, init, find, latest, validate, create, update, delete, users_ids, run, id, ids, (==), subset
 
@@ -140,6 +142,12 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		})
 	}
 
+	F _assert_props_has_only_known_keys(rd:ResDef, *known_keys) {
+		rd.props.each(F(k, v) {
+			k not in known_keys throws InvalidArgument("Props contains unknown key '$k'. Known keys are: $known_keys")
+		})
+	}
+
 	# --------------------------------------------------
 	# Vpc
 	# --------------------------------------------------
@@ -188,6 +196,73 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		"<Aws::Vpc$t anchor=${r.anchor}>"
 	}
 
+	# --- Extract VPC ID ---
+	F _eval_vpc_id(x) x
+	F _eval_vpc_id(rd:Vpc) rd.ids().the_one()
+
+	# --------------------------------------------------
+	# Internet Gateway
+	# --------------------------------------------------
+
+	type Igw(ResDef)
+	type IgwRes(Res)
+
+	F id(r:IgwRes) r.props.InternetGatewayId
+
+	F find(rd:Igw) {
+		rd.log('Find', 'IGW')
+		rd._assert_anchor_has_only_known_keys('tags', 'Attachments')
+		filters = rd.anchor.tags.cli_tags_filters()
+		rd.anchor.get('Attachments', []).map(F(att) {
+			filters += cli_filters({'attachment.vpc-id': _eval_vpc_id(att.VpcId)})
+		})
+		filters .= map_true(['--filters'] + X)
+		rd.resources = ``aws ec2 describe-internet-gateways $*filters``.map(IgwRes(rd, X))
+		rd
+	}
+
+	F create(rd:Igw) {
+		result = rd.run('Create IGW', %(aws ec2 create-internet-gateway))
+		echo("CREATE RESULT $result")
+		rd.resources = rd.resources or []
+		if not(rd.dry_run) {
+			filters = cli_filters({'internet-gateway-id': result.InternetGateway.InternetGatewayId})
+			rd.resources += ``aws ec2 describe-internet-gateways --filters $*filters``.map(IgwRes(rd, X))
+		}
+	}
+
+	F update(r:IgwRes) {
+		r.update_tags()
+		r.def.log('Update', 'IGW')
+		r.def.opt_prop('Attachments').each(F(target_attachments) {
+			target_vpcs_ids = target_attachments.VpcId.map(_eval_vpc_id)
+			current_vpcs_ids = r.props.Attachments.VpcId
+			if current_vpcs_ids == target_vpcs_ids {
+				r.def.log('update_attachments/info', "Current attachments: $current_vpcs_ids are same as target attachments, not updating")
+				return
+			}
+			r.def.log('update_attachments/info', "Current attachments: $current_vpcs_ids. Target attachments: $target_vpcs_ids")
+			diff = cmp(current_vpcs_ids, target_vpcs_ids)
+
+			diff.add.each(F(vpc_id) {
+				r.run('update_attachments/add', %(aws ec2 attach-internet-gateway --internet-gateway-id ${r.id()} --vpc-id $vpc_id))
+			})
+
+			# Attachments might be only in Anchor
+			# so we should not delete other attachments
+			if 'Attachments' in r.def.props {
+				diff.remove.each(F(vpc_id) {
+					r.run('update_attachments/remove', %(aws ec2 detach-internet-gateway --internet-gateway-id ${r.id()} --vpc-id $vpc_id))
+				})
+			}
+		})
+
+	}
+
+	F delete(r:IgwRes) {
+		r.def.run('Delete IGW', %(aws ec2 delete-internet-gateway --internet-gateway-id ${r.id()}))
+	}
+
 	# --------------------------------------------------
 	# SecGroup
 	# --------------------------------------------------
@@ -206,10 +281,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F users_ids(r:SecGroup) r.resources / F(res) { {'GroupId': res.props.GroupId, 'UserId': res.props.OwnerId} }
 
-	F vpc_id(rd:SecGroup) rd.anchor.vpc_id
+	# TODO: refactor - start
+	F vpc_id(rd:SecGroup) rd.anchor.get('vpc_id')
 
 	F vpc_id(rd:SecGroup) {
-		guard rd.anchor.vpc_id is ResDef
+		guard rd.anchor.get('vpc_id') is ResDef
 		rd.anchor.vpc_id.ids().the_one()
 	}
 
@@ -226,12 +302,19 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		guard vpc_id(rd) is Null
 		[]
 	}
+	# TODO: refactor - end
 
 	F find(rd:SecGroup) {
 		rd.log('find', 'SG')
+		rd._assert_anchor_has_only_known_keys('vpc_id', 'name', 'tags')
+		filters = rd.anchor.tags.cli_tags_filters()
+		filters .= map_true(['--filters'] + X)
 		# XXX: check with default VPC / EC2 classic
 		# Can not use --group-names as it will assume default VPC / EC2 classic
-		resources = ``aws ec2 describe-security-groups $*{vpc_id_filter(rd)}``.filter(F(sg) sg.GroupName == rd.anchor.name)
+		resources = ``aws ec2 describe-security-groups $*{vpc_id_filter(rd)} $*filters``
+		if 'name' in rd.anchor {
+			resources .= filter(F(sg) sg.GroupName == rd.anchor.name)
+		}
 		rd.resources = resources.map(SecGroupRes(rd, X))
 		rd
 	}
@@ -293,6 +376,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		sg.update_tags()
 	}
 
+	F delete(r:SecGroupRes) {
+		r.def.run('Delete security group', %(aws ec2 delete-security-group --group-id ${r.props.GroupId}))
+	}
+
 	# --------------------------------------------------
 	# Subnet
 	# --------------------------------------------------
@@ -326,10 +413,13 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd
 	}
 
+	# TODO: Support multiple subnets so one could easily set up new VPC for RDS and ELB
 	F create(rd:Subnet) {
+		rd._assert_props_has_only_known_keys('VpcId', 'CidrBlock', 'AvailabilityZone')
 		vpcid = _vpcid(rd)
 		cidr = rd.req_prop('CidrBlock')
-		result = rd.run('Create Subnet', %(aws ec2 create-subnet --vpc-id $vpcid --cidr-block $cidr))
+		az = rd.opt_prop('AvailabilityZone').map({ ['--availability-zone', A] }).get([])
+		result = rd.run('Create Subnet', %(aws ec2 create-subnet --vpc-id $vpcid --cidr-block $cidr $*az))
 		rd.resources = rd.resources or []
 		if not(rd.dry_run) {
 			filters = cli_filters({'subnet-id': result.Subnet.SubnetId})
@@ -617,6 +707,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		if 'SecurityGroups' in elb.def.props {
 			sgs = elb.def.props.SecurityGroups
 			if sgs is ResDef {
+				if sgs.resources is Null {
+					sgs.find()
+				}
 				sgs .= ids()
 			}
 			diff = cmp(elb.props.SecurityGroups, sgs)
@@ -728,55 +821,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			}
 			rrset.run('update RecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${rrset.def.zone_id} --change-batch ${change_batch.encode_json()}))
 		}
-	}
-
-	F test() {
-		# TODO: test for all resources and all operations
-		# TODO: test tags with spaces
-
-		# --- settings ---
-		cidr = ENV.get('NGS_AWS_TEST_CIDR', "192.168.11.0/24")
-		subnet_cidrs = [
-			ENV.get('NGS_AWS_TEST_CIDR1', "192.168.11.0/25")
-			ENV.get('NGS_AWS_TEST_CIDR2', "192.168.11.128/25")
-		]
-		name_tag = {"Name": "ngs-test"}
-
-		# --- vpc ---
-		global_test("Create VPC with Name tag 'ngs-test' and CIDR $cidr") with {
-			Vpc(name_tag, {"CidrBlock": cidr}).converge()
-		}
-		global_test("Update tags on VPCs with Name tag 'ngs-test'") with {
-			Vpc(name_tag, {'Tags': {'k1': 'v1'}}).converge()
-		}
-		global_test("Find exactly one VPC with 'Name' tag 'ngs-test' and 'k1' tag 'v1'") with {
-			Vpc({"Name": "ngs-test", "k1": "v1"}).expect(1)
-		}
-		global_test("Find exactly one VPC with CIDR $cidr") with {
-			Vpc(Anchor(CidrBlock=cidr)).expect(1)
-		}
-		# --- subnets ---
-		for(i;subnet_cidrs.len()) {
-			global_test("Create Subnet ${i+1}") with {
-				vpc = Vpc(Anchor(CidrBlock=cidr)).expect(1)
-				Subnet(Anchor(VpcId=vpc, CidrBlock=subnet_cidrs[i])).converge(AvailabilityZone=zones()[i])
-			}
-		}
-		global_test("Add Name tag to Subnets") with {
-			vpc = Vpc({"Name": "ngs-test"}).expect(1)
-			Subnet(Anchor(VpcId=vpc)).converge(Tags={'Name': 'ngs-test'})
-		}
-		# --- cleanup ---
-		if not(ENV.get('NGS_AWS_TEST_SKIP_DESTROY', false)) {
-			global_test("Delete all subnets with Name tag 'ngs-test'") with {
-				Subnet(name_tag).delete()
-			}
-			global_test("Delete all VPCs with Name tag 'ngs-test'") with {
-				Vpc(name_tag).delete()
-			}
-		}
-
-		echo("All tests passed.")
 	}
 
 	# --------------------------------------------------

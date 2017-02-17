@@ -2006,7 +2006,7 @@ doc %RET - Box. FullBox if the array has the element indexed by idx, EmptyBox ot
 F Box(a:Arr, idx) {
 	l = a.len()
 	l <= idx returns EmptyBox()
-	Box(a[idx])
+	FullBox(a[idx])
 }
 
 doc Convert hash value indexed by the given key to a Box

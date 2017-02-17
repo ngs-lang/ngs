@@ -17,6 +17,11 @@ Note that this started as internal document so things here are unformed, not fin
 	* make ResDef ArrLike for the resources
 	* make Res HashLike ?
 	* AwsResDef - assert known keys in props, maybe message about properties that require instance re-creation
+	* Fix parser in
+		function_call(
+			with_comments,
+			# syntax
+			yes)
 
 [roadmap]
 
