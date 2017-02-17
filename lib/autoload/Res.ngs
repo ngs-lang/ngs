@@ -1,14 +1,15 @@
 {
 	type ResDef
 
-	F init(rd:ResDef, anchor, props:Hash) {
+	F init(rd:ResDef, anchor) {
 		init(args())
 		rd.resources = null
-		META              = rd.props.get('META', {})
-		rd.count          = META.get('count')
-		rd.dry_run        = META.get('dry_run', false) or 'DRY_RUN' in ENV
-		unknown_meta_keys = META.keys() - %[count dry_run]
-		unknown_meta_keys throws InvalidArgument("Unknown key(s) in META: ${unknown_meta_keys.join(', ')}")
+		### META              = rd.props.get('META', {})
+		### rd.count          = META.get('count')
+		### rd.dry_run        = META.get('dry_run', false) or 'DRY_RUN' in ENV
+		### unknown_meta_keys = META.keys() - %[count dry_run]
+		### unknown_meta_keys throws InvalidArgument("Unknown key(s) in META: ${unknown_meta_keys.join(', ')}")
+		rd.dry_run = ENV.get('DRY_RUN', false)
 	}
 
 	F len(rd:ResDef) {
@@ -16,8 +17,7 @@
 		rd.resources.len()
 	}
 
-	F init(rd:ResDef, anchor) init(rd, anchor, {})
-	F init(rd:ResDef) init(rd, {}, {})
+	F init(rd:ResDef) init(rd, {})
 
 	F Str(rd:ResDef) {
 		props = rd.props.without('META')
@@ -50,11 +50,8 @@
 	F Str(r:Res) "<${r.typeof().name} props=${r.props}>"
 
 	F converge(rd:ResDef, **props) {
-		if props {
-			rd.props = props
-		}
 		rd.find()
-		n = rd.count
+		n = props.get('META', {}).get('count')
 		if n is Null and rd.resources.len() == 0 {
 			rd.log('converge', "Count unspecified but there are no resources, assuming count to be 1")
 			n = 1
@@ -71,19 +68,19 @@
 				rd.resources = rd.resources[0..n]
 			}
 			if n > rd.resources.len() {
-				rd.create(n - rd.resources.len())
+				rd.create(n - rd.resources.len(), props)
 			}
 		}
 		# TODO: pass props to update(), do not assign props to rd.props
-		rd.resources % update
+		rd.resources % update(X, props)
 	}
 
 	# TODO: pass props to create(), do not assign props to rd.props
 	# Methods that support bulk creating should implement this
-	F create(rd:ResDef, n:Int) {
+	F create(rd:ResDef, n:Int, props:Hash) {
 		for(i;n) {
 			rd.log('converge', "Creating ${rd.typeof().name} ${i+1} of $n")
-			create(rd)
+			create(rd, props)
 		}
 	}
 
@@ -95,12 +92,12 @@
 	F ids(rd:ResDef) rd.resources.map(id)
 
 	doc %RET - Box
-	F opt_prop(rd:ResDef, name:Str) {
-		ret = [rd.props, rd.anchor].get(name).Box(0)
+	F opt_prop(rd:ResDef, name:Str, props:Hash) {
+		ret = [props, rd.anchor].get(name).Box(0)
 	}
 
-	F req_prop(rd:ResDef, name:Str) {
-		ret = [rd.props, rd.anchor].get(name)
+	F req_prop(rd:ResDef, name:Str, props:Hash) {
+		ret = [props, rd.anchor].get(name)
 		not(ret) throws InvalidArgument("$name must be present in either anchor or props of a ${rd.typeof().name}")
 		ret[0]
 	}

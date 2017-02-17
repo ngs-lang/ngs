@@ -13,10 +13,10 @@ ns(Anchor=AWS::Anchor, Igw=AWS::Igw, SecGroup=AWS::SecGroup, Subnet=AWS::Subnet,
 
 	# --- vpc ---
 	test("Create VPC with Name tag 'ngs-test' and CIDR $cidr") with {
-		Vpc(name_tag, {"CidrBlock": cidr}).converge()
+		Vpc(name_tag).converge(CidrBlock=cidr)
 	}
 	test("Update tags on VPCs with Name tag 'ngs-test'") with {
-		Vpc(name_tag, {'Tags': {'k1': 'v1'}}).converge()
+		Vpc(name_tag).converge(Tags={'k1': 'v1'})
 	}
 	test("Find exactly one VPC with 'Name' tag 'ngs-test' and 'k1' tag 'v1'") with {
 		Vpc({"Name": "ngs-test", "k1": "v1"}).expect(1)

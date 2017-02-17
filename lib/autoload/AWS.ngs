@@ -70,8 +70,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F run(r:Res, log_pfx:Str, cmd:Command) r.def.run(log_pfx, cmd)
 
-	F update_tags(r:Res) {
-		target_tags = r.def.anchor.Tags + r.def.props.get('Tags', {})
+	F update_tags(r:Res, props:Hash) {
+		target_tags = r.def.anchor.Tags + props.get('Tags', {})
 		current_tags = r.props.get('Tags', {})
 
 		if current_tags == target_tags {
@@ -90,7 +90,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 		# Tags might be only in Anchor
 		# so we should not delete other tags
-		if 'Tags' in r.def.props {
+		if 'Tags' in props {
 			if (tags = diff.remove / "Key=$X") {
 				r.run('update_tags/remove', %(aws ec2 delete-tags --resources ${r.id()} --tags $*tags))
 			}
@@ -103,8 +103,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	type ResDef(GlobalResDef)
 
-	F init(rd:ResDef, anchor, props:Hash) {
-		super(rd, anchor, props)
+	F init(rd:ResDef, anchor) {
+		super(rd, anchor)
 		rd.anchor is Anchor returns
 		if rd.anchor is Hash {
 			rd.anchor = Anchor(Tags=rd.anchor)
@@ -130,8 +130,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		})
 	}
 
-	F _assert_props_has_only_known_keys(rd:ResDef, *known_keys) {
-		rd.props.each(F(k, v) {
+	F _assert_props_has_only_known_keys(rd:ResDef, props:Hash, *known_keys) {
+		props.without('META').each(F(k, v) {
 			k not in known_keys throws InvalidArgument("Props contains unknown key '$k'. Known keys are: $known_keys")
 		})
 	}
@@ -157,8 +157,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd
 	}
 
-	F create(rd:Vpc) {
-		cidr = rd.req_prop('CidrBlock')
+	F create(rd:Vpc, props:Hash) {
+		cidr = rd.req_prop('CidrBlock', props)
 		result = rd.run('Create VPC', %(aws ec2 create-vpc --cidr-block $cidr))
 		rd.resources = rd.resources or []
 		if not(rd.dry_run) {
@@ -167,8 +167,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 	}
 
-	F update(r:VpcRes) {
-		r.update_tags()
+	F update(r:VpcRes, props:Hash) {
+		r.update_tags(props)
 	}
 
 	F delete(r:VpcRes) {
@@ -209,7 +209,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd
 	}
 
-	F create(rd:Igw) {
+	F create(rd:Igw, props:Hash) {
 		result = rd.run('Create IGW', %(aws ec2 create-internet-gateway))
 		echo("CREATE RESULT $result")
 		rd.resources = rd.resources or []
@@ -219,10 +219,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 	}
 
-	F update(r:IgwRes) {
-		r.update_tags()
+	F update(r:IgwRes, props:Hash) {
+		r.update_tags(props)
 		r.def.log('Update', 'IGW')
-		r.def.opt_prop('Attachments').each(F(target_attachments) {
+		r.def.opt_prop('Attachments', props).each(F(target_attachments) {
 			target_vpcs_ids = target_attachments.VpcId.map(_eval_vpc_id)
 			current_vpcs_ids = r.props.Attachments.VpcId
 			if current_vpcs_ids == target_vpcs_ids {
@@ -238,7 +238,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 			# Attachments might be only in Anchor
 			# so we should not delete other attachments
-			if 'Attachments' in r.def.props {
+			if 'Attachments' in props {
 				diff.remove.each(F(vpc_id) {
 					r.run('update_attachments/remove', %(aws ec2 detach-internet-gateway --internet-gateway-id ${r.id()} --vpc-id $vpc_id))
 				})
@@ -258,11 +258,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	type SecGroup(ResDef)
 	type SecGroupRes(Res)
 
-	F init(rd:SecGroup, anchor, props:Hash) {
+	F init(rd:SecGroup, anchor) {
 		if anchor is Arr {
 			anchor = Anchor(name=anchor[0], vpc_id=anchor[1])
 		}
-		super(rd, anchor, props)
+		super(rd, anchor)
 	}
 
 	F id(r:SecGroupRes) r.props.GroupId
@@ -336,23 +336,23 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	}
 
-	F create(rd:SecGroup) {
+	F create(rd:SecGroup, props:Hash) {
 		rd.log('Create', 'SG')
-		rd.run('Create SG', %(aws ec2 create-security-group --group-name ${rd.anchor.name} --description ${rd.req_prop('Description')} $*{vpc_id_args(rd)}))
+		rd.run('Create SG', %(aws ec2 create-security-group --group-name ${rd.anchor.name} --description ${rd.req_prop('Description', props)} $*{vpc_id_args(rd)}))
 		if not(rd.dry_run) {
 			rd.find()
 		}
 	}
 
-	F update(sg:SecGroupRes) {
+	F update(sg:SecGroupRes, props:Hash) {
 
 		sg.def.log('update', 'SG')
 
-		if 'IpPermissions' in sg.def.props {
+		if 'IpPermissions' in props {
 			# PrefixListIds - http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_IpPermission.html
 			# (Valid for AuthorizeSecurityGroupEgress, RevokeSecurityGroupEgress and DescribeSecurityGroups only)
 			# sg.props.IpPermissions.each(F(perm) perm.del('PrefixListIds'))
-			diff = compare(sg.props.IpPermissions/IpPermBox, sg.def.props.IpPermissions/IpPermBox)
+			diff = compare(sg.props.IpPermissions/IpPermBox, props.IpPermissions/IpPermBox)
 			if diff.add {
 				sg.run('add SG ingress rules', %(aws ec2 authorize-security-group-ingress --group-id ${sg.props.GroupId} --ip-permissions $*{diff.add.val / encode_json}))
 			}
@@ -361,7 +361,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			}
 		}
 
-		sg.update_tags()
+		sg.update_tags(props)
 	}
 
 	F delete(r:SecGroupRes) {
@@ -377,9 +377,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F id(r:SubnetRes) r.props.SubnetId
 
-	F _vpcid(rd:Subnet) {
+	F _vpcid(rd:Subnet, props:Hash) {
 		# VpcId property of either rd.props or rd.anchor, in this preference order.
-		vpcid = rd.req_prop('VpcId')
+		vpcid = rd.req_prop('VpcId', props)
 		if vpcid is Vpc {
 			vpcid = ids(vpcid).the_one()
 		}
@@ -391,7 +391,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd._assert_anchor_has_only_known_keys('Tags', 'VpcId', 'CidrBlock')
 		filters = rd.anchor.Tags.cli_tags_filters()
 		if 'VpcId' in rd.anchor {
-			filters += cli_filters({'vpc-id': _vpcid(rd)})
+			filters += cli_filters({'vpc-id': _vpcid(rd, {})})
 		}
 		if 'CidrBlock' in rd.anchor {
 			filters += cli_filters({'cidr': rd.anchor.CidrBlock})
@@ -402,11 +402,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	# TODO: Support multiple subnets so one could easily set up new VPC for RDS and ELB
-	F create(rd:Subnet) {
-		rd._assert_props_has_only_known_keys('VpcId', 'CidrBlock', 'AvailabilityZone')
-		vpcid = _vpcid(rd)
-		cidr = rd.req_prop('CidrBlock')
-		az = rd.opt_prop('AvailabilityZone').map({ ['--availability-zone', A] }).get([])
+	F create(rd:Subnet, props:Hash) {
+		rd._assert_props_has_only_known_keys(props, 'VpcId', 'CidrBlock', 'AvailabilityZone')
+		vpcid = _vpcid(rd, props)
+		cidr = rd.req_prop('CidrBlock', props)
+		az = rd.opt_prop('AvailabilityZone', props).map({ ['--availability-zone', A] }).get([])
 		result = rd.run('Create Subnet', %(aws ec2 create-subnet --vpc-id $vpcid --cidr-block $cidr $*az))
 		rd.resources = rd.resources or []
 		if not(rd.dry_run) {
@@ -416,9 +416,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		echo("R ${rd.resources}")
 	}
 
-	F update(r:SubnetRes) {
+	F update(r:SubnetRes, props:Hash) {
 		r.def.log('update', 'Subnet')
-		r.update_tags()
+		r.update_tags(props)
 	}
 
 	F delete(r:SubnetRes) {
@@ -514,7 +514,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F id(r:InstanceRes) r.props.InstanceId
 
 	# TODO: Support multiple NICs?
-	F create(rd:Instance) {
+	F create(rd:Instance, props:Hash) {
 		rd.log('create', 'Instance')
 		assert(rd.resources is not Null, "Creating an instance assumes find() already run")
 		%[ImageId].each(F(prop_name) {
@@ -522,15 +522,15 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		})
 
 		args = []
-		args += ['--key-name', rd.props.KeyName] tor []
+		args += ['--key-name', props.KeyName] tor []
 
 		sgs = _sgs(rd).map_true(['--security-group-ids'] + X)
 
 		# TODO: Support Res SubnetId?
-		args += ['--subnet-id', rd.props.SubnetId] tor []
+		args += ['--subnet-id', props.SubnetId] tor []
 
-		if rd.props.get('PublicIpAddress', null) is Bool {
-			args += [if rd.props.PublicIpAddress '--associate-public-ip-address' '--no-associate-public-ip-address']
+		if props.get('PublicIpAddress', null) is Bool {
+			args += [if props.PublicIpAddress '--associate-public-ip-address' '--no-associate-public-ip-address']
 		}
 
 
@@ -541,9 +541,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	# TODO: Support EC2 classic?
-	F update(instance:InstanceRes) {
+	F update(instance:InstanceRes, props:Hash) {
 		instance.def.log('update', 'Instance')
-		instance.update_tags()
+		instance.update_tags(props)
 
 		current_sgs = instance.props.SecurityGroups.GroupId
 		target_sgs = _sgs(instance.def)
@@ -560,9 +560,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	# TODO: Support EC2 classic?
 	# TODO: Handle SGS in Anchor?
-	F _sgs(rd:Instance) {
-		if 'SecurityGroups' in rd.props {
-			ret = rd.props.SecurityGroups
+	F _sgs(rd:Instance, props:Hash) {
+		if 'SecurityGroups' in props {
+			ret = props.SecurityGroups
 			if ret is ResDef {
 				ret .= ids()
 			}
@@ -611,14 +611,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd
 	}
 
-	F create(rd:Elb) {
+	F create(rd:Elb, props:Hash) {
 		rd.log('create', "creating an ELB")
 		rd.anchor.get('name') is not Str throws InvalidArgument("ELB name and must be a string, not ${rd.anchor.get('name')}")
-		'ListenerDescriptions' not in rd.props throws InvalidArgument("Elb must have 'listeners' property")
+		'ListenerDescriptions' not in props throws InvalidArgument("Elb must have 'listeners' property")
 
-		('AvailabilityZones' not in rd.props) and ('Subnets' not in rd.props) throws InvalidArgument("Either 'AvailabilityZones' or 'Subnets' must be in Elb properties")
-		'AvailabilityZones' in rd.props throws NotImplemented("'AvailabilityZones' Elb property")
-		subnets = try rd.props.Subnets
+		('AvailabilityZones' not in props) and ('Subnets' not in props) throws InvalidArgument("Either 'AvailabilityZones' or 'Subnets' must be in Elb properties")
+		'AvailabilityZones' in props throws NotImplemented("'AvailabilityZones' Elb property")
+		subnets = try props.Subnets
 		# TODO: subnets .= only(ResDef, ids)
 		if subnets is ResDef {
 			subnets .= ids()
@@ -627,19 +627,19 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		if subnets {
 			subnets = ['--subnets', *subnets]
 		}
-		rd.run('create ELB', %(aws elb create-load-balancer --load-balancer-name ${rd.anchor.name} --listeners ${rd.props.ListenerDescriptions.encode_json()} $*subnets))
+		rd.run('create ELB', %(aws elb create-load-balancer --load-balancer-name ${rd.anchor.name} --listeners ${props.ListenerDescriptions.encode_json()} $*subnets))
 		# TODO: Use specific find, with the name
 		if not(rd.dry_run) {
 			rd.find()
 		}
 	}
 
-	F update(elb:ElbRes) {
+	F update(elb:ElbRes, props:Hash) {
 		elb.def.log('update', 'ELB')
 		elb.def.anchor.get('name') is not Str throws InvalidArgument("Elb is the ELB name and must be a string, not ${elb.def.anchor.get('name')}")
 
 		# Tags
-		diff = cmp(elb.props.get('Tags', {}), elb.def.props.get('Tags', {}))
+		diff = cmp(elb.props.get('Tags', {}), props.get('Tags', {}))
 
 		if (tags = cli_tags(diff.add + diff.change)) {
 			elb.run('add ELB tags', %(aws elb add-tags --load-balancer-names ${elb.def.anchor.name} --tags $*tags))
@@ -650,8 +650,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 
 		# Health check. Note: only updates given properties and keeps the rest as they were.
-		if 'HealthCheck' in elb.def.props {
-			diff = cmp(elb.props['HealthCheck'], elb.def.props['HealthCheck'])
+		if 'HealthCheck' in props {
+			diff = cmp(elb.props['HealthCheck'], props['HealthCheck'])
 			assert(not(diff.add), "Can't handle additional health check properties ${diff.add}")
 			if diff.change {
 				elb.def.log('update', "ELB health check change: ${diff.change}")
@@ -664,8 +664,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 
 		# Instances
-		if 'Instances' in elb.def.props {
-			instances = elb.def.props.Instances
+		if 'Instances' in props {
+			instances = props.Instances
 			if instances is ResDef {
 				instances .= ids()
 			}
@@ -685,8 +685,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 
 		# Security groups
-		if 'SecurityGroups' in elb.def.props {
-			sgs = elb.def.props.SecurityGroups
+		if 'SecurityGroups' in props {
+			sgs = props.SecurityGroups
 			if sgs is ResDef {
 				if sgs.resources is Null {
 					sgs.find()
@@ -703,7 +703,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 
 		# TODO: listeners
-		diff = cmp(elb.props.ListenerDescriptions, elb.def.props.ListenerDescriptions)
+		diff = cmp(elb.props.ListenerDescriptions, props.ListenerDescriptions)
 		# echo("DIFF $diff")
 	}
 
@@ -763,9 +763,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd
 	}
 
-	F _get_props(rd:RecordSet) {
+	F _get_props(rd:RecordSet, props:Hash) {
 		ret = {}
-		ret.update(rd.props)
+		ret.update(props)
 		%[Name Type SetIdentifier].each(F(prop) {
 			if prop in rd.anchor and prop not in ret {
 				ret[prop] = rd.anchor[prop]
@@ -774,12 +774,12 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		ret
 	}
 
-	F create(rd:RecordSet) {
+	F create(rd:RecordSet, props:Hash) {
 		change_batch = {
-			'Comment': rd.props.get('Comment', "Added by AWS.ngs")
+			'Comment': props.get('Comment', "Added by AWS.ngs")
 			'Changes': [{
 				'Action': 'CREATE'
-				'ResourceRecordSet': _get_props(rd)
+				'ResourceRecordSet': _get_props(rd, props)
 			}]
 		}
 		rd.run('create RecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${rd.zone_id} --change-batch ${change_batch.encode_json()}))
@@ -788,13 +788,13 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 	}
 
-	F update(rrset:RecordSetRes) {
-		props = _get_props(rrset.def)
+	F update(rrset:RecordSetRes, props:Hash) {
+		props = _get_props(rrset.def, props)
 		diff = cmp(rrset.props, props)
 		# NOT DONE AND NOT SURE!
 		if diff.add or diff.change or diff.remove {
 			change_batch = {
-				'Comment': rrset.def.props.get('Comment', "Updated by AWS.ngs")
+				'Comment': props.get('Comment', "Updated by AWS.ngs")
 				'Changes': [{
 					'Action': 'UPSERT'
 					'ResourceRecordSet': _get_props(rrset.def)
