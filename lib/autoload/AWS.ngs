@@ -245,6 +245,29 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	# --------------------------------------------------
+	# RouteTable (WIP)
+	# --------------------------------------------------
+
+	type RouteTable(ResDef)
+	type RouteTableRes(Res)
+
+	F id(r:RouteTableRes) r.props.RouteTableId
+
+	F find(rd:RouteTable) {
+		# TODO: route.gateway-id, route.instance-id
+		rd.log('Find', 'VPC')
+		rd._assert_anchor_has_only_known_keys('Tags', 'VpcId')
+		filters = rd.anchor.Tags.cli_tags_filters()
+		if 'VpcId' in rd.anchor {
+			filters += cli_filters({'vpc-id': _eval_vpc_id(rd.anchor.VpcId)})
+		}
+		filters .= map_true(['--filters'] + X)
+		rd.resources = ``aws ec2 describe-route-tables $*filters``.map(RouteTableRes(rd, X))
+		rd
+	}
+
+
+	# --------------------------------------------------
 	# SecGroup
 	# --------------------------------------------------
 
@@ -820,4 +843,24 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	global AwsElb = Elb, AwsElbRes = ElbRes
 	global AwsRecordSet = RecordSet, AwsRecordSetRes = RecordSetRes
 
+	# ==================================================
+	# Quick and dirty - set global variables
+	# ==================================================
+
+	F pollute(do_warn=true) {
+
+		vars =
+			_exports.filterk(/^AMI_OWNER/) +
+			_exports.filterv(Type).without('Res').without('ResDef') +
+			{
+				'regions': regions
+				'zones': zones
+			}
+
+		if do_warn {
+			warn("Polluting global namespace with AWS-specific variables: ${vars.keys().join(', ')}")
+		}
+
+		vars.mapk(resolve_global_variable).each(set_global_variable)
+	}
 }

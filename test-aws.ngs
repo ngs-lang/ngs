@@ -1,5 +1,5 @@
 #!/usr/bin/env ngs
-ns(Igw=AWS::Igw, SecGroup=AWS::SecGroup, Subnet=AWS::Subnet, Vpc=AWS::Vpc, zones=AWS::zones) {
+ns(Igw=AWS::Igw, SecGroup=AWS::SecGroup, Subnet=AWS::Subnet, Vpc=AWS::Vpc, zones=AWS::zones, Elb=AWS::Elb) {
 	# TODO: test for all resources and all operations
 	# TODO: test tags with spaces
 
@@ -71,7 +71,7 @@ ns(Igw=AWS::Igw, SecGroup=AWS::SecGroup, Subnet=AWS::Subnet, Vpc=AWS::Vpc, zones
 	}
 	# --- ELB ---
 	test("Add ELB") with {
-		elb = AWS::Elb("ngs-test-elb").converge(
+		elb = Elb("ngs-test-elb").converge(
 				Tags = name_tag,
 				ListenerDescriptions = [
 					%{
@@ -97,7 +97,7 @@ ns(Igw=AWS::Igw, SecGroup=AWS::SecGroup, Subnet=AWS::Subnet, Vpc=AWS::Vpc, zones
 	# --- cleanup ---
 	if not(ENV.get('NGS_AWS_TEST_SKIP_DESTROY', false)) {
 		test("Delete ELB") with {
-			AWS::Elb("ngs-test-elb").delete()
+			Elb("ngs-test-elb").delete()
 		}
 		test("Delete all security groups with tag $name_tag") with {
 			SecGroup(name_tag).delete()
