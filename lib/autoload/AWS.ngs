@@ -424,7 +424,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	# debian-jessie-amd64-hvm
 	F find(rd:Image) {
-		rd._assert_anchor_has_only_known_keys(props, 'OwnerId', 'Name', 'State', 'RootDeviceType', 'VolumeType')
+		rd._assert_anchor_has_only_known_keys('OwnerId', 'Name', 'State', 'RootDeviceType', 'VolumeType')
 		owners = ['--owners', rd.anchor.OwnerId] tor []
 		filters = %{
 			state available
