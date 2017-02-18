@@ -1,5 +1,10 @@
 ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
+	# TODO: alert or handle somehow the special case when anchor properties are changed,
+	#       this might be a programming error.
+
+	# TODO: track newly added resources and provide a method to list them or have a callback
+
 	# TODO: Use JSON tags. Currently special symbols in tag name or value will cause problems.
 	# http://docs.aws.amazon.com/cli/latest/userguide/shorthand-syntax.html
 
@@ -54,15 +59,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F zones() _zones()
 
 	# --------------------------------------------------
-	# Anchor
-	# --------------------------------------------------
-
-	type Anchor(HashLike)
-
-	doc Constructor for AWS resource anchor
-	F init(a:Anchor, **kw) a.super({'regions': null, 'Tags': {}, **kw})
-
-	# --------------------------------------------------
 	# Res
 	# --------------------------------------------------
 
@@ -71,7 +67,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F run(r:Res, log_pfx:Str, cmd:Command) r.def.run(log_pfx, cmd)
 
 	F update_tags(r:Res, props:Hash) {
-		target_tags = r.def.anchor.Tags + props.get('Tags', {})
+		target_tags = r.def.opt_prop('Tags', props).get({})
 		current_tags = r.props.get('Tags', {})
 
 		if current_tags == target_tags {
@@ -103,16 +99,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	type ResDef(GlobalResDef)
 
-	F init(rd:ResDef, anchor) {
-		super(rd, anchor)
-		rd.anchor is Anchor returns
-		if rd.anchor is Hash {
-			rd.anchor = Anchor(Tags=rd.anchor)
-		}
-		if rd.anchor is Str {
-			rd.anchor = Anchor(name=rd.anchor)
-		}
-	}
+	F init(rd:ResDef, **kw)           super(rd, {'regions': null, 'Tags': {}} + kw)
+	F init(rd:ResDef, _ngs_name:Str)  super(rd, {'regions': null, 'Tags': {}, 'name': _ngs_name})
+	F init(rd:ResDef, _ngs_tags:Hash) super(rd, {'regions': null, 'Tags': _ngs_tags})
 
 	F run(rd:ResDef, log_pfx:Str, cmd:Command) {
 		if rd.dry_run {
@@ -158,6 +147,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F create(rd:Vpc, props:Hash) {
+		rd._assert_props_has_only_known_keys(props, 'Tags', 'CidrBlock')
 		cidr = rd.req_prop('CidrBlock', props)
 		result = rd.run('Create VPC', %(aws ec2 create-vpc --cidr-block $cidr))
 		rd.resources = rd.resources or []
@@ -168,6 +158,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F update(r:VpcRes, props:Hash) {
+		r.def._assert_props_has_only_known_keys(props, 'Tags', 'CidrBlock')
 		r.update_tags(props)
 	}
 
@@ -210,8 +201,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F create(rd:Igw, props:Hash) {
+		rd.log('Create', 'IGW')
+		rd._assert_anchor_has_only_known_keys('Tags', 'Attachments')
 		result = rd.run('Create IGW', %(aws ec2 create-internet-gateway))
-		echo("CREATE RESULT $result")
 		rd.resources = rd.resources or []
 		if not(rd.dry_run) {
 			filters = cli_filters({'internet-gateway-id': result.InternetGateway.InternetGatewayId})
@@ -220,8 +212,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F update(r:IgwRes, props:Hash) {
-		r.update_tags(props)
 		r.def.log('Update', 'IGW')
+		r.def._assert_anchor_has_only_known_keys('Tags', 'Attachments')
+		r.update_tags(props)
 		r.def.opt_prop('Attachments', props).each(F(target_attachments) {
 			target_vpcs_ids = target_attachments.VpcId.map(_eval_vpc_id)
 			current_vpcs_ids = r.props.Attachments.VpcId
@@ -258,11 +251,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	type SecGroup(ResDef)
 	type SecGroupRes(Res)
 
-	F init(rd:SecGroup, anchor) {
-		if anchor is Arr {
-			anchor = Anchor(name=anchor[0], vpc_id=anchor[1])
-		}
-		super(rd, anchor)
+	F init(rd:SecGroup, anchor:Arr) {
+		warn("Using deprecated SecGroup anchor - array. Should use SecGroup(name, vpc) form.")
+		super(rd, name=anchor[0], vpc_id=anchor[1])
+	}
+
+	F init(rd:SecGroup, name:Str, vpc_id) {
+		guard vpc_id is Str or vpc_id is Vpc
+		super(rd, name=name, vpc_id=vpc_id)
 	}
 
 	F id(r:SecGroupRes) r.props.GroupId
@@ -377,24 +373,18 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F id(r:SubnetRes) r.props.SubnetId
 
-	F _vpcid(rd:Subnet, props:Hash) {
-		# VpcId property of either rd.props or rd.anchor, in this preference order.
-		vpcid = rd.req_prop('VpcId', props)
-		if vpcid is Vpc {
-			vpcid = ids(vpcid).the_one()
-		}
-		vpcid
-	}
-
 	F find(rd:Subnet) {
 		rd.log('find', 'Subnet')
-		rd._assert_anchor_has_only_known_keys('Tags', 'VpcId', 'CidrBlock')
+		rd._assert_anchor_has_only_known_keys('Tags', 'VpcId', 'CidrBlock', 'AvailabilityZone')
 		filters = rd.anchor.Tags.cli_tags_filters()
 		if 'VpcId' in rd.anchor {
-			filters += cli_filters({'vpc-id': _vpcid(rd, {})})
+			filters += cli_filters({'vpc-id': _eval_vpc_id(rd.anchor.VpcId)})
 		}
 		if 'CidrBlock' in rd.anchor {
 			filters += cli_filters({'cidr': rd.anchor.CidrBlock})
+		}
+		if 'AvailabilityZone' in rd.anchor {
+			filters += cli_filters({'availability-zone': rd.anchor.AvailabilityZone})
 		}
 		filters .= map_true(['--filters'] + X)
 		rd.resources = ``aws ec2 describe-subnets $*filters``.map(SubnetRes(rd, X))
@@ -404,7 +394,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# TODO: Support multiple subnets so one could easily set up new VPC for RDS and ELB
 	F create(rd:Subnet, props:Hash) {
 		rd._assert_props_has_only_known_keys(props, 'VpcId', 'CidrBlock', 'AvailabilityZone')
-		vpcid = _vpcid(rd, props)
+		vpcid = rd.req_prop('VpcId', props)._eval_vpc_id()
 		cidr = rd.req_prop('CidrBlock', props)
 		az = rd.opt_prop('AvailabilityZone', props).map({ ['--availability-zone', A] }).get([])
 		result = rd.run('Create Subnet', %(aws ec2 create-subnet --vpc-id $vpcid --cidr-block $cidr $*az))
@@ -413,11 +403,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			filters = cli_filters({'subnet-id': result.Subnet.SubnetId})
 			rd.resources += ``aws ec2 describe-subnets --filters $*filters``.map(SubnetRes(rd, X))
 		}
-		echo("R ${rd.resources}")
 	}
 
 	F update(r:SubnetRes, props:Hash) {
 		r.def.log('update', 'Subnet')
+		r.def._assert_props_has_only_known_keys(props, 'Tags')
 		r.update_tags(props)
 	}
 
@@ -434,6 +424,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	# debian-jessie-amd64-hvm
 	F find(rd:Image) {
+		rd._assert_anchor_has_only_known_keys(props, 'OwnerId', 'Name', 'State', 'RootDeviceType', 'VolumeType')
 		owners = ['--owners', rd.anchor.OwnerId] tor []
 		filters = %{
 			state available
@@ -820,7 +811,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	global AWS_AMI_OWNER_AMAZON = AMI_OWNER_AMAZON
 	global stdlib_aws_tags = cli_tags
 	global aws_regions = regions
-	global AwsAnchor = Anchor
 	global AwsRes = Res, AwsResDef = ResDef
 	global AwsVpc = Vpc, AwsVpcRes = VpcRes
 	global AwsSecGroup = SecGroup, AwsSecGroupRes = SecGroupRes

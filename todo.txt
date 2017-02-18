@@ -22,6 +22,7 @@ Note that this started as internal document so things here are unformed, not fin
 			with_comments,
 			# syntax
 			yes)
+	* option to turn backtraces on in warn() and error()
 
 [roadmap]
 

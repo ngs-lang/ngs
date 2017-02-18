@@ -1,5 +1,5 @@
 #!/usr/bin/env ngs
-ns(Anchor=AWS::Anchor, Igw=AWS::Igw, SecGroup=AWS::SecGroup, Subnet=AWS::Subnet, Vpc=AWS::Vpc, zones=AWS::zones) {
+ns(Igw=AWS::Igw, SecGroup=AWS::SecGroup, Subnet=AWS::Subnet, Vpc=AWS::Vpc, zones=AWS::zones) {
 	# TODO: test for all resources and all operations
 	# TODO: test tags with spaces
 
@@ -16,24 +16,24 @@ ns(Anchor=AWS::Anchor, Igw=AWS::Igw, SecGroup=AWS::SecGroup, Subnet=AWS::Subnet,
 		Vpc(name_tag).converge(CidrBlock=cidr)
 	}
 	test("Update tags on VPCs with Name tag 'ngs-test'") with {
-		Vpc(name_tag).converge(Tags={'k1': 'v1'})
+		Vpc(name_tag).converge(Tags = name_tag + {'k1': 'v1'})
 	}
 	test("Find exactly one VPC with 'Name' tag 'ngs-test' and 'k1' tag 'v1'") with {
 		Vpc({"Name": "ngs-test", "k1": "v1"}).expect(1)
 	}
 	test("Find exactly one VPC with CIDR $cidr") with {
-		Vpc(Anchor(CidrBlock=cidr)).expect(1)
+		Vpc(CidrBlock=cidr).expect(1)
 	}
 	# --- subnets ---
 	for(i;subnet_cidrs.len()) {
 		test("Create Subnet ${i+1}") with {
-			vpc = Vpc(Anchor(CidrBlock=cidr)).expect(1)
-			Subnet(Anchor(VpcId=vpc, CidrBlock=subnet_cidrs[i])).converge(AvailabilityZone=zones()[i])
+			vpc = Vpc(CidrBlock=cidr).expect(1)
+			Subnet(VpcId=vpc, CidrBlock=subnet_cidrs[i], AvailabilityZone=zones()[i]).converge()
 		}
 	}
 	test("Add Name tag to Subnets") with {
 		vpc = Vpc({"Name": "ngs-test"}).expect(1)
-		Subnet(Anchor(VpcId=vpc)).converge(Tags={'Name': 'ngs-test'})
+		Subnet(VpcId=vpc).converge(Tags={'Name': 'ngs-test'})
 	}
 	# --- security groups ---
 	vpc = Vpc({"Name": "ngs-test"}).expect(1)
@@ -61,10 +61,10 @@ ns(Anchor=AWS::Anchor, Igw=AWS::Igw, SecGroup=AWS::SecGroup, Subnet=AWS::Subnet,
 	# --- Internet Gateway ---
 	test("Add Internet Gateway") with {
 		# Not tagging it, it's uncommon practice
-		Igw(AWS::Anchor(Attachments=[{'VpcId': vpc}])).converge()
+		Igw(Attachments=[{'VpcId': vpc}]).converge()
 	}
 	test("Add Name tag to Gateway, remove attachment") with {
-		Igw(AWS::Anchor(Attachments=[{'VpcId': vpc}])).converge(Tags=name_tag, Attachments=[])
+		Igw(Attachments=[{'VpcId': vpc}]).converge(Tags=name_tag, Attachments=[])
 	}
 	test("Re-attach gateway") with {
 		Igw(name_tag).converge(Attachments=[{'VpcId': vpc}])
@@ -82,7 +82,7 @@ ns(Anchor=AWS::Anchor, Igw=AWS::Igw, SecGroup=AWS::SecGroup, Subnet=AWS::Subnet,
 					}.n()
 				],
 				Subnets = AWS::Subnet(name_tag).expect(2),
-				SecurityGroups = SecGroup(["ngs-test-elb", vpc]),
+				SecurityGroups = SecGroup("ngs-test-elb", vpc),
 				HealthCheck = %{
 					UnhealthyThreshold 5
 					Timeout 5
