@@ -1075,6 +1075,7 @@ TEST r=[]; ["a", "b"].each_idx_val(F(idx, val) r.push([idx, val])); r == [[0, "a
 
 
 # TODO: make it work with anything that has each() method
+# TODO: check if used anywhere
 doc Process each N elements of an Array at a time.
 doc Throws InvalidArgument if number of items in arr is not divisible by n.
 doc cb is called as cb(eltI, ..., eltJ) where I is multiple of n and J is I+n-1
@@ -1213,7 +1214,7 @@ doc %EX - [1,5,1,10].indexes(X>2)  # [1,3]
 F indexes(arr:Arr, predicate) {
 	p = Pred(predicate)
 	l = arr.len()
-	l.filter({ p(arr[A]) })
+	l.filter(p + arr[X])
 }
 
 TEST [1,5,1,10].indexes(X>2) == [1,3]
