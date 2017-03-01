@@ -8,21 +8,20 @@ Note that this started as internal document so things here are unformed, not fin
 	* Look for other sets of constants to move to namespaces
 	* address resolution functions
 	* AWS fix SG rules (IpPermBox < IpPermBox)
-	* [stdlib] pid() - c_getpid() wrapper
 	* Fix $(separate$item issue)
 	* Fix $(ls $some_obj) silent crash
 	* update(Hash, key, value) - update specified key only if exists
 	* update(Arr[Hash], key, value / Fun) - update specified key only if exists
-	* make ResDef#converge should take the props argument, not ResDef constructor
-	* make ResDef ArrLike for the resources
-	* make Res HashLike ?
-	* AwsResDef - assert known keys in props, maybe message about properties that require instance re-creation
+	* make ResDef ArrLike for the resources?
+	* make Res HashLike?
 	* Fix parser in
 		function_call(
 			with_comments,
 			# syntax
 			yes)
 	* option to turn backtraces on in warn() and error()
+	* assert_file / assert_file_exists ?
+	* assert_has_line / assert_has_line_with ?
 
 [roadmap]
 
