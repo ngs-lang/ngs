@@ -999,17 +999,18 @@ doc args - Additional arguments for calling the predicate.
 doc %RET - Bool
 doc %EX - [1,2,3].all(X<10)   # true
 doc %EX - [1,2,10].all(X>5)   # false
-F all(e:Eachable1, predicate) {
+F all(e:Eachable, predicate) {
 	p = Pred(predicate)
 	r = Return()
-	e.each(F(x) {
-		not(p(x)) throws r(false)
+	e.each(F(*x) {
+		not(p(*x)) throws r(false)
 	})
 	true
 }
 
 TEST [1,2,3].all(X<10)
 TEST [1,2,10].all(X>5).not()
+TEST {"x": 1, "y": 2}.all(F(k, v) v is Int)
 
 doc Check that there is no element in e that satisfies the given predicate. Exactly same as not(any(arr, predicate)) .
 doc %RET - Bool
@@ -1697,24 +1698,6 @@ F filterk(h:Hash, predicate) filter(h, Pred(predicate) + {A})
 
 doc Filter hash by values
 F filterv(h:Hash, predicate) filter(h, Pred(predicate) + {B})
-
-doc Check whether all key-value pairs in Hash satisfy the given predicate
-doc h - Hash to check
-doc predicate - Test function to be called with one key and one value at a time
-doc args - Additional arguments for calling the predicate.
-doc %RET - Bool
-doc %EX - {"x": 1, "y": 2}.all(F(k, v) v is Int)  # true
-F all(h:Hash, predicate) {
-	p = Pred(predicate)
-	arr = h.keys()
-	l = arr.len()
-	for(i;l)
-		not(p(arr[i], h[arr[i]])) returns false
-	true
-}
-
-TEST {"x": 1, "y": 2}.all(F(k, v) v is Int)
-
 
 doc Count number of key-value pairs in Hash that satisfy the predicate.
 doc h - Hash to check
