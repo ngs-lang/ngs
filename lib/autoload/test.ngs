@@ -97,11 +97,12 @@ F assert_has(actual, expected, title=null) {
 	assert_base(actual, expected, has, "to contain", title or "Data subset")
 }
 
-F assert_resolvable(h:Str, title="Resolve host", times=45, sleep=2) {
+F assert_resolvable(h:Str, title="Resolve host", times=45, sleep=2, check=Bool) {
 	retry(times=times, sleep=sleep, title=title)
-		body       => { `dig "+short" $h`.lines() }
-		success_cb => { log_test_ok("$title: $h resolves to ${A[-1]}") }
-		fail_cb    => { throw TestFail("$title: no resolve for $h").set('host', h) }
+		body              => { `dig "+short" $h`.lines() }
+		success_predicate => check
+		success_cb        => { log_test_ok("$title: $h resolves to ${A[-1]}") }
+		fail_cb           => { throw TestFail("$title: no resolve for $h").set('host', h) }
 }
 
 F assert_path_exists(p, title="Path exists") {
