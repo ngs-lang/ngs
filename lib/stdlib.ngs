@@ -385,6 +385,12 @@ doc Same as calling f(x)
 doc %EX - [1,2,3,4] \ echo
 F \(x, f:Fun) f(x)
 
+F +?(a, b) {
+	not(a) returns a
+	not(b) returns b
+	a + b
+}
+
 # === ArrLike ====================================
 
 {
@@ -605,7 +611,7 @@ F Str(i:NormalTypeInstance) {
 	}
 	# TODO limit key and value lengths
 	h .= Strs()
-	attrs = h.join(' ').map_true(' ' + X)
+	attrs = ' ' +? h.join(' ')
 
 	"<${i.typeof().name}${attrs}${if truncated ' ...' else ''}>"
 }
@@ -1241,6 +1247,7 @@ doc %EX - [1,2,3].reverse()  # [3,2,1]
 F reverse(arr:Arr) {
 	l = arr.len()
 	l.map({ arr[l-A-1] })
+	# TODO: maybe make this work: arr[InclusiveRange(arr.len() - 1, 0, -1)]
 }
 
 TEST [1,2,3].reverse() == [3,2,1]

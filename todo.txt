@@ -22,6 +22,7 @@ Note that this started as internal document so things here are unformed, not fin
 	* option to turn backtraces on in warn() and error()
 	* assert_file / assert_file_exists ?
 	* assert_has_line / assert_has_line_with ?
+	* Make Indexable: Arr, Str, Range - this might save some code
 
 [roadmap]
 

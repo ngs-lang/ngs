@@ -141,7 +141,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		if 'CidrBlock' in rd.anchor {
 			filters += cli_filters({'cidr': rd.anchor.CidrBlock})
 		}
-		filters .= map_true(['--filters'] + X)
+		filters = ['--filters'] +? filters
 		rd.resources = ``aws ec2 describe-vpcs $*filters``.map(VpcRes(rd, X))
 		rd
 	}
@@ -195,7 +195,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd.anchor.get('Attachments', []).map(F(att) {
 			filters += cli_filters({'attachment.vpc-id': _eval_vpc_id(att.VpcId)})
 		})
-		filters .= map_true(['--filters'] + X)
+		filters = ['--filters'] +? filters
 		rd.resources = ``aws ec2 describe-internet-gateways $*filters``.map(IgwRes(rd, X))
 		rd
 	}
@@ -261,7 +261,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		if 'VpcId' in rd.anchor {
 			filters += cli_filters({'vpc-id': _eval_vpc_id(rd.anchor.VpcId)})
 		}
-		filters .= map_true(['--filters'] + X)
+		filters = ['--filters'] +? filters
 		rd.resources = ``aws ec2 describe-route-tables $*filters``.map(RouteTableRes(rd, X))
 		rd
 	}
@@ -314,8 +314,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F find(rd:SecGroup) {
 		rd.log('find', 'SG')
 		rd._assert_anchor_has_only_known_keys('vpc_id', 'name', 'Tags')
-		filters = rd.anchor.Tags.cli_tags_filters()
-		filters .= map_true(['--filters'] + X)
+		filters = ['--filters'] +? rd.anchor.Tags.cli_tags_filters()
 		# XXX: check with default VPC / EC2 classic
 		# Can not use --group-names as it will assume default VPC / EC2 classic
 		resources = ``aws ec2 describe-security-groups $*{vpc_id_filter(rd)} $*filters``
@@ -409,7 +408,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		if 'AvailabilityZone' in rd.anchor {
 			filters += cli_filters({'availability-zone': rd.anchor.AvailabilityZone})
 		}
-		filters .= map_true(['--filters'] + X)
+		filters = ['--filters'] +? filters
 		rd.resources = ``aws ec2 describe-subnets $*filters``.map(SubnetRes(rd, X))
 		rd
 	}
@@ -461,8 +460,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 		try filters['root-device-type'] = rd.anchor.RootDeviceType
 		try filters['block-device-mapping.volume-type'] = rd.anchor.VolumeType
-		filters .= cli_filters()
-		filters .= map_true(['--filters'] + X)
+		filters = ['--filters'] +? cli_filters(filters)
 		resources = ``aws ec2 describe-images $*owners $*filters``
 		if 'Name' in rd.anchor {
 			resources .= filter({A.Name ~ rd.anchor.Name})
