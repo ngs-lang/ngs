@@ -1577,7 +1577,11 @@ command-words = acc:command-node (
 			}
 		)
 	)+ (inline_space? "&" {
-		MAKE_STRING_NODE(option, "&");
+		MAKE_NODE(option, EXPRESSIONS_NODE);
+			MAKE_STRING_NODE(option_k, "&");
+			append_ast_node_child(option, option_k);
+			MAKE_NODE(option_v, TRUE_NODE);
+			append_ast_node_child(option, option_v);
 		append_ast_node_child(acc->first_child->next_sibling->next_sibling->next_sibling, option);
 	})? {
 	$$ = acc;
