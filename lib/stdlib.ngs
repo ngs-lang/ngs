@@ -1701,11 +1701,27 @@ F filter(h:Hash, predicate) {
 
 TEST {'a': 1, 'b': 2}.filter(F(k, v) k == 'a') == {'a': 1}
 
-doc Filter hash by keys
+doc Filter hash by keys, keeping matched
 F filterk(h:Hash, predicate) filter(h, Pred(predicate) + {A})
+
+TEST {"a1": 1, "a2": 2, "b1": 10}.filterk(/^b/) == {"b1": 10}
+
+doc Filter hash by keys, removing matched
+F rejectk(h:Hash, predicate) h.filterk(not + Pred(predicate))
+
+TEST {"a1": 1, "a2": 2, "b1": 10}.rejectk(/^b/) == {"a1": 1, "a2": 2}
+
 
 doc Filter hash by values
 F filterv(h:Hash, predicate) filter(h, Pred(predicate) + {B})
+
+TEST {"a1": 1, "a2": 2, "b1": 10}.filterv(X>5) == {"b1": 10}
+
+
+doc Filter hash by values
+F rejectv(h:Hash, predicate) h.filterv(not + Pred(predicate))
+
+TEST {"a1": 1, "a2": 2, "b1": 10}.rejectv(X>5) == {"a1": 1, "a2": 2}
 
 doc Count number of key-value pairs in Hash that satisfy the predicate.
 doc h - Hash to check
