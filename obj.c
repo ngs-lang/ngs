@@ -649,7 +649,7 @@ void array_reverse(VALUE arr) {
 	}
 }
 
-VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, int params_flags, VALUE *params) {
+VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, int params_flags, VALUE *params, VALUE *locals) {
 
 	VALUE v;
 	CLOSURE_OBJECT *c;
@@ -668,6 +668,10 @@ VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX 
 	assert(c->params.params);
 	memcpy(c->params.params, params, params_size);
 	c->n_uplevels = n_uplevels;
+
+	c->params.locals = NGS_MALLOC(n_local_vars * sizeof(c->params.locals[0]));
+	assert(c->params.locals);
+	memcpy(c->params.locals, locals, n_local_vars * sizeof(c->params.locals[0]));
 
 	SET_OBJ(v, c);
 	OBJ_ATTRS(v) = make_hash(2);

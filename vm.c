@@ -801,7 +801,7 @@ METHOD_RESULT native_load_str_str EXT_METHOD_PARAMS {
 	size_t ip;
 	(void) ctx;
 	ip = vm_load_bytecode(vm, OBJ_DATA_PTR(argv[0]));
-	METHOD_RETURN(make_closure_obj(ip, 0, 0, 0, 0, 0, NULL));
+	METHOD_RETURN(make_closure_obj(ip, 0, 0, 0, 0, 0, NULL, NULL));
 }
 
 METHOD_RESULT native_decode_json_str EXT_METHOD_PARAMS {
@@ -3635,7 +3635,7 @@ main_loop:
 								VALUE exc;
 								exc = make_normal_type_instance(vm->UndefinedLocalVar);
 								// TODO: variable name
-								// set_normal_type_instance_attribute(exc, make_string("name"), make_string(vm->globals_names[gvi]));
+								set_normal_type_instance_attribute(exc, make_string("name"), CLOSURE_OBJ_LOCALS(THIS_FRAME_CLOSURE)[lvi]);
 								set_normal_type_instance_attribute(exc, make_string("index"), MAKE_INT(lvi));
 								set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 								*result = exc;
@@ -3786,12 +3786,14 @@ do_jump:
 							ARG(n_locals, LOCAL_VAR_INDEX);
 							ARG(n_uplevels, UPVAR_INDEX);
 							ARG(params_flags, int);
+							ctx->stack_ptr -= (n_params_required + ADDITIONAL_PARAMS_COUNT)*2 + n_params_optional*3;
 							v = make_closure_obj(
 									ip+jo,
 									n_locals, n_params_required, n_params_optional, n_uplevels, params_flags,
-									&ctx->stack[ctx->stack_ptr - (n_params_required + ADDITIONAL_PARAMS_COUNT)*2 - n_params_optional*3]
+									&ctx->stack[ctx->stack_ptr],
+									&ctx->stack[ctx->stack_ptr - n_locals]
 							);
-							ctx->stack_ptr -= (n_params_required + ADDITIONAL_PARAMS_COUNT)*2 + n_params_optional*3;
+							ctx->stack_ptr -= n_locals;
 							if(n_uplevels) {
 								assert(CLOSURE_OBJ_N_UPLEVELS(THIS_FRAME_CLOSURE) >= n_uplevels-1);
 								CLOSURE_OBJ_UPLEVELS(v) = NGS_MALLOC(sizeof(CLOSURE_OBJ_UPLEVELS(v)[0]) * n_uplevels);

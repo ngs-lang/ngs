@@ -188,7 +188,7 @@ int main(int argc, char **argv)
 	set_global(&vm, "BOOTSTRAP_FILE", make_string(bootstrap_file_name));
 	ctx_init(&ctx);
 	ip = vm_load_bytecode(&vm, bytecode);
-	closure = make_closure_obj(ip, 0, 0, 0, 0, 0, NULL);
+	closure = make_closure_obj(ip, 0, 0, 0, 0, 0, NULL, NULL);
 	mr = vm_call(&vm, &ctx, &result, closure, 0, NULL);
 	if(mr == METHOD_OK) {
 		return 0;

@@ -109,6 +109,8 @@ typedef struct params {
 	LOCAL_VAR_INDEX n_params_optional;
 	int flags;
 	VALUE *params;
+	// maybe not the best place but convenient and related to n_local_vars
+	VALUE *locals;
 } PARAMS_DESC;
 
 typedef struct closure {
@@ -277,6 +279,7 @@ typedef enum {
 #define CLOSURE_OBJ_N_REQ_PAR(v)  (((CLOSURE_OBJECT *) v.ptr)->params.n_params_required)
 #define CLOSURE_OBJ_N_OPT_PAR(v)  (((CLOSURE_OBJECT *) v.ptr)->params.n_params_optional)
 #define CLOSURE_OBJ_PARAMS(v)     (((CLOSURE_OBJECT *) v.ptr)->params.params)
+#define CLOSURE_OBJ_LOCALS(v)     (((CLOSURE_OBJECT *) v.ptr)->params.locals)
 #define CLOSURE_OBJ_N_UPLEVELS(v) (((CLOSURE_OBJECT *) v.ptr)->n_uplevels)
 #define CLOSURE_OBJ_UPLEVELS(v)   (((CLOSURE_OBJECT *) v.ptr)->uplevels)
 #define CLOSURE_OBJ_PARAMS_FLAGS(v) (((CLOSURE_OBJECT *) v.ptr)->params.flags)
@@ -360,7 +363,7 @@ void vlo_ensure_additional_space(VALUE v, size_t n);
 void array_push(VALUE arr, VALUE v);
 VALUE array_shift(VALUE arr);
 void array_reverse(VALUE arr);
-VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, int params_flags, VALUE *params);
+VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, int params_flags, VALUE *params, VALUE *locals);
 VALUE join_strings(int argc, VALUE *argv);
 // VALUE value_type(VM *vm, VALUE val);
 // int obj_is_of_type(VM *vm, VALUE obj, VALUE t);

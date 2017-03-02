@@ -346,7 +346,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 	UPVAR_INDEX n_uplevels;
 	size_t loop_beg_idx, cond_jump, continue_target_idx, func_jump, end_of_func_idx, if_jump, while_jump;
 	int old_break_addrs_ptr, old_continue_addrs_ptr, i, saved_stack_depth;
+	SYMBOL_TABLE *st;
 
+	// Can probably be overwhelmed by number of local variables with lengthy names
 	ensure_room(buf, *idx, allocated, 1024); // XXX - magic number
 
 	// printf("compile_main_section() node=%p type=%s last_child=%p need_result=%d\n", node, NGS_AST_NODE_TYPES_NAMES[node->type], node->last_child, need_result);
@@ -636,11 +638,20 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			register_local_vars(ctx, node->first_child->next_sibling);
 			// if(N_UPLEVELS) printf("UPLEVELS %d\n", N_UPLEVELS);
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
-			n_locals = N_LOCALS;
-			n_uplevels = N_UPLEVELS;
-			ctx->locals_ptr--;
 			OPCODE(*buf, OP_RET);
 			end_of_func_idx = *idx;
+
+			n_locals = N_LOCALS;
+			n_uplevels = N_UPLEVELS;
+
+			// Local variables names
+			// TODO: something more efficient
+			for(st=LOCALS; st; st=st->hh.next) {
+				OPCODE(*buf, OP_PUSH_L_STR);
+				L_STR(*buf, st->name);
+			}
+
+			ctx->locals_ptr--;
 
 			// Arguments' types and default values
 			for(ptr=node->first_child->first_child, n_params_required=0, n_params_optional=0; ptr; ptr=ptr->next_sibling) {

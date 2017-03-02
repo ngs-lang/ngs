@@ -118,8 +118,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Go over methods and make sure the method X types matrix is as full as possible
 
-			* Usage of undefined local variable - add name of the variable in exception
-
 			* Partial application syntax
 				* Make sure it works correct in expressions such as 10 + X * 2
 				* Check that this works: f(X, *something, **some_kw)
