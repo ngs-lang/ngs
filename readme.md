@@ -1,3 +1,4 @@
+<img align="right" src="img/ngs-logo.svg" />
 Next generation UNIX-ish shell. [![Build Status](https://travis-ci.org/ilyash/ngs.svg?branch=master)](https://travis-ci.org/ilyash/ngs)
 
 Quick links
