@@ -1,6 +1,6 @@
-Next Generation Shell. [![Build Status](https://travis-ci.org/ilyash/ngs.svg?branch=master)](https://travis-ci.org/ilyash/ngs)
+<img alt="NGS logo - cloud and UNIX shell icon" align="right" src="img/ngs-logo-300.png" />
 
-![NGS logo - cloud and UNIX shell icon](img/ngs-logo-300.png?raw=true "NGS")
+Next Generation Shell. [![Build Status](https://travis-ci.org/ilyash/ngs.svg?branch=master)](https://travis-ci.org/ilyash/ngs)
 
 Quick links
 ===========
