@@ -12,12 +12,17 @@
 // ..., FMEMOPEN(3)
 #include <stdio.h>
 
+#ifdef __APPLE__
+#include "fmemopen.h"
+#endif 
+
 // OPEN(2), LSEEK(2), WAIT(2)
+// #define _POSIX_SOURCE
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <fcntl.h>
-
+#include <signal.h>
 // READ(2), LSEEK(2), FORK(2), EXECVE(2), DUP2(2)
 #include <unistd.h>
 
@@ -1036,8 +1041,14 @@ METHOD_RESULT native_c_execve METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(execve(exec_filename, exec_argv, exec_envp)));
 }
 
-METHOD_RESULT native_C_WEXITSTATUS METHOD_PARAMS { METHOD_RETURN(MAKE_INT(WEXITSTATUS(GET_INT(argv[0])))); }
-METHOD_RESULT native_C_WTERMSIG METHOD_PARAMS { METHOD_RETURN(MAKE_INT(WTERMSIG(GET_INT(argv[0])))); }
+METHOD_RESULT native_C_WEXITSTATUS METHOD_PARAMS {
+	int status = GET_INT(argv[0]);
+	METHOD_RETURN(MAKE_INT(WEXITSTATUS(status)));
+}
+METHOD_RESULT native_C_WTERMSIG METHOD_PARAMS {
+	int status = GET_INT(argv[0]);
+	METHOD_RETURN(MAKE_INT(WTERMSIG(status)));
+}
 
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
 	VAR_INDEX *var;
@@ -2907,6 +2918,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// TODO: Some good solution for many defines
 #define E(name) set_global(vm, "C_" #name, MAKE_INT(name))
 	// errno -ls | awk '{print "E("$1");"}' | xargs -n10
+	/*
 	E(EPERM); E(ENOENT); E(ESRCH); E(EINTR); E(EIO); E(ENXIO); E(E2BIG); E(ENOEXEC); E(EBADF); E(ECHILD);
 	E(EAGAIN); E(ENOMEM); E(EACCES); E(EFAULT); E(ENOTBLK); E(EBUSY); E(EEXIST); E(EXDEV); E(ENODEV); E(ENOTDIR);
 	E(EISDIR); E(EINVAL); E(ENFILE); E(EMFILE); E(ENOTTY); E(ETXTBSY); E(EFBIG); E(ENOSPC); E(ESPIPE); E(EROFS);
@@ -2921,8 +2933,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	E(ECONNREFUSED); E(EHOSTDOWN); E(EHOSTUNREACH); E(EALREADY); E(EINPROGRESS); E(ESTALE); E(EUCLEAN); E(ENOTNAM); E(ENAVAIL); E(EISNAM);
 	E(EREMOTEIO); E(EDQUOT); E(ENOMEDIUM); E(EMEDIUMTYPE); E(ECANCELED); E(ENOKEY); E(EKEYEXPIRED); E(EKEYREVOKED); E(EKEYREJECTED); E(EOWNERDEAD);
 	E(ENOTRECOVERABLE); E(ERFKILL); E(EHWPOISON); E(ENOTSUP);
+	*/
 	// awk '/^#define RTLD_/ {print "E("$2");"}' /usr/include/x86_64-linux-gnu/bits/dlfcn.h | xargs -n10
-	E(RTLD_LAZY); E(RTLD_NOW); E(RTLD_NOLOAD); E(RTLD_DEEPBIND); E(RTLD_GLOBAL); E(RTLD_LOCAL); E(RTLD_NODELETE);
+	E(RTLD_LAZY); E(RTLD_NOW); E(RTLD_NOLOAD); /* E(RTLD_DEEPBIND); E(RTLD_GLOBAL); E(RTLD_LOCAL); E(RTLD_NODELETE); */
 	// man access(2)
 	E(F_OK); E(R_OK); E(W_OK); E(X_OK);
 	// man poll(2);
@@ -2961,7 +2974,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 #ifdef SIGEMT
 	S(SIGEMT);
 #endif
-	S(SIGFPE); S(SIGHUP); S(SIGILL); S(SIGINT); S(SIGKILL); S(SIGPIPE); S(SIGPOLL); S(SIGPROF); S(SIGPWR); S(SIGQUIT); S(SIGSEGV);
+	S(SIGFPE); S(SIGHUP); S(SIGILL); S(SIGINT); S(SIGKILL); S(SIGPIPE); /* S(SIGPOLL); */ S(SIGPROF); /* S(SIGPWR); */ S(SIGQUIT); S(SIGSEGV);
 #ifdef SIGSTKFLT
 	S(SIGSTKFLT);
 #endif
@@ -2995,11 +3008,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	FFI_TYPE(ffi_type_double);
 	FFI_TYPE(ffi_type_pointer);
 	FFI_TYPE(ffi_type_longdouble);
-#ifdef FFI_TARGET_HAS_COMPLEX_TYPE
-	FFI_TYPE(ffi_type_complex_float);
-	FFI_TYPE(ffi_type_complex_double);
-	FFI_TYPE(ffi_type_complex_longdouble);
-#endif
+// #ifdef FFI_TARGET_HAS_COMPLEX_TYPE
+// 	FFI_TYPE(ffi_type_complex_float);
+// 	FFI_TYPE(ffi_type_complex_double);
+// 	FFI_TYPE(ffi_type_complex_longdouble);
+// #endif
 	{
 		ffi_type *t;
 		t = NGS_MALLOC(sizeof(*t));

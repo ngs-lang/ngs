@@ -17,8 +17,8 @@ LDLIBS := -lm -lpthread -lgc -lffi -ldl -ljson-c -lpcre
 LDFLAGS := -rdynamic
 # -pg - for gprof profiler
 LDFLAGS_PROFILER := -pg -g
-COMMON_DEPS := *.h Makefile syntax.c syntax.auto.h pcre_constants.c
-SRC := debug.o ast.o obj.o compile.o decompile.o vm.o ngs.o
+COMMON_DEPS := *.h Makefile syntax.c syntax.auto.h pcre_constants.c fmemopen.c
+SRC := debug.o ast.o obj.o compile.o decompile.o vm.o ngs.o fmemopen.o
 PCRE_H := /usr/include/pcre.h
 # SRC := *.c
 
