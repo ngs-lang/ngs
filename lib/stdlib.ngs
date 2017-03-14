@@ -3989,6 +3989,13 @@ doc Used by match EXPR { ... } construct.
 doc %RET - a ~ b
 F match(a,b) a ~ b
 
+F table(a:Arr) {
+	t = Table()
+	a[0].each(t.register_column(X))
+	a[1..null].each(t.push(X))
+	t
+}
+
 # === File =======================================
 
 F store(s:Str, fname:Str) {

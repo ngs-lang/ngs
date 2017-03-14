@@ -109,7 +109,7 @@ install: ngs man
 	$(INSTALL) -m 755 -d $(DESTDIR)$(bindir)
 	$(INSTALL) -m 755 ngs $(DESTDIR)$(bindir)/
 	# Making sure it's clear that these are NGS tools - keeping the .ngs suffix
-	$(INSTALL) -m 644 bin/*.ngs $(DESTDIR)$(bindir)/
+	$(INSTALL) -m 755 bin/*.ngs $(DESTDIR)$(bindir)/
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -m 644 doc/*.1 $(DESTDIR)$(mandir)/man1/
 	$(INSTALL) -m 755 -d $(DESTDIR)$(docdir)
