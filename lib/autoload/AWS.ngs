@@ -799,7 +799,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 				'Comment': props.get('Comment', "Updated by AWS.ngs")
 				'Changes': [{
 					'Action': 'UPSERT'
-					'ResourceRecordSet': _get_props(rrset.def)
+					'ResourceRecordSet': _get_props(rrset.def, props)
 				}]
 			}
 			rrset.run('update RecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${rrset.def.zone_id} --change-batch ${change_batch.encode_json()}))
