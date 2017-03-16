@@ -23,6 +23,10 @@ Note that this started as internal document so things here are unformed, not fin
 	* assert_file / assert_file_exists ?
 	* assert_has_line / assert_has_line_with ?
 	* Make Indexable: Arr, Str, Range - this might save some code
+	* shift(h:Hash, k)
+	* shift(h:Hash, k, dflt)
+	* AWS::SecGroup - check whether Description is Anchor-only
+	* Support newlines as function arguments separators
 
 [roadmap]
 

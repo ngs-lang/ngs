@@ -637,27 +637,29 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		elb.def.anchor.get('name') is not Str throws InvalidArgument("Elb is the ELB name and must be a string, not ${elb.def.anchor.get('name')}")
 
 		# Tags
-		diff = cmp(elb.props.get('Tags', {}), props.get('Tags', {}))
+		if 'Tags' in props {
+			diff = cmp(elb.props.get('Tags', {}), props.Tags)
 
-		if (tags = cli_tags(diff.add + diff.change)) {
-			elb.run('add ELB tags', %(aws elb add-tags --load-balancer-names ${elb.def.anchor.name} --tags $*tags))
-		}
+			if (tags = cli_tags(diff.add + diff.change)) {
+				elb.run('add ELB tags', %(aws elb add-tags --load-balancer-names ${elb.def.anchor.name} --tags $*tags))
+			}
 
-		if (tags = diff.remove) {
-			elb.run('remove ELB tags', %(aws elb remove-tags --load-balancer-names ${elb.def.anchor.name} --tags $*tags))
-		}
+			if (tags = diff.remove) {
+				elb.run('remove ELB tags', %(aws elb remove-tags --load-balancer-names ${elb.def.anchor.name} --tags $*tags))
+			}
 
-		# Health check. Note: only updates given properties and keeps the rest as they were.
-		if 'HealthCheck' in props {
-			diff = cmp(elb.props['HealthCheck'], props['HealthCheck'])
-			assert(not(diff.add), "Can't handle additional health check properties ${diff.add}")
-			if diff.change {
-				elb.def.log('update', "ELB health check change: ${diff.change}")
-				t = elb.props['HealthCheck'] + diff.change
-				elb.run(
-					'update ELB health check',
-					%(aws elb configure-health-check --load-balancer-name ${elb.def.anchor.name} --health-check ${t.encode_json()})
-				)
+			# Health check. Note: only updates given properties and keeps the rest as they were.
+			if 'HealthCheck' in props {
+				diff = cmp(elb.props['HealthCheck'], props['HealthCheck'])
+				assert(not(diff.add), "Can't handle additional health check properties ${diff.add}")
+				if diff.change {
+					elb.def.log('update', "ELB health check change: ${diff.change}")
+					t = elb.props['HealthCheck'] + diff.change
+					elb.run(
+						'update ELB health check',
+						%(aws elb configure-health-check --load-balancer-name ${elb.def.anchor.name} --health-check ${t.encode_json()})
+					)
+				}
 			}
 		}
 
@@ -701,8 +703,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 
 		# TODO: listeners
-		diff = cmp(elb.props.ListenerDescriptions, props.ListenerDescriptions)
-		# echo("DIFF $diff")
+		if 'ListenerDescriptions' in props {
+			diff = cmp(elb.props.ListenerDescriptions, props.ListenerDescriptions)
+			# echo("DIFF $diff")
+		}
 	}
 
 	F delete(elb:Elb) {
