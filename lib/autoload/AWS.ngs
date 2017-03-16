@@ -761,6 +761,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			rrs .= filter({A.SetIdentifier == anchor.SetIdentifier})
 		}
 
+		if 'Region' in anchor {
+			rrs .= filter({A.Region == anchor.Region})
+		}
+
 		rd.resources = rrs / RecordSetRes(rd, X)
 		rd
 	}
@@ -804,6 +808,18 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			}
 			rrset.run('update RecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${rrset.def.zone_id} --change-batch ${change_batch.encode_json()}))
 		}
+	}
+
+	F delete(r:RecordSetRes) {
+		change_batch = {
+			'Comment': "Deleted by AWS.ngs"
+			'Changes': [{
+				'Action': 'DELETE'
+				'ResourceRecordSet': r.props
+			}]
+		}
+		r.def.run('Delete RecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${r.def.zone_id} --change-batch ${change_batch.encode_json()}))
+
 	}
 
 	# --------------------------------------------------
