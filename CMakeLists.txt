@@ -7,6 +7,7 @@ set(FMEMOPEN_SOURCE fmemopen.c)
 ENDIF(APPLE)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS})
 add_executable(ngs ngs.c syntax.include syntax.auto.h pcre_constants.include obj.c vm.c compile.c debug.c ast.c ${FMEMOPEN_SOURCE})
+pkg_get_variable(PCRE_H_DIR libpcre includedir)
 add_custom_command(
 	OUTPUT
 		${CMAKE_CURRENT_BINARY_DIR}/syntax.include
@@ -31,7 +32,7 @@ add_custom_command(
 )
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
-	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/make-pcre-constants.sh >${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/make-pcre-constants.sh ${PCRE_H_DIR}/pcre.h >${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
 )
 target_link_libraries(ngs m pthread gc ffi dl json-c pcre)
 # install(TARGETS ngs DESTINATION bin)

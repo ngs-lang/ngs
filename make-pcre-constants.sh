@@ -2,4 +2,6 @@
 
 set -eu
 
-awk '/^#define PCRE/ && $3 {print "E("$2");"}' /usr/include/pcre.h | grep -v 'PCRE_UCHAR\|PCRE_SPTR' | sort | xargs -n5
+H="$1"
+
+awk '/^#define PCRE/ && $3 {print "E("$2");"}' $H | grep -v 'PCRE_UCHAR\|PCRE_SPTR' | sort | xargs -n5
