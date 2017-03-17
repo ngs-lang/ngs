@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <pcre.h>
 #include "ngs.h"
-#include "syntax.c"
+#include "syntax.include"
 #undef __
 #include "compile.h"
 #include "decompile.h"

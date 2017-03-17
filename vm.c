@@ -2943,7 +2943,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	#pragma GCC diagnostic ignored "-Wpragmas"
 	// Silence GCC 6 warnings (negative value)
 	#pragma GCC diagnostic ignored "-Wshift-negative-value"
-#include "pcre_constants.c"
+#include "pcre_constants.include"
 	#pragma GCC diagnostic pop
 
 #undef E
