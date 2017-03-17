@@ -749,6 +749,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			[]
 		}
 
+		# XXX: getting 100 rrs. Overkill / underkill.
 		rrs = ``aws route53 list-resource-record-sets --hosted-zone-id $zone_id --start-record-name ${anchor.Name} $*type_args``
 
 		rrs .= filter({A.Name == anchor.Name})
