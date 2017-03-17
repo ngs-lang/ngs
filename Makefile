@@ -17,7 +17,7 @@ LDLIBS := -lm -lpthread -lgc -lffi -ldl -ljson-c -lpcre
 LDFLAGS := -rdynamic
 # -pg - for gprof profiler
 LDFLAGS_PROFILER := -pg -g
-COMMON_DEPS := *.h Makefile syntax.c syntax.auto.h pcre_constants.include
+COMMON_DEPS := *.h Makefile syntax.include syntax.auto.h pcre_constants.include
 SRC := debug.o ast.o obj.o compile.o decompile.o vm.o ngs.o
 PCRE_H := /usr/include/pcre.h
 # SRC := *.c
@@ -25,10 +25,10 @@ PCRE_H := /usr/include/pcre.h
 all: ngs
 
 # Built for peg/leg v 0.1.15
-syntax.c: syntax.leg patch-leg-input.sed patch-leg-output.sed patch-leg-output.awk
+syntax.include: syntax.leg patch-leg-input.sed patch-leg-output.sed patch-leg-output.awk
 	cat $< | sed -f patch-leg-input.sed | leg | sed 's/<stdin>/$</' | sed -f patch-leg-output.sed | awk -f patch-leg-output.awk >$@
 
-syntax.auto.h: syntax.c Makefile
+syntax.auto.h: syntax.include Makefile
 	cat $< | (sed -n '/^typedef/p; /^struct/,/^$$/p; /define YY_MAX_LINES/p;'; echo 'int yyparse(yycontext *yyctx);'; echo 'yycontext * yyrelease(yycontext *yyctx);') >$@
 
 pcre_constants.include: $(PCRE_H)
@@ -78,7 +78,7 @@ time-sum: ngs
 	time echo 'set s 0; for {set i 0} {$$i < 10000000} {incr i} {set s [expr {$$s + $$i}]}' | tclsh8.6
 
 clean:
-	-rm syntax.c pcre_constants.include
+	-rm syntax.include pcre_constants.include
 	-rm syntax.auto.h
 	-rm ngs ngs-prof ngs-debug
 	-rm *.o

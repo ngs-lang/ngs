@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 project(NGS)
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(ngs ngs.c syntax.include syntax.auto.h pcre_constants.include obj.c vm.c compile.c debug.c ast.c)
 add_custom_command(
 	OUTPUT

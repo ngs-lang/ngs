@@ -11,6 +11,6 @@ ngs-debug
 
 tags
 *.o
-syntax.c
+syntax.include
 syntax.auto.h
-pcre_constants.c
+pcre_constants.include
