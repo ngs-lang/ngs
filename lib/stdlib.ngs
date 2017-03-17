@@ -1977,8 +1977,9 @@ F get(eb:EmptyBox) throw InvalidArgument("Can not get value from EmptyBox")
 
 doc Get EmptyBox value
 doc %RET - dflt
-F get(eb:EmptyBox, dflt) dflt
+F get(eb:EmptyBox, dflt=null) dflt
 
+# --- Maybe remove - start ---
 doc Convert FullBox to array
 doc %RET - Arr of exactly one element, the value of FullBox
 F Arr(fb:FullBox) [fb.val]
@@ -1986,6 +1987,7 @@ F Arr(fb:FullBox) [fb.val]
 doc Convert EmptyBox to array
 doc %RET - Empty array
 F Arr(eb:EmptyBox) []
+# --- Maybe remove - end ---
 
 doc Convert anything to Box (always FullBox)
 doc x - value to enclose in a box
@@ -1996,6 +1998,7 @@ doc Convert null to Box (always EmptyBox)
 doc %RET - EmptyBox
 F Box(n:Null) EmptyBox()
 
+# --- Maybe remove - start ---
 doc Convert array to a Box. Throws InvalidArgument if length of the array is not 0 or 1.
 doc %RET - Box. FullBox if the array has one element, EmptyBox otherwise.
 F Box(a:Arr) {
@@ -2006,6 +2009,7 @@ F Box(a:Arr) {
 		true   throw InvalidArgument("Box(a:Arr) only handles arrays of length of 0 or 1")
 	}
 }
+# --- Maybe remove - end ---
 
 doc Convert array value indexed by the given index
 doc idx - key to look in hash
@@ -2031,6 +2035,22 @@ F dflt(fb: FullBox, x) fb
 doc Wrap x in a Box
 doc %RET - FullBox with the value x
 F dflt(eb: EmptyBox, x) FullBox(x)
+
+doc Compare boxes. Empty boxes and boxes with same content are considered to be equal.
+doc %RET - Bool
+F ==(b1:Box, b2:Box) {
+	# Boxes comparison stolen from
+	# http://learnyouahaskell.com/making-our-own-types-and-typeclasses
+	# "instance Eq (Maybe m) where"
+	b1 is EmptyBox and b2 is EmptyBox returns true
+	b1 is FullBox and b2 is FullBox and b1.val == b2.val returns true
+	false
+}
+
+TEST EmptyBox() == EmptyBox()
+TEST EmptyBox() != FullBox(1)
+TEST FullBox(1) == FullBox(1)
+TEST FullBox(1) != FullBox(2)
 
 # === Integer ====================================
 
