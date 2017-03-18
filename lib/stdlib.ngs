@@ -1977,7 +1977,7 @@ F get(eb:EmptyBox) throw InvalidArgument("Can not get value from EmptyBox")
 
 doc Get EmptyBox value
 doc %RET - dflt
-F get(eb:EmptyBox, dflt=null) dflt
+F get(eb:EmptyBox, dflt) dflt
 
 # --- Maybe remove - start ---
 doc Convert FullBox to array
