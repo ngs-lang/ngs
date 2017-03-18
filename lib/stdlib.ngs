@@ -1975,9 +1975,13 @@ F get(fb:FullBox, dflt=null) fb.val
 doc Get EmptyBox value. Always throws InvalidArgument.
 F get(eb:EmptyBox) throw InvalidArgument("Can not get value from EmptyBox")
 
+TEST try EmptyBox().get() catch(e:InvalidArgument) true
+
 doc Get EmptyBox value
 doc %RET - dflt
 F get(eb:EmptyBox, dflt) dflt
+
+TEST EmptyBox().get(10) == 10
 
 # --- Maybe remove - start ---
 doc Convert FullBox to array
