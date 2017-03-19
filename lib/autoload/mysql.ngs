@@ -1,0 +1,89 @@
+ns(GlobalRes=Res, GlobalResDef=ResDef) {
+
+	# TODO: allow specifying endpoint instead of "mysql" binary defaults
+
+	# Methods with added implementations
+	global Str, init, find, latest, create, update, delete, users_ids, run, id, ids, (==), subset
+
+	type Res(GlobalRes)
+
+	F run(r:Res, log_pfx:Str, cmd:Command) r.def.run(log_pfx, cmd)
+
+	# --------------------------------------------------
+	# ResDef
+	# --------------------------------------------------
+
+	type ResDef(GlobalResDef)
+
+	F run(rd:ResDef, log_pfx:Str, cmd:Command) {
+		if rd.dry_run {
+			rd.log("run/$log_pfx", "would run: ${cmd.argv.join(' ')}")
+			null
+		} else {
+			rd.log("run/$log_pfx", "running: ${cmd.argv.join(' ')}")
+			`$cmd`
+		}
+	}
+
+	F init(rd:ResDef, **kw) super(rd, kw)
+
+	# --------------------------------------------------
+	# Db
+	# --------------------------------------------------
+
+	type Db(ResDef)
+	type DbRes(Res)
+
+	F _list_databases(rd:Db) {
+		collector {
+			`mysql -e "show databases" -E`.lines(F(line) {
+				if m = line ~ /Database: (.*)/ {
+					('db' in rd.anchor) and not(m[1] ~ rd.anchor.db) returns
+					collect({'db': m[1]})
+				}
+			})
+		}
+	}
+
+	F init(rd:Db, db) {
+		guard db is Str or db is Pfx or db is Sfx
+		super(rd, db=db)
+	}
+
+	F find(rd:Db) {
+		rd.log('Find', 'Database')
+		rd.resources = _list_databases(rd).map(DbRes(rd, X))
+		rd
+	}
+
+	F create(rd:Db, props:Hash) {
+		rd.run('Create database', %(mysqladmin create ${rd.anchor.db}))
+		if not(rd.dry_run) {
+			rd.resources = _list_databases(rd).map(DbRes(rd, X))
+		}
+	}
+
+	F update(r:DbRes, props:Hash) {
+		warn('Db update is not implemented. Doing nothing.')
+	}
+
+	F delete(r:DbRes) {
+		r.def.run('Delete database', %(mysqladmin drop -f ${r.props.db}))
+	}
+
+	# ==================================================
+	# Quick and dirty - set global variables
+	# ==================================================
+
+	F pollute(do_warn=true) {
+
+		vars = _exports.filterv(Type).without('Res').without('ResDef')
+
+		if do_warn {
+			warn("Polluting global namespace with AWS-specific variables: ${vars.keys().join(', ')}")
+		}
+
+		vars.mapk(resolve_global_variable).each(set_global_variable)
+	}
+}
+
