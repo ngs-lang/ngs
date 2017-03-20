@@ -1,0 +1,50 @@
+#!/usr/bin/env ngs
+
+MARKERS = ['# EC2SSH - start', '# EC2SSH - end']
+
+f = ENV.get('EC2SSHFILE') or ENV.HOME / '.ssh' / 'config'
+if not(File(f)) {
+	$(touch $f)
+}
+
+F HostnameBase(i:Hash) "${i.Tags.env}-${i.Tags.role}"
+
+{
+	instances = AWS::Instance().find().resources.props.filter({try HostnameBase(A)}).filter(X.get('PublicIpAddress')).sort('LaunchTime')
+	stats = Stats(instances / HostnameBase)
+	numbering = Stats()
+
+	out = collector {
+		collect(MARKERS[0])
+		instances.each(F(i) {
+			hostname_base = HostnameBase(i)
+			h = if stats[hostname_base] == 1 hostname_base else {
+				numbering.push(hostname_base)
+				"${hostname_base}-${numbering[hostname_base]}"
+			}
+			collect("Host $h-${i.Placement.AvailabilityZone}-${i.PublicIpAddress.replace(/[.]/, {'-'})}")
+			collect("  # Instance ID - ${i.InstanceId}")
+			collect("  Hostname ${i.PublicIpAddress}")
+			collect("")
+		})
+		collect(MARKERS[1])
+	}
+
+	file_lines = out + collector {
+		do_collect = true
+		File(f).lines(F(line) {
+			if line == MARKERS[0] {
+				do_collect = false
+			}
+			if do_collect {
+				collect(line)
+			}
+			if line == MARKERS[1] {
+				do_collect = true
+			}
+		})
+	}
+	File("${f}.new").lines(file_lines)
+	$(mv "${f}.new" $f)
+	echo("Done")
+}

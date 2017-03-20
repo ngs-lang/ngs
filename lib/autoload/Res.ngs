@@ -1,5 +1,5 @@
 {
-	type ResDef
+	type ResDef(Eachable1)
 
 	F init(rd:ResDef, anchor) {
 		init(args())
@@ -40,6 +40,16 @@
 	F expect(rd:ResDef) {
 		rd.find()
 		assert(rd.len() > 0, "Expected one or more ${rd.typeof().name} resource instances but found none")
+		rd
+	}
+
+	F each(rd:ResDef, cb:Fun) {
+		if rd.resources is Null {
+			rd.find()
+		}
+		rd.resources.each(F(r) {
+			cb(r.props)
+		})
 		rd
 	}
 
