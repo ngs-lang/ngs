@@ -10,7 +10,7 @@ if not(File(f)) {
 F HostnameBase(i:Hash) "${i.Tags.env}-${i.Tags.role}"
 
 {
-	instances = AWS::Instance().find().resources.props.filter({try HostnameBase(A)}).filter(X.get('PublicIpAddress')).sort('LaunchTime')
+	instances = AWS::Instance(regions='*').find().resources.props.filter({try HostnameBase(A)}).filter(X.get('PublicIpAddress')).sort('LaunchTime')
 	stats = Stats(instances / HostnameBase)
 	numbering = Stats()
 
