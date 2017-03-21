@@ -71,8 +71,10 @@ typedef struct {
 #define MAX_TRIES_PER_FRAME   (8)
 #define MAX_ARGS             (16)
 
-typedef uint16_t PATCH_OFFSET;
-typedef int16_t JUMP_OFFSET;
+// TODO: range check
+// TODO: smaller types for shorter jumps?
+typedef uint32_t PATCH_OFFSET;
+typedef int32_t JUMP_OFFSET;
 
 typedef size_t IP;
 
