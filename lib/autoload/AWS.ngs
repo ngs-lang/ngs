@@ -377,6 +377,16 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			}
 		}
 
+		if 'IpPermissionsEgress' in props {
+			diff = compare(sg.props.IpPermissionsEgress/IpPermBox, props.IpPermissionsEgress/IpPermBox)
+			if diff.add {
+				sg.run('add SG egress rules', %(aws ec2 authorize-security-group-egress --group-id ${sg.props.GroupId} --ip-permissions $*{diff.add.val / encode_json}))
+			}
+			if diff.remove {
+				sg.run('remove SG egress rules', %(aws ec2 revoke-security-group-egress --group-id ${sg.props.GroupId} --ip-permissions $*{diff.remove.val / encode_json}))
+			}
+		}
+
 		sg.update_tags(props)
 	}
 
@@ -522,7 +532,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		args = []
 		args += ['--key-name', props.KeyName] tor []
 
-		sgs = _sgs(rd).map_true(['--security-group-ids'] + X)
+		sgs = _sgs(rd, props).map_true(['--security-group-ids'] + X)
 
 		# TODO: Support Res SubnetId?
 		args += ['--subnet-id', props.SubnetId] tor []
@@ -544,7 +554,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		instance.update_tags(props)
 
 		current_sgs = instance.props.SecurityGroups.GroupId
-		target_sgs = _sgs(instance.def)
+		target_sgs = _sgs(instance.def, props)
 		diff = cmp(current_sgs, target_sgs)
 		if diff.add or diff.remove {
 			diff.add    % { instance.def.log('update', "${instance.id()} - Adding SG $A") }

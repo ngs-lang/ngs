@@ -27,6 +27,7 @@ Note that this started as internal document so things here are unformed, not fin
 	* shift(h:Hash, k, dflt)
 	* AWS::SecGroup - check whether Description is Anchor-only
 	* Support newlines as function arguments separators
+	* Convert first(...) to work with Eachable, not specific types?
 
 [roadmap]
 
