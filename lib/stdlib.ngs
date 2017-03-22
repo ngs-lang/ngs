@@ -190,6 +190,22 @@ F filter(something:Eachable1, predicate) {
 		}
 }
 
+doc Find first element in e that satisfies the predicate.
+doc %RET - Either the element or null if element was not found.
+doc %EX - (10..20).first(F(x) x % 3 == 0)  # 12 - first item divisible by 3
+F first(e:Eachable1, predicate) {
+	p = Pred(predicate)
+	finish = Return()
+	e.each(F(i) {
+		p(i) throws finish(i)
+	})
+	null
+}
+
+doc Find first element in e that satisfies Bool(e) == true.
+doc Exactly same as first(e, identity).
+F first(e:Eachable1) first(e, identity)
+
 {
 	type TheOneFail
 	TheOneFail.inherit(InvalidArgument)
@@ -731,19 +747,6 @@ F each(r:Range, cb:Fun) {
 TEST (1..3).map(X*2) == [2, 4]
 TEST (1...3).map(X*2) == [2, 4, 6]
 
-doc Find first element in r that satisfies the predicate.
-doc args - Additional arguments for calling the predicate.
-doc The predicate is called with each one of the elements plus the args: predicate(i)
-doc %RET - Either the element or null if element was not found.
-doc %EX - (10..20).first(F(x) x % 3 == 0)  # 12 - first item divisible by 3
-F first(r:Range, predicate:Fun) {
-	finish = Return()
-	r.each(F(i) {
-		predicate(i) throws finish(i)
-	})
-	null
-}
-
 TEST (10..20).first(F(x) x % 3 == 0) == 12
 
 doc TODO
@@ -1189,10 +1192,6 @@ F uniq(arr:Arr) arr.Hash({true}).keys()
 
 TEST [1,2,2,3,4,4].uniq() == [1,2,3,4]
 
-doc Find first true value
-doc %EX - [null, false, 10, 20].first()  # 10
-F first(arr:Arr) first(arr, identity)
-
 TEST [null, false, 10, 20].first() == 10
 
 doc Find index of first value that satisfies the predicate.
@@ -1224,19 +1223,6 @@ F indexes(arr:Arr, predicate) {
 }
 
 TEST [1,5,1,10].indexes(X>2) == [1,3]
-
-doc Find first value that satisfies the predicate.
-doc TODO: Make it work on anything with each() method
-doc arr - Items to look at
-doc predicate - Test function
-doc args - Additional arguments for the predicate
-doc %RET - Int or null
-doc %EX - [1,2,11,3,4].first(X>10)  # 11
-F first(arr:Arr, predicate:Fun) {
-	i = arr.index(predicate)
-	i is Null returns
-	arr[i]
-}
 
 TEST [5,10,15].first(X>7) == 10
 TEST [5,10,15].first(X>20) == null
