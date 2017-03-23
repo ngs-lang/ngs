@@ -18,37 +18,52 @@
 	doc filters - kkk=vvv - for instances having given tag value
 	F main(filters:Arr, allreg:Bool=false) {
 
-		filters .= map(F(arg) {
+		# region to az
+		regions = {}
+
+		filters = collector filters.each(F(arg) {
 			kv = arg.split('=')
 			econd {
 
-				arg.starts_with('vpc-')
-					"Name=vpc-id,Values=$arg"
+				arg.starts_with('vpc-') collect("Name=vpc-id,Values=$arg")
 
-				arg.starts_with('i-')
-					"Name=instance-id,Values=$arg"
+				arg.starts_with('i-') collect("Name=instance-id,Values=$arg")
+
+				m = arg ~ /^([a-z]{2}-[a-z]+-[0-9]+)([a-z])?$/ {
+					# region or az
+					regions.dflt(m[0], {})
+					if m.matches.len() == 3 {
+						regions[m[0]][m[1]] = true
+						throw InvalidArgument("Availability zones filtering is not supported yet")
+					}
+				}
 
 				arg ~ /^[0-9.]+$/ {
 					filter_name = if IPAddr(arg).is_private() then 'private-ip-address' else 'ip-address'
-					"Name=$filter_name,Values=$arg"
+					collect("Name=$filter_name,Values=$arg")
 				}
 
-				kv.len() == 2
-					"Name=tag-key,Values=${kv[0]},Name=tag-value,Values=${kv[1]}"
+				kv.len() == 2 collect("Name=tag-key,Values=${kv[0]},Name=tag-value,Values=${kv[1]}")
 			}
 		})
+
+		len(regions) > 1 throws InvalidArgument("Multiple regions are not supported yet")
 
 		if filters {
 			filters = ['--filters', *filters]
 		}
 
 		instances = if allreg {
-			AWS
 			# AZ is now important so moving it to be first
 			config('table_Instances', ['AZ'] + config('table_Instances').without('AZ'))
-			aws_regions({ ``aws ec2 describe-instances --region $A $*filters`` })
+			AWS::regions({ ``aws ec2 describe-instances --region $A $*filters`` })
 		} else {
-			``aws ec2 describe-instances $*filters``
+			reg = if len(regions) == 1 {
+				['--region', regions.keys().the_one()]
+			} else {
+				[]
+			}
+			``aws ec2 describe-instances $*filters $*reg``
 		}
 		instances .= sort('LaunchTime')
 
