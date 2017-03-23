@@ -21,7 +21,7 @@
 		# region to az
 		regions = {}
 
-		filters = collector filters.each(F(arg) {
+		filters = ['--filters'] +? collector filters.each(F(arg) {
 			kv = arg.split('=')
 			econd {
 
@@ -48,10 +48,6 @@
 		})
 
 		len(regions) > 1 throws InvalidArgument("Multiple regions are not supported yet")
-
-		if filters {
-			filters = ['--filters', *filters]
-		}
 
 		instances = if allreg {
 			# AZ is now important so moving it to be first
