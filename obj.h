@@ -375,6 +375,7 @@ METHOD_RESULT decode_json(VALUE s, VALUE *result);
 METHOD_RESULT encode_json(VALUE obj, VALUE *result);
 void *ngs_memmem(const void *haystack_start, size_t haystack_len, const void *needle_start, size_t needle_len);
 char *ngs_strdup(const char *src);
+char *ngs_strcat(const char *s1, const char *s2);
 VALUE make_pthread();
 VALUE make_pthread_attr();
 VALUE make_pthread_mutex();

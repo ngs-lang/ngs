@@ -1162,6 +1162,8 @@ for =
 	for-i-n
 	|
 	for-start-cond-incr
+	|
+	for-in
 
 for-start-cond-incr =
 	"for" space? "(" init:code-block ";" space? cond:code-block space? ";" space? incr:code-block space? ")" space? body:code-block {
@@ -1222,6 +1224,57 @@ for-i-n =
 
 			incr_node->next_sibling = body;
 
+		$$ = ret;
+	}
+
+for-in =
+	"for" space? v:identifier space "in" space e:code-block space? body:code-block {
+		MAKE_NODE(ret, EXPRESSIONS_NODE);
+
+			// v_iter = Iter(e)
+			MAKE_NODE(iter_assignment, ASSIGNMENT_NODE);
+				// Not sure exposing the ..._iter variable like this is a good idea
+				MAKE_IDENTIFIER_NODE(iter_var, ngs_strcat(v->name, "_iter"));
+				append_ast_node_child(iter_assignment, iter_var);
+				MAKE_NODE(iter_call, CALL_NODE);
+					MAKE_IDENTIFIER_NODE(iter_identifier, "Iter");
+					append_ast_node_child(iter_call, iter_identifier);
+					MAKE_NODE(iter_call_args, ARGS_NODE);
+						MAKE_REQ_ARG_NODE(iter_call_arg_e, e);
+						append_ast_node_child(iter_call_args, iter_call_arg_e);
+					append_ast_node_child(iter_call, iter_call_args);
+				append_ast_node_child(iter_assignment, iter_call);
+			append_ast_node_child(ret, iter_assignment);
+
+			// while v_iter { ... }
+			MAKE_NODE(while_iter, WHILE_NODE);
+
+				MAKE_IDENTIFIER_NODE(while_cond, ngs_strcat(v->name, "_iter"));
+				while_iter->first_child = while_cond;
+
+				MAKE_NODE(while_body, EXPRESSIONS_NODE);
+
+					// v = next(v_iter)
+					MAKE_NODE(var_assignment, ASSIGNMENT_NODE);
+						append_ast_node_child(var_assignment, v);
+						MAKE_NODE(next_call, CALL_NODE);
+							MAKE_IDENTIFIER_NODE(next_identifier, "next");
+							append_ast_node_child(next_call, next_identifier);
+							MAKE_NODE(next_call_args, ARGS_NODE);
+								MAKE_IDENTIFIER_NODE(next_call_arg_iter_identifier, ngs_strcat(v->name, "_iter"));
+								MAKE_REQ_ARG_NODE(next_call_arg_iter, next_call_arg_iter_identifier);
+								append_ast_node_child(next_call_args, next_call_arg_iter);
+							append_ast_node_child(next_call, next_call_args);
+						append_ast_node_child(var_assignment, next_call);
+					append_ast_node_child(while_body, var_assignment);
+
+					// body
+					append_ast_node_child(while_body, body);
+
+				while_cond->next_sibling = while_body;
+			append_ast_node_child(ret, while_iter);
+
+		// print_ast(ret, 0);
 		$$ = ret;
 	}
 

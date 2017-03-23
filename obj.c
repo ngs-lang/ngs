@@ -989,6 +989,15 @@ char *ngs_strdup(const char *src) {
 	memcpy(ret, src, len);
 	return ret;
 }
+char *ngs_strcat(const char *s1, const char *s2) {
+	size_t len = strlen(s1) + strlen(s2) + 1;
+	char *ret = NGS_MALLOC_ATOMIC(len);
+	if (ret == NULL) { return ret; }
+	memcpy(ret, s1, strlen(s1));
+	memcpy(ret + strlen(s1), s2, strlen(s2)+1);
+	return ret;
+}
+
 
 // WIP
 // INFO: Backtrace is always needed to throw an exception
