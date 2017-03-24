@@ -11,7 +11,7 @@
 // TODO: Use exceptions instead of asserts
 
 #define OPCODE(buf, x) { (buf)[*idx]=x; (*idx)++; }
-#define L_STR(buf, x) { int l = strlen(x); assert(l<256); OPCODE(buf, l); memcpy((buf)+(*idx), x, l); (*idx) += l; }
+#define L8_STR(buf, x) { int l = strlen(x); assert(l<256); OPCODE(buf, l); memcpy((buf)+(*idx), x, l); (*idx) += l; }
 #define DATA(buf, x) { memcpy((buf)+(*idx), &(x), sizeof(x)); (*idx) += sizeof(x); }
 #define DATA_INT(buf, x) { *(int *)&(buf)[*idx] = x; (*idx)+=sizeof(int); }
 #define DATA_UINT16(buf, x) { *(uint16_t *)&(buf)[*idx] = x; (*idx)+=sizeof(uint16_t); }
@@ -334,8 +334,8 @@ void compile_attr_name(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, siz
 		compile_main_section(ctx, node, buf, idx, allocated, NEED_RESULT);
 		return;
 	}
-	OPCODE(*buf, OP_PUSH_L_STR);
-	L_STR(*buf, node->name);
+	OPCODE(*buf, OP_PUSH_L8_STR);
+	L8_STR(*buf, node->name);
 }
 
 void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
@@ -647,8 +647,8 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			// Local variables names
 			// TODO: something more efficient
 			for(st=LOCALS; st; st=st->hh.next) {
-				OPCODE(*buf, OP_PUSH_L_STR);
-				L_STR(*buf, st->name);
+				OPCODE(*buf, OP_PUSH_L8_STR);
+				L8_STR(*buf, st->name);
 			}
 
 			ctx->locals_ptr--;
@@ -656,8 +656,8 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			// Arguments' types and default values
 			for(ptr=node->first_child->first_child, n_params_required=0, n_params_optional=0; ptr; ptr=ptr->next_sibling) {
 				// ptr children: identifier, type, (default value | splat indicator)
-				OPCODE(*buf, OP_PUSH_L_STR);
-				L_STR(*buf, ptr->first_child->name);
+				OPCODE(*buf, OP_PUSH_L8_STR);
+				L8_STR(*buf, ptr->first_child->name);
 				// printf("PT 0 %s\n", ptr->first_child->name);
 				compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 				if(ptr->first_child->next_sibling->next_sibling) {
@@ -704,7 +704,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				// Function has a name
 				compile_identifier(ctx, buf, idx, node->first_child->next_sibling->next_sibling->next_sibling->name, OP_DEF_LOCAL_FUNC, OP_DEF_UPVAR_FUNC, OP_DEF_GLOBAL_FUNC);
 				OPCODE(*buf, OP_SET_CLOSURE_NAME);
-				L_STR(*buf, node->first_child->next_sibling->next_sibling->next_sibling->name);
+				L8_STR(*buf, node->first_child->next_sibling->next_sibling->next_sibling->name);
 			}
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
@@ -728,10 +728,20 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			}
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
-		case STR_COMP_IMM_NODE:
-			OPCODE(*buf, OP_PUSH_L_STR);
-			L_STR(*buf, node->name);
+		case STR_COMP_IMM_NODE: {
+			size_t l = strlen(node->name);
+			if(l < 256) {
+				OPCODE(*buf, OP_PUSH_L8_STR);
+				L8_STR(*buf, node->name);
+			} else {
+				OPCODE(*buf, OP_PUSH_L32_STR);
+				DATA_UINT32(*buf, l);
+				ensure_room(buf, *idx, allocated, l);
+				memcpy((*buf)+(*idx), node->name, l);
+				(*idx) += l;
+			}
 			break;
+		}
 		case NULL_NODE:  if(need_result) { OPCODE(*buf, OP_PUSH_NULL); } break;
 		case TRUE_NODE:  if(need_result) { OPCODE(*buf, OP_PUSH_TRUE); } break;
 		case FALSE_NODE: if(need_result) { OPCODE(*buf, OP_PUSH_FALSE); } break;
@@ -1142,7 +1152,7 @@ void compile_init_section(COMPILATION_CONTEXT *ctx, char **init_buf, size_t *idx
 			// uint16 - number of locations
 			// uint32[] - locations
 			size_t len;
-			L_STR(buf, globals->name);
+			L8_STR(buf, globals->name);
 			len = utarray_len(globals->offsets);
 			DATA_UINT16(buf, len);
 			for(i = 0; i < len; i++) {
@@ -1161,7 +1171,7 @@ void compile_source_location_section(COMPILATION_CONTEXT *ctx, char **buf, size_
 	// Number of files' names. Currently just one is supported
 	// More than one file could be result of compiling something to NGS language
 	DATA_UINT16(*buf, 1);
-	L_STR(*buf, ctx->source_file_name);
+	L8_STR(*buf, ctx->source_file_name);
 	DATA_UINT32(*buf, ctx->source_tracking_entries_count);
 	memcpy(*buf + *idx, ctx->source_tracking_entries, ctx->source_tracking_entries_count * sizeof(source_tracking_entry));
 	*idx += ctx->source_tracking_entries_count * sizeof(source_tracking_entry);

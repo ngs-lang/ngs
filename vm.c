@@ -56,55 +56,56 @@ char *opcodes_names[] = {
 	/*  3 */ "PUSH_TRUE",
 	/*  4 */ "PUSH_INT",
 	/*  5 */ "PUSH_REAL",
-	/*  6 */ "PUSH_L_STR",
-	/*  7 */ "DUP",
-	/*  8 */ "POP",
-	/*  9 */ "XCHG",
-	/* 10 */ "RESOLVE_GLOBAL",
-	/* 11 */ "PATCH",
-	/* 12 */ "FETCH_GLOBAL",
-	/* 13 */ "STORE_GLOBAL",
-	/* 14 */ "FETCH_LOCAL",
-	/* 15 */ "STORE_LOCAL",
-	/* 16 */ "CALL",
-	/* 17 */ "CALL_EXC",
-	/* 18 */ "CALL_ARR",
-	/* 19 */ "RET",
-	/* 20 */ "JMP",
-	/* 21 */ "JMP_TRUE",
-	/* 22 */ "JMP_FALSE",
-	/* 23 */ "MAKE_ARR",
-	/* 24 */ "MAKE_CLOSURE",
-	/* 25 */ "TO_STR",
-	/* 26 */ "MAKE_STR",
-	/* 27 */ "PUSH_EMPTY_STR",
-	/* 28 */ "GLOBAL_DEF_P",
-	/* 29 */ "LOCAL_DEF_P",
-	/* 30 */ "DEF_GLOBAL_FUNC",
-	/* 31 */ "DEF_LOCAL_FUNC",
-	/* 32 */ "FETCH_UPVAR",
-	/* 33 */ "STORE_UPVAR",
-	/* 34 */ "UPVAR_DEF_P",
-	/* 35 */ "DEF_UPVAR_FUNC",
-	/* 36 */ "MAKE_HASH",
-	/* 37 */ "TO_BOOL",
-	/* 38 */ "TO_ARR",
-	/* 39 */ "TO_HASH",
-	/* 40 */ "ARR_APPEND",
-	/* 41 */ "ARR_CONCAT",
-	/* 42 */ "GUARD",
-	/* 43 */ "TRY_START",
-	/* 44 */ "TRY_END",
-	/* 45 */ "ARR_REVERSE",
-	/* 46 */ "THROW",
-	/* 47 */ "MAKE_CMD",
-	/* 48 */ "SET_CLOSURE_NAME",
-	/* 49 */ "SET_CLOSURE_DOC",
-	/* 50 */ "HASH_SET",
-	/* 51 */ "HASH_UPDATE",
-	/* 52 */ "PUSH_KWARGS_MARKER",
-	/* 53 */ "MAKE_REDIR",
-	/* 54 */ "SUPER",
+	/*  6 */ "PUSH_L8_STR",
+	/*  7 */ "PUSH_L32_STR",
+	/*  8 */ "DUP",
+	/*  9 */ "POP",
+	/* 10 */ "XCHG",
+	/* 11 */ "RESOLVE_GLOBAL",
+	/* 12 */ "PATCH",
+	/* 13 */ "FETCH_GLOBAL",
+	/* 14 */ "STORE_GLOBAL",
+	/* 15 */ "FETCH_LOCAL",
+	/* 16 */ "STORE_LOCAL",
+	/* 17 */ "CALL",
+	/* 18 */ "CALL_EXC",
+	/* 19 */ "CALL_ARR",
+	/* 20 */ "RET",
+	/* 21 */ "JMP",
+	/* 22 */ "JMP_TRUE",
+	/* 23 */ "JMP_FALSE",
+	/* 24 */ "MAKE_ARR",
+	/* 25 */ "MAKE_CLOSURE",
+	/* 26 */ "TO_STR",
+	/* 27 */ "MAKE_STR",
+	/* 28 */ "PUSH_EMPTY_STR",
+	/* 29 */ "GLOBAL_DEF_P",
+	/* 30 */ "LOCAL_DEF_P",
+	/* 31 */ "DEF_GLOBAL_FUNC",
+	/* 32 */ "DEF_LOCAL_FUNC",
+	/* 33 */ "FETCH_UPVAR",
+	/* 34 */ "STORE_UPVAR",
+	/* 35 */ "UPVAR_DEF_P",
+	/* 36 */ "DEF_UPVAR_FUNC",
+	/* 37 */ "MAKE_HASH",
+	/* 38 */ "TO_BOOL",
+	/* 39 */ "TO_ARR",
+	/* 40 */ "TO_HASH",
+	/* 41 */ "ARR_APPEND",
+	/* 42 */ "ARR_CONCAT",
+	/* 43 */ "GUARD",
+	/* 44 */ "TRY_START",
+	/* 45 */ "TRY_END",
+	/* 46 */ "ARR_REVERSE",
+	/* 47 */ "THROW",
+	/* 48 */ "MAKE_CMD",
+	/* 49 */ "SET_CLOSURE_NAME",
+	/* 50 */ "SET_CLOSURE_DOC",
+	/* 51 */ "HASH_SET",
+	/* 52 */ "HASH_UPDATE",
+	/* 53 */ "PUSH_KWARGS_MARKER",
+	/* 54 */ "MAKE_REDIR",
+	/* 55 */ "SUPER",
 };
 
 
@@ -3543,12 +3544,20 @@ main_loop:
 							PUSH(make_real(*(NGS_REAL *) &vm->bytecode[ip]));
 							ip += sizeof(NGS_REAL);
 							goto main_loop;
-		case OP_PUSH_L_STR:
-							// Arg: LEN + string
+		case OP_PUSH_L8_STR:
+							// Arg: LEN8 + string
 							// In: ...
 							// Out: ... string
-							v = make_string_of_len(&(vm->bytecode[ip+1]), (unsigned char) vm->bytecode[ip]);
-							ip += 1 + (unsigned char) vm->bytecode[ip];
+							v = make_string_of_len(&(vm->bytecode[ip+sizeof(unsigned char)]), (unsigned char) vm->bytecode[ip]);
+							ip += sizeof(unsigned char) + (unsigned char) vm->bytecode[ip];
+							PUSH(v);
+							goto main_loop;
+		case OP_PUSH_L32_STR:
+							// Arg: LEN32 + string
+							// In: ...
+							// Out: ... string
+							v = make_string_of_len(&(vm->bytecode[ip+sizeof(uint32_t)]), *(uint32_t *) &vm->bytecode[ip]);
+							ip += sizeof(uint32_t) + *(uint32_t *) &vm->bytecode[ip];
 							PUSH(v);
 							goto main_loop;
 		case OP_DUP:

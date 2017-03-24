@@ -61,7 +61,7 @@ void decompile(const char *buf, const size_t start, const size_t end) {
 				sprintf(info_buf, " %d", *(int32_t *)&buf[idx]); idx+=4; break;
 			case OP_PUSH_REAL:
 				sprintf(info_buf, " " NGS_REAL_FMT, *(NGS_REAL *)&buf[idx]); idx+=sizeof(NGS_REAL); break;
-			case OP_PUSH_L_STR:
+			case OP_PUSH_L8_STR:
 				str_len = (unsigned char)buf[idx++];
 				sprintf(info_buf, " %.*s", str_len, &buf[idx]);
 				idx += str_len;
