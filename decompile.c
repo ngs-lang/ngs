@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 #include "ngs.h"
 #include "vm.h"
 
@@ -11,7 +12,7 @@ void decompile(const char *buf, const size_t start, const size_t end) {
 	size_t idx, orig_idx;
 	unsigned char opcode;
 	char info_buf[1024];
-	unsigned char str_len;
+	uint32_t str_len;
 
 	for(idx=start; idx < end; ) {
 		orig_idx = idx;
@@ -65,6 +66,12 @@ void decompile(const char *buf, const size_t start, const size_t end) {
 				str_len = (unsigned char)buf[idx++];
 				sprintf(info_buf, " %.*s", str_len, &buf[idx]);
 				idx += str_len;
+				break;
+			case OP_PUSH_L32_STR:
+				str_len = *(uint32_t *) &buf[idx++];
+				sprintf(info_buf, " (len %"PRIu32", not showing)", str_len);
+				idx += str_len;
+				break;
 		}
 		if(opcode <= sizeof(opcodes_names) / sizeof(char *)) {
 			printf("DECOMPILE [%04zu] %s%s\n", orig_idx, opcodes_names[opcode], info_buf);
