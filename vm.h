@@ -231,6 +231,11 @@ typedef struct {
 
 	VALUE Stat;
 
+	VALUE NgsStrComp;
+		VALUE NgsStrCompImm;
+		VALUE NgsStrCompExp;
+		VALUE NgsStrCompSplatExp;
+
 	VALUE impl_not_found_handler;
 	VALUE global_not_found_handler;
 	VALUE init;
@@ -295,6 +300,9 @@ enum opcodes {
 	OP_MAKE_CLOSURE,
 	OP_TO_STR,
 	OP_MAKE_STR,
+	OP_MAKE_STR_IMM,
+	OP_MAKE_STR_EXP,
+	OP_MAKE_STR_SPLAT_EXP,
 	OP_PUSH_EMPTY_STR,
 	OP_GLOBAL_DEF_P,
 	OP_LOCAL_DEF_P,

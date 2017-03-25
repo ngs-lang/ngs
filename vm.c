@@ -78,34 +78,37 @@ char *opcodes_names[] = {
 	/* 25 */ "MAKE_CLOSURE",
 	/* 26 */ "TO_STR",
 	/* 27 */ "MAKE_STR",
-	/* 28 */ "PUSH_EMPTY_STR",
-	/* 29 */ "GLOBAL_DEF_P",
-	/* 30 */ "LOCAL_DEF_P",
-	/* 31 */ "DEF_GLOBAL_FUNC",
-	/* 32 */ "DEF_LOCAL_FUNC",
-	/* 33 */ "FETCH_UPVAR",
-	/* 34 */ "STORE_UPVAR",
-	/* 35 */ "UPVAR_DEF_P",
-	/* 36 */ "DEF_UPVAR_FUNC",
-	/* 37 */ "MAKE_HASH",
-	/* 38 */ "TO_BOOL",
-	/* 39 */ "TO_ARR",
-	/* 40 */ "TO_HASH",
-	/* 41 */ "ARR_APPEND",
-	/* 42 */ "ARR_CONCAT",
-	/* 43 */ "GUARD",
-	/* 44 */ "TRY_START",
-	/* 45 */ "TRY_END",
-	/* 46 */ "ARR_REVERSE",
-	/* 47 */ "THROW",
-	/* 48 */ "MAKE_CMD",
-	/* 49 */ "SET_CLOSURE_NAME",
-	/* 50 */ "SET_CLOSURE_DOC",
-	/* 51 */ "HASH_SET",
-	/* 52 */ "HASH_UPDATE",
-	/* 53 */ "PUSH_KWARGS_MARKER",
-	/* 54 */ "MAKE_REDIR",
-	/* 55 */ "SUPER",
+	/* 28 */ "MAKE_STR_IMM",
+	/* 29 */ "MAKE_STR_EXP",
+	/* 30 */ "MAKE_STR_SPLAT_EXP",
+	/* 31 */ "PUSH_EMPTY_STR",
+	/* 32 */ "GLOBAL_DEF_P",
+	/* 33 */ "LOCAL_DEF_P",
+	/* 34 */ "DEF_GLOBAL_FUNC",
+	/* 35 */ "DEF_LOCAL_FUNC",
+	/* 36 */ "FETCH_UPVAR",
+	/* 37 */ "STORE_UPVAR",
+	/* 38 */ "UPVAR_DEF_P",
+	/* 39 */ "DEF_UPVAR_FUNC",
+	/* 40 */ "MAKE_HASH",
+	/* 41 */ "TO_BOOL",
+	/* 42 */ "TO_ARR",
+	/* 43 */ "TO_HASH",
+	/* 44 */ "ARR_APPEND",
+	/* 45 */ "ARR_CONCAT",
+	/* 46 */ "GUARD",
+	/* 47 */ "TRY_START",
+	/* 48 */ "TRY_END",
+	/* 49 */ "ARR_REVERSE",
+	/* 50 */ "THROW",
+	/* 51 */ "MAKE_CMD",
+	/* 52 */ "SET_CLOSURE_NAME",
+	/* 53 */ "SET_CLOSURE_DOC",
+	/* 54 */ "HASH_SET",
+	/* 55 */ "HASH_UPDATE",
+	/* 56 */ "PUSH_KWARGS_MARKER",
+	/* 57 */ "MAKE_REDIR",
+	/* 58 */ "SUPER",
 };
 
 
@@ -2230,13 +2233,21 @@ void vm_init(VM *vm, int argc, char **argv) {
 	SETUP_TYPE_FIELD(Stat, st_blksize, 8);
 	SETUP_TYPE_FIELD(Stat, st_blocks, 9);
 
+	// "NgsStrImm${NgsStrExp}$*{NgsStrSplatExp}"
+	MKTYPE(NgsStrComp);
+		MKSUBTYPE(NgsStrCompImm, NgsStrComp);
+		MKSUBTYPE(NgsStrCompExp, NgsStrComp);
+		MKSUBTYPE(NgsStrCompSplatExp, NgsStrComp);
+
 #undef SETUP_RANGE_TYPE
 #undef SETUP_TYPE_FIELD
 #undef MKSUBTYPE
 #undef MKTYPE
 
+	// Why is it here? Consider removing - start
 	vm->eqeq = make_array(0);
 	set_global(vm, "==", vm->eqeq);
+	// Why is it here? Consider removing - end
 
 	register_global_func(vm, 0, "==",              &native_false,    2, "a", vm->Any, "b", vm->Any);
 	_doc(vm, "%RET", "false");
@@ -3560,6 +3571,19 @@ main_loop:
 							ip += sizeof(uint32_t) + *(uint32_t *) &vm->bytecode[ip];
 							PUSH(v);
 							goto main_loop;
+#define OP_MAKE_STR_(type_name) \
+	EXPECT_STACK_DEPTH(1); \
+	v = make_normal_type_instance(vm->type_name); \
+	set_normal_type_instance_attribute(v, make_string("val"), TOP); \
+	TOP = v; \
+	goto main_loop;
+		case OP_MAKE_STR_IMM:
+							OP_MAKE_STR_(NgsStrCompImm);
+		case OP_MAKE_STR_EXP:
+							OP_MAKE_STR_(NgsStrCompExp);
+		case OP_MAKE_STR_SPLAT_EXP:
+							OP_MAKE_STR_(NgsStrCompSplatExp);
+#undef OP_MAKE_STR_
 		case OP_DUP:
 							DUP;
 							goto main_loop;
@@ -3581,7 +3605,7 @@ main_loop:
 							// Arg: offset
 							// In ... n
 							// Out: ...
-							// Effect: bytecode[offset] <- n
+							// Effect: bytecode[ip+offset] <- n
 							POP(v);
 							ARG(po, PATCH_OFFSET);
 #ifdef DO_NGS_DEBUG

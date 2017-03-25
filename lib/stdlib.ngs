@@ -2111,9 +2111,9 @@ CHARS = ns {
 
 # --- Constructors ---
 
-# TODO: escaping?
-doc TODO
-F Str(s:Str) "'$s'"
+doc No-op constructor
+doc %RET - s
+F Str(s:Str) s
 
 doc Convert Null to string
 doc %RET - the string "null"
@@ -2379,6 +2379,34 @@ F code(s:Str) {
 	# XXX TODO: escaping
 	"'${s}'"
 }
+
+doc String expansion handler. Called automatically for every double-quoted string that
+doc has $* components.
+doc %EX - "$*{ENV.PATH.split(":")}/od".filter(File(X))  # Find out where in PATH is the "od" binary
+F '"$*"'(components:Arr) {
+	components.len() == 0 throws InvalidArgument("Must be one or more component")
+	c = components
+	c_len = c.len()
+	cached_str = c.map(F(elt:NgsStrComp) {
+		elt is not NgsStrCompSplatExp returns Str(elt.val)
+	})
+	collector {
+		F kern(acc:Arr, i:Int) {
+			if i == c_len {
+				collect(acc.join(''))
+				return
+			}
+			if c[i] is NgsStrCompSplatExp {
+				c[i].val.each(F(v) kern(acc + [v], i+1))
+			} else {
+				kern(acc + [cached_str[i]], i+1)
+			}
+		}
+		kern([], 0)
+	}
+}
+
+TEST "a$*{[1,2]}b$*{10..12}c" == ["a1b10c", "a1b11c", "a2b10c", "a2b11c"]
 
 
 # === Logging and status reporting (WIP) =========

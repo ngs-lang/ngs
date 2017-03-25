@@ -172,14 +172,19 @@ ast_node *call_node_partial_application(ast_node *orig, int location[4]) {
 
 // TODO: name the function
 ast_node *string_node_partial_application(ast_node *orig, int location[4]) {
-	ast_node *p;
+	ast_node *p, *pp;
 	assert(orig->type == STR_COMPS_NODE);
 	for(p=orig->first_child; p; p=p->next_sibling) {
-		if(p->type == EXPRESSIONS_NODE && p->first_child && !p->first_child->next_sibling && p->first_child->type == IDENTIFIER_NODE) {
-			p = p->first_child;
+		if(p->type == STR_COMP_IMM_NODE) {
+			pp = p;
+		} else {
+			pp = p->first_child;
 		}
-		if(p->type == IDENTIFIER_NODE && strlen(p->name) == 1) {
-			if(p->name[0] == 'X' || p->name[0] == 'Y' || p->name[0] == 'Z') {
+		if(pp->type == EXPRESSIONS_NODE && pp->first_child && !pp->first_child->next_sibling && pp->first_child->type == IDENTIFIER_NODE) {
+			pp = pp->first_child;
+		}
+		if(pp->type == IDENTIFIER_NODE && strlen(pp->name) == 1) {
+			if(pp->name[0] == 'X' || pp->name[0] == 'Y' || pp->name[0] == 'Z') {
 				// wrap_in_func(ast_node *node, int location[4], char *docstring, int argc, ...) {
 				return wrap_in_func(orig, 0, location, "Partial application syntax - string", 1, 3, "X", "Any", "Y", "Any", "Z", "Any");
 			}
@@ -705,7 +710,7 @@ function-definition =
 
 function-definition-name =
 	space+ i:identifier { $$ = i; }
-	| space? "'" <([-|=!@?<>~+*/%()$a-zA-Z0-9.`: ]|"["|"]")+> "'" {
+	| space? "'" <([-|=!@?<>~+*/%()$a-zA-Z0-9.`": ]|"["|"]")+> "'" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
@@ -1452,9 +1457,11 @@ string-dq-imm =
 	}
 
 string-dq-dollar-expansion =
-	subshell
-	| "$" v:identifier { $$ = v; }
-	| "$" c:curly-code-block { $$ = c; }
+	s:subshell                 { MAKE_NODE(ret, STR_COMP_EXPANSION_NODE); append_ast_node_child(ret, s); $$ = ret; }
+	| "$"  v:identifier        { MAKE_NODE(ret, STR_COMP_EXPANSION_NODE); append_ast_node_child(ret, v); $$ = ret; }
+	| "$"  c:curly-code-block  { MAKE_NODE(ret, STR_COMP_EXPANSION_NODE); append_ast_node_child(ret, c); $$ = ret; }
+	| "$*" v:identifier        { MAKE_NODE(ret, STR_COMP_SPLAT_EXPANSION_NODE); append_ast_node_child(ret, v); $$ = ret; }
+	| "$*" c:curly-code-block  { MAKE_NODE(ret, STR_COMP_SPLAT_EXPANSION_NODE); append_ast_node_child(ret, c); $$ = ret; }
 
 # https://en.wikipedia.org/wiki/Escape_sequences_in_C
 string-escape = "\\" (

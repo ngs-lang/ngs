@@ -708,26 +708,53 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			}
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
-		case STR_COMPS_NODE:
+		case STR_COMPS_NODE: {
+			int have_splat = 0;
 			for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
-				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
-				if(ptr->type != STR_COMP_IMM_NODE) {
-					OPCODE(*buf, OP_TO_STR);
+				if(ptr->type == STR_COMP_SPLAT_EXPANSION_NODE) {
+					have_splat = 1;
+					break;
 				}
 			}
-			switch(argc) {
-				case 0:
-					OPCODE(*buf, OP_PUSH_EMPTY_STR);
-					break;
-				case 1:
-					break;
-				default:
-					OPCODE(*buf, OP_PUSH_INT);
-					DATA_INT(*buf, argc);
-					OPCODE(*buf, OP_MAKE_STR);
+			if(have_splat) {
+				OPCODE(*buf, OP_PUSH_NULL);
+				for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
+					compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
+					switch(ptr->type) {
+						case STR_COMP_IMM_NODE:             OPCODE(*buf, OP_MAKE_STR_IMM); break;
+						case STR_COMP_EXPANSION_NODE:       OPCODE(*buf, OP_MAKE_STR_EXP); break;
+						case STR_COMP_SPLAT_EXPANSION_NODE: OPCODE(*buf, OP_MAKE_STR_SPLAT_EXP); break;
+					}
+				}
+				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, argc);
+				OPCODE(*buf, OP_MAKE_ARR);
+
+				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 1);
+				// OPCODE(*buf, OP_MAKE_SPLAT_STR);
+				compile_identifier(ctx, buf, idx, "\"$*\"", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
+				OPCODE(*buf, OP_CALL);
+			} else {
+				for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
+					compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
+					if(ptr->type != STR_COMP_IMM_NODE) {
+						OPCODE(*buf, OP_TO_STR);
+					}
+				}
+				switch(argc) {
+					case 0:
+						OPCODE(*buf, OP_PUSH_EMPTY_STR);
+						break;
+					case 1:
+						break;
+					default:
+						OPCODE(*buf, OP_PUSH_INT);
+						DATA_INT(*buf, argc);
+						OPCODE(*buf, OP_MAKE_STR);
+				}
 			}
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
+		}
 		case STR_COMP_IMM_NODE: {
 			size_t l = strlen(node->name);
 			if(l < 256) {
@@ -742,6 +769,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			}
 			break;
 		}
+		case STR_COMP_EXPANSION_NODE:
+		case STR_COMP_SPLAT_EXPANSION_NODE:
+			compile_main_section(ctx, node->first_child, buf, idx, allocated, need_result); break;
 		case NULL_NODE:  if(need_result) { OPCODE(*buf, OP_PUSH_NULL); } break;
 		case TRUE_NODE:  if(need_result) { OPCODE(*buf, OP_PUSH_TRUE); } break;
 		case FALSE_NODE: if(need_result) { OPCODE(*buf, OP_PUSH_FALSE); } break;

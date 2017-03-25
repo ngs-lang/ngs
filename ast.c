@@ -18,6 +18,8 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 	"param",
 	"str_comps",
 	"str_comp_imm",
+	"str_comp_expansion",
+	"str_comp_splat_expansion",
 	"null",
 	"true",
 	"false",
