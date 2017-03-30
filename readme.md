@@ -51,23 +51,26 @@ Running using docker
 ====================
 
 	# Build the docker
-	docker build -t ngs
+	docker build -t ngs .
 	# Run the container
 	docker run -it --rm ngs
 	# Use NGS inside the container
 	ngs -pi 'sum(0..10)'
 
+Compiling and running
+=====================
 
-Compile and run
-===============
+### Compile and run - Linux
 
 	sudo apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre3-dev make
 	sudo type awk || sudo apt-get install gawk
 	make
-	# NGS_DIR, where stdlib.ngs resides defaults to /usr/local/lib/ngs . Either link it to the "lib" folder or run with NGS_DIR=lib
-	NGS_DIR=lib ./ngs SCRIPT_NAME.ngs
+	# If NGS is not installed:
+	NGS_DIR=lib NGS_BOOTSTRAP=lib/bootstrap.ngs ./ngs SCRIPT_NAME.ngs
+	# If NGS is installed:
+	./ngs SCRIPT_NAME.ngs
 
-Tested as follows:
+Tested as follows (some time ago):
 
 * Debian Stretch: gcc 4.8.5 + 4.9.3 + 5, clang 3.6
 * Debian Jessie: gcc 4.8.4 + 4.9.2, clang 3.5
@@ -75,11 +78,48 @@ Tested as follows:
 
 If you have troubles compiling, please try to compile the commit tagged `tested`.
 
-Running tests
-=============
+### Compile and run - Mac OS X
+
+	brew update
+	brew install cmake peg libgc pcre libffi gnu-sed json-c pkg-config
+
+	# install macports
+	brew install Caskroom/cask/macports
+	macports_dir=$(brew cask info macports | grep '/usr/local/Caskroom/macports' | awk '{print $1}')
+	macports_pkg=$(brew cask info macports | awk '$2 == "(pkg)" {print $1}')
+
+	sudo installer -pkg "$macports_dir/$macports_pkg" -target /
+
+	sudo /opt/local/bin/port install uthash
+
+	export PATH="/usr/local/opt/gnu-sed/libexec/gnubin:$PATH"
+	pcp=$(dirname $(brew list pkg-config | grep '/bin/pkg-config'))
+	export PATH="$pcp:$PATH"
+	export PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig
+
+	cmake .
+	make
+	# If NGS is not installed:
+	NGS_DIR=lib NGS_BOOTSTRAP=lib/bootstrap.ngs ./ngs SCRIPT_NAME.ngs
+	# If NGS is installed:
+	./ngs SCRIPT_NAME.ngs
+
+### Running tests - all OSes
 
 	# NGS_DIR, where stdlib.ngs resides defaults to /usr/local/lib/ngs . Either link it to the "lib" folder or run with NGS_DIR=lib
-	NGS_DIR=lib make test
+	NGS_DIR=lib NGS_BOOTSTRAP=lib/bootstrap.ngs make test
+
+### Installing - all OSes
+
+	sudo make install
+
+### Uninstalling - Linux
+
+	make uninstall
+
+### Uninstall - Mac OS X
+
+	for i in $(<install_manifest.txt);do rm "$i";done
 
 Contributing
 ============
