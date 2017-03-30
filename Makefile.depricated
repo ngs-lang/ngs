@@ -17,8 +17,8 @@ LDLIBS := -lm -lpthread -lgc -lffi -ldl -ljson-c -lpcre
 LDFLAGS := -rdynamic
 # -pg - for gprof profiler
 LDFLAGS_PROFILER := -pg -g
-COMMON_DEPS := *.h Makefile syntax.include syntax.auto.h pcre_constants.include
-SRC := debug.o ast.o obj.o compile.o decompile.o vm.o ngs.o
+COMMON_DEPS := *.h Makefile syntax.include syntax.auto.h pcre_constants.include fmemopen.c
+SRC := debug.o ast.o obj.o compile.o decompile.o vm.o ngs.o fmemopen.o
 PCRE_H := /usr/include/pcre.h
 # SRC := *.c
 
@@ -109,7 +109,7 @@ install: ngs man
 	$(INSTALL) -m 755 -d $(DESTDIR)$(bindir)
 	$(INSTALL) -m 755 ngs $(DESTDIR)$(bindir)/
 	# Making sure it's clear that these are NGS tools - keeping the .ngs suffix
-	$(INSTALL) -m 644 bin/*.ngs $(DESTDIR)$(bindir)/
+	$(INSTALL) -m 755 bin/*.ngs $(DESTDIR)$(bindir)/
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -m 644 doc/*.1 $(DESTDIR)$(mandir)/man1/
 	$(INSTALL) -m 755 -d $(DESTDIR)$(docdir)
