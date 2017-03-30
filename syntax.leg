@@ -966,7 +966,7 @@ function-call-external-argument =
 	}
 
 function-call-arguments-without-parens =
-	arg:function-call-argument space? "," space? args:function-call-arguments-without-parens {
+	arg:function-call-argument items-separator args:function-call-arguments-without-parens {
 		PREPEND_NODE(args, arg);
 		$$ = args;
 		CAPTURE_LOCATION($$);
