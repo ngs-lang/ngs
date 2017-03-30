@@ -1,0 +1,5 @@
+# What's the most common letters binary on your system starts with?
+ngs -pl 'ENV.PATH.split(":").filter(File(X)).map(F(p) $(ls $p)).map(lines).flatten().map(X[0]).Stats().map("$X $Y")' | sort -k2 -n
+
+# Download slack attachments mentioned in backup *.json files
+ngs -e '``find . -name "*.json"``.map(fetch).flatten().get("file").get("url_private_download").each(F(url) { echo(url); `curl -s $url > "FILES/${encode_uri_component(url)}"` })'
