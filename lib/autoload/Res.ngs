@@ -78,7 +78,7 @@
 				rd.resources = rd.resources[0..n]
 			}
 			if n > rd.resources.len() {
-				rd.create(n - rd.resources.len(), props)
+				rd.create(n - rd.resources.len(), **props)
 			}
 		}
 		# TODO: pass props to update(), do not assign props to rd.props
@@ -87,10 +87,10 @@
 
 	# TODO: pass props to create(), do not assign props to rd.props
 	# Methods that support bulk creating should implement this
-	F create(rd:ResDef, n:Int, props:Hash) {
+	F create(rd:ResDef, n:Int, **props) {
 		for(i;n) {
 			rd.log('converge', "Creating ${rd.typeof().name} ${i+1} of $n")
-			create(rd, props)
+			create(rd, **props)
 		}
 	}
 

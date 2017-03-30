@@ -148,7 +148,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd
 	}
 
-	F create(rd:Vpc, props:Hash) {
+	F create(rd:Vpc, **props) {
 		rd._assert_props_has_only_known_keys(props, 'Tags', 'CidrBlock')
 		cidr = rd.req_prop('CidrBlock', props)
 		result = rd.run('Create VPC', %(aws ec2 create-vpc --cidr-block $cidr))
@@ -202,7 +202,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd
 	}
 
-	F create(rd:Igw, props:Hash) {
+	F create(rd:Igw, **props) {
 		rd.log('Create', 'IGW')
 		rd._assert_anchor_has_only_known_keys('Tags', 'Attachments')
 		result = rd.run('Create IGW', %(aws ec2 create-internet-gateway))
@@ -352,7 +352,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	}
 
-	F create(rd:SecGroup, props:Hash) {
+	F create(rd:SecGroup, **props) {
 		rd.log('Create', 'SG')
 		rd.run('Create SG', %(aws ec2 create-security-group --group-name ${rd.anchor.name} --description ${rd.req_prop('Description', props)} $*{vpc_id_args(rd)}))
 		if not(rd.dry_run) {
@@ -416,7 +416,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	# TODO: Support multiple subnets so one could easily set up new VPC for RDS and ELB
-	F create(rd:Subnet, props:Hash) {
+	F create(rd:Subnet, **props) {
 		rd._assert_props_has_only_known_keys(props, 'VpcId', 'CidrBlock', 'AvailabilityZone')
 		vpcid = rd.req_prop('VpcId', props)._eval_vpc_id()
 		cidr = rd.req_prop('CidrBlock', props)
@@ -522,12 +522,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F id(r:InstanceRes) r.props.InstanceId
 
 	# TODO: Support multiple NICs?
-	F create(rd:Instance, props:Hash) {
+	F create(rd:Instance, **props) {
 		rd.log('create', 'Instance')
-		assert(rd.resources is not Null, "Creating an instance assumes find() already run")
-		%[ImageId].each(F(prop_name) {
+		for prop_name in %[ImageId] {
 			prop_name not in rd.anchor throws InvalidArgument("Anchor must contain $prop_name")
-		})
+		}
 
 		args = []
 		args += ['--key-name', props.KeyName] tor []
@@ -619,7 +618,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd
 	}
 
-	F create(rd:Elb, props:Hash) {
+	F create(rd:Elb, **props) {
 		rd.log('create', "creating an ELB")
 		rd.anchor.get('name') is not Str throws InvalidArgument("ELB name and must be a string, not ${rd.anchor.get('name')}")
 		'ListenerDescriptions' not in props throws InvalidArgument("Elb must have 'listeners' property")
@@ -791,7 +790,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		ret
 	}
 
-	F create(rd:RecordSet, props:Hash) {
+	F create(rd:RecordSet, **props) {
 		change_batch = {
 			'Comment': props.get('Comment', "Added by AWS.ngs")
 			'Changes': [{
