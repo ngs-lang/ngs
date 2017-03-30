@@ -28,6 +28,9 @@ Note that this started as internal document so things here are unformed, not fin
 	* AWS::SecGroup - check whether Description is Anchor-only
 	* Support newlines as function arguments separators
 
+	* MacOS (support being added): gc repeated allocation of very large block
+	* MacOS (support being added): thread / fork - stuck (ec2din.ngs --allreg does not work)
+
 [roadmap]
 
 	* Phase 1 - the language (will be v0.1.0) [in progress]
