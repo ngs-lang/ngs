@@ -8,7 +8,11 @@
 	config('table_ELBs', %[LoadBalancerName DNSName ListenerDescriptions AvailabilityZones Instances])
 	# CanonicalHostedZoneName CanonicalHostedZoneNameID SecurityGroups SourceSecurityGroup Subnets Policies BackendServerDescriptions HealthCheck Scheme VPCId
 
-	F limit_len(s:Str, l:Int) limit(s, l, '...')
+	F short_dns_name(s:Str) {
+		len(s) < 60 returns s
+		parts = s.split('.')
+		[ parts[0] + '.', parts[1..null].join('.') ]
+	}
 
 	ArgvMatcher('positionals', 'filters') do
 	doc filters - Show only instances matching the given filters. Possible filter forms are:
@@ -44,7 +48,16 @@
 		} else {
 			``aws elb describe-load-balancers``
 		}
+		instances = {}
+		instances_by_lb = {}
+		if not(allreg) {
+			# TODO: implement for allreg too
+			instances = ``aws ec2 describe-instances``.Hash('InstanceId')
+			# TODO: unhardcode the tags
+			instances_by_lb = instances.values().group(F(i) "${i.Tags.env}-${i.Tags.role}" tor "UNKOWN")
+		}
 		elbs % F(elb) {
+			elb.DNSName .= short_dns_name()
 			elb.ListenerDescriptions = elb.ListenerDescriptions.map(F(ld) {
 				collector {
 					ld.PolicyNames % collect
@@ -52,7 +65,10 @@
 					collect("${l.LoadBalancerPort}/${l.Protocol} -> ${l.InstancePort}/${l.InstanceProtocol}")
 				}
 			}).flatten()
-			elb.Instances .= InstanceId
+			detached_instances = instances_by_lb.get(elb.LoadBalancerName, []).reject(F(i) i.InstanceId in elb.Instances.InstanceId)
+			# echo("D $detached_instances")
+			elb.Instances .= map(F(i) "${i.InstanceId} ${instances[i.InstanceId].PublicIpAddress tor instances[i.instanceId].PrivateIpAddress tor '-'}")
+			elb.Instances += detached_instances.map(F(i) "[DETACHED] ${i.InstanceId} ${i.PublicIpAddress tor i.PrivateIpAddress tor '-'}")
 			elb.CreatedTime .= split('T')
 			# inspect(elb.ListenerDescriptions) % echo
 		}

@@ -155,7 +155,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd.resources = rd.resources or []
 		if not(rd.dry_run) {
 			filters = cli_filters({'vpc-id': result.Vpc.VpcId})
-			rd.resources += ``aws ec2 describe-vpcs --filters $*filters``.map(VpcRes(rd, X))
+			rd.created(``aws ec2 describe-vpcs --filters $*filters``.map(VpcRes(rd, X)), props)
 		}
 	}
 
@@ -209,7 +209,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd.resources = rd.resources or []
 		if not(rd.dry_run) {
 			filters = cli_filters({'internet-gateway-id': result.InternetGateway.InternetGatewayId})
-			rd.resources += ``aws ec2 describe-internet-gateways --filters $*filters``.map(IgwRes(rd, X))
+			rd.created(``aws ec2 describe-internet-gateways --filters $*filters``.map(IgwRes(rd, X)), props)
 		}
 	}
 
@@ -356,7 +356,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd.log('Create', 'SG')
 		rd.run('Create SG', %(aws ec2 create-security-group --group-name ${rd.anchor.name} --description ${rd.req_prop('Description', props)} $*{vpc_id_args(rd)}))
 		if not(rd.dry_run) {
+			# XXX use GroupId output of run()
 			rd.find()
+			rd.resources % update(X, props)
 		}
 	}
 
@@ -425,7 +427,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd.resources = rd.resources or []
 		if not(rd.dry_run) {
 			filters = cli_filters({'subnet-id': result.Subnet.SubnetId})
-			rd.resources += ``aws ec2 describe-subnets --filters $*filters``.map(SubnetRes(rd, X))
+			rd.created(``aws ec2 describe-subnets --filters $*filters``.map(SubnetRes(rd, X)), props)
 		}
 	}
 
@@ -531,19 +533,24 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		args = []
 		args += ['--key-name', props.KeyName] tor []
 
-		sgs = _sgs(rd, props).map_true(['--security-group-ids'] + X)
+		args += _sgs(rd, props).map(['--security-group-ids'] + X).get([])
 
 		# TODO: Support Res SubnetId?
-		args += ['--subnet-id', props.SubnetId] tor []
+		args += ['--subnet-id'] +? rd.opt_prop('SubnetId', props).map(only(ResDef, ids)).get([])
 
-		if props.get('PublicIpAddress', null) is Bool {
+		if rd.opt_prop('PublicIpAddress', props).get(null) is Bool {
 			args += [if props.PublicIpAddress '--associate-public-ip-address' '--no-associate-public-ip-address']
 		}
 
+		instance_type = rd.opt_prop('InstanceType', props)
+		if instance_type {
+			args += ['--instance-type', instance_type.get()]
+		}
 
 		result = rd.run('Create Instance', %(aws ec2 run-instances --image-id ${rd._image_id()} $*args))
 		if not(rd.dry_run) {
-			rd.resources += result.Instances / InstanceRes(rd, X)
+			# warn("INSTANCES: ${result.Instances / InstanceRes(rd, X)}")
+			rd.created(result.Instances / InstanceRes(rd, X), props)
 		}
 	}
 
@@ -552,13 +559,15 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		instance.def.log('update', 'Instance')
 		instance.update_tags(props)
 
-		current_sgs = instance.props.SecurityGroups.GroupId
-		target_sgs = _sgs(instance.def, props)
-		diff = cmp(current_sgs, target_sgs)
-		if diff.add or diff.remove {
-			diff.add    % { instance.def.log('update', "${instance.id()} - Adding SG $A") }
-			diff.remove % { instance.def.log('update', "${instance.id()} - Removing SG $A") }
-			instance.def.run('Set security groups', %(aws ec2 modify-instance-attribute --instance-id ${instance.id()} --groups $*target_sgs))
+		if 'SecurityGroups' in props {
+			current_sgs = instance.props.SecurityGroups.GroupId
+			target_sgs = _sgs(instance.def, props).get()
+			diff = cmp(current_sgs, target_sgs)
+			if diff.add or diff.remove {
+				diff.add    % { instance.def.log('update', "${instance.id()} - Adding SG $A") }
+				diff.remove % { instance.def.log('update', "${instance.id()} - Removing SG $A") }
+				instance.def.run('Set security groups', %(aws ec2 modify-instance-attribute --instance-id ${instance.id()} --groups $*target_sgs))
+			}
 		}
 	}
 
@@ -568,14 +577,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# TODO: Support EC2 classic?
 	# TODO: Handle SGS in Anchor?
 	F _sgs(rd:Instance, props:Hash) {
-		if 'SecurityGroups' in props {
-			ret = props.SecurityGroups
-			if ret is ResDef {
-				ret .= ids()
-			}
-			return ret
-		}
-		[]
+		rd.opt_prop('SecurityGroups', props).map(F(sgs) {
+			debug("AWS::Instance", "_sgs(AWS::Instance, Hash): sgs $sgs")
+			if sgs is ResDef return ids(sgs)
+			debug("AWS::Instance", "_sgs(AWS::Instance, Hash): sgs was not ResDef")
+			ret = sgs.map(F(sg) if sg is ResDef then sg.expect().ids() else [sg]).flatten()
+			debug("AWS::Instance", "_sgs(AWS::Instance, Hash) -> $ret")
+			ret
+		})
 	}
 
 	F _image_id(rd:Instance) {
@@ -638,6 +647,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		# TODO: Use specific find, with the name
 		if not(rd.dry_run) {
 			rd.find()
+			rd.resources % update(X, props)
 		}
 	}
 
@@ -800,7 +810,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 		rd.run('create RecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${rd.zone_id} --change-batch ${change_batch.encode_json()}))
 		if not(rd.dry_run) {
+			# XXX use some id from run() above
 			rd.find()
+			rd.resources % update(X, props)
 		}
 	}
 

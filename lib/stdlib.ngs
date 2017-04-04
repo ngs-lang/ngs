@@ -1021,7 +1021,7 @@ TEST [1,2,3].all(X<10)
 TEST [1,2,10].all(X>5).not()
 TEST {"x": 1, "y": 2}.all(F(k, v) v is Int)
 
-doc Check that there is no element in e that satisfies the given predicate. Exactly same as not(any(arr, predicate)) .
+doc Check that there is no element in e that satisfies the given predicate. Exactly same as not(any(e, predicate)) .
 doc %RET - Bool
 doc %EX - [0,1,2].none(X>2)  # true
 doc %EX - [0,1,2].none(X<2)  # false
@@ -2424,15 +2424,17 @@ F log(s:Str) {
 	echo("[LOG] $s")
 }
 
+doc Same as debug('default', s)
+F debug(s:Str) debug('default', s)
+
+# TODO: more efficient
 doc Debug to standard error.
 doc "DEBUG" environment variable must be non-empty string to activate. Otherwise nothing is outputted.
 doc TODO: Not output thread ID if there is only one thread.
 doc TODO: Timestamps?
-F debug(s:Str) {
-	# TODO: Use RingBuffer when debug is off and
-	#       show last N debug messages on uncaught exception
-	if try ENV['DEBUG'] {
-		echo(stdlib_error_fd, "[DEBUG ${c_getpid()} ${c_pthread_self().id()}] $s")
+F debug(facility:Str, s:Str) {
+	if ENV.Box('DEBUG').map(split(X, ',')).map({facility in A or '*' in A}).get(false) {
+		echo(stdlib_error_fd, "[DEBUG $facility ${c_getpid()} ${c_pthread_self().id()}] $s")
 	}
 }
 
@@ -2721,7 +2723,7 @@ doc TODO: handle errors, throw exceptions.
 doc TODO: handle possible EINTR.
 doc fd - File descriptor to write to
 doc %RET - unspecified at this time, do not count on it
-F store(s:Str, fd:Int) fd.c_write(s)
+F write(s:Str, fd:Int) fd.c_write(s)
 
 { type TtyCheckFail(CException) }
 
@@ -2782,7 +2784,7 @@ F close_reading_end(p:Pipe) p.read_fd.c_close()
 
 doc Write to Pipe. TODO: document if it throws.
 doc %RET - unspecified at this time, do not count on it
-F store(s:Str, p:Pipe) p.write_fd.c_write(s)
+F write(s:Str, p:Pipe) p.write_fd.c_write(s)
 
 doc Read from Pipe without parsing. TODO: document if it throws.
 doc %RET - read data
@@ -2879,12 +2881,11 @@ F lines(f:File, lines_:Arr) {
 	finally()
 		body => {
 			f.open('w')
-			(lines_ + STDLIB_EOL).each(store(X, f.fd))
+			(lines_ + STDLIB_EOL).each(write(X, f.fd))
 		}
 		cleanup => {
 			f.close()
 		}
-
 }
 
 doc Close a file and sets the "fd" field to null. Uses CLOSE(2).
@@ -4029,12 +4030,12 @@ F match(a,b) a ~ b
 
 # === File =======================================
 
-F store(s:Str, fname:Str) {
+F write(s:Str, fname:Str) {
 	f = File(fname)
 	open(f, 'w')
 	finally()
 		body => {
-			store(s, f.fd)
+			write(s, f.fd)
 		}
 		cleanup => {
 			f.close()
