@@ -81,7 +81,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 
 		r.def.log('update_tags/info', "Current tags: $current_tags. Target tags: $target_tags")
-		diff = cmp(current_tags, target_tags)
+		diff = Diff(current_tags, target_tags)
 
 		# Tags might be only in Anchor
 		# so we should create them during first update
@@ -224,7 +224,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 				return
 			}
 			r.def.log('update_attachments/info', "Current attachments: $current_vpcs_ids. Target attachments: $target_vpcs_ids")
-			diff = cmp(current_vpcs_ids, target_vpcs_ids)
+			diff = Diff(current_vpcs_ids, target_vpcs_ids)
 
 			diff.add.each(F(vpc_id) {
 				r.run('update_attachments/add', %(aws ec2 attach-internet-gateway --internet-gateway-id ${r.id()} --vpc-id $vpc_id))
@@ -340,7 +340,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		a .= cleanup()
 		b .= cleanup()
 		a.len() != b.len() returns false
-		diff = cmp(a, b)
+		diff = Diff(a, b)
 		not(diff.add or diff.remove or diff.change)
 	}
 
@@ -369,7 +369,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			# PrefixListIds - http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_IpPermission.html
 			# (Valid for AuthorizeSecurityGroupEgress, RevokeSecurityGroupEgress and DescribeSecurityGroups only)
 			# sg.props.IpPermissions.each(F(perm) perm.del('PrefixListIds'))
-			diff = compare(sg.props.IpPermissions/IpPermBox, props.IpPermissions/IpPermBox)
+			diff = Diff(sg.props.IpPermissions/IpPermBox, props.IpPermissions/IpPermBox, full=true)
 			if diff.add {
 				sg.run('add SG ingress rules', %(aws ec2 authorize-security-group-ingress --group-id ${sg.props.GroupId} --ip-permissions $*{diff.add.val / encode_json}))
 			}
@@ -379,7 +379,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 
 		if 'IpPermissionsEgress' in props {
-			diff = compare(sg.props.IpPermissionsEgress/IpPermBox, props.IpPermissionsEgress/IpPermBox)
+			diff = Diff(sg.props.IpPermissionsEgress/IpPermBox, props.IpPermissionsEgress/IpPermBox, full=true)
 			if diff.add {
 				sg.run('add SG egress rules', %(aws ec2 authorize-security-group-egress --group-id ${sg.props.GroupId} --ip-permissions $*{diff.add.val / encode_json}))
 			}
@@ -555,7 +555,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		if 'SecurityGroups' in props {
 			current_sgs = instance.props.SecurityGroups.GroupId
 			target_sgs = _sgs(instance.def, props).get()
-			diff = cmp(current_sgs, target_sgs)
+			diff = Diff(current_sgs, target_sgs)
 			if diff.add or diff.remove {
 				diff.add    % { instance.def.log('update', "${instance.id()} - Adding SG $A") }
 				diff.remove % { instance.def.log('update', "${instance.id()} - Removing SG $A") }
@@ -650,7 +650,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 		# Tags
 		if 'Tags' in props {
-			diff = cmp(elb.props.get('Tags', {}), props.Tags)
+			diff = Diff(elb.props.get('Tags', {}), props.Tags)
 
 			if (tags = cli_tags(diff.add + diff.change)) {
 				elb.run('add ELB tags', %(aws elb add-tags --load-balancer-names ${elb.def.anchor.name} --tags $*tags))
@@ -662,7 +662,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 			# Health check. Note: only updates given properties and keeps the rest as they were.
 			if 'HealthCheck' in props {
-				diff = cmp(elb.props['HealthCheck'], props['HealthCheck'])
+				diff = Diff(elb.props['HealthCheck'], props['HealthCheck'])
 				assert(not(diff.add), "Can't handle additional health check properties ${diff.add}")
 				if diff.change {
 					elb.def.log('update', "ELB health check change: ${diff.change}")
@@ -681,7 +681,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			if instances is ResDef {
 				instances .= ids()
 			}
-			diff = cmp(elb.props.Instances, instances)
+			diff = Diff(elb.props.Instances, instances)
 			if diff.add {
 				elb.run(
 					'register instances with ELB',
@@ -705,7 +705,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 				}
 				sgs .= ids()
 			}
-			diff = cmp(elb.props.SecurityGroups, sgs)
+			diff = Diff(elb.props.SecurityGroups, sgs)
 			if diff.add or diff.remove {
 				elb.run(
 					'update ELB SGs',
@@ -716,7 +716,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 		# TODO: listeners
 		if 'ListenerDescriptions' in props {
-			diff = cmp(elb.props.ListenerDescriptions, props.ListenerDescriptions)
+			diff = Diff(elb.props.ListenerDescriptions, props.ListenerDescriptions)
 			# echo("DIFF $diff")
 		}
 	}
@@ -811,7 +811,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F update(rrset:RecordSetRes, props:Hash) {
 		props = _get_props(rrset.def, props)
-		diff = cmp(rrset.props, props)
+		diff = Diff(rrset.props, props)
 		# NOT DONE AND NOT SURE!
 		if diff.add or diff.change or diff.remove {
 			change_batch = {
