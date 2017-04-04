@@ -3038,6 +3038,7 @@ doc %RET - Str
 F Str(p:Process) p.wait().stdout
 
 # TODO: type Arg(Str) -- currently, inheriting built in types is not supported
+F Arg(x:Real) Str(x)
 F Arg(x:Int) Str(x)
 F Arg(x:Str) x
 
