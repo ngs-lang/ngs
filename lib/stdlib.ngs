@@ -96,6 +96,9 @@ F call(r:Return, v=null) {
 	Str.inherit(Eachable1)
 	# TODO: Consider Eachable2 subtype for Hash (as callback has 2 arguments)
 	Hash.inherit(Eachable2)
+
+	type NoData
+	Null.inherit(NoData)
 }
 
 
@@ -729,7 +732,7 @@ doc %EX - echo(s)  # Outputs: 55
 F each(r:Range, cb:Fun) {
 	# TODO: support Real step
 	econd {
-		(r.end is Null) or (r.step == 0) {
+		(r.end is NoData) or (r.step == 0) {
 			cmp = F(a,b) true
 		}
 		r.step > 0 {
@@ -1878,7 +1881,7 @@ F dflt(h:Hash, k, v) {
 		doc val - The value
 		type FullBox(Box)
 		doc Represents absence of a value
-		type EmptyBox(Box)
+		type EmptyBox([Box, NoData])
 }
 
 doc Do not use directly!
@@ -3042,6 +3045,34 @@ F Arg(x:Real) Str(x)
 F Arg(x:Int) Str(x)
 F Arg(x:Str) x
 
+# TODO: Consider storing original h in one of the attrs() of the result
+F Argv(h:Hash) {
+	collector
+		h.rejectv(NoData).mapv(only(Box, get)).each(F(k, v) {
+			if k is Arr {
+
+				# ['--flag-if-yes', '--flag-if-no']: my_bool_expr
+				k.len() != 2 throws InvalidArgument("Argv key which is array must be of length 2").set('value', k)
+				v is not Bool throws InvalidArgument("Argv value for key which is array must be Bool").set('value', v)
+				collect(k[if v then 0 else 1])
+				return
+			}
+
+			# If you have nothing to give to the switch, the switch should not be present
+			if v is Eachable1 and v is not Str {
+				v = Arr(v)
+				not(v) returns
+			}
+
+			collect(k)
+			if v is Arr {
+				v.each(collect)
+			} else {
+				v.collect()
+			}
+		})
+}
+
 # --- $() ---
 
 # TODO: better exceptions (use correct type, not string)
@@ -3978,7 +4009,7 @@ F retry(
 			$(sleep "$s")
 		}
 	}
-	fail_cb is Null throws RetryFail()
+	fail_cb is NoData throws RetryFail()
 	fail_cb()
 }
 

@@ -31,8 +31,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	doc Key-value pairs in which value is null or instance of EmptyBox are discarded.
 	doc TODO: make it JSON when keys or values contain special characters such as = or ,
 	F cli_filters(h:Hash) {
-		filtered = h.rejectv(Null).rejectv(EmptyBox)
-		unboxed = filtered.mapv(only(Box, get))
+		unboxed = h.rejectv(NoData).mapv(only(Box, get))
 		unboxed.mapv(only(Pfx, { "${A.val}*" })).map("Name=$X,Values=$Y")
 	}
 
@@ -530,24 +529,16 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			prop_name not in rd.anchor throws InvalidArgument("Anchor must contain $prop_name")
 		}
 
-		args = []
-		args += ['--key-name', props.KeyName] tor []
+		args = Argv({
+			'--image-id':            rd._image_id()
+			'--key-name':            props.get('KeyName')
+			'--security-group-ids':  _sgs(rd, props)
+			'--subnet-id':           rd.opt_prop('SubnetId', props).map(only(ResDef, ids))
+			'--instance-type':       rd.opt_prop('InstanceType', props)
+			['--associate-public-ip-address', '--no-associate-public-ip-address']: rd.opt_prop('PublicIpAddress', props)
+		})
 
-		args += _sgs(rd, props).map(['--security-group-ids'] + X).get([])
-
-		# TODO: Support Res SubnetId?
-		args += ['--subnet-id'] +? rd.opt_prop('SubnetId', props).map(only(ResDef, ids)).get([])
-
-		if rd.opt_prop('PublicIpAddress', props).get(null) is Bool {
-			args += [if props.PublicIpAddress '--associate-public-ip-address' '--no-associate-public-ip-address']
-		}
-
-		instance_type = rd.opt_prop('InstanceType', props)
-		if instance_type {
-			args += ['--instance-type', instance_type.get()]
-		}
-
-		result = rd.run('Create Instance', %(aws ec2 run-instances --image-id ${rd._image_id()} $*args))
+		result = rd.run('Create Instance', %(aws ec2 run-instances $*args))
 		if not(rd.dry_run) {
 			# warn("INSTANCES: ${result.Instances / InstanceRes(rd, X)}")
 			rd.created(result.Instances / InstanceRes(rd, X), props)
