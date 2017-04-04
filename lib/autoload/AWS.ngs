@@ -533,7 +533,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 		args = Argv({
 			'--image-id':            rd._image_id()
-			'--key-name':            rd.req_prop('KeyName', props)
+			'--key-name':            rd.opt_prop('KeyName', props)
 			'--security-group-ids':  _sgs(rd, props)
 			'--subnet-id':           rd.opt_prop('SubnetId', props).map(only(ResDef, ids))
 			'--instance-type':       rd.opt_prop('InstanceType', props)
