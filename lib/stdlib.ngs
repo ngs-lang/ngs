@@ -2585,16 +2585,16 @@ doc If PATH is not set built-in value for PATH is used to search: /usr/local/bin
 doc %RET - Path
 doc %EX - find_in_path("ls")  # <Path path=/bin/ls>
 F find_in_path(executable_name:Str) {
-	debug("[find_in_path] got ${executable_name}")
+	debug("process", "[find_in_path] got ${executable_name}")
 	if "/" in executable_name {
 		debug("[find_in_path] leaving unprocessed ${executable_name}")
 		return Path(executable_name)
 	}
 	# TODO: rethink default PATH
 	path = ENV.get('PATH', '/usr/local/bin:/usr/bin:/bin:/sbin:/usr/sbin').split(':')
-	debug('[find_in_path] will search')
+	debug("process", '[find_in_path] will search')
 	ret = path.map(F(dir) Path(dir / executable_name)).first()
-	debug("[find_in_path] ${executable_name} found at ${ret}")
+	debug("process", "[find_in_path] ${executable_name} found at ${ret}")
 	ret is Null throws ExecutableNotFound().set('path', path).set('name', executable_name)
 	ret
 }
@@ -2698,16 +2698,17 @@ doc %EX - read(0)  # All data from stdin
 F read(fd:Int) {
 	ret = []
 	while true {
-		debug("[read] will read from fd $fd")
+		debug("file", "[read] will read from fd $fd")
 		result = c_read(fd, 4096)
-		debug("[read] read from fd $fd : <<${result}>>")
+		debug("file", "[read] read from fd $fd : <<${result}>>")
 		result[0] == 0 returns ret.join('')
 		if result[0] > 0 {
 			ret.push(result[1])
 		} else {
 			e = get_c_errno()
 			if e != C_EINTR {
-				debug("[read] read from fd $fd failed, errno $e")
+				debug("file", "[read] read from fd $fd failed, errno $e")
+				# TODO: Better exception
 				throw "[read] failed to c_read()"
 			}
 		}
@@ -2761,7 +2762,7 @@ F init(pipe:Pipe) {
 	result[0] != 0 throws PipeCreateFail("Failed to create Pipe")
 	pipe.read_fd = result[1]
 	pipe.write_fd = result[2]
-	debug("[Pipe] created pipe with read_fd=${pipe.read_fd} and write_fd=${pipe.write_fd}")
+	debug("file", "[Pipe] created pipe with read_fd=${pipe.read_fd} and write_fd=${pipe.write_fd}")
 }
 
 doc Pipe constructor. Create UNIX pipe using PIPE(2). Throws PipeCreateFail if pipe can not be created.
@@ -3014,15 +3015,15 @@ F wait(p:Process) {
 
 	p.exit_code is Int returns p
 
-	debug("[wait] joining reading and writing threads")
+	debug("process", "[wait] joining reading and writing threads")
 	p.reading_threads.join()
 	p.reading_threads = []
 	p.writing_threads.join()
 	p.writing_threads = []
 
-	debug("[wait] will waitpid(${p.pid})")
+	debug("process", "[wait] will waitpid(${p.pid})")
 	w = c_waitpid(p.pid)
-	debug("[wait] waitpid(${p.pid}) -> ${w}")
+	debug("process", "[wait] waitpid(${p.pid}) -> ${w}")
 	p.exit_code = C_WEXITSTATUS(w[1])
 	p.exit_signal = C_WTERMSIG(w[1])
 	not(finished_ok(p)) throws ProcessFail(p)
@@ -3035,6 +3036,10 @@ F to_exit_code(p:Process) p.wait().exit_code
 doc Wait for the process to finish and return its standard output.
 doc %RET - Str
 F Str(p:Process) p.wait().stdout
+
+# TODO: type Arg(Str) -- currently, inheriting built in types is not supported
+F Arg(x:Int) Str(x)
+F Arg(x:Str) x
 
 # --- $() ---
 
@@ -3060,12 +3065,13 @@ F '$()'(c:Command) {
 		c = c.argv[0]
 	}
 
-	debug_pfx = '[stdlib $()]'
-	debug("$debug_pfx Parsed command: ${c.argv}")
+	argv = c.argv.map(Arg)
+
+	debug("process", "Parsed command: ${argv}")
 
 	process = Process(c)
 	try {
-		process.executable = find_in_path(c.argv[0])
+		process.executable = find_in_path(argv[0])
 	} catch(nf:ExecutableNotFound) {
 		throw ProcessFail(process).set('cause', nf).set('message', 'Executable not found')
 	}
@@ -3085,7 +3091,7 @@ F '$()'(c:Command) {
 
 	pid == -1 throws "Failed to fork()"
 
-	debug("$debug_pfx PID after fork: $pid")
+	debug("process", "PID after fork: $pid")
 
 	child_fds = pipes / child_fd(Y)
 	parent_fds = pipes / parent_fd(Y)
@@ -3125,16 +3131,16 @@ F '$()'(c:Command) {
 			}
 		})
 		# Redirections (WIP) - end
-		result = c_execve(process.executable.path, c.argv, ENV.Strs())
+		result = c_execve(process.executable.path, argv, ENV.Strs())
 		# TODO: propagate this error to parent, don't know how yet
-		throw "$debug_pfx failed to execve()"
+		throw ProcessFail(process).set('message', "failed to execve()")
 	}
 
 	if pid > 0 {
 		# === Parent ===
 		process.pid = pid
 		child_fds % c_close
-		debug("$debug_pfx reading all output of the child process")
+		debug("process", "Reading all output of the child process")
 		# XXX: maybe make it chunk based with c_poll() and single thread
 		pipes_to_read_from = pipes ? F(fd, pipe) { pipe.direction == STDLIB_CHILD_TO_PARENT_PIPE_DIR }
 		# TODO: some error handling inside these threads and after joining them
@@ -3142,7 +3148,7 @@ F '$()'(c:Command) {
 			Thread({
 				process.outputs[fd] = pipe.read()
 				pipe.close_reading_end()
-				debug("$debug_pfx read all output of the child process for descriptor $fd, closing reading/parent end")
+				debug("process", "Read all output of the child process for descriptor $fd, closing reading/parent end")
 			})
 		})
 		# echo("R ${c.reading_threads}")
