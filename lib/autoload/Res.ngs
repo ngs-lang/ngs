@@ -83,6 +83,7 @@
 				rd.create(n - rd.resources.len(), **props)
 			}
 		}
+		rd
 	}
 
 	# TODO: pass props to create(), do not assign props to rd.props

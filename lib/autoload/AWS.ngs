@@ -486,6 +486,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# Instance
 	# --------------------------------------------------
 
+	# TODO: State property (now assuming "running")
+
 	type Instance(ResDef)
 	type InstanceRes(Res)
 
@@ -531,7 +533,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 		args = Argv({
 			'--image-id':            rd._image_id()
-			'--key-name':            props.get('KeyName')
+			'--key-name':            rd.req_prop('KeyName', props)
 			'--security-group-ids':  _sgs(rd, props)
 			'--subnet-id':           rd.opt_prop('SubnetId', props).map(only(ResDef, ids))
 			'--instance-type':       rd.opt_prop('InstanceType', props)
@@ -840,6 +842,17 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# --------------------------------------------------
 
 	# TODO
+
+	util = ns {
+		F world_open_port(port:Int, proto:Str='tcp') {
+			{
+				'IpProtocol': proto
+				'FromPort': port
+				'ToPort': port
+				'IpRanges': [ { 'CidrIp': '0.0.0.0/0' } ]
+			}
+		}
+	}
 
 	# ==================================================
 	# Backwards compatibility with bunch of global variables

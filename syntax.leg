@@ -799,13 +799,19 @@ namespace = "ns" opt_params:namespace-optional-parameters c:curly-code-block {
 		// ns { c }
 		// (transforms to)
 		// F() {
-		//   exports = {}
+		//   local _exports
+		//   _exports = {}
 		//   c
-		//   exports
+		//   _exports
 		// }()
 
-
 		MAKE_NODE(code, EXPRESSIONS_NODE);
+
+			// local _exports
+			MAKE_NODE(local_exports, LOCAL_NODE);
+				MAKE_IDENTIFIER_NODE(local_exports_identifier, "_exports")
+				append_ast_node_child(local_exports, local_exports_identifier);
+			append_ast_node_child(code, local_exports);
 
 			// exports = {}
 			MAKE_NODE(set_exports, ASSIGNMENT_NODE);
