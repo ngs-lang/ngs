@@ -116,13 +116,14 @@
 		rd.resources += resources
 	}
 
+	doc Get optional resource property, looking up in properties first and then in anchor
 	doc %RET - Box
-	F opt_prop(rd:ResDef, name:Str, props:Hash) {
-		ret = [props, rd.anchor].get(name).Box(0)
-		debug("opt_prop(ResDef, '$name', Hash) -> $ret")
-		ret
-	}
+	F opt_prop(rd:ResDef, name:Str, props:Hash) [props, rd.anchor].get(name).Box(0)
 
+	doc Run cb with optional resource property if it exists, uses opt_prop(ResDef, Str, Hash)
+	F opt_prop(rd:ResDef, name:Str, props:Hash, cb:Fun) opt_prop(rd, name, props).each(cb)
+
+	doc Get resource property, looking up in properties first and then in anchor
 	F req_prop(rd:ResDef, name:Str, props:Hash) {
 		ret = [props, rd.anchor].get(name)
 		not(ret) throws InvalidArgument("$name must be present in either anchor or props of a ${rd.typeof().name}")

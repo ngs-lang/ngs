@@ -249,6 +249,12 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# RouteTable (WIP)
 	# --------------------------------------------------
 
+	type RouteBox(FullBox)
+
+	F _normalize(r:RouteBox) r.get().without('Origin').without('State').sort()
+
+	F ==(a:RouteBox, b:RouteBox) _normalize(a) == _normalize(b)
+
 	type RouteTable(ResDef)
 	type RouteTableRes(Res)
 
@@ -256,11 +262,47 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F find(rd:RouteTable) {
 		# TODO: route.gateway-id, route.instance-id
-		rd.log('Find', 'VPC')
+		rd.log('Find', 'RouteTable')
 		rd._assert_anchor_has_only_known_keys('Tags', 'VpcId')
-		filters = ['--filters'] +? (rd.anchor.Tags.cli_tags_filters() + cli_filters({'vpc-id': rd.anchor.Box('VpcId').map(_eval_vpc_id)}))
+		filters = Argv({
+			'--filters': rd.anchor.Tags.cli_tags_filters() + cli_filters({'vpc-id': rd.anchor.Box('VpcId').map(_eval_vpc_id)})
+		})
 		rd.resources = ``aws ec2 describe-route-tables $*filters``.map(RouteTableRes(rd, X))
 		rd
+	}
+
+	F update(r:RouteTableRes, props:Hash) {
+		r.def.log('Update', 'RouteTable')
+		# log("RouteTableRes entry $r")
+		r.def.opt_prop('Routes', props) do F(target_routes) {
+			target_routes .= normalize_target_list()
+			# log("target_routes $target_routes")
+			# TODO: do not replace in-place, make a copy
+			target_routes.map(get).each(F(r) if r.GatewayId is ResDef then r.GatewayId = r.GatewayId.ids().the_one())
+			target_routes.each(F(r) r.val .= RouteBox())
+			diff = Diff(r.props.Routes.map(RouteBox), target_routes, full=true) # apparently works without full. TODO: check why
+			# log("RouteTableRes diff $diff")
+			diff.add.map(get).each(F(route) {
+				args = Argv({
+					'--route-table-id': r.id()
+					'--destination-cidr-block': route.DestinationCidrBlock
+					'--gateway-id': route.get('GatewayId')
+					'--instance-id': route.get('InstanceId')
+					'--network-interface-id': route.get('NetworkInterfaceId')
+					'--vpc-peering-connection-id': route.get('VpcPeeringConnectionId')
+					'--nat-gateway-id': route.get('NatGatewayId')
+				})
+				r.def.run('Update route table/add route', %(aws ec2 create-route $*args))
+			})
+			diff.remove.map(get).each(F(route) {
+				echo("ROUTE $route")
+				args = Argv({
+					'--route-table-id': r.id()
+					'--destination-cidr-block': route.DestinationCidrBlock
+				})
+				r.def.run('Update route table/remove route', %(aws ec2 delete-route $*args))
+			})
+		} # Routes
 	}
 
 
@@ -340,15 +382,13 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		a .= cleanup()
 		b .= cleanup()
 		a.len() != b.len() returns false
-		diff = Diff(a, b)
-		not(diff.add or diff.remove or diff.change)
+		not(Diff(a, b))
 	}
 
 	# TOOD: continue here
 	F subset(smaller:IpPermBox, larger:IpPermBox) {
 		a .= cleanup()
 		b .= cleanup()
-
 	}
 
 	F create(rd:SecGroup, **props) {

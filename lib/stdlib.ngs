@@ -1522,53 +1522,6 @@ doc Convert an array to NGS code that would produce the array when executed. Not
 doc %RET - Str
 F code(a:Arr) "[" + a.map(code).join(', ') + "]"
 
-# === Diff =======================================
-
-{
-	doc Represents difference
-	type Diff
-	doc Represents difference of elements between two arrays (order unimportant)
-	type ArrDiff(Diff)
-	doc Represents difference of elements between two hashes (order unimportant)
-	type HashDiff(Diff)
-}
-
-doc Compare arrays. Warning: Hash is used so internal Hash keys comparison is used, not ==
-doc %EX - Diff([1,2], [2,3])  # .add = [3] .remove = [1]
-F Diff(a:Arr, b:Arr, full:Bool=false) {
-	d = ArrDiff()
-	if full {
-		d.add    = b.filter(X not in a)
-		d.remove = a.filter(X not in b)
-	} else {
-		ah = Hash(a, {true})
-		bh = Hash(b, {true})
-		d.add    = bh.reject(X in ah).keys()
-		d.remove = ah.reject(X in bh).keys()
-	}
-	d
-}
-
-TEST Diff([1,2], [2,3]).Hash().sort() == {'add': [3], 'remove': [1]}
-
-doc Compare hashes
-doc %EX - diff = Diff(current_tags, target_tags)
-doc %EX - if (tags = stdlib_aws_tags(diff.add + diff.change)) {
-doc %EX - 	r.run('update_tags/add', %(aws ec2 create-tags --resources ${r.id()} --tags $*tags))
-doc %EX - }
-doc %EX - if (tags = diff.remove / "Key=$X") {
-doc %EX - 	r.run('update_tags/remove', %(aws ec2 delete-tags --resources ${r.id()} --tags $*tags))
-doc %EX - }
-F Diff(a:Hash, b:Hash) {
-	d = HashDiff()
-	d.add    = b.reject(X in a)
-	d.change = b.filter(X in a).filter(F(k, v) a[k] != v)
-	d.remove = a.reject(X in b).keys()
-	d
-}
-
-TEST Diff({"a": 1, "b":2}, {"b": 3, "d": 4}).Hash().sort() == {"add":{"d":4}, "change":{"b":3}, "remove":["a"]}
-
 # === Hash =======================================
 
 
@@ -2063,6 +2016,119 @@ TEST EmptyBox() != FullBox(1)
 TEST FullBox(1) == FullBox(1)
 TEST FullBox(1) != FullBox(2)
 
+# === Diff =======================================
+{
+
+	doc Represents desired target configuration list item presence
+	type Presence
+
+		type PartialPresence([FullBox, Presence])
+
+			doc Represents a target configuration list item that must be present
+			type Present([FullBox, PartialPresence])
+
+			doc Represents a target configuration list item that must be absent
+			type Absent([FullBox, PartialPresence])
+
+		doc Represents a target configuration list item in a list
+		type ExactPresence([FullBox, Presence])
+}
+
+F normalize_target_list(x) {
+	econd {
+		x is Presence   { [x] }
+		x.all(Presence) x
+		x is Eachable1  {
+			x.any(Presence) throws InvalidArgument("Mixing Presence and non-Presence items in a list is not supported").set('value', x)
+			x.map(ExactPresence)
+		}
+	}
+}
+
+
+{
+	doc Represents difference
+	type Diff
+	doc Represents difference of elements between two arrays (order unimportant)
+	type ArrDiff(Diff)
+	doc Represents difference of elements between two hashes (order unimportant)
+	type HashDiff(Diff)
+}
+
+doc Compare arrays. Warning: Hash is used so internal Hash keys comparison is used, not ==
+doc %EX - Diff([1,2], [2,3])  # .add = [3] .remove = [1]
+F Diff(a:Arr, b:Arr, full:Bool=false) {
+	# echo("DIFF 1 A $a")
+	# echo("DIFF 1 B $b")
+	d = ArrDiff()
+	if full {
+		d.add    = b.filter(X not in a)
+		d.remove = a.filter(X not in b)
+	} else {
+		ah = Hash(a, {true})
+		bh = Hash(b, {true})
+		d.add    = bh.reject(X in ah).keys()
+		d.remove = ah.reject(X in bh).keys()
+	}
+	d
+}
+
+TEST Diff([1,2], [2,3]).Hash().sort() == {'add': [3], 'remove': [1]}
+
+doc b - Presence or Arr[Presence]
+doc %RET - ArrDiff
+F Diff(a:Arr, b:Arr, full:Bool=false) {
+	guard b.all(PartialPresence)
+	# echo("DIFF 2 $a $b")
+
+	d = ArrDiff()
+	if full {
+		d.add    = b.filter(Present).map(get).filter(X not in a)
+		d.remove = a.filter(X in b.filter(Absent).map(get))
+	} else {
+		ah = Hash(a, {true})
+		d.add    = Hash(b.filter(Present).map(get), b).reject(X in ah).keys()
+		d.remove = ah.filter(X in Hash(b.filter(Absent).map(get), b)).keys()
+	}
+	d
+}
+
+TEST Diff(["a", "b"], [Present("a"), Present("c"), Absent("b"), Absent("d")], false).Hash().sort() == {"add": ["c"], "remove": ["b"]}
+TEST Diff(["a", "b"], [Present("a"), Present("c"), Absent("b"), Absent("d")], true).Hash().sort() == {"add": ["c"], "remove": ["b"]}
+
+F Diff(a:Arr, b:Arr, full:Bool=false) {
+	guard b.all(ExactPresence)
+	Diff(a, b.map(get), full)
+}
+
+doc Whether there is a difference
+F Bool(d:ArrDiff) Bool(d.add or d.remove)
+
+doc Compare hashes
+doc %EX - diff = Diff(current_tags, target_tags)
+doc %EX - if (tags = stdlib_aws_tags(diff.add + diff.change)) {
+doc %EX - 	r.run('update_tags/add', %(aws ec2 create-tags --resources ${r.id()} --tags $*tags))
+doc %EX - }
+doc %EX - if (tags = diff.remove / "Key=$X") {
+doc %EX - 	r.run('update_tags/remove', %(aws ec2 delete-tags --resources ${r.id()} --tags $*tags))
+doc %EX - }
+F Diff(a:Hash, b:Hash) {
+	d = HashDiff()
+	d.add    = b.reject(X in a)
+	d.change = b.filter(X in a).filter(F(k, v) a[k] != v)
+	d.remove = a.reject(X in b).keys()
+	d
+}
+
+TEST Diff({"a": 1, "b":2}, {"b": 3, "d": 4}).Hash().sort() == {"add":{"d":4}, "change":{"b":3}, "remove":["a"]}
+
+doc Whether there is a difference
+F Bool(d:HashDiff) Bool(d.add or d.remove or d.change)
+
+# === Bool =======================================
+
+F code(b:Bool) Str(b)
+
 # === Integer ====================================
 
 # --- Functional ---
@@ -2442,7 +2508,7 @@ stdlib_error_fd = ENV.NGS_ERR_FD.Int() tor 2
 
 doc Log to standard output. Later log output will be treated specially by the shell. It will have suitable representation in the UI. Use log() when it's semantically a log.
 F log(s:Str) {
-	echo("[LOG] $s")
+	echo(stdlib_error_fd, "[LOG] $s")
 }
 
 doc Same as debug('default', s)
@@ -2469,21 +2535,17 @@ F warn(s:Str) {
 	echo(stdlib_error_fd, "[WARNING] $s")
 }
 
-doc Send status to standard error. Later status output will be treated specially by the shell. It will have suitable representation in the UI. Use status() when it's semantically a status - a task that's being done.
+doc Send status to standard error.
+doc Later status output will be treated specially by the shell. It will have suitable representation in the UI.
+doc Use status() when it's semantically a status - a task that's being done.
 F status(s:Str) {
 	echo(stdlib_error_fd, "(status) $s")
 }
 
-doc Write messages in a to standard error and exit
-F die(a:Arr, exit_code=1) {
-	guard a.all(Str)
-	a % echo(stdlib_error_fd, X)
-	c_exit(exit_code)
-}
-
 doc Write message in s to standard error and exit
 F die(s:Str, exit_code=1) {
-	echo(stdlib_error_fd, s)
+	c = Str(Backtrace().frames[-2].closure) tor "at unknown location"
+	echo(stdlib_error_fd, "[FATAL ERROR] $s -- $c")
 	c_exit(exit_code)
 }
 
