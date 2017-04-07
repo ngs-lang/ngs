@@ -275,7 +275,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		r.def.log('Update', 'RouteTable')
 		# log("RouteTableRes entry $r")
 		r.def.opt_prop('Routes', props) do F(target_routes) {
-			target_routes .= normalize_target_list()
+			target_routes .= normalize_presence_list()
 			# log("target_routes $target_routes")
 			# TODO: do not replace in-place, make a copy
 			target_routes.map(get).each(F(r) if r.GatewayId is ResDef then r.GatewayId = r.GatewayId.ids().the_one())

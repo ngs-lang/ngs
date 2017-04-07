@@ -2034,7 +2034,7 @@ TEST FullBox(1) != FullBox(2)
 		type ExactPresence([FullBox, Presence])
 }
 
-F normalize_target_list(x) {
+F normalize_presence_list(x) {
 	econd {
 		x is Presence   { [x] }
 		x.all(Presence) x
