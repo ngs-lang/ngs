@@ -9,7 +9,6 @@ Note that this started as internal document so things here are unformed, not fin
 	* address resolution functions
 	* AWS fix SG rules (IpPermBox < IpPermBox)
 	* Fix $(separate$item issue)
-	* Fix $(ls $some_obj) silent crash
 	* update(Hash, key, value) - update specified key only if exists
 	* update(Arr[Hash], key, value / Fun) - update specified key only if exists
 	* make ResDef ArrLike for the resources?
@@ -28,6 +27,7 @@ Note that this started as internal document so things here are unformed, not fin
 	* AWS::SecGroup - check whether Description is Anchor-only
 	* Support newlines as function arguments separators
 	* Consider standardizing InvalidArgument offending value (.value ?)
+  * AWS::Instance - make sure works properly with AWS::Image Res
 
 [roadmap]
 

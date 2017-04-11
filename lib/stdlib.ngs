@@ -2058,8 +2058,6 @@ F normalize_presence_list(x) {
 doc Compare arrays. Warning: Hash is used so internal Hash keys comparison is used, not ==
 doc %EX - Diff([1,2], [2,3])  # .add = [3] .remove = [1]
 F Diff(a:Arr, b:Arr, full:Bool=false) {
-	# echo("DIFF 1 A $a")
-	# echo("DIFF 1 B $b")
 	d = ArrDiff()
 	if full {
 		d.add    = b.filter(X not in a)
@@ -2078,8 +2076,7 @@ TEST Diff([1,2], [2,3]).Hash().sort() == {'add': [3], 'remove': [1]}
 doc b - Presence or Arr[Presence]
 doc %RET - ArrDiff
 F Diff(a:Arr, b:Arr, full:Bool=false) {
-	guard b.all(PartialPresence)
-	# echo("DIFF 2 $a $b")
+	guard b and b.all(PartialPresence)
 
 	d = ArrDiff()
 	if full {
@@ -2097,7 +2094,7 @@ TEST Diff(["a", "b"], [Present("a"), Present("c"), Absent("b"), Absent("d")], fa
 TEST Diff(["a", "b"], [Present("a"), Present("c"), Absent("b"), Absent("d")], true).Hash().sort() == {"add": ["c"], "remove": ["b"]}
 
 F Diff(a:Arr, b:Arr, full:Bool=false) {
-	guard b.all(ExactPresence)
+	guard b and b.all(ExactPresence)
 	Diff(a, b.map(get), full)
 }
 

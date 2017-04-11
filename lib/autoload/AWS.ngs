@@ -191,12 +191,13 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F find(rd:Igw) {
 		rd.log('Find', 'IGW')
-		rd._assert_anchor_has_only_known_keys('Tags', 'Attachments')
-		filters = rd.anchor.Tags.cli_tags_filters()
-		rd.anchor.get('Attachments', []).map(F(att) {
-			filters += cli_filters({'attachment.vpc-id': _eval_vpc_id(att.VpcId)})
+		rd._assert_anchor_has_only_known_keys('Tags', 'Attachments', 'InternetGatewayId')
+
+		filters = Argv({
+				'--internet-gateway-ids': rd.anchor.get('InternetGatewayId')
+				'--filters': rd.anchor.Tags.cli_tags_filters() + rd.anchor.get('Attachments', []).map(F(att) cli_filters({'attachment.vpc-id': _eval_vpc_id(att.VpcId)})).flatten()
 		})
-		filters = ['--filters'] +? filters
+
 		rd.resources = ``aws ec2 describe-internet-gateways $*filters``.map(IgwRes(rd, X))
 		rd
 	}
@@ -295,7 +296,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 				r.def.run('Update route table/add route', %(aws ec2 create-route $*args))
 			})
 			diff.remove.map(get).each(F(route) {
-				echo("ROUTE $route")
 				args = Argv({
 					'--route-table-id': r.id()
 					'--destination-cidr-block': route.DestinationCidrBlock
@@ -315,12 +315,12 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F init(rd:SecGroup, anchor:Arr) {
 		warn("Using deprecated SecGroup anchor - array. Should use SecGroup(name, vpc) form.")
-		super(rd, name=anchor[0], vpc_id=anchor[1])
+		super(rd, name=anchor[0], VpcId=anchor[1])
 	}
 
-	F init(rd:SecGroup, name:Str, vpc_id) {
-		guard vpc_id is Str or vpc_id is Vpc
-		super(rd, name=name, vpc_id=vpc_id)
+	F init(rd:SecGroup, name:Str, VpcId) {
+		guard VpcId is Str or VpcId is Vpc
+		super(rd, name=name, VpcId=VpcId)
 	}
 
 	F id(r:SecGroupRes) r.props.GroupId
@@ -328,11 +328,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F users_ids(r:SecGroup) r.resources / F(res) { {'GroupId': res.props.GroupId, 'UserId': res.props.OwnerId} }
 
 	# TODO: refactor - start
-	F vpc_id(rd:SecGroup) rd.anchor.get('vpc_id')
+	F vpc_id(rd:SecGroup) rd.anchor.get('VpcId')
 
 	F vpc_id(rd:SecGroup) {
-		guard rd.anchor.get('vpc_id') is ResDef
-		rd.anchor.vpc_id.ids().the_one()
+		guard rd.anchor.get('VpcId') is ResDef
+		rd.anchor.VpcId.ids().the_one()
 	}
 
 	F vpc_id_args(rd:SecGroup) ['--vpc-id', vpc_id(rd)]
@@ -352,7 +352,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F find(rd:SecGroup) {
 		rd.log('find', 'SG')
-		rd._assert_anchor_has_only_known_keys('vpc_id', 'name', 'Tags')
+		rd._assert_anchor_has_only_known_keys('VpcId', 'name', 'Tags')
 		filters = ['--filters'] +? rd.anchor.Tags.cli_tags_filters()
 		# XXX: check with default VPC / EC2 classic
 		# Can not use --group-names as it will assume default VPC / EC2 classic
