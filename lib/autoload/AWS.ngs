@@ -20,6 +20,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# From https://wiki.debian.org/Cloud/AmazonEC2Image/Jessie
 	AMI_OWNER_DEBIAN = '379101102735'
 	AMI_OWNER_AMAZON = '801119661308'
+	INSTANCE_STATES = %[pending running shutting-down terminated stopping stopped]
 
 	# --------------------------------------------------
 	# Misc utilities
@@ -31,8 +32,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	doc Key-value pairs in which value is null or instance of EmptyBox are discarded.
 	doc TODO: make it JSON when keys or values contain special characters such as = or ,
 	F cli_filters(h:Hash) {
-		unboxed = h.rejectv(NoData).mapv(only(Box, get))
-		unboxed.mapv(only(Pfx, { "${A.val}*" })).map("Name=$X,Values=$Y")
+		unboxed = h.rejectv(NoData).mapv(only(Box, get)).reject(X == [])
+		unboxed.mapv(only(Pfx, { "${A.val}*" })).mapv(only(Arr, X.join(","))).map("Name=$X,Values=$Y")
 	}
 
 	TEST AWS::cli_filters({}) == []
@@ -161,6 +162,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F update(r:VpcRes, props:Hash) {
 		r.def._assert_props_has_only_known_keys(props, 'Tags', 'CidrBlock')
 		r.update_tags(props)
+		# TODO: since we can't modify CidrBlock, we should at least assert that it matches
+		if 'CidrBlock' in props {
+			props.CidrBlock != r.props.CidrBlock throws InvalidArgument("CidrBlock can not be changed after VPC creation")
+		}
 	}
 
 	F delete(r:VpcRes) {
@@ -531,10 +536,25 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	type Instance(ResDef)
 	type InstanceRes(Res)
 
+	F init(rd:Instance, **kwargs) {
+		t = {} + kwargs
+		t.State = kwargs.get('State', %[pending running])
+		if t.State is NoData {
+			t.State = INSTANCE_STATES - ['terminated']
+		}
+		if t.State == '*' {
+			t.State = null
+		}
+		super(rd, **t)
+	}
+
 	F find(rd:Instance) {
-		filters = ['--filters', 'Name=instance-state-name,Values=running']
-		filters += rd.anchor.Tags.cli_tags_filters()
-		debug("Filters: $filters")
+		filters = Argv({
+			'--instance-ids': rd.anchor.get('InstanceId')
+			'--filters': rd.anchor.Tags.cli_tags_filters() + cli_filters({'instance-state-name': rd.anchor.get('State')})
+		})
+
+		debug("AWS::Instance", "Filters: $filters")
 
 		regs = cond {
 			rd.anchor.regions is Arr { rd.anchor.regions }
@@ -565,10 +585,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F id(r:InstanceRes) r.props.InstanceId
 
 	# TODO: Support multiple NICs?
+	# TODO: ImageId should be able to be in props too, not just anchor
 	F create(rd:Instance, **props) {
 		rd.log('create', 'Instance')
 		for prop_name in %[ImageId] {
-			prop_name not in rd.anchor throws InvalidArgument("Anchor must contain $prop_name")
+			prop_name not in rd.anchor throws InvalidArgument("Anchor must contain $prop_name when creating an instance")
 		}
 
 		args = Argv({
@@ -588,18 +609,38 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	# TODO: Support EC2 classic?
-	F update(instance:InstanceRes, props:Hash) {
-		instance.def.log('update', 'Instance')
-		instance.update_tags(props)
+	F update(r:InstanceRes, props:Hash) {
+		r.def.log('update', 'Instance')
+		r.update_tags(props)
 
+		# TODO: make SecurityGroups work with Presence
 		if 'SecurityGroups' in props {
-			current_sgs = instance.props.SecurityGroups.GroupId
-			target_sgs = _sgs(instance.def, props).get()
+			current_sgs = r.props.SecurityGroups.GroupId
+			target_sgs = _sgs(r.def, props).get()
 			diff = Diff(current_sgs, target_sgs)
-			if diff.add or diff.remove {
-				diff.add    % { instance.def.log('update', "${instance.id()} - Adding SG $A") }
-				diff.remove % { instance.def.log('update', "${instance.id()} - Removing SG $A") }
-				instance.def.run('Set security groups', %(aws ec2 modify-instance-attribute --instance-id ${instance.id()} --groups $*target_sgs))
+			if diff {
+				diff.add    % { r.def.log('update', "${r.id()} - Adding SG $A") }
+				diff.remove % { r.def.log('update', "${r.id()} - Removing SG $A") }
+				r.def.run('Set security groups', %(aws ec2 modify-instance-attribute --instance-id ${r.id()} --groups $*target_sgs))
+			}
+		}
+
+		# TODO: make this call for all instances of ResDef at once, not one by one
+		if 'State' in props {
+			a = r.props.State.Name
+			b = props.State
+
+			econd {
+				a == b { "nothing to do" }
+				a == "pending" and b == "running" { "nothing to do"}
+				a == "stopped" and b == "running" {
+					r.def.run('Starting instance', %(aws ec2 start-instances --instance-ids ${r.id()}))
+				}
+				a == "stopping" and b == "stopped" { "nothing to do" }
+				a == "running" and b == "stopped" {
+					r.def.run('Stopping instance', %(aws ec2 stop-instances --instance-ids ${r.id()}))
+				}
+				true throw InvalidArgument("Don't know how to transition instances state from $a to $b").set('value', b)
 			}
 		}
 	}
@@ -622,13 +663,21 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F _image_id(rd:Instance) {
 		guard rd.anchor.ImageId is Image
-		assert(rd.anchor.ImageId.resources.len() == 1, "Expecting exacty one image described by Image resource defeinition")
+		assert(rd.anchor.ImageId.resources.len() == 1, "Expecting exacty one image described by Image resource definition")
 		rd.anchor.ImageId.ids()[0]
 	}
 
 	F _image_id(rd:Instance) {
 		guard rd.anchor.ImageId is Str
 		rd.anchor.ImageId
+	}
+
+	F get_ssh_fingerprint(r:InstanceRes) {
+
+	}
+
+	F add_to_known_hosts(r:InstanceRes, tag_name:Str=null, target_file=null) {
+
 	}
 
 	# --------------------------------------------------

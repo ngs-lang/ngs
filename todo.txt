@@ -27,7 +27,9 @@ Note that this started as internal document so things here are unformed, not fin
 	* AWS::SecGroup - check whether Description is Anchor-only
 	* Support newlines as function arguments separators
 	* Consider standardizing InvalidArgument offending value (.value ?)
-  * AWS::Instance - make sure works properly with AWS::Image Res
+	* ---
+	* AWS::Instance -- state
+	* AWS::Instance -- make sure Anchor works as expected
 
 [roadmap]
 
@@ -374,6 +376,8 @@ Note that this started as internal document so things here are unformed, not fin
 				+ such as F f(t:T1) and F f(t:T2) when T1 and T2 are unrelated types
 
 		* Optimize so that namespace items access ("namespace::item") will not have Hash lookups
+
+		* Consider augeas integration
 
 [todo by priority]
 
