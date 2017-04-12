@@ -67,14 +67,14 @@
 		rd.find()
 		n = props.get('META', {}).get('count')
 		if n is Null and rd.resources.len() == 0 {
-			rd.log('converge', "Count unspecified but there are no resources, assuming count to be 1")
+			debug("ResDef", "converge() - Count unspecified but there are no resources, assuming count to be 1")
 			n = 1
 		}
 
 		rd.resources % update(X, props)
 
 		if n is Null {
-			rd.log('converge', "Count unspecified, not creating or deleting resources")
+			debug("ResDef", "converge() - Count unspecified, not creating or deleting resources")
 		} else {
 			rd.log('converge', "${rd.resources.len()} of $n ${rd.typeof().name} resources exist")
 			if n < rd.resources.len() {
@@ -94,7 +94,7 @@
 	# Methods that support bulk creating should implement this
 	F create(rd:ResDef, n:Int, **props) {
 		for(i;n) {
-			rd.log('converge', "Creating ${rd.typeof().name} ${i+1} of $n")
+			debug("ResDef", "converge() - Creating ${rd.typeof().name} ${i+1} of $n")
 			create(rd, **props)
 		}
 	}

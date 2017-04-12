@@ -39,7 +39,7 @@ ns(Igw=AWS::Igw, SecGroup=AWS::SecGroup, Subnet=AWS::Subnet, Vpc=AWS::Vpc, zones
 	vpc = Vpc({"Name": "ngs-test"}).expect(1)
 
 	test("Create security group") with {
-		SecGroup(["ngs-test-elb", vpc]).converge(
+		SecGroup("ngs-test-elb", vpc).converge(
 			Description="NGS test ELB",
 			IpPermissions= [
 				{
@@ -56,7 +56,7 @@ ns(Igw=AWS::Igw, SecGroup=AWS::SecGroup, Subnet=AWS::Subnet, Vpc=AWS::Vpc, zones
 		)
 	}
 	test("Add Name tag to ELB SG") with {
-		SecGroup(["ngs-test-elb", vpc]).converge(Tags=name_tag)
+		SecGroup("ngs-test-elb", vpc).converge(Tags=name_tag)
 	}
 	# --- Internet Gateway ---
 	test("Add Internet Gateway") with {

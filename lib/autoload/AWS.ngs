@@ -70,14 +70,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	type Res(GlobalRes)
 
-	F run(r:Res, log_pfx:Str, cmd:Command) r.def.run(log_pfx, cmd)
+	F run(r:Res, log_pfx:Str, cmd:Command) r.def.run("${r} ${log_pfx}", cmd)
 
 	F update_tags(r:Res, props:Hash) {
 		target_tags = r.def.opt_prop('Tags', props).get({})
 		current_tags = r.props.get('Tags', {})
 
-		if current_tags == target_tags {
-			r.log('update tags', "Current tags: $current_tags are same as target tags, not updating")
+		if current_tags.sort() == target_tags.sort() {
+			debug("AWS", "${r} Current tags: $current_tags are same as target tags, not updating")
 			return
 		}
 
@@ -111,10 +111,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F run(rd:ResDef, log_pfx:Str, cmd:Command) {
 		if rd.dry_run {
-			rd.log("run/$log_pfx", "would run: ${cmd.argv.join(' ')}")
+			rd.log(log_pfx, "would run: ${cmd.argv.join(' ')}")
 			null
 		} else {
-			rd.log("run/$log_pfx", "running: ${cmd.argv.join(' ')}")
+			rd.log(log_pfx, "running: ${cmd.argv.join(' ')}")
 			``$cmd``
 		}
 	}
@@ -141,7 +141,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F id(r:VpcRes) r.props.VpcId
 
 	F find(rd:Vpc) {
-		rd.log('Find', 'VPC')
+		debug("AWS", "Find VPC $rd")
 		rd._assert_anchor_has_only_known_keys('Tags', 'CidrBlock')
 		filters = ['--filters'] +? (rd.anchor.Tags.cli_tags_filters() + cli_filters({'cidr': rd.anchor.get('CidrBlock')}))
 		rd.resources = ``aws ec2 describe-vpcs $*filters``.map(VpcRes(rd, X))
@@ -169,7 +169,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F delete(r:VpcRes) {
-		r.def.run('Delete VPC', %(aws ec2 delete-vpc --vpc-id ${r.props.VpcId}))
+		r.run('Delete VPC', %(aws ec2 delete-vpc --vpc-id ${r.props.VpcId}))
 	}
 
 	F Str(r:Vpc) {
@@ -195,7 +195,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F id(r:IgwRes) r.props.InternetGatewayId
 
 	F find(rd:Igw) {
-		rd.log('Find', 'IGW')
+		debug("AWS", "Find IGW $rd")
 		rd._assert_anchor_has_only_known_keys('Tags', 'Attachments', 'InternetGatewayId')
 
 		filters = Argv({
@@ -219,14 +219,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F update(r:IgwRes, props:Hash) {
-		r.log('Update', 'IGW')
+		debug("AWS", "${r} Update IGW")
 		r.def._assert_anchor_has_only_known_keys('Tags', 'Attachments')
 		r.update_tags(props)
 		r.def.opt_prop('Attachments', props).each(F(target_attachments) {
 			target_vpcs_ids = target_attachments.VpcId.map(_eval_vpc_id)
 			current_vpcs_ids = r.props.Attachments.VpcId
 			if current_vpcs_ids == target_vpcs_ids {
-				r.log('update_attachments/info', "Current attachments: $current_vpcs_ids are same as target attachments, not updating")
+				debug("AWS", "${r} Current attachments: $current_vpcs_ids are same as target attachments, not updating")
 				return
 			}
 			r.log('update_attachments/info', "Current attachments: $current_vpcs_ids. Target attachments: $target_vpcs_ids")
@@ -248,7 +248,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F delete(r:IgwRes) {
-		r.def.run('Delete IGW', %(aws ec2 delete-internet-gateway --internet-gateway-id ${r.id()}))
+		r.run('Delete IGW', %(aws ec2 delete-internet-gateway --internet-gateway-id ${r.id()}))
 	}
 
 	# --------------------------------------------------
@@ -268,7 +268,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F find(rd:RouteTable) {
 		# TODO: route.gateway-id, route.instance-id
-		rd.log('Find', 'RouteTable')
+		debug("AWS", "Find RouteTable ${rd}")
 		rd._assert_anchor_has_only_known_keys('Tags', 'VpcId')
 		filters = Argv({
 			'--filters': rd.anchor.Tags.cli_tags_filters() + cli_filters({'vpc-id': rd.anchor.Box('VpcId').map(_eval_vpc_id)})
@@ -278,7 +278,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F update(r:RouteTableRes, props:Hash) {
-		r.log('Update', 'RouteTable')
+		debug("AWS", "${r} Update RouteTable")
 		# log("RouteTableRes entry $r")
 		r.def.opt_prop('Routes', props) do F(target_routes) {
 			target_routes .= normalize_presence_list()
@@ -298,14 +298,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 					'--vpc-peering-connection-id': route.get('VpcPeeringConnectionId')
 					'--nat-gateway-id': route.get('NatGatewayId')
 				})
-				r.def.run('Update route table/add route', %(aws ec2 create-route $*args))
+				r.run('Update route table/add route', %(aws ec2 create-route $*args))
 			})
 			diff.remove.map(get).each(F(route) {
 				args = Argv({
 					'--route-table-id': r.id()
 					'--destination-cidr-block': route.DestinationCidrBlock
 				})
-				r.def.run('Update route table/remove route', %(aws ec2 delete-route $*args))
+				r.run('Update route table/remove route', %(aws ec2 delete-route $*args))
 			})
 		} # Routes
 	}
@@ -356,7 +356,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# TODO: refactor - end
 
 	F find(rd:SecGroup) {
-		rd.log('find', 'SG')
+		debug("AWS", "Find SG ${rd}")
 		rd._assert_anchor_has_only_known_keys('VpcId', 'name', 'Tags')
 		filters = ['--filters'] +? rd.anchor.Tags.cli_tags_filters()
 		# XXX: check with default VPC / EC2 classic
@@ -408,7 +408,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F update(sg:SecGroupRes, props:Hash) {
 
-		sg.log('update', 'SG')
+		debug("AWS", "${sg} Updating SG")
 
 		if 'IpPermissions' in props {
 			# PrefixListIds - http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_IpPermission.html
@@ -437,7 +437,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F delete(r:SecGroupRes) {
-		r.def.run('Delete security group', %(aws ec2 delete-security-group --group-id ${r.props.GroupId}))
+		r.run('Delete security group', %(aws ec2 delete-security-group --group-id ${r.props.GroupId}))
 	}
 
 	# --------------------------------------------------
@@ -450,7 +450,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F id(r:SubnetRes) r.props.SubnetId
 
 	F find(rd:Subnet) {
-		rd.log('find', 'Subnet')
+		debug("AWS", "Find Subnet ${rd}")
 		rd._assert_anchor_has_only_known_keys('Tags', 'VpcId', 'CidrBlock', 'AvailabilityZone')
 		filters = ['--filters'] +? ( rd.anchor.Tags.cli_tags_filters() + cli_filters({
 			'vpc-id':             rd.anchor.Box('VpcId').map(_eval_vpc_id)
@@ -476,13 +476,13 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F update(r:SubnetRes, props:Hash) {
-		r.log('update', 'Subnet')
+		debug("AWS", "${r} Updating Subnet")
 		r.def._assert_props_has_only_known_keys(props, 'Tags')
 		r.update_tags(props)
 	}
 
 	F delete(r:SubnetRes) {
-		r.def.run('Delete Subnet', %(aws ec2 delete-subnet --subnet-id ${r.props.SubnetId}))
+		r.run('Delete Subnet', %(aws ec2 delete-subnet --subnet-id ${r.props.SubnetId}))
 	}
 
 	# --------------------------------------------------
@@ -494,6 +494,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	# debian-jessie-amd64-hvm
 	F find(rd:Image) {
+		debug("AWS", "Find Image ${rd}")
 		rd._assert_anchor_has_only_known_keys('OwnerId', 'Name', 'State', 'RootDeviceType', 'VolumeType')
 		owners = ['--owners', rd.anchor.OwnerId] tor []
 		filters = ['--filters'] +? cli_filters({
@@ -508,7 +509,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			resources .= filter({A.Name ~ rd.anchor.Name})
 		}
 		rd.resources = resources / ImageRes(rd, X)
-		rd.log('find', "found ${resources.len()} ${rd.typeof().name} resources")
+		debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources")
 		rd
 	}
 
@@ -549,6 +550,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F find(rd:Instance) {
+		debug("AWS", "Find Instance ${rd}")
 		filters = Argv({
 			'--instance-ids': rd.anchor.get('InstanceId')
 			'--filters': rd.anchor.Tags.cli_tags_filters() + cli_filters({
@@ -576,9 +578,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 
 		if regs {
-			rd.log('find', "found ${resources.len()} ${rd.typeof().name} resources in ${resources.group({A.Region}).len()} regions (${resources.group({A.Placement.AvailabilityZone}).len()} zones)")
+			debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources in ${resources.group({A.Region}).len()} regions (${resources.group({A.Placement.AvailabilityZone}).len()} zones)")
 		} else {
-			rd.log('find', "found ${resources.len()} ${rd.typeof().name} resources in ${resources.group({A.Placement.AvailabilityZone}).len()} zones)")
+			debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources in ${resources.group({A.Placement.AvailabilityZone}).len()} zones)")
 		}
 
 		rd.resources = resources / InstanceRes(rd, X)
@@ -613,7 +615,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	# TODO: Support EC2 classic?
 	F update(r:InstanceRes, props:Hash) {
-		r.log('update', 'Instance')
+		debug("AWS", "${r} Update Instance")
 		r.update_tags(props)
 
 		# TODO: make SecurityGroups work with Presence
@@ -622,9 +624,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			target_sgs = _sgs(r.def, props).get()
 			diff = Diff(current_sgs, target_sgs)
 			if diff {
-				diff.add    % { r.log('update', "${r.id()} - Adding SG $A") }
-				diff.remove % { r.log('update', "${r.id()} - Removing SG $A") }
-				r.def.run('Set security groups', %(aws ec2 modify-instance-attribute --instance-id ${r.id()} --groups $*target_sgs))
+				diff.add    % { debug('AWS', "${r} - Adding SG $A") }
+				diff.remove % { debug('AWS', "${r} - Removing SG $A") }
+				r.run('Set security groups', %(aws ec2 modify-instance-attribute --instance-id ${r.id()} --groups $*target_sgs))
 			}
 		}
 
@@ -637,11 +639,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 				a == b { "nothing to do" }
 				a == "pending" and b == "running" { "nothing to do"}
 				a == "stopped" and b == "running" {
-					r.def.run('Starting instance', %(aws ec2 start-instances --instance-ids ${r.id()}))
+					r.run('Starting instance', %(aws ec2 start-instances --instance-ids ${r.id()}))
 				}
 				a == "stopping" and b == "stopped" { "nothing to do" }
 				a == "running" and b == "stopped" {
-					r.def.run('Stopping instance', %(aws ec2 stop-instances --instance-ids ${r.id()}))
+					r.run('Stopping instance', %(aws ec2 stop-instances --instance-ids ${r.id()}))
 				}
 				true throw InvalidArgument("Don't know how to transition instances state from $a to $b").set('value', b)
 			}
@@ -651,7 +653,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			args = Argv({
 				['--source-dest-check', '--no-source-dest-check']: props.SourceDestCheck
 			})
-			r.def.run('Set SourceDestCheck', %(aws ec2 modify-instance-attribute --instance-id ${r.id()} $*args))
+			r.run('Set SourceDestCheck', %(aws ec2 modify-instance-attribute --instance-id ${r.id()} $*args))
 		}
 	}
 
@@ -697,10 +699,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	type Elb(ResDef)
 	type ElbRes(Res)
 
-	F id(rd:Elb) rd.resource.LoadBalancerName
+	F id(r:ElbRes) r.props.LoadBalancerName
 
 	F find(rd:Elb) {
-		rd.log('find', "ELB")
+		debug("AWS", "Find ELB ${rd}")
 		resources = ``aws elb describe-load-balancers``
 		if rd.anchor.get('name') is Str {
 			resources .= filter(F(desc) desc.LoadBalancerName == rd.anchor.name)
@@ -744,7 +746,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F update(elb:ElbRes, props:Hash) {
-		elb.log('update', 'ELB')
+		debug("AWS", "${elb} Update")
 		elb.def.anchor.get('name') is not Str throws InvalidArgument("Elb is the ELB name and must be a string, not ${elb.def.anchor.get('name')}")
 
 		# Tags
@@ -846,7 +848,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F find(rd:RecordSet) {
-		rd.log('find', 'RecordSet')
+		debug("AWS", "Find RecordSet ${rd}")
 		anchor = rd.anchor
 		zones = ``aws route53 list-hosted-zones-by-name --dns-name ${anchor.ZoneName} --max-items 1``
 
@@ -932,7 +934,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 				'ResourceRecordSet': r.props
 			}]
 		}
-		r.def.run('Delete RecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${r.def.zone_id} --change-batch ${change_batch.encode_json()}))
+		r.run('Delete RecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${r.def.zone_id} --change-batch ${change_batch.encode_json()}))
 
 	}
 
