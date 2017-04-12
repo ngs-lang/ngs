@@ -818,7 +818,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		# TODO: listeners
 		if 'ListenerDescriptions' in props {
 			diff = Diff(elb.props.ListenerDescriptions, props.ListenerDescriptions)
-			# echo("DIFF $diff")
 		}
 	}
 
@@ -953,6 +952,16 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 				'IpRanges': [ { 'CidrIp': '0.0.0.0/0' } ]
 			}
 		}
+		F world_open_port(port:Arr, proto:Str='tcp') port.map(world_open_port(X, proto))
+
+		F world_open_ip_proto(proto) {
+			{
+				'IpProtocol': Str(proto)
+				'IpRanges': [ { 'CidrIp': '0.0.0.0/0' } ]
+			}
+
+		}
+		F world_open_ip_proto(proto:Arr) proto.map(world_open_ip_proto)
 	}
 
 	# ==================================================
