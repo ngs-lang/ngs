@@ -77,24 +77,24 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		current_tags = r.props.get('Tags', {})
 
 		if current_tags == target_tags {
-			r.def.log('update_tags/info', "Current tags: $current_tags are same as target tags, not updating")
+			r.log('update tags', "Current tags: $current_tags are same as target tags, not updating")
 			return
 		}
 
-		r.def.log('update_tags/info', "Current tags: $current_tags. Target tags: $target_tags")
+		r.log('update tags', "Current tags: $current_tags. Target tags: $target_tags")
 		diff = Diff(current_tags, target_tags)
 
 		# Tags might be only in Anchor
 		# so we should create them during first update
 		if (tags = cli_tags(diff.add + diff.change)) {
-			r.run('update_tags/add', %(aws ec2 create-tags --resources ${r.id()} --tags $*tags))
+			r.run('add tags', %(aws ec2 create-tags --resources ${r.id()} --tags $*tags))
 		}
 
 		# Tags might be only in Anchor
 		# so we should not delete other tags
 		if 'Tags' in props {
 			if (tags = diff.remove / "Key=$X") {
-				r.run('update_tags/remove', %(aws ec2 delete-tags --resources ${r.id()} --tags $*tags))
+				r.run('remove tags', %(aws ec2 delete-tags --resources ${r.id()} --tags $*tags))
 			}
 		}
 	}
@@ -219,17 +219,17 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F update(r:IgwRes, props:Hash) {
-		r.def.log('Update', 'IGW')
+		r.log('Update', 'IGW')
 		r.def._assert_anchor_has_only_known_keys('Tags', 'Attachments')
 		r.update_tags(props)
 		r.def.opt_prop('Attachments', props).each(F(target_attachments) {
 			target_vpcs_ids = target_attachments.VpcId.map(_eval_vpc_id)
 			current_vpcs_ids = r.props.Attachments.VpcId
 			if current_vpcs_ids == target_vpcs_ids {
-				r.def.log('update_attachments/info', "Current attachments: $current_vpcs_ids are same as target attachments, not updating")
+				r.log('update_attachments/info', "Current attachments: $current_vpcs_ids are same as target attachments, not updating")
 				return
 			}
-			r.def.log('update_attachments/info', "Current attachments: $current_vpcs_ids. Target attachments: $target_vpcs_ids")
+			r.log('update_attachments/info', "Current attachments: $current_vpcs_ids. Target attachments: $target_vpcs_ids")
 			diff = Diff(current_vpcs_ids, target_vpcs_ids)
 
 			diff.add.each(F(vpc_id) {
@@ -278,7 +278,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F update(r:RouteTableRes, props:Hash) {
-		r.def.log('Update', 'RouteTable')
+		r.log('Update', 'RouteTable')
 		# log("RouteTableRes entry $r")
 		r.def.opt_prop('Routes', props) do F(target_routes) {
 			target_routes .= normalize_presence_list()
@@ -408,7 +408,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F update(sg:SecGroupRes, props:Hash) {
 
-		sg.def.log('update', 'SG')
+		sg.log('update', 'SG')
 
 		if 'IpPermissions' in props {
 			# PrefixListIds - http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_IpPermission.html
@@ -476,7 +476,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F update(r:SubnetRes, props:Hash) {
-		r.def.log('update', 'Subnet')
+		r.log('update', 'Subnet')
 		r.def._assert_props_has_only_known_keys(props, 'Tags')
 		r.update_tags(props)
 	}
@@ -551,7 +551,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F find(rd:Instance) {
 		filters = Argv({
 			'--instance-ids': rd.anchor.get('InstanceId')
-			'--filters': rd.anchor.Tags.cli_tags_filters() + cli_filters({'instance-state-name': rd.anchor.get('State')})
+			'--filters': rd.anchor.Tags.cli_tags_filters() + cli_filters({
+				'instance-state-name': rd.anchor.get('State')
+				'vpc-id': rd.anchor.Box('VpcId').map(only(ResDef, ids)).map(the_one)
+			})
 		})
 
 		debug("AWS::Instance", "Filters: $filters")
@@ -610,7 +613,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	# TODO: Support EC2 classic?
 	F update(r:InstanceRes, props:Hash) {
-		r.def.log('update', 'Instance')
+		r.log('update', 'Instance')
 		r.update_tags(props)
 
 		# TODO: make SecurityGroups work with Presence
@@ -619,8 +622,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			target_sgs = _sgs(r.def, props).get()
 			diff = Diff(current_sgs, target_sgs)
 			if diff {
-				diff.add    % { r.def.log('update', "${r.id()} - Adding SG $A") }
-				diff.remove % { r.def.log('update', "${r.id()} - Removing SG $A") }
+				diff.add    % { r.log('update', "${r.id()} - Adding SG $A") }
+				diff.remove % { r.log('update', "${r.id()} - Removing SG $A") }
 				r.def.run('Set security groups', %(aws ec2 modify-instance-attribute --instance-id ${r.id()} --groups $*target_sgs))
 			}
 		}
@@ -642,6 +645,13 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 				}
 				true throw InvalidArgument("Don't know how to transition instances state from $a to $b").set('value', b)
 			}
+		}
+
+		if 'SourceDestCheck' in props and props.SourceDestCheck != r.props.SourceDestCheck {
+			args = Argv({
+				['--source-dest-check', '--no-source-dest-check']: props.SourceDestCheck
+			})
+			r.def.run('Set SourceDestCheck', %(aws ec2 modify-instance-attribute --instance-id ${r.id()} $*args))
 		}
 	}
 
@@ -734,7 +744,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F update(elb:ElbRes, props:Hash) {
-		elb.def.log('update', 'ELB')
+		elb.log('update', 'ELB')
 		elb.def.anchor.get('name') is not Str throws InvalidArgument("Elb is the ELB name and must be a string, not ${elb.def.anchor.get('name')}")
 
 		# Tags
@@ -754,7 +764,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 				diff = Diff(elb.props['HealthCheck'], props['HealthCheck'])
 				assert(not(diff.add), "Can't handle additional health check properties ${diff.add}")
 				if diff.change {
-					elb.def.log('update', "ELB health check change: ${diff.change}")
+					elb.log('update', "ELB health check change: ${diff.change}")
 					t = elb.props['HealthCheck'] + diff.change
 					elb.run(
 						'update ELB health check',

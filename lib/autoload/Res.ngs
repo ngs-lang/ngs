@@ -57,7 +57,11 @@
 
 	F init(r:Res, def:ResDef, props:Hash) init(args())
 
-	F Str(r:Res) "<${r.typeof().name} props=${r.props}>"
+	F Str(r:Res) "<${r.typeof().name} ${r.id()}>"
+
+	F log(r:Res, method:Str, s:Str) {
+		log("[${r.typeof().name} ${r.id()}] [$method] $s")
+	}
 
 	F converge(rd:ResDef, **props) {
 		rd.find()
