@@ -372,6 +372,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	type IpPermBox(FullBox)
 
 	# Cleans up AWS Security Group IpPermissions so it's possible to compare current and desired states of IpPermissions
+	# TODO: cleanup FromPort -1 & ToPort -1
 	F cleanup(x:IpPermBox) {
 		ret = x.val
 		ret .= filter(F(k, v) (v is not Arr) or v)

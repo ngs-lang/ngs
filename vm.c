@@ -675,9 +675,16 @@ METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 }
 
 // TODO: make "start" and "end" size_t to simplify the code
-#define NATIVE_INDEX_STR_RANGE_SETUP \
-	if(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(argv[1])) < 2) return METHOD_ARGS_MISMATCH; \
-	start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[0]; \
+// TODO: better than METHOD_ARGS_MISMATCH on include_start != true and include_end != false
+#define NATIVE_RANGE_INDEX_SETUP \
+	if(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(argv[1])) < 5) return METHOD_ARGS_MISMATCH; \
+	include_start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_INCLUDE_START]; \
+	if(!IS_BOOL(include_start)) return METHOD_ARGS_MISMATCH; \
+	if(!IS_TRUE(include_start)) return METHOD_ARGS_MISMATCH; \
+	include_end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_INCLUDE_END]; \
+	if(!IS_BOOL(include_end)) return METHOD_ARGS_MISMATCH; \
+	if(!IS_FALSE(include_end)) return METHOD_ARGS_MISMATCH; \
+	start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_START]; \
 	if(!IS_INT(start)) return METHOD_ARGS_MISMATCH; \
 	if(GET_INT(start) < 0) { \
 		exc = make_normal_type_instance(vm->InvalidArgument); \
@@ -689,7 +696,7 @@ METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range starts after string/array end")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	} \
-	end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[1]; \
+	end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_END]; \
 	if(IS_NULL(end)) { \
 		end = MAKE_INT(OBJ_LEN(argv[0])); \
 	} \
@@ -708,9 +715,9 @@ METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 
 METHOD_RESULT native_index_get_str_range EXT_METHOD_PARAMS {
 	size_t len;
-	VALUE start, end, exc;
+	VALUE start, end, include_start, include_end, exc;
 	(void) ctx;
-	NATIVE_INDEX_STR_RANGE_SETUP;
+	NATIVE_RANGE_INDEX_SETUP;
 	*result = make_string_of_len(NULL, len);
 	memcpy(OBJ_DATA_PTR(*result), OBJ_DATA_PTR(argv[0]) + GET_INT(start), len);
 	return METHOD_OK;
@@ -718,10 +725,10 @@ METHOD_RESULT native_index_get_str_range EXT_METHOD_PARAMS {
 
 METHOD_RESULT native_index_set_str_range_str EXT_METHOD_PARAMS {
 	size_t len, new_total_len;
-	VALUE start, end, exc;
+	VALUE start, end, include_start, include_end, exc;
 	char *old_data;
 	(void) ctx;
-	NATIVE_INDEX_STR_RANGE_SETUP;
+	NATIVE_RANGE_INDEX_SETUP;
 	new_total_len = GET_INT(start) + OBJ_LEN(argv[2]) + (OBJ_LEN(argv[0]) - GET_INT(end));
 	old_data = OBJ_DATA_PTR(argv[0]);
 	OBJ_DATA_PTR(argv[0]) = NGS_MALLOC_ATOMIC(new_total_len);
@@ -737,9 +744,9 @@ METHOD_RESULT native_index_set_str_range_str EXT_METHOD_PARAMS {
 // TODO: maybe use vlo->item_size and unify Str and Arr methods
 METHOD_RESULT native_index_get_arr_range EXT_METHOD_PARAMS {
 	size_t len;
-	VALUE start, end, exc;
+	VALUE start, end, include_start, include_end, exc;
 	(void) ctx;
-	NATIVE_INDEX_STR_RANGE_SETUP;
+	NATIVE_RANGE_INDEX_SETUP;
 	*result = make_array(len);
 	memcpy(OBJ_DATA_PTR(*result), &ARRAY_ITEMS(argv[0])[GET_INT(start)], len*sizeof(VALUE));
 	return METHOD_OK;
@@ -748,10 +755,10 @@ METHOD_RESULT native_index_get_arr_range EXT_METHOD_PARAMS {
 // TODO: maybe use vlo->item_size and unify Str and Arr methods
 METHOD_RESULT native_index_set_arr_range_arr EXT_METHOD_PARAMS {
 	size_t len, new_total_len;
-	VALUE start, end, exc;
+	VALUE start, end, include_start, include_end, exc;
 	char *old_data;
 	(void) ctx;
-	NATIVE_INDEX_STR_RANGE_SETUP;
+	NATIVE_RANGE_INDEX_SETUP;
 	new_total_len = GET_INT(start) + OBJ_LEN(argv[2]) + (OBJ_LEN(argv[0]) - GET_INT(end));
 	old_data = OBJ_DATA_PTR(argv[0]);
 	OBJ_DATA_PTR(argv[0]) = NGS_MALLOC(new_total_len * sizeof(VALUE));
@@ -2004,10 +2011,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 	add_type_inheritance(name, parent);
 
 #define SETUP_TYPE_FIELD(name, field, idx) set_hash_key(NGS_TYPE_FIELDS(name), make_string(#field), MAKE_INT(idx));
-#define SETUP_RANGE_TYPE(name) \
-	SETUP_TYPE_FIELD(name, start, 0); \
-	SETUP_TYPE_FIELD(name, end, 1); \
-	SETUP_TYPE_FIELD(name, step, 2);
 
 	MKTYPE(NormalTypeConstructor);
 	_doc(vm, "", "Default constructor for Normal types. Normal types are user-defined and some of the built-in types.");
@@ -2214,24 +2217,23 @@ void vm_init(VM *vm, int argc, char **argv) {
 	//      will break everything. TODO: make sure this can not be done by
 	//      an NGS script.
 	MKTYPE(Range);
-
-		MKSUBTYPE(InclusiveRange, Range);
-		SETUP_RANGE_TYPE(InclusiveRange);
-
-		MKSUBTYPE(ExclusiveRange, Range);
-		SETUP_RANGE_TYPE(ExclusiveRange);
+		SETUP_TYPE_FIELD(Range, start, RANGE_ATTR_START);
+		SETUP_TYPE_FIELD(Range, end, RANGE_ATTR_END);
+		SETUP_TYPE_FIELD(Range, include_start, RANGE_ATTR_INCLUDE_START);
+		SETUP_TYPE_FIELD(Range, include_end, RANGE_ATTR_INCLUDE_END);
+		SETUP_TYPE_FIELD(Range, step, RANGE_ATTR_STEP);
 
 	MKTYPE(Stat);
-	SETUP_TYPE_FIELD(Stat, st_dev, 0);
-	SETUP_TYPE_FIELD(Stat, st_ino, 1);
-	SETUP_TYPE_FIELD(Stat, st_mode, 2);
-	SETUP_TYPE_FIELD(Stat, st_nlink, 3);
-	SETUP_TYPE_FIELD(Stat, st_uid, 4);
-	SETUP_TYPE_FIELD(Stat, st_gid, 5);
-	SETUP_TYPE_FIELD(Stat, st_rdev, 6);
-	SETUP_TYPE_FIELD(Stat, st_size, 7);
-	SETUP_TYPE_FIELD(Stat, st_blksize, 8);
-	SETUP_TYPE_FIELD(Stat, st_blocks, 9);
+		SETUP_TYPE_FIELD(Stat, st_dev, 0);
+		SETUP_TYPE_FIELD(Stat, st_ino, 1);
+		SETUP_TYPE_FIELD(Stat, st_mode, 2);
+		SETUP_TYPE_FIELD(Stat, st_nlink, 3);
+		SETUP_TYPE_FIELD(Stat, st_uid, 4);
+		SETUP_TYPE_FIELD(Stat, st_gid, 5);
+		SETUP_TYPE_FIELD(Stat, st_rdev, 6);
+		SETUP_TYPE_FIELD(Stat, st_size, 7);
+		SETUP_TYPE_FIELD(Stat, st_blksize, 8);
+		SETUP_TYPE_FIELD(Stat, st_blocks, 9);
 
 	// "NgsStrImm${NgsStrExp}$*{NgsStrSplatExp}"
 	MKTYPE(NgsStrComp);
@@ -2239,7 +2241,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 		MKSUBTYPE(NgsStrCompExp, NgsStrComp);
 		MKSUBTYPE(NgsStrCompSplatExp, NgsStrComp);
 
-#undef SETUP_RANGE_TYPE
 #undef SETUP_TYPE_FIELD
 #undef MKSUBTYPE
 #undef MKTYPE
@@ -2594,8 +2595,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "shift",    &native_shift_arr_any,           2, "arr", vm->Arr, "dflt", vm->Any);
 	register_global_func(vm, 0, "len",      &native_len,                     1, "arr", vm->Arr);
 	register_global_func(vm, 0, "get",      &native_index_get_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
-	register_global_func(vm, 1, "[]",       &native_index_get_arr_range,     2, "arr", vm->Arr, "range", vm->ExclusiveRange);
-	register_global_func(vm, 1, "[]=",      &native_index_set_arr_range_arr, 3, "arr", vm->Arr, "range", vm->ExclusiveRange, "replacement", vm->Arr);
+	register_global_func(vm, 1, "[]",       &native_index_get_arr_range,     2, "arr", vm->Arr, "range", vm->Range);
+	register_global_func(vm, 1, "[]=",      &native_index_set_arr_range_arr, 3, "arr", vm->Arr, "range", vm->Range, "replacement", vm->Arr);
 	register_global_func(vm, 1, "[]",       &native_index_get_arr_int,       2, "arr", vm->Arr, "idx", vm->Int);
 	register_global_func(vm, 1, "[]=",      &native_index_set_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "v", vm->Any);
 	register_global_func(vm, 1, "join",     &native_join_arr_str,            2, "arr", vm->Arr, "s", vm->Str);
@@ -2616,11 +2617,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "start", "Non-negative Int, position where the search starts");
 	_doc(vm, "%RET", "Int or null. Not -1 as in many languages");
 
-	register_global_func(vm, 1, "[]",       &native_index_get_str_range,     2, "s", vm->Str, "range", vm->ExclusiveRange);
+	register_global_func(vm, 1, "[]",       &native_index_get_str_range,     2, "s", vm->Str, "range", vm->Range);
 	_doc(vm, "", "Get substring");
 	_doc(vm, "%EX", "\"abcd\"[1..3]  # \"bc\"");
 
-	register_global_func(vm, 1, "[]=",      &native_index_set_str_range_str, 3, "s", vm->Str, "range", vm->ExclusiveRange, "replacement", vm->Str);
+	register_global_func(vm, 1, "[]=",      &native_index_set_str_range_str, 3, "s", vm->Str, "range", vm->Range, "replacement", vm->Str);
 	_doc(vm, "", "Change substring");
 	_doc(vm, "%RET", "replacement");
 	_doc(vm, "%EX", "s=\"abcd\"; s[1..3]=\"X\"; s  # \"aXd\"");

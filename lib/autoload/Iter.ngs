@@ -77,6 +77,9 @@ doc Supports "for i in existing_iterator"
 doc %RET - i
 F Iter(i:Iter) i
 
+doc Don't use, subject to change
+F Arr(i:Iter) collector for elt in i collect(elt)
+
 # ---------- ConstIter ----------
 doc Constant iterator constructor.
 doc val - the constant value to use in next() and peek()
@@ -91,18 +94,21 @@ F peek(i:ConstIter) i.val
 doc %RET - true
 F Bool(i:ConstIter) true
 
+TEST ConstIter(7).drop(10).take(2) == [7,7]
+
 # ---------- RangeIter ----------
 F Iter(r:Range) RangeIter(r)
 
 F init(i:RangeIter, r:Range) {
 	i.val = r
-	i.elt = r.start
+	i.elt = r.start + if r.include_start then 0 else r.step
 }
 
 F next(i:RangeIter) {
 	throw_if_no_next(i)
 	ret = i.elt
 	i.elt += i.val.step
+	ret
 }
 
 F Bool(i:RangeIter) {
@@ -110,18 +116,23 @@ F Bool(i:RangeIter) {
 	# Copy+paste from each(r:Range, cb:Fun) from stdlib
 	# TODO: deduplicate the code
 	econd {
-		(r.end is Null) or (r.step == 0) {
+		(r.end is NoData) or (r.step == 0) {
 			cmp = F(a,b) true
 		}
 		r.step > 0 {
-			cmp = if r is ExclusiveRange (<) (<=)
+			cmp = if r.include_end (<=) (<)
 		}
 		r.step < 0 {
-			cmp = if r is ExclusiveRange (>) (>=)
+			cmp = if r.include_end (>=) (>)
 		}
 	}
-	cmp(i.elt + r.step, r.end)
+	cmp(i.elt, r.end)
 }
+
+TEST Range(1, 4, false, false).Iter().Arr() == [2,3]
+TEST Range(1, 4, false, true).Iter().Arr() == [2,3,4]
+TEST Range(1, 4, true, false).Iter().Arr() == [1,2,3]
+TEST Range(1, 4, true, true).Iter().Arr() == [1,2,3,4]
 
 # ---------- ArrIter ----------
 doc Calls ArrIter constructor.

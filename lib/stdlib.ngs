@@ -714,13 +714,13 @@ F global_not_found_handler(name:Str) {
 { Range.inherit(Eachable1) }
 
 doc Range constructor
-F init(r:Range, start, end, step=1) init(args())
+F init(r:Range, start, end, include_start=true, include_end=false, step=1) init(args())
 
-doc ExclusiveRange constructor
-F ..(start, end)  ExclusiveRange(start, end)
+doc Constructs close-open range
+F ..(start, end)  Range(start, end, true, false)
 
-doc InclusiveRange constructor
-F ...(start, end) InclusiveRange(start, end)
+doc Constructs close-close range
+F ...(start, end) Range(start, end, true, true)
 
 doc Iterates over the elements of r, passing each in turn to cb.
 doc cb - Function to be called with values from r
@@ -736,13 +736,13 @@ F each(r:Range, cb:Fun) {
 			cmp = F(a,b) true
 		}
 		r.step > 0 {
-			cmp = if r is ExclusiveRange (<) (<=)
+			cmp = if r.include_end (<=) (<)
 		}
 		r.step < 0 {
-			cmp = if r is ExclusiveRange (>) (>=)
+			cmp = if r.include_end (>=) (>)
 		}
 	}
-	for(i=r.start; cmp(i, r.end); i=i+r.step)
+	for(i=r.start + if r.include_start then 0 else r.step; cmp(i, r.end); i=i+r.step)
 		cb(i)
 	r
 }
@@ -752,11 +752,8 @@ TEST (1...3).map(X*2) == [2, 4, 6]
 
 TEST (10..20).first(F(x) x % 3 == 0) == 12
 
-doc TODO
-F Str(r:ExclusiveRange) "<ExclusiveRange ${r.start}..${r.end} step ${r.step}>"
-
-doc TODO
-F Str(r:InclusiveRange) "<InclusiveRange ${r.start}...${r.end} step ${r.step}>"
+doc Convert range to human readable representation
+F Str(r:Range) "<Range ${r.start}..${r.end} include_start=${r.include_start} include_end=${r.include_end} step=${r.step}>"
 
 # === Syntactic sugar ============================
 
@@ -1236,7 +1233,7 @@ doc %EX - [1,2,3].reverse()  # [3,2,1]
 F reverse(arr:Arr) {
 	l = arr.len()
 	l.map({ arr[l-A-1] })
-	# TODO: maybe make this work: arr[InclusiveRange(arr.len() - 1, 0, -1)]
+	# TODO: maybe make this work: arr[Range(arr.len() - 1, 0, -1)]
 }
 
 TEST [1,2,3].reverse() == [3,2,1]
@@ -1303,7 +1300,7 @@ TEST zip([1,2,3], [4,5,6], [7,8,9,10]) == [[1,4,7], [2,5,8], [3,6,9], [null, nul
 doc Convert range to an array
 doc %EX - Arr(1..3)   # [1,2]
 doc %EX - Arr(1...3)  # [1,2,3]
-F Arr(r:Range) r / identity
+F Arr(r:Eachable1) r / identity
 
 TEST Arr(1..3) == [1,2]
 TEST Arr(1...3) == [1,2,3]
@@ -1321,13 +1318,13 @@ F '[]'(arr:Arr, idx:Int) {
 	arr[i]
 }
 
-doc Get array elements at specified indexes. Indexes specified by ExclusiveRange.
-doc r - ExclusiveRange with negatve .end
+doc Get array elements at specified indexes. Indexes specified by Range.
+doc r - Range with negatve .end
 doc %EX - [10,20,30,40][1..-1]  # [20,30]
 doc %RET - Arr
-F '[]'(arr:Arr, r:ExclusiveRange) {
+F '[]'(arr:Arr, r:Range) {
 	guard r.end is Int and r.end < 0
-	r.end < 0 - arr.len() throws IndexNotFound("[](Arr, ExclusiveRange): Index ${r.end} (range end) is illegal for array of size ${arr.len()}", arr, idx)
+	r.end < 0 - arr.len() throws IndexNotFound("[](Arr, Range): Index ${r.end} (range end) is illegal for array of size ${arr.len()}", arr, idx)
 	arr[r.start..arr.len() + r.end]
 }
 
@@ -2276,12 +2273,12 @@ F '[]'(s:Str, i:Int) {
 TEST ("abc"[-1] == "c") and ("abc"[-3] == "a")
 TEST try "abc"[-4] == "x" catch(e:InvalidArgument) true
 
-doc Get a substring. Indexes in s are specified by ExclusiveRange.
+doc Get a substring. Indexes in s are specified by Range.
 doc s - Original string
-doc r - ExclusiveRange with negatve .end
+doc r - Range with negatve .end
 doc %EX - "(Look ma, no parens)"[1..-1]  # "Look ma, no parens"
 doc %RET - Str
-F '[]'(s:Str, r:ExclusiveRange) {
+F '[]'(s:Str, r:Range) {
 	guard r.end is Int and r.end < 0
 	r.end < 0 - s.len() throws InvalidArgument("Negative index (range end) into string is (abs) larger than the string")
 	s[r.start..s.len() + r.end]
@@ -4025,9 +4022,8 @@ doc Pick one random element from a range
 doc %RET - Any
 F rand(r:Range) {
 	guard r.step == 1
-	points = r.end - r.start
-	if r is InclusiveRange points += 1
-	rand(points) + r.start
+	points = r.end - r.start - 1 + Int(r.include_start) + Int(r.include_end)
+	rand(points) + r.start + if r.include_start then 0 else r.step
 }
 
 # === retry facility =============================
