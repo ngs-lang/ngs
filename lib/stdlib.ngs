@@ -1368,7 +1368,7 @@ F '[]'(arr:Arr, r:PredRange) {
 				}
 			}
 		})
-	do_collect throws InvalidArgument("Array did not match PredRange").set('value', arr).set('range', r)
+	do_collect throws IndexNotFound("Array did not match PredRange", arr, r)
 	ret
 }
 
