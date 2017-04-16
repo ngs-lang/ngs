@@ -6,7 +6,6 @@
 	# Autoload
 	AWS
 	ArgvMatcher
-	Counter
 	DelimStr
 	Iter
 	KV

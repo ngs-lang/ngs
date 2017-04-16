@@ -693,7 +693,7 @@ METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 	} \
 	if(((size_t) GET_INT(start)) > OBJ_LEN(argv[0])) { \
 		exc = make_normal_type_instance(vm->InvalidArgument); \
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range starts after string/array end")); \
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("NumRange starts after string/array end")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	} \
 	end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_END]; \
@@ -703,13 +703,13 @@ METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 	if(!IS_INT(end)) return METHOD_ARGS_MISMATCH; \
 	if(GET_INT(end) < GET_INT(start)) { \
 		exc = make_normal_type_instance(vm->InvalidArgument); \
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range end smaller than range start when calling [](s:Str, r:Range)")); \
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("NumRange end smaller than range start when calling [](s:Str, r:NumRange)")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	} \
 	len = GET_INT(end) - GET_INT(start); \
 	if(GET_INT(start) + len > OBJ_LEN(argv[0])) { \
 		exc = make_normal_type_instance(vm->InvalidArgument); \
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range ends after string end")); \
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("NumRange ends after string end")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	}
 
@@ -2216,12 +2216,12 @@ void vm_init(VM *vm, int argc, char **argv) {
 	//      in such a way that "start" is not 0 or "end" is not 1
 	//      will break everything. TODO: make sure this can not be done by
 	//      an NGS script.
-	MKTYPE(Range);
-		SETUP_TYPE_FIELD(Range, start, RANGE_ATTR_START);
-		SETUP_TYPE_FIELD(Range, end, RANGE_ATTR_END);
-		SETUP_TYPE_FIELD(Range, include_start, RANGE_ATTR_INCLUDE_START);
-		SETUP_TYPE_FIELD(Range, include_end, RANGE_ATTR_INCLUDE_END);
-		SETUP_TYPE_FIELD(Range, step, RANGE_ATTR_STEP);
+	MKTYPE(NumRange);
+		SETUP_TYPE_FIELD(NumRange, start, RANGE_ATTR_START);
+		SETUP_TYPE_FIELD(NumRange, end, RANGE_ATTR_END);
+		SETUP_TYPE_FIELD(NumRange, include_start, RANGE_ATTR_INCLUDE_START);
+		SETUP_TYPE_FIELD(NumRange, include_end, RANGE_ATTR_INCLUDE_END);
+		SETUP_TYPE_FIELD(NumRange, step, RANGE_ATTR_STEP);
 
 	MKTYPE(Stat);
 		SETUP_TYPE_FIELD(Stat, st_dev, 0);
@@ -2310,7 +2310,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Get closure-specific Return type. Throwing it, will return from the closure");
 	_doc(vm, "%EX", "F f() Return(); f()  # <Return closure=<Closure f at <command line -pi switch>:2> depth=4 val=null>");
 	_doc(vm, "%EX", "");
-	_doc(vm, "%EX", "F first(r:Range, predicate:Fun) {");
+	_doc(vm, "%EX", "F first(r:NumRange, predicate:Fun) {");
 	_doc(vm, "%EX", "	finish = Return()");
 	_doc(vm, "%EX", "	r.each(F(i) {");
 	_doc(vm, "%EX", "		predicate(i) throws finish(i)");
@@ -2595,8 +2595,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "shift",    &native_shift_arr_any,           2, "arr", vm->Arr, "dflt", vm->Any);
 	register_global_func(vm, 0, "len",      &native_len,                     1, "arr", vm->Arr);
 	register_global_func(vm, 0, "get",      &native_index_get_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
-	register_global_func(vm, 1, "[]",       &native_index_get_arr_range,     2, "arr", vm->Arr, "range", vm->Range);
-	register_global_func(vm, 1, "[]=",      &native_index_set_arr_range_arr, 3, "arr", vm->Arr, "range", vm->Range, "replacement", vm->Arr);
+	register_global_func(vm, 1, "[]",       &native_index_get_arr_range,     2, "arr", vm->Arr, "range", vm->NumRange);
+	register_global_func(vm, 1, "[]=",      &native_index_set_arr_range_arr, 3, "arr", vm->Arr, "range", vm->NumRange, "replacement", vm->Arr);
 	register_global_func(vm, 1, "[]",       &native_index_get_arr_int,       2, "arr", vm->Arr, "idx", vm->Int);
 	register_global_func(vm, 1, "[]=",      &native_index_set_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "v", vm->Any);
 	register_global_func(vm, 1, "join",     &native_join_arr_str,            2, "arr", vm->Arr, "s", vm->Str);
@@ -2617,11 +2617,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "start", "Non-negative Int, position where the search starts");
 	_doc(vm, "%RET", "Int or null. Not -1 as in many languages");
 
-	register_global_func(vm, 1, "[]",       &native_index_get_str_range,     2, "s", vm->Str, "range", vm->Range);
+	register_global_func(vm, 1, "[]",       &native_index_get_str_range,     2, "s", vm->Str, "range", vm->NumRange);
 	_doc(vm, "", "Get substring");
 	_doc(vm, "%EX", "\"abcd\"[1..3]  # \"bc\"");
 
-	register_global_func(vm, 1, "[]=",      &native_index_set_str_range_str, 3, "s", vm->Str, "range", vm->Range, "replacement", vm->Str);
+	register_global_func(vm, 1, "[]=",      &native_index_set_str_range_str, 3, "s", vm->Str, "range", vm->NumRange, "replacement", vm->Str);
 	_doc(vm, "", "Change substring");
 	_doc(vm, "%RET", "replacement");
 	_doc(vm, "%EX", "s=\"abcd\"; s[1..3]=\"X\"; s  # \"aXd\"");

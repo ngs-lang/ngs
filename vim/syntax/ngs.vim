@@ -20,7 +20,8 @@ syn keyword ngsRepeat for
 " bootstrap types
 syn keyword ngsType NotImplemented ReadFail RequreFail MainFail
 " other types
-syn keyword ngsType Any ArgvMatcher ArgvMatcherDecorator Arr ArrIter ArrLike BasicType Bool Box CLib Closure Command ConstIter Counter CSym DelimStr Eachable Eachable1 Eachable2 EmptyBox ExclusiveRange ExecutableNotFound FFI FullBox Fun Hash HashIter HashLike InclusiveRange Int Iter KillFail KV NormalType NormalTypeInstance NoData Null Path Pipe PipeCreateFail Pred Process ProcessFail Range RangeIter Real Seq Stats Str Table TableMeta TableMetaNotIfCol TtyCheckFail Type
+syn keyword ngsType Any ArgvMatcher ArgvMatcherDecorator Arr ArrIter ArrLike BasicType Bool Box CLib Closure Command ConstIter Counter CSym DelimStr Eachable Eachable1 Eachable2 EmptyBox ExecutableNotFound FFI FullBox Fun Hash HashIter HashLike Int Iter KillFail KV NormalType NormalTypeInstance NoData Null Num Path Pipe PipeCreateFail Pred Process ProcessFail Range RangeIter Real Seq Stats Str Table TableMeta TableMetaNotIfCol TtyCheckFail Type
+syn keyword ngsType Range NumRange PredRange
 syn keyword ngsType Diff ArrDiff HashDiff
 syn keyword ngsType Presence PartialPresence Present Absent ExactPresence
 syn keyword ngsType AssertFail ArgsMismatch CException EmptyArrayFail Error Exception CompileFail DontKnowHowToCall GlobalNotFound ImplNotFound InternalError LookupFail KeyNotFound StackDepthFail UndefinedLocalVar

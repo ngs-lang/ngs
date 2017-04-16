@@ -30,7 +30,7 @@
 	doc %EX - # Output:
 	doc %EX - #   {switch=val, sw2=val2}
 	doc %EX - #   ['some','other','positional']
-	type ArrIter(Iter)
+	type ArrIter([Iter, Eachable1])
 
 	doc EXPERIMENTAL Hash iterator.
 	type HashIter(Iter)
@@ -43,7 +43,7 @@
 	doc %EX - # Output:
 	doc %EX - #   10
 	doc %EX - #   10
-	type ConstIter(Iter)
+	type ConstIter([Iter, Eachable1])
 
 	doc NOT IMPLEMENTED YET. Iterator that returns values in the given range
 	doc %EX - { Iter }
@@ -53,7 +53,7 @@
 	doc %EX - # Output:
 	doc %EX - #   10
 	doc %EX - #   11
-	type RangeIter(Iter)
+	type RangeIter([Iter, Eachable1])
 }
 
 doc Private method of Iter.ngs, will be hidden in future.
@@ -77,8 +77,16 @@ doc Supports "for i in existing_iterator"
 doc %RET - i
 F Iter(i:Iter) i
 
-doc Don't use, subject to change
-F Arr(i:Iter) collector for elt in i collect(elt)
+doc Calls cb with each element from i
+doc %RET - i
+F each(i:Iter, cb:Fun) {
+	for elt in i {
+		cb(elt)
+	}
+	i
+}
+
+TEST s=0; NumRange(1,10,true,true).Iter().each({ s+= A }); s==55
 
 # ---------- ConstIter ----------
 doc Constant iterator constructor.
@@ -97,9 +105,11 @@ F Bool(i:ConstIter) true
 TEST ConstIter(7).drop(10).take(2) == [7,7]
 
 # ---------- RangeIter ----------
-F Iter(r:Range) RangeIter(r)
+F Iter(r:NumRange) RangeIter(r)
 
-F init(i:RangeIter, r:Range) {
+F init(i:RangeIter, r:NumRange) {
+	r.start is not Int throws NotImplemented("start must be Int for now")
+	r.step is not Int throws NotImplemented("step must be Int for now")
 	i.val = r
 	i.elt = r.start + if r.include_start then 0 else r.step
 }
@@ -113,7 +123,7 @@ F next(i:RangeIter) {
 
 F Bool(i:RangeIter) {
 	r = i.val
-	# Copy+paste from each(r:Range, cb:Fun) from stdlib
+	# Copy+paste from each(r:NumRange, cb:Fun) from stdlib
 	# TODO: deduplicate the code
 	econd {
 		(r.end is NoData) or (r.step == 0) {
@@ -129,10 +139,10 @@ F Bool(i:RangeIter) {
 	cmp(i.elt, r.end)
 }
 
-TEST Range(1, 4, false, false).Iter().Arr() == [2,3]
-TEST Range(1, 4, false, true).Iter().Arr() == [2,3,4]
-TEST Range(1, 4, true, false).Iter().Arr() == [1,2,3]
-TEST Range(1, 4, true, true).Iter().Arr() == [1,2,3,4]
+TEST NumRange(1, 4, false, false).Iter().Arr() == [2,3]
+TEST NumRange(1, 4, false, true).Iter().Arr() == [2,3,4]
+TEST NumRange(1, 4, true, false).Iter().Arr() == [1,2,3]
+TEST NumRange(1, 4, true, true).Iter().Arr() == [1,2,3,4]
 
 # ---------- ArrIter ----------
 doc Calls ArrIter constructor.

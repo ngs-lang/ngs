@@ -225,7 +225,7 @@ typedef struct {
 	VALUE Command;
 	VALUE Redir;
 
-	VALUE Range;
+	VALUE NumRange;
 
 	VALUE Stat;
 

@@ -34,6 +34,9 @@ F init(h:Hash) {
 	doc %EX - # ... Exception of type AssertFail ...
 	type AssertFail
 	AssertFail.inherit(Exception)
+
+	type InstantiatingAbstractType
+	InstantiatingAbstractType.inherit(Exception)
 }
 
 doc IndexNotFound exception constructor
@@ -53,6 +56,8 @@ F assert(condition, *args) {
 	super(Bool(condition), *args)
 }
 
+F init(e:InstantiatingAbstractType, t:Type) init(args())
+
 # === Namespaces =================================
 
 F '::'(nti:NormalTypeInstance, k) nti.(k)
@@ -65,7 +70,7 @@ F '::='(h:Hash, k, v) h[k] = v
 
 doc Implements calling of Return type instances
 doc like the finish(i) call in the example below
-doc %EX - F first(r:Range, predicate:Fun) {
+doc %EX - F first(r:NumRange, predicate:Fun) {
 doc %EX - 	finish = Return()
 doc %EX - 	r.each(F(i) {
 doc %EX - 		predicate(i) throws finish(i)
@@ -99,6 +104,10 @@ F call(r:Return, v=null) {
 
 	type NoData
 	Null.inherit(NoData)
+
+	type Num
+	Int.inherit(Num)
+	Real.inherit(Num)
 }
 
 
@@ -711,16 +720,36 @@ F global_not_found_handler(name:Str) {
 
 # === Range ======================================
 
-{ Range.inherit(Eachable1) }
+{
+	type Range
+		NumRange.inherit(Range)
+		NumRange.inherit(Eachable1)
+
+	type PredRange
+		PredRange.inherit(Range)
+}
 
 doc Range constructor
-F init(r:Range, start, end, include_start=true, include_end=false, step=1) init(args())
+F init(r:Range, start, end, include_start=true, include_end=false, step=1) {
+	r.typeof() == Range throws InstantiatingAbstractType(Range)
+	init(args())
+}
 
-doc Constructs close-open range
-F ..(start, end)  Range(start, end, true, false)
+doc Constructs open-open predicate range
+doc %RET - PredRange
+F ..(start, end)  PredRange(start, end, false, false)
 
-doc Constructs close-close range
-F ...(start, end) Range(start, end, true, true)
+doc Constructs closed-closed predicate range
+doc %RET - PredRange
+F ...(start, end) PredRange(start, end, true, true)
+
+doc Constructs closed-open numerical range
+doc %RET - NumRange
+F ..(start:Num, end) NumRange(start, end, true, false)
+
+doc Constructs closed-closed numerical range
+doc %RET - NumRange
+F ...(start:Num, end) NumRange(start, end, true, true)
 
 doc Iterates over the elements of r, passing each in turn to cb.
 doc cb - Function to be called with values from r
@@ -729,23 +758,7 @@ doc %RET - r
 doc %EX - s=0
 doc %EX - (1...10).each(F(i) { global s; s+=i })
 doc %EX - echo(s)  # Outputs: 55
-F each(r:Range, cb:Fun) {
-	# TODO: support Real step
-	econd {
-		(r.end is NoData) or (r.step == 0) {
-			cmp = F(a,b) true
-		}
-		r.step > 0 {
-			cmp = if r.include_end (<=) (<)
-		}
-		r.step < 0 {
-			cmp = if r.include_end (>=) (>)
-		}
-	}
-	for(i=r.start + if r.include_start then 0 else r.step; cmp(i, r.end); i=i+r.step)
-		cb(i)
-	r
-}
+F each(r:NumRange, cb:Fun) r.Iter().each(cb)
 
 TEST (1..3).map(X*2) == [2, 4]
 TEST (1...3).map(X*2) == [2, 4, 6]
@@ -753,7 +766,7 @@ TEST (1...3).map(X*2) == [2, 4, 6]
 TEST (10..20).first(F(x) x % 3 == 0) == 12
 
 doc Convert range to human readable representation
-F Str(r:Range) "<Range ${r.start}..${r.end} include_start=${r.include_start} include_end=${r.include_end} step=${r.step}>"
+F Str(r:Range) "<${r.typeof().name} ${r.start}..${r.end} include_start=${r.include_start} include_end=${r.include_end} step=${r.step}>"
 
 # === Syntactic sugar ============================
 
@@ -1233,7 +1246,7 @@ doc %EX - [1,2,3].reverse()  # [3,2,1]
 F reverse(arr:Arr) {
 	l = arr.len()
 	l.map({ arr[l-A-1] })
-	# TODO: maybe make this work: arr[Range(arr.len() - 1, 0, -1)]
+	# TODO: maybe make this work: arr[NumRange(arr.len() - 1, 0, -1)]
 }
 
 TEST [1,2,3].reverse() == [3,2,1]
@@ -1318,17 +1331,49 @@ F '[]'(arr:Arr, idx:Int) {
 	arr[i]
 }
 
-doc Get array elements at specified indexes. Indexes specified by Range.
-doc r - Range with negatve .end
+# TODO: Make "Indexable" and make this method work with Indexable
+doc Get array elements at specified indexes. Indexes specified by NumRange.
+doc r - NumRange with negatve .end
 doc %EX - [10,20,30,40][1..-1]  # [20,30]
 doc %RET - Arr
-F '[]'(arr:Arr, r:Range) {
+F '[]'(arr:Arr, r:NumRange) {
 	guard r.end is Int and r.end < 0
-	r.end < 0 - arr.len() throws IndexNotFound("[](Arr, Range): Index ${r.end} (range end) is illegal for array of size ${arr.len()}", arr, idx)
+	r.end < 0 - arr.len() throws IndexNotFound("[](Arr, NumRange): Index ${r.end} (range end) is illegal for array of size ${arr.len()}", arr, idx)
 	arr[r.start..arr.len() + r.end]
 }
 
 TEST [10,20,30,40][1..-1] == [20,30]
+
+F '[]'(arr:Arr, r:PredRange) {
+	do_collect = false
+	start_pred = Pred(r.start)
+	end_pred = Pred(r.end)
+	ret = collector
+		arr.each(F(elt) {
+			if do_collect {
+				if end_pred(elt) {
+					if r.include_end {
+						collect(elt)
+					}
+					do_collect = false
+				} else {
+					collect(elt)
+				}
+			} else {
+				if start_pred(elt) {
+					if r.include_start {
+						collect(elt)
+					}
+					do_collect = true
+				}
+			}
+		})
+	do_collect throws InvalidArgument("Array did not match PredRange").set('value', arr).set('range', r)
+	ret
+}
+
+TEST %[a1 a2 b1 b2][/^a/../^b/] == %[a2]
+TEST %[a1 a2 b1 b2][/^a/.../^b/] == %[a1 a2 b1]
 
 
 doc Get array elements at specified indexes.
@@ -2273,12 +2318,12 @@ F '[]'(s:Str, i:Int) {
 TEST ("abc"[-1] == "c") and ("abc"[-3] == "a")
 TEST try "abc"[-4] == "x" catch(e:InvalidArgument) true
 
-doc Get a substring. Indexes in s are specified by Range.
+doc Get a substring. Indexes in s are specified by NumRange.
 doc s - Original string
-doc r - Range with negatve .end
+doc r - NumRange with negatve .end
 doc %EX - "(Look ma, no parens)"[1..-1]  # "Look ma, no parens"
 doc %RET - Str
-F '[]'(s:Str, r:Range) {
+F '[]'(s:Str, r:NumRange) {
 	guard r.end is Int and r.end < 0
 	r.end < 0 - s.len() throws InvalidArgument("Negative index (range end) into string is (abs) larger than the string")
 	s[r.start..s.len() + r.end]
@@ -3975,7 +4020,7 @@ srand(time())
 doc Pick n random unique elements from something
 doc %RET - Arr
 F rand_uniq(something, n:Int) {
-	# TODO: Fix the guard - it does not work with Range currently
+	# TODO: Fix the guard - it does not work with NumRange currently
 	# guard n <= something.len()
 	result = []
 	safety_counter = 0
@@ -4020,7 +4065,7 @@ F rand(a:Str, n:Int) super(a, n).join('')
 
 doc Pick one random element from a range
 doc %RET - Any
-F rand(r:Range) {
+F rand(r:NumRange) {
 	guard r.step == 1
 	points = r.end - r.start - 1 + Int(r.include_start) + Int(r.include_end)
 	rand(points) + r.start + if r.include_start then 0 else r.step
