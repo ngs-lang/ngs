@@ -1344,10 +1344,16 @@ F '[]'(arr:Arr, r:NumRange) {
 
 TEST [10,20,30,40][1..-1] == [20,30]
 
+doc Extract array elements between the element that matches r.start and the element that matches r.end .
+doc Starting and ending elements are optionally included, depending on r.include_start and r.include_end .
+doc %EX - %[a1 a2 b1 b2][/^a/../^b/]   # ['a2']
+doc %EX - %[a1 a2 b1 b2][/^a/.../^b/]  # ['a1', 'a2', 'b1']
+doc %EX - %[a1 a2 b1 b2][/^a/.../^x/]  # IndexNotFound exception
 F '[]'(arr:Arr, r:PredRange) {
-	do_collect = false
 	start_pred = Pred(r.start)
 	end_pred = Pred(r.end)
+	do_collect = false
+	start_found = false
 	ret = collector
 		arr.each(F(elt) {
 			if do_collect {
@@ -1365,15 +1371,18 @@ F '[]'(arr:Arr, r:PredRange) {
 						collect(elt)
 					}
 					do_collect = true
+					start_found = true
 				}
 			}
 		})
-	do_collect throws IndexNotFound("Array did not match PredRange", arr, r)
+	not(start_found) or do_collect throws IndexNotFound("Array did not match PredRange", arr, r)
 	ret
 }
 
 TEST %[a1 a2 b1 b2][/^a/../^b/] == %[a2]
 TEST %[a1 a2 b1 b2][/^a/.../^b/] == %[a1 a2 b1]
+TEST try %[a1 a2 b1 b2][/^a/.../^x/] catch(e:IndexNotFound) true
+TEST try %[a1 a2 b1 b2][/^x/.../^b/] catch(e:IndexNotFound) true
 
 
 doc Get array elements at specified indexes.
