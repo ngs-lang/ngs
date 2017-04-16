@@ -694,12 +694,27 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd.anchor.ImageId
 	}
 
-	F get_ssh_fingerprint(r:InstanceRes) {
-
+	doc Get lines of console output
+	F get_console_output(r:InstanceRes) {
+		``aws ec2 get-console-output --instance-id ${r.id()}``.Output.lines()
 	}
 
-	F add_to_known_hosts(r:InstanceRes, tag_name:Str=null, target_file=null) {
+	doc %RET - Array of Str. Each Str format "key-type base64key"
+	F get_ssh_host_keys(r:InstanceRes) {
+		r.get_console_output()["-----BEGIN SSH HOST KEY KEYS-----".."-----END SSH HOST KEY KEYS-----"].map({A.split(' ')[0..2].join(' ')})
+	}
 
+	doc WIP, don't use!
+	F add_to_known_hosts(r:InstanceRes, ip_or_hostname) {
+		f = ENV.get('NGS_KNOWN_HOSTS', ENV.HOME / '.ssh' / 'known_hosts')
+		keys_from_console = r.get_ssh_host_keys()
+		scanned_keys = $(ssh-keyscan -H $ip_or_hostname 2>/dev/null).lines()
+		key_parts_to_compare = scanned_keys.map({A.split(' ')[1..3].join(' ')})
+		echo("S $keys_from_console, $scanned_keys")
+		if d = Diff(keys_from_console, key_parts_to_compare) {
+			# throw SecurtyFail(
+			throw Exception("Scanned SSH keys and SSH keys from console did not match").set('diff', d)
+		}
 	}
 
 	# --------------------------------------------------

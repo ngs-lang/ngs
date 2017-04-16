@@ -1350,6 +1350,7 @@ doc %EX - %[a1 a2 b1 b2][/^a/../^b/]   # ['a2']
 doc %EX - %[a1 a2 b1 b2][/^a/.../^b/]  # ['a1', 'a2', 'b1']
 doc %EX - %[a1 a2 b1 b2][/^a/.../^x/]  # IndexNotFound exception
 F '[]'(arr:Arr, r:PredRange) {
+	r.step != 1 throws NotImplemented("r.step not 1 is not supported")
 	start_pred = Pred(r.start)
 	end_pred = Pred(r.end)
 	do_collect = false
