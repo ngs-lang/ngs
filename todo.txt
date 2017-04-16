@@ -30,6 +30,9 @@ Note that this started as internal document so things here are unformed, not fin
 	* ---
 	* AWS::Instance -- state
 	* AWS::Instance -- make sure Anchor works as expected
+	* "The README doesn’t seem to have any simple syntax examples"
+	* Consider somethig like data_strucure ~ [Capture("x"), 7 , "xx"]
+	* Creating an AWS res not matching the Anchor - think
 
 [roadmap]
 

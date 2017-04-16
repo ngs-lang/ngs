@@ -284,7 +284,13 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			target_routes .= normalize_presence_list()
 			# log("target_routes $target_routes")
 			# TODO: do not replace in-place, make a copy
-			target_routes.map(get).each(F(r) if r.GatewayId is ResDef then r.GatewayId = r.GatewayId.ids().the_one())
+			target_routes.map(get).each(F(r) {
+				for prop in %[GatewayId InstanceId] {
+					if prop in r {
+						if r.(prop) is ResDef then r.(prop) = r.(prop).ids().the_one()
+					}
+				}
+			})
 			target_routes.each(F(r) r.val .= RouteBox())
 			diff = Diff(r.props.Routes.map(RouteBox), target_routes, full=true) # apparently works without full. TODO: check why
 			# log("RouteTableRes diff $diff")
@@ -378,8 +384,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		ret .= filter(F(k, v) (v is not Arr) or v)
 		ret .= without('IpRanges', [{"CidrIp": "0.0.0.0/0"}])
 		if 'UserIdGroupPairs' in ret {
-			# Hash is ordered. The right order for comparison is GroupId and then UserId
-			ret.UserIdGroupPairs .= map(F(pair) { {'GroupId': pair.GroupId, 'UserId': pair.UserId } })
+			# Hash is ordered.
+			ret.UserIdGroupPairs .= map(sort)
 		}
 		ret
 	}
@@ -415,7 +421,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			# PrefixListIds - http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_IpPermission.html
 			# (Valid for AuthorizeSecurityGroupEgress, RevokeSecurityGroupEgress and DescribeSecurityGroups only)
 			# sg.props.IpPermissions.each(F(perm) perm.del('PrefixListIds'))
-			diff = Diff(sg.props.IpPermissions/IpPermBox, props.IpPermissions/IpPermBox, full=true)
+			target_perms = normalize_presence_list(props.IpPermissions)
+			target_perms.each(F(r) r.val .= IpPermBox())
+			diff = Diff(sg.props.IpPermissions/IpPermBox, target_perms, full=true)
+
 			if diff.add {
 				sg.run('add SG ingress rules', %(aws ec2 authorize-security-group-ingress --group-id ${sg.props.GroupId} --ip-permissions $*{diff.add.val / encode_json}))
 			}
