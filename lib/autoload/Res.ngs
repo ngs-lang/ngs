@@ -23,7 +23,7 @@
 		props = (rd.props tor {}).without('META')
 		multi = " x${rd.count}" tor ""
 		dry_run = if rd.dry_run " (dry run)" else ""
-		"<${rd.typeof().name} anchor=${rd.anchor.without('META')} props=$props$multi$dry_run resources:${rd.resources.map_true(len)}>"
+		"<${rd.typeof().name} anchor=${rd.anchor.without('META')} props=$props$multi$dry_run resources:${only(Arr, len)(rd.resources)}>"
 	}
 
 	F log(rd:ResDef, method:Str, s:Str) {

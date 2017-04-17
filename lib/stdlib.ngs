@@ -369,23 +369,9 @@ F map_base_idx(base, n:Int, mapper:Fun) {
 	n.map(mapper(base, X))
 }
 
-doc EXPERIMENTAL! Do not use!
-doc Map val only when val is true in boolean context. Otherwise return the original val.
-F map_true(val, mapper:Fun) only(identity, mapper)(val)
-
-TEST [].map_true(["--filters"] + X) == []
-TEST ["something"].map_true(["--filters"] + X) == ["--filters", "something"]
-
-doc EXPERIMENTAL! Do not use!
-doc Map val only when val is false in boolean context. Otherwise return the original val.
-F map_false(val, mapper:Fun) only(not + identity, mapper)(val)
-
-TEST [].map_false({ ["default"] }) == ["default"]
-TEST ["something"].map_false({ ["default"] }) == ["something"]
-
 doc Call cb with val
 doc %RET - val
-doc %EX - h.mapv(only(Pfx, { "${A.val}*" })).map("Name=$X,Values=$Y").tap(F(x) echo("DEBUG: $x")).map_true(['--filters'] + X)
+doc %EX - long_computation_part1().tap(F(x) echo("DEBUG: $x")).long_computation_part2()
 F tap(val, cb:Fun) {
 	cb(val)
 	val
