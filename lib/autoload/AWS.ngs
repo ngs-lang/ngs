@@ -749,20 +749,16 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F create(rd:Elb, **props) {
 		rd.log('create', "creating an ELB")
 		rd.anchor.get('name') is not Str throws InvalidArgument("ELB name and must be a string, not ${rd.anchor.get('name')}")
-		'ListenerDescriptions' not in props throws InvalidArgument("Elb must have 'listeners' property")
+		'ListenerDescriptions' not in props throws InvalidArgument("Elb must have 'ListenerDescriptions' property")
 
 		('AvailabilityZones' not in props) and ('Subnets' not in props) throws InvalidArgument("Either 'AvailabilityZones' or 'Subnets' must be in Elb properties")
 		'AvailabilityZones' in props throws NotImplemented("'AvailabilityZones' Elb property")
-		subnets = try props.Subnets
-		# TODO: subnets .= only(ResDef, ids)
-		if subnets is ResDef {
-			subnets .= ids()
-		}
-		# TODO: map_true()
-		if subnets {
-			subnets = ['--subnets', *subnets]
-		}
-		rd.run('create ELB', %(aws elb create-load-balancer --load-balancer-name ${rd.anchor.name} --listeners ${props.ListenerDescriptions.encode_json()} $*subnets))
+		argv = Argv({
+			'--load-balancer-name': rd.anchor.name
+			'--listeners': props.ListenerDescriptions.encode_json()
+			'--subnets': rd.opt_prop('Subnets', props).map(only(ResDef, ids))
+		})
+		rd.run('create ELB', %(aws elb create-load-balancer $*argv))
 		# TODO: Use specific find, with the name
 		if not(rd.dry_run) {
 			rd.find()
