@@ -4092,9 +4092,9 @@ doc %EX - page = retry(times=10, sleep=ExpBackIter(), body={ `curl "http://flaky
 F retry(
 	times:Int=60,
 	sleep=1,
-	logger:Fun=debug,
+	logger:Fun=debug("retry", X),
 	success_predicate=Bool,
-	catch_exceptions=true,
+	catch_exceptions:Bool=true,
 	title="<retry>",
 	progress_cb:Fun={null},
 	success_cb:Fun=identity,
