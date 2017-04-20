@@ -502,12 +502,21 @@ METHOD_RESULT native_index_get_hash_any EXT_METHOD_PARAMS {
 		set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
-	*result = e->val;
-	return METHOD_OK;
+	METHOD_RETURN(e->val)
 }
 
 METHOD_RESULT native_index_set_hash_any_any METHOD_PARAMS { set_hash_key(argv[0], argv[1], argv[2]); METHOD_RETURN(argv[2]); }
-METHOD_RESULT native_index_del_hash_any METHOD_PARAMS { del_hash_key(argv[0], argv[1]); METHOD_RETURN(argv[0]); }
+
+METHOD_RESULT native_index_del_hash_any EXT_METHOD_PARAMS {
+	if(!del_hash_key(argv[0], argv[1])) {
+		VALUE exc;
+		exc = make_normal_type_instance(vm->KeyNotFound);
+		set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
+		set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+		THROW_EXCEPTION_INSTANCE(exc);
+	}
+	METHOD_RETURN(argv[0])
+}
 
 METHOD_RESULT native_Hash_nti METHOD_PARAMS {
 	VALUE ut, item;
@@ -2874,7 +2883,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 		NULL
 	);
 
-	register_global_func(vm, 0, "del",      &native_index_del_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
+	register_global_func(vm, 1, "del",      &native_index_del_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
 	_doc(vm, "", "Delete hash key. No exception is thrown if key is not found, the deletion is just skipped then.");
 	_doc(vm, "h", "Target hash");
 	_doc(vm, "k", "Key");

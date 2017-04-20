@@ -1879,6 +1879,33 @@ F sort(h:Hash, lte:Fun=(<=)) {
 
 TEST {"b": 2, "c": 3, "a": 1}.sort() == {"a": 1, "b": 2, "c": 3}
 
+doc Get the given key from a Hash and remove it from the Hash.
+doc Underlying h[k] may throw KeyNotFound.
+doc %EX - h = {"a": 1}
+doc %EX - s = h.shift("a")  # h == {} and s == 1
+F shift(h:Hash, k) {
+	ret = h[k]
+	del(h, k)
+	ret
+}
+
+doc Get a key from a Hash and remove it from the Hash.
+doc If they key is not in the Hash, return dflt
+doc %EX - h = {}
+doc %EX - h.shift("a", 7)  # 7
+F shift(h:Hash, k, dflt) {
+	k not in h returns dflt
+	ret = h[k]
+	del(h, k)
+	ret
+}
+
+TEST h={"a": 1}; s = h.shift("a"); h == {} and s == 1
+TEST h={}; try h.shift("a") catch(e:KeyNotFound) true
+TEST h={}; h.shift("a", 7) == 7
+TEST h={"a": 1, "b": 2}; s = h.shift("a"); h == {"b": 2} and s == 1
+
+
 # === Box ========================================
 
 # Inspired by Option from Scala. http://www.scala-lang.org/api/2.12.x/scala/Option.html
@@ -4265,7 +4292,7 @@ TEST a=[1,2,3,4]; a[4..4]=["END"]; a[2..2]=["MIDDLE"]; a[0..0]=["START"]; a[0..1
 
 # === Hash tests =================================
 TEST h={"a": 1}; h.del("a"); h == {}
-TEST h={}; h.del("a"); h == {}
+TEST h={}; try h.del("a") catch(e:KeyNotFound) true
 TEST h={"a": 1, "b": 2}; h.del("a"); h == {"b": 2}
 
 # === Str tests ==================================
