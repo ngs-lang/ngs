@@ -1200,10 +1200,10 @@ doc predicate - Test function
 doc args - Additional arguments for the predicate
 doc %RET - Int or null
 doc %EX - [1,2,11,3,4].index(X>10)  # 2
-F index(arr:Arr, predicate) {
+F index(arr:Arr, predicate, start:Int=0) {
 	p = Pred(predicate)
 	l = arr.len()
-	for(i;l)
+	for(i=start;i<l;i+=1)
 		p(arr[i]) returns i
 	null
 }
@@ -1330,47 +1330,41 @@ F '[]'(arr:Arr, r:NumRange) {
 
 TEST [10,20,30,40][1..-1] == [20,30]
 
+# TODO: something more effective
+doc %RET - NumRange with .include_start=true and .include_end=false
+F indexes(arr:Arr, r:PredRange) {
+	r.step != 1 throws NotImplemented("r.step must be 1")
+	start = if r.start is Null {
+		0
+	} else {
+		index(arr, r.start)
+	}
+	start is Null throws IndexNotFound("Array did not match PredRange (start)", arr, r)
+	end = if r.end is Null {
+		len(arr)
+	} else {
+		index(arr, r.end, start + Int(r.start is not Null and r.include_start.not()))
+	}
+	end is Null throws IndexNotFound("Array did not match PredRange (end)", arr, r)
+	NumRange(start + Int(r.start is not Null and r.include_start.not()), end + Int(r.include_end))
+}
+
 doc Extract array elements between the element that matches r.start and the element that matches r.end .
 doc Starting and ending elements are optionally included, depending on r.include_start and r.include_end .
 doc %EX - %[a1 a2 b1 b2][/^a/../^b/]   # ['a2']
 doc %EX - %[a1 a2 b1 b2][/^a/.../^b/]  # ['a1', 'a2', 'b1']
 doc %EX - %[a1 a2 b1 b2][/^a/.../^x/]  # IndexNotFound exception
-F '[]'(arr:Arr, r:PredRange) {
-	r.step != 1 throws NotImplemented("r.step not 1 is not supported")
-	start_pred = Pred(r.start)
-	end_pred = Pred(r.end)
-	do_collect = false
-	start_found = false
-	ret = collector
-		arr.each(F(elt) {
-			if do_collect {
-				if end_pred(elt) {
-					if r.include_end {
-						collect(elt)
-					}
-					do_collect = false
-				} else {
-					collect(elt)
-				}
-			} else {
-				if start_pred(elt) {
-					if r.include_start {
-						collect(elt)
-					}
-					do_collect = true
-					start_found = true
-				}
-			}
-		})
-	not(start_found) or do_collect throws IndexNotFound("Array did not match PredRange", arr, r)
-	ret
-}
+F '[]'(arr:Arr, r:PredRange) arr[indexes(arr, r)]
 
 TEST %[a1 a2 b1 b2][/^a/../^b/] == %[a2]
+TEST %[a1 a2 b1 b2][null../^b/] == %[a1 a2]
+TEST %[a1 a2 b1 b2][/^b/..null] == %[b2]
 TEST %[a1 a2 b1 b2][/^a/.../^b/] == %[a1 a2 b1]
-TEST try %[a1 a2 b1 b2][/^a/.../^x/] catch(e:IndexNotFound) true
-TEST try %[a1 a2 b1 b2][/^x/.../^b/] catch(e:IndexNotFound) true
+TEST try { %[a1 a2 b1 b2][/^a/.../^x/]; false } catch(e:IndexNotFound) true
+TEST try { %[a1 a2 b1 b2][/^x/.../^b/]; false } catch(e:IndexNotFound) true
 
+F '[]='(arr:Arr, r:PredRange, replacement:Arr) arr[indexes(arr, r)] = replacement
+TEST a = %[a1 a2 b1 b2]; a[/^a/.../^b/] = [7]; a == [7, 'b2']
 
 doc Get array elements at specified indexes.
 doc arr - Array to pick items from
@@ -4208,6 +4202,11 @@ doc %RET - a ~ b
 F match(a,b) a ~ b
 
 # === File =======================================
+
+F access(f:File, flags:Int) {
+	# x
+}
+
 
 F write(s:Str, fname:Str) {
 	f = File(fname)
