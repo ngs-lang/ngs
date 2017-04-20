@@ -2884,13 +2884,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	register_global_func(vm, 1, "del",      &native_index_del_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
-	_doc(vm, "", "Delete hash key. No exception is thrown if key is not found, the deletion is just skipped then.");
+	_doc(vm, "", "Delete hash key. Throws KeyNotFound if k is not in h.");
 	_doc(vm, "h", "Target hash");
 	_doc(vm, "k", "Key");
 	_doc(vm, "%RET", "h");
 	_doc_arr(vm, "%EX",
 		"h={\"a\": 1}; h.del(\"a\"); h  # {}",
-		"h={}; h.del(\"a\"); h  # {}",
+		"h={}; h.del(\"a\"); # KeyNotFound exception",
 		"h={\"a\": 1, \"b\": 2}; h.del(\"a\"); h  # {\"b\": 2}",
 		NULL
 	);
