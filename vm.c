@@ -2945,8 +2945,15 @@ void vm_init(VM *vm, int argc, char **argv) {
 	E(ENOTRECOVERABLE); E(ERFKILL); E(EHWPOISON); E(ENOTSUP);
 	// awk '/^#define RTLD_/ {print "E("$2");"}' /usr/include/x86_64-linux-gnu/bits/dlfcn.h | xargs -n10
 	E(RTLD_LAZY); E(RTLD_NOW); E(RTLD_NOLOAD); E(RTLD_DEEPBIND); E(RTLD_GLOBAL); E(RTLD_LOCAL); E(RTLD_NODELETE);
+
 	// man access(2)
-	E(F_OK); E(R_OK); E(W_OK); E(X_OK);
+	VALUE access = make_hash(8);
+
+#define A(name) set_hash_key(access, make_string(#name), MAKE_INT(name))
+	A(F_OK); A(R_OK); A(W_OK); A(X_OK);
+#undef A
+	set_global(vm, "ACCESS", access);
+
 	// man poll(2);
 	E(POLLIN); E(POLLPRI); E(POLLOUT); E(POLLERR); E(POLLHUP); E(POLLNVAL);
 

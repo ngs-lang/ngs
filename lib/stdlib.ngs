@@ -2714,7 +2714,7 @@ F init(p:Path, other:Path) {
 
 doc Checks whether the path is accessible using access(2) and F_OK.
 doc %RET - Bool
-F Bool(p:Path) c_access(p.path, C_F_OK) == 0
+F Bool(p:Path) c_access(p.path, ACCESS::F_OK) == 0
 
 TEST Path('/').Bool()
 TEST Path('/no-such-file').Bool() == false
