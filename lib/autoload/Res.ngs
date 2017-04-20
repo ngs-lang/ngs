@@ -23,7 +23,7 @@
 		props = (rd.props tor {}).without('META')
 		multi = " x${rd.count}" tor ""
 		dry_run = if rd.dry_run " (dry run)" else ""
-		"<${rd.typeof().name} anchor=${rd.anchor.without('META')} props=$props$multi$dry_run resources:${rd.resources.map_true(len)}>"
+		"<${rd.typeof().name} anchor=${rd.anchor.without('META')} props=$props$multi$dry_run resources:${only(Arr, len)(rd.resources)}>"
 	}
 
 	F log(rd:ResDef, method:Str, s:Str) {
@@ -33,13 +33,13 @@
 	F expect(rd:ResDef, e:Int) {
 		rd.find()
 		rd.resources.len() != e throws
-		assert(rd.resources.len() == e, "Expected exactly ${e} ${rd.typeof().name} resource instances but found ${rd.resources.len()}")
+		assert(rd.resources.len() == e, "Expected exactly ${e} ${rd.typeof().name} resource instances but found ${rd.resources.len()}: ${rd}")
 		rd
 	}
 
 	F expect(rd:ResDef) {
 		rd.find()
-		assert(rd.len() > 0, "Expected one or more ${rd.typeof().name} resource instances but found none")
+		assert(rd.len() > 0, "Expected one or more ${rd.typeof().name} resource instances but found none: ${rd}")
 		rd
 	}
 
@@ -57,18 +57,24 @@
 
 	F init(r:Res, def:ResDef, props:Hash) init(args())
 
-	F Str(r:Res) "<${r.typeof().name} props=${r.props}>"
+	F Str(r:Res) "<${r.typeof().name} ${r.id()}>"
+
+	F log(r:Res, method:Str, s:Str) {
+		log("[${r.typeof().name} ${r.id()}] [$method] $s")
+	}
 
 	F converge(rd:ResDef, **props) {
 		rd.find()
 		n = props.get('META', {}).get('count')
 		if n is Null and rd.resources.len() == 0 {
-			rd.log('converge', "Count unspecified but there are no resources, assuming count to be 1")
+			debug("ResDef", "converge() - Count unspecified but there are no resources, assuming count to be 1")
 			n = 1
 		}
 
+		rd.resources % update(X, props)
+
 		if n is Null {
-			rd.log('converge', "Count unspecified, not creating or deleting resources")
+			debug("ResDef", "converge() - Count unspecified, not creating or deleting resources")
 		} else {
 			rd.log('converge', "${rd.resources.len()} of $n ${rd.typeof().name} resources exist")
 			if n < rd.resources.len() {
@@ -78,19 +84,18 @@
 				rd.resources = rd.resources[0..n]
 			}
 			if n > rd.resources.len() {
-				rd.create(n - rd.resources.len(), props)
+				rd.create(n - rd.resources.len(), **props)
 			}
 		}
-		# TODO: pass props to update(), do not assign props to rd.props
-		rd.resources % update(X, props)
+		rd
 	}
 
 	# TODO: pass props to create(), do not assign props to rd.props
 	# Methods that support bulk creating should implement this
-	F create(rd:ResDef, n:Int, props:Hash) {
+	F create(rd:ResDef, n:Int, **props) {
 		for(i;n) {
-			rd.log('converge', "Creating ${rd.typeof().name} ${i+1} of $n")
-			create(rd, props)
+			debug("ResDef", "converge() - Creating ${rd.typeof().name} ${i+1} of $n")
+			create(rd, **props)
 		}
 	}
 
@@ -99,13 +104,30 @@
 		rd.resources.each(delete)
 	}
 
-	F ids(rd:ResDef) rd.resources.map(id)
-
-	doc %RET - Box
-	F opt_prop(rd:ResDef, name:Str, props:Hash) {
-		ret = [props, rd.anchor].get(name).Box(0)
+	F ids(rd:ResDef) {
+		if rd.resources is Null {
+			rd.find()
+		}
+		rd.resources.map(id)
 	}
 
+	F created(rd:ResDef, resources:Arr, props:Hash) {
+		guard resources.all(Res)
+		resources % update(X, props)
+		if rd.resources is Null {
+			rd.resources = []
+		}
+		rd.resources += resources
+	}
+
+	doc Get optional resource property, looking up in properties first and then in anchor
+	doc %RET - Box
+	F opt_prop(rd:ResDef, name:Str, props:Hash) [props, rd.anchor].get(name).Box(0)
+
+	doc Run cb with optional resource property if it exists, uses opt_prop(ResDef, Str, Hash)
+	F opt_prop(rd:ResDef, name:Str, props:Hash, cb:Fun) opt_prop(rd, name, props).each(cb)
+
+	doc Get resource property, looking up in properties first and then in anchor
 	F req_prop(rd:ResDef, name:Str, props:Hash) {
 		ret = [props, rd.anchor].get(name)
 		not(ret) throws InvalidArgument("$name must be present in either anchor or props of a ${rd.typeof().name}")

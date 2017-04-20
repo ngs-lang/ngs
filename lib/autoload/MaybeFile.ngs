@@ -1,0 +1,7 @@
+{
+	type MaybeFile(File)
+	# TODO open(..., 'r') and close() - how?
+
+}
+
+F lines(f:MaybeFile, cb:Fun) f returns super(f, cb)

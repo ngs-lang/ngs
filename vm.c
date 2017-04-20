@@ -507,12 +507,21 @@ METHOD_RESULT native_index_get_hash_any EXT_METHOD_PARAMS {
 		set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
-	*result = e->val;
-	return METHOD_OK;
+	METHOD_RETURN(e->val)
 }
 
 METHOD_RESULT native_index_set_hash_any_any METHOD_PARAMS { set_hash_key(argv[0], argv[1], argv[2]); METHOD_RETURN(argv[2]); }
-METHOD_RESULT native_index_del_hash_any METHOD_PARAMS { del_hash_key(argv[0], argv[1]); METHOD_RETURN(argv[0]); }
+
+METHOD_RESULT native_index_del_hash_any EXT_METHOD_PARAMS {
+	if(!del_hash_key(argv[0], argv[1])) {
+		VALUE exc;
+		exc = make_normal_type_instance(vm->KeyNotFound);
+		set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
+		set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+		THROW_EXCEPTION_INSTANCE(exc);
+	}
+	METHOD_RETURN(argv[0])
+}
 
 METHOD_RESULT native_Hash_nti METHOD_PARAMS {
 	VALUE ut, item;
@@ -680,9 +689,16 @@ METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 }
 
 // TODO: make "start" and "end" size_t to simplify the code
-#define NATIVE_INDEX_STR_RANGE_SETUP \
-	if(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(argv[1])) < 2) return METHOD_ARGS_MISMATCH; \
-	start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[0]; \
+// TODO: better than METHOD_ARGS_MISMATCH on include_start != true and include_end != false
+#define NATIVE_RANGE_INDEX_SETUP \
+	if(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(argv[1])) < 5) return METHOD_ARGS_MISMATCH; \
+	include_start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_INCLUDE_START]; \
+	if(!IS_BOOL(include_start)) return METHOD_ARGS_MISMATCH; \
+	if(!IS_TRUE(include_start)) return METHOD_ARGS_MISMATCH; \
+	include_end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_INCLUDE_END]; \
+	if(!IS_BOOL(include_end)) return METHOD_ARGS_MISMATCH; \
+	if(!IS_FALSE(include_end)) return METHOD_ARGS_MISMATCH; \
+	start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_START]; \
 	if(!IS_INT(start)) return METHOD_ARGS_MISMATCH; \
 	if(GET_INT(start) < 0) { \
 		exc = make_normal_type_instance(vm->InvalidArgument); \
@@ -691,31 +707,31 @@ METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 	} \
 	if(((size_t) GET_INT(start)) > OBJ_LEN(argv[0])) { \
 		exc = make_normal_type_instance(vm->InvalidArgument); \
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range starts after string/array end")); \
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("NumRange starts after string/array end")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	} \
-	end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[1]; \
+	end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_END]; \
 	if(IS_NULL(end)) { \
 		end = MAKE_INT(OBJ_LEN(argv[0])); \
 	} \
 	if(!IS_INT(end)) return METHOD_ARGS_MISMATCH; \
 	if(GET_INT(end) < GET_INT(start)) { \
 		exc = make_normal_type_instance(vm->InvalidArgument); \
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range end smaller than range start when calling [](s:Str, r:Range)")); \
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("NumRange end smaller than range start when calling [](s:Str, r:NumRange)")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	} \
 	len = GET_INT(end) - GET_INT(start); \
 	if(GET_INT(start) + len > OBJ_LEN(argv[0])) { \
 		exc = make_normal_type_instance(vm->InvalidArgument); \
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Range ends after string end")); \
+		set_normal_type_instance_attribute(exc, make_string("message"), make_string("NumRange ends after string end")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	}
 
 METHOD_RESULT native_index_get_str_range EXT_METHOD_PARAMS {
 	size_t len;
-	VALUE start, end, exc;
+	VALUE start, end, include_start, include_end, exc;
 	(void) ctx;
-	NATIVE_INDEX_STR_RANGE_SETUP;
+	NATIVE_RANGE_INDEX_SETUP;
 	*result = make_string_of_len(NULL, len);
 	memcpy(OBJ_DATA_PTR(*result), OBJ_DATA_PTR(argv[0]) + GET_INT(start), len);
 	return METHOD_OK;
@@ -723,10 +739,10 @@ METHOD_RESULT native_index_get_str_range EXT_METHOD_PARAMS {
 
 METHOD_RESULT native_index_set_str_range_str EXT_METHOD_PARAMS {
 	size_t len, new_total_len;
-	VALUE start, end, exc;
+	VALUE start, end, include_start, include_end, exc;
 	char *old_data;
 	(void) ctx;
-	NATIVE_INDEX_STR_RANGE_SETUP;
+	NATIVE_RANGE_INDEX_SETUP;
 	new_total_len = GET_INT(start) + OBJ_LEN(argv[2]) + (OBJ_LEN(argv[0]) - GET_INT(end));
 	old_data = OBJ_DATA_PTR(argv[0]);
 	OBJ_DATA_PTR(argv[0]) = NGS_MALLOC_ATOMIC(new_total_len);
@@ -742,9 +758,9 @@ METHOD_RESULT native_index_set_str_range_str EXT_METHOD_PARAMS {
 // TODO: maybe use vlo->item_size and unify Str and Arr methods
 METHOD_RESULT native_index_get_arr_range EXT_METHOD_PARAMS {
 	size_t len;
-	VALUE start, end, exc;
+	VALUE start, end, include_start, include_end, exc;
 	(void) ctx;
-	NATIVE_INDEX_STR_RANGE_SETUP;
+	NATIVE_RANGE_INDEX_SETUP;
 	*result = make_array(len);
 	memcpy(OBJ_DATA_PTR(*result), &ARRAY_ITEMS(argv[0])[GET_INT(start)], len*sizeof(VALUE));
 	return METHOD_OK;
@@ -753,10 +769,10 @@ METHOD_RESULT native_index_get_arr_range EXT_METHOD_PARAMS {
 // TODO: maybe use vlo->item_size and unify Str and Arr methods
 METHOD_RESULT native_index_set_arr_range_arr EXT_METHOD_PARAMS {
 	size_t len, new_total_len;
-	VALUE start, end, exc;
+	VALUE start, end, include_start, include_end, exc;
 	char *old_data;
 	(void) ctx;
-	NATIVE_INDEX_STR_RANGE_SETUP;
+	NATIVE_RANGE_INDEX_SETUP;
 	new_total_len = GET_INT(start) + OBJ_LEN(argv[2]) + (OBJ_LEN(argv[0]) - GET_INT(end));
 	old_data = OBJ_DATA_PTR(argv[0]);
 	OBJ_DATA_PTR(argv[0]) = NGS_MALLOC(new_total_len * sizeof(VALUE));
@@ -2015,10 +2031,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 	add_type_inheritance(name, parent);
 
 #define SETUP_TYPE_FIELD(name, field, idx) set_hash_key(NGS_TYPE_FIELDS(name), make_string(#field), MAKE_INT(idx));
-#define SETUP_RANGE_TYPE(name) \
-	SETUP_TYPE_FIELD(name, start, 0); \
-	SETUP_TYPE_FIELD(name, end, 1); \
-	SETUP_TYPE_FIELD(name, step, 2);
 
 	MKTYPE(NormalTypeConstructor);
 	_doc(vm, "", "Default constructor for Normal types. Normal types are user-defined and some of the built-in types.");
@@ -2224,25 +2236,24 @@ void vm_init(VM *vm, int argc, char **argv) {
 	//      in such a way that "start" is not 0 or "end" is not 1
 	//      will break everything. TODO: make sure this can not be done by
 	//      an NGS script.
-	MKTYPE(Range);
-
-		MKSUBTYPE(InclusiveRange, Range);
-		SETUP_RANGE_TYPE(InclusiveRange);
-
-		MKSUBTYPE(ExclusiveRange, Range);
-		SETUP_RANGE_TYPE(ExclusiveRange);
+	MKTYPE(NumRange);
+		SETUP_TYPE_FIELD(NumRange, start, RANGE_ATTR_START);
+		SETUP_TYPE_FIELD(NumRange, end, RANGE_ATTR_END);
+		SETUP_TYPE_FIELD(NumRange, include_start, RANGE_ATTR_INCLUDE_START);
+		SETUP_TYPE_FIELD(NumRange, include_end, RANGE_ATTR_INCLUDE_END);
+		SETUP_TYPE_FIELD(NumRange, step, RANGE_ATTR_STEP);
 
 	MKTYPE(Stat);
-	SETUP_TYPE_FIELD(Stat, st_dev, 0);
-	SETUP_TYPE_FIELD(Stat, st_ino, 1);
-	SETUP_TYPE_FIELD(Stat, st_mode, 2);
-	SETUP_TYPE_FIELD(Stat, st_nlink, 3);
-	SETUP_TYPE_FIELD(Stat, st_uid, 4);
-	SETUP_TYPE_FIELD(Stat, st_gid, 5);
-	SETUP_TYPE_FIELD(Stat, st_rdev, 6);
-	SETUP_TYPE_FIELD(Stat, st_size, 7);
-	SETUP_TYPE_FIELD(Stat, st_blksize, 8);
-	SETUP_TYPE_FIELD(Stat, st_blocks, 9);
+		SETUP_TYPE_FIELD(Stat, st_dev, 0);
+		SETUP_TYPE_FIELD(Stat, st_ino, 1);
+		SETUP_TYPE_FIELD(Stat, st_mode, 2);
+		SETUP_TYPE_FIELD(Stat, st_nlink, 3);
+		SETUP_TYPE_FIELD(Stat, st_uid, 4);
+		SETUP_TYPE_FIELD(Stat, st_gid, 5);
+		SETUP_TYPE_FIELD(Stat, st_rdev, 6);
+		SETUP_TYPE_FIELD(Stat, st_size, 7);
+		SETUP_TYPE_FIELD(Stat, st_blksize, 8);
+		SETUP_TYPE_FIELD(Stat, st_blocks, 9);
 
 	// "NgsStrImm${NgsStrExp}$*{NgsStrSplatExp}"
 	MKTYPE(NgsStrComp);
@@ -2250,7 +2261,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 		MKSUBTYPE(NgsStrCompExp, NgsStrComp);
 		MKSUBTYPE(NgsStrCompSplatExp, NgsStrComp);
 
-#undef SETUP_RANGE_TYPE
 #undef SETUP_TYPE_FIELD
 #undef MKSUBTYPE
 #undef MKTYPE
@@ -2320,7 +2330,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Get closure-specific Return type. Throwing it, will return from the closure");
 	_doc(vm, "%EX", "F f() Return(); f()  # <Return closure=<Closure f at <command line -pi switch>:2> depth=4 val=null>");
 	_doc(vm, "%EX", "");
-	_doc(vm, "%EX", "F first(r:Range, predicate:Fun) {");
+	_doc(vm, "%EX", "F first(r:NumRange, predicate:Fun) {");
 	_doc(vm, "%EX", "	finish = Return()");
 	_doc(vm, "%EX", "	r.each(F(i) {");
 	_doc(vm, "%EX", "		predicate(i) throws finish(i)");
@@ -2605,8 +2615,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "shift",    &native_shift_arr_any,           2, "arr", vm->Arr, "dflt", vm->Any);
 	register_global_func(vm, 0, "len",      &native_len,                     1, "arr", vm->Arr);
 	register_global_func(vm, 0, "get",      &native_index_get_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
-	register_global_func(vm, 1, "[]",       &native_index_get_arr_range,     2, "arr", vm->Arr, "range", vm->ExclusiveRange);
-	register_global_func(vm, 1, "[]=",      &native_index_set_arr_range_arr, 3, "arr", vm->Arr, "range", vm->ExclusiveRange, "replacement", vm->Arr);
+	register_global_func(vm, 1, "[]",       &native_index_get_arr_range,     2, "arr", vm->Arr, "range", vm->NumRange);
+	register_global_func(vm, 1, "[]=",      &native_index_set_arr_range_arr, 3, "arr", vm->Arr, "range", vm->NumRange, "replacement", vm->Arr);
 	register_global_func(vm, 1, "[]",       &native_index_get_arr_int,       2, "arr", vm->Arr, "idx", vm->Int);
 	register_global_func(vm, 1, "[]=",      &native_index_set_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "v", vm->Any);
 	register_global_func(vm, 1, "join",     &native_join_arr_str,            2, "arr", vm->Arr, "s", vm->Str);
@@ -2627,11 +2637,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "start", "Non-negative Int, position where the search starts");
 	_doc(vm, "%RET", "Int or null. Not -1 as in many languages");
 
-	register_global_func(vm, 1, "[]",       &native_index_get_str_range,     2, "s", vm->Str, "range", vm->ExclusiveRange);
+	register_global_func(vm, 1, "[]",       &native_index_get_str_range,     2, "s", vm->Str, "range", vm->NumRange);
 	_doc(vm, "", "Get substring");
 	_doc(vm, "%EX", "\"abcd\"[1..3]  # \"bc\"");
 
-	register_global_func(vm, 1, "[]=",      &native_index_set_str_range_str, 3, "s", vm->Str, "range", vm->ExclusiveRange, "replacement", vm->Str);
+	register_global_func(vm, 1, "[]=",      &native_index_set_str_range_str, 3, "s", vm->Str, "range", vm->NumRange, "replacement", vm->Str);
 	_doc(vm, "", "Change substring");
 	_doc(vm, "%RET", "replacement");
 	_doc(vm, "%EX", "s=\"abcd\"; s[1..3]=\"X\"; s  # \"aXd\"");
@@ -2884,14 +2894,14 @@ void vm_init(VM *vm, int argc, char **argv) {
 		NULL
 	);
 
-	register_global_func(vm, 0, "del",      &native_index_del_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
-	_doc(vm, "", "Delete hash key. No exception is thrown if key is not found, the deletion is just skipped then.");
+	register_global_func(vm, 1, "del",      &native_index_del_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
+	_doc(vm, "", "Delete hash key. Throws KeyNotFound if k is not in h.");
 	_doc(vm, "h", "Target hash");
 	_doc(vm, "k", "Key");
 	_doc(vm, "%RET", "h");
 	_doc_arr(vm, "%EX",
 		"h={\"a\": 1}; h.del(\"a\"); h  # {}",
-		"h={}; h.del(\"a\"); h  # {}",
+		"h={}; h.del(\"a\"); # KeyNotFound exception",
 		"h={\"a\": 1, \"b\": 2}; h.del(\"a\"); h  # {\"b\": 2}",
 		NULL
 	);
@@ -2948,8 +2958,15 @@ void vm_init(VM *vm, int argc, char **argv) {
 	*/
 	// awk '/^#define RTLD_/ {print "E("$2");"}' /usr/include/x86_64-linux-gnu/bits/dlfcn.h | xargs -n10
 	E(RTLD_LAZY); E(RTLD_NOW); E(RTLD_NOLOAD); /* E(RTLD_DEEPBIND); E(RTLD_GLOBAL); E(RTLD_LOCAL); E(RTLD_NODELETE); */
+
 	// man access(2)
-	E(F_OK); E(R_OK); E(W_OK); E(X_OK);
+	VALUE access = make_hash(8);
+
+#define A(name) set_hash_key(access, make_string(#name), MAKE_INT(name))
+	A(F_OK); A(R_OK); A(W_OK); A(X_OK);
+#undef A
+	set_global(vm, "ACCESS", access);
+
 	// man poll(2);
 	E(POLLIN); E(POLLPRI); E(POLLOUT); E(POLLERR); E(POLLHUP); E(POLLNVAL);
 

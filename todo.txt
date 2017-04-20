@@ -9,7 +9,6 @@ Note that this started as internal document so things here are unformed, not fin
 	* address resolution functions
 	* AWS fix SG rules (IpPermBox < IpPermBox)
 	* Fix $(separate$item issue)
-	* Fix $(ls $some_obj) silent crash
 	* update(Hash, key, value) - update specified key only if exists
 	* update(Arr[Hash], key, value / Fun) - update specified key only if exists
 	* make ResDef ArrLike for the resources?
@@ -23,10 +22,14 @@ Note that this started as internal document so things here are unformed, not fin
 	* assert_file / assert_file_exists ?
 	* assert_has_line / assert_has_line_with ?
 	* Make Indexable: Arr, Str, Range - this might save some code
-	* shift(h:Hash, k)
-	* shift(h:Hash, k, dflt)
 	* AWS::SecGroup - check whether Description is Anchor-only
 	* Support newlines as function arguments separators
+	* Consider standardizing InvalidArgument offending value (.value ?)
+	* ---
+	* AWS::Instance -- make sure Anchor works as expected
+	* "The README doesn’t seem to have any simple syntax examples"
+	* Consider somethig like data_strucure ~ [Capture("x"), 7 , "xx"]
+	* Creating an AWS res not matching the Anchor - think
 
 	* MacOS (support being added): gc repeated allocation of very large block
 	* MacOS (support being added): thread / fork - stuck (ec2din.ngs --allreg does not work)
@@ -376,6 +379,8 @@ Note that this started as internal document so things here are unformed, not fin
 				+ such as F f(t:T1) and F f(t:T2) when T1 and T2 are unrelated types
 
 		* Optimize so that namespace items access ("namespace::item") will not have Hash lookups
+
+		* Consider augeas integration
 
 [todo by priority]
 

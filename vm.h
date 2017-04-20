@@ -225,9 +225,7 @@ typedef struct {
 	VALUE Command;
 	VALUE Redir;
 
-	VALUE Range;
-		VALUE InclusiveRange;
-		VALUE ExclusiveRange;
+	VALUE NumRange;
 
 	VALUE Stat;
 
@@ -335,6 +333,14 @@ enum opcodes {
 };
 
 extern char *opcodes_names[NUMBER_OF_OPCODES];
+
+enum range_attr {
+	RANGE_ATTR_START = 0,
+	RANGE_ATTR_END = 1,
+	RANGE_ATTR_INCLUDE_START = 2,
+	RANGE_ATTR_INCLUDE_END = 3,
+	RANGE_ATTR_STEP = 4,
+};
 
 typedef METHOD_RESULT (*VM_FUNC)(const VALUE *argv, VALUE *result);
 typedef METHOD_RESULT (*VM_EXT_FUNC)(VM *vm, CTX *ctx, const VALUE *argv, VALUE *result);

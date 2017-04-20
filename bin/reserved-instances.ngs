@@ -8,17 +8,76 @@
 		'Windows': 'windows'
 	}
 
-	AWS
-	echo("Warning: re-check the results. No warranties!")
+	warn("Re-check the results. No warranties!")
 
-	instances = aws_regions({ ``aws ec2 describe-instances --filters 'Name=instance-state-name,Values=running' --region $A`` })
-	needed = instances.group({ "az=${A.Placement.AvailabilityZone},tenancy=${A.Placement.Tenancy},type=${A.InstanceType},platform=${A.Platform tor 'linux'}" }).mapv(len)
+	F abstract_instance(i:Hash) {
+		{
+			'az':       i.Placement.AvailabilityZone
+			'platform': i.get('Platform', 'linux')
+			'tenancy':  i.Placement.Tenancy
+			'type':     i.InstanceType
+		}
+	}
 
-	ris = aws_regions({ ``aws ec2 describe-reserved-instances --region $A --filters Name=state,Values=active`` })
-	have = ris / {["az=${A.AvailabilityZone},tenancy=${A.InstanceTenancy},type=${A.InstanceType},platform=${prod2platform[A.ProductDescription]}", A.InstanceCount]} \ Hash
+	F abstract_ri(r:Hash) {
+		{
+			'az':       r.get('AvailabilityZone')
+			'platform': prod2platform[r.ProductDescription]
+			'region':   r.Region
+			'tenancy':  r.InstanceTenancy
+			'type':     r.InstanceType
+			'COUNT':    r.InstanceCount
+		}.rejectv(NoData)
+	}
 
-	diff = cmp(have, needed)
-	diff.add / "Add $X - $Y" % echo
-	diff.remove / "Unused $X - $Y" % echo
-	diff.change / {"Change $A - ${have[A]} -> ${needed[A]}"} % echo
+	F balance(a:Hash, b:Hash) {
+		x = min([a.COUNT, b.COUNT])
+		x = max([x, 0])
+		a.COUNT -= x
+		b.COUNT -= x
+	}
+
+	F balance_az_ris(abstract_instances:Hash, ris:Arr) {
+		# echo("L ${ris.len()}")
+		for r in ris {
+			k = Str(r.without('COUNT').without('region'))
+			# echo("K $k")
+			k not in abstract_instances continues
+			# echo("DOING BALANCE")
+			balance(abstract_instances[k], r)
+		}
+	}
+
+	# TODO: smarter algorithm
+	# TODO: instance type matching: larger/smaller are ok as long as they are in same group
+	# TODO: make sure region checking is ok
+	F balance_region_ris(abstract_instances:Hash, ris:Arr) {
+		for r in ris {
+			for i in abstract_instances.values() {
+				r.platform != i.platform continues
+				r.tenancy != i.tenancy continues
+				r.type != i.type continues
+				not(i.az.starts_with(r.region)) continues
+				balance(i, r)
+			}
+		}
+	}
+
+	instances = AWS::regions({ ``aws ec2 describe-instances --filters 'Name=instance-state-name,Values=running' --region $A`` })
+	needed = instances.map(abstract_instance).group(Str).mapv(F(abstract_instances:Arr) {
+		abstract_instances[0].set('COUNT', len(abstract_instances))
+	})
+
+	ris = AWS::regions({ ``aws ec2 describe-reserved-instances --region $A --filters Name=state,Values=active`` }).map(abstract_ri)
+	Table("Reserved Instances", ris).echo()
+	echo('')
+	Table("Actual instances", needed.values()).echo()
+	echo('')
+
+	balance_az_ris(needed, ris.filter(X.has('az')))
+	balance_region_ris(needed, ris.reject(X.has('az')))
+	Table("Unused Reserved Instances", ris.reject({A.COUNT == 0})).echo()
+	echo('')
+	Table("Actual instances not covered by Reserved Instances", needed.values().reject({A.COUNT == 0})).echo()
+	echo('')
 }

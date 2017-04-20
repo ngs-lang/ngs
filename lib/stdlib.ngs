@@ -34,6 +34,9 @@ F init(h:Hash) {
 	doc %EX - # ... Exception of type AssertFail ...
 	type AssertFail
 	AssertFail.inherit(Exception)
+
+	type InstantiatingAbstractType
+	InstantiatingAbstractType.inherit(Exception)
 }
 
 doc IndexNotFound exception constructor
@@ -53,6 +56,8 @@ F assert(condition, *args) {
 	super(Bool(condition), *args)
 }
 
+F init(e:InstantiatingAbstractType, t:Type) init(args())
+
 # === Namespaces =================================
 
 F '::'(nti:NormalTypeInstance, k) nti.(k)
@@ -65,7 +70,7 @@ F '::='(h:Hash, k, v) h[k] = v
 
 doc Implements calling of Return type instances
 doc like the finish(i) call in the example below
-doc %EX - F first(r:Range, predicate:Fun) {
+doc %EX - F first(r:NumRange, predicate:Fun) {
 doc %EX - 	finish = Return()
 doc %EX - 	r.each(F(i) {
 doc %EX - 		predicate(i) throws finish(i)
@@ -96,6 +101,13 @@ F call(r:Return, v=null) {
 	Str.inherit(Eachable1)
 	# TODO: Consider Eachable2 subtype for Hash (as callback has 2 arguments)
 	Hash.inherit(Eachable2)
+
+	type NoData
+	Null.inherit(NoData)
+
+	type Num
+	Int.inherit(Num)
+	Real.inherit(Num)
 }
 
 
@@ -357,23 +369,9 @@ F map_base_idx(base, n:Int, mapper:Fun) {
 	n.map(mapper(base, X))
 }
 
-doc EXPERIMENTAL! Do not use!
-doc Map val only when val is true in boolean context. Otherwise return the original val.
-F map_true(val, mapper:Fun) only(identity, mapper)(val)
-
-TEST [].map_true(["--filters"] + X) == []
-TEST ["something"].map_true(["--filters"] + X) == ["--filters", "something"]
-
-doc EXPERIMENTAL! Do not use!
-doc Map val only when val is false in boolean context. Otherwise return the original val.
-F map_false(val, mapper:Fun) only(not + identity, mapper)(val)
-
-TEST [].map_false({ ["default"] }) == ["default"]
-TEST ["something"].map_false({ ["default"] }) == ["something"]
-
 doc Call cb with val
 doc %RET - val
-doc %EX - h.mapv(only(Pfx, { "${A.val}*" })).map("Name=$X,Values=$Y").tap(F(x) echo("DEBUG: $x")).map_true(['--filters'] + X)
+doc %EX - long_computation_part1().tap(F(x) echo("DEBUG: $x")).long_computation_part2()
 F tap(val, cb:Fun) {
 	cb(val)
 	val
@@ -708,16 +706,36 @@ F global_not_found_handler(name:Str) {
 
 # === Range ======================================
 
-{ Range.inherit(Eachable1) }
+{
+	type Range
+		NumRange.inherit(Range)
+		NumRange.inherit(Eachable1)
+
+	type PredRange
+		PredRange.inherit(Range)
+}
 
 doc Range constructor
-F init(r:Range, start, end, step=1) init(args())
+F init(r:Range, start, end, include_start=true, include_end=false, step=1) {
+	r.typeof() == Range throws InstantiatingAbstractType(Range)
+	init(args())
+}
 
-doc ExclusiveRange constructor
-F ..(start, end)  ExclusiveRange(start, end)
+doc Constructs open-open predicate range
+doc %RET - PredRange
+F ..(start, end)  PredRange(start, end, false, false)
 
-doc InclusiveRange constructor
-F ...(start, end) InclusiveRange(start, end)
+doc Constructs closed-closed predicate range
+doc %RET - PredRange
+F ...(start, end) PredRange(start, end, true, true)
+
+doc Constructs closed-open numerical range
+doc %RET - NumRange
+F ..(start:Num, end) NumRange(start, end, true, false)
+
+doc Constructs closed-closed numerical range
+doc %RET - NumRange
+F ...(start:Num, end) NumRange(start, end, true, true)
 
 doc Iterates over the elements of r, passing each in turn to cb.
 doc cb - Function to be called with values from r
@@ -726,34 +744,15 @@ doc %RET - r
 doc %EX - s=0
 doc %EX - (1...10).each(F(i) { global s; s+=i })
 doc %EX - echo(s)  # Outputs: 55
-F each(r:Range, cb:Fun) {
-	# TODO: support Real step
-	econd {
-		(r.end is Null) or (r.step == 0) {
-			cmp = F(a,b) true
-		}
-		r.step > 0 {
-			cmp = if r is ExclusiveRange (<) (<=)
-		}
-		r.step < 0 {
-			cmp = if r is ExclusiveRange (>) (>=)
-		}
-	}
-	for(i=r.start; cmp(i, r.end); i=i+r.step)
-		cb(i)
-	r
-}
+F each(r:NumRange, cb:Fun) r.Iter().each(cb)
 
 TEST (1..3).map(X*2) == [2, 4]
 TEST (1...3).map(X*2) == [2, 4, 6]
 
 TEST (10..20).first(F(x) x % 3 == 0) == 12
 
-doc TODO
-F Str(r:ExclusiveRange) "<ExclusiveRange ${r.start}..${r.end} step ${r.step}>"
-
-doc TODO
-F Str(r:InclusiveRange) "<InclusiveRange ${r.start}...${r.end} step ${r.step}>"
+doc Convert range to human readable representation
+F Str(r:Range) "<${r.typeof().name} ${r.start}..${r.end} include_start=${r.include_start} include_end=${r.include_end} step=${r.step}>"
 
 # === Syntactic sugar ============================
 
@@ -1021,7 +1020,7 @@ TEST [1,2,3].all(X<10)
 TEST [1,2,10].all(X>5).not()
 TEST {"x": 1, "y": 2}.all(F(k, v) v is Int)
 
-doc Check that there is no element in e that satisfies the given predicate. Exactly same as not(any(arr, predicate)) .
+doc Check that there is no element in e that satisfies the given predicate. Exactly same as not(any(e, predicate)) .
 doc %RET - Bool
 doc %EX - [0,1,2].none(X>2)  # true
 doc %EX - [0,1,2].none(X<2)  # false
@@ -1201,10 +1200,10 @@ doc predicate - Test function
 doc args - Additional arguments for the predicate
 doc %RET - Int or null
 doc %EX - [1,2,11,3,4].index(X>10)  # 2
-F index(arr:Arr, predicate) {
+F index(arr:Arr, predicate, start:Int=0) {
 	p = Pred(predicate)
 	l = arr.len()
-	for(i;l)
+	for(i=start;i<l;i+=1)
 		p(arr[i]) returns i
 	null
 }
@@ -1233,7 +1232,7 @@ doc %EX - [1,2,3].reverse()  # [3,2,1]
 F reverse(arr:Arr) {
 	l = arr.len()
 	l.map({ arr[l-A-1] })
-	# TODO: maybe make this work: arr[InclusiveRange(arr.len() - 1, 0, -1)]
+	# TODO: maybe make this work: arr[NumRange(arr.len() - 1, 0, -1)]
 }
 
 TEST [1,2,3].reverse() == [3,2,1]
@@ -1300,7 +1299,7 @@ TEST zip([1,2,3], [4,5,6], [7,8,9,10]) == [[1,4,7], [2,5,8], [3,6,9], [null, nul
 doc Convert range to an array
 doc %EX - Arr(1..3)   # [1,2]
 doc %EX - Arr(1...3)  # [1,2,3]
-F Arr(r:Range) r / identity
+F Arr(r:Eachable1) r / identity
 
 TEST Arr(1..3) == [1,2]
 TEST Arr(1...3) == [1,2,3]
@@ -1318,18 +1317,54 @@ F '[]'(arr:Arr, idx:Int) {
 	arr[i]
 }
 
-doc Get array elements at specified indexes. Indexes specified by ExclusiveRange.
-doc r - ExclusiveRange with negatve .end
+# TODO: Make "Indexable" and make this method work with Indexable
+doc Get array elements at specified indexes. Indexes specified by NumRange.
+doc r - NumRange with negatve .end
 doc %EX - [10,20,30,40][1..-1]  # [20,30]
 doc %RET - Arr
-F '[]'(arr:Arr, r:ExclusiveRange) {
+F '[]'(arr:Arr, r:NumRange) {
 	guard r.end is Int and r.end < 0
-	r.end < 0 - arr.len() throws IndexNotFound("[](Arr, ExclusiveRange): Index ${r.end} (range end) is illegal for array of size ${arr.len()}", arr, idx)
+	r.end < 0 - arr.len() throws IndexNotFound("[](Arr, NumRange): Index ${r.end} (range end) is illegal for array of size ${arr.len()}", arr, idx)
 	arr[r.start..arr.len() + r.end]
 }
 
 TEST [10,20,30,40][1..-1] == [20,30]
 
+# TODO: something more effective
+doc %RET - NumRange with .include_start=true and .include_end=false
+F indexes(arr:Arr, r:PredRange) {
+	r.step != 1 throws NotImplemented("r.step must be 1")
+	start = if r.start is Null {
+		0
+	} else {
+		index(arr, r.start)
+	}
+	start is Null throws IndexNotFound("Array did not match PredRange (start)", arr, r)
+	end = if r.end is Null {
+		len(arr)
+	} else {
+		index(arr, r.end, start + Int(r.start is not Null and r.include_start.not()))
+	}
+	end is Null throws IndexNotFound("Array did not match PredRange (end)", arr, r)
+	NumRange(start + Int(r.start is not Null and r.include_start.not()), end + Int(r.include_end))
+}
+
+doc Extract array elements between the element that matches r.start and the element that matches r.end .
+doc Starting and ending elements are optionally included, depending on r.include_start and r.include_end .
+doc %EX - %[a1 a2 b1 b2][/^a/../^b/]   # ['a2']
+doc %EX - %[a1 a2 b1 b2][/^a/.../^b/]  # ['a1', 'a2', 'b1']
+doc %EX - %[a1 a2 b1 b2][/^a/.../^x/]  # IndexNotFound exception
+F '[]'(arr:Arr, r:PredRange) arr[indexes(arr, r)]
+
+TEST %[a1 a2 b1 b2][/^a/../^b/] == %[a2]
+TEST %[a1 a2 b1 b2][null../^b/] == %[a1 a2]
+TEST %[a1 a2 b1 b2][/^b/..null] == %[b2]
+TEST %[a1 a2 b1 b2][/^a/.../^b/] == %[a1 a2 b1]
+TEST try { %[a1 a2 b1 b2][/^a/.../^x/]; false } catch(e:IndexNotFound) true
+TEST try { %[a1 a2 b1 b2][/^x/.../^b/]; false } catch(e:IndexNotFound) true
+
+F '[]='(arr:Arr, r:PredRange, replacement:Arr) arr[indexes(arr, r)] = replacement
+TEST a = %[a1 a2 b1 b2]; a[/^a/.../^b/] = [7]; a == [7, 'b2']
 
 doc Get array elements at specified indexes.
 doc arr - Array to pick items from
@@ -1515,28 +1550,6 @@ F split(a:Arr, delim) {
 }
 
 
-doc Compare arrays. Warning: Hash is used so internal Hash keys comparison is used, not ==
-doc %EX - cmp([1,2], [2,3])  # {'add': [3], 'remove': [1]}
-F cmp(a:Arr, b:Arr) {
-	ah = Hash(a, {true})
-	bh = Hash(b, {true})
-	{
-		'add': bh.filter(X not in ah).keys()
-		'remove': ah.filter(X not in bh).keys()
-	}
-}
-
-TEST cmp([1,2], [2,3]) == {'add': [3], 'remove': [1]}
-
-doc Like cmp() but compare arrays without using Hash so that '==' is used for comparison
-doc and not internal '===' for Hash keys. Much slower than cmp().
-F compare(a:Arr, b:Arr) {
-	{
-		'add': b.filter(X not in a)
-		'remove': a.filter(X not in b)
-	}
-}
-
 doc Convert an array to NGS code that would produce the array when executed. Not fully functional yet.
 doc %RET - Str
 F code(a:Arr) "[" + a.map(code).join(', ') + "]"
@@ -1549,24 +1562,6 @@ F code(a:Arr) "[" + a.map(code).join(', ') + "]"
 doc Compare two Hashes. Hashes must have same keys with same values in same order to return true.
 doc %RET - Bool
 F ==(a:Hash, b:Hash) Arr(a) == Arr(b)
-
-doc Compare hashes
-doc %EX - diff = cmp(current_tags, target_tags)
-doc %EX - if (tags = stdlib_aws_tags(diff.add + diff.change)) {
-doc %EX - 	r.run('update_tags/add', %(aws ec2 create-tags --resources ${r.id()} --tags $*tags))
-doc %EX - }
-doc %EX - if (tags = diff.remove / "Key=$X") {
-doc %EX - 	r.run('update_tags/remove', %(aws ec2 delete-tags --resources ${r.id()} --tags $*tags))
-doc %EX - }
-F cmp(a:Hash, b:Hash) {
-	{
-		'add': b.filter(X not in a)
-		'change': b.filter(X in a).filter(F(k, v) a[k] != v)
-		'remove': a.filter(X not in b).keys()
-	}
-}
-
-TEST cmp({"a": 1, "b":2}, {"b": 3, "d": 4}) == {"add":{"d":4}, "change":{"b":3}, "remove":["a"]}
 
 F subset(smaller:Hash, larger:Hash) smaller.all(F(k, v) k in larger and larger[k] == v)
 
@@ -1867,6 +1862,44 @@ F dflt(h:Hash, k, v) {
 	h[k]
 }
 
+doc Sort a Hash.
+doc lte - Less-then-or-equal function to use for comparison of the keys in h
+doc %RET - Hash
+doc %EX - {"b": 2, "c": 3, "a": 1}.sort()  # {"a": 1, "b": 2, "c": 3}
+F sort(h:Hash, lte:Fun=(<=)) {
+	collector/{}
+		h.keys().sort(lte).each(F(k) collect(k, h[k]))
+}
+
+TEST {"b": 2, "c": 3, "a": 1}.sort() == {"a": 1, "b": 2, "c": 3}
+
+doc Get the given key from a Hash and remove it from the Hash.
+doc Underlying h[k] may throw KeyNotFound.
+doc %EX - h = {"a": 1}
+doc %EX - s = h.shift("a")  # h == {} and s == 1
+F shift(h:Hash, k) {
+	ret = h[k]
+	del(h, k)
+	ret
+}
+
+doc Get a key from a Hash and remove it from the Hash.
+doc If they key is not in the Hash, return dflt
+doc %EX - h = {}
+doc %EX - h.shift("a", 7)  # 7
+F shift(h:Hash, k, dflt) {
+	k not in h returns dflt
+	ret = h[k]
+	del(h, k)
+	ret
+}
+
+TEST h={"a": 1}; s = h.shift("a"); h == {} and s == 1
+TEST h={}; try h.shift("a") catch(e:KeyNotFound) true
+TEST h={}; h.shift("a", 7) == 7
+TEST h={"a": 1, "b": 2}; s = h.shift("a"); h == {"b": 2} and s == 1
+
+
 # === Box ========================================
 
 # Inspired by Option from Scala. http://www.scala-lang.org/api/2.12.x/scala/Option.html
@@ -1878,7 +1911,7 @@ F dflt(h:Hash, k, v) {
 		doc val - The value
 		type FullBox(Box)
 		doc Represents absence of a value
-		type EmptyBox(Box)
+		type EmptyBox([Box, NoData])
 }
 
 doc Do not use directly!
@@ -2042,6 +2075,116 @@ TEST EmptyBox() != FullBox(1)
 TEST FullBox(1) == FullBox(1)
 TEST FullBox(1) != FullBox(2)
 
+# === Diff =======================================
+{
+
+	doc Represents desired target configuration list item presence
+	type Presence
+
+		type PartialPresence([FullBox, Presence])
+
+			doc Represents a target configuration list item that must be present
+			type Present([FullBox, PartialPresence])
+
+			doc Represents a target configuration list item that must be absent
+			type Absent([FullBox, PartialPresence])
+
+		doc Represents a target configuration list item in a list
+		type ExactPresence([FullBox, Presence])
+}
+
+F normalize_presence_list(x) {
+	econd {
+		x is Presence   { [x] }
+		x.all(Presence) x
+		x is Eachable1  {
+			x.any(Presence) throws InvalidArgument("Mixing Presence and non-Presence items in a list is not supported").set('value', x)
+			x.map(ExactPresence)
+		}
+	}
+}
+
+
+{
+	doc Represents difference
+	type Diff
+	doc Represents difference of elements between two arrays (order unimportant)
+	type ArrDiff(Diff)
+	doc Represents difference of elements between two hashes (order unimportant)
+	type HashDiff(Diff)
+}
+
+doc Compare arrays. Warning: Hash is used so internal Hash keys comparison is used, not ==
+doc %EX - Diff([1,2], [2,3])  # .add = [3] .remove = [1]
+F Diff(a:Arr, b:Arr, full:Bool=false) {
+	d = ArrDiff()
+	if full {
+		d.add    = b.filter(X not in a)
+		d.remove = a.filter(X not in b)
+	} else {
+		ah = Hash(a, {true})
+		bh = Hash(b, {true})
+		d.add    = bh.reject(X in ah).keys()
+		d.remove = ah.reject(X in bh).keys()
+	}
+	d
+}
+
+TEST Diff([1,2], [2,3]).Hash().sort() == {'add': [3], 'remove': [1]}
+
+doc b - Presence or Arr[Presence]
+doc %RET - ArrDiff
+F Diff(a:Arr, b:Arr, full:Bool=false) {
+	guard b and b.all(PartialPresence)
+
+	d = ArrDiff()
+	if full {
+		d.add    = b.filter(Present).map(get).filter(X not in a)
+		d.remove = a.filter(X in b.filter(Absent).map(get))
+	} else {
+		ah = Hash(a, {true})
+		d.add    = Hash(b.filter(Present).map(get), b).reject(X in ah).keys()
+		d.remove = ah.filter(X in Hash(b.filter(Absent).map(get), b)).keys()
+	}
+	d
+}
+
+TEST Diff(["a", "b"], [Present("a"), Present("c"), Absent("b"), Absent("d")], false).Hash().sort() == {"add": ["c"], "remove": ["b"]}
+TEST Diff(["a", "b"], [Present("a"), Present("c"), Absent("b"), Absent("d")], true).Hash().sort() == {"add": ["c"], "remove": ["b"]}
+
+F Diff(a:Arr, b:Arr, full:Bool=false) {
+	guard b and b.all(ExactPresence)
+	Diff(a, b.map(get), full)
+}
+
+doc Whether there is a difference
+F Bool(d:ArrDiff) Bool(d.add or d.remove)
+
+doc Compare hashes
+doc %EX - diff = Diff(current_tags, target_tags)
+doc %EX - if (tags = stdlib_aws_tags(diff.add + diff.change)) {
+doc %EX - 	r.run('update_tags/add', %(aws ec2 create-tags --resources ${r.id()} --tags $*tags))
+doc %EX - }
+doc %EX - if (tags = diff.remove / "Key=$X") {
+doc %EX - 	r.run('update_tags/remove', %(aws ec2 delete-tags --resources ${r.id()} --tags $*tags))
+doc %EX - }
+F Diff(a:Hash, b:Hash) {
+	d = HashDiff()
+	d.add    = b.reject(X in a)
+	d.change = b.filter(X in a).filter(F(k, v) a[k] != v)
+	d.remove = a.reject(X in b).keys()
+	d
+}
+
+TEST Diff({"a": 1, "b":2}, {"b": 3, "d": 4}).Hash().sort() == {"add":{"d":4}, "change":{"b":3}, "remove":["a"]}
+
+doc Whether there is a difference
+F Bool(d:HashDiff) Bool(d.add or d.remove or d.change)
+
+# === Bool =======================================
+
+F code(b:Bool) Str(b)
+
 # === Integer ====================================
 
 # --- Functional ---
@@ -2192,12 +2335,12 @@ F '[]'(s:Str, i:Int) {
 TEST ("abc"[-1] == "c") and ("abc"[-3] == "a")
 TEST try "abc"[-4] == "x" catch(e:InvalidArgument) true
 
-doc Get a substring. Indexes in s are specified by ExclusiveRange.
+doc Get a substring. Indexes in s are specified by NumRange.
 doc s - Original string
-doc r - ExclusiveRange with negatve .end
+doc r - NumRange with negatve .end
 doc %EX - "(Look ma, no parens)"[1..-1]  # "Look ma, no parens"
 doc %RET - Str
-F '[]'(s:Str, r:ExclusiveRange) {
+F '[]'(s:Str, r:NumRange) {
 	guard r.end is Int and r.end < 0
 	r.end < 0 - s.len() throws InvalidArgument("Negative index (range end) into string is (abs) larger than the string")
 	s[r.start..s.len() + r.end]
@@ -2421,18 +2564,20 @@ stdlib_error_fd = ENV.NGS_ERR_FD.Int() tor 2
 
 doc Log to standard output. Later log output will be treated specially by the shell. It will have suitable representation in the UI. Use log() when it's semantically a log.
 F log(s:Str) {
-	echo("[LOG] $s")
+	echo(stdlib_error_fd, "[LOG] $s")
 }
 
+doc Same as debug('default', s)
+F debug(s:Str) debug('default', s)
+
+# TODO: more efficient
 doc Debug to standard error.
 doc "DEBUG" environment variable must be non-empty string to activate. Otherwise nothing is outputted.
 doc TODO: Not output thread ID if there is only one thread.
 doc TODO: Timestamps?
-F debug(s:Str) {
-	# TODO: Use RingBuffer when debug is off and
-	#       show last N debug messages on uncaught exception
-	if try ENV['DEBUG'] {
-		echo(stdlib_error_fd, "[DEBUG ${c_getpid()} ${c_pthread_self().id()}] $s")
+F debug(facility:Str, s:Str) {
+	if ENV.Box('DEBUG').map(split(X, ',')).map({facility in A or '*' in A}).get(false) {
+		echo(stdlib_error_fd, "[DEBUG $facility ${c_getpid()} ${c_pthread_self().id()}] $s")
 	}
 }
 
@@ -2446,21 +2591,17 @@ F warn(s:Str) {
 	echo(stdlib_error_fd, "[WARNING] $s")
 }
 
-doc Send status to standard error. Later status output will be treated specially by the shell. It will have suitable representation in the UI. Use status() when it's semantically a status - a task that's being done.
+doc Send status to standard error.
+doc Later status output will be treated specially by the shell. It will have suitable representation in the UI.
+doc Use status() when it's semantically a status - a task that's being done.
 F status(s:Str) {
 	echo(stdlib_error_fd, "(status) $s")
 }
 
-doc Write messages in a to standard error and exit
-F die(a:Arr, exit_code=1) {
-	guard a.all(Str)
-	a % echo(stdlib_error_fd, X)
-	c_exit(exit_code)
-}
-
 doc Write message in s to standard error and exit
 F die(s:Str, exit_code=1) {
-	echo(stdlib_error_fd, s)
+	c = Str(Backtrace().frames[-2].closure) tor "at unknown location"
+	echo(stdlib_error_fd, "[FATAL ERROR] $s -- $c")
 	c_exit(exit_code)
 }
 
@@ -2567,7 +2708,7 @@ F init(p:Path, other:Path) {
 
 doc Checks whether the path is accessible using access(2) and F_OK.
 doc %RET - Bool
-F Bool(p:Path) c_access(p.path, C_F_OK) == 0
+F Bool(p:Path) c_access(p.path, ACCESS::F_OK) == 0
 
 TEST Path('/').Bool()
 TEST Path('/no-such-file').Bool() == false
@@ -2583,16 +2724,16 @@ doc If PATH is not set built-in value for PATH is used to search: /usr/local/bin
 doc %RET - Path
 doc %EX - find_in_path("ls")  # <Path path=/bin/ls>
 F find_in_path(executable_name:Str) {
-	debug("[find_in_path] got ${executable_name}")
+	debug("process", "[find_in_path] got ${executable_name}")
 	if "/" in executable_name {
 		debug("[find_in_path] leaving unprocessed ${executable_name}")
 		return Path(executable_name)
 	}
 	# TODO: rethink default PATH
 	path = ENV.get('PATH', '/usr/local/bin:/usr/bin:/bin:/sbin:/usr/sbin').split(':')
-	debug('[find_in_path] will search')
+	debug("process", '[find_in_path] will search')
 	ret = path.map(F(dir) Path(dir / executable_name)).first()
-	debug("[find_in_path] ${executable_name} found at ${ret}")
+	debug("process", "[find_in_path] ${executable_name} found at ${ret}")
 	ret is Null throws ExecutableNotFound().set('path', path).set('name', executable_name)
 	ret
 }
@@ -2696,16 +2837,17 @@ doc %EX - read(0)  # All data from stdin
 F read(fd:Int) {
 	ret = []
 	while true {
-		debug("[read] will read from fd $fd")
+		debug("file", "[read] will read from fd $fd")
 		result = c_read(fd, 4096)
-		debug("[read] read from fd $fd : <<${result}>>")
+		debug("file", "[read] read from fd $fd : <<${result}>>")
 		result[0] == 0 returns ret.join('')
 		if result[0] > 0 {
 			ret.push(result[1])
 		} else {
 			e = get_c_errno()
 			if e != C_EINTR {
-				debug("[read] read from fd $fd failed, errno $e")
+				debug("file", "[read] read from fd $fd failed, errno $e")
+				# TODO: Better exception
 				throw "[read] failed to c_read()"
 			}
 		}
@@ -2721,7 +2863,7 @@ doc TODO: handle errors, throw exceptions.
 doc TODO: handle possible EINTR.
 doc fd - File descriptor to write to
 doc %RET - unspecified at this time, do not count on it
-F store(s:Str, fd:Int) fd.c_write(s)
+F write(s:Str, fd:Int) fd.c_write(s)
 
 { type TtyCheckFail(CException) }
 
@@ -2759,7 +2901,7 @@ F init(pipe:Pipe) {
 	result[0] != 0 throws PipeCreateFail("Failed to create Pipe")
 	pipe.read_fd = result[1]
 	pipe.write_fd = result[2]
-	debug("[Pipe] created pipe with read_fd=${pipe.read_fd} and write_fd=${pipe.write_fd}")
+	debug("file", "[Pipe] created pipe with read_fd=${pipe.read_fd} and write_fd=${pipe.write_fd}")
 }
 
 doc Pipe constructor. Create UNIX pipe using PIPE(2). Throws PipeCreateFail if pipe can not be created.
@@ -2782,7 +2924,7 @@ F close_reading_end(p:Pipe) p.read_fd.c_close()
 
 doc Write to Pipe. TODO: document if it throws.
 doc %RET - unspecified at this time, do not count on it
-F store(s:Str, p:Pipe) p.write_fd.c_write(s)
+F write(s:Str, p:Pipe) p.write_fd.c_write(s)
 
 doc Read from Pipe without parsing. TODO: document if it throws.
 doc %RET - read data
@@ -2879,12 +3021,11 @@ F lines(f:File, lines_:Arr) {
 	finally()
 		body => {
 			f.open('w')
-			(lines_ + STDLIB_EOL).each(store(X, f.fd))
+			(lines_ + STDLIB_EOL).each(write(X, f.fd))
 		}
 		cleanup => {
 			f.close()
 		}
-
 }
 
 doc Close a file and sets the "fd" field to null. Uses CLOSE(2).
@@ -3013,15 +3154,15 @@ F wait(p:Process) {
 
 	p.exit_code is Int returns p
 
-	debug("[wait] joining reading and writing threads")
+	debug("process", "[wait] joining reading and writing threads")
 	p.reading_threads.join()
 	p.reading_threads = []
 	p.writing_threads.join()
 	p.writing_threads = []
 
-	debug("[wait] will waitpid(${p.pid})")
+	debug("process", "[wait] will waitpid(${p.pid})")
 	w = c_waitpid(p.pid)
-	debug("[wait] waitpid(${p.pid}) -> ${w}")
+	debug("process", "[wait] waitpid(${p.pid}) -> ${w}")
 	p.exit_code = C_WEXITSTATUS(w[1])
 	p.exit_signal = C_WTERMSIG(w[1])
 	not(finished_ok(p)) throws ProcessFail(p)
@@ -3034,6 +3175,39 @@ F to_exit_code(p:Process) p.wait().exit_code
 doc Wait for the process to finish and return its standard output.
 doc %RET - Str
 F Str(p:Process) p.wait().stdout
+
+# TODO: type Arg(Str) -- currently, inheriting built in types is not supported
+F Arg(x:Real) Str(x)
+F Arg(x:Int) Str(x)
+F Arg(x:Str) x
+
+# TODO: Consider storing original h in one of the attrs() of the result
+F Argv(h:Hash) {
+	collector
+		h.rejectv(NoData).mapv(only(Box, get)).each(F(k, v) {
+			if k is Arr {
+
+				# ['--flag-if-yes', '--flag-if-no']: my_bool_expr
+				k.len() != 2 throws InvalidArgument("Argv key which is array must be of length 2").set('value', k)
+				v is not Bool throws InvalidArgument("Argv value for key which is array must be Bool").set('value', v)
+				collect(k[if v then 0 else 1])
+				return
+			}
+
+			# If you have nothing to give to the switch, the switch should not be present
+			if v is Eachable1 and v is not Str {
+				v = Arr(v)
+				not(v) returns
+			}
+
+			collect(k)
+			if v is Arr {
+				v.each(collect)
+			} else {
+				v.collect()
+			}
+		})
+}
 
 # --- $() ---
 
@@ -3059,12 +3233,13 @@ F '$()'(c:Command) {
 		c = c.argv[0]
 	}
 
-	debug_pfx = '[stdlib $()]'
-	debug("$debug_pfx Parsed command: ${c.argv}")
+	argv = c.argv.map(Arg)
+
+	debug("process", "Parsed command: ${argv}")
 
 	process = Process(c)
 	try {
-		process.executable = find_in_path(c.argv[0])
+		process.executable = find_in_path(argv[0])
 	} catch(nf:ExecutableNotFound) {
 		throw ProcessFail(process).set('cause', nf).set('message', 'Executable not found')
 	}
@@ -3084,7 +3259,7 @@ F '$()'(c:Command) {
 
 	pid == -1 throws "Failed to fork()"
 
-	debug("$debug_pfx PID after fork: $pid")
+	debug("process", "PID after fork: $pid")
 
 	child_fds = pipes / child_fd(Y)
 	parent_fds = pipes / parent_fd(Y)
@@ -3124,16 +3299,16 @@ F '$()'(c:Command) {
 			}
 		})
 		# Redirections (WIP) - end
-		result = c_execve(process.executable.path, c.argv, ENV.Strs())
+		result = c_execve(process.executable.path, argv, ENV.Strs())
 		# TODO: propagate this error to parent, don't know how yet
-		throw "$debug_pfx failed to execve()"
+		throw ProcessFail(process).set('message', "failed to execve()")
 	}
 
 	if pid > 0 {
 		# === Parent ===
 		process.pid = pid
 		child_fds % c_close
-		debug("$debug_pfx reading all output of the child process")
+		debug("process", "Reading all output of the child process")
 		# XXX: maybe make it chunk based with c_poll() and single thread
 		pipes_to_read_from = pipes ? F(fd, pipe) { pipe.direction == STDLIB_CHILD_TO_PARENT_PIPE_DIR }
 		# TODO: some error handling inside these threads and after joining them
@@ -3141,7 +3316,7 @@ F '$()'(c:Command) {
 			Thread({
 				process.outputs[fd] = pipe.read()
 				pipe.close_reading_end()
-				debug("$debug_pfx read all output of the child process for descriptor $fd, closing reading/parent end")
+				debug("process", "Read all output of the child process for descriptor $fd, closing reading/parent end")
 			})
 		})
 		# echo("R ${c.reading_threads}")
@@ -3862,7 +4037,7 @@ srand(time())
 doc Pick n random unique elements from something
 doc %RET - Arr
 F rand_uniq(something, n:Int) {
-	# TODO: Fix the guard - it does not work with Range currently
+	# TODO: Fix the guard - it does not work with NumRange currently
 	# guard n <= something.len()
 	result = []
 	safety_counter = 0
@@ -3907,11 +4082,10 @@ F rand(a:Str, n:Int) super(a, n).join('')
 
 doc Pick one random element from a range
 doc %RET - Any
-F rand(r:Range) {
+F rand(r:NumRange) {
 	guard r.step == 1
-	points = r.end - r.start
-	if r is InclusiveRange points += 1
-	rand(points) + r.start
+	points = r.end - r.start - 1 + Int(r.include_start) + Int(r.include_end)
+	rand(points) + r.start + if r.include_start then 0 else r.step
 }
 
 # === retry facility =============================
@@ -3939,9 +4113,9 @@ doc %EX - page = retry(times=10, sleep=ExpBackIter(), body={ `curl "http://flaky
 F retry(
 	times:Int=60,
 	sleep=1,
-	logger:Fun=debug,
+	logger:Fun=debug("retry", X),
 	success_predicate=Bool,
-	catch_exceptions=true,
+	catch_exceptions:Bool=true,
 	title="<retry>",
 	progress_cb:Fun={null},
 	success_cb:Fun=identity,
@@ -3970,7 +4144,7 @@ F retry(
 			$(sleep "$s")
 		}
 	}
-	fail_cb is Null throws RetryFail()
+	fail_cb is NoData throws RetryFail()
 	fail_cb()
 }
 
@@ -4036,12 +4210,17 @@ F table(a:Arr) {
 
 # === File =======================================
 
-F store(s:Str, fname:Str) {
+F access(f:File, flags:Int) {
+	# x
+}
+
+
+F write(s:Str, fname:Str) {
 	f = File(fname)
 	open(f, 'w')
 	finally()
 		body => {
-			store(s, f.fd)
+			write(s, f.fd)
 		}
 		cleanup => {
 			f.close()
@@ -4119,7 +4298,7 @@ TEST a=[1,2,3,4]; a[4..4]=["END"]; a[2..2]=["MIDDLE"]; a[0..0]=["START"]; a[0..1
 
 # === Hash tests =================================
 TEST h={"a": 1}; h.del("a"); h == {}
-TEST h={}; h.del("a"); h == {}
+TEST h={}; try h.del("a") catch(e:KeyNotFound) true
 TEST h={"a": 1, "b": 2}; h.del("a"); h == {"b": 2}
 
 # === Str tests ==================================

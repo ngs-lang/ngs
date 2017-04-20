@@ -55,7 +55,7 @@ bootstrap_ngs_dir_candidates = [
 F bootstrap_find_ngs_dir() {
 	l = bootstrap_ngs_dir_candidates.len()
 	for(i;l) {
-		c_access("${bootstrap_ngs_dir_candidates[i]}/stdlib.ngs", C_F_OK) == 0 returns bootstrap_ngs_dir_candidates[i]
+		c_access("${bootstrap_ngs_dir_candidates[i]}/stdlib.ngs", ACCESS['F_OK']) == 0 returns bootstrap_ngs_dir_candidates[i]
 	}
 	null
 }

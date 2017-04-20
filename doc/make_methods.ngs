@@ -6,7 +6,6 @@
 	# Autoload
 	AWS
 	ArgvMatcher
-	Counter
 	DelimStr
 	Iter
 	KV
@@ -478,7 +477,7 @@
 					local mdn = MethodsDocNode([process_method(impls[0], impls[1..null])])
 					local page = TopDocNode([mdn])
 					local html = Html(page, {'detailed_method_page': true})
-					html.Str().store("method-impl-${id}.html")
+					html.Str().write("method-impl-${id}.html")
 				})
 
 			}
@@ -570,7 +569,7 @@
 					local tdn = TypesDocNode([t])
 					local page = TopDocNode([tdn])
 					local html = Html(page, {'detailed_type_page': true})
-					html.Str().store("type-${t.type.name}.html")
+					html.Str().write("type-${t.type.name}.html")
 				})
 			}
 
