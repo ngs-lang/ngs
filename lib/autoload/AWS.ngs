@@ -47,7 +47,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	_aws_cached_regions = null
 
 	# --- regions ---
-	_regions = cached({ ``aws ec2 describe-regions``.RegionName.sort() })
+	_regions = cached({
+		if r = ENV.Box('NGS_AWS_REGIONS').map(X.split(',')).get(null) {
+			debug("AWS", "Regions: Using NGS_AWS_REGIONS environment variable with value $r")
+			r
+		} else {
+			``aws ec2 describe-regions``.RegionName.sort()
+		}
+	})
 	F regions() _regions()
 
 	F regions(cb:Fun) {
