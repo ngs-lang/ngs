@@ -104,6 +104,12 @@ If you have troubles compiling, please try to compile the commit tagged `tested`
 	# If NGS is installed:
 	./ngs SCRIPT_NAME.ngs
 
+
+	# Debug when stuck (note to self mostly)
+	killall -SIGSEGV ngs
+	lldb --core /cores/core.XXXXX
+
+
 ### Running tests - all OSes
 
 	# NGS_DIR, where stdlib.ngs resides defaults to /usr/local/lib/ngs . Either link it to the "lib" folder or run with NGS_DIR=lib
