@@ -270,7 +270,7 @@ F the_one(something:Eachable1, predicate, body:Fun, found_more:Fun={null}, found
 	}
 }
 
-TEST ok = false; [1,2,11,3,4].the_one(X>10, F(the_value) { if(the_value == 11) ok = true });
+TEST ok = false; [1,2,11,3,4].the_one(X>10, F(the_value) { if(the_value == 11) ok = true }); ok
 TEST ok = false; [1,2,11,3,4].the_one(X>20, { does_not_matter }, found_none = { ok = true }); ok
 TEST ok = false; [1,2,11,3,4].the_one(Int, { does_not_matter }, found_more = { ok = true }); ok
 
@@ -731,11 +731,25 @@ F ...(start, end) PredRange(start, end, true, true)
 
 doc Constructs closed-open numerical range
 doc %RET - NumRange
-F ..(start:Num, end) NumRange(start, end, true, false)
+F ..(start, end) {
+	guard start is Num or end is Num
+	guard start is Num or start is Null
+	guard end is Num or end is Null
+	NumRange(start, end, true, false)
+}
 
 doc Constructs closed-closed numerical range
 doc %RET - NumRange
-F ...(start:Num, end) NumRange(start, end, true, true)
+F ...(start, end) {
+	guard start is Num or end is Num
+	guard start is Num or start is Null
+	guard end is Num or end is Null
+	NumRange(start, end, true, true)
+}
+
+TEST 0..null is NumRange
+TEST null..null is PredRange
+TEST null.."xyz" is PredRange
 
 doc Iterates over the elements of r, passing each in turn to cb.
 doc cb - Function to be called with values from r
@@ -924,6 +938,18 @@ doc %RET - Arr
 F .(a:Arr, attr:Str) a.map(X.(attr))
 
 TEST [{"x": 1}, {"x": 2}].x == [1, 2]
+
+doc Set attr of every element in array to v
+doc %EX - a=[{"x": 1}, {"x": 2}]
+doc %EX - a.y = 10
+doc %EX - # a == [{"x": 1, "y": 10}, {"x": 2, "y": 10}]
+doc %RET - v
+F .=(a:Arr, attr:Str, v) {
+	a.each(F(elt) elt.(attr) = v)
+	v
+}
+
+TEST a=[{"x": 1}, {"x": 2}]; a.y = 10; a == [{"x": 1, "y": 10}, {"x": 2, "y": 10}]
 
 doc Return array made of given attribute of each element of given Eachable1 where present
 doc %EX - [{"x": 1}, {"y": 2}].get("x")  # [1]
@@ -1324,6 +1350,7 @@ doc %EX - [10,20,30,40][1..-1]  # [20,30]
 doc %RET - Arr
 F '[]'(arr:Arr, r:NumRange) {
 	guard r.end is Int and r.end < 0
+	r.step != 1 throws NotImplemented("r.step must be 1")
 	r.end < 0 - arr.len() throws IndexNotFound("[](Arr, NumRange): Index ${r.end} (range end) is illegal for array of size ${arr.len()}", arr, idx)
 	arr[r.start..arr.len() + r.end]
 }

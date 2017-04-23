@@ -61,7 +61,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		regs = regions()
 		regs.pmap(F(r) {
 			data = cb(r)
-			data % { A.Region = r }
+			data.Region = r
 			data
 		}).flatten()
 	}
