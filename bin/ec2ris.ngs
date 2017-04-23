@@ -1,0 +1,10 @@
+#!/usr/bin/env ngs
+
+config('table_RIS', %[State period AvailabilityZone Region InstanceTenancy InstanceType ProductDescription InstanceCount OfferingType])
+
+ris = AWS::regions({ ``aws ec2 describe-reserved-instances --region $A --filters Name=state,Values=active`` }).map(F(ri) {
+	ri.period = [ri.Start, ri.End]
+	ri.N = ri.InstanceCount
+	ri.without('Start').without('End').without('ReservedInstancesId')
+})
+echo(Table("RIS", ris))

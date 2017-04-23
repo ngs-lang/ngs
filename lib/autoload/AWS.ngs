@@ -829,7 +829,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd.resources = resources.pmap(F(props) {
 			ret = props
 			ret.Instances = props.Instances.InstanceId
-			rd.log('find', "Fetching ELB tags for LB ${props.LoadBalancerName}")
+			debug("AWS", "${rd} Fetching ELB tags for LB ${props.LoadBalancerName}")
 			ret.Tags = ``aws elb describe-tags --load-balancer-names ${props.LoadBalancerName}``[0].Tags
 			ElbRes(rd, ret)
 		})
