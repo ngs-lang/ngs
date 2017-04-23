@@ -77,7 +77,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	type Res(GlobalRes)
 
-	F run(r:Res, log_pfx:Str, cmd:Command) r.def.run("${r} ${log_pfx}", cmd)
+	F run(r:Res, log_pfx:Str, cmd:Command, do_parse=true) r.def.run("${r} ${log_pfx}", cmd, do_parse)
 
 	F update_tags(r:Res, props:Hash) {
 		target_tags = r.def.opt_prop('Tags', props).get({})
@@ -116,13 +116,17 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F init(rd:ResDef, _ngs_name:Str)  super(rd, {'regions': null, 'Tags': {}, 'name': _ngs_name})
 	F init(rd:ResDef, _ngs_tags:Hash) super(rd, {'regions': null, 'Tags': _ngs_tags})
 
-	F run(rd:ResDef, log_pfx:Str, cmd:Command) {
+	F run(rd:ResDef, log_pfx:Str, cmd:Command, do_parse=true) {
 		if rd.dry_run {
 			rd.log(log_pfx, "would run: ${cmd.argv.join(' ')}")
 			null
 		} else {
 			rd.log(log_pfx, "running: ${cmd.argv.join(' ')}")
-			``$cmd``
+			if do_parse {
+				``$cmd``
+			} else {
+				$($cmd)
+			}
 		}
 	}
 
@@ -724,6 +728,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		r
 	}
 
+	# TODO: cache the results for example if add_to_known_hosts is run twice in a row
+	#       once for PublicIpAddress and once for PrivateIpAddress
 	doc Get lines of console output
 	F get_console_output(r:InstanceRes) {
 		retry(
@@ -743,6 +749,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		)
 	}
 
+	# TODO: cache ssh key fingerprints somewhere in the cloud, maybe in tags
+	#       so it will be available when they are not in the console anymore
 	doc %RET - Array of Str. Each Str format "key-type base64key"
 	F get_ssh_host_keys(r:InstanceRes) {
 		# Observed bahviour, which might not always be true: when console output is ready, it already has the needed output
@@ -751,23 +759,55 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F add_to_known_hosts(r:Instance, prop_name:Str) {
 		# TODO: consider making it in parallel
-		for res in r.resources {
+		for res in r {
 			wait_state(res, 'running')
 			add_to_known_hosts(res, res.props.(prop_name))
 		}
 	}
 
+	# TODO: factor out parts that could work for other clouds/VMs
 	doc WIP, don't use!
 	F add_to_known_hosts(r:InstanceRes, ip_or_hostname) {
 		f = ENV.get('NGS_KNOWN_HOSTS', ENV.HOME / '.ssh' / 'known_hosts')
 		keys_from_console = r.get_ssh_host_keys()
+		for k in keys_from_console {
+			debug("AWS", "SSH key from console of ${r.id()} - $k")
+		}
 		scanned_keys = $(ssh-keyscan -H $ip_or_hostname 2>/dev/null).lines()
-		key_parts_to_compare = scanned_keys.map({A.split(' ')[1..3].join(' ')})
-		echo("S $keys_from_console, $scanned_keys")
-		if d = Diff(keys_from_console, key_parts_to_compare) {
+		scanned_keys_parts_to_compare = scanned_keys.map({A.split(' ')[1..3].join(' ')})
+		# echo("S $keys_from_console, $scanned_keys")
+		if d = Diff(keys_from_console, scanned_keys_parts_to_compare) {
 			# throw SecurtyFail(
 			throw Exception("Scanned SSH keys and SSH keys from console did not match").set('diff', d)
 		}
+		# echo("SCANNED $scanned_keys")
+
+		for k in scanned_keys {
+			debug("AWS", "Scanned key of ${r.id()} at ${ip_or_hostname} - $k")
+		}
+
+		listed_keys = try {
+			$(ssh-keygen -F $ip_or_hostname -f $f).lines().reject(/^#/)
+		} catch(pf:ProcessFail) {
+			guard pf.process.exit_code = 1
+			[]
+		}
+		listed_keys_parts_to_compare = listed_keys.map({A.split(' ')[1..3].join(' ')})
+
+		if not(Diff(listed_keys_parts_to_compare, scanned_keys_parts_to_compare)) {
+			debug("AWS", "Scanned keys of ${r.id()} at ${ip_or_hostname} and keys in file are the same, no update needed")
+			return
+		}
+
+		# debug("AWS", "Removing keys of ${ip_or_hostname} from file $f")
+		if listed_keys {
+			r.run("Removing keys of ${ip_or_hostname} from file $f", %(ssh-keygen -R $ip_or_hostname -f $f), do_parse=false)
+		}
+
+		for k in scanned_keys {
+			r.run("Adding key ${k.limit(20, '...')} to file $f", %(echo $k >>$f), do_parse=false)
+		}
+
 	}
 
 	# --------------------------------------------------
