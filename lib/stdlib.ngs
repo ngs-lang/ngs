@@ -683,6 +683,13 @@ F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
 		e.errno_name = c_strerror(e.errno)
 	}
 
+	doc CException constructor. In addition to storing message attribute, adds errno and errno_name attributes.
+	F init(e:CException, errno:Int, message:Str) {
+		super(e, message)
+		e.errno = errno
+		e.errno_name = c_strerror(e.errno)
+	}
+
 	doc Exception representing a failure to kill() a process
 	type KillFail
 	KillFail.inherit(CException)
@@ -4230,9 +4237,18 @@ F match(a,b) a ~ b
 
 # === File =======================================
 
-F access(f:File, flags:Int) {
+F access(f:File, flags:Int=ACCESS::F_OK) {
 	# x
+	ret = c_access(f.path, flags)
+	ret == 0 returns true
+	assert(ret < 0)
+	e = get_c_errno()
+	e == C_EACCES returns false
+	throw CException(e, "access() failed")
 }
+
+# Hope this is correct for all platforms
+TEST access(File("/"), bor(ACCESS::R_OK, ACCESS::X_OK))
 
 
 F write(s:Str, fname:Str) {

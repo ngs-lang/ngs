@@ -30,6 +30,7 @@ Note that this started as internal document so things here are unformed, not fin
 	* "The README doesn’t seem to have any simple syntax examples"
 	* Consider somethig like data_strucure ~ [Capture("x"), 7 , "xx"]
 	* Creating an AWS res not matching the Anchor - think
+	* [urgent] get_c_errno() -> c::errno()
 
 [roadmap]
 
