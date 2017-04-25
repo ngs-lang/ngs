@@ -526,7 +526,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			'block-device-mapping.volume-type': rd.anchor.Box('VolumeType')
 		})
 		resources = ``aws ec2 describe-images $*owners $*filters``
-		if 'Name' in rd.anchor {
+		if 'Name' in rd.anchor and rd.anchor.Name is Pfx {
 			resources .= filter({A.Name ~ rd.anchor.Name})
 		}
 		rd.resources = resources / ImageRes(rd, X)

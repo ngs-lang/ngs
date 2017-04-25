@@ -30,7 +30,8 @@ Note that this started as internal document so things here are unformed, not fin
 	* "The README doesn’t seem to have any simple syntax examples"
 	* Consider somethig like data_strucure ~ [Capture("x"), 7 , "xx"]
 	* Creating an AWS res not matching the Anchor - think
-	* [urgent] get_c_errno() -> c::errno()
+	* [urgent] get_c_errno() -> c::errno() or c_errno()
+	* Implement Hash(Arr[Str]) for strings of form "key=value"?
 
 [roadmap]
 

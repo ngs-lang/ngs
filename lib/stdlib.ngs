@@ -2546,8 +2546,63 @@ F ord(s:Str) {
 	ord(s, 0)
 }
 
+# TODO: return match object
+# TODO: match partial string too? as regexp does
 doc EXPERIMENTAL. For use with AWS Anchors.
-F ~(a:Str, b:Str) a==b
+F ~(haystack:Str, needle:Str, offset:Int=0) {
+	p = pos(haystack, needle, offset)
+	p is Null returns MatchN()
+	l = needle.len()
+	ret = MatchY([needle])
+	ret.named = {}
+	ret.positions = [[p, p+l]]
+	ret.whole = ret.matches[0]
+	ret.before = haystack[0..p]
+	ret.after = haystack[p+l..null]
+	ret
+}
+
+F ~~(haystack:Str, needle:Str, collect_unmatched:Bool=false) {
+	collector {
+		m = (~)(haystack, needle, 0)
+		if not(m) {
+			if collect_unmatched collect(haystack)
+			return null
+		}
+		start_offset = m.positions[0][0]
+		next_offset = m.positions[0][1]
+		if collect_unmatched and start_offset then collect(haystack[0..start_offset])
+		collect(m)
+		while true {
+			if start_offset == next_offset {
+				next_offset == len(haystack) breaks
+			}
+			m = (~)(haystack, needle, next_offset)
+			if m {
+				if collect_unmatched {
+					if next_offset != m.positions[0][0] {
+						collect(haystack[next_offset..m.positions[0][0]])
+					}
+				}
+				start_offset = m.positions[0][0]
+				next_offset = m.positions[0][1]
+				collect(m)
+				continue
+			}
+			break
+		}
+		if collect_unmatched and (next_offset < len(haystack)) {
+			collect(haystack[next_offset..null])
+		}
+	}
+}
+
+TEST m = (~~)("abcbe", "b", true); m.len() == 5 and m[[0,2,4]] == %[a c e] and m[[1,3]].all(MatchY)
+
+doc Replace all occurrences of src with dst in s
+F replace(s:Str, src:Str, dst:Str) (~~)(s, src, true).map(only(MatchY, {dst})).join('')
+
+TEST "x10ab20c30y".replace("0", "X") == "x1Xab2Xc3Xy"
 
 doc Convert a Str to NGS code that would produce the string when executed. Not fully functional yet.
 doc BUG: Does not do escaping.
