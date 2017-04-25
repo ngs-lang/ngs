@@ -12,15 +12,17 @@
 			from_groups           " $from_groups"
 		}
 
+		port = econd {
+			elt.get('FromPort') == -1 and elt.get('ToPort') == -1 { "all" }
+			'FromPort' in elt and 'ToPort' in elt and elt.FromPort == elt.ToPort { elt.FromPort }
+			'FromPort' in elt and 'ToPort' in elt { "${elt.FromPort}-${elt.ToPort}" }
+			true { "-" }
+		}
+
 		econd {
-			(elt.IpProtocol == "-1") and (elt.IpRanges == [{'CidrIp': '0.0.0.0/0'}])
-				"all"
-			elt.IpProtocol == "-1"
-				"all_protos$from"
-			elt.FromPort == elt.ToPort
-				"${elt.FromPort}/${elt.IpProtocol}$from"
-			true
-				"${elt.FromPort}-${elt.ToPort}/${elt.IpProtocol}$from"
+			(elt.IpProtocol == "-1") and (elt.IpRanges == [{'CidrIp': '0.0.0.0/0'}]) { "all" }
+			elt.IpProtocol == "-1" { "all_protos$from" }
+			true { "$port/${elt.IpProtocol}$from" }
 		}
 	}
 

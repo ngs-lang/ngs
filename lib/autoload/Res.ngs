@@ -30,9 +30,11 @@
 		log("[${rd.typeof().name} ${rd.anchor}] [$method] $s")
 	}
 
+	# TODO: F find_if_needed() -- if rd.resources is Null then find ...
+
+	# TODO: throw ExpectFail or somthing similar
 	F expect(rd:ResDef, e:Int) {
 		rd.find()
-		rd.resources.len() != e throws
 		assert(rd.resources.len() == e, "Expected exactly ${e} ${rd.typeof().name} resource instances but found ${rd.resources.len()}: ${rd}")
 		rd
 	}
@@ -51,6 +53,14 @@
 			cb(r.props)
 		})
 		rd
+	}
+
+	Iter # autoload Iter type
+	F Iter(rd:ResDef) {
+		if rd.resources is Null {
+			rd.find()
+		}
+		Iter(rd.resources)
 	}
 
 	type Res

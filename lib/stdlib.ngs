@@ -270,7 +270,7 @@ F the_one(something:Eachable1, predicate, body:Fun, found_more:Fun={null}, found
 	}
 }
 
-TEST ok = false; [1,2,11,3,4].the_one(X>10, F(the_value) { if(the_value == 11) ok = true });
+TEST ok = false; [1,2,11,3,4].the_one(X>10, F(the_value) { if(the_value == 11) ok = true }); ok
 TEST ok = false; [1,2,11,3,4].the_one(X>20, { does_not_matter }, found_none = { ok = true }); ok
 TEST ok = false; [1,2,11,3,4].the_one(Int, { does_not_matter }, found_more = { ok = true }); ok
 
@@ -683,6 +683,13 @@ F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
 		e.errno_name = c_strerror(e.errno)
 	}
 
+	doc CException constructor. In addition to storing message attribute, adds errno and errno_name attributes.
+	F init(e:CException, errno:Int, message:Str) {
+		super(e, message)
+		e.errno = errno
+		e.errno_name = c_strerror(e.errno)
+	}
+
 	doc Exception representing a failure to kill() a process
 	type KillFail
 	KillFail.inherit(CException)
@@ -731,11 +738,25 @@ F ...(start, end) PredRange(start, end, true, true)
 
 doc Constructs closed-open numerical range
 doc %RET - NumRange
-F ..(start:Num, end) NumRange(start, end, true, false)
+F ..(start, end) {
+	guard start is Num or end is Num
+	guard start is Num or start is Null
+	guard end is Num or end is Null
+	NumRange(start, end, true, false)
+}
 
 doc Constructs closed-closed numerical range
 doc %RET - NumRange
-F ...(start:Num, end) NumRange(start, end, true, true)
+F ...(start, end) {
+	guard start is Num or end is Num
+	guard start is Num or start is Null
+	guard end is Num or end is Null
+	NumRange(start, end, true, true)
+}
+
+TEST 0..null is NumRange
+TEST null..null is PredRange
+TEST null.."xyz" is PredRange
 
 doc Iterates over the elements of r, passing each in turn to cb.
 doc cb - Function to be called with values from r
@@ -924,6 +945,18 @@ doc %RET - Arr
 F .(a:Arr, attr:Str) a.map(X.(attr))
 
 TEST [{"x": 1}, {"x": 2}].x == [1, 2]
+
+doc Set attr of every element in array to v
+doc %EX - a=[{"x": 1}, {"x": 2}]
+doc %EX - a.y = 10
+doc %EX - # a == [{"x": 1, "y": 10}, {"x": 2, "y": 10}]
+doc %RET - v
+F .=(a:Arr, attr:Str, v) {
+	a.each(F(elt) elt.(attr) = v)
+	v
+}
+
+TEST a=[{"x": 1}, {"x": 2}]; a.y = 10; a == [{"x": 1, "y": 10}, {"x": 2, "y": 10}]
 
 doc Return array made of given attribute of each element of given Eachable1 where present
 doc %EX - [{"x": 1}, {"y": 2}].get("x")  # [1]
@@ -1324,6 +1357,7 @@ doc %EX - [10,20,30,40][1..-1]  # [20,30]
 doc %RET - Arr
 F '[]'(arr:Arr, r:NumRange) {
 	guard r.end is Int and r.end < 0
+	r.step != 1 throws NotImplemented("r.step must be 1")
 	r.end < 0 - arr.len() throws IndexNotFound("[](Arr, NumRange): Index ${r.end} (range end) is illegal for array of size ${arr.len()}", arr, idx)
 	arr[r.start..arr.len() + r.end]
 }
@@ -1365,6 +1399,21 @@ TEST try { %[a1 a2 b1 b2][/^x/.../^b/]; false } catch(e:IndexNotFound) true
 
 F '[]='(arr:Arr, r:PredRange, replacement:Arr) arr[indexes(arr, r)] = replacement
 TEST a = %[a1 a2 b1 b2]; a[/^a/.../^b/] = [7]; a == [7, 'b2']
+
+F ~(arr:Arr, r:PredRange) {
+	i = try indexes(arr, r)
+	i is Null returns MatchN()
+	ret = MatchY([arr[i]])
+	ret.named = {}
+	ret.positions = [[i.start, i.end]]
+	ret.whole = ret.matches[0]
+	ret.before = arr[0..i.start]
+	ret.after = arr[i.end..null]
+	ret
+}
+
+TEST a = %[a1 a2 b1 b2]; m = a ~ /^a/../^b/; m.matches == [['a2']] and m.before == ['a1'] and m.after == ['b1', 'b2']
+TEST a = %[a1 a2 b1 b2]; m = a ~ /^a/.../^b/; m.matches == [['a1','a2','b1']] and m.before == [] and m.after == ['b2']
 
 doc Get array elements at specified indexes.
 doc arr - Array to pick items from
@@ -2512,8 +2561,68 @@ F ord(s:Str) {
 	ord(s, 0)
 }
 
-doc EXPERIMENTAL. For use with AWS Anchors.
-F ~(a:Str, b:Str) a==b
+doc Find substring in string. Uses pos().
+doc %RET - Match
+F ~(haystack:Str, needle:Str, offset:Int=0) {
+	p = pos(haystack, needle, offset)
+	p is Null returns MatchN()
+	l = needle.len()
+	ret = MatchY([needle])
+	ret.named = {}
+	ret.positions = [[p, p+l]]
+	ret.whole = ret.matches[0]
+	ret.before = haystack[0..p]
+	ret.after = haystack[p+l..null]
+	ret
+}
+
+doc Find all non-overlapping matches of a substring in a string.
+doc %RET - if collect_unmatched - Arr with each element being MatchY or Str, if not collect_unmatched - Arr of MatchY
+doc %EX - ["key=value", "key2=value2"].map(F(kv) {
+doc %EX -   m = kv ~ "="
+doc %EX -   [m.before, m.after]
+doc %EX - }).Hash()  # {'key': 'value', 'key2': 'value2'}
+F ~~(haystack:Str, needle:Str, collect_unmatched:Bool=false) {
+	collector {
+		m = (~)(haystack, needle, 0)
+		if not(m) {
+			if collect_unmatched collect(haystack)
+			return null
+		}
+		start_offset = m.positions[0][0]
+		next_offset = m.positions[0][1]
+		if collect_unmatched and start_offset then collect(haystack[0..start_offset])
+		collect(m)
+		while true {
+			if start_offset == next_offset {
+				next_offset == len(haystack) breaks
+			}
+			m = (~)(haystack, needle, next_offset)
+			if m {
+				if collect_unmatched {
+					if next_offset != m.positions[0][0] {
+						collect(haystack[next_offset..m.positions[0][0]])
+					}
+				}
+				start_offset = m.positions[0][0]
+				next_offset = m.positions[0][1]
+				collect(m)
+				continue
+			}
+			break
+		}
+		if collect_unmatched and (next_offset < len(haystack)) {
+			collect(haystack[next_offset..null])
+		}
+	}
+}
+
+TEST m = (~~)("abcbe", "b", true); m.len() == 5 and m[[0,2,4]] == %[a c e] and m[[1,3]].all(MatchY)
+
+doc Replace all occurrences of src with dst in s
+F replace(s:Str, src:Str, dst:Str) (~~)(s, src, true).map(only(MatchY, {dst})).join('')
+
+TEST "x10ab20c30y".replace("0", "X") == "x1Xab2Xc3Xy"
 
 doc Convert a Str to NGS code that would produce the string when executed. Not fully functional yet.
 doc BUG: Does not do escaping.
@@ -3155,10 +3264,14 @@ F wait(p:Process) {
 	p.exit_code is Int returns p
 
 	debug("process", "[wait] joining reading and writing threads")
-	p.reading_threads.join()
-	p.reading_threads = []
-	p.writing_threads.join()
-	p.writing_threads = []
+	if p.reading_threads {
+		p.reading_threads.join()
+		p.reading_threads = []
+	}
+	if p.writing_threads {
+		p.writing_threads.join()
+		p.writing_threads = []
+	}
 
 	debug("process", "[wait] will waitpid(${p.pid})")
 	w = c_waitpid(p.pid)
@@ -4210,11 +4323,36 @@ F table(a:Arr) {
 
 # === File =======================================
 
-F access(f:File, flags:Int) {
+F access(f:File, flags:Int=ACCESS::F_OK) {
 	# x
+	ret = c_access(f.path, flags)
+	ret == 0 returns true
+	assert(ret < 0)
+	e = get_c_errno()
+	e == C_EACCES returns false
+	throw CException(e, "access() failed")
 }
 
+# Hope this is correct for all platforms
+TEST access(File("/"), bor(ACCESS::R_OK, ACCESS::X_OK))
 
+doc Read whole file
+F read(fname:Str) {
+	f = File(fname)
+	open(f, 'r')
+	finally()
+		body => {
+			read(f.fd)
+		}
+		cleanup => {
+			f.close()
+		}
+}
+
+doc Read whole file
+F read(f:File) read(f.path)
+
+doc Write whole file
 F write(s:Str, fname:Str) {
 	f = File(fname)
 	open(f, 'w')
@@ -4226,6 +4364,11 @@ F write(s:Str, fname:Str) {
 			f.close()
 		}
 }
+
+doc Write whole file
+F write(s:Str, f:File) write(s, f.path)
+
+F Arg(f:File) f.path
 
 
 # === Networking =================================
