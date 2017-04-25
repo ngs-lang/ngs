@@ -4342,6 +4342,8 @@ F write(s:Str, fname:Str) {
 		}
 }
 
+F Arg(f:File) f.path
+
 
 # === Networking =================================
 
