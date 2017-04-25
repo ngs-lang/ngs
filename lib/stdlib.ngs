@@ -4329,7 +4329,23 @@ F access(f:File, flags:Int=ACCESS::F_OK) {
 # Hope this is correct for all platforms
 TEST access(File("/"), bor(ACCESS::R_OK, ACCESS::X_OK))
 
+doc Read whole file
+F read(fname:Str) {
+	f = File(fname)
+	open(f, 'r')
+	finally()
+		body => {
+			read(f.fd)
+		}
+		cleanup => {
+			f.close()
+		}
+}
 
+doc Read whole file
+F read(s:Str, f:File) read(f.path)
+
+doc Write whole file
 F write(s:Str, fname:Str) {
 	f = File(fname)
 	open(f, 'w')
@@ -4341,6 +4357,9 @@ F write(s:Str, fname:Str) {
 			f.close()
 		}
 }
+
+doc Write whole file
+F write(s:Str, f:File) write(s, f.path)
 
 F Arg(f:File) f.path
 
