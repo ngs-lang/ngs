@@ -4343,7 +4343,7 @@ F read(fname:Str) {
 }
 
 doc Read whole file
-F read(s:Str, f:File) read(f.path)
+F read(f:File) read(f.path)
 
 doc Write whole file
 F write(s:Str, fname:Str) {
