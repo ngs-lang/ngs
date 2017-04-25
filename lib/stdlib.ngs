@@ -3249,10 +3249,14 @@ F wait(p:Process) {
 	p.exit_code is Int returns p
 
 	debug("process", "[wait] joining reading and writing threads")
-	p.reading_threads.join()
-	p.reading_threads = []
-	p.writing_threads.join()
-	p.writing_threads = []
+	if p.reading_threads {
+		p.reading_threads.join()
+		p.reading_threads = []
+	}
+	if p.writing_threads {
+		p.writing_threads.join()
+		p.writing_threads = []
+	}
 
 	debug("process", "[wait] will waitpid(${p.pid})")
 	w = c_waitpid(p.pid)
