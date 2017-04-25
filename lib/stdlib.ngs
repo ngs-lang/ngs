@@ -1400,6 +1400,21 @@ TEST try { %[a1 a2 b1 b2][/^x/.../^b/]; false } catch(e:IndexNotFound) true
 F '[]='(arr:Arr, r:PredRange, replacement:Arr) arr[indexes(arr, r)] = replacement
 TEST a = %[a1 a2 b1 b2]; a[/^a/.../^b/] = [7]; a == [7, 'b2']
 
+F ~(arr:Arr, r:PredRange) {
+	i = try indexes(arr, r)
+	i is Null returns MatchN()
+	ret = MatchY([arr[i]])
+	ret.named = {}
+	ret.positions = [[i.start, i.end]]
+	ret.whole = ret.matches[0]
+	ret.before = arr[0..i.start]
+	ret.after = arr[i.end..null]
+	ret
+}
+
+TEST a = %[a1 a2 b1 b2]; m = a ~ /^a/../^b/; m.matches == [['a2']] and m.before == ['a1'] and m.after == ['b1', 'b2']
+TEST a = %[a1 a2 b1 b2]; m = a ~ /^a/.../^b/; m.matches == [['a1','a2','b1']] and m.before == [] and m.after == ['b2']
+
 doc Get array elements at specified indexes.
 doc arr - Array to pick items from
 doc indexes - Indexes of items to pick
