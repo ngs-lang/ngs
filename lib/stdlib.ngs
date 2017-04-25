@@ -2546,9 +2546,8 @@ F ord(s:Str) {
 	ord(s, 0)
 }
 
-# TODO: return match object
-# TODO: match partial string too? as regexp does
-doc EXPERIMENTAL. For use with AWS Anchors.
+doc Find substring in string. Uses pos().
+doc %RET - Match
 F ~(haystack:Str, needle:Str, offset:Int=0) {
 	p = pos(haystack, needle, offset)
 	p is Null returns MatchN()
@@ -2562,6 +2561,12 @@ F ~(haystack:Str, needle:Str, offset:Int=0) {
 	ret
 }
 
+doc Find all non-overlapping matches of a substring in a string.
+doc %RET - if collect_unmatched - Arr with each element being MatchY or Str, if not collect_unmatched - Arr of MatchY
+doc %EX - ["key=value", "key2=value2"].map(F(kv) {
+doc %EX -   m = kv ~ "="
+doc %EX -   [m.before, m.after]
+doc %EX - }).Hash()  # {'key': 'value', 'key2': 'value2'}
 F ~~(haystack:Str, needle:Str, collect_unmatched:Bool=false) {
 	collector {
 		m = (~)(haystack, needle, 0)
