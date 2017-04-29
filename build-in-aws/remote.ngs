@@ -1,0 +1,56 @@
+#!/usr/bin/env ngs
+
+targets = ['debian:jessie', 'debian:stretch']
+
+DOCKER_API_VER='v1.18'
+
+F debootstrap(distro:Str) {
+	if Path(distro) {
+		echo("+ ${distro} already exists, not running debootstrap")
+		return
+	}
+	packages = read("ngs/debian/control").lines()["Build-Depends:"../:/].map({A.replace(/[ ,]/, {""})}).join(',')
+	echo("+ Deboostrapping $distro with packages: $packages")
+	try {
+		$(debootstrap "--include=$packages" $distro $distro)
+	} catch(e:Exception) {
+		echo("ERROR: $e")
+		echo("+ Cleaning up $distro")
+		try $(rm -r $distro)
+	}
+}
+
+F docker_image(image_name:Str) {
+	images = ``curl -s --unix-socket /var/run/docker.sock "http:/${DOCKER_API_VER}/images/json"``
+
+	# Maybe compare timestamp with the debootstrapped directory?
+	if image_name in images.RepoTags.flatten() {
+		echo("+ Docker image $image_name already exists, skipping image creation")
+		return
+	}
+
+	t = image_name.split(':')
+	distro = t[1]
+	debootstrap(distro)
+
+	distro_tar = "${distro}.tar"
+
+	if not(File(distro_tar)) {
+		echo("+ Preparing distro ${distro} tar")
+		$(tar -f $distro_tar -C $distro -c .)
+	} else {
+		echo("+ Distro ${distro} tar already exists, not creating")
+	}
+
+	echo("+ Importing distro ${distro} into docker")
+	$(docker import - $image_name <"$distro_tar")
+
+}
+
+F main() {
+	echo("+ remote.ngs is running")
+	for target in targets {
+		echo("+ Target: $target")
+		docker_image(target)
+	}
+}

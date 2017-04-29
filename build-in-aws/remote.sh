@@ -36,17 +36,23 @@ pkg() {
 	fi
 }
 
-for p in git moreutils docker.io bash-completion rsync uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre3-dev make pandoc;do
+for p in git moreutils docker.io bash-completion rsync debootstrap curl uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre3-dev make pandoc;do
 	pkg "$p"
 done
 
-if [[ -d ngs ]];then
-	echo "+ NGS - pulling most recent version"
-	(cd ngs && git pull)
-else
-	echo "+ NGS - cloning repo"
-	git clone https://github.com/ilyash/ngs.git
-fi
+repo() {
+	DIR="$1"
+	if [[ -d "$DIR" ]];then
+		echo "+ NGS - pulling most recent version into directory $DIR"
+		(cd "$DIR" && git pull)
+	else
+		echo "+ NGS - cloning repo into directory $DIR"
+		git clone https://github.com/ilyash/ngs.git "$DIR"
+	fi
+}
+
+repo ngs
+repo ngs-clean
 
 echo "+ NGS - Building"
 (cd ngs && chronic make)
