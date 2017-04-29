@@ -2,6 +2,28 @@
 
 set -eu
 
+pkg() {
+	local PKG="$1"
+	# echo "+ Package: $PKG"
+	if dpkg -s "$PKG" >/dev/null;then
+		echo "+ Package is already installed: $PKG"
+	else
+		echo "+ Installing package: $PKG"
+		apt-get install -y "$PKG"
+	fi
+}
+
+repo() {
+	DIR="$1"
+	if [[ -d "$DIR" ]];then
+		echo "+ NGS - pulling most recent version into directory $DIR"
+		(cd "$DIR" && git pull)
+	else
+		echo "+ NGS - cloning repo into directory $DIR"
+		git clone https://github.com/ilyash/ngs.git "$DIR"
+	fi
+}
+
 if [[ $EUID -ne 0 ]]; then
 	echo "+ Sudoing"
 	exec sudo $0 "$@"
@@ -25,31 +47,9 @@ else
 	echo "+ Skipping APT cache update"
 fi
 
-pkg() {
-	local PKG="$1"
-	# echo "+ Package: $PKG"
-	if dpkg -s "$PKG" >/dev/null;then
-		echo "+ Package is already installed: $PKG"
-	else
-		echo "+ Installing package: $PKG"
-		apt-get install -y "$PKG"
-	fi
-}
-
 for p in git moreutils docker.io bash-completion rsync debootstrap curl uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre3-dev make pandoc;do
 	pkg "$p"
 done
-
-repo() {
-	DIR="$1"
-	if [[ -d "$DIR" ]];then
-		echo "+ NGS - pulling most recent version into directory $DIR"
-		(cd "$DIR" && git pull)
-	else
-		echo "+ NGS - cloning repo into directory $DIR"
-		git clone https://github.com/ilyash/ngs.git "$DIR"
-	fi
-}
 
 repo ngs
 repo ngs-clean
