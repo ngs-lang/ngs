@@ -40,6 +40,8 @@
 		$(mkdir -p $d)
 		File(d / 'build-ip').lines([ip])
 	}
+
+	echo("+ Connecting to $ip")
 }
 
 ssh "admin@$ip" "cat >remote.sh && chmod +x remote.sh && ./remote.sh" <remote.sh

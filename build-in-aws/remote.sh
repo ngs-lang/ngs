@@ -36,7 +36,7 @@ pkg() {
 	fi
 }
 
-for p in git moreutils uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre3-dev make pandoc;do
+for p in git moreutils docker.io bash-completion rsync uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre3-dev make pandoc;do
 	pkg "$p"
 done
 
@@ -53,3 +53,5 @@ echo "+ NGS - Building"
 echo "+ NGS - Installing"
 (cd ngs && chronic make install)
 ngs -e 'echo("+ NGS - Built OK")'
+echo "+ Running ngs/build-in-aws/remote.ngs"
+ngs/build-in-aws/remote.ngs
