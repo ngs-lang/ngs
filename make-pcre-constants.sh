@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -eu
+set -o pipefail
 
 H="$1"
 
