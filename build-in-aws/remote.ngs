@@ -12,7 +12,7 @@ F debootstrap(distro:Str) {
 	packages = read("ngs/debian/control").lines()["Build-Depends:"../:/].map({A.replace(/[ ,]/, {""})}).join(',')
 	echo("+ Deboostrapping $distro with packages: $packages")
 	try {
-		$(debootstrap "--include=$packages" $distro $distro)
+		$(debootstrap "--include=$packages,devscripts" $distro $distro)
 	} catch(e:Exception) {
 		echo("ERROR: $e")
 		echo("+ Cleaning up $distro")
@@ -47,10 +47,23 @@ F docker_image(image_name:Str) {
 
 }
 
+F build(image_name:Str) {
+	echo("+ Building: $image_name")
+	d = "FROM $image_name
+ADD ngs-clean /src
+WORKDIR /src
+RUN debuild -i -us -uc -b
+CMD [\"/bin/bash\"]
+"
+	d.write("Dockerfile")
+	$(docker build -t "${image_name}-ngs" .)
+}
+
 F main() {
 	echo("+ remote.ngs is running")
 	for target in targets {
 		echo("+ Target: $target")
 		docker_image(target)
+		build(target)
 	}
 }
