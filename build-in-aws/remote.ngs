@@ -1,6 +1,7 @@
 #!/usr/bin/env ngs
 
-targets = ['debian:jessie', 'debian:stretch']
+# TARGETS = ['debian:jessie', 'debian:stretch']
+TARGETS = ['debian:jessie']
 
 DOCKER_API_VER='v1.18'
 
@@ -12,7 +13,7 @@ F debootstrap(distro:Str) {
 	packages = read("ngs/debian/control").lines()["Build-Depends:"../:/].map({A.replace(/[ ,]/, {""})}).join(',')
 	echo("+ Deboostrapping $distro with packages: $packages")
 	try {
-		$(debootstrap "--include=$packages,devscripts" $distro $distro)
+		$(debootstrap "--include=${packages},devscripts,build-essential" $distro $distro)
 	} catch(e:Exception) {
 		echo("ERROR: $e")
 		echo("+ Cleaning up $distro")
@@ -47,6 +48,7 @@ F docker_image(image_name:Str) {
 
 }
 
+# TODO: build only if image does not exist?
 F build(image_name:Str) {
 	echo("+ Building: $image_name")
 	d = "FROM $image_name
@@ -61,7 +63,7 @@ CMD [\"/bin/bash\"]
 
 F main() {
 	echo("+ remote.ngs is running")
-	for target in targets {
+	for target in TARGETS {
 		echo("+ Target: $target")
 		docker_image(target)
 		build(target)

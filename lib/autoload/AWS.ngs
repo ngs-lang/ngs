@@ -88,7 +88,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			return
 		}
 
-		r.log('update tags', "Current tags: $current_tags. Target tags: $target_tags")
+		debug('AWS', "Current tags: $current_tags. Target tags: $target_tags")
 		diff = Diff(current_tags, target_tags)
 
 		# Tags might be only in Anchor
@@ -621,7 +621,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		args = Argv({
 			'--image-id':            rd._image_id()
 			'--key-name':            rd.opt_prop('KeyName', props)
-			'--security-group-ids':  _sgs(rd, props)
+			'--security-group-ids':  _sgs(rd, props).map(F(sgs) Diff([], sgs).add)
 			'--subnet-id':           rd.opt_prop('SubnetId', props).map(only(ResDef, ids))
 			'--instance-type':       rd.opt_prop('InstanceType', props)
 			['--associate-public-ip-address', '--no-associate-public-ip-address']: rd.opt_prop('PublicIpAddress', props)
@@ -647,7 +647,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			if diff {
 				diff.add    % { debug('AWS', "${r} - Adding SG $A") }
 				diff.remove % { debug('AWS', "${r} - Removing SG $A") }
-				r.run('Set security groups', %(aws ec2 modify-instance-attribute --instance-id ${r.id()} --groups $*target_sgs))
+				sgs_to_set = current_sgs - diff.remove + diff.add
+				r.run('Set security groups', %(aws ec2 modify-instance-attribute --instance-id ${r.id()} --groups $*sgs_to_set))
 			}
 		}
 
@@ -689,12 +690,12 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# TODO: Handle SGS in Anchor?
 	F _sgs(rd:Instance, props:Hash) {
 		rd.opt_prop('SecurityGroups', props).map(F(sgs) {
-			debug("AWS::Instance", "_sgs(AWS::Instance, Hash): sgs $sgs")
-			if sgs is ResDef return ids(sgs)
-			debug("AWS::Instance", "_sgs(AWS::Instance, Hash): sgs was not ResDef")
-			ret = sgs.map(F(sg) if sg is ResDef then sg.expect().ids() else [sg]).flatten()
-			debug("AWS::Instance", "_sgs(AWS::Instance, Hash) -> $ret")
-			ret
+			normalize_presence_list(if sgs is Arr then sgs else [sgs]).map(F(sg) {
+				# TODO: Converting Presence(Arr) to [Presence] should be in stdlib
+				arr = if sg.val is ResDef then sg.val.expect().ids() else [sg]
+				t = sg.typeof()
+				arr.map(t)
+			}).flatten()
 		})
 	}
 
