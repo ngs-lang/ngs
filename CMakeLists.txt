@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 3.0)
 include(FindPkgConfig)
 project(NGS)
-IF(APPLE)
-set(FMEMOPEN_SOURCE fmemopen.c)
-ENDIF(APPLE)
+
+include(CheckFunctionExists)
+check_function_exists(fmemopen FMEMOPEN)
+IF(NOT FMEMOPEN)
+	set(FMEMOPEN_SOURCE fmemopen.c)
+ENDIF()
+
 pkg_check_modules(LIBFFI libffi REQUIRED)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /opt/local/include/uthash)
 add_executable(ngs ngs.c syntax.include syntax.auto.h pcre_constants.include obj.c vm.c compile.c debug.c ast.c ${FMEMOPEN_SOURCE})
