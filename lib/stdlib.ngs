@@ -772,6 +772,24 @@ TEST (1...3).map(X*2) == [2, 4, 6]
 
 TEST (10..20).first(F(x) x % 3 == 0) == 12
 
+doc Check whether the number is in range
+F in(n:Int, r:NumRange) {
+	econd {
+		r.include_start and n == r.start true
+		r.start is not Null and n <= r.start false
+		r.include_end and n == r.end true
+		r.end is not Null and r.end <= n false
+		true true
+	}
+}
+
+# TODO: better coverage
+TEST not(1 in NumRange(1,2,false,true))
+TEST 2 in NumRange(1,2,false,true)
+TEST not(10 in NumRange(1,2,false,true))
+TEST 20 in NumRange(1,30,false,true)
+TEST 30 in NumRange(1,30,false,true)
+
 doc Convert range to human readable representation
 F Str(r:Range) "<${r.typeof().name} ${r.start}..${r.end} include_start=${r.include_start} include_end=${r.include_end} step=${r.step}>"
 
@@ -3298,29 +3316,26 @@ F Arg(x:Str) x
 F Argv(h:Hash) {
 	collector
 		h.rejectv(NoData).mapv(only(Box, get)).each(F(k, v) {
-			if k is Arr {
-
+			if k is Arr and v is Bool {
+				# ['--might-be-flag']: my_bool_expr
 				# ['--flag-if-yes', '--flag-if-no']: my_bool_expr
-				k.len() != 2 throws InvalidArgument("Argv key which is array must be of length 2").set('value', k)
-				v is not Bool throws InvalidArgument("Argv value for key which is array must be Bool").set('value', v)
-				collect(k[if v then 0 else 1])
+				k.len() not in 1...2 throws InvalidArgument("Argv key which is array must be of length 1 or 2").set('value', k)
+				# v == true -> use index 0, v == false -> use index 1
+				k.Box(Int(not(v))).map(collect)
 				return
 			}
 
-			# If you have nothing to give to the switch, the switch should not be present
-			if v is Eachable1 and v is not Str {
-				v = Arr(v)
-				not(v) returns
-			}
+			# If you have nothing to give to the switch, skip the switch
+			v == [] returns
 
 			collect(k)
-			if v is Arr {
-				v.each(collect)
-			} else {
-				v.collect()
-			}
+			# Convert non-arrays to FullBox so each() could be used on scalars
+			only(X is not Arr, FullBox)(v).each(collect)
 		})
 }
+
+TEST Argv({"--a": 1, "-b": null, ["-y1", "-n1"]: true, ["-y2", "-n2"]: false, ["-y3"]: true, ["-y4"]: false}) == ["--a", 1, "-y1", "-n2", "-y3"]
+TEST Argv({"-a1": [], "-a2": [1,2,3]}) == ["-a2", 1, 2, 3]
 
 # --- $() ---
 

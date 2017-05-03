@@ -29,7 +29,7 @@ F init(t:Table, name=null) {
 	t.rows = []
 
 	conf = config(if t.name "table_${t.name}" "table") or []
-	debug("Table config is $conf")
+	debug("Table", "Table config is $conf")
 	conf % register_column(t, X)
 }
 
@@ -42,14 +42,9 @@ F init(t:Table, name, rows_hashes:Arr) {
 	super(t, name)
 
 	if not(t.cols_enum) {
-		rows_hashes.each(F(row_hash) {
-			# row_hash.keys().each(register_column)
-			row_hash.keys() % register_column(t, X)
-		})
+		rows_hashes.map(keys).flatten().each(register_column(t, X))
 	}
-	debug("Table created with fields: ${t.cols_enum}")
-	# hashes to arrays
-	# rows_hashes.each(partial(push, t))
+	debug("Table", "Table created with fields: ${t.cols_enum}")
 	rows_hashes % push(t, X)
 }
 
@@ -73,7 +68,7 @@ F push(t:Table, row_hash:Hash) {
 F width(t:Table) t.cols_enum.len()
 F column(t:Table, k:Str) t.column(t.cols_enum[k])
 F column(t:Table, n:Int) t.rows.map(X[n])
-F columns(t:Table) t.width() / t.column(X)
+F columns(t:Table) t.width().map(t.column(X))
 
 F each(t:Table, cb:Fun) t.rows.each(cb)
 
@@ -91,6 +86,8 @@ F calculate_num_cols_to_show(t:Table, max_colums_widths:Arr, available_cols:Int)
 	}
 	i
 }
+
+# TODO: echo(t:Table) for non-tty. Alternatives JSON or greppable.
 
 doc Displays a table. Implemented only for tty output (or output_format=text configuration)
 F echo(t:Table) {

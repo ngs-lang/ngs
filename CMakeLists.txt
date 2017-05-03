@@ -1,13 +1,13 @@
-cmake_minimum_required(VERSION 2.0)
+cmake_minimum_required(VERSION 3.0)
 include(FindPkgConfig)
 project(NGS)
-pkg_check_modules(LIBFFI libffi REQUIRED)
 IF(APPLE)
 set(FMEMOPEN_SOURCE fmemopen.c)
 ENDIF(APPLE)
+pkg_check_modules(LIBFFI libffi REQUIRED)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /opt/local/include/uthash)
 add_executable(ngs ngs.c syntax.include syntax.auto.h pcre_constants.include obj.c vm.c compile.c debug.c ast.c ${FMEMOPEN_SOURCE})
-pkg_get_variable(PCRE_H_DIR libpcre includedir)
+find_file(PCRE_H pcre.h)
 add_custom_command(
 	OUTPUT
 		${CMAKE_CURRENT_BINARY_DIR}/syntax.include
@@ -32,7 +32,7 @@ add_custom_command(
 )
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
-	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/make-pcre-constants.sh ${PCRE_H_DIR}/pcre.h >${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/make-pcre-constants.sh ${PCRE_H} >${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
 )
 add_custom_target(
 	doc
@@ -41,7 +41,6 @@ add_custom_target(
  	${CMAKE_CURRENT_SOURCE_DIR}/doc
 	)
 target_link_libraries(ngs m pthread gc ffi dl json-c pcre)
-# install(TARGETS ngs DESTINATION bin)
 install(FILES "${PROJECT_BINARY_DIR}/ngs" DESTINATION bin)
 
 enable_testing()

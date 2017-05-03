@@ -2,6 +2,7 @@
 \#*
 .#*
 *~
+build
 node_modules
 small-poc/ssl
 TAGS
