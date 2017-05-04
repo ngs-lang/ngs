@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# TODO: consider pbuilder
+
 set -eu
 
 pkg() {

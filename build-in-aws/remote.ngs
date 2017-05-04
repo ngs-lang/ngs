@@ -1,5 +1,7 @@
 #!/usr/bin/env ngs
 
+# TODO: complete rething and probably rewrite. Feels wrong.
+
 # TARGETS = ['debian:jessie', 'debian:stretch']
 TARGETS = ['debian:jessie']
 
@@ -10,14 +12,17 @@ F debootstrap(distro:Str) {
 		echo("+ ${distro} already exists, not running debootstrap")
 		return
 	}
-	packages = read("ngs/debian/control").lines()["Build-Depends:"../:/].map({A.replace(/[ ,]/, {""})}).join(',')
+	packages = read("ngs/debian/control").lines()["Build-Depends:"../:/].map({A.replace(/[ ,]/, {""})}).join(",")
 	echo("+ Deboostrapping $distro with packages: $packages")
 	try {
-		$(debootstrap "--include=${packages},devscripts,build-essential" $distro $distro)
+		$(debootstrap "--include=${packages}" $distro $distro)
+		$(chroot $distro apt-get -y install devscripts build-essential)
+		$(chroot $distro apt-get clean)
 	} catch(e:Exception) {
 		echo("ERROR: $e")
 		echo("+ Cleaning up $distro")
 		try $(rm -r $distro)
+		throw e
 	}
 }
 
