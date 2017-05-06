@@ -4141,7 +4141,12 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 
 	if 'cause' in h {
 		err("Cause:")
-		print_exception(e.cause, level+1, e)
+		if e.cause is Exception {
+			print_exception(e.cause, level+1, e)
+		} else {
+			err("  (WARNING: cause is not Exception)")
+			("  " + inspect(e.cause)).each(err)
+		}
 	}
 
 }
