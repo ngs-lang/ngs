@@ -1874,6 +1874,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 		vm->type_by_t_obj_type_id[i] = NULL;
 	}
 
+	set_global(vm, "VERSION", make_string(NGS_VERSION));
+
 	MK_BUILTIN_TYPE_DOC(Null, T_NULL, "Null type. Has only one instance, null");
 	vm->type_by_value_tag[V_NULL >> TAG_BITS] = &vm->Null;
 

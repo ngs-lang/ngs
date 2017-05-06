@@ -17,12 +17,19 @@ LDLIBS := -lm -lpthread -lgc -lffi -ldl -ljson-c -lpcre
 LDFLAGS := -rdynamic
 # -pg - for gprof profiler
 LDFLAGS_PROFILER := -pg -g
-COMMON_DEPS := *.h Makefile syntax.include syntax.auto.h pcre_constants.include
+COMMON_DEPS := *.h Makefile syntax.include syntax.auto.h pcre_constants.include version.h
 SRC := debug.o ast.o obj.o compile.o decompile.o vm.o ngs.o
 PCRE_H := /usr/include/pcre.h
 # SRC := *.c
 
 all: ngs
+
+.PHONY: VERSION
+VERSION:
+	./make-version.sh .
+
+version.h: VERSION version.h.in
+	v=$$(cat VERSION) && sed "s/@/$$v/g" version.h.in >$@
 
 # Built for peg/leg v 0.1.15
 syntax.include: syntax.leg patch-leg-input.sed patch-leg-output.sed patch-leg-output.awk
@@ -81,6 +88,7 @@ clean:
 	-rm syntax.include pcre_constants.include
 	-rm syntax.auto.h
 	-rm ngs ngs-prof ngs-debug
+	-rm VERSION version.h
 	-rm *.o
 
 tags: *.c *.h

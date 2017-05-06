@@ -124,6 +124,10 @@ F bootstrap() {
 	sw = null
 	if ARGV {
 		a = ARGV[0]
+		if (a == '--version') {
+			echo(VERSION)
+			return 0
+		}
 		if (a == '-e' or a == '-E' or a == '-p' or a == '-pj' or a == '-pi' or a == '-pl' or a == '-pjl' or a == '-pc') {
 			sw = ARGV.shift()
 			# Newline at the end is for avoiding # commenting out the closing }
