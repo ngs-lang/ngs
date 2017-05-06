@@ -6,7 +6,7 @@ F=VERSION
 SRC_DIR="$1"
 
 commit_timestamp=$(git log -1 --format='%ct')
-v=$(date +'%Y%m%d-%H%M%S' -d "@$commit_timestamp")
+v=$(date -u +'%Y%m%d-%H%M%S' -d "@$commit_timestamp")
 
 dirty=""
 
