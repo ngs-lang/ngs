@@ -9,8 +9,18 @@ DOCKER_API_VER='v1.18'
 
 F debootstrap(distro:Str) {
 	if Path(distro) {
-		echo("+ ${distro} already exists, not running debootstrap")
-		return
+		echo("+ Chroot ${distro} already exists. Checking whether up-to-date.")
+		files = ``find "$distro/var/lib/apt" -mtime -1``
+		if files {
+			echo("+ Chroot ${distro} is up to date. Skipping update.")
+			return false
+		} else {
+			echo("+ Chroot ${distro} is not up to date. Updating")
+			$(chroot $distro apt-get update)
+			$(chroot $distro apt-get -y dist-upgrade)
+			$(chroot $distro apt-get clean)
+			return true
+		}
 	}
 	packages = read("ngs/debian/control").lines()["Build-Depends:"../:/].map({A.replace(/[ ,]/, {""})}).join(",")
 	echo("+ Deboostrapping $distro with packages: $packages")
@@ -24,31 +34,39 @@ F debootstrap(distro:Str) {
 		try $(rm -r $distro)
 		throw e
 	}
+	return true
 }
 
 F docker_image(image_name:Str) {
 	images = ``curl -s --unix-socket /var/run/docker.sock "http:/${DOCKER_API_VER}/images/json"``
 
-	# Maybe compare timestamp with the debootstrapped directory?
-	if image_name in images.RepoTags.flatten() {
-		echo("+ Docker image $image_name already exists, skipping image creation")
-		return
-	}
-
 	t = image_name.split(':')
 	distro = t[1]
-	debootstrap(distro)
+	debootstrap_updated = debootstrap(distro)
+	debootstrap_updated = true
+
+	# Maybe compare timestamp with the debootstrapped directory?
+	# XXX: Not a very good up-to-date check logic.
+	if image_name in images.RepoTags.flatten() {
+		if debootstrap_updated {
+			echo("+ Docker image $image_name already exists but is not up to date. Removing it.")
+			$(docker rmi $image_name)
+		} else {
+			echo("+ Docker image $image_name already exists and it's up to date.")
+			return
+		}
+	}
 
 	distro_tar = "${distro}.tar"
 
-	if not(File(distro_tar)) {
-		echo("+ Preparing distro ${distro} tar")
+	if not(File(distro_tar)) or debootstrap_updated {
+		echo("+ Preparing tar of chroot ${distro} for importing into docker.")
 		$(tar -f $distro_tar -C $distro -c .)
 	} else {
-		echo("+ Distro ${distro} tar already exists, not creating")
+		echo("+ Distro ${distro} tar already exists, not creating.")
 	}
 
-	echo("+ Importing distro ${distro} into docker")
+	echo("+ Importing distro ${distro} tar at ${distro_tar} into docker.")
 	$(docker import - $image_name <"$distro_tar")
 
 }
@@ -69,8 +87,8 @@ CMD [\"/bin/bash\"]
 F main() {
 	echo("+ remote.ngs is running")
 	for target in TARGETS {
-		echo("+ Target: $target")
+		echo("--- Target: $target ---")
 		docker_image(target)
-		build(target)
+		# build(target)
 	}
 }
