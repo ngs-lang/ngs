@@ -1892,6 +1892,52 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	set_global(vm, "VERSION", make_string(NGS_VERSION));
 
+	// http://stackoverflow.com/questions/5919996/how-to-detect-reliably-mac-os-x-ios-linux-windows-in-c-preprocessor
+	// nodejs:
+	//   https://nodejs.org/api/process.html#process_process_platform
+	//   deps/v8/include/v8config.h
+	VALUE OS = make_hash(16);
+	set_hash_key(OS, make_string("bsd"), MAKE_FALSE);
+	set_hash_key(OS, make_string("darwin"), MAKE_FALSE);
+	set_hash_key(OS, make_string("dragonflybsd"), MAKE_FALSE);
+	set_hash_key(OS, make_string("freebsd"), MAKE_FALSE);
+	set_hash_key(OS, make_string("linux"), MAKE_FALSE);
+	set_hash_key(OS, make_string("netbsd"), MAKE_FALSE);
+	set_hash_key(OS, make_string("openbsd"), MAKE_FALSE);
+	set_hash_key(OS, make_string("posix"), MAKE_FALSE);
+	set_hash_key(OS, make_string("qnx"), MAKE_FALSE);
+	set_hash_key(OS, make_string("win"), MAKE_FALSE);
+	#if defined(__APPLE__)
+	set_hash_key(OS, make_string("darwin"), MAKE_TRUE);
+	set_hash_key(OS, make_string("posix"), MAKE_TRUE);
+	#elif defined(__linux__)
+	set_hash_key(OS, make_string("linux"), MAKE_TRUE);
+	set_hash_key(OS, make_string("posix"), MAKE_TRUE);
+	#elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+	set_hash_key(OS, make_string("bsd"), MAKE_TRUE);
+	set_hash_key(OS, make_string("freebsd"), MAKE_TRUE);
+	set_hash_key(OS, make_string("posix"), MAKE_TRUE);
+	#elif defined(__DragonFly__)
+	set_hash_key(OS, make_string("bsd"), MAKE_TRUE);
+	set_hash_key(OS, make_string("dragonflybsd"), MAKE_TRUE);
+	set_hash_key(OS, make_string("posix"), MAKE_TRUE);
+	#elif defined(__NetBSD__)
+	set_hash_key(OS, make_string("bsd"), MAKE_TRUE);
+	set_hash_key(OS, make_string("netbsd"), MAKE_TRUE);
+	set_hash_key(OS, make_string("posix"), MAKE_TRUE);
+	#elif defined(__OpenBSD__)
+	set_hash_key(OS, make_string("bsd"), MAKE_TRUE);
+	set_hash_key(OS, make_string("openbsd"), MAKE_TRUE);
+	set_hash_key(OS, make_string("posix"), MAKE_TRUE);
+	#elif defined(__QNXNTO__)
+	set_hash_key(OS, make_string("posix"), MAKE_TRUE);
+	set_hash_key(OS, make_string("qnx"), MAKE_TRUE);
+	#elif defined(_WIN32)
+	set_hash_key(OS, make_string("win"), MAKE_TRUE);
+	#endif
+
+	set_global(vm, "OS", OS);
+
 	MK_BUILTIN_TYPE_DOC(Null, T_NULL, "Null type. Has only one instance, null");
 	vm->type_by_value_tag[V_NULL >> TAG_BITS] = &vm->Null;
 
