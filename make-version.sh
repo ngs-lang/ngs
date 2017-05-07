@@ -10,7 +10,7 @@ v=$(date -u +'%Y%m%d-%H%M%S' -d "@$commit_timestamp")
 
 dirty=""
 
-if git status --porcelain 2>/dev/null | awk '{print $1}' | grep -q '^M';then
+if git status --porcelain 2>/dev/null | grep -v debian/ | awk '{print $1}' | grep -q '^M';then
 	dirty="-dirty"
 fi
 
