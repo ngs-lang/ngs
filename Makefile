@@ -24,9 +24,7 @@ PCRE_H := /usr/include/pcre.h
 
 all: ngs
 
-.PHONY: VERSION
-VERSION:
-	./make-version.sh .
+$(shell ./make-version.sh .)
 
 version.h: VERSION version.h.in
 	v=$$(cat VERSION) && sed "s/@/$$v/g" version.h.in >$@

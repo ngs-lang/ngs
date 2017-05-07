@@ -1730,6 +1730,9 @@ MAKE_STAT_METHOD(fstat, GET_INT)
 #undef MAKE_STAT_METHOD
 #undef ELT
 
+METHOD_RESULT native_gc_enable  METHOD_PARAMS { (void) argv; GC_enable();  METHOD_RETURN(MAKE_NULL); }
+METHOD_RESULT native_gc_disable METHOD_PARAMS { (void) argv; GC_disable(); METHOD_RETURN(MAKE_NULL); }
+
 
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
@@ -1753,49 +1756,62 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	return var->index;
 }
 
-void register_global_func(VM *vm, int pass_extra_params, char *name, void *func_ptr, int argc, ...) {
-	size_t index;
+VALUE _make_func(VM *vm, int pass_extra_params, char *name, void *func_ptr, int argc, va_list varargs) {
 	int i;
-	va_list varargs;
-	NATIVE_METHOD_OBJECT *o;
+	NATIVE_METHOD_OBJECT *func;
 	VALUE *argv = NULL;
-	o = NGS_MALLOC(sizeof(*o));
-	o->base.type.num = T_NATIVE_METHOD;
-	o->base.val.ptr = func_ptr;
-	o->params.n_params_required = argc;
-	o->params.n_params_optional = 0; /* currently none of builtins uses optional parameters */
-	o->pass_extra_params = pass_extra_params;
+	func = NGS_MALLOC(sizeof(*func));
+	func->base.type.num = T_NATIVE_METHOD;
+	func->base.val.ptr = func_ptr;
+	func->params.n_params_required = argc;
+	func->params.n_params_optional = 0; /* currently none of builtins uses optional parameters */
+	func->pass_extra_params = pass_extra_params;
 	vm->last_doc_hash = make_hash(4);
-	o->base.attrs = make_hash(8);
-		set_hash_key(o->base.attrs, make_string("name"), make_string(name));
-		set_hash_key(o->base.attrs, make_string("doc"), vm->last_doc_hash);
+	func->base.attrs = make_hash(8);
+		set_hash_key(func->base.attrs, make_string("name"), make_string(name));
+		set_hash_key(func->base.attrs, make_string("doc"), vm->last_doc_hash);
 	if(argc) {
 		argv = NGS_MALLOC(argc * sizeof(VALUE) * 2);
 		assert(argv);
-		va_start(varargs, argc);
 		for(i=0; i<argc; i++) {
 			// name:
 			argv[i*2+0] = make_string(va_arg(varargs, char *));
 			// type:
 			argv[i*2+1] = (VALUE){.ptr = va_arg(varargs, NGS_TYPE *)};
 		}
-		va_end(varargs);
 	}
-	o->params.params = argv;
+	func->params.params = argv;
+	return MAKE_OBJ(func);
+}
+
+void register_global_func(VM *vm, int pass_extra_params, char *name, void *func_ptr, int argc, ...) {
+	size_t index;
+	va_list args;
+	va_start(args, argc);
+	VALUE func = _make_func(vm, pass_extra_params, name, func_ptr, argc, args);
+	va_end(args);
 	index = get_global_index(vm, name, strlen(name));
 	if(IS_ARRAY(GLOBALS[index])) {
-		array_push(GLOBALS[index], MAKE_OBJ(o));
+		array_push(GLOBALS[index], func);
 		return;
 	}
 	if(IS_NGS_TYPE(GLOBALS[index])) {
-		array_push(NGS_TYPE_CONSTRUCTORS(GLOBALS[index]), MAKE_OBJ(o));
+		array_push(NGS_TYPE_CONSTRUCTORS(GLOBALS[index]), func);
 		return;
 	}
 	if(IS_UNDEF(GLOBALS[index])) {
-		GLOBALS[index] = make_array_with_values(1, &MAKE_OBJ(o));
+		GLOBALS[index] = make_array_with_values(1, &func);
 		return;
 	}
 	assert(0 == "register_global_func fail");
+}
+
+VALUE make_func(VM *vm, int pass_extra_params, char *name, void *func_ptr, int argc, ...) {
+	va_list args;
+	va_start(args, argc);
+	VALUE func = _make_func(vm, pass_extra_params, name, func_ptr, argc, args);
+	va_end(args);
+	return func;
 }
 
 // TODO: consider array values (for separate lines or list items)
@@ -3049,6 +3065,12 @@ void vm_init(VM *vm, int argc, char **argv) {
 	set_global(vm, "INT_MAX", NGS_INT_MAX_VALUE);
 	set_global(vm, "RAND_MAX", MAKE_INT(NGS_RAND_MAX));
 
+
+	// TODO: documentation
+	VALUE gc = make_hash(4);
+	set_hash_key(gc, make_string("enable"), make_func(vm, 0, "enable", &native_gc_enable, 0));
+	set_hash_key(gc, make_string("disable"), make_func(vm, 0, "disable", &native_gc_disable, 0));
+	set_global(vm, "GC", gc);
 }
 
 void ctx_init(CTX *ctx) {
