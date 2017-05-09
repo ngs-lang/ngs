@@ -2083,16 +2083,6 @@ F get(eb:EmptyBox, dflt) dflt
 
 TEST EmptyBox().get(10) == 10
 
-# --- Maybe remove - start ---
-doc Convert FullBox to array
-doc %RET - Arr of exactly one element, the value of FullBox
-F Arr(fb:FullBox) [fb.val]
-
-doc Convert EmptyBox to array
-doc %RET - Empty array
-F Arr(eb:EmptyBox) []
-# --- Maybe remove - end ---
-
 doc Convert anything to Box (always FullBox)
 doc x - value to enclose in a box
 doc %RET - FullBox with given value
@@ -2101,19 +2091,6 @@ F Box(x) FullBox(x)
 doc Convert null to Box (always EmptyBox)
 doc %RET - EmptyBox
 F Box(n:Null) EmptyBox()
-
-# --- Maybe remove - start ---
-doc Convert array to a Box. Throws InvalidArgument if length of the array is not 0 or 1.
-doc %RET - Box. FullBox if the array has one element, EmptyBox otherwise.
-F Box(a:Arr) {
-	l = a.len()
-	econd {
-		l == 0 EmptyBox()
-		l == 1 FullBox(a[0])
-		true   throw InvalidArgument("Box(a:Arr) only handles arrays of length of 0 or 1")
-	}
-}
-# --- Maybe remove - end ---
 
 doc Convert array value indexed by the given index
 doc idx - key to look in hash
@@ -2950,8 +2927,7 @@ TEST dir("/", subtype=true).all({ (A is Path) and (A.typeof().name != 'Path') })
 
 doc Work in progress, do not use!
 F glob(pattern:Str, start_dir='.') {
-
-
+	throw NotImplemented("glob() is not implemented yet")
 }
 
 # === Commands and processes (WIP) ===============

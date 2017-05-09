@@ -35,6 +35,8 @@ Note that this started as internal document so things here are unformed, not fin
 	* Predicates in parameters list?
 	* Immediate values in parameters list
 	* new syntax: .attr OP val
+	* consider special call syntax: myfunc?(any_arg, which_is_null, causes_call_to_be_skipped)
+		or myfunc(not_any, but_only_marked, skips argument)
 
 [roadmap]
 
