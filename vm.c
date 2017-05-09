@@ -1038,7 +1038,7 @@ METHOD_RESULT native_c_dup2_int_int METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(dup2(GET_INT(argv[0]), GET_INT(argv[1]))));
 }
 
-METHOD_RESULT native_get_c_errno METHOD_PARAMS {
+METHOD_RESULT native_c_errno METHOD_PARAMS {
 	(void) argv;
 	METHOD_RETURN(MAKE_INT(errno));
 }
@@ -2634,7 +2634,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "C_WEXITSTATUS", &native_C_WEXITSTATUS,1, "status",   vm->Int);
 	register_global_func(vm, 0, "C_WTERMSIG", &native_C_WTERMSIG,      1, "status",   vm->Int);
 
-	register_global_func(vm, 0, "get_c_errno", &native_get_c_errno,    0);
+	register_global_func(vm, 0, "c_errno",     &native_c_errno,    0);
 	register_global_func(vm, 0, "c_strerror",  &native_c_strerror,     1, "errnum",   vm->Int);
 
 	register_global_func(vm, 0, "c_strcasecmp", &native_c_strcasecmp,  2, "a",   vm->Str,  "b",   vm->Str);

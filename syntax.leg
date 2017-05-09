@@ -1632,7 +1632,14 @@ subshell =
 	| "``" cmd:command-words "``" { cmd->first_child->name = ngs_strdup("````"); $$ = cmd; }
 	| "`" cmd:command-words "`" { cmd->first_child->name = ngs_strdup("``");  $$ = cmd; }
 
-command-words = acc:command-node (
+command-words = acc:command-node
+	(
+		inline_space?
+		o:command-option {
+			append_ast_node_child(acc->first_child->next_sibling->next_sibling->next_sibling, o);
+		}
+	)*
+	(
 		inline_space?
 		(
 			command-redirect {
@@ -1699,6 +1706,25 @@ hash-command-word =
 			splat->first_child = c;
 		$$ = splat;
 	}
+
+command-option =
+	i:identifier ":" (
+		e:expression {
+			MAKE_NODE(ret, EXPRESSIONS_NODE);
+				MAKE_STRING_NODE(option_k, i->name);
+				append_ast_node_child(ret, option_k);
+				append_ast_node_child(ret, e);
+			$$ = ret;
+		}
+		| {
+			MAKE_NODE(ret, EXPRESSIONS_NODE);
+				MAKE_STRING_NODE(option_k, i->name);
+				append_ast_node_child(ret, option_k);
+				MAKE_NODE(option_v, TRUE_NODE);
+				append_ast_node_child(ret, option_v);
+			$$ = ret;
+		}
+	)
 
 command-redirect =
 	rfd:redir-fd rm:redir-marker inline_space? dst:command-word {

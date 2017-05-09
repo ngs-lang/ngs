@@ -691,7 +691,7 @@ F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
 
 	doc CException constructor. In addition to storing message attribute, adds errno and errno_name attributes.
 	F init(e:CException, message:Str) {
-		errno = get_c_errno()
+		errno = c_errno()
 		super(e, message)
 		e.errno = errno
 		e.errno_name = c_strerror(e.errno)
@@ -2961,7 +2961,7 @@ F dup2(oldfd:Int, newfd:Int) {
 	while true {
 		status = c_dup2(oldfd, newfd)
 		status != -1 returns newfd
-		get_c_errno() != C_EINTR throws "dup2() failed"
+		c_errno() != C_EINTR throws "dup2() failed"
 	}
 }
 
@@ -2985,7 +2985,7 @@ F read(fd:Int) {
 		if result[0] > 0 {
 			ret.push(result[1])
 		} else {
-			e = get_c_errno()
+			e = c_errno()
 			if e != C_EINTR {
 				debug("file", "[read] read from fd $fd failed, errno $e")
 				# TODO: Better exception
@@ -3013,7 +3013,7 @@ doc Throws TtyCheckFail.
 doc %RET - Bool
 F isatty(fd:Int) {
 	ret = c_isatty(fd)
-	errno = get_c_errno()
+	errno = c_errno()
 
 	ret == 1 returns true
 	ret != 0 throws TtyCheckFail("c_isatty($fd) - unknown response code $ret").set('fd', fd).set('isatty_returned', ret)
@@ -3265,6 +3265,23 @@ F finished_ok(p:Process) {
 	true
 }
 
+F finished_ok(p:Process) {
+	ok = p.command.options.get('ok')
+	guard ok is not Null
+	econd {
+		ok is Bool { ok }
+		ok is Int  { p.exit_code == ok }
+		(ok is Arr) and len(ok) == 1 and ok[0] is NumRange { throw InvalidArgument("'ok' option is [some..range] but should be some..range") }
+		(ok is Arr) or (ok is NumRange) { p.exit_code in ok }
+		true throw InvalidArgument("'ok' option must be one of: Bool, Int, Arr, NumRange")
+	}
+}
+
+TEST try $(ok:2 cat NO_SUCH_FILE 2>/dev/null) catch(pf:ProcessFail) true
+TEST $(ok:1 cat NO_SUCH_FILE 2>/dev/null); true
+TEST $(ok:[1,10] cat NO_SUCH_FILE 2>/dev/null); true
+TEST $(ok:1..2 cat NO_SUCH_FILE 2>/dev/null); true
+
 doc Process constructor
 F init(p:Process, c:Command) {
 	p.command = c
@@ -3437,7 +3454,7 @@ F '$()'(c:Command) {
 				f = File(r.datum).open(flags)
 				ok = c_dup2(f.fd, target_fd)
 				# TODO: better exception
-				ok < 0 throws "Failed to dup2(${f.fd}, ${target_fd}). Errno ${get_c_errno()}"
+				ok < 0 throws "Failed to dup2(${f.fd}, ${target_fd}). Errno ${c_errno()}"
 			}
 		})
 		# Redirections (WIP) - end
@@ -4355,7 +4372,7 @@ F access(f:File, flags:Int=ACCESS::F_OK) {
 	ret = c_access(f.path, flags)
 	ret == 0 returns true
 	assert(ret < 0)
-	e = get_c_errno()
+	e = c_errno()
 	e == C_EACCES returns false
 	throw CException(e, "access() failed")
 }
