@@ -5,8 +5,7 @@ set -eu
 F=VERSION
 SRC_DIR="$1"
 
-commit_timestamp=$(git log -1 --format='%ct')
-v=$(date -u +'%Y%m%d-%H%M%S' -d "@$commit_timestamp")
+v=$(TZ=UTC git log -1 --format='%cd' '--date=format-local:%Y%m%d-%H%M%S')
 
 dirty=""
 
