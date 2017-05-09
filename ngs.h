@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <pthread.h>
 
+#include "version.h"
+
 // GC - start
 // http://www.hboehm.info/gc/scale.html
 #define GC_THREADS

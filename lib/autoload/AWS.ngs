@@ -692,7 +692,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd.opt_prop('SecurityGroups', props).map(F(sgs) {
 			normalize_presence_list(if sgs is Arr then sgs else [sgs]).map(F(sg) {
 				# TODO: Converting Presence(Arr) to [Presence] should be in stdlib
+				# XXX: [sg] is not right, not the same type!
 				arr = if sg.val is ResDef then sg.val.expect().ids() else [sg]
+				# arr = sg.filter(ResDef).map(ids + expect).get([sg])
 				t = sg.typeof()
 				arr.map(t)
 			}).flatten()

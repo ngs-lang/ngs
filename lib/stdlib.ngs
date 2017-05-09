@@ -187,7 +187,7 @@ F only(predicate, mapper:Fun) {
 TEST ["abc", 1, "def", 2].map(only(Int, X*2)) == ["abc", 2, "def", 4]
 
 doc Filter something to an Arr (array) of values using predicate.
-doc something - Instance of any type that has each(something, callback) implemented.
+doc something - Eachable1
 doc predicate - Decision function to be called with each item as first argument.
 doc predicate - When predicate(item) returns true, the item will appear in the resulting array.
 doc %EX - (1...10).filter(F(num) num % 2 == 0)  # Gives [2,4,6,8,10]
@@ -201,6 +201,20 @@ F filter(something:Eachable1, predicate) {
 				collect(elt)
 		}
 }
+
+doc Partition elements in something according to the predicate into two arrays.
+doc First array contains all elements for which predicate(elt) is true and
+doc the second array contains all elements for which predicate(elt) is false.
+doc something - Eachable1
+doc %RET - Array with two arrays in it
+F partition(something:Eachable1, predicate) {
+	p = Pred(predicate)
+	ret = [[], []]
+	something.each(F(elt) ret[1-Int(p(elt))].push(elt))
+	ret
+}
+
+TEST partition([1,10,2,20], X>=10) == [[10, 20], [1, 2]]
 
 doc Find first element in e that satisfies the predicate.
 doc %RET - Either the element or null if element was not found.
@@ -4127,7 +4141,12 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 
 	if 'cause' in h {
 		err("Cause:")
-		print_exception(e.cause, level+1, e)
+		if e.cause is Exception {
+			print_exception(e.cause, level+1, e)
+		} else {
+			err("  (WARNING: cause is not Exception)")
+			("  " + inspect(e.cause)).each(err)
+		}
 	}
 
 }

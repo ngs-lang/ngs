@@ -16,3 +16,6 @@ syntax.include
 syntax.auto.h
 pcre_constants.include
 Makefile
+
+VERSION
+version.h

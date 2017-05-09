@@ -3,3 +3,6 @@ ngs -pl 'ENV.PATH.split(":").filter(File(X)).map(F(p) $(ls $p)).map(lines).flatt
 
 # Download slack attachments mentioned in backup *.json files
 ngs -e '``find . -name "*.json"``.map(fetch).flatten().get("file").get("url_private_download").each(F(url) { echo(url); `curl -s $url > "FILES/${encode_uri_component(url)}"` })'
+
+# quicksort, translation of implementation at https://en.wikipedia.org/wiki/Erlang_(programming_language)
+ngs -pl 'F qsort(a:Arr) { not(a) returns []; pivot=a[0]; rest=a[1..null]; rest.filter(X<pivot).qsort() + [pivot] + rest.filter(X>=pivot).qsort() }; qsort([10,20,5,3])'

@@ -1,71 +1,113 @@
 #!/usr/bin/env ngs
 
+# TODO: complete rething and probably rewrite. Feels wrong.
+
 # TARGETS = ['debian:jessie', 'debian:stretch']
 TARGETS = ['debian:jessie']
 
 DOCKER_API_VER='v1.18'
 
-F debootstrap(distro:Str) {
-	if Path(distro) {
-		echo("+ ${distro} already exists, not running debootstrap")
-		return
+F sanitize_image_name(s:Str) s.replace(':', '_')
+
+F debootstrap(image_name:Str, with_dev_tools:Bool) {
+	t = image_name.split(':')
+	distro = t[1]
+	image_dir = sanitize_image_name(image_name)
+	if Path(image_dir) {
+		echo("+ Chroot ${image_dir} already exists. Checking whether up-to-date.")
+		files = ``find "$image_dir/var/lib/apt" -mtime -1``
+		if files {
+			echo("+ Chroot ${image_dir} is up to date. Skipping update.")
+			return false
+		} else {
+			echo("+ Chroot ${image_dir} is not up to date. Updating")
+			$(chroot $image_dir apt-get update)
+			$(chroot $image_dir apt-get -y dist-upgrade)
+			$(chroot $image_dir apt-get clean)
+			return true
+		}
 	}
-	packages = read("ngs/debian/control").lines()["Build-Depends:"../:/].map({A.replace(/[ ,]/, {""})}).join(',')
-	echo("+ Deboostrapping $distro with packages: $packages")
+	pkg_arg = if with_dev_tools {
+		packages = read("ngs/debian/control").lines()["Build-Depends:"../:/].map({A.replace(/[ ,]/, {""})}).join(",")
+		["--include=${packages}"]
+	} else {
+		[]
+	}
 	try {
-		$(debootstrap "--include=${packages},devscripts,build-essential" $distro $distro)
+		echo("+ Deboostrapping $image_dir with packages: $pkg_arg")
+		$(debootstrap $*pkg_arg $distro $image_dir)
+		if with_dev_tools {
+			echo("+ Installing build tools in $image_dir")
+			$(chroot $image_dir apt-get -y install devscripts build-essential git)
+		}
+		echo("+ Cleaning apt cache in $image_dir")
+		$(chroot $image_dir apt-get clean)
 	} catch(e:Exception) {
 		echo("ERROR: $e")
-		echo("+ Cleaning up $distro")
-		try $(rm -r $distro)
+		echo("+ Cleaning up $image_dir")
+		try $(rm -r $image_dir)
+		throw e
 	}
+	return true
 }
 
-F docker_image(image_name:Str) {
+F docker_image(image_name:Str, with_dev_tools:Bool) {
 	images = ``curl -s --unix-socket /var/run/docker.sock "http:/${DOCKER_API_VER}/images/json"``
-
-	# Maybe compare timestamp with the debootstrapped directory?
-	if image_name in images.RepoTags.flatten() {
-		echo("+ Docker image $image_name already exists, skipping image creation")
-		return
-	}
 
 	t = image_name.split(':')
 	distro = t[1]
-	debootstrap(distro)
+	image_dir = sanitize_image_name(image_name)
+	debootstrap_updated = debootstrap(image_name, with_dev_tools)
 
-	distro_tar = "${distro}.tar"
-
-	if not(File(distro_tar)) {
-		echo("+ Preparing distro ${distro} tar")
-		$(tar -f $distro_tar -C $distro -c .)
-	} else {
-		echo("+ Distro ${distro} tar already exists, not creating")
+	# Maybe compare timestamp with the debootstrapped directory?
+	# XXX: Not a very good up-to-date check logic.
+	if image_name in images.RepoTags.flatten() {
+		if debootstrap_updated {
+			echo("+ Docker image $image_name already exists but is not up to date. Removing it.")
+			$(docker rmi $image_name)
+		} else {
+			echo("+ Docker image $image_name already exists and it's up to date.")
+			return
+		}
 	}
 
-	echo("+ Importing distro ${distro} into docker")
+	distro_tar = "${image_dir}.tar"
+
+	if not(File(distro_tar)) or debootstrap_updated {
+		echo("+ Preparing tar of chroot ${image_dir} for importing into docker.")
+		$(tar -f $distro_tar -C $image_dir -c .)
+	} else {
+		echo("+ Distro ${image_dir} tar already exists, not creating.")
+	}
+
+	echo("+ Importing distro ${distro} tar at ${distro_tar} into docker.")
 	$(docker import - $image_name <"$distro_tar")
 
 }
 
 # TODO: build only if image does not exist?
 F build(image_name:Str) {
-	echo("+ Building: $image_name")
-	d = "FROM $image_name
-ADD ngs-clean /src
-WORKDIR /src
-RUN debuild -i -us -uc -b
-CMD [\"/bin/bash\"]
-"
-	d.write("Dockerfile")
-	$(docker build -t "${image_name}-ngs" .)
+	workspace_dir = `realpath ${image_name.replace(':', '_')}`.lines()[0] + '_workspace'
+	echo("+ Workspace for ${image_name} is ${workspace_dir}")
+	if Dir(workspace_dir) {
+		echo("+ Removing workspace $workspace_dir")
+		$(rm -rf $workspace_dir)
+	}
+	echo("+ Creating workspace $workspace_dir")
+	$(mkdir -p $workspace_dir)
+	echo("+ Copying NGS into workspace $workspace_dir")
+	$(cp -a ngs-clean "${workspace_dir}/ngs")
+	echo("+ Building using docker in $workspace_dir")
+	echo($(docker run --rm -it -v "${workspace_dir}:/workspace" $image_name bash -c 'cd /workspace/ngs && make VERSION && debchange -v "$(cat VERSION)-1" "New version" && debchange -r "" && debuild -i -us -uc -b && cd /workspace && sha256sum *.deb'))
 }
 
 F main() {
+	ENV.DEBIAN_FRONTEND = 'noninteractive'
 	echo("+ remote.ngs is running")
 	for target in TARGETS {
-		echo("+ Target: $target")
-		docker_image(target)
+		echo("--- Target: $target ---")
+		docker_image(target, true)
+		docker_image("clean-${target}", false)
 		build(target)
 	}
 }

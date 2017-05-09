@@ -5,7 +5,7 @@ project(NGS)
 pkg_check_modules(LIBFFI libffi REQUIRED)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /opt/local/include/uthash)
 
-add_executable(ngs ngs.c syntax.include syntax.auto.h pcre_constants.include obj.c vm.c compile.c debug.c ast.c)
+add_executable(ngs version.h ngs.c syntax.include syntax.auto.h pcre_constants.include obj.c vm.c compile.c debug.c ast.c)
 
 include(CheckFunctionExists)
 check_function_exists(fmemopen FMEMOPEN)
@@ -14,6 +14,19 @@ IF(NOT FMEMOPEN)
 ENDIF()
 
 find_file(PCRE_H pcre.h)
+# --- version - start ---
+add_custom_command(
+	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/VERSION
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/make-version.sh ${CMAKE_CURRENT_SOURCE_DIR}
+	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/make-version.sh
+)
+add_custom_command(
+	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/version.h
+	# TODO: Find cleaner way. $$ instead of $ because of make is not that pretty.
+	COMMAND bash -euc 'v=`cat ${CMAKE_CURRENT_BINARY_DIR}/VERSION` && echo "V=$$v" && sed "s/@/$$v/g" ${CMAKE_CURRENT_SOURCE_DIR}/version.h.in >${CMAKE_CURRENT_BINARY_DIR}/version.h'
+	DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/VERSION
+)
+# --- version - end ---
 add_custom_command(
 	OUTPUT
 		${CMAKE_CURRENT_BINARY_DIR}/syntax.include
