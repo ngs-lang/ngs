@@ -228,6 +228,7 @@ typedef struct {
 	VALUE NumRange;
 
 	VALUE Stat;
+	VALUE c_tm;
 
 	VALUE NgsStrComp;
 		VALUE NgsStrCompImm;

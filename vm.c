@@ -874,7 +874,57 @@ METHOD_RESULT native_globals EXT_METHOD_PARAMS {
 	METHOD_RETURN(ret);
 }
 
-METHOD_RESULT native_time METHOD_PARAMS { (void) argv; METHOD_RETURN(MAKE_INT((long int)time(NULL))); }
+METHOD_RESULT native_c_time METHOD_PARAMS { (void) argv; METHOD_RETURN(MAKE_INT((long int)time(NULL))); }
+
+#define ELT(value) *p = MAKE_INT(value); p++;
+METHOD_RESULT native_c_gmtime EXT_METHOD_PARAMS {
+		struct tm t;
+		time_t arg = (time_t) GET_INT(argv[0]);
+		VALUE ret, *p;
+		(void) ctx;
+		gmtime_r(&arg, &t);
+		ret = make_normal_type_instance(vm->c_tm);
+		OBJ_DATA(ret) = make_array(9);
+		p = ARRAY_ITEMS(OBJ_DATA(ret));
+		ELT(t.tm_sec); ELT(t.tm_min); ELT(t.tm_hour); ELT(t.tm_mday); ELT(t.tm_mon); ELT(t.tm_year); ELT(t.tm_wday); ELT(t.tm_yday); ELT(t.tm_isdst);
+		METHOD_RETURN(ret);
+}
+METHOD_RESULT native_c_localtime EXT_METHOD_PARAMS {
+		struct tm t;
+		time_t arg = (time_t) GET_INT(argv[0]);
+		VALUE ret, *p;
+		(void) ctx;
+		localtime_r(&arg, &t);
+		ret = make_normal_type_instance(vm->c_tm);
+		OBJ_DATA(ret) = make_array(9);
+		p = ARRAY_ITEMS(OBJ_DATA(ret));
+		ELT(t.tm_sec); ELT(t.tm_min); ELT(t.tm_hour); ELT(t.tm_mday); ELT(t.tm_mon); ELT(t.tm_year); ELT(t.tm_wday); ELT(t.tm_yday); ELT(t.tm_isdst);
+		METHOD_RETURN(ret);
+}
+#undef ELT
+
+METHOD_RESULT native_c_strftime METHOD_PARAMS {
+	size_t size;
+	struct tm t;
+	char *s = NGS_MALLOC_ATOMIC(1024);
+	assert(s);
+	t.tm_sec   = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[0]);
+	t.tm_min   = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[1]);
+	t.tm_hour  = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[2]);
+	t.tm_mday  = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[3]);
+	t.tm_mon   = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[4]);
+	t.tm_year  = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[5]);
+	t.tm_wday  = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[6]);
+	t.tm_yday  = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[7]);
+	t.tm_isdst = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[8]);
+	size = strftime(s, 1024, obj_to_cstring(argv[1]), &t);
+	if(size) {
+		METHOD_RETURN(make_string_of_len(s, size));
+	} else {
+		METHOD_RETURN(MAKE_NULL);
+	}
+}
+
 
 METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_normal_type(argv[0])); }
 METHOD_RESULT native_type_str_doc METHOD_PARAMS {
@@ -2308,6 +2358,17 @@ void vm_init(VM *vm, int argc, char **argv) {
 		SETUP_TYPE_FIELD(Stat, st_blksize, 8);
 		SETUP_TYPE_FIELD(Stat, st_blocks, 9);
 
+	MKTYPE(c_tm);
+		SETUP_TYPE_FIELD(c_tm, tm_sec,   0);
+		SETUP_TYPE_FIELD(c_tm, tm_min,   1);
+		SETUP_TYPE_FIELD(c_tm, tm_hour,  2);
+		SETUP_TYPE_FIELD(c_tm, tm_mday,  3);
+		SETUP_TYPE_FIELD(c_tm, tm_mon,   4);
+		SETUP_TYPE_FIELD(c_tm, tm_year,  5);
+		SETUP_TYPE_FIELD(c_tm, tm_wday,  6);
+		SETUP_TYPE_FIELD(c_tm, tm_yday,  7);
+		SETUP_TYPE_FIELD(c_tm, tm_isdst, 8);
+
 	// "NgsStrImm${NgsStrExp}$*{NgsStrSplatExp}"
 	MKTYPE(NgsStrComp);
 		MKSUBTYPE(NgsStrCompImm, NgsStrComp);
@@ -2855,13 +2916,17 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	// TODO: check for errors, probably wrap in stdlib.
-	register_global_func(vm, 0, "time",     &native_time,         0);
+	register_global_func(vm, 0, "c_time",     &native_c_time,         0);
 	_doc(vm, "", "Get time as the number of seconds since the Epoch, 1970-01-01 00:00:00 +0000 (UTC). Wraps TIME(2).");
 	_doc(vm, "%RET", "Int");
 	_doc_arr(vm, "%EX",
 		"time()  # 1483780368",
 		NULL
 	);
+
+	register_global_func(vm, 1, "c_gmtime",     &native_c_gmtime,         1, "timep", vm->Int);
+	register_global_func(vm, 1, "c_localtime",  &native_c_localtime,      1, "timep", vm->Int);
+	register_global_func(vm, 0, "c_strftime",   &native_c_strftime,       2, "tm",    vm->c_tm, "format", vm->Str);
 
 	// hash
 	register_global_func(vm, 0, "in",       &native_in_any_hash,       2, "x",   vm->Any, "h", vm->Hash);

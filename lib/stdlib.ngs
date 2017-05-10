@@ -2682,7 +2682,7 @@ stdlib_error_fd = ENV.NGS_ERR_FD.Int() tor 2
 
 doc Log to standard output. Later log output will be treated specially by the shell. It will have suitable representation in the UI. Use log() when it's semantically a log.
 F log(s:Str) {
-	echo(stdlib_error_fd, "[LOG] $s")
+	echo(stdlib_error_fd, "[LOG ${strftime(LOG_TIME_FORMAT)} GMT] $s")
 }
 
 doc Same as debug('default', s)
@@ -2701,25 +2701,25 @@ F debug(facility:Str, s:Str) {
 
 doc Write error message to standard error.
 F error(s:Str) {
-	echo(stdlib_error_fd, "[ERROR] $s")
+	echo(stdlib_error_fd, "[ERROR ${strftime(LOG_TIME_FORMAT)} GMT] $s")
 }
 
 doc Write error message to standard error.
 F warn(s:Str) {
-	echo(stdlib_error_fd, "[WARNING] $s")
+	echo(stdlib_error_fd, "[WARNING ${strftime(LOG_TIME_FORMAT)} GMT] $s")
 }
 
 doc Send status to standard error.
 doc Later status output will be treated specially by the shell. It will have suitable representation in the UI.
 doc Use status() when it's semantically a status - a task that's being done.
 F status(s:Str) {
-	echo(stdlib_error_fd, "(status) $s")
+	echo(stdlib_error_fd, "[STATUS ${strftime(LOG_TIME_FORMAT)} GMT] $s")
 }
 
 doc Write message in s to standard error and exit
 F die(s:Str, exit_code=1) {
 	c = Str(Backtrace().frames[-2].closure) tor "at unknown location"
-	echo(stdlib_error_fd, "[FATAL ERROR] $s -- $c")
+	echo(stdlib_error_fd, "[FATAL ERROR ${strftime(LOG_TIME_FORMAT)} GMT] $s -- $c")
 	c_exit(exit_code)
 }
 
@@ -4168,6 +4168,41 @@ exit_hook = Hook()
 		}
 	}
 }
+
+# === time =======================================
+
+{ type TimeFail(CException) }
+
+LOG_TIME_FORMAT = ENV.get('NGS_LOG_TIME_FORMAT', '%Y-%m-%d %H:%M:%S')
+
+F time() {
+	ret = c_time()
+	ret == -1 throws TimeFail("Failed to get time")
+	ret
+}
+
+# TODO: handle errors
+F gmtime(t:Int) {
+	ret = c_gmtime(t)
+	ret
+}
+
+# TODO: handle errors
+F localtime(t:Int) {
+	ret = c_localtime(t)
+	ret
+}
+
+F strftime(format:Str) strftime(gmtime(time()), format)
+
+F strftime(t:Int, format:Str) strftime(gmtime(t), format)
+
+F strftime(tm:c_tm, format:Str) {
+	ret = c_strftime(tm, format)
+	ret is Null throws TimeFail("Failed to c_strftime()").set('tm', tm).set('format', format)
+	ret
+}
+
 
 # === Random =====================================
 # This is _not_ crypto safe random!
