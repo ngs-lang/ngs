@@ -1021,6 +1021,10 @@ METHOD_RESULT native_c_fork METHOD_PARAMS {
 	(void) argv;
 	pid_t pid;
 	pid = fork();
+	if(pid == 0) {
+		// Child
+		NGS_NOTIFY_MALLOC_ABOUT_FORK();
+	}
 	METHOD_RETURN(MAKE_INT(pid));
 }
 
