@@ -54,61 +54,62 @@ char *opcodes_names[] = {
 	/*  1 */ "PUSH_NULL",
 	/*  2 */ "PUSH_FALSE",
 	/*  3 */ "PUSH_TRUE",
-	/*  4 */ "PUSH_INT",
-	/*  5 */ "PUSH_REAL",
-	/*  6 */ "PUSH_L8_STR",
-	/*  7 */ "PUSH_L32_STR",
-	/*  8 */ "DUP",
-	/*  9 */ "POP",
-	/* 10 */ "XCHG",
-	/* 11 */ "RESOLVE_GLOBAL",
-	/* 12 */ "PATCH",
-	/* 13 */ "FETCH_GLOBAL",
-	/* 14 */ "STORE_GLOBAL",
-	/* 15 */ "FETCH_LOCAL",
-	/* 16 */ "STORE_LOCAL",
-	/* 17 */ "CALL",
-	/* 18 */ "CALL_EXC",
-	/* 19 */ "CALL_ARR",
-	/* 20 */ "RET",
-	/* 21 */ "JMP",
-	/* 22 */ "JMP_TRUE",
-	/* 23 */ "JMP_FALSE",
-	/* 24 */ "MAKE_ARR",
-	/* 25 */ "MAKE_CLOSURE",
-	/* 26 */ "TO_STR",
-	/* 27 */ "MAKE_STR",
-	/* 28 */ "MAKE_STR_IMM",
-	/* 29 */ "MAKE_STR_EXP",
-	/* 30 */ "MAKE_STR_SPLAT_EXP",
-	/* 31 */ "PUSH_EMPTY_STR",
-	/* 32 */ "GLOBAL_DEF_P",
-	/* 33 */ "LOCAL_DEF_P",
-	/* 34 */ "DEF_GLOBAL_FUNC",
-	/* 35 */ "DEF_LOCAL_FUNC",
-	/* 36 */ "FETCH_UPVAR",
-	/* 37 */ "STORE_UPVAR",
-	/* 38 */ "UPVAR_DEF_P",
-	/* 39 */ "DEF_UPVAR_FUNC",
-	/* 40 */ "MAKE_HASH",
-	/* 41 */ "TO_BOOL",
-	/* 42 */ "TO_ARR",
-	/* 43 */ "TO_HASH",
-	/* 44 */ "ARR_APPEND",
-	/* 45 */ "ARR_CONCAT",
-	/* 46 */ "GUARD",
-	/* 47 */ "TRY_START",
-	/* 48 */ "TRY_END",
-	/* 49 */ "ARR_REVERSE",
-	/* 50 */ "THROW",
-	/* 51 */ "MAKE_CMD",
-	/* 52 */ "SET_CLOSURE_NAME",
-	/* 53 */ "SET_CLOSURE_DOC",
-	/* 54 */ "HASH_SET",
-	/* 55 */ "HASH_UPDATE",
-	/* 56 */ "PUSH_KWARGS_MARKER",
-	/* 57 */ "MAKE_REDIR",
-	/* 58 */ "SUPER",
+	/*  4 */ "PUSH_INT32",
+	/*  5 */ "PUSH_INT64",
+	/*  6 */ "PUSH_REAL",
+	/*  7 */ "PUSH_L8_STR",
+	/*  8 */ "PUSH_L32_STR",
+	/*  9 */ "DUP",
+	/* 10 */ "POP",
+	/* 11 */ "XCHG",
+	/* 12 */ "RESOLVE_GLOBAL",
+	/* 13 */ "PATCH",
+	/* 14 */ "FETCH_GLOBAL",
+	/* 15 */ "STORE_GLOBAL",
+	/* 16 */ "FETCH_LOCAL",
+	/* 17 */ "STORE_LOCAL",
+	/* 18 */ "CALL",
+	/* 19 */ "CALL_EXC",
+	/* 20 */ "CALL_ARR",
+	/* 21 */ "RET",
+	/* 22 */ "JMP",
+	/* 23 */ "JMP_TRUE",
+	/* 24 */ "JMP_FALSE",
+	/* 25 */ "MAKE_ARR",
+	/* 26 */ "MAKE_CLOSURE",
+	/* 27 */ "TO_STR",
+	/* 28 */ "MAKE_STR",
+	/* 29 */ "MAKE_STR_IMM",
+	/* 30 */ "MAKE_STR_EXP",
+	/* 31 */ "MAKE_STR_SPLAT_EXP",
+	/* 32 */ "PUSH_EMPTY_STR",
+	/* 33 */ "GLOBAL_DEF_P",
+	/* 34 */ "LOCAL_DEF_P",
+	/* 35 */ "DEF_GLOBAL_FUNC",
+	/* 36 */ "DEF_LOCAL_FUNC",
+	/* 37 */ "FETCH_UPVAR",
+	/* 38 */ "STORE_UPVAR",
+	/* 39 */ "UPVAR_DEF_P",
+	/* 40 */ "DEF_UPVAR_FUNC",
+	/* 41 */ "MAKE_HASH",
+	/* 42 */ "TO_BOOL",
+	/* 43 */ "TO_ARR",
+	/* 44 */ "TO_HASH",
+	/* 45 */ "ARR_APPEND",
+	/* 46 */ "ARR_CONCAT",
+	/* 47 */ "GUARD",
+	/* 48 */ "TRY_START",
+	/* 49 */ "TRY_END",
+	/* 50 */ "ARR_REVERSE",
+	/* 51 */ "THROW",
+	/* 52 */ "MAKE_CMD",
+	/* 53 */ "SET_CLOSURE_NAME",
+	/* 54 */ "SET_CLOSURE_DOC",
+	/* 55 */ "HASH_SET",
+	/* 56 */ "HASH_UPDATE",
+	/* 57 */ "PUSH_KWARGS_MARKER",
+	/* 58 */ "MAKE_REDIR",
+	/* 59 */ "SUPER",
 };
 
 
@@ -908,15 +909,15 @@ METHOD_RESULT native_c_strftime METHOD_PARAMS {
 	struct tm t;
 	char *s = NGS_MALLOC_ATOMIC(1024);
 	assert(s);
-	t.tm_sec   = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[0]);
-	t.tm_min   = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[1]);
-	t.tm_hour  = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[2]);
-	t.tm_mday  = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[3]);
-	t.tm_mon   = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[4]);
-	t.tm_year  = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[5]);
-	t.tm_wday  = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[6]);
-	t.tm_yday  = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[7]);
-	t.tm_isdst = (int) GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[8]);
+	t.tm_sec   = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[0]);
+	t.tm_min   = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[1]);
+	t.tm_hour  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[2]);
+	t.tm_mday  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[3]);
+	t.tm_mon   = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[4]);
+	t.tm_year  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[5]);
+	t.tm_wday  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[6]);
+	t.tm_yday  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[7]);
+	t.tm_isdst = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[8]);
 	size = strftime(s, 1024, obj_to_cstring(argv[1]), &t);
 	if(size) {
 		METHOD_RETURN(make_string_of_len(s, size));
@@ -3647,7 +3648,6 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 
 METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result) {
 	VALUE v, callable, command;
-	int i;
 	unsigned char opcode;
 	GLOBAL_VAR_INDEX gvi;
 	PATCH_OFFSET po;
@@ -3690,35 +3690,33 @@ main_loop:
 		case OP_PUSH_TRUE:
 							PUSH(MAKE_TRUE);
 							goto main_loop;
-		case OP_PUSH_INT:
-							// Arg: n
-							// In ...
-							// Out: ... n
-							// TODO: make it push_intSIZE maybe?
-							i = *(int *) &vm->bytecode[ip];
-							ip += sizeof(i);
-							PUSH(MAKE_INT(i));
-							goto main_loop;
+		case OP_PUSH_INT32:
+							{
+								// WARNING! Highest bits get lost! Works with TAG_BITS highest bits unset!
+								int32_t i = *(int32_t *) &vm->bytecode[ip];
+								ip += sizeof(i);
+								PUSH(MAKE_INT(i));
+								goto main_loop;
+							}
+		case OP_PUSH_INT64:
+							{
+								int64_t i = *(int64_t *) &vm->bytecode[ip];
+								ip += sizeof(i);
+								PUSH(MAKE_INT(i));
+								goto main_loop;
+							}
 		case OP_PUSH_REAL:
-							// Arg: n
-							// In ...
-							// Out: ... n
-							// TODO: make it push_intSIZE maybe?
 							PUSH(make_real(*(NGS_REAL *) &vm->bytecode[ip]));
 							ip += sizeof(NGS_REAL);
 							goto main_loop;
 		case OP_PUSH_L8_STR:
 							// Arg: LEN8 + string
-							// In: ...
-							// Out: ... string
 							v = make_string_of_len(&(vm->bytecode[ip+sizeof(unsigned char)]), (unsigned char) vm->bytecode[ip]);
 							ip += sizeof(unsigned char) + (unsigned char) vm->bytecode[ip];
 							PUSH(v);
 							goto main_loop;
 		case OP_PUSH_L32_STR:
 							// Arg: LEN32 + string
-							// In: ...
-							// Out: ... string
 							v = make_string_of_len(&(vm->bytecode[ip+sizeof(uint32_t)]), *(uint32_t *) &vm->bytecode[ip]);
 							ip += sizeof(uint32_t) + *(uint32_t *) &vm->bytecode[ip];
 							PUSH(v);

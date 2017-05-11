@@ -13,7 +13,8 @@
 #define OPCODE(buf, x) { (buf)[*idx]=x; (*idx)++; }
 #define L8_STR(buf, x) { int l = strlen(x); assert(l<256); OPCODE(buf, l); memcpy((buf)+(*idx), x, l); (*idx) += l; }
 #define DATA(buf, x) { memcpy((buf)+(*idx), &(x), sizeof(x)); (*idx) += sizeof(x); }
-#define DATA_INT(buf, x) { *(int *)&(buf)[*idx] = x; (*idx)+=sizeof(int); }
+#define DATA_INT32(buf, x) { *(int32_t *)&(buf)[*idx] = x; (*idx)+=sizeof(int32_t); }
+#define DATA_INT64(buf, x) { *(int64_t *)&(buf)[*idx] = x; (*idx)+=sizeof(int64_t); }
 #define DATA_UINT16(buf, x) { *(uint16_t *)&(buf)[*idx] = x; (*idx)+=sizeof(uint16_t); }
 #define DATA_UINT32(buf, x) { *(uint32_t *)&(buf)[*idx] = x; (*idx)+=sizeof(uint32_t); }
 #define DATA_JUMP_OFFSET(buf, x) { *(JUMP_OFFSET *)&(buf)[*idx] = x; (*idx)+=sizeof(JUMP_OFFSET); }
@@ -395,7 +396,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				}
 			}
 			if(have_arr_splat) {
-				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0);
+				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0);
 				OPCODE(*buf, OP_MAKE_ARR);
 				STACK_DEPTH++;
 			}
@@ -416,7 +417,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 						// Setup named arguments
 						doing_named_args = 1;
 						// TODO: maybe special opcode for creating an empty hash?
-						OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0);
+						OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0);
 						OPCODE(*buf, OP_MAKE_HASH);
 						STACK_DEPTH++;
 						argc++;
@@ -440,7 +441,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 						// Setup named arguments
 						doing_named_args = 1;
 						// TODO: maybe special opcode for creating an empty hash?
-						OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0);
+						OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0);
 						OPCODE(*buf, OP_MAKE_HASH);
 						argc++;
 					}
@@ -466,7 +467,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			}
 			if(!have_arr_splat) {
 				assert(argc <= MAX_ARGS); // TODO: Exception
-				OPCODE(*buf, OP_PUSH_INT); DATA(*buf, argc);
+				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, argc);
 				STACK_DEPTH++;
 			}
 			if(node->first_child->type == ATTR_NODE) {
@@ -494,7 +495,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 			}
 			STACK_DEPTH++;
-			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 2);
+			OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 2);
 			STACK_DEPTH++;
 			compile_identifier(ctx, buf, idx, node->type == INDEX_NODE ? "[]" : (node->type == NS_NODE ? "::" : "."), OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 			OPCODE(*buf, OP_CALL);
@@ -504,7 +505,13 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 		case INT_NODE:
 			/*printf("Compiling tNUMBER @ %d\n", *idx);*/
 			if(need_result) {
-				OPCODE(*buf, OP_PUSH_INT); DATA(*buf, node->number);
+				// (>> TAG_BITS) is workaround for highest bits of OP_PUSH_INT32 get lost
+				if(node->number < (INT32_MIN >> TAG_BITS) || node->number > (INT32_MAX >> TAG_BITS)) {
+					OPCODE(*buf, OP_PUSH_INT64); DATA_INT64(*buf, node->number);
+				} else {
+					int n = (int) node->number;
+					OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, n);
+				}
 			}
 			break;
 		case REAL_NODE:
@@ -530,7 +537,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
 					compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 					compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
-					OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 3);
+					OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 3);
 					compile_identifier(ctx, buf, idx, "[]=", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 					OPCODE(*buf, OP_CALL);
 					POP_IF_DONT_NEED_RESULT(*buf);
@@ -541,7 +548,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
 					compile_attr_name(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 					compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
-					OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 3);
+					OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 3);
 					compile_identifier(ctx, buf, idx, ptr->type == ATTR_NODE ? ".=" : "::=", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 					OPCODE(*buf, OP_CALL);
 					POP_IF_DONT_NEED_RESULT(*buf);
@@ -595,7 +602,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				}
 			}
 			if(have_arr_splat) {
-				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0);
+				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0);
 				OPCODE(*buf, OP_MAKE_ARR);
 			}
 			for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
@@ -610,7 +617,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				}
 			}
 			if(!have_arr_splat) {
-				OPCODE(*buf, OP_PUSH_INT); DATA(*buf, argc);
+				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, argc);
 				OPCODE(*buf, OP_MAKE_ARR);
 			}
 			POP_IF_DONT_NEED_RESULT(*buf);
@@ -693,7 +700,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			DATA_N_LOCAL_VARS(*buf, n_params_optional);
 			DATA_N_LOCAL_VARS(*buf, n_locals);
 			DATA_N_UPVAR_INDEX(*buf, n_uplevels);
-			DATA_INT(*buf, params_flags);
+			DATA_INT32(*buf, params_flags);
 
 			// Doc
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling, buf, idx, allocated, NEED_RESULT);
@@ -726,10 +733,10 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 						case STR_COMP_SPLAT_EXPANSION_NODE: OPCODE(*buf, OP_MAKE_STR_SPLAT_EXP); break;
 					}
 				}
-				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, argc);
+				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, argc);
 				OPCODE(*buf, OP_MAKE_ARR);
 
-				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 1);
+				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 1);
 				// OPCODE(*buf, OP_MAKE_SPLAT_STR);
 				compile_identifier(ctx, buf, idx, "\"$*\"", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 				OPCODE(*buf, OP_CALL);
@@ -747,8 +754,8 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					case 1:
 						break;
 					default:
-						OPCODE(*buf, OP_PUSH_INT);
-						DATA_INT(*buf, argc);
+						OPCODE(*buf, OP_PUSH_INT32);
+						DATA_INT32(*buf, argc);
 						OPCODE(*buf, OP_MAKE_STR);
 				}
 			}
@@ -828,7 +835,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				}
 			}
 			if(have_hash_splat) {
-				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0);
+				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0);
 				OPCODE(*buf, OP_MAKE_HASH);
 				for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
 					if(ptr->type == HASH_SPLAT_NODE) {
@@ -846,7 +853,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
 					compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 				}
-				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, argc);
+				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, argc);
 				OPCODE(*buf, OP_MAKE_HASH);
 			}
 			POP_IF_DONT_NEED_RESULT(*buf);
@@ -934,8 +941,8 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				OPCODE(*buf, OP_PUSH_NULL);
 				OPCODE(*buf, OP_XCHG);
 
-				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 1); // One argument for the call of handler function(s)
-				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0); // Make array with zero elements
+				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 1); // One argument for the call of handler function(s)
+				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0); // Make array with zero elements
 				OPCODE(*buf, OP_MAKE_ARR);
 				for(ptr=node->first_child->next_sibling; ptr; ptr=ptr->next_sibling) {
 					compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
@@ -962,7 +969,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 		case COMMAND_NODE:
 			OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
 			// argv
-			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0); // Make array with zero elements
+			OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0); // Make array with zero elements
 			OPCODE(*buf, OP_MAKE_ARR);
 			for(ptr=node->first_child->next_sibling->first_child; ptr; ptr=ptr->next_sibling) {
 				if(ptr->type == ARR_SPLAT_NODE) {
@@ -975,7 +982,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				OPCODE(*buf, OP_ARR_APPEND);
 			}
 			// redirects
-			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0); // Make array with zero elements
+			OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0); // Make array with zero elements
 			OPCODE(*buf, OP_MAKE_ARR);
 			for(ptr=node->first_child->next_sibling->next_sibling->first_child; ptr; ptr=ptr->next_sibling) {
 				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
@@ -986,7 +993,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 
 			OPCODE(*buf, OP_MAKE_CMD);
 
-			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 1);
+			OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 1);
 			compile_identifier(ctx, buf, idx, node->first_child->name, OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 			OPCODE(*buf, OP_CALL);
 			POP_IF_DONT_NEED_RESULT(*buf);
@@ -1042,13 +1049,13 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				switch((switch_node_subtype)node->number) {
 					case SWITCH_NODE_SWITCH:
 					case SWITCH_NODE_ESWITCH:
-						OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 2);
+						OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 2);
 						compile_identifier(ctx, buf, idx, "==", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 						OPCODE(*buf, OP_CALL);
 						break;
 					case SWITCH_NODE_MATCH:
 					case SWITCH_NODE_EMATCH:
-						OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 2);
+						OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 2);
 						compile_identifier(ctx, buf, idx, "match", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 						OPCODE(*buf, OP_CALL);
 					case SWITCH_NODE_COND:
@@ -1056,7 +1063,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 						OPCODE(*buf, OP_TO_BOOL);
 						break;
 					default:
-						fprintf(stderr, "ERROR: SWITCH_NODE subtype %i %i\n", node->number, SWITCH_NODE_COND);
+						fprintf(stderr, "ERROR: SWITCH_NODE subtype %li %i\n", node->number, SWITCH_NODE_COND);
 						assert(0 == "Unsupported SWITCH_NODE subtype");
 				}
 				OPCODE(*buf, OP_JMP_FALSE);
@@ -1081,7 +1088,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			}
 			// TOOD: optimize - OP_PUSH_NULL is not needed if result is not needed
 			if(node->number & 1) {
-				OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 0);
+				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0);
 				compile_identifier(ctx, buf, idx, "SwitchFail", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 				// TODO: attribute with offending value
 				OPCODE(*buf, OP_CALL);
@@ -1110,7 +1117,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_PUSH_NULL);
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
-			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 2);
+			OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 2);
 			compile_identifier(ctx, buf, idx, "//", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 			OPCODE(*buf, OP_CALL);
 			POP_IF_DONT_NEED_RESULT(*buf);
@@ -1119,7 +1126,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 		case TABLE_LIT_NODE:
 			OPCODE(*buf, OP_PUSH_NULL);
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
-			OPCODE(*buf, OP_PUSH_INT); DATA_INT(*buf, 1);
+			OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 1);
 			compile_identifier(ctx, buf, idx, "table", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 			OPCODE(*buf, OP_CALL);
 			POP_IF_DONT_NEED_RESULT(*buf);

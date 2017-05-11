@@ -67,7 +67,7 @@ void print_ast(ast_node *node, int level) {
 	switch(node->type) {
 		case CALL_NODE:
 		case INT_NODE:
-			snprintf(info, AST_NODE_INFO_STR_LEN-1, "%d", node->number);
+			snprintf(info, AST_NODE_INFO_STR_LEN-1, "%ld", node->number);
 			break;
 		case REAL_NODE:
 			snprintf(info, AST_NODE_INFO_STR_LEN-1, NGS_REAL_FMT, (*(NGS_REAL *)node->data));

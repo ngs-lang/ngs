@@ -2682,7 +2682,7 @@ stdlib_error_fd = ENV.NGS_ERR_FD.Int() tor 2
 
 doc Log to standard output. Later log output will be treated specially by the shell. It will have suitable representation in the UI. Use log() when it's semantically a log.
 F log(s:Str) {
-	echo(stdlib_error_fd, "[LOG ${strftime(LOG_TIME_FORMAT)} GMT] $s")
+	echo(stdlib_error_fd, "[LOG ${Time()}] $s")
 }
 
 doc Same as debug('default', s)
@@ -2692,7 +2692,7 @@ F debug(s:Str) debug('default', s)
 doc Debug to standard error.
 doc "DEBUG" environment variable must be non-empty string to activate. Otherwise nothing is outputted.
 doc TODO: Not output thread ID if there is only one thread.
-doc TODO: Timestamps?
+doc TODO: Timestamps? Timestamps acquiring might not be safe after fork before exec.
 F debug(facility:Str, s:Str) {
 	if ENV.Box('DEBUG').map(split(X, ',')).map({facility in A or '*' in A}).get(false) {
 		echo(stdlib_error_fd, "[DEBUG $facility ${c_getpid()} ${c_pthread_self().id()}] $s")
@@ -2701,25 +2701,25 @@ F debug(facility:Str, s:Str) {
 
 doc Write error message to standard error.
 F error(s:Str) {
-	echo(stdlib_error_fd, "[ERROR ${strftime(LOG_TIME_FORMAT)} GMT] $s")
+	echo(stdlib_error_fd, "[ERROR ${Time()}] $s")
 }
 
 doc Write error message to standard error.
 F warn(s:Str) {
-	echo(stdlib_error_fd, "[WARNING ${strftime(LOG_TIME_FORMAT)} GMT] $s")
+	echo(stdlib_error_fd, "[WARNING ${Time()}] $s")
 }
 
 doc Send status to standard error.
 doc Later status output will be treated specially by the shell. It will have suitable representation in the UI.
 doc Use status() when it's semantically a status - a task that's being done.
 F status(s:Str) {
-	echo(stdlib_error_fd, "[STATUS ${strftime(LOG_TIME_FORMAT)} GMT] $s")
+	echo(stdlib_error_fd, "[STATUS ${Time()}] $s")
 }
 
 doc Write message in s to standard error and exit
 F die(s:Str, exit_code=1) {
 	c = Str(Backtrace().frames[-2].closure) tor "at unknown location"
-	echo(stdlib_error_fd, "[FATAL ERROR ${strftime(LOG_TIME_FORMAT)} GMT] $s -- $c")
+	echo(stdlib_error_fd, "[FATAL ERROR ${Time()}] $s -- $c")
 	c_exit(exit_code)
 }
 
@@ -4169,11 +4169,14 @@ exit_hook = Hook()
 	}
 }
 
-# === time =======================================
+# === Time =======================================
 
-{ type TimeFail(CException) }
+{
+	type Time
+	type TimeFail(CException)
+}
 
-LOG_TIME_FORMAT = ENV.get('NGS_LOG_TIME_FORMAT', '%Y-%m-%d %H:%M:%S')
+TIME_FORMAT = ENV.get('NGS_TIME_FORMAT', '%F %T %Z')
 
 F time() {
 	ret = c_time()
@@ -4182,26 +4185,41 @@ F time() {
 }
 
 # TODO: handle errors
+doc Low-level function. Do not use directly. Use Time type.
 F gmtime(t:Int) {
 	ret = c_gmtime(t)
 	ret
 }
 
 # TODO: handle errors
+doc Low-level function. Do not use directly. Use Time type.
 F localtime(t:Int) {
 	ret = c_localtime(t)
 	ret
 }
 
-F strftime(format:Str) strftime(gmtime(time()), format)
-
-F strftime(t:Int, format:Str) strftime(gmtime(t), format)
-
+doc Low-level function. Do not use directly. Use Time type.
 F strftime(tm:c_tm, format:Str) {
 	ret = c_strftime(tm, format)
 	ret is Null throws TimeFail("Failed to c_strftime()").set('tm', tm).set('format', format)
 	ret
 }
+
+F init(t:Time) {
+	t.epoch = time()
+}
+
+F init(t:Time, epoch:Int) {
+	t.epoch = epoch
+}
+
+doc String representation of Time
+doc format - strftime(3) format
+doc gmt - Use GMT time zone (defaults to local time zone)
+F Str(t:Time, format:Str=TIME_FORMAT, gmt:Bool=false) strftime([localtime, gmtime][Int(gmt)](t.epoch), TIME_FORMAT)
+
+F Int(t:Time) t.epoch
+
 
 
 # === Random =====================================
