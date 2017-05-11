@@ -228,6 +228,7 @@ typedef struct {
 	VALUE NumRange;
 
 	VALUE Stat;
+	VALUE c_tm;
 
 	VALUE NgsStrComp;
 		VALUE NgsStrCompImm;
@@ -274,7 +275,8 @@ enum opcodes {
 	OP_PUSH_NULL,
 	OP_PUSH_FALSE,
 	OP_PUSH_TRUE,
-	OP_PUSH_INT,
+	OP_PUSH_INT32,
+	OP_PUSH_INT64,
 	OP_PUSH_REAL,
 	OP_PUSH_L8_STR,
 	OP_PUSH_L32_STR,
