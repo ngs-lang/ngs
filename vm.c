@@ -1536,7 +1536,7 @@ METHOD_RESULT native_is_global_variable_defined EXT_METHOD_PARAMS {
 	if(GET_INT(argv[0]) < 0 || gvi >= vm->globals_len) {
 		VALUE e;
 		e = make_normal_type_instance(vm->IndexNotFound);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("Global with given index was not found"));
+		set_normal_type_instance_attribute(e, make_string("message"), make_string("Global variable with given index was not found"));
 		set_normal_type_instance_attribute(e, make_string("key"), argv[0]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
@@ -1548,7 +1548,7 @@ METHOD_RESULT native_set_global_variable EXT_METHOD_PARAMS {
 	if(GET_INT(argv[0]) < 0 || gvi >= vm->globals_len) {
 		VALUE e;
 		e = make_normal_type_instance(vm->IndexNotFound);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("Global with given index was not found"));
+		set_normal_type_instance_attribute(e, make_string("message"), make_string("Global variable with given index was not found"));
 		set_normal_type_instance_attribute(e, make_string("key"), argv[0]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}

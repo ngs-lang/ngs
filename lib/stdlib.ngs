@@ -4029,7 +4029,7 @@ F exception_specific_message(e:Exception) EmptyBox()
 
 doc Format GlobalNotFound exception message.
 doc %RET - FullBox with Str
-F exception_specific_message(gnf:GlobalNotFound) FullBox("Global '${gnf.name}' not found")
+F exception_specific_message(gnf:GlobalNotFound) FullBox("Global variable '${gnf.name}' not found")
 
 doc Don't use, subject to change, including name
 F SafeStr(val) "$val" tor "(Failed to inspect <${val.typeof().name tor '(unknown type)'}>)"
