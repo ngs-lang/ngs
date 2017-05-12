@@ -914,6 +914,7 @@ METHOD_RESULT native_c_strftime METHOD_PARAMS {
 	struct tm t;
 	char *s = NGS_MALLOC_ATOMIC(1024);
 	assert(s);
+	memset(&t, 0, sizeof(t));
 	t.tm_sec   = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[0]);
 	t.tm_min   = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[1]);
 	t.tm_hour  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[2]);
