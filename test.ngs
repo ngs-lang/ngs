@@ -24,7 +24,7 @@
 		})
 	}
 
-	files = ['lib/bootstrap.ngs', 'lib/stdlib.ngs'] + ``find lib/autoload -name '*.ngs'``
+	files = ["${NGS_DIR}/bootstrap.ngs", "${NGS_DIR}/stdlib.ngs"] + ``find "${NGS_DIR}/autoload" -name '*.ngs'``
 
 	files.each(perform_tests_in_file)
 

@@ -63,7 +63,7 @@ target_link_libraries(ngs m pthread gc ffi dl json-c pcre)
 install(FILES "${PROJECT_BINARY_DIR}/ngs" DESTINATION bin)
 
 enable_testing()
-add_test(all bash -c "NGS_BOOTSTRAP=lib/bootstrap.ngs NGS_DIR=lib ./ngs test.ngs")
+add_test(all bash -c "NGS_BOOTSTRAP=${CMAKE_CURRENT_SOURCE_DIR}/lib/bootstrap.ngs NGS_DIR=${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_BINARY_DIR}/ngs ${CMAKE_CURRENT_SOURCE_DIR}/test.ngs")
 
 install(PROGRAMS ngs DESTINATION bin)
 install(DIRECTORY ${PROJECT_BINARY_DIR}/lib/ DESTINATION lib/ngs)
