@@ -95,7 +95,7 @@ Running using docker
 Compiling and running
 =====================
 
-### Install dependencies - Linux
+### Install dependencies - Debian-based Linux
 
 	sudo apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre3-dev make cmake pandoc
 	sudo type awk || sudo apt-get install gawk
@@ -142,20 +142,20 @@ Tested as follows (some time ago):
 If you have troubles compiling, please try to compile the commit tagged `tested`.
 
 
-### Debug on Mac
+### Debug - Mac
 
 	# Debug when stuck (note to self mostly)
 	killall -SIGSEGV ngs
 	lldb --core /cores/core.XXXXX
 
 
-### Installing - all OSes
+### Install
 
 	# after build steps
 	cd build
 	sudo make install
 
-### Uninstalling - all OSes
+### Uninstall
 
 	cd build
 	for i in $(<install_manifest.txt);do rm "$i";done
