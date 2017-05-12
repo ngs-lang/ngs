@@ -4445,8 +4445,14 @@ F write(s:Str, fname:Str) {
 		}
 }
 
-doc Write whole file
-F write(s:Str, f:File) write(s, f.path)
+doc Write whole file if it's closed, write to file descriptor if it's open
+F write(s:Str, f:File) {
+	if f.fd is Null {
+		write(s, f.path)
+	} else {
+		write(s, f.fd)
+	}
+}
 
 F Arg(f:File) f.path
 
