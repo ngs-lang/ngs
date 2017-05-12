@@ -60,6 +60,7 @@ This is how an instance can be created using NGS (real working code). No state f
 		State = 'running'
 	)
 
+	# Get SSH fingerprit from machine's console
 	AWS::add_to_known_hosts(instance, 'PublicIpAddress')
 
 
