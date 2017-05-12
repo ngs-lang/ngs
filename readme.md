@@ -28,6 +28,41 @@ Vision
 * Create a language that will be domain-specific for system tasks.
 * Create a shell (in that language) that is up to date with today's tasks - working with APIs, cloud, remote execution on a group of hosts.
 
+### Example - basic cloud usage
+
+This is how an instance can be created using NGS (real working code). No state file involved!
+
+	NGS_BUILD_CIDR = '192.168.120.0/24'
+	NGS_BUILD_TAGS = {'Name': 'ngs-build'}
+
+	vpc    = AWS::Vpc(NGS_BUILD_TAGS).converge(CidrBlock=NGS_BUILD_CIDR, Tags=NGS_BUILD_TAGS)
+	gw     = AWS::Igw(Attachments=[{'VpcId': vpc}]).converge(Tags=NGS_BUILD_TAGS)
+	rtb    = AWS::RouteTable(VpcId=vpc).converge(Routes=Present({"DestinationCidrBlock": "0.0.0.0/0", "GatewayId": gw}))
+	subnet = AWS::Subnet(VpcId=vpc, CidrBlock=NGS_BUILD_CIDR).converge()
+
+	sg = AWS::SecGroup("ngs-build-sg", vpc).converge(
+		Description = "ngs-build-sg"
+		Tags = NGS_BUILD_TAGS
+		IpPermissions = [ AWS::util::world_open_port(22) ]
+	)
+
+	ami = AWS::Image(OwnerId=AWS::AMI_OWNER_DEBIAN, Name=Pfx('debian-jessie-amd64-hvm'), RootDeviceType='ebs', VolumeType='gp2').latest()
+
+	instance = AWS::Instance(
+		ImageId = ami
+		State = null
+		KeyName = ENV.get('AWS_NGS_BUILD_KEY', 'ngs-build')
+		SecurityGroups = sg
+		SubnetId = subnet
+		PublicIpAddress = true
+		Tags = NGS_BUILD_TAGS
+	).converge(
+		State = 'running'
+	)
+
+	AWS::add_to_known_hosts(instance, 'PublicIpAddress')
+
+
 About this document
 ===================
 
@@ -60,28 +95,20 @@ Running using docker
 Compiling and running
 =====================
 
-### Compile and run - Linux
+### Install dependencies - Linux
 
-	sudo apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre3-dev make
+	sudo apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre3-dev make cmake pandoc
 	sudo type awk || sudo apt-get install gawk
-	make
+	mkdir build && cd build && cmake .. && make && ctest
 	# If NGS is not installed:
-	NGS_DIR=lib NGS_BOOTSTRAP=lib/bootstrap.ngs ./ngs SCRIPT_NAME.ngs
+	NGS_DIR=../lib NGS_BOOTSTRAP=../lib/bootstrap.ngs ./ngs SCRIPT_NAME.ngs
 	# If NGS is installed:
 	./ngs SCRIPT_NAME.ngs
 
-Tested as follows (some time ago):
-
-* Debian Stretch: gcc 4.8.5 + 4.9.3 + 5, clang 3.6
-* Debian Jessie: gcc 4.8.4 + 4.9.2, clang 3.5
-* Ubunty Trusty: gcc 4.8.4, clang 3.4
-
-If you have troubles compiling, please try to compile the commit tagged `tested`.
-
-### Compile and run - Mac OS X
+### Install dependencies - Mac OS X
 
 	brew update
-	brew install cmake peg libgc pcre libffi gnu-sed json-c pkg-config
+	brew install cmake peg libgc pcre libffi gnu-sed json-c pkg-config pandoc
 
 	# install macports
 	brew install Caskroom/cask/macports
@@ -97,34 +124,40 @@ If you have troubles compiling, please try to compile the commit tagged `tested`
 	export PATH="$pcp:$PATH"
 	export PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig
 
-	cmake .
-	make
+
+### Compile, test and run
+
+	mkdir -p build && cd build && cmake .. && make && ctest
 	# If NGS is not installed:
 	NGS_DIR=lib NGS_BOOTSTRAP=lib/bootstrap.ngs ./ngs SCRIPT_NAME.ngs
 	# If NGS is installed:
 	./ngs SCRIPT_NAME.ngs
 
+Tested as follows (some time ago):
+
+* Debian Stretch: gcc 4.8.5 + 4.9.3 + 5, clang 3.6
+* Debian Jessie: gcc 4.8.4 + 4.9.2, clang 3.5
+* Ubunty Trusty: gcc 4.8.4, clang 3.4
+
+If you have troubles compiling, please try to compile the commit tagged `tested`.
+
+
+### Debug on Mac
 
 	# Debug when stuck (note to self mostly)
 	killall -SIGSEGV ngs
 	lldb --core /cores/core.XXXXX
 
 
-### Running tests - all OSes
-
-	# NGS_DIR, where stdlib.ngs resides defaults to /usr/local/lib/ngs . Either link it to the "lib" folder or run with NGS_DIR=lib
-	NGS_DIR=lib NGS_BOOTSTRAP=lib/bootstrap.ngs make test
-
 ### Installing - all OSes
 
+	# after build steps
+	cd build
 	sudo make install
 
-### Uninstalling - Linux
+### Uninstalling - all OSes
 
-	make uninstall
-
-### Uninstall - Mac OS X
-
+	cd build
 	for i in $(<install_manifest.txt);do rm "$i";done
 
 Contributing
