@@ -23,7 +23,7 @@ add_custom_command(
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/version.h
 	# TODO: Find cleaner way. $$ instead of $ because of make is not that pretty.
-	COMMAND bash -euc 'v=`cat ${CMAKE_CURRENT_BINARY_DIR}/VERSION` && echo "V=$$v" && sed "s/@/$$v/g" ${CMAKE_CURRENT_SOURCE_DIR}/version.h.in >${CMAKE_CURRENT_BINARY_DIR}/version.h'
+	COMMAND bash -euc 'v=`cat ${CMAKE_CURRENT_BINARY_DIR}/VERSION` && sed "s/@/$$v/g" ${CMAKE_CURRENT_SOURCE_DIR}/version.h.in >${CMAKE_CURRENT_BINARY_DIR}/version.h'
 	DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/VERSION
 )
 # --- version - end ---

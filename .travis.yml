@@ -4,7 +4,7 @@ env:
   - NGS_DIR=lib
 compiler:
   - gcc
-  - clang
+  # - clang
 before_script:
   - sudo apt-get install -y uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg gawk make libpcre3-dev cmake
 script:
