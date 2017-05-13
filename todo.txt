@@ -44,9 +44,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 [roadmap]
 
-	* Phase 1 - the language (will be v0.1.0) [in progress]
+	* Phase 1 - the language [in progress]
 
-		* Milestone "programming"
+		* Milestone "programming" (will be v0.2.0)
 
 			* commands syntax
 
@@ -70,10 +70,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* files globbing
 				consider special syntax such as <foo*bar>
-
-		* Milestone "Mac OS support" (will be v0.2.0)
-
-			+ Issue #15
 
 		* Milestone "modules"
 			* require() - add search path
