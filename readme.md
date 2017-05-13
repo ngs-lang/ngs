@@ -32,36 +32,38 @@ Vision
 
 This is how an instance can be created using NGS (real working code). No state file involved!
 
-	NGS_BUILD_CIDR = '192.168.120.0/24'
-	NGS_BUILD_TAGS = {'Name': 'ngs-build'}
+	{
+		NGS_BUILD_CIDR = '192.168.120.0/24'
+		NGS_BUILD_TAGS = {'Name': 'ngs-build'}
 
-	vpc    = AWS::Vpc(NGS_BUILD_TAGS).converge(CidrBlock=NGS_BUILD_CIDR, Tags=NGS_BUILD_TAGS)
-	gw     = AWS::Igw(Attachments=[{'VpcId': vpc}]).converge(Tags=NGS_BUILD_TAGS)
-	rtb    = AWS::RouteTable(VpcId=vpc).converge(Routes=Present({"DestinationCidrBlock": "0.0.0.0/0", "GatewayId": gw}))
-	subnet = AWS::Subnet(VpcId=vpc, CidrBlock=NGS_BUILD_CIDR).converge()
+		vpc    = AWS::Vpc(NGS_BUILD_TAGS).converge(CidrBlock=NGS_BUILD_CIDR, Tags=NGS_BUILD_TAGS)
+		gw     = AWS::Igw(Attachments=[{'VpcId': vpc}]).converge(Tags=NGS_BUILD_TAGS)
+		rtb    = AWS::RouteTable(VpcId=vpc).converge(Routes=Present({"DestinationCidrBlock": "0.0.0.0/0", "GatewayId": gw}))
+		subnet = AWS::Subnet(VpcId=vpc, CidrBlock=NGS_BUILD_CIDR).converge()
 
-	sg = AWS::SecGroup("ngs-build-sg", vpc).converge(
-		Description = "ngs-build-sg"
-		Tags = NGS_BUILD_TAGS
-		IpPermissions = [ AWS::util::world_open_port(22) ]
-	)
+		sg = AWS::SecGroup("ngs-build-sg", vpc).converge(
+			Description = "ngs-build-sg"
+			Tags = NGS_BUILD_TAGS
+			IpPermissions = [ AWS::util::world_open_port(22) ]
+		)
 
-	ami = AWS::Image(OwnerId=AWS::AMI_OWNER_DEBIAN, Name=Pfx('debian-jessie-amd64-hvm'), RootDeviceType='ebs', VolumeType='gp2').latest()
+		ami = AWS::Image(OwnerId=AWS::AMI_OWNER_DEBIAN, Name=Pfx('debian-jessie-amd64-hvm'), RootDeviceType='ebs', VolumeType='gp2').latest()
 
-	instance = AWS::Instance(
-		ImageId = ami
-		State = null
-		KeyName = ENV.get('AWS_NGS_BUILD_KEY', 'ngs-build')
-		SecurityGroups = sg
-		SubnetId = subnet
-		PublicIpAddress = true
-		Tags = NGS_BUILD_TAGS
-	).converge(
-		State = 'running'
-	)
+		instance = AWS::Instance(
+			ImageId = ami
+			State = null
+			KeyName = ENV.get('AWS_NGS_BUILD_KEY', 'ngs-build')
+			SecurityGroups = sg
+			SubnetId = subnet
+			PublicIpAddress = true
+			Tags = NGS_BUILD_TAGS
+		).converge(
+			State = 'running'
+		)
 
-	# Get SSH fingerprit from machine's console
-	AWS::add_to_known_hosts(instance, 'PublicIpAddress')
+		# Get SSH fingerprit from machine's console
+		AWS::add_to_known_hosts(instance, 'PublicIpAddress')
+	}
 
 
 About this document
