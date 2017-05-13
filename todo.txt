@@ -37,9 +37,10 @@ Note that this started as internal document so things here are unformed, not fin
 	* new syntax: .attr OP val
 	* consider special call syntax: myfunc?(any_arg, which_is_null, causes_call_to_be_skipped)
 		or myfunc(not_any, but_only_marked, skips argument)
-
 	* MacOS (support being added): gc repeated allocation of very large block
-	* MacOS (support being added): thread / fork - stuck (ec2din.ngs --allreg does not work)
+	* F main(a:Str, b:Str=null) is not matched when only one argument is passed
+		happens because all matched arguments are treated as positional
+		should implement keyword-only arguments first
 
 [roadmap]
 
