@@ -107,14 +107,16 @@ char *opcodes_names[] = {
 	/* 49 */ "TRY_END",
 	/* 50 */ "ARR_REVERSE",
 	/* 51 */ "THROW",
-	/* 52 */ "MAKE_CMD",
-	/* 53 */ "SET_CLOSURE_NAME",
-	/* 54 */ "SET_CLOSURE_DOC",
-	/* 55 */ "HASH_SET",
-	/* 56 */ "HASH_UPDATE",
-	/* 57 */ "PUSH_KWARGS_MARKER",
-	/* 58 */ "MAKE_REDIR",
-	/* 59 */ "SUPER",
+	/* 52 */ "MAKE_CMDS_PIPELINE",
+	/* 53 */ "MAKE_CMDS_PIPE",
+	/* 54 */ "MAKE_CMD",
+	/* 55 */ "SET_CLOSURE_NAME",
+	/* 56 */ "SET_CLOSURE_DOC",
+	/* 57 */ "HASH_SET",
+	/* 58 */ "HASH_UPDATE",
+	/* 59 */ "PUSH_KWARGS_MARKER",
+	/* 60 */ "MAKE_REDIR",
+	/* 61 */ "SUPER",
 };
 
 
@@ -2349,6 +2351,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 		NULL
 	);
 
+	MKTYPE(CommandsPipeline);
+	MKTYPE(CommandsPipe);
 	MKTYPE(Command);
 	MKTYPE(Redir);
 
@@ -4155,6 +4159,24 @@ do_jump:
 							// The place that Exception is created is the right place to set backtrace, not where it is thrown
 							// so not setting *result backtrace property here.
 							goto exception;
+		case OP_MAKE_CMDS_PIPELINE:
+							EXPECT_STACK_DEPTH(2);
+							command = make_normal_type_instance(vm->CommandsPipeline);
+							POP_NOCHECK(v);
+							set_normal_type_instance_attribute(command, make_string("options"), v);
+							POP_NOCHECK(v);
+							set_normal_type_instance_attribute(command, make_string("commands"), v);
+							PUSH_NOCHECK(command);
+							goto main_loop;
+		case OP_MAKE_CMDS_PIPE:
+							EXPECT_STACK_DEPTH(2);
+							command = make_normal_type_instance(vm->CommandsPipe);
+							POP_NOCHECK(v);
+							set_normal_type_instance_attribute(command, make_string("options"), v);
+							POP_NOCHECK(v);
+							set_normal_type_instance_attribute(command, make_string("name"), v);
+							PUSH_NOCHECK(command);
+							goto main_loop;
 		case OP_MAKE_CMD:
 							EXPECT_STACK_DEPTH(3);
 							command = make_normal_type_instance(vm->Command);

@@ -1062,7 +1062,7 @@ imm-array-literal =
 				CAPTURE_LOCATION($$);
 		}
 
-imm-array-words = acc:command-node (
+imm-array-words = acc:command-words-node (
 		inline_space?
 		(
 			array-command-word {
@@ -1138,7 +1138,7 @@ imm-hash-literal =
 				CAPTURE_LOCATION($$);
 		}
 
-imm-hash-words = acc:command-node (
+imm-hash-words = acc:command-words-node (
 		space?
 		(
 			hash-command-word {
@@ -1627,12 +1627,48 @@ optional-function-call-arguments =
 	}
 
 subshell =
-	"$(" cmd:command-words ")" { $$ = cmd; }
-	| "%(" cmd:command-words ")" { cmd->first_child->name = ngs_strdup("%()"); $$ = cmd; }
-	| "``" cmd:command-words "``" { cmd->first_child->name = ngs_strdup("````"); $$ = cmd; }
-	| "`" cmd:command-words "`" { cmd->first_child->name = ngs_strdup("``");  $$ = cmd; }
+	"$(" cmd:commands-pipeline ")" { $$ = cmd; }
+	| "%(" cmd:commands-pipeline ")" { cmd->first_child->name = ngs_strdup("%()"); $$ = cmd; }
+	| "``" cmd:commands-pipeline "``" { cmd->first_child->name = ngs_strdup("````"); $$ = cmd; }
+	| "`" cmd:commands-pipeline "`" { cmd->first_child->name = ngs_strdup("``");  $$ = cmd; }
 
-command-words = acc:command-node
+commands-pipeline = acc:commands-pipeline-node c1:command-words {
+		append_ast_node_child(acc->first_child->next_sibling, c1);
+	}
+	(
+		inline_space?
+		p:commands-pipe {
+			append_ast_node_child(acc->first_child->next_sibling, p);
+		}
+		c:command-words {
+			append_ast_node_child(acc->first_child->next_sibling, c);
+		}
+	)* {
+	$$ = acc;
+	CAPTURE_LOCATION($$);
+}
+
+commands-pipeline-node = {
+	MAKE_NODE(ret, COMMANDS_PIPELINE_NODE);
+		MAKE_IDENTIFIER_NODE(f, "$()");
+		append_ast_node_child(ret, f);
+		MAKE_NODE(commands, ARR_LIT_NODE);
+		append_ast_node_child(ret, commands);
+		MAKE_NODE(options, HASH_LIT_NODE);
+		append_ast_node_child(ret, options);
+	$$ = ret;
+}
+
+commands-pipe = <"|"> {
+	MAKE_NODE(ret, COMMANDS_PIPE_NODE);
+		MAKE_STRING_NODE(name, yytext);
+		append_ast_node_child(ret, name);
+		MAKE_NODE(options, HASH_LIT_NODE);
+		append_ast_node_child(ret, options);
+	$$ = ret;
+}
+
+command-words = acc:command-words-node
 	(
 		inline_space?
 		o:command-option {
@@ -1662,7 +1698,7 @@ command-words = acc:command-node
 	CAPTURE_LOCATION($$);
 }
 
-command-node = {
+command-words-node = {
 	MAKE_NODE(ret, COMMAND_NODE);
 		MAKE_IDENTIFIER_NODE(f, "$()");
 		append_ast_node_child(ret, f);

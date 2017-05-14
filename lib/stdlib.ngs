@@ -3346,21 +3346,6 @@ TEST Argv({"-a1": [], "-a2": [1,2,3]}) == ["-a2", 1, 2, 3]
 
 # --- $() ---
 
-# TODO: better exceptions (use correct type, not string)
-# TODO: c_waitpid() - handle signals
-# TODO: split to methods for easy behaviour modification
-# TODO: capture stderr
-# TODO: provide additional communication channel on additional fd?
-# TODO: handle built-in commands: do not execve,
-# INFO: bash - redir.c
-doc Execute an external command. Waits for the command to finish unless "&" is specified.
-doc c - Command type instance, typically constructed by NGS when parsing the contents of $(...) .
-doc %EX - if $(test -f /myfile) { ... }
-doc %EX - # or
-doc %EX - p = $(node main.js serve &)
-doc %EX - YOUR_TESTS_OF_NODE_SERVER_HERE
-doc %EX - p.kill()
-doc %RET - Process
 F '$()'(c:Command) {
 
 	# Special case: $($cmd)
@@ -3465,6 +3450,32 @@ F '$()'(c:Command) {
 	process
 }
 
+# TODO: better exceptions (use correct type, not string)
+# TODO: c_waitpid() - handle signals
+# TODO: split to methods for easy behaviour modification
+# TODO: capture stderr
+# TODO: provide additional communication channel on additional fd?
+# TODO: handle built-in commands: do not execve,
+# INFO: bash - redir.c
+doc Execute an external command. Waits for the command to finish unless "&" is specified.
+doc c - Command type instance, typically constructed by NGS when parsing the contents of $(...) .
+doc %EX - if $(test -f /myfile) { ... }
+doc %EX - # or
+doc %EX - p = $(node main.js serve &)
+doc %EX - YOUR_TESTS_OF_NODE_SERVER_HERE
+doc %EX - p.kill()
+doc %RET - Process
+F '$()'(cp:CommandsPipeline) {
+
+	cp.commands.len() !=1 throws NotImplemented("CommandsPipeline can have exactly one command")
+
+	# XXX: can not be printed because it's circular - StackDepthFail in inspect()
+	# cp.commands.cp = cp
+
+	('$()')(cp.commands[0])
+
+}
+
 TEST $(true).Bool()
 TEST $(false).Bool() == false
 TEST "$(/bin/echo -n abc)" == 'abc'
@@ -3482,14 +3493,14 @@ F '$()'(c:Command) {
 
 
 doc Get command standard output. Similar to bash.
-F ``(c:Command) ('$()')(c).Str()
+F ``(cp:CommandsPipeline) ('$()')(cp).Str()
 
 doc Get command standard output and parse() it.
 doc %RET - structured data when the output can be parsed.
 doc %EX - ``aws ec2 describe-instances`` is Arr  # true
 doc %EX - ``aws ec2 describe-instances``.InstanceId.map(X[0..3]).join(",")  # i-3, i-9, i-8, i-a, i-7, ...
-F ````(c:Command) {
-	p = ('$()')(c)
+F ````(cp:CommandsPipeline) {
+	p = ('$()')(cp)
 	p.stdout.parse({'process': p})
 }
 
@@ -3558,11 +3569,11 @@ F unparse(data, hints:Hash) {
 	1
 }
 
-doc Returns c, wihout any processing. Convenient way to pass ready-to-run Command as an argument
-doc %EX - F run_when_needed(c:Command) { ... $(c) ... }
+doc Returns cp, wihout any processing. Convenient way to pass ready-to-run Command as an argument
+doc %EX - F run_when_needed(cp:CommandsPipeline) { ... $(cp) ... }
 doc %EX - ...
 doc %EX - run_when_needed(%(ls >/tmp/my_ls))
-F '%()'(c:Command) c
+F '%()'(cp:CommandsPipeline) cp
 
 doc Wait for the process and return lines of its stdout.
 doc %RET - Arr of Str
@@ -4046,9 +4057,10 @@ doc Inspect Int
 doc %RET - Arr with one element, Str
 F inspect(i:Int) ["Int: $i"]
 
+# TODO: escape special characters
 doc Inspect Str
 doc %RET - Arr with one element, Str
-F inspect(s:Str) ["String: $s"]
+F inspect(s:Str) ["String(${s.len()}): $s"]
 
 doc Inspect Arr
 doc %RET - Arr of Str

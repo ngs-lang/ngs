@@ -222,6 +222,8 @@ typedef struct {
 
 	VALUE Backtrace;
 
+	VALUE CommandsPipeline;
+	VALUE CommandsPipe;
 	VALUE Command;
 	VALUE Redir;
 
@@ -323,6 +325,8 @@ enum opcodes {
 	OP_TRY_END,
 	OP_ARR_REVERSE,
 	OP_THROW,
+	OP_MAKE_CMDS_PIPELINE,
+	OP_MAKE_CMDS_PIPE,
 	OP_MAKE_CMD,
 	OP_SET_CLOSURE_NAME,
 	OP_SET_CLOSURE_DOC,

@@ -966,8 +966,34 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_THROW);
 			break;
 
-		case COMMAND_NODE:
+		case COMMANDS_PIPELINE_NODE:
+
 			OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
+			// commands
+			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+			// options
+			compile_main_section(ctx, node->first_child->next_sibling->next_sibling, buf, idx, allocated, NEED_RESULT);
+			OPCODE(*buf, OP_MAKE_CMDS_PIPELINE);
+
+			OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 1);
+			compile_identifier(ctx, buf, idx, node->first_child->name, OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
+			OPCODE(*buf, OP_CALL);
+			POP_IF_DONT_NEED_RESULT(*buf);
+
+			break;
+
+		case COMMANDS_PIPE_NODE:
+
+			// name
+			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			// options
+			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+
+			OPCODE(*buf, OP_MAKE_CMDS_PIPE);
+			POP_IF_DONT_NEED_RESULT(*buf);
+			break;
+
+		case COMMAND_NODE:
 			// argv
 			OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0); // Make array with zero elements
 			OPCODE(*buf, OP_MAKE_ARR);
@@ -988,16 +1014,11 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
 				OPCODE(*buf, OP_ARR_APPEND);
 			}
-			//options
+			// options
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling->next_sibling, buf, idx, allocated, NEED_RESULT);
 
 			OPCODE(*buf, OP_MAKE_CMD);
-
-			OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 1);
-			compile_identifier(ctx, buf, idx, node->first_child->name, OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
-			OPCODE(*buf, OP_CALL);
 			POP_IF_DONT_NEED_RESULT(*buf);
-
 			break;
 
 		case BREAK_NODE:
