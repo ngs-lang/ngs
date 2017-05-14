@@ -41,6 +41,7 @@ Note that this started as internal document so things here are unformed, not fin
 	* F main(a:Str, b:Str=null) is not matched when only one argument is passed
 		happens because all matched arguments are treated as positional
 		should implement keyword-only arguments first
+	* build - install ngs syntax detection and highlighting for vim
 
 [roadmap]
 
