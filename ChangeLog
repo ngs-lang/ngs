@@ -1,0 +1,9 @@
+Version 0.2.0 unreleased
+
+	* Pipes support
+	* Improved documentation
+	* Files globbing
+
+2017-05-13 Version 0.1.0
+
+	* Incorporate Mac OS X support contributed by Zeev Glozman
