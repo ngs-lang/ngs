@@ -42,6 +42,7 @@ Note that this started as internal document so things here are unformed, not fin
 		happens because all matched arguments are treated as positional
 		should implement keyword-only arguments first
 	* build - install ngs syntax detection and highlighting for vim
+	* last(?, predicate)
 
 [roadmap]
 
@@ -53,6 +54,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 				* pipes
 					* between external commands
+						* move flags to pipeline
+						* configure pipes
 					* between internal commands/functions
 					* between internal and external commands
 

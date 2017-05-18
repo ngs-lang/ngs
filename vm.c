@@ -4013,13 +4013,26 @@ do_jump:
 							CONVERTING_OP(IS_STRING, Str);
 		case OP_MAKE_STR:
 							// TODO: (optimization) update top of the stack instead of POP and PUSH
-							POP(v);
-							string_components_count = GET_INT(v);
-							v = join_strings(string_components_count, &(ctx->stack[ctx->stack_ptr-string_components_count]));
-							assert(ctx->stack_ptr >= string_components_count);
-							ctx->stack_ptr -= string_components_count;
-							PUSH_NOCHECK(v);
-							goto main_loop;
+							{
+								int i;
+								POP(v);
+								string_components_count = GET_INT(v);
+								EXPECT_STACK_DEPTH(string_components_count);
+								for(i=0;i<string_components_count;i++) {
+									if(!IS_STRING(ctx->stack[ctx->stack_ptr-string_components_count+i])) {
+										VALUE exc;
+										exc = make_normal_type_instance(vm->InvalidArgument);
+										set_normal_type_instance_attribute(exc, make_string("message"), make_string("String interpolation requires all components to be strings"));
+										set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+										*result = exc;
+										goto exception;
+									}
+								}
+								v = join_strings(string_components_count, &(ctx->stack[ctx->stack_ptr-string_components_count]));
+								ctx->stack_ptr -= string_components_count;
+								PUSH_NOCHECK(v);
+								goto main_loop;
+							}
 		case OP_PUSH_EMPTY_STR:
 							PUSH(make_var_len_obj(T_STR, 1, 0));
 							goto main_loop;

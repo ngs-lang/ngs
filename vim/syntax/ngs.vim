@@ -20,7 +20,7 @@ syn keyword ngsRepeat for
 " bootstrap types
 syn keyword ngsType NotImplemented ReadFail RequreFail MainFail
 " other types
-syn keyword ngsType Any ArgvMatcher ArgvMatcherDecorator Arr ArrIter ArrLike BasicType Bool Box CLib Closure Command CommandsPipe CommandsPipeline ConstIter Counter CSym DelimStr Eachable Eachable1 Eachable2 EmptyBox ExecutableNotFound FFI FullBox Fun Hash HashIter HashLike Int Iter KillFail KV NormalType NormalTypeInstance NoData Null Num Path Pipe PipeCreateFail Pred Process ProcessFail Range RangeIter Real Seq Stats Str Table TableMeta TableMetaNotIfCol TtyCheckFail Type
+syn keyword ngsType Any ArgvMatcher ArgvMatcherDecorator Arr ArrIter ArrLike BasicType Bool Box CLib Closure Command CommandsPipe CommandsPipeline ConstIter Counter CSym DelimStr Eachable Eachable1 Eachable2 EmptyBox ExecutableNotFound FFI FullBox Fun Hash HashIter HashLike Int Iter KillFail KV NormalType NormalTypeInstance NoData Null Num Path Pipe PipeCreateFail PipeFromChildProcess PipeToChildProcess Pred Process ProcessFail Range RangeIter Real Seq Stats Str Table TableMeta TableMetaNotIfCol TtyCheckFail Type
 syn keyword ngsType Range NumRange PredRange
 syn keyword ngsType Diff ArrDiff HashDiff
 syn keyword ngsType Presence PartialPresence Present Absent ExactPresence

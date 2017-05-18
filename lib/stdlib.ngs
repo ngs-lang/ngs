@@ -1,7 +1,5 @@
 STDLIB_EOL = "\n"
 STDLIB_PATH_SEP = '/'
-STDLIB_CHILD_TO_PARENT_PIPE_DIR = 1
-STDLIB_PARENT_TO_CHILD_PIPE_DIR = 2
 STDLIB_MAX_RAND_REAL = Real(RAND_MAX)
 STDLIB_RAND_SAFETY_MAX = 100
 
@@ -3005,6 +3003,12 @@ F isatty(fd:Int) {
 {
 	doc Wrapper around file descriptors returned by PIPE(2)
 	type Pipe
+		type PipeToChildProcess(Pipe)
+			type PipeFromParentToChildProcess(PipeToChildProcess)
+			type ReadingPipeBetweenChildren(PipeToChildProcess)
+		type PipeFromChildProcess(Pipe)
+			type PipeFromChildToParentProcess(PipeFromChildProcess)
+			type WritingPipeBetweenChildren(PipeFromChildProcess)
 	doc Represents failure of creating a Pipe when calling PIPE(2)
 	type PipeCreateFail(CException)
 }
@@ -3018,18 +3022,27 @@ F init(pipe:Pipe) {
 	result[0] != 0 throws PipeCreateFail("Failed to create Pipe")
 	pipe.read_fd = result[1]
 	pipe.write_fd = result[2]
-	debug("file", "[Pipe] created pipe with read_fd=${pipe.read_fd} and write_fd=${pipe.write_fd}")
+	debug("file", "${pipe.typeof().name} created pipe with read_fd=${pipe.read_fd} and write_fd=${pipe.write_fd}")
 }
 
-doc Pipe constructor. Create UNIX pipe using PIPE(2). Throws PipeCreateFail if pipe can not be created.
-doc direction - One of: STDLIB_CHILD_TO_PARENT_PIPE_DIR or STDLIB_PARENT_TO_CHILD_PIPE_DIR
-doc %EX - p = Pipe(STDLIB_PARENT_TO_CHILD_PIPE_DIR)
-F init(pipe:Pipe, direction:Int) {
-	init(pipe)
-	init(args())
+F init(pipe:Pipe, other:Pipe) {
+	pipe.read_fd = other.read_fd
+	pipe.write_fd = other.write_fd
 }
 
-F Str(p:Pipe) "<Pipe read_fd=${p.read_fd} write_fd=${p.write_fd}>"
+doc Get child process end file descriptor of Pipe.
+F child_fd(pipe:PipeToChildProcess) pipe.read_fd
+
+doc Get child process end file descriptor of Pipe.
+F child_fd(pipe:PipeFromChildProcess) pipe.write_fd
+
+doc Get parent process end file descriptor of Pipe.
+F parent_fd(pipe:PipeToChildProcess) pipe.write_fd
+
+doc Get parent process end file descriptor of Pipe.
+F parent_fd(pipe:PipeFromChildProcess) pipe.read_fd
+
+F Str(p:Pipe) "<${p.typeof().name} read_fd=${p.read_fd} write_fd=${p.write_fd}>"
 
 # TODO: exception on fail, maybe close() wrapper for c_close()
 
@@ -3053,30 +3066,6 @@ F dup2_writing_end(p:Pipe, newfd:Int) dup2(p.write_fd, newfd)
 
 doc DUP2(2) reading file descriptor
 F dup2_reading_end(p:Pipe, newfd:Int) dup2(p.read_fd, newfd)
-
-doc Get child process end file descriptor of Pipe. It's the writing end for Pipe(STDLIB_CHILD_TO_PARENT_PIPE_DIR).
-F child_fd(p:Pipe) {
-	guard p.direction == STDLIB_CHILD_TO_PARENT_PIPE_DIR
-	p.write_fd
-}
-
-doc Get child process end file descriptor of Pipe. It's the reading end for Pipe(STDLIB_PARENT_TO_CHILD_PIPE_DIR).
-F child_fd(p:Pipe) {
-	guard p.direction == STDLIB_PARENT_TO_CHILD_PIPE_DIR
-	p.read_fd
-}
-
-doc Get parent process end file descriptor of Pipe. It's the reading end for Pipe(STDLIB_CHILD_TO_PARENT_PIPE_DIR).
-F parent_fd(p:Pipe) {
-	guard p.direction == STDLIB_CHILD_TO_PARENT_PIPE_DIR
-	p.read_fd
-}
-
-doc Get parent process end file descriptor of Pipe. It's the writing end for Pipe(STDLIB_PARENT_TO_CHILD_PIPE_DIR).
-F parent_fd(p:Pipe) {
-	guard p.direction == STDLIB_PARENT_TO_CHILD_PIPE_DIR
-	p.write_fd
-}
 
 # --- File ---
 
@@ -3167,6 +3156,8 @@ doc Read standard input and parse() it, passing "source" equals "stdin" hint.
 F fetch(parse_hints:Hash={}) read(0).parse({'source': 'stdin'} + parse_hints)
 
 # --- Redir ---
+
+F init(r:Redir, fd, marker:Str, datum) init(args())
 
 doc TODO
 F Str(r:Redir) "<Redirect ${r.fd} ${r.marker} ${r.datum}>"
@@ -3265,7 +3256,6 @@ F init(p:Process, c:Command) {
 	p.pid = null
 	p.exit_code = null
 	p.exit_signal = null
-	p.pipes = {}
 	p.outputs = {1:null, 2:null}
 	p.reading_threads = []
 	p.writing_threads = []
@@ -3274,9 +3264,9 @@ F init(p:Process, c:Command) {
 
 doc Wait for process to finish and see whether exit code is 0
 doc %RET - Bool
-F Bool(p:Process) {
-	p.wait()
-	p.exit_code == 0
+F Bool(cp:CommandsPipeline) {
+	cp.wait()
+	cp.processes.all({A.exit_code == 0})
 }
 
 # TODO: better exceptions (use correct type, not string)
@@ -3307,12 +3297,22 @@ F wait(p:Process) {
 	p
 }
 
+F wait(cp:CommandsPipeline) {
+	cp.processes.each(wait)
+}
+
 doc Convert Process to exit code. Waites for the process to finish and uses its exit code.
 F to_exit_code(p:Process) p.wait().exit_code
 
 doc Wait for the process to finish and return its standard output.
 doc %RET - Str
 F Str(p:Process) p.wait().stdout
+
+F Str(cp:CommandsPipeline) {
+	cp.wait()
+	assert(cp.processes)
+	Str(cp.processes[-1])
+}
 
 # TODO: type Arg(Str) -- currently, inheriting built in types is not supported
 F Arg(x:Real) Str(x)
@@ -3363,41 +3363,33 @@ F '$()'(c:Command) {
 	} catch(nf:ExecutableNotFound) {
 		throw ProcessFail(process).set('cause', nf).set('message', 'Executable not found')
 	}
-	# child fd -> Pipe
-	pipes = process.pipes
-	if not(c.options.get('top_level')) {
-		pipes[1] = Pipe(STDLIB_CHILD_TO_PARENT_PIPE_DIR)
-	}
-
-	c.redirects.each(F(r:Redir) {
-		# WIP. Continue here: support functions and Pipe objects
-	})
-
-	pipes % { process.outputs[A] = null }
 
 	pid = c_fork()
 
-	pid == -1 throws "Failed to fork()"
+	pid == -1 throws ProcessFail("Could not spawn a process").set('cause', CException("Failed to fork()"))
 
 	debug("process", "PID after fork: $pid")
 
-	child_fds = pipes / child_fd(Y)
-	parent_fds = pipes / parent_fd(Y)
+	pipes = c.redirects.filter({A.marker == 'PIPE'})
+	debug("process2", "PIPES FROM REDIRECTS $pipes REDIRECTS ${c.redirects} COMMND ${c.Hash()}")
+	child_fds =  pipes.datum.map(child_fd)
+	parent_fds = pipes.datum.map(parent_fd)
 
 	if pid == 0 {
 		# === Child ===
 		# TODO: -------------------- test - start --------------------
 
+		debug("process2", "CHILD FDS $child_fds PARENT FDS $parent_fds")
 		for(i=3;i<100;i+=1) {
 			if i not in child_fds {
+				# XXX child to parent also closed here
+				# echo("CHILD CLOSING $i")
 				i.c_close()
 			}
 		}
-		# TODO: -------------------- test - end --------------------
 		parent_fds % c_close
-		pipes % F(fd, pipe) {
-			dup2(pipe.child_fd(), fd)
-		}
+		# TODO: -------------------- test - end --------------------
+
 		# Redirections (WIP) - start
 		c.redirects.each(F(r:Redir) {
 
@@ -3408,17 +3400,31 @@ F '$()'(c:Command) {
 				'<'  { flags = 'r'; target_fd = fd_or_dflt(r.fd, 0); }
 				'>'  { flags = 'w'; target_fd = fd_or_dflt(r.fd, 1); }
 				'>>' { flags = 'a'; target_fd = fd_or_dflt(r.fd, 1); }
+				'PIPE' {
+					target_fd = child_fd(r.datum)
+				}
 			}
 
 			# TODO: Maybe support File or some other datum types later?
 			if r.datum is Str {
 				f = File(r.datum).open(flags)
 				ok = c_dup2(f.fd, target_fd)
-				# TODO: better exception
-				ok < 0 throws "Failed to dup2(${f.fd}, ${target_fd}). Errno ${c_errno()}"
+				ok < 0 throws FileIOFail("Failed to dup2(${f.fd}, ${target_fd}). Errno ${c_errno()}").set('src_fd', f.fd).set('dst_fd', target_fd)
+			}
+
+			if r.datum is Pipe {
+				debug("process2", "REDIRECT PIPE ${r.fd} -> ${child_fd(r.datum)}")
+
+				ok = c_dup2(child_fd(r.datum), r.fd)
+				ok < 0 throws FileIOFail("Failed to dup2(${child_fd(r.datum)}, ${r.fd}). Errno ${c_errno()}").set('src_fd', child_fd(r.datum)).set('dst_fd', r.fd)
+
+				# Is this needed?
+				ok = c_close(child_fd(r.datum))
+				ok < 0 throws FileIOFail("Failed to c_close")
 			}
 		})
 		# Redirections (WIP) - end
+		debug("process", "will execve()")
 		result = c_execve(process.executable.path, argv, ENV.Strs())
 		# TODO: propagate this error to parent, don't know how yet
 		throw ProcessFail(process).set('message', "failed to execve()")
@@ -3427,29 +3433,38 @@ F '$()'(c:Command) {
 	if pid > 0 {
 		# === Parent ===
 		process.pid = pid
+		# XXX
 		child_fds % c_close
 		debug("process", "Reading all output of the child process")
 		# XXX: maybe make it chunk based with c_poll() and single thread
-		pipes_to_read_from = pipes ? F(fd, pipe) { pipe.direction == STDLIB_CHILD_TO_PARENT_PIPE_DIR }
 		# TODO: some error handling inside these threads and after joining them
-		process.reading_threads = pipes_to_read_from.map(F(fd, pipe) {
+		process.reading_threads = c.redirects.filter(F(r:Redir) r.datum is PipeFromChildToParentProcess).map(F(r:Redir) {
+			debug("process2", "MAKING READING THREAD")
 			Thread({
-				process.outputs[fd] = pipe.read()
+				debug("process2", "READING ${r.datum}")
+				try {
+					process.outputs[r.fd] = r.datum.read()
+				} catch(e) {
+					debug("process2", "READ FAILED: $e")
+				}
+				debug("process2", "READ ${process.outputs[r.fd]}")
 				pipe.close_reading_end()
 				debug("process", "Read all output of the child process for descriptor $fd, closing reading/parent end")
 			})
 		})
-		# echo("R ${c.reading_threads}")
-		if not(c.options.get('&')) {
-			process.wait()
-		}
+		# debug("process2", "R ${c.reading_threads}")
+		### xxx ### if not(c.options.get('&')) {
+		### xxx ### 	process.wait()
+		### xxx ### }
 	}
 
 	# TODO: pid < 0 => throw exception with errno
 
+	debug("process2", "XXX process ${process.Hash()}")
 	process
 }
 
+# TODO: Free (close) fds on failure
 # TODO: better exceptions (use correct type, not string)
 # TODO: c_waitpid() - handle signals
 # TODO: split to methods for easy behaviour modification
@@ -3467,13 +3482,44 @@ doc %EX - p.kill()
 doc %RET - Process
 F '$()'(cp:CommandsPipeline) {
 
-	cp.commands.len() !=1 throws NotImplemented("CommandsPipeline can have exactly one command")
+	# cp.commands.len() !=1 throws NotImplemented("CommandsPipeline can have exactly one command")
 
 	# XXX: can not be printed because it's circular - StackDepthFail in inspect()
 	# cp.commands.cp = cp
 
-	('$()')(cp.commands[0])
+	cp.processes = null
+	cp.pipes = {}
 
+	for(i;cp.commands.len()) {
+		item = cp.commands[i]
+		if item is CommandsPipe {
+			p = Pipe()
+			cp.pipes[i] = Pipe()
+			if i > 0 {
+				assert(cp.commands[i-1] is Command)
+				cp.commands[i-1].redirects.unshift(Redir(1, 'PIPE', WritingPipeBetweenChildren(p)))
+			}
+			if i < cp.commands.len() - 1 {
+				assert(cp.commands[i+1] is Command)
+				cp.commands[i+1].redirects.unshift(Redir(0, 'PIPE', ReadingPipeBetweenChildren(p)))
+			}
+		}
+	}
+
+	### xxx ### if not(c.options.get('top_level')) {
+	### xxx ### 	pipes[1] = Pipe(STDLIB_CHILD_TO_PARENT_PIPE_DIR)
+	### xxx ### }
+
+	# XXX: Only if not top_level
+	if cp.commands[-1] is Command {
+		cp.commands[-1].redirects.unshift(Redir(1, 'PIPE', PipeFromChildToParentProcess()))
+	}
+
+	debug("process2", "PT8 ${cp.commands.filter(Command)}")
+	cp.processes = cp.commands.filter(Command).map(('$()'))
+	# TODO: if not top_level:
+	cp.processes.each(wait)
+	cp
 }
 
 TEST $(true).Bool()
@@ -3493,15 +3539,21 @@ F '$()'(c:Command) {
 
 
 doc Get command standard output. Similar to bash.
-F ``(cp:CommandsPipeline) ('$()')(cp).Str()
+F ``(cp:CommandsPipeline) {
+	processes = ('$()')(cp).processes
+	assert(processes)
+	processes[-1].Str()
+}
 
 doc Get command standard output and parse() it.
 doc %RET - structured data when the output can be parsed.
 doc %EX - ``aws ec2 describe-instances`` is Arr  # true
 doc %EX - ``aws ec2 describe-instances``.InstanceId.map(X[0..3]).join(",")  # i-3, i-9, i-8, i-a, i-7, ...
 F ````(cp:CommandsPipeline) {
-	p = ('$()')(cp)
-	p.stdout.parse({'process': p})
+	processes = ('$()')(cp).processes
+	assert(processes)
+	p = processes[-1]
+	p.stdout.parse({'process': p, 'pipeline': cp})
 }
 
 doc Send signal to a process. Uses KILL(2). Throws KillFail on error.
