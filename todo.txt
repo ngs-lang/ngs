@@ -46,7 +46,6 @@ Note that this started as internal document so things here are unformed, not fin
 	* last(?, predicate)
 	* fix [10].Box(-20)
 	* Consider Ref(h:Hash, k) and Ref(a:Arr, idx:Int)
-	* add "max" parameter to split()
 
 [roadmap]
 

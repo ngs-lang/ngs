@@ -2408,20 +2408,26 @@ doc Split string by substring
 doc %RET - Arr of Str
 doc %EX - ":a:bc:d:".split(":")   # ["", "a", "bc", "d", ""]
 doc %EX - ":a:bc:d:".split("bc")  # [":a:", ":d:"]
-F split(s:Str, delim:Str) {
+F split(s:Str, delim:Str, max_parts:Int=null) {
 	l = delim.len()
 	guard l > 0
 	start = 0
+	parts = 0
 	collector {
 		while (p = pos(s, delim, start)) is not Null {
 			collect(s[start..p])
 			start = p + l
+			if max_parts is not Null {
+				parts += 1
+				parts == max_parts - 1 breaks
+			}
 		}
 		collect(s[start..null])
 	}
 }
 
 TEST ":a:bc:d:".split(":") == ["", "a", "bc", "d", ""]
+TEST "bucket_name/dir/file".split("/", 2) == ["bucket_name", "dir/file"]
 TEST ":a:bc:d:".split("bc") == [":a:", ":d:"]
 
 doc Repeat string n times
@@ -3134,6 +3140,7 @@ F lines(f:File, lines_:Arr) {
 		}
 }
 
+# Note: EINTR should not be handled
 doc Close a file and sets the "fd" field to null. Uses CLOSE(2).
 doc Throws InvalidArgument if file is not open.
 doc Throws FileIOFail if an underlying error occurs.
@@ -3146,7 +3153,7 @@ F close(f:File) {
 	f.fd = null
 }
 
-# TODO: handle EINTR
+# Note: EINTR should not be handled
 F close(fd:Int) {
 	ret = c_close(fd)
 	ret < 0 throws FileIOFail("Failed to close file descriptor $fd").set('fd', fd)
