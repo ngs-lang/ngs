@@ -4173,10 +4173,12 @@ do_jump:
 							// so not setting *result backtrace property here.
 							goto exception;
 		case OP_MAKE_CMDS_PIPELINE:
-							EXPECT_STACK_DEPTH(2);
+							EXPECT_STACK_DEPTH(3);
 							command = make_normal_type_instance(vm->CommandsPipeline);
 							POP_NOCHECK(v);
 							set_normal_type_instance_attribute(command, make_string("options"), v);
+							POP_NOCHECK(v);
+							set_normal_type_instance_attribute(command, make_string("pipes"), v);
 							POP_NOCHECK(v);
 							set_normal_type_instance_attribute(command, make_string("commands"), v);
 							PUSH_NOCHECK(command);

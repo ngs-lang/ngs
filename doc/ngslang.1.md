@@ -105,7 +105,7 @@ NGS is a domain-specific language. It is aimed to solve common system tasks in a
 
 ## Do the most practical thing
 
-* `read('myfile.json')` will parse the JSON and return the data structure. (Use `fetch()` to get raw contents).
+* `fetch('myfile.json')` will parse the JSON and return the data structure. (Use `read()` to get raw contents).
 * The ```` ``my_command`` ```` will parse the command output (JSON for example) and return the data structure. Note that ```` ``aws ...`` ```` will be parsed even further (not just JSON) to return more usable data structures.
 * `my_array.my_prop` returns an array of `.my_prop` properties of each element.
 
@@ -125,8 +125,8 @@ Trade-offs between power and not allowing to shoot yourself in the foot are usua
 
 ## Extensibility
 
-* `read('your_file.super-format')` can be extended to parse your format.
-* `fetch`, which reads from a file, can be extended to support HTTP or S3.
+* `fetch('your_file.super-format')` can be extended to parse your format.
+* `read`, which reads from a file, can be extended to support HTTP or S3.
 * Define any operator for existing or your custom types.
 
 ## Simplicity

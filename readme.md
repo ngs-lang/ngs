@@ -100,7 +100,7 @@ Compiling and running
 
 ### Install dependencies - Debian-based Linux
 
-	sudo apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre3-dev make cmake pandoc
+	sudo apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c-dev peg libpcre3-dev make cmake pandoc
 	sudo type awk || sudo apt-get install gawk
 	mkdir build && cd build && cmake .. && make && ctest
 	# If NGS is not installed:

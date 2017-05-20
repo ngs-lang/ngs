@@ -971,8 +971,10 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
 			// commands
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
-			// options
+			// pipes
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling, buf, idx, allocated, NEED_RESULT);
+			// options
+			compile_main_section(ctx, node->first_child->next_sibling->next_sibling->next_sibling, buf, idx, allocated, NEED_RESULT);
 			OPCODE(*buf, OP_MAKE_CMDS_PIPELINE);
 
 			OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 1);

@@ -291,7 +291,7 @@ command =
 	|
 	comment
 	|
-	cw:command-words {
+	cp:commands-pipeline {
 		// TODO: constants for flags
 		MAKE_STRING_NODE(option_pair, "top_level")
 			MAKE_STRING_NODE(option_name, "top_level")
@@ -299,8 +299,8 @@ command =
 			MAKE_NODE(option_value, TRUE_NODE);
 			append_ast_node_child(option_pair, option_value);
 		append_ast_node_child($$->first_child->next_sibling->next_sibling->next_sibling, option_pair);
-		cw->number = 1;
-		$$ = cw;
+		cp->number = 1;
+		$$ = cp;
 	}
 
 
@@ -1632,18 +1632,55 @@ subshell =
 	| "``" cmd:commands-pipeline "``" { cmd->first_child->name = ngs_strdup("````"); $$ = cmd; }
 	| "`" cmd:commands-pipeline "`" { cmd->first_child->name = ngs_strdup("``");  $$ = cmd; }
 
-commands-pipeline = acc:commands-pipeline-node c1:command-words {
+commands-pipeline = acc:commands-pipeline-node
+	(
+		inline_space?
+		o:commands-pipeline-option {
+			append_ast_node_child(acc->first_child->next_sibling->next_sibling->next_sibling, o);
+		}
+	)*
+	(
+		(
+			inline_space?
+			p:commands-pipe {
+				append_ast_node_child(acc->first_child->next_sibling->next_sibling, p);
+			}
+		) | {
+			MAKE_NODE(p2, NULL_NODE);
+			append_ast_node_child(acc->first_child->next_sibling->next_sibling, p2);
+		}
+	)
+	c1:command-words {
 		append_ast_node_child(acc->first_child->next_sibling, c1);
 	}
 	(
 		inline_space?
 		p:commands-pipe {
-			append_ast_node_child(acc->first_child->next_sibling, p);
+			append_ast_node_child(acc->first_child->next_sibling->next_sibling, p);
 		}
 		c:command-words {
 			append_ast_node_child(acc->first_child->next_sibling, c);
 		}
-	)* {
+	)*
+	(
+		(
+			inline_space?
+			p:commands-pipe {
+				append_ast_node_child(acc->first_child->next_sibling->next_sibling, p);
+			}
+		) | {
+			MAKE_NODE(p2, NULL_NODE);
+			append_ast_node_child(acc->first_child->next_sibling->next_sibling, p2);
+		}
+	)
+	(inline_space? "&" {
+		MAKE_NODE(option, EXPRESSIONS_NODE);
+			MAKE_STRING_NODE(option_k, "&");
+			append_ast_node_child(option, option_k);
+			MAKE_NODE(option_v, TRUE_NODE);
+			append_ast_node_child(option, option_v);
+		append_ast_node_child(acc->first_child->next_sibling->next_sibling->next_sibling, option);
+	})? {
 	$$ = acc;
 	CAPTURE_LOCATION($$);
 }
@@ -1654,6 +1691,8 @@ commands-pipeline-node = {
 		append_ast_node_child(ret, f);
 		MAKE_NODE(commands, ARR_LIT_NODE);
 		append_ast_node_child(ret, commands);
+		MAKE_NODE(pipes, ARR_LIT_NODE);
+		append_ast_node_child(ret, pipes);
 		MAKE_NODE(options, HASH_LIT_NODE);
 		append_ast_node_child(ret, options);
 	$$ = ret;
@@ -1667,6 +1706,25 @@ commands-pipe = <"|"> {
 		append_ast_node_child(ret, options);
 	$$ = ret;
 }
+
+commands-pipeline-option =
+	i:identifier "::" (
+		e:expression {
+			MAKE_NODE(ret, EXPRESSIONS_NODE);
+				MAKE_STRING_NODE(option_k, i->name);
+				append_ast_node_child(ret, option_k);
+				append_ast_node_child(ret, e);
+			$$ = ret;
+		}
+		| {
+			MAKE_NODE(ret, EXPRESSIONS_NODE);
+				MAKE_STRING_NODE(option_k, i->name);
+				append_ast_node_child(ret, option_k);
+				MAKE_NODE(option_v, TRUE_NODE);
+				append_ast_node_child(ret, option_v);
+			$$ = ret;
+		}
+	)
 
 command-words = acc:command-words-node
 	(
@@ -1686,14 +1744,7 @@ command-words = acc:command-words-node
 				append_ast_node_child(acc->first_child->next_sibling, $$);
 			}
 		)
-	)+ (inline_space? "&" {
-		MAKE_NODE(option, EXPRESSIONS_NODE);
-			MAKE_STRING_NODE(option_k, "&");
-			append_ast_node_child(option, option_k);
-			MAKE_NODE(option_v, TRUE_NODE);
-			append_ast_node_child(option, option_v);
-		append_ast_node_child(acc->first_child->next_sibling->next_sibling->next_sibling, option);
-	})? {
+	)+ {
 	$$ = acc;
 	CAPTURE_LOCATION($$);
 }

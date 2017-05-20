@@ -3453,9 +3453,6 @@ F '$()'(c:Command) {
 			})
 		})
 		# debug("process2", "R ${c.reading_threads}")
-		### xxx ### if not(c.options.get('&')) {
-		### xxx ### 	process.wait()
-		### xxx ### }
 	}
 
 	# TODO: pid < 0 => throw exception with errno
@@ -3482,49 +3479,51 @@ doc %EX - p.kill()
 doc %RET - Process
 F '$()'(cp:CommandsPipeline) {
 
-	# cp.commands.len() !=1 throws NotImplemented("CommandsPipeline can have exactly one command")
-
-	# XXX: can not be printed because it's circular - StackDepthFail in inspect()
-	# cp.commands.cp = cp
-
 	cp.processes = null
-	cp.pipes = {}
+	cp.pipe_in = null
+	cp.pipe_out = null
 
-	for(i;cp.commands.len()) {
-		item = cp.commands[i]
-		if item is CommandsPipe {
-			p = Pipe()
-			cp.pipes[i] = Pipe()
-			if i > 0 {
-				assert(cp.commands[i-1] is Command)
-				cp.commands[i-1].redirects.unshift(Redir(1, 'PIPE', WritingPipeBetweenChildren(p)))
-			}
-			if i < cp.commands.len() - 1 {
-				assert(cp.commands[i+1] is Command)
-				cp.commands[i+1].redirects.unshift(Redir(0, 'PIPE', ReadingPipeBetweenChildren(p)))
-			}
+	# Commands:    C0    C1    C2
+	# Pipes:    P0    P1    P2    P3
+	# $(| ...) - uses P0
+	# $(... |) - uses P3
+	for(i;cp.pipes.len()) {
+		cp.pipes[i] is Null continues
+		if i == 0 {
+			debug("process2", "PIPE IN")
+			cp.pipe_in = PipeToChildProcess()
+			cp.commands[i].redirects.unshift(Redir(0, 'PIPE', cp.pipe_in))
+			continue
 		}
+		if i == cp.commands.len() {
+			debug("process2", "PIPE OUT")
+			cp.pipe_out = PipeFromChildToParentProcess()
+			cp.commands[i-1].redirects.unshift(Redir(0, 'PIPE', cp.pipe_out))
+			continue
+		}
+		p = Pipe()
+		cp.commands[i-1].redirects.unshift(Redir(1, 'PIPE', WritingPipeBetweenChildren(p)))
+		cp.commands[i].redirects.unshift(Redir(0, 'PIPE', ReadingPipeBetweenChildren(p)))
 	}
 
-	### xxx ### if not(c.options.get('top_level')) {
-	### xxx ### 	pipes[1] = Pipe(STDLIB_CHILD_TO_PARENT_PIPE_DIR)
-	### xxx ### }
-
-	# XXX: Only if not top_level
-	if cp.commands[-1] is Command {
+	if not(cp.options.get('top_level')) {
 		cp.commands[-1].redirects.unshift(Redir(1, 'PIPE', PipeFromChildToParentProcess()))
 	}
 
-	debug("process2", "PT8 ${cp.commands.filter(Command)}")
-	cp.processes = cp.commands.filter(Command).map(('$()'))
-	# TODO: if not top_level:
-	cp.processes.each(wait)
+	cp.processes = cp.commands.map(('$()'))
+
+	if not(cp.options.get('&')) {
+		cp.wait()
+	}
+
 	cp
 }
 
 TEST $(true).Bool()
 TEST $(false).Bool() == false
 TEST "$(/bin/echo -n abc)" == 'abc'
+
+F wait(cp:CommandsPipeline) cp.processes.each(wait)
 
 doc Enables "nofail" command prefix.
 doc %EX - test

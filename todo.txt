@@ -32,6 +32,7 @@ Note that this started as internal document so things here are unformed, not fin
 	* Creating an AWS res not matching the Anchor - think
 	* Implement Hash(Arr[Str]) for strings of form "key=value"?
 	* Keyword only arguments
+		* then think about File("/etc/myconfig")[lines='# start'..'# end'] = ['my', 'content']
 	* Predicates in parameters list?
 	* Immediate values in parameters list
 	* new syntax: .attr OP val
@@ -43,23 +44,34 @@ Note that this started as internal document so things here are unformed, not fin
 		should implement keyword-only arguments first
 	* build - install ngs syntax detection and highlighting for vim
 	* last(?, predicate)
+	* fix [10].Box(-20)
+	* Consider Ref(h:Hash, k) and Ref(a:Arr, idx:Int)
+	* add "max" parameter to split()
 
 [roadmap]
 
 	* Phase 1 - the language [in progress]
 
-		* Milestone "programming" (will be v0.2.0)
+		* Milestone "programming"
 
-			* commands syntax
+			* commands syntax (will be v0.2.0)
 
 				* pipes
 					* between external commands
-						* move flags to pipeline
-						* configure pipes
+						* make sure top_level works [done]
+						* options in pipeline [done]
+						* warn and use "top_level:" option as "top_level::" option
+						* make sure $(...|) does not clash with output collection
+						* move all inline_space? to end of expressions
+						* make sure $(...&) works [done]
+						* add tests
+						* make sure inspect() works on $(...)
 					* between internal commands/functions
 					* between internal and external commands
 
 			* documentation [in progress]
+				* Make sure build process for online documentation works.
+					Might be broken after migration to cmake.
 				* { } in examples
 				* Tutorial
 					+ Build an app - decide which
@@ -70,6 +82,7 @@ Note that this started as internal document so things here are unformed, not fin
 				* Exit codes (see bootstrap.ngs and ngs.c)
 				* Document that inner functions are declared local
 				* Language reference, good example: https://golang.org/ref/spec [have most of it in ngslang]
+				* Pipes
 				* Internals
 
 			* files globbing
@@ -395,7 +408,7 @@ Note that this started as internal document so things here are unformed, not fin
 			Describe the "local myvar" behavior and make it clear that
 			for(i=0;i<n;i=i+1) will automatically declare i as local.
 		* which exceptions are thrown where and their meanings
-		* config()
+		* config() and/or Config()
 		* other projects
 			Explain how this project is different from other projects:
 				+ There is a shell in Python, don't remember the name.
