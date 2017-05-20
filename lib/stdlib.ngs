@@ -3146,6 +3146,13 @@ F close(f:File) {
 	f.fd = null
 }
 
+# TODO: handle EINTR
+F close(fd:Int) {
+	ret = c_close(fd)
+	ret < 0 throws FileIOFail("Failed to close file descriptor $fd").set('fd', fd)
+	fd
+}
+
 doc read() and parse() the given file
 F fetch(filename:Str, parse_hints:Hash={}) {
 	data = read(filename)
@@ -3512,7 +3519,7 @@ F '$()'(cp:CommandsPipeline) {
 
 	cp.processes = cp.commands.map(('$()'))
 
-	if not(cp.options.get('&')) {
+	if not(cp.options.get('&')) and cp.pipe_in is Null and cp.pipe_out is Null {
 		cp.wait()
 	}
 
@@ -3524,6 +3531,18 @@ TEST $(false).Bool() == false
 TEST "$(/bin/echo -n abc)" == 'abc'
 
 F wait(cp:CommandsPipeline) cp.processes.each(wait)
+
+F write(s:Str, cp:CommandsPipeline) {
+	cp.pipe_in is Null throws InvalidArgument("CommandsPipeline has no input pipe").set('cp', cp)
+	s.write(cp.pipe_in)
+	cp
+}
+
+F close(cp:CommandsPipeline) {
+	cp.pipe_in.Box().map({A.parent_fd().close()})
+	cp.pipe_out.Box().map({A.parent_fd().close()})
+	cp
+}
 
 doc Enables "nofail" command prefix.
 doc %EX - test
