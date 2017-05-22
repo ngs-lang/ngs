@@ -2095,7 +2095,11 @@ doc idx - key to look in hash
 doc %RET - Box. FullBox if the array has the element indexed by idx, EmptyBox otherwise.
 F Box(a:Arr, idx) {
 	l = a.len()
-	l <= idx returns EmptyBox()
+	if idx >= 0 {
+		l <= idx returns EmptyBox()
+	} else {
+		l < abs(idx) returns EmptyBox()
+	}
 	FullBox(a[idx])
 }
 
@@ -2241,7 +2245,12 @@ F Bool(d:HashDiff) Bool(d.add or d.remove or d.change)
 
 F code(b:Bool) Str(b)
 
-# === Integer ====================================
+# === Int ========================================
+
+F abs(i:Int) {
+	i >= 0 returns i
+	0-i
+}
 
 # --- Functional ---
 
@@ -2955,15 +2964,22 @@ doc Read all data from a file referenced by file descriptor without parsing it.
 doc fd - File descriptor to read from
 doc %RET - Str
 doc %EX - read(0)  # All data from stdin
-F read(fd:Int) {
+F read(fd:Int, count=null) {
+	guard count is Int or count is Null
+	count == 0 throws InvalidArgument("read(fd, count) - count can't be 0")
 	ret = []
+	to_read = count
 	while true {
 		debug("file", "[read] will read from fd $fd")
-		result = c_read(fd, 4096)
+		result = c_read(fd, to_read or 4096)
 		debug("file", "[read] read from fd $fd : <<${result}>>")
 		result[0] == 0 returns ret.join('')
 		if result[0] > 0 {
 			ret.push(result[1])
+			if count is not Null {
+				to_read -= len(result[1])
+				to_read <= 0 returns ret.join('')
+			}
 		} else {
 			e = c_errno()
 			if e != C_EINTR {
@@ -2978,13 +2994,18 @@ F read(fd:Int) {
 doc Read all data from a file referenced by file descriptor 0 (stdin) without parsing it. Same as read(0)
 F read() read(0)
 
+F write(s:Str, fd:Int) {
+	warn("Using deprecated write() arguments order")
+	write(fd, s)
+}
+
 doc Write data to a file referenced by file descriptor.
 doc WARNING: Incomplete implementation.
 doc TODO: handle errors, throw exceptions.
 doc TODO: handle possible EINTR.
 doc fd - File descriptor to write to
 doc %RET - unspecified at this time, do not count on it
-F write(s:Str, fd:Int) fd.c_write(s)
+F write(fd:Int, s:Str) fd.c_write(s)
 
 { type TtyCheckFail(CException) }
 
@@ -3014,6 +3035,7 @@ F isatty(fd:Int) {
 			type ReadingPipeBetweenChildren(PipeToChildProcess)
 		type PipeFromChildProcess(Pipe)
 			type PipeFromChildToParentProcess(PipeFromChildProcess)
+				type CollectingPipeFromChildToParentProcess(PipeFromChildProcess)
 			type WritingPipeBetweenChildren(PipeFromChildProcess)
 	doc Represents failure of creating a Pipe when calling PIPE(2)
 	type PipeCreateFail(CException)
@@ -3058,14 +3080,22 @@ F close_writing_end(p:Pipe) p.write_fd.c_close()
 doc Close reading end of the Pipe
 F close_reading_end(p:Pipe) p.read_fd.c_close()
 
+F write(s:Str, p:Pipe) {
+	warn("Using deprecated write() arguments order")
+	write(p, s)
+}
+
 doc Write to Pipe. TODO: document if it throws.
 doc %RET - unspecified at this time, do not count on it
-F write(s:Str, p:Pipe) p.write_fd.c_write(s)
+F write(p:Pipe, s:Str) p.write_fd.c_write(s)
 
 doc Read from Pipe without parsing. TODO: document if it throws.
 doc %RET - read data
 doc %EX - data = read(myipe)
-F read(p:Pipe) p.read_fd.read()
+F read(p:Pipe, count=null) {
+	guard count is Int or count is Null
+	p.read_fd.read(count)
+}
 
 doc DUP2(2) writing file descriptor
 F dup2_writing_end(p:Pipe, newfd:Int) dup2(p.write_fd, newfd)
@@ -3133,7 +3163,8 @@ F lines(f:File, lines_:Arr) {
 	finally()
 		body => {
 			f.open('w')
-			(lines_ + STDLIB_EOL).each(write(X, f.fd))
+			(lines_ + STDLIB_EOL).each(write(f.fd, X))
+			f
 		}
 		cleanup => {
 			f.close()
@@ -3427,7 +3458,7 @@ F '$()'(c:Command) {
 			}
 
 			if r.datum is Pipe {
-				debug("process2", "REDIRECT PIPE ${r.fd} -> ${child_fd(r.datum)}")
+				debug("process2", "CHILD REDIRECT PIPE ${r.fd} -> ${child_fd(r.datum)}")
 
 				ok = c_dup2(child_fd(r.datum), r.fd)
 				ok < 0 throws FileIOFail("Failed to dup2(${child_fd(r.datum)}, ${r.fd}). Errno ${c_errno()}").set('src_fd', child_fd(r.datum)).set('dst_fd', r.fd)
@@ -3452,7 +3483,7 @@ F '$()'(c:Command) {
 		debug("process", "Reading all output of the child process")
 		# XXX: maybe make it chunk based with c_poll() and single thread
 		# TODO: some error handling inside these threads and after joining them
-		process.reading_threads = c.redirects.filter(F(r:Redir) r.datum is PipeFromChildToParentProcess).map(F(r:Redir) {
+		process.reading_threads = c.redirects.filter(F(r:Redir) r.datum is CollectingPipeFromChildToParentProcess).map(F(r:Redir) {
 			debug("process2", "MAKING READING THREAD")
 			Thread({
 				debug("process2", "READING ${r.datum}")
@@ -3503,6 +3534,7 @@ F '$()'(cp:CommandsPipeline) {
 	# $(... |) - uses P3
 	for(i;cp.pipes.len()) {
 		cp.pipes[i] is Null continues
+		debug("process2", "cp.pipes[$i]")
 		if i == 0 {
 			debug("process2", "PIPE IN")
 			cp.pipe_in = PipeToChildProcess()
@@ -3512,7 +3544,7 @@ F '$()'(cp:CommandsPipeline) {
 		if i == cp.commands.len() {
 			debug("process2", "PIPE OUT")
 			cp.pipe_out = PipeFromChildToParentProcess()
-			cp.commands[i-1].redirects.unshift(Redir(0, 'PIPE', cp.pipe_out))
+			cp.commands[i-1].redirects.unshift(Redir(1, 'PIPE', cp.pipe_out))
 			continue
 		}
 		p = Pipe()
@@ -3520,8 +3552,8 @@ F '$()'(cp:CommandsPipeline) {
 		cp.commands[i].redirects.unshift(Redir(0, 'PIPE', ReadingPipeBetweenChildren(p)))
 	}
 
-	if not(cp.options.get('top_level')) {
-		cp.commands[-1].redirects.unshift(Redir(1, 'PIPE', PipeFromChildToParentProcess()))
+	if not(cp.options.get('top_level')) and cp.pipe_out is Null {
+		cp.commands[-1].redirects.unshift(Redir(1, 'PIPE', CollectingPipeFromChildToParentProcess()))
 	}
 
 	cp.processes = cp.commands.map(('$()'))
@@ -3539,10 +3571,16 @@ TEST "$(/bin/echo -n abc)" == 'abc'
 
 F wait(cp:CommandsPipeline) cp.processes.each(wait)
 
-F write(s:Str, cp:CommandsPipeline) {
+F write(cp:CommandsPipeline, s:Str) {
 	cp.pipe_in is Null throws InvalidArgument("CommandsPipeline has no input pipe").set('cp', cp)
-	s.write(cp.pipe_in)
+	cp.pipe_in.write(s)
 	cp
+}
+
+F read(cp:CommandsPipeline, count=null) {
+	guard count is Int or count is Null
+	cp.pipe_out is Null throws InvalidArgument("CommandsPipeline has no output pipe").set('cp', cp)
+	cp.pipe_out.read(count)
 }
 
 F close(cp:CommandsPipeline) {
@@ -4522,7 +4560,12 @@ doc Read whole file
 F read(f:File) read(f.path)
 
 doc Write whole file
-F write(s:Str, fname:Str) {
+F write(fname:Str, s:Str) {
+	'\n' in s and '\n' in fname throws InvalidArgument("Both data and file name contain newline characters").set('s', s).set('fname', fname)
+	if '\n' in fname {
+		warn("Using deprecated write() arguments order")
+		return write(s, fname)
+	}
 	f = File(fname)
 	open(f, 'w')
 	finally()
@@ -4536,7 +4579,12 @@ F write(s:Str, fname:Str) {
 
 doc Write whole file if it's closed, write to file descriptor if it's open
 F write(s:Str, f:File) {
-	write(s, if f.fd is Null then f.path else f.fd)
+	warn("Using deprecated write() arguments order")
+	write(f, s)
+}
+
+F write(f:File, s:Str) {
+	write(if f.fd is Null then f.path else f.fd, s)
 }
 
 F Arg(f:File) f.path

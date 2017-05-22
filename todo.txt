@@ -44,7 +44,6 @@ Note that this started as internal document so things here are unformed, not fin
 		should implement keyword-only arguments first
 	* build - install ngs syntax detection and highlighting for vim
 	* last(?, predicate)
-	* fix [10].Box(-20)
 	* Consider Ref(h:Hash, k) and Ref(a:Arr, idx:Int)
 
 [roadmap]
@@ -57,16 +56,14 @@ Note that this started as internal document so things here are unformed, not fin
 
 				* pipes
 					* between external commands
-						* make sure top_level works [done]
-						* options in pipeline [done]
 						* warn and use "top_level:" option as "top_level::" option
-						* make sure $(...|) does not clash with output collection
+						* make sure $(...|) does not clash with output collection [done]
 						* move all inline_space? to end of expressions
 						* make sure $(...&) works [done]
 						* add tests
 						* make sure inspect() works on $(...)
-					* between internal commands/functions
-					* between internal and external commands
+					* between internal commands/functions [canceled]
+					* between internal and external commands [read() and write()]
 
 			* documentation [in progress]
 				* Make sure build process for online documentation works.
