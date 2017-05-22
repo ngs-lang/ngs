@@ -1632,39 +1632,41 @@ subshell =
 	| "``" cmd:commands-pipeline "``" { cmd->first_child->name = ngs_strdup("````"); $$ = cmd; }
 	| "`" cmd:commands-pipeline "`" { cmd->first_child->name = ngs_strdup("``");  $$ = cmd; }
 
-commands-pipeline = acc:commands-pipeline-node
+commands-pipeline = inline_space? acc:commands-pipeline-node
 	(
-		inline_space?
 		o:commands-pipeline-option {
 			append_ast_node_child(acc->first_child->next_sibling->next_sibling->next_sibling, o);
 		}
+		inline_space?
 	)*
 	(
 		(
-			inline_space?
-			p:commands-pipe {
-				append_ast_node_child(acc->first_child->next_sibling->next_sibling, p);
+			(
+				p:commands-pipe {
+					append_ast_node_child(acc->first_child->next_sibling->next_sibling, p);
+				}
+			) | {
+				MAKE_NODE(p2, NULL_NODE);
+				append_ast_node_child(acc->first_child->next_sibling->next_sibling, p2);
 			}
-		) | {
-			MAKE_NODE(p2, NULL_NODE);
-			append_ast_node_child(acc->first_child->next_sibling->next_sibling, p2);
-		}
+		)
+		inline_space?
 	)
 	c1:command-words {
 		append_ast_node_child(acc->first_child->next_sibling, c1);
 	}
 	(
-		inline_space?
 		p:commands-pipe {
 			append_ast_node_child(acc->first_child->next_sibling->next_sibling, p);
 		}
+		inline_space?
 		c:command-words {
 			append_ast_node_child(acc->first_child->next_sibling, c);
 		}
+		inline_space?
 	)*
 	(
 		(
-			inline_space?
 			p:commands-pipe {
 				append_ast_node_child(acc->first_child->next_sibling->next_sibling, p);
 			}
@@ -1672,15 +1674,16 @@ commands-pipeline = acc:commands-pipeline-node
 			MAKE_NODE(p2, NULL_NODE);
 			append_ast_node_child(acc->first_child->next_sibling->next_sibling, p2);
 		}
+		inline_space?
 	)
-	(inline_space? "&" {
+	("&" {
 		MAKE_NODE(option, EXPRESSIONS_NODE);
 			MAKE_STRING_NODE(option_k, "&");
 			append_ast_node_child(option, option_k);
 			MAKE_NODE(option_v, TRUE_NODE);
 			append_ast_node_child(option, option_v);
 		append_ast_node_child(acc->first_child->next_sibling->next_sibling->next_sibling, option);
-	})? {
+	} inline_space? )? {
 	$$ = acc;
 	CAPTURE_LOCATION($$);
 }
@@ -1728,13 +1731,12 @@ commands-pipeline-option =
 
 command-words = acc:command-words-node
 	(
-		inline_space?
 		o:command-option {
 			append_ast_node_child(acc->first_child->next_sibling->next_sibling->next_sibling, o);
 		}
+		inline_space?
 	)*
 	(
-		inline_space?
 		(
 			command-redirect {
 				append_ast_node_child(acc->first_child->next_sibling->next_sibling, $$);
@@ -1744,6 +1746,7 @@ command-words = acc:command-words-node
 				append_ast_node_child(acc->first_child->next_sibling, $$);
 			}
 		)
+		inline_space?
 	)+ {
 	$$ = acc;
 	CAPTURE_LOCATION($$);
