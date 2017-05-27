@@ -57,17 +57,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* commands syntax (will be v0.2.0)
 
-				* pipes
-					* between external commands
-						* warn and use "top_level:" option as "top_level::" option [done]
-						* make sure $(...|) does not clash with output collection [done]
-						* move all inline_space? to end of expressions [done]
-						* make sure $(...&) works [done]
-						* add tests
-						* make sure inspect() works on $(...) [done]
-					* between internal commands/functions [canceled]
-					* between internal and external commands [read() and write()]
-
 			* documentation [in progress]
 				* Make sure build process for online documentation works.
 					Might be broken after migration to cmake.
@@ -104,6 +93,8 @@ Note that this started as internal document so things here are unformed, not fin
 				+ how different module versions can run alongside?
 
 		* Milestone "correct programming"
+
+			* add missing split('str', 'sep')
 
 			* cmake - check that C macros exists (E..., RTLD_...) and make them available. Currently most of the are commented out due to Mac OS support.
 
@@ -214,6 +205,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 		See beginning of CLI implementation in previous NGS implementation:
 		https://github.com/ilyash/ngs/blob/0ed8455efe851e3c5a275290a71c38c4e718f15c/cli.ngs
+
+		* Milestone LayoutManager
+			+ Also useful for Table
 
 		* Milestone "screen layout"
 
