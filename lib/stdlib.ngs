@@ -3393,9 +3393,11 @@ TEST Argv({"-a1": [], "-a2": [1,2,3]}) == ["-a2", 1, 2, 3]
 
 F '$()'(c:Command) {
 
+	# Removing this fails the test $(nofail cat NO_SUCH_FILE 2>/dev/null)
+	#   TODO: handle later. Ideally this if should be removed.
 	# Special case: $($cmd)
 	if (c.argv.len() == 1) and (c.argv[0] is Command) {
-		c = c.argv[0]
+	        c = c.argv[0]
 	}
 
 	argv = c.argv.map(Arg)
@@ -3524,6 +3526,22 @@ doc %EX - p.kill()
 doc %RET - Process
 F '$()'(cp:CommandsPipeline) {
 
+	if cp.commands.len() == 1 {
+
+		# Special case: $($cmd)
+		c = cp.commands[0]
+		if (c.argv.len() == 1) and (c.argv[0] is CommandsPipeline) {
+			cp = c.argv[0]
+		}
+
+		# Deprecate "top_level: cmd", should be "top_level::"
+		if cp.commands[0].options.get('top_level') {
+			warn("Use 'top_level::' instead of 'top_level:' in ${cp.commands[0].Str()}")
+			cp.options.top_level = cp.commands[0].options.top_level
+		}
+
+	}
+
 	cp.processes = null
 	cp.pipe_in = null
 	cp.pipe_out = null
@@ -3594,7 +3612,7 @@ doc %EX - test
 doc %EX - $(nofail ./NONE).exit_code.echo()  # Would cause exception without "nofail"
 F '$()'(c:Command) {
 	guard c.argv[0] == 'nofail'
-	warn("Using deprecated 'nofail'")
+	warn("Using deprecated 'nofail' in command $c")
 	c.options.nofail = true
 	c.argv.shift()
 	$($c)
@@ -4160,6 +4178,8 @@ F exception_specific_message(gnf:GlobalNotFound) FullBox("Global variable '${gnf
 doc Don't use, subject to change, including name
 F SafeStr(val) "$val" tor "(Failed to inspect <${val.typeof().name tor '(unknown type)'}>)"
 
+# TODO: in-depth inspect()
+
 doc Inspect any value.
 doc %RET - Arr with one element, Str
 F inspect(val) [SafeStr(val)]
@@ -4179,11 +4199,11 @@ F inspect(s:Str) ["String(${s.len()}): $s"]
 
 doc Inspect Arr
 doc %RET - Arr of Str
-F inspect(a:Arr) ["Array of size ${a.len()}"] + a.map_idx_val({"[${SafeStr(A)}] = ${SafeStr(B)}"})
+F inspect(a:Arr) ["Array of size ${a.len()}"] + a.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"})
 
 doc Inspect Hash
 doc %RET - Arr of Str
-F inspect(h:Hash) ["Hash of size ${h.len()}"] + h.map({"[${SafeStr(A)}] = ${SafeStr(B)}"})
+F inspect(h:Hash) ["Hash of size ${h.len()}"] + h.map({"  [${SafeStr(A)}] = ${SafeStr(B)}"})
 
 doc Inspect Process
 doc %RET - Arr of Str
@@ -4191,16 +4211,37 @@ F inspect(p:Process) {
 	collector {
 		c = collect
 		c("Process")
-		c("command = ${p.command}")
-		c("pid = ${p.pid}")
-		c("exit_code = ${p.exit_code}")
-		c("exit_signal = ${p.exit_signal}")
+		c("  command = ${p.command}")
+		c("  pid = ${p.pid}")
+		c("  exit_code = ${p.exit_code}")
+		c("  exit_signal = ${p.exit_signal}")
 		%[stdout stderr].each(F(attr) {
 			val = p.(attr)
 			val_lines = if val is Null [] else val.lines()
-			c("$attr (${val_lines.len()} lines):")
-			("  " + val_lines) % c
+			c("  $attr (${val_lines.len()} lines):")
+			("    " + val_lines) % c
 		})
+	}
+}
+
+F inspect(cp:CommandsPipeline) {
+	F p(idx:Int) {
+		cp.pipes[idx] is Null returns []
+		("  pipe[$idx]: " + inspect(cp.pipes[idx]))
+	}
+	collector {
+		collect("CommandsPipeline")
+		if cp.options {
+			("  options: " + inspect(cp.options)) % collect
+		}
+		p(0) % collect
+		for(i;len(cp.commands)) {
+			("  command[$i]: " + inspect(cp.commands[i])) % collect
+			if 'processes' in cp and cp.processes {
+				("  process[$i]: " + inspect(cp.processes[i])) % collect
+			}
+			p(i+1) % collect
+		}
 	}
 }
 

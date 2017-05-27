@@ -67,7 +67,7 @@
 
 	F init(r:Res, def:ResDef, props:Hash) init(args())
 
-	F Str(r:Res) "<${r.typeof().name} ${r.id()}>"
+	F Str(r:Res) "<${r.typeof().name} ${r.id() tor 'id-not-available'}>"
 
 	F log(r:Res, method:Str, s:Str) {
 		log("[${r.typeof().name} ${r.id()}] [$method] $s")

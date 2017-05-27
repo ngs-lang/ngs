@@ -45,6 +45,9 @@ Note that this started as internal document so things here are unformed, not fin
 	* build - install ngs syntax detection and highlighting for vim
 	* last(?, predicate)
 	* Consider Ref(h:Hash, k) and Ref(a:Arr, idx:Int)
+	* add avg()
+	* Consider OneOf type for nullable parameters: F myfunc(a:Int, b:OneOf(Int, Null))
+		also think about more traditional approach: F myfunc(a:Int, b:Box[Int])
 
 [roadmap]
 
@@ -56,12 +59,12 @@ Note that this started as internal document so things here are unformed, not fin
 
 				* pipes
 					* between external commands
-						* warn and use "top_level:" option as "top_level::" option
+						* warn and use "top_level:" option as "top_level::" option [done]
 						* make sure $(...|) does not clash with output collection [done]
-						* move all inline_space? to end of expressions
+						* move all inline_space? to end of expressions [done]
 						* make sure $(...&) works [done]
 						* add tests
-						* make sure inspect() works on $(...)
+						* make sure inspect() works on $(...) [done]
 					* between internal commands/functions [canceled]
 					* between internal and external commands [read() and write()]
 
@@ -105,6 +108,8 @@ Note that this started as internal document so things here are unformed, not fin
 			* Standardize and explain naming convention: function/method, attribute/property.
 
 			* Check ArgvMatcher - why ec2din.ngs does not have F main(..., *filters) ?
+
+			* Check executable bit before execve
 
 			* Namespace: "ns { F f() ... }" when f is global, namespace should only list f implementations defined in the namespace
 
