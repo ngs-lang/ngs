@@ -3664,9 +3664,9 @@ F kill(cp:CommandsPipeline) {
 }
 
 TEST counter = 0; p=$(sleep 5&); if p.processes[0].stdout == null counter +=1; p.kill(); if p.Str() == "" counter+=1; counter == 2
-# TEST p=$(|cat|); p.write("abc"); p.close(); p.read() == "abc"
 TEST p=$(|cat); p.write("abc"); p.close(); p.Str() == "abc"
 TEST p=$(|cat|); p.write("abc"); p.read(3) == "abc"
+TEST $(echo abc | cat).Str().starts_with("abc")
 
 doc Call parse(s, {})
 F parse(s:Str) parse(s, {})
