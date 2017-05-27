@@ -4550,6 +4550,8 @@ F encode_uri_component(s:Str) s.replace(STDLIB_INVALID_URI_CHAR_RE, F(char) '%' 
 
 TEST encode_uri_component("ab+c%") == "ab%2Bc%25"
 
+# TODO: more efficient
+doc Decodes URI component, unsecaping %XX hexadecimals
 F decode_uri_component(s:Str) {
 	l = s.len()
 	ret = ''
