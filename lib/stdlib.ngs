@@ -3658,6 +3658,16 @@ F kill(p:Process, sig:Int=SIGNALS.TERM) {
 	kill(p.pid, sig)
 }
 
+F kill(cp:CommandsPipeline) {
+	'processes' not in cp throws InvalidArgument("Can't kill() a pipeline that has no running processes")
+	cp.processes.map(kill)
+}
+
+TEST counter = 0; p=$(sleep 5&); if p.processes[0].stdout == null counter +=1; p.kill(); if p.Str() == "" counter+=1; counter == 2
+# TEST p=$(|cat|); p.write("abc"); p.close(); p.read() == "abc"
+TEST p=$(|cat); p.write("abc"); p.close(); p.Str() == "abc"
+TEST p=$(|cat|); p.write("abc"); p.read(3) == "abc"
+
 doc Call parse(s, {})
 F parse(s:Str) parse(s, {})
 

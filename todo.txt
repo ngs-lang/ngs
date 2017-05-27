@@ -105,6 +105,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "correct programming"
 
+			* File descriptors cleanup (close), especially when forking and making pipes
+
 			* Standardize and explain naming convention: function/method, attribute/property.
 
 			* Check ArgvMatcher - why ec2din.ngs does not have F main(..., *filters) ?
