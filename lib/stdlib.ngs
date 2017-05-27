@@ -4550,6 +4550,21 @@ F encode_uri_component(s:Str) s.replace(STDLIB_INVALID_URI_CHAR_RE, F(char) '%' 
 
 TEST encode_uri_component("ab+c%") == "ab%2Bc%25"
 
+F decode_uri_component(s:Str) {
+	l = s.len()
+	ret = ''
+	for(i;l) {
+		ret += if s[i] == '%' {
+			i += 2
+			chr(Int(s[i-1..i+1], 16))
+		} else {
+			s[i]
+		}
+	}
+	ret
+}
+
+TEST decode_uri_component("ab%2Bc%25") == "ab+c%"
 
 STDLIB_HTML_ESCAPE = {'&': '&amp;', '<': '&lt;', '>': '&gt;'}
 

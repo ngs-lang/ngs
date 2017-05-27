@@ -105,6 +105,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "correct programming"
 
+			* cmake - check that C macros exists (E..., RTLD_...) and make them available. Currently most of the are commented out due to Mac OS support.
+
 			* File descriptors cleanup (close), especially when forking and making pipes
 
 			* Standardize and explain naming convention: function/method, attribute/property.
@@ -113,7 +115,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Check executable bit before execve
 
-			* Namespace: "ns { F f() ... }" when f is global, namespace should only list f implementations defined in the namespace
+			* Namespace: "ns { F f() ... }" when f is global, ns::f should only list f implementations defined in the namespace?
 
 			* Check map* and filter* functions naming consistency
 

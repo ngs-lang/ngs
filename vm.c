@@ -3079,6 +3079,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// TODO: Some good solution for many defines
 #define E(name) set_global(vm, "C_" #name, MAKE_INT(name))
 	// errno -ls | awk '{print "E("$1");"}' | xargs -n10
+	// (errno -ls | awk '{print $1}'; awk '/^#define RTLD_/ {print $2}' /usr/include/x86_64-linux-gnu/bits/dlfcn.h ) > c_constants.txt
 	E(EPERM); E(ENOENT); E(ESRCH); E(EINTR);
 	/*
 	E(EIO); E(ENXIO); E(E2BIG); E(ENOEXEC); E(EBADF); E(ECHILD);
