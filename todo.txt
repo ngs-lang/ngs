@@ -48,6 +48,12 @@ Note that this started as internal document so things here are unformed, not fin
 	* add avg()
 	* Consider OneOf type for nullable parameters: F myfunc(a:Int, b:OneOf(Int, Null))
 		also think about more traditional approach: F myfunc(a:Int, b:Box[Int])
+	* add fetch(Path), maybe read(Path)
+		now have read(File)
+	* "borrow" status() behaviour from apt/apt-pkg/install-progress.cc
+		switch to override and do:
+		+ tmux title only
+		+ gnome/whatever terminal title
 
 [roadmap]
 
@@ -58,6 +64,15 @@ Note that this started as internal document so things here are unformed, not fin
 			* commands syntax (will be v0.2.0)
 
 			* documentation [in progress]
+				* Add "-pd" switch: print documentation
+					+ Should take one of:
+						+ Type
+						+ Method
+						+ Namespace
+						+ Topic
+					+ Add some method to list topics?
+					+ Use pager?
+					+ Simple formatting as plain text when no pandoc installed, man formatting when pandoc installed? Maybe pre-compiled man pages?
 				* Make sure build process for online documentation works.
 					Might be broken after migration to cmake.
 				* { } in examples
@@ -109,8 +124,6 @@ Note that this started as internal document so things here are unformed, not fin
 			* Namespace: "ns { F f() ... }" when f is global, ns::f should only list f implementations defined in the namespace?
 
 			* Check map* and filter* functions naming consistency
-
-			* /think of eliminating \\ in regexp literals/
 
 			* c_stat() / stat() - return timestamps too
 

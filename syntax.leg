@@ -1507,7 +1507,14 @@ regexp-imm =
 
 regexp-escape = "\\" (
 		"/"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("/"); $$ = content; } |
-		"\\" { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\\"); $$ = content; }
+		<.>  {
+			MAKE_NODE(content, STR_COMP_IMM_NODE);
+				content->name = NGS_MALLOC_ATOMIC(3);
+				content->name[0] = '\\';
+				content->name[1] = yytext[0];
+				content->name[2] = 0;
+			$$ = content;
+		}
 	)
 
 regexp-flags = <[a-zA-Z0-9]*> {

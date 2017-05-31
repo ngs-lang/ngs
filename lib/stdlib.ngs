@@ -1388,7 +1388,7 @@ doc %RET - Arr
 F '[]'(arr:Arr, r:NumRange) {
 	guard r.end is Int and r.end < 0
 	r.step != 1 throws NotImplemented("r.step must be 1")
-	r.end < 0 - arr.len() throws IndexNotFound("[](Arr, NumRange): Index ${r.end} (range end) is illegal for array of size ${arr.len()}", arr, idx)
+	r.end < 0 - arr.len() throws IndexNotFound("[](Arr, NumRange): Index ${r.end} (range end) is illegal for array of size ${arr.len()}", arr, r.end)
 	arr[r.start..arr.len() + r.end]
 }
 
