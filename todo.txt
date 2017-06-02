@@ -53,9 +53,11 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* Phase 1 - the language [in progress]
 
-		* Milestone "programming"
+		* Milestone "packaging"
+			* Debian packages
+			* Brew package
 
-			* commands syntax (will be v0.2.0)
+		* Milestone "programming"
 
 			* documentation [in progress]
 				* Add "-pd" switch: print documentation

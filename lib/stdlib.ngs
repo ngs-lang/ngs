@@ -4394,7 +4394,7 @@ F init(t:Time, epoch:Int) {
 doc String representation of Time
 doc format - strftime(3) format
 doc gmt - Use GMT time zone (defaults to local time zone)
-F Str(t:Time, format:Str=TIME_FORMAT, gmt:Bool=false) strftime([localtime, gmtime][Int(gmt)](t.epoch), TIME_FORMAT)
+F Str(t:Time, format:Str=TIME_FORMAT, gmt:Bool=false) strftime([localtime, gmtime][Int(gmt)](t.epoch), format)
 
 F Int(t:Time) t.epoch
 
