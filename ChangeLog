@@ -1,4 +1,4 @@
-Version 0.2.0 unreleased
+2017-06-02 Version 0.2.0
 
 	* Pipes support
 	* BREAKING: Swap write() arguments from write(what, file) to write(file, what)
