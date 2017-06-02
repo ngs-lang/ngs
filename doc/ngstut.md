@@ -1,48 +1,115 @@
 % NGS(1) NGS User Manual
-% Ilya Sher,  Zeeev Glozman
+% Ilya Sher,  Zeev Glozman (@zglozman)
+
 % 2017
 
 # NAME
 
 ngstut - Simple Tutorial how to get started with NGS-
 
-# LAUNCHING SCRIPTS 
+# BASIC USAGE OF NGS SWITCHES 
+This is a not a replacement for proper NGS syntax training, but rather an attemp to create a short introduction with some 
+cool code that you can cut-n-paste and modify. I will also try to make an accents on things that were not obious to me, 
+which are some of the coolest shortest synax in my opinion.
 
-There are multiple switches, possible, dont be affraid. The example will print the work example. The "-p" option will print the result of the entire function. 
+## Basics  
+There are multiple switches, possible, don't be afraid. In this seciton we will focus on the two most useful concetps. 
+	a. running a script 
+	b. running it from command line for immidiate results. 
 
-**echo** "example" | **ngs** -e "data=read(); echo(data)" # will print "example" 
-**echo** "example" | **ngs** -p "read()"                  # will print "example"
-**echo** "example" | **ngs** -pj '{"data":  read()}'      # will print json format  
+## Running short comamnds from command line 
+	echo "example" | **ngs** -p 'read()'
+	echo "example" | **ngs** -e 'data=read(); echo(data)' 
+	echo "example" | **ngs** -pj '{"data":  read()}'
 
-curl -s 'https://api.github.com/repos/ilyash/ngs/commits?per_page=5' | ngs -p "fetch().sha" # will print out the sha
+Understanding the "-p, -pl, -pj, e"
+
+	-e  -- Will just execute the expressions
+	-p  -- Will print out the result of the last expression 
+	-pl -- Will print out the result of the last expression element by element  
+	-pj -- Will print out the result of the last expression in json format
+
+## Working with a json web service filters and iterators	
+
+### Example 1:
+
+One of the way in which NGS shines is in the way it can work with external web services, especially JSON based.
+In the example below we will query github and return the sha signatures of the commits 
+	
+	curl -s 'https://api.github.com/repos/ilyash/ngs/commits?per_page=5' | ngs -p 'fetch().sha'
+
+fetch() will read and parse the json and then select **sha** elemenet from the object.
+
+Lets complicate this a bit:
+	
+	curl -s 'https://api.github.com/repos/ilyash/ngs/commits?per_page=2000' | ngs -pl 'fetch().commit.filter(F(commit) commit.author.name.has("Serge") ).tree.sha' 
+	
+
+### Example 2
+This example will first read and parse using the fetch() command then preform filter of the commit objects by calling filter function. 
+The filter accepts a function that has to return true/false, then we add conditional logic by F(commit) commit.author.name.has("Serge") 
+and take tree.sha and print it as a list because we launched it using "-pl" argument.
+
+	curl -s 'https://api.github.com/repos/ilyash/ngs/commits?per_page=2000' | ngs -e 'fetch().commit.filter(F(commit) commit.author.name.has("Serge") ).tree.sha.each(F(sha) echo(sha))'
+	
+	same as 
+	
+	curl -s 'https://api.github.com/repos/ilyash/ngs/commits?per_page=2000' | ngs -e 'fetch().commit.filter(F(commit) commit.author.name.has("Serge") ).tree.sha.each(echo)'
+
+each accepts a funciton so echo is a function so it can accept it, which offers for a a little shorter syntax.
 
 
+### Example 3 
 
-**ngs** [**-e**|**-E**|**-p**|**-pi**|**-pj**|**-pl**|**-pjl**] *expression*
+In this example we will iterate over all results of the filter of all commits belonging to a specic user in our case 'Serge', and then execute `git show $sha` with the sha on all the selected commits. 
+	
+	curl -s 'https://api.github.com/repos/ilyash/ngs/commits?per_page=2000' | ngs -e 'fetch().commit.filter(F(commit) commit.author.name.has("Serge") ).tree.sha.each(F(sha) echo(`git show $sha`))'
 
-# DESCRIPTION
+### Example 4
+In this example we complicate it a little further, and we run over all the commits where `author.name` matches Serge, and then make a map, and output it to a string, or as shown in the second example a json structure. 
 
-**ngs** is a Next GeNeRAtION Shell. It has two main parts: the language and the interactive shell.
+	curl -s 'https://api.github.com/repos/ilyash/ngs/commits?per_page=2000' | ngs -pl 'fetch().commit.filter(F(commit) commit.author.name.has("Serge") ).map(F(commit) "${commit.author.name} -- ${commit.message}")'	
+	
+	OR 
 
-This project contains the language part which is under development. The interactive part will be dealt with later. This manual covers both implemented and unimplemented parts.
+	curl -s 'https://api.github.com/repos/ilyash/ngs/commits?per_page=2000' | ngs -pj 'fetch().commit.filter(F(commit) commit.author.name.has("Serge") ).map(F(commit) {"name": commit.author.name, "message":  commit.message})' 
 
-# OPTIONS
+	To make one json structure as an array.	
+	
+	curl -s 'https://api.github.com/repos/ilyash/ngs/commits?per_page=2000' | ngs -pj 'fetch().commit.filter(F(commit) commit.author.name.has("Serge") ).map(F(commit) {"name": commit.author.name, "message":  commit.message})' 
+	
+	To make multiple json objects on each new line.
 
-Given *script_name* runs the script.
 
-Using *expression* is equivalent to running a script that consists of `{` *expression* `}`.
+### Example 5
 
-**-e** evaluates the *expression*.
+In this example we will demonstrate predicate conditions, for example download a certificate from facebook.com using openssl, and then cut the between "-----BEGIN CERTIFICATE-----" and  "-----END CERTIFICATE-----"
 
-**-E** prevents loading of **stdlib.ngs** and evaluates the *expression*.
+	openssl s_client -connect www.facebook.com:443 -servername www.facebook.com  < /dev/null | ngs -e 'read().lines()["-----BEGIN CERTIFICATE-----".."-----END CERTIFICATE-----"].join("\n").echo()'
+	then we will join the string by eliminating the "\n" and print the result using .echo"
 
-**-p** prints the resulting *expression* value in a human readable NGS format.
 
-**-pi** prints `inspect(...)` (detailed information) of the resulting *expression* value.
+### Example 6 
+The privous examples we did short one lines, now we will write a little script, to download the latest issue of the phrack maganzine. 
+So it should be pretty self explanatory, but this shows a bit more of the special ngs magic,so the first peace of magic is the NGS. So first we selct the magazine issue with 
 
-**-pj** prints the resulting *expression* value as JSON.
+		m = phrak ~ /href="(.*?)" title="Issues"/
 
-**-pl** prints elements of the result, one per line (mnemonic "print lines")
+this will return one occurence of the link from the HTML return by the page.
+#then we construct the url with baseurl + m[1], and perform another query. Then we will use ~~ to take all matching links.
 
-**-pjl** prints elements of the result, one per line as JSON (mnemonic "print JSON lines")
 
+	#!/usr/local/bin/ngs
+
+	{
+		base_url = "http://www.phrack.org/"
+		phrak = `curl -s $base_url`
+		m = phrak ~ /href="(.*?)" title="Issues"/
+		issue = `curl -s "$base_url/${m[1]}"`;
+		pages = issue ~~ /href=".*?(issues\/\d+\/\d+.html)#article/
+		rel_pages_urls = pages.map(X[1])
+		abs_pages_urls = base_url + rel_pages_urls
+		pages_texts = abs_pages_urls.pmap(F(url)  `lynx -dump $url`  );
+		pages_texts % echo  
+	}
+5
