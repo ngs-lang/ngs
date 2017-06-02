@@ -1,8 +1,20 @@
 Version 0.2.0 unreleased
 
 	* Pipes support
-	* Improved documentation
-	* Files globbing
+	* BREAKING: Swap write() arguments from write(what, file) to write(file, what)
+		Many methods with old arguments order will still work but will give a
+		deprecation warning.
+	* Add optional "count" (bytes) parameter to read(fd:Int)
+	* Slightly improved documentation
+	* Add missing id(rrset:RecordSetRes)
+	* Improve stability of Str(r:Res)
+	* Add preliminary Str(t:c_pthread_t)
+	* Fix error handling in [](arr:Arr, r:NumRange)
+	* Add abs(i:Int)
+	* Add optional "max_parts" parameter to split(s:Str, delim:Str)
+	* A bit more readable inspect() output
+	* Add decode_uri_component(s:Str)
+	* Fix backslashes syntax in /regular expressions/
 
 2017-05-13 Version 0.1.0
 
