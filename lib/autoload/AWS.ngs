@@ -975,11 +975,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		zone_id = zones[0].Id
 		rd.zone_id = zone_id
 
-		type_args = if 'Type' in anchor {
-			['--start-record-type', anchor.Type]
-		} else {
-			[]
-		}
+		type_args = Argv({
+			'--start-record-type': anchor.Box('Type')
+		})
 
 		# XXX: getting 100 rrs. Overkill / underkill.
 		rrs = ``aws route53 list-resource-record-sets --hosted-zone-id $zone_id --start-record-name ${anchor.Name} $*type_args``
