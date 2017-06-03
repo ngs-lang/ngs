@@ -18,9 +18,9 @@ There are multiple switches, possible, don't be afraid. In this seciton we will 
 	b. running it from command line for immidiate results. 
 
 ## Running short comamnds from command line 
-	echo "example" | **ngs** -p 'read()'
-	echo "example" | **ngs** -e 'data=read(); echo(data)' 
-	echo "example" | **ngs** -pj '{"data":  read()}'
+	echo "example" | ngs -p 'read()'
+	echo "example" | ngs -e 'data=read(); echo(data)' 
+	echo "example" | ngs -pj '{"data":  read()}'
 
 Understanding the "-p, -pl, -pj, e"
 
@@ -96,7 +96,11 @@ So it should be pretty self explanatory, but this shows a bit more of the specia
 		m = phrak ~ /href="(.*?)" title="Issues"/
 
 this will return one occurence of the link from the HTML return by the page.
-#then we construct the url with baseurl + m[1], and perform another query. Then we will use ~~ to take all matching links.
+then we construct the url with baseurl + m[1], and perform another query. Then we will use ~~ to take all matching links.
+
+In this example we also introduced the usage of pmap, in my opinon its one of the most powerful features ever. Run a bunch of forks and waits for all of them to finish and returs the results in an array. Just awesome, for downloads, file proccessing tasks. I have used it this way with python scripts, etc. 
+
+
 
 
 	#!/usr/local/bin/ngs
@@ -112,4 +116,6 @@ this will return one occurence of the link from the HTML return by the page.
 		pages_texts = abs_pages_urls.pmap(F(url)  `lynx -dump $url`  );
 		pages_texts % echo  
 	}
-5
+
+### Example 7
+
