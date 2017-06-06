@@ -18,7 +18,7 @@
 		# TODO: also other files
 		File(file).lines(F(line) {
 			# dump(line)
-			if m = line ~ /^\\s*TEST (.*)/ {
+			if m = line ~ /^\s*TEST (.*)/ {
 				perform_test(m[1])
 			}
 		})
@@ -28,5 +28,6 @@
 
 	files.each(perform_tests_in_file)
 
+	assert(tests_counter > 360)
 	echo("OK. Tests: ${tests_counter}")
 }

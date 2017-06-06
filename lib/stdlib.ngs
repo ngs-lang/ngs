@@ -151,6 +151,15 @@ doc anything - The value to compare to
 doc %RET - A function that compares the only argument to the given value
 F Pred(anything) F eq_pred(x) x == anything
 
+doc EXPERIMENTAL
+doc Inspired by underscorejs' "matcher"
+F Pred(h:Hash) {
+	preds = h.mapv(Pred)
+	F hash_pred(x) {
+		preds.all(F(k, pred) x.(k).pred())
+	}
+}
+
 doc Convert a function to predicate.
 doc %RET - The given function, without any transformation
 F Pred(f:Fun) f
@@ -3349,6 +3358,11 @@ F wait(cp:CommandsPipeline) {
 doc Convert Process to exit code. Waites for the process to finish and uses its exit code.
 F to_exit_code(p:Process) p.wait().exit_code
 
+F to_exit_code(cp:CommandsPipeline) {
+	cp.wait()
+	cp.processes.exit_code.first(X != 0) or 0
+}
+
 doc Wait for the process to finish and return its standard output.
 doc %RET - Str
 F Str(p:Process) p.wait().stdout
@@ -3733,6 +3747,19 @@ F lines(p:Process, cb:Fun) {
 	p.wait()
 	p.stdout.lines(cb)
 }
+
+F lines(cp:CommandsPipeline) {
+	cp.wait()
+	cp.processes[-1].stdout.lines()
+}
+
+F lines(cp:CommandsPipeline, cb:Fun) {
+	cp.wait()
+	cp.processes[-1].stdout.lines(cb)
+}
+
+# XXX: might not be correct on all platforms
+TEST ok = false; $(cat /etc/passwd).lines({if ":" in A ok = true}); ok
 
 # === Parse aws output ===========================
 # TODO: move to separate auto-loaded file maybe?
