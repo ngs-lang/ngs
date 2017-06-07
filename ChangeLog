@@ -1,5 +1,17 @@
 Version 0.3.0 unreleased
+
 	* Dunno yet
+
+2017-06-07 Version 0.2.1
+
+	* Add lines(cp:CommandsPipeline) to fix broken $(command).lines()
+		after pipes support in 0.2.0
+	* Add to_exit_code(cp:CommandsPipeline) to fix broken exit codes
+		after pipes support in 0.2.0
+	* Fix tests broken with RegExp syntax change in 0.2.0
+	* Fix Str(t:Time, format:Str=TIME_FORMAT, gmt:Bool=false)
+		that was not using "format"
+	* Add experimental Pred(h:Hash)
 
 2017-06-02 Version 0.2.0
 
