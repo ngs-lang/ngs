@@ -34,6 +34,7 @@ syn keyword ngsType Lock Pthread PthreadAttr Thread
 syn keyword ngsType LockFail
 syn keyword ngsType RegExp RegExpCompileFail
 syn keyword ngsType Redir
+syn keyword ngsType Result Success Failure ResultFail
 syn keyword ngsType Return
 syn keyword ngsType ScreenRenderer ScreenItemsContainer ScreenItemsVerticalContainer ScreenItemsHorizontalContainer
 syn keyword ngsType Match MatchY MatchN MatchFail SubSeq Pfx MaybePfx MustPfx Sfx MaybeSfx MustSfx

@@ -796,9 +796,9 @@ function-definition-default-value =
 
 namespace = "ns" opt_params:namespace-optional-parameters c:curly-code-block {
 
-		// ns { c }
+		// ns(opt_params) { c }
 		// (transforms to)
-		// F() {
+		// F(opt_params) {
 		//   local _exports
 		//   _exports = {}
 		//   c
