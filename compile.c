@@ -443,6 +443,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 						// TODO: maybe special opcode for creating an empty hash?
 						OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0);
 						OPCODE(*buf, OP_MAKE_HASH);
+						// XXX needed? /// STACK_DEPTH++;
 						argc++;
 					}
 					compile_main_section(ctx, ptr->first_child->first_child, buf, idx, allocated, NEED_RESULT);
@@ -462,7 +463,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				OPCODE(*buf, OP_PUSH_KWARGS_MARKER);
 				argc++;
 				if(have_arr_splat) {
-					OPCODE(*buf, OP_ARR_APPEND);
+					OPCODE(*buf, OP_ARR_APPEND2);
 				}
 			}
 			if(!have_arr_splat) {

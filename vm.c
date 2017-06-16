@@ -101,22 +101,23 @@ char *opcodes_names[] = {
 	/* 43 */ "TO_ARR",
 	/* 44 */ "TO_HASH",
 	/* 45 */ "ARR_APPEND",
-	/* 46 */ "ARR_CONCAT",
-	/* 47 */ "GUARD",
-	/* 48 */ "TRY_START",
-	/* 49 */ "TRY_END",
-	/* 50 */ "ARR_REVERSE",
-	/* 51 */ "THROW",
-	/* 52 */ "MAKE_CMDS_PIPELINE",
-	/* 53 */ "MAKE_CMDS_PIPE",
-	/* 54 */ "MAKE_CMD",
-	/* 55 */ "SET_CLOSURE_NAME",
-	/* 56 */ "SET_CLOSURE_DOC",
-	/* 57 */ "HASH_SET",
-	/* 58 */ "HASH_UPDATE",
-	/* 59 */ "PUSH_KWARGS_MARKER",
-	/* 60 */ "MAKE_REDIR",
-	/* 61 */ "SUPER",
+	/* 46 */ "ARR_APPEND2",
+	/* 47 */ "ARR_CONCAT",
+	/* 48 */ "GUARD",
+	/* 49 */ "TRY_START",
+	/* 50 */ "TRY_END",
+	/* 51 */ "ARR_REVERSE",
+	/* 52 */ "THROW",
+	/* 53 */ "MAKE_CMDS_PIPELINE",
+	/* 54 */ "MAKE_CMDS_PIPE",
+	/* 55 */ "MAKE_CMD",
+	/* 56 */ "SET_CLOSURE_NAME",
+	/* 57 */ "SET_CLOSURE_DOC",
+	/* 58 */ "HASH_SET",
+	/* 59 */ "HASH_UPDATE",
+	/* 60 */ "PUSH_KWARGS_MARKER",
+	/* 61 */ "MAKE_REDIR",
+	/* 62 */ "SUPER",
 };
 
 
@@ -4139,6 +4140,12 @@ do_jump:
 							EXPECT_STACK_DEPTH(2);
 							array_push(ctx->stack[ctx->stack_ptr-2], ctx->stack[ctx->stack_ptr-1]);
 							REMOVE_TOP_NOCHECK;
+							goto main_loop;
+		case OP_ARR_APPEND2:
+							EXPECT_STACK_DEPTH(3);
+							array_push(ctx->stack[ctx->stack_ptr-3], ctx->stack[ctx->stack_ptr-2]);
+							array_push(ctx->stack[ctx->stack_ptr-3], ctx->stack[ctx->stack_ptr-1]);
+							REMOVE_TOP_N_NOCHECK(2);
 							goto main_loop;
 		case OP_ARR_CONCAT:
 							EXPECT_STACK_DEPTH(2);

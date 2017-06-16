@@ -6,7 +6,7 @@ pkg_check_modules(LIBFFI libffi REQUIRED)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /opt/local/include/uthash /usr/local/include)
 link_directories(/usr/local/lib)
 
-add_executable(ngs version.h ngs.c syntax.include syntax.auto.h pcre_constants.include obj.c vm.c compile.c debug.c ast.c malloc.c)
+add_executable(ngs version.h ngs.c syntax.include syntax.auto.h pcre_constants.include obj.c vm.c compile.c debug.c ast.c malloc.c decompile.c)
 
 include(CheckFunctionExists)
 check_function_exists(fmemopen FMEMOPEN)

@@ -13,7 +13,7 @@ F bootstrap_try_main(c:Closure, argv:Arr, finish:Return) {
 			return null
 		}
 		# echo("Matched: $m")
-		v = c(*m.matches)
+		v = c(*m.args, **m.kwargs)
 		bootstrap_debug("Trying main() candidate ${c} - matched")
 		throw finish(v)
 	} catch(inf:ImplNotFound) {
@@ -36,5 +36,5 @@ F bootstrap_invoke_main(default) {
 	finish = Return()
 	candidate_mains.each(bootstrap_try_main(X, ARGV, finish))
 	# TODO: print usage examples here and exit with error code
-	throw BootstrapNoMatchingMain("No matching main() found")
+	throw BootstrapNoMatchingMain("Command line arguments are invalid.")
 }

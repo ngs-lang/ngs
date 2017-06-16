@@ -5,6 +5,14 @@
 	doc ArgvMatcher internal type, do not use!
 	type UnmatchedParam(EmptyBox)
 
+	type ParamsMatchY(MatchY)
+	type ParamsMatchN(MatchN)
+
+	F init(pmy:ParamsMatchY, args:Arr, kwargs:Hash) {
+		pmy.args = args
+		pmy.kwargs = kwargs
+	}
+
 }
 
 # Decorator. TODO: Consider generice attributes-setting decorator
@@ -30,7 +38,7 @@ F ArgvMatcher(option:Str, value, f:Closure) {
 doc Tries to match command line arguments with closure parameters.
 doc argv - Command line arguments, typically ARGV
 doc c - Closure to match with
-doc %RET - Match (MatchY on success, MatchN on failure). If MatchY is returned it has "matches" property with values is suitable order to call c. If MatchN is returned, it has "message" property explaining why there was no match. Currently it's not printed anywhere.
+doc %RET - Match (ParamsMatchY on success, ParamsMatchN on failure). If ParamsMatchY is returned it has "matches" property with values is suitable order to call c. If ParamsMatchN is returned, it has "message" property explaining why there was no match. Currently it's not printed anywhere.
 doc %EX - ArgvMatcher; (["--b", "B", "A", "C"] ~ F(a,b,c) 7).matches  # %[A B C]
 doc %EX - (["A", "C", "D", "--b", "B"] ~ ArgvMatcher("positionals", "a") do F(a,b) 7).matches  # %[%[A C D] B]
 F ~(argv:Arr, c:Closure) {
@@ -53,9 +61,10 @@ F ~(argv:Arr, c:Closure) {
 
 	params_by_name = params_by_pos.Hash('name')
 	params_by_name.each_idx_key_val(F(idx, k, v) v.idx = idx)
-	matches = UnmatchedParam * params_by_name.len()
+	matched_args = UnmatchedParam * params_by_name.len()
+	matched_kwargs = {}
 
-	F set_match(v) matches[params_by_name[param_name].idx] = MatchedParam(v)
+	F set_match(v) matched_args[params_by_name[param_name].idx] = MatchedParam(v)
 
 	F convert(v, t:Type) {
 		throw InvalidArgument("Don't know how to convert value ${v} to type ${t}")
@@ -92,18 +101,18 @@ F ~(argv:Arr, c:Closure) {
 				param_name = negated.after
 			}
 
-			param_name not in params_by_name returns MatchN().set('message', "Unknown parameter '${param_name}'")
+			param_name not in params_by_name returns ParamsMatchN().set('message', "Unknown parameter '${param_name}'")
 
 			if params_by_name[param_name].type == Bool {
 				set_match(not(negated))
 			} else {
 				if negated {
-					return MatchN().set('message', "Parameter '${param_name}' is not a boolean but used with 'no-'")
+					return ParamsMatchN().set('message', "Parameter '${param_name}' is not a boolean but used with 'no-'")
 				}
 				try
 					arg = argv_iter.next()
 				catch(nn:NoNext)
-					throw MatchN().set('message', "Parameter '${param_name}' was not followed by parameter value")
+					throw ParamsMatchN().set('message', "Parameter '${param_name}' was not followed by parameter value")
 				set_match(arg.convert(params_by_name[param_name].type))
 			}
 		} else {
@@ -118,30 +127,31 @@ F ~(argv:Arr, c:Closure) {
 	}
 
 	positionals.each(F(arg) {
-		idx = matches.index(UnmatchedParam)
+		idx = matched_args.index(UnmatchedParam)
 		if idx is Null {
 			if have_arr_splat {
-				matches.push(MatchedParam(arg))
+				matched_args.push(MatchedParam(arg))
 				return null
 			} else {
-				throw match_ret(MatchN().set('message', "Too many arguments"))
+				throw match_ret(ParamsMatchN().set('message', "Too many arguments"))
 			}
 		}
-		matches[idx] = MatchedParam(arg.convert(params_by_pos[idx].type))
+		matched_args[idx] = MatchedParam(arg.convert(params_by_pos[idx].type))
 	})
 
-	for(i;matches.len()) {
-		matches[i] continues
+	for(i;matched_args.len()) {
+		matched_args[i] continues
 		p = params_by_pos[i]
-		'dflt' not in p returns MatchN().set('message', "Parameter '${p.name}' missing")
-		matches[i] = MatchedParam(p.dflt)
+		'dflt' not in p returns ParamsMatchN().set('message', "Parameter '${p.name}' missing")
+		matched_args[i] = MatchedParam(p.dflt)
 	}
 
-	MatchY(matches.val)
+	ParamsMatchY(matched_args.val, {})
 }
 
-TEST ArgvMatcher; (["--b", "B", "A", "C"] ~ F(a,b,c) 7).matches == %[A B C]
-TEST ArgvMatcher; (["--b", "B", "A", "C", "D"] ~ F(a,b,c) 7) is MatchN
-TEST ArgvMatcher; (["--b", "B", "A", "C", "D"] ~ F(a,b,c, *d) 7).matches == %[A B C D]
-TEST ArgvMatcher; (["A", "C", "D", "--b", "B"] ~ F(a,b,c, *d) 7).matches == %[A B C D]
-TEST (["A", "C", "D", "--b", "B"] ~ ArgvMatcher("positionals", "a") do F(a,b) 7).matches == %[%[A C D] B]
+TEST ArgvMatcher; (["--b", "B", "A", "C"] ~ F(a,b,c) 7).args == %[A B C]
+TEST ArgvMatcher; (["--b", "B", "A", "C", "D"] ~ F(a,b,c) 7) is ParamsMatchN
+TEST ArgvMatcher; (["--b", "B", "A", "C", "D"] ~ F(a,b,c, *d) 7).args == %[A B C D]
+TEST ArgvMatcher; (["A", "C", "D", "--b", "B"] ~ F(a,b,c, *d) 7).args == %[A B C D]
+# TEST ArgvMatcher; (["A"] ~ F(a,b:Int=null) 7).matches.args == %[A B C D]
+TEST (["A", "C", "D", "--b", "B"] ~ ArgvMatcher("positionals", "a") do F(a,b) 7).args == %[%[A C D] B]
