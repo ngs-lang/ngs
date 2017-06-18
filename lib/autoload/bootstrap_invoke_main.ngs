@@ -2,12 +2,18 @@
 {
 	ArgvMatcher
 	type BootstrapNoMatchingMain(Exception)
+	type BootstrapFailedMatchMain(Exception)
 }
 
 F bootstrap_try_main(c:Closure, argv:Arr, finish:Return) {
 	bootstrap_debug("Trying main() candidate $c")
 	try {
-		m = argv ~ c
+		m = null
+		try {
+			m = argv ~ c
+		} catch(e:Exception) {
+			throw BootstrapFailedMatchMain("Command line arguments are invalid. Failed to match main() method.").set('cause', e)
+		}
 		if not(m) {
 			bootstrap_debug("Trying main() candidate ${c} - no match before calling")
 			return null

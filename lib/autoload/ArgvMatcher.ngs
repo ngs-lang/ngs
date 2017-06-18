@@ -52,15 +52,19 @@ F ~(argv:Arr, c:Closure) {
 	params_by_pos = c.params()
 
 	have_arr_splat = false
-	rest = []
-	if params_by_pos and ('splat' in params_by_pos[-1]) {
-		assert(params_by_pos[-1].splat == '*', 'ArgvMatcher does not support **kwargs')
-		have_arr_splat = true
-		params_by_pos.pop()
-	}
+	have_hash_splat = false
+
+	params_by_pos .= reject(F(p) {
+		splat = p.get('splat')
+		cond {
+			splat == '*'  have_arr_splat = true
+			splat == '**' have_hash_splat = true
+		}
+	})
 
 	params_by_name = params_by_pos.Hash('name')
 	params_by_name.each_idx_key_val(F(idx, k, v) v.idx = idx)
+
 	matched_args = UnmatchedParam * params_by_name.len()
 	matched_kwargs = {}
 
@@ -80,6 +84,14 @@ F ~(argv:Arr, c:Closure) {
 		v
 	}
 
+	F next_arg() {
+		try
+			arg = argv_iter.next()
+		catch(nn:NoNext)
+			throw ParamsMatchN().set('message', "Parameter '${param_name}' was not followed by parameter value")
+		arg
+	}
+
 	accepting_named_arguments = true
 	argv_iter = Iter(argv)
 	positionals = []
@@ -87,12 +99,14 @@ F ~(argv:Arr, c:Closure) {
 		param_name = null
 		arg = argv_iter.next()
 		# TODO: process -xyz arg as -x -y -z ?
-		# TODO: SHORT_SW_PFX & handle len() != 2
 		if accepting_named_arguments {
 			cond {
 				arg == '--' { accepting_named_arguments = false; continue }
 				(m = arg ~ LONG_SW_PFX) { param_name = m.after }
-				(m = arg ~ SHORT_SW_PFX) and arg.len() == 2 { param_name = m.after }
+				(m = arg ~ SHORT_SW_PFX) {
+					arg.len() != 2 throws NotImplemented("Don't know how to parse command line switch ${arg}").set('value', arg)
+					param_name = m.after
+				}
 			}
 		}
 		if param_name {
@@ -101,7 +115,17 @@ F ~(argv:Arr, c:Closure) {
 				param_name = negated.after
 			}
 
-			param_name not in params_by_name returns ParamsMatchN().set('message', "Unknown parameter '${param_name}'")
+			if param_name not in params_by_name {
+				if have_hash_splat {
+					if negated {
+						return ParamsMatchN().set('message', "Parameter '${param_name}' is not a boolean (has unknown type due to kwargs) but used with 'no-'")
+					}
+					matched_kwargs[param_name] = next_arg()
+					continue
+				} else {
+					return ParamsMatchN().set('message', "Unknown parameter '${param_name}'")
+				}
+			}
 
 			if params_by_name[param_name].type == Bool {
 				set_match(not(negated))
@@ -109,10 +133,7 @@ F ~(argv:Arr, c:Closure) {
 				if negated {
 					return ParamsMatchN().set('message', "Parameter '${param_name}' is not a boolean but used with 'no-'")
 				}
-				try
-					arg = argv_iter.next()
-				catch(nn:NoNext)
-					throw ParamsMatchN().set('message', "Parameter '${param_name}' was not followed by parameter value")
+				arg = next_arg()
 				set_match(arg.convert(params_by_name[param_name].type))
 			}
 		} else {
@@ -146,12 +167,13 @@ F ~(argv:Arr, c:Closure) {
 		matched_args[i] = MatchedParam(p.dflt)
 	}
 
-	ParamsMatchY(matched_args.val, {})
+	ParamsMatchY(matched_args.val, matched_kwargs)
 }
 
 TEST ArgvMatcher; (["--b", "B", "A", "C"] ~ F(a,b,c) 7).args == %[A B C]
 TEST ArgvMatcher; (["--b", "B", "A", "C", "D"] ~ F(a,b,c) 7) is ParamsMatchN
 TEST ArgvMatcher; (["--b", "B", "A", "C", "D"] ~ F(a,b,c, *d) 7).args == %[A B C D]
 TEST ArgvMatcher; (["A", "C", "D", "--b", "B"] ~ F(a,b,c, *d) 7).args == %[A B C D]
+TEST ArgvMatcher; m = (["--b", "B", "A", "C", "--d", "10"] ~ F(a,b,c,*args,**kw) 7); m.args == %[A B C] and m.kwargs == {"d": "10"}
 # TEST ArgvMatcher; (["A"] ~ F(a,b:Int=null) 7).matches.args == %[A B C D]
 TEST (["A", "C", "D", "--b", "B"] ~ ArgvMatcher("positionals", "a") do F(a,b) 7).args == %[%[A C D] B]
