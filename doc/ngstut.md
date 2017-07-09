@@ -118,4 +118,8 @@ In this example we also introduced the usage of pmap, in my opinon its one of th
 	}
 
 ### Example 7
+Extract a CERT from CA chain 
+
+cat p7b.cer | ngs -pi 'markers = "-----BEGIN CERTIFICATE-----"..."-----END CERTIFICATE-----"; l=read().lines(); m= l ~ markers; m.after[markers].join("\n").echo()' 
+
 
