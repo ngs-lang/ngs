@@ -154,8 +154,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F find(rd:Vpc) {
 		debug("AWS", "Find VPC $rd")
-		rd._assert_anchor_has_only_known_keys('Tags', 'CidrBlock')
-		filters = ['--filters'] +? (rd.anchor.Tags.cli_tags_filters() + cli_filters({'cidr': rd.anchor.get('CidrBlock')}))
+		rd._assert_anchor_has_only_known_keys('Tags', 'CidrBlock', 'IsDefault')
+		filters = ['--filters'] +? (rd.anchor.Tags.cli_tags_filters() + cli_filters({'cidr': rd.anchor.get('CidrBlock'), 'isDefault': rd.anchor.get('IsDefault')}))
 		rd.resources = ``aws ec2 describe-vpcs $*filters``.map(VpcRes(rd, X))
 		rd
 	}
