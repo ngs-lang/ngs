@@ -591,7 +591,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		resources = if regs {
 			instances = regs.pmap(F(r) {
 				ins = ``aws ec2 describe-instances --region $r $*filters``
-				ins % F(i) i.Region = r
+				ins.Region = r
 				ins
 			}).flatten()
 			# .filter(F(i) try i.PublicIpAddress)
