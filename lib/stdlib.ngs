@@ -4728,6 +4728,7 @@ TEST F opt(a, b=10, *rest, **kw) [b, rest, kw]; opt(1, b=30, **{"b": 20}, b=40) 
 TEST F opt(a, b=10, *rest, **kw) [a, b, rest, kw]; opt(1, 100, 200, **{"b": 20}, b=40) == [1, 100, [200], {"b": 40}]
 TEST F f(a) a; f(**{"a": 10}) == 10
 TEST F f(a=7) a; f(**{"a": 10}) == 10
+TEST F f(a,b,*args,**kwargs) [a,b,args,kwargs]; f(kw1=100, 1, 2, 3, kw2=200) == [1, 2, [3], {"kw1":100, "kw2":200}]
 
 TEST F construct(x:Int) F() x; f1=construct(1); f2=construct(2); (f1==f1) and (f1!=f2)
 TEST 1.1 < 1.11
@@ -4807,3 +4808,6 @@ TEST $(nofail cat NO_SUCH_FILE 2>/dev/null); true
 # Warning: file name is not unique
 TEST f='/tmp/ngs-redir-test'; $(echo -n abc >$f); $(echo -n def >>$f); txt=`cat $f`; $(rm $f); txt == 'abcdef'
 TEST f='/tmp/ngs-redir-test'; $(nofail cat /NO-SUCH-FILE 2>$f); txt=`cat $f`; $(rm $f); (txt ~ /No such file or directory/) is MatchY
+
+# TODO
+# TEST F f(a=100,b=200,c=300) [a,b,c]; f(b=10,20,30) # Currently b is not marked as matched and is overridden by 30

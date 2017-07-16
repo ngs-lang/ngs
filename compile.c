@@ -400,7 +400,6 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				OPCODE(*buf, OP_MAKE_ARR);
 				STACK_DEPTH++;
 			}
-			doing_named_args = 0;
 			argc = 0;
 			if(node->first_child->type == ATTR_NODE) {
 				compile_main_section(ctx, node->first_child->first_child, buf, idx, allocated, NEED_RESULT);
@@ -409,6 +408,28 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				}
 				argc++;
 			}
+			for(ptr=node->first_child->next_sibling->first_child; ptr; ptr=ptr->next_sibling) {
+				assert(ptr->type == ARG_NODE);
+				if(ptr->first_child->next_sibling) {
+					continue;
+				}
+				if(ptr->first_child->type == ARR_SPLAT_NODE) {
+					compile_main_section(ctx, ptr->first_child->first_child, buf, idx, allocated, NEED_RESULT);
+					OPCODE(*buf, OP_TO_ARR);
+					OPCODE(*buf, OP_ARR_CONCAT);
+					continue;
+				}
+				if(ptr->first_child->type == HASH_SPLAT_NODE) {
+					continue;
+				}
+				compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+				STACK_DEPTH++;
+				argc++;
+				if(have_arr_splat) {
+					OPCODE(*buf, ptr->first_child->type == ARR_SPLAT_NODE ? OP_ARR_CONCAT : OP_ARR_APPEND);
+				}
+			}
+			doing_named_args = 0;
 			for(ptr=node->first_child->next_sibling->first_child; ptr; ptr=ptr->next_sibling) {
 				assert(ptr->type == ARG_NODE);
 				if(ptr->first_child->next_sibling) {
@@ -429,13 +450,6 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					OPCODE(*buf, OP_HASH_SET);
 					continue;
 				}
-				if(ptr->first_child->type == ARR_SPLAT_NODE) {
-					assert(!doing_named_args);
-					compile_main_section(ctx, ptr->first_child->first_child, buf, idx, allocated, NEED_RESULT);
-					OPCODE(*buf, OP_TO_ARR);
-					OPCODE(*buf, OP_ARR_CONCAT);
-					continue;
-				}
 				if(ptr->first_child->type == HASH_SPLAT_NODE) {
 					if(!doing_named_args) {
 						// Setup named arguments
@@ -449,13 +463,6 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					compile_main_section(ctx, ptr->first_child->first_child, buf, idx, allocated, NEED_RESULT);
 					OPCODE(*buf, OP_HASH_UPDATE);
 					continue;
-				}
-				assert(!doing_named_args);
-				compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
-				STACK_DEPTH++;
-				argc++;
-				if(have_arr_splat) {
-					OPCODE(*buf, ptr->first_child->type == ARR_SPLAT_NODE ? OP_ARR_CONCAT : OP_ARR_APPEND);
 				}
 			}
 			if(doing_named_args) {
