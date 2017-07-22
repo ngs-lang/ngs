@@ -40,9 +40,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	TEST AWS::cli_filters({"x": "y", "z": null, "w": FullBox("ww")}) == ['Name=x,Values=y', 'Name=w,Values=ww']
 	TEST AWS::cli_filters({"x": Pfx("aa"), "z": EmptyBox()}) == ['Name=x,Values=aa*']
 
-	F cli_tags_filters(h:Hash) h / "Name=tag-key,Values=$X,Name=tag-value,Values=$Y"
+	F cli_tags_filters(h:Hash) h / "Name=tag:$X,Values=$Y"
 	TEST AWS::cli_tags_filters({}) == []
-	TEST AWS::cli_tags_filters({"x": "y"}) == ['Name=tag-key,Values=x,Name=tag-value,Values=y']
+	TEST AWS::cli_tags_filters({"x": "y"}) == ['Name=tag:x,Values=y']
 
 	_aws_cached_regions = null
 
@@ -328,6 +328,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		} # Routes
 	}
 
+	F delete(r:RouteTableRes) {
+		r.run('Delete route table', %(aws ec2 delete-route-table --route-table-id ${r.id()}))
+	}
 
 	# --------------------------------------------------
 	# SecGroup
@@ -626,6 +629,13 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			'--subnet-id':           rd.opt_prop('SubnetId', props).map(only(ResDef, ids))
 			'--instance-type':       rd.opt_prop('InstanceType', props)
 			['--associate-public-ip-address', '--no-associate-public-ip-address']: rd.opt_prop('PublicIpAddress', props)
+			'--private-ip-address':  rd.opt_prop('PrivateIpAddress', props)
+		})
+
+
+		rd.opt_prop('UserData', props, F(ud) {
+			args.push('--user-data')
+			args.push(ud)
 		})
 
 		result = rd.run('Create Instance', %(aws ec2 run-instances $*args))
@@ -1080,6 +1090,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 		}
 		F world_open_ip_proto(proto:Arr) proto.map(world_open_ip_proto)
+
+		F world_open_icmp() {
+			{
+				'IpProtocol': 'icmp'
+				'FromPort': -1
+				'ToPort': -1
+			}
+		}
 	}
 
 	# ==================================================
