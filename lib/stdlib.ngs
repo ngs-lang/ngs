@@ -914,6 +914,13 @@ F collector(n:Int, body:Fun) {
 	n
 }
 
+doc EXPERIMENTAL! Do not use!
+F collector(s:Str, body:Fun) {
+	ret = []
+	body(ret.push(X))
+	s + ret.join('')
+}
+
 doc Comparison to null
 doc %RET - false
 F ==(a:Null, b) false
@@ -1130,6 +1137,7 @@ F each(arr:Arr, cb:Fun) {
 
 # Tested by flatten() tests
 
+# TODO: Support Eachable1 ?
 # TODO: map_idx_val, each_idx_val for other types
 doc Iterates over the elements of arr, passing each in turn to cb along with index and args: cb(INDEX, ITEM)
 doc %RET - arr
@@ -1241,6 +1249,7 @@ F count(arr:Arr) count(arr, identity)
 
 TEST [0,1,2,null,false].count() == 2
 
+# Maybe Eachable1 ?
 doc Flatten one level.
 doc e - Eachable with each element also Eachable
 doc %RET - Arr
@@ -1994,7 +2003,7 @@ TEST h={"a": 1, "b": 2}; s = h.shift("a"); h == {"b": 2} and s == 1
 
 {
 	doc A box which might (FullBox) or might not (EmptyBox) contain a value
-	type Box
+	type Box(Eachable1)
 		doc Represents presence of a value
 		doc val - The value
 		type FullBox(Box)
@@ -2952,6 +2961,8 @@ F glob(pattern:Str, start_dir='.') {
 	throw NotImplemented("glob() is not implemented yet")
 }
 
+F Arg(p:Path) p.path
+
 # === Commands and processes (WIP) ===============
 
 # TODO: better exceptions (use correct type, not string, maybe use errno)
@@ -3403,6 +3414,11 @@ F Argv(h:Hash) {
 TEST Argv({"--a": 1, "-b": null, ["-y1", "-n1"]: true, ["-y2", "-n2"]: false, ["-y3"]: true, ["-y4"]: false}) == ["--a", 1, "-y1", "-n2", "-y3"]
 TEST Argv({"-a1": [], "-a2": [1,2,3]}) == ["-a2", 1, 2, 3]
 
+doc EXPERIMENTAL! Do not use!
+F Argv(a:Arr) {
+	a.reject(NoData).map(only(Box, get)).map(only(X is not Arr, FullBox)).flatten()
+}
+
 # --- $() ---
 
 F '$()'(c:Command) {
@@ -3637,7 +3653,11 @@ doc Get command standard output. Similar to bash.
 F ``(cp:CommandsPipeline) {
 	processes = ('$()')(cp).processes
 	assert(processes)
-	processes[-1].Str()
+	ret = processes[-1].Str()
+	if cp.commands[-1].options.get('line') == true {
+		ret = ret.lines()[0]
+	}
+	ret
 }
 
 doc Get command standard output and parse() it.

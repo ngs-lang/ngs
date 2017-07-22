@@ -57,6 +57,14 @@ Note that this started as internal document so things here are unformed, not fin
 	* '.'(Iter, Str) -> AttrIter or alike maybe MappingIter or child
 	* Take a look at Red programming language http://www.red-lang.org/p/documentation.html
 	* Add test for find(Vpc) isDefault property
+	* Reconsider Int inheriting Eachable. Think 10.flatten() - very strange behaviour.
+	* ns { F init(...) ... } -- forgetting "global init" is hard to debug
+	* [Doc.ngs] check why n = Node('html', children = tl.children) does not work
+	* Document pitfalls
+		* ns { F some_global_name() ... } -- does not add method implementation
+		* F(x,a:Arr=[]) ...,  when a is mutable
+	* Document `options: ...`
+	* Fix operators priority for obj.Mod::method()
 
 
 [roadmap]

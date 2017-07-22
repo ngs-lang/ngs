@@ -1,0 +1,116 @@
+ns {
+
+	global init, push, inspect
+
+	# Maybe add: NodesGroup - logical group, producing only children in the output
+
+	doc EXPERIMENTAL! Do not use!
+	type DocPart
+		type Node(DocPart)
+			type TopLevel(Node)
+		type Textual(DocPart)
+			type Comment(Textual)
+			type Text(Textual)
+
+	F init_children(n:Node) {
+		if n.children is Null {
+			n.children = []
+		}
+	}
+
+	F init(n:Node, name:Str, children:Arr=null, **attrs) {
+		init(args())
+		init_children(n)
+	}
+
+	F init(tl:TopLevel, children:Arr=null, **attrs) {
+		init(args())
+		init_children(tl)
+	}
+
+	F init(t:Textual, txt:Str) init(args())
+
+	F push(n:Node, dp:DocPart) n.children.push(dp)
+
+	F name(t:Textual) null
+	F name(n:Node) n.name
+	F name(tl:TopLevel) null
+
+	F children(t:Textual) []
+	F children(n:Node) n.children
+
+	F each_child(dp:DocPart, cb:Fun) dp.children().each(cb)
+	F map_children(dp:DocPart, mapper:Fun) dp.children().map(mapper)
+
+	# TODO: maybe remove options?
+	F transform(dp:DocPart, transformer:Hash, options:Hash={}, parents:Arr=[]) {
+		t = F generated_transformer(dp, children, parents) {
+			k = if dp is Node and dp is not TopLevel then dp.name else dp.typeof()
+			k not in transformer throws NotImplemented("Doc::transform was not given transformer for Doc::DocPart '$k'")
+			transformer[k](dp, children, parents)
+		}
+		transform(dp, t, options, parents)
+	}
+
+	F transform(dp:DocPart, transformer:Fun, options:Hash={}, parents:Arr=[]) {
+		p = parents + [dp]
+		transformer(dp, dp.map_children({transform(A, transformer, options, p)}), parents)
+	}
+
+	F visit(dp:DocPart, cb:Fun, parents:Arr=[]) {
+		p = parents + [dp]
+		dp.each_child({visit(A, cb, p)})
+		cb(dp, parents)
+	}
+
+	F Html(n:Node) {
+
+		ret = collector/'' {
+			collect("<${n.name}")
+			n.attrs.each(F(k, v) {
+				collect(" $k=\"${encode_html_attr(Str(v))}\"")
+			})
+
+			if n.children {
+				collect(">\n")
+				n.map_children(Html).each(F(child_text) {
+					collect(child_text)
+					collect("\n")
+				})
+				collect("</${n.name}>\n")
+			} else {
+				collect("/>")
+			}
+		}
+	}
+
+	F Html(tl:TopLevel) {
+		n = Node('html', tl.children)
+		'<!DOCTYPE html>\n' + Html(n)
+	}
+
+	F Html(t:Text) encode_html(t.txt)
+
+	F inspect(n:Node, levels=2) {
+		collector {
+			c = collect
+			c("Doc::" + n.typeof().name + (if 'name' in n then " ${n.name}" else "")) # later - maybe typeof can return namespace name?
+
+			n.attrs.each(F(k, v) {
+				c("  Attribute [${SafeStr(k)}] = ${SafeStr(v)}")
+			})
+
+			if levels > 0 {
+				n.children.each_idx_val(F(idx, val) {
+					# echo("child $levels - $idx")
+					("  Child $idx: " + inspect(val, levels-1)) % c
+				})
+			} else {
+				n.children.each_idx_val(F(idx, val) {
+					c("  Child $idx: ${SafeStr(val)}")
+				})
+			}
+		}
+	}
+
+}
