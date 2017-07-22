@@ -47,7 +47,7 @@
 
 				arg in AWS::INSTANCE_STATES collect("Name=instance-state-name,Values=$arg")
 
-				kv.len() == 2 collect("Name=tag-key,Values=${kv[0]},Name=tag-value,Values=${kv[1]}")
+				kv.len() == 2 collect("Name=tag:${kv[0]},Values=${kv[1]}")
 			}
 		})
 
