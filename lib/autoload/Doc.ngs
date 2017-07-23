@@ -7,7 +7,6 @@ ns {
 	doc EXPERIMENTAL! Do not use!
 	type DocPart
 		type Node(DocPart)
-			type TopLevel(Node)
 		type Textual(DocPart)
 			type Comment(Textual)
 			type Text(Textual)
@@ -23,18 +22,12 @@ ns {
 		init_children(n)
 	}
 
-	F init(tl:TopLevel, children:Arr=null, **attrs) {
-		init(args())
-		init_children(tl)
-	}
-
 	F init(t:Textual, txt:Str) init(args())
 
 	F push(n:Node, dp:DocPart) n.children.push(dp)
 
 	F name(t:Textual) null
 	F name(n:Node) n.name
-	F name(tl:TopLevel) null
 
 	F children(t:Textual) []
 	F children(n:Node) n.children
@@ -42,11 +35,14 @@ ns {
 	F each_child(dp:DocPart, cb:Fun) dp.children().each(cb)
 	F map_children(dp:DocPart, mapper:Fun) dp.children().map(mapper)
 
+	# Open issue: what should be the correct order of "parents" when passed to transformer() in transform() and to cb() in visit()
+
 	# TODO: maybe remove options?
+	# Children are visited first so when parent is visited it has the transformed children to pack into result
 	F transform(dp:DocPart, transformer:Hash, options:Hash={}, parents:Arr=[]) {
 		t = F generated_transformer(dp, children, parents) {
-			k = if dp is Node and dp is not TopLevel then dp.name else dp.typeof()
-			k not in transformer throws NotImplemented("Doc::transform was not given transformer for Doc::DocPart '$k'")
+			k = if dp is Node then dp.name else dp.typeof()
+			k not in transformer throws NotImplemented("Doc::transform was not given transformer for Doc::DocPart '$k'").set('key', k)
 			transformer[k](dp, children, parents)
 		}
 		transform(dp, t, options, parents)
@@ -84,8 +80,7 @@ ns {
 		}
 	}
 
-	F Html(tl:TopLevel) {
-		n = Node('html', tl.children)
+	F HtmlRoot(n:Node) {
 		'<!DOCTYPE html>\n' + Html(n)
 	}
 

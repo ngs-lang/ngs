@@ -18,7 +18,7 @@
 
 	# Use anonymous function to exclude methods in this file
 	# The inner functions are local
-	ns(DocPart=Doc::DocPart, DocNode=Doc::Node, DocTopLevel=Doc::TopLevel) {
+	ns(DocPart=Doc::DocPart, DocNode=Doc::Node, DocText=Doc::Text, doc_visit=Doc::visit) {
 
 		global Arr, Str, init, push, each
 
@@ -73,12 +73,10 @@
 			DocNode('param', name=param.name, type=param.get('type', Any), splat=dn.get('splat'), dflt=dflt, doc=doc.get(param.name))
 		}
 
-		### F process_method_impl_doc_attr(mi:Fun, dn:DocNode, doc_attr:Str, doc_node_type:Type) {
-		### 	d = mi.attrs().doc or {}
-		### 	if doc_attr in d {
-		### 		dn.push(doc_node_type(d[doc_attr].to_lines()))
-		### 	}
-		### }
+		F process_doc_attr(mi:Fun, attr:Str, cb:Fun) {
+			d = mi.attrs().doc or {}
+			d.Box(attr).map(to_lines).each(cb)
+		}
 
 		### F process_type_impl_doc_attr(t:Type, dn:DocNode, doc_attr:Str, doc_node_type:Type) {
 		### 	a = t.attrs()
@@ -107,9 +105,10 @@
 				# Handling Closure, not handling built-ins yet
 				location_info = mi.ip().resolve_instruction_pointer()
 				if m = location_info.file ~ pfx {
-					dn.push(DocNode('location', file=m.after, line=location_info.first_line))
+					dn.push(DocNode('source-ref', file=m.after, line=location_info.first_line))
 				}
 			}
+			process_doc_attr(mi, '', F(lines) lines.map(DocText).each(dn.push(X)))
 			dn
 		}
 
@@ -121,18 +120,18 @@
 
 				# Index page
 				methods = DocNode('methods') with list_methods().limit(3) / process_method
-				page = DocTopLevel() with [methods]
+				page = DocNode('root') with [methods]
 
 				html_page = Doc::transform(page, {
-					'location': F(dp:DocPart, children, parents) {
+					'source-ref': F(dp:DocNode, children, parents) {
 						# dp.attrs.file
 						# dp.attrs.line
-						DocNode('a', href="https://github.com/ilyash/ngs/blob/$commit/lib/${dp.attrs.file}#L${dp.attrs.line}", class='location') with [
+						DocNode('a', href="https://github.com/ilyash/ngs/blob/$commit/lib/${dp.attrs.file}#L${dp.attrs.line}", class='source-ref') with [
 							Doc::Text("${dp.attrs.file}:${dp.attrs.line}")
 
 						]
 					}
-					'method-impl': F(dp:DocPart, children, parents) {
+					'method-impl': F(dp:DocNode, children, parents) {
 						# dp.attrs.mi
 						DocNode('section', class='method-impl') with [
 							DocNode('h') with [
@@ -140,7 +139,7 @@
 							]
 						] + children
 					}
-					'method': F(dp:DocPart, children, parents) {
+					'method': F(dp:DocNode, children, parents) {
 						# dp.attrs.name
 						DocNode('section', class='method') with [
 							DocNode('h') with [
@@ -148,7 +147,7 @@
 							]
 						] + children
 					}
-					'methods': F(dp:DocPart, children, parents) {
+					'methods': F(dp:DocNode, children, parents) {
 						# dp.attrs.name
 						DocNode('section', class='methods') with [
 							DocNode('h') with [
@@ -156,14 +155,18 @@
 							]
 						] + children
 					}
-					Doc::TopLevel: F(dp:DocPart, children, parents) {
-						DocTopLevel() with children
+					'root': F(n:DocNode, children, parents) {
+						DocNode('html') with children
+					}
+					DocText: F(n:DocText, children, parents) {
+						n
 					}
 				})
 
-				Doc::visit(html_page, F(dp:DocPart, parents) {
-					if Doc::name(dp) == 'h' {
-						dp.name = "h${count(parents, {Doc::name(A) == 'section'})}"
+				# Convert h to h1, h2, ... depending on depth (counted by number of "section" elements)
+				html_page.doc_visit(F(dp:DocPart, parents) {
+					if dp is DocNode and dp.name == 'h' {
+						dp.name = "h${parents.filter(DocNode).count({'name': 'section'})}"
 					}
 				})
 
@@ -271,7 +274,7 @@
 
 		}
 
-		echo(Doc::Html(html_page))
+		echo(Doc::HtmlRoot(html_page))
 		# echo(page)
 		# inspect(html_page, 5) % echo
 		# each_idx_val(page.children[0].children[0].children, F(idx, val) {
