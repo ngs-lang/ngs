@@ -18,7 +18,7 @@
 
 	# Use anonymous function to exclude methods in this file
 	# The inner functions are local
-	ns(DocPart=Doc::DocPart, DocNode=Doc::Node, DocText=Doc::Text, doc_visit=Doc::visit) {
+	ns(DocPart=Doc::DocPart, DocNode=Doc::Node, DocText=Doc::Text, DocGroup=Doc::Group, doc_visit=Doc::visit) {
 
 		global Arr, Str, init, push, each
 
@@ -70,7 +70,7 @@
 				Fun Doc::Node('default-is-fun')
 				Any Doc::Node('default-value', text=param.dflt.Str())
 			}})
-			DocNode('param', name=param.name, type=param.get('type', Any), splat=dn.get('splat'), dflt=dflt, doc=doc.get(param.name))
+			DocNode('param', name=param.name, type=param.get('type', Any), splat=param.get('splat'), dflt=dflt, doc=doc.get(param.name))
 		}
 
 		F process_doc_attr(mi:Fun, attr:Str, cb:Fun) {
@@ -95,12 +95,8 @@
 		F process_method_impl(name:Str, mi:Fun) {
 			method_impls_by_id.dflt(method_impl_id(name, mi), [name]).push(mi)
 
-			### process_method_impl_doc_attr(mi, dn, '', DescDocNode)
-			### dn.push(ParamsDocNode(mi.params().map(process_param(X, mi.attrs().doc or {}))))
-			### process_method_impl_doc_attr(mi, dn, '%EX', ExampleDocNode)
-			### process_method_impl_doc_attr(mi, dn, '%RET', RetDocNode)
-
-			dn = DocNode('method-impl', mi=mi)
+			dn = DocNode('method-impl', name=name, mi=mi)
+			process_doc_attr(mi, '', F(lines) lines.map(DocText).each(dn.push(X)))
 			if mi is Closure {
 				# Handling Closure, not handling built-ins yet
 				location_info = mi.ip().resolve_instruction_pointer()
@@ -108,60 +104,115 @@
 					dn.push(DocNode('source-ref', file=m.after, line=location_info.first_line))
 				}
 			}
-			process_doc_attr(mi, '', F(lines) lines.map(DocText).each(dn.push(X)))
+
+			mi_doc = mi.attrs().doc or {}
+			dn.push(DocNode('params') with mi.params().map(process_param(X, mi_doc)))
+
+
+			process_doc_attr(mi, '%EX', F(lines) {
+				dn.push(DocNode('example') with [
+					DocText(lines.join('\n'))
+				])
+			})
+			process_doc_attr(mi, '%RET', F(lines) {
+				assert(lines.len() == 1, '%RET must be used at most once per method')
+				dn.push(DocNode('returns') with [
+					DocText(lines[0])
+				])
+			})
 			dn
 		}
 
-		F process_method(name, value) DocNode('method', name=name) with value.map(process_method_impl(name, X))
+		F process_method(name, implementations) {
+			DocNode('method', name=name) with
+				implementations.map(process_method_impl(name, X))
+		}
 
 		eswitch mode {
 
 			'methods' {
 
 				# Index page
-				methods = DocNode('methods') with list_methods().limit(3) / process_method
-				page = DocNode('root') with [methods]
+				methods_node = DocNode('methods') with list_methods().limit(10).map(process_method)
+				page_node = DocNode('root') with [methods_node]
 
-				html_page = Doc::transform(page, {
-					'source-ref': F(dp:DocNode, children, parents) {
-						# dp.attrs.file
-						# dp.attrs.line
-						DocNode('a', href="https://github.com/ilyash/ngs/blob/$commit/lib/${dp.attrs.file}#L${dp.attrs.line}", class='source-ref') with [
-							Doc::Text("${dp.attrs.file}:${dp.attrs.line}")
+				transformer = {
+					'param': F(dn:DocNode) {
+							# name, type, splat, dflt, doc
+							# TODO later: type link
+							## DocText(dn.attrs.type.name)
+							ret = DocNode('section', class='param') with [
+								DocNode('h') with [
+									DocText(dn.attrs.name)
+								]
+							]
+							if dn.attrs.doc {
+								ret.push(DocText(dn.attrs.doc.join('\n')))
+							}
+							ret
+					}
+					'params': F(dn:DocNode) {
+						DocGroup(Doc::transform(dn.children.filter({A.attrs.doc}), transformer))
+					}
+					'source-ref': F(dn:DocNode) {
+						# dn.attrs.file
+						# dn.attrs.line
+						DocNode('div', class="source-ref") with [
+							DocText('Source: ')
+							DocNode('a', href="https://github.com/ilyash/ngs/blob/$commit/lib/${dn.attrs.file}#L${dn.attrs.line}", class='source-ref') with [
+								Doc::Text("${dn.attrs.file}:${dn.attrs.line}")
 
+							]
 						]
 					}
-					'method-impl': F(dp:DocNode, children, parents) {
-						# dp.attrs.mi
+					'example':  F(dn:DocNode) {
+							DocNode('pre', class='example') with Doc::transform(dn.children, transformer)
+					}
+					'returns':  F(dn:DocNode) {
+							# TODO
+							DocNode('section', class='returns') with [
+								DocNode('h') with [
+									DocText('Returns')
+								]
+							] + Doc::transform(dn.children, transformer)
+					}
+					'method-impl': F(dn:DocNode) {
+						# dn.attrs.mi
 						DocNode('section', class='method-impl') with [
 							DocNode('h') with [
-								Doc::Text('method impl. todo: method name')
+								Doc::Text(dn.attrs.name)
 							]
-						] + children
+						] + Doc::transform(dn.children, transformer)
 					}
-					'method': F(dp:DocNode, children, parents) {
-						# dp.attrs.name
+					'method': F(dn:DocNode) {
+						# dn.attrs.name
 						DocNode('section', class='method') with [
 							DocNode('h') with [
-								Doc::Text("Method: ${dp.attrs.name}")
+								Doc::Text("Method: ${dn.attrs.name}")
 							]
-						] + children
+						] + Doc::transform(dn.children, transformer)
 					}
-					'methods': F(dp:DocNode, children, parents) {
-						# dp.attrs.name
+					'methods': F(dn:DocNode) {
+						# dn.attrs.name
 						DocNode('section', class='methods') with [
 							DocNode('h') with [
 								Doc::Text('Methods')
 							]
-						] + children
+						] + Doc::transform(dn.children, transformer)
 					}
-					'root': F(n:DocNode, children, parents) {
-						DocNode('html') with children
+					'root': F(dn:DocNode) {
+						DocNode('html') with [
+							DocNode('head') with [
+								DocNode('meta', charset='UTF-8')
+								DocNode('link', rel='stylesheet', href='main.css', type='text/css')
+							]
+							DocNode('body') with Doc::transform(dn.children, transformer)
+						]
 					}
-					DocText: F(n:DocText, children, parents) {
-						n
-					}
-				})
+					DocText: F(t:DocText) t
+				}
+
+				html_page = Doc::transform(page_node, transformer)
 
 				# Convert h to h1, h2, ... depending on depth (counted by number of "section" elements)
 				html_page.doc_visit(F(dp:DocPart, parents) {

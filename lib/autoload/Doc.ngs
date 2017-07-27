@@ -6,14 +6,16 @@ ns {
 
 	doc EXPERIMENTAL! Do not use!
 	type DocPart
-		type Node(DocPart)
+		type Container(DocPart)
+			type Node(Container)
+			type Group(Container)
 		type Textual(DocPart)
 			type Comment(Textual)
 			type Text(Textual)
 
-	F init_children(n:Node) {
-		if n.children is Null {
-			n.children = []
+	F init_children(c:Container) {
+		if c.children is Null {
+			c.children = []
 		}
 	}
 
@@ -22,35 +24,48 @@ ns {
 		init_children(n)
 	}
 
+	F init(g:Group, children:Arr=null, **attrs) {
+		init(args())
+		init_children(g)
+	}
+
+
 	F init(t:Textual, txt:Str) init(args())
 
-	F push(n:Node, dp:DocPart) n.children.push(dp)
+	F push(c:Container, dp:DocPart) c.children.push(dp)
 
-	F name(t:Textual) null
+	F name(dp:DocPart) null
 	F name(n:Node) n.name
 
-	F children(t:Textual) []
-	F children(n:Node) n.children
+	F children(dp:DocPart) []
+	F children(c:Container) c.children
 
 	F each_child(dp:DocPart, cb:Fun) dp.children().each(cb)
 	F map_children(dp:DocPart, mapper:Fun) dp.children().map(mapper)
 
 	# Open issue: what should be the correct order of "parents" when passed to transformer() in transform() and to cb() in visit()
 
-	# TODO: maybe remove options?
-	# Children are visited first so when parent is visited it has the transformed children to pack into result
-	F transform(dp:DocPart, transformer:Hash, options:Hash={}, parents:Arr=[]) {
-		t = F generated_transformer(dp, children, parents) {
+	F Transformer(x:Fun) x
+
+	F Transformer(x:Hash) {
+		t = F generated_transformer(dp) {
 			k = if dp is Node then dp.name else dp.typeof()
-			k not in transformer throws NotImplemented("Doc::transform was not given transformer for Doc::DocPart '$k'").set('key', k)
-			transformer[k](dp, children, parents)
+			k not in x throws NotImplemented("Doc::transform was not given transformer for Doc::DocPart '$k'").set('key', k)
+			x[k](dp)
 		}
-		transform(dp, t, options, parents)
 	}
 
-	F transform(dp:DocPart, transformer:Fun, options:Hash={}, parents:Arr=[]) {
-		p = parents + [dp]
-		transformer(dp, dp.map_children({transform(A, transformer, options, p)}), parents)
+	# TODO: maybe remove options?
+	# Children are visited first so when parent is visited it has the transformed children to pack into result
+	F transform(dp:DocPart, transformer) {
+		t = Transformer(transformer)
+		t(dp)
+	}
+
+	F transform(dps:Arr, transformer) {
+		guard dps.all(DocPart)
+		t = Transformer(transformer)
+		dps.map(transform(X, t))
 	}
 
 	F visit(dp:DocPart, cb:Fun, parents:Arr=[]) {
@@ -68,12 +83,11 @@ ns {
 			})
 
 			if n.children {
-				collect(">\n")
+				collect(">")
 				n.map_children(Html).each(F(child_text) {
 					collect(child_text)
-					collect("\n")
 				})
-				collect("</${n.name}>\n")
+				collect("</${n.name}>")
 			} else {
 				collect("/>")
 			}
@@ -85,6 +99,8 @@ ns {
 	}
 
 	F Html(t:Text) encode_html(t.txt)
+
+	F Html(g:Group) g.map_children(Html).join('')
 
 	F inspect(n:Node, levels=2) {
 		collector {

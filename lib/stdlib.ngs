@@ -3421,6 +3421,7 @@ F Argv(a:Arr) {
 
 # --- $() ---
 
+doc Run a process, described by the command c
 F '$()'(c:Command) {
 
 	# Removing this fails the test $(nofail cat NO_SUCH_FILE 2>/dev/null)
@@ -3546,8 +3547,9 @@ F '$()'(c:Command) {
 # TODO: provide additional communication channel on additional fd?
 # TODO: handle built-in commands: do not execve,
 # INFO: bash - redir.c
-doc Execute an external command. Waits for the command to finish unless "&" is specified.
-doc c - Command type instance, typically constructed by NGS when parsing the contents of $(...) .
+doc Run external processes described by the commands pipeline.
+doc Waits for the commands to finish unless "&" is specified.
+doc c - CommandsPipeline type instance, typically constructed by NGS when parsing the contents of $(...) .
 doc %EX - if $(test -f /myfile) { ... }
 doc %EX - # or
 doc %EX - p = $(node main.js serve &)

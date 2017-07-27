@@ -1,0 +1,81 @@
+html {
+    font-family: sans-serif;
+}
+
+body {
+    margin: 1em;
+	line-height: 1.5;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	color: brown;
+}
+
+
+pre.example {
+	background-color: #F0FFE0;
+	padding: 1em;
+	border: 1px solid #A0C0A0;
+	border-radius: 0.5em;
+}
+
+q {
+    quotes: "\201C" "\201D" "\2018" "\2019";
+}
+
+a.section-link, a.type-link {
+	visibility: hidden;
+	font-size: 0.8em;
+	text-decoration: none;
+	padding-left: 0.5em;
+}
+
+h1:hover > a.section-link,
+h2:hover > a.section-link,
+h3:hover > a.section-link,
+h4:hover > a.section-link,
+h1:hover > a.type-link,
+h2:hover > a.type-link,
+h3:hover > a.type-link,
+h4:hover > a.type-link
+{
+	visibility: visible;
+}
+
+.method, .type, .type-method-impl, .type-method-impl-desc {
+	padding-left: 4em;
+}
+.type-method-impl {
+	padding-bottom: 1em;
+}
+.method-header {
+	color: #888;
+}
+.method-source {
+	opacity: 0.5;
+	font-size: 0.9em;
+}
+.method-impl-content {
+	padding-bottom: 1em;
+}
+.method-impl, .method-impl-content, .method-param-content, .method-returns-content, .method-example-content, .type-example-content, .type-content, .type-attrs-content, .type-attr-content {
+	padding-left: 4ex;
+}
+.method-impl-content {
+	border-bottom: 1px solid #DDD;
+}
+.returns-header {
+	font-style: italic;
+}
+.example-header {
+	color: #208020;
+
+}
+.param-header {
+	margin-bottom: 0;
+}
+
+/* new */
+.source-ref {
+	opacity: 0.5;
+}
