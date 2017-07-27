@@ -133,7 +133,7 @@
 			'methods' {
 
 				# Index page
-				methods_node = DocNode('methods') with list_methods().limit(10).map(process_method)
+				methods_node = DocNode('methods') with list_methods().limit(30).map(process_method)
 				page_node = DocNode('root') with [methods_node]
 
 				transformer = {
@@ -147,7 +147,7 @@
 								]
 							]
 							if dn.attrs.doc {
-								ret.push(DocText(dn.attrs.doc.join('\n')))
+								ret.push(DocText(dn.attrs.doc.to_lines().join('\n')))
 							}
 							ret
 					}
@@ -193,14 +193,14 @@
 						] + Doc::transform(dn.children, transformer)
 					}
 					'methods': F(dn:DocNode) {
-						# dn.attrs.name
 						DocNode('section', class='methods') with [
 							DocNode('h') with [
-								Doc::Text('Methods')
+								Doc::Text('Methods - NGS documentation')
 							]
 						] + Doc::transform(dn.children, transformer)
 					}
 					'root': F(dn:DocNode) {
+						# TODO: title
 						DocNode('html') with [
 							DocNode('head') with [
 								DocNode('meta', charset='UTF-8')
