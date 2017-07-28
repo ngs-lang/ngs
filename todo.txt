@@ -9,25 +9,35 @@ Note that this started as internal document so things here are unformed, not fin
 	* Phase 1 - the language [in progress]
 
 		* Milestone "documentation" [in progress]
-			* Make sure build process for online documentation works. [in progress]
-				Might be broken after migration to cmake.
-			* Pages [in proress]
-				* Method related
-					* All methods list page: method name, implementation descritions, link to method page, link to method implementation page
-					* Method implementations list page: method_name(args), args descriptions, example
-					* Method page: method_name(args), args descriptions, example, link to method page
-				* Types related
-					* All types page: name, description
-					* Type page: description, parent types, child types, methods' imlementations list
-				* Namespaces related
-					* Namespaces list page: name, description
-					* Namespace page: list of exported symbols ???
-					* ???
+			* Generated [in progress]
+				* Pages
+					/ (documentaton root)
+						links to: methods, types, tutorial, etc
+					/methods
+					/methods/method-name
+					/methods/method-name/args
+					Show NGS version on each page
+					* Method related
+						* All methods list page: method name, implementation descritions, link to method page, link to method implementation page, link to type where applicable
+						* Method implementations list page: method_name(args), args descriptions, example
+						* Method page: method_name(args), args descriptions, example, link to method page
+					* Types related
+						* All types page: name, description, parents?
+						* Type page: description, parent types (including transient), child types, methods' imlementations list
+						* Link %RET types
+					* Namespaces related
+						* Namespaces list page: name, description
+						* Namespace page: list of exported symbols ???
+						* ???
+					* Namespaced types and methods
+						* Show namespace
+					* { } in examples
+					* Mark experimental
+					* Mark deprecated
 			* Document `options: ...`
 			* Document pitfalls
 				* ns { F some_global_name() ... } -- does not add method implementation
 				* F(x,a:Arr=[]) ...,  when a is mutable
-			* List all parents, including transient
 			* "The README doesn’t seem to have any simple syntax examples"
 			* Add "-pd" switch: print documentation
 				+ Should take one of:
@@ -38,21 +48,15 @@ Note that this started as internal document so things here are unformed, not fin
 				+ Add some method to list topics?
 				+ Use pager?
 				+ Simple formatting as plain text when no pandoc installed, man formatting when pandoc installed? Maybe pre-compiled man pages?
-			* { } in examples
 			* Tutorial
 				+ Build an app - decide which
-			* All types documentation [in progress]
-				* Link %RET types
-			* All methods documentation [in progress]
-			* Namespaced types and methods
 			* Exit codes (see bootstrap.ngs and ngs.c)
 			* Document that inner functions are declared local
 			* Language reference, good example: https://golang.org/ref/spec [have most of it in ngslang]
 			* Pipes
 			* Internals
-			* Mark experimental
-			* Mark deprecated
 			* Community examples: look at Kubernetes/examples/task/*,readme
+			* Explain Type/Strs capitalization rationale
 
 		* Milestone "packaging"
 			* Debian packages

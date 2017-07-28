@@ -19,6 +19,7 @@ pre.example {
 	border-radius: 0.5em;
 }
 
+/*
 q {
     quotes: "\201C" "\201D" "\2018" "\2019";
 }
@@ -74,6 +75,7 @@ h4:hover > a.type-link
 .param-header {
 	margin-bottom: 0;
 }
+*/
 
 /* new */
 .source-ref {

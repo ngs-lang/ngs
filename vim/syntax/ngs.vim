@@ -45,6 +45,8 @@ syn keyword ngsPredefinedVariable ARGV ARGV0 ENV ORIG_ARGV _exports VERSION
 " Special methods
 syn keyword ngsPredefinedVariable init call args
 syn keyword ngsKeyword super
+" Namespaces
+syn keyword ngsNamespace AWS CHARS Doc OS
 
 " strings
 syn match   ngsSpecial contained #\$#
@@ -94,6 +96,7 @@ hi def link ngsString String
 hi def link ngsTest PreProc
 hi def link ngsTodo Todo
 hi def link ngsType Type
+hi def link ngsNamespace Keyword
 
 let b:current_syntax = "ngs"
 

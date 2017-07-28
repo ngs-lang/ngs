@@ -16,18 +16,15 @@
 	Thread
 	test
 
-	# Use anonymous function to exclude methods in this file
-	# The inner functions are local
-	ns(DocPart=Doc::DocPart, DocNode=Doc::Node, DocText=Doc::Text, DocGroup=Doc::Group, doc_visit=Doc::visit) {
+	F main(doc_root:Str) {
 
-		global Arr, Str, init, push, each
+		DocPart = Doc::Part
+		DocNode = Doc::Node
+		DocText = Doc::Text
+		DocGroup = Doc::Group
+		doc_visit = Doc::visit
 
 		commit = `line: git rev-parse HEAD`
-
-		mode = ARGV[0]
-		assert(mode == 'methods' or mode == 'types')
-
-		# --- Html ---
 
 		F is_public_name(s:Str) s ~ /^[^_]/
 		F is_phased_out_type(s:Str) s ~ Pfx('Aws')
@@ -57,15 +54,6 @@
 				})
 
 		F process_param(param:Hash, doc:Hash) {
-			# echo("P $param")
-			### dflt = if 'dflt' in param {
-			### 	FullBox(ematch param.dflt {
-			### 		Fun Doc::Node('default-is-fun')
-			### 		Any Doc::Node('default-value', text=param.dflt.Str())
-			### 	})
-			### } else {
-			### 	EmptyBox()
-			### }
 			dflt = param.Box('dflt').map({ematch A {
 				Fun Doc::Node('default-is-fun')
 				Any Doc::Node('default-value', text=param.dflt.Str())
@@ -78,15 +66,6 @@
 			d.Box(attr).map(to_lines).each(cb)
 		}
 
-		### F process_type_impl_doc_attr(t:Type, dn:DocNode, doc_attr:Str, doc_node_type:Type) {
-		### 	a = t.attrs()
-		### 	'doc' not in a returns null
-		### 	d = t.attrs().doc or {}
-		### 	if doc_attr in d {
-		### 		dn.push(doc_node_type(d[doc_attr].to_lines()))
-		### 	}
-		### }
-
 		method_impls_by_id = {}
 
 		# F process_params
@@ -96,7 +75,11 @@
 			method_impls_by_id.dflt(method_impl_id(name, mi), [name]).push(mi)
 
 			dn = DocNode('method-impl', name=name, mi=mi)
-			process_doc_attr(mi, '', F(lines) lines.map(DocText).each(dn.push(X)))
+			process_doc_attr(mi, '', F(lines) {
+				dn.push(DocNode('description') with [
+					DocText(lines.join('\n'))
+				])
+			})
 			if mi is Closure {
 				# Handling Closure, not handling built-ins yet
 				location_info = mi.ip().resolve_instruction_pointer()
@@ -124,208 +107,251 @@
 		}
 
 		F process_method(name, implementations) {
+			status("Processing method: $name")
 			DocNode('method', name=name) with
 				implementations.map(process_method_impl(name, X))
 		}
 
-		eswitch mode {
+		F do_methods() {
+			# Index page
+			methods_node = DocNode('methods') with list_methods().limit(90).map(process_method)
+			page_node = DocNode('root') with [methods_node]
 
-			'methods' {
-
-				# Index page
-				methods_node = DocNode('methods') with list_methods().limit(30).map(process_method)
-				page_node = DocNode('root') with [methods_node]
-
-				transformer = {
-					'param': F(dn:DocNode) {
-							# name, type, splat, dflt, doc
-							# TODO later: type link
-							## DocText(dn.attrs.type.name)
-							ret = DocNode('section', class='param') with [
-								DocNode('h') with [
-									DocText(dn.attrs.name)
-								]
-							]
-							if dn.attrs.doc {
-								ret.push(DocText(dn.attrs.doc.to_lines().join('\n')))
-							}
-							ret
-					}
-					'params': F(dn:DocNode) {
-						DocGroup(Doc::transform(dn.children.filter({A.attrs.doc}), transformer))
-					}
-					'source-ref': F(dn:DocNode) {
-						# dn.attrs.file
-						# dn.attrs.line
-						DocNode('div', class="source-ref") with [
-							DocText('Source: ')
-							DocNode('a', href="https://github.com/ilyash/ngs/blob/$commit/lib/${dn.attrs.file}#L${dn.attrs.line}", class='source-ref') with [
-								Doc::Text("${dn.attrs.file}:${dn.attrs.line}")
-
+			transformer = {
+				'param': F(dn:DocNode) {
+						# name, type, splat, dflt, doc
+						# TODO later: type link
+						## DocText(dn.attrs.type.name)
+						ret = DocNode('section', class='param') with [
+							DocNode('h') with [
+								DocText(dn.attrs.name)
 							]
 						]
-					}
-					'example':  F(dn:DocNode) {
-							DocNode('pre', class='example') with Doc::transform(dn.children, transformer)
-					}
-					'returns':  F(dn:DocNode) {
-							# TODO
-							DocNode('section', class='returns') with [
-								DocNode('h') with [
-									DocText('Returns')
-								]
-							] + Doc::transform(dn.children, transformer)
-					}
-					'method-impl': F(dn:DocNode) {
-						# dn.attrs.mi
-						DocNode('section', class='method-impl') with [
-							DocNode('h') with [
-								Doc::Text(dn.attrs.name)
-							]
-						] + Doc::transform(dn.children, transformer)
-					}
-					'method': F(dn:DocNode) {
-						# dn.attrs.name
-						DocNode('section', class='method') with [
-							DocNode('h') with [
-								Doc::Text("Method: ${dn.attrs.name}")
-							]
-						] + Doc::transform(dn.children, transformer)
-					}
-					'methods': F(dn:DocNode) {
-						DocNode('section', class='methods') with [
-							DocNode('h') with [
-								Doc::Text('Methods - NGS documentation')
-							]
-						] + Doc::transform(dn.children, transformer)
-					}
-					'root': F(dn:DocNode) {
-						# TODO: title
-						DocNode('html') with [
-							DocNode('head') with [
-								DocNode('meta', charset='UTF-8')
-								DocNode('link', rel='stylesheet', href='main.css', type='text/css')
-							]
-							DocNode('body') with Doc::transform(dn.children, transformer)
-						]
-					}
-					DocText: F(t:DocText) t
-				}
-
-				html_page = Doc::transform(page_node, transformer)
-
-				# Convert h to h1, h2, ... depending on depth (counted by number of "section" elements)
-				html_page.doc_visit(F(dp:DocPart, parents) {
-					if dp is DocNode and dp.name == 'h' {
-						dp.name = "h${parents.filter(DocNode).count({'name': 'section'})}"
-					}
-				})
-
-				### # Detailed method implementations pages
-				### method_impls_by_id.each(F(id, impls) {
-				### 	assert('/' not in id)
-				### 	assert('.' not in id)
-				### 	local mdn = MethodsDocNode([process_method(impls[0], impls[1..null])])
-				### 	local page = TopDocNode([mdn])
-				### 	local html = Html(page, {'detailed_method_page': true})
-				### 	# OLD # html.Str().write("method-impl-${id}.html")
-				### })
-
-			}
-
-			'types' {
-
-				# TODO: methods with this type
-				# TODO: constructors
-				# TODO: child types
-
-				# Splat params will be Arr or Hash but they are not interesting
-				F method_impl_has_arg_of_type(mi:Fun, t:Type) mi.params().reject(X.get('splat')).type.has(t)
-
-				# We'll use it to list methods that have given
-				# type as type of one of the parameters.
-				methods = list_methods()
-
-				types = globals().filterv(Type).filterk(is_public_name).filterk(not + is_phased_out_type).sortk(lte)
-
-				# Init with ( type -> [] ) pairs
-				types_direct_children = types.values().Hash({ [] })
-
-				types.values().each(F(t) {
-					t.parents.each(F(p) {
-						types_direct_children[p].push(t)
-					})
-				})
-
-
-				# TODO: straighten by using ParentTypeDocNode instead of 'full' / 'leaf' option.
-				F type_to_doc_node(value:Type, full:Bool) {
-					# echo("N $name")
-					# ret = TypeDocNode([ParentTypesDocNode(value.parents.map())])
-					ret = TypeDocNode()
-					ret.type = value
-					# ret.full = full
-					process_type_impl_doc_attr(value, ret, '', DescDocNode)
-					type_attrs_dns = ((try value.attrs().doc) or {}).without('').reject(X ~ /^%/).map(F(k, v) {
-						TypeAttrDocNode(v.to_lines()).set('name', k)
-					})
-					ret.push(TypeAttrsDocNode(type_attrs_dns))
-
-					if full {
-						process_type_impl_doc_attr(value, ret, '%EX', ExampleDocNode)
-						ret.push(ParentTypesDocNode(value.parents.map(type_to_doc_node(X, false))))
-						ret.push(ChildTypesDocNode(types_direct_children[value].map(type_to_doc_node(X, false))))
-						methods_of_type_dns = collector
-							methods.each() do F(name, impls) {
-								relevant_impls = impls.filter(method_impl_has_arg_of_type(X, value)).map() do F(mi) {
-									dn = TypeMethodImplDocNode([])
-									dn.mi = mi
-									process_method_impl_doc_attr(mi, dn, '', DescDocNode)
-									dn.push(ParamsDocNode(mi.params().map(process_param(X, mi.attrs().doc or {}))))
-									dn
-								}
-								if relevant_impls {
-									dn = TypeMethodDocNode(relevant_impls)
-									dn.method = name
-									collect(dn)
-								}
-							}
-						constructors_dns = value.constructors.reject(NormalTypeConstructor).map() do F(c) {
-							dn = TypeMethodImplDocNode([])
-							# dn.method = value.name
-							dn.mi = c
-							process_method_impl_doc_attr(c, dn, '', DescDocNode)
-							dn.push(ParamsDocNode(c.params().map(process_param(X, c.attrs().doc or {}))))
-							dn
+						if dn.attrs.doc {
+							ret.push(DocText(dn.attrs.doc.to_lines().join('\n')))
 						}
-						ret.push(TypeMethodsDocNode(methods_of_type_dns))
-						ret.push(TypeConstructorsDocNode(constructors_dns).set('method', value.name))
-					}
-					ret
+						ret
 				}
+				'params': F(dn:DocNode) {
+					DocGroup(Doc::transform(dn.children.filter({A.attrs.doc}), transformer))
+				}
+				'source-ref': F(dn:DocNode) {
+					# dn.attrs.file
+					# dn.attrs.line
+					DocNode('div', class="source-ref") with [
+						DocText('Source: ')
+						DocNode('a', href="https://github.com/ilyash/ngs/blob/$commit/lib/${dn.attrs.file}#L${dn.attrs.line}", class='source-ref') with [
+							Doc::Text("${dn.attrs.file}:${dn.attrs.line}")
 
-				types .= map(F(name, value) {
-					type_to_doc_node(value, true)
-				})
-
-				# Index page
-				tdn = TypesDocNode(types)
-				page = TopDocNode([tdn])
-
-				# Detailed types pages
-				types.each(F(t) {
-					assert('/' not in t.type.name)
-					assert('.' not in t.type.name)
-					local tdn = TypesDocNode([t])
-					local page = TopDocNode([tdn])
-					local html = Html(page, {'detailed_type_page': true})
-					# OLD # html.Str().write("type-${t.type.name}.html")
-				})
+						]
+					]
+				}
+				'example':  F(dn:DocNode) {
+						DocNode('pre', class='example') with Doc::transform(dn.children, transformer)
+				}
+				'returns':  F(dn:DocNode) {
+						# TODO
+						DocNode('section', class='returns') with [
+							DocNode('h') with [
+								DocText('Returns')
+							]
+						] + Doc::transform(dn.children, transformer)
+				}
+				'method-impl': F(dn:DocNode) {
+					# dn.attrs.mi
+					DocNode('section', class='method-impl') with [
+						DocNode('h') with [
+							Doc::Text(dn.attrs.name)
+						]
+					] + Doc::transform(dn.children, transformer)
+				}
+				'method': F(dn:DocNode) {
+					# dn.attrs.name
+					DocNode('section', class='method') with [
+						DocNode('h') with [
+							Doc::Text("Method: ${dn.attrs.name}")
+						]
+					] + Doc::transform(dn.children, transformer)
+				}
+				'methods': F(dn:DocNode) {
+					DocNode('section', class='methods') with [
+						DocNode('h') with [
+							Doc::Text('Methods - NGS documentation')
+						]
+					] + Doc::transform(dn.children, transformer)
+				}
+				'root': F(dn:DocNode) {
+					# TODO: title
+					DocNode('html') with [
+						DocNode('head') with [
+							DocNode('meta', charset='UTF-8')
+							DocNode('link', rel='stylesheet', href='main.css', type='text/css')
+						]
+						DocNode('body') with Doc::transform(dn.children, transformer)
+					]
+				}
+				DocText: F(t:DocText) t
 			}
+
+			transformer = {
+				'method-impl': F(dn:DocNode) {
+					# dn.attrs.mi
+					desc_nodes = dn.children.filter({'name': 'description'})
+					DocNode('section', class='method-impl') with [
+						DocNode('li') with [
+							if desc_nodes {
+								desc_nodes[0].children[0]
+							} else {
+								DocText('undocumented')
+							}
+						]
+					]
+				}
+				'method': F(dn:DocNode) {
+					# dn.attrs.name
+					DocNode('li', style='method') with [
+						Doc::Text(dn.attrs.name)
+						DocNode('ul') with Doc::transform(dn.children, transformer)
+					].reject(F(dn) dn is DocNode and dn.name == 'ul' and not(dn.children))
+					# .reject(DocNode ?? {'name': ul, children: []})
+				}
+				'methods': F(dn:DocNode) {
+					DocNode('section', class='methods') with [
+						DocNode('h') with [
+							Doc::Text('Methods - NGS documentation')
+						]
+						DocNode('ul') with Doc::transform(dn.children, transformer)
+					]
+				}
+				'root': F(dn:DocNode) {
+					# TODO: title
+					DocNode('html') with [
+						DocNode('head') with [
+							DocNode('meta', charset='UTF-8')
+							DocNode('link', rel='stylesheet', href='main.css', type='text/css')
+						]
+						DocNode('body', class='methods-index-page') with Doc::transform(dn.children, transformer)
+					]
+				}
+				DocText: F(t:DocText) t
+			}
+
+			html_page = Doc::transform(page_node, transformer)
+
+			# Convert h to h1, h2, ... depending on depth (counted by number of "section" elements)
+			html_page.doc_visit(F(dp:DocPart, parents) {
+				if dp is DocNode and dp.name == 'h' {
+					dp.name = "h${parents.filter(DocNode).count({'name': 'section'})}"
+				}
+			})
+
+			$(mkdir -p ${doc_root / 'methods'})
+			write(doc_root / 'methods/index.html', Doc::HtmlRoot(html_page))
+
+			### # Detailed method implementations pages
+			### method_impls_by_id.each(F(id, impls) {
+			### 	assert('/' not in id)
+			### 	assert('.' not in id)
+			### 	local mdn = MethodsDocNode([process_method(impls[0], impls[1..null])])
+			### 	local page = TopDocNode([mdn])
+			### 	local html = Html(page, {'detailed_method_page': true})
+			### 	# OLD # html.Str().write("method-impl-${id}.html")
+			### })
+		}
+
+		F do_types() {
+
+			# TODO: methods with this type
+			# TODO: constructors
+			# TODO: child types
+
+			# Splat params will be Arr or Hash but they are not interesting
+			F method_impl_has_arg_of_type(mi:Fun, t:Type) mi.params().reject(X.get('splat')).type.has(t)
+
+			# We'll use it to list methods that have given
+			# type as type of one of the parameters.
+			methods = list_methods()
+
+			types = globals().filterv(Type).filterk(is_public_name).filterk(not + is_phased_out_type).sortk(lte)
+
+			# Init with ( type -> [] ) pairs
+			types_direct_children = types.values().Hash({ [] })
+
+			types.values().each(F(t) {
+				t.parents.each(F(p) {
+					types_direct_children[p].push(t)
+				})
+			})
+
+
+			# TODO: straighten by using ParentTypeDocNode instead of 'full' / 'leaf' option.
+			F type_to_doc_node(value:Type, full:Bool) {
+				# echo("N $name")
+				# ret = TypeDocNode([ParentTypesDocNode(value.parents.map())])
+				ret = TypeDocNode()
+				ret.type = value
+				# ret.full = full
+				process_type_impl_doc_attr(value, ret, '', DescDocNode)
+				type_attrs_dns = ((try value.attrs().doc) or {}).without('').reject(X ~ /^%/).map(F(k, v) {
+					TypeAttrDocNode(v.to_lines()).set('name', k)
+				})
+				ret.push(TypeAttrsDocNode(type_attrs_dns))
+
+				if full {
+					process_type_impl_doc_attr(value, ret, '%EX', ExampleDocNode)
+					ret.push(ParentTypesDocNode(value.parents.map(type_to_doc_node(X, false))))
+					ret.push(ChildTypesDocNode(types_direct_children[value].map(type_to_doc_node(X, false))))
+					methods_of_type_dns = collector
+						methods.each() do F(name, impls) {
+							relevant_impls = impls.filter(method_impl_has_arg_of_type(X, value)).map() do F(mi) {
+								dn = TypeMethodImplDocNode([])
+								dn.mi = mi
+								process_method_impl_doc_attr(mi, dn, '', DescDocNode)
+								dn.push(ParamsDocNode(mi.params().map(process_param(X, mi.attrs().doc or {}))))
+								dn
+							}
+							if relevant_impls {
+								dn = TypeMethodDocNode(relevant_impls)
+								dn.method = name
+								collect(dn)
+							}
+						}
+					constructors_dns = value.constructors.reject(NormalTypeConstructor).map() do F(c) {
+						dn = TypeMethodImplDocNode([])
+						# dn.method = value.name
+						dn.mi = c
+						process_method_impl_doc_attr(c, dn, '', DescDocNode)
+						dn.push(ParamsDocNode(c.params().map(process_param(X, c.attrs().doc or {}))))
+						dn
+					}
+					ret.push(TypeMethodsDocNode(methods_of_type_dns))
+					ret.push(TypeConstructorsDocNode(constructors_dns).set('method', value.name))
+				}
+				ret
+			}
+
+			types .= map(F(name, value) {
+				type_to_doc_node(value, true)
+			})
+
+			# Index page
+			tdn = TypesDocNode(types)
+			page = TopDocNode([tdn])
+
+			# Detailed types pages
+			types.each(F(t) {
+				assert('/' not in t.type.name)
+				assert('.' not in t.type.name)
+				local tdn = TypesDocNode([t])
+				local page = TopDocNode([tdn])
+				local html = Html(page, {'detailed_type_page': true})
+				# OLD # html.Str().write("type-${t.type.name}.html")
+			})
 
 		}
 
-		echo(Doc::HtmlRoot(html_page))
+		do_methods()
+
 		# echo(page)
 		# inspect(html_page, 5) % echo
 		# each_idx_val(page.children[0].children[0].children, F(idx, val) {

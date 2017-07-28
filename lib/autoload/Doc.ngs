@@ -2,14 +2,12 @@ ns {
 
 	global init, push, inspect
 
-	# Maybe add: NodesGroup - logical group, producing only children in the output
-
 	doc EXPERIMENTAL! Do not use!
-	type DocPart
-		type Container(DocPart)
+	type Part
+		type Container(Part)
 			type Node(Container)
 			type Group(Container)
-		type Textual(DocPart)
+		type Textual(Part)
 			type Comment(Textual)
 			type Text(Textual)
 
@@ -32,46 +30,46 @@ ns {
 
 	F init(t:Textual, txt:Str) init(args())
 
-	F push(c:Container, dp:DocPart) c.children.push(dp)
+	F push(c:Container, p:Part) c.children.push(p)
 
-	F name(dp:DocPart) null
+	F name(p:Part) null
 	F name(n:Node) n.name
 
-	F children(dp:DocPart) []
+	F children(p:Part) []
 	F children(c:Container) c.children
 
-	F each_child(dp:DocPart, cb:Fun) dp.children().each(cb)
-	F map_children(dp:DocPart, mapper:Fun) dp.children().map(mapper)
+	F each_child(p:Part, cb:Fun) p.children().each(cb)
+	F map_children(p:Part, mapper:Fun) p.children().map(mapper)
 
 	# Open issue: what should be the correct order of "parents" when passed to transformer() in transform() and to cb() in visit()
 
 	F Transformer(x:Fun) x
 
 	F Transformer(x:Hash) {
-		t = F generated_transformer(dp) {
-			k = if dp is Node then dp.name else dp.typeof()
-			k not in x throws NotImplemented("Doc::transform was not given transformer for Doc::DocPart '$k'").set('key', k)
-			x[k](dp)
+		t = F generated_transformer(p) {
+			k = if p is Node then p.name else p.typeof()
+			k not in x throws NotImplemented("Doc::transform was not given transformer for Doc::Part '$k'").set('key', k)
+			x[k](p)
 		}
 	}
 
 	# TODO: maybe remove options?
 	# Children are visited first so when parent is visited it has the transformed children to pack into result
-	F transform(dp:DocPart, transformer) {
+	F transform(p:Part, transformer) {
 		t = Transformer(transformer)
-		t(dp)
+		t(p)
 	}
 
 	F transform(dps:Arr, transformer) {
-		guard dps.all(DocPart)
+		guard dps.all(Part)
 		t = Transformer(transformer)
 		dps.map(transform(X, t))
 	}
 
-	F visit(dp:DocPart, cb:Fun, parents:Arr=[]) {
-		p = parents + [dp]
-		dp.each_child({visit(A, cb, p)})
-		cb(dp, parents)
+	F visit(p:Part, cb:Fun, parents:Arr=[]) {
+		next_parents = parents + [p]
+		p.each_child({visit(A, cb, next_parents)})
+		cb(p, parents)
 	}
 
 	F Html(n:Node) {

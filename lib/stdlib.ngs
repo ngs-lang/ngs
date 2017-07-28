@@ -58,10 +58,20 @@ F init(e:InstantiatingAbstractType, t:Type) init(args())
 
 # === Namespaces =================================
 
+doc Get normal type instance attribute. Useful when calling method stored in an attribute.
+doc %EX - myobj::method_in_attr(arg)  # calls method stored in myobj.method_in_attr
+doc %EX - (myobj.method_in_attr)(arg) # calls method stored in myobj.method_in_attr
+doc %EX - myobj.method_in_attr(arg)   # calls global "method_in_attr"
 F '::'(nti:NormalTypeInstance, k) nti.(k)
+
+doc Get Hash key. Useful when calling method stored in a Hash key.
+doc Useful for working with namespaces, which are implemented as Hash instances.
+doc %EX - elb = AWS::Elb(...).converge(...)
 F '::'(h:Hash, k) h[k]
 
+doc Set normal type instance attribute. It's implemented to complete the :: operator. There is no particular use case.
 F '::='(nti:NormalTypeInstance, k, v) nti.(k) = v
+doc Set Hash key. It's implemented to complete the :: operator. There is no particular use case.
 F '::='(h:Hash, k, v) h[k] = v
 
 # === Return =====================================
@@ -420,6 +430,10 @@ doc Same as calling f(x)
 doc %EX - [1,2,3,4] \ echo
 F \(x, f:Fun) f(x)
 
+doc Return a+b unless one of the arguments is falsy. In that case return that argument (a if both are falsy). Useful for building strings with optional parts.
+doc %EX - status_detail = ' (' +? maybe_empty_array.join(',') +? ')'
+doc %EX - echo("Status: ${main_status}${status_detail}")
+doc %RET - a+b or a or b
 F +?(a, b) {
 	not(a) returns a
 	not(b) returns b
@@ -2265,6 +2279,7 @@ F code(b:Bool) Str(b)
 
 # === Int ========================================
 
+doc Absolute value of a number
 F abs(i:Int) {
 	i >= 0 returns i
 	0-i
@@ -4173,7 +4188,7 @@ TEST "abc01def23" - /[0-9]+/ == "abcdef23"
 
 doc Split string by regexp
 doc %RET - Arr of Str
-doc %EX "x10ab20c30y".split(/[0-9]+/).join(" :: ")  # "x :: ab :: c :: y"
+doc %EX - "x10ab20c30y".split(/[0-9]+/).join(" :: ")  # "x :: ab :: c :: y"
 F split(s:Str, r:RegExp) (~~)(s, r, true).filter(Str)
 
 # Crashes on Ubuntu 14.04 clang 3.5.0 (Travis CI)
@@ -4188,7 +4203,7 @@ TEST (try ENV.TRAVIS and ENV.CC == "clang") returns true; "ab01de12f".without(/[
 
 # TODO: make it a low priority method implementation
 doc Get substring of a string that corresponds to first match of given regular expression
-doc %EX "x10ab20c30y"[/[0-9]+/]  # "10"
+doc %EX - "x10ab20c30y"[/[0-9]+/]  # "10"
 F '[]'(s:Str, r:RegExp) {
 	not((m = s ~ r)) throws InvalidArgument("String does not contain the given RegExp").set('container', s).set('regexp', r)
 	m.whole
@@ -4691,7 +4706,7 @@ F write(fname:Str, s:Str) {
 	open(f, 'w')
 	finally()
 		body => {
-			write(s, f)
+			write(f, s)
 		}
 		cleanup => {
 			f.close()
