@@ -4,69 +4,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 	Unsorted and undecided things go here. The important sections is [roadmap] and it's just below this section.
 
-	* Fix $(separate$item issue)
-	* update(Hash, key, value) - update specified key only if exists
-	* update(Arr[Hash], key, value / Fun) - update specified key only if exists
-	* make ResDef ArrLike for the resources?
-	* make Res HashLike?
-	* Fix parser in
-		function_call(
-			with_comments,
-			# syntax
-			yes)
-	* option to turn backtraces on in warn() and error()
-	* assert_file / assert_file_exists ?
-	* assert_has_line / assert_has_line_with ?
-	* Make Indexable: Arr, Str, Range - this might save some code
-	* AWS::SecGroup - check whether Description is Anchor-only
-	* ---
-	* AWS::Instance -- make sure Anchor works as expected
-	* "The README doesn’t seem to have any simple syntax examples"
-	* Consider somethig like data_strucure ~ [Capture("x"), 7 , "xx"]
-	* Creating an AWS res not matching the Anchor - think
-	* Implement Hash(Arr[Str]) for strings of form "key=value"?
-	* Keyword only arguments
-		* then think about File("/etc/myconfig")[lines='# start'..'# end'] = ['my', 'content']
-	* Predicates in parameters list?
-	* Immediate values in parameters list
-	* consider special call syntax: myfunc?(any_arg, which_is_null, causes_call_to_be_skipped)
-		or myfunc(not_any, but_only_marked, skips argument)
-	* MacOS (support being added): gc repeated allocation of very large block
-	* F main(a:Str, b:Str=null) is not matched when only one argument is passed
-		happens because all matched arguments are treated as positional
-		should implement keyword-only arguments first
-	* build - install ngs syntax detection and highlighting for vim
-	* last(?, predicate)
-	* Consider Ref(h:Hash, k) and Ref(a:Arr, idx:Int)
-	* add avg()
-	* Consider OneOf type for nullable parameters: F myfunc(a:Int, b:OneOf(Int, Null))
-		also think about more traditional approach: F myfunc(a:Int, b:Box[Int])
-	* add fetch(Path), maybe read(Path)
-		now have read(File)
-	* "borrow" status() behaviour from apt/apt-pkg/install-progress.cc
-		switch to override and do:
-		+ tmux title only
-		+ gnome/whatever terminal title
-	* community examples: look at Kubernetes/examples/task/*,readme
-	* Closure needs to be renamed to Method in most places
-	* Look at ipython, books systems, bpython for ideas
-	* "str" / [str]
-	* Comparison to https://www.dmst.aueb.gr/dds/sw/dgsh/
-	* Comparison to ipython
-	* Syntax or another solution for one line outputs
-	* '.'(Iter, Str) -> AttrIter or alike maybe MappingIter or child
-	* Take a look at Red programming language http://www.red-lang.org/p/documentation.html
-	* Add test for find(Vpc) isDefault property
-	* Reconsider Int inheriting Eachable. Think 10.flatten() - very strange behaviour.
-	* ns { F init(...) ... } -- forgetting "global init" is hard to debug
-	* [Doc.ngs] check why n = Node('html', children = tl.children) does not work
-	* Document pitfalls
-		* ns { F some_global_name() ... } -- does not add method implementation
-		* F(x,a:Arr=[]) ...,  when a is mutable
-	* Document `options: ...`
-	* Fix operators priority for obj.Mod::method()
-
-
 [roadmap]
 
 	* Phase 1 - the language [in progress]
@@ -86,6 +23,12 @@ Note that this started as internal document so things here are unformed, not fin
 					* Namespaces list page: name, description
 					* Namespace page: list of exported symbols ???
 					* ???
+			* Document `options: ...`
+			* Document pitfalls
+				* ns { F some_global_name() ... } -- does not add method implementation
+				* F(x,a:Arr=[]) ...,  when a is mutable
+			* List all parents, including transient
+			* "The README doesn’t seem to have any simple syntax examples"
 			* Add "-pd" switch: print documentation
 				+ Should take one of:
 					+ Type
@@ -109,11 +52,14 @@ Note that this started as internal document so things here are unformed, not fin
 			* Internals
 			* Mark experimental
 			* Mark deprecated
+			* Community examples: look at Kubernetes/examples/task/*,readme
 
 		* Milestone "packaging"
 			* Debian packages
 			* Brew package
 			* Arch Linux package
+			* Install ngs syntax detection and highlighting for vim
+			* Make multiple versions installable side by side, like Node.js
 
 		* Milestone "programming"
 
@@ -138,8 +84,39 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "correct programming"
 
-			* AWS fix SG rules (IpPermBox < IpPermBox)
-				Make it work correctly when one rule is superset of another one
+			* Fix $(separate$item issue)
+
+			* Fix parser in
+				function_call(
+					with_comments,
+					# syntax
+					yes)
+
+			* Fix operators priority for obj.Mod::method()
+			* [Doc.ngs] check why n = Node('html', children = tl.children) does not work
+
+			* Option to turn backtraces on in warn() and error()
+				* Make option for unique backtraces only
+
+			* ns { F init(...) ... } -- forgetting "global init" is hard to debug
+
+			* F main(a:Str, b:Str=null) is not matched when only one argument is passed
+				happens because all matched arguments are treated as positional
+				should implement keyword-only arguments first
+
+			* Reconsider Int inheriting Eachable. Think 10.flatten() - very strange behaviour. Maybe Visitable/Traversable or alike is needed for containers.
+			* Fix parser for # comments at end of line
+			* MacOS warning: "gc repeated allocation of very large block"
+
+			* Keyword only arguments
+				* then think about File("/etc/myconfig")[lines='# start'..'# end'] = ['my', 'content']
+			* AWS
+				* Creating an AWS res not matching the Anchor - think
+				* AWS fix SG rules (IpPermBox < IpPermBox)
+					Make it work correctly when one rule is superset of another one
+				* AWS::SecGroup - check whether Description is Anchor-only
+				* AWS::Instance -- make sure Anchor works as expected
+				* Add test for find(Vpc) isDefault property
 
 			* Look for sets of C constants to move to namespaces
 				+ C_PCRE_* - move to C_PCRE namespace?
@@ -247,7 +224,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "threads"
 
-			* pmap() - limit number of concurrent threads
+			* pmap() - limit number of concurrent threads and/or make it dynamic
 			* rethink exceptions in threads
 			* Make ENV and current directory thread-local but allow access to the global ones
 			* Thread - Make pthread_attr_t accessible - get/set attributes
@@ -272,6 +249,11 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Allow navigation on the screen, choosing operations from a menu for the objects
 			* History of operations in context menu
+
+		* "borrow" status() behaviour from apt/apt-pkg/install-progress.cc
+			switch to override and do:
+			+ tmux title only
+			+ gnome/whatever terminal title
 
 	* Phase 3 - running code remotely
 
@@ -298,9 +280,28 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* Phase 5 - nice to have
 
-		* Generated types documentation - list all parents, including transient
-
+		* Calling
+			* Predicates in parameters list?
+			* Immediate values in parameters list
+			* Consider OneOf type for nullable parameters: F myfunc(a:Int, b:OneOf(Int, Null))
+				also think about more traditional approach: F myfunc(a:Int, b:Box[Int])
+		* Data manipulation
+			* Make Indexable: Arr, Str, Range - this might save some code
+			* update(Hash, key, value) - update specified key only if exists ?
+			* update(Arr[Hash], key, value / Fun) - update specified key only if exists ?
+			* Implement Hash(Arr[Str]) for strings of form "key=value"?
+			* Add fetch(Path), maybe read(Path). Now have read(File)
+			* "str" / [str]
+			* '.'(Iter, Str) -> AttrIter or alike maybe MappingIter or child
+		* assert_file / assert_file_exists ?
+		* assert_has_line / assert_has_line_with ?
+		* make ResDef ArrLike for the resources?
+		* make Res HashLike?
+		* last(?, predicate)
+		* Consider Ref(h:Hash, k) and Ref(a:Arr, idx:Int)
+		* add avg()
 		* Address resolution functions
+		* Consider somethig like data_strucure ~ [Capture("x"), 7 , "xx"]
 
 		* Sub-typing built-in types
 			* Subclass Fun? For mapper for example to know which arguments to pass and what to construct
@@ -308,6 +309,7 @@ Note that this started as internal document so things here are unformed, not fin
 			* Not sure about the star, maybe:
 				~All
 				X ~ All
+
 		* Method to push a value into Arr if it's not there already
 		* Function static variables
 			F parse(s:Str, ...)
@@ -455,21 +457,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Consider augeas integration
 
-[todo by priority]
-
-	* doc
-		* "local" and for() auto-local
-			Describe the "local myvar" behavior and make it clear that
-			for(i=0;i<n;i=i+1) will automatically declare i as local.
-		* which exceptions are thrown where and their meanings
-		* config() and/or Config()
-		* other projects
-			Explain how this project is different from other projects:
-				+ There is a shell in Python, don't remember the name.
-				( add more projects here )
-	* solve the inheritance (also for "expose")
-	* strings / mb_strings
-
 [types]
 	* Cloud / Compute / etc ?
 	* Host
@@ -488,5 +475,9 @@ Note that this started as internal document so things here are unformed, not fin
 		+ Pipes
 	* HistoryEntry
 
-[functions]
-	* Path#relative_to(root)
+[things to look at]
+
+	* Look at ipython, books systems, bpython for ideas
+	* Comparison to https://www.dmst.aueb.gr/dds/sw/dgsh/
+	* Comparison to ipython
+	* Take a look at Red programming language http://www.red-lang.org/p/documentation.html

@@ -3157,7 +3157,11 @@ F open(f:File, flags:Str) {
 TEST open(File("/etc/passwd"), "r").fd > 0
 
 doc Get basename of the file. Uses BASENAME(1).
+F basename(p:Path) p.path.basename()
+
+doc Get basename of the file. Uses BASENAME(1).
 F basename(s:Str) $(basename $s).Str() - Sfx('\n')
+
 
 # TODO: something more efficient than reading all of it. Some kind of streaming.
 doc Iterate over lines of the file
