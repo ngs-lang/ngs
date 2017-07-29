@@ -12,17 +12,19 @@
 		code throws LockFail("c_pthread_attr_init", code, "Call to underlying API failed")
 	}
 
+	doc Block till the lock is avaiable and then acquire the lock.
 	F acquire(l:Lock) {
 		c_pthread_mutex_lock(l.lock)
 		l
 	}
 
+	doc Release the lock
 	F release(l:Lock) {
 		c_pthread_mutex_unlock(l.lock)
 		l
 	}
 
-	# TODO: use finally()
+	doc Call cb with lock l held. Releases the lock after cb returns or throws.
 	F acquire(l:Lock, cb:Fun) {
 		l.acquire()
 		try {
