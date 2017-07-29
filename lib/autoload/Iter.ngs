@@ -198,7 +198,12 @@ F init(i:HashIter, h:Hash) {
 
 # Don't like accessing kind-of-private ArrIter#idx
 F Str(i:HashIter) "<HashIter ${i._iter.idx}/${i._iter.val.len()}>"
+
+doc Check whether there are more pairs to iterate over.
+doc true: next() will return next pair. false: next() will throw NoNext
+doc %RET - Bool
 F Bool(i:HashIter) Bool(i._iter)
+
 F next(i:HashIter) { throw_if_no_next(i); k = i._iter.next(); [k, i.val[k]] }
 F peek(i:HashIter) { throw_if_no_next(i); k = i._iter.peek(); [k, i.val[k]] }
 

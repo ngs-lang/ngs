@@ -19,6 +19,13 @@ pre.example {
 	border-radius: 0.5em;
 }
 
+.underline-on-hover-only {
+	text-decoration: none;
+}
+.underline-on-hover-only:hover {
+	text-decoration: underline;
+}
+
 /*
 q {
     quotes: "\201C" "\201D" "\2018" "\2019";
@@ -80,4 +87,8 @@ h4:hover > a.type-link
 /* new */
 .source-ref {
 	opacity: 0.5;
+}
+
+.shift-right {
+	padding-left: 4em;
 }

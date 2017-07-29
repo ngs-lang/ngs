@@ -1073,8 +1073,8 @@ TEST [1, 2] == [1, 2]
 TEST [1, 3] != [1, 2]
 TEST [1] != [1, 2]
 
+# TODO: Make it work on anything with Eachable2 too.
 doc Check whether there is any element in arr that satisfies the given predicate.
-doc TODO: Make it work on anything with Eachable2 too.
 doc e - The items to check
 doc predicate - Test function
 doc args - Additional arguments for calling the predicate.
@@ -1659,6 +1659,19 @@ F split(a:Arr, delim) {
 	ret.push(cur)
 	ret
 }
+
+doc Insert delimiter element between each two elements in an array
+F intersperse(a:Arr, delim) {
+	not(a) returns []
+	collector {
+		a.each(F(elt) {
+			collect(elt)
+			collect(delim)
+		})
+	}[0..-1]
+}
+
+TEST [1,2,3].intersperse(0) == [1,0,2,0,3]
 
 
 doc Convert an array to NGS code that would produce the array when executed. Not fully functional yet.
@@ -2976,6 +2989,7 @@ F glob(pattern:Str, start_dir='.') {
 	throw NotImplemented("glob() is not implemented yet")
 }
 
+doc Convert to string, appropriate for using as argument to external process.
 F Arg(p:Path) p.path
 
 # === Commands and processes (WIP) ===============
@@ -3404,11 +3418,19 @@ F Str(cp:CommandsPipeline) {
 }
 
 # TODO: type Arg(Str) -- currently, inheriting built in types is not supported
+
+doc Convert to string, appropriate for using as argument to external process.
 F Arg(x:Real) Str(x)
+
+doc Convert to string, appropriate for using as argument to external process.
 F Arg(x:Int) Str(x)
+
+doc Convert to string, appropriate for using as argument to external process.
 F Arg(x:Str) x
 
 # TODO: Consider storing original h in one of the attrs() of the result
+doc Convert to array of strings, appropriate for using as argument to external process.
+doc TODO - complete documentation.
 F Argv(h:Hash) {
 	collector
 		h.rejectv(NoData).mapv(only(Box, get)).each(F(k, v) {
@@ -4345,6 +4367,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 		out = inspect(h[k]) tor ["Info: $k - (Failed to inspect)"]
 		assert(out is Arr)
 		assert(out.len() > 0)
+		out .= map(limit(X, 200, '...'))
 		if out.len() == 1 {
 			err("Info: $k = ${out[0]}")
 		} else {
@@ -4722,9 +4745,6 @@ F write(s:Str, f:File) {
 F write(f:File, s:Str) {
 	write(if f.fd is Null then f.path else f.fd, s)
 }
-
-F Arg(f:File) f.path
-
 
 # === Networking =================================
 

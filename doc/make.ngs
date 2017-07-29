@@ -32,7 +32,7 @@
 		F to_lines(s:Str) [s]
 		F to_lines(a:Arr) a
 
-		### F encode_id(s:Str) s.replace(/[^-_a-zA-Z0-9]/, F(char) '%' + encode_hex(char))
+		F safe_file_name(s:Str) s.replace(/[^-_a-zA-Z0-9]/, F(char) '%' + encode_hex(char))
 		F method_impl_id(name:Str, mi:Fun) (name + '-' + mi.params().type.name.join('-'))
 
 		F list_methods()
@@ -58,7 +58,11 @@
 				Fun Doc::Node('default-is-fun')
 				Any Doc::Node('default-value', text=param.dflt.Str())
 			}})
-			DocNode('param', name=param.name, type=param.get('type', Any), splat=param.get('splat'), dflt=dflt, doc=doc.get(param.name))
+			ret = DocNode('param', name=param.name, type=param.get('type', Any), splat=param.get('splat'), doc=doc.get(param.name))
+			dflt.each(F(d) {
+				ret.push(d)
+			})
+			ret
 		}
 
 		F process_doc_attr(mi:Fun, attr:Str, cb:Fun) {
@@ -91,16 +95,15 @@
 			mi_doc = mi.attrs().doc or {}
 			dn.push(DocNode('params') with mi.params().map(process_param(X, mi_doc)))
 
-
-			process_doc_attr(mi, '%EX', F(lines) {
-				dn.push(DocNode('example') with [
-					DocText(lines.join('\n'))
-				])
-			})
 			process_doc_attr(mi, '%RET', F(lines) {
 				assert(lines.len() == 1, '%RET must be used at most once per method')
 				dn.push(DocNode('returns') with [
 					DocText(lines[0])
+				])
+			})
+			process_doc_attr(mi, '%EX', F(lines) {
+				dn.push(DocNode('example') with [
+					DocText(lines.join('\n'))
 				])
 			})
 			dn
@@ -112,141 +115,206 @@
 				implementations.map(process_method_impl(name, X))
 		}
 
+		doc Convert h to h1, h2, ... depending on depth (counted by number of "section" elements)
+		F fix_headers(doc:DocPart) {
+			doc.doc_visit(F(dp:DocPart, parents) {
+				if dp is DocNode and dp.name == 'h' {
+					dp.name = "h${parents.filter(DocNode).count({'name': 'section'})}"
+				}
+			})
+			doc
+		}
+
 		F do_methods() {
 			# Index page
 			methods_node = DocNode('methods') with list_methods().limit(90).map(process_method)
 			page_node = DocNode('root') with [methods_node]
 
-			transformer = {
-				'param': F(dn:DocNode) {
-						# name, type, splat, dflt, doc
-						# TODO later: type link
-						## DocText(dn.attrs.type.name)
-						ret = DocNode('section', class='param') with [
-							DocNode('h') with [
-								DocText(dn.attrs.name)
-							]
+			params_inline_transformer = {
+				'default-value': F(dn:DocNode) {
+					DocGroup() with [
+						DocText('=')
+						DocText(dn.attrs.text)
+					]
+				}
+				'default-is-fun': F(dn:DocNode) {
+					DocGroup() with [
+						DocText('=')
+						DocNode('span', class='TODECIDE') with [
+							DocText('METHOD')
 						]
-						if dn.attrs.doc {
-							ret.push(DocText(dn.attrs.doc.to_lines().join('\n')))
-						}
-						ret
+					]
+				}
+				'param': F(dn:DocNode) {
+					# status("P $dn")
+					DocNode('span', class='inline-param') with [
+						DocText(dn.attrs.name)
+						DocText(':')
+						DocText(dn.attrs.type.name)
+					] + Doc::transform(dn.children, params_inline_transformer)
 				}
 				'params': F(dn:DocNode) {
-					DocGroup(Doc::transform(dn.children.filter({A.attrs.doc}), transformer))
+					DocGroup() with
+						[ DocText('(') ] +
+						Doc::transform(dn.children, params_inline_transformer).intersperse(DocText(', ')) +
+						[ DocText(')') ]
 				}
-				'source-ref': F(dn:DocNode) {
-					# dn.attrs.file
-					# dn.attrs.line
-					DocNode('div', class="source-ref") with [
-						DocText('Source: ')
-						DocNode('a', href="https://github.com/ilyash/ngs/blob/$commit/lib/${dn.attrs.file}#L${dn.attrs.line}", class='source-ref') with [
-							Doc::Text("${dn.attrs.file}:${dn.attrs.line}")
-
-						]
-					]
-				}
-				'example':  F(dn:DocNode) {
-						DocNode('pre', class='example') with Doc::transform(dn.children, transformer)
-				}
-				'returns':  F(dn:DocNode) {
-						# TODO
-						DocNode('section', class='returns') with [
-							DocNode('h') with [
-								DocText('Returns')
-							]
-						] + Doc::transform(dn.children, transformer)
-				}
-				'method-impl': F(dn:DocNode) {
-					# dn.attrs.mi
-					DocNode('section', class='method-impl') with [
-						DocNode('h') with [
-							Doc::Text(dn.attrs.name)
-						]
-					] + Doc::transform(dn.children, transformer)
-				}
-				'method': F(dn:DocNode) {
-					# dn.attrs.name
-					DocNode('section', class='method') with [
-						DocNode('h') with [
-							Doc::Text("Method: ${dn.attrs.name}")
-						]
-					] + Doc::transform(dn.children, transformer)
-				}
-				'methods': F(dn:DocNode) {
-					DocNode('section', class='methods') with [
-						DocNode('h') with [
-							Doc::Text('Methods - NGS documentation')
-						]
-					] + Doc::transform(dn.children, transformer)
-				}
-				'root': F(dn:DocNode) {
-					# TODO: title
-					DocNode('html') with [
-						DocNode('head') with [
-							DocNode('meta', charset='UTF-8')
-							DocNode('link', rel='stylesheet', href='main.css', type='text/css')
-						]
-						DocNode('body') with Doc::transform(dn.children, transformer)
-					]
-				}
-				DocText: F(t:DocText) t
 			}
 
-			transformer = {
+			index_page_transformer = {
 				'method-impl': F(dn:DocNode) {
 					# dn.attrs.mi
-					desc_nodes = dn.children.filter({'name': 'description'})
-					DocNode('section', class='method-impl') with [
-						DocNode('li') with [
-							if desc_nodes {
-								desc_nodes[0].children[0]
-							} else {
-								DocText('undocumented')
-							}
-						]
+					desc_nodes = dn.children.filter(DocNode).filter({'name': 'description'})
+					mi_id = method_impl_id(dn.attrs.name, dn.attrs.mi)
+					params = Doc::transform(dn.children.filter(DocNode).filter({'name': 'params'}), params_inline_transformer)
+					DocNode('li') with [
+						DocNode('a', href=mi_id.safe_file_name().encode_uri_component() + '.html', class='underline-on-hover-only') with
+							[DocText(dn.attrs.name)] + params + [
+								DocText(' - ')
+								if desc_nodes {
+									desc_nodes[0].children[0]
+								} else {
+									DocText('Undocumented')
+								}
+							]
 					]
 				}
 				'method': F(dn:DocNode) {
 					# dn.attrs.name
 					DocNode('li', style='method') with [
-						Doc::Text(dn.attrs.name)
-						DocNode('ul') with Doc::transform(dn.children, transformer)
+						DocNode('a', href=dn.attrs.name.safe_file_name().encode_uri_component() + '.html', class='underline-on-hover-only') with [
+							DocText(dn.attrs.name)
+						]
+						DocNode('ul') with Doc::transform(dn.children, index_page_transformer)
 					].reject(F(dn) dn is DocNode and dn.name == 'ul' and not(dn.children))
 					# .reject(DocNode ?? {'name': ul, children: []})
 				}
 				'methods': F(dn:DocNode) {
 					DocNode('section', class='methods') with [
 						DocNode('h') with [
-							Doc::Text('Methods - NGS documentation')
+							DocText('Methods overview - NGS documentation')
 						]
-						DocNode('ul') with Doc::transform(dn.children, transformer)
+						DocNode('ul') with Doc::transform(dn.children, index_page_transformer)
 					]
 				}
 				'root': F(dn:DocNode) {
-					# TODO: title
 					DocNode('html') with [
 						DocNode('head') with [
 							DocNode('meta', charset='UTF-8')
-							DocNode('link', rel='stylesheet', href='main.css', type='text/css')
+							DocNode('link', rel='stylesheet', href='../main.css', type='text/css')
+							DocNode('title') with [
+								DocText('Methods overview - NGS documentation')
+							]
 						]
-						DocNode('body', class='methods-index-page') with Doc::transform(dn.children, transformer)
+						DocNode('body', class='methods-index-page') with Doc::transform(dn.children, index_page_transformer)
 					]
 				}
 				DocText: F(t:DocText) t
 			}
 
-			html_page = Doc::transform(page_node, transformer)
-
-			# Convert h to h1, h2, ... depending on depth (counted by number of "section" elements)
-			html_page.doc_visit(F(dp:DocPart, parents) {
-				if dp is DocNode and dp.name == 'h' {
-					dp.name = "h${parents.filter(DocNode).count({'name': 'section'})}"
-				}
-			})
+			index_page_html = Doc::transform(page_node, index_page_transformer).fix_headers()
 
 			$(mkdir -p ${doc_root / 'methods'})
-			write(doc_root / 'methods/index.html', Doc::HtmlRoot(html_page))
+			$(cp main.css "$doc_root/")
+			status("Writing methods index (overview) page")
+			write(doc_root / 'methods/index.html', Doc::HtmlRoot(index_page_html))
+
+			for method_node in methods_node.children {
+				status("Making page for method ${method_node.attrs.name}")
+				method_page_transformer = {
+					'param': F(dn:DocNode) {
+							# name, type, splat, dflt, doc
+							# TODO later: type link
+							## DocText(dn.attrs.type.name)
+							ret = DocNode('section', class='param') with [
+								DocNode('h') with [
+									DocText(dn.attrs.name)
+								]
+							]
+							if dn.attrs.doc {
+								ret.push(DocNode('div', class='shift-right') with [DocText(dn.attrs.doc.to_lines().join('\n'))])
+							}
+							ret
+					}
+					'params': F(dn:DocNode) {
+						DocGroup(Doc::transform(dn.children.filter({A.attrs.doc}), method_page_transformer))
+					}
+					'source-ref': F(dn:DocNode) {
+						# dn.attrs.file
+						# dn.attrs.line
+						DocNode('div', class="source-ref") with [
+							DocText('Source: ')
+							DocNode('a', href="https://github.com/ilyash/ngs/blob/$commit/lib/${dn.attrs.file}#L${dn.attrs.line}", class='source-ref') with [
+								DocText("${dn.attrs.file}:${dn.attrs.line}")
+
+							]
+						]
+					}
+					'example':  F(dn:DocNode) {
+							DocNode('section', class='example') with [
+								DocNode('h') with [
+									DocText('Example')
+								]
+								DocNode('div', class='shift-right') with [
+									DocNode('pre', class='example') with Doc::transform(dn.children, method_page_transformer)
+								]
+							]
+					}
+					'returns':  F(dn:DocNode) {
+							# TODO
+							DocNode('section', class='returns') with [
+								DocNode('h') with [
+									DocText('Returns')
+								]
+								DocNode('div', class='shift-right') with Doc::transform(dn.children, method_page_transformer)
+							]
+					}
+					'description': F(dn:DocNode) {
+						DocNode('section', class='method-description') with Doc::transform(dn.children, method_page_transformer)
+					}
+					'method-impl': F(dn:DocNode) {
+						# dn.attrs.mi
+						params = dn.children.filter(DocNode).filter({'name': 'params'})[0]
+						DocNode('section', class='method-impl') with [
+							DocNode('h') with [
+								DocText(dn.attrs.name)
+								Doc::transform(params, params_inline_transformer)
+							]
+							DocNode('div', class='shift-right') with Doc::transform(dn.children, method_page_transformer)
+						]
+					}
+					'method': F(dn:DocNode) {
+						# dn.attrs.name
+						DocNode('section', class='method') with [
+							DocNode('h') with [
+								DocText("${dn.attrs.name} method - NGS documentation")
+							]
+							DocNode('div', class='shift-right') with Doc::transform(dn.children, method_page_transformer)
+						]
+					}
+					'root': F(dn:DocNode) {
+						# TODO: title
+						DocNode('html') with [
+							DocNode('head') with [
+								DocNode('meta', charset='UTF-8')
+								DocNode('link', rel='stylesheet', href='../main.css', type='text/css')
+								DocNode('title') with [
+									DocText("${dn.attrs.name} method - NGS documentation")
+								]
+							]
+							DocNode('body', class='method-page') with Doc::transform(dn.children, method_page_transformer)
+						]
+					}
+					DocText: F(t:DocText) t
+				}
+
+				method_page_html = Doc::transform(DocNode('root', name=method_node.attrs.name) with [method_node], method_page_transformer).fix_headers()
+				status("Writing method page: name=${method_node.attrs.name} file=${method_node.attrs.name.safe_file_name()}.html")
+				write(doc_root / 'methods' / method_node.attrs.name.safe_file_name() + '.html', Doc::HtmlRoot(method_page_html))
+
+
+			}
+
 
 			### # Detailed method implementations pages
 			### method_impls_by_id.each(F(id, impls) {
