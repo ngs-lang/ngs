@@ -2622,6 +2622,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, ".",        &native_get_attr_bt_str,       2, "obj", vm->BasicType,          "attr", vm->Str);
 	_doc(vm, "", "Get BasicType (Int, Arr, Hash, ...) attribute. Throws AttrNotFound.");
 	_doc(vm, "attr", "Attribute to get. Currently only \"name\" and \"constructors\" are supported.");
+	_doc(vm, "%AUTO", "obj.attr");
 	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
 	_doc_arr(vm, "%EX",
 		"Hash.name  # String: Hash",
@@ -2633,20 +2634,24 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, ".",        &native_get_attr_nt_str,       2, "obj", vm->NormalType,         "attr", vm->Str);
 	_doc(vm, "", "Get NormalType (a type that is typically defined by user) attribute. Throws AttrNotFound.");
 	_doc(vm, "attr", "Attribute to get. Currently only \"name\" and \"constructors\" are supported.");
+	_doc(vm, "%AUTO", "obj.attr");
 	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
 
 	register_global_func(vm, 1, ".",        &native_get_attr_nti_str,      2, "obj", vm->NormalTypeInstance, "attr", vm->Str);
 	_doc(vm, "", "Get NormalType (a type that is typically defined by user) instance attribute. Throws AttrNotFound.");
+	_doc(vm, "%AUTO", "obj.attr");
 	_doc(vm, "%RET", "Any");
 	_doc(vm, "%EX", "type T; t=T(); t.x=1; t.x  # 1");
 
 	register_global_func(vm, 0, ".=",       &native_set_attr_nti_str_any,  3, "obj", vm->NormalTypeInstance, "attr", vm->Str, "v", vm->Any);
-	_doc(vm, "", "Set Normal type (a type that is typically defined by user) instance attribute. Throws AttrNotFound.");
+	_doc(vm, "", "Set Normal type (a type that is typically defined by user) instance attribute");
+	_doc(vm, "%AUTO", "obj.attr = v");
 	_doc(vm, "%RET", "Any");
 	_doc(vm, "%EX", "type T; t=T(); t.x=1");
 
 	register_global_func(vm, 0, "in",       &native_in_nti_str,            2, "attr", vm->Str,               "obj", vm->NormalTypeInstance);
 	_doc(vm, "", "Check whether NormalType (a type that is typically defined by user) instance has an attribute.");
+	_doc(vm, "%AUTO", "attr in obj");
 	_doc(vm, "%RET", "Bool");
 	_doc(vm, "%EX", "type T; t=T(); t.x=1; \"x\" in t  # true");
 

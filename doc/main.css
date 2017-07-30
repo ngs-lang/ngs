@@ -62,6 +62,13 @@ th, td {
 	padding: 0.5em;
 }
 
+code {
+	margin: 0.25em;
+	padding: 0.25em;
+	background-color: #F0FFE0;
+	border: 1px solid #A0C0A0;
+	border-radius: 0.25em;
+}
 
 pre.example {
 	background-color: #F0FFE0;

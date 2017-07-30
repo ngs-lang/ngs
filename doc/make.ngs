@@ -90,6 +90,13 @@
 				}
 			}
 
+			process_doc_attr(mi, '%AUTO', F(lines) {
+				assert(lines.len() == 1, '%AUTO must be used at most once per method')
+				dn.push(DocNode('auto') with [
+					DocText(lines[0])
+				])
+			})
+
 			mi_doc = mi.attrs().doc or {}
 			dn.push(DocNode('params') with mi.params().map(process_param(X, mi_doc)))
 
@@ -256,6 +263,12 @@
 							]
 						]
 					}
+					'auto':  F(dn:DocNode) {
+							DocNode('section', class='auto') with [
+								DocText('Automatically called by NGS for syntax:')
+								DocNode('code', class='auto', title='Usage syntax') with Doc::transform(dn.children, method_page_transformer)
+							]
+					}
 					'example':  F(dn:DocNode) {
 							DocNode('section', class='example') with [
 								DocNode('pre', class='example', title='Example') with Doc::transform(dn.children, method_page_transformer)
@@ -279,6 +292,7 @@
 						# dn.attrs.mi
 						params = dn.children.filter(DocNode).filter({'name': 'params'})[0]
 						_returns = dn.children.filter(DocNode).filter({'name': 'returns'}).Box(0)
+						_auto = dn.children.filter(DocNode).filter({'name': 'auto'}).Box(0)
 						src_ref = dn.children.filter(DocNode).filter({'name': 'source-ref'}).Box(0)
 						DocNode('dl') with [
 							DocNode('dt') with [
