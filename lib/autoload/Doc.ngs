@@ -1,6 +1,6 @@
 ns {
 
-	global init, push, inspect
+	global init, push, inspect, Arr
 
 	doc EXPERIMENTAL! Do not use!
 	type Part
@@ -31,6 +31,8 @@ ns {
 	F init(t:Textual, txt:Str) init(args())
 
 	F push(c:Container, p:Part) c.children.push(p)
+
+	F Arr(g:Group) g.children
 
 	F name(p:Part) null
 	F name(n:Node) n.name

@@ -54,18 +54,25 @@
 				})
 
 		F process_param(param:Hash, doc:Hash) {
-			dflt = param.Box('dflt').map({ematch A {
-				Fun Doc::Node('default-is-fun')
-				Any Doc::Node('default-value', text=param.dflt.Str())
-			}})
-			ret = DocNode('param', name=param.name, type=param.get('type', Any), splat=param.get('splat'), doc=doc.get(param.name))
-			dflt.each(ret.push(X))
-			ret
+			{
+				'name':  param.name
+				'type':  param.get('type', Any)
+				'dflt':  param.Box('dflt')
+				'splat': param.Box('splat')
+				'doc':   doc.Box(param.name)
+			}
 		}
 
 		F process_doc_attr(mi:Fun, attr:Str, cb:Fun) {
-			d = mi.attrs().doc or {}
-			d.Box(attr).map(to_lines).each(cb)
+			a = mi.attrs()
+			not(a) returns
+			a.get('doc', {}).Box(attr).map(to_lines).each(cb)
+		}
+
+		F doc_attr(mi:Fun, attr:Str) {
+			a = mi.attrs()
+			not(a) returns
+			(a.get('doc') or {}).Box(attr).map(to_lines)
 		}
 
 		method_impls_by_id = {}
@@ -76,162 +83,126 @@
 		F process_method_impl(name:Str, mi:Fun) {
 			method_impls_by_id.dflt(method_impl_id(name, mi), [name]).push(mi)
 
-			dn = DocNode('method-impl', name=name, mi=mi)
-			process_doc_attr(mi, '', F(lines) {
-				dn.push(DocNode('description') with [
-					DocText(lines.join('\n'))
-				])
-			})
-			if mi is Closure {
-				# Handling Closure, not handling built-ins yet
-				location_info = mi.ip().resolve_instruction_pointer()
-				if m = location_info.file ~ pfx {
-					dn.push(DocNode('source-ref', file=m.after, line=location_info.first_line))
-				}
+			mi_doc = mi.attrs().doc or {}
+			{
+				'name': name
+				'mi': mi
+				'description': doc_attr(mi, '')
+				'auto': doc_attr(mi, '%AUTO').each(F(lines) assert(lines.len() == 1, '%AUTO must be used at most once per method'))
+				'params': mi.params().map(process_param(X, mi_doc))
+				'source_ref': Box(if mi is Closure {
+					# Handling Closure, not handling built-ins yet
+					location_info = mi.ip().resolve_instruction_pointer()
+					if m = location_info.file ~ pfx {
+						{
+							'file': m.after
+							'line': location_info.first_line
+						}
+					}
+				})
+				'returns': doc_attr(mi, '%RET').each(F(lines) assert(lines.len() == 1, '%RET must be used at most once per method'))
+				'example': doc_attr(mi, '%EX').map(F(lines) lines.join('\n'))
 			}
 
-			process_doc_attr(mi, '%AUTO', F(lines) {
-				assert(lines.len() == 1, '%AUTO must be used at most once per method')
-				dn.push(DocNode('auto') with [
-					DocText(lines[0])
-				])
-			})
-
-			mi_doc = mi.attrs().doc or {}
-			dn.push(DocNode('params') with mi.params().map(process_param(X, mi_doc)))
-
-			process_doc_attr(mi, '%RET', F(lines) {
-				assert(lines.len() == 1, '%RET must be used at most once per method')
-				dn.push(DocNode('returns') with [
-					DocText(lines[0])
-				])
-			})
-			process_doc_attr(mi, '%EX', F(lines) {
-				dn.push(DocNode('example') with [
-					DocText(lines.join('\n'))
-				])
-			})
-			dn
 		}
 
 		F process_method(name, implementations) {
 			status("Processing method: $name")
-			DocNode('method', name=name) with
-				implementations.map(process_method_impl(name, X))
+			{
+				'name': name
+				'implementations': implementations.map(process_method_impl(name, X))
+			}
 		}
 
-		doc Convert h to h1, h2, ... depending on depth (counted by number of "section" elements)
-		F fix_headers(doc:DocPart) {
-			doc.doc_visit(F(dp:DocPart, parents) {
-				if dp is DocNode and dp.name == 'h' {
-					dp.name = "h${parents.filter(DocNode).count({'name': 'section'})}"
-				}
-			})
-			doc
+		F param_to_inline_html_doc(param:Hash) {
+			DocNode('span', class='inline-param') with [
+				DocText(param.name)
+				DocText(':')
+				DocText(param.type.name)
+				param.dflt.map(F(d) {
+					DocGroup() with [
+						DocText('=')
+						ematch d {
+							Fun DocNode('span', class='non-literal') with [ DocText('method') ]
+							Any DocText(d.code())
+						}
+					]
+				}).get(DocGroup())
+			]
+		}
+
+		F params_to_inline_html_doc(params:Arr) {
+			DocGroup() with
+				[
+					DocText('('),
+					*params.map(param_to_inline_html_doc).intersperse(DocText(', '))
+					DocText(')')
+				]
+		}
+
+		F method_impl_to_index_html_doc(name:Str, mi:Hash) {
+
+			DocNode('li') with [
+				DocNode('a', href=method_impl_id(name, mi.mi).safe_file_name().encode_uri_component() + '.html', class='underline-on-hover-only') with
+					[
+						DocText(name),
+						*params_to_inline_html_doc(mi.params)
+						DocText(' - ')
+						mi.description.map(X.join('\n')).map(DocText).get(DocText('Undocumented'))
+					]
+			]
+
+		}
+
+		F method_to_index_html_doc(method:Hash) {
+			status("Preparing HTML doc for method ${method.name}")
+			DocNode('li', style='method') with [
+				DocNode('a', href=method.name.safe_file_name().encode_uri_component() + '.html', class='underline-on-hover-only') with [
+					DocText(method.name)
+				]
+				method.implementations.map(method_impl_to_index_html_doc(method.name, X)).Box().filter({A}).map(DocNode('ul', X)).get(DocGroup())
+			]
+		}
+
+		F methods_to_index_html_doc(methods:Arr) {
+			DocNode('html') with [
+				DocNode('head') with [
+					DocNode('meta', charset='UTF-8')
+					DocNode('link', rel='stylesheet', href='../main.css', type='text/css')
+					DocNode('title') with [
+						DocText('Methods index - NGS documentation')
+					]
+				]
+				DocNode('body', class='methods-index-page') with [
+					DocNode('nav') with [
+						DocNode('ul') with [
+							DocNode('li') with [
+								DocNode('span', class='nav-here') with [
+									DocText('Methods index')
+								]
+							]
+						]
+					]
+					DocNode('main') with [
+						DocGroup() with [
+							DocNode('h1') with [
+								DocText('Methods')
+							]
+						] + methods.map(method_to_index_html_doc)
+					]
+				]
+			]
 		}
 
 		F do_methods() {
-			# Index page
-			methods_node = DocNode('methods') with list_methods().limit(90).map(process_method)
-			page_node = DocNode('root') with [methods_node]
-
-			params_inline_transformer = {
-				'default-value': F(dn:DocNode) {
-					DocGroup() with [
-						DocText('=')
-						DocText(dn.attrs.text)
-					]
-				}
-				'default-is-fun': F(dn:DocNode) {
-					DocGroup() with [
-						DocText('=')
-						DocNode('span', class='non-literal') with [ DocText('method') ]
-					]
-				}
-				'param': F(dn:DocNode) {
-					# status("P $dn")
-					DocNode('span', class='inline-param') with [
-						DocText(dn.attrs.name)
-						DocText(':')
-						DocText(dn.attrs.type.name)
-					] + Doc::transform(dn.children, params_inline_transformer)
-				}
-				'params': F(dn:DocNode) {
-					DocGroup() with
-						[ DocText('(') ] +
-						Doc::transform(dn.children, params_inline_transformer).intersperse(DocText(', ')) +
-						[ DocText(')') ]
-				}
-			}
-
-			index_page_transformer = {
-				'method-impl': F(dn:DocNode) {
-					# dn.attrs.mi
-					desc_nodes = dn.children.filter(DocNode).filter({'name': 'description'})
-					mi_id = method_impl_id(dn.attrs.name, dn.attrs.mi)
-					params = Doc::transform(dn.children.filter(DocNode).filter({'name': 'params'}), params_inline_transformer)
-					DocNode('li') with [
-						DocNode('a', href=mi_id.safe_file_name().encode_uri_component() + '.html', class='underline-on-hover-only') with
-							[DocText(dn.attrs.name)] + params + [
-								DocText(' - ')
-								if desc_nodes {
-									desc_nodes[0].children[0]
-								} else {
-									DocText('Undocumented')
-								}
-							]
-					]
-				}
-				'method': F(dn:DocNode) {
-					# dn.attrs.name
-					DocNode('li', style='method') with [
-						DocNode('a', href=dn.attrs.name.safe_file_name().encode_uri_component() + '.html', class='underline-on-hover-only') with [
-							DocText(dn.attrs.name)
-						]
-						DocNode('ul') with Doc::transform(dn.children, index_page_transformer)
-					].reject(F(dn) dn is DocNode and dn.name == 'ul' and not(dn.children))
-					# .reject(DocNode ?? {'name': ul, children: []})
-				}
-				'methods': F(dn:DocNode) {
-					DocNode('section', class='methods') with [
-						DocNode('h') with [
-							DocText('Methods index')
-						]
-						DocNode('ul') with Doc::transform(dn.children, index_page_transformer)
-					]
-				}
-				'root': F(dn:DocNode) {
-					DocNode('html') with [
-						DocNode('head') with [
-							DocNode('meta', charset='UTF-8')
-							DocNode('link', rel='stylesheet', href='../main.css', type='text/css')
-							DocNode('title') with [
-								DocText('Methods index - NGS documentation')
-							]
-						]
-						DocNode('body', class='methods-index-page') with [
-							DocNode('nav') with [
-								DocNode('ul') with [
-									DocNode('li') with [
-										DocNode('span', class='nav-here') with [
-											DocText('Methods index')
-										]
-									]
-								]
-							]
-							DocNode('main') with Doc::transform(dn.children, index_page_transformer)
-						]
-					]
-				}
-				DocText: F(t:DocText) t
-			}
-
-			index_page_html = Doc::transform(page_node, index_page_transformer).fix_headers()
-
+			methods_index_html_doc = list_methods().limit(30).map(process_method).methods_to_index_html_doc()
 			$(mkdir -p ${doc_root / 'methods'})
 			$(cp main.css "$doc_root/")
 			status("Writing methods index (overview) page")
-			write(doc_root / 'methods/index.html', Doc::HtmlRoot(index_page_html))
+			write(doc_root / 'methods/index.html', Doc::HtmlRoot(methods_index_html_doc))
+
+
+			return
 
 			for method_node in methods_node.children {
 				status("Making page for method ${method_node.attrs.name}")
