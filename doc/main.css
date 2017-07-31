@@ -111,6 +111,12 @@ dt:hover .source-ref {
 }
 
 .unobtrusive {
+	font-size: 0.8em;
+	opacity: 0.6;
+}
+
+h1 .unobtrusive,
+nav .unobtrusive {
 	font-size: 0.6em;
 	opacity: 0.3;
 }
