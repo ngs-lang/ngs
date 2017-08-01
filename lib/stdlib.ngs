@@ -937,15 +937,15 @@ F collector(s:Str, body:Fun) {
 	s + ret.join('')
 }
 
-doc Comparison to null
+doc Compare to null
 doc %RET - false
 F ==(a:Null, b) false
 
-doc Comparison to null
+doc Compare to null
 doc %RET - false
 F ==(a, b:Null) false
 
-doc Comparison to null
+doc Compare to null
 doc %RET - true
 F ==(a:Null, b:Null) true
 

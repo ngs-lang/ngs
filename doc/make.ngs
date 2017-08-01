@@ -32,7 +32,10 @@
 		F to_lines(s:Str) [s]
 		F to_lines(a:Arr) a
 
-		F safe_file_name(s:Str) s.replace(/[^-_a-zA-Z0-9]/, F(char) '%' + encode_hex(char))
+		F safe_file_name(s:Str) {
+			s == 'index' returns 'index-'
+			s.replace(/[^-_a-zA-Z0-9]/, F(char) '%' + encode_hex(char))
+		}
 		F method_impl_id(name:Str, mi:Fun) (name + '-' + mi.params().type.name.join('-'))
 
 		F list_methods()
@@ -42,13 +45,9 @@
 						(value is Arr) and value.all(Fun) {
 							collect(name, value)
 						}
-						value is NormalType {
-							# NormalType has special constructor which we can't handle for now
-							# so skipping that one
-							collect(name, value.constructors[1..null])
-						}
 						value is Type {
-							collect(name, value.constructors)
+							# NormalTypeConstructor is built-in. We are not documenting it here.
+							collect(name, value.constructors.reject(NormalTypeConstructor))
 						}
 					}
 				})
@@ -81,10 +80,9 @@
 
 		pfx = Pfx("$NGS_DIR/")
 		F process_method_impl(name:Str, mi:Fun) {
-			method_impls_by_id.dflt(method_impl_id(name, mi), [name]).push(mi)
 
 			mi_doc = mi.attrs().doc or {}
-			{
+			ret = {
 				'name': name
 				'mi': mi
 				'description': doc_attr(mi, '')
@@ -102,7 +100,10 @@
 				})
 				'returns': doc_attr(mi, '%RET').each(F(lines) assert(lines.len() == 1, '%RET must be used at most once per method'))
 				'example': doc_attr(mi, '%EX').map(to_lines)
+				'ext_links': doc_attr(mi, '%EXTLINK').map(to_lines)
 			}
+			method_impls_by_id.dflt(method_impl_id(name, mi), [name]).push(ret)
+			ret
 
 		}
 
@@ -194,7 +195,7 @@
 			]
 		}
 
-		F method_impl_to_method_page_html_doc(name:Str, mi:Hash) {
+		F method_impl_to_method_page_html_doc(name:Str, mi:Hash, opts:Hash) {
 			DocNode('dl') with [
 				DocNode('dt') with [
 					DocText(name),
@@ -267,11 +268,36 @@
 							]
 						]
 					}).get(DocGroup())
+					mi.ext_links.filter({opts.get('detailed')}).map(F(links) {
+						DocNode('div') with [
+							DocText('External links')
+							DocNode('ul', class='external-links') with links.map(F(link) {
+								parts = link.split(' ', 2)
+								href = parts[0]
+								text = parts.Box(1).get(href)
+								DocNode('li') with [
+									DocNode('a', href=href) with [ DocText(text) ]
+								]
+							})
+
+						]
+					}).get(DocGroup())
+					if opts.get('detailed') {
+						DocGroup()
+					} else {
+						DocNode('div', class='link-to-method-impl-page') with [
+							DocNode('a', href=method_impl_id(name, mi.mi).safe_file_name().encode_uri_component() + '.html', class='underline-on-hover-only') with
+								[
+									DocText(name),
+									*params_to_inline_html_doc(mi.params)
+								]
+						]
+					}
 				] # dd
 			]
 		}
 
-		F method_to_method_page_html_doc(method:Hash) {
+		F method_to_method_page_html_doc(method:Hash, opts:Hash={}) {
 			# TODO: title
 			DocNode('html') with [
 				DocNode('head') with [
@@ -289,14 +315,30 @@
 									DocText('Methods')
 								]
 							]
-							DocNode('ul') with [
-								DocNode('li') with [
-									DocNode('span', class='nav-here') with [
-										DocText(method.name)
-										DocNode('span', class='unobtrusive') with [ DocText(" (method)") ]
+							if opts.get('detailed') {
+								DocNode('ul') with [
+									DocNode('li') with [
+										DocNode('a', href=method.name.safe_file_name().encode_uri_component() + '.html') with [
+											DocText(method.name)
+										]
+										DocNode('ul') with [
+											DocNode('li') with [
+												DocNode('span', class='nav-here') with [
+													DocText(method.name + " implementation ${opts.counter[0]}/${opts.counter[1]}")
+												]
+											]
+										]
 									]
 								]
-							]
+							} else {
+								DocNode('ul') with [
+									DocNode('li') with [
+										DocNode('span', class='nav-here') with [
+											DocText(method.name)
+										]
+									]
+								]
+							}
 						]
 					]
 					DocNode('main') with [
@@ -304,7 +346,7 @@
 							DocText(method.name)
 							DocNode('span', class='unobtrusive') with [ DocText(" (method)") ]
 						]
-					] + method.implementations.map(method_impl_to_method_page_html_doc(method.name, X))
+					] + method.implementations.map(method_impl_to_method_page_html_doc(method.name, X, opts))
 				]
 			]
 
@@ -327,6 +369,25 @@
 				write(doc_root / 'methods' / m.name.safe_file_name() + '.html', Doc::HtmlRoot(method_page_html_doc))
 			}
 
+			method_impls_page_count_by_method_name = method_impls_by_id.values().map(X[0]).Stats()
+			method_impls_name_counter = Stats()
+
+			method_impls_by_id.each(F(id, implementations) {
+
+				name = implementations[0]
+				impls = implementations[1..null]
+				method_impls_name_counter.push(name)
+
+
+				status("Making page for method id ${id}")
+				# m.implementations
+				method_id_page_html_doc = method_to_method_page_html_doc({'name': name, 'implementations': impls}, {
+					'detailed': true
+					'counter': [method_impls_name_counter[name], method_impls_page_count_by_method_name[name]]
+				})
+				write(doc_root / 'methods' / id.safe_file_name() + '.html', Doc::HtmlRoot(method_id_page_html_doc))
+
+			})
 			### # Detailed method implementations pages
 			### method_impls_by_id.each(F(id, impls) {
 			### 	assert('/' not in id)

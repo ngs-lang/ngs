@@ -38,6 +38,7 @@ Note that this started as internal document so things here are unformed, not fin
 			* Document pitfalls
 				* ns { F some_global_name() ... } -- does not add method implementation
 				* F(x,a:Arr=[]) ...,  when a is mutable
+				* Comments syntax not implemented everywhere
 			* "The README doesn’t seem to have any simple syntax examples"
 			* Add "-pd" switch: print documentation
 				+ Should take one of:
@@ -57,6 +58,7 @@ Note that this started as internal document so things here are unformed, not fin
 			* Internals
 			* Community examples: look at Kubernetes/examples/task/*,readme
 			* Explain Type/Strs capitalization rationale
+			* Link from constructors to types
 
 		* Milestone "packaging"
 			* Debian packages

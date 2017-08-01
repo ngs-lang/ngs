@@ -2407,6 +2407,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// Why is it here? Consider removing - end
 
 	register_global_func(vm, 0, "==",              &native_false,    2, "a", vm->Any, "b", vm->Any);
+	_doc(vm, "", "Always false");
 	_doc(vm, "%RET", "false");
 
 	// Regex
@@ -2534,13 +2535,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// Type
 	// needed for switch
 	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->Type, "b", vm->Type);
-	_doc(vm, "", "Types equality comparison. Implemented as sameness comparison.");
+	_doc(vm, "", "Compare types. Implemented as sameness comparison.");
 	_doc(vm, "%EX", "type T; T==T  # true");
 	_doc(vm, "%EX", "type T1; type T2; T1==T2  # false");
 
 	// Closure
 	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->Closure, "b", vm->Closure);
-	_doc(vm, "", "Closure equality comparison. Implemented as sameness comparison.");
+	_doc(vm, "", "Compare closures. Implemented as sameness comparison.");
 	_doc_arr(vm, "%EX",
 		"F make_closure() { F(x) x + 1 }; make_closure()      == make_closure()       # false - different instances",
 		"F make_closure() { F(x) x + 1 }; make_closure().ip() == make_closure().ip()  # true - same code",
@@ -2597,8 +2598,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Greater-than-or-equal comparison");
 	register_global_func(vm, 0, "==",       &native_eq_real_real,        2, "a",   vm->Real, "b", vm->Real);
 	_doc_arr(vm, "",
-		"Equality comparison. Using this operator/function is not recommended.",
-		"See http://how-to.wikia.com/wiki/Howto_compare_floating_point_numbers_in_the_C_programming_language .",
+		"Compare floating point numbers. Using this operator/function is not recommended.",
+		NULL
+	);
+	_doc_arr(vm, "%EXTLINK",
+		"http://how-to.wikia.com/wiki/Howto_compare_floating_point_numbers_in_the_C_programming_language Comparing floating point numbers (wikia)",
 		NULL
 	);
 	register_global_func(vm, 0, "Str",      &native_Str_real,            1, "r",   vm->Real);
@@ -2771,7 +2775,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "Int");
 
 	register_global_func(vm, 0, "==",       &native_eq_str_str,              2, "a",   vm->Str, "b", vm->Str);
-	_doc(vm, "", "Equality comparison");
+	_doc(vm, "", "Compare strings");
 
 	register_global_func(vm, 0, "pos",      &native_pos_str_str_int,         3, "haystack", vm->Str, "needle", vm->Str, "start", vm->Int);
 	_doc(vm, "", "Find substring position");
