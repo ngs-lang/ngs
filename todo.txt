@@ -4,6 +4,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 	Unsorted and undecided things go here. The important sections is [roadmap] and it's just below this section.
 
+	* See only() and/or "guard" vs https://www.scala-lang.org/api/current/scala/PartialFunction.html
+	* Maybe Iter(b:Box)
+
 [roadmap]
 
 	* Phase 1 - the language [in progress]

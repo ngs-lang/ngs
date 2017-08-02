@@ -68,8 +68,8 @@
 			a.get('doc', {}).Box(attr).map(to_lines).each(cb)
 		}
 
-		F doc_attr(mi:Fun, attr:Str) {
-			a = mi.attrs()
+		F doc_attr(x, attr:Str) {
+			a = x.attrs()
 			not(a) returns
 			(a.get('doc') or {}).Box(attr).map(to_lines)
 		}
@@ -157,11 +157,13 @@
 
 		F method_to_index_html_doc(method:Hash) {
 			status("Preparing HTML doc for method ${method.name}")
-			DocNode('li', style='method') with [
-				DocNode('a', href=method.name.safe_file_name().encode_uri_component() + '.html', class='underline-on-hover-only') with [
-					DocText(method.name)
+			DocNode('ul') with [
+				DocNode('li', style='method') with [
+					DocNode('a', href=method.name.safe_file_name().encode_uri_component() + '.html', class='underline-on-hover-only') with [
+						DocText(method.name)
+					]
+					method.implementations.map(method_impl_to_index_html_doc(method.name, X)).Box().filter({A}).map(DocNode('ul', X)).get(DocGroup())
 				]
-				method.implementations.map(method_impl_to_index_html_doc(method.name, X)).Box().filter({A}).map(DocNode('ul', X)).get(DocGroup())
 			]
 		}
 
@@ -358,7 +360,6 @@
 			methods = list_methods().limit(30).map(process_method)
 			methods_index_html_doc = methods.methods_to_index_html_doc()
 			$(mkdir -p ${doc_root / 'methods'})
-			$(cp main.css "$doc_root/")
 			status("Writing methods (overview) page")
 			write(doc_root / 'methods/index.html', Doc::HtmlRoot(methods_index_html_doc))
 
@@ -373,7 +374,6 @@
 			method_impls_name_counter = Stats()
 
 			method_impls_by_id.each(F(id, implementations) {
-
 				name = implementations[0]
 				impls = implementations[1..null]
 				method_impls_name_counter.push(name)
@@ -386,24 +386,64 @@
 					'counter': [method_impls_name_counter[name], method_impls_page_count_by_method_name[name]]
 				})
 				write(doc_root / 'methods' / id.safe_file_name() + '.html', Doc::HtmlRoot(method_id_page_html_doc))
-
 			})
-			### # Detailed method implementations pages
-			### method_impls_by_id.each(F(id, impls) {
-			### 	assert('/' not in id)
-			### 	assert('.' not in id)
-			### 	local mdn = MethodsDocNode([process_method(impls[0], impls[1..null])])
-			### 	local page = TopDocNode([mdn])
-			### 	local html = Html(page, {'detailed_method_page': true})
-			### 	# OLD # html.Str().write("method-impl-${id}.html")
-			### })
+		}
+
+		F process_type(name:Str, t:Type) {
+			{
+				'name': name
+				'type': t
+				'description': doc_attr(t, '')
+			}
+		}
+
+		F type_to_index_entry_doc(t:Hash) {
+			DocNode('dl', style='method') with [
+				DocNode('dt') with [
+					DocNode('a', href=t.name.safe_file_name().encode_uri_component() + '.html', class='underline-on-hover-only') with [
+						DocText(t.name)
+					]
+				]
+				DocNode('dd') with [
+					t.description.map(F(d) {
+						DocText(d.join('\n'))
+					}).get(DocText('Undocumented'))
+				]
+			]
+		}
+
+		F types_to_index_html_doc(types:Arr) {
+			DocNode('html') with [
+				DocNode('head') with [
+					DocNode('meta', charset='UTF-8')
+					DocNode('link', rel='stylesheet', href='../main.css', type='text/css')
+					DocNode('title') with [
+						DocText("Types - NGS documentation")
+					]
+				]
+				DocNode('body', class='types-index-page') with [
+					DocNode('nav') with [
+						DocNode('ul') with [
+							DocNode('li') with [
+								DocNode('a', href='../methods/index.html') with [
+									DocText('Methods')
+								]
+							]
+							DocNode('li') with [
+								DocNode('span', class='nav-here') with [
+									DocText('Types')
+								]
+							]
+						]
+					]
+					DocNode('main') with [
+						DocNode('h1') with [ DocText('Types') ]
+					] + types.map(type_to_index_entry_doc)
+				]
+			]
 		}
 
 		F do_types() {
-
-			# TODO: methods with this type
-			# TODO: constructors
-			# TODO: child types
 
 			# Splat params will be Arr or Hash but they are not interesting
 			F method_impl_has_arg_of_type(mi:Fun, t:Type) mi.params().reject(X.get('splat')).type.has(t)
@@ -412,7 +452,7 @@
 			# type as type of one of the parameters.
 			methods = list_methods()
 
-			types = globals().filterv(Type).filterk(is_public_name).filterk(not + is_phased_out_type).sortk(lte)
+			types = globals().filterv(Type).filterk(is_public_name).rejectk(is_phased_out_type).sortk(lte)
 
 			# Init with ( type -> [] ) pairs
 			types_direct_children = types.values().Hash({ [] })
@@ -423,14 +463,23 @@
 				})
 			})
 
+			types .= map(process_type)
+
+			types_index_html_doc = types_to_index_html_doc(types)
+			$(mkdir -p ${doc_root / 'types'})
+			status("Writing types (overview) page")
+			write(doc_root / 'types/index.html', Doc::HtmlRoot(types_index_html_doc))
+
+			for t in types {
+
+			}
+
+
+			throw NotImplemented('HERE')
+
 
 			# TODO: straighten by using ParentTypeDocNode instead of 'full' / 'leaf' option.
 			F type_to_doc_node(value:Type, full:Bool) {
-				# echo("N $name")
-				# ret = TypeDocNode([ParentTypesDocNode(value.parents.map())])
-				ret = TypeDocNode()
-				ret.type = value
-				# ret.full = full
 				process_type_impl_doc_attr(value, ret, '', DescDocNode)
 				type_attrs_dns = ((try value.attrs().doc) or {}).without('').reject(X ~ /^%/).map(F(k, v) {
 					TypeAttrDocNode(v.to_lines()).set('name', k)
@@ -490,27 +539,10 @@
 
 		}
 
-		do_methods()
+		$(cp main.css "$doc_root/")
+		# do_methods()
+		do_types()
 
-		# echo(page)
-		# inspect(html_page, 5) % echo
-		# each_idx_val(page.children[0].children[0].children, F(idx, val) {
-		# 	log("IDX $idx")
-		# 	log("KEYS ${val.Hash().keys()}")
-		# 	inspect(val.Hash()).each(echo)
-		# 	Str(val)
-		# 	# log("ELT $val")
-		# })
-		# echo(hash(page))
-		# echo(hash(page.children[0]))
-		# echo(hash(page.children[0].children[0]))
-		# echo(hash(page.children[0].children[0].children[0]))
-		# echo(hash(page.children[0].children[0].children[0].children[0]))
-		# echo(hash(page.children[0].children[0].children[0].children[0].children[0]))
-		# echo(page.children[0].children[0].children[0].children[0].name)
-		# echo(Data::find_cycle(page)[1].name)
-
-		# echo(methods.children[-100])
 	}
 }
 
