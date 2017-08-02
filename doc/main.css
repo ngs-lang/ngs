@@ -53,13 +53,16 @@ table {
 	border-collapse: collapse;
 }
 
+table.params td:nth-child(1) {
+	font-weight: bold;
+}
+
 th {
-	background-color: #EEEEEE;
+	color: #888888;
 }
 
 th, td {
-	border: 1px solid #CCCCCC;
-	padding: 0.5em;
+	padding: 0.3em;
 }
 
 code {

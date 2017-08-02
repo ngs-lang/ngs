@@ -26,7 +26,7 @@ See more about running NGS in [ngs(1)](ngs.1.html).
 
 # WHY NGS?
 
-If your attitude towards system tools is like mine, NGS would resonate better with how you think than bash, Python, Ruby, Perl or any other language for systems administration tasks.
+If your attitude towards system tools is like mine, NGS would resonate better with how you think than bash, Python, Ruby, Perl, Go or any other language for systems administration tasks.
 
 ## NGS was built for systems administration tasks
 
@@ -86,7 +86,7 @@ Yes, there is also built-in `jmespath` in `awscli`. It won't be much better than
 
 **other languages**
 
-You are probably using Python or Ruby or Perl (and if you are like me, Perl is out of the question because of it's syntax horror). You use one of the above languages because bash is not powerful enough / not convenient enough to do the tasks that these languages do. On the other hand something as simple as `echo mystring >myfile` or run an external program is not as convenient to do in these languages. Yes all of the languages above support system tasks to some degree. None of these languages support system tasks as a language that was built ground-up for system tasks. See the double-backtick examples above... for example.
+You are probably using Python/Ruby/Perl/Go . You use one of the above languages because bash is not powerful enough / not convenient enough to do the tasks that these languages do. On the other hand something as simple as `echo mystring >myfile` or run an external program is not as convenient to do in these languages. Yes all of the languages above support system tasks to some degree. None of these languages support system tasks as a language that was built ground-up for system tasks. See the double-backtick examples above... for example.
 
 ## You are using configuration management tools
 

@@ -62,6 +62,7 @@ Note that this started as internal document so things here are unformed, not fin
 			* Community examples: look at Kubernetes/examples/task/*,readme
 			* Explain Type/Strs capitalization rationale
 			* Link from constructors to types
+			* Add field (for example for Absent) for methods that get Arr[T] to link that method from type T page
 
 		* Milestone "packaging"
 			* Debian packages

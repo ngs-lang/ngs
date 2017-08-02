@@ -141,6 +141,16 @@
 				]
 		}
 
+		F make_page_head_doc(title:Str) {
+			DocNode('head') with [
+				DocNode('meta', charset='UTF-8')
+				DocNode('link', rel='stylesheet', href='../main.css', type='text/css')
+				DocNode('title') with [
+					DocText(title)
+				]
+			]
+		}
+
 		F method_impl_to_index_html_doc(name:Str, mi:Hash) {
 
 			DocNode('li') with [
@@ -169,13 +179,7 @@
 
 		F methods_to_index_html_doc(methods:Arr) {
 			DocNode('html') with [
-				DocNode('head') with [
-					DocNode('meta', charset='UTF-8')
-					DocNode('link', rel='stylesheet', href='../main.css', type='text/css')
-					DocNode('title') with [
-						DocText('Methods - NGS documentation')
-					]
-				]
+				make_page_head_doc('Methods - NGS documentation')
 				DocNode('body', class='methods-index-page') with [
 					DocNode('nav') with [
 						DocNode('ul') with [
@@ -224,45 +228,32 @@
 							]
 						]
 					}).get(DocGroup())
-					DocNode('table', class='params') with [
-						DocNode('tr') with [
-							DocNode('th') with [
-								DocText('Parameter')
-							]
-							DocNode('th') with [
-								DocText('Type')
-							]
-							DocNode('th') with [
-								DocText('Description')
-							]
-						] + mi.params.map(F(param) {
-							DocNode('tr', class='param') with [
-								DocNode('td') with [
-									DocText(param.name)
-								]
-								DocNode('td') with [
-									DocText(param.type.name)
-								]
-								DocNode('td') with [
-									param.doc.map(X.join('\n')).map(DocText).get(DocText('-'))
-								]
-							]
-						}) + [
-							mi.returns.map(F(rets) {
-								DocNode('tr', class='returns') with [
+					if mi.params.any({A.doc}) or mi.returns {
+						DocNode('table', class='params') with
+							mi.params.filter({A.doc}).map(F(param) {
+								DocNode('tr', class='param') with [
 									DocNode('td') with [
-										DocNode('span', class='non-literal') with [ DocText('Returns') ]
+										DocText(param.name)
 									]
 									DocNode('td') with [
-										DocText('-')
-									]
-									DocNode('td') with [
-										rets.join('\n').DocText()
+										param.doc.map(X.join('\n')).map(DocText).get(DocText('-'))
 									]
 								]
-							}).get(DocGroup())
-						]
-					]
+							}) + [
+								mi.returns.map(F(rets) {
+									DocNode('tr', class='returns') with [
+										DocNode('td') with [
+											DocNode('span', class='non-literal') with [ DocText('Returns') ]
+										]
+										DocNode('td') with [
+											rets.join('\n').DocText()
+										]
+									]
+								}).get(DocGroup())
+							]
+					} else {
+						DocGroup()
+					}
 					mi.example.map(F(ex) {
 						DocNode('section', class='example') with [
 							DocNode('pre', class='example', title='Example') with [
@@ -302,13 +293,7 @@
 		F method_to_method_page_html_doc(method:Hash, opts:Hash={}) {
 			# TODO: title
 			DocNode('html') with [
-				DocNode('head') with [
-					DocNode('meta', charset='UTF-8')
-					DocNode('link', rel='stylesheet', href='../main.css', type='text/css')
-					DocNode('title') with [
-						DocText("${method.name} method - NGS documentation")
-					]
-				]
+				make_page_head_doc("${method.name} method - NGS documentation")
 				DocNode('body', class='method-page') with [
 					DocNode('nav') with [
 						DocNode('ul') with [
@@ -390,10 +375,13 @@
 		}
 
 		F process_type(name:Str, t:Type) {
+			# 'fields': t.attrs().Box().map(X.doc).
 			{
 				'name': name
 				'type': t
 				'description': doc_attr(t, '')
+				'fields': (t.attrs() or {}).get('doc').Box().get({}).without('').reject(X ~ /^%/).mapv(to_lines)
+				'example': doc_attr(t, '%EX').map(to_lines)
 			}
 		}
 
@@ -414,13 +402,7 @@
 
 		F types_to_index_html_doc(types:Arr) {
 			DocNode('html') with [
-				DocNode('head') with [
-					DocNode('meta', charset='UTF-8')
-					DocNode('link', rel='stylesheet', href='../main.css', type='text/css')
-					DocNode('title') with [
-						DocText("Types - NGS documentation")
-					]
-				]
+				make_page_head_doc("Types - NGS documentation")
 				DocNode('body', class='types-index-page') with [
 					DocNode('nav') with [
 						DocNode('ul') with [
@@ -439,6 +421,65 @@
 					DocNode('main') with [
 						DocNode('h1') with [ DocText('Types') ]
 					] + types.map(type_to_index_entry_doc)
+				]
+			]
+		}
+
+		F type_to_type_page_doc(t:Hash) {
+			DocNode('html') with [
+				make_page_head_doc("${t.name} type - NGS documentation")
+				DocNode('body', class='types-index-page') with [
+					DocNode('nav') with [
+						DocNode('ul') with [
+							DocNode('li') with [
+								DocNode('a', href='../methods/index.html') with [
+									DocText('Methods')
+								]
+							]
+							DocNode('li') with [
+								DocNode('a', href='index.html') with [
+									DocText('Types')
+								]
+								DocNode('ul') with [
+									DocNode('li') with [
+										DocNode('span', class='nav-here') with [
+											DocText(t.name)
+										]
+									]
+								]
+							]
+						]
+					]
+					DocNode('main') with [
+						DocNode('h1') with [ DocText(t.name) ]
+						DocNode('section') with [
+							t.description.map(F(d) {
+								DocText(d.join('\n'))
+							}).get(DocText('Undocumented'))
+						]
+						if t.fields {
+							DocNode('table', class='params') with
+								t.fields.map(F(name, desc) {
+									DocNode('tr') with [
+										DocNode('td') with [
+											DocText(name)
+										]
+										DocNode('td') with [
+											DocText(desc.join('\n') or '-')
+										]
+									]
+								})
+						} else {
+							DocGroup()
+						}
+						t.example.map(F(ex) {
+							DocNode('section', class='example') with [
+								DocNode('pre', class='example', title='Example') with [
+									ex.join('\n').DocText()
+								]
+							]
+						}).get(DocGroup())
+					]
 				]
 			]
 		}
@@ -471,6 +512,9 @@
 			write(doc_root / 'types/index.html', Doc::HtmlRoot(types_index_html_doc))
 
 			for t in types {
+				status("Making page for type ${t.name}")
+				type_page_doc = type_to_type_page_doc(t)
+				write(doc_root / 'types' / t.name.safe_file_name() + '.html', Doc::HtmlRoot(type_page_doc))
 
 			}
 
