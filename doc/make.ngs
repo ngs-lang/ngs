@@ -153,7 +153,7 @@
 
 		F method_impl_to_index_html_doc(name:Str, mi:Hash) {
 
-			DocNode('li') with [
+			DocNode('div') with [
 				DocNode('a', href=method_impl_id(name, mi.mi).safe_file_name().encode_uri_component() + '.html', class='underline-on-hover-only') with
 					[
 						DocText(name),
@@ -163,17 +163,33 @@
 					]
 			]
 
+			DocNode('dl') with [
+				DocNode('dt') with [
+					DocText(name),
+					*params_to_inline_html_doc(mi.params)
+				]
+				DocNode('dd') with [
+					DocNode('section', class='method-description') with [
+						mi.description.map(X.join('\n')).map(DocText).get(DocText('Undocumented'))
+					]
+					DocNode('div', class='link-to-method-impl-page') with [
+						DocNode('a', href='../methods/' + method_impl_id(name, mi.mi).safe_file_name().encode_uri_component() + '.html') with
+							[
+								DocText('more'),
+							]
+					]
+				] # dd
+			]
+
 		}
 
 		F method_to_index_html_doc(method:Hash) {
 			status("Preparing HTML doc for method ${method.name}")
-			DocNode('ul') with [
-				DocNode('li', style='method') with [
-					DocNode('a', href=method.name.safe_file_name().encode_uri_component() + '.html', class='underline-on-hover-only') with [
-						DocText(method.name)
-					]
-					method.implementations.map(method_impl_to_index_html_doc(method.name, X)).Box().filter({A}).map(DocNode('ul', X)).get(DocGroup())
-				]
+			DocNode('div', style='index-page-method') with [
+				# DocNode('a', href=method.name.safe_file_name().encode_uri_component() + '.html', class='underline-on-hover-only') with [
+				# 	DocText(method.name)
+				# ]
+				*method.implementations.map(method_impl_to_index_html_doc(method.name, X))
 			]
 		}
 
@@ -279,7 +295,7 @@
 						DocGroup()
 					} else {
 						DocNode('div', class='link-to-method-impl-page') with [
-							DocNode('a', href=method_impl_id(name, mi.mi).safe_file_name().encode_uri_component() + '.html', class='underline-on-hover-only') with
+							DocNode('a', href='../methods/' + method_impl_id(name, mi.mi).safe_file_name().encode_uri_component() + '.html', class='underline-on-hover-only') with
 								[
 									DocText(name),
 									*params_to_inline_html_doc(mi.params)
@@ -289,6 +305,14 @@
 				] # dd
 			]
 		}
+
+		F methods_impls_to_doc(impls:Arr, opts:Hash={}) {
+			DocGroup() with
+				impls.map(F(i) {
+					method_impl_to_method_page_html_doc(i.name, i, opts)
+				})
+		}
+
 
 		F method_to_method_page_html_doc(method:Hash, opts:Hash={}) {
 			# TODO: title
@@ -342,7 +366,6 @@
 
 		# XXX: "index" method file name collision with the index!
 		F do_methods() {
-			methods = list_methods().limit(30).map(process_method)
 			methods_index_html_doc = methods.methods_to_index_html_doc()
 			$(mkdir -p ${doc_root / 'methods'})
 			status("Writing methods (overview) page")
@@ -514,6 +537,15 @@
 						if t.constructors {
 							DocNode('section') with [
 								DocNode('h2') with [ DocText('Constructors') ]
+								methods_impls_to_doc(t.constructors)
+							]
+						} else {
+							DocGroup()
+						}
+						if t.methods {
+							DocNode('section') with [
+								DocNode('h2') with [ DocText('Methods') ]
+								methods_impls_to_doc(t.methods)
 							]
 						} else {
 							DocGroup()
@@ -545,12 +577,26 @@
 
 			types .= map(process_type)
 			types_hash = types.map(F(t) [t.type, t]).Hash()
+
 			for t in types {
+				status("Augmenting type information: ${t.name}")
 				t.parents = t.type.parents.map(types_hash[X]).sort('name')
 				t.children = types_direct_children[t.type].map(types_hash[X])
+				# maybe find it in methods variable instead of re-doing process_method_impl()
 				t.constructors = t.type.constructors.reject(NormalTypeConstructor).map(process_method_impl(t.name, X))
+
+				t.methods = collector
+					methods.each(F(name, impls) {
+						impls.filter(method_impl_has_arg_of_type(X, t.type)).map() do F(mi) {
+							i = method_impl_id(name, mi)
+							method_impls_by_id.Box(i).map(F(mis) {
+								mis[1..null].each(collect)
+							})
+						}
+					})
 			}
 
+			status("Preparing types HTML")
 			types_index_html_doc = types_to_index_html_doc(types)
 			$(mkdir -p ${doc_root / 'types'})
 			status("Writing types (overview) page")
@@ -562,60 +608,11 @@
 				write(doc_root / 'types' / t.name.safe_file_name() + '.html', Doc::HtmlRoot(type_page_doc))
 
 			}
-
-
-			throw NotImplemented('HERE')
-
-
-			# TODO: straighten by using ParentTypeDocNode instead of 'full' / 'leaf' option.
-			F type_to_doc_node(value:Type, full:Bool) {
-				process_type_impl_doc_attr(value, ret, '', DescDocNode)
-				type_attrs_dns = ((try value.attrs().doc) or {}).without('').reject(X ~ /^%/).map(F(k, v) {
-					TypeAttrDocNode(v.to_lines()).set('name', k)
-				})
-				ret.push(TypeAttrsDocNode(type_attrs_dns))
-
-				if full {
-					process_type_impl_doc_attr(value, ret, '%EX', ExampleDocNode)
-					ret.push(ParentTypesDocNode(value.parents.map(type_to_doc_node(X, false))))
-					ret.push(ChildTypesDocNode(types_direct_children[value].map(type_to_doc_node(X, false))))
-					methods_of_type_dns = collector
-						methods.each() do F(name, impls) {
-							relevant_impls = impls.filter(method_impl_has_arg_of_type(X, value)).map() do F(mi) {
-								dn = TypeMethodImplDocNode([])
-								dn.mi = mi
-								process_method_impl_doc_attr(mi, dn, '', DescDocNode)
-								dn.push(ParamsDocNode(mi.params().map(process_param(X, mi.attrs().doc or {}))))
-								dn
-							}
-							if relevant_impls {
-								dn = TypeMethodDocNode(relevant_impls)
-								dn.method = name
-								collect(dn)
-							}
-						}
-					constructors_dns = value.constructors.reject(NormalTypeConstructor).map() do F(c) {
-						dn = TypeMethodImplDocNode([])
-						# dn.method = value.name
-						dn.mi = c
-						process_method_impl_doc_attr(c, dn, '', DescDocNode)
-						dn.push(ParamsDocNode(c.params().map(process_param(X, c.attrs().doc or {}))))
-						dn
-					}
-					ret.push(TypeMethodsDocNode(methods_of_type_dns))
-					ret.push(TypeConstructorsDocNode(constructors_dns).set('method', value.name))
-				}
-				ret
-			}
-
-			types .= map(F(name, value) {
-				type_to_doc_node(value, true)
-			})
-
 		}
 
 		$(cp main.css "$doc_root/")
-		# do_methods()
+		methods = list_methods().limit(60).map(process_method)
+		do_methods()
 		do_types()
 
 	}

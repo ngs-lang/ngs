@@ -1265,12 +1265,11 @@ F count(arr:Arr) count(arr, identity)
 
 TEST [0,1,2,null,false].count() == 2
 
-# Maybe Eachable1 ?
 doc Flatten one level.
 doc e - Eachable with each element also Eachable
 doc %RET - Arr
 doc %EX - [[1], [2,3]].flatten()  # [1,2,3]
-F flatten(e:Eachable) {
+F flatten(e:Eachable1) {
 	guard e.all(Eachable)
 	collector
 		e.each(F(subarr) {
