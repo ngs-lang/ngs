@@ -14,11 +14,6 @@ Note that this started as internal document so things here are unformed, not fin
 		* Milestone "documentation" [in progress]
 			* Generated [in progress]
 				* Pages
-					/ (documentaton root)
-						links to: methods, types, tutorial, etc
-					/methods
-					/methods/method-name
-					/methods/method-name/args
 					Show NGS version on each page
 					* Method related
 						* All methods list page: method name, implementation descritions, link to method page, link to method implementation page, link to type where applicable
@@ -26,6 +21,7 @@ Note that this started as internal document so things here are unformed, not fin
 						* Method page: method_name(args), args descriptions, example, link to method page
 					* Types related
 						* All types page: name, description, parents?
+						* Constructors
 						* Type page: description, parent types (including transient), child types, methods' imlementations list
 						* Link %RET types
 					* Namespaces related
@@ -43,26 +39,16 @@ Note that this started as internal document so things here are unformed, not fin
 				* F(x,a:Arr=[]) ...,  when a is mutable
 				* Comments syntax not implemented everywhere
 			* "The README doesn’t seem to have any simple syntax examples"
-			* Add "-pd" switch: print documentation
-				+ Should take one of:
-					+ Type
-					+ Method
-					+ Namespace
-					+ Topic
-				+ Add some method to list topics?
-				+ Use pager?
-				+ Simple formatting as plain text when no pandoc installed, man formatting when pandoc installed? Maybe pre-compiled man pages?
 			* Tutorial
 				+ Build an app - decide which
 			* Exit codes (see bootstrap.ngs and ngs.c)
 			* Document that inner functions are declared local
 			* Language reference, good example: https://golang.org/ref/spec [have most of it in ngslang]
 			* Pipes
-			* Internals
 			* Community examples: look at Kubernetes/examples/task/*,readme
 			* Explain Type/Strs capitalization rationale
 			* Link from constructors to types
-			* Add field (for example for Absent) for methods that get Arr[T] to link that method from type T page
+			* Type constructors and instance creation
 
 		* Milestone "packaging"
 			* Debian packages
@@ -75,6 +61,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* files globbing
 				consider special syntax such as <foo*bar>
+				think about Res globbing
 
 		* Milestone "modules"
 			* require() - add search path
@@ -91,6 +78,20 @@ Note that this started as internal document so things here are unformed, not fin
 				+ maybe specifying methods' signatures
 				+ maybe methods should be versioned (like in .so files)
 				+ how different module versions can run alongside?
+
+		* Milestone "even better documentation"
+			* Add field (for example for Absent) for methods that get Arr[T] to link that method from type T page
+			* Tags associated with methods/types/namespaces
+			* Add "-pd" switch: print documentation
+				+ Should take one of:
+					+ Type
+					+ Method
+					+ Namespace
+					+ Topic
+				+ Add some method to list topics?
+				+ Use pager?
+				+ Simple formatting as plain text when no pandoc installed, man formatting when pandoc installed? Maybe pre-compiled man pages?
+			* Internals
 
 		* Milestone "correct programming"
 

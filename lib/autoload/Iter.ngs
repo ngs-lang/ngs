@@ -45,7 +45,7 @@
 	doc %EX - #   10
 	type ConstIter([Iter, Eachable1])
 
-	doc NOT IMPLEMENTED YET. Iterator that returns values in the given range
+	doc Iterates over a Range
 	doc %EX - { Iter }
 	doc %EX - i = RangeIter(10..20)
 	doc %EX - echo(i.next())

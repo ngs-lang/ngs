@@ -375,12 +375,12 @@
 		}
 
 		F process_type(name:Str, t:Type) {
-			# 'fields': t.attrs().Box().map(X.doc).
+			# 'attrs': t.attrs().Box().map(X.doc).
 			{
 				'name': name
 				'type': t
 				'description': doc_attr(t, '')
-				'fields': (t.attrs() or {}).get('doc').Box().get({}).without('').reject(X ~ /^%/).mapv(to_lines)
+				'attrs': (t.attrs() or {}).get('doc').Box().get({}).without('').reject(X ~ /^%/).mapv(to_lines)
 				'example': doc_attr(t, '%EX').map(to_lines)
 			}
 		}
@@ -457,28 +457,67 @@
 								DocText(d.join('\n'))
 							}).get(DocText('Undocumented'))
 						]
-						if t.fields {
-							DocNode('table', class='params') with
-								t.fields.map(F(name, desc) {
-									DocNode('tr') with [
-										DocNode('td') with [
-											DocText(name)
-										]
-										DocNode('td') with [
-											DocText(desc.join('\n') or '-')
+						if t.parents {
+							DocNode('section') with [
+								DocNode('h2') with [ DocText('Direct parent types') ]
+								DocNode('ul') with t.parents.map(F(p) {
+									DocNode('li') with [
+										DocNode('a', href=p.name.safe_file_name().encode_uri_component() + '.html') with [
+											DocText(p.name)
 										]
 									]
 								})
+							]
+						} else {
+							DocGroup()
+						}
+						if t.children {
+							DocNode('section') with [
+								DocNode('h2') with [ DocText('Direct children types') ]
+								DocNode('ul') with t.children.map(F(c) {
+									DocNode('li') with [
+										DocNode('a', href=c.name.safe_file_name().encode_uri_component() + '.html') with [
+											DocText(c.name)
+										]
+									]
+								})
+							]
+						} else {
+							DocGroup()
+						}
+						if t.attrs {
+							DocNode('section') with [
+								DocNode('h2') with [ DocText('Attributes') ]
+								DocNode('table', class='params') with
+									t.attrs.map(F(name, desc) {
+										DocNode('tr') with [
+											DocNode('td') with [
+												DocText(name)
+											]
+											DocNode('td') with [
+												DocText(desc.join('\n') or '-')
+											]
+										]
+									})
+							]
 						} else {
 							DocGroup()
 						}
 						t.example.map(F(ex) {
-							DocNode('section', class='example') with [
+							DocNode('section') with [
+								DocNode('h2') with [ DocText('Example') ]
 								DocNode('pre', class='example', title='Example') with [
 									ex.join('\n').DocText()
 								]
 							]
 						}).get(DocGroup())
+						if t.constructors {
+							DocNode('section') with [
+								DocNode('h2') with [ DocText('Constructors') ]
+							]
+						} else {
+							DocGroup()
+						}
 					]
 				]
 			]
@@ -505,6 +544,12 @@
 			})
 
 			types .= map(process_type)
+			types_hash = types.map(F(t) [t.type, t]).Hash()
+			for t in types {
+				t.parents = t.type.parents.map(types_hash[X]).sort('name')
+				t.children = types_direct_children[t.type].map(types_hash[X])
+				t.constructors = t.type.constructors.reject(NormalTypeConstructor).map(process_method_impl(t.name, X))
+			}
 
 			types_index_html_doc = types_to_index_html_doc(types)
 			$(mkdir -p ${doc_root / 'types'})
@@ -565,20 +610,6 @@
 
 			types .= map(F(name, value) {
 				type_to_doc_node(value, true)
-			})
-
-			# Index page
-			tdn = TypesDocNode(types)
-			page = TopDocNode([tdn])
-
-			# Detailed types pages
-			types.each(F(t) {
-				assert('/' not in t.type.name)
-				assert('.' not in t.type.name)
-				local tdn = TypesDocNode([t])
-				local page = TopDocNode([tdn])
-				local html = Html(page, {'detailed_type_page': true})
-				# OLD # html.Str().write("type-${t.type.name}.html")
 			})
 
 		}
