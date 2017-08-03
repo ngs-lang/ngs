@@ -1,5 +1,11 @@
 ns {
 
+	doc EXPERIMENTAL. Do not use! Defines types and methods to work with document nodes. Can be used to relatively conveniently generate HTML.
+	F _doc() {
+
+	}
+
+	_exports.attrs(_doc[0].attrs())
 	global init, push, inspect, Arr
 
 	doc EXPERIMENTAL! Do not use!

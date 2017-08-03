@@ -62,21 +62,13 @@
 			}
 		}
 
-		F process_doc_attr(mi:Fun, attr:Str, cb:Fun) {
-			a = mi.attrs()
-			not(a) returns
-			a.get('doc', {}).Box(attr).map(to_lines).each(cb)
-		}
-
 		F doc_attr(x, attr:Str) {
 			a = x.attrs()
-			not(a) returns
+			not(a) returns EmptyBox()
 			(a.get('doc') or {}).Box(attr).map(to_lines)
 		}
 
 		method_impls_by_id = {}
-
-		# F process_params
 
 		pfx = Pfx("$NGS_DIR/")
 		F process_method_impl(name:Str, mi:Fun) {
@@ -610,10 +602,116 @@
 			}
 		}
 
+		F process_namespace(name:Str, ns:Hash) {
+			{
+				'name': name
+				'ns': ns
+				'description': doc_attr(ns, '')
+				'example': doc_attr(ns, '%EX').map(to_lines)
+				'ext_links': doc_attr(ns, '%EXTLINK').map(to_lines)
+				'types': ns.filterv(Type).map(F(name, t) {
+					# STDLIB_FILE_TYPE namespace has numbers as keys
+					process_type(Str(name), t)
+				})
+				'methods': ns.filterv(Fun).rejectv(Type).map(F(name, impls) {
+					# STDLIB_FILE_TYPE namespace has numbers as keys
+					if impls is not Arr {
+						impls = [impls]
+					}
+					process_method(Str(name), impls)
+				})
+			}
+		}
+
+		F namespace_to_html_doc(ns:Hash, opts:Hash={}) {
+			DocNode('dl') with [
+				DocNode('dt') with [
+					DocText(ns.name),
+				]
+				DocNode('dd') with [
+					DocNode('section') with [
+						ns.description.map(F(d) {
+							DocText(d.join('\n'))
+						}).get(DocText('Undocumented'))
+					]
+					ns.example.map(F(ex) {
+						DocNode('section') with [
+							DocNode('h2') with [ DocText('Example') ]
+							DocNode('pre', class='example', title='Example') with [
+								ex.join('\n').DocText()
+							]
+						]
+					}).get(DocGroup())
+					DocNode('div', class='link-to-method-impl-page') with [
+						DocNode('a', href='../namespaces/' + ns.name.safe_file_name().encode_uri_component() + '.html') with
+							[
+								{
+									'methods': len(ns.methods)
+									'types': len(ns.types)
+								}.filterv(X>0).map("$Y $X").join(', ').DocText()
+							]
+					]
+				] # dd
+			]
+		}
+
+		F namespaces_to_index_html_doc(namespaces:Arr) {
+			DocNode('html') with [
+				make_page_head_doc('Namespaces - NGS documentation')
+				DocNode('body', class='namespaces-index-page') with [
+					DocNode('nav') with [
+						DocNode('ul') with [
+							DocNode('li') with [
+								DocNode('a', href='../methods/index.html') with [
+									DocText('Methods')
+								]
+							]
+							DocNode('li') with [
+								DocNode('a', href='../types/index.html') with [
+									DocText('Types')
+								]
+							]
+							DocNode('li') with [
+								DocNode('span', class='nav-here') with [
+									DocText('Namespaces')
+								]
+							]
+						]
+					]
+					DocNode('main') with [
+						DocGroup() with [
+							DocNode('h1') with [
+								DocText('Namespaces')
+							]
+						] + namespaces.map(namespace_to_html_doc)
+					]
+				]
+			]
+		}
+
+		F do_namespaces() {
+
+			# Heuristic for detecting namespaces
+			# Should be changed if Namespace type is introduced
+			F is_namespace(x) {
+				x is not Hash returns false
+				x.values().any(F(v) v is Type or v is Fun)
+			}
+
+			namespaces = globals().filterv(is_namespace).map(process_namespace).sort('name')
+
+			status("Preparing namespaces HTML")
+			namespaces_index_html_doc = namespaces_to_index_html_doc(namespaces)
+			$(mkdir -p ${doc_root / 'namespaces'})
+			status("Writing namespaces (overview) page")
+			write(doc_root / 'namespaces/index.html', Doc::HtmlRoot(namespaces_index_html_doc))
+		}
+
 		$(cp main.css "$doc_root/")
 		methods = list_methods().limit(60).map(process_method)
-		do_methods()
-		do_types()
+		# do_methods()
+		# do_types()
+		do_namespaces()
 
 	}
 }

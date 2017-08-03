@@ -2,6 +2,7 @@ STDLIB_EOL = "\n"
 STDLIB_PATH_SEP = '/'
 STDLIB_MAX_RAND_REAL = Real(RAND_MAX)
 STDLIB_RAND_SAFETY_MAX = 100
+{ GC.attrs({'doc': {'': 'Control NGS garbarge colection'}}) }
 
 # === Trivial init() helper ===
 
@@ -2818,6 +2819,7 @@ STDLIB_FILE_TYPE = {
 	C_S_IFCHR:  CharDevice
 	C_S_IFIFO:  FifoFile
 }
+{ STDLIB_FILE_TYPE.attrs({'doc': {'': 'Mapping between S_IFMT bits of st_mode returned by stat()/lstat() and NGS types. All types in this Namespace are subtypes of Path.'}}) }
 
 doc Issue stat() system call. Throws StatFail if the call fails.
 doc %RET - Stat

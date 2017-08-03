@@ -1,5 +1,15 @@
 ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
+	# Documentation hack as documentation for namespaces
+
+	doc Amazon Web Services.
+	doc This namespace contains resource types that implement common resources methods: find(), create(), delete(), converge()
+	F _doc() {
+
+	}
+
+	_exports.attrs(_doc[0].attrs())
+
 	# TODO: alert or handle somehow the special case when anchor properties are changed,
 	#       this might be a programming error.
 
