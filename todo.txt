@@ -6,6 +6,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* See only() and/or "guard" vs https://www.scala-lang.org/api/current/scala/PartialFunction.html
 	* Maybe Iter(b:Box)
+	* Conditional modification of value
+		* Conditon can be Fun/value
+		* Replacement can be Fun/value
 
 [roadmap]
 

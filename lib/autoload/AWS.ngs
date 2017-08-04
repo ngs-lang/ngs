@@ -3,7 +3,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# Documentation hack as documentation for namespaces
 
 	doc Amazon Web Services.
-	doc This namespace contains resource types that implement common resources methods: find(), create(), delete(), converge()
+	doc This namespace contains resource types that implement common methods: find(), create(), delete(), converge()
 	F _doc() {
 
 	}

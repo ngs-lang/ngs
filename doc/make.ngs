@@ -25,6 +25,7 @@
 		doc_visit = Doc::visit
 
 		commit = `line: git rev-parse HEAD`
+		limited = ENV.Box('LIMIT').map(Int).get(INT_MAX)
 
 		F is_public_name(s:Str) s ~ /^[^_]/
 		F is_phased_out_type(s:Str) s ~ Pfx('Aws')
@@ -143,6 +144,41 @@
 			]
 		}
 
+		F make_nav_doc(branch:Arr) {
+
+			F nav_item_to_doc(item:Hash) DocNode('a', href=item.href) with [ DocText(item.title) ]
+			F nav_item_to_doc(item:Str) DocNode('span', class='nav-here') with [ DocText(item) ]
+
+			F make_nav_branch_doc(data:Arr) {
+				len(data) == 1 returns DocNode('li') with [ data[0].nav_item_to_doc() ]
+				DocGroup() with [
+					DocNode('li') with [ data[0].nav_item_to_doc() ]
+					DocNode('ul') with [ make_nav_branch_doc(data[1..null]) ]
+				]
+			}
+
+			root_nav = [
+				[{'title': 'Methods', 'href':  '../methods/index.html'}]
+				[{'title': 'Types', 'href':  '../types/index.html'}]
+				[{'title': 'Namespaces', 'href':  '../namespaces/index.html'}]
+			]
+
+			# echo("BRANCH $branch")
+			nav = if branch {
+				root_nav.map(F(x) {
+					x[0].title != branch[0] returns x
+					branch.len() == 1 returns branch
+					x + branch[1..null]
+				})
+			} else {
+				root_nav
+			}
+
+			DocNode('nav') with [
+				DocNode('ul') with nav.map(make_nav_branch_doc)
+			]
+		}
+
 		F method_impl_to_index_html_doc(name:Str, mi:Hash) {
 
 			DocNode('div') with [
@@ -189,15 +225,7 @@
 			DocNode('html') with [
 				make_page_head_doc('Methods - NGS documentation')
 				DocNode('body', class='methods-index-page') with [
-					DocNode('nav') with [
-						DocNode('ul') with [
-							DocNode('li') with [
-								DocNode('span', class='nav-here') with [
-									DocText('Methods')
-								]
-							]
-						]
-					]
+					make_nav_doc(['Methods'])
 					DocNode('main') with [
 						DocGroup() with [
 							DocNode('h1') with [
@@ -308,42 +336,16 @@
 
 		F method_to_method_page_html_doc(method:Hash, opts:Hash={}) {
 			# TODO: title
+			nav = ['Methods']
+			if opts.get('detailed') {
+				nav += [{'title': method.name, 'href': method.name.safe_file_name().encode_uri_component() + '.html'}, method.name + " implementation ${opts.counter[0]}/${opts.counter[1]}"]
+			} else {
+				nav.push(method.name)
+			}
 			DocNode('html') with [
 				make_page_head_doc("${method.name} method - NGS documentation")
 				DocNode('body', class='method-page') with [
-					DocNode('nav') with [
-						DocNode('ul') with [
-							DocNode('li') with [
-								DocNode('a', href='index.html') with [
-									DocText('Methods')
-								]
-							]
-							if opts.get('detailed') {
-								DocNode('ul') with [
-									DocNode('li') with [
-										DocNode('a', href=method.name.safe_file_name().encode_uri_component() + '.html') with [
-											DocText(method.name)
-										]
-										DocNode('ul') with [
-											DocNode('li') with [
-												DocNode('span', class='nav-here') with [
-													DocText(method.name + " implementation ${opts.counter[0]}/${opts.counter[1]}")
-												]
-											]
-										]
-									]
-								]
-							} else {
-								DocNode('ul') with [
-									DocNode('li') with [
-										DocNode('span', class='nav-here') with [
-											DocText(method.name)
-										]
-									]
-								]
-							}
-						]
-					]
+					make_nav_doc(nav)
 					DocNode('main') with [
 						DocNode('h1') with [
 							DocText(method.name)
@@ -419,20 +421,7 @@
 			DocNode('html') with [
 				make_page_head_doc("Types - NGS documentation")
 				DocNode('body', class='types-index-page') with [
-					DocNode('nav') with [
-						DocNode('ul') with [
-							DocNode('li') with [
-								DocNode('a', href='../methods/index.html') with [
-									DocText('Methods')
-								]
-							]
-							DocNode('li') with [
-								DocNode('span', class='nav-here') with [
-									DocText('Types')
-								]
-							]
-						]
-					]
+					make_nav_doc(['Types'])
 					DocNode('main') with [
 						DocNode('h1') with [ DocText('Types') ]
 					] + types.map(type_to_index_entry_doc)
@@ -444,27 +433,7 @@
 			DocNode('html') with [
 				make_page_head_doc("${t.name} type - NGS documentation")
 				DocNode('body', class='types-index-page') with [
-					DocNode('nav') with [
-						DocNode('ul') with [
-							DocNode('li') with [
-								DocNode('a', href='../methods/index.html') with [
-									DocText('Methods')
-								]
-							]
-							DocNode('li') with [
-								DocNode('a', href='index.html') with [
-									DocText('Types')
-								]
-								DocNode('ul') with [
-									DocNode('li') with [
-										DocNode('span', class='nav-here') with [
-											DocText(t.name)
-										]
-									]
-								]
-							]
-						]
-					]
+					make_nav_doc(['Types', t.name])
 					DocNode('main') with [
 						DocNode('h1') with [ DocText(t.name) ]
 						DocNode('section') with [
@@ -556,14 +525,17 @@
 			# type as type of one of the parameters.
 			methods = list_methods()
 
-			types = globals().filterv(Type).filterk(is_public_name).rejectk(is_phased_out_type).sortk(lte)
+			types = globals().filterv(Type).filterk(is_public_name).rejectk(is_phased_out_type).sortk(lte).limit(limited)
 
 			# Init with ( type -> [] ) pairs
 			types_direct_children = types.values().Hash({ [] })
 
 			types.values().each(F(t) {
 				t.parents.each(F(p) {
-					types_direct_children[p].push(t)
+					# "if" is good for test runs, where not all types are present in types_direct_children
+					if p in types_direct_children {
+						types_direct_children[p].push(t)
+					}
 				})
 			})
 
@@ -572,7 +544,7 @@
 
 			for t in types {
 				status("Augmenting type information: ${t.name}")
-				t.parents = t.type.parents.map(types_hash[X]).sort('name')
+				t.parents = t.type.parents.filter(X in types_hash).map(types_hash[X]).sort('name')
 				t.children = types_direct_children[t.type].map(types_hash[X])
 				# maybe find it in methods variable instead of re-doing process_method_impl()
 				t.constructors = t.type.constructors.reject(NormalTypeConstructor).map(process_method_impl(t.name, X))
@@ -659,25 +631,7 @@
 			DocNode('html') with [
 				make_page_head_doc('Namespaces - NGS documentation')
 				DocNode('body', class='namespaces-index-page') with [
-					DocNode('nav') with [
-						DocNode('ul') with [
-							DocNode('li') with [
-								DocNode('a', href='../methods/index.html') with [
-									DocText('Methods')
-								]
-							]
-							DocNode('li') with [
-								DocNode('a', href='../types/index.html') with [
-									DocText('Types')
-								]
-							]
-							DocNode('li') with [
-								DocNode('span', class='nav-here') with [
-									DocText('Namespaces')
-								]
-							]
-						]
-					]
+					make_nav_doc(['Namespaces'])
 					DocNode('main') with [
 						DocGroup() with [
 							DocNode('h1') with [
@@ -708,9 +662,9 @@
 		}
 
 		$(cp main.css "$doc_root/")
-		methods = list_methods().limit(60).map(process_method)
-		# do_methods()
-		# do_types()
+		methods = list_methods().limit(limited).map(process_method)
+		do_methods()
+		do_types()
 		do_namespaces()
 
 	}
