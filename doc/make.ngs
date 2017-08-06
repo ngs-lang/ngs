@@ -175,6 +175,7 @@
 			}
 
 			DocNode('nav') with [
+				DocText("NGS version $VERSION documentation:")
 				DocNode('ul') with nav.map(make_nav_branch_doc)
 			]
 		}
@@ -574,7 +575,11 @@
 			}
 		}
 
+		F is_in_ns(x, ns) x.attrs().Box().get({}).get('ns') === ns
+
 		F process_namespace(name:Str, ns:Hash) {
+			# echo("NS $ns")
+
 			{
 				'name': name
 				'ns': ns
@@ -590,8 +595,9 @@
 					if impls is not Arr {
 						impls = [impls]
 					}
-					process_method(Str(name), impls)
+					process_method(Str(name), impls.filter(is_in_ns(X, ns)))
 				})
+				'attrs': ns.attrs().Box().get({}).get('doc').Box().get({}).without('').reject(X ~ /^%/).mapv(to_lines)
 			}
 		}
 
@@ -643,6 +649,65 @@
 			]
 		}
 
+		F namespace_to_namespace_page_doc(namespace:Hash) {
+			DocNode('html') with [
+				make_page_head_doc("${namespace.name} type - NGS documentation")
+				DocNode('body', class='namespaces-index-page') with [
+					make_nav_doc(['Namespaces', namespace.name])
+					DocNode('main') with [
+						DocNode('h1') with [ DocText(namespace.name) ]
+						DocNode('section') with [
+							namespace.description.map(F(d) {
+								DocText(d.join('\n'))
+							}).get(DocText('Undocumented'))
+						]
+						namespace.example.map(F(ex) {
+							DocNode('section') with [
+								DocNode('h2') with [ DocText('Example') ]
+								DocNode('pre', class='example', title='Example') with [
+									ex.join('\n').DocText()
+								]
+							]
+						}).get(DocGroup())
+						if namespace.types {
+							DocNode('section') with [
+								DocNode('h2') with [ DocText('Types (CONTINUE HERE)') ]
+							]
+						} else {
+							DocGroup()
+						}
+						if namespace.methods {
+							DocNode('section') with [
+								DocNode('h2') with [ DocText('Methods') ]
+								methods_impls_to_doc(namespace.methods.sort('name').implementations.flatten(), {'detailed': true})
+							]
+						} else {
+							DocGroup()
+						}
+						if namespace.attrs {
+							DocNode('section') with [
+								DocNode('h2') with [ DocText('Variables & other') ]
+								DocNode('table', class='params') with
+									namespace.attrs.map(F(name, desc) {
+										DocNode('tr') with [
+											DocNode('td') with [
+												DocText(name)
+											]
+											DocNode('td') with [
+												DocText(desc.join('\n') or '-')
+											]
+										]
+									})
+							]
+						} else {
+							DocGroup()
+						}
+					]
+				]
+			]
+
+		}
+
 		F do_namespaces() {
 
 			# Heuristic for detecting namespaces
@@ -659,6 +724,13 @@
 			$(mkdir -p ${doc_root / 'namespaces'})
 			status("Writing namespaces (overview) page")
 			write(doc_root / 'namespaces/index.html', Doc::HtmlRoot(namespaces_index_html_doc))
+
+			for namespace in namespaces {
+				status("Making page for namespace ${namespace.name}")
+				namespace_page_doc = namespace_to_namespace_page_doc(namespace)
+				write(doc_root / 'namespaces' / namespace.name.safe_file_name() + '.html', Doc::HtmlRoot(namespace_page_doc))
+
+			}
 		}
 
 		$(cp main.css "$doc_root/")

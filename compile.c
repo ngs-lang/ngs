@@ -39,6 +39,7 @@
 #define IDENTIFIERS_SCOPES (ctx->identifiers_scopes[ctx->locals_ptr-1])
 #define N_LOCALS (ctx->n_locals[ctx->locals_ptr-1])
 #define N_UPLEVELS (ctx->n_uplevels[ctx->locals_ptr-1])
+#define NS (ctx->ns[ctx->locals_ptr])
 #define STACK_DEPTH (ctx->stack_depth[ctx->locals_ptr])
 // #define IN_FUNCTION (ctx->locals_ptr)
 
@@ -643,6 +644,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			N_LOCALS = 0;
 			N_UPLEVELS = 0;
 			STACK_DEPTH = 0;
+			NS = NULL;
 			params_flags = 0;
 			// Arguments
 			for(ptr=node->first_child->first_child; ptr; ptr=ptr->next_sibling) {
@@ -714,6 +716,12 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling, buf, idx, allocated, NEED_RESULT);
 			OPCODE(*buf, OP_SET_CLOSURE_DOC);
 
+			// Namespace attribute
+			if(NS) {
+				compile_main_section(ctx, NS, buf, idx, allocated, NEED_RESULT);
+				OPCODE(*buf, OP_SET_CLOSURE_NS);
+			}
+
 			// Name
 			if(node->first_child->next_sibling->next_sibling->next_sibling) {
 				// Function has a name
@@ -722,6 +730,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				L8_STR(*buf, node->first_child->next_sibling->next_sibling->next_sibling->name);
 			}
 			POP_IF_DONT_NEED_RESULT(*buf);
+			break;
+		case SET_NS_NODE:
+			NS = node->first_child;
 			break;
 		case STR_COMPS_NODE: {
 			int have_splat = 0;
@@ -1259,6 +1270,7 @@ char *compile(ast_node *node, char *source_file_name, size_t *len) {
 	// TODO: assert that got memory?
 	ctx.locals_ptr = 0;
 	ctx.stack_depth[0] = 0;
+	ctx.ns[0] = NULL;
 	ctx.source_file_name = source_file_name;
 	ctx.source_tracking_entries_count = 0;
 	ctx.source_tracking_entries_allocated = 1024;

@@ -4,6 +4,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	doc Amazon Web Services.
 	doc This namespace contains resource types that implement common methods: find(), create(), delete(), converge()
+	doc AMI_OWNER_DEBIAN - The string "379101102735"
+	doc AMI_OWNER_AMAZON - The string "801119661308"
 	F _doc() {
 
 	}
@@ -281,6 +283,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F _normalize(r:RouteBox) r.get().without('Origin').without('State').sort()
 
+	doc Internal method. Please do not use.
 	F ==(a:RouteBox, b:RouteBox) _normalize(a) == _normalize(b)
 
 	type RouteTable(ResDef)
@@ -415,6 +418,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		ret
 	}
 
+	doc Internal method. Please do not use.
 	F ==(a:IpPermBox, b:IpPermBox) {
 		a .= cleanup()
 		b .= cleanup()

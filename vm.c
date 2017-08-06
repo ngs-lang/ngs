@@ -113,11 +113,12 @@ char *opcodes_names[] = {
 	/* 55 */ "MAKE_CMD",
 	/* 56 */ "SET_CLOSURE_NAME",
 	/* 57 */ "SET_CLOSURE_DOC",
-	/* 58 */ "HASH_SET",
-	/* 59 */ "HASH_UPDATE",
-	/* 60 */ "PUSH_KWARGS_MARKER",
-	/* 61 */ "MAKE_REDIR",
-	/* 62 */ "SUPER",
+	/* 58 */ "SET_CLOSURE_NS",
+	/* 59 */ "HASH_SET",
+	/* 60 */ "HASH_UPDATE",
+	/* 61 */ "PUSH_KWARGS_MARKER",
+	/* 62 */ "MAKE_REDIR",
+	/* 63 */ "SUPER",
 };
 
 
@@ -4239,6 +4240,15 @@ do_jump:
 								goto main_loop;
 							}
 							set_hash_key(OBJ_ATTRS(SECOND), make_string("doc"), FIRST);
+							REMOVE_TOP_NOCHECK;
+							goto main_loop;
+		case OP_SET_CLOSURE_NS:
+							EXPECT_STACK_DEPTH(2);
+							assert(IS_CLOSURE(SECOND));
+							if(!IS_HASH(OBJ_ATTRS(SECOND))) {
+								goto main_loop;
+							}
+							set_hash_key(OBJ_ATTRS(SECOND), make_string("ns"), FIRST);
 							REMOVE_TOP_NOCHECK;
 							goto main_loop;
 		case OP_HASH_SET:

@@ -9,6 +9,7 @@ Note that this started as internal document so things here are unformed, not fin
 	* Conditional modification of value
 		* Conditon can be Fun/value
 		* Replacement can be Fun/value
+	* To fix: "attributes" is used for two different concenpts: attrs() and the rest
 
 [roadmap]
 
@@ -36,6 +37,7 @@ Note that this started as internal document so things here are unformed, not fin
 					* { } in examples
 					* Mark experimental
 					* Mark deprecated
+					* Mark internal
 			* Document `options: ...`
 			* Document pitfalls
 				* ns { F some_global_name() ... } -- does not add method implementation
@@ -52,6 +54,8 @@ Note that this started as internal document so things here are unformed, not fin
 			* Explain Type/Strs capitalization rationale
 			* Link from constructors to types
 			* Type constructors and instance creation
+			* Nested namespaces (AWS::util)
+			* "N methods" in link to namespace - filter by added implementations, don't count x in "global init; x = init"
 
 		* Milestone "packaging"
 			* Debian packages

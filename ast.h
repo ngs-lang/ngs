@@ -75,6 +75,7 @@ typedef enum {
 	SUPER_NODE,
 	REGEXP_NODE,
 	TABLE_LIT_NODE,
+	SET_NS_NODE,
 	NUMBER_OF_AST_NODE_TYPES,
 } ast_node_type;
 

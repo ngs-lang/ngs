@@ -56,6 +56,7 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 	"super",
 	"regexp",
 	"table",
+	"set_ns",
 };
 
 

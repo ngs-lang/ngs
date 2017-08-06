@@ -821,6 +821,12 @@ namespace = "ns" opt_params:namespace-optional-parameters c:curly-code-block {
 				append_ast_node_child(set_exports, empty_hash);
 			append_ast_node_child(code, set_exports);
 
+			// SET NAMESPACE FOR COMPILER PHASE
+			MAKE_NODE(set_ns, SET_NS_NODE);
+				MAKE_IDENTIFIER_NODE(set_ns_exports_identifier, "_exports")
+				append_ast_node_child(set_ns, set_ns_exports_identifier);
+			append_ast_node_child(code, set_ns);
+
 			// c, the original body
 			append_ast_node_child(code, c);
 
