@@ -268,7 +268,7 @@ F the_one(something:Eachable1, predicate) {
 		}
 	}
 	not(ret) throws TheOneFail("the_one() had no matches")
-	ret.val
+	ret.get()
 }
 
 TEST [1,2,11,3,4].the_one(X>10) == 11

@@ -284,6 +284,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F _normalize(r:RouteBox) r.get().without('Origin').without('State').sort()
 
 	doc Internal method. Please do not use.
+	doc %STATUS - internal
 	F ==(a:RouteBox, b:RouteBox) _normalize(a) == _normalize(b)
 
 	type RouteTable(ResDef)
@@ -407,7 +408,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	# Cleans up AWS Security Group IpPermissions so it's possible to compare current and desired states of IpPermissions
 	# TODO: cleanup FromPort -1 & ToPort -1
-	F cleanup(x:IpPermBox) {
+	F _cleanup(x:IpPermBox) {
 		ret = x.val
 		ret .= filter(F(k, v) (v is not Arr) or v)
 		ret .= without('IpRanges', [{"CidrIp": "0.0.0.0/0"}])
@@ -420,16 +421,16 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	doc Internal method. Please do not use.
 	F ==(a:IpPermBox, b:IpPermBox) {
-		a .= cleanup()
-		b .= cleanup()
+		a .= _cleanup()
+		b .= _cleanup()
 		a.len() != b.len() returns false
 		not(Diff(a, b))
 	}
 
 	# TOOD: continue here
 	F subset(smaller:IpPermBox, larger:IpPermBox) {
-		a .= cleanup()
-		b .= cleanup()
+		a .= _cleanup()
+		b .= _cleanup()
 	}
 
 	F create(rd:SecGroup, **props) {

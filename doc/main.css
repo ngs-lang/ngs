@@ -124,3 +124,11 @@ nav .unobtrusive {
 	font-size: 0.6em;
 	opacity: 0.3;
 }
+
+.method-status {
+	margin-left: 1em;
+	border-radius: 0.25em;
+	padding: 0.25em;
+	background-color: #DDDDDD;
+	font-weight: normal;
+}

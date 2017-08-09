@@ -19,18 +19,21 @@ Note that this started as internal document so things here are unformed, not fin
 			* Generated [in progress]
 				* Pages
 					Show NGS version on each page
-					* Method related
+					* Method related [done]
 						* All methods list page: method name, implementation descritions, link to method page, link to method implementation page, link to type where applicable
 						* Method implementations list page: method_name(args), args descriptions, example
 						* Method page: method_name(args), args descriptions, example, link to method page
-					* Types related
+					* Types related [done]
 						* All types page: name, description, parents?
 						* Constructors
 						* Type page: description, parent types (including transient), child types, methods' imlementations list
-						* Link %RET types
 					* Namespaces related
 						* Namespaces list page: name, description
-						* Namespace page: list of exported symbols ???
+						* Namespace page
+							* Types index
+							* Links to types' pages
+							* Methods. Mark which are additions to globals and which are local.
+							* Constants
 						* ???
 					* Namespaced types and methods
 						* Show namespace
