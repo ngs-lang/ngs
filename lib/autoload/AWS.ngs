@@ -285,6 +285,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	doc Internal method. Please do not use.
 	doc %STATUS - internal
+	doc %EX - # TODO: example
 	F ==(a:RouteBox, b:RouteBox) _normalize(a) == _normalize(b)
 
 	type RouteTable(ResDef)

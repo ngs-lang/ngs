@@ -135,17 +135,17 @@
 				]
 		}
 
-		F make_page_head_doc(title:Str) {
+		F make_page_head_doc(title:Str, dotdots:Int=1) {
 			DocNode('head') with [
 				DocNode('meta', charset='UTF-8')
-				DocNode('link', rel='stylesheet', href='../main.css', type='text/css')
+				DocNode('link', rel='stylesheet', href='../' * dotdots + 'main.css', type='text/css')
 				DocNode('title') with [
 					DocText(title)
 				]
 			]
 		}
 
-		F make_nav_doc(branch:Arr) {
+		F make_nav_doc(branch:Arr, dotdots:Int=1) {
 
 			F nav_item_to_doc(item:Hash) DocNode('a', href=item.href) with [ DocText(item.title) ]
 			F nav_item_to_doc(item:Str) DocNode('span', class='nav-here') with [ DocText(item) ]
@@ -158,10 +158,12 @@
 				]
 			}
 
+			dd = '../' * dotdots
+
 			root_nav = [
-				[{'title': 'Methods', 'href':  '../methods/index.html'}]
-				[{'title': 'Types', 'href':  '../types/index.html'}]
-				[{'title': 'Namespaces', 'href':  '../namespaces/index.html'}]
+				[{'title': 'Methods', 'href':  dd + 'methods/index.html'}]
+				[{'title': 'Types', 'href':  dd + 'types/index.html'}]
+				[{'title': 'Namespaces', 'href': dd + 'namespaces/index.html'}]
 			]
 
 			# echo("BRANCH $branch")
@@ -409,10 +411,11 @@
 		}
 
 		F type_to_index_entry_doc(t:Hash, opts:Hash={}) {
+			alt_name = ' (' +? (if t.name != t.type.name then t.type.name else '') +? ')'
 			DocNode('dl', style='method') with [
 				DocNode('dt') with [
 					DocNode('a', href=opts.get('href_prefix', '') + t.name.safe_file_name().encode_uri_component() + '.html', class='underline-on-hover-only') with [
-						DocText(t.name)
+						DocText(t.name + alt_name)
 					]
 				]
 				DocNode('dd') with [
@@ -548,7 +551,7 @@
 			types .= map(process_type)
 			types_hash = types.map(F(t) [t.type, t]).Hash()
 
-			for t in types {
+			for t in types.sort('name') {
 				status("Augmenting type information: ${t.name}")
 				t.parents = t.type.parents.filter(X in types_hash).map(types_hash[X]).sort('name')
 				t.children = types_direct_children[t.type].map(types_hash[X])
@@ -580,14 +583,41 @@
 			}
 		}
 
+		F is_namespace(x) {
+			x is not Hash returns false
+			x.values().any(F(v) v is Type or v is Fun)
+		}
+
 		F is_in_ns(x, ns) x.attrs().Box().get({}).get('ns') === ns
 
-		F process_namespace(name:Str, ns:Hash) {
+		F namespace_file_components(ns:Hash) {
+			t = ns.parents.name + [ns.name]
+			t = collector for tt in t {
+				collect('namespaces')
+				collect(tt)
+			}
+			ret = t.map(safe_file_name)
+			ret[len(ret)-1] += '.html'
+			ret
+		}
+
+		F namespace_href(ns, dotdots:Int) {
+			t = ns.parents.name + [ns.name]
+			t = collector for tt in t {
+				collect('namespaces')
+				collect(tt)
+			}
+			'../' * dotdots + namespace_file_components(ns).map(encode_uri_component).join('/')
+		}
+
+		doc Process ns Hash to create data structure convenient for building a document from
+		F process_namespace(name:Str, ns:Hash, parents:Arr=[]) {
 			# echo("NS $ns")
 			g = globals()
 
-			{
+			ret = {
 				'name': name
+				'fqname': parents.map(X.name).join('::') +? '::' + name
 				'ns': ns
 				'description': doc_attr(ns, '')
 				'example': doc_attr(ns, '%EX').map(to_lines)
@@ -595,7 +625,7 @@
 				'types': ns.filterv(Type).reject(F(k, v) g.get(k) === v).map(F(name, t) {
 					# STDLIB_FILE_TYPE namespace has numbers as keys
 					process_type(Str(name), t)
-				})
+				}).sort('name')
 				'methods': ns.filterv(Fun).rejectv(Type).map(F(name, impls) {
 					# STDLIB_FILE_TYPE namespace has numbers as keys
 					if impls is not Arr {
@@ -604,13 +634,16 @@
 					process_method(Str(name), impls.filter(is_in_ns(X, ns)))
 				})
 				'attrs': ns.attrs().Box().get({}).get('doc', {}).without('').reject(X ~ /^%/).mapv(to_lines)
+				'parents': parents
 			}
+			ret.namespaces = ns.filterv(is_namespace).map(process_namespace(X, Y, parents + [ret])).sort('name')
+			ret
 		}
 
 		F namespace_to_html_doc(ns:Hash, opts:Hash={}) {
 			DocNode('dl') with [
 				DocNode('dt') with [
-					DocText(ns.name),
+					DocNode('a', href=namespace_href(ns, 1)) with [ DocText(ns.name) ]
 				]
 				DocNode('dd') with [
 					DocNode('section') with [
@@ -618,23 +651,22 @@
 							DocText(d.join('\n'))
 						}).get(DocText('Undocumented'))
 					]
+					DocNode('div', class='unobtrusive') with
+						[
+							{
+								'methods': len(ns.methods)
+								'types': len(ns.types)
+								'sub-namespaces': len(ns.namespaces)
+							}.filterv(X>0).map("$Y $X").join(', ').DocText()
+						]
 					ns.example.map(F(ex) {
 						DocNode('section') with [
-							DocNode('h2') with [ DocText('Example') ]
+							DocNode(if ns.parents then 'h3' else 'h2') with [ DocText('Example') ]
 							DocNode('pre', class='example', title='Example') with [
 								ex.join('\n').DocText()
 							]
 						]
 					}).get(DocGroup())
-					DocNode('div', class='link-to-method-impl-page') with [
-						DocNode('a', href='../namespaces/' + ns.name.safe_file_name().encode_uri_component() + '.html') with
-							[
-								{
-									'methods': len(ns.methods)
-									'types': len(ns.types)
-								}.filterv(X>0).map("$Y $X").join(', ').DocText()
-							]
-					]
 				] # dd
 			]
 		}
@@ -656,17 +688,32 @@
 		}
 
 		F namespace_to_namespace_page_doc(namespace:Hash) {
+			dd = namespace.parents.len()*2+1
+			nav = namespace.parents.map(F(n) {
+				{
+					'title': n.name
+					'href': namespace_href(n, dd)
+				}
+			})
 			DocNode('html') with [
-				make_page_head_doc("${namespace.name} type - NGS documentation")
+				make_page_head_doc("${namespace.fqname} type - NGS documentation", dotdots=dd)
 				DocNode('body', class='namespaces-index-page') with [
-					make_nav_doc(['Namespaces', namespace.name])
+					make_nav_doc(['Namespaces'] + nav + [namespace.name], dotdots=dd)
 					DocNode('main') with [
-						DocNode('h1') with [ DocText(namespace.name) ]
+						DocNode('h1') with [ DocText(namespace.fqname) ]
 						DocNode('section') with [
 							namespace.description.map(F(d) {
 								DocText(d.join('\n'))
 							}).get(DocText('Undocumented'))
 						]
+						if namespace.namespaces {
+							DocGroup() with [
+								DocNode('h2') with [ DocText('Sub-namespaces') ],
+								*namespace.namespaces.map(namespace_to_html_doc)
+							]
+						} else {
+							DocGroup()
+						}
 						namespace.example.map(F(ex) {
 							DocNode('section') with [
 								DocNode('h2') with [ DocText('Example') ]
@@ -677,7 +724,7 @@
 						}).get(DocGroup())
 						if namespace.types {
 							DocNode('section') with [
-								DocNode('h2') with [ DocText('Types (CONTINUE HERE)') ],
+								DocNode('h2') with [ DocText('Types') ],
 								*namespace.types.map(type_to_index_entry_doc(X, {'href_prefix': namespace.name.safe_file_name().encode_uri_component() + '/types/'}))
 							]
 						} else {
@@ -717,13 +764,23 @@
 
 		F do_namespaces() {
 
-			# Heuristic for detecting namespaces
-			# Should be changed if Namespace type is introduced
-			F is_namespace(x) {
-				x is not Hash returns false
-				x.values().any(F(v) v is Type or v is Fun)
+			F kern(namespaces:Arr, parents:Arr=[]) {
+				for namespace in namespaces {
+					status("Making page for namespace ${namespace.fqname}")
+					namespace_page_doc = namespace_to_namespace_page_doc(namespace)
+					d = namespace_file_components(namespace)[0..-1].reduce(doc_root, (/))
+					status("Making sure directory $d exists")
+					$(mkdir -p $d)
+					f = namespace_file_components(namespace).reduce(doc_root, (/))
+					status("Writing namespace file $f")
+					write(f, Doc::HtmlRoot(namespace_page_doc))
+					kern(namespace.namespaces, parents + [namespace])
+				}
 			}
 
+
+			# Heuristic for detecting namespaces
+			# Should be changed if Namespace type is introduced
 			namespaces = globals().filterv(is_namespace).map(process_namespace).sort('name')
 
 			status("Preparing namespaces HTML")
@@ -731,12 +788,8 @@
 			$(mkdir -p ${doc_root / 'namespaces'})
 			status("Writing namespaces (overview) page")
 			write(doc_root / 'namespaces/index.html', Doc::HtmlRoot(namespaces_index_html_doc))
+			kern(namespaces)
 
-			for namespace in namespaces {
-				status("Making page for namespace ${namespace.name}")
-				namespace_page_doc = namespace_to_namespace_page_doc(namespace)
-				write(doc_root / 'namespaces' / namespace.name.safe_file_name() + '.html', Doc::HtmlRoot(namespace_page_doc))
-			}
 		}
 
 		$(cp main.css "$doc_root/")
