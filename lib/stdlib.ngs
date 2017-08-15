@@ -613,17 +613,14 @@ F Str(c:Closure) {
 
 # === Type =======================================
 
-doc Type constructor
-doc %EX - type MyType1
-doc %EX - type MyType2(MyType1)
-F Type(t:Str, doc, parent:Type) Type(t, doc, [parent])
+doc Create a new type. Do not use directly.
+doc %AUTO - type MyType2(MyType1)
+F Type(t:Str, doc, ns, parent:Type) Type(t, doc, ns, [parent])
 
-doc Type constructor
-doc %EX - type MyType1
-doc %EX - type MyType2
-doc %EX - type MyType3([MyType1, MyType2])
-F Type(t:Str, doc, parents:Arr) {
-	ret = Type(t, doc)
+doc Create a new type. Do not use directly.
+doc %AUTO - type MyType2([MyParent1, MyParent2, ...])
+F Type(t:Str, doc, ns, parents:Arr) {
+	ret = Type(t, doc, ns)
 	parents % ret.inherit(X)
 	ret
 }

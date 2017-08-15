@@ -941,6 +941,7 @@ METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_normal_type(arg
 METHOD_RESULT native_type_str_doc METHOD_PARAMS {
 	*result = make_normal_type(argv[0]);
 	set_hash_key(OBJ_ATTRS(*result), make_string("doc"), argv[1]);
+	set_hash_key(OBJ_ATTRS(*result), make_string("ns"), argv[2]);
 	return METHOD_OK;
 }
 
@@ -2670,8 +2671,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	// Type
-	register_global_func(vm, 0, "Type",     &native_type_str_doc      ,2, "name",   vm->Str, "doc", vm->Any);
-	_doc(vm, "", "Create a new type. Do not use directly. Use \"type MyType\".");
+	register_global_func(vm, 0, "Type",     &native_type_str_doc      ,3, "name",   vm->Str, "doc", vm->Any, "ns", vm->Any);
+	_doc(vm, "", "Create a new type. Do not use directly.");
+	_doc(vm, "%AUTO", "type MyType");
 
 	register_global_func(vm, 1, "typeof",   &native_typeof_any        ,1, "x",      vm->Any);
 	_doc(vm, "", "Returns type of the given instance");

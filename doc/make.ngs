@@ -33,6 +33,12 @@
 		F to_lines(s:Str) [s]
 		F to_lines(a:Arr) a
 
+		# TODO: maybe use this instead of: if cond_ body else DocGroup()
+		F maybe_doc(cond_:Bool, body:Fun) {
+			not(cond_) returns DocGroup()
+			body()
+		}
+
 		F safe_file_name(s:Str) {
 			s == 'index' returns 'index-'
 			s.replace(/[^-_a-zA-Z0-9]/, F(char) '%' + encode_hex(char))
@@ -525,7 +531,7 @@
 			]
 		}
 
-		F do_types() {
+		F do_types(namespaces) {
 
 			# Splat params will be Arr or Hash but they are not interesting
 			F method_impl_has_arg_of_type(mi:Fun, t:Type) mi.params().reject(X.get('splat')).type.has(t)
@@ -534,12 +540,17 @@
 			# type as type of one of the parameters.
 			methods = list_methods()
 
-			types = globals().filterv(Type).filterk(is_public_name).rejectk(is_phased_out_type).sortk(lte).limit(limited)
+			global_types = globals().filterv(Type).filterk(is_public_name).rejectk(is_phased_out_type).sortk(lte).limit(limited)
+			ns_types = namespaces.types.flatten()
+			# echo(ns_types)
+			# BROKEN by +(Fun, Fun)
+			# all_types = global_types.values() + ns_types.type
+			all_types = global_types.values()
 
 			# Init with ( type -> [] ) pairs
-			types_direct_children = types.values().Hash({ [] })
+			types_direct_children = all_types.Hash({ [] })
 
-			types.values().each(F(t) {
+			all_types.each(F(t) {
 				t.parents.each(F(p) {
 					# "if" is good for test runs, where not all types are present in types_direct_children
 					if p in types_direct_children {
@@ -548,10 +559,10 @@
 				})
 			})
 
-			types .= map(process_type)
-			types_hash = types.map(F(t) [t.type, t]).Hash()
+			global_types .= map(process_type)
+			types_hash = global_types.Hash('type')
 
-			for t in types.sort('name') {
+			for t in global_types.sort('name') {
 				status("Augmenting type information: ${t.name}")
 				t.parents = t.type.parents.filter(X in types_hash).map(types_hash[X]).sort('name')
 				t.children = types_direct_children[t.type].map(types_hash[X])
@@ -570,12 +581,12 @@
 			}
 
 			status("Preparing types HTML")
-			types_index_html_doc = types_to_index_html_doc(types)
+			types_index_html_doc = types_to_index_html_doc(global_types)
 			$(mkdir -p ${doc_root / 'types'})
 			status("Writing types (overview) page")
 			write(doc_root / 'types/index.html', Doc::HtmlRoot(types_index_html_doc))
 
-			for t in types {
+			for t in global_types {
 				status("Making page for type ${t.name}")
 				type_page_doc = type_to_type_page_doc(t)
 				write(doc_root / 'types' / t.name.safe_file_name() + '.html', Doc::HtmlRoot(type_page_doc))
@@ -789,14 +800,14 @@
 			status("Writing namespaces (overview) page")
 			write(doc_root / 'namespaces/index.html', Doc::HtmlRoot(namespaces_index_html_doc))
 			kern(namespaces)
-
+			namespaces
 		}
 
 		$(cp main.css "$doc_root/")
 		methods = list_methods().limit(limited).map(process_method)
 		do_methods()
-		do_types()
-		do_namespaces()
+		namespaces = do_namespaces()
+		do_types(namespaces)
 
 	}
 }

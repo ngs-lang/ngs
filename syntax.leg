@@ -1614,10 +1614,16 @@ type = doc:optional-doc inline_space? "type" space i:identifier inline_space? op
 			call->first_child = type_identifier;
 			MAKE_STRING_NODE(type_string, ngs_strdup(i->name));
 			MAKE_REQ_ARG_NODE(a1, type_string);
-				MAKE_REQ_ARG_NODE(a2, doc);
-				a1->next_sibling = a2;
+
+			MAKE_REQ_ARG_NODE(a2, doc);
+			a1->next_sibling = a2;
+
+			MAKE_NODE(ns, GET_NS_NODE);
+			MAKE_REQ_ARG_NODE(a3, ns);
+			a2->next_sibling = a3;
+
 			if(opt_args->type != NULL_NODE) {
-				a2->next_sibling = opt_args->first_child;
+				a3->next_sibling = opt_args->first_child;
 				opt_args->first_child = a1;
 				type_identifier->next_sibling = opt_args;
 			} else {

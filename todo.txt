@@ -10,6 +10,7 @@ Note that this started as internal document so things here are unformed, not fin
 		* Conditon can be Fun/value
 		* Replacement can be Fun/value
 	* To fix: "attributes" is used for two different concenpts: attrs() and the rest
+	* Look at Juju / conjure-up
 
 [roadmap]
 

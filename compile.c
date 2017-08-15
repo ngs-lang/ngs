@@ -734,6 +734,15 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 		case SET_NS_NODE:
 			NS = node->first_child;
 			break;
+		case GET_NS_NODE:
+			if(NS) {
+				compile_main_section(ctx, NS, buf, idx, allocated, need_result);
+			} else {
+				if(need_result) {
+					OPCODE(*buf, OP_PUSH_NULL);
+				}
+			}
+			break;
 		case STR_COMPS_NODE: {
 			int have_splat = 0;
 			for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
