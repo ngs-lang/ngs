@@ -43,7 +43,7 @@
 					collect("Name=$filter_name,Values=$arg")
 				}
 
-				arg ~ /^[a-z][0-9][.][a-z]+$/ collect("Name=instance-type,Values=$arg")
+				arg ~ /^[a-z][0-9][.][0-9]*[a-z]+$/ collect("Name=instance-type,Values=$arg")
 
 				arg in AWS::INSTANCE_STATES collect("Name=instance-state-name,Values=$arg")
 
