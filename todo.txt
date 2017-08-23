@@ -11,6 +11,7 @@ Note that this started as internal document so things here are unformed, not fin
 		* Replacement can be Fun/value
 	* To fix: "attributes" is used for two different concenpts: attrs() and the rest
 	* Look at Juju / conjure-up
+	* Add %k{...} and %v{...} syntax and remove n()
 
 [roadmap]
 
