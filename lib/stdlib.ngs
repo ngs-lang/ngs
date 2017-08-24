@@ -4245,7 +4245,12 @@ doc mapper - Function that will be called with one matching string at a time tha
 doc %RET - Str
 doc %EX - "x10ab20c30y".replace(/[0-9]+/, F(match_text) "[$match_text]")  # "x[10]ab[20]c[30]y"
 F replace(s:Str, r:RegExp, mapper:Fun) {
-	(~~)(s, r, true).map([ F(m:MatchY) mapper(m.whole), F(s:Str) s ]).join('')
+	(~~)(s, r, true).map(F(x) {
+		ematch x {
+			MatchY mapper(x.whole)
+			Str x
+		}
+	}).join('')
 }
 
 TEST "x10ab20c30y".replace(/[0-9]+/, F(match_text) "[$match_text]") == "x[10]ab[20]c[30]y"
@@ -4283,6 +4288,15 @@ F SafeStr(val) "$val" tor "(Failed to inspect <${val.typeof().name tor '(unknown
 doc Inspect any value.
 doc %RET - Arr with one element, Str
 F inspect(val) [SafeStr(val)]
+
+doc Inspect boolean.
+doc %RET - Arr with one element, Str
+F inspect(b:Bool) ["Bool: $b"]
+
+# F inspect(mm:MultiMethod) ["MultiMethod "] + mm.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"})
+doc Inspect MultiMethod
+doc %RET - Arr with one element, Str
+F inspect(mm:MultiMethod) ["MultiMethod", "  Methods"] + ("    " + mm.Arr().inspect())
 
 doc Inspect Real
 doc %RET - Arr with one element, Str
@@ -4794,11 +4808,11 @@ TEST F f(a,b,*args,**kwargs) [a,b,args,kwargs]; f(kw1=100, 1, 2, 3, kw2=200) == 
 TEST F construct(x:Int) F() x; f1=construct(1); f2=construct(2); (f1==f1) and (f1!=f2)
 TEST 1.1 < 1.11
 TEST 1.1 + 1.1 == 2.2
-TEST F uniq_attrs_func() "some body"; uniq_attrs_func[0].attrs({"a": 1}); uniq_attrs_func[0].attrs() == {"a": 1}
-TEST attrs((+)[0])['name'] == '+'
+TEST F uniq_attrs_func() "some body"; uniq_attrs_func.Arr()[0].attrs({"a": 1}); uniq_attrs_func.Arr()[0].attrs() == {"a": 1}
+TEST attrs((+).Arr()[0])['name'] == '+'
 # TODO: more introspection tests
-TEST params((+)[0])[0]['name'] == 'a'
-TEST params((+)[0])[0]['type'] === Real
+TEST params((+).Arr()[0])[0]['name'] == 'a'
+TEST params((+).Arr()[0])[0]['type'] === Real
 TEST "config" in globals()
 TEST args=['1', '+', '2']; $(expr $*args).Str()[0..1] == '3'
 TEST time() > 1466662171

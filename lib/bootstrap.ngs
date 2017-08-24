@@ -36,7 +36,16 @@ F to_exit_code(n:Int) n
 doc %RET - Always 200
 F to_exit_code(e:Exception) 200
 
-main = []
+doc Create MultiMethod with no methods
+F MultiMethod() super([])
+
+doc Number of methods in MultiMethod
+F len(mm:MultiMethod) mm.Arr().len()
+
+doc Whether MultiMethod has any methods
+F Bool(mm:MultiMethod) mm.Arr().Bool()
+
+main = MultiMethod()
 
 # *** Define bootstrap_debug function ***
 bootstrap_debug =

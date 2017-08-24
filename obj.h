@@ -53,6 +53,12 @@ typedef struct {
 
 typedef struct {
 	OBJECT base;
+	VALUE methods;
+	/* TODO: VALUE attrs ? */
+} MULTIMETHOD_OBJECT;
+
+typedef struct {
+	OBJECT base;
 	NGS_REAL val;
 } REAL_OBJECT;
 
@@ -237,10 +243,12 @@ typedef enum {
 	T_FFI_CIF       = (15 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_REGEXP        = (16 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_DIR           = (17 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_MULMETHOD     = (18 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	// *** Add new T_ itmes above this line ***
+	// *** UPDATE MAX_T_OBJ_TYPE_ID ACCORDINGLY ***
 } IMMEDIATE_TYPE;
 
-#define MAX_T_OBJ_TYPE_ID (T_DIR >> T_OBJ_TYPE_SHIFT_BITS)
+#define MAX_T_OBJ_TYPE_ID (T_MULMETHOD >> T_OBJ_TYPE_SHIFT_BITS)
 
 // TODO: handle situation when n is wider than size_t - TAG_BITS bits
 #define IS_NULL(v)      ((v).num == V_NULL)
@@ -325,6 +333,7 @@ typedef enum {
 #define IS_FFI_CIF(v)             ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_FFI_CIF)
 #define IS_REGEXP(v)              ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_REGEXP)
 #define IS_DIR(v)                 ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_DIR)
+#define IS_MULMETHOD(v)           ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_MULMETHOD)
 // *** Add new IS_... macros above this line ***
 #define ARRAY_ITEMS(v)            ((VALUE *)(OBJ_DATA_PTR(v)))
 #define HASH_BUCKETS_N(v)         (((HASH_OBJECT *)(v).ptr)->n_buckets)
@@ -337,6 +346,10 @@ typedef enum {
 #define REGEXP_OBJECT_RE(v)       (((REGEXP_OBJECT *) (v).ptr)->re)
 #define DIR_OBJECT_DIR(v)         (((DIR_OBJECT *) (v).ptr)->dir)
 #define DIR_OBJECT_IS_OPEN(v)     (((DIR_OBJECT *) (v).ptr)->is_open)
+#define MULTIMETHOD_METHODS(v)    (((MULTIMETHOD_OBJECT *) (v).ptr)->methods)
+#define MULTIMETHOD_LEN(v)        (OBJ_LEN(MULTIMETHOD_METHODS(v)))
+#define MULTIMETHOD_ITEMS(v)      (ARRAY_ITEMS(MULTIMETHOD_METHODS(v)))
+
 
 // Boolean 00001X10
 #define GET_INVERTED_BOOL(v)      ((VALUE){.num = (v).num ^= 4})
@@ -344,6 +357,9 @@ typedef enum {
 VALUE make_var_len_obj(uintptr_t type, const size_t item_size, const size_t len);
 VALUE make_array(size_t len);
 VALUE make_array_with_values(size_t len, const VALUE *values);
+VALUE make_multimethod();
+VALUE make_multimethod_with_value(const VALUE value);
+VALUE make_multimethod_from_array(const VALUE arr);
 VALUE make_hash(size_t start_buckets);
 VALUE make_normal_type(VALUE name);
 VALUE make_normal_type_constructor(VALUE normal_type);
@@ -361,6 +377,7 @@ VALUE make_string_of_len(const char *s, size_t len);
 VALUE make_real(double n);
 void vlo_ensure_additional_space(VALUE v, size_t n);
 void array_push(VALUE arr, VALUE v);
+void push_multimethod_method(VALUE multimethod, const VALUE method);
 VALUE array_shift(VALUE arr);
 void array_reverse(VALUE arr);
 VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, int params_flags, VALUE *params, VALUE *locals);

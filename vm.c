@@ -119,6 +119,9 @@ char *opcodes_names[] = {
 	/* 61 */ "PUSH_KWARGS_MARKER",
 	/* 62 */ "MAKE_REDIR",
 	/* 63 */ "SUPER",
+	/* 64 */ "MAKE_MULTIMETHOD",
+	/* 65 */ "MULTIMETHOD_APPEND",
+	/* 66 */ "MULTIMETHOD_REVERSE",
 };
 
 
@@ -147,7 +150,29 @@ char *opcodes_names[] = {
 #define ARG_LVI ARG(lvi, LOCAL_VAR_INDEX);
 #define ARG_GVI ARG(gvi, GLOBAL_VAR_INDEX);
 #define ARG_UVI ARG(uvi, UPVAR_INDEX);
-#define PUSH_FUNC(dst, fn) if(IS_NGS_TYPE(dst)) { array_push(NGS_TYPE_CONSTRUCTORS(dst), (fn)); } else { array_push(dst, fn); };
+
+#define PUSH_METHOD_EXC(msg, dst, fn) \
+	VALUE e; \
+	e = make_normal_type_instance(vm->InvalidArgument); \
+	set_normal_type_instance_attribute(e, make_string("message"), make_string(msg)); \
+	set_normal_type_instance_attribute(e, make_string("backtrace"), make_backtrace(vm, ctx)); \
+	set_normal_type_instance_attribute(e, make_string("target"), dst); \
+	set_normal_type_instance_attribute(e, make_string("method"), fn); \
+	*result = e; \
+	goto exception;
+
+#define PUSH_METHOD(dst, fn) \
+	if(IS_NGS_TYPE(dst)) { \
+		if(!IS_MULMETHOD(NGS_TYPE_CONSTRUCTORS(dst))) { \
+			PUSH_METHOD_EXC("Can not push method as type constructor is not a MultiMethod", dst, fn); \
+		} \
+		push_multimethod_method(NGS_TYPE_CONSTRUCTORS(dst), (fn)); \
+	} else { \
+		if(!IS_MULMETHOD(dst)) { \
+			PUSH_METHOD_EXC("Can not push method into non-MultiMethod. You are defining a method but the variable already exists and it is not a MultiMethod.", dst, fn); \
+		} \
+		push_multimethod_method(dst, fn); \
+	};
 // TODO: Exception
 #define CONVERTING_OP(test, type) \
 	assert(ctx->stack_ptr); \
@@ -1805,6 +1830,16 @@ MAKE_STAT_METHOD(fstat, GET_INT)
 METHOD_RESULT native_gc_enable  METHOD_PARAMS { (void) argv; GC_enable();  METHOD_RETURN(MAKE_NULL); }
 METHOD_RESULT native_gc_disable METHOD_PARAMS { (void) argv; GC_disable(); METHOD_RETURN(MAKE_NULL); }
 
+METHOD_RESULT native_Arr_mm METHOD_PARAMS {
+	METHOD_RETURN(make_array_with_values(
+		OBJ_LEN(MULTIMETHOD_METHODS(argv[0])),
+		ARRAY_ITEMS(MULTIMETHOD_METHODS(argv[0]))
+	));
+}
+
+METHOD_RESULT native_MultiMethod_arr METHOD_PARAMS {
+	METHOD_RETURN(make_multimethod_from_array(argv[0]));
+}
 
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
@@ -1863,16 +1898,16 @@ void register_global_func(VM *vm, int pass_extra_params, char *name, void *func_
 	VALUE func = _make_func(vm, pass_extra_params, name, func_ptr, argc, args);
 	va_end(args);
 	index = get_global_index(vm, name, strlen(name));
-	if(IS_ARRAY(GLOBALS[index])) {
-		array_push(GLOBALS[index], func);
+	if(IS_MULMETHOD(GLOBALS[index])) {
+		push_multimethod_method(GLOBALS[index], func);
 		return;
 	}
 	if(IS_NGS_TYPE(GLOBALS[index])) {
-		array_push(NGS_TYPE_CONSTRUCTORS(GLOBALS[index]), func);
+		push_multimethod_method(NGS_TYPE_CONSTRUCTORS(GLOBALS[index]), func);
 		return;
 	}
 	if(IS_UNDEF(GLOBALS[index])) {
-		GLOBALS[index] = make_array_with_values(1, &func);
+		GLOBALS[index] = make_multimethod_with_value(func);
 		return;
 	}
 	assert(0 == "register_global_func fail");
@@ -1918,7 +1953,7 @@ void set_global(VM *vm, const char *name, VALUE v) {
 	ret = make_normal_type(make_string(name));
 	// Fixes for built-ins - start
 	NGS_TYPE_ID(ret) = native_type_id;
-	OBJ_LEN(NGS_TYPE_CONSTRUCTORS(ret)) = 0;
+	MULTIMETHOD_LEN(NGS_TYPE_CONSTRUCTORS(ret)) = 0;
 	// Fixes for built-ins - end
 	index = get_global_index(vm, name, strlen(name));
 	assert(IS_UNDEF(GLOBALS[index]));
@@ -2051,10 +2086,15 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 
 	MK_BUILTIN_TYPE_DOC(Fun, T_FUN, "Function type: an Array of Closures, a Closure, or a native method");
+
 		MK_BUILTIN_TYPE_DOC(Closure, T_CLOSURE, "Closure type. User-defined functions/methods are Closures");
 		vm->type_by_t_obj_type_id[T_CLOSURE >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Closure;
+
 		MK_BUILTIN_TYPE_DOC(NativeMethod, T_NATIVE_METHOD, "Native method type");
 		vm->type_by_t_obj_type_id[T_NATIVE_METHOD >> T_OBJ_TYPE_SHIFT_BITS] = &vm->NativeMethod;
+
+		MK_BUILTIN_TYPE_DOC(MultiMethod, T_MULMETHOD, "MultiMethod, container for methods.");
+		vm->type_by_t_obj_type_id[T_MULMETHOD >> T_OBJ_TYPE_SHIFT_BITS] = &vm->MultiMethod;
 
 	MK_BUILTIN_TYPE(Any, T_ANY);
 	_doc_arr(vm, "",
@@ -2404,7 +2444,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 #undef MKTYPE
 
 	// Why is it here? Consider removing - start
-	vm->eqeq = make_array(0);
+	vm->eqeq = make_multimethod();
 	set_global(vm, "==", vm->eqeq);
 	// Why is it here? Consider removing - end
 
@@ -2567,6 +2607,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Get closure code instruction pointer.");
 	_doc(vm, "%RET", "Int");
 	_doc(vm, "%EX", "f=F(x) x+1; f.ip()  # 116506");
+
+	// MultiMethod
+	register_global_func(vm, 0, "Arr",         &native_Arr_mm,           1, "mm",  vm->MultiMethod);
+	register_global_func(vm, 0, "MultiMethod", &native_MultiMethod_arr,  1, "arr", vm->Arr);
 
 	// Int
 	register_global_func(vm, 0, "Int",      &native_Int_real,           1, "r",    vm->Real);
@@ -3084,10 +3128,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 		ARRAY_ITEMS(argv_array)[i] = make_string(argv[i]);
 	}
 	set_global(vm, "ARGV", argv_array);
-	set_global(vm, "impl_not_found_handler", vm->impl_not_found_handler = make_array(0)); // There must be a catch-all in stdlib
-	set_global(vm, "global_not_found_handler", vm->global_not_found_handler = make_array(0));
-	set_global(vm, "init", vm->init = make_array(0));
-	set_global(vm, "call", vm->call = make_array(0));
+	set_global(vm, "impl_not_found_handler", vm->impl_not_found_handler = make_multimethod()); // There must be a catch-all in stdlib
+	set_global(vm, "global_not_found_handler", vm->global_not_found_handler = make_multimethod());
+	set_global(vm, "init", vm->init = make_multimethod());
+	set_global(vm, "call", vm->call = make_multimethod());
 
 	// TODO: Some good solution for many defines
 #define E(name) set_global(vm, "C_" #name, MAKE_INT(name))
@@ -3362,10 +3406,11 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 	METHOD_RESULT mr;
 	VALUE *callable_items;
 
-	if(IS_ARRAY(callable)) {
+	if(IS_MULMETHOD(callable)) {
+		int len = MULTIMETHOD_LEN(callable);
 		DEEPER_FRAME.arr_callable = &callable;
 		DEEPER_FRAME.arr_callable_idx = &i;
-		for(i=OBJ_LEN(callable)-1, callable_items = OBJ_DATA_PTR(callable); i>=0; i--) {
+		for(i=len-1, callable_items = MULTIMETHOD_ITEMS(callable); i>=0; i--) {
 			mr = vm_call(vm, ctx, result, callable_items[i], argc, argv);
 			if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION) || (mr == METHOD_IMPL_MISSING)) {
 				DEEPER_FRAME.arr_callable = NULL;
@@ -4071,9 +4116,10 @@ do_jump:
 							// TODO: report error here instead of crashing
 #endif
 							if(IS_UNDEF(GLOBALS[gvi])) {
-								GLOBALS[gvi] = make_array_with_values(1, &TOP);
+								GLOBALS[gvi] = make_multimethod_with_value(TOP);
 							} else {
-								PUSH_FUNC(GLOBALS[gvi], TOP);
+								// printf("GVI %d %s\n", gvi, vm->globals_names[gvi]);
+								PUSH_METHOD(GLOBALS[gvi], TOP);
 							}
 							goto main_loop;
 		case OP_DEF_LOCAL_FUNC:
@@ -4083,9 +4129,9 @@ do_jump:
 							assert(ctx->stack_ptr);
 							ARG_LVI;
 							if(IS_UNDEF(LOCALS[lvi])) {
-								LOCALS[lvi] = make_array_with_values(1, &TOP);
+								LOCALS[lvi] = make_multimethod_with_value(TOP);
 							} else {
-								PUSH_FUNC(LOCALS[lvi], TOP);
+								PUSH_METHOD(LOCALS[lvi], TOP);
 							}
 							goto main_loop;
 		case OP_FETCH_UPVAR:
@@ -4126,9 +4172,9 @@ do_jump:
 							ARG_UVI;
 							ARG_LVI;
 							if(IS_UNDEF(UPLEVELS[uvi][lvi])) {
-								UPLEVELS[uvi][lvi] = make_array_with_values(1, &TOP);
+								UPLEVELS[uvi][lvi] = make_multimethod_with_value(TOP);
 							} else {
-								PUSH_FUNC(UPLEVELS[uvi][lvi], TOP);
+								PUSH_METHOD(UPLEVELS[uvi][lvi], TOP);
 							}
 							goto main_loop;
 		case OP_MAKE_HASH:
@@ -4280,8 +4326,11 @@ do_jump:
 							goto main_loop;
 		case OP_SUPER:
 							if(THIS_FRAME.arr_callable) {
-								assert(IS_ARRAY(*THIS_FRAME.arr_callable));
-								PUSH(make_array_with_values(*THIS_FRAME.arr_callable_idx, OBJ_DATA_PTR(*THIS_FRAME.arr_callable)));
+								assert(IS_MULMETHOD(*THIS_FRAME.arr_callable));
+								// PUSH(make_array_with_values(*THIS_FRAME.arr_callable_idx, OBJ_DATA_PTR(*THIS_FRAME.arr_callable)));
+								v = make_multimethod();
+								MULTIMETHOD_METHODS(v) = make_array_with_values(*THIS_FRAME.arr_callable_idx, MULTIMETHOD_ITEMS(*THIS_FRAME.arr_callable));
+								PUSH(v);
 								goto main_loop;
 							} else {
 								VALUE exc;
@@ -4292,6 +4341,19 @@ do_jump:
 								*result = exc;
 								goto exception;
 							}
+		case OP_MAKE_MULTIMETHOD:
+							PUSH(make_multimethod());
+							goto main_loop;
+		case OP_MULTIMETHOD_APPEND:
+							EXPECT_STACK_DEPTH(2);
+							push_multimethod_method(ctx->stack[ctx->stack_ptr-2], ctx->stack[ctx->stack_ptr-1]);
+							REMOVE_TOP_NOCHECK;
+							goto main_loop;
+		case OP_MULTIMETHOD_REVERSE:
+							// XXX: leaked abstraction
+							EXPECT_STACK_DEPTH(1);
+							array_reverse(MULTIMETHOD_METHODS(TOP));
+							goto main_loop;
 		default:
 							// TODO: exception
 							printf("ERROR: Unknown opcode %d\n", opcode);

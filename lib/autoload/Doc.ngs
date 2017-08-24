@@ -5,7 +5,7 @@ ns {
 
 	}
 
-	_exports.attrs(_doc[0].attrs())
+	_exports.attrs(_doc.Arr()[0].attrs())
 	global init, push, inspect, Arr
 
 	doc EXPERIMENTAL! Do not use!

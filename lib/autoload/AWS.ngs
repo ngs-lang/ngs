@@ -10,7 +10,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	}
 
-	_exports.attrs(_doc[0].attrs())
+	_exports.attrs(_doc.Arr()[0].attrs())
 
 	# TODO: alert or handle somehow the special case when anchor properties are changed,
 	#       this might be a programming error.

@@ -970,13 +970,12 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				OPCODE(*buf, OP_XCHG);
 
 				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 1); // One argument for the call of handler function(s)
-				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0); // Make array with zero elements
-				OPCODE(*buf, OP_MAKE_ARR);
+				OPCODE(*buf, OP_MAKE_MULTIMETHOD);
 				for(ptr=node->first_child->next_sibling; ptr; ptr=ptr->next_sibling) {
 					compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
-					OPCODE(*buf, OP_ARR_APPEND);
+					OPCODE(*buf, OP_MULTIMETHOD_APPEND);
 				}
-				OPCODE(*buf, OP_ARR_REVERSE);
+				OPCODE(*buf, OP_MULTIMETHOD_REVERSE);
 				OPCODE(*buf, OP_CALL_EXC);
 				POP_IF_DONT_NEED_RESULT(*buf);
 			} else {

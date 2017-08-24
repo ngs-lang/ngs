@@ -30,12 +30,8 @@ F bootstrap_try_main(c:Closure, argv:Arr, finish:Return) {
 }
 
 F bootstrap_invoke_main(default) {
-	main is not Arr returns default
-	not(main) returns default
-	if main.any(X is not Closure) {
-		return default
-	}
-	candidate_mains = main.filter(F(m) m.ip().resolve_instruction_pointer().file == bootstrap_main_file).reverse()
+	main is not MultiMethod returns default
+	candidate_mains = main.Arr().filter(F(m) m.ip().resolve_instruction_pointer().file == bootstrap_main_file).reverse()
 	not(candidate_mains) returns default
 	bootstrap_debug("Candidate main() functions: $candidate_mains")
 

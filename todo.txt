@@ -11,6 +11,10 @@ Note that this started as internal document so things here are unformed, not fin
 		* Replacement can be Fun/value
 	* To fix: "attributes" is used for two different concenpts: attrs() and the rest
 	* Look at Juju / conjure-up
+	* Rename plan
+		* Method -> MultiMethod ; Method implementation -> Method
+		* Closure -> UserMethod
+		* Check about AnyVal / AnyRef. These do _not_ correspond to BasicType and NormalType.
 	* Add %k{...} and %v{...} syntax and remove n()
 
 [roadmap]

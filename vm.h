@@ -169,6 +169,7 @@ typedef struct {
 	VALUE Fun;
 		VALUE Closure;
 		VALUE NativeMethod;
+		VALUE MultiMethod;
 	VALUE Any;
 		VALUE BasicTypeInstance;
 		VALUE NormalTypeInstance;
@@ -337,6 +338,9 @@ enum opcodes {
 	OP_PUSH_KWARGS_MARKER,
 	OP_MAKE_REDIR,
 	OP_SUPER,
+	OP_MAKE_MULTIMETHOD,
+	OP_MULTIMETHOD_APPEND,
+	OP_MULTIMETHOD_REVERSE,
 	NUMBER_OF_OPCODES,
 };
 

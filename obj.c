@@ -92,6 +92,13 @@ static void _dump(VALUE v, int level) {
 		goto exit;
 	}
 
+	if(IS_MULMETHOD(v)) {
+		printf("%*s* multimethod\n", level << 1, "");
+		printf("%*s* methods\n", (level+1) << 1, "");
+		_dump(MULTIMETHOD_METHODS(v), level+2);
+		goto exit;
+	}
+
 	if(IS_HASH(v)) {
 		printf("%*s* hash with total of %zu items in %zu buckets at %p\n", level << 1, "", OBJ_LEN(v), HASH_BUCKETS_N(v), OBJ_DATA_PTR(v));
 		buckets = OBJ_DATA_PTR(v);
@@ -232,6 +239,35 @@ VALUE make_array_with_values(size_t len, const VALUE *values) {
 	return ret;
 }
 
+VALUE _make_multimethod() {
+	VALUE ret;
+	MULTIMETHOD_OBJECT *multimethod;
+	multimethod = NGS_MALLOC(sizeof(*multimethod));
+	assert(multimethod);
+	SET_OBJ(ret, multimethod);
+	OBJ_TYPE_NUM(ret) = T_MULMETHOD;
+	return ret;
+}
+
+VALUE make_multimethod() {
+	VALUE ret = _make_multimethod();
+	MULTIMETHOD_METHODS(ret) = make_array(0);
+	return ret;
+}
+
+VALUE make_multimethod_with_value(const VALUE value) {
+	VALUE ret = _make_multimethod();
+	MULTIMETHOD_METHODS(ret) = make_array(1);
+	ARRAY_ITEMS(MULTIMETHOD_METHODS(ret))[0] = value;
+	return ret;
+}
+
+VALUE make_multimethod_from_array(const VALUE arr) {
+	VALUE ret = _make_multimethod();
+	MULTIMETHOD_METHODS(ret) = arr;
+	return ret;
+}
+
 VALUE make_hash(size_t start_buckets) {
 	VALUE ret;
 	HASH_OBJECT *hash;
@@ -264,14 +300,13 @@ VALUE make_normal_type(VALUE name) {
 	SET_OBJ(ret, t);
 	OBJ_TYPE_NUM(ret) = T_TYPE;
 
+	VALUE ctr = make_normal_type_constructor(ret);
+
 	NGS_TYPE_NAME(ret) = name;
 	NGS_TYPE_FIELDS(ret) = make_hash(8); // Hash: name->index
-	NGS_TYPE_CONSTRUCTORS(ret) = make_array(1);
+	NGS_TYPE_CONSTRUCTORS(ret) = make_multimethod_with_value(ctr);
 	NGS_TYPE_PARENTS(ret) = make_array(0);
 	OBJ_ATTRS(ret) = make_hash(2);
-
-	VALUE ctr = make_normal_type_constructor(ret);
-	ARRAY_ITEMS(NGS_TYPE_CONSTRUCTORS(ret))[0] = ctr;
 
 	return ret;
 }
@@ -624,6 +659,11 @@ void array_push(VALUE arr, VALUE v) {
 	arr_items[o->len++] = v;
 }
 
+void push_multimethod_method(VALUE multimethod, const VALUE method) {
+	assert(IS_MULMETHOD(multimethod));
+	array_push(MULTIMETHOD_METHODS(multimethod), method);
+}
+
 // TODO: shring allocated memory
 VALUE array_shift(VALUE arr) {
 	VALUE ret;
@@ -748,6 +788,7 @@ VALUE value_type(VM *vm, VALUE val) {
 };
 
 // TODO: T_ANY, maybe some other special cases
+// TODO: Fix for ut_child being internal type
 int type_is_type(VALUE ut_child, VALUE ut_parent) {
 	if(ut_child.ptr == ut_parent.ptr) { return 1; }
 	size_t len, i;
@@ -783,14 +824,7 @@ int obj_is_of_type(VM *vm, VALUE obj, VALUE t) {
 		OBJ_C_OBJ_IS_OF_TYPE(T_NORMTI, IS_NORMAL_TYPE_INSTANCE);
 		OBJ_C_OBJ_IS_OF_TYPE(T_BASICTI, IS_BASIC_TYPE_INSTANCE);
 		if(tid == T_FUN) {
-			if(IS_ARRAY(obj)) {
-				if(OBJ_LEN(obj)) {
-					return obj_is_of_type(vm, ARRAY_ITEMS(obj)[0], t);
-				} else {
-					return 0;
-				}
-			}
-			return IS_NATIVE_METHOD(obj) || IS_CLOSURE(obj) || IS_NGS_TYPE(obj);
+			return IS_MULMETHOD(obj) || IS_NATIVE_METHOD(obj) || IS_CLOSURE(obj) || IS_NGS_TYPE(obj);
 		}
 		OBJ_C_OBJ_IS_OF_TYPE(T_NORMT, IS_NORMAL_TYPE);
 		OBJ_C_OBJ_IS_OF_TYPE(T_BASICT, IS_BASIC_TYPE);
