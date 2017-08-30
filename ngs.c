@@ -44,7 +44,7 @@ char *find_bootstrap_file() {
 	home_dir = getenv("HOME");
 	if(home_dir) {
 		len = snprintf(NULL, 0, fmt, home_dir) + 1;
-		fname = NGS_MALLOC(len);
+		fname = NGS_MALLOC_ATOMIC(len);
 		snprintf(fname, len, fmt, home_dir);
 		// printf("HOME fname: %s\n", fname);
 		if(access(fname, F_OK) != -1) {

@@ -1853,8 +1853,9 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	}
 	assert(vm->globals_len < (MAX_GLOBALS-1));
 	var = NGS_MALLOC(sizeof(*var));
-	var->name = NGS_MALLOC(name_len);
+	var->name = NGS_MALLOC_ATOMIC(name_len+1);
 	memcpy(var->name, name, name_len);
+	var->name[name_len] = 0;
 	var->index = vm->globals_len++;
 	HASH_ADD_KEYPTR(hh, vm->globals_indexes, var->name, name_len, var);
 	GLOBALS[var->index] = MAKE_UNDEF;
@@ -3320,8 +3321,7 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 				if(vm->bytecode) {
 					vm->bytecode = NGS_REALLOC(vm->bytecode, vm->bytecode_len + len);
 				} else {
-					// XXX if a large number (1G) is given here, test.ngs runs successfully
-					vm->bytecode = NGS_MALLOC(len);
+					vm->bytecode = NGS_MALLOC_ATOMIC(len);
 				}
 				assert(vm->bytecode);
 				memcpy(vm->bytecode + vm->bytecode_len, data, len);
@@ -4395,7 +4395,7 @@ BYTECODE_HANDLE *ngs_create_bytecode() {
 	h = NGS_MALLOC(sizeof(*h));
 	assert(h);
 	len = strlen(BYTECODE_SIGNATURE) + sizeof(BYTECODE_ORDER_CHECK) + sizeof(BYTECODE_SECTIONS_COUNT);
-	h->data = NGS_MALLOC(len);
+	h->data = NGS_MALLOC_ATOMIC(len);
 	h->len = len;
 	p = h->data;
 

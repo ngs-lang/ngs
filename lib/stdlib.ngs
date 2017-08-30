@@ -627,10 +627,14 @@ F Type(t:Str, doc, ns, parents:Arr) {
 
 TEST type T1; type T2(T1); T2() is T1
 
-doc Match a type. Same as "something is t".
-doc %EX -   1 ~ Int  # true
-doc %EX - "a" ~ Int  # false
-F ~(something, t:Type) something is t
+doc Match anything.
+F ~(something, pred) {
+	if Pred(pred)(something) {
+		MatchY([something])
+	} else {
+		MatchN()
+	}
+}
 
 doc String representation of a type
 doc %RET - "<Type NAME>"
@@ -1333,7 +1337,7 @@ TEST [1,2,3].reverse() == [3,2,1]
 
 doc Calculate sum of the elements
 doc %EX - [1,2,3].sum()  # 6
-F sum(something) something.reduce(0, (+))
+F sum(something:Eachable1) something.reduce(0, (+))
 
 doc Prepend one element to the given array
 doc %RET - Modified arr

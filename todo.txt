@@ -16,6 +16,7 @@ Note that this started as internal document so things here are unformed, not fin
 		* Closure -> UserMethod
 		* Check about AnyVal / AnyRef. These do _not_ correspond to BasicType and NormalType.
 	* Add %k{...} and %v{...} syntax and remove n()
+	* filter(Iter), reject(Iter), map(Iter) - should return new Iter
 
 [roadmap]
 

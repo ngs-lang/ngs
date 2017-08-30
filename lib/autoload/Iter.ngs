@@ -108,8 +108,8 @@ TEST ConstIter(7).drop(10).take(2) == [7,7]
 F Iter(r:NumRange) RangeIter(r)
 
 F init(i:RangeIter, r:NumRange) {
-	r.start is not Int throws NotImplemented("start must be Int for now")
-	r.step is not Int throws NotImplemented("step must be Int for now")
+	r.start is not Int throws NotImplemented("start must be Int for now").set('value', r)
+	r.step is not Int throws NotImplemented("step must be Int for now").set('value', r)
 	i.val = r
 	i.elt = r.start + if r.include_start then 0 else r.step
 }

@@ -1228,7 +1228,7 @@ void compile_init_section(COMPILATION_CONTEXT *ctx, char **init_buf, size_t *idx
 	size_t i = 0;
 	DEBUG_COMPILER("%s", "entering compile_init_section()\n");
 	init_section_size = calculate_init_section_size(ctx);
-	buf = NGS_MALLOC(init_section_size);
+	buf = NGS_MALLOC_ATOMIC(init_section_size);
 	FOR_GLOBALS(
 		i++;
 	)
@@ -1267,7 +1267,7 @@ void compile_source_location_section(COMPILATION_CONTEXT *ctx, char **buf, size_
 // ast_node - the top level node
 char *compile(ast_node *node, char *source_file_name, size_t *len) {
 
-	char *buf = NGS_MALLOC(COMPILE_INITIAL_BUF_SIZE);
+	char *buf = NGS_MALLOC_ATOMIC(COMPILE_INITIAL_BUF_SIZE);
 	size_t main_allocated = COMPILE_INITIAL_BUF_SIZE;
 	size_t l;
 	COMPILATION_CONTEXT ctx;
@@ -1282,7 +1282,7 @@ char *compile(ast_node *node, char *source_file_name, size_t *len) {
 	ctx.source_file_name = source_file_name;
 	ctx.source_tracking_entries_count = 0;
 	ctx.source_tracking_entries_allocated = 1024;
-	ctx.source_tracking_entries = NGS_MALLOC(sizeof(source_tracking_entry) * ctx.source_tracking_entries_allocated);
+	ctx.source_tracking_entries = NGS_MALLOC_ATOMIC(sizeof(source_tracking_entry) * ctx.source_tracking_entries_allocated);
 	ctx.fill_in_break_addrs_ptr = 0;
 	ctx.fill_in_continue_addrs_ptr = 0;
 

@@ -542,10 +542,7 @@
 
 			global_types = globals().filterv(Type).filterk(is_public_name).rejectk(is_phased_out_type).sortk(lte).limit(limited)
 			ns_types = namespaces.types.flatten()
-			# echo(ns_types)
-			# BROKEN by +(Fun, Fun)
-			# all_types = global_types.values() + ns_types.type
-			all_types = global_types.values()
+			all_types = global_types.values() + ns_types.type
 
 			# Init with ( type -> [] ) pairs
 			types_direct_children = all_types.Hash({ [] })
@@ -560,9 +557,9 @@
 			})
 
 			global_types .= map(process_type)
-			types_hash = global_types.Hash('type')
+			types_hash = (global_types + ns_types).Hash('type')
 
-			for t in global_types.sort('name') {
+			for t in global_types + ns_types {
 				status("Augmenting type information: ${t.name}")
 				t.parents = t.type.parents.filter(X in types_hash).map(types_hash[X]).sort('name')
 				t.children = types_direct_children[t.type].map(types_hash[X])
