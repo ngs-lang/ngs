@@ -514,9 +514,9 @@ F Bool(hl:HashLike)          hl.attrs().HashLike.Bool()
 # TODO: mapk, mapv and friends
 # TOOD: Hash() - copy or hash attribute?
 
-F filter(hl:HashLike, cb:Fun) {
+F filter(hl:HashLike, predicate:Fun) {
 	ret = HashLike()
-	ret.attrs().HashLike = hl.attrs().HashLike.filter(cb)
+	ret.attrs().HashLike = hl.attrs().HashLike.filter(predicate)
 	ret
 }
 
@@ -3001,12 +3001,11 @@ F Arg(p:Path) p.path
 
 # === Commands and processes (WIP) ===============
 
-# TODO: better exceptions (use correct type, not string, maybe use errno)
 F dup2(oldfd:Int, newfd:Int) {
 	while true {
 		status = c_dup2(oldfd, newfd)
 		status != -1 returns newfd
-		c_errno() != C_EINTR throws "dup2() failed"
+		c_errno() != C_EINTR throws PipeCreateFail("Failed to c_dup2()").set('oldfd', oldfd).set('newfd', newfd)
 	}
 }
 
@@ -3262,7 +3261,11 @@ F fetch(parse_hints:Hash={}) read(0).parse({'source': 'stdin'} + parse_hints)
 
 # --- Redir ---
 
-F init(r:Redir, fd, marker:Str, datum) init(args())
+F init(r:Redir, fd, marker, datum) {
+	guard marker is Str or marker is Null
+	guard datum is Str or datum is Pipe or datum == true
+	init(args())
+}
 
 doc TODO
 F Str(r:Redir) "<Redirect ${r.fd} ${r.marker} ${r.datum}>"
@@ -3496,7 +3499,7 @@ F '$()'(c:Command) {
 
 	debug("process", "PID after fork: $pid")
 
-	pipes = c.redirects.filter({A.marker == 'PIPE'})
+	pipes = c.redirects.filter({A.datum is Pipe})
 	debug("process2", "PIPES FROM REDIRECTS $pipes REDIRECTS ${c.redirects} COMMND ${c.Hash()}")
 	child_fds =  pipes.datum.map(child_fd)
 	parent_fds = pipes.datum.map(parent_fd)
@@ -3522,14 +3525,15 @@ F '$()'(c:Command) {
 			F fd_or_dflt(fd:Int, dflt) fd
 			F fd_or_dflt(fd:Null, dflt) dflt
 
-			eswitch r.marker {
-				'<'  { flags = 'r'; target_fd = fd_or_dflt(r.fd, 0); }
-				'>'  { flags = 'w'; target_fd = fd_or_dflt(r.fd, 1); }
-				'>>' { flags = 'a'; target_fd = fd_or_dflt(r.fd, 1); }
-				'PIPE' {
-					target_fd = child_fd(r.datum)
+			target_fd = if r.datum is Pipe {
+					child_fd(r.datum)
+				} else {
+					eswitch r.marker {
+						'<'  { flags = 'r'; fd_or_dflt(r.fd, 0); }
+						'>'  { flags = 'w'; fd_or_dflt(r.fd, 1); }
+						'>>' { flags = 'a'; fd_or_dflt(r.fd, 1); }
+					}
 				}
-			}
 
 			# TODO: Maybe support File or some other datum types later?
 			if r.datum is Str {
@@ -3626,6 +3630,15 @@ F '$()'(cp:CommandsPipeline) {
 	cp.pipe_in = null
 	cp.pipe_out = null
 
+	for c in cp.commands {
+		for r in c.redirects {
+			if r.datum == true {
+				r.marker != '>' throws InvalidArgument("Redirection to 'true' for collecting output can only be done with '>' redirection syntax, not '${r.marker}'").set('cp', cp)
+				r.datum = CollectingPipeFromChildToParentProcess()
+			}
+		}
+	}
+
 	# Commands:    C0    C1    C2
 	# Pipes:    P0    P1    P2    P3
 	# $(| ...) - uses P0
@@ -3636,22 +3649,22 @@ F '$()'(cp:CommandsPipeline) {
 		if i == 0 {
 			debug("process2", "PIPE IN")
 			cp.pipe_in = PipeToChildProcess()
-			cp.commands[i].redirects.unshift(Redir(0, 'PIPE', cp.pipe_in))
+			cp.commands[i].redirects.unshift(Redir(0, null, cp.pipe_in))
 			continue
 		}
 		if i == cp.commands.len() {
 			debug("process2", "PIPE OUT")
 			cp.pipe_out = PipeFromChildToParentProcess()
-			cp.commands[i-1].redirects.unshift(Redir(1, 'PIPE', cp.pipe_out))
+			cp.commands[i-1].redirects.unshift(Redir(1, null, cp.pipe_out))
 			continue
 		}
 		p = Pipe()
-		cp.commands[i-1].redirects.unshift(Redir(1, 'PIPE', WritingPipeBetweenChildren(p)))
-		cp.commands[i].redirects.unshift(Redir(0, 'PIPE', ReadingPipeBetweenChildren(p)))
+		cp.commands[i-1].redirects.unshift(Redir(1, null, WritingPipeBetweenChildren(p)))
+		cp.commands[i].redirects.unshift(Redir(0, null, ReadingPipeBetweenChildren(p)))
 	}
 
 	if not(cp.options.get('top_level')) and cp.pipe_out is Null {
-		cp.commands[-1].redirects.unshift(Redir(1, 'PIPE', CollectingPipeFromChildToParentProcess()))
+		cp.commands[-1].redirects.unshift(Redir(1, null, CollectingPipeFromChildToParentProcess()))
 	}
 
 	cp.processes = cp.commands.map(('$()'))
@@ -4329,18 +4342,19 @@ F inspect(h:Hash) ["Hash of size ${h.len()}"] + h.map({"  [${SafeStr(A)}] = ${Sa
 doc Inspect Process
 doc %RET - Arr of Str
 F inspect(p:Process) {
+	# XXX: Are there any platforms with different convention?
+	outputs_names = {1: 'stdout', 2: 'stderr'}
 	collector {
-		c = collect
-		c("Process")
-		c("  command = ${p.command}")
-		c("  pid = ${p.pid}")
-		c("  exit_code = ${p.exit_code}")
-		c("  exit_signal = ${p.exit_signal}")
-		%[stdout stderr].each(F(attr) {
-			val = p.(attr)
-			val_lines = if val is Null [] else val.lines()
-			c("  $attr (${val_lines.len()} lines):")
-			("    " + val_lines) % c
+		collect("Process")
+		collect("  command = ${p.command}")
+		collect("  pid = ${p.pid}")
+		collect("  exit_code = ${p.exit_code}")
+		collect("  exit_signal = ${p.exit_signal}")
+		p.outputs.each(F(k, val) {
+			val_lines = val.Box().map(lines).get([])
+			name = ', ' +? outputs_names.get(k, '')
+			collect("  output on fd ${k}${name} (${val_lines.len()} lines):")
+			("    " + val_lines).each(collect)
 		})
 	}
 }
