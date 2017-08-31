@@ -656,16 +656,19 @@ doc %EX - }
 doc %RET - "<TYPE_NAME attr1=val1 attr2=val2 ...>"
 F Str(i:NormalTypeInstance) {
 	h = Hash(i)
-	truncated = len(h) > 10
-	if truncated {
+	attrs_dots = if len(h) > 10 {
 		h .= limit(10)
+		' ...'
+	} else {
+		''
 	}
 	# TODO limit key and value lengths
-	h .= Strs()
-	attrs = ' ' +? h.join(' ')
-
-	"<${i.typeof().name}${attrs}${if truncated ' ...' else ''}>"
+	attrs = ' ' +? h.Strs().join(' ')
+	"<${i.typeof().name}${attrs}${attrs_dots}>"
 }
+
+TEST type T; t=T(); Str(t) == '<T>'
+TEST type T; t=T(); t.a=1; t.b=2; Str(t) == '<T a=1 b=2>'
 
 doc Set an attribute in an instance if it's not already set
 doc %EX - mysomething.dflt(k, []).push(elt)
