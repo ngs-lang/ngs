@@ -266,10 +266,25 @@ Note that this started as internal document so things here are unformed, not fin
 		See beginning of CLI implementation in previous NGS implementation:
 		https://github.com/ilyash/ngs/blob/0ed8455efe851e3c5a275290a71c38c4e718f15c/cli.ngs
 
+		+ Information for contributors
+			+ Contributors should research and understand first
+				+ https://en.wikipedia.org/wiki/Termcap
+				+ https://en.wikipedia.org/wiki/Curses_(programming_library)
+				+ TERM environment variable
+				+ libreadline - https://cnswww.cns.cwru.edu/php/chet/readline/rltop.html
+				+ TTY / PTY - https://en.wikipedia.org/wiki/Pseudoterminal
+				+ TTY Signals - http://www.linusakesson.net/programming/tty/
+			+ CLI entry point is at lib/cli.ngs . It's called from lib/bootstrap.ngs
+				+ Current CLI readline implementation is not meant to stay, readline will probably not be a good fit for NGS
+				+ Current CLI readline implementation is based on unfinished FFI implementation, which is not stable (API can change)
+			+ All UI functoinality that is implemented should be able to gracefully degrade and work in TTY.
+
 		* Milestone LayoutManager
-			+ Also useful for Table
+			* Dynamic width support for Table and probably other objects on the screen
 
 		* Milestone "screen layout"
+
+			* Commnds prompt and input area at the bottom
 
 			* Processes have their own area on the screen
 				+ Truncated stdout/stderr
@@ -277,8 +292,16 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "semantic output"
 
+			* Needs software design: interactive objects and operations on them
+				+ Interactive data types
+				+ Protocol for specifying operations
+				+ Should gracefully degrade when go to file or piped to another program instead of interactive UI
 			* Allow navigation on the screen, choosing operations from a menu for the objects
 			* History of operations in context menu
+			* A way for external script to:
+				* Detect that it's running under NGS
+				* Return interactive objects (needs software design)
+				* For NGS scripts which return Table this should be automatic
 
 		* "borrow" status() behaviour from apt/apt-pkg/install-progress.cc
 			switch to override and do:

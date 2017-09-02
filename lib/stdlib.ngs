@@ -220,6 +220,13 @@ F filter(something:Eachable1, predicate) {
 		}
 }
 
+doc EXPERIMENTAL! Do not use!
+doc TODO: similar for all(), any(), none(), reject()
+F filter(something:Eachable1, attr:Str, predicate) {
+	p = Pred(predicate)
+	something.filter({ p(A.(attr)) })
+}
+
 doc Partition elements in something according to the predicate into two arrays.
 doc First array contains all elements for which predicate(elt) is true and
 doc the second array contains all elements for which predicate(elt) is false.
