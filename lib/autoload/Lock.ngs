@@ -39,4 +39,6 @@
 
 
 	TEST Lock().acquire(F() 1) == 1
+
+	F Str(cpm:c_pthread_mutex_t) "<c_pthread_mutex_t>"
 }

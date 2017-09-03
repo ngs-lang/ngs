@@ -19,6 +19,15 @@ Note that this started as internal document so things here are unformed, not fin
 	* filter(Iter), reject(Iter), map(Iter) - should return new Iter
 	* Iter[PredRange] - should return new Iter
 	* Namespace type, probably subtype of Hash
+	* Iter(cb:Fun) - endless iterator with values from calling cb
+		+ Consider passing the Iter instance
+	* If migrating lines() to Iter
+		+ remember to implement ==(Iter, Arr), as used in tests:
+			fqdn = 'example.com'
+			fqdns = `mybin list`.lines()
+			assert(fqdns == [fqdn])
+	* Fix: %[x y SPACE_HERE] syntax
+	* Fix: a.mymod::memethod() syntax
 
 [roadmap]
 

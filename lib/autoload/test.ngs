@@ -22,6 +22,12 @@ F test(name:Str, f:Fun) {
 	}
 }
 
+F test(results:TestsResults, group:Str, name:Str, f:Fun, critical:Bool=true) {
+	if not(results.is_blocked_group(group)) {
+		results.report(group, name, f.Result(), critical)
+	}
+}
+
 F log_test_ok(s:Str) {
 	echo("  $s")
 

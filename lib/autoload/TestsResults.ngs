@@ -1,0 +1,31 @@
+{
+	type TestsResults
+}
+
+F init(tr:TestsResults) {
+	tr.lock = Lock()
+	tr.groups = {}
+	tr.blocked_groups = {}
+}
+
+# TODO: maybe throw exception when adding to blocked group
+F report(tr:TestsResults, group_name:Str, test_name:Str, result:Result, critical:Bool) {
+	tr.lock.acquire({
+		g = tr.groups.dflt(group_name, {})
+		g[test_name] = if test_name in g {
+			Result({ throw InvalidArgument("Test result for ${group_name}/${test_name} reported more than once") })
+		} else {
+			result
+		}
+		if critical and result is Failure {
+			tr.blocked_groups[group_name] = true
+		}
+	})
+	tr
+}
+
+F is_blocked_group(tr:TestsResults, group_name:Str) {
+	tr.lock.acquire({
+		group_name in tr.blocked_groups
+	})
+}
