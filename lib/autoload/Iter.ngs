@@ -2,6 +2,8 @@
 	doc Iterator. Parent type for all specific iterator types.
 	type Iter
 
+	type FilterIter(Iter)
+
 	doc Represents attempt to fetch next value of an iterator when it's exhausted
 	doc %EX - { Iter([]).next() }
 	doc %EX - # ... Exception of type NoNext ...
@@ -87,6 +89,39 @@ F each(i:Iter, cb:Fun) {
 }
 
 TEST s=0; NumRange(1,10,true,true).Iter().each({ s+= A }); s==55
+
+# ---------- FilterIter ----------
+# WIP
+
+doc EXPERIMENTAL! Do not use!
+F init(i:FilterIter, upstream_iter:Iter, predicate, invert_predicate:Bool=false) {
+	i.val = upstream_iter
+	i.orig_predicate = predicate
+	i.predicate = Pred(predicate)
+	i.invert_predicate = invert_predicate
+	if invert_predicate {
+		i.predicate = not + i.predicate
+	}
+}
+
+doc EXPERIMENTAL! Do not use!
+F next(i:FilterIter) {
+	while true {
+		i.elt = i.val.next()
+		i::predicate(i.elt) returns i.elt
+	}
+}
+
+F Bool(i:FilterIter) {
+	throw NotImplemented("Bool(FilterIter)")
+
+}
+
+doc EXPERIMENTAL! Do not use!
+F filter(i:Iter, predicate:Fun) FilterIter(i, predicate)
+doc EXPERIMENTAL! Do not use!
+F reject(i:Iter, predicate:Fun) FilterIter(i, predicate, invert_predicate=true)
+
 
 # ---------- ConstIter ----------
 doc Constant iterator constructor.

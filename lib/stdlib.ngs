@@ -160,7 +160,7 @@ F set(obj, attr:Str, val) {
 doc Convert anything to a predicate.
 doc anything - The value to compare to
 doc %RET - A function that compares the only argument to the given value
-F Pred(anything) F eq_pred(x) x == anything
+F Pred(anything:BasicTypeInstance) F eq_pred(x) x == anything
 
 doc EXPERIMENTAL
 doc Inspired by underscorejs' "matcher"
@@ -344,7 +344,7 @@ F reject(something:Eachable, predicate) {
 
 
 doc EXPERIMENTAL! Do not use!
-F take_while(something:Eachable1, predicate)
+F take(something:Eachable1, predicate)
 	collector {
 		p = Pred(predicate)
 		r = Return()
@@ -356,11 +356,11 @@ F take_while(something:Eachable1, predicate)
 		})
 	}
 
-TEST [1,2,3,1,2].take_while(X<3) == [1,2]
+TEST [1,2,3,1,2].take(X<3) == [1,2]
 
 # Would look much better with an iterator of "something"
 doc EXPERIMENTAL! Do not use!
-F drop_while(something:Eachable1, predicate)
+F drop(something:Eachable1, predicate)
 	collector {
 		p = Pred(predicate)
 		found = false
@@ -373,7 +373,7 @@ F drop_while(something:Eachable1, predicate)
 		})
 	}
 
-TEST [1,2,3,1,2].drop_while(X<3) == [3,1,2]
+TEST [1,2,3,1,2].drop(X<3) == [3,1,2]
 
 doc Replace all occurrences of src with dst
 doc something - Instance of any type that has each(something, callback) implemented
