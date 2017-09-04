@@ -2,8 +2,6 @@
 	doc Iterator. Parent type for all specific iterator types.
 	type Iter
 
-	type FilterIter(Iter)
-
 	doc Represents attempt to fetch next value of an iterator when it's exhausted
 	doc %EX - { Iter([]).next() }
 	doc %EX - # ... Exception of type NoNext ...
@@ -56,6 +54,16 @@
 	doc %EX - #   10
 	doc %EX - #   11
 	type RangeIter([Iter, Eachable1])
+
+	doc EXPERIMENTAL! Do not use!
+	type MapIter([Iter, Eachable1])
+
+	doc EXPERIMENTAL! Do not use!
+	type FilterIter([Iter, Eachable1])
+
+	doc EXPERIMENTAL! Do not use!
+	type FunIter([Iter, Eachable1])
+
 }
 
 doc Private method of Iter.ngs, will be hidden in future.
@@ -90,6 +98,23 @@ F each(i:Iter, cb:Fun) {
 
 TEST s=0; NumRange(1,10,true,true).Iter().each({ s+= A }); s==55
 
+# ---------- MapIter ----------
+# WIP
+
+doc EXPERIMENTAL! Do not use!
+F init(i:MapIter, upstream_iter:Iter, mapper:Fun) {
+	i.val = upstream_iter
+	i.mapper = mapper
+}
+
+doc EXPERIMENTAL! Do not use!
+F next(i:MapIter) i::mapper(i.val.next())
+
+F Bool(i:MapIter) Bool(i.val)
+
+doc EXPERIMENTAL! Do not use!
+F map(i:Iter, mapper:Fun) MapIter(i, mapper)
+
 # ---------- FilterIter ----------
 # WIP
 
@@ -102,19 +127,49 @@ F init(i:FilterIter, upstream_iter:Iter, predicate, invert_predicate:Bool=false)
 	if invert_predicate {
 		i.predicate = not + i.predicate
 	}
+	# elt & elt_loaded could be Box but using faster approach
+	i.elt = null
+	i.elt_loaded = false
+	i.finished = false
 }
 
-doc EXPERIMENTAL! Do not use!
-F next(i:FilterIter) {
-	while true {
-		i.elt = i.val.next()
-		i::predicate(i.elt) returns i.elt
+ns {
+	global next, peek, Bool
+
+	F _load(i:FilterIter) {
+		while true {
+			not(Bool(i.val)) breaks
+			i.elt = i.val.next()
+			if i::predicate(i.elt) {
+				i.elt_loaded = true
+				return
+			}
+		}
+		i.finished = true
 	}
-}
 
-F Bool(i:FilterIter) {
-	throw NotImplemented("Bool(FilterIter)")
+	doc EXPERIMENTAL! Do not use!
+	F next(i:FilterIter) {
+		i.throw_if_no_next()
+		assert(i.elt_loaded)
+		i.elt_loaded = false
+		return i.elt
+	}
 
+	doc EXPERIMENTAL! Do not use!
+	F peek(i:FilterIter) {
+		i.throw_if_no_next()
+		assert(i.elt_loaded)
+		return i.elt
+	}
+
+	doc EXPERIMENTAL! Do not use!
+	F Bool(i:FilterIter) {
+		i.finished returns false
+		i.elt_loaded returns true
+		i._load()
+		not(i.finished)
+	}
 }
 
 doc EXPERIMENTAL! Do not use!
@@ -122,7 +177,46 @@ F filter(i:Iter, predicate:Fun) FilterIter(i, predicate)
 doc EXPERIMENTAL! Do not use!
 F reject(i:Iter, predicate:Fun) FilterIter(i, predicate, invert_predicate=true)
 
+TEST Iter(1...10).map(X*2).reject(X>7).map(X*2).Arr() == [4, 8, 12]
+TEST Iter(1...10).map(X*2).filter(X>15).map(X*2).Arr() == [32, 36, 40]
 
+# ---------- FunIter ----------
+
+F Iter(f:Fun) FunIter(f)
+
+F init(i:FunIter, f:Fun) {
+	i.val = f
+	i.elt_loaded = false
+}
+
+ns {
+	global next, peek, Bool
+
+	F _load(i:FunIter) {
+		i.elt = i::val()
+		i.elt_loaded = true
+	}
+
+	doc EXPERIMENTAL! Do not use!
+	F next(i:FunIter) {
+		if not(i.elt_loaded) {
+			i._load()
+		}
+		i.elt_loaded = false
+		return i.elt
+	}
+
+	doc EXPERIMENTAL! Do not use!
+	F peek(i:FunIter) {
+		if not(i.elt_loaded) {
+			i._load()
+		}
+		return i.elt
+	}
+
+	doc EXPERIMENTAL! Do not use!
+	F Bool(i:FunIter) true
+}
 # ---------- ConstIter ----------
 doc Constant iterator constructor.
 doc val - the constant value to use in next() and peek()

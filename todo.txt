@@ -26,8 +26,15 @@ Note that this started as internal document so things here are unformed, not fin
 			fqdn = 'example.com'
 			fqdns = `mybin list`.lines()
 			assert(fqdns == [fqdn])
+		+ make sure join() works
 	* Fix: %[x y SPACE_HERE] syntax
 	* Fix: a.mymod::memethod() syntax
+	* zip(Iter, Iter)
+	* reduce(Iter, ...)
+	* limit(Iter, n)
+	* rand(Iter)
+	* Iter(PredRange)
+	* each_idx_val(Iter, ...)
 
 [roadmap]
 
