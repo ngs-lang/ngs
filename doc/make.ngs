@@ -568,13 +568,14 @@
 
 				t.methods = collector
 					methods.each(F(name, impls) {
-						impls.filter(method_impl_has_arg_of_type(X, t.type)).map() do F(mi) {
-							i = method_impl_id(name, mi)
+						impls_ids = impls.filter(method_impl_has_arg_of_type(X, t.type)).map(method_impl_id(name, X)).uniq()
+						impls_ids.each(F(i) {
 							method_impls_by_id.Box(i).map(F(mis) {
 								mis[1..null].each(collect)
 							})
-						}
+						})
 					})
+				status("Type ${t.name}: ${len(t.constructors)} constructors, ${len(t.methods)} methods")
 			}
 
 			status("Preparing types HTML")

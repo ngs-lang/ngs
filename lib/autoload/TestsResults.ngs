@@ -12,7 +12,7 @@ F init(tr:TestsResults) {
 F report(tr:TestsResults, group_name:Str, test_name:Str, result:Result, critical:Bool) {
 	tr.lock.acquire({
 		g = tr.groups.dflt(group_name, {})
-		g[test_name] = if test_name in g {
+		g[test_name] = if test_name in g and g[test_name] is Result {
 			Result({ throw InvalidArgument("Test result for ${group_name}/${test_name} reported more than once") })
 		} else {
 			result
@@ -24,8 +24,38 @@ F report(tr:TestsResults, group_name:Str, test_name:Str, result:Result, critical
 	tr
 }
 
+F status(tr:TestsResults, group_name:Str, test_name:Str, s:Str) {
+	tr.lock.acquire({
+		g = tr.groups.dflt(group_name, {})
+		g[test_name] = s
+	})
+}
+
 F is_blocked_group(tr:TestsResults, group_name:Str) {
 	tr.lock.acquire({
 		group_name in tr.blocked_groups
+	})
+}
+
+F inspect(tr:TestsResults) {
+	tr.lock.acquire({
+		collector
+			tr.groups.each(F(group_name, tests) {
+				v = tests.values()
+				ok = v.count(Success)
+				failed = v.count(Failure)
+				statuses = tests.filterv(Str).map("$X [$Y]")
+				collect("${group_name}: ok=$ok failed=$failed total=${ok+failed} ${'running: ' +? statuses.join(', ')}")
+			})
+	})
+}
+
+F each_group_test(tr:TestsResults, cb:Fun) {
+	tr.lock.acquire({
+		tr.groups.each(F(group_name, tests) {
+			tests.each(F(test_name, result) {
+				cb(group_name, test_name, result)
+			})
+		})
 	})
 }

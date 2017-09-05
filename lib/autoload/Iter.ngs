@@ -193,24 +193,21 @@ ns {
 	global next, peek, Bool
 
 	F _load(i:FunIter) {
+		i.elt_loaded returns
 		i.elt = i::val()
 		i.elt_loaded = true
 	}
 
 	doc EXPERIMENTAL! Do not use!
 	F next(i:FunIter) {
-		if not(i.elt_loaded) {
-			i._load()
-		}
+		i._load()
 		i.elt_loaded = false
 		return i.elt
 	}
 
 	doc EXPERIMENTAL! Do not use!
 	F peek(i:FunIter) {
-		if not(i.elt_loaded) {
-			i._load()
-		}
+		i._load()
 		return i.elt
 	}
 
@@ -338,3 +335,8 @@ F peek(i:HashIter) { throw_if_no_next(i); k = i._iter.peek(); [k, i.val[k]] }
 
 TEST i = Iter({"a": 1, "b": 2}); [i.next(), i.peek()] == [["a", 1], ["b", 2]]
 TEST try {}.Iter().next() catch(nn:NoNext) true
+
+# F Iter(*args) {
+# 	echo("ITER ${args.map(typeof)}")
+# 	super(*args)
+# }
