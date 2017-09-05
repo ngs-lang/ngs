@@ -1,4 +1,5 @@
 {
+	Table
 	type TestsResults
 }
 
@@ -58,4 +59,33 @@ F each_group_test(tr:TestsResults, cb:Fun) {
 			})
 		})
 	})
+}
+
+F Table(name:Str, tr:TestsResults) {
+	total_ok = 0
+	total_failed = 0
+	t = tr.lock.acquire({
+		collector {
+			tr.groups.each(F(group_name, tests) {
+				v = tests.values()
+				collect({
+					'group': group_name
+					'ok': ok = v.count(Success)
+					'failed': failed = v.count(Failure)
+					'total': ok + failed
+					'statuses': tests.filterv(Str).map("$X [$Y]") or null
+				})
+				total_ok += ok
+				total_failed = failed
+			})
+		}
+	})
+	t.push({
+		'group': 'TOTAL'
+		'ok': total_ok
+		'failed': total_failed
+		'total': total_ok + total_failed
+		'statuses': null
+	})
+	Table(name, t)
 }

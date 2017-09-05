@@ -37,6 +37,7 @@ Note that this started as internal document so things here are unformed, not fin
 	* each_idx_val(Iter, ...)
 	* See what can be fixed regarding functions that accept Arr[T] for specific types
 		+ Such as join(threads:Arr) in lib/autoload/Thread.ngs
+	* min(a,b), max(a,b)
 
 [roadmap]
 

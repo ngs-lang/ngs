@@ -38,12 +38,26 @@ F assert_base(actual, expected, comparison, display_comparison, title, ok_prefix
 TEST test; try assert_base(10, 100, (==), "equals", "test comparison") catch(e:TestFail) true
 TEST test; assert_base(10, 10, (==), "equals", "test comparison") == 10
 
-F assert_eq(actual, expected, title) {
-	assert_base(actual, expected, (==), "to be equal to", title)
+F assert_eq(actual, expected, title=null) {
+	assert_base(actual, expected, (==), "to be equal to", title or "Data equality")
 }
 
 TEST test; try assert_eq(10, 100, "test comparison") catch(e:TestFail) true
 TEST test; assert_eq(10, 10, "test comparison") == 10
+
+F assert_in(actual, expected, title=null) {
+	assert_base(actual, expected, in, "to be in", title or "Must be in")
+}
+
+TEST test; try assert_in(10, [1,2], "test in") catch(e:TestFail) true
+TEST test; assert_in(10, [10, 2], "test in") == 10
+
+F assert_match(actual, expected, title=null) {
+	assert_base(actual, expected, (~), "to be in", title or "Data match")
+}
+
+TEST test; try assert_match("abc", /^b/, "test match") catch(e:TestFail) true
+TEST test; assert_match("abc", /^a/, "test match") == "abc"
 
 F assert_hash(actual, title=null) {
 	assert_base(actual, "a Hash", X is Hash, "to be", title or "Data type (mis)match")
