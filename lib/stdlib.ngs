@@ -3975,13 +3975,19 @@ F config(k:Str, v) {
 	type SubSeq
 		doc Prefix subsequence of a sequence
 		type Pfx(SubSeq)
-			doc Prefix that might or might not be present for ~ matching to succeed
+			doc Prefix that might or might not be present for (-) to succeed
 			type MaybePfx(Pfx)
 			doc Prefix that must be present for ~ matching to succeed
 			type MustPfx(Pfx)
+		doc Infix subsequence of a sequence
+		type Ifx(SubSeq)
+			doc Infix that might or might not be present for (-) to succeed
+			type MaybeIfx(Ifx)
+			doc Infix that must be present for ~ matching to succeed
+			type MustIfx(Ifx)
 		doc Suffix subsequence of a sequence
 		type Sfx(SubSeq)
-			doc Suffix that might or might not be present for ~ matching to succeed
+			doc Suffix that might or might not be present for (-) to succeed
 			type MaybeSfx(Sfx)
 			doc Suffix that must be present for ~ matching to succeed
 			type MustSfx(Sfx)
@@ -4009,6 +4015,10 @@ F init(s:SubSeq, val) s.val = val
 doc Convenience method for creating MustPfx
 doc %RET - MustPfx
 F Pfx(val) MustPfx(val)
+
+doc Convenience method for creating MustIfx
+doc %RET - MustIfx
+F Ifx(val) MustIfx(val)
 
 doc Convenience method for creating MustSfx
 doc %RET - MustSfx
@@ -4060,6 +4070,20 @@ F ~(s:Str, pfx:Pfx) {
 	ret = MatchY([pfx.val])
 	ret.before = ''
 	ret.after = s[pfx.val.len()..null]
+	ret
+}
+
+F ~(s:Str, i:Ifx) s ~ i.val
+
+doc Check whether s ends with pfx.
+doc %EX - "abcde" ~ Sfx("de")  # <MatchY matches=['de'] before=abc after=>
+doc %EX - "abcde" ~ Pfx("xy")  # <MatchN >
+doc %RET - Match
+F ~(s:Str, sfx:Sfx) {
+	not(s.ends_with(sfx.val)) returns MatchN()
+	ret = MatchY([sfx.val])
+	ret.before = s[0..(s.len() - sfx.val.len())]
+	ret.after = ''
 	ret
 }
 

@@ -38,6 +38,9 @@ Note that this started as internal document so things here are unformed, not fin
 	* See what can be fixed regarding functions that accept Arr[T] for specific types
 		+ Such as join(threads:Arr) in lib/autoload/Thread.ngs
 	* min(a,b), max(a,b)
+	* assert_proc(cp:CommandsPipeline, exit_code, stdout, stderr)
+	* Fix syntax: "ifx" is now "if x"
+	* -(Str, Ifx)
 
 [roadmap]
 

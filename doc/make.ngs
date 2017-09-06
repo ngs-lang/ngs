@@ -48,11 +48,11 @@
 		F list_methods()
 			collector/{}
 				globals().filterk(is_public_name).sortk(lte).each(F(name, value) {
-					cond {
-						(value is Arr) and value.all(Fun) {
-							collect(name, value)
+					match value {
+						MultiMethod {
+							collect(name, value.Arr())
 						}
-						value is Type {
+						Type {
 							# NormalTypeConstructor is built-in. We are not documenting it here.
 							collect(name, value.constructors.Arr().reject(NormalTypeConstructor))
 						}
