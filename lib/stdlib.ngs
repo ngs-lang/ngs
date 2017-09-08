@@ -162,7 +162,8 @@ doc anything - The value to compare to
 doc %RET - A function that compares the only argument to the given value
 F Pred(anything:BasicTypeInstance) F eq_pred(x) x == anything
 
-doc EXPERIMENTAL
+doc Convert Hash to a predicate. The predicate asserts that
+doc instance attributes named after hash keys return true for predictes made of corresponding hash values.
 doc Inspired by underscorejs' "matcher"
 F Pred(h:Hash) {
 	preds = h.mapv(Pred)
