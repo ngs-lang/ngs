@@ -45,6 +45,9 @@
 		}
 		F method_impl_id(name:Str, mi:Fun) (name + '-' + mi.params().type.name.join('-'))
 
+		constructor_mis = {}
+		F register_constructors_mis(mis:Arr) mis.each({ constructor_mis[A] = true })
+
 		F list_methods()
 			collector/{}
 				globals().filterk(is_public_name).sortk(lte).each(F(name, value) {
@@ -54,7 +57,7 @@
 						}
 						Type {
 							# NormalTypeConstructor is built-in. We are not documenting it here.
-							collect(name, value.constructors.Arr().reject(NormalTypeConstructor))
+							collect(name, value.constructors.Arr().reject(NormalTypeConstructor).register_constructors_mis())
 						}
 					}
 				})
@@ -84,6 +87,7 @@
 			ret = {
 				'name': name
 				'mi': mi
+				'is_constructor': mi in constructor_mis
 				'description': doc_attr(mi, '')
 				'auto': doc_attr(mi, '%AUTO').each(F(lines) assert(lines.len() == 1, '%AUTO must be used at most once per method'))
 				'params': mi.params().map(process_param(X, mi_doc))
@@ -564,18 +568,16 @@
 				t.parents = t.type.parents.filter(X in types_hash).map(types_hash[X]).sort('name')
 				t.children = types_direct_children[t.type].map(types_hash[X])
 				# maybe find it in methods variable instead of re-doing process_method_impl()
-				t.constructors = t.type.constructors.Arr().reject(NormalTypeConstructor).map(process_method_impl(t.name, X))
+				t.constructors = t.type.constructors.Arr().reject(NormalTypeConstructor).register_constructors_mis().map(process_method_impl(t.name, X))
 
 				t.methods = collector
 					methods.each(F(name, impls) {
-						impls_ids = impls.filter(method_impl_has_arg_of_type(X, t.type)).map(method_impl_id(name, X)).uniq()
-						impls_ids.each(F(i) {
+						impls.filter(method_impl_has_arg_of_type(X, t.type)).map(method_impl_id(name, X)).each(F(i) {
 							method_impls_by_id.Box(i).map(F(mis) {
-								mis[1..null].each(collect)
+								mis[1..null].reject({'is_constructor': true}).each(collect)
 							})
 						})
 					})
-				status("Type ${t.name}: ${len(t.constructors)} constructors, ${len(t.methods)} methods")
 			}
 
 			status("Preparing types HTML")
@@ -803,7 +805,9 @@
 
 		$(cp main.css "$doc_root/")
 		methods = list_methods().limit(limited).map(process_method)
-		do_methods()
+		if not(ENV.get('SKIP_METHODS')) {
+			do_methods()
+		}
 		namespaces = do_namespaces()
 		do_types(namespaces)
 
