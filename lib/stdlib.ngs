@@ -3658,25 +3658,32 @@ F '$()'(cp:CommandsPipeline) {
 	for(i;cp.pipes.len()) {
 		cp.pipes[i] is Null continues
 		debug("process2", "cp.pipes[$i]")
-		if i == 0 {
-			debug("process2", "PIPE IN")
-			cp.pipe_in = PipeToChildProcess()
-			cp.commands[i].redirects.unshift(Redir(0, null, cp.pipe_in))
-			continue
+		econd {
+			i == 0 {
+				debug("process2", "PIPE IN")
+				cp.pipe_in = PipeToChildProcess()
+				cp.commands[i].redirects.unshift(Redir(0, null, cp.pipe_in))
+			}
+			i == cp.commands.len() {
+				debug("process2", "PIPE OUT")
+				cp.pipe_out = PipeFromChildToParentProcess()
+				cp.commands[i-1].redirects.unshift(Redir(1, null, cp.pipe_out))
+			}
+			true {
+				p = Pipe()
+				cp.commands[i-1].redirects.unshift(Redir(1, null, WritingPipeBetweenChildren(p)))
+				cp.commands[i].redirects.unshift(Redir(0, null, ReadingPipeBetweenChildren(p)))
+			}
 		}
-		if i == cp.commands.len() {
-			debug("process2", "PIPE OUT")
-			cp.pipe_out = PipeFromChildToParentProcess()
-			cp.commands[i-1].redirects.unshift(Redir(1, null, cp.pipe_out))
-			continue
-		}
-		p = Pipe()
-		cp.commands[i-1].redirects.unshift(Redir(1, null, WritingPipeBetweenChildren(p)))
-		cp.commands[i].redirects.unshift(Redir(0, null, ReadingPipeBetweenChildren(p)))
 	}
 
 	if not(cp.options.get('top_level')) and cp.pipe_out is Null {
-		cp.commands[-1].redirects.unshift(Redir(1, null, CollectingPipeFromChildToParentProcess()))
+		do_redir_1 = cp.commands[-1].redirects.none(F(r) {
+			r.datum == false and r.marker == '>' and r.fd in [null, 1]
+		})
+		if do_redir_1 {
+			cp.commands[-1].redirects.unshift(Redir(1, null, CollectingPipeFromChildToParentProcess()))
+		}
 	}
 
 	cp.processes = cp.commands.map(('$()'))
