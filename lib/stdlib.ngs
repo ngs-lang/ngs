@@ -594,7 +594,8 @@ doc TODO: Defaut values
 F StrParams(f:Fun) {
 	guard f is Closure or f is NativeMethod
 	f.params().map(F(p) {
-		"${p.name}:${p.type.name}"
+		d = if 'dflt' in p then '=...' else ''
+		"${p.name}:${p.type.name}${d}"
 	}).join(', ') \ "($X)"
 }
 
@@ -3742,7 +3743,11 @@ F ````(cp:CommandsPipeline) {
 	processes = ('$()')(cp).processes
 	assert(processes)
 	p = processes[-1]
-	p.stdout.parse({'process': p, 'pipeline': cp})
+	try {
+		p.stdout.parse({'process': p, 'pipeline': cp})
+	} catch(e) {
+		throw ProcessFail("Failed to parse process output").set('process', p).set('cause', e)
+	}
 }
 
 doc Send signal to a process. Uses KILL(2). Throws KillFail on error.
@@ -4327,6 +4332,12 @@ F code(n:Null) "null"
 
 # === exit_hook - Print uncaught exception =======
 
+F digest(a:Arr, chunk_size:Int, marker:Str='(...)') {
+	l = a.len()
+	l < chunk_size*2 returns a
+	a[0..chunk_size] + [marker] + a[(l-chunk_size)..l]
+}
+
 doc Do nothing. Catch-all for exception_specific_message().
 doc %RET - EmptyBox
 F exception_specific_message(e:Exception) EmptyBox()
@@ -4389,7 +4400,7 @@ F inspect(p:Process) {
 			val_lines = val.Box().map(lines).get([])
 			name = ', ' +? outputs_names.get(k, '')
 			collect("  output on fd ${k}${name} (${val_lines.len()} lines):")
-			("    " + val_lines).each(collect)
+			("    " + val_lines.digest(5)).each(collect)
 		})
 	}
 }
