@@ -3139,6 +3139,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// errno -ls | awk '{print "E("$1");"}' | xargs -n10
 	// (errno -ls | awk '{print $1}'; awk '/^#define RTLD_/ {print $2}' /usr/include/x86_64-linux-gnu/bits/dlfcn.h ) > c_constants.txt
 	E(EPERM); E(ENOENT); E(ESRCH); E(EINTR);
+	E(EINVAL); E(ENOTTY);
 	/*
 	E(EIO); E(ENXIO); E(E2BIG); E(ENOEXEC); E(EBADF); E(ECHILD);
 	E(EAGAIN); E(ENOMEM); E(EACCES); E(EFAULT); E(ENOTBLK); E(EBUSY); E(EEXIST); E(EXDEV); E(ENODEV); E(ENOTDIR);

@@ -29,7 +29,7 @@ F test(results:TestsResults, group:Str, name:Str, f:Fun, critical:Bool=true) {
 	}
 }
 
-F assert_base(actual, expected, comparison, display_comparison, title, ok_prefix='') {
+F assert_base(actual, expected, comparison, display_comparison, title:Str, ok_prefix='') {
 	ok = comparison(actual, expected)
 	not(ok) throws TestFail("$title: actual value is $actual while expected $display_comparison $expected")
 	actual
@@ -38,28 +38,28 @@ F assert_base(actual, expected, comparison, display_comparison, title, ok_prefix
 TEST test; try assert_base(10, 100, (==), "equals", "test comparison") catch(e:TestFail) true
 TEST test; assert_base(10, 10, (==), "equals", "test comparison") == 10
 
-F assert_eq(actual, expected, title=null) {
+F assert_eq(actual, expected, title:Str=null) {
 	assert_base(actual, expected, (==), "to be equal to", title or "Data equality")
 }
 
 TEST test; try assert_eq(10, 100, "test comparison") catch(e:TestFail) true
 TEST test; assert_eq(10, 10, "test comparison") == 10
 
-F assert_in(actual, expected, title=null) {
+F assert_in(actual, expected, title:Str=null) {
 	assert_base(actual, expected, in, "to be in", title or "Must be in")
 }
 
 TEST test; try assert_in(10, [1,2], "test in") catch(e:TestFail) true
 TEST test; assert_in(10, [10, 2], "test in") == 10
 
-F assert_match(actual, expected, title=null) {
+F assert_match(actual, expected, title:Str=null) {
 	assert_base(actual, expected, (~), "to be in", title or "Data match")
 }
 
 TEST test; try assert_match("abc", /^b/, "test match") catch(e:TestFail) true
 TEST test; assert_match("abc", /^a/, "test match") == "abc"
 
-F assert_hash(actual, title=null) {
+F assert_hash(actual, title:Str=null) {
 	assert_base(actual, "a Hash", X is Hash, "to be", title or "Data type (mis)match")
 	actual
 }
@@ -67,7 +67,7 @@ F assert_hash(actual, title=null) {
 TEST test; try assert_hash(1) catch(e:TestFail) true
 TEST test; assert_hash({}) == {}
 
-F assert_array(actual, title=null) {
+F assert_array(actual, title:Str=null) {
 	assert_base(actual, "an Arr", X is Arr, "to be", title or "Data type (mis)match")
 	actual
 }
@@ -75,7 +75,7 @@ F assert_array(actual, title=null) {
 TEST test; try assert_array(1) catch(e:TestFail) true
 TEST test; assert_array([]) == []
 
-F assert_string(actual, title=null) {
+F assert_string(actual, title:Str=null) {
 	assert_base(actual, "a Str", X is Str, "to be", title or "Data type (mis)match")
 	actual
 }
@@ -83,7 +83,7 @@ F assert_string(actual, title=null) {
 TEST test; try assert_string(1) catch(e:TestFail) true
 TEST test; assert_string("") == ""
 
-F assert_hash_keys(actual, expected:Arr, title=null) {
+F assert_hash_keys(actual, expected:Arr, title:Str=null) {
 	assert_hash(actual, title)
 	expected.each(F(k) {
 		assert_base(actual, "key '$k' exists", {has(actual, k)}, "to have", title or "Must be a hash with keys")
@@ -95,7 +95,7 @@ TEST test; try assert_hash_keys(1, []) catch(e:TestFail) true
 TEST test; try assert_hash_keys({}, ['kk']) catch(e:TestFail) true
 TEST test; assert_hash_keys({'kk': 7}, ['kk']) == {'kk': 7}
 
-F assert_hash_keys_values(actual, expected:Hash, title=null) {
+F assert_hash_keys_values(actual, expected:Hash, title:Str=null) {
 	assert_hash(actual, title)
 	expected.each(F(k, v) {
 		assert_base(actual, "key '$k' with value '$v'", {has(actual, k) and actual[k] == v}, "to have", title or "Must be a hash with keys and values")
@@ -109,7 +109,7 @@ TEST test; try assert_hash_keys_values({'kk': 7}, {'kk': 8}) catch(e:TestFail) t
 TEST test; try assert_hash_keys_values({'kk': 7}, {'ll': 7}) catch(e:TestFail) true
 TEST test; assert_hash_keys_values({'kk': 7, 'll': 8}, {'kk': 7}) == {'kk': 7, 'll': 8}
 
-F assert_min_len(actual, expected, title=null) {
+F assert_min_len(actual, expected, title:Str=null) {
 	assert_base(actual, expected, { len(A) >= expected }, "to have at least", title or "Data items count", ok_prefix="at least ")
 	actual
 }
@@ -117,7 +117,7 @@ F assert_min_len(actual, expected, title=null) {
 TEST test; try assert_min_len("abc", 10) catch(e:TestFail) true
 TEST test; assert_min_len("abc", 3) == "abc"
 
-F assert_exit_code(cp:CommandsPipeline, expected:Int, title=null) {
+F assert_exit_code(cp:CommandsPipeline, expected:Int, title:Str=null) {
 	cp.wait()
 	assert_base(cp.processes[-1].exit_code, expected, (==), "to be equal to", title or "Exit code of process '${cp.processes[-1].command.argv.join(' ')}'")
 	cp
@@ -127,7 +127,7 @@ TEST test; try assert_exit_code($(true), 10) catch(e:TestFail) true
 TEST test; p = $(true); assert_exit_code(p, 0) == p
 TEST test; p = $(false); assert_exit_code(p, 1) == p
 
-F assert_output_has(cp:CommandsPipeline, expected:RegExp, title=null) {
+F assert_output_has(cp:CommandsPipeline, expected:RegExp, title:Str=null) {
 	assert_base(Str(cp), expected, (~), "to match", title or "Output of process '${cp.processes[-1].command.argv.join(' ')}'")
 	cp
 }
@@ -135,7 +135,7 @@ F assert_output_has(cp:CommandsPipeline, expected:RegExp, title=null) {
 TEST test; try assert_output_has($(echo abc), /xyz/) catch(e:TestFail) true
 TEST test; p = $(echo abc); assert_output_has(p, /c$/) == p
 
-F assert_output_has(cp:CommandsPipeline, expected:Str, title=null) {
+F assert_output_has(cp:CommandsPipeline, expected:Str, title:Str=null) {
 	assert_base(Str(cp), expected, has, "to contain", title or "Output of process '${cp.processes[-1].command.argv.join(' ')}'")
 	cp
 }
@@ -143,14 +143,14 @@ F assert_output_has(cp:CommandsPipeline, expected:Str, title=null) {
 TEST test; try assert_output_has($(echo abc), "xyz") catch(e:TestFail) true
 TEST test; p = $(echo abc); assert_output_has(p, "bc") == p
 
-F assert_has(actual, expected, title=null) {
+F assert_has(actual, expected, title:Str=null) {
 	assert_base(actual, expected, has, "to contain", title or "Data subset")
 }
 
 TEST test; try assert_has("abc", "xyz") catch(e:TestFail) true
 TEST test; assert_has([1,2,3], 3) == [1,2,3]
 
-F assert_resolvable(h:Str, title="Resolve host", times=45, sleep=2, check=Bool) {
+F assert_resolvable(h:Str, title:Str="Resolve host", times=45, sleep=2, check=Bool) {
 	retry(times=times, sleep=sleep, title=title)
 		body              => { `dig "+short" $h`.lines() }
 		success_predicate => check
@@ -158,7 +158,7 @@ F assert_resolvable(h:Str, title="Resolve host", times=45, sleep=2, check=Bool) 
 		fail_cb           => { throw TestFail("$title: no resolve for $h").set('host', h) }
 }
 
-F assert_path_exists(p, title="Path exists") {
+F assert_path_exists(p, title:Str="Path exists") {
 	guard (p is Str) or (p is Path)
 	path = p
 	if path is not Path {
