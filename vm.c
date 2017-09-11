@@ -1829,6 +1829,7 @@ MAKE_STAT_METHOD(fstat, GET_INT)
 
 METHOD_RESULT native_gc_enable  METHOD_PARAMS { (void) argv; GC_enable();  METHOD_RETURN(MAKE_NULL); }
 METHOD_RESULT native_gc_disable METHOD_PARAMS { (void) argv; GC_disable(); METHOD_RETURN(MAKE_NULL); }
+METHOD_RESULT native_gc_get_parallel METHOD_PARAMS { (void) argv; METHOD_RETURN(MAKE_INT(GC_get_parallel())); }
 
 METHOD_RESULT native_Arr_mm METHOD_PARAMS {
 	METHOD_RETURN(make_array_with_values(
@@ -3265,6 +3266,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	VALUE gc = make_hash(4);
 	set_hash_key(gc, make_string("enable"), make_func(vm, 0, "enable", &native_gc_enable, 0));
 	set_hash_key(gc, make_string("disable"), make_func(vm, 0, "disable", &native_gc_disable, 0));
+	set_hash_key(gc, make_string("get_parallel"), make_func(vm, 0, "get_parallel", &native_gc_get_parallel, 0));
 	set_global(vm, "GC", gc);
 }
 
