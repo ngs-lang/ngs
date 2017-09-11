@@ -83,10 +83,10 @@ F assert_string(actual, title:Str=null) {
 TEST test; try assert_string(1) catch(e:TestFail) true
 TEST test; assert_string("") == ""
 
-F assert_hash_keys(actual, expected:Arr, title:Str=null) {
+F assert_hash_keys(actual, expected:Arr, title:Str="Must be a hash with keys") {
 	assert_hash(actual, title)
 	expected.each(F(k) {
-		assert_base(actual, "key '$k' exists", {has(actual, k)}, "to have", title or "Must be a hash with keys")
+		assert_base(actual, "key '$k' exists", {has(actual, k)}, "to have", title)
 	})
 	actual
 }
@@ -95,10 +95,10 @@ TEST test; try assert_hash_keys(1, []) catch(e:TestFail) true
 TEST test; try assert_hash_keys({}, ['kk']) catch(e:TestFail) true
 TEST test; assert_hash_keys({'kk': 7}, ['kk']) == {'kk': 7}
 
-F assert_hash_keys_values(actual, expected:Hash, title:Str=null) {
+F assert_hash_keys_values(actual, expected:Hash, title:Str="Must be a hash with keys and values") {
 	assert_hash(actual, title)
 	expected.each(F(k, v) {
-		assert_base(actual, "key '$k' with value '$v'", {has(actual, k) and actual[k] == v}, "to have", title or "Must be a hash with keys and values")
+		assert_base(actual, "key '$k' with value '$v'", {has(actual, k) and actual[k] == v}, "to have", title)
 	})
 	actual
 }

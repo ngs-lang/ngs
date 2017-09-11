@@ -3600,7 +3600,7 @@ F '$()'(c:Command) {
 
 	# TODO: pid < 0 => throw exception with errno
 
-	debug("process2", "XXX process ${process.Hash()}")
+	debug("process2", "DOLLAR() returns process ${process.Hash()}")
 	process
 }
 
