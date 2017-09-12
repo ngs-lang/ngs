@@ -30,7 +30,7 @@ syn keyword ngsType FileIOFail StatFail
 syn keyword ngsType Hook
 syn keyword ngsType IndexNotFound AttrNotFound InvalidParameter NoNext
 syn keyword ngsType InvalidArgument DivisionByZero
-syn keyword ngsType Lock Pthread PthreadAttr Thread
+syn keyword ngsType Lock ReentrantLock Pthread PthreadAttr Thread
 syn keyword ngsType LockFail
 syn keyword ngsType RegExp RegExpCompileFail
 syn keyword ngsType Redir

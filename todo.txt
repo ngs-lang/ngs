@@ -281,6 +281,9 @@ Note that this started as internal document so things here are unformed, not fin
 			* Make ENV and current directory thread-local but allow access to the global ones
 			* Thread - Make pthread_attr_t accessible - get/set attributes
 			* Thread local variables
+			* pthread_mutexattr_gettype()
+			* pthread_mutexattr_destroy()
+			* pthread_attr_destroy()
 
 
 	* Phase 2 - the shell [not started]

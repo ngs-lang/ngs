@@ -1267,6 +1267,21 @@ METHOD_RESULT native_c_pthreadmutext METHOD_PARAMS {
 	METHOD_RETURN(make_pthread_mutex());
 }
 
+METHOD_RESULT native_c_pthreadmutext_pma METHOD_PARAMS {
+	(void) argv;
+	METHOD_RETURN(make_pthread_mutex());
+}
+
+METHOD_RESULT native_c_pthreadmutexattrt METHOD_PARAMS {
+	(void) argv;
+	METHOD_RETURN(make_pthread_mutexattr());
+}
+
+// https://linux.die.net/man/3/pthread_mutexattr_settype
+METHOD_RESULT native_c_pthreadmutexattrsettype_pma_int METHOD_PARAMS {
+	METHOD_RETURN(MAKE_INT(pthread_mutexattr_settype(&GET_PTHREADMUTEXATTR(argv[0]), GET_INT(argv[1]))));
+}
+
 // TODO: For gcc-5 and on consider: #define ATTR ((pthread_attr_t * restrict)&GET_PTHREADATTR(argv[0]))
 #define ATTR ((pthread_attr_t *)&GET_PTHREADATTR(argv[0]))
 // TODO: check range - i might be larger than supported MAKE_INT() argument
@@ -1345,11 +1360,26 @@ METHOD_RESULT native_c_pthreadjoin METHOD_PARAMS {
 	METHOD_RETURN(ret);
 }
 
-METHOD_RESULT native_c_pthreadattrinit METHOD_PARAMS  { METHOD_RETURN(MAKE_INT(pthread_attr_init(&GET_PTHREADATTR(argv[0])))); }
-// TODO: pthread_mutexattr_init attributes
-METHOD_RESULT native_c_pthreadmutexinit METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_mutex_init(&GET_PTHREADMUTEX(argv[0]), NULL))); }
+METHOD_RESULT native_c_pthreadattrinit METHOD_PARAMS  {
+	METHOD_RETURN(MAKE_INT(pthread_attr_init(&GET_PTHREADATTR(argv[0]))));
+}
+
+METHOD_RESULT native_c_pthreadmutexattrinit METHOD_PARAMS  {
+	METHOD_RETURN(MAKE_INT(pthread_mutexattr_init(&GET_PTHREADMUTEXATTR(argv[0]))));
+}
+
+METHOD_RESULT native_c_pthreadmutexinit METHOD_PARAMS {
+	METHOD_RETURN(MAKE_INT(pthread_mutex_init(&GET_PTHREADMUTEX(argv[0]), NULL)));
+}
+
+METHOD_RESULT native_c_pthreadmutexinit_pma METHOD_PARAMS {
+	METHOD_RETURN(MAKE_INT(pthread_mutex_init(&GET_PTHREADMUTEX(argv[0]), &GET_PTHREADMUTEXATTR(argv[1]))));
+}
+
 METHOD_RESULT native_c_pthreadmutexlock METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_mutex_lock(&GET_PTHREADMUTEX(argv[0])))); }
+
 METHOD_RESULT native_c_pthreadmutexunlock METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_mutex_unlock(&GET_PTHREADMUTEX(argv[0])))); }
+
 METHOD_RESULT native_c_pthreadself METHOD_PARAMS {
 	VALUE pthread = make_pthread();
 	(void) argv;
@@ -2168,6 +2198,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MK_BUILTIN_TYPE(c_pthread_mutex_t, T_PTHREADMUTEX);
 	vm->type_by_t_obj_type_id[T_PTHREADMUTEX >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_pthread_mutex_t;
 
+	MK_BUILTIN_TYPE(c_pthread_mutexattr_t, T_PTHREADMUTEXATTR);
+	vm->type_by_t_obj_type_id[T_PTHREADMUTEXATTR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_pthread_mutexattr_t;
+
 	MK_BUILTIN_TYPE_DOC(c_ffi_type, T_FFI_TYPE, "Unfinished feature. Don't use!");
 	vm->type_by_t_obj_type_id[T_FFI_TYPE >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_ffi_type;
 
@@ -2564,12 +2597,16 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	register_global_func(vm, 0, "c_pthread_attr_init",    &native_c_pthreadattrinit,    1, "attr",   vm->c_pthread_attr_t);
+	register_global_func(vm, 0, "c_pthread_mutexattr_init",   &native_c_pthreadattrinit,    1, "attr",   vm->c_pthread_mutexattr_t);
+	register_global_func(vm, 0, "c_pthread_mutex_init",   &native_c_pthreadmutexinit_pma,   2, "mutex",  vm->c_pthread_mutex_t, "attr", vm->c_pthread_mutexattr_t);
 	register_global_func(vm, 0, "c_pthread_mutex_init",   &native_c_pthreadmutexinit,   1, "mutex",  vm->c_pthread_mutex_t);
 	register_global_func(vm, 0, "c_pthread_mutex_lock",   &native_c_pthreadmutexlock,   1, "mutex",  vm->c_pthread_mutex_t);
 	register_global_func(vm, 0, "c_pthread_mutex_unlock", &native_c_pthreadmutexunlock, 1, "mutex",  vm->c_pthread_mutex_t);
 	register_global_func(vm, 0, "c_pthread_self",         &native_c_pthreadself,        0);
-	register_global_func(vm, 0, "c_pthread_attr_t",       &native_c_pthreadattrt,         0);
-	register_global_func(vm, 0, "c_pthread_mutex_t",      &native_c_pthreadmutext,        0);
+	register_global_func(vm, 0, "c_pthread_attr_t",       &native_c_pthreadattrt,       0);
+	register_global_func(vm, 0, "c_pthread_mutex_t",      &native_c_pthreadmutext,      0);
+	register_global_func(vm, 0, "c_pthread_mutexattr_t",  &native_c_pthreadmutexattrt,  0);
+	register_global_func(vm, 0, "c_pthread_mutexattr_settype",  &native_c_pthreadmutexattrsettype_pma_int,  2, "mutex", vm->c_pthread_mutexattr_t, "type", vm->Int);
 	register_global_func(vm, 0, "id",                     &native_id_pthread,           1, "thread", vm->c_pthread_t);
 	register_global_func(vm, 0, ".",                      &native_attr_pthreadattr,     2, "pa", vm->c_pthread_attr_t,    "attr", vm->Str);
 
@@ -3176,6 +3213,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	E(S_ISUID); E(S_ISGID); E(S_ISVTX); E(S_IRWXU); E(S_IRUSR); E(S_IWUSR); E(S_IXUSR); E(S_IRWXG); E(S_IRGRP); E(S_IWGRP);
 	E(S_IXGRP); E(S_IRWXO); E(S_IROTH); E(S_IWOTH); E(S_IXOTH);
+
+
+	// pthread
+	E(PTHREAD_MUTEX_RECURSIVE);
 
 
 	// awk '/^#define PCRE/ && $3 {print "E("$2");"}' /usr/include/pcre.h | grep -v 'PCRE_UCHAR\|PCRE_SPTR' | sort | xargs -n5

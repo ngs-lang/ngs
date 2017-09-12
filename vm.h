@@ -188,6 +188,7 @@ typedef struct {
 	VALUE c_pthread_t;
 	VALUE c_pthread_attr_t;
 	VALUE c_pthread_mutex_t;
+	VALUE c_pthread_mutexattr_t;
 	// TODO: VALUE c_pthread_mutex_tAttr;
 
 	VALUE c_ffi_type;

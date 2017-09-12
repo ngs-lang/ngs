@@ -1084,6 +1084,15 @@ VALUE make_pthread_mutex() {
 	return v;
 }
 
+VALUE make_pthread_mutexattr() {
+	VALUE v;
+	PTHREADMUTEXATTR_OBJECT *pma;
+	pma = NGS_MALLOC(sizeof(*pma));
+	pma->base.type.num = T_PTHREADMUTEXATTR;
+	SET_OBJ(v, pma);
+	return v;
+}
+
 VALUE make_ffi_type(ffi_type *t) {
 	VALUE v;
 	FFI_TYPE_OBJECT *tmp;
