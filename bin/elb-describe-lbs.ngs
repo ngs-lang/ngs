@@ -3,7 +3,6 @@
 {
 	# TODO: Other fields
 	# TODO: Tags
-	# TODO: Fix filters, AWS CLI does not have --filters for ELBs
 
 	config('table_ELBs', %[LoadBalancerName DNSName ListenerDescriptions AvailabilityZones Instances])
 	# CanonicalHostedZoneName CanonicalHostedZoneNameID SecurityGroups SourceSecurityGroup Subnets Policies BackendServerDescriptions HealthCheck Scheme VPCId
