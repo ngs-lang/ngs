@@ -79,6 +79,7 @@
 		}
 
 		method_impls_by_id = {}
+		processed_methods = {}
 
 		pfx = Pfx("$NGS_DIR/")
 		F process_method_impl(name:Str, mi:Fun) {
@@ -106,6 +107,7 @@
 				'ext_links': doc_attr(mi, '%EXTLINK').map(to_lines)
 				'status': doc_attr(mi, '%STATUS').map(to_lines)
 			}
+			processed_methods[mi] = ret
 			method_impls_by_id.dflt(method_impl_id(name, mi), [name]).push(ret)
 			ret
 
@@ -381,7 +383,9 @@
 			methods_index_html_doc = methods.methods_to_index_html_doc()
 			$(mkdir -p ${doc_root / 'methods'})
 			status("Writing methods (overview) page")
+			# status("P1")
 			write(doc_root / 'methods/index.html', Doc::HtmlRoot(methods_index_html_doc))
+			# die("X")
 
 			for m in methods {
 				status("Making page for method ${m.name}")
@@ -550,6 +554,7 @@
 
 			# Init with ( type -> [] ) pairs
 			types_direct_children = all_types.Hash({ [] })
+			types_methods = all_types.Hash({ [] })
 
 			all_types.each(F(t) {
 				t.parents.each(F(p) {
@@ -563,21 +568,22 @@
 			global_types .= map(process_type)
 			types_hash = (global_types + ns_types).Hash('type')
 
+			status("Gathering types' methods")
+			methods.each(F(name, impls) {
+				impls.each(F(mi) {
+					mi.params().reject(X.get('splat')).type.uniq().each(F(t) {
+						types_methods[t].push(mi)
+					})
+				})
+			})
+
 			for t in global_types + ns_types {
 				status("Augmenting type information: ${t.name}")
 				t.parents = t.type.parents.filter(X in types_hash).map(types_hash[X]).sort('name')
 				t.children = types_direct_children[t.type].map(types_hash[X])
 				# maybe find it in methods variable instead of re-doing process_method_impl()
 				t.constructors = t.type.constructors.Arr().reject(NormalTypeConstructor).register_constructors_mis().map(process_method_impl(t.name, X))
-
-				t.methods = collector
-					methods.each(F(name, impls) {
-						impls.filter(method_impl_has_arg_of_type(X, t.type)).map(method_impl_id(name, X)).each(F(i) {
-							method_impls_by_id.Box(i).map(F(mis) {
-								mis[1..null].reject({'is_constructor': true}).each(collect)
-							})
-						})
-					})
+				t.methods = types_methods[t.type].map(processed_methods[X]).reject({'is_constructor': true})
 			}
 
 			status("Preparing types HTML")
@@ -586,10 +592,18 @@
 			status("Writing types (overview) page")
 			write(doc_root / 'types/index.html', Doc::HtmlRoot(types_index_html_doc))
 
-			for t in global_types {
+			if not(ENV.get('SKIP_GLOBAL_TYPES')) {
+				for t in global_types {
+					status("Making page for type ${t.name}")
+					type_page_doc = type_to_type_page_doc(t)
+					write(doc_root / 'types' / t.name.safe_file_name() + '.html', Doc::HtmlRoot(type_page_doc))
+				}
+			}
+
+			for t in ns_types {
 				status("Making page for type ${t.name}")
-				type_page_doc = type_to_type_page_doc(t)
-				write(doc_root / 'types' / t.name.safe_file_name() + '.html', Doc::HtmlRoot(type_page_doc))
+
+				# type_page_doc = type_to_type_page_doc(t)
 
 			}
 		}

@@ -7,6 +7,9 @@
 #include <sys/poll.h>
 #include <time.h>
 
+// GETTIMEOFDAY(2)
+#include <sys/time.h>
+
 #include <ffi.h>
 
 // ..., FMEMOPEN(3)
@@ -910,6 +913,16 @@ METHOD_RESULT native_globals EXT_METHOD_PARAMS {
 }
 
 METHOD_RESULT native_c_time METHOD_PARAMS { (void) argv; METHOD_RETURN(MAKE_INT((long int)time(NULL))); }
+
+METHOD_RESULT native_c_gettimeofday METHOD_PARAMS {
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	VALUE ret;
+	ret = make_array(2);
+	ARRAY_ITEMS(ret)[0] = MAKE_INT(tv.tv_sec);
+	ARRAY_ITEMS(ret)[1] = MAKE_INT(tv.tv_usec);
+	METHOD_RETURN(ret);
+}
 
 #define ELT(value) *p = MAKE_INT(value); p++;
 METHOD_RESULT native_c_gmtime EXT_METHOD_PARAMS {
@@ -3031,6 +3044,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 		"globals().filterk(/^map/)  # {map=[...], ..., map_true=[...], ...}",
 		NULL
 	);
+
+	register_global_func(vm, 0, "c_gettimeofday",     &native_c_gettimeofday,         0);
+	_doc(vm, "", "Wraps GETTIMEOFDAY(2).");
+	_doc(vm, "%RET", "Arr[Int] - [tv_sec, tv_usec]");
 
 	// TODO: check for errors, probably wrap in stdlib.
 	register_global_func(vm, 0, "c_time",     &native_c_time,         0);

@@ -33,6 +33,7 @@ Note that this started as internal document so things here are unformed, not fin
 	* reduce(Iter, ...)
 	* limit(Iter, n)
 	* rand(Iter)
+	* in(x, Iter)
 	* Iter(PredRange)
 	* each_idx_val(Iter, ...)
 	* See what can be fixed regarding functions that accept Arr[T] for specific types
@@ -41,6 +42,7 @@ Note that this started as internal document so things here are unformed, not fin
 	* assert_proc(cp:CommandsPipeline, exit_code, stdout, stderr)
 	* Fix syntax: "ifx" is now "if x"
 	* -(Str, Ifx)
+	* Comparison and link to https://github.com/RexOps/Rex
 
 [roadmap]
 

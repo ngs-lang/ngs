@@ -108,6 +108,13 @@ ns {
 
 	F Html(g:Group) g.map_children(Html).join('')
 
+	s = Stats()
+	F Html(x) {
+		s.push(x.typeof())
+		super(x)
+	}
+	exit_hook.push({echo(s)})
+
 	F inspect(n:Node, levels=2) {
 		collector {
 			c = collect
