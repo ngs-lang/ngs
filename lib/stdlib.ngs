@@ -810,8 +810,10 @@ AUTOLOAD = ns {
 	global global_not_found_handler
 	_lock = ReentrantLock()
 
-	# Sorted by: file, global
-	GLOBAL_NAME_TO_AUTOLOAD_FILE = %{
+	# Sorted by: file, global variable name
+	# Not exposing _global_name_to_autoload_file as use cases are not clear yet.
+	# Also, it's probably better to expose an API and not the data.
+	_global_name_to_autoload_file = %{
 		InMemoryCache       Cache
 		OnDiskCache         Cache
 
@@ -838,7 +840,6 @@ AUTOLOAD = ns {
 
 	doc Called when reading undefined global.
 	doc Implements autoloading.
-	doc Uses AUTOLOAD::GLOBAL_NAME_TO_AUTOLOAD_FILE for file to load for the global
 	doc Searches in $NGS_DIR/autoload/GLOBAL_NAME.ngs
 	doc WARNING: May have security implications when looking up a name from untrusted source.
 	doc %EX - test("My web server runs") do { .... }  # $NGS_DIR/autoload/test.ngs is automatically loaded.
@@ -846,8 +847,8 @@ AUTOLOAD = ns {
 		_lock.acquire() do {
 			idx = resolve_global_variable(name)
 			is_global_variable_defined(idx) returns
-			if name in GLOBAL_NAME_TO_AUTOLOAD_FILE {
-				require("${NGS_DIR}/autoload/${GLOBAL_NAME_TO_AUTOLOAD_FILE[name]}.ngs")
+			if name in _global_name_to_autoload_file {
+				require("${NGS_DIR}/autoload/${_global_name_to_autoload_file[name]}.ngs")
 				return
 			}
 			val = require("${NGS_DIR}/autoload/${name}.ngs")
