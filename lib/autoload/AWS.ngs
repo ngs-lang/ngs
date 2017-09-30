@@ -965,8 +965,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 	}
 
-	F delete(elb:Elb) {
-		elb.run('delete ELB', %(aws elb delete-load-balancer --load-balancer-name ${elb.anchor.name}))
+	F delete(r:ElbRes) {
+		r.run('Delete ELB', %(aws elb delete-load-balancer --load-balancer-name ${r.id()}))
 	}
 
 	# --------------------------------------------------
