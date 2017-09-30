@@ -110,7 +110,7 @@ F require(fname:Str) {
 		bootstrap_debug("require(): done requiring ${fname}")
 		ret
 	} catch(e) {
-		throw RequreFail(e)
+		throw RequireFail(e)
 	}
 }
 
