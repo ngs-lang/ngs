@@ -18,7 +18,7 @@ syn keyword ngsKeyword A B C and break breaks catch collector collect cond conti
 syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
 " bootstrap types
-syn keyword ngsType NotImplemented ReadFail RequreFail MainFail
+syn keyword ngsType NotImplemented ReadFail RequireFail MainFail
 " other types
 syn keyword ngsType Any ArgvMatcher ArgvMatcherDecorator Arr ArrIter ArrLike BasicType Bool Box CLib Closure CollectingPipeFromChildToParentProcess Command CommandsPipe CommandsPipeline ConstIter Counter CSym DelimStr Eachable Eachable1 Eachable2 EmptyBox ExecutableNotFound FFI FullBox Fun Hash HashIter HashLike Int Iter KillFail KV NormalType NormalTypeInstance NoData Null Num Path Pipe PipeCreateFail PipeFromChildProcess PipeFromChildToParentProcess PipeFromParentToChildProcess PipeToChildProcess Pred Process ProcessFail Range RangeIter Real ReadingPipeBetweenChildren Seq Stats Str Table TableMeta TableMetaNotIfCol TtyCheckFail Type WritingPipeBetweenChildren
 syn keyword ngsType Range NumRange PredRange

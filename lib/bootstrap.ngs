@@ -19,7 +19,7 @@ TEST Exception(Exception()).cause is Exception
 {
 	type NotImplemented; NotImplemented.inherit(Exception);
 	type ReadFail; ReadFail.inherit(Exception);
-	type RequreFail; RequreFail.inherit(Exception);
+	type RequireFail; RequireFail.inherit(Exception);
 	type MainFail; MainFail.inherit(Exception);
 }
 
