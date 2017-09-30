@@ -55,6 +55,16 @@
 		rd
 	}
 
+	F filter(rd:ResDef, cb:Fun) {
+		if rd.resources is Null {
+			rd.find()
+		}
+		t = rd.typeof()
+		ret = t(rd.anchor)
+		ret.resources = rd.resources.filter(F(r) cb(r.props))
+		ret
+	}
+
 	Iter # autoload Iter type
 	F Iter(rd:ResDef) {
 		if rd.resources is Null {
@@ -110,7 +120,9 @@
 	}
 
 	F delete(rd:ResDef) {
-		rd.find()
+		if rd.resources is Null {
+			rd.find()
+		}
 		rd.resources.each(delete)
 	}
 
