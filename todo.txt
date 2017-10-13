@@ -27,15 +27,11 @@ Note that this started as internal document so things here are unformed, not fin
 			fqdns = `mybin list`.lines()
 			assert(fqdns == [fqdn])
 		+ make sure join() works
-	* Fix: %[x y SPACE_HERE] syntax
 	* Fix: a.mymod::memethod() syntax
 	* zip(Iter, Iter)
-	* reduce(Iter, ...)
 	* limit(Iter, n)
-	* rand(Iter)
 	* in(x, Iter)
 	* Iter(PredRange)
-	* each_idx_val(Iter, ...)
 	* See what can be fixed regarding functions that accept Arr[T] for specific types
 		+ Such as join(threads:Arr) in lib/autoload/Thread.ngs
 	* min(a,b), max(a,b)
@@ -43,6 +39,9 @@ Note that this started as internal document so things here are unformed, not fin
 	* Fix syntax: "ifx" is now "if x"
 	* -(Str, Ifx)
 	* Comparison and link to https://github.com/RexOps/Rex
+	* ec2hostsfile.ngs - fix the tags filter
+	* Example: AWS::Elb().reject(X.Instances).delete()
+	* Consider first() to throw exception, somewhat like the_one()
 
 [roadmap]
 
@@ -137,6 +136,8 @@ Note that this started as internal document so things here are unformed, not fin
 			* Internals
 
 		* Milestone "correct programming"
+
+			* Adding a field to a type is not thread safe because of possible fields hash (field name -> field number) update
 
 			* Fix $(separate$item issue)
 

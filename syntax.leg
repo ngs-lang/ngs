@@ -1061,7 +1061,7 @@ imm-array-literal =
 				MAKE_NODE(ret, ARR_LIT_NODE);
 				$$ = ret;
 		}
-		| "%[" ws:imm-array-words "]" {
+		| "%[" ws:imm-array-words space? "]" {
 				MAKE_NODE(ret, ARR_LIT_NODE);
 				ret->first_child = ws->first_child->next_sibling->first_child;
 				$$ = ret;
@@ -1069,7 +1069,7 @@ imm-array-literal =
 		}
 
 imm-array-words = acc:command-words-node (
-		inline_space?
+		space?
 		(
 			array-command-word {
 				append_ast_node_child(acc->first_child->next_sibling, $$);

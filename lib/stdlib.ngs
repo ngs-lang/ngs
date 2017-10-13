@@ -1044,12 +1044,20 @@ F collector(n:Int, body:Fun) {
 	n
 }
 
-doc EXPERIMENTAL! Do not use!
-F collector(s:Str, body:Fun) {
-	ret = []
-	body(ret.push(X))
-	s + ret.join('')
+ns {
+	global collector
+	# XXX
+	join_strings = join.Arr()[0]
+
+	doc EXPERIMENTAL! Do not use!
+	F collector(s:Str, body:Fun) {
+		ret = [s]
+		body(ret.push(X))
+		ret.join_strings('')
+	}
 }
+
+TEST (collector/"a" collect("b")) == "ab"
 
 doc Compare to null
 doc %RET - false
@@ -1267,8 +1275,18 @@ F each(arr:Arr, cb:Fun) {
 
 # Tested by flatten() tests
 
-# TODO: Support Eachable1 ?
-# TODO: map_idx_val, each_idx_val for other types
+doc Iterates over the elements of an Eachable1, passing each in turn to cb along with index and args: cb(INDEX, ITEM)
+doc %RET - e
+doc %EX - "abc".each_idx_val(F(idx, val) echo("Element #$idx equals to $val"))
+F each_idx_val(e:Eachable1, cb:Fun) {
+	idx = 0
+	e.each(F(elt) {
+		cb(idx, elt)
+		idx += 1
+	})
+}
+
+# TODO: map_idx_val
 doc Iterates over the elements of arr, passing each in turn to cb along with index and args: cb(INDEX, ITEM)
 doc %RET - arr
 doc %EX - [10,20,30].each_idx_val(F(idx, val) echo("Element #$idx equals to $val"))
@@ -4687,6 +4705,14 @@ F Str(t:Time, format:Str=TIME_FORMAT, gmt:Bool=false) strftime([localtime, gmtim
 
 F Int(t:Time) t.epoch
 
+
+doc Mesure running time of cb in microseconds
+F time(cb:Fun) {
+	start = c_gettimeofday()
+	cb()
+	finish = c_gettimeofday()
+	(finish[0]* 1000000 + finish[1]) - (start[0] * 1000000 + start[1])
+}
 
 
 # === Random =====================================
