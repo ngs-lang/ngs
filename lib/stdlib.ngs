@@ -242,6 +242,11 @@ F partition(something:Eachable1, predicate) {
 
 TEST partition([1,10,2,20], X>=10) == [[10, 20], [1, 2]]
 
+{
+	type ElementNotFound
+	ElementNotFound.inherit(LookupFail)
+}
+
 doc Find first element in e that satisfies the predicate.
 doc %RET - Either the element or null if element was not found.
 doc %EX - (10..20).first(F(x) x % 3 == 0)  # 12 - first item divisible by 3
@@ -251,37 +256,32 @@ F first(e:Eachable1, predicate) {
 	e.each(F(i) {
 		p(i) throws finish(i)
 	})
-	null
+	throw ElementNotFound("first() did not found the element").set('container', e).set('predicate', predicate)
 }
 
 doc Find first element in e that satisfies Bool(e) == true.
 doc Exactly same as first(e, identity).
 F first(e:Eachable1) first(e, identity)
 
-{
-	type TheOneFail
-	TheOneFail.inherit(InvalidArgument)
-}
-
 doc Find the only element that satisfies the predicate.
-doc Throws TheOneFail exception if there are no elements that satisfy the predicate or if there is more than one element that satisfies the predicate.
+doc Throws ElementNotFound exception if there are no elements that satisfy the predicate or if there is more than one element that satisfies the predicate.
 doc %RET - The only element that satisfies the predicate.
-F the_one(something:Eachable1, predicate) {
+F the_one(e:Eachable1, predicate) {
 	p = Pred(predicate)
 	ret = EmptyBox()
-	something.each() do F(elt) {
+	e.each() do F(elt) {
 		if p(elt) {
-			ret throws TheOneFail("the_one() had more than one match")
+			ret throws ElementNotFound("the_one() had more than one match").set('container', e).set('predicate', predicate)
 			ret = FullBox(elt)
 		}
 	}
-	not(ret) throws TheOneFail("the_one() had no matches")
+	not(ret) throws ElementNotFound("the_one() had no matches").set('container', e).set('predicate', predicate)
 	ret.get()
 }
 
 TEST [1,2,11,3,4].the_one(X>10) == 11
-TEST try [1,2,11,12,4].the_one(X>10) catch(e:TheOneFail) true
-TEST try [1,2,3,4].the_one(X>10) catch(e:TheOneFail) true
+TEST try [1,2,11,12,4].the_one(X>10) catch(e:ElementNotFound) true
+TEST try [1,2,3,4].the_one(X>10) catch(e:ElementNotFound) true
 
 doc Find the only element that satisfies the predicate and execute given code with the value
 doc body - The code to execute when exactly one element that satisfies the predicate was found. Executed with the found value. It's value will be returned as result of the_one().
@@ -291,11 +291,11 @@ doc %RET - Result of running on of the following: body, found_more, found_none
 doc %EX - F name(dn:MethodDocNode) {
 doc %EX - 	dn.children.the_one(MethodNameDocNode).text[0]
 doc %EX - }
-F the_one(something:Eachable1, predicate, body:Fun, found_more:Fun={null}, found_none:Fun={null}) {
+F the_one(e:Eachable1, predicate, body:Fun, found_more:Fun={null}, found_none:Fun={null}) {
 	p = Pred(predicate)
 	ret = EmptyBox()
 	r = Return()
-	something.each(F(elt) {
+	e.each(F(elt) {
 		if p(elt) {
 			if ret {
 				throw r(found_more())
@@ -315,18 +315,18 @@ TEST ok = false; [1,2,11,3,4].the_one(X>20, { does_not_matter }, found_none = { 
 TEST ok = false; [1,2,11,3,4].the_one(Int, { does_not_matter }, found_more = { ok = true }); ok
 
 doc Extract the only element.
-doc Throws TheOneFail exception if there are no elements or if there is more than one element.
+doc Throws ElementNotFound exception if there are no elements or if there is more than one element.
 doc %RET - The only element.
 doc %EX - ``aws ec2 describe-security-groups --group-ids $sg_id``.the_one()  # {OwnerId=..., VpcId=..., GroupId=..., ...}
-F the_one(something:Eachable1) something.the_one({true})
+F the_one(e:Eachable1) e.the_one({true})
 
 doc Filter nulls out.
 doc DEPRECATED, USE something.without(null) INSTEAD.
 doc something - Instance of any type that has each(something, callback) implemented
 doc %RET - Arr (array) of original items without nulls
-F filter(something:Eachable1) {
-	error("USING DEPRECATED filter(something)")
-	filter(something, X is not Null)
+F filter(e:Eachable1) {
+	error("USING DEPRECATED filter(e)")
+	filter(e, X is not Null)
 }
 
 TEST [1,2,null,3].filter() == [1,2,3]
@@ -1463,7 +1463,7 @@ F indexes(arr:Arr, predicate) {
 TEST [1,5,1,10].indexes(X>2) == [1,3]
 
 TEST [5,10,15].first(X>7) == 10
-TEST [5,10,15].first(X>20) == null
+TEST try [5,10,15].first(X>20) catch(e:ElementNotFound) true
 
 doc Make new array which is a reversed given array
 doc %RET - Arr
@@ -2196,11 +2196,11 @@ doc %EX - # Simplified code from the_one() method:
 doc %EX - ret = EmptyBox()
 doc %EX - something.each(F(elt) {
 doc %EX - 	if predicate(elt) {
-doc %EX - 		ret throws TheOneFail("the_one() had more than one match")
+doc %EX - 		ret throws ElementNotFound("the_one() had more than one match")
 doc %EX - 		ret = FullBox(elt)
 doc %EX - 	}
 doc %EX - })
-doc %EX - not(ret) throws TheOneFail("the_one() had no matches")
+doc %EX - not(ret) throws ElementNotFound("the_one() had no matches")
 doc %EX - ret.val # Has the value
 F init(b:FullBox, val) b.val = val
 
