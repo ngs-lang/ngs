@@ -4,44 +4,38 @@ Note that this started as internal document so things here are unformed, not fin
 
 	Unsorted and undecided things go here. The important sections is [roadmap] and it's just below this section.
 
-	* See only() and/or "guard" vs https://www.scala-lang.org/api/current/scala/PartialFunction.html
-	* Maybe Iter(b:Box)
 	* Conditional modification of value
 		* Conditon can be Fun/value
 		* Replacement can be Fun/value
-	* To fix: "attributes" is used for two different concenpts: attrs() and the rest
+	* Naming fixes
+		* To fix: "attributes" is used for two different concepts: attrs() and the rest
+		* Rename plan
+			* Method -> MultiMethod ; Method implementation -> Method
+			* Closure -> UserMethod ?
+			* Check about AnyVal / AnyRef. These do _not_ correspond to BasicType and NormalType.
+	* Iter improvements
+		* If migrating lines() to Iter
+			+ remember to implement ==(Iter, Arr), as used in tests:
+				fqdn = 'example.com'
+				fqdns = `mybin list`.lines()
+				assert(fqdns == [fqdn])
+			+ make sure join() works
+		* Iter[PredRange] - should return new Iter
+		* zip(Iter, Iter)
+		* limit(Iter, n)
 	* Look at Juju / conjure-up
-	* Rename plan
-		* Method -> MultiMethod ; Method implementation -> Method
-		* Closure -> UserMethod
-		* Check about AnyVal / AnyRef. These do _not_ correspond to BasicType and NormalType.
 	* Add %k{...} and %v{...} syntax and remove n()
-	* filter(Iter), reject(Iter), map(Iter) - should return new Iter
-	* Iter[PredRange] - should return new Iter
 	* Namespace type, probably subtype of Hash
-	* Iter(cb:Fun) - endless iterator with values from calling cb
-		+ Consider passing the Iter instance
-	* If migrating lines() to Iter
-		+ remember to implement ==(Iter, Arr), as used in tests:
-			fqdn = 'example.com'
-			fqdns = `mybin list`.lines()
-			assert(fqdns == [fqdn])
-		+ make sure join() works
 	* Fix: a.mymod::memethod() syntax
-	* zip(Iter, Iter)
-	* limit(Iter, n)
-	* in(x, Iter)
-	* Iter(PredRange)
 	* See what can be fixed regarding functions that accept Arr[T] for specific types
 		+ Such as join(threads:Arr) in lib/autoload/Thread.ngs
 	* min(a,b), max(a,b)
 	* assert_proc(cp:CommandsPipeline, exit_code, stdout, stderr)
 	* Fix syntax: "ifx" is now "if x"
-	* -(Str, Ifx)
-	* Comparison and link to https://github.com/RexOps/Rex
+	* Documentation
+		* Comparison and link to https://github.com/RexOps/Rex
+		* Example: AWS::Elb().reject(X.Instances).delete()
 	* ec2hostsfile.ngs - fix the tags filter
-	* Example: AWS::Elb().reject(X.Instances).delete()
-	* Consider first() to throw exception, somewhat like the_one()
 
 [roadmap]
 
@@ -277,6 +271,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Fix inspect() and maybe others to display special symbols in strings as \x.. or alike
 
+			* -(Str, Ifx)
+
 		* Milestone "threads"
 
 			* pmap() - limit number of concurrent threads and/or make it dynamic
@@ -374,6 +370,9 @@ Note that this started as internal document so things here are unformed, not fin
 			* Add fetch(Path), maybe read(Path). Now have read(File)
 			* "str" / [str]
 			* '.'(Iter, Str) -> AttrIter or alike maybe MappingIter or child
+			* Maybe Iter(b:Box)
+		* Syntax
+			* Conditional presence of an element in an array
 		* assert_file / assert_file_exists ?
 		* assert_has_line / assert_has_line_with ?
 		* make ResDef ArrLike for the resources?
