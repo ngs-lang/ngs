@@ -65,6 +65,13 @@
 		ret
 	}
 
+	F Bool(rd:ResDef) {
+		if rd.resources is Null {
+			rd.find()
+		}
+		rd.resources.Bool()
+	}
+
 	Iter # autoload Iter type
 	F Iter(rd:ResDef) {
 		if rd.resources is Null {
