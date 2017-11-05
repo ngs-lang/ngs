@@ -607,7 +607,7 @@ F StrParams(f:Fun) {
 	guard f is Closure or f is NativeMethod
 	f.params().map(F(p) {
 		d = if 'dflt' in p then '=...' else ''
-		"${p.name}:${p.type.name}${d}"
+		"${p.get('splat', '')}${p.name}:${p.type.name}${d}"
 	}).join(', ') \ "($X)"
 }
 
