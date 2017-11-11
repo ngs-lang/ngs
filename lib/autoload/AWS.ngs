@@ -23,7 +23,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# TODO: log describe AWS CLI commands too
 
 	# Methods with added implementations
-	global Str, init, find, latest, create, update, delete, users_ids, run, id, ids, (==), subset
+	global Str, init, find, latest, create, update, delete, users_ids, run, id, ids, (==), subset, code
 
 	# --------------------------------------------------
 	# Constants
@@ -838,6 +838,28 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			r.run("Adding key ${k.limit(20, '...')} to file $f", %(echo $k >>$f), do_parse=false)
 		}
 
+	}
+
+	doc EXPERIMENTAL! Do not use!
+	doc Right now it works in the most primitive way.
+	F code(r:InstanceRes) {
+		warn("You are using EXPERIMENTAL code(InstanceRes)")
+		p = r.props
+		anchor = {
+			'ImageId': p.ImageId
+			'InstanceType': p.InstanceType
+			'KeyName': p.KeyName
+		}
+		# TODO: UserData
+		# Maybe TODO: PrivateIpAddress
+		# TODO: EIP p.NetworkInterfaces.PrivateIpAddresses.flatten().get('Association').Bool()
+		props = {
+			'SecurityGroups': p.SecurityGroups.GroupId
+			'SubnetId': p.SubnetId
+			'Tags': p.Tags
+		}
+		F _eq(h:Hash) h.map(F(k,v) "${k}=${code(v)}").join(', ')
+		"AWS::Instance(${_eq(anchor)}).create(${_eq(props)})"
 	}
 
 	# --------------------------------------------------
