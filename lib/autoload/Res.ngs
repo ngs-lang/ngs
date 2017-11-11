@@ -1,4 +1,6 @@
 {
+	doc Abstract resource definition
+	doc anchor - Describes how to find the resource, if it exists.
 	type ResDef(Eachable1)
 
 	F init(rd:ResDef, anchor) {
@@ -12,13 +14,16 @@
 		rd.dry_run = ENV.get('DRY_RUN', false)
 	}
 
+	doc Check how many resources are matching given resource definition. Throws InvalidArgument if resources were not looked up yet.
 	F len(rd:ResDef) {
-		rd.resources is Null throws Error("Programming error. find() was not run before len()")
+		rd.resources is Null throws InvalidArgument("Programming error. find() was not run before len()")
 		rd.resources.len()
 	}
 
+	doc Creates resource definition with empty Hash anchor.
 	F init(rd:ResDef) init(rd, {})
 
+	doc Converts resource definition to a string, for displaying purposed.
 	F Str(rd:ResDef) {
 		props = (rd.props tor {}).without('META')
 		multi = " x${rd.count}" tor ""
@@ -26,57 +31,73 @@
 		"<${rd.typeof().name} anchor=${rd.anchor.without('META')} props=$props$multi$dry_run resources:${only(Arr, len)(rd.resources)}>"
 	}
 
+	doc Formats and logs message s for resource definition rd.
+	doc method - the name of calling method which also goes to the formatted message.
 	F log(rd:ResDef, method:Str, s:Str) {
 		log("[${rd.typeof().name} ${rd.anchor}] [$method] $s")
 	}
 
-	# TODO: F find_if_needed() -- if rd.resources is Null then find ...
+	doc Populates .resources by running .find(), if it was not done yet.
+	doc %RET - rd
+	F find_if_needed(rd:ResDef) {
+		if rd.resources is Null {
+			rd.find()
+		}
+		rd
+	}
 
 	# TODO: throw ExpectFail or somthing similar
+	doc Throw an exception unless there is exactly e resources were found.
+	doc Useful to express assumptions before operating.
+	doc %EX - slave_build_server = AWS::Instance(Tags={'env': 'aux', 'role': 'build-slave'}).expect(1)
+	doc %EX - subnets = AWS::Subnet(my_vpc_anchor).expect(2)
+	doc %RET - rd
 	F expect(rd:ResDef, e:Int) {
-		rd.find()
+		rd.find_if_needed()
 		assert(rd.resources.len() == e, "Expected exactly ${e} ${rd.typeof().name} resource instances but found ${rd.resources.len()}: ${rd}")
 		rd
 	}
 
+	doc Throw an exception unless the resources were found.
+	doc Useful to express assumptions before operating.
+	doc %EX - instances = AWS::Instance({'env': env, 'role': role}).expect()
+	doc %RET - rd
 	F expect(rd:ResDef) {
-		rd.find()
+		rd.find_if_needed()
 		assert(rd.len() > 0, "Expected one or more ${rd.typeof().name} resource instances but found none: ${rd}")
 		rd
 	}
 
+	doc Call cb with properties of each found resource
+	doc %EX - AWS::Instance().each(F(i) echo(i.InstanceId))
+	doc %RET - rd
 	F each(rd:ResDef, cb:Fun) {
-		if rd.resources is Null {
-			rd.find()
-		}
+		rd.find_if_needed()
 		rd.resources.each(F(r) {
 			cb(r.props)
 		})
 		rd
 	}
 
-	F filter(rd:ResDef, cb:Fun) {
-		if rd.resources is Null {
-			rd.find()
-		}
+	doc Create new resource definition by filtering resources of rd.
+	doc rd - Original resource definition. Not modified.
+	doc %RET - ResDef
+	F filter(rd:ResDef, predicate:Fun) {
+		rd.find_if_needed()
 		t = rd.typeof()
 		ret = t(rd.anchor)
-		ret.resources = rd.resources.filter(F(r) cb(r.props))
+		ret.resources = rd.resources.filter(F(r) predicate(r.props))
 		ret
 	}
 
 	F Bool(rd:ResDef) {
-		if rd.resources is Null {
-			rd.find()
-		}
+		rd.find_if_needed()
 		rd.resources.Bool()
 	}
 
 	Iter # autoload Iter type
 	F Iter(rd:ResDef) {
-		if rd.resources is Null {
-			rd.find()
-		}
+		rd.find_if_needed()
 		Iter(rd.resources)
 	}
 
@@ -127,16 +148,12 @@
 	}
 
 	F delete(rd:ResDef) {
-		if rd.resources is Null {
-			rd.find()
-		}
+		rd.find_if_needed()
 		rd.resources.each(delete)
 	}
 
 	F ids(rd:ResDef) {
-		if rd.resources is Null {
-			rd.find()
-		}
+		rd.find_if_needed()
 		rd.resources.map(id)
 	}
 

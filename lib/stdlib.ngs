@@ -248,16 +248,36 @@ TEST partition([1,10,2,20], X>=10) == [[10, 20], [1, 2]]
 }
 
 doc Find first element in e that satisfies the predicate.
-doc %RET - Either the element or null if element was not found.
+doc %RET - Either the element or the provided default if element was not found.
+doc %EX - (10..20).first(F(x) x % 3 == 0)        # 12 - first item divisible by 3
+doc %EX - (10..20).first(F(x) x % 50 == 0, 1000) # 1000
+F first(e:Eachable1, predicate, default) {
+	p = Pred(predicate)
+	finish = Return()
+	e.each(F(i) {
+		p(i) throws finish(i)
+	})
+	default
+}
+
+TEST [1,2,3].first(X>1, 10) == 2
+TEST [1,2,3].first(X>5, 10) == 10
+
+doc Find first element in e that satisfies the predicate. Throws ElementNotFound exception if no such element is found.
+doc %RET - The element.
 doc %EX - (10..20).first(F(x) x % 3 == 0)  # 12 - first item divisible by 3
+doc %EX - (10..20).first(F(x) x % 50 == 0) # ElementNotFound exception
 F first(e:Eachable1, predicate) {
 	p = Pred(predicate)
 	finish = Return()
 	e.each(F(i) {
 		p(i) throws finish(i)
 	})
-	throw ElementNotFound("first() did not found the element").set('container', e).set('predicate', predicate)
+	throw ElementNotFound("first() did not find the element").set('container', e).set('predicate', predicate)
 }
+
+TEST [1,2,3].first(X>1) == 2
+TEST try [1,2,3].first(X>5) catch(e:ElementNotFound) true
 
 doc Find first element in e that satisfies Bool(e) == true.
 doc Exactly same as first(e, identity).
@@ -3367,8 +3387,12 @@ F lines(f:File, cb:Fun) {
 # XXX: might not be correct on all platforms
 TEST ok = false; File("/etc/passwd").lines({if ":" in A ok = true}); ok
 
+doc Get all lines of the file
+doc %RET - Arr of Str
 F lines(f:File) collector f.lines(collect)
 
+doc Write given lines to the file. Overwrites the file.
+doc %RET - Arr of Str
 F lines(f:File, lines_:Arr) {
 	finally()
 		body => {
@@ -3565,9 +3589,7 @@ F wait(p:Process) {
 }
 
 doc Wait for all processes to finish.
-F wait(cp:CommandsPipeline) {
-	cp.processes.each(wait)
-}
+F wait(cp:CommandsPipeline) cp.processes.each(wait)
 
 doc Convert Process to exit code. Waits for the process to finish and uses its exit code.
 F to_exit_code(p:Process) p.wait().exit_code
@@ -3576,7 +3598,7 @@ doc Convert CommandsPipeline to exit code. Waits for the processes to finish.
 doc Returns first non-zero exit code. Returns zero if all exit codes are zero.
 F to_exit_code(cp:CommandsPipeline) {
 	cp.wait()
-	cp.processes.exit_code.first(X != 0) or 0
+	e = cp.processes.exit_code.first(X != 0, 0)
 }
 
 doc Wait for the process to finish and return its standard output.
@@ -3604,9 +3626,19 @@ F Arg(x:Str) x
 
 # TODO: Consider storing original h in one of the attrs() of the result
 doc Convert a Hash, describing command line arguments, to array of strings, appropriate for using as argument to external process.
+doc Key-value pairs with values of type NoData (null, EmptyBox) are discarded.
+doc Key-value pairs with empty array values are discarded.
+doc Values of type Box are unboxed.
+doc For keys which are arrays of two elements, Bool value selects first (for true) or second (for false) element.
+doc For keys which are arrays of single element, Bool value selects whether the key is present or absent in the output.
 doc %EX - # Typical usage:
 doc %EX - argv = Argv({'name1': value1, 'name2': value2, ...})
 doc %EX - $(my_command $*argv)
+doc %EX - # Handling of key-value pairs
+doc %EX - Argv({"--a": 1, "-b": null})                         # ['--a', 1]
+doc %EX - Argv({["-y1", "-n1"]: true, ["-y2", "-n2"]: false})  # ['-y1', '-n2']
+doc %EX - Argv({["-y3"]: true, ["-y4"]: false})                # ["-y3"]
+doc %EX - Argv({"-a1": [], "-a2": [1,2,3]})                    # ["-a2", 1, 2, 3]
 F Argv(h:Hash) {
 	collector
 		h.rejectv(NoData).mapv(only(Box, get)).each(F(k, v) {
@@ -3774,6 +3806,7 @@ doc %EX - p = $(node main.js serve &)
 doc %EX - YOUR_TESTS_OF_NODE_SERVER_HERE
 doc %EX - p.kill()
 doc %RET - Process
+doc %AUTO - $(my_prog) , $(some | programs)
 F '$()'(cp:CommandsPipeline) {
 
 	if cp.commands.len() == 1 {
@@ -3853,20 +3886,28 @@ TEST $(true).Bool()
 TEST $(false).Bool() == false
 TEST "$(/bin/echo -n abc)" == 'abc'
 
-F wait(cp:CommandsPipeline) cp.processes.each(wait)
-
+doc Write to first process of CommandsPipeline
+doc %EX - p = (|cat -n | tac >/tmp/1)
+doc %EX - p.write("one\n")
+doc %EX - p.write("two\n")
+doc %EX - p.close()
 F write(cp:CommandsPipeline, s:Str) {
 	cp.pipe_in is Null throws InvalidArgument("CommandsPipeline has no input pipe").set('cp', cp)
 	cp.pipe_in.write(s)
 	cp
 }
 
+doc Read from last process of CommandsPipeline
+doc %EX - p = $(seq 3 | tac |);
+doc %EX - data = read(p);
+doc %EX - p.close()
 F read(cp:CommandsPipeline, count=null) {
 	guard count is Int or count is Null
 	cp.pipe_out is Null throws InvalidArgument("CommandsPipeline has no output pipe").set('cp', cp)
 	cp.pipe_out.read(count)
 }
 
+doc Close reading and writing pipes of CommandsPipeline, if they exist
 F close(cp:CommandsPipeline) {
 	cp.pipe_in.Box().map({A.parent_fd().close()})
 	cp.pipe_out.Box().map({A.parent_fd().close()})
@@ -3885,7 +3926,9 @@ F '$()'(c:Command) {
 }
 
 
-doc Get command standard output. Similar to bash.
+doc Get command standard output. Similar to bash. Does not strip trailing new line character(s)
+doc `line:true my_command` will return the first line, stripping trailing new line character(s)
+doc %AUTO - `my_command` , `my_command | my_other_command`
 F ``(cp:CommandsPipeline) {
 	processes = ('$()')(cp).processes
 	assert(processes)
@@ -3900,6 +3943,7 @@ doc Get command standard output and parse() it.
 doc %RET - structured data when the output can be parsed.
 doc %EX - ``aws ec2 describe-instances`` is Arr  # true
 doc %EX - ``aws ec2 describe-instances``.InstanceId.map(X[0..3]).join(",")  # i-3, i-9, i-8, i-a, i-7, ...
+doc %AUTO - ``my_command`` , ``my_command | my_other_command``
 F ````(cp:CommandsPipeline) {
 	processes = ('$()')(cp).processes
 	assert(processes)
@@ -3932,9 +3976,10 @@ F kill(p:Process, sig:Int=SIGNALS.TERM) {
 	kill(p.pid, sig)
 }
 
-F kill(cp:CommandsPipeline) {
+doc Kill all processes in the CommandsPipeline. Throws InvalidArgument if CommandsPipeline is not running (yet).
+F kill(cp:CommandsPipeline, sig:Int=SIGNALS.TERM) {
 	'processes' not in cp throws InvalidArgument("Can't kill() a pipeline that has no running processes")
-	cp.processes.map(kill)
+	cp.processes.map(kill(X, sig))
 }
 
 TEST counter = 0; p=$(sleep 5&); if p.processes[0].stdout == null counter +=1; p.kill(); if p.Str() == "" counter+=1; counter == 2
@@ -3971,6 +4016,7 @@ F parse(s:Str, hints:Hash) {
 
 TEST parse('a b\nc d', {'FS': ' '}) == [['a', 'b'], ['c', 'd']]
 
+doc EXPERIMENTAL! Do not use!
 doc Handle fields_names hint - run parse() and make Arr[Hash] from Arr[Arr] using provided fields_names
 doc %EX - backup_list = fetch('backup.list', {'FS': ' ', 'fields_names': %[env role]})
 F parse(s:Str, hints:Hash) {
@@ -3990,6 +4036,7 @@ doc Returns cp, wihout any processing. Convenient way to pass ready-to-run Comma
 doc %EX - F run_when_needed(cp:CommandsPipeline) { ... $(cp) ... }
 doc %EX - ...
 doc %EX - run_when_needed(%(ls >/tmp/my_ls))
+doc %AUTO - %(my_command) , %(my_command | my_other_command)
 F '%()'(cp:CommandsPipeline) cp
 
 doc Wait for the process and return lines of its stdout.
@@ -4002,17 +4049,23 @@ F lines(p:Process) {
 
 # TODO: ability to handle running process & its streaming stdout
 doc Iterate lines of Process' stdout, calling cb with successive lines.
-doc Warning: current implementation waits for the process to finish and accumulates all its stdout.
+doc Warning: current implementation waits for the process to finish, accumulates all its stdout, and only then starts calling cb for each line.
 F lines(p:Process, cb:Fun) {
 	p.wait()
 	p.stdout.lines(cb)
 }
 
+doc Wait for cp and return lines of stdout of the last process.
+doc %RET - Arr of Str
+doc %EX - $(seq 3 | tac).lines().map(Int)  # [3,2,1]
 F lines(cp:CommandsPipeline) {
 	cp.wait()
 	cp.processes[-1].stdout.lines()
 }
 
+doc Wait for cp and return call cb for each line of stdout of last process.
+doc Warning: current implementation waits for the processes to finish, accumulates all stdout of the last process, and only then starts calling cb for each line.
+doc %RET - Arr of Str
 F lines(cp:CommandsPipeline, cb:Fun) {
 	cp.wait()
 	cp.processes[-1].stdout.lines(cb)
@@ -4022,7 +4075,7 @@ F lines(cp:CommandsPipeline, cb:Fun) {
 TEST ok = false; $(cat /etc/passwd).lines({if ":" in A ok = true}); ok
 
 # === Parse aws output ===========================
-# TODO: move to separate auto-loaded file maybe?
+# TODO: move to separate auto-loaded file.
 
 doc Convert "Tags" array in each element of AWS resources (typically returned by AWS CLI) into Hash.
 doc Makes "Tags" much more usable.
@@ -4101,24 +4154,25 @@ F config(k:Str) {
 	#       what about structured data? JSON?
 	# TODO: read from config files
 	# TODO: read from command line switches
-	debug("[config] getting key '$k'")
+	debug("config", "Getting key '$k'")
 	v = try ENV["NGS_$k"]
 	if v {
-		debug("[config] Value config for key '$k' found in the environment variable 'NGS_${k}': '$v'")
+		debug("config", "'$k' found in the environment variable 'NGS_${k}': '$v'")
 		return parse(v) tor v
 	}
 	v = try STDLIB_CONFIG[k]
 	if v is not Null {
-		debug("Value config for key '$k' found in STDLIB_CONFIG: $v")
+		debug("config", "'$k' found in STDLIB_CONFIG: $v")
 		return v
 	}
+	debug("config", "'$k' was not found")
 	v
 }
 
 doc Set configuration. To be used with config(k:Str).
 doc %EX - config('table_Instances', %[InstanceId tag_Name tag_env tag_role IPs InstanceType State KeyName SecurityGroups AZ RestOfTags])
 F config(k:Str, v) {
-	debug("Configuring ${k}=${v}")
+	debug("config", "Setting ${k}=${v}")
 	STDLIB_CONFIG[k] = v
 }
 
