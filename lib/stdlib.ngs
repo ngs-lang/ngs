@@ -2848,9 +2848,9 @@ F code(s:Str) {
 	"'${s}'"
 }
 
-doc String expansion handler. Called automatically for every double-quoted string that
-doc has $* components.
+doc String expansion handler. Called automatically for every double-quoted string that has $* components.
 doc %EX - "$*{ENV.PATH.split(":")}/od".filter(File(X))  # Find out where in PATH is the "od" binary
+doc %AUTO - "abc$*{something}def"
 F '"$*"'(components:Arr) {
 	components.len() == 0 throws InvalidArgument("Must be one or more component")
 	c = components
@@ -3477,7 +3477,7 @@ F finished_ok(p:Process) {
 }
 
 doc Decide whether specific process finished normally: exit code must be 0 or 1.
-doc p - One of the processes: /usr/bin/test, /bin/fuser, /bin/ping
+doc p - One of the processes: /usr/bin/test, {,/usr}/bin/fuser, {,/usr}/bin/ping
 doc %EX - # Exit code 1 on the line below but no exception thanks to this finished_ok().
 doc %EX - if $(test -f /) echo("/ is a file")  # Outputs nothing, / is a directory
 doc %RET - bool
@@ -3486,11 +3486,18 @@ F finished_ok(p:Process) {
 	p.exit_code in [0, 1]
 }
 
+doc Decide whether a process finished normally: OK for any process that has "nofail:" option
+doc %EX - $(nofail: ls no-such-file)
 F finished_ok(p:Process) {
 	guard p.command.options.get('nofail')
 	true
 }
 
+doc Decide whether a process finished normally: OK for exit codes given in "ok:" option
+doc %EX - $(ok:2 ls no-such-file)
+doc %EX - $(ok:[0,1,2] ls no-such-file)
+doc %EX - $(ok:0..10 ls no-such-file)
+doc %EX - $(ok:10 ls no-such-file) # ProcessFail exception
 F finished_ok(p:Process) {
 	ok = p.command.options.get('ok')
 	guard ok is not Null
@@ -3508,7 +3515,7 @@ TEST $(ok:1 cat NO_SUCH_FILE 2>/dev/null); true
 TEST $(ok:[1,10] cat NO_SUCH_FILE 2>/dev/null); true
 TEST $(ok:1..2 cat NO_SUCH_FILE 2>/dev/null); true
 
-doc Process constructor
+doc Process constructor. Initializes attributes.
 F init(p:Process, c:Command) {
 	p.command = c
 	p.executable = null
@@ -3521,15 +3528,16 @@ F init(p:Process, c:Command) {
 	# p.lock = Lock()
 }
 
-doc Wait for process to finish and see whether exit code is 0
+doc Wait for all process to finish and see whether all exit codes are 0
 doc %RET - Bool
+doc %EX - if $(test -f myfile) ... # if runs Bool() on any non-Bool condition expression
 F Bool(cp:CommandsPipeline) {
 	cp.wait()
 	cp.processes.all({A.exit_code == 0})
 }
 
-# TODO: better exceptions (use correct type, not string)
-doc Wait for the process to finish. Waits for reading and writing threads to finish first.
+doc Wait for a process. Waits for reading and writing threads to finish.
+doc Waits for the process to finish. Checks whether to throw ProcessFail using finished_ok().
 doc %RET - p
 F wait(p:Process) {
 
@@ -3556,13 +3564,16 @@ F wait(p:Process) {
 	p
 }
 
+doc Wait for all processes to finish.
 F wait(cp:CommandsPipeline) {
 	cp.processes.each(wait)
 }
 
-doc Convert Process to exit code. Waites for the process to finish and uses its exit code.
+doc Convert Process to exit code. Waits for the process to finish and uses its exit code.
 F to_exit_code(p:Process) p.wait().exit_code
 
+doc Convert CommandsPipeline to exit code. Waits for the processes to finish.
+doc Returns first non-zero exit code. Returns zero if all exit codes are zero.
 F to_exit_code(cp:CommandsPipeline) {
 	cp.wait()
 	cp.processes.exit_code.first(X != 0) or 0
@@ -3572,6 +3583,8 @@ doc Wait for the process to finish and return its standard output.
 doc %RET - Str
 F Str(p:Process) p.wait().stdout
 
+doc Wait for the processes to finish and return standard output of the last process in pipeline.
+doc %RET - Str
 F Str(cp:CommandsPipeline) {
 	cp.wait()
 	assert(cp.processes)
@@ -3590,8 +3603,10 @@ doc Convert to string, appropriate for using as argument to external process.
 F Arg(x:Str) x
 
 # TODO: Consider storing original h in one of the attrs() of the result
-doc Convert to array of strings, appropriate for using as argument to external process.
-doc TODO - complete documentation.
+doc Convert a Hash, describing command line arguments, to array of strings, appropriate for using as argument to external process.
+doc %EX - # Typical usage:
+doc %EX - argv = Argv({'name1': value1, 'name2': value2, ...})
+doc %EX - $(my_command $*argv)
 F Argv(h:Hash) {
 	collector
 		h.rejectv(NoData).mapv(only(Box, get)).each(F(k, v) {

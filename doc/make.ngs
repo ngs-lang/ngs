@@ -385,7 +385,6 @@
 			status("Writing methods (overview) page")
 			# status("P1")
 			write(doc_root / 'methods/index.html', Doc::HtmlRoot(methods_index_html_doc))
-			# die("X")
 
 			for m in methods {
 				status("Making page for method ${m.name}")
@@ -824,6 +823,7 @@
 		}
 		namespaces = do_namespaces()
 		do_types(namespaces)
+		status("All docs done")
 
 	}
 }

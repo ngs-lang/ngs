@@ -166,7 +166,7 @@ If you have troubles compiling, please try to compile the commit tagged `tested`
 Contributing
 ============
 
-Fork on GitHub, work on whatever you like, preferably from the top of [the todo](todo.txt), make a pull request. If the change is big or involves modifying the syntax, it's better to coordinate with Ilya before you start.
+Fork on GitHub, work on whatever you like, preferably from the top of [the todo](todo.txt), make a pull request (to "dev" branch). If the change is big or involves modifying the syntax, it's better to coordinate with Ilya before you start.
 
 Planned Features
 ================
