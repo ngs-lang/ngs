@@ -23,7 +23,7 @@
 	doc Creates resource definition with empty Hash anchor.
 	F init(rd:ResDef) init(rd, {})
 
-	doc Converts resource definition to a string, for displaying purposed.
+	doc Converts resource definition to a string, for displaying purposes.
 	F Str(rd:ResDef) {
 		props = (rd.props tor {}).without('META')
 		multi = " x${rd.count}" tor ""
@@ -90,29 +90,47 @@
 		ret
 	}
 
+	doc Check whether any resources were found.
 	F Bool(rd:ResDef) {
 		rd.find_if_needed()
 		rd.resources.Bool()
 	}
 
 	Iter # autoload Iter type
+	doc EXPERIMENTAL! Do not use!
 	F Iter(rd:ResDef) {
 		rd.find_if_needed()
 		Iter(rd.resources)
 	}
 
+	doc Abstract resource
+	doc def - A ResDef, corresponding resource definition
+	doc props - A Hash of properties
 	type Res
 
+	doc Stores def and props in r
 	F init(r:Res, def:ResDef, props:Hash) init(args())
 
+	doc Converts resource to a string, for displaying purposes.
 	F Str(r:Res) "<${r.typeof().name} ${r.id() tor 'id-not-available'}>"
 
+	doc Formats and logs message s for resource r.
+	doc method - the name of calling method which also goes to the formatted message.
 	F log(r:Res, method:Str, s:Str) {
 		log("[${r.typeof().name} ${r.id()}] [$method] $s")
 	}
 
+	doc Ensure that resources matching resource definition have given properties. This operation will do necessary changes, including creating the resource(s) if they do not exist.
+    doc %EX - # Idempotent
+    doc %EX - PROXY_LAB_TAGS = { 'env': 'proxy-lab' }
+    doc %EX - PROXY_LAB_VPC_CIDR = '192.168.10.0/24'
+	doc %EX - vpc    = AWS::Vpc(VPN_POC_TAGS).converge(CidrBlock=VPN_POC_CIDR, Tags=VPN_POC_TAGS)
+	doc %EX - gw     = AWS::Igw(Attachments=[{'VpcId': vpc}]).converge(Tags=VPN_POC_TAGS)
+	doc %EX - rtb    = AWS::RouteTable(VpcId=vpc).converge(Routes=Present({"DestinationCidrBlock": "0.0.0.0/0", "GatewayId": gw}))
+	doc %EX - subnet = AWS::Subnet(VpcId=vpc, CidrBlock=VPN_POC_CIDR).converge()
+	doc %RET - rd
 	F converge(rd:ResDef, **props) {
-		rd.find()
+		rd.find_if_needed()
 		n = props.get('META', {}).get('count')
 		if n is Null and rd.resources.len() == 0 {
 			debug("ResDef", "converge() - Count unspecified but there are no resources, assuming count to be 1")
@@ -138,18 +156,22 @@
 		rd
 	}
 
-	# TODO: pass props to create(), do not assign props to rd.props
-	# Methods that support bulk creating should implement this
+	# Create n resources with given props. Typically called by converge().
+	doc %RET - rd
 	F create(rd:ResDef, n:Int, **props) {
 		for(i;n) {
 			debug("ResDef", "converge() - Creating ${rd.typeof().name} ${i+1} of $n")
 			create(rd, **props)
 		}
+		rd
 	}
 
+	doc Ensure that resources matching resource definition have given properties. This operation will do necessary changes, including creating the resource(s) if they do not exist.
+	doc %RET - rd
 	F delete(rd:ResDef) {
 		rd.find_if_needed()
 		rd.resources.each(delete)
+		rd
 	}
 
 	F ids(rd:ResDef) {
