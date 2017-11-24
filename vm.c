@@ -2103,7 +2103,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MK_BUILTIN_TYPE_DOC(Real, T_REAL, "Real/Float type. Equivalent to the 'double' type in C");
 	vm->type_by_t_obj_type_id[T_REAL >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Real;
 
-	MK_BUILTIN_TYPE_DOC(Str, T_STR, "String type");
+	MK_BUILTIN_TYPE_DOC(Str, T_STR, "String type. Contains sequential bytes.");
 	vm->type_by_t_obj_type_id[T_STR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Str;
 
 	MK_BUILTIN_TYPE(Arr, T_ARR);
@@ -2620,8 +2620,14 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_pthread_mutex_t",      &native_c_pthreadmutext,      0);
 	register_global_func(vm, 0, "c_pthread_mutexattr_t",  &native_c_pthreadmutexattrt,  0);
 	register_global_func(vm, 0, "c_pthread_mutexattr_settype",  &native_c_pthreadmutexattrsettype_pma_int,  2, "mutex", vm->c_pthread_mutexattr_t, "type", vm->Int);
+
 	register_global_func(vm, 0, "id",                     &native_id_pthread,           1, "thread", vm->c_pthread_t);
+	_doc(vm, "", "Get pthread id as string of characters. This is opaque string which can be used for displaying and comparing to other pthreads ids.");
+	_doc(vm, "%RET", "Str");
+
 	register_global_func(vm, 0, ".",                      &native_attr_pthreadattr,     2, "pa", vm->c_pthread_attr_t,    "attr", vm->Str);
+	_doc(vm, "", "Get pthread attribute. Currently returns null for unknown attributes. Will throw exceptions in future.");
+	_doc(vm, "attr", "One of: detachstate, guardsize, inheritsched, stacksize.");
 
 	// Native methods
 	register_global_func(vm, 0, "params",   &native_params_nm,         1, "m",      vm->NativeMethod);
@@ -2662,7 +2668,12 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// MultiMethod
 	register_global_func(vm, 0, "Arr",         &native_Arr_mm,           1, "mm",  vm->MultiMethod);
-	register_global_func(vm, 0, "MultiMethod", &native_MultiMethod_arr,  1, "arr", vm->Arr);
+	_doc(vm, "", "Get methods of a MultiMethod");
+	_doc(vm, "%RET", "Arr");
+
+	register_global_func(vm, 0, "MultiMethod", &native_MultiMethod_arr,  1, "methods", vm->Arr);
+	_doc(vm, "", "Construct MultiMethod from the given methods");
+	_doc(vm, "%RET", "MultiMethod");
 
 	// Int
 	register_global_func(vm, 0, "Int",      &native_Int_real,           1, "r",    vm->Real);
@@ -2856,13 +2867,39 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%EX", "a=[1,2]; a.pop()  # 2, a is now [1]");
 
 	register_global_func(vm, 1, "shift",    &native_shift_arr,               1, "arr", vm->Arr);
+	_doc(vm, "", "Get the first element and remove it from the array. Throws EmptyArrayFail if there are no elements in the array.");
+	_doc(vm, "%RET", "Any");
+
 	register_global_func(vm, 0, "shift",    &native_shift_arr_any,           2, "arr", vm->Arr, "dflt", vm->Any);
+	_doc(vm, "", "Get the first element and remove it from the array. Returns dlft if there are no elements in the array.");
+	_doc(vm, "%RET", "Any");
+
 	register_global_func(vm, 0, "len",      &native_len,                     1, "arr", vm->Arr);
+	_doc(vm, "", "Get number of elements in the array");
+	_doc(vm, "%RET", "Int");
+
 	register_global_func(vm, 0, "get",      &native_index_get_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
+	_doc(vm, "", "Get element at the given index or return dflt if the index is out of range (element at the given index does not exist)");
+	_doc(vm, "%RET", "Any");
+
 	register_global_func(vm, 1, "[]",       &native_index_get_arr_range,     2, "arr", vm->Arr, "range", vm->NumRange);
+	_doc(vm, "", "Get array elements at specified indexes.");
+	_doc(vm, "r", "NumRange with positive .start and .end");
+	_doc(vm, "%RET", "Arr");
+
 	register_global_func(vm, 1, "[]=",      &native_index_set_arr_range_arr, 3, "arr", vm->Arr, "range", vm->NumRange, "replacement", vm->Arr);
+	_doc(vm, "", "Set array elements at specified indexes.");
+	_doc(vm, "r", "NumRange with positive .start and .end");
+	_doc(vm, "%RET", "replacement");
+
 	register_global_func(vm, 1, "[]",       &native_index_get_arr_int,       2, "arr", vm->Arr, "idx", vm->Int);
+	_doc(vm, "", "Get element at the given index or throw IndexNotFound if the index is out of range (element at the given index does not exist).");
+	_doc(vm, "%RET", "Any");
+
 	register_global_func(vm, 1, "[]=",      &native_index_set_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "v", vm->Any);
+	_doc(vm, "", "Set element at the given index or throw IndexNotFound if the index is out of range.");
+	_doc(vm, "%RET", "v");
+
 	register_global_func(vm, 1, "join",     &native_join_arr_str,            2, "arr", vm->Arr, "s", vm->Str);
 	register_global_func(vm, 0, "copy",     &native_copy_arr,                1, "arr", vm->Arr);
 	_doc(vm, "%RET", "Shallow copy of arr");

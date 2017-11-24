@@ -530,35 +530,82 @@ F push(al:ArrLike, val) al.(al.arr_like_attr).push(val)
 # === HashLike ===================================
 
 {
+	doc Base type for user-defined hash-like types. This is a workaround: it's not possible currently no inherit from the built-in Hash type.
 	type HashLike
 	HashLike.inherit(Eachable2)
 }
 
-F in(name:Str, hl:HashLike)  name in hl.attrs().HashLike
+doc Check whether k is in the HashLike
+doc %RET - Bool
+F in(k, hl:HashLike)         k in hl.attrs().HashLike
 
+doc Get number of key-value pairs in a HashLike
+doc %RET - Int
 F len(hl:HashLike)           hl.attrs().HashLike.len()
+
+
+doc Get value by key. Throws KeyNotFound.
+doc %AUTO - your_hashlike[k]
 F '[]' (hl:HashLike, k)      hl.attrs().HashLike[k]
+
+doc Set value.
+doc %AUTO - your_hashlike[k] = v
 F '[]='(hl:HashLike, k, v)   hl.attrs().HashLike[k] = v
 
+doc Get value by key. Throws KeyNotFound.
+doc %AUTO - your_hashlike.literal_key
+doc %RET - Any
 F .(hl:HashLike, k)          hl.attrs().HashLike[k]
+
+doc Set value.
+doc %AUTO - your_hashlike.literal_key = v
+doc %RET - v
 F .=(hl:HashLike, k, v)      hl.attrs().HashLike[k] = v
+
+doc Get value by key or dflt if it does not exist
+doc %RET - Any
 F get(hl:HashLike, k, dflt)  hl.attrs().HashLike.get(k, dflt)
+
+doc Get value by key or null if it does not exist
+doc %RET - Any
 F get(hl:HashLike, k)        hl.get(k, null)
 
-F each(hl:HashLike, cb:Fun)  hl.attrs().HashLike.each(cb)
+doc Iterate over keys and values.
+doc %EX - my_hashlike.each(F(k, v) echo("$k=$v"))
+doc %RET - hl
+F each(hl:HashLike, cb:Fun) {
+	hl.attrs().HashLike.each(cb)
+	hl
+}
+
+doc Get keys
+doc %RET - Arr
 F keys(hl:HashLike)          hl.attrs().HashLike.keys()
+
+doc Get values
+doc %RET - Arr
 F values(hl:HashLike)        hl.attrs().HashLike.values()
+
+doc Check whether hl has any elements.
+doc %RET - Bool
 F Bool(hl:HashLike)          hl.attrs().HashLike.Bool()
 
 # TODO: mapk, mapv and friends
 # TOOD: Hash() - copy or hash attribute?
 
+doc Filter hash. Build new HashLike with kev-value pairs selected by predicate.
+doc predicate - Test function to be called with one key and one value at a time.
+doc %EX - my_hashlike.filter(F(k, v) k == 'a')
+doc %RET - HashLike
 F filter(hl:HashLike, predicate:Fun) {
 	ret = HashLike()
 	ret.attrs().HashLike = hl.attrs().HashLike.filter(predicate)
 	ret
 }
 
+doc Create a HashLike.
+doc h - If provided, used as initial value.
+doc %EX - HashLike(%{a aha b bee}) # <HashLike a=aha b=bee>
 F init(hl:HashLike, h:Hash=null) {
 	if hl.attrs() is not Hash {
 		hl.attrs({})
@@ -1627,9 +1674,24 @@ TEST %[a1 a2 b1 b2][/^a/.../^b/] == %[a1 a2 b1]
 TEST try { %[a1 a2 b1 b2][/^a/.../^x/]; false } catch(e:IndexNotFound) true
 TEST try { %[a1 a2 b1 b2][/^x/.../^b/]; false } catch(e:IndexNotFound) true
 
+doc Replace array elements.
+doc arr - Array to operate on.
+doc r - Range of elements to replace.
+doc replacement - New elements.
+doc %EX - a = %[a1 a2 b1 b2]
+doc %EX - a[/^a/.../^b/] = [7]  # a == [7, 'b2']
+doc %EX - MARKERS = '# generated - start'..'# generated - end'
+doc %EX - text[MARKERS] = newly_generated_content_lines
 F '[]='(arr:Arr, r:PredRange, replacement:Arr) arr[indexes(arr, r)] = replacement
 TEST a = %[a1 a2 b1 b2]; a[/^a/.../^b/] = [7]; a == [7, 'b2']
 
+doc Check whether the array contains the given range. Finds first match.
+doc %EX - a = %[a1 a2 b1 b2]
+doc %EX - m = a ~ /^a/../^b/ # Exclusive range
+doc %EX - # m.matches == [['a2']]
+doc %EX - # m.before == ['a1']
+doc %EX - # m.after == ['b1', 'b2']
+doc %RET - Match
 F ~(arr:Arr, r:PredRange) {
 	i = try indexes(arr, r)
 	i is Null returns MatchN()
@@ -4986,9 +5048,11 @@ F match(a,b) a ~ b
 
 # === File =======================================
 
-F access(f:File, flags:Int=ACCESS::F_OK) {
-	# x
-	ret = c_access(f.path, flags)
+doc Check whether current process has the specified access to the file. Wrapper around ACCESS(2). Throws CException.
+doc mode - One of the file ACCESS::* modes, defaults to ACCESS::F_OK (test file existance only).
+doc %RET - Bool
+F access(f:File, mode:Int=ACCESS::F_OK) {
+	ret = c_access(f.path, mode)
 	ret == 0 returns true
 	assert(ret < 0)
 	e = c_errno()

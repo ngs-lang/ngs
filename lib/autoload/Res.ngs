@@ -156,7 +156,7 @@
 		rd
 	}
 
-	# Create n resources with given props. Typically called by converge().
+	doc Create n resources with given props. Typically called by converge().
 	doc %RET - rd
 	F create(rd:ResDef, n:Int, **props) {
 		for(i;n) {
@@ -166,7 +166,7 @@
 		rd
 	}
 
-	doc Ensure that resources matching resource definition have given properties. This operation will do necessary changes, including creating the resource(s) if they do not exist.
+	doc Delete the resources matching resource definition.
 	doc %RET - rd
 	F delete(rd:ResDef) {
 		rd.find_if_needed()
@@ -174,11 +174,16 @@
 		rd
 	}
 
+	doc Get IDs of the resources matching resource definition.
+	doc %RET - Arr
 	F ids(rd:ResDef) {
 		rd.find_if_needed()
 		rd.resources.map(id)
 	}
 
+	doc Called by create() on new resources. Appends the new resources to the list and runs update().
+	doc Don't call directly.
+	doc resources - Arr of Res
 	F created(rd:ResDef, resources:Arr, props:Hash) {
 		guard resources.all(Res)
 		resources % update(X, props)
@@ -188,7 +193,7 @@
 		rd.resources += resources
 	}
 
-	doc Get optional resource property, looking up in properties first and then in anchor
+	doc Get optional resource property, looking up in properties first and then in anchor.
 	doc %RET - Box
 	F opt_prop(rd:ResDef, name:Str, props:Hash) [props, rd.anchor].get(name).Box(0)
 
