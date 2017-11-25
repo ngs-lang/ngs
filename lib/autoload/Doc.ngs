@@ -8,13 +8,28 @@ ns {
 	_exports.attrs(_doc.Arr()[0].attrs())
 	global init, push, inspect, Arr
 
-	doc EXPERIMENTAL! Do not use!
+	doc Document part. May represent one element (which might have children) or group of elements.
 	type Part
+
+		doc Any document part that can contain other elements.
 		type Container(Part)
+
+			doc Document node which can have child nodes.
+			doc children - Arr
 			type Node(Container)
+
+			doc A group of document nodes
+			doc children - Arr
 			type Group(Container)
+
+		doc Textual document part. Textual can not contain other nodes.
+		doc txt - Str
 		type Textual(Part)
+
+			doc Comment document part.
 			type Comment(Textual)
+
+			doc Text document part.
 			type Text(Textual)
 
 	F init_children(c:Container) {
@@ -23,21 +38,38 @@ ns {
 		}
 	}
 
+	doc Initialize document node
+	doc %EX - Doc::Node('span', class='inline-param') with [
+	doc %EX - 	Doc::Text(param.name)
+	doc %EX - 	Doc::Text(':')
+	doc %EX - 	Doc::Text(param.type.name)
+	doc %EX - 	...
+	doc %EX - ]
 	F init(n:Node, name:Str, children:Arr=null, **attrs) {
 		init(args())
 		init_children(n)
 	}
 
+	doc Initialize document nodes group
+	doc %EX - Doc::Group() with [
+	doc %EX - 	Doc::Text('something')
+	doc %EX - 	...
+	doc %EX - ]
 	F init(g:Group, children:Arr=null, **attrs) {
 		init(args())
 		init_children(g)
 	}
 
 
+	doc Initialize text fragment of a document
+	doc %EX - Doc::Text(':')
 	F init(t:Textual, txt:Str) init(args())
 
+	doc EXPERIMENTAL! Do not use!
 	F push(c:Container, p:Part) c.children.push(p)
 
+	doc Get all items (children) of document elements group
+	doc %RET - Arr
 	F Arr(g:Group) g.children
 
 	F name(p:Part) null
@@ -100,6 +132,8 @@ ns {
 		}
 	}
 
+	doc Create HTML document from the give top level document node
+	doc %RET - Str
 	F HtmlRoot(n:Node) {
 		'<!DOCTYPE html>\n' + Html(n)
 	}
@@ -117,6 +151,8 @@ ns {
 		exit_hook.push({echo(s)})
 	}
 
+	doc Inspect document node
+	doc %RET - Arr of Str
 	F inspect(n:Node, levels=2) {
 		collector {
 			c = collect

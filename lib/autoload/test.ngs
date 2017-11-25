@@ -1,5 +1,8 @@
 {
+	doc Represents failed test.
 	type TestFail(Error)
+
+	doc Represents an informational, human readable message a successful test would present to the user.
 	type TestMessage(FullBox)
 }
 
@@ -7,6 +10,9 @@ F init(tf:TestFail, message:Str) init(args())
 
 # TODO show standard error output on one changing line instead of occupying a lot of space
 
+doc Runs f as a test.
+doc name - Human readable name of the test.
+doc f - A Fun that will either throw TestFail, return TestMessage. Other values are ignored by the testing framework.
 F test(name:Str, f:Fun) {
 	echo("")
 	echo("==================== TEST: $name ====================")
@@ -22,6 +28,8 @@ F test(name:Str, f:Fun) {
 	}
 }
 
+doc EXPERIMENTAL! Do not use!
+doc Runs f as a test in a test group
 F test(results:TestsResults, group:Str, name:Str, f:Fun, critical:Bool=true) {
 	if not(results.is_blocked_group(group)) {
 		results.status(group, name, "Running")
