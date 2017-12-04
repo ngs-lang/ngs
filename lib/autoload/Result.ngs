@@ -73,9 +73,11 @@
 	doc %RET - f
 	F filter(f:Failure, predicate) f
 
+	doc Convert Success to Bool (true)
 	doc %RET - true
 	F Bool(s:Success) true
 
+	doc Convert Failure to Bool (false)
 	doc %RET - false
 	F Bool(f:Failure) false
 

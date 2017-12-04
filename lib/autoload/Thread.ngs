@@ -5,6 +5,7 @@
 
 	type Thread
 
+	doc Creates and runs a thread. The code that the created thread runs is f, which is passed arg.
 	F init(t:Thread, f:Fun, arg) {
 		thread_attr = c_pthread_attr_t()
 		c_pthread_attr_init(thread_attr)
@@ -17,15 +18,23 @@
 		t.thread = create_result[1]
 	}
 
+	doc Creates and runs a thread. The code that the created thread runs is f without arguments.
 	F init(t:Thread, f:Fun) {
 		init(t, F thread_arg_discard_wrapper(discard) f(), null)
 	}
 
+	doc Joins threads.
+	doc threads - Arr of Thread.
+	doc %RET - Arr, the results from threads, in order.
 	F join(threads:Arr) {
 		guard threads.all(Thread)
 		threads / join
 	}
 
+	doc Joins on thread. Waits for the thread to finish and returns the result from the thread.
+	doc Currently, if a thread throwed an exception, it will be returned as the value.
+	doc In future it might re-throw the exception, probably wrapped in ThreadExeption.
+	doc %RET - Any
 	F join(t:Thread) {
 		debug("[Thread] joining thread ${t.thread.id()}")
 		join_result = c_pthread_join(t.thread)
@@ -37,12 +46,18 @@
 	}
 
 	# TODO: maybe limit number of concurrent threads (default to cores count?)
+	doc Parallel map. Runs mapper in threads. Each thread processes one element from the array but this might change in future (preserving the total number of calls to mapper and the order of results).
+	doc %RET - Arr, result of applying mapper to elements of a, preserving the order.
 	F pmap(a:Arr, mapper:Fun) {
 		# threads = a.map(F(elt) Thread(mapper, elt))
 		threads = a / Thread(mapper, X)
 		threads.join()
 	}
 
+	doc Do something in parallel threads. Runs mapper in threads. Each thread processes one number but this might change in future (preserving the total n calls to mapper and the order of results).
+	doc Mapper is called with thread number of zero to n (not including).
+	doc %RET - Arr, result of applying mapper to sequential numbers, preserving the order.
+	doc %EX - # TODO: parallel API check
 	F pmap(n:Int, mapper:Fun) {
 		# threads = collector
 		# 	for(i;n) {
@@ -52,6 +67,7 @@
 		threads.join()
 	}
 
+	doc Run cb in n parallel threads. Each thread runs one cb but this might change in future (preserving the total n calls to cb).
 	F ptimes(n:Int, cb:Fun) {
 		threads = collector
 			for(i;n) {

@@ -110,6 +110,7 @@ F init(i:MapIter, upstream_iter:Iter, mapper:Fun) {
 doc EXPERIMENTAL! Do not use!
 F next(i:MapIter) i::mapper(i.val.next())
 
+doc EXPERIMENTAL! Do not use!
 F Bool(i:MapIter) Bool(i.val)
 
 doc EXPERIMENTAL! Do not use!
@@ -219,20 +220,23 @@ doc Constant iterator constructor.
 doc val - the constant value to use in next() and peek()
 F init(i:ConstIter, val) init(args())
 
-doc Return the constant iterator value
+doc Return the constant iterator value.
 F next(i:ConstIter) i.val
 
-doc Return the constant iterator value
+doc Return the constant iterator value.
 F peek(i:ConstIter) i.val
 
+doc Convert ConstIter to Bool (true).
 doc %RET - true
 F Bool(i:ConstIter) true
 
 TEST ConstIter(7).drop(10).take(2) == [7,7]
 
 # ---------- RangeIter ----------
+doc Create Iter from NumRange
 F Iter(r:NumRange) RangeIter(r)
 
+doc Initialize RangeIter. Will throw NotImplemented if r.start or r.step are not Int
 F init(i:RangeIter, r:NumRange) {
 	r.start is not Int throws NotImplemented("start must be Int for now").set('value', r)
 	r.step is not Int throws NotImplemented("step must be Int for now").set('value', r)
@@ -240,6 +244,7 @@ F init(i:RangeIter, r:NumRange) {
 	i.elt = r.start + if r.include_start then 0 else r.step
 }
 
+doc Return next item in range.
 F next(i:RangeIter) {
 	throw_if_no_next(i)
 	ret = i.elt
@@ -247,6 +252,8 @@ F next(i:RangeIter) {
 	ret
 }
 
+doc Check whether there is at least one uniterated item in range.
+doc %RET - Bool. true: next() will return next element. false: next() will throw NoNext
 F Bool(i:RangeIter) {
 	r = i.val
 	# Copy+paste from each(r:NumRange, cb:Fun) from stdlib
@@ -288,8 +295,7 @@ doc %RET - Str
 F Str(i:ArrIter) "<ArrIter ${i.idx}/${i.val.len()}>"
 
 doc Check whether there are more array elements to iterate over.
-doc true: next() will return next element. false: next() will throw NoNext
-doc %RET - Bool
+doc %RET - Bool. true: next() will return next element. false: next() will throw NoNext
 F Bool(i:ArrIter) i.idx < i.val.len()
 
 doc Get value of the next element of the array iterated over.
@@ -326,11 +332,13 @@ F init(i:HashIter, h:Hash) {
 F Str(i:HashIter) "<HashIter ${i._iter.idx}/${i._iter.val.len()}>"
 
 doc Check whether there are more pairs to iterate over.
-doc true: next() will return next pair. false: next() will throw NoNext
-doc %RET - Bool
+doc %RET - Bool. true: next() will return next pair. false: next() will throw NoNext
 F Bool(i:HashIter) Bool(i._iter)
 
+doc EXPERIMENTAL! Do not use!
 F next(i:HashIter) { throw_if_no_next(i); k = i._iter.next(); [k, i.val[k]] }
+
+doc EXPERIMENTAL! Do not use!
 F peek(i:HashIter) { throw_if_no_next(i); k = i._iter.peek(); [k, i.val[k]] }
 
 TEST i = Iter({"a": 1, "b": 2}); [i.next(), i.peek()] == [["a", 1], ["b", 2]]

@@ -34,6 +34,7 @@ F init(h:Hash) {
 	type AssertFail
 	AssertFail.inherit(Exception)
 
+	doc Represents an attempt to create an instance of an abstract type (not intended for instanciation).
 	type InstantiatingAbstractType
 	InstantiatingAbstractType.inherit(Exception)
 }
@@ -50,11 +51,17 @@ doc Throws AssertFail if condition is false
 doc %RET - Unspecified, do not count on this value
 F assert(condition:Bool) assert(condition, "Assertion failed")
 
+doc Throws AssertFail if condition, after conversition to Bool is false.
+doc Same as super(Bool(condition), *args) .
+doc condition - not Bool
+doc %RET - Unspecified, do not count on this value
+doc %EX - assert(my_array, "my_array must have elements at this point")
 F assert(condition, *args) {
 	guard condition is not Bool
 	super(Bool(condition), *args)
 }
 
+doc Initializes InstantiatingAbstractType.
 F init(e:InstantiatingAbstractType, t:Type) init(args())
 
 # === Namespaces =================================
@@ -120,6 +127,7 @@ F call(r:Return, v=null) {
 }
 
 
+doc The identity function. Simply returns the given parameter.
 doc %RET - The given argument
 F identity(x)  x
 
@@ -792,6 +800,9 @@ F ==(a:NormalTypeInstance, b:NormalTypeInstance) {
 }
 
 # TODO: move to somewhere more appropriate, keep in mind - must be after dflt(NormalTypeInstance, ...)
+doc Set a key if it's not already set
+doc %EX - mysomething.dflt(k, []).push(elt)
+doc %RET - Key value, the already-existed or new.
 F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
 
 # === Exceptions =================================
@@ -833,8 +844,10 @@ F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
 	type LockFail
 	LockFail.inherit(Exception)
 
+	doc Initialize LockFail exception.
 	F init(e:LockFail, op:Str, code:Int, msg:Str) init(args())
 
+	doc Initialize Lock. Creates and initializes pthread_mutex.
 	F init(l:Lock) {
 		l.lock = c_pthread_mutex_t()
 		code = c_pthread_mutex_init(l.lock)
@@ -868,6 +881,7 @@ F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
 
 	TEST Lock().acquire(F() 1) == 1
 
+	doc Initialize Lock. Creates and initializes PTHREAD_MUTEX_RECURSIVE pthread_mutex.
 	F init(l:ReentrantLock) {
 		l.lock_attr = c_pthread_mutexattr_t()
 		code = c_pthread_mutexattr_init(l.lock_attr)
@@ -878,7 +892,10 @@ F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
 		code throws LockFail("c_pthread_attr_init", code, "Call to underlying API failed")
 	}
 
+	doc Convert c_pthread_mutex_t to Str for displaying to humans.
 	F Str(cpm:c_pthread_mutex_t) "<c_pthread_mutex_t>"
+
+	doc Convert c_pthread_mutexattr_t to Str for displaying to humans.
 	F Str(cpma:c_pthread_mutexattr_t) "<c_pthread_mutexattr_t>"
 }
 
@@ -949,7 +966,7 @@ AUTOLOAD = ns {
 		PredRange.inherit(Range)
 }
 
-doc Range constructor
+doc Range constructor. Throws InstantiatingAbstractType if r is exactly of type Range (not a sub-type).
 F init(r:Range, start, end, include_start=true, include_end=false, step=1) {
 	r.typeof() == Range throws InstantiatingAbstractType(Range)
 	init(args())
@@ -1642,6 +1659,8 @@ F '[]'(arr:Arr, r:NumRange) {
 TEST [10,20,30,40][1..-1] == [20,30]
 
 # TODO: something more effective
+doc Find the indexes of elements of the given PredRange.
+doc Throws IndexNotFound if there is no match between the elements of arr and r.
 doc %RET - NumRange with .include_start=true and .include_end=false
 F indexes(arr:Arr, r:PredRange) {
 	r.step != 1 throws NotImplemented("r.step must be 1")
@@ -2487,6 +2506,9 @@ F Diff(a:Arr, b:Arr, full:Bool=false) {
 TEST Diff(["a", "b"], [Present("a"), Present("c"), Absent("b"), Absent("d")], false).Hash().sort() == {"add": ["c"], "remove": ["b"]}
 TEST Diff(["a", "b"], [Present("a"), Present("c"), Absent("b"), Absent("d")], true).Hash().sort() == {"add": ["c"], "remove": ["b"]}
 
+doc Compare two arrays
+doc b - Array where all elements are of type ExactPresence
+doc %RET - Diff
 F Diff(a:Arr, b:Arr, full:Bool=false) {
 	guard b and b.all(ExactPresence)
 	Diff(a, b.map(get), full)
@@ -2497,7 +2519,7 @@ F Bool(d:ArrDiff) Bool(d.add or d.remove)
 
 doc Compare hashes
 doc %EX - diff = Diff(current_tags, target_tags)
-doc %EX - if (tags = stdlib_aws_tags(diff.add + diff.change)) {
+doc %EX - if (tags = AWS::cli_tags(diff.add + diff.change)) {
 doc %EX - 	r.run('update_tags/add', %(aws ec2 create-tags --resources ${r.id()} --tags $*tags))
 doc %EX - }
 doc %EX - if (tags = diff.remove / "Key=$X") {
@@ -2518,6 +2540,8 @@ F Bool(d:HashDiff) Bool(d.add or d.remove or d.change)
 
 # === Bool =======================================
 
+doc Convert a Bool to NGS code that would produce the given Bool when executed. Not fully functional yet.
+doc %RET - Str
 F code(b:Bool) Str(b)
 
 # === Int ========================================
@@ -2962,14 +2986,19 @@ TEST "a$*{[1,2]}b$*{10..12}c" == ["a1b10c", "a1b11c", "a2b10c", "a2b11c"]
 # === Logging and status reporting (WIP) =========
 
 {
+	doc Represents a fatal error condition that causes the program to exit.
+	doc %EX - throw FatalError("Input file not found")
 	type FatalError(Exception)
 }
 
+doc Initializes FatalError.
 F init(fe:FatalError, message:Str, exit_code:Int=1) {
 	super(fe, message)
 	fe.exit_code = exit_code
 }
 
+doc Convert FatalError to an exit code.
+doc %RET - fe.exit_code
 F to_exit_code(fe:FatalError) fe.exit_code
 
 # TODO: timestamps
@@ -3234,6 +3263,7 @@ F Arg(p:Path) p.path
 
 # === Commands and processes (WIP) ===============
 
+doc Duplicate a file descriptor. Uses DUP2(2). Handles EINTR.
 F dup2(oldfd:Int, newfd:Int) {
 	while true {
 		status = c_dup2(oldfd, newfd)
@@ -3341,6 +3371,9 @@ F init(pipe:Pipe) {
 	debug("file", "${pipe.typeof().name} created pipe with read_fd=${pipe.read_fd} and write_fd=${pipe.write_fd}")
 }
 
+doc Initializes Pipe, copying read_fd and write_fd from another Pipe.
+doc %EX - my_pipe = ...
+doc %EX - second_pipe = Pipe(my_pipe)
 F init(pipe:Pipe, other:Pipe) {
 	pipe.read_fd = other.read_fd
 	pipe.write_fd = other.write_fd
@@ -3395,11 +3428,14 @@ F dup2_reading_end(p:Pipe, newfd:Int) dup2(p.read_fd, newfd)
 
 { type FileIOFail(CException) }
 
+doc Create File type instance from the given path. The file is not open.
+doc %EX - f = File('/tmp/myfile')
 F init(f:File, path:Str) {
 	init(args())
 	f.fd = null
 }
 
+doc Create File type instance from the given file descriptor.
 F init(f:File, fd:Int) init(args())
 
 doc String representation of File
@@ -3481,6 +3517,8 @@ F close(f:File) {
 }
 
 # Note: EINTR should not be handled
+doc Close a file. Uses CLOSE(2).
+doc Throws FileIOFail if an underlying error occurs.
 F close(fd:Int) {
 	ret = c_close(fd)
 	ret < 0 throws FileIOFail("Failed to close file descriptor $fd").set('fd', fd)
@@ -3498,13 +3536,16 @@ F fetch(parse_hints:Hash={}) read(0).parse({'source': 'stdin'} + parse_hints)
 
 # --- Redir ---
 
+doc Initialize Redir type instance. Used internally for commands syntax.
+doc %AUTO - $(my_prog >my_file)
 F init(r:Redir, fd, marker, datum) {
 	guard marker is Str or marker is Null
 	guard datum is Str or datum is Pipe or datum == true
 	init(args())
 }
 
-doc TODO
+doc Convert Redit to human-readable string.
+doc %RET - Str
 F Str(r:Redir) "<Redirect ${r.fd} ${r.marker} ${r.datum}>"
 
 # --- Process ---
@@ -4278,9 +4319,11 @@ F config(k:Str, v) {
 doc Successful match constructor
 F init(my:MatchY, matches:Arr) init(args())
 
+doc Convert successful match to Bool (true)
 doc %RET - true
 F Bool(my:MatchY) true
 
+doc Convert failed match to Bool (false)
 doc %RET - false
 F Bool(my:MatchN) false
 
@@ -4288,6 +4331,7 @@ doc Convert Match to exit code.
 doc %RET - 0 for successful match (MatchY), 1 for unsuccessful match (MatchN).
 F to_exit_code(m:Match) m.Bool().to_exit_code()
 
+doc Initialize MatchFail.
 F init(mf:MatchFail, msg:Str, container, pattern) init(args())
 
 doc SubSec construcor
@@ -4609,6 +4653,17 @@ F code(n:Null) "null"
 
 # === exit_hook - Print uncaught exception =======
 
+doc Convert an array to a possibly shorter version, for displaying to human.
+doc chunk_size - number of elements to retain at the beginning and at the end.
+doc marker - how to mark the cut elements in the middle.
+doc %RET - Arr
+doc %EX - my_arr = Arr(1...100)
+doc %EX - digest(my_arr, 2).each(echo)
+doc %EX - # 1
+doc %EX - # 2
+doc %EX - # (...)
+doc %EX - # 99
+doc %EX - # 100
 F digest(a:Arr, chunk_size:Int, marker:Str='(...)') {
 	l = a.len()
 	l < chunk_size*2 returns a
@@ -4832,10 +4887,12 @@ F strftime(tm:c_tm, format:Str) {
 	ret
 }
 
+doc Initialize Time type instance with current time.
 F init(t:Time) {
 	t.epoch = time()
 }
 
+doc Initialize Time type instance with the given epoch time.
 F init(t:Time, epoch:Int) {
 	t.epoch = epoch
 }
@@ -4923,6 +4980,7 @@ F rand(r:NumRange) {
 	type RetryFail(Error)
 }
 
+doc Internal method. Used by retry().
 F body_missing_in_retry() throw InvalidArgument("'body' argument missing in retry()")
 
 # TODO: Handle NoNext that could occur in sleep iterator
@@ -5118,6 +5176,12 @@ F write(f:File, s:Str) {
 # === Caching ====================================
 
 # TODO: *args and per-args combination wrapping
+doc Cache cb results. Runs cb only once. TODO: Support arguments.
+doc %RET - New function which wraps cb.
+doc %EX - my_func = cached( { expensive(); calculation(); steps(); result } )
+doc %EX - use_result_of(my_func())
+doc %EX - ...
+doc %EX - use_result_of(my_func())
 F cached(cb:Fun) {
 	result = EmptyBox()
 	F cached_function_wrapper() {

@@ -2610,16 +2610,27 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	register_global_func(vm, 0, "c_pthread_attr_init",    &native_c_pthreadattrinit,    1, "attr",   vm->c_pthread_attr_t);
+	_doc(vm, "", "Call pthread_attr_init(3)");
 	register_global_func(vm, 0, "c_pthread_mutexattr_init",   &native_c_pthreadattrinit,    1, "attr",   vm->c_pthread_mutexattr_t);
+	// XXX _doc(vm, "", "Call ");
 	register_global_func(vm, 0, "c_pthread_mutex_init",   &native_c_pthreadmutexinit_pma,   2, "mutex",  vm->c_pthread_mutex_t, "attr", vm->c_pthread_mutexattr_t);
+	_doc(vm, "", "Call PTHREAD_MUTEX_INIT(3)");
 	register_global_func(vm, 0, "c_pthread_mutex_init",   &native_c_pthreadmutexinit,   1, "mutex",  vm->c_pthread_mutex_t);
+	_doc(vm, "", "Call PTHREAD_MUTEX_INIT(3) with NULL as second argument (attr)");
 	register_global_func(vm, 0, "c_pthread_mutex_lock",   &native_c_pthreadmutexlock,   1, "mutex",  vm->c_pthread_mutex_t);
+	_doc(vm, "", "Call PTHREAD_MUTEX_LOCK(3)");
 	register_global_func(vm, 0, "c_pthread_mutex_unlock", &native_c_pthreadmutexunlock, 1, "mutex",  vm->c_pthread_mutex_t);
+	_doc(vm, "", "Call PTHREAD_MUTEX_UNLOCK(3)");
 	register_global_func(vm, 0, "c_pthread_self",         &native_c_pthreadself,        0);
+	_doc(vm, "", "Call PTHREAD_SELF(3)");
 	register_global_func(vm, 0, "c_pthread_attr_t",       &native_c_pthreadattrt,       0);
+	_doc(vm, "", "Create pthread attribute object");
 	register_global_func(vm, 0, "c_pthread_mutex_t",      &native_c_pthreadmutext,      0);
+	_doc(vm, "", "Create pthread mutex object");
 	register_global_func(vm, 0, "c_pthread_mutexattr_t",  &native_c_pthreadmutexattrt,  0);
+	_doc(vm, "", "Create pthread mutex attribute object");
 	register_global_func(vm, 0, "c_pthread_mutexattr_settype",  &native_c_pthreadmutexattrsettype_pma_int,  2, "mutex", vm->c_pthread_mutexattr_t, "type", vm->Int);
+	_doc(vm, "", "Call PTHREAD_MUTEXATTR_SETTYPE(3)");
 
 	register_global_func(vm, 0, "id",                     &native_id_pthread,           1, "thread", vm->c_pthread_t);
 	_doc(vm, "", "Get pthread id as string of characters. This is opaque string which can be used for displaying and comparing to other pthreads ids.");
@@ -2729,7 +2740,17 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// OBJECT
 	register_global_func(vm, 0, "attrs",    &native_attrs,               1, "obj",      vm->Any);
+	_doc_arr(vm, "",
+		"Get attributes. Attributes is auxiliary data slot. It is available on all non-immediate objects.",
+		"The idea is to store additional information that will not get in your way in cases when you don't care about it.",
+		NULL
+	);
 	register_global_func(vm, 0, "attrs",    &native_attrs_any,           2, "obj",      vm->Any, "v", vm->Any);
+	_doc_arr(vm, "",
+		"Set attributes. Attributes is auxiliary data slot. It is available on all non-immediate objects.",
+		"The idea is to store additional information that will not get in your way in cases when you don't care about it.",
+		NULL
+	);
 
 	// BasicType
 	register_global_func(vm, 1, ".",        &native_get_attr_bt_str,       2, "obj", vm->BasicType,          "attr", vm->Str);
@@ -2788,19 +2809,40 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// low level file operations
 	register_global_func(vm, 0, "c_dup2",   &native_c_dup2_int_int,    2, "oldfd",    vm->Int, "newfd", vm->Int);
+	_doc(vm, "", "Duplicate a file descriptor. Uses DUP2(2).");
+	_doc(vm, "%RET", "Int - file descriptor or -1");
 	register_global_func(vm, 0, "c_open",   &native_c_open_str_str,    2, "pathname", vm->Str, "flags", vm->Str);
+	_doc(vm, "", "Open a file. Uses OPEN(2).");
 	_doc(vm, "flags", "r - O_RDONLY; w - O_WRONLY | O_CREAT | O_TRUNC; a - O_WRONLY | O_CREAT | O_APPEND");
+	_doc(vm, "%RET", "Int - file descriptor or -1");
 	register_global_func(vm, 0, "c_close",  &native_c_close_int,       1, "fd",       vm->Int);
+	_doc(vm, "", "Close a file. Uses CLOSE(2).");
+	_doc(vm, "%RET", "Int - zero on success or -1");
 	register_global_func(vm, 0, "c_read",   &native_c_read_int_int,    2, "fd",       vm->Int, "count", vm->Int);
+	_doc(vm, "", "Read from a file. Uses READ(2).");
+	_doc(vm, "count", "Maximal number of bytes to read.");
+	_doc(vm, "%RET", "Arr of two elements: Int - number of bytes read or -1, Str - the read bytes");
 	register_global_func(vm, 0, "c_write",  &native_c_write_int_str,   2, "fd",       vm->Int, "s",     vm->Str);
+	_doc(vm, "", "Write to a file. Uses WRITE(2).");
+	_doc(vm, "%RET", "Int - number of bytes written or -1");
 	register_global_func(vm, 0, "c_poll",   &native_c_poll,            2, "fds_evs",  vm->Arr, "timeout", vm->Int);
+	// TODO DOC
 	register_global_func(vm, 0, "c_dup2",   &native_c_dup2,            2, "oldfd",    vm->Int, "newfd", vm->Int);
+	_doc(vm, "", "Call DUP2(2).");
+	_doc(vm, "%RET", "Int - file descriptor or -1");
 	register_global_func(vm, 1, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
+	_doc(vm, "", "Call LSEEK(2).");
 	_doc(vm, "whence", "One of: set, cur, end");
+	_doc(vm, "%RET", "Int: new offset or -1");
 	register_global_func(vm, 0, "c_isatty", &native_c_isatty,           1,"fd",       vm->Int);
+	_doc(vm, "", "Check if file descriptor refers to a TTY device. Uses ISATTY(3).");
+	_doc(vm, "%RET", "Int: 1 or 0");
 	register_global_func(vm, 0, "c_opendir", &native_c_opendir,         1,"name",     vm->Str);
+	_doc(vm, "", "Call OPENDIR(3)");
 	register_global_func(vm, 1, "c_readdir", &native_c_readdir,         1,"dirp",     vm->C_DIR);
+	_doc(vm, "", "Call READDIR(3)");
 	register_global_func(vm, 1, "c_closedir",&native_c_closedir,        1,"dirp",     vm->C_DIR);
+	_doc(vm, "", "Call CLOSEDIR(3)");
 
 	register_global_func(vm, 1, "c_stat",    &native_c_stat,            1,"pathname", vm->Str);
 	_doc(vm, "", "Call STAT(2)");
@@ -2832,17 +2874,26 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "Array with 3 items: error code, reading end file descriptor, writing end file descriptor");
 
 	register_global_func(vm, 0, "c_waitpid",&native_c_waitpid,         1, "pid",      vm->Int);
+	_doc(vm, "", "Call WAITPID(2)");
 	register_global_func(vm, 0, "c_execve", &native_c_execve,          3, "filename", vm->Str, "argv", vm->Arr, "envp", vm->Arr);
+	_doc(vm, "", "Call EXECVE(2)");
 	register_global_func(vm, 0, "C_WEXITSTATUS", &native_C_WEXITSTATUS,1, "status",   vm->Int);
+	_doc(vm, "", "Use WEXITSTATUS macro.");
 	register_global_func(vm, 0, "C_WTERMSIG", &native_C_WTERMSIG,      1, "status",   vm->Int);
+	_doc(vm, "", "Use WTERMSIG macro.");
 
 	register_global_func(vm, 0, "c_errno",     &native_c_errno,    0);
+	_doc(vm, "", "Use errno macro.");
 	register_global_func(vm, 0, "c_strerror",  &native_c_strerror,     1, "errnum",   vm->Int);
+	_doc(vm, "", "Call STRERROR(2)");
 
 	register_global_func(vm, 0, "c_strcasecmp", &native_c_strcasecmp,  2, "a",   vm->Str,  "b",   vm->Str);
+	_doc(vm, "", "Call STRCASECMP(3)");
 	register_global_func(vm, 0, "c_strcmp",     &native_c_strcmp,      2, "a",   vm->Str,  "b",   vm->Str);
+	_doc(vm, "", "Call STRCMP(3)");
 
 	register_global_func(vm, 0, "c_kill",       &native_c_kill,        2, "pid", vm->Int,  "sig", vm->Int);
+	_doc(vm, "", "Call KILL(2)");
 
 	// boolean
 	register_global_func(vm, 0, "==",       &native_eq_bool_bool,      2, "a",   vm->Bool, "b", vm->Bool);
@@ -2901,8 +2952,12 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "v");
 
 	register_global_func(vm, 1, "join",     &native_join_arr_str,            2, "arr", vm->Arr, "s", vm->Str);
+	_doc(vm, "", "Join strings using s as glue");
+	_doc(vm, "arr", "Arr of Str");
+
 	register_global_func(vm, 0, "copy",     &native_copy_arr,                1, "arr", vm->Arr);
-	_doc(vm, "%RET", "Shallow copy of arr");
+	_doc(vm, "", "Shallow copy of arr");
+	_doc(vm, "%RET", "Arr");
 
 	// string
 	// TODO: other string comparison operators
@@ -3096,8 +3151,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	register_global_func(vm, 1, "c_gmtime",     &native_c_gmtime,         1, "timep", vm->Int);
+	// XXX _doc(vm, "", "Call GMTIME_R(?)");
 	register_global_func(vm, 1, "c_localtime",  &native_c_localtime,      1, "timep", vm->Int);
+	_doc(vm, "", "Call LOCALTIME(3)");
 	register_global_func(vm, 0, "c_strftime",   &native_c_strftime,       2, "tm",    vm->c_tm, "format", vm->Str);
+	_doc(vm, "", "Call STRFTIME(3)");
 
 	// hash
 	register_global_func(vm, 0, "in",       &native_in_any_hash,       2, "x",   vm->Any, "h", vm->Hash);

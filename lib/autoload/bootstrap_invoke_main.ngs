@@ -5,6 +5,8 @@
 	type BootstrapFailedMatchMain(Exception)
 }
 
+doc Internal method. Please do not use.
+doc Tries to run c if it matches argv.
 F bootstrap_try_main(c:Closure, argv:Arr, finish:Return) {
 	bootstrap_debug("Trying main() candidate $c")
 	try {
@@ -29,6 +31,9 @@ F bootstrap_try_main(c:Closure, argv:Arr, finish:Return) {
 	}
 }
 
+doc Find and invoke main() method that matches the passed command line arguments.
+doc Called by bootstrapper in cases where main() is defined.
+doc default - The result of evaluation of the code that was run by bootstrapper. Returned when main is not a MultiMethod or the defined main() was not in the main file.
 F bootstrap_invoke_main(default) {
 	main is not MultiMethod returns default
 	candidate_mains = main.Arr().filter(F(m) m.ip().resolve_instruction_pointer().file == bootstrap_main_file).reverse()

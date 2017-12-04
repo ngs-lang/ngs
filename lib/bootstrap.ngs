@@ -1,11 +1,13 @@
 # === Exception ==================================
 
+doc Initialize an Exception.
 doc %RET - Exception with .backtrace and .message
 doc message - Goes into .message
 F init(e:Exception, message:Str) {
 	e.message = message
 }
 
+doc Initialize an Exception.
 doc %RET - Exception with .backtrace and .cause
 F init(e:Exception, cause:Exception) {
 	e.cause = cause
@@ -28,8 +30,10 @@ TEST Exception(Exception()).cause is Exception
 # *** Convert values returned by the program (or -e/-E expression) to exit codes ***
 doc %RET - always 0
 F to_exit_code(x) 0
+
 doc %RET - 0 for true, 1 for false
 F to_exit_code(b:Bool) if b 0 1
+
 doc %RET - n
 F to_exit_code(n:Int) n
 
@@ -61,6 +65,9 @@ bootstrap_ngs_dir_candidates = [
 	'/usr/lib/ngs'
 ]
 
+doc Internal method. Please do not use.
+doc Find which of bootstrap_ngs_dir_candidates directories contains stdlib.ngs . That directory would be the "NGS_DIR".
+doc %RET - Str or null
 F bootstrap_find_ngs_dir() {
 	l = bootstrap_ngs_dir_candidates.len()
 	for(i;l) {
@@ -69,6 +76,8 @@ F bootstrap_find_ngs_dir() {
 	null
 }
 
+doc Internal method. Please do not use.
+doc Use the environment variable "NGS_DIR" for "NGS_DIR".
 F bootstrap_find_ngs_dir() {
 	guard 'NGS_DIR' in ENV
 	ENV['NGS_DIR']
@@ -114,6 +123,7 @@ F require(fname:Str) {
 	}
 }
 
+doc Internal method. Please do not use.
 doc Main entry point. Executed on NGS boot.
 F bootstrap() {
 	global ARGV0
@@ -226,6 +236,8 @@ F bootstrap() {
 	result.to_exit_code()
 }
 
+doc Internal method. Please do not use.
+doc Runs bootstrap() and handles exceptions.
 F bootstrap_exception_catch_wrapper() {
 	exception = null
 	exit_code = null

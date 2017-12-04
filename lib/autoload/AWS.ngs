@@ -38,11 +38,18 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# Misc utilities
 	# --------------------------------------------------
 
+	doc Convert hash to Key=...,Value=... strings suitable for passing to AWS CLI.
+	doc %RET - Arr of Str
+	doc %EX - diff = Diff(current_tags, target_tags)
+	doc %EX - if (tags = cli_tags(diff.add + diff.change)) {
+	doc %EX - 	r.run('add tags', %(aws ec2 create-tags --resources ${r.id()} --tags $*tags))
+	doc %EX - }
 	F cli_tags(h:Hash) h / "Key=$X,Value=$Y"
 
 	doc Convert Hash with AWS filters to command line arguments.
 	doc Key-value pairs in which value is null or instance of EmptyBox are discarded.
 	doc TODO: make it JSON when keys or values contain special characters such as = or ,
+	doc %RET - Arr of Str
 	F cli_filters(h:Hash) {
 		unboxed = h.rejectv(NoData).mapv(only(Box, get)).reject(X == [])
 		unboxed.mapv(only(Pfx, { "${A.val}*" })).mapv(only(Arr, X.join(","))).map("Name=$X,Values=$Y")
@@ -52,6 +59,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	TEST AWS::cli_filters({"x": "y", "z": null, "w": FullBox("ww")}) == ['Name=x,Values=y', 'Name=w,Values=ww']
 	TEST AWS::cli_filters({"x": Pfx("aa"), "z": EmptyBox()}) == ['Name=x,Values=aa*']
 
+	doc Convert hash to Name=tag:...,Values=... strings suitable for passing to AWS CLI as filters.
+	doc %EX - filters = AWS::cli_filters({'vpc-id': ...})
+	doc %EX - vpcs = ``aws ec2 describe-vpcs --filters $*filters``
 	F cli_tags_filters(h:Hash) h / "Name=tag:$X,Values=$Y"
 	TEST AWS::cli_tags_filters({}) == []
 	TEST AWS::cli_tags_filters({"x": "y"}) == ['Name=tag:x,Values=y']
@@ -67,8 +77,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			``aws ec2 describe-regions``.RegionName.sort()
 		}
 	})
+	doc Get list of AWS regions. If NGS_AWS_REGIONS environment variable is set, it is used as comma separated list. Otherwise AWS CLI command describe-regions is used.
+	doc In future, the results of AWS CLI call might be cached.
 	F regions() _regions()
 
+	doc Call cb in parallel threads, each with AWS region name as argument.
+	doc cb - Returns array. regions() sets .Region in the result and flattens the results
+	doc %RET - Arr
+	doc %EX - ins = AWS::regions({ ``aws ec2 describe-instances --region $A $*filters`` })
 	F regions(cb:Fun) {
 		regs = regions()
 		regs.pmap(F(r) {
@@ -81,16 +97,23 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# --- zones ---
 	# TODO: support regions
 	_zones = cached({ ``aws ec2 describe-availability-zones``.ZoneName.sort() })
+	doc Internal method. Please do not use. It does not support regions yet.
+	doc %RET - Arr of Str
 	F zones() _zones()
 
 	# --------------------------------------------------
 	# Res
 	# --------------------------------------------------
 
+	doc AWS resource
 	type Res(GlobalRes)
 
+	doc Run a command. Internal method. Please do not use outside the AWS library.
 	F run(r:Res, log_pfx:Str, cp:CommandsPipeline, do_parse=true) r.def.run("${r} ${log_pfx}", cp, do_parse)
 
+	doc Update tags using AWS CLI "aws ec2 create-tags" and "aws ec2 delete-tags".
+	doc The required AWS CLI is computed from current tags, which are expected to be in r.props.Tags, and props.Tags
+	doc %RET - Do not count on this value.
 	F update_tags(r:Res, props:Hash) {
 		target_tags = r.def.opt_prop('Tags', props).get({})
 		current_tags = r.props.get('Tags', {})
@@ -122,12 +145,21 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# ResDef
 	# --------------------------------------------------
 
+	doc AWS Resource definition
 	type ResDef(GlobalResDef)
 
+	doc Initialize ResDef from kw. Defaults: null for .regions and empty hash for .Tags
 	F init(rd:ResDef, **kw)           super(rd, {'regions': null, 'Tags': {}} + kw)
+
+	doc Initialize ResDef from _ngs_name. Sets .regions to null, .Tags to empty hash and .name to _ngs_name.
 	F init(rd:ResDef, _ngs_name:Str)  super(rd, {'regions': null, 'Tags': {}, 'name': _ngs_name})
+
+	doc Initialize ResDef from _ngs_tags. Sets .regions to null and .Tags to _ngs_tags.
 	F init(rd:ResDef, _ngs_tags:Hash) super(rd, {'regions': null, 'Tags': _ngs_tags})
 
+	doc Run an external command related to the resource definition. Will not run the command if rd.dry_run is true.
+	doc do_parse - Whether to parse the output
+	doc %RET - Either parsed output or finished CommandsPipeline (processes in CommandsPipeline finished)
 	F run(rd:ResDef, log_pfx:Str, cp:CommandsPipeline, do_parse=true) {
 		assert(cp.commands.len() == 1, "Don't know how to print pipeline")
 		if rd.dry_run {
@@ -162,8 +194,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	type Vpc(ResDef)
 	type VpcRes(Res)
 
+	doc Return VPC id
 	F id(r:VpcRes) r.props.VpcId
 
+	doc Find a VPC(s). Currently supported search criteria are: Tags, CidrBlock, IsDefault
 	F find(rd:Vpc) {
 		debug("AWS", "Find VPC $rd")
 		rd._assert_anchor_has_only_known_keys('Tags', 'CidrBlock', 'IsDefault')
@@ -172,6 +206,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd
 	}
 
+	doc Create a VPC. Currently supported properties are: Tags, CidrBlock.
 	F create(rd:Vpc, **props) {
 		rd._assert_props_has_only_known_keys(props, 'Tags', 'CidrBlock')
 		cidr = rd.req_prop('CidrBlock', props)
@@ -1146,8 +1181,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# different from "x = y" (which is exported)
 	global AWS_AMI_OWNER_DEBIAN = AMI_OWNER_DEBIAN
 	global AWS_AMI_OWNER_AMAZON = AMI_OWNER_AMAZON
-	global stdlib_aws_tags = cli_tags
-	global aws_regions = regions
 	global AwsRes = Res, AwsResDef = ResDef
 	global AwsVpc = Vpc, AwsVpcRes = VpcRes
 	global AwsSecGroup = SecGroup, AwsSecGroupRes = SecGroupRes
