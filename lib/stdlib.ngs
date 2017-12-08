@@ -229,8 +229,8 @@ F filter(something:Eachable1, predicate) {
 		}
 }
 
-doc EXPERIMENTAL! Do not use!
-doc TODO: similar for all(), any(), none(), reject()
+doc DEPRECATED! Do not use!
+doc Use something.filter({attr: predicate}) instead.
 F filter(something:Eachable1, attr:Str, predicate) {
 	p = Pred(predicate)
 	something.filter({ p(A.(attr)) })

@@ -1,0 +1,82 @@
+{
+	doc Represents a set of items
+	type Set(Eachable1)
+
+	doc Initialize a set
+	F init(s:Set) {
+		s.val = {}
+	}
+
+	doc Convert array to set
+	F init(s:Set, e:Eachable1) {
+		super(s)
+		e.each({ s.val[A] = true })
+	}
+
+	doc Add an element to the set
+	doc %RET - s
+	F push(s:Set, v) {
+		s.val[v] = true
+		s
+	}
+
+	doc Get number of items in the set
+	doc %RET - Int
+	F len(s:Set) s.val.len()
+
+	doc Call cb for each value in the set
+	doc %RET - s
+	F each(s:Set, cb:Fun) {
+		s.val.keys().each(cb)
+		s
+	}
+
+	doc Check if the value is in the set
+	doc %RET - Bool
+	F in(x, s:Set) x in s.val
+
+	doc Check whether the set is not empty
+	F Bool(s:Set) Bool(s.val)
+
+	doc Convert the set to an array
+	F Arr(s:Set) s.val.keys()
+
+	doc Make a new set containing only values that match the predicate
+	doc %RET - Set
+	F filter(s:Set, predicate) Set().set('val', s.val.filterk(predicate))
+
+	doc Make a new set without the given value
+	doc %RET - Set
+	F without(s:Set, v) s.filter({ A == v })
+
+	doc Convert the set to a human-readable representation
+	F Str(s:Set) "<${s.typeof().name} ${s.val.keys().join(', ')}>"
+
+	doc Set difference
+	doc %RET - Set
+	F -(a:Set, b:Set) a.filter(X not in b)
+
+	TEST Set([1,2]) - Set([2]) == Set([1])
+
+	doc Set union
+	doc %RET - Set
+	F +(a:Set, b:Set) Set().set('val', a.val + b.val)
+
+	TEST Set([1,2]) + Set([3]) == Set([1,2,3])
+
+	doc Check whether all values in a are also in b
+	F '<='(a:Set, b:Set) {
+		len(a) <= len(b) and a.all(X in b)
+	}
+
+	TEST Set([1,2]) + Set([3]) <= Set([1,2,3])
+	TEST Set([1,2]) <= Set([1,2,3])
+	TEST not(Set([1,2,4]) <= Set([1,2,3]))
+
+	F copy(s:Set) {
+		ret = Set()
+		s.each(ret.push(X))
+		ret
+	}
+
+}

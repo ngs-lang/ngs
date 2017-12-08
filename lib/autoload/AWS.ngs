@@ -33,6 +33,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	AMI_OWNER_DEBIAN = '379101102735'
 	AMI_OWNER_AMAZON = '801119661308'
 	INSTANCE_STATES = %[pending running shutting-down terminated stopping stopped]
+	# VOLUME_STATES = %[creating available in-use deleting deleted error]
+	# SNAPSHOT_STATES = %[pending completed error]
+	_SNAPSHOT_AMI_RE = /^Created by CreateImage.* for (ami-[a-z0-9]+)/
+	_REGION_RE = /^[a-z]{2,3}-[a-z]{2,20}-[0-9]+$/
+	_AZ_RE = /^([a-z]{2,3}-[a-z]{2,20}-[0-9]+)([a-z])$/
 
 	# --------------------------------------------------
 	# Misc utilities
@@ -101,6 +106,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	doc %RET - Arr of Str
 	F zones() _zones()
 
+
 	# --------------------------------------------------
 	# Res
 	# --------------------------------------------------
@@ -139,6 +145,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 				r.run('remove tags', %(aws ec2 delete-tags --resources ${r.id()} --tags $*tags))
 			}
 		}
+	}
+
+	F id(r:Res) {
+		r.props.(r.def.typeof().attrs().id)
 	}
 
 	# --------------------------------------------------
@@ -184,6 +194,20 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F _assert_props_has_only_known_keys(rd:ResDef, props:Hash, *known_keys) {
 		props.without('META').each(F(k, v) {
 			k not in known_keys throws InvalidArgument("Props contains unknown key '$k'. Known keys are: $known_keys")
+		})
+	}
+
+	# --------------------------------------------------
+	# (helpers)
+	# --------------------------------------------------
+
+	# --- filters helper ---
+	F _make_filters_argv(rd:ResDef, filtersNamesToAnchorNames:Hash) {
+		h = filtersNamesToAnchorNames.mapv({ rd.anchor.Box(A) })
+		Argv({
+			'--filters':
+				cli_filters(h) +
+				rd.anchor.Tags.cli_tags_filters()
 		})
 	}
 
@@ -1173,6 +1197,77 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 	}
 
+	# --------------------------------------------------
+	# Volume (WIP)
+	# --------------------------------------------------
+
+	type Volume(ResDef)
+	type VolumeRes(Res)
+
+	Volume.attrs().update(%{
+		prefix vol
+		id     VolumeId
+	})
+
+	F find(rd:Volume) {
+		debug("AWS", "Find Volume ${rd}")
+		rd._assert_anchor_has_only_known_keys(*%[VolumeId State SnapshotId Tags AvailabilityZone VolumeType Size])
+		# filters = ['--filters'] +? (rd.anchor.Tags.cli_tags_filters() + cli_filters({'cidr': rd.anchor.get('CidrBlock'), 'isDefault': rd.anchor.get('IsDefault')}))
+		filters = _make_filters_argv(rd, {
+				'volume-id': 'VolumeId'
+				'status': 'State'
+				'snapshot-id': 'SnapshotId'
+				'availability-zone': 'AvailabilityZone'
+				'volume-type': 'VolumeType'
+				'size': 'Size'
+		})
+		resources = ``aws ec2 describe-volumes $*filters``
+		rd.resources = resources / VolumeRes(rd, X)
+		rd.resources .= sort({ A.props.CreateTime <= B.props.CreateTime })
+		debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources")
+		rd
+	}
+
+	# --------------------------------------------------
+	# Snapshot (WIP)
+	# --------------------------------------------------
+
+	type Snapshot(ResDef)
+	type SnapshotRes(Res)
+
+	# Owner ids starting with zero must be passed as strings
+	F find(rd:Snapshot) {
+		debug("AWS", "Find Snapshot ${rd}")
+		rd._assert_anchor_has_only_known_keys(*%[Tags Description OwnerId OwnerIds SnapshotId State VolumeId VolumeSize _AMI])
+		# filters = ['--filters'] +? (rd.anchor.Tags.cli_tags_filters() + cli_filters({'cidr': rd.anchor.get('CidrBlock'), 'isDefault': rd.anchor.get('IsDefault')}))
+		filters = _make_filters_argv(rd, {
+				'description': 'Description'
+				'owner-id': 'OwnerId'
+				'snapshot-id': 'SnapshotId'
+				'status': 'State'
+				'volume-id': 'VolumeId'
+				'volume-size': 'VolumeSize'
+		})
+		filters2 = Argv({
+			'--owner-ids': rd.anchor.Box('OwnerIds')
+		})
+		resources = ``aws ec2 describe-snapshots $*filters $*filters2``
+		resources.each(F(r) {
+			r._AMI = if m = (r.Description ~ _SNAPSHOT_AMI_RE) {
+				m[1]
+			} else {
+				null
+			}
+		})
+		rd.opt_prop('_AMI', rd.anchor, F(_AMI) {
+			resources .= filter(F(r) r._AMI == _AMI)
+		})
+		rd.resources = resources / SnapshotRes(rd, X)
+		debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources")
+		rd
+	}
+
+
 	# ==================================================
 	# Backwards compatibility with bunch of global variables
 	# ==================================================
@@ -1209,5 +1304,34 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 
 		vars.mapk(resolve_global_variable).each(set_global_variable)
+	}
+
+	# ==================================================
+	# Quick resolve of resource ids to ResDef (WIP)
+	# ==================================================
+
+	_rd_types = _exports.without('ResDef').values().filter(Type).filter(F(t) t.parents.has(ResDef))
+	# echo(_exports.without('ResDef').values().map(typeof))
+	_rd_types_with_prefixes = _rd_types.filter(F(t) t.attrs().has('prefix'))
+
+	RESOURCE_CODE_TO_RESOURCE_TYPE = _rd_types_with_prefixes.map(F(t) {
+		[t.attrs().prefix, t]
+	}).Hash()
+
+	doc Work in progress, do not use!
+	F q(id:Str) {
+		m = id ~ /^([a-z]+)-[a-zA-Z0-9]+$/
+		guard m
+		guard m[1] in RESOURCE_CODE_TO_RESOURCE_TYPE
+		t = RESOURCE_CODE_TO_RESOURCE_TYPE[m[1]]
+		args = { t.attrs().id: id }
+		t(**args)
+	}
+
+	doc Work in progress, do not use!
+	F q(id:Str) {
+		guard id in RESOURCE_CODE_TO_RESOURCE_TYPE
+		t = RESOURCE_CODE_TO_RESOURCE_TYPE[id]
+		t()
 	}
 }
