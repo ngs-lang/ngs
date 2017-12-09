@@ -301,3 +301,233 @@ Output:
 	  [c] = letter c
 	  [10] = ten
 	  [20] = twenty
+
+# AWS
+
+## Get more convenient data structures from AWS CLI - background
+
+NGS has double backtick syntax. It means to run a command and parse the output. It can detect and parse JSON so you can run arbitrary commands that return JSON and have it parsed. For AWS CLI commands double backtick does more meaningful transformations of the data.
+
+## Get more convenient data structures from AWS CLI - volumes example
+
+AWS CLI commands return JSON data structures. Unfortunately, these are not very convenient to work with.
+
+Command:
+
+	aws ec2 describe-volumes
+
+Output:
+
+	{
+	    "Volumes": [
+	        {
+	            "Size": 8,
+	            "Encrypted": false,
+	            "Iops": 100,
+	            "SnapshotId": "snap-xxxxxxxx",
+	            "VolumeType": "gp2",
+	            "AvailabilityZone": "eu-central-1b",
+	            "State": "available",
+	            "Attachments": [],
+	            "CreateTime": "2015-08-26T21:51:07.681Z",
+	            "VolumeId": "vol-vvvvvvvv"
+	        },
+	        {
+	            "Size": 8,
+	            "Encrypted": false,
+	            "Iops": 100,
+	            "SnapshotId": "snap-yyyyyyyy",
+				...
+			},
+			...
+	}
+
+The interesting information is in the "Volumes" of course. This is how NGS can help a bit: have the interesting information at the top level of your data structure
+
+Command:
+
+	ngs -pj '``aws ec2 describe-volumes``' | jq .
+
+Output:
+
+	[
+	  {
+	    "VolumeType": "gp2",
+	    "State": "available",
+	    "Iops": 100,
+	    "VolumeId": "vol-vvvvvvvv",
+	    "CreateTime": "2015-08-26T21:51:07.681Z",
+	    "AvailabilityZone": "eu-central-1b",
+	    "Encrypted": false,
+	    "Attachments": [],
+	    "SnapshotId": "snap-xxxxxxxx",
+	    "Size": 8
+	  },
+	  {
+	    "VolumeType": "gp2",
+	    "State": "in-use",
+		...
+	   },
+	 ...
+	 ]
+
+Suppose you want to do some more processing of this information. Maybe in bash. One JSON per line can help:
+
+Command:
+
+	ngs -pjl '``aws ec2 describe-volumes``'
+
+Output:
+
+	{ "State": "available", "Encrypted": false, "Size": 8, ... }
+	{ "State": "in-use", "Encrypted": false, "Size": 8, ... }
+	...
+
+
+## Get more convenient data structures from AWS CLI - instances example
+
+Even more unfortunately, the `aws ec2 describe-instances` CLI returns even less friendly data structure:
+
+Command:
+
+	aws ec2 describe-instances
+
+Output:
+
+	{
+	    "Reservations": [
+	        {
+	            "Instances": [
+	                {
+	                    "State": {
+	                        "Name": "stopped",
+	                        "Code": 80
+	                    },
+						...
+					}
+					...
+				]
+			}
+			...
+		]
+	}
+
+With NGS, you get the contents of "Instances" at the top level:
+
+Command:
+
+	ngs -pj '``aws ec2 describe-instances``' | jq .
+
+Output:
+
+	[
+	  {
+	    "ProductCodes": [],
+	    "ImageId": "ami-xxxxxxxx",
+	    "PrivateDnsName": "ip-10-XX-XX-XX.eu-central-1.compute.internal",
+	    "Hypervisor": "xen",
+		...
+	  },
+	  ...
+	]
+
+Again, we can do the one JSON per line variant.
+
+Command:
+
+	ngs -pjl '``aws ec2 describe-instances``'
+
+Output:
+
+	{ "VpcId": "vpc-vvvvvvvv", "ProductCodes": [ ], "SubnetId": "subnet-aaaaaaaa", ... }
+	{ "VpcId": "vpc-vvvvvvvv", "ProductCodes": [ ], "SubnetId": "subnet-bbbbbbbb", ... }
+	...
+
+## Get more convenient data structures from AWS CLI - tags example
+
+We are getting at what bothered me for years. The tags. I hope it will take some of your pain away too :)
+
+Command:
+
+	ngs -pj '``aws ec2 describe-instances``[10].Tags'
+
+Output:
+
+	{ "status": "Setup done", "role": "insta-server", "env": "staging", "Name": "beame-login" }
+
+Yes! Not a list of hashes that look like `{ "Key": ..., "Value": ... }` each, just one simple hash!
+
+
+## Get all distinct roles of machines
+
+Command:
+
+	ngs -pl '``aws ec2 describe-instances``.Tags.filter("role" in X).role.uniq().sort()'
+
+Output:
+
+	...
+	docker-builder
+	edge
+	elk
+	graphing
+	...
+
+Explanation:
+
+	``aws ec2 describe-instances``.Tags # Returns array of hashes. One hash per instance
+	.filter("role" in X)                # Only keep instances that have "role" tag
+	.role                               # Returns array of values of "role" tags
+
+Alternative command:
+
+	ngs -pl '``aws ec2 describe-instances``.Tags.get("role").uniq().sort()'
+
+Explanation:
+
+	.get("role")  # for all elements of the array on the left (array of tags hashes)
+	              # it returns the value for "role", if it exists
+				  # Note that using simply .role as in the previous example
+				  # would throw exception for any instance without the "role" tag.
+				  # That's why the previous example uses filter().
+
+## NGS AWS library - background
+
+I manipulate infrastructure using scripts (some parts using CloudFormation). To make handling infrastructure more convenient for me, I made NGS AWS library. Examples follow.
+
+## NGS AWS library - list instances in all regions
+
+The following command uses built-in parallelism to query all regions at once.
+
+Command:
+
+	ngs -pjl 'AWS::Instance(regions="*")'
+
+Output:
+
+	{ "Tags": { "Name": "edge", "status": "Setup done", ... }
+	{ "LaunchTime": "2017-07-19T08:05:06.000Z", "PublicIpAddress": "35.XXX.XXX.XXX", ... }
+	{ "LaunchTime": "2016-10-02T10:15:26.000Z", "PublicIpAddress": "52.YY.YY.YYY", ... }
+	...
+
+
+## NGS AWS library - ELB examples
+
+Delete ELB:
+
+	ngs -e 'AWS::Elb("prod-mobile-redirect").delete()'
+
+Disconnect all instances from ELB:
+
+	ngs -e 'AWS::Elb("dev-provision").converge(Instances=[])'
+
+Make sure instances are connected to ELB.
+
+	ngs -e 'AWS::Elb("dev-provision").converge(Instances=AWS::Instance({"env": "dev", "role": "provision"}).expect())
+
+Delete unused ELBs:
+
+	ngs -e 'AWS::Elb().reject(X.Instances).delete()'
+
+	AWS::Elb()            # references all load balancers
+	.reject(X.Instances)  # filters out load balancers that have instances attached to them
