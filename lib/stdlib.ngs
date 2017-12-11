@@ -124,6 +124,17 @@ F call(r:Return, v=null) {
 	type Num
 	Int.inherit(Num)
 	Real.inherit(Num)
+
+	doc Get empty array
+	F Arr()  { [] }
+	doc Get empty hash
+	F Hash() { {} }
+	doc Get empty string
+	F Str()  { '' }
+	doc Get zero
+	F Int()  { 0 }
+	doc Get zero
+	F Real() { 0.0 }
 }
 
 
@@ -213,21 +224,24 @@ F only(predicate, mapper:Fun) {
 
 TEST ["abc", 1, "def", 2].map(only(Int, X*2)) == ["abc", 2, "def", 4]
 
-doc Filter something to an Arr (array) of values using predicate.
-doc something - Eachable1
+doc Filter e using predicate.
+doc e - Eachable1. WARNING: instances of same type as e must have empty constructor and push() method.
 doc predicate - Decision function to be called with each item as first argument.
 doc predicate - When predicate(item) returns true, the item will appear in the resulting array.
 doc %EX - (1...10).filter(F(num) num % 2 == 0)  # Gives [2,4,6,8,10]
 doc %EX - (1...10).filter(X<5)  # Gives [1,2,3,4], predicate called as predicate(item, 5)
 doc %RET - Arr
-F filter(something:Eachable1, predicate) {
-	p = Pred(predicate)
-	collector
-		something.each() do F(elt) {
-			if p(elt)
-				collect(elt)
-		}
+F filter(e:Eachable1, predicate) {
+	pred = Pred(predicate)
+	t = typeof(e)
+	ret = t()
+	e.each() do F(elt) {
+		if pred(elt)
+			ret.push(elt)
+	}
+	ret
 }
+
 
 doc DEPRECATED! Do not use!
 doc Use something.filter({attr: predicate}) instead.
@@ -405,6 +419,7 @@ F drop(something:Eachable1, predicate)
 TEST [1,2,3,1,2].drop(X<3) == [3,1,2]
 
 doc Replace all occurrences of src with dst
+doc TODO: Return same type, not Arr
 doc something - Instance of any type that has each(something, callback) implemented
 doc %RET - Arr
 doc %EX - ["ssh", "IP", "w"].replace("IP", "10.0.0.100")  # ['ssh','10.0.0.100','w']
@@ -1443,11 +1458,11 @@ F map(arr:Arr, n:Int, mapper:Fun) collector arr.each(n, collect + mapper)
 # Tested by ~(s:Str, r:RegExp)
 
 doc Filter out all occurrences of specific value
-doc arr - items to filter
+doc e - items to filter
 doc without_elt - The value to filter out
 doc %RET - Arr
 doc %EX - [1,2,3,2].without(2)  # [1,3]
-F without(arr:Arr, without_elt) arr.filter(X != without_elt)
+F without(e:Eachable1, without_elt) e.filter(X != without_elt)
 
 TEST [1,2,3,2].without(2) == [1,3]
 
@@ -1541,7 +1556,13 @@ doc %EX - [1,5,1,10].indexes(X>2)  # [1,3]
 F indexes(arr:Arr, predicate) {
 	p = Pred(predicate)
 	l = arr.len()
-	l.filter(p + arr[X])
+	ret = []
+	for(i;l) {
+		if(p(arr[i])) {
+			ret.push(i)
+		}
+	}
+	ret
 }
 
 TEST [1,5,1,10].indexes(X>2) == [1,3]
@@ -2207,12 +2228,12 @@ TEST {"a": 1, "b": 2}.limit(3) == {"a": 1, "b": 2}
 TEST {"a": 1, "b": 2}.limit(1) == {"a": 1}
 
 doc TODO.
-doc Group items from a by key returned by cb
+doc Group items from e by key returned by cb
 doc args - Additional arguments for calling cb
 doc %RET - Hash
-F group(a:Arr, cb:Fun) {
+F group(e:Eachable1, cb:Fun) {
 	ret = {}
-	a.each(F(elt) {
+	e.each(F(elt) {
 		k = cb(elt)
 		ret.dflt(k, []).push(elt)
 	})

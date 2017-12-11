@@ -41,14 +41,6 @@
 	doc Convert the set to an array
 	F Arr(s:Set) s.val.keys()
 
-	doc Make a new set containing only values that match the predicate
-	doc %RET - Set
-	F filter(s:Set, predicate) Set().set('val', s.val.filterk(predicate))
-
-	doc Make a new set without the given value
-	doc %RET - Set
-	F without(s:Set, v) s.filter({ A == v })
-
 	doc Convert the set to a human-readable representation
 	F Str(s:Set) "<${s.typeof().name} ${s.val.keys().join(', ')}>"
 

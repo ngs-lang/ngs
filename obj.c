@@ -431,7 +431,7 @@ uint32_t hash(VALUE v) {
 		return ret;
 	}
 	if(IS_OBJ(v)) {
-		// Warning: only using lower 32 significant bits out of 60 significan bits on x86_64.
+		// Warning: only using lower 32 significant bits out of 60 significant bits on x86_64.
 		// Observed to be 16 bytes aligned on x86_64 Linux. Discarding zero bits.
 		t.i = v.num >> 4;
 		ret = FNV_OFFSET_BASIS;
