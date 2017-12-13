@@ -1989,7 +1989,11 @@ doc args - Additional arguments for calling cb
 doc %RET - h
 doc %EX - {"a": 1, "b": 2}.each(F(k, v) echo("$k=$v"))  # Outputs: "a=1" and on the next line "b=2"
 F each(h:Hash, cb:Fun) {
-	h.keys().each(F(k) cb(k, h[k]))
+	entry = ll_hash_head(h)
+	while entry != null {
+		cb(entry.ll_hash_entry_key(), entry.ll_hash_entry_val())
+		entry = entry.ll_hash_entry_next()
+	}
 	h
 }
 
@@ -2001,7 +2005,13 @@ doc %RET - h
 doc %EX - {"a": 1, "b": 2}.each_idx_key_val(F(idx, k, v) echo("[$idx] $k=$v"))
 doc %EX - # Outputs: "[0] a=1" and on the next line "[1] b=2"
 F each_idx_key_val(h:Hash, cb:Fun) {
-	h.keys().each_idx_val(F(idx, k) cb(idx, k, h[k]))
+	entry = ll_hash_head(h)
+	i = 0
+	while entry != null {
+		cb(i, entry.ll_hash_entry_key(), entry.ll_hash_entry_val())
+		entry = entry.ll_hash_entry_next()
+		i += 1
+	}
 	h
 }
 
@@ -4347,6 +4357,23 @@ F Bool(my:MatchY) true
 doc Convert failed match to Bool (false)
 doc %RET - false
 F Bool(my:MatchN) false
+
+doc Convert successful match to FullBox
+F Box(my:MatchY) FullBox(my)
+
+doc Convert failed match to EmptyBox
+F Box(mn:MatchN) EmptyBox()
+
+doc EXPERIMENTAL! Do not use!
+F attempt(x, *cbs) {
+	guard cbs.all(Fun)
+	r = Return()
+	cbs.each(F(cb) {
+		t = cb(x)
+		t throws r(t.get())
+	})
+	throw Error("attempt() failed").set('x', x).set('cbs', cbs)
+}
 
 doc Convert Match to exit code.
 doc %RET - 0 for successful match (MatchY), 1 for unsuccessful match (MatchN).

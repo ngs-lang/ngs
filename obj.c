@@ -279,6 +279,7 @@ VALUE make_hash(size_t start_buckets) {
 
 	if(start_buckets) {
 		OBJ_DATA_PTR(ret) = NGS_MALLOC(start_buckets * sizeof(HASH_OBJECT_ENTRY *));
+		assert(OBJ_DATA_PTR(ret));
 		memset(OBJ_DATA_PTR(ret), 0, start_buckets * sizeof(HASH_OBJECT_ENTRY *)); // XXX check if needed
 	} else {
 		OBJ_DATA_PTR(ret) = NULL;

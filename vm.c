@@ -556,6 +556,63 @@ METHOD_RESULT native_index_del_hash_any EXT_METHOD_PARAMS {
 	METHOD_RETURN(argv[0])
 }
 
+// TODO: factor out common in native_ll_hash_{head,tail}
+METHOD_RESULT native_ll_hash_head EXT_METHOD_PARAMS {
+	VALUE ret;
+	HASH_OBJECT_ENTRY *e = HASH_HEAD(argv[0]);
+	if(!e) {
+		METHOD_RETURN(MAKE_NULL);
+	};
+	HASH_ENTRY_OBJECT *heo;
+	heo = NGS_MALLOC(sizeof(*heo));
+	assert(heo);
+	heo->entry = e;
+	SET_OBJ(ret, heo);
+	OBJ_TYPE_NUM(ret) = T_LL_HASH_ENTRY;
+	METHOD_RETURN(ret);
+}
+
+METHOD_RESULT native_ll_hash_tail EXT_METHOD_PARAMS {
+	VALUE ret;
+	HASH_OBJECT_ENTRY *e = HASH_TAIL(argv[0]);
+	if(!e) {
+		METHOD_RETURN(MAKE_NULL);
+	};
+	HASH_ENTRY_OBJECT *heo;
+	heo = NGS_MALLOC(sizeof(*heo));
+	assert(heo);
+	heo->entry = e;
+	SET_OBJ(ret, heo);
+	OBJ_TYPE_NUM(ret) = T_LL_HASH_ENTRY;
+	METHOD_RETURN(ret);
+}
+
+METHOD_RESULT native_ll_hash_entry_key EXT_METHOD_PARAMS {
+	HASH_OBJECT_ENTRY *e = ((HASH_ENTRY_OBJECT *)(argv[0].ptr))->entry;
+	METHOD_RETURN(e->key);
+}
+
+METHOD_RESULT native_ll_hash_entry_val EXT_METHOD_PARAMS {
+	HASH_OBJECT_ENTRY *e = ((HASH_ENTRY_OBJECT *)(argv[0].ptr))->entry;
+	METHOD_RETURN(e->val);
+}
+
+METHOD_RESULT native_ll_hash_entry_next EXT_METHOD_PARAMS {
+	HASH_OBJECT_ENTRY *e = ((HASH_ENTRY_OBJECT *)(argv[0].ptr))->entry;
+	if(!e->insertion_order_next) {
+		METHOD_RETURN(MAKE_NULL);
+	};
+
+	VALUE ret;
+	HASH_ENTRY_OBJECT *heo;
+	heo = NGS_MALLOC(sizeof(*heo));
+	assert(heo);
+	heo->entry = e->insertion_order_next;
+	SET_OBJ(ret, heo);
+	OBJ_TYPE_NUM(ret) = T_LL_HASH_ENTRY;
+	METHOD_RETURN(ret);
+}
+
 METHOD_RESULT native_Hash_nti METHOD_PARAMS {
 	VALUE ut, item;
 	HASH_OBJECT_ENTRY *e;
@@ -2226,6 +2283,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MK_BUILTIN_TYPE_DOC(C_DIR, T_DIR, "C language DIR type for low level directory operations. Please do not use directly unless you are extending stdlib.");
 	vm->type_by_t_obj_type_id[T_DIR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->C_DIR;
 
+	MK_BUILTIN_TYPE(LLHashEntry, T_LL_HASH_ENTRY);
+	vm->type_by_t_obj_type_id[T_LL_HASH_ENTRY >> T_OBJ_TYPE_SHIFT_BITS] = &vm->LLHashEntry;
+
 	// *** Add new MKTYPE / MKSUBTYPE above this line ***
 
 #undef MK_BUILTIN_TYPE
@@ -3260,6 +3320,26 @@ void vm_init(VM *vm, int argc, char **argv) {
 		"(1..10).Hash()  # Hash {start=1, end=10, step=1}",
 		NULL
 	);
+
+	register_global_func(vm, 1, "ll_hash_head",      &native_ll_hash_head,        1, "h",   vm->Hash);
+	_doc(vm, "", "Low level. Do not use directly.");
+	_doc(vm, "%RET", "LLHashEntry or null");
+
+	register_global_func(vm, 1, "ll_hash_tail",      &native_ll_hash_tail,        1, "h",   vm->Hash);
+	_doc(vm, "", "Low level. Do not use directly.");
+	_doc(vm, "%RET", "LLHashEntry or null");
+
+	register_global_func(vm, 1, "ll_hash_entry_key",      &native_ll_hash_entry_key,        1, "h",   vm->LLHashEntry);
+	_doc(vm, "", "Low level. Do not use directly.");
+	_doc(vm, "%RET", "Any");
+
+	register_global_func(vm, 1, "ll_hash_entry_val",      &native_ll_hash_entry_val,        1, "h",   vm->LLHashEntry);
+	_doc(vm, "", "Low level. Do not use directly.");
+	_doc(vm, "%RET", "Any");
+
+	register_global_func(vm, 1, "ll_hash_entry_next",      &native_ll_hash_entry_next,        1, "h",   vm->LLHashEntry);
+	_doc(vm, "", "Low level. Do not use directly.");
+	_doc(vm, "%RET", "LLHashEntry or null");
 
 	// http://stackoverflow.com/questions/3473692/list-environment-variables-with-c-in-unix
 	env_hash = make_hash(32);

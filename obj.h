@@ -54,7 +54,6 @@ typedef struct {
 typedef struct {
 	OBJECT base;
 	VALUE methods;
-	/* TODO: VALUE attrs ? */
 } MULTIMETHOD_OBJECT;
 
 typedef struct {
@@ -103,6 +102,11 @@ typedef struct {
 	HASH_OBJECT_ENTRY *head;
 	HASH_OBJECT_ENTRY *tail;
 } HASH_OBJECT;
+
+typedef struct {
+	OBJECT base;
+	HASH_OBJECT_ENTRY *entry;
+} HASH_ENTRY_OBJECT;
 
 typedef struct {
 	OBJECT base;
@@ -250,11 +254,12 @@ typedef enum {
 	T_REGEXP        = (17 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_DIR           = (18 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_MULMETHOD     = (19 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_LL_HASH_ENTRY = (20 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	// *** Add new T_ itmes above this line ***
 	// *** UPDATE MAX_T_OBJ_TYPE_ID ACCORDINGLY ***
 } IMMEDIATE_TYPE;
 
-#define MAX_T_OBJ_TYPE_ID (T_MULMETHOD >> T_OBJ_TYPE_SHIFT_BITS)
+#define MAX_T_OBJ_TYPE_ID (T_LL_HASH_ENTRY >> T_OBJ_TYPE_SHIFT_BITS)
 
 // TODO: handle situation when n is wider than size_t - TAG_BITS bits
 #define IS_NULL(v)      ((v).num == V_NULL)

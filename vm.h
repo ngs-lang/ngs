@@ -178,6 +178,7 @@ typedef struct {
 		VALUE BasicType;
 		VALUE NormalType;
 	VALUE Hash;
+	VALUE LLHashEntry;
 	VALUE CLib;
 	VALUE CSym;
 	VALUE RegExp;

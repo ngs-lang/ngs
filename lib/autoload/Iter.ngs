@@ -322,29 +322,31 @@ TEST try [].Iter().next() catch(nn:NoNext) true
 # Not sure it's needed but it's good to have it for completeness
 # ---------- HashIter ----------
 F Iter(h:Hash) HashIter(h)
-doc EXPERIMENTAL! Do not use!
+
+doc HashIter constructor.
+doc %EX - i = HashIter({"a": 1, "b": 2})
 F init(i:HashIter, h:Hash) {
 	i.val = h
-	i._iter = h.keys().Iter()
+	i.entry = ll_hash_head(h)
+	i.idx = 0
 }
 
-# Don't like accessing kind-of-private ArrIter#idx
-F Str(i:HashIter) "<HashIter ${i._iter.idx}/${i._iter.val.len()}>"
+doc Textual representation of HashIter.
+doc %RET - Str
+F Str(i:HashIter) "<HashIter ${i.idx}/${i.val.len()}>"
 
 doc Check whether there are more pairs to iterate over.
 doc %RET - Bool. true: next() will return next pair. false: next() will throw NoNext
-F Bool(i:HashIter) Bool(i._iter)
+F Bool(i:HashIter) i.entry != null
 
-doc EXPERIMENTAL! Do not use!
-F next(i:HashIter) { throw_if_no_next(i); k = i._iter.next(); [k, i.val[k]] }
+doc Get next key-value of the hash iterated over.
+doc %RET - Any
+F next(i:HashIter) { ret = i.peek(); i.entry = i.entry.ll_hash_entry_next(); ret  }
 
-doc EXPERIMENTAL! Do not use!
-F peek(i:HashIter) { throw_if_no_next(i); k = i._iter.peek(); [k, i.val[k]] }
+doc Preview key-value of the next pair of the hash iterated over.
+doc Does not affect internal pointer which means it does not affect of value returned by next().
+doc %RET - Any
+F peek(i:HashIter) { throw_if_no_next(i); [i.entry.ll_hash_entry_key(), i.entry.ll_hash_entry_val()] }
 
 TEST i = Iter({"a": 1, "b": 2}); [i.next(), i.peek()] == [["a", 1], ["b", 2]]
 TEST try {}.Iter().next() catch(nn:NoNext) true
-
-# F Iter(*args) {
-# 	echo("ITER ${args.map(typeof)}")
-# 	super(*args)
-# }
