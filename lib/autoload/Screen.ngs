@@ -1,0 +1,42 @@
+ns {
+	global init
+	type Renderer
+	type ItemsContainer
+	type ItemsVerticalContainer(ItemsContainer)
+	type ItemsHorizontalContainer(ItemsContainer)
+
+	type ColoredStr
+
+	F init(ic:ItemsContainer) {
+		ic.items = []
+		ic.spacing = 1
+	}
+
+
+	F init(r:Renderer) {
+		r.lock = Lock()
+		r.tput_cache = %[el sc rc smso rmso sgr0].Hash(F(capname) `tput $capname`)
+		# TODO: make colors customizable, somewhat CSS-like.
+		# red
+		r.tput_cache.error_color = `tput setaf 1`
+		# green
+		r.tput_cache.success_color = `tput setaf 2`
+		r.top_level = ItemsVerticalContainer()
+	}
+
+	# TODO: cache + invalidate cache on WINCH
+	F dimensions() {
+		[`tput cols`, `tput lines`].map(Int)
+	}
+
+	colors = %[black red green yellow blue magenta cyan white]
+
+	colors.each_idx_val(F(i, color) {
+		_exports[color] = F experimental_dont_use() {
+			`tput setaf $i`
+		}
+	})
+
+	# r = Screen::Renderer()
+	# echo(r.tput_cache.keys())
+}

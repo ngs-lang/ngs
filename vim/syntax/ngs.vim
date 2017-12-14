@@ -36,7 +36,7 @@ syn keyword ngsType RegExp RegExpCompileFail
 syn keyword ngsType Redir
 syn keyword ngsType Result Success Failure ResultFail
 syn keyword ngsType Return
-syn keyword ngsType ScreenRenderer ScreenItemsContainer ScreenItemsVerticalContainer ScreenItemsHorizontalContainer
+syn keyword ngsType Renderer ItemsContainer ItemsVerticalContainer ItemsHorizontalContainer
 syn keyword ngsType Match MatchY MatchN MatchFail SubSeq Pfx MaybePfx MustPfx Sfx MaybeSfx MustSfx
 syn keyword ngsType Props
 syn keyword ngsTodo TODO FIXME XXX NOTE
