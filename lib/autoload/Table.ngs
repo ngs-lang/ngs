@@ -229,6 +229,7 @@ TEST Table([{"a": 1}, {"a": 2}]).len() == 2
 # Where is it used. Can we get rid of this?
 doc DEPRECATED.
 F table(a:Arr) {
+	warn("Using deprecated table(a:Arr)")
 	t = Table()
 	a[0].each(t.register_column(X))
 	a[1..null].each(t.push(X))

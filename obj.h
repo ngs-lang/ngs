@@ -150,6 +150,7 @@ typedef struct ngs_type {
 	VALUE fields; // Hash: name->index
 	VALUE constructors; // Arr[F]
 	VALUE parents; // Arr[NGS_TYPE]
+	VALUE user; // Hash, user defined
 } NGS_TYPE;
 
 typedef struct {
@@ -315,6 +316,7 @@ typedef enum {
 #define NGS_TYPE_ID(v)            (((NGS_TYPE *)(v).ptr)->base.val.num)
 #define NGS_TYPE_FIELDS(v)        (((NGS_TYPE *)(v).ptr)->fields)
 #define NGS_TYPE_PARENTS(v)       (((NGS_TYPE *)(v).ptr)->parents)
+#define NGS_TYPE_USER(v)          (((NGS_TYPE *)(v).ptr)->user)
 // TODO: reanme OBJ_DATA to OBJ_VAL
 #define OBJ_DATA(v)               (((OBJECT *)(v).ptr)->val)
 #define OBJ_DATA_PTR(v)           (((OBJECT *)(v).ptr)->val.ptr)

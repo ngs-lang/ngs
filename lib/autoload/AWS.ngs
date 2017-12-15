@@ -218,14 +218,23 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	type Vpc(ResDef)
 	type VpcRes(Res)
 
+	Vpc.user = %{
+		prefix vpc
+		id     VpcId
+	}
+
 	doc Return VPC id
 	F id(r:VpcRes) r.props.VpcId
 
 	doc Find a VPC(s). Currently supported search criteria are: Tags, CidrBlock, IsDefault
 	F find(rd:Vpc) {
 		debug("AWS", "Find VPC $rd")
-		rd._assert_anchor_has_only_known_keys('Tags', 'CidrBlock', 'IsDefault')
-		filters = ['--filters'] +? (rd.anchor.Tags.cli_tags_filters() + cli_filters({'cidr': rd.anchor.get('CidrBlock'), 'isDefault': rd.anchor.get('IsDefault')}))
+		rd._assert_anchor_has_only_known_keys('VpcId', 'Tags', 'CidrBlock', 'IsDefault')
+		filters = _make_filters_argv(rd, %{
+				cidr      CidrBlock
+				isDefault IsDefault
+				vpc-id    VpcId
+		})
 		rd.resources = ``aws ec2 describe-vpcs $*filters``.map(VpcRes(rd, X))
 		rd
 	}
@@ -937,11 +946,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			resources .= filter(F(desc) desc.LoadBalancerName == rd.anchor.name)
 		}
 		# TODO: make tags fetching lazy
-		rd.resources = resources.pmap(F(props) {
+		tags = ``aws elb describe-tags --load-balancer-names $*{resources.map(X.LoadBalancerName)}``.Hash('LoadBalancerName', 'Tags')
+		rd.resources = resources.map(F(props) {
 			ret = props
 			ret.Instances = props.Instances.InstanceId
-			debug("AWS", "${rd} Fetching ELB tags for LB ${props.LoadBalancerName}")
-			ret.Tags = ``aws elb describe-tags --load-balancer-names ${props.LoadBalancerName}``[0].Tags
+			ret.Tags = tags.get(props.LoadBalancerName, {})
 			ElbRes(rd, ret)
 		})
 		rd.resources .= reject(F(r) {
@@ -1204,10 +1213,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	type Volume(ResDef)
 	type VolumeRes(Res)
 
-	Volume.attrs().update(%{
+	Volume.user = %{
 		prefix vol
 		id     VolumeId
-	})
+	}
 
 	F find(rd:Volume) {
 		debug("AWS", "Find Volume ${rd}")
@@ -1240,13 +1249,13 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		debug("AWS", "Find Snapshot ${rd}")
 		rd._assert_anchor_has_only_known_keys(*%[Tags Description OwnerId OwnerIds SnapshotId State VolumeId VolumeSize _AMI])
 		# filters = ['--filters'] +? (rd.anchor.Tags.cli_tags_filters() + cli_filters({'cidr': rd.anchor.get('CidrBlock'), 'isDefault': rd.anchor.get('IsDefault')}))
-		filters = _make_filters_argv(rd, {
-				'description': 'Description'
-				'owner-id': 'OwnerId'
-				'snapshot-id': 'SnapshotId'
-				'status': 'State'
-				'volume-id': 'VolumeId'
-				'volume-size': 'VolumeSize'
+		filters = _make_filters_argv(rd, %{
+				description  Description
+				owner-id     OwnerId
+				snapshot-id  SnapshotId
+				status       State
+				volume-id    VolumeId
+				volume-size  VolumeSize
 		})
 		filters2 = Argv({
 			'--owner-ids': rd.anchor.Box('OwnerIds')
@@ -1312,10 +1321,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	_rd_types = _exports.without('ResDef').values().filter(Type).filter(F(t) t.parents.has(ResDef))
 	# echo(_exports.without('ResDef').values().map(typeof))
-	_rd_types_with_prefixes = _rd_types.filter(F(t) t.attrs().has('prefix'))
+	_rd_types_with_prefixes = _rd_types.filter(F(t) t.user.has('prefix'))
 
 	RESOURCE_CODE_TO_RESOURCE_TYPE = _rd_types_with_prefixes.map(F(t) {
-		[t.attrs().prefix, t]
+		[t.user.prefix, t]
 	}).Hash()
 
 	doc Work in progress, do not use!
@@ -1324,7 +1333,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		guard m
 		guard m[1] in RESOURCE_CODE_TO_RESOURCE_TYPE
 		t = RESOURCE_CODE_TO_RESOURCE_TYPE[m[1]]
-		args = { t.attrs().id: id }
+		args = { t.user.id: id }
 		t(**args)
 	}
 

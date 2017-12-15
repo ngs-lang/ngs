@@ -1175,10 +1175,31 @@ METHOD_RESULT native_get_attr_nt_str EXT_METHOD_PARAMS {
 	if(!strcmp(attr, "parents")) {
 		METHOD_RETURN(NGS_TYPE_PARENTS(argv[0]));
 	}
+	if(!strcmp(attr, "user")) {
+		METHOD_RETURN(NGS_TYPE_USER(argv[0]));
+	}
 
 	exc = make_normal_type_instance(vm->AttrNotFound);
 	set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
 	set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+	THROW_EXCEPTION_INSTANCE(exc);
+}
+
+METHOD_RESULT native_set_attr_nt_str EXT_METHOD_PARAMS {
+	VALUE exc;
+	char *attr = obj_to_cstring(argv[1]);
+	(void) ctx;
+	if(!strcmp(attr, "user")) {
+		NGS_TYPE_USER(argv[0]) = argv[2];
+		METHOD_RETURN(argv[0]);
+	}
+
+	exc = make_normal_type_instance(vm->AttrNotFound);
+	set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
+	set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+	VALUE ak = make_array(1);
+	ARRAY_ITEMS(ak)[0] = make_string("user");
+	set_normal_type_instance_attribute(exc, make_string("available_keys"), ak);
 	THROW_EXCEPTION_INSTANCE(exc);
 }
 
@@ -2827,8 +2848,14 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// NormalType
 	register_global_func(vm, 1, ".",        &native_get_attr_nt_str,       2, "obj", vm->NormalType,         "attr", vm->Str);
 	_doc(vm, "", "Get NormalType (a type that is typically defined by user) attribute. Throws AttrNotFound.");
-	_doc(vm, "attr", "Attribute to get. Currently only \"name\" and \"constructors\" are supported.");
+	_doc(vm, "attr", "Attribute to get. Currently only \"name\", \"constructors\", \"parents\" and \"user\" are supported.");
 	_doc(vm, "%AUTO", "obj.attr");
+	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
+
+	register_global_func(vm, 1, ".=",       &native_set_attr_nt_str,       3, "obj", vm->NormalType,         "attr", vm->Str, "v", vm->Any);
+	_doc(vm, "", "Set NormalType (a type that is typically defined by user) attribute. Throws AttrNotFound.");
+	_doc(vm, "attr", "Attribute to get. Currently only \"user\" is supported.");
+	_doc(vm, "%AUTO", "obj.attr = v");
 	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
 
 	register_global_func(vm, 1, ".",        &native_get_attr_nti_str,      2, "obj", vm->NormalTypeInstance, "attr", vm->Str);

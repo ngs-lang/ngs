@@ -307,6 +307,7 @@ VALUE make_normal_type(VALUE name) {
 	NGS_TYPE_FIELDS(ret) = make_hash(8); // Hash: name->index
 	NGS_TYPE_CONSTRUCTORS(ret) = make_multimethod_with_value(ctr);
 	NGS_TYPE_PARENTS(ret) = make_array(0);
+	NGS_TYPE_USER(ret) = make_hash(0);
 	OBJ_ATTRS(ret) = make_hash(2);
 
 	return ret;
