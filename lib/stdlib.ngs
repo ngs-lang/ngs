@@ -541,6 +541,8 @@ F '[]'(al:ArrLike, idx:Int)     al.(al.arr_like_attr)[idx]
 doc Get element from the underlying array.
 F '[]='(al:ArrLike, idx:Int, x) al.(al.arr_like_attr)[idx] = x
 
+F get(al:ArrLike, idx:Int, dflt) al.(al.arr_like_attr).get(idx, dflt)
+
 doc Call cb for each element in the underlying array.
 F each(al:ArrLike, cb:Fun) al.(al.arr_like_attr).each(cb)
 

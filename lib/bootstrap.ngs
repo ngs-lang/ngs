@@ -229,7 +229,7 @@ F bootstrap() {
 			'-pc': code
 		}
 		if sw == '-pt' {
-			transformation['-pt'] = Table
+			transformation['-pt'] = Table2::Table
 		}
 		if sw in transformation {
 			echo(transformation[sw](result))
