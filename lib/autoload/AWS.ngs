@@ -148,7 +148,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	F id(r:Res) {
-		r.props.(r.def.typeof().attrs().id)
+		r.props.(r.def.typeof().user.id)
 	}
 
 	# --------------------------------------------------
