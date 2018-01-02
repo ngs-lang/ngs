@@ -2691,9 +2691,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	register_global_func(vm, 0, "c_pthread_attr_init",    &native_c_pthreadattrinit,    1, "attr",   vm->c_pthread_attr_t);
-	_doc(vm, "", "Call pthread_attr_init(3)");
-	register_global_func(vm, 0, "c_pthread_mutexattr_init",   &native_c_pthreadattrinit,    1, "attr",   vm->c_pthread_mutexattr_t);
-	// XXX _doc(vm, "", "Call ");
+	_doc(vm, "", "Call PTHREAD_ATTR_INIT(3)");
+	register_global_func(vm, 0, "c_pthread_mutexattr_init",   &native_c_pthreadmutexattrinit,    1, "attr",   vm->c_pthread_mutexattr_t);
+	_doc(vm, "", "Call PTHREAD_MUTEXATTR_INIT(3)");
 	register_global_func(vm, 0, "c_pthread_mutex_init",   &native_c_pthreadmutexinit_pma,   2, "mutex",  vm->c_pthread_mutex_t, "attr", vm->c_pthread_mutexattr_t);
 	_doc(vm, "", "Call PTHREAD_MUTEX_INIT(3)");
 	register_global_func(vm, 0, "c_pthread_mutex_init",   &native_c_pthreadmutexinit,   1, "mutex",  vm->c_pthread_mutex_t);

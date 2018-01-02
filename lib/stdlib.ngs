@@ -868,7 +868,7 @@ F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
 	F init(l:Lock) {
 		l.lock = c_pthread_mutex_t()
 		code = c_pthread_mutex_init(l.lock)
-		code throws LockFail("c_pthread_attr_init", code, "Call to underlying API failed")
+		code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
 	}
 
 	doc Block till the lock is avaiable and then acquire the lock.
@@ -906,7 +906,7 @@ F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
 		c_pthread_mutexattr_settype(l.lock_attr, C_PTHREAD_MUTEX_RECURSIVE)
 		l.lock = c_pthread_mutex_t()
 		code = c_pthread_mutex_init(l.lock, l.lock_attr)
-		code throws LockFail("c_pthread_attr_init", code, "Call to underlying API failed")
+		code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
 	}
 
 	doc Convert c_pthread_mutex_t to Str for displaying to humans.
