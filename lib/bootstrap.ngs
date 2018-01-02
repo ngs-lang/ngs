@@ -227,9 +227,7 @@ F bootstrap() {
 			'-p': identity
 			'-pj': encode_json
 			'-pc': code
-		}
-		if sw == '-pt' {
-			transformation['-pt'] = Table2::Table
+			'-pt': { Table2::Table(A) }
 		}
 		if sw in transformation {
 			echo(transformation[sw](result))

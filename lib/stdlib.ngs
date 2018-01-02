@@ -706,9 +706,16 @@ F StrParams(f:Fun) {
 # === NativeMethod ===============================
 
 doc String representation of native method.
-doc %RET - "<Native method NAME>"
-doc %EX - (%)[0].Str().echo()  # Outputs: <Native method %>
-F Str(c:NativeMethod) "<Native method ${c.attrs().name}${StrParams(c)}>"
+doc %RET - "<Native method NAME(PARAMS)>"
+doc %EX - (%).Arr()[0].Str().echo()  # Outputs: <Native method %(a:Int, b:Int)>
+F Str(nm:NativeMethod) "<Native method ${nm.attrs().name}${StrParams(nm)}>"
+
+# === NormalTypeConstructor ===============================
+
+doc String representation of normal type constructor. NormalTypeConstructor
+doc %RET - "<NormalTypeConstructor>"
+doc %EX - Box.constructors.Arr()[0].Str().echo()  # Outputs: <NormalTypeConstructor>
+F Str(ntc:NormalTypeConstructor) "<NormalTypeConstructor>"
 
 # === Closure ====================================
 
