@@ -998,16 +998,21 @@ F init(r:Range, start, end, include_start=true, include_end=false, step=1) {
 
 doc Constructs open-open predicate range
 doc %RET - PredRange
+doc %EX - [10,200,300,40,50][(X==10)..(X==40)]          # [200, 300]
+doc %EX - ["abc", "aaa", "bbb", "def"][/^abc/../^def/]  # ["aaa", "bbb"]
 F ..(start, end)  PredRange(start, end, false, false)
 
 doc Constructs closed-closed predicate range
 doc %RET - PredRange
+doc %EX - [10,200,300,40,50][(X==10)...(X==40)]          # [10,200,300,40]
+doc %EX - ["abc", "aaa", "bbb", "def"][/^abc/.../^bbb/]  # ["abc", "aaa", "bbb"]
 F ...(start, end) PredRange(start, end, true, true)
 
 doc Constructs closed-open numerical range
 doc start - numerical or null (at least one of start or end must be non-null)
 doc end - numerical or null (at least one of start or end must be non-null)
 doc %RET - NumRange
+doc %EX - (1..4).sum()  # 6
 F ..(start, end) {
 	guard start is Num or end is Num
 	guard start is Num or start is Null
@@ -1017,6 +1022,7 @@ F ..(start, end) {
 
 doc Constructs closed-closed numerical range
 doc %RET - NumRange
+doc %EX - (1...4).sum()  # 10
 F ...(start, end) {
 	guard start is Num or end is Num
 	guard start is Num or start is Null
@@ -1242,8 +1248,15 @@ F n(h:Hash) h.mapv({Int(A) tor A})
 TEST %{k 7 kk "a"}.n() == {'k': 7, 'kk': 'a'}
 
 # --- Arr ---
-doc Return array made of given attribute of each element of given array
-doc %EX - [{"x": 1}, {"x": 2}].x  # [1, 2]
+
+# TODO: generalize to Eachable1 ?
+doc Return array made of given attribute of each element of given array.
+doc Will throw KeyNotFound if any of the elements does not have the desired attribute.
+doc Use get() to handle missing attribute differently.
+doc %EX - [{"x": 1}, {"x": 2}].x               # [1, 2]
+doc %EX - [{"x": 1}, {"y": 2}].x               # KeyNotFound exeption
+doc %EX - [{"x": 1}, {"y": 2}].get("x")        # [1] - skip
+doc %EX - [{"x": 1}, {"y": 2}].get("x", null)  # [1, null] - use default value
 doc %RET - Arr
 F .(a:Arr, attr:Str) a.map(X.(attr))
 
@@ -1316,10 +1329,10 @@ TEST [1, 2] == [1, 2]
 TEST [1, 3] != [1, 2]
 TEST [1] != [1, 2]
 
-doc TODO
-doc Arrays LTE test.
-doc XXX Compare element-wise, if all elements equal, longest
+doc Compare arrays, elemt-wise. If all elements are equal, the longest array considered to be the "big" one.
 doc %RET - Bool
+doc %EX -  [1, 2] <= [1, 3]  # true
+doc %EX -  [1] <= [1, 2]     # true
 F '<='(a:Arr, b:Arr) {
 	l = min([a.len(), b.len()])
 	for(i;l) {
@@ -1983,7 +1996,10 @@ F code(a:Arr) "[" + a.map(code).join(', ') + "]"
 
 doc Compare two Hashes. Hashes must have same keys with same values in same order to return true.
 doc %RET - Bool
-F ==(a:Hash, b:Hash) Arr(a) == Arr(b)
+F ==(a:Hash, b:Hash) {
+	len(a) != len(b) returns false
+	Arr(a) == Arr(b)
+}
 
 F subset(smaller:Hash, larger:Hash) smaller.all(F(k, v) k in larger and larger[k] == v)
 
@@ -2474,6 +2490,10 @@ F dflt(eb: EmptyBox, x) FullBox(x)
 
 doc Compare boxes. Empty boxes and boxes with same content are considered to be equal.
 doc %RET - Bool
+doc %EX - EmptyBox() == EmptyBox()
+doc %EX - EmptyBox() != FullBox(1)
+doc %EX - FullBox(1) == FullBox(1)
+doc %EX - FullBox(1) != FullBox(2)
 F ==(b1:Box, b2:Box) {
 	# Boxes comparison stolen from
 	# http://learnyouahaskell.com/making-our-own-types-and-typeclasses
@@ -4649,7 +4669,8 @@ STDLIB_REGEXP_FLAGS = {
 	'n': C_PCRE_NOTEMPTY_ATSTART
 }
 
-doc Regular expression constructor. Called by NGS when /myregex/ syntax is used.
+doc Regular expression constructor.
+doc %AUTO - /myregex/
 doc %RET - RegExp
 doc %EX - my_re = /blah/
 F //(regexp:Str, flags:Str) {

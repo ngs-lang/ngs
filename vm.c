@@ -2578,7 +2578,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// Why is it here? Consider removing - end
 
 	register_global_func(vm, 0, "==",              &native_false,    2, "a", vm->Any, "b", vm->Any);
-	_doc(vm, "", "Always false");
+	_doc(vm, "", "Always false. Other == method implementations should compare types they understand. If none of them can handle the comparison, objects are considered non-equal.");
 	_doc(vm, "%RET", "false");
 
 	// Regex
@@ -2854,7 +2854,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	register_global_func(vm, 1, ".=",       &native_set_attr_nt_str,       3, "obj", vm->NormalType,         "attr", vm->Str, "v", vm->Any);
 	_doc(vm, "", "Set NormalType (a type that is typically defined by user) attribute. Throws AttrNotFound.");
-	_doc(vm, "attr", "Attribute to get. Currently only \"user\" is supported.");
+	_doc(vm, "attr", "Attribute to set. Currently only \"user\" is supported.");
 	_doc(vm, "%AUTO", "obj.attr = v");
 	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
 
