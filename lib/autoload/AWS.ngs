@@ -161,8 +161,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	doc Initialize ResDef from kw. Defaults: null for .regions and empty hash for .Tags
 	F init(rd:ResDef, **kw)           super(rd, {'regions': null, 'Tags': {}} + kw)
 
-	doc Initialize ResDef from _ngs_name. Sets .regions to null, .Tags to empty hash and .name to _ngs_name.
-	F init(rd:ResDef, _ngs_name:Str)  super(rd, {'regions': null, 'Tags': {}, 'name': _ngs_name})
+	doc Initialize ResDef from _ngs_name. Sets .regions to null, .Tags to empty hash and .Name to _ngs_name.
+	F init(rd:ResDef, _ngs_name:Str)  super(rd, {'regions': null, 'Tags': {}, 'Name': _ngs_name})
 
 	doc Initialize ResDef from _ngs_tags. Sets .regions to null and .Tags to _ngs_tags.
 	F init(rd:ResDef, _ngs_tags:Hash) super(rd, {'regions': null, 'Tags': _ngs_tags})
@@ -201,9 +201,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# (helpers)
 	# --------------------------------------------------
 
+	# Resolve ids of resources and use one
+	_one_id = only(ResDef, the_one + ids)
+
 	# --- filters helper ---
-	F _make_filters_argv(rd:ResDef, filtersNamesToAnchorNames:Hash) {
-		h = filtersNamesToAnchorNames.mapv({ rd.anchor.Box(A) })
+	F _make_filters_argv(rd:ResDef, filtersNamesToAnchorNames:Hash, transform:Hash={}) {
+		h = filtersNamesToAnchorNames.mapv(F(anchor_name) {
+			rd.anchor.Box(anchor_name).map(transform.get(anchor_name, identity))
+		})
 		Argv({
 			'--filters':
 				cli_filters(h) +
@@ -422,53 +427,40 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	type SecGroup(ResDef)
 	type SecGroupRes(Res)
 
+	SecGroup.user = %{
+		prefix sg
+		id     GroupId
+	}
+
+
 	F init(rd:SecGroup, anchor:Arr) {
 		warn("Using deprecated SecGroup anchor - array. Should use SecGroup(name, vpc) form.")
-		super(rd, name=anchor[0], VpcId=anchor[1])
+		super(rd, Name=anchor[0], VpcId=anchor[1])
 	}
 
-	F init(rd:SecGroup, name:Str, VpcId) {
+	F init(rd:SecGroup, Name:Str, VpcId) {
 		guard VpcId is Str or VpcId is Vpc
-		super(rd, name=name, VpcId=VpcId)
+		super(rd, Name=Name, VpcId=VpcId)
 	}
-
-	F id(r:SecGroupRes) r.props.GroupId
 
 	F users_ids(r:SecGroup) r.resources / F(res) { {'GroupId': res.props.GroupId, 'UserId': res.props.OwnerId} }
 
-	# TODO: refactor - start
-	F vpc_id(rd:SecGroup) rd.anchor.get('VpcId')
-
-	F vpc_id(rd:SecGroup) {
-		guard rd.anchor.get('VpcId') is ResDef
-		rd.anchor.VpcId.ids().the_one()
-	}
-
-	F vpc_id_args(rd:SecGroup) ['--vpc-id', vpc_id(rd)]
-
-	F vpc_id_args(rd:SecGroup) {
-		guard vpc_id(rd) is Null
-		[]
-	}
-
-	F vpc_id_filter(rd:SecGroup) ['--filters', "Name=vpc-id,Values=${vpc_id(rd)}"]
-
-	F vpc_id_filter(rd:SecGroup) {
-		guard vpc_id(rd) is Null
-		[]
-	}
-	# TODO: refactor - end
-
 	F find(rd:SecGroup) {
 		debug("AWS", "Find SG ${rd}")
-		rd._assert_anchor_has_only_known_keys('VpcId', 'name', 'Tags')
-		filters = ['--filters'] +? rd.anchor.Tags.cli_tags_filters()
-		# XXX: check with default VPC / EC2 classic
-		# Can not use --group-names as it will assume default VPC / EC2 classic
-		resources = ``aws ec2 describe-security-groups $*{vpc_id_filter(rd)} $*filters``
 		if 'name' in rd.anchor {
-			resources .= filter(F(sg) sg.GroupName == rd.anchor.name)
+			warn("SecGroup uses deprecated anchor property 'name'. Should be 'Name'")
+			rd.anchor['Name'] = rd.anchor.name
+			rd.anchor .= without('name')
 		}
+		rd._assert_anchor_has_only_known_keys('VpcId', 'Name', 'Tags', 'Description', 'GroupId')
+		filters = _make_filters_argv(rd, %{
+				description  Description
+				group-id     GroupId
+				group-name   Name
+				owner-id     OwnerId
+				vpc-id       VpcId
+		}, transform={'VpcId': _one_id})
+		resources = ``aws ec2 describe-security-groups $*filters``
 		rd.resources = resources.map(SecGroupRes(rd, X))
 		rd
 	}
@@ -504,7 +496,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F create(rd:SecGroup, **props) {
 		rd.log('Create', 'SG')
-		rd.run('Create SG', %(aws ec2 create-security-group --group-name ${rd.anchor.name} --description ${rd.req_prop('Description', props)} $*{vpc_id_args(rd)}))
+		argv = Argv({'--vpc-id': rd.anchor.Box('VpcId').map(_one_id)})
+		rd.run('Create SG', %(aws ec2 create-security-group --group-name ${rd.anchor.Name} --description ${rd.req_prop('Description', props)} $*argv))
 		if not(rd.dry_run) {
 			# XXX use GroupId output of run()
 			rd.find()
@@ -601,18 +594,28 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	type Image(ResDef)
 	type ImageRes(Res)
 
+	Image.user = %{
+		prefix ami
+		id     ImageId
+	}
+
+
 	# debian-jessie-amd64-hvm
 	F find(rd:Image) {
 		debug("AWS", "Find Image ${rd}")
-		rd._assert_anchor_has_only_known_keys('OwnerId', 'Name', 'State', 'RootDeviceType', 'VolumeType')
+		rd._assert_anchor_has_only_known_keys('OwnerId', 'Name', 'State', 'RootDeviceType', 'VolumeType', 'ImageId')
 		owners = ['--owners', rd.anchor.OwnerId] tor []
+		# owners = []
 		filters = ['--filters'] +? cli_filters({
 			'state':                            rd.anchor.get('State', 'available')
 			'virtualization-type':              'hvm'
 			'name':                             rd.anchor.Box('Name').filter({A is Str or A is Pfx})
 			'root-device-type':                 rd.anchor.Box('RootDeviceType')
 			'block-device-mapping.volume-type': rd.anchor.Box('VolumeType')
+			'image-id':                         rd.anchor.Box('ImageId')
 		})
+		# Doesn't work with "self"
+		# 'owner-id':                         rd.anchor.Box('OwnerId')
 		resources = ``aws ec2 describe-images $*owners $*filters``
 		if 'Name' in rd.anchor and rd.anchor.Name is Pfx {
 			resources .= filter({A.Name ~ rd.anchor.Name})
@@ -645,6 +648,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	type Instance(ResDef)
 	type InstanceRes(Res)
+
+	Instance.user = %{
+		prefix i
+		id     InstanceId
+	}
 
 	F init(rd:Instance, **kwargs) {
 		t = {} + kwargs
@@ -942,8 +950,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F find(rd:Elb) {
 		debug("AWS", "Find ELB ${rd}")
 		resources = ``aws elb describe-load-balancers``
-		if rd.anchor.get('name') is Str {
-			resources .= filter(F(desc) desc.LoadBalancerName == rd.anchor.name)
+		if rd.anchor.get('Name') is Str {
+			resources .= filter(F(desc) desc.LoadBalancerName == rd.anchor.Name)
 		}
 		# TODO: make tags fetching lazy
 		tags = ``aws elb describe-tags --load-balancer-names $*{resources.map(X.LoadBalancerName)}``.Hash('LoadBalancerName', 'Tags')
@@ -961,13 +969,13 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F create(rd:Elb, **props) {
 		rd.log('create', "creating an ELB")
-		rd.anchor.get('name') is not Str throws InvalidArgument("ELB name and must be a string, not ${rd.anchor.get('name')}")
+		rd.anchor.get('Name') is not Str throws InvalidArgument("ELB name and must be a string, not ${rd.anchor.get('Name')}")
 		'ListenerDescriptions' not in props throws InvalidArgument("Elb must have 'ListenerDescriptions' property")
 
 		('AvailabilityZones' not in props) and ('Subnets' not in props) throws InvalidArgument("Either 'AvailabilityZones' or 'Subnets' must be in Elb properties")
 		'AvailabilityZones' in props throws NotImplemented("'AvailabilityZones' Elb property")
 		argv = Argv({
-			'--load-balancer-name': rd.anchor.name
+			'--load-balancer-name': rd.anchor.Name
 			'--listeners': props.ListenerDescriptions.encode_json()
 			'--subnets': rd.opt_prop('Subnets', props).map(only(ResDef, ids))
 		})
@@ -981,18 +989,18 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	F update(elb:ElbRes, props:Hash) {
 		debug("AWS", "${elb} Update")
-		elb.def.anchor.get('name') is not Str throws InvalidArgument("Elb is the ELB name and must be a string, not ${elb.def.anchor.get('name')}")
+		elb.def.anchor.get('Name') is not Str throws InvalidArgument("Elb is the ELB name and must be a string, not ${elb.def.anchor.get('Name')}")
 
 		# Tags
 		if 'Tags' in props {
 			diff = Diff(elb.props.get('Tags', {}), props.Tags)
 
 			if (tags = cli_tags(diff.add + diff.change)) {
-				elb.run('add ELB tags', %(aws elb add-tags --load-balancer-names ${elb.def.anchor.name} --tags $*tags))
+				elb.run('add ELB tags', %(aws elb add-tags --load-balancer-names ${elb.def.anchor.Name} --tags $*tags))
 			}
 
 			if (tags = diff.remove) {
-				elb.run('remove ELB tags', %(aws elb remove-tags --load-balancer-names ${elb.def.anchor.name} --tags $*tags))
+				elb.run('remove ELB tags', %(aws elb remove-tags --load-balancer-names ${elb.def.anchor.Name} --tags $*tags))
 			}
 
 			# Health check. Note: only updates given properties and keeps the rest as they were.
@@ -1004,7 +1012,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 					t = elb.props['HealthCheck'] + diff.change
 					elb.run(
 						'update ELB health check',
-						%(aws elb configure-health-check --load-balancer-name ${elb.def.anchor.name} --health-check ${t.encode_json()})
+						%(aws elb configure-health-check --load-balancer-name ${elb.def.anchor.Name} --health-check ${t.encode_json()})
 					)
 				}
 			}
@@ -1020,13 +1028,13 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			if diff.add {
 				elb.run(
 					'register instances with ELB',
-					%(aws elb register-instances-with-load-balancer --load-balancer-name ${elb.def.anchor.name} --instances $*{diff.add})
+					%(aws elb register-instances-with-load-balancer --load-balancer-name ${elb.def.anchor.Name} --instances $*{diff.add})
 				)
 			}
 			if diff.remove {
 				elb.run(
 					'deregister instances from ELB',
-					%(aws elb deregister-instances-from-load-balancer --load-balancer-name ${elb.def.anchor.name} --instances $*{diff.remove})
+					%(aws elb deregister-instances-from-load-balancer --load-balancer-name ${elb.def.anchor.Name} --instances $*{diff.remove})
 				)
 			}
 		}
@@ -1044,7 +1052,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 			if diff.add or diff.remove {
 				elb.run(
 					'update ELB SGs',
-					%(aws elb apply-security-groups-to-load-balancer --load-balancer-name ${elb.def.anchor.name} --security-groups $*{sgs})
+					%(aws elb apply-security-groups-to-load-balancer --load-balancer-name ${elb.def.anchor.Name} --security-groups $*{sgs})
 				)
 			}
 		}
@@ -1343,4 +1351,35 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		t = RESOURCE_CODE_TO_RESOURCE_TYPE[id]
 		t()
 	}
+
+	F is_resource_code(s:Str) {
+		s in RESOURCE_CODE_TO_RESOURCE_TYPE
+	}
+
+	# --------------------------------------------------
+	# Any
+	# --------------------------------------------------
+
+	# Can't define Any because all unspecified types are "Any"
+	doc EXPERIMENTAL! Do not use!
+	type _Any(ResDef)
+	_exports.Any = _Any
+
+	# Could query every resource type but describe-tags makes
+	# the process more efficient.
+	# To think: resources' .rd should be changed to this rd?
+	# TODO: parallel calls for each resource type
+	doc EXPERIMENTAL! Do not use!
+	F find(rd:_Any) {
+		filters = _make_filters_argv(rd, {})
+		if rd.anchor.Tags {
+			codes = ``aws ec2 describe-tags $*filters``.ResourceId.map({ (A ~ /^(.*?)-/)[1] }).uniq()
+			types = codes.map(RESOURCE_CODE_TO_RESOURCE_TYPE[X])
+		} else {
+			types = RESOURCE_CODE_TO_RESOURCE_TYPE.values()
+		}
+		rd.resources = types.map(X(Tags=rd.anchor.Tags)).map(find).resources.flatten()
+		rd
+	}
+
 }

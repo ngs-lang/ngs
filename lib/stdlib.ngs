@@ -1978,7 +1978,10 @@ doc Compare two Hashes. Hashes must have same keys with same values in same orde
 doc %RET - Bool
 F ==(a:Hash, b:Hash) Arr(a) == Arr(b)
 
-F subset(smaller:Hash, larger:Hash) smaller.all(F(k, v) k in larger and larger[k] == v)
+F subset(smaller:Hash, larger:Hash) {
+	not(len(smaller) <= len(larger)) returns false
+	smaller.all(F(k, v) k in larger and larger[k] == v)
+}
 
 TEST subset({}, {"a": 1})
 TEST subset({"a": 1}, {"a": 1})
