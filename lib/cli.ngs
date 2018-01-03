@@ -34,7 +34,7 @@ F run_cli_rc_files() {
 F cli() {
 	not(0.isatty() and 1.isatty()) throws Error("CLI only runs when attached to a TTY")
 
-	screen_renderer = ScreenRenderer()
+	screen_renderer = Screen::Renderer()
 
 	run_cli_rc_files()
 

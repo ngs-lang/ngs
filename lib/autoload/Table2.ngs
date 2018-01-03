@@ -33,6 +33,9 @@ ns {
 			t = Cell(v)
 			t.each(c.push(X))
 		})
+		# cells = val.map(Cell)
+		# do_separators = cells.max(len) > 1
+
 		# aws ec2 describe-route-tables
 		# WIP # cells = val.each(Cell)
 		# WIP # do_sep = any(cells, {A.height() > 1})
