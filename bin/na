@@ -1,0 +1,22 @@
+#!/usr/bin/env ngs
+
+F main(*argv) {
+	t = argv[0]
+
+	m = t ~ /^([a-z]+)-[a-zA-Z0-9]+$/
+	if m {
+		if AWS::is_resource_code(m[1]) {
+			res = AWS::q(t).find()
+			echo(Table2::Table(res.resources.props))
+			# echo(res.resources.props)
+
+		}
+
+	}
+	
+	if AWS::is_resource_code(t) {
+		echo("YES")
+
+	}
+
+}
