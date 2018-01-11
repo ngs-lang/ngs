@@ -791,12 +791,12 @@ METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 	start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_START]; \
 	if(!IS_INT(start)) return METHOD_ARGS_MISMATCH; \
 	if(GET_INT(start) < 0) { \
-		exc = make_normal_type_instance(vm->InvalidArgument); \
+		exc = make_normal_type_instance(vm->IndexNotFound); \
 		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Negative range start")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	} \
 	if(((size_t) GET_INT(start)) > OBJ_LEN(argv[0])) { \
-		exc = make_normal_type_instance(vm->InvalidArgument); \
+		exc = make_normal_type_instance(vm->IndexNotFound); \
 		set_normal_type_instance_attribute(exc, make_string("message"), make_string("NumRange starts after string/array end")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	} \
@@ -812,7 +812,7 @@ METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 	} \
 	len = GET_INT(end) - GET_INT(start); \
 	if(GET_INT(start) + len > OBJ_LEN(argv[0])) { \
-		exc = make_normal_type_instance(vm->InvalidArgument); \
+		exc = make_normal_type_instance(vm->IndexNotFound); \
 		set_normal_type_instance_attribute(exc, make_string("message"), make_string("NumRange ends after string end")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	}
@@ -3004,6 +3004,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "Any");
 	_doc(vm, "%EX", "a=[1,2]; a.pop()  # 2, a is now [1]");
 
+	// TODO [doc]: examples
 	register_global_func(vm, 1, "shift",    &native_shift_arr,               1, "arr", vm->Arr);
 	_doc(vm, "", "Get the first element and remove it from the array. Throws EmptyArrayFail if there are no elements in the array.");
 	_doc(vm, "%RET", "Any");
@@ -3396,10 +3397,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// errno -ls | awk '{print "E("$1");"}' | xargs -n10
 	// (errno -ls | awk '{print $1}'; awk '/^#define RTLD_/ {print $2}' /usr/include/x86_64-linux-gnu/bits/dlfcn.h ) > c_constants.txt
 	E(EPERM); E(ENOENT); E(ESRCH); E(EINTR);
-	E(EINVAL); E(ENOTTY);
+	E(EINVAL); E(ENOTTY); E(EACCES);
 	/*
 	E(EIO); E(ENXIO); E(E2BIG); E(ENOEXEC); E(EBADF); E(ECHILD);
-	E(EAGAIN); E(ENOMEM); E(EACCES); E(EFAULT); E(ENOTBLK); E(EBUSY); E(EEXIST); E(EXDEV); E(ENODEV); E(ENOTDIR);
+	E(EAGAIN); E(ENOMEM); E(EFAULT); E(ENOTBLK); E(EBUSY); E(EEXIST); E(EXDEV); E(ENODEV); E(ENOTDIR);
 	E(EISDIR); E(EINVAL); E(ENFILE); E(EMFILE); E(ENOTTY); E(ETXTBSY); E(EFBIG); E(ENOSPC); E(ESPIPE); E(EROFS);
 	E(EMLINK); E(EPIPE); E(EDOM); E(ERANGE); E(EDEADLK); E(ENAMETOOLONG); E(ENOLCK); E(ENOSYS); E(ENOTEMPTY); E(ELOOP);
 	E(EWOULDBLOCK); E(ENOMSG); E(EIDRM); E(ECHRNG); E(EL2NSYNC); E(EL3HLT); E(EL3RST); E(ELNRNG); E(EUNATCH); E(ENOCSI);

@@ -98,6 +98,20 @@ F call(r:Return, v=null) {
 	r
 }
 
+# === MultiMethod ================================
+
+ns {
+	global each
+	# Preventing execution of F Arr(Eachable1) defined below.
+	# It causes infinite loop when tries to convert Eachable1 MultiMethod: it uses this each(), which uses Arr()
+	basic_arr = MultiMethod(Arr.constructors.Arr())
+
+	doc Call cb for each method of the MultiMethod
+	F each(mm:MultiMethod, cb:Fun) mm.basic_arr().each(cb)
+}
+
+F Str(mm:MultiMethod) "<MultiMethod with ${mm.Arr().len()} method(s)>"
+
 # === Misc functional ============================
 
 {
@@ -115,6 +129,7 @@ F call(r:Return, v=null) {
 	Int.inherit(Eachable1)
 	Arr.inherit(Eachable1)
 	Str.inherit(Eachable1)
+	MultiMethod.inherit(Eachable1)
 	# TODO: Consider Eachable2 subtype for Hash (as callback has 2 arguments)
 	Hash.inherit(Eachable2)
 
@@ -504,7 +519,7 @@ TEST ( 1 in [1,2,3].Iter()) == true
 TEST (10 in [1,2,3].Iter()) == false
 
 # === ArrLike ====================================
-
+# TODO [doc]: examples in methods
 {
 	doc Parent type for user-defined types with array-like behaviour. Use in cases when you would like to inherit from built-in Arr. Inheriting from built-ins is not possible for now.
 	doc arr_like_attr - name of the attribute that holds the underlying array, defaults to "items"
@@ -553,7 +568,7 @@ doc Push an element to the underlying array.
 F push(al:ArrLike, val) al.(al.arr_like_attr).push(val)
 
 # === HashLike ===================================
-
+# TODO [doc]: examples in methods
 {
 	doc Base type for user-defined hash-like types. This is a workaround: it's not possible currently no inherit from the built-in Hash type.
 	type HashLike
@@ -1696,7 +1711,7 @@ TEST Arr(1...3) == [1,2,3]
 
 # --- Access elements ---
 
-doc Get array element by index from the end
+doc Get array element by index from the end (negative indexes handler). Throws IndexNotFound if abs(idx) > len(arr).
 doc idx - Negative index
 doc %EX - [10,20,30][-1]  # 30
 F '[]'(arr:Arr, idx:Int) {
@@ -2629,6 +2644,8 @@ F code(b:Bool) Str(b)
 # === Int ========================================
 
 doc Absolute value of a number
+doc %EX - abs(5)   # 5
+doc %EX - abs(-5)  # 5
 F abs(i:Int) {
 	i >= 0 returns i
 	0-i
@@ -2766,21 +2783,20 @@ doc %EX - "abc"[0]  # "a"
 F '[]'(s:Str, i:Int) s[i..i+1]
 
 TEST ("abc"[0] == "a") and ("abc"[2] == "c")
-TEST try "abc"[3] == "x" catch(e:InvalidArgument) true
+TEST try "abc"[3] == "x" catch(e:IndexNotFound) true
 
-doc Get given character (currently byte) of the string.
-doc TODO: Document InvalidArgument exception.
-doc s - Original string
+doc Get given character (currently byte) of the string (negative indexes handler). Throws IndexNotFound if abs(i) > len(s).
+doc s - Original string.
 doc i - Negative index of the character to return
 doc %EX - "abc"[-1]  # "c"
 F '[]'(s:Str, i:Int) {
 	guard i < 0
-	i < 0-s.len() throws InvalidArgument("Negative index into string is (abs) larger than the string")
+	i < 0-s.len() throws IndexNotFound("Negative index into string is (abs) larger than the string")
 	s[s.len()+i]
 }
 
 TEST ("abc"[-1] == "c") and ("abc"[-3] == "a")
-TEST try "abc"[-4] == "x" catch(e:InvalidArgument) true
+TEST try "abc"[-4] == "x" catch(e:IndexNotFound) true
 
 doc Get a substring. Indexes in s are specified by NumRange.
 doc s - Original string
@@ -5219,6 +5235,7 @@ F match(a,b) a ~ b
 doc Check whether current process has the specified access to the file. Wrapper around ACCESS(2). Throws CException.
 doc mode - One of the file ACCESS::* modes, defaults to ACCESS::F_OK (test file existance only).
 doc %RET - Bool
+doc %EX - HERE
 F access(f:File, mode:Int=ACCESS::F_OK) {
 	ret = c_access(f.path, mode)
 	ret == 0 returns true
@@ -5343,10 +5360,10 @@ TEST a=[10,20,30]; f=X[1]; f(a) == 20
 # === Arr tests ==================================
 TEST [10,20,30,40][0..2] == [10,20]
 TEST [10,20,30,40][1..2] == [20]
-TEST (try [10,20,30,40][-1..2] catch(e:InvalidArgument) "OK") == "OK"
+TEST (try [10,20,30,40][-1..2] catch(e:IndexNotFound) "OK") == "OK"
 TEST [10,20,30,40][2..null] == [30, 40]
 TEST (try [10,20,30,40][2..1] catch(e:InvalidArgument) "OK") == "OK"
-TEST (try [10,20,30,40][2..10] catch(e:InvalidArgument) "OK") == "OK"
+TEST (try [10,20,30,40][2..10] catch(e:IndexNotFound) "OK") == "OK"
 TEST [10,20,30,40][4..null] == []
 TEST a=[1,2,3,4]; a[4..4]=["END"]; a[2..2]=["MIDDLE"]; a[0..0]=["START"]; a[0..1] = ["start"]; a == ["start", 1, 2, "MIDDLE", 3, 4, "END"]
 
