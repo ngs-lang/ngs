@@ -45,10 +45,16 @@ F init(e:IndexNotFound, message:Str, container, key) init(args())
 
 doc Throws AssertFail with givens message if condition is false
 doc %RET - Unspecified, do not count on this value
+doc %EX - my_array=[]
+doc %EX - # ... Code that adds elements to my_array ...
+doc %EX - assert(my_array.len() > 3, "my_array must have more than 3 elements")  # AssertFail exception, with the given message
 F assert(condition:Bool, msg:Str) not(condition) throws AssertFail(msg)
 
 doc Throws AssertFail if condition is false
 doc %RET - Unspecified, do not count on this value
+doc %EX - my_array=[]
+doc %EX - # ... Code that adds elements to my_array ...
+doc %EX - assert(my_array.len() > 3)  # AssertFail exception, with "Assertion failed" message
 F assert(condition:Bool) assert(condition, "Assertion failed")
 
 doc Throws AssertFail if condition, after conversition to Bool is false.
@@ -140,15 +146,20 @@ F Str(mm:MultiMethod) "<MultiMethod with ${mm.Arr().len()} method(s)>"
 	Int.inherit(Num)
 	Real.inherit(Num)
 
-	doc Get empty array
+	doc Make empty array
+	doc %RET - []
 	F Arr()  { [] }
-	doc Get empty hash
+	doc Make empty hash
+	doc %RET - {}
 	F Hash() { {} }
-	doc Get empty string
+	doc Make empty string
+	doc %RET - ''
 	F Str()  { '' }
 	doc Get zero
+	doc %RET - 0
 	F Int()  { 0 }
 	doc Get zero
+	doc %RET - 0.0
 	F Real() { 0.0 }
 }
 
@@ -561,7 +572,7 @@ F get(al:ArrLike, idx:Int, dflt) al.(al.arr_like_attr).get(idx, dflt)
 doc Call cb for each element in the underlying array.
 F each(al:ArrLike, cb:Fun) al.(al.arr_like_attr).each(cb)
 
-doc Call Bool() on the underlying array.
+doc Check whether al has any elements.
 F Bool(al:ArrLike) al.(al.arr_like_attr).Bool()
 
 doc Push an element to the underlying array.
@@ -894,18 +905,33 @@ F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
 	}
 
 	doc Block till the lock is avaiable and then acquire the lock.
+	doc %EX - l = Lock()
+	doc %EX - ...
+	doc %EX - l.acquire()
+	doc %EX - modify_global_state_safely(...)
+	doc %EX - l.release()
 	F acquire(l:Lock) {
 		c_pthread_mutex_lock(l.lock)
 		l
 	}
 
 	doc Release the lock
+	doc %EX - l = Lock()
+	doc %EX - ...
+	doc %EX - l.acquire()
+	doc %EX - modify_global_state_safely(...)
+	doc %EX - l.release()
 	F release(l:Lock) {
 		c_pthread_mutex_unlock(l.lock)
 		l
 	}
 
 	doc Call cb with lock l held. Releases the lock after cb returns or throws.
+	doc %EX - l = Lock()
+	doc %EX - ...
+	doc %EX - l.acquire(F() {
+	doc %EX -   modify_global_state_safely(...)
+	doc %EX - })
 	F acquire(l:Lock, cb:Fun) {
 		l.acquire()
 		try {
@@ -1696,7 +1722,7 @@ F zip(*args) {
 TEST zip([1,2,3], [4,5,6]) == [[1,4], [2,5], [3,6]]
 TEST zip([1,2,3], [4,5,6], [7,8,9,10]) == [[1,4,7], [2,5,8], [3,6,9], [null, null, 10]]
 
-doc Convert range to an array
+doc Convert Eachable1 (anything with "each" method that takes callback of one parameter) to an array
 doc %EX - Arr(1..3)   # [1,2]
 doc %EX - Arr(1...3)  # [1,2,3]
 F Arr(something:Eachable1) {
@@ -2471,15 +2497,22 @@ TEST EmptyBox().get(10) == 10
 doc Convert anything to Box (always FullBox)
 doc x - value to enclose in a box
 doc %RET - FullBox with given value
+doc %EX - Box(7).map(X*2).get()  # 14
 F Box(x) FullBox(x)
 
 doc Convert null to Box (always EmptyBox)
 doc %RET - EmptyBox
+doc %EX - Box(null).map(X*2).get()  # InvalidArgument exception (in "get()")
 F Box(n:Null) EmptyBox()
 
 doc Convert array value indexed by the given index
 doc idx - key to look in hash
 doc %RET - Box. FullBox if the array has the element indexed by idx, EmptyBox otherwise.
+doc %EX - my_array = [10, 20]
+doc %EX - my_array.Box(1).map(X*2).each(echo)
+doc %EX - # output: 40
+doc %EX - my_array.Box(5).map(X*2).each(echo)
+doc %EX - # no output
 F Box(a:Arr, idx) {
 	l = a.len()
 	if idx >= 0 {
@@ -2493,6 +2526,11 @@ F Box(a:Arr, idx) {
 doc Convert hash value indexed by the given key to a Box
 doc k - key to look in hash
 doc %RET - Box. FullBox if the hash has the element referenced by k, EmptyBox otherwise.
+doc %EX - my_hash = {"a": 10, "b": 300}
+doc %EX - my_hash.Box("a").map(X*2).each(echo)
+doc %EX - # output: 20
+doc %EX - my_hash.Box("nope").map(X*2).each(echo)
+doc %EX - # no output
 F Box(h:Hash, k) {
 	k not in h returns EmptyBox()
 	FullBox(h[k])
@@ -2500,10 +2538,24 @@ F Box(h:Hash, k) {
 
 doc Do nothing
 doc %RET - fb
+doc %EX - my_array = [10, 20]
+doc %EX - # dflt on FullBox has no effect
+doc %EX - my_array.Box(1).dflt(100).map(X*2).each(echo) # HERE
+doc %EX - # output: 40
+doc %EX - # dflt on EmptyBox creates FullBox with the given value
+doc %EX - my_array.Box(5).dflt(100).map(X*2).each(echo)
+doc %EX - # output: 200
 F dflt(fb: FullBox, x) fb
 
 doc Wrap x in a Box
 doc %RET - FullBox with the value x
+doc %EX - my_array = [10, 20]
+doc %EX - # dflt on FullBox has no effect
+doc %EX - my_array.Box(1).dflt(100).map(X*2).each(echo)
+doc %EX - # output: 40
+doc %EX - # dflt on EmptyBox creates FullBox with the given value
+doc %EX - my_array.Box(5).dflt(100).map(X*2).each(echo) # HERE
+doc %EX - # output: 200
 F dflt(eb: EmptyBox, x) FullBox(x)
 
 doc Compare boxes. Empty boxes and boxes with same content are considered to be equal.
@@ -2611,7 +2663,19 @@ F Diff(a:Arr, b:Arr, full:Bool=false) {
 	Diff(a, b.map(get), full)
 }
 
-doc Whether there is a difference
+doc Check whether there is a difference
+doc %RET - Bool
+doc %EX - arr_diff = Diff(current, desired)
+doc %EX - # Implicit Bool() when using in "if": if arr_diff -> if Bool(arr_diff)
+doc %EX - if arr_diff {
+doc %EX -   echo("Will make modifications to the resource")
+doc %EX -   if arr_diff.add {
+doc %EX -     ...
+doc %EX -   }
+doc %EX -   if arr_diff.remove {
+doc %EX -     ...
+doc %EX -   }
+doc %EX - }
 F Bool(d:ArrDiff) Bool(d.add or d.remove)
 
 doc Compare hashes
@@ -2633,6 +2697,21 @@ F Diff(a:Hash, b:Hash) {
 TEST Diff({"a": 1, "b":2}, {"b": 3, "d": 4}).Hash().sort() == {"add":{"d":4}, "change":{"b":3}, "remove":["a"]}
 
 doc Whether there is a difference
+doc %RET - Bool
+doc %EX - hash_diff = Diff(current_properties, desired_properties)
+doc %EX - # Implicit Bool() when using in "if": if hash_diff -> if Bool(hash_diff)
+doc %EX - if hash_diff {
+doc %EX -   echo("Will make modifications to the resource")
+doc %EX -   if hash_diff.add {
+doc %EX -     ...
+doc %EX -   }
+doc %EX -   if hash_diff.remove {
+doc %EX -     ...
+doc %EX -   }
+doc %EX -   if hash_diff.change {
+doc %EX -     ...
+doc %EX -   }
+doc %EX - }
 F Bool(d:HashDiff) Bool(d.add or d.remove or d.change)
 
 # === Bool =======================================
@@ -3367,6 +3446,9 @@ F glob(pattern:Str, start_dir='.') {
 }
 
 doc Convert to string, appropriate for using as argument to external process.
+doc %AUTO - $(mycommand $mypath) # mypath is Path
+doc %EX - conf_files = [Path("/usr/local/etc/some.conf"), Path("/etc/some.conf")].filter(Bool(X))
+doc %EX - $(ls -l $*conf_files)
 F Arg(p:Path) p.path
 
 # === Commands and processes (WIP) ===============
@@ -3827,12 +3909,15 @@ F Str(cp:CommandsPipeline) {
 # TODO: type Arg(Str) -- currently, inheriting built in types is not supported
 
 doc Convert to string, appropriate for using as argument to external process.
+doc %AUTO - $(mycommand $num) # num is Real
 F Arg(x:Real) Str(x)
 
 doc Convert to string, appropriate for using as argument to external process.
+doc %AUTO - $(mycommand $num) # num is Int
 F Arg(x:Int) Str(x)
 
-doc Convert to string, appropriate for using as argument to external process.
+doc Convert to string, appropriate for using as argument to external process. No-op for Str: return the same string.
+doc %AUTO - $(mycommand $str) # str is Str
 F Arg(x:Str) x
 
 # TODO: Consider storing original h in one of the attrs() of the result
@@ -4783,8 +4868,8 @@ doc Convert an array to a possibly shorter version, for displaying to human.
 doc chunk_size - number of elements to retain at the beginning and at the end.
 doc marker - how to mark the cut elements in the middle.
 doc %RET - Arr
-doc %EX - my_arr = Arr(1...100)
-doc %EX - digest(my_arr, 2).each(echo)
+doc %EX - my_array = Arr(1...100)
+doc %EX - digest(my_array, 2).each(echo)
 doc %EX - # 1
 doc %EX - # 2
 doc %EX - # (...)
@@ -5235,7 +5320,7 @@ F match(a,b) a ~ b
 doc Check whether current process has the specified access to the file. Wrapper around ACCESS(2). Throws CException.
 doc mode - One of the file ACCESS::* modes, defaults to ACCESS::F_OK (test file existance only).
 doc %RET - Bool
-doc %EX - HERE
+doc %EX - access(File("mydata"), ACCESS::R_OK).not() throws Error("No access to data file").set("file", "mydata")
 F access(f:File, mode:Int=ACCESS::F_OK) {
 	ret = c_access(f.path, mode)
 	ret == 0 returns true

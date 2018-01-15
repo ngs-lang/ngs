@@ -91,6 +91,11 @@
 	}
 
 	doc Check whether any resources were found.
+	doc %RET - Bool
+	doc %EX - # Implicit Bool(): if expr -> if Bool(expr)
+	doc %EX - if AWS::Instance({"env": "dev", "role": "edge"}) {
+	doc %EX -   echo("There is at least one edge server in dev environment")
+	doc %EX - }
 	F Bool(rd:ResDef) {
 		rd.find_if_needed()
 		rd.resources.Bool()

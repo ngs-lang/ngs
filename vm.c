@@ -3144,8 +3144,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%EX", "echo(2, \"blah\")  # Output on stderr: blah");
 
 	register_global_func(vm, 0, "Bool",     &native_Bool_any,          1, "x",   vm->Any);
-	_doc(vm, "", "Convert to Bool");
-	_doc(vm, "x", "Bool or Str or Arr or Hash or Null");
+	_doc(vm, "", "Convert to Bool. Str, Arr and Hash of non-zero size return true. Bool returns as is. Null returns false. Int returns true if it is not zero.");
+	_doc(vm, "x", "Bool or Int or Str or Arr or Hash or Null");
 	_doc(vm, "%RET", "Bool");
 
 	register_global_func(vm, 0, "Str",      &native_Str_int,           1, "n",   vm->Int);
