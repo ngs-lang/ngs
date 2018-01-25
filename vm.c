@@ -3351,7 +3351,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	register_global_func(vm, 1, "del",      &native_index_del_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
-	_doc(vm, "", "Delete hash key. Throws KeyNotFound if k is not in h.");
+	_doc(vm, "", "Delete hash key. Throws KeyNotFound if k is not in h. WARNING: this method will probably be renamed to \"delete\" in future versions.");
 	_doc(vm, "h", "Target hash");
 	_doc(vm, "k", "Key");
 	_doc(vm, "%RET", "h");

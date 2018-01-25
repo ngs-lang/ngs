@@ -117,6 +117,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	doc Run a command. Internal method. Please do not use outside the AWS library.
 	F run(r:Res, log_pfx:Str, cp:CommandsPipeline, do_parse=true) r.def.run("${r} ${log_pfx}", cp, do_parse)
 
+	doc Don't call directly, use converge(). API subject to change.
 	doc Update tags using AWS CLI "aws ec2 create-tags" and "aws ec2 delete-tags".
 	doc The required AWS CLI is computed from current tags, which are expected to be in r.props.Tags, and props.Tags
 	doc %RET - Do not count on this value.
@@ -256,6 +257,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 	}
 
+	doc Don't call directly, use converge(). API subject to change.
 	F update(r:VpcRes, props:Hash) {
 		r.def._assert_props_has_only_known_keys(props, 'Tags', 'CidrBlock')
 		r.update_tags(props)
@@ -316,6 +318,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 	}
 
+	doc Don't call directly, use converge(). API subject to change.
 	F update(r:IgwRes, props:Hash) {
 		debug("AWS", "${r} Update IGW")
 		r.def._assert_anchor_has_only_known_keys('Tags', 'Attachments')
@@ -378,6 +381,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd
 	}
 
+	doc Don't call directly, use converge(). API subject to change.
 	F update(r:RouteTableRes, props:Hash) {
 		debug("AWS", "${r} Update RouteTable")
 		# log("RouteTableRes entry $r")
@@ -495,6 +499,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		b .= _cleanup()
 	}
 
+	doc Create AWS security group. Required property: "Description". Supported properties: IpPermissions, IpPermissionsEgress
 	F create(rd:SecGroup, **props) {
 		rd.log('Create', 'SG')
 		argv = Argv({'--vpc-id': rd.anchor.Box('VpcId').map(_one_id)})
@@ -506,6 +511,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 	}
 
+	doc Don't call directly, use converge(). API subject to change.
 	F update(sg:SecGroupRes, props:Hash) {
 
 		debug("AWS", "${sg} Updating SG")
@@ -578,6 +584,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 	}
 
+	doc Don't call directly, use converge(). API subject to change.
 	F update(r:SubnetRes, props:Hash) {
 		debug("AWS", "${r} Updating Subnet")
 		r.def._assert_props_has_only_known_keys(props, 'Tags')
@@ -739,6 +746,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	# TODO: Support EC2 classic?
+	doc Don't call directly, use converge(). API subject to change.
 	F update(r:InstanceRes, props:Hash) {
 		debug("AWS", "${r} Update Instance")
 		r.update_tags(props)
@@ -988,6 +996,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 	}
 
+	doc Don't call directly, use converge(). API subject to change.
 	F update(elb:ElbRes, props:Hash) {
 		debug("AWS", "${elb} Update")
 		elb.def.anchor.get('Name') is not Str throws InvalidArgument("Elb is the ELB name and must be a string, not ${elb.def.anchor.get('Name')}")
@@ -1152,6 +1161,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		}
 	}
 
+	doc Don't call directly, use converge(). API subject to change.
 	F update(rrset:RecordSetRes, props:Hash) {
 		props = _get_props(rrset.def, props)
 		diff = Diff(rrset.props, props)

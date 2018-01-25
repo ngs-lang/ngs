@@ -816,7 +816,7 @@ TEST type T; t=T(); Str(t) == '<T>'
 TEST type T; t=T(); t.a=1; t.b=2; Str(t) == '<T a=1 b=2>'
 
 doc Set an attribute in an instance if it's not already set
-doc %EX - mysomething.dflt(k, []).push(elt)
+doc %EX - my_something.dflt(k, []).push(elt)
 doc %RET - Attribute value, the already-existed or new.
 F dflt(i:NormalTypeInstance, k, v) {
 	if k not in i {
@@ -828,13 +828,17 @@ F dflt(i:NormalTypeInstance, k, v) {
 TEST type T; t=T(); t.dflt("a", 1); t.a == 1
 TEST type T; t=T(); t.a = 2; t.dflt("a", 1); t.a == 2
 
-doc Set an attribute on instances if it's not already set
-doc %RET - v
-F dflt(arr:Arr, k, v) {
-	guard arr.all({A is NormalTypeInstance or A is Hash})
-	arr.each(X.dflt(k, v))
-	v
+doc Set an attribute on all elements if it's not already set
+doc e - Eachable1 with elements of type NormalTypeInstance or Hash
+doc %EX - my_items.dflt("source", "(unknown)")
+doc %RET - e
+F dflt(e:Eachable1, k, v) {
+	guard e.all({A is NormalTypeInstance or A is Hash})
+	e.each(X.dflt(k, v))
+	e
 }
+
+TEST [{}, {"x": 1}].dflt("x", 100) == [{"x": 100}, {"x": 1}]
 
 doc Equaity test for normal type instances: must be of same type and have same attributes and their values
 doc %RET - Bool

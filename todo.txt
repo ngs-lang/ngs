@@ -67,6 +67,7 @@ Note that this started as internal document so things here are unformed, not fin
 					* Mark experimental
 					* Mark deprecated
 					* Mark internal
+			* Document AWS library (including usage examples)
 			* Document Iter
 				* Bool() usage by "for"
 			* Document `options: ...`
@@ -134,6 +135,8 @@ Note that this started as internal document so things here are unformed, not fin
 			* Internals
 
 		* Milestone "correct programming"
+
+			* decode_json - meaningful exceptions
 
 			* Adding a field to a type is not thread safe because of possible fields hash (field name -> field number) update
 
