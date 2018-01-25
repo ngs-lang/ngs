@@ -123,6 +123,7 @@
 
 		F param_to_inline_html_doc(param:Hash) {
 			DocNode('span', class='inline-param') with [
+				DocText(param.splat.get(''))
 				DocText(param.name)
 				DocText(':')
 				DocText(param.type.name)

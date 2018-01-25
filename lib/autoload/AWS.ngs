@@ -244,7 +244,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd
 	}
 
-	doc Create a VPC. Currently supported properties are: Tags, CidrBlock.
+	doc Create AWS VPC. Currently supported properties are: Tags, CidrBlock.
 	F create(rd:Vpc, **props) {
 		rd._assert_props_has_only_known_keys(props, 'Tags', 'CidrBlock')
 		cidr = rd.req_prop('CidrBlock', props)
@@ -304,6 +304,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd
 	}
 
+	doc Create AWS Internet Gateway. Current supported properties: Tags, Attachments
 	F create(rd:Igw, **props) {
 		rd.log('Create', 'IGW')
 		rd._assert_anchor_has_only_known_keys('Tags', 'Attachments')

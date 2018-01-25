@@ -4,6 +4,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 	Unsorted and undecided things go here. The important sections is [roadmap] and it's just below this section.
 
+	* Fix: a.mymod::memethod() syntax
 	* Conditional modification of value
 		* Conditon can be Fun/value
 		* Replacement can be Fun/value
@@ -26,7 +27,6 @@ Note that this started as internal document so things here are unformed, not fin
 	* Look at Juju / conjure-up
 	* Add %k{...} and %v{...} syntax and remove n()
 	* Namespace type, probably subtype of Hash
-	* Fix: a.mymod::memethod() syntax
 	* See what can be fixed regarding functions that accept Arr[T] for specific types
 		+ Such as join(threads:Arr) in lib/autoload/Thread.ngs
 	* min(a,b), max(a,b)
@@ -67,6 +67,8 @@ Note that this started as internal document so things here are unformed, not fin
 					* Mark experimental
 					* Mark deprecated
 					* Mark internal
+			* Document Iter
+				* Bool() usage by "for"
 			* Document `options: ...`
 			* Document pitfalls
 				* ns { F some_global_name() ... } -- does not add method implementation
@@ -116,6 +118,8 @@ Note that this started as internal document so things here are unformed, not fin
 				+ how different module versions can run alongside?
 
 		* Milestone "even better documentation"
+			* Tables documentation - examples
+			* Finish c_* methods documentation
 			* Add field (for example for Absent) for methods that get Arr[T] to link that method from type T page
 			* Tags associated with methods/types/namespaces
 			* Add "-pd" switch: print documentation

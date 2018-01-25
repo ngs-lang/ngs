@@ -1564,16 +1564,15 @@ TEST [1,2,3] - [5,6,1] == [2,3]
 TEST [1,2,3] - [5,6,1,1,1,1,1,1,1,1,1,1,1,2] == [3]
 
 doc Count number of items that satisfy the predicate.
-doc TODO: Make it work on anything with each() method.
-doc arr - Items to look at
+doc e - Items to look at
 doc predicate - Test function
 doc args - Additional arguments for the predicate
 doc %RET - Int
 doc %EX - [1,2,3,11,12].count(X>10)  # 2
-F count(arr:Arr, predicate) {
+F count(e:Eachable1, predicate) {
 	p = Pred(predicate)
 	collector/0
-		arr.each(F(elt) {
+		e.each(F(elt) {
 			if p(elt)
 				collect(1)
 		})
@@ -1582,10 +1581,10 @@ F count(arr:Arr, predicate) {
 TEST [1,2,3,11,12].count(X>10) == 2
 
 doc Count all true values.
-doc arr - Items to look at
+doc e - Items to look at
 doc %RET - Int
 doc %EX - [0,1,2,null,false].count()  # 2 (Only 1 and 2 count as true values)
-F count(arr:Arr) count(arr, identity)
+F count(e:Arr) count(e, identity)
 
 TEST [0,1,2,null,false].count() == 2
 
@@ -2197,15 +2196,15 @@ F rejectv(h:Hash, predicate) h.filterv(not + Pred(predicate))
 TEST {"a1": 1, "a2": 2, "b1": 10}.rejectv(X>5) == {"a1": 1, "a2": 2}
 
 doc Count number of key-value pairs in Hash that satisfy the predicate.
-doc h - Hash to check
+doc e - Something to check, typically a Hash
 doc predicate - Test function to be called with one key and one value at a time
 doc args - Additional arguments for calling the predicate.
 doc %RET - Int
 doc %EX - {'a': 1, 'b': 2, 'c': 11}.count(F(k, v) v>10)  # 1
-F count(h:Hash, predicate) {
+F count(e:Eachable2, predicate) {
 	p = Pred(predicate)
 	collector/0
-		h.each(F(k, v) {
+		e.each(F(k, v) {
 			if p(k, v)
 				collect(1)
 		})
@@ -3697,7 +3696,6 @@ F lines(f:File, lines_:Arr) {
 doc Close a file and sets the "fd" field to null. Uses CLOSE(2).
 doc Throws InvalidArgument if file is not open.
 doc Throws FileIOFail if an underlying error occurs.
-doc flags - Currently "r", "w" or "a" for read/write/append
 doc %RET - f
 F close(f:File) {
 	f.fd is Null throws InvalidArgument("File is not open. close() expects an open file").set('file', f)
@@ -4203,6 +4201,7 @@ F read(cp:CommandsPipeline, count=null) {
 	cp.pipe_out.read(count)
 }
 
+# TODO: example
 doc Close reading and writing pipes of CommandsPipeline, if they exist
 F close(cp:CommandsPipeline) {
 	cp.pipe_in.Box().map({A.parent_fd().close()})
@@ -4521,9 +4520,13 @@ doc %RET - false
 F Bool(my:MatchN) false
 
 doc Convert successful match to FullBox
+doc %RET - FullBox
+doc %EX - Box("abcd" ~ /^(..)/).map({"First two letters: ${A[1]}"}).get("(too short)")  # First two letters: ab
 F Box(my:MatchY) FullBox(my)
 
 doc Convert failed match to EmptyBox
+doc %RET - EmptyBox
+doc %EX - Box("a" ~ /^(..)/).map({"First two letters: ${A[1]}"}).get("(too short)")  # (too short)
 F Box(mn:MatchN) EmptyBox()
 
 doc EXPERIMENTAL! Do not use!

@@ -721,11 +721,6 @@ METHOD_RESULT native_c_read_int_int METHOD_PARAMS {
 // TODO: error handling support
 METHOD_RESULT native_c_write_int_str METHOD_PARAMS { METHOD_RETURN(MAKE_INT(write(GET_INT(argv[0]), OBJ_DATA_PTR(argv[1]), OBJ_LEN(argv[1])))); }
 
-// DUP2(2)
-METHOD_RESULT native_c_dup2 METHOD_PARAMS {
-	METHOD_RETURN(MAKE_INT(dup2(GET_INT(argv[0]), GET_INT(argv[1]))));
-}
-
 METHOD_RESULT native_c_lseek_int_int_str EXT_METHOD_PARAMS {
 	off_t offset;
 	const char *whence_str = obj_to_cstring(argv[2]);
@@ -2914,9 +2909,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "Int - number of bytes written or -1");
 	register_global_func(vm, 0, "c_poll",   &native_c_poll,            2, "fds_evs",  vm->Arr, "timeout", vm->Int);
 	// TODO DOC
-	register_global_func(vm, 0, "c_dup2",   &native_c_dup2,            2, "oldfd",    vm->Int, "newfd", vm->Int);
-	_doc(vm, "", "Call DUP2(2).");
-	_doc(vm, "%RET", "Int - file descriptor or -1");
 	register_global_func(vm, 1, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
 	_doc(vm, "", "Call LSEEK(2).");
 	_doc(vm, "whence", "One of: set, cur, end");
@@ -2936,6 +2928,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	register_global_func(vm, 1, "c_lstat",   &native_c_lstat,           1,"pathname", vm->Str);
 	_doc(vm, "", "Call LSTAT(2)");
+	_doc(vm, "%EX", "c_lstat(\"/tmp\")  # <Stat st_dev=... st_ino=... st_mode=... ...>");
 
 	register_global_func(vm, 1, "c_fstat",   &native_c_fstat,           1,"fd",       vm->Int);
 	_doc(vm, "", "Call FSTAT(2)");
@@ -2945,7 +2938,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Call ACCESS(2)");
 
 	register_global_func(vm, 0, "c_exit",   &native_c_exit_int,        1, "status",   vm->Int);
-	_doc(vm, "", "Call EXIT(3)");
+	_doc(vm, "", "Call EXIT(3). Don't use directly unless you must. Use FatalError exception.");
 
 	register_global_func(vm, 0, "c_fork",   &native_c_fork,            0);
 	_doc(vm, "", "Call FORK(2)");
@@ -2980,7 +2973,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Call STRCMP(3)");
 
 	register_global_func(vm, 0, "c_kill",       &native_c_kill,        2, "pid", vm->Int,  "sig", vm->Int);
-	_doc(vm, "", "Call KILL(2)");
+	_doc(vm, "", "Call KILL(2). Global variable SIGNALS contains mapping between signals' names and values.");
 
 	// boolean
 	register_global_func(vm, 0, "==",       &native_eq_bool_bool,      2, "a",   vm->Bool, "b", vm->Bool);
@@ -3239,9 +3232,37 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	register_global_func(vm, 1, "c_gmtime",     &native_c_gmtime,         1, "timep", vm->Int);
-	// XXX _doc(vm, "", "Call GMTIME_R(?)");
+	_doc(vm, "", "Call GMTIME_R(3)");
+	_doc_arr(vm, "%EX",
+		"ngs -pl 'c_gmtime(0).Hash().Strs()'",
+		"tm_sec=0",
+		"tm_min=0",
+		"tm_hour=0",
+		"tm_mday=1",
+		"tm_mon=0",
+		"tm_year=70",
+		"tm_wday=4",
+		"tm_yday=0",
+		"tm_isdst=0",
+		NULL
+	);
+
 	register_global_func(vm, 1, "c_localtime",  &native_c_localtime,      1, "timep", vm->Int);
 	_doc(vm, "", "Call LOCALTIME(3)");
+	_doc_arr(vm, "%EX",
+		"ngs -pl 'c_gmtime(0).Hash().keys()'",
+		"tm_sec",
+		"tm_min",
+		"tm_hour",
+		"tm_mday",
+		"tm_mon",
+		"tm_year",
+		"tm_wday",
+		"tm_yday",
+		"tm_isdst",
+		NULL
+	);
+
 	register_global_func(vm, 0, "c_strftime",   &native_c_strftime,       2, "tm",    vm->c_tm, "format", vm->Str);
 	_doc(vm, "", "Call STRFTIME(3)");
 

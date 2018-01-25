@@ -129,6 +129,11 @@ ns {
 	doc Create unnamed table containing provided rows
 	F init(t:Table, rows_hashes:Arr) super(t, null, rows_hashes)
 
+	doc Create single-line table
+	F init(t:Table, row_hash:Hash) super(t, null, [row_hash])
+
+	TEST Table2::columns(Table2::Table({"a": 1, "b": 2})) == [[1], [2]]
+
 	doc Internal method. Please do not use.
 	F register_column(t:Table, k) t.cols_enum.push(k)
 
