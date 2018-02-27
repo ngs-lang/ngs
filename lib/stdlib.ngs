@@ -20,7 +20,7 @@ F init(h:Hash) {
 # === Exceptions ===
 
 {
-	doc Represents failed asserttion, thrown by assert(). Should be used to catch programming errors.
+	doc Represents failed assertion, thrown by assert(). Should be used to catch programming errors.
 	doc %EXSYN - commands
 	doc %EX - F box_area(x:Int, y:Int) {
 	doc %EX - 	assert(x > 0)
@@ -113,6 +113,7 @@ ns {
 	basic_arr = MultiMethod(Arr.constructors.Arr())
 
 	doc Call cb for each method of the MultiMethod
+	doc %EX - echo.each(F(method) echo("${method.params().name.join(", ")}"))
 	F each(mm:MultiMethod, cb:Fun) mm.basic_arr().each(cb)
 }
 
@@ -427,13 +428,14 @@ F take(something:Eachable1, predicate)
 
 TEST [1,2,3,1,2].take(X<3) == [1,2]
 
-# Would look much better with an iterator of "something"
+# Would look much better with an iterator of e.
 doc EXPERIMENTAL! Do not use!
-F drop(something:Eachable1, predicate)
+doc Filters out items that satisfy predicate at the begginning of e.
+F drop(e:Eachable1, predicate)
 	collector {
 		p = Pred(predicate)
 		found = false
-		something.each(F(elt) {
+		e.each(F(elt) {
 			if found { collect(elt); return null; }
 			if not(p(elt)) {
 				collect(elt)
@@ -992,6 +994,9 @@ AUTOLOAD = ns {
 
 		ResDef              Res
 
+		Failure				Result
+		Success				Result
+
 		InputStream         Stream
 		InputOutputStream   Stream
 		OutputStream        Stream
@@ -1114,6 +1119,8 @@ TEST 30 in NumRange(1,30,false,true)
 doc Convert range to human readable representation
 F Str(r:Range) "<${r.typeof().name} ${r.start}..${r.end} include_start=${r.include_start} include_end=${r.include_end} step=${r.step}>"
 
+# TODO: think about multi-valued results (say 10 hosts, 8 succeeded and 2 failed)
+# TODO: think about Argv cooperation. Maybe Failure is NoData and Success is FullBox?
 # === Syntactic sugar ============================
 
 doc Boolean negation for non-boolean values. Converts to boolean first.
@@ -1244,21 +1251,29 @@ F ==(a:Null, b:Null) true
 doc Run cleanup after successful execution of body or exception in body
 doc body - Main code to execute
 doc cleanup - Cleanup code to execute
-doc TODO: make sure cleanup() is not run twice in case of exception in cleanup() itself
+doc %RET - Whatever body call returns
 doc %EX - finally(
 doc %EX -   { while entry = c_readdir(d) { ... } },
 doc %EX -   { ... c_closedir(d) ...}
 doc %EX - )
-doc %RET - Whatever body call returns
+doc %EX - # Alternative function call syntax:
+doc %EX - finally()
+doc %EX -   body => {
+doc %EX -     while entry = c_readdir(d) {
+doc %EX -       cb(Path(dirname / entry.d_name, subtype=subtype))
+doc %EX -     }
+doc %EX -   }
+doc %EX -   cleanup => {
+doc %EX -     r = c_closedir(d)
+doc %EX -     r != 0 throws DirFail('Failed to close directory after listing').set('dirname', dirname)
+doc %EX -   }
 F finally(body:Fun, cleanup:Fun) {
-	try {
-		ret = body()
-		cleanup()
-		ret
-	} catch(e) {
-		cleanup()
-		throw e
+	ret = Result(body)
+	cleanup()
+	if ret is Failure {
+		throw ret.val
 	}
+	ret.get()
 }
 
 TEST a=0; {1/1}.finally({a=10}) == 1 and a == 10
@@ -1471,7 +1486,7 @@ F each(arr:Arr, cb:Fun) {
 
 # Tested by flatten() tests
 
-doc Iterates over the elements of an Eachable1, passing each in turn to cb along with index and args: cb(INDEX, ITEM)
+doc Iterates over elements of e, passing each in turn to cb along with index and args: cb(INDEX, ITEM)
 doc %RET - e
 doc %EX - "abc".each_idx_val(F(idx, val) echo("Element #$idx equals to $val"))
 F each_idx_val(e:Eachable1, cb:Fun) {
@@ -2178,17 +2193,23 @@ F filter(h:Hash, predicate) {
 TEST {'a': 1, 'b': 2}.filter(F(k, v) k == 'a') == {'a': 1}
 
 doc Filter hash by keys, keeping matched
+doc %EX - {"a": 1, "b": 2, "ccc": 3}.filterk(/^.$/)    # {a=1, b=2}
+doc %EX - {"aa": 1, "ab": 2, "ba": 3}.filterk(/^a/)    # {aa=1, ab=2}
+doc %EX - {"aa": 1, "ab": 2, 10: 3}.filterk(Int)       # {10=3}
+doc %EX - {10: "a", 20: "b", 30: "c"}.filterk(X > 10)  # {20=b, 30=c}
 F filterk(h:Hash, predicate) filter(h, Pred(predicate) + {A})
 
 TEST {"a1": 1, "a2": 2, "b1": 10}.filterk(/^b/) == {"b1": 10}
 
-doc Filter hash by keys, removing matched
+doc Filter hash by keys, removing matched. See filterk().
+doc %EX - {"a1": 1, "a2": 2, "b1": 10}.rejectk(/^b/)  # {"a1": 1, "a2": 2}
 F rejectk(h:Hash, predicate) h.filterk(not + Pred(predicate))
 
 TEST {"a1": 1, "a2": 2, "b1": 10}.rejectk(/^b/) == {"a1": 1, "a2": 2}
 
 
 doc Filter hash by values
+doc %EX - {"a1": 1, "a2": 2, "b1": 10}.filterv(X>5)  # {"b1": 10}
 F filterv(h:Hash, predicate) filter(h, Pred(predicate) + {B})
 
 TEST {"a1": 1, "a2": 2, "b1": 10}.filterv(X>5) == {"b1": 10}
@@ -2447,19 +2468,28 @@ F map(eb:EmptyBox, mapper:Fun) eb
 
 doc Call cb with the value of the FullBox
 doc %RET - fb
+doc %EX - Box(10).each(echo)  # Output: 10
 F each(fb:FullBox, cb:Fun) { cb(fb.val); fb }
 
 doc Do nothing
 doc %RET - eb
+doc %EX - Box(null).each(echo)  # No output
 F each(eb:EmptyBox, cb:Fun) eb
 
-doc Test FullBox value
-doc predicate - Test function to be called with the value of the FullBox
+doc Conditionaly convert FullBox to EmptyBox.
+doc predicate - Test function to be called with the value in the FullBox
 doc %RET - Box. fb if predicate succeeds, EmptyBox if not.
-F filter(fb:FullBox, predicate) { p = Pred(predicate); if p(fb.val) fb else EmptyBox() }
+doc %EX - Box(10).filter(X>5)   # <FullBox val=10>
+doc %EX - Box(10).filter(X>20)  # <EmptyBox>
+F filter(fb:FullBox, predicate) {
+	p = Pred(predicate)
+	p(fb.val) returns fb
+	EmptyBox()
+}
 
 doc Do nothing
 doc %RET - eb
+doc %EX - EmptyBox().filter(X>20)  # <EmptyBox>
 F filter(eb:EmptyBox, predicate) eb
 
 doc Test Box value
@@ -2581,6 +2611,107 @@ TEST EmptyBox() != FullBox(1)
 TEST FullBox(1) == FullBox(1)
 TEST FullBox(1) != FullBox(2)
 
+# === Result =====================================
+{
+	doc Thrown by get(Failure) as it has no value to get
+	type ResultFail
+	ResultFail.inherit(Error)
+
+	doc Result of a computation
+	doc val - computed value or exception
+	type Result
+
+		doc Successful computation
+		doc val - computed value
+		type Success
+		Success.inherit(Result)
+
+		doc Failed computation
+		doc val - exception
+		type Failure
+		Failure.inherit(Result)
+
+	doc Runs the computation and wraps the result: a value is wrapped in Success and an exception is wrapped in Failure.
+	doc %RET - Success or Failure
+	F Result(fun:Fun) {
+		try {
+			Success(fun())
+		} catch(e) {
+			# if e is Null {
+			# 	throw Error("E IS NULL").set('cause', e)
+			# }
+			Failure(e)
+		}
+	}
+
+	doc Initialize Result with the given value.
+	F init(r:Result, v) r.val = v
+
+	doc Gets wrapped value
+	F get(s:Success) s.val
+
+	doc Throws ResultFail
+	F get(f:Failure) {
+		e = ResultFail("Can not get value of Failure")
+		if f.val is Exception {
+			e.cause = f.val
+		} else {
+			e.failure = f.val
+		}
+		throw e
+	}
+
+	doc Gets wrapped value
+	F get(s:Success, dflt) s.val
+
+	doc Retruns dflt
+	F get(f:Failure, dflt) dflt
+
+	doc Run fun with wrapped value. If exception is thrown, Failure is returned; otherwise Success with new vaule is returned.
+	doc %RET - Result
+	F map(s:Success, fun:Fun) {
+		try {
+			Success(fun(s.val))
+		} catch(e) {
+			Failure(e)
+		}
+	}
+
+	doc No-op, returns f
+	doc %RET - f
+	F map(f:Failure, fun:Fun) f
+
+	doc Run predicate on wrapped value.
+	doc %RET - s or Failure
+	doc %EX - Success(10).filter(X>5)   # <Success val=10>
+	doc %EX - Success(10).filter(X>15)  # <Failure val=<ResultFail ...>>
+	F filter(s:Success, predicate) {
+		p = Pred(predicate)
+		p(s.val) returns s
+		Failure(ResultFail("Success filtered out, resulting Failure").set('filter_predicate', predicate))
+	}
+
+	doc No-op, returns f
+	doc %RET - f
+	doc %EX - Failure("blah").filter(X>5)  # <Failure val=blah>
+	F filter(f:Failure, predicate) f
+
+	doc Convert Success to Bool (true)
+	doc %RET - true
+	F Bool(s:Success) true
+
+	doc Convert Failure to Bool (false)
+	doc %RET - false
+	F Bool(f:Failure) false
+
+	doc EXPERIMENTAL! Do not use!
+	F to_exit_code(r:Result) r.Bool().to_exit_code()
+}
+
+TEST {read("/etc/passwd")}.Result() is Success
+TEST {read("NO-SUCH-FILE")}.Result() is Failure
+TEST Success(10).map(X*2).get() == 20
+
 # === Diff =======================================
 {
 
@@ -2599,6 +2730,8 @@ TEST FullBox(1) != FullBox(2)
 		type ExactPresence([FullBox, Presence])
 }
 
+doc Internal method. Please do not use.
+doc Converts Presence or Arr[something] to Arr[Presence]. Used by Res and friends.
 F normalize_presence_list(x) {
 	econd {
 		x is Presence   { [x] }
@@ -2620,7 +2753,8 @@ F normalize_presence_list(x) {
 	type HashDiff(Diff)
 }
 
-doc Compare arrays. Warning: Hash is used so internal Hash keys comparison is used, not ==
+doc Compare arrays. Warning: by default Hash is used so internal Hash keys comparison is used, not ==
+doc full - Do not use Hash, work slower but use == comparison.
 doc %EX - Diff([1,2], [2,3])  # .add = [3] .remove = [1]
 F Diff(a:Arr, b:Arr, full:Bool=false) {
 	d = ArrDiff()
@@ -2638,8 +2772,15 @@ F Diff(a:Arr, b:Arr, full:Bool=false) {
 
 TEST Diff([1,2], [2,3]).Hash().sort() == {'add': [3], 'remove': [1]}
 
-doc b - Presence or Arr[Presence]
+doc Compare arrays. Warning: by default Hash is used so internal Hash keys comparison is used, not ==
+doc full - Do not use Hash, work slower but use == comparison.
+doc b - Arr[PartialPresence]
 doc %RET - ArrDiff
+doc %EX - Diff([1,2,3], [Present(1)])  # <ArrDiff add=[] remove=[]>
+doc %EX - Diff([1,2,3], [Present(5)])  # <ArrDiff add=[5] remove=[]>
+doc %EX - Diff([1,2,3], [Absent(1)])   # <ArrDiff add=[] remove=[1]>
+doc %EX - Diff([1,2,3], [Absent(5)])   # <ArrDiff add=[] remove=[]>
+doc %EX - Diff(["a", "b"], [Present("a"), Present("c"), Absent("b"), Absent("d")])  # <ArrDiff add=[c] remove=[b]>
 F Diff(a:Arr, b:Arr, full:Bool=false) {
 	guard b and b.all(PartialPresence)
 
@@ -2658,8 +2799,10 @@ F Diff(a:Arr, b:Arr, full:Bool=false) {
 TEST Diff(["a", "b"], [Present("a"), Present("c"), Absent("b"), Absent("d")], false).Hash().sort() == {"add": ["c"], "remove": ["b"]}
 TEST Diff(["a", "b"], [Present("a"), Present("c"), Absent("b"), Absent("d")], true).Hash().sort() == {"add": ["c"], "remove": ["b"]}
 
-doc Compare two arrays
-doc b - Array where all elements are of type ExactPresence
+doc Compare arrays. Warning: by default Hash is used so internal Hash keys comparison is used, not ==.
+doc Calls Diff(a, b.map(get), full)
+doc full - Do not use Hash, work slower but use == comparison.
+doc b - Arr[ExactPresence]
 doc %RET - Diff
 F Diff(a:Arr, b:Arr, full:Bool=false) {
 	guard b and b.all(ExactPresence)
@@ -2820,10 +2963,14 @@ F Str(h:Hash) "{" + h.map(F(k, v) "${k}=${v}").join(", ") + "}"
 # --- Functional ---
 
 doc Iterates over all string characters (currently bytes).
-doc TODO: example.
 doc cb - Function to be called with each character from s
 doc args - Additional arguments for calling cb
 doc %RET - s
+doc %EX - "abc".each(echo)
+doc %EX - # Output:
+doc %EX - # a
+doc %EX - # b
+doc %EX - # c
 F each(s:Str, cb:Fun) {
 	s.len().each(F(idx) {
 		cb(s[idx])
@@ -3219,11 +3366,17 @@ F debug(facility:Str, s:Str) {
 }
 
 doc Write error message to standard error.
+doc %EX - error("Failed to read configuration file. Will clean up and exit now.")
+doc %EX - # Approximate output on stderr:
+doc %EX - # [ERROR 2018-01-01 00:00:00 YOUR_TZ] Failed to read configuration file. Will clean up and exit now.
 F error(s:Str) {
 	echo(stdlib_error_fd, "[ERROR ${Time()}] $s")
 }
 
-doc Write error message to standard error.
+doc Write warning message to standard error.
+doc %EX - warn("Could not open input file $my_file , skipping it.")
+doc %EX - # Approximate output on stderr:
+doc %EX - # [WARNING 2018-01-01 00:00:00 YOUR_TZ] Could not open input file ./my_file , skipping it.
 F warn(s:Str) {
 	echo(stdlib_error_fd, "[WARNING ${Time()}] $s")
 }
@@ -3718,12 +3871,14 @@ F close(fd:Int) {
 }
 
 doc read() and parse() the given file
+doc %EX - fetch("1.json")  # Data structure, the parsed JSON
 F fetch(filename:Str, parse_hints:Hash={}) {
 	data = read(filename)
 	parse(data, {'filename': filename} + parse_hints)
 }
 
 doc Read standard input and parse() it, passing "source" equals "stdin" hint.
+doc %EX - fetch()  # Data structure, parsed stdin
 F fetch(parse_hints:Hash={}) read(0).parse({'source': 'stdin'} + parse_hints)
 
 # --- Redir ---
@@ -3745,7 +3900,7 @@ F Str(r:Redir) "<Redirect ${r.fd} ${r.marker} ${r.datum}>"
 {
 	doc Running or finished process
 	type Process
-	
+
 	doc Occurs when executable was not found in path or when executable was absolute or relative and was not found.
 	type ExecutableNotFound(Exception)
 }
@@ -5265,6 +5420,7 @@ F ppid() c_getppid()
 
 doc Encodes each character in a string as two uppercase hexadecimal digits
 doc %RET - Str
+doc %EX - encode_hex("ab")  # "6162"
 F encode_hex(s:Str) {
 	s.map(F(char) {
 		n = ord(char)
@@ -5279,6 +5435,7 @@ STDLIB_INVALID_URI_CHAR_RE = /[^-a-zA-Z0-9_.!~*'()]/
 
 doc Encodes URI component, escaping with %XX hexadecimal codes.
 doc %RET - Str
+doc %EX - encode_uri_component("ab+c%")  # "ab%2Bc%25"
 F encode_uri_component(s:Str) s.replace(STDLIB_INVALID_URI_CHAR_RE, F(char) '%' + encode_hex(char))
 
 TEST encode_uri_component("ab+c%") == "ab%2Bc%25"
@@ -5305,6 +5462,7 @@ STDLIB_HTML_ESCAPE = {'&': '&amp;', '<': '&lt;', '>': '&gt;'}
 
 doc Encodes HTML. Escapes &, < and > .
 doc %RET - Str
+doc %EX - "ab>+c%&'".encode_html()  # "ab&gt;+c%&amp;'"
 F encode_html(s:Str) s.map(STDLIB_HTML_ESCAPE.get(X, X)).join('')
 
 TEST "ab>+c%&'".encode_html() == "ab&gt;+c%&amp;'"
@@ -5314,6 +5472,7 @@ STDLIB_HTML_ATTR_ESCAPE = STDLIB_HTML_ESCAPE + {'"': '&quot;', "'": '&#39;'}
 
 doc Encodes HTML attribute. Escapes &, <, >, " and ' .
 doc %RET - Str
+doc %EX - "ab>+c%&'".encode_html_attr()  # "ab&gt;+c%&amp;&#39;"
 F encode_html_attr(s:Str) s.map(STDLIB_HTML_ATTR_ESCAPE.get(X, X)).join('')
 
 TEST "ab>+c%&'".encode_html_attr() == "ab&gt;+c%&amp;&#39;"

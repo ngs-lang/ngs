@@ -75,20 +75,27 @@ doc Fetch and drop next n values from iterator i.
 doc %EX - i = Iter([10,20,30])
 doc %EX - drop(i, 1)
 doc %EX - echo(i.next())
-doc %EX - #   20
+doc %EX - # Output: 20
 F drop(i:Iter, n:Int) { n.times({ i.next()}); i }
 
 doc Fetch and convert to array next n values from iterator i.
 doc %EX - i = Iter([10,20,30])
-doc %EX - echo(i.take(2))
+doc %EX - echo(i.take(2))  # Output: [10,20]
 F take(i:Iter, n:Int) n.map({ i.next() })
 
-doc Supports "for i in existing_iterator"
+doc Supports "for i in existing_iterator". Useful if you want to have a reference to the Iter for any reason.
 doc %RET - i
+doc %EX - # Prints 0, 2, ...
+doc %EX - for i in my_iter=Iter(10) {
+doc %EX -   echo(i)
+doc %EX -   my_iter.drop(1)
+doc %EX - }
+doc %AUTO - for my_var in something { ... }
 F Iter(i:Iter) i
 
 doc Calls cb with each element from i
 doc %RET - i
+doc %EX - Iter(10).each(echo)  # Prints 0 to 9
 F each(i:Iter, cb:Fun) {
 	for elt in i {
 		cb(elt)
@@ -235,6 +242,9 @@ TEST ConstIter(7).drop(10).take(2) == [7,7]
 # ---------- RangeIter ----------
 doc Create Iter from NumRange
 F Iter(r:NumRange) RangeIter(r)
+
+doc Create Iter from Int
+F Iter(n:Int) Iter(0..n)
 
 doc Initialize RangeIter. Will throw NotImplemented if r.start or r.step are not Int
 F init(i:RangeIter, r:NumRange) {

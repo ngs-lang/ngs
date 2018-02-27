@@ -82,6 +82,8 @@
 	doc Create new resource definition by filtering resources of rd.
 	doc rd - Original resource definition. Not modified.
 	doc %RET - ResDef
+	doc %EX - # Get instances with last private IP octet less than 20:
+	doc %EX - AWS::Instance().filter({A.PrivateIpAddress.split(".")[-1].Int()<20})
 	F filter(rd:ResDef, predicate:Fun) {
 		rd.find_if_needed()
 		t = rd.typeof()
