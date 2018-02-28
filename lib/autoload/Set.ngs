@@ -68,4 +68,7 @@
 		ret
 	}
 
+	doc Inspect Set
+	doc %RET - Arr of Str
+	F inspect(a:Set) ["Set of size ${a.len()}"] + a.map({"  ${SafeStr(A)}"})
 }

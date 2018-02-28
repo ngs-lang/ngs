@@ -907,11 +907,14 @@ F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
 # === Lock =======================================
 
 {
+	doc Synchronization lock.
 	type Lock
 
+	doc Re-entrant synchronization lock. Same thread can re-acquire the lock.
 	type ReentrantLock()
 	ReentrantLock.inherit(Lock)
 
+	doc Failure to perform an operation on a lock.
 	type LockFail
 	LockFail.inherit(Exception)
 

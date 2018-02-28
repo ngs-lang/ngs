@@ -3,6 +3,7 @@
 
 	# TODO: consider *args for consistency with other parts of the language
 
+	doc Execution thread. Currently a POSIX thread.
 	type Thread
 
 	doc Creates and runs a thread. The code that the created thread runs is f, which is passed arg.

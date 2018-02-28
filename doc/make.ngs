@@ -407,14 +407,18 @@
 			})
 		}
 
+		types_hash = {}
 		F process_type(t:Type) {
-			{
-				'name': t.name
-				'type': t
-				'description': doc_attr(t, '')
-				'attrs': (t.attrs() or {}).get('doc').Box().get({}).without('').rejectk(/^%/).mapv(to_lines)
-				'example': doc_attr(t, '%EX').map(to_lines)
+			if t not in types_hash {
+				types_hash[t] = {
+					'name': t.name
+					'type': t
+					'description': doc_attr(t, '')
+					'attrs': (t.attrs() or {}).get('doc').Box().get({}).without('').rejectk(/^%/).mapv(to_lines)
+					'example': doc_attr(t, '%EX').map(to_lines)
+				}
 			}
+			types_hash[t]
 		}
 
 		F type_to_index_entry_doc(t:Hash, opts:Hash={}) {
@@ -559,7 +563,6 @@
 			})
 
 			global_types = global_types.values().map(process_type)
-			types_hash = (global_types + ns_types).Hash('type')
 
 			status("Gathering types' methods")
 			methods.each(F(name, impls) {
@@ -795,7 +798,7 @@
 
 			# Heuristic for detecting namespaces
 			# Should be changed if Namespace type is introduced
-			namespaces = globals().filterv(is_namespace).map(process_namespace).sort('name')
+			namespaces = globals().without('STDLIB_FILE_TYPE').without('AUTOLOAD').filterv(is_namespace).map(process_namespace).sort('name')
 
 			status("Preparing namespaces HTML")
 			namespaces_index_html_doc = namespaces_to_index_html_doc(namespaces)
