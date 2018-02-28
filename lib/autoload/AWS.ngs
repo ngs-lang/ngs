@@ -103,6 +103,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# TODO: support regions
 	_zones = cached({ ``aws ec2 describe-availability-zones``.ZoneName.sort() })
 	doc Internal method. Please do not use. It does not support regions yet.
+	doc %STATUS - internal
 	doc %RET - Arr of Str
 	F zones() _zones()
 
@@ -115,6 +116,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	type Res(GlobalRes)
 
 	doc Run a command. Internal method. Please do not use outside the AWS library.
+	doc %STATUS - internal
 	F run(r:Res, log_pfx:Str, cp:CommandsPipeline, do_parse=true) r.def.run("${r} ${log_pfx}", cp, do_parse)
 
 	doc Don't call directly, use converge(). API subject to change.
@@ -486,6 +488,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	}
 
 	doc Internal method. Please do not use.
+	doc %STATUS - internal
 	F ==(a:IpPermBox, b:IpPermBox) {
 		a .= _cleanup()
 		b .= _cleanup()

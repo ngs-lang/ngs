@@ -604,13 +604,20 @@
 			}
 		}
 
+		# Later, there should be a Namespace type (subtype of Hash)
 		F is_namespace(x) {
 			x is not Hash returns false
-			# x.keys().all(Int) returns false
+			not((x.attrs() or {}).get('doc').Box()) returns false
+			x.keys().all(Int) returns false # STDLIB_FILE_TYPE, possibly others in future
 			x.values().any(F(v) v is Type or v is Fun)
 		}
 
-		F is_in_ns(x, ns) x.attrs().Box().get({}).get('ns') === ns
+		F is_in_ns(x, ns) {
+			# echo("X has ns: ${Bool(x.attrs().Box().get({}).get('ns'))} $x")
+			# Hack for GC
+			ns === GC and x is NativeMethod returns true
+			x.attrs().Box().get({}).get('ns') === ns
+		}
 
 		F namespace_file_components(ns:Hash) {
 			t = ns.parents.name + [ns.name]
@@ -640,13 +647,14 @@
 				'example': doc_attr(ns, '%EX').map(to_lines)
 				'ext_links': doc_attr(ns, '%EXTLINK').map(to_lines)
 				'types': ns.filterv(Type).reject(F(k, v) g.get(k) === v).map(F(name, t) {
-					# STDLIB_FILE_TYPE namespace has numbers as keys
 					process_type(t)
 				}).sort('name')
 				'methods': ns.filterv(Fun).rejectv(Type).map(F(name, impls) {
 					# STDLIB_FILE_TYPE namespace has numbers as keys
-					if impls is not Arr {
-						impls = [impls]
+					impls = if impls is MultiMethod {
+						impls.Arr()
+					} else {
+						[impls]
 					}
 					process_method(Str(name), impls.filter(is_in_ns(X, ns)))
 				})
@@ -748,6 +756,7 @@
 							DocGroup()
 						}
 						if namespace.methods {
+							echo(namespace.methods)
 							DocNode('section') with [
 								DocNode('h2') with [ DocText('Methods') ]
 								methods_impls_to_doc(namespace.methods.sort('name').implementations.flatten(), {'detailed': true})
@@ -798,7 +807,7 @@
 
 			# Heuristic for detecting namespaces
 			# Should be changed if Namespace type is introduced
-			namespaces = globals().without('STDLIB_FILE_TYPE').without('AUTOLOAD').filterv(is_namespace).map(process_namespace).sort('name')
+			namespaces = globals().filterv(is_namespace).map(process_namespace).sort('name')
 
 			status("Preparing namespaces HTML")
 			namespaces_index_html_doc = namespaces_to_index_html_doc(namespaces)
