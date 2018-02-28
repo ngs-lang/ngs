@@ -2521,7 +2521,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MKTYPE(CommandsPipeline);
 	MKTYPE(CommandsPipe);
 	MKTYPE(Command);
+
 	MKTYPE(Redir);
+	_doc(vm, "", "Input/output redirection");
 
 	// XXX: changing NGS_TYPE_FIELDS of InclusiveRange or ExclusiveRange
 	//      in such a way that "start" is not 0 or "end" is not 1
@@ -2533,6 +2535,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 		SETUP_TYPE_FIELD(NumRange, include_start, RANGE_ATTR_INCLUDE_START);
 		SETUP_TYPE_FIELD(NumRange, include_end, RANGE_ATTR_INCLUDE_END);
 		SETUP_TYPE_FIELD(NumRange, step, RANGE_ATTR_STEP);
+	_doc(vm, "", "Numerical range");
 
 	MKTYPE(Stat);
 		SETUP_TYPE_FIELD(Stat, st_dev, 0);
@@ -2545,6 +2548,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 		SETUP_TYPE_FIELD(Stat, st_size, 7);
 		SETUP_TYPE_FIELD(Stat, st_blksize, 8);
 		SETUP_TYPE_FIELD(Stat, st_blocks, 9);
+	_doc(vm, "", "Result of stat() or lstat()");
 
 	MKTYPE(c_tm);
 		SETUP_TYPE_FIELD(c_tm, tm_sec,   0);
@@ -2631,15 +2635,18 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// Return
 	register_global_func(vm, 1, "Return",          &native_Return,   0);
 	_doc(vm, "", "Get closure-specific Return type. Throwing it, will return from the closure");
-	_doc(vm, "%EX", "F f() Return(); f()  # <Return closure=<Closure f at <command line -pi switch>:2> depth=4 val=null>");
-	_doc(vm, "%EX", "");
-	_doc(vm, "%EX", "F first(r:NumRange, predicate:Fun) {");
-	_doc(vm, "%EX", "	finish = Return()");
-	_doc(vm, "%EX", "	r.each(F(i) {");
-	_doc(vm, "%EX", "		predicate(i) throws finish(i)");
-	_doc(vm, "%EX", "	})");
-	_doc(vm, "%EX", "	null");
-	_doc(vm, "%EX", "}");
+	_doc_arr(vm, "%EX",
+		"F f() Return(); f()  # <Return closure=<Closure f at <command line -pi switch>:2> depth=4 val=null>",
+		"",
+		"F first(r:NumRange, predicate:Fun) {",
+		"	finish = Return()",
+		"	r.each(F(i) {",
+		"		predicate(i) throws finish(i)",
+		"	})",
+		"	null",
+		"}",
+		NULL
+	);
 
 	// CLib and c calls
 	register_global_func(vm, 1, "c_dlopen",        &native_c_dlopen_str_int,   2, "filename", vm->Str,        "flags",  vm->Int);
@@ -2739,7 +2746,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Get closure parameters.");
 	_doc_arr(vm, "%EX",
 		"... F the_one(something, predicate, body:Fun, found_more:Fun={null}, found_none:Fun={null}) ...",
-		"the_one[1].params().each(echo)"
+		"the_one.Arr()[1].params().each(echo)"
 		"# {name=something, type=<Type Any>}",
 		"# {name=predicate, type=<Type Any>}",
 		"# {name=body, type=<Type Fun>}",
@@ -2811,8 +2818,18 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Truncate a number");
 	register_global_func(vm, 0, "floor",    &native_floor_real,          1, "r",   vm->Real);
 	_doc(vm, "", "Floor a number");
+	_doc_arr(vm, "%EX",
+		"floor(1.1)   # 1.0",
+		"floor(-1.1)  # -2.0",
+		NULL
+	);
 	register_global_func(vm, 0, "ceil",     &native_ceil_real,           1, "r",   vm->Real);
 	_doc(vm, "", "Ceil a number");
+	_doc_arr(vm, "%EX",
+		"ceil(1.1)   # 2.0",
+		"ceil(-1.1)  # -1.0",
+		NULL
+	);
 
 	// OBJECT
 	register_global_func(vm, 0, "attrs",    &native_attrs,               1, "obj",      vm->Any);
@@ -3013,6 +3030,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "get",      &native_index_get_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
 	_doc(vm, "", "Get element at the given index or return dflt if the index is out of range (element at the given index does not exist)");
 	_doc(vm, "%RET", "Any");
+	_doc_arr(vm, "%EX",
+		"[1,2,3].get(0, 10)  # 1",
+		"[1,2,3].get(5, 10)  # 10",
+		NULL
+	);
 
 	register_global_func(vm, 1, "[]",       &native_index_get_arr_range,     2, "arr", vm->Arr, "range", vm->NumRange);
 	_doc(vm, "", "Get array elements at specified indexes.");
@@ -3214,7 +3236,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Get all global variables as Hash");
 	_doc(vm, "%RET", "Hash");
 	_doc_arr(vm, "%EX",
-		"globals().filterk(/^map/)  # {map=[...], ..., map_true=[...], ...}",
+		"globals().filterk(/^map/)  # {map=<MultiMethod with 7 method(s)>, mapv=...}",
 		NULL
 	);
 
@@ -3271,7 +3293,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Check key presence in a Hash");
 	_doc(vm, "%RET", "Bool");
 	_doc_arr(vm, "%EX",
-		"time()  # 1483780368",
+		"\"a\" in {\"a\": 1}  # true",
+		"\"b\" in {\"a\": 1}  # false",
 		NULL
 	);
 

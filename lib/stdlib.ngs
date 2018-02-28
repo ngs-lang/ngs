@@ -140,9 +140,11 @@ F Str(mm:MultiMethod) "<MultiMethod with ${mm.Arr().len()} method(s)>"
 	# TODO: Consider Eachable2 subtype for Hash (as callback has 2 arguments)
 	Hash.inherit(Eachable2)
 
+	doc Absence of data
 	type NoData
 	Null.inherit(NoData)
 
+	doc A number
 	type Num
 	Int.inherit(Num)
 	Real.inherit(Num)
@@ -282,10 +284,11 @@ doc First array contains all elements for which predicate(elt) is true and
 doc the second array contains all elements for which predicate(elt) is false.
 doc something - Eachable1
 doc %RET - Array with two arrays in it
+doc %EX - partition([1,10,2,20], X>=10)  # [[10, 20], [1, 2]]
 F partition(something:Eachable1, predicate) {
 	p = Pred(predicate)
 	ret = [[], []]
-	something.each(F(elt) ret[1-Int(p(elt))].push(elt))
+	something.each(F(elt) ret[p(elt).not().Int()].push(elt))
 	ret
 }
 
@@ -330,6 +333,8 @@ TEST try [1,2,3].first(X>5) catch(e:ElementNotFound) true
 
 doc Find first element in e that satisfies Bool(e) == true.
 doc Exactly same as first(e, identity).
+doc %EX - [false, 0, null, "xyz", 100].first()  # "xyz"
+doc %EX - [].first()                            # ElementNotFound exception
 F first(e:Eachable1) first(e, identity)
 
 doc Find the only element that satisfies the predicate.
@@ -531,6 +536,15 @@ F in(x, e:Eachable1) e.any({A == x})
 TEST ( 1 in [1,2,3].Iter()) == true
 TEST (10 in [1,2,3].Iter()) == false
 
+doc Push all elements of e into dst.
+doc %RET - dst
+F push_all(dst, e:Eachable1) {
+	e.each(push(dst, X))
+	dst
+}
+
+TEST a=[1,2]; a.push_all([3,4]); a==[1,2,3,4]
+
 # === ArrLike ====================================
 # TODO [doc]: examples in methods
 {
@@ -569,6 +583,7 @@ F '[]'(al:ArrLike, idx:Int)     al.(al.arr_like_attr)[idx]
 doc Get element from the underlying array.
 F '[]='(al:ArrLike, idx:Int, x) al.(al.arr_like_attr)[idx] = x
 
+doc Get element at the given index or return dflt if the index is out of range (element at the given index does not exist). See get(Arr).
 F get(al:ArrLike, idx:Int, dflt) al.(al.arr_like_attr).get(idx, dflt)
 
 doc Call cb for each element in the underlying array.
@@ -722,7 +737,7 @@ TEST Real('1.1') == 1.1
 
 # === Fun helpers ================================
 
-doc TODO: Defaut values
+doc Do not use!
 F StrParams(f:Fun) {
 	guard f is Closure or f is NativeMethod
 	f.params().map(F(p) {
@@ -994,9 +1009,6 @@ AUTOLOAD = ns {
 
 		ResDef              Res
 
-		Failure				Result
-		Success				Result
-
 		InputStream         Stream
 		InputOutputStream   Stream
 		OutputStream        Stream
@@ -1032,10 +1044,12 @@ AUTOLOAD = ns {
 # === Range ======================================
 
 {
+	doc A range
 	type Range
 		NumRange.inherit(Range)
 		NumRange.inherit(Eachable1)
 
+	doc A range with start and end expressed as predicates.
 	type PredRange
 		PredRange.inherit(Range)
 }
@@ -1099,6 +1113,8 @@ TEST (1...3).map(X*2) == [2, 4, 6]
 TEST (10..20).first(F(x) x % 3 == 0) == 12
 
 doc Check whether the number is in range
+doc 10 in 10..20  # true
+doc 1 in 10..20   # false
 F in(n:Int, r:NumRange) {
 	econd {
 		r.include_start and n == r.start true
@@ -1345,8 +1361,7 @@ F get(e:Eachable1, attr:Str)
 			try collect(item.(attr))
 		})
 
-doc Return array made of given attribute of each element of given Eachable1 where present or default value where the attribute is not present
-doc Return array (? depends on map() ?) made of given attribute of each element of given Eachable1
+doc Return array made of given attribute of each element of given Eachable1 where present or default value where the attribute is not present.
 doc %EX - [{"x": 1}, {"y": 2}].get("x", null)  # [1, null]
 doc %RET - Arr
 F get(e:Eachable1, attr:Str, dflt) e.map(X.get(attr, dflt))
@@ -1783,6 +1798,8 @@ TEST [10,20,30,40][1..-1] == [20,30]
 doc Find the indexes of elements of the given PredRange.
 doc Throws IndexNotFound if there is no match between the elements of arr and r.
 doc %RET - NumRange with .include_start=true and .include_end=false
+doc %EX - %[a1 a2 b1 b2 c1].indexes(/^a/../^b/)   # <NumRange 1..2 include_start=true include_end=false step=1>
+doc %EX - %[a1 a2 b1 b2 c1].indexes(/^a/.../^b/)  # <NumRange 0..3 include_start=true include_end=false step=1>
 F indexes(arr:Arr, r:PredRange) {
 	r.step != 1 throws NotImplemented("r.step must be 1")
 	start = if r.start is Null {
@@ -1895,15 +1912,15 @@ ns {
 		ret_cb
 	}
 
-	doc TODO
+	doc Find minimnal element under (<)
 	F min(e:Eachable1) most(e, (<))
-	doc TODO
+	doc Find maximal element under (>)
 	F max(e:Eachable1) most(e, (>))
 
 	# EXPERIMENTAL!
-	doc TODO
+	doc EXPERIMENTAL! Do not use!
 	F min(e:Eachable1, cb:Fun) most_by_cb(e, (<), cb)
-	doc TODO
+	doc EXPERIMENTAL! Do not use!
 	F max(e:Eachable1, cb:Fun) most_by_cb(e, (>), cb)
 }
 
@@ -1955,7 +1972,7 @@ F join(a:Arr, s:Str) {
 	# TODO: consider making Str(x) == x
 }
 
-doc Used for command line arguments such as ['--vpc-id', my_vpc_id()].nuke_null()
+doc DEPRECATED in favor of Argv facility. Used for command line arguments such as ['--vpc-id', my_vpc_id()].nuke_null()
 doc If my_vpc_id() is null the whole array is not needed
 doc %EX - [1,2].nuke_null()  # [1,2]
 doc %EX - [1,null].nuke_null()  # []
@@ -2014,7 +2031,9 @@ F sort(a:Arr, attr:Str, lte:Fun=(<=)) a.sort(F(a, b) lte(a.(attr), b.(attr)))
 
 TEST [{'x': 1}, {'x': 5}, {'x': 3}].sort('x') == [{'x': 1}, {'x': 3}, {'x': 5}]
 
-doc TODO. Is it used even?
+# TODO: better documentation
+doc Split a into arrays
+doc %RET - Arr of Arr
 F split(a:Arr, delim) {
 	ret = []
 	cur = []
@@ -2031,6 +2050,8 @@ F split(a:Arr, delim) {
 }
 
 doc Insert delimiter element between each two elements in an array
+doc %RET - Arr
+doc %EX [1,2,3].intersperse(0)  # [1,0,2,0,3]
 F intersperse(a:Arr, delim) {
 	not(a) returns []
 	collector {
@@ -2259,7 +2280,9 @@ F Hash(arr:Arr)
 
 TEST Hash([['a', 1], ['c', 3]]) == {'a': 1, 'c': 3}
 
-doc TODO. Not sure it's used anywhere. Maybe remove?
+doc Create Hash with keys being the given attribute of array elements and the values being corresponding arr elements.
+doc %RET - Hash
+doc %EX - Hash([{'x': 1}, {'x': 2}], 'x')  # {1: {'x': 1}, 2: {'x': 2}}
 F Hash(arr:Arr, attr:Str)
 	collector/{}
 		arr.each(F(v) collect(v[attr], v))
@@ -2349,10 +2372,9 @@ F limit(h:Hash, l:Int) h.keys().limit(l).Hash(h[X])
 TEST {"a": 1, "b": 2}.limit(3) == {"a": 1, "b": 2}
 TEST {"a": 1, "b": 2}.limit(1) == {"a": 1}
 
-doc TODO.
 doc Group items from e by key returned by cb
-doc args - Additional arguments for calling cb
-doc %RET - Hash
+doc %RET - Hash with Arr values
+doc %EX - ["ab", "ac", "ba", "bc", "bd"].group(F(x) x[0])  # {a=[ab,ac], b=[ba,bc,bd]}
 F group(e:Eachable1, cb:Fun) {
 	ret = {}
 	e.each(F(elt) {
@@ -2421,11 +2443,18 @@ TEST h={"a": 1, "b": 2}; s = h.shift("a"); h == {"b": 2} and s == 1
 # Inspired by Option from Scala. http://www.scala-lang.org/api/2.12.x/scala/Option.html
 
 {
-	doc A box which might (FullBox) or might not (EmptyBox) contain a value
+	doc Thrown when trying to get() a value from EmptyBox and no default value given.
+	type BoxFail(Error)
+
+	doc A box which might (FullBox) or might not (EmptyBox) contain a value.
+	doc Box is somewhat similar to Arr of zero (EmptyBox) or exactly one (FullBox) element.
+	doc This analogy helps understanding each() and filter() operation.
 	type Box(Eachable1)
+
 		doc Represents presence of a value
 		doc val - The value
 		type FullBox(Box)
+
 		doc Represents absence of a value
 		type EmptyBox([Box, NoData])
 }
@@ -2460,10 +2489,12 @@ F to_exit_code(b:Box) b.Bool().to_exit_code()
 doc Map FullBox value
 doc mapper - mapper to be called with the FullBox value
 doc %RET - FullBox with value returned by mapper
+doc %EX - Box(10).map(X*2)  # <FullBox val=20>
 F map(fb:FullBox, mapper:Fun) FullBox(mapper(fb.val))
 
 doc Do nothing
 doc %RET - eb
+doc %EX - EmptyBox().map(X*2)  # <EmptyBox>
 F map(eb:EmptyBox, mapper:Fun) eb
 
 doc Call cb with the value of the FullBox
@@ -2514,12 +2545,13 @@ TEST EmptyBox().none(Int)
 
 doc Get FullBox value
 doc %RET - Any
+doc %EX - Box(10).get()  # 10
 F get(fb:FullBox, dflt=null) fb.val
 
-doc Get EmptyBox value. Always throws InvalidArgument.
-F get(eb:EmptyBox) throw InvalidArgument("Can not get value from EmptyBox")
+doc Get EmptyBox value. Always throws BoxFail.
+F get(eb:EmptyBox) throw BoxFail("Can not get value from EmptyBox")
 
-TEST try EmptyBox().get() catch(e:InvalidArgument) true
+TEST try EmptyBox().get() catch(e:BoxFail) true
 
 doc Get EmptyBox value
 doc %RET - dflt
@@ -2614,8 +2646,7 @@ TEST FullBox(1) != FullBox(2)
 # === Result =====================================
 {
 	doc Thrown by get(Failure) as it has no value to get
-	type ResultFail
-	ResultFail.inherit(Error)
+	type ResultFail(Error)
 
 	doc Result of a computation
 	doc val - computed value or exception
@@ -2623,13 +2654,11 @@ TEST FullBox(1) != FullBox(2)
 
 		doc Successful computation
 		doc val - computed value
-		type Success
-		Success.inherit(Result)
+		type Success(Result)
 
 		doc Failed computation
 		doc val - exception
-		type Failure
-		Failure.inherit(Result)
+		type Failure(Result)
 
 	doc Runs the computation and wraps the result: a value is wrapped in Success and an exception is wrapped in Failure.
 	doc %RET - Success or Failure
@@ -2637,9 +2666,6 @@ TEST FullBox(1) != FullBox(2)
 		try {
 			Success(fun())
 		} catch(e) {
-			# if e is Null {
-			# 	throw Error("E IS NULL").set('cause', e)
-			# }
 			Failure(e)
 		}
 	}
@@ -2648,9 +2674,12 @@ TEST FullBox(1) != FullBox(2)
 	F init(r:Result, v) r.val = v
 
 	doc Gets wrapped value
+	doc %RET - Any
+	doc %EX - { 1 / 10 }.Result().get()  # 0
 	F get(s:Success) s.val
 
 	doc Throws ResultFail
+	doc %EX - { 1 / 0 }.Result().get()  # ResultFail exception
 	F get(f:Failure) {
 		e = ResultFail("Can not get value of Failure")
 		if f.val is Exception {
@@ -2662,9 +2691,12 @@ TEST FullBox(1) != FullBox(2)
 	}
 
 	doc Gets wrapped value
+	doc %RET - Any
+	doc %EX - { 1 / 10 }.Result().get(100)  # 0
 	F get(s:Success, dflt) s.val
 
 	doc Retruns dflt
+	doc %EX - { 1 / 0 }.Result().get(100)  # 100
 	F get(f:Failure, dflt) dflt
 
 	doc Run fun with wrapped value. If exception is thrown, Failure is returned; otherwise Success with new vaule is returned.
@@ -2994,7 +3026,7 @@ TEST pos("abcdef", "cd") == 2
 TEST pos("a:b:c", ":") == 1
 TEST pos("a:b:c", ":", 2) == 3
 
-doc Determin if needle substring occurs at least once in haystack
+doc Determine if needle substring occurs at least once in haystack
 doc haystack - The string to search in
 doc needle - The string to find
 doc %RET - Bool
@@ -3222,6 +3254,8 @@ F ord(s:Str) {
 
 doc Find substring in string. Uses pos().
 doc %RET - Match
+doc %EX - "abc" ~ "bc"  # <MatchY ...>
+doc %EX - "abc" ~ "X"   # <MatchN>
 F ~(haystack:Str, needle:Str, offset:Int=0) {
 	p = pos(haystack, needle, offset)
 	p is Null returns MatchN()
@@ -3346,7 +3380,7 @@ F to_exit_code(fe:FatalError) fe.exit_code
 # Not sure such flexibility is needed (NGS_ERR_FD)
 stdlib_error_fd = ENV.NGS_ERR_FD.Int() tor 2
 
-doc Log to standard output. Later log output will be treated specially by the shell. It will have suitable representation in the UI. Use log() when it's semantically a log.
+doc Log to standard error. Later log output will be treated specially by the shell. It will have suitable representation in the UI. Use log() when it's semantically a log.
 F log(s:Str) {
 	echo(stdlib_error_fd, "[LOG ${Time()}] $s")
 }
@@ -3398,20 +3432,20 @@ F die(s:Str, exit_code=1) {
 {
 	doc Represents file system path
 	type Path
-	doc Represents a socket file in a file system (S_IFSOCK)
-	type SocketFile(Path)  # S_IFSOCK
-	doc Represents a link in a file system (S_IFLNK)
-	type Symlink(Path)     # S_IFLNK
-	doc Represents a file in a file system (S_IFREG)
-	type File(Path)        # S_IFREG
-	doc Represents a block device in a file system (S_IFBLK)
-	type BlockDevice(Path) # S_IFBLK
-	doc Represents a directory in a file system (S_IFBLK)
-	type Dir(Path)         # S_IFDIR
-	doc Represents a character device in a file system (S_IFCHR)
-	type CharDevice(Path)  # S_IFCHR
-	doc Represents a fifo file in a file system (S_IFIFO)
-	type FifoFile(Path)    # S_IFIFO
+		doc Represents a socket file in a file system (S_IFSOCK)
+		type SocketFile(Path)  # S_IFSOCK
+		doc Represents a link in a file system (S_IFLNK)
+		type Symlink(Path)     # S_IFLNK
+		doc Represents a file in a file system (S_IFREG)
+		type File(Path)        # S_IFREG
+		doc Represents a block device in a file system (S_IFBLK)
+		type BlockDevice(Path) # S_IFBLK
+		doc Represents a directory in a file system (S_IFBLK)
+		type Dir(Path)         # S_IFDIR
+		doc Represents a character device in a file system (S_IFCHR)
+		type CharDevice(Path)  # S_IFCHR
+		doc Represents a fifo file in a file system (S_IFIFO)
+		type FifoFile(Path)    # S_IFIFO
 
 	doc Represents a failure in stat() system call.
 	type StatFail(CException)
@@ -3658,6 +3692,7 @@ F read(fd:Int, count=null) {
 doc Read all data from a file referenced by file descriptor 0 (stdin) without parsing it. Same as read(0)
 F read() read(0)
 
+doc DEPRECATED! Do not use!
 F write(s:Str, fd:Int) {
 	warn("Using deprecated write() arguments order")
 	write(fd, s)
@@ -3747,6 +3782,7 @@ F close_writing_end(p:Pipe) p.write_fd.c_close()
 doc Close reading end of the Pipe
 F close_reading_end(p:Pipe) p.read_fd.c_close()
 
+doc DEPRECATED! Do not use!
 F write(s:Str, p:Pipe) {
 	warn("Using deprecated write() arguments order")
 	write(p, s)
@@ -4531,10 +4567,12 @@ TEST ok = false; $(cat /etc/passwd).lines({if ":" in A ok = true}); ok
 # === Parse aws output ===========================
 # TODO: move to separate auto-loaded file.
 
+doc Do not use directly. Subject to change.
 doc Convert "Tags" array in each element of AWS resources (typically returned by AWS CLI) into Hash.
 doc Makes "Tags" much more usable.
 F stdlib_aws_straighten_tags(a:Arr) a.each(stdlib_aws_straighten_tags)
 
+doc Do not use directly. Subject to change.
 doc Convert "Tags" array in the given AWS resource (typically returned by AWS CLI) into Hash.
 doc %EX - t = {"Tags": [{"Key": "k", "Value": "v"},{"Key": "k2", "Value": "v2"}]}  # Not very convenient, is it?
 doc %EX - t.stdlib_aws_straighten_tags()
@@ -4547,6 +4585,7 @@ F stdlib_aws_straighten_tags(h:Hash) {
 
 # For the case of { "SecurityGroups": [ "sg-XXXXXXXX" ] }
 # Which is output of aws elb apply-security-groups-to-load-balancer --load-balancer-name SOMETHING -beame-servers-authz --security-groups sg-XXXXXXXX
+doc Do not use directly. Subject to change.
 doc A no-op
 F stdlib_aws_straighten_tags(s:Str) null
 
@@ -4773,19 +4812,7 @@ F ~(s:Str, pfx:Pfx) {
 
 F ~(s:Str, i:Ifx) s ~ i.val
 
-doc Check whether s ends with pfx.
-doc %EX - "abcde" ~ Sfx("de")  # <MatchY matches=['de'] before=abc after=>
-doc %EX - "abcde" ~ Pfx("xy")  # <MatchN >
-doc %RET - Match
-F ~(s:Str, sfx:Sfx) {
-	not(s.ends_with(sfx.val)) returns MatchN()
-	ret = MatchY([sfx.val])
-	ret.before = s[0..(s.len() - sfx.val.len())]
-	ret.after = ''
-	ret
-}
-
-doc Check whether s ends with pfx.
+doc Check whether s ends with sfx.
 doc %EX - "abcde" ~ Sfx("de")  # <MatchY matches=['de'] before=abc after=>
 doc %EX - "abcde" ~ Pfx("xy")  # <MatchN >
 doc %RET - Match
@@ -4818,6 +4845,7 @@ doc %EX - globals().keys().filter(/^C_PCRE/)  # lists possible options
 doc %EX - "xabcy" ~ /a(.)c/  # <MatchY matches=['abc','b'] named={} positions=[[1,4],[2,3]] whole=abc before=x after=y>
 doc %EX - m = ("xabcy" ~ /a(?P<mychar>.)c/)
 doc %EX - echo(m.named.mychar)  # Outputs: b
+doc %AUTO - my_str ~ my_regexp
 F ~(s:Str, r:RegExp, offset:Int=0, options:Int=0) {
 	not(options) and not(s) returns MatchN()
 	result = c_pcre_exec(r, s, offset, options)
@@ -5066,7 +5094,7 @@ F inspect(b:Bool) ["Bool: $b"]
 
 # F inspect(mm:MultiMethod) ["MultiMethod "] + mm.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"})
 doc Inspect MultiMethod
-doc %RET - Arr with one element, Str
+doc %RET - Arr of Str
 F inspect(mm:MultiMethod) ["MultiMethod", "  Methods"] + ("    " + mm.Arr().inspect())
 
 doc Inspect Real
@@ -5233,6 +5261,8 @@ exit_hook = Hook()
 
 TIME_FORMAT = ENV.get('NGS_TIME_FORMAT', '%F %T %Z')
 
+doc Get epoch time
+doc %RET - Int
 F time() {
 	ret = c_time()
 	ret == -1 throws TimeFail("Failed to get time")
@@ -5279,6 +5309,7 @@ F Int(t:Time) t.epoch
 
 
 doc Mesure running time of cb in microseconds
+doc %RET - Int
 F time(cb:Fun) {
 	start = c_gettimeofday()
 	cb()
@@ -5477,8 +5508,14 @@ F encode_html_attr(s:Str) s.map(STDLIB_HTML_ATTR_ESCAPE.get(X, X)).join('')
 
 TEST "ab>+c%&'".encode_html_attr() == "ab&gt;+c%&amp;&#39;"
 
-doc Used by match EXPR { ... } construct.
+doc Used by match EXPR { ... } construct to check whether the expression matches the case.
+doc %AUTO match EXPR { ... }
 doc %RET - a ~ b
+doc %EX - r = match x {
+doc %EX -   Int  "Got integer"
+doc %EX -   /^a/ "Got special string"
+doc %EX -   Str  "Got regular string"
+doc %EX - }
 F match(a,b) a ~ b
 
 # === File =======================================

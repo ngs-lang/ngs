@@ -36,7 +36,6 @@
 	type HashIter(Iter)
 
 	doc Iterator that returns given value forever.
-	doc %EX - { Iter }
 	doc %EX - i = ConstIter(10)
 	doc %EX - echo(i.next())
 	doc %EX - echo(i.next())
@@ -46,7 +45,6 @@
 	type ConstIter([Iter, Eachable1])
 
 	doc Iterates over a Range
-	doc %EX - { Iter }
 	doc %EX - i = RangeIter(10..20)
 	doc %EX - echo(i.next())
 	doc %EX - echo(i.next())

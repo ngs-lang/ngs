@@ -48,6 +48,7 @@
 	# TODO: maybe limit number of concurrent threads (default to cores count?)
 	doc Parallel map. Runs mapper in threads. Each thread processes one element from the array but this might change in future (preserving the total number of calls to mapper and the order of results).
 	doc %RET - Arr, result of applying mapper to elements of a, preserving the order.
+	doc %EX - pages_texts = abs_pages_urls.pmap(F(url)  `lynx -dump $url`)
 	F pmap(a:Arr, mapper:Fun) {
 		# threads = a.map(F(elt) Thread(mapper, elt))
 		threads = a / Thread(mapper, X)

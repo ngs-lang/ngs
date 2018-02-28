@@ -38,9 +38,6 @@
 	doc Check whether the set is not empty
 	F Bool(s:Set) Bool(s.val)
 
-	doc Convert the set to an array
-	F Arr(s:Set) s.val.keys()
-
 	doc Convert the set to a human-readable representation
 	F Str(s:Set) "<${s.typeof().name} ${s.val.keys().join(', ')}>"
 

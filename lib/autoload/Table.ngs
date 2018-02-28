@@ -61,7 +61,7 @@ F init(t:Table, rows_hashes:Arr) super(t, null, rows_hashes)
 doc Internal method. Please do not use.
 F register_column(t:Table, k) t.cols_enum.push(k)
 
-doc Append give row to the table
+doc Append given row to the table
 doc %RET - t
 F push(t:Table, row_arr:Arr) {
 	# TODO: handle mismatch in number of columns
@@ -69,7 +69,7 @@ F push(t:Table, row_arr:Arr) {
 	t
 }
 
-doc Append give row to the table
+doc Append given row to the table
 doc %RET - t
 F push(t:Table, row_hash:Hash) {
 	# TODO: handle mismatch of columns

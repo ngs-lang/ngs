@@ -7,10 +7,10 @@
 	DelimStr
 	Doc
 	Iter
-	KV
-	Lock
+	# KV
 	Res
 	ResDef
+	Set
 	Stats
 	Table
 	Thread
@@ -22,7 +22,6 @@
 		DocNode = Doc::Node
 		DocText = Doc::Text
 		DocGroup = Doc::Group
-		doc_visit = Doc::visit
 
 		commit = `line: git rev-parse HEAD`
 		limited = ENV.Box('LIMIT').map(Int).get(INT_MAX)
@@ -33,24 +32,22 @@
 		F to_lines(s:Str) [s]
 		F to_lines(a:Arr) a
 
-		# TODO: maybe use this instead of: if cond_ body else DocGroup()
-		F maybe_doc(cond_:Bool, body:Fun) {
-			not(cond_) returns DocGroup()
-			body()
-		}
-
 		F safe_file_name(s:Str) {
 			s == 'index' returns 'index-'
 			s.replace(/[^-_a-zA-Z0-9]/, F(char) '%' + encode_hex(char))
 		}
+
 		F method_impl_id(name:Str, mi:Fun) (name + '-' + mi.params().type.name.join('-'))
 
-		constructor_mis = {}
-		F register_constructors_mis(mis:Arr) mis.each({ constructor_mis[A] = true })
+		constructor_mis = Set()
+		F register_constructors_mis(mis:Arr) {
+			constructor_mis.push_all(mis)
+			mis
+		}
 
 		F list_methods()
 			collector/{}
-				globals().filterk(is_public_name).sortk(lte).each(F(name, value) {
+				globals().without('main').filterk(is_public_name).sortk(lte).each(F(name, value) {
 					match value {
 						MultiMethod {
 							collect(name, value.Arr())
@@ -410,13 +407,12 @@
 			})
 		}
 
-		F process_type(name:Str, t:Type) {
-			# 'attrs': t.attrs().Box().map(X.doc).
+		F process_type(t:Type) {
 			{
-				'name': name
+				'name': t.name
 				'type': t
 				'description': doc_attr(t, '')
-				'attrs': (t.attrs() or {}).get('doc').Box().get({}).without('').reject(X ~ /^%/).mapv(to_lines)
+				'attrs': (t.attrs() or {}).get('doc').Box().get({}).without('').rejectk(/^%/).mapv(to_lines)
 				'example': doc_attr(t, '%EX').map(to_lines)
 			}
 		}
@@ -562,7 +558,7 @@
 				})
 			})
 
-			global_types .= map(process_type)
+			global_types = global_types.values().map(process_type)
 			types_hash = (global_types + ns_types).Hash('type')
 
 			status("Gathering types' methods")
@@ -607,6 +603,7 @@
 
 		F is_namespace(x) {
 			x is not Hash returns false
+			# x.keys().all(Int) returns false
 			x.values().any(F(v) v is Type or v is Fun)
 		}
 
@@ -624,11 +621,6 @@
 		}
 
 		F namespace_href(ns, dotdots:Int) {
-			t = ns.parents.name + [ns.name]
-			t = collector for tt in t {
-				collect('namespaces')
-				collect(tt)
-			}
 			'../' * dotdots + namespace_file_components(ns).map(encode_uri_component).join('/')
 		}
 
@@ -646,7 +638,7 @@
 				'ext_links': doc_attr(ns, '%EXTLINK').map(to_lines)
 				'types': ns.filterv(Type).reject(F(k, v) g.get(k) === v).map(F(name, t) {
 					# STDLIB_FILE_TYPE namespace has numbers as keys
-					process_type(Str(name), t)
+					process_type(t)
 				}).sort('name')
 				'methods': ns.filterv(Fun).rejectv(Type).map(F(name, impls) {
 					# STDLIB_FILE_TYPE namespace has numbers as keys

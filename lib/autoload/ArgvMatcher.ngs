@@ -37,6 +37,7 @@ F ArgvMatcher(option:Str, value, f:Closure) {
 
 # TODO: *args, **kwargs
 # TODO: replace '-' in argv parameters names with '_' when matching
+doc Please do not use directly!
 doc Tries to match command line arguments with closure parameters.
 doc argv - Command line arguments, typically ARGV
 doc c - Closure to match with

@@ -38,6 +38,8 @@ Note that this started as internal document so things here are unformed, not fin
 	* ec2hostsfile.ngs - fix the tags filter
 	* intersperse(Iter, ...)
 	* filterk/filterv for HashLike
+	* Rethink null/exception/Box
+	* to_exit_code -> ExitCode or alike
 
 [roadmap]
 
@@ -69,7 +71,6 @@ Note that this started as internal document so things here are unformed, not fin
 					* Mark experimental
 					* Mark deprecated
 					* Mark internal
-			* Document Box concept as roughly array of 0 or 1 elements
 			* Document Pred aspect in filter() and friends
 			* Document AWS library (including usage examples)
 			* Document Iter
