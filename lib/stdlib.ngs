@@ -274,6 +274,7 @@ F filter(e:Eachable1, predicate) {
 
 doc DEPRECATED! Do not use!
 doc Use something.filter({attr: predicate}) instead.
+doc %STATUS - deprecated
 F filter(something:Eachable1, attr:Str, predicate) {
 	p = Pred(predicate)
 	something.filter({ p(A.(attr)) })
@@ -397,6 +398,7 @@ F the_one(e:Eachable1) e.the_one({true})
 doc Filter nulls out.
 doc DEPRECATED, USE something.without(null) INSTEAD.
 doc something - Instance of any type that has each(something, callback) implemented
+doc %STATUS - deprecated
 doc %RET - Arr (array) of original items without nulls
 F filter(e:Eachable1) {
 	error("USING DEPRECATED filter(e)")
@@ -1977,6 +1979,7 @@ F join(a:Arr, s:Str) {
 
 doc DEPRECATED in favor of Argv facility. Used for command line arguments such as ['--vpc-id', my_vpc_id()].nuke_null()
 doc If my_vpc_id() is null the whole array is not needed
+doc %STATUS - deprecated
 doc %EX - [1,2].nuke_null()  # [1,2]
 doc %EX - [1,null].nuke_null()  # []
 F nuke_null(a:Arr) {
@@ -3696,6 +3699,7 @@ doc Read all data from a file referenced by file descriptor 0 (stdin) without pa
 F read() read(0)
 
 doc DEPRECATED! Do not use!
+doc %STATUS - deprecated
 F write(s:Str, fd:Int) {
 	warn("Using deprecated write() arguments order")
 	write(fd, s)
@@ -3786,6 +3790,7 @@ doc Close reading end of the Pipe
 F close_reading_end(p:Pipe) p.read_fd.c_close()
 
 doc DEPRECATED! Do not use!
+doc %STATUS - deprecated
 F write(s:Str, p:Pipe) {
 	warn("Using deprecated write() arguments order")
 	write(p, s)

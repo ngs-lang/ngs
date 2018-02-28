@@ -192,30 +192,23 @@
 
 		F method_impl_to_index_html_doc(name:Str, mi:Hash) {
 
-			DocNode('div') with [
-				DocNode('a', href=method_impl_id(name, mi.mi).safe_file_name().encode_uri_component() + '.html', class='underline-on-hover-only') with
-					[
-						DocText(name),
-						*params_to_inline_html_doc(mi.params)
-						DocText(' - ')
-						mi.description.map(X.join('\n')).map(DocText).get(DocText('Undocumented'))
-					]
-			]
-
-			DocNode('dl') with [
+			attrs = if mi.status then {'class': 'method-with-status'} else { {} }
+			DocNode('dl', **attrs) with [
 				DocNode('dt') with [
 					DocText(name),
 					*params_to_inline_html_doc(mi.params)
+					DocGroup() with mi.status.get([]).map(F(s) {
+						DocNode('span', class="method-status") with [ DocText(s) ]
+					})
 				]
 				DocNode('dd') with [
 					DocNode('section', class='method-description') with [
 						mi.description.map(X.join('\n')).map(DocText).get(DocText('Undocumented'))
 					]
 					DocNode('div', class='link-to-method-impl-page') with [
-						DocNode('a', href='../methods/' + method_impl_id(name, mi.mi).safe_file_name().encode_uri_component() + '.html') with
-							[
-								DocText('more'),
-							]
+						DocNode('a', href='../methods/' + method_impl_id(name, mi.mi).safe_file_name().encode_uri_component() + '.html') with [
+							DocText('more')
+						]
 					]
 				] # dd
 			]
@@ -255,14 +248,13 @@
 					DocText(name),
 					*params_to_inline_html_doc(mi.params)
 					DocGroup() with mi.status.get([]).map(F(s) {
-						DocNode('span', class="method-status") with [ DocText(" $s ") ]
+						DocNode('span', class="method-status") with [ DocText(s) ]
 					})
 					mi.source_ref.map(F(r) {
 						DocNode('span', class="source-ref") with [
 							DocText(' Source: ')
 							DocNode('a', href="https://github.com/ilyash/ngs/blob/$commit/lib/${r.file}#L${r.line}") with [
 								DocText("${r.file}:${r.line}")
-
 							]
 						]
 					}).get(DocGroup())
@@ -599,6 +591,7 @@
 			for t in ns_types {
 				status("Making page for type ${t.name}")
 
+				# HERE
 				# type_page_doc = type_to_type_page_doc(t)
 
 			}
@@ -756,7 +749,6 @@
 							DocGroup()
 						}
 						if namespace.methods {
-							echo(namespace.methods)
 							DocNode('section') with [
 								DocNode('h2') with [ DocText('Methods') ]
 								methods_impls_to_doc(namespace.methods.sort('name').implementations.flatten(), {'detailed': true})
