@@ -3689,7 +3689,7 @@ F read(fd:Int, count=null) {
 			if e != C_EINTR {
 				debug("file", "[read] read from fd $fd failed, errno $e")
 				# TODO: Better exception
-				throw "[read] failed to c_read()"
+				throw CException("Failed to c_read()")
 			}
 		}
 	}
@@ -5538,6 +5538,7 @@ F access(f:File, mode:Int=ACCESS::F_OK) {
 	assert(ret < 0)
 	e = c_errno()
 	e == C_EACCES returns false
+	# TODO: Better exception
 	throw CException(e, "access() failed")
 }
 

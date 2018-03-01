@@ -979,16 +979,18 @@ Running external programs
 	proc = $(seq 3)
 	each(inspect(proc), echo)
 	# Output:
-	#   Process
-	#   command = <Command is_top_level=false redirects=[] argv=['seq','3']>
-	#   pid = NNNNN
-	#   exit_code = 0
-	#   exit_signal = 0
-	#   stdout (3 lines):
-	#     1
-	#     2
-	#     3
-	#   stderr (0 lines):
+	#   CommandsPipeline
+	#     command[0]: <Command options={} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[seq,3]>
+	#     process[0]: Process
+	#     process[0]:   command = <Command options={} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[seq,3]>
+	#     process[0]:   pid = 43582
+	#     process[0]:   exit_code = 0
+	#     process[0]:   exit_signal = 0
+	#     process[0]:   output on fd 1, stdout (3 lines):
+	#     process[0]:     1
+	#     process[0]:     2
+	#     process[0]:     3
+	#     process[0]:   output on fd 2, stderr (0 lines):
 
 	data = ``echo '{"a": 1}'``
 	echo("Parsed data: $data, a is ${data.a}")
@@ -1058,7 +1060,7 @@ I do not recommend NGS as your first language. Python for example would be a muc
 
 ## Watch the version
 
-NGS is under development. Currently NGS has no version, breaking changes can happen. If you do anything a important with NGS, it's preferable to note the git revision you are using for reproducible installation. The plan is to stop breaking NGS when it reaches version 1.0.0 Since that version, the behaviour will be common - patch level increase for fixes, minor for improvements, major for breaking changes.
+NGS is under development. Currently NGS has no version, breaking changes can happen. If you do anything important with NGS, it's preferable to note the git revision you are using for reproducible installation. The plan is to stop breaking NGS when it reaches version 1.0.0 Since that version, the behaviour will be common - patch level increase for fixes, minor for improvements, major for breaking changes.
 
 ## Keyword arguments gotchas
 
@@ -1256,7 +1258,7 @@ Another way is to add named hook handlers (also a practical example):
 
 Method signature: `exit_hook(exit_info:Hash)`. `exit_info` currently has two keys: `exit_code` and `exception`. **stdlib.ngs** defines two standard hooks.
 
-	# ngs -pi 'exit_hook.handlers'
+	# ngs -pi 'exit_hook.Hash()'
 	Hash of size 2
 	[print_exception] = <Closure <anonymous> at /usr/share/ngs/stdlib.ngs:2110>
 	[exception_to_exit_code] = <Closure <anonymous> at /usr/share/ngs/stdlib.ngs:2117>

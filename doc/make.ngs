@@ -714,7 +714,7 @@
 				}
 			})
 			DocNode('html') with [
-				make_page_head_doc("${namespace.fqname} type - NGS documentation", dotdots=dd)
+				make_page_head_doc("${namespace.fqname} namespace - NGS documentation", dotdots=dd)
 				DocNode('body', class='namespaces-index-page') with [
 					make_nav_doc(['Namespaces'] + nav + [namespace.name], dotdots=dd)
 					DocNode('main') with [
