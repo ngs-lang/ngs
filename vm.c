@@ -1748,7 +1748,7 @@ METHOD_RESULT native_c_pcre_exec METHOD_PARAMS {
 	rc = pcre_exec(
 		REGEXP_OBJECT_RE(argv[0]), /* the compiled pattern */
 		NULL,                      /* no extra data - we didn't study the pattern */
-		OBJ_DATA_PTR(argv[1]),     /* the subject string */
+		OBJ_DATA_PTR(argv[1]) ? OBJ_DATA_PTR(argv[1]) : "",     /* the subject string */
 		OBJ_LEN(argv[1]),          /* the length of the subject */
 		GET_INT(argv[2]),          /* start offset */
 		GET_INT(argv[3]),          /* options */

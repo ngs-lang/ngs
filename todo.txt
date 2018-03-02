@@ -39,6 +39,9 @@ Note that this started as internal document so things here are unformed, not fin
 	* intersperse(Iter, ...)
 	* filterk/filterv for HashLike
 	* Rethink null/exception/Box
+		+ F index
+		+ F zip
+		+ F pos
 	* to_exit_code -> ExitCode or alike
 
 [roadmap]

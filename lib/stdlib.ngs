@@ -229,13 +229,31 @@ doc t - A type
 doc %RET - A function that checks whether the only argument is of type t
 F Pred(t:Type) F is_pred(x) x is t
 
-doc Map something to an Arr (array) of values using mapper.
-doc something - Instance of any type that has each(something, callback) implemented
+doc Map e to an Arr (array) of values using mapper.
+doc e - Instance of any type that has each(e, callback) implemented
 doc %RET - Arr
 doc %EX - [1,2,3].map(X*4)  # [4,8,12]
-F map(something:Eachable, mapper:Fun)
+F map(e:Eachable, mapper:Fun)
 	collector
-		something.each(collect + mapper)
+		e.each(collect + mapper)
+
+doc EXPERIMENTAL! Do not use!
+doc Map e to same type. Mnemonics: "map original" / "MAP to Original type".
+doc e - Instance of any type that has each(e, callback) implemented
+doc e - Eachable1. WARNING: instances of same type as e must have empty constructor and push() method.
+doc %RET - Of same type as e
+doc %STATUS - experimental
+doc %EX - Set([1,2]).mapo(X*2)  # Set([2,4])
+F mapo(e:Eachable1, mapper:Fun) {
+	t = typeof(e)
+	ret = t()
+	e.each(F(elt) {
+		ret.push(mapper(elt))
+	})
+	ret
+}
+
+TEST Set([1,2]).mapo(X*2) == Set([2,4])
 
 
 doc Transform mapper to handle only items matching predicate. Non-matching items will be returned as is.
@@ -259,7 +277,7 @@ doc predicate - Decision function to be called with each item as first argument.
 doc predicate - When predicate(item) returns true, the item will appear in the resulting array.
 doc %EX - (1...10).filter(F(num) num % 2 == 0)  # Gives [2,4,6,8,10]
 doc %EX - (1...10).filter(X<5)  # Gives [1,2,3,4], predicate called as predicate(item, 5)
-doc %RET - Arr
+doc %RET - Of same type as e
 F filter(e:Eachable1, predicate) {
 	pred = Pred(predicate)
 	t = typeof(e)
@@ -2069,6 +2087,21 @@ F intersperse(a:Arr, delim) {
 }
 
 TEST [1,2,3].intersperse(0) == [1,0,2,0,3]
+
+doc Optionally, wrap x in an array. Return x if it's already Arr.
+doc %RET - Arr
+doc %EX - ensure_array([1,2])  # [1,2]
+doc %EX - ensure_array("aa")   # ["aa"]
+F ensure_array(x) {
+	if x is Arr {
+		x
+	} else {
+		[x]
+	}
+}
+
+TEST ensure_array([1,2]) == [1,2]
+TEST ensure_array("aa") == ["aa"]
 
 
 doc Convert an array to NGS code that would produce the array when executed. Not fully functional yet.
@@ -4855,7 +4888,6 @@ doc %EX - m = ("xabcy" ~ /a(?P<mychar>.)c/)
 doc %EX - echo(m.named.mychar)  # Outputs: b
 doc %AUTO - my_str ~ my_regexp
 F ~(s:Str, r:RegExp, offset:Int=0, options:Int=0) {
-	not(options) and not(s) returns MatchN()
 	result = c_pcre_exec(r, s, offset, options)
 	if result is Int {
 		result == C_PCRE_ERROR_NOMATCH returns MatchN()
@@ -5088,7 +5120,18 @@ doc %RET - FullBox with Str
 F exception_specific_message(gnf:GlobalNotFound) FullBox("Global variable '${gnf.name}' not found")
 
 doc Don't use, subject to change, including name
-F SafeStr(val) "$val" tor "(Failed to inspect <${val.typeof().name tor '(unknown type)'}>)"
+F SafeStr(val) {
+	try {
+		v = "$val"
+	} catch(e:Error) {
+		"(Failed to inspect <${val.typeof().name tor '(unknown type)'}>)"
+	}
+	v.map(F(ch) {
+		o = ord(ch)
+		o >= 32 and ch != '\\' returns ch
+		'\\x' + encode_hex(ch)
+	}).join('')
+}
 
 # TODO: in-depth inspect()
 
