@@ -20,7 +20,7 @@ You can put the following line as first line of your script:
 
 	#!/usr/bin/env ngs
 
-If you do, you can run the script as `./script_name.ngs` or `/full/path/to/script_name.ngs` (you must make your script executable, `chmod 655 script_name.ngs`.
+If you do, you can run the script as `./script_name.ngs` or `/full/path/to/script_name.ngs` (you must make your script executable, `chmod 755 script_name.ngs`.
 
 See more about running NGS in [ngs(1)](ngs.1.html).
 
@@ -86,20 +86,14 @@ Yes, there is also built-in `jmespath` in `awscli`. It won't be much better than
 
 **other languages**
 
-You are probably using Python/Ruby/Perl/Go . You use one of the above languages because bash is not powerful enough / not convenient enough to do the tasks that these languages do. On the other hand something as simple as `echo mystring >myfile` or run an external program is not as convenient to do in these languages. Yes all of the languages above support system tasks to some degree. None of these languages support system tasks as a language that was built ground-up for system tasks. See the double-backtick examples above... for example.
-
-## You are using configuration management tools
-
-I've seen unjustified usage of configuration management tools too much. Yes, these are the "Cool Shiny New DevOps" hype tools: Chef, Puppet, Ansible and friends. I assume that in many situations it would be better to script these tasks instead of using configuration management tools. They are very complex and they take control away from you. The price of complexity is too high in many cases in my opinion. Any system beyond the most simple will need customization/wrapping/forking of ready-made modules for these configuration management systems to such degree that usage of such systems will be at very least questionable TCO-wise.
-
-Why not make your own clean solution that matches your own needs exactly? I mean except for being unpopular. The issue is that currently there is no good language to make these scripts. It would be inconvenient to script the task even if you wanted. I hope NGS will enable easy scripting of system tasks.
+You are probably using Python/Ruby/Perl/Go . You use one of the above languages because bash is not powerful enough / not convenient enough to do the tasks that these languages do. On the other hand something as simple as `echo mystring >myfile` or running an external program is not as convenient to do in these languages. Yes all of the languages above support system tasks to some degree. None of these languages can support system tasks as a language that was built ground-up for system tasks. See the double-backtick examples above... for example.
 
 
 # LANGUAGE PRINCIPLES OVERVIEW
 
 This section is about principles behind NGS language design.
 
-## Systems engineers language
+## Systems engineers' language
 
 NGS is a domain-specific language. It is aimed to solve common system tasks in a convenient manner.
 
@@ -119,9 +113,11 @@ Trade-offs between power and not allowing to shoot yourself in the foot are usua
 
 ## Simple methods naming for less guess work
 
-* `1+2` adds the numbers (method name `+`)
-* `arr1+arr2` adds (concatenates) arrays
-* `hash1+hash2` produces merged hash.
+For example, the method `+`:
+
+* `1 + 2` adds the numbers
+* `arr1 + arr2` adds (concatenates) arrays
+* `hash1 + hash2` produces merged hash.
 
 ## Extensibility
 
@@ -131,9 +127,11 @@ Trade-offs between power and not allowing to shoot yourself in the foot are usua
 
 ## Simplicity
 
-* Minimal possible number of concepts in the language.
-* No classes. Only types, methods and multiple dispatch (picking the right method implementation by matching types of parameters and arguments)
-* Simple type system.
+Very small number of main concepts in the language:
+
+* Types with a simple type system, geared only toward multiple dispatch. No classes.
+* Methods (functions).
+* Multiple dispatch - allows using same method name for operations on different types, as in the `+` example above.
 
 ## Familiarity
 
@@ -1109,7 +1107,7 @@ The correct version to add global method implementation is
 
 Comments syntax is implemented in many places but not everywhere. If you get syntax error regarding comment, move to somewhere nearby.
 
-## Mutable default parameter
+## Mutable default parameter gotchas
 
 The code below will probably not to what was intended. Note that default parameter value is only computed once, at function definition time.
 
@@ -1345,17 +1343,19 @@ In a function, any identifier that is mentioned in any of the enclosing function
 	# Output: 10
 	# Output: 1
 
-In a function, any variable that is assigned to (including the `i` in constuct `for(i;10) ...`) in the function is automatically `local` unless it's an `upvar` as described above.
+In a function, any variable that is assigned to (including the `i` in constuct `for(i;10) ...`) in the function is automatically `local` unless it's an `upvar` as described above. Inner functions are also `local` by default.
 
 	a = 1
 	F f() {
 		a = 2
 		echo(a)
+		F inner_func() "something"
 	}
 	f()
 	echo(a)
 	# Output: 2
 	# Output: 1
+	# Can not call inner_func from outside f()
 
 ## Modifying variables' scoping
 
@@ -1390,3 +1390,53 @@ You can modify default scoping using the `global` and `local` keywords.
 	# Does not work yet due to a bug, "a" stays upvar
 	# Output: 3
 
+## Predicates
+
+Functions (methods) such as `filter`, `filterk`, `filterv`, etc take predicate as one of the arguments.
+Traditionally, such functions took a function (method) as the predicate argument.
+A predicate function is a function with one parameter and that returns a boolean.
+
+NGS allows more powerful and convenient usage of predicates in these and other methods.
+All kinds of instances can be passed as predicates.
+NGS higher-order functions that have predicate parameters convert the predicates into predicate functions using the `Pred` function:
+
+	# Note that "predicate" can be of any type
+	F filter(e:Eachable1, predicate) {
+		pred = Pred(predicate)  # <-- Converting predicate to a predicate function.
+		t = typeof(e)
+		ret = t()
+		e.each() do F(elt) {
+			if pred(elt)
+				ret.push(elt)
+		}
+		ret
+	}
+
+This behaviour allows defining how any given type behaves as a predicate. Several built-in types have `Pred` function defined for them.
+Here are some examples of how this can shorten the code:
+
+
+	# Would be {...}.filterk(F(k) k ~ /^b/)
+	{"a1": 1, "a2": 2, "b1": 10}.filterk(/^b/)  # {"b1": 10}
+
+	# Would be {...}.filter(F(elt) elt.x == 7)
+	[{"x": 10, "y": 20}, {"x": 7, "y": 30}].filter({"x": 7})  # [{x=7, y=30}]
+
+	# Would be {...}.filter(F(t) t is Str)
+	["abc", 1, "def"].filter(Str)  # [abc,def]
+
+One can easily define how a type behaves as a predicate: just define appropriate `Pred` function.
+Here is example of `Pred` function that allows `.filter(SomeType)` such as `.filter(Str)` example above:
+
+	F Pred(t:Type) F is_pred(x) x is t
+
+That's a function (`Pred`) that returns a predicate function which is called `is_pred`.
+Naming the returned function helps a bit when looking at backtrace. `is_pred`, the predicate functions, checks whether it's argument is of type `t`.
+
+Note that using a function as predicate is still possible:
+
+	[1,2,11].filter(F(x) x > 10)  # [11]
+
+That is because `Pred` function leaves it's argument as is, if it's a function:
+
+	F Pred(f:Fun) f

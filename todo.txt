@@ -14,6 +14,7 @@ Note that this started as internal document so things here are unformed, not fin
 			* Method -> MultiMethod ; Method implementation -> Method
 			* Closure -> UserMethod ?
 			* Check about AnyVal / AnyRef. These do _not_ correspond to BasicType and NormalType.
+			* Instance -> Object?
 	* Iter improvements
 		* If migrating lines() to Iter
 			+ remember to implement ==(Iter, Arr), as used in tests:
@@ -51,15 +52,6 @@ Note that this started as internal document so things here are unformed, not fin
 		* Milestone "documentation" [in progress]
 			* Generated [in progress]
 				* Pages
-					Show NGS version on each page
-					* Method related [done]
-						* All methods list page: method name, implementation descritions, link to method page, link to method implementation page, link to type where applicable
-						* Method implementations list page: method_name(args), args descriptions, example
-						* Method page: method_name(args), args descriptions, example, link to method page
-					* Types related [done]
-						* All types page: name, description, parents?
-						* Constructors
-						* Type page: description, parent types (including transient), child types, methods' imlementations list
 					* Namespaces related
 						* Namespaces list page: name, description
 						* Namespace page
@@ -74,7 +66,6 @@ Note that this started as internal document so things here are unformed, not fin
 					* Mark experimental
 					* Mark deprecated
 					* Mark internal
-			* Document Pred aspect in filter() and friends
 			* Document AWS library (including usage examples)
 			* Document Iter
 				* Bool() usage by "for"
@@ -83,7 +74,6 @@ Note that this started as internal document so things here are unformed, not fin
 			* Tutorial
 				+ Build an app - decide which
 			* Exit codes (see bootstrap.ngs and ngs.c)
-			* Document that inner functions are declared local
 			* Language reference, good example: https://golang.org/ref/spec [have most of it in ngslang]
 			* Pipes
 			* Community examples: look at Kubernetes/examples/task/*,readme
