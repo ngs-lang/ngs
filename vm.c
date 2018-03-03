@@ -3567,7 +3567,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	set_global(vm, "RAND_MAX", MAKE_INT(NGS_RAND_MAX));
 
 
-	// TODO: documentation
+	// Documented in lib/stdlib.ngs
 	VALUE gc = make_hash(4);
 	set_hash_key(gc, make_string("enable"), make_func(vm, 0, "enable", &native_gc_enable, 0));
 	set_hash_key(gc, make_string("disable"), make_func(vm, 0, "disable", &native_gc_disable, 0));

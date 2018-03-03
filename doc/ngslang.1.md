@@ -1084,6 +1084,45 @@ Keyword arguments implementation is preliminary so:
 	kwargs = {"a": 10}
 	F f(a=1, **kw) [a, kw]; f(**kwargs) == [10, {"a": 10}]
 
+## Namespaces gotchas
+
+Since by default all variables are local, the following example will not add method implementation to `some_global_name` but will create namespace-local `some_global_name`.
+
+	myns = ns {
+		F some_global_name() ...
+	}
+
+	# Only available as myns::some_global_name(...)
+	# Global some_global_name(...) will not be able to access the
+	# above implementation.
+
+The correct version to add global method implementation is
+
+	ns {
+		global some_global_name
+		F some_global_name() ...
+	}
+
+	# Available as global some_global_name(...)
+
+## Comments syntax gotchas
+
+Comments syntax is implemented in many places but not everywhere. If you get syntax error regarding comment, move to somewhere nearby.
+
+## Mutable default parameter
+
+The code below will probably not to what was intended. Note that default parameter value is only computed once, at function definition time.
+
+	F f(x, a:Arr=[]) {
+		a.push(x)
+		a
+	}
+
+	echo(f(10))  # [10]
+	echo(f(20))  # [10,20]
+
+Same happens in Python and hence already described: http://docs.python-guide.org/en/latest/writing/gotchas/#mutable-default-arguments
+
 # TYPES
 
 NGS is dynamically typed language: values (and not variables) have types.

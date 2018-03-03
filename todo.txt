@@ -79,10 +79,6 @@ Note that this started as internal document so things here are unformed, not fin
 			* Document Iter
 				* Bool() usage by "for"
 			* Document `options: ...`
-			* Document pitfalls
-				* ns { F some_global_name() ... } -- does not add method implementation
-				* F(x,a:Arr=[]) ...,  when a is mutable
-				* Comments syntax not implemented everywhere
 			* "The README doesn’t seem to have any simple syntax examples"
 			* Tutorial
 				+ Build an app - decide which

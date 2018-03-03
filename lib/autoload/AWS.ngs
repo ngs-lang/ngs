@@ -954,6 +954,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	# Elb
 	# --------------------------------------------------
 
+	doc AWS Elastic Load Balancer
 	type Elb(ResDef)
 	type ElbRes(Res)
 

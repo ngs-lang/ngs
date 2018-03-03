@@ -2,7 +2,12 @@ STDLIB_EOL = "\n"
 STDLIB_PATH_SEP = '/'
 STDLIB_MAX_RAND_REAL = Real(RAND_MAX)
 STDLIB_RAND_SAFETY_MAX = 100
-{ GC.attrs({'doc': {'': 'Control NGS garbarge collection'}}) }
+{
+	GC.attrs({'doc': {'': 'Control NGS garbarge collection'}})
+	GC['enable'].attrs({'doc': {'': 'Enable garbarge collection'}})
+	GC['disable'].attrs({'doc': {'': 'Disable garbarge collection'}})
+	GC['get_parallel'].attrs({'doc': {'': 'Check parallel garbarge collection. Please do not use!', '%STATUS': 'internal'}})
+}
 
 # === Trivial init() helper ===
 
@@ -5524,6 +5529,7 @@ TEST encode_uri_component("ab+c%") == "ab%2Bc%25"
 
 # TODO: more efficient
 doc Decodes URI component, unsecaping %XX hexadecimals
+doc %EX - decode_uri_component("ab%2Bc%25")  # "ab+c%"
 F decode_uri_component(s:Str) {
 	l = s.len()
 	ret = ''
