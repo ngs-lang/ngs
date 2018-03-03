@@ -358,6 +358,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* Phase 5 - nice to have
 
+		* Inheriting built-in types without performance penalty (probably eliminates the need for ArrLike and HashLike)
 		* Calling
 			* Predicates in parameters list?
 			* Immediate values in parameters list

@@ -2262,26 +2262,26 @@ doc %EX - {"a": 1, "b": 2, "ccc": 3}.filterk(/^.$/)    # {a=1, b=2}
 doc %EX - {"aa": 1, "ab": 2, "ba": 3}.filterk(/^a/)    # {aa=1, ab=2}
 doc %EX - {"aa": 1, "ab": 2, 10: 3}.filterk(Int)       # {10=3}
 doc %EX - {10: "a", 20: "b", 30: "c"}.filterk(X > 10)  # {20=b, 30=c}
-F filterk(h:Hash, predicate) filter(h, Pred(predicate) + {A})
+F filterk(h:Eachable2, predicate) filter(h, Pred(predicate) + {A})
 
 TEST {"a1": 1, "a2": 2, "b1": 10}.filterk(/^b/) == {"b1": 10}
 
 doc Filter hash by keys, removing matched. See filterk().
 doc %EX - {"a1": 1, "a2": 2, "b1": 10}.rejectk(/^b/)  # {"a1": 1, "a2": 2}
-F rejectk(h:Hash, predicate) h.filterk(not + Pred(predicate))
+F rejectk(h:Eachable2, predicate) h.filterk(not + Pred(predicate))
 
 TEST {"a1": 1, "a2": 2, "b1": 10}.rejectk(/^b/) == {"a1": 1, "a2": 2}
 
 
 doc Filter hash by values
 doc %EX - {"a1": 1, "a2": 2, "b1": 10}.filterv(X>5)  # {"b1": 10}
-F filterv(h:Hash, predicate) filter(h, Pred(predicate) + {B})
+F filterv(h:Eachable2, predicate) filter(h, Pred(predicate) + {B})
 
 TEST {"a1": 1, "a2": 2, "b1": 10}.filterv(X>5) == {"b1": 10}
 
 
 doc Filter hash by values
-F rejectv(h:Hash, predicate) h.filterv(not + Pred(predicate))
+F rejectv(h:Eachable2, predicate) h.filterv(not + Pred(predicate))
 
 TEST {"a1": 1, "a2": 2, "b1": 10}.rejectv(X>5) == {"a1": 1, "a2": 2}
 
