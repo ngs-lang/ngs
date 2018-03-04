@@ -67,15 +67,13 @@ Note that this started as internal document so things here are unformed, not fin
 					* Mark deprecated
 					* Mark internal
 			* Document AWS library (including usage examples)
-			* Document Iter
-				* Bool() usage by "for"
-			* Document `options: ...`
-			* "The README doesn’t seem to have any simple syntax examples"
+			* Docuemtn $(...)
+				* Document `options: ...`
+				* Pipes
 			* Tutorial
 				+ Build an app - decide which
 			* Exit codes (see bootstrap.ngs and ngs.c)
 			* Language reference, good example: https://golang.org/ref/spec [have most of it in ngslang]
-			* Pipes
 			* Community examples: look at Kubernetes/examples/task/*,readme
 			* Explain Type/Strs capitalization rationale
 			* Link from constructors to types

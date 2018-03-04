@@ -85,6 +85,37 @@ The language feels (to me) like a mix of Python, bash and a bit less Ruby and Pe
 * Demo 3: [demonstrates race condition](bin/locks.ngs) and locks.
 
 
+Code example
+============
+
+	# Arrays
+	a = [1, 2, 3]
+	arr = a.map(X*2) # arr is now [2, 4, 6]
+	for i in arr {
+		echo(i)
+	}
+
+	# Hashes (maps)
+	h = {"a": 1, "b1": 2, "b2": 3}
+	echo(h.filterk(/^b/).mapv(X+10))  # {b1=12, b2=13}
+
+
+	# Functions (multimethods) and multi-dispatch
+
+	F my_func(x:Int) x*10 # Single expression does not require { ... } syntax
+
+	doc This method is documented!
+	F my_func(s:Str) {
+		t = s * 2
+		"[" + t + "]" # Last value returned as the result
+	}
+
+	echo(my_func(1))      # 10
+	echo(my_func("xyz"))  # [xyzxyz]
+	echo(my_func)         # <MultiMethod with 2 method(s)>
+
+More information about the language and syntax in particular is in [ngslang.1](doc/ngslang.1.md)
+
 Running using docker
 ====================
 

@@ -143,8 +143,7 @@ ns {
 	global next, peek, Bool
 
 	F _load(i:FilterIter) {
-		while true {
-			not(Bool(i.val)) breaks
+		while i.val {
 			i.elt = i.val.next()
 			if i::predicate(i.elt) {
 				i.elt_loaded = true
