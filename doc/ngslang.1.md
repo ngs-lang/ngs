@@ -89,7 +89,7 @@ Yes, there is also built-in `jmespath` in `awscli`. It won't be much better than
 You are probably using Python/Ruby/Perl/Go . You use one of the above languages because bash is not powerful enough / not convenient enough to do the tasks that these languages do. On the other hand something as simple as `echo mystring >myfile` or running an external program is not as convenient to do in these languages. Yes all of the languages above support system tasks to some degree. None of these languages can support system tasks as a language that was built ground-up for system tasks. See the double-backtick examples above... for example.
 
 
-# LANGUAGE PRINCIPLES OVERVIEW
+# Language principles overview
 
 This section is about principles behind NGS language design.
 
@@ -109,7 +109,7 @@ NGS tries to be uniform wherever possible to minimize surprises.
 
 ## Power
 
-Trade-offs between power and not allowing to shoot yourself in the foot are usually resolved in favor of the power solution. The language is aimed at experienced engineers which use their own judgement. The language should be powerful enough to shoot all feet in the building at once.
+As rule, trade-offs between power and not allowing to shoot yourself in the foot are resolved in favor of the power solution. The language is aimed at experienced engineers which use their own judgement. The language should be powerful enough to shoot all feet in the building at once.
 
 ## Simple methods naming for less guess work
 
@@ -127,7 +127,7 @@ For example, the method `+`:
 
 ## Simplicity
 
-Very small number of main concepts in the language:
+Very small number of core concepts in the language:
 
 * Types with a simple type system, geared only toward multiple dispatch. No classes.
 * Methods (functions).
@@ -137,14 +137,15 @@ Very small number of main concepts in the language:
 
 Many concepts and syntax constructs come from other languages.
 
-# SYNTAX AND BASIC FUNCTIONALITY
+# Two syntaxes overview
 
 NGS has two syntaxes: **command syntax** and **code syntax**.
 
 ## Command syntax
 
-This is the close-to-bash syntax geared towards running external programs and i/o redirection.
-Command syntax is the syntax at the top level of every NGS script. The most simple NGS scripts might look very similar to bash scripts. Commands are separated by either newlines or by semicolon (`;`).
+This is the resembles-bash syntax geared towards running external programs and i/o redirection.
+Command syntax is the syntax at the top level of every NGS script. The most simple NGS scripts might look very similar to bash scripts.
+Commands are separated by either newlines or by semicolon (`;`).
 
 Example:
 
@@ -236,13 +237,13 @@ In **code syntax** it is possible to switch to **command syntax** in one of the 
 
 	my_process = $( commands syntax )
 
-## Quick dive into syntax and basic functionality
+# Language syntax and functionality
 
-Comment
+## Comment
 
 	# comment till end of line
 
-Calling a function
+## Calling a function
 
 	echo('Hello world')
 	{
@@ -253,7 +254,9 @@ Calling a function
 	#   Hello world
 	#   Hello world
 
-Variables
+Note: `f(a, b, c)` is same as `a.f(b, c)`
+
+## Variables
 
 	echo(defined a)
 	a = 1 + 2
@@ -265,7 +268,9 @@ Variables
 	#   true
 	#   3
 
-Basic constants: true, false, null
+Note: Reading undefined variables will cause an exception.
+
+## Basic constants: true, false, null
 
 	if true echo("if true")
 	if false echo("if false")
@@ -287,7 +292,7 @@ Basic constants: true, false, null
 	#   2
 	#   null
 
-Booleans
+## Booleans
 
 	echo(true and false)
 	# Output:
@@ -297,7 +302,23 @@ Booleans
 	# Output:
 	#   true
 
-Integers
+When a boolean value is needed, such as in `if EXPR {...}`, the `EXPR` is converted to boolean by calling `Bool(EXPR)`.
+For many types, NGS defines `Bool` methods. These `Bool` methods cause the following values to be converted to false:
+
+* 0
+* null
+* false
+* empty array
+* empty hash
+* empty string
+* an instance of EmptyBox, for example `[1,2,3].Box(10)`
+* an instance of Failure, for example `Result({ 1 / 0 })`
+* regular expression that did not match, for example `"abc" ~ /XYZ/`
+
+Unless specified otherwise, all other values are converted to `true`.
+To define how your user-defined types behaves as boolean, define `Bool(x:YOUR_TYPE)` method. The behaviour described above is con
+
+## Integers
 
 	echo(1 + 2 * 3)
 	# Output:
@@ -318,6 +339,8 @@ Integers
 	#   0
 	#   2
 	#   4
+
+## Strings
 
 Strings - string interpolation
 
@@ -367,6 +390,8 @@ Strings - some basic methods that operate on strings
 	# See RegExp type
 	# Output:
 	#   Name=abc Value=120
+
+## Arrays
 
 Arrays - basics
 
@@ -439,6 +464,8 @@ Arrays - some basic methods that operate on arrays
 	# Converts array consisting of pairs into Hash
 	# Output:
 	#   {a=1, b=2}
+
+## Hashes
 
 Hashes - basics
 
@@ -548,7 +575,7 @@ Hashes - some basic methods that operate on Hashes
 	# Output:
 	#   [['a',1],['b',2]]
 
-Common higher-order methods (functions)
+## Common higher-order methods (functions)
 
 	echo([1,2,3].all(Int))
 	# Output:
@@ -582,7 +609,8 @@ Common higher-order methods (functions)
 	# Output:
 	#   2
 
-Defining a type
+
+## Defining a type
 
 	# Switch to code syntax inside { ... }. "type" currently does not work in command syntax
 	{
@@ -612,6 +640,7 @@ Defining a type
 	#   c is Vehicle: true
 	#   c is Car: true
 
+## Methods
 
 Defining a method
 
@@ -792,7 +821,7 @@ Method-related flow control
 	#   <Return closure=<Closure find_the_one at 1.ngs:2> depth=7 val=null>
 	#   Not found
 
-Short circuit binary operators
+## Short circuit binary operators
 
 	a = 1 and 2                    # a = 2
 	a = null and 2                 # a = null
@@ -800,7 +829,7 @@ Short circuit binary operators
 	a = null or 2                  # a = 2
 	a = code_with_exception tor 3  # a = 3, exception discarded
 
-Ignoring exceptions using "try" without "catch"
+## Ignoring exceptions using "try" without "catch"
 
 	myhash = {"a": 1, "b": 2}
 
@@ -816,7 +845,7 @@ Ignoring exceptions using "try" without "catch"
 	echo(v)
 	# Output: null
 
-Exceptions
+## Exceptions
 
 	{
 		type MyError(Error)
@@ -833,6 +862,24 @@ Exceptions
 		}
 		# Output: [Exceptions] This error was expected: ...
 	}
+
+## Flow control
+
+If
+
+	if my_var > 10 {
+		a += 100
+		b = "x"
+	} else {
+		b = "y"
+	}
+
+	result = if my_var then "xyz" else "ww".
+	result = if my_var 10 20  # result is now either 10 or 20
+
+In `if`, `while`, and `for`, where `{...}` code block is expected, if the block consists of only a single expression, curly braces are optional. In `if`, the `then` and `else` keywords are optional.
+
+Note that `if` is an expression. `if` without else where the condition is equivalent to `false`, evaluates to `null`.
 
 Loops
 
@@ -857,6 +904,17 @@ Loops
 	#   Shorthand loop, iteration 1
 	#   Shorthand loop, iteration 2
 	#   Shorthand loop, iteration 4
+
+	for i in [1,5,10,20,50] {
+		echo(i)
+	}
+	# Output:
+	#   1
+	#   5
+	#   10
+	#   20
+	#   50
+	# See "Iterators"
 
 	i = 0
 	while i<10 {
@@ -913,7 +971,7 @@ Switch and switch-like expressions
 		}
 	}
 
-Regular expressions
+## Regular expressions
 
 	myregex = /^begin/
 	echo(myregex)
@@ -938,7 +996,7 @@ Regular expressions
 	#   The character after the digit 2 is b
 	#   The character after the digit 3 is e
 
-Collector facility
+## Collector facility
 
 	mylist = collector {
 		collect("HEADER")
@@ -964,7 +1022,7 @@ Collector facility
 	echo(mysumm)
 	# Output: 111
 
-Running external programs
+## Running external programs
 
 	t = `echo -n text1`
 	echo("[ $t ]")
@@ -1025,6 +1083,9 @@ Higher numbers mean higher precedence.
 	...    160  "Inclusive range"             0...5               # 0,1,2,3,4,5
 	..     160  "Exclusive range"             0..5                # 0,1,2,3,4
 	+      190  "Plus"
+	+?     190  "Plus maybe"                  "a" + "b"           # "ab"
+	                                          null + "b"          # null
+	                                          "a" + null          # null
 	-      190  "Minus"
 	*      200  "Multiply" or "repeat"        3 * 5               # 15
 	                                          "ab" * 3            # "ababab"
@@ -1048,7 +1109,7 @@ These are syntactically equivalent expressions:
 	a = a.f()      a .= f()    a = f(a)
 	a = a.f(b)     a .= f(b)   a = f(a, b)
 
-# LANGUAGE GOTCHAS
+# Language gotchas
 
 This section will be expanded as I get feedback :)
 
@@ -1121,7 +1182,7 @@ The code below will probably not to what was intended. Note that default paramet
 
 Same happens in Python and hence already described: http://docs.python-guide.org/en/latest/writing/gotchas/#mutable-default-arguments
 
-# TYPES
+# Types
 
 NGS is dynamically typed language: values (and not variables) have types.
 
@@ -1138,7 +1199,7 @@ NGS is a "strongly typed" language: values are not implicitly converted to unrel
 	echo(1+Int("2"))
 	# Output: 3
 
-# BUILT-IN TYPES
+# Built-in types
 
 There are several built-in types. Sample types and values:
 
@@ -1164,7 +1225,7 @@ Checking types:
 
 See types reference: [ngstyp(1)](ngstyp.1.html).
 
-# DEFINE YOUR OWN TYPES
+# Define your own types
 
 You can define your own types. Let's define `Counter` type and a few methods that can operate on values of the `Counter` type. Then we'll define `MyCounter` sub-type and it's `incr` method:
 
@@ -1224,7 +1285,7 @@ You can define your own types. Let's define `Counter` type and a few methods tha
 		# Output: 10
 	}
 
-# METHODS, METHOD IMPLEMENTATIONS AND CALLING
+# Methods, method implementations and calling
 
 Each value in NGS has a type, similar to many other languages. One of the main features of NGS is choosing the correct **method implementation** based on types of the arguments:
 Let's start with the following snippet:
@@ -1247,7 +1308,7 @@ Let's start with the following snippet:
 
 The `+` in NGS is a method. It has few **method implementations**. You can see definitions of two of the implementations in the example above. One implementation can add numbers. Another implementation concatenates strings. How NGS knows which one of them to run? The decision is made based on arguments' types. NGS scans the **method imlementations** array backwards and invokes the **method implementation** that matches the given arguments (this matching process is called multiple dispatch).
 
-# HANDLERS AND HOOKS
+# Handlers and hooks
 
 Handlers and hooks are called by NGS when a certain condition occurs. What exactly happens when they are called differs between handlers and hooks.
 
@@ -1303,7 +1364,7 @@ Method signature: `exit_hook(exit_info:Hash)`. `exit_info` currently has two key
 * `print_exception` prints exception details if an exception occurred.
 * `exception_to_exit_code` sets the exit code using `to_exit_code`. Unless defined for your specific exception, `to_exit_code` of an `Exception` returns **200**.
 
-# VARIABLES SCOPING RULES
+# Variables' scoping rules
 
 ## Default scoping rules
 
@@ -1390,7 +1451,7 @@ You can modify default scoping using the `global` and `local` keywords.
 	# Does not work yet due to a bug, "a" stays upvar
 	# Output: 3
 
-## Predicates
+# Predicates
 
 Functions (methods) such as `filter`, `filterk`, `filterv`, etc take predicate as one of the arguments.
 Traditionally, such functions took a function (method) as the predicate argument.
@@ -1440,3 +1501,36 @@ Note that using a function as predicate is still possible:
 That is because `Pred` function leaves it's argument as is, if it's a function:
 
 	F Pred(f:Fun) f
+
+# Iterators
+
+Iterators give more flexibility and control as opposed to `each` iteration.
+
+## The iterator protocol
+
+Iterators must implement
+
+* `Bool(x:YOUR_ITER_TYPE)` which tells whether there are more values
+* `next(x:YOUR_ITER_TYPE)` which returns the next value (or throws `NoNext` exception)
+
+When `for x in EXPR { BODY }` syntax is used, it is equivalent to the following:
+
+	_hidden_iter = Iter(EXPR)
+	while _hidden_iter {
+		x = _hidden_iter.next()
+		BODY
+	}
+
+## Referencing the iterator in the BODY
+
+Since `Iter(x:Iter)` is defined as `x`, you can use the following solution if you want to use the `for` syntax and have access to the iterator:
+
+	for x in my_iter=Iter(EXPR) {
+		BODY # can manipulate my_iter for advanced control
+	}
+
+The above works as follows: `my_iter=Iter(EXPR)` is an assignment which evaluates an `Iter` type instance. `for` uses `Iter` on that value to get an iterator but it is the same iterator that `my_iter` references.
+
+## Built-in iterators
+
+See `Iter` type documentation to see which iterators are available in NGS.
