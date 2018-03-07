@@ -23,7 +23,7 @@ doc Calculate cell display width - any Str()-able instance
 F cell_display_width(x) StrForTable(x).len()
 
 doc Calculate cell display width for an array
-F cell_display_width(x:Arr) x.map(StrForTable).max(len)
+F cell_display_width(x:Arr) x.map(StrForTable).map(len).max()
 
 doc Calculate cell display width for an empty array
 F cell_display_width(x:Arr) { guard x.len()==0; 0 }
@@ -131,7 +131,7 @@ F echo(t:Table) {
 	do_output_headers = config('output_headers') in [null, true]
 	max_colums_widths = t.cols_enum.map(F(k, idx) {
 		col = t.column(idx)
-		((if do_output_headers [k] [])+ col).max(cell_display_width)
+		((if do_output_headers [k] [])+ col).map(cell_display_width).max()
 	})
 
 	# How much full table columns fit on the screen

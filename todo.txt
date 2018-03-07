@@ -30,7 +30,6 @@ Note that this started as internal document so things here are unformed, not fin
 	* Namespace type, probably subtype of Hash
 	* See what can be fixed regarding functions that accept Arr[T] for specific types
 		+ Such as join(threads:Arr) in lib/autoload/Thread.ngs
-	* min(a,b), max(a,b)
 	* assert_proc(cp:CommandsPipeline, exit_code, stdout, stderr)
 	* Fix syntax: "ifx" is now "if x"
 	* Documentation
@@ -38,12 +37,12 @@ Note that this started as internal document so things here are unformed, not fin
 		* Example: AWS::Elb().reject(X.Instances).delete()
 	* ec2hostsfile.ngs - fix the tags filter
 	* intersperse(Iter, ...)
-	* filterk/filterv for HashLike
 	* Rethink null/exception/Box
 		+ F index
 		+ F zip
 		+ F pos
 	* to_exit_code -> ExitCode or alike
+	* OS - make it a type, not a list booleans
 
 [roadmap]
 
@@ -67,15 +66,8 @@ Note that this started as internal document so things here are unformed, not fin
 					* Mark deprecated
 					* Mark internal
 			* Document AWS library (including usage examples)
-			* Docuemtn $(...)
-				* Document `options: ...`
-				* Pipes
-			* Tutorial
-				+ Build an app - decide which
 			* Exit codes (see bootstrap.ngs and ngs.c)
-			* Language reference, good example: https://golang.org/ref/spec [have most of it in ngslang]
 			* Community examples: look at Kubernetes/examples/task/*,readme
-			* Explain Type/Strs capitalization rationale
 			* Link from constructors to types
 			* Type constructors and instance creation
 			* Nested namespaces (AWS::util)

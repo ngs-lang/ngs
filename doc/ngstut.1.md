@@ -244,17 +244,17 @@ In this example we also introduced the usage of `pmap`, in my opinion its one of
 
 	ngs -e 'for(i;10) { j=i+1; echo(j*10) }'
 
-## Creates a Range, and launches each function for each element in the Range
+## Create a Range, and launches each function for each element in the Range
 
-`{ ... }` is lambda definition, which equivalent to `F(A = null, B = null,C = null) { ... }` .
+`{ ... }` is lambda definition, which equivalent to `F(A = null, B = null, C = null) { ... }` .
 
 	ngs -e '(0..10).each({echo(A*10)})'
 
-## Creates a Range inclusive of the number on the right
+## Create a Range inclusive of the number on the right
 
 	ngs -e '(1...10).each({echo(A*10)})'
 
-## Short loop.
+## Short loop
 
 	ngs -e '10.each({echo(A*10)})'
 

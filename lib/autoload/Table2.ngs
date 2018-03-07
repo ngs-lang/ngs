@@ -1,5 +1,4 @@
 # === Table ======================================
-# TODO: namespace
 
 ns {
 	global init, push, each, len, echo
@@ -207,7 +206,7 @@ ns {
 		do_output_headers = config('output_headers') in [null, true]
 		max_colums_widths = t.cols_enum.map(F(k, idx) {
 			col = t.column(idx)
-			((if do_output_headers [k] []) + col).map(Cell).max(width)
+			((if do_output_headers [k] []) + col).map(Cell).map(width).max()
 		})
 
 		# How much full table columns fit on the screen
@@ -240,7 +239,7 @@ ns {
 			row_cells = row.limit(showing_n_columns).map_idx_val(F(idx, cell) {
 				Cell(cell, max_colums_widths[idx])
 			})
-			screen_lines_for_row = row_cells.max(height)
+			screen_lines_for_row = row_cells.map(height).max()
 			for(screen_line; screen_lines_for_row) {
 				screen_line_items = row_cells.map_idx_val(F(idx, cell) {
 					cell.get(screen_line, Str('', max_colums_widths[idx]))
@@ -262,6 +261,7 @@ ns {
 	F echo(t:Table) {
 		guard config('output_format') == 'csv-flat'
 		col_elts = t.cols_enum.values().Hash(F(col_name) {
+			# ensure_array?
 			col = t.column(col_name).map(only(X is not Arr, F(x) [x]))
 			(col.map(len) + [0]).max()
 		})

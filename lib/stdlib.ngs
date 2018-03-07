@@ -1945,11 +1945,24 @@ ns {
 	doc Find maximal element under (>)
 	F max(e:Eachable1) most(e, (>))
 
-	# EXPERIMENTAL!
+	doc Find minimnal element under (<)
+	F min(a, b, *rest) [a, b, *rest].min()
+
+	doc Find maximal element under (>)
+	F max(a, b, *rest) [a, b, *rest].max()
+
 	doc EXPERIMENTAL! Do not use!
-	F min(e:Eachable1, cb:Fun) most_by_cb(e, (<), cb)
+	doc %STATUS - deprecated
+	F min(e:Eachable1, cb:Fun) {
+		warn("Using deprecated min(Eachable1, Fun)")
+		most_by_cb(e, (<), cb)
+	}
 	doc EXPERIMENTAL! Do not use!
-	F max(e:Eachable1, cb:Fun) most_by_cb(e, (>), cb)
+	doc %STATUS - deprecated
+	F max(e:Eachable1, cb:Fun) {
+		warn("Using deprecated max(Eachable1, Fun)")
+		most_by_cb(e, (>), cb)
+	}
 }
 
 doc Repeat all elements in arr n times
@@ -5225,7 +5238,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 	pfx = "  " * level
 	h = Hash(e)
 
-	err("Exception of type ${e.typeof().name} occured")
+	err("Exception of type ${e.typeof().name} occurred")
 
 	exception_specific_message(e).each(err)
 

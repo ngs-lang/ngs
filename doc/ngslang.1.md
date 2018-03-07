@@ -152,14 +152,6 @@ Example:
 	cat a.txt; touch myfile
 	echo mystr >myfile
 
-Redirections syntax (based on bash syntax):
-
-* Ovewrite : `ls >myfile`
-* Append: `ls >>myfile`
-* Read from: `wc -l <myfile`
-* Specifiy file descriptor, overwrite: `cmd_writing_to_stderr 2>myfile`
-* Specifiy file descriptor, append: `cmd_writing_to_stderr 2>>myfile`
-
 In addition to running commands and performing redirections, there are several expressions that are also supported in the **commands syntax**. Note `code` below means **code syntax** expressions.
 
 * `{ code }` - see **Switching between syntaxes** below
@@ -238,6 +230,17 @@ In **code syntax** it is possible to switch to **command syntax** in one of the 
 	my_process = $( commands syntax )
 
 # Language syntax and functionality
+
+## Naming convention
+
+* `var_name`
+* `method_name`
+* `TypeName`
+* `TransformationName` - example: `Strs` (converts to array of strings), `Argv` (constructs command line arguments array), in future `ExitCode`.
+
+Reasoning behind `TransformationName`:
+* Transforms data into something else, like many other constructors
+* The output data might get it's own data type some day
 
 ## Comment
 
@@ -1356,7 +1359,7 @@ Another way is to add named hook handlers (also a practical example):
 
 Method signature: `exit_hook(exit_info:Hash)`. `exit_info` currently has two keys: `exit_code` and `exception`. **stdlib.ngs** defines two standard hooks.
 
-	# ngs -pi 'exit_hook.Hash()'
+	$ ngs -pi 'exit_hook.Hash()'
 	Hash of size 2
 	[print_exception] = <Closure <anonymous> at /usr/share/ngs/stdlib.ngs:2110>
 	[exception_to_exit_code] = <Closure <anonymous> at /usr/share/ngs/stdlib.ngs:2117>
@@ -1534,3 +1537,167 @@ The above works as follows: `my_iter=Iter(EXPR)` is an assignment which evaluate
 ## Built-in iterators
 
 See `Iter` type documentation to see which iterators are available in NGS.
+
+# Executing external programs
+
+When a command (more precisely commands pipeline) is parsed, an instance of `CommandsPipeline` is created. Then depending on the syntax, appropriate method is called with the `CommandsPipeline` argument. The methods are: `$()`, ```` `` ````, and ```````` ```` ````````.
+
+The syntactic options for executing external programs are:
+
+* Being in top level syntax of an NGS script, which is the **commands syntax**
+* In **code syntax**: `$(...)` - run the process and get the reference to it
+* In **code syntax**: `%(...)` - construct the `CommandsPipeline` but do not run it. Useful for passing ready-to-run commands around: `t=%(ls /); ...; $($t)`
+* In **code syntax**: `` `...` `` - capture the output
+* In **code syntax**: ```` ``...`` ```` - capture and parse the output
+
+Note that if you want just to construct the command and not run it
+
+External commands are represented with type `CommandsPipeline`. In the simple case, there is exactly one command. In more complex cases `CommandsPipeline` references several programs and pipes between them, for example constructed by `$(my_prog_1 | my_prog_2 | my_prog_3)` .
+
+	$ ngs -pi '$(ls | wc -l)'
+	CommandsPipeline
+	  command[0]: <Command options={} redirects=[<Redirect 1 null <WritingPipeBetweenChildren read_fd=4 write_fd=5>>] argv=[ls]>
+	  process[0]: Process
+	  process[0]:   command = <Command options={} redirects=[<Redirect 1 null <WritingPipeBetweenChildren read_fd=4 write_fd=5>>] argv=[ls]>
+	  process[0]:   pid = 87711
+	  process[0]:   exit_code = 0
+	  process[0]:   exit_signal = 0
+	  process[0]:   output on fd 1, stdout (0 lines):
+	  process[0]:   output on fd 2, stderr (0 lines):
+	  pipe[1]: <CommandsPipe options={} name=|>
+	  command[1]: <Command options={} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=6 write_fd=7>>,<Redirect 0 null <ReadingPipeBetweenChildren read_fd=4 write_fd=5>>] argv=[wc,-l]>
+	  process[1]: Process
+	  process[1]:   command = <Command options={} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=6 write_fd=7>>,<Redirect 0 null <ReadingPipeBetweenChildren read_fd=4 write_fd=5>>] argv=[wc,-l]>
+	  process[1]:   pid = 87712
+	  process[1]:   exit_code = 0
+	  process[1]:   exit_signal = 0
+	  process[1]:   output on fd 1, stdout (1 lines):
+	  process[1]:           20
+	  process[1]:   output on fd 2, stderr (0 lines):
+
+## Substitution of command line arguments
+
+	$(ls $fname)      # $var_name - expands to exactly one argument
+	$(ls ${ EXPR })   # ${ EXPR } - expands to exactly one argument
+	$(ls $*fnames)    # $*var_name - expands to zero or more arguments
+	$(ls $*{ EXPR })  # $*{ EXPR } - expands to zero or more arguments
+
+`EXPR` above can be single expression or any number expressions, new-line or `;` separated, value of last one is used for the substitution.
+
+The examples above show `$()` syntax but the substitution works the same for all syntaxes mentioned in **syntactic options for executing external programs** above.
+
+## Options
+
+Rationale: it is sometimes desirable to alter behaviour of execution of external program.
+NGS provides syntax for passing arbitrary key-value pairs to augment `CommandsPipeline` or `Command`.
+
+Syntax:
+
+* Options for one command: `option1:value1 option2:value2 optionN:valueN command and arguments` inside `$()` and friends and at the top level.
+* Options for one the whole pipeline: `option1::value1 option2::value2 optionN::valueN command_1 | command_2` inside `$()` and friends and at the top level.
+
+In both cases, the values must follow the colon immediately, no spaces allowed. Missing value defaults to `true`.
+
+Options:
+
+* `$(nofail: my_command)` - (deprecated, use `$(ok: my_command)`) no exception will be thrown as `finished_ok` always returns `true` for commands with option.
+* `$(ok:CODES my_command)` - `finished_ok` will return `true` for the listed `CODES`. `CODES` can be a boolean (`Bool`), single integer (`Int`), an array of integers (`Arr` of `Int`), or a `NumRange`.
+* `$(top_level:: my_command)` - do not capture the output of the command. This is the default behaviour of the top-level **commands syntax**: the stdout connected to the stdout of the NGS process.
+* Internally the `&` in `$(my_command &)` sets the `&` option to `true`. This mechanism can be used to modify the behaviour of `CommandsPipeline` prepared by `%(...)`.
+
+		ngs -pi '%(ls / &)'
+		CommandsPipeline
+		  options: Hash of size 1
+		  options:   [&] = true
+		  command[0]: <Command options={} redirects=[] argv=[ls,/]>
+
+* `` `line: my_prog` `` - return the first line of the output, without the new-line characters
+
+**WARNING**: unrecognized options are silently ignored.
+
+## Input/Output Redirections
+
+Redirections are represented by the `Redir` type. When a command is parsed and converted to `CommandsPipeline`, each `Command` gets a (possibly empty) list of redirections (in the `.redirects` property)
+
+Redirections syntax (based on bash syntax):
+
+* Overwrite : `my_command >myfile`
+* Append: `my_command >>myfile`
+* Read from: `my_command  <myfile`
+* Specify file descriptor, overwrite: `my_command 2>myfile`
+* Specify file descriptor, append: `my_command 2>>myfile`
+* Capture: `my_command 2>${true}` . The default is to not capture stderr but rather output it immediately to NGS' process stderr.
+
+
+	$ ngs -pi '$(ok: ls xxx)'
+	ls: xxx: No such file or directory
+	CommandsPipeline
+	  command[0]: <Command options={ok=true} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[ls,xxx]>
+	  process[0]: Process
+	  process[0]:   command = <Command options={ok=true} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[ls,xxx]>
+	  process[0]:   pid = 26157
+	  process[0]:   exit_code = 1
+	  process[0]:   exit_signal = 0
+	  process[0]:   output on fd 1, stdout (0 lines):
+	  process[0]:   output on fd 2, stderr (0 lines):
+	$ ngs -pi '$(ok: ls xxx 2>${true})'
+	CommandsPipeline
+	  command[0]: <Command options={ok=true} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=6 write_fd=7>>,<Redirect 2 > <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[ls,xxx]>
+	  process[0]: Process
+	  process[0]:   command = <Command options={ok=true} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=6 write_fd=7>>,<Redirect 2 > <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[ls,xxx]>
+	  process[0]:   pid = 26179
+	  process[0]:   exit_code = 1
+	  process[0]:   exit_signal = 0
+	  process[0]:   output on fd 1, stdout (0 lines):
+	  process[0]:   output on fd 2, stderr (1 lines):
+	  process[0]:     ls: xxx: No such file or directory
+
+## Exit codes handling
+
+Immediately after an external program finishes, it's exit code (and in future, possibly other aspects) is checked using `finished_ok` method. The method returns a `Bool`. If it's `false`, an exception is thrown.
+
+For unknown programs, `finished_ok` returns `false` for non-zero exit code and hence an exception is thrown. This behaviour can be modified with the `ok:` option of the command.
+
+NGS knows about some of external programs (`false`, `test`, `fuser`, `ping`) which might return non-zero exit codes which do not indicate an error. These commands do not cause exceptions for exit code one.
+
+If there is a particular program that you are using which also returns non-zero exit codes which should not cause an exception, you should add your own method `finished_ok` which handles that program. Please consider contributing this addition back to NGS.
+
+## External program boolean value
+
+When converting to `Bool`, for example in expression `if $(test -f my_file) { ... }`, all programs in the `CommandsPipeline` must exit with code zero in order to get `true`, otherwise the result of converting to `Bool` is `false`.
+
+## Constructing command line arguments
+
+While it's feasible to construct an array with command line arguments for a program, `Argv` makes this task much easier by supporting common cases such as omitting a command line switch which has no corresponding value to use.
+
+See `Argv` method.
+
+## Globbing
+
+Globbing is not implemented yet.
+
+# Debugging
+
+This section is planned to grow over time.
+
+## ImplNotFound exception
+
+	$ ngs -pi 'map(1,2,3)'
+	...
+	Exception of type ImplNotFound occurred
+	...
+
+	# Means the parameters did not match any of the existing methods.
+	# See which methods are defined:
+
+	ngs -pi map
+	MultiMethod
+	  Methods
+		Array of size 7
+		  [0] = <Closure map(e:Eachable, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:242>
+		  [1] = <Closure map(arr:Arr, n:Int, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:1600>
+		  [2] = <Closure map(h:Hash, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:2209>
+		  [3] = <Closure map(fb:FullBox, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:2550>
+		  [4] = <Closure map(eb:EmptyBox, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:2555>
+		  [5] = <Closure map(s:Success, fun:Fun) at /usr/local/lib/ngs/stdlib.ngs:2762>
+		  [6] = <Closure map(f:Failure, fun:Fun) at /usr/local/lib/ngs/stdlib.ngs:2771>
