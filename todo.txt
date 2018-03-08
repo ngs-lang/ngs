@@ -43,6 +43,7 @@ Note that this started as internal document so things here are unformed, not fin
 		+ F pos
 	* to_exit_code -> ExitCode or alike
 	* OS - make it a type, not a list booleans
+	* Fix StackDepthFail in: ngs -pi '[1].count(/x/)' AND ngs -pi '1 ~ /x/'
 
 [roadmap]
 

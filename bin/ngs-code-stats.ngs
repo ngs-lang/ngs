@@ -1,0 +1,18 @@
+#!/usr/bin/env ngs
+
+stats = Stats()
+for f in ARGV {
+	read(f).lines().each(F(line) {
+		t = match line {
+			/^\s*$/      'empty'
+			/^\s*#/      'comments'
+			/^\s*doc /   'doc'
+			/^\s*TEST /  'tests'
+			Any          'code'
+		}
+		stats.push(t)
+	})
+}
+
+each(stats.Hash().sort().map("$X $Y"), echo)
+echo("TOTAL ${stats.values().sum()}")
