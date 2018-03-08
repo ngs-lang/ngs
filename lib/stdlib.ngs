@@ -5171,12 +5171,9 @@ doc %RET - FullBox with Str
 F exception_specific_message(gnf:GlobalNotFound) FullBox("Global variable '${gnf.name}' not found")
 
 doc Don't use, subject to change, including name
+doc %STATUS - experimental
 F SafeStr(val) {
-	try {
-		v = "$val"
-	} catch(e:Error) {
-		"(Failed to inspect <${val.typeof().name tor '(unknown type)'}>)"
-	}
+	v = "$val" tor "(Failed to inspect <${val.typeof().name tor '(unknown type)'}>)"
 	v.map(F(ch) {
 		o = ord(ch)
 		o >= 32 and ch != '\\' returns ch
