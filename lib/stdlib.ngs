@@ -501,6 +501,36 @@ F reduce(something:Eachable1, start, f:Fun) {
 
 TEST [1,2,3].reduce(0, (+)) == 6
 
+{
+	type EmptyEachableFail
+	EmptyEachableFail.inherit(InvalidArgument)
+}
+
+doc Combine items to a single value using the supplied binary function
+doc First f is applied to the first two elements of e
+doc then on each step f is applied to previous result and next element
+doc of e. Throws EmptyEachableFail if e has no elements. If e has only
+doc one element, that element is returned.
+doc e - Instance of any type that has each(e, callback) implemented
+doc f - The combining function
+doc %EX - F sum(e) e.reduce((+))
+F reduce(e:Eachable1, f:Fun) {
+	ret = EmptyBox()
+	e.each(F(elt) {
+		if ret {
+			ret .= map(F(val) f(val, elt))
+		} else {
+			ret = FullBox(elt)
+		}
+	})
+	not(ret) throws EmptyEachableFail("e must have at least one element").set('e', e)
+	ret.get()
+}
+
+TEST [10].reduce((+)) == 10
+TEST [1,2,3].reduce((+)) == 6
+TEST try [].reduce((+)) catch(e:EmptyEachableFail) true
+
 doc EXPERIMENTAL!
 doc Map when there is more than one element. If there is exactly one element, it's left as is
 doc mapper - Will be called with zero based index and successive elements from arr
@@ -1724,6 +1754,7 @@ F reverse(arr:Arr) {
 
 TEST [1,2,3].reverse() == [3,2,1]
 
+# Uses reduce method with start value as it is probably faster
 doc Calculate sum of the elements
 doc %EX - [1,2,3].sum()  # 6
 F sum(something:Eachable1) something.reduce(0, (+))

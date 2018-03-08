@@ -20,7 +20,7 @@ syn keyword ngsRepeat for
 " bootstrap types
 syn keyword ngsType NotImplemented ReadFail RequireFail MainFail
 " other types
-syn keyword ngsType Any ArgvMatcher ArgvMatcherDecorator Arr ArrIter ArrLike BasicType Bool CLib Closure CollectingPipeFromChildToParentProcess Command CommandsPipe CommandsPipeline ConstIter Counter CSym DelimStr Eachable Eachable1 Eachable2 ElementNotFound ExecutableNotFound FFI Fun Hash HashIter HashLike InstantiatingAbstractType Int Iter KillFail KV NormalType NormalTypeInstance NoData Null Num Path Pipe PipeCreateFail PipeFromChildProcess PipeFromChildToParentProcess PipeFromParentToChildProcess PipeToChildProcess Pred Process ProcessFail Range RangeIter Real ReadingPipeBetweenChildren Seq Set Stats Str Table TableMeta TableMetaNotIfCol TtyCheckFail Type WritingPipeBetweenChildren
+syn keyword ngsType Any ArgvMatcher ArgvMatcherDecorator Arr ArrIter ArrLike BasicType Bool CLib Closure CollectingPipeFromChildToParentProcess Command CommandsPipe CommandsPipeline ConstIter Counter CSym DelimStr Eachable Eachable1 Eachable2 ElementNotFound EmptyEachableFail ExecutableNotFound FFI Fun Hash HashIter HashLike InstantiatingAbstractType Int Iter KillFail KV NormalType NormalTypeInstance NoData Null Num Path Pipe PipeCreateFail PipeFromChildProcess PipeFromChildToParentProcess PipeFromParentToChildProcess PipeToChildProcess Pred Process ProcessFail Range RangeIter Real ReadingPipeBetweenChildren Seq Set Stats Str Table TableMeta TableMetaNotIfCol TtyCheckFail Type WritingPipeBetweenChildren
 syn keyword ngsType Box EmptyBox FullBox BoxFail
 syn keyword ngsType Range NumRange PredRange
 syn keyword ngsType Diff ArrDiff HashDiff
@@ -61,7 +61,7 @@ syn keyword ngsFunction c_access c_close c_closedir c_errno c_execve c_exit c_fo
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction fetch main require to_exit_code
 " stdlib functions
-syn keyword ngsFunction abs access acquire all any assert basename chr close close_reading_end close_writing_end cmp code compare count dflt dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error exit_hook debug die filter filterk filterv finally find_in_path finished_ok first flatten fstat global_not_found_handler group has identity in index indexes join kill len limit lines log lstat map mapo map_idx_val mapk mapv mapkv max merge_sorted min n next none open ord parse partial partial_tail partition peek pmap pos ptimes publish read reject rejectk rejectv release reverse set sort sortk split starts_with stat status store StrParams Strs subscribe subset sum test uniq unshift update wait warn without write zip
+syn keyword ngsFunction abs access acquire all any assert basename chr close close_reading_end close_writing_end cmp code compare count dflt dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error exit_hook debug die filter filterk filterv finally find_in_path finished_ok first flatten fstat global_not_found_handler group has identity in index indexes join kill len limit lines log lstat map mapo map_idx_val mapk mapv mapkv max merge_sorted min n next none open ord parse partial partial_tail partition peek pmap pos ptimes publish read reduce reject rejectk rejectv release reverse set sort sortk split starts_with stat status store StrParams Strs subscribe subset sum tap test uniq unshift update wait warn without write zip
 
 " resources types
 syn keyword ngsType Res ResDef ResNotFound
