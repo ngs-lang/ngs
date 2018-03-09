@@ -19,7 +19,7 @@ F StrForTable(x:Null) "-"
 doc Internal method. Please do not use.
 F StrForTable(x:Null, width:Int) Str("-", width)
 
-doc Calculate cell display width - any Str()-able instance
+doc Calculate cell display width - any Str()-able object
 F cell_display_width(x) StrForTable(x).len()
 
 doc Calculate cell display width for an array

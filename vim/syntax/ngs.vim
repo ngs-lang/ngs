@@ -25,7 +25,7 @@ syn keyword ngsType Box EmptyBox FullBox BoxFail
 syn keyword ngsType Range NumRange PredRange
 syn keyword ngsType Diff ArrDiff HashDiff
 syn keyword ngsType Presence PartialPresence Present Absent ExactPresence
-syn keyword ngsType AssertFail ArgsMismatch CException EmptyArrayFail Error Exception FatalError CompileFail DontKnowHowToCall GlobalNotFound ImplNotFound InternalError LookupFail KeyNotFound StackDepthFail UndefinedLocalVar
+syn keyword ngsType AssertFail ArgsMismatch CException EmptyArrayFail Error Exception FatalError CompileFail DontKnowHowToCall GlobalNotFound MethodNotFound InternalError LookupFail KeyNotFound StackDepthFail UndefinedLocalVar
 syn keyword ngsType File SocketFile Symlink BlockDevice Dir CharDevice FifoFile MaybeFile
 syn keyword ngsType FileIOFail StatFail
 syn keyword ngsType Hook

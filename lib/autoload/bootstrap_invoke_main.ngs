@@ -24,9 +24,9 @@ F bootstrap_try_main(c:Closure, argv:Arr, finish:Return) {
 		v = c(*m.args, **m.kwargs)
 		bootstrap_debug("Trying main() candidate ${c} - matched")
 		throw finish(v)
-	} catch(inf:ImplNotFound) {
+	} catch(mnf:MethodNotFound) {
 		# That's fine
-		inf.callable !== c throws inf
+		mnf.callable !== c throws mnf
 		bootstrap_debug("Trying main() candidate ${c} - no match after calling")
 	}
 }

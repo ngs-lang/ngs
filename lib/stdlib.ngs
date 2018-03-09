@@ -52,7 +52,7 @@ F init(h:Hash) {
 }
 
 doc IndexNotFound exception constructor
-doc %RET - IndexNotFound type instance with the given message, container and key attributes
+doc %RET - IndexNotFound object with the given message, container and key attributes
 F init(e:IndexNotFound, message:Str, container, key) init(args())
 
 doc Throws AssertFail with givens message if condition is false
@@ -84,7 +84,7 @@ F init(e:InstantiatingAbstractType, t:Type) init(args())
 
 # === Namespaces =================================
 
-doc Get normal type instance attribute. Useful when calling method stored in an attribute.
+doc Get NormalType object attribute. Useful when calling method stored in an attribute.
 doc %EX - myobj::method_in_attr(arg)  # calls method stored in myobj.method_in_attr
 doc %EX - (myobj.method_in_attr)(arg) # calls method stored in myobj.method_in_attr
 doc %EX - myobj.method_in_attr(arg)   # calls global "method_in_attr"
@@ -95,7 +95,7 @@ doc Useful for working with namespaces, which are implemented as Hash instances.
 doc %EX - elb = AWS::Elb(...).converge(...)
 F '::'(h:Hash, k) h[k]
 
-doc Set normal type instance attribute. It's implemented to complete the :: operator. There is no particular use case.
+doc Set NormalType object attribute. It's implemented to complete the :: operator. There is no particular use case.
 F '::='(nti:NormalTypeInstance, k, v) nti.(k) = v
 doc Set Hash key. It's implemented to complete the :: operator. There is no particular use case.
 F '::='(h:Hash, k, v) h[k] = v
@@ -223,7 +223,7 @@ doc %RET - A function that compares the only argument to the given value
 F Pred(anything:BasicTypeInstance) F eq_pred(x) x == anything
 
 doc Convert Hash to a predicate. The predicate asserts that
-doc instance attributes named after hash keys return true for predictes made of corresponding hash values.
+doc object attributes named after h hash keys return true for predicates made of corresponding hash values.
 doc Inspired by underscorejs' "matcher"
 F Pred(h:Hash) {
 	preds = h.mapv(Pred)
@@ -242,7 +242,7 @@ doc %RET - A function that checks whether the only argument is of type t
 F Pred(t:Type) F is_pred(x) x is t
 
 doc Map e to an Arr (array) of values using mapper.
-doc e - Instance of any type that has each(e, callback) implemented
+doc e - Object of any type that has each(e, callback) implemented
 doc %RET - Arr
 doc %EX - [1,2,3].map(X*4)  # [4,8,12]
 F map(e:Eachable, mapper:Fun)
@@ -251,7 +251,7 @@ F map(e:Eachable, mapper:Fun)
 
 doc EXPERIMENTAL! Do not use!
 doc Map e to same type. Mnemonics: "map original" / "MAP to Original type".
-doc e - Instance of any type that has each(e, callback) implemented
+doc e - object of any type that has each(e, callback) implemented
 doc e - Eachable1. WARNING: instances of same type as e must have empty constructor and push() method.
 doc %RET - Of same type as e
 doc %STATUS - experimental
@@ -427,7 +427,7 @@ F the_one(e:Eachable1) e.the_one({true})
 
 doc Filter nulls out.
 doc DEPRECATED, USE something.without(null) INSTEAD.
-doc something - Instance of any type that has each(something, callback) implemented
+doc something - Object of any type that has each(something, callback) implemented
 doc %STATUS - deprecated
 doc %RET - Arr (array) of original items without nulls
 F filter(e:Eachable1) {
@@ -440,7 +440,7 @@ TEST [1,2,null,3].filter() == [1,2,3]
 doc Filter something to an Arr (array) of values using predicate
 doc predicate - Decision function to be called with each item as first argument.
 doc predicate - When predicate(item) returns true, the item will not appear in the resulting array
-doc something - Instance of any type that has each(something, callback) implemented
+doc something - object of any type that has each(something, callback) implemented
 doc %EX - (1...10).reject(F(num) num % 2 == 0)  # Gives [1,3,5,7,9]
 doc %EX - (1...10).reject(X<5)  # Gives [5,6,7,8,9,10], predicate called as predicate(item, 5)
 doc %RET - Arr
@@ -485,7 +485,7 @@ TEST [1,2,3,1,2].drop(X<3) == [3,1,2]
 
 doc Replace all occurrences of src with dst
 doc TODO: Return same type, not Arr
-doc something - Instance of any type that has each(something, callback) implemented
+doc something - object of any type that has each(something, callback) implemented
 doc %RET - Arr
 doc %EX - ["ssh", "IP", "w"].replace("IP", "10.0.0.100")  # ['ssh','10.0.0.100','w']
 F replace(something:Eachable1, src, dst) map(something, only(X == src, {dst}))
@@ -497,7 +497,7 @@ doc First f is applied to start and the first element of something
 doc then on each step f is applied to previous result and next element
 doc of something.
 doc start - First argument of f, for the first call of f
-doc something - Instance of any type that has each(something, callback) implemented
+doc something - object of any type that has each(something, callback) implemented
 doc f - The combining function
 doc %EX - F sum(something) something.reduce(0, (+))
 F reduce(something:Eachable1, start, f:Fun) {
@@ -518,7 +518,7 @@ doc First f is applied to the first two elements of e
 doc then on each step f is applied to previous result and next element
 doc of e. Throws EmptyEachableFail if e has no elements. If e has only
 doc one element, that element is returned.
-doc e - Instance of any type that has each(e, callback) implemented
+doc e - object of any type that has each(e, callback) implemented
 doc f - The combining function
 doc %EX - F sum(e) e.reduce((+))
 F reduce(e:Eachable1, f:Fun) {
@@ -896,7 +896,7 @@ F Str(i:NormalTypeInstance) {
 TEST type T; t=T(); Str(t) == '<T>'
 TEST type T; t=T(); t.a=1; t.b=2; Str(t) == '<T a=1 b=2>'
 
-doc Set an attribute in an instance if it's not already set
+doc Set an attribute in an object if it's not already set
 doc %EX - my_something.dflt(k, []).push(elt)
 doc %RET - Attribute value, the already-existed or new.
 F dflt(i:NormalTypeInstance, k, v) {
@@ -3914,14 +3914,14 @@ F dup2_reading_end(p:Pipe, newfd:Int) dup2(p.read_fd, newfd)
 
 { type FileIOFail(CException) }
 
-doc Create File type instance from the given path. The file is not open.
+doc Create File object from the given path. The file is not open.
 doc %EX - f = File('/tmp/myfile')
 F init(f:File, path:Str) {
 	init(args())
 	f.fd = null
 }
 
-doc Create File type instance from the given file descriptor.
+doc Create File object from the given file descriptor.
 F init(f:File, fd:Int) init(args())
 
 doc String representation of File
@@ -4023,7 +4023,7 @@ F fetch(parse_hints:Hash={}) read(0).parse({'source': 'stdin'} + parse_hints)
 
 # --- Redir ---
 
-doc Initialize Redir type instance. Used internally for commands syntax.
+doc Initialize Redir object. Used internally for commands syntax.
 doc %AUTO - $(my_prog >my_file)
 F init(r:Redir, fd, marker, datum) {
 	guard marker is Str or marker is Null
@@ -4392,7 +4392,7 @@ F '$()'(c:Command) {
 # INFO: bash - redir.c
 doc Run external processes described by the commands pipeline.
 doc Waits for the commands to finish unless "&" is specified.
-doc c - CommandsPipeline type instance, typically constructed by NGS when parsing the contents of $(...) .
+doc c - CommandsPipeline object, typically constructed by NGS when parsing the contents of $(...) .
 doc %EX - if $(test -f /myfile) { ... }
 doc %EX - # or
 doc %EX - p = $(node main.js serve &)
@@ -5401,12 +5401,12 @@ F strftime(tm:c_tm, format:Str) {
 	ret
 }
 
-doc Initialize Time type instance with current time.
+doc Initialize Time object with current time.
 F init(t:Time) {
 	t.epoch = time()
 }
 
-doc Initialize Time type instance with the given epoch time.
+doc Initialize Time object with the given epoch time.
 F init(t:Time, epoch:Int) {
 	t.epoch = epoch
 }
@@ -5736,7 +5736,7 @@ TEST F opt(a, b=10, *rest) [b, rest]; opt(1, 2, 3) == [2, [3]]
 TEST F opt(a, b=10, *rest) [b, rest]; opt(1, b=10) == [10, []]
 TEST F opt(a, b=10, *rest, **kw) [b, rest, kw]; opt(1, b=20) == [20, [], {"b": 20}]
 TEST F opt(a, b=10, *rest, **kw) [b, rest, kw]; opt(1, c=20) == [10, [], {"c": 20}]
-TEST F opt(a, b=10, *rest) [b, rest]; try opt(1, c=20) == [10, []] catch(e:ImplNotFound) true
+TEST F opt(a, b=10, *rest) [b, rest]; try opt(1, c=20) == [10, []] catch(e:MethodNotFound) true
 TEST F opt(a, b=10, *rest, **kw) [b, rest, kw]; opt(1, b=30, **{"b": 20}) == [20, [], {"b": 20}]
 TEST F opt(a, b=10, *rest, **kw) [b, rest, kw]; opt(1, b=30, **{"b": 20}, b=40) == [40, [], {"b": 40}]
 TEST F opt(a, b=10, *rest, **kw) [a, b, rest, kw]; opt(1, 100, 200, **{"b": 20}, b=40) == [1, 100, [200], {"b": 40}]
@@ -5790,7 +5790,7 @@ TEST try NO_SUCH_GLOBAL catch(e:GlobalNotFound) true
 TEST try c_lseek(0, 0, "bad arg") catch(e:InvalidArgument) true
 TEST try compile("xyz(", "something") catch(e:CompileFail) true
 TEST try 1(2, 3) catch(e:DontKnowHowToCall) true
-TEST type T; try echo(T(), T()) catch(e:ImplNotFound) true
+TEST type T; try echo(T(), T()) catch(e:MethodNotFound) true
 TEST try F f() f(); try f() catch(e:StackDepthFail) true
 TEST try [].pop() catch(e:EmptyArrayFail) true
 TEST try [].shift() catch(e:EmptyArrayFail) true

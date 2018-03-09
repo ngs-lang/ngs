@@ -52,7 +52,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F cli_tags(h:Hash) h / "Key=$X,Value=$Y"
 
 	doc Convert Hash with AWS filters to command line arguments.
-	doc Key-value pairs in which value is null or instance of EmptyBox are discarded.
+	doc Key-value pairs in which value is null or an EmptyBox object are discarded.
 	doc TODO: make it JSON when keys or values contain special characters such as = or ,
 	doc %RET - Arr of Str
 	F cli_filters(h:Hash) {

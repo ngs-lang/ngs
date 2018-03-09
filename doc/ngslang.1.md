@@ -88,6 +88,12 @@ Yes, there is also built-in `jmespath` in `awscli`. It won't be much better than
 
 You are probably using Python/Ruby/Perl/Go . You use one of the above languages because bash is not powerful enough / not convenient enough to do the tasks that these languages do. On the other hand something as simple as `echo mystring >myfile` or running an external program is not as convenient to do in these languages. Yes all of the languages above support system tasks to some degree. None of these languages can support system tasks as a language that was built ground-up for system tasks. See the double-backtick examples above... for example.
 
+# Terminology
+
+* type - Built-in or user-defined data type, similar to Python, Ruby and other languages.
+* object - Instance of a type, similar to Python, Ruby and other languages. The phrase "MyType object" refers to an Instance of "MyType".
+* method - Built-in or user-defined function. User defined methods can be closures.
+* multimethod - A MultiMethod object containing ordered list of methods. When called, the appropriate method is selected from the list to perform the computation.
 
 # Language principles overview
 
@@ -113,7 +119,7 @@ As rule, trade-offs between power and not allowing to shoot yourself in the foot
 
 ## Simple methods naming for less guess work
 
-For example, the method `+`:
+For example, the multimethod `+`:
 
 * `1 + 2` adds the numbers
 * `arr1 + arr2` adds (concatenates) arrays
@@ -130,8 +136,7 @@ For example, the method `+`:
 Very small number of core concepts in the language:
 
 * Types with a simple type system, geared only toward multiple dispatch. No classes.
-* Methods (functions).
-* Multiple dispatch - allows using same method name for operations on different types, as in the `+` example above.
+* Multimethods, which allow using same method name for operations on different types, as in the `+` example above.
 
 ## Familiarity
 
@@ -234,7 +239,7 @@ In **code syntax** it is possible to switch to **command syntax** in one of the 
 ## Naming convention
 
 * `var_name`
-* `method_name`
+* `method_name` (multimethod name)
 * `TypeName`
 * `TransformationName` - example: `Strs` (converts to array of strings), `Argv` (constructs command line arguments array), `ExitCode` (converts anything to integer exit code).
 
@@ -306,7 +311,7 @@ Note: Reading undefined variables will cause an exception.
 	#   true
 
 When a boolean value is needed, such as in `if EXPR {...}`, the `EXPR` is converted to boolean by calling `Bool(EXPR)`.
-For many types, NGS defines `Bool` methods. These `Bool` methods cause the following values to be converted to false:
+NGS defines `Bool` multimethod, with methods for many types. These methods cause the following values to be converted to false:
 
 * 0
 * null
@@ -314,12 +319,12 @@ For many types, NGS defines `Bool` methods. These `Bool` methods cause the follo
 * empty array
 * empty hash
 * empty string
-* an instance of EmptyBox, for example `[1,2,3].Box(10)`
-* an instance of Failure, for example `Result({ 1 / 0 })`
+* an EmptyBox object, for example `[1,2,3].Box(10)`
+* a Failure object, for example `Result({ 1 / 0 })`
 * regular expression that did not match, for example `"abc" ~ /XYZ/`
 
 Unless specified otherwise, all other values are converted to `true`.
-To define how your user-defined types behaves as boolean, define `Bool(x:YOUR_TYPE)` method. The behaviour described above is con
+To define how your user-defined types behaves as boolean, define `Bool(x:YOUR_TYPE)` method.
 
 ## Integers
 
@@ -645,7 +650,9 @@ Hashes - some basic methods that operate on Hashes
 
 ## Methods
 
-Defining a method
+Defining a method.
+
+When defining a named method, NGS automatically creates a MultiMethod with the given name (if it does not exist) and appends the new method to the multimethod's list of methods.
 
 	{
 		type Vehicle
@@ -657,6 +664,7 @@ Defining a method
 	F drive(c:Car) {
 		echo("Driving the car")
 	}
+	# "drive" is now a MultiMethod with one method
 
 	mycar = Car()
 	drive(mycar)
@@ -672,7 +680,7 @@ Defining a method
 
 	# There is no method drive() that takes a string as an argument
 	drive("well...")
-	# ... Exception of type ImplNotFound occured ...
+	# ... Exception of type MethodNotFound occured ...
 
 Method optional parameters
 
@@ -743,7 +751,7 @@ Method guard
 	#   Second gg active
 	#   500
 
-Call super methods
+Call super methods (methods higher in the multimethod list of methods)
 
 	F sup(x) x+1
 
@@ -1172,7 +1180,7 @@ Keyword arguments implementation is preliminary so:
 
 ## Namespaces gotchas
 
-Since by default all variables are local, the following example will not add method implementation to `some_global_name` but will create namespace-local `some_global_name`.
+Since by default all variables are local, the following example will not add method to `some_global_name` multimethod but will create namespace-local `some_global_name` multimethod.
 
 	myns = ns {
 		F some_global_name() ...
@@ -1182,7 +1190,7 @@ Since by default all variables are local, the following example will not add met
 	# Global some_global_name(...) will not be able to access the
 	# above implementation.
 
-The correct version to add global method implementation is
+The correct version to add method to a global multimethod is
 
 	ns {
 		global some_global_name
@@ -1220,8 +1228,8 @@ NGS is dynamically typed language: values (and not variables) have types.
 NGS is a "strongly typed" language: values are not implicitly converted to unrelated types. This makes the language more verbose but prevents some bugs.
 
 	echo(1+"2")
-	# ... Exception of type ImplNotFound occured ...
-	# That means that NGS has no method implementation that "knows" how to add an Int and a Str
+	# ... Exception of type MethodNotFound occured ...
+	# That means that NGS has no method that "knows" how to add an Int and a Str
 
 	echo(1+Int("2"))
 	# Output: 3
@@ -1270,14 +1278,14 @@ You can define your own types. Let's define `Counter` type and a few methods tha
 			c.counter_value = 0
 		}
 
-		# Define increment method implementation
+		# Define increment method
 		F incr(c:Counter) {
 			c.counter_value = c.counter_value + 1
 			# Return the Counter itself, allowing chaining such as c.incr().incr()...
 			c
 		}
 
-		# Define get method implemetation
+		# Define get method
 		F get(c:Counter) c.counter_value
 
 		c = Counter()
@@ -1290,7 +1298,7 @@ You can define your own types. Let's define `Counter` type and a few methods tha
 		# MyCounter inherits from Counter meaning that any method that works with Counter also works with MyCounter
 		type MyCounter(Counter)
 
-		# Define incr method implementation for MyCounter type
+		# Define incr method for MyCounter type
 		F incr(c:MyCounter) {
 			c.counter_value = c.counter_value + 10
 			c
@@ -1300,7 +1308,7 @@ You can define your own types. Let's define `Counter` type and a few methods tha
 		# Instantiate new MyCounter
 		c = MyCounter()
 
-		# * Will run incr(c:MyCounter) method implementation.
+		# * Will run incr(c:MyCounter) method.
 		# * Both incr(c:Counter) and incr(c:MyCounter) implementations match the arguments,
 		#   the second implementation wins because it was declared last and search is perfomed
 		#   from last to first.
@@ -1312,9 +1320,9 @@ You can define your own types. Let's define `Counter` type and a few methods tha
 		# Output: 10
 	}
 
-# Methods, method implementations and calling
+# Methods, multimethods and calling
 
-Each value in NGS has a type, similar to many other languages. One of the main features of NGS is choosing the correct **method implementation** based on types of the arguments:
+Each value in NGS has a type, similar to many other languages. One of the main features of NGS is choosing the correct method of a multimethod, based on types of the arguments:
 Let's start with the following snippet:
 
 	F +(a:Int, b:Int) {
@@ -1333,15 +1341,15 @@ Let's start with the following snippet:
 		# -> 'ab'
 	}
 
-The `+` in NGS is a method. It has few **method implementations**. You can see definitions of two of the implementations in the example above. One implementation can add numbers. Another implementation concatenates strings. How NGS knows which one of them to run? The decision is made based on arguments' types. NGS scans the **method imlementations** array backwards and invokes the **method implementation** that matches the given arguments (this matching process is called multiple dispatch).
+The `+` in NGS is a multimethod. It has few methods. You can see definitions of two of the methods in the example above. One method can add numbers. Another method concatenates strings. How NGS knows which one of them to run? The decision is made based on arguments' types. NGS scans the methods list backwards and invokes the method that matches the given arguments (this matching process is called multiple dispatch).
 
 # Handlers and hooks
 
 Handlers and hooks are called by NGS when a certain condition occurs. What exactly happens when they are called differs between handlers and hooks.
 
-**A handler** is a regular method (`Arr` of **method implementations**). Like with any other method, you can override what it does by defining your own **method implementation** with the same name further down in the code. Since standard handlers are defined in **stdlib.ngs** which is typically loaded first, your own **method implementation** will be "further down".
+**A handler** is a multimethod. Like with any other multimethod, you can override what it does by defining your own method with the same name further down in the code. Since standard handlers are defined in **stdlib.ngs** which is typically loaded first, your own methods will be "further down".
 
-**A hook** is an instance of the `Hook` type. Some hooks are called by NGS when a certain condition occurs. You are free to create and use your own hooks. When called, it executes all registered functions. The main difference is that using hook you get accumulative behaviour instead of overriding behaviour.
+**A hook** is a `Hook` object. Some hooks are called by NGS when a certain condition occurs. You are free to create and use your own hooks. When called, it executes all registered functions. The main difference is that using hook you get accumulative behaviour instead of overriding behaviour.
 
 User-defined hook example:
 
@@ -1362,7 +1370,7 @@ Another way is to add named hook handlers (also a practical example):
 
 ## `impl_not_found_handler`
 
-`impl_not_found_handler` is called when a method was called but no **method implementation** matched the arguments. Use `F impl_not_found_handler(callable:Fun, *args) ...` to add your behaviours.
+`impl_not_found_handler` is called when a multimethod was called but no method matched the arguments. Use `F impl_not_found_handler(callable:Fun, *args) ...` to add your behaviours.
 
 
 ## `global_not_found_handler`
@@ -1480,7 +1488,7 @@ You can modify default scoping using the `global` and `local` keywords.
 
 # Predicates
 
-Functions (methods) such as `filter`, `filterk`, `filterv`, etc take predicate as one of the arguments.
+Methods such as `filter`, `filterk`, `filterv`, etc take predicate as one of the arguments.
 Traditionally, such functions took a function (method) as the predicate argument.
 A predicate function is a function with one parameter and that returns a boolean.
 
@@ -1556,7 +1564,7 @@ Since `Iter(x:Iter)` is defined as `x`, you can use the following solution if yo
 		BODY # can manipulate my_iter for advanced control
 	}
 
-The above works as follows: `my_iter=Iter(EXPR)` is an assignment which evaluates an `Iter` type instance. `for` uses `Iter` on that value to get an iterator but it is the same iterator that `my_iter` references.
+The above works as follows: `my_iter=Iter(EXPR)` is an assignment which evaluates to an `Iter` object. `for` uses `Iter` on that value to get an iterator but it is the same iterator that `my_iter` references.
 
 ## Built-in iterators
 
@@ -1564,7 +1572,7 @@ See `Iter` type documentation to see which iterators are available in NGS.
 
 # Executing external programs
 
-When a command (more precisely commands pipeline) is parsed, an instance of `CommandsPipeline` is created. Then depending on the syntax, appropriate method is called with the `CommandsPipeline` argument. The methods are: `$()`, ```` `` ````, and ```````` ```` ````````.
+When a command (more precisely commands pipeline) is parsed, an `CommandsPipeline` object is created. Then depending on the syntax, appropriate method is called with the `CommandsPipeline` argument. The methods are: `$()`, ```` `` ````, and ```````` ```` ````````.
 
 The syntactic options for executing external programs are:
 
@@ -1678,7 +1686,7 @@ Redirections syntax (based on bash syntax):
 
 ## Exit codes handling
 
-Immediately after an external program finishes, it's exit code (and in future, possibly other aspects) is checked using `finished_ok` method. The method returns a `Bool`. If it's `false`, an exception is thrown.
+Immediately after an external program finishes, it's exit code (and in future, possibly other aspects) is checked using `finished_ok` multimethod. The multimethod returns a `Bool`. If it's `false`, an exception is thrown.
 
 For unknown programs, `finished_ok` returns `false` for non-zero exit code and hence an exception is thrown. This behaviour can be modified with the `ok:` option of the command.
 
@@ -1694,7 +1702,7 @@ When converting to `Bool`, for example in expression `if $(test -f my_file) { ..
 
 While it's feasible to construct an array with command line arguments for a program, `Argv` makes this task much easier by supporting common cases such as omitting a command line switch which has no corresponding value to use.
 
-See `Argv` method.
+See `Argv` multimethod.
 
 ## Globbing
 
@@ -1704,11 +1712,11 @@ Globbing is not implemented yet.
 
 This section is planned to grow over time.
 
-## ImplNotFound exception
+## MethodNotFound exception
 
 	$ ngs -pi 'map(1,2,3)'
 	...
-	Exception of type ImplNotFound occurred
+	Exception of type MethodNotFound occurred
 	...
 
 	# Means the parameters did not match any of the existing methods.

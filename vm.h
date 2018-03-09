@@ -215,7 +215,7 @@ typedef struct {
 			VALUE RegExpCompileFail;
 			VALUE CallFail;
 				VALUE DontKnowHowToCall;
-				VALUE ImplNotFound;
+				VALUE MethodNotFound;
 				VALUE StackDepthFail;
 				VALUE ArgsMismatch;
 			VALUE SwitchFail;

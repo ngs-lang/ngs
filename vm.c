@@ -2439,13 +2439,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 					NULL
 				);
 
-				MKSUBTYPE(ImplNotFound, CallFail);
+				MKSUBTYPE(MethodNotFound, CallFail);
 				_doc(vm, "", "Represents calling failure when arguments do not match any method implementation.");
 				_doc_arr(vm, "%EX",
 					"F f(x:Int) 1"
 					"F f(x:Str) 2"
 					"f(true)",
-					"# ... Exception of type ImplNotFound ...",
+					"# ... Exception of type MethodNotFound ...",
 					NULL
 				);
 
@@ -2484,7 +2484,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 			_doc(vm, "", "Represents failure to open dynamically loaded library (feature is a work in progress).");
 
 	MKTYPE(Return);
-	_doc(vm, "", "Return instance types, when thrown, will exit the call frame where they were created returning given value.");
+	_doc(vm, "", "Return instance type, when thrown, will exit the call frame where they were created returning given value.");
 	_doc_arr(vm, "%EX",
 		"{",
 		"    F find_the_one(haystack:Arr, needle) {",
@@ -2903,8 +2903,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%AUTO", "type MyType");
 
 	register_global_func(vm, 1, "typeof",   &native_typeof_any        ,1, "x",      vm->Any);
-	_doc(vm, "", "Returns type of the given instance");
-	_doc(vm, "x", "Instance (an object). Currently only instances of NormalType are supported.");
+	_doc(vm, "", "Returns type of the given object");
+	_doc(vm, "x", "Object. Currently only objects of NormalType are supported.");
 
 	// low level file operations
 	register_global_func(vm, 0, "c_dup2",   &native_c_dup2_int_int,    2, "oldfd",    vm->Int, "newfd", vm->Int);
@@ -3756,7 +3756,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			// Either we called impl_not_found_handler and it resulted METHOD_IMPL_MISSING
 			// or we don't have impl_not_found_handler
 			VALUE exc;
-			exc = make_normal_type_instance(vm->ImplNotFound);
+			exc = make_normal_type_instance(vm->MethodNotFound);
 			set_normal_type_instance_attribute(exc, make_string("callable"), callable);
 			SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv);
 			THROW_EXCEPTION_INSTANCE(exc);
@@ -3976,7 +3976,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		THIS_FRAME.do_call_impl_not_found_handler = 1;
 		if(argc && (mr == METHOD_IMPL_MISSING)) {
 			VALUE exc;
-			exc = make_normal_type_instance(vm->ImplNotFound);
+			exc = make_normal_type_instance(vm->MethodNotFound);
 			set_normal_type_instance_attribute(exc, make_string("message"), make_string("Normal type constructor: init() not found"));
 			set_normal_type_instance_attribute(exc, make_string("callable"), vm->init);
 			SET_EXCEPTION_ARGS_KWARGS(exc, argc+1, new_argv);
@@ -4008,7 +4008,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			}
 			if(mr == METHOD_EXCEPTION) {
 				VALUE r = MAKE_NULL;
-				if(obj_is_of_type(vm, *result, vm->ImplNotFound)) {
+				if(obj_is_of_type(vm, *result, vm->MethodNotFound)) {
 					get_normal_type_instace_attribute(*result, make_string("callable"), &r);
 					if(r.ptr == vm->call.ptr) {
 						// Don't know how to call
@@ -4291,7 +4291,7 @@ main_loop:
 							if(mr != METHOD_OK) {
 								if(mr == METHOD_ARGS_MISMATCH) {
 									VALUE exc;
-									exc = make_normal_type_instance(vm->ImplNotFound);
+									exc = make_normal_type_instance(vm->MethodNotFound);
 									set_normal_type_instance_attribute(exc, make_string("callable"), callable);
 									SET_EXCEPTION_ARGS_KWARGS(exc, OBJ_LEN(ctx->stack[ctx->stack_ptr-1]), ARRAY_ITEMS(ctx->stack[ctx->stack_ptr-1]));
 									set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
@@ -4642,8 +4642,8 @@ do_jump:
 								goto main_loop;
 							} else {
 								VALUE exc;
-								// TODO: better exception type than ImplNotFound
-								exc = make_normal_type_instance(vm->ImplNotFound);
+								// TODO: better exception type than MethodNotFound
+								exc = make_normal_type_instance(vm->MethodNotFound);
 								set_normal_type_instance_attribute(exc, make_string("message"), make_string("Using super where callable is not an array"));
 								set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 								*result = exc;

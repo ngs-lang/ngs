@@ -12,9 +12,7 @@ Note that this started as internal document so things here are unformed, not fin
 		* Milestone "documentation" [in progress]
 			* Naming fixes
 				* Rename plan
-					* Method -> MultiMethod ; Method implementation -> Method
 					* Closure -> UserMethod ?
-					* Instance -> Object?
 			* Standardize and explain naming convention: function/method, attribute/property.
 			* Generated [in progress]
 				* Pages
@@ -34,7 +32,7 @@ Note that this started as internal document so things here are unformed, not fin
 			* Exit codes (see bootstrap.ngs and ngs.c)
 			* Community examples: look at Kubernetes/examples/task/*,readme
 			* Link from constructors to types
-			* Type constructors and instance creation
+			* Type constructors and object creation
 			* Nested namespaces (AWS::util)
 			* "N methods" in link to namespace - filter by added implementations, don't count x in "global init; x = init"
 
