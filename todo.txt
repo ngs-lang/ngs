@@ -4,23 +4,10 @@ Note that this started as internal document so things here are unformed, not fin
 
 	Unsorted and undecided things go here. The important sections is [roadmap] and it's just below this section.
 
-	* Conditional modification of value
-		* Condition can be Fun/value
-		* Replacement can be Fun/value
-	* Look at Juju / conjure-up
-	* See what can be fixed regarding functions that accept Arr[T] for specific types
-		+ Such as join(threads:Arr) in lib/autoload/Thread.ngs
-	* Rethink null/exception/Box
-		+ F index
-		+ F zip
-		+ F pos
-		+ {,e}{switch,match,cond}
 
 [roadmap]
 
 	* Phase 1 - the language [in progress]
-
-		* OS - make it a type, not a list booleans
 
 		* Milestone "documentation" [in progress]
 			* Naming fixes
@@ -98,6 +85,17 @@ Note that this started as internal document so things here are unformed, not fin
 			* Internals
 
 		* Milestone "correct programming"
+
+			* OS - make it a type, not a list booleans
+
+			* See what can be fixed regarding functions that accept Arr[T] for specific types
+				+ Such as join(threads:Arr) in lib/autoload/Thread.ngs
+
+			* Rethink null/exception/Box
+				+ F index
+				+ F zip
+				+ F pos
+				+ {,e}{switch,match,cond}
 
 			* ec2hostsfile.ngs - fix the tags filter
 
@@ -275,14 +273,14 @@ Note that this started as internal document so things here are unformed, not fin
 			+ CLI entry point is at lib/cli.ngs . It's called from lib/bootstrap.ngs
 				+ Current CLI readline implementation is not meant to stay, readline will probably not be a good fit for NGS
 				+ Current CLI readline implementation is based on unfinished FFI implementation, which is not stable (API can change)
-			+ All UI functoinality that is implemented should be able to gracefully degrade and work in TTY.
+			+ All UI functionality that is implemented should be able to gracefully degrade and work in TTY.
 
 		* Milestone LayoutManager
 			* Dynamic width support for Table and probably other objects on the screen
 
 		* Milestone "screen layout"
 
-			* Commnds prompt and input area at the bottom
+			* Commands prompt and input area at the bottom
 
 			* Processes have their own area on the screen
 				+ Truncated stdout/stderr
@@ -527,6 +525,12 @@ Note that this started as internal document so things here are unformed, not fin
 		* Documentation
 			* Comparison and link to https://github.com/RexOps/Rex
 
+		* Conditional modification of value
+			* Condition can be Fun/value
+			* Replacement can be Fun/value
+			Syntax for common pattern, somewhat analogous to only():
+			newval = if my_cond then my_func(my_val) else my_val
+
 [types]
 	* Cloud / Compute / etc ?
 	* Host
@@ -551,3 +555,4 @@ Note that this started as internal document so things here are unformed, not fin
 	* Comparison to https://www.dmst.aueb.gr/dds/sw/dgsh/
 	* Comparison to ipython
 	* Take a look at Red programming language http://www.red-lang.org/p/documentation.html
+	* Juju / conjure-up
