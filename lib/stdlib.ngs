@@ -1383,10 +1383,14 @@ F get(h:Hash, k) get(h, k, null)
 
 doc Convert hash values to integers where possible
 doc %RET - New Hash
+doc %STATUS - deprecated
 doc %EX - %{k 7 kk "a"}["k"] is Str      # true
 doc %EX - %{k 7 kk "a"}.n()              # {'k': 7, 'kk': 'a'}
 doc %EX - %{k 7 kk "a"}.n()["k"] is Int  # true
-F n(h:Hash) h.mapv({Int(A) tor A})
+F n(h:Hash) {
+	warn("Using deprecated n(Hash)")
+	h.mapv({Int(A) tor A})
+}
 
 TEST %{k 7 kk "a"}.n() == {'k': 7, 'kk': 'a'}
 

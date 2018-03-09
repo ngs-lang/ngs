@@ -20,8 +20,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* Phase 1 - the language [in progress]
 
-		* Fix %{...} syntax and deprecate n()
-
 		* OS - make it a type, not a list booleans
 
 		* Milestone "documentation" [in progress]

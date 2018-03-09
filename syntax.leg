@@ -1807,7 +1807,8 @@ array-command-word =
 	| imm-hash-literal
 
 hash-command-word =
-	basic-command-word
+	number
+	| basic-command-word
 	| imm-array-literal
 	| imm-hash-literal
 	| "$**" c:code-block {
