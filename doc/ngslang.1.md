@@ -236,7 +236,7 @@ In **code syntax** it is possible to switch to **command syntax** in one of the 
 * `var_name`
 * `method_name`
 * `TypeName`
-* `TransformationName` - example: `Strs` (converts to array of strings), `Argv` (constructs command line arguments array), in future `ExitCode`.
+* `TransformationName` - example: `Strs` (converts to array of strings), `Argv` (constructs command line arguments array), `ExitCode` (converts anything to integer exit code).
 
 Reasoning behind `TransformationName`:
 * Transforms data into something else, like many other constructors
@@ -1389,7 +1389,7 @@ Method signature: `exit_hook(exit_info:Hash)`. `exit_info` currently has two key
 	[exception_to_exit_code] = <Closure <anonymous> at /usr/share/ngs/stdlib.ngs:2117>
 
 * `print_exception` prints exception details if an exception occurred.
-* `exception_to_exit_code` sets the exit code using `to_exit_code`. Unless defined for your specific exception, `to_exit_code` of an `Exception` returns **200**.
+* `exception_to_exit_code` sets the exit code using `ExitCode`. Unless defined for your specific exception, `ExitCode` of an `Exception` returns **200**.
 
 # Variables' scoping rules
 

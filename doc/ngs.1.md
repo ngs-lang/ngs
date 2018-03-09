@@ -48,8 +48,8 @@ The exit code is whatever the running code (*script_name* or *expression*) retur
 
 * `Int` (integer) - used directly as exit code (modulo 256). For example, `ngs -E 10` returns exit code 10.
 * `Bool` (boolean) - `true` results 0, `false` results 1.
-* `T` (a user-defined type) - The exit code can be customized by `to_exit_code(x:T)` method.
-* Anything else, including user-defined types without `to_exit_code(x:T)` method will result 0.
+* `T` (a user-defined type) - The exit code can be customized by `ExitCode(x:T)` method.
+* Anything else, including user-defined types without `ExitCode(x:T)` method will result 0.
 
 In case of an uncaught exception, the exit code is 1.
 

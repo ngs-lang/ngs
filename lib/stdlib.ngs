@@ -9,6 +9,13 @@ STDLIB_RAND_SAFETY_MAX = 100
 	GC['get_parallel'].attrs({'doc': {'': 'Check parallel garbarge collection. Please do not use!', '%STATUS': 'internal'}})
 }
 
+doc Deprecated. Use ExitCode.
+doc %STATUS - deprecated
+F to_exit_code(x) {
+	warn("Using deprecated to_exit_code(). Use ExitCode() instead")
+	ExitCode(x)
+}
+
 # === Trivial init() helper ===
 
 doc Trivial initialization helper for init(o, ...)
@@ -2575,7 +2582,7 @@ doc Always false
 F Bool(eb:EmptyBox) false
 
 doc Zero for FullBox and one for EmptyBox
-F to_exit_code(b:Box) b.Bool().to_exit_code()
+F ExitCode(b:Box) b.Bool().ExitCode()
 
 doc Map FullBox value
 doc mapper - mapper to be called with the FullBox value
@@ -2828,7 +2835,7 @@ TEST FullBox(1) != FullBox(2)
 	F Bool(f:Failure) false
 
 	doc EXPERIMENTAL! Do not use!
-	F to_exit_code(r:Result) r.Bool().to_exit_code()
+	F ExitCode(r:Result) r.Bool().ExitCode()
 }
 
 TEST {read("/etc/passwd")}.Result() is Success
@@ -3461,7 +3468,7 @@ F init(fe:FatalError, message:Str, exit_code:Int=1) {
 
 doc Convert FatalError to an exit code.
 doc %RET - fe.exit_code
-F to_exit_code(fe:FatalError) fe.exit_code
+F ExitCode(fe:FatalError) fe.exit_code
 
 # TODO: timestamps
 
@@ -4171,11 +4178,11 @@ doc Wait for all processes to finish.
 F wait(cp:CommandsPipeline) cp.processes.each(wait)
 
 doc Convert Process to exit code. Waits for the process to finish and uses its exit code.
-F to_exit_code(p:Process) p.wait().exit_code
+F ExitCode(p:Process) p.wait().exit_code
 
 doc Convert CommandsPipeline to exit code. Waits for the processes to finish.
 doc Returns first non-zero exit code. Returns zero if all exit codes are zero.
-F to_exit_code(cp:CommandsPipeline) {
+F ExitCode(cp:CommandsPipeline) {
 	cp.wait()
 	e = cp.processes.exit_code.first(X != 0, 0)
 }
@@ -4833,7 +4840,7 @@ F attempt(x, *cbs) {
 
 doc Convert Match to exit code.
 doc %RET - 0 for successful match (MatchY), 1 for unsuccessful match (MatchN).
-F to_exit_code(m:Match) m.Bool().to_exit_code()
+F ExitCode(m:Match) m.Bool().ExitCode()
 
 doc Initialize MatchFail.
 F init(mf:MatchFail, msg:Str, container, pattern) init(args())
@@ -5343,7 +5350,7 @@ exit_hook = Hook()
 	exit_hook['exception_to_exit_code'] = F(exit_info:Hash) {
 		if exit_info.exception is not Null {
 			try {
-				exit_info.exit_code = exit_info.exception.to_exit_code()
+				exit_info.exit_code = exit_info.exception.ExitCode()
 			} catch(e:Exception) {
 				error("--- Exception during converting exception to exit code ---")
 				print_exception(e)

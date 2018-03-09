@@ -29,16 +29,16 @@ TEST Exception(Exception()).cause is Exception
 
 # *** Convert values returned by the program (or -e/-E expression) to exit codes ***
 doc %RET - always 0
-F to_exit_code(x) 0
+F ExitCode(x) 0
 
 doc %RET - 0 for true, 1 for false
-F to_exit_code(b:Bool) if b 0 1
+F ExitCode(b:Bool) if b 0 1
 
 doc %RET - n
-F to_exit_code(n:Int) n
+F ExitCode(n:Int) n
 
 doc %RET - Always 200
-F to_exit_code(e:Exception) 200
+F ExitCode(e:Exception) 200
 
 doc Create MultiMethod with no methods
 F MultiMethod() super([])
@@ -234,7 +234,7 @@ F bootstrap() {
 			return 0
 		}
 	}
-	result.to_exit_code()
+	result.ExitCode()
 }
 
 doc Internal method. Please do not use.
