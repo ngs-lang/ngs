@@ -1718,6 +1718,7 @@ F index(arr:Arr, predicate, start:Int=0) {
 	l = arr.len()
 	for(i=start;i<l;i+=1)
 		p(arr[i]) returns i
+	warn("index() is returning null. In future, this will be an exception")
 	null
 }
 
@@ -5610,13 +5611,13 @@ TEST "ab>+c%&'".encode_html_attr() == "ab&gt;+c%&amp;&#39;"
 
 doc Used by match EXPR { ... } construct to check whether the expression matches the case.
 doc %AUTO match EXPR { ... }
-doc %RET - a ~ b
+doc %RET - Pred(b)(a)
 doc %EX - r = match x {
 doc %EX -   Int  "Got integer"
 doc %EX -   /^a/ "Got special string"
 doc %EX -   Str  "Got regular string"
 doc %EX - }
-F match(a,b) a ~ b
+F match(a,b) Pred(b)(a)
 
 # === File =======================================
 

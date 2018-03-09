@@ -936,17 +936,27 @@ Switch and switch-like expressions
 	result = switch a {
 		10 "ten"
 		20 "twenty"
-		30 { my_complex_code; "thirty" }
+		30 { more_code(); "thirty" }
 	}
 	echo("Switch result for $a is $result")
 	# Output: Switch result for 10 is ten
+
+	a = "my_string"
+	result = match a {
+		Int    "an integer"
+		/^my_/ "special string"
+		Str    { more_code(); "a string" }
+		Any    "not sure"
+	}
+	echo("Match result for $a is $result")
+	# Output: Match result for my_string is special string
 
 	a = 12
 	result = cond {
 		a > 10
 			"Excellent"
 		a > 5 {
-			my_complex_code; "Good enough"
+			more_code(); "Good enough"
 		}
 		a > 3
 			"so so"

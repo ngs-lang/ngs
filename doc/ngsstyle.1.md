@@ -47,3 +47,21 @@ When I see the "Bad" variant, I assume one of the following:
 
 * The author wanted to explicitly name the elements (`x`). Good name for `my_arr` eliminates the need for naming elements.
 * The author does not understand how to use the `map` function
+
+# Functional operators
+
+Avoid using the "functional operators". They are confusing to the reader.
+
+Bad:
+
+	my_list / my_func
+	my_list ? my_func
+	my_list % my_func
+	my_val \ my_func
+
+Good:
+
+	my_list.map(my_func)
+	my_list.filter(my_func)
+	my_list.each(my_func)
+	my_func(my_val)

@@ -27,7 +27,6 @@ Note that this started as internal document so things here are unformed, not fin
 		* limit(Iter, n)
 	* Look at Juju / conjure-up
 	* Add %k{...} and %v{...} syntax and remove n()
-	* Namespace type, probably subtype of Hash
 	* See what can be fixed regarding functions that accept Arr[T] for specific types
 		+ Such as join(threads:Arr) in lib/autoload/Thread.ngs
 	* assert_proc(cp:CommandsPipeline, exit_code, stdout, stderr)
@@ -43,6 +42,7 @@ Note that this started as internal document so things here are unformed, not fin
 		+ F pos
 	* to_exit_code -> ExitCode or alike
 	* OS - make it a type, not a list booleans
+	* Think about unification of Eachable and Iter
 
 [roadmap]
 
@@ -62,9 +62,6 @@ Note that this started as internal document so things here are unformed, not fin
 					* Namespaced types and methods
 						* Show namespace
 					* { } in examples
-					* Mark experimental
-					* Mark deprecated
-					* Mark internal
 			* Document AWS library (including usage examples)
 			* Exit codes (see bootstrap.ngs and ngs.c)
 			* Community examples: look at Kubernetes/examples/task/*,readme
@@ -119,6 +116,8 @@ Note that this started as internal document so things here are unformed, not fin
 			* Internals
 
 		* Milestone "correct programming"
+
+			* Namespace type, probably subtype of Hash
 
 			* decode_json - meaningful exceptions
 
