@@ -4,52 +4,36 @@ Note that this started as internal document so things here are unformed, not fin
 
 	Unsorted and undecided things go here. The important sections is [roadmap] and it's just below this section.
 
-	* Fix: a.mymod::memethod() syntax
 	* Conditional modification of value
 		* Conditon can be Fun/value
 		* Replacement can be Fun/value
-	* Naming fixes
-		* To fix: "attributes" is used for two different concepts: attrs() and the rest
-		* Rename plan
-			* Method -> MultiMethod ; Method implementation -> Method
-			* Closure -> UserMethod ?
-			* Check about AnyVal / AnyRef. These do _not_ correspond to BasicType and NormalType.
-			* Instance -> Object?
-	* Iter improvements
-		* If migrating lines() to Iter
-			+ remember to implement ==(Iter, Arr), as used in tests:
-				fqdn = 'example.com'
-				fqdns = `mybin list`.lines()
-				assert(fqdns == [fqdn])
-			+ make sure join() works
-		* Iter[PredRange] - should return new Iter
-		* zip(Iter, Iter)
-		* limit(Iter, n)
 	* Look at Juju / conjure-up
-	* Add %k{...} and %v{...} syntax and remove n()
 	* See what can be fixed regarding functions that accept Arr[T] for specific types
 		+ Such as join(threads:Arr) in lib/autoload/Thread.ngs
-	* assert_proc(cp:CommandsPipeline, exit_code, stdout, stderr)
-	* Fix syntax: "ifx" is now "if x"
-	* Documentation
-		* Comparison and link to https://github.com/RexOps/Rex
-		* Example: AWS::Elb().reject(X.Instances).delete()
-	* ec2hostsfile.ngs - fix the tags filter
-	* intersperse(Iter, ...)
 	* Rethink null/exception/Box
 		+ F index
 		+ F zip
 		+ F pos
 		+ {,e}{switch,match,cond}
-	* to_exit_code -> ExitCode or alike
-	* OS - make it a type, not a list booleans
-	* Think about unification of Eachable and Iter
 
 [roadmap]
 
 	* Phase 1 - the language [in progress]
 
+		* to_exit_code -> ExitCode or alike
+
+		* Fix %{...} syntax and deprecate n()
+
+		* OS - make it a type, not a list booleans
+
 		* Milestone "documentation" [in progress]
+			* Naming fixes
+				* Rename plan
+					* Method -> MultiMethod ; Method implementation -> Method
+					* Closure -> UserMethod ?
+					* Check about AnyVal / AnyRef. These do _not_ correspond to BasicType and NormalType.
+					* Instance -> Object?
+			* Standardize and explain naming convention: function/method, attribute/property.
 			* Generated [in progress]
 				* Pages
 					* Namespaces related
@@ -64,6 +48,7 @@ Note that this started as internal document so things here are unformed, not fin
 						* Show namespace
 					* { } in examples
 			* Document AWS library (including usage examples)
+				* Example: AWS::Elb().reject(X.Instances).delete()
 			* Exit codes (see bootstrap.ngs and ngs.c)
 			* Community examples: look at Kubernetes/examples/task/*,readme
 			* Link from constructors to types
@@ -118,21 +103,27 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "correct programming"
 
+			* ec2hostsfile.ngs - fix the tags filter
+
+			* Syntax fixes
+				* Fix operators priority for obj.Mod::method()
+				* Fix syntax: "ifx" is now "if x"
+				* Fix parser in
+					function_call(
+						with_comments,
+						# syntax
+						yes)
+				* Fix $(separate$item issue)
+
+			* Think about unification of Eachable and Iter
+				* Maybe something resembling "yield"
+
 			* Namespace type, probably subtype of Hash
 
 			* decode_json - meaningful exceptions
 
 			* Adding a field to a type is not thread safe because of possible fields hash (field name -> field number) update
 
-			* Fix $(separate$item issue)
-
-			* Fix parser in
-				function_call(
-					with_comments,
-					# syntax
-					yes)
-
-			* Fix operators priority for obj.Mod::method()
 			* [Doc.ngs] check why n = Node('html', children = tl.children) does not work
 
 			* Option to turn backtraces on in warn() and error()
@@ -166,13 +157,9 @@ Note that this started as internal document so things here are unformed, not fin
 				+ offending value in .value
 				+ other fields?
 
-			* add missing split('str', 'sep')
-
 			* cmake - check that C macros exists (E..., RTLD_...) and make them available. Currently most of the are commented out due to Mac OS support.
 
 			* File descriptors cleanup (close), especially when forking and making pipes
-
-			* Standardize and explain naming convention: function/method, attribute/property.
 
 			* Check ArgvMatcher - why ec2din.ngs does not have F main(..., *filters) ?
 
@@ -348,7 +335,19 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* Phase 5 - nice to have
 
+		* Iter improvements
+			* If migrating lines() to Iter
+				+ remember to implement ==(Iter, Arr), as used in tests:
+					fqdn = 'example.com'
+					fqdns = `mybin list`.lines()
+					assert(fqdns == [fqdn])
+				+ make sure join() works
+			* Iter[PredRange] - should return new Iter
+			* zip(Iter, Iter)
+			* limit(Iter, n)
+			* intersperse(Iter, ...)
 		* Inheriting built-in types without performance penalty (probably eliminates the need for ArrLike and HashLike)
+		* assert_proc(cp:CommandsPipeline, exit_code, stdout, stderr)
 		* Calling
 			* Predicates in parameters list?
 			* Immediate values in parameters list
@@ -528,6 +527,9 @@ Note that this started as internal document so things here are unformed, not fin
 		* Optimize so that namespace items access ("namespace::item") will not have Hash lookups
 
 		* Consider augeas integration
+
+		* Documentation
+			* Comparison and link to https://github.com/RexOps/Rex
 
 [types]
 	* Cloud / Compute / etc ?
