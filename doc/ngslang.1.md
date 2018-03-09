@@ -181,7 +181,7 @@ Expressions are separated by either newlines or by semicolon (`;`).
 	# Output:
 	[2,4,6,8,10]
 
-If the above example looks too verbose, here is the shorter and uglier alternative:
+If the above example looks too verbose, here is the shorter and uglier (and not generally recommended) alternative:
 
 	ngs -p '(1...10)?{A%2==0}'
 
@@ -930,7 +930,13 @@ Loops
 	#   While loop, iteration 0
 	#   While loop, iteration 1
 
-Switch and switch-like expressions
+Switch and switch-like expressions.
+
+* The first match activates the related code, there is no fall-through.
+* The value resulting from executing the code is the result of the switch-like expression.
+* If there is no match, `switch`, `match` and `cond` return `null`.
+* If there is no match, `eswitch`, `ematch` and `econd` throw `SwitchFail` exception.
+
 
 	a = 10
 	result = switch a {
@@ -964,10 +970,7 @@ Switch and switch-like expressions
 	echo("Cond result for $a is $result")
 	# Output: Cond result for 12 is Excellent
 
-	# There are also eswitch and econd which throw an exception
-	# when no match is found as opposed to swicth and cond which
-	# return null when no match is found.
-
+	# SwitchFail exception will be thrown
 	F will_throw_exception1() {
 		a = "bad value"
 		result = eswitch a {
@@ -976,13 +979,24 @@ Switch and switch-like expressions
 		}
 	}
 
+	# SwitchFail exception will be thrown
 	F will_throw_exception2() {
+		a = true
+		result = ematch a {
+			Int  "an integer"
+			Str  "a string"
+		}
+	}
+
+	# SwitchFail exception will be thrown
+	F will_throw_exception3() {
 		a = 10
 		result = econd {
 			a > 15 "one"
 			a > 20 "two"
 		}
 	}
+
 
 ## Regular expressions
 
