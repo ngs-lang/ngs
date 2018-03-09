@@ -14,7 +14,6 @@ Note that this started as internal document so things here are unformed, not fin
 				* Rename plan
 					* Method -> MultiMethod ; Method implementation -> Method
 					* Closure -> UserMethod ?
-					* Check about AnyVal / AnyRef. These do _not_ correspond to BasicType and NormalType.
 					* Instance -> Object?
 			* Standardize and explain naming convention: function/method, attribute/property.
 			* Generated [in progress]
@@ -85,6 +84,8 @@ Note that this started as internal document so things here are unformed, not fin
 			* Internals
 
 		* Milestone "correct programming"
+
+			* Support multi-command / multi-line $(...) syntax
 
 			* OS - make it a type, not a list booleans
 
@@ -217,8 +218,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Check what happens with misplaced local/upvar/global. Example: "F f(); global f" - function declaration causes f to be local
 
-			* Replace all compile asserts with exceptions
-
 			* Make sure (uncaught) exceptions go to stderr, not stdout
 
 			* get rid of expose() ?
@@ -229,9 +228,7 @@ Note that this started as internal document so things here are unformed, not fin
 				+ Not used in current stdlib
 				+ Think of use cases justifying existence of nuke_null()
 
-			* Low prioroty method MatchY[]
-
-			* break / continue - disable when not in for
+			* break / continue - disable when not in for/while
 
 			* -pedantic
 
@@ -530,6 +527,8 @@ Note that this started as internal document so things here are unformed, not fin
 			* Replacement can be Fun/value
 			Syntax for common pattern, somewhat analogous to only():
 			newval = if my_cond then my_func(my_val) else my_val
+
+		* Consider introducing AnyVal / AnyRef types. These do _not_ correspond to BasicType and NormalType.
 
 [types]
 	* Cloud / Compute / etc ?
