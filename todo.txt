@@ -5,7 +5,7 @@ Note that this started as internal document so things here are unformed, not fin
 	Unsorted and undecided things go here. The important sections is [roadmap] and it's just below this section.
 
 	* Conditional modification of value
-		* Conditon can be Fun/value
+		* Condition can be Fun/value
 		* Replacement can be Fun/value
 	* Look at Juju / conjure-up
 	* See what can be fixed regarding functions that accept Arr[T] for specific types

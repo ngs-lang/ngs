@@ -24,7 +24,7 @@ F init(net:IPNet, s:Str) {
 	net.bit_mask = (0..net.mask).reduce(0, { A / 2 + STDLIB_BIT_31})
 }
 
-STDLIB_PRIVATE_IP_NETWORKS = %[10.0.0.0/8 172.16.0.0/12 192.168.0.0/16] / IPNet
+STDLIB_PRIVATE_IP_NETWORKS = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'].map(IPNet)
 
 doc Check whether the IP address is in one of the given IP networks
 F in(addr:IPAddr, networks:Arr) {
