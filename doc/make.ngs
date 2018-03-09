@@ -89,8 +89,8 @@
 				'description': doc_attr(mi, '')
 				'auto': doc_attr(mi, '%AUTO').each(F(lines) assert(lines.len() == 1, '%AUTO must be used at most once per method'))
 				'params': mi.params().map(process_param(X, mi_doc))
-				'source_ref': Box(if mi is Closure {
-					# Handling Closure, not handling built-ins yet
+				'source_ref': Box(if mi is UserDefinedMethod {
+					# Handling UserDefinedMethod, not handling built-ins yet
 					location_info = mi.ip().resolve_instruction_pointer()
 					if m = location_info.file ~ pfx {
 						{

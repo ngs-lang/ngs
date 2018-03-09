@@ -446,8 +446,8 @@
 			process_method_impl_doc_attr(mi, dn, '%EX', ExampleDocNode)
 			process_method_impl_doc_attr(mi, dn, '%RET', RetDocNode)
 
-			if mi is Closure {
-				# Handling Closure, not handling built-ins yet
+			if mi is UserDefinedMethod {
+				# Handling UserDefinedMethod, not handling built-ins yet
 				location_info = mi.ip().resolve_instruction_pointer()
 				if m = location_info.file ~ pfx {
 					dn.push(LocationDocNode().set('file', m.after).set('line', location_info.first_line))

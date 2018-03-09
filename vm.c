@@ -2203,10 +2203,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 
-	MK_BUILTIN_TYPE_DOC(Fun, T_FUN, "Function type: an Array of Closures, a Closure, or a native method");
+	MK_BUILTIN_TYPE_DOC(Fun, T_FUN, "Function type: native method, user defined method, or a multimethod");
 
-		MK_BUILTIN_TYPE_DOC(Closure, T_CLOSURE, "Closure type. User-defined functions/methods are Closures");
-		vm->type_by_t_obj_type_id[T_CLOSURE >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Closure;
+		MK_BUILTIN_TYPE_DOC(UserDefinedMethod, T_CLOSURE, "UserDefinedMethod type. User-defined functions/methods are Closures");
+		vm->type_by_t_obj_type_id[T_CLOSURE >> T_OBJ_TYPE_SHIFT_BITS] = &vm->UserDefinedMethod;
 
 		MK_BUILTIN_TYPE_DOC(NativeMethod, T_NATIVE_METHOD, "Native method type");
 		vm->type_by_t_obj_type_id[T_NATIVE_METHOD >> T_OBJ_TYPE_SHIFT_BITS] = &vm->NativeMethod;
@@ -2499,9 +2499,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 		"    echo([10,20].find_the_one(30))",
 		"}",
 		"# Output:",
-		"#   <Return closure=<Closure find_the_one at 1.ngs:2> depth=7 val=null>",
+		"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
 		"#   Found it!",
-		"#   <Return closure=<Closure find_the_one at 1.ngs:2> depth=7 val=null>",
+		"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
 		"#   Not found",
 		NULL
 	);
@@ -2511,10 +2511,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "frames", "Array of locations. Each element of the array is a Hash with \"ip\" and \"closure\" properties.");
 	_doc_arr(vm, "%EX",
 		"Backtrace().frames.each(echo)",
-		"# {ip=4770, closure=<Closure <anonymous> at /etc/ngs/bootstrap.ngs:3>}",
-		"# {ip=4153, closure=<Closure bootstrap_exception_catch_wrapper at /etc/ngs/bootstrap.ngs:205>}",
-		"# {ip=3583, closure=<Closure bootstrap at /etc/ngs/bootstrap.ngs:111>}",
-		"# {ip=116587, closure=<Closure <anonymous> at <command line -pi switch>:2>}",
+		"# {ip=4770, closure=<UserDefinedMethod <anonymous> at /etc/ngs/bootstrap.ngs:3>}",
+		"# {ip=4153, closure=<UserDefinedMethod bootstrap_exception_catch_wrapper at /etc/ngs/bootstrap.ngs:205>}",
+		"# {ip=3583, closure=<UserDefinedMethod bootstrap at /etc/ngs/bootstrap.ngs:111>}",
+		"# {ip=116587, closure=<UserDefinedMethod <anonymous> at <command line -pi switch>:2>}",
 		NULL
 	);
 
@@ -2636,7 +2636,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, "Return",          &native_Return,   0);
 	_doc(vm, "", "Get closure-specific Return type. Throwing it, will return from the closure");
 	_doc_arr(vm, "%EX",
-		"F f() Return(); f()  # <Return closure=<Closure f at <command line -pi switch>:2> depth=4 val=null>",
+		"F f() Return(); f()  # <Return closure=<UserDefinedMethod f at <command line -pi switch>:2> depth=4 val=null>",
 		"",
 		"F first(r:NumRange, predicate:Fun) {",
 		"	finish = Return()",
@@ -2661,7 +2661,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Unfinished feature. Don't use!");
 
 	// threads
-	register_global_func(vm, 1, "c_pthread_create",       &native_c_pthreadcreate_pthreadattr_startroutine_arg, 3, "attr", vm->c_pthread_attr_t, "start_routine", vm->Closure, "arg", vm->Any);
+	register_global_func(vm, 1, "c_pthread_create",       &native_c_pthreadcreate_pthreadattr_startroutine_arg, 3, "attr", vm->c_pthread_attr_t, "start_routine", vm->UserDefinedMethod, "arg", vm->Any);
 	_doc(vm, "", "Call PTHREAD_CREATE(3). Not recommended for direct calls, use Thread type instead.");
 	_doc(vm, "%RET", "Arr with [Int, c_pthread_t]. Int is the status returned by pthread_create(). c_pthread_t is a thin wrapper around underlying pthread_t, returned by PTHREAD_CREATE(3)");
 	_doc_arr(vm, "%EX",
@@ -2733,8 +2733,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%EX", "type T; T==T  # true");
 	_doc(vm, "%EX", "type T1; type T2; T1==T2  # false");
 
-	// Closure
-	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->Closure, "b", vm->Closure);
+	// UserDefinedMethod
+	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->UserDefinedMethod, "b", vm->UserDefinedMethod);
 	_doc(vm, "", "Compare closures. Implemented as sameness comparison.");
 	_doc_arr(vm, "%EX",
 		"F make_closure() { F(x) x + 1 }; make_closure()      == make_closure()       # false - different instances",
@@ -2742,7 +2742,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 		"f = F(x) x +1; f == f  # true - same instance",
 		NULL
 	);
-	register_global_func(vm, 0, "params",   &native_params_closure,    1, "c",      vm->Closure);
+	register_global_func(vm, 0, "params",   &native_params_closure,    1, "c",      vm->UserDefinedMethod);
 	_doc(vm, "", "Get closure parameters.");
 	_doc_arr(vm, "%EX",
 		"... F the_one(something, predicate, body:Fun, found_more:Fun={null}, found_none:Fun={null}) ...",
@@ -2750,12 +2750,12 @@ void vm_init(VM *vm, int argc, char **argv) {
 		"# {name=something, type=<Type Any>}",
 		"# {name=predicate, type=<Type Any>}",
 		"# {name=body, type=<Type Fun>}",
-		"# {name=found_more, type=<Type Fun>, dflt=<Closure <anonymous> at /usr/share/ngs/stdlib.ngs:198>}",
-		"# {name=found_none, type=<Type Fun>, dflt=<Closure <anonymous> at /usr/share/ngs/stdlib.ngs:198>}",
+		"# {name=found_more, type=<Type Fun>, dflt=<UserDefinedMethod <anonymous> at /usr/share/ngs/stdlib.ngs:198>}",
+		"# {name=found_none, type=<Type Fun>, dflt=<UserDefinedMethod <anonymous> at /usr/share/ngs/stdlib.ngs:198>}",
 		NULL
 	);
 
-	register_global_func(vm, 0, "ip",       &native_ip_closure,        1, "c",      vm->Closure);
+	register_global_func(vm, 0, "ip",       &native_ip_closure,        1, "c",      vm->UserDefinedMethod);
 	_doc(vm, "", "Get closure code instruction pointer.");
 	_doc(vm, "%RET", "Int");
 	_doc(vm, "%EX", "f=F(x) x+1; f.ip()  # 116506");
@@ -2853,7 +2853,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
 	_doc_arr(vm, "%EX",
 		"Hash.name  # String: Hash",
-		"Hash.constructors  # [<Native method Hash>,<Closure Hash at ...>,...]",
+		"Hash.constructors  # [<Native method Hash>,<UserDefinedMethod Hash at ...>,...]",
 		NULL
 	);
 

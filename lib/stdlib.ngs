@@ -766,7 +766,7 @@ F init(hook:Hook) {
 doc Add unnamed handler.
 doc The hook is automatically named "pushed-N" where N is sequential integer.
 doc %RET - New hook name
-F push(hook:Hook, handler:Closure) {
+F push(hook:Hook, handler:UserDefinedMethod) {
 	name = "pushed-${hook.attrs().idx}"
 	hook.attrs().idx += 1
 	hook[name] = handler
@@ -801,7 +801,7 @@ TEST Real('1.1') == 1.1
 
 doc Do not use!
 F StrParams(f:Fun) {
-	guard f is Closure or f is NativeMethod
+	guard f is UserDefinedMethod or f is NativeMethod
 	f.params().map(F(p) {
 		d = if 'dflt' in p then '=...' else ''
 		"${p.get('splat', '')}${p.name}:${p.type.name}${d}"
@@ -822,17 +822,17 @@ doc %RET - "<NormalTypeConstructor>"
 doc %EX - Box.constructors.Arr()[0].Str().echo()  # Outputs: <NormalTypeConstructor>
 F Str(ntc:NormalTypeConstructor) "<NormalTypeConstructor>"
 
-# === Closure ====================================
+# === UserDefinedMethod ====================================
 
 # TODO: show arguments:
-#   "<Closure ${c.attrs().name tor "<anonymous>"}(HERE) at ${location}>"
+#   "<UserDefinedMethod ${c.attrs().name tor "<anonymous>"}(HERE) at ${location}>"
 doc String representation of a closure
 doc %RET - Str
-doc %EX - Real.constructors[-1].Str().echo()  # Outputs: <Closure Real at /usr/share/ngs/stdlib.ngs:350>
-F Str(c:Closure) {
+doc %EX - Real.constructors[-1].Str().echo()  # Outputs: <UserDefinedMethod Real at /usr/share/ngs/stdlib.ngs:350>
+F Str(c:UserDefinedMethod) {
 	info = c.ip().resolve_instruction_pointer()
 	location = "${info.file}:${info.first_line}" tor "<unknown location>"
-	"<Closure ${c.attrs().name tor "<anonymous>"}${StrParams(c)} at ${location}>"
+	"<UserDefinedMethod ${c.attrs().name tor "<anonymous>"}${StrParams(c)} at ${location}>"
 }
 
 # === Type =======================================

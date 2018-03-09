@@ -764,7 +764,7 @@ Anonymous function (method) literal
 
 	f = F(item) { echo("Item: $item") }
 	echo("F is $f")
-	# Output: F is <Closure <anonymous> at 1.ngs:1>
+	# Output: F is <UserDefinedMethod <anonymous> at 1.ngs:1>
 
 	each([10,20,30], f)
 	# Output:
@@ -827,9 +827,9 @@ Method-related flow control
 	echo([10,20].find_the_one(20))
 	echo([10,20].find_the_one(30))
 	# Output:
-	#   <Return closure=<Closure find_the_one at 1.ngs:2> depth=7 val=null>
+	#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>
 	#   Found it!
-	#   <Return closure=<Closure find_the_one at 1.ngs:2> depth=7 val=null>
+	#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>
 	#   Not found
 
 ## Short circuit binary operators
@@ -1393,8 +1393,8 @@ Method signature: `exit_hook(exit_info:Hash)`. `exit_info` currently has two key
 
 	$ ngs -pi 'exit_hook.Hash()'
 	Hash of size 2
-	[print_exception] = <Closure <anonymous> at /usr/share/ngs/stdlib.ngs:2110>
-	[exception_to_exit_code] = <Closure <anonymous> at /usr/share/ngs/stdlib.ngs:2117>
+	[print_exception] = <UserDefinedMethod <anonymous> at /usr/share/ngs/stdlib.ngs:2110>
+	[exception_to_exit_code] = <UserDefinedMethod <anonymous> at /usr/share/ngs/stdlib.ngs:2117>
 
 * `print_exception` prints exception details if an exception occurred.
 * `exception_to_exit_code` sets the exit code using `ExitCode`. Unless defined for your specific exception, `ExitCode` of an `Exception` returns **200**.
@@ -1726,10 +1726,10 @@ This section is planned to grow over time.
 	MultiMethod
 	  Methods
 		Array of size 7
-		  [0] = <Closure map(e:Eachable, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:242>
-		  [1] = <Closure map(arr:Arr, n:Int, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:1600>
-		  [2] = <Closure map(h:Hash, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:2209>
-		  [3] = <Closure map(fb:FullBox, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:2550>
-		  [4] = <Closure map(eb:EmptyBox, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:2555>
-		  [5] = <Closure map(s:Success, fun:Fun) at /usr/local/lib/ngs/stdlib.ngs:2762>
-		  [6] = <Closure map(f:Failure, fun:Fun) at /usr/local/lib/ngs/stdlib.ngs:2771>
+		  [0] = <UserDefinedMethod map(e:Eachable, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:242>
+		  [1] = <UserDefinedMethod map(arr:Arr, n:Int, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:1600>
+		  [2] = <UserDefinedMethod map(h:Hash, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:2209>
+		  [3] = <UserDefinedMethod map(fb:FullBox, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:2550>
+		  [4] = <UserDefinedMethod map(eb:EmptyBox, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:2555>
+		  [5] = <UserDefinedMethod map(s:Success, fun:Fun) at /usr/local/lib/ngs/stdlib.ngs:2762>
+		  [6] = <UserDefinedMethod map(f:Failure, fun:Fun) at /usr/local/lib/ngs/stdlib.ngs:2771>

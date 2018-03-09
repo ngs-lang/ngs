@@ -7,7 +7,7 @@
 
 doc Internal method. Please do not use.
 doc Tries to run c if it matches argv.
-F bootstrap_try_main(c:Closure, argv:Arr, finish:Return) {
+F bootstrap_try_main(c:UserDefinedMethod, argv:Arr, finish:Return) {
 	bootstrap_debug("Trying main() candidate $c")
 	try {
 		m = null

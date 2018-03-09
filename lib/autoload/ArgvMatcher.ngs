@@ -24,7 +24,7 @@ doc value - Option value.
 doc %EX - # Any command line argument that is not "allreg" goes to "filters" parameters.
 doc %EX - ArgvMatcher('positionals', 'filters') do
 doc %EX - F main(filters:Arr, allreg:Bool=false) ...
-F ArgvMatcher(option:Str, value, f:Closure) {
+F ArgvMatcher(option:Str, value, f:UserDefinedMethod) {
 	h = f.attrs()
 	assert(h is Hash)
 	h.dflt('ArgvMatcher', {})
@@ -40,11 +40,11 @@ F ArgvMatcher(option:Str, value, f:Closure) {
 doc Please do not use directly!
 doc Tries to match command line arguments with closure parameters.
 doc argv - Command line arguments, typically ARGV
-doc c - Closure to match with
+doc udm - UserDefinedMethod to match with
 doc %RET - Match (ParamsMatchY on success, ParamsMatchN on failure). If ParamsMatchY is returned it has "matches" property with values is suitable order to call c. If ParamsMatchN is returned, it has "message" property explaining why there was no match. Currently it's not printed anywhere.
 doc %EX - ArgvMatcher; (["--b", "B", "A", "C"] ~ F(a,b,c) 7).matches  # %[A B C]
 doc %EX - (["A", "C", "D", "--b", "B"] ~ ArgvMatcher("positionals", "a") do F(a,b) 7).matches  # %[%[A C D] B]
-F ~(argv:Arr, c:Closure) {
+F ~(argv:Arr, udm:UserDefinedMethod) {
 
 	LONG_SW_PFX = Pfx('--')
 	SHORT_SW_PFX = Pfx('-')
@@ -52,7 +52,7 @@ F ~(argv:Arr, c:Closure) {
 
 	match_ret = Return()
 
-	params_by_pos = c.params()
+	params_by_pos = udm.params()
 
 	have_arr_splat = false
 	have_hash_splat = false
@@ -145,7 +145,7 @@ F ~(argv:Arr, c:Closure) {
 		}
 	}
 
-	if (param_name = try c.attrs().ArgvMatcher.positionals) {
+	if (param_name = try udm.attrs().ArgvMatcher.positionals) {
 		set_match(positionals)
 		positionals = []
 	}

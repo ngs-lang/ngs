@@ -167,7 +167,7 @@ typedef struct {
 	VALUE Str;
 	VALUE Arr;
 	VALUE Fun;
-		VALUE Closure;
+		VALUE UserDefinedMethod;
 		VALUE NativeMethod;
 		VALUE MultiMethod;
 	VALUE Any;

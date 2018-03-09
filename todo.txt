@@ -10,9 +10,6 @@ Note that this started as internal document so things here are unformed, not fin
 	* Phase 1 - the language [in progress]
 
 		* Milestone "documentation" [in progress]
-			* Naming fixes
-				* Rename plan
-					* Closure -> UserMethod ?
 			* Standardize and explain naming convention: function/method, attribute/property.
 			* Generated [in progress]
 				* Pages
