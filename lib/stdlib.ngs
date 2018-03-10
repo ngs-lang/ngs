@@ -5216,10 +5216,9 @@ doc Inspect Int
 doc %RET - Arr with one element, Str
 F inspect(i:Int) ["Int: $i"]
 
-# TODO: escape special characters
 doc Inspect Str
 doc %RET - Arr with one element, Str
-F inspect(s:Str) ["String(${s.len()}): $s"]
+F inspect(s:Str) ["String(${s.len()}): ${SafeStr(s)}"]
 
 doc Inspect Arr
 doc %RET - Arr of Str

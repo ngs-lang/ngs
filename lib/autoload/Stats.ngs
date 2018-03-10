@@ -2,7 +2,7 @@
 
 {
 	doc A group of named counters
-	doc h - The underlying Hash, expose()d
+	doc h - The underlying Hash
 	doc %EX - s = Stats().push('a').push('a').push('b')
 	doc %EX - s["a"]  # 2
 	doc %EX - s["b"]  # 1

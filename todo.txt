@@ -39,7 +39,6 @@ Note that this started as internal document so things here are unformed, not fin
 			* Make multiple versions installable side by side, like Node.js
 
 		* Milestone "programming"
-
 			* files globbing
 				consider special syntax such as <foo*bar>
 				think about Res globbing
@@ -102,6 +101,16 @@ Note that this started as internal document so things here are unformed, not fin
 						# syntax
 						yes)
 				* Fix $(separate$item issue)
+				* Fix segfault in case of comments between cond clauses
+				* Fix - ngs: vm.c:2988: vm_run: Assertion `0=="Function does not have result value"' failed.
+					F parse(s:Str, hints:Hash) {
+						guard try hints['process'].command.argv[0] == 'find'
+						# argv = hints['process'].command.argv
+						# guard '-printf' not in argv
+						# zero_sep = '-print0' in argv
+						# if zero_sep then s.split('\0') else s.lines()
+					}
+				* Make comments that begin not at beginning of line work
 
 			* Think about unification of Eachable and Iter
 				* Maybe something resembling "yield"
@@ -161,15 +170,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Replace Command#options with Hash (currently Arr)
 
-			* Fix - ngs: vm.c:2988: vm_run: Assertion `0=="Function does not have result value"' failed.
-				F parse(s:Str, hints:Hash) {
-					guard try hints['process'].command.argv[0] == 'find'
-					# argv = hints['process'].command.argv
-					# guard '-printf' not in argv
-					# zero_sep = '-print0' in argv
-					# if zero_sep then s.split('\0') else s.lines()
-				}
-
 			* Run exit_hook on CTRL+C (Throw exception)
 
 			* Copy stderr to both stderr and to captured .stderr of the process
@@ -184,15 +184,11 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* OP_PUSH_INT - check limits of the number
 
-			* Make comments that begin not at beginning of line work
-
 			* Go over methods and make sure the method X types matrix is as full as possible
 
 			* Partial application syntax
 				* Make sure it works correct in expressions such as 10 + X * 2
 				* Check that this works: f(X, *something, **some_kw)
-
-			* Fix segfault in case of comments between cond clauses
 
 			* Go over naming convention, making sure it's consistent and can be easily described in the manual
 
@@ -213,14 +209,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Make sure (uncaught) exceptions go to stderr, not stdout
 
-			* get rid of expose() ?
-				+ Used in Stats
-				+ Probably needs inheritance from builtin types
-
-			* get rid of nuke_null() ?
-				+ Not used in current stdlib
-				+ Think of use cases justifying existence of nuke_null()
-
 			* break / continue - disable when not in for/while
 
 			* -pedantic
@@ -230,8 +218,6 @@ Note that this started as internal document so things here are unformed, not fin
 			* compile
 				* exceptions instead of asserts
 				* disallow duplicate name for an argument
-
-			* Fix inspect() and maybe others to display special symbols in strings as \x.. or alike
 
 			* -(Str, Ifx)
 
