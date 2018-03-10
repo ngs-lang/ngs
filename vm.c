@@ -4160,7 +4160,6 @@ main_loop:
 							// DEBUG_VM_RUN("OP_FETCH_GLOBAL gvi=%d len=%d\n", gvi, vm->globals_len);
 							assert(gvi < vm->globals_len);
 #endif
-							// TODO: report error here instead of crashing
 							if(IS_UNDEF(GLOBALS[gvi])) {
 								THIS_FRAME.last_ip = ip;
 
