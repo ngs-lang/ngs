@@ -10,7 +10,7 @@ Note that this started as internal document so things here are unformed, not fin
 	* Phase 1 - the language [in progress]
 
 		* Milestone "documentation" [in progress]
-			* Standardize and explain naming convention: function/method, attribute/property.
+			* Standardize and explain naming convention: attribute/property/field.
 			* Generated [in progress]
 				* Pages
 					* Namespaces related
@@ -27,9 +27,7 @@ Note that this started as internal document so things here are unformed, not fin
 			* Document AWS library (including usage examples)
 				* Example: AWS::Elb().reject(X.Instances).delete()
 			* Exit codes (see bootstrap.ngs and ngs.c)
-			* Community examples: look at Kubernetes/examples/task/*,readme
 			* Link from constructors to types
-			* Type constructors and object creation
 			* Nested namespaces (AWS::util)
 			* "N methods" in link to namespace - filter by added implementations, don't count x in "global init; x = init"
 

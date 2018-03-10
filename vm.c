@@ -2853,7 +2853,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
 	_doc_arr(vm, "%EX",
 		"Hash.name  # String: Hash",
-		"Hash.constructors  # [<Native method Hash>,<UserDefinedMethod Hash at ...>,...]",
+		"Hash.constructors  # [<NativeMethod Hash>,<UserDefinedMethod Hash at ...>,...]",
 		NULL
 	);
 

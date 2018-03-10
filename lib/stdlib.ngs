@@ -811,9 +811,9 @@ F StrParams(f:Fun) {
 # === NativeMethod ===============================
 
 doc String representation of native method.
-doc %RET - "<Native method NAME(PARAMS)>"
-doc %EX - (%).Arr()[0].Str().echo()  # Outputs: <Native method %(a:Int, b:Int)>
-F Str(nm:NativeMethod) "<Native method ${nm.attrs().name}${StrParams(nm)}>"
+doc %RET - "<NativeMethod NAME(PARAMS)>"
+doc %EX - (%).Arr()[0].Str().echo()  # Outputs: <NativeMethod %(a:Int, b:Int)>
+F Str(nm:NativeMethod) "<${nm.typeof().name} ${nm.attrs().name}${StrParams(nm)}>"
 
 # === NormalTypeConstructor ===============================
 
@@ -2264,7 +2264,7 @@ doc %RET - Hash
 doc %EX - mapk({"a": 1}, F(k) k+"z")  # {"az": 1}
 F mapk(h:Hash, mapper:Fun)
 	collector/{}
-		h % { collect(mapper(A), B) }
+		h.each(F(k, v) collect(mapper(k), v))
 
 TEST mapk({"a": 1}, X+"z") == {"az": 1}
 
@@ -2283,7 +2283,7 @@ doc %EX - top .= limit(10)
 doc %EX - echo(top)  # Outputs: {con=1219, dis=1001, pro=808, pre=607, com=600, int=543, tra=498, ove=431, per=422, imp=421}
 F mapv(h:Hash, mapper:Fun)
 	collector/{}
-		h % { collect(A, mapper(B)) }
+		h.each(F(k, v) collect(k, mapper(v)))
 
 TEST mapv({"a": 1}, X+1) == {"a": 2}
 

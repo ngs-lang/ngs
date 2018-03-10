@@ -1225,7 +1225,7 @@ NGS is dynamically typed language: values (and not variables) have types.
 	a = "ok"
 	# 'a' had value of one type and then value of another type
 
-NGS is a "strongly typed" language: values are not implicitly converted to unrelated types. This makes the language more verbose but prevents some bugs.
+NGS is a "strongly typed" language: values are not implicitly converted to unrelated types. This makes the language more verbose in some cases but helps catch certain type of bugs earlier.
 
 	echo(1+"2")
 	# ... Exception of type MethodNotFound occured ...
@@ -1234,7 +1234,7 @@ NGS is a "strongly typed" language: values are not implicitly converted to unrel
 	echo(1+Int("2"))
 	# Output: 3
 
-# Built-in types
+## Built-in types
 
 There are several built-in types. Sample types and values:
 
@@ -1260,7 +1260,7 @@ Checking types:
 
 See types reference: [ngstyp(1)](ngstyp.1.html).
 
-# Define your own types
+## Define your own types
 
 You can define your own types. Let's define `Counter` type and a few methods that can operate on values of the `Counter` type. Then we'll define `MyCounter` sub-type and it's `incr` method:
 
@@ -1319,6 +1319,32 @@ You can define your own types. Let's define `Counter` type and a few methods tha
 		echo(c.get())
 		# Output: 10
 	}
+
+## Type constructors and object creation
+
+* When type definition (`type T`) is executed, NGS defines the `.constructors` MultiMethod that includes one method. This method creates object of type `T`. The type of this method is `NormalTypeConstructor`.
+* After defining a type `T`, one can add methods using `F T(...) {...}` definitions. If you add your method to the `.constructors` field, please make sure it returns an object of type `T` or object of a type that is a subtype of `T`. Otherwise, it will be surprising for the callers.
+* When you call a user defined type, its `.constructors` MultiMethod is called.
+* If the default constructor added by NGS (method of type `NormalTypeConstructor`) gets executed, it does the following:
+	* Creates object of type `T`
+	* Runs `init()` MultiMethod with the new object as the first argument and the arguments of the call to `T(...)` as second and on arguments to `init(...)`.
+	* Note that calling `init()` might trigger `MethodNotFound` exception. It is ignored if and only if the call to `T()` had no arguments.
+
+
+	# Customizing Box object creation (code from stdlib)
+	F Box(x) FullBox(x)
+	F Box(n:Null) EmptyBox()
+	F Box(a:Arr, idx) { ... }
+	F Box(h:Hash, k) { ... }
+
+	# FullBox initialization, called when FullBox(x) is called
+	F init(b:FullBox, val) b.val = val
+
+	# Note that there is no init(eb:EmptyBox) as there is nothing to initialize
+
+	Box(1)    # FullBox with 1 as value
+	Box(null) # EmptyBox
+
 
 # Methods, multimethods and calling
 

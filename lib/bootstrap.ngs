@@ -54,7 +54,7 @@ main = MultiMethod()
 # *** Define bootstrap_debug function ***
 bootstrap_debug =
 	if 'NGS_BOOTSTRAP_DEBUG' in ENV
-		F(s) echo("+ [BOOSTRAP DEBUG] $s")
+		F(s) echo(2, "+ [BOOSTRAP DEBUG] $s")
 	else
 		F(s) {}
 
@@ -68,6 +68,7 @@ bootstrap_ngs_dir_candidates = [
 doc Internal method. Please do not use.
 doc Find which of bootstrap_ngs_dir_candidates directories contains stdlib.ngs . That directory would be the "NGS_DIR".
 doc %RET - Str or null
+doc %STATUS - internal
 F bootstrap_find_ngs_dir() {
 	l = bootstrap_ngs_dir_candidates.len()
 	for(i;l) {
@@ -78,12 +79,11 @@ F bootstrap_find_ngs_dir() {
 
 doc Internal method. Please do not use.
 doc Use the environment variable "NGS_DIR" for "NGS_DIR".
+doc %STATUS - internal
 F bootstrap_find_ngs_dir() {
 	guard 'NGS_DIR' in ENV
 	ENV['NGS_DIR']
 }
-
-bootstrap_main_file = null
 
 # *** read - abstraction above low level c io primitives ***
 # TODO: Better exceptions
@@ -125,6 +125,7 @@ F require(fname:Str) {
 
 doc Internal method. Please do not use.
 doc Main entry point. Executed on NGS boot.
+doc %STATUS - internal
 F bootstrap() {
 	global ARGV0
 	global ORIG_ARGV = copy(ARGV)
@@ -193,7 +194,6 @@ F bootstrap() {
 	program_bytecode = compile(code_to_run, fname)
 	bootstrap_debug("bootstrap(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
 	program_func = load(program_bytecode, "bootstrap()ped file: $fname")
-	global bootstrap_main_file = fname
 
 	result = program_func()
 
@@ -203,7 +203,7 @@ F bootstrap() {
 		if global_not_found_handler.len() == 0 {
 			throw MainFail("Autoloading (usually defined in stdlib) is not present but the main() invoking mechanism requires it")
 		}
-		result = bootstrap_invoke_main(result)
+		result = bootstrap_invoke_main(fname, result)
 	}
 	# Handle main() - end
 
@@ -239,6 +239,7 @@ F bootstrap() {
 
 doc Internal method. Please do not use.
 doc Runs bootstrap() and handles exceptions.
+doc %STATUS - internal
 F bootstrap_exception_catch_wrapper() {
 	exception = null
 	exit_code = null
