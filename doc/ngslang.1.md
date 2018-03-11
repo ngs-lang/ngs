@@ -1164,7 +1164,7 @@ Keyword arguments implementation is preliminary so:
 	kwargs = {"a": 10}
 	F f(a, **kw) a; f(1, **kwargs) == 1
 
-	# Keyword arguments for existing named attributes cause parameters not to match
+	# Keyword arguments for existing named parameters cause parameters not to match
 	kwargs = {"a": 10}
 	F f(a) a; f(1, **kwargs) == 1
 
@@ -1274,7 +1274,7 @@ You can define your own types. Let's define `Counter` type and a few methods tha
 		#   Counter() returns the newly-created value of type Counter
 
 		F init(c:Counter) {
-			# Initialize the counter_value attribute
+			# Initialize the counter_value field
 			c.counter_value = 0
 		}
 

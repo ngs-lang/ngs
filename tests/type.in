@@ -24,8 +24,8 @@
 	echo('Test: instance of T is U (after inheritance)')
 	dump(t1 is U)
 
-	echo('Test: AttrNotFound')
-	dump(try T().x catch(AttrNotFound) "OK")
+	echo('Test: FieldNotFound')
+	dump(try T().x catch(FieldNotFound) "OK")
 
 	echo('Test: Custom constructor')
 	F T(n:Int) {

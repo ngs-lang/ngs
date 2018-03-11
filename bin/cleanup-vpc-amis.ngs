@@ -18,7 +18,7 @@
 	# "try expr" is shortcut for "try expr catch(e:Exception) null" - silently
 	# discard all exceptions in expr and return null when they occur.
 	# In our case i.Tags could throw and i.Tags.role could throw if the
-	# attribute after the last dot is nor present.
+	# field after the last dot is nor present.
 	# ---
 	# ``command`` - runs the command and parses the output to a data structure
 	images = ``aws ec2 describe-images --owner self``.filter(F(i) try i.Tags.role).sort('CreationDate')

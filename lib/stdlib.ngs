@@ -52,7 +52,7 @@ F init(h:Hash) {
 }
 
 doc IndexNotFound exception constructor
-doc %RET - IndexNotFound object with the given message, container and key attributes
+doc %RET - IndexNotFound object with the given message, container and key fields
 F init(e:IndexNotFound, message:Str, container, key) init(args())
 
 doc Throws AssertFail with givens message if condition is false
@@ -84,7 +84,7 @@ F init(e:InstantiatingAbstractType, t:Type) init(args())
 
 # === Namespaces =================================
 
-doc Get NormalType object attribute. Useful when calling method stored in an attribute.
+doc Get NormalType object field. Useful when calling method stored in an field.
 doc %EX - myobj::method_in_attr(arg)  # calls method stored in myobj.method_in_attr
 doc %EX - (myobj.method_in_attr)(arg) # calls method stored in myobj.method_in_attr
 doc %EX - myobj.method_in_attr(arg)   # calls global "method_in_attr"
@@ -95,7 +95,7 @@ doc Useful for working with namespaces, which are implemented as Hash instances.
 doc %EX - elb = AWS::Elb(...).converge(...)
 F '::'(h:Hash, k) h[k]
 
-doc Set NormalType object attribute. It's implemented to complete the :: operator. There is no particular use case.
+doc Set NormalType object field. It's implemented to complete the :: operator. There is no particular use case.
 F '::='(nti:NormalTypeInstance, k, v) nti.(k) = v
 doc Set Hash key. It's implemented to complete the :: operator. There is no particular use case.
 F '::='(h:Hash, k, v) h[k] = v
@@ -203,7 +203,7 @@ F partial_tail(f:Fun, *bind_args)
 
 TEST p = partial_tail((-), 10); p(7) == -3
 
-doc Sets the given attribute to the given value
+doc Sets the given field to the given value
 doc %RET - The modified obj
 doc %EX - s.len() != 1 throws InvalidArgument("ord() argument must be of length 1 exactly").set('given', s)
 doc %EX - # Would else be written as
@@ -212,8 +212,8 @@ doc %EX - 	e = InvalidArgument("ord() argument must be of length 1 exactly")
 doc %EX - 	e.given = s
 doc %EX - 	throw e
 doc %EX - }
-F set(obj, attr:Str, val) {
-	obj.(attr) = val
+F set(obj, field:Str, val) {
+	obj.(field) = val
 	obj
 }
 
@@ -223,7 +223,7 @@ doc %RET - A function that compares the only argument to the given value
 F Pred(anything:BasicTypeInstance) F eq_pred(x) x == anything
 
 doc Convert Hash to a predicate. The predicate asserts that
-doc object attributes named after h hash keys return true for predicates made of corresponding hash values.
+doc object fields named after h hash keys return true for predicates made of corresponding hash values.
 doc Inspired by underscorejs' "matcher"
 F Pred(h:Hash) {
 	preds = h.mapv(Pred)
@@ -303,11 +303,11 @@ F filter(e:Eachable1, predicate) {
 
 
 doc DEPRECATED! Do not use!
-doc Use something.filter({attr: predicate}) instead.
+doc Use something.filter({field: predicate}) instead.
 doc %STATUS - deprecated
-F filter(something:Eachable1, attr:Str, predicate) {
+F filter(something:Eachable1, field:Str, predicate) {
 	p = Pred(predicate)
-	something.filter({ p(A.(attr)) })
+	something.filter({ p(A.(field)) })
 }
 
 doc Partition elements in something according to the predicate into two arrays.
@@ -611,8 +611,8 @@ TEST a=[1,2]; a.push_all([3,4]); a==[1,2,3,4]
 # TODO [doc]: examples in methods
 {
 	doc Parent type for user-defined types with array-like behaviour. Use in cases when you would like to inherit from built-in Arr. Inheriting from built-ins is not possible for now.
-	doc arr_like_attr - name of the attribute that holds the underlying array, defaults to "items"
-	doc items - default attribute for the underlying array
+	doc arr_like_attr - name of the field that holds the underlying array, defaults to "items"
+	doc items - default field for the underlying array
 	doc %EX - type T(ArrLike)
 	doc %EX - F Str(t:T) "<My array has ${len(t)} items totalling ${sum(t)}>"  # Override one of the Arr methods
 	doc %EX - a = T()
@@ -630,9 +630,9 @@ TEST a=[1,2]; a.push_all([3,4]); a==[1,2,3,4]
 }
 
 doc ArrLike constructor
-doc attr - name of the attribute that holds the underlying array
-F init(al:ArrLike, attr:Str='items') {
-	al.arr_like_attr = attr
+doc field - name of the field that holds the underlying array
+F init(al:ArrLike, field:Str='items') {
+	al.arr_like_attr = field
 	al.(al.arr_like_attr) = []
 }
 
@@ -719,9 +719,6 @@ F values(hl:HashLike)        hl.attrs().HashLike.values()
 doc Check whether hl has any elements.
 doc %RET - Bool
 F Bool(hl:HashLike)          hl.attrs().HashLike.Bool()
-
-# TODO: mapk, mapv and friends
-# TOOD: Hash() - copy or hash attribute?
 
 doc Filter hash. Build new HashLike with kev-value pairs selected by predicate.
 doc predicate - Test function to be called with one key and one value at a time.
@@ -896,9 +893,9 @@ F Str(i:NormalTypeInstance) {
 TEST type T; t=T(); Str(t) == '<T>'
 TEST type T; t=T(); t.a=1; t.b=2; Str(t) == '<T a=1 b=2>'
 
-doc Set an attribute in an object if it's not already set
+doc Set object field if it's not already set
 doc %EX - my_something.dflt(k, []).push(elt)
-doc %RET - Attribute value, the already-existed or new.
+doc %RET - Field value, the already-existed or new.
 F dflt(i:NormalTypeInstance, k, v) {
 	if k not in i {
 		i.(k) = v
@@ -909,7 +906,7 @@ F dflt(i:NormalTypeInstance, k, v) {
 TEST type T; t=T(); t.dflt("a", 1); t.a == 1
 TEST type T; t=T(); t.a = 2; t.dflt("a", 1); t.a == 2
 
-doc Set an attribute on all elements if it's not already set
+doc Set a field on all elements if it's not already set
 doc e - Eachable1 with elements of type NormalTypeInstance or Hash
 doc %EX - my_items.dflt("source", "(unknown)")
 doc %RET - e
@@ -921,7 +918,7 @@ F dflt(e:Eachable1, k, v) {
 
 TEST [{}, {"x": 1}].dflt("x", 100) == [{"x": 100}, {"x": 1}]
 
-doc Equaity test for normal type instances: must be of same type and have same attributes and their values
+doc Equality test for normal type instances: must be of same type and have same fields and their values
 doc %RET - Bool
 doc %EX - type T
 doc %EX - t1 = T()
@@ -948,7 +945,7 @@ F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
 	type CException
 	CException.inherit(Error)
 
-	doc CException constructor. In addition to storing message attribute, adds errno and errno_name attributes.
+	doc CException constructor. In addition to storing message field, adds errno and errno_name fields.
 	F init(e:CException, message:Str) {
 		errno = c_errno()
 		super(e, message)
@@ -956,7 +953,7 @@ F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
 		e.errno_name = c_strerror(e.errno)
 	}
 
-	doc CException constructor. In addition to storing message attribute, adds errno and errno_name attributes.
+	doc CException constructor. In addition to storing message field, adds errno and errno_name fields.
 	F init(e:CException, errno:Int, message:Str) {
 		super(e, message)
 		e.errno = errno
@@ -1367,13 +1364,13 @@ TEST a=0; (try finally() with {1/0} with {a=10} catch(e:DivisionByZero) "OK") ==
 doc Get hash key.
 doc %EX - h = {"a": 1}
 doc %EX - h.a  # 1, Same as h["a"]
-F .(h:Hash, attr:Str) h[attr]
+F .(h:Hash, field:Str) h[field]
 
 doc Set hash key.
 doc %EX - h = {"a": 1}
 doc %EX - h.a = 2  # 2, Same as h["a"] = 2
 doc %RET - v
-F .=(h:Hash, attr:Str, v) h[attr] = v
+F .=(h:Hash, field:Str, v) h[field] = v
 
 doc Get hash value by key or null if it does not exist
 doc %EX - h = {"a": 1}
@@ -1397,45 +1394,45 @@ TEST %{k 7 kk "a"}.n() == {'k': 7, 'kk': 'a'}
 # --- Arr ---
 
 # TODO: generalize to Eachable1 ?
-doc Return array made of given attribute of each element of given array.
-doc Will throw KeyNotFound if any of the elements does not have the desired attribute.
-doc Use get() to handle missing attribute differently.
+doc Return array made of given field of each element of given array.
+doc Will throw KeyNotFound if any of the elements does not have the desired field.
+doc Use get() to handle missing field differently.
 doc %EX - [{"x": 1}, {"x": 2}].x               # [1, 2]
 doc %EX - [{"x": 1}, {"y": 2}].x               # KeyNotFound exeption
 doc %EX - [{"x": 1}, {"y": 2}].get("x")        # [1] - skip
 doc %EX - [{"x": 1}, {"y": 2}].get("x", null)  # [1, null] - use default value
 doc %RET - Arr
-F .(a:Arr, attr:Str) a.map(X.(attr))
+F .(a:Arr, field:Str) a.map(X.(field))
 
 TEST [{"x": 1}, {"x": 2}].x == [1, 2]
 
-doc Set attr of every element in array to v
+doc Set field of every element in array to v
 doc %EX - a=[{"x": 1}, {"x": 2}]
 doc %EX - a.y = 10
 doc %EX - # a == [{"x": 1, "y": 10}, {"x": 2, "y": 10}]
 doc %RET - v
-F .=(a:Arr, attr:Str, v) {
-	a.each(F(elt) elt.(attr) = v)
+F .=(a:Arr, field:Str, v) {
+	a.each(F(elt) elt.(field) = v)
 	v
 }
 
 TEST a=[{"x": 1}, {"x": 2}]; a.y = 10; a == [{"x": 1, "y": 10}, {"x": 2, "y": 10}]
 
-doc Return array made of given attribute of each element of given Eachable1 where present
+doc Return array made of given field of each element of given Eachable1 where present
 doc %EX - [{"x": 1}, {"y": 2}].get("x")  # [1]
 doc %EX - ``aws ec2 describe-instances``.Tags.get("role").uniq()
 doc %EX - # Returns Arr of Str with roles. Does not crash if some machines do not have "role" tag.
 doc %RET - Arr
-F get(e:Eachable1, attr:Str)
+F get(e:Eachable1, field:Str)
 	collector
 		e.each(F(item) {
-			try collect(item.(attr))
+			try collect(item.(field))
 		})
 
-doc Return array made of given attribute of each element of given Eachable1 where present or default value where the attribute is not present.
+doc Return array made of given field of each element of given Eachable1 where present or default value where the field is not present.
 doc %EX - [{"x": 1}, {"y": 2}].get("x", null)  # [1, null]
 doc %RET - Arr
-F get(e:Eachable1, attr:Str, dflt) e.map(X.get(attr, dflt))
+F get(e:Eachable1, field:Str, dflt) e.map(X.get(field, dflt))
 
 doc Concatenate strings
 doc %EX - "ab" + "cd"  # "abcd"
@@ -2110,31 +2107,34 @@ F sort(a:Arr, lte:Fun=(<=)) {
 
 TEST sort([0,5,3,-1], (<=)) == [-1, 0, 3, 5]
 
-doc Sort an array based on attribute value
-doc lte - Less-then-or-equal function to use for comparison of the items' attributes
+doc Sort an array based on field value
+doc lte - Less-then-or-equal function to use for comparison of the items' fields
 doc %RET - Arr
 doc %EX - [{'x': 1}, {'x': 5}, {'x': 3}].sort('x')  # [{'x': 1}, {'x': 3}, {'x': 5}]
-F sort(a:Arr, attr:Str, lte:Fun=(<=)) a.sort(F(a, b) lte(a.(attr), b.(attr)))
+F sort(a:Arr, field:Str, lte:Fun=(<=)) a.sort(F(a, b) lte(a.(field), b.(field)))
 
 TEST [{'x': 1}, {'x': 5}, {'x': 3}].sort('x') == [{'x': 1}, {'x': 3}, {'x': 5}]
 
 # TODO: better documentation
-doc Split a into arrays
+doc Split e into arrays
 doc %RET - Arr of Arr
-F split(a:Arr, delim) {
-	ret = []
-	cur = []
-	a.each(F(elt) {
-		if elt == delim {
-			ret.push(cur)
-			cur = []
-		} else {
-			cur.push(elt)
-		}
-	})
-	ret.push(cur)
-	ret
+doc %EX - [1, "a", 2, 3, "a", 4].split("a")  # [[1], [2, 3], [4]]
+F split(e:Eachable1, delim) {
+	collector {
+		cur = []
+		e.each(F(elt) {
+			if elt == delim {
+				collect(cur)
+				cur = []
+			} else {
+				cur.push(elt)
+			}
+		})
+		collect(cur)
+	}
 }
+
+TEST [1, "a", 2, 3, "a", 4].split("a") == [[1], [2, 3], [4]]
 
 doc Insert delimiter element between each two elements in an array
 doc %RET - Arr
@@ -2295,7 +2295,7 @@ doc args - Additional arguments for calling mapper
 doc %EX - mapkv({"a": 1}, {[A+"zz", B+10]})  # {"azz": 11}
 F mapkv(h:Hash, mapper:Fun)
 	collector/{}
-		h % { collect(*mapper(A, B)) }
+		h.each(F(k, v) collect(*mapper(k, v)))
 
 TEST mapkv({"a": 1}, {[A+"zz", B+10]}) == {"azz": 11}
 
@@ -2382,12 +2382,12 @@ F Hash(arr:Arr)
 
 TEST Hash([['a', 1], ['c', 3]]) == {'a': 1, 'c': 3}
 
-doc Create Hash with keys being the given attribute of array elements and the values being corresponding arr elements.
+doc Create Hash with keys being the given field of array elements and the values being corresponding arr elements.
 doc %RET - Hash
 doc %EX - Hash([{'x': 1}, {'x': 2}], 'x')  # {1: {'x': 1}, 2: {'x': 2}}
-F Hash(arr:Arr, attr:Str)
+F Hash(arr:Arr, field:Str)
 	collector/{}
-		arr.each(F(v) collect(v[attr], v))
+		arr.each(F(v) collect(v[field], v))
 
 TEST Hash([{'x': 1}, {'x': 2}], 'x') == {1: {'x': 1}, 2: {'x': 2}}
 
@@ -2414,14 +2414,14 @@ F Hash(keys:Arr, values:Arr)
 
 TEST Hash(["a", "b", "c"], [1,2,3]) == {"a": 1, "b": 2, "c": 3}
 
-doc Create Hash from Arr of something that has key and value attribute
-doc arr - Arr with all the keys and values
-doc key_attr - Name of the attribute holding the keys of newly created Hash
-doc val_attr - Name of the attribute holding the values of newly created Hash
+doc Create Hash from Arr of something that has key and value fields
+doc e - Arr with all the keys and values
+doc key_field - Name of the field holding the keys of newly created Hash
+doc val_field - Name of the field holding the values of newly created Hash
 doc %EX - Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}], "Name", "Value")  # {"n1": "v1", "n2": "v2"}
-F Hash(arr:Arr, key_attr:Str, val_attr:Str)
+F Hash(e:Eachable1, key_field:Str, val_field:Str)
 	collector/{}
-		arr.each(F(elt) collect(elt.(key_attr), elt.(val_attr)))
+		e.each(F(elt) collect(elt.(key_field), elt.(val_field)))
 
 TEST Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}], "Name", "Value") == {"n1": "v1", "n2": "v2"}
 
@@ -2477,14 +2477,12 @@ TEST {"a": 1, "b": 2}.limit(1) == {"a": 1}
 doc Group items from e by key returned by cb
 doc %RET - Hash with Arr values
 doc %EX - ["ab", "ac", "ba", "bc", "bd"].group(F(x) x[0])  # {a=[ab,ac], b=[ba,bc,bd]}
-F group(e:Eachable1, cb:Fun) {
-	ret = {}
-	e.each(F(elt) {
-		k = cb(elt)
-		ret.dflt(k, []).push(elt)
-	})
-	ret
-}
+F group(e:Eachable1, cb:Fun)
+	collector/ret={}
+		e.each(F(elt) {
+			k = cb(elt)
+			ret.dflt(k, []).push(elt)
+		})
 
 doc Convert a Hash to NGS code that would produce the given Hash when executed. Not fully functional yet.
 doc %RET - Str
@@ -4046,34 +4044,34 @@ F Str(r:Redir) "<Redirect ${r.fd} ${r.marker} ${r.datum}>"
 }
 
 doc Get process "stdout"
-doc attr - "stdout"
+doc field - "stdout"
 doc %RET - Str
-F '.'(p:Process, attr:Str) {
-	guard attr == 'stdout'
+F '.'(p:Process, field:Str) {
+	guard field == 'stdout'
 	p.outputs[1]
 }
 
 doc Set process "stdout"
-doc attr - "stdout"
+doc field - "stdout"
 doc %RET - Unspecified, do not count on this value
-F '.='(p:Process, attr:Str, v) {
-	guard attr == 'stdout'
+F '.='(p:Process, field:Str, v) {
+	guard field == 'stdout'
 	p.outputs[1] = v
 }
 
 doc Get process "stderr"
-doc attr - "stderr"
+doc field - "stderr"
 doc %RET - Str
-F '.'(p:Process, attr:Str) {
-	guard attr == 'stderr'
+F '.'(p:Process, field:Str) {
+	guard field == 'stderr'
 	p.outputs[2]
 }
 
 doc Set process "stderr"
-doc attr - "stderr"
+doc field - "stderr"
 doc %RET - Unspecified, do not count on this value
-F '.='(p:Process, attr:Str, v) {
-	guard attr == 'stderr'
+F '.='(p:Process, field:Str, v) {
+	guard field == 'stderr'
 	p.outputs[2] = v
 }
 
@@ -4129,7 +4127,7 @@ TEST $(ok:1 cat NO_SUCH_FILE 2>/dev/null); true
 TEST $(ok:[1,10] cat NO_SUCH_FILE 2>/dev/null); true
 TEST $(ok:1..2 cat NO_SUCH_FILE 2>/dev/null); true
 
-doc Process constructor. Initializes attributes.
+doc Process constructor. Initializes fields.
 F init(p:Process, c:Command) {
 	p.command = c
 	p.executable = null
@@ -5784,7 +5782,7 @@ TEST Path("a") != Path("b")
 TEST h={}; try h["a"] catch(e:KeyNotFound) true
 TEST a=[]; try a[0] catch(e:IndexNotFound) true
 TEST a=[]; try a[0]=1 catch(e:IndexNotFound) true
-TEST type T; try T().xyz catch(e:AttrNotFound) true
+TEST type T; try T().xyz catch(e:FieldNotFound) true
 TEST try NO_SUCH_GLOBAL catch(e:GlobalNotFound) true
 TEST try c_lseek(0, 0, "bad arg") catch(e:InvalidArgument) true
 TEST try compile("xyz(", "something") catch(e:CompileFail) true

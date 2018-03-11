@@ -483,7 +483,7 @@
 						}
 						if t.attrs {
 							DocNode('section') with [
-								DocNode('h2') with [ DocText('Attributes') ]
+								DocNode('h2') with [ DocText('Fields') ]
 								DocNode('table', class='params') with
 									t.attrs.map(F(name, desc) {
 										DocNode('tr') with [

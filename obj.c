@@ -340,12 +340,12 @@ VALUE make_normal_type_instance(VALUE normal_type) {
 	return ret;
 }
 
-METHOD_RESULT get_normal_type_instace_attribute(VALUE obj, VALUE attr, VALUE *result) {
+METHOD_RESULT get_normal_type_instace_field(VALUE obj, VALUE field, VALUE *result) {
 	VALUE ut;
 	HASH_OBJECT_ENTRY *e;
 	size_t n;
 	ut = NORMAL_TYPE_INSTANCE_TYPE(obj);
-	e = get_hash_key(NGS_TYPE_FIELDS(ut), attr);
+	e = get_hash_key(NGS_TYPE_FIELDS(ut), field);
 	if(!e) {
 		return METHOD_EXCEPTION;
 	}
@@ -360,17 +360,17 @@ METHOD_RESULT get_normal_type_instace_attribute(VALUE obj, VALUE attr, VALUE *re
 	return METHOD_OK;
 }
 
-void set_normal_type_instance_attribute(VALUE obj, VALUE attr, VALUE v) {
+void set_normal_type_instance_field(VALUE obj, VALUE field, VALUE v) {
 	VALUE ut;
 	HASH_OBJECT_ENTRY *e;
 	size_t n;
 	ut = NORMAL_TYPE_INSTANCE_TYPE(obj);
-	e = get_hash_key(NGS_TYPE_FIELDS(ut), attr);
+	e = get_hash_key(NGS_TYPE_FIELDS(ut), field);
 	if(e) {
 		n = GET_INT(e->val);
 	} else {
 		n = OBJ_LEN(NGS_TYPE_FIELDS(ut));
-		set_hash_key(NGS_TYPE_FIELDS(ut), attr, MAKE_INT(n));
+		set_hash_key(NGS_TYPE_FIELDS(ut), field, MAKE_INT(n));
 	}
 	// TODO: more optimized
 	while(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(obj)) < n) {
@@ -1053,7 +1053,7 @@ VALUE make_backtrace(VM *vm, CTX *ctx) {
 		ARRAY_ITEMS(frames)[i] = h;
 	}
 	ret = make_normal_type_instance(vm->Backtrace);
-	set_normal_type_instance_attribute(ret, make_string("frames"), frames);
+	set_normal_type_instance_field(ret, make_string("frames"), frames);
 	return ret;
 }
 

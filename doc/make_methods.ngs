@@ -211,17 +211,17 @@
 
 		F Html(dn:TypeAttrsDocNode, options:Hash) {
 			not(dn.children) returns null
-			tc.push("<h${tc.heading_level} class=\"attrs-header\">Attributes</h${tc.heading_level}>")
-			tc.push('<section class="type-attrs-content">')
+			tc.push("<h${tc.heading_level} class=\"fields-header\">Fields</h${tc.heading_level}>")
+			tc.push('<section class="type-fileds-content">')
 			dn.process_children(options)
-			tc.push('</section>') # type-attr-content
+			tc.push('</section>') # type-field-content
 		}
 
 		F Html(dn:TypeAttrDocNode, options:Hash) {
 			tc.push("<h${tc.heading_level} class=\"param-header\">${dn.name.encode_html()}</h${tc.heading_level}>")
-			tc.push('<section class="type-attr-content">')
+			tc.push('<section class="type-field-content">')
 			dn.text / encode_html % tc.push(X)
-			tc.push('</section>') # type-attr-content
+			tc.push('</section>') # type-field-content
 		}
 
 		F Html(dn:ParentTypesDocNode, options:Hash) {

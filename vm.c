@@ -157,10 +157,10 @@ char *opcodes_names[] = {
 #define PUSH_METHOD_EXC(msg, dst, fn) \
 	VALUE e; \
 	e = make_normal_type_instance(vm->InvalidArgument); \
-	set_normal_type_instance_attribute(e, make_string("message"), make_string(msg)); \
-	set_normal_type_instance_attribute(e, make_string("backtrace"), make_backtrace(vm, ctx)); \
-	set_normal_type_instance_attribute(e, make_string("target"), dst); \
-	set_normal_type_instance_attribute(e, make_string("method"), fn); \
+	set_normal_type_instance_field(e, make_string("message"), make_string(msg)); \
+	set_normal_type_instance_field(e, make_string("backtrace"), make_backtrace(vm, ctx)); \
+	set_normal_type_instance_field(e, make_string("target"), dst); \
+	set_normal_type_instance_field(e, make_string("method"), fn); \
 	*result = e; \
 	goto exception;
 
@@ -203,7 +203,7 @@ char *opcodes_names[] = {
 #define METHOD_RETURN(v) { *result = (v); return METHOD_OK; }
 #define THROW_EXCEPTION(t) { *result = make_string(t); return METHOD_EXCEPTION; }
 #define THROW_EXCEPTION_INSTANCE(e) { \
-	set_normal_type_instance_attribute(e, make_string("backtrace"), make_backtrace(vm, ctx)); \
+	set_normal_type_instance_field(e, make_string("backtrace"), make_backtrace(vm, ctx)); \
 	*result = e; \
 	return METHOD_EXCEPTION; \
 }
@@ -305,9 +305,9 @@ METHOD_RESULT native_Return EXT_METHOD_PARAMS {
 		METHOD_RETURN(THIS_FRAME.ReturnInstance);
 	}
 	*result = make_normal_type_instance(vm->Return);
-	set_normal_type_instance_attribute(*result, make_string("closure"), THIS_FRAME.closure);
-	set_normal_type_instance_attribute(*result, make_string("depth"), MAKE_INT(ctx->stack_ptr-1));
-	set_normal_type_instance_attribute(*result, make_string("val"), MAKE_NULL);
+	set_normal_type_instance_field(*result, make_string("closure"), THIS_FRAME.closure);
+	set_normal_type_instance_field(*result, make_string("depth"), MAKE_INT(ctx->stack_ptr-1));
+	set_normal_type_instance_field(*result, make_string("val"), MAKE_NULL);
 	THIS_FRAME.ReturnInstance = *result;
 	METHOD_RETURN(*result);
 }
@@ -324,7 +324,7 @@ METHOD_RESULT native_pop_arr EXT_METHOD_PARAMS {
 	if(!OBJ_LEN(argv[0])) {
 		VALUE e;
 		e = make_normal_type_instance(vm->EmptyArrayFail);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("pop(arr:Arr) failed because of empty array"));
+		set_normal_type_instance_field(e, make_string("message"), make_string("pop(arr:Arr) failed because of empty array"));
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	*result = ARRAY_ITEMS(argv[0])[OBJ_LEN(argv[0])-1];
@@ -336,7 +336,7 @@ METHOD_RESULT native_shift_arr EXT_METHOD_PARAMS {
 	if(!OBJ_LEN(argv[0])) {
 		VALUE e;
 		e = make_normal_type_instance(vm->EmptyArrayFail);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("shift(arr:Arr) failed because of empty array"));
+		set_normal_type_instance_field(e, make_string("message"), make_string("shift(arr:Arr) failed because of empty array"));
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	METHOD_RETURN(array_shift(argv[0]));
@@ -370,8 +370,8 @@ METHOD_RESULT native_index_get_arr_int EXT_METHOD_PARAMS {
 	if((idx < 0) || (idx >= len)) {
 		VALUE e;
 		e = make_normal_type_instance(vm->IndexNotFound);
-		set_normal_type_instance_attribute(e, make_string("container"), argv[0]);
-		set_normal_type_instance_attribute(e, make_string("key"), argv[1]);
+		set_normal_type_instance_field(e, make_string("container"), argv[0]);
+		set_normal_type_instance_field(e, make_string("key"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	*result = ARRAY_ITEMS(argv[0])[idx];
@@ -386,8 +386,8 @@ METHOD_RESULT native_index_set_arr_int_any EXT_METHOD_PARAMS {
 	if((idx < 0) || (idx >= len)) {
 		VALUE e;
 		e = make_normal_type_instance(vm->IndexNotFound);
-		set_normal_type_instance_attribute(e, make_string("container"), argv[0]);
-		set_normal_type_instance_attribute(e, make_string("key"), argv[1]);
+		set_normal_type_instance_field(e, make_string("container"), argv[0]);
+		set_normal_type_instance_field(e, make_string("key"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	ARRAY_ITEMS(argv[0])[idx] = argv[2];
@@ -457,9 +457,9 @@ METHOD_RESULT native_Int_str_int EXT_METHOD_PARAMS {
 	if(nptr == endptr) {
 		VALUE e;
 		e = make_normal_type_instance(vm->InvalidArgument);
-		set_normal_type_instance_attribute(e, make_string("which"), make_string("First argument to Int(s:Str, base:Int)"));
-		set_normal_type_instance_attribute(e, make_string("given"), argv[0]);
-		set_normal_type_instance_attribute(e, make_string("expected"), make_string("Integer in the specified base"));
+		set_normal_type_instance_field(e, make_string("which"), make_string("First argument to Int(s:Str, base:Int)"));
+		set_normal_type_instance_field(e, make_string("given"), argv[0]);
+		set_normal_type_instance_field(e, make_string("expected"), make_string("Integer in the specified base"));
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	METHOD_RETURN(MAKE_INT(r));
@@ -536,8 +536,8 @@ METHOD_RESULT native_index_get_hash_any EXT_METHOD_PARAMS {
 	if(!e) {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->KeyNotFound);
-		set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
-		set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+		set_normal_type_instance_field(exc, make_string("container"), argv[0]);
+		set_normal_type_instance_field(exc, make_string("key"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	METHOD_RETURN(e->val)
@@ -549,8 +549,8 @@ METHOD_RESULT native_index_del_hash_any EXT_METHOD_PARAMS {
 	if(!del_hash_key(argv[0], argv[1])) {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->KeyNotFound);
-		set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
-		set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+		set_normal_type_instance_field(exc, make_string("container"), argv[0]);
+		set_normal_type_instance_field(exc, make_string("key"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	METHOD_RETURN(argv[0])
@@ -641,8 +641,8 @@ METHOD_RESULT native_c_dlopen_str_int EXT_METHOD_PARAMS {
 	if(!out) {
 		VALUE e;
 		e = make_normal_type_instance(vm->DlopenFail);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("Failed to dlopen()"));
-		set_normal_type_instance_attribute(e, make_string("filename"), argv[0]);
+		set_normal_type_instance_field(e, make_string("message"), make_string("Failed to dlopen()"));
+		set_normal_type_instance_field(e, make_string("filename"), argv[0]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	o = NGS_MALLOC(sizeof(*o));
@@ -668,9 +668,9 @@ METHOD_RESULT native_index_get_clib_str EXT_METHOD_PARAMS {
 	if(!o->base.val.ptr) {
 		VALUE e;
 		e = make_normal_type_instance(vm->Error);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("Failed to dlsym()"));
-		set_normal_type_instance_attribute(e, make_string("handle"), argv[0]);
-		set_normal_type_instance_attribute(e, make_string("symbol"), argv[1]);
+		set_normal_type_instance_field(e, make_string("message"), make_string("Failed to dlsym()"));
+		set_normal_type_instance_field(e, make_string("handle"), argv[0]);
+		set_normal_type_instance_field(e, make_string("symbol"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	o->lib = argv[0];
@@ -737,10 +737,10 @@ METHOD_RESULT native_c_lseek_int_int_str EXT_METHOD_PARAMS {
 			} else {
 				VALUE exc;
 				exc = make_normal_type_instance(vm->InvalidArgument);
-				set_normal_type_instance_attribute(exc, make_string("which"), make_string("Third parameter to c_lseek(), 'whence'"));
-				set_normal_type_instance_attribute(exc, make_string("given"), argv[2]);
+				set_normal_type_instance_field(exc, make_string("which"), make_string("Third parameter to c_lseek(), 'whence'"));
+				set_normal_type_instance_field(exc, make_string("given"), argv[2]);
 				// TODO: Array of expected values maybe?
-				set_normal_type_instance_attribute(exc, make_string("expected"), make_string("One of: 'set', 'cur', 'end'"));
+				set_normal_type_instance_field(exc, make_string("expected"), make_string("One of: 'set', 'cur', 'end'"));
 				THROW_EXCEPTION_INSTANCE(exc);
 			}
 		}
@@ -787,12 +787,12 @@ METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 	if(!IS_INT(start)) return METHOD_ARGS_MISMATCH; \
 	if(GET_INT(start) < 0) { \
 		exc = make_normal_type_instance(vm->IndexNotFound); \
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Negative range start")); \
+		set_normal_type_instance_field(exc, make_string("message"), make_string("Negative range start")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	} \
 	if(((size_t) GET_INT(start)) > OBJ_LEN(argv[0])) { \
 		exc = make_normal_type_instance(vm->IndexNotFound); \
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("NumRange starts after string/array end")); \
+		set_normal_type_instance_field(exc, make_string("message"), make_string("NumRange starts after string/array end")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	} \
 	end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_END]; \
@@ -802,13 +802,13 @@ METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 	if(!IS_INT(end)) return METHOD_ARGS_MISMATCH; \
 	if(GET_INT(end) < GET_INT(start)) { \
 		exc = make_normal_type_instance(vm->InvalidArgument); \
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("NumRange end smaller than range start when calling [](s:Str, r:NumRange)")); \
+		set_normal_type_instance_field(exc, make_string("message"), make_string("NumRange end smaller than range start when calling [](s:Str, r:NumRange)")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	} \
 	len = GET_INT(end) - GET_INT(start); \
 	if(GET_INT(start) + len > OBJ_LEN(argv[0])) { \
 		exc = make_normal_type_instance(vm->IndexNotFound); \
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("NumRange ends after string end")); \
+		set_normal_type_instance_field(exc, make_string("message"), make_string("NumRange ends after string end")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	}
 
@@ -894,9 +894,9 @@ METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 		VALUE exc;
 		char *err = NGS_MALLOC_ATOMIC(1024);
 		exc = make_normal_type_instance(vm->CompileFail);
-		set_normal_type_instance_attribute(exc, make_string("given"), argv[0]);
+		set_normal_type_instance_field(exc, make_string("given"), argv[0]);
 		snprintf(err, 1024, "Failed to parse at position %d (%s), rule %s", yyctx.fail_pos, sprintf_position(&yyctx, yyctx.fail_pos), yyctx.fail_rule);
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string(err));
+		set_normal_type_instance_field(exc, make_string("message"), make_string(err));
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	tree = yyctx.__;
@@ -922,8 +922,8 @@ METHOD_RESULT native_decode_json_str EXT_METHOD_PARAMS {
 		VALUE exc;
 		// TODO: more specific error
 		exc = make_normal_type_instance(vm->Error);
-		set_normal_type_instance_attribute(exc, make_string("message"), *result);
-		set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+		set_normal_type_instance_field(exc, make_string("message"), *result);
+		set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 		*result = exc;
 	}
 	return mr;
@@ -937,9 +937,9 @@ METHOD_RESULT native_encode_json_obj EXT_METHOD_PARAMS {
 		VALUE exc;
 		// TODO: more specific error
 		exc = make_normal_type_instance(vm->Error);
-		// could be big... // set_normal_type_instance_attribute(exc, make_string("data"), argv[0]);
-		set_normal_type_instance_attribute(exc, make_string("message"), *result);
-		set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+		// could be big... // set_normal_type_instance_field(exc, make_string("data"), argv[0]);
+		set_normal_type_instance_field(exc, make_string("message"), *result);
+		set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 		*result = exc;
 	}
 	return mr;
@@ -1040,29 +1040,29 @@ METHOD_RESULT native_typeof_any EXT_METHOD_PARAMS {
 	METHOD_RETURN(value_type(vm, argv[0]));
 }
 
-METHOD_RESULT native_get_attr_nti_str EXT_METHOD_PARAMS {
-	// WARNING: for now get_normal_type_instace_attribute can only throw AttrNotFound
+METHOD_RESULT native_get_field_nti_str EXT_METHOD_PARAMS {
+	// WARNING: for now get_normal_type_instace_field can only throw FieldNotFound
 	//          if it changes in future the calling convention below should be changed
 	//          The reason for such calling convention is not to pass the VM to
-	//          get_normal_type_instace_attribute() just so it will have access to the
+	//          get_normal_type_instace_field() just so it will have access to the
 	//          exceptions.
 	METHOD_RESULT mr;
 	(void) ctx;
-	mr = get_normal_type_instace_attribute(argv[0], argv[1], result);
+	mr = get_normal_type_instace_field(argv[0], argv[1], result);
 	if(mr == METHOD_EXCEPTION) {
 		VALUE exc;
-		exc = make_normal_type_instance(vm->AttrNotFound);
-		set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
-		set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+		exc = make_normal_type_instance(vm->FieldNotFound);
+		set_normal_type_instance_field(exc, make_string("container"), argv[0]);
+		set_normal_type_instance_field(exc, make_string("key"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	return mr;
 }
-METHOD_RESULT native_set_attr_nti_str_any METHOD_PARAMS { set_normal_type_instance_attribute(argv[0], argv[1], argv[2]); METHOD_RETURN(argv[2]); }
+METHOD_RESULT native_set_field_nti_str_any METHOD_PARAMS { set_normal_type_instance_field(argv[0], argv[1], argv[2]); METHOD_RETURN(argv[2]); }
 
 METHOD_RESULT native_in_nti_str METHOD_PARAMS {
 	METHOD_RESULT mr;
-	mr = get_normal_type_instace_attribute(argv[1], argv[0], result);
+	mr = get_normal_type_instace_field(argv[1], argv[0], result);
 	METHOD_RETURN(MAKE_BOOL(mr != METHOD_EXCEPTION));
 }
 
@@ -1081,8 +1081,8 @@ METHOD_RESULT native_join_arr_str EXT_METHOD_PARAMS {
 		if(!IS_STRING(ARRAY_ITEMS(argv[0])[i])) {
 			VALUE exc;
 			exc = make_normal_type_instance(vm->InvalidArgument);
-			set_normal_type_instance_attribute(exc, make_string("message"), make_string("join - array must contain only strings"));
-			set_normal_type_instance_attribute(exc, make_string("given"), ARRAY_ITEMS(argv[0])[i]);
+			set_normal_type_instance_field(exc, make_string("message"), make_string("join - array must contain only strings"));
+			set_normal_type_instance_field(exc, make_string("given"), ARRAY_ITEMS(argv[0])[i]);
 			THROW_EXCEPTION_INSTANCE(exc);
 		}
 		dst_len += OBJ_LEN(ARRAY_ITEMS(argv[0])[i]);
@@ -1135,66 +1135,66 @@ METHOD_RESULT native_c_waitpid METHOD_PARAMS {
 	METHOD_RETURN(ret);
 }
 
-// TODO: dedup native_get_attr_bt_str / native_get_attr_nt_str
-METHOD_RESULT native_get_attr_bt_str EXT_METHOD_PARAMS {
+// TODO: dedup native_get_field_bt_str / native_get_field_nt_str
+METHOD_RESULT native_get_field_bt_str EXT_METHOD_PARAMS {
 	VALUE exc;
-	char *attr = obj_to_cstring(argv[1]);
+	char *field = obj_to_cstring(argv[1]);
 	(void) ctx;
-	if(!strcmp(attr, "constructors")) {
+	if(!strcmp(field, "constructors")) {
 		METHOD_RETURN(NGS_TYPE_CONSTRUCTORS(argv[0]));
 	}
-	if(!strcmp(attr, "name")) {
+	if(!strcmp(field, "name")) {
 		METHOD_RETURN(NGS_TYPE_NAME(argv[0]));
 	}
-	if(!strcmp(attr, "parents")) {
+	if(!strcmp(field, "parents")) {
 		METHOD_RETURN(NGS_TYPE_PARENTS(argv[0]));
 	}
 
-	exc = make_normal_type_instance(vm->AttrNotFound);
-	set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
-	set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+	exc = make_normal_type_instance(vm->FieldNotFound);
+	set_normal_type_instance_field(exc, make_string("container"), argv[0]);
+	set_normal_type_instance_field(exc, make_string("key"), argv[1]);
 	THROW_EXCEPTION_INSTANCE(exc);
 }
 
 // TODO: Factor out "constructors", "name", ...
-METHOD_RESULT native_get_attr_nt_str EXT_METHOD_PARAMS {
+METHOD_RESULT native_get_field_nt_str EXT_METHOD_PARAMS {
 	VALUE exc;
-	char *attr = obj_to_cstring(argv[1]);
+	char *field = obj_to_cstring(argv[1]);
 	(void) ctx;
-	if(!strcmp(attr, "constructors")) {
+	if(!strcmp(field, "constructors")) {
 		METHOD_RETURN(NGS_TYPE_CONSTRUCTORS(argv[0]));
 	}
-	if(!strcmp(attr, "name")) {
+	if(!strcmp(field, "name")) {
 		METHOD_RETURN(NGS_TYPE_NAME(argv[0]));
 	}
-	if(!strcmp(attr, "parents")) {
+	if(!strcmp(field, "parents")) {
 		METHOD_RETURN(NGS_TYPE_PARENTS(argv[0]));
 	}
-	if(!strcmp(attr, "user")) {
+	if(!strcmp(field, "user")) {
 		METHOD_RETURN(NGS_TYPE_USER(argv[0]));
 	}
 
-	exc = make_normal_type_instance(vm->AttrNotFound);
-	set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
-	set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+	exc = make_normal_type_instance(vm->FieldNotFound);
+	set_normal_type_instance_field(exc, make_string("container"), argv[0]);
+	set_normal_type_instance_field(exc, make_string("key"), argv[1]);
 	THROW_EXCEPTION_INSTANCE(exc);
 }
 
-METHOD_RESULT native_set_attr_nt_str EXT_METHOD_PARAMS {
+METHOD_RESULT native_set_field_nt_str EXT_METHOD_PARAMS {
 	VALUE exc;
-	char *attr = obj_to_cstring(argv[1]);
+	char *field = obj_to_cstring(argv[1]);
 	(void) ctx;
-	if(!strcmp(attr, "user")) {
+	if(!strcmp(field, "user")) {
 		NGS_TYPE_USER(argv[0]) = argv[2];
 		METHOD_RETURN(argv[0]);
 	}
 
-	exc = make_normal_type_instance(vm->AttrNotFound);
-	set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
-	set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+	exc = make_normal_type_instance(vm->FieldNotFound);
+	set_normal_type_instance_field(exc, make_string("container"), argv[0]);
+	set_normal_type_instance_field(exc, make_string("key"), argv[1]);
 	VALUE ak = make_array(1);
 	ARRAY_ITEMS(ak)[0] = make_string("user");
-	set_normal_type_instance_attribute(exc, make_string("available_keys"), ak);
+	set_normal_type_instance_field(exc, make_string("available_keys"), ak);
 	THROW_EXCEPTION_INSTANCE(exc);
 }
 
@@ -1372,17 +1372,17 @@ METHOD_RESULT native_c_pthreadmutexattrsettype_pma_int METHOD_PARAMS {
 #define ATTR ((pthread_attr_t *)&GET_PTHREADATTR(argv[0]))
 // TODO: check range - i might be larger than supported MAKE_INT() argument
 #define INT_ATTR(name) \
-	if(!strcmp(attr, #name)) { \
+	if(!strcmp(field, #name)) { \
 		pthread_attr_get ## name(ATTR, &i); \
 		METHOD_RETURN(MAKE_INT(i)); \
 	}
 #define SIZE_ATTR(name) \
-	if(!strcmp(attr, #name)) { \
+	if(!strcmp(field, #name)) { \
 		pthread_attr_get ## name(ATTR, &size); \
 		METHOD_RETURN(MAKE_INT(size)); \
 	}
 METHOD_RESULT native_attr_pthreadattr METHOD_PARAMS {
-	char *attr = obj_to_cstring(argv[1]);
+	char *field = obj_to_cstring(argv[1]);
 	size_t size;
 	int i;
 	// TODO: check exit statuses maybe?
@@ -1490,8 +1490,8 @@ METHOD_RESULT native_c_ffi_prep_cif EXT_METHOD_PARAMS {
 	if(FFI_OK != (status = ffi_prep_cif(&GET_FFI_CIF(ret), FFI_DEFAULT_ABI, OBJ_LEN(argv[1]), GET_FFI_TYPE(argv[0]), args))) {
 		VALUE e;
 		e = make_normal_type_instance(vm->Error);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("Failed to ffi_prep_cif()"));
-		set_normal_type_instance_attribute(e, make_string("status"), MAKE_INT(status));
+		set_normal_type_instance_field(e, make_string("message"), make_string("Failed to ffi_prep_cif()"));
+		set_normal_type_instance_field(e, make_string("status"), MAKE_INT(status));
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	METHOD_RETURN(ret);
@@ -1644,9 +1644,9 @@ METHOD_RESULT native_replace EXT_METHOD_PARAMS {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->InvalidArgument);
 		// TODO: better message phrasing
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Both replace() arguments must be objects, not tagged values"));
-		set_normal_type_instance_attribute(exc, make_string("dst"), argv[0]);
-		set_normal_type_instance_attribute(exc, make_string("src"), argv[1]);
+		set_normal_type_instance_field(exc, make_string("message"), make_string("Both replace() arguments must be objects, not tagged values"));
+		set_normal_type_instance_field(exc, make_string("dst"), argv[0]);
+		set_normal_type_instance_field(exc, make_string("src"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	if(IS_NORMAL_TYPE_INSTANCE(argv[0]) && IS_NORMAL_TYPE_INSTANCE(argv[1])) {
@@ -1658,9 +1658,9 @@ METHOD_RESULT native_replace EXT_METHOD_PARAMS {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->InvalidArgument);
 		// TODO: better message phrasing
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Current implementation of replace() is limited to dst and src of same type when replacing a builtin type instance"));
-		set_normal_type_instance_attribute(exc, make_string("dst"), argv[0]);
-		set_normal_type_instance_attribute(exc, make_string("src"), argv[1]);
+		set_normal_type_instance_field(exc, make_string("message"), make_string("Current implementation of replace() is limited to dst and src of same type when replacing a builtin type instance"));
+		set_normal_type_instance_field(exc, make_string("dst"), argv[0]);
+		set_normal_type_instance_field(exc, make_string("src"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	dst_size = NGS_SIZE(argv[0].ptr);
@@ -1682,8 +1682,8 @@ METHOD_RESULT native_is_global_variable_defined EXT_METHOD_PARAMS {
 	if(GET_INT(argv[0]) < 0 || gvi >= vm->globals_len) {
 		VALUE e;
 		e = make_normal_type_instance(vm->IndexNotFound);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("Global variable with given index was not found"));
-		set_normal_type_instance_attribute(e, make_string("key"), argv[0]);
+		set_normal_type_instance_field(e, make_string("message"), make_string("Global variable with given index was not found"));
+		set_normal_type_instance_field(e, make_string("key"), argv[0]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	METHOD_RETURN(MAKE_BOOL(IS_NOT_UNDEF(GLOBALS[gvi])));
@@ -1694,8 +1694,8 @@ METHOD_RESULT native_set_global_variable EXT_METHOD_PARAMS {
 	if(GET_INT(argv[0]) < 0 || gvi >= vm->globals_len) {
 		VALUE e;
 		e = make_normal_type_instance(vm->IndexNotFound);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("Global variable with given index was not found"));
-		set_normal_type_instance_attribute(e, make_string("key"), argv[0]);
+		set_normal_type_instance_field(e, make_string("message"), make_string("Global variable with given index was not found"));
+		set_normal_type_instance_field(e, make_string("key"), argv[0]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	GLOBALS[gvi] = argv[1];
@@ -1720,9 +1720,9 @@ METHOD_RESULT native_c_pcre_compile EXT_METHOD_PARAMS {
 	if(re == NULL) {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->RegExpCompileFail);
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string(error));
-		set_normal_type_instance_attribute(exc, make_string("regexp"), argv[0]);
-		set_normal_type_instance_attribute(exc, make_string("offset"), MAKE_INT(erroffset));
+		set_normal_type_instance_field(exc, make_string("message"), make_string(error));
+		set_normal_type_instance_field(exc, make_string("regexp"), argv[0]);
+		set_normal_type_instance_field(exc, make_string("offset"), MAKE_INT(erroffset));
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 
@@ -1769,17 +1769,17 @@ METHOD_RESULT native_c_pcre_exec METHOD_PARAMS {
 }
 
 // http://www.pcre.org/original/doc/html/pcredemo.html
-METHOD_RESULT native_attr_regexp EXT_METHOD_PARAMS {
-	char *attr = obj_to_cstring(argv[1]);
+METHOD_RESULT native_field_regexp EXT_METHOD_PARAMS {
+	char *field = obj_to_cstring(argv[1]);
 	pcre *re;
 	re = REGEXP_OBJECT_RE(argv[0]);
-	if(!strcmp(attr, "options")) {
+	if(!strcmp(field, "options")) {
 		unsigned int option_bits;
 		(void)pcre_fullinfo(re, NULL, PCRE_INFO_OPTIONS, &option_bits);
 		METHOD_RETURN(MAKE_INT(option_bits));
 	}
 
-	if(!strcmp(attr, "names")) {
+	if(!strcmp(field, "names")) {
 		VALUE ret;
 		int namecount, name_entry_size, i;
 		unsigned char *name_table;
@@ -1817,10 +1817,10 @@ METHOD_RESULT native_attr_regexp EXT_METHOD_PARAMS {
 	}
 
 	VALUE exc;
-	exc = make_normal_type_instance(vm->AttrNotFound);
-	set_normal_type_instance_attribute(exc, make_string("message"), make_string("RegExp does not have given attribute"));
-	set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
-	set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+	exc = make_normal_type_instance(vm->FieldNotFound);
+	set_normal_type_instance_field(exc, make_string("message"), make_string("RegExp does not have given field"));
+	set_normal_type_instance_field(exc, make_string("container"), argv[0]);
+	set_normal_type_instance_field(exc, make_string("key"), argv[1]);
 	THROW_EXCEPTION_INSTANCE(exc);
 }
 
@@ -1830,8 +1830,8 @@ METHOD_RESULT native_ord_str_int EXT_METHOD_PARAMS {
 	if(idx < 0 || idx >= (int) OBJ_LEN(argv[0])) {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->InvalidArgument);
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("String index out of range"));
-		set_normal_type_instance_attribute(exc, make_string("idx"), argv[1]);
+		set_normal_type_instance_field(exc, make_string("message"), make_string("String index out of range"));
+		set_normal_type_instance_field(exc, make_string("idx"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	METHOD_RETURN(MAKE_INT(((unsigned char *)OBJ_DATA_PTR(argv[0]))[idx]));
@@ -1880,8 +1880,8 @@ METHOD_RESULT native_c_readdir EXT_METHOD_PARAMS {
 	if(!DIR_OBJECT_IS_OPEN(argv[0])) {
 		VALUE e;
 		e = make_normal_type_instance(vm->InvalidArgument);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("Tried to c_readdir() on closed directory"));
-		set_normal_type_instance_attribute(e, make_string("dirp"), argv[0]);
+		set_normal_type_instance_field(e, make_string("message"), make_string("Tried to c_readdir() on closed directory"));
+		set_normal_type_instance_field(e, make_string("dirp"), argv[0]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	e = readdir(DIR_OBJECT_DIR(argv[0]));
@@ -1899,8 +1899,8 @@ METHOD_RESULT native_c_closedir EXT_METHOD_PARAMS {
 	if(!DIR_OBJECT_IS_OPEN(argv[0])) {
 		VALUE e;
 		e = make_normal_type_instance(vm->InvalidArgument);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("Tried to c_closedir() on closed directory"));
-		set_normal_type_instance_attribute(e, make_string("dirp"), argv[0]);
+		set_normal_type_instance_field(e, make_string("message"), make_string("Tried to c_closedir() on closed directory"));
+		set_normal_type_instance_field(e, make_string("dirp"), argv[0]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	int ret = closedir(DIR_OBJECT_DIR(argv[0]));
@@ -2327,7 +2327,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	MKTYPE(Exception);
 	_doc(vm, "", "Represents exceptional situaution. All thrown things shouhld inherit Exception.");
-	_doc(vm, "backtrace", "Automatic attribute set when creating Exception type instances (including sub-types, as long as super() is called.");
+	_doc(vm, "backtrace", "Automatic field set when creating Exception type instances (including sub-types, as long as super() is called.");
 
 		MKSUBTYPE(Error, Exception);
 		_doc(vm, "", "Represents an error. Usually more specific error types are used.");
@@ -2365,15 +2365,15 @@ void vm_init(VM *vm, int argc, char **argv) {
 						NULL
 					);
 
-				MKSUBTYPE(AttrNotFound, LookupFail);
-				_doc(vm, "", "Represents an error of reading non-existent attribute of an object.");
+				MKSUBTYPE(FieldNotFound, LookupFail);
+				_doc(vm, "", "Represents an error of reading non-existent field of an object.");
 				_doc_arr(vm, "%EX",
 					"{",
 					"  type T",
 					"  t.a = 1",
 					"  echo(t.b)",
 					"}",
-					"# ... Exception of type AttrNotFound ...",
+					"# ... Exception of type FieldNotFound ...",
 					NULL
 				);
 
@@ -2594,9 +2594,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Represents RegExp");
 	_doc(vm, "%RET", "The string <RegExp>");
 
-	register_global_func(vm, 1, ".",              &native_attr_regexp,      2, "regexp", vm->RegExp, "attr", vm->Str);
-	_doc(vm, "", "Get attributes of a RegExp. Throws AttrNotFound if attr is not one of the allowed values. You should not use this directly. Use \"~\" and \"~~\" operators.");
-	_doc(vm, "attr", "\"options\" or \"names\"");
+	register_global_func(vm, 1, ".",              &native_field_regexp,      2, "regexp", vm->RegExp, "field", vm->Str);
+	_doc(vm, "", "Get fields of a RegExp. Throws FieldNotFound if field is not one of the allowed values. You should not use this directly. Use \"~\" and \"~~\" operators.");
+	_doc(vm, "field", "\"options\" or \"names\"");
 	_doc(vm, "%RET", "Int for \"options\". Hash of names/indexes of named groups for \"names\".");
 	_doc_arr(vm, "%EX",
 		"/abc/i.options  # 1 - case insensitive (C_PCRE_CASELESS)",
@@ -2846,10 +2846,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	// BasicType
-	register_global_func(vm, 1, ".",        &native_get_attr_bt_str,       2, "obj", vm->BasicType,          "attr", vm->Str);
-	_doc(vm, "", "Get BasicType (Int, Arr, Hash, ...) attribute. Throws AttrNotFound.");
-	_doc(vm, "attr", "Attribute to get. Currently only \"name\" and \"constructors\" are supported.");
-	_doc(vm, "%AUTO", "obj.attr");
+	register_global_func(vm, 1, ".",        &native_get_field_bt_str,       2, "obj", vm->BasicType,          "field", vm->Str);
+	_doc(vm, "", "Get BasicType (Int, Arr, Hash, ...) field. Throws FieldNotFound.");
+	_doc(vm, "field", "Attribute to get. Currently only \"name\" and \"constructors\" are supported.");
+	_doc(vm, "%AUTO", "obj.field");
 	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
 	_doc_arr(vm, "%EX",
 		"Hash.name  # String: Hash",
@@ -2858,33 +2858,33 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	// NormalType
-	register_global_func(vm, 1, ".",        &native_get_attr_nt_str,       2, "obj", vm->NormalType,         "attr", vm->Str);
-	_doc(vm, "", "Get NormalType (a type that is typically defined by user) attribute. Throws AttrNotFound.");
-	_doc(vm, "attr", "Attribute to get. Currently only \"name\", \"constructors\", \"parents\" and \"user\" are supported.");
-	_doc(vm, "%AUTO", "obj.attr");
+	register_global_func(vm, 1, ".",        &native_get_field_nt_str,       2, "obj", vm->NormalType,         "field", vm->Str);
+	_doc(vm, "", "Get NormalType (a type that is typically defined by user) field. Throws FieldNotFound.");
+	_doc(vm, "field", "Attribute to get. Currently only \"name\", \"constructors\", \"parents\" and \"user\" are supported.");
+	_doc(vm, "%AUTO", "obj.field");
 	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
 
-	register_global_func(vm, 1, ".=",       &native_set_attr_nt_str,       3, "obj", vm->NormalType,         "attr", vm->Str, "v", vm->Any);
-	_doc(vm, "", "Set NormalType (a type that is typically defined by user) attribute. Throws AttrNotFound.");
-	_doc(vm, "attr", "Attribute to set. Currently only \"user\" is supported.");
-	_doc(vm, "%AUTO", "obj.attr = v");
+	register_global_func(vm, 1, ".=",       &native_set_field_nt_str,       3, "obj", vm->NormalType,         "field", vm->Str, "v", vm->Any);
+	_doc(vm, "", "Set NormalType (a type that is typically defined by user) field. Throws FieldNotFound.");
+	_doc(vm, "field", "Attribute to set. Currently only \"user\" is supported.");
+	_doc(vm, "%AUTO", "obj.field = v");
 	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
 
-	register_global_func(vm, 1, ".",        &native_get_attr_nti_str,      2, "obj", vm->NormalTypeInstance, "attr", vm->Str);
-	_doc(vm, "", "Get NormalType (a type that is typically defined by user) instance attribute. Throws AttrNotFound.");
-	_doc(vm, "%AUTO", "obj.attr");
+	register_global_func(vm, 1, ".",        &native_get_field_nti_str,      2, "obj", vm->NormalTypeInstance, "field", vm->Str);
+	_doc(vm, "", "Get NormalType (a type that is typically defined by user) instance field. Throws FieldNotFound.");
+	_doc(vm, "%AUTO", "obj.field");
 	_doc(vm, "%RET", "Any");
 	_doc(vm, "%EX", "type T; t=T(); t.x=1; t.x  # 1");
 
-	register_global_func(vm, 0, ".=",       &native_set_attr_nti_str_any,  3, "obj", vm->NormalTypeInstance, "attr", vm->Str, "v", vm->Any);
-	_doc(vm, "", "Set Normal type (a type that is typically defined by user) instance attribute");
-	_doc(vm, "%AUTO", "obj.attr = v");
+	register_global_func(vm, 0, ".=",       &native_set_field_nti_str_any,  3, "obj", vm->NormalTypeInstance, "field", vm->Str, "v", vm->Any);
+	_doc(vm, "", "Set Normal type (a type that is typically defined by user) instance field");
+	_doc(vm, "%AUTO", "obj.field = v");
 	_doc(vm, "%RET", "Any");
 	_doc(vm, "%EX", "type T; t=T(); t.x=1");
 
-	register_global_func(vm, 0, "in",       &native_in_nti_str,            2, "attr", vm->Str,               "obj", vm->NormalTypeInstance);
-	_doc(vm, "", "Check whether NormalType (a type that is typically defined by user) instance has an attribute.");
-	_doc(vm, "%AUTO", "attr in obj");
+	register_global_func(vm, 0, "in",       &native_in_nti_str,            2, "field", vm->Str,               "obj", vm->NormalTypeInstance);
+	_doc(vm, "", "Check whether NormalType (a type that is typically defined by user) instance has the given field.");
+	_doc(vm, "%AUTO", "field in obj");
 	_doc(vm, "%RET", "Bool");
 	_doc(vm, "%EX", "type T; t=T(); t.x=1; \"x\" in t  # true");
 
@@ -3386,7 +3386,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	register_global_func(vm, 0, "Hash",     &native_Hash_nti,                  1, "obj", vm->NormalTypeInstance);
-	_doc(vm, "", "Get all attributes and their values as key-value pairs in the resulting Hash.");
+	_doc(vm, "", "Get all fields and their values as key-value pairs in the resulting Hash.");
 	_doc(vm, "%RET", "Hash");
 	_doc_arr(vm, "%EX",
 		"(1..10).Hash()  # Hash {start=1, end=10, step=1}",
@@ -3700,9 +3700,9 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 #define SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv) \
 { \
 	int minus = (((argc) >= 2) && IS_KWARGS_MARKER((argv)[(argc)-1])) ? 2 : 0; \
-	set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values((argc)-minus, (argv))); \
+	set_normal_type_instance_field(exc, make_string("args"), make_array_with_values((argc)-minus, (argv))); \
 	if(minus) { \
-		set_normal_type_instance_attribute(exc, make_string("kwargs"), (argv)[(argc)-2]); \
+		set_normal_type_instance_field(exc, make_string("kwargs"), (argv)[(argc)-2]); \
 	} \
 }
 
@@ -3729,8 +3729,8 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 				dump_titled("RESULT", *result);
 				VALUE exc;
 				exc = make_normal_type_instance(vm->InternalError);
-				set_normal_type_instance_attribute(exc, make_string("message"), make_string("Unexpected method result"));
-				set_normal_type_instance_attribute(exc, make_string("callable"), callable_items[i]);
+				set_normal_type_instance_field(exc, make_string("message"), make_string("Unexpected method result"));
+				set_normal_type_instance_field(exc, make_string("callable"), callable_items[i]);
 				SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv);
 				THROW_EXCEPTION_INSTANCE(exc);
 			}
@@ -3757,7 +3757,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			// or we don't have impl_not_found_handler
 			VALUE exc;
 			exc = make_normal_type_instance(vm->MethodNotFound);
-			set_normal_type_instance_attribute(exc, make_string("callable"), callable);
+			set_normal_type_instance_field(exc, make_string("callable"), callable);
 			SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv);
 			THROW_EXCEPTION_INSTANCE(exc);
 		}
@@ -3813,7 +3813,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			if(!IS_HASH(kw)) {
 				VALUE exc;
 				exc = make_normal_type_instance(vm->InternalError);
-				set_normal_type_instance_attribute(exc, make_string("message"), make_string("Kwargs is not a hash"));
+				set_normal_type_instance_field(exc, make_string("message"), make_string("Kwargs is not a hash"));
 				THROW_EXCEPTION_INSTANCE(exc);
 			}
 			argc -= 2;
@@ -3871,10 +3871,10 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			if(!IS_NGS_TYPE(params[n_params_required*2 + (i-n_params_required)*3 + 1])) {
 				VALUE exc;
 				exc = make_normal_type_instance(vm->InvalidArgument);
-				set_normal_type_instance_attribute(exc, make_string("message"), make_string("Parameter type expected"));
-				set_normal_type_instance_attribute(exc, make_string("callable"), callable);
-				set_normal_type_instance_attribute(exc, make_string("parameter_index"), MAKE_INT(i));
-				set_normal_type_instance_attribute(exc, make_string("got"), params[n_params_required*2 + (i-n_params_required)*3 + 1]);
+				set_normal_type_instance_field(exc, make_string("message"), make_string("Parameter type expected"));
+				set_normal_type_instance_field(exc, make_string("callable"), callable);
+				set_normal_type_instance_field(exc, make_string("parameter_index"), MAKE_INT(i));
+				set_normal_type_instance_field(exc, make_string("got"), params[n_params_required*2 + (i-n_params_required)*3 + 1]);
 				THROW_EXCEPTION_INSTANCE(exc);
 			}
 			// XXX temp - end
@@ -3943,7 +3943,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			// TODO: Appropriate exception type, not Exception
 			VALUE exc;
 			exc = make_normal_type_instance(vm->StackDepthFail);
-			set_normal_type_instance_attribute(exc, make_string("message"), make_string("Max stack depth reached"));
+			set_normal_type_instance_field(exc, make_string("message"), make_string("Max stack depth reached"));
 			THROW_EXCEPTION_INSTANCE(exc);
 		}
 		mr = vm_run(vm, ctx, CLOSURE_OBJ_IP(callable), result);
@@ -3958,7 +3958,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 	if(IS_NORMAL_TYPE_CONSTRUCTOR(callable)) {
 		*result = make_normal_type_instance(NORMAL_TYPE_CONSTRUCTOR_TYPE(callable));
 		if(obj_is_of_type(vm, *result, vm->Exception)) {
-			set_normal_type_instance_attribute(*result, make_string("backtrace"), make_backtrace(vm, ctx));
+			set_normal_type_instance_field(*result, make_string("backtrace"), make_backtrace(vm, ctx));
 		}
 		// init() is optional when constructor is called without arguments
 		// --- init() - start ---
@@ -3977,8 +3977,8 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		if(argc && (mr == METHOD_IMPL_MISSING)) {
 			VALUE exc;
 			exc = make_normal_type_instance(vm->MethodNotFound);
-			set_normal_type_instance_attribute(exc, make_string("message"), make_string("Normal type constructor: init() not found"));
-			set_normal_type_instance_attribute(exc, make_string("callable"), vm->init);
+			set_normal_type_instance_field(exc, make_string("message"), make_string("Normal type constructor: init() not found"));
+			set_normal_type_instance_field(exc, make_string("callable"), vm->init);
 			SET_EXCEPTION_ARGS_KWARGS(exc, argc+1, new_argv);
 			THROW_EXCEPTION_INSTANCE(exc);
 		}
@@ -4009,7 +4009,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			if(mr == METHOD_EXCEPTION) {
 				VALUE r = MAKE_NULL;
 				if(obj_is_of_type(vm, *result, vm->MethodNotFound)) {
-					get_normal_type_instace_attribute(*result, make_string("callable"), &r);
+					get_normal_type_instace_field(*result, make_string("callable"), &r);
 					if(r.ptr == vm->call.ptr) {
 						// Don't know how to call
 						mr = METHOD_IMPL_MISSING;
@@ -4028,8 +4028,8 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 
 	VALUE exc;
 	exc = make_normal_type_instance(vm->DontKnowHowToCall);
-	set_normal_type_instance_attribute(exc, make_string("message"), make_string("No matching call() found"));
-	set_normal_type_instance_attribute(exc, make_string("callable"), callable);
+	set_normal_type_instance_field(exc, make_string("message"), make_string("No matching call() found"));
+	set_normal_type_instance_field(exc, make_string("callable"), callable);
 	SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv);
 	THROW_EXCEPTION_INSTANCE(exc);
 
@@ -4114,7 +4114,7 @@ main_loop:
 #define OP_MAKE_STR_(type_name) \
 	EXPECT_STACK_DEPTH(1); \
 	v = make_normal_type_instance(vm->type_name); \
-	set_normal_type_instance_attribute(v, make_string("val"), TOP); \
+	set_normal_type_instance_field(v, make_string("val"), TOP); \
 	TOP = v; \
 	goto main_loop;
 		case OP_MAKE_STR_IMM:
@@ -4171,16 +4171,16 @@ main_loop:
 								if(IS_UNDEF(GLOBALS[gvi]) || mr == METHOD_EXCEPTION) {
 									VALUE exc;
 									exc = make_normal_type_instance(vm->GlobalNotFound);
-									set_normal_type_instance_attribute(exc, make_string("name"), make_string(vm->globals_names[gvi]));
-									set_normal_type_instance_attribute(exc, make_string("index"), MAKE_INT(gvi));
-									set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+									set_normal_type_instance_field(exc, make_string("name"), make_string(vm->globals_names[gvi]));
+									set_normal_type_instance_field(exc, make_string("index"), MAKE_INT(gvi));
+									set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 									if(mr == METHOD_EXCEPTION) {
-										set_normal_type_instance_attribute(exc, make_string("cause"), *result);
+										set_normal_type_instance_field(exc, make_string("cause"), *result);
 									} else {
 										if (mr == METHOD_IMPL_MISSING) {
-											set_normal_type_instance_attribute(exc, make_string("message"), make_string("Additionally, no appropriate global_not_found_handler() found"));
+											set_normal_type_instance_field(exc, make_string("message"), make_string("Additionally, no appropriate global_not_found_handler() found"));
 										} else {
-											set_normal_type_instance_attribute(exc, make_string("message"), make_string("Additionally, global_not_found_handler() failed to provide the global"));
+											set_normal_type_instance_field(exc, make_string("message"), make_string("Additionally, global_not_found_handler() failed to provide the global"));
 										}
 									}
 									*result = exc;
@@ -4207,9 +4207,9 @@ main_loop:
 								VALUE exc;
 								exc = make_normal_type_instance(vm->UndefinedLocalVar);
 								// TODO: variable name
-								set_normal_type_instance_attribute(exc, make_string("name"), CLOSURE_OBJ_LOCALS(THIS_FRAME_CLOSURE)[lvi]);
-								set_normal_type_instance_attribute(exc, make_string("index"), MAKE_INT(lvi));
-								set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+								set_normal_type_instance_field(exc, make_string("name"), CLOSURE_OBJ_LOCALS(THIS_FRAME_CLOSURE)[lvi]);
+								set_normal_type_instance_field(exc, make_string("index"), MAKE_INT(lvi));
+								set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 								*result = exc;
 								goto exception;
 							}
@@ -4236,18 +4236,18 @@ main_loop:
 							}
 							if(mr == METHOD_ARGS_MISMATCH) {
 								*result = make_normal_type_instance(vm->ArgsMismatch);
-								set_normal_type_instance_attribute(*result, make_string("message"), make_string("Arguments did not match"));
-								set_normal_type_instance_attribute(*result, make_string("callable"), callable);
+								set_normal_type_instance_field(*result, make_string("message"), make_string("Arguments did not match"));
+								set_normal_type_instance_field(*result, make_string("callable"), callable);
 								SET_EXCEPTION_ARGS_KWARGS(*result, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
-								set_normal_type_instance_attribute(*result, make_string("backtrace"), make_backtrace(vm, ctx));
+								set_normal_type_instance_field(*result, make_string("backtrace"), make_backtrace(vm, ctx));
 								goto exception;
 							}
 							if(mr != METHOD_OK) {
 								*result = make_normal_type_instance(vm->InternalError);
-								set_normal_type_instance_attribute(*result, make_string("message"), make_string("Unexpected method result"));
-								set_normal_type_instance_attribute(*result, make_string("callable"), callable);
+								set_normal_type_instance_field(*result, make_string("message"), make_string("Unexpected method result"));
+								set_normal_type_instance_field(*result, make_string("callable"), callable);
 								SET_EXCEPTION_ARGS_KWARGS(*result, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
-								set_normal_type_instance_attribute(*result, make_string("backtrace"), make_backtrace(vm, ctx));
+								set_normal_type_instance_field(*result, make_string("backtrace"), make_backtrace(vm, ctx));
 								goto exception;
 							}
 							REMOVE_TOP_N(GET_INT(v));
@@ -4291,9 +4291,9 @@ main_loop:
 								if(mr == METHOD_ARGS_MISMATCH) {
 									VALUE exc;
 									exc = make_normal_type_instance(vm->MethodNotFound);
-									set_normal_type_instance_attribute(exc, make_string("callable"), callable);
+									set_normal_type_instance_field(exc, make_string("callable"), callable);
 									SET_EXCEPTION_ARGS_KWARGS(exc, OBJ_LEN(ctx->stack[ctx->stack_ptr-1]), ARRAY_ITEMS(ctx->stack[ctx->stack_ptr-1]));
-									set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+									set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 									*result = exc;
 									goto exception;
 								}
@@ -4389,8 +4389,8 @@ do_jump:
 									if(!IS_STRING(ctx->stack[ctx->stack_ptr-string_components_count+i])) {
 										VALUE exc;
 										exc = make_normal_type_instance(vm->InvalidArgument);
-										set_normal_type_instance_attribute(exc, make_string("message"), make_string("String interpolation requires all components to be strings"));
-										set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+										set_normal_type_instance_field(exc, make_string("message"), make_string("String interpolation requires all components to be strings"));
+										set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 										*result = exc;
 										goto exception;
 									}
@@ -4550,31 +4550,31 @@ do_jump:
 							EXPECT_STACK_DEPTH(3);
 							command = make_normal_type_instance(vm->CommandsPipeline);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("options"), v);
+							set_normal_type_instance_field(command, make_string("options"), v);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("pipes"), v);
+							set_normal_type_instance_field(command, make_string("pipes"), v);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("commands"), v);
+							set_normal_type_instance_field(command, make_string("commands"), v);
 							PUSH_NOCHECK(command);
 							goto main_loop;
 		case OP_MAKE_CMDS_PIPE:
 							EXPECT_STACK_DEPTH(2);
 							command = make_normal_type_instance(vm->CommandsPipe);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("options"), v);
+							set_normal_type_instance_field(command, make_string("options"), v);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("name"), v);
+							set_normal_type_instance_field(command, make_string("name"), v);
 							PUSH_NOCHECK(command);
 							goto main_loop;
 		case OP_MAKE_CMD:
 							EXPECT_STACK_DEPTH(3);
 							command = make_normal_type_instance(vm->Command);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("options"), v);
+							set_normal_type_instance_field(command, make_string("options"), v);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("redirects"), v);
+							set_normal_type_instance_field(command, make_string("redirects"), v);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("argv"), v);
+							set_normal_type_instance_field(command, make_string("argv"), v);
 							PUSH_NOCHECK(command);
 							goto main_loop;
 		case OP_SET_CLOSURE_NAME:
@@ -4624,11 +4624,11 @@ do_jump:
 							EXPECT_STACK_DEPTH(3);
 							command = make_normal_type_instance(vm->Redir);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("datum"), v);
+							set_normal_type_instance_field(command, make_string("datum"), v);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("marker"), v);
+							set_normal_type_instance_field(command, make_string("marker"), v);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("fd"), v);
+							set_normal_type_instance_field(command, make_string("fd"), v);
 							PUSH_NOCHECK(command);
 							goto main_loop;
 		case OP_SUPER:
@@ -4643,8 +4643,8 @@ do_jump:
 								VALUE exc;
 								// TODO: better exception type than MethodNotFound
 								exc = make_normal_type_instance(vm->MethodNotFound);
-								set_normal_type_instance_attribute(exc, make_string("message"), make_string("Using super where callable is not an array"));
-								set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+								set_normal_type_instance_field(exc, make_string("message"), make_string("Using super where callable is not an array"));
+								set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 								*result = exc;
 								goto exception;
 							}
@@ -4673,7 +4673,7 @@ end_main_loop:
 exception:
 	// *result is the exception
 	if (IS_NORMAL_TYPE_INSTANCE(*result) && (result->ptr == THIS_FRAME.ReturnInstance.ptr)) {
-		mr = get_normal_type_instace_attribute(*result, make_string("val"), result);
+		mr = get_normal_type_instace_field(*result, make_string("val"), result);
 		ctx->stack_ptr = saved_stack_ptr;
 		return mr;
 	}

@@ -17,7 +17,7 @@
 
 }
 
-# Decorator. TODO: Consider generice attributes-setting decorator
+# Decorator. TODO: Consider generic fields-setting decorator
 doc Sets ARGV matching option.
 doc option - Option name. The only supported option at this time is "positionals".
 doc value - Option value.

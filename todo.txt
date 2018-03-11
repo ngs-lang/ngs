@@ -10,7 +10,7 @@ Note that this started as internal document so things here are unformed, not fin
 	* Phase 1 - the language [in progress]
 
 		* Milestone "documentation" [in progress]
-			* Standardize and explain naming convention: attribute/property/field.
+			* Standardize and explain naming convention: attribute/property/field [in progress]
 			* Generated [in progress]
 				* Pages
 					* Namespaces related
@@ -76,6 +76,10 @@ Note that this started as internal document so things here are unformed, not fin
 			* Internals
 
 		* Milestone "correct programming"
+
+			* Convert VERSION to an object and add option to print it as JSON
+
+			* Consider adding FEATURES (Hash?)
 
 			* Support multi-command / multi-line $(...) syntax
 
@@ -224,7 +228,7 @@ Note that this started as internal document so things here are unformed, not fin
 			* pmap() - limit number of concurrent threads and/or make it dynamic
 			* rethink exceptions in threads
 			* Make ENV and current directory thread-local but allow access to the global ones
-			* Thread - Make pthread_attr_t accessible - get/set attributes
+			* Thread - Make pthread_attr_t accessible - get/set fields
 			* Thread local variables
 			* pthread_mutexattr_gettype()
 			* pthread_mutexattr_destroy()

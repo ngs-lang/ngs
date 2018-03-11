@@ -29,7 +29,7 @@ syn keyword ngsType AssertFail ArgsMismatch CException EmptyArrayFail Error Exce
 syn keyword ngsType File SocketFile Symlink BlockDevice Dir CharDevice FifoFile MaybeFile
 syn keyword ngsType FileIOFail StatFail
 syn keyword ngsType Hook
-syn keyword ngsType IndexNotFound AttrNotFound InvalidParameter NoNext
+syn keyword ngsType IndexNotFound FieldNotFound InvalidParameter NoNext
 syn keyword ngsType InvalidArgument DivisionByZero
 syn keyword ngsType Lock ReentrantLock Pthread PthreadAttr Thread
 syn keyword ngsType LockFail

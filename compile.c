@@ -328,7 +328,7 @@ void compile_identifier(COMPILATION_CONTEXT *ctx, char **buf, size_t *idx, char 
 	}
 }
 
-void compile_attr_name(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
+void compile_field_name(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
 	if(!need_result) {
 		return;
 	}
@@ -402,7 +402,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				STACK_DEPTH++;
 			}
 			argc = 0;
-			if(node->first_child->type == ATTR_NODE) {
+			if(node->first_child->type == FIELD_NODE) {
 				compile_main_section(ctx, node->first_child->first_child, buf, idx, allocated, NEED_RESULT);
 				if(have_arr_splat) {
 					OPCODE(*buf, OP_ARR_APPEND);
@@ -479,7 +479,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, argc);
 				STACK_DEPTH++;
 			}
-			if(node->first_child->type == ATTR_NODE) {
+			if(node->first_child->type == FIELD_NODE) {
 				callable = node->first_child->first_child->next_sibling;
 			} else {
 				callable = node->first_child;
@@ -490,7 +490,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			STACK_DEPTH = saved_stack_depth;
 			break;
 		case INDEX_NODE:
-		case ATTR_NODE:
+		case FIELD_NODE:
 		case NS_NODE:
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "INDEX NODE", *idx);
 			OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
@@ -498,8 +498,8 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			STACK_DEPTH++;
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
 			STACK_DEPTH++;
-			if(node->type == ATTR_NODE || node->type == NS_NODE) {
-				compile_attr_name(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+			if(node->type == FIELD_NODE || node->type == NS_NODE) {
+				compile_field_name(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 			} else {
 				compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 			}
@@ -551,14 +551,14 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					OPCODE(*buf, OP_CALL);
 					POP_IF_DONT_NEED_RESULT(*buf);
 					break;
-				case ATTR_NODE:
+				case FIELD_NODE:
 				case NS_NODE:
 					OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
 					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
-					compile_attr_name(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+					compile_field_name(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 					compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 					OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 3);
-					compile_identifier(ctx, buf, idx, ptr->type == ATTR_NODE ? ".=" : "::=", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
+					compile_identifier(ctx, buf, idx, ptr->type == FIELD_NODE ? ".=" : "::=", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 					OPCODE(*buf, OP_CALL);
 					POP_IF_DONT_NEED_RESULT(*buf);
 					break;
@@ -1140,7 +1140,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			if(node->number & 1) {
 				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0);
 				compile_identifier(ctx, buf, idx, "SwitchFail", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
-				// TODO: attribute with offending value
+				// TODO: field with offending value
 				OPCODE(*buf, OP_CALL);
 				OPCODE(*buf, OP_THROW);
 			} else {
