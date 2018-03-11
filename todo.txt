@@ -4,6 +4,8 @@ Note that this started as internal document so things here are unformed, not fin
 
 	Unsorted and undecided things go here. The important sections is [roadmap] and it's just below this section.
 
+	* Allow dump() to stderr (to use in print_exception in bootstrap)
+
 
 [roadmap]
 
@@ -25,7 +27,6 @@ Note that this started as internal document so things here are unformed, not fin
 					* { } in examples
 			* Document AWS library (including usage examples)
 				* Example: AWS::Elb().reject(X.Instances).delete()
-			* Exit codes (see bootstrap.ngs and ngs.c)
 			* Link from constructors to types
 			* Nested namespaces (AWS::util)
 			* "N methods" in link to namespace - filter by added implementations, don't count x in "global init; x = init"

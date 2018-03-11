@@ -107,8 +107,8 @@ typedef struct {
 	TRY_INFO try_info[MAX_TRIES_PER_FRAME];
 	int try_info_ptr;
 
-	// Enable/disable using impl_not_found_handler
-	int do_call_impl_not_found_handler;
+	// Enable/disable using method_not_found_handler
+	int do_call_method_not_found_handler;
 	int do_call_call;
 
 	// For stack trace
@@ -240,7 +240,7 @@ typedef struct {
 		VALUE NgsStrCompExp;
 		VALUE NgsStrCompSplatExp;
 
-	VALUE impl_not_found_handler;
+	VALUE method_not_found_handler;
 	VALUE global_not_found_handler;
 	VALUE init;
 	VALUE call;

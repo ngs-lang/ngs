@@ -13,16 +13,26 @@ F init(e:Exception, cause:Exception) {
 	e.cause = cause
 }
 
-TEST Exception().backtrace is Backtrace
-TEST Exception("xyz").message == "xyz"
-TEST Exception(Exception()).cause is Exception
-
+doc Initialize an Exception.
+doc %RET - Exception with .backtrace, .message, and .cause
+F init(e:Exception, message:Str, cause:Exception) {
+	e.message = message
+	e.cause = cause
+}
 
 {
-	type NotImplemented; NotImplemented.inherit(Exception);
-	type ReadFail; ReadFail.inherit(Exception);
-	type RequireFail; RequireFail.inherit(Exception);
-	type MainFail; MainFail.inherit(Exception);
+	type NotImplemented; NotImplemented.inherit(Exception)
+	type ReadFail; ReadFail.inherit(Exception)
+	type RequireFail; RequireFail.inherit(Exception)
+	type MainFail; MainFail.inherit(Exception)
+
+	doc Represents error when converting program execution result to exit code
+	type ExitCodeFail; ExitCodeFail.inherit(Exception)
+
+	doc Information about exiting, used by bootstrap and as argument to exit_hook.
+	doc exit_code - the code to exit with
+	doc exceptions - exceptions that occured during exit procedure
+	type Exit
 }
 
 # === bootstrap ==================================
@@ -37,8 +47,8 @@ F ExitCode(b:Bool) if b 0 1
 doc %RET - n
 F ExitCode(n:Int) n
 
-doc %RET - Always 200
-F ExitCode(e:Exception) 200
+doc %RET - Always 240
+F ExitCode(e:Exception) 240
 
 doc Create MultiMethod with no methods
 F MultiMethod() super([])
@@ -230,48 +240,53 @@ F bootstrap() {
 	result.ExitCode()
 }
 
+doc Uses built-in dump() to show an exception. Only used if stdlib is not loaded (stdlib defines better method).
+F print_exception(e:Exception) {
+	dump(exception)
+}
+
+doc Prints exceptions. Only used if stdlib is not loaded (stdlib changes exit_hook to a Hook object).
+F exit_hook(exit:Exit) {
+	for(i; exit.exceptions.len()) {
+		# FIXME: output to stderr when print_exception is fixed
+		echo("--- Uncaught exception ---")
+		print_exception(exit.exceptions[i])
+	}
+}
+
 doc Internal method. Please do not use.
 doc Runs bootstrap() and handles exceptions.
 doc %STATUS - internal
 F bootstrap_exception_catch_wrapper() {
-	exception = null
-	exit_code = null
+	exit = Exit()
+	exit.exit_code = 0
+	exit.exceptions = []
 	try {
-		exit_code = bootstrap()
+		exit.exit_code = bootstrap()
 	} catch(e:Exception) {
-		exception = e
-	}
-	t = {'exit_code': exit_code, 'exception': exception}
-
-	if defined exit_hook {
+		exit.exceptions.push(e)
+		exit.exit_code = 240
 		try {
-			exit_hook(t)
+			exit.exit_code = e.ExitCode()
 		} catch(e:Exception) {
-			if exception is Null {
-				exception = e
-			} else {
-				exception.additional_exit_hook_exception = e
-			}
-		}
-	} else {
-		# stdlib was not loaded
-		if exception is Null {
-			"nop"
-		} else {
-			echo("Uncaught exception occured:")
-			dump(exception)
-			c_exit(201)
+			exit.exceptions.push(ExitCodeFail("Failed to convert exception to exit code", e))
+			exit.exit_code = exit.exit_code + 1
 		}
 	}
 
-	if exception is Null {
-		"nop"
-	} else {
-		if not(t['exit_code']) {
-			c_exit(200)
+	try {
+		exit_hook(exit)
+	} catch(e:Exception) {
+		exit.exceptions.push(e)
+		exit.exit_code = exit.exit_code + 2
+		for(i; exit.exceptions.len()) {
+			# FIXME: output to stderr when print_exception is fixed
+			echo("--- Uncaught exception ---")
+			dump(exit.exceptions[i])
 		}
 	}
-	c_exit(t['exit_code'])
+
+	c_exit(exit.exit_code)
 }
 
 bootstrap_exception_catch_wrapper()

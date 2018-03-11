@@ -156,7 +156,7 @@ int main(int argc, char **argv)
 	bootstrap_file_name = find_bootstrap_file();
 	if(!bootstrap_file_name) {
 		fprintf(stderr, "Could not find bootstrap file\n");
-		exit(100);
+		exit(244);
 	}
 	if(!strcmp(bootstrap_file_name, "-")) {
 		source_file_name = ngs_strdup("<stdin>");
@@ -167,13 +167,13 @@ int main(int argc, char **argv)
 	}
 	if(!yyctx.input_file) {
 		fprintf(stderr, "Error while opening bootstrap file '%s': %d - %s\n", bootstrap_file_name, errno, strerror(errno));
-		exit(101);
+		exit(245);
 	}
 	parse_ok = yyparse(&yyctx);
 	// printf("parse_ok %d\n", parse_ok);
 	if(!parse_ok) {
 		fprintf(stderr, "NGS: Failed to parse at position %d (%s), rule %s. Exiting.\n", yyctx.fail_pos, sprintf_position(&yyctx, yyctx.fail_pos), yyctx.fail_rule);
-		exit(2);
+		exit(246);
 	}
 
 	tree = yyctx.__;

@@ -93,7 +93,7 @@ You are probably using Python/Ruby/Perl/Go . You use one of the above languages 
 * type - Built-in or user-defined data type, similar to Python, Ruby and other languages.
 * object - Instance of a type, similar to Python, Ruby and other languages. The phrase "MyType object" refers to an Instance of "MyType".
 * field - A named slot of an object, similar to field in Python, Java, etc.
-* attributes - Slot for auxiliary data on some most types of objects (the ones that are references, i.e. not Int,Bool,Null), typically a `Hash` or `null`.
+* attributes - Slot for auxiliary data on most types of objects (the ones that are references, i.e. not Int,Bool,Null), typically a `Hash` or `null`.
 * method - Built-in or user-defined function. User defined methods can be closures.
 * multimethod - A MultiMethod object containing ordered list of methods. When called, the appropriate method is selected from the list to perform the computation.
 
@@ -1396,9 +1396,9 @@ Another way is to add named hook handlers (also a practical example):
 	}
 
 
-## `impl_not_found_handler`
+## `method_not_found_handler`
 
-`impl_not_found_handler` is called when a multimethod was called but no method matched the arguments. Use `F impl_not_found_handler(callable:Fun, *args) ...` to add your behaviours.
+`method_not_found_handler` is called when a multimethod was called but no method matched the arguments. Use `F method_not_found_handler(callable:Fun, *args) ...` to add your behaviours.
 
 
 ## `global_not_found_handler`
@@ -1425,7 +1425,6 @@ Method signature: `exit_hook(exit_info:Hash)`. `exit_info` currently has two key
 	[exception_to_exit_code] = <UserDefinedMethod <anonymous> at /usr/share/ngs/stdlib.ngs:2117>
 
 * `print_exception` prints exception details if an exception occurred.
-* `exception_to_exit_code` sets the exit code using `ExitCode`. Unless defined for your specific exception, `ExitCode` of an `Exception` returns **200**.
 
 # Variables' scoping rules
 
@@ -1712,7 +1711,7 @@ Redirections syntax (based on bash syntax):
 	  process[0]:   output on fd 2, stderr (1 lines):
 	  process[0]:     ls: xxx: No such file or directory
 
-## Exit codes handling
+## Exit codes handling when running external programs
 
 Immediately after an external program finishes, it's exit code (and in future, possibly other aspects) is checked using `finished_ok` multimethod. The multimethod returns a `Bool`. If it's `false`, an exception is thrown.
 
@@ -1735,6 +1734,37 @@ See `Argv` multimethod.
 ## Globbing
 
 Globbing is not implemented yet.
+
+# NGS exit codes
+
+Both regular results of running a program and exceptions are converted to exit code using `ExitCode` MultiMethod. Built in methods of `ExitCode` do the following conversion:
+
+* `true` - 0
+* `false` - 1
+* `Int` object - the number itself
+* `Exception` objects - 240
+* `FullBox` object - 0
+* `EmptyBox` object - 1
+* `Success` object - 0
+* `Failure` object - 1
+* `FatalError` objects - using the `exit_code` field of the exception, which if not given to `FatalError` constructor defaults to 1.
+* `CommandsPipeline` / `Process` objects - the exit code of the external command
+* `MatchY` object - 0
+* `MatchN` object - 1
+* All others - 0
+
+Special cases:
+
+* An exception and additional exception when converting the first exception using `ExitCode` - 241
+* An exception and `exit_hook` failure - 242
+* An exception, additional exception when converting the first exception using `ExitCode`, and `exit_hook` failure - 243
+* NGS could not find the bootstrap file - 244
+* NGS could not open bootstrap file - 245
+* NGS could not parse bootstrap file - 246
+
+## Customizing translation of your types/objects to exit code
+
+Define `F ExitCode(t:MyType) {...}` method that returns `Int` to customize the exit code.
 
 # Debugging
 

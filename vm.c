@@ -3431,7 +3431,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 		ARRAY_ITEMS(argv_array)[i] = make_string(argv[i]);
 	}
 	set_global(vm, "ARGV", argv_array);
-	set_global(vm, "impl_not_found_handler", vm->impl_not_found_handler = make_multimethod()); // There must be a catch-all in stdlib
+	set_global(vm, "method_not_found_handler", vm->method_not_found_handler = make_multimethod()); // There must be a catch-all in stdlib
 	set_global(vm, "global_not_found_handler", vm->global_not_found_handler = make_multimethod());
 	set_global(vm, "init", vm->init = make_multimethod());
 	set_global(vm, "call", vm->call = make_multimethod());
@@ -3736,32 +3736,32 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			}
 		}
 		DEEPER_FRAME.arr_callable = NULL;
-		// --- impl_not_found_handler() - start ---
-		if(THIS_FRAME.do_call_impl_not_found_handler) {
-			// impl_not_found_handler == [] when stdlib is not loaded (-E bootstrap switch / during basic tests)
-			if(OBJ_LEN(vm->impl_not_found_handler)) {
+		// --- method_not_found_handler() - start ---
+		if(THIS_FRAME.do_call_method_not_found_handler) {
+			// method_not_found_handler == [] when stdlib is not loaded (-E bootstrap switch / during basic tests)
+			if(OBJ_LEN(vm->method_not_found_handler)) {
 				VALUE new_argv;
 				new_argv = make_array(argc+1);
 				ARRAY_ITEMS(new_argv)[0] = callable;
 				memcpy(&ARRAY_ITEMS(new_argv)[1], argv, sizeof(VALUE)*argc);
-				THIS_FRAME.do_call_impl_not_found_handler = 0;
+				THIS_FRAME.do_call_method_not_found_handler = 0;
 				// last_ip should have been already set up before calling vm_call()
-				mr = vm_call(vm, ctx, result, vm->impl_not_found_handler, argc+1, ARRAY_ITEMS(new_argv));
-				THIS_FRAME.do_call_impl_not_found_handler = 1;
+				mr = vm_call(vm, ctx, result, vm->method_not_found_handler, argc+1, ARRAY_ITEMS(new_argv));
+				THIS_FRAME.do_call_method_not_found_handler = 1;
 				if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION)) {
 					return mr;
 				}
 				assert(mr == METHOD_IMPL_MISSING);
 			}
-			// Either we called impl_not_found_handler and it resulted METHOD_IMPL_MISSING
-			// or we don't have impl_not_found_handler
+			// Either we called method_not_found_handler and it resulted METHOD_IMPL_MISSING
+			// or we don't have method_not_found_handler
 			VALUE exc;
 			exc = make_normal_type_instance(vm->MethodNotFound);
 			set_normal_type_instance_field(exc, make_string("callable"), callable);
 			SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv);
 			THROW_EXCEPTION_INSTANCE(exc);
 		}
-		// --- impl_not_found_handler() - end ---
+		// --- method_not_found_handler() - end ---
 		return METHOD_IMPL_MISSING;
 	}
 
@@ -3932,7 +3932,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 
 		ctx->frames[ctx->frame_ptr].closure = callable;
 		ctx->frames[ctx->frame_ptr].try_info_ptr = 0;
-		ctx->frames[ctx->frame_ptr].do_call_impl_not_found_handler = 1;
+		ctx->frames[ctx->frame_ptr].do_call_method_not_found_handler = 1;
 		ctx->frames[ctx->frame_ptr].do_call_call = 1;
 		ctx->frames[ctx->frame_ptr].last_ip = 0;
 		ctx->frames[ctx->frame_ptr].ReturnInstance = MAKE_NULL;
@@ -3971,9 +3971,9 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		} else {
 			new_argv = result;
 		}
-		THIS_FRAME.do_call_impl_not_found_handler = 0;
+		THIS_FRAME.do_call_method_not_found_handler = 0;
 		mr = vm_call(vm, ctx, &v, vm->init, argc+1, new_argv);
-		THIS_FRAME.do_call_impl_not_found_handler = 1;
+		THIS_FRAME.do_call_method_not_found_handler = 1;
 		if(argc && (mr == METHOD_IMPL_MISSING)) {
 			VALUE exc;
 			exc = make_normal_type_instance(vm->MethodNotFound);
@@ -4163,11 +4163,11 @@ main_loop:
 							if(IS_UNDEF(GLOBALS[gvi])) {
 								THIS_FRAME.last_ip = ip;
 
-								THIS_FRAME.do_call_impl_not_found_handler = 0;
+								THIS_FRAME.do_call_method_not_found_handler = 0;
 								// last_ip should have been already set up before calling vm_call()
 								v = make_string(vm->globals_names[gvi]);
 								mr = vm_call(vm, ctx, result, vm->global_not_found_handler, 1, &v);
-								THIS_FRAME.do_call_impl_not_found_handler = 1;
+								THIS_FRAME.do_call_method_not_found_handler = 1;
 								if(IS_UNDEF(GLOBALS[gvi]) || mr == METHOD_EXCEPTION) {
 									VALUE exc;
 									exc = make_normal_type_instance(vm->GlobalNotFound);
@@ -4257,10 +4257,10 @@ main_loop:
 							EXPECT_STACK_DEPTH(2);
 							POP_NOCHECK(callable);
 							POP_NOCHECK(v); // number of arguments
-							THIS_FRAME.do_call_impl_not_found_handler = 0;
+							THIS_FRAME.do_call_method_not_found_handler = 0;
 							THIS_FRAME.last_ip = ip;
 							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-GET_INT(v)-1], callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
-							THIS_FRAME.do_call_impl_not_found_handler = 1;
+							THIS_FRAME.do_call_method_not_found_handler = 1;
 							if(mr == METHOD_EXCEPTION) {
 								// TODO: special handling? Exception during exception handling.
 								*result = ctx->stack[ctx->stack_ptr-GET_INT(v)-1];
