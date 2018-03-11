@@ -85,9 +85,9 @@ F init(e:InstantiatingAbstractType, t:Type) init(args())
 # === Namespaces =================================
 
 doc Get NormalType object field. Useful when calling method stored in an field.
-doc %EX - myobj::method_in_attr(arg)  # calls method stored in myobj.method_in_attr
-doc %EX - (myobj.method_in_attr)(arg) # calls method stored in myobj.method_in_attr
-doc %EX - myobj.method_in_attr(arg)   # calls global "method_in_attr"
+doc %EX - myobj::method_in_field(arg)  # calls method stored in myobj.method_in_field
+doc %EX - (myobj.method_in_field)(arg) # calls method stored in myobj.method_in_field
+doc %EX - myobj.method_in_field(arg)   # calls global "method_in_field"
 F '::'(nti:NormalTypeInstance, k) nti.(k)
 
 doc Get Hash key. Useful when calling method stored in a Hash key.
@@ -611,7 +611,7 @@ TEST a=[1,2]; a.push_all([3,4]); a==[1,2,3,4]
 # TODO [doc]: examples in methods
 {
 	doc Parent type for user-defined types with array-like behaviour. Use in cases when you would like to inherit from built-in Arr. Inheriting from built-ins is not possible for now.
-	doc arr_like_attr - name of the field that holds the underlying array, defaults to "items"
+	doc arr_like_field - name of the field that holds the underlying array, defaults to "items"
 	doc items - default field for the underlying array
 	doc %EX - type T(ArrLike)
 	doc %EX - F Str(t:T) "<My array has ${len(t)} items totalling ${sum(t)}>"  # Override one of the Arr methods
@@ -632,30 +632,30 @@ TEST a=[1,2]; a.push_all([3,4]); a==[1,2,3,4]
 doc ArrLike constructor
 doc field - name of the field that holds the underlying array
 F init(al:ArrLike, field:Str='items') {
-	al.arr_like_attr = field
-	al.(al.arr_like_attr) = []
+	al.arr_like_field = field
+	al.(al.arr_like_field) = []
 }
 
 doc Get length of the underlying array.
-F len(al:ArrLike)               al.(al.arr_like_attr).len()
+F len(al:ArrLike)               al.(al.arr_like_field).len()
 
 doc Set element in the underlying array.
-F '[]'(al:ArrLike, idx:Int)     al.(al.arr_like_attr)[idx]
+F '[]'(al:ArrLike, idx:Int)     al.(al.arr_like_field)[idx]
 
 doc Get element from the underlying array.
-F '[]='(al:ArrLike, idx:Int, x) al.(al.arr_like_attr)[idx] = x
+F '[]='(al:ArrLike, idx:Int, x) al.(al.arr_like_field)[idx] = x
 
 doc Get element at the given index or return dflt if the index is out of range (element at the given index does not exist). See get(Arr).
-F get(al:ArrLike, idx:Int, dflt) al.(al.arr_like_attr).get(idx, dflt)
+F get(al:ArrLike, idx:Int, dflt) al.(al.arr_like_field).get(idx, dflt)
 
 doc Call cb for each element in the underlying array.
-F each(al:ArrLike, cb:Fun) al.(al.arr_like_attr).each(cb)
+F each(al:ArrLike, cb:Fun) al.(al.arr_like_field).each(cb)
 
 doc Check whether al has any elements.
-F Bool(al:ArrLike) al.(al.arr_like_attr).Bool()
+F Bool(al:ArrLike) al.(al.arr_like_field).Bool()
 
 doc Push an element to the underlying array.
-F push(al:ArrLike, val) al.(al.arr_like_attr).push(val)
+F push(al:ArrLike, val) al.(al.arr_like_field).push(val)
 
 # === HashLike ===================================
 # TODO [doc]: examples in methods
@@ -876,18 +876,18 @@ doc %EX -   nti.a = 1
 doc %EX -   nti.b = 2
 doc %EX -   echo(Str(nti)) # <T a=1 b=2>
 doc %EX - }
-doc %RET - "<TYPE_NAME attr1=val1 attr2=val2 ...>"
+doc %RET - "<TYPE_NAME field1=val1 field2=val2 ...>"
 F Str(i:NormalTypeInstance) {
 	h = Hash(i)
-	attrs_dots = if len(h) > 10 {
+	fields_dots = if len(h) > 10 {
 		h .= limit(10)
 		' ...'
 	} else {
 		''
 	}
 	# TODO limit key and value lengths
-	attrs = ' ' +? h.Strs().join(' ')
-	"<${i.typeof().name}${attrs}${attrs_dots}>"
+	fields = ' ' +? h.Strs().join(' ')
+	"<${i.typeof().name}${fields}${fields_dots}>"
 }
 
 TEST type T; t=T(); Str(t) == '<T>'

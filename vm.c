@@ -777,13 +777,13 @@ METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 // TODO: better than METHOD_ARGS_MISMATCH on include_start != true and include_end != false
 #define NATIVE_RANGE_INDEX_SETUP \
 	if(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(argv[1])) < 5) return METHOD_ARGS_MISMATCH; \
-	include_start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_INCLUDE_START]; \
+	include_start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_FIELD_INCLUDE_START]; \
 	if(!IS_BOOL(include_start)) return METHOD_ARGS_MISMATCH; \
 	if(!IS_TRUE(include_start)) return METHOD_ARGS_MISMATCH; \
-	include_end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_INCLUDE_END]; \
+	include_end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_FIELD_INCLUDE_END]; \
 	if(!IS_BOOL(include_end)) return METHOD_ARGS_MISMATCH; \
 	if(!IS_FALSE(include_end)) return METHOD_ARGS_MISMATCH; \
-	start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_START]; \
+	start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_FIELD_START]; \
 	if(!IS_INT(start)) return METHOD_ARGS_MISMATCH; \
 	if(GET_INT(start) < 0) { \
 		exc = make_normal_type_instance(vm->IndexNotFound); \
@@ -795,7 +795,7 @@ METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 		set_normal_type_instance_field(exc, make_string("message"), make_string("NumRange starts after string/array end")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	} \
-	end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_END]; \
+	end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_FIELD_END]; \
 	if(IS_NULL(end)) { \
 		end = MAKE_INT(OBJ_LEN(argv[0])); \
 	} \
@@ -2530,11 +2530,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	//      will break everything. TODO: make sure this can not be done by
 	//      an NGS script.
 	MKTYPE(NumRange);
-		SETUP_TYPE_FIELD(NumRange, start, RANGE_ATTR_START);
-		SETUP_TYPE_FIELD(NumRange, end, RANGE_ATTR_END);
-		SETUP_TYPE_FIELD(NumRange, include_start, RANGE_ATTR_INCLUDE_START);
-		SETUP_TYPE_FIELD(NumRange, include_end, RANGE_ATTR_INCLUDE_END);
-		SETUP_TYPE_FIELD(NumRange, step, RANGE_ATTR_STEP);
+		SETUP_TYPE_FIELD(NumRange, start, RANGE_FIELD_START);
+		SETUP_TYPE_FIELD(NumRange, end, RANGE_FIELD_END);
+		SETUP_TYPE_FIELD(NumRange, include_start, RANGE_FIELD_INCLUDE_START);
+		SETUP_TYPE_FIELD(NumRange, include_end, RANGE_FIELD_INCLUDE_END);
+		SETUP_TYPE_FIELD(NumRange, step, RANGE_FIELD_STEP);
 	_doc(vm, "", "Numerical range");
 
 	MKTYPE(Stat);
@@ -2848,7 +2848,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// BasicType
 	register_global_func(vm, 1, ".",        &native_get_field_bt_str,       2, "obj", vm->BasicType,          "field", vm->Str);
 	_doc(vm, "", "Get BasicType (Int, Arr, Hash, ...) field. Throws FieldNotFound.");
-	_doc(vm, "field", "Attribute to get. Currently only \"name\" and \"constructors\" are supported.");
+	_doc(vm, "field", "Field to get. Currently only \"name\" and \"constructors\" are supported.");
 	_doc(vm, "%AUTO", "obj.field");
 	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
 	_doc_arr(vm, "%EX",
@@ -2860,13 +2860,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// NormalType
 	register_global_func(vm, 1, ".",        &native_get_field_nt_str,       2, "obj", vm->NormalType,         "field", vm->Str);
 	_doc(vm, "", "Get NormalType (a type that is typically defined by user) field. Throws FieldNotFound.");
-	_doc(vm, "field", "Attribute to get. Currently only \"name\", \"constructors\", \"parents\" and \"user\" are supported.");
+	_doc(vm, "field", "Field to get. Currently only \"name\", \"constructors\", \"parents\" and \"user\" are supported.");
 	_doc(vm, "%AUTO", "obj.field");
 	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
 
 	register_global_func(vm, 1, ".=",       &native_set_field_nt_str,       3, "obj", vm->NormalType,         "field", vm->Str, "v", vm->Any);
 	_doc(vm, "", "Set NormalType (a type that is typically defined by user) field. Throws FieldNotFound.");
-	_doc(vm, "field", "Attribute to set. Currently only \"user\" is supported.");
+	_doc(vm, "field", "Field to set. Currently only \"user\" is supported.");
 	_doc(vm, "%AUTO", "obj.field = v");
 	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
 

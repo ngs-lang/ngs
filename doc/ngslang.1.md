@@ -92,6 +92,8 @@ You are probably using Python/Ruby/Perl/Go . You use one of the above languages 
 
 * type - Built-in or user-defined data type, similar to Python, Ruby and other languages.
 * object - Instance of a type, similar to Python, Ruby and other languages. The phrase "MyType object" refers to an Instance of "MyType".
+* field - A named slot of an object, similar to field in Python, Java, etc.
+* attributes - Slot for auxiliary data on some most types of objects (the ones that are references, i.e. not Int,Bool,Null), typically a `Hash` or `null`.
 * method - Built-in or user-defined function. User defined methods can be closures.
 * multimethod - A MultiMethod object containing ordered list of methods. When called, the appropriate method is selected from the list to perform the computation.
 
