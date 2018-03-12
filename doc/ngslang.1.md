@@ -947,6 +947,7 @@ Switch and switch-like expressions.
 * If there is no match, `switch`, `match` and `cond` return `null`.
 * If there is no match, `eswitch`, `ematch` and `econd` throw `SwitchFail` exception.
 
+Examples:
 
 	a = 10
 	result = switch a {
@@ -1332,6 +1333,7 @@ You can define your own types. Let's define `Counter` type and a few methods tha
 	* Runs `init()` MultiMethod with the new object as the first argument and the arguments of the call to `T(...)` as second and on arguments to `init(...)`.
 	* Note that calling `init()` might trigger `MethodNotFound` exception. It is ignored if and only if the call to `T()` had no arguments.
 
+Examples:
 
 	# Customizing Box object creation (code from stdlib)
 	F Box(x) FullBox(x)
@@ -1420,9 +1422,8 @@ Another way is to add named hook handlers (also a practical example):
 Method signature: `exit_hook(exit_info:Hash)`. `exit_info` currently has two keys: `exit_code` and `exception`. **stdlib.ngs** defines two standard hooks.
 
 	$ ngs -pi 'exit_hook.Hash()'
-	Hash of size 2
-	[print_exception] = <UserDefinedMethod <anonymous> at /usr/share/ngs/stdlib.ngs:2110>
-	[exception_to_exit_code] = <UserDefinedMethod <anonymous> at /usr/share/ngs/stdlib.ngs:2117>
+	Hash of size 1
+	  [print_exception] = <UserDefinedMethod <anonymous>(exit:Exit) at /usr/local/lib/ngs/stdlib.ngs:5345>
 
 * `print_exception` prints exception details if an exception occurred.
 
