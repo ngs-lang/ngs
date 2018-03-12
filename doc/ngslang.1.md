@@ -22,7 +22,7 @@ You can put the following line as first line of your script:
 
 If you do, you can run the script as `./script_name.ngs` or `/full/path/to/script_name.ngs` (you must make your script executable, `chmod 755 script_name.ngs`.
 
-See more about running NGS in [ngs(1)](ngs.1.html).
+See more about running NGS in [NGS(1)](ngs.1.md).
 
 # WHY NGS?
 
@@ -64,7 +64,7 @@ We all know that life is not that simple so here is a bit more complex situation
 
 ## Your current situation with languages sucks
 
-Currently, as a systems engineer you are probably using bash combined with of one or more high-level languages.
+Currently, as a systems engineer you are probably using bash combined with of one or more high-level general purpose languages.
 
 **bash**
 
@@ -82,11 +82,11 @@ You are using bash because it's domain-specific and allows you to get some tasks
 
 `jq` is fine till you need to work with tags (thanks AWS for list instead of hash!) or do something more complex. It starts looking bad really fast. It probably can be done with `jq` but why get yourself into this instead of using a normal programming language. You can do chess in `sed` too (actually done) but it doesn't mean you should unless it's for fun and not to get the job done quickly.
 
-Yes, there is also built-in `jmespath` in `awscli`. It won't be much better than `jq` - OK for simple cases. Why bother then? I've read the specs once and decided it was not worth the trouble if you already know how to use `jq`.
+Yes, there is also built-in `jmespath` in `awscli`. It won't be much better than `jq` - OK for simple cases. Why bother then?
 
 **other languages**
 
-You are probably using Python/Ruby/Perl/Go . You use one of the above languages because bash is not powerful enough / not convenient enough to do the tasks that these languages do. On the other hand something as simple as `echo mystring >myfile` or running an external program is not as convenient to do in these languages. Yes all of the languages above support system tasks to some degree. None of these languages can support system tasks as a language that was built ground-up for system tasks. See the double-backtick examples above... for example.
+You are probably using Python/Ruby/Perl/Go . You use one of the above languages because bash is not powerful enough / not convenient enough to do the tasks that these languages do. On the other hand something as simple as `echo mystring >myfile` or running an external program is not as convenient to do in these languages compared to bash. Yes, all of the languages above support system tasks to some degree. None of these languages can support system tasks as a language that was built ground-up for system tasks. See the double-backtick examples above... for example.
 
 # Terminology
 
@@ -94,7 +94,7 @@ You are probably using Python/Ruby/Perl/Go . You use one of the above languages 
 * object - Instance of a type, similar to Python, Ruby and other languages. The phrase "MyType object" refers to an Instance of "MyType".
 * field - A named slot of an object, similar to field in Python, Java, etc.
 * attributes - Slot for auxiliary data on most types of objects (the ones that are references, i.e. not Int,Bool,Null), typically a `Hash` or `null`.
-* method - Built-in or user-defined function. User defined methods can be closures.
+* method - Built-in or user-defined function. User defined methods can be closures. Methods are also called functions in several places in the documentation.
 * multimethod - A MultiMethod object containing ordered list of methods. When called, the appropriate method is selected from the list to perform the computation.
 
 # Language principles overview
@@ -117,7 +117,7 @@ NGS tries to be uniform wherever possible to minimize surprises.
 
 ## Power
 
-As rule, trade-offs between power and not allowing to shoot yourself in the foot are resolved in favor of the power solution. The language is aimed at experienced engineers which use their own judgement. The language should be powerful enough to shoot all feet in the building at once.
+As a rule, trade-offs between power and not allowing to shoot yourself in the foot are resolved in favor of the power solution. The language is aimed at experienced engineers which use their own judgement. The language should be powerful enough to shoot all feet in the building at once.
 
 ## Simple methods naming for less guess work
 
@@ -164,8 +164,8 @@ In addition to running commands and performing redirections, there are several e
 * `{ code }` - see **Switching between syntaxes** below
 * assignment: `myvar = code` (`myvar = 1 + 2`)
 * in-place assignment: `myvar += code` (`myvar += 10`)
-* function definition: `F myfunc(params...) code` (`F myfunc(n:Int) echo(n*10)`)
-* function call: `myfunc(arguments...)` (`myfunc(7)`)
+* method (function) definition: `F myfunc(params...) code` (`F myfunc(n:Int) echo(n*10)`)
+* method (function) call: `myfunc(arguments...)` (`myfunc(7)`)
 * `if condition_code [then] yes_code [else] no_code`
 * `while condition_code body_code`
 * `for(...) body_code`
@@ -253,7 +253,7 @@ Reasoning behind `TransformationName`:
 
 	# comment till end of line
 
-## Calling a function
+## Calling a method
 
 	echo('Hello world')
 	{
@@ -326,7 +326,7 @@ NGS defines `Bool` multimethod, with methods for many types. These methods cause
 * regular expression that did not match, for example `"abc" ~ /XYZ/`
 
 Unless specified otherwise, all other values are converted to `true`.
-To define how your user-defined types behaves as boolean, define `Bool(x:YOUR_TYPE)` method.
+To define how your user-defined types behave as boolean, define `Bool(x:YOUR_TYPE)` method.
 
 ## Integers
 
@@ -484,15 +484,6 @@ Hashes - basics
 	# Output:
 	#   {a=1, b=2}
 
-	x = %{akey avalue bkey bvalue}
-	echo(x)
-	# Output:
-	#   {akey=avalue, bkey=bvalue}
-
-	echo(x)
-	# Output:
-	#   {a=1, b=2}
-
 	echo(x['a'])
 	echo(x.a)
 	# Output:
@@ -546,6 +537,11 @@ Hashes - basics
 
 	echo(x.e)
 	# ... Exception of type KeyNotFound occured ...
+
+	x = %{akey avalue bkey bvalue}
+	echo(x)
+	# Output:
+	#   {akey=avalue, bkey=bvalue}
 
 Hashes - some basic methods that operate on Hashes
 
@@ -654,7 +650,7 @@ Hashes - some basic methods that operate on Hashes
 
 Defining a method.
 
-When defining a named method, NGS automatically creates a MultiMethod with the given name (if it does not exist) and appends the new method to the multimethod's list of methods.
+When defining a named method, NGS automatically creates a `MultiMethod` with the given name (if it does not exist) and appends the new method to the multimethod's list of methods.
 
 	{
 		type Vehicle
@@ -723,12 +719,17 @@ Method "rest keywords" parameter
 	#   a => 10
 	#   b => 20
 
-Method guard
+Method `guard`.
+
+Method guards restrict method execution to specific conditions, typically on parameters' values. If guard condition evaluates to `false`, NGS considers the method as if it did not match the arguments and continues to search for other methods to run in the multimethod's methods list.
 
 	F gg(i:Int) {
 		echo("First gg active")
 		echo(i*10)
 	}
+
+	# gg is now MultiMethod with one method
+
 	gg(1)
 	gg(5)
 	# Output:
@@ -743,6 +744,9 @@ Method guard
 		echo("Second gg active")
 		echo(i*100)
 	}
+
+	# gg is now MultiMethod with two methods
+
 	gg(1)
 	gg(5)
 	# Output:
@@ -753,7 +757,7 @@ Method guard
 	#   Second gg active
 	#   500
 
-Call super methods (methods higher in the multimethod list of methods)
+Call super methods (methods higher in the multimethod's list of methods)
 
 	F sup(x) x+1
 
@@ -762,7 +766,9 @@ Call super methods (methods higher in the multimethod list of methods)
 	echo(sup(5))
 	# Output: 60
 
-Anonymous function (method) literal
+Anonymous function (method) literal.
+
+Syntactically, anonymous method is `F` not followed by a name.
 
 	f = F(item) { echo("Item: $item") }
 	echo("F is $f")
@@ -947,7 +953,7 @@ Switch and switch-like expressions.
 * If there is no match, `switch`, `match` and `cond` return `null`.
 * If there is no match, `eswitch`, `ematch` and `econd` throw `SwitchFail` exception.
 
-Examples:
+Switch and switch-like expressions examples.
 
 	a = 10
 	result = switch a {
@@ -1208,7 +1214,7 @@ Comments syntax is implemented in many places but not everywhere. If you get syn
 
 ## Mutable default parameter gotchas
 
-The code below will probably not to what was intended. Note that default parameter value is only computed once, at function definition time.
+The code below will probably not to what was intended. Note that default parameter value is only computed once, at method definition time.
 
 	F f(x, a:Arr=[]) {
 		a.push(x)
@@ -1261,7 +1267,7 @@ Checking types:
 	echo(typeof(1))
 	# Output: <Type Int>
 
-See types reference: [ngstyp(1)](ngstyp.1.html).
+See the generated documentation for list of all types and their methods. (URL will be provided once it's online)
 
 ## Define your own types
 
@@ -1326,7 +1332,7 @@ You can define your own types. Let's define `Counter` type and a few methods tha
 ## Type constructors and object creation
 
 * When type definition (`type T`) is executed, NGS defines the `.constructors` MultiMethod that includes one method. This method creates object of type `T`. The type of this method is `NormalTypeConstructor`.
-* After defining a type `T`, one can add methods using `F T(...) {...}` definitions. If you add your method to the `.constructors` field, please make sure it returns an object of type `T` or object of a type that is a subtype of `T`. Otherwise, it will be surprising for the callers.
+* After defining a type `T`, one can add methods to `.constructors` using `F T(...) {...}` definitions. If you add your method to the `.constructors` field, please make sure it returns an object of type `T` or object of a type that is a subtype of `T`. Otherwise, it will be surprising for the callers.
 * When you call a user defined type, its `.constructors` MultiMethod is called.
 * If the default constructor added by NGS (method of type `NormalTypeConstructor`) gets executed, it does the following:
 	* Creates object of type `T`
@@ -1353,7 +1359,7 @@ Examples:
 # Methods, multimethods and calling
 
 Each value in NGS has a type, similar to many other languages. One of the main features of NGS is choosing the correct method of a multimethod, based on types of the arguments:
-Let's start with the following snippet:
+Let's start with the following example:
 
 	F +(a:Int, b:Int) {
 		...
@@ -1364,22 +1370,57 @@ Let's start with the following snippet:
 	}
 
 	{
-		1 + 1
-		# -> 2
-
-		'a' + 'b'
-		# -> 'ab'
+		1 + 1     # 2
+		'a' + 'b' # 'ab'
 	}
 
-The `+` in NGS is a multimethod. It has few methods. You can see definitions of two of the methods in the example above. One method can add numbers. Another method concatenates strings. How NGS knows which one of them to run? The decision is made based on arguments' types. NGS scans the methods list backwards and invokes the method that matches the given arguments (this matching process is called multiple dispatch).
+The `+` is a multimethod. It has few methods. You can see definitions of two of the methods in the example above. One method adds numbers. Another method concatenates strings. How NGS knows which one of them to run? The decision is made based on arguments' types. NGS scans the methods list backwards and invokes the method that matches the given arguments (this matching process is called multiple dispatch).
 
-# Handlers and hooks
+**Important**: when a `MultiMethod` is called, the multimethod's methods list is searched from last element to first element. The method which parameters' types match is executed. This model is different from many other languages, where the most specific method is called. In NGS, if two methods' parameters both match the arguments, that one that was defined last is called. Typically, methods for more specific types are defined later in code so the behaviour is similar to other languages.
 
-Handlers and hooks are called by NGS when a certain condition occurs. What exactly happens when they are called differs between handlers and hooks.
+Consider the following types:
 
-**A handler** is a multimethod. Like with any other multimethod, you can override what it does by defining your own method with the same name further down in the code. Since standard handlers are defined in **stdlib.ngs** which is typically loaded first, your own methods will be "further down".
+	{
+		type Vehicle
+		type Car(Vehicle)
+	}
 
-**A hook** is a `Hook` object. Some hooks are called by NGS when a certain condition occurs. You are free to create and use your own hooks. When called, it executes all registered functions. The main difference is that using hook you get accumulative behaviour instead of overriding behaviour.
+Typical MultiMethod definition:
+
+	F park(v:Vehicle) { ... }
+	F park(c:Car) { ... }
+
+	park(Vehicle())  # calls the first method
+	park(Car())      # calls the second method
+
+Leveraging the NGS MultiMethod call behaviour: one can for example do debugging by adding the third method to the `park` MultiMethod:
+
+	F park(v:Vehicle) {
+		debug("Parking vehicle ${v}")
+		super(v)  # Execute one of the two methods defined above
+	}
+
+# Handlers
+
+Handlers are called by NGS when a certain condition occurs.
+
+**A handler** is a `MultiMethod`. Like with any other multimethod, you can override what it does by defining your own method with the same name further down in the code. Since standard handlers are defined in **stdlib.ngs** which is typically loaded first, your own methods will be "further down".
+
+## method_not_found_handler
+
+`method_not_found_handler` is called when a multimethod was called but no method matched the arguments. Use `F method_not_found_handler(callable:Fun, *args) ...` to add your behaviours.
+
+## global_not_found_handler
+
+`global_not_found_handler` is called on attempt to read from an undefined global variable. Sample usage from **stdlib.ngs**
+
+	F global_not_found_handler(name:Str) {
+		require("${NGS_DIR}/autoload/${name}.ngs")
+	}
+
+# Hooks
+
+**A hook** is a `Hook` object. Some hooks are called by NGS when a certain condition occurs. You are free to create and use your own hooks. When called, it executes all registered methods. The main difference vs calling a `MultiMethod` is that using hook you get accumulative behaviour instead of overriding behaviour.
 
 User-defined hook example:
 
@@ -1393,33 +1434,18 @@ User-defined hook example:
 
 Another way is to add named hook handlers (also a practical example):
 
-	exit_hook['cleanup_temp_files'] = F(exit_info:Hash) {
+	exit_hook['cleanup_temp_files'] = F(exit:Exit) {
 		# remove my temp files
 	}
 
-
-## `method_not_found_handler`
-
-`method_not_found_handler` is called when a multimethod was called but no method matched the arguments. Use `F method_not_found_handler(callable:Fun, *args) ...` to add your behaviours.
-
-
-## `global_not_found_handler`
-
-`global_not_found_handler` is called on attempt to read from an undefined global variable. Sample usage from **stdlib.ngs**
-
-	F global_not_found_handler(name:Str) {
-		require("${NGS_DIR}/autoload/${name}.ngs")
-	}
-
-
-## `exit_hook`
+## exit_hook
 
 `exit_hook` is called when NGS is about to exit. Typical cases are:
 
 * All of the given code was executed.
 * `throw` was invoked and no matching `catch` was found.
 
-Method signature: `exit_hook(exit_info:Hash)`. `exit_info` currently has two keys: `exit_code` and `exception`. **stdlib.ngs** defines two standard hooks.
+Method signature: `exit_hook(exit:Exit)`. `Exit` currently has two keys: `exit_code` (`Int`) and `exceptions` (`Arr`). **stdlib.ngs** defines one standard exit hook.
 
 	$ ngs -pi 'exit_hook.Hash()'
 	Hash of size 1
@@ -1431,7 +1457,7 @@ Method signature: `exit_hook(exit_info:Hash)`. `exit_info` currently has two key
 
 ## Default scoping rules
 
-In a function, any variable that is not assigned to inside the function is looked up as an **upvar** (enclosing functions) and as **global**.
+In a method, any variable that is not assigned to inside the method is looked up as an **upvar** (enclosing methods) and as **global**.
 
 	a = 1
 	F f() {
@@ -1451,7 +1477,7 @@ In a function, any variable that is not assigned to inside the function is looke
 	f()
 	# Output: 2
 
-In a function, any identifier that is mentioned in any of the enclosing functions is automatically `upvar` - references the variable in the outer scope.
+In a method, any identifier that is mentioned in any of the enclosing methods is automatically `upvar` - references the variable in the outer scope.
 
 	a = 1
 	F f() {
@@ -1467,7 +1493,7 @@ In a function, any identifier that is mentioned in any of the enclosing function
 	# Output: 10
 	# Output: 1
 
-In a function, any variable that is assigned to (including the `i` in constuct `for(i;10) ...`) in the function is automatically `local` unless it's an `upvar` as described above. Inner functions are also `local` by default.
+In a method, any variable that is assigned to (including the `i` in construct `for(i;10) ...`) in the method is automatically `local` unless it's an `upvar` as described above. Inner methods are also `local` by default.
 
 	a = 1
 	F f() {
@@ -1517,12 +1543,12 @@ You can modify default scoping using the `global` and `local` keywords.
 # Predicates
 
 Methods such as `filter`, `filterk`, `filterv`, etc take predicate as one of the arguments.
-Traditionally, such functions took a function (method) as the predicate argument.
+Traditionally, such methods (functions) took a method (function) as the predicate argument.
 A predicate function is a function with one parameter and that returns a boolean.
 
 NGS allows more powerful and convenient usage of predicates in these and other methods.
-All kinds of instances can be passed as predicates.
-NGS higher-order functions that have predicate parameters convert the predicates into predicate functions using the `Pred` function:
+All kinds of objects can be passed as predicates.
+NGS higher-order methods (functions) that have predicate parameters convert the predicates into predicate methods (functions) using the `Pred` multimethod:
 
 	# Note that "predicate" can be of any type
 	F filter(e:Eachable1, predicate) {
@@ -1536,8 +1562,8 @@ NGS higher-order functions that have predicate parameters convert the predicates
 		ret
 	}
 
-This behaviour allows defining how any given type behaves as a predicate. Several built-in types have `Pred` function defined for them.
-Here are some examples of how this can shorten the code:
+This behaviour allows defining how any given type behaves as a predicate. Several built-in types have `Pred` method defined for them.
+Here are some examples of how predicate conversion described above can shorten the code:
 
 
 	# Would be {...}.filterk(F(k) k ~ /^b/)
@@ -1549,19 +1575,19 @@ Here are some examples of how this can shorten the code:
 	# Would be {...}.filter(F(t) t is Str)
 	["abc", 1, "def"].filter(Str)  # [abc,def]
 
-One can easily define how a type behaves as a predicate: just define appropriate `Pred` function.
-Here is example of `Pred` function that allows `.filter(SomeType)` such as `.filter(Str)` example above:
+One can easily define how a type behaves as a predicate: define appropriate `Pred` method.
+Here is the `Pred` method that allows `.filter(SomeType)` such as `.filter(Str)` example above:
 
 	F Pred(t:Type) F is_pred(x) x is t
 
-That's a function (`Pred`) that returns a predicate function which is called `is_pred`.
-Naming the returned function helps a bit when looking at backtrace. `is_pred`, the predicate functions, checks whether it's argument is of type `t`.
+That's a method (`Pred`) that returns a predicate method (function) which is called `is_pred`.
+Naming the returned method helps a bit when looking at backtrace. `is_pred`, the predicate method, checks whether it's argument is of type `t`.
 
-Note that using a function as predicate is still possible:
+Note that using a method as predicate is still possible:
 
 	[1,2,11].filter(F(x) x > 10)  # [11]
 
-That is because `Pred` function leaves it's argument as is, if it's a function:
+That is because `Pred` method leaves it's argument as is, if it is callable (a method for example):
 
 	F Pred(f:Fun) f
 
@@ -1571,7 +1597,7 @@ Iterators give more flexibility and control as opposed to `each` iteration.
 
 ## The iterator protocol
 
-Iterators must implement
+Iterators must implement the following methods:
 
 * `Bool(x:YOUR_ITER_TYPE)` which tells whether there are more values
 * `next(x:YOUR_ITER_TYPE)` which returns the next value (or throws `NoNext` exception)
@@ -1688,6 +1714,7 @@ Redirections syntax (based on bash syntax):
 * Specify file descriptor, append: `my_command 2>>myfile`
 * Capture: `my_command 2>${true}` . The default is to not capture stderr but rather output it immediately to NGS' process stderr.
 
+Running external programs examples:
 
 	$ ngs -pi '$(ok: ls xxx)'
 	ls: xxx: No such file or directory
