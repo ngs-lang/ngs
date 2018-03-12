@@ -305,7 +305,34 @@ Note that this started as internal document so things here are unformed, not fin
 			+ method calls: scanned / not scanned (where in Arr the method was found)
 			+ something about call sites?
 
-	* Phase 5 - nice to have
+	* Phase 5 - RESTful client
+
+		* Introduce "FEATURES" global Hash to indicate supported features.
+
+		* Milestone "curl" - integrate libcurl
+			+ Make libcurl optional with compile time switch. If curl is compiled, add "curl": CURL_VERSION pair to FEATURES.
+			+ Use namespace "curl"
+			+ Low level functions in the namespace will be called "c_..." as all other low level c functions that are exposed to NGS language.
+			+ Higher level functions and types also go into the "curl" namespace, these will be the interface used by the rest of NGS code.
+			+ Integration: when read() sees a URL that starts with a scheme that libcurl supports, use libcurl to obtain the resource. Think about passing credentials, etc.
+			+ Think about stream processing for large resources, where read() will not be appropriate
+			+ Think about write() integration. Should it "POST"?
+
+		* Milestone "YAML" - integrate YAML parser and generator
+			+ Implementing YAML parser/generator in NGS will probably result very slow code, so a C library should probably be used
+			+ Same as with libcurl, compile time switch and YAML_LIB_NAME: YAML_LIB_VERSION pair added to FEATURES, and probably "yaml": true pair in FEATURES.
+			+ Look at JSON implementation
+			+ Functions: encode_yaml, decode_yaml
+			+ Integration: when parse() tries JSON, try YAML after that. If the hint says YAML, try just it.
+
+		* Milestone RESTful client
+			+ Think about this!
+			+ Support RAML for
+				+ Constructing queries
+				+ Parsing and validating responses
+				+ Think about how to integrate to the shell (completions, etc) when the shell is ready.
+
+	* Phase 6 - nice to have
 
 		* Iter improvements
 			* If migrating lines() to Iter
