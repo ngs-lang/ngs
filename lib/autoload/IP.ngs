@@ -44,4 +44,4 @@ TEST IPAddr("192.168.1.100").is_private()
 TEST IPAddr("172.31.255.255").is_private()
 TEST IPAddr("172.32.0.1").is_private().not()
 
-# TODO: consider parse() for ipcalc output for "deaggregate" operation for example
+# TODO: consider decode() for ipcalc output for "deaggregate" operation for example

@@ -117,7 +117,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 	doc Run a command. Internal method. Please do not use outside the AWS library.
 	doc %STATUS - internal
-	F run(r:Res, log_pfx:Str, cp:CommandsPipeline, do_parse=true) r.def.run("${r} ${log_pfx}", cp, do_parse)
+	F run(r:Res, log_pfx:Str, cp:CommandsPipeline, do_decode=true) r.def.run("${r} ${log_pfx}", cp, do_decode)
 
 	doc Don't call directly, use converge(). API subject to change.
 	doc Update tags using AWS CLI "aws ec2 create-tags" and "aws ec2 delete-tags".
@@ -171,16 +171,16 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 	F init(rd:ResDef, _ngs_tags:Hash) super(rd, {'regions': null, 'Tags': _ngs_tags})
 
 	doc Run an external command related to the resource definition. Will not run the command if rd.dry_run is true.
-	doc do_parse - Whether to parse the output
+	doc do_decode - Whether to decode the output
 	doc %RET - Either parsed output or finished CommandsPipeline (processes in CommandsPipeline finished)
-	F run(rd:ResDef, log_pfx:Str, cp:CommandsPipeline, do_parse=true) {
+	F run(rd:ResDef, log_pfx:Str, cp:CommandsPipeline, do_decode=true) {
 		assert(cp.commands.len() == 1, "Don't know how to print pipeline")
 		if rd.dry_run {
 			rd.log(log_pfx, "would run: ${cp.commands[-1].argv.join(' ')}")
 			null
 		} else {
 			rd.log(log_pfx, "running: ${cp.commands[-1].argv.join(' ')}")
-			if do_parse {
+			if do_decode {
 				``$cp``
 			} else {
 				$($cp)
@@ -919,11 +919,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 
 		# debug("AWS", "Removing keys of ${ip_or_hostname} from file $f")
 		if listed_keys {
-			r.run("Removing keys of ${ip_or_hostname} from file $f", %(ssh-keygen -R $ip_or_hostname -f $f), do_parse=false)
+			r.run("Removing keys of ${ip_or_hostname} from file $f", %(ssh-keygen -R $ip_or_hostname -f $f), do_decode=false)
 		}
 
 		for k in scanned_keys {
-			r.run("Adding key ${k.limit(20, '...')} to file $f", %(echo $k >>$f), do_parse=false)
+			r.run("Adding key ${k.limit(20, '...')} to file $f", %(echo $k >>$f), do_decode=false)
 		}
 
 	}

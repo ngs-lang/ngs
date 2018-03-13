@@ -107,8 +107,8 @@ NGS is a domain-specific language. It is aimed to solve common system tasks in a
 
 ## Do the most practical thing
 
-* `fetch('myfile.json')` will parse the JSON and return the data structure. (Use `read()` to get raw contents).
-* The ```` ``my_command`` ```` will parse the command output (JSON for example) and return the data structure. Note that ```` ``aws ...`` ```` will be parsed even further (not just JSON) to return more usable data structures.
+* `fetch('myfile.json')` will decode the JSON and return the data structure. (Use `read()` to get raw contents).
+* The ```` ``my_command`` ```` will decode the command output (JSON for example) and return the data structure. Note that ```` ``aws ...`` ```` will be parsed even further (not just JSON) to return more usable data structures.
 * `my_array.my_prop` returns an array of `.my_prop` properties of each element.
 
 ## Uniformity
@@ -129,7 +129,7 @@ For example, the multimethod `+`:
 
 ## Extensibility
 
-* `fetch('your_file.super-format')` can be extended to parse your format.
+* `fetch('your_file.super-format')` can be extended to decode your format.
 * `read`, which reads from a file, can be extended to support HTTP or S3.
 * Define any operator for existing or your custom types.
 
@@ -227,7 +227,7 @@ In **code syntax** it is possible to switch to **command syntax** in one of the 
 	out = `commands syntax`
 	myvar = "mystring\n" + `my other command`
 
-**Capture and parse switch**
+**Capture and decode switch**
 
 	parsed_data_structure = ``commands syntax``
 	n = ``curl https://example.com/myservice/stats``.number_of_items_in_storage
@@ -1634,7 +1634,7 @@ The syntactic options for executing external programs are:
 * In **code syntax**: `$(...)` - run the process and get the reference to it
 * In **code syntax**: `%(...)` - construct the `CommandsPipeline` but do not run it. Useful for passing ready-to-run commands around: `t=%(ls /); ...; $($t)`
 * In **code syntax**: `` `...` `` - capture the output
-* In **code syntax**: ```` ``...`` ```` - capture and parse the output
+* In **code syntax**: ```` ``...`` ```` - capture and decode the output
 
 Note that if you want just to construct the command and not run it
 

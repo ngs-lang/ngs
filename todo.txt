@@ -107,7 +107,7 @@ Note that this started as internal document so things here are unformed, not fin
 				* Fix $(separate$item issue)
 				* Fix segfault in case of comments between cond clauses
 				* Fix - ngs: vm.c:2988: vm_run: Assertion `0=="Function does not have result value"' failed.
-					F parse(s:Str, hints:Hash) {
+					F decode(s:Str, hints:Hash) {
 						guard try hints['process'].command.argv[0] == 'find'
 						# argv = hints['process'].command.argv
 						# guard '-printf' not in argv
@@ -225,8 +225,14 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "threads"
 
+			* Meaningful thread names
+				+ https://stackoverflow.com/questions/2369738/can-i-set-the-name-of-a-thread-in-pthreads-linux
 			* pmap() - limit number of concurrent threads and/or make it dynamic
 			* rethink exceptions in threads
+			* Think about and implement concurrency-supporting types
+				* LinkedList, ThreadSafeLinkedList
+				* Queue?
+				* Executor, ThreadPoolExecutor
 			* Make ENV and current directory thread-local but allow access to the global ones
 			* Thread - Make pthread_attr_t accessible - get/set fields
 			* Thread local variables
@@ -323,7 +329,7 @@ Note that this started as internal document so things here are unformed, not fin
 			+ Same as with libcurl, compile time switch and YAML_LIB_NAME: YAML_LIB_VERSION pair added to FEATURES, and probably "yaml": true pair in FEATURES.
 			+ Look at JSON implementation
 			+ Functions: encode_yaml, decode_yaml
-			+ Integration: when parse() tries JSON, try YAML after that. If the hint says YAML, try just it.
+			+ Integration: when decode() tries JSON, try YAML after that. If the hint says YAML, try just it.
 
 		* Milestone RESTful client
 			+ Think about this!
@@ -382,7 +388,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Method to push a value into Arr if it's not there already
 		* Function static variables
-			F parse(s:Str, ...)
+			F decode(s:Str, ...)
 			?static? re = /myregex/
 			guard s ~ re
 			...
@@ -427,7 +433,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* modules / namespaces
 
-		* implement parse() wherever possible (example: IPAddr, IPNet)
+		* implement decode() wherever possible (example: IPAddr, IPNet)
 			+ allow auto-load missing implementations by extension and mime type
 
 		* push/pop/shift/unshift for Hash

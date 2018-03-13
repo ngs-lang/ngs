@@ -921,7 +921,7 @@ METHOD_RESULT native_decode_json_str EXT_METHOD_PARAMS {
 	if(mr == METHOD_EXCEPTION) {
 		VALUE exc;
 		// TODO: more specific error
-		exc = make_normal_type_instance(vm->Error);
+		exc = make_normal_type_instance(vm->JsonDecodeFail);
 		set_normal_type_instance_field(exc, make_string("message"), *result);
 		set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 		*result = exc;
@@ -2482,6 +2482,12 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 			MKSUBTYPE(DlopenFail, Error);
 			_doc(vm, "", "Represents failure to open dynamically loaded library (feature is a work in progress).");
+
+			MKSUBTYPE(DecodeFail, Error);
+			_doc(vm, "", "Represents an error decoding a data.");
+
+				MKSUBTYPE(JsonDecodeFail, DecodeFail);
+				_doc(vm, "", "Represents an error decoding JSON data.");
 
 	MKTYPE(Return);
 	_doc(vm, "", "Return instance type, when thrown, will exit the call frame where they were created returning given value.");

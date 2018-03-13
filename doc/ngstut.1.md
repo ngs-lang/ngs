@@ -53,7 +53,7 @@ Output:
 	f750d7cc025eeac943c86c492c736992a745bd17
 
 
-`fetch()` will read and parse the JSON. Then we select **sha** property of the object.
+`fetch()` will read and decode the JSON. Then we select **sha** property of the object.
 
 ## Query GitHub and return the SHA signatures of commits matching a criteria
 
@@ -103,7 +103,7 @@ The function
 
 returns `true` for commits made by Serge and `false` for others.
 
-* `fetch()` will read and parse the JSON. The JSON is an array at top level so `fetch()` evaluates to an array at top level.
+* `fetch()` will read and decode the JSON. The JSON is an array at top level so `fetch()` evaluates to an array at top level.
 * Then we select **commit** properties from each element of the array. This requires explanation. `array.property` evaluates to `[array[0].property, array[1].property, ..., array[N].property]`.
 * `filter()` filters the **commit** array, leaving only elements that the function above "approves".
 * `.tree.sha` extracts the SHA of the commits
@@ -306,7 +306,7 @@ Output:
 
 ## Get more convenient data structures from AWS CLI - background
 
-NGS has double backtick syntax. It means to run a command and parse the output. It can detect and parse JSON so you can run arbitrary commands that return JSON and have it parsed. For AWS CLI commands double backtick does more meaningful transformations of the data.
+NGS has double backtick syntax. It means to run a command and decode the output. It can detect and decode JSON so you can run arbitrary commands that return JSON and have it parsed. For AWS CLI commands double backtick does more meaningful transformations of the data.
 
 ## Get more convenient data structures from AWS CLI - volumes example
 

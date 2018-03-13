@@ -220,6 +220,8 @@ typedef struct {
 				VALUE ArgsMismatch;
 			VALUE SwitchFail;
 			VALUE DlopenFail;
+			VALUE DecodeFail;
+				VALUE JsonDecodeFail;
 
 	VALUE Return;
 

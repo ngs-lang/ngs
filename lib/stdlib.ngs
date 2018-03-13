@@ -4008,16 +4008,23 @@ F close(fd:Int) {
 	fd
 }
 
-doc read() and parse() the given file
+doc read() and decode() the given file
 doc %EX - fetch("1.json")  # Data structure, the parsed JSON
-F fetch(filename:Str, parse_hints:Hash={}) {
+F fetch(filename:Str, decode_hints:Hash={}) {
 	data = read(filename)
-	parse(data, {'filename': filename} + parse_hints)
+	decode(data, {'filename': filename} + decode_hints)
 }
 
-doc Read standard input and parse() it, passing "source" equals "stdin" hint.
+doc Read standard input and decode() it, passing "source" equals "stdin" hint.
 doc %EX - fetch()  # Data structure, parsed stdin
-F fetch(parse_hints:Hash={}) read(0).parse({'source': 'stdin'} + parse_hints)
+F fetch(decode_hints:Hash={}) read(0).decode({'source': 'stdin'} + decode_hints)
+
+doc encode() and write() the data to the file
+doc %RET - null (but subject to change)
+F store(filename:Str, data, encode_hints:Hash={}) {
+	write(filename, encode(data, {'filename': filename} + encode_hints))
+	null
+}
 
 # --- Redir ---
 
@@ -4367,7 +4374,13 @@ F '$()'(c:Command) {
 					debug("process2", "READ FAILED: $e")
 				}
 				debug("process2", "READ ${process.outputs[r.fd]}")
-				pipe.close_reading_end()
+				try {
+					debug("process2", "DATUM *** ${r.datum}")
+					r.datum.close_reading_end()
+					debug("process2", "CLOSED READING END OF PIPE, REDIRECT ${r}")
+				} catch(e) {
+					debug("process2", "CLOSING READING END OF PIPE FAILED: $e")
+				}
 				debug("process", "Read all output of the child process for descriptor $fd, closing reading/parent end")
 			})
 		})
@@ -4531,7 +4544,7 @@ F ``(cp:CommandsPipeline) {
 	ret
 }
 
-doc Get command standard output and parse() it.
+doc Get command standard output and decode() it.
 doc %RET - structured data when the output can be parsed.
 doc %EX - ``aws ec2 describe-instances`` is Arr  # true
 doc %EX - ``aws ec2 describe-instances``.InstanceId.map(X[0..3]).join(",")  # i-3, i-9, i-8, i-a, i-7, ...
@@ -4541,9 +4554,9 @@ F ````(cp:CommandsPipeline) {
 	assert(processes)
 	p = processes[-1]
 	try {
-		p.stdout.parse({'process': p, 'pipeline': cp})
+		p.stdout.decode({'process': p, 'pipeline': cp})
 	} catch(e) {
-		throw ProcessFail("Failed to parse process output").set('process', p).set('cause', e)
+		throw ProcessFail("Failed to decode process output").set('process', p).set('cause', e)
 	}
 }
 
@@ -4579,49 +4592,47 @@ TEST p=$(|cat); p.write("abc"); p.close(); p.Str() == "abc"
 TEST p=$(|cat|); p.write("abc"); p.read(3) == "abc"
 TEST $(echo abc | cat).Str().starts_with("abc")
 
-doc Call parse(s, {})
-F parse(s:Str) parse(s, {})
-
-doc Attempt to parse JSON. Uses decode_json().
-F parse(s:Str, hints:Hash) {
+doc Attempt to decode JSON. Uses decode_json().
+F decode(s:Str, hints:Hash={}) {
 	ret = FullBox(decode_json(s)) tor EmptyBox()
 	guard ret
 	ret.val
 }
 
 # TODO: handle more than one occurrence of kvsep in each line
-doc EXPERIMENTAL. KVS (key-value separator) hint for parse()
-doc %EX - parse('a b\nc d', {'KVS': ' '}) == {'a': 'b', 'c': 'd'}
-F parse(s:Str, hints:Hash) {
+doc EXPERIMENTAL. KVS (key-value separator) hint for decode()
+doc %EX - decode('a b\nc d', {'KVS': ' '}) == {'a': 'b', 'c': 'd'}
+F decode(s:Str, hints:Hash) {
 	guard 'KVS' in hints
 	s.lines().map(split(X, hints.KVS)).Hash()
 }
 
-TEST parse('a b\nc d', {'KVS': ' '}) == {'a': 'b', 'c': 'd'}
+TEST decode('a b\nc d', {'KVS': ' '}) == {'a': 'b', 'c': 'd'}
 
-doc EXPERIMENTAL. FS (field separator) hint for parse()
-doc %EX - parse('a b\nc d', {'FS': ' '})  # [['a', 'b'], ['c', 'd']]
-F parse(s:Str, hints:Hash) {
+doc EXPERIMENTAL. FS (field separator) hint for decode()
+doc %EX - decode('a b\nc d', {'FS': ' '})  # [['a', 'b'], ['c', 'd']]
+F decode(s:Str, hints:Hash) {
 	guard 'FS' in hints
 	s.lines().map(split(X, hints.FS))
 }
 
-TEST parse('a b\nc d', {'FS': ' '}) == [['a', 'b'], ['c', 'd']]
+TEST decode('a b\nc d', {'FS': ' '}) == [['a', 'b'], ['c', 'd']]
 
 doc EXPERIMENTAL! Do not use!
-doc Handle fields_names hint - run parse() and make Arr[Hash] from Arr[Arr] using provided fields_names
+doc Handle fields_names hint - run decode() and make Arr[Hash] from Arr[Arr] using provided fields_names
 doc %EX - backup_list = fetch('backup.list', {'FS': ' ', 'fields_names': %[env role]})
-F parse(s:Str, hints:Hash) {
+F decode(s:Str, hints:Hash) {
 	guard 'fields_names' in hints
-	parse(s, hints.without('fields_names')).map(F(row) {
+	decode(s, hints.without('fields_names')).map(F(row) {
 		zip(hints.fields_names, row).Hash()
 	})
 }
 
-# WIP
-doc Not implemented yet
-F unparse(data, hints:Hash) {
-	1
+doc Encode data as JSON if hints say that "filename" ends with ".json"
+doc %RET - Str
+F encode(data, hints:Hash={}) {
+	guard hints.get('filename', '').ends_with('.json')
+	encode_json(data)
 }
 
 doc Returns cp, wihout any processing. Convenient way to pass ready-to-run Command as an argument
@@ -4698,7 +4709,7 @@ doc Parse the output of "aws" command. Extracts the array (see "s" below"). For 
 doc s - Str containing JSON with a Hash at top level with exactly one Arr as value
 doc hints - hints.process.command.argv[0] must be 'aws'
 doc %RET - data structure, tyically an Arr at top level. If s is empty string - null.
-F parse(s:Str, hints:Hash) {
+F decode(s:Str, hints:Hash) {
 	guard try hints['process'].command.argv[0] == 'aws'
 
 	# aws ec2 create-tags/delete-tags
@@ -4728,7 +4739,7 @@ F parse(s:Str, hints:Hash) {
 doc Parse the output of "find" command which does not use "-printf". Handles "-print0".
 doc hints - hints.process.command.argv[0] must be 'find'
 doc %RET - Arr of Str
-F parse(s:Str, hints:Hash) {
+F decode(s:Str, hints:Hash) {
 	guard try hints['process'].command.argv[0] == 'find'
 	argv = hints['process'].command.argv
 	guard '-printf' not in argv
@@ -4742,7 +4753,7 @@ STDLIB_CONFIG = {}
 
 doc Get configuration for the given key. Lookup order / first wins: (1) Environment variable NGS_$k (2) previously set config(k, v)
 doc k - Configuration key
-doc %RET - Any. If data found in environment variable, it will be parse()d or returned as Str if parse() fails.
+doc %RET - Any. If data found in environment variable, it will be decode()d or returned as Str if decode() fails.
 doc %EX - conf = config("table_${t.name}")
 F config(k:Str) {
 	# TODO: think, organize
@@ -4753,7 +4764,7 @@ F config(k:Str) {
 	v = try ENV["NGS_$k"]
 	if v {
 		debug("config", "'$k' found in the environment variable 'NGS_${k}': '$v'")
-		return parse(v) tor v
+		return decode(v) tor v
 	}
 	v = try STDLIB_CONFIG[k]
 	if v is not Null {

@@ -907,7 +907,6 @@ VALUE _decode_json_kern(json_object *obj) {
 	assert(0 == "Internal error while parsing JSON");
 }
 
-// TODO: more meaningful exceptions
 METHOD_RESULT decode_json(VALUE s, VALUE *result) {
 	json_tokener *tok;
 	json_object  *jobj;
@@ -915,9 +914,9 @@ METHOD_RESULT decode_json(VALUE s, VALUE *result) {
 
 	tok = json_tokener_new();
 	if(!tok) {
-		*result = make_string("Failed to allocate parser");
+		*result = make_string("Failed to allocate JSON parser");
 		return METHOD_EXCEPTION;
-	} // TODO: Throw more specific exception
+	}
 
 	jobj = json_tokener_parse_ex(tok, OBJ_DATA_PTR(s), OBJ_LEN(s));
 	jerr = json_tokener_get_error(tok);
@@ -930,11 +929,6 @@ METHOD_RESULT decode_json(VALUE s, VALUE *result) {
 
 	if(jerr != json_tokener_success) {
 		*result = make_string(json_tokener_error_desc(jerr));
-		goto error;
-	} // TODO: Throw more specific exception
-
-	if(!jobj) {
-		*result = make_string("Failed to decode JSON - no resulting object");
 		goto error;
 	}
 

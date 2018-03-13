@@ -1,0 +1,41 @@
+#!/usr/bin/env ngs
+
+# HackerNews API documentation: https://github.com/HackerNews/API
+
+BASE_API_URL = 'https://hacker-news.firebaseio.com/v0'
+
+# Use HN_STATE_FILE environment variable if set, default to ~/.hn_state.json
+STATE_FILE_DEFAULT = ENV.get('HN_STATE_FILE', ENV.HOME / '.hn_state.json')
+
+# Command line arguments are automatically parsed and passed to main()
+F main(state_file:Str=STATE_FILE_DEFAULT, interval:Int=60, once:Bool=false) {
+
+	# Try to read last seen ID. If reading fails, "seen" will be null
+	seen = try fetch(state_file)
+	while true {
+		newstories = ``curl -s "$BASE_API_URL/newstories.json"`` # Arr of Int
+		if not(seen) {
+			# If we start fresh, display last 10 stories
+			newstories .= limit(10)
+		} else {
+			# Only keep unseen stories
+			newstories .= filter(X > seen)
+		}
+		for i in reverse(newstories) {
+			item = ``curl -s "$BASE_API_URL/item/${i}.json"``
+			# Sometimes "item" is null
+			not(item) continues
+			echo("-" * 80)
+			echo("${Time(item.time)} [${item.by}] [${item.score}] ${item.title}")
+			for k in %[url text] {
+				# Display item's .url / .text if exist
+				item.Box(k).each(echo)
+			}
+		}
+		# Update "seen" if we have any stories in "newstories"
+		seen = newstories.Box(0).get(seen)
+		store(state_file, seen)
+		once breaks
+		$(sleep $interval)
+	}
+}
