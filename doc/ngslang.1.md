@@ -241,6 +241,7 @@ In **code syntax** it is possible to switch to **command syntax** in one of the 
 ## Naming convention
 
 * `var_name`
+* `CONST_NAME` - Currently NGS does not support constants, it's only a naming convention
 * `method_name` (multimethod name)
 * `TypeName`
 * `TransformationName` - example: `Strs` (converts to array of strings), `Argv` (constructs command line arguments array), `ExitCode` (converts anything to integer exit code).
