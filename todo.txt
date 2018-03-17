@@ -30,6 +30,8 @@ Note that this started as internal document so things here are unformed, not fin
 			* Link from constructors to types
 			* Nested namespaces (AWS::util)
 			* "N methods" in link to namespace - filter by added implementations, don't count x in "global init; x = init"
+			* Methods tags
+				+ higher-order functions
 
 		* Milestone "packaging"
 			* Debian packages
@@ -77,6 +79,11 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "correct programming"
 
+			* Make sure this works:
+				something
+				.method1()
+				.method2()
+
 			* Convert VERSION to an object and add option to print it as JSON
 
 			* Consider adding FEATURES (Hash?)
@@ -98,6 +105,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Syntax fixes
 				* Fix operators priority for obj.Mod::method()
+					+ Probably needs rework "." to be regular binop with priority
 				* Fix syntax: "ifx" is now "if x"
 				* Fix parser in
 					function_call(
