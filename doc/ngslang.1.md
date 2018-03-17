@@ -101,7 +101,7 @@ NGS has two syntaxes: **commands syntax** and **code syntax**.
 Motivation: I can not imagine any syntax for a "real" programming language that I would like which is built on top of the **commands syntax**, which is similar to bash. That's why NGS has **code syntax** for "real" programming and **commands syntax** for running external programs and i/o redirection, where this syntax is very convenient.
 
 
-# Commands syntax
+## Commands syntax
 
 This is the resembles-bash syntax geared towards running external programs and i/o redirection. Command syntax is the syntax at the top level of every NGS script. The most simple NGS scripts might look very similar to bash scripts.
 Commands are separated by either newlines or by semicolon (`;`).
@@ -110,7 +110,7 @@ Commands are separated by either newlines or by semicolon (`;`).
 	echo mystr >myfile
 	ls | wc -l
 
-# Code syntax
+## Code syntax
 
 Code syntax resembles other high-level languages such as Python or Ruby.
 
@@ -130,7 +130,7 @@ Expressions are separated by either newlines or by semicolon (`;`). It is also p
 	# Output:
 	[2,4,6,8,10]
 
-# Switching between commands and code syntaxes
+## Switching between commands and code syntaxes
 
 In **commands syntax** it is possible to switch to **code syntax** in one of the following ways:
 
@@ -529,7 +529,7 @@ NGS has several pre-defined types. A programmer can define additional types. Typ
 
 ## Creating object of given type
 
-Syntactically, creating object of a given type is type name followed by parenthesis which optionally contain arguments.
+Creating object of a given type is calling the type. Syntactically, it's type name followed by parenthesis which optionally contain arguments.
 
 	# Create object of type Path
 	p = Path("/")
@@ -564,7 +564,123 @@ Type definition is only supported in code syntax.
 	#   [<Type Car>,<Type RedThing>]
 
 
+# Loading additional code
+
+## require
+
+The `require` method reads, compiles and executes the given file. Currently absolute paths and paths relative to current directory are supported. In future, paths relative to current directory will not be supported but rather paths relative to the file that does `require()` call will be supported, similar to Node.js. This needs work which was not done yet, there was never intention to support paths relative to current directory; it's just wrong.
+
+	require('/home/someone/my_module.ngs')
+
+`require` returns the value of last expression in the file. This feature plays nice with namespaces (see below) in cases when the whole file is an `ns { ... }` expression.
+
+## Auto-loading
+
+When an undefined global variable is referenced, `global_not_found_handler` is called. This handler tries to load a module (currently from the `lib/autoload` directory) that will define the referenced variable. Here are some modules that are autoloaded and additional variables/methods they define.
+
+* AWS
+* IP (IPAddr, IPNet)
+* Iter (ArrIter, ConstIter, HashIter, RangeIter, ...)
+* Thread (pmap, ptimes)
+
 # Namespaces
+
+Namespaces are used to prevent names collisions and hide methods. One of the main usages for namespaces is in modules.
+
+Let's consider a file named `my_ns.ngs`:
+
+	ns {
+
+		# This method is only visible to other methods in the namespace
+		F _private_helper_method() {
+			...
+		}
+
+		F accessible_method() {
+			...
+			_private_helper_method()
+			...
+		}
+
+		global global_method
+		F global_method() {
+			...
+			_private_helper_method()
+			...
+		}
+	}
+
+Another file, `example.ngs` could be using the above namespace utilizing the `require` method:
+
+	arbitrary_ns_name = require('my_ns.ngs')
+
+	global_method()
+
+	# :: is namespace member access operator
+	arbitrary_ns_name::accessible_method()
+
+## How namespace definition works
+
+The `ns { ... }` definition is equivalent to the following code:
+
+	F() {
+		_exports = {}
+
+		....
+
+		_exports
+	}() # Call as soon as the method is defined
+
+Inside the `F() { ... }`, all variables and methods which do not start with underscore (`_`) are automatically added to the `_exports` hash. The underscore exclusion prevents from `_exports` itself to be added to the hash. This implementation also allows arbitrary manipulations of the returned value.
+
+	# The simple case
+	ngs -pi 'ns { F func() 7; }'
+	Hash of size 1
+	  [func] = <MultiMethod with 1 method(s)>
+
+	# Prefix all exported methods and variables with "my_"
+	ngs -pi 'ns { F func() 7; _exports .= mapk("my_$X") }'
+	Hash of size 1
+	  [my_func] = <MultiMethod with 1 method(s)>
+
+	# Make "ns" return arbitrary value
+	$ ngs -pi 'ns {_exports=7}'
+	Int: 7
+
+	# Show exclusion of underscore prefixed items
+	$ ngs -pi 'ns { F visible() 7; F _invisible() 7; }'
+	Hash of size 1
+	  [visible] = <MultiMethod with 1 method(s)>
+
+	# Not only methods but also variables are exported
+	$ ngs -pi 'ns { visible=1; _invisible=2; }'
+	Hash of size 1
+	  [visible] = 1
+
+## Renaming variables in a namespace scope
+
+Namespaces also support additional syntax `ns(PARAMETERS) { ... }`. This syntax is converted to `F(PARAMETERS) { ... }()`. This allows referencing external variables by another names. Inside the namespace one can now define variables and methods which would shadow the global (or upvar) variables and still access them.
+
+Here is example from `lib/autoload/AWS.ngs` :
+
+	ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
+		...
+		doc AWS resource
+		type Res(GlobalRes)
+		...
+		doc AWS Resource definition
+		type ResDef(GlobalResDef)
+		...
+	}
+
+Note that when `ns(PARAMETERS) { ... }` syntax is converted to `F(PARAMETERS) { ... }`, the method is called without any arguments so all parameters must have default values or an exception will occur:
+
+	$ ngs -pi 'ns(a) { 7 }'
+	... Exception of type ArgsMismatch occurred
+
+## Planned future changes to namespaces
+
+The `ns { ... }` construct will probably not return a `Hash` object but object of a new type, `Namespace` which will probably be subtype of `Hash`. In any case, the `::` operator will be defined in such way that `my_namspace::my_method()` will continue to work.
 
 === END NEW ===
 
@@ -598,6 +714,10 @@ Type definition is only supported in code syntax.
 
 	for
 
+
+# Accessing environment variables
+
+CONTINUE HERE
 
 # Common types
 
