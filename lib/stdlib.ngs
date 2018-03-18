@@ -3655,7 +3655,7 @@ F find_in_path(executable_name:Str) {
 	# TODO: rethink default PATH
 	path = ENV.get('PATH', '/usr/local/bin:/usr/bin:/bin:/sbin:/usr/sbin').split(':')
 	debug("process", '[find_in_path] will search')
-	ret = path.map(F(dir) Path(dir / executable_name)).first()
+	ret = path.map(F(dir) Path(dir / executable_name)).first(identity, null)
 	debug("process", "[find_in_path] ${executable_name} found at ${ret}")
 	ret is Null throws ExecutableNotFound().set('path', path).set('name', executable_name)
 	ret
