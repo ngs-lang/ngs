@@ -1,4 +1,4 @@
-ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
+ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	# Documentation hack as documentation for namespaces
 
@@ -472,6 +472,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
 		rd
 	}
 
+	doc Internal type. Please do not use.
+	doc %STATUS - internal
 	type IpPermBox(FullBox)
 
 	# Cleans up AWS Security Group IpPermissions so it's possible to compare current and desired states of IpPermissions

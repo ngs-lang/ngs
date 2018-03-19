@@ -1978,6 +1978,117 @@ Special cases:
 
 Define `F ExitCode(t:MyType) {...}` method that returns `Int` to customize the exit code.
 
+# Declarative primitives
+
+Some of NGS libraries (currently only AWS) implement declarative primitives approach. Declarative primitives approach is to expose functions to manipulate resources in an idempotent way. Similar to configuration management systems, exposed resources are manipulated by declaring their desired state. Unlike configuration management systems, this approach does not deal with dependencies and order resolution. Declarative primitives approach provides convenient scripting facility, not a configuration management system.
+
+## Related methods
+
+**Constructors**
+
+Resources references are created using constructors, such as `AWS::Vpc`. Resources references are of type which is a subtype of `ResDef`.
+
+	my_vpc = AWS::Vpc()                # Reference to all VPCs that can be fetched using AWS CLI
+	echo(my_vpc)                       # Output: <Aws::Vpc anchor={regions=null, Tags={}}>
+	echo(AWS::Vpc().typeof())          # Output: <Type Vpc>
+	echo(AWS::Vpc().typeof().parents)  # Output: [<Type ResDef>]
+
+**find**
+
+`find` - find the specified resources. Almost never should be called manually. `expect`, `converge`, `each` and other methods run `find` automatically if needed (if it did not run previously on the reference).
+
+	my_vpc = AWS::Vpc().find()
+	echo(my_vpc)
+	# Output:
+	#   <Aws::Vpc vpc-ef...,vpc-ef...,vpc-bf... anchor={regions=null, Tags={}}>
+
+Empty result is not an exception for `find`.
+
+**expect**
+
+`expect` - check that referenced resources exist. Throw an exception otherwise. Used to assert assumptions about the system. If you write a script that for example counts on exactly one VPC that matches your description to exist, I strongly recommend to be explicit and state your expectation as `.expect(1)`.
+
+	my_vpc = AWS::Vpc().expect() # If no VPCs exist - throws exception
+	echo(my_vpc)
+	# Output:
+	#   <Aws::Vpc vpc-ef...,vpc-ef...,vpc-bf... anchor={regions=null, Tags={}}>
+
+	# Find VPCs with name tag "XX"
+	my_vpc = AWS::Vpc({"Name": "XX"}).expect() # If no VPCs exist - throws exception
+	# ... Exception of type AssertFail occurred ...
+
+	# Find VPCs with the given tag
+	my_vpc = AWS::Vpc({"aws:cloudformation:stack-name": "edge-vpc"}).expect(1)
+	# Would throw exception if there was not exactly one resources matching the description
+	echo(my_vpc)
+	# Output:
+	#   <Aws::Vpc vpc-ef... anchor={regions=null, Tags={aws:cloudformation:stack-name=edge-vpc}}>
+
+**converge**
+
+`converge` - Creates or updates resources if needed in order to match given properties.
+
+Example from production code, shortened for brevity:
+
+	# Library that describes ELB creation. The system has several ELBs which are similarly configured.
+	# The library contains this common configuration.
+	ns(c=converge) {
+		F converge(env, role, dns=null) {
+			edge_vpc_anchor = {'aws:cloudformation:stack-name': 'edge-vpc'}
+			vpc = AWS::Vpc(edge_vpc_anchor).expect(1)
+			tags = {'env': env, 'role': role, 'creator': 'system/images/elb.ngs'}
+
+			# Anchor: name + vpc_id
+			elb_sg = AWS::SecGroup("https-server", vpc)
+			elb = AWS::Elb("${env}-${role}")
+
+			# ---> Converge happens here <---
+			# Load balancer is either created or updated here
+			elb.c(
+				Tags = tags + if dns { {'DNS': dns} } else { {} },
+				ListenerDescriptions = ...,
+				Subnets = AWS::Subnet(edge_vpc_anchor).expect(2),
+				SecurityGroups = elb_sg,
+				HealthCheck = ...,
+				Instances = AWS::Instance({'env': env, 'role': role}).expect()
+			)
+		}
+	}
+
+**delete**
+
+`delete` deletes referenced resources.
+
+	# Delete referenced resources, in this case one specific load balancer
+	AWS::Elb("prod-mobile-redirect").delete()
+
+	# Delete all unused load balancers
+	AWS::Elb().reject(X.Instances).delete()
+
+## Anchor
+
+Anchors describe which resources are referenced.
+
+As you probably have noticed, resource references, which are created using constructors, get some parameters. These parameters are called "Anchor". Note that all parameters passed to the constructors are called "Anchor" collectively.
+
+Examples of Anchors:
+
+* Tags hash: `AWS::Instance({'env': env, 'role': role})`
+* Explicit tags: `AWS::Instance(Tags={'env': 'prod', 'role': 'ssh-sandbox'})`
+* Resources specific properties: `AWS::Vpc(IsDefault=true).expect(1)`
+* Tags and resource-specific properties: `AWS::Vpc(IsDefault=false, Tags=...).expect(1)`
+
+Any combination of explicit tags and resource-specific properties is possible.
+
+## Properties
+
+Properties describe the desired state of resources. The parameters to `converge` are properties. See the `converge` example above.
+
+## Planned future changes
+
+* `regions` in AWS library will probably be renamed to `_Region` or something else starting with underscore to emphasize it's a syntactic property, not something that correlates to AWS CLI output.
+* Currently there is no way to know whether `converge` has created resources or updated them. There will be a way to tell.
+
 # Debugging
 
 This section is planned to grow over time.
