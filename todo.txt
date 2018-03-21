@@ -157,6 +157,7 @@ Note that this started as internal document so things here are unformed, not fin
 				* AWS::SecGroup - check whether Description is Anchor-only
 				* AWS::Instance -- make sure Anchor works as expected
 				* Add test for find(Vpc) isDefault property
+				* Add _Unused property or alike to find unused security groups, vpcs, load balancers, etc...
 
 			* Look for sets of C constants to move to namespaces
 				+ C_PCRE_* - move to C_PCRE namespace?

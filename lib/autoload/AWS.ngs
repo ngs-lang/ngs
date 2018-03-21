@@ -23,7 +23,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# TODO: log describe AWS CLI commands too
 
 	# Methods with added implementations
-	global Str, init, find, latest, create, update, delete, users_ids, run, id, ids, (==), subset, code
+	global Str, init, find, latest, create, update, delete, users_ids, run, id, ids, (==), code
 
 	# --------------------------------------------------
 	# Constants
@@ -150,6 +150,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 	}
 
+	doc Get unique identifier of a resource
+	doc %EX - AWS::Instance().find().resources[0].id()  # i-0011b2.....
 	F id(r:Res) {
 		r.props.(r.def.typeof().user.id)
 	}
@@ -173,6 +175,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc Run an external command related to the resource definition. Will not run the command if rd.dry_run is true.
 	doc do_decode - Whether to decode the output
 	doc %RET - Either parsed output or finished CommandsPipeline (processes in CommandsPipeline finished)
+	doc %STATUS - internal
 	F run(rd:ResDef, log_pfx:Str, cp:CommandsPipeline, do_decode=true) {
 		assert(cp.commands.len() == 1, "Don't know how to print pipeline")
 		if rd.dry_run {
@@ -223,7 +226,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# Vpc
 	# --------------------------------------------------
 
-	doc Declarative primitive for referencing AWS VPC resources
+	doc Declarative primitive for referencing AWS VPC resources.
+	doc Supported anchor items: VpcId, Tags, CidrBlock, IsDefault.
+	doc Supported properties: Tags, CidrBlock (assert only).
 	type Vpc(ResDef)
 	doc Single declarative primitive resource describing AWS VPC
 	type VpcRes(Res)
@@ -233,10 +238,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		id     VpcId
 	}
 
-	doc Return VPC id
-	F id(r:VpcRes) r.props.VpcId
-
-	doc Find a VPC(s). Currently supported search criteria are: Tags, CidrBlock, IsDefault
+	doc Declarative primitive for finding AWS VPC resources
 	F find(rd:Vpc) {
 		debug("AWS", "Find VPC $rd")
 		rd._assert_anchor_has_only_known_keys('VpcId', 'Tags', 'CidrBlock', 'IsDefault')
@@ -249,19 +251,20 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		rd
 	}
 
-	doc Create AWS VPC. Currently supported properties are: Tags, CidrBlock.
+	doc Declarative primitive for creating AWS VPC resources
+	doc %STATUS - internal
 	F create(rd:Vpc, **props) {
 		rd._assert_props_has_only_known_keys(props, 'Tags', 'CidrBlock')
 		cidr = rd.req_prop('CidrBlock', props)
 		result = rd.run('Create VPC', %(aws ec2 create-vpc --cidr-block $cidr))
-		rd.resources = rd.resources or []
 		if not(rd.dry_run) {
 			filters = cli_filters({'vpc-id': result.Vpc.VpcId})
 			rd.created(``aws ec2 describe-vpcs --filters $*filters``.map(VpcRes(rd, X)), props)
 		}
 	}
 
-	doc Don't call directly, use converge(). API subject to change.
+	doc Declarative primitive for updating AWS VPC resources
+	doc %STATUS - internal
 	F update(r:VpcRes, props:Hash) {
 		r.def._assert_props_has_only_known_keys(props, 'Tags', 'CidrBlock')
 		r.update_tags(props)
@@ -271,10 +274,12 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 	}
 
+	doc Declarative primitive for deleting AWS VPC resources
 	F delete(r:VpcRes) {
 		r.run('Delete VPC', %(aws ec2 delete-vpc --vpc-id ${r.props.VpcId}))
 	}
 
+	doc String representation of AWS Vpc
 	F Str(r:Vpc) {
 		t = if r.resources is Null {
 			''
@@ -292,13 +297,19 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# Internet Gateway
 	# --------------------------------------------------
 
-	doc Declarative primitive for referencing AWS Internet Gateway resources
+	doc Declarative primitive for referencing AWS Internet Gateway resources.
+	doc Supported anchor items: Tags, Attachments, InternetGatewayId.
+	doc Supported properties: Tags, Attachments.
 	type Igw(ResDef)
 	doc Single declarative primitive resource describing AWS Internet Gateway
 	type IgwRes(Res)
 
-	F id(r:IgwRes) r.props.InternetGatewayId
+	Igw.user = %{
+		prefix igw
+		id     InternetGatewayId
+	}
 
+	doc Declarative primitive for finding AWS InternetGateway resources
 	F find(rd:Igw) {
 		debug("AWS", "Find IGW $rd")
 		rd._assert_anchor_has_only_known_keys('Tags', 'Attachments', 'InternetGatewayId')
@@ -312,7 +323,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		rd
 	}
 
-	doc Create AWS Internet Gateway. Current supported properties: Tags, Attachments
+	doc Declarative primitive for creating AWS InternetGateway resources
+	doc %STATUS - internal
 	F create(rd:Igw, **props) {
 		rd.log('Create', 'IGW')
 		rd._assert_anchor_has_only_known_keys('Tags', 'Attachments')
@@ -324,7 +336,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 	}
 
-	doc Don't call directly, use converge(). API subject to change.
+	doc Declarative primitive for creating AWS InternetGateway resources
+	doc %STATUS - internal
 	F update(r:IgwRes, props:Hash) {
 		debug("AWS", "${r} Update IGW")
 		r.def._assert_anchor_has_only_known_keys('Tags', 'Attachments')
@@ -354,6 +367,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	}
 
+	doc Declarative primitive for deleting AWS InternetGateway resources
 	F delete(r:IgwRes) {
 		r.run('Delete IGW', %(aws ec2 delete-internet-gateway --internet-gateway-id ${r.id()}))
 	}
@@ -373,11 +387,19 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc %EX - # TODO: example
 	F ==(a:RouteBox, b:RouteBox) _normalize(a) == _normalize(b)
 
+	doc Declarative primitive for referencing AWS RouteTable resources. Creation is not supported yet.
+	doc Supported anchor items: Tags, VpcId.
+	doc Supported properties: Routes.
 	type RouteTable(ResDef)
+	doc Single declarative primitive resource describing AWS RouteTable
 	type RouteTableRes(Res)
 
-	F id(r:RouteTableRes) r.props.RouteTableId
+	RouteTable.user = %{
+		prefix rtb
+		id     RouteTableId
+	}
 
+	doc Declarative primitive for finding AWS RouteTable resources
 	F find(rd:RouteTable) {
 		# TODO: route.gateway-id, route.instance-id
 		debug("AWS", "Find RouteTable ${rd}")
@@ -389,7 +411,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		rd
 	}
 
-	doc Don't call directly, use converge(). API subject to change.
+	doc Declarative primitive for updating AWS RouteTable resources
+	doc %STATUS - internal
 	F update(r:RouteTableRes, props:Hash) {
 		debug("AWS", "${r} Update RouteTable")
 		# log("RouteTableRes entry $r")
@@ -429,6 +452,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		} # Routes
 	}
 
+	doc Declarative primitive for deleting AWS RouteTable resources
 	F delete(r:RouteTableRes) {
 		r.run('Delete route table', %(aws ec2 delete-route-table --route-table-id ${r.id()}))
 	}
@@ -437,7 +461,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# SecGroup
 	# --------------------------------------------------
 
+	doc Declarative primitive for referencing AWS Security Group resources.
+	doc Supported anchor items: Name, VpcId (can be Vpc resource), Description (required for creation), Tags, GroupId
+	doc Supported properties: Tags, CidrBlock (assert only).
 	type SecGroup(ResDef)
+	doc Single declarative primitive resource describing AWS Security Group
 	type SecGroupRes(Res)
 
 	SecGroup.user = %{
@@ -446,18 +474,37 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	}
 
 
+	doc Initialize SecGroup from Arr of [name, vpc_id].
+	doc %STATUS - deprecated
 	F init(rd:SecGroup, anchor:Arr) {
 		warn("Using deprecated SecGroup anchor - array. Should use SecGroup(name, vpc) form.")
 		super(rd, Name=anchor[0], VpcId=anchor[1])
 	}
 
+	doc Initialize SecGroup from security group name and vpc.
+	doc %EX - AWS::SecGroup("https-server", AWS::Vpc(...))
 	F init(rd:SecGroup, Name:Str, VpcId) {
 		guard VpcId is Str or VpcId is Vpc
 		super(rd, Name=Name, VpcId=VpcId)
 	}
 
-	F users_ids(r:SecGroup) r.resources / F(res) { {'GroupId': res.props.GroupId, 'UserId': res.props.OwnerId} }
+	doc Declarative primitive to convert AWS Security Group to array of hashes with GroupId and UserId keys.
+	doc Looks like it's badly named. Candidate for renaming.
+	doc Additional plan is to eliminate the need for this method.
+	doc %RET - Arr of Hash. Each Hash has: GroupId, UserId
+	doc %EX - sg = AwsSecGroup(...) # servers behing ELB
+	doc %EX - # Allow traffic from ELB to the servers
+	doc %EX - sg.converge(..., IpPermissions = [{UserIdGroupPairs = elb_sg.users_ids(), ...}])
+	doc %EX - # In future, should be:
+	doc %EX - sg.converge(..., IpPermissions = [{UserIdGroupPairs = elb_sg, ...}])
+	F users_ids(r:SecGroup) r.resources.map(F(res) {
+		{
+			'GroupId': res.props.GroupId
+			'UserId': res.props.OwnerId
+		}
+	})
 
+	doc Declarative primitive for finding AWS Security Group resources
 	F find(rd:SecGroup) {
 		debug("AWS", "Find SG ${rd}")
 		if 'name' in rd.anchor {
@@ -504,13 +551,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		not(Diff(a, b))
 	}
 
-	# TOOD: continue here
-	F subset(smaller:IpPermBox, larger:IpPermBox) {
-		a .= _cleanup()
-		b .= _cleanup()
-	}
-
-	doc Create AWS security group. Required property: "Description". Supported properties: IpPermissions, IpPermissionsEgress
+	doc Declarative primitive for creating AWS Security Group resources
+	doc %STATUS - internal
 	F create(rd:SecGroup, **props) {
 		rd.log('Create', 'SG')
 		argv = Argv({'--vpc-id': rd.anchor.Box('VpcId').map(_one_id)})
@@ -522,7 +564,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 	}
 
-	doc Don't call directly, use converge(). API subject to change.
+	doc Declarative primitive for updating AWS Security Group resources
+	doc %STATUS - internal
 	F update(sg:SecGroupRes, props:Hash) {
 
 		debug("AWS", "${sg} Updating SG")
@@ -556,6 +599,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		sg.update_tags(props)
 	}
 
+	doc Declarative primitive for deleting AWS Security Group resources
 	F delete(r:SecGroupRes) {
 		r.run('Delete security group', %(aws ec2 delete-security-group --group-id ${r.props.GroupId}))
 	}
@@ -564,11 +608,19 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# Subnet
 	# --------------------------------------------------
 
+	doc Declarative primitive for referencing AWS Subnet resources.
+	doc Supported anchor items: VpcId (required for creation), Tags, CidrBlock (required for creation), AvailabilityZone.
+	doc Supported properties: Tags.
 	type Subnet(ResDef)
+	doc Single declarative primitive resource describing AWS Subnet
 	type SubnetRes(Res)
 
-	F id(r:SubnetRes) r.props.SubnetId
+	Subnet.user = %{
+		prefix subnet
+		id     SubnetId
+	}
 
+	doc Declarative primitive for finding AWS Subnet resources
 	F find(rd:Subnet) {
 		debug("AWS", "Find Subnet ${rd}")
 		rd._assert_anchor_has_only_known_keys('Tags', 'VpcId', 'CidrBlock', 'AvailabilityZone')
@@ -582,6 +634,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	}
 
 	# TODO: Support multiple subnets so one could easily set up new VPC for RDS and ELB
+	# TODO: Migrate to Argv
+	doc Declarative primitive for creating AWS Subnet resources
+	doc %STATUS - internal
 	F create(rd:Subnet, **props) {
 		rd._assert_props_has_only_known_keys(props, 'VpcId', 'CidrBlock', 'AvailabilityZone')
 		vpcid = rd.req_prop('VpcId', props)._eval_vpc_id()
@@ -595,13 +650,15 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 	}
 
-	doc Don't call directly, use converge(). API subject to change.
+	doc Declarative primitive for updating AWS Subnet resources
+	doc %STATUS - internal
 	F update(r:SubnetRes, props:Hash) {
 		debug("AWS", "${r} Updating Subnet")
 		r.def._assert_props_has_only_known_keys(props, 'Tags')
 		r.update_tags(props)
 	}
 
+	doc Declarative primitive for deleting AWS Subnet resources
 	F delete(r:SubnetRes) {
 		r.run('Delete Subnet', %(aws ec2 delete-subnet --subnet-id ${r.props.SubnetId}))
 	}
@@ -610,7 +667,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# Image
 	# --------------------------------------------------
 
+	doc Declarative primitive for referencing AWS AMI resources.
+	doc Supported anchor items: State (defaults to "available"), OwnerId, Name (Str or Pfx), RootDeviceType, VirtualizationType (defaults to hvm), VolumeType, ImageId.
+	doc Supported properties: (not supported yet).
 	type Image(ResDef)
+	doc Single declarative primitive resource describing AWS AMI
 	type ImageRes(Res)
 
 	Image.user = %{
@@ -620,14 +681,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 
 	# debian-jessie-amd64-hvm
+	doc Declarative primitive for finding AWS AMI resources
 	F find(rd:Image) {
 		debug("AWS", "Find Image ${rd}")
-		rd._assert_anchor_has_only_known_keys('OwnerId', 'Name', 'State', 'RootDeviceType', 'VolumeType', 'ImageId')
-		owners = ['--owners', rd.anchor.OwnerId] tor []
-		# owners = []
+		rd._assert_anchor_has_only_known_keys('OwnerId', 'Name', 'State', 'RootDeviceType', 'VirtualizationType', 'VolumeType', 'ImageId')
+		owners = Argv({'--owners': rd.anchor.Box('OwnerId')})
 		filters = ['--filters'] +? cli_filters({
 			'state':                            rd.anchor.get('State', 'available')
-			'virtualization-type':              'hvm'
+			'virtualization-type':              rd.anchor.get('VirtualizationType', 'hvm')
 			'name':                             rd.anchor.Box('Name').filter({A is Str or A is Pfx})
 			'root-device-type':                 rd.anchor.Box('RootDeviceType')
 			'block-device-mapping.volume-type': rd.anchor.Box('VolumeType')
@@ -647,17 +708,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# TODO: convert it to something more uniform,
 	#       a property in Anchor for example, so one
 	#       could just select the latest image with Anchor
+	doc Declarative primitive for referencing latest AWS AMI resources. Will probably be reworked to be special anchor item.
+	doc %EX - AWS::Image(OwnerId=AWS_AMI_OWNER_DEBIAN, Name=Pfx('debian-jessie-amd64-hvm'), RootDeviceType='ebs', VolumeType='gp2').latest()
 	F latest(rd:Image) {
-		if rd.resources is Null {
-			rd.find()
-		}
+		rd.find_if_needed()
 		assert(rd.resources.len() >= 1, "Can not find latest() image because there are no images")
 		rd.resources = [rd.resources.sort({ A.props.CreationDate <= B.props.CreationDate })[-1]]
 		rd
 	}
-
-	F id(r:ImageRes) r.props.ImageId
-
 
 	# --------------------------------------------------
 	# Instance
@@ -741,13 +799,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			'--instance-type':       rd.opt_prop('InstanceType', props)
 			['--associate-public-ip-address', '--no-associate-public-ip-address']: rd.opt_prop('PublicIpAddress', props)
 			'--private-ip-address':  rd.opt_prop('PrivateIpAddress', props)
+			'--user-data':           rd.opt_prop('UserData', props)
 		})
 
-
-		rd.opt_prop('UserData', props, F(ud) {
-			args.push('--user-data')
-			args.push(ud)
-		})
 
 		result = rd.run('Create Instance', %(aws ec2 run-instances $*args))
 		if not(rd.dry_run) {
@@ -1359,20 +1413,20 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	}).Hash()
 
 	doc Work in progress, do not use!
-	F q(id:Str) {
+	F q(id:Str, **kw) {
 		m = id ~ /^([a-z]+)-[a-zA-Z0-9]+$/
 		guard m
 		guard m[1] in RESOURCE_CODE_TO_RESOURCE_TYPE
 		t = RESOURCE_CODE_TO_RESOURCE_TYPE[m[1]]
-		args = { t.user.id: id }
+		args = { t.user.id: id } + kw
 		t(**args)
 	}
 
 	doc Work in progress, do not use!
-	F q(id:Str) {
+	F q(id:Str, **kw) {
 		guard id in RESOURCE_CODE_TO_RESOURCE_TYPE
 		t = RESOURCE_CODE_TO_RESOURCE_TYPE[id]
-		t()
+		t(**kw)
 	}
 
 	F is_resource_code(s:Str) {

@@ -1,22 +1,26 @@
 #!/usr/bin/env ngs
 
-F main(*argv) {
-	t = argv[0]
-
-	m = t ~ /^([a-z]+)-[a-zA-Z0-9]+$/
-	if m {
-		if AWS::is_resource_code(m[1]) {
-			res = AWS::q(t).find()
-			echo(Table2::Table(res.resources.props))
-			# echo(res.resources.props)
-
+F process_argv(argv:Arr) {
+	ret = {
+		'anchor': {'Tags': {}}
+		'options': {}
+	}
+	for arg in (iter = Iter(argv)) {
+		econd {
+			m = arg ~ Pfx('--') {
+				ret.options[m.after] = iter.next()
+			}
+			m = arg ~ /=/ {
+				ret.anchor.Tags[m.before] = m.after
+			}
+			m = arg ~ /:/ {
+				ret.anchor[m.before] = m.after
+			}
 		}
-
 	}
-	
-	if AWS::is_resource_code(t) {
-		echo("YES")
-
-	}
-
+	ret
 }
+
+processed_argv = process_argv(ARGV[1..null])
+res = AWS::q(ARGV[0], **processed_argv.anchor).find()
+echo(Table2::Table(res.resources.props))

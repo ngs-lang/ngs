@@ -151,7 +151,7 @@ F ~(argv:Arr, udm:UserDefinedMethod) {
 	}
 
 	positionals.each(F(arg) {
-		idx = matched_args.index(UnmatchedParam)
+		idx = matched_args.index(UnmatchedParam, dflt=null)
 		if idx is Null {
 			if have_arr_splat {
 				matched_args.push(MatchedParam(arg))

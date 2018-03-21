@@ -1,6 +1,7 @@
 {
 	doc Abstract resource definition
 	doc anchor - Describes how to find the resource, if it exists.
+	doc resources - null or Arr[Res]
 	type ResDef(Eachable1)
 
 	F init(rd:ResDef, anchor) {

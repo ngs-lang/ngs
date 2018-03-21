@@ -1714,20 +1714,27 @@ TEST [1,2,2,3,4,4].uniq() == [1,2,3,4]
 
 TEST [null, false, 10, 20].first() == 10
 
-doc Find index of first value that satisfies the predicate.
-doc TODO: Make it work on anything with each() method.
-doc arr - Items to look at
-doc predicate - Test function
-doc args - Additional arguments for the predicate
-doc %RET - Int or null
-doc %EX - [1,2,11,3,4].index(X>10)  # 2
-F index(arr:Arr, predicate, start:Int=0) {
-	p = Pred(predicate)
-	l = arr.len()
-	for(i=start;i<l;i+=1)
-		p(arr[i]) returns i
-	warn("index() is returning null. In future, this will be an exception")
-	null
+ns {
+	global index
+	no_default = []  # Just a unique object that nobody else can reference
+	doc Find index of first value that satisfies the predicate.
+	doc TODO: Make it work on anything with each() method.
+	doc In future, will throw exception if element is not found and default is not provided. Now returns null for backwards compatibilty in this case.
+	doc arr - Items to look at
+	doc predicate - Test function
+	doc start - Index to start search at
+	doc dflt - default value to return when element is not found
+	doc %RET - Int or dflt. Temporary also null, for backwards compatibilty.
+	doc %EX - [1,2,11,3,4].index(X>10)  # 2
+	F index(arr:Arr, predicate, start:Int=0, dflt=no_default) {
+		p = Pred(predicate)
+		l = arr.len()
+		for(i=start; i<l; i+=1)
+			p(arr[i]) returns i
+		dflt !== no_default returns dflt
+		warn("index() is returning null. In future, this will be an exception. You can change your call to index(..., dflt=null)")
+		null
+	}
 }
 
 doc Find all indexes of values that satisfy the predicate
@@ -3507,12 +3514,15 @@ F error(s:Str) {
 	echo(stdlib_error_fd, "[ERROR ${Time()}] $s")
 }
 
-doc Write warning message to standard error.
+doc Write warning message to standard error. Prints backtrace if NGS_TRACE_WARNINGS environment variable is not an empty string.
 doc %EX - warn("Could not open input file $my_file , skipping it.")
 doc %EX - # Approximate output on stderr:
 doc %EX - # [WARNING 2018-01-01 00:00:00 YOUR_TZ] Could not open input file ./my_file , skipping it.
 F warn(s:Str) {
 	echo(stdlib_error_fd, "[WARNING ${Time()}] $s")
+	if ENV.get('NGS_TRACE_WARNINGS') {
+		print_exception(Exception("WARNING"))
+	}
 }
 
 doc Send status to standard error.
