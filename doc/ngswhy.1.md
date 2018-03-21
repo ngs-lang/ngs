@@ -26,7 +26,7 @@ Yes, I am aware that other people are also working on shells. I have seen many o
 
 # WHY NGS?
 
-NGS is optimized by design to perform easily typical systems administration tasks. The following tasks are common so NGS either has a syntax or features to make these tasks easy:
+NGS is optimized by design to perform easily typical systems administration tasks. For common tasks NGS has either a syntax or a set of features to make them easy:
 
 * Running external commands
 	* Facility for easier construction of command line arguments (the `Argv` facility)

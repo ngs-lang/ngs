@@ -92,3 +92,4 @@ Located in `NGS_DIR`. Standard library. Defines many methods and autoloading beh
 
 Thanks to Zeev Glozman for Mac support, CMake contribution and other help.
 Thanks to Guy Egozy, Avishai Ish-Shalom and other friends for ideas and feedback.
+Thanks to Ricardo Gomes for feedback and fixes to documentation.

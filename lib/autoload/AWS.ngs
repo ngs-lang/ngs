@@ -223,7 +223,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# Vpc
 	# --------------------------------------------------
 
+	doc Declarative primitive for referencing AWS VPC resources
 	type Vpc(ResDef)
+	doc Single declarative primitive resource describing AWS VPC
 	type VpcRes(Res)
 
 	Vpc.user = %{
@@ -290,7 +292,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# Internet Gateway
 	# --------------------------------------------------
 
+	doc Declarative primitive for referencing AWS Internet Gateway resources
 	type Igw(ResDef)
+	doc Single declarative primitive resource describing AWS Internet Gateway
 	type IgwRes(Res)
 
 	F id(r:IgwRes) r.props.InternetGatewayId
@@ -358,6 +362,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# RouteTable (WIP)
 	# --------------------------------------------------
 
+	doc Internal type. Please do not use.
+	doc %STATUS - internal
 	type RouteBox(FullBox)
 
 	F _normalize(r:RouteBox) r.get().without('Origin').without('State').sort()

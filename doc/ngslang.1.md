@@ -10,7 +10,9 @@ ngslang - Next Generation Shell language reference.
 
 NGS is an alternative shell. At it's core is a domain-specific language that was specifically designed to be a shell language.
 
-NGS is under development. The language part is already good enough to write some useful scripts. CLI does not exist yet. It will be written using the same language.
+NGS is under development. The language part is already good enough to write some useful scripts.
+The CLI still doesn't exist and will be written using the same language.
+
 
 # Running ngs scripts
 
@@ -20,7 +22,7 @@ You can put the following line as first line of your script:
 
 	#!/usr/bin/env ngs
 
-If you do that, you can run the script as `./script_name.ngs` or `/full/path/to/script_name.ngs` (you must make your script executable, `chmod 755 script_name.ngs` ).
+If you do that, you can run the script as `./script_name.ngs` or `/full/path/to/script_name.ngs` (you must make your script executable, by running `chmod 755 script_name.ngs` ).
 
 See more about running NGS in [NGS(1)](ngs.1.md).
 
@@ -522,7 +524,7 @@ Method with "rest keywords" parameter
 
 ## Method guards
 
-Method guards restrict method execution to specific conditions, typically the conditions are functions of parameters' values. If guard condition evaluates to `false`, NGS considers the method as if it did not match the arguments and continues to search for other methods to run in the multimethod's methods list.
+Method guards restrict method execution to specific conditions, typically the conditions are functions of parameters' values. If the guard condition evaluates to `false`, NGS considers the method as if it did not match the arguments and continues to search for other methods to run in the multimethod's methods list.
 
 	F gg(i:Int) {
 		echo("First gg active")
@@ -677,7 +679,7 @@ Since identifiers are alphanumeric (with underscores), `my_method` can be refere
 
 # Types
 
-NGS is dynamically typed language: values (and not variables) have types.
+NGS is a dynamically typed language: values (and not variables) have types.
 
 	a = 1
 	a = "ok"
@@ -1590,11 +1592,11 @@ This section will be expanded as I get feedback :)
 
 ## NGS should not be your first language
 
-I do not recommend NGS as your first language. Python for example would be a much better choice. Programming experience is assumed prior to using NGS.
+I do not recommend NGS as your first language. Python, for example, would be a much better choice. Programming experience is assumed prior to using NGS.
 
 ## Watch the version
 
-NGS is under development. Currently NGS has no version, breaking changes can happen. If you do anything important with NGS, it's preferable to note the git revision you are using for reproducible installation. The plan is to stop breaking NGS when it reaches version 1.0.0 Since that version, the behaviour will be common - patch level increase for fixes, minor for improvements, major for breaking changes.
+NGS is under development. Currently NGS has no version, breaking changes can happen. If you do anything important with NGS, it's preferable to note the git revision you are using for reproducible installation. The plan is to stop breaking NGS when it reaches version 1.0.0. From that version, the behaviour will be common - patch level increase for fixes, minor for improvements, major for breaking changes.
 
 ## Keyword arguments gotchas
 
@@ -1645,7 +1647,7 @@ Comments syntax is implemented in many places but not everywhere. If you get syn
 
 ## Mutable default parameter gotchas
 
-The code below will probably not to what was intended. Note that default parameter value is only computed once, at method definition time.
+The code below will probably not do what was intended. Note that the default parameter value is only computed once, at method definition time.
 
 	F f(x, a:Arr=[]) {
 		a.push(x)
@@ -1838,13 +1840,13 @@ External commands are represented with type `CommandsPipeline`. In the simple ca
 	$(ls $*fnames)    # $*var_name - expands to zero or more arguments
 	$(ls $*{ EXPR })  # $*{ EXPR } - expands to zero or more arguments
 
-`EXPR` above can be single expression or any number expressions, new-line or `;` separated, value of last one is used for the substitution.
+`EXPR` above can be a single expression or any number expressions, new-line or `;` separated, value of the last one is used for the substitution.
 
-The examples above show `$()` syntax but the substitution works the same for all syntaxes mentioned in **syntactic options for executing external programs** above.
+The examples above show `$()` syntax but the substitution works the same for all syntaxes mentioned in **syntactic options for executing external programs**.
 
 ## Options
 
-Rationale: it is sometimes desirable to alter behaviour of execution of external program.
+Rationale: it is sometimes desirable to alter the behaviour of execution of an external program.
 NGS provides syntax for passing arbitrary key-value pairs to augment `CommandsPipeline` or `Command`.
 
 Syntax:
@@ -1921,7 +1923,7 @@ If there is a particular program that you are using which also returns non-zero 
 
 ## External program boolean value
 
-When converting to `Bool`, for example in expression `if $(test -f my_file) { ... }`, all programs in the `CommandsPipeline` must exit with code zero in order to get `true`, otherwise the result of converting to `Bool` is `false`.
+When converting to `Bool`, for example in the expression `if $(test -f my_file) { ... }`, all programs in the `CommandsPipeline` must exit with code zero in order to get `true`, otherwise the result of converting to `Bool` is `false`.
 
 ## Constructing command line arguments
 
@@ -1949,7 +1951,9 @@ On NGS startup, the global variable `ENV` is populated with the environment vari
 
 # NGS exit codes
 
-Both regular results of running a program and exceptions are converted to exit code using `ExitCode` MultiMethod. Built in methods of `ExitCode` do the following conversion:
+Both regular results of running a program and exceptions are converted to exit code using `ExitCode` MultiMethod.
+
+Built in methods of `ExitCode` do the following conversion:
 
 * `true` - 0
 * `false` - 1
