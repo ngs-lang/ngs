@@ -1,7 +1,7 @@
 # === Table ======================================
 
 ns {
-	global init, push, each, len, echo
+	global init, push, each, len, echo, digest
 
 	doc Table cell. Array of rows.
 	type Cell(ArrLike)
@@ -136,6 +136,11 @@ ns {
 	doc Internal method. Please do not use.
 	F register_column(t:Table, k) t.cols_enum.push(k)
 
+	doc Internal method. Please do not use.
+	F register_columns(t:Table, columns:Eachable1) {
+		columns.each(register_column(t, X))
+	}
+
 	doc Append give row to the table
 	doc %RET - t
 	F push(t:Table, row_arr:Arr) {
@@ -252,7 +257,6 @@ ns {
 		# TODO: remove, make per-page
 		if(do_output_headers) {
 			t.cols_enum.limit(showing_n_columns).map(F(k, idx) Cell(k, max_colums_widths[idx])[0]).join(' ').echo()
-			do_line_spacing()
 		}
 	}
 
@@ -290,4 +294,21 @@ ns {
 	TEST Table2::column(Table2::Table([{"a": 1}, {"a": 2}]), "a") == [1,2]
 	TEST Table2::columns(Table2::Table([{"a": 1}, {"a": 2}])) == [[1,2]]
 	TEST Table2::Table([{"a": 1}, {"a": 2}]).len() == 2
+
+	F digest(t:Table) {
+		ret = Table("Digest of ${t.len()} rows")
+		%[field uniq min max].each(F(col) ret.register_column(col))
+		cols = t.columns()
+		# Work around uniq() limitation (uses Hash internally) by using .map(Str)
+		t.cols_enum.keys().sort().each(F(field_name) {
+			field_idx = t.cols_enum[field_name]
+			ret.push({
+				'field': field_name
+				'uniq': cols[field_idx].map(Str).uniq().len()
+				'min': cols[field_idx].min() tor '(failed to compare)'
+				'max': cols[field_idx].max() tor '(failed to compare)'
+			})
+		})
+		ret
+	}
 }

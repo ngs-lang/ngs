@@ -62,7 +62,7 @@ syn keyword ngsFunction c_access c_close c_closedir c_errno c_execve c_exit c_fo
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction bootstrap bootstrap_debug bootstrap_exception_catch_wrapper bootstrap_find_ngs_dir fetch main print_exception require ExitCode
 " stdlib functions
-syn keyword ngsFunction abs Argv access acquire all any assert basename chr close close_reading_end close_writing_end cmp code compare count dflt dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error exit_hook debug die filter filterk filterv finally find_in_path finished_ok first flatten fstat global_not_found_handler group has identity in index indexes join kill len limit lines log lstat map mapo map_idx_val mapk mapv mapkv max merge_sorted min n next none open ord partial partial_tail partition peek pmap pos ptimes publish read reduce reject rejectk rejectv release reverse set sort sortk split starts_with stat status store StrParams Strs subscribe subset sum tap test uniq unshift update wait warn without write zip
+syn keyword ngsFunction abs Argv access acquire all any assert basename chr close close_reading_end close_writing_end cmp code compare count dflt digest dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error exit_hook debug die filter filterk filterv finally find_in_path finished_ok first flatten fstat global_not_found_handler group has identity in index indexes join kill len limit lines log lstat map mapo map_idx_val mapk mapv mapkv max merge_sorted min n next none open ord partial partial_tail partition peek pmap pos ptimes publish read reduce reject rejectk rejectv release reverse set sort sortk split starts_with stat status store StrParams Strs subscribe subset sum tap test uniq unshift update wait warn without write zip
 syn keyword ngsFunction encode encode_hex encode_html encode_html_attr encode_json encode_uri_component
 syn keyword ngsFunction decode decode_uri_component
 
@@ -85,7 +85,7 @@ syn keyword ngsFunction converge create created delete expect find find_if_neede
 " AWS library functions
 syn keyword ngsFunction latest users_ids
 
-" stdlib test library functions
+" test library functions
 syn keyword ngsFunction log_test_ok
 syn keyword ngsFunction assert_base assert_eq assert_type assert_hash assert_array assert_string assert_hash_keys assert_hash_keys_values assert_min_len assert_exit_code assert_output_has assert_has assert_resolvable assert_path_exists
 

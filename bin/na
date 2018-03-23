@@ -1,26 +1,63 @@
 #!/usr/bin/env ngs
 
 F process_argv(argv:Arr) {
-	ret = {
-		'anchor': {'Tags': {}}
-		'options': {}
+	ret = []
+	cur = null
+	F next_cur() {
+		cur = {
+			'resource_id': null,
+			'anchor': {'Tags': {}}
+			'options': {}
+		}
 	}
 	for arg in (iter = Iter(argv)) {
 		econd {
 			m = arg ~ Pfx('--') {
-				ret.options[m.after] = iter.next()
+				cur.options[m.after] = iter.next()
 			}
 			m = arg ~ /=/ {
-				ret.anchor.Tags[m.before] = m.after
+				cur.anchor.Tags[m.before] = m.after
 			}
 			m = arg ~ /:/ {
-				ret.anchor[m.before] = m.after
+				cur.anchor[m.before] = m.after
+			}
+			true {
+				ret.push(cur)
+				next_cur()
+				cur.resource_id = arg
 			}
 		}
 	}
-	ret
+	ret.push(cur)
+	ret.without(null)
 }
 
-processed_argv = process_argv(ARGV[1..null])
-res = AWS::q(ARGV[0], **processed_argv.anchor).find()
-echo(Table2::Table(res.resources.props))
+processed_argv = process_argv(ARGV)
+
+references = []
+
+for obj in processed_argv {
+	# Maybe new syntax later instead of the "if": obj.anchor._RelatedTo := references.Box(-1)
+	if references {
+		obj.anchor._RelatedTo = references[-1]
+	}
+	res_def = AWS::q(obj.resource_id, **obj.anchor).find()
+	references.push(res_def)
+}
+
+# tbl = Table2::Table("Resources")
+#
+# {
+# 	res_def.typeof().user.Box('columns_order').each(F(order) {
+# 		Table2::register_columns(tbl, order)
+# 	})
+# 	res_def.each(push(tbl, X))
+# }
+
+tbl = Table2::Table("Resources", res_def.resources.props)
+digest_limit = obj.options.get('digest', 10).Int()
+
+if len(tbl) > digest_limit and (isatty(1) or 'digest' in obj.options) {
+	tbl = digest(tbl)
+}
+echo(tbl)

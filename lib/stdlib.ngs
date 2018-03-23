@@ -3041,6 +3041,10 @@ F times(n:Int, cb:Fun) {
 
 TEST r=0; 5.times(F() r=r+2); r==10
 
+doc Convert Int to Int, a no-op
+doc %RET - i
+F Int(i:Int) i
+
 doc Convert base-10 string to Int.
 doc Throws InvalidArgument if the number in s is not well-formatted.
 doc %RET - Int

@@ -164,7 +164,17 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	type ResDef(GlobalResDef)
 
 	doc Initialize ResDef from kw. Defaults: null for .regions and empty hash for .Tags
-	F init(rd:ResDef, **kw)           super(rd, {'regions': null, 'Tags': {}} + kw)
+	F init(rd:ResDef, **kw) {
+		if '_RelatedTo' in kw {
+			rd.related_to = kw._RelatedTo
+			kw.del('_RelatedTo')
+			rd.related_to.ensure_array().each(F(rel) {
+				prop = rd.typeof().user.related_to[rel.typeof()]
+				kw.(prop) = rel
+			})
+		}
+		super(rd, {'regions': null, 'Tags': {}} + kw)
+	}
 
 	doc Initialize ResDef from _ngs_name. Sets .regions to null, .Tags to empty hash and .Name to _ngs_name.
 	F init(rd:ResDef, _ngs_name:Str)  super(rd, {'regions': null, 'Tags': {}, 'Name': _ngs_name})
@@ -309,6 +319,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		id     InternetGatewayId
 	}
 
+	# TODO: Rename Attachments to _VpcId
 	doc Declarative primitive for finding AWS InternetGateway resources
 	F find(rd:Igw) {
 		debug("AWS", "Find IGW $rd")
@@ -723,14 +734,20 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	# TODO: State property (now assuming "running")
 
+	doc Declarative primitive for referencing AWS Instance resources.
+	doc Supported anchor items: VpcId, State (defaults to pending and running, pass "*" for all states except shutting-down and terminated, pass null for all states), InstanceId, ImageId (required for creation), KeyName, SubnetId, InstanceType, PublicIpAddress (Bool), PrivateIpAddresses, UserData
+	doc Supported properties: Tags, SecurityGroups, State (running/stopped), SourceDestCheck.
 	type Instance(ResDef)
+	doc Single declarative primitive resource describing AWS Instance
 	type InstanceRes(Res)
 
 	Instance.user = %{
-		prefix i
-		id     InstanceId
+		prefix         i
+		id             InstanceId
+		columns_order  %[InstanceId tag_Name tag_env tag_role IPs InstanceType State KeyName SecurityGroups AZ RestOfTags]
 	}
 
+	doc Initialize Instance (ResDef) from kwargs
 	F init(rd:Instance, **kwargs) {
 		t = {} + kwargs
 		t.State = kwargs.get('State', %[pending running])
@@ -743,10 +760,16 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		super(rd, **t)
 	}
 
+	doc Declarative primitive for finding AWS Instance resources
 	F find(rd:Instance) {
 		debug("AWS", "Find Instance ${rd}")
+		instance_ids = rd.anchor.get('InstanceId')
+		rd.anchor.Box('_Elb').each(F(elb) {
+			assert(rd.anchor._Elb is Elb, "_Elb must be of type AWS::Elb")
+			instance_ids = elb.map(F(elb) elb.Instances).flatten()
+		})
 		filters = Argv({
-			'--instance-ids': rd.anchor.get('InstanceId')
+			'--instance-ids': instance_ids
 			'--filters': rd.anchor.Tags.cli_tags_filters() + cli_filters({
 				'instance-state-name': rd.anchor.get('State')
 				'vpc-id': rd.anchor.Box('VpcId').map(only(ResDef, ids)).map(the_one)
@@ -781,10 +804,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		rd
 	}
 
-	F id(r:InstanceRes) r.props.InstanceId
-
 	# TODO: Support multiple NICs?
 	# TODO: ImageId should be able to be in props too, not just anchor
+	doc Declarative primitive for creating AWS Instance resources
+	doc %STATUS - internal
 	F create(rd:Instance, **props) {
 		rd.log('create', 'Instance')
 		for prop_name in %[ImageId] {
@@ -811,7 +834,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	}
 
 	# TODO: Support EC2 classic?
-	doc Don't call directly, use converge(). API subject to change.
+	doc Declarative primitive for updating AWS Instance resources
+	doc %STATUS - internal
 	F update(r:InstanceRes, props:Hash) {
 		debug("AWS", "${r} Update Instance")
 		r.update_tags(props)
@@ -856,12 +880,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 	}
 
+	doc Declarative primitive for deleting AWS Instance resources
 	F delete(r:InstanceRes) {
 		r.run('Terminate instance', %(aws ec2 terminate-instances --instance-ids ${r.id()}))
 	}
-
-	# Needed for update_tags()
-	F id(instance:InstanceRes) instance.props.InstanceId
 
 	# TODO: Support EC2 classic?
 	# TODO: Handle SGS in Anchor?
@@ -890,6 +912,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	}
 
 	# TODO: handle regions
+	doc Declarative primitive for waiting for AWS Instance resource to reach given state
+	doc state_name - typeically "running" or "stopped" (less common)
+	doc %RET - r
 	F wait_state(r:InstanceRes, state_name:Str) {
 		retry(
 			sleep = 5
@@ -910,7 +935,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	# TODO: cache the results for example if add_to_known_hosts is run twice in a row
 	#       once for PublicIpAddress and once for PrivateIpAddress
-	doc Get lines of console output
+	doc Declarative primitive for getting console output of AWS Instance resource
 	F get_console_output(r:InstanceRes) {
 		retry(
 			sleep = 5
@@ -931,12 +956,16 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	# TODO: cache ssh key fingerprints somewhere in the cloud, maybe in tags
 	#       so it will be available when they are not in the console anymore
+	doc Declarative primitive for getting ssh host fingerprints of AWS Instance resource
 	doc %RET - Array of Str. Each Str format "key-type base64key"
 	F get_ssh_host_keys(r:InstanceRes) {
 		# Observed bahviour, which might not always be true: when console output is ready, it already has the needed output
 		r.get_console_output()["-----BEGIN SSH HOST KEY KEYS-----".."-----END SSH HOST KEY KEYS-----"].map({A.split(' ')[0..2].join(' ')})
 	}
 
+	doc Declarative primitive for adding ssh host fingerprints of AWS Instance resource to
+	doc known hosts.
+	doc %STATUS - experimental
 	F add_to_known_hosts(r:Instance, prop_name:Str) {
 		# TODO: consider making it in parallel
 		for res in r {
@@ -946,7 +975,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	}
 
 	# TODO: factor out parts that could work for other clouds/VMs
-	doc WIP, don't use!
+	doc Declarative primitive for adding ssh host fingerprints of AWS Instance resource to
+	doc known hosts.
+	doc %STATUS - experimental
 	F add_to_known_hosts(r:InstanceRes, ip_or_hostname) {
 		f = ENV.get('NGS_KNOWN_HOSTS', ENV.HOME / '.ssh' / 'known_hosts')
 		keys_from_console = r.get_ssh_host_keys()
@@ -991,7 +1022,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	}
 
 	doc EXPERIMENTAL! Do not use!
+	doc Converts Instance resources to NGS code.
 	doc Right now it works in the most primitive way.
+	doc %STATUS - experimental
 	F code(r:InstanceRes) {
 		warn("You are using EXPERIMENTAL code(InstanceRes)")
 		p = r.props
@@ -1016,15 +1049,28 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# Elb
 	# --------------------------------------------------
 
-	doc AWS Elastic Load Balancer
+	# Should id() return "elb-..." ?
+	# Get rid of synthetic "Name" property?
+	doc Declarative primitive for referencing AWS Elastic Load Balancer resources.
+	doc Supported anchor items: LoadBalancerName, Name (required for creation, synthetic, probably will be removed), Tags, ListenerDescriptions (can not be used for lookup but required for creation), Subnets (can not be used for lookup but required for creation), AvailabilityZones (not implemented yet).
+	doc Supported properties: Tags, Instances, SecurityGroups, ListenerDescriptions
 	type Elb(ResDef)
+	doc Single declarative primitive resource describing AWS Elastic Load Balancer
 	type ElbRes(Res)
 
-	F id(r:ElbRes) r.props.LoadBalancerName
+	Elb.user = %{
+		prefix              elb
+		prefix_is_synthetic ${true}
+		id                  LoadBalancerName
+	}
 
+	doc Declarative primitive for finding AWS Elastic Load Balancer resources
 	F find(rd:Elb) {
 		debug("AWS", "Find ELB ${rd}")
-		resources = ``aws elb describe-load-balancers``
+		filters = Argv({
+			'--load-balancer-names': rd.anchor.Box('LoadBalancerName')
+		})
+		resources = ``aws elb describe-load-balancers $*filters``
 		if rd.anchor.get('Name') is Str {
 			resources .= filter(F(desc) desc.LoadBalancerName == rd.anchor.Name)
 		}
@@ -1042,6 +1088,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		rd
 	}
 
+	doc Declarative primitive for creating AWS Elastic Load Balancer resources
+	doc %STATUS - internal
 	F create(rd:Elb, **props) {
 		rd.log('create', "creating an ELB")
 		rd.anchor.get('Name') is not Str throws InvalidArgument("ELB name and must be a string, not ${rd.anchor.get('Name')}")
@@ -1062,7 +1110,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 	}
 
-	doc Don't call directly, use converge(). API subject to change.
+	doc Declarative primitive for updating AWS Elastic Load Balancer resources
+	doc %STATUS - internal
 	F update(elb:ElbRes, props:Hash) {
 		debug("AWS", "${elb} Update")
 		elb.def.anchor.get('Name') is not Str throws InvalidArgument("Elb is the ELB name and must be a string, not ${elb.def.anchor.get('Name')}")
@@ -1139,8 +1188,48 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 	}
 
+	doc Declarative primitive for deleting AWS Elastic Load Balancer resources
 	F delete(r:ElbRes) {
 		r.run('Delete ELB', %(aws elb delete-load-balancer --load-balancer-name ${r.id()}))
+	}
+
+	# --------------------------------------------------
+	# Zone
+	# --------------------------------------------------
+
+	# http://docs.aws.amazon.com/cli/latest/reference/route53/change-resource-record-sets.html
+
+	# Anchor: [record_name, domain_name]. Most specific first to be unifrom with Subnet
+	# Maybe support array or *-style wildcard for record_name?
+	# Maybe support anchor hosted-zone-id in the future? Don't currently see how this could be useful.
+
+	doc Declarative primitive for referencing AWS Route53 hosted zones resources.
+	doc Supported anchor items: Name, ZoneName (in future _ZoneName), Type, SetIdentifier, Region.
+	doc %STATUS - experimental
+	type Zone(ResDef)
+	doc Single declarative primitive resource describing AWS Route53 hosted zones
+	type ZoneRes(Res)
+
+	Zone.user = %{
+		prefix               zone
+		prefix_is_synthetic ${true}
+		id                  ZoneName
+	}
+
+	doc Declarative primitive for finding AWS Route53 hosted zones resources
+	F find(rd:Zone) {
+		debug("AWS", "Find Zone ${rd}")
+		anchor = rd.anchor
+		filters = []
+
+		if 'ZoneName' in rd.anchor {
+			filters += ['--dns-name', rd.anchor.ZoneName, '--max-items', 1]
+		}
+
+		zones = ``aws route53 list-hosted-zones-by-name $*filters``
+
+		rd.resources = zones.map(ZoneRes(rd, X))
+		rd
 	}
 
 	# --------------------------------------------------
@@ -1153,11 +1242,19 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# Maybe support array or *-style wildcard for record_name?
 	# Maybe support anchor hosted-zone-id in the future? Don't currently see how this could be useful.
 
+	doc Declarative primitive for referencing AWS Route53 RecordSet resources.
+	doc Supported anchor items: Name, ZoneName (in future _ZoneName), Type, SetIdentifier, Region.
+	doc Supported properties (not sure): Type, SetIdentifier, Region.
 	type RecordSet(ResDef)
+	doc Single declarative primitive resource describing AWS Route53 RecordSet
 	type RecordSetRes(Res)
 
-	F id(rrset:RecordSetRes) "${rrset.props.Name}"
+	RecordSet.user = %{
+		prefix rrset
+		id     Name
+	}
 
+	doc Declarative primitive for validating AWS Route53 RecordSet
 	F validate(rd:RecordSet) {
 		%[Name ZoneName].each(F(prop_name) {
 			prop_name not in rd.anchor throws InvalidArgument("Anchor must contain $prop_name")
@@ -1166,34 +1263,28 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		"todo"
 	}
 
+	doc Declarative primitive for finding AWS Route53 RecordSet
 	F find(rd:RecordSet) {
 		debug("AWS", "Find RecordSet ${rd}")
 		anchor = rd.anchor
 		zones = ``aws route53 list-hosted-zones-by-name --dns-name ${anchor.ZoneName} --max-items 1``
 
-		assert(zones.len() == 1 and zones[0].Name == anchor.ZoneName, "Zone ${anchor.ZoneName} not found when trying to create an RecordSet in it")
+		assert(zones.len() == 1 and zones[0].Name == anchor.ZoneName, "Zone ${anchor.ZoneName} not found when trying to manipulate a RecordSet in it")
 		zone_id = zones[0].Id
 		rd.zone_id = zone_id
 
 		type_args = Argv({
+			'--start-record-name': anchor.Box('Name')
 			'--start-record-type': anchor.Box('Type')
 		})
 
 		# XXX: getting 100 rrs. Overkill / underkill.
-		rrs = ``aws route53 list-resource-record-sets --hosted-zone-id $zone_id --start-record-name ${anchor.Name} $*type_args``
+		rrs = ``aws route53 list-resource-record-sets --hosted-zone-id $zone_id $*type_args``
 
-		rrs .= filter({A.Name == anchor.Name})
-
-		if 'Type' in anchor {
-			rrs .= filter({A.Type == anchor.Type})
-		}
-
-		if 'SetIdentifier' in anchor {
-			rrs .= filter({A.SetIdentifier == anchor.SetIdentifier})
-		}
-
-		if 'Region' in anchor {
-			rrs .= filter({A.Region == anchor.Region})
+		for prop in %[Name Type SetIdentifier Region] {
+			if prop in anchor {
+				rrs .= filter({A.(prop) == anchor.(prop)})
+			}
 		}
 
 		rd.resources = rrs / RecordSetRes(rd, X)
@@ -1211,6 +1302,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		ret
 	}
 
+	doc Declarative primitive for creating AWS Route53 RecordSet resources
+	doc %STATUS - internal
 	F create(rd:RecordSet, **props) {
 		change_batch = {
 			'Comment': props.get('Comment', "Added by AWS.ngs")
@@ -1227,7 +1320,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 	}
 
-	doc Don't call directly, use converge(). API subject to change.
+	doc Declarative primitive for updating AWS Route53 RecordSet resources
+	doc %STATUS - internal
 	F update(rrset:RecordSetRes, props:Hash) {
 		props = _get_props(rrset.def, props)
 		diff = Diff(rrset.props, props)
@@ -1244,6 +1338,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 	}
 
+	doc Declarative primitive for deleting AWS Route53 RecordSet resources
 	F delete(r:RecordSetRes) {
 		change_batch = {
 			'Comment': "Deleted by AWS.ngs"
@@ -1262,39 +1357,15 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	# TODO
 
-	util = ns {
-		F world_open_port(port:Int, proto:Str='tcp') {
-			{
-				'IpProtocol': proto
-				'FromPort': port
-				'ToPort': port
-				'IpRanges': [ { 'CidrIp': '0.0.0.0/0' } ]
-			}
-		}
-		F world_open_port(port:Arr, proto:Str='tcp') port.map(world_open_port(X, proto))
-
-		F world_open_ip_proto(proto) {
-			{
-				'IpProtocol': Str(proto)
-				'IpRanges': [ { 'CidrIp': '0.0.0.0/0' } ]
-			}
-
-		}
-		F world_open_ip_proto(proto:Arr) proto.map(world_open_ip_proto)
-
-		F world_open_icmp() {
-			{
-				'IpProtocol': 'icmp'
-				'FromPort': -1
-				'ToPort': -1
-			}
-		}
-	}
-
 	# --------------------------------------------------
 	# Volume (WIP)
 	# --------------------------------------------------
 
+	doc Declarative primitive for referencing AWS EC2 Volumes.
+	doc Supported anchor items: VolumeId, _InstanceId, State, SnapshotId, Tags, AvailabilityZone, VolumeType, Size
+	doc Supported properties: (converge is not implemented yet).
+	doc Resources are listed in 'CreateTime' order.
+	doc %STATUS - WIP
 	type Volume(ResDef)
 	type VolumeRes(Res)
 
@@ -1303,9 +1374,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		id     VolumeId
 	}
 
+	doc Declarative primitive for finding AWS VPC resources
 	F find(rd:Volume) {
 		debug("AWS", "Find Volume ${rd}")
-		rd._assert_anchor_has_only_known_keys(*%[VolumeId State SnapshotId Tags AvailabilityZone VolumeType Size])
+		rd._assert_anchor_has_only_known_keys(*%[VolumeId _InstanceId State SnapshotId Tags AvailabilityZone VolumeType Size])
 		# filters = ['--filters'] +? (rd.anchor.Tags.cli_tags_filters() + cli_filters({'cidr': rd.anchor.get('CidrBlock'), 'isDefault': rd.anchor.get('IsDefault')}))
 		filters = _make_filters_argv(rd, {
 				'volume-id': 'VolumeId'
@@ -1314,7 +1386,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 				'availability-zone': 'AvailabilityZone'
 				'volume-type': 'VolumeType'
 				'size': 'Size'
-		})
+				'attachment.instance-id': '_InstanceId'
+		}, transform={'_InstanceId': ids})
 		resources = ``aws ec2 describe-volumes $*filters``
 		rd.resources = resources / VolumeRes(rd, X)
 		rd.resources .= sort({ A.props.CreateTime <= B.props.CreateTime })
@@ -1326,10 +1399,23 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# Snapshot (WIP)
 	# --------------------------------------------------
 
+	# TODO: Are both OwnerId and OwnerIds needed?
+	doc Declarative primitive for referencing AWS EC2 Snapshot resources.
+	doc Supported anchor items: Tags, Description, OwnerId, OwnerIds, SnapshotId, State, VolumeId, VolumeSize, _AMI (extracted from Description "Created by CreateImage ...")
+	doc Supported properties: (converge is not implemented yet).
+	doc Warning: Owner ids starting with zero must be passed as strings.
+	doc %STATUS - WIP
 	type Snapshot(ResDef)
+	doc Single declarative primitive resource describing AWS EC2 Snapshot resources
 	type SnapshotRes(Res)
 
-	# Owner ids starting with zero must be passed as strings
+	Snapshot.user = %{
+		prefix snap
+		id     SnapshotId
+	}
+
+	doc Declarative primitive for finding AWS VPC resources.
+	doc Warning: Owner ids starting with zero must be passed as strings.
 	F find(rd:Snapshot) {
 		debug("AWS", "Find Snapshot ${rd}")
 		rd._assert_anchor_has_only_known_keys(*%[Tags Description OwnerId OwnerIds SnapshotId State VolumeId VolumeSize _AMI])
@@ -1361,6 +1447,39 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		rd
 	}
 
+
+	# ==================================================
+	# Utilities
+	# ==================================================
+
+	util = ns {
+		F world_open_port(port:Int, proto:Str='tcp') {
+			{
+				'IpProtocol': proto
+				'FromPort': port
+				'ToPort': port
+				'IpRanges': [ { 'CidrIp': '0.0.0.0/0' } ]
+			}
+		}
+		F world_open_port(port:Arr, proto:Str='tcp') port.map(world_open_port(X, proto))
+
+		F world_open_ip_proto(proto) {
+			{
+				'IpProtocol': Str(proto)
+				'IpRanges': [ { 'CidrIp': '0.0.0.0/0' } ]
+			}
+
+		}
+		F world_open_ip_proto(proto:Arr) proto.map(world_open_ip_proto)
+
+		F world_open_icmp() {
+			{
+				'IpProtocol': 'icmp'
+				'FromPort': -1
+				'ToPort': -1
+			}
+		}
+	}
 
 	# ==================================================
 	# Backwards compatibility with bunch of global variables
@@ -1415,9 +1534,15 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc Work in progress, do not use!
 	F q(id:Str, **kw) {
 		m = id ~ /^([a-z]+)-[a-zA-Z0-9]+$/
+		if not(m) {
+			m = id ~ /^(elb|zone)-(.+)$/
+		}
 		guard m
 		guard m[1] in RESOURCE_CODE_TO_RESOURCE_TYPE
 		t = RESOURCE_CODE_TO_RESOURCE_TYPE[m[1]]
+		if t.user.get('prefix_is_synthetic') {
+			id = m[2]
+		}
 		args = { t.user.id: id } + kw
 		t(**args)
 	}
@@ -1431,6 +1556,30 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	F is_resource_code(s:Str) {
 		s in RESOURCE_CODE_TO_RESOURCE_TYPE
+	}
+
+	# --------------------------------------------------
+	# related_to
+	# --------------------------------------------------
+	Subnet.user.related_to = {
+		Vpc: 'VpcId'
+	}
+	# TODO: SecGroup
+	Instance.user.related_to = {
+		Image: 'ImageId'
+		Vpc: 'VpcId'
+		Elb: '_Elb'
+	}
+	Igw.user.related_to = {
+		Vpc: 'Attachments'
+	}
+	Volume.user.related_to = {
+		Instance: '_InstanceId'
+	}
+
+	# Does not work yet
+	RecordSet.user.related_to = {
+		Zone: 'ZoneId'
 	}
 
 	# --------------------------------------------------
