@@ -46,7 +46,6 @@ for obj in processed_argv {
 }
 
 # tbl = Table2::Table("Resources")
-#
 # {
 # 	res_def.typeof().user.Box('columns_order').each(F(order) {
 # 		Table2::register_columns(tbl, order)
