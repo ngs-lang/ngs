@@ -109,44 +109,51 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 
 	# --------------------------------------------------
+	# CreateOnly
+	# --------------------------------------------------
+
+	doc A Box for a property which is to be used only at creation time, not when a resource is updated
+	type CreateOnly(FullBox)
+
+	# --------------------------------------------------
 	# Res
 	# --------------------------------------------------
 
 	doc AWS resource
 	type Res(GlobalRes)
 
+	# TODO: always output at least ID of the creates resources
+	#       because if update() fails the resourcs is difficult to find
 	doc Run a command. Internal method. Please do not use outside the AWS library.
 	doc %STATUS - internal
 	F run(r:Res, log_pfx:Str, cp:CommandsPipeline, do_decode=true) r.def.run("${r} ${log_pfx}", cp, do_decode)
 
+	F _diff_tags(current_tags:Hash, target_tags:Hash) {
+		# target_tags.mapv(typeof).echo()
+		d = HashDiff()
+		d.add = target_tags.rejectv(NoData).reject(X in current_tags)
+		d.change = target_tags.rejectv(NoData).filter(X in current_tags).filter(F(k, v) current_tags[k] != v)
+		d.remove = target_tags.filterv(NoData).keys().filter(X in current_tags)
+		d
+	}
+
 	doc Don't call directly, use converge(). API subject to change.
 	doc Update tags using AWS CLI "aws ec2 create-tags" and "aws ec2 delete-tags".
-	doc The required AWS CLI is computed from current tags, which are expected to be in r.props.Tags, and props.Tags
+	doc The required AWS CLI is computed from current tags in r.props.Tags, and desired tags in r.def.anchor.Tags and props.Tags
 	doc %RET - Do not count on this value.
 	F update_tags(r:Res, props:Hash) {
-		target_tags = r.def.opt_prop('Tags', props).get({})
+		target_tags = r.def.anchor.get('Tags', {}) + props.get('Tags', {})
 		current_tags = r.props.get('Tags', {})
 
-		if current_tags.sort() == target_tags.sort() {
-			debug("AWS", "${r} Current tags: $current_tags are same as target tags, not updating")
-			return
-		}
+		debug('AWS', "Current tags: $current_tags. Target tags: $target_tags (from anchor and properties)")
+		diff = _diff_tags(current_tags, target_tags)
 
-		debug('AWS', "Current tags: $current_tags. Target tags: $target_tags")
-		diff = Diff(current_tags, target_tags)
-
-		# Tags might be only in Anchor
-		# so we should create them during first update
 		if (tags = cli_tags(diff.add + diff.change)) {
-			r.run('add tags', %(aws ec2 create-tags --resources ${r.id()} --tags $*tags))
+			r.run('adding tags', %(aws ec2 create-tags --resources ${r.id()} --tags $*tags))
 		}
 
-		# Tags might be only in Anchor
-		# so we should not delete other tags
-		if 'Tags' in props {
-			if (tags = diff.remove / "Key=$X") {
-				r.run('remove tags', %(aws ec2 delete-tags --resources ${r.id()} --tags $*tags))
-			}
+		if (tags = diff.remove.map("Key=$X")) {
+			r.run('removing tags', %(aws ec2 delete-tags --resources ${r.id()} --tags $*tags))
 		}
 	}
 
@@ -175,9 +182,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 		super(rd, {'regions': null, 'Tags': {}} + kw)
 	}
-
-	doc Initialize ResDef from _ngs_name. Sets .regions to null, .Tags to empty hash and .Name to _ngs_name.
-	F init(rd:ResDef, _ngs_name:Str)  super(rd, {'regions': null, 'Tags': {}, 'Name': _ngs_name})
 
 	doc Initialize ResDef from _ngs_tags. Sets .regions to null and .Tags to _ngs_tags.
 	F init(rd:ResDef, _ngs_tags:Hash) super(rd, {'regions': null, 'Tags': _ngs_tags})
@@ -214,6 +218,47 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	}
 
 	# --------------------------------------------------
+	# (updaters)
+	# --------------------------------------------------
+
+	F _make_one_at_a_time_list_updater(getter:Fun, add_command, remove_command, eq:Fun=(==)) {
+
+		commands = {
+			'add': add_command
+			'remove': remove_command
+		}
+
+		F process_command(r:Res, command:Arr, item_to_add) {
+			collector {
+				command.each(F(c) {
+					item = if c is Fun then c(item_to_add) else c
+					item.ensure_array().each(collect)
+				})
+				if command.none(Fun) {
+					collect(item_to_add)
+				}
+			}.replace('ID', r.id())
+		}
+
+		F list_updater(r:Res, target) {
+			echo("list_updater() active")
+			current_list = getter(r.props)
+			echo("list_updater() current list: $current_list")
+			target_list = ensure_array(target)
+			diff = Diff(current_list, target_list, eq)
+			echo("list_updater() diff: $diff")
+
+			for op in %[add remove] {
+				diff.(op).each(F(item) {
+					cmd = process_command(r, commands[op], item)
+					echo("list_updater() cmd: $cmd")
+					result = r.def.run('Updating ' + r.def.typeof().user.display_name, %($*cmd))
+				})
+			}
+		}
+	}
+
+	# --------------------------------------------------
 	# (helpers)
 	# --------------------------------------------------
 
@@ -233,75 +278,134 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	}
 
 	# --------------------------------------------------
-	# Vpc
+	# Declarative primitives methods
 	# --------------------------------------------------
 
-	doc Declarative primitive for referencing AWS VPC resources.
-	doc Supported anchor items: VpcId, Tags, CidrBlock, IsDefault.
-	doc Supported properties: Tags, CidrBlock (assert only).
-	type Vpc(ResDef)
-	doc Single declarative primitive resource describing AWS VPC
-	type VpcRes(Res)
-
-	Vpc.user = %{
-		prefix vpc
-		id     VpcId
-	}
-
-	doc Declarative primitive for finding AWS VPC resources
-	F find(rd:Vpc) {
-		debug("AWS", "Find VPC $rd")
-		rd._assert_anchor_has_only_known_keys('VpcId', 'Tags', 'CidrBlock', 'IsDefault')
-		filters = _make_filters_argv(rd, %{
-				cidr      CidrBlock
-				isDefault IsDefault
-				vpc-id    VpcId
-		}, transform={
-			'VpcId': F(x) ematch x {
-				Str x
-				ResDef x.the_one().VpcId
-			}
+	F find(rd:ResDef) {
+		type_user_data = rd.typeof().user
+		allowed_keys = type_user_data.find_props_to_filters.keys()
+		if type_user_data.get('find_supports_tags') {
+			allowed_keys .= push('Tags')
+		}
+		rd._assert_anchor_has_only_known_keys(*allowed_keys)
+		h = collector/{} type_user_data.find_props_to_filters.each(F(anchor_name, filter_name) {
+			v = rd.anchor.Box(anchor_name) # .map(transform.get(anchor_name, identity))
+			# TODO: check that there is only one result?
+			# TODO: maybe it's not id() that should be used in some cases?
+			v .= map(only(ResDef, ids))
+			collect(filter_name, v)
 		})
-		rd.resources = ``aws ec2 describe-vpcs $*filters``.map(VpcRes(rd, X))
+		tags_filters = if type_user_data.get('find_supports_tags') {
+			rd.anchor.Tags.cli_tags_filters()
+		} else {
+			{}
+		}
+		argv = Argv({ '--filters': cli_filters(h) + tags_filters })
+		res_type = type_user_data.res_type
+		rd.resources = ``$*{type_user_data.find_command} $*argv``.map(res_type(rd, X))
 		rd
 	}
 
-	doc Declarative primitive for creating AWS VPC resources
-	doc %STATUS - internal
-	F create(rd:Vpc, **props) {
-		rd._assert_props_has_only_known_keys(props, 'Tags', 'CidrBlock')
-		cidr = rd.req_prop('CidrBlock', props)
-		result = rd.run('Create VPC', %(aws ec2 create-vpc --cidr-block $cidr))
+	# TODO: give error when getting create only property not wrapped in CreateOnly
+	F create(rd:ResDef, **orig_props) {
+		props = orig_props.mapv(only(CreateOnly, get))
+		type_user_data = rd.typeof().user
+		allowed_keys = type_user_data.get('create_props_to_args', {}).keys() # + type_user_data.get('create_opt', [])
+		if type_user_data.get('find_supports_tags') {
+			allowed_keys .= push('Tags')
+		}
+		rd._assert_anchor_has_only_known_keys(*allowed_keys)
+		required_keys = type_user_data.get('create_props_required', [])
+		for k in required_keys {
+			if not([props, rd.anchor].get(k)) {
+				throw InvalidArgument("'$k' parameter is required when creating ${type_user_data.display_name}")
+			}
+		}
+		echo("create() props $props")
+		argv = type_user_data.get('create_props_to_args', {}).mapkv(F(prop, arg) {
+			[arg, rd.opt_prop(prop, props).map(F(x) only(ResDef, ids)(x))]
+		}).Argv()
+		result = rd.run('Creating ' + rd.typeof().user.display_name, %($*{type_user_data.create_command} $*argv))
+		if (result is Hash) and (result.len() == 1) {
+			result = result.values()[0]
+		}
+		result = [result]
+
+		# Some API calls (sg) only return the ID of the created resource
+		result .= map(F(maybe_id) {
+			maybe_id is not Str returns maybe_id
+			q(maybe_id).map(identity).the_one()
+		})
+
+		result.each(F(h:Hash) {
+			if 'Tags' in h {
+				h.Tags .= Hash('Key', 'Value')
+			}
+		})
+		res_type = type_user_data.res_type
 		if not(rd.dry_run) {
-			filters = cli_filters({'vpc-id': result.Vpc.VpcId})
-			rd.created(``aws ec2 describe-vpcs --filters $*filters``.map(VpcRes(rd, X)), props)
+			rd.created(result.map(res_type(rd, X)), orig_props)
 		}
 	}
 
-	doc Declarative primitive for updating AWS VPC resources
-	doc %STATUS - internal
-	F update(r:VpcRes, props:Hash) {
-		r.def._assert_props_has_only_known_keys(props, 'Tags', 'CidrBlock')
-		r.update_tags(props)
-		# TODO: since we can't modify CidrBlock, we should at least assert that it matches
-		if 'CidrBlock' in props {
-			props.CidrBlock != r.props.CidrBlock throws InvalidArgument("CidrBlock can not be changed after VPC creation")
+	# TODO: Give better error when orig_props contains
+	#       create only (unrecognized by update) property
+	F update(r:Res, orig_props:Hash) {
+		props = orig_props.rejectv(CreateOnly)
+		type_user_data = r.def.typeof().user
+		allowed_keys = type_user_data.get('update_methods', {}).keys()
+		if type_user_data.get('find_supports_tags') {
+			allowed_keys .= push('Tags')
 		}
+		r.def._assert_props_has_only_known_keys(props, *allowed_keys)
+		if type_user_data.get('find_supports_tags') {
+			r.update_tags(props)
+		}
+		props.without('Tags').each(F(k, v) {
+			# update_how = type_user_data.update_methods[k]
+			# current_list = update_how::current_list(r.props)
+			# target_list = ensure_array(v)
+			m = type_user_data.update_methods[k]
+			m(r, v)
+		})
 	}
 
-	doc Declarative primitive for deleting AWS VPC resources
-	F delete(r:VpcRes) {
-		r.run('Delete VPC', %(aws ec2 delete-vpc --vpc-id ${r.props.VpcId}))
+	F delete(r:Res) {
+		type_user_data = r.def.typeof().user
+		r.run('Deleting ' + type_user_data.display_name, %($*{type_user_data.delete_command} ${r.props.(type_user_data.id)}))
 	}
 
-	doc String representation of AWS Vpc
-	F Str(r:Vpc) {
-		t = if r.resources is Null {
-			''
-		} else {
-			" ${r.ids().join(',')}"
+
+	# --------------------------------------------------
+	# Vpc
+	# --------------------------------------------------
+
+	type Vpc(ResDef)
+	type VpcRes(Res)
+
+	Vpc.user = %{
+		prefix       vpc
+		id           VpcId
+		display_name VPC
+
+		find_command          %[aws ec2 describe-vpcs]
+		find_supports_tags    ${true}
+		find_props_to_filters %{
+			CidrBlock cidr
+			IsDefault isDefault
+			VpcId     vpc-id
+			State     state
 		}
-		"<Aws::Vpc$t anchor=${r.anchor}>"
+
+		create_command       %[aws ec2 create-vpc]
+		create_props_to_args %{
+			CidrBlock --cidr-block
+		}
+		create_props_required %[CidrBlock]
+
+		delete_command       %[aws ec2 delete-vpc --vpc-id]
+
+		res_type     ${VpcRes}
 	}
 
 	# --- Extract VPC ID ---
@@ -312,80 +416,36 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# Internet Gateway
 	# --------------------------------------------------
 
-	doc Declarative primitive for referencing AWS Internet Gateway resources.
-	doc Supported anchor items: Tags, Attachments, InternetGatewayId.
-	doc Supported properties: Tags, Attachments.
 	type Igw(ResDef)
-	doc Single declarative primitive resource describing AWS Internet Gateway
 	type IgwRes(Res)
 
 	Igw.user = %{
-		prefix igw
-		id     InternetGatewayId
-	}
+		prefix                igw
+		id                    InternetGatewayId
+		display_name          "Internet Gateway"
 
-	# TODO: Rename Attachments to _VpcId
-	doc Declarative primitive for finding AWS InternetGateway resources
-	F find(rd:Igw) {
-		debug("AWS", "Find IGW $rd")
-		rd._assert_anchor_has_only_known_keys('Tags', 'Attachments', 'InternetGatewayId')
-
-		filters = Argv({
-				'--internet-gateway-ids': rd.anchor.get('InternetGatewayId')
-				'--filters': rd.anchor.Tags.cli_tags_filters() + rd.anchor.get('Attachments', []).map(F(att) cli_filters({'attachment.vpc-id': _eval_vpc_id(att.VpcId)})).flatten()
-		})
-
-		rd.resources = ``aws ec2 describe-internet-gateways $*filters``.map(IgwRes(rd, X))
-		rd
-	}
-
-	doc Declarative primitive for creating AWS InternetGateway resources
-	doc %STATUS - internal
-	F create(rd:Igw, **props) {
-		rd.log('Create', 'IGW')
-		rd._assert_anchor_has_only_known_keys('Tags', 'Attachments')
-		result = rd.run('Create IGW', %(aws ec2 create-internet-gateway))
-		rd.resources = rd.resources or []
-		if not(rd.dry_run) {
-			filters = cli_filters({'internet-gateway-id': result.InternetGateway.InternetGatewayId})
-			rd.created(``aws ec2 describe-internet-gateways --filters $*filters``.map(IgwRes(rd, X)), props)
+		find_command          %[aws ec2 describe-internet-gateways]
+		find_supports_tags    ${true}
+		find_props_to_filters %{
+			InternetGatewayId  internet-gateway-id
+			_VpcId             attachment.vpc-id
+			State              state
 		}
-	}
 
-	doc Declarative primitive for creating AWS InternetGateway resources
-	doc %STATUS - internal
-	F update(r:IgwRes, props:Hash) {
-		debug("AWS", "${r} Update IGW")
-		r.def._assert_anchor_has_only_known_keys('Tags', 'Attachments')
-		r.update_tags(props)
-		r.def.opt_prop('Attachments', props).each(F(target_attachments) {
-			target_vpcs_ids = target_attachments.VpcId.map(_eval_vpc_id)
-			current_vpcs_ids = r.props.Attachments.VpcId
-			if current_vpcs_ids == target_vpcs_ids {
-				debug("AWS", "${r} Current attachments: $current_vpcs_ids are same as target attachments, not updating")
-				return
+		create_command        %[aws ec2 create-internet-gateway]
+		delete_command        %[aws ec2 delete-internet-gateway --internet-gateway-id]
+
+		update_methods        %{
+			_VpcId  ${
+				_make_one_at_a_time_list_updater(
+					F get_current_list(props:Hash) props.Attachments.VpcId,
+					%[aws ec2 attach-internet-gateway --internet-gateway-id ID --vpc-id],
+					%[aws ec2 detach-internet-gateway --internet-gateway-id ID --vpc-id]
+				)
 			}
-			r.log('update_attachments/info', "Current attachments: $current_vpcs_ids. Target attachments: $target_vpcs_ids")
-			diff = Diff(current_vpcs_ids, target_vpcs_ids)
+		}
 
-			diff.add.each(F(vpc_id) {
-				r.run('update_attachments/add', %(aws ec2 attach-internet-gateway --internet-gateway-id ${r.id()} --vpc-id $vpc_id))
-			})
-
-			# Attachments might be only in Anchor
-			# so we should not delete other attachments
-			if 'Attachments' in props {
-				diff.remove.each(F(vpc_id) {
-					r.run('update_attachments/remove', %(aws ec2 detach-internet-gateway --internet-gateway-id ${r.id()} --vpc-id $vpc_id))
-				})
-			}
-		})
-
-	}
-
-	doc Declarative primitive for deleting AWS InternetGateway resources
-	F delete(r:IgwRes) {
-		r.run('Delete IGW', %(aws ec2 delete-internet-gateway --internet-gateway-id ${r.id()}))
+		res_type              ${IgwRes}
 	}
 
 	# --------------------------------------------------
@@ -403,143 +463,111 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc %EX - # TODO: example
 	F ==(a:RouteBox, b:RouteBox) _normalize(a) == _normalize(b)
 
-	doc Declarative primitive for referencing AWS RouteTable resources. Creation is not supported yet.
-	doc Supported anchor items: Tags, VpcId.
-	doc Supported properties: Routes.
 	type RouteTable(ResDef)
-	doc Single declarative primitive resource describing AWS RouteTable
 	type RouteTableRes(Res)
 
-	RouteTable.user = %{
-		prefix rtb
-		id     RouteTableId
-	}
-
-	doc Declarative primitive for finding AWS RouteTable resources
-	F find(rd:RouteTable) {
-		# TODO: route.gateway-id, route.instance-id
-		debug("AWS", "Find RouteTable ${rd}")
-		rd._assert_anchor_has_only_known_keys('Tags', 'VpcId')
-		filters = Argv({
-			'--filters': rd.anchor.Tags.cli_tags_filters() + cli_filters({'vpc-id': rd.anchor.Box('VpcId').map(_eval_vpc_id)})
+	F _route_cidr(route) route.DestinationCidrBlock
+	F _route_to_argv(route) {
+		Argv({
+			'--destination-cidr-block': route.DestinationCidrBlock
+			'--gateway-id': route.get('GatewayId')
+			'--instance-id': route.get('InstanceId')
+			'--network-interface-id': route.get('NetworkInterfaceId')
+			'--vpc-peering-connection-id': route.get('VpcPeeringConnectionId')
+			'--nat-gateway-id': route.get('NatGatewayId')
 		})
-		rd.resources = ``aws ec2 describe-route-tables $*filters``.map(RouteTableRes(rd, X))
-		rd
 	}
 
-	doc Declarative primitive for updating AWS RouteTable resources
-	doc %STATUS - internal
-	F update(r:RouteTableRes, props:Hash) {
-		debug("AWS", "${r} Update RouteTable")
-		# log("RouteTableRes entry $r")
-		r.def.opt_prop('Routes', props) do F(target_routes) {
-			target_routes .= normalize_presence_list()
-			# log("target_routes $target_routes")
-			# TODO: do not replace in-place, make a copy
-			target_routes.map(get).each(F(r) {
-				for prop in %[GatewayId InstanceId] {
-					if prop in r {
-						if r.(prop) is ResDef then r.(prop) = r.(prop).ids().the_one()
+	# CONTINUE HERE
+	# TODO: Think of more efficient behaviour of "eq"
+	# TODO: normalize_presence_list
+	# TODO: support ResDef for GatewayId, InstanceId, maybe others
+	RouteTable.user = %{
+		prefix        rtb
+		id            RouteTableId
+		display_name "Routing Table"
+
+		find_command          %[aws ec2 describe-route-tables]
+		find_supports_tags    ${true}
+		find_props_to_filters %{
+			RouteTableId route-table-id
+			VpcId        vpc-id
+		}
+
+		create_command       %[aws ec2 create-route-table]
+		create_props_to_args %{
+			VpcId --vpc-id
+		}
+		create_props_required %[VpcId]
+
+		update_methods        %{
+			Routes  ${
+				_make_one_at_a_time_list_updater(
+					F get_current_list(props:Hash) props.Routes,
+					%[aws ec2 create-route --route-table-id ID $_route_to_argv],
+					%[aws ec2 delete-route --route-table-id ID --destination-cidr-block $_route_cidr],
+					eq = F(a,b) {
+						F _normalize(x) x.without('Origin').without('State').sort()
+						_normalize(a) == _normalize(b)
 					}
-				}
-			})
-			target_routes.each(F(r) r.val .= RouteBox())
-			diff = Diff(r.props.Routes.map(RouteBox), target_routes, full=true) # apparently works without full. TODO: check why
-			# log("RouteTableRes diff $diff")
-			diff.add.map(get).each(F(route) {
-				args = Argv({
-					'--route-table-id': r.id()
-					'--destination-cidr-block': route.DestinationCidrBlock
-					'--gateway-id': route.get('GatewayId')
-					'--instance-id': route.get('InstanceId')
-					'--network-interface-id': route.get('NetworkInterfaceId')
-					'--vpc-peering-connection-id': route.get('VpcPeeringConnectionId')
-					'--nat-gateway-id': route.get('NatGatewayId')
-				})
-				r.run('Update route table/add route', %(aws ec2 create-route $*args))
-			})
-			diff.remove.map(get).each(F(route) {
-				args = Argv({
-					'--route-table-id': r.id()
-					'--destination-cidr-block': route.DestinationCidrBlock
-				})
-				r.run('Update route table/remove route', %(aws ec2 delete-route $*args))
-			})
-		} # Routes
-	}
+				)
+			}
+		}
 
-	doc Declarative primitive for deleting AWS RouteTable resources
-	F delete(r:RouteTableRes) {
-		r.run('Delete route table', %(aws ec2 delete-route-table --route-table-id ${r.id()}))
+		delete_command        %[aws ec2 delete-route-table --route-table-id]
+
+		res_type ${RouteTableRes}
 	}
 
 	# --------------------------------------------------
 	# SecGroup
 	# --------------------------------------------------
 
-	doc Declarative primitive for referencing AWS Security Group resources.
-	doc Supported anchor items: Name, VpcId (can be Vpc resource), Description (required for creation), Tags, GroupId
-	doc Supported properties: Tags, CidrBlock (assert only).
 	type SecGroup(ResDef)
-	doc Single declarative primitive resource describing AWS Security Group
 	type SecGroupRes(Res)
 
 	SecGroup.user = %{
-		prefix sg
-		id     GroupId
-	}
+		prefix                sg
+		id                    GroupId
+		display_name          "Security Group"
+
+		find_command          %[aws ec2 describe-security-groups]
+		find_supports_tags    ${true}
+		find_props_to_filters %{
+			Description description
+			GroupId          group-id
+			GroupName        group-name
+			VpcId            vpc-id
+			OwnerId          owner-id
+		}
+
+		create_command       %[aws ec2 create-security-group]
+		create_props_to_args %{
+			Description      --description
+			GroupName        --group-name
+			VpcId            --vpc-id
+		}
+		create_props_required %[Description GroupName]
 
 
-	doc Initialize SecGroup from Arr of [name, vpc_id].
-	doc %STATUS - deprecated
-	F init(rd:SecGroup, anchor:Arr) {
-		warn("Using deprecated SecGroup anchor - array. Should use SecGroup(name, vpc) form.")
-		super(rd, Name=anchor[0], VpcId=anchor[1])
+		res_type     ${SecGroupRes}
 	}
+
+		# delete_command       %[aws ec2 delete-vpc --vpc-id]
 
 	doc Initialize SecGroup from security group name and vpc.
 	doc %EX - AWS::SecGroup("https-server", AWS::Vpc(...))
-	F init(rd:SecGroup, Name:Str, VpcId) {
+	F init(rd:SecGroup, GroupName:Str, VpcId) {
 		guard VpcId is Str or VpcId is Vpc
-		super(rd, Name=Name, VpcId=VpcId)
+		super(rd, GroupName=GroupName, VpcId=VpcId)
 	}
 
-	doc Declarative primitive to convert AWS Security Group to array of hashes with GroupId and UserId keys.
-	doc Looks like it's badly named. Candidate for renaming.
-	doc Additional plan is to eliminate the need for this method.
-	doc %RET - Arr of Hash. Each Hash has: GroupId, UserId
-	doc %EX - sg = AwsSecGroup(...) # servers behing ELB
-	doc %EX - # Allow traffic from ELB to the servers
-	doc %EX - sg.converge(..., IpPermissions = [{UserIdGroupPairs = elb_sg.users_ids(), ...}])
-	doc %EX - # In future, should be:
-	doc %EX - sg.converge(..., IpPermissions = [{UserIdGroupPairs = elb_sg, ...}])
 	F users_ids(r:SecGroup) r.resources.map(F(res) {
 		{
 			'GroupId': res.props.GroupId
 			'UserId': res.props.OwnerId
 		}
 	})
-
-	doc Declarative primitive for finding AWS Security Group resources
-	F find(rd:SecGroup) {
-		debug("AWS", "Find SG ${rd}")
-		if 'name' in rd.anchor {
-			warn("SecGroup uses deprecated anchor property 'name'. Should be 'Name'")
-			rd.anchor['Name'] = rd.anchor.name
-			rd.anchor .= without('name')
-		}
-		rd._assert_anchor_has_only_known_keys('VpcId', 'Name', 'Tags', 'Description', 'GroupId')
-		filters = _make_filters_argv(rd, %{
-				description  Description
-				group-id     GroupId
-				group-name   Name
-				owner-id     OwnerId
-				vpc-id       VpcId
-		}, transform={'VpcId': _one_id})
-		resources = ``aws ec2 describe-security-groups $*filters``
-		rd.resources = resources.map(SecGroupRes(rd, X))
-		rd
-	}
 
 	doc Internal type. Please do not use.
 	doc %STATUS - internal
@@ -567,18 +595,18 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		not(Diff(a, b))
 	}
 
-	doc Declarative primitive for creating AWS Security Group resources
-	doc %STATUS - internal
-	F create(rd:SecGroup, **props) {
-		rd.log('Create', 'SG')
-		argv = Argv({'--vpc-id': rd.anchor.Box('VpcId').map(_one_id)})
-		rd.run('Create SG', %(aws ec2 create-security-group --group-name ${rd.anchor.Name} --description ${rd.req_prop('Description', props)} $*argv))
-		if not(rd.dry_run) {
-			# XXX use GroupId output of run()
-			rd.find()
-			rd.resources % update(X, props)
-		}
-	}
+	# doc Declarative primitive for creating AWS Security Group resources
+	# doc %STATUS - internal
+	# F create(rd:SecGroup, **props) {
+	# 	rd.log('Create', 'SG')
+	# 	argv = Argv({'--vpc-id': rd.anchor.Box('VpcId').map(_one_id)})
+	# 	rd.run('Create SG', %(aws ec2 create-security-group --group-name ${rd.anchor.GroupName} --description ${rd.req_prop('Description', props)} $*argv))
+	# 	if not(rd.dry_run) {
+	# 		# XXX use GroupId output of run()
+	# 		rd.find()
+	# 		rd.resources % update(X, props)
+	# 	}
+	# }
 
 	doc Declarative primitive for updating AWS Security Group resources
 	doc %STATUS - internal
@@ -716,7 +744,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		if 'Name' in rd.anchor and rd.anchor.Name is Pfx {
 			resources .= filter({A.Name ~ rd.anchor.Name})
 		}
-		resources .= sort('CreationDate')
 		rd.resources = resources / ImageRes(rd, X)
 		debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources")
 		rd
@@ -787,6 +814,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			'--filters': rd.anchor.Tags.cli_tags_filters() + cli_filters({
 				'instance-state-name': rd.anchor.get('State')
 				'vpc-id': rd.anchor.Box('VpcId').map(only(ResDef, ids)).map(the_one)
+				'block-device-mapping.volume-id': rd.anchor.Box('_VolumeId').map(only(ResDef, ids))
 			})
 		})
 
@@ -1078,6 +1106,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		id                  LoadBalancerName
 	}
 
+	# TODO: Fix exception when describe-tags had no --load-balancer-names to work with
 	doc Declarative primitive for finding AWS Elastic Load Balancer resources
 	F find(rd:Elb) {
 		debug("AWS", "Find ELB ${rd}")
@@ -1386,6 +1415,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	Volume.user = %{
 		prefix vol
 		id     VolumeId
+
+		delete_command       %[aws ec2 delete-volume --volume-id]
 	}
 
 	doc Declarative primitive for finding AWS VPC resources
@@ -1465,8 +1496,12 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	type EipRes(Res)
 
 	Eip.user = %{
+		id     AllocationId
 		prefix eip
 		prefix_is_synthetic ${true}
+
+		create_command %[aws ec2 allocate-address]
+		delete_command %[aws ec2 release-address --allocation-id]
 	}
 
 	F find(rd:Eip) {
@@ -1608,6 +1643,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		Vpc: 'VpcId'
 		Elb: '_Elb'
 		Eip: '_Eip'
+		Volume: '_VolumeId'
 	}
 	Igw.user.related_to = {
 		Vpc: 'Attachments'
@@ -1652,3 +1688,4 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	}
 
 }
+

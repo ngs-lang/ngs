@@ -26,10 +26,14 @@
 
 	doc Converts resource definition to a string, for displaying purposes.
 	F Str(rd:ResDef) {
-		props = (rd.props tor {}).without('META')
+		props = (rd.props tor {}).without('META').filterv(identity)
+		props = if props then " props=$props" else ""
 		multi = " x${rd.count}" tor ""
 		dry_run = if rd.dry_run " (dry run)" else ""
-		"<${rd.typeof().name} anchor=${rd.anchor.without('META')} props=$props$multi$dry_run resources:${only(Arr, len)(rd.resources)}>"
+		anchor = rd.anchor.without('META').filterv(identity)
+		resources = if rd.resources is Arr then " resources:${len(rd.resources)}" else ""
+		# (${rd.ids().limit(3).join(', ')})
+		"<${rd.typeof().name} anchor=${anchor}$props$multi$dry_run$resources>"
 	}
 
 	doc Formats and logs message s for resource definition rd.
@@ -179,6 +183,7 @@
 	F delete(rd:ResDef) {
 		rd.find_if_needed()
 		rd.resources.each(delete)
+		rd.resources = []
 		rd
 	}
 

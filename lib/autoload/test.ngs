@@ -207,11 +207,13 @@ doc Assert given host is resolvable. Uses "dig" command line utility. Retries "t
 doc %EX - assert_resolvable("my_new_host.example.com")
 doc %RET - don't count on return value
 F assert_resolvable(h:Str, title:Str="Resolve host", times=45, sleep=2, check=Bool) {
-	retry(times=times, sleep=sleep, title=title)
-		body              => { `dig "+short" $h`.lines() }
-		success_predicate => check
-		success_cb        => { null }
-		fail_cb           => { throw TestFail("$title: no resolve for $h").set('host', h) }
+	retry(times=times, sleep=sleep, title=title,
+		body              = { `dig "+short" $h`.lines() }
+		success_predicate = check
+		success_cb        = { null }
+		fail_cb           = { throw TestFail("$title: no resolve for $h").set('host', h) }
+	)
+	h
 }
 
 doc Assert given path exists.

@@ -16,6 +16,11 @@ F to_exit_code(x) {
 	ExitCode(x)
 }
 
+doc Do nothing
+doc %RET - null
+F nop() null
+
+
 # === Trivial init() helper ===
 
 doc Trivial initialization helper for init(o, ...)
@@ -396,7 +401,7 @@ doc %RET - Result of running on of the following: body, found_more, found_none
 doc %EX - F name(dn:MethodDocNode) {
 doc %EX - 	dn.children.the_one(MethodNameDocNode).text[0]
 doc %EX - }
-F the_one(e:Eachable1, predicate, body:Fun, found_more:Fun={null}, found_none:Fun={null}) {
+F the_one(e:Eachable1, predicate, body:Fun, found_more:Fun=nop, found_none:Fun=nop) {
 	p = Pred(predicate)
 	ret = EmptyBox()
 	r = Return()
@@ -451,6 +456,8 @@ F reject(something:Eachable, predicate) {
 
 
 doc EXPERIMENTAL! Do not use!
+doc %STATUS - experimental
+doc %EX - [1,2,3,1,2].take(X<3)  # [1,2]
 F take(something:Eachable1, predicate)
 	collector {
 		p = Pred(predicate)
@@ -468,6 +475,8 @@ TEST [1,2,3,1,2].take(X<3) == [1,2]
 # Would look much better with an iterator of e.
 doc EXPERIMENTAL! Do not use!
 doc Filters out items that satisfy predicate at the begginning of e.
+doc %STATUS - experimental
+doc %EX - [1,2,3,1,2].drop(X<3)  # [3,1,2]
 F drop(e:Eachable1, predicate)
 	collector {
 		p = Pred(predicate)
@@ -2202,10 +2211,6 @@ TEST subset({"a": 1}, {"a": 10}) == false
 
 # --- Functional ---
 
-doc Do nothing
-doc %RET - null
-F nop() null
-
 doc Compose functions
 doc %RET - Fun f(g(...))
 doc %EX - F reject(something, predicate) {
@@ -2490,6 +2495,14 @@ F group(e:Eachable1, cb:Fun)
 			k = cb(elt)
 			ret.dflt(k, []).push(elt)
 		})
+
+doc Make shallow copy of a Hash
+doc %RET - Hash
+F copy(h:Hash) {
+	{**h}
+}
+
+TEST h={"a": 1}; g=copy(h); h.b = 2; ("b" in h) and ("b" not in g)
 
 doc Convert a Hash to NGS code that would produce the given Hash when executed. Not fully functional yet.
 doc %RET - Str
@@ -2910,6 +2923,17 @@ F Diff(a:Arr, b:Arr, full:Bool=false) {
 }
 
 TEST Diff([1,2], [2,3]).Hash().sort() == {'add': [3], 'remove': [1]}
+
+doc EXPERIMENTAL! Do not use!
+doc Compare arrays using eq as equality test. 2*n*m comparisons
+doc %RET - ArrDiff
+doc %STATUS - experimental
+F Diff(a:Arr, b:Arr, eq:Fun) {
+	d = ArrDiff()
+	d.add    = b.filter(F(x) a.none(eq(x, X)))
+	d.remove = a.filter(F(x) b.none(eq(x, X)))
+	d
+}
 
 doc Compare arrays. Warning: by default Hash is used so internal Hash keys comparison is used, not ==
 doc full - Do not use Hash, work slower but use == comparison.
@@ -3782,9 +3806,9 @@ F read(fd:Int, count=null) {
 	ret = []
 	to_read = count
 	while true {
-		debug("file", "[read] will read from fd $fd")
 		result = c_read(fd, to_read or 4096)
-		debug("file", "[read] read from fd $fd : <<${result}>>")
+		# debug("file", "[FD $fd] Read ${result[0]} bytes <<${result.Box(1).dflt('(none)').get().SafeStr()}>>")
+		debug("file", "[FD $fd] Read ${result[0]} bytes")
 		result[0] == 0 returns ret.join('')
 		if result[0] > 0 {
 			ret.push(result[1])
@@ -3795,7 +3819,7 @@ F read(fd:Int, count=null) {
 		} else {
 			e = c_errno()
 			if e != C_EINTR {
-				debug("file", "[read] read from fd $fd failed, errno $e")
+				debug("file", "[FD $fd] read failed, errno $e")
 				# TODO: Better exception
 				throw CException("Failed to c_read()")
 			}
@@ -4387,7 +4411,7 @@ F '$()'(c:Command) {
 				} catch(e) {
 					debug("process2", "READ FAILED: $e")
 				}
-				debug("process2", "READ ${process.outputs[r.fd]}")
+				debug("process2", "READ <<${process.outputs[r.fd].limit(100, '...').SafeStr()}>>")
 				try {
 					debug("process2", "DATUM *** ${r.datum}")
 					r.datum.close_reading_end()
@@ -5423,6 +5447,12 @@ F init(t:Time, epoch:Int) {
 	t.epoch = epoch
 }
 
+F init(t:Time, s:Str, format:Str) {
+	tt = c_strptime(s, format)[1]
+	tt is Null throws InvalidArgument("Failed to parse time").set('s', s).set('format', format)
+	t.epoch = c_mktime(tt)
+}
+
 doc String representation of Time
 doc format - strftime(3) format
 doc gmt - Use GMT time zone (defaults to local time zone)
@@ -5665,13 +5695,7 @@ doc Read whole file
 F read(fname:Str) {
 	f = File(fname)
 	open(f, 'r')
-	finally()
-		body => {
-			read(f.fd)
-		}
-		cleanup => {
-			f.close()
-		}
+	finally(body = {read(f.fd)}, cleanup = {f.close()})
 }
 
 doc Read whole file

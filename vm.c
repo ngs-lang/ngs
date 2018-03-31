@@ -1026,6 +1026,53 @@ METHOD_RESULT native_c_strftime METHOD_PARAMS {
 	}
 }
 
+// TODO: make 9 a constant
+METHOD_RESULT native_c_strptime EXT_METHOD_PARAMS {
+	VALUE ret = make_array(2);
+	struct tm t;
+	char *input = obj_to_cstring(argv[0]);
+	char *next_char = strptime(input, obj_to_cstring(argv[1]), &t);
+	// char *next_char = strptime("2018", "%Y", &t);
+	if(next_char == NULL) {
+		ARRAY_ITEMS(ret)[0] = MAKE_INT(0);
+		ARRAY_ITEMS(ret)[1] = MAKE_NULL;
+	} else {
+		ARRAY_ITEMS(ret)[0] = MAKE_INT(next_char - input);
+		VALUE ret_tm = make_normal_type_instance(vm->c_tm);
+		OBJ_DATA(ret_tm) = make_array(9);
+		VALUE *p = ARRAY_ITEMS(OBJ_DATA(ret_tm));
+		*(p++) = MAKE_INT(t.tm_sec);
+		*(p++) = MAKE_INT(t.tm_min);
+		*(p++) = MAKE_INT(t.tm_hour);
+		*(p++) = MAKE_INT(t.tm_mday);
+		*(p++) = MAKE_INT(t.tm_mon);
+		*(p++) = MAKE_INT(t.tm_year);
+		*(p++) = MAKE_INT(t.tm_wday);
+		*(p++) = MAKE_INT(t.tm_yday);
+		*(p++) = MAKE_INT(t.tm_isdst);
+		ARRAY_ITEMS(ret)[1] = ret_tm;
+	}
+	METHOD_RETURN(ret);
+}
+
+// TODO: factor out c_tm -> struct tm conversion
+METHOD_RESULT native_c_mktime METHOD_PARAMS {
+	struct tm t;
+	memset(&t, 0, sizeof(t));
+	t.tm_sec   = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[0]);
+	t.tm_min   = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[1]);
+	t.tm_hour  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[2]);
+	t.tm_mday  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[3]);
+	t.tm_mon   = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[4]);
+	t.tm_year  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[5]);
+	t.tm_year  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[5]);
+	t.tm_wday  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[6]);
+	t.tm_yday  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[7]);
+	t.tm_isdst = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[8]);
+	time_t tt = mktime(&t);
+	METHOD_RETURN(MAKE_INT(tt));
+}
+
 
 METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_normal_type(argv[0])); }
 METHOD_RESULT native_type_str_doc METHOD_PARAMS {
@@ -3293,6 +3340,15 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	register_global_func(vm, 0, "c_strftime",   &native_c_strftime,       2, "tm",    vm->c_tm, "format", vm->Str);
 	_doc(vm, "", "Call STRFTIME(3)");
+
+	register_global_func(vm, 1, "c_strptime",   &native_c_strptime,       2, "buf",   vm->Str,  "format", vm->Str);
+	_doc(vm, "", "Call STRPTIME(3)");
+	_doc(vm, "%RET", "Arr. [number_of_parsed_chars:Int, result:c_tm]");
+
+	register_global_func(vm, 0, "c_mktime",     &native_c_mktime,         1, "tm",    vm->c_tm);
+	_doc(vm, "", "Call MKTIME(3)");
+	_doc(vm, "%RET", "Int - epoch time");
+
 
 	// hash
 	register_global_func(vm, 0, "in",       &native_in_any_hash,       2, "x",   vm->Any, "h", vm->Hash);

@@ -41,6 +41,7 @@ syn keyword ngsType Return
 syn keyword ngsType Renderer ItemsContainer ItemsVerticalContainer ItemsHorizontalContainer
 syn keyword ngsType Match MatchY MatchN MatchFail SubSeq Pfx MaybePfx MustPfx Ifx MaybeIfx MustIfx Sfx MaybeSfx MustSfx
 syn keyword ngsType Props
+syn keyword ngsType Time TimeFail
 syn keyword ngsTodo TODO FIXME XXX NOTE
 syn keyword ngsConstant true false null
 syn keyword ngsPredefinedVariable ARGV ARGV0 ENV ORIG_ARGV _exports VERSION
@@ -61,8 +62,17 @@ syn match   ngsNumber "\<\d\+\>"
 syn keyword ngsFunction c_access c_close c_closedir c_errno c_execve c_exit c_fork c_fstat c_lseek c_lstat copy c_open c_opendir c_stat c_pcre_compile c_pcre_exec c_read c_readdir c_waitpid C_WEXITSTATUS C_WTERMSIG compile defined del dump echo get globals hash method_not_found_handler in inherit is keys len load not decode_json pop push push_all shift typeof values
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction bootstrap bootstrap_debug bootstrap_exception_catch_wrapper bootstrap_find_ngs_dir fetch main print_exception require ExitCode
+
 " stdlib functions
-syn keyword ngsFunction abs Argv access acquire all any assert basename chr close close_reading_end close_writing_end cmp code compare count dflt digest dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error exit_hook debug die filter filterk filterv finally find_in_path finished_ok first flatten fstat global_not_found_handler group has identity in index indexes join kill len limit lines log lstat map mapo map_idx_val mapk mapv mapkv max merge_sorted min n next none open ord partial partial_tail partition peek pmap pos ptimes publish read reduce reject rejectk rejectv release reverse set sort sortk split starts_with stat status store StrParams Strs subscribe subset sum tap test uniq unshift update wait warn without write zip
+syn keyword ngsFunction abs Argv access acquire all any assert basename chr close close_reading_end close_writing_end cmp code compare count
+syn keyword ngsFunction dflt digest drop dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error exit_hook
+syn keyword ngsFunction debug die filter filterk filterv finally find_in_path finished_ok first flatten fstat global_not_found_handler group has
+syn keyword ngsFunction identity in index indexes join kill len limit lines log lstat map mapo map_idx_val mapk mapv mapkv max merge_sorted min
+syn keyword ngsFunction n next none nop open ord partial partial_tail partition peek pmap pos ptimes publish rand read reduce reject rejectk rejectv release replace reverse
+syn keyword ngsFunction set sort sortk split srand starts_with stat status store StrParams Strs subscribe subset sum take tap test uniq unshift update wait warn without write zip
+
+syn keyword ngsFunction c_gettimeofday c_strftime c_strptime c_time gmtime localtime strftime time
+
 syn keyword ngsFunction encode encode_hex encode_html encode_html_attr encode_json encode_uri_component
 syn keyword ngsFunction decode decode_uri_component
 

@@ -1,25 +1,76 @@
 #!/usr/bin/env ngs
 
+# TODO: consider --digest on & --digest off
+
+warn("'na' is experimental tool")
+
+AWS = AWS2
+
+F decode_arg_value(s:Str) {
+	s ~ /^0/ returns s
+	decode_json(s) tor s
+}
+
 F process_argv(argv:Arr) {
 	ret = []
 	cur = null
+	mode = 'anchor'
 	F next_cur() {
 		cur = {
 			'resource_id': null,
 			'anchor': {'Tags': {}}
 			'options': {}
+			'properties': {}
+			'operation': null
 		}
 	}
 	for arg in (iter = Iter(argv)) {
 		econd {
 			m = arg ~ Pfx('--') {
-				cur.options[m.after] = iter.next()
+				ematch mode {
+					'anchor' cur.options[m.after] = iter.next()
+				}
 			}
 			m = arg ~ /=/ {
-				cur.anchor.Tags[m.before] = m.after
+				ematch mode {
+					'anchor' cur.anchor.Tags
+					'properties' cur.properties.dflt('Tags', {})
+				}[m.before] = decode_arg_value(m.after)
 			}
 			m = arg ~ /:/ {
-				cur.anchor[m.before] = m.after
+				# TODO: CreateOnly should ne only for properties, not for anchor
+				transform = if m.before ~ Pfx('+') {
+					m.before = m.before[1..null]
+					AWS::CreateOnly
+				} else {
+					identity
+				}
+				ematch mode {
+					'anchor' cur.anchor
+					'properties' cur.properties
+				}[m.before] = decode_arg_value(m.after).transform()
+			}
+			arg == 'SET' {
+				ematch mode {
+					'anchor' {
+						mode = 'properties'
+						cur.operation = 'converge'
+					}
+				}
+			}
+			arg == 'DEL' {
+				ematch mode {
+					'anchor' {
+						cur.operation = 'delete'
+					}
+				}
+			}
+			arg == 'COUNT' {
+				ematch mode {
+					'anchor' {
+						cur.operation = 'count'
+					}
+				}
 			}
 			true {
 				ret.push(cur)
@@ -39,9 +90,15 @@ references = []
 for obj in processed_argv {
 	# Maybe new syntax later instead of the "if": obj.anchor._RelatedTo := references.Box(-1)
 	if references {
-		obj.anchor._RelatedTo = references[-1]
+		obj.anchor._RelatedTo = [references[-1]]
 	}
-	res_def = AWS::q(obj.resource_id, **obj.anchor).find()
+	res_def = AWS::q(obj.resource_id, **obj.anchor)
+	eswitch obj.operation {
+		'converge' res_def.converge(**obj.properties)
+		'delete'   res_def.delete()
+		'count'    res_def.find()
+		null       res_def.find()
+	}
 	references.push(res_def)
 }
 
@@ -53,10 +110,21 @@ for obj in processed_argv {
 # 	res_def.each(push(tbl, X))
 # }
 
-tbl = Table2::Table("Resources", res_def.resources.props)
-digest_limit = obj.options.get('digest', 10).Int()
+{
+	econd {
+		obj.operation in [null, 'converge'] {
 
-if len(tbl) > digest_limit and (isatty(1) or 'digest' in obj.options) {
-	tbl = digest(tbl)
+			tbl = Table2::Table("Resources", res_def.resources.props)
+			digest_limit = obj.options.get('digest', 10).Int()
+
+			if len(tbl) > digest_limit and (isatty(1) or 'digest' in obj.options) {
+				tbl = digest(tbl)
+			}
+			echo(tbl)
+		}
+		obj.operation == 'count' {
+			echo(res_def.resources.len())
+		}
+		true echo("OK")
+	}
 }
-echo(tbl)
