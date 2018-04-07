@@ -76,7 +76,27 @@
 
 		type NamespaceDescription(Description)
 
+			F fqname(nd:NamespaceDescription) fqname(nd.containing_nd) +? '::' + nd.name
+
 			F init(nd:NamespaceDescription, namespace:Hash) {
+				nd.fqname = parents.map(X.name).join('::') +? '::' + name
+				# 'description': doc_attr(ns, '')
+				# 'example': doc_attr(ns, '%EX').map(ensure_array)
+				# 'ext_links': doc_attr(ns, '%EXTLINK').map(ensure_array)
+				# 'types': ns.filterv(Type).reject(F(k, v) g.get(k) === v).map(F(name, t) {
+				# 	process_type(t)
+				# }).sort('name')
+				# 'methods': ns.filterv(Fun).rejectv(Type).map(F(name, impls) {
+				# 	# STDLIB_FILE_TYPE namespace has numbers as keys
+				# 	impls = if impls is MultiMethod {
+				# 		impls.Arr()
+				# 	} else {
+				# 		[impls]
+				# 	}
+				# 	process_method(Str(name), impls.filter(is_in_ns(X, ns)))
+				# })
+				# 'attrs': ns.attrs().Box().get({}).get('doc', {}).without('').reject(X ~ /^%/).mapv(ensure_array)
+				# 'parents': parents
 				nd.objects_descriptions = {}
 				nd.objects_by_type = {
 					MultiMethodDescription: []
@@ -156,6 +176,8 @@
 			}
 
 		type GlobalNamespaceDescription(NamespaceDescription)
+
+			F fqname(gnd:NamespaceDescription) ''
 
 			F init(gnd:GlobalNamespaceDescription) {
 				super(gnd, globals().without('main').filterk(is_public_name).sortk(lte))
