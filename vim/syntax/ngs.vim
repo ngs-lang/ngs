@@ -67,7 +67,7 @@ syn keyword ngsFunction bootstrap bootstrap_debug bootstrap_exception_catch_wrap
 syn keyword ngsFunction abs Argv access acquire all any assert basename chr close close_reading_end close_writing_end cmp code compare count
 syn keyword ngsFunction dflt digest drop dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error exit_hook
 syn keyword ngsFunction debug die filter filterk filterv finally find_in_path finished_ok first flatten fstat global_not_found_handler group has
-syn keyword ngsFunction identity in index indexes join kill len limit lines log lstat map mapo map_idx_val mapk mapv mapkv max merge_sorted min
+syn keyword ngsFunction identity in index indexes inspect join kill len limit lines log lstat map mapo map_idx_val mapk mapv mapkv max merge_sorted min
 syn keyword ngsFunction n next none nop open ord partial partial_tail partition peek pmap pos ptimes publish rand read reduce reject rejectk rejectv release replace reverse
 syn keyword ngsFunction set sort sortk split srand starts_with stat status store StrParams Strs subscribe subset sum take tap test uniq unshift update wait warn without write zip
 

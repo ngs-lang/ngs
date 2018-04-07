@@ -428,7 +428,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		find_supports_tags    ${true}
 		find_props_to_filters %{
 			InternetGatewayId  internet-gateway-id
-			_VpcId             attachment.vpc-id
+			Attachments.VpcId  attachment.vpc-id
 			State              state
 		}
 
@@ -436,7 +436,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		delete_command        %[aws ec2 delete-internet-gateway --internet-gateway-id]
 
 		update_methods        %{
-			_VpcId  ${
+			Attachments.VpcId ${
 				_make_one_at_a_time_list_updater(
 					F get_current_list(props:Hash) props.Attachments.VpcId,
 					%[aws ec2 attach-internet-gateway --internet-gateway-id ID --vpc-id],

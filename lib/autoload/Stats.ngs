@@ -15,7 +15,7 @@
 }
 
 doc Makes Stats, with each element in the array counted as if push()ed
-doc %EX - XXX Stats(['a', 'a', 'b']).Hash()  # {'a': 2, 'b': 1}
+doc %EX - Stats(['a', 'a', 'b']).Hash()  # {'a': 2, 'b': 1}
 F init(s:Stats, a:Arr) {
 	init(s)
 	a.each(push(s, X))

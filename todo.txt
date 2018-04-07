@@ -15,16 +15,10 @@ Note that this started as internal document so things here are unformed, not fin
 			* Generated [in progress]
 				* Pages
 					* Namespaces related
-						* Namespaces list page: name, description
 						* Namespace page
-							* Types index
 							* Links to types' pages
-							* Methods. Mark which are additions to globals and which are local.
-							* Constants
-						* ???
 					* Namespaced types and methods
 						* Show namespace
-					* { } in examples
 			* Document AWS library (including usage examples)
 				* Example: AWS::Elb().reject(X.Instances).delete()
 			* Link from constructors to types
@@ -62,6 +56,7 @@ Note that this started as internal document so things here are unformed, not fin
 				+ how different module versions can run alongside?
 
 		* Milestone "even better documentation"
+			* Namespaces -> Methods. Mark which are additions to globals and which are local.
 			* Tables documentation - examples
 			* Finish c_* methods documentation
 			* Add field (for example for Absent) for methods that get Arr[T] to link that method from type T page

@@ -3,7 +3,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# Documentation hack as documentation for namespaces
 
 	doc Amazon Web Services.
-	doc This namespace contains resource types that implement common methods: find(), create(), delete(), converge()
+	doc This namespace contains declarative primitives resource types that implement common methods: find(), create(), delete(), converge()
 	doc AMI_OWNER_DEBIAN - The string "379101102735"
 	doc AMI_OWNER_AMAZON - The string "801119661308"
 	F _doc() {
@@ -1461,7 +1461,12 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		rd
 	}
 
+	doc Declarative primitive for referencing AWS Elastic IP resources.
+	doc Supported anchor items: InstanceId
+	doc %STATUS - experimental
 	type Eip(ResDef)
+	doc Single declarative primitive resource describing AWS Elastic IP
+	doc %STATUS - experimental
 	type EipRes(Res)
 
 	Eip.user = %{
@@ -1469,6 +1474,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		prefix_is_synthetic ${true}
 	}
 
+	doc Declarative primitive for finding AWS Elastic IP resources
 	F find(rd:Eip) {
 		debug("AWS", "Find Snapshot ${rd}")
 		rd._assert_anchor_has_only_known_keys(*%[InstanceId Tags])
@@ -1488,6 +1494,16 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# ==================================================
 
 	util = ns {
+		doc Misc AWS utilities to make your life easier
+		F _doc() {
+
+		}
+
+		_exports.attrs(_doc.Arr()[0].attrs())
+
+		doc %STATUS - internal
+		type type_for_doc_test
+
 		F world_open_port(port:Int, proto:Str='tcp') {
 			{
 				'IpProtocol': proto
@@ -1567,6 +1583,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	}).Hash()
 
 	doc Work in progress, do not use!
+	doc %STATUS - WIP
+	doc %EX - AWS::q("vpc-11111111")  # references specific vpc
 	F q(id:Str, **kw) {
 		m = id ~ /^([a-z]+)-[a-zA-Z0-9]+$/
 		if not(m) {
@@ -1583,6 +1601,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	}
 
 	doc Work in progress, do not use!
+	doc %STATUS - WIP
+	doc %EX - AWS::q("vpc")  # references all vpcs
+	doc %EX - AWS::q("vpc", Tags={"env": "proxy-lab"})
 	F q(id:Str, **kw) {
 		guard id in RESOURCE_CODE_TO_RESOURCE_TYPE
 		t = RESOURCE_CODE_TO_RESOURCE_TYPE[id]

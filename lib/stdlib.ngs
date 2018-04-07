@@ -4769,6 +4769,10 @@ F decode(s:Str, hints:Hash) {
 
 	# Anyone cares about Reservations? Certainly it's not the common case so...
 	if data.all('ReservationId' in X) {
+		# Put reservation data into .Reservation field of each instance, just in case
+		data.each(F(reservation) {
+			reservation.Instances.Reservation = reservation.without('Instances')
+		})
 		data = data.Instances.flatten()
 	}
 	data.stdlib_aws_straighten_tags()

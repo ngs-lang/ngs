@@ -36,6 +36,7 @@ ns {
 		if c.children is Null {
 			c.children = []
 		}
+		c.children .= map(only(Str, Text))
 	}
 
 	doc Initialize document node
