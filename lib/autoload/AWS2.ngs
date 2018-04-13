@@ -298,7 +298,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		tags_filters = if type_user_data.get('find_supports_tags') {
 			rd.anchor.Tags.cli_tags_filters()
 		} else {
-			{}
+			[]
 		}
 		argv = Argv({ '--filters': cli_filters(h) + tags_filters })
 		res_type = type_user_data.res_type
@@ -1492,6 +1492,10 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		rd
 	}
 
+	# --------------------------------------------------
+	# Elastic IP (WIP)
+	# --------------------------------------------------
+
 	type Eip(ResDef)
 	type EipRes(Res)
 
@@ -1514,6 +1518,27 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		rd.resources = resources / EipRes(rd, X)
 		debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources")
 		rd
+	}
+
+	# --------------------------------------------------
+	# AvailabilityZone
+	# --------------------------------------------------
+
+	type Az(ResDef)
+	type AzRes(Res)
+
+	Az.user = %{
+		id     ZoneName
+		prefix az
+		prefix_is_synthetic ${true}
+
+		find_command          %[aws ec2 describe-availability-zones]
+		find_props_to_filters %{
+			RegionName region-name
+			State      state
+			ZoneName   zone-name
+		}
+		res_type ${AzRes}
 	}
 
 

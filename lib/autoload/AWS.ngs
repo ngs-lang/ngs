@@ -705,7 +705,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		filters = ['--filters'] +? cli_filters({
 			'state':                            rd.anchor.get('State', 'available')
 			'virtualization-type':              rd.anchor.get('VirtualizationType', 'hvm')
-			'name':                             rd.anchor.Box('Name').filter({A is Str or A is Pfx})
+			'name':                             rd.anchor.Box('Name').filter({(A is Str) or (A is Pfx)})
 			'root-device-type':                 rd.anchor.Box('RootDeviceType')
 			'block-device-mapping.volume-type': rd.anchor.Box('VolumeType')
 			'image-id':                         rd.anchor.Box('ImageId')
@@ -931,7 +931,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc %RET - r
 	F wait_state(r:InstanceRes, state_name:Str) {
 		retry(
-			sleep = 5
+			sleep = 10
 			catch_exceptions = false
 			logger = debug("AWS", X)
 			title = "[waiting intstance ${r.id()} to be in state $state_name]"
@@ -1089,7 +1089,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			resources .= filter(F(desc) desc.LoadBalancerName == rd.anchor.Name)
 		}
 		# TODO: make tags fetching lazy
-		tags = ``aws elb describe-tags --load-balancer-names $*{resources.map(X.LoadBalancerName)}``.Hash('LoadBalancerName', 'Tags')
+		if resources {
+			tags = ``aws elb describe-tags --load-balancer-names $*{resources.map(X.LoadBalancerName)}``.Hash('LoadBalancerName', 'Tags')
+		}
 		rd.resources = resources.map(F(props) {
 			ret = props
 			ret.Instances = props.Instances.InstanceId

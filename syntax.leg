@@ -464,7 +464,7 @@ binop-expression-inner =
 
 binop = binop1 | binop2
 
-binop1 = space? (
+binop1 = inline_space? (
 	  <"|">  @@ 120 @@
 	| <"==="> @@ 130 @@
 	| <"!=="> @@ 130 @@
@@ -488,7 +488,7 @@ binop1 = space? (
 	| <"\\"> @@ 200 @@
 	) space?
 
-binop2 = space op:binop2op space { $$ = op; }
+binop2 = inline_space op:binop2op space { $$ = op; }
 
 binop2op =
 	  <"is not">  @@ 90 @@
@@ -667,6 +667,7 @@ basic-expression =
 	| hash-literal
 	| abc-function-literal
 	| imm-hash-literal
+	| tree-literal
 	| "(" space? e:expression space? ")" { MAKE_NODE(ret, EXPRESSIONS_NODE); ret->name = "()"; ret->first_child = e; ret->last_child = e; $$ = ret; }
 
 assignment =
@@ -1154,6 +1155,40 @@ imm-hash-words = acc:command-words-node (
 	)+ {
 	$$ = acc;
 	CAPTURE_LOCATION($$);
+}
+
+tree-literal = "\\" i:identifier-as-text n:tree-node (inline_space? attr:identifier-as-text inline_space? "=" inline_space? e:expression {
+		MAKE_NODE(kv, EXPRESSIONS_NODE);
+		kv->first_child = attr;
+		kv->last_child = e;
+		attr->next_sibling = e;
+
+		append_ast_node_child(n->first_child->next_sibling->first_child->first_child, kv);
+	})* (inline_space? arr:array-literal {
+		n->first_child->next_sibling->first_child->next_sibling->first_child = arr;
+	})? {
+		MAKE_REQ_ARG_NODE(a0, i);
+		a0->next_sibling = n->first_child->next_sibling->first_child;
+		n->first_child->next_sibling->first_child = a0;
+	$$ = n;
+	CAPTURE_LOCATION($$);
+}
+
+tree-node = {
+	MAKE_NODE(ret, CALL_NODE);
+		MAKE_IDENTIFIER_NODE(func, "\\");
+		MAKE_NODE(args, ARGS_NODE);
+			MAKE_NODE(h, HASH_LIT_NODE);
+			MAKE_REQ_ARG_NODE(a1, h);
+			MAKE_NODE(arr, ARR_LIT_NODE);
+			MAKE_REQ_ARG_NODE(a2, arr);
+			a1->next_sibling = a2;
+			args->first_child = a1;
+		ret->first_child = func;
+		func->next_sibling = args;
+	$$ = ret;
+	CAPTURE_LOCATION($$);
+
 }
 
 table-literal = "table" space? "{" space? table:table-node (ws:imm-array-words {

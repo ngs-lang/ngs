@@ -46,6 +46,8 @@ doc %EX - ArgvMatcher; (["--b", "B", "A", "C"] ~ F(a,b,c) 7).matches  # %[A B C]
 doc %EX - (["A", "C", "D", "--b", "B"] ~ ArgvMatcher("positionals", "a") do F(a,b) 7).matches  # %[%[A C D] B]
 F ~(argv:Arr, udm:UserDefinedMethod) {
 
+	debug("ARGV_MATCHER", "Trying to match argv=${argv} udm=${udm}")
+
 	LONG_SW_PFX = Pfx('--')
 	SHORT_SW_PFX = Pfx('-')
 	NEG_PFX = Pfx('no-')
@@ -64,6 +66,7 @@ F ~(argv:Arr, udm:UserDefinedMethod) {
 			splat == '**' have_hash_splat = true
 		}
 	})
+	debug("ARGV_MATCHER", "params_by_pos=${params_by_pos}")
 
 	params_by_name = params_by_pos.Hash('name')
 	params_by_name.each_idx_key_val(F(idx, k, v) v.idx = idx)
@@ -98,9 +101,10 @@ F ~(argv:Arr, udm:UserDefinedMethod) {
 	accepting_named_arguments = true
 	argv_iter = Iter(argv)
 	positionals = []
-	while(argv_iter) {
+	# while(argv_iter) {
+	for arg in argv_iter = Iter(argv) {
 		param_name = null
-		arg = argv_iter.next()
+		# arg = argv_iter.next()
 		# TODO: process -xyz arg as -x -y -z ?
 		if accepting_named_arguments {
 			cond {
@@ -146,6 +150,7 @@ F ~(argv:Arr, udm:UserDefinedMethod) {
 	}
 
 	if (param_name = try udm.attrs().ArgvMatcher.positionals) {
+		debug("ARGV_MATCHER", "Positionals go to specified parameter positionals=${positionals} parameter=${param_name}")
 		set_match(positionals)
 		positionals = []
 	}
@@ -160,7 +165,14 @@ F ~(argv:Arr, udm:UserDefinedMethod) {
 				throw match_ret(ParamsMatchN().set('message', "Too many arguments"))
 			}
 		}
-		matched_args[idx] = MatchedParam(arg.convert(params_by_pos[idx].type))
+		debug("ARGV_MATCHER", "Setting matched args idx=$idx arg=$arg type-to-convert-to=${params_by_pos[idx].type}")
+		try {
+			v = arg.convert(params_by_pos[idx].type)
+		} catch(e) {
+			throw match_ret(ParamsMatchN().set('message', "Failed to convert to desired type for parameter ${params_by_pos[idx].name}"))
+
+		}
+		matched_args[idx] = MatchedParam(v)
 	})
 
 	for(i;matched_args.len()) {
@@ -170,6 +182,7 @@ F ~(argv:Arr, udm:UserDefinedMethod) {
 		matched_args[i] = MatchedParam(p.dflt)
 	}
 
+	debug("ARGV_MATCHER", "Matched argv=${argv} udm=${udm}")
 	ParamsMatchY(matched_args.val, matched_kwargs)
 }
 

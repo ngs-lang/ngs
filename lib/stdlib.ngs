@@ -729,6 +729,8 @@ doc Check whether hl has any elements.
 doc %RET - Bool
 F Bool(hl:HashLike)          hl.attrs().HashLike.Bool()
 
+F map_idx_key_val(hl:HashLike, mapper:Fun) hl.attrs().HashLike.map_idx_key_val(mapper)
+
 doc Filter hash. Build new HashLike with kev-value pairs selected by predicate.
 doc predicate - Test function to be called with one key and one value at a time.
 doc %EX - my_hashlike.filter(F(k, v) k == 'a')
@@ -2259,7 +2261,6 @@ F each_idx_key_val(h:Hash, cb:Fun) {
 doc Map a Hash
 doc h - Hash with source keys and values
 doc mapper - Function to be called with keys and values from h
-doc args - Additional arguments for calling mapper
 doc %RET - Arr
 doc %EX - {'a': 1, 'b': 2}.map(F(k, v) "${k}-$v")  # ['a-1', 'b-2']
 F map(h:Hash, mapper:Fun)
@@ -2267,6 +2268,24 @@ F map(h:Hash, mapper:Fun)
 		h.each(collect + mapper)
 
 TEST {'a': 1, 'b': 2}.map(F(k, v) "${k}-$v") == ['a-1', 'b-2']
+
+doc Map a Hash
+doc h - Hash with source keys and values
+doc mapper - Function to be called with sequential zero-based index, keys and values from h
+doc %RET - Arr
+doc %EX - {'a': 1, 'b': 2}.map_idx_key_val(F(i, k, v) "${i}-${k}-$v")  # ['0-a-1', '1-b-2']
+F map_idx_key_val(h:Hash, mapper:Fun) {
+	idx = 0
+	collector {
+		entry = ll_hash_head(h)
+		while entry != null {
+			collect(mapper(idx, entry.ll_hash_entry_key(), entry.ll_hash_entry_val()))
+			entry = entry.ll_hash_entry_next()
+			idx += 1
+		}
+	}
+}
+
 
 doc Map Hash keys. Build new Hash with same values as in h but keys mapped by mapper.
 doc h - Source hash

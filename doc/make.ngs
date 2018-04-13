@@ -26,6 +26,11 @@
 
 		commit = `line: git rev-parse HEAD`
 
+		F \(name:Str, attributes:Hash, children:Arr) {
+			DocNode(name, children, **attributes)
+
+		}
+
 		F is_public_name(s:Str) s ~ /^[^_]/
 		F is_phased_out_type(s:Str) s ~ Pfx('Aws')
 
@@ -36,6 +41,7 @@
 
 		F object_attr(x, a:Str) (x.attrs() or {}).get(a).Box()
 		F object_doc(x) x.object_attr('doc')
+		F object_doc_attr(x, a:Str) object_doc(x).filter(a in X).map(X[a]).map(ensure_array)
 
 		F make_page_head(title:Str, dotdots:Int=1) {
 			DocNode('head') with [
@@ -79,9 +85,9 @@
 			F fqname(nd:NamespaceDescription) fqname(nd.containing_nd) +? '::' + nd.name
 
 			F init(nd:NamespaceDescription, namespace:Hash) {
-				nd.fqname = parents.map(X.name).join('::') +? '::' + name
-				# 'description': doc_attr(ns, '')
-				# 'example': doc_attr(ns, '%EX').map(ensure_array)
+				nd.fqname = nd.fqname()
+				nd.description = object_doc_attr(namespace, '')
+				nd.example = object_doc_attr(namespace, '%EX')
 				# 'ext_links': doc_attr(ns, '%EXTLINK').map(ensure_array)
 				# 'types': ns.filterv(Type).reject(F(k, v) g.get(k) === v).map(F(name, t) {
 				# 	process_type(t)
@@ -95,7 +101,7 @@
 				# 	}
 				# 	process_method(Str(name), impls.filter(is_in_ns(X, ns)))
 				# })
-				# 'attrs': ns.attrs().Box().get({}).get('doc', {}).without('').reject(X ~ /^%/).mapv(ensure_array)
+				nd.attrs = namespace.attrs().Box().get({}).get('doc', {}).without('').reject(X ~ /^%/).mapv(ensure_array)
 				# 'parents': parents
 				nd.objects_descriptions = {}
 				nd.objects_by_type = {
@@ -125,18 +131,32 @@
 			F page_heading(nd:NamespaceDescription) "{nd.fqname} namespace - NGS documentation"
 
 			F index_fragment(nd:NamespaceDescription) {
-				DocNode('dl') with [
-					DocNode('dt') with [
-						DocNode('a', href="TODO", [nd.name])
+
+				\dl [
+					\dt [
+						\a href="TODO" [nd.name]
 					]
-					DocNode('dd') with [
-						DocNode('div', class='unobtrusive') with [
-							{
-								'sub-namespaces': len(nd.objects_by_type[NamespaceDescription])
-								'types':          len(nd.objects_by_type[TypeDescription])
-								'multimethods':   len(nd.objects_by_type[MultiMethodDescription])
-							}.filterv(X>0).map("$Y $X").join(', ').DocText()
+					\dd [
+						\section [
+							nd.description.map(F(d) {
+								d.join('\n')
+							}).get('Undocumented')
 						]
+						\div class='unobtrusive' [
+							{
+								'sub-namespaces': NamespaceDescription
+								'types':          TypeDescription
+								'multimethods':   MultiMethodDescription
+							}.mapv({nd.objects_by_type[A].len()}).filterv(X>0).map("$Y $X").join(', ')
+						]
+						nd.example.map(F(ex) {
+							\section [
+								\h2 ['Example']
+								\pre class='example' title='Example' [
+									ex.join('\n')
+								]
+							]
+						}).get(DocGroup())
 					] # dd
 				]
 			}

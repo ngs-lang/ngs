@@ -30,7 +30,7 @@
 		props = if props then " props=$props" else ""
 		multi = " x${rd.count}" tor ""
 		dry_run = if rd.dry_run " (dry run)" else ""
-		anchor = rd.anchor.without('META').filterv(identity)
+		anchor = rd.anchor.without('META').filterv({ Bool(a) tor true })
 		resources = if rd.resources is Arr then " resources:${len(rd.resources)}" else ""
 		# (${rd.ids().limit(3).join(', ')})
 		"<${rd.typeof().name} anchor=${anchor}$props$multi$dry_run$resources>"

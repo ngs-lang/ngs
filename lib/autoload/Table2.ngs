@@ -1,87 +1,104 @@
 # === Table ======================================
 
 ns {
-	global init, push, each, len, echo, digest
+	global init, push, each, len, echo, digest, Str
+
+	# --- TableView ---
+	type TableView
+
+		F init(tv:TableView, name:Str=null, view_name:Str=null, columns:Arr=null) {
+			tv.name = name
+			tv.view_name = view_name or name
+			tv.columns = (columns or []).map(F(c) {
+				ematch c {
+					Str             SimpleTableViewColumn(c)
+					TableViewColumn c
+				}
+			})
+		}
+
+	doc witdth - Range of desired width
+	doc weight - Width distribution weight when there is not enough space on the screen
+	type TableViewColumn
+
+		F init(tvc:TableViewColumn) {
+			tvc.witdh = 0..null
+			tvc.weight = 1
+		}
+
+		type SimpleTableViewColumn(TableViewColumn)
+			F init(stvc:SimpleTableViewColumn, name:Str) {
+				super(stvc)
+				stvc.name = name
+			}
+
+	# --- _Cell ---
 
 	doc Table cell. Array of rows.
-	type Cell(ArrLike)
+	type _Cell(ArrLike)
 
-	doc Any unknown value is a table cell with one row, Str(val)
-	F init(c:Cell, val) {
-		super(c)
-		c.val = val
-		c.push(Str(val))
-	}
+		doc Any unknown value is a table cell with one row, Str(val)
+		F init(c:_Cell, val) {
+			super(c)
+			c.val = val
+			c.push(Str(val))
+		}
 
-	doc A null value is a table cell with one row, "-"
-	F init(c:Cell, val:Null) {
-		super(c)
-		c.val = val
-		c.push("-")
-	}
+		doc A null value is a table cell with one row, "-"
+		F init(c:_Cell, val:Null) {
+			super(c)
+			c.val = val
+			c.push("-")
+		}
 
-	doc An Eachable1 value is a table cell with all elements one below the other.
-	doc Converts elements to strings using Cell().
-	F init(c:Cell, val:Eachable1) {
-		guard val is not Str
-		guard val is not Int
-		super(c)
-		c.val = val
-		# TODO: If array elements are more than one line, put a separator
-		val.each(F(v) {
-			t = Cell(v)
-			t.each(c.push(X))
-		})
-		# cells = val.map(Cell)
-		# do_separators = cells.max(len) > 1
+		doc An Eachable1 value is a table cell with all elements one below the other.
+		doc Converts elements to strings using _Cell().
+		F init(c:_Cell, val:Eachable1) {
+			guard val is not Str
+			guard val is not Int
+			super(c)
+			c.val = val
+			# TODO: If array elements are more than one line, put a separator
+			val.each(F(v) {
+				t = _Cell(v)
+				t.each(c.push(X))
+			})
+			# cells = val.map(_Cell)
+			# do_separators = cells.max(len) > 1
 
-		# aws ec2 describe-route-tables
-		# WIP # cells = val.each(Cell)
-		# WIP # do_sep = any(cells, {A.height() > 1})
-	}
+			# aws ec2 describe-route-tables
+			# WIP # cells = val.each(_Cell)
+			# WIP # do_sep = any(cells, {A.height() > 1})
+		}
 
-	doc An Eachable2 value is a table cell with all pairs one below the other.
-	doc Converts values to strings using Cell().
-	F init(c:Cell, val:Eachable2) {
-		guard val is not Str
-		super(c)
-		c.val = val
-		val.each(F(k, v) {
-			assert(k is Str)
-			c.push("${k}:")
-			t = Cell(v)
-			t.each({ c.push("  ${A}") })
-		})
-	}
+		doc An Eachable2 value is a table cell with all pairs one below the other.
+		doc Converts values to strings using _Cell().
+		F init(c:_Cell, val:Eachable2) {
+			guard val is not Str
+			super(c)
+			c.val = val
+			val.each(F(k, v) {
+				assert(k is Str)
+				c.push("${k}:")
+				t = _Cell(v)
+				t.each({ c.push("  ${A}") })
+			})
+		}
 
-	doc Make a cell of given width. Uses Cell(val).
-	F init(c:Cell, val, width:Int) {
-		init(c, val)
-		c.items .= map(Str(X, width))
-	}
+		doc Make a cell of given width. Uses _Cell(val).
+		F init(c:_Cell, val, width:Int) {
+			init(c, val)
+			c.items .= map(Str(X, width))
+		}
 
-	doc Get cell with, defaults to zero.
-	F width(c:Cell) (c or [""]).map(len).max()
+		doc Get cell with, defaults to zero.
+		F width(c:_Cell) (c or [""]).map(len).max()
 
-	doc Get cell height.
-	F height(c:Cell) len(c)
+		doc Get cell height.
+		F height(c:_Cell) len(c)
 
-	doc Holds tabular data
-	doc name - Table name to display and for configuration lookup
-	doc cols_enum - Enum for columns names
-	type Table(Eachable1)
 
-	doc Initialize rows to an empty array
-	F init(t:Table, name=null) {
-		guard name is Str or name is Null
-		init(args())
-		t.cols_enum = Enum()
-		t.rows = []
-
-		conf = config(if t.name "table_${t.name}" "table") or []
-		debug("Table", "Table config is $conf")
-		conf % register_column(t, X)
-	}
+	# --- (table utils) ---
 
 	# TODO: smarter algorithm
 	F columns_names_best_order(cols:Arr) {
@@ -108,207 +125,243 @@ ns {
 		weighted.sort('weight').name
 	}
 
-	doc Create named table containing provided rows
-	doc name - name of the table for display and for configuration purposes
-	doc rows_hashes - rows, each row is a Hash
-	F init(t:Table, name, rows_hashes:Arr) {
-		guard name is Str or name is Null
-		guard rows_hashes.all(Hash)
-		super(t, name)
+	# --- Table ---
 
-		if not(t.cols_enum) {
-			# rows_hashes.map(keys).flatten().each(register_column(t, X))
-			cols_names = rows_hashes.map(keys).flatten().uniq()
-			columns_names_best_order(cols_names).each(register_column(t, X))
-		}
-		debug("Table", "Table created with fields: ${t.cols_enum}")
-		rows_hashes % push(t, X)
-	}
+	doc Holds tabular data
+	doc name - Table name to display and for configuration lookup
+	doc cols_enum - Enum for columns names
+	type Table(Eachable1)
 
-	doc Create unnamed table containing provided rows
-	F init(t:Table, rows_hashes:Arr) super(t, null, rows_hashes)
+		doc Initialize rows to an empty array
+		F init(t:Table, name=null) {
+			guard name is Str or name is Null
+			t.name = name
+			t.cols_enum = Enum()
+			t.rows = []
 
-	doc Create single-line table
-	F init(t:Table, row_hash:Hash) super(t, null, [row_hash])
-
-	TEST Table2::columns(Table2::Table({"a": 1, "b": 2})) == [[1], [2]]
-
-	doc Internal method. Please do not use.
-	F register_column(t:Table, k) t.cols_enum.push(k)
-
-	doc Internal method. Please do not use.
-	F register_columns(t:Table, columns:Eachable1) {
-		columns.each(register_column(t, X))
-	}
-
-	doc Append give row to the table
-	doc %RET - t
-	F push(t:Table, row_arr:Arr) {
-		# TODO: handle mismatch in number of columns
-		t.rows.push(row_arr)
-		t
-	}
-
-	doc Append give row to the table
-	doc %RET - t
-	F push(t:Table, row_hash:Hash) {
-		# TODO: handle mismatch of columns
-		row = t.cols_enum / get(row_hash, X, null)
-		t.push(row)
-		t
-	}
-
-	doc Internal method. Please do not use.
-	F width(t:Table) t.cols_enum.len()
-
-	doc Get values in the given table column.
-	doc %RET - Arr
-	F column(t:Table, k:Str) t.column(t.cols_enum[k])
-
-	doc Get values in the given table column.
-	doc %RET - Arr
-	F column(t:Table, n:Int) t.rows.map(X[n])
-
-	doc Get values in all table columns.
-	doc %RET - Arr of Arr
-	F columns(t:Table) t.width().map(t.column(X))
-
-	doc Please do not use. This method might change.
-	doc Call cb with each table row.
-	F each(t:Table, cb:Fun) t.rows.each(cb)
-
-	# --- Conversions ---
-
-	doc Get number of rows in the table.
-	F len(t:Table) t.rows.len()
-
-	doc Check whether there are any rows in the table.
-	F Bool(t:Table) t.len().Bool()
-
-	doc Internal method. Please do not use.
-	F calculate_num_cols_to_show(t:Table, max_colums_widths:Arr, available_cols:Int) {
-		cols_to_show = 0
-		for(i; max_colums_widths.len()) {
-			# TODO: unhardcode the "+1" spacing width
-			cols_to_show += max_colums_widths[i] + 1
-			cols_to_show > available_cols returns i
-		}
-		i
-	}
-
-	# TODO: echo(t:Table) for non-tty. Alternatives JSON or greppable.
-
-	doc Displays a table. Implemented only for tty output (or output_format=text configuration)
-	F echo(t:Table) {
-		guard 1.isatty() or (config('output_format') == 'text')
-		lines = (ENV.get('LINES')   or `tput lines`).Int()
-		cols  = (ENV.get('COLUMNS') or `tput cols`).Int()
-		# TODO: special treatment for tmux? can print any width and tmux can be adjusted later.
-		# TODO: support Arr in headers
-		# TODO: handle Hash type of cell (maybe allow configuring order of keys etc)
-		# TODO: handle limiting width of a cell, probably using subtype of TableMeta
-
-		do_output_headers = config('output_headers') in [null, true]
-		max_colums_widths = t.cols_enum.map(F(k, idx) {
-			col = t.column(idx)
-			((if do_output_headers [k] []) + col).map(Cell).map(width).max()
-		})
-
-		# How much full table columns fit on the screen
-		showing_n_columns = t.calculate_num_cols_to_show(max_colums_widths, cols)
-
-		# Setup line spacing
-		do_line_spacing = t.any(F(row) {
-			row.any(F(cell) {
-				Cell(cell).height() > 1
-			})
-		})
-
-		do_line_spacing = if do_line_spacing F() echo('') else nop
-
-		# Title
-		if t.name and (config('output_title') in [null, true]) {
-			echo("=== ${t.name} ===")
-			do_line_spacing()
+			conf = config(if t.name "table_${t.name}" "table") or []
+			debug("Table", "Table config is $conf")
+			conf % register_column(t, X)
 		}
 
-		# Headers
-		# WARNING: Headers assumed to be Str
-		if(do_output_headers) {
-			t.cols_enum.limit(showing_n_columns).map(F(k, idx) Cell(k, max_colums_widths[idx])[0]).join(' ').echo()
-			do_line_spacing()
-		}
+		doc Create named table containing provided rows
+		doc name - name of the table for display and for configuration purposes
+		doc rows_hashes - rows, each row is a Hash
+		F init(t:Table, name, rows_hashes:Arr) {
+			guard name is Str or name is Null
+			guard rows_hashes.all(Hash)
+			super(t, name)
 
-		# Rows
-		t.rows.each(F(row) {
-			row_cells = row.limit(showing_n_columns).map_idx_val(F(idx, cell) {
-				Cell(cell, max_colums_widths[idx])
-			})
-			screen_lines_for_row = row_cells.map(height).max()
-			for(screen_line; screen_lines_for_row) {
-				screen_line_items = row_cells.map_idx_val(F(idx, cell) {
-					cell.get(screen_line, Str('', max_colums_widths[idx]))
-				})
-				echo(screen_line_items.join(' '))
+			if not(t.cols_enum) {
+				# rows_hashes.map(keys).flatten().each(register_column(t, X))
+				cols_names = rows_hashes.map(keys).flatten().uniq()
+				columns_names_best_order(cols_names).each(register_column(t, X))
 			}
-			do_line_spacing()
-		})
-
-		# TODO: remove, make per-page
-		if(do_output_headers) {
-			t.cols_enum.limit(showing_n_columns).map(F(k, idx) Cell(k, max_colums_widths[idx])[0]).join(' ').echo()
+			debug("Table", "Table created with fields: ${t.cols_enum}")
+			rows_hashes % push(t, X)
 		}
-	}
 
-	doc Output (echo) CSV table with cells that contain arrays converted to columns.
-	doc TODO: data escaping.
-	F echo(t:Table) {
-		guard config('output_format') == 'csv-flat'
-		col_elts = t.cols_enum.values().Hash(F(col_name) {
-			# ensure_array?
-			col = t.column(col_name).map(only(X is not Arr, F(x) [x]))
-			(col.map(len) + [0]).max()
-		})
-		# echo(col_elts)
-		field_names = t.cols_enum.map(F(col_name, col_idx) {
-			field_names = map_base_idx(col_name, col_elts[col_idx], { "${A}_${B+1}" })
-		}).flatten()
+		doc Create unnamed table containing provided rows
+		F init(t:Table, rows_hashes:Arr) super(t, null, rows_hashes)
 
-		# Headers
-		echo(field_names.join(','))
+		doc Create single-line table
+		F init(t:Table, row_hash:Hash) super(t, null, [row_hash])
 
-		t.rows.each(F(row) {
-			cols_to_display = row.map_idx_val(F(col_idx, cell) {
-				val = ematch cell {
-					Arr  cell
-					Null ['']
-					Any  [cell]
+		TEST Table2::columns(Table2::Table({"a": 1, "b": 2})) == [[1], [2]]
+
+		doc Internal method. Please do not use.
+		F register_column(t:Table, k) t.cols_enum.push(k)
+
+		doc Internal method. Please do not use.
+		F register_columns(t:Table, columns:Eachable1) {
+			columns.each(register_column(t, X))
+		}
+
+		doc Append give row to the table
+		doc %RET - t
+		F push(t:Table, row_arr:Arr) {
+			# TODO: handle mismatch in number of columns
+			t.rows.push(row_arr)
+			t
+		}
+
+		doc Append give row to the table
+		doc %RET - t
+		F push(t:Table, row_hash:Hash) {
+			# TODO: handle mismatch of columns
+			row = t.cols_enum / get(row_hash, X, null)
+			t.push(row)
+			t
+		}
+
+		doc Internal method. Please do not use.
+		F width(t:Table) t.cols_enum.len()
+
+		doc Get values in the given table column.
+		doc %RET - Arr
+		F column(t:Table, k:Str) t.column(t.cols_enum[k])
+
+		doc Get values in the given table column.
+		doc %RET - Arr
+		F column(t:Table, n:Int) t.rows.map(X[n])
+
+		doc Get values in all table columns.
+		doc %RET - Arr of Arr
+		F columns(t:Table) t.width().map(t.column(X))
+
+		doc Please do not use. This method might change.
+		doc Call cb with each table row.
+		F each(t:Table, cb:Fun) t.rows.each(cb)
+
+		# --- Conversions ---
+
+		doc Get number of rows in the table.
+		F len(t:Table) t.rows.len()
+
+		doc Check whether there are any rows in the table.
+		F Bool(t:Table) t.len().Bool()
+
+		F _calculate_num_cols_to_show(t:Table, max_colums_widths:Arr, available_cols:Int, sep_len:Int) {
+			cols_to_show = 0
+			for(i; max_colums_widths.len()) {
+				cols_to_show + max_colums_widths[i] > available_cols returns i
+				cols_to_show += max_colums_widths[i] + sep_len
+			}
+			i
+		}
+
+		# TODO: echo(t:Table) for non-tty. Alternatives JSON or greppable.
+
+		# WIP: TableView
+		doc Displays a table. Implemented only for tty output (or output_format=text configuration)
+		F echo(t:Table, tv:TableView=null) {
+			guard 1.isatty() or (config('output_format') == 'text')
+
+			COLS_SEP = '  ' # Two spaces
+
+			F maybe_output_headers() {
+				if(do_output_headers) {
+					cols_enum.map_idx_key_val(F(width_idx, k, row_idx) {
+						_Cell(k, max_colums_widths[width_idx])[0]
+					}).join(COLS_SEP).echo()
+					do_line_spacing()
 				}
-				n = col_elts[col_idx]
-				val
-			}).flatten()
-			echo(cols_to_display.join(','))
-		})
-	}
+			}
 
-	TEST Table2::column(Table2::Table([{"a": 1}, {"a": 2}]), "a") == [1,2]
-	TEST Table2::columns(Table2::Table([{"a": 1}, {"a": 2}])) == [[1,2]]
-	TEST Table2::Table([{"a": 1}, {"a": 2}]).len() == 2
+			lines = (ENV.get('LINES')   or `tput lines`).Int()
+			cols  = (ENV.get('COLUMNS') or `tput cols`).Int()
+			# TODO: special treatment for tmux? can print any width and tmux can be adjusted later.
+			# TODO: support Arr in headers
 
-	F digest(t:Table) {
-		ret = Table("Digest of ${t.len()} rows")
-		%[field uniq min max].each(F(col) ret.register_column(col))
-		cols = t.columns()
-		# Work around uniq() limitation (uses Hash internally) by using .map(Str)
-		t.cols_enum.keys().sort().each(F(field_name) {
-			field_idx = t.cols_enum[field_name]
-			ret.push({
-				'field': field_name
-				'uniq': cols[field_idx].map(Str).uniq().len()
-				'min': cols[field_idx].min() tor '(failed to compare)'
-				'max': cols[field_idx].max() tor '(failed to compare)'
+			if tv is Null {
+				tv = TableView(t.name, columns = t.cols_enum.keys())
+			}
+
+			columns_to_show = tv.columns.name
+			cols_enum = Enum()
+			columns_to_show.each(F(c) cols_enum[c] = t.cols_enum[c])
+
+			do_output_headers = config('output_headers') in [null, true]
+			max_colums_widths = cols_enum.map(F(k, idx) {
+				col = t.column(idx)
+				((if do_output_headers [k] []) + col).map(_Cell).map(width).max()
 			})
-		})
-		ret
-	}
+
+			# How much full table columns fit on the screen
+			showing_n_columns = t._calculate_num_cols_to_show(max_colums_widths, cols, len(COLS_SEP))
+			cols_enum .= limit(showing_n_columns)
+
+			# Setup line spacing
+			do_line_spacing = t.any(F(row) {
+				row.any(F(cell) {
+					_Cell(cell).height() > 1
+				})
+			})
+
+			do_line_spacing = if do_line_spacing F() echo('') else nop
+
+			# Title
+			if t.name and (config('output_title') in [null, true]) {
+				echo("=== ${t.name} ===")
+				do_line_spacing()
+			}
+
+			# Headers
+			# WARNING: Headers assumed to be Str
+			maybe_output_headers()
+
+			# Rows
+			t.rows.each(F(row) {
+				row_cells = cols_enum.map_idx_key_val(F(width_idx, k, row_idx) {
+					_Cell(row[row_idx], max_colums_widths[width_idx])
+				})
+				screen_lines_for_row = row_cells.map(height).max()
+				for(screen_line; screen_lines_for_row) {
+					screen_line_items = row_cells.map_idx_val(F(idx, cell) {
+						cell.get(screen_line, Str('', max_colums_widths[idx]))
+					})
+					echo(screen_line_items.join(COLS_SEP))
+				}
+				do_line_spacing()
+			})
+
+			maybe_output_headers()
+		}
+
+		doc Output (echo) CSV table with cells that contain arrays converted to columns.
+		doc TODO: data escaping.
+		F echo(t:Table) {
+			guard config('output_format') == 'csv-flat'
+			col_elts = t.cols_enum.values().Hash(F(col_name) {
+				# ensure_array?
+				col = t.column(col_name).map(only(X is not Arr, F(x) [x]))
+				(col.map(len) + [0]).max()
+			})
+			# echo(col_elts)
+			field_names = t.cols_enum.map(F(col_name, col_idx) {
+				field_names = map_base_idx(col_name, col_elts[col_idx], { "${A}_${B+1}" })
+			}).flatten()
+
+			# Headers
+			echo(field_names.join(','))
+
+			t.rows.each(F(row) {
+				cols_to_display = row.map_idx_val(F(col_idx, cell) {
+					val = ematch cell {
+						Arr  cell
+						Null ['']
+						Any  [cell]
+					}
+					n = col_elts[col_idx]
+					val
+				}).flatten()
+				echo(cols_to_display.join(','))
+			})
+		}
+
+		TEST Table2::column(Table2::Table([{"a": 1}, {"a": 2}]), "a") == [1,2]
+		TEST Table2::columns(Table2::Table([{"a": 1}, {"a": 2}])) == [[1,2]]
+		TEST Table2::Table([{"a": 1}, {"a": 2}]).len() == 2
+
+		F digest(t:Table) {
+			ret = Table("Digest of ${t.len()} rows")
+			%[field uniq min max].each(F(col) ret.register_column(col))
+			cols = t.columns()
+			# Work around uniq() limitation (uses Hash internally) by using .map(Str)
+			t.cols_enum.keys().sort().each(F(field_name) {
+				field_idx = t.cols_enum[field_name]
+				ret.push({
+					'field': field_name
+					'uniq': cols[field_idx].map(Str).uniq().len()
+					'min': cols[field_idx].min() tor '(failed to compare)'
+					'max': cols[field_idx].max() tor '(failed to compare)'
+				})
+			})
+			ret
+		}
+
+		F Str(t:Table) {
+			"<${t.typeof().name} columns=${t.cols_enum.keys().join(',')} rows:${t.len()}>"
+		}
+
 }
