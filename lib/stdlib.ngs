@@ -3587,7 +3587,7 @@ F die(s:Str, exit_code=1) {
 # === Path =======================================
 
 {
-	doc Represents file system path
+	doc Represents file system path such as a file, a block device, etc
 	type Path
 		doc Represents a socket file in a file system (S_IFSOCK)
 		type SocketFile(Path)  # S_IFSOCK
@@ -3805,7 +3805,7 @@ F dup2(oldfd:Int, newfd:Int) {
 	while true {
 		status = c_dup2(oldfd, newfd)
 		status != -1 returns newfd
-		c_errno() != C_EINTR throws PipeCreateFail("Failed to c_dup2()").set('oldfd', oldfd).set('newfd', newfd)
+		c_errno() != C_EINTR throws FileIOFail("Failed to c_dup2()").set('oldfd', oldfd).set('newfd', newfd)
 	}
 }
 
@@ -4089,7 +4089,7 @@ doc Initialize Redir object. Used internally for commands syntax.
 doc %AUTO - $(my_prog >my_file)
 F init(r:Redir, fd, marker, datum) {
 	guard marker is Str or marker is Null
-	guard datum is Str or datum is Pipe or datum == true
+	guard datum is Str or datum is Pipe or datum == true or datum is Int
 	init(args())
 }
 
@@ -4359,54 +4359,47 @@ F '$()'(c:Command) {
 
 	if pid == 0 {
 		# === Child ===
-		# TODO: -------------------- test - start --------------------
-
+		# TODO: See https://stackoverflow.com/questions/13101690/c-get-all-open-file-descriptors
 		debug("process2", "CHILD FDS $child_fds PARENT FDS $parent_fds")
 		for(i=3;i<100;i+=1) {
 			if i not in child_fds {
 				# XXX child to parent also closed here
 				# echo("CHILD CLOSING $i")
+				# close() throws exception on invalid descriptors, hence c_close()
 				i.c_close()
 			}
 		}
 		parent_fds % c_close
-		# TODO: -------------------- test - end --------------------
 
-		# Redirections (WIP) - start
+		# Should be after redirects to be able to 2>/dev/null ?
+		if 'cd' in c.options {
+			throw NotImplemented("Changing directory is not implemented yet")
+		}
+
+		# TODO: Maybe support File or some other datum types later?
 		c.redirects.each(F(r:Redir) {
-
-			F fd_or_dflt(fd:Int, dflt) fd
-			F fd_or_dflt(fd:Null, dflt) dflt
-
-			target_fd = if r.datum is Pipe {
-					child_fd(r.datum)
-				} else {
-					eswitch r.marker {
-						'<'  { flags = 'r'; fd_or_dflt(r.fd, 0); }
-						'>'  { flags = 'w'; fd_or_dflt(r.fd, 1); }
-						'>>' { flags = 'a'; fd_or_dflt(r.fd, 1); }
+			ematch r.datum {
+				Str {
+					target_fd = eswitch r.marker {
+						'<'  { flags = 'r'; r.fd.Box().get(0); }
+						'>'  { flags = 'w'; r.fd.Box().get(1); }
+						'>>' { flags = 'a'; r.fd.Box().get(1); }
 					}
+					debug("process2", "CHILD FILE REDIRECT ${target_fd} -> ${r.datum}")
+					f = File(r.datum).open(flags)
+					dup2(f.fd, target_fd)
 				}
-
-			# TODO: Maybe support File or some other datum types later?
-			if r.datum is Str {
-				f = File(r.datum).open(flags)
-				ok = c_dup2(f.fd, target_fd)
-				ok < 0 throws FileIOFail("Failed to dup2(${f.fd}, ${target_fd}). Errno ${c_errno()}").set('src_fd', f.fd).set('dst_fd', target_fd)
-			}
-
-			if r.datum is Pipe {
-				debug("process2", "CHILD REDIRECT PIPE ${r.fd} -> ${child_fd(r.datum)}")
-
-				ok = c_dup2(child_fd(r.datum), r.fd)
-				ok < 0 throws FileIOFail("Failed to dup2(${child_fd(r.datum)}, ${r.fd}). Errno ${c_errno()}").set('src_fd', child_fd(r.datum)).set('dst_fd', r.fd)
-
-				# Is this needed?
-				ok = c_close(child_fd(r.datum))
-				ok < 0 throws FileIOFail("Failed to c_close")
+				Pipe {
+					debug("process2", "CHILD REDIRECT PIPE ${r.fd} -> ${child_fd(r.datum)}")
+					dup2(child_fd(r.datum), r.fd)
+					close(child_fd(r.datum)) # Is this needed?
+				}
+				Int {
+					debug("process2", "CHILD DESCRIPTOR REDIRECT ${r.fd} -> ${r.datum}")
+					dup2(r.datum, r.fd)
+				}
 			}
 		})
-		# Redirections (WIP) - end
 		debug("process", "will execve()")
 		result = c_execve(process.executable.path, argv, ENV.Strs())
 		# TODO: propagate this error to parent, don't know how yet
