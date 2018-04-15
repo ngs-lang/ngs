@@ -112,7 +112,7 @@
 	doc EXPERIMENTAL! Do not use!
 	F Iter(rd:ResDef) {
 		rd.find_if_needed()
-		Iter(rd.resources)
+		Iter(rd.resources.props)
 	}
 
 	doc Abstract resource

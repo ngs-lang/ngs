@@ -32,11 +32,6 @@
 
 		commit = `line: git rev-parse HEAD`
 
-		F \(name:Str, attributes:Hash, children:Arr) {
-			DocNode(name, children.without(null), **attributes)
-
-		}
-
 		F is_public_name(s:Str) s ~ /^[^_]/
 		F is_phased_out_type(s:Str) s ~ Pfx('Aws')
 
@@ -170,15 +165,12 @@
 			# Not sure yet
 			F top_level_types(nd:NamespaceDescription) {
 				types = nd.objects_by_type[TypeDescription]
-				rrr = []
 				all_types_count = len(types)
 				types .= reject(F(t) {
 					t.parents.any(F(p) {
-						if p.containing_nd === nd rrr.push(t)
 						p.containing_nd === nd
 					})
 				})
-				echo(rrr.name.uniq())
 				{
 					'types': types
 					'hidden': all_types_count - len(types)
@@ -222,6 +214,7 @@
 
 			F generate(nd:NamespaceDescription) {
 
+				status("Generating page for namespace ${nd}")
 				dst = (nd.containing_namespace_root_dir_components() + ['index.html']).reduce(doc_root, (/))
 				p = page(nd)
 				write(dst, Doc::HtmlRoot(p))
@@ -382,18 +375,20 @@
 		F augment_types() {
 			status("Augmenting types information")
 
-			for t in obj_to_description.values().filter(TypeDescription) {
+			tds = obj_to_description.values().filter(TypeDescription)
+
+			# .parents
+			for t in tds {
 				t.parents = t.type.parents.map(obj_to_description[X])
 			}
 
-			for t in obj_to_description.values().filter(TypeDescription) {
+			# .children
+			for t in tds {
 				t.parents.each(F(p) {
 					p.children.push(t)
 				})
 			}
 
-			# t.parents = t.type.parents.filter(X in processed_types).map(processed_types[X]).sort('name')
-			# t.children = types_direct_children[t.type].map(processed_types[X])
 			# # maybe find it in methods variable instead of re-doing process_method_impl()
 			# t.constructors = t.type.constructors.Arr().reject(NormalTypeConstructor).register_constructors_mis().map(process_method_impl(t.name, X))
 			# t.methods = types_methods[t.type].map(processed_methods[X]).reject({'is_constructor': true})

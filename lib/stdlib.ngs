@@ -5772,6 +5772,12 @@ F cached(cb:Fun) {
 	}
 }
 
+doc %STATUS - experimental
+doc %AUTO - \name attr1=val1 attr2=val2 ... [ ... ]
+F \(name:Str, attributes:Hash, children:Arr) {
+	Doc::Node(name, children.reject(NoData).map(only(FullBox, get)), **attributes)
+}
+
 # === Misc tests =================================
 
 # expr1 op= expr2

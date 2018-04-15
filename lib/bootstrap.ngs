@@ -222,7 +222,9 @@ F bootstrap() {
 			'-pjl': encode_json
 		}
 		if sw in transformation {
-			result.map(transformation[sw]).each(echo)
+			for r in result {
+				transformation[sw](r).echo()
+			}
 			return 0
 		}
 

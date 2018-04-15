@@ -1974,9 +1974,10 @@ Special cases:
 * An exception and additional exception when converting the first exception using `ExitCode` - 241
 * An exception and `exit_hook` failure - 242
 * An exception, additional exception when converting the first exception using `ExitCode`, and `exit_hook` failure - 243
-* NGS could not find the bootstrap file - 244
-* NGS could not open bootstrap file - 245
-* NGS could not parse bootstrap file - 246
+* Non-Exception was thrown and then caught by C code - 245
+* NGS could not find the bootstrap file - 246
+* NGS could not open bootstrap file - 247
+* NGS could not parse bootstrap file - 248
 
 ## Customizing translation of your types/objects to exit code
 
