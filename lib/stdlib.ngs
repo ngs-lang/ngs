@@ -3572,11 +3572,72 @@ F warn(s:Str) {
 	}
 }
 
-doc Send status to standard error.
-doc Later status output will be treated specially by the shell. It will have suitable representation in the UI.
-doc Use status() when it's semantically a status - a task that's being done.
-F status(s:Str) {
-	echo(stdlib_error_fd, "[STATUS ${Time()}] $s")
+ns {
+	# THIS CODE IS NOT ORGANIZED PROPERLY, WIP
+	global status
+	fd_pos = null
+	stderr_is_a_tty = null
+	stdout_is_a_tty = null
+	iterm = (ENV.get('TERM_PROGRAM') == 'iTerm.app') and ('NGS_NO_ITERM' not in ENV)
+
+	# TODO: c_lseek(x, 0, "cur") -> make a special function?
+	doc Send status information to standard error. If it's a tty, consequtive status() calls
+	doc will use tty escape codes to overwrite
+	doc previous status() message (one line up, erase to end of line, write new message).
+	doc Later status output will be treated specially by the shell. It will have suitable representation in the UI.
+	doc Use status() when it's semantically a status - a task that's being done.
+	F status(s:Str) {
+		new_fd_pos = null
+		if stderr_is_a_tty is Null {
+			stderr_is_a_tty = isatty(stdlib_error_fd)
+		}
+		if stderr_is_a_tty {
+			new_fd_pos = c_lseek(stdlib_error_fd, 0, "cur")
+			if fd_pos == new_fd_pos {
+				write(stdlib_error_fd, "\e[A\e[0K")
+			}
+		}
+		echo(stdlib_error_fd, "[STATUS ${Time()}] $s")
+
+		if stderr_is_a_tty {
+			fd_pos = c_lseek(stdlib_error_fd, 0, "cur")
+		}
+		null
+	}
+
+	# https://www.iterm2.com/documentation-badges.html
+	doc Show status as iTerm2 badge
+	F status(s:Str) {
+		guard iterm
+		if stdout_is_a_tty is Null {
+			stdout_is_a_tty = isatty(1)
+			if stdout_is_a_tty {
+				iterm_fmt = `echo "\\(user.status)" | base64`
+				write(1, "\e]1337;SetBadgeFormat=${iterm_fmt}" + chr(7))
+				exit_hook['undo_iterm_badge'] = {
+					write(1, "\e]1337;SetBadgeFormat=" + chr(7))
+				}
+			}
+		}
+		guard stdout_is_a_tty
+
+		# OSC 1337 ; SetUserVar=name=Base64-encoded value ST
+
+		iterm_var_val = `echo "${Time().Str("[%H:%M:%S]")} $s" | base64`
+		write(1, "\e]1337;SetUserVar=status=${iterm_var_val}\e\\")
+		null
+	}
+
+	### # Info: printf '\033kWINDOW_NAME\033\\' -- set tmux window name (not title)
+	### # Info: printf '\033]2;My Title\033\\' -- same as select-pane -T -- Problematic: default setting in tmux truncates title at 21 characters
+	### doc Set tmux pane title. Works when TMUX environment variable is set and NGS_NO_TMUX environment variable is not set.
+	### doc Use status() when it's semantically a status - a task that's being done.
+	### F status(s:Str) {
+	### 	guard 'TMUX' in ENV
+	### 	guard 'NGS_NO_TMUX' not in ENV
+	### 	write(0, "\ek${s.replace('\e', '?').limit(80, '...')}\e\\")
+	### 	null
+	### }
 }
 
 doc Write message in s to standard error and exit
@@ -3586,6 +3647,7 @@ F die(s:Str, exit_code=1) {
 
 # === Path =======================================
 
+# Maybe TODO: F ==(Path,Path) --> https://stackoverflow.com/questions/12502552/can-i-check-if-two-file-or-file-descriptor-numbers-refer-to-the-same-file
 {
 	doc Represents file system path such as a file, a block device, etc
 	type Path

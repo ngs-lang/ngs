@@ -982,7 +982,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc %STATUS - experimental
 	F add_to_known_hosts(r:Instance, prop_name:Str) {
 		# TODO: consider making it in parallel
-		for res in r {
+		r.find_if_needed()
+		for res in r.resources {
 			wait_state(res, 'running')
 			add_to_known_hosts(res, res.props.(prop_name))
 		}
