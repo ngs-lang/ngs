@@ -3581,27 +3581,29 @@ ns {
 	iterm = (ENV.get('TERM_PROGRAM') == 'iTerm.app') and ('NGS_NO_ITERM' not in ENV)
 
 	# TODO: c_lseek(x, 0, "cur") -> make a special function?
-	doc Send status information to standard error. If it's a tty, consequtive status() calls
-	doc will use tty escape codes to overwrite
-	doc previous status() message (one line up, erase to end of line, write new message).
+	doc Send status information to standard error.
 	doc Later status output will be treated specially by the shell. It will have suitable representation in the UI.
 	doc Use status() when it's semantically a status - a task that's being done.
 	F status(s:Str) {
-		new_fd_pos = null
+		echo(stdlib_error_fd, "[STATUS ${Time()}] $s")
+	}
+
+	doc Send status information to standard error. Works only if stderr is a tty.
+	doc Consequtive status() calls will use tty escape codes to overwrite
+	doc previous status() message (one line up, erase to end of line, write new message).
+	doc Show status on a tty
+	F status(s:Str) {
 		if stderr_is_a_tty is Null {
 			stderr_is_a_tty = isatty(stdlib_error_fd)
 		}
-		if stderr_is_a_tty {
-			new_fd_pos = c_lseek(stdlib_error_fd, 0, "cur")
-			if fd_pos == new_fd_pos {
-				write(stdlib_error_fd, "\e[A\e[0K")
-			}
-		}
-		echo(stdlib_error_fd, "[STATUS ${Time()}] $s")
+		guard stderr_is_a_tty
 
-		if stderr_is_a_tty {
-			fd_pos = c_lseek(stdlib_error_fd, 0, "cur")
+		new_fd_pos = c_lseek(stdlib_error_fd, 0, "cur")
+		if fd_pos == new_fd_pos {
+			write(stdlib_error_fd, "\e[A\e[0K")
 		}
+		super(s)
+		fd_pos = c_lseek(stdlib_error_fd, 0, "cur")
 		null
 	}
 
@@ -4493,7 +4495,7 @@ F '$()'(c:Command) {
 				} catch(e) {
 					debug("process2", "CLOSING READING END OF PIPE FAILED: $e")
 				}
-				debug("process", "Read all output of the child process for descriptor $fd, closing reading/parent end")
+				debug("process", "Read all output of the child process for descriptor ${r.fd}, closing reading/parent end")
 			})
 		})
 		# debug("process2", "R ${c.reading_threads}")

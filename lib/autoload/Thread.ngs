@@ -6,6 +6,19 @@
 	doc Execution thread. Currently a POSIX thread.
 	type Thread
 
+	doc Parent type of various thread exceptions
+	type ThreadFail(Exception)
+
+		doc Thrown when creating a thread (currently - c_pthread_create()) fails
+		type ThreadCreateFail(ThreadFail)
+
+		doc Thrown when joining a thread (currently - c_pthread_join()) fails
+		type ThreadJoinFail(ThreadFail)
+
+		doc Thrown where join()ing another thread that threw an exception
+		doc %EX - Thread(F() 1/0).join()  # OtherThreadFail with .cause DivisionByZero
+		type OtherThreadFail(ThreadFail)
+
 	doc Creates and runs a thread. The code that the created thread runs is f, which is passed arg.
 	F init(t:Thread, f:Fun, arg) {
 		thread_attr = c_pthread_attr_t()
@@ -13,8 +26,7 @@
 		create_result = c_pthread_create(thread_attr, f, arg)
 		code = create_result[0]
 		if code {
-			# XXX better exception ... and include code in it
-			throw Error("Failed to c_pthread_create")
+			throw ThreadCreateFail("Failed to c_pthread_create").set('code', code)
 		}
 		t.thread = create_result[1]
 	}
@@ -24,12 +36,14 @@
 		init(t, F thread_arg_discard_wrapper(discard) f(), null)
 	}
 
+	# Not sure yet: %STATUS - deprecated
 	doc Joins threads.
 	doc threads - Arr of Thread.
 	doc %RET - Arr, the results from threads, in order.
 	F join(threads:Arr) {
+		# warn("Using deprecated join(threads:Arr)")
 		guard threads.all(Thread)
-		threads / join
+		threads.map(join)
 	}
 
 	doc Joins on thread. Waits for the thread to finish and returns the result from the thread.
@@ -37,36 +51,24 @@
 	doc In future it might re-throw the exception, probably wrapped in ThreadExeption.
 	doc %RET - Any
 	F join(t:Thread) {
-		debug("[Thread] joining thread ${t.thread.id()}")
+		debug("process", "Joining thread ${t}")
 		join_result = c_pthread_join(t.thread)
+		# join_result: [ join_status, [ result_is_exception:Bool, result ] ]
 		if join_result[0] {
-			# XXX better exception ... and include code in it
-			throw Error("Failed to c_pthread_join")
+			throw ThreadJoinFail("Failed to c_pthread_join").set('code', code)
 		}
-		join_result[1]
+		if join_result[1][0] {
+			throw OtherThreadFail("Joined thread that threw exception").set('cause', join_result[1][1]).set('thread', t)
+		}
+		join_result[1][1]
 	}
 
 	# TODO: maybe limit number of concurrent threads (default to cores count?)
 	doc Parallel map. Runs mapper in threads. Each thread processes one element from the array but this might change in future (preserving the total number of calls to mapper and the order of results).
 	doc %RET - Arr, result of applying mapper to elements of a, preserving the order.
 	doc %EX - pages_texts = abs_pages_urls.pmap(F(url)  `lynx -dump $url`)
-	F pmap(a:Arr, mapper:Fun) {
-		# threads = a.map(F(elt) Thread(mapper, elt))
-		threads = a / Thread(mapper, X)
-		threads.join()
-	}
-
-	doc Do something in parallel threads. Runs mapper in threads. Each thread processes one number but this might change in future (preserving the total n calls to mapper and the order of results).
-	doc Mapper is called with thread number of zero to n (not including).
-	doc %RET - Arr, result of applying mapper to sequential numbers, preserving the order.
-	doc %EX - # TODO: parallel API check
-	F pmap(n:Int, mapper:Fun) {
-		# threads = collector
-		# 	for(i;n) {
-		# 		collect(Thread(mapper, i))
-		# 	}
-		threads = n / Thread(mapper, X)
-		threads.join()
+	F pmap(a:Eachable1, mapper:Fun) {
+		a.map(Thread(mapper, X)).map(join)
 	}
 
 	doc Run cb in n parallel threads. Each thread runs one cb but this might change in future (preserving the total n calls to cb).
@@ -75,12 +77,12 @@
 			for(i;n) {
 				collect(Thread(cb))
 			}
-		threads.join()
+		threads.map(join)
 	}
 
 	TEST (1..3).Arr().pmap(X*10) == [10, 20]
 	TEST 3.pmap(X*10) == [0, 10, 20]
 
-	F Str(t:c_pthread_t) "<c_pthread_t>"
+	F Str(t:c_pthread_t) "<c_pthread_t ${id(t)}>"
 
 }

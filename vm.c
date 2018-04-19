@@ -1454,13 +1454,14 @@ void *_pthread_start_routine(void *arg) {
 	NGS_PTHREAD_INIT_INFO *init;
 	CTX ctx;
 	VALUE *result;
-	// METHOD_RESULT mr;
+	METHOD_RESULT mr;
 	result = NGS_MALLOC(sizeof(*result));
-	*result = MAKE_NULL;
+	*result = make_array(2);
 	init = (NGS_PTHREAD_INIT_INFO *)arg;
 	ctx_init(&ctx);
-	// mr = vm_call(init->vm, &ctx, result, init->f, 1, &init->arg);
-	vm_call(init->vm, &ctx, result, init->f, 1, &init->arg);
+	ARRAY_ITEMS(*result)[1] = MAKE_NULL;
+	mr = vm_call(init->vm, &ctx, &ARRAY_ITEMS(*result)[1], init->f, 1, &init->arg);
+	ARRAY_ITEMS(*result)[0] = MAKE_BOOL(mr == METHOD_EXCEPTION);
 	return result;
 }
 
