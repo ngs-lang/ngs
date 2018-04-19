@@ -55,6 +55,7 @@ syn keyword ngsNamespace AWS CHARS Doc OS
 syn match   ngsSpecial contained #\$#
 syn region  ngsString start=+'+ end=+'+ skip=+\\\\\|\\'+ contains=ngsSpecial
 syn region  ngsString start=+"+ end=+"+ skip=+\\\\\|\\"+ contains=ngsSpecial
+"syn region  ngsString start=+/+ end=+/+ skip=+\\\\\|\\"+ contains=ngsSpecial
 
 syn match   ngsNumber "\<\d\+\>"
 
@@ -64,17 +65,17 @@ syn keyword ngsFunction c_access c_close c_closedir c_errno c_execve c_exit c_fo
 syn keyword ngsFunction bootstrap bootstrap_debug bootstrap_exception_catch_wrapper bootstrap_find_ngs_dir fetch main print_exception require ExitCode
 
 " stdlib functions
-syn keyword ngsFunction abs Argv access acquire all any assert basename chr close close_reading_end close_writing_end cmp code compare count
+syn keyword ngsFunction abs Argv access acquire all any assert basename cached chr close close_reading_end close_writing_end cmp code compare count
 syn keyword ngsFunction dflt digest drop dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error exit_hook
-syn keyword ngsFunction debug die filter filterk filterv finally find_in_path finished_ok first flatten fstat global_not_found_handler group has
-syn keyword ngsFunction identity in index indexes inspect join kill len limit lines log lstat map mapo map_idx_key_val map_idx_val mapk mapv mapkv max merge_sorted min
-syn keyword ngsFunction n next none nop open ord partial partial_tail partition peek pmap pos ptimes publish rand read reduce reject rejectk rejectv release replace reverse
-syn keyword ngsFunction set sort sortk split srand starts_with stat status store StrParams Strs subscribe subset sum take tap test uniq unshift update wait warn without write zip
+syn keyword ngsFunction debug die ensure_array filter filterk filterv finally find_in_path finished_ok first flatten fstat global_not_found_handler group has
+syn keyword ngsFunction identity in index indexes inspect intersperse join kill len limit lines log lstat map mapo map_idx_key_val map_idx_val mapk mapv mapkv max merge_sorted min
+syn keyword ngsFunction next none nop only open ord partial partial_tail partition peek pmap pos ptimes publish rand read reduce reject rejectk rejectv release replace reverse
+syn keyword ngsFunction set sort sortk split srand starts_with stat status store StrParams Strs subscribe subset sum take tap test the_one uniq unshift update wait warn without write zip
 
 syn keyword ngsFunction c_gettimeofday c_strftime c_strptime c_time gmtime localtime strftime time
 
 syn keyword ngsFunction encode encode_hex encode_html encode_html_attr encode_json encode_uri_component
-syn keyword ngsFunction decode decode_uri_component
+syn keyword ngsFunction decode decode_hex decode_uri_component
 
 " resources types
 syn keyword ngsType Res ResDef ResNotFound

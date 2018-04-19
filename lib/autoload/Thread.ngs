@@ -1,6 +1,4 @@
 {
-	# ./ngs -e 't = c_pthread_create(c_pthread_attr_t(), F(x) {echo(x); x+1} , 7); c_pthread_join(t[1]).dump()'
-
 	# TODO: consider *args for consistency with other parts of the language
 
 	doc Execution thread. Currently a POSIX thread.

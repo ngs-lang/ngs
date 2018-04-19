@@ -547,11 +547,13 @@ TEST [10].reduce((+)) == 10
 TEST [1,2,3].reduce((+)) == 6
 TEST try [].reduce((+)) catch(e:EmptyEachableFail) true
 
-doc EXPERIMENTAL!
+doc Deprecated.
 doc Map when there is more than one element. If there is exactly one element, it's left as is
 doc mapper - Will be called with zero based index and successive elements from arr
+doc %STATUS - deprecated
 doc %RET - Arr
 F map_base_idx(base, n:Int, mapper:Fun) {
+	warn("Using deprecated map_base_idx()")
 	n == 1 returns [base]
 	n.map(mapper(base, X))
 }
@@ -1846,11 +1848,9 @@ TEST zip([1,2,3], [4,5,6], [7,8,9,10]) == [[1,4,7], [2,5,8], [3,6,9], [null, nul
 doc Convert Eachable1 (anything with "each" method that takes callback of one parameter) to an array
 doc %EX - Arr(1..3)   # [1,2]
 doc %EX - Arr(1...3)  # [1,2,3]
-F Arr(something:Eachable1) {
-	ret = []
-	something.each(F(elt) ret.push(elt))
-	ret
-}
+F Arr(something:Eachable1)
+	collector
+		something.each(collect)
 
 TEST Arr(1..3) == [1,2]
 TEST Arr(1...3) == [1,2,3]
@@ -2033,7 +2033,7 @@ doc %EX - [10,20] * 2  # [10,20,10,20]
 F *(arr:Arr, n:Int)
 	collector
 		for(i;n)
-			arr % collect
+			arr.each(collect)
 
 TEST [10,20] * 2 == [10,20,10,20]
 
@@ -2079,6 +2079,7 @@ doc %STATUS - deprecated
 doc %EX - [1,2].nuke_null()  # [1,2]
 doc %EX - [1,null].nuke_null()  # []
 F nuke_null(a:Arr) {
+	warn("Using deprecated nuke_null")
 	a.any(Null) returns []
 	a
 }
@@ -2529,8 +2530,8 @@ F code(h:Hash) {
 	'{' + h.map(F(k, v) "${k.code()}: ${v.code()}").join(', ') + '}'
 }
 
-doc Set an key in a Hash if it's not already set
-doc %EX - Myhash.dflt(k, []).push(elt)
+doc Set a key in a Hash if it's not already set
+doc %EX - my_hash.dflt(k, []).push(elt)
 doc %RET - Hash value, the already-existed or new.
 F dflt(h:Hash, k, v) {
 	if k not in h {
@@ -3125,6 +3126,9 @@ CHARS = ns {
 	octdigits = '01234567'
 	base64 = ascii_uppercase + ascii_lowercase + digits + '+/'
 	base64url = ascii_uppercase + ascii_lowercase + digits + '-_'
+	html_escape = {'&': '&amp;', '<': '&lt;', '>': '&gt;'}
+	html_attr_escape = html_escape + {'"': '&quot;', "'": '&#39;'}
+
 }
 
 # --- Constructors ---
@@ -5694,6 +5698,11 @@ F encode_hex(s:Str) {
 
 TEST encode_hex('ab') == '6162'
 
+F decode_hex(s:Str) {
+	guard len(s) == 2
+	chr(Int(s, 16))
+}
+
 STDLIB_INVALID_URI_CHAR_RE = /[^-a-zA-Z0-9_.!~*'()]/
 #'
 
@@ -5713,7 +5722,7 @@ F decode_uri_component(s:Str) {
 	for(i;l) {
 		ret += if s[i] == '%' {
 			i += 2
-			chr(Int(s[i-1..i+1], 16))
+			decode_hex(s[i-1..i+1])
 		} else {
 			s[i]
 		}
@@ -5723,22 +5732,19 @@ F decode_uri_component(s:Str) {
 
 TEST decode_uri_component("ab%2Bc%25") == "ab+c%"
 
-STDLIB_HTML_ESCAPE = {'&': '&amp;', '<': '&lt;', '>': '&gt;'}
 
 doc Encodes HTML. Escapes &, < and > .
 doc %RET - Str
 doc %EX - "ab>+c%&'".encode_html()  # "ab&gt;+c%&amp;'"
-F encode_html(s:Str) s.map(STDLIB_HTML_ESCAPE.get(X, X)).join('')
+F encode_html(s:Str) s.map(CHARS::html_escape.get(X, X)).join('')
 
 TEST "ab>+c%&'".encode_html() == "ab&gt;+c%&amp;'"
 
 
-STDLIB_HTML_ATTR_ESCAPE = STDLIB_HTML_ESCAPE + {'"': '&quot;', "'": '&#39;'}
-
 doc Encodes HTML attribute. Escapes &, <, >, " and ' .
 doc %RET - Str
 doc %EX - "ab>+c%&'".encode_html_attr()  # "ab&gt;+c%&amp;&#39;"
-F encode_html_attr(s:Str) s.map(STDLIB_HTML_ATTR_ESCAPE.get(X, X)).join('')
+F encode_html_attr(s:Str) s.map(CHARS::html_attr_escape.get(X, X)).join('')
 
 TEST "ab>+c%&'".encode_html_attr() == "ab&gt;+c%&amp;&#39;"
 
@@ -5790,13 +5796,7 @@ F write(fname:Str, s:Str) {
 	}
 	f = File(fname)
 	open(f, 'w')
-	finally()
-		body => {
-			write(f, s)
-		}
-		cleanup => {
-			f.close()
-		}
+	finally(body = {write(f, s)}, cleanup = {f.close()})
 }
 
 doc Write whole file if it's closed, write to file descriptor if it's open

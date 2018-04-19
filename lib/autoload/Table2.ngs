@@ -313,13 +313,12 @@ ns {
 		F echo(t:Table) {
 			guard config('output_format') == 'csv-flat'
 			col_elts = t.cols_enum.values().Hash(F(col_name) {
-				# ensure_array?
-				col = t.column(col_name).map(only(X is not Arr, F(x) [x]))
-				(col.map(len) + [0]).max()
+				max(t.column(col_name).map(ensure_array).map(len) + [0])
 			})
-			# echo(col_elts)
 			field_names = t.cols_enum.map(F(col_name, col_idx) {
-				field_names = map_base_idx(col_name, col_elts[col_idx], { "${A}_${B+1}" })
+				x = col_elts[col_idx]
+				x == 1 returns [col_name]
+				(1...x).map("${col_name}_${X}")
 			}).flatten()
 
 			# Headers

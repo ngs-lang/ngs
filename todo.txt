@@ -35,6 +35,7 @@ Note that this started as internal document so things here are unformed, not fin
 			* Make multiple versions installable side by side, like Node.js
 
 		* Milestone "programming"
+			* chdir() and $(cd:... my_prog) option
 			* files globbing
 				consider special syntax such as <foo*bar>
 				think about Res globbing
