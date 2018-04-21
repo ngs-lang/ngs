@@ -29,9 +29,6 @@
 // READ(2), LSEEK(2), FORK(2), EXECVE(2), DUP2(2)
 #include <unistd.h>
 
-// BCMP(3)
-#include <strings.h>
-
 // DIR
 #include <dirent.h>
 
