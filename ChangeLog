@@ -1,4 +1,4 @@
-Version 0.3.0 unreleased
+2018-04-21 Version 0.2.4
 
 	* Add Time, built on exposed c primitives - gettimeofday, strptime, mktime
 	* Add Set
