@@ -115,6 +115,7 @@ ns {
 			[2000, 0, col]
 		}
 
+		# cols.sort(weight) ?
 		weighted = cols.map(F(col) {
 			{
 				'name': col

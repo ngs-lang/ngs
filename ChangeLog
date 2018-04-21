@@ -1,6 +1,30 @@
 Version 0.3.0 unreleased
 
-	* Dunno yet
+	* Add Time, built on exposed c primitives - gettimeofday, strptime, mktime
+	* Add Set
+	* Add .user arbitrary data on types
+	* Add bin/hn.ngs -- "tail -f" like script for Hacker News
+	* status() will override previous one on tty using escape codes
+	if no other output was sent between the calls
+	* status() - use iTerm2 badges
+	* join(Thread) - throw exception if the other thread had exception
+	* Improve AWS declarative primitives library
+	* Implement file descriptors redirection $(my_prog 2>${1})
+	* Better Hash iteration in stdlib due to additional exposed ll_hash_* primitives and LLHashEntry
+	* Fix Linux installation instructions
+	* Update Mac installation instructions
+	* Automatically set reference to namespace in methods defined in ns { ... }
+	* Improve memory allocation - use "atomic" memory in few additional places
+	* Rename "Method" to "Multimethod" and "Method imlementation" to "Method" all over
+	* Rename "attribute" to "field" all over
+	* Deprecate KV
+	* Rename "to_exit_code" to "ExitCode" for consistency (deprecate "to_exit_code")
+	* WIP AWS2 -- second version of AWS
+	* WIP bin/na ("NGS AWS" ) -- CLI for AWS wrapper around declarative primitives library
+	* WIP Table2 -- the more advanced tabular data holder
+	* WIP documentation
+	* Experimental syntax for building documents
+	* Add experimental MapIter, FilterIter, FunIter
 
 2017-06-07 Version 0.2.1
 

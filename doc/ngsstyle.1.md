@@ -14,7 +14,7 @@ Bad:
 
 	F my_func() {
 		# Returns null or an array
-	}    
+	}
 
 	...
 	my_arr = my_func()
@@ -27,7 +27,7 @@ Good:
 
 	F my_func() {
 		# Always returns an array, potentially empty
-	}    
+	}
 
 	...
 

@@ -604,7 +604,7 @@ doc e - Haystack
 doc %EX -  1 in [1,2,3].Iter()  # true
 doc %EX - 10 in [1,2,3].Iter()  # false
 doc %RET - Bool
-F in(x, e:Eachable1) e.any({A == x})
+F in(x, e:Eachable1) e.any(X == x)
 
 TEST ( 1 in [1,2,3].Iter()) == true
 TEST (10 in [1,2,3].Iter()) == false
