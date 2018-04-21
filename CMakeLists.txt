@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.0)
 include(FindPkgConfig)
 project(NGS)
 
+# -D_DARWIN_C_SOURCE - SIGWINCH and friends on MacOS
+# -D_XOPEN_SOURCE - misc stuff on Linux
+add_definitions(-D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE=1)
+
 pkg_check_modules(LIBFFI libffi REQUIRED)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /opt/local/include/uthash /usr/local/include)
 link_directories(/usr/local/lib)
