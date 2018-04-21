@@ -1,3 +1,4 @@
+#define _XOPEN_SOURCE 700
 #include <assert.h>
 #include <dlfcn.h>
 #include <inttypes.h>
@@ -760,7 +761,7 @@ METHOD_RESULT native_eq_str_str METHOD_PARAMS {
 	if(OBJ_LEN(argv[0]) != OBJ_LEN(argv[1])) { METHOD_RETURN(MAKE_BOOL(0)); }
 	if(OBJ_DATA_PTR(argv[0]) == OBJ_DATA_PTR(argv[1])) { METHOD_RETURN(MAKE_BOOL(1)); }
 	len = OBJ_LEN(argv[0]);
-	METHOD_RETURN(MAKE_BOOL(!bcmp(OBJ_DATA_PTR(argv[0]), OBJ_DATA_PTR(argv[1]), len)));
+	METHOD_RETURN(MAKE_BOOL(!memcmp(OBJ_DATA_PTR(argv[0]), OBJ_DATA_PTR(argv[1]), len)));
 }
 
 METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
