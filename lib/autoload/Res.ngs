@@ -1,4 +1,7 @@
 {
+	doc Abstract resource definition
+	doc anchor - Describes how to find the resource, if it exists.
+	doc resources - null or Arr[Res]
 	type ResDef(Eachable1)
 
 	F init(rd:ResDef, anchor) {
@@ -12,69 +15,134 @@
 		rd.dry_run = ENV.get('DRY_RUN', false)
 	}
 
+	doc Check how many resources are matching given resource definition. Throws InvalidArgument if resources were not looked up yet.
 	F len(rd:ResDef) {
-		rd.resources is Null throws Error("Programming error. find() was not run before len()")
+		rd.resources is Null throws InvalidArgument("Programming error. find() was not run before len()")
 		rd.resources.len()
 	}
 
+	doc Creates resource definition with empty Hash anchor.
 	F init(rd:ResDef) init(rd, {})
 
+	doc Converts resource definition to a string, for displaying purposes.
 	F Str(rd:ResDef) {
-		props = (rd.props tor {}).without('META')
+		props = (rd.props tor {}).without('META').filterv(identity)
+		props = if props then " props=$props" else ""
 		multi = " x${rd.count}" tor ""
 		dry_run = if rd.dry_run " (dry run)" else ""
-		"<${rd.typeof().name} anchor=${rd.anchor.without('META')} props=$props$multi$dry_run resources:${only(Arr, len)(rd.resources)}>"
+		anchor = rd.anchor.without('META').filterv({ Bool(a) tor true })
+		resources = if rd.resources is Arr then " resources:${len(rd.resources)}" else ""
+		# (${rd.ids().limit(3).join(', ')})
+		"<${rd.typeof().name} anchor=${anchor}$props$multi$dry_run$resources>"
 	}
 
+	doc Formats and logs message s for resource definition rd.
+	doc method - the name of calling method which also goes to the formatted message.
 	F log(rd:ResDef, method:Str, s:Str) {
 		log("[${rd.typeof().name} ${rd.anchor}] [$method] $s")
 	}
 
-	# TODO: F find_if_needed() -- if rd.resources is Null then find ...
+	doc Populates .resources by running .find(), if it was not done yet.
+	doc %RET - rd
+	F find_if_needed(rd:ResDef) {
+		if rd.resources is Null {
+			rd.find()
+		}
+		rd
+	}
 
 	# TODO: throw ExpectFail or somthing similar
+	doc Throw an exception unless there is exactly e resources were found.
+	doc Useful to express assumptions before operating.
+	doc %EX - slave_build_server = AWS::Instance(Tags={'env': 'aux', 'role': 'build-slave'}).expect(1)
+	doc %EX - subnets = AWS::Subnet(my_vpc_anchor).expect(2)
+	doc %RET - rd
 	F expect(rd:ResDef, e:Int) {
-		rd.find()
+		rd.find_if_needed()
 		assert(rd.resources.len() == e, "Expected exactly ${e} ${rd.typeof().name} resource instances but found ${rd.resources.len()}: ${rd}")
 		rd
 	}
 
+	doc Throw an exception unless the resources were found.
+	doc Useful to express assumptions before operating.
+	doc %EX - instances = AWS::Instance({'env': env, 'role': role}).expect()
+	doc %RET - rd
 	F expect(rd:ResDef) {
-		rd.find()
+		rd.find_if_needed()
 		assert(rd.len() > 0, "Expected one or more ${rd.typeof().name} resource instances but found none: ${rd}")
 		rd
 	}
 
+	doc Call cb with properties of each found resource
+	doc %EX - AWS::Instance().each(F(i) echo(i.InstanceId))
+	doc %RET - rd
 	F each(rd:ResDef, cb:Fun) {
-		if rd.resources is Null {
-			rd.find()
-		}
+		rd.find_if_needed()
 		rd.resources.each(F(r) {
 			cb(r.props)
 		})
 		rd
 	}
 
-	Iter # autoload Iter type
-	F Iter(rd:ResDef) {
-		if rd.resources is Null {
-			rd.find()
-		}
-		Iter(rd.resources)
+	doc Create new resource definition by filtering resources of rd.
+	doc rd - Original resource definition. Not modified.
+	doc %RET - ResDef
+	doc %EX - # Get instances with last private IP octet less than 20:
+	doc %EX - AWS::Instance().filter({A.PrivateIpAddress.split(".")[-1].Int()<20})
+	F filter(rd:ResDef, predicate:Fun) {
+		rd.find_if_needed()
+		t = rd.typeof()
+		ret = t(rd.anchor)
+		ret.resources = rd.resources.filter(F(r) predicate(r.props))
+		ret
 	}
 
+	doc Check whether any resources were found.
+	doc %RET - Bool
+	doc %EX - # Implicit Bool(): if expr -> if Bool(expr)
+	doc %EX - if AWS::Instance({"env": "dev", "role": "edge"}) {
+	doc %EX -   echo("There is at least one edge server in dev environment")
+	doc %EX - }
+	F Bool(rd:ResDef) {
+		rd.find_if_needed()
+		rd.resources.Bool()
+	}
+
+	Iter # autoload Iter type
+	doc EXPERIMENTAL! Do not use!
+	F Iter(rd:ResDef) {
+		rd.find_if_needed()
+		Iter(rd.resources.props)
+	}
+
+	doc Abstract resource
+	doc def - A ResDef, corresponding resource definition
+	doc props - A Hash of properties
 	type Res
 
+	doc Stores def and props in r
 	F init(r:Res, def:ResDef, props:Hash) init(args())
 
+	doc Converts resource to a string, for displaying purposes.
 	F Str(r:Res) "<${r.typeof().name} ${r.id() tor 'id-not-available'}>"
 
+	doc Formats and logs message s for resource r.
+	doc method - the name of calling method which also goes to the formatted message.
 	F log(r:Res, method:Str, s:Str) {
 		log("[${r.typeof().name} ${r.id()}] [$method] $s")
 	}
 
+	doc Ensure that resources matching resource definition have given properties. This operation will do necessary changes, including creating the resource(s) if they do not exist.
+    doc %EX - # Idempotent
+    doc %EX - PROXY_LAB_TAGS = { 'env': 'proxy-lab' }
+    doc %EX - PROXY_LAB_VPC_CIDR = '192.168.10.0/24'
+	doc %EX - vpc    = AWS::Vpc(VPN_POC_TAGS).converge(CidrBlock=VPN_POC_CIDR, Tags=VPN_POC_TAGS)
+	doc %EX - gw     = AWS::Igw(Attachments=[{'VpcId': vpc}]).converge(Tags=VPN_POC_TAGS)
+	doc %EX - rtb    = AWS::RouteTable(VpcId=vpc).converge(Routes=Present({"DestinationCidrBlock": "0.0.0.0/0", "GatewayId": gw}))
+	doc %EX - subnet = AWS::Subnet(VpcId=vpc, CidrBlock=VPN_POC_CIDR).converge()
+	doc %RET - rd
 	F converge(rd:ResDef, **props) {
-		rd.find()
+		rd.find_if_needed()
 		n = props.get('META', {}).get('count')
 		if n is Null and rd.resources.len() == 0 {
 			debug("ResDef", "converge() - Count unspecified but there are no resources, assuming count to be 1")
@@ -100,27 +168,35 @@
 		rd
 	}
 
-	# TODO: pass props to create(), do not assign props to rd.props
-	# Methods that support bulk creating should implement this
+	doc Create n resources with given props. Typically called by converge().
+	doc %RET - rd
 	F create(rd:ResDef, n:Int, **props) {
 		for(i;n) {
 			debug("ResDef", "converge() - Creating ${rd.typeof().name} ${i+1} of $n")
 			create(rd, **props)
 		}
+		rd
 	}
 
+	doc Delete the resources matching resource definition.
+	doc %RET - rd
 	F delete(rd:ResDef) {
-		rd.find()
+		rd.find_if_needed()
 		rd.resources.each(delete)
+		rd.resources = []
+		rd
 	}
 
+	doc Get IDs of the resources matching resource definition.
+	doc %RET - Arr
 	F ids(rd:ResDef) {
-		if rd.resources is Null {
-			rd.find()
-		}
+		rd.find_if_needed()
 		rd.resources.map(id)
 	}
 
+	doc Called by create() on new resources. Appends the new resources to the list and runs update().
+	doc Don't call directly.
+	doc resources - Arr of Res
 	F created(rd:ResDef, resources:Arr, props:Hash) {
 		guard resources.all(Res)
 		resources % update(X, props)
@@ -130,7 +206,7 @@
 		rd.resources += resources
 	}
 
-	doc Get optional resource property, looking up in properties first and then in anchor
+	doc Get optional resource property, looking up in properties first and then in anchor.
 	doc %RET - Box
 	F opt_prop(rd:ResDef, name:Str, props:Hash) [props, rd.anchor].get(name).Box(0)
 

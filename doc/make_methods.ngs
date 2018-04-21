@@ -74,8 +74,8 @@
 			type TopDocNode(DocNode)
 				type TypesDocNode(DocNode)
 					type TypeDocNode(DocNode)
-						type TypeAttrsDocNode(DocNode)
-							type TypeAttrDocNode(TextDocNode)
+						type TypeFieldsDocNode(DocNode)
+							type TypeFieldDocNode(TextDocNode)
 						type TypeMethodsDocNode(DocNode)
 							type TypeMethodDocNode(DocNode)
 								type TypeMethodImplDocNode(DocNode)
@@ -209,19 +209,19 @@
 			dn.process_children(options + {'method': dn.method}, TypeMethodImplDocNode)
 		}
 
-		F Html(dn:TypeAttrsDocNode, options:Hash) {
+		F Html(dn:TypeFieldsDocNode, options:Hash) {
 			not(dn.children) returns null
-			tc.push("<h${tc.heading_level} class=\"attrs-header\">Attributes</h${tc.heading_level}>")
-			tc.push('<section class="type-attrs-content">')
+			tc.push("<h${tc.heading_level} class=\"fields-header\">Fields</h${tc.heading_level}>")
+			tc.push('<section class="type-fileds-content">')
 			dn.process_children(options)
-			tc.push('</section>') # type-attr-content
+			tc.push('</section>') # type-field-content
 		}
 
-		F Html(dn:TypeAttrDocNode, options:Hash) {
+		F Html(dn:TypeFieldDocNode, options:Hash) {
 			tc.push("<h${tc.heading_level} class=\"param-header\">${dn.name.encode_html()}</h${tc.heading_level}>")
-			tc.push('<section class="type-attr-content">')
+			tc.push('<section class="type-field-content">')
 			dn.text / encode_html % tc.push(X)
-			tc.push('</section>') # type-attr-content
+			tc.push('</section>') # type-field-content
 		}
 
 		F Html(dn:ParentTypesDocNode, options:Hash) {
@@ -256,7 +256,7 @@
 							dn.text / encode_html % tc.push(X)
 						}
 						if options.get('detailed_type_page') {
-							dn.process_children(options, TypeAttrsDocNode)
+							dn.process_children(options, TypeFieldsDocNode)
 							dn.children.the_one(ParentTypesDocNode).Html(options)
 							dn.children.the_one(ChildTypesDocNode).Html(options)
 							dn.children.the_one(ExampleDocNode) do F(dn) {
@@ -446,8 +446,8 @@
 			process_method_impl_doc_attr(mi, dn, '%EX', ExampleDocNode)
 			process_method_impl_doc_attr(mi, dn, '%RET', RetDocNode)
 
-			if mi is Closure {
-				# Handling Closure, not handling built-ins yet
+			if mi is UserDefinedMethod {
+				# Handling UserDefinedMethod, not handling built-ins yet
 				location_info = mi.ip().resolve_instruction_pointer()
 				if m = location_info.file ~ pfx {
 					dn.push(LocationDocNode().set('file', m.after).set('line', location_info.first_line))
@@ -516,9 +516,9 @@
 					# ret.full = full
 					process_type_impl_doc_attr(value, ret, '', DescDocNode)
 					type_attrs_dns = ((try value.attrs().doc) or {}).without('').reject(X ~ /^%/).map(F(k, v) {
-						TypeAttrDocNode(v.to_lines()).set('name', k)
+						TypeFieldDocNode(v.to_lines()).set('name', k)
 					})
-					ret.push(TypeAttrsDocNode(type_attrs_dns))
+					ret.push(TypeFieldsDocNode(type_attrs_dns))
 
 					if full {
 						process_type_impl_doc_attr(value, ret, '%EX', ExampleDocNode)

@@ -52,6 +52,8 @@ typedef struct compilation_context {
 	size_t fill_in_continue_addrs[COMPILE_MAX_FILL_IN_LEN];
 	int fill_in_continue_addrs_ptr;
 
+	ast_node *ns[COMPILE_MAX_FUNC_DEPTH];
+
 } COMPILATION_CONTEXT;
 
 SYMBOL_TABLE *get_symbol_table_entry(SYMBOL_TABLE **st, char *name, int create_if_not_exists, int *created);

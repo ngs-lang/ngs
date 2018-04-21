@@ -107,8 +107,8 @@ typedef struct {
 	TRY_INFO try_info[MAX_TRIES_PER_FRAME];
 	int try_info_ptr;
 
-	// Enable/disable using impl_not_found_handler
-	int do_call_impl_not_found_handler;
+	// Enable/disable using method_not_found_handler
+	int do_call_method_not_found_handler;
 	int do_call_call;
 
 	// For stack trace
@@ -167,8 +167,9 @@ typedef struct {
 	VALUE Str;
 	VALUE Arr;
 	VALUE Fun;
-		VALUE Closure;
+		VALUE UserDefinedMethod;
 		VALUE NativeMethod;
+		VALUE MultiMethod;
 	VALUE Any;
 		VALUE BasicTypeInstance;
 		VALUE NormalTypeInstance;
@@ -177,6 +178,7 @@ typedef struct {
 		VALUE BasicType;
 		VALUE NormalType;
 	VALUE Hash;
+	VALUE LLHashEntry;
 	VALUE CLib;
 	VALUE CSym;
 	VALUE RegExp;
@@ -187,6 +189,7 @@ typedef struct {
 	VALUE c_pthread_t;
 	VALUE c_pthread_attr_t;
 	VALUE c_pthread_mutex_t;
+	VALUE c_pthread_mutexattr_t;
 	// TODO: VALUE c_pthread_mutex_tAttr;
 
 	VALUE c_ffi_type;
@@ -203,7 +206,7 @@ typedef struct {
 				VALUE KeyNotFound;
 				VALUE IndexNotFound;
 					VALUE EmptyArrayFail;
-				VALUE AttrNotFound;
+				VALUE FieldNotFound;
 				VALUE GlobalNotFound;
 			VALUE UndefinedLocalVar;
 			VALUE InvalidArgument;
@@ -212,11 +215,13 @@ typedef struct {
 			VALUE RegExpCompileFail;
 			VALUE CallFail;
 				VALUE DontKnowHowToCall;
-				VALUE ImplNotFound;
+				VALUE MethodNotFound;
 				VALUE StackDepthFail;
 				VALUE ArgsMismatch;
 			VALUE SwitchFail;
 			VALUE DlopenFail;
+			VALUE DecodeFail;
+				VALUE JsonDecodeFail;
 
 	VALUE Return;
 
@@ -237,7 +242,7 @@ typedef struct {
 		VALUE NgsStrCompExp;
 		VALUE NgsStrCompSplatExp;
 
-	VALUE impl_not_found_handler;
+	VALUE method_not_found_handler;
 	VALUE global_not_found_handler;
 	VALUE init;
 	VALUE call;
@@ -319,6 +324,7 @@ enum opcodes {
 	OP_TO_ARR,
 	OP_TO_HASH,
 	OP_ARR_APPEND,
+	OP_ARR_APPEND2,
 	OP_ARR_CONCAT,
 	OP_GUARD,
 	OP_TRY_START,
@@ -330,22 +336,26 @@ enum opcodes {
 	OP_MAKE_CMD,
 	OP_SET_CLOSURE_NAME,
 	OP_SET_CLOSURE_DOC,
+	OP_SET_CLOSURE_NS,
 	OP_HASH_SET,
 	OP_HASH_UPDATE,
 	OP_PUSH_KWARGS_MARKER,
 	OP_MAKE_REDIR,
 	OP_SUPER,
+	OP_MAKE_MULTIMETHOD,
+	OP_MULTIMETHOD_APPEND,
+	OP_MULTIMETHOD_REVERSE,
 	NUMBER_OF_OPCODES,
 };
 
 extern char *opcodes_names[NUMBER_OF_OPCODES];
 
-enum range_attr {
-	RANGE_ATTR_START = 0,
-	RANGE_ATTR_END = 1,
-	RANGE_ATTR_INCLUDE_START = 2,
-	RANGE_ATTR_INCLUDE_END = 3,
-	RANGE_ATTR_STEP = 4,
+enum range_field {
+	RANGE_FIELD_START = 0,
+	RANGE_FIELD_END = 1,
+	RANGE_FIELD_INCLUDE_START = 2,
+	RANGE_FIELD_INCLUDE_END = 3,
+	RANGE_FIELD_STEP = 4,
 };
 
 typedef METHOD_RESULT (*VM_FUNC)(const VALUE *argv, VALUE *result);

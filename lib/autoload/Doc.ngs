@@ -1,0 +1,179 @@
+ns {
+
+	doc EXPERIMENTAL. Do not use! Defines types and methods to work with document nodes. Can be used to relatively conveniently generate HTML.
+	F _doc() {
+
+	}
+
+	_exports.attrs(_doc.Arr()[0].attrs())
+	global init, push, inspect, Arr
+
+	doc Document part. May represent one element (which might have children) or group of elements.
+	type Part
+
+		doc Any document part that can contain other elements.
+		type Container(Part)
+
+			doc Document node which can have child nodes.
+			doc children - Arr
+			type Node(Container)
+
+			doc A group of document nodes
+			doc children - Arr
+			type Group(Container)
+
+		doc Textual document part. Textual can not contain other nodes.
+		doc txt - Str
+		type Textual(Part)
+
+			doc Comment document part.
+			type Comment(Textual)
+
+			doc Text document part.
+			type Text(Textual)
+
+	F init_children(c:Container) {
+		if c.children is Null {
+			c.children = []
+		}
+		c.children .= map(only(Str, Text))
+	}
+
+	doc Initialize document node
+	doc %EX - Doc::Node('span', class='inline-param') with [
+	doc %EX - 	Doc::Text(param.name)
+	doc %EX - 	Doc::Text(':')
+	doc %EX - 	Doc::Text(param.type.name)
+	doc %EX - 	...
+	doc %EX - ]
+	F init(n:Node, name:Str, children:Arr=null, **attrs) {
+		init(args())
+		init_children(n)
+	}
+
+	doc Initialize document nodes group
+	doc %EX - Doc::Group() with [
+	doc %EX - 	Doc::Text('something')
+	doc %EX - 	...
+	doc %EX - ]
+	F init(g:Group, children:Arr=null, **attrs) {
+		init(args())
+		init_children(g)
+	}
+
+
+	doc Initialize text fragment of a document
+	doc %EX - Doc::Text(':')
+	F init(t:Textual, txt:Str) init(args())
+
+	doc EXPERIMENTAL! Do not use!
+	F push(c:Container, p:Part) c.children.push(p)
+
+	doc Get all items (children) of document elements group
+	doc %RET - Arr
+	F Arr(g:Group) g.children
+
+	F name(p:Part) null
+	F name(n:Node) n.name
+
+	F children(p:Part) []
+	F children(c:Container) c.children
+
+	F each_child(p:Part, cb:Fun) p.children().each(cb)
+	F map_children(p:Part, mapper:Fun) p.children().map(mapper)
+
+	# Open issue: what should be the correct order of "parents" when passed to transformer() in transform() and to cb() in visit()
+
+	F Transformer(x:Fun) x
+
+	F Transformer(x:Hash) {
+		t = F generated_transformer(p) {
+			k = if p is Node then p.name else p.typeof()
+			k not in x throws NotImplemented("Doc::transform was not given transformer for Doc::Part '$k'").set('key', k)
+			x[k](p)
+		}
+	}
+
+	# TODO: maybe remove options?
+	# Children are visited first so when parent is visited it has the transformed children to pack into result
+	F transform(p:Part, transformer) {
+		t = Transformer(transformer)
+		t(p)
+	}
+
+	F transform(dps:Arr, transformer) {
+		guard dps.all(Part)
+		t = Transformer(transformer)
+		dps.map(transform(X, t))
+	}
+
+	F visit(p:Part, cb:Fun, parents:Arr=[]) {
+		next_parents = parents + [p]
+		p.each_child({visit(A, cb, next_parents)})
+		cb(p, parents)
+	}
+
+	F Html(n:Node) {
+
+		ret = collector/'' {
+			collect("<${n.name}")
+			n.attrs.each(F(k, v) {
+				collect(" $k=\"${encode_html_attr(Str(v))}\"")
+			})
+
+			if n.children {
+				collect(">")
+				n.map_children(Html).each(F(child_text) {
+					collect(child_text)
+				})
+				collect("</${n.name}>")
+			} else {
+				collect("/>")
+			}
+		}
+	}
+
+	doc Create HTML document from the give top level document node
+	doc %RET - Str
+	F HtmlRoot(n:Node) {
+		'<!DOCTYPE html>\n' + Html(n)
+	}
+
+	F Html(t:Text) encode_html(t.txt)
+
+	F Html(g:Group) g.map_children(Html).join('')
+
+	if ENV.get('NGS_DOC_HTML_STATS') {
+		s = Stats()
+		F Html(x) {
+			s.push(x.typeof())
+			super(x)
+		}
+		exit_hook.push({echo(s)})
+	}
+
+	doc Inspect document node
+	doc %RET - Arr of Str
+	F inspect(n:Node, levels=2) {
+		collector {
+			c = collect
+			c("Doc::" + n.typeof().name + (if 'name' in n then " ${n.name}" else "")) # later - maybe typeof can return namespace name?
+
+			n.attrs.each(F(k, v) {
+				c("  Attribute [${SafeStr(k)}] = ${SafeStr(v)}")
+			})
+
+			if levels > 0 {
+				n.children.each_idx_val(F(idx, val) {
+					# echo("child $levels - $idx")
+					("  Child $idx: " + inspect(val, levels-1)) % c
+				})
+			} else {
+				n.children.each_idx_val(F(idx, val) {
+					c("  Child $idx: ${SafeStr(val)}")
+				})
+			}
+		}
+	}
+
+}

@@ -125,7 +125,7 @@ ast_node *call_node_partial_application(ast_node *orig, int location[4]) {
 	//   first_child->next_sibling - args
 	//   first_child->next_sibling children - [arg]
 	// Option 2:
-	//   orig - ATTR_NODE (which is later treated as call node)
+	//   orig - FIELD_NODE (which is later treated as call node)
 
 	// Handle erroneously wrapped X.something when it's actually X.something(blah)
 	if(orig->type == CALL_NODE && orig->first_child->type == FUNC_NODE && orig->first_child->data) {
@@ -134,10 +134,10 @@ ast_node *call_node_partial_application(ast_node *orig, int location[4]) {
 		return wrap_in_func(orig, 0, location, "Partial application syntax - X.something(blah)", 1, 3, "X", "Any", "Y", "Any", "Z", "Any");
 	}
 
-	save_orig = orig->type == ATTR_NODE;
+	save_orig = orig->type == FIELD_NODE;
 
 	p = orig->first_child;
-	if(p->type == ATTR_NODE) {
+	if(p->type == FIELD_NODE) {
 		// TODO: apply call_node_partial_application later so it will not be a special case?
 		p = p->first_child;
 	}
@@ -147,7 +147,7 @@ ast_node *call_node_partial_application(ast_node *orig, int location[4]) {
 			return wrap_in_func(orig, save_orig, location, "Partial application syntax", 1, 3, "X", "Any", "Y", "Any", "Z", "Any");
 		}
 	}
-	if(orig->type == ATTR_NODE) {
+	if(orig->type == FIELD_NODE) {
 		if(orig->first_child->next_sibling->type == EXPRESSIONS_NODE) {
 			p = orig->first_child->next_sibling->first_child;
 			if(p && !p->next_sibling && p->type == IDENTIFIER_NODE) {
@@ -464,7 +464,7 @@ binop-expression-inner =
 
 binop = binop1 | binop2
 
-binop1 = space? (
+binop1 = inline_space? (
 	  <"|">  @@ 120 @@
 	| <"==="> @@ 130 @@
 	| <"!=="> @@ 130 @@
@@ -488,7 +488,7 @@ binop1 = space? (
 	| <"\\"> @@ 200 @@
 	) space?
 
-binop2 = space op:binop2op space { $$ = op; }
+binop2 = inline_space op:binop2op space { $$ = op; }
 
 binop2op =
 	  <"is not">  @@ 90 @@
@@ -558,10 +558,10 @@ chain-expression = b:basic-expression (
 				e->first_child->next_sibling->first_child = call_arg1;
 				b->next_sibling = e;
 			} else {
-				MAKE_NODE(attr_node, ATTR_NODE);
-					append_ast_node_child(attr_node, copy_ast_tree(b));
-					append_ast_node_child(attr_node, e);
-				b->next_sibling = attr_node;
+				MAKE_NODE(field_node, FIELD_NODE);
+					append_ast_node_child(field_node, copy_ast_tree(b));
+					append_ast_node_child(field_node, e);
+				b->next_sibling = field_node;
 			}
 
 			b = ret;
@@ -575,7 +575,7 @@ chain-expression = b:basic-expression (
 		}
 		|
 		"." i:super {
-			MAKE_NODE(ret, ATTR_NODE);
+			MAKE_NODE(ret, FIELD_NODE);
 				ret->number = 902;
 				ret->first_child = b;
 				ret->first_child->next_sibling = i;
@@ -584,7 +584,7 @@ chain-expression = b:basic-expression (
 		}
 		|
 		".(" space? e:expression space? ")" {
-			MAKE_NODE(ret, ATTR_NODE);
+			MAKE_NODE(ret, FIELD_NODE);
 				ret->number = 902;
 				ret->first_child = b;
 				// Expressions node is needed because otherwise if e is identifier
@@ -597,7 +597,7 @@ chain-expression = b:basic-expression (
 		}
 		|
 		"." i:identifier {
-			MAKE_NODE(ret, ATTR_NODE);
+			MAKE_NODE(ret, FIELD_NODE);
 				ret->number = 902;
 				ret->first_child = b;
 				ret->first_child->next_sibling = i;
@@ -667,6 +667,7 @@ basic-expression =
 	| hash-literal
 	| abc-function-literal
 	| imm-hash-literal
+	| tree-literal
 	| "(" space? e:expression space? ")" { MAKE_NODE(ret, EXPRESSIONS_NODE); ret->name = "()"; ret->first_child = e; ret->last_child = e; $$ = ret; }
 
 assignment =
@@ -796,9 +797,9 @@ function-definition-default-value =
 
 namespace = "ns" opt_params:namespace-optional-parameters c:curly-code-block {
 
-		// ns { c }
+		// ns(opt_params) { c }
 		// (transforms to)
-		// F() {
+		// F(opt_params) {
 		//   local _exports
 		//   _exports = {}
 		//   c
@@ -820,6 +821,12 @@ namespace = "ns" opt_params:namespace-optional-parameters c:curly-code-block {
 				MAKE_NODE(empty_hash, HASH_LIT_NODE);
 				append_ast_node_child(set_exports, empty_hash);
 			append_ast_node_child(code, set_exports);
+
+			// SET NAMESPACE FOR COMPILER PHASE
+			MAKE_NODE(set_ns, SET_NS_NODE);
+				MAKE_IDENTIFIER_NODE(set_ns_exports_identifier, "_exports")
+				append_ast_node_child(set_ns, set_ns_exports_identifier);
+			append_ast_node_child(code, set_ns);
 
 			// c, the original body
 			append_ast_node_child(code, c);
@@ -1055,7 +1062,7 @@ imm-array-literal =
 				MAKE_NODE(ret, ARR_LIT_NODE);
 				$$ = ret;
 		}
-		| "%[" ws:imm-array-words "]" {
+		| "%[" ws:imm-array-words space? "]" {
 				MAKE_NODE(ret, ARR_LIT_NODE);
 				ret->first_child = ws->first_child->next_sibling->first_child;
 				$$ = ret;
@@ -1063,7 +1070,7 @@ imm-array-literal =
 		}
 
 imm-array-words = acc:command-words-node (
-		inline_space?
+		space?
 		(
 			array-command-word {
 				append_ast_node_child(acc->first_child->next_sibling, $$);
@@ -1148,6 +1155,40 @@ imm-hash-words = acc:command-words-node (
 	)+ {
 	$$ = acc;
 	CAPTURE_LOCATION($$);
+}
+
+tree-literal = "\\" i:identifier-as-text n:tree-node (inline_space? attr:identifier-as-text inline_space? "=" inline_space? e:expression {
+		MAKE_NODE(kv, EXPRESSIONS_NODE);
+		kv->first_child = attr;
+		kv->last_child = e;
+		attr->next_sibling = e;
+
+		append_ast_node_child(n->first_child->next_sibling->first_child->first_child, kv);
+	})* (inline_space? arr:array-literal {
+		n->first_child->next_sibling->first_child->next_sibling->first_child = arr;
+	})? {
+		MAKE_REQ_ARG_NODE(a0, i);
+		a0->next_sibling = n->first_child->next_sibling->first_child;
+		n->first_child->next_sibling->first_child = a0;
+	$$ = n;
+	CAPTURE_LOCATION($$);
+}
+
+tree-node = {
+	MAKE_NODE(ret, CALL_NODE);
+		MAKE_IDENTIFIER_NODE(func, "\\");
+		MAKE_NODE(args, ARGS_NODE);
+			MAKE_NODE(h, HASH_LIT_NODE);
+			MAKE_REQ_ARG_NODE(a1, h);
+			MAKE_NODE(arr, ARR_LIT_NODE);
+			MAKE_REQ_ARG_NODE(a2, arr);
+			a1->next_sibling = a2;
+			args->first_child = a1;
+		ret->first_child = func;
+		func->next_sibling = args;
+	$$ = ret;
+	CAPTURE_LOCATION($$);
+
 }
 
 table-literal = "table" space? "{" space? table:table-node (ws:imm-array-words {
@@ -1353,20 +1394,20 @@ econd-keyword   = "econd"   { MAKE_NODE(ret, SWITCH_NODE); ret->number = SWITCH_
 
 
 number = 
-	<[-+]?"0x"[0-9a-fA-F]+> {
+	<[-+]?"0x"[0-9a-fA-F]+> ! [a-zA-Z] {
 		MAKE_NODE(ret, INT_NODE);
 		ret->number = strtol(yytext, NULL, 16);
 		$$ = ret;
 	}
 	|
-	<[-+]?[0-9]+[.][0-9]+> {
+	<[-+]?[0-9]+[.][0-9]+> ! [a-zA-Z] {
 		MAKE_NODE(ret, REAL_NODE);
 		ret->data = NGS_MALLOC(sizeof(NGS_REAL));
 		*(NGS_REAL *)ret->data = strtod(yytext, NULL);
 		$$ = ret;
 	}
 	|
-	<[-+]?[0-9]+> {
+	<[-+]?[0-9]+> ! [a-zA-Z] {
 		MAKE_NODE(ret, INT_NODE);
 		ret->number = atol(yytext);
 		$$ = ret;
@@ -1608,10 +1649,16 @@ type = doc:optional-doc inline_space? "type" space i:identifier inline_space? op
 			call->first_child = type_identifier;
 			MAKE_STRING_NODE(type_string, ngs_strdup(i->name));
 			MAKE_REQ_ARG_NODE(a1, type_string);
-				MAKE_REQ_ARG_NODE(a2, doc);
-				a1->next_sibling = a2;
+
+			MAKE_REQ_ARG_NODE(a2, doc);
+			a1->next_sibling = a2;
+
+			MAKE_NODE(ns, GET_NS_NODE);
+			MAKE_REQ_ARG_NODE(a3, ns);
+			a2->next_sibling = a3;
+
 			if(opt_args->type != NULL_NODE) {
-				a2->next_sibling = opt_args->first_child;
+				a3->next_sibling = opt_args->first_child;
 				opt_args->first_child = a1;
 				type_identifier->next_sibling = opt_args;
 			} else {
@@ -1790,12 +1837,14 @@ command-word =
 	}
 
 array-command-word =
-	command-word
+	number
+	| command-word
 	| imm-array-literal
 	| imm-hash-literal
 
 hash-command-word =
-	basic-command-word
+	number
+	| basic-command-word
 	| imm-array-literal
 	| imm-hash-literal
 	| "$**" c:code-block {

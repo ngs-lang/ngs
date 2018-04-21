@@ -92,6 +92,13 @@ static void _dump(VALUE v, int level) {
 		goto exit;
 	}
 
+	if(IS_MULMETHOD(v)) {
+		printf("%*s* multimethod\n", level << 1, "");
+		printf("%*s* methods\n", (level+1) << 1, "");
+		_dump(MULTIMETHOD_METHODS(v), level+2);
+		goto exit;
+	}
+
 	if(IS_HASH(v)) {
 		printf("%*s* hash with total of %zu items in %zu buckets at %p\n", level << 1, "", OBJ_LEN(v), HASH_BUCKETS_N(v), OBJ_DATA_PTR(v));
 		buckets = OBJ_DATA_PTR(v);
@@ -143,7 +150,7 @@ static void _dump(VALUE v, int level) {
 
 	if(IS_NORMAL_TYPE_INSTANCE(v)) {
 		printf("%*s* user type instance (type and fields optionally follow)\n", level << 1, "");
-		// level < 4 so that uncaught exception ImplNotFound could display the type of the arguments
+		// level < 4 so that uncaught exception MethodNotFound could display the type of the arguments
 		if(level < 4) {
 			HASH_OBJECT_ENTRY *e;
 			VALUE fields = NGS_TYPE_FIELDS(NORMAL_TYPE_INSTANCE_TYPE(v));
@@ -232,6 +239,35 @@ VALUE make_array_with_values(size_t len, const VALUE *values) {
 	return ret;
 }
 
+VALUE _make_multimethod() {
+	VALUE ret;
+	MULTIMETHOD_OBJECT *multimethod;
+	multimethod = NGS_MALLOC(sizeof(*multimethod));
+	assert(multimethod);
+	SET_OBJ(ret, multimethod);
+	OBJ_TYPE_NUM(ret) = T_MULMETHOD;
+	return ret;
+}
+
+VALUE make_multimethod() {
+	VALUE ret = _make_multimethod();
+	MULTIMETHOD_METHODS(ret) = make_array(0);
+	return ret;
+}
+
+VALUE make_multimethod_with_value(const VALUE value) {
+	VALUE ret = _make_multimethod();
+	MULTIMETHOD_METHODS(ret) = make_array(1);
+	ARRAY_ITEMS(MULTIMETHOD_METHODS(ret))[0] = value;
+	return ret;
+}
+
+VALUE make_multimethod_from_array(const VALUE arr) {
+	VALUE ret = _make_multimethod();
+	MULTIMETHOD_METHODS(ret) = arr;
+	return ret;
+}
+
 VALUE make_hash(size_t start_buckets) {
 	VALUE ret;
 	HASH_OBJECT *hash;
@@ -243,6 +279,7 @@ VALUE make_hash(size_t start_buckets) {
 
 	if(start_buckets) {
 		OBJ_DATA_PTR(ret) = NGS_MALLOC(start_buckets * sizeof(HASH_OBJECT_ENTRY *));
+		assert(OBJ_DATA_PTR(ret));
 		memset(OBJ_DATA_PTR(ret), 0, start_buckets * sizeof(HASH_OBJECT_ENTRY *)); // XXX check if needed
 	} else {
 		OBJ_DATA_PTR(ret) = NULL;
@@ -264,14 +301,14 @@ VALUE make_normal_type(VALUE name) {
 	SET_OBJ(ret, t);
 	OBJ_TYPE_NUM(ret) = T_TYPE;
 
+	VALUE ctr = make_normal_type_constructor(ret);
+
 	NGS_TYPE_NAME(ret) = name;
 	NGS_TYPE_FIELDS(ret) = make_hash(8); // Hash: name->index
-	NGS_TYPE_CONSTRUCTORS(ret) = make_array(1);
+	NGS_TYPE_CONSTRUCTORS(ret) = make_multimethod_with_value(ctr);
 	NGS_TYPE_PARENTS(ret) = make_array(0);
+	NGS_TYPE_USER(ret) = make_hash(0);
 	OBJ_ATTRS(ret) = make_hash(2);
-
-	VALUE ctr = make_normal_type_constructor(ret);
-	ARRAY_ITEMS(NGS_TYPE_CONSTRUCTORS(ret))[0] = ctr;
 
 	return ret;
 }
@@ -303,12 +340,12 @@ VALUE make_normal_type_instance(VALUE normal_type) {
 	return ret;
 }
 
-METHOD_RESULT get_normal_type_instace_attribute(VALUE obj, VALUE attr, VALUE *result) {
+METHOD_RESULT get_normal_type_instace_field(VALUE obj, VALUE field, VALUE *result) {
 	VALUE ut;
 	HASH_OBJECT_ENTRY *e;
 	size_t n;
 	ut = NORMAL_TYPE_INSTANCE_TYPE(obj);
-	e = get_hash_key(NGS_TYPE_FIELDS(ut), attr);
+	e = get_hash_key(NGS_TYPE_FIELDS(ut), field);
 	if(!e) {
 		return METHOD_EXCEPTION;
 	}
@@ -323,17 +360,17 @@ METHOD_RESULT get_normal_type_instace_attribute(VALUE obj, VALUE attr, VALUE *re
 	return METHOD_OK;
 }
 
-void set_normal_type_instance_attribute(VALUE obj, VALUE attr, VALUE v) {
+void set_normal_type_instance_field(VALUE obj, VALUE field, VALUE v) {
 	VALUE ut;
 	HASH_OBJECT_ENTRY *e;
 	size_t n;
 	ut = NORMAL_TYPE_INSTANCE_TYPE(obj);
-	e = get_hash_key(NGS_TYPE_FIELDS(ut), attr);
+	e = get_hash_key(NGS_TYPE_FIELDS(ut), field);
 	if(e) {
 		n = GET_INT(e->val);
 	} else {
 		n = OBJ_LEN(NGS_TYPE_FIELDS(ut));
-		set_hash_key(NGS_TYPE_FIELDS(ut), attr, MAKE_INT(n));
+		set_hash_key(NGS_TYPE_FIELDS(ut), field, MAKE_INT(n));
 	}
 	// TODO: more optimized
 	while(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(obj)) < n) {
@@ -396,7 +433,7 @@ uint32_t hash(VALUE v) {
 		return ret;
 	}
 	if(IS_OBJ(v)) {
-		// Warning: only using lower 32 significant bits out of 60 significan bits on x86_64.
+		// Warning: only using lower 32 significant bits out of 60 significant bits on x86_64.
 		// Observed to be 16 bytes aligned on x86_64 Linux. Discarding zero bits.
 		t.i = v.num >> 4;
 		ret = FNV_OFFSET_BASIS;
@@ -624,6 +661,11 @@ void array_push(VALUE arr, VALUE v) {
 	arr_items[o->len++] = v;
 }
 
+void push_multimethod_method(VALUE multimethod, const VALUE method) {
+	assert(IS_MULMETHOD(multimethod));
+	array_push(MULTIMETHOD_METHODS(multimethod), method);
+}
+
 // TODO: shring allocated memory
 VALUE array_shift(VALUE arr) {
 	VALUE ret;
@@ -748,6 +790,7 @@ VALUE value_type(VM *vm, VALUE val) {
 };
 
 // TODO: T_ANY, maybe some other special cases
+// TODO: Fix for ut_child being internal type
 int type_is_type(VALUE ut_child, VALUE ut_parent) {
 	if(ut_child.ptr == ut_parent.ptr) { return 1; }
 	size_t len, i;
@@ -783,14 +826,7 @@ int obj_is_of_type(VM *vm, VALUE obj, VALUE t) {
 		OBJ_C_OBJ_IS_OF_TYPE(T_NORMTI, IS_NORMAL_TYPE_INSTANCE);
 		OBJ_C_OBJ_IS_OF_TYPE(T_BASICTI, IS_BASIC_TYPE_INSTANCE);
 		if(tid == T_FUN) {
-			if(IS_ARRAY(obj)) {
-				if(OBJ_LEN(obj)) {
-					return obj_is_of_type(vm, ARRAY_ITEMS(obj)[0], t);
-				} else {
-					return 0;
-				}
-			}
-			return IS_NATIVE_METHOD(obj) || IS_CLOSURE(obj) || IS_NGS_TYPE(obj);
+			return IS_MULMETHOD(obj) || IS_NATIVE_METHOD(obj) || IS_CLOSURE(obj) || IS_NGS_TYPE(obj);
 		}
 		OBJ_C_OBJ_IS_OF_TYPE(T_NORMT, IS_NORMAL_TYPE);
 		OBJ_C_OBJ_IS_OF_TYPE(T_BASICT, IS_BASIC_TYPE);
@@ -871,7 +907,6 @@ VALUE _decode_json_kern(json_object *obj) {
 	assert(0 == "Internal error while parsing JSON");
 }
 
-// TODO: more meaningful exceptions
 METHOD_RESULT decode_json(VALUE s, VALUE *result) {
 	json_tokener *tok;
 	json_object  *jobj;
@@ -879,9 +914,9 @@ METHOD_RESULT decode_json(VALUE s, VALUE *result) {
 
 	tok = json_tokener_new();
 	if(!tok) {
-		*result = make_string("Failed to allocate parser");
+		*result = make_string("Failed to allocate JSON parser");
 		return METHOD_EXCEPTION;
-	} // TODO: Throw more specific exception
+	}
 
 	jobj = json_tokener_parse_ex(tok, OBJ_DATA_PTR(s), OBJ_LEN(s));
 	jerr = json_tokener_get_error(tok);
@@ -894,11 +929,6 @@ METHOD_RESULT decode_json(VALUE s, VALUE *result) {
 
 	if(jerr != json_tokener_success) {
 		*result = make_string(json_tokener_error_desc(jerr));
-		goto error;
-	} // TODO: Throw more specific exception
-
-	if(!jobj) {
-		*result = make_string("Failed to decode JSON - no resulting object");
 		goto error;
 	}
 
@@ -1017,7 +1047,7 @@ VALUE make_backtrace(VM *vm, CTX *ctx) {
 		ARRAY_ITEMS(frames)[i] = h;
 	}
 	ret = make_normal_type_instance(vm->Backtrace);
-	set_normal_type_instance_attribute(ret, make_string("frames"), frames);
+	set_normal_type_instance_field(ret, make_string("frames"), frames);
 	return ret;
 }
 
@@ -1047,6 +1077,15 @@ VALUE make_pthread_mutex() {
 	pm = NGS_MALLOC(sizeof(*pm));
 	pm->base.type.num = T_PTHREADMUTEX;
 	SET_OBJ(v, pm);
+	return v;
+}
+
+VALUE make_pthread_mutexattr() {
+	VALUE v;
+	PTHREADMUTEXATTR_OBJECT *pma;
+	pma = NGS_MALLOC(sizeof(*pma));
+	pma->base.type.num = T_PTHREADMUTEXATTR;
+	SET_OBJ(v, pma);
 	return v;
 }
 

@@ -79,7 +79,7 @@ ns(Igw=AWS::Igw, SecGroup=AWS::SecGroup, Subnet=AWS::Subnet, Vpc=AWS::Vpc, zones
 						LoadBalancerPort 443
 						InstanceProtocol TCP
 						InstancePort 443
-					}.n()
+					}
 				],
 				Subnets = AWS::Subnet(name_tag).expect(2),
 				SecurityGroups = SecGroup("ngs-test-elb", vpc),
@@ -89,7 +89,7 @@ ns(Igw=AWS::Igw, SecGroup=AWS::SecGroup, Subnet=AWS::Subnet, Vpc=AWS::Vpc, zones
 					HealthyThreshold 3
 					Interval 10
 					Target 'SSL:443'
-				}.n()
+				}
 		)
 	}
 	# 'Instances': AWS::Instance({'env': env, 'role': role}).expect()

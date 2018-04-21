@@ -39,6 +39,7 @@
 #define IDENTIFIERS_SCOPES (ctx->identifiers_scopes[ctx->locals_ptr-1])
 #define N_LOCALS (ctx->n_locals[ctx->locals_ptr-1])
 #define N_UPLEVELS (ctx->n_uplevels[ctx->locals_ptr-1])
+#define NS (ctx->ns[ctx->locals_ptr])
 #define STACK_DEPTH (ctx->stack_depth[ctx->locals_ptr])
 // #define IN_FUNCTION (ctx->locals_ptr)
 
@@ -327,7 +328,7 @@ void compile_identifier(COMPILATION_CONTEXT *ctx, char **buf, size_t *idx, char 
 	}
 }
 
-void compile_attr_name(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
+void compile_field_name(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
 	if(!need_result) {
 		return;
 	}
@@ -400,15 +401,36 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				OPCODE(*buf, OP_MAKE_ARR);
 				STACK_DEPTH++;
 			}
-			doing_named_args = 0;
 			argc = 0;
-			if(node->first_child->type == ATTR_NODE) {
+			if(node->first_child->type == FIELD_NODE) {
 				compile_main_section(ctx, node->first_child->first_child, buf, idx, allocated, NEED_RESULT);
 				if(have_arr_splat) {
 					OPCODE(*buf, OP_ARR_APPEND);
 				}
 				argc++;
 			}
+			for(ptr=node->first_child->next_sibling->first_child; ptr; ptr=ptr->next_sibling) {
+				assert(ptr->type == ARG_NODE);
+				if(ptr->first_child->next_sibling) {
+					continue;
+				}
+				if(ptr->first_child->type == ARR_SPLAT_NODE) {
+					compile_main_section(ctx, ptr->first_child->first_child, buf, idx, allocated, NEED_RESULT);
+					OPCODE(*buf, OP_TO_ARR);
+					OPCODE(*buf, OP_ARR_CONCAT);
+					continue;
+				}
+				if(ptr->first_child->type == HASH_SPLAT_NODE) {
+					continue;
+				}
+				compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+				STACK_DEPTH++;
+				argc++;
+				if(have_arr_splat) {
+					OPCODE(*buf, ptr->first_child->type == ARR_SPLAT_NODE ? OP_ARR_CONCAT : OP_ARR_APPEND);
+				}
+			}
+			doing_named_args = 0;
 			for(ptr=node->first_child->next_sibling->first_child; ptr; ptr=ptr->next_sibling) {
 				assert(ptr->type == ARG_NODE);
 				if(ptr->first_child->next_sibling) {
@@ -429,13 +451,6 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					OPCODE(*buf, OP_HASH_SET);
 					continue;
 				}
-				if(ptr->first_child->type == ARR_SPLAT_NODE) {
-					assert(!doing_named_args);
-					compile_main_section(ctx, ptr->first_child->first_child, buf, idx, allocated, NEED_RESULT);
-					OPCODE(*buf, OP_TO_ARR);
-					OPCODE(*buf, OP_ARR_CONCAT);
-					continue;
-				}
 				if(ptr->first_child->type == HASH_SPLAT_NODE) {
 					if(!doing_named_args) {
 						// Setup named arguments
@@ -443,18 +458,12 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 						// TODO: maybe special opcode for creating an empty hash?
 						OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0);
 						OPCODE(*buf, OP_MAKE_HASH);
+						// XXX needed? /// STACK_DEPTH++;
 						argc++;
 					}
 					compile_main_section(ctx, ptr->first_child->first_child, buf, idx, allocated, NEED_RESULT);
 					OPCODE(*buf, OP_HASH_UPDATE);
 					continue;
-				}
-				assert(!doing_named_args);
-				compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
-				STACK_DEPTH++;
-				argc++;
-				if(have_arr_splat) {
-					OPCODE(*buf, ptr->first_child->type == ARR_SPLAT_NODE ? OP_ARR_CONCAT : OP_ARR_APPEND);
 				}
 			}
 			if(doing_named_args) {
@@ -462,7 +471,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				OPCODE(*buf, OP_PUSH_KWARGS_MARKER);
 				argc++;
 				if(have_arr_splat) {
-					OPCODE(*buf, OP_ARR_APPEND);
+					OPCODE(*buf, OP_ARR_APPEND2);
 				}
 			}
 			if(!have_arr_splat) {
@@ -470,7 +479,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, argc);
 				STACK_DEPTH++;
 			}
-			if(node->first_child->type == ATTR_NODE) {
+			if(node->first_child->type == FIELD_NODE) {
 				callable = node->first_child->first_child->next_sibling;
 			} else {
 				callable = node->first_child;
@@ -481,7 +490,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			STACK_DEPTH = saved_stack_depth;
 			break;
 		case INDEX_NODE:
-		case ATTR_NODE:
+		case FIELD_NODE:
 		case NS_NODE:
 			DEBUG_COMPILER("COMPILER: %s %zu\n", "INDEX NODE", *idx);
 			OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
@@ -489,8 +498,8 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			STACK_DEPTH++;
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
 			STACK_DEPTH++;
-			if(node->type == ATTR_NODE || node->type == NS_NODE) {
-				compile_attr_name(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+			if(node->type == FIELD_NODE || node->type == NS_NODE) {
+				compile_field_name(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 			} else {
 				compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 			}
@@ -542,14 +551,14 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					OPCODE(*buf, OP_CALL);
 					POP_IF_DONT_NEED_RESULT(*buf);
 					break;
-				case ATTR_NODE:
+				case FIELD_NODE:
 				case NS_NODE:
 					OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
 					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
-					compile_attr_name(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+					compile_field_name(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 					compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 					OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 3);
-					compile_identifier(ctx, buf, idx, ptr->type == ATTR_NODE ? ".=" : "::=", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
+					compile_identifier(ctx, buf, idx, ptr->type == FIELD_NODE ? ".=" : "::=", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 					OPCODE(*buf, OP_CALL);
 					POP_IF_DONT_NEED_RESULT(*buf);
 					break;
@@ -635,6 +644,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			N_LOCALS = 0;
 			N_UPLEVELS = 0;
 			STACK_DEPTH = 0;
+			NS = NULL;
 			params_flags = 0;
 			// Arguments
 			for(ptr=node->first_child->first_child; ptr; ptr=ptr->next_sibling) {
@@ -706,6 +716,12 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling, buf, idx, allocated, NEED_RESULT);
 			OPCODE(*buf, OP_SET_CLOSURE_DOC);
 
+			// Namespace attribute
+			if(NS) {
+				compile_main_section(ctx, NS, buf, idx, allocated, NEED_RESULT);
+				OPCODE(*buf, OP_SET_CLOSURE_NS);
+			}
+
 			// Name
 			if(node->first_child->next_sibling->next_sibling->next_sibling) {
 				// Function has a name
@@ -714,6 +730,18 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				L8_STR(*buf, node->first_child->next_sibling->next_sibling->next_sibling->name);
 			}
 			POP_IF_DONT_NEED_RESULT(*buf);
+			break;
+		case SET_NS_NODE:
+			NS = node->first_child;
+			break;
+		case GET_NS_NODE:
+			if(NS) {
+				compile_main_section(ctx, NS, buf, idx, allocated, need_result);
+			} else {
+				if(need_result) {
+					OPCODE(*buf, OP_PUSH_NULL);
+				}
+			}
 			break;
 		case STR_COMPS_NODE: {
 			int have_splat = 0;
@@ -942,13 +970,12 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				OPCODE(*buf, OP_XCHG);
 
 				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 1); // One argument for the call of handler function(s)
-				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0); // Make array with zero elements
-				OPCODE(*buf, OP_MAKE_ARR);
+				OPCODE(*buf, OP_MAKE_MULTIMETHOD);
 				for(ptr=node->first_child->next_sibling; ptr; ptr=ptr->next_sibling) {
 					compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
-					OPCODE(*buf, OP_ARR_APPEND);
+					OPCODE(*buf, OP_MULTIMETHOD_APPEND);
 				}
-				OPCODE(*buf, OP_ARR_REVERSE);
+				OPCODE(*buf, OP_MULTIMETHOD_REVERSE);
 				OPCODE(*buf, OP_CALL_EXC);
 				POP_IF_DONT_NEED_RESULT(*buf);
 			} else {
@@ -1113,7 +1140,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			if(node->number & 1) {
 				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0);
 				compile_identifier(ctx, buf, idx, "SwitchFail", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
-				// TODO: attribute with offending value
+				// TODO: field with offending value
 				OPCODE(*buf, OP_CALL);
 				OPCODE(*buf, OP_THROW);
 			} else {
@@ -1201,7 +1228,7 @@ void compile_init_section(COMPILATION_CONTEXT *ctx, char **init_buf, size_t *idx
 	size_t i = 0;
 	DEBUG_COMPILER("%s", "entering compile_init_section()\n");
 	init_section_size = calculate_init_section_size(ctx);
-	buf = NGS_MALLOC(init_section_size);
+	buf = NGS_MALLOC_ATOMIC(init_section_size);
 	FOR_GLOBALS(
 		i++;
 	)
@@ -1240,7 +1267,7 @@ void compile_source_location_section(COMPILATION_CONTEXT *ctx, char **buf, size_
 // ast_node - the top level node
 char *compile(ast_node *node, char *source_file_name, size_t *len) {
 
-	char *buf = NGS_MALLOC(COMPILE_INITIAL_BUF_SIZE);
+	char *buf = NGS_MALLOC_ATOMIC(COMPILE_INITIAL_BUF_SIZE);
 	size_t main_allocated = COMPILE_INITIAL_BUF_SIZE;
 	size_t l;
 	COMPILATION_CONTEXT ctx;
@@ -1251,10 +1278,11 @@ char *compile(ast_node *node, char *source_file_name, size_t *len) {
 	// TODO: assert that got memory?
 	ctx.locals_ptr = 0;
 	ctx.stack_depth[0] = 0;
+	ctx.ns[0] = NULL;
 	ctx.source_file_name = source_file_name;
 	ctx.source_tracking_entries_count = 0;
 	ctx.source_tracking_entries_allocated = 1024;
-	ctx.source_tracking_entries = NGS_MALLOC(sizeof(source_tracking_entry) * ctx.source_tracking_entries_allocated);
+	ctx.source_tracking_entries = NGS_MALLOC_ATOMIC(sizeof(source_tracking_entry) * ctx.source_tracking_entries_allocated);
 	ctx.fill_in_break_addrs_ptr = 0;
 	ctx.fill_in_continue_addrs_ptr = 0;
 

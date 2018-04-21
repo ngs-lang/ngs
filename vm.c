@@ -7,6 +7,9 @@
 #include <sys/poll.h>
 #include <time.h>
 
+// GETTIMEOFDAY(2)
+#include <sys/time.h>
+
 #include <ffi.h>
 
 // ..., FMEMOPEN(3)
@@ -25,9 +28,6 @@
 #include <signal.h>
 // READ(2), LSEEK(2), FORK(2), EXECVE(2), DUP2(2)
 #include <unistd.h>
-
-// BCMP(3)
-#include <strings.h>
 
 // DIR
 #include <dirent.h>
@@ -101,22 +101,27 @@ char *opcodes_names[] = {
 	/* 43 */ "TO_ARR",
 	/* 44 */ "TO_HASH",
 	/* 45 */ "ARR_APPEND",
-	/* 46 */ "ARR_CONCAT",
-	/* 47 */ "GUARD",
-	/* 48 */ "TRY_START",
-	/* 49 */ "TRY_END",
-	/* 50 */ "ARR_REVERSE",
-	/* 51 */ "THROW",
-	/* 52 */ "MAKE_CMDS_PIPELINE",
-	/* 53 */ "MAKE_CMDS_PIPE",
-	/* 54 */ "MAKE_CMD",
-	/* 55 */ "SET_CLOSURE_NAME",
-	/* 56 */ "SET_CLOSURE_DOC",
-	/* 57 */ "HASH_SET",
-	/* 58 */ "HASH_UPDATE",
-	/* 59 */ "PUSH_KWARGS_MARKER",
-	/* 60 */ "MAKE_REDIR",
-	/* 61 */ "SUPER",
+	/* 46 */ "ARR_APPEND2",
+	/* 47 */ "ARR_CONCAT",
+	/* 48 */ "GUARD",
+	/* 49 */ "TRY_START",
+	/* 50 */ "TRY_END",
+	/* 51 */ "ARR_REVERSE",
+	/* 52 */ "THROW",
+	/* 53 */ "MAKE_CMDS_PIPELINE",
+	/* 54 */ "MAKE_CMDS_PIPE",
+	/* 55 */ "MAKE_CMD",
+	/* 56 */ "SET_CLOSURE_NAME",
+	/* 57 */ "SET_CLOSURE_DOC",
+	/* 58 */ "SET_CLOSURE_NS",
+	/* 59 */ "HASH_SET",
+	/* 60 */ "HASH_UPDATE",
+	/* 61 */ "PUSH_KWARGS_MARKER",
+	/* 62 */ "MAKE_REDIR",
+	/* 63 */ "SUPER",
+	/* 64 */ "MAKE_MULTIMETHOD",
+	/* 65 */ "MULTIMETHOD_APPEND",
+	/* 66 */ "MULTIMETHOD_REVERSE",
 };
 
 
@@ -145,7 +150,29 @@ char *opcodes_names[] = {
 #define ARG_LVI ARG(lvi, LOCAL_VAR_INDEX);
 #define ARG_GVI ARG(gvi, GLOBAL_VAR_INDEX);
 #define ARG_UVI ARG(uvi, UPVAR_INDEX);
-#define PUSH_FUNC(dst, fn) if(IS_NGS_TYPE(dst)) { array_push(NGS_TYPE_CONSTRUCTORS(dst), (fn)); } else { array_push(dst, fn); };
+
+#define PUSH_METHOD_EXC(msg, dst, fn) \
+	VALUE e; \
+	e = make_normal_type_instance(vm->InvalidArgument); \
+	set_normal_type_instance_field(e, make_string("message"), make_string(msg)); \
+	set_normal_type_instance_field(e, make_string("backtrace"), make_backtrace(vm, ctx)); \
+	set_normal_type_instance_field(e, make_string("target"), dst); \
+	set_normal_type_instance_field(e, make_string("method"), fn); \
+	*result = e; \
+	goto exception;
+
+#define PUSH_METHOD(dst, fn) \
+	if(IS_NGS_TYPE(dst)) { \
+		if(!IS_MULMETHOD(NGS_TYPE_CONSTRUCTORS(dst))) { \
+			PUSH_METHOD_EXC("Can not push method as type constructor is not a MultiMethod", dst, fn); \
+		} \
+		push_multimethod_method(NGS_TYPE_CONSTRUCTORS(dst), (fn)); \
+	} else { \
+		if(!IS_MULMETHOD(dst)) { \
+			PUSH_METHOD_EXC("Can not push method into non-MultiMethod. You are defining a method but the variable already exists and it is not a MultiMethod.", dst, fn); \
+		} \
+		push_multimethod_method(dst, fn); \
+	};
 // TODO: Exception
 #define CONVERTING_OP(test, type) \
 	assert(ctx->stack_ptr); \
@@ -173,7 +200,7 @@ char *opcodes_names[] = {
 #define METHOD_RETURN(v) { *result = (v); return METHOD_OK; }
 #define THROW_EXCEPTION(t) { *result = make_string(t); return METHOD_EXCEPTION; }
 #define THROW_EXCEPTION_INSTANCE(e) { \
-	set_normal_type_instance_attribute(e, make_string("backtrace"), make_backtrace(vm, ctx)); \
+	set_normal_type_instance_field(e, make_string("backtrace"), make_backtrace(vm, ctx)); \
 	*result = e; \
 	return METHOD_EXCEPTION; \
 }
@@ -275,9 +302,9 @@ METHOD_RESULT native_Return EXT_METHOD_PARAMS {
 		METHOD_RETURN(THIS_FRAME.ReturnInstance);
 	}
 	*result = make_normal_type_instance(vm->Return);
-	set_normal_type_instance_attribute(*result, make_string("closure"), THIS_FRAME.closure);
-	set_normal_type_instance_attribute(*result, make_string("depth"), MAKE_INT(ctx->stack_ptr-1));
-	set_normal_type_instance_attribute(*result, make_string("val"), MAKE_NULL);
+	set_normal_type_instance_field(*result, make_string("closure"), THIS_FRAME.closure);
+	set_normal_type_instance_field(*result, make_string("depth"), MAKE_INT(ctx->stack_ptr-1));
+	set_normal_type_instance_field(*result, make_string("val"), MAKE_NULL);
 	THIS_FRAME.ReturnInstance = *result;
 	METHOD_RETURN(*result);
 }
@@ -294,7 +321,7 @@ METHOD_RESULT native_pop_arr EXT_METHOD_PARAMS {
 	if(!OBJ_LEN(argv[0])) {
 		VALUE e;
 		e = make_normal_type_instance(vm->EmptyArrayFail);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("pop(arr:Arr) failed because of empty array"));
+		set_normal_type_instance_field(e, make_string("message"), make_string("pop(arr:Arr) failed because of empty array"));
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	*result = ARRAY_ITEMS(argv[0])[OBJ_LEN(argv[0])-1];
@@ -306,7 +333,7 @@ METHOD_RESULT native_shift_arr EXT_METHOD_PARAMS {
 	if(!OBJ_LEN(argv[0])) {
 		VALUE e;
 		e = make_normal_type_instance(vm->EmptyArrayFail);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("shift(arr:Arr) failed because of empty array"));
+		set_normal_type_instance_field(e, make_string("message"), make_string("shift(arr:Arr) failed because of empty array"));
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	METHOD_RETURN(array_shift(argv[0]));
@@ -340,8 +367,8 @@ METHOD_RESULT native_index_get_arr_int EXT_METHOD_PARAMS {
 	if((idx < 0) || (idx >= len)) {
 		VALUE e;
 		e = make_normal_type_instance(vm->IndexNotFound);
-		set_normal_type_instance_attribute(e, make_string("container"), argv[0]);
-		set_normal_type_instance_attribute(e, make_string("key"), argv[1]);
+		set_normal_type_instance_field(e, make_string("container"), argv[0]);
+		set_normal_type_instance_field(e, make_string("key"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	*result = ARRAY_ITEMS(argv[0])[idx];
@@ -356,8 +383,8 @@ METHOD_RESULT native_index_set_arr_int_any EXT_METHOD_PARAMS {
 	if((idx < 0) || (idx >= len)) {
 		VALUE e;
 		e = make_normal_type_instance(vm->IndexNotFound);
-		set_normal_type_instance_attribute(e, make_string("container"), argv[0]);
-		set_normal_type_instance_attribute(e, make_string("key"), argv[1]);
+		set_normal_type_instance_field(e, make_string("container"), argv[0]);
+		set_normal_type_instance_field(e, make_string("key"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	ARRAY_ITEMS(argv[0])[idx] = argv[2];
@@ -427,9 +454,9 @@ METHOD_RESULT native_Int_str_int EXT_METHOD_PARAMS {
 	if(nptr == endptr) {
 		VALUE e;
 		e = make_normal_type_instance(vm->InvalidArgument);
-		set_normal_type_instance_attribute(e, make_string("which"), make_string("First argument to Int(s:Str, base:Int)"));
-		set_normal_type_instance_attribute(e, make_string("given"), argv[0]);
-		set_normal_type_instance_attribute(e, make_string("expected"), make_string("Integer in the specified base"));
+		set_normal_type_instance_field(e, make_string("which"), make_string("First argument to Int(s:Str, base:Int)"));
+		set_normal_type_instance_field(e, make_string("given"), argv[0]);
+		set_normal_type_instance_field(e, make_string("expected"), make_string("Integer in the specified base"));
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	METHOD_RETURN(MAKE_INT(r));
@@ -506,8 +533,8 @@ METHOD_RESULT native_index_get_hash_any EXT_METHOD_PARAMS {
 	if(!e) {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->KeyNotFound);
-		set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
-		set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+		set_normal_type_instance_field(exc, make_string("container"), argv[0]);
+		set_normal_type_instance_field(exc, make_string("key"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	METHOD_RETURN(e->val)
@@ -519,11 +546,68 @@ METHOD_RESULT native_index_del_hash_any EXT_METHOD_PARAMS {
 	if(!del_hash_key(argv[0], argv[1])) {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->KeyNotFound);
-		set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
-		set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+		set_normal_type_instance_field(exc, make_string("container"), argv[0]);
+		set_normal_type_instance_field(exc, make_string("key"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	METHOD_RETURN(argv[0])
+}
+
+// TODO: factor out common in native_ll_hash_{head,tail}
+METHOD_RESULT native_ll_hash_head EXT_METHOD_PARAMS {
+	VALUE ret;
+	HASH_OBJECT_ENTRY *e = HASH_HEAD(argv[0]);
+	if(!e) {
+		METHOD_RETURN(MAKE_NULL);
+	};
+	HASH_ENTRY_OBJECT *heo;
+	heo = NGS_MALLOC(sizeof(*heo));
+	assert(heo);
+	heo->entry = e;
+	SET_OBJ(ret, heo);
+	OBJ_TYPE_NUM(ret) = T_LL_HASH_ENTRY;
+	METHOD_RETURN(ret);
+}
+
+METHOD_RESULT native_ll_hash_tail EXT_METHOD_PARAMS {
+	VALUE ret;
+	HASH_OBJECT_ENTRY *e = HASH_TAIL(argv[0]);
+	if(!e) {
+		METHOD_RETURN(MAKE_NULL);
+	};
+	HASH_ENTRY_OBJECT *heo;
+	heo = NGS_MALLOC(sizeof(*heo));
+	assert(heo);
+	heo->entry = e;
+	SET_OBJ(ret, heo);
+	OBJ_TYPE_NUM(ret) = T_LL_HASH_ENTRY;
+	METHOD_RETURN(ret);
+}
+
+METHOD_RESULT native_ll_hash_entry_key EXT_METHOD_PARAMS {
+	HASH_OBJECT_ENTRY *e = ((HASH_ENTRY_OBJECT *)(argv[0].ptr))->entry;
+	METHOD_RETURN(e->key);
+}
+
+METHOD_RESULT native_ll_hash_entry_val EXT_METHOD_PARAMS {
+	HASH_OBJECT_ENTRY *e = ((HASH_ENTRY_OBJECT *)(argv[0].ptr))->entry;
+	METHOD_RETURN(e->val);
+}
+
+METHOD_RESULT native_ll_hash_entry_next EXT_METHOD_PARAMS {
+	HASH_OBJECT_ENTRY *e = ((HASH_ENTRY_OBJECT *)(argv[0].ptr))->entry;
+	if(!e->insertion_order_next) {
+		METHOD_RETURN(MAKE_NULL);
+	};
+
+	VALUE ret;
+	HASH_ENTRY_OBJECT *heo;
+	heo = NGS_MALLOC(sizeof(*heo));
+	assert(heo);
+	heo->entry = e->insertion_order_next;
+	SET_OBJ(ret, heo);
+	OBJ_TYPE_NUM(ret) = T_LL_HASH_ENTRY;
+	METHOD_RETURN(ret);
 }
 
 METHOD_RESULT native_Hash_nti METHOD_PARAMS {
@@ -554,8 +638,8 @@ METHOD_RESULT native_c_dlopen_str_int EXT_METHOD_PARAMS {
 	if(!out) {
 		VALUE e;
 		e = make_normal_type_instance(vm->DlopenFail);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("Failed to dlopen()"));
-		set_normal_type_instance_attribute(e, make_string("filename"), argv[0]);
+		set_normal_type_instance_field(e, make_string("message"), make_string("Failed to dlopen()"));
+		set_normal_type_instance_field(e, make_string("filename"), argv[0]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	o = NGS_MALLOC(sizeof(*o));
@@ -581,9 +665,9 @@ METHOD_RESULT native_index_get_clib_str EXT_METHOD_PARAMS {
 	if(!o->base.val.ptr) {
 		VALUE e;
 		e = make_normal_type_instance(vm->Error);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("Failed to dlsym()"));
-		set_normal_type_instance_attribute(e, make_string("handle"), argv[0]);
-		set_normal_type_instance_attribute(e, make_string("symbol"), argv[1]);
+		set_normal_type_instance_field(e, make_string("message"), make_string("Failed to dlsym()"));
+		set_normal_type_instance_field(e, make_string("handle"), argv[0]);
+		set_normal_type_instance_field(e, make_string("symbol"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	o->lib = argv[0];
@@ -634,11 +718,6 @@ METHOD_RESULT native_c_read_int_int METHOD_PARAMS {
 // TODO: error handling support
 METHOD_RESULT native_c_write_int_str METHOD_PARAMS { METHOD_RETURN(MAKE_INT(write(GET_INT(argv[0]), OBJ_DATA_PTR(argv[1]), OBJ_LEN(argv[1])))); }
 
-// DUP2(2)
-METHOD_RESULT native_c_dup2 METHOD_PARAMS {
-	METHOD_RETURN(MAKE_INT(dup2(GET_INT(argv[0]), GET_INT(argv[1]))));
-}
-
 METHOD_RESULT native_c_lseek_int_int_str EXT_METHOD_PARAMS {
 	off_t offset;
 	const char *whence_str = obj_to_cstring(argv[2]);
@@ -655,10 +734,10 @@ METHOD_RESULT native_c_lseek_int_int_str EXT_METHOD_PARAMS {
 			} else {
 				VALUE exc;
 				exc = make_normal_type_instance(vm->InvalidArgument);
-				set_normal_type_instance_attribute(exc, make_string("which"), make_string("Third parameter to c_lseek(), 'whence'"));
-				set_normal_type_instance_attribute(exc, make_string("given"), argv[2]);
+				set_normal_type_instance_field(exc, make_string("which"), make_string("Third parameter to c_lseek(), 'whence'"));
+				set_normal_type_instance_field(exc, make_string("given"), argv[2]);
 				// TODO: Array of expected values maybe?
-				set_normal_type_instance_attribute(exc, make_string("expected"), make_string("One of: 'set', 'cur', 'end'"));
+				set_normal_type_instance_field(exc, make_string("expected"), make_string("One of: 'set', 'cur', 'end'"));
 				THROW_EXCEPTION_INSTANCE(exc);
 			}
 		}
@@ -678,7 +757,7 @@ METHOD_RESULT native_eq_str_str METHOD_PARAMS {
 	if(OBJ_LEN(argv[0]) != OBJ_LEN(argv[1])) { METHOD_RETURN(MAKE_BOOL(0)); }
 	if(OBJ_DATA_PTR(argv[0]) == OBJ_DATA_PTR(argv[1])) { METHOD_RETURN(MAKE_BOOL(1)); }
 	len = OBJ_LEN(argv[0]);
-	METHOD_RETURN(MAKE_BOOL(!bcmp(OBJ_DATA_PTR(argv[0]), OBJ_DATA_PTR(argv[1]), len)));
+	METHOD_RETURN(MAKE_BOOL(!memcmp(OBJ_DATA_PTR(argv[0]), OBJ_DATA_PTR(argv[1]), len)));
 }
 
 METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
@@ -695,38 +774,38 @@ METHOD_RESULT native_pos_str_str_int METHOD_PARAMS {
 // TODO: better than METHOD_ARGS_MISMATCH on include_start != true and include_end != false
 #define NATIVE_RANGE_INDEX_SETUP \
 	if(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(argv[1])) < 5) return METHOD_ARGS_MISMATCH; \
-	include_start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_INCLUDE_START]; \
+	include_start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_FIELD_INCLUDE_START]; \
 	if(!IS_BOOL(include_start)) return METHOD_ARGS_MISMATCH; \
 	if(!IS_TRUE(include_start)) return METHOD_ARGS_MISMATCH; \
-	include_end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_INCLUDE_END]; \
+	include_end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_FIELD_INCLUDE_END]; \
 	if(!IS_BOOL(include_end)) return METHOD_ARGS_MISMATCH; \
 	if(!IS_FALSE(include_end)) return METHOD_ARGS_MISMATCH; \
-	start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_START]; \
+	start = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_FIELD_START]; \
 	if(!IS_INT(start)) return METHOD_ARGS_MISMATCH; \
 	if(GET_INT(start) < 0) { \
-		exc = make_normal_type_instance(vm->InvalidArgument); \
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Negative range start")); \
+		exc = make_normal_type_instance(vm->IndexNotFound); \
+		set_normal_type_instance_field(exc, make_string("message"), make_string("Negative range start")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	} \
 	if(((size_t) GET_INT(start)) > OBJ_LEN(argv[0])) { \
-		exc = make_normal_type_instance(vm->InvalidArgument); \
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("NumRange starts after string/array end")); \
+		exc = make_normal_type_instance(vm->IndexNotFound); \
+		set_normal_type_instance_field(exc, make_string("message"), make_string("NumRange starts after string/array end")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	} \
-	end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_ATTR_END]; \
+	end = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[1]))[RANGE_FIELD_END]; \
 	if(IS_NULL(end)) { \
 		end = MAKE_INT(OBJ_LEN(argv[0])); \
 	} \
 	if(!IS_INT(end)) return METHOD_ARGS_MISMATCH; \
 	if(GET_INT(end) < GET_INT(start)) { \
 		exc = make_normal_type_instance(vm->InvalidArgument); \
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("NumRange end smaller than range start when calling [](s:Str, r:NumRange)")); \
+		set_normal_type_instance_field(exc, make_string("message"), make_string("NumRange end smaller than range start when calling [](s:Str, r:NumRange)")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	} \
 	len = GET_INT(end) - GET_INT(start); \
 	if(GET_INT(start) + len > OBJ_LEN(argv[0])) { \
-		exc = make_normal_type_instance(vm->InvalidArgument); \
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("NumRange ends after string end")); \
+		exc = make_normal_type_instance(vm->IndexNotFound); \
+		set_normal_type_instance_field(exc, make_string("message"), make_string("NumRange ends after string end")); \
 		THROW_EXCEPTION_INSTANCE(exc); \
 	}
 
@@ -812,9 +891,9 @@ METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 		VALUE exc;
 		char *err = NGS_MALLOC_ATOMIC(1024);
 		exc = make_normal_type_instance(vm->CompileFail);
-		set_normal_type_instance_attribute(exc, make_string("given"), argv[0]);
+		set_normal_type_instance_field(exc, make_string("given"), argv[0]);
 		snprintf(err, 1024, "Failed to parse at position %d (%s), rule %s", yyctx.fail_pos, sprintf_position(&yyctx, yyctx.fail_pos), yyctx.fail_rule);
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string(err));
+		set_normal_type_instance_field(exc, make_string("message"), make_string(err));
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	tree = yyctx.__;
@@ -839,9 +918,9 @@ METHOD_RESULT native_decode_json_str EXT_METHOD_PARAMS {
 	if(mr == METHOD_EXCEPTION) {
 		VALUE exc;
 		// TODO: more specific error
-		exc = make_normal_type_instance(vm->Error);
-		set_normal_type_instance_attribute(exc, make_string("message"), *result);
-		set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+		exc = make_normal_type_instance(vm->JsonDecodeFail);
+		set_normal_type_instance_field(exc, make_string("message"), *result);
+		set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 		*result = exc;
 	}
 	return mr;
@@ -855,9 +934,9 @@ METHOD_RESULT native_encode_json_obj EXT_METHOD_PARAMS {
 		VALUE exc;
 		// TODO: more specific error
 		exc = make_normal_type_instance(vm->Error);
-		// could be big... // set_normal_type_instance_attribute(exc, make_string("data"), argv[0]);
-		set_normal_type_instance_attribute(exc, make_string("message"), *result);
-		set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+		// could be big... // set_normal_type_instance_field(exc, make_string("data"), argv[0]);
+		set_normal_type_instance_field(exc, make_string("message"), *result);
+		set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 		*result = exc;
 	}
 	return mr;
@@ -883,6 +962,16 @@ METHOD_RESULT native_globals EXT_METHOD_PARAMS {
 }
 
 METHOD_RESULT native_c_time METHOD_PARAMS { (void) argv; METHOD_RETURN(MAKE_INT((long int)time(NULL))); }
+
+METHOD_RESULT native_c_gettimeofday METHOD_PARAMS {
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	VALUE ret;
+	ret = make_array(2);
+	ARRAY_ITEMS(ret)[0] = MAKE_INT(tv.tv_sec);
+	ARRAY_ITEMS(ret)[1] = MAKE_INT(tv.tv_usec);
+	METHOD_RETURN(ret);
+}
 
 #define ELT(value) *p = MAKE_INT(value); p++;
 METHOD_RESULT native_c_gmtime EXT_METHOD_PARAMS {
@@ -934,11 +1023,59 @@ METHOD_RESULT native_c_strftime METHOD_PARAMS {
 	}
 }
 
+// TODO: make 9 a constant
+METHOD_RESULT native_c_strptime EXT_METHOD_PARAMS {
+	VALUE ret = make_array(2);
+	struct tm t;
+	char *input = obj_to_cstring(argv[0]);
+	char *next_char = strptime(input, obj_to_cstring(argv[1]), &t);
+	// char *next_char = strptime("2018", "%Y", &t);
+	if(next_char == NULL) {
+		ARRAY_ITEMS(ret)[0] = MAKE_INT(0);
+		ARRAY_ITEMS(ret)[1] = MAKE_NULL;
+	} else {
+		ARRAY_ITEMS(ret)[0] = MAKE_INT(next_char - input);
+		VALUE ret_tm = make_normal_type_instance(vm->c_tm);
+		OBJ_DATA(ret_tm) = make_array(9);
+		VALUE *p = ARRAY_ITEMS(OBJ_DATA(ret_tm));
+		*(p++) = MAKE_INT(t.tm_sec);
+		*(p++) = MAKE_INT(t.tm_min);
+		*(p++) = MAKE_INT(t.tm_hour);
+		*(p++) = MAKE_INT(t.tm_mday);
+		*(p++) = MAKE_INT(t.tm_mon);
+		*(p++) = MAKE_INT(t.tm_year);
+		*(p++) = MAKE_INT(t.tm_wday);
+		*(p++) = MAKE_INT(t.tm_yday);
+		*(p++) = MAKE_INT(t.tm_isdst);
+		ARRAY_ITEMS(ret)[1] = ret_tm;
+	}
+	METHOD_RETURN(ret);
+}
+
+// TODO: factor out c_tm -> struct tm conversion
+METHOD_RESULT native_c_mktime METHOD_PARAMS {
+	struct tm t;
+	memset(&t, 0, sizeof(t));
+	t.tm_sec   = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[0]);
+	t.tm_min   = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[1]);
+	t.tm_hour  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[2]);
+	t.tm_mday  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[3]);
+	t.tm_mon   = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[4]);
+	t.tm_year  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[5]);
+	t.tm_year  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[5]);
+	t.tm_wday  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[6]);
+	t.tm_yday  = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[7]);
+	t.tm_isdst = GET_INT(ARRAY_ITEMS(OBJ_DATA(argv[0]))[8]);
+	time_t tt = mktime(&t);
+	METHOD_RETURN(MAKE_INT(tt));
+}
+
 
 METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_normal_type(argv[0])); }
 METHOD_RESULT native_type_str_doc METHOD_PARAMS {
 	*result = make_normal_type(argv[0]);
 	set_hash_key(OBJ_ATTRS(*result), make_string("doc"), argv[1]);
+	set_hash_key(OBJ_ATTRS(*result), make_string("ns"), argv[2]);
 	return METHOD_OK;
 }
 
@@ -947,29 +1084,29 @@ METHOD_RESULT native_typeof_any EXT_METHOD_PARAMS {
 	METHOD_RETURN(value_type(vm, argv[0]));
 }
 
-METHOD_RESULT native_get_attr_nti_str EXT_METHOD_PARAMS {
-	// WARNING: for now get_normal_type_instace_attribute can only throw AttrNotFound
+METHOD_RESULT native_get_field_nti_str EXT_METHOD_PARAMS {
+	// WARNING: for now get_normal_type_instace_field can only throw FieldNotFound
 	//          if it changes in future the calling convention below should be changed
 	//          The reason for such calling convention is not to pass the VM to
-	//          get_normal_type_instace_attribute() just so it will have access to the
+	//          get_normal_type_instace_field() just so it will have access to the
 	//          exceptions.
 	METHOD_RESULT mr;
 	(void) ctx;
-	mr = get_normal_type_instace_attribute(argv[0], argv[1], result);
+	mr = get_normal_type_instace_field(argv[0], argv[1], result);
 	if(mr == METHOD_EXCEPTION) {
 		VALUE exc;
-		exc = make_normal_type_instance(vm->AttrNotFound);
-		set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
-		set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+		exc = make_normal_type_instance(vm->FieldNotFound);
+		set_normal_type_instance_field(exc, make_string("container"), argv[0]);
+		set_normal_type_instance_field(exc, make_string("key"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	return mr;
 }
-METHOD_RESULT native_set_attr_nti_str_any METHOD_PARAMS { set_normal_type_instance_attribute(argv[0], argv[1], argv[2]); METHOD_RETURN(argv[2]); }
+METHOD_RESULT native_set_field_nti_str_any METHOD_PARAMS { set_normal_type_instance_field(argv[0], argv[1], argv[2]); METHOD_RETURN(argv[2]); }
 
 METHOD_RESULT native_in_nti_str METHOD_PARAMS {
 	METHOD_RESULT mr;
-	mr = get_normal_type_instace_attribute(argv[1], argv[0], result);
+	mr = get_normal_type_instace_field(argv[1], argv[0], result);
 	METHOD_RETURN(MAKE_BOOL(mr != METHOD_EXCEPTION));
 }
 
@@ -988,8 +1125,8 @@ METHOD_RESULT native_join_arr_str EXT_METHOD_PARAMS {
 		if(!IS_STRING(ARRAY_ITEMS(argv[0])[i])) {
 			VALUE exc;
 			exc = make_normal_type_instance(vm->InvalidArgument);
-			set_normal_type_instance_attribute(exc, make_string("message"), make_string("join - array must contain only strings"));
-			set_normal_type_instance_attribute(exc, make_string("given"), ARRAY_ITEMS(argv[0])[i]);
+			set_normal_type_instance_field(exc, make_string("message"), make_string("join - array must contain only strings"));
+			set_normal_type_instance_field(exc, make_string("given"), ARRAY_ITEMS(argv[0])[i]);
 			THROW_EXCEPTION_INSTANCE(exc);
 		}
 		dst_len += OBJ_LEN(ARRAY_ITEMS(argv[0])[i]);
@@ -1042,45 +1179,66 @@ METHOD_RESULT native_c_waitpid METHOD_PARAMS {
 	METHOD_RETURN(ret);
 }
 
-// TODO: dedup native_get_attr_bt_str / native_get_attr_nt_str
-METHOD_RESULT native_get_attr_bt_str EXT_METHOD_PARAMS {
+// TODO: dedup native_get_field_bt_str / native_get_field_nt_str
+METHOD_RESULT native_get_field_bt_str EXT_METHOD_PARAMS {
 	VALUE exc;
-	char *attr = obj_to_cstring(argv[1]);
+	char *field = obj_to_cstring(argv[1]);
 	(void) ctx;
-	if(!strcmp(attr, "constructors")) {
+	if(!strcmp(field, "constructors")) {
 		METHOD_RETURN(NGS_TYPE_CONSTRUCTORS(argv[0]));
 	}
-	if(!strcmp(attr, "name")) {
+	if(!strcmp(field, "name")) {
 		METHOD_RETURN(NGS_TYPE_NAME(argv[0]));
 	}
-	if(!strcmp(attr, "parents")) {
+	if(!strcmp(field, "parents")) {
 		METHOD_RETURN(NGS_TYPE_PARENTS(argv[0]));
 	}
 
-	exc = make_normal_type_instance(vm->AttrNotFound);
-	set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
-	set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+	exc = make_normal_type_instance(vm->FieldNotFound);
+	set_normal_type_instance_field(exc, make_string("container"), argv[0]);
+	set_normal_type_instance_field(exc, make_string("key"), argv[1]);
 	THROW_EXCEPTION_INSTANCE(exc);
 }
 
 // TODO: Factor out "constructors", "name", ...
-METHOD_RESULT native_get_attr_nt_str EXT_METHOD_PARAMS {
+METHOD_RESULT native_get_field_nt_str EXT_METHOD_PARAMS {
 	VALUE exc;
-	char *attr = obj_to_cstring(argv[1]);
+	char *field = obj_to_cstring(argv[1]);
 	(void) ctx;
-	if(!strcmp(attr, "constructors")) {
+	if(!strcmp(field, "constructors")) {
 		METHOD_RETURN(NGS_TYPE_CONSTRUCTORS(argv[0]));
 	}
-	if(!strcmp(attr, "name")) {
+	if(!strcmp(field, "name")) {
 		METHOD_RETURN(NGS_TYPE_NAME(argv[0]));
 	}
-	if(!strcmp(attr, "parents")) {
+	if(!strcmp(field, "parents")) {
 		METHOD_RETURN(NGS_TYPE_PARENTS(argv[0]));
 	}
+	if(!strcmp(field, "user")) {
+		METHOD_RETURN(NGS_TYPE_USER(argv[0]));
+	}
 
-	exc = make_normal_type_instance(vm->AttrNotFound);
-	set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
-	set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+	exc = make_normal_type_instance(vm->FieldNotFound);
+	set_normal_type_instance_field(exc, make_string("container"), argv[0]);
+	set_normal_type_instance_field(exc, make_string("key"), argv[1]);
+	THROW_EXCEPTION_INSTANCE(exc);
+}
+
+METHOD_RESULT native_set_field_nt_str EXT_METHOD_PARAMS {
+	VALUE exc;
+	char *field = obj_to_cstring(argv[1]);
+	(void) ctx;
+	if(!strcmp(field, "user")) {
+		NGS_TYPE_USER(argv[0]) = argv[2];
+		METHOD_RETURN(argv[0]);
+	}
+
+	exc = make_normal_type_instance(vm->FieldNotFound);
+	set_normal_type_instance_field(exc, make_string("container"), argv[0]);
+	set_normal_type_instance_field(exc, make_string("key"), argv[1]);
+	VALUE ak = make_array(1);
+	ARRAY_ITEMS(ak)[0] = make_string("user");
+	set_normal_type_instance_field(exc, make_string("available_keys"), ak);
 	THROW_EXCEPTION_INSTANCE(exc);
 }
 
@@ -1239,21 +1397,36 @@ METHOD_RESULT native_c_pthreadmutext METHOD_PARAMS {
 	METHOD_RETURN(make_pthread_mutex());
 }
 
+METHOD_RESULT native_c_pthreadmutext_pma METHOD_PARAMS {
+	(void) argv;
+	METHOD_RETURN(make_pthread_mutex());
+}
+
+METHOD_RESULT native_c_pthreadmutexattrt METHOD_PARAMS {
+	(void) argv;
+	METHOD_RETURN(make_pthread_mutexattr());
+}
+
+// https://linux.die.net/man/3/pthread_mutexattr_settype
+METHOD_RESULT native_c_pthreadmutexattrsettype_pma_int METHOD_PARAMS {
+	METHOD_RETURN(MAKE_INT(pthread_mutexattr_settype(&GET_PTHREADMUTEXATTR(argv[0]), GET_INT(argv[1]))));
+}
+
 // TODO: For gcc-5 and on consider: #define ATTR ((pthread_attr_t * restrict)&GET_PTHREADATTR(argv[0]))
 #define ATTR ((pthread_attr_t *)&GET_PTHREADATTR(argv[0]))
 // TODO: check range - i might be larger than supported MAKE_INT() argument
 #define INT_ATTR(name) \
-	if(!strcmp(attr, #name)) { \
+	if(!strcmp(field, #name)) { \
 		pthread_attr_get ## name(ATTR, &i); \
 		METHOD_RETURN(MAKE_INT(i)); \
 	}
 #define SIZE_ATTR(name) \
-	if(!strcmp(attr, #name)) { \
+	if(!strcmp(field, #name)) { \
 		pthread_attr_get ## name(ATTR, &size); \
 		METHOD_RETURN(MAKE_INT(size)); \
 	}
 METHOD_RESULT native_attr_pthreadattr METHOD_PARAMS {
-	char *attr = obj_to_cstring(argv[1]);
+	char *field = obj_to_cstring(argv[1]);
 	size_t size;
 	int i;
 	// TODO: check exit statuses maybe?
@@ -1278,13 +1451,14 @@ void *_pthread_start_routine(void *arg) {
 	NGS_PTHREAD_INIT_INFO *init;
 	CTX ctx;
 	VALUE *result;
-	// METHOD_RESULT mr;
+	METHOD_RESULT mr;
 	result = NGS_MALLOC(sizeof(*result));
-	*result = MAKE_NULL;
+	*result = make_array(2);
 	init = (NGS_PTHREAD_INIT_INFO *)arg;
 	ctx_init(&ctx);
-	// mr = vm_call(init->vm, &ctx, result, init->f, 1, &init->arg);
-	vm_call(init->vm, &ctx, result, init->f, 1, &init->arg);
+	ARRAY_ITEMS(*result)[1] = MAKE_NULL;
+	mr = vm_call(init->vm, &ctx, &ARRAY_ITEMS(*result)[1], init->f, 1, &init->arg);
+	ARRAY_ITEMS(*result)[0] = MAKE_BOOL(mr == METHOD_EXCEPTION);
 	return result;
 }
 
@@ -1317,11 +1491,26 @@ METHOD_RESULT native_c_pthreadjoin METHOD_PARAMS {
 	METHOD_RETURN(ret);
 }
 
-METHOD_RESULT native_c_pthreadattrinit METHOD_PARAMS  { METHOD_RETURN(MAKE_INT(pthread_attr_init(&GET_PTHREADATTR(argv[0])))); }
-// TODO: pthread_mutexattr_init attributes
-METHOD_RESULT native_c_pthreadmutexinit METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_mutex_init(&GET_PTHREADMUTEX(argv[0]), NULL))); }
+METHOD_RESULT native_c_pthreadattrinit METHOD_PARAMS  {
+	METHOD_RETURN(MAKE_INT(pthread_attr_init(&GET_PTHREADATTR(argv[0]))));
+}
+
+METHOD_RESULT native_c_pthreadmutexattrinit METHOD_PARAMS  {
+	METHOD_RETURN(MAKE_INT(pthread_mutexattr_init(&GET_PTHREADMUTEXATTR(argv[0]))));
+}
+
+METHOD_RESULT native_c_pthreadmutexinit METHOD_PARAMS {
+	METHOD_RETURN(MAKE_INT(pthread_mutex_init(&GET_PTHREADMUTEX(argv[0]), NULL)));
+}
+
+METHOD_RESULT native_c_pthreadmutexinit_pma METHOD_PARAMS {
+	METHOD_RETURN(MAKE_INT(pthread_mutex_init(&GET_PTHREADMUTEX(argv[0]), &GET_PTHREADMUTEXATTR(argv[1]))));
+}
+
 METHOD_RESULT native_c_pthreadmutexlock METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_mutex_lock(&GET_PTHREADMUTEX(argv[0])))); }
+
 METHOD_RESULT native_c_pthreadmutexunlock METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_mutex_unlock(&GET_PTHREADMUTEX(argv[0])))); }
+
 METHOD_RESULT native_c_pthreadself METHOD_PARAMS {
 	VALUE pthread = make_pthread();
 	(void) argv;
@@ -1346,8 +1535,8 @@ METHOD_RESULT native_c_ffi_prep_cif EXT_METHOD_PARAMS {
 	if(FFI_OK != (status = ffi_prep_cif(&GET_FFI_CIF(ret), FFI_DEFAULT_ABI, OBJ_LEN(argv[1]), GET_FFI_TYPE(argv[0]), args))) {
 		VALUE e;
 		e = make_normal_type_instance(vm->Error);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("Failed to ffi_prep_cif()"));
-		set_normal_type_instance_attribute(e, make_string("status"), MAKE_INT(status));
+		set_normal_type_instance_field(e, make_string("message"), make_string("Failed to ffi_prep_cif()"));
+		set_normal_type_instance_field(e, make_string("status"), MAKE_INT(status));
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	METHOD_RETURN(ret);
@@ -1500,9 +1689,9 @@ METHOD_RESULT native_replace EXT_METHOD_PARAMS {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->InvalidArgument);
 		// TODO: better message phrasing
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Both replace() arguments must be objects, not tagged values"));
-		set_normal_type_instance_attribute(exc, make_string("dst"), argv[0]);
-		set_normal_type_instance_attribute(exc, make_string("src"), argv[1]);
+		set_normal_type_instance_field(exc, make_string("message"), make_string("Both replace() arguments must be objects, not tagged values"));
+		set_normal_type_instance_field(exc, make_string("dst"), argv[0]);
+		set_normal_type_instance_field(exc, make_string("src"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	if(IS_NORMAL_TYPE_INSTANCE(argv[0]) && IS_NORMAL_TYPE_INSTANCE(argv[1])) {
@@ -1514,9 +1703,9 @@ METHOD_RESULT native_replace EXT_METHOD_PARAMS {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->InvalidArgument);
 		// TODO: better message phrasing
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("Current implementation of replace() is limited to dst and src of same type when replacing a builtin type instance"));
-		set_normal_type_instance_attribute(exc, make_string("dst"), argv[0]);
-		set_normal_type_instance_attribute(exc, make_string("src"), argv[1]);
+		set_normal_type_instance_field(exc, make_string("message"), make_string("Current implementation of replace() is limited to dst and src of same type when replacing a builtin type instance"));
+		set_normal_type_instance_field(exc, make_string("dst"), argv[0]);
+		set_normal_type_instance_field(exc, make_string("src"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	dst_size = NGS_SIZE(argv[0].ptr);
@@ -1538,8 +1727,8 @@ METHOD_RESULT native_is_global_variable_defined EXT_METHOD_PARAMS {
 	if(GET_INT(argv[0]) < 0 || gvi >= vm->globals_len) {
 		VALUE e;
 		e = make_normal_type_instance(vm->IndexNotFound);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("Global variable with given index was not found"));
-		set_normal_type_instance_attribute(e, make_string("key"), argv[0]);
+		set_normal_type_instance_field(e, make_string("message"), make_string("Global variable with given index was not found"));
+		set_normal_type_instance_field(e, make_string("key"), argv[0]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	METHOD_RETURN(MAKE_BOOL(IS_NOT_UNDEF(GLOBALS[gvi])));
@@ -1550,8 +1739,8 @@ METHOD_RESULT native_set_global_variable EXT_METHOD_PARAMS {
 	if(GET_INT(argv[0]) < 0 || gvi >= vm->globals_len) {
 		VALUE e;
 		e = make_normal_type_instance(vm->IndexNotFound);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("Global variable with given index was not found"));
-		set_normal_type_instance_attribute(e, make_string("key"), argv[0]);
+		set_normal_type_instance_field(e, make_string("message"), make_string("Global variable with given index was not found"));
+		set_normal_type_instance_field(e, make_string("key"), argv[0]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	GLOBALS[gvi] = argv[1];
@@ -1576,9 +1765,9 @@ METHOD_RESULT native_c_pcre_compile EXT_METHOD_PARAMS {
 	if(re == NULL) {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->RegExpCompileFail);
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string(error));
-		set_normal_type_instance_attribute(exc, make_string("regexp"), argv[0]);
-		set_normal_type_instance_attribute(exc, make_string("offset"), MAKE_INT(erroffset));
+		set_normal_type_instance_field(exc, make_string("message"), make_string(error));
+		set_normal_type_instance_field(exc, make_string("regexp"), argv[0]);
+		set_normal_type_instance_field(exc, make_string("offset"), MAKE_INT(erroffset));
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 
@@ -1604,7 +1793,7 @@ METHOD_RESULT native_c_pcre_exec METHOD_PARAMS {
 	rc = pcre_exec(
 		REGEXP_OBJECT_RE(argv[0]), /* the compiled pattern */
 		NULL,                      /* no extra data - we didn't study the pattern */
-		OBJ_DATA_PTR(argv[1]),     /* the subject string */
+		OBJ_DATA_PTR(argv[1]) ? OBJ_DATA_PTR(argv[1]) : "",     /* the subject string */
 		OBJ_LEN(argv[1]),          /* the length of the subject */
 		GET_INT(argv[2]),          /* start offset */
 		GET_INT(argv[3]),          /* options */
@@ -1625,17 +1814,17 @@ METHOD_RESULT native_c_pcre_exec METHOD_PARAMS {
 }
 
 // http://www.pcre.org/original/doc/html/pcredemo.html
-METHOD_RESULT native_attr_regexp EXT_METHOD_PARAMS {
-	char *attr = obj_to_cstring(argv[1]);
+METHOD_RESULT native_field_regexp EXT_METHOD_PARAMS {
+	char *field = obj_to_cstring(argv[1]);
 	pcre *re;
 	re = REGEXP_OBJECT_RE(argv[0]);
-	if(!strcmp(attr, "options")) {
+	if(!strcmp(field, "options")) {
 		unsigned int option_bits;
 		(void)pcre_fullinfo(re, NULL, PCRE_INFO_OPTIONS, &option_bits);
 		METHOD_RETURN(MAKE_INT(option_bits));
 	}
 
-	if(!strcmp(attr, "names")) {
+	if(!strcmp(field, "names")) {
 		VALUE ret;
 		int namecount, name_entry_size, i;
 		unsigned char *name_table;
@@ -1673,10 +1862,10 @@ METHOD_RESULT native_attr_regexp EXT_METHOD_PARAMS {
 	}
 
 	VALUE exc;
-	exc = make_normal_type_instance(vm->AttrNotFound);
-	set_normal_type_instance_attribute(exc, make_string("message"), make_string("RegExp does not have given attribute"));
-	set_normal_type_instance_attribute(exc, make_string("container"), argv[0]);
-	set_normal_type_instance_attribute(exc, make_string("key"), argv[1]);
+	exc = make_normal_type_instance(vm->FieldNotFound);
+	set_normal_type_instance_field(exc, make_string("message"), make_string("RegExp does not have given field"));
+	set_normal_type_instance_field(exc, make_string("container"), argv[0]);
+	set_normal_type_instance_field(exc, make_string("key"), argv[1]);
 	THROW_EXCEPTION_INSTANCE(exc);
 }
 
@@ -1686,8 +1875,8 @@ METHOD_RESULT native_ord_str_int EXT_METHOD_PARAMS {
 	if(idx < 0 || idx >= (int) OBJ_LEN(argv[0])) {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->InvalidArgument);
-		set_normal_type_instance_attribute(exc, make_string("message"), make_string("String index out of range"));
-		set_normal_type_instance_attribute(exc, make_string("idx"), argv[1]);
+		set_normal_type_instance_field(exc, make_string("message"), make_string("String index out of range"));
+		set_normal_type_instance_field(exc, make_string("idx"), argv[1]);
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	METHOD_RETURN(MAKE_INT(((unsigned char *)OBJ_DATA_PTR(argv[0]))[idx]));
@@ -1736,8 +1925,8 @@ METHOD_RESULT native_c_readdir EXT_METHOD_PARAMS {
 	if(!DIR_OBJECT_IS_OPEN(argv[0])) {
 		VALUE e;
 		e = make_normal_type_instance(vm->InvalidArgument);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("Tried to c_readdir() on closed directory"));
-		set_normal_type_instance_attribute(e, make_string("dirp"), argv[0]);
+		set_normal_type_instance_field(e, make_string("message"), make_string("Tried to c_readdir() on closed directory"));
+		set_normal_type_instance_field(e, make_string("dirp"), argv[0]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	e = readdir(DIR_OBJECT_DIR(argv[0]));
@@ -1755,8 +1944,8 @@ METHOD_RESULT native_c_closedir EXT_METHOD_PARAMS {
 	if(!DIR_OBJECT_IS_OPEN(argv[0])) {
 		VALUE e;
 		e = make_normal_type_instance(vm->InvalidArgument);
-		set_normal_type_instance_attribute(e, make_string("message"), make_string("Tried to c_closedir() on closed directory"));
-		set_normal_type_instance_attribute(e, make_string("dirp"), argv[0]);
+		set_normal_type_instance_field(e, make_string("message"), make_string("Tried to c_closedir() on closed directory"));
+		set_normal_type_instance_field(e, make_string("dirp"), argv[0]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
 	int ret = closedir(DIR_OBJECT_DIR(argv[0]));
@@ -1801,7 +1990,18 @@ MAKE_STAT_METHOD(fstat, GET_INT)
 
 METHOD_RESULT native_gc_enable  METHOD_PARAMS { (void) argv; GC_enable();  METHOD_RETURN(MAKE_NULL); }
 METHOD_RESULT native_gc_disable METHOD_PARAMS { (void) argv; GC_disable(); METHOD_RETURN(MAKE_NULL); }
+METHOD_RESULT native_gc_get_parallel METHOD_PARAMS { (void) argv; METHOD_RETURN(MAKE_INT(GC_get_parallel())); }
 
+METHOD_RESULT native_Arr_mm METHOD_PARAMS {
+	METHOD_RETURN(make_array_with_values(
+		OBJ_LEN(MULTIMETHOD_METHODS(argv[0])),
+		ARRAY_ITEMS(MULTIMETHOD_METHODS(argv[0]))
+	));
+}
+
+METHOD_RESULT native_MultiMethod_arr METHOD_PARAMS {
+	METHOD_RETURN(make_multimethod_from_array(argv[0]));
+}
 
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	VAR_INDEX *var;
@@ -1815,8 +2015,9 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	}
 	assert(vm->globals_len < (MAX_GLOBALS-1));
 	var = NGS_MALLOC(sizeof(*var));
-	var->name = NGS_MALLOC(name_len);
+	var->name = NGS_MALLOC_ATOMIC(name_len+1);
 	memcpy(var->name, name, name_len);
+	var->name[name_len] = 0;
 	var->index = vm->globals_len++;
 	HASH_ADD_KEYPTR(hh, vm->globals_indexes, var->name, name_len, var);
 	GLOBALS[var->index] = MAKE_UNDEF;
@@ -1860,16 +2061,16 @@ void register_global_func(VM *vm, int pass_extra_params, char *name, void *func_
 	VALUE func = _make_func(vm, pass_extra_params, name, func_ptr, argc, args);
 	va_end(args);
 	index = get_global_index(vm, name, strlen(name));
-	if(IS_ARRAY(GLOBALS[index])) {
-		array_push(GLOBALS[index], func);
+	if(IS_MULMETHOD(GLOBALS[index])) {
+		push_multimethod_method(GLOBALS[index], func);
 		return;
 	}
 	if(IS_NGS_TYPE(GLOBALS[index])) {
-		array_push(NGS_TYPE_CONSTRUCTORS(GLOBALS[index]), func);
+		push_multimethod_method(NGS_TYPE_CONSTRUCTORS(GLOBALS[index]), func);
 		return;
 	}
 	if(IS_UNDEF(GLOBALS[index])) {
-		GLOBALS[index] = make_array_with_values(1, &func);
+		GLOBALS[index] = make_multimethod_with_value(func);
 		return;
 	}
 	assert(0 == "register_global_func fail");
@@ -1915,7 +2116,7 @@ void set_global(VM *vm, const char *name, VALUE v) {
 	ret = make_normal_type(make_string(name));
 	// Fixes for built-ins - start
 	NGS_TYPE_ID(ret) = native_type_id;
-	OBJ_LEN(NGS_TYPE_CONSTRUCTORS(ret)) = 0;
+	MULTIMETHOD_LEN(NGS_TYPE_CONSTRUCTORS(ret)) = 0;
 	// Fixes for built-ins - end
 	index = get_global_index(vm, name, strlen(name));
 	assert(IS_UNDEF(GLOBALS[index]));
@@ -2020,7 +2221,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MK_BUILTIN_TYPE_DOC(Real, T_REAL, "Real/Float type. Equivalent to the 'double' type in C");
 	vm->type_by_t_obj_type_id[T_REAL >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Real;
 
-	MK_BUILTIN_TYPE_DOC(Str, T_STR, "String type");
+	MK_BUILTIN_TYPE_DOC(Str, T_STR, "String type. Contains sequential bytes.");
 	vm->type_by_t_obj_type_id[T_STR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Str;
 
 	MK_BUILTIN_TYPE(Arr, T_ARR);
@@ -2047,11 +2248,16 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 
-	MK_BUILTIN_TYPE_DOC(Fun, T_FUN, "Function type: an Array of Closures, a Closure, or a native method");
-		MK_BUILTIN_TYPE_DOC(Closure, T_CLOSURE, "Closure type. User-defined functions/methods are Closures");
-		vm->type_by_t_obj_type_id[T_CLOSURE >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Closure;
+	MK_BUILTIN_TYPE_DOC(Fun, T_FUN, "Function type: native method, user defined method, or a multimethod");
+
+		MK_BUILTIN_TYPE_DOC(UserDefinedMethod, T_CLOSURE, "UserDefinedMethod type. User-defined functions/methods are Closures");
+		vm->type_by_t_obj_type_id[T_CLOSURE >> T_OBJ_TYPE_SHIFT_BITS] = &vm->UserDefinedMethod;
+
 		MK_BUILTIN_TYPE_DOC(NativeMethod, T_NATIVE_METHOD, "Native method type");
 		vm->type_by_t_obj_type_id[T_NATIVE_METHOD >> T_OBJ_TYPE_SHIFT_BITS] = &vm->NativeMethod;
+
+		MK_BUILTIN_TYPE_DOC(MultiMethod, T_MULMETHOD, "MultiMethod, container for methods.");
+		vm->type_by_t_obj_type_id[T_MULMETHOD >> T_OBJ_TYPE_SHIFT_BITS] = &vm->MultiMethod;
 
 	MK_BUILTIN_TYPE(Any, T_ANY);
 	_doc_arr(vm, "",
@@ -2123,6 +2329,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MK_BUILTIN_TYPE(c_pthread_mutex_t, T_PTHREADMUTEX);
 	vm->type_by_t_obj_type_id[T_PTHREADMUTEX >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_pthread_mutex_t;
 
+	MK_BUILTIN_TYPE(c_pthread_mutexattr_t, T_PTHREADMUTEXATTR);
+	vm->type_by_t_obj_type_id[T_PTHREADMUTEXATTR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_pthread_mutexattr_t;
+
 	MK_BUILTIN_TYPE_DOC(c_ffi_type, T_FFI_TYPE, "Unfinished feature. Don't use!");
 	vm->type_by_t_obj_type_id[T_FFI_TYPE >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_ffi_type;
 
@@ -2134,6 +2343,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	MK_BUILTIN_TYPE_DOC(C_DIR, T_DIR, "C language DIR type for low level directory operations. Please do not use directly unless you are extending stdlib.");
 	vm->type_by_t_obj_type_id[T_DIR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->C_DIR;
+
+	MK_BUILTIN_TYPE(LLHashEntry, T_LL_HASH_ENTRY);
+	vm->type_by_t_obj_type_id[T_LL_HASH_ENTRY >> T_OBJ_TYPE_SHIFT_BITS] = &vm->LLHashEntry;
 
 	// *** Add new MKTYPE / MKSUBTYPE above this line ***
 
@@ -2160,7 +2372,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	MKTYPE(Exception);
 	_doc(vm, "", "Represents exceptional situaution. All thrown things shouhld inherit Exception.");
-	_doc(vm, "backtrace", "Automatic attribute set when creating Exception type instances (including sub-types, as long as super() is called.");
+	_doc(vm, "backtrace", "Automatic field set when creating Exception type instances (including sub-types, as long as super() is called.");
 
 		MKSUBTYPE(Error, Exception);
 		_doc(vm, "", "Represents an error. Usually more specific error types are used.");
@@ -2198,15 +2410,15 @@ void vm_init(VM *vm, int argc, char **argv) {
 						NULL
 					);
 
-				MKSUBTYPE(AttrNotFound, LookupFail);
-				_doc(vm, "", "Represents an error of reading non-existent attribute of an object.");
+				MKSUBTYPE(FieldNotFound, LookupFail);
+				_doc(vm, "", "Represents an error of reading non-existent field of an object.");
 				_doc_arr(vm, "%EX",
 					"{",
 					"  type T",
 					"  t.a = 1",
 					"  echo(t.b)",
 					"}",
-					"# ... Exception of type AttrNotFound ...",
+					"# ... Exception of type FieldNotFound ...",
 					NULL
 				);
 
@@ -2272,13 +2484,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 					NULL
 				);
 
-				MKSUBTYPE(ImplNotFound, CallFail);
+				MKSUBTYPE(MethodNotFound, CallFail);
 				_doc(vm, "", "Represents calling failure when arguments do not match any method implementation.");
 				_doc_arr(vm, "%EX",
 					"F f(x:Int) 1"
 					"F f(x:Str) 2"
 					"f(true)",
-					"# ... Exception of type ImplNotFound ...",
+					"# ... Exception of type MethodNotFound ...",
 					NULL
 				);
 
@@ -2316,8 +2528,14 @@ void vm_init(VM *vm, int argc, char **argv) {
 			MKSUBTYPE(DlopenFail, Error);
 			_doc(vm, "", "Represents failure to open dynamically loaded library (feature is a work in progress).");
 
+			MKSUBTYPE(DecodeFail, Error);
+			_doc(vm, "", "Represents an error decoding a data.");
+
+				MKSUBTYPE(JsonDecodeFail, DecodeFail);
+				_doc(vm, "", "Represents an error decoding JSON data.");
+
 	MKTYPE(Return);
-	_doc(vm, "", "Return instance types, when thrown, will exit the call frame where they were created returning given value.");
+	_doc(vm, "", "Return instance type, when thrown, will exit the call frame where they were created returning given value.");
 	_doc_arr(vm, "%EX",
 		"{",
 		"    F find_the_one(haystack:Arr, needle) {",
@@ -2332,9 +2550,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 		"    echo([10,20].find_the_one(30))",
 		"}",
 		"# Output:",
-		"#   <Return closure=<Closure find_the_one at 1.ngs:2> depth=7 val=null>",
+		"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
 		"#   Found it!",
-		"#   <Return closure=<Closure find_the_one at 1.ngs:2> depth=7 val=null>",
+		"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
 		"#   Not found",
 		NULL
 	);
@@ -2344,28 +2562,31 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "frames", "Array of locations. Each element of the array is a Hash with \"ip\" and \"closure\" properties.");
 	_doc_arr(vm, "%EX",
 		"Backtrace().frames.each(echo)",
-		"# {ip=4770, closure=<Closure <anonymous> at /etc/ngs/bootstrap.ngs:3>}",
-		"# {ip=4153, closure=<Closure bootstrap_exception_catch_wrapper at /etc/ngs/bootstrap.ngs:205>}",
-		"# {ip=3583, closure=<Closure bootstrap at /etc/ngs/bootstrap.ngs:111>}",
-		"# {ip=116587, closure=<Closure <anonymous> at <command line -pi switch>:2>}",
+		"# {ip=4770, closure=<UserDefinedMethod <anonymous> at /etc/ngs/bootstrap.ngs:3>}",
+		"# {ip=4153, closure=<UserDefinedMethod bootstrap_exception_catch_wrapper at /etc/ngs/bootstrap.ngs:205>}",
+		"# {ip=3583, closure=<UserDefinedMethod bootstrap at /etc/ngs/bootstrap.ngs:111>}",
+		"# {ip=116587, closure=<UserDefinedMethod <anonymous> at <command line -pi switch>:2>}",
 		NULL
 	);
 
 	MKTYPE(CommandsPipeline);
 	MKTYPE(CommandsPipe);
 	MKTYPE(Command);
+
 	MKTYPE(Redir);
+	_doc(vm, "", "Input/output redirection");
 
 	// XXX: changing NGS_TYPE_FIELDS of InclusiveRange or ExclusiveRange
 	//      in such a way that "start" is not 0 or "end" is not 1
 	//      will break everything. TODO: make sure this can not be done by
 	//      an NGS script.
 	MKTYPE(NumRange);
-		SETUP_TYPE_FIELD(NumRange, start, RANGE_ATTR_START);
-		SETUP_TYPE_FIELD(NumRange, end, RANGE_ATTR_END);
-		SETUP_TYPE_FIELD(NumRange, include_start, RANGE_ATTR_INCLUDE_START);
-		SETUP_TYPE_FIELD(NumRange, include_end, RANGE_ATTR_INCLUDE_END);
-		SETUP_TYPE_FIELD(NumRange, step, RANGE_ATTR_STEP);
+		SETUP_TYPE_FIELD(NumRange, start, RANGE_FIELD_START);
+		SETUP_TYPE_FIELD(NumRange, end, RANGE_FIELD_END);
+		SETUP_TYPE_FIELD(NumRange, include_start, RANGE_FIELD_INCLUDE_START);
+		SETUP_TYPE_FIELD(NumRange, include_end, RANGE_FIELD_INCLUDE_END);
+		SETUP_TYPE_FIELD(NumRange, step, RANGE_FIELD_STEP);
+	_doc(vm, "", "Numerical range");
 
 	MKTYPE(Stat);
 		SETUP_TYPE_FIELD(Stat, st_dev, 0);
@@ -2378,6 +2599,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 		SETUP_TYPE_FIELD(Stat, st_size, 7);
 		SETUP_TYPE_FIELD(Stat, st_blksize, 8);
 		SETUP_TYPE_FIELD(Stat, st_blocks, 9);
+	_doc(vm, "", "Result of stat() or lstat()");
 
 	MKTYPE(c_tm);
 		SETUP_TYPE_FIELD(c_tm, tm_sec,   0);
@@ -2401,11 +2623,12 @@ void vm_init(VM *vm, int argc, char **argv) {
 #undef MKTYPE
 
 	// Why is it here? Consider removing - start
-	vm->eqeq = make_array(0);
+	vm->eqeq = make_multimethod();
 	set_global(vm, "==", vm->eqeq);
 	// Why is it here? Consider removing - end
 
 	register_global_func(vm, 0, "==",              &native_false,    2, "a", vm->Any, "b", vm->Any);
+	_doc(vm, "", "Always false. Other == method implementations should compare types they understand. If none of them can handle the comparison, objects are considered non-equal.");
 	_doc(vm, "%RET", "false");
 
 	// Regex
@@ -2422,9 +2645,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Represents RegExp");
 	_doc(vm, "%RET", "The string <RegExp>");
 
-	register_global_func(vm, 1, ".",              &native_attr_regexp,      2, "regexp", vm->RegExp, "attr", vm->Str);
-	_doc(vm, "", "Get attributes of a RegExp. Throws AttrNotFound if attr is not one of the allowed values. You should not use this directly. Use \"~\" and \"~~\" operators.");
-	_doc(vm, "attr", "\"options\" or \"names\"");
+	register_global_func(vm, 1, ".",              &native_field_regexp,      2, "regexp", vm->RegExp, "field", vm->Str);
+	_doc(vm, "", "Get fields of a RegExp. Throws FieldNotFound if field is not one of the allowed values. You should not use this directly. Use \"~\" and \"~~\" operators.");
+	_doc(vm, "field", "\"options\" or \"names\"");
 	_doc(vm, "%RET", "Int for \"options\". Hash of names/indexes of named groups for \"names\".");
 	_doc_arr(vm, "%EX",
 		"/abc/i.options  # 1 - case insensitive (C_PCRE_CASELESS)",
@@ -2463,15 +2686,18 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// Return
 	register_global_func(vm, 1, "Return",          &native_Return,   0);
 	_doc(vm, "", "Get closure-specific Return type. Throwing it, will return from the closure");
-	_doc(vm, "%EX", "F f() Return(); f()  # <Return closure=<Closure f at <command line -pi switch>:2> depth=4 val=null>");
-	_doc(vm, "%EX", "");
-	_doc(vm, "%EX", "F first(r:NumRange, predicate:Fun) {");
-	_doc(vm, "%EX", "	finish = Return()");
-	_doc(vm, "%EX", "	r.each(F(i) {");
-	_doc(vm, "%EX", "		predicate(i) throws finish(i)");
-	_doc(vm, "%EX", "	})");
-	_doc(vm, "%EX", "	null");
-	_doc(vm, "%EX", "}");
+	_doc_arr(vm, "%EX",
+		"F f() Return(); f()  # <Return closure=<UserDefinedMethod f at <command line -pi switch>:2> depth=4 val=null>",
+		"",
+		"F first(r:NumRange, predicate:Fun) {",
+		"	finish = Return()",
+		"	r.each(F(i) {",
+		"		predicate(i) throws finish(i)",
+		"	})",
+		"	null",
+		"}",
+		NULL
+	);
 
 	// CLib and c calls
 	register_global_func(vm, 1, "c_dlopen",        &native_c_dlopen_str_int,   2, "filename", vm->Str,        "flags",  vm->Int);
@@ -2486,7 +2712,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Unfinished feature. Don't use!");
 
 	// threads
-	register_global_func(vm, 1, "c_pthread_create",       &native_c_pthreadcreate_pthreadattr_startroutine_arg, 3, "attr", vm->c_pthread_attr_t, "start_routine", vm->Closure, "arg", vm->Any);
+	register_global_func(vm, 1, "c_pthread_create",       &native_c_pthreadcreate_pthreadattr_startroutine_arg, 3, "attr", vm->c_pthread_attr_t, "start_routine", vm->UserDefinedMethod, "arg", vm->Any);
 	_doc(vm, "", "Call PTHREAD_CREATE(3). Not recommended for direct calls, use Thread type instead.");
 	_doc(vm, "%RET", "Arr with [Int, c_pthread_t]. Int is the status returned by pthread_create(). c_pthread_t is a thin wrapper around underlying pthread_t, returned by PTHREAD_CREATE(3)");
 	_doc_arr(vm, "%EX",
@@ -2518,14 +2744,35 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	register_global_func(vm, 0, "c_pthread_attr_init",    &native_c_pthreadattrinit,    1, "attr",   vm->c_pthread_attr_t);
+	_doc(vm, "", "Call PTHREAD_ATTR_INIT(3)");
+	register_global_func(vm, 0, "c_pthread_mutexattr_init",   &native_c_pthreadmutexattrinit,    1, "attr",   vm->c_pthread_mutexattr_t);
+	_doc(vm, "", "Call PTHREAD_MUTEXATTR_INIT(3)");
+	register_global_func(vm, 0, "c_pthread_mutex_init",   &native_c_pthreadmutexinit_pma,   2, "mutex",  vm->c_pthread_mutex_t, "attr", vm->c_pthread_mutexattr_t);
+	_doc(vm, "", "Call PTHREAD_MUTEX_INIT(3)");
 	register_global_func(vm, 0, "c_pthread_mutex_init",   &native_c_pthreadmutexinit,   1, "mutex",  vm->c_pthread_mutex_t);
+	_doc(vm, "", "Call PTHREAD_MUTEX_INIT(3) with NULL as second argument (attr)");
 	register_global_func(vm, 0, "c_pthread_mutex_lock",   &native_c_pthreadmutexlock,   1, "mutex",  vm->c_pthread_mutex_t);
+	_doc(vm, "", "Call PTHREAD_MUTEX_LOCK(3)");
 	register_global_func(vm, 0, "c_pthread_mutex_unlock", &native_c_pthreadmutexunlock, 1, "mutex",  vm->c_pthread_mutex_t);
+	_doc(vm, "", "Call PTHREAD_MUTEX_UNLOCK(3)");
 	register_global_func(vm, 0, "c_pthread_self",         &native_c_pthreadself,        0);
-	register_global_func(vm, 0, "c_pthread_attr_t",       &native_c_pthreadattrt,         0);
-	register_global_func(vm, 0, "c_pthread_mutex_t",      &native_c_pthreadmutext,        0);
+	_doc(vm, "", "Call PTHREAD_SELF(3)");
+	register_global_func(vm, 0, "c_pthread_attr_t",       &native_c_pthreadattrt,       0);
+	_doc(vm, "", "Create pthread attribute object");
+	register_global_func(vm, 0, "c_pthread_mutex_t",      &native_c_pthreadmutext,      0);
+	_doc(vm, "", "Create pthread mutex object");
+	register_global_func(vm, 0, "c_pthread_mutexattr_t",  &native_c_pthreadmutexattrt,  0);
+	_doc(vm, "", "Create pthread mutex attribute object");
+	register_global_func(vm, 0, "c_pthread_mutexattr_settype",  &native_c_pthreadmutexattrsettype_pma_int,  2, "mutex", vm->c_pthread_mutexattr_t, "type", vm->Int);
+	_doc(vm, "", "Call PTHREAD_MUTEXATTR_SETTYPE(3)");
+
 	register_global_func(vm, 0, "id",                     &native_id_pthread,           1, "thread", vm->c_pthread_t);
+	_doc(vm, "", "Get pthread id as string of characters. This is opaque string which can be used for displaying and comparing to other pthreads ids.");
+	_doc(vm, "%RET", "Str");
+
 	register_global_func(vm, 0, ".",                      &native_attr_pthreadattr,     2, "pa", vm->c_pthread_attr_t,    "attr", vm->Str);
+	_doc(vm, "", "Get pthread attribute. Currently returns null for unknown attributes. Will throw exceptions in future.");
+	_doc(vm, "attr", "One of: detachstate, guardsize, inheritsched, stacksize.");
 
 	// Native methods
 	register_global_func(vm, 0, "params",   &native_params_nm,         1, "m",      vm->NativeMethod);
@@ -2533,36 +2780,45 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// Type
 	// needed for switch
 	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->Type, "b", vm->Type);
-	_doc(vm, "", "Types equality comparison. Implemented as sameness comparison.");
+	_doc(vm, "", "Compare types. Implemented as sameness comparison.");
 	_doc(vm, "%EX", "type T; T==T  # true");
 	_doc(vm, "%EX", "type T1; type T2; T1==T2  # false");
 
-	// Closure
-	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->Closure, "b", vm->Closure);
-	_doc(vm, "", "Closure equality comparison. Implemented as sameness comparison.");
+	// UserDefinedMethod
+	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->UserDefinedMethod, "b", vm->UserDefinedMethod);
+	_doc(vm, "", "Compare closures. Implemented as sameness comparison.");
 	_doc_arr(vm, "%EX",
 		"F make_closure() { F(x) x + 1 }; make_closure()      == make_closure()       # false - different instances",
 		"F make_closure() { F(x) x + 1 }; make_closure().ip() == make_closure().ip()  # true - same code",
 		"f = F(x) x +1; f == f  # true - same instance",
 		NULL
 	);
-	register_global_func(vm, 0, "params",   &native_params_closure,    1, "c",      vm->Closure);
+	register_global_func(vm, 0, "params",   &native_params_closure,    1, "c",      vm->UserDefinedMethod);
 	_doc(vm, "", "Get closure parameters.");
 	_doc_arr(vm, "%EX",
 		"... F the_one(something, predicate, body:Fun, found_more:Fun={null}, found_none:Fun={null}) ...",
-		"the_one[1].params().each(echo)"
+		"the_one.Arr()[1].params().each(echo)"
 		"# {name=something, type=<Type Any>}",
 		"# {name=predicate, type=<Type Any>}",
 		"# {name=body, type=<Type Fun>}",
-		"# {name=found_more, type=<Type Fun>, dflt=<Closure <anonymous> at /usr/share/ngs/stdlib.ngs:198>}",
-		"# {name=found_none, type=<Type Fun>, dflt=<Closure <anonymous> at /usr/share/ngs/stdlib.ngs:198>}",
+		"# {name=found_more, type=<Type Fun>, dflt=<UserDefinedMethod <anonymous> at /usr/share/ngs/stdlib.ngs:198>}",
+		"# {name=found_none, type=<Type Fun>, dflt=<UserDefinedMethod <anonymous> at /usr/share/ngs/stdlib.ngs:198>}",
 		NULL
 	);
 
-	register_global_func(vm, 0, "ip",       &native_ip_closure,        1, "c",      vm->Closure);
+	register_global_func(vm, 0, "ip",       &native_ip_closure,        1, "c",      vm->UserDefinedMethod);
 	_doc(vm, "", "Get closure code instruction pointer.");
 	_doc(vm, "%RET", "Int");
 	_doc(vm, "%EX", "f=F(x) x+1; f.ip()  # 116506");
+
+	// MultiMethod
+	register_global_func(vm, 0, "Arr",         &native_Arr_mm,           1, "mm",  vm->MultiMethod);
+	_doc(vm, "", "Get methods of a MultiMethod");
+	_doc(vm, "%RET", "Arr");
+
+	register_global_func(vm, 0, "MultiMethod", &native_MultiMethod_arr,  1, "methods", vm->Arr);
+	_doc(vm, "", "Construct MultiMethod from the given methods");
+	_doc(vm, "%RET", "MultiMethod");
 
 	// Int
 	register_global_func(vm, 0, "Int",      &native_Int_real,           1, "r",    vm->Real);
@@ -2596,8 +2852,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Greater-than-or-equal comparison");
 	register_global_func(vm, 0, "==",       &native_eq_real_real,        2, "a",   vm->Real, "b", vm->Real);
 	_doc_arr(vm, "",
-		"Equality comparison. Using this operator/function is not recommended.",
-		"See http://how-to.wikia.com/wiki/Howto_compare_floating_point_numbers_in_the_C_programming_language .",
+		"Compare floating point numbers. Using this operator/function is not recommended.",
+		NULL
+	);
+	_doc_arr(vm, "%EXTLINK",
+		"http://how-to.wikia.com/wiki/Howto_compare_floating_point_numbers_in_the_C_programming_language Comparing floating point numbers (wikia)",
 		NULL
 	);
 	register_global_func(vm, 0, "Str",      &native_Str_real,            1, "r",   vm->Real);
@@ -2610,42 +2869,73 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Truncate a number");
 	register_global_func(vm, 0, "floor",    &native_floor_real,          1, "r",   vm->Real);
 	_doc(vm, "", "Floor a number");
+	_doc_arr(vm, "%EX",
+		"floor(1.1)   # 1.0",
+		"floor(-1.1)  # -2.0",
+		NULL
+	);
 	register_global_func(vm, 0, "ceil",     &native_ceil_real,           1, "r",   vm->Real);
 	_doc(vm, "", "Ceil a number");
+	_doc_arr(vm, "%EX",
+		"ceil(1.1)   # 2.0",
+		"ceil(-1.1)  # -1.0",
+		NULL
+	);
 
 	// OBJECT
 	register_global_func(vm, 0, "attrs",    &native_attrs,               1, "obj",      vm->Any);
+	_doc_arr(vm, "",
+		"Get attributes. Attributes is auxiliary data slot. It is available on all non-immediate objects.",
+		"The idea is to store additional information that will not get in your way in cases when you don't care about it.",
+		NULL
+	);
 	register_global_func(vm, 0, "attrs",    &native_attrs_any,           2, "obj",      vm->Any, "v", vm->Any);
+	_doc_arr(vm, "",
+		"Set attributes. Attributes is auxiliary data slot. It is available on all non-immediate objects.",
+		"The idea is to store additional information that will not get in your way in cases when you don't care about it.",
+		NULL
+	);
 
 	// BasicType
-	register_global_func(vm, 1, ".",        &native_get_attr_bt_str,       2, "obj", vm->BasicType,          "attr", vm->Str);
-	_doc(vm, "", "Get BasicType (Int, Arr, Hash, ...) attribute. Throws AttrNotFound.");
-	_doc(vm, "attr", "Attribute to get. Currently only \"name\" and \"constructors\" are supported.");
+	register_global_func(vm, 1, ".",        &native_get_field_bt_str,       2, "obj", vm->BasicType,          "field", vm->Str);
+	_doc(vm, "", "Get BasicType (Int, Arr, Hash, ...) field. Throws FieldNotFound.");
+	_doc(vm, "field", "Field to get. Currently only \"name\" and \"constructors\" are supported.");
+	_doc(vm, "%AUTO", "obj.field");
 	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
 	_doc_arr(vm, "%EX",
 		"Hash.name  # String: Hash",
-		"Hash.constructors  # [<Native method Hash>,<Closure Hash at ...>,...]",
+		"Hash.constructors  # [<NativeMethod Hash>,<UserDefinedMethod Hash at ...>,...]",
 		NULL
 	);
 
 	// NormalType
-	register_global_func(vm, 1, ".",        &native_get_attr_nt_str,       2, "obj", vm->NormalType,         "attr", vm->Str);
-	_doc(vm, "", "Get NormalType (a type that is typically defined by user) attribute. Throws AttrNotFound.");
-	_doc(vm, "attr", "Attribute to get. Currently only \"name\" and \"constructors\" are supported.");
+	register_global_func(vm, 1, ".",        &native_get_field_nt_str,       2, "obj", vm->NormalType,         "field", vm->Str);
+	_doc(vm, "", "Get NormalType (a type that is typically defined by user) field. Throws FieldNotFound.");
+	_doc(vm, "field", "Field to get. Currently only \"name\", \"constructors\", \"parents\" and \"user\" are supported.");
+	_doc(vm, "%AUTO", "obj.field");
 	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
 
-	register_global_func(vm, 1, ".",        &native_get_attr_nti_str,      2, "obj", vm->NormalTypeInstance, "attr", vm->Str);
-	_doc(vm, "", "Get NormalType (a type that is typically defined by user) instance attribute. Throws AttrNotFound.");
+	register_global_func(vm, 1, ".=",       &native_set_field_nt_str,       3, "obj", vm->NormalType,         "field", vm->Str, "v", vm->Any);
+	_doc(vm, "", "Set NormalType (a type that is typically defined by user) field. Throws FieldNotFound.");
+	_doc(vm, "field", "Field to set. Currently only \"user\" is supported.");
+	_doc(vm, "%AUTO", "obj.field = v");
+	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
+
+	register_global_func(vm, 1, ".",        &native_get_field_nti_str,      2, "obj", vm->NormalTypeInstance, "field", vm->Str);
+	_doc(vm, "", "Get NormalType (a type that is typically defined by user) instance field. Throws FieldNotFound.");
+	_doc(vm, "%AUTO", "obj.field");
 	_doc(vm, "%RET", "Any");
 	_doc(vm, "%EX", "type T; t=T(); t.x=1; t.x  # 1");
 
-	register_global_func(vm, 0, ".=",       &native_set_attr_nti_str_any,  3, "obj", vm->NormalTypeInstance, "attr", vm->Str, "v", vm->Any);
-	_doc(vm, "", "Set Normal type (a type that is typically defined by user) instance attribute. Throws AttrNotFound.");
+	register_global_func(vm, 0, ".=",       &native_set_field_nti_str_any,  3, "obj", vm->NormalTypeInstance, "field", vm->Str, "v", vm->Any);
+	_doc(vm, "", "Set Normal type (a type that is typically defined by user) instance field");
+	_doc(vm, "%AUTO", "obj.field = v");
 	_doc(vm, "%RET", "Any");
 	_doc(vm, "%EX", "type T; t=T(); t.x=1");
 
-	register_global_func(vm, 0, "in",       &native_in_nti_str,            2, "attr", vm->Str,               "obj", vm->NormalTypeInstance);
-	_doc(vm, "", "Check whether NormalType (a type that is typically defined by user) instance has an attribute.");
+	register_global_func(vm, 0, "in",       &native_in_nti_str,            2, "field", vm->Str,               "obj", vm->NormalTypeInstance);
+	_doc(vm, "", "Check whether NormalType (a type that is typically defined by user) instance has the given field.");
+	_doc(vm, "%AUTO", "field in obj");
 	_doc(vm, "%RET", "Bool");
 	_doc(vm, "%EX", "type T; t=T(); t.x=1; \"x\" in t  # true");
 
@@ -2659,34 +2949,54 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	// Type
-	register_global_func(vm, 0, "Type",     &native_type_str_doc      ,2, "name",   vm->Str, "doc", vm->Any);
-	_doc(vm, "", "Create a new type. Do not use directly. Use \"type MyType\".");
+	register_global_func(vm, 0, "Type",     &native_type_str_doc      ,3, "name",   vm->Str, "doc", vm->Any, "ns", vm->Any);
+	_doc(vm, "", "Create a new type. Do not use directly.");
+	_doc(vm, "%AUTO", "type MyType");
 
 	register_global_func(vm, 1, "typeof",   &native_typeof_any        ,1, "x",      vm->Any);
-	_doc(vm, "", "Returns type of the given instance");
-	_doc(vm, "x", "Instance (an object). Currently only instances of NormalType are supported.");
+	_doc(vm, "", "Returns type of the given object");
+	_doc(vm, "x", "Object. Currently only objects of NormalType are supported.");
 
 	// low level file operations
 	register_global_func(vm, 0, "c_dup2",   &native_c_dup2_int_int,    2, "oldfd",    vm->Int, "newfd", vm->Int);
+	_doc(vm, "", "Duplicate a file descriptor. Uses DUP2(2).");
+	_doc(vm, "%RET", "Int - file descriptor or -1");
 	register_global_func(vm, 0, "c_open",   &native_c_open_str_str,    2, "pathname", vm->Str, "flags", vm->Str);
+	_doc(vm, "", "Open a file. Uses OPEN(2).");
 	_doc(vm, "flags", "r - O_RDONLY; w - O_WRONLY | O_CREAT | O_TRUNC; a - O_WRONLY | O_CREAT | O_APPEND");
+	_doc(vm, "%RET", "Int - file descriptor or -1");
 	register_global_func(vm, 0, "c_close",  &native_c_close_int,       1, "fd",       vm->Int);
+	_doc(vm, "", "Close a file. Uses CLOSE(2).");
+	_doc(vm, "%RET", "Int - zero on success or -1");
 	register_global_func(vm, 0, "c_read",   &native_c_read_int_int,    2, "fd",       vm->Int, "count", vm->Int);
+	_doc(vm, "", "Read from a file. Uses READ(2).");
+	_doc(vm, "count", "Maximal number of bytes to read.");
+	_doc(vm, "%RET", "Arr of two elements: Int - number of bytes read or -1, Str - the read bytes");
 	register_global_func(vm, 0, "c_write",  &native_c_write_int_str,   2, "fd",       vm->Int, "s",     vm->Str);
+	_doc(vm, "", "Write to a file. Uses WRITE(2).");
+	_doc(vm, "%RET", "Int - number of bytes written or -1");
 	register_global_func(vm, 0, "c_poll",   &native_c_poll,            2, "fds_evs",  vm->Arr, "timeout", vm->Int);
-	register_global_func(vm, 0, "c_dup2",   &native_c_dup2,            2, "oldfd",    vm->Int, "newfd", vm->Int);
+	// TODO DOC
 	register_global_func(vm, 1, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
+	_doc(vm, "", "Call LSEEK(2).");
 	_doc(vm, "whence", "One of: set, cur, end");
+	_doc(vm, "%RET", "Int: new offset or -1");
 	register_global_func(vm, 0, "c_isatty", &native_c_isatty,           1,"fd",       vm->Int);
+	_doc(vm, "", "Check if file descriptor refers to a TTY device. Uses ISATTY(3).");
+	_doc(vm, "%RET", "Int: 1 or 0");
 	register_global_func(vm, 0, "c_opendir", &native_c_opendir,         1,"name",     vm->Str);
+	_doc(vm, "", "Call OPENDIR(3)");
 	register_global_func(vm, 1, "c_readdir", &native_c_readdir,         1,"dirp",     vm->C_DIR);
+	_doc(vm, "", "Call READDIR(3)");
 	register_global_func(vm, 1, "c_closedir",&native_c_closedir,        1,"dirp",     vm->C_DIR);
+	_doc(vm, "", "Call CLOSEDIR(3)");
 
 	register_global_func(vm, 1, "c_stat",    &native_c_stat,            1,"pathname", vm->Str);
 	_doc(vm, "", "Call STAT(2)");
 
 	register_global_func(vm, 1, "c_lstat",   &native_c_lstat,           1,"pathname", vm->Str);
 	_doc(vm, "", "Call LSTAT(2)");
+	_doc(vm, "%EX", "c_lstat(\"/tmp\")  # <Stat st_dev=... st_ino=... st_mode=... ...>");
 
 	register_global_func(vm, 1, "c_fstat",   &native_c_fstat,           1,"fd",       vm->Int);
 	_doc(vm, "", "Call FSTAT(2)");
@@ -2696,7 +3006,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Call ACCESS(2)");
 
 	register_global_func(vm, 0, "c_exit",   &native_c_exit_int,        1, "status",   vm->Int);
-	_doc(vm, "", "Call EXIT(3)");
+	_doc(vm, "", "Call EXIT(3). Don't use directly unless you must. Use FatalError exception.");
 
 	register_global_func(vm, 0, "c_fork",   &native_c_fork,            0);
 	_doc(vm, "", "Call FORK(2)");
@@ -2712,17 +3022,26 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "Array with 3 items: error code, reading end file descriptor, writing end file descriptor");
 
 	register_global_func(vm, 0, "c_waitpid",&native_c_waitpid,         1, "pid",      vm->Int);
+	_doc(vm, "", "Call WAITPID(2)");
 	register_global_func(vm, 0, "c_execve", &native_c_execve,          3, "filename", vm->Str, "argv", vm->Arr, "envp", vm->Arr);
+	_doc(vm, "", "Call EXECVE(2)");
 	register_global_func(vm, 0, "C_WEXITSTATUS", &native_C_WEXITSTATUS,1, "status",   vm->Int);
+	_doc(vm, "", "Use WEXITSTATUS macro.");
 	register_global_func(vm, 0, "C_WTERMSIG", &native_C_WTERMSIG,      1, "status",   vm->Int);
+	_doc(vm, "", "Use WTERMSIG macro.");
 
 	register_global_func(vm, 0, "c_errno",     &native_c_errno,    0);
+	_doc(vm, "", "Use errno macro.");
 	register_global_func(vm, 0, "c_strerror",  &native_c_strerror,     1, "errnum",   vm->Int);
+	_doc(vm, "", "Call STRERROR(2)");
 
 	register_global_func(vm, 0, "c_strcasecmp", &native_c_strcasecmp,  2, "a",   vm->Str,  "b",   vm->Str);
+	_doc(vm, "", "Call STRCASECMP(3)");
 	register_global_func(vm, 0, "c_strcmp",     &native_c_strcmp,      2, "a",   vm->Str,  "b",   vm->Str);
+	_doc(vm, "", "Call STRCMP(3)");
 
 	register_global_func(vm, 0, "c_kill",       &native_c_kill,        2, "pid", vm->Int,  "sig", vm->Int);
+	_doc(vm, "", "Call KILL(2). Global variable SIGNALS contains mapping between signals' names and values.");
 
 	// boolean
 	register_global_func(vm, 0, "==",       &native_eq_bool_bool,      2, "a",   vm->Bool, "b", vm->Bool);
@@ -2746,17 +3065,53 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "Any");
 	_doc(vm, "%EX", "a=[1,2]; a.pop()  # 2, a is now [1]");
 
+	// TODO [doc]: examples
 	register_global_func(vm, 1, "shift",    &native_shift_arr,               1, "arr", vm->Arr);
+	_doc(vm, "", "Get the first element and remove it from the array. Throws EmptyArrayFail if there are no elements in the array.");
+	_doc(vm, "%RET", "Any");
+
 	register_global_func(vm, 0, "shift",    &native_shift_arr_any,           2, "arr", vm->Arr, "dflt", vm->Any);
+	_doc(vm, "", "Get the first element and remove it from the array. Returns dlft if there are no elements in the array.");
+	_doc(vm, "%RET", "Any");
+
 	register_global_func(vm, 0, "len",      &native_len,                     1, "arr", vm->Arr);
+	_doc(vm, "", "Get number of elements in the array");
+	_doc(vm, "%RET", "Int");
+
 	register_global_func(vm, 0, "get",      &native_index_get_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
+	_doc(vm, "", "Get element at the given index or return dflt if the index is out of range (element at the given index does not exist)");
+	_doc(vm, "%RET", "Any");
+	_doc_arr(vm, "%EX",
+		"[1,2,3].get(0, 10)  # 1",
+		"[1,2,3].get(5, 10)  # 10",
+		NULL
+	);
+
 	register_global_func(vm, 1, "[]",       &native_index_get_arr_range,     2, "arr", vm->Arr, "range", vm->NumRange);
+	_doc(vm, "", "Get array elements at specified indexes.");
+	_doc(vm, "r", "NumRange with positive .start and .end");
+	_doc(vm, "%RET", "Arr");
+
 	register_global_func(vm, 1, "[]=",      &native_index_set_arr_range_arr, 3, "arr", vm->Arr, "range", vm->NumRange, "replacement", vm->Arr);
+	_doc(vm, "", "Set array elements at specified indexes.");
+	_doc(vm, "r", "NumRange with positive .start and .end");
+	_doc(vm, "%RET", "replacement");
+
 	register_global_func(vm, 1, "[]",       &native_index_get_arr_int,       2, "arr", vm->Arr, "idx", vm->Int);
+	_doc(vm, "", "Get element at the given index or throw IndexNotFound if the index is out of range (element at the given index does not exist).");
+	_doc(vm, "%RET", "Any");
+
 	register_global_func(vm, 1, "[]=",      &native_index_set_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "v", vm->Any);
+	_doc(vm, "", "Set element at the given index or throw IndexNotFound if the index is out of range.");
+	_doc(vm, "%RET", "v");
+
 	register_global_func(vm, 1, "join",     &native_join_arr_str,            2, "arr", vm->Arr, "s", vm->Str);
+	_doc(vm, "", "Join strings using s as glue");
+	_doc(vm, "arr", "Arr of Str");
+
 	register_global_func(vm, 0, "copy",     &native_copy_arr,                1, "arr", vm->Arr);
-	_doc(vm, "%RET", "Shallow copy of arr");
+	_doc(vm, "", "Shallow copy of arr");
+	_doc(vm, "%RET", "Arr");
 
 	// string
 	// TODO: other string comparison operators
@@ -2765,7 +3120,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "Int");
 
 	register_global_func(vm, 0, "==",       &native_eq_str_str,              2, "a",   vm->Str, "b", vm->Str);
-	_doc(vm, "", "Equality comparison");
+	_doc(vm, "", "Compare strings");
 
 	register_global_func(vm, 0, "pos",      &native_pos_str_str_int,         3, "haystack", vm->Str, "needle", vm->Str, "start", vm->Int);
 	_doc(vm, "", "Find substring position");
@@ -2855,8 +3210,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%EX", "echo(2, \"blah\")  # Output on stderr: blah");
 
 	register_global_func(vm, 0, "Bool",     &native_Bool_any,          1, "x",   vm->Any);
-	_doc(vm, "", "Convert to Bool");
-	_doc(vm, "x", "Bool or Str or Arr or Hash or Null");
+	_doc(vm, "", "Convert to Bool. Str, Arr and Hash of non-zero size return true. Bool returns as is. Null returns false. Int returns true if it is not zero.");
+	_doc(vm, "x", "Bool or Int or Str or Arr or Hash or Null");
 	_doc(vm, "%RET", "Bool");
 
 	register_global_func(vm, 0, "Str",      &native_Str_int,           1, "n",   vm->Int);
@@ -2932,9 +3287,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Get all global variables as Hash");
 	_doc(vm, "%RET", "Hash");
 	_doc_arr(vm, "%EX",
-		"globals().filterk(/^map/)  # {map=[...], ..., map_true=[...], ...}",
+		"globals().filterk(/^map/)  # {map=<MultiMethod with 7 method(s)>, mapv=...}",
 		NULL
 	);
+
+	register_global_func(vm, 0, "c_gettimeofday",     &native_c_gettimeofday,         0);
+	_doc(vm, "", "Wraps GETTIMEOFDAY(2).");
+	_doc(vm, "%RET", "Arr[Int] - [tv_sec, tv_usec]");
 
 	// TODO: check for errors, probably wrap in stdlib.
 	register_global_func(vm, 0, "c_time",     &native_c_time,         0);
@@ -2946,15 +3305,56 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	register_global_func(vm, 1, "c_gmtime",     &native_c_gmtime,         1, "timep", vm->Int);
+	_doc(vm, "", "Call GMTIME_R(3)");
+	_doc_arr(vm, "%EX",
+		"ngs -pl 'c_gmtime(0).Hash().Strs()'",
+		"tm_sec=0",
+		"tm_min=0",
+		"tm_hour=0",
+		"tm_mday=1",
+		"tm_mon=0",
+		"tm_year=70",
+		"tm_wday=4",
+		"tm_yday=0",
+		"tm_isdst=0",
+		NULL
+	);
+
 	register_global_func(vm, 1, "c_localtime",  &native_c_localtime,      1, "timep", vm->Int);
+	_doc(vm, "", "Call LOCALTIME(3)");
+	_doc_arr(vm, "%EX",
+		"ngs -pl 'c_gmtime(0).Hash().keys()'",
+		"tm_sec",
+		"tm_min",
+		"tm_hour",
+		"tm_mday",
+		"tm_mon",
+		"tm_year",
+		"tm_wday",
+		"tm_yday",
+		"tm_isdst",
+		NULL
+	);
+
 	register_global_func(vm, 0, "c_strftime",   &native_c_strftime,       2, "tm",    vm->c_tm, "format", vm->Str);
+	_doc(vm, "", "Call STRFTIME(3)");
+
+	register_global_func(vm, 1, "c_strptime",   &native_c_strptime,       2, "buf",   vm->Str,  "format", vm->Str);
+	_doc(vm, "", "Call STRPTIME(3)");
+	_doc(vm, "%RET", "Arr. [number_of_parsed_chars:Int, result:c_tm]");
+
+	register_global_func(vm, 0, "c_mktime",     &native_c_mktime,         1, "tm",    vm->c_tm);
+	_doc(vm, "", "Call MKTIME(3)");
+	_doc(vm, "%RET", "Int - epoch time");
+
 
 	// hash
 	register_global_func(vm, 0, "in",       &native_in_any_hash,       2, "x",   vm->Any, "h", vm->Hash);
 	_doc(vm, "", "Check key presence in a Hash");
 	_doc(vm, "%RET", "Bool");
 	_doc_arr(vm, "%EX",
-		"time()  # 1483780368",
+		"\"a\" in {\"a\": 1}  # true",
+		"\"b\" in {\"a\": 1}  # false",
 		NULL
 	);
 
@@ -3034,7 +3434,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	register_global_func(vm, 1, "del",      &native_index_del_hash_any,        2, "h",   vm->Hash,"k", vm->Any);
-	_doc(vm, "", "Delete hash key. Throws KeyNotFound if k is not in h.");
+	_doc(vm, "", "Delete hash key. Throws KeyNotFound if k is not in h. WARNING: this method will probably be renamed to \"delete\" in future versions.");
 	_doc(vm, "h", "Target hash");
 	_doc(vm, "k", "Key");
 	_doc(vm, "%RET", "h");
@@ -3046,12 +3446,32 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	register_global_func(vm, 0, "Hash",     &native_Hash_nti,                  1, "obj", vm->NormalTypeInstance);
-	_doc(vm, "", "Get all attributes and their values as key-value pairs in the resulting Hash.");
+	_doc(vm, "", "Get all fields and their values as key-value pairs in the resulting Hash.");
 	_doc(vm, "%RET", "Hash");
 	_doc_arr(vm, "%EX",
 		"(1..10).Hash()  # Hash {start=1, end=10, step=1}",
 		NULL
 	);
+
+	register_global_func(vm, 1, "ll_hash_head",      &native_ll_hash_head,        1, "h",   vm->Hash);
+	_doc(vm, "", "Low level. Do not use directly.");
+	_doc(vm, "%RET", "LLHashEntry or null");
+
+	register_global_func(vm, 1, "ll_hash_tail",      &native_ll_hash_tail,        1, "h",   vm->Hash);
+	_doc(vm, "", "Low level. Do not use directly.");
+	_doc(vm, "%RET", "LLHashEntry or null");
+
+	register_global_func(vm, 1, "ll_hash_entry_key",      &native_ll_hash_entry_key,        1, "h",   vm->LLHashEntry);
+	_doc(vm, "", "Low level. Do not use directly.");
+	_doc(vm, "%RET", "Any");
+
+	register_global_func(vm, 1, "ll_hash_entry_val",      &native_ll_hash_entry_val,        1, "h",   vm->LLHashEntry);
+	_doc(vm, "", "Low level. Do not use directly.");
+	_doc(vm, "%RET", "Any");
+
+	register_global_func(vm, 1, "ll_hash_entry_next",      &native_ll_hash_entry_next,        1, "h",   vm->LLHashEntry);
+	_doc(vm, "", "Low level. Do not use directly.");
+	_doc(vm, "%RET", "LLHashEntry or null");
 
 	// http://stackoverflow.com/questions/3473692/list-environment-variables-with-c-in-unix
 	env_hash = make_hash(32);
@@ -3071,19 +3491,20 @@ void vm_init(VM *vm, int argc, char **argv) {
 		ARRAY_ITEMS(argv_array)[i] = make_string(argv[i]);
 	}
 	set_global(vm, "ARGV", argv_array);
-	set_global(vm, "impl_not_found_handler", vm->impl_not_found_handler = make_array(0)); // There must be a catch-all in stdlib
-	set_global(vm, "global_not_found_handler", vm->global_not_found_handler = make_array(0));
-	set_global(vm, "init", vm->init = make_array(0));
-	set_global(vm, "call", vm->call = make_array(0));
+	set_global(vm, "method_not_found_handler", vm->method_not_found_handler = make_multimethod()); // There must be a catch-all in stdlib
+	set_global(vm, "global_not_found_handler", vm->global_not_found_handler = make_multimethod());
+	set_global(vm, "init", vm->init = make_multimethod());
+	set_global(vm, "call", vm->call = make_multimethod());
 
 	// TODO: Some good solution for many defines
 #define E(name) set_global(vm, "C_" #name, MAKE_INT(name))
 	// errno -ls | awk '{print "E("$1");"}' | xargs -n10
 	// (errno -ls | awk '{print $1}'; awk '/^#define RTLD_/ {print $2}' /usr/include/x86_64-linux-gnu/bits/dlfcn.h ) > c_constants.txt
 	E(EPERM); E(ENOENT); E(ESRCH); E(EINTR);
+	E(EINVAL); E(ENOTTY); E(EACCES);
 	/*
 	E(EIO); E(ENXIO); E(E2BIG); E(ENOEXEC); E(EBADF); E(ECHILD);
-	E(EAGAIN); E(ENOMEM); E(EACCES); E(EFAULT); E(ENOTBLK); E(EBUSY); E(EEXIST); E(EXDEV); E(ENODEV); E(ENOTDIR);
+	E(EAGAIN); E(ENOMEM); E(EFAULT); E(ENOTBLK); E(EBUSY); E(EEXIST); E(EXDEV); E(ENODEV); E(ENOTDIR);
 	E(EISDIR); E(EINVAL); E(ENFILE); E(EMFILE); E(ENOTTY); E(ETXTBSY); E(EFBIG); E(ENOSPC); E(ESPIPE); E(EROFS);
 	E(EMLINK); E(EPIPE); E(EDOM); E(ERANGE); E(EDEADLK); E(ENAMETOOLONG); E(ENOLCK); E(ENOSYS); E(ENOTEMPTY); E(ELOOP);
 	E(EWOULDBLOCK); E(ENOMSG); E(EIDRM); E(ECHRNG); E(EL2NSYNC); E(EL3HLT); E(EL3RST); E(ELNRNG); E(EUNATCH); E(ENOCSI);
@@ -3116,6 +3537,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	E(S_ISUID); E(S_ISGID); E(S_ISVTX); E(S_IRWXU); E(S_IRUSR); E(S_IWUSR); E(S_IXUSR); E(S_IRWXG); E(S_IRGRP); E(S_IWGRP);
 	E(S_IXGRP); E(S_IRWXO); E(S_IROTH); E(S_IWOTH); E(S_IXOTH);
+
+
+	// pthread
+	E(PTHREAD_MUTEX_RECURSIVE);
 
 
 	// awk '/^#define PCRE/ && $3 {print "E("$2");"}' /usr/include/pcre.h | grep -v 'PCRE_UCHAR\|PCRE_SPTR' | sort | xargs -n5
@@ -3202,10 +3627,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	set_global(vm, "RAND_MAX", MAKE_INT(NGS_RAND_MAX));
 
 
-	// TODO: documentation
+	// Documented in lib/stdlib.ngs
 	VALUE gc = make_hash(4);
 	set_hash_key(gc, make_string("enable"), make_func(vm, 0, "enable", &native_gc_enable, 0));
 	set_hash_key(gc, make_string("disable"), make_func(vm, 0, "disable", &native_gc_disable, 0));
+	set_hash_key(gc, make_string("get_parallel"), make_func(vm, 0, "get_parallel", &native_gc_get_parallel, 0));
 	set_global(vm, "GC", gc);
 }
 
@@ -3263,8 +3689,7 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 				if(vm->bytecode) {
 					vm->bytecode = NGS_REALLOC(vm->bytecode, vm->bytecode_len + len);
 				} else {
-					// XXX if a large number (1G) is given here, test.ngs runs successfully
-					vm->bytecode = NGS_MALLOC(len);
+					vm->bytecode = NGS_MALLOC_ATOMIC(len);
 				}
 				assert(vm->bytecode);
 				memcpy(vm->bytecode + vm->bytecode_len, data, len);
@@ -3335,9 +3760,9 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 #define SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv) \
 { \
 	int minus = (((argc) >= 2) && IS_KWARGS_MARKER((argv)[(argc)-1])) ? 2 : 0; \
-	set_normal_type_instance_attribute(exc, make_string("args"), make_array_with_values((argc)-minus, (argv))); \
+	set_normal_type_instance_field(exc, make_string("args"), make_array_with_values((argc)-minus, (argv))); \
 	if(minus) { \
-		set_normal_type_instance_attribute(exc, make_string("kwargs"), (argv)[(argc)-2]); \
+		set_normal_type_instance_field(exc, make_string("kwargs"), (argv)[(argc)-2]); \
 	} \
 }
 
@@ -3349,10 +3774,11 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 	METHOD_RESULT mr;
 	VALUE *callable_items;
 
-	if(IS_ARRAY(callable)) {
+	if(IS_MULMETHOD(callable)) {
+		int len = MULTIMETHOD_LEN(callable);
 		DEEPER_FRAME.arr_callable = &callable;
 		DEEPER_FRAME.arr_callable_idx = &i;
-		for(i=OBJ_LEN(callable)-1, callable_items = OBJ_DATA_PTR(callable); i>=0; i--) {
+		for(i=len-1, callable_items = MULTIMETHOD_ITEMS(callable); i>=0; i--) {
 			mr = vm_call(vm, ctx, result, callable_items[i], argc, argv);
 			if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION) || (mr == METHOD_IMPL_MISSING)) {
 				DEEPER_FRAME.arr_callable = NULL;
@@ -3363,39 +3789,39 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 				dump_titled("RESULT", *result);
 				VALUE exc;
 				exc = make_normal_type_instance(vm->InternalError);
-				set_normal_type_instance_attribute(exc, make_string("message"), make_string("Unexpected method result"));
-				set_normal_type_instance_attribute(exc, make_string("callable"), callable_items[i]);
+				set_normal_type_instance_field(exc, make_string("message"), make_string("Unexpected method result"));
+				set_normal_type_instance_field(exc, make_string("callable"), callable_items[i]);
 				SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv);
 				THROW_EXCEPTION_INSTANCE(exc);
 			}
 		}
 		DEEPER_FRAME.arr_callable = NULL;
-		// --- impl_not_found_handler() - start ---
-		if(THIS_FRAME.do_call_impl_not_found_handler) {
-			// impl_not_found_handler == [] when stdlib is not loaded (-E bootstrap switch / during basic tests)
-			if(OBJ_LEN(vm->impl_not_found_handler)) {
+		// --- method_not_found_handler() - start ---
+		if(THIS_FRAME.do_call_method_not_found_handler) {
+			// method_not_found_handler == [] when stdlib is not loaded (-E bootstrap switch / during basic tests)
+			if(OBJ_LEN(vm->method_not_found_handler)) {
 				VALUE new_argv;
 				new_argv = make_array(argc+1);
 				ARRAY_ITEMS(new_argv)[0] = callable;
 				memcpy(&ARRAY_ITEMS(new_argv)[1], argv, sizeof(VALUE)*argc);
-				THIS_FRAME.do_call_impl_not_found_handler = 0;
+				THIS_FRAME.do_call_method_not_found_handler = 0;
 				// last_ip should have been already set up before calling vm_call()
-				mr = vm_call(vm, ctx, result, vm->impl_not_found_handler, argc+1, ARRAY_ITEMS(new_argv));
-				THIS_FRAME.do_call_impl_not_found_handler = 1;
+				mr = vm_call(vm, ctx, result, vm->method_not_found_handler, argc+1, ARRAY_ITEMS(new_argv));
+				THIS_FRAME.do_call_method_not_found_handler = 1;
 				if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION)) {
 					return mr;
 				}
 				assert(mr == METHOD_IMPL_MISSING);
 			}
-			// Either we called impl_not_found_handler and it resulted METHOD_IMPL_MISSING
-			// or we don't have impl_not_found_handler
+			// Either we called method_not_found_handler and it resulted METHOD_IMPL_MISSING
+			// or we don't have method_not_found_handler
 			VALUE exc;
-			exc = make_normal_type_instance(vm->ImplNotFound);
-			set_normal_type_instance_attribute(exc, make_string("callable"), callable);
+			exc = make_normal_type_instance(vm->MethodNotFound);
+			set_normal_type_instance_field(exc, make_string("callable"), callable);
 			SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv);
 			THROW_EXCEPTION_INSTANCE(exc);
 		}
-		// --- impl_not_found_handler() - end ---
+		// --- method_not_found_handler() - end ---
 		return METHOD_IMPL_MISSING;
 	}
 
@@ -3447,7 +3873,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			if(!IS_HASH(kw)) {
 				VALUE exc;
 				exc = make_normal_type_instance(vm->InternalError);
-				set_normal_type_instance_attribute(exc, make_string("message"), make_string("Kwargs is not a hash"));
+				set_normal_type_instance_field(exc, make_string("message"), make_string("Kwargs is not a hash"));
 				THROW_EXCEPTION_INSTANCE(exc);
 			}
 			argc -= 2;
@@ -3505,10 +3931,10 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			if(!IS_NGS_TYPE(params[n_params_required*2 + (i-n_params_required)*3 + 1])) {
 				VALUE exc;
 				exc = make_normal_type_instance(vm->InvalidArgument);
-				set_normal_type_instance_attribute(exc, make_string("message"), make_string("Parameter type expected"));
-				set_normal_type_instance_attribute(exc, make_string("callable"), callable);
-				set_normal_type_instance_attribute(exc, make_string("parameter_index"), MAKE_INT(i));
-				set_normal_type_instance_attribute(exc, make_string("got"), params[n_params_required*2 + (i-n_params_required)*3 + 1]);
+				set_normal_type_instance_field(exc, make_string("message"), make_string("Parameter type expected"));
+				set_normal_type_instance_field(exc, make_string("callable"), callable);
+				set_normal_type_instance_field(exc, make_string("parameter_index"), MAKE_INT(i));
+				set_normal_type_instance_field(exc, make_string("got"), params[n_params_required*2 + (i-n_params_required)*3 + 1]);
 				THROW_EXCEPTION_INSTANCE(exc);
 			}
 			// XXX temp - end
@@ -3566,7 +3992,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 
 		ctx->frames[ctx->frame_ptr].closure = callable;
 		ctx->frames[ctx->frame_ptr].try_info_ptr = 0;
-		ctx->frames[ctx->frame_ptr].do_call_impl_not_found_handler = 1;
+		ctx->frames[ctx->frame_ptr].do_call_method_not_found_handler = 1;
 		ctx->frames[ctx->frame_ptr].do_call_call = 1;
 		ctx->frames[ctx->frame_ptr].last_ip = 0;
 		ctx->frames[ctx->frame_ptr].ReturnInstance = MAKE_NULL;
@@ -3577,7 +4003,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			// TODO: Appropriate exception type, not Exception
 			VALUE exc;
 			exc = make_normal_type_instance(vm->StackDepthFail);
-			set_normal_type_instance_attribute(exc, make_string("message"), make_string("Max stack depth reached"));
+			set_normal_type_instance_field(exc, make_string("message"), make_string("Max stack depth reached"));
 			THROW_EXCEPTION_INSTANCE(exc);
 		}
 		mr = vm_run(vm, ctx, CLOSURE_OBJ_IP(callable), result);
@@ -3592,7 +4018,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 	if(IS_NORMAL_TYPE_CONSTRUCTOR(callable)) {
 		*result = make_normal_type_instance(NORMAL_TYPE_CONSTRUCTOR_TYPE(callable));
 		if(obj_is_of_type(vm, *result, vm->Exception)) {
-			set_normal_type_instance_attribute(*result, make_string("backtrace"), make_backtrace(vm, ctx));
+			set_normal_type_instance_field(*result, make_string("backtrace"), make_backtrace(vm, ctx));
 		}
 		// init() is optional when constructor is called without arguments
 		// --- init() - start ---
@@ -3605,14 +4031,14 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		} else {
 			new_argv = result;
 		}
-		THIS_FRAME.do_call_impl_not_found_handler = 0;
+		THIS_FRAME.do_call_method_not_found_handler = 0;
 		mr = vm_call(vm, ctx, &v, vm->init, argc+1, new_argv);
-		THIS_FRAME.do_call_impl_not_found_handler = 1;
+		THIS_FRAME.do_call_method_not_found_handler = 1;
 		if(argc && (mr == METHOD_IMPL_MISSING)) {
 			VALUE exc;
-			exc = make_normal_type_instance(vm->ImplNotFound);
-			set_normal_type_instance_attribute(exc, make_string("message"), make_string("Normal type constructor: init() not found"));
-			set_normal_type_instance_attribute(exc, make_string("callable"), vm->init);
+			exc = make_normal_type_instance(vm->MethodNotFound);
+			set_normal_type_instance_field(exc, make_string("message"), make_string("Normal type constructor: init() not found"));
+			set_normal_type_instance_field(exc, make_string("callable"), vm->init);
 			SET_EXCEPTION_ARGS_KWARGS(exc, argc+1, new_argv);
 			THROW_EXCEPTION_INSTANCE(exc);
 		}
@@ -3642,8 +4068,8 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			}
 			if(mr == METHOD_EXCEPTION) {
 				VALUE r = MAKE_NULL;
-				if(obj_is_of_type(vm, *result, vm->ImplNotFound)) {
-					get_normal_type_instace_attribute(*result, make_string("callable"), &r);
+				if(obj_is_of_type(vm, *result, vm->MethodNotFound)) {
+					get_normal_type_instace_field(*result, make_string("callable"), &r);
 					if(r.ptr == vm->call.ptr) {
 						// Don't know how to call
 						mr = METHOD_IMPL_MISSING;
@@ -3662,8 +4088,8 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 
 	VALUE exc;
 	exc = make_normal_type_instance(vm->DontKnowHowToCall);
-	set_normal_type_instance_attribute(exc, make_string("message"), make_string("No matching call() found"));
-	set_normal_type_instance_attribute(exc, make_string("callable"), callable);
+	set_normal_type_instance_field(exc, make_string("message"), make_string("No matching call() found"));
+	set_normal_type_instance_field(exc, make_string("callable"), callable);
 	SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv);
 	THROW_EXCEPTION_INSTANCE(exc);
 
@@ -3748,7 +4174,7 @@ main_loop:
 #define OP_MAKE_STR_(type_name) \
 	EXPECT_STACK_DEPTH(1); \
 	v = make_normal_type_instance(vm->type_name); \
-	set_normal_type_instance_attribute(v, make_string("val"), TOP); \
+	set_normal_type_instance_field(v, make_string("val"), TOP); \
 	TOP = v; \
 	goto main_loop;
 		case OP_MAKE_STR_IMM:
@@ -3794,28 +4220,27 @@ main_loop:
 							// DEBUG_VM_RUN("OP_FETCH_GLOBAL gvi=%d len=%d\n", gvi, vm->globals_len);
 							assert(gvi < vm->globals_len);
 #endif
-							// TODO: report error here instead of crashing
 							if(IS_UNDEF(GLOBALS[gvi])) {
 								THIS_FRAME.last_ip = ip;
 
-								THIS_FRAME.do_call_impl_not_found_handler = 0;
+								THIS_FRAME.do_call_method_not_found_handler = 0;
 								// last_ip should have been already set up before calling vm_call()
 								v = make_string(vm->globals_names[gvi]);
 								mr = vm_call(vm, ctx, result, vm->global_not_found_handler, 1, &v);
-								THIS_FRAME.do_call_impl_not_found_handler = 1;
+								THIS_FRAME.do_call_method_not_found_handler = 1;
 								if(IS_UNDEF(GLOBALS[gvi]) || mr == METHOD_EXCEPTION) {
 									VALUE exc;
 									exc = make_normal_type_instance(vm->GlobalNotFound);
-									set_normal_type_instance_attribute(exc, make_string("name"), make_string(vm->globals_names[gvi]));
-									set_normal_type_instance_attribute(exc, make_string("index"), MAKE_INT(gvi));
-									set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+									set_normal_type_instance_field(exc, make_string("name"), make_string(vm->globals_names[gvi]));
+									set_normal_type_instance_field(exc, make_string("index"), MAKE_INT(gvi));
+									set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 									if(mr == METHOD_EXCEPTION) {
-										set_normal_type_instance_attribute(exc, make_string("cause"), *result);
+										set_normal_type_instance_field(exc, make_string("cause"), *result);
 									} else {
 										if (mr == METHOD_IMPL_MISSING) {
-											set_normal_type_instance_attribute(exc, make_string("message"), make_string("Additionally, no appropriate global_not_found_handler() found"));
+											set_normal_type_instance_field(exc, make_string("message"), make_string("Additionally, no appropriate global_not_found_handler() found"));
 										} else {
-											set_normal_type_instance_attribute(exc, make_string("message"), make_string("Additionally, global_not_found_handler() failed to provide the global"));
+											set_normal_type_instance_field(exc, make_string("message"), make_string("Additionally, global_not_found_handler() failed to provide the global"));
 										}
 									}
 									*result = exc;
@@ -3842,9 +4267,9 @@ main_loop:
 								VALUE exc;
 								exc = make_normal_type_instance(vm->UndefinedLocalVar);
 								// TODO: variable name
-								set_normal_type_instance_attribute(exc, make_string("name"), CLOSURE_OBJ_LOCALS(THIS_FRAME_CLOSURE)[lvi]);
-								set_normal_type_instance_attribute(exc, make_string("index"), MAKE_INT(lvi));
-								set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+								set_normal_type_instance_field(exc, make_string("name"), CLOSURE_OBJ_LOCALS(THIS_FRAME_CLOSURE)[lvi]);
+								set_normal_type_instance_field(exc, make_string("index"), MAKE_INT(lvi));
+								set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 								*result = exc;
 								goto exception;
 							}
@@ -3871,18 +4296,18 @@ main_loop:
 							}
 							if(mr == METHOD_ARGS_MISMATCH) {
 								*result = make_normal_type_instance(vm->ArgsMismatch);
-								set_normal_type_instance_attribute(*result, make_string("message"), make_string("Arguments did not match"));
-								set_normal_type_instance_attribute(*result, make_string("callable"), callable);
+								set_normal_type_instance_field(*result, make_string("message"), make_string("Arguments did not match"));
+								set_normal_type_instance_field(*result, make_string("callable"), callable);
 								SET_EXCEPTION_ARGS_KWARGS(*result, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
-								set_normal_type_instance_attribute(*result, make_string("backtrace"), make_backtrace(vm, ctx));
+								set_normal_type_instance_field(*result, make_string("backtrace"), make_backtrace(vm, ctx));
 								goto exception;
 							}
 							if(mr != METHOD_OK) {
 								*result = make_normal_type_instance(vm->InternalError);
-								set_normal_type_instance_attribute(*result, make_string("message"), make_string("Unexpected method result"));
-								set_normal_type_instance_attribute(*result, make_string("callable"), callable);
+								set_normal_type_instance_field(*result, make_string("message"), make_string("Unexpected method result"));
+								set_normal_type_instance_field(*result, make_string("callable"), callable);
 								SET_EXCEPTION_ARGS_KWARGS(*result, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
-								set_normal_type_instance_attribute(*result, make_string("backtrace"), make_backtrace(vm, ctx));
+								set_normal_type_instance_field(*result, make_string("backtrace"), make_backtrace(vm, ctx));
 								goto exception;
 							}
 							REMOVE_TOP_N(GET_INT(v));
@@ -3892,10 +4317,10 @@ main_loop:
 							EXPECT_STACK_DEPTH(2);
 							POP_NOCHECK(callable);
 							POP_NOCHECK(v); // number of arguments
-							THIS_FRAME.do_call_impl_not_found_handler = 0;
+							THIS_FRAME.do_call_method_not_found_handler = 0;
 							THIS_FRAME.last_ip = ip;
 							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-GET_INT(v)-1], callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
-							THIS_FRAME.do_call_impl_not_found_handler = 1;
+							THIS_FRAME.do_call_method_not_found_handler = 1;
 							if(mr == METHOD_EXCEPTION) {
 								// TODO: special handling? Exception during exception handling.
 								*result = ctx->stack[ctx->stack_ptr-GET_INT(v)-1];
@@ -3925,10 +4350,10 @@ main_loop:
 							if(mr != METHOD_OK) {
 								if(mr == METHOD_ARGS_MISMATCH) {
 									VALUE exc;
-									exc = make_normal_type_instance(vm->ImplNotFound);
-									set_normal_type_instance_attribute(exc, make_string("callable"), callable);
+									exc = make_normal_type_instance(vm->MethodNotFound);
+									set_normal_type_instance_field(exc, make_string("callable"), callable);
 									SET_EXCEPTION_ARGS_KWARGS(exc, OBJ_LEN(ctx->stack[ctx->stack_ptr-1]), ARRAY_ITEMS(ctx->stack[ctx->stack_ptr-1]));
-									set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+									set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 									*result = exc;
 									goto exception;
 								}
@@ -4024,8 +4449,8 @@ do_jump:
 									if(!IS_STRING(ctx->stack[ctx->stack_ptr-string_components_count+i])) {
 										VALUE exc;
 										exc = make_normal_type_instance(vm->InvalidArgument);
-										set_normal_type_instance_attribute(exc, make_string("message"), make_string("String interpolation requires all components to be strings"));
-										set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+										set_normal_type_instance_field(exc, make_string("message"), make_string("String interpolation requires all components to be strings"));
+										set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 										*result = exc;
 										goto exception;
 									}
@@ -4058,9 +4483,10 @@ do_jump:
 							// TODO: report error here instead of crashing
 #endif
 							if(IS_UNDEF(GLOBALS[gvi])) {
-								GLOBALS[gvi] = make_array_with_values(1, &TOP);
+								GLOBALS[gvi] = make_multimethod_with_value(TOP);
 							} else {
-								PUSH_FUNC(GLOBALS[gvi], TOP);
+								// printf("GVI %d %s\n", gvi, vm->globals_names[gvi]);
+								PUSH_METHOD(GLOBALS[gvi], TOP);
 							}
 							goto main_loop;
 		case OP_DEF_LOCAL_FUNC:
@@ -4070,9 +4496,9 @@ do_jump:
 							assert(ctx->stack_ptr);
 							ARG_LVI;
 							if(IS_UNDEF(LOCALS[lvi])) {
-								LOCALS[lvi] = make_array_with_values(1, &TOP);
+								LOCALS[lvi] = make_multimethod_with_value(TOP);
 							} else {
-								PUSH_FUNC(LOCALS[lvi], TOP);
+								PUSH_METHOD(LOCALS[lvi], TOP);
 							}
 							goto main_loop;
 		case OP_FETCH_UPVAR:
@@ -4113,9 +4539,9 @@ do_jump:
 							ARG_UVI;
 							ARG_LVI;
 							if(IS_UNDEF(UPLEVELS[uvi][lvi])) {
-								UPLEVELS[uvi][lvi] = make_array_with_values(1, &TOP);
+								UPLEVELS[uvi][lvi] = make_multimethod_with_value(TOP);
 							} else {
-								PUSH_FUNC(UPLEVELS[uvi][lvi], TOP);
+								PUSH_METHOD(UPLEVELS[uvi][lvi], TOP);
 							}
 							goto main_loop;
 		case OP_MAKE_HASH:
@@ -4139,6 +4565,12 @@ do_jump:
 							EXPECT_STACK_DEPTH(2);
 							array_push(ctx->stack[ctx->stack_ptr-2], ctx->stack[ctx->stack_ptr-1]);
 							REMOVE_TOP_NOCHECK;
+							goto main_loop;
+		case OP_ARR_APPEND2:
+							EXPECT_STACK_DEPTH(3);
+							array_push(ctx->stack[ctx->stack_ptr-3], ctx->stack[ctx->stack_ptr-2]);
+							array_push(ctx->stack[ctx->stack_ptr-3], ctx->stack[ctx->stack_ptr-1]);
+							REMOVE_TOP_N_NOCHECK(2);
 							goto main_loop;
 		case OP_ARR_CONCAT:
 							EXPECT_STACK_DEPTH(2);
@@ -4178,31 +4610,31 @@ do_jump:
 							EXPECT_STACK_DEPTH(3);
 							command = make_normal_type_instance(vm->CommandsPipeline);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("options"), v);
+							set_normal_type_instance_field(command, make_string("options"), v);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("pipes"), v);
+							set_normal_type_instance_field(command, make_string("pipes"), v);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("commands"), v);
+							set_normal_type_instance_field(command, make_string("commands"), v);
 							PUSH_NOCHECK(command);
 							goto main_loop;
 		case OP_MAKE_CMDS_PIPE:
 							EXPECT_STACK_DEPTH(2);
 							command = make_normal_type_instance(vm->CommandsPipe);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("options"), v);
+							set_normal_type_instance_field(command, make_string("options"), v);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("name"), v);
+							set_normal_type_instance_field(command, make_string("name"), v);
 							PUSH_NOCHECK(command);
 							goto main_loop;
 		case OP_MAKE_CMD:
 							EXPECT_STACK_DEPTH(3);
 							command = make_normal_type_instance(vm->Command);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("options"), v);
+							set_normal_type_instance_field(command, make_string("options"), v);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("redirects"), v);
+							set_normal_type_instance_field(command, make_string("redirects"), v);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("argv"), v);
+							set_normal_type_instance_field(command, make_string("argv"), v);
 							PUSH_NOCHECK(command);
 							goto main_loop;
 		case OP_SET_CLOSURE_NAME:
@@ -4225,6 +4657,15 @@ do_jump:
 							set_hash_key(OBJ_ATTRS(SECOND), make_string("doc"), FIRST);
 							REMOVE_TOP_NOCHECK;
 							goto main_loop;
+		case OP_SET_CLOSURE_NS:
+							EXPECT_STACK_DEPTH(2);
+							assert(IS_CLOSURE(SECOND));
+							if(!IS_HASH(OBJ_ATTRS(SECOND))) {
+								goto main_loop;
+							}
+							set_hash_key(OBJ_ATTRS(SECOND), make_string("ns"), FIRST);
+							REMOVE_TOP_NOCHECK;
+							goto main_loop;
 		case OP_HASH_SET:
 							EXPECT_STACK_DEPTH(3);
 							set_hash_key(THIRD, SECOND, FIRST);
@@ -4243,27 +4684,43 @@ do_jump:
 							EXPECT_STACK_DEPTH(3);
 							command = make_normal_type_instance(vm->Redir);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("datum"), v);
+							set_normal_type_instance_field(command, make_string("datum"), v);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("marker"), v);
+							set_normal_type_instance_field(command, make_string("marker"), v);
 							POP_NOCHECK(v);
-							set_normal_type_instance_attribute(command, make_string("fd"), v);
+							set_normal_type_instance_field(command, make_string("fd"), v);
 							PUSH_NOCHECK(command);
 							goto main_loop;
 		case OP_SUPER:
 							if(THIS_FRAME.arr_callable) {
-								assert(IS_ARRAY(*THIS_FRAME.arr_callable));
-								PUSH(make_array_with_values(*THIS_FRAME.arr_callable_idx, OBJ_DATA_PTR(*THIS_FRAME.arr_callable)));
+								assert(IS_MULMETHOD(*THIS_FRAME.arr_callable));
+								// PUSH(make_array_with_values(*THIS_FRAME.arr_callable_idx, OBJ_DATA_PTR(*THIS_FRAME.arr_callable)));
+								v = make_multimethod();
+								MULTIMETHOD_METHODS(v) = make_array_with_values(*THIS_FRAME.arr_callable_idx, MULTIMETHOD_ITEMS(*THIS_FRAME.arr_callable));
+								PUSH(v);
 								goto main_loop;
 							} else {
 								VALUE exc;
-								// TODO: better exception type than ImplNotFound
-								exc = make_normal_type_instance(vm->ImplNotFound);
-								set_normal_type_instance_attribute(exc, make_string("message"), make_string("Using super where callable is not an array"));
-								set_normal_type_instance_attribute(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+								// TODO: better exception type than MethodNotFound
+								exc = make_normal_type_instance(vm->MethodNotFound);
+								set_normal_type_instance_field(exc, make_string("message"), make_string("Using super where callable is not an array"));
+								set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
 								*result = exc;
 								goto exception;
 							}
+		case OP_MAKE_MULTIMETHOD:
+							PUSH(make_multimethod());
+							goto main_loop;
+		case OP_MULTIMETHOD_APPEND:
+							EXPECT_STACK_DEPTH(2);
+							push_multimethod_method(ctx->stack[ctx->stack_ptr-2], ctx->stack[ctx->stack_ptr-1]);
+							REMOVE_TOP_NOCHECK;
+							goto main_loop;
+		case OP_MULTIMETHOD_REVERSE:
+							// XXX: leaked abstraction
+							EXPECT_STACK_DEPTH(1);
+							array_reverse(MULTIMETHOD_METHODS(TOP));
+							goto main_loop;
 		default:
 							// TODO: exception
 							printf("ERROR: Unknown opcode %d\n", opcode);
@@ -4276,7 +4733,7 @@ end_main_loop:
 exception:
 	// *result is the exception
 	if (IS_NORMAL_TYPE_INSTANCE(*result) && (result->ptr == THIS_FRAME.ReturnInstance.ptr)) {
-		mr = get_normal_type_instace_attribute(*result, make_string("val"), result);
+		mr = get_normal_type_instace_field(*result, make_string("val"), result);
 		ctx->stack_ptr = saved_stack_ptr;
 		return mr;
 	}
@@ -4305,7 +4762,7 @@ BYTECODE_HANDLE *ngs_create_bytecode() {
 	h = NGS_MALLOC(sizeof(*h));
 	assert(h);
 	len = strlen(BYTECODE_SIGNATURE) + sizeof(BYTECODE_ORDER_CHECK) + sizeof(BYTECODE_SECTIONS_COUNT);
-	h->data = NGS_MALLOC(len);
+	h->data = NGS_MALLOC_ATOMIC(len);
 	h->len = len;
 	p = h->data;
 

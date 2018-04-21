@@ -4,15 +4,17 @@
 
 # NAME
 
-ngslang - Next Generation Shell language tutorial.
+ngslang - Next Generation Shell language reference.
 
-# WHAT IS NGS?
+# What is ngs?
 
 NGS is an alternative shell. At it's core is a domain-specific language that was specifically designed to be a shell language.
 
-NGS is under development. The language part is already good enough to write some useful scripts. CLI does not exist yet. It will be written using the same language.
+NGS is under development. The language part is already good enough to write some useful scripts.
+The CLI still doesn't exist and will be written using the same language.
 
-# RUNNING NGS
+
+# Running ngs scripts
 
 **ngs** *script_name.ngs*
 
@@ -20,93 +22,31 @@ You can put the following line as first line of your script:
 
 	#!/usr/bin/env ngs
 
-If you do, you can run the script as `./script_name.ngs` or `/full/path/to/script_name.ngs` (you must make your script executable, `chmod 655 script_name.ngs`.
+If you do that, you can run the script as `./script_name.ngs` or `/full/path/to/script_name.ngs` (you must make your script executable, by running `chmod 755 script_name.ngs` ).
 
-See more about running NGS in [ngs(1)](ngs.1.html).
+See more about running NGS in [NGS(1)](ngs.1.md).
 
-# WHY NGS?
+# Terminology
 
-If your attitude towards system tools is like mine, NGS would resonate better with how you think than bash, Python, Ruby, Perl or any other language for systems administration tasks.
+* type - Built-in or user-defined data type, similar to Python, Ruby and other languages.
+* object - Instance of a type, similar to Python, Ruby and other languages. The phrase "MyType object" refers to an Instance of "MyType".
+* field - A named slot of an object, similar to field in Python, Java, etc.
+* attributes - Slot for auxiliary data on most types of objects (the ones that are references, i.e. not Int,Bool,Null), typically a `Hash` or `null`.
+* method - Built-in or user-defined function. User defined methods can be closures. Methods are also called functions in several places in the documentation.
+* multimethod - A MultiMethod object containing ordered list of methods. When called, the appropriate method is selected from the list to perform the computation.
 
-## NGS was built for systems administration tasks
-
-NGS is optimized by design to perform easily typical systems administration tasks. The following tasks are common so NGS either has a syntax or features to make these tasks easy:
-
-* Running external commands
-* Manipulating data
-* Simple remote execution (not implemented yet)
-
-Example of running external command + data manipulation (detailed explanation later):
-
-	ngs -pi '``aws ec2 describe-instances``.InstanceId'
-
-	# Output:
-	Array of size 37
-	[0] = i-0a0xxxxxxxxxxxxxx
-	[1] = i-04dxxxxxxxxxxxxxx
-	...
-
-You might want to process the output above with an external tool but it's in a human-readable and not-machine-parseble format. No problem, use the **-pj** (print JSON) switch:
-
-	ngs -pj '``aws ec2 describe-instances``.InstanceId'
-
-	# Output:
-	[ "i-0a0xxxxxxxxxxxxxx", "i-04dxxxxxxxxxxxxxx", ... ]
-
-We all know that life is not that simple so here is a bit more complex situation where the field might or might not appear in the data (also outputting space delimited items):
-
-	ngs -p '``aws ec2 describe-instances``.map({A.PublicIpAddress tor "-"}).join(" ")'
-
-	# Output:
-	52.58.XXX.XX 52.59.XX.XX 52.29.XXX.XX 52.57.XXX.XXX - 52.57.XX.XXX ...
-
-
-
-## Your current situation with languages sucks
-
-Currently, as a systems engineer you are probably using bash combined with of one or more high-level languages.
-
-**bash**
-
-You are using bash because it's domain-specific and allows you to get some tasks done easily. On the other hand, bash can not manipulate nested data structures in a sane way. So you need an external tool:
-
-	aws ec2 describe-instances | jq -r '.Reservations[].Instances[].PublicIpAddress'
-
-	# Output:
-	52.58.XXX.XX
-	52.59.XX.XX
-	52.29.XXX.XX
-	52.57.XXX.XXX
-	null
-	...
-
-`jq` is fine till you need to work with tags (thanks AWS for list instead of hash!) or do something more complex. It starts looking bad really fast. It probably can be done with `jq` but why get yourself into this instead of using a normal programming language. You can do chess in `sed` too (actually done) but it doesn't mean you should unless it's for fun and not to get the job done quickly.
-
-Yes, there is also built-in `jmespath` in `awscli`. It won't be much better than `jq` - OK for simple cases. Why bother then? I've read the specs once and decided it was not worth the trouble if you already know how to use `jq`.
-
-**other languages**
-
-You are probably using Python or Ruby or Perl (and if you are like me, Perl is out of the question because of it's syntax horror). You use one of the above languages because bash is not powerful enough / not convenient enough to do the tasks that these languages do. On the other hand something as simple as `echo mystring >myfile` or run an external program is not as convenient to do in these languages. Yes all of the languages above support system tasks to some degree. None of these languages support system tasks as a language that was built ground-up for system tasks. See the double-backtick examples above... for example.
-
-## You are using configuration management tools
-
-I've seen unjustified usage of configuration management tools too much. Yes, these are the "Cool Shiny New DevOps" hype tools: Chef, Puppet, Ansible and friends. I assume that in many situations it would be better to script these tasks instead of using configuration management tools. They are very complex and they take control away from you. The price of complexity is too high in many cases in my opinion. Any system beyond the most simple will need customization/wrapping/forking of ready-made modules for these configuration management systems to such degree that usage of such systems will be at very least questionable TCO-wise.
-
-Why not make your own clean solution that matches your own needs exactly? I mean except for being unpopular. The issue is that currently there is no good language to make these scripts. It would be inconvenient to script the task even if you wanted. I hope NGS will enable easy scripting of system tasks.
-
-
-# LANGUAGE PRINCIPLES OVERVIEW
+# Language principles
 
 This section is about principles behind NGS language design.
 
-## Systems engineers language
+## Systems engineers' language
 
 NGS is a domain-specific language. It is aimed to solve common system tasks in a convenient manner.
 
 ## Do the most practical thing
 
-* `fetch('myfile.json')` will parse the JSON and return the data structure. (Use `read()` to get raw contents).
-* The ```` ``my_command`` ```` will parse the command output (JSON for example) and return the data structure. Note that ```` ``aws ...`` ```` will be parsed even further (not just JSON) to return more usable data structures.
+* `fetch('myfile.json')` will decode the JSON and return the data structure. (Use `read()` to get raw contents).
+* The ```` ``my_command`` ```` will decode the command output (JSON for example) and return the data structure. Note that ```` ``aws ...`` ```` will be parsed even further (not just JSON) to return more usable data structures.
 * `my_array.my_prop` returns an array of `.my_prop` properties of each element.
 
 ## Uniformity
@@ -115,63 +55,62 @@ NGS tries to be uniform wherever possible to minimize surprises.
 
 ## Power
 
-Trade-offs between power and not allowing to shoot yourself in the foot are usually resolved in favor of the power solution. The language is aimed at experienced engineers which use their own judgement. The language should be powerful enough to shoot all feet in the building at once.
+As a rule, trade-offs between power and not allowing to shoot yourself in the foot are resolved in favor of the power solution. The language is aimed at experienced engineers which use their own judgement. The language should be powerful enough to shoot all feet in the building at once.
 
 ## Simple methods naming for less guess work
 
-* `1+2` adds the numbers (method name `+`)
-* `arr1+arr2` adds (concatenates) arrays
-* `hash1+hash2` produces merged hash.
+For example, the multimethod `+`:
+
+* `1 + 2` adds the numbers
+* `arr1 + arr2` adds (concatenates) arrays
+* `hash1 + hash2` produces merged hash.
 
 ## Extensibility
 
-* `fetch('your_file.super-format')` can be extended to parse your format.
+* `fetch('your_file.super-format')` can be extended to decode your format.
 * `read`, which reads from a file, can be extended to support HTTP or S3.
-* Define any operator for existing or your custom types.
+* Most of the syntax (for example `my_var.my_field` or `my_var[my_index]`) is just sugar for calling methods. This behaviour lets you, the user define any operator for existing or your custom types.
 
 ## Simplicity
 
-* Minimal possible number of concepts in the language.
-* No classes. Only types, methods and multiple dispatch (picking the right method implementation by matching types of parameters and arguments)
-* Simple type system.
+Very small number of core concepts in the language:
+
+* Types with a simple type system, geared only toward multiple dispatch. No classes.
+* Multimethods, which allow using same method name for operations on different types, as in the `+` example above.
+* Closures
+* Exceptions
 
 ## Familiarity
 
 Many concepts and syntax constructs come from other languages.
 
-# SYNTAX AND BASIC FUNCTIONALITY
+# Naming convention
 
-NGS has two syntaxes: **command syntax** and **code syntax**.
+* `var_name`
+* `CONST_NAME` - Currently NGS does not support constants, it's only a naming convention
+* `method_name` (multimethod name)
+* `TypeName`
+* `TransformationName` - example: `Strs` (converts to array of strings), `Argv` (constructs command line arguments array), `ExitCode` (converts anything to integer exit code).
 
-## Command syntax
+Reasoning behind `TransformationName`:
+* Transforms data into something else, like many other constructors
+* The output data might get it's own data type some day
 
-This is the close-to-bash syntax geared towards running external programs and i/o redirection.
-Command syntax is the syntax at the top level of every NGS script. The most simple NGS scripts might look very similar to bash scripts. Commands are separated by either newlines or by semicolon (`;`).
+# The two syntaxes
 
-Example:
+NGS has two syntaxes: **commands syntax** and **code syntax**.
+
+Motivation: I can not imagine any syntax for a "real" programming language that I would like which is built on top of the **commands syntax**, which is similar to bash. That's why NGS has **code syntax** for "real" programming and **commands syntax** for running external programs and i/o redirection, where this syntax is very convenient.
+
+
+## Commands syntax
+
+This is the resembles-bash syntax geared towards running external programs and i/o redirection. Command syntax is the syntax at the top level of every NGS script. The most simple NGS scripts might look very similar to bash scripts.
+Commands are separated by either newlines or by semicolon (`;`).
 
 	cat a.txt; touch myfile
 	echo mystr >myfile
-
-Redirections syntax (based on bash syntax):
-
-* Ovewrite : `ls >myfile`
-* Append: `ls >>myfile`
-* Read from: `wc -l <myfile`
-* Specifiy file descriptor, overwrite: `cmd_writing_to_stderr 2>myfile`
-* Specifiy file descriptor, append: `cmd_writing_to_stderr 2>>myfile`
-
-In addition to running commands and performing redirections, there are several expressions that are also supported in the **commands syntax**. Note `code` below means **code syntax** expressions.
-
-* `{ code }` - see **Switching between syntaxes** below
-* assignment: `myvar = code` (`myvar = 1 + 2`)
-* in-place assignment: `myvar += code` (`myvar += 10`)
-* function definition: `F myfunc(params...) code` (`F myfunc(n:Int) echo(n*10)`)
-* function call: `myfunc(arguments...)` (`myfunc(7)`)
-* `if condition_code [then] yes_code [else] no_code`
-* `while condition_code body_code`
-* `for(...) body_code`
-* comment: `#` and till end of line
+	ls | wc -l
 
 ## Code syntax
 
@@ -181,97 +120,788 @@ Example:
 
 	1 + 2 * 3; %[abc def ghi].without('ghi').each(echo)
 
-Expressions are separated by either newlines or by semicolon (`;`).
+Expressions are separated by either newlines or by semicolon (`;`). It is also permitted to have trailing semicolon in the end of a line:
 
-**code syntax** is the syntax of **-e**, **-E**, **-p**, **-pi** and **-pj** switches to `ngs` interpreter. Example:
+	my_func();
+	my_other_func()
 
-	ngs -p '(1...10).filter(F(num) num % 2 == 0)'
+**code syntax** is the syntax of **-e**, **-E**, **-p**, **-pi**, **-pl**, **-pj**, **-pjl**, and **-pt** switches to `ngs` interpreter. Example:
+
+	$ ngs -p '(1...10).filter(F(num) num % 2 == 0)'
 
 	# Output:
 	[2,4,6,8,10]
 
-If the above example looks too verbose, here is the shorter and uglier alternative:
+## Switching between commands and code syntaxes
 
-	ngs -p '(1...10)?{A%2==0}'
-
-## Switching between syntaxes
-
-In **command syntax** it is possible to switch to **code syntax** in one of the following ways:
-
-**Simple switching** (for a lack of better name)
+In **commands syntax** it is possible to switch to **code syntax** in one of the following ways:
 
 	ls
 	{ code syntax here }
 
-Use the kind of switching to above when an expression that you are writing is not supported in **command syntax**.
-
-It's not uncommon that the whole file is inside `{...}`:
-
-	{
-		%[abc def ghi].without('ghi').each(echo)
-	}
-
-**Singe argument substitution switch**
-
 	ls ${ code that computes the file name and returns a string,
 	spaces don't matter, expaned into single argument of ls }
 
-**Multiple arguments substitution switch**
-
+	# Expands to zero or more positional arguments to ls
 	ls $*{ code that computes the files names and returns array of
 	strings. Spaces don't matter, each element is expaned into single
 	argument of ls }
 
-In **code syntax** it is possible to switch to **command syntax** in one of the following ways:
 
-**Capture switch**
+In **code syntax** it is possible to switch to **commands syntax** in one of the following ways:
 
+	# Capture output
 	out = `commands syntax`
-	myvar = "mystring\n" + `my other command`
+	my_var = "mystring\n" + `my other command`
 
-**Capture and parse switch**
-
+	# Capture output and decode it
 	parsed_data_structure = ``commands syntax``
 	n = ``curl https://example.com/myservice/stats``.number_of_items_in_storage
 
-**Command switch**
-
+	# Get reference to a process
 	my_process = $( commands syntax )
 
-## Quick dive into syntax and basic functionality
+# Comments
 
-Comment
+Comments are allowed in both commands and code syntax. At the beginning of a line, a comment starts with a hash sign (`#`). A comment that starts in a middle of the line starts with space and a hash sign (`#`) and continues to end of the line.
 
 	# comment till end of line
+	run_external_program --input my_file # COMMENTS HERE ARE NOT IMPLEMENTED YET
 
-Calling a function
+	{
+		a = 1 # comment till end of line
+	}
+
+Also, lines that start with "TEST " (note the trailing space) are considered to be comments. They are ignored. The purpose is to allow an external testing script to extract and run these tests.
+
+# Variables
+
+As in other languages, variables are named locations that can store values. Variables' names should consist of ASCII letters (a-z, A-Z) and numbers (0-9). Variable name must start with a letter. Assignment to variables looks the same in both commands and code syntax. Referencing a variable in the code syntax is just the variable's name while referencing it in commands syntax or inside string interpolation is `$my_var` (not recommended) or `${my_var}` (recommended).
+
+Advanced topic: more precisely, the naming restrictions for the variables mentioned above are naming restrictions on identifiers. NGS can have variables that are named not by the rules above. This is not recommended except for special methods' which correlate with NGS syntax which is a syntactic sugar for calling methods, for example, binary operators. See more about methods' naming in "Methods and multimethods" section below.
+
+Assigning to a variable works in both commands and code syntax.
+
+	# Assigning value to a variable.
+	# Note that syntax to the right of = is code syntax even if the surrouning syntax is commands syntax.
+	a = 1 + 2
+
+	# Referencing a variable in code syntax.
+	# Not that arguments to method call are in code syntax even if the surrouning syntax is commands syntax.
+	echo(a)
+	# Output:
+	#   3
+
+	my_file = '1.txt'
+	# Referencing a variable inside commands syntax.
+	$(ls $my_file)
+	$(ls ${my_file})
+
+	# Referencing a variable inside string interpolation.
+	echo("A is ${a}")
+	# Output:
+	#   A is 3
+
+	# In-place assignment ( -=,+=,*=,/=,%= )
+	a += 100
+	# The above is exactly the same as a = a + 100
+
+Referencing undefined variable will cause `GlobalNotFound` or `UndefinedLocalVar` exceptions.
+
+## Checking whether a variable is defined
+
+	echo(defined a)
+	a = 100
+	echo(defined a)
+	# Output:
+	#   false
+	#   true
+
+It's a rare circumstance that one needs to use `defined`. Please try to avoid such situations.
+
+## Variables' scoping rules
+
+Variables scope types:
+
+* `local` - local to a method
+* `upvar` - local to enclosing method
+* `global` - global
+
+In a method, any variable that is not assigned to inside the method is looked up as an `upvar` (enclosing methods) and as `global`.
+
+	a = 1
+	F f() {
+		echo(a)
+	}
+	f()
+	# Output: 1
+
+	a = 1
+	F f() {
+		a = 2
+		F g() {
+			echo(a)
+		}
+		g()
+	}
+	f()
+	# Output: 2
+
+In a method, any variable that is mentioned in any of the enclosing methods is automatically `upvar` - references the variable in the outer scope.
+
+	a = 1
+	F f() {
+		a = 2
+		F g() {
+			a = 10
+		}
+		g()
+		echo(a)
+	}
+	f()
+	echo(a)
+	# Output: 10
+	# Output: 1
+
+In a method, any variable that is assigned to (including the `i` in construct `for(i;10) ...`) in the method is automatically `local` unless it's an `upvar` as described above. Inner methods are also `local` by default.
+
+	a = 1
+	F f() {
+		a = 2
+		echo(a)
+		F inner_func() "something"
+	}
+	f()
+	echo(a)
+	# Output: 2
+	# Output: 1
+	# Can not call inner_func from outside f()
+
+## Modifying variables' scoping
+
+You can modify default scoping using the `global` and `local` keywords.
+
+	a = 1
+	F f() {
+		a = 2
+		F g() {
+			# local instead of upvar
+			local a
+			a = 3
+		}
+		g()
+		echo(a)
+	}
+	f()
+	# Output: 2
+
+	a = 1
+	F f() {
+		a = 2
+		F g() {
+			# global instead of upvar
+			global a
+			a = 3
+		}
+		g()
+		echo(a)
+	}
+	f()
+	# Does not work yet due to a bug, "a" stays upvar
+	# Output: 3
+
+## Planned features for variables
+
+Destructuring assignment. Something like the following:
+
+	[a, b, **rest] = my_arr
+
+Syntax for `Hash` destructuring is not clear yet:
+
+	... = my_hash
+
+Destructuring should also be available in `for`:
+
+	# Hash iterator gives Arr of two elements each iteration.
+	# Destructuring would place the two elements in k and v varaibles.
+	for [k, v] in my_hash {
+		...
+	}
+
+# Methods and multimethods
+
+Methods' names are composed of letters (a-z, A-Z), digits (0-9) and the following characters: `_`, `-`, `|`, `=`, `!`, `@`, `?`, `<`, `>`, `~`, `+`, `*`, `/`, `%`, `(`, `)`, `$`, `.`, ```` `` ````, `"`, `:`, ` ` (space), `[`, `]` .
+
+## Multi-dispatch
+
+Each value in NGS has a type, similar to many other languages. One of the main features of NGS is choosing the correct method of a multimethod, based on types of the arguments. This feature is called multi-dispatch.
+
+Let's start with the following example:
+
+	F +(a:Int, b:Int) {
+		...
+	}
+
+	F +(s1:Str, s2:Str) {
+		...
+	}
+
+	{
+		1 + 1     # 2
+		'a' + 'b' # 'ab'
+	}
+
+The `+` is a multimethod. It has few methods. You can see definitions of two of the methods in the example above. One method adds numbers. Another method concatenates strings. How NGS knows which one of them to run? The decision is made based on arguments' types. NGS scans the methods list backwards and invokes the method that matches the given arguments (this matching process is called multiple dispatch).
+
+When a `MultiMethod` is called, the multimethod's methods list is searched from last element to first element. The method which parameters' types match is executed. This model is different from many other languages, where the most specific method is called. In NGS, if two methods' parameters both match the arguments, that one that was defined last is called. Typically, methods for more specific types are defined later in code so the behaviour is similar to other languages. If matched method is executed and a `guard` (see below) fails, the search is continued as if the method did not match.
+
+Consider the following types:
+
+	{
+		type Vehicle
+		type Car(Vehicle)
+	}
+
+Typical MultiMethod definition:
+
+	F park(v:Vehicle) { ... }
+	F park(c:Car) { ... }
+
+	park(Vehicle())  # calls the first method
+	park(Car())      # calls the second method
+
+Leveraging the NGS MultiMethod call behaviour: one can for example do debugging by adding the third method to the `park` MultiMethod:
+
+	F park(v:Vehicle) {
+		debug("Parking vehicle ${v}")
+		super(v)  # Execute one of the two methods defined above
+	}
+
+## Calling a method - simple syntax
+
+This syntax is available in both commands and code syntax.
 
 	echo('Hello world')
+	# Output:
+	#   Hello world
+
+## Calling a method - object-style syntax
+
+This syntax is available in code syntax only.
+
+As a syntactic sugar, method call `f(a, b, c)` can be written as `a.f(b, c)`.
+
 	{
 		'Hello world'.echo()
 	}
 
 	# Output:
 	#   Hello world
-	#   Hello world
 
-Variables
+Note: `f(a, b, c)` is same as `a.f(b, c)`
 
-	echo(defined a)
-	a = 1 + 2
-	echo(defined a)
-	echo(a)
+## Methods for operators
+
+In NGS, binary operators are just syntactic sugar for calling methods. The variety of permitted characters in methods' names allow using same method name as the operator.
+
+	# Define the + operator for Fun objects (Fun objects are callable objects: methods and types)
+	F +(f:Fun, g:Fun) {
+		F composed_function(*args) {
+			f(g(*args))
+		}
+	}
+	...
+	F reject(something:Eachable, predicate) {
+		p = Pred(predicate)
+		something.filter(not + p) # Usage
+    }
+
+Current methods with special names are listed below.
+
+	# Output wrapped manually for your convenience.
+	# All of them correspond to a syntax, mostly binary operators.
+	$ ngs -p 'globals().filterv(Fun).keys().filter(/[^a-zA-Z0-9_]/).join(", ")'
+	==, ., [], +, *, /, -, <, <=, >, >=,
+	.=, []=, %, ===, ::, is not, ::=,
+	?, \, +?, !=, ~, not in, .., ...,
+	!==, ~~, "$*", $(), ``, ````, %(), //
+
+## Binary operators (methods) and precedence
+
+Higher numbers mean higher precedence. Note that short-circuit operators can not and are not implemented as method calls - that would require eager evaluation of the arguments.
+
+	tor     40  "Try ... or", short-circuit   questionable_code tor default_value
+	tand    50  "Try ... and", short-circuit  (not sure when it's needed, don't use it)
+	or      60  Logical or, short-circuit
+	and     65  Logical and, short-circuit
+
+
+	in      70  Value-in-container check      1 in [1, 2, 3]
+	                                          "a" in {"a": 1}
+	not in  70  Value-not-in-container check  10 not in [1, 2, 3]
+	                                          "b" not in {"a": 1}
+	is      90  Instance-of check             1 is Int
+	is not  90  Not-instance-of check         1 is not Str
+
+
+	|      120  "Pipe", currenty not used
+	===    130  "Same as"                     v = [1, 2]; v === v
+	!==    130  "Not same as",                [1, 2] !== [1, 2]
+	==     130  "Equals",                     [1, 2] == [1, 2]
+	!=     130  "Not equals"                  [1, 3] != [1, 2]
+	<=     150  "Less than or equals"
+	<      150  "Less than"
+	>=     150  "Greater or equals"
+	>      150  "Greater"
+	~      150  "Match"                       "a1b2c" ~ /[0-9]/
+	~~     150  "Match all"                   "a1b2c" ~~ /[0-9]/
+	...    160  "Inclusive range"             0...5               # 0,1,2,3,4,5
+	..     160  "Exclusive range"             0..5                # 0,1,2,3,4
+	+      190  "Plus"
+	+?     190  "Plus maybe"                  "a" + "b"           # "ab"
+	                                          null + "b"          # null
+	                                          "a" + null          # null
+	-      190  "Minus"
+	*      200  "Multiply" or "repeat"        3 * 5               # 15
+	                                          "ab" * 3            # "ababab"
+	                                          EmptyBox * 2        # two values of EmptyBox type
+	%      200  "Modulus" or "each"           3 % 2               # 1
+	                                          ['a', 'b'] % echo   # Outputs a and b on different lines
+	/      200  "Divide" or "map"             10 / 5
+	                                          [1, 2, 3] / F(x) x * 2
+	?      200  "Filter"                      [1, 2, 3] ? F(x) x > 1
+	\      200  "Call"                        [1, 2, 3] \ echo
+
+## Defining a method
+
+Method definition works in both commands and code syntax.
+
+When defining a named method, NGS automatically creates a `MultiMethod` with the given name (if it does not exist) and appends the new method to the multimethod's list of methods.
+
+	F my_method() {
+		echo("wassup?")
+		echo("my method is running")
+	}
+
+Method with optional parameters
+
+	F mysum(a:Int, b:Int=100) a+b
+
+	echo(mysum(5))
+	# Output: 105
+
+	echo(mysum(5, 200))
+	# Output: 205
+
+Method with "rest" parameter
+
+	F print_with_prefix(prefix:Str, *strings) {
+		strings.each(F(s) {
+			echo("$prefix$s")
+		})
+		echo("Printed ${strings.len()} lines with prefix")
+	}
+
+	print_with_prefix('-> ', 'abc', 'def')
+	# Output:
+	#   -> abc
+	#   -> def
+	#   Printed 2 lines with prefix
+
+Method with "rest keywords" parameter
+
+	F print_properties(separator:Str, **kw_args) {
+		kw_args.each(F(name, value) {
+			echo("$name$separator$value")
+		})
+	}
+
+	print_properties(' => ', a=10, b=20)
 
 	# Output:
-	#   false
-	#   true
-	#   3
+	#   a => 10
+	#   b => 20
 
-Basic constants: true, false, null
+## Method guards
+
+Method guards restrict method execution to specific conditions, typically the conditions are functions of parameters' values. If the guard condition evaluates to `false`, NGS considers the method as if it did not match the arguments and continues to search for other methods to run in the multimethod's methods list.
+
+	F gg(i:Int) {
+		echo("First gg active")
+		echo(i*10)
+	}
+
+	# gg is now MultiMethod with one method
+
+	gg(1)
+	gg(5)
+	# Output:
+	#   First gg active
+	#   10
+	#   First gg active
+	#   50
+
+	F gg(i:Int) {
+		echo("Second gg checking guard")
+		guard i > 3
+		echo("Second gg active")
+		echo(i*100)
+	}
+
+	# gg is now MultiMethod with two methods
+
+	gg(1)
+	gg(5)
+	# Output:
+	#   Second gg checking guard
+	#   First gg active
+	#   10
+	#   Second gg checking guard
+	#   Second gg active
+	#   500
+
+## Calling super methods
+
+Super methods are methods higher in the multimethod's list of methods.
+
+	F sup(x) x+1
+
+	F sup(x) super(x) * 10
+
+	echo(sup(5))
+	# Output: 60
+
+## Anonymous function (method) literal
+
+Syntactically, anonymous method is `F` not followed by a name.
+
+	f = F(item) { echo("Item: $item") }
+	echo("F is $f")
+	# Output: F is <UserDefinedMethod <anonymous> at 1.ngs:1>
+
+	each([10,20,30], f)
+	# Output:
+	#   Item: 10
+	#   Item: 20
+	#   Item: 30
+
+	# Anonymous method as map() parameter
+	echo([1,2,3].map(F(x) x*5))
+	# Output: [5,10,15]
+
+## Anonymous function (method) literal using magical X, Y or Z variables
+
+Three special variables can be used as a syntactic sugar for creating anonymous methods. A method call which uses one of the special variables X, Y, or Z is wrapped in anonymous function as follows: `F(X=null, Y=null, Z=null) { method_call(....) } `.
+
+Operators are just syntactic sugar for method calls so `X*5` for example is also processed as described.
+
+
+	# X*5 is same as F(X=null, Y=null, Z=null) { X*5 } which in out case is roughly equivalent to F(X) X*5
+	echo([1,2,3].map(X*5))
+	# Output: [5,10,15]
+
+	# "Key:" + X is same as F(X=null, Y=null, Z=null) { "Key:" + X }
+	echo({"a": "one", "b": "two"}.map("Key:" + X))
+	# Output: ['Key:a','Key:b']
+
+	echo({"a": "one", "b": "two"}.map("Val:" + Y))
+	# Output: ['Val:one','Val:two']
+
+	echo([1,2,3,11,12].count(X>10))
+	# Output: 2
+
+If the special variables X, Y, or Z are found in a string interpolation, such as `"Key $X, Value $Y"`, the string is wrapped in anonymous function as described above.
+
+	echo({"a": 1, "b": 2}.map("Key $X, Value $Y"))
+	# Output: ['Key a, Value 1','Key b, Value 2']
+
+## Anonymous function (method) literal using magical A, B or C variables
+
+Additional syntactic sugar for anonymous function is `{ ... }`. This is equivalent to `F(A=null, B=null, C=null) { ... }`.
+
+	# X*5 + 1 would not work as X*5 itself would be anonymous function
+	echo([1,2,3].map({ A*5 + 1 }))
+	# Output: [6,11,16]
+
+## Returning values from methods
+
+Method evaluates to the last expression, as in Lisp and Ruby. Additionally following expressions allow immediate return from a method.
+
+* `return` - returns `null`
+* `return EXPR` - returns the value of EXPR
+* `COND returns` - if COND evaluates to true, returns `null`
+* `COND returns EXPR` - if COND evaluates to true, returns the value of EXPR
+
+Examples of `return`, `returns` and last expression value as result of a method.
+
+	F flow_ret(x) {
+		if x < 0 {
+			unrelated_calculation = 1
+			return "negative"
+		}
+		x == 0 returns "zero"
+		"positive"
+	}
+	echo(flow_ret(-1))
+	echo(flow_ret( 0))
+	echo(flow_ret( 1))
+	# Output:
+	#   negative
+	#   zero
+	#   positive
+
+## Returning from inner method
+
+Use `Return` type to return from inner methods.
+
+	F find_the_one(haystack:Arr, needle) {
+		ret_from_find_the_one = Return()
+		echo(ret_from_find_the_one)
+		haystack.each(F(elt) {
+			elt == needle throws ret_from_find_the_one("Found it!")
+		})
+		"Not found"
+	}
+	echo([10,20].find_the_one(20))
+	echo([10,20].find_the_one(30))
+	# Output:
+	#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>
+	#   Found it!
+	#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>
+	#   Not found
+
+## Referencing specially named methods
+
+Since identifiers are alphanumeric (with underscores), `my_method` can be referenced simple by name, while `+` for example can not. Here is example of referencing specially named methods:
+
+	# (+) references the method +
+	F sum(something:Eachable1) something.reduce(0, (+))
+
+# Types
+
+NGS is a dynamically typed language: values (and not variables) have types.
+
+	a = 1
+	a = "ok"
+	# 'a' had value of one type and then value of another type
+
+NGS is a "strongly typed" language: values are not implicitly converted to unrelated types. This makes the language more verbose in some cases but helps catch certain type of bugs earlier.
+
+	echo(1+"2")
+	# ... Exception of type MethodNotFound occured ...
+	# That means that NGS has no method that "knows" how to add an Int and a Str
+
+	echo(1+Int("2"))
+	# Output: 3
+
+NGS has several pre-defined types. A programmer can define additional types. Types roughly correspond to classes in other languages (Python, Ruby, Java) but without defined fields and methods.
+
+## Creating object of given type
+
+Creating object of a given type is calling the type. Syntactically, it's type name followed by parenthesis which optionally contain arguments.
+
+	# Create object of type Path
+	p = Path("/")
+
+	# Create EmptyBox object
+	eb = EmptyBox()
+
+## Defining your own types
+
+Type definition is only supported in code syntax.
+
+	# Switch to code syntax inside { ... }. "type" currently does not work in command syntax
+	{
+		# Define type
+		type Vehicle
+
+		# Define sub-type
+		type Car(Vehicle)
+
+		type RedThing
+
+		# Multiple inheritance
+		type RedCar([Car, RedThing])
+	}
+	echo(Vehicle)
+	echo(Car)
+	echo(RedCar.parents)
+
+	# Output:
+	#   <Type Vehicle>
+	#   <Type Car>
+	#   [<Type Car>,<Type RedThing>]
+
+## Type constructors and object creation
+
+* When type definition (`type T`) is executed, NGS defines the `.constructors` MultiMethod that includes one method. This method creates object of type `T`. The type of this method is `NormalTypeConstructor`.
+* After defining a type `T`, one can add methods to `.constructors` using `F T(...) {...}` definitions. If you add your method to the `.constructors` field, please make sure it returns an object of type `T` or object of a type that is a subtype of `T`. Otherwise, it will be surprising for the callers.
+* When you call a user defined type, its `.constructors` MultiMethod is called.
+* If the default constructor added by NGS (method of type `NormalTypeConstructor`) gets executed, it does the following:
+	* Creates object of type `T`
+	* Runs `init()` MultiMethod with the new object as the first argument and the arguments of the call to `T(...)` as second and on arguments to `init(...)`.
+	* Note that calling `init()` might trigger `MethodNotFound` exception. It is ignored if and only if the call to `T()` had no arguments.
+
+Examples:
+
+	# Customizing Box object creation (code from stdlib)
+	F Box(x) FullBox(x)
+	F Box(n:Null) EmptyBox()
+	F Box(a:Arr, idx) { ... }
+	F Box(h:Hash, k) { ... }
+
+	# FullBox initialization, called when FullBox(x) is called
+	F init(b:FullBox, val) b.val = val
+
+	# Note that there is no init(eb:EmptyBox) as there is nothing to initialize
+
+	Box(1)    # FullBox with 1 as value
+	Box(null) # EmptyBox
+
+# Loading and running additional code
+
+## require
+
+The `require` method reads, compiles and executes the given file. Currently absolute paths and paths relative to current directory are supported. In future, paths relative to current directory will not be supported but rather paths relative to the file that does `require()` call will be supported, similar to Node.js. This needs work which was not done yet, there was never intention to support paths relative to current directory; it's just wrong.
+
+	require('/home/someone/my_module.ngs')
+
+`require` returns the value of last expression in the file. This feature plays nice with namespaces (see below) in cases when the whole file is an `ns { ... }` expression.
+
+## Auto-loading
+
+When an undefined global variable is referenced, `global_not_found_handler` is called. This handler tries to load a module (currently from the `lib/autoload` directory) that will define the referenced variable. Here are some modules that are autoloaded and additional variables/methods they define.
+
+* AWS
+* IP (IPAddr, IPNet)
+* Iter (ArrIter, ConstIter, HashIter, RangeIter, ...)
+* Thread (pmap, ptimes)
+
+# Namespaces
+
+Namespaces are used to prevent names collisions and hide methods. One of the main usages for namespaces is in modules.
+
+Let's consider a file named `my_ns.ngs`:
+
+	ns {
+
+		# This method is only visible to other methods in the namespace
+		F _private_helper_method() {
+			...
+		}
+
+		F accessible_method() {
+			...
+			_private_helper_method()
+			...
+		}
+
+		global global_method
+		F global_method() {
+			...
+			_private_helper_method()
+			...
+		}
+	}
+
+Another file, `example.ngs` could be using the above namespace utilizing the `require` method:
+
+	arbitrary_ns_name = require('my_ns.ngs')
+
+	global_method()
+
+	# :: is namespace member access operator
+	arbitrary_ns_name::accessible_method()
+
+## How namespace definition works
+
+Namespace definition works in both commands and code syntax.
+
+The `ns { ... }` definition is equivalent to the following code:
+
+	F() {
+		_exports = {}
+
+		....
+
+		_exports
+	}() # Call as soon as the method is defined
+
+Inside the `F() { ... }`, all variables and methods which do not start with underscore (`_`) are automatically added to the `_exports` hash. The underscore exclusion prevents from `_exports` itself to be added to the hash. This implementation also allows arbitrary manipulations of the returned value.
+
+	# The simple case
+	ngs -pi 'ns { F func() 7; }'
+	Hash of size 1
+	  [func] = <MultiMethod with 1 method(s)>
+
+	# Prefix all exported methods and variables with "my_"
+	ngs -pi 'ns { F func() 7; _exports .= mapk("my_$X") }'
+	Hash of size 1
+	  [my_func] = <MultiMethod with 1 method(s)>
+
+	# Make "ns" return arbitrary value
+	$ ngs -pi 'ns {_exports=7}'
+	Int: 7
+
+	# Show exclusion of underscore prefixed items
+	$ ngs -pi 'ns { F visible() 7; F _invisible() 7; }'
+	Hash of size 1
+	  [visible] = <MultiMethod with 1 method(s)>
+
+	# Not only methods but also variables are exported
+	$ ngs -pi 'ns { visible=1; _invisible=2; }'
+	Hash of size 1
+	  [visible] = 1
+
+## Different names for external variables in a namespace
+
+Namespaces also support additional syntax `ns(PARAMETERS) { ... }`. This syntax is converted to `F(PARAMETERS) { ... }()`. This allows referencing external variables by another names. Inside the namespace one can now define variables and methods which would shadow the global (or upvar) variables and still access them.
+
+Here is example from `lib/autoload/AWS.ngs` :
+
+	ns(GlobalRes=Res, GlobalResDef=ResDef, global_test=test) {
+		...
+		doc AWS resource
+		type Res(GlobalRes)
+		...
+		doc AWS Resource definition
+		type ResDef(GlobalResDef)
+		...
+	}
+
+Note that when `ns(PARAMETERS) { ... }` syntax is converted to `F(PARAMETERS) { ... }`, the method is called without any arguments so all parameters must have default values or an exception will occur:
+
+	$ ngs -pi 'ns(a) { 7 }'
+	... Exception of type ArgsMismatch occurred
+
+## Planned future changes to namespaces
+
+The `ns { ... }` construct will probably not return a `Hash` object but object of a new type, `Namespace` which will probably be subtype of `Hash`. In any case, the `::` operator will be defined in such way that `my_namspace::my_method()` will continue to work.
+
+
+# Frequently used types and methods
+
+This section is not a reference but rather an overview. It includes the most important types and methods. For full documentation regarding types and methods see the generated documentation.
+
+## Null
+
+`null` signifies absence of data. `null` is the only value of type `Null`.
+
+	echo("abcd".pos("c"))
+	echo("abcd".pos("x"))
+	# Output:
+	#   2
+	#   null
+
+	if null echo("if null")
+	# No output, null converts to false
+
+## Bool
+
+The type `Bool` represents a boolean. The values `true` and `false` are the only values of type `Bool`.
 
 	if true echo("if true")
 	if false echo("if false")
-	if null echo("if null")
 	# Output:
 	#   if true
 
@@ -283,14 +913,6 @@ Basic constants: true, false, null
 	# Output:
 	#   false
 
-	echo("abcd".pos("c"))
-	echo("abcd".pos("x"))
-	# Output:
-	#   2
-	#   null
-
-Booleans
-
 	echo(true and false)
 	# Output:
 	#   false
@@ -299,7 +921,26 @@ Booleans
 	# Output:
 	#   true
 
-Integers
+When a boolean value is needed, such as in `if EXPR {...}`, the `EXPR` is converted to boolean by calling `Bool(EXPR)`.
+NGS defines `Bool` multimethod (technically `Bool` type constructors), with methods for many types. These methods cause the following values to be converted to false:
+
+* 0
+* null
+* false
+* empty array
+* empty hash
+* empty string
+* an EmptyBox object, for example `[1,2,3].Box(10)` (which boxes the element at index 10)
+* a Failure object, for example `Result({ 1 / 0 })`
+* regular expression that did not match, for example `"abc" ~ /XYZ/`
+
+Unless specified otherwise, all other values are converted to `true`.
+
+To define how your user-defined types behave as boolean, define `Bool(x:YOUR_TYPE)` method.
+
+## Int
+
+`Int` represents integer numbers
 
 	echo(1 + 2 * 3)
 	# Output:
@@ -320,6 +961,10 @@ Integers
 	#   0
 	#   2
 	#   4
+
+## Str
+
+`Str` represents string of bytes.
 
 Strings - string interpolation
 
@@ -369,6 +1014,10 @@ Strings - some basic methods that operate on strings
 	# See RegExp type
 	# Output:
 	#   Name=abc Value=120
+
+## Arr
+
+`Arr` represents an ordered list which can be accessed by zero-based index. Currently `Arr` is implemented as consecutive memory locations.
 
 Arrays - basics
 
@@ -442,18 +1091,13 @@ Arrays - some basic methods that operate on arrays
 	# Output:
 	#   {a=1, b=2}
 
+## Hash
+
+`Hash` represents a mapping between keys and values. `Hash` is implemented as a hash table.
+
 Hashes - basics
 
 	x = {"a": 1, "b": 2}
-	echo(x)
-	# Output:
-	#   {a=1, b=2}
-
-	x = %{akey avalue bkey bvalue}
-	echo(x)
-	# Output:
-	#   {akey=avalue, bkey=bvalue}
-
 	echo(x)
 	# Output:
 	#   {a=1, b=2}
@@ -512,6 +1156,11 @@ Hashes - basics
 	echo(x.e)
 	# ... Exception of type KeyNotFound occured ...
 
+	x = %{akey avalue bkey bvalue}
+	echo(x)
+	# Output:
+	#   {akey=avalue, bkey=bvalue}
+
 Hashes - some basic methods that operate on Hashes
 
 	{
@@ -550,7 +1199,11 @@ Hashes - some basic methods that operate on Hashes
 	# Output:
 	#   [['a',1],['b',2]]
 
-Common higher-order methods (functions)
+# Higher-order functions (methods)
+
+This section is an overview. The purpose is to give overall impression of how higher-order functions feel in NGS. For full documentation regarding methods (including higher-order functions) see the generated documentation.
+
+Higher order functions are functions that get another function as a parameter.
 
 	echo([1,2,3].all(Int))
 	# Output:
@@ -584,241 +1237,10 @@ Common higher-order methods (functions)
 	# Output:
 	#   2
 
-Defining a type
 
-	# Switch to code syntax inside { ... }. "type" currently does not work in command syntax
-	{
-		# Define type
-		type Vehicle
+# Exceptions
 
-		# Define sub-type
-		type Car(Vehicle)
-	}
-	echo(Vehicle)
-	echo(Car)
-
-	# Output:
-	#   <Type Vehicle>
-	#   <Type Car>
-
-	v = Vehicle()
-	c = Car()
-	echo("v is Vehicle: ${v is Vehicle}")
-	echo("v is Car: ${v is Car}")
-	echo("c is Vehicle: ${c is Vehicle}")
-	echo("c is Car: ${c is Car}")
-
-	# Output:
-	#   v is Vehicle: true
-	#   v is Car: false
-	#   c is Vehicle: true
-	#   c is Car: true
-
-
-Defining a method
-
-	{
-		type Vehicle
-		type Car(Vehicle)
-	}
-
-	# c - parameter name
-	# Car - parameter type
-	F drive(c:Car) {
-		echo("Driving the car")
-	}
-
-	mycar = Car()
-	drive(mycar)
-	# Output: Driving the car
-
-
-	# Defining method with single expression as body
-	# does not require { ... } around the method body
-	F park(c:Car) echo("Parking the car")
-
-	park(mycar)
-	# Output: Parking the car
-
-	# There is no method drive() that takes a string as an argument
-	drive("well...")
-	# ... Exception of type ImplNotFound occured ...
-
-Method optional parameters
-
-	F mysum(a:Int, b:Int=100) a+b
-
-	echo(mysum(5))
-	# Output: 105
-
-	echo(mysum(5, 200))
-	# Output: 205
-
-Method "rest" parameter
-
-	F print_with_prefix(prefix:Str, *strings) {
-		strings.each(F(s) {
-			echo("$prefix$s")
-		})
-		echo("Printed ${strings.len()} lines with prefix")
-	}
-
-	print_with_prefix('-> ', 'abc', 'def')
-	# Output:
-	#   -> abc
-	#   -> def
-	#   Printed 2 lines with prefix
-
-Method "rest keywords" parameter
-
-	F print_properties(separator:Str, **kw_args) {
-		kw_args.each(F(name, value) {
-			echo("$name$separator$value")
-		})
-	}
-
-	print_properties(' => ', a=10, b=20)
-
-	# Output:
-	#   a => 10
-	#   b => 20
-
-Method guard
-
-	F gg(i:Int) {
-		echo("First gg active")
-		echo(i*10)
-	}
-	gg(1)
-	gg(5)
-	# Output:
-	#   First gg active
-	#   10
-	#   First gg active
-	#   50
-
-	F gg(i:Int) {
-		echo("Second gg checking guard")
-		guard i > 3
-		echo("Second gg active")
-		echo(i*100)
-	}
-	gg(1)
-	gg(5)
-	# Output:
-	#   Second gg checking guard
-	#   First gg active
-	#   10
-	#   Second gg checking guard
-	#   Second gg active
-	#   500
-
-Call super methods
-
-	F sup(x) x+1
-
-	F sup(x) super(x) * 10
-
-	echo(sup(5))
-	# Output: 60
-
-Anonymous function (method) literal
-
-	f = F(item) { echo("Item: $item") }
-	echo("F is $f")
-	# Output: F is <Closure <anonymous> at 1.ngs:1>
-
-	each([10,20,30], f)
-	# Output:
-	#   Item: 10
-	#   Item: 20
-	#   Item: 30
-
-	echo([1,2,3].map(F(x) x*5))
-	# Output: [5,10,15]
-
-Anonymous function literal using magical X, Y or Z variables
-
-	echo([1,2,3].map(X*5))
-	# Output: [5,10,15]
-
-	echo({"a": "one", "b": "two"}.map("Key:" + X))
-	# Output: ['Key:a','Key:b']
-
-	echo({"a": "one", "b": "two"}.map("Val:" + Y))
-	# Output: ['Val:one','Val:two']
-
-	echo({"a": 1, "b": 2}.map("Key $X, Value $Y"))
-	# Output: ['Key a, Value 1','Key b, Value 2']
-
-	echo([1,2,3,11,12].count(X>10))
-	# Output: 2
-
-Anonymous function literal using magical A, B or C variables
-
-	# X*5 + 1 would not work as X*5 itself would be anonymous function
-	echo([1,2,3].map({ A*5 + 1 }))
-	# Output: [6,11,16]
-
-Method-related flow control
-
-	F flow_ret(x) {
-		if x < 0 {
-			unrelated_calculation = 1
-			return "negative"
-		}
-		x == 0 returns "zero"
-		"positive"
-	}
-	echo(flow_ret(-1))
-	echo(flow_ret( 0))
-	echo(flow_ret( 1))
-	# Output:
-	#   negative
-	#   zero
-	#   positive
-
-	F find_the_one(haystack:Arr, needle) {
-		ret_from_find_the_one = Return()
-		echo(ret_from_find_the_one)
-		haystack.each(F(elt) {
-			elt == needle throws ret_from_find_the_one("Found it!")
-		})
-		"Not found"
-	}
-	echo([10,20].find_the_one(20))
-	echo([10,20].find_the_one(30))
-	# Output:
-	#   <Return closure=<Closure find_the_one at 1.ngs:2> depth=7 val=null>
-	#   Found it!
-	#   <Return closure=<Closure find_the_one at 1.ngs:2> depth=7 val=null>
-	#   Not found
-
-Short circuit binary operators
-
-	a = 1 and 2                    # a = 2
-	a = null and 2                 # a = null
-	a = 1 or 2                     # a = 1
-	a = null or 2                  # a = 2
-	a = code_with_exception tor 3  # a = 3, exception discarded
-
-Ignoring exceptions using "try" without "catch"
-
-	myhash = {"a": 1, "b": 2}
-
-	v = try myhash.a
-	echo(v)
-	# Output: 1
-
-	v = try myhash.c
-	echo(v)
-	# Output: null
-
-	v = try { unrelated = 1+2; myhash.c }
-	echo(v)
-	# Output: null
-
-Exceptions
+Similar to other languages (such as Python, Ruby, Java, etc), NGS has exceptions which can be thrown and caught.
 
 	{
 		type MyError(Error)
@@ -836,7 +1258,64 @@ Exceptions
 		# Output: [Exceptions] This error was expected: ...
 	}
 
-Loops
+The `catch` clauses are implemented using multimethod. If an exception occurs, the `catch` multimethod is called with a single argument, the exception. Unlike all other situations, the search of a method that matches the exception is done from the beginning to the end of methods list.
+
+Implementation of `catch` using multimethod prevents using `return` inside `catch` clauses in the expected way. That's why this implementation might change in the future.
+
+## Ignoring exceptions using "try" without "catch"
+
+	myhash = {"a": 1, "b": 2}
+
+	v = try myhash.a
+	echo(v)
+	# Output: 1
+
+	v = try myhash.c
+	echo(v)
+	# Output: null
+
+	v = try { unrelated = 1+2; myhash.c }
+	echo(v)
+	# Output: null
+
+## Default value for expression that causes exception
+
+The short-circuit binary operator `tor` (try-or) allows specifying default value for an expression that might throw an exception.
+
+	# .backtrace might not exist, .frames might not exist
+	# Accessing non-existent fields using the . notation will cause KeyNotFound exception
+	parent_frames = parent.backtrace.frames tor []
+
+`EXPR tor null` is functionally equivalent to `try EXPR`.
+
+## Alternative mechanism for handling exceptions
+
+See generated documentation for the `Result` type.
+
+# Flow control
+
+## If
+
+If works in both commands and code syntax.
+
+	if my_var > 10 {
+		a += 100
+		b = "x"
+	} else {
+		b = "y"
+	}
+
+	result = if my_var then "xyz" else "ww".
+	result = if my_var 10 20  # result is now either 10 or 20
+
+In `if`, `while`, and `for`, where `{...}` code block is expected, if the block consists of only a single expression, curly braces are optional. In `if`, the `then` and `else` keywords are optional.
+
+Note that `if` is an expression. `if` without else where the condition is equivalent to `false`, evaluates to `null`.
+
+## Loops
+
+Loops work in both commands and code syntax.
+
 
 	for(i=0; i<5; i+=1) {
 		if i == 3 {
@@ -860,6 +1339,17 @@ Loops
 	#   Shorthand loop, iteration 2
 	#   Shorthand loop, iteration 4
 
+	for i in [1,5,10,20,50] {
+		echo(i)
+	}
+	# Output:
+	#   1
+	#   5
+	#   10
+	#   20
+	#   50
+	# See "Iterators"
+
 	i = 0
 	while i<10 {
 		echo("While loop, iteration $i")
@@ -871,23 +1361,42 @@ Loops
 	#   While loop, iteration 0
 	#   While loop, iteration 1
 
-Switch and switch-like expressions
+## Switch and switch-like expressions
+
+Switch and switch-like expressions work in both commands and code syntax.
+
+* The first match activates the related code, there is no fall-through.
+* The value resulting from executing the code is the result of the switch-like expression.
+* If there is no match, `switch`, `match` and `cond` return `null`.
+* If there is no match, `eswitch`, `ematch` and `econd` throw `SwitchFail` exception.
+
+Switch and switch-like expressions examples.
 
 	a = 10
 	result = switch a {
 		10 "ten"
 		20 "twenty"
-		30 { my_complex_code; "thirty" }
+		30 { more_code(); "thirty" }
 	}
 	echo("Switch result for $a is $result")
 	# Output: Switch result for 10 is ten
+
+	a = "my_string"
+	result = match a {
+		Int    "an integer"
+		/^my_/ "special string"
+		Str    { more_code(); "a string" }
+		Any    "not sure"
+	}
+	echo("Match result for $a is $result")
+	# Output: Match result for my_string is special string
 
 	a = 12
 	result = cond {
 		a > 10
 			"Excellent"
 		a > 5 {
-			my_complex_code; "Good enough"
+			more_code(); "Good enough"
 		}
 		a > 3
 			"so so"
@@ -895,10 +1404,7 @@ Switch and switch-like expressions
 	echo("Cond result for $a is $result")
 	# Output: Cond result for 12 is Excellent
 
-	# There are also eswitch and econd which throw an exception
-	# when no match is found as opposed to swicth and cond which
-	# return null when no match is found.
-
+	# SwitchFail exception will be thrown
 	F will_throw_exception1() {
 		a = "bad value"
 		result = eswitch a {
@@ -907,7 +1413,17 @@ Switch and switch-like expressions
 		}
 	}
 
+	# SwitchFail exception will be thrown
 	F will_throw_exception2() {
+		a = true
+		result = ematch a {
+			Int  "an integer"
+			Str  "a string"
+		}
+	}
+
+	# SwitchFail exception will be thrown
+	F will_throw_exception3() {
 		a = 10
 		result = econd {
 			a > 15 "one"
@@ -915,7 +1431,8 @@ Switch and switch-like expressions
 		}
 	}
 
-Regular expressions
+
+# Regular expressions
 
 	myregex = /^begin/
 	echo(myregex)
@@ -940,7 +1457,33 @@ Regular expressions
 	#   The character after the digit 2 is b
 	#   The character after the digit 3 is e
 
-Collector facility
+# Collector facility
+
+Collector facility assists in building lists, hashes and other data structures. Collector facility should be used where `map` and other functional facilities are not meeting the requirements or when using collector is cleaner. Typically, the code of the following forms is replaced by collector (or some mix or something similar to the following forms):
+
+	# --- 1 ---
+	my_arr = []
+	for ... {
+		my_arr.push(my_something_one)
+		if ... {
+			my_arr.push(my_something_two)
+		}
+	}
+
+	# --- 2 ---
+	my_arr = []
+	my_arr.push(my_something_one)
+	for ... {
+		if ... {
+			my_arr.push(my_something_two)
+		}
+	}
+	my_arr.push(my_something_three)
+
+
+The `collector` keyword wraps the following expression (or expressions if they are grouped using `{...}` syntax) in a function with single argument, `collect`.
+
+`collector` keyword can be followed by slash (`/`) and initial expression, which defaults to an empty array.
 
 	mylist = collector {
 		collect("HEADER")
@@ -966,7 +1509,41 @@ Collector facility
 	echo(mysumm)
 	# Output: 111
 
-Running external programs
+	# Code from stdlib:
+	F flatten(arr:Arr)
+		collector
+			arr.each(F(subarr) {
+				subarr.each(collect)
+			})
+
+## Customizing collector facility
+
+`collector` keyword is implemented as a call to `collector` method with two arguments: the initial value (which defaults to empty array) and the wrapped code, which is passed as a method.
+
+By defining `collector` method, the programmer can customize the behaviour. Here is implementation of collector for `Arr`.
+
+	# Code from stdlib:
+	F collector(a:Arr, body:Fun) {
+		body(F(elt) a.push(elt))
+		a
+	}
+
+Here `a` gets the initial value, `body` is the wrapped code that comes after the `collector` keyword, the anonymous function that is passed to `body` becomes the `collect` function inside the wrapped code.
+
+Here is `collector` for `Hash` and it's usage example:
+
+	# Code from stdlib:
+
+	F collector(h:Hash, body:Fun) {
+		body(F(k, v) h[k] = v)
+		h
+	}
+
+	F mapk(h:Hash, mapper:Fun)
+		collector/{}
+			h.each(F(k, v) collect(mapper(k), v))
+
+# Running external programs
 
 	t = `echo -n text1`
 	echo("[ $t ]")
@@ -979,64 +1556,25 @@ Running external programs
 	proc = $(seq 3)
 	each(inspect(proc), echo)
 	# Output:
-	#   Process
-	#   command = <Command is_top_level=false redirects=[] argv=['seq','3']>
-	#   pid = NNNNN
-	#   exit_code = 0
-	#   exit_signal = 0
-	#   stdout (3 lines):
-	#     1
-	#     2
-	#     3
-	#   stderr (0 lines):
+	#   CommandsPipeline
+	#     command[0]: <Command options={} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[seq,3]>
+	#     process[0]: Process
+	#     process[0]:   command = <Command options={} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[seq,3]>
+	#     process[0]:   pid = 43582
+	#     process[0]:   exit_code = 0
+	#     process[0]:   exit_signal = 0
+	#     process[0]:   output on fd 1, stdout (3 lines):
+	#     process[0]:     1
+	#     process[0]:     2
+	#     process[0]:     3
+	#     process[0]:   output on fd 2, stderr (0 lines):
 
 	data = ``echo '{"a": 1}'``
 	echo("Parsed data: $data, a is ${data.a}")
 	# Output: Parsed data: {a=1}, a is 1
 
 
-## Binary operators and precedence
-
-Higher numbers mean higher precedence.
-
-	tor     40  "Try ... or", short-circuit   questionable_code tor default_value
-	tand    50  "Try ... and", short-circuit  (not sure when it's needed, don't use it)
-	or      60  Logical or, short-circuit
-	and     65  Logical and, short-circuit
-	in      70  Value-in-container check      1 in [1, 2, 3]
-	                                          "a" in {"a": 1}
-	not in  70  Value-not-in-container check  10 not in [1, 2, 3]
-	                                          "b" not in {"a": 1}
-	is      90  Instance-of check             1 is Int
-	is not  90  Not-instance-of check         1 is not Str
-
-
-	|      120  "Pipe", currenty not used
-	===    130  "Same as"                     v = [1, 2]; v === v
-	!==    130  "Not same as",                [1, 2] !== [1, 2]
-	==     130  "Equals",                     [1, 2] == [1, 2]
-	!=     130  "Not equals"                  [1, 3] != [1, 2]
-	<=     150  "Less than or equals"
-	<      150  "Less than"
-	>=     150  "Greater or equals"
-	>      150  "Greater"
-	~      150  "Match"                       "a1b2c" ~ /[0-9]/
-	~~     150  "Match all"                   "a1b2c" ~~ /[0-9]/
-	...    160  "Inclusive range"             0...5               # 0,1,2,3,4,5
-	..     160  "Exclusive range"             0..5                # 0,1,2,3,4
-	+      190  "Plus"
-	-      190  "Minus"
-	*      200  "Multiply" or "repeat"        3 * 5               # 15
-	                                          "ab" * 3            # "ababab"
-	                                          EmptyBox * 2        # two values of EmptyBox type
-	%      200  "Modulus" or "each"           3 % 2               # 1
-	                                          ['a', 'b'] % echo   # Outputs a and b on different lines
-	/      200  "Divide" or "map"             10 / 5
-	                                          [1, 2, 3] / F(x) x * 2
-	?      200  "Filter"                      [1, 2, 3] ? F(x) x > 1
-	\      200  "Call"                        [1, 2, 3] \ echo
-
-## Assignment shortcuts
+# Assignment shortcuts
 
 These are syntactically equivalent expressions:
 
@@ -1048,17 +1586,17 @@ These are syntactically equivalent expressions:
 	a = a.f()      a .= f()    a = f(a)
 	a = a.f(b)     a .= f(b)   a = f(a, b)
 
-# LANGUAGE GOTCHAS
+# Language gotchas
 
 This section will be expanded as I get feedback :)
 
 ## NGS should not be your first language
 
-I do not recommend NGS as your first language. Python for example would be a much better choice. Programming experience is assumed prior to using NGS.
+I do not recommend NGS as your first language. Python, for example, would be a much better choice. Programming experience is assumed prior to using NGS.
 
 ## Watch the version
 
-NGS is under development. Currently NGS has no version, breaking changes can happen. If you do anything a important with NGS, it's preferable to note the git revision you are using for reproducible installation. The plan is to stop breaking NGS when it reaches version 1.0.0 Since that version, the behaviour will be common - patch level increase for fixes, minor for improvements, major for breaking changes.
+NGS is under development. Currently NGS has no version, breaking changes can happen. If you do anything important with NGS, it's preferable to note the git revision you are using for reproducible installation. The plan is to stop breaking NGS when it reaches version 1.0.0. From that version, the behaviour will be common - patch level increase for fixes, minor for improvements, major for breaking changes.
 
 ## Keyword arguments gotchas
 
@@ -1068,7 +1606,7 @@ Keyword arguments implementation is preliminary so:
 	kwargs = {"a": 10}
 	F f(a, **kw) a; f(1, **kwargs) == 1
 
-	# Keyword arguments for existing named attributes cause parameters not to match
+	# Keyword arguments for existing named parameters cause parameters not to match
 	kwargs = {"a": 10}
 	F f(a) a; f(1, **kwargs) == 1
 
@@ -1082,139 +1620,66 @@ Keyword arguments implementation is preliminary so:
 	kwargs = {"a": 10}
 	F f(a=1, **kw) [a, kw]; f(**kwargs) == [10, {"a": 10}]
 
-# TYPES
+## Namespaces gotchas
 
-NGS is dynamically typed language: values (and not variables) have types.
+Since by default all variables are local, the following example will not add method to `some_global_name` multimethod but will create namespace-local `some_global_name` multimethod.
 
-	a = 1
-	a = "ok"
-	# 'a' had value of one type and then value of another type
-
-NGS is a "strongly typed" language: values are not implicitly converted to unrelated types. This makes the language more verbose but prevents some bugs.
-
-	echo(1+"2")
-	# ... Exception of type ImplNotFound occured ...
-	# That means that NGS has no method implementation that "knows" how to add an Int and a Str
-
-	echo(1+Int("2"))
-	# Output: 3
-
-# BUILT-IN TYPES
-
-There are several built-in types. Sample types and values:
-
-* `Bool` - true, false
-* `Int` - 1,2,3
-* `Str` - 'a', "bc"
-* `Arr` - `[1, true, 'x']`
-* `Any` - any value in NGS is of type `Any` :)
-
-Checking types:
-
-	echo(1 is Int)
-	# Output: true
-
-	echo(1 is Str)
-	# Output: false
-
-	echo(1 is not Str)
-	# Output: true
-
-	echo(typeof(1))
-	# Output: <Type Int>
-
-See types reference: [ngstyp(1)](ngstyp.1.html).
-
-# DEFINE YOUR OWN TYPES
-
-You can define your own types. Let's define `Counter` type and a few methods that can operate on values of the `Counter` type. Then we'll define `MyCounter` sub-type and it's `incr` method:
-
-	{
-		# Declare that we have a new type
-		type Counter
-
-		# * Define constructor which is called when Counter() is invoked.
-		# * First argument of constructor, named "c" is the newly-created value of type Counter
-		# * The value that the constructor returns is discarded,
-		#   Counter() returns the newly-created value of type Counter
-
-		F init(c:Counter) {
-			# Initialize the counter_value attribute
-			c.counter_value = 0
-		}
-
-		# Define increment method implementation
-		F incr(c:Counter) {
-			c.counter_value = c.counter_value + 1
-			# Return the Counter itself, allowing chaining such as c.incr().incr()...
-			c
-		}
-
-		# Define get method implemetation
-		F get(c:Counter) c.counter_value
-
-		c = Counter()
-		# c.incr() and incr(c) are syntactically equivalent
-		c.incr()
-		echo(c.get())
-		# Output: 1
-
-		# Declare MyCounter type, a sub-type of Counter
-		# MyCounter inherits from Counter meaning that any method that works with Counter also works with MyCounter
-		type MyCounter(Counter)
-
-		# Define incr method implementation for MyCounter type
-		F incr(c:MyCounter) {
-			c.counter_value = c.counter_value + 10
-			c
-		}
-		# incr method has now two different implementations: one for Counter type and one for MyCounter type.
-
-		# Instantiate new MyCounter
-		c = MyCounter()
-
-		# * Will run incr(c:MyCounter) method implementation.
-		# * Both incr(c:Counter) and incr(c:MyCounter) implementations match the arguments,
-		#   the second implementation wins because it was declared last and search is perfomed
-		#   from last to first.
-		c.incr()
-
-		# c.get() will run get(c:Counter) because
-		# parameter of type Counter and argument of type MyCounter will match
-		echo(c.get())
-		# Output: 10
+	myns = ns {
+		F some_global_name() ...
 	}
 
-# METHODS, METHOD IMPLEMENTATIONS AND CALLING
+	# Only available as myns::some_global_name(...)
+	# Global some_global_name(...) will not be able to access the
+	# above implementation.
 
-Each value in NGS has a type, similar to many other languages. One of the main features of NGS is choosing the correct **method implementation** based on types of the arguments:
-Let's start with the following snippet:
+The correct version to add method to a global multimethod is
 
-	F +(a:Int, b:Int) {
-		...
+	ns {
+		global some_global_name
+		F some_global_name() ...
 	}
 
-	F +(s1:Str, s2:Str) {
-		...
+	# Available as global some_global_name(...)
+
+## Comments syntax gotchas
+
+Comments syntax is implemented in many places but not everywhere. If you get syntax error regarding comment, move to somewhere nearby.
+
+## Mutable default parameter gotchas
+
+The code below will probably not do what was intended. Note that the default parameter value is only computed once, at method definition time.
+
+	F f(x, a:Arr=[]) {
+		a.push(x)
+		a
 	}
 
-	{
-		1 + 1
-		# -> 2
+	echo(f(10))  # [10]
+	echo(f(20))  # [10,20]
 
-		'a' + 'b'
-		# -> 'ab'
+Same happens in Python and hence already described: http://docs.python-guide.org/en/latest/writing/gotchas/#mutable-default-arguments
+
+# Handlers
+
+Handlers are called by NGS when a certain condition occurs.
+
+**A handler** is a `MultiMethod`. Like with any other multimethod, you can override what it does by defining your own method with the same name further down in the code. Since standard handlers are defined in **stdlib.ngs** which is typically loaded first, your own methods will be "further down".
+
+## method_not_found_handler
+
+`method_not_found_handler` is called when a multimethod was called but no method matched the arguments. Use `F method_not_found_handler(callable:Fun, *args) ...` to add your behaviours.
+
+## global_not_found_handler
+
+`global_not_found_handler` is called on attempt to read from an undefined global variable. Sample usage from **stdlib.ngs**
+
+	F global_not_found_handler(name:Str) {
+		require("${NGS_DIR}/autoload/${name}.ngs")
 	}
 
-The `+` in NGS is a method. It has few **method implementations**. You can see definitions of two of the implementations in the example above. One implementation can add numbers. Another implementation concatenates strings. How NGS knows which one of them to run? The decision is made based on arguments' types. NGS scans the **method imlementations** array backwards and invokes the **method implementation** that matches the given arguments (this matching process is called multiple dispatch).
+# Hooks
 
-# HANDLERS AND HOOKS
-
-Handlers and hooks are called by NGS when a certain condition occurs. What exactly happens when they are called differs between handlers and hooks.
-
-**A handler** is a regular method (`Arr` of **method implementations**). Like with any other method, you can override what it does by defining your own **method implementation** with the same name further down in the code. Since standard handlers are defined in **stdlib.ngs** which is typically loaded first, your own **method implementation** will be "further down".
-
-**A hook** is an instance of the `Hook` type. Some hooks are called by NGS when a certain condition occurs. You are free to create and use your own hooks. When called, it executes all registered functions. The main difference is that using hook you get accumulative behaviour instead of overriding behaviour.
+**A hook** is a `Hook` object. Some hooks are called by NGS when a certain condition occurs. You are free to create and use your own hooks. When called, it executes all registered methods. The main difference vs calling a `MultiMethod` is that using hook you get accumulative behaviour instead of overriding behaviour.
 
 User-defined hook example:
 
@@ -1228,124 +1693,429 @@ User-defined hook example:
 
 Another way is to add named hook handlers (also a practical example):
 
-	exit_hook['cleanup_temp_files'] = F(exit_info:Hash) {
+	exit_hook['cleanup_temp_files'] = F(exit:Exit) {
 		# remove my temp files
 	}
 
-
-## `impl_not_found_handler`
-
-`impl_not_found_handler` is called when a method was called but no **method implementation** matched the arguments. Use `F impl_not_found_handler(callable:Fun, *args) ...` to add your behaviours.
-
-
-## `global_not_found_handler`
-
-`global_not_found_handler` is called on attempt to read from an undefined global variable. Sample usage from **stdlib.ngs**
-
-	F global_not_found_handler(name:Str) {
-		require("${NGS_DIR}/autoload/${name}.ngs")
-	}
-
-
-## `exit_hook`
+## exit_hook
 
 `exit_hook` is called when NGS is about to exit. Typical cases are:
 
 * All of the given code was executed.
 * `throw` was invoked and no matching `catch` was found.
 
-Method signature: `exit_hook(exit_info:Hash)`. `exit_info` currently has two keys: `exit_code` and `exception`. **stdlib.ngs** defines two standard hooks.
+Method signature: `exit_hook(exit:Exit)`. `Exit` currently has two keys: `exit_code` (`Int`) and `exceptions` (`Arr`). **stdlib.ngs** defines one standard exit hook.
 
-	# ngs -pi 'exit_hook.handlers'
-	Hash of size 2
-	[print_exception] = <Closure <anonymous> at /usr/share/ngs/stdlib.ngs:2110>
-	[exception_to_exit_code] = <Closure <anonymous> at /usr/share/ngs/stdlib.ngs:2117>
+	$ ngs -pi 'exit_hook.Hash()'
+	Hash of size 1
+	  [print_exception] = <UserDefinedMethod <anonymous>(exit:Exit) at /usr/local/lib/ngs/stdlib.ngs:5345>
 
 * `print_exception` prints exception details if an exception occurred.
-* `exception_to_exit_code` sets the exit code using `to_exit_code`. Unless defined for your specific exception, `to_exit_code` of an `Exception` returns **200**.
 
-# VARIABLES SCOPING RULES
+# Predicates
 
-## Default scoping rules
+Methods such as `filter`, `filterk`, `filterv`, etc take predicate as one of the arguments.
+Traditionally, such methods (functions) took a method (function) as the predicate argument.
+A predicate function is a function with one parameter and that returns a boolean.
 
-In a function, any variable that is not assigned to inside the function is looked up as an **upvar** (enclosing functions) and as **global**.
+NGS allows more powerful and convenient usage of predicates in these and other methods.
+All kinds of objects can be passed as predicates.
+NGS higher-order methods (functions) that have predicate parameters convert the predicates into predicate methods (functions) using the `Pred` multimethod:
 
-	a = 1
-	F f() {
-		echo(a)
-	}
-	f()
-	# Output: 1
-
-	a = 1
-	F f() {
-		a = 2
-		F g() {
-			echo(a)
+	# Note that "predicate" can be of any type
+	F filter(e:Eachable1, predicate) {
+		pred = Pred(predicate)  # <-- Converting predicate to a predicate function.
+		t = typeof(e)
+		ret = t()
+		e.each() do F(elt) {
+			if pred(elt)
+				ret.push(elt)
 		}
-		g()
+		ret
 	}
-	f()
-	# Output: 2
 
-In a function, any identifier that is mentioned in any of the enclosing functions is automatically `upvar` - references the variable in the outer scope.
+This behaviour allows defining how any given type behaves as a predicate. Several built-in types have `Pred` method defined for them.
+Here are some examples of how predicate conversion described above can shorten the code:
 
-	a = 1
-	F f() {
-		a = 2
-		F g() {
-			a = 10
+
+	# Would be {...}.filterk(F(k) k ~ /^b/)
+	{"a1": 1, "a2": 2, "b1": 10}.filterk(/^b/)  # {"b1": 10}
+
+	# Would be {...}.filter(F(elt) elt.x == 7)
+	[{"x": 10, "y": 20}, {"x": 7, "y": 30}].filter({"x": 7})  # [{x=7, y=30}]
+
+	# Would be {...}.filter(F(t) t is Str)
+	["abc", 1, "def"].filter(Str)  # [abc,def]
+
+One can easily define how a type behaves as a predicate: define appropriate `Pred` method.
+Here is the `Pred` method that allows `.filter(SomeType)` such as `.filter(Str)` example above:
+
+	F Pred(t:Type) F is_pred(x) x is t
+
+That's a method (`Pred`) that returns a predicate method (function) which is called `is_pred`.
+Naming the returned method helps a bit when looking at backtrace. `is_pred`, the predicate method, checks whether it's argument is of type `t`.
+
+Note that using a method as predicate is still possible:
+
+	[1,2,11].filter(F(x) x > 10)  # [11]
+
+That is because `Pred` method leaves it's argument as is, if it is callable (a method for example):
+
+	F Pred(f:Fun) f
+
+# Iterators
+
+Iterators give more flexibility and control as opposed to `each` iteration.
+
+## The iterator protocol
+
+Iterators must implement the following methods:
+
+* `Bool(x:YOUR_ITER_TYPE)` which tells whether there are more values
+* `next(x:YOUR_ITER_TYPE)` which returns the next value (or throws `NoNext` exception)
+
+When `for x in EXPR { BODY }` syntax is used, it is equivalent to the following:
+
+	_hidden_iter = Iter(EXPR)
+	while _hidden_iter {
+		x = _hidden_iter.next()
+		BODY
+	}
+
+## Referencing the iterator in the BODY
+
+Since `Iter(x:Iter)` is defined as `x`, you can use the following solution if you want to use the `for` syntax and have access to the iterator:
+
+	for x in my_iter=Iter(EXPR) {
+		BODY # can manipulate my_iter for advanced control
+	}
+
+The above works as follows: `my_iter=Iter(EXPR)` is an assignment which evaluates to an `Iter` object. `for` uses `Iter` on that value to get an iterator but it is the same iterator that `my_iter` references.
+
+## Built-in iterators
+
+See `Iter` type documentation to see which iterators are available in NGS.
+
+# Executing external programs
+
+When a command (more precisely commands pipeline) is parsed, an `CommandsPipeline` object is created. Then depending on the syntax, appropriate method is called with the `CommandsPipeline` argument. The methods are: `$()`, ```` `` ````, and ```````` ```` ````````.
+
+The syntactic options for executing external programs are:
+
+* Being in top level syntax of an NGS script, which is the **commands syntax**
+* In **code syntax**: `$(...)` - run the process and get the reference to it
+* In **code syntax**: `%(...)` - construct the `CommandsPipeline` but do not run it. Useful for passing ready-to-run commands around: `t=%(ls /); ...; $($t)`
+* In **code syntax**: `` `...` `` - capture the output
+* In **code syntax**: ```` ``...`` ```` - capture and decode the output
+
+Note that if you want just to construct the command and not run it
+
+External commands are represented with type `CommandsPipeline`. In the simple case, there is exactly one command. In more complex cases `CommandsPipeline` references several programs and pipes between them, for example constructed by `$(my_prog_1 | my_prog_2 | my_prog_3)` .
+
+	$ ngs -pi '$(ls | wc -l)'
+	CommandsPipeline
+	  command[0]: <Command options={} redirects=[<Redirect 1 null <WritingPipeBetweenChildren read_fd=4 write_fd=5>>] argv=[ls]>
+	  process[0]: Process
+	  process[0]:   command = <Command options={} redirects=[<Redirect 1 null <WritingPipeBetweenChildren read_fd=4 write_fd=5>>] argv=[ls]>
+	  process[0]:   pid = 87711
+	  process[0]:   exit_code = 0
+	  process[0]:   exit_signal = 0
+	  process[0]:   output on fd 1, stdout (0 lines):
+	  process[0]:   output on fd 2, stderr (0 lines):
+	  pipe[1]: <CommandsPipe options={} name=|>
+	  command[1]: <Command options={} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=6 write_fd=7>>,<Redirect 0 null <ReadingPipeBetweenChildren read_fd=4 write_fd=5>>] argv=[wc,-l]>
+	  process[1]: Process
+	  process[1]:   command = <Command options={} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=6 write_fd=7>>,<Redirect 0 null <ReadingPipeBetweenChildren read_fd=4 write_fd=5>>] argv=[wc,-l]>
+	  process[1]:   pid = 87712
+	  process[1]:   exit_code = 0
+	  process[1]:   exit_signal = 0
+	  process[1]:   output on fd 1, stdout (1 lines):
+	  process[1]:           20
+	  process[1]:   output on fd 2, stderr (0 lines):
+
+## Substitution of command line arguments
+
+	$(ls $fname)      # $var_name - expands to exactly one argument
+	$(ls ${ EXPR })   # ${ EXPR } - expands to exactly one argument
+	$(ls $*fnames)    # $*var_name - expands to zero or more arguments
+	$(ls $*{ EXPR })  # $*{ EXPR } - expands to zero or more arguments
+
+`EXPR` above can be a single expression or any number expressions, new-line or `;` separated, value of the last one is used for the substitution.
+
+The examples above show `$()` syntax but the substitution works the same for all syntaxes mentioned in **syntactic options for executing external programs**.
+
+## Options
+
+Rationale: it is sometimes desirable to alter the behaviour of execution of an external program.
+NGS provides syntax for passing arbitrary key-value pairs to augment `CommandsPipeline` or `Command`.
+
+Syntax:
+
+* Options for one command: `option1:value1 option2:value2 optionN:valueN command and arguments` inside `$()` and friends and at the top level.
+* Options for one the whole pipeline: `option1::value1 option2::value2 optionN::valueN command_1 | command_2` inside `$()` and friends and at the top level.
+
+In both cases, the values must follow the colon immediately, no spaces allowed. Missing value defaults to `true`.
+
+Options:
+
+* `$(nofail: my_command)` - (deprecated, use `$(ok: my_command)`) no exception will be thrown as `finished_ok` always returns `true` for commands with option.
+* `$(ok:CODES my_command)` - `finished_ok` will return `true` for the listed `CODES`. `CODES` can be a boolean (`Bool`), single integer (`Int`), an array of integers (`Arr` of `Int`), or a `NumRange`.
+* `$(top_level:: my_command)` - do not capture the output of the command. This is the default behaviour of the top-level **commands syntax**: the stdout connected to the stdout of the NGS process.
+* Internally the `&` in `$(my_command &)` sets the `&` option to `true`. This mechanism can be used to modify the behaviour of `CommandsPipeline` prepared by `%(...)`.
+
+		ngs -pi '%(ls / &)'
+		CommandsPipeline
+		  options: Hash of size 1
+		  options:   [&] = true
+		  command[0]: <Command options={} redirects=[] argv=[ls,/]>
+
+* `` `line: my_prog` `` - return the first line of the output, without the new-line characters
+
+**WARNING**: unrecognized options are silently ignored.
+
+## Input/Output Redirections
+
+Redirections are represented by the `Redir` type. When a command is parsed and converted to `CommandsPipeline`, each `Command` gets a (possibly empty) list of redirections (in the `.redirects` property)
+
+Redirections syntax (based on bash syntax):
+
+* Overwrite : `my_command >myfile`
+* Append: `my_command >>myfile`
+* Read from: `my_command  <myfile`
+* Specify file descriptor, overwrite: `my_command 2>myfile`
+* Specify file descriptor, append: `my_command 2>>myfile`
+* Capture: `my_command 2>${true}` . The default is to not capture stderr but rather output it immediately to NGS' process stderr.
+
+Running external programs examples:
+
+	$ ngs -pi '$(ok: ls xxx)'
+	ls: xxx: No such file or directory
+	CommandsPipeline
+	  command[0]: <Command options={ok=true} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[ls,xxx]>
+	  process[0]: Process
+	  process[0]:   command = <Command options={ok=true} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[ls,xxx]>
+	  process[0]:   pid = 26157
+	  process[0]:   exit_code = 1
+	  process[0]:   exit_signal = 0
+	  process[0]:   output on fd 1, stdout (0 lines):
+	  process[0]:   output on fd 2, stderr (0 lines):
+	$ ngs -pi '$(ok: ls xxx 2>${true})'
+	CommandsPipeline
+	  command[0]: <Command options={ok=true} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=6 write_fd=7>>,<Redirect 2 > <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[ls,xxx]>
+	  process[0]: Process
+	  process[0]:   command = <Command options={ok=true} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=6 write_fd=7>>,<Redirect 2 > <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[ls,xxx]>
+	  process[0]:   pid = 26179
+	  process[0]:   exit_code = 1
+	  process[0]:   exit_signal = 0
+	  process[0]:   output on fd 1, stdout (0 lines):
+	  process[0]:   output on fd 2, stderr (1 lines):
+	  process[0]:     ls: xxx: No such file or directory
+
+## Exit codes handling when running external programs
+
+Immediately after an external program finishes, it's exit code (and in future, possibly other aspects) is checked using `finished_ok` multimethod. The multimethod returns a `Bool`. If it's `false`, an exception is thrown.
+
+For unknown programs, `finished_ok` returns `false` for non-zero exit code and hence an exception is thrown. This behaviour can be modified with the `ok:` option of the command.
+
+NGS knows about some of external programs (`false`, `test`, `fuser`, `ping`) which might return non-zero exit codes which do not indicate an error. These commands do not cause exceptions for exit code one.
+
+If there is a particular program that you are using which also returns non-zero exit codes which should not cause an exception, you should add your own method `finished_ok` which handles that program. Please consider contributing this addition back to NGS.
+
+## External program boolean value
+
+When converting to `Bool`, for example in the expression `if $(test -f my_file) { ... }`, all programs in the `CommandsPipeline` must exit with code zero in order to get `true`, otherwise the result of converting to `Bool` is `false`.
+
+## Constructing command line arguments
+
+While it's feasible to construct an array with command line arguments for a program, `Argv` makes this task much easier by supporting common cases such as omitting a command line switch which has no corresponding value to use.
+
+See `Argv` multimethod.
+
+## Globbing
+
+Globbing is not implemented yet.
+
+# Accessing environment variables
+
+On NGS startup, the global variable `ENV` is populated with the environment variables. `ENV` is a `Hash` object.
+
+	echo(ENV.HOME)
+	echo(ENV["HO" + "ME"])
+
+`ENV` is also passed to external programs.
+
+	{
+		ENV.HOME = "/home/fake"
+		$(my_prog)
+	}
+
+# NGS exit codes
+
+Both regular results of running a program and exceptions are converted to exit code using `ExitCode` MultiMethod.
+
+Built in methods of `ExitCode` do the following conversion:
+
+* `true` - 0
+* `false` - 1
+* `Int` object - the number itself
+* `Exception` objects - 240
+* `FullBox` object - 0
+* `EmptyBox` object - 1
+* `Success` object - 0
+* `Failure` object - 1
+* `FatalError` objects - using the `exit_code` field of the exception, which if not given to `FatalError` constructor defaults to 1.
+* `CommandsPipeline` / `Process` objects - the exit code of the external command
+* `MatchY` object - 0
+* `MatchN` object - 1
+* All others - 0
+
+Special cases:
+
+* An exception and additional exception when converting the first exception using `ExitCode` - 241
+* An exception and `exit_hook` failure - 242
+* An exception, additional exception when converting the first exception using `ExitCode`, and `exit_hook` failure - 243
+* Non-Exception was thrown and then caught by C code - 245
+* NGS could not find the bootstrap file - 246
+* NGS could not open bootstrap file - 247
+* NGS could not parse bootstrap file - 248
+
+## Customizing translation of your types/objects to exit code
+
+Define `F ExitCode(t:MyType) {...}` method that returns `Int` to customize the exit code.
+
+# Declarative primitives
+
+Some of NGS libraries (currently only AWS) implement declarative primitives approach. Declarative primitives approach is to expose functions to manipulate resources in an idempotent way. Similar to configuration management systems, exposed resources are manipulated by declaring their desired state. Unlike configuration management systems, this approach does not deal with dependencies and order resolution. Declarative primitives approach provides convenient scripting facility, not a configuration management system.
+
+## Related methods
+
+**Constructors**
+
+Resources references are created using constructors, such as `AWS::Vpc`. Resources references are of type which is a subtype of `ResDef`.
+
+	my_vpc = AWS::Vpc()                # Reference to all VPCs that can be fetched using AWS CLI
+	echo(my_vpc)                       # Output: <Aws::Vpc anchor={regions=null, Tags={}}>
+	echo(AWS::Vpc().typeof())          # Output: <Type Vpc>
+	echo(AWS::Vpc().typeof().parents)  # Output: [<Type ResDef>]
+
+**find**
+
+`find` - find the specified resources. Almost never should be called manually. `expect`, `converge`, `each` and other methods run `find` automatically if needed (if it did not run previously on the reference).
+
+	my_vpc = AWS::Vpc().find()
+	echo(my_vpc)
+	# Output:
+	#   <Aws::Vpc vpc-ef...,vpc-ef...,vpc-bf... anchor={regions=null, Tags={}}>
+
+Empty result is not an exception for `find`.
+
+**expect**
+
+`expect` - check that referenced resources exist. Throw an exception otherwise. Used to assert assumptions about the system. If you write a script that for example counts on exactly one VPC that matches your description to exist, I strongly recommend to be explicit and state your expectation as `.expect(1)`.
+
+	my_vpc = AWS::Vpc().expect() # If no VPCs exist - throws exception
+	echo(my_vpc)
+	# Output:
+	#   <Aws::Vpc vpc-ef...,vpc-ef...,vpc-bf... anchor={regions=null, Tags={}}>
+
+	# Find VPCs with name tag "XX"
+	my_vpc = AWS::Vpc({"Name": "XX"}).expect() # If no VPCs exist - throws exception
+	# ... Exception of type AssertFail occurred ...
+
+	# Find VPCs with the given tag
+	my_vpc = AWS::Vpc({"aws:cloudformation:stack-name": "edge-vpc"}).expect(1)
+	# Would throw exception if there was not exactly one resources matching the description
+	echo(my_vpc)
+	# Output:
+	#   <Aws::Vpc vpc-ef... anchor={regions=null, Tags={aws:cloudformation:stack-name=edge-vpc}}>
+
+**converge**
+
+`converge` - Creates or updates resources if needed in order to match given properties.
+
+Example from production code, shortened for brevity:
+
+	# Library that describes ELB creation. The system has several ELBs which are similarly configured.
+	# The library contains this common configuration.
+	ns(c=converge) {
+		F converge(env, role, dns=null) {
+			edge_vpc_anchor = {'aws:cloudformation:stack-name': 'edge-vpc'}
+			vpc = AWS::Vpc(edge_vpc_anchor).expect(1)
+			tags = {'env': env, 'role': role, 'creator': 'system/images/elb.ngs'}
+
+			# Anchor: name + vpc_id
+			elb_sg = AWS::SecGroup("https-server", vpc)
+			elb = AWS::Elb("${env}-${role}")
+
+			# ---> Converge happens here <---
+			# Load balancer is either created or updated here
+			elb.c(
+				Tags = tags + if dns { {'DNS': dns} } else { {} },
+				ListenerDescriptions = ...,
+				Subnets = AWS::Subnet(edge_vpc_anchor).expect(2),
+				SecurityGroups = elb_sg,
+				HealthCheck = ...,
+				Instances = AWS::Instance({'env': env, 'role': role}).expect()
+			)
 		}
-		g()
-		echo(a)
 	}
-	f()
-	echo(a)
-	# Output: 10
-	# Output: 1
 
-In a function, any variable that is assigned to (including the `i` in constuct `for(i;10) ...`) in the function is automatically `local` unless it's an `upvar` as described above.
+**delete**
 
-	a = 1
-	F f() {
-		a = 2
-		echo(a)
-	}
-	f()
-	echo(a)
-	# Output: 2
-	# Output: 1
+`delete` deletes referenced resources.
 
-## Modifying variables' scoping
+	# Delete referenced resources, in this case one specific load balancer
+	AWS::Elb("prod-mobile-redirect").delete()
 
-You can modify default scoping using the `global` and `local` keywords.
+	# Delete all unused load balancers
+	AWS::Elb().reject(X.Instances).delete()
 
-	a = 1
-	F f() {
-		a = 2
-		F g() {
-			# local instead of upvar
-			local a
-			a = 3
-		}
-		g()
-		echo(a)
-	}
-	f()
-	# Output: 2
+## Anchor
 
-	a = 1
-	F f() {
-		a = 2
-		F g() {
-			# global instead of upvar
-			global a
-			a = 3
-		}
-		g()
-		echo(a)
-	}
-	f()
-	# Does not work yet due to a bug, "a" stays upvar
-	# Output: 3
+Anchors describe which resources are referenced.
 
+As you probably have noticed, resource references, which are created using constructors, get some parameters. These parameters are called "Anchor". Note that all parameters passed to the constructors are called "Anchor" collectively.
+
+Examples of Anchors:
+
+* Tags hash: `AWS::Instance({'env': env, 'role': role})`
+* Explicit tags: `AWS::Instance(Tags={'env': 'prod', 'role': 'ssh-sandbox'})`
+* Resources specific properties: `AWS::Vpc(IsDefault=true).expect(1)`
+* Tags and resource-specific properties: `AWS::Vpc(IsDefault=false, Tags=...).expect(1)`
+
+Any combination of explicit tags and resource-specific properties is possible.
+
+## Properties
+
+Properties describe the desired state of resources. The parameters to `converge` are properties. See the `converge` example above.
+
+## Planned future changes
+
+* `regions` in AWS library will probably be renamed to `_Region` or something else starting with underscore to emphasize it's a syntactic property, not something that correlates to AWS CLI output.
+* Currently there is no way to know whether `converge` has created resources or updated them. There will be a way to tell.
+
+# Debugging
+
+This section is planned to grow over time.
+
+## MethodNotFound exception
+
+	$ ngs -pi 'map(1,2,3)'
+	...
+	Exception of type MethodNotFound occurred
+	...
+
+	# Means the parameters did not match any of the existing methods.
+	# See which methods are defined:
+
+	ngs -pi map
+	MultiMethod
+	  Methods
+		Array of size 7
+		  [0] = <UserDefinedMethod map(e:Eachable, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:242>
+		  [1] = <UserDefinedMethod map(arr:Arr, n:Int, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:1600>
+		  [2] = <UserDefinedMethod map(h:Hash, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:2209>
+		  [3] = <UserDefinedMethod map(fb:FullBox, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:2550>
+		  [4] = <UserDefinedMethod map(eb:EmptyBox, mapper:Fun) at /usr/local/lib/ngs/stdlib.ngs:2555>
+		  [5] = <UserDefinedMethod map(s:Success, fun:Fun) at /usr/local/lib/ngs/stdlib.ngs:2762>
+		  [6] = <UserDefinedMethod map(f:Failure, fun:Fun) at /usr/local/lib/ngs/stdlib.ngs:2771>

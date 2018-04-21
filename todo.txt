@@ -4,88 +4,41 @@ Note that this started as internal document so things here are unformed, not fin
 
 	Unsorted and undecided things go here. The important sections is [roadmap] and it's just below this section.
 
-	* Fix $(separate$item issue)
-	* update(Hash, key, value) - update specified key only if exists
-	* update(Arr[Hash], key, value / Fun) - update specified key only if exists
-	* make ResDef ArrLike for the resources?
-	* make Res HashLike?
-	* Fix parser in
-		function_call(
-			with_comments,
-			# syntax
-			yes)
-	* option to turn backtraces on in warn() and error()
-	* assert_file / assert_file_exists ?
-	* assert_has_line / assert_has_line_with ?
-	* Make Indexable: Arr, Str, Range - this might save some code
-	* AWS::SecGroup - check whether Description is Anchor-only
-	* ---
-	* AWS::Instance -- make sure Anchor works as expected
-	* "The README doesn’t seem to have any simple syntax examples"
-	* Consider somethig like data_strucure ~ [Capture("x"), 7 , "xx"]
-	* Creating an AWS res not matching the Anchor - think
-	* Implement Hash(Arr[Str]) for strings of form "key=value"?
-	* Keyword only arguments
-		* then think about File("/etc/myconfig")[lines='# start'..'# end'] = ['my', 'content']
-	* Predicates in parameters list?
-	* Immediate values in parameters list
-	* new syntax: .attr OP val
-	* consider special call syntax: myfunc?(any_arg, which_is_null, causes_call_to_be_skipped)
-		or myfunc(not_any, but_only_marked, skips argument)
-	* MacOS (support being added): gc repeated allocation of very large block
-	* F main(a:Str, b:Str=null) is not matched when only one argument is passed
-		happens because all matched arguments are treated as positional
-		should implement keyword-only arguments first
-	* build - install ngs syntax detection and highlighting for vim
-	* last(?, predicate)
-	* Consider Ref(h:Hash, k) and Ref(a:Arr, idx:Int)
-	* add avg()
-	* Consider OneOf type for nullable parameters: F myfunc(a:Int, b:OneOf(Int, Null))
-		also think about more traditional approach: F myfunc(a:Int, b:Box[Int])
-	* add fetch(Path), maybe read(Path)
-		now have read(File)
-	* "borrow" status() behaviour from apt/apt-pkg/install-progress.cc
-		switch to override and do:
-		+ tmux title only
-		+ gnome/whatever terminal title
+	* Allow dump() to stderr (to use in print_exception in bootstrap)
+
 
 [roadmap]
 
 	* Phase 1 - the language [in progress]
 
+		* Milestone "documentation" [in progress]
+			* Generated [in progress]
+				* Pages
+					* Namespaces related
+						* Namespace page
+							* Links to types' pages
+					* Namespaced types and methods
+						* Show namespace
+			* Document AWS library (including usage examples)
+				* Example: AWS::Elb().reject(X.Instances).delete()
+			* Link from constructors to types
+			* Nested namespaces (AWS::util)
+			* "N methods" in link to namespace - filter by added implementations, don't count x in "global init; x = init"
+			* Methods tags
+				+ higher-order functions
+
 		* Milestone "packaging"
 			* Debian packages
 			* Brew package
+			* Arch Linux package
+			* Install ngs syntax detection and highlighting for vim
+			* Make multiple versions installable side by side, like Node.js
 
 		* Milestone "programming"
-
-			* documentation [in progress]
-				* Add "-pd" switch: print documentation
-					+ Should take one of:
-						+ Type
-						+ Method
-						+ Namespace
-						+ Topic
-					+ Add some method to list topics?
-					+ Use pager?
-					+ Simple formatting as plain text when no pandoc installed, man formatting when pandoc installed? Maybe pre-compiled man pages?
-				* Make sure build process for online documentation works.
-					Might be broken after migration to cmake.
-				* { } in examples
-				* Tutorial
-					+ Build an app - decide which
-				* All types documentation [in progress]
-					* Link %RET types
-				* All methods documentation [in progress]
-				* Namespaced types and methods
-				* Exit codes (see bootstrap.ngs and ngs.c)
-				* Document that inner functions are declared local
-				* Language reference, good example: https://golang.org/ref/spec [have most of it in ngslang]
-				* Pipes
-				* Internals
-
+			* chdir() and $(cd:... my_prog) option
 			* files globbing
 				consider special syntax such as <foo*bar>
+				think about Res globbing
 
 		* Milestone "modules"
 			* require() - add search path
@@ -103,10 +56,104 @@ Note that this started as internal document so things here are unformed, not fin
 				+ maybe methods should be versioned (like in .so files)
 				+ how different module versions can run alongside?
 
+		* Milestone "even better documentation"
+			* Namespaces -> Methods. Mark which are additions to globals and which are local.
+			* Tables documentation - examples
+			* Finish c_* methods documentation
+			* Add field (for example for Absent) for methods that get Arr[T] to link that method from type T page
+			* Tags associated with methods/types/namespaces
+			* Add "-pd" switch: print documentation
+				+ Should take one of:
+					+ Type
+					+ Method
+					+ Namespace
+					+ Topic
+				+ Add some method to list topics?
+				+ Use pager?
+				+ Simple formatting as plain text when no pandoc installed, man formatting when pandoc installed? Maybe pre-compiled man pages?
+			* Internals
+
 		* Milestone "correct programming"
 
-			* AWS fix SG rules (IpPermBox < IpPermBox)
-				Make it work correctly when one rule is superset of another one
+			* Make sure this works:
+				something
+				.method1()
+				.method2()
+
+			* Convert VERSION to an object and add option to print it as JSON
+
+			* Consider adding FEATURES (Hash?)
+
+			* Support multi-command / multi-line $(...) syntax
+
+			* OS - make it a type, not a list booleans
+
+			* See what can be fixed regarding functions that accept Arr[T] for specific types
+				+ Such as join(threads:Arr) in lib/autoload/Thread.ngs
+
+			* Rethink null/exception/Box
+				+ F index
+				+ F zip
+				+ F pos
+				+ {,e}{switch,match,cond}
+
+			* ec2hostsfile.ngs - fix the tags filter
+
+			* Syntax fixes
+				* Fix operators priority for obj.Mod::method()
+					+ Probably needs rework "." to be regular binop with priority
+				* Fix syntax: "ifx" is now "if x"
+				* Fix parser in
+					function_call(
+						with_comments,
+						# syntax
+						yes)
+				* Fix $(separate$item issue)
+				* Fix segfault in case of comments between cond clauses
+				* Fix - ngs: vm.c:2988: vm_run: Assertion `0=="Function does not have result value"' failed.
+					F decode(s:Str, hints:Hash) {
+						guard try hints['process'].command.argv[0] == 'find'
+						# argv = hints['process'].command.argv
+						# guard '-printf' not in argv
+						# zero_sep = '-print0' in argv
+						# if zero_sep then s.split('\0') else s.lines()
+					}
+				* Make comments that begin not at beginning of line work
+
+			* Think about unification of Eachable and Iter
+				* Maybe something resembling "yield"
+
+			* Namespace type, probably subtype of Hash
+
+			* decode_json - meaningful exceptions
+
+			* Adding a field to a type is not thread safe because of possible fields hash (field name -> field number) update
+
+			* [Doc.ngs] check why n = Node('html', children = tl.children) does not work
+
+			* Option to turn backtraces on in warn() and error()
+				* Make option for unique backtraces only
+
+			* ns { F init(...) ... } -- forgetting "global init" is hard to debug
+
+			* F main(a:Str, b:Str=null) is not matched when only one argument is passed
+				happens because all matched arguments are treated as positional
+				should implement keyword-only arguments first
+
+			* Reconsider Int inheriting Eachable. Think 10.flatten() - very strange behaviour. Maybe Visitable/Traversable or alike is needed for containers.
+			* Fix parser for # comments at end of line
+			* MacOS warning: "gc repeated allocation of very large block"
+
+			* Keyword only arguments
+				* then think about File("/etc/myconfig")[lines='# start'..'# end'] = ['my', 'content']
+			* AWS
+				* Creating an AWS res not matching the Anchor - think
+				* AWS fix SG rules (IpPermBox < IpPermBox)
+					Make it work correctly when one rule is superset of another one
+				* AWS::SecGroup - check whether Description is Anchor-only
+				* AWS::Instance -- make sure Anchor works as expected
+				* Add test for find(Vpc) isDefault property
+				* Add _Unused property or alike to find unused security groups, vpcs, load balancers, etc...
 
 			* Look for sets of C constants to move to namespaces
 				+ C_PCRE_* - move to C_PCRE namespace?
@@ -116,13 +163,9 @@ Note that this started as internal document so things here are unformed, not fin
 				+ offending value in .value
 				+ other fields?
 
-			* add missing split('str', 'sep')
-
 			* cmake - check that C macros exists (E..., RTLD_...) and make them available. Currently most of the are commented out due to Mac OS support.
 
 			* File descriptors cleanup (close), especially when forking and making pipes
-
-			* Standardize and explain naming convention: function/method, attribute/property.
 
 			* Check ArgvMatcher - why ec2din.ngs does not have F main(..., *filters) ?
 
@@ -133,17 +176,6 @@ Note that this started as internal document so things here are unformed, not fin
 			* Check map* and filter* functions naming consistency
 
 			* c_stat() / stat() - return timestamps too
-
-			* Replace Command#options with Hash (currently Arr)
-
-			* Fix - ngs: vm.c:2988: vm_run: Assertion `0=="Function does not have result value"' failed.
-				F parse(s:Str, hints:Hash) {
-					guard try hints['process'].command.argv[0] == 'find'
-					# argv = hints['process'].command.argv
-					# guard '-printf' not in argv
-					# zero_sep = '-print0' in argv
-					# if zero_sep then s.split('\0') else s.lines()
-				}
 
 			* Run exit_hook on CTRL+C (Throw exception)
 
@@ -159,15 +191,11 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* OP_PUSH_INT - check limits of the number
 
-			* Make comments that begin not at beginning of line work
-
 			* Go over methods and make sure the method X types matrix is as full as possible
 
 			* Partial application syntax
 				* Make sure it works correct in expressions such as 10 + X * 2
 				* Check that this works: f(X, *something, **some_kw)
-
-			* Fix segfault in case of comments between cond clauses
 
 			* Go over naming convention, making sure it's consistent and can be easily described in the manual
 
@@ -186,21 +214,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Check what happens with misplaced local/upvar/global. Example: "F f(); global f" - function declaration causes f to be local
 
-			* Replace all compile asserts with exceptions
-
 			* Make sure (uncaught) exceptions go to stderr, not stdout
 
-			* get rid of expose() ?
-				+ Used in Stats
-				+ Probably needs inheritance from builtin types
-
-			* get rid of nuke_null() ?
-				+ Not used in current stdlib
-				+ Think of use cases justifying existence of nuke_null()
-
-			* Low prioroty method MatchY[]
-
-			* break / continue - disable when not in for
+			* break / continue - disable when not in for/while
 
 			* -pedantic
 
@@ -210,15 +226,24 @@ Note that this started as internal document so things here are unformed, not fin
 				* exceptions instead of asserts
 				* disallow duplicate name for an argument
 
-			* Fix inspect() and maybe others to display special symbols in strings as \x.. or alike
+			* -(Str, Ifx)
 
 		* Milestone "threads"
 
-			* pmap() - limit number of concurrent threads
+			* Meaningful thread names
+				+ https://stackoverflow.com/questions/2369738/can-i-set-the-name-of-a-thread-in-pthreads-linux
+			* pmap() - limit number of concurrent threads and/or make it dynamic
 			* rethink exceptions in threads
+			* Think about and implement concurrency-supporting types
+				* LinkedList, ThreadSafeLinkedList
+				* Queue?
+				* Executor, ThreadPoolExecutor
 			* Make ENV and current directory thread-local but allow access to the global ones
-			* Thread - Make pthread_attr_t accessible - get/set attributes
+			* Thread - Make pthread_attr_t accessible - get/set fields
 			* Thread local variables
+			* pthread_mutexattr_gettype()
+			* pthread_mutexattr_destroy()
+			* pthread_attr_destroy()
 
 
 	* Phase 2 - the shell [not started]
@@ -226,10 +251,25 @@ Note that this started as internal document so things here are unformed, not fin
 		See beginning of CLI implementation in previous NGS implementation:
 		https://github.com/ilyash/ngs/blob/0ed8455efe851e3c5a275290a71c38c4e718f15c/cli.ngs
 
+		+ Information for contributors
+			+ Contributors should research and understand first
+				+ https://en.wikipedia.org/wiki/Termcap
+				+ https://en.wikipedia.org/wiki/Curses_(programming_library)
+				+ TERM environment variable
+				+ libreadline - https://cnswww.cns.cwru.edu/php/chet/readline/rltop.html
+				+ TTY / PTY - https://en.wikipedia.org/wiki/Pseudoterminal
+				+ TTY Signals - http://www.linusakesson.net/programming/tty/
+			+ CLI entry point is at lib/cli.ngs . It's called from lib/bootstrap.ngs
+				+ Current CLI readline implementation is not meant to stay, readline will probably not be a good fit for NGS
+				+ Current CLI readline implementation is based on unfinished FFI implementation, which is not stable (API can change)
+			+ All UI functionality that is implemented should be able to gracefully degrade and work in TTY.
+
 		* Milestone LayoutManager
-			+ Also useful for Table
+			* Dynamic width support for Table and probably other objects on the screen
 
 		* Milestone "screen layout"
+
+			* Commands prompt and input area at the bottom
 
 			* Processes have their own area on the screen
 				+ Truncated stdout/stderr
@@ -237,8 +277,21 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "semantic output"
 
+			* Needs software design: interactive objects and operations on them
+				+ Interactive data types
+				+ Protocol for specifying operations
+				+ Should gracefully degrade when go to file or piped to another program instead of interactive UI
 			* Allow navigation on the screen, choosing operations from a menu for the objects
 			* History of operations in context menu
+			* A way for external script to:
+				* Detect that it's running under NGS
+				* Return interactive objects (needs software design)
+				* For NGS scripts which return Table this should be automatic
+
+		* "borrow" status() behaviour from apt/apt-pkg/install-progress.cc
+			switch to override and do:
+			+ tmux title only
+			+ gnome/whatever terminal title
 
 	* Phase 3 - running code remotely
 
@@ -263,11 +316,73 @@ Note that this started as internal document so things here are unformed, not fin
 			+ method calls: scanned / not scanned (where in Arr the method was found)
 			+ something about call sites?
 
-	* Phase 5 - nice to have
+	* Phase 5 - RESTful client
 
-		* Generated types documentation - list all parents, including transient
+		* Introduce "FEATURES" global Hash to indicate supported features.
 
+		* Milestone "curl" - integrate libcurl
+			+ Make libcurl optional with compile time switch. If curl is compiled, add "curl": CURL_VERSION pair to FEATURES.
+			+ Use namespace "curl"
+			+ Low level functions in the namespace will be called "c_..." as all other low level c functions that are exposed to NGS language.
+			+ Higher level functions and types also go into the "curl" namespace, these will be the interface used by the rest of NGS code.
+			+ Integration: when read() sees a URL that starts with a scheme that libcurl supports, use libcurl to obtain the resource. Think about passing credentials, etc.
+			+ Think about stream processing for large resources, where read() will not be appropriate
+			+ Think about write() integration. Should it "POST"?
+
+		* Milestone "YAML" - integrate YAML parser and generator
+			+ Implementing YAML parser/generator in NGS will probably result very slow code, so a C library should probably be used
+			+ Same as with libcurl, compile time switch and YAML_LIB_NAME: YAML_LIB_VERSION pair added to FEATURES, and probably "yaml": true pair in FEATURES.
+			+ Look at JSON implementation
+			+ Functions: encode_yaml, decode_yaml
+			+ Integration: when decode() tries JSON, try YAML after that. If the hint says YAML, try just it.
+
+		* Milestone RESTful client
+			+ Think about this!
+			+ Support RAML for
+				+ Constructing queries
+				+ Parsing and validating responses
+				+ Think about how to integrate to the shell (completions, etc) when the shell is ready.
+
+	* Phase 6 - nice to have
+
+		* Iter improvements
+			* If migrating lines() to Iter
+				+ remember to implement ==(Iter, Arr), as used in tests:
+					fqdn = 'example.com'
+					fqdns = `mybin list`.lines()
+					assert(fqdns == [fqdn])
+				+ make sure join() works
+			* Iter[PredRange] - should return new Iter
+			* zip(Iter, Iter)
+			* limit(Iter, n)
+			* intersperse(Iter, ...)
+		* Inheriting built-in types without performance penalty (probably eliminates the need for ArrLike and HashLike)
+		* assert_proc(cp:CommandsPipeline, exit_code, stdout, stderr)
+		* Calling
+			* Predicates in parameters list?
+			* Immediate values in parameters list
+			* Consider OneOf type for nullable parameters: F myfunc(a:Int, b:OneOf(Int, Null))
+				also think about more traditional approach: F myfunc(a:Int, b:Box[Int])
+		* Data manipulation
+			* Make Indexable: Arr, Str, Range - this might save some code
+			* update(Hash, key, value) - update specified key only if exists ?
+			* update(Arr[Hash], key, value / Fun) - update specified key only if exists ?
+			* Implement Hash(Arr[Str]) for strings of form "key=value"?
+			* Add fetch(Path), maybe read(Path). Now have read(File)
+			* "str" / [str]
+			* '.'(Iter, Str) -> AttrIter or alike maybe MappingIter or child
+			* Maybe Iter(b:Box)
+		* Syntax
+			* Conditional presence of an element in an array
+		* assert_file / assert_file_exists ?
+		* assert_has_line / assert_has_line_with ?
+		* make ResDef ArrLike for the resources?
+		* make Res HashLike?
+		* last(?, predicate)
+		* Consider Ref(h:Hash, k) and Ref(a:Arr, idx:Int)
+		* add avg()
 		* Address resolution functions
+		* Consider somethig like data_strucure ~ [Capture("x"), 7 , "xx"]
 
 		* Sub-typing built-in types
 			* Subclass Fun? For mapper for example to know which arguments to pass and what to construct
@@ -275,9 +390,10 @@ Note that this started as internal document so things here are unformed, not fin
 			* Not sure about the star, maybe:
 				~All
 				X ~ All
+
 		* Method to push a value into Arr if it's not there already
 		* Function static variables
-			F parse(s:Str, ...)
+			F decode(s:Str, ...)
 			?static? re = /myregex/
 			guard s ~ re
 			...
@@ -322,7 +438,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* modules / namespaces
 
-		* implement parse() wherever possible (example: IPAddr, IPNet)
+		* implement decode() wherever possible (example: IPAddr, IPNet)
 			+ allow auto-load missing implementations by extension and mime type
 
 		* push/pop/shift/unshift for Hash
@@ -422,20 +538,16 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Consider augeas integration
 
-[todo by priority]
+		* Documentation
+			* Comparison and link to https://github.com/RexOps/Rex
 
-	* doc
-		* "local" and for() auto-local
-			Describe the "local myvar" behavior and make it clear that
-			for(i=0;i<n;i=i+1) will automatically declare i as local.
-		* which exceptions are thrown where and their meanings
-		* config() and/or Config()
-		* other projects
-			Explain how this project is different from other projects:
-				+ There is a shell in Python, don't remember the name.
-				( add more projects here )
-	* solve the inheritance (also for "expose")
-	* strings / mb_strings
+		* Conditional modification of value
+			* Condition can be Fun/value
+			* Replacement can be Fun/value
+			Syntax for common pattern, somewhat analogous to only():
+			newval = if my_cond then my_func(my_val) else my_val
+
+		* Consider introducing AnyVal / AnyRef types. These do _not_ correspond to BasicType and NormalType.
 
 [types]
 	* Cloud / Compute / etc ?
@@ -455,5 +567,10 @@ Note that this started as internal document so things here are unformed, not fin
 		+ Pipes
 	* HistoryEntry
 
-[functions]
-	* Path#relative_to(root)
+[things to look at]
+
+	* Look at ipython, books systems, bpython for ideas
+	* Comparison to https://www.dmst.aueb.gr/dds/sw/dgsh/
+	* Comparison to ipython
+	* Take a look at Red programming language http://www.red-lang.org/p/documentation.html
+	* Juju / conjure-up

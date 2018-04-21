@@ -44,7 +44,7 @@ char *find_bootstrap_file() {
 	home_dir = getenv("HOME");
 	if(home_dir) {
 		len = snprintf(NULL, 0, fmt, home_dir) + 1;
-		fname = NGS_MALLOC(len);
+		fname = NGS_MALLOC_ATOMIC(len);
 		snprintf(fname, len, fmt, home_dir);
 		// printf("HOME fname: %s\n", fname);
 		if(access(fname, F_OK) != -1) {
@@ -65,7 +65,7 @@ char *find_bootstrap_file() {
 void print_exception(VM *vm, VALUE result) {
 	// TODO: fprintf to stderr and teach dump_titled to optionally fprintf to stderr too
 	printf("====== Exception of type '%s' ======\n", obj_to_cstring(NGS_TYPE_NAME(NORMAL_TYPE_INSTANCE_TYPE(result))));
-	// TODO: maybe macro to iterate attributes
+	// TODO: maybe macro to iterate fields
 	VALUE fields = NGS_TYPE_FIELDS(NORMAL_TYPE_INSTANCE_TYPE(result));
 	HASH_OBJECT_ENTRY *e;
 	for(e=HASH_HEAD(fields); e; e=e->insertion_order_next) {
@@ -74,7 +74,7 @@ void print_exception(VM *vm, VALUE result) {
 			// Backtrace.frames = [{"closure": ..., "ip": ...}, ...]
 			VALUE backtrace = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)];
 			VALUE frames;
-			assert(get_normal_type_instace_attribute(backtrace, make_string("frames"), &frames) == METHOD_OK);
+			assert(get_normal_type_instace_field(backtrace, make_string("frames"), &frames) == METHOD_OK);
 			unsigned int i;
 			for(i = 0; i < OBJ_LEN(frames); i++) {
 				VALUE frame, resolved_ip, ip;
@@ -117,8 +117,8 @@ void print_exception(VM *vm, VALUE result) {
 			dump_titled(obj_to_cstring(e->key), ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
 		} else {
 			// Should not happen
-			dump_titled("attribute key", e->key);
-			dump_titled("attribute value", ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
+			dump_titled("field key", e->key);
+			dump_titled("field value", ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
 		}
 	}
 }
@@ -156,7 +156,7 @@ int main(int argc, char **argv)
 	bootstrap_file_name = find_bootstrap_file();
 	if(!bootstrap_file_name) {
 		fprintf(stderr, "Could not find bootstrap file\n");
-		exit(100);
+		exit(246);
 	}
 	if(!strcmp(bootstrap_file_name, "-")) {
 		source_file_name = ngs_strdup("<stdin>");
@@ -167,13 +167,13 @@ int main(int argc, char **argv)
 	}
 	if(!yyctx.input_file) {
 		fprintf(stderr, "Error while opening bootstrap file '%s': %d - %s\n", bootstrap_file_name, errno, strerror(errno));
-		exit(101);
+		exit(247);
 	}
 	parse_ok = yyparse(&yyctx);
 	// printf("parse_ok %d\n", parse_ok);
 	if(!parse_ok) {
 		fprintf(stderr, "NGS: Failed to parse at position %d (%s), rule %s. Exiting.\n", yyctx.fail_pos, sprintf_position(&yyctx, yyctx.fail_pos), yyctx.fail_rule);
-		exit(2);
+		exit(248);
 	}
 
 	tree = yyctx.__;
@@ -200,7 +200,7 @@ int main(int argc, char **argv)
 		} else {
 			dump_titled("Uncaught exception", result);
 		}
-		return 1;
+		return 245;
 	}
 	assert(0 == "Unexpected exit from bootstrap code");
 }

@@ -3,7 +3,6 @@
 {
 	# TODO: Other fields
 	# TODO: Tags
-	# TODO: Fix filters, AWS CLI does not have --filters for ELBs
 
 	config('table_ELBs', %[LoadBalancerName DNSName ListenerDescriptions AvailabilityZones Instances])
 	# CanonicalHostedZoneName CanonicalHostedZoneNameID SecurityGroups SourceSecurityGroup Subnets Policies BackendServerDescriptions HealthCheck Scheme VPCId
@@ -14,37 +13,10 @@
 		[ parts[0] + '.', parts[1..null].join('.') ]
 	}
 
-	ArgvMatcher('positionals', 'filters') do
-	doc filters - Show only instances matching the given filters. Possible filter forms are:
-	doc filters - vpc-xxxyyyzz - for specific vpc
-	doc filters - i-xxxyyyzz - for specific instance id
-	doc filters - 1.2.3.4 - for instance having given IP
-	doc filters - kkk=vvv - for instances having given tag value
-	F main(filters:Arr, allreg:Bool=false) {
-
-		filters .= map(F(arg) {
-			kv = arg.split('=')
-			econd {
-
-				arg.starts_with('vpc-')
-					"Name=vpc-id,Values=$arg"
-
-				arg ~ /^[0-9.]+$/ {
-					filter_name = if IPAddr(arg).is_private() then 'private-ip-address' else 'ip-address'
-					"Name=$filter_name,Values=$arg"
-				}
-
-				kv.len() == 2
-					"Name=tag-key,Values=${kv[0]},Name=tag-value,Values=${kv[1]}"
-			}
-		})
+	F main(allreg:Bool=false) {
 
 		elbs = if allreg {
-			AWS
-			# AZ is now important so moving it to be first
-			# xxx config('table_ELBs', ['AZ'] + config('table_ELBs').without('AZ'))
-			# aws_regions({ ``aws elb $A $*filters`` })
-			aws_regions({``aws elb describe-load-balancers``})
+			AWS::regions({``aws elb describe-load-balancers --region $A``})
 		} else {
 			``aws elb describe-load-balancers``
 		}
@@ -56,7 +28,7 @@
 			# TODO: unhardcode the tags
 			instances_by_lb = instances.values().group(F(i) "${i.Tags.env}-${i.Tags.role}" tor "UNKOWN")
 		}
-		elbs % F(elb) {
+		for elb in elbs {
 			elb.DNSName .= short_dns_name()
 			elb.ListenerDescriptions = elb.ListenerDescriptions.map(F(ld) {
 				collector {

@@ -2,39 +2,47 @@
 {
 	ArgvMatcher
 	type BootstrapNoMatchingMain(Exception)
+	type BootstrapFailedMatchMain(Exception)
 }
 
-F bootstrap_try_main(c:Closure, argv:Arr, finish:Return) {
+doc Internal method. Please do not use.
+doc Tries to run c if it matches argv.
+F bootstrap_try_main(c:UserDefinedMethod, argv:Arr, finish:Return) {
 	bootstrap_debug("Trying main() candidate $c")
 	try {
-		m = argv ~ c
+		m = null
+		try {
+			m = argv ~ c
+		} catch(e:Exception) {
+			throw BootstrapFailedMatchMain("Command line arguments are invalid. Failed to match main() method.").set('cause', e)
+		}
 		if not(m) {
 			bootstrap_debug("Trying main() candidate ${c} - no match before calling")
 			return null
 		}
 		# echo("Matched: $m")
-		v = c(*m.matches)
+		v = c(*m.args, **m.kwargs)
 		bootstrap_debug("Trying main() candidate ${c} - matched")
 		throw finish(v)
-	} catch(inf:ImplNotFound) {
+	} catch(mnf:MethodNotFound) {
 		# That's fine
-		inf.callable !== c throws inf
+		mnf.callable !== c throws mnf
 		bootstrap_debug("Trying main() candidate ${c} - no match after calling")
 	}
 }
 
-F bootstrap_invoke_main(default) {
-	main is not Arr returns default
-	not(main) returns default
-	if main.any(X is not Closure) {
-		return default
-	}
-	candidate_mains = main.filter(F(m) m.ip().resolve_instruction_pointer().file == bootstrap_main_file).reverse()
+doc Internal method. Please do not use.
+doc Find and invoke main() method that matches the passed command line arguments.
+doc Called by bootstrapper in cases where main() is defined.
+doc default - The result of evaluation of the code that was run by bootstrapper. Returned when main is not a MultiMethod or the defined main() was not in the main file.
+F bootstrap_invoke_main(bootstrap_main_file:Str, default) {
+	main is not MultiMethod returns default
+	candidate_mains = main.Arr().filter(F(m) m.ip().resolve_instruction_pointer().file == bootstrap_main_file).reverse()
 	not(candidate_mains) returns default
 	bootstrap_debug("Candidate main() functions: $candidate_mains")
 
 	finish = Return()
 	candidate_mains.each(bootstrap_try_main(X, ARGV, finish))
 	# TODO: print usage examples here and exit with error code
-	throw BootstrapNoMatchingMain("No matching main() found")
+	throw BootstrapNoMatchingMain("Command line arguments are invalid.")
 }

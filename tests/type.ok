@@ -10,7 +10,7 @@ Test: instance of T is U (before inheritance)
 * false
 Test: instance of T is U (after inheritance)
 * true
-Test: AttrNotFound
+Test: FieldNotFound
 * string(len=2) OK
 Test: Custom constructor
 * true

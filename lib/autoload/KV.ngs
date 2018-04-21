@@ -1,7 +1,10 @@
 {
+	doc DEPRECATED! Do not use!
 	type KV
 
+	doc DEPRECATED! Do not use!
 	F init(kv:KV, k, v) init(args())
 
+	doc DEPRECATED! Do not use!
 	F Str(kv:KV) "${kv.k}=${kv.v}"
 }

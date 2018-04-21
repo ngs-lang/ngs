@@ -1,0 +1,415 @@
+#!/usr/bin/env ngs
+{
+
+	# Autoload
+	AWS
+	ArgvMatcher
+	DelimStr
+	Doc
+	Iter
+	Res
+	ResDef
+	Set
+	Stats
+	Table
+	Thread
+	test
+
+	# TODO: Do not list all types on the namespace page,
+	# just up to TYPES_THRESHOLD, probably the parents.
+	TYPES_THRESHOLD = 10
+
+	# TODO: types trees pages
+
+	F main(doc_root:Str) {
+
+		global init, Str, Bool
+
+		DocPart = Doc::Part
+		DocNode = Doc::Node
+		DocText = Doc::Text
+		DocGroup = Doc::Group
+
+		commit = `line: git rev-parse HEAD`
+
+		F is_public_name(s:Str) s ~ /^[^_]/
+		F is_phased_out_type(s:Str) s ~ Pfx('Aws')
+
+		F safe_file_name(s:Str) {
+			s == 'index' returns 'index-'
+			s.replace(/[^-_a-zA-Z0-9]/, F(char) '%' + encode_hex(char))
+		}
+
+		F object_attr(x, a:Str) (x.attrs() or {}).get(a).Box()
+		F object_doc(x) x.object_attr('doc')
+		F object_doc_attr(x, a:Str) object_doc(x).filter(a in X).map(X[a]).map(ensure_array)
+
+		F make_page_head(title:Str, dotdots:Int=1) {
+			DocNode('head') with [
+				DocNode('meta', charset='UTF-8')
+				DocNode('link', rel='stylesheet', href='../' * dotdots + 'main.css', type='text/css')
+				DocNode('title') with [
+					DocText(title)
+				]
+			]
+		}
+
+		obj_to_description = {}
+
+		type Description
+
+			F containing_namespace_root_dir_components() {
+				d.containing_nd.containing_namespace_root_dir_components()
+			}
+
+			F output_abs_file_name_components(d:Description) {
+				d.containing_namespace_root_dir_components() + [ d.output_file_name() ]
+			}
+
+			F generate(d:Description) {
+				dst = d.output_abs_file_name_components().reduce(doc_root, (/))
+				status("Generating page(s) for ${d} -> ${dst}")
+
+				# Namespaces
+				# Types
+				# Multimethods
+			}
+
+			F Bool(d:Description) true
+
+			F Str(d:Description) {
+				"<${d.typeof().name} ${d.name}>"
+			}
+
+		type NamespaceDescription(Description)
+
+			F fqname(nd:NamespaceDescription) fqname(nd.containing_nd) +? '::' + nd.name
+
+			F init(nd:NamespaceDescription, namespace:Hash) {
+				nd.fqname = nd.fqname()
+				nd.description = object_doc_attr(namespace, '')
+				nd.example = object_doc_attr(namespace, '%EX')
+				# 'ext_links': doc_attr(ns, '%EXTLINK').map(ensure_array)
+				# 'types': ns.filterv(Type).reject(F(k, v) g.get(k) === v).map(F(name, t) {
+				# 	process_type(t)
+				# }).sort('name')
+				# 'methods': ns.filterv(Fun).rejectv(Type).map(F(name, impls) {
+				# 	# STDLIB_FILE_TYPE namespace has numbers as keys
+				# 	impls = if impls is MultiMethod {
+				# 		impls.Arr()
+				# 	} else {
+				# 		[impls]
+				# 	}
+				# 	process_method(Str(name), impls.filter(is_in_ns(X, ns)))
+				# })
+				nd.attrs = namespace.attrs().Box().get({}).get('doc', {}).without('').reject(X ~ /^%/).mapv(ensure_array)
+				# 'parents': parents
+				nd.objects_descriptions = {}
+				nd.objects_by_type = {
+					MultiMethodDescription: []
+					MethodDescription: []
+					TypeDescription: []
+					NamespaceDescription: []
+				}
+				namespace.each(F(k, v) {
+					if t = Description(nd, k, v) {
+						# echo("KV1 $k $t")
+						nd.objects_descriptions[k] = t
+						nd.objects_by_type[t.typeof()].push(t)
+					}
+				})
+			}
+
+			F init(nd:NamespaceDescription, containing_nd:NamespaceDescription, name:Str, namespace:Hash) {
+				init(args())
+				obj_to_description[namespace] = nd
+				super(nd, namespace)
+			}
+
+			F output_file_name(nd:NamespaceDescription) 'index.html'
+
+			F page_title(nd:NamespaceDescription) "${nd.name} namespace - NGS documentation"
+			F page_heading(nd:NamespaceDescription) "{nd.fqname} namespace - NGS documentation"
+
+			F index_fragment(nd:NamespaceDescription) {
+
+				\dl [
+					\dt [
+						\a href="TODO" [nd.name]
+					]
+					\dd [
+						\section [
+							nd.description.map(F(d) {
+								d.join('\n')
+							}).get('Undocumented')
+						]
+						\div class='unobtrusive' [
+							{
+								'sub-namespaces': NamespaceDescription
+								'types':          TypeDescription
+								'multimethods':   MultiMethodDescription
+							}.mapv({nd.objects_by_type[A].len()}).filterv(X>0).map("$Y $X").join(', ')
+						]
+						nd.example.map(F(ex) {
+							\section [
+								\h2 ['Example']
+								\pre class='example' title='Example' [
+									ex.join('\n')
+								]
+							]
+						}).get(DocGroup())
+					] # dd
+				]
+			}
+
+			# Not sure yet
+			F top_level_types(nd:NamespaceDescription) {
+				types = nd.objects_by_type[TypeDescription]
+				all_types_count = len(types)
+				types .= reject(F(t) {
+					t.parents.any(F(p) {
+						p.containing_nd === nd
+					})
+				})
+				{
+					'types': types
+					'hidden': all_types_count - len(types)
+				}
+			}
+
+			# TODO: MethodDescription (bootstrap_debug for example)
+			F page(nd:NamespaceDescription) {
+				tlt = top_level_types(nd)
+				\html [
+					make_page_head(page_title(nd))
+					\body class='namespace-page' [
+						# make_nav_doc(['Namespaces'] + nav + [namespace.name], dotdots=dd)
+						\main [
+							\h1 [page_heading(nd)]
+							if nd.objects_by_type[NamespaceDescription] {
+								DocGroup() with [
+									\h2 ['Sub-namespaces']
+									*nd.objects_by_type[NamespaceDescription].map(index_fragment)
+								]
+							}
+							if tlt.types {
+								DocGroup() with [
+									\h2 ['Types']
+									if tlt.hidden {
+										\section class='unobtrusive' ["${tlt.hidden} types, which are descendants of types listed below, are not shown for brevity"]
+									}
+									*tlt.types.map(index_fragment)
+								]
+							}
+							if nd.objects_by_type[MultiMethodDescription] {
+								DocGroup() with [
+									\h2 ['Multimethods']
+									*nd.objects_by_type[MultiMethodDescription].map(index_fragment)
+								]
+							}
+						]
+					]
+				]
+			}
+
+			F generate(nd:NamespaceDescription) {
+
+				status("Generating page for namespace ${nd}")
+				dst = (nd.containing_namespace_root_dir_components() + ['index.html']).reduce(doc_root, (/))
+				p = page(nd)
+				write(dst, Doc::HtmlRoot(p))
+				log("DST ${dst}")
+
+			}
+
+			F Str(nd:NamespaceDescription) {
+				"<${nd.typeof().name} ${nd.name} with ${nd.objects_descriptions.len()} items>"
+
+			}
+
+		type GlobalNamespaceDescription(NamespaceDescription)
+
+			F fqname(gnd:NamespaceDescription) ''
+
+			F init(gnd:GlobalNamespaceDescription) {
+				super(gnd, globals().without('main').filterk(is_public_name).rejectk(is_phased_out_type).sortk(lte))
+			}
+
+			F containing_namespace_root_dir_components(gnd:GlobalNamespaceDescription) []
+
+			F page_title(gnd:GlobalNamespaceDescription) "The global namespace - NGS documentation"
+			F page_heading(nd:NamespaceDescription) "The global namespace - NGS documentation"
+
+			F Str(gnd:GlobalNamespaceDescription) {
+				"<${gnd.typeof().name} with ${gnd.objects_descriptions.len()} items>"
+			}
+
+
+		type TypeDescription(Description)
+
+			F init(td:TypeDescription, containing_nd:NamespaceDescription, name:Str, type:Type) {
+				init(args())
+				obj_to_description[type] = td
+				td.constructor = MultiMethodDescription(containing_nd, name, type.constructors)
+				td.description = object_doc_attr(type, '')
+				td.parents = []
+				td.children = []
+			}
+
+			F index_fragment(td:TypeDescription) {
+				alt_name = ' (' +? (if td.name != td.type.name then td.type.name else '') +? ')'
+				\dl [
+					\dt [
+						\a href=td.name.safe_file_name().encode_uri_component() + '.FIXME.html' class='underline-on-hover-only' [
+							td.name + alt_name
+						]
+					]
+					\dd [
+						\section [
+							td.description.map(F(d) {
+								DocText(d.join('\n'))
+							}).get('Undocumented')
+						]
+						if td.children {
+							\div class='unobtrusive' [
+								"Direct subtypes: ${td.children.len()}"
+							]
+						} else {
+							DocGroup()
+						}
+					]
+				]
+			}
+
+
+
+		type MultiMethodDescription(Description)
+
+			F init(mmd:MultiMethodDescription, containing_nd:NamespaceDescription, name:Str, multimethod:MultiMethod) {
+				init(args())
+				obj_to_description[multimethod] = mmd
+				mmd.methods = multimethod.Arr().reject(NormalTypeConstructor).map(MethodDescription(containing_nd, name, mmd, X))
+				# mmd.methods = multimethod.Arr().map(MethodDescription(containing_nd, name, mmd, X))
+			}
+
+			F index_fragment(mmd:MultiMethodDescription) {
+				\dl [
+					\dt [
+						\a href=mmd.name.safe_file_name().encode_uri_component() + '.FIXME.html' class='underline-on-hover-only' [
+							"(MMD) " + mmd.name
+						]
+					]
+					\dd [
+						\section [
+							*mmd.methods.map(index_fragment)
+						]
+					]
+				]
+			}
+
+
+		type MethodDescription(Description)
+
+			F init(md:MethodDescription, containing_nd:NamespaceDescription, name:Str, mmd:MultiMethodDescription, method:Fun) {
+				init(args())
+				obj_to_description[method] = md
+				md.mmd = FullBox(mmd)
+				md.description = object_doc_attr(method, '')
+			}
+
+			F init(md:MethodDescription, containing_nd:NamespaceDescription, name:Str, method:Fun) {
+				init(args())
+				obj_to_description[method] = md
+				md.mmd = EmptyBox()
+				md.description = object_doc_attr(method, '')
+			}
+
+			F index_fragment(md:MethodDescription) {
+				\dl [
+					\dt [
+						\a href=md.name.safe_file_name().encode_uri_component() + '.FIXME.html' class='underline-on-hover-only' [
+							md.name
+						]
+					]
+					\dd [
+						\section [
+							md.description.map(F(d) {
+								DocText(d.join('\n'))
+							}).get('Undocumented')
+						]
+					]
+				]
+			}
+
+
+
+		F Description(containing_nd:NamespaceDescription, name:Str, x) {
+			if ENV.get('SHOW_IGNORED') {
+				warn("Ignoring ${containing_nd} ${x.typeof()} ${name}")
+			}
+			null
+		}
+
+		F Description(containing_nd:NamespaceDescription, name:Str, method:Fun) {
+			MethodDescription(containing_nd, name, method)
+		}
+
+		F Description(containing_nd:NamespaceDescription, name:Str, multimethod:MultiMethod) {
+			MultiMethodDescription(containing_nd, name, multimethod)
+		}
+
+		F Description(containing_nd:NamespaceDescription, name:Str, t:Type) {
+			TypeDescription(containing_nd, name, t)
+		}
+
+		F Description(containing_nd:NamespaceDescription, name:Str, maybe_namespace:Hash) {
+			F is_namespace(x) {
+				not(object_doc(x)) returns false
+				x.keys().all(Int) returns false # STDLIB_FILE_TYPE, possibly others in future
+				x.values().any(F(v) v is Type or v is Fun)
+			}
+			not(is_namespace(maybe_namespace)) returns null
+			NamespaceDescription(containing_nd, name, maybe_namespace)
+		}
+
+		F augment_types() {
+			status("Augmenting types information")
+
+			tds = obj_to_description.values().filter(TypeDescription)
+
+			# .parents
+			for t in tds {
+				t.parents = t.type.parents.map(obj_to_description[X])
+			}
+
+			# .children
+			for t in tds {
+				t.parents.each(F(p) {
+					p.children.push(t)
+				})
+			}
+
+			# # maybe find it in methods variable instead of re-doing process_method_impl()
+			# t.constructors = t.type.constructors.Arr().reject(NormalTypeConstructor).register_constructors_mis().map(process_method_impl(t.name, X))
+			# t.methods = types_methods[t.type].map(processed_methods[X]).reject({'is_constructor': true})
+
+		}
+
+
+		status("Building descriptors")
+		global_ns = GlobalNamespaceDescription()
+
+		status("Writing files")
+		$(cp main.css "$doc_root/")
+
+		augment_types()
+
+		global_ns.generate()
+
+
+
+
+		status("OK")
+
+	}
+}

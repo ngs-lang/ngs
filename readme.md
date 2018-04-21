@@ -85,6 +85,37 @@ The language feels (to me) like a mix of Python, bash and a bit less Ruby and Pe
 * Demo 3: [demonstrates race condition](bin/locks.ngs) and locks.
 
 
+Code example
+============
+
+	# Arrays
+	a = [1, 2, 3]
+	arr = a.map(X*2) # arr is now [2, 4, 6]
+	for i in arr {
+		echo(i)
+	}
+
+	# Hashes (maps)
+	h = {"a": 1, "b1": 2, "b2": 3}
+	echo(h.filterk(/^b/).mapv(X+10))  # {b1=12, b2=13}
+
+
+	# Functions (multimethods) and multi-dispatch
+
+	F my_func(x:Int) x*10 # Single expression does not require { ... } syntax
+
+	doc This method is documented!
+	F my_func(s:Str) {
+		t = s * 2
+		"[" + t + "]" # Last value returned as the result
+	}
+
+	echo(my_func(1))      # 10
+	echo(my_func("xyz"))  # [xyzxyz]
+	echo(my_func)         # <MultiMethod with 2 method(s)>
+
+More information about the language and syntax in particular is in [ngslang.1](doc/ngslang.1.md)
+
 Running using docker
 ====================
 
@@ -100,7 +131,7 @@ Compiling and running
 
 ### Install dependencies - Debian-based Linux
 
-	sudo apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c-dev peg libpcre3-dev make cmake pandoc
+	sudo apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c-dev peg libpcre3-dev make cmake pandoc pkg-config build-essential
 	sudo type awk || sudo apt-get install gawk
 	mkdir build && cd build && cmake .. && make && ctest
 	# If NGS is not installed:
@@ -116,7 +147,7 @@ Compiling and running
 	# install macports
 	brew install Caskroom/cask/macports
 	macports_dir=$(brew cask info macports | grep '/usr/local/Caskroom/macports' | awk '{print $1}')
-	macports_pkg=$(brew cask info macports | awk '$2 == "(pkg)" {print $1}')
+	macports_pkg=$(brew cask info macports | awk '$2 == "(pkg)" || $2 == "(Pkg)" {print $1}')
 
 	sudo installer -pkg "$macports_dir/$macports_pkg" -target /
 
@@ -166,7 +197,7 @@ If you have troubles compiling, please try to compile the commit tagged `tested`
 Contributing
 ============
 
-Fork on GitHub, work on whatever you like, preferably from the top of [the todo](todo.txt), make a pull request. If the change is big or involves modifying the syntax, it's better to coordinate with Ilya before you start.
+Fork on GitHub, work on whatever you like, preferably from the top of [the todo](todo.txt), make a pull request (to "dev" branch). If the change is big or involves modifying the syntax, it's better to coordinate with Ilya before you start.
 
 Planned Features
 ================
@@ -467,9 +498,10 @@ Following instructions should work (tested on Debian)
 Have you heard of project X? How it compares to NGS?
 ====================================================
 
-None of the shells below provide interaction with objects on the screen: if you run a command to describe EC2 instances for example, there is no way to interact with the shown list. Such interaction is a planned feature in NGS.
-
-None of the shells below have built-in interaction with a cloud. In NGS the work on ["declarative primitives for the cloud"](https://ilya-sher.org/2016/07/06/declarative-primitives-or-mkdir-p-for-the-cloud/) has already started. Declarative primitives are somewhat similar to Chef or Puppet resources. The main difference between declarative primitives and a configuration management resource is that I'm proposing just a library function which can be called when you need it and not a control-grabbing framework. So for example `AwsElb(...)` function call will make sure the load balancer exists and is configured as described.
+* All of the shells below
+  * ... have no interaction with objects on the screen: if you run a command to describe EC2 instances for example, there is no way to interact with the shown list. Such interaction is a planned feature in NGS.
+  * ... have no built-in interaction with a cloud. In NGS follows the principles described in ["declarative primitives for the cloud"](https://ilya-sher.org/2016/07/06/declarative-primitives-or-mkdir-p-for-the-cloud/). Declarative primitives are somewhat similar to Chef or Puppet resources. The main difference between declarative primitives and a configuration management resource is that I'm proposing just a library function which can be called when you need it and not a control-grabbing framework. So for example `AwsElb(...)` function call will make sure the load balancer exists and is configured as described. NGS has work-in-progress AWS library. It's already usable for a subset of AWS resource types.
+  * ... have no CLI (planned NGS feature) that is written in the shell language itself.
 
 
 * [oil shell](http://www.oilshell.org/) is a very promising project with motiviation similar to that behind NGS. It's too early to tell the differences.
@@ -483,13 +515,20 @@ None of the shells below have built-in interaction with a cloud. In NGS the work
 * [rc shell](https://swtch.com/plan9port/man/man1/rc.html) is much closer to Bash than to NGS.
 * [Es: A shell with higher-order functions](https://wryun.github.io/es-shell/paper.html) . ES and NGS share quite a bit of common ideas. NGS goes further with making a shell a real programming language. ES vs NGS would probably be a matter of personal preference. ES is simpler and been here for a while.
 * [elvish](https://github.com/elves/elvish/) features nestable data structures, lambdas and namespacing and is pretty close to general purpose programming language when it comes to the semantics. When compared to NGS, it prefers to extend traditional mechanisms like output capture and pipelines as more expressive programming constructs, and looks a bit more like traditional shells (it is non-POSIX though). It is currently terminal-oriented.
+  * Elvish has neat interactive features.
+  * The programming language:
+    * Simple and consistent (vs NGS' more richer language). Built around the pipes paradigm (vs NGS' two syntaxes, one minimalistic bash-like and the other more suitable for programming).
+    * Single space for built-in functions and external programs faces the same problem that bash has with `while ...;do ... done`, hence `joins` and `splits` functions which avoid name clashing.
+    * In Elvish nested data structures can flow in pipes. Pipes in NGS currently carry bytes and the need to carry data structures is not felt because in "code" mode this happens naturaly in other ways such as `mydata.map(myfunc)`.
+    * New data types can not be defined in Elvish (as opposed to NGS' user data types and mutlti-dispatch methods).
+    * External programs that Elvish runs that exit with code other than 0 are converted to exceptions. This is simpler and more consistent approach than NGS takes. NGS has customizable decision system with few sane defaults that knows which exit codes for which programs are exceptions. `false` for example must return 1 and it's not an exception in NGS. `test -f ...` that returns 0 or 1 is fine, 2 is syntax error which is converted to exception. See [blog post about NGS exit code handling](https://ilya-sher.org/2017/01/28/ngs-unique-features-exit-code-handling/).
 * [Windows PowerShell](https://en.wikipedia.org/wiki/Windows_PowerShell) is probably the best thing that ever happened to Windows. I'm not familiar with it enough but here are my points
 	* PowerShell is built on top of .NET while NGS is a standalone language (as of writing, NGS will be a shell). In my opinion, PowerShell is an adaptation of .NET for scripting while NGS is built from ground up for scripting. I wrote some bootstrapping script in PowerShell and it felt very inconvenient and weird compared to bash or NGS.
 	* Syntax
 		* PowerShell has also two syntaxes. They are called [parsing modes](https://technet.microsoft.com/en-us/library/hh847892.aspx). These roughly correspond to commands and expression mode of NGS. Compared to NGS, the rules of switching between the two parsing modes are numerous and complex.
 		* PowerShell is too verbose by default.
 		* NGS syntax is much better in my opinion than syntax of PowerShell.
-	* Extending PowerShell is either inconvenient because you have to write in PowerShell which is inconvenient by itself or you have to know C#.
+	* Extending PowerShell is either inconvenient because you have to write in PowerShell which is inconvenient by itself or you have to know C# (or other .NET laguage?).
 	* PowerShell got some things right compared to other shells: structured data and consistent `$` in front of variables come to mind.
 	* Despite some similarities, writing a script in PowerShell and NGS is a completely different experience. You should try both and pick NGS without any doubt :)
 * [Shill - Scripting with Least Privilege](http://shill.seas.harvard.edu/) . Security focused (capability-based), runs on FreeBSD only (looks like Shill kernel module is required), examples mostly show security features, written in Racket. Not much development since initial commit at 2014. Real world usability is unclear. At this point I assume NGS as a programming language is much more usable.

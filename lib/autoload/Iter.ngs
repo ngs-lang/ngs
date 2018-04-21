@@ -36,7 +36,6 @@
 	type HashIter(Iter)
 
 	doc Iterator that returns given value forever.
-	doc %EX - { Iter }
 	doc %EX - i = ConstIter(10)
 	doc %EX - echo(i.next())
 	doc %EX - echo(i.next())
@@ -45,8 +44,7 @@
 	doc %EX - #   10
 	type ConstIter([Iter, Eachable1])
 
-	doc NOT IMPLEMENTED YET. Iterator that returns values in the given range
-	doc %EX - { Iter }
+	doc Iterates over a Range
 	doc %EX - i = RangeIter(10..20)
 	doc %EX - echo(i.next())
 	doc %EX - echo(i.next())
@@ -54,6 +52,16 @@
 	doc %EX - #   10
 	doc %EX - #   11
 	type RangeIter([Iter, Eachable1])
+
+	doc EXPERIMENTAL! Do not use!
+	type MapIter([Iter, Eachable1])
+
+	doc EXPERIMENTAL! Do not use!
+	type FilterIter([Iter, Eachable1])
+
+	doc EXPERIMENTAL! Do not use!
+	type FunIter([Iter, Eachable1])
+
 }
 
 doc Private method of Iter.ngs, will be hidden in future.
@@ -65,20 +73,27 @@ doc Fetch and drop next n values from iterator i.
 doc %EX - i = Iter([10,20,30])
 doc %EX - drop(i, 1)
 doc %EX - echo(i.next())
-doc %EX - #   20
+doc %EX - # Output: 20
 F drop(i:Iter, n:Int) { n.times({ i.next()}); i }
 
 doc Fetch and convert to array next n values from iterator i.
 doc %EX - i = Iter([10,20,30])
-doc %EX - echo(i.take(2))
+doc %EX - echo(i.take(2))  # Output: [10,20]
 F take(i:Iter, n:Int) n.map({ i.next() })
 
-doc Supports "for i in existing_iterator"
+doc Supports "for i in existing_iterator". Useful if you want to have a reference to the Iter for any reason.
 doc %RET - i
+doc %EX - # Prints 0, 2, ...
+doc %EX - for i in my_iter=Iter(10) {
+doc %EX -   echo(i)
+doc %EX -   my_iter.drop(1)
+doc %EX - }
+doc %AUTO - for my_var in something { ... }
 F Iter(i:Iter) i
 
 doc Calls cb with each element from i
 doc %RET - i
+doc %EX - Iter(10).each(echo)  # Prints 0 to 9
 F each(i:Iter, cb:Fun) {
 	for elt in i {
 		cb(elt)
@@ -88,32 +103,155 @@ F each(i:Iter, cb:Fun) {
 
 TEST s=0; NumRange(1,10,true,true).Iter().each({ s+= A }); s==55
 
+# ---------- MapIter ----------
+# WIP
+
+doc EXPERIMENTAL! Do not use!
+F init(i:MapIter, upstream_iter:Iter, mapper:Fun) {
+	i.val = upstream_iter
+	i.mapper = mapper
+}
+
+doc EXPERIMENTAL! Do not use!
+F next(i:MapIter) i::mapper(i.val.next())
+
+doc EXPERIMENTAL! Do not use!
+F Bool(i:MapIter) Bool(i.val)
+
+doc EXPERIMENTAL! Do not use!
+F map(i:Iter, mapper:Fun) MapIter(i, mapper)
+
+# ---------- FilterIter ----------
+# WIP
+
+doc EXPERIMENTAL! Do not use!
+F init(i:FilterIter, upstream_iter:Iter, predicate, invert_predicate:Bool=false) {
+	i.val = upstream_iter
+	i.orig_predicate = predicate
+	i.predicate = Pred(predicate)
+	i.invert_predicate = invert_predicate
+	if invert_predicate {
+		i.predicate = not + i.predicate
+	}
+	# elt & elt_loaded could be Box but using faster approach
+	i.elt = null
+	i.elt_loaded = false
+	i.finished = false
+}
+
+ns {
+	global next, peek, Bool
+
+	F _load(i:FilterIter) {
+		while i.val {
+			i.elt = i.val.next()
+			if i::predicate(i.elt) {
+				i.elt_loaded = true
+				return
+			}
+		}
+		i.finished = true
+	}
+
+	doc EXPERIMENTAL! Do not use!
+	F next(i:FilterIter) {
+		i.throw_if_no_next()
+		assert(i.elt_loaded)
+		i.elt_loaded = false
+		return i.elt
+	}
+
+	doc EXPERIMENTAL! Do not use!
+	F peek(i:FilterIter) {
+		i.throw_if_no_next()
+		assert(i.elt_loaded)
+		return i.elt
+	}
+
+	doc EXPERIMENTAL! Do not use!
+	F Bool(i:FilterIter) {
+		i.finished returns false
+		i.elt_loaded returns true
+		i._load()
+		not(i.finished)
+	}
+}
+
+doc EXPERIMENTAL! Do not use!
+F filter(i:Iter, predicate:Fun) FilterIter(i, predicate)
+doc EXPERIMENTAL! Do not use!
+F reject(i:Iter, predicate:Fun) FilterIter(i, predicate, invert_predicate=true)
+
+TEST Iter(1...10).map(X*2).reject(X>7).map(X*2).Arr() == [4, 8, 12]
+TEST Iter(1...10).map(X*2).filter(X>15).map(X*2).Arr() == [32, 36, 40]
+
+# ---------- FunIter ----------
+
+F Iter(f:Fun) FunIter(f)
+
+F init(i:FunIter, f:Fun) {
+	i.val = f
+	i.elt_loaded = false
+}
+
+ns {
+	global next, peek, Bool
+
+	F _load(i:FunIter) {
+		i.elt_loaded returns
+		i.elt = i::val()
+		i.elt_loaded = true
+	}
+
+	doc EXPERIMENTAL! Do not use!
+	F next(i:FunIter) {
+		i._load()
+		i.elt_loaded = false
+		return i.elt
+	}
+
+	doc EXPERIMENTAL! Do not use!
+	F peek(i:FunIter) {
+		i._load()
+		return i.elt
+	}
+
+	doc EXPERIMENTAL! Do not use!
+	F Bool(i:FunIter) true
+}
 # ---------- ConstIter ----------
 doc Constant iterator constructor.
 doc val - the constant value to use in next() and peek()
 F init(i:ConstIter, val) init(args())
 
-doc Return the constant iterator value
+doc Return the constant iterator value.
 F next(i:ConstIter) i.val
 
-doc Return the constant iterator value
+doc Return the constant iterator value.
 F peek(i:ConstIter) i.val
 
+doc Convert ConstIter to Bool (true).
 doc %RET - true
 F Bool(i:ConstIter) true
 
 TEST ConstIter(7).drop(10).take(2) == [7,7]
 
 # ---------- RangeIter ----------
+doc Create Iter from NumRange
 F Iter(r:NumRange) RangeIter(r)
 
+doc Create Iter from Int
+F Iter(n:Int) Iter(0..n)
+
+doc Initialize RangeIter. Will throw NotImplemented if r.start or r.step are not Int
 F init(i:RangeIter, r:NumRange) {
-	r.start is not Int throws NotImplemented("start must be Int for now")
-	r.step is not Int throws NotImplemented("step must be Int for now")
+	r.start is not Int throws NotImplemented("start must be Int for now").set('value', r)
+	r.step is not Int throws NotImplemented("step must be Int for now").set('value', r)
 	i.val = r
 	i.elt = r.start + if r.include_start then 0 else r.step
 }
 
+doc Return next item in range.
 F next(i:RangeIter) {
 	throw_if_no_next(i)
 	ret = i.elt
@@ -121,6 +259,8 @@ F next(i:RangeIter) {
 	ret
 }
 
+doc Check whether there is at least one uniterated item in range.
+doc %RET - Bool. true: next() will return next element. false: next() will throw NoNext
 F Bool(i:RangeIter) {
 	r = i.val
 	# Copy+paste from each(r:NumRange, cb:Fun) from stdlib
@@ -162,8 +302,7 @@ doc %RET - Str
 F Str(i:ArrIter) "<ArrIter ${i.idx}/${i.val.len()}>"
 
 doc Check whether there are more array elements to iterate over.
-doc true: next() will return next element. false: next() will throw NoNext
-doc %RET - Bool
+doc %RET - Bool. true: next() will return next element. false: next() will throw NoNext
 F Bool(i:ArrIter) i.idx < i.val.len()
 
 doc Get value of the next element of the array iterated over.
@@ -190,17 +329,33 @@ TEST try [].Iter().next() catch(nn:NoNext) true
 # Not sure it's needed but it's good to have it for completeness
 # ---------- HashIter ----------
 F Iter(h:Hash) HashIter(h)
-doc EXPERIMENTAL! Do not use!
+
+doc HashIter constructor.
+doc %EX - i = HashIter({"a": 1, "b": 2})
 F init(i:HashIter, h:Hash) {
 	i.val = h
-	i._iter = h.keys().Iter()
+	i.entry = ll_hash_head(h)
+	i.idx = 0
 }
 
-# Don't like accessing kind-of-private ArrIter#idx
-F Str(i:HashIter) "<HashIter ${i._iter.idx}/${i._iter.val.len()}>"
-F Bool(i:HashIter) Bool(i._iter)
-F next(i:HashIter) { throw_if_no_next(i); k = i._iter.next(); [k, i.val[k]] }
-F peek(i:HashIter) { throw_if_no_next(i); k = i._iter.peek(); [k, i.val[k]] }
+doc Textual representation of HashIter.
+doc %RET - Str
+F Str(i:HashIter) "<HashIter ${i.idx}/${i.val.len()}>"
+
+doc Check whether there are more pairs to iterate over.
+doc %RET - Bool. true: next() will return next pair. false: next() will throw NoNext
+F Bool(i:HashIter) i.entry != null
+
+doc Get next key-value of the hash iterated over.
+doc %RET - Any
+F next(i:HashIter) { ret = i.peek(); i.entry = i.entry.ll_hash_entry_next(); ret  }
+
+doc Preview key-value of the next pair of the hash iterated over.
+doc Does not affect internal pointer which means it does not affect of value returned by next().
+doc %RET - Any
+F peek(i:HashIter) { throw_if_no_next(i); [i.entry.ll_hash_entry_key(), i.entry.ll_hash_entry_val()] }
 
 TEST i = Iter({"a": 1, "b": 2}); [i.next(), i.peek()] == [["a", 1], ["b", 2]]
 TEST try {}.Iter().next() catch(nn:NoNext) true
+
+# F Counter(start:Int=0) Iter(start..null)

@@ -59,9 +59,9 @@ void decompile(const char *buf, const size_t start, const size_t end) {
 			case OP_DEF_UPVAR_FUNC:
 				sprintf(info_buf, " uplevel=%d, index=%d", *(UPVAR_INDEX *)&buf[idx], *(LOCAL_VAR_INDEX *)&buf[idx+sizeof(UPVAR_INDEX)]); idx+=sizeof(UPVAR_INDEX)+sizeof(LOCAL_VAR_INDEX); break;
 			case OP_PUSH_INT32:
-				sprintf(info_buf, " %d", *(int32_t *)&buf[idx]); idx+=4; break;
+				sprintf(info_buf, " %" PRIi32, *(int32_t *)&buf[idx]); idx+=4; break;
 			case OP_PUSH_INT64:
-				sprintf(info_buf, " %ld", *(int64_t *)&buf[idx]); idx+=8; break;
+				sprintf(info_buf, " %" PRIi64, *(int64_t *)&buf[idx]); idx+=8; break;
 			case OP_PUSH_REAL:
 				sprintf(info_buf, " " NGS_REAL_FMT, *(NGS_REAL *)&buf[idx]); idx+=sizeof(NGS_REAL); break;
 			case OP_PUSH_L8_STR:

@@ -1,0 +1,134 @@
+html {
+    font-family: sans-serif;
+}
+
+body {
+	line-height: 1.5;
+	xbackground-color: #FDFDFB;
+	margin: 0;
+}
+
+nav {
+	float: left;
+	width: 18em;
+	background-color: #EEEEEE;
+	border-right: 1px solid #DDDDDD;
+	border-bottom: 1px solid #DDDDDD;
+	padding: 1em;
+}
+
+main {
+	padding: 2em;
+	margin-left: 20em;
+}
+
+main > h1 {
+	margin-top: 0;
+}
+
+section {
+	margin-top: 1em;
+	margin-bottom: 1em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	xcolor: brown;
+	margin-top: 1em;
+}
+
+dl {
+	xmargin-top: 3em;
+}
+
+dt {
+	font-weight: bold;
+}
+
+dd {
+	margin-top: 1em;
+}
+
+table {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+	border-collapse: collapse;
+}
+
+table.params td:nth-child(1) {
+	font-weight: bold;
+}
+
+th {
+	color: #888888;
+}
+
+th, td {
+	padding: 0.3em;
+}
+
+code {
+	margin: 0.25em;
+	padding: 0.25em;
+	background-color: #F0FFE0;
+	border: 1px solid #A0C0A0;
+	border-radius: 0.25em;
+}
+
+pre.example {
+	background-color: #F0FFE0;
+	padding: 1em;
+	border: 1px solid #A0C0A0;
+	border-radius: 0.5em;
+}
+
+.underline-on-hover-only {
+	text-decoration: none;
+}
+.underline-on-hover-only:hover {
+	text-decoration: underline;
+}
+
+q {
+    quotes: "\201C" "\201D" "\2018" "\2019";
+}
+
+.nav-here {
+	font-weight: bold;
+}
+
+.source-ref {
+	margin-left: 2em;
+	opacity: 0.5;
+	visibility: hidden;
+}
+
+dt:hover .source-ref {
+	visibility: visible;
+}
+
+.shift-right {
+	padding-left: 2em;
+}
+
+.non-literal {
+	font-style: italic;
+}
+
+.unobtrusive {
+	font-size: 0.8em;
+	opacity: 0.6;
+}
+
+h1 .unobtrusive,
+nav .unobtrusive {
+	font-size: 0.6em;
+	opacity: 0.3;
+}
+
+.method-status {
+	margin-left: 1em;
+	border-radius: 0.25em;
+	padding: 0.25em;
+	background-color: #DDDDDD;
+	font-weight: normal;
+}

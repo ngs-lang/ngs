@@ -1,47 +1,70 @@
 # === Exception ==================================
 
+doc Initialize an Exception.
 doc %RET - Exception with .backtrace and .message
 doc message - Goes into .message
 F init(e:Exception, message:Str) {
 	e.message = message
 }
 
+doc Initialize an Exception.
 doc %RET - Exception with .backtrace and .cause
 F init(e:Exception, cause:Exception) {
 	e.cause = cause
 }
 
-TEST Exception().backtrace is Backtrace
-TEST Exception("xyz").message == "xyz"
-TEST Exception(Exception()).cause is Exception
-
+doc Initialize an Exception.
+doc %RET - Exception with .backtrace, .message, and .cause
+F init(e:Exception, message:Str, cause:Exception) {
+	e.message = message
+	e.cause = cause
+}
 
 {
-	type NotImplemented; NotImplemented.inherit(Exception);
-	type ReadFail; ReadFail.inherit(Exception);
-	type RequreFail; RequreFail.inherit(Exception);
-	type MainFail; MainFail.inherit(Exception);
+	type NotImplemented; NotImplemented.inherit(Exception)
+	type ReadFail; ReadFail.inherit(Exception)
+	type RequireFail; RequireFail.inherit(Exception)
+	type MainFail; MainFail.inherit(Exception)
+
+	doc Represents error when converting program execution result to exit code
+	type ExitCodeFail; ExitCodeFail.inherit(Exception)
+
+	doc Information about exiting, used by bootstrap and as argument to exit_hook.
+	doc exit_code - the code to exit with
+	doc exceptions - exceptions that occured during exit procedure
+	type Exit
 }
 
 # === bootstrap ==================================
 
 # *** Convert values returned by the program (or -e/-E expression) to exit codes ***
 doc %RET - always 0
-F to_exit_code(x) 0
+F ExitCode(x) 0
+
 doc %RET - 0 for true, 1 for false
-F to_exit_code(b:Bool) if b 0 1
+F ExitCode(b:Bool) if b 0 1
+
 doc %RET - n
-F to_exit_code(n:Int) n
+F ExitCode(n:Int) n
 
-doc %RET - Always 200
-F to_exit_code(e:Exception) 200
+doc %RET - Always 240
+F ExitCode(e:Exception) 240
 
-main = []
+doc Create MultiMethod with no methods
+F MultiMethod() super([])
+
+doc Number of methods in MultiMethod
+F len(mm:MultiMethod) mm.Arr().len()
+
+doc Whether MultiMethod has any methods
+F Bool(mm:MultiMethod) mm.Arr().Bool()
+
+main = MultiMethod()
 
 # *** Define bootstrap_debug function ***
 bootstrap_debug =
 	if 'NGS_BOOTSTRAP_DEBUG' in ENV
-		F(s) echo("+ [BOOSTRAP DEBUG] $s")
+		F(s) echo(2, "+ [BOOSTRAP DEBUG] $s")
 	else
 		F(s) {}
 
@@ -52,20 +75,18 @@ bootstrap_ngs_dir_candidates = [
 	'/usr/lib/ngs'
 ]
 
+doc Internal method. Please do not use.
+doc Find which of bootstrap_ngs_dir_candidates directories contains stdlib.ngs . That directory would be the "NGS_DIR".
+doc %RET - Str or null
+doc %STATUS - internal
 F bootstrap_find_ngs_dir() {
+	'NGS_DIR' in ENV returns ENV['NGS_DIR']
 	l = bootstrap_ngs_dir_candidates.len()
 	for(i;l) {
 		c_access("${bootstrap_ngs_dir_candidates[i]}/stdlib.ngs", ACCESS['F_OK']) == 0 returns bootstrap_ngs_dir_candidates[i]
 	}
 	null
 }
-
-F bootstrap_find_ngs_dir() {
-	guard 'NGS_DIR' in ENV
-	ENV['NGS_DIR']
-}
-
-bootstrap_main_file = null
 
 # *** read - abstraction above low level c io primitives ***
 # TODO: Better exceptions
@@ -101,11 +122,13 @@ F require(fname:Str) {
 		bootstrap_debug("require(): done requiring ${fname}")
 		ret
 	} catch(e) {
-		throw RequreFail(e)
+		throw RequireFail(e)
 	}
 }
 
+doc Internal method. Please do not use.
 doc Main entry point. Executed on NGS boot.
+doc %STATUS - internal
 F bootstrap() {
 	global ARGV0
 	global ORIG_ARGV = copy(ARGV)
@@ -128,7 +151,7 @@ F bootstrap() {
 			echo(VERSION)
 			return 0
 		}
-		if (a == '-e' or a == '-E' or a == '-p' or a == '-pj' or a == '-pi' or a == '-pl' or a == '-pjl' or a == '-pc') {
+		if (a == '-e' or a == '-E' or a == '-p' or a == '-pj' or a == '-pi' or a == '-pl' or a == '-pjl' or a == '-pc' or a == '-pt') {
 			sw = ARGV.shift()
 			# Newline at the end is for avoiding # commenting out the closing }
 			# Newline at the beginning is for symmetry
@@ -174,7 +197,6 @@ F bootstrap() {
 	program_bytecode = compile(code_to_run, fname)
 	bootstrap_debug("bootstrap(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
 	program_func = load(program_bytecode, "bootstrap()ped file: $fname")
-	global bootstrap_main_file = fname
 
 	result = program_func()
 
@@ -184,7 +206,7 @@ F bootstrap() {
 		if global_not_found_handler.len() == 0 {
 			throw MainFail("Autoloading (usually defined in stdlib) is not present but the main() invoking mechanism requires it")
 		}
-		result = bootstrap_invoke_main(result)
+		result = bootstrap_invoke_main(fname, result)
 	}
 	# Handle main() - end
 
@@ -200,7 +222,9 @@ F bootstrap() {
 			'-pjl': encode_json
 		}
 		if sw in transformation {
-			result.map(transformation[sw]).each(echo)
+			for r in result {
+				transformation[sw](r).echo()
+			}
 			return 0
 		}
 
@@ -208,54 +232,63 @@ F bootstrap() {
 			'-p': identity
 			'-pj': encode_json
 			'-pc': code
+			'-pt': { Table2::Table(A) }
 		}
 		if sw in transformation {
 			echo(transformation[sw](result))
 			return 0
 		}
 	}
-	result.to_exit_code()
+	result.ExitCode()
 }
 
+doc Uses built-in dump() to show an exception. Only used if stdlib is not loaded (stdlib defines better method).
+F print_exception(e:Exception) {
+	dump(exception)
+}
+
+doc Prints exceptions. Only used if stdlib is not loaded (stdlib changes exit_hook to a Hook object).
+F exit_hook(exit:Exit) {
+	for(i; exit.exceptions.len()) {
+		# FIXME: output to stderr when print_exception is fixed
+		echo("--- Uncaught exception ---")
+		print_exception(exit.exceptions[i])
+	}
+}
+
+doc Internal method. Please do not use.
+doc Runs bootstrap() and handles exceptions.
+doc %STATUS - internal
 F bootstrap_exception_catch_wrapper() {
-	exception = null
-	exit_code = null
+	exit = Exit()
+	exit.exit_code = 0
+	exit.exceptions = []
 	try {
-		exit_code = bootstrap()
+		exit.exit_code = bootstrap()
 	} catch(e:Exception) {
-		exception = e
-	}
-	t = {'exit_code': exit_code, 'exception': exception}
-
-	if defined exit_hook {
+		exit.exceptions.push(e)
+		exit.exit_code = 240
 		try {
-			exit_hook(t)
+			exit.exit_code = e.ExitCode()
 		} catch(e:Exception) {
-			if exception is Null {
-				exception = e
-			} else {
-				exception.additional_exit_hook_exception = e
-			}
-		}
-	} else {
-		# stdlib was not loaded
-		if exception is Null {
-			"nop"
-		} else {
-			echo("Uncaught exception occured:")
-			dump(exception)
-			c_exit(201)
+			exit.exceptions.push(ExitCodeFail("Failed to convert exception to exit code", e))
+			exit.exit_code = exit.exit_code + 1
 		}
 	}
 
-	if exception is Null {
-		"nop"
-	} else {
-		if not(t['exit_code']) {
-			c_exit(200)
+	try {
+		exit_hook(exit)
+	} catch(e:Exception) {
+		exit.exceptions.push(e)
+		exit.exit_code = exit.exit_code + 2
+		for(i; exit.exceptions.len()) {
+			# FIXME: output to stderr when print_exception is fixed
+			echo("--- Uncaught exception ---")
+			dump(exit.exceptions[i])
 		}
 	}
-	c_exit(t['exit_code'])
+
+	c_exit(exit.exit_code)
 }
 
 bootstrap_exception_catch_wrapper()

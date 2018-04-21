@@ -53,7 +53,7 @@ typedef enum {
 	GLOBAL_NODE,
 	HASH_LIT_NODE,
 	INDEX_NODE,
-	ATTR_NODE,
+	FIELD_NODE,
 	NS_NODE,
 	RETURN_NODE,
 	AND_NODE,
@@ -75,6 +75,8 @@ typedef enum {
 	SUPER_NODE,
 	REGEXP_NODE,
 	TABLE_LIT_NODE,
+	SET_NS_NODE,
+	GET_NS_NODE,
 	NUMBER_OF_AST_NODE_TYPES,
 } ast_node_type;
 
