@@ -124,6 +124,9 @@ void print_exception(VM *vm, VALUE result) {
 }
 #undef H
 
+
+pthread_key_t thread_local_key;
+
 int main(int argc, char **argv)
 {
 	ast_node *tree = NULL;
@@ -137,6 +140,7 @@ int main(int argc, char **argv)
 	char *bootstrap_file_name;
 	char *source_file_name;
 	METHOD_RESULT mr;
+	VALUE main_thread_local = make_hash(4);
 
 	// Silence GCC -Wunused-function
 	if(0) { yymatchDot(NULL); yyAccept(NULL, 0); }
@@ -146,6 +150,9 @@ int main(int argc, char **argv)
 	pcre_malloc = GC_malloc;
 	pcre_free = GC_free;
 	// (causes warning) // NGS_GC_THR_INIT();
+
+	pthread_key_create(&thread_local_key, NULL);
+	pthread_setspecific(thread_local_key, &main_thread_local);
 
 	yycontext yyctx;
 	memset(&yyctx, 0, sizeof(yycontext));

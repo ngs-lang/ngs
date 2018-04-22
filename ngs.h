@@ -84,4 +84,5 @@ typedef enum {
 	METHOD_EXCEPTION,
 } METHOD_RESULT;
 
+extern pthread_key_t thread_local_key;
 #endif

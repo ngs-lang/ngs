@@ -1521,7 +1521,8 @@ string-escape = "\\" (
 		"t"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\t"); $$ = content; } |
 		"\\" { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\\"); $$ = content; } |
 		"'"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\'"); $$ = content; } |
-		"\"" { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\""); $$ = content; }
+		"\"" { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\""); $$ = content; } |
+		"$"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("$"); $$ = content; }
 	)
 
 str-comps-node = {

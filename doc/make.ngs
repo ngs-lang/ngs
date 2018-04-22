@@ -130,6 +130,8 @@
 
 			F page_title(nd:NamespaceDescription) "${nd.name} namespace - NGS documentation"
 			F page_heading(nd:NamespaceDescription) "{nd.fqname} namespace - NGS documentation"
+			F path_as_item() 1
+			F path_as_container() 2
 
 			F index_fragment(nd:NamespaceDescription) {
 
@@ -203,7 +205,7 @@
 							}
 							if nd.objects_by_type[MultiMethodDescription] {
 								DocGroup() with [
-									\h2 ['Multimethods']
+									\h2 ['Methods and Multimethods']
 									*nd.objects_by_type[MultiMethodDescription].map(index_fragment)
 								]
 							}
@@ -296,16 +298,23 @@
 				\dl [
 					\dt [
 						\a href=mmd.name.safe_file_name().encode_uri_component() + '.FIXME.html' class='underline-on-hover-only' [
-							"(MMD) " + mmd.name
+							mmd.name
 						]
 					]
 					\dd [
-						\section [
-							*mmd.methods.map(index_fragment)
+						\section class='unobtrusive' [
+							"MultiMethod with ${mmd.methods.len()} methods"
 						]
 					]
 				]
 			}
+
+			F index_fragment(mmd:MultiMethodDescription) {
+				guard mmd.methods.len() == 1
+				mmd.methods[0].index_fragment()
+			}
+
+
 
 
 		type MethodDescription(Description)

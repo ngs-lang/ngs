@@ -19,13 +19,9 @@ Note that this started as internal document so things here are unformed, not fin
 							* Links to types' pages
 					* Namespaced types and methods
 						* Show namespace
-			* Document AWS library (including usage examples)
-				* Example: AWS::Elb().reject(X.Instances).delete()
 			* Link from constructors to types
 			* Nested namespaces (AWS::util)
 			* "N methods" in link to namespace - filter by added implementations, don't count x in "global init; x = init"
-			* Methods tags
-				+ higher-order functions
 
 		* Milestone "packaging"
 			* Debian packages
@@ -57,6 +53,12 @@ Note that this started as internal document so things here are unformed, not fin
 				+ how different module versions can run alongside?
 
 		* Milestone "even better documentation"
+			* Tags (methods and types) and index by
+				+ higher-order functions
+				+ auto tag type:...
+				+ auto tag file:...
+			* Types - links to definition in source code
+			* Method brief description (for MultiMethod summary)
 			* Namespaces -> Methods. Mark which are additions to globals and which are local.
 			* Tables documentation - examples
 			* Finish c_* methods documentation

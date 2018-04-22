@@ -1452,6 +1452,9 @@ void *_pthread_start_routine(void *arg) {
 	CTX ctx;
 	VALUE *result;
 	METHOD_RESULT mr;
+	VALUE *ts = NGS_MALLOC(sizeof(VALUE));
+	*ts = make_hash(4);
+	pthread_setspecific(thread_local_key, ts);
 	result = NGS_MALLOC(sizeof(*result));
 	*result = make_array(2);
 	init = (NGS_PTHREAD_INIT_INFO *)arg;
@@ -1460,6 +1463,10 @@ void *_pthread_start_routine(void *arg) {
 	mr = vm_call(init->vm, &ctx, &ARRAY_ITEMS(*result)[1], init->f, 1, &init->arg);
 	ARRAY_ITEMS(*result)[0] = MAKE_BOOL(mr == METHOD_EXCEPTION);
 	return result;
+}
+
+METHOD_RESULT native_ll_thread_local METHOD_PARAMS {
+	METHOD_RETURN(*(VALUE *)pthread_getspecific(thread_local_key));
 }
 
 METHOD_RESULT native_c_pthreadcreate_pthreadattr_startroutine_arg EXT_METHOD_PARAMS {
@@ -2773,6 +2780,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, ".",                      &native_attr_pthreadattr,     2, "pa", vm->c_pthread_attr_t,    "attr", vm->Str);
 	_doc(vm, "", "Get pthread attribute. Currently returns null for unknown attributes. Will throw exceptions in future.");
 	_doc(vm, "attr", "One of: detachstate, guardsize, inheritsched, stacksize.");
+
+	register_global_func(vm, 0, "ll_thread_local",  &native_ll_thread_local,  0);
+	_doc(vm, "", "Get thread-local storage");
+	_doc(vm, "%RET", "Hash");
 
 	// Native methods
 	register_global_func(vm, 0, "params",   &native_params_nm,         1, "m",      vm->NativeMethod);
