@@ -77,6 +77,15 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "correct programming"
 
+			* MethodParameter type
+
+			* Make indexes() take default value
+				* F ~(arr:Arr, r:PredRange) -- convert "try indexes()" to indexes() with default value
+
+			* Add missing F ~~(arr:Arr, r:PredRange)
+				+ Can be good for parsing certificate chains
+				  x.lines() ~~ /-BEGIN/.../-END/
+
 			* Make sure this works:
 				something
 				.method1()
@@ -347,6 +356,11 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* Phase 6 - nice to have
 
+		* Think about structured log (and possible ELK and other integrations?)
+			+ Environment variables for
+				+ Directing output
+				+ Adding arbitrary key-value pairs
+				+ Directing output of other programs to logger too?
 		* Iter improvements
 			* If migrating lines() to Iter
 				+ remember to implement ==(Iter, Arr), as used in tests:

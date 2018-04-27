@@ -140,12 +140,12 @@ int main(int argc, char **argv)
 	char *bootstrap_file_name;
 	char *source_file_name;
 	METHOD_RESULT mr;
-	VALUE main_thread_local = make_hash(4);
 
 	// Silence GCC -Wunused-function
 	if(0) { yymatchDot(NULL); yyAccept(NULL, 0); }
 
 	NGS_GC_INIT();
+	VALUE main_thread_local = make_hash(4);
 
 	pcre_malloc = GC_malloc;
 	pcre_free = GC_free;

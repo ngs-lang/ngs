@@ -1,20 +1,38 @@
+/*
+	https://material.io/guidelines/style/color.html#color-color-palette
+*/
+
 html {
     font-family: sans-serif;
 }
 
 body {
 	line-height: 1.5;
-	xbackground-color: #FDFDFB;
+	padding-top: 3em;
 	margin: 0;
 }
 
+.header {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	padding: 0.5em;
+	color: #FFFFFF;
+	background-color: #673AB7;
+	box-shadow: 0 0 4px 0px black;
+	z-index: 4;
+	text-align: center;
+}
+
 nav {
-	float: left;
+	position: fixed;
+	left: 0;
 	width: 18em;
-	background-color: #EEEEEE;
-	border-right: 1px solid #DDDDDD;
-	border-bottom: 1px solid #DDDDDD;
+	background-color: #EDE7F6;
+	margin-top: 2em;
 	padding: 1em;
+	box-shadow: 0 0 1px 0px black;
 }
 
 main {
@@ -32,12 +50,25 @@ section {
 }
 
 h1, h2, h3, h4, h5, h6 {
-	xcolor: brown;
+	/*
+	color: #512DA8;
+	color: #9C27B0;
+	color: #8E24AA;
+	*/
 	margin-top: 1em;
+	color: #7B1FA2;
+}
+
+a {
+	color: #009688;
+	text-decoration: none;
 }
 
 dl {
-	xmargin-top: 3em;
+	/*
+	padding: 0.5em;
+	box-shadow: 0 0 1px 0px black;
+	*/
 }
 
 dt {
@@ -75,10 +106,10 @@ code {
 }
 
 pre.example {
-	background-color: #F0FFE0;
+	background-color: #E0F2F1;
 	padding: 1em;
-	border: 1px solid #A0C0A0;
 	border-radius: 0.5em;
+	box-shadow: 0 0 1px 0px black;
 }
 
 .underline-on-hover-only {
@@ -116,7 +147,7 @@ dt:hover .source-ref {
 
 .unobtrusive {
 	font-size: 0.8em;
-	opacity: 0.6;
+	opacity: 0.38;
 }
 
 h1 .unobtrusive,
@@ -126,9 +157,12 @@ nav .unobtrusive {
 }
 
 .method-status {
+	background-color: #7B1FA2;
+	color: #FFFFFF;
 	margin-left: 1em;
 	border-radius: 0.25em;
 	padding: 0.25em;
-	background-color: #DDDDDD;
 	font-weight: normal;
+	box-shadow: 0 0 1px 0px black;
+	font-size: 80%;
 }

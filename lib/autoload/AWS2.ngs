@@ -2,7 +2,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	# Documentation hack as documentation for namespaces
 
-	doc Amazon Web Services.
+	doc Amazon Web Services. This namespace is under development. Use at your own risk.
 	doc This namespace contains resource types that implement common methods: find(), create(), delete(), converge()
 	doc AMI_OWNER_DEBIAN - The string "379101102735"
 	doc AMI_OWNER_AMAZON - The string "801119661308"
@@ -454,14 +454,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	doc Internal type. Please do not use.
 	doc %STATUS - internal
-	type RouteBox(FullBox)
+	type _RouteBox(FullBox)
 
-	F _normalize(r:RouteBox) r.get().without('Origin').without('State').sort()
+	F _normalize(r:_RouteBox) r.get().without('Origin').without('State').sort()
 
 	doc Internal method. Please do not use.
 	doc %STATUS - internal
 	doc %EX - # TODO: example
-	F ==(a:RouteBox, b:RouteBox) _normalize(a) == _normalize(b)
+	F ==(a:_RouteBox, b:_RouteBox) _normalize(a) == _normalize(b)
 
 	type RouteTable(ResDef)
 	type RouteTableRes(Res)
@@ -571,11 +571,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	doc Internal type. Please do not use.
 	doc %STATUS - internal
-	type IpPermBox(FullBox)
+	type _IpPermBox(FullBox)
 
 	# Cleans up AWS Security Group IpPermissions so it's possible to compare current and desired states of IpPermissions
 	# TODO: cleanup FromPort -1 & ToPort -1
-	F _cleanup(x:IpPermBox) {
+	F _cleanup(x:_IpPermBox) {
 		ret = x.val
 		ret .= filter(F(k, v) (v is not Arr) or v)
 		ret .= without('IpRanges', [{"CidrIp": "0.0.0.0/0"}])
@@ -588,7 +588,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	doc Internal method. Please do not use.
 	doc %STATUS - internal
-	F ==(a:IpPermBox, b:IpPermBox) {
+	F ==(a:_IpPermBox, b:_IpPermBox) {
 		a .= _cleanup()
 		b .= _cleanup()
 		a.len() != b.len() returns false
@@ -619,8 +619,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			# (Valid for AuthorizeSecurityGroupEgress, RevokeSecurityGroupEgress and DescribeSecurityGroups only)
 			# sg.props.IpPermissions.each(F(perm) perm.del('PrefixListIds'))
 			target_perms = normalize_presence_list(props.IpPermissions)
-			target_perms.each(F(r) r.val .= IpPermBox())
-			diff = Diff(sg.props.IpPermissions/IpPermBox, target_perms, full=true)
+			target_perms.each(F(r) r.val .= _IpPermBox())
+			diff = Diff(sg.props.IpPermissions/_IpPermBox, target_perms, full=true)
 
 			if diff.add {
 				sg.run('add SG ingress rules', %(aws ec2 authorize-security-group-ingress --group-id ${sg.props.GroupId} --ip-permissions $*{diff.add.val / encode_json}))
@@ -631,7 +631,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 
 		if 'IpPermissionsEgress' in props {
-			diff = Diff(sg.props.IpPermissionsEgress/IpPermBox, props.IpPermissionsEgress/IpPermBox, full=true)
+			diff = Diff(sg.props.IpPermissionsEgress/_IpPermBox, props.IpPermissionsEgress/_IpPermBox, full=true)
 			if diff.add {
 				sg.run('add SG egress rules', %(aws ec2 authorize-security-group-egress --group-id ${sg.props.GroupId} --ip-permissions $*{diff.add.val / encode_json}))
 			}

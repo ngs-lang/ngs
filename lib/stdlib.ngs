@@ -3517,6 +3517,8 @@ ns {
 	doc Execution thread. Currently a POSIX thread.
 	type Thread
 
+	# TODO: expose. Not called automatically because some names are
+	#       already unique.
 	_threads_names_lock = Lock()
 	_threads_names_counters = Stats()
 	F _make_thread_name(s:Str) {
@@ -3541,7 +3543,7 @@ ns {
 
 	doc Creates and runs a thread. The code that the created thread runs is f, which is passed arg.
 	F init(t:Thread, name:Str, f:Fun, arg) {
-		t.id = _make_thread_name(name)
+		t.id = name
 		debug("process", "Creating thread ${t.id}")
 		thread_attr = c_pthread_attr_t()
 		c_pthread_attr_init(thread_attr)
@@ -3581,7 +3583,7 @@ ns {
 	doc %RET - Arr, the results from threads, in order.
 	F join(threads:Arr) {
 		# warn("Using deprecated join(threads:Arr)")
-		guard threads.all(Thread)
+		guard threads and threads.all(Thread)
 		threads.map(join)
 	}
 
@@ -4033,7 +4035,7 @@ F read(fd:Int, count=null) {
 			if e != C_EINTR {
 				debug("file", "[FD $fd] read failed, errno $e")
 				# TODO: Better exception
-				throw CException("Failed to c_read()")
+				throw ReadFail("Failed to read()").set('fd', fd).set('cause', CException("Failed to c_read()"))
 			}
 		}
 	}
@@ -4608,7 +4610,7 @@ F '$()'(c:Command) {
 		# XXX: maybe make it chunk based with c_poll() and single thread
 		# TODO: some error handling inside these threads and after joining them
 		process.reading_threads = c.redirects.filter(F(r:Redir) r.datum is CollectingPipeFromChildToParentProcess).map(F(r:Redir) {
-			Thread("process-output-reader", {
+			Thread("process-${process.pid}-output-fd-${r.fd}-reader", {
 				debug("process2", "READING ${r.datum}")
 				try {
 					process.outputs[r.fd] = r.datum.read()

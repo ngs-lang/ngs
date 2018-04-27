@@ -2218,7 +2218,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MK_BUILTIN_TYPE_DOC(Null, T_NULL, "Null type. Has only one instance, null");
 	vm->type_by_value_tag[V_NULL >> TAG_BITS] = &vm->Null;
 
-	MK_BUILTIN_TYPE_DOC(Bool, T_BOOL, "Boolean type. The only instances are true and false");
+	MK_BUILTIN_TYPE_DOC(Bool, T_BOOL, "Boolean type. The only objects are true and false");
 	vm->type_by_value_tag[V_TRUE >> TAG_BITS] = &vm->Bool;
 	vm->type_by_value_tag[V_FALSE >> TAG_BITS] = &vm->Bool;
 
@@ -2233,13 +2233,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	MK_BUILTIN_TYPE(Arr, T_ARR);
 	vm->type_by_t_obj_type_id[T_ARR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Arr;
-	_doc(vm, "", "Array - list of items accessed by zero-based index");
+	_doc(vm, "", "Array - ordered list of items accessed by zero-based index");
 	_doc_arr(vm, "%EX",
 		"x = [\"first\", \"second\", \"third\", \"fourth\"]",
 		"",
 		"echo(x)",
 		"# Output:",
-		"#   ['first','second','third','fourth']",
+		"#   [first,second,third,fourth]",
 		"",
 		"echo(x.len())",
 		"# Output:",
@@ -2269,12 +2269,12 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MK_BUILTIN_TYPE(Any, T_ANY);
 	_doc_arr(vm, "",
 		"Any type is parent type of all types. ",
-		"All instances in NGS are of type Any. ",
+		"All objects in NGS are of type Any. ",
 		"F(x) ... is same as F(x:Any) ...",
 		NULL
 	);
-		MK_BUILTIN_TYPE_DOC(BasicTypeInstance, T_BASICTI, "A type for instances of builtin types. Children types are not displayed as this type is specially optimized.");
-		MK_BUILTIN_TYPE_DOC(NormalTypeInstance, T_NORMTI, "A type for instances of user-defined types. Children types are not displayed as this type is specially optimized.");
+		MK_BUILTIN_TYPE_DOC(BasicTypeInstance, T_BASICTI, "A type for objects of builtin types. Children types are not displayed as this type is specially optimized.");
+		MK_BUILTIN_TYPE_DOC(NormalTypeInstance, T_NORMTI, "A type for objects of user-defined types. Children types are not displayed as this type is specially optimized.");
 
 	MK_BUILTIN_TYPE_DOC(Seq, T_SEQ, "Unused type");
 
@@ -2379,7 +2379,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	MKTYPE(Exception);
 	_doc(vm, "", "Represents exceptional situaution. All thrown things shouhld inherit Exception.");
-	_doc(vm, "backtrace", "Automatic field set when creating Exception type instances (including sub-types, as long as super() is called.");
+	_doc(vm, "backtrace", "Automatic field set when creating Exception type objects (including sub-types, as long as super() is called.");
 
 		MKSUBTYPE(Error, Exception);
 		_doc(vm, "", "Represents an error. Usually more specific error types are used.");
@@ -2799,7 +2799,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->UserDefinedMethod, "b", vm->UserDefinedMethod);
 	_doc(vm, "", "Compare closures. Implemented as sameness comparison.");
 	_doc_arr(vm, "%EX",
-		"F make_closure() { F(x) x + 1 }; make_closure()      == make_closure()       # false - different instances",
+		"F make_closure() { F(x) x + 1 }; make_closure()      == make_closure()       # false - different objects",
 		"F make_closure() { F(x) x + 1 }; make_closure().ip() == make_closure().ip()  # true - same code",
 		"f = F(x) x +1; f == f  # true - same instance",
 		NULL

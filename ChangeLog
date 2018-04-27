@@ -1,6 +1,8 @@
 (UNRELEASED) Version 0.2.5
 	* Add "dollar \$ escaping syntax"
+	* Add Thread.local - thread local storage (a Hash)
 	* Human-readable thread ids in debug() output
+	* Fix join(Arr) for array of "Thread"s
 
 2018-04-21 Version 0.2.4
 
