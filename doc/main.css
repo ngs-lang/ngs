@@ -3,7 +3,7 @@
 */
 
 html {
-    font-family: sans-serif;
+    font-family: Verdana, sans-serif;
 }
 
 body {
@@ -60,7 +60,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 a {
+	/*
 	color: #009688;
+	*/
+	color: #00897b;
 	text-decoration: none;
 }
 
@@ -72,7 +75,9 @@ dl {
 }
 
 dt {
+	/*
 	font-weight: bold;
+	*/
 }
 
 dd {

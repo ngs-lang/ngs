@@ -29,7 +29,7 @@
 	doc %EX - echo(positional)
 	doc %EX - # Output:
 	doc %EX - #   {switch=val, sw2=val2}
-	doc %EX - #   ['some','other','positional']
+	doc %EX - #   [some,other,positional]
 	type ArrIter([Iter, Eachable1])
 
 	doc EXPERIMENTAL Hash iterator.
