@@ -9,6 +9,8 @@ html {
 body {
 	line-height: 1.5;
 	padding-top: 3em;
+	/*
+	*/
 	margin: 0;
 }
 
@@ -23,16 +25,9 @@ body {
 	box-shadow: 0 0 4px 0px black;
 	z-index: 4;
 	text-align: center;
-}
-
-nav {
-	position: fixed;
-	left: 0;
-	width: 18em;
-	background-color: #EDE7F6;
-	margin-top: 2em;
-	padding: 1em;
-	box-shadow: 0 0 1px 0px black;
+	/*
+	background-color: #7E57C2;
+	*/
 }
 
 main {
@@ -170,4 +165,45 @@ nav .unobtrusive {
 	font-weight: normal;
 	box-shadow: 0 0 1px 0px black;
 	font-size: 80%;
+}
+
+nav {
+	position: fixed;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 18em;
+	color: #FAFAFA;
+	background-color: #212121;
+	box-shadow: 0 0 2px 0px black;
+	margin-top: 2em;
+	/*
+	background-color: #FAFAFA;
+	background-color: #424242;
+	padding: 1em;
+	*/
+}
+
+nav a {
+	color: #80CBC4;
+}
+
+nav h1, nav h2, nav h3, nav h4, nav h5, nav h6 {
+	margin-top: 0;
+	color: #BA68C8;
+}
+
+.nav-main {
+	padding: 1em;
+}
+
+.parent-namespace-nav > .parent-namespace-nav,
+.parent-namespace-nav > .current-nav {
+	padding-left: 1em;
+}
+
+.current-nav {
+	/*
+	font-weight: bold;
+	*/
 }

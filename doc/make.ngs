@@ -67,14 +67,6 @@
 					to_path[i..null].map(safe_file_name).map(encode_uri_component).join('/')
 			}
 
-			F head_fragment(from:Description) {
-				\head [
-					\meta charset='UTF-8'
-					\link rel='stylesheet' href=('../' * (len(from.path_as_item()) - 1)) + 'main.css' type='text/css'
-					\title [ page_title(from) ]
-				]
-			}
-
 			F fqname(d:Description) fqname(d.containing_nd) +? '::' + d.name
 
 			F generate(d:Description) {
@@ -97,22 +89,40 @@
 
 			F get_children(d:Description) []
 
-			F Bool(d:Description) true
-
-			F Str(d:Description) {
-				"<${d.typeof().name} ${d.name}>"
-			}
-
 			F path_as_item(d:Description) d.containing_nd.path_as_container() + [(if d.name == 'index' then '_index' else d.name) + '.html']
 			F path_as_container(d:Description) d.containing_nd.path_as_container() + [d.name]
 
+			F head_fragment(from:Description) {
+				\head [
+					\meta charset='UTF-8'
+					\link rel='stylesheet' href=('../' * (len(from.path_as_item()) - 1)) + 'main.css' type='text/css'
+					\title [ page_title(from) ]
+				]
+			}
+
+			F nav_name(d:Description) d.name
+
 			F nav_fragment(d:Description) {
+
+				t = d
+				ns_nav = \div class='current-nav' [ nav_name(t) ]
+				while 'containing_nd' in t {
+					t = t.containing_nd
+					ns_nav = \div class='parent-namespace-nav' [
+						\a href=href(d, t) [ t.nav_name() ]
+						ns_nav
+					]
+				}
+
 				DocGroup() with [
 					\div class='header' [
 						"NGS version $VERSION auto-generated documentation"
 					]
 					\nav [
-						"[ TODO: Navigation ]"
+						\div class='nav-main' [
+							\h5 [ "Namespaces" ]
+							ns_nav
+						]
 					]
 				]
 			}
@@ -136,6 +146,12 @@
 			}
 
 			F page(d:Description) \html [ \body [ "NOT-READY-YET" ] ]
+
+			F Bool(d:Description) true
+
+			F Str(d:Description) {
+				"<${d.typeof().name} ${d.name}>"
+			}
 
 
 		type NamespaceDescription(Description)
@@ -162,9 +178,6 @@
 					TypeDescription: []
 					NamespaceDescription: []
 				}
-				type_translations = {
-					NativeMethod: 1
-				}
 				namespace.each(F(k, v) {
 					if t = Description(nd, k, v) {
 						if t is TypeDescription and nd is not GlobalNamespaceDescription {
@@ -186,13 +199,14 @@
 			F get_children(nd:NamespaceDescription) nd.objects_descriptions.values()
 
 			F page_title(nd:NamespaceDescription) "${nd.fqname} namespace - NGS documentation"
-			F page_heading(nd:NamespaceDescription) "${nd.fqname} namespace - NGS documentation"
+			F page_heading(nd:NamespaceDescription) "${nd.fqname} namespace"
+			F nav_name(nd:NamespaceDescription) "${nd.name} namespace"
 
 			F index_fragment(indexer:Description, nd:NamespaceDescription) {
 
 				\dl [
 					\dt [
-						\a href=href(indexer, nd)  [nd.name]
+						\a href=href(indexer, nd)  [nd.fqname]
 					]
 					\dd [
 						description_fragment(nd)
@@ -276,7 +290,8 @@
 			}
 
 			F page_title(gnd:GlobalNamespaceDescription) "The global namespace - NGS documentation"
-			F page_heading(gnd:GlobalNamespaceDescription) "The global namespace - NGS documentation"
+			F page_heading(gnd:GlobalNamespaceDescription) "The global namespace"
+			F nav_name(gnd:GlobalNamespaceDescription) "The global namespace"
 
 			F path_as_item(gnd:GlobalNamespaceDescription) ['index.html']
 			F path_as_container(gnd:GlobalNamespaceDescription) []
@@ -301,6 +316,10 @@
 				td.children = []
 			}
 
+			F page_title(td:TypeDescription) "${td.fqname} type - NGS documentation"
+			F page_heading(td:TypeDescription) "${td.fqname} type"
+			F nav_name(td:TypeDescription) "${td.name} type"
+
 			F index_fragment(indexer:Description, td:TypeDescription) {
 				alt_name = ' (' +? (if td.name != td.type.name then td.type.name else '') +? ')'
 				\dl [
@@ -317,9 +336,6 @@
 					]
 				]
 			}
-
-			F page_title(td:TypeDescription) "${td.fqname} type - NGS documentation"
-			F page_heading(td:TypeDescription) "${td.fqname} type - NGS documentation"
 
 			F directly_related_types_fragment(td:TypeDescription, related_types:Arr, rel:Str) {
 				if related_types {

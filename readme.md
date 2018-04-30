@@ -194,6 +194,28 @@ If you have troubles compiling, please try to compile the commit tagged `tested`
 	cd build
 	for i in $(<install_manifest.txt);do rm "$i";done
 
+
+### Generate documentation
+
+On Linux
+
+	# --- Linux ---
+	cd doc
+	rm -r out
+	mkdir out
+	./make.ngs out
+
+On Mac, follow [the instructions to create case sensitive volume](https://coderwall.com/p/mgi8ja/case-sensitive-git-in-mac-os-x-like-a-pro).
+
+	# --- Mac --- One time setup ---
+	cd doc/
+	ln -s /Volumes/YOUR-VOLUME-NAME out
+
+	# --- Mac --- Each time ---
+	cd doc/
+	rm -r out/*;
+	./make.ngs out
+
 Contributing
 ============
 
