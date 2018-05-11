@@ -33,9 +33,18 @@
 		DocGroup = Doc::Group
 
 		commit = `line: git rev-parse HEAD`
+		pfx = Pfx("$NGS_DIR/")
+		github_user = ENV.get('NGS_GITHUB_USER', 'ilyash')
 
 		F is_public_name(s:Str) s ~ /^[^_]/
 		F is_phased_out_type(s:Str) s ~ Pfx('Aws')
+
+		F is_namespace(x) {
+			x is not Hash returns false
+			not(object_doc(x)) returns false
+			x.keys().all(Int) returns false # STDLIB_FILE_TYPE, possibly others in future
+			x.values().any(F(v) v is Type or v is Fun)
+		}
 
 		F safe_file_name(s:Str) s.replace(/[^-._a-zA-Z0-9]/, F(char) '%' + encode_hex(char))
 
@@ -58,6 +67,7 @@
 			F href(from:Description, to:Description) {
 				from_path = from.path_as_item()
 				to_path = to.path_as_item()
+				from_path == to_path returns '#HERE'
 				i = 0
 				while from_path[i] == to_path[i] {
 					i += 1
@@ -71,6 +81,12 @@
 
 			F generate(d:Description) {
 				# status("Generating page for descriptors ${d}")
+				o = ENV.Box('NGS_DOC_ONLY').map(X.split(','))
+				if o {
+					if not(o.get().has(d.typeof().name)) {
+						return
+					}
+				}
 				dst = (d.path_as_item().map(safe_file_name)).reduce(doc_root, (/))
 				p = page(d)
 				file_content = Doc::HtmlRoot(p)
@@ -134,10 +150,10 @@
 					}).get('Undocumented')
 				]
 
-			F example_fragment(d:Description) {
+			F example_fragment(d:Description, h='h2') {
 				d.example.map(F(ex) {
 					\section [
-						\h2 ['Example']
+						DocNode(h) with ['Example']
 						\pre class='example' title='Example' [
 							ex.join('\n')
 						]
@@ -157,6 +173,7 @@
 		type NamespaceDescription(Description)
 
 			F init(nd:NamespaceDescription, namespace:Hash) {
+				obj_to_description[namespace] = nd
 				nd.fqname = nd.fqname()
 				nd.description = object_doc_attr(namespace, '')
 				nd.example = object_doc_attr(namespace, '%EX')
@@ -170,7 +187,7 @@
 				# 	}
 				# 	process_method(Str(name), impls.filter(is_in_ns(X, ns)))
 				# })
-				nd.attrs = namespace.attrs().Box().get({}).get('doc', {}).without('').reject(X ~ /^%/).mapv(ensure_array)
+				nd.fields = namespace.attrs().Box().get({}).get('doc', {}).without('').reject(X ~ /^%/).mapv(ensure_array)
 				nd.objects_descriptions = {}
 				nd.objects_by_type = {
 					MultiMethodDescription: []
@@ -178,21 +195,24 @@
 					TypeDescription: []
 					NamespaceDescription: []
 				}
-				namespace.each(F(k, v) {
-					if t = Description(nd, k, v) {
-						if t is TypeDescription and nd is not GlobalNamespaceDescription {
+				namespaces_and_rest = namespace.Arr().partition(F(kv) is_namespace(kv[1])).map(Hash)
+				namespaces_and_rest.reverse().each(F(namespace_part) {
+
+					namespace_part.each(F(k, v) {
+						if nd is not GlobalNamespaceDescription and v is Type and g.get(k) === v {
 							# Skip global types which are also in a namespace when showing the namespace
-							g.get(k) === v returns
+							return
 						}
-						nd.objects_descriptions[k] = t
-						nd.objects_by_type[t.typeof()].push(t)
-					}
+						if t = Description(nd, k, v) {
+							nd.objects_descriptions[k] = t
+							nd.objects_by_type[t.typeof()].push(t)
+						}
+					})
 				})
 			}
 
 			F init(nd:NamespaceDescription, containing_nd:NamespaceDescription, name:Str, namespace:Hash) {
 				init(args())
-				obj_to_description[namespace] = nd
 				super(nd, namespace)
 			}
 
@@ -254,6 +274,17 @@
 									*nd.objects_by_type[NamespaceDescription].map(index_fragment(nd, X))
 								]
 							}
+							if nd.fields {
+								\section class='variables-and-other' [
+									\h2 [ 'Constants, variables and other' ]
+									*nd.fields.map(F(name, desc) {
+										\dl [
+											\dt [ name ]
+											\dd [ desc.join('\n') or '-' ]
+										]
+									})
+								]
+							}
 							if tlt.types {
 								DocGroup() with [
 									\h2 ['Types']
@@ -268,8 +299,8 @@
 							if nd.objects_by_type[MultiMethodDescription] or nd.objects_by_type[MethodDescription] {
 								DocGroup() with [
 									\h2 ['Methods and Multimethods']
-									*nd.objects_by_type[MultiMethodDescription].map(index_fragment(nd, X))
-									*nd.objects_by_type[MethodDescription].map(index_fragment(nd, X))
+									*nd.objects_by_type[MultiMethodDescription].map(page_fragment(nd, X))
+									*nd.objects_by_type[MethodDescription].map(page_fragment(nd, X))
 								]
 							}
 						]
@@ -309,7 +340,7 @@
 				init(args())
 				obj_to_description[type] = td
 				td.fqname = fqname(td)
-				td.constructor = MultiMethodDescription(containing_nd, name, type.constructors)
+				td.constructors = MultiMethodDescription(containing_nd, name, type.constructors).methods
 				td.description = object_doc_attr(type, '')
 				td.example = object_doc_attr(type, '%EX')
 				td.parents = null
@@ -337,6 +368,9 @@
 				]
 			}
 
+			# TODO: try to display as a table on type pages.
+			#       That will make related types visually distinctive from more important
+			#       information such as constructors and methods.
 			F directly_related_types_fragment(td:TypeDescription, related_types:Arr, rel:Str) {
 				if related_types {
 					\section [
@@ -360,6 +394,18 @@
 							example_fragment(td)
 							directly_related_types_fragment(td, td.parents, 'parent')
 							directly_related_types_fragment(td, td.children, 'children')
+							if td.constructors {
+								DocGroup() with [
+									\h2 [ 'Constructors' ]
+									*td.constructors.map(page_fragment(td, X))
+								]
+							}
+							if td.methods {
+								DocGroup() with [
+									\h2 [ 'Methods' ]
+									*td.methods.map(page_fragment(td, X))
+								]
+							}
 						]
 					]
 				]
@@ -374,6 +420,10 @@
 				mmd.methods = multimethod.Arr().reject(NormalTypeConstructor).map(MethodDescription(containing_nd, name, mmd, X))
 				# mmd.methods = multimethod.Arr().map(MethodDescription(containing_nd, name, mmd, X))
 			}
+
+			F page_title(mmd:MultiMethodDescription) "${mmd.fqname} multimethod - NGS documentation"
+			F page_heading(mmd:MultiMethodDescription) "${mmd.fqname} multimethod"
+			F nav_name(mmd:MultiMethodDescription) "${mmd.name} multimethod"
 
 			F index_fragment(indexer:Description, mmd:MultiMethodDescription) {
 				\dl [
@@ -395,7 +445,74 @@
 				index_fragment(indexer, mmd.methods[0])
 			}
 
+			F page_fragment(indexer:NamespaceDescription, mmd:MultiMethodDescription) {
+				# echo("INDEXER ${indexer} MMD ${mmd}")
+				methods_in_namespace_and_others = mmd.methods.partition(F(x) {
+					x.containing_nd === indexer
+				})
+				DocGroup() with [
+					*methods_in_namespace_and_others[0].map(page_fragment(mmd, X))
+					if methods_in_namespace_and_others[1] {
+						\dl class='unobtrusive' [
+							\dt class='method-signature' [
+								\a href=href(indexer, mmd) class='underline-on-hover-only' [
+									mmd.fqname
+								]
+							]
+							\dd [
+								"This multimethod has additional ${methods_in_namespace_and_others[1].len()} method(s) not listed above, defined in other namespace(s)"
+							]
+						]
+					} else {
+						DocGroup()
+					}
+				]
+			}
 
+			F page_fragment(indexer:GlobalNamespaceDescription, mmd:MultiMethodDescription) {
+				index_fragment(indexer, mmd)
+			}
+
+			F page(mmd:MultiMethodDescription) {
+				\html [
+					head_fragment(mmd)
+					\body class='multimethod-page' [
+						nav_fragment(mmd)
+						\main [
+							\h1 [page_heading(mmd)]
+							if mmd.methods {
+								DocGroup() with [
+									\h2 [ 'Methods' ]
+									*mmd.methods.map(page_fragment(mmd, X))
+								]
+							}
+						]
+					]
+				]
+			}
+
+		type ParamDescription
+
+			# TODO: link to type?
+			F fragment(from:Description, pd:ParamDescription) {
+				td = obj_to_description.Box(pd.type)
+				\span class='param' [
+					pd.splat.get('') + pd.name + ':'
+					td.map(F(td) {
+						td === from returns td.fqname
+						\a href=href(from, td) [td.fqname]
+					}).get(pd.type.name)
+					pd.dflt.map(F(d) {
+						DocGroup() with [
+							'='
+							ematch d {
+								Fun { \span class='non-literal' [ 'method' ] }
+								Any d.code()
+							}
+						]
+					})
+				]
+			}
 
 
 		type MethodDescription(Description)
@@ -405,6 +522,28 @@
 				md.fqname = md.mmd.map(fqname).get(md.name)
 				md.description = object_doc_attr(method, '')
 				md.status = object_doc_attr(method, '%STATUS').get([])
+				md.params = method.params().map(F(p) {
+					pd = ParamDescription()
+					pd.name = p.name
+					pd.type = p.get('type', Any)
+					pd.dflt = p.Box('dflt')
+					pd.splat = p.Box('splat')
+					pd.doc = method.object_doc_attr(p.name)
+					pd
+				})
+				md.returns = object_doc_attr(method, '%RET')
+				md.example = object_doc_attr(method, '%EX')
+				md.auto = object_doc_attr(method, '%AUTO')
+				md.source_ref= Box(if method is UserDefinedMethod {
+					# Handling UserDefinedMethod, not handling built-ins yet
+					location_info = method.ip().resolve_instruction_pointer()
+					if m = location_info.file ~ pfx {
+						{
+							'file': m.after
+							'line': location_info.first_line
+						}
+					}
+				})
 			}
 
 
@@ -436,6 +575,60 @@
 				]
 			}
 
+			F page_fragment(indexer:Description, md:MethodDescription) {
+				documented_params = md.params.filter({A.doc})
+				\dl class='method' [
+					\dt [
+						\span class='method-signature' [
+							md.fqname
+							'('
+							*md.params.map(fragment(indexer, X)).intersperse(', ')
+							')'
+							*md.status.map(F(s) {
+								\span class="method-status" [ s ]
+							})
+						]
+						md.source_ref.map(F(r) {
+							\span class="source-ref" [
+								' Source: '
+								\a href="https://github.com/${github_user}/ngs/blob/$commit/lib/${r.file}#L${r.line}" [
+									"${r.file}:${r.line}"
+								]
+							]
+						})
+					]
+					\dd [
+						description_fragment(md)
+						md.auto.map(F(a) {
+							\section [
+								\h4 [ 'Automatically called by NGS for syntax' ]
+								\pre class='auto' title='Usage syntax' [ a[0] ]
+							]
+						})
+						if documented_params {
+							\section class='params' [
+								\h4 ['Parameters']
+								\table class='documented-params' [
+									*documented_params.map(F(p) {
+										\tr [
+											\td [ p.name ]
+											\td [ p.doc.map(X.join('\n')).get() ]
+										]
+									})
+								]
+							]
+						}
+						md.returns.map(F(r) {
+							\section class='returns' [
+								\h4 ['Returns']
+								r.join('\n')
+							]
+						})
+						example_fragment(md, 'h4') # Logically h3 but it's too big
+					]
+				]
+			}
+
 
 
 		F Description(containing_nd:NamespaceDescription, name:Str, x) {
@@ -458,11 +651,6 @@
 		}
 
 		F Description(containing_nd:NamespaceDescription, name:Str, maybe_namespace:Hash) {
-			F is_namespace(x) {
-				not(object_doc(x)) returns false
-				x.keys().all(Int) returns false # STDLIB_FILE_TYPE, possibly others in future
-				x.values().any(F(v) v is Type or v is Fun)
-			}
 			not(is_namespace(maybe_namespace)) returns null
 			NamespaceDescription(containing_nd, name, maybe_namespace)
 		}
@@ -474,6 +662,16 @@
 
 		F augment_types() {
 			status("Augmenting types information")
+
+			methods = obj_to_description.values().filter(MethodDescription)
+			methods_by_td = {}
+			for m in methods {
+				m.method.params().reject(X.get('splat')).type.uniq().each(F(t) {
+					k = obj_to_description.get(t)
+					k is Null returns
+					methods_by_td.dflt(obj_to_description[t], []).push(m)
+				})
+			}
 
 			tds = obj_to_description.values().filter(TypeDescription)
 
@@ -489,10 +687,28 @@
 				})
 			}
 
+			# .methods
+			for t in tds {
+				# TODO: Reject constructors
+				constructors = Set(t.constructors)
+				t.methods = methods_by_td.get(t, []).reject(X in constructors)
+			}
+
 			# # maybe find it in methods variable instead of re-doing process_method_impl()
 			# t.constructors = t.type.constructors.Arr().reject(NormalTypeConstructor).register_constructors_mis().map(process_method_impl(t.name, X))
 			# t.methods = types_methods[t.type].map(processed_methods[X]).reject({'is_constructor': true})
 
+		}
+
+		# Note that methods in anonymous namespaces will not have corresponding
+		# obj_to_description for their 'ns'
+		F augment_methods() {
+			status("Augmenting methods information")
+			methods = obj_to_description.values().filter(MethodDescription)
+			for md in methods {
+				namespace = md.method.object_attr('ns').map(obj_to_description.get(X)).reject(NoData)
+				md.containing_nd = namespace.get(md.containing_nd)
+			}
 		}
 
 
@@ -500,6 +716,7 @@
 		global_ns = GlobalNamespaceDescription()
 
 		augment_types()
+		augment_methods()
 
 		status("Writing files")
 		$(cp main.css "$doc_root/")

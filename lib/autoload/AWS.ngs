@@ -87,7 +87,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	F regions() _regions()
 
 	doc Call cb in parallel threads, each with AWS region name as argument.
-	doc cb - Returns array. regions() sets .Region in the result and flattens the results
+	doc cb - Must return an array. regions() sets .Region in the result and flattens the results
 	doc %RET - Arr
 	doc %EX - ins = AWS::regions({ ``aws ec2 describe-instances --region $A $*filters`` })
 	F regions(cb:Fun) {

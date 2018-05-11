@@ -85,18 +85,6 @@ table {
 	border-collapse: collapse;
 }
 
-table.params td:nth-child(1) {
-	font-weight: bold;
-}
-
-th {
-	color: #888888;
-}
-
-th, td {
-	padding: 0.3em;
-}
-
 code {
 	margin: 0.25em;
 	padding: 0.25em;
@@ -105,11 +93,14 @@ code {
 	border-radius: 0.25em;
 }
 
-pre.example {
-	background-color: #E0F2F1;
+pre {
 	padding: 1em;
 	border-radius: 0.5em;
 	box-shadow: 0 0 1px 0px black;
+}
+
+pre.example {
+	background-color: #E0F2F1;
 }
 
 .underline-on-hover-only {
@@ -206,4 +197,32 @@ nav h1, nav h2, nav h3, nav h4, nav h5, nav h6 {
 	/*
 	font-weight: bold;
 	*/
+}
+
+/*
+.method {
+	box-shadow: 0 0 1px 0px black;
+	padding: 1em;
+	background-color: #FAFAFA;
+	border-radius: 0.25em;
+	margin-bottom: 1em;
+}
+*/
+.method-signature {
+	font-weight: bold;
+}
+
+/*
+.returns h4 {
+	margin-bottom: 0.25em;
+}
+*/
+
+table.documented-params td:nth-child(1) {
+	font-weight: bold;
+	padding-right: 1em;
+}
+
+pre.auto {
+	background-color: #FFFDE7;
 }

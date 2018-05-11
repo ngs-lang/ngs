@@ -87,7 +87,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	F regions() _regions()
 
 	doc Call cb in parallel threads, each with AWS region name as argument.
-	doc cb - Returns array. regions() sets .Region in the result and flattens the results
+	doc cb - Must return an array. regions() sets .Region in the result and flattens the results
 	doc %RET - Arr
 	doc %EX - ins = AWS::regions({ ``aws ec2 describe-instances --region $A $*filters`` })
 	F regions(cb:Fun) {
@@ -141,7 +141,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc Update tags using AWS CLI "aws ec2 create-tags" and "aws ec2 delete-tags".
 	doc The required AWS CLI is computed from current tags in r.props.Tags, and desired tags in r.def.anchor.Tags and props.Tags
 	doc %RET - Do not count on this value.
-	F update_tags(r:Res, props:Hash) {
+	F _update_tags(r:Res, props:Hash) {
 		target_tags = r.def.anchor.get('Tags', {}) + props.get('Tags', {})
 		current_tags = r.props.get('Tags', {})
 
@@ -359,7 +359,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 		r.def._assert_props_has_only_known_keys(props, *allowed_keys)
 		if type_user_data.get('find_supports_tags') {
-			r.update_tags(props)
+			r._update_tags(props)
 		}
 		props.without('Tags').each(F(k, v) {
 			# update_how = type_user_data.update_methods[k]
@@ -640,7 +640,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			}
 		}
 
-		sg.update_tags(props)
+		sg._update_tags(props)
 	}
 
 	doc Declarative primitive for deleting AWS Security Group resources
@@ -699,7 +699,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	F update(r:SubnetRes, props:Hash) {
 		debug("AWS", "${r} Updating Subnet")
 		r.def._assert_props_has_only_known_keys(props, 'Tags')
-		r.update_tags(props)
+		r._update_tags(props)
 	}
 
 	doc Declarative primitive for deleting AWS Subnet resources
@@ -880,7 +880,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc %STATUS - internal
 	F update(r:InstanceRes, props:Hash) {
 		debug("AWS", "${r} Update Instance")
-		r.update_tags(props)
+		r._update_tags(props)
 
 		# TODO: make SecurityGroups work with Presence
 		if 'SecurityGroups' in props {
@@ -914,11 +914,16 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			}
 		}
 
+		# TODO: merge all modify-instance-attribute calls
 		if 'SourceDestCheck' in props and props.SourceDestCheck != r.props.SourceDestCheck {
 			args = Argv({
 				['--source-dest-check', '--no-source-dest-check']: props.SourceDestCheck
 			})
 			r.run('Set SourceDestCheck', %(aws ec2 modify-instance-attribute --instance-id ${r.id()} $*args))
+		}
+
+		if 'InstanceType' in props and props.InstanceType != r.props.InstanceType {
+			r.run('Change instance type', %(aws ec2 modify-instance-attribute --instance-id ${r.id()} --instance-type ${props.InstanceType}))
 		}
 	}
 

@@ -12,16 +12,9 @@ Note that this started as internal document so things here are unformed, not fin
 	* Phase 1 - the language [in progress]
 
 		* Milestone "documentation" [in progress]
-			* Generated [in progress]
-				* Pages
-					* Namespaces related
-						* Namespace page
-							* Links to types' pages
-					* Namespaced types and methods
-						* Show namespace
-			* Link from constructors to types
-			* Nested namespaces (AWS::util)
-			* "N methods" in link to namespace - filter by added implementations, don't count x in "global init; x = init"
+			* Generated [done]
+			* Make coherenet markdown and generated HTML [in progress]
+			* Publish to a site
 
 		* Milestone "packaging"
 			* Debian packages
@@ -53,6 +46,7 @@ Note that this started as internal document so things here are unformed, not fin
 				+ how different module versions can run alongside?
 
 		* Milestone "even better documentation"
+			* GC namespace methods should be shows as "GC::some_method" not as "some_method".
 			* Tags (methods and types) and index by
 				+ higher-order functions
 				+ auto tag type:...

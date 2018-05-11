@@ -48,6 +48,9 @@ F init(h:Hash) {
 	doc %EX - # Output: 50
 	doc %EX - echo(box_area(-5, 10))
 	doc %EX - # ... Exception of type AssertFail ...
+	doc %EX - #
+	doc %EX - # Note that the following is better than using assert():
+	doc %EX - # not(x > 0) throws InvalidArgument('x must be greater than zero').set('x', x)
 	type AssertFail
 	AssertFail.inherit(Exception)
 
@@ -1600,6 +1603,13 @@ F each_idx_val(arr:Arr, cb:Fun) {
 	arr
 }
 
+doc Map an Eachable1 to an Arr (array) of values using mapper
+doc mapper is called as mapper(INDEX, ITEM)
+doc %RET - New Arr
+doc %EX - echo("Array items: " + ArrLike().push(10).push(20).push(30).map_idx_val(F(idx, val) "[$idx]=$val").join(", "))
+doc %EX - # Outputs: Array items: [0]=10, [1]=20, [2]=30
+F map_idx_val(e:Eachable1, mapper:Fun) collector each_idx_val(e, collect + mapper)
+
 doc Map an Arr to an Arr (array) of values using mapper
 doc mapper is called as mapper(INDEX, ITEM)
 doc %RET - New Arr
@@ -1816,17 +1826,13 @@ F join(a:Arr, sep:Arr) {
 
 # --- Conversions ---
 
-doc Make Arr from Hash. Each key/value pair becomes two-items array:
+doc Make Arr from Hash. Each key/value pair becomes two-items array.
 doc %RET - Arr of form [[k1, v1], [k2, v2], ...]
 doc %EX - Arr({'x': 7, 'y': 8})  # [['x', 7], ['y', 8]]
 F Arr(h:Hash)
 	h.map(F(*pair) pair)
 
 TEST Arr({'x': 7, 'y': 8}) == [['x', 7], ['y', 8]]
-
-doc Make Arr from Arr. A no-op.
-doc %RET - arr
-F Arr(arr:Arr) arr
 
 doc Make new array which aggregates elements from each of the args arrays
 doc n-th element of the new array is an array that contains n-th element of each of the given arrays
@@ -1852,6 +1858,9 @@ F Arr(something:Eachable1)
 TEST Arr(1..3) == [1,2]
 TEST Arr(1...3) == [1,2,3]
 
+doc Make Arr from Arr. A no-op.
+doc %RET - arr
+F Arr(arr:Arr) arr
 
 # --- Access elements ---
 
@@ -2444,9 +2453,10 @@ F Hash(keys:Arr, values:Arr)
 TEST Hash(["a", "b", "c"], [1,2,3]) == {"a": 1, "b": 2, "c": 3}
 
 doc Create Hash from Arr of something that has key and value fields
-doc e - Arr with all the keys and values
+doc e - Eachable1 with all the keys and values
 doc key_field - Name of the field holding the keys of newly created Hash
 doc val_field - Name of the field holding the values of newly created Hash
+doc %RET - Hash
 doc %EX - Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}], "Name", "Value")  # {"n1": "v1", "n2": "v2"}
 F Hash(e:Eachable1, key_field:Str, val_field:Str)
 	collector/{}
@@ -3606,10 +3616,11 @@ ns {
 
 	# TODO: maybe limit number of concurrent threads (default to cores count?)
 	doc Parallel map. Runs mapper in threads. Each thread processes one element from the array but this might change in future (preserving the total number of calls to mapper and the order of results).
-	doc %RET - Arr, result of applying mapper to elements of a, preserving the order.
+	doc %RET - Arr, result of applying mapper to elements of e, preserving the order.
 	doc %EX - pages_texts = abs_pages_urls.pmap(F(url)  `lynx -dump $url`)
-	F pmap(a:Eachable1, mapper:Fun) {
-		a.map(Thread(mapper, X)).map(join)
+	F pmap(e:Eachable1, mapper:Fun) {
+		e_hash = hash(e)
+		e.map_idx_val(F(idx, val) Thread("pmap-${e_hash}-${idx}", mapper, val)).map(join)
 	}
 
 	doc Run cb in n parallel threads. Each thread runs one cb but this might change in future (preserving the total n calls to cb).

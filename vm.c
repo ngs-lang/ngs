@@ -2260,7 +2260,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 		MK_BUILTIN_TYPE_DOC(UserDefinedMethod, T_CLOSURE, "UserDefinedMethod type. User-defined functions/methods are Closures");
 		vm->type_by_t_obj_type_id[T_CLOSURE >> T_OBJ_TYPE_SHIFT_BITS] = &vm->UserDefinedMethod;
 
-		MK_BUILTIN_TYPE_DOC(NativeMethod, T_NATIVE_METHOD, "Native method type");
+		MK_BUILTIN_TYPE_DOC(NativeMethod, T_NATIVE_METHOD, "Native method type. Methods implemented in C have this type.");
 		vm->type_by_t_obj_type_id[T_NATIVE_METHOD >> T_OBJ_TYPE_SHIFT_BITS] = &vm->NativeMethod;
 
 		MK_BUILTIN_TYPE_DOC(MultiMethod, T_MULMETHOD, "MultiMethod, container for methods.");
@@ -2289,7 +2289,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 		"Key-Value pairs are stored and iterated in insertion order.",
 		"Currently Hash type has several limitations: ",
 		"Hash keys are hashed using internal hash() function which can not be overwritten. ",
-		"The internal hash() function exposed to NGS code but adding implementations or setting \"hash\" to some other function ",
+		"The internal hash() multimethod exposed to NGS code but adding methods to it or setting \"hash\" to some other function ",
 		"will not affect operation of Hashes. ",
 		"Hash values are compared using internal is_equal() function which can not be overwritten. ",
 		"Both hash() and is_equal() currently handle only Int, Str and arbitrary objects. ",
@@ -2787,6 +2787,14 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// Native methods
 	register_global_func(vm, 0, "params",   &native_params_nm,         1, "m",      vm->NativeMethod);
+	_doc(vm, "", "Introspect method parameters");
+	_doc_arr(vm, "%EX",
+		"(+).Arr()[2].params().each(echo)",
+		"# {name=a, type=<Type Int>}",
+		"# {name=b, type=<Type Int>}",
+		NULL
+	);
+
 
 	// Type
 	// needed for switch
@@ -2805,7 +2813,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 		NULL
 	);
 	register_global_func(vm, 0, "params",   &native_params_closure,    1, "c",      vm->UserDefinedMethod);
-	_doc(vm, "", "Get closure parameters.");
+	_doc(vm, "", "Introspect closure parameters.");
 	_doc_arr(vm, "%EX",
 		"... F the_one(something, predicate, body:Fun, found_more:Fun={null}, found_none:Fun={null}) ...",
 		"the_one.Arr()[1].params().each(echo)"
@@ -2912,7 +2920,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Get BasicType (Int, Arr, Hash, ...) field. Throws FieldNotFound.");
 	_doc(vm, "field", "Field to get. Currently only \"name\" and \"constructors\" are supported.");
 	_doc(vm, "%AUTO", "obj.field");
-	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
+	_doc(vm, "%RET", "Str for \"name\" and MultiMethod for \"constructors\".");
 	_doc_arr(vm, "%EX",
 		"Hash.name  # String: Hash",
 		"Hash.constructors  # [<NativeMethod Hash>,<UserDefinedMethod Hash at ...>,...]",

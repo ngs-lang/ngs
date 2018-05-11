@@ -43,7 +43,7 @@ ns {
 	doc Tries to match command line arguments with closure parameters.
 	doc argv - Command line arguments, typically ARGV
 	doc udm - UserDefinedMethod to match with
-	doc %RET - Match (ParamsMatchY on success, ParamsMatchN on failure). If ParamsMatchY is returned it has "matches" property with values is suitable order to call c. If ParamsMatchN is returned, it has "message" property explaining why there was no match. Currently it's not printed anywhere.
+	doc %RET - Match (ParamsMatchY on success, ParamsMatchN on failure). If ParamsMatchY is returned it has "matches" field with values in suitable order to call c. If ParamsMatchN is returned, it has "message" field explaining why there was no match. Currently it's not printed anywhere.
 	doc %EX - ArgvMatcher; (["--b", "B", "A", "C"] ~ F(a,b,c) 7).matches  # %[A B C]
 	doc %EX - (["A", "C", "D", "--b", "B"] ~ ArgvMatcher("positionals", "a") do F(a,b) 7).matches  # %[%[A C D] B]
 	F ~(argv:Arr, udm:UserDefinedMethod) {
