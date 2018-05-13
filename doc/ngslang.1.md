@@ -10,8 +10,7 @@ ngslang - Next Generation Shell language reference.
 
 NGS is an alternative shell. At it's core is a domain-specific language that was specifically designed to be a shell language.
 
-NGS is under development. The language part is already good enough to write some useful scripts.
-The CLI still doesn't exist and will be written using the same language.
+NGS is under development. The language part is already good enough to write some useful scripts. The CLI still doesn't exist and will be written using the same language.
 
 
 # Running ngs scripts
@@ -178,7 +177,7 @@ Also, lines that start with "TEST " (note the trailing space) are considered to 
 
 As in other languages, variables are named locations that can store values. Variables' names should consist of ASCII letters (a-z, A-Z) and numbers (0-9). Variable name must start with a letter. Assignment to variables looks the same in both commands and code syntax. Referencing a variable in the code syntax is just the variable's name while referencing it in commands syntax or inside string interpolation is `$my_var` (not recommended) or `${my_var}` (recommended).
 
-Advanced topic: more precisely, the naming restrictions for the variables mentioned above are naming restrictions on identifiers. NGS can have variables that are named not by the rules above. This is not recommended except for special methods' which correlate with NGS syntax which is a syntactic sugar for calling methods, for example, binary operators. See more about methods' naming in "Methods and multimethods" section below.
+Advanced topic: more precisely, the naming restrictions for the variables mentioned above are naming restrictions on identifiers. NGS can have variables that are named not by the rules above. This is not recommended except for special methods which correlate with NGS syntax which is a syntactic sugar for calling methods, for example, binary operators. See more about methods' naming in "Methods and multimethods" section below.
 
 Assigning to a variable works in both commands and code syntax.
 
@@ -330,7 +329,7 @@ Destructuring should also be available in `for`:
 
 # Methods and multimethods
 
-Methods' names are composed of letters (a-z, A-Z), digits (0-9) and the following characters: `_`, `-`, `|`, `=`, `!`, `@`, `?`, `<`, `>`, `~`, `+`, `*`, `/`, `%`, `(`, `)`, `$`, `.`, ```` `` ````, `"`, `:`, ` ` (space), `[`, `]` .
+Methods' names are composed of letters (a-z, A-Z), digits (0-9) and the following characters: `_`, `-`, `|`, `=`, `!`, `@`, `?`, `<`, `>`, `~`, `+`, `*`, `/`, `%`, `(`, `)`, `$`, `.`, ```` `` ````, `"`, `:`, (space), `[`, `]` .
 
 ## Multi-dispatch
 
@@ -689,7 +688,7 @@ NGS is a "strongly typed" language: values are not implicitly converted to unrel
 
 	echo(1+"2")
 	# ... Exception of type MethodNotFound occured ...
-	# That means that NGS has no method that "knows" how to add an Int and a Str
+	# That means that NGS has no method that "knows" how to add an Int and an Str
 
 	echo(1+Int("2"))
 	# Output: 3
@@ -762,7 +761,7 @@ Examples:
 
 ## require
 
-The `require` method reads, compiles and executes the given file. Currently absolute paths and paths relative to current directory are supported. In future, paths relative to current directory will not be supported but rather paths relative to the file that does `require()` call will be supported, similar to Node.js. This needs work which was not done yet, there was never intention to support paths relative to current directory; it's just wrong.
+The `require` method reads, compiles (to bytecode) and executes the given file. Currently absolute paths and paths relative to current directory are supported. In future, paths relative to current directory will not be supported but rather paths relative to the file that does `require()` call will be supported, similar to Node.js. This needs work which was not done yet, there was never intention to support paths relative to current directory; it's just wrong.
 
 	require('/home/someone/my_module.ngs')
 
@@ -775,7 +774,6 @@ When an undefined global variable is referenced, `global_not_found_handler` is c
 * AWS
 * IP (IPAddr, IPNet)
 * Iter (ArrIter, ConstIter, HashIter, RangeIter, ...)
-* Thread (pmap, ptimes)
 
 # Namespaces
 
@@ -1596,7 +1594,7 @@ I do not recommend NGS as your first language. Python, for example, would be a m
 
 ## Watch the version
 
-NGS is under development. Currently NGS has no version, breaking changes can happen. If you do anything important with NGS, it's preferable to note the git revision you are using for reproducible installation. The plan is to stop breaking NGS when it reaches version 1.0.0. From that version, the behaviour will be common - patch level increase for fixes, minor for improvements, major for breaking changes.
+NGS is under development. Breaking changes can happen. If you do anything important with NGS, it's preferable to note the git revision you are using for reproducible installation. The plan is to stop breaking NGS when it reaches version 1.0.0. From that version, the behaviour will be common - patch level increase for fixes, minor for improvements, major for breaking changes.
 
 ## Keyword arguments gotchas
 
@@ -1643,7 +1641,7 @@ The correct version to add method to a global multimethod is
 
 ## Comments syntax gotchas
 
-Comments syntax is implemented in many places but not everywhere. If you get syntax error regarding comment, move to somewhere nearby.
+Comments syntax is implemented in many places but not everywhere. If you get syntax error regarding comment, move it to somewhere nearby.
 
 ## Mutable default parameter gotchas
 

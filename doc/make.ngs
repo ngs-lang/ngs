@@ -46,7 +46,16 @@
 			x.values().any(F(v) v is Type or v is Fun)
 		}
 
-		F safe_file_name(s:Str) s.replace(/[^-._a-zA-Z0-9]/, F(char) '%' + encode_hex(char))
+		F safe_file_name(s:Str) {
+			m = s ~ Sfx('.html')
+			sfx = if m {
+				s = m.before
+				m[0]
+			} else {
+				''
+			}
+			s.replace(/(^[.]+)|[^-._a-zA-Z0-9]/, F(char) '%' + encode_hex(char)) + sfx
+		}
 
 		F object_attr(x, a:Str) (x.attrs() or {}).get(a).Box()
 		F object_doc(x) x.object_attr('doc')
@@ -64,9 +73,8 @@
 
 		type Description
 
-			F href(from:Description, to:Description) {
+			F href(from:Description, to_path:Arr) {
 				from_path = from.path_as_item()
-				to_path = to.path_as_item()
 				from_path == to_path returns '#HERE'
 				i = 0
 				while from_path[i] == to_path[i] {
@@ -77,7 +85,18 @@
 					to_path[i..null].map(safe_file_name).map(encode_uri_component).join('/')
 			}
 
+			F href(from:Description, to:Description) href(from, to.path_as_item())
+
 			F fqname(d:Description) fqname(d.containing_nd) +? '::' + d.name
+
+
+			F get_this_version_desc(d:Description) d.containing_nd.get_this_version_desc()
+
+			F path_as_container_str(d:Description) {
+				d.path_as_container().map(safe_file_name).reduce(doc_root, (/))
+			}
+
+			F generate_before_children_hook(d:Description) null
 
 			F generate(d:Description) {
 				# status("Generating page for descriptors ${d}")
@@ -87,20 +106,23 @@
 						return
 					}
 				}
+
+				children = get_children(d)
+
+				if children or (d.path_as_container() == d.path_as_item()[0..-1]) {
+					container_dir = d.path_as_container_str()
+					log("Ensuring directory $container_dir exists")
+					$(mkdir -p $container_dir)
+				}
+
 				dst = (d.path_as_item().map(safe_file_name)).reduce(doc_root, (/))
 				p = page(d)
 				file_content = Doc::HtmlRoot(p)
 				log("Writing file=${dst} description=${d} len=${file_content.len()} hash=${file_content.hash()}")
 				write(dst, file_content)
 
-				children = get_children(d)
-
-				if children {
-					d = d.path_as_container().map(safe_file_name).reduce(doc_root, (/))
-					log("Ensuring directory $d exists")
-					$(mkdir -p $d)
-					children.each(generate)
-				}
+				generate_before_children_hook(d)
+				children.each(generate)
 			}
 
 			F get_children(d:Description) []
@@ -111,7 +133,7 @@
 			F head_fragment(from:Description) {
 				\head [
 					\meta charset='UTF-8'
-					\link rel='stylesheet' href=('../' * (len(from.path_as_item()) - 1)) + 'main.css' type='text/css'
+					\link rel='stylesheet' href=href(from, from.get_this_version_desc().path_as_container() + ['main.css']) type='text/css'
 					\title [ page_title(from) ]
 				]
 			}
@@ -165,10 +187,142 @@
 
 			F Bool(d:Description) true
 
-			F Str(d:Description) {
-				"<${d.typeof().name} ${d.name}>"
+			F Str(d:Description) "<${d.typeof().name} ${d.name}>"
+
+
+		type ThisVersionIndex(Description)
+
+			F init(tvi:ThisVersionIndex) {
+				tvi.docs = collector dir('.').each(F(p) {
+					m = p.path ~ /\.md$/
+					not(m) returns
+					status("Reading ${p.path}")
+					# collect(m.before, ``pandoc -f 'markdown+hard_line_breaks' -t json -s ${p}``)
+					collect(MarkdownDescription(tvi, m.before, p))
+				})
+
+				status("Building generated documentation descriptors")
+				tvi.global_ns = GlobalNamespaceDescription(tvi)
+
+				augment_types()
+				augment_methods()
+
 			}
 
+			F nav_name(tvi:ThisVersionIndex) "Documentation index"
+			F page_title(tvi:ThisVersionIndex) "Documentation index"
+			F path_as_item(tvi:ThisVersionIndex) [Str(VERSION), 'index.html']
+			F path_as_container(tvi:ThisVersionIndex) [Str(VERSION)]
+
+			F Str(tvi:ThisVersionIndex) "<${tvi.typeof().name} for version ${VERSION}>"
+
+			F get_children(tvi:ThisVersionIndex) {
+				tvi.docs + [tvi.global_ns]
+			}
+
+			F generate_before_children_hook(tvi:ThisVersionIndex) {
+				$(mkdir ${tvi.path_as_container_str() / 'man'})
+			}
+
+			F generate(tvi:ThisVersionIndex) {
+				super(tvi)
+				$(cp main.css "${tvi.path_as_container_str()}/")
+			}
+
+			F get_this_version_desc(tvi:ThisVersionIndex) tvi
+
+			F page(tvi:ThisVersionIndex) {
+				\html [
+					head_fragment(tvi)
+					\body class='version-index-page' [
+						nav_fragment(tvi)
+						\main [
+							\h1 [ "Documentation index" ]
+							\section [ "NGS version ${VERSION}"]
+							\h2 [ "Manuals" ]
+							*tvi.docs.map(index_fragment(tvi, X))
+							\h2 [ "Generated documentation" ]
+						]
+					]
+				]
+			}
+
+		# F to_doc(h:Hash) {
+		# 	guard h.t == 'CodeBlock'
+		# 	DocNode('pre', class='md-codeblock') with DocText(h.c[1])
+		# }
+
+		MARKDOWN_QUOTES = {
+			'DoubleQuote': '"'
+			'SingleQuote': "'"
+		}
+		F to_doc(h:Hash) {
+			# Maybe TODO: header .c[1] - href?
+			eswitch h.t {
+				'Space'       ' '
+				'Str'         h.c
+				'Para'        DocNode('p') with h.c.map(to_doc)
+				'Header'      DocNode('h' + Str(h.c[0] + 1)) with h.c[2].map(to_doc)
+				'Strong'      DocNode('strong') with h.c.map(to_doc)
+				'Emph'        DocNode('em') with h.c.map(to_doc)
+				'LineBreak'   { \br }
+				'CodeBlock'   DocNode('pre', class='example') with [ h.c[1] ]
+				'Code'        DocNode('code') with [ h.c[1] ]
+				'Link'        "LINK ${h.c}"
+				'BulletList'  DocNode('ul') with h.c.map(F(x) DocNode('li', x.map(to_doc)))
+				'Quoted'      DocGroup() with [MARKDOWN_QUOTES[h.c[0].t], *h.c[1].map(to_doc), MARKDOWN_QUOTES[h.c[0].t]]
+				'Table'       "TABLE ${h.c}"
+				'DefinitionList' "DEF LIST ${h.c}"
+				'Plain'       DocGroup() with h.c.map(to_doc)
+			}
+		}
+
+		type MarkdownDescription(Description)
+
+			F init(md:MarkdownDescription, tvi:ThisVersionIndex, output_name:Str, file_path:Path) {
+				init(args())
+				md.data = ``pandoc -f 'markdown+hard_line_breaks' -t json -s ${md.file_path}``
+				md.doc = DocGroup() with md.data.blocks.map(to_doc)
+				md.name_fragment = md.doc.children.filter(DocNode).filter({'name': 'p'})[0].children
+			}
+
+			F page_title(md:MarkdownDescription) md.data.meta.title.c.map(to_doc).DocGroup()
+			F nav_name(md:MarkdownDescription) md.data.meta.title.c.map(to_doc).DocGroup()
+			F path_as_item(md:MarkdownDescription) md.tvi.path_as_container() + ['man', md.output_name + '.html']
+			F path_as_container(md:MarkdownDescription) md.tvi.path_as_container() + ['MD_CONTAINER_SHOULD_NOT_HAPPEN']
+
+			F get_this_version_desc(md:MarkdownDescription) md.tvi
+
+			F Str(md:MarkdownDescription) "<${md.typeof().name} ${md.output_name}>"
+
+			F index_fragment(indexer:Description, md:MarkdownDescription) {
+				\dl [
+					\dt [
+						\a href=href(indexer, md) [ *md.name_fragment ]
+					]
+					\dd [
+						# description_fragment(nd)
+						'TODO'
+					] # dd
+				]
+			}
+
+			F page(md:MarkdownDescription) {
+				\html [
+					head_fragment(md)
+					\body class='manual-page' [
+						nav_fragment(md)
+						\main [
+							# \h1 [ "Documentation index" ]
+							# \section [ "NGS version ${VERSION}"]
+							# \h2 [ "Manuals" ]
+							# *tvi.docs.map(index_fragment(tvi, X))
+							# \h2 [ "Generated documentation" ]
+							md.doc
+						]
+					]
+				]
+			}
 
 		type NamespaceDescription(Description)
 
@@ -316,16 +470,19 @@
 
 			F fqname(gnd:GlobalNamespaceDescription) ''
 
-			F init(gnd:GlobalNamespaceDescription) {
+			F init(gnd:GlobalNamespaceDescription, this_version_index) {
+				gnd.this_version_index = this_version_index
 				super(gnd, g.without('main').filterk(is_public_name).rejectk(is_phased_out_type).sortk(lte))
 			}
+
+			F get_this_version_desc(gnd:GlobalNamespaceDescription) gnd.this_version_index
 
 			F page_title(gnd:GlobalNamespaceDescription) "The global namespace - NGS documentation"
 			F page_heading(gnd:GlobalNamespaceDescription) "The global namespace"
 			F nav_name(gnd:GlobalNamespaceDescription) "The global namespace"
 
-			F path_as_item(gnd:GlobalNamespaceDescription) ['index.html']
-			F path_as_container(gnd:GlobalNamespaceDescription) []
+			F path_as_item(gnd:GlobalNamespaceDescription) [Str(VERSION), 'generated', 'index.html']
+			F path_as_container(gnd:GlobalNamespaceDescription) [Str(VERSION), 'generated']
 
 			F description_fragment(gnd:GlobalNamespaceDescription) null
 
@@ -711,20 +868,10 @@
 			}
 		}
 
+		this_version_index = ThisVersionIndex()
 
-		status("Building descriptors")
-		global_ns = GlobalNamespaceDescription()
-
-		augment_types()
-		augment_methods()
-
-		status("Writing files")
-		$(cp main.css "$doc_root/")
-
-		global_ns.generate()
-
-
-
+		status("Building site index descriptors")
+		this_version_index.generate()
 
 		status("OK")
 
