@@ -62,21 +62,12 @@ a {
 	text-decoration: none;
 }
 
-dl {
-	/*
-	padding: 0.5em;
-	box-shadow: 0 0 1px 0px black;
-	*/
-}
-
-dt {
-	/*
-	font-weight: bold;
-	*/
-}
-
 dd {
 	margin-top: 1em;
+}
+
+.markdown-definitions dd {
+	margin-top: 0;
 }
 
 table {
@@ -225,4 +216,8 @@ table.documented-params td:nth-child(1) {
 
 pre.auto {
 	background-color: #FFFDE7;
+}
+
+.markdown-table td {
+	padding-right: 2em;
 }

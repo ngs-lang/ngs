@@ -92,6 +92,7 @@ Many concepts and syntax constructs come from other languages.
 * `TransformationName` - example: `Strs` (converts to array of strings), `Argv` (constructs command line arguments array), `ExitCode` (converts anything to integer exit code).
 
 Reasoning behind `TransformationName`:
+
 * Transforms data into something else, like many other constructors
 * The output data might get it's own data type some day
 

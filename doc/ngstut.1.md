@@ -4,7 +4,7 @@
 
 # NAME
 
-ngstut - Simple Tutorial how to get started with NGS
+ngstut - Getting started with NGS - simple tutorial.
 
 # ABOUT THIS DOCUMENT
 

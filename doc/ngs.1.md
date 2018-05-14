@@ -51,11 +51,11 @@ The exit code is whatever the running code (*script_name* or *expression*) retur
 * `T` (a user-defined type) - The exit code can be customized by `ExitCode(x:T)` method.
 * Anything else, including user-defined types without `ExitCode(x:T)` method will result 0.
 
-In case of an uncaught exception, the exit code is 1.
+In case of an uncaught exception, the exit code is 240. In cases where additional errors were encountered during exiting, the exit codes will be greater than 240, [ngslang(1)](ngslang.1.md) has specific information on that.
 
 # ENVIRONMENT
 
-* `DEBUG` - when non-empty string, switches on `debug` method output (default is off). It's recommended to use `debug("my debug info")` in your scripts for easily be turning on/off.
+* `DEBUG` - when non-empty string, switches on `debug` method output (default is off). It's recommended to use `debug("my debug info")` in your scripts for turning debug output on and off easily, using the `DEBUG` environment variable.
 * `NGS_BOOTSTRAP` points to the bootstrap NGS file. On NGS startup this file is always run. Defaults to first of:
 	* `$HOME/.bootstrap.ngs`
 	* `/etc/ngs/bootstrap.ngs`
@@ -83,9 +83,10 @@ Located in `NGS_DIR`. Standard library. Defines many methods and autoloading beh
 
 |||
 |-|-|
-|[ngslang(1)](ngslang.1.html)| NGS language tutorial|
-|[types.html](types.html)| NGS language pre-defined types|
-|[methods.html](methods.html)| NGS language pre-defined methods|
+|[ngstut(1)](ngstut.1.md)| NGS language tutorial|
+|[ngslang(1)](ngslang.1.md)| NGS language manual|
+|[ngswhy(1)](ngswhy.1.md)| Motivation behind creation of NGS|
+|[ngsstyle(1)](ngsstyle.1.md)| Recommended style for NGS scripts|
 
 
 # THANKS

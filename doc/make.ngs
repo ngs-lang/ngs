@@ -247,11 +247,29 @@
 				]
 			}
 
-		# F to_doc(h:Hash) {
-		# 	guard h.t == 'CodeBlock'
-		# 	DocNode('pre', class='md-codeblock') with DocText(h.c[1])
-		# }
-
+		F process_markdown_link(s:Str) {
+			if m = s ~ /^([a-z.0-9]+)(\.md)$/ {
+				return m[1] + '.html'
+			}
+			s
+		}
+		F process_markdown_table(h:Hash) {
+			# table: 0 - ?, 1 - Alignment, 2 - something about columns?, 3 - ?, 4 - rows
+			assert(h.t == 'Table')
+			DocNode('table', class='markdown-table') with h.c[4].map(F(row) {
+				DocNode('tr') with row.map(F(cell) {
+					DocNode('td') with [ cell[0].to_doc() ]
+				})
+			})
+		}
+		F process_markdown_def_list(h:Hash) {
+			DocNode('dl', class='markdown-definitions') with h.c.map(F(d) {
+				DocGroup() with [
+					DocNode('dt') with d[0].map(to_doc)
+					DocNode('dd') with d[1].the_one().map(to_doc)
+				]
+			})
+		}
 		MARKDOWN_QUOTES = {
 			'DoubleQuote': '"'
 			'SingleQuote': "'"
@@ -259,21 +277,21 @@
 		F to_doc(h:Hash) {
 			# Maybe TODO: header .c[1] - href?
 			eswitch h.t {
-				'Space'       ' '
-				'Str'         h.c
-				'Para'        DocNode('p') with h.c.map(to_doc)
-				'Header'      DocNode('h' + Str(h.c[0] + 1)) with h.c[2].map(to_doc)
-				'Strong'      DocNode('strong') with h.c.map(to_doc)
-				'Emph'        DocNode('em') with h.c.map(to_doc)
-				'LineBreak'   { \br }
-				'CodeBlock'   DocNode('pre', class='example') with [ h.c[1] ]
-				'Code'        DocNode('code') with [ h.c[1] ]
-				'Link'        "LINK ${h.c}"
-				'BulletList'  DocNode('ul') with h.c.map(F(x) DocNode('li', x.map(to_doc)))
-				'Quoted'      DocGroup() with [MARKDOWN_QUOTES[h.c[0].t], *h.c[1].map(to_doc), MARKDOWN_QUOTES[h.c[0].t]]
-				'Table'       "TABLE ${h.c}"
-				'DefinitionList' "DEF LIST ${h.c}"
-				'Plain'       DocGroup() with h.c.map(to_doc)
+				'Space'           ' '
+				'Str'             h.c
+				'Para'            DocNode('p') with h.c.map(to_doc)
+				'Header'          DocNode('h' + Str(h.c[0] + 1)) with h.c[2].map(to_doc)
+				'Strong'          DocNode('strong') with h.c.map(to_doc)
+				'Emph'            DocNode('em') with h.c.map(to_doc)
+				'LineBreak'       DocNode('br')
+				'CodeBlock'       DocNode('pre', class='example') with [ h.c[1] ]
+				'Code'            DocNode('code') with [ h.c[1] ]
+				'Link'            DocNode('a', href=h.c[2][0].process_markdown_link()) with h.c[1].map(to_doc)
+				'BulletList'      DocNode('ul') with h.c.map(F(x) DocNode('li', x.map(to_doc)))
+				'Quoted'          DocGroup() with [MARKDOWN_QUOTES[h.c[0].t], *h.c[1].map(to_doc), MARKDOWN_QUOTES[h.c[0].t]]
+				'Table'           process_markdown_table(h)
+				'DefinitionList'  process_markdown_def_list(h)
+				'Plain'           DocGroup() with h.c.map(to_doc)
 			}
 		}
 
@@ -301,8 +319,7 @@
 						\a href=href(indexer, md) [ *md.name_fragment ]
 					]
 					\dd [
-						# description_fragment(nd)
-						'TODO'
+						*md.doc.children.filter(DocNode).filter({'name': 'h2'}).map(F(x) DocNode('span') with x.children).intersperse(', ')
 					] # dd
 				]
 			}
@@ -313,11 +330,6 @@
 					\body class='manual-page' [
 						nav_fragment(md)
 						\main [
-							# \h1 [ "Documentation index" ]
-							# \section [ "NGS version ${VERSION}"]
-							# \h2 [ "Manuals" ]
-							# *tvi.docs.map(index_fragment(tvi, X))
-							# \h2 [ "Generated documentation" ]
 							md.doc
 						]
 					]

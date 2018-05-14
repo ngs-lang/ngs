@@ -47,6 +47,7 @@ Note that this started as internal document so things here are unformed, not fin
 				+ how different module versions can run alongside?
 
 		* Milestone "even better documentation"
+			* HTML generated from Markdown: anchors for headers so that specific section could be linked to
 			* GC namespace methods should be shows as "GC::some_method" not as "some_method".
 			* Tags (methods and types) and index by
 				+ higher-order functions

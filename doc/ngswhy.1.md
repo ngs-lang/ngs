@@ -1,4 +1,4 @@
-% NGSLANG(1) NGS User Manual
+% NGSWHY(1) NGS User Manual
 % Ilya Sher
 % 2018
 
