@@ -178,6 +178,7 @@
 						nav_bottom_fragment(d)
 					]
 				]
+
 			}
 
 			F description_fragment(d:Description)
@@ -196,6 +197,12 @@
 						]
 					]
 				})
+			}
+
+			F logo_fragment(d:Description) {
+				\div class='logo' [
+					\img src=href(d, d.get_this_version_desc().path_as_container() + ['ngs-logo-300.png']) alt='NGS logo'
+				]
 			}
 
 			F page(d:Description) \html [ \body [ "NOT-READY-YET" ] ]
@@ -243,6 +250,7 @@
 			F generate(tvi:ThisVersionIndex) {
 				super(tvi)
 				$(cp main.css "${tvi.path_as_container_str()}/")
+				$(cp ../img/ngs-logo-300.png "${tvi.path_as_container_str()}/")
 			}
 
 			F get_this_version_desc(tvi:ThisVersionIndex) tvi
@@ -267,6 +275,7 @@
 					\body class='version-index-page' [
 						nav_fragment(tvi)
 						\main [
+							logo_fragment(tvi)
 							\h1 [ "Documentation index" ]
 							\section [ "NGS version ${VERSION}"]
 							\h2 [ "Manuals - general" ]

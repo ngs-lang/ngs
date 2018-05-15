@@ -197,6 +197,15 @@ nav .footer {
 	padding: 1em;
 }
 
+.logo {
+	text-align: right;
+}
+
+.logo > img {
+	width: 150px;
+	height: 40px;
+}
+
 /*
 .method {
 	box-shadow: 0 0 1px 0px black;

@@ -314,7 +314,7 @@ You can modify default scoping using the `global` and `local` keywords.
 
 Destructuring assignment. Something like the following:
 
-	[a, b, **rest] = my_arr
+	[a, b, *rest] = my_arr
 
 Syntax for `Hash` destructuring is not clear yet:
 
