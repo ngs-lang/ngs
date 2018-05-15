@@ -190,6 +190,13 @@ nav h1, nav h2, nav h3, nav h4, nav h5, nav h6 {
 	*/
 }
 
+nav .footer {
+	position: fixed;
+	left: 0;
+	bottom: 0;
+	padding: 1em;
+}
+
 /*
 .method {
 	box-shadow: 0 0 1px 0px black;
@@ -220,4 +227,8 @@ pre.auto {
 
 .markdown-table td {
 	padding-right: 2em;
+}
+
+.man-page-date {
+	text-align: center;
 }

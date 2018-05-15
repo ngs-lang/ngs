@@ -169,6 +169,7 @@ Compiling and running
 
 Tested as follows (some time ago):
 
+* Pandoc 2.2
 * Debian Stretch: gcc 4.8.5 + 4.9.3 + 5, clang 3.6
 * Debian Jessie: gcc 4.8.4 + 4.9.2, clang 3.5
 * Ubunty Trusty: gcc 4.8.4, clang 3.4

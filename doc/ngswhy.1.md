@@ -8,7 +8,7 @@ ngswhy - Motivation behind Next Generation Shell.
 
 # TLDR
 
-Because systems engineers deserve better.
+Because systems engineers ("DevOps") deserve better.
 
 # NGS BIRTH
 
@@ -21,6 +21,8 @@ Python, on the other hand, has data structures and proper error handling. I was 
 I was looking at my scripts and scripts that were written by other people for systems administration and thinking: I can't believe it is the best we can do today, this is intolerable crap.
 
 That was how I started working on NGS.
+
+# OTHER SHELLS
 
 Yes, I am aware that other people are also working on shells. I have seen many other projects. None of them was "Oh! That's exactly how I see the future of shells and systems programming; I should stop working on NGS and join this project".
 
@@ -64,5 +66,5 @@ We all know that life is not that simple so here is a bit more complex situation
 
 # SEE ALSO
 
-* https://news.ycombinator.com/item?id=16276911
-* https://ilya-sher.org/2017/07/07/why-next-generation-shell/
+* [https://news.ycombinator.com/item?id=16276911](https://news.ycombinator.com/item?id=16276911)
+* [https://ilya-sher.org/2017/07/07/why-next-generation-shell/](https://ilya-sher.org/2017/07/07/why-next-generation-shell/)

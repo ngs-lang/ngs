@@ -68,7 +68,7 @@ For example, the multimethod `+`:
 
 * `fetch('your_file.super-format')` can be extended to decode your format.
 * `read`, which reads from a file, can be extended to support HTTP or S3.
-* Most of the syntax (for example `my_var.my_field` or `my_var[my_index]`) is just sugar for calling methods. This behaviour lets you, the user define any operator for existing or your custom types.
+* Most of the syntax (for example `my_var.my_field` or `my_var[my_index]`) is just sugar for calling methods. This behaviour lets you, the user, define any operator for existing or your custom types.
 
 ## Simplicity
 

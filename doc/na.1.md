@@ -8,10 +8,10 @@ na - NGS AWS. Command line for AWS.
 
 # SYNOPSIS
 
-**na** resource-specification
-**na** resource-specification SET new-tags-and-properties
-**na** resource-specification DEL
-**na** resource-specification COUNT
+**na** [**\-\-digest N**] resource-specification ...
+**na** resource-specification ... SET new-tags-and-properties
+**na** resource-specification ... DEL
+**na** resource-specification ... COUNT
 
 # DESCRIPTION
 
@@ -23,13 +23,13 @@ na - NGS AWS. Command line for AWS.
 
 **\-\-digest N** (default 10). **na** is human oriented. Since it's usually not helpful to have thousands of lines dumped into your screen (not likely to be processed in a meaningful manner by a human), **na** limits the number of items it outputs. **\-\-digest** gives the number of items starting at which the output is shown as a digest of the items and not the items themselves.
 
-# SPECIFYING RESOURCES
+# RESOURCE SPECIFICATION
 
 ## Option 1 - resource id
 
 RESOURCE-ID -- vpc-11111111, subnet-22222222, etc
 
-## Option 2 - resource type + tags + properties
+## Option 2 - resource prefix, optional tags, optional properties
 
 RESOURCE-PREFIX TAG\_NAME=TAG\_VALUE ... PROPERTY\_NAME:PROPERTY\_VALUE ...
 
