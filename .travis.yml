@@ -9,7 +9,7 @@ before_script:
 - sudo apt-get install -y uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev
   peg gawk make libpcre3-dev cmake pandoc
 script:
-- mkdir build && cd build && cmake .. && make && ctest
+- (mkdir build && cd build && cmake .. && make && ctest)
 env:
   global:
   - COMMIT=${TRAVIS_COMMIT::8}
