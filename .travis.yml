@@ -1,23 +1,25 @@
 dist: trusty
 language: c
 services:
-  - docker
+- docker
 compiler:
-  - gcc
-  - clang
+- gcc
+- clang
 before_script:
-  - sudo apt-get install -y uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg gawk make libpcre3-dev cmake pandoc
+- sudo apt-get install -y uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev
+  peg gawk make libpcre3-dev cmake pandoc
 script:
-  - mkdir build && cd build && cmake .. && make && ctest
+- mkdir build && cd build && cmake .. && make && ctest
 env:
   global:
-  - secure: ZotalA8CZZAUOnPUGnFnba/dXB5Fxb7luhlraQGOD/KCW3iX6VlFA4rHJZGf67JBuEPXD0RCLoSQLThPGMIfkg/1wQbcEJT9NN5WJf22SESryrR8eM25B7a60q5MZY6Hn2BOwrDZzb3Ecl6U9zdXjoc5kSef8/HRE1Pd39tThbvGYlTm+nX0zhgZg9vYJawkMM45sndUVw/Mretvi+UQKB0oLVG5zTHcLKUblbTm4Udcnv1gs+p1KcBR4WW29QG9BSrC6EG3qYrg+D8VJTJYQsOtnAbYnz/Y9TvhTz0BdbEYozU6+gmDFGpZMxwTzkOidq0VHx0YW78ktYZZs1CvJ+uw9gGDFJxVHzPkhjZHtH/0Unx7yNXYLss7MqRaEkzU6fpn5128Mc4/US8RuvqUfsxLirW5lw+z7xYGr2PAOE1zaSGL20drsNAM6kU6qcL9W3DtMEXRDVVdLx26ngLOKarLeUCIMS0Uds+YQTcnAN4AoablfriOu5mDBF2dJ7lZVeANddJcfPXsag5XHgNdmgt7RxCauVyOWD7EJ6rDgMMMtFDvvFPhCI1ABZNSvDsOJ0I6HN/av2BqrD0YpsCMmqki7uWpJ/S8xVLicW0gqv5wIBWU1ZRy/95MtWVOluoUxemGb56qFvS1KoxPYmS7XgpFbPQcoZ9F1lg5rH0tP8U=
-  - secure: i1VVxe/MJMyMWoUgkGISWP/2eAkbwo7+lGCaEAmWt/U5Jdwk/+xiKPWDkVe5wDEvPNFSJOcMML57NB9ZYSi0jqhcTx8nJ1BkPY+CkNUdBc3jpKT5PSzG5YrnP3BE0F/RU68xcrbtlTqs0La/2EgmzmB8hpCRRwuSsT6pgzOYMjB1fHDetI1pGMWwlQ55T/VdGhcGvpAQtyFSUjwvAlaTN2XrKv5/9hXzhO/mf5Nf23DIziKxZUJUKtop0Q9ueU4NEFgAZg1KZ3vz2NgZ0yBYdyBzhxLPV9Mx16ZU8Hy49CpkL2gUXJsmkp+uW/l7PHPHwzqPjfTfPBh0JS80dyIF64djf2tpURpAxvoMS1kq2PWw/GRqXjtbrQqGq5EYhlXaS2lJyq7fW1056UYN2VXbkb0nV8+YnuKSDTmAXmOZtzDLc90fN7lswTnrMttxNy9Z7DShKXbX03h/FxZssHYcSvfCYBZE+VnplGp3Uz1QnCMpv33Piq+H5jJtUiyyD0BULGhRS5kHqavf2lO9mFKzEsp7qFqrIOH4UyfHcl0Ot+NPBtQgaMBQwUohCb4VSxvO4rfK+A1oV8j9rs21k3p5rIDKDfgPe4P/01KIp+68bK0Hhei1cd0HJjn+9HtAvx95naTq2OMqKal6zUHys7K8aq13z3fFNmZHAWk7JcLITWg=
   - COMMIT=${TRAVIS_COMMIT::8}
+  - secure: ZV40iyDZPgi8RZ8kMXy4GHLr6ovh/l8NfTaBYTiPMIXSL1szzO/wQFz9C1LhSXOU7Rur09iPz9gvc55WuWo5pwLECRSDXPoNqZOhzSoNVzYfCe3Hui4S8HQ/SyFqZlcZXTqy1uX4YkEjpSkyOeFU01HMKEg0Jc6Vt/4t946bV5g=
+  - secure: L9jUdyoHTSDFqy4qEgrOvlToo95rcoOO7GO2MYDDF+fs9xf/eJY1wq7tn8IW6vA4BaVfMICT65Afn4J/926WYCEoRjknHvT2eXggznED1ebmgnxCP6n8nYnny0Rf6lbEAdDeLTJSItPspSiQa9vZ3mJX4y7XUesvLQuZiDzlKsE=
 after_success:
-  - docker login -u $DOCKER_USER -p $DOCKER_PASS
-  - export REPO=ngslang/ngs
-  - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
-  - docker build -f Dockerfile -t $REPO:$COMMIT .
-  - docker tag $REPO:$COMMIT $REPO:$TAG
-  - docker push $REPO
+- docker login -u $DOCKER_USER -p $DOCKER_PASS
+- export REPO=ngslang/ngs
+- export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH
+  ; fi`
+- docker build -f Dockerfile -t $REPO:$COMMIT .
+- docker tag $REPO:$COMMIT $REPO:$TAG
+- docker push $REPO
