@@ -21,7 +21,7 @@ syn keyword ngsRepeat for
 " bootstrap types
 syn keyword ngsType NotImplemented ReadFail RequireFail MainFail
 " other types
-syn keyword ngsType Any ArgvMatcher ArgvMatcherDecorator Arr ArrIter ArrLike BasicType Bool CLib CollectingPipeFromChildToParentProcess Command CommandsPipe CommandsPipeline ConstIter Counter CSym DelimStr Eachable Eachable1 Eachable2 ElementNotFound EmptyEachableFail ExecutableNotFound Exit FFI Fun Hash HashIter HashLike InstantiatingAbstractType Int Iter KillFail MultiMethod NormalType NormalTypeInstance NoData Null Num Path Pipe PipeCreateFail PipeFromChildProcess PipeFromChildToParentProcess PipeFromParentToChildProcess PipeToChildProcess Pred Process ProcessFail Range RangeIter Real ReadingPipeBetweenChildren Seq Set Stats Str Table TableMeta TableMetaNotIfCol TtyCheckFail Type UserDefinedMethod WritingPipeBetweenChildren
+syn keyword ngsType Any ArgvMatcher ArgvMatcherDecorator Arr ArrIter ArrLike BasicType Bool CLib CollectingPipeFromChildToParentProcess Command CommandsPipe CommandsPipeline ConstIter Counter CSym DelimStr Eachable Eachable1 Eachable2 ElementNotFound EmptyEachableFail ExecutableNotFound Exit FFI Fun Hash HashIter HashLike InstantiatingAbstractType Int Iter KillFail MultiMethod NativeMethod NormalType NormalTypeInstance NoData Null Num Path Pipe PipeCreateFail PipeFromChildProcess PipeFromChildToParentProcess PipeFromParentToChildProcess PipeToChildProcess Pred Process ProcessFail Range RangeIter Real ReadingPipeBetweenChildren Seq Set Stats Str Table TableMeta TableMetaNotIfCol TtyCheckFail Type UserDefinedMethod WritingPipeBetweenChildren
 syn keyword ngsType Box EmptyBox FullBox BoxFail
 syn keyword ngsType Range NumRange PredRange
 syn keyword ngsType Diff ArrDiff HashDiff

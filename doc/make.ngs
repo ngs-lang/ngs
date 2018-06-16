@@ -149,6 +149,8 @@
 
 			F nav_bottom_fragment(d:Description) {
 				\div class='footer' [
+					\a href='https://ngs-lang.org/' [ "NGS website" ]
+					\br
 					\a href='https://github.com/ilyash/ngs' [ "NGS on GitHub" ]
 				]
 

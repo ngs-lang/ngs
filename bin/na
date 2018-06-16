@@ -8,7 +8,7 @@ AWS = AWS2
 
 F decode_arg_value(s:Str) {
 	s ~ /^0/ returns s
-	s ~ /^[0-9]/ and len(s ~~ '.') > 1 returns s
+	s ~ /^[0-9.]+$/ and len(s ~~ '.') > 1 returns s
 	decode_json(s) tor s
 }
 
@@ -32,11 +32,11 @@ F process_argv(argv:Arr) {
 					'anchor' cur.options[m.after] = iter.next()
 				}
 			}
-			m = arg ~ /=/ {
+			m = arg ~ /^([a-zA-Z0-9]+)=/ {
 				ematch mode {
 					'anchor' cur.anchor.Tags
 					'properties' cur.properties.dflt('Tags', {})
-				}[m.before] = decode_arg_value(m.after)
+				}[m[1]] = decode_arg_value(m.after)
 			}
 			m = arg ~ /:/ {
 				# TODO: CreateOnly should ne only for properties, not for anchor
@@ -74,6 +74,7 @@ F process_argv(argv:Arr) {
 				}
 			}
 			true {
+				# TODO # t = AWS::detect(arg)
 				ret.push(cur)
 				next_cur()
 				cur.resource_id = arg

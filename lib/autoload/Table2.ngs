@@ -6,7 +6,8 @@ ns {
 	# --- TableView ---
 	type TableView
 
-		F init(tv:TableView, name:Str=null, view_name:Str=null, columns:Arr=null) {
+		F init(tv:TableView, name:Any=null, view_name:Str=null, columns:Arr=null) {
+			guard (name is Str) or (name is Null)
 			tv.name = name
 			tv.view_name = view_name or name
 			tv.columns = (columns or []).map(F(c) {
@@ -254,8 +255,9 @@ ns {
 			# TODO: special treatment for tmux? can print any width and tmux can be adjusted later.
 			# TODO: support Arr in headers
 
+			# TODO: syntax: tv := TableView(name = t.name, columns = t.cols_enum.keys())
 			if tv is Null {
-				tv = TableView(t.name, columns = t.cols_enum.keys())
+				tv = TableView(name = t.name, columns = t.cols_enum.keys())
 			}
 
 			columns_to_show = tv.columns.name

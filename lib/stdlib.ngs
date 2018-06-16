@@ -18,7 +18,7 @@ F to_exit_code(x) {
 
 doc Do nothing
 doc %RET - null
-F nop() null
+F nop(*args, **kwargs) null
 
 
 # === Trivial init() helper ===
@@ -1454,7 +1454,7 @@ F +(s1:Str, s2:Str) "${s1}${s2}"
 
 TEST "ab" + "cd" == "abcd"
 
-# === Array ======================================
+# === Arr ========================================
 
 
 doc Checks whether element x is in array arr
@@ -2160,6 +2160,23 @@ F split(e:Eachable1, delim) {
 }
 
 TEST [1, "a", 2, 3, "a", 4].split("a") == [[1], [2, 3], [4]]
+
+doc Call cb with array of maximum length of n, repeatedely for all items of e.
+doc TODO: better doc
+doc %STATUS - experimental
+F each_chunk(e:Eachable1, n:Int, cb:Fun) {
+	cur = []
+	e.each(F(x) {
+		cur.push(x)
+		if len(cur) == n {
+			cb(cur)
+			cur = []
+		}
+	})
+	if cur {
+		cb(cur)
+	}
+}
 
 doc Insert delimiter element between each two elements in an array
 doc %RET - Arr
@@ -3958,6 +3975,11 @@ doc %RET - Path
 doc %EX - Path("tmp") / Path("v8")  # <Path path=tmp/v8>
 F /(a:Path, b:Path) Path(a.path / b.path)
 
+doc Concatenate two Path-s using /(a:Str, b:Str)
+doc %RET - Path
+doc %EX - Path("tmp") / "v8"  # <Path path=tmp/v8>
+F /(a:Path, b:Str) Path(a.path / b)
+
 { type DirFail(CException) }
 
 doc List directory contents. Warning: "." and ".." are included.
@@ -3976,9 +3998,11 @@ doc %EX - 's=Stats(); dir("tmp/v8", {s.push(A.typeof().name)}, true); s  # <Stat
 F dir(dirname:Str, cb:Fun, subtype=false) {
 	d = c_opendir(dirname)
 	d is Null throws DirFail('Failed to list directory contents').set('dirname', dirname)
+	SKIP_DIRS = ['.', '..']
 	finally()
 		body => {
 			while entry = c_readdir(d) {
+				entry.d_name in SKIP_DIRS continues
 				cb(Path(dirname / entry.d_name, subtype=subtype))
 			}
 		}
@@ -3992,6 +4016,12 @@ F dir(dirname:Str, cb:Fun, subtype=false) {
 TEST dir("/").path.has("/var")
 TEST dir("/").all({A.typeof().name == 'Path'})
 TEST dir("/", subtype=true).all({ (A is Path) and (A.typeof().name != 'Path') })
+
+doc Same as dir(dirname.path, *args)
+F dir(dirname:Path, *args) dir(dirname.path, *args)
+
+doc Same as a.path > b.path
+F '>'(a:Path, b:Path) a.path > b.path
 
 doc Work in progress, do not use!
 F glob(pattern:Str, start_dir='.') {
@@ -4178,12 +4208,17 @@ F dup2_reading_end(p:Pipe, newfd:Int) dup2(p.read_fd, newfd)
 doc Create File object from the given path. The file is not open.
 doc %EX - f = File('/tmp/myfile')
 F init(f:File, path:Str) {
-	init(args())
+	f.path = path
 	f.fd = null
 }
 
 doc Create File object from the given file descriptor.
-F init(f:File, fd:Int) init(args())
+F init(f:File, fd:Int) {
+	f.path = null
+	f.fd = fd
+}
+
+F init(f:File, path:Path) super(f, path.path)
 
 doc String representation of File
 doc %EX - open(File("tmp/v8/LICENSE"), "r").Str().echo()  # Output: <File path=tmp/v8/LICENSE fd=4>
@@ -4281,6 +4316,10 @@ F fetch(filename:Str, decode_hints:Hash={}) {
 doc Read standard input and decode() it, passing "source" equals "stdin" hint.
 doc %EX - fetch()  # Data structure, parsed stdin
 F fetch(decode_hints:Hash={}) read(0).decode({'source': 'stdin'} + decode_hints)
+
+doc read() and decode() the given file
+doc %EX - fetch(File("1.json"))  # Data structure, the parsed JSON
+F fetch(p:Path, decode_hints:Hash={}) p.path.fetch(decode_hints)
 
 doc encode() and write() the data to the file
 doc %RET - null (but subject to change)
@@ -4964,13 +5003,41 @@ doc s - Str containing JSON with a Hash at top level with exactly one Arr as val
 doc hints - hints.process.command.argv[0] must be 'aws'
 doc %RET - data structure, tyically an Arr at top level. If s is empty string - null.
 F decode(s:Str, hints:Hash) {
-	guard try hints['process'].command.argv[0] == 'aws'
+	guard (try hints.process.command.argv[0] == 'aws') or (try hints.process.command.options.decode == 'aws')
 
-	# aws ec2 create-tags/delete-tags
-	s == '' returns null
+	if s == '' {
+		# cloudfront empty list
+		if hints.process.command.argv.get(1, null) == 'cloudfront' and hints.process.command.argv.get(2, null) ~ /^list/ {
+			return []
+		}
+		# aws ec2 create-tags/delete-tags
+		return null
+	}
 
 	data = decode_json(s)
 	guard data is Hash
+
+	if hints.process.command.argv.get(1, null) == 'cloudfront' {
+		# TODO: eliminate stupid 'Quantity' field.
+		# Can not convert {'Quantity': ..., 'Items': [ iii ]} to just [ iii ]
+		# because _some_ (of course, AWS) Hashes contain additional keys:
+		# TrustedSigners: [Enabled]
+		# AllowedMethods: [CachedMethods]
+		# GeoRestriction: [RestrictionType]
+	}
+
+	# CloudFront
+	# aws cloudfront list-invalidations --distribution-id --> { "InvalidationList": { "Items": [ ... ] } }
+
+	if (len(data) == 1) and (data.values()[0] is Hash) and (data.values()[0].len() == 1) {
+		candidate = data.values()[0].values().the_one()
+		candidate is Arr returns candidate
+	}
+
+	if 'DistributionList' in data {
+		guard data.DistributionList.len() == 1
+		return data.DistributionList.Items
+	}
 
 	# Use the only top-level key that has array as it's value
 	# Thanks goes to Elastic Beanstalk which complicates this,
@@ -4985,9 +5052,9 @@ F decode(s:Str, hints:Hash) {
 
 	# Anyone cares about Reservations? Certainly it's not the common case so...
 	if data.all('ReservationId' in X) {
-		# Put reservation data into .Reservation field of each instance, just in case
+		# Put reservation data into ._Reservation field of each instance, just in case
 		data.each(F(reservation) {
-			reservation.Instances.Reservation = reservation.without('Instances')
+			reservation.Instances._Reservation = reservation.without('Instances')
 		})
 		data = data.Instances.flatten()
 	}
@@ -5386,9 +5453,9 @@ F '[]'(s:Str, r:RegExp) {
 TEST "ab01de12f"[/[0-9]+/] == '01'
 
 doc Convert regular expression to a predicate.
-doc %RET - A function that checks whether the only argument matches r
+doc %RET - A function that checks whether the only argument (of type Str) matches r
 doc %EX - %[w1 w2].filter(/1/)  # %[w1]
-F Pred(r:RegExp) F regexp_pred(x) x ~ r
+F Pred(r:RegExp) F regexp_pred(x:Str) x ~ r
 
 TEST %[w1 w2].filter(/1/) == %[w1]
 

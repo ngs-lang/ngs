@@ -8,11 +8,11 @@ ngswhy - Motivation behind Next Generation Shell.
 
 # TLDR
 
-Because systems engineers ("DevOps") deserve better.
+Because systems engineers deserve better.
 
 # NGS BIRTH
 
-I was using bash and Python for systems administration ("DevOps") tasks, each one where it was a better fit for the task at hand. Neither felt like the best possible tool for the job.
+I was using bash and Python for systems administration tasks, each one where it was a better fit for the task at hand. Neither felt like the best possible tool for the job.
 
 While bash is a reasonable choice for running processes and handling files, it has serious flaws. Top ones are missing data structures (beyond strings, flat lists, and flat hashes), poor error handling, and syntax. Regarding data structures, one might say "just use `jq`". My opinion: `jq` is not nearly as convenient as having data structures in the language.
 

@@ -65,3 +65,15 @@ Good:
 	my_list.filter(my_func)
 	my_list.each(my_func)
 	my_func(my_val)
+
+# Method body of one short expression
+
+Not recommended:
+
+	F is_resource_code(s:Str)
+		s in RESOURCE_CODE_TO_RESOURCE_TYPE
+	}
+
+Recommended:
+
+	F is_resource_code(s:Str) s in RESOURCE_CODE_TO_RESOURCE_TYPE

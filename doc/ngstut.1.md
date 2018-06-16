@@ -30,6 +30,9 @@ This is a not a replacement for proper NGS syntax training, but rather an attemp
 -pi CODE
 : "Print Inspected" -- Will print out the result of the last expression, with more information about it
 
+-pt CODE
+: "Print Table" -- Will print out the result of the last expression as a table
+
 Examples:
 
 	echo "example" | ngs -p 'read()'

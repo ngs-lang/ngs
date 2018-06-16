@@ -12,8 +12,6 @@ Note that this started as internal document so things here are unformed, not fin
 	* Phase 1 - the language [in progress]
 
 		* Milestone "documentation" [in progress]
-			* Generated [done]
-			* Make coherenet markdown and generated HTML [in progress]
 			* Publish to a site
 
 		* Milestone "packaging"
@@ -48,7 +46,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* Milestone "even better documentation"
 			* HTML generated from Markdown: anchors for headers so that specific section could be linked to
-			* GC namespace methods should be shows as "GC::some_method" not as "some_method".
+			* GC namespace methods should be shown as "GC::some_method" not as "some_method".
 			* Tags (methods and types) and index by
 				+ higher-order functions
 				+ auto tag type:...
@@ -74,6 +72,10 @@ Note that this started as internal document so things here are unformed, not fin
 		* Milestone "correct programming"
 
 			* MethodParameter type
+
+			* Type's .user should be accessible from children types (per key inheritance)
+
+			* Warn about ``line: ...`` on non-last command
 
 			* Make indexes() take default value
 				* F ~(arr:Arr, r:PredRange) -- convert "try indexes()" to indexes() with default value
@@ -352,6 +354,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* Phase 6 - nice to have
 
+		* BigInt (allows meaningful parsing of X.509)
 		* Think about structured log (and possible ELK and other integrations?)
 			+ Environment variables for
 				+ Directing output

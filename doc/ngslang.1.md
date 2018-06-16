@@ -6,14 +6,14 @@
 
 ngslang - Next Generation Shell language reference.
 
-# What is ngs?
+# What is NGS?
 
-NGS is an alternative shell. At it's core is a domain-specific language that was specifically designed to be a shell language.
+NGS is an alternative shell. At its core is a domain-specific language that was specifically designed to be a shell language.
 
 NGS is under development. The language part is already good enough to write some useful scripts. The CLI still doesn't exist and will be written using the same language.
 
 
-# Running ngs scripts
+# Running NGS scripts
 
 **ngs** *script_name.ngs*
 
@@ -30,7 +30,7 @@ See more about running NGS in [NGS(1)](ngs.1.md).
 * type - Built-in or user-defined data type, similar to Python, Ruby and other languages.
 * object - Instance of a type, similar to Python, Ruby and other languages. The phrase "MyType object" refers to an Instance of "MyType".
 * field - A named slot of an object, similar to field in Python, Java, etc.
-* attributes - Slot for auxiliary data on most types of objects (the ones that are references, i.e. not Int,Bool,Null), typically a `Hash` or `null`.
+* attributes - Slot for auxiliary data on most types of objects (the ones that are references, i.e. not Int,Bool,Null), typically a `Hash` or `null`. Attributes are not fields and are accessed differently (using `attrs` method).
 * method - Built-in or user-defined function. User defined methods can be closures. Methods are also called functions in several places in the documentation.
 * multimethod - A MultiMethod object containing ordered list of methods. When called, the appropriate method is selected from the list to perform the computation.
 
@@ -40,9 +40,7 @@ This section is about principles behind NGS language design.
 
 ## Systems engineers' language
 
-NGS is a domain-specific language. It is aimed to solve common system tasks in a convenient manner.
-
-## Do the most practical thing
+NGS is a domain-specific language. It is aimed to solve common system tasks in a convenient manner. Some examples:
 
 * `fetch('myfile.json')` will decode the JSON and return the data structure. (Use `read()` to get raw contents).
 * The ```` ``my_command`` ```` will decode the command output (JSON for example) and return the data structure. Note that ```` ``aws ...`` ```` will be parsed even further (not just JSON) to return more usable data structures.
@@ -50,7 +48,7 @@ NGS is a domain-specific language. It is aimed to solve common system tasks in a
 
 ## Uniformity
 
-NGS tries to be uniform wherever possible to minimize surprises.
+NGS tries to be uniform wherever possible to minimize surprises. The idea here is to match between expected and actual behaviour of given method plus parameters.
 
 ## Power
 
@@ -178,7 +176,9 @@ Also, lines that start with "TEST " (note the trailing space) are considered to 
 
 As in other languages, variables are named locations that can store values. Variables' names should consist of ASCII letters (a-z, A-Z) and numbers (0-9). Variable name must start with a letter. Assignment to variables looks the same in both commands and code syntax. Referencing a variable in the code syntax is just the variable's name while referencing it in commands syntax or inside string interpolation is `$my_var` (not recommended) or `${my_var}` (recommended).
 
-Advanced topic: more precisely, the naming restrictions for the variables mentioned above are naming restrictions on identifiers. NGS can have variables that are named not by the rules above. This is not recommended except for special methods which correlate with NGS syntax which is a syntactic sugar for calling methods, for example, binary operators. See more about methods' naming in "Methods and multimethods" section below.
+Advanced topic: more precisely, the naming restrictions for the variables mentioned above are naming restrictions on identifiers. NGS can have variables that are named not by the rules above.
+
+Note that it is not recommended to use names which are not valid identifiers. As an exception to this rule, it's OK for methods which correlate with NGS syntax to have names which are not valid identifiers. Example of such methods are binary operators (`+`, `-`, etc.). See more about methods' naming in "Methods and multimethods" section below.
 
 Assigning to a variable works in both commands and code syntax.
 
@@ -220,6 +220,8 @@ Referencing undefined variable will cause `GlobalNotFound` or `UndefinedLocalVar
 It's a rare circumstance that one needs to use `defined`. Please try to avoid such situations.
 
 ## Variables' scoping rules
+
+Variables scoping is similar to Python's.
 
 Variables scope types:
 
@@ -351,7 +353,7 @@ Let's start with the following example:
 		'a' + 'b' # 'ab'
 	}
 
-The `+` is a multimethod. It has few methods. You can see definitions of two of the methods in the example above. One method adds numbers. Another method concatenates strings. How NGS knows which one of them to run? The decision is made based on arguments' types. NGS scans the methods list backwards and invokes the method that matches the given arguments (this matching process is called multiple dispatch).
+The `+` is a multimethod. It has a few methods. You can see definitions of two of the methods in the example above. One method adds numbers. Another method concatenates strings. How NGS knows which one of them to run? The decision is made based on arguments' types. NGS scans the methods list backwards and invokes the method that matches the given arguments (this matching process is called multiple dispatch).
 
 When a `MultiMethod` is called, the multimethod's methods list is searched from last element to first element. The method which parameters' types match is executed. This model is different from many other languages, where the most specific method is called. In NGS, if two methods' parameters both match the arguments, that one that was defined last is called. Typically, methods for more specific types are defined later in code so the behaviour is similar to other languages. If matched method is executed and a `guard` (see below) fails, the search is continued as if the method did not match.
 
@@ -397,8 +399,6 @@ As a syntactic sugar, method call `f(a, b, c)` can be written as `a.f(b, c)`.
 
 	# Output:
 	#   Hello world
-
-Note: `f(a, b, c)` is same as `a.f(b, c)`
 
 ## Methods for operators
 

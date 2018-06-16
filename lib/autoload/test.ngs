@@ -38,7 +38,8 @@ F test(results:TestsResults, group:Str, name:Str, f:Fun, critical:Bool=true) {
 	}
 }
 
-doc Internal method, a helper used by other assert_* methods.
+doc A helper used by other assert_* methods. Please do not use directly.
+doc %STATUS - internal
 F assert_base(actual, expected, comparison, display_comparison, title:Str, ok_prefix='') {
 	ok = comparison(actual, expected)
 	not(ok) throws TestFail("$title: actual value is $actual while expected $display_comparison $expected")
@@ -53,7 +54,7 @@ doc %RET - actual
 doc %EX - test("Heavy load on instance", {
 doc %EX -   # do the load
 doc %EX -   assert_eq(`curl -m 1 192.168.10.10/health`, 'OK')
-doc %EX - }
+doc %EX - })
 F assert_eq(actual, expected, title:Str=null) {
 	assert_base(actual, expected, (==), "to be equal to", title or "Data equality")
 }

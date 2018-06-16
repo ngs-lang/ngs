@@ -87,14 +87,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	F regions() _regions()
 
 	doc Call cb in parallel threads, each with AWS region name as argument.
-	doc cb - Must return an array. regions() sets .Region in the result and flattens the results
+	doc cb - Must return an array. regions() sets ._Region in the result and flattens the results
 	doc %RET - Arr
 	doc %EX - ins = AWS::regions({ ``aws ec2 describe-instances --region $A $*filters`` })
 	F regions(cb:Fun) {
 		regs = regions()
 		regs.pmap(F(r) {
 			data = cb(r)
-			data.Region = r
+			data._Region = r
 			data
 		}).flatten()
 	}
@@ -170,7 +170,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc AWS Resource definition
 	type ResDef(GlobalResDef)
 
-	doc Initialize ResDef from kw. Defaults: null for .regions and empty hash for .Tags
+	doc Initialize ResDef from kw. Defaults: null for ._Region and empty hash for .Tags
 	F init(rd:ResDef, **kw) {
 		if '_RelatedTo' in kw {
 			rd.related_to = kw._RelatedTo
@@ -180,11 +180,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 				kw.(prop) = rel
 			})
 		}
-		super(rd, {'regions': null, 'Tags': {}} + kw)
+		super(rd, {'_Region': null, 'Tags': {}} + kw)
 	}
 
-	doc Initialize ResDef from _ngs_tags. Sets .regions to null and .Tags to _ngs_tags.
-	F init(rd:ResDef, _ngs_tags:Hash) super(rd, {'regions': null, 'Tags': _ngs_tags})
+	doc Initialize ResDef from _ngs_tags. Sets ._Region to null and .Tags to _ngs_tags.
+	F init(rd:ResDef, _ngs_tags:Hash) super(rd, {'_Region': null, 'Tags': _ngs_tags})
 
 	doc Run an external command related to the resource definition. Will not run the command if rd.dry_run is true.
 	doc do_decode - Whether to decode the output
@@ -206,7 +206,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	}
 
 	F _assert_anchor_has_only_known_keys(rd:ResDef, *known_keys) {
-		rd.anchor.without('regions', null).without('Tags', {}).each(F(k, v) {
+		rd.anchor.without('_Region', null).without('Tags', {}).each(F(k, v) {
 			k not in known_keys throws InvalidArgument("Anchor contains unknown key '$k'. Known keys are: $known_keys")
 		})
 	}
@@ -216,6 +216,17 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			k not in known_keys throws InvalidArgument("Props contains unknown key '$k'. Known keys are: $known_keys")
 		})
 	}
+
+	# --------------------------------------------------
+	# Parameter
+	# --------------------------------------------------
+
+	doc A Box for a property which is to be used only at creation time, not when a resource is updated
+	type Parameter
+
+		F init(p:Parameter, res_type:Type, param_name:Str, param_value) init(args())
+
+	detect = Hook()
 
 	# --------------------------------------------------
 	# (updaters)
@@ -283,12 +294,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	F find(rd:ResDef) {
 		type_user_data = rd.typeof().user
-		allowed_keys = type_user_data.find_props_to_filters.keys()
-		if type_user_data.get('find_supports_tags') {
+		allowed_keys_sources = %[find_props_to_filters find_props_to_args find_props_to_post_filters]
+		allowed_keys = allowed_keys_sources.map(F(aks) type_user_data.get(aks, {}).keys()).flatten()
+		if %[find_supports_tags find_tags_command_1].any(X in type_user_data) {
 			allowed_keys .= push('Tags')
 		}
 		rd._assert_anchor_has_only_known_keys(*allowed_keys)
-		h = collector/{} type_user_data.find_props_to_filters.each(F(anchor_name, filter_name) {
+
+		find_props_filters = collector/{} type_user_data.get('find_props_to_filters', {}).each(F(anchor_name, filter_name) {
 			v = rd.anchor.Box(anchor_name) # .map(transform.get(anchor_name, identity))
 			# TODO: check that there is only one result?
 			# TODO: maybe it's not id() that should be used in some cases?
@@ -300,9 +313,39 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		} else {
 			[]
 		}
-		argv = Argv({ '--filters': cli_filters(h) + tags_filters })
+		find_props_args = collector/{} type_user_data.get('find_props_to_args', {}).each(F(anchor_name, arg_name) {
+			v = rd.anchor.Box(anchor_name)
+			v .= map(only(ResDef, ids))
+			collect(arg_name, v)
+		})
+
+		argv = Argv({ '--filters': cli_filters(find_props_filters) + tags_filters } + find_props_args)
 		res_type = type_user_data.res_type
 		rd.resources = ``$*{type_user_data.find_command} $*argv``.map(res_type(rd, X))
+		type_user_data.Box('find_describe_command').each(F(cmd) {
+			rd.resources.each(F(r) {
+				argv = cmd + [id(r)]
+				props = ``$*argv``
+				if type_user_data.get('find_describe_remove_top_level_hash', false) {
+					assert(props is Hash)
+					assert(props.len() == 1)
+					props = props.values().the_one()
+				}
+				props.each(F(k, v) {
+					if k in r.props {
+						assert(r.props[k] == v)
+						return
+					}
+					r.props[k] = v
+				})
+			})
+		})
+		type_user_data.get('find_props_to_post_filters', {}).each(F(prop_name, dummy) {
+			prop_name not in rd.anchor returns
+			rd.resources .= reject(F(r) {
+				r.props[prop_name] != rd.anchor[prop_name]
+			})
+		})
 		rd
 	}
 
@@ -321,11 +364,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 				throw InvalidArgument("'$k' parameter is required when creating ${type_user_data.display_name}")
 			}
 		}
-		echo("create() props $props")
 		argv = type_user_data.get('create_props_to_args', {}).mapkv(F(prop, arg) {
+			if prop is Fun {
+				return [arg, prop(rd)]
+			}
 			[arg, rd.opt_prop(prop, props).map(F(x) only(ResDef, ids)(x))]
 		}).Argv()
 		result = rd.run('Creating ' + rd.typeof().user.display_name, %($*{type_user_data.create_command} $*argv))
+		rd.dry_run returns []
 		if (result is Hash) and (result.len() == 1) {
 			result = result.values()[0]
 		}
@@ -659,6 +705,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc Single declarative primitive resource describing AWS Subnet
 	type SubnetRes(Res)
 
+	# XXX: change to new layout and use the generic find() and create() above
 	Subnet.user = %{
 		prefix subnet
 		id     SubnetId
@@ -780,6 +827,21 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		columns_order  %[InstanceId tag_Name tag_env tag_role IPs InstanceType State KeyName SecurityGroups AZ RestOfTags]
 	}
 
+	detect.instance_state = F(x) {
+		x not in INSTANCE_STATES returns null
+		Parameter(Instance, 'State', x)
+	}
+
+	# TODO: use botocore/data/ec2/DATE/service-2.json
+	detect.instance_type = F(x) {
+		not(x ~ /^[a-z]+[0-9]+[.][0-9]*[a-z]+$/) returns null
+		Parameter(Instance, 'InstanceType', x)
+	}
+
+	# TODO: regions?
+	# TODO: availability zones?
+	# TODO: IPs
+
 	doc Initialize Instance (ResDef) from kwargs
 	F init(rd:Instance, **kwargs) {
 		t = {} + kwargs
@@ -821,14 +883,14 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		debug("AWS::Instance", "Filters: $filters")
 
 		regs = cond {
-			rd.anchor.regions is Arr { rd.anchor.regions }
-			rd.anchor.regions == '*' { regions() }
+			rd.anchor._Region is Arr { rd.anchor._Region }
+			rd.anchor._Region == '*' { regions() }
 		}
 
 		resources = if regs {
 			instances = regs.pmap(F(r) {
 				ins = ``aws ec2 describe-instances --region $r $*filters``
-				ins.Region = r
+				ins._Region = r
 				ins
 			}).flatten()
 			# .filter(F(i) try i.PublicIpAddress)
@@ -837,7 +899,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 
 		if regs {
-			debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources in ${resources.group({A.Region}).len()} regions (${resources.group({A.Placement.AvailabilityZone}).len()} zones)")
+			debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources in ${resources.group({A._Region}).len()} regions (${resources.group({A.Placement.AvailabilityZone}).len()} zones)")
 		} else {
 			debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources in ${resources.group({A.Placement.AvailabilityZone}).len()} zones")
 		}
@@ -958,7 +1020,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		rd.anchor.ImageId
 	}
 
-	# TODO: handle regions
+	# TODO: handle _Region
 	doc Declarative primitive for waiting for AWS Instance resource to reach given state
 	doc state_name - typeically "running" or "stopped" (less common)
 	doc %RET - r
@@ -1166,7 +1228,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 		# Tags
 		if 'Tags' in props {
-			diff = Diff(elb.props.get('Tags', {}), props.Tags)
+			diff = _diff_tags(elb.props.get('Tags', {}), props.Tags)
 
 			if (tags = cli_tags(diff.add + diff.change)) {
 				elb.run('add ELB tags', %(aws elb add-tags --load-balancer-names ${elb.def.anchor.Name} --tags $*tags))
@@ -1252,32 +1314,104 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# Maybe support anchor hosted-zone-id in the future? Don't currently see how this could be useful.
 
 	doc Declarative primitive for referencing AWS Route53 hosted zones resources.
-	doc Supported anchor items: Name, ZoneName (in future _ZoneName), Type, SetIdentifier, Region.
+	doc Supported anchor items: Name.
 	doc %STATUS - experimental
 	type Zone(ResDef)
 	doc Single declarative primitive resource describing AWS Route53 hosted zones
 	type ZoneRes(Res)
 
+	# FIXME: zone-blah.com does not work, selects all zones
+
+	# ${F(x) x.anchor.get('CallerReference', "${x.anchor.Name}-${Time().Int()}")}  --caller-reference
 	Zone.user = %{
-		prefix               zone
-		prefix_is_synthetic ${true}
-		id                  ZoneName
+		prefix                zone
+		prefix_is_synthetic   ${true}
+		id                    Id
+
+		find_command          %[aws route53 list-hosted-zones UNUSED]
+		find_supports_tags    ${true}
+
+		create_command        %[aws route53 create-hosted-zone]
+		create_props_required %[Name]
+		create_props_to_args  %{
+			Name                   --name
+			${F(x) "${x.anchor.Name}-${Time().Int()}"}  --caller-reference
+		}
+
+
+		display_name          "Route53 DNS zone"
+		res_type              ${ZoneRes}
 	}
 
+	F init(rd:Zone, Name:Str) super(rd, Name=Name)
+
+	F route53_resource_id(id:Str) id.split('/')[2]
+
+	detect.zone_id = F(x) {
+		not(x ~ /^Z[0-9A-Z]+$/) returns null
+		Parameter(Zone, 'Id', "/hostedzone/${x}")
+	}
+
+	# TODO: Fix - selecting by --dns-name does *not* mean there will be at most
+	#       one such zone!
 	doc Declarative primitive for finding AWS Route53 hosted zones resources
 	F find(rd:Zone) {
 		debug("AWS", "Find Zone ${rd}")
+
+		rd._assert_anchor_has_only_known_keys(*%[Name Id Tags])
+
 		anchor = rd.anchor
 		filters = []
 
-		if 'ZoneName' in rd.anchor {
-			filters += ['--dns-name', rd.anchor.ZoneName, '--max-items', 1]
+		if 'Name' in anchor {
+			filters += ['--dns-name', anchor.Name, '--max-items', 1]
 		}
 
 		zones = ``aws route53 list-hosted-zones-by-name $*filters``
 
+		if 'Name' in anchor {
+			zones .= filter(F(z) (z.Name == anchor.Name) or (z.Name == anchor.Name + '.'))
+		}
+
+		if 'Id' in anchor {
+			zones .= filter(F(z) (z.Id == anchor.Id))
+		}
+
+		res_ids = zones.Id.map(route53_resource_id)
+		tags = collector/{} res_ids.each_chunk(10, F(ids) {
+			tags_chunk = ``aws route53 list-tags-for-resources --resource-type hostedzone --resource-ids $*{ids}``
+			tags_chunk.each(F(t) collect("/hostedzone/${t.ResourceId}", t.Tags))
+		})
+		zones.each(F(z) z.Tags = tags.get(z.Id, {}))
+
+		if 'Tags' in anchor {
+			zones .= filter(F(z) anchor.Tags.subset(z.Tags))
+		}
+
 		rd.resources = zones.map(ZoneRes(rd, X))
 		rd
+	}
+
+	F update(z:ZoneRes, props:Hash) {
+		debug("AWS", "${z} Update")
+
+		# Tags
+		if 'Tags' in props {
+			diff = _diff_tags(z.props.Tags, props.Tags)
+
+			if (tags = cli_tags(diff.add + diff.change)) {
+				z.run('add Zone tags', %(aws route53 change-tags-for-resource --resource-type hostedzone --resource-id ${z.id().split('/')[2]} --add-tags $*tags))
+			}
+
+			if (tags = diff.remove) {
+				z.run('remove Zone tags', %(aws route53 change-tags-for-resource --resource-type hostedzone --resource-id ${z.id().split('/')[2]} --remove-tag-keys $*tags))
+			}
+		}
+	}
+
+	F delete(z:ZoneRes) {
+		type_user_data = z.def.typeof().user
+		z.run('Deleting ' + type_user_data.display_name, %(aws route53 delete-hosted-zone --id ${z.props.Id}))
 	}
 
 	# --------------------------------------------------
@@ -1302,32 +1436,32 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		id     Name
 	}
 
-	doc Declarative primitive for validating AWS Route53 RecordSet
-	F validate(rd:RecordSet) {
-		%[Name ZoneName].each(F(prop_name) {
-			prop_name not in rd.anchor throws InvalidArgument("Anchor must contain $prop_name")
-			not(rd.anchor[prop_name] ~ Sfx('.')) throws InvalidArgument("$prop_name (${rd.anchor[prop_name]}) must end with a dot")
-		})
-		"todo"
-	}
-
 	doc Declarative primitive for finding AWS Route53 RecordSet
 	F find(rd:RecordSet) {
 		debug("AWS", "Find RecordSet ${rd}")
 		anchor = rd.anchor
-		zones = ``aws route53 list-hosted-zones-by-name --dns-name ${anchor.ZoneName} --max-items 1``
 
-		assert(zones.len() == 1 and zones[0].Name == anchor.ZoneName, "Zone ${anchor.ZoneName} not found when trying to manipulate a RecordSet in it")
-		zone_id = zones[0].Id
+		zone_id = if 'ZoneName' in anchor {
+			zones = ``aws route53 list-hosted-zones-by-name --dns-name ${anchor.ZoneName} --max-items 1``
+
+			assert(zones.len() == 1 and zones[0].Name == anchor.ZoneName, "Zone ${anchor.ZoneName} not found when trying to manipulate a RecordSet in it")
+			zones[0].Id
+		} else {
+			only(ResDef, ids)(anchor.ZoneId).the_one()
+		}
 		rd.zone_id = zone_id
 
-		type_args = Argv({
-			'--start-record-name': anchor.Box('Name')
-			'--start-record-type': anchor.Box('Type')
-		})
+		start_args = if 'Name' in anchor {
+			Argv({
+				'--start-record-name': anchor.Box('Name')
+				'--start-record-type': anchor.Box('Type')
+			})
+		} else {
+			[]
+		}
 
 		# XXX: getting 100 rrs. Overkill / underkill.
-		rrs = ``aws route53 list-resource-record-sets --hosted-zone-id $zone_id $*type_args``
+		rrs = ``aws route53 list-resource-record-sets --hosted-zone-id $zone_id $*start_args``
 
 		for prop in %[Name Type SetIdentifier Region] {
 			if prop in anchor {
@@ -1335,7 +1469,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			}
 		}
 
-		rd.resources = rrs / RecordSetRes(rd, X)
+		rd.resources = rrs.map(RecordSetRes(rd, X))
 		rd
 	}
 
@@ -1360,6 +1494,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 				'ResourceRecordSet': _get_props(rd, props)
 			}]
 		}
+		echo("PROPS $props")
 		rd.run('create RecordSet', %(aws route53 change-resource-record-sets --hosted-zone-id ${rd.zone_id} --change-batch ${change_batch.encode_json()}))
 		if not(rd.dry_run) {
 			# XXX use some id from run() above
@@ -1400,8 +1535,25 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	}
 
 	# --------------------------------------------------
-	# Bucket
+	# Az
 	# --------------------------------------------------
+
+	type Az(ResDef)
+	type AzRes(Res)
+
+	Az.user = %{
+		id     ZoneName
+		prefix az
+		prefix_is_synthetic ${true}
+
+		find_command          %[aws ec2 describe-availability-zones]
+		find_props_to_filters %{
+			RegionName region-name
+			State      state
+			ZoneName   zone-name
+		}
+		res_type ${AzRes}
+	}
 
 	# TODO
 
@@ -1529,23 +1681,124 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# AvailabilityZone
 	# --------------------------------------------------
 
-	type Az(ResDef)
-	type AzRes(Res)
+	type Bucket(ResDef)
+	type BucketRes(Res)
 
-	Az.user = %{
-		id     ZoneName
-		prefix az
+	# TODO: unhardcode region
+	Bucket.user = %{
+		id                   Name
+		prefix               bucket
 		prefix_is_synthetic ${true}
 
-		find_command          %[aws ec2 describe-availability-zones]
+		find_command          %[aws s3api list-buckets]
 		find_props_to_filters %{
-			RegionName region-name
-			State      state
-			ZoneName   zone-name
 		}
-		res_type ${AzRes}
+		find_props_to_post_filters %{
+			Name DUMMY
+		}
+
+		create_command        %[aws s3api create-bucket --region us-east-1]
+		create_props_to_args  %{
+			Name --bucket
+		}
+
+		delete_command        %[aws s3api delete-bucket --bucket]
+
+		res_type ${BucketRes}
+		display_name          "S3 bucket"
 	}
 
+	# --------------------------------------------------
+	# Certificate
+	# --------------------------------------------------
+
+	type Certificate(ResDef)
+	type CertificateRes(Res)
+
+	detect.certificate_arn = F(x) {
+		not(x ~ /^arn:aws:acm:eu-central-1:209483131680:certificate\//) returns null
+		Parameter(Certificate, 'CertificateArn', x)
+	}
+
+
+	# aws acm request-certificate --domain-name test2.com --validation-method DNS
+	# TODO: Support email validation?
+	# TODO: after creation, describe should be used and not list (i think)
+	Certificate.user = %{
+		id                  CertificateArn
+		prefix              cert
+		prefix_is_synthetic ${true}
+
+		find_command          %[aws acm list-certificates]
+		find_props_to_args    %{
+			Status         --certificate-statuses
+		}
+		find_props_to_post_filters %{
+			DomainName     DUMMY
+			CertificateArn DUMMY
+		}
+
+		find_describe_command %[aws acm describe-certificate --certificate-arn]
+		find_describe_remove_top_level_hash ${true}
+
+		create_command        %[aws acm request-certificate --validation-method DNS]
+		create_props_to_args  %{
+			DomainName  --domain-name
+
+		}
+		delete_command        %[aws acm delete-certificate --certificate-arn]
+
+		res_type ${CertificateRes}
+		display_name          "ACM certificate"
+	}
+
+	# --------------------------------------------------
+	# Distribution
+	# --------------------------------------------------
+
+	type Distribution(ResDef)
+	type DistributionRes(Res)
+
+	# detect.certificate_arn = F(x) {
+	# 	not(x ~ /^arn:aws:acm:eu-central-1:209483131680:certificate\//) returns null
+	# 	Parameter(Distribution, 'DistributionArn', x)
+	# }
+
+
+	# aws cloudfront create-distribution --origin-domain-name www.yahoo.com
+	# find_tags_command_1   %[aws cloudfront list-tags-for-resource --resource]
+	Distribution.user = %{
+		id                  Id
+		prefix              dist
+		prefix_is_synthetic ${true}
+
+		find_command          %[aws cloudfront list-distributions]
+
+		create_command        %[aws cloudfront create-distribution]
+		create_props_to_args  %{
+			Origins.DomainName  --origin-domain-name
+		}
+
+		update_methods        %{
+			Enabled  ${
+				F update_enabled(d:DistributionRes, v:Bool) {
+					d.props.Enabled == v returns
+					debug("AWS", "Will modify DistributionRes.props.Enabled from ${d.props.Enabled} to ${v}")
+					conf = ``aws cloudfront get-distribution-config --id ${d.id()}``
+					conf.DistributionConfig.Enabled = v
+					d.run('Update Enabled', %(aws cloudfront update-distribution --id ${d.id()} --if-match ${conf.ETag} --distribution-config ${conf.DistributionConfig.encode_json()}))
+				}
+			}
+		}
+
+		res_type ${DistributionRes}
+		display_name          "CloudFormation Distribution"
+	}
+
+	F delete(d:DistributionRes) {
+		conf = ``aws cloudfront get-distribution-config --id ${d.id()}``
+		d.run('Delete', %(aws cloudfront delete-distribution --id ${d.id()} --if-match ${conf.ETag}))
+	}
 
 
 	# ==================================================
@@ -1631,32 +1884,40 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		[t.user.prefix, t]
 	}).Hash()
 
-	doc Work in progress, do not use!
-	F q(id:Str, **kw) {
-		m = id ~ /^([a-z]+)-[a-zA-Z0-9]+$/
-		if not(m) {
-			m = id ~ /^(elb|zone)-(.+)$/
-		}
-		guard m
-		guard m[1] in RESOURCE_CODE_TO_RESOURCE_TYPE
-		t = RESOURCE_CODE_TO_RESOURCE_TYPE[m[1]]
-		if t.user.get('prefix_is_synthetic') {
-			id = m[2]
-		}
-		args = { t.user.id: id } + kw
-		t(**args)
+	detect.plain_prefix = F(x) {
+		RESOURCE_CODE_TO_RESOURCE_TYPE.get(x)
 	}
 
-	doc Work in progress, do not use!
-	F q(id:Str, **kw) {
-		guard id in RESOURCE_CODE_TO_RESOURCE_TYPE
-		t = RESOURCE_CODE_TO_RESOURCE_TYPE[id]
-		t(**kw)
+	detect.prefixed_resource = F(x) {
+		m = x ~ /^([a-z]+)-[a-zA-Z0-9]+$/
+		not(m) returns null
+		t = RESOURCE_CODE_TO_RESOURCE_TYPE.get(m[1])
+		t is Null returns null
+		t.user.get('prefix_is_synthetic') returns null
+		p = Parameter(t, t.user.id, x)
 	}
 
-	F is_resource_code(s:Str) {
-		s in RESOURCE_CODE_TO_RESOURCE_TYPE
+	detect.synthetically_prefixed_resource = F(x) {
+		m = x ~ /^([a-z]+)-(.+)$/
+		not(m) returns null
+		t = RESOURCE_CODE_TO_RESOURCE_TYPE.get(m[1])
+		t is Null returns null
+		t.user.get('prefix_is_synthetic').not() returns null
+		p = Parameter(t, t.user.id, m[2])
 	}
+
+	# doc Work in progress, do not use!
+	F q(s:Str, **kw) {
+		detected = detect(s).values().reject(NoData).map(ensure_array).flatten()
+		debug("AWS", "q() detected ${detected}")
+		not(detected) throws InvalidArgument("Unkown resource").set('s', s)
+		detected.len() > 1 throws Error("TODO")
+		d = detected[0]
+		d is Type returns d(**kw)
+		(d.res_type)( **{ d.param_name: d.param_value } + kw )
+	}
+
+	F is_resource_code(s:Str) s in RESOURCE_CODE_TO_RESOURCE_TYPE
 
 	# --------------------------------------------------
 	# related_to
