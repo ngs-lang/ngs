@@ -8,9 +8,7 @@ Next Generation Shell.
 Quick links
 ===========
 
-* [Language tutorial](https://ilyash.github.io/ngs-doc/ngslang.1.html)
-* [Built-in types generated documentation](https://ilyash.github.io/ngs-doc/types.html) (WIP)
-* [Built-in method generated documentations](https://ilyash.github.io/ngs-doc/methods.html) (WIP)
+* [NGS Website](https://ngs-lang.org/)
 * [NGS Facebook group](https://www.facebook.com/groups/next.generation.shell/)
 * [Reddit](https://www.reddit.com/r/NextGenerationShell/)
 
