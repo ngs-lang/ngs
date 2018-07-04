@@ -12,8 +12,8 @@ Quick links
 * [NGS Facebook group](https://www.facebook.com/groups/next.generation.shell/)
 * [Reddit](https://www.reddit.com/r/NextGenerationShell/)
 
-Motivation - The problem with current state
-===========================================
+The problem
+===========
 
 Shells are [Domain Specific Languages](https://en.wikipedia.org/wiki/Domain-specific_language).  The domain has changed greatly since the shells we use today were conceived.  The shells never caught up.
 

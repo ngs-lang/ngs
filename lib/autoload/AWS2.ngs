@@ -1027,7 +1027,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	F wait_state(r:InstanceRes, state_name:Str) {
 		retry(
 			sleep = 5
-			catch_exceptions = false
 			logger = debug("AWS", X)
 			title = "[waiting intstance ${r.id()} to be in state $state_name]"
 			body = {
@@ -1049,7 +1048,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		retry(
 			sleep = 5
 			title = "[waiting intstance ${r.id()} to have console output]"
-			catch_exceptions = false
 			logger = debug("AWS", X)
 			title = "[waiting intstance ${r.id()} console output]"
 			body = {

@@ -207,11 +207,10 @@ TEST test; assert_has([1,2,3], 3) == [1,2,3]
 doc Assert given host is resolvable. Uses "dig" command line utility. Retries "times" times, sleeping "sleep" seconds in between. Throws TestFail.
 doc %EX - assert_resolvable("my_new_host.example.com")
 doc %RET - don't count on return value
-F assert_resolvable(h:Str, title:Str="Resolve host", times=45, sleep=2, check=Bool) {
+F assert_resolvable(h:Str, title:Str="Check that host is resolvable", times=45, sleep=2, check=Bool) {
 	retry(times=times, sleep=sleep, title=title,
 		body              = { `dig "+short" $h`.lines() }
 		success_predicate = check
-		success_cb        = { null }
 		fail_cb           = { throw TestFail("$title: no resolve for $h").set('host', h) }
 	)
 	h
@@ -220,16 +219,9 @@ F assert_resolvable(h:Str, title:Str="Resolve host", times=45, sleep=2, check=Bo
 doc Assert given path exists.
 doc p - Str or Path
 doc %RET - p
-F assert_path_exists(p, title:Str="Path exists") {
+F assert_path_exists(p, title:Str="Check that path exists") {
 	guard (p is Str) or (p is Path)
-	path = p
-	if path is not Path {
-		path .= Path()
-	}
-	if path {
-		log_test_ok("$title: Path ${path.path} exists")
-		return p
-	}
-	throw TestFail("$title: Path ${path.path} does not exist").set('path', p)
+	Path(p) returns p
+	throw TestFail("$title: Path ${p} does not exist").set('path', p)
 }
 

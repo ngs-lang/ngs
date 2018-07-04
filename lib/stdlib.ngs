@@ -5833,19 +5833,17 @@ doc times - Limit of times to run "body"
 doc sleep - Either sleep in seconds between tries or Iter that returns successive sleep times in seconds
 doc logger - Function to use to log attempts, caught body exceptions and sleep times. Defaults to stdlib's debug.
 doc success_predicate - CANDIDATE FOR REMOVAL. Run against body results to. Says whether the attempt succeeded. Defaults to Bool.
-doc catch_exceptions - Catch exceptions that might occur in body and treat them as if body returned failure.
 doc title - Prefix strings sent to logger with this string. Defaults to "<retry>".
 doc progress_cb - Called before each attempt with (1) current attempt number and (2) limit of attempts ("times"). Defaults to do nothing.
 doc success_cb - Called when body succeeds with the result that comes from body. Defaults to identity function.
 doc fail_cb - If passed, called if all attempts fail. Defaults to null.
 doc %RET - Any. Result of success_cb or result of fail_cb.
-doc %EX - page = retry(times=10, sleep=ExpBackIter(), body={ `curl "http://flaky-site.com"` })
+doc %EX - page = retry(times=10, sleep=ExpBackIter(), body={ try `curl "http://flaky-site.com"` })
 F retry(
 	times:Int=60,
 	sleep=1,
 	logger:Fun=debug("retry", X),
 	success_predicate=Bool,
-	catch_exceptions:Bool=true,
 	title="<retry>",
 	progress_cb:Fun={null},
 	success_cb:Fun=identity,
@@ -5863,7 +5861,7 @@ F retry(
 			result = body()
 		} catch(e:Exception) {
 			logger("$title Exception $e")
-			not(catch_exceptions) throws e
+			throw e
 		}
 		if success_predicate(result) {
 			return success_cb(result)
