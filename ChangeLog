@@ -11,7 +11,10 @@
 	* Add experimental each_chunk(e:Eachable1, n:Int, cb:Fun)
 	* Improve Pred(r:RegExp)
 	* Fix join(Arr) for array of "Thread"s
+	* Bool(Path) now checks that underlying file system object is of the correct type
 	* dir() now skips . and .. entries
+	* dir() now has "raw" parameter
+	* decode() now parses "locate" output
 	* nop() now takes any arguments
 	* retry() - removed "catch_exceptions" parameter
 	* assert_path_exists() - improve implementation

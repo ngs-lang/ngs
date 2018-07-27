@@ -3917,6 +3917,21 @@ TEST Path('/').Bool()
 TEST Path('/no-such-file').Bool() == false
 TEST Path('/', true) is Dir
 
+doc Check whether file system object at given path
+doc is of the given type.
+doc %EX - if File("myfile.txt") ...
+doc %EX - if Dir("my_tmp_dir") ...
+doc %STATUS - experimental
+F Bool(p:Path) {
+	# Only subclasses
+	guard typeof(p) != Path
+	ok = super(p)
+	not(ok) returns false
+	s = lstat(p)
+	file_type = s.st_mode.band(C_S_IFMT)
+	p is STDLIB_FILE_TYPE[file_type]
+}
+
 # TODO: better exceptions (use correct type, not string, maybe use errno)
 # TODO: support platforms with non ":" path delimiter?
 doc Finds given binary and returns it's full path.
@@ -3982,20 +3997,21 @@ F /(a:Path, b:Str) Path(a.path / b)
 
 { type DirFail(CException) }
 
+# TODO: recode after https://github.com/ngs-lang/ngs/issues/45 is solved
 doc List directory contents. Warning: "." and ".." are included.
 doc Throws DirFail when directory can not be listed.
 doc subtype - Select type of returned items: true for Path sub-type, false for Path type
 doc %RET - Arr of Path or it's sub-type
 doc %EX - dir("tmp/v8", true).filter(File)  # [ ..., <File path=tmp/v8/README.md fd=null>, <File path=tmp/v8/LICENSE.valgrind fd=null>, ... ]
 doc %EX - dir("tmp/v8", true).filter(Dir)   # [ ..., <Dir path=tmp/v8/tools>, <Dir path=tmp/v8/infra>, ... ]
-F dir(dirname:Str, subtype=false) collector dir(dirname, collect, subtype)
+F dir(dirname:Str, subtype=false, **kwargs) collector dir(dirname, collect, subtype, **(kwargs.without('subtype')))
 
 # TODO: recurse ?
 # TODO: filter out "." and ".." ?
 doc List directory contents and call cb with Path() of each found item. Warning: "." and ".." are included.
 doc %RET - unspecified at this time, do not count on it
 doc %EX - 's=Stats(); dir("tmp/v8", {s.push(A.typeof().name)}, true); s  # <Stats: {File=23, Dir=16}>'
-F dir(dirname:Str, cb:Fun, subtype=false) {
+F dir(dirname:Str, cb:Fun, subtype=false, raw=false) {
 	d = c_opendir(dirname)
 	d is Null throws DirFail('Failed to list directory contents').set('dirname', dirname)
 	SKIP_DIRS = ['.', '..']
@@ -4003,7 +4019,11 @@ F dir(dirname:Str, cb:Fun, subtype=false) {
 		body => {
 			while entry = c_readdir(d) {
 				entry.d_name in SKIP_DIRS continues
-				cb(Path(dirname / entry.d_name, subtype=subtype))
+				if raw {
+					cb(entry.d_name)
+				} else {
+					cb(Path(dirname / entry.d_name, subtype=subtype))
+				}
 			}
 		}
 		cleanup => {
@@ -4018,7 +4038,7 @@ TEST dir("/").all({A.typeof().name == 'Path'})
 TEST dir("/", subtype=true).all({ (A is Path) and (A.typeof().name != 'Path') })
 
 doc Same as dir(dirname.path, *args)
-F dir(dirname:Path, *args) dir(dirname.path, *args)
+F dir(dirname:Path, *args, **kwargs) dir(dirname.path, *args, **kwargs)
 
 doc Same as a.path > b.path
 F '>'(a:Path, b:Path) a.path > b.path
@@ -5070,6 +5090,15 @@ F decode(s:Str, hints:Hash) {
 	guard '-printf' not in argv
 	zero_sep = '-print0' in argv
 	if zero_sep then s.split(chr(0))[0..-1] else s.lines()
+}
+
+doc Parse the output of "locate" command.
+doc hints - hints.process.command.argv[0] must be 'locate'
+doc %RET - Arr of Str
+F decode(s:Str, hints:Hash) {
+	guard try hints['process'].command.argv[0] == 'locate'
+	# .map(Path) ?
+	s.lines()
 }
 
 # === config =====================================
