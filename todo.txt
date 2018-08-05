@@ -1,176 +1,14 @@
+**************************************************************
+* THE CONTENTS OF THIS FILE ARE BEING MOVED TO GITHUB ISSUES *
+**************************************************************
+
 Note that this started as internal document so things here are unformed, not final and fluid.
-
-[inbox]
-
-	Unsorted and undecided things go here. The important sections is [roadmap] and it's just below this section.
-
-	* Allow dump() to stderr (to use in print_exception in bootstrap)
-
 
 [roadmap]
 
 	* Phase 1 - the language [in progress]
 
-		* Milestone "documentation" [in progress]
-			* Publish to a site
-
-		* Milestone "packaging"
-			* Debian packages
-			* Brew package
-			* Arch Linux package
-			* Install ngs syntax detection and highlighting for vim
-			* Make multiple versions installable side by side, like Node.js
-
-		* Milestone "programming"
-			* SwitchFail - add useful information
-			* chdir() and $(cd:... my_prog) option
-			* files globbing
-				consider special syntax such as <foo*bar>
-				think about Res globbing
-
-		* Milestone "modules"
-			* require() - add search path
-			* require() - allow relative to caller require
-				* compile() - get list of "local" variables?
-				* load() - pass these "local" variables?
-				* require() - pass new require() function that knows base path?
-				* require() - pass __FILENAME and maybe __DIRNAME?
-			* require() - support algorithm+signature: modules can theoretically be fetched over network
-			* consider pre- and post- require() hooks
-			* versioning
-				+ maybe "require('mymod', '=2.0.1')" like "use" in perl
-				+ maybe "require('mymod', '2.0.1'..'2.0.9')" similar to perl but range
-				+ maybe specifying methods' signatures
-				+ maybe methods should be versioned (like in .so files)
-				+ how different module versions can run alongside?
-
-		* Milestone "even better documentation"
-			* HTML generated from Markdown: anchors for headers so that specific section could be linked to
-			* GC namespace methods should be shown as "GC::some_method" not as "some_method".
-			* Tags (methods and types) and index by
-				+ higher-order functions
-				+ auto tag type:...
-				+ auto tag file:...
-			* Types - links to definition in source code
-			* Method brief description (for MultiMethod summary)
-			* Namespaces -> Methods. Mark which are additions to globals and which are local.
-			* Tables documentation - examples
-			* Finish c_* methods documentation
-			* Add field (for example for Absent) for methods that get Arr[T] to link that method from type T page
-			* Tags associated with methods/types/namespaces
-			* Add "-pd" switch: print documentation
-				+ Should take one of:
-					+ Type
-					+ Method
-					+ Namespace
-					+ Topic
-				+ Add some method to list topics?
-				+ Use pager?
-				+ Simple formatting as plain text when no pandoc installed, man formatting when pandoc installed? Maybe pre-compiled man pages?
-			* Internals
-
 		* Milestone "correct programming"
-
-			* MethodParameter type
-
-			* Type's .user should be accessible from children types (per key inheritance)
-
-			* Warn about ``line: ...`` on non-last command
-
-			* Make indexes() take default value
-				* F ~(arr:Arr, r:PredRange) -- convert "try indexes()" to indexes() with default value
-
-			* Add missing F ~~(arr:Arr, r:PredRange)
-				+ Can be good for parsing certificate chains
-				  x.lines() ~~ /-BEGIN/.../-END/
-
-			* Make sure this works:
-				something
-				.method1()
-				.method2()
-
-			* Convert VERSION to an object and add option to print it as JSON
-
-			* Consider adding FEATURES (Hash?)
-
-			* Support multi-command / multi-line $(...) syntax
-
-			* OS - make it a type, not a list booleans
-
-			* See what can be fixed regarding functions that accept Arr[T] for specific types
-				+ Such as join(threads:Arr) in lib/autoload/Thread.ngs
-
-			* Rethink null/exception/Box
-				+ F index
-				+ F zip
-				+ F pos
-				+ {,e}{switch,match,cond}
-
-			* ec2hostsfile.ngs - fix the tags filter
-
-			* Syntax fixes
-				* Fix operators priority for obj.Mod::method()
-					+ Probably needs rework "." to be regular binop with priority
-				* Fix syntax: "ifx" is now "if x"
-				* Fix parser in
-					function_call(
-						with_comments,
-						# syntax
-						yes)
-				* Fix $(separate$item issue)
-				* Fix segfault in case of comments between cond clauses
-				* Fix - ngs: vm.c:2988: vm_run: Assertion `0=="Function does not have result value"' failed.
-					F decode(s:Str, hints:Hash) {
-						guard try hints['process'].command.argv[0] == 'find'
-						# argv = hints['process'].command.argv
-						# guard '-printf' not in argv
-						# zero_sep = '-print0' in argv
-						# if zero_sep then s.split('\0') else s.lines()
-					}
-				* Make comments that begin not at beginning of line work
-
-			* Think about unification of Eachable and Iter
-				* Maybe something resembling "yield"
-
-			* Namespace type, probably subtype of Hash
-
-			* decode_json - meaningful exceptions
-
-			* Adding a field to a type is not thread safe because of possible fields hash (field name -> field number) update
-
-			* [Doc.ngs] check why n = Node('html', children = tl.children) does not work
-
-			* Option to turn backtraces on in warn() and error()
-				* Make option for unique backtraces only
-
-			* ns { F init(...) ... } -- forgetting "global init" is hard to debug
-
-			* F main(a:Str, b:Str=null) is not matched when only one argument is passed
-				happens because all matched arguments are treated as positional
-				should implement keyword-only arguments first
-
-			* Reconsider Int inheriting Eachable. Think 10.flatten() - very strange behaviour. Maybe Visitable/Traversable or alike is needed for containers.
-			* Fix parser for # comments at end of line
-			* MacOS warning: "gc repeated allocation of very large block"
-
-			* Keyword only arguments
-				* then think about File("/etc/myconfig")[lines='# start'..'# end'] = ['my', 'content']
-			* AWS
-				* Creating an AWS res not matching the Anchor - think
-				* AWS fix SG rules (IpPermBox < IpPermBox)
-					Make it work correctly when one rule is superset of another one
-				* AWS::SecGroup - check whether Description is Anchor-only
-				* AWS::Instance -- make sure Anchor works as expected
-				* Add test for find(Vpc) isDefault property
-				* Add _Unused property or alike to find unused security groups, vpcs, load balancers, etc...
-
-			* Look for sets of C constants to move to namespaces
-				+ C_PCRE_* - move to C_PCRE namespace?
-				+ others?
-
-			* Standardizing InvalidArgument
-				+ offending value in .value
-				+ other fields?
 
 			* cmake - check that C macros exists (E..., RTLD_...) and make them available. Currently most of the are commented out due to Mac OS support.
 
@@ -182,19 +20,7 @@ Note that this started as internal document so things here are unformed, not fin
 
 			* Namespace: "ns { F f() ... }" when f is global, ns::f should only list f implementations defined in the namespace?
 
-			* Check map* and filter* functions naming consistency
-
-			* c_stat() / stat() - return timestamps too
-
-			* Run exit_hook on CTRL+C (Throw exception)
-
 			* Copy stderr to both stderr and to captured .stderr of the process
-
-			* Bool(subtypes of Path) - kind of object (File, Dir, etc) must match to what's on disk
-
-			* think about read/write vs read/echo methods naming
-
-			* locals() - to complete globals()
 
 			* Make sure attrs() are implemented on all possible types
 
@@ -205,12 +31,6 @@ Note that this started as internal document so things here are unformed, not fin
 			* Partial application syntax
 				* Make sure it works correct in expressions such as 10 + X * 2
 				* Check that this works: f(X, *something, **some_kw)
-
-			* Go over naming convention, making sure it's consistent and can be easily described in the manual
-
-			* Binary safe strings
-				* echo()
-				* anywhere else?
 
 			* Make sure not to leak FDs to processes that NGS runs
 				+ See bash-4.3/execute_cmd.c, execute_in_subshell(), "fds_to_close"
@@ -354,7 +174,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 	* Phase 6 - nice to have
 
-		* BigInt (allows meaningful parsing of X.509)
 		* Think about structured log (and possible ELK and other integrations?)
 			+ Environment variables for
 				+ Directing output
@@ -511,15 +330,9 @@ Note that this started as internal document so things here are unformed, not fin
 
 		* K M G suffixes for numbers
 
-		* arbitrary length integers
-
 		* Dynamic file names for use cases such as logger
 			logger = DynFile('/var/log/...%h')
 			logger.echo('my log event')
-
-		* (UI) Suggested commands ("Command ... did not find any results. Try ..." - CLI menu)
-
-		* digits() function?
 
 		* Channels - Chan type & syntax
 			Initial syntax thoughts:

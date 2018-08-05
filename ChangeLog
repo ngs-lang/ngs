@@ -8,7 +8,9 @@
 	* "aws" command output parsing - .Reservation renamed to ._Reservation
 	* Add "dollar \$ escaping syntax"
 	* Add map_idx_val(e:Eachable1, mapper:Fun)
+	* Add myip()
 	* Add experimental each_chunk(e:Eachable1, n:Int, cb:Fun)
+	* Add experimental decode(s:Str, t:Type)
 	* Improve Pred(r:RegExp)
 	* Fix join(Arr) for array of "Thread"s
 	* Bool(Path) now checks that underlying file system object is of the correct type

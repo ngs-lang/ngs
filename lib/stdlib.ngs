@@ -880,6 +880,40 @@ doc %RET - "<Type NAME>"
 doc %EX - Real.Str().echo()  # Outputs: <Type Real>
 F Str(t:Type) "<Type ${t.name}>"
 
+{
+	type DecodeFail
+	DecodeFail.inherit(Exception)
+}
+
+doc Decode (parse) strings such as command line arguments or environment variables to result given type
+doc %STATUS - experimental
+F decode(s:Str, t:Type) {
+	F _fail(cause:Exception=null) {
+		args = ["Failed to decode value. Could not convert given value to type ${t.name}", cause].reject(Null)
+		throw DecodeFail(*args).set('value', s).set('target_type', t)
+	}
+	if t in [Int, Real, Str] {
+		return try {
+			t(s)
+		} catch(e:InvalidArgument) {
+			_fail(e)
+		}
+	}
+	if t == Bool {
+		s ~ /^(1)|(y(es?)?)|true|on$/i returns true
+		s ~ /^(0)|(no?)|false|off$/i returns false
+		_fail(e)
+	}
+	guard false
+}
+
+TEST decode("no", Bool) == false
+TEST decode("0", Bool) == false
+TEST decode("yes", Bool) == true
+TEST decode("1", Bool) == true
+TEST decode("1", Int) == 1
+TEST decode("1", Real) == 1.0
+
 # === NormalType =================================
 
 doc String representation of normal type instance i
@@ -4333,6 +4367,14 @@ F fetch(filename:Str, decode_hints:Hash={}) {
 	decode(data, {'filename': filename} + decode_hints)
 }
 
+# TODO: think about protocols support, programs support (wget, curl, ...) and refactor
+doc Fetch HTTP(S) file and decode() it
+doc %EX - fetch('https://api.myip.com')  # Data structure, the parsed JSON
+F fetch(url:Str, decode_hints:Hash={}) {
+	guard url ~ /^(https?):\/\//
+	decode(`curl -s $url`, {'url': url})
+}
+
 doc Read standard input and decode() it, passing "source" equals "stdin" hint.
 doc %EX - fetch()  # Data structure, parsed stdin
 F fetch(decode_hints:Hash={}) read(0).decode({'source': 'stdin'} + decode_hints)
@@ -6046,6 +6088,11 @@ F write(f:File, s:Str) {
 ### 	guard s ~ /^http[s]?:\/\//i
 ### 	guard "curl" found
 ### }
+
+F myip() {
+	fetch('https://api.myip.com').ip.IPAddr()
+}
+
 
 # === Caching ====================================
 
