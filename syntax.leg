@@ -1334,7 +1334,7 @@ for-in =
 	}
 
 if =
-	"if" space? cond:code-block (space "then")? space? yes:code-block no:if-optional-else-block {
+	"if" !identifier-continuation space? cond:code-block (space "then")? space? yes:code-block no:if-optional-else-block {
 		MAKE_NODE(ret, IF_NODE);
 		ret->first_child = cond;
 		cond->next_sibling = yes;
@@ -1348,7 +1348,7 @@ if-optional-else-block =
 	{ MAKE_NODE(ret, NULL_NODE); $$ = ret; }
 
 while =
-	"while" space? cond:code-block space? body:code-block {
+	"while" !identifier-continuation space? cond:code-block space? body:code-block {
 		MAKE_NODE(ret, WHILE_NODE);
 		ret->first_child = cond;
 		cond->next_sibling = body;
@@ -1356,7 +1356,7 @@ while =
 	}
 
 switch =
-	acc:any-switch space datum:expression { append_ast_node_child(acc, datum) } space? "{"
+	acc:any-switch !identifier-continuation space? datum:expression { append_ast_node_child(acc, datum) } space? "{"
 		(
 			space? e:expression space? c:code-block {
 				MAKE_NODE(case_node, EXPRESSIONS_NODE);
@@ -1438,6 +1438,8 @@ identifier =
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
+
+identifier-continuation = <[_a-zA-Z0-9]+>
 
 defined =
 	"defined" space i:identifier {
