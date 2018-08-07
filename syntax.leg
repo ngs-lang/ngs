@@ -1134,12 +1134,9 @@ imm-hash-literal =
 					MAKE_NODE(kv, EXPRESSIONS_NODE);
 					append_ast_node_child(kv, p);
 					p = p->next_sibling;
-					if(p) {
-						append_ast_node_child(kv, p);
-						append_ast_node_child(ret, kv);
-					} else {
-						// TODO: exception
-					}
+					assert(p); // should be there, imm-hash-words should ensure that
+					append_ast_node_child(kv, p);
+					append_ast_node_child(ret, kv);
 				}
 				$$ = ret;
 				CAPTURE_LOCATION($$);
@@ -1147,6 +1144,12 @@ imm-hash-literal =
 
 imm-hash-words = acc:command-words-node (
 		space?
+		(
+			hash-command-word {
+				append_ast_node_child(acc->first_child->next_sibling, $$);
+			}
+		)
+		space
 		(
 			hash-command-word {
 				append_ast_node_child(acc->first_child->next_sibling, $$);
