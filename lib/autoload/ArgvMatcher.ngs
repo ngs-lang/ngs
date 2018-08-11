@@ -78,20 +78,6 @@ ns {
 
 		F set_match(v) matched_args[params_by_name[param_name].idx] = MatchedParam(v)
 
-		F convert(v, t:Type) {
-			throw InvalidArgument("Don't know how to convert value ${v} to type ${t}")
-		}
-
-		F convert(v:Str, t:Type) {
-			guard t in [Int, Real]
-			t(v)
-		}
-
-		F convert(v, t:Type) {
-			guard v is t
-			v
-		}
-
 		F next_arg() {
 			try
 				arg = argv_iter.next()
@@ -101,9 +87,7 @@ ns {
 		}
 
 		accepting_named_arguments = true
-		argv_iter = Iter(argv)
 		positionals = []
-		# while(argv_iter) {
 		for arg in argv_iter = Iter(argv) {
 			param_name = null
 			# arg = argv_iter.next()
@@ -143,7 +127,7 @@ ns {
 						return ParamsMatchN().set('message', "Parameter '${param_name}' is not a boolean but used with 'no-'")
 					}
 					arg = next_arg()
-					set_match(arg.convert(params_by_name[param_name].type))
+					set_match(arg.decode(params_by_name[param_name].type))
 				}
 			} else {
 				# positional parameter
@@ -169,7 +153,7 @@ ns {
 			}
 			debug("ARGV_MATCHER", "Setting matched args idx=$idx arg=$arg type-to-convert-to=${params_by_pos[idx].type}")
 			try {
-				v = arg.convert(params_by_pos[idx].type)
+				v = arg.decode(params_by_pos[idx].type)
 			} catch(e) {
 				throw match_ret(ParamsMatchN().set('message', "Failed to convert to desired type for parameter ${params_by_pos[idx].name}"))
 
@@ -195,4 +179,5 @@ ns {
 	TEST ArgvMatcher; m = (["--b", "B", "A", "C", "--d", "10"] ~ F(a,b,c,*args,**kw) 7); m.args == %[A B C] and m.kwargs == {"d": "10"}
 	# TEST ArgvMatcher; (["A"] ~ F(a,b:Int=null) 7).matches.args == %[A B C D]
 	TEST (["A", "C", "D", "--b", "B"] ~ ArgvMatcher("positionals", "a") do F(a,b) 7).args == %[%[A C D] B]
+	TEST ArgvMatcher; (["1", "1.0"] ~ F(i:Int, r:Real) 7).args == %[1 1.0]
 }
