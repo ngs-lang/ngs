@@ -108,17 +108,17 @@ void print_exception(VM *vm, VALUE result) {
 		}
 		if(obj_is_of_type(vm, ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)], vm->Exception)) {
 			assert(IS_STRING(e->key));
-			printf("---8<--- %s - start ---8<---\n", obj_to_cstring(e->key));
+			fprintf(stderr, "---8<--- %s - start ---8<---\n", obj_to_cstring(e->key));
 			print_exception(vm, ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
-			printf("---8<--- %s - end ---8<---\n", obj_to_cstring(e->key));
+			fprintf(stderr, "---8<--- %s - end ---8<---\n", obj_to_cstring(e->key));
 			continue;
 		}
 		if(IS_STRING(e->key)) {
-			dump_titled(obj_to_cstring(e->key), ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
+			dump_titled(stderr, obj_to_cstring(e->key), ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
 		} else {
 			// Should not happen
-			dump_titled("field key", e->key);
-			dump_titled("field value", ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
+			dump_titled(stderr, "field key", e->key);
+			dump_titled(stderr, "field value", ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
 		}
 	}
 }
@@ -202,10 +202,10 @@ int main(int argc, char **argv)
 	}
 	if(mr == METHOD_EXCEPTION) {
 		if(obj_is_of_type(&vm, result, vm.Exception)) {
-			printf("========= Uncaught exception of type '%s' =========\n", obj_to_cstring(NGS_TYPE_NAME(NORMAL_TYPE_INSTANCE_TYPE(result))));
+			fprintf(stderr, "========= Uncaught exception of type '%s' =========\n", obj_to_cstring(NGS_TYPE_NAME(NORMAL_TYPE_INSTANCE_TYPE(result))));
 			print_exception(&vm, result);
 		} else {
-			dump_titled("Uncaught exception", result);
+			dump_titled(stderr, "Uncaught exception", result);
 		}
 		return 245;
 	}

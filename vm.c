@@ -188,8 +188,8 @@ char *opcodes_names[] = {
 		goto exception; \
 	} \
 	if(mr != METHOD_OK) { \
-		dump_titled("Failed to convert to type", vm->type); \
-		dump_titled("Failed to convert value", ctx->stack[ctx->stack_ptr-1]); \
+		dump_titled(stderr, "Failed to convert to type", vm->type); \
+		dump_titled(stderr, "Failed to convert value", ctx->stack[ctx->stack_ptr-1]); \
 		assert(0 == "Failed to convert"); \
 	} \
 	REMOVE_TOP_N(1); \
@@ -275,7 +275,7 @@ REAL_CMP_METHOD(greater_eq, >=)
 REAL_CMP_METHOD(eq, ==)
 
 METHOD_RESULT native_dump_any METHOD_PARAMS {
-	dump(argv[0]);
+	dump(stdout, argv[0]);
 	*result = MAKE_NULL;
 	return METHOD_OK;
 }
@@ -3805,7 +3805,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			}
 			if(mr != METHOD_ARGS_MISMATCH) {
 				DEEPER_FRAME.arr_callable = NULL;
-				dump_titled("RESULT", *result);
+				dump_titled(stderr, "RESULT", *result);
 				VALUE exc;
 				exc = make_normal_type_instance(vm->InternalError);
 				set_normal_type_instance_field(exc, make_string("message"), make_string("Unexpected method result"));
@@ -4140,7 +4140,7 @@ main_loop:
 		decompile(vm->bytecode, ip-1, ip);
 		for(j=ctx->stack_ptr; j>0; j--) {
 			printf("Stack @ %zu\n", j-1);
-			dump(ctx->stack[j-1]);
+			dump(stderr, ctx->stack[j-1]);
 		}
 	}
 #endif
@@ -4266,7 +4266,7 @@ main_loop:
 									goto exception;
 								}
 							}
-							// dump_titled("FETCH_GLOBAL", GLOBALS[gvi]);
+							// dump_titled(stderr, "FETCH_GLOBAL", GLOBALS[gvi]);
 							PUSH(GLOBALS[gvi]);
 							goto main_loop;
 		case OP_STORE_GLOBAL:
@@ -4349,7 +4349,7 @@ main_loop:
 								goto exception_return;
 							}
 							if(mr != METHOD_OK) {
-								dump_titled("Failed callable / 2", callable);
+								dump_titled(stderr, "Failed callable / 2", callable);
 								assert(0=="Handling failed method calls is not implemented yet");
 							}
 							REMOVE_TOP_N(GET_INT(v));
@@ -4376,8 +4376,8 @@ main_loop:
 									*result = exc;
 									goto exception;
 								}
-								dump_titled("Failed argument array", ctx->stack[ctx->stack_ptr-1]);
-								dump_titled("Failed callable / 3", callable);
+								dump_titled(stderr, "Failed argument array", ctx->stack[ctx->stack_ptr-1]);
+								dump_titled(stderr, "Failed callable / 3", callable);
 								assert(0=="Handling failed method calls is not implemented yet");
 							}
 							REMOVE_TOP_N(1);

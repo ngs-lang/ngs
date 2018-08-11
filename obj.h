@@ -399,8 +399,8 @@ VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX 
 VALUE join_strings(int argc, VALUE *argv);
 // VALUE value_type(VM *vm, VALUE val);
 // int obj_is_of_type(VM *vm, VALUE obj, VALUE t);
-void dump(VALUE v);
-void dump_titled(char *title, VALUE v);
+void dump(FILE *f, VALUE v);
+void dump_titled(FILE *f, char *title, VALUE v);
 char *obj_to_cstring(VALUE v);
 char **obj_to_cstring_array(VALUE v);
 METHOD_RESULT decode_json(VALUE s, VALUE *result);
