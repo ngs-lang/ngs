@@ -632,6 +632,7 @@ chain-expression = b:basic-expression (
 
 basic-expression =
 	if
+	| uu
 	| while
 	| switch
 	| cond
@@ -1825,22 +1826,39 @@ command-words-node = {
 	$$ = ret;
 }
 
-basic-command-word =
+
+unquoted-basic-command-word-node = {
+	MAKE_NODE(ret, STR_COMPS_NODE);
+	$$ = ret;
+}
+
+
+unquoted-basic-command-word = acc:unquoted-basic-command-word-node (
+
 	<[-a-zA-Z0-9/=,._@:]+> {
-		MAKE_STRING_NODE(ret, yytext);
-		$$ = ret;
+		MAKE_NODE(s, STR_COMP_IMM_NODE); \
+		s->name = ngs_strdup(yytext); \
+		append_ast_node_child(acc, s);
 	}
-	| "$" i:identifier { $$ = i; }
-	| "$" c:curly-code-block { $$ = c; }
-	| string
+	| esc:string-escape { append_ast_node_child(acc, esc); }
+	| e:string-dq-dollar-expansion { append_ast_node_child(acc, e); }
+)+ {
+	$$ = acc;
+}
+
+uu = "UU" space unquoted-basic-command-word
+
+basic-command-word = string | unquoted-basic-command-word
 
 command-word =
-	basic-command-word
-	| "$*" c:code-block {
+	"$*" c:code-block {
 		MAKE_NODE(splat, ARR_SPLAT_NODE);
 			splat->first_child = c;
 		$$ = splat;
 	}
+	| "$" c:curly-code-block { $$ = c; }
+	| "$" i:identifier { $$ = i; }
+	| basic-command-word
 
 array-command-word =
 	number

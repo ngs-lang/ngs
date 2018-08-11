@@ -888,6 +888,7 @@ F Str(t:Type) "<Type ${t.name}>"
 doc Decode (parse) strings such as command line arguments or environment variables to result given type
 doc %STATUS - experimental
 F decode(s:Str, t:Type) {
+	t == Any returns s # For ArgvMatcher
 	F _fail(cause:Exception=null) {
 		args = ["Failed to decode value. Could not convert given value to type ${t.name}", cause].reject(Null)
 		throw DecodeFail(*args).set('value', s).set('target_type', t)
@@ -6216,6 +6217,7 @@ TEST global a=110; ns1 = ns(outer_a=a) { a=outer_a+1 }; ns1::a == a+1
 
 TEST try $(cat NO_SUCH_FILE 2>/dev/null) catch(pf:ProcessFail) true
 TEST $(nofail cat NO_SUCH_FILE 2>/dev/null); true
+TEST x=1; `line: echo a$x b${x}c` == "a1 b1c"
 
 # === Redirections tests ===========================
 # Warning: file name is not unique

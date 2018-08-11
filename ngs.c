@@ -17,7 +17,7 @@
 
 char *sprintf_position(yycontext *yy, int pos) {
 	int linecol[2];
-	char *ret = NGS_MALLOC_ATOMIC(1024);
+	char *ret = (char *)NGS_MALLOC_ATOMIC(1024);
 	position_to_line_col(yy, pos, linecol);
 	snprintf(ret, 1024, "%d:%d", linecol[0], linecol[1]);
 	return ret;
@@ -44,7 +44,7 @@ char *find_bootstrap_file() {
 	home_dir = getenv("HOME");
 	if(home_dir) {
 		len = snprintf(NULL, 0, fmt, home_dir) + 1;
-		fname = NGS_MALLOC_ATOMIC(len);
+		fname = (char *)NGS_MALLOC_ATOMIC(len);
 		snprintf(fname, len, fmt, home_dir);
 		// printf("HOME fname: %s\n", fname);
 		if(access(fname, F_OK) != -1) {
