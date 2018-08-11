@@ -275,7 +275,7 @@ REAL_CMP_METHOD(greater_eq, >=)
 REAL_CMP_METHOD(eq, ==)
 
 METHOD_RESULT native_dump_any METHOD_PARAMS {
-	dump(stdout, argv[0]);
+	dump(stderr, argv[0]);
 	*result = MAKE_NULL;
 	return METHOD_OK;
 }
