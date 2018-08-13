@@ -33,6 +33,7 @@ char *find_bootstrap_file() {
 	};
 	char *fname;
 	char *home_dir;
+	int i;
 	int len;
 	char fmt[] = "%s/.bootstrap.ngs";
 
@@ -52,9 +53,9 @@ char *find_bootstrap_file() {
 		}
 	}
 
-	for(len=0; places[len]; len++) {
-		if(access(places[len], F_OK) != -1) {
-			return places[len];
+	for(i=0; places[i]; i++) {
+		if(access(places[i], F_OK) != -1) {
+			return places[i];
 		}
 	}
 
