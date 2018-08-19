@@ -230,41 +230,7 @@ UI
 --
 * Screencast of `small-poc` is on youtube: http://www.youtube.com/watch?v=T5Bpu4thVNo
 
-* Not to block, allow typing next commands even if previous command(s) still run(s).
-	* Open issue: how to deal with a command that requires interaction.
-
-* Provide good feedback. In GUI for example, this can be green / red icon near a completed command to show exit status. Tweaking prompt to include such info or typing `echo $?` all the time is not what I dream about.
-
-* All operations made via a UI, including mouse operations in GUI _must_ have and display textual representation, allowing to copy / paste / save to a file / send to friend.
-
-* Different UI modules must exist. In the beginning we can start with these:
-  * Console (use pty)
-  * Web (allow multiple users to collaborate, some rw, some ro)
-
-* Commands' outputs displayed below the commands up to max N lines then scroll the output in
-  a small window below the command. When there is more output than a human can process -
-  don't display it and suggest saving it to a file (maybe).
-
-* Commands scroll up, new commands are added at the bottom. When a command that haven't
-  completed yet, reaches top of the screen, it can be converted to a mini-area at the
-  top (right?) of the screen, representing the command and current progress (and exit
-  status later).
-
-* [Later] Confirmation mode. One user in collaboration mode gives the command to execute,
-  another user must approve the command for execution.
-
-* Display structured results as real f\*cking structures (JSON, Yaml, ...)
-	* Most of the data dealt with is tables. List of files, list of instances in a cloud, list of load balancers. Amazing that none of current UNIX shell tools (I heard of) don't treat the data as such. The closest you get is set of records in `awk`. Well, if the fields in records are the same it's actually a table. `$1` in awk could be `id` or `name`, referencing the data by column name and not by field number. Yes, you have `jq` and it's close but it still works (in best case) with list of records with same fields. PowerShell has something in that direction (`Get-Process | Where-Object {$_.handles -gt 200}`)[https://technet.microsoft.com/en-us/library/ee177028.aspx] + `Format-Table`.
-	* (Maybe) Allow editing it and saving to file.
-	* (Maybe) Allow write jq filters in (G)UI by selecting the elements
-
-* Underline red/green for existing/non-existing files? Fish shell does it for the commands.
-
-* Actions on objects that are on screen. Think right click / context menu.
-
-* Commands history: among duplicate commands all but last should be grayed out, so that non-grayed out commands are unique.
-
-* When hover over an object, highlight the same object everywhere it appears.
+* See UI wiki page for software design and ideas: https://github.com/ngs-lang/ngs/wiki/UI
 
 Cross-system
 ------------

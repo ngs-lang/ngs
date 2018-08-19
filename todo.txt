@@ -6,37 +6,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 [roadmap]
 
-	* Phase 2 - the shell [not started]
-
-		* Milestone LayoutManager
-			* Dynamic width support for Table and probably other objects on the screen
-
-		* Milestone "screen layout"
-
-			* Commands prompt and input area at the bottom
-
-			* Processes have their own area on the screen
-				+ Truncated stdout/stderr
-				+ Option to view full stdout/stderr in a pager
-
-		* Milestone "semantic output"
-
-			* Needs software design: interactive objects and operations on them
-				+ Interactive data types
-				+ Protocol for specifying operations
-				+ Should gracefully degrade when go to file or piped to another program instead of interactive UI
-			* Allow navigation on the screen, choosing operations from a menu for the objects
-			* History of operations in context menu
-			* A way for external script to:
-				* Detect that it's running under NGS
-				* Return interactive objects (needs software design)
-				* For NGS scripts which return Table this should be automatic
-
-		* "borrow" status() behaviour from apt/apt-pkg/install-progress.cc
-			switch to override and do:
-			+ tmux title only
-			+ gnome/whatever terminal title
-
 	* Phase 3 - running code remotely
 
 		* think about serialization and remote execution
