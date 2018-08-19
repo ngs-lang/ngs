@@ -1,0 +1,37 @@
+#!/usr/bin/env ngs
+
+warn("'nd' is experimental tool. Arguments, functionality and output might change.")
+
+parse_aws = false
+do_print = true
+print_transform_func = encode_json
+
+todo = []
+idx = 1
+for arg in ARGV {
+	econd {
+		arg == '-a' parse_aws = true
+		arg == '-n' do_print = false
+		arg == '-r' print_transform_func = Str
+		true {
+			if arg.starts_with('.') then arg = 'd' + arg
+			todo.push(compile('{' + arg + '}', "<arg:$idx>").load("<arg:$idx>"))
+		}
+	}
+	idx += 1
+}
+
+decode_hints = if parse_aws {
+	{'process': {'command': {'argv': ['aws']}}}
+} else {
+	{}
+}
+
+d = fetch(decode_hints)
+
+for f in todo {
+	d = f()
+}
+if do_print {
+	echo(print_transform_func(d))
+}
