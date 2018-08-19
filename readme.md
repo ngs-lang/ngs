@@ -281,7 +281,7 @@ Cross-system
 	* Auto-detect completion history objects for existing commands (by wrappers and/or hooks probably)
 
 * Toaster/script prepare mode/assist
-	* After a command is run (succsessfully?) a key shortcut key would
+	* After a command is run (successfully?) a key shortcut key would
 	  append it (the last command) to a buffer / file.
 
 * Processes communication
