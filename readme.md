@@ -237,11 +237,7 @@ Cross-system
 
 * Feedback
 	* Some new protocol is needed to convey process progress and other information
-	* For external programs that don't support such protocol (currently all existing programs)
-	  use heuristics such as look at open files + position in such files to guess the progress
-	  with high probability.
 
-* Ability to add new commands after a running one completes
 
 * Manage multiple servers at once
 
@@ -277,22 +273,12 @@ Cross-system
 		  It can be helpful to identify and show slow machines.
 		  If it's a cluster,the performance should be similar. If not, it can inidcate a problem.
 
-* Easy integration with currently available software
-
-	* Easy way to write hooks that will provide additional information
-	  about running process, such as progress.
-
 * Smart completion, context sensitive
 	* Command switches and values
 	* Complete objects (file names, urls, etc) depending on context.
 	  Think `wget .../x.tgz`, `tar ` [COMPLETION_KEY] [Maybe some choice keys] -> ` xzf x.tgz`
 	* Maybe API to insert objects to completion history
 	* Auto-detect completion history objects for existing commands (by wrappers and/or hooks probably)
-
-* "Mentioned" completion
-	* Complete objects from output of previous commands. Example: `apt-cache search ...` , `apt-get install ...`
-	  Isn't this copy+paste annoying? It's already on the screen, it's a package name, and still the system can't
-	  complete...
 
 * Toaster/script prepare mode/assist
 	* After a command is run (succsessfully?) a key shortcut key would
