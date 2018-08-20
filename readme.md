@@ -308,7 +308,7 @@ Cross-system
 	  complete...
 
 * Toaster/script prepare mode/assist
-	* After a command is run (succsessfully?) a key shortcut key would
+	* After a command is run (successfully?) a key shortcut key would
 	  append it (the last command) to a buffer / file.
 
 * Processes communication
