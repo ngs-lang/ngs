@@ -1750,10 +1750,11 @@ doc e - Eachable with each element also Eachable
 doc %RET - Arr
 doc %EX - [[1], [2,3]].flatten()  # [1,2,3]
 F flatten(e:Eachable1) {
+	guard not(e is Int)
 	guard e.all(Eachable1)
 	collector
 		e.each(F(subarr) {
-			subarr % collect
+			subarr.each(collect)
 		})
 }
 
