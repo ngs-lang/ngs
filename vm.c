@@ -3564,7 +3564,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// awk '/^#define PCRE/ && $3 {print "E("$2");"}' /usr/include/pcre.h | grep -v 'PCRE_UCHAR\|PCRE_SPTR' | sort | xargs -n5
 	#pragma GCC diagnostic push
-	// Silcence clang unknown pragmas
+	// Silence clang unknown pragmas
 	#pragma GCC diagnostic ignored "-Wunknown-pragmas"
 	// Silence GCC unkown pragmas
 	#pragma GCC diagnostic ignored "-Wpragmas"

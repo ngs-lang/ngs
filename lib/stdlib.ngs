@@ -3706,20 +3706,26 @@ ns {
 # === Logging and status reporting (WIP) =========
 
 {
-	doc Represents a fatal error condition that causes the program to exit.
-	doc %EX - throw FatalError("Input file not found")
-	type FatalError(Exception)
+	doc Represents an exception that should cause exit from the program
+	doc exit_code - Contains the exit code to be used by ExitCode
+	type ExitException(Exception)
+		doc Represents a fatal error condition that causes the program to exit.
+		doc %EX - throw ExitException("Input file not found")
+		type FatalError(ExitException)
+		type NormalExit(ExitException)
 }
 
-doc Initializes FatalError.
-F init(fe:FatalError, message:Str, exit_code:Int=1) {
-	super(fe, message)
-	fe.exit_code = exit_code
+doc Initializes ExitException.
+F init(ee:ExitException, message:Str, exit_code:Int=1) {
+	super(ee, message)
+	ee.exit_code = exit_code
 }
 
-doc Convert FatalError to an exit code.
-doc %RET - fe.exit_code
-F ExitCode(fe:FatalError) fe.exit_code
+F init(ee:ExitException, exit_code:Int=1) ee.exit_code = exit_code
+
+doc Convert ExitException to an exit code.
+doc %RET - ee.exit_code
+F ExitCode(ee:ExitException) ee.exit_code
 
 # TODO: timestamps
 
@@ -3837,10 +3843,14 @@ ns {
 	### }
 }
 
+doc Write message in s to standard error and exit, printing backtrace
+F die(s:Str, exit_code:Int=1) throw FatalError(s, exit_code)
+
 doc Write message in s to standard error and exit
-F die(s:Str, exit_code=1) {
-	throw FatalError(s, exit_code)
-}
+F exit(s:Str, exit_code:Int=1) throw NormalExit(s, exit_code)
+
+doc Exit with given exit_code
+F exit(exit_code:Int=1) throw NormalExit(exit_code)
 
 # === Path =======================================
 
@@ -5751,9 +5761,17 @@ exit_hook = Hook()
 	#       If it has exception, it could prevent
 	#       user-defined cleanups.
 	exit_hook['print_exception'] = F(exit:Exit) {
-		exit.exceptions.each(F(e) {
+		exit.exceptions.reject(NormalExit).each(F(e) {
 			error("--- Exception ---")
 			print_exception(e)
+		})
+	}
+
+	exit_hook['print_exit_message'] = F(exit:Exit) {
+		exit.exceptions.filter(NormalExit).each(F(e) {
+			if 'message' in e {
+				echo(stdlib_error_fd, e.message)
+			}
 		})
 	}
 

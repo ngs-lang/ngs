@@ -198,6 +198,10 @@ typedef struct {
 // 001010 10 - Any
 // 001011 10 - Seq
 // 001100 10 - Type
+// (misc)
+// 010110 10 - Kwargs marker
+// (immediate types)
+// XXXXXXXX 100000 10 - An Object
 
 
 #define TAG_BITS    (2)
@@ -317,7 +321,7 @@ typedef enum {
 #define NGS_TYPE_FIELDS(v)        (((NGS_TYPE *)(v).ptr)->fields)
 #define NGS_TYPE_PARENTS(v)       (((NGS_TYPE *)(v).ptr)->parents)
 #define NGS_TYPE_USER(v)          (((NGS_TYPE *)(v).ptr)->user)
-// TODO: reanme OBJ_DATA to OBJ_VAL
+// TODO: rename OBJ_DATA to OBJ_VAL
 #define OBJ_DATA(v)               (((OBJECT *)(v).ptr)->val)
 #define OBJ_DATA_PTR(v)           (((OBJECT *)(v).ptr)->val.ptr)
 #define OBJ_TYPE(v)               (((OBJECT *)(v).ptr)->type)

@@ -11,6 +11,12 @@
 		* Add `init(t:Thread, name:Str, f:Fun)`
 		* Add `init(t:Thread, name:Str, f:Fun, arg)`
 * `aws` command output parsing - `.Reservation` renamed to `._Reservation`
+* Exiting
+	* Add `ExitException` - parent of all exceptions with `exit_code` field
+		* `FatalError` is now a child of `ExitException`
+		* Add `NormalExit` (child of `ExitException`)
+	* Add `exit(exit_code:Int=1)`
+	* Add `exit(s:Str, exit_code:Int=1)`
 * Add `dollar \$ escaping syntax`
 * Add `map_idx_val(e:Eachable1, mapper:Fun)`
 * Add `myip()` - returns your IP as observable from the Internet
