@@ -2288,13 +2288,38 @@ F +(f:Fun, g:Fun) {
 doc Iterate a Hash.
 doc h - Hash to iterate
 doc cb - Function to call with successive keys and values
-doc args - Additional arguments for calling cb
 doc %RET - h
 doc %EX - {"a": 1, "b": 2}.each(F(k, v) echo("$k=$v"))  # Outputs: "a=1" and on the next line "b=2"
 F each(h:Hash, cb:Fun) {
 	entry = ll_hash_head(h)
 	while entry != null {
 		cb(entry.ll_hash_entry_key(), entry.ll_hash_entry_val())
+		entry = entry.ll_hash_entry_next()
+	}
+	h
+}
+
+doc Iterate a Hash.
+doc h - Hash to iterate
+doc cb - Function to call with successive keys
+doc %RET - h
+F eachk(h:Hash, cb:Fun) {
+	entry = ll_hash_head(h)
+	while entry != null {
+		cb(entry.ll_hash_entry_key())
+		entry = entry.ll_hash_entry_next()
+	}
+	h
+}
+
+doc Iterate a Hash.
+doc h - Hash to iterate
+doc cb - Function to call with successive values
+doc %RET - h
+F eachv(h:Hash, cb:Fun) {
+	entry = ll_hash_head(h)
+	while entry != null {
+		cb(entry.ll_hash_entry_val())
 		entry = entry.ll_hash_entry_next()
 	}
 	h
