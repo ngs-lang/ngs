@@ -11,6 +11,7 @@
 		* Add `init(t:Thread, name:Str, f:Fun)`
 		* Add `init(t:Thread, name:Str, f:Fun, arg)`
 * `aws` command output parsing - `.Reservation` renamed to `._Reservation`
+* Add `eachk()` and `eachv()'
 * Exiting
 	* Add `ExitException` - parent of all exceptions with `exit_code` field
 		* `FatalError` is now a child of `ExitException`
