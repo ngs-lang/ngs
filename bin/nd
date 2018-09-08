@@ -1,10 +1,69 @@
 #!/usr/bin/env ngs
 
-warn("'nd' is experimental tool. Arguments, functionality and output might change.")
+warn("'nd' is an experimental tool. Arguments, functionality and output might change.")
 
 parse_aws = false
 do_print = true
 print_transform_func = encode_json
+
+ns {
+	e = echo(2, X)
+
+	if ARGV.get(0, null) in ['-h', '--help'] {
+		e("")
+		e("About 'nd':")
+		e("  nd (mnemonic Ngs Data) is a simple yet powerful data manipulation command line tool.")
+		e("")
+		e("Usage:")
+		e("  nd [-a] [-n] [-r] <code> ...")
+		e("    -a      - parse aws cli output.")
+		e("              Places the underlying array at top the level.")
+		e("              In case of 'aws ec2 describe-instances' makes the instanes top level.")
+		e("              Converts tags from the stupid array format to real Hash.")
+		e("    -n      - do Not print the result.")
+		e("    -r      - print raw result (by default result is converted to JSON for printing).")
+		e("    <code>  - NGS code (top level syntax is the expressions syntax)")
+		e("              In the code the 'd' (mnemonic Data) variable is the parsed stdin")
+		e("              or the result of previous <code> expression for 2nd and on <code>s")
+		e("              if <code> starts with a dot (.), the 'd' varaible is prepended.")
+		e("              Example: 'nd -e .myfield' is same as 'nd -e d.myfield' .")
+		e("")
+		e("Examples: run 'nd --examples' for examples")
+		e("")
+		exit(1)
+	}
+
+	if ARGV.get(0, null) == '--examples' {
+		e("Examples:")
+		e("")
+		e("  ** Count number of instances in each environment (current region only): **")
+		e("    \$ aws ec2 describe-instances | nd -a '.group(F(i) i.Tags.get(\"env\", \"-\")).mapv(len)'")
+		e('    { "dev": 16, "prod": 19, "aux": 16, ... }')
+		e("")
+
+		e("  ** Number of instances by type (current region only): **")
+		e("    \$ aws ec2 describe-instances | nd -a '.group(F(i) i.InstanceType).mapv(len)'")
+		e("    \$ aws ec2 describe-instances | nd -a '.group(X.InstanceType).mapv(len)'")
+		e('    { "t2.micro": 49, "t2.nano": 1, ... }')
+		e("")
+		e("")
+		e("  ** List only instances that have the 'env' tag and only the interesting fields, ordered by LaunchTime (current region only): **")
+		e("    \$ aws ec2 describe-instances | nd -a '.filter(F(i) \"env\" in i.Tags).sort(\"LaunchTime\").map(F(i) {\"id\": i.InstanceId, \"env\": i.Tags.get(\"env\"), \"Name\": i.Tags.get(\"Name\")})' | jq .")
+		e('    ...')
+		e('    {')
+		e('      "id": "i-073xxxxxxxxxxxxxx",')
+		e('      "env": "aux",')
+		e('      "Name": "ilya dev java"')
+		e('    },')
+		e('    {')
+		e('      "id": "i-05bxxxxxxxxxxxxxx",')
+		e('      "env": "dev",')
+		e('      "Name": null')
+		e('    },')
+		e('    ...')
+		exit(1)
+	}
+}
 
 todo = []
 idx = 1
