@@ -16,3 +16,4 @@ syntax.include
 syntax.auto.h
 pcre_constants.include
 Makefile
+junk

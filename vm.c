@@ -3515,50 +3515,30 @@ void vm_init(VM *vm, int argc, char **argv) {
 	set_global(vm, "init", vm->init = make_multimethod());
 	set_global(vm, "call", vm->call = make_multimethod());
 
-	// TODO: Some good solution for many defines
-#define E(name) set_global(vm, "C_" #name, MAKE_INT(name))
-	// errno -ls | awk '{print "E("$1");"}' | xargs -n10
-	// (errno -ls | awk '{print $1}'; awk '/^#define RTLD_/ {print $2}' /usr/include/x86_64-linux-gnu/bits/dlfcn.h ) > c_constants.txt
-	E(EPERM); E(ENOENT); E(ESRCH); E(EINTR);
-	E(EINVAL); E(ENOTTY); E(EACCES);
-	/*
-	E(EIO); E(ENXIO); E(E2BIG); E(ENOEXEC); E(EBADF); E(ECHILD);
-	E(EAGAIN); E(ENOMEM); E(EFAULT); E(ENOTBLK); E(EBUSY); E(EEXIST); E(EXDEV); E(ENODEV); E(ENOTDIR);
-	E(EISDIR); E(EINVAL); E(ENFILE); E(EMFILE); E(ENOTTY); E(ETXTBSY); E(EFBIG); E(ENOSPC); E(ESPIPE); E(EROFS);
-	E(EMLINK); E(EPIPE); E(EDOM); E(ERANGE); E(EDEADLK); E(ENAMETOOLONG); E(ENOLCK); E(ENOSYS); E(ENOTEMPTY); E(ELOOP);
-	E(EWOULDBLOCK); E(ENOMSG); E(EIDRM); E(ECHRNG); E(EL2NSYNC); E(EL3HLT); E(EL3RST); E(ELNRNG); E(EUNATCH); E(ENOCSI);
-	E(EL2HLT); E(EBADE); E(EBADR); E(EXFULL); E(ENOANO); E(EBADRQC); E(EBADSLT); E(EDEADLOCK); E(EBFONT); E(ENOSTR);
-	E(ENODATA); E(ETIME); E(ENOSR); E(ENONET); E(ENOPKG); E(EREMOTE); E(ENOLINK); E(EADV); E(ESRMNT); E(ECOMM);
-	E(EPROTO); E(EMULTIHOP); E(EDOTDOT); E(EBADMSG); E(EOVERFLOW); E(ENOTUNIQ); E(EBADFD); E(EREMCHG); E(ELIBACC); E(ELIBBAD);
-	E(ELIBSCN); E(ELIBMAX); E(ELIBEXEC); E(EILSEQ); E(ERESTART); E(ESTRPIPE); E(EUSERS); E(ENOTSOCK); E(EDESTADDRREQ); E(EMSGSIZE);
-	E(EPROTOTYPE); E(ENOPROTOOPT); E(EPROTONOSUPPORT); E(ESOCKTNOSUPPORT); E(EOPNOTSUPP); E(EPFNOSUPPORT); E(EAFNOSUPPORT); E(EADDRINUSE); E(EADDRNOTAVAIL); E(ENETDOWN);
-	E(ENETUNREACH); E(ENETRESET); E(ECONNABORTED); E(ECONNRESET); E(ENOBUFS); E(EISCONN); E(ENOTCONN); E(ESHUTDOWN); E(ETOOMANYREFS); E(ETIMEDOUT);
-	E(ECONNREFUSED); E(EHOSTDOWN); E(EHOSTUNREACH); E(EALREADY); E(EINPROGRESS); E(ESTALE); E(EUCLEAN); E(ENOTNAM); E(ENAVAIL); E(EISNAM);
-	E(EREMOTEIO); E(EDQUOT); E(ENOMEDIUM); E(EMEDIUMTYPE); E(ECANCELED); E(ENOKEY); E(EKEYEXPIRED); E(EKEYREVOKED); E(EKEYREJECTED); E(EOWNERDEAD);
-	E(ENOTRECOVERABLE); E(ERFKILL); E(EHWPOISON); E(ENOTSUP);
-	*/
-	// awk '/^#define RTLD_/ {print "E("$2");"}' /usr/include/x86_64-linux-gnu/bits/dlfcn.h | xargs -n10
+	#define E(name) set_global(vm, "C_" #name, MAKE_INT(name))
+	#include "errno.include"
+
+	// awk '/^#define RTLD_/ {print $2}' /usr/include/x86_64-linux-gnu/bits/dlfcn.h ) > c_constants.txt
 	E(RTLD_LAZY); E(RTLD_NOW); E(RTLD_NOLOAD); /* E(RTLD_DEEPBIND); E(RTLD_GLOBAL); E(RTLD_LOCAL); E(RTLD_NODELETE); */
 
-	// man access(2)
+	// --- man access(2) ---
 	VALUE access = make_hash(8);
-
-#define A(name) set_hash_key(access, make_string(#name), MAKE_INT(name))
+	#define A(name) set_hash_key(access, make_string(#name), MAKE_INT(name))
 	A(F_OK); A(R_OK); A(W_OK); A(X_OK);
-#undef A
+	#undef A
 	set_global(vm, "ACCESS", access);
 
-	// man poll(2);
+	// --- man poll(2) ---
 	E(POLLIN); E(POLLPRI); E(POLLOUT); E(POLLERR); E(POLLHUP); E(POLLNVAL);
 
-	// man 2 stat
+	// --- man 2 stat ---
 	E(S_IFMT); E(S_IFSOCK); E(S_IFLNK); E(S_IFREG); E(S_IFBLK); E(S_IFDIR); E(S_IFCHR); E(S_IFIFO);
 
 	E(S_ISUID); E(S_ISGID); E(S_ISVTX); E(S_IRWXU); E(S_IRUSR); E(S_IWUSR); E(S_IXUSR); E(S_IRWXG); E(S_IRGRP); E(S_IWGRP);
 	E(S_IXGRP); E(S_IRWXO); E(S_IROTH); E(S_IWOTH); E(S_IXOTH);
 
 
-	// pthread
+	// --- pthread ---
 	E(PTHREAD_MUTEX_RECURSIVE);
 
 
