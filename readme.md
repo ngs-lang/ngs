@@ -5,15 +5,14 @@
 
 Next Generation Shell. 
 
-Quick links
-===========
+# Quick links
+
 
 * [NGS Website](https://ngs-lang.org/)
 * [NGS Facebook group](https://www.facebook.com/groups/next.generation.shell/)
 * [Reddit](https://www.reddit.com/r/NextGenerationShell/)
 
-The problem
-===========
+# The problem
 
 Shells are [Domain Specific Languages](https://en.wikipedia.org/wiki/Domain-specific_language).  The domain has changed greatly since the shells we use today were conceived.  The shells never caught up.
 
@@ -23,13 +22,61 @@ The problem with classical shells looks pretty clear: they were made with one ki
 
 The problem of using general purpose programming languages (Python, Ruby, Perl, Go) is not so obvious. Domain-specific language makes your life much easier when solving the tasks that the language was built for.  Of course you can write to a file in any language but probably not as easy as `echo something >my_file`. You can run a program but it's probably won't be a simple `ls`. The scripts that I've seen (and written in Python and Ruby) look too verbose and show unnecessary effort. Such scripts do not look an optimal solution (at the very least).
 
-Vision
-======
+# Vision
 
 * Create a language that will be domain-specific for system tasks.
 * Create a shell (in that language) that is up to date with today's tasks - working with APIs, cloud, remote execution on a group of hosts.
 
-### Example - basic cloud usage
+# About this document
+
+This document started as internal draft. Some sections might not be clear. Still exposing it as per "release early" policy. Feel free to open a GitHub issue or email me directly: ilya (DOT) sher (AT) coding (DASH) knight (DOT) com
+
+# Project status
+
+Development. Help is welcome.
+
+**The language** is useful and scripts can be written. See [the utilities folder](bin) for examples. NGS is used in Beame.io for miscellaneous scripting such as testing CLI tools, performance tests orchestration, cloud manipulation, etc.
+
+**The shell** is not started yet. That's because the shell has dependency on the language. The shell will be implemented in NGS.
+
+# The language
+
+The language feels (to me) like a mix of Python, bash and a bit less Ruby and Perl 6 with saner syntax, all of it taken to a more functional direction. Unique features are rare but contribute a lot toward solving domain-specific solutions. Most useful of the unique features (in my opinion) is the ```````` ``command`` ```````` syntax which runs the command and parses the output.
+
+# Code examples
+
+## Arrays
+
+
+	a = [1, 2, 3]
+	arr = a.map(X*2) # arr is now [2, 4, 6]
+	for i in arr {
+		echo(i)
+	}
+
+### Hashes
+
+	h = {"a": 1, "b1": 2, "b2": 3}
+	echo(h.filterk(/^b/).mapv(X+10))  # {b1=12, b2=13}
+
+
+## Functions (multimethods) and multi-dispatch
+
+	F my_func(x:Int) x*10 # Single expression does not require { ... } syntax
+
+	doc This method is documented!
+	F my_func(s:Str) {
+		t = s * 2
+		"[" + t + "]" # Last value returned as the result
+	}
+
+	echo(my_func(1))      # 10
+	echo(my_func("xyz"))  # [xyzxyz]
+	echo(my_func)         # <MultiMethod with 2 method(s)>
+
+More information about the language and syntax in particular is in [ngslang.1](doc/ngslang.1.md)
+
+## Basic cloud
 
 This is how an instance can be created using NGS (real working code). No state file involved!
 
@@ -66,59 +113,13 @@ This is how an instance can be created using NGS (real working code). No state f
 		AWS::add_to_known_hosts(instance, 'PublicIpAddress')
 	}
 
+## Full scripts
 
-About this document
-===================
+* [describe ec2 instances](bin/ec2din.ngs). The script has nicely aligned output for humans. It uses `stdlib`'s `Table` to do output layout and columns configuration. `Table` handles columns presence and order and it can be configured via environment variable.
+* [build chunk of hosts file](bin/ec2hostsfile.ngs) for a management machine. Hosts named `env-role` or `env-role-N`, depending on whether you have one or more machines of specific role in the environment.
+* [Race condition and locks demo](bin/locks.ngs).
 
-This document started as internal draft. Some sections might not be clear. Still exposing it as per "release early" policy. Feel free to open a GitHub issue or email me directly: ilya (DOT) sher (AT) coding (DASH) knight (DOT) com
-
-Project status
-==============
-
-Development. Help is welcome.
-
-The bigger part of the language is implemented to the point that some useful scripts can be written. See [the utilities folder](bin).
-
-The language feels (to me) like a mix of Python, bash and a bit less Ruby and Perl 6 with saner syntax, all of it taken to a more functional direction. Unique features are rare but contribute a lot toward solving domain-specific solutions. Most useful of the unique features (in my opinion) is the ```````` ``command`` ```````` syntax which runs the command and parses the output.
-
-* Demo 1: [describe ec2 instances](bin/ec2din.ngs). The script has nicely aligned output for humans. It uses `stdlib`'s `Table` to do output layout and columns configuration. `Table` handles columns presence and order and it can be configured via environment variable.
-* Demo 2: [build chunk of hosts file](bin/ec2hostsfile.ngs) for a management machine. Hosts named `env-role` or `env-role-N`, depending on whether you have one or more machines of specific role in the environment.
-* Demo 3: [demonstrates race condition](bin/locks.ngs) and locks.
-
-
-Code example
-============
-
-	# Arrays
-	a = [1, 2, 3]
-	arr = a.map(X*2) # arr is now [2, 4, 6]
-	for i in arr {
-		echo(i)
-	}
-
-	# Hashes (maps)
-	h = {"a": 1, "b1": 2, "b2": 3}
-	echo(h.filterk(/^b/).mapv(X+10))  # {b1=12, b2=13}
-
-
-	# Functions (multimethods) and multi-dispatch
-
-	F my_func(x:Int) x*10 # Single expression does not require { ... } syntax
-
-	doc This method is documented!
-	F my_func(s:Str) {
-		t = s * 2
-		"[" + t + "]" # Last value returned as the result
-	}
-
-	echo(my_func(1))      # 10
-	echo(my_func("xyz"))  # [xyzxyz]
-	echo(my_func)         # <MultiMethod with 2 method(s)>
-
-More information about the language and syntax in particular is in [ngslang.1](doc/ngslang.1.md)
-
-Running using docker
-====================
+# Running using docker
 
 	# Build the docker
 	docker build -t ngs .
@@ -127,10 +128,9 @@ Running using docker
 	# Use NGS inside the container
 	ngs -pi 'sum(0..10)'
 
-Compiling and running
-=====================
+# Compiling and running
 
-### Install dependencies - Debian-based Linux
+## Install dependencies - Debian-based Linux
 
 	sudo apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c-dev peg libpcre3-dev make cmake pandoc pkg-config build-essential
 	sudo type awk || sudo apt-get install gawk
@@ -140,7 +140,7 @@ Compiling and running
 	# If NGS is installed:
 	./ngs SCRIPT_NAME.ngs
 
-### Install dependencies - Mac OS X
+## Install dependencies - Mac OS X
 
 	brew update
 	brew install cmake peg libgc pcre libffi gnu-sed json-c pkg-config pandoc
@@ -160,7 +160,7 @@ Compiling and running
 	export PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig
 
 
-### Compile, test and run
+## Compile, test and run
 
 	mkdir -p build && cd build && cmake .. && make && ctest
 	# If NGS is not installed:
@@ -178,26 +178,25 @@ Tested as follows (some time ago):
 If you have troubles compiling, please try to compile the commit tagged `tested`.
 
 
-### Debug - Mac
+## Debug - Mac
 
 	# Debug when stuck (note to self mostly)
 	killall -SIGSEGV ngs
 	lldb --core /cores/core.XXXXX
 
 
-### Install
+## Install
 
 	# after build steps
 	cd build
 	sudo make install
 
-### Uninstall
+## Uninstall
 
 	cd build
 	for i in $(<install_manifest.txt);do rm "$i";done
 
-
-### Generate documentation
+## Generate documentation
 
 On Linux
 
@@ -218,22 +217,19 @@ On Mac, follow [the instructions to create case sensitive volume](https://coderw
 	rm -r out/*;
 	./make.ngs out
 
-Contributing
-============
+# Contributing
 
 Fork on GitHub, work on whatever you like, preferably from the top of [the todo](todo.txt), make a pull request (to "dev" branch). If the change is big or involves modifying the syntax, it's better to coordinate with Ilya before you start.
 
-Planned Features
-================
+# Planned Features
 
-UI
---
+## UI
+
 * Screencast of `small-poc` is on youtube: http://www.youtube.com/watch?v=T5Bpu4thVNo
 
 * See UI wiki page for software design and ideas: https://github.com/ngs-lang/ngs/wiki/UI
 
-Cross-system
-------------
+## Cross-system
 
 * Feedback
 	* Some new protocol is needed to convey process progress and other information
@@ -298,8 +294,7 @@ Cross-system
 	  sockets, pipes, resource usage (CPU, disk, network), process running time, accumulative
 	  CPU time, ...
 
-History
--------
+## History
 
 Two types of history:
 
@@ -326,8 +321,7 @@ Two types of history:
 		* Consider putting in git all modified files
 	* Host history will be kept on both the shell host and the target host
 
-Development
------------
+## Development
 
 * Code completion
 * Variables values shown when editing the commands / code (think `ls $a`, when the cursor is on `$a`)
@@ -338,8 +332,7 @@ Development
 	* Overall progress (`70%` or `File 7 out of 10`)
 	* ETA maybe
 
-The NGS language
-----------------
+## The NGS language
 
 Two languages actually.
 
@@ -451,8 +444,7 @@ Later / unformed / unfinished thoughts
 * Hosts group will be ordered. When running commands, one could specify to run in order or async.
 	* When commands run in order there should be an option to stop on first fail.
 
-How to run the POC
-==================
+# How to run the POC
 
 Following instructions should work (tested on Debian)
 
@@ -471,8 +463,7 @@ Following instructions should work (tested on Debian)
 		* `sleep` - a process that sleeps for 5 seconds
 		* `fail` - a process that fails
 
-Have you heard of project X? How it compares to NGS?
-====================================================
+# Have you heard of project X? How it compares to NGS?
 
 * All of the shells below
   * ... have no interaction with objects on the screen: if you run a command to describe EC2 instances for example, there is no way to interact with the shown list. Such interaction is a planned feature in NGS.
@@ -525,10 +516,17 @@ Have you heard of project X? How it compares to NGS?
 	* Difference: Ammonite is JVM based. I think it would be really hard to convince anyone that manages systems to have JVM installed on the managed systems just to run a shell. NGS is written in C and compiles to native binary.
 	* Difference: Ammonite's REPL looks very good. NGS does not have a REPL yet.
 	* If you are OK with Scala, Ammonite is worth trying. I think Scala is too complicated, especially as a shell language. Looking at [HTTP request](http://www.lihaoyi.com/Ammonite/#HTTPRequests): `val resp = Http("https://api.github.com/repos/scala/scala").asString` and `val parsed = upickle.json.read(resp.body).asInstanceOf[upickle.Js.Obj]`. In NGS that would be ```````` parsed=``curl -s "https://api.github.com/repos/scala/scala"`` ````````. On the other hand [Ammonite-Ops](http://www.lihaoyi.com/Ammonite/#Ammonite-Ops) and [Ammonite-Shell](http://www.lihaoyi.com/Ammonite/#Ammonite-Shell) aim to make common "operations" tasks convenient to handle.
+* [sh module for Python](https://amoffat.github.io/sh/): "sh is a full-fledged subprocess replacement for Python 2.6 - 3.5, PyPy and PyPy3 that allows you to call any program as if it were a function".
+	* It's Python. If you have some code and you just need to run some commands, it's much better than builtin Python facilities.
+	* As modules for other languages - you can't have the convenient syntax for common tasks. 
+		* `sh.wc(sh.ls("-1"), "-l")` is really not the same as `ls -1 | wc -l`. BTW, `-1` is not needed because `ls` does that automatically when when `stdout` is not a `tty` (try `ls | cat`).
+		* `p = sh.find("-name", "sh.py", _bg=True)` is not the same as `p = $(find -name sh.py &)` (NGS)
+		* No redirections syntax so `ls >/tmp/dir_contents` (bash, NGS) becomes `with open("/tmp/dir_contents", "w") as h: sh.ls(_out=h)` in sh.
+	* Exit codes handling
+		* Similar option to NGS: give "ok" exit codes when running a program. What's not "ok" becomes an exception which you can catch (both in sh and NGS).
+		* I did not see an option to customize the system so that you define once what's an exception for a specific command and then this logic is used every time when you run the specified command. NGS does have this capability.
 
-
-Discussion / requests / comments
-================================
+# Discussion / requests / comments
 
 * If you are totally unsure - open GitHub issues.
 * Feel free to fork/edit/pull-request this document.
