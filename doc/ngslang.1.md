@@ -688,7 +688,7 @@ NGS is a dynamically typed language: values (and not variables) have types.
 NGS is a "strongly typed" language: values are not implicitly converted to unrelated types. This makes the language more verbose in some cases but helps catch certain type of bugs earlier.
 
 	echo(1+"2")
-	# ... Exception of type MethodNotFound occured ...
+	# ... Exception of type MethodNotFound occurred ...
 	# That means that NGS has no method that "knows" how to add an Int and an Str
 
 	echo(1+Int("2"))
@@ -1060,7 +1060,7 @@ Arrays - basics
 	#   ['blah',2,'some text']
 
 	echo(x[10])
-	# ... Exception of type IndexNotFound occured ...
+	# ... Exception of type IndexNotFound occurred ...
 
 Arrays - some basic methods that operate on arrays
 
@@ -1153,7 +1153,7 @@ Hashes - basics
 	#   my_default
 
 	echo(x.e)
-	# ... Exception of type KeyNotFound occured ...
+	# ... Exception of type KeyNotFound occurred ...
 
 	x = %{akey avalue bkey bvalue}
 	echo(x)

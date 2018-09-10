@@ -958,7 +958,7 @@ json_object *_encode_json_kern(VALUE obj, VALUE *result) {
 		// TODO: replace unsigned int with something more appropriate
 		for(i=0; i<OBJ_LEN(obj); i++) {
 			t = _encode_json_kern(ARRAY_ITEMS(obj)[i], result);
-			if(!IS_UNDEF(*result)) return NULL; // Exception occured
+			if(!IS_UNDEF(*result)) return NULL; // Exception occurred
 			json_object_array_add(arr, t);
 		}
 		return arr;
@@ -971,7 +971,7 @@ json_object *_encode_json_kern(VALUE obj, VALUE *result) {
 				*result = make_string("Hash keys must be strings");
 			}
 			v = _encode_json_kern(e->val, result);
-			if(!IS_UNDEF(*result)) return NULL; // Exception occured
+			if(!IS_UNDEF(*result)) return NULL; // Exception occurred
 			json_object_object_add(hash, obj_to_cstring(e->key), v);
 		}
 		return hash;
