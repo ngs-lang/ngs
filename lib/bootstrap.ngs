@@ -31,7 +31,7 @@ F init(e:Exception, message:Str, cause:Exception) {
 
 	doc Information about exiting, used by bootstrap and as argument to exit_hook.
 	doc exit_code - the code to exit with
-	doc exceptions - exceptions that occured during exit procedure
+	doc exceptions - exceptions that occurred during exit procedure
 	type Exit
 }
 
