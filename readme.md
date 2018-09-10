@@ -223,103 +223,20 @@ Fork on GitHub, work on whatever you like, preferably from the top of [the todo]
 
 # Planned Features
 
-## UI
+( This section is moving to Wiki and Issues )
 
-* Screencast of `small-poc` is on youtube: http://www.youtube.com/watch?v=T5Bpu4thVNo
+See "feature" issues and wiki: https://github.com/ngs-lang/ngs/issues?q=is%3Aissue+is%3Aopen+label%3Afeature
+* UI: https://github.com/ngs-lang/ngs/wiki/UI-Design
+* Manage multiple servers: https://github.com/ngs-lang/ngs/wiki/Manage-Servers-Design
+* History: https://github.com/ngs-lang/ngs/wiki/History-Design
 
-* See UI wiki page for software design and ideas: https://github.com/ngs-lang/ngs/wiki/UI
+You are welcome to open new issues with `feature-request` label if there is something you would like to see in NGS.
 
 ## Cross-system
-
-* Feedback
-	* Some new protocol is needed to convey process progress and other information
-
-
-* Manage multiple servers at once
-
-	* Preferably using nothing more than standard SSH,
-	  maybe uploading required parts automatically when a command needs to run.
-
-	* Smart displaying of results,
-	  such as "OK on all T servers", "OK on N servers, fail on M servers, out of total T servers"
-
-	* Smart handling of failures,
-	  maybe divide into groups depending on command status / output and then letting
-	  to manage these groups. Consider dividing to several "fail" groups depending on
-	  the fail mode. Think deploy script that should handle the conditions. Also make
-	  one large group for any failures (contains all fail sub-groups).
-
-	* Automatic server groups by
-		* (In a cloud) a security group, a tag or other properties (regex on name for example)
-		* (Configuration management: Chef/Puppe) by properties
-		* (Locally) by /etc/hosts remark or by .ssh/config properties or remarks
-		* by naming conventions (for example regex defined) for all cases above
-		* Dynamic by a command output/exit code
-		  Think `netstat -lpnt | grep -q :8000` or `pgrep java` or `dpkg -l '*apache*' >/dev/null`
-
-	* Allow to run commands on remote hosts and connect them with pipes
-		* Example: `@web_servers { cat /var/log/messages } | @management_server { grep MY_EVENT | sort > /tmp/MY_EVENT }`
-		  That's just for the sake of an example, it would probably be better to `grep` locally.
-		* Issue warning if the output of `cat` can not be pushed or pulled directly between
-		  the machines (and therefore will be transferred through the controlling host, where the shell runs)
-			* Have shortcut key to setup SSH access required for direct transfer
-			* Or.. run temporary SSH daemons to allow this?
-		* Provide meaningful progress on that, including ETA. This won't be easy but it's worth it.
-		* Provide processing speeds inspection, CPU graphs, network usage, including graphs.
-		  It can be helpful to identify and show slow machines.
-		  If it's a cluster,the performance should be similar. If not, it can inidcate a problem.
-
-* Smart completion, context sensitive
-	* Command switches and values
-	* Complete objects (file names, urls, etc) depending on context.
-	  Think `wget .../x.tgz`, `tar ` [COMPLETION_KEY] [Maybe some choice keys] -> ` xzf x.tgz`
-	* Maybe API to insert objects to completion history
-	* Auto-detect completion history objects for existing commands (by wrappers and/or hooks probably)
 
 * Toaster/script prepare mode/assist
 	* After a command is run (successfully?) a key shortcut key would
 	  append it (the last command) to a buffer / file.
-
-* Processes communication
-
-	* Remove stupid limit of one output is connected to one input of the next process,
-	  allow fan out and fan in
-
-	* Support named inputs and outputs
-
-	* Allow on the fly connection to pipes/files. Think a logger is writing to a file on full disk.
-	  Just reconnect to another file on another partition/disk.
-
-	* UI representation of a job. A map with all involved processes, their open files,
-	  sockets, pipes, resource usage (CPU, disk, network), process running time, accumulative
-	  CPU time, ...
-
-## History
-
-Two types of history:
-
-* Commands history, similar to todays history but each entry will consist of the following fields:
-	* Timestamp
-	* Command
-	* Output (stdout, stderr)
-	* Input (stdin) ?
-	* Exit code
-	* Comment - can be provided when runnig the command, editable after that
-	* Context:
-		* Target host / group
-			* Working directory
-			* Values of used variables
-* Host history - all changes on given host. Points:
-	* History entry will consist of:
-		* Timestamp
-		* Script or basic command (create/update/chmod file, etc)
-		* Script that changed the object (I guess only files for now)
-		* Host that was running the script
-		* User that was running the script
-		* Session (name) under which the script was running
-		* Relevant global variables
-		* Consider putting in git all modified files
-	* Host history will be kept on both the shell host and the target host
 
 ## Development
 
@@ -332,88 +249,7 @@ Two types of history:
 	* Overall progress (`70%` or `File 7 out of 10`)
 	* ETA maybe
 
-## The NGS language
-
-Two languages actually.
-
-* Current-shells-like but simplified (called "commands"), `$(...)` syntax
-* Scripting language, "normal" programming language (called "code"), `{...}` syntax
-
-### The NGS "code" language ###
-
-* Functional
-* Types (File, Host, Group, Str, Num, ...)
-* Multi-dispatch with guards (trying to avoid "regular" full-blown OO to minimize the work)
-	* For example:
-		* `replace(Str orig, Str a, Str b)`
-		* `replace(Array orig, Str a, Str b)` - replaces in all strings in the `orig` array
-			* This may have a guard something like: `all(orig, isStr)`
-		* `replace(File f, Str a, Str b)` - will `sed` the file, possibly backing it up.
-* Lots of functions for data manipulation (TODO: list them)
-* File, Host, Group literals:
-	* f'/tmp/my-temp.txt'
-
-Later / unformed / unfinished thoughts
---------------------------------------
-
-* Measure and graph pipes throughput (and/or process performance for example by how fast it reads an input file)
-
-* In a job, per process state / title
-
-* Number of open files / sockets is part of the process status
-
-* Interactive pipe construction: show intermediate results
-	* only when requested (for example by a shortcut key) because commands can have side effects
-	* white list of "safe" commands to show output
-
-* Preview output with a shortcut key (don't run the command and insert it's output to the stream)
-
-* Dynamic update command output, think `ps` / `top` when their output is in the stream
-	* "pin" feature so user defined command sticks to the screen and being re-run and the output updated,
-	  essentially making it a widget
-
-* On the fly check of called commands existence
-	* Also on servers group
-	* Shortcut key to install the providing package (of course with textual representation)
-
-* On the fly check of command arguments
-	* Bring relevant man section
-	* Show error on unsupported switches
-	* Warn on different versions / implementations of the command in a hosts group
-	* Preview wildcards expansions (can be difficult to implement because of relativity to current directory)
-
-* Hosts group that is automatically updated should show last update time
-	* ... and updates log, when machines were added/removed
-	* "Current" hosts group to execute commands on.
-	* Whenever group is formed, connectivity must be checked and problems notified
-	* Each host should have statuses, such as `pending` for EC2 machines
-	  (in the shell can be pending till SSH connection is ready)
-  * Have group history (snapshots of list of hosts in the given group)
-  * When running a command on a group of hosts, run on one first and then rolling
-    as default behaviour. Maybe stop at certain error rate.
-
-* Statuses should have "debug level" to them so that background jobs could be showed as less important
-
-* Sessions. Total and global environment with it's own (saved) history etc. Think session per project or client.
-  Option to share a session with other people. Open issue: history - common for session or per user
-  (probably per user).
-
-* Quick navigation. Search for session, host, host group, IP, history, etc.
-
-* Icons (in any UI that allows it). Icons are processed much faster than text.
-
-* Every failed script must have exact error information to it.
-  No re-run with added `-x` or `echo`s should be required.
-
-* Commands of the shell will pass objects in pipes between them, not strings.
-  External commands should use JSON or API (not sure here).
-
-* For remote host or hosts group, give an option to execute command(s)
-  as soon as the host is available. Notify when done, failed or timed out.
-
-* In-line editor (maybe) for when a command line becomes few lines.
-  Or quick way to take the long line and continue editing it in an
-  editor.
+## Later / unformed / unfinished thoughts
 
 * BIG: Arguments / etc. - description language. Think Javadoc.
 	* Python (and other high level languages) is half-way there with argparse.
@@ -421,28 +257,16 @@ Later / unformed / unfinished thoughts
 	  it can be run with the shell replacement for argparse to inspect the arguments.
 	* Auto discovery of file arguments: run a command with a unique value for
 	  an argument and see if it tries to open such file. Tricky, Dangerous.
-	* Auto discovery for jars? Think ec2 tools.
-	* Anyway, there must be a way to specify externally argument types and
-	  objects (file/url/pid... see bash doc about completion for more types)
+	* Auto discovery for jars?
+	* Anyway, there must be a way to specify externally argument types and objects (file/url/pid... see bash doc about completion for more types)
 	* Learn from interaction. Example `curl URL` -> curl has argument of type URL.
 		* Provide easy access to modify/delete/blacklist learned commands' arguments.
 		* Shortcut key to define object type. Example `curl [SHORTCUT_KEY_PRESSES]` ->
 		  menu with object types -> remember the selection.
 		* Use same format for learned and pre-defined arguments, allowing easy adding
 		  to the shell package and interchange between people.
-			* The format (future feature, low priority) will include version detection
-			  and which switches are supported in which versions.
-			* The format will include how to do completion for specific arguments.
-			  Think `ec2kill` < `ec2din ...`.
-
-* Define which commands will run where when using hosts group. Think `ec2...` on
-  a group of machines which include all ec2 machines: "management" machine, web, app,
-  etc. servers.
-
-* Hosts groups should be organized in a stack ( pushd/popd style )
-
-* Hosts group will be ordered. When running commands, one could specify to run in order or async.
-	* When commands run in order there should be an option to stop on first fail.
+			* The format (future feature, low priority) will include version detection and which switches are supported in which versions.
+			* The format will include how to do completion for specific arguments. Think `ec2kill` < `ec2din ...`.
 
 # How to run the POC
 
