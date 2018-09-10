@@ -244,10 +244,6 @@ You are welcome to open new issues with `feature-request` label if there is some
 * Variables values shown when editing the commands / code (think `ls $a`, when the cursor is on `$a`)
 * Running scripts will once in a while update current line/column in the job info
 * Ability to start tracing already running scripts
-* API to report the progress
-	* Current task (`Copying mydata.txt to /tmp/`)
-	* Overall progress (`70%` or `File 7 out of 10`)
-	* ETA maybe
 
 ## Later / unformed / unfinished thoughts
 
