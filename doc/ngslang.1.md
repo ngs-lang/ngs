@@ -134,15 +134,14 @@ Expressions are separated by either newlines or by semicolon (`;`). It is also p
 
 In **commands syntax** it is possible to switch to **code syntax** in one of the following ways:
 
-	ls
-	{ code syntax here }
+	ls { code syntax here }
 
-	ls ${ code that computes the file name and returns a string,
-	spaces don't matter, expaned into single argument of ls }
+	ls ${ code that computes the file name and returns a string, spaces
+	don't matter, expanded into single argument of ls }
 
 	# Expands to zero or more positional arguments to ls
 	ls $*{ code that computes the files names and returns array of
-	strings. Spaces don't matter, each element is expaned into single
+	strings. Spaces don't matter, each element is expanded into single
 	argument of ls }
 
 
