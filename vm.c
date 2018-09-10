@@ -2243,7 +2243,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 		"#   second",
 		"",
 		"echo(x[10])",
-		"# ... Exception of type IndexNotFound occured ...",
+		"# ... Exception of type IndexNotFound occurred ...",
 		NULL
 	);
 
