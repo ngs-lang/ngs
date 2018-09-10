@@ -136,7 +136,8 @@ Expressions are separated by either newlines or by semicolon (`;`). It is also p
 
 In **commands syntax** it is possible to switch to **code syntax** in one of the following ways:
 
-	ls { code syntax here }
+	ls
+	{ code syntax here }
 
 	ls ${ code that computes the file name and returns a string, spaces
 	don't matter, expanded into single argument of ls }
