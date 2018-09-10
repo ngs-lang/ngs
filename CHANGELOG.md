@@ -36,11 +36,13 @@
 * nop() now takes any arguments
 * retry() - removed "catch_exceptions" parameter
 * assert_path_exists() - improve implementation
+* `E_...` constants from C now include all constants available during compilation
 
 ### Work in progress
 
 * `AWS2` -- second version of AWS (among other: `.Region` renamed to `._Region`)
 * `bin/na` ("NGS AWS") -- CLI for AWS wrapper around declarative primitives library
+* `bin/nd` ("NGS Data") -- Data manipulation utility
 * documentation
 * Moving `todo.txt` to [GitHub issues](https://github.com/ngs-lang/ngs/issues)
 
