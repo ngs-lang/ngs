@@ -3,10 +3,10 @@ STDLIB_PATH_SEP = '/'
 STDLIB_MAX_RAND_REAL = Real(RAND_MAX)
 STDLIB_RAND_SAFETY_MAX = 100
 {
-	GC.attrs({'doc': {'': 'Control NGS garbarge collection'}})
-	GC['enable'].attrs({'doc': {'': 'Enable garbarge collection'}})
-	GC['disable'].attrs({'doc': {'': 'Disable garbarge collection'}})
-	GC['get_parallel'].attrs({'doc': {'': 'Check parallel garbarge collection. Please do not use!', '%STATUS': 'internal'}})
+	GC.attrs({'doc': {'': 'Control NGS garbage collection'}})
+	GC['enable'].attrs({'doc': {'': 'Enable garbage collection'}})
+	GC['disable'].attrs({'doc': {'': 'Disable garbage collection'}})
+	GC['get_parallel'].attrs({'doc': {'': 'Check parallel garbage collection. Please do not use!', '%STATUS': 'internal'}})
 }
 
 doc Deprecated. Use ExitCode.
@@ -54,7 +54,7 @@ F init(h:Hash) {
 	type AssertFail
 	AssertFail.inherit(Exception)
 
-	doc Represents an attempt to create an instance of an abstract type (not intended for instanciation).
+	doc Represents an attempt to create an instance of an abstract type (not intended for instantiation).
 	type InstantiatingAbstractType
 	InstantiatingAbstractType.inherit(Exception)
 }
@@ -77,7 +77,7 @@ doc %EX - # ... Code that adds elements to my_array ...
 doc %EX - assert(my_array.len() > 3)  # AssertFail exception, with "Assertion failed" message
 F assert(condition:Bool) assert(condition, "Assertion failed")
 
-doc Throws AssertFail if condition, after conversition to Bool is false.
+doc Throws AssertFail if condition, after conversion to Bool is false.
 doc Same as super(Bool(condition), *args) .
 doc condition - not Bool
 doc %RET - Unspecified, do not count on this value
@@ -2895,8 +2895,11 @@ TEST FullBox(1) != FullBox(2)
 		}
 	}
 
-	doc Initialize Result with the given value.
-	F init(r:Result, v) r.val = v
+	doc Initialize Success with the given value.
+	F init(s:Success, v) s.val = v
+
+	doc Initialize Failure with the given value.
+	F init(f:Failure, e:Exception) f.val = e
 
 	doc Gets wrapped value
 	doc %RET - Any
@@ -2906,13 +2909,7 @@ TEST FullBox(1) != FullBox(2)
 	doc Throws ResultFail
 	doc %EX - { 1 / 0 }.Result().get()  # ResultFail exception
 	F get(f:Failure) {
-		e = ResultFail("Can not get value of Failure")
-		if f.val is Exception {
-			e.cause = f.val
-		} else {
-			e.failure = f.val
-		}
-		throw e
+		throw ResultFail("Can not get value of Failure").set('cause', f.val)
 	}
 
 	doc Gets wrapped value
@@ -2924,6 +2921,12 @@ TEST FullBox(1) != FullBox(2)
 	doc %EX - { 1 / 0 }.Result().get(100)  # 100
 	F get(f:Failure, dflt) dflt
 
+	doc Run fun with wrapped value.
+	F each(s:Success, fun:Fun) {
+		fun(s.val)
+		s
+	}
+
 	doc Run fun with wrapped value. If exception is thrown, Failure is returned; otherwise Success with new vaule is returned.
 	doc %RET - Result
 	F map(s:Success, fun:Fun) {
@@ -2933,6 +2936,10 @@ TEST FullBox(1) != FullBox(2)
 			Failure(e)
 		}
 	}
+
+	doc No-op, returns f
+	doc %RET - f
+	F each(f:Failure, fun:Fun) f
 
 	doc No-op, returns f
 	doc %RET - f

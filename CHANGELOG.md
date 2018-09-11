@@ -21,6 +21,7 @@
 * Add `dollar \$ escaping syntax`
 * Add `map_idx_val(e:Eachable1, mapper:Fun)`
 * Add `myip()` - returns your IP as observable from the Internet
+* Add `each()` for `Success` and `Failure`
 * Add experimental `each_chunk(e:Eachable1, n:Int, cb:Fun)`
 * Add experimental `decode(s:Str, t:Type)`
 * Add experimental `nd` (Ngs Data) command line tool
@@ -37,6 +38,7 @@
 * retry() - removed "catch_exceptions" parameter
 * assert_path_exists() - improve implementation
 * `E_...` constants from C now include all constants available during compilation
+* init(Failure, ...) - only accept Exception as second argument
 
 ### Work in progress
 
