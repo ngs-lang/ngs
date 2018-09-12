@@ -22,6 +22,9 @@ The problem with classical shells looks pretty clear: they were made with one ki
 
 The problem of using general purpose programming languages (Python, Ruby, Perl, Go) is not so obvious. Domain-specific language makes your life much easier when solving the tasks that the language was built for.  Of course you can write to a file in any language but probably not as easy as `echo something >my_file`. You can run a program but it's probably won't be a simple `ls`. The scripts that I've seen (and written in Python and Ruby) look too verbose and show unnecessary effort. Such scripts do not look an optimal solution (at the very least).
 
+From George Nachman, creator of [iTerm2](https://www.iterm2.com/):
+> Neat! This is totally the project I would do if I had unlimited free time :) I've wished for something like this for a long time. I think there's a lot of room for improvement over a basic TTY, and you've nailed some of the important things
+
 # Vision
 
 * Create a language that will be domain-specific for system tasks.
