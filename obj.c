@@ -907,7 +907,10 @@ VALUE _decode_json_kern(json_object *obj) {
 	assert(0 == "Internal error while parsing JSON");
 }
 
-METHOD_RESULT decode_json(VALUE s, VALUE *result) {
+METHOD_RESULT decode_json(VM *vm, VALUE s, VALUE *result) {
+
+	// https://github.com/json-c/json-c/blob/master/json_tokener.h
+
 	json_tokener *tok;
 	json_object  *jobj;
 	enum json_tokener_error jerr;
@@ -928,7 +931,11 @@ METHOD_RESULT decode_json(VALUE s, VALUE *result) {
 	}
 
 	if(jerr != json_tokener_success) {
-		*result = make_string(json_tokener_error_desc(jerr));
+		*result = make_normal_type_instance(vm->JsonDecodeFail);
+		set_normal_type_instance_field(*result, make_string("message"), make_string(json_tokener_error_desc(jerr)));
+		set_normal_type_instance_field(*result, make_string("value"), s);
+		// XXX: Leaking abstraction tok->char_offset. Unfortunately I did not see any alternative.
+		set_normal_type_instance_field(*result, make_string("position"), MAKE_INT(tok->char_offset));
 		goto error;
 	}
 

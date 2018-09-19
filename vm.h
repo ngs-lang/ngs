@@ -144,7 +144,7 @@ typedef struct {
 
 } VM_REGION;
 
-typedef struct {
+struct VM {
 	char *bytecode;
 	size_t bytecode_len;
 	VALUE *globals;
@@ -269,7 +269,8 @@ typedef struct {
 
 	VALUE c_ffi_type_string;
 
-} VM;
+};
+
 
 typedef struct {
 	VM *vm;
