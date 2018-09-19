@@ -24,10 +24,10 @@
 		})
 	}
 
-	files = ["${NGS_DIR}/bootstrap.ngs", "${NGS_DIR}/stdlib.ngs"] + ``find "${NGS_DIR}/autoload" -name '*.ngs'``
+	files = %[bootstrap.ngs stdlib.ngs lang-tests.ngs].map(NGS_DIR / X) + ``find "${NGS_DIR}/autoload" -name '*.ngs'``
 
 	files.each(perform_tests_in_file)
 
-	assert(tests_counter > 360)
+	assert(tests_counter > 440)
 	echo("OK. Tests: ${tests_counter}")
 }

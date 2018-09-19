@@ -1868,7 +1868,7 @@ array-command-word =
 
 hash-command-word =
 	number
-	| basic-command-word
+	| command-word
 	| imm-array-literal
 	| imm-hash-literal
 	| "$**" c:code-block {
