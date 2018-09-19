@@ -39,6 +39,7 @@
 * assert_path_exists() - improve implementation
 * `E_...` constants from C now include all constants available during compilation
 * init(Failure, ...) - only accept Exception as second argument
+* decode_json() - improve exception
 
 ### Work in progress
 
