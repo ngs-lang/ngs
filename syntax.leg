@@ -632,7 +632,6 @@ chain-expression = b:basic-expression (
 
 basic-expression =
 	if
-	| uu
 	| while
 	| switch
 	| cond
@@ -1845,8 +1844,6 @@ unquoted-basic-command-word = acc:unquoted-basic-command-word-node (
 )+ {
 	$$ = acc;
 }
-
-uu = "UU" space unquoted-basic-command-word
 
 basic-command-word = string | unquoted-basic-command-word
 
