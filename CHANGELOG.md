@@ -28,6 +28,7 @@
 
 ### Fixes and improvements
 
+* Fix incorrect parsing of immediate hashes: `%{k1 v1 k2 v2 ...}`
 * Improve `Pred(r:RegExp)`
 * Fix `join(Arr)` for array of `Thread`s
 * `Bool(Path)` now checks that underlying file system object is of the correct type
