@@ -880,11 +880,6 @@ doc %RET - "<Type NAME>"
 doc %EX - Real.Str().echo()  # Outputs: <Type Real>
 F Str(t:Type) "<Type ${t.name}>"
 
-{
-	type DecodeFail
-	DecodeFail.inherit(Exception)
-}
-
 doc Decode (parse) strings such as command line arguments or environment variables to result given type
 doc %STATUS - experimental
 F decode(s:Str, t:Type) {
