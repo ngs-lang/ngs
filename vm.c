@@ -1226,7 +1226,7 @@ METHOD_RESULT native_set_field_nt_str EXT_METHOD_PARAMS {
 	(void) ctx;
 	if(!strcmp(field, "user")) {
 		NGS_TYPE_USER(argv[0]) = argv[2];
-		METHOD_RETURN(argv[0]);
+		METHOD_RETURN(argv[1]);
 	}
 
 	exc = make_normal_type_instance(vm->FieldNotFound);
@@ -2919,7 +2919,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "Str for \"name\" and MultiMethod for \"constructors\".");
 	_doc_arr(vm, "%EX",
 		"Hash.name  # String: Hash",
-		"Hash.constructors  # [<NativeMethod Hash>,<UserDefinedMethod Hash at ...>,...]",
+		"Hash.constructors  # MultiMethod",
 		NULL
 	);
 
@@ -2928,13 +2928,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Get NormalType (a type that is typically defined by user) field. Throws FieldNotFound.");
 	_doc(vm, "field", "Field to get. Currently only \"name\", \"constructors\", \"parents\" and \"user\" are supported.");
 	_doc(vm, "%AUTO", "obj.field");
-	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
+	_doc(vm, "%RET", "Str for \"name\", MultiMethod for \"constructors\", Arr for \"parents\", Any for \"user\".");
 
 	register_global_func(vm, 1, ".=",       &native_set_field_nt_str,       3, "obj", vm->NormalType,         "field", vm->Str, "v", vm->Any);
 	_doc(vm, "", "Set NormalType (a type that is typically defined by user) field. Throws FieldNotFound.");
 	_doc(vm, "field", "Field to set. Currently only \"user\" is supported.");
 	_doc(vm, "%AUTO", "obj.field = v");
-	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
+	_doc(vm, "%RET", "v");
 
 	register_global_func(vm, 1, ".",        &native_get_field_nti_str,      2, "obj", vm->NormalTypeInstance, "field", vm->Str);
 	_doc(vm, "", "Get NormalType (a type that is typically defined by user) instance field. Throws FieldNotFound.");
@@ -2945,7 +2945,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, ".=",       &native_set_field_nti_str_any,  3, "obj", vm->NormalTypeInstance, "field", vm->Str, "v", vm->Any);
 	_doc(vm, "", "Set Normal type (a type that is typically defined by user) instance field");
 	_doc(vm, "%AUTO", "obj.field = v");
-	_doc(vm, "%RET", "Any");
+	_doc(vm, "%RET", "v");
 	_doc(vm, "%EX", "type T; t=T(); t.x=1");
 
 	register_global_func(vm, 0, "in",       &native_in_nti_str,            2, "field", vm->Str,               "obj", vm->NormalTypeInstance);

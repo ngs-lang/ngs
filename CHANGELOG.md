@@ -1,5 +1,10 @@
 ## (UNRELEASED) Version 0.2.6
 
+### Fixes and improvements
+
+* Better `c_dlopen()` error message
+* `T.user = x` for native types now returns `x` and not `T`, consistently with other assignments
+
 ## 2018-09-20 Version 0.2.5
 
 ### New features
