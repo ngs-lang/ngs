@@ -1,5 +1,34 @@
 # WIP, don't use!
 
+if not(ENV.has('NGS_DEV_CLI')) {
+	F e(s:Str) {
+		echo(2, s)
+	}
+	e("You have started NGS with no command line arguments.")
+	e("In future this will invoke the CLI (shell). Currently the CLI is not implemented yet.")
+	e("")
+	e("Option 1: run an ngs script")
+	e("  Run ngs with a file name as an argument:")
+	e("  ngs MY_SCRIPT.ngs")
+	e("")
+	e("Option 2: use ngs as an interpreter")
+	e("  Start your ngs script with the following line (without spaces in the beginning):")
+	e("  #!/usr/bin/env ngs")
+	e("  ... and remember to 'chmod +x' the script file")
+	e("")
+	e("Option 3: use one of the following switches:")
+	e("  ngs -e EXPR     evaluate EXPR")
+	e("  ngs -p EXPR     evaluate EXPR and print the result")
+	e("  ngs -pl EXPR    evaluate EXPR and print each element of result on it's own line")
+	e("  ngs -pj EXPR    evaluate EXPR, convert the result to JSON and print it")
+	e("  ngs -pjl EXPR   evaluate EXPR, convert each element of the result to")
+	e("                  JSON and print one element per line")
+	e("  ngs -pi EXPR    evaluate EXPR and print inspection (detailed information) of the result")
+	e("")
+	e("For more information, see NGS site at https://ngs-lang.org/")
+	exit(1)
+}
+
 debug('Starting NGS CLI')
 
 echo('*** NGS CLI is under construction ***')

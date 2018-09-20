@@ -9,7 +9,7 @@
 #include "obj.h"
 #include "vm.h"
 
-static void _dump(VALUE v, int level) {
+static void _dump(FILE *f, VALUE v, int level) {
 	char **symbols;
 	void *symbols_buffer[1];
 	VALUE *ptr;
@@ -17,37 +17,37 @@ static void _dump(VALUE v, int level) {
 	HASH_OBJECT_ENTRY *e;
 	HASH_OBJECT_ENTRY **buckets;
 
-	if(IS_NULL(v))  { printf("%*s* null\n",    level << 1, ""); goto exit; }
-	if(IS_TRUE(v))  { printf("%*s* true\n",    level << 1, ""); goto exit; }
-	if(IS_FALSE(v)) { printf("%*s* false\n",   level << 1, ""); goto exit; }
-	if(IS_UNDEF(v)) { printf("%*s* undef\n",   level << 1, ""); goto exit; }
-	if(IS_KWARGS_MARKER(v)){ printf("%*s* kwargs marker\n",   level << 1, ""); goto exit; }
+	if(IS_NULL(v))  { fprintf(f, "%*s* null\n",    level << 1, ""); goto exit; }
+	if(IS_TRUE(v))  { fprintf(f, "%*s* true\n",    level << 1, ""); goto exit; }
+	if(IS_FALSE(v)) { fprintf(f, "%*s* false\n",   level << 1, ""); goto exit; }
+	if(IS_UNDEF(v)) { fprintf(f, "%*s* undef\n",   level << 1, ""); goto exit; }
+	if(IS_KWARGS_MARKER(v)){ fprintf(f, "%*s* kwargs marker\n",   level << 1, ""); goto exit; }
 
-	if(IS_INT(v))   { printf("%*s* int %" VALUE_NUM_FMT "\n", level << 1, "", GET_INT(v)); goto exit; }
-	if(IS_REAL(v))  { printf("%*s* real %g\n", level << 1, "", REAL_OBJECT_VAL(v)); goto exit; }
+	if(IS_INT(v))   { fprintf(f, "%*s* int %" VALUE_NUM_FMT "\n", level << 1, "", GET_INT(v)); goto exit; }
+	if(IS_REAL(v))  { fprintf(f, "%*s* real %g\n", level << 1, "", REAL_OBJECT_VAL(v)); goto exit; }
 
 	if(IS_STRING(v)) {
 		// TODO: properly handle
 		//       1. non-printable characters
 		//       2. zero character
-		printf("%*s* string(len=%zu) %.*s\n", level << 1, "", OBJ_LEN(v), (int) OBJ_LEN(v), (char *)OBJ_DATA_PTR(v));
+		fprintf(f, "%*s* string(len=%zu) %.*s\n", level << 1, "", OBJ_LEN(v), (int) OBJ_LEN(v), (char *)OBJ_DATA_PTR(v));
 		goto exit;
 	}
 
 	if(IS_NATIVE_METHOD(v)) {
 		symbols_buffer[0] = OBJ_DATA_PTR(v);
 		symbols = backtrace_symbols(symbols_buffer, 1);
-		printf("%*s* native method %s at %p req_params=%d\n", level << 1, "", symbols[0], OBJ_DATA_PTR(v), NATIVE_METHOD_OBJ_N_REQ_PAR(v));
+		fprintf(f, "%*s* native method %s at %p req_params=%d\n", level << 1, "", symbols[0], OBJ_DATA_PTR(v), NATIVE_METHOD_OBJ_N_REQ_PAR(v));
 		for(i=0; i<NATIVE_METHOD_OBJ_N_REQ_PAR(v); i++) {
-			printf("%*s* required parameter %zu\n", (level+1) << 1, "", i+1);
-			_dump(NATIVE_METHOD_OBJ_PARAMS(v)[i*2+0], level+2);
-			_dump(NATIVE_METHOD_OBJ_PARAMS(v)[i*2+1], level+2);
+			fprintf(f, "%*s* required parameter %zu\n", (level+1) << 1, "", i+1);
+			_dump(f, NATIVE_METHOD_OBJ_PARAMS(v)[i*2+0], level+2);
+			_dump(f, NATIVE_METHOD_OBJ_PARAMS(v)[i*2+1], level+2);
 		}
 		goto exit;
 	}
 
 	if(IS_CLOSURE(v)) {
-		printf("%*s* ip=%zu locals_including_params=%d req_params=%d opt_params=%d n_uplevels=%d params_flags=%d\n", level << 1, "",
+		fprintf(f, "%*s* ip=%zu locals_including_params=%d req_params=%d opt_params=%d n_uplevels=%d params_flags=%d\n", level << 1, "",
 			CLOSURE_OBJ_IP(v),
 			CLOSURE_OBJ_N_LOCALS(v),
 			CLOSURE_OBJ_N_REQ_PAR(v),
@@ -55,116 +55,116 @@ static void _dump(VALUE v, int level) {
 			CLOSURE_OBJ_N_UPLEVELS(v),
 			CLOSURE_OBJ_PARAMS_FLAGS(v)
 		);
-		printf("%*s* closure attributes\n", (level+1) << 1, "");
-		_dump(OBJ_ATTRS(v), level+2);
+		fprintf(f, "%*s* closure attributes\n", (level+1) << 1, "");
+		_dump(f, OBJ_ATTRS(v), level+2);
 		for(i=0; i<CLOSURE_OBJ_N_REQ_PAR(v); i++) {
-			printf("%*s* required parameter %zu (name and type follow)\n", (level+1) << 1, "", i+1);
-			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+0], level+2);
-			_dump(CLOSURE_OBJ_PARAMS(v)[i*2+1], level+2);
+			fprintf(f, "%*s* required parameter %zu (name and type follow)\n", (level+1) << 1, "", i+1);
+			_dump(f, CLOSURE_OBJ_PARAMS(v)[i*2+0], level+2);
+			_dump(f, CLOSURE_OBJ_PARAMS(v)[i*2+1], level+2);
 		}
 		for(i=0; i<CLOSURE_OBJ_N_OPT_PAR(v); i++) {
-			printf("%*s* optional parameter %zu (name, type and default value follow)\n", (level+1) << 1, "", i+1);
-			_dump(CLOSURE_OBJ_PARAMS(v)[CLOSURE_OBJ_N_REQ_PAR(v)*2 + i*3 + 0], level+2);
-			_dump(CLOSURE_OBJ_PARAMS(v)[CLOSURE_OBJ_N_REQ_PAR(v)*2 + i*3 + 1], level+2);
-			_dump(CLOSURE_OBJ_PARAMS(v)[CLOSURE_OBJ_N_REQ_PAR(v)*2 + i*3 + 2], level+2);
+			fprintf(f, "%*s* optional parameter %zu (name, type and default value follow)\n", (level+1) << 1, "", i+1);
+			_dump(f, CLOSURE_OBJ_PARAMS(v)[CLOSURE_OBJ_N_REQ_PAR(v)*2 + i*3 + 0], level+2);
+			_dump(f, CLOSURE_OBJ_PARAMS(v)[CLOSURE_OBJ_N_REQ_PAR(v)*2 + i*3 + 1], level+2);
+			_dump(f, CLOSURE_OBJ_PARAMS(v)[CLOSURE_OBJ_N_REQ_PAR(v)*2 + i*3 + 2], level+2);
 		}
 		i = CLOSURE_OBJ_N_REQ_PAR(v)*2 + CLOSURE_OBJ_N_OPT_PAR(v)*3;
 		if(CLOSURE_OBJ_PARAMS_FLAGS(v) & PARAMS_FLAG_ARR_SPLAT) {
-			printf("%*s* array splat parameter\n", (level+1) << 1, "");
-			_dump(CLOSURE_OBJ_PARAMS(v)[i+0], level+2);
-			_dump(CLOSURE_OBJ_PARAMS(v)[i+1], level+2);
+			fprintf(f, "%*s* array splat parameter\n", (level+1) << 1, "");
+			_dump(f, CLOSURE_OBJ_PARAMS(v)[i+0], level+2);
+			_dump(f, CLOSURE_OBJ_PARAMS(v)[i+1], level+2);
 			i+=2;
 		}
 		if(CLOSURE_OBJ_PARAMS_FLAGS(v) & PARAMS_FLAG_HASH_SPLAT) {
-			printf("%*s* hash splat parameter\n", (level+1) << 1, "");
-			_dump(CLOSURE_OBJ_PARAMS(v)[i+0], level+2);
-			_dump(CLOSURE_OBJ_PARAMS(v)[i+1], level+2);
+			fprintf(f, "%*s* hash splat parameter\n", (level+1) << 1, "");
+			_dump(f, CLOSURE_OBJ_PARAMS(v)[i+0], level+2);
+			_dump(f, CLOSURE_OBJ_PARAMS(v)[i+1], level+2);
 			i+=2;
 		}
 		goto exit;
 	}
 
 	if(IS_ARRAY(v)) {
-		printf("%*s* array of length %zu\n", level << 1, "", OBJ_LEN(v));
+		fprintf(f, "%*s* array of length %zu\n", level << 1, "", OBJ_LEN(v));
 		for(i=0, ptr=(VALUE *)OBJ_DATA_PTR(v); i<OBJ_LEN(v); i++, ptr++) {
-			_dump(*ptr, level+1);
+			_dump(f, *ptr, level+1);
 		}
 		goto exit;
 	}
 
 	if(IS_MULMETHOD(v)) {
-		printf("%*s* multimethod\n", level << 1, "");
-		printf("%*s* methods\n", (level+1) << 1, "");
-		_dump(MULTIMETHOD_METHODS(v), level+2);
+		fprintf(f, "%*s* multimethod\n", level << 1, "");
+		fprintf(f, "%*s* methods\n", (level+1) << 1, "");
+		_dump(f, MULTIMETHOD_METHODS(v), level+2);
 		goto exit;
 	}
 
 	if(IS_HASH(v)) {
-		printf("%*s* hash with total of %zu items in %zu buckets at %p\n", level << 1, "", OBJ_LEN(v), HASH_BUCKETS_N(v), OBJ_DATA_PTR(v));
+		fprintf(f, "%*s* hash with total of %zu items in %zu buckets at %p\n", level << 1, "", OBJ_LEN(v), HASH_BUCKETS_N(v), OBJ_DATA_PTR(v));
 		buckets = OBJ_DATA_PTR(v);
 		for(i=0; i<HASH_BUCKETS_N(v); i++) {
 			if(!buckets[i]) { continue; }
-			printf("%*s* bucket # %zu\n", (level+1) << 1, "", i);
+			fprintf(f, "%*s* bucket # %zu\n", (level+1) << 1, "", i);
 			for(e=buckets[i]; e; e=e->bucket_next) {
-				printf("%*s* item at %p with hash() of %u insertion_order_prev=%p insertion_order_next=%p \n", (level+2) << 1, "", (void *)e, e->hash, (void *)e->insertion_order_prev, (void *)e->insertion_order_next);
-				printf("%*s* key\n", (level+3) << 1, "");
-				_dump(e->key, level+4);
-				printf("%*s* value\n", (level+3) << 1, "");
-				_dump(e->val, level+4);
+				fprintf(f, "%*s* item at %p with hash() of %u insertion_order_prev=%p insertion_order_next=%p \n", (level+2) << 1, "", (void *)e, e->hash, (void *)e->insertion_order_prev, (void *)e->insertion_order_next);
+				fprintf(f, "%*s* key\n", (level+3) << 1, "");
+				_dump(f, e->key, level+4);
+				fprintf(f, "%*s* value\n", (level+3) << 1, "");
+				_dump(f, e->val, level+4);
 			}
 		}
 		goto exit;
 	}
 
 	if(IS_NGS_TYPE(v)) {
-		printf("%*s* type (name and optionally constructors and parents follow) id=%" PRIdPTR " ptr=%p\n", level << 1, "", NGS_TYPE_ID(v), IS_NORMAL_TYPE(v) ? v.ptr : 0);
-		_dump(NGS_TYPE_NAME(v), level + 1);
+		fprintf(f, "%*s* type (name and optionally constructors and parents follow) id=%" PRIdPTR " ptr=%p\n", level << 1, "", NGS_TYPE_ID(v), IS_NORMAL_TYPE(v) ? v.ptr : 0);
+		_dump(f, NGS_TYPE_NAME(v), level + 1);
 		if(level < 3) {
-			_dump(NGS_TYPE_FIELDS(v), level + 1);
-			_dump(NGS_TYPE_CONSTRUCTORS(v), level + 1);
-			_dump(NGS_TYPE_PARENTS(v), level + 1);
+			_dump(f, NGS_TYPE_FIELDS(v), level + 1);
+			_dump(f, NGS_TYPE_CONSTRUCTORS(v), level + 1);
+			_dump(f, NGS_TYPE_PARENTS(v), level + 1);
 		}
 		goto exit;
 	}
 
 	if(IS_CLIB(v)) {
-		printf("%*s* C library (name follows) ptr=%p\n", level << 1, "", OBJ_DATA_PTR(v));
-		_dump(CLIB_OBJECT_NAME(v), level + 1);
+		fprintf(f, "%*s* C library (name follows) ptr=%p\n", level << 1, "", OBJ_DATA_PTR(v));
+		_dump(f, CLIB_OBJECT_NAME(v), level + 1);
 		goto exit;
 	}
 
 	if(IS_CSYM(v)) {
-		printf("%*s* C symbol (name and library follow) ptr=%p\n", level << 1, "", OBJ_DATA_PTR(v));
-		_dump(CSYM_OBJECT_NAME(v), level + 1);
-		_dump(CSYM_OBJECT_LIB(v), level + 1);
+		fprintf(f, "%*s* C symbol (name and library follow) ptr=%p\n", level << 1, "", OBJ_DATA_PTR(v));
+		_dump(f, CSYM_OBJECT_NAME(v), level + 1);
+		_dump(f, CSYM_OBJECT_LIB(v), level + 1);
 		goto exit;
 	}
 
 	if(IS_NORMAL_TYPE_CONSTRUCTOR(v)) {
-		printf("%*s* user type constructor (type optionally follows)\n", level << 1, "");
+		fprintf(f, "%*s* user type constructor (type optionally follows)\n", level << 1, "");
 		if(level < 3) {
-			_dump(OBJ_DATA(v), level + 1);
+			_dump(f, OBJ_DATA(v), level + 1);
 		}
 		goto exit;
 	}
 
 	if(IS_NORMAL_TYPE_INSTANCE(v)) {
-		printf("%*s* user type instance (type and fields optionally follow)\n", level << 1, "");
+		fprintf(f, "%*s* user type instance (type and fields optionally follow)\n", level << 1, "");
 		// level < 4 so that uncaught exception MethodNotFound could display the type of the arguments
 		if(level < 4) {
 			HASH_OBJECT_ENTRY *e;
 			VALUE fields = NGS_TYPE_FIELDS(NORMAL_TYPE_INSTANCE_TYPE(v));
 			assert(IS_HASH(fields));
-			_dump(NORMAL_TYPE_INSTANCE_TYPE(v), level + 1);
+			_dump(f, NORMAL_TYPE_INSTANCE_TYPE(v), level + 1);
 			for(e=HASH_HEAD(fields); e; e=e->insertion_order_next) {
 				if(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(v)) <= (size_t)GET_INT(e->val)) {
 					continue;
 				}
 				if(!IS_UNDEF(ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(v))[GET_INT(e->val)])) {
-					printf("%*s* key:\n", (level+1) << 1, "");
-					_dump(e->key, level + 2);
-					printf("%*s* value:\n", (level+1) << 1, "");
-					_dump(ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(v))[GET_INT(e->val)], level + 2);
+					fprintf(f, "%*s* key:\n", (level+1) << 1, "");
+					_dump(f, e->key, level + 2);
+					fprintf(f, "%*s* value:\n", (level+1) << 1, "");
+					_dump(f, ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(v))[GET_INT(e->val)], level + 2);
 				}
 			}
 		}
@@ -172,31 +172,31 @@ static void _dump(VALUE v, int level) {
 	}
 
 	if(IS_PTHREAD(v)) {
-		printf("%*s* pthread_t at %p\n", level << 1, "", &GET_PTHREAD(v));
+		fprintf(f, "%*s* pthread_t at %p\n", level << 1, "", &GET_PTHREAD(v));
 		goto exit;
 	}
 
 	if(IS_PTHREADATTR(v)) {
-		printf("%*s* pthread_attr_t at %p\n", level << 1, "", &GET_PTHREADATTR(v));
+		fprintf(f, "%*s* pthread_attr_t at %p\n", level << 1, "", &GET_PTHREADATTR(v));
 		goto exit;
 	}
 
 	if(IS_PTHREADMUTEX(v)) {
-		printf("%*s* pthread_mutex_t at %p\n", level << 1, "", &GET_PTHREADMUTEX(v));
+		fprintf(f, "%*s* pthread_mutex_t at %p\n", level << 1, "", &GET_PTHREADMUTEX(v));
 		goto exit;
 	}
 
 	if(IS_FFI_TYPE(v)) {
-		printf("%*s* ffi_type at %p\n", level << 1, "", &GET_FFI_TYPE(v));
+		fprintf(f, "%*s* ffi_type at %p\n", level << 1, "", &GET_FFI_TYPE(v));
 		goto exit;
 	}
 
 	if(IS_FFI_CIF(v)) {
-		printf("%*s* ffi_cif at %p\n", level << 1, "", &GET_FFI_CIF(v));
+		fprintf(f, "%*s* ffi_cif at %p\n", level << 1, "", &GET_FFI_CIF(v));
 		goto exit;
 	}
 
-	printf("%*s* (dump not implemented for the object at %p)\n", level << 1, "", OBJ_DATA_PTR(v));
+	fprintf(f, "%*s* (dump not implemented for the object at %p)\n", level << 1, "", OBJ_DATA_PTR(v));
 
 exit:
 	return;
@@ -834,13 +834,13 @@ int obj_is_of_type(VM *vm, VALUE obj, VALUE t) {
 	return type_is_type(value_type(vm, obj), t);
 }
 
-void dump(VALUE v) {
-	_dump(v, 0);
+void dump(FILE *f, VALUE v) {
+	_dump(f, v, 0);
 }
 
-void dump_titled(char *title, VALUE v) {
-	printf("=== [ dump %s ] ===\n", title);
-	dump(v);
+void dump_titled(FILE *f, char *title, VALUE v) {
+	fprintf(f, "=== [ dump %s ] ===\n", title);
+	dump(f, v);
 }
 
 // XXX is it safe?
@@ -907,7 +907,10 @@ VALUE _decode_json_kern(json_object *obj) {
 	assert(0 == "Internal error while parsing JSON");
 }
 
-METHOD_RESULT decode_json(VALUE s, VALUE *result) {
+METHOD_RESULT decode_json(VM *vm, VALUE s, VALUE *result) {
+
+	// https://github.com/json-c/json-c/blob/master/json_tokener.h
+
 	json_tokener *tok;
 	json_object  *jobj;
 	enum json_tokener_error jerr;
@@ -928,7 +931,11 @@ METHOD_RESULT decode_json(VALUE s, VALUE *result) {
 	}
 
 	if(jerr != json_tokener_success) {
-		*result = make_string(json_tokener_error_desc(jerr));
+		*result = make_normal_type_instance(vm->JsonDecodeFail);
+		set_normal_type_instance_field(*result, make_string("message"), make_string(json_tokener_error_desc(jerr)));
+		set_normal_type_instance_field(*result, make_string("value"), s);
+		// XXX: Leaking abstraction tok->char_offset. Unfortunately I did not see any alternative.
+		set_normal_type_instance_field(*result, make_string("position"), MAKE_INT(tok->char_offset));
 		goto error;
 	}
 
@@ -958,7 +965,7 @@ json_object *_encode_json_kern(VALUE obj, VALUE *result) {
 		// TODO: replace unsigned int with something more appropriate
 		for(i=0; i<OBJ_LEN(obj); i++) {
 			t = _encode_json_kern(ARRAY_ITEMS(obj)[i], result);
-			if(!IS_UNDEF(*result)) return NULL; // Exception occured
+			if(!IS_UNDEF(*result)) return NULL; // Exception occurred
 			json_object_array_add(arr, t);
 		}
 		return arr;
@@ -971,7 +978,7 @@ json_object *_encode_json_kern(VALUE obj, VALUE *result) {
 				*result = make_string("Hash keys must be strings");
 			}
 			v = _encode_json_kern(e->val, result);
-			if(!IS_UNDEF(*result)) return NULL; // Exception occured
+			if(!IS_UNDEF(*result)) return NULL; // Exception occurred
 			json_object_object_add(hash, obj_to_cstring(e->key), v);
 		}
 		return hash;

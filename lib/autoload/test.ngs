@@ -38,7 +38,8 @@ F test(results:TestsResults, group:Str, name:Str, f:Fun, critical:Bool=true) {
 	}
 }
 
-doc Internal method, a helper used by other assert_* methods.
+doc A helper used by other assert_* methods. Please do not use directly.
+doc %STATUS - internal
 F assert_base(actual, expected, comparison, display_comparison, title:Str, ok_prefix='') {
 	ok = comparison(actual, expected)
 	not(ok) throws TestFail("$title: actual value is $actual while expected $display_comparison $expected")
@@ -53,7 +54,7 @@ doc %RET - actual
 doc %EX - test("Heavy load on instance", {
 doc %EX -   # do the load
 doc %EX -   assert_eq(`curl -m 1 192.168.10.10/health`, 'OK')
-doc %EX - }
+doc %EX - })
 F assert_eq(actual, expected, title:Str=null) {
 	assert_base(actual, expected, (==), "to be equal to", title or "Data equality")
 }
@@ -206,11 +207,10 @@ TEST test; assert_has([1,2,3], 3) == [1,2,3]
 doc Assert given host is resolvable. Uses "dig" command line utility. Retries "times" times, sleeping "sleep" seconds in between. Throws TestFail.
 doc %EX - assert_resolvable("my_new_host.example.com")
 doc %RET - don't count on return value
-F assert_resolvable(h:Str, title:Str="Resolve host", times=45, sleep=2, check=Bool) {
+F assert_resolvable(h:Str, title:Str="Check that host is resolvable", times=45, sleep=2, check=Bool) {
 	retry(times=times, sleep=sleep, title=title,
 		body              = { `dig "+short" $h`.lines() }
 		success_predicate = check
-		success_cb        = { null }
 		fail_cb           = { throw TestFail("$title: no resolve for $h").set('host', h) }
 	)
 	h
@@ -219,16 +219,9 @@ F assert_resolvable(h:Str, title:Str="Resolve host", times=45, sleep=2, check=Bo
 doc Assert given path exists.
 doc p - Str or Path
 doc %RET - p
-F assert_path_exists(p, title:Str="Path exists") {
+F assert_path_exists(p, title:Str="Check that path exists") {
 	guard (p is Str) or (p is Path)
-	path = p
-	if path is not Path {
-		path .= Path()
-	}
-	if path {
-		log_test_ok("$title: Path ${path.path} exists")
-		return p
-	}
-	throw TestFail("$title: Path ${path.path} does not exist").set('path', p)
+	Path(p) returns p
+	throw TestFail("$title: Path ${p} does not exist").set('path', p)
 }
 

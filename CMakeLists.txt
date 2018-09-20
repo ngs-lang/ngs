@@ -11,7 +11,7 @@ pkg_check_modules(LIBFFI libffi REQUIRED)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /opt/local/include/uthash /usr/local/include)
 link_directories(/usr/local/lib)
 
-add_executable(ngs version.h ngs.c syntax.include syntax.auto.h pcre_constants.include obj.c vm.c compile.c debug.c ast.c malloc.c decompile.c)
+add_executable(ngs version.h ngs.c syntax.include syntax.auto.h pcre_constants.include errno.include obj.c vm.c compile.c debug.c ast.c malloc.c decompile.c)
 
 include(CheckFunctionExists)
 check_function_exists(fmemopen FMEMOPEN)
@@ -25,26 +25,34 @@ add_custom_command(
 		${CMAKE_CURRENT_BINARY_DIR}/syntax.include
 	COMMAND
 		cat ${CMAKE_CURRENT_SOURCE_DIR}/syntax.leg |
-		sed -f ${CMAKE_CURRENT_SOURCE_DIR}/patch-leg-input.sed |
+		sed -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-input.sed |
 		leg |
 		sed 's/<stdin>/syntax.leg/' |
-		sed -f ${CMAKE_CURRENT_SOURCE_DIR}/patch-leg-output.sed |
-		awk -f ${CMAKE_CURRENT_SOURCE_DIR}/patch-leg-output.awk
+		sed -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-output.sed |
+		awk -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-output.awk
 		>${CMAKE_CURRENT_BINARY_DIR}/syntax.include
 	DEPENDS
 		${CMAKE_CURRENT_SOURCE_DIR}/syntax.leg
-		${CMAKE_CURRENT_SOURCE_DIR}/patch-leg-input.sed
-		${CMAKE_CURRENT_SOURCE_DIR}/patch-leg-output.sed
-		${CMAKE_CURRENT_SOURCE_DIR}/patch-leg-output.awk
+		${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-input.sed
+		${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-output.sed
+		${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-output.awk
 )
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/syntax.auto.h
-	COMMAND cat ${CMAKE_CURRENT_BINARY_DIR}/syntax.include | ${CMAKE_CURRENT_SOURCE_DIR}/make-syntax-auto.sh >${CMAKE_CURRENT_BINARY_DIR}/syntax.auto.h
+	COMMAND cat ${CMAKE_CURRENT_BINARY_DIR}/syntax.include | ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/make-syntax-auto.sh >${CMAKE_CURRENT_BINARY_DIR}/syntax.auto.h
 	DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/syntax.include
 )
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
-	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/make-pcre-constants.sh ${PCRE_H} >${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/make-pcre-constants.sh ${PCRE_H} >${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
+)
+add_custom_command(
+	OUTPUT
+		${CMAKE_CURRENT_BINARY_DIR}/errno.include
+	COMMAND
+		${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/make-errno-include.sh ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/include_errno.c >${CMAKE_CURRENT_BINARY_DIR}/errno.include
+	DEPENDS
+		${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/include_errno.c
 )
 
 target_link_libraries(ngs m pthread gc ffi dl json-c pcre)

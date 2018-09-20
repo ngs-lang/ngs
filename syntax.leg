@@ -1134,12 +1134,9 @@ imm-hash-literal =
 					MAKE_NODE(kv, EXPRESSIONS_NODE);
 					append_ast_node_child(kv, p);
 					p = p->next_sibling;
-					if(p) {
-						append_ast_node_child(kv, p);
-						append_ast_node_child(ret, kv);
-					} else {
-						// TODO: exception
-					}
+					assert(p); // should be there, imm-hash-words should ensure that
+					append_ast_node_child(kv, p);
+					append_ast_node_child(ret, kv);
 				}
 				$$ = ret;
 				CAPTURE_LOCATION($$);
@@ -1147,6 +1144,12 @@ imm-hash-literal =
 
 imm-hash-words = acc:command-words-node (
 		space?
+		(
+			hash-command-word {
+				append_ast_node_child(acc->first_child->next_sibling, $$);
+			}
+		)
+		space
 		(
 			hash-command-word {
 				append_ast_node_child(acc->first_child->next_sibling, $$);
@@ -1331,7 +1334,7 @@ for-in =
 	}
 
 if =
-	"if" space? cond:code-block (space "then")? space? yes:code-block no:if-optional-else-block {
+	"if" !identifier-continuation space? cond:code-block (space "then")? space? yes:code-block no:if-optional-else-block {
 		MAKE_NODE(ret, IF_NODE);
 		ret->first_child = cond;
 		cond->next_sibling = yes;
@@ -1345,7 +1348,7 @@ if-optional-else-block =
 	{ MAKE_NODE(ret, NULL_NODE); $$ = ret; }
 
 while =
-	"while" space? cond:code-block space? body:code-block {
+	"while" !identifier-continuation space? cond:code-block space? body:code-block {
 		MAKE_NODE(ret, WHILE_NODE);
 		ret->first_child = cond;
 		cond->next_sibling = body;
@@ -1353,7 +1356,7 @@ while =
 	}
 
 switch =
-	acc:any-switch space datum:expression { append_ast_node_child(acc, datum) } space? "{"
+	acc:any-switch !identifier-continuation space? datum:expression { append_ast_node_child(acc, datum) } space? "{"
 		(
 			space? e:expression space? c:code-block {
 				MAKE_NODE(case_node, EXPRESSIONS_NODE);
@@ -1435,6 +1438,8 @@ identifier =
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
+
+identifier-continuation = <[_a-zA-Z0-9]+>
 
 defined =
 	"defined" space i:identifier {
@@ -1521,7 +1526,8 @@ string-escape = "\\" (
 		"t"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\t"); $$ = content; } |
 		"\\" { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\\"); $$ = content; } |
 		"'"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\'"); $$ = content; } |
-		"\"" { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\""); $$ = content; }
+		"\"" { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("\""); $$ = content; } |
+		"$"  { MAKE_NODE(content, STR_COMP_IMM_NODE); content->name = ngs_strdup("$"); $$ = content; }
 	)
 
 str-comps-node = {
@@ -1819,22 +1825,37 @@ command-words-node = {
 	$$ = ret;
 }
 
-basic-command-word =
+
+unquoted-basic-command-word-node = {
+	MAKE_NODE(ret, STR_COMPS_NODE);
+	$$ = ret;
+}
+
+
+unquoted-basic-command-word = acc:unquoted-basic-command-word-node (
+
 	<[-a-zA-Z0-9/=,._@:]+> {
-		MAKE_STRING_NODE(ret, yytext);
-		$$ = ret;
+		MAKE_NODE(s, STR_COMP_IMM_NODE); \
+		s->name = ngs_strdup(yytext); \
+		append_ast_node_child(acc, s);
 	}
-	| "$" i:identifier { $$ = i; }
-	| "$" c:curly-code-block { $$ = c; }
-	| string
+	| esc:string-escape { append_ast_node_child(acc, esc); }
+	| e:string-dq-dollar-expansion { append_ast_node_child(acc, e); }
+)+ {
+	$$ = acc;
+}
+
+basic-command-word = string | unquoted-basic-command-word
 
 command-word =
-	basic-command-word
-	| "$*" c:code-block {
+	"$*" c:code-block {
 		MAKE_NODE(splat, ARR_SPLAT_NODE);
 			splat->first_child = c;
 		$$ = splat;
 	}
+	| "$" c:curly-code-block { $$ = c; }
+	| "$" i:identifier { $$ = i; }
+	| basic-command-word
 
 array-command-word =
 	number
@@ -1844,7 +1865,7 @@ array-command-word =
 
 hash-command-word =
 	number
-	| basic-command-word
+	| command-word
 	| imm-array-literal
 	| imm-hash-literal
 	| "$**" c:code-block {

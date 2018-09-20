@@ -198,6 +198,10 @@ typedef struct {
 // 001010 10 - Any
 // 001011 10 - Seq
 // 001100 10 - Type
+// (misc)
+// 010110 10 - Kwargs marker
+// (immediate types)
+// XXXXXXXX 100000 10 - An Object
 
 
 #define TAG_BITS    (2)
@@ -317,7 +321,7 @@ typedef enum {
 #define NGS_TYPE_FIELDS(v)        (((NGS_TYPE *)(v).ptr)->fields)
 #define NGS_TYPE_PARENTS(v)       (((NGS_TYPE *)(v).ptr)->parents)
 #define NGS_TYPE_USER(v)          (((NGS_TYPE *)(v).ptr)->user)
-// TODO: reanme OBJ_DATA to OBJ_VAL
+// TODO: rename OBJ_DATA to OBJ_VAL
 #define OBJ_DATA(v)               (((OBJECT *)(v).ptr)->val)
 #define OBJ_DATA_PTR(v)           (((OBJECT *)(v).ptr)->val.ptr)
 #define OBJ_TYPE(v)               (((OBJECT *)(v).ptr)->type)
@@ -399,11 +403,11 @@ VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX 
 VALUE join_strings(int argc, VALUE *argv);
 // VALUE value_type(VM *vm, VALUE val);
 // int obj_is_of_type(VM *vm, VALUE obj, VALUE t);
-void dump(VALUE v);
-void dump_titled(char *title, VALUE v);
+void dump(FILE *f, VALUE v);
+void dump_titled(FILE *f, char *title, VALUE v);
 char *obj_to_cstring(VALUE v);
 char **obj_to_cstring_array(VALUE v);
-METHOD_RESULT decode_json(VALUE s, VALUE *result);
+METHOD_RESULT decode_json(VM *vm, VALUE s, VALUE *result);
 METHOD_RESULT encode_json(VALUE obj, VALUE *result);
 void *ngs_memmem(const void *haystack_start, size_t haystack_len, const void *needle_start, size_t needle_len);
 char *ngs_strdup(const char *src);

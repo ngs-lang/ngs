@@ -188,8 +188,8 @@ char *opcodes_names[] = {
 		goto exception; \
 	} \
 	if(mr != METHOD_OK) { \
-		dump_titled("Failed to convert to type", vm->type); \
-		dump_titled("Failed to convert value", ctx->stack[ctx->stack_ptr-1]); \
+		dump_titled(stderr, "Failed to convert to type", vm->type); \
+		dump_titled(stderr, "Failed to convert value", ctx->stack[ctx->stack_ptr-1]); \
 		assert(0 == "Failed to convert"); \
 	} \
 	REMOVE_TOP_N(1); \
@@ -275,7 +275,7 @@ REAL_CMP_METHOD(greater_eq, >=)
 REAL_CMP_METHOD(eq, ==)
 
 METHOD_RESULT native_dump_any METHOD_PARAMS {
-	dump(argv[0]);
+	dump(stderr, argv[0]);
 	*result = MAKE_NULL;
 	return METHOD_OK;
 }
@@ -914,14 +914,9 @@ METHOD_RESULT native_load_str_str EXT_METHOD_PARAMS {
 METHOD_RESULT native_decode_json_str EXT_METHOD_PARAMS {
 	METHOD_RESULT mr;
 	(void) ctx;
-	mr = decode_json(argv[0], result);
+	mr = decode_json(vm, argv[0], result);
 	if(mr == METHOD_EXCEPTION) {
-		VALUE exc;
-		// TODO: more specific error
-		exc = make_normal_type_instance(vm->JsonDecodeFail);
-		set_normal_type_instance_field(exc, make_string("message"), *result);
-		set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
-		*result = exc;
+		set_normal_type_instance_field(*result, make_string("backtrace"), make_backtrace(vm, ctx));
 	}
 	return mr;
 }
@@ -1452,6 +1447,9 @@ void *_pthread_start_routine(void *arg) {
 	CTX ctx;
 	VALUE *result;
 	METHOD_RESULT mr;
+	VALUE *ts = NGS_MALLOC(sizeof(VALUE));
+	*ts = make_hash(4);
+	pthread_setspecific(thread_local_key, ts);
 	result = NGS_MALLOC(sizeof(*result));
 	*result = make_array(2);
 	init = (NGS_PTHREAD_INIT_INFO *)arg;
@@ -1460,6 +1458,10 @@ void *_pthread_start_routine(void *arg) {
 	mr = vm_call(init->vm, &ctx, &ARRAY_ITEMS(*result)[1], init->f, 1, &init->arg);
 	ARRAY_ITEMS(*result)[0] = MAKE_BOOL(mr == METHOD_EXCEPTION);
 	return result;
+}
+
+METHOD_RESULT native_ll_thread_local METHOD_PARAMS {
+	METHOD_RETURN(*(VALUE *)pthread_getspecific(thread_local_key));
 }
 
 METHOD_RESULT native_c_pthreadcreate_pthreadattr_startroutine_arg EXT_METHOD_PARAMS {
@@ -2211,7 +2213,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MK_BUILTIN_TYPE_DOC(Null, T_NULL, "Null type. Has only one instance, null");
 	vm->type_by_value_tag[V_NULL >> TAG_BITS] = &vm->Null;
 
-	MK_BUILTIN_TYPE_DOC(Bool, T_BOOL, "Boolean type. The only instances are true and false");
+	MK_BUILTIN_TYPE_DOC(Bool, T_BOOL, "Boolean type. The only objects are true and false");
 	vm->type_by_value_tag[V_TRUE >> TAG_BITS] = &vm->Bool;
 	vm->type_by_value_tag[V_FALSE >> TAG_BITS] = &vm->Bool;
 
@@ -2226,13 +2228,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	MK_BUILTIN_TYPE(Arr, T_ARR);
 	vm->type_by_t_obj_type_id[T_ARR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Arr;
-	_doc(vm, "", "Array - list of items accessed by zero-based index");
+	_doc(vm, "", "Array - ordered list of items accessed by zero-based index");
 	_doc_arr(vm, "%EX",
 		"x = [\"first\", \"second\", \"third\", \"fourth\"]",
 		"",
 		"echo(x)",
 		"# Output:",
-		"#   ['first','second','third','fourth']",
+		"#   [first,second,third,fourth]",
 		"",
 		"echo(x.len())",
 		"# Output:",
@@ -2243,7 +2245,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 		"#   second",
 		"",
 		"echo(x[10])",
-		"# ... Exception of type IndexNotFound occured ...",
+		"# ... Exception of type IndexNotFound occurred ...",
 		NULL
 	);
 
@@ -2253,7 +2255,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 		MK_BUILTIN_TYPE_DOC(UserDefinedMethod, T_CLOSURE, "UserDefinedMethod type. User-defined functions/methods are Closures");
 		vm->type_by_t_obj_type_id[T_CLOSURE >> T_OBJ_TYPE_SHIFT_BITS] = &vm->UserDefinedMethod;
 
-		MK_BUILTIN_TYPE_DOC(NativeMethod, T_NATIVE_METHOD, "Native method type");
+		MK_BUILTIN_TYPE_DOC(NativeMethod, T_NATIVE_METHOD, "Native method type. Methods implemented in C have this type.");
 		vm->type_by_t_obj_type_id[T_NATIVE_METHOD >> T_OBJ_TYPE_SHIFT_BITS] = &vm->NativeMethod;
 
 		MK_BUILTIN_TYPE_DOC(MultiMethod, T_MULMETHOD, "MultiMethod, container for methods.");
@@ -2262,12 +2264,12 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MK_BUILTIN_TYPE(Any, T_ANY);
 	_doc_arr(vm, "",
 		"Any type is parent type of all types. ",
-		"All instances in NGS are of type Any. ",
+		"All objects in NGS are of type Any. ",
 		"F(x) ... is same as F(x:Any) ...",
 		NULL
 	);
-		MK_BUILTIN_TYPE_DOC(BasicTypeInstance, T_BASICTI, "A type for instances of builtin types. Children types are not displayed as this type is specially optimized.");
-		MK_BUILTIN_TYPE_DOC(NormalTypeInstance, T_NORMTI, "A type for instances of user-defined types. Children types are not displayed as this type is specially optimized.");
+		MK_BUILTIN_TYPE_DOC(BasicTypeInstance, T_BASICTI, "A type for objects of builtin types. Children types are not displayed as this type is specially optimized.");
+		MK_BUILTIN_TYPE_DOC(NormalTypeInstance, T_NORMTI, "A type for objects of user-defined types. Children types are not displayed as this type is specially optimized.");
 
 	MK_BUILTIN_TYPE_DOC(Seq, T_SEQ, "Unused type");
 
@@ -2282,7 +2284,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 		"Key-Value pairs are stored and iterated in insertion order.",
 		"Currently Hash type has several limitations: ",
 		"Hash keys are hashed using internal hash() function which can not be overwritten. ",
-		"The internal hash() function exposed to NGS code but adding implementations or setting \"hash\" to some other function ",
+		"The internal hash() multimethod exposed to NGS code but adding methods to it or setting \"hash\" to some other function ",
 		"will not affect operation of Hashes. ",
 		"Hash values are compared using internal is_equal() function which can not be overwritten. ",
 		"Both hash() and is_equal() currently handle only Int, Str and arbitrary objects. ",
@@ -2372,7 +2374,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	MKTYPE(Exception);
 	_doc(vm, "", "Represents exceptional situaution. All thrown things shouhld inherit Exception.");
-	_doc(vm, "backtrace", "Automatic field set when creating Exception type instances (including sub-types, as long as super() is called.");
+	_doc(vm, "backtrace", "Automatic field set when creating Exception type objects (including sub-types, as long as super() is called.");
 
 		MKSUBTYPE(Error, Exception);
 		_doc(vm, "", "Represents an error. Usually more specific error types are used.");
@@ -2774,8 +2776,20 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Get pthread attribute. Currently returns null for unknown attributes. Will throw exceptions in future.");
 	_doc(vm, "attr", "One of: detachstate, guardsize, inheritsched, stacksize.");
 
+	register_global_func(vm, 0, "ll_thread_local",  &native_ll_thread_local,  0);
+	_doc(vm, "", "Get thread-local storage");
+	_doc(vm, "%RET", "Hash");
+
 	// Native methods
 	register_global_func(vm, 0, "params",   &native_params_nm,         1, "m",      vm->NativeMethod);
+	_doc(vm, "", "Introspect method parameters");
+	_doc_arr(vm, "%EX",
+		"(+).Arr()[2].params().each(echo)",
+		"# {name=a, type=<Type Int>}",
+		"# {name=b, type=<Type Int>}",
+		NULL
+	);
+
 
 	// Type
 	// needed for switch
@@ -2788,13 +2802,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->UserDefinedMethod, "b", vm->UserDefinedMethod);
 	_doc(vm, "", "Compare closures. Implemented as sameness comparison.");
 	_doc_arr(vm, "%EX",
-		"F make_closure() { F(x) x + 1 }; make_closure()      == make_closure()       # false - different instances",
+		"F make_closure() { F(x) x + 1 }; make_closure()      == make_closure()       # false - different objects",
 		"F make_closure() { F(x) x + 1 }; make_closure().ip() == make_closure().ip()  # true - same code",
 		"f = F(x) x +1; f == f  # true - same instance",
 		NULL
 	);
 	register_global_func(vm, 0, "params",   &native_params_closure,    1, "c",      vm->UserDefinedMethod);
-	_doc(vm, "", "Get closure parameters.");
+	_doc(vm, "", "Introspect closure parameters.");
 	_doc_arr(vm, "%EX",
 		"... F the_one(something, predicate, body:Fun, found_more:Fun={null}, found_none:Fun={null}) ...",
 		"the_one.Arr()[1].params().each(echo)"
@@ -2901,7 +2915,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Get BasicType (Int, Arr, Hash, ...) field. Throws FieldNotFound.");
 	_doc(vm, "field", "Field to get. Currently only \"name\" and \"constructors\" are supported.");
 	_doc(vm, "%AUTO", "obj.field");
-	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
+	_doc(vm, "%RET", "Str for \"name\" and MultiMethod for \"constructors\".");
 	_doc_arr(vm, "%EX",
 		"Hash.name  # String: Hash",
 		"Hash.constructors  # [<NativeMethod Hash>,<UserDefinedMethod Hash at ...>,...]",
@@ -3496,56 +3510,36 @@ void vm_init(VM *vm, int argc, char **argv) {
 	set_global(vm, "init", vm->init = make_multimethod());
 	set_global(vm, "call", vm->call = make_multimethod());
 
-	// TODO: Some good solution for many defines
-#define E(name) set_global(vm, "C_" #name, MAKE_INT(name))
-	// errno -ls | awk '{print "E("$1");"}' | xargs -n10
-	// (errno -ls | awk '{print $1}'; awk '/^#define RTLD_/ {print $2}' /usr/include/x86_64-linux-gnu/bits/dlfcn.h ) > c_constants.txt
-	E(EPERM); E(ENOENT); E(ESRCH); E(EINTR);
-	E(EINVAL); E(ENOTTY); E(EACCES);
-	/*
-	E(EIO); E(ENXIO); E(E2BIG); E(ENOEXEC); E(EBADF); E(ECHILD);
-	E(EAGAIN); E(ENOMEM); E(EFAULT); E(ENOTBLK); E(EBUSY); E(EEXIST); E(EXDEV); E(ENODEV); E(ENOTDIR);
-	E(EISDIR); E(EINVAL); E(ENFILE); E(EMFILE); E(ENOTTY); E(ETXTBSY); E(EFBIG); E(ENOSPC); E(ESPIPE); E(EROFS);
-	E(EMLINK); E(EPIPE); E(EDOM); E(ERANGE); E(EDEADLK); E(ENAMETOOLONG); E(ENOLCK); E(ENOSYS); E(ENOTEMPTY); E(ELOOP);
-	E(EWOULDBLOCK); E(ENOMSG); E(EIDRM); E(ECHRNG); E(EL2NSYNC); E(EL3HLT); E(EL3RST); E(ELNRNG); E(EUNATCH); E(ENOCSI);
-	E(EL2HLT); E(EBADE); E(EBADR); E(EXFULL); E(ENOANO); E(EBADRQC); E(EBADSLT); E(EDEADLOCK); E(EBFONT); E(ENOSTR);
-	E(ENODATA); E(ETIME); E(ENOSR); E(ENONET); E(ENOPKG); E(EREMOTE); E(ENOLINK); E(EADV); E(ESRMNT); E(ECOMM);
-	E(EPROTO); E(EMULTIHOP); E(EDOTDOT); E(EBADMSG); E(EOVERFLOW); E(ENOTUNIQ); E(EBADFD); E(EREMCHG); E(ELIBACC); E(ELIBBAD);
-	E(ELIBSCN); E(ELIBMAX); E(ELIBEXEC); E(EILSEQ); E(ERESTART); E(ESTRPIPE); E(EUSERS); E(ENOTSOCK); E(EDESTADDRREQ); E(EMSGSIZE);
-	E(EPROTOTYPE); E(ENOPROTOOPT); E(EPROTONOSUPPORT); E(ESOCKTNOSUPPORT); E(EOPNOTSUPP); E(EPFNOSUPPORT); E(EAFNOSUPPORT); E(EADDRINUSE); E(EADDRNOTAVAIL); E(ENETDOWN);
-	E(ENETUNREACH); E(ENETRESET); E(ECONNABORTED); E(ECONNRESET); E(ENOBUFS); E(EISCONN); E(ENOTCONN); E(ESHUTDOWN); E(ETOOMANYREFS); E(ETIMEDOUT);
-	E(ECONNREFUSED); E(EHOSTDOWN); E(EHOSTUNREACH); E(EALREADY); E(EINPROGRESS); E(ESTALE); E(EUCLEAN); E(ENOTNAM); E(ENAVAIL); E(EISNAM);
-	E(EREMOTEIO); E(EDQUOT); E(ENOMEDIUM); E(EMEDIUMTYPE); E(ECANCELED); E(ENOKEY); E(EKEYEXPIRED); E(EKEYREVOKED); E(EKEYREJECTED); E(EOWNERDEAD);
-	E(ENOTRECOVERABLE); E(ERFKILL); E(EHWPOISON); E(ENOTSUP);
-	*/
-	// awk '/^#define RTLD_/ {print "E("$2");"}' /usr/include/x86_64-linux-gnu/bits/dlfcn.h | xargs -n10
+	#define E(name) set_global(vm, "C_" #name, MAKE_INT(name))
+	#include "errno.include"
+
+	// awk '/^#define RTLD_/ {print $2}' /usr/include/x86_64-linux-gnu/bits/dlfcn.h ) > c_constants.txt
 	E(RTLD_LAZY); E(RTLD_NOW); E(RTLD_NOLOAD); /* E(RTLD_DEEPBIND); E(RTLD_GLOBAL); E(RTLD_LOCAL); E(RTLD_NODELETE); */
 
-	// man access(2)
+	// --- man access(2) ---
 	VALUE access = make_hash(8);
-
-#define A(name) set_hash_key(access, make_string(#name), MAKE_INT(name))
+	#define A(name) set_hash_key(access, make_string(#name), MAKE_INT(name))
 	A(F_OK); A(R_OK); A(W_OK); A(X_OK);
-#undef A
+	#undef A
 	set_global(vm, "ACCESS", access);
 
-	// man poll(2);
+	// --- man poll(2) ---
 	E(POLLIN); E(POLLPRI); E(POLLOUT); E(POLLERR); E(POLLHUP); E(POLLNVAL);
 
-	// man 2 stat
+	// --- man 2 stat ---
 	E(S_IFMT); E(S_IFSOCK); E(S_IFLNK); E(S_IFREG); E(S_IFBLK); E(S_IFDIR); E(S_IFCHR); E(S_IFIFO);
 
 	E(S_ISUID); E(S_ISGID); E(S_ISVTX); E(S_IRWXU); E(S_IRUSR); E(S_IWUSR); E(S_IXUSR); E(S_IRWXG); E(S_IRGRP); E(S_IWGRP);
 	E(S_IXGRP); E(S_IRWXO); E(S_IROTH); E(S_IWOTH); E(S_IXOTH);
 
 
-	// pthread
+	// --- pthread ---
 	E(PTHREAD_MUTEX_RECURSIVE);
 
 
 	// awk '/^#define PCRE/ && $3 {print "E("$2");"}' /usr/include/pcre.h | grep -v 'PCRE_UCHAR\|PCRE_SPTR' | sort | xargs -n5
 	#pragma GCC diagnostic push
-	// Silcence clang unknown pragmas
+	// Silence clang unknown pragmas
 	#pragma GCC diagnostic ignored "-Wunknown-pragmas"
 	// Silence GCC unkown pragmas
 	#pragma GCC diagnostic ignored "-Wpragmas"
@@ -3786,7 +3780,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			}
 			if(mr != METHOD_ARGS_MISMATCH) {
 				DEEPER_FRAME.arr_callable = NULL;
-				dump_titled("RESULT", *result);
+				dump_titled(stderr, "RESULT", *result);
 				VALUE exc;
 				exc = make_normal_type_instance(vm->InternalError);
 				set_normal_type_instance_field(exc, make_string("message"), make_string("Unexpected method result"));
@@ -4121,7 +4115,7 @@ main_loop:
 		decompile(vm->bytecode, ip-1, ip);
 		for(j=ctx->stack_ptr; j>0; j--) {
 			printf("Stack @ %zu\n", j-1);
-			dump(ctx->stack[j-1]);
+			dump(stderr, ctx->stack[j-1]);
 		}
 	}
 #endif
@@ -4247,7 +4241,7 @@ main_loop:
 									goto exception;
 								}
 							}
-							// dump_titled("FETCH_GLOBAL", GLOBALS[gvi]);
+							// dump_titled(stderr, "FETCH_GLOBAL", GLOBALS[gvi]);
 							PUSH(GLOBALS[gvi]);
 							goto main_loop;
 		case OP_STORE_GLOBAL:
@@ -4330,7 +4324,7 @@ main_loop:
 								goto exception_return;
 							}
 							if(mr != METHOD_OK) {
-								dump_titled("Failed callable / 2", callable);
+								dump_titled(stderr, "Failed callable / 2", callable);
 								assert(0=="Handling failed method calls is not implemented yet");
 							}
 							REMOVE_TOP_N(GET_INT(v));
@@ -4357,8 +4351,8 @@ main_loop:
 									*result = exc;
 									goto exception;
 								}
-								dump_titled("Failed argument array", ctx->stack[ctx->stack_ptr-1]);
-								dump_titled("Failed callable / 3", callable);
+								dump_titled(stderr, "Failed argument array", ctx->stack[ctx->stack_ptr-1]);
+								dump_titled(stderr, "Failed callable / 3", callable);
 								assert(0=="Handling failed method calls is not implemented yet");
 							}
 							REMOVE_TOP_N(1);

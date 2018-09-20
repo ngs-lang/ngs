@@ -44,4 +44,19 @@ TEST IPAddr("192.168.1.100").is_private()
 TEST IPAddr("172.31.255.255").is_private()
 TEST IPAddr("172.32.0.1").is_private().not()
 
+F Str(ip:IP) {
+	t = ip.ip
+	octets = collector
+		for(i;4) {
+			collect(t.band(255))
+			t = t / 256 # change to bshr() when implemented
+		}
+	octets.reverse().join('.') + if ip is IPNet then "/${ip.mask}" else ""
+}
+
+TEST IPAddr("192.168.1.100").Str() == "192.168.1.100"
+TEST IPNet("192.168.1.0/24").Str() == "192.168.1.0/24"
+
+F Arg(ip:IP) Str(ip)
+
 # TODO: consider decode() for ipcalc output for "deaggregate" operation for example

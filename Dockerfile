@@ -5,6 +5,6 @@ RUN apt-get update && apt-get -y install cmake pkg-config build-essential devscr
 ADD . /src
 WORKDIR /src
 
-RUN mkdir build && cd build && cmake .. && make && ctest && make install
+RUN rm build -rf && mkdir build && cd build && cmake .. && make && ctest && make install
 
 CMD ["/bin/bash"]

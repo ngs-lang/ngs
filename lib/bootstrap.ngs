@@ -31,7 +31,7 @@ F init(e:Exception, message:Str, cause:Exception) {
 
 	doc Information about exiting, used by bootstrap and as argument to exit_hook.
 	doc exit_code - the code to exit with
-	doc exceptions - exceptions that occured during exit procedure
+	doc exceptions - exceptions that occurred during exit procedure
 	type Exit
 }
 
@@ -250,8 +250,7 @@ F print_exception(e:Exception) {
 doc Prints exceptions. Only used if stdlib is not loaded (stdlib changes exit_hook to a Hook object).
 F exit_hook(exit:Exit) {
 	for(i; exit.exceptions.len()) {
-		# FIXME: output to stderr when print_exception is fixed
-		echo("--- Uncaught exception ---")
+		echo(2, "[exit_hook] --- Uncaught exception ---")
 		print_exception(exit.exceptions[i])
 	}
 }
@@ -282,8 +281,7 @@ F bootstrap_exception_catch_wrapper() {
 		exit.exceptions.push(e)
 		exit.exit_code = exit.exit_code + 2
 		for(i; exit.exceptions.len()) {
-			# FIXME: output to stderr when print_exception is fixed
-			echo("--- Uncaught exception ---")
+			echo(2, "[bootstrap_exception_catch_wrapper] --- Uncaught exception ---")
 			dump(exit.exceptions[i])
 		}
 	}

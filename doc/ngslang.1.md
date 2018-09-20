@@ -6,15 +6,14 @@
 
 ngslang - Next Generation Shell language reference.
 
-# What is ngs?
+# What is NGS?
 
-NGS is an alternative shell. At it's core is a domain-specific language that was specifically designed to be a shell language.
+NGS is an alternative shell. At its core is a domain-specific language that was specifically designed to be a shell language.
 
-NGS is under development. The language part is already good enough to write some useful scripts.
-The CLI still doesn't exist and will be written using the same language.
+NGS is under development. The language part is already good enough to write some useful scripts. The CLI still doesn't exist and will be written using the same language.
 
 
-# Running ngs scripts
+# Running NGS scripts
 
 **ngs** *script_name.ngs*
 
@@ -31,7 +30,7 @@ See more about running NGS in [NGS(1)](ngs.1.md).
 * type - Built-in or user-defined data type, similar to Python, Ruby and other languages.
 * object - Instance of a type, similar to Python, Ruby and other languages. The phrase "MyType object" refers to an Instance of "MyType".
 * field - A named slot of an object, similar to field in Python, Java, etc.
-* attributes - Slot for auxiliary data on most types of objects (the ones that are references, i.e. not Int,Bool,Null), typically a `Hash` or `null`.
+* attributes - Slot for auxiliary data on most types of objects (the ones that are references, i.e. not Int,Bool,Null), typically a `Hash` or `null`. Attributes are not fields and are accessed differently (using `attrs` method).
 * method - Built-in or user-defined function. User defined methods can be closures. Methods are also called functions in several places in the documentation.
 * multimethod - A MultiMethod object containing ordered list of methods. When called, the appropriate method is selected from the list to perform the computation.
 
@@ -41,9 +40,7 @@ This section is about principles behind NGS language design.
 
 ## Systems engineers' language
 
-NGS is a domain-specific language. It is aimed to solve common system tasks in a convenient manner.
-
-## Do the most practical thing
+NGS is a domain-specific language. It is aimed to solve common system tasks in a convenient manner. Some examples:
 
 * `fetch('myfile.json')` will decode the JSON and return the data structure. (Use `read()` to get raw contents).
 * The ```` ``my_command`` ```` will decode the command output (JSON for example) and return the data structure. Note that ```` ``aws ...`` ```` will be parsed even further (not just JSON) to return more usable data structures.
@@ -51,7 +48,7 @@ NGS is a domain-specific language. It is aimed to solve common system tasks in a
 
 ## Uniformity
 
-NGS tries to be uniform wherever possible to minimize surprises.
+NGS tries to be uniform wherever possible to minimize surprises. The idea here is to match between expected and actual behaviour of given method plus parameters.
 
 ## Power
 
@@ -69,7 +66,7 @@ For example, the multimethod `+`:
 
 * `fetch('your_file.super-format')` can be extended to decode your format.
 * `read`, which reads from a file, can be extended to support HTTP or S3.
-* Most of the syntax (for example `my_var.my_field` or `my_var[my_index]`) is just sugar for calling methods. This behaviour lets you, the user define any operator for existing or your custom types.
+* Most of the syntax (for example `my_var.my_field` or `my_var[my_index]`) is just sugar for calling methods. This behaviour lets you, the user, define any operator for existing or your custom types.
 
 ## Simplicity
 
@@ -93,6 +90,7 @@ Many concepts and syntax constructs come from other languages.
 * `TransformationName` - example: `Strs` (converts to array of strings), `Argv` (constructs command line arguments array), `ExitCode` (converts anything to integer exit code).
 
 Reasoning behind `TransformationName`:
+
 * Transforms data into something else, like many other constructors
 * The output data might get it's own data type some day
 
@@ -139,12 +137,12 @@ In **commands syntax** it is possible to switch to **code syntax** in one of the
 	ls
 	{ code syntax here }
 
-	ls ${ code that computes the file name and returns a string,
-	spaces don't matter, expaned into single argument of ls }
+	ls ${ code that computes the file name and returns a string, spaces
+	don't matter, expanded into single argument of ls }
 
 	# Expands to zero or more positional arguments to ls
 	ls $*{ code that computes the files names and returns array of
-	strings. Spaces don't matter, each element is expaned into single
+	strings. Spaces don't matter, each element is expanded into single
 	argument of ls }
 
 
@@ -178,7 +176,9 @@ Also, lines that start with "TEST " (note the trailing space) are considered to 
 
 As in other languages, variables are named locations that can store values. Variables' names should consist of ASCII letters (a-z, A-Z) and numbers (0-9). Variable name must start with a letter. Assignment to variables looks the same in both commands and code syntax. Referencing a variable in the code syntax is just the variable's name while referencing it in commands syntax or inside string interpolation is `$my_var` (not recommended) or `${my_var}` (recommended).
 
-Advanced topic: more precisely, the naming restrictions for the variables mentioned above are naming restrictions on identifiers. NGS can have variables that are named not by the rules above. This is not recommended except for special methods' which correlate with NGS syntax which is a syntactic sugar for calling methods, for example, binary operators. See more about methods' naming in "Methods and multimethods" section below.
+Advanced topic: more precisely, the naming restrictions for the variables mentioned above are naming restrictions on identifiers. NGS can have variables that are named not by the rules above.
+
+Note that it is not recommended to use names which are not valid identifiers. As an exception to this rule, it's OK for methods which correlate with NGS syntax to have names which are not valid identifiers. Example of such methods are binary operators (`+`, `-`, etc.). See more about methods' naming in "Methods and multimethods" section below.
 
 Assigning to a variable works in both commands and code syntax.
 
@@ -220,6 +220,8 @@ Referencing undefined variable will cause `GlobalNotFound` or `UndefinedLocalVar
 It's a rare circumstance that one needs to use `defined`. Please try to avoid such situations.
 
 ## Variables' scoping rules
+
+Variables scoping is similar to Python's.
 
 Variables scope types:
 
@@ -314,7 +316,7 @@ You can modify default scoping using the `global` and `local` keywords.
 
 Destructuring assignment. Something like the following:
 
-	[a, b, **rest] = my_arr
+	[a, b, *rest] = my_arr
 
 Syntax for `Hash` destructuring is not clear yet:
 
@@ -330,7 +332,7 @@ Destructuring should also be available in `for`:
 
 # Methods and multimethods
 
-Methods' names are composed of letters (a-z, A-Z), digits (0-9) and the following characters: `_`, `-`, `|`, `=`, `!`, `@`, `?`, `<`, `>`, `~`, `+`, `*`, `/`, `%`, `(`, `)`, `$`, `.`, ```` `` ````, `"`, `:`, ` ` (space), `[`, `]` .
+Methods' names are composed of letters (a-z, A-Z), digits (0-9) and the following characters: `_`, `-`, `|`, `=`, `!`, `@`, `?`, `<`, `>`, `~`, `+`, `*`, `/`, `%`, `(`, `)`, `$`, `.`, ```` `` ````, `"`, `:`, (space), `[`, `]` .
 
 ## Multi-dispatch
 
@@ -351,7 +353,7 @@ Let's start with the following example:
 		'a' + 'b' # 'ab'
 	}
 
-The `+` is a multimethod. It has few methods. You can see definitions of two of the methods in the example above. One method adds numbers. Another method concatenates strings. How NGS knows which one of them to run? The decision is made based on arguments' types. NGS scans the methods list backwards and invokes the method that matches the given arguments (this matching process is called multiple dispatch).
+The `+` is a multimethod. It has a few methods. You can see definitions of two of the methods in the example above. One method adds numbers. Another method concatenates strings. How NGS knows which one of them to run? The decision is made based on arguments' types. NGS scans the methods list backwards and invokes the method that matches the given arguments (this matching process is called multiple dispatch).
 
 When a `MultiMethod` is called, the multimethod's methods list is searched from last element to first element. The method which parameters' types match is executed. This model is different from many other languages, where the most specific method is called. In NGS, if two methods' parameters both match the arguments, that one that was defined last is called. Typically, methods for more specific types are defined later in code so the behaviour is similar to other languages. If matched method is executed and a `guard` (see below) fails, the search is continued as if the method did not match.
 
@@ -397,8 +399,6 @@ As a syntactic sugar, method call `f(a, b, c)` can be written as `a.f(b, c)`.
 
 	# Output:
 	#   Hello world
-
-Note: `f(a, b, c)` is same as `a.f(b, c)`
 
 ## Methods for operators
 
@@ -688,8 +688,8 @@ NGS is a dynamically typed language: values (and not variables) have types.
 NGS is a "strongly typed" language: values are not implicitly converted to unrelated types. This makes the language more verbose in some cases but helps catch certain type of bugs earlier.
 
 	echo(1+"2")
-	# ... Exception of type MethodNotFound occured ...
-	# That means that NGS has no method that "knows" how to add an Int and a Str
+	# ... Exception of type MethodNotFound occurred ...
+	# That means that NGS has no method that "knows" how to add an Int and an Str
 
 	echo(1+Int("2"))
 	# Output: 3
@@ -762,7 +762,7 @@ Examples:
 
 ## require
 
-The `require` method reads, compiles and executes the given file. Currently absolute paths and paths relative to current directory are supported. In future, paths relative to current directory will not be supported but rather paths relative to the file that does `require()` call will be supported, similar to Node.js. This needs work which was not done yet, there was never intention to support paths relative to current directory; it's just wrong.
+The `require` method reads, compiles (to bytecode) and executes the given file. Currently absolute paths and paths relative to current directory are supported. In future, paths relative to current directory will not be supported but rather paths relative to the file that does `require()` call will be supported, similar to Node.js. This needs work which was not done yet, there was never intention to support paths relative to current directory; it's just wrong.
 
 	require('/home/someone/my_module.ngs')
 
@@ -775,7 +775,6 @@ When an undefined global variable is referenced, `global_not_found_handler` is c
 * AWS
 * IP (IPAddr, IPNet)
 * Iter (ArrIter, ConstIter, HashIter, RangeIter, ...)
-* Thread (pmap, ptimes)
 
 # Namespaces
 
@@ -1061,7 +1060,7 @@ Arrays - basics
 	#   ['blah',2,'some text']
 
 	echo(x[10])
-	# ... Exception of type IndexNotFound occured ...
+	# ... Exception of type IndexNotFound occurred ...
 
 Arrays - some basic methods that operate on arrays
 
@@ -1154,7 +1153,7 @@ Hashes - basics
 	#   my_default
 
 	echo(x.e)
-	# ... Exception of type KeyNotFound occured ...
+	# ... Exception of type KeyNotFound occurred ...
 
 	x = %{akey avalue bkey bvalue}
 	echo(x)
@@ -1596,7 +1595,7 @@ I do not recommend NGS as your first language. Python, for example, would be a m
 
 ## Watch the version
 
-NGS is under development. Currently NGS has no version, breaking changes can happen. If you do anything important with NGS, it's preferable to note the git revision you are using for reproducible installation. The plan is to stop breaking NGS when it reaches version 1.0.0. From that version, the behaviour will be common - patch level increase for fixes, minor for improvements, major for breaking changes.
+NGS is under development. Breaking changes can happen. If you do anything important with NGS, it's preferable to note the git revision you are using for reproducible installation. The plan is to stop breaking NGS when it reaches version 1.0.0. From that version, the behaviour will be common - patch level increase for fixes, minor for improvements, major for breaking changes.
 
 ## Keyword arguments gotchas
 
@@ -1643,7 +1642,7 @@ The correct version to add method to a global multimethod is
 
 ## Comments syntax gotchas
 
-Comments syntax is implemented in many places but not everywhere. If you get syntax error regarding comment, move to somewhere nearby.
+Comments syntax is implemented in many places but not everywhere. If you get syntax error regarding comment, move it to somewhere nearby.
 
 ## Mutable default parameter gotchas
 

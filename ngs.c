@@ -17,7 +17,7 @@
 
 char *sprintf_position(yycontext *yy, int pos) {
 	int linecol[2];
-	char *ret = NGS_MALLOC_ATOMIC(1024);
+	char *ret = (char *)NGS_MALLOC_ATOMIC(1024);
 	position_to_line_col(yy, pos, linecol);
 	snprintf(ret, 1024, "%d:%d", linecol[0], linecol[1]);
 	return ret;
@@ -33,6 +33,7 @@ char *find_bootstrap_file() {
 	};
 	char *fname;
 	char *home_dir;
+	int i;
 	int len;
 	char fmt[] = "%s/.bootstrap.ngs";
 
@@ -44,7 +45,7 @@ char *find_bootstrap_file() {
 	home_dir = getenv("HOME");
 	if(home_dir) {
 		len = snprintf(NULL, 0, fmt, home_dir) + 1;
-		fname = NGS_MALLOC_ATOMIC(len);
+		fname = (char *)NGS_MALLOC_ATOMIC(len);
 		snprintf(fname, len, fmt, home_dir);
 		// printf("HOME fname: %s\n", fname);
 		if(access(fname, F_OK) != -1) {
@@ -52,9 +53,9 @@ char *find_bootstrap_file() {
 		}
 	}
 
-	for(len=0; places[len]; len++) {
-		if(access(places[len], F_OK) != -1) {
-			return places[len];
+	for(i=0; places[i]; i++) {
+		if(access(places[i], F_OK) != -1) {
+			return places[i];
 		}
 	}
 
@@ -108,21 +109,24 @@ void print_exception(VM *vm, VALUE result) {
 		}
 		if(obj_is_of_type(vm, ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)], vm->Exception)) {
 			assert(IS_STRING(e->key));
-			printf("---8<--- %s - start ---8<---\n", obj_to_cstring(e->key));
+			fprintf(stderr, "---8<--- %s - start ---8<---\n", obj_to_cstring(e->key));
 			print_exception(vm, ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
-			printf("---8<--- %s - end ---8<---\n", obj_to_cstring(e->key));
+			fprintf(stderr, "---8<--- %s - end ---8<---\n", obj_to_cstring(e->key));
 			continue;
 		}
 		if(IS_STRING(e->key)) {
-			dump_titled(obj_to_cstring(e->key), ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
+			dump_titled(stderr, obj_to_cstring(e->key), ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
 		} else {
 			// Should not happen
-			dump_titled("field key", e->key);
-			dump_titled("field value", ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
+			dump_titled(stderr, "field key", e->key);
+			dump_titled(stderr, "field value", ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
 		}
 	}
 }
 #undef H
+
+
+pthread_key_t thread_local_key;
 
 int main(int argc, char **argv)
 {
@@ -142,10 +146,14 @@ int main(int argc, char **argv)
 	if(0) { yymatchDot(NULL); yyAccept(NULL, 0); }
 
 	NGS_GC_INIT();
+	VALUE main_thread_local = make_hash(4);
 
 	pcre_malloc = GC_malloc;
 	pcre_free = GC_free;
 	// (causes warning) // NGS_GC_THR_INIT();
+
+	pthread_key_create(&thread_local_key, NULL);
+	pthread_setspecific(thread_local_key, &main_thread_local);
 
 	yycontext yyctx;
 	memset(&yyctx, 0, sizeof(yycontext));
@@ -195,10 +203,10 @@ int main(int argc, char **argv)
 	}
 	if(mr == METHOD_EXCEPTION) {
 		if(obj_is_of_type(&vm, result, vm.Exception)) {
-			printf("========= Uncaught exception of type '%s' =========\n", obj_to_cstring(NGS_TYPE_NAME(NORMAL_TYPE_INSTANCE_TYPE(result))));
+			fprintf(stderr, "========= Uncaught exception of type '%s' =========\n", obj_to_cstring(NGS_TYPE_NAME(NORMAL_TYPE_INSTANCE_TYPE(result))));
 			print_exception(&vm, result);
 		} else {
-			dump_titled("Uncaught exception", result);
+			dump_titled(stderr, "Uncaught exception", result);
 		}
 		return 245;
 	}

@@ -1,20 +1,33 @@
+/*
+	https://material.io/guidelines/style/color.html#color-color-palette
+*/
+
 html {
-    font-family: sans-serif;
+    font-family: Verdana, sans-serif;
 }
 
 body {
 	line-height: 1.5;
-	xbackground-color: #FDFDFB;
+	padding-top: 3em;
+	/*
+	*/
 	margin: 0;
 }
 
-nav {
-	float: left;
-	width: 18em;
-	background-color: #EEEEEE;
-	border-right: 1px solid #DDDDDD;
-	border-bottom: 1px solid #DDDDDD;
-	padding: 1em;
+.header {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	padding: 0.5em;
+	color: #FFFFFF;
+	background-color: #673AB7;
+	box-shadow: 0 0 4px 0px black;
+	z-index: 4;
+	text-align: center;
+	/*
+	background-color: #7E57C2;
+	*/
 }
 
 main {
@@ -32,20 +45,29 @@ section {
 }
 
 h1, h2, h3, h4, h5, h6 {
-	xcolor: brown;
+	/*
+	color: #512DA8;
+	color: #9C27B0;
+	color: #8E24AA;
+	*/
 	margin-top: 1em;
+	color: #7B1FA2;
 }
 
-dl {
-	xmargin-top: 3em;
-}
-
-dt {
-	font-weight: bold;
+a {
+	/*
+	color: #009688;
+	*/
+	color: #00897b;
+	text-decoration: none;
 }
 
 dd {
 	margin-top: 1em;
+}
+
+.markdown-definitions dd {
+	margin-top: 0;
 }
 
 table {
@@ -54,31 +76,22 @@ table {
 	border-collapse: collapse;
 }
 
-table.params td:nth-child(1) {
-	font-weight: bold;
-}
-
-th {
-	color: #888888;
-}
-
-th, td {
-	padding: 0.3em;
-}
-
 code {
 	margin: 0.25em;
 	padding: 0.25em;
-	background-color: #F0FFE0;
+	background-color: #E0F2F1;
 	border: 1px solid #A0C0A0;
 	border-radius: 0.25em;
 }
 
-pre.example {
-	background-color: #F0FFE0;
+pre {
 	padding: 1em;
-	border: 1px solid #A0C0A0;
 	border-radius: 0.5em;
+	box-shadow: 0 0 1px 0px black;
+}
+
+pre.example {
+	background-color: #E0F2F1;
 }
 
 .underline-on-hover-only {
@@ -116,7 +129,7 @@ dt:hover .source-ref {
 
 .unobtrusive {
 	font-size: 0.8em;
-	opacity: 0.6;
+	opacity: 0.38;
 }
 
 h1 .unobtrusive,
@@ -126,9 +139,105 @@ nav .unobtrusive {
 }
 
 .method-status {
+	background-color: #7B1FA2;
+	color: #FFFFFF;
 	margin-left: 1em;
 	border-radius: 0.25em;
 	padding: 0.25em;
-	background-color: #DDDDDD;
 	font-weight: normal;
+	box-shadow: 0 0 1px 0px black;
+	font-size: 80%;
+}
+
+nav {
+	position: fixed;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 18em;
+	color: #FAFAFA;
+	background-color: #212121;
+	box-shadow: 0 0 2px 0px black;
+	margin-top: 2em;
+	/*
+	background-color: #FAFAFA;
+	background-color: #424242;
+	padding: 1em;
+	*/
+}
+
+nav a {
+	color: #80CBC4;
+}
+
+nav h1, nav h2, nav h3, nav h4, nav h5, nav h6 {
+	margin-top: 0;
+	color: #BA68C8;
+}
+
+.nav-main {
+	padding: 1em;
+}
+
+.parent-namespace-nav > .parent-namespace-nav,
+.parent-namespace-nav > .current-nav {
+	padding-left: 1em;
+}
+
+.current-nav {
+	/*
+	font-weight: bold;
+	*/
+}
+
+nav .footer {
+	position: fixed;
+	left: 0;
+	bottom: 0;
+	padding: 1em;
+}
+
+.logo {
+	text-align: right;
+}
+
+.logo > img {
+	width: 150px;
+	height: 40px;
+}
+
+/*
+.method {
+	box-shadow: 0 0 1px 0px black;
+	padding: 1em;
+	background-color: #FAFAFA;
+	border-radius: 0.25em;
+	margin-bottom: 1em;
+}
+*/
+.method-signature {
+	font-weight: bold;
+}
+
+/*
+.returns h4 {
+	margin-bottom: 0.25em;
+}
+*/
+
+table.documented-params td:nth-child(1) {
+	font-weight: bold;
+	padding-right: 1em;
+}
+
+pre.auto {
+	background-color: #FFFDE7;
+}
+
+.markdown-table td {
+	padding-right: 2em;
+}
+
+.man-page-date {
+	text-align: center;
 }

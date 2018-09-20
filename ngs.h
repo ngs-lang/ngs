@@ -53,6 +53,8 @@ void *ngs_realloc(void *ptr, size_t size);
 
 // GC - end
 
+typedef struct VM VM;
+
 // XXX: don't do NGS_REALLOC all the time. Maybe re-use some
 //      other code here instead of reinventing the wheel
 #define ENSURE_ARRAY_ROOM(dst, allocated, len, min_len) { \
@@ -84,4 +86,5 @@ typedef enum {
 	METHOD_EXCEPTION,
 } METHOD_RESULT;
 
+extern pthread_key_t thread_local_key;
 #endif

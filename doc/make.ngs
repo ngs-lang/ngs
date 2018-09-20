@@ -3,6 +3,7 @@
 
 	# Autoload
 	AWS
+	AWS2
 	ArgvMatcher
 	DelimStr
 	Doc
@@ -18,12 +19,13 @@
 	# TODO: Do not list all types on the namespace page,
 	# just up to TYPES_THRESHOLD, probably the parents.
 	TYPES_THRESHOLD = 10
+	g = globals()
 
 	# TODO: types trees pages
 
 	F main(doc_root:Str) {
 
-		global init, Str, Bool
+		global init, Str, Bool, ([]=)
 
 		DocPart = Doc::Part
 		DocNode = Doc::Node
@@ -31,68 +33,388 @@
 		DocGroup = Doc::Group
 
 		commit = `line: git rev-parse HEAD`
+		pfx = Pfx("$NGS_DIR/")
+		github_user = ENV.get('NGS_GITHUB_USER', 'ilyash')
 
 		F is_public_name(s:Str) s ~ /^[^_]/
 		F is_phased_out_type(s:Str) s ~ Pfx('Aws')
 
+		F is_namespace(x) {
+			x is not Hash returns false
+			not(object_doc(x)) returns false
+			x.keys().all(Int) returns false # STDLIB_FILE_TYPE, possibly others in future
+			x.values().any(F(v) v is Type or v is Fun)
+		}
+
 		F safe_file_name(s:Str) {
-			s == 'index' returns 'index-'
-			s.replace(/[^-_a-zA-Z0-9]/, F(char) '%' + encode_hex(char))
+			m = s ~ Sfx('.html')
+			sfx = if m {
+				s = m.before
+				m[0]
+			} else {
+				''
+			}
+			s.replace(/(^[.]+)|[^-._a-zA-Z0-9]/, F(char) '%' + encode_hex(char)) + sfx
 		}
 
 		F object_attr(x, a:Str) (x.attrs() or {}).get(a).Box()
 		F object_doc(x) x.object_attr('doc')
 		F object_doc_attr(x, a:Str) object_doc(x).filter(a in X).map(X[a]).map(ensure_array)
 
-		F make_page_head(title:Str, dotdots:Int=1) {
-			DocNode('head') with [
-				DocNode('meta', charset='UTF-8')
-				DocNode('link', rel='stylesheet', href='../' * dotdots + 'main.css', type='text/css')
-				DocNode('title') with [
-					DocText(title)
-				]
-			]
-		}
-
 		obj_to_description = {}
+
+		doc Setting same key twice is a bug. If it happens, augment_types() works on one objects
+		doc but other objects are used later.
+		F '[]='(h:Hash, k, v) {
+			guard h === obj_to_description
+			assert(k not in h)
+			super(h, k, v)
+		}
 
 		type Description
 
-			F containing_namespace_root_dir_components() {
-				d.containing_nd.containing_namespace_root_dir_components()
+			F href(from:Description, to_path:Arr) {
+				from_path = from.path_as_item()
+				from_path == to_path returns '#HERE'
+				i = 0
+				while from_path[i] == to_path[i] {
+					i += 1
+				}
+				ret =
+					('../' * (len(from_path) - i - 1)) +
+					to_path[i..null].map(safe_file_name).map(encode_uri_component).join('/')
 			}
 
-			F output_abs_file_name_components(d:Description) {
-				d.containing_namespace_root_dir_components() + [ d.output_file_name() ]
+			F href(from:Description, to:Description) href(from, to.path_as_item())
+
+			F fqname(d:Description) fqname(d.containing_nd) +? '::' + d.name
+
+
+			F get_this_version_desc(d:Description) d.containing_nd.get_this_version_desc()
+
+			F path_as_container_str(d:Description) {
+				d.path_as_container().map(safe_file_name).reduce(doc_root, (/))
 			}
+
+			F generate_before_children_hook(d:Description) null
 
 			F generate(d:Description) {
-				dst = d.output_abs_file_name_components().reduce(doc_root, (/))
-				status("Generating page(s) for ${d} -> ${dst}")
+				# status("Generating page for descriptors ${d}")
+				o = ENV.Box('NGS_DOC_ONLY').map(X.split(','))
+				if o {
+					if not(o.get().has(d.typeof().name)) {
+						return
+					}
+				}
 
-				# Namespaces
-				# Types
-				# Multimethods
+				children = get_children(d)
+
+				if children or (d.path_as_container() == d.path_as_item()[0..-1]) {
+					container_dir = d.path_as_container_str()
+					log("Ensuring directory $container_dir exists")
+					$(mkdir -p $container_dir)
+				}
+
+				dst = (d.path_as_item().map(safe_file_name)).reduce(doc_root, (/))
+				p = page(d)
+				file_content = Doc::HtmlRoot(p)
+				log("Writing file=${dst} description=${d} len=${file_content.len()} hash=${file_content.hash()}")
+				write(dst, file_content)
+
+				generate_before_children_hook(d)
+				children.each(generate)
 			}
+
+			F get_children(d:Description) []
+
+			F path_as_item(d:Description) d.containing_nd.path_as_container() + [(if d.name == 'index' then '_index' else d.name) + '.html']
+			F path_as_container(d:Description) d.containing_nd.path_as_container() + [d.name]
+
+			F head_fragment(from:Description) {
+				\head [
+					\meta charset='UTF-8'
+					\link rel='stylesheet' href=href(from, from.get_this_version_desc().path_as_container() + ['main.css']) type='text/css'
+					\title [ page_title(from) ]
+				]
+			}
+
+			F nav_name(d:Description) d.name
+			F nav_header(d:Description) "auto-generated documentation"
+
+			F nav_header_fragment(d:Description) {
+				\div class='header' [
+					"NGS version $VERSION ${nav_header(d)}"
+				]
+			}
+
+			F nav_bottom_fragment(d:Description) {
+				\div class='footer' [
+					\a href='https://ngs-lang.org/' [ "NGS website" ]
+					\br
+					\a href='https://github.com/ilyash/ngs' [ "NGS on GitHub" ]
+				]
+
+			}
+
+			F nav_fragment(d:Description) {
+				tvi = d.get_this_version_desc()
+				t = d
+				ns_nav = \div class='current-nav' [ nav_name(t) ]
+				while 'containing_nd' in t {
+					t = t.containing_nd
+					ns_nav = \div class='parent-namespace-nav' [
+						\a href=href(d, t) [ t.nav_name() ]
+						ns_nav
+					]
+				}
+
+				DocGroup() with [
+					\nav [
+						nav_header_fragment(d)
+						\div class='nav-main' [
+							\div class='parent-namespace-nav' [
+								\a href=href(d, tvi) [ tvi.nav_name() ]
+								ns_nav
+							]
+						]
+						nav_bottom_fragment(d)
+					]
+				]
+
+			}
+
+			F description_fragment(d:Description)
+				\section class='description' [
+					d.description.map(F(desc) {
+						desc.join('\n')
+					}).get('Undocumented')
+				]
+
+			F example_fragment(d:Description, h='h2') {
+				d.example.map(F(ex) {
+					\section [
+						DocNode(h) with ['Example']
+						\pre class='example' title='Example' [
+							ex.join('\n')
+						]
+					]
+				})
+			}
+
+			F logo_fragment(d:Description) {
+				\div class='logo' [
+					\img src=href(d, d.get_this_version_desc().path_as_container() + ['ngs-logo-300.png']) alt='NGS logo'
+				]
+			}
+
+			F page(d:Description) \html [ \body [ "NOT-READY-YET" ] ]
 
 			F Bool(d:Description) true
 
-			F Str(d:Description) {
-				"<${d.typeof().name} ${d.name}>"
+			F Str(d:Description) "<${d.typeof().name} ${d.name}>"
+
+
+		type ThisVersionIndex(Description)
+
+			F init(tvi:ThisVersionIndex) {
+				tvi.docs = collector dir('.').each(F(p) {
+					m = p.path ~ /\.md$/
+					not(m) returns
+					status("Reading ${p.path}")
+					# collect(m.before, ``pandoc -f 'markdown+hard_line_breaks' -t json -s ${p}``)
+					collect(MarkdownDescription(tvi, m.before, p))
+				})
+
+				status("Building generated documentation descriptors")
+				tvi.global_ns = GlobalNamespaceDescription(tvi)
+
+				augment_types()
+				augment_methods()
+
+			}
+
+			F nav_header(tvi:ThisVersionIndex) "documentation"
+			F nav_name(tvi:ThisVersionIndex) "Documentation index"
+			F page_title(tvi:ThisVersionIndex) "Documentation index"
+			F path_as_item(tvi:ThisVersionIndex) [Str(VERSION), 'index.html']
+			F path_as_container(tvi:ThisVersionIndex) [Str(VERSION)]
+
+			F Str(tvi:ThisVersionIndex) "<${tvi.typeof().name} for version ${VERSION}>"
+
+			F get_children(tvi:ThisVersionIndex) {
+				tvi.docs + [tvi.global_ns]
+			}
+
+			F generate_before_children_hook(tvi:ThisVersionIndex) {
+				$(mkdir ${tvi.path_as_container_str() / 'man'})
+			}
+
+			F generate(tvi:ThisVersionIndex) {
+				super(tvi)
+				$(cp main.css "${tvi.path_as_container_str()}/")
+				$(cp ../img/ngs-logo-300.png "${tvi.path_as_container_str()}/")
+			}
+
+			F get_this_version_desc(tvi:ThisVersionIndex) tvi
+
+			F nav_fragment(tvi:ThisVersionIndex) {
+				DocGroup() with [
+					nav_header_fragment(tvi)
+					\nav [
+						\div class='nav-main' [
+							\div class='current-nav' [ nav_name(tvi) ]
+						]
+						nav_bottom_fragment(tvi)
+					]
+				]
+			}
+
+			F page(tvi:ThisVersionIndex) {
+				docs_by_type = tvi.docs.group(classify)
+				assert_hash_keys(docs_by_type, %[CLI GENERAL])
+				\html [
+					head_fragment(tvi)
+					\body class='version-index-page' [
+						nav_fragment(tvi)
+						\main [
+							logo_fragment(tvi)
+							\h1 [ "Documentation index" ]
+							\section [ "NGS version ${VERSION}"]
+							\h2 [ "Manuals - general" ]
+							*docs_by_type.GENERAL.map(index_fragment(tvi, X))
+							\h2 [ "Manuals - command line tools" ]
+							*docs_by_type.CLI.map(index_fragment(tvi, X))
+							\h2 [ "Generated documentation" ]
+							index_fragment(tvi, tvi.global_ns)
+						]
+					]
+				]
+			}
+
+		F process_markdown_link(s:Str) {
+			if m = s ~ /^([a-z.0-9]+)(\.md)$/ {
+				return m[1] + '.html'
+			}
+			s
+		}
+		F process_markdown_table(h:Hash) {
+			# table: 0 - ?, 1 - Alignment, 2 - something about columns?, 3 - ?, 4 - rows
+			assert(h.t == 'Table')
+			DocNode('table', class='markdown-table') with h.c[4].map(F(row) {
+				DocNode('tr') with row.map(F(cell) {
+					DocNode('td') with [ cell[0].to_doc() ]
+				})
+			})
+		}
+		F process_markdown_def_list(h:Hash) {
+			DocNode('dl', class='markdown-definitions') with h.c.map(F(d) {
+				DocGroup() with [
+					DocNode('dt') with d[0].map(to_doc)
+					DocNode('dd') with d[1].the_one().map(to_doc)
+				]
+			})
+		}
+		MARKDOWN_QUOTES = {
+			'DoubleQuote': '"'
+			'SingleQuote': "'"
+		}
+		F to_doc(h:Hash) {
+			# Maybe TODO: header .c[1] - href?
+			eswitch h.t {
+				'Space'           ' '
+				'Str'             h.c
+				'Para'            DocNode('p') with h.c.map(to_doc)
+				'Header'          DocNode('h' + Str(h.c[0] + 1)) with h.c[2].map(to_doc)
+				'Strong'          DocNode('strong') with h.c.map(to_doc)
+				'Emph'            DocNode('em') with h.c.map(to_doc)
+				'LineBreak'       DocNode('br')
+				'CodeBlock'       DocNode('pre', class='example') with [ h.c[1] ]
+				'Code'            DocNode('code') with [ h.c[1] ]
+				'Link'            DocNode('a', href=h.c[2][0].process_markdown_link()) with h.c[1].map(to_doc)
+				'BulletList'      DocNode('ul') with h.c.map(F(x) DocNode('li', x.map(to_doc)))
+				'Quoted'          DocGroup() with [MARKDOWN_QUOTES[h.c[0].t], *h.c[1].map(to_doc), MARKDOWN_QUOTES[h.c[0].t]]
+				'Table'           process_markdown_table(h)
+				'DefinitionList'  process_markdown_def_list(h)
+				'Plain'           DocGroup() with h.c.map(to_doc)
+			}
+		}
+
+		type MarkdownDescription(Description)
+
+			F init(md:MarkdownDescription, tvi:ThisVersionIndex, output_name:Str, file_path:Path) {
+				init(args())
+				md.data = ``pandoc -f 'markdown+hard_line_breaks' -t json -s ${md.file_path}``
+				md.doc = DocGroup() with md.data.blocks.map(to_doc)
+				md.name_fragment = md.doc.children.filter(DocNode).filter({'name': 'p'})[0].children
+			}
+
+			F nav_header(md:MarkdownDescription) "manual"
+			F page_title(md:MarkdownDescription) md.data.meta.title.c.map(to_doc).DocGroup()
+			F nav_name(md:MarkdownDescription) md.data.meta.title.c.map(to_doc).DocGroup()
+			F path_as_item(md:MarkdownDescription) md.tvi.path_as_container() + ['man', md.output_name + '.html']
+			F path_as_container(md:MarkdownDescription) md.tvi.path_as_container() + ['MD_CONTAINER_SHOULD_NOT_HAPPEN']
+
+			F get_this_version_desc(md:MarkdownDescription) md.tvi
+
+			F Str(md:MarkdownDescription) "<${md.typeof().name} ${md.output_name}>"
+
+			F nav_fragment(md:MarkdownDescription) {
+				DocGroup() with [
+					nav_header_fragment(md)
+					\nav [
+						\div class='nav-main' [
+							\div class='parent-namespace-nav' [
+								\a href=href(md, md.tvi) [ md.tvi.nav_name() ]
+								\div class='current-nav' [ nav_name(md) ]
+							]
+						]
+						nav_bottom_fragment(md)
+					]
+				]
+			}
+
+			F index_fragment(indexer:Description, md:MarkdownDescription) {
+				\dl [
+					\dt [
+						\a href=href(indexer, md) [ *md.name_fragment ]
+					]
+					\dd [
+						*md.doc.children.filter(DocNode).filter({'name': 'h2'}).map(F(x) DocNode('span') with x.children).intersperse(', ')
+					] # dd
+				]
+			}
+
+			F page(md:MarkdownDescription) {
+				\html [
+					head_fragment(md)
+					\body class='manual-page' [
+						nav_fragment(md)
+						\main [
+							md.doc
+							\h2 [ 'AUTHORS' ]
+							DocNode('ul') with md.data.meta.author.c.map(F(author) {
+								DocNode('li', author.c.map(to_doc))
+							})
+							DocNode('div', class='man-page-date') with md.data.meta.date.c.map(to_doc)
+						]
+					]
+				]
+			}
+
+			F classify(md:MarkdownDescription) {
+				headers = md.doc.children.filter(DocNode).filter({'name': 'h2'}).children.txt.map(X[0])
+				%[ SYNOPSIS DESCRIPTION OPTIONS ].all(X in headers) returns 'CLI'
+				'GENERAL'
 			}
 
 		type NamespaceDescription(Description)
 
-			F fqname(nd:NamespaceDescription) fqname(nd.containing_nd) +? '::' + nd.name
-
 			F init(nd:NamespaceDescription, namespace:Hash) {
+				obj_to_description[namespace] = nd
 				nd.fqname = nd.fqname()
 				nd.description = object_doc_attr(namespace, '')
 				nd.example = object_doc_attr(namespace, '%EX')
 				# 'ext_links': doc_attr(ns, '%EXTLINK').map(ensure_array)
-				# 'types': ns.filterv(Type).reject(F(k, v) g.get(k) === v).map(F(name, t) {
-				# 	process_type(t)
-				# }).sort('name')
 				# 'methods': ns.filterv(Fun).rejectv(Type).map(F(name, impls) {
 				# 	# STDLIB_FILE_TYPE namespace has numbers as keys
 				# 	impls = if impls is MultiMethod {
@@ -102,8 +424,7 @@
 				# 	}
 				# 	process_method(Str(name), impls.filter(is_in_ns(X, ns)))
 				# })
-				nd.attrs = namespace.attrs().Box().get({}).get('doc', {}).without('').reject(X ~ /^%/).mapv(ensure_array)
-				# 'parents': parents
+				nd.fields = namespace.attrs().Box().get({}).get('doc', {}).without('').reject(X ~ /^%/).mapv(ensure_array)
 				nd.objects_descriptions = {}
 				nd.objects_by_type = {
 					MultiMethodDescription: []
@@ -111,58 +432,55 @@
 					TypeDescription: []
 					NamespaceDescription: []
 				}
-				namespace.each(F(k, v) {
-					if t = Description(nd, k, v) {
-						# echo("KV1 $k $t")
-						nd.objects_descriptions[k] = t
-						nd.objects_by_type[t.typeof()].push(t)
-					}
+				namespaces_and_rest = namespace.Arr().partition(F(kv) is_namespace(kv[1])).map(Hash)
+				namespaces_and_rest.reverse().each(F(namespace_part) {
+
+					namespace_part.each(F(k, v) {
+						if nd is not GlobalNamespaceDescription and v is Type and g.get(k) === v {
+							# Skip global types which are also in a namespace when showing the namespace
+							return
+						}
+						if t = Description(nd, k, v) {
+							nd.objects_descriptions[k] = t
+							nd.objects_by_type[t.typeof()].push(t)
+						}
+					})
 				})
 			}
 
 			F init(nd:NamespaceDescription, containing_nd:NamespaceDescription, name:Str, namespace:Hash) {
 				init(args())
-				obj_to_description[namespace] = nd
 				super(nd, namespace)
 			}
 
-			F output_file_name(nd:NamespaceDescription) 'index.html'
+			F get_children(nd:NamespaceDescription) nd.objects_descriptions.values()
 
-			F page_title(nd:NamespaceDescription) "${nd.name} namespace - NGS documentation"
-			F page_heading(nd:NamespaceDescription) "{nd.fqname} namespace - NGS documentation"
+			F page_title(nd:NamespaceDescription) "${nd.fqname} namespace - NGS documentation"
+			F page_heading(nd:NamespaceDescription) "${nd.fqname} namespace"
+			F nav_name(nd:NamespaceDescription) "${nd.name} namespace"
 
-			F index_fragment(nd:NamespaceDescription) {
+			F index_fragment(indexer:Description, nd:NamespaceDescription) {
 
 				\dl [
 					\dt [
-						\a href="TODO" [nd.name]
+						# Dirty hack: or
+						\a href=href(indexer, nd)  [nd.fqname or 'The global namespace']
 					]
 					\dd [
-						\section [
-							nd.description.map(F(d) {
-								d.join('\n')
-							}).get('Undocumented')
-						]
+						description_fragment(nd)
 						\div class='unobtrusive' [
 							{
-								'sub-namespaces': NamespaceDescription
-								'types':          TypeDescription
-								'multimethods':   MultiMethodDescription
+								'sub-namespaces':     NamespaceDescription
+								'types':              TypeDescription
+								'multimethods':       MultiMethodDescription
+								'top level methods':  MethodDescription
 							}.mapv({nd.objects_by_type[A].len()}).filterv(X>0).map("$Y $X").join(', ')
 						]
-						nd.example.map(F(ex) {
-							\section [
-								\h2 ['Example']
-								\pre class='example' title='Example' [
-									ex.join('\n')
-								]
-							]
-						}).get(DocGroup())
+						example_fragment(nd)
 					] # dd
 				]
 			}
 
-			# Not sure yet
 			F top_level_types(nd:NamespaceDescription) {
 				types = nd.objects_by_type[TypeDescription]
 				all_types_count = len(types)
@@ -181,15 +499,28 @@
 			F page(nd:NamespaceDescription) {
 				tlt = top_level_types(nd)
 				\html [
-					make_page_head(page_title(nd))
+					head_fragment(nd)
 					\body class='namespace-page' [
-						# make_nav_doc(['Namespaces'] + nav + [namespace.name], dotdots=dd)
+						nav_fragment(nd)
 						\main [
 							\h1 [page_heading(nd)]
+							description_fragment(nd)
+							example_fragment(nd)
 							if nd.objects_by_type[NamespaceDescription] {
 								DocGroup() with [
 									\h2 ['Sub-namespaces']
-									*nd.objects_by_type[NamespaceDescription].map(index_fragment)
+									*nd.objects_by_type[NamespaceDescription].map(index_fragment(nd, X))
+								]
+							}
+							if nd.fields {
+								\section class='variables-and-other' [
+									\h2 [ 'Constants, variables and other' ]
+									*nd.fields.map(F(name, desc) {
+										\dl [
+											\dt [ name ]
+											\dd [ desc.join('\n') or '-' ]
+										]
+									})
 								]
 							}
 							if tlt.types {
@@ -197,14 +528,17 @@
 									\h2 ['Types']
 									if tlt.hidden {
 										\section class='unobtrusive' ["${tlt.hidden} types, which are descendants of types listed below, are not shown for brevity"]
+									} else {
+										DocGroup()
 									}
-									*tlt.types.map(index_fragment)
+									*tlt.types.map(index_fragment(nd, X))
 								]
 							}
-							if nd.objects_by_type[MultiMethodDescription] {
+							if nd.objects_by_type[MultiMethodDescription] or nd.objects_by_type[MethodDescription] {
 								DocGroup() with [
-									\h2 ['Multimethods']
-									*nd.objects_by_type[MultiMethodDescription].map(index_fragment)
+									\h2 ['Methods and Multimethods']
+									*nd.objects_by_type[MultiMethodDescription].map(page_fragment(nd, X))
+									*nd.objects_by_type[MethodDescription].map(page_fragment(nd, X))
 								]
 							}
 						]
@@ -212,33 +546,29 @@
 				]
 			}
 
-			F generate(nd:NamespaceDescription) {
-
-				status("Generating page for namespace ${nd}")
-				dst = (nd.containing_namespace_root_dir_components() + ['index.html']).reduce(doc_root, (/))
-				p = page(nd)
-				write(dst, Doc::HtmlRoot(p))
-				log("DST ${dst}")
-
-			}
-
 			F Str(nd:NamespaceDescription) {
 				"<${nd.typeof().name} ${nd.name} with ${nd.objects_descriptions.len()} items>"
-
 			}
 
 		type GlobalNamespaceDescription(NamespaceDescription)
 
-			F fqname(gnd:NamespaceDescription) ''
+			F fqname(gnd:GlobalNamespaceDescription) ''
 
-			F init(gnd:GlobalNamespaceDescription) {
-				super(gnd, globals().without('main').filterk(is_public_name).rejectk(is_phased_out_type).sortk(lte))
+			F init(gnd:GlobalNamespaceDescription, this_version_index) {
+				gnd.this_version_index = this_version_index
+				super(gnd, g.without('main').filterk(is_public_name).rejectk(is_phased_out_type).sortk(lte))
 			}
 
-			F containing_namespace_root_dir_components(gnd:GlobalNamespaceDescription) []
+			F get_this_version_desc(gnd:GlobalNamespaceDescription) gnd.this_version_index
 
 			F page_title(gnd:GlobalNamespaceDescription) "The global namespace - NGS documentation"
-			F page_heading(nd:NamespaceDescription) "The global namespace - NGS documentation"
+			F page_heading(gnd:GlobalNamespaceDescription) "The global namespace"
+			F nav_name(gnd:GlobalNamespaceDescription) "The global namespace"
+
+			F path_as_item(gnd:GlobalNamespaceDescription) [Str(VERSION), 'generated', 'index.html']
+			F path_as_container(gnd:GlobalNamespaceDescription) [Str(VERSION), 'generated']
+
+			F description_fragment(gnd:GlobalNamespaceDescription) 'The main entry point to generated documentation'
 
 			F Str(gnd:GlobalNamespaceDescription) {
 				"<${gnd.typeof().name} with ${gnd.objects_descriptions.len()} items>"
@@ -250,93 +580,292 @@
 			F init(td:TypeDescription, containing_nd:NamespaceDescription, name:Str, type:Type) {
 				init(args())
 				obj_to_description[type] = td
-				td.constructor = MultiMethodDescription(containing_nd, name, type.constructors)
+				td.fqname = fqname(td)
+				td.constructors = MultiMethodDescription(containing_nd, name, type.constructors).methods
 				td.description = object_doc_attr(type, '')
-				td.parents = []
+				td.example = object_doc_attr(type, '%EX')
+				td.parents = null
 				td.children = []
 			}
 
-			F index_fragment(td:TypeDescription) {
+			F page_title(td:TypeDescription) "${td.fqname} type - NGS documentation"
+			F page_heading(td:TypeDescription) "${td.fqname} type"
+			F nav_name(td:TypeDescription) "${td.name} type"
+
+			F index_fragment(indexer:Description, td:TypeDescription) {
 				alt_name = ' (' +? (if td.name != td.type.name then td.type.name else '') +? ')'
 				\dl [
 					\dt [
-						\a href=td.name.safe_file_name().encode_uri_component() + '.FIXME.html' class='underline-on-hover-only' [
-							td.name + alt_name
-						]
+						\a href=href(indexer, td) [td.fqname + alt_name]
 					]
 					\dd [
-						\section [
-							td.description.map(F(d) {
-								DocText(d.join('\n'))
-							}).get('Undocumented')
-						]
+						description_fragment(td)
 						if td.children {
 							\div class='unobtrusive' [
 								"Direct subtypes: ${td.children.len()}"
 							]
-						} else {
-							DocGroup()
 						}
 					]
 				]
 			}
 
+			# TODO: try to display as a table on type pages.
+			#       That will make related types visually distinctive from more important
+			#       information such as constructors and methods.
+			F directly_related_types_fragment(td:TypeDescription, related_types:Arr, rel:Str) {
+				if related_types {
+					\section [
+						\h2 [ "Direct ${rel} types" ]
+						*related_types.map(index_fragment(td, X))
+					]
+				} else {
+					DocGroup()
+				}
 
+			}
+
+			F page(td:TypeDescription) {
+				\html [
+					head_fragment(td)
+					\body class='type-page' [
+						nav_fragment(td)
+						\main [
+							\h1 [page_heading(td)]
+							description_fragment(td)
+							example_fragment(td)
+							directly_related_types_fragment(td, td.parents, 'parent')
+							directly_related_types_fragment(td, td.children, 'children')
+							if td.constructors {
+								DocGroup() with [
+									\h2 [ 'Constructors' ]
+									*td.constructors.map(page_fragment(td, X))
+								]
+							}
+							if td.methods {
+								DocGroup() with [
+									\h2 [ 'Methods' ]
+									*td.methods.map(page_fragment(td, X))
+								]
+							}
+						]
+					]
+				]
+			}
 
 		type MultiMethodDescription(Description)
 
 			F init(mmd:MultiMethodDescription, containing_nd:NamespaceDescription, name:Str, multimethod:MultiMethod) {
 				init(args())
 				obj_to_description[multimethod] = mmd
+				mmd.fqname = fqname(mmd)
 				mmd.methods = multimethod.Arr().reject(NormalTypeConstructor).map(MethodDescription(containing_nd, name, mmd, X))
 				# mmd.methods = multimethod.Arr().map(MethodDescription(containing_nd, name, mmd, X))
 			}
 
-			F index_fragment(mmd:MultiMethodDescription) {
+			F page_title(mmd:MultiMethodDescription) "${mmd.fqname} multimethod - NGS documentation"
+			F page_heading(mmd:MultiMethodDescription) "${mmd.fqname} multimethod"
+			F nav_name(mmd:MultiMethodDescription) "${mmd.name} multimethod"
+
+			F index_fragment(indexer:Description, mmd:MultiMethodDescription) {
 				\dl [
 					\dt [
-						\a href=mmd.name.safe_file_name().encode_uri_component() + '.FIXME.html' class='underline-on-hover-only' [
-							"(MMD) " + mmd.name
+						\a href=href(indexer, mmd) class='underline-on-hover-only' [
+							mmd.fqname
 						]
 					]
 					\dd [
-						\section [
-							*mmd.methods.map(index_fragment)
+						\section class='unobtrusive' [
+							"MultiMethod with ${mmd.methods.len()} methods"
 						]
 					]
+				]
+			}
+
+			F index_fragment(indexer:Description, mmd:MultiMethodDescription) {
+				guard mmd.methods.len() == 1
+				index_fragment(indexer, mmd.methods[0])
+			}
+
+			F page_fragment(indexer:NamespaceDescription, mmd:MultiMethodDescription) {
+				# echo("INDEXER ${indexer} MMD ${mmd}")
+				methods_in_namespace_and_others = mmd.methods.partition(F(x) {
+					x.containing_nd === indexer
+				})
+				DocGroup() with [
+					*methods_in_namespace_and_others[0].map(page_fragment(mmd, X))
+					if methods_in_namespace_and_others[1] {
+						\dl class='unobtrusive' [
+							\dt class='method-signature' [
+								\a href=href(indexer, mmd) class='underline-on-hover-only' [
+									mmd.fqname
+								]
+							]
+							\dd [
+								"This multimethod has additional ${methods_in_namespace_and_others[1].len()} method(s) not listed above, defined in other namespace(s)"
+							]
+						]
+					} else {
+						DocGroup()
+					}
+				]
+			}
+
+			F page_fragment(indexer:GlobalNamespaceDescription, mmd:MultiMethodDescription) {
+				index_fragment(indexer, mmd)
+			}
+
+			F page(mmd:MultiMethodDescription) {
+				\html [
+					head_fragment(mmd)
+					\body class='multimethod-page' [
+						nav_fragment(mmd)
+						\main [
+							\h1 [page_heading(mmd)]
+							if mmd.methods {
+								DocGroup() with [
+									\h2 [ 'Methods' ]
+									*mmd.methods.map(page_fragment(mmd, X))
+								]
+							}
+						]
+					]
+				]
+			}
+
+		type ParamDescription
+
+			# TODO: link to type?
+			F fragment(from:Description, pd:ParamDescription) {
+				td = obj_to_description.Box(pd.type)
+				\span class='param' [
+					pd.splat.get('') + pd.name + ':'
+					td.map(F(td) {
+						td === from returns td.fqname
+						\a href=href(from, td) [td.fqname]
+					}).get(pd.type.name)
+					pd.dflt.map(F(d) {
+						DocGroup() with [
+							'='
+							ematch d {
+								Fun { \span class='non-literal' [ 'method' ] }
+								Any d.code()
+							}
+						]
+					})
 				]
 			}
 
 
 		type MethodDescription(Description)
 
+			F init(md:MethodDescription, method:Fun) {
+				obj_to_description[method] = md
+				md.fqname = md.mmd.map(fqname).get(md.name)
+				md.description = object_doc_attr(method, '')
+				md.status = object_doc_attr(method, '%STATUS').get([])
+				md.params = method.params().map(F(p) {
+					pd = ParamDescription()
+					pd.name = p.name
+					pd.type = p.get('type', Any)
+					pd.dflt = p.Box('dflt')
+					pd.splat = p.Box('splat')
+					pd.doc = method.object_doc_attr(p.name)
+					pd
+				})
+				md.returns = object_doc_attr(method, '%RET')
+				md.example = object_doc_attr(method, '%EX')
+				md.auto = object_doc_attr(method, '%AUTO')
+				md.source_ref= Box(if method is UserDefinedMethod {
+					# Handling UserDefinedMethod, not handling built-ins yet
+					location_info = method.ip().resolve_instruction_pointer()
+					if m = location_info.file ~ pfx {
+						{
+							'file': m.after
+							'line': location_info.first_line
+						}
+					}
+				})
+			}
+
+
 			F init(md:MethodDescription, containing_nd:NamespaceDescription, name:Str, mmd:MultiMethodDescription, method:Fun) {
 				init(args())
-				obj_to_description[method] = md
 				md.mmd = FullBox(mmd)
-				md.description = object_doc_attr(method, '')
+				super(md, method)
 			}
 
 			F init(md:MethodDescription, containing_nd:NamespaceDescription, name:Str, method:Fun) {
 				init(args())
-				obj_to_description[method] = md
 				md.mmd = EmptyBox()
-				md.description = object_doc_attr(method, '')
+				super(md, method)
 			}
 
-			F index_fragment(md:MethodDescription) {
+			F index_fragment(indexer:Description, md:MethodDescription) {
 				\dl [
 					\dt [
-						\a href=md.name.safe_file_name().encode_uri_component() + '.FIXME.html' class='underline-on-hover-only' [
-							md.name
+						\a href=href(indexer, md) class='underline-on-hover-only' [
+							md.fqname
 						]
+						*md.status.map(F(s) {
+							\span class="method-status" [ s ]
+						})
 					]
 					\dd [
-						\section [
-							md.description.map(F(d) {
-								DocText(d.join('\n'))
-							}).get('Undocumented')
+						description_fragment(md)
+					]
+				]
+			}
+
+			F page_fragment(indexer:Description, md:MethodDescription) {
+				documented_params = md.params.filter({A.doc})
+				\dl class='method' [
+					\dt [
+						\span class='method-signature' [
+							md.fqname
+							'('
+							*md.params.map(fragment(indexer, X)).intersperse(', ')
+							')'
+							*md.status.map(F(s) {
+								\span class="method-status" [ s ]
+							})
 						]
+						md.source_ref.map(F(r) {
+							\span class="source-ref" [
+								' Source: '
+								\a href="https://github.com/${github_user}/ngs/blob/$commit/lib/${r.file}#L${r.line}" [
+									"${r.file}:${r.line}"
+								]
+							]
+						})
+					]
+					\dd [
+						description_fragment(md)
+						md.auto.map(F(a) {
+							\section [
+								\h4 [ 'Automatically called by NGS for syntax' ]
+								\pre class='auto' title='Usage syntax' [ a[0] ]
+							]
+						})
+						if documented_params {
+							\section class='params' [
+								\h4 ['Parameters']
+								\table class='documented-params' [
+									*documented_params.map(F(p) {
+										\tr [
+											\td [ p.name ]
+											\td [ p.doc.map(X.join('\n')).get() ]
+										]
+									})
+								]
+							]
+						}
+						md.returns.map(F(r) {
+							\section class='returns' [
+								\h4 ['Returns']
+								r.join('\n')
+							]
+						})
+						example_fragment(md, 'h4') # Logically h3 but it's too big
 					]
 				]
 			}
@@ -363,17 +892,27 @@
 		}
 
 		F Description(containing_nd:NamespaceDescription, name:Str, maybe_namespace:Hash) {
-			F is_namespace(x) {
-				not(object_doc(x)) returns false
-				x.keys().all(Int) returns false # STDLIB_FILE_TYPE, possibly others in future
-				x.values().any(F(v) v is Type or v is Fun)
-			}
 			not(is_namespace(maybe_namespace)) returns null
 			NamespaceDescription(containing_nd, name, maybe_namespace)
 		}
 
+		F Description(containing_nd:NamespaceDescription, name:Str, x) {
+			guard x in obj_to_description
+			obj_to_description[x]
+		}
+
 		F augment_types() {
 			status("Augmenting types information")
+
+			methods = obj_to_description.values().filter(MethodDescription)
+			methods_by_td = {}
+			for m in methods {
+				m.method.params().reject(X.get('splat')).type.uniq().each(F(t) {
+					k = obj_to_description.get(t)
+					k is Null returns
+					methods_by_td.dflt(obj_to_description[t], []).push(m)
+				})
+			}
 
 			tds = obj_to_description.values().filter(TypeDescription)
 
@@ -389,25 +928,34 @@
 				})
 			}
 
+			# .methods
+			for t in tds {
+				# TODO: Reject constructors
+				constructors = Set(t.constructors)
+				t.methods = methods_by_td.get(t, []).reject(X in constructors)
+			}
+
 			# # maybe find it in methods variable instead of re-doing process_method_impl()
 			# t.constructors = t.type.constructors.Arr().reject(NormalTypeConstructor).register_constructors_mis().map(process_method_impl(t.name, X))
 			# t.methods = types_methods[t.type].map(processed_methods[X]).reject({'is_constructor': true})
 
 		}
 
+		# Note that methods in anonymous namespaces will not have corresponding
+		# obj_to_description for their 'ns'
+		F augment_methods() {
+			status("Augmenting methods information")
+			methods = obj_to_description.values().filter(MethodDescription)
+			for md in methods {
+				namespace = md.method.object_attr('ns').map(obj_to_description.get(X)).reject(NoData)
+				md.containing_nd = namespace.get(md.containing_nd)
+			}
+		}
 
-		status("Building descriptors")
-		global_ns = GlobalNamespaceDescription()
+		this_version_index = ThisVersionIndex()
 
-		status("Writing files")
-		$(cp main.css "$doc_root/")
-
-		augment_types()
-
-		global_ns.generate()
-
-
-
+		status("Building site index descriptors")
+		this_version_index.generate()
 
 		status("OK")
 

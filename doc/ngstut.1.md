@@ -1,14 +1,14 @@
-% NGS(1) NGS User Manual
-% Ilya Sher,  Zeev Glozman (@zglozman)
+% NGSTUT(1) NGS User Manual
+% Zeev Glozman (\@zglozman); Ilya Sher
 % 2017
 
 # NAME
 
-ngstut - Simple Tutorial how to get started with NGS
+ngstut - Getting started with NGS - simple tutorial.
 
 # ABOUT THIS DOCUMENT
 
-This is a not a replacement for proper NGS syntax training, but rather an attempt to create a short introduction with some cool code that you can cut-n-paste and modify. I will also try to make accents on things that were not obvious to me, which are some of the coolest shortest syntax in my opinion.
+This is a not a replacement for proper NGS syntax training, but rather an attempt to create a short introduction with some cool code that you can cut-n-paste and modify. I will also try to make accents on things that were not obvious to me (Zeev), which are some of the coolest shortest syntax in my opinion.
 
 # NGS SWITCHES
 
@@ -29,6 +29,9 @@ This is a not a replacement for proper NGS syntax training, but rather an attemp
 
 -pi CODE
 : "Print Inspected" -- Will print out the result of the last expression, with more information about it
+
+-pt CODE
+: "Print Table" -- Will print out the result of the last expression as a table
 
 Examples:
 

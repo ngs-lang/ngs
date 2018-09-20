@@ -3,10 +3,10 @@ STDLIB_PATH_SEP = '/'
 STDLIB_MAX_RAND_REAL = Real(RAND_MAX)
 STDLIB_RAND_SAFETY_MAX = 100
 {
-	GC.attrs({'doc': {'': 'Control NGS garbarge collection'}})
-	GC['enable'].attrs({'doc': {'': 'Enable garbarge collection'}})
-	GC['disable'].attrs({'doc': {'': 'Disable garbarge collection'}})
-	GC['get_parallel'].attrs({'doc': {'': 'Check parallel garbarge collection. Please do not use!', '%STATUS': 'internal'}})
+	GC.attrs({'doc': {'': 'Control NGS garbage collection'}})
+	GC['enable'].attrs({'doc': {'': 'Enable garbage collection'}})
+	GC['disable'].attrs({'doc': {'': 'Disable garbage collection'}})
+	GC['get_parallel'].attrs({'doc': {'': 'Check parallel garbage collection. Please do not use!', '%STATUS': 'internal'}})
 }
 
 doc Deprecated. Use ExitCode.
@@ -18,7 +18,7 @@ F to_exit_code(x) {
 
 doc Do nothing
 doc %RET - null
-F nop() null
+F nop(*args, **kwargs) null
 
 
 # === Trivial init() helper ===
@@ -48,10 +48,13 @@ F init(h:Hash) {
 	doc %EX - # Output: 50
 	doc %EX - echo(box_area(-5, 10))
 	doc %EX - # ... Exception of type AssertFail ...
+	doc %EX - #
+	doc %EX - # Note that the following is better than using assert():
+	doc %EX - # not(x > 0) throws InvalidArgument('x must be greater than zero').set('x', x)
 	type AssertFail
 	AssertFail.inherit(Exception)
 
-	doc Represents an attempt to create an instance of an abstract type (not intended for instanciation).
+	doc Represents an attempt to create an instance of an abstract type (not intended for instantiation).
 	type InstantiatingAbstractType
 	InstantiatingAbstractType.inherit(Exception)
 }
@@ -74,7 +77,7 @@ doc %EX - # ... Code that adds elements to my_array ...
 doc %EX - assert(my_array.len() > 3)  # AssertFail exception, with "Assertion failed" message
 F assert(condition:Bool) assert(condition, "Assertion failed")
 
-doc Throws AssertFail if condition, after conversition to Bool is false.
+doc Throws AssertFail if condition, after conversion to Bool is false.
 doc Same as super(Bool(condition), *args) .
 doc condition - not Bool
 doc %RET - Unspecified, do not count on this value
@@ -877,6 +880,41 @@ doc %RET - "<Type NAME>"
 doc %EX - Real.Str().echo()  # Outputs: <Type Real>
 F Str(t:Type) "<Type ${t.name}>"
 
+{
+	type DecodeFail
+	DecodeFail.inherit(Exception)
+}
+
+doc Decode (parse) strings such as command line arguments or environment variables to result given type
+doc %STATUS - experimental
+F decode(s:Str, t:Type) {
+	t == Any returns s # For ArgvMatcher
+	F _fail(cause:Exception=null) {
+		args = ["Failed to decode value. Could not convert given value to type ${t.name}", cause].reject(Null)
+		throw DecodeFail(*args).set('value', s).set('target_type', t)
+	}
+	if t in [Int, Real, Str] {
+		return try {
+			t(s)
+		} catch(e:InvalidArgument) {
+			_fail(e)
+		}
+	}
+	if t == Bool {
+		s ~ /^(1)|(y(es?)?)|true|on$/i returns true
+		s ~ /^(0)|(no?)|false|off$/i returns false
+		_fail(e)
+	}
+	guard false
+}
+
+TEST decode("no", Bool) == false
+TEST decode("0", Bool) == false
+TEST decode("yes", Bool) == true
+TEST decode("1", Bool) == true
+TEST decode("1", Int) == 1
+TEST decode("1", Real) == 1.0
+
 # === NormalType =================================
 
 doc String representation of normal type instance i
@@ -1091,9 +1129,6 @@ AUTOLOAD = ns {
 		OutputStream        Stream
 
 		table               Table
-
-		pmap                Thread
-		ptimes              Thread
 	}
 
 	doc Called when reading undefined global.
@@ -1454,7 +1489,7 @@ F +(s1:Str, s2:Str) "${s1}${s2}"
 
 TEST "ab" + "cd" == "abcd"
 
-# === Array ======================================
+# === Arr ========================================
 
 
 doc Checks whether element x is in array arr
@@ -1603,6 +1638,13 @@ F each_idx_val(arr:Arr, cb:Fun) {
 	arr
 }
 
+doc Map an Eachable1 to an Arr (array) of values using mapper
+doc mapper is called as mapper(INDEX, ITEM)
+doc %RET - New Arr
+doc %EX - echo("Array items: " + ArrLike().push(10).push(20).push(30).map_idx_val(F(idx, val) "[$idx]=$val").join(", "))
+doc %EX - # Outputs: Array items: [0]=10, [1]=20, [2]=30
+F map_idx_val(e:Eachable1, mapper:Fun) collector each_idx_val(e, collect + mapper)
+
 doc Map an Arr to an Arr (array) of values using mapper
 doc mapper is called as mapper(INDEX, ITEM)
 doc %RET - New Arr
@@ -1708,10 +1750,11 @@ doc e - Eachable with each element also Eachable
 doc %RET - Arr
 doc %EX - [[1], [2,3]].flatten()  # [1,2,3]
 F flatten(e:Eachable1) {
+	guard not(e is Int)
 	guard e.all(Eachable1)
 	collector
 		e.each(F(subarr) {
-			subarr % collect
+			subarr.each(collect)
 		})
 }
 
@@ -1819,17 +1862,13 @@ F join(a:Arr, sep:Arr) {
 
 # --- Conversions ---
 
-doc Make Arr from Hash. Each key/value pair becomes two-items array:
+doc Make Arr from Hash. Each key/value pair becomes two-items array.
 doc %RET - Arr of form [[k1, v1], [k2, v2], ...]
 doc %EX - Arr({'x': 7, 'y': 8})  # [['x', 7], ['y', 8]]
 F Arr(h:Hash)
 	h.map(F(*pair) pair)
 
 TEST Arr({'x': 7, 'y': 8}) == [['x', 7], ['y', 8]]
-
-doc Make Arr from Arr. A no-op.
-doc %RET - arr
-F Arr(arr:Arr) arr
 
 doc Make new array which aggregates elements from each of the args arrays
 doc n-th element of the new array is an array that contains n-th element of each of the given arrays
@@ -1855,6 +1894,9 @@ F Arr(something:Eachable1)
 TEST Arr(1..3) == [1,2]
 TEST Arr(1...3) == [1,2,3]
 
+doc Make Arr from Arr. A no-op.
+doc %RET - arr
+F Arr(arr:Arr) arr
 
 # --- Access elements ---
 
@@ -2155,6 +2197,23 @@ F split(e:Eachable1, delim) {
 
 TEST [1, "a", 2, 3, "a", 4].split("a") == [[1], [2, 3], [4]]
 
+doc Call cb with array of maximum length of n, repeatedely for all items of e.
+doc TODO: better doc
+doc %STATUS - experimental
+F each_chunk(e:Eachable1, n:Int, cb:Fun) {
+	cur = []
+	e.each(F(x) {
+		cur.push(x)
+		if len(cur) == n {
+			cb(cur)
+			cur = []
+		}
+	})
+	if cur {
+		cb(cur)
+	}
+}
+
 doc Insert delimiter element between each two elements in an array
 doc %RET - Arr
 doc %EX [1,2,3].intersperse(0)  # [1,0,2,0,3]
@@ -2229,13 +2288,38 @@ F +(f:Fun, g:Fun) {
 doc Iterate a Hash.
 doc h - Hash to iterate
 doc cb - Function to call with successive keys and values
-doc args - Additional arguments for calling cb
 doc %RET - h
 doc %EX - {"a": 1, "b": 2}.each(F(k, v) echo("$k=$v"))  # Outputs: "a=1" and on the next line "b=2"
 F each(h:Hash, cb:Fun) {
 	entry = ll_hash_head(h)
 	while entry != null {
 		cb(entry.ll_hash_entry_key(), entry.ll_hash_entry_val())
+		entry = entry.ll_hash_entry_next()
+	}
+	h
+}
+
+doc Iterate a Hash.
+doc h - Hash to iterate
+doc cb - Function to call with successive keys
+doc %RET - h
+F eachk(h:Hash, cb:Fun) {
+	entry = ll_hash_head(h)
+	while entry != null {
+		cb(entry.ll_hash_entry_key())
+		entry = entry.ll_hash_entry_next()
+	}
+	h
+}
+
+doc Iterate a Hash.
+doc h - Hash to iterate
+doc cb - Function to call with successive values
+doc %RET - h
+F eachv(h:Hash, cb:Fun) {
+	entry = ll_hash_head(h)
+	while entry != null {
+		cb(entry.ll_hash_entry_val())
 		entry = entry.ll_hash_entry_next()
 	}
 	h
@@ -2447,9 +2531,10 @@ F Hash(keys:Arr, values:Arr)
 TEST Hash(["a", "b", "c"], [1,2,3]) == {"a": 1, "b": 2, "c": 3}
 
 doc Create Hash from Arr of something that has key and value fields
-doc e - Arr with all the keys and values
+doc e - Eachable1 with all the keys and values
 doc key_field - Name of the field holding the keys of newly created Hash
 doc val_field - Name of the field holding the values of newly created Hash
+doc %RET - Hash
 doc %EX - Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}], "Name", "Value")  # {"n1": "v1", "n2": "v2"}
 F Hash(e:Eachable1, key_field:Str, val_field:Str)
 	collector/{}
@@ -2810,8 +2895,11 @@ TEST FullBox(1) != FullBox(2)
 		}
 	}
 
-	doc Initialize Result with the given value.
-	F init(r:Result, v) r.val = v
+	doc Initialize Success with the given value.
+	F init(s:Success, v) s.val = v
+
+	doc Initialize Failure with the given value.
+	F init(f:Failure, e:Exception) f.val = e
 
 	doc Gets wrapped value
 	doc %RET - Any
@@ -2821,13 +2909,7 @@ TEST FullBox(1) != FullBox(2)
 	doc Throws ResultFail
 	doc %EX - { 1 / 0 }.Result().get()  # ResultFail exception
 	F get(f:Failure) {
-		e = ResultFail("Can not get value of Failure")
-		if f.val is Exception {
-			e.cause = f.val
-		} else {
-			e.failure = f.val
-		}
-		throw e
+		throw ResultFail("Can not get value of Failure").set('cause', f.val)
 	}
 
 	doc Gets wrapped value
@@ -2839,6 +2921,12 @@ TEST FullBox(1) != FullBox(2)
 	doc %EX - { 1 / 0 }.Result().get(100)  # 100
 	F get(f:Failure, dflt) dflt
 
+	doc Run fun with wrapped value.
+	F each(s:Success, fun:Fun) {
+		fun(s.val)
+		s
+	}
+
 	doc Run fun with wrapped value. If exception is thrown, Failure is returned; otherwise Success with new vaule is returned.
 	doc %RET - Result
 	F map(s:Success, fun:Fun) {
@@ -2848,6 +2936,10 @@ TEST FullBox(1) != FullBox(2)
 			Failure(e)
 		}
 	}
+
+	doc No-op, returns f
+	doc %RET - f
+	F each(f:Failure, fun:Fun) f
 
 	doc No-op, returns f
 	doc %RET - f
@@ -3263,13 +3355,14 @@ F *(s:Str, n:Int) ([s]*n).join('')
 # Tested with Str(Str,Int)
 
 doc Convert anything to Str of a given width
-F Str(x, target_width:Int) x.Str().Str(target_width)
+F Str(x, target_width:Int, ch:Str=' ') x.Str().Str(target_width, ch)
 
 doc Pad a string to given width with spaces
 doc target_width - Positive pads on right, negative pads on left
 doc %EX - Str("x", 3)  # 'x  '
 doc %EX - Str("x",-3)  # '  x'
-F Str(s:Str, target_width:Int) {
+F Str(s:Str, target_width:Int, ch:Str=' ') {
+	assert(len(ch) == 1)
 	l = s.len()
 	pad_on_left = target_width < 0
 	if pad_on_left {
@@ -3278,7 +3371,7 @@ F Str(s:Str, target_width:Int) {
 
 	l >= target_width returns s
 
-	padding = ' ' * (target_width - l)
+	padding = ch * (target_width - l)
 	if pad_on_left {
 		padding + s
 	} else {
@@ -3291,12 +3384,14 @@ doc Convert a number to a string and pad it
 doc target_width - Positive pads on left, negative pads on right
 doc %EX - Str(10,  4)  # '  10'
 doc %EX - Str(10, -4)  # '10  '
-F Str(n:Int, target_width:Int) n.Str().Str(0-target_width)
+F Str(n:Int, target_width:Int, ch:Str=' ') n.Str().Str(0-target_width, ch)
 
 TEST Str(10,  4) == '  10'
+TEST Str(10,  4, '0') == '0010'
 TEST Str(10, -4) == '10  '
-TEST Str("x", 3) == 'x  '
-TEST Str("x",-3) == '  x'
+TEST Str('x', 3) == 'x  '
+TEST Str('x',-3) == '  x'
+TEST Str('x',-3, '.') == '..x'
 
 doc Check whether a string starts with another string
 doc %RET - Bool
@@ -3512,23 +3607,160 @@ F '"$*"'(components:Arr) {
 TEST "a$*{[1,2]}b$*{10..12}c" == ["a1b10c", "a1b11c", "a2b10c", "a2b11c"]
 
 
+# === Thread ========================================
+ns {
+	global Thread, ThreadFail, init, join, pmap, ptimes, Str, (.)
+	# TODO: consider *args for consistency with other parts of the language
+
+	doc Execution thread. Currently a POSIX thread.
+	type Thread
+
+	# TODO: expose. Not called automatically because some names are
+	#       already unique.
+	_threads_names_lock = Lock()
+	_threads_names_counters = Stats()
+	F _make_thread_name(s:Str) {
+		_threads_names_lock.acquire({
+			_threads_names_counters.push(s)
+			"${s}-${_threads_names_counters[s]}"
+		})
+	}
+
+	doc Parent type of various thread exceptions
+	type ThreadFail(Exception)
+
+		doc Thrown when creating a thread (currently - c_pthread_create()) fails
+		type ThreadCreateFail(ThreadFail)
+
+		doc Thrown when joining a thread (currently - c_pthread_join()) fails
+		type ThreadJoinFail(ThreadFail)
+
+		doc Thrown where join()ing another thread that threw an exception
+		doc %EX - Thread(F() 1/0).join()  # OtherThreadFail with .cause DivisionByZero
+		type OtherThreadFail(ThreadFail)
+
+	doc Creates and runs a thread. The code that the created thread runs is f, which is passed arg.
+	F init(t:Thread, name:Str, f:Fun, arg) {
+		t.id = name
+		debug("process", "Creating thread ${t.id}")
+		thread_attr = c_pthread_attr_t()
+		c_pthread_attr_init(thread_attr)
+		thread_setup_wrapper = F(t_arg) {
+			# Not sure I can reference t here because the call frame
+			# might have been removed already, so passing t via the argument
+			Thread.local.thread = t_arg[0]
+			debug("process", "Thread set up done, will run thread code")
+			f(t_arg[1])
+		}
+		create_result = c_pthread_create(thread_attr, thread_setup_wrapper, [t, arg])
+		code = create_result[0]
+		if code {
+			throw ThreadCreateFail("Failed to c_pthread_create").set('code', code)
+		}
+		t.thread = create_result[1]
+	}
+
+	doc Creates and runs a thread. The code that the created thread runs is f, which is passed arg.
+	F init(t:Thread, f:Fun, arg) {
+		super(t, 'unnamed', f, arg)
+	}
+
+	doc Creates and runs a thread. The code that the created thread runs is f without arguments.
+	F init(t:Thread, f:Fun) {
+		init(t, F thread_arg_discard_wrapper(discard) f(), null)
+	}
+
+	doc Creates and runs a thread. The code that the created thread runs is f without arguments.
+	F init(t:Thread, name:Str, f:Fun) {
+		init(t, name, F thread_arg_discard_wrapper(discard) f(), null)
+	}
+
+	# Not sure yet: %STATUS - deprecated
+	doc Joins threads.
+	doc threads - Arr of Thread.
+	doc %RET - Arr, the results from threads, in order.
+	F join(threads:Arr) {
+		# warn("Using deprecated join(threads:Arr)")
+		guard threads and threads.all(Thread)
+		threads.map(join)
+	}
+
+	doc Joins on thread. Waits for the thread to finish and returns the result from the thread.
+	doc Currently, if a thread throwed an exception, it will be returned as the value.
+	doc In future it might re-throw the exception, probably wrapped in ThreadExeption.
+	doc %RET - Any
+	F join(t:Thread) {
+		debug("process", "Joining thread ${t}")
+		join_result = c_pthread_join(t.thread)
+		# join_result: [ join_status, [ result_is_exception:Bool, result ] ]
+		if join_result[0] {
+			throw ThreadJoinFail("Failed to c_pthread_join").set('code', code)
+		}
+		if join_result[1][0] {
+			throw OtherThreadFail("Joined thread that threw exception").set('cause', join_result[1][1]).set('thread', t)
+		}
+		join_result[1][1]
+	}
+
+	# TODO: maybe limit number of concurrent threads (default to cores count?)
+	doc Parallel map. Runs mapper in threads. Each thread processes one element from the array but this might change in future (preserving the total number of calls to mapper and the order of results).
+	doc %RET - Arr, result of applying mapper to elements of e, preserving the order.
+	doc %EX - pages_texts = abs_pages_urls.pmap(F(url)  `lynx -dump $url`)
+	F pmap(e:Eachable1, mapper:Fun) {
+		e_hash = hash(e)
+		e.map_idx_val(F(idx, val) Thread("pmap-${e_hash}-${idx}", mapper, val)).map(join)
+	}
+
+	doc Run cb in n parallel threads. Each thread runs one cb but this might change in future (preserving the total n calls to cb).
+	F ptimes(n:Int, cb:Fun) {
+		threads = collector
+			for(i;n) {
+				collect(Thread(cb))
+			}
+		threads.map(join)
+	}
+
+	TEST (1..3).Arr().pmap(X*10) == [10, 20]
+	TEST 3.pmap(X*10) == [0, 10, 20]
+
+	F Str(t:c_pthread_t) "<c_pthread_t ${id(t)}>"
+	F Str(t:Thread) "<Thread ${t.id}>"
+
+	F .(t:Type, field:Str) {
+		guard t === Thread and field == 'local'
+		ll_thread_local()
+	}
+
+	# ASSUMPTION: Thread is loadad in main thread
+	assert('thread' not in Thread.local)
+
+	Thread.local.thread = Thread().set('id', 'main').set('thread', 'MAIN THREAD REFERENCE IS NOT IMPLEMENTED YET')
+
+}
+
 # === Logging and status reporting (WIP) =========
 
 {
-	doc Represents a fatal error condition that causes the program to exit.
-	doc %EX - throw FatalError("Input file not found")
-	type FatalError(Exception)
+	doc Represents an exception that should cause exit from the program
+	doc exit_code - Contains the exit code to be used by ExitCode
+	type ExitException(Exception)
+		doc Represents a fatal error condition that causes the program to exit.
+		doc %EX - throw ExitException("Input file not found")
+		type FatalError(ExitException)
+		type NormalExit(ExitException)
 }
 
-doc Initializes FatalError.
-F init(fe:FatalError, message:Str, exit_code:Int=1) {
-	super(fe, message)
-	fe.exit_code = exit_code
+doc Initializes ExitException.
+F init(ee:ExitException, message:Str, exit_code:Int=1) {
+	super(ee, message)
+	ee.exit_code = exit_code
 }
 
-doc Convert FatalError to an exit code.
-doc %RET - fe.exit_code
-F ExitCode(fe:FatalError) fe.exit_code
+F init(ee:ExitException, exit_code:Int=1) ee.exit_code = exit_code
+
+doc Convert ExitException to an exit code.
+doc %RET - ee.exit_code
+F ExitCode(ee:ExitException) ee.exit_code
 
 # TODO: timestamps
 
@@ -3553,7 +3785,7 @@ doc TODO: Not output thread ID if there is only one thread.
 doc TODO: Timestamps? Timestamps acquiring might not be safe after fork before exec.
 F debug(facility:Str, s:Str) {
 	if ENV.Box('DEBUG').map(split(X, ',')).map({facility in A or '*' in A}).get(false) {
-		echo(stdlib_error_fd, "[DEBUG $facility ${c_getpid()} ${c_pthread_self().id()}] $s")
+		echo(stdlib_error_fd, "[DEBUG $facility ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] $s")
 	}
 }
 
@@ -3646,10 +3878,14 @@ ns {
 	### }
 }
 
+doc Write message in s to standard error and exit, printing backtrace
+F die(s:Str, exit_code:Int=1) throw FatalError(s, exit_code)
+
 doc Write message in s to standard error and exit
-F die(s:Str, exit_code=1) {
-	throw FatalError(s, exit_code)
-}
+F exit(s:Str, exit_code:Int=1) throw NormalExit(s, exit_code)
+
+doc Exit with given exit_code
+F exit(exit_code:Int=1) throw NormalExit(exit_code)
 
 # === Path =======================================
 
@@ -3762,6 +3998,21 @@ TEST Path('/').Bool()
 TEST Path('/no-such-file').Bool() == false
 TEST Path('/', true) is Dir
 
+doc Check whether file system object at given path
+doc is of the given type.
+doc %EX - if File("myfile.txt") ...
+doc %EX - if Dir("my_tmp_dir") ...
+doc %STATUS - experimental
+F Bool(p:Path) {
+	# Only subclasses
+	guard typeof(p) != Path
+	ok = super(p)
+	not(ok) returns false
+	s = lstat(p)
+	file_type = s.st_mode.band(C_S_IFMT)
+	p is STDLIB_FILE_TYPE[file_type]
+}
+
 # TODO: better exceptions (use correct type, not string, maybe use errno)
 # TODO: support platforms with non ":" path delimiter?
 doc Finds given binary and returns it's full path.
@@ -3820,28 +4071,40 @@ doc %RET - Path
 doc %EX - Path("tmp") / Path("v8")  # <Path path=tmp/v8>
 F /(a:Path, b:Path) Path(a.path / b.path)
 
+doc Concatenate two Path-s using /(a:Str, b:Str)
+doc %RET - Path
+doc %EX - Path("tmp") / "v8"  # <Path path=tmp/v8>
+F /(a:Path, b:Str) Path(a.path / b)
+
 { type DirFail(CException) }
 
+# TODO: recode after https://github.com/ngs-lang/ngs/issues/45 is solved
 doc List directory contents. Warning: "." and ".." are included.
 doc Throws DirFail when directory can not be listed.
 doc subtype - Select type of returned items: true for Path sub-type, false for Path type
 doc %RET - Arr of Path or it's sub-type
 doc %EX - dir("tmp/v8", true).filter(File)  # [ ..., <File path=tmp/v8/README.md fd=null>, <File path=tmp/v8/LICENSE.valgrind fd=null>, ... ]
 doc %EX - dir("tmp/v8", true).filter(Dir)   # [ ..., <Dir path=tmp/v8/tools>, <Dir path=tmp/v8/infra>, ... ]
-F dir(dirname:Str, subtype=false) collector dir(dirname, collect, subtype)
+F dir(dirname:Str, subtype=false, **kwargs) collector dir(dirname, collect, subtype, **(kwargs.without('subtype')))
 
 # TODO: recurse ?
 # TODO: filter out "." and ".." ?
 doc List directory contents and call cb with Path() of each found item. Warning: "." and ".." are included.
 doc %RET - unspecified at this time, do not count on it
 doc %EX - 's=Stats(); dir("tmp/v8", {s.push(A.typeof().name)}, true); s  # <Stats: {File=23, Dir=16}>'
-F dir(dirname:Str, cb:Fun, subtype=false) {
+F dir(dirname:Str, cb:Fun, subtype=false, raw=false) {
 	d = c_opendir(dirname)
 	d is Null throws DirFail('Failed to list directory contents').set('dirname', dirname)
+	SKIP_DIRS = ['.', '..']
 	finally()
 		body => {
 			while entry = c_readdir(d) {
-				cb(Path(dirname / entry.d_name, subtype=subtype))
+				entry.d_name in SKIP_DIRS continues
+				if raw {
+					cb(entry.d_name)
+				} else {
+					cb(Path(dirname / entry.d_name, subtype=subtype))
+				}
 			}
 		}
 		cleanup => {
@@ -3854,6 +4117,12 @@ F dir(dirname:Str, cb:Fun, subtype=false) {
 TEST dir("/").path.has("/var")
 TEST dir("/").all({A.typeof().name == 'Path'})
 TEST dir("/", subtype=true).all({ (A is Path) and (A.typeof().name != 'Path') })
+
+doc Same as dir(dirname.path, *args)
+F dir(dirname:Path, *args, **kwargs) dir(dirname.path, *args, **kwargs)
+
+doc Same as a.path > b.path
+F '>'(a:Path, b:Path) a.path > b.path
 
 doc Work in progress, do not use!
 F glob(pattern:Str, start_dir='.') {
@@ -3889,7 +4158,7 @@ doc %RET - Str
 doc %EX - read(0)  # All data from stdin
 F read(fd:Int, count=null) {
 	guard count is Int or count is Null
-	count == 0 throws InvalidArgument("read(fd, count) - count can't be 0")
+	count == 0 throws InvalidArgument("read(fd, count) - count can't be 0").set('fd', fd)
 	ret = []
 	to_read = count
 	while true {
@@ -3908,7 +4177,7 @@ F read(fd:Int, count=null) {
 			if e != C_EINTR {
 				debug("file", "[FD $fd] read failed, errno $e")
 				# TODO: Better exception
-				throw CException("Failed to c_read()")
+				throw ReadFail("Failed to read()").set('fd', fd).set('cause', CException("Failed to c_read()"))
 			}
 		}
 	}
@@ -4040,12 +4309,17 @@ F dup2_reading_end(p:Pipe, newfd:Int) dup2(p.read_fd, newfd)
 doc Create File object from the given path. The file is not open.
 doc %EX - f = File('/tmp/myfile')
 F init(f:File, path:Str) {
-	init(args())
+	f.path = path
 	f.fd = null
 }
 
 doc Create File object from the given file descriptor.
-F init(f:File, fd:Int) init(args())
+F init(f:File, fd:Int) {
+	f.path = null
+	f.fd = fd
+}
+
+F init(f:File, path:Path) super(f, path.path)
 
 doc String representation of File
 doc %EX - open(File("tmp/v8/LICENSE"), "r").Str().echo()  # Output: <File path=tmp/v8/LICENSE fd=4>
@@ -4081,9 +4355,9 @@ doc Iterate over lines of the file
 doc f - Closed File
 doc cb - function to call with successive lines from the file
 F lines(f:File, cb:Fun) {
+	f.open('r')
 	finally()
 		body => {
-			f.open('r')
 			f.fd.read().lines(cb)
 		}
 		cleanup => {
@@ -4140,9 +4414,21 @@ F fetch(filename:Str, decode_hints:Hash={}) {
 	decode(data, {'filename': filename} + decode_hints)
 }
 
+# TODO: think about protocols support, programs support (wget, curl, ...) and refactor
+doc Fetch HTTP(S) file and decode() it
+doc %EX - fetch('https://api.myip.com')  # Data structure, the parsed JSON
+F fetch(url:Str, decode_hints:Hash={}) {
+	guard url ~ /^(https?):\/\//
+	decode(`curl -s $url`, {'url': url})
+}
+
 doc Read standard input and decode() it, passing "source" equals "stdin" hint.
 doc %EX - fetch()  # Data structure, parsed stdin
 F fetch(decode_hints:Hash={}) read(0).decode({'source': 'stdin'} + decode_hints)
+
+doc read() and decode() the given file
+doc %EX - fetch(File("1.json"))  # Data structure, the parsed JSON
+F fetch(p:Path, decode_hints:Hash={}) p.path.fetch(decode_hints)
 
 doc encode() and write() the data to the file
 doc %RET - null (but subject to change)
@@ -4483,8 +4769,7 @@ F '$()'(c:Command) {
 		# XXX: maybe make it chunk based with c_poll() and single thread
 		# TODO: some error handling inside these threads and after joining them
 		process.reading_threads = c.redirects.filter(F(r:Redir) r.datum is CollectingPipeFromChildToParentProcess).map(F(r:Redir) {
-			debug("process2", "MAKING READING THREAD")
-			Thread({
+			Thread("process-${process.pid}-output-fd-${r.fd}-reader", {
 				debug("process2", "READING ${r.datum}")
 				try {
 					process.outputs[r.fd] = r.datum.read()
@@ -4502,7 +4787,6 @@ F '$()'(c:Command) {
 				debug("process", "Read all output of the child process for descriptor ${r.fd}, closing reading/parent end")
 			})
 		})
-		# debug("process2", "R ${c.reading_threads}")
 	}
 
 	# TODO: pid < 0 => throw exception with errno
@@ -4828,13 +5112,41 @@ doc s - Str containing JSON with a Hash at top level with exactly one Arr as val
 doc hints - hints.process.command.argv[0] must be 'aws'
 doc %RET - data structure, tyically an Arr at top level. If s is empty string - null.
 F decode(s:Str, hints:Hash) {
-	guard try hints['process'].command.argv[0] == 'aws'
+	guard (try hints.process.command.argv[0] == 'aws') or (try hints.process.command.options.decode == 'aws')
 
-	# aws ec2 create-tags/delete-tags
-	s == '' returns null
+	if s == '' {
+		# cloudfront empty list
+		if hints.process.command.argv.get(1, null) == 'cloudfront' and hints.process.command.argv.get(2, null) ~ /^list/ {
+			return []
+		}
+		# aws ec2 create-tags/delete-tags
+		return null
+	}
 
 	data = decode_json(s)
 	guard data is Hash
+
+	if hints.process.command.argv.get(1, null) == 'cloudfront' {
+		# TODO: eliminate stupid 'Quantity' field.
+		# Can not convert {'Quantity': ..., 'Items': [ iii ]} to just [ iii ]
+		# because _some_ (of course, AWS) Hashes contain additional keys:
+		# TrustedSigners: [Enabled]
+		# AllowedMethods: [CachedMethods]
+		# GeoRestriction: [RestrictionType]
+	}
+
+	# CloudFront
+	# aws cloudfront list-invalidations --distribution-id --> { "InvalidationList": { "Items": [ ... ] } }
+
+	if (len(data) == 1) and (data.values()[0] is Hash) and (data.values()[0].len() == 1) {
+		candidate = data.values()[0].values().the_one()
+		candidate is Arr returns candidate
+	}
+
+	if 'DistributionList' in data {
+		guard data.DistributionList.len() == 1
+		return data.DistributionList.Items
+	}
 
 	# Use the only top-level key that has array as it's value
 	# Thanks goes to Elastic Beanstalk which complicates this,
@@ -4849,9 +5161,9 @@ F decode(s:Str, hints:Hash) {
 
 	# Anyone cares about Reservations? Certainly it's not the common case so...
 	if data.all('ReservationId' in X) {
-		# Put reservation data into .Reservation field of each instance, just in case
+		# Put reservation data into ._Reservation field of each instance, just in case
 		data.each(F(reservation) {
-			reservation.Instances.Reservation = reservation.without('Instances')
+			reservation.Instances._Reservation = reservation.without('Instances')
 		})
 		data = data.Instances.flatten()
 	}
@@ -4867,6 +5179,15 @@ F decode(s:Str, hints:Hash) {
 	guard '-printf' not in argv
 	zero_sep = '-print0' in argv
 	if zero_sep then s.split(chr(0))[0..-1] else s.lines()
+}
+
+doc Parse the output of "locate" command.
+doc hints - hints.process.command.argv[0] must be 'locate'
+doc %RET - Arr of Str
+F decode(s:Str, hints:Hash) {
+	guard try hints['process'].command.argv[0] == 'locate'
+	# .map(Path) ?
+	s.lines()
 }
 
 # === config =====================================
@@ -5250,9 +5571,9 @@ F '[]'(s:Str, r:RegExp) {
 TEST "ab01de12f"[/[0-9]+/] == '01'
 
 doc Convert regular expression to a predicate.
-doc %RET - A function that checks whether the only argument matches r
+doc %RET - A function that checks whether the only argument (of type Str) matches r
 doc %EX - %[w1 w2].filter(/1/)  # %[w1]
-F Pred(r:RegExp) F regexp_pred(x) x ~ r
+F Pred(r:RegExp) F regexp_pred(x:Str) x ~ r
 
 TEST %[w1 w2].filter(/1/) == %[w1]
 
@@ -5475,9 +5796,17 @@ exit_hook = Hook()
 	#       If it has exception, it could prevent
 	#       user-defined cleanups.
 	exit_hook['print_exception'] = F(exit:Exit) {
-		exit.exceptions.each(F(e) {
+		exit.exceptions.reject(NormalExit).each(F(e) {
 			error("--- Exception ---")
 			print_exception(e)
+		})
+	}
+
+	exit_hook['print_exit_message'] = F(exit:Exit) {
+		exit.exceptions.filter(NormalExit).each(F(e) {
+			if 'message' in e {
+				echo(stdlib_error_fd, e.message)
+			}
 		})
 	}
 
@@ -5630,19 +5959,17 @@ doc times - Limit of times to run "body"
 doc sleep - Either sleep in seconds between tries or Iter that returns successive sleep times in seconds
 doc logger - Function to use to log attempts, caught body exceptions and sleep times. Defaults to stdlib's debug.
 doc success_predicate - CANDIDATE FOR REMOVAL. Run against body results to. Says whether the attempt succeeded. Defaults to Bool.
-doc catch_exceptions - Catch exceptions that might occur in body and treat them as if body returned failure.
 doc title - Prefix strings sent to logger with this string. Defaults to "<retry>".
 doc progress_cb - Called before each attempt with (1) current attempt number and (2) limit of attempts ("times"). Defaults to do nothing.
 doc success_cb - Called when body succeeds with the result that comes from body. Defaults to identity function.
 doc fail_cb - If passed, called if all attempts fail. Defaults to null.
 doc %RET - Any. Result of success_cb or result of fail_cb.
-doc %EX - page = retry(times=10, sleep=ExpBackIter(), body={ `curl "http://flaky-site.com"` })
+doc %EX - page = retry(times=10, sleep=ExpBackIter(), body={ try `curl "http://flaky-site.com"` })
 F retry(
 	times:Int=60,
 	sleep=1,
 	logger:Fun=debug("retry", X),
 	success_predicate=Bool,
-	catch_exceptions:Bool=true,
 	title="<retry>",
 	progress_cb:Fun={null},
 	success_cb:Fun=identity,
@@ -5660,7 +5987,7 @@ F retry(
 			result = body()
 		} catch(e:Exception) {
 			logger("$title Exception $e")
-			not(catch_exceptions) throws e
+			throw e
 		}
 		if success_predicate(result) {
 			return success_cb(result)
@@ -5817,6 +6144,11 @@ F write(f:File, s:Str) {
 ### 	guard "curl" found
 ### }
 
+F myip() {
+	fetch('https://api.myip.com').ip.IPAddr()
+}
+
+
 # === Caching ====================================
 
 # TODO: *args and per-args combination wrapping
@@ -5841,109 +6173,3 @@ doc %AUTO - \name attr1=val1 attr2=val2 ... [ ... ]
 F \(name:Str, attributes:Hash, children:Arr) {
 	Doc::Node(name, children.reject(NoData).map(only(FullBox, get)), **attributes)
 }
-
-# === Misc tests =================================
-
-# expr1 op= expr2
-TEST a = 1; a+=1 ; a*=10; a == 20
-TEST a=[{"x": 7}, {"x": 8}]; a .= x; a == [7, 8]
-TEST a=[1,2]; a .= map(F(x) x*2); a[0]+=10; a == [12,4]
-
-TEST o = {'a': 1, 'b': [null, false, true, 3.14], 'nothing': null}; decode_json(encode_json(o)) == o
-TEST h={'a': 1, 'b': 2, 'c': 3}; h.update({'b': 20, 'd': 40}); h == {'a': 1, 'b': 20, 'c': 3, 'd': 40}
-
-TEST F opt(a, b=10, *rest) [b, rest]; opt(1) == [10, []]
-TEST F opt(a, b=10, *rest) [b, rest]; opt(1, 2) == [2, []]
-TEST F opt(a, b=10, *rest) [b, rest]; opt(1, 2, 3) == [2, [3]]
-TEST F opt(a, b=10, *rest) [b, rest]; opt(1, b=10) == [10, []]
-TEST F opt(a, b=10, *rest, **kw) [b, rest, kw]; opt(1, b=20) == [20, [], {"b": 20}]
-TEST F opt(a, b=10, *rest, **kw) [b, rest, kw]; opt(1, c=20) == [10, [], {"c": 20}]
-TEST F opt(a, b=10, *rest) [b, rest]; try opt(1, c=20) == [10, []] catch(e:MethodNotFound) true
-TEST F opt(a, b=10, *rest, **kw) [b, rest, kw]; opt(1, b=30, **{"b": 20}) == [20, [], {"b": 20}]
-TEST F opt(a, b=10, *rest, **kw) [b, rest, kw]; opt(1, b=30, **{"b": 20}, b=40) == [40, [], {"b": 40}]
-TEST F opt(a, b=10, *rest, **kw) [a, b, rest, kw]; opt(1, 100, 200, **{"b": 20}, b=40) == [1, 100, [200], {"b": 40}]
-TEST F f(a) a; f(**{"a": 10}) == 10
-TEST F f(a=7) a; f(**{"a": 10}) == 10
-TEST F f(a,b,*args,**kwargs) [a,b,args,kwargs]; f(kw1=100, 1, 2, 3, kw2=200) == [1, 2, [3], {"kw1":100, "kw2":200}]
-
-TEST F construct(x:Int) F() x; f1=construct(1); f2=construct(2); (f1==f1) and (f1!=f2)
-TEST 1.1 < 1.11
-TEST 1.1 + 1.1 == 2.2
-TEST F uniq_attrs_func() "some body"; uniq_attrs_func.Arr()[0].attrs({"a": 1}); uniq_attrs_func.Arr()[0].attrs() == {"a": 1}
-TEST attrs((+).Arr()[0])['name'] == '+'
-# TODO: more introspection tests
-TEST params((+).Arr()[0])[0]['name'] == 'a'
-TEST params((+).Arr()[0])[0]['type'] === Real
-TEST "config" in globals()
-TEST args=['1', '+', '2']; $(expr $*args).Str()[0..1] == '3'
-TEST time() > 1466662171
-TEST a=[10,20,30]; f=a[X]; f(1) == 20
-TEST a=[10,20,30]; f=X[1]; f(a) == 20
-
-# === Arr tests ==================================
-TEST [10,20,30,40][0..2] == [10,20]
-TEST [10,20,30,40][1..2] == [20]
-TEST (try [10,20,30,40][-1..2] catch(e:IndexNotFound) "OK") == "OK"
-TEST [10,20,30,40][2..null] == [30, 40]
-TEST (try [10,20,30,40][2..1] catch(e:InvalidArgument) "OK") == "OK"
-TEST (try [10,20,30,40][2..10] catch(e:IndexNotFound) "OK") == "OK"
-TEST [10,20,30,40][4..null] == []
-TEST a=[1,2,3,4]; a[4..4]=["END"]; a[2..2]=["MIDDLE"]; a[0..0]=["START"]; a[0..1] = ["start"]; a == ["start", 1, 2, "MIDDLE", 3, 4, "END"]
-
-# === Hash tests =================================
-TEST h={"a": 1}; h.del("a"); h == {}
-TEST h={}; try h.del("a") catch(e:KeyNotFound) true
-TEST h={"a": 1, "b": 2}; h.del("a"); h == {"b": 2}
-
-# === Str tests ==================================
-TEST "abcd"[1..3] == "bc"
-TEST s="abcd"; s[4..4]="END"; s[2..2]="MIDDLE"; s[0..0]="START"; s[0..1] = "s"; s == "sTARTabMIDDLEcdEND"
-
-# === NormalTypeInstance tests ===================
-TEST a = Path("a"); b = Path("a"); (a == b) and (a !== b)
-TEST Path("a") != Path("b")
-
-# === Exceptions tests ===========================
-TEST h={}; try h["a"] catch(e:KeyNotFound) true
-TEST a=[]; try a[0] catch(e:IndexNotFound) true
-TEST a=[]; try a[0]=1 catch(e:IndexNotFound) true
-TEST type T; try T().xyz catch(e:FieldNotFound) true
-TEST try NO_SUCH_GLOBAL catch(e:GlobalNotFound) true
-TEST try c_lseek(0, 0, "bad arg") catch(e:InvalidArgument) true
-TEST try compile("xyz(", "something") catch(e:CompileFail) true
-TEST try 1(2, 3) catch(e:DontKnowHowToCall) true
-TEST type T; try echo(T(), T()) catch(e:MethodNotFound) true
-TEST try F f() f(); try f() catch(e:StackDepthFail) true
-TEST try [].pop() catch(e:EmptyArrayFail) true
-TEST try [].shift() catch(e:EmptyArrayFail) true
-TEST try { {myvar=myvar}() } catch(e:UndefinedLocalVar) { e.name == 'myvar'}
-
-# === Partial application tests ==================
-TEST [{"val": 10, "flag": false}, {"val": 20, "flag": true}].filter(X.flag).val == [20]
-TEST %[f1 f3].map({"f1": 1, "f2": 2, "f3": 3}.(X)) == [1, 3]
-TEST [[1, 10], [2,20]].map(X[0]) == [1, 2]
-TEST [1,2].map([10,20,30][X]) == [20, 30]
-TEST [[1],[2,3]].filter(X.has(1)) == [[1]]
-TEST {true}()
-TEST f = F(x, y) x+y; f(X, 10)(20) == 30
-
-# === Namespaces tests ===========================
-TEST ns1 = ns { a = 1; _b = 2; a = 100 }; ns1 == {"a": 100}
-TEST ns1 = ns { F f(x) x+1; }; ns1::f(1) == 2
-TEST ns1 = ns { yes_one = 1; no_one = 11; no_two = 12; _exports.=reject(F(k, v) k ~ /^no/) }; ns1 == {"yes_one": 1}
-TEST ns1 = ns { return 10 }; ns1 == 10
-TEST ns1 = ns { _exports = 11 }; ns1 == 11
-TEST global a=110; ns1 = ns(outer_a=a) { a=outer_a+1 }; ns1::a == a+1
-
-# === Process tests ================================
-
-TEST try $(cat NO_SUCH_FILE 2>/dev/null) catch(pf:ProcessFail) true
-TEST $(nofail cat NO_SUCH_FILE 2>/dev/null); true
-
-# === Redirections tests ===========================
-# Warning: file name is not unique
-TEST f='/tmp/ngs-redir-test'; $(echo -n abc >$f); $(echo -n def >>$f); txt=`cat $f`; $(rm $f); txt == 'abcdef'
-TEST f='/tmp/ngs-redir-test'; $(nofail cat /NO-SUCH-FILE 2>$f); txt=`cat $f`; $(rm $f); (txt ~ /No such file or directory/) is MatchY
-
-# TODO
-# TEST F f(a=100,b=200,c=300) [a,b,c]; f(b=10,20,30) # Currently b is not marked as matched and is overridden by 30

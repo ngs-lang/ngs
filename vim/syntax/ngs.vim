@@ -21,7 +21,7 @@ syn keyword ngsRepeat for
 " bootstrap types
 syn keyword ngsType NotImplemented ReadFail RequireFail MainFail
 " other types
-syn keyword ngsType Any ArgvMatcher ArgvMatcherDecorator Arr ArrIter ArrLike BasicType Bool CLib CollectingPipeFromChildToParentProcess Command CommandsPipe CommandsPipeline ConstIter Counter CSym DelimStr Eachable Eachable1 Eachable2 ElementNotFound EmptyEachableFail ExecutableNotFound Exit FFI Fun Hash HashIter HashLike InstantiatingAbstractType Int Iter KillFail MultiMethod NormalType NormalTypeInstance NoData Null Num Path Pipe PipeCreateFail PipeFromChildProcess PipeFromChildToParentProcess PipeFromParentToChildProcess PipeToChildProcess Pred Process ProcessFail Range RangeIter Real ReadingPipeBetweenChildren Seq Set Stats Str Table TableMeta TableMetaNotIfCol TtyCheckFail Type UserDefinedMethod WritingPipeBetweenChildren
+syn keyword ngsType Any ArgvMatcher ArgvMatcherDecorator Arr ArrIter ArrLike BasicType Bool CLib CollectingPipeFromChildToParentProcess Command CommandsPipe CommandsPipeline ConstIter Counter CSym DelimStr Eachable Eachable1 Eachable2 ElementNotFound EmptyEachableFail ExecutableNotFound Exit FFI Fun Hash HashIter HashLike InstantiatingAbstractType Int Iter KillFail MultiMethod NativeMethod NormalType NormalTypeInstance NoData Null Num Path Pipe PipeCreateFail PipeFromChildProcess PipeFromChildToParentProcess PipeFromParentToChildProcess PipeToChildProcess Pred Process ProcessFail Range RangeIter Real ReadingPipeBetweenChildren Seq Set Stats Str Table TableMeta TableMetaNotIfCol TtyCheckFail Type UserDefinedMethod WritingPipeBetweenChildren
 syn keyword ngsType Box EmptyBox FullBox BoxFail
 syn keyword ngsType Range NumRange PredRange
 syn keyword ngsType Diff ArrDiff HashDiff
@@ -65,7 +65,7 @@ syn keyword ngsFunction c_access c_close c_closedir c_errno c_execve c_exit c_fo
 syn keyword ngsFunction bootstrap bootstrap_debug bootstrap_exception_catch_wrapper bootstrap_find_ngs_dir fetch main print_exception require ExitCode
 
 " stdlib functions
-syn keyword ngsFunction abs Argv access acquire all any assert basename cached chr close close_reading_end close_writing_end cmp code compare count
+syn keyword ngsFunction abs Arg Argv access acquire all any assert basename cached chr close close_reading_end close_writing_end cmp code compare count
 syn keyword ngsFunction dflt digest drop dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error exit_hook
 syn keyword ngsFunction debug die ensure_array filter filterk filterv finally find_in_path finished_ok first flatten fstat global_not_found_handler group has
 syn keyword ngsFunction identity in index indexes inspect intersperse join kill len limit lines log lstat map mapo map_idx_key_val map_idx_val mapk mapv mapkv max merge_sorted min
