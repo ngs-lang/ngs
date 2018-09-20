@@ -33,3 +33,4 @@ This document describes releasing a new version of NGS.
 * Checkout `dev`
 * Increase version in `version.h`
 * Make a new entry at the top of `CHANGELOG.md`
+* Build (to get the new version from `version.h`)
