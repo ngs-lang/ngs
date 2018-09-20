@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css"
+          integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+    <link rel="stylesheet" href="main.css">
+
+    <title>NGS - Next Generation Shell</title>
+</head>
+<body>
+
+<div class="container pb-5">
+    <div class="row">
+        <div class="col-sm">
+            <h1>NGS - Next Generation Shell</h1>
+        </div>
+    </div>
+    <div class="row pt-2">
+        <div class="col-md-3">
+        </div>
+        <div class="col-md-6">
+            <p class="text-center text-justify main-thing-on-page">
+                NGS is a modern programming language with the focus on systems engineering.
+            </p>
+            <p class="text-center">
+                <span class="align-middle"><img src="ngs-logo-300.png" width="150" height="40"></span>
+            </p>
+        </div>
+        <div class="col-md-3">
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm">
+            <h2>About NGS</h2>
+
+            <p>
+                NGS is a unique combination of select features borrowed from other languages and original features.
+                NGS was built from the ground up focusing on daily systems engineering tasks.
+            </p>
+
+            <p>
+                One way to think about NGS is bash plus data structures plus better syntax and error handling.
+            </p>
+
+            <p>
+                Scripting AWS is much easier with NGS, there is a <a href="https://ilya-sher.org/2016/07/06/declarative-primitives-or-mkdir-p-for-the-cloud/">Declarative Primitives style</a> library for that.
+            </p>
+
+            <p>
+                If you need additional function or syntax in NGS,
+                it's highly probable that it will be included in the language
+                as long as it is for systems engineering tasks.
+            </p>
+
+
+        </div>
+        <div class="col-sm">
+            <h2>Start using NGS</h2>
+            <h4>Install NGS</h4>
+            NGS runs on Linux and Mac.
+            Please follow
+            <a href="https://github.com/ilyash/ngs#compiling-and-running">the instructions to build NGS</a> on your
+            computer.
+            Packages (apt, brew and others) are coming soon.
+
+            <h4>Run NGS inside docker</h4>
+            <a href="https://github.com/ilyash/ngs#running-using-docker">Play with NGS inside docker - instructions</a>
+            <h4>Documentation for NGS beginners</h4>
+            <ul>
+                <li><a href="doc/latest/man/ngstut.1.html">Examples-based tutorial</a> - understand how NGS feels like</li>
+                <li><a href="doc/latest/man/ngslang.1.html">Full language description</a></li>
+                <li><a href="doc/latest/man/ngsstyle.1.html">Coding style guide</a></li>
+                <li><a href="doc/latest/man/ngswhy.1.html">Why use NGS? Why it was created?</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="row">
+
+        <div class="col-sm">
+            <h2>Sample NGS features</h2>
+            <ul>
+                <li>
+                    Common systems engineering scripting aspects are covered
+                    <ul>
+                        <li><code>retry</code> function</li>
+                        <li>environment-variable-controlled <code>debug</code> function</li>
+                        <li><code>log</code> function for neat logging</li>
+                        <li><code>status</code> function for what is semantically a status</li>
+                    </ul>
+                </li>
+                <li>
+                    Easy processes handling
+                    <ul>
+                        <li>small subset of bash syntax for redirections and pipes</li>
+                        <li>smart and customizable handling of processes' exit codes (including throwing exceptions)</li>
+                        <li>syntax for running a command and parsing the output</li>
+                        <li>process control with <code>p=$(my_process &); ... p.kill()</code></li>
+                    </ul>
+                </li>
+                <li>
+                    Structured data manipulation. While parsing text remains a necessity, many of today's tasks include talking to APIs.
+                    APIs return structured data.
+                    <ul>
+                        <li>Sample functions: <code>map</code>, <code>filter</code>, <code>reject</code>, <code>mapk</code> -
+                            maps hash keys, <code>mapv</code> - maps hash values, <code>group</code> - groups values into hash,
+                            <code>fetch</code> - reads and parses a file.</li>
+                        <li><code>collector</code> facility lets you accumulate result easily into array,
+                            hash or any user defined type.</li>
+                        <li><code>Table</code> for displaying tabular data elegantly</li>
+                        <li><code>Stats</code> type counts occurrences</li>
+                        <li>
+                            <code>Box</code>, <code>FullBox</code> and
+                            <code>EmptyBox</code> types represent containers with or without data in them.
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+
+        </div>
+        <div class="col-sm">
+            <h2>Documentation</h2>
+            <ul>
+                <li><a href="doc/latest/index.html">Documentation Index</a> - main entry point to all documentation</li>
+            </ul>
+        </div>
+
+    </div>
+    <div class="row">
+        <div class="col-sm">
+            <h2>Source</h2>
+            <a href="https://github.com/ngs-lang/ngs">https://github.com/ngs-lang/ngs</a>
+        </div>
+        <div class="col-sm">
+            <h2>Thanks</h2>
+            <ul>
+                <li>Thanks to all contributors to NGS</li>
+                <li>Thanks to <a href="https://il.linkedin.com/company/beame-io">Beame.io</a> for hosting this site</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- main advantages, maybe without comparison. multiple dispatch, take most approproiate features from other lang for systems engineering -->
+
+<!-- Optional JavaScript -->
+<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"
+        integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
+        crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"
+        integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T"
+        crossorigin="anonymous"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+#!/usr/bin/env ngs
+
+{
+	# Due to incomplete AWS2 implementation, this script fails. Just run it again.
+	AWS = AWS2
+	DOMAIN = ENV.get('NGS_DOMAIN', 'ngs-lang.org')
+	BUCKET_NAME = "01.${DOMAIN}"
+
+	zone = AWS::Zone(Name=DOMAIN).converge()
+	cert = AWS::Certificate(DomainName=DOMAIN).converge().the_one()
+		dvo = cert.DomainValidationOptions.the_one()
+		assert(dvo.ValidationMethod == 'DNS')
+		rec = dvo.ResourceRecord
+		AWS::RecordSet(ZoneName=DOMAIN + '.', Name=rec.Name, Type=rec.Type).converge(ResourceRecords=[{"Value": rec.Value}], TTL=600)
+	bucket = AWS::Bucket(Name=BUCKET_NAME).converge()
+
+	if not($(ok:[0, 255] aws s3api get-bucket-website --bucket ${BUCKET_NAME})) {
+		bucket.resources[0].run("Setting website", %(aws s3 website "s3://${BUCKET_NAME}/" --index-document index.html --error-document error.html), false)
+	}
+
+	# $(top_level:: aws s3 sync --exclude '*.swp' --acl public-read ./ "s3://${BUCKET_NAME}/")
+	# not implemented # dist = AWS::Distribution(Tags={'Name': 'ngs-site'}).converge()
+	# aws cloudfront create-distribution --origin-domain-name s3.amazonaws.com
+
+	# Manual steps:
+	# * Create CloudFront distribution with origin s3.amazonaws.com/${BUCKET_NAME}
+	# * Create DNS alias for @
+
+}
