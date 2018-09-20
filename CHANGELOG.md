@@ -1,4 +1,4 @@
-## (UNRELEASED) Version 0.2.5
+## 2018-09-20 Version 0.2.5
 
 ### New features
 
@@ -12,6 +12,7 @@
 		* Add `init(t:Thread, name:Str, f:Fun, arg)`
 * `aws` command output parsing - `.Reservation` renamed to `._Reservation`
 * Add `eachk()` and `eachv()'
+* `Str(s:Str, target_width:Int)` extended to `Str(s:Str, target_width:Int, ch=' ')`, allowing padding with given character
 * Exiting
 	* Add `ExitException` - parent of all exceptions with `exit_code` field
 		* `FatalError` is now a child of `ExitException`
@@ -34,13 +35,13 @@
 * `Bool(Path)` now checks that underlying file system object is of the correct type
 * `dir()` now skips `.` and `..` entries
 * `dir()` now has "raw" parameter
-* decode() now parses "locate" output
-* nop() now takes any arguments
-* retry() - removed "catch_exceptions" parameter
-* assert_path_exists() - improve implementation
+* `decode()` now parses "locate" output
+* `nop()` now takes any arguments
+* `retry()` - removed "catch_exceptions" parameter
+* `assert_path_exists(`) - improve implementation
 * `E_...` constants from C now include all constants available during compilation
-* init(Failure, ...) - only accept Exception as second argument
-* decode_json() - improve exception
+* `init(Failure, ...)` - only accept Exception as second argument
+* `decode_json()` - improve exception
 
 ### Work in progress
 
