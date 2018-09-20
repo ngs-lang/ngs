@@ -7,10 +7,8 @@ Next Generation Shell.
 
 # Quick links
 
-
 * [NGS Website](https://ngs-lang.org/)
-* [NGS Facebook group](https://www.facebook.com/groups/next.generation.shell/)
-* [Reddit](https://www.reddit.com/r/NextGenerationShell/)
+* [Docker repository](https://hub.docker.com/r/ngslang/ngs/)
 
 # The problem
 
