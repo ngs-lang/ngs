@@ -3355,13 +3355,14 @@ F *(s:Str, n:Int) ([s]*n).join('')
 # Tested with Str(Str,Int)
 
 doc Convert anything to Str of a given width
-F Str(x, target_width:Int) x.Str().Str(target_width)
+F Str(x, target_width:Int, ch:Str=' ') x.Str().Str(target_width, ch)
 
 doc Pad a string to given width with spaces
 doc target_width - Positive pads on right, negative pads on left
 doc %EX - Str("x", 3)  # 'x  '
 doc %EX - Str("x",-3)  # '  x'
-F Str(s:Str, target_width:Int) {
+F Str(s:Str, target_width:Int, ch:Str=' ') {
+	assert(len(ch) == 1)
 	l = s.len()
 	pad_on_left = target_width < 0
 	if pad_on_left {
@@ -3370,7 +3371,7 @@ F Str(s:Str, target_width:Int) {
 
 	l >= target_width returns s
 
-	padding = ' ' * (target_width - l)
+	padding = ch * (target_width - l)
 	if pad_on_left {
 		padding + s
 	} else {
@@ -3383,12 +3384,14 @@ doc Convert a number to a string and pad it
 doc target_width - Positive pads on left, negative pads on right
 doc %EX - Str(10,  4)  # '  10'
 doc %EX - Str(10, -4)  # '10  '
-F Str(n:Int, target_width:Int) n.Str().Str(0-target_width)
+F Str(n:Int, target_width:Int, ch:Str=' ') n.Str().Str(0-target_width, ch)
 
 TEST Str(10,  4) == '  10'
+TEST Str(10,  4, '0') == '0010'
 TEST Str(10, -4) == '10  '
-TEST Str("x", 3) == 'x  '
-TEST Str("x",-3) == '  x'
+TEST Str('x', 3) == 'x  '
+TEST Str('x',-3) == '  x'
+TEST Str('x',-3, '.') == '..x'
 
 doc Check whether a string starts with another string
 doc %RET - Bool
@@ -4352,9 +4355,9 @@ doc Iterate over lines of the file
 doc f - Closed File
 doc cb - function to call with successive lines from the file
 F lines(f:File, cb:Fun) {
+	f.open('r')
 	finally()
 		body => {
-			f.open('r')
 			f.fd.read().lines(cb)
 		}
 		cleanup => {
