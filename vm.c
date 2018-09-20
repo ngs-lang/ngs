@@ -638,7 +638,8 @@ METHOD_RESULT native_c_dlopen_str_int EXT_METHOD_PARAMS {
 	if(!out) {
 		VALUE e;
 		e = make_normal_type_instance(vm->DlopenFail);
-		set_normal_type_instance_field(e, make_string("message"), make_string("Failed to dlopen()"));
+		// XXX: Could not find whether we should free the (char *) returned by dlerror()
+		set_normal_type_instance_field(e, make_string("message"), make_string(dlerror()));
 		set_normal_type_instance_field(e, make_string("filename"), argv[0]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
