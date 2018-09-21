@@ -869,9 +869,9 @@ doc %STATUS - deprecated
 F ~(something, pred) {
 	warn("Using deprecated ~(something:Any, pred:Any)")
 	if Pred(pred)(something) {
-		MatchY([something])
+		MatchSuccess([something])
 	} else {
-		MatchN()
+		MatchFailure()
 	}
 }
 
@@ -1973,11 +1973,11 @@ doc %EX - m = a ~ /^a/../^b/ # Exclusive range
 doc %EX - # m.matches == [['a2']]
 doc %EX - # m.before == ['a1']
 doc %EX - # m.after == ['b1', 'b2']
-doc %RET - Match
+doc %RET - MatchResult
 F ~(arr:Arr, r:PredRange) {
 	i = try indexes(arr, r)
-	i is Null returns MatchN()
-	ret = MatchY([arr[i]])
+	i is Null returns MatchFailure(arr, r)
+	ret = MatchSuccess([arr[i]])
 	ret.named = {}
 	ret.positions = [[i.start, i.end]]
 	ret.whole = ret.matches[0]
@@ -3501,14 +3501,14 @@ F ord(s:Str) {
 }
 
 doc Find substring in string. Uses pos().
-doc %RET - Match
-doc %EX - "abc" ~ "bc"  # <MatchY ...>
-doc %EX - "abc" ~ "X"   # <MatchN>
+doc %RET - MatchResult
+doc %EX - "abc" ~ "bc"  # <MatchSuccess ...>
+doc %EX - "abc" ~ "X"   # <MatchFailure>
 F ~(haystack:Str, needle:Str, offset:Int=0) {
 	p = pos(haystack, needle, offset)
-	p is Null returns MatchN()
+	p is Null returns MatchFailure()
 	l = needle.len()
-	ret = MatchY([needle])
+	ret = MatchSuccess([needle])
 	ret.named = {}
 	ret.positions = [[p, p+l]]
 	ret.whole = ret.matches[0]
@@ -3518,7 +3518,7 @@ F ~(haystack:Str, needle:Str, offset:Int=0) {
 }
 
 doc Find all non-overlapping matches of a substring in a string.
-doc %RET - if collect_unmatched - Arr with each element being MatchY or Str, if not collect_unmatched - Arr of MatchY
+doc %RET - if collect_unmatched - Arr with each element being MatchSuccess or Str, if not collect_unmatched - Arr of MatchSuccess
 doc %EX - ["key=value", "key2=value2"].map(F(kv) {
 doc %EX -   m = kv ~ "="
 doc %EX -   [m.before, m.after]
@@ -3558,10 +3558,10 @@ F ~~(haystack:Str, needle:Str, collect_unmatched:Bool=false) {
 	}
 }
 
-TEST m = (~~)("abcbe", "b", true); m.len() == 5 and m[[0,2,4]] == %[a c e] and m[[1,3]].all(MatchY)
+TEST m = (~~)("abcbe", "b", true); m.len() == 5 and m[[0,2,4]] == %[a c e] and m[[1,3]].all(MatchSuccess)
 
 doc Replace all occurrences of src with dst in s
-F replace(s:Str, src:Str, dst:Str) (~~)(s, src, true).map(only(MatchY, {dst})).join('')
+F replace(s:Str, src:Str, dst:Str) (~~)(s, src, true).map(only(MatchSuccess, {dst})).join('')
 
 TEST "x10ab20c30y".replace("0", "X") == "x1Xab2Xc3Xy"
 
@@ -5220,21 +5220,18 @@ F config(k:Str, v) {
 	STDLIB_CONFIG[k] = v
 }
 
-# === Match, Pfx, Sfx ============================
+# === MatchResult, Pfx, Sfx ============================
 
 {
 	doc Successful or unsuccessful match result
-	type Match
+	type MatchResult
 
 		doc Successful match result
 		doc matches - Successful matches
-		type MatchY(Match)
+		type MatchSuccess([MatchResult, Success])
 
 		doc Unsucessfull match result
-		type MatchN(Match)
-
-	doc Matching failure
-	type MatchFail(Exception)
+		type MatchFailure([MatchResult, Failure])
 
 	type SubSeq
 		doc Prefix subsequence of a sequence
@@ -5258,25 +5255,35 @@ F config(k:Str, v) {
 }
 
 doc Successful match constructor
-F init(my:MatchY, matches:Arr) init(args())
+F init(ms:MatchSuccess, matches:Arr) init(args())
+
+
+doc Unsuccessful construtcor
+F init(mf:MatchFailure, data, pattern) init(args())
 
 doc Convert successful match to Bool (true)
 doc %RET - true
-F Bool(my:MatchY) true
+F Bool(ms:MatchSuccess) true
 
 doc Convert failed match to Bool (false)
 doc %RET - false
-F Bool(my:MatchN) false
+F Bool(mf:MatchFailure) false
 
-doc Convert successful match to FullBox
+doc Get the values of successfull match
+F get(ms:MatchSuccess) ms
+
+doc Throws ResultFail
+F get(mf:MatchFailure) throw ResultFail("There was no match").set('failure', mf)
+
+doc Convert Success to FullBox
 doc %RET - FullBox
 doc %EX - Box("abcd" ~ /^(..)/).map({"First two letters: ${A[1]}"}).get("(too short)")  # First two letters: ab
-F Box(my:MatchY) FullBox(my)
+F Box(s:Success) FullBox(ms)
 
-doc Convert failed match to EmptyBox
+doc Convert failure to EmptyBox
 doc %RET - EmptyBox
 doc %EX - Box("a" ~ /^(..)/).map({"First two letters: ${A[1]}"}).get("(too short)")  # (too short)
-F Box(mn:MatchN) EmptyBox()
+F Box(f:Failure) EmptyBox()
 
 doc EXPERIMENTAL! Do not use!
 F attempt(x, *cbs) {
@@ -5288,13 +5295,6 @@ F attempt(x, *cbs) {
 	})
 	throw Error("attempt() failed").set('x', x).set('cbs', cbs)
 }
-
-doc Convert Match to exit code.
-doc %RET - 0 for successful match (MatchY), 1 for unsuccessful match (MatchN).
-F ExitCode(m:Match) m.Bool().ExitCode()
-
-doc Initialize MatchFail.
-F init(mf:MatchFail, msg:Str, container, pattern) init(args())
 
 doc SubSec construcor
 F init(s:SubSeq, val) s.val = val
@@ -5314,48 +5314,48 @@ F Sfx(val) MustSfx(val)
 
 F Str(s:SubSeq) "<${s.typeof().name} ${s.val}>"
 
-doc Return string without the prefix. Throws MatchFail if pfx is MustPfx but s does not start with it.
+doc Return string without the prefix. Throws InvalidArgument if pfx is MustPfx but s does not start with it.
 doc s - original string
 doc pfx - prefix to get rid of
 doc %RET - s without pfx
 doc %EX - "abcde" - Pfx("ab")  # "cde"
-doc %EX - "abcde" - Pfx("xy")  # MatchFail exception
+doc %EX - "abcde" - Pfx("xy")  # InvalidArgument exception
 doc %EX - "abcde" - MaybePfx("xy")  # "abcde"
 F -(s:Str, pfx:Pfx) {
 	s.starts_with(pfx.val) returns s[pfx.val.len()..null]
-	pfx is MustPfx throws MatchFail("Given string '$s' does not start with prefix '$pfx.val'", s, pfx)
+	pfx is MustPfx throws InvalidArgument("Given string '$s' does not start with prefix '$pfx.val'").set('s', s).set('pfx', pfx)
 	s
 }
 
 TEST "abc" - Pfx("a") == "bc"
-TEST try "abc" - Pfx("wa") catch(mf:MatchFail) true
+TEST try "abc" - Pfx("wa") catch(mf:InvalidArgument) true
 TEST "abc" - MaybePfx("wa") == "abc"
 
 
-doc Return string without the suffix. Throws MatchFail if pfx is MustSfx but s does not end with it.
+doc Return string without the suffix. Throws InvalidArgument if pfx is MustSfx but s does not end with it.
 doc s - original string
 doc sfx - suffix to get rid of
 doc %RET - s without pfx
 doc %EX - "abcde" - Sfx("de")  # "abc"
-doc %EX - "abcde" - Sfx("xy")  # MatchFail exception
+doc %EX - "abcde" - Sfx("xy")  # InvalidArgument exception
 doc %EX - "abcde" - MaybeSfx("xy")  # "abcde"
 F -(s:Str, sfx:Sfx) {
 	s.ends_with(sfx.val) returns s[0 .. (s.len() - sfx.val.len())]
-	sfx is MustSfx throws MatchFail("Given string '$s' does not end with suffix '$sfx.val'", s, sfx)
+	sfx is MustSfx throws InvalidArgument("Given string '$s' does not end with suffix '$sfx.val'").set('s', s).set('sfx', sfx)
 	s
 }
 
 TEST "abc" - Sfx("c") == "ab"
-TEST try "abc" - Sfx("cd") catch(mf:MatchFail) true
+TEST try "abc" - Sfx("cd") catch(mf:InvalidArgument) true
 TEST "abc" - MaybeSfx("cd") == "abc"
 
 doc Check whether s starts with pfx.
-doc %EX - "abcde" ~ Pfx("ab")  # <MatchY matches=['ab'] before= after=cde>
-doc %EX - "abcde" ~ Pfx("xy")  # <MatchN >
-doc %RET - Match
+doc %EX - "abcde" ~ Pfx("ab")  # <MatchSuccess matches=['ab'] before= after=cde>
+doc %EX - "abcde" ~ Pfx("xy")  # <MatchFailure >
+doc %RET - MatchResult
 F ~(s:Str, pfx:Pfx) {
-	not(s.starts_with(pfx.val)) returns MatchN()
-	ret = MatchY([pfx.val])
+	not(s.starts_with(pfx.val)) returns MatchFailure()
+	ret = MatchSuccess([pfx.val])
 	ret.before = ''
 	ret.after = s[pfx.val.len()..null]
 	ret
@@ -5364,21 +5364,21 @@ F ~(s:Str, pfx:Pfx) {
 F ~(s:Str, i:Ifx) s ~ i.val
 
 doc Check whether s ends with sfx.
-doc %EX - "abcde" ~ Sfx("de")  # <MatchY matches=['de'] before=abc after=>
-doc %EX - "abcde" ~ Pfx("xy")  # <MatchN >
-doc %RET - Match
+doc %EX - "abcde" ~ Sfx("de")  # <MatchSuccess matches=['de'] before=abc after=>
+doc %EX - "abcde" ~ Pfx("xy")  # <MatchFailure >
+doc %RET - MatchResult
 F ~(s:Str, sfx:Sfx) {
-	not(s.ends_with(sfx.val)) returns MatchN()
-	ret = MatchY([sfx.val])
+	not(s.ends_with(sfx.val)) returns MatchFailure()
+	ret = MatchSuccess([sfx.val])
 	ret.before = s[0..(s.len() - sfx.val.len())]
 	ret.after = ''
 	ret
 }
 
 # TODO: make it a low priority method implementation
-doc Convenience method to access matches in MatchY
+doc Convenience method to access matches in MatchSuccess
 doc %EX - ("abc" ~ /a(.)c/)[1]  # "b"
-F '[]'(my:MatchY, idx:Int) my.matches[idx]
+F '[]'(ms:MatchSuccess, idx:Int) ms.matches[idx]
 
 TEST ("abc" ~ /a(.)c/)[1] == "b"
 
@@ -5388,25 +5388,25 @@ F Pred(s:SubSeq) F subseq_pred(x) x ~ s
 # === RegExp =====================================
 
 # TODO: better exceptions
-doc Find PCRE regular expression in s. Empty string without options returns MatchN. Throws Error if more than 20 captures are used or if there is an error during matching.
+doc Find PCRE regular expression in s. Empty string without options returns MatchFailure. Throws Error if more than 20 captures are used or if there is an error during matching.
 doc offset - search start offset
 doc options - options to pass to underlying PCRE_EXEC(3).
-doc %RET - Match
+doc %RET - MatchResult
 doc %EX - globals().keys().filter(/^C_PCRE/)  # lists possible options
-doc %EX - "xabcy" ~ /a(.)c/  # <MatchY matches=['abc','b'] named={} positions=[[1,4],[2,3]] whole=abc before=x after=y>
+doc %EX - "xabcy" ~ /a(.)c/  # <MatchSuccess matches=['abc','b'] named={} positions=[[1,4],[2,3]] whole=abc before=x after=y>
 doc %EX - m = ("xabcy" ~ /a(?P<mychar>.)c/)
 doc %EX - echo(m.named.mychar)  # Outputs: b
 doc %AUTO - my_str ~ my_regexp
 F ~(s:Str, r:RegExp, offset:Int=0, options:Int=0) {
 	result = c_pcre_exec(r, s, offset, options)
 	if result is Int {
-		result == C_PCRE_ERROR_NOMATCH returns MatchN()
+		result == C_PCRE_ERROR_NOMATCH returns MatchFailure()
 		result == 0 throws Error("Too many captures. Max 20")
 		result < 0 throws Error("RegExp matching error in c_pcre_exec").set('code', result)
 		assert(false, "Unexpected integer result from c_pcre_exec")
 	}
 	assert(result is Arr, "c_pcre_exec must return either integer or an array")
-	ret = MatchY(
+	ret = MatchSuccess(
 		result.map(2, F(start_pos, end_pos) {
 			if start_pos >= 0
 				s[start_pos..end_pos]
@@ -5423,7 +5423,7 @@ F ~(s:Str, r:RegExp, offset:Int=0, options:Int=0) {
 }
 
 TEST m = "xabcy" ~ /a(.)c/; m.matches == ["abc", "b"] and m.before == 'x' and m.after == 'y' and m.whole == 'abc'
-TEST m = "xAbcy" ~ /a(.)c/; m is MatchN
+TEST m = "xAbcy" ~ /a(.)c/; m is MatchFailure
 
 PCRE_NEWLINE_TO_OPTIONS = {
 	         13: C_PCRE_NEWLINE_CR,
@@ -5434,11 +5434,11 @@ PCRE_NEWLINE_TO_OPTIONS = {
 }
 
 doc Find all non-overlapping matches of regular expression in a string.
-doc %RET - if collect_unmatched - Arr with each element being MatchY or Str, if not collect_unmatched - Arr of MatchY
+doc %RET - if collect_unmatched - Arr with each element being MatchSuccess or Str, if not collect_unmatched - Arr of MatchSuccess
 doc %EX - ("x10ab20c30y" ~~ /[0-9]+/).whole.map(Int).sum()  # 60
 doc %EX -
 doc %EX - arr = (~~)("x10ab20c30y", /[0-9]+/, true)
-doc %EX - arr .= map(F(elt) if elt is MatchY "[${elt.whole}]" else elt)
+doc %EX - arr .= map(F(elt) if elt is MatchSuccess "[${elt.whole}]" else elt)
 doc %EX - arr.join("")  # "x[10]ab[20]c[30]y"
 F ~~(s:Str, r:RegExp, collect_unmatched:Bool=false) {
 	collector {
@@ -5579,7 +5579,7 @@ doc %EX - "x10ab20c30y".replace(/[0-9]+/, F(match_text) "[$match_text]")  # "x[1
 F replace(s:Str, r:RegExp, mapper:Fun) {
 	(~~)(s, r, true).map(F(x) {
 		ematch x {
-			MatchY mapper(x.whole)
+			MatchSuccess mapper(x.whole)
 			Str x
 		}
 	}).join('')

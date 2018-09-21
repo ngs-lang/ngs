@@ -8,8 +8,8 @@ ns {
 	doc ArgvMatcher internal type, do not use!
 	type UnmatchedParam(EmptyBox)
 
-	type ParamsMatchY(MatchY)
-	type ParamsMatchN(MatchN)
+	type ParamsMatchY(MatchSuccess)
+	type ParamsMatchN(MatchFailure)
 
 	F init(pmy:ParamsMatchY, args:Arr, kwargs:Hash) {
 		pmy.args = args
