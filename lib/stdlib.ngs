@@ -2918,7 +2918,7 @@ TEST FullBox(1) != FullBox(2)
 
 	doc Run fun with wrapped value.
 	F each(s:Success, fun:Fun) {
-		fun(s.val)
+		fun(s.get())
 		s
 	}
 
@@ -2926,7 +2926,7 @@ TEST FullBox(1) != FullBox(2)
 	doc %RET - Result
 	F map(s:Success, fun:Fun) {
 		try {
-			Success(fun(s.val))
+			Success(fun(s.get()))
 		} catch(e) {
 			Failure(e)
 		}
@@ -2970,6 +2970,7 @@ TEST FullBox(1) != FullBox(2)
 TEST {read("/etc/passwd")}.Result() is Success
 TEST {read("NO-SUCH-FILE")}.Result() is Failure
 TEST Success(10).map(X*2).get() == 20
+TEST try ({ throw Error("xx") }.Result().map(X*2).get()) catch(rf:ResultFail) true
 
 # === Diff =======================================
 {
