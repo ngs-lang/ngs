@@ -2,6 +2,7 @@
 
 ### Fixes and improvements
 
+* `indexes(arr:Arr, predicate)` upgraded to handle eachable: `indexes(e:Eachable1, predicate)`
 * Better `c_dlopen()` error message
 * `T.user = x` for native types now returns `x` and not `T`, consistently with other assignments
 

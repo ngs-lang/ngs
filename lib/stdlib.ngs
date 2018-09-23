@@ -198,7 +198,7 @@ TEST identity(10) == 10
 #       See https://docs.python.org/2/library/functools.html#partial-objects
 doc Returns partially-applied function
 doc f - The base function
-doc Xunderscore_unsupportedXbind_args - The arguments to partiall apply (bind the function to)
+doc Xunderscore_unsupportedXbind_args - The arguments to partial apply (bind the function to)
 F partial(f:Fun, *bind_args)
 	F(*args) f(*bind_args, *args)
 
@@ -1789,22 +1789,19 @@ ns {
 }
 
 doc Find all indexes of values that satisfy the predicate
-doc TODO: Make it work on anything with each() method
 doc arr - Items to look at
 doc predicate - Test function
 doc args - Additional arguments for the predicate
 doc %RET - Arr of Int
 doc %EX - [1,5,1,10].indexes(X>2)  # [1,3]
-F indexes(arr:Arr, predicate) {
+F indexes(e:Eachable1, predicate) {
 	p = Pred(predicate)
-	l = arr.len()
-	ret = []
-	for(i;l) {
-		if(p(arr[i])) {
-			ret.push(i)
-		}
-	}
-	ret
+	collector
+		e.each_idx_val(F(idx, elt) {
+			if(p(elt)) {
+				collect(idx)
+			}
+		})
 }
 
 TEST [1,5,1,10].indexes(X>2) == [1,3]
@@ -1848,9 +1845,9 @@ F join(a:Arr, sep:Arr) {
 	guard a.all(Arr)
 	collector
 		a.each_idx_val(F(idx, subarr) {
-			subarr % collect
+			subarr.each(collect)
 			if idx < a.len() - 1 {
-				sep % collect
+				sep.each(collect)
 			}
 		})
 }
@@ -4343,7 +4340,7 @@ doc Get basename of the file. Uses BASENAME(1).
 F basename(p:Path) p.path.basename()
 
 doc Get basename of the file. Uses BASENAME(1).
-F basename(s:Str) $(basename $s).Str() - Sfx('\n')
+F basename(s:Str) `line: basename $s`
 
 
 # TODO: something more efficient than reading all of it. Some kind of streaming.
@@ -5969,7 +5966,7 @@ F retry(
 	title="<retry>",
 	progress_cb:Fun={null},
 	success_cb:Fun=identity,
-	fail_cb=null,
+	fail_cb={throw RetryFail()},
 	body:Fun=body_missing_in_retry
 ) {
 	guard sleep is Int or sleep is Iter
@@ -5994,7 +5991,6 @@ F retry(
 			$(sleep "$s")
 		}
 	}
-	fail_cb is NoData throws RetryFail()
 	fail_cb()
 }
 
