@@ -4750,6 +4750,9 @@ F '$()'(c:Command) {
 		debug("process", "will execve()")
 		result = c_execve(process.executable.path, argv, ENV.Strs())
 		# TODO: propagate this error to parent, don't know how yet
+		# Bug #180 occurs on next line.
+		#   Does not happen if replaced with 'throw Error("Process")'.
+		#   On Linux two exceptions are shown and there is no crash.
 		throw ProcessFail(process).set('message', "failed to execve()")
 	}
 
