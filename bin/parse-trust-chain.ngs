@@ -7,12 +7,7 @@ F main(fileName:Str){
          subject = (`echo ${cert} | openssl x509 -subject -noout` -Sfx("\n") -Pfx("subject= /")).split("/").map(split(X, "=")).Hash()
          issuer  = (`echo ${cert} | openssl x509 -issuer -noout` -Sfx("\n") -Pfx("issuer= /")).split("/").map(split(X, "=")).Hash()
          pubkey = (`echo ${cert} | openssl x509 -pubkey -noout`)
-         log("subject ${subject} ");
-         log("issue ${issuer}")
-         log("issue ${pubkey}")
-         metadata = {'Subject' :  subject.CN, 'Issuer' :  issuer.CN}
-         log(metadata.Str())
-         echo(cert)
+         log("subject ${subject} issuer  ${issuer}");
      }
 }
 
