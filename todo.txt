@@ -4,6 +4,14 @@
 
 Note that this started as internal document so things here are unformed, not final and fluid.
 
+[consider]
+
+* `grep` exit code 1 should be ok?
+* processes "good" exit codes global variable (`OK_EXIT_CODES[Str, ?]`, ? is somethig that supports `in`)
+* `Row`, `Column`, `TableRow`, `TableColumn` types
+* `-ptc` switch - print table column (needs deep thinking)
+* `Amount` / `Len` type
+
 [roadmap]
 
 	* Phase 3 - running code remotely

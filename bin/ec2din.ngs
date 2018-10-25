@@ -85,7 +85,7 @@
 			i.RestOfTags = i.Tags.reject(tag_has_column).map({ "${A.limit_len(10)}=${B.limit_len(15)}" })
 		}
 		# t = Table('Instances', instances)
-		instances % push(table, X)
+		instances.each(push(table, X))
 		echo(table)
 	}
 }

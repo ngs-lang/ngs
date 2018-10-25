@@ -1401,6 +1401,7 @@ F finally(body:Fun, cleanup:Fun) {
 
 TEST a=0; {1/1}.finally({a=10}) == 1 and a == 10
 TEST a=0; (try finally() with {1/0} with {a=10} catch(e:DivisionByZero) "OK") == "OK" and a == 10
+TEST F f() { r=Return(); finally({throw r(7)}, {8}) }; f() == 7
 
 # --- Hash ---
 

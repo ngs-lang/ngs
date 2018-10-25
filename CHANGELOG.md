@@ -5,6 +5,7 @@
 * `indexes(arr:Arr, predicate)` upgraded to handle eachable: `indexes(e:Eachable1, predicate)`
 * Better `c_dlopen()` error message
 * `T.user = x` for native types now returns `x` and not `T`, consistently with other assignments
+* `Return` is now a subtype of `Exception`. This fixes failing `Failure(Return)`, which only works on `Exception`.
 
 ## 2018-09-20 Version 0.2.5
 

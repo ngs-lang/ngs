@@ -2537,28 +2537,28 @@ void vm_init(VM *vm, int argc, char **argv) {
 				MKSUBTYPE(JsonDecodeFail, DecodeFail);
 				_doc(vm, "", "Represents an error decoding JSON data.");
 
-	MKTYPE(Return);
-	_doc(vm, "", "Return instance type, when thrown, will exit the call frame where they were created returning given value.");
-	_doc_arr(vm, "%EX",
-		"{",
-		"    F find_the_one(haystack:Arr, needle) {",
-		"        ret_from_find_the_one = Return()",
-		"        echo(ret_from_find_the_one)",
-		"        haystack.each(F(elt) {",
-		"                elt == needle throws ret_from_find_the_one(\"Found it!\")",
-		"        })",
-		"        \"Not found\"",
-		"    }",
-		"    echo([10,20].find_the_one(20))",
-		"    echo([10,20].find_the_one(30))",
-		"}",
-		"# Output:",
-		"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
-		"#   Found it!",
-		"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
-		"#   Not found",
-		NULL
-	);
+		MKSUBTYPE(Return, Exception);
+		_doc(vm, "", "Return instance type, when thrown, will exit the call frame where they were created returning given value.");
+		_doc_arr(vm, "%EX",
+			"{",
+			"    F find_the_one(haystack:Arr, needle) {",
+			"        ret_from_find_the_one = Return()",
+			"        echo(ret_from_find_the_one)",
+			"        haystack.each(F(elt) {",
+			"                elt == needle throws ret_from_find_the_one(\"Found it!\")",
+			"        })",
+			"        \"Not found\"",
+			"    }",
+			"    echo([10,20].find_the_one(20))",
+			"    echo([10,20].find_the_one(30))",
+			"}",
+			"# Output:",
+			"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
+			"#   Found it!",
+			"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
+			"#   Not found",
+			NULL
+		);
 
 	MKTYPE(Backtrace);
 	_doc(vm, "", "Represents stack trace");
