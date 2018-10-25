@@ -1,0 +1,17 @@
+#!/usr/bin/env ngs
+# This is not ment a production tool, but rather a sysadmin tool check p7b files on servers
+# dont learn from this, but it shows how NGS can plug any while with annoying native linux tools
+
+F main(fileName:Str){
+     certs = read(fileName) ~~ /-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----/ms
+     for cert in certs.whole {
+         subject = (`echo ${cert} | openssl x509 -subject -noout` -Sfx("\n") -Pfx("subject= /")).split("/").map(split(X, "=")).Hash()
+         issuer  = (`echo ${cert} | openssl x509 -issuer -noout` -Sfx("\n") -Pfx("issuer= /")).split("/").map(split(X, "=")).Hash()
+		 dates =   (`echo ${cert} | openssl x509 -dates -noout`).lines().map(split(X, "=")).Hash()
+
+		 issuedBeforeDays = ((Time().Int() - dates.notBefore.Time('%b %d %H:%M:%S %Y %Z').Int()) / 86400)
+		 expiresInDays =    ((dates.notAfter.Time('%b %d %H:%M:%S %Y %Z').Int() - Time().Int())   / 86400)
+		 pubkey = (`echo ${cert} | openssl x509 -pubkey -noout`)
+		 log("Certificate  issued ${issuedBeforeDays}  days ago and will expire in ${expiresInDays} subject ${subject} issuer  ${issuer}");
+     }
+}
