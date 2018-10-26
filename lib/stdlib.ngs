@@ -5880,6 +5880,7 @@ F time(cb:Fun) {
 	(finish[0]* 1000000 + finish[1]) - (start[0] * 1000000 + start[1])
 }
 
+F Bool(t:Time) true
 
 # === Random =====================================
 # This is _not_ crypto safe random!

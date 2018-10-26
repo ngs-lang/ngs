@@ -1,17 +1,59 @@
 #!/usr/bin/env ngs
-# This is not ment a production tool, but rather a sysadmin tool check p7b files on servers
+# This is not meant a production tool, but rather a sysadmin tool check p7b files on servers
 # dont learn from this, but it shows how NGS can plug any while with annoying native linux tools
 
-F main(fileName:Str){
-     certs = read(fileName) ~~ /-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----/ms
-     for cert in certs.whole {
-         subject = (`echo ${cert} | openssl x509 -subject -noout` -Sfx("\n") -Pfx("subject= /")).split("/").map(split(X, "=")).Hash()
-         issuer  = (`echo ${cert} | openssl x509 -issuer -noout` -Sfx("\n") -Pfx("issuer= /")).split("/").map(split(X, "=")).Hash()
-		 dates =   (`echo ${cert} | openssl x509 -dates -noout`).lines().map(split(X, "=")).Hash()
 
-		 issuedBeforeDays = ((Time().Int() - dates.notBefore.Time('%b %d %H:%M:%S %Y %Z').Int()) / 86400)
-		 expiresInDays =    ((dates.notAfter.Time('%b %d %H:%M:%S %Y %Z').Int() - Time().Int())   / 86400)
-		 pubkey = (`echo ${cert} | openssl x509 -pubkey -noout`)
-		 log("Certificate  issued ${issuedBeforeDays}  days ago and will expire in ${expiresInDays} subject ${subject} issuer  ${issuer}");
-     }
+F main(fileName:Str, full:Bool=false){
+
+	F time_diff(t:Time) {
+		diff = t.Int() - Time().Int()
+		future = diff >= 0
+		diff .= abs()
+		diff_days = diff / 86400
+		if future {
+			"in ${diff_days} days"
+		} else {
+			"${diff_days} days ago"
+		}
+	}
+
+	certs = read(fileName) ~~ /-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----/ms
+
+	prev = null
+	certs = certs.whole.map(F(cert) {
+
+		info = `echo ${cert} | openssl x509 -subject -issuer -dates -noout`.lines().map(F(line) {
+			kv = line.split("=", 2)
+		}).Hash()
+
+		info .= mapv(F(v) {
+			# Composite values
+			if v ~ Pfx(" /") {
+				h = v.split("/")[1..null].map(split(X, "=")).Hash()
+				if not(full) and 'CN' in h {
+					return h['CN']
+				}
+				return h
+			}
+			# Time
+			if t = (v.Time('%b %d %H:%M:%S %Y %Z') tor null) {
+				return [v, time_diff(t)]
+			}
+			# All other values
+			v
+		})
+
+		info['*prevIssuerIsCurSubject'] = if prev {
+			if prev == info.subject then "YES" else "NO"
+		}
+		prev = info.issuer
+
+		info
+	})
+
+	if isatty(1) {
+		echo(Table2::Table(certs), Table2::TableView(name="certs", columns=%[subject issuer "*prevIssuerIsCurSubject" notBefore notAfter]))
+	} else {
+		certs.encode_json().echo()
+	}
 }
