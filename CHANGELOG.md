@@ -21,7 +21,7 @@
 		* Add `init(t:Thread, name:Str, f:Fun)`
 		* Add `init(t:Thread, name:Str, f:Fun, arg)`
 * `aws` command output parsing - `.Reservation` renamed to `._Reservation`
-* Add `eachk()` and `eachv()'
+* Add `eachk()` and `eachv()`
 * `Str(s:Str, target_width:Int)` extended to `Str(s:Str, target_width:Int, ch=' ')`, allowing padding with given character
 * Exiting
 	* Add `ExitException` - parent of all exceptions with `exit_code` field
