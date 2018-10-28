@@ -2035,12 +2035,12 @@ ns {
 		ret_cb
 	}
 
-	doc Find minimnal element under (<)
+	doc Find minimal element under (<)
 	F min(e:Eachable1) most(e, (<))
 	doc Find maximal element under (>)
 	F max(e:Eachable1) most(e, (>))
 
-	doc Find minimnal element under (<)
+	doc Find minimal element under (<)
 	F min(a, b, *rest) [a, b, *rest].min()
 
 	doc Find maximal element under (>)
@@ -2725,6 +2725,16 @@ doc %RET - eb
 doc %EX - Box(null).each(echo)  # No output
 F each(eb:EmptyBox, cb:Fun) eb
 
+# each() allows any()
+TEST Box(5).any(Int)
+TEST EmptyBox().any(Str) == false
+TEST EmptyBox().any(Int) == false
+
+# each() allows none()
+TEST Box(5).none(Int) == false
+TEST Box(5).none(Str)
+TEST EmptyBox().none(Int)
+
 doc Conditionaly convert FullBox to EmptyBox.
 doc predicate - Test function to be called with the value in the FullBox
 doc %RET - Box. fb if predicate succeeds, EmptyBox if not.
@@ -2740,26 +2750,6 @@ doc Do nothing
 doc %RET - eb
 doc %EX - EmptyBox().filter(X>20)  # <EmptyBox>
 F filter(eb:EmptyBox, predicate) eb
-
-doc Test Box value
-doc %EX - Box(5).any(Int)      # true
-doc %EX - Box(5).any(Str)      # false
-doc %EX - EmptyBox().any(Int)  # false
-F any(b:Box, predicate) Bool(b.filter(predicate))
-
-TEST Box(5).any(Int)
-TEST EmptyBox().any(Str) == false
-TEST EmptyBox().any(Int) == false
-
-doc Test Box value
-doc %EX - Box(5).none(Int)      # false
-doc %EX - Box(5).none(Str)      # true
-doc %EX - EmptyBox().none(Int)  # true
-F none(b:Box, predicate) not(b.filter(predicate))
-
-TEST Box(5).none(Int) == false
-TEST Box(5).none(Str)
-TEST EmptyBox().none(Int)
 
 doc Get FullBox value
 doc %RET - Any
