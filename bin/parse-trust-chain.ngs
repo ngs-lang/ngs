@@ -15,9 +15,12 @@ F main(fileName:Str, full:Bool=false){
 			"${diff_days} days ago"
 		}
 	}
-
-	certs = read(fileName) ~~ /-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----/ms
-
+	if fileName == 'stdin' then 
+		content = read() 
+	else 
+		content = read(fileName);
+	
+	certs = content ~~ /-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----/ms
 	prev = null
 	certs = certs.whole.map(F(cert) {
 
