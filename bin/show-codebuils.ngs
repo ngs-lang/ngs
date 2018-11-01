@@ -1,0 +1,26 @@
+#!/usr/bin/env ngs
+{
+    F get_build_project_name(b:Str) b.split(':')[0]
+    F human_time(i) i.Str().Int().Time().Str('%Y-%m-%d %H:%M')
+    status("Listing projects")
+    projects=``aws codebuild list-projects``
+    status("Listing builds")
+    builds_by_project = ``aws codebuild list-builds --sort-order DESCENDING --max-items 1000``.group(get_build_project_name)
+    builds_by_project .= filterk(X in projects)
+    builds_by_project .= mapv(X.limit(3))
+    builds = builds_by_project.values().flatten()
+    # echo(builds)
+    status("Getting builds information")
+    info=``aws codebuild batch-get-builds --ids $*builds``.builds
+    fields=%[projectName buildStatus startTime endTime]
+    info .= map(F(i) {
+        {
+            'projectName': i.projectName
+            'buildStatus': i.buildStatus
+            'startTime': i.startTime.human_time()
+            'endTime': i.Box('endTime').map(human_time).get('RUNNING')
+        }
+    })
+    info .= sort('endTime')
+    echo(Table2::Table(info))
+}
