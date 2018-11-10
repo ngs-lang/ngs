@@ -28,9 +28,13 @@ doc Sets object fields from the supplied parameters
 doc %EX - # sets t.a and t.b
 doc %EX - F init(t:MyType, a, b) init(args())
 F init(h:Hash) {
-	args = Arr(h)
-	dst = args.shift()[1]
-	args.each(F(field_name_value) dst.(field_name_value[0]) = field_name_value[1])
+	dst_kv = ll_hash_head(h)
+	dst = dst_kv.ll_hash_entry_val() # dst - value of first Hash entry
+	e = dst_kv.ll_hash_entry_next()
+	while e != null {
+		dst.(e.ll_hash_entry_key()) = e.ll_hash_entry_val()
+		e .= ll_hash_entry_next()
+	}
 	dst
 }
 

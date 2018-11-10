@@ -7,6 +7,8 @@
 * `T.user = x` for native types now returns `x` and not `T`, consistently with other assignments
 * `Return` is now a subtype of `Exception`. This fixes failing `Failure(Return)`, which only works on `Exception`.
 * Remove `any()` and `none()` for `Box` - they work anyway because `Box` is `Eachable1`. `any()` and `none()` are defined for `Eachable1`.
+* Faster `==(Hash, Hash)`
+* Faster `init(Hash)`
 
 ## 2018-09-20 Version 0.2.5
 
