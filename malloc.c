@@ -13,7 +13,7 @@
 int_fast8_t ngs_use_stupid_malloc;
 void *ngs_malloc_base = 0;
 void *ngs_malloc_next_free = 0;
-long ngs_malloc_allocated = 0;
+size_t ngs_malloc_allocated = 0;
 
 void ngs_malloc_init() {
 	long sz = sysconf(_SC_PAGESIZE);
