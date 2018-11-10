@@ -2248,10 +2248,21 @@ F code(a:Arr) "[" + a.map(code).join(', ') + "]"
 # --- Comparisons ---
 
 doc Compare two Hashes. Hashes must have same keys with same values in same order to return true.
+doc Both hashes must not be modified during comparison. This was not tested.
 doc %RET - Bool
 F ==(a:Hash, b:Hash) {
 	len(a) != len(b) returns false
-	Arr(a) == Arr(b)
+	a === b returns true
+
+	e1 = ll_hash_head(a)
+	e2 = ll_hash_head(b)
+	while e1 != null {
+		e1.ll_hash_entry_key() != e2.ll_hash_entry_key() returns false
+		e1.ll_hash_entry_val() != e2.ll_hash_entry_val() returns false
+		e1 .= ll_hash_entry_next()
+		e2 .= ll_hash_entry_next()
+	}
+	true
 }
 
 F subset(smaller:Hash, larger:Hash) {
