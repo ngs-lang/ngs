@@ -1658,6 +1658,17 @@ The code below will probably not do what was intended. Note that the default par
 
 Same happens in Python and hence already described: http://docs.python-guide.org/en/latest/writing/gotchas/#mutable-default-arguments
 
+## Type system is only used for multi-dispatch
+
+Consider the code:
+
+	F f(x:Int=null) {
+		...
+	}
+
+The `x:Int` only says that when calling `f`, the parameter `x` must be of type `Int`.
+It does *not* mean that `x` must be `Int` inside `f`. Even the default value can be of different type.
+
 # Handlers
 
 Handlers are called by NGS when a certain condition occurs.

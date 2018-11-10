@@ -4,11 +4,14 @@
 
 * `indexes(arr:Arr, predicate)` upgraded to handle eachable: `indexes(e:Eachable1, predicate)`
 * Better `c_dlopen()` error message
-* `T.user = x` for native types now returns `x` and not `T`, consistently with other assignments
+* `T.user = x` for native types now returns `x` and not `T`, consistent with other assignments
 * `Return` is now a subtype of `Exception`. This fixes failing `Failure(Return)`, which only works on `Exception`.
 * Remove `any()` and `none()` for `Box` - they work anyway because `Box` is `Eachable1`. `any()` and `none()` are defined for `Eachable1`.
 * Faster `==(Hash, Hash)`
 * Faster `init(Hash)`
+* Fix `C_WEXITSTATUS` - return null when `WIFEXITED` returns false.
+* Fix `C_WTERMSIG` - return null when `WIFSIGNALED` returns false.
+* Work around strange error (Issue #180) after `execve()` was failing on MacOS. Now executing minimal amount of code after failing `execve()`.
 
 ## 2018-09-20 Version 0.2.5
 

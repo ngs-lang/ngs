@@ -17,7 +17,7 @@
 
 #ifdef __APPLE__
 #include "fmemopen.h"
-#endif 
+#endif
 
 // OPEN(2), LSEEK(2), WAIT(2)
 // #define _POSIX_SOURCE
@@ -1274,12 +1274,20 @@ METHOD_RESULT native_c_execve METHOD_PARAMS {
 }
 
 METHOD_RESULT native_C_WEXITSTATUS METHOD_PARAMS {
-	int status = GET_INT(argv[0]);
-	METHOD_RETURN(MAKE_INT(WEXITSTATUS(status)));
+	int status = (int) GET_INT(argv[0]);
+	if(WIFEXITED(status)) {
+		METHOD_RETURN(MAKE_INT(WEXITSTATUS(status)));
+	} else {
+		METHOD_RETURN(MAKE_NULL);
 }
+	}
 METHOD_RESULT native_C_WTERMSIG METHOD_PARAMS {
-	int status = GET_INT(argv[0]);
-	METHOD_RETURN(MAKE_INT(WTERMSIG(status)));
+	int status = (int) GET_INT(argv[0]);
+	if(WIFSIGNALED(status)) {
+		METHOD_RETURN(MAKE_INT(WTERMSIG(status)));
+	} else {
+		METHOD_RETURN(MAKE_NULL);
+	}
 }
 
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {

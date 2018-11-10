@@ -4493,6 +4493,7 @@ F '.='(p:Process, field:Str, v) {
 }
 
 doc Decide whether process finished normally: exit code must be 0.
+doc Note that processes terminated by a signal will have .exit_code null.
 doc p - any process
 doc %RET - bool
 F finished_ok(p:Process) p.exit_code == 0
@@ -4596,14 +4597,26 @@ F wait(p:Process) {
 doc Wait for all processes to finish.
 F wait(cp:CommandsPipeline) cp.processes.each(wait)
 
-doc Convert Process to exit code. Waits for the process to finish and uses its exit code.
-F ExitCode(p:Process) p.wait().exit_code
+doc Convert Process to exit code. Waits for the process to finish and uses its exit code or
+F ExitCode(p:Process) {
+	ec = p.wait().exit_code
+	ec is Int returns ec
+
+	# http://tldp.org/LDP/abs/html/exitcodes.html
+	es = p.exit_signal
+	# echo("ES $es")
+	es is Int returns 128 + es
+
+	# Don't know what to do
+	# error("Failed to convert process to exit code")
+	240
+}
 
 doc Convert CommandsPipeline to exit code. Waits for the processes to finish.
 doc Returns first non-zero exit code. Returns zero if all exit codes are zero.
 F ExitCode(cp:CommandsPipeline) {
 	cp.wait()
-	e = cp.processes.exit_code.first(X != 0, 0)
+	e = cp.processes.map(ExitCode).first(X != 0, 0)
 }
 
 doc Wait for the process to finish and return its standard output.
@@ -4759,7 +4772,9 @@ F '$()'(c:Command) {
 		# Bug #180 occurs on next line.
 		#   Does not happen if replaced with 'throw Error("Process")'.
 		#   On Linux two exceptions are shown and there is no crash.
-		throw ProcessFail(process).set('message', "failed to execve()")
+		# --> throw ProcessFail(process).set('message', "failed to execve()")
+		error("Process ${c_getpid()} (fork child) failed to execve()")
+		c_exit(250)
 	}
 
 	if pid > 0 {
@@ -4991,7 +5006,7 @@ F kill(cp:CommandsPipeline, sig:Int=SIGNALS.TERM) {
 	cp.processes.map(kill(X, sig))
 }
 
-TEST counter = 0; p=$(sleep 5&); if p.processes[0].stdout == null counter +=1; p.kill(); if p.Str() == "" counter+=1; counter == 2
+TEST counter = 0; p=$(sleep 5&); if p.processes[0].stdout == null counter +=1; p.kill(); try p.wait() catch(e:ProcessFail) true
 TEST p=$(|cat); p.write("abc"); p.close(); p.Str() == "abc"
 TEST p=$(|cat|); p.write("abc"); p.read(3) == "abc"
 TEST $(echo abc | cat).Str().starts_with("abc")
