@@ -4,6 +4,8 @@
 
 F main(fileName:Str, full:Bool=false){
 
+	ok = true
+
 	F time_diff(t:Time) {
 		diff = t.Int() - Time().Int()
 		future = diff >= 0
@@ -15,10 +17,11 @@ F main(fileName:Str, full:Bool=false){
 			"${diff_days} days ago"
 		}
 	}
-	if fileName == 'stdin' then 
-		content = read() 
+
+	content = if fileName in %[- stdin] then
+		read()
 	else 
-		content = read(fileName);
+		read(fileName)
 	
 	certs = content ~~ /-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----/ms
 	prev = null
@@ -46,7 +49,7 @@ F main(fileName:Str, full:Bool=false){
 		})
 
 		info['*prevIssuerIsCurSubject'] = if prev {
-			if prev == info.subject then "YES" else "NO"
+			if prev == info.subject then "YES" else { ok = false; "NO" }
 		}
 		prev = info.issuer
 
@@ -58,4 +61,6 @@ F main(fileName:Str, full:Bool=false){
 	} else {
 		certs.encode_json().echo()
 	}
+
+	exit(ok)
 }

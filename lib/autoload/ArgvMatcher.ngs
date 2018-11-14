@@ -96,7 +96,7 @@ ns {
 				cond {
 					arg == '--' { accepting_named_arguments = false; continue }
 					(m = arg ~ LONG_SW_PFX) { param_name = m.after }
-					(m = arg ~ SHORT_SW_PFX) {
+					(arg != '-' and m = arg ~ SHORT_SW_PFX) {
 						arg.len() != 2 throws SwitchParseFail("Don't know how to parse command line switch ${arg}").set('value', arg)
 						param_name = m.after
 					}

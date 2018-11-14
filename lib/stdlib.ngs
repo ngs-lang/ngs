@@ -3878,13 +3878,16 @@ ns {
 }
 
 doc Write message in s to standard error and exit, printing backtrace
-F die(s:Str, exit_code:Int=1) throw FatalError(s, exit_code)
+doc status - converted to exit code using ExitCode()
+F die(s:Str, status=1) throw FatalError(s, status.ExitCode())
 
 doc Write message in s to standard error and exit
-F exit(s:Str, exit_code:Int=1) throw NormalExit(s, exit_code)
+doc status - converted to exit code using ExitCode()
+F exit(s:Str, status=1) throw NormalExit(s, status.ExitCode())
 
-doc Exit with given exit_code
-F exit(exit_code:Int=1) throw NormalExit(exit_code)
+doc Exit with given status
+doc status - converted to exit code using ExitCode()
+F exit(status=1) throw NormalExit(status.ExitCode())
 
 # === Path =======================================
 
