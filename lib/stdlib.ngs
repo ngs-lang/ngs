@@ -647,11 +647,16 @@ TEST a=[1,2]; a.push_all([3,4]); a==[1,2,3,4]
 	ArrLike.inherit(Eachable1)
 }
 
-doc ArrLike constructor
-doc field - name of the field that holds the underlying array
+doc ArrLike constructor.  TODO: consider removing "field" parameter.
+doc field - name of the field that holds the underlying array.
 F init(al:ArrLike, field:Str='items') {
 	al.arr_like_field = field
 	al.(al.arr_like_field) = []
+}
+
+F init(al:ArrLike, arr:Arr) {
+	al.arr_like_field = 'items'
+	al.(al.arr_like_field) = arr
 }
 
 doc Get length of the underlying array.
@@ -672,8 +677,18 @@ F each(al:ArrLike, cb:Fun) al.(al.arr_like_field).each(cb)
 doc Check whether al has any elements.
 F Bool(al:ArrLike) al.(al.arr_like_field).Bool()
 
+doc Get the underlying array
+F Arr(al:ArrLike) al.(al.arr_like_field)
+
 doc Push an element to the underlying array.
 F push(al:ArrLike, val) al.(al.arr_like_field).push(val)
+
+doc Defines collector { ... collect(...) ... } behaviour for ArrLike.
+doc Very similar to collector for Arr. See collector(Arr,Fun).
+F collector(al:ArrLike, body:Fun) {
+	body(F(elt) al.push(elt))
+	al
+}
 
 # === HashLike ===================================
 # TODO [doc]: examples in methods
@@ -3439,15 +3454,9 @@ F '>'(a:Str, b:Str)
 	c_strcmp(a, b) > 0
 
 doc Split s to strings using end-of-line separators.
-doc UNIX and Windows line endings supported (Windows - not tested yet).
-doc Warning: Max OS <= 9 line separation of CR (\r) is not supported
-doc %EX - "xx\nyy".lines()  # %[xx yy]
-F lines(s:Str) {
-	# Note: Max OS <= 9 line separation of CR (\r) is not supported
-	not(s) returns []
-	s -= MaybeSfx('\n')
-	s.split('\n').map(X - MaybeSfx('\r'))
-}
+doc Same as Lines(s).Arr()
+doc %RET - Arr
+F lines(s:Str) Lines(s).Arr()
 
 doc Split s to strings using end-of-line separators and call cb for each one of the lines.
 doc TODO: More efficient implementation, which would not have temporary array of all lines.
@@ -3461,7 +3470,8 @@ TEST "xx\nyy".lines() == %[xx yy]
 
 doc Prepend each line in a with s
 doc %EX - "a " + ["1", "2"]  # ["a 1", "a 2"]
-F +(s:Str, a:Arr) {
+F +(s:Str, a:Eachable1) {
+	guard a is not Str
 	guard a.all(Str)
 	a.map(s+X)
 }
@@ -3469,7 +3479,8 @@ TEST "a " + ["1", "2"] == ["a 1", "a 2"]
 
 doc Append s to each line in a
 doc %EX - ["1", "2"] + " a"  # ["1 a", "2 a"]
-F +(a:Arr, s:Str) {
+F +(a:Eachable1, s:Str) {
+	guard a is not Str
 	guard a.all(Str)
 	a.map(X+s)
 }
@@ -5668,50 +5679,51 @@ F SafeStr(val) {
 # TODO: in-depth inspect()
 
 doc Inspect any value.
-doc %RET - Arr with one element, Str
-F inspect(val) [SafeStr(val)]
+doc %RET - Lines with exactly one line
+F inspect(val) Lines([SafeStr(val)])
 
 doc Inspect boolean.
-doc %RET - Arr with one element, Str
-F inspect(b:Bool) ["Bool: $b"]
+doc %RET - Lines with exactly one line
+F inspect(b:Bool) Lines(["Bool: $b"])
 
 # F inspect(mm:MultiMethod) ["MultiMethod "] + mm.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"})
 doc Inspect MultiMethod
-doc %RET - Arr of Str
-F inspect(mm:MultiMethod) ["MultiMethod", "  Methods"] + ("    " + mm.Arr().inspect())
+doc %RET - Lines
+F inspect(mm:MultiMethod) Lines(["MultiMethod", "  Methods"] + ("    " + mm.Arr().inspect()))
 
 doc Inspect Real
-doc %RET - Arr with one element, Str
-F inspect(r:Real) ["Real: $r"]
+doc %RET - Lines with exactly one line
+F inspect(r:Real) Lines(["Real: $r"])
 
 doc Inspect Int
-doc %RET - Arr with one element, Str
-F inspect(i:Int) ["Int: $i"]
+doc %RET - Lines with exactly one line
+F inspect(i:Int) Lines(["Int: $i"])
 
 doc Inspect Str
-doc %RET - Arr with one element, Str
-F inspect(s:Str) ["String(${s.len()}): ${SafeStr(s)}"]
+doc %RET - Lines
+F inspect(s:Str) Lines(["String(${s.len()}): ${SafeStr(s)}"])
 
 doc Inspect Arr
-doc %RET - Arr of Str
-F inspect(a:Arr) ["Array of size ${a.len()}"] + a.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"})
+doc %RET - Lines
+F inspect(a:Arr) Lines(["Array of size ${a.len()}"] + a.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
 
 doc Inspect Hash
-doc %RET - Arr of Str
-F inspect(h:Hash) ["Hash of size ${h.len()}"] + h.map({"  [${SafeStr(A)}] = ${SafeStr(B)}"})
+doc %RET - Lines
+F inspect(h:Hash) Lines(["Hash of size ${h.len()}"] + h.map({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
 
 doc Inspect Process
-doc %RET - Arr of Str
+doc %RET - Lines
 F inspect(p:Process) {
 	# XXX: Are there any platforms with different convention?
 	outputs_names = {1: 'stdout', 2: 'stderr'}
-	collector {
+	collector/Lines() {
 		collect("Process")
 		collect("  command = ${p.command}")
 		collect("  pid = ${p.pid}")
 		collect("  exit_code = ${p.exit_code}")
 		collect("  exit_signal = ${p.exit_signal}")
 		p.outputs.each(F(k, val) {
+			# Replacing 'lines' with 'Lines' does not work. Gives "(Failed to inspect)".
 			val_lines = val.Box().map(lines).get([])
 			name = ', ' +? outputs_names.get(k, '')
 			collect("  output on fd ${k}${name} (${val_lines.len()} lines):")
@@ -5720,12 +5732,14 @@ F inspect(p:Process) {
 	}
 }
 
+doc Inspect CommandsPipeline
+doc %RET - Lines
 F inspect(cp:CommandsPipeline) {
 	F p(idx:Int) {
 		cp.pipes[idx] is Null returns []
 		("  pipe[$idx]: " + inspect(cp.pipes[idx]))
 	}
-	collector {
+	collector/Lines() {
 		collect("CommandsPipeline")
 		if cp.options {
 			("  options: " + inspect(cp.options)) % collect
@@ -5760,9 +5774,11 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 	info_keys = h.keys() - %[message backtrace cause]
 
 	F print_info(k) {
-		out = inspect(h[k]) tor ["Info: $k - (Failed to inspect)"]
-		assert(out is Arr)
-		assert(out.len() > 0)
+		out = inspect(h[k]) tor Lines(["Info: $k - (Failed to inspect)"])
+		assert(out is Lines)
+		if not(out) {
+			out = Lines(["Info: $k - (Failed to inspect, no inspection info)"])
+		}
 		out .= map(limit(X, 1024, '...'))
 		if out.len() == 1 {
 			err("Info: $k = ${out[0]}")
@@ -5774,7 +5790,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 		# err("Info: $k is hash of size ${h[k].len()}")
 	}
 
-	info_keys % print_info
+	info_keys.each(print_info)
 
 	if 'backtrace' in h {
 

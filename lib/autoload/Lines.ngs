@@ -1,0 +1,43 @@
+{
+	doc Array of strings which comprise a text which is treated as a
+	doc unit for purposes of output (and maybe for other purposes later).
+	type Lines(ArrLike)
+
+	doc Split s to strings using end-of-line separators.
+	doc UNIX and Windows line endings supported (Windows - not tested yet).
+	doc Warning: Max OS <= 9 line separation of CR (\r) is not supported
+	doc %EX - "xx\nyy".lines()  # %[xx yy]
+	F init(lines:Lines, s:Str) {
+		_lines = if s {
+			s -= MaybeSfx('\n')
+			s.split('\n').map(X - MaybeSfx('\r'))
+		} else {
+			[]
+		}
+		lines.init(_lines)
+	}
+
+	doc Echo all lines using echo(Str)
+	F echo(lines:Lines) lines.each(echo)
+
+	doc Write all lines to standard error using warn(Str)
+	F warn(lines:Lines) lines.each(warn)
+
+	doc Write all lines to standard error using error(Str)
+	F error(lines:Lines) lines.each(error)
+
+	# Later this should be a widget which can be displayed
+	# with ASCII art in console or as a box in a browser.
+	doc %STATUS - experimental
+	F framed(lines:Lines) {
+		not(lines) returns lines
+		m = lines.map(len).max()
+		border = '+' + ('-' * (m+2)) + '+'
+		collector/Lines() {
+			collect(border)
+			lines.each(F(x) collect("| ${x} |"))
+			collect(border)
+		}
+	}
+
+}

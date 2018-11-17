@@ -32,6 +32,7 @@ syn keyword ngsType FileIOFail StatFail
 syn keyword ngsType Hook
 syn keyword ngsType IndexNotFound FieldNotFound InvalidParameter NoNext
 syn keyword ngsType InvalidArgument DivisionByZero
+syn keyword ngsType Lines
 syn keyword ngsType Lock ReentrantLock Pthread PthreadAttr Thread
 syn keyword ngsType LockFail
 syn keyword ngsType MatchResult MatchSuccess MatchFailure MatchFail SubSeq Pfx MaybePfx MustPfx Ifx MaybeIfx MustIfx Sfx MaybeSfx MustSfx

@@ -1,5 +1,12 @@
 ## (UNRELEASED) Version 0.2.6
 
+### New features
+
+* `Lines` type. Array of strings to be processed as a unit for output purposes (`echo`, `warn`, `error`).
+* `inspect()` now returns `Lines`.
+* Add `-pil` command line switch for "Print Inspect()ed Lines"
+* Add `collector` for `ArrLike`. Enables `collector/ArrLike() ...`.
+
 ### Fixes and improvements
 
 * `indexes(arr:Arr, predicate)` upgraded to handle eachable: `indexes(e:Eachable1, predicate)`

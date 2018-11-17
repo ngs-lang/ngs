@@ -38,9 +38,10 @@ F is_blocked_group(tr:TestsResults, group_name:Str) {
 	})
 }
 
+doc %RET - Lines
 F inspect(tr:TestsResults) {
 	tr.lock.acquire({
-		collector
+		collector/Lines()
 			tr.groups.each(F(group_name, tests) {
 				v = tests.values()
 				ok = v.count(Success)
