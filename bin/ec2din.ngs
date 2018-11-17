@@ -58,11 +58,7 @@
 			config('table_Instances', ['AZ'] + config('table_Instances').without('AZ'))
 			AWS::regions({ ``aws ec2 describe-instances --region $A $*filters`` })
 		} else {
-			reg = if len(regions) == 1 {
-				['--region', regions.keys().the_one()]
-			} else {
-				[]
-			}
+			reg = Argv({'--region': regions.keys()})
 			``aws ec2 describe-instances $*filters $*reg``
 		}
 		instances .= sort('LaunchTime')
