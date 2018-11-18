@@ -546,7 +546,7 @@ F reduce(e:Eachable1, f:Fun) {
 			ret = FullBox(elt)
 		}
 	})
-	not(ret) throws EmptyEachableFail("e must have at least one element").set('e', e)
+	not(ret) throws EmptyEachableFail("reduce(e:Eachable1, f:Fun): e must have at least one element").set('e', e)
 	ret.get()
 }
 
@@ -3234,6 +3234,8 @@ CHARS = ns {
 	base64url = ascii_uppercase + ascii_lowercase + digits + '-_'
 	html_escape = {'&': '&amp;', '<': '&lt;', '>': '&gt;'}
 	html_attr_escape = html_escape + {'"': '&quot;', "'": '&#39;'}
+	shell_escape = {'\\': '\\\\', '"': '\\"', "'": "\\'"}
+	shell_escape_with_eq = shell_escape + {'=': '\\='}
 
 }
 
@@ -3485,6 +3487,13 @@ F +(a:Eachable1, s:Str) {
 	a.map(X+s)
 }
 TEST ["1", "2"] + " a" == ["1 a", "2 a"]
+
+doc Map a string, character by character.
+doc %EX - "abcd".mapo(F(x) if x == "b" then "X" else x)  # "aXcd"
+doc %RET - Str
+F mapo(s:Str, mapper:Fun) s.map(mapper).join('')
+
+TEST "abcd".mapo(F(x) if x == "b" then "X" else x) == "aXcd"
 
 doc Truncate a string if necessary so it would have maximum n characters (currently bytes).
 doc s - The string to (possibly) truncate.
@@ -4604,8 +4613,19 @@ F wait(p:Process) {
 	debug("process", "[wait] waitpid(${p.pid}) -> ${w}")
 	p.exit_code = C_WEXITSTATUS(w[1])
 	p.exit_signal = C_WTERMSIG(w[1])
-	not(finished_ok(p)) throws ProcessFail(p)
-	p
+	finished_ok(p) returns p
+	message = collector/Lines() {
+		argv0 = ("'" + try p.command.argv[0] + "'") tor '(with unknown name)'
+		collect("Executing external process ${argv0} failed")
+		collect("Command: ${p.command.argv.map(escape_bash).join(' ') tor '(unavailable)'}")
+		if p.exit_code is not Null {
+			collect("Command exited with code: ${p.exit_code}")
+		}
+		if p.exit_signal is not Null {
+			collect("Command exited with signal: ${p.exit_signal}")
+		}
+	}
+	throw ProcessFail(p).set('message', message)
 }
 
 doc Wait for all processes to finish.
@@ -5665,6 +5685,35 @@ doc Format GlobalNotFound exception message.
 doc %RET - FullBox with Str
 F exception_specific_message(gnf:GlobalNotFound) FullBox("Global variable '${gnf.name}' not found")
 
+doc Format MethodNotFound exception message.
+doc %STATUS - WIP
+F exception_specific_message(mnt:MethodNotFound) {
+	methods_names = mnt.callable.Arr().map(attrs).get('name')
+	if methods_names and methods_names.all(X == methods_names[0]) {
+		mn = methods_names[0]
+	} else {
+		mn = '(unavailable, maybe anonymous)'
+	}
+	FullBox(Lines([
+		"The arguments did not match any of the methods' parameters."
+		"MultiMethod name: ${mn}"
+		"Called with arguments' types: ${mnt.args.map(typeof).name.join(', ')}"
+		"Please check that you pass the right number of arguments."
+		"Please check that arguments' types are matching methdos' parameters."
+	]))
+}
+
+# TODO: show relevant value part
+doc Format JsonDecodeFail exception message.
+F exception_specific_message(jdf:JsonDecodeFail) {
+	FullBox(Lines([
+		"Failed to parse JSON"
+		"Error message: ${jdf.error}"
+		"Error position in given JSON: ${jdf.position}"
+		"(TODO: show relevant value part)"
+	]))
+}
+
 doc Don't use, subject to change, including name
 doc %STATUS - experimental
 F SafeStr(val) {
@@ -5760,16 +5809,38 @@ doc level - indentation level to use (two spaces for each level)
 doc parent - parent exception if print_exception() was called for .cause exception
 F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 
+	F err_sipmle(s:Str) echo(stdlib_error_fd, s)
 	F err(message:Str) error("$pfx$message")
 
 	pfx = "  " * level
 	h = Hash(e)
 
+	m = null
+
+	if 'message' in h {
+		m = e.message
+	}
+
+	if m is Null {
+		try {
+			m = exception_specific_message(e).get(null)
+		} catch(e) {
+			guard not(ENV.get('NGS_THROW_ESM'))
+			m = '(failed to get friendly exception message)'
+		}
+	}
+
+	if m is Null {
+		m = Lines(["Unfortunately the exception had no message.", "Exception type might give a hint: ${e.typeof().name}"])
+	}
+
+	if m is not Lines {
+		m = Lines([m])
+	}
+
+	m.framed().each(err)
+
 	err("Exception of type ${e.typeof().name} occurred")
-
-	exception_specific_message(e).each(err)
-
-	h.Box('message').map("Message: $X").each(err)
 
 	info_keys = h.keys() - %[message backtrace cause]
 
@@ -5823,6 +5894,10 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 		}
 	}
 
+	if level == 0 {
+		m.framed().each(err_sipmle)
+	}
+
 }
 
 exit_hook = Hook()
@@ -5833,7 +5908,6 @@ exit_hook = Hook()
 	#       user-defined cleanups.
 	exit_hook['print_exception'] = F(exit:Exit) {
 		exit.exceptions.reject(NormalExit).each(F(e) {
-			error("--- Exception ---")
 			print_exception(e)
 		})
 	}
@@ -6099,7 +6173,7 @@ TEST decode_uri_component("ab%2Bc%25") == "ab+c%"
 doc Encodes HTML. Escapes &, < and > .
 doc %RET - Str
 doc %EX - "ab>+c%&'".encode_html()  # "ab&gt;+c%&amp;'"
-F encode_html(s:Str) s.map(CHARS::html_escape.get(X, X)).join('')
+F encode_html(s:Str) s.mapo(CHARS::html_escape.get(X, X))
 
 TEST "ab>+c%&'".encode_html() == "ab&gt;+c%&amp;'"
 
@@ -6107,7 +6181,7 @@ TEST "ab>+c%&'".encode_html() == "ab&gt;+c%&amp;'"
 doc Encodes HTML attribute. Escapes &, <, >, " and ' .
 doc %RET - Str
 doc %EX - "ab>+c%&'".encode_html_attr()  # "ab&gt;+c%&amp;&#39;"
-F encode_html_attr(s:Str) s.map(CHARS::html_attr_escape.get(X, X)).join('')
+F encode_html_attr(s:Str) s.mapo(CHARS::html_attr_escape.get(X, X))
 
 TEST "ab>+c%&'".encode_html_attr() == "ab&gt;+c%&amp;&#39;"
 

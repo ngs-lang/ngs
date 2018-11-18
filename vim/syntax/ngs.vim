@@ -32,6 +32,7 @@ syn keyword ngsType FileIOFail StatFail
 syn keyword ngsType Hook
 syn keyword ngsType IndexNotFound FieldNotFound InvalidParameter NoNext
 syn keyword ngsType InvalidArgument DivisionByZero
+syn keyword ngsType JsonDecodeFail
 syn keyword ngsType Lines
 syn keyword ngsType Lock ReentrantLock Pthread PthreadAttr Thread
 syn keyword ngsType LockFail

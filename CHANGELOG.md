@@ -6,6 +6,7 @@
 * `inspect()` now returns `Lines`.
 * Add `-pil` command line switch for "Print Inspect()ed Lines"
 * Add `collector` for `ArrLike`. Enables `collector/ArrLike() ...`.
+* Add `mapo(Str, Fun)` (**map** to **o**riginal data type) - map a string to a string, character by character.
 
 ### Fixes and improvements
 
@@ -19,6 +20,11 @@
 * Fix `C_WEXITSTATUS` - return null when `WIFEXITED` returns false.
 * Fix `C_WTERMSIG` - return null when `WIFSIGNALED` returns false.
 * Work around strange error (Issue #180) after `execve()` was failing on MacOS. Now executing minimal amount of code after failing `execve()`.
+
+### Work in progress
+
+* Improving error messages shown when exceptions occur.
+* Add experimental `escape_bash(Str)` - quote argument for bash
 
 ## 2018-09-20 Version 0.2.5
 
