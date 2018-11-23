@@ -7,6 +7,7 @@
 * Add `-pil` command line switch for "Print Inspect()ed Lines"
 * Add `collector` for `ArrLike`. Enables `collector/ArrLike() ...`.
 * Add `mapo(Str, Fun)` (**map** to **o**riginal data type) - map a string to a string, character by character.
+* Add `assert_bool(Any, Str)` to `tests.ngs`
 
 ### Fixes and improvements
 

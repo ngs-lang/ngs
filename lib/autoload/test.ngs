@@ -82,6 +82,18 @@ F assert_match(actual, expected, title:Str=null) {
 TEST test; try assert_match("abc", /^b/, "test match") catch(e:TestFail) true
 TEST test; assert_match("abc", /^a/, "test match") == "abc"
 
+doc Assert actual is a Bool. Throws TestFail.
+doc %RET - actual
+F assert_bool(actual, title:Str=null) {
+	assert_base(actual, "a Bool", X is Bool, "to be", title or "Data type (mis)match")
+	actual
+}
+
+TEST test; try assert_bool(1) catch(e:TestFail) true
+TEST test; try assert_bool("true") catch(e:TestFail) true
+TEST test; assert_bool(true) == true
+TEST test; assert_bool(false) == false
+
 doc Assert actual is a Hash. Throws TestFail.
 doc %RET - actual
 F assert_hash(actual, title:Str=null) {
