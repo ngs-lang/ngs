@@ -1008,6 +1008,9 @@ doc %EX - t2.a = 1
 doc %EX - echo(t1 == t2)  # Outputs: true
 F ==(a:NormalTypeInstance, b:NormalTypeInstance) {
 	typeof(a) != typeof(b) returns false
+	# TODO: more efficient implementation:
+	#       * Provide low level primitive to either access the fields (ll_nti_hash) or iterate them
+	#       * Use it here
 	Hash(a) == Hash(b)
 }
 
