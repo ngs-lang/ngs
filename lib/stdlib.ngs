@@ -3278,7 +3278,7 @@ CHARS = ns {
 	base64url = ascii_uppercase + ascii_lowercase + digits + '-_'
 	html_escape = {'&': '&amp;', '<': '&lt;', '>': '&gt;'}
 	html_attr_escape = html_escape + {'"': '&quot;', "'": '&#39;'}
-	shell_escape = {'\\': '\\\\', '"': '\\"', "'": "\\'"}
+	shell_escape = {'\\': '\\\\', '"': '\\"', "'": "\\'", '&': '\\&'}
 	shell_escape_with_eq = shell_escape + {'=': '\\='}
 
 }
