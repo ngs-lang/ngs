@@ -21,7 +21,7 @@
 	F echo(lines:Lines) lines.each(echo)
 
 	doc Each all lines to given file descriptor
-	F echo(fd:Int, lines:Lines) lines.each(echo(fs, X))
+	F echo(fd:Int, lines:Lines) lines.each(echo(fd, X))
 
 	doc Write all lines to standard error using warn(Str)
 	F warn(lines:Lines) lines.each(warn)
