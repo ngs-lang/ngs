@@ -9,7 +9,11 @@
     builds_by_project .= filterk(X in projects)
     builds_by_project .= mapv(X.limit(3))
     builds = builds_by_project.values().flatten()
-    # echo(builds)
+
+	if not(builds) {
+		exit("'aws codebuild list-builds' returned no builds. Are you in the correct region?")
+	}
+
     status("Getting builds information")
     info=``aws codebuild batch-get-builds --ids $*builds``.builds
     fields=%[projectName buildStatus startTime endTime]
