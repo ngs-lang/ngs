@@ -625,6 +625,20 @@ F push_all(dst, e:Eachable1) {
 
 TEST a=[1,2]; a.push_all([3,4]); a==[1,2,3,4]
 
+# === Eachable1 ==================================
+
+# Should be low priority (ordered before others) method
+F +(a:Eachable1, b:Eachable1) {
+	guard typeof(a) === typeof(b)
+	t = typeof(a)
+	guard t != Int
+	guard t != Arr
+	guard t != Str
+	t().push_all(a).push_all(b)
+}
+
+TEST Lines(["ab", "cd"]) + Lines(["ef"]) == Lines(["ab", "cd", "ef"])
+
 # === ArrLike ====================================
 # TODO [doc]: examples in methods
 {

@@ -8,6 +8,7 @@
 * Add `collector` for `ArrLike`. Enables `collector/ArrLike() ...`.
 * Add `mapo(Str, Fun)` (**map** to **o**riginal data type) - map a string to a string, character by character.
 * Add `assert_bool(Any, Str)` to `tests.ngs`
+* Add `+(a:Eachable1, b:Eachable1)` which is only defined for same types of `a` and `b`.
 
 ### Fixes and improvements
 
