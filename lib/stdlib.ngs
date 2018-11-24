@@ -5725,39 +5725,39 @@ F digest(a:Arr, chunk_size:Int, marker:Str='(...)') {
 
 doc Do nothing. Catch-all for exception_specific_message().
 doc %RET - EmptyBox
-F exception_specific_message(e:Exception) EmptyBox()
+F exception_specific_message(e:Exception) null
 
 doc Format GlobalNotFound exception message.
 doc %RET - FullBox with Str
-F exception_specific_message(gnf:GlobalNotFound) FullBox("Global variable '${gnf.name}' not found")
+F exception_specific_message(gnf:GlobalNotFound) "Global variable '${gnf.name}' not found"
 
 doc Format MethodNotFound exception message.
 doc %STATUS - WIP
-F exception_specific_message(mnt:MethodNotFound) {
-	methods_names = mnt.callable.Arr().map(attrs).get('name')
+F exception_specific_message(mnf:MethodNotFound) {
+	methods_names = mnf.callable.Arr().map(attrs).get('name')
 	if methods_names and methods_names.all(X == methods_names[0]) {
 		mn = methods_names[0]
 	} else {
-		mn = '(unavailable, maybe anonymous)'
+		mn = '(method name unavailable, maybe anonymous)'
 	}
-	FullBox(Lines([
+	Lines([
 		"The arguments did not match any of the methods' parameters."
 		"MultiMethod name: ${mn}"
-		"Called with arguments' types: ${mnt.args.map(typeof).name.join(', ')}"
+		"Called with arguments' types: ${mnf.args.map(typeof).name.join(', ')}"
 		"Please check that you pass the right number of arguments."
-		"Please check that arguments' types are matching methdos' parameters."
-	]))
+		"Please check that arguments' types are matching methods' parameters."
+	])
 }
 
 # TODO: show relevant value part
 doc Format JsonDecodeFail exception message.
 F exception_specific_message(jdf:JsonDecodeFail) {
-	FullBox(Lines([
+	Lines([
 		"Failed to parse JSON"
 		"Error message: ${jdf.error}"
 		"Error position in given JSON: ${jdf.position}"
 		"(TODO: show relevant value part)"
-	]))
+	])
 }
 
 doc Don't use, subject to change, including name
@@ -5784,7 +5784,7 @@ F inspect(b:Bool) Lines(["Bool: $b"])
 # F inspect(mm:MultiMethod) ["MultiMethod "] + mm.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"})
 doc Inspect MultiMethod
 doc %RET - Lines
-F inspect(mm:MultiMethod) Lines(["MultiMethod", "  Methods"] + ("    " + mm.Arr().inspect()))
+F inspect(mm:MultiMethod) Lines(["MultiMethod", "  Methods"]) + ("    " + mm.Arr().inspect())
 
 doc Inspect Real
 doc %RET - Lines with exactly one line
@@ -5855,77 +5855,56 @@ doc level - indentation level to use (two spaces for each level)
 doc parent - parent exception if print_exception() was called for .cause exception
 F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 
-	F err_sipmle(s:Str) echo(stdlib_error_fd, s)
-	F err(message:Str) error("$pfx$message")
+	F err(message) error(pfx + message)
 
 	pfx = "  " * level
 	h = Hash(e)
 
-	m = null
-
-	if 'message' in h {
-		m = e.message
-	}
-
-	if m is Null {
+	F esm() {
 		try {
-			m = exception_specific_message(e).get(null)
+			exception_specific_message(e)
 		} catch(e) {
 			guard not(ENV.get('NGS_THROW_ESM'))
-			m = '(failed to get friendly exception message)'
+			'(failed to get friendly exception message)'
 		}
 	}
 
-	if m is Null {
-		m = Lines(["Unfortunately the exception had no message.", "Exception type might give a hint: ${e.typeof().name}"])
-	}
+	m =
+		h.get('message') or
+		esm() or
+		Lines(["Unfortunately the exception had no message.", "Exception type might give a hint: ${e.typeof().name}"])
 
-	if m is not Lines {
-		m = Lines([m])
-	}
+	m .= ensure(Lines)
 
-	m.framed().each(err)
+	m.framed().err()
 
 	err("Exception of type ${e.typeof().name} occurred")
 
 	info_keys = h.keys() - %[message backtrace cause]
 
-	F print_info(k) {
+	info_keys.each(F (k) {
 		out = inspect(h[k]) tor Lines(["Info: $k - (Failed to inspect)"])
-		assert(out is Lines)
-		if not(out) {
+		if (out is not Lines) or not(out) {
 			out = Lines(["Info: $k - (Failed to inspect, no inspection info)"])
 		}
-		out .= map(limit(X, 1024, '...'))
+		out .= mapo(limit(X, 128, '...'))
 		if out.len() == 1 {
 			err("Info: $k = ${out[0]}")
 		} else {
 			err("Info: $k:")
-			("  " + out) % err
+			err("  " + out)
 		}
-
-		# err("Info: $k is hash of size ${h[k].len()}")
-	}
-
-	info_keys.each(print_info)
+	})
 
 	if 'backtrace' in h {
 
 		parent_frames = parent.backtrace.frames tor []
 
 		h.backtrace.frames.each_idx_val(F(idx, frame) {
-
 			# Don't print frames that overlap with parent exception
 			frame.ip == (try parent_frames[idx].ip) returns
-
 			l = resolve_instruction_pointer(frame.ip)
 			closure = " [in ${frame.closure.attrs().name}]" tor ''
-			try {
-				doc = frame.closure.attrs().doc
-				if doc is Str {
-					closure = "$closure (${doc.limit(50, '...')})"
-				}
-			}
 			err("Frame $idx: ${l.file}:${l.first_line}:${l.first_column} - ${l.last_line}:${l.last_column}$closure")
 		})
 	}
@@ -5936,12 +5915,12 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 			print_exception(e.cause, level+1, e)
 		} else {
 			err("  (WARNING: cause is not Exception)")
-			("  " + inspect(e.cause)).each(err)
+			err("  " + inspect(e.cause))
 		}
 	}
 
 	if level == 0 {
-		m.framed().each(err_sipmle)
+		echo(stdlib_error_fd, m.framed())
 	}
 
 }
