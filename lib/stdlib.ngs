@@ -822,7 +822,7 @@ F push(hook:Hook, handler:UserDefinedMethod) {
 # TODO: consider optional? try/catch isolation
 doc Runs all handlers passing all args.
 doc args - Arguments to pass to handlers
-doc %RET - Output of the combiner function applied to all handlers' results
+doc %RET - Arr. Results from all the handlers
 F call(hook:Hook, *args) hook.attrs().HashLike.mapv(X(*args))
 
 # === Real =======================================
@@ -914,6 +914,7 @@ doc %EX - Real.Str().echo()  # Outputs: <Type Real>
 F Str(t:Type) "<Type ${t.name}>"
 
 doc Decode (parse) strings such as command line arguments or environment variables to result given type
+doc TODO: Consider renaming to UnArgv or decode_arg
 doc %STATUS - experimental
 F decode(s:Str, t:Type) {
 	t == Any returns s # For ArgvMatcher
