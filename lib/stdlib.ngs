@@ -639,6 +639,19 @@ F +(a:Eachable1, b:Eachable1) {
 
 TEST Lines(["ab", "cd"]) + Lines(["ef"]) == Lines(["ab", "cd", "ef"])
 
+doc EXPERIMENTAL! Do not use!
+doc Makes sure returned value is of type t. If x is already of type t, returns x.
+doc Otherwise, returns object of type t with single item x.
+doc t - a subtype of Eachable1
+doc %RET - Object of type t
+doc %STATUS - experimental
+F ensure(x, t:Type) {
+	guard t.is_subtype(Eachable1)
+	typeof(x) === t returns x
+	t().push(x)
+}
+
+
 # === ArrLike ====================================
 # TODO [doc]: examples in methods
 {
@@ -2282,13 +2295,7 @@ doc Optionally, wrap x in an array. Return x if it's already Arr.
 doc %RET - Arr
 doc %EX - ensure_array([1,2])  # [1,2]
 doc %EX - ensure_array("aa")   # ["aa"]
-F ensure_array(x) {
-	if x is Arr {
-		x
-	} else {
-		[x]
-	}
-}
+F ensure_array(x) x.ensure(Arr)
 
 TEST ensure_array([1,2]) == [1,2]
 TEST ensure_array("aa") == ["aa"]

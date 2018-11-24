@@ -10,6 +10,7 @@
 * Add `assert_bool(Any, Str)` to `tests.ngs`
 * Add `+(a:Eachable1, b:Eachable1)` which is only defined for same types of `a` and `b`.
 * Add experimental `is_subtype(t:Type, maybe_supertype:Type)`.
+* Add experimental `ensure(x, t:Type)` for `Eachable1` subtypes. Returns either `x` if it's already of type `t` or new object of type `t` with single item `x`.
 
 ### Fixes and improvements
 
