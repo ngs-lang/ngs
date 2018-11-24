@@ -965,6 +965,7 @@ doc %RET - Bool
 doc %EX - Lines.is_subtype(Eachable1)  # true
 doc %EX - Eachable.is_subtype(Lines)  # false
 F is_subtype(t:Type, maybe_supertype:Type) {
+	maybe_supertype === Any returns true
 	F kern(t:Type) {
 		t === maybe_supertype returns true
 		t.parents.any(kern)
@@ -974,6 +975,7 @@ F is_subtype(t:Type, maybe_supertype:Type) {
 
 TEST Lines.is_subtype(Eachable1)
 TEST Lines.is_subtype(Eachable)
+TEST Int.is_subtype(Any)
 TEST Eachable.is_subtype(Lines) == false
 
 # === NormalType =================================
