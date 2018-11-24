@@ -27,9 +27,7 @@ F main(fileName:Str, full:Bool=false){
 	prev = null
 	certs = certs.whole.map(F(cert) {
 
-		info = `echo ${cert} | openssl x509 -subject -issuer -dates -noout`.lines().map(F(line) {
-			kv = line.split("=", 2)
-		}).Hash()
+		info = `echo ${cert} | openssl x509 -subject -issuer -dates -noout`.lines().map(X.split("=", 2)).Hash()
 
 		info .= mapv(F(v) {
 			# Composite values
@@ -62,5 +60,5 @@ F main(fileName:Str, full:Bool=false){
 		certs.encode_json().echo()
 	}
 
-	exit(ok)
+	ok
 }
