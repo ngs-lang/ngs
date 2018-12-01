@@ -625,6 +625,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		ret = x.val
 		ret .= filter(F(k, v) (v is not Arr) or v)
 		ret .= without('IpRanges', [{"CidrIp": "0.0.0.0/0"}])
+		ret .= without('Ipv6Ranges', [{"CidrIpv6": "::/0"}])
 		if 'UserIdGroupPairs' in ret {
 			# Hash is ordered.
 			ret.UserIdGroupPairs .= map(sort)
