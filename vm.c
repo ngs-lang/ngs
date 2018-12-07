@@ -885,6 +885,14 @@ METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 	yyctx.lines = 0;
 	yyctx.lines_postions[0] = 0;
 	// printf("PT 1 %p\n", OBJ_DATA_PTR(argv[0]));
+
+	if(OBJ_LEN(argv[0]) == 0) {
+		VALUE exc;
+		exc = make_normal_type_instance(vm->CompileFail);
+		set_normal_type_instance_field(exc, make_string("message"), make_string("Empty string was passed as input to compile(). Trying to run an empty file?"));
+		THROW_EXCEPTION_INSTANCE(exc);
+	}
+
 	yyctx.input_file = fmemopen(OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]), "r");
 	parse_ok = yyparse(&yyctx);
 	if(!parse_ok) {

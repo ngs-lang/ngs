@@ -708,7 +708,10 @@ doc Get the underlying array
 F Arr(al:ArrLike) al.(al.arr_like_field)
 
 doc Push an element to the underlying array.
-F push(al:ArrLike, val) al.(al.arr_like_field).push(val)
+F push(al:ArrLike, val) {
+	al.(al.arr_like_field).push(val)
+	al
+}
 
 doc Defines collector { ... collect(...) ... } behaviour for ArrLike.
 doc Very similar to collector for Arr. See collector(Arr,Fun).
