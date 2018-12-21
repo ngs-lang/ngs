@@ -4,7 +4,7 @@
 # Running example: NGS_table_Instances='["InstanceId", "PublicIpAddress", "PrivateIpAddress", "State", "KeyName", "SecurityGroups"]' ./demo/ec2din.ngs
 
 {
-	config('table_Instances', %[InstanceId tag_Name tag_env tag_role IPs InstanceType State KeyName SecurityGroups AZ RestOfTags])
+	config('table_Instances', %[InstanceId tag_Name tag_proj tag_env tag_role IPs InstanceType State KeyName SecurityGroups AZ RestOfTags])
 
 	table = Table('Instances')
 
