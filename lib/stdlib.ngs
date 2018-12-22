@@ -6204,10 +6204,16 @@ F encode_hex(s:Str) {
 
 TEST encode_hex('ab') == '6162'
 
+doc Decodes each two hex digits into a character (byte). Reverse of encode_hex()
+doc %RET - Str
 F decode_hex(s:Str) {
-	guard len(s) == 2
-	chr(Int(s, 16))
+	len(s) % 2 != 0 throws InvalidArgument("decode_hex() input string must contain even number of bytes")
+	l = len(s) / 2
+	l.map(F(i) chr(Int(s[i*2..(i*2+2)], 16))).join('')
 }
+
+TEST decode_hex("010203") == chr(1) + chr(2) + chr(3)
+TEST try decode_hex("0102034") catch(e:InvalidArgument) true
 
 STDLIB_INVALID_URI_CHAR_RE = /[^-a-zA-Z0-9_.!~*'()]/
 #'

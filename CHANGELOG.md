@@ -25,6 +25,7 @@
 * Faster `init(Hash)`
 * Fix `C_WEXITSTATUS` - return null when `WIFEXITED` returns false.
 * Fix `C_WTERMSIG` - return null when `WIFSIGNALED` returns false.
+* Fix `decode_hex()` - now handles inputs of even length, not specifically 2. This makes `decode_hex()` exact reverse of `encode_hex()`.
 * Work around strange error (Issue #180) after `execve()` was failing on MacOS. Now executing minimal amount of code after failing `execve()`.
 * `+(s:Str, a:Eachable1)` and +`(a:Eachable1, s:Str)` now return result of exact the same type as `a`, not `Arr`.
 * Improve `print_exception()`
