@@ -5798,6 +5798,12 @@ F exception_specific_message(jdf:JsonDecodeFail) {
 	])
 }
 
+doc Format KeyNotFound exception message for ENV global variable.
+F exception_specific_message(knf:KeyNotFound) {
+	guard knf.container === ENV
+	"Environment variable '${knf.key}' is not set."
+}
+
 doc Don't use, subject to change, including name
 doc %STATUS - experimental
 F SafeStr(val) {
