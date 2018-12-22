@@ -1842,7 +1842,7 @@ TEST [null, false, 10, 20].first() == 10
 
 ns {
 	global index
-	no_default = []  # Just a unique object that nobody else can reference
+	no_default = []  # Just a unique object
 	doc Find index of first value that satisfies the predicate.
 	doc TODO: Make it work on anything with each() method.
 	doc In future, will throw exception if element is not found and default is not provided. Now returns null for backwards compatibilty in this case.
@@ -1991,28 +1991,41 @@ F '[]'(arr:Arr, r:NumRange) {
 
 TEST [10,20,30,40][1..-1] == [20,30]
 
-# TODO: something more effective
-doc Find the indexes of elements of the given PredRange.
-doc Throws IndexNotFound if there is no match between the elements of arr and r.
-doc %RET - NumRange with .include_start=true and .include_end=false
-doc %EX - %[a1 a2 b1 b2 c1].indexes(/^a/../^b/)   # <NumRange 1..2 include_start=true include_end=false step=1>
-doc %EX - %[a1 a2 b1 b2 c1].indexes(/^a/.../^b/)  # <NumRange 0..3 include_start=true include_end=false step=1>
-F indexes(arr:Arr, r:PredRange) {
-	r.step != 1 throws NotImplemented("r.step must be 1")
-	start = if r.start is Null {
-		0
-	} else {
-		index(arr, r.start)
+ns {
+	global indexes
+	no_default = []  # Just a unique object
+	# TODO: something more effective
+	doc Find the indexes of elements of the given PredRange.
+	doc Throws IndexNotFound if there is no match between the elements of arr and r.
+	doc %RET - NumRange with .include_start=true and .include_end=false
+	doc %EX - %[a1 a2 b1 b2 c1].indexes(/^a/../^b/)   # <NumRange 1..2 include_start=true include_end=false step=1>
+	doc %EX - %[a1 a2 b1 b2 c1].indexes(/^a/.../^b/)  # <NumRange 0..3 include_start=true include_end=false step=1>
+	F indexes(arr:Arr, r:PredRange, dflt=no_default) {
+		r.step != 1 throws NotImplemented("r.step must be 1")
+		start = if r.start is Null {
+			0
+		} else {
+			index(arr, r.start, dflt=null)
+		}
+		if start is Null {
+			dflt !== no_default returns dflt
+			throw IndexNotFound("Array did not match PredRange (start)", arr, r)
+		}
+		end = if r.end is Null {
+			len(arr)
+		} else {
+			index(arr, r.end, start=start + Int(r.start is not Null and r.include_start.not()), dflt=null)
+		}
+		if end is Null {
+			dflt !== no_default returns dflt
+			throw IndexNotFound("Array did not match PredRange (end)", arr, r)
+		}
+		NumRange(start + Int(r.start is not Null and r.include_start.not()), end + Int(r.include_end))
 	}
-	start is Null throws IndexNotFound("Array did not match PredRange (start)", arr, r)
-	end = if r.end is Null {
-		len(arr)
-	} else {
-		index(arr, r.end, start + Int(r.start is not Null and r.include_start.not()))
-	}
-	end is Null throws IndexNotFound("Array did not match PredRange (end)", arr, r)
-	NumRange(start + Int(r.start is not Null and r.include_start.not()), end + Int(r.include_end))
 }
+
+TEST try { indexes([1,2,3,4], ((X==1)..(X==14))); false } catch(e:IndexNotFound) true
+TEST indexes([1,2,3,4], ((X==1)..(X==14)), []) == []
 
 doc Extract array elements between the element that matches r.start and the element that matches r.end .
 doc Starting and ending elements are optionally included, depending on r.include_start and r.include_end .
@@ -2047,7 +2060,7 @@ doc %EX - # m.before == ['a1']
 doc %EX - # m.after == ['b1', 'b2']
 doc %RET - MatchResult
 F ~(arr:Arr, r:PredRange) {
-	i = try indexes(arr, r)
+	i = indexes(arr, r, dflt=null)
 	i is Null returns MatchFailure(arr, r)
 	ret = MatchSuccess([arr[i]])
 	ret.named = {}

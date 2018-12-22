@@ -9,12 +9,14 @@
 * Add `mapo(Str, Fun)` (**map** to **o**riginal data type) - map a string to a string, character by character.
 * Add `assert_bool(Any, Str)` to `tests.ngs`
 * Add `+(a:Eachable1, b:Eachable1)` which is only defined for same types of `a` and `b`.
+* Add `-(Str, Ifx)`
 * Add experimental `is_subtype(t:Type, maybe_supertype:Type)`.
 * Add experimental `ensure(x, t:Type)` for `Eachable1` subtypes. Returns either `x` if it's already of type `t` or new object of type `t` with single item `x`.
 
 ### Fixes and improvements
 
 * `indexes(arr:Arr, predicate)` upgraded to handle eachable: `indexes(e:Eachable1, predicate)`
+* `indexes(arr:Arr, r:PredRange)` - now takes optional `dflt` parameter: `indexes(arr:Arr, r:PredRange, dflt=...)`
 * Better `c_dlopen()` error message
 * `T.user = x` for native types now returns `x` and not `T`, consistent with other assignments
 * `Return` is now a subtype of `Exception`. This fixes failing `Failure(Return)`, which only works on `Exception`.
