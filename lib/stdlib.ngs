@@ -5773,10 +5773,10 @@ doc Format MethodNotFound exception message.
 doc %STATUS - WIP
 F exception_specific_message(mnf:MethodNotFound) {
 	methods_names = mnf.callable.Arr().map(attrs).get('name')
-	if methods_names and methods_names.all(X == methods_names[0]) {
-		mn = methods_names[0]
+	mn = if methods_names and methods_names.all(X == methods_names[0]) {
+		methods_names[0]
 	} else {
-		mn = '(method name unavailable, maybe anonymous)'
+		'(method name unavailable, maybe anonymous)'
 	}
 	Lines([
 		"The arguments did not match any of the methods' parameters."
