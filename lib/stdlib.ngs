@@ -5430,7 +5430,7 @@ doc %EX - "abcde" - Pfx("xy")  # InvalidArgument exception
 doc %EX - "abcde" - MaybePfx("xy")  # "abcde"
 F -(s:Str, pfx:Pfx) {
 	s.starts_with(pfx.val) returns s[pfx.val.len()..null]
-	pfx is MustPfx throws InvalidArgument("Given string '$s' does not start with prefix '$pfx.val'").set('s', s).set('pfx', pfx)
+	pfx is MustPfx throws InvalidArgument("Given string '$s' does not start with prefix '${pfx.val}'").set('s', s).set('pfx', pfx)
 	s
 }
 
@@ -5448,13 +5448,31 @@ doc %EX - "abcde" - Sfx("xy")  # InvalidArgument exception
 doc %EX - "abcde" - MaybeSfx("xy")  # "abcde"
 F -(s:Str, sfx:Sfx) {
 	s.ends_with(sfx.val) returns s[0 .. (s.len() - sfx.val.len())]
-	sfx is MustSfx throws InvalidArgument("Given string '$s' does not end with suffix '$sfx.val'").set('s', s).set('sfx', sfx)
+	sfx is MustSfx throws InvalidArgument("Given string '$s' does not end with suffix '${sfx.val}'").set('s', s).set('sfx', sfx)
 	s
 }
 
 TEST "abc" - Sfx("c") == "ab"
 TEST try "abc" - Sfx("cd") catch(mf:InvalidArgument) true
 TEST "abc" - MaybeSfx("cd") == "abc"
+
+doc Return string without the infix. Throws InvalidArgument if ifx is MustIfx but s does not contain it.
+doc s - original string
+doc ifx - infix to get rid of
+doc %RET - s without ifx
+doc %EX - "abcde" - Ifx("bc")  # "ade"
+doc %EX - "abcde" - Ifx("xy")  # InvalidArgument exception
+doc %EX - "abcde" - MaybeIfx("xy")  # "abcde"
+F -(s:Str, ifx:Ifx) {
+	p = s.pos(ifx.val)
+	p is not Null returns s[0 .. p] + s[(p + ifx.val.len()) .. s.len()]
+	ifx is MustIfx throws InvalidArgument("Given string '$s' does not contain infix '${ifx.val}'").set('s', s).set('ifx', ifx)
+	s
+}
+
+TEST "abcde" - Ifx("bc") == "ade"
+TEST try "abcde" - Ifx("xy") catch(mf:InvalidArgument) true
+TEST "abcde" - MaybeIfx("xy") == "abcde"
 
 doc Check whether s starts with pfx.
 doc %EX - "abcde" ~ Pfx("ab")  # <MatchSuccess matches=['ab'] before= after=cde>
@@ -5468,6 +5486,8 @@ F ~(s:Str, pfx:Pfx) {
 	ret
 }
 
+doc Check whether s contains i. Same as s ~ i.val
+doc %RET - MatchResult
 F ~(s:Str, i:Ifx) s ~ i.val
 
 doc Check whether s ends with sfx.
