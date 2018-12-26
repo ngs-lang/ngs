@@ -1,0 +1,107 @@
+ns {
+
+	# TODO: move stdin(0) and stdout(1) to constants... but where?
+
+	global inherit
+	global Terminal, AnsiTerminal, NoTerminal
+	global init, read, write, set_scroll_area, save_cursor, restore_cursor
+
+	# Should typically be up to two
+	# * stdin:stdout
+	# * stdin:stderr
+	terminals = {}
+
+	doc %STATUS - experimental
+	type Terminal
+
+		# TODO: more flexible, correct and extensible terminal type selection
+		F Terminal(fd_in:Int, fd_out:Int) {
+			k = "${fd_in}:${fd_out}"
+			k in terminals returns terminals[k]
+			terminals[k] = NoTerminal(fd_in, fd_out)
+		}
+
+		F Terminal(fd_in:Int, fd_out:Int) {
+			guard isatty(fd_out)
+			k = "${fd_in}:${fd_out}"
+			k in terminals returns terminals[k]
+			terminals[k] = AnsiTerminal(fd_in, fd_out)
+		}
+
+		F Terminal() Terminal(0,1)
+
+		F init(t:Terminal, fd_in:Int, fd_out:Int) {
+			t.term = null
+			t.ver = null
+			t.fd_in = fd_in
+			t.fd_out = fd_out
+		}
+
+		F init(t:Terminal) t.init(0, 1)
+
+		F read(t:Terminal, count:Int=1) t.fd_in.read(count)
+		F write(t:Terminal, s:Str) t.fd_out.write(s)
+
+		doc Represents output not connected to a terminal but to
+		doc a file or a pipe.
+		doc %STATUS - experimental
+		type NoTerminal(Terminal)
+
+		doc %STATUS - experimental
+		type AnsiTerminal(Terminal)
+
+			# See apt/apt-pkg/install-progress.cc
+			doc %STATUS - experimental
+			F set_scroll_area(at:AnsiTerminal, start:Int, end:Int) {
+				at.write("\n")        # avoid glitch
+				at.write("\e7")       # save cursor
+				at.write("\e[${start};${end}r")  # set scroll area
+				at.write("\e8")       # restore cursor
+				at.write("\e[1A")     # move cursor up
+				# TODO: flush
+				# TODO: ioctl(pty, TIOCSWINSZ, (char *)&win);
+				null
+			}
+
+			doc %STATUS - experimental
+			type ItermTerminal(AnsiTerminal)
+
+				# iTerm2 detection is based on iTerm2/tests/isiterm2.sh
+				# XXX: support fd_in (and fd_out?)
+				# XXX: figure out whether we care about the version, as in isiterm2.sh
+				F AnsiTerminal(fd_in:Int, fd_out:Int) {
+					saved_stty=`stty -g`
+					F read_dsr() {
+						spam = fd_in.read(2)
+						collector/'' {
+							while (byte = fd_in.read(1)) != 'n' {
+								collect(byte)
+							}
+						}
+					}
+					$(stty -echo -icanon raw)
+					fd_out.write("\e[1337n") # iTerm2 proprietary code
+					fd_out.write("\e[5n")    # report device status 
+					version_string = read_dsr()
+					if 'ITERM' in version_string {
+						# The seen response was from DSR 1337. Discarding response to DSR 5.
+						read_dsr()
+					} else {
+						# No response to DSR 1337. We are seing response to DSR 5.
+						version_string = null
+					}
+					$(stty $saved_stty)
+					guard version_string
+					parts = version_string.split(' ')
+					ItermTerminal(fd_in, fd_out).set('term', parts[0]).set('ver', parts[1])
+				}
+
+			type TmuxTerminal(AnsiTerminal)
+
+				F AnsiTerminal(*args) {
+					# XXX: How to distingush between tmux and screen?
+					guard ENV.get('TERM') == 'screen'
+					TmuxTerminal(*args)
+				}
+
+}
