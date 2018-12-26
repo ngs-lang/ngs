@@ -30,6 +30,7 @@
 * `+(s:Str, a:Eachable1)` and +`(a:Eachable1, s:Str)` now return result of exact the same type as `a`, not `Arr`.
 * Improve `print_exception()`
 * Improved exception message for environment variable access, when the environment variable is not set.
+* Remove MacOS-specific "stupid" malloc. GC library appears to work OK on MacOS now.
 
 ### Work in progress
 

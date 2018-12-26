@@ -150,7 +150,6 @@ int main(int argc, char **argv)
 
 	pcre_malloc = GC_malloc;
 	pcre_free = GC_free;
-	// (causes warning) // NGS_GC_THR_INIT();
 
 	pthread_key_create(&thread_local_key, NULL);
 	pthread_setspecific(thread_local_key, &main_thread_local);
