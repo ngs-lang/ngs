@@ -4111,7 +4111,7 @@ doc %EX - find_in_path("ls")  # <Path path=/bin/ls>
 F find_in_path(executable_name:Str) {
 	debug("process", "[find_in_path] got ${executable_name}")
 	if "/" in executable_name {
-		debug("[find_in_path] leaving unprocessed ${executable_name}")
+		debug("process", "[find_in_path] leaving unprocessed ${executable_name}")
 		return Path(executable_name)
 	}
 	# TODO: rethink default PATH
@@ -4818,39 +4818,36 @@ F '$()'(c:Command) {
 
 	pipes = c.redirects.filter({A.datum is Pipe})
 	debug("process2", "PIPES FROM REDIRECTS $pipes REDIRECTS ${c.redirects} COMMND ${c.Hash()}")
-	child_fds =  pipes.datum.map(child_fd)
-	parent_fds = pipes.datum.map(parent_fd)
+	child_fds = pipes.datum.map(child_fd) + c.redirects.datum.filter(Int)
 
 	if pid == 0 {
 		# === Child ===
 		# TODO: See https://stackoverflow.com/questions/13101690/c-get-all-open-file-descriptors
-		debug("process2", "CHILD FDS $child_fds PARENT FDS $parent_fds")
 		for(i=3;i<100;i+=1) {
 			if i not in child_fds {
 				# XXX child to parent also closed here
-				# echo("CHILD CLOSING $i")
+				debug("process2", "CHILD CLOSING $i")
 				# close() throws exception on invalid descriptors, hence c_close()
 				i.c_close()
 			}
 		}
-		parent_fds % c_close
 
 		# Should be after redirects to be able to 2>/dev/null ?
 		if 'cd' in c.options {
 			throw NotImplemented("Changing directory is not implemented yet")
 		}
 
-		# TODO: Maybe support File or some other datum types later?
+		marker_to_open_flags = {'<': 'r', '>': 'w', '>>': 'a'}
+		marker_to_default_fd = {'<': 0, '>': 1, '>>': 1}
+
 		c.redirects.each(F(r:Redir) {
+			if r.datum is not Pipe {
+				target_fd = r.fd.Box().get(marker_to_default_fd[r.marker])
+			}
 			ematch r.datum {
 				Str {
-					target_fd = eswitch r.marker {
-						'<'  { flags = 'r'; r.fd.Box().get(0); }
-						'>'  { flags = 'w'; r.fd.Box().get(1); }
-						'>>' { flags = 'a'; r.fd.Box().get(1); }
-					}
 					debug("process2", "CHILD FILE REDIRECT ${target_fd} -> ${r.datum}")
-					f = File(r.datum).open(flags)
+					f = File(r.datum).open(marker_to_open_flags[r.marker])
 					dup2(f.fd, target_fd)
 				}
 				Pipe {
@@ -4860,17 +4857,13 @@ F '$()'(c:Command) {
 				}
 				Int {
 					debug("process2", "CHILD DESCRIPTOR REDIRECT ${r.fd} -> ${r.datum}")
-					dup2(r.datum, r.fd)
+					dup2(r.datum, target_fd)
 				}
 			}
 		})
 		debug("process", "will execve()")
 		result = c_execve(process.executable.path, argv, ENV.Strs())
 		# TODO: propagate this error to parent, don't know how yet
-		# Bug #180 occurs on next line.
-		#   Does not happen if replaced with 'throw Error("Process")'.
-		#   On Linux two exceptions are shown and there is no crash.
-		# --> throw ProcessFail(process).set('message', "failed to execve()")
 		error("Process ${c_getpid()} (fork child) failed to execve()")
 		c_exit(250)
 	}
@@ -4878,8 +4871,7 @@ F '$()'(c:Command) {
 	if pid > 0 {
 		# === Parent ===
 		process.pid = pid
-		# XXX
-		child_fds % c_close
+		child_fds.each(close)
 		debug("process", "Reading all output of the child process")
 		# XXX: maybe make it chunk based with c_poll() and single thread
 		# TODO: some error handling inside these threads and after joining them
@@ -4904,9 +4896,7 @@ F '$()'(c:Command) {
 		})
 	}
 
-	# TODO: pid < 0 => throw exception with errno
-
-	debug("process2", "DOLLAR() returns process ${process.Hash()}")
+	debug("process2", "\$() returns process ${process.Hash()}")
 	process
 }
 
@@ -4987,7 +4977,10 @@ F '$()'(cp:CommandsPipeline) {
 
 	if not(cp.options.get('top_level')) and cp.pipe_out is Null {
 		do_redir_1 = cp.commands[-1].redirects.none(F(r) {
-			r.datum == false and r.marker == '>' and r.fd in [null, 1]
+			# >${false} OR 1>${false}
+			# 1>? OR 1<?
+			r.datum == false and r.marker == '>' and r.fd in [null, 1] or
+			r.fd == 1
 		})
 		if do_redir_1 {
 			cp.commands[-1].redirects.unshift(Redir(1, null, CollectingPipeFromChildToParentProcess()))

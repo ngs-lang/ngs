@@ -79,7 +79,7 @@ ns {
 							}
 						}
 					}
-					$(stty -echo -icanon raw)
+					$(stty -echo -icanon raw 0<${fd_in} 1>${fd_out})
 					fd_out.write("\e[1337n") # iTerm2 proprietary code
 					fd_out.write("\e[5n")    # report device status 
 					version_string = read_dsr()
@@ -90,7 +90,7 @@ ns {
 						# No response to DSR 1337. We are seing response to DSR 5.
 						version_string = null
 					}
-					$(stty $saved_stty)
+					$(stty $saved_stty 0<${fd_in} 1>${fd_out})
 					guard version_string
 					parts = version_string.split(' ')
 					ItermTerminal(fd_in, fd_out).set('term', parts[0]).set('ver', parts[1])
@@ -100,6 +100,9 @@ ns {
 
 				F AnsiTerminal(*args) {
 					# XXX: How to distingush between tmux and screen?
+					#      Locally TMUX environment variable should be enough.
+					#      How about remote (local tmux connected to a remote using SSH)?
+					#      Do we care?
 					guard ENV.get('TERM') == 'screen'
 					TmuxTerminal(*args)
 				}
