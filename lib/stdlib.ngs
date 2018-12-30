@@ -3692,11 +3692,14 @@ TEST "a$*{[1,2]}b$*{10..12}c" == ["a1b10c", "a1b11c", "a2b10c", "a2b11c"]
 
 # === Thread ========================================
 ns {
-	global Thread, ThreadFail, init, join, pmap, ptimes, Str, (.)
+	global Thread, Threads, ThreadFail, init, join, pmap, ptimes, Str, (.)
 	# TODO: consider *args for consistency with other parts of the language
 
 	doc Execution thread. Currently a POSIX thread.
 	type Thread
+
+	doc Threads
+	type Threads(ArrLike)
 
 	# TODO: expose. Not called automatically because some names are
 	#       already unique.
@@ -3763,10 +3766,14 @@ ns {
 	doc threads - Arr of Thread.
 	doc %RET - Arr, the results from threads, in order.
 	F join(threads:Arr) {
-		# warn("Using deprecated join(threads:Arr)")
+		warn("Using deprecated join(threads:Arr)")
 		guard threads and threads.all(Thread)
 		threads.map(join)
 	}
+
+	doc Joins threads.
+	doc %RET - Arr, the results from threads, in order.
+	F join(threads:Threads) threads.map(join)
 
 	doc Joins on thread. Waits for the thread to finish and returns the result from the thread.
 	doc Currently, if a thread throwed an exception, it will be returned as the value.
@@ -3796,11 +3803,11 @@ ns {
 
 	doc Run cb in n parallel threads. Each thread runs one cb but this might change in future (preserving the total n calls to cb).
 	F ptimes(n:Int, cb:Fun) {
-		threads = collector
+		threads = collector/Threads()
 			for(i;n) {
 				collect(Thread(cb))
 			}
-		threads.map(join)
+		threads.join()
 	}
 
 	TEST (1..3).Arr().pmap(X*10) == [10, 20]
@@ -3892,73 +3899,16 @@ F warn(s:Str) {
 }
 
 ns {
-	# THIS CODE IS NOT ORGANIZED PROPERLY, WIP
 	global status
-	fd_pos = null
-	stderr_is_a_tty = null
-	stdout_is_a_tty = null
-	iterm = (ENV.get('TERM_PROGRAM') == 'iTerm.app') and ('NGS_NO_ITERM' not in ENV)
 
-	# TODO: c_lseek(x, 0, "cur") -> make a special function?
-	doc Send status information to standard error.
-	doc Later status output will be treated specially by the shell. It will have suitable representation in the UI.
-	doc Use status() when it's semantically a status - a task that's being done.
-	F status(s:Str) {
-		echo(stdlib_error_fd, "[STATUS ${Time()}] $s")
-	}
+	status_terminal = null
 
-	doc Send status information to standard error. Works only if stderr is a tty.
-	doc Consequtive status() calls will use tty escape codes to overwrite
-	doc previous status() message (one line up, erase to end of line, write new message).
-	doc Show status on a tty
-	F status(s:Str) {
-		if stderr_is_a_tty is Null {
-			stderr_is_a_tty = isatty(stdlib_error_fd)
+	F status(s) {
+		if status_terminal is Null {
+			status_terminal = Terminal(0, stdlib_error_fd)
 		}
-		guard stderr_is_a_tty
-
-		new_fd_pos = c_lseek(stdlib_error_fd, 0, "cur")
-		if fd_pos == new_fd_pos {
-			write(stdlib_error_fd, "\e[A\e[0K")
-		}
-		super(s)
-		fd_pos = c_lseek(stdlib_error_fd, 0, "cur")
-		null
+		status_terminal.status(s)
 	}
-
-	# https://www.iterm2.com/documentation-badges.html
-	doc Show status as iTerm2 badge
-	F status(s:Str) {
-		guard iterm
-		if stdout_is_a_tty is Null {
-			stdout_is_a_tty = isatty(1)
-			if stdout_is_a_tty {
-				iterm_fmt = `echo "\\(user.status)" | base64`
-				write(1, "\e]1337;SetBadgeFormat=${iterm_fmt}" + chr(7))
-				exit_hook['undo_iterm_badge'] = {
-					write(1, "\e]1337;SetBadgeFormat=" + chr(7))
-				}
-			}
-		}
-		guard stdout_is_a_tty
-
-		# OSC 1337 ; SetUserVar=name=Base64-encoded value ST
-
-		iterm_var_val = `echo "${Time().Str("[%H:%M:%S]")} $s" | base64`
-		write(1, "\e]1337;SetUserVar=status=${iterm_var_val}\e\\")
-		null
-	}
-
-	### # Info: printf '\033kWINDOW_NAME\033\\' -- set tmux window name (not title)
-	### # Info: printf '\033]2;My Title\033\\' -- same as select-pane -T -- Problematic: default setting in tmux truncates title at 21 characters
-	### doc Set tmux pane title. Works when TMUX environment variable is set and NGS_NO_TMUX environment variable is not set.
-	### doc Use status() when it's semantically a status - a task that's being done.
-	### F status(s:Str) {
-	### 	guard 'TMUX' in ENV
-	### 	guard 'NGS_NO_TMUX' not in ENV
-	### 	write(0, "\ek${s.replace('\e', '?').limit(80, '...')}\e\\")
-	### 	null
-	### }
 }
 
 doc Write message in s to standard error and exit, printing backtrace
@@ -4640,8 +4590,8 @@ F init(p:Process, c:Command) {
 	p.exit_code = null
 	p.exit_signal = null
 	p.outputs = {1:null, 2:null}
-	p.reading_threads = []
-	p.writing_threads = []
+	p.reading_threads = Threads()
+	p.writing_threads = Threads()
 	# p.lock = Lock()
 }
 
@@ -4658,19 +4608,24 @@ doc Waits for the process to finish. Checks whether to throw ProcessFail using f
 doc %RET - p
 F wait(p:Process) {
 
+	# TODO: reading/writing threads failure - throw at the end (allowing resources cleanup in this function)
 	p.pid is Null throws InvalidArgument("Can not wait() on Process without PID")
 
 	p.exit_code is Int returns p
 
+	F join_threads(which:Str) {
+		threads = p.(which)
+		results = threads.join()
+		p.(which) = []
+		first_failure = results.first(Failure, null)
+		if first_failure {
+			throw ProcessFail('Error in reading/writing thread').set('process', p).set('cause', first_failure)
+		}
+	}
+
 	debug("process", "[wait] joining reading and writing threads")
-	if p.reading_threads {
-		p.reading_threads.join()
-		p.reading_threads = []
-	}
-	if p.writing_threads {
-		p.writing_threads.join()
-		p.writing_threads = []
-	}
+	%[reading_threads writing_threads].each(join_threads)
+
 
 	debug("process", "[wait] will waitpid(${p.pid})")
 	w = c_waitpid(p.pid)
@@ -4818,13 +4773,13 @@ F '$()'(c:Command) {
 
 	pipes = c.redirects.filter({A.datum is Pipe})
 	debug("process2", "PIPES FROM REDIRECTS $pipes REDIRECTS ${c.redirects} COMMND ${c.Hash()}")
-	child_fds = pipes.datum.map(child_fd) + c.redirects.datum.filter(Int)
+	child_fds = pipes.datum.map(child_fd)
 
 	if pid == 0 {
 		# === Child ===
 		# TODO: See https://stackoverflow.com/questions/13101690/c-get-all-open-file-descriptors
 		for(i=3;i<100;i+=1) {
-			if i not in child_fds {
+			if i not in child_fds + c.redirects.datum.filter(Int) {
 				# XXX child to parent also closed here
 				debug("process2", "CHILD CLOSING $i")
 				# close() throws exception on invalid descriptors, hence c_close()
@@ -4875,25 +4830,20 @@ F '$()'(c:Command) {
 		debug("process", "Reading all output of the child process")
 		# XXX: maybe make it chunk based with c_poll() and single thread
 		# TODO: some error handling inside these threads and after joining them
-		process.reading_threads = c.redirects.filter(F(r:Redir) r.datum is CollectingPipeFromChildToParentProcess).map(F(r:Redir) {
+		process.reading_threads = c.redirects.filter({'datum': CollectingPipeFromChildToParentProcess}).map(F(r:Redir) {
 			Thread("process-${process.pid}-output-fd-${r.fd}-reader", {
-				debug("process2", "READING ${r.datum}")
-				try {
+				Result({
+					debug("process2", "READING ${r.datum}")
 					process.outputs[r.fd] = r.datum.read()
-				} catch(e) {
-					debug("process2", "READ FAILED: $e")
-				}
-				debug("process2", "READ <<${process.outputs[r.fd].limit(100, '...').SafeStr()}>>")
-				try {
+					debug("process2", "READ <<${process.outputs[r.fd].limit(100, '...').SafeStr()}>>")
 					debug("process2", "DATUM *** ${r.datum}")
 					r.datum.close_reading_end()
 					debug("process2", "CLOSED READING END OF PIPE, REDIRECT ${r}")
-				} catch(e) {
-					debug("process2", "CLOSING READING END OF PIPE FAILED: $e")
-				}
-				debug("process", "Read all output of the child process for descriptor ${r.fd}, closing reading/parent end")
+					debug("process", "Read all output of the child process for descriptor ${r.fd}, closing reading/parent end")
+					null
+				})
 			})
-		})
+		}).Threads()
 	}
 
 	debug("process2", "\$() returns process ${process.Hash()}")
@@ -6314,6 +6264,23 @@ F write(f:File, s:Str) {
 	write(if f.fd is Null then f.path else f.fd, s)
 }
 
+# === Misc =======================================
+
+doc %STATUS - experimental
+F encode_base64(s:Str, wrap:Int=0) {
+	guard OS.posix
+	`echo -n $s | base64 -w $wrap`
+}
+
+doc %STATUS - experimental
+F encode_base64(s:Str, wrap:Int=0) {
+	guard OS.darwin
+	`echo -n $s | base64 -b $wrap`
+}
+
+doc %STATUS - experimental
+F decode_base64(s:Str) `echo $s | base64 --decode`
+
 # === Networking =================================
 
 ### F read(s:Str) {
@@ -6345,6 +6312,8 @@ F cached(cb:Fun) {
 		result.get()
 	}
 }
+
+# === Doc ========================================
 
 doc %STATUS - experimental
 doc %AUTO - \name attr1=val1 attr2=val2 ... [ ... ]

@@ -12,6 +12,7 @@
 * Add `-(Str, Ifx)`
 * Add experimental `is_subtype(t:Type, maybe_supertype:Type)`.
 * Add experimental `ensure(x, t:Type)` for `Eachable1` subtypes. Returns either `x` if it's already of type `t` or new object of type `t` with single item `x`.
+* Add `Threads(ArrLike)` type
 
 ### Fixes and improvements
 
@@ -34,6 +35,7 @@
 
 ### Work in progress
 
+* Terminal
 * Improving error messages shown when exceptions occur.
 * Add experimental `escape_bash(Str)` - quote argument for bash
 

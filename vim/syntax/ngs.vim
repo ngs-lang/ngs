@@ -34,7 +34,7 @@ syn keyword ngsType IndexNotFound FieldNotFound InvalidParameter NoNext
 syn keyword ngsType InvalidArgument DivisionByZero
 syn keyword ngsType JsonDecodeFail
 syn keyword ngsType Lines
-syn keyword ngsType Lock ReentrantLock Pthread PthreadAttr Thread
+syn keyword ngsType Lock ReentrantLock Pthread PthreadAttr Thread Threads
 syn keyword ngsType LockFail
 syn keyword ngsType MatchResult MatchSuccess MatchFailure MatchFail SubSeq Pfx MaybePfx MustPfx Ifx MaybeIfx MustIfx Sfx MaybeSfx MustSfx
 syn keyword ngsType NormalExit
@@ -44,7 +44,7 @@ syn keyword ngsType Redir
 syn keyword ngsType Result Success Failure ResultFail
 syn keyword ngsType Return
 syn keyword ngsType Renderer ItemsContainer ItemsVerticalContainer ItemsHorizontalContainer
-syn keyword ngsType Time TimeFail
+syn keyword ngsType ThreadFail Time TimeFail
 syn keyword ngsTodo TODO FIXME XXX NOTE
 syn keyword ngsConstant true false null
 syn keyword ngsPredefinedVariable ARGV ARGV0 ENV ORIG_ARGV _exports VERSION
