@@ -3,11 +3,16 @@ default:
 
 .PHONY: build
 build:
-	( mkdir -p build && cd build && cmake .. && make && sudo make install )
+ifeq ($(shell uname -s),Darwin)
+	( source build.macos.env.sh && mkdir -p build && cd build && cmake .. && make )
+else
+	( mkdir -p build && cd build && cmake .. && make )
+endif
+
+.PHONY: install
+install: build
+	(cd build && sudo make install)
+
+.PHONY: clean
 clean:
 	rm -rf build
-
-install-mac:
-	brew bundle --file << EOF
-	set -e  && brew install libgc libffi peg cmake pandoc awk 
-	EOF

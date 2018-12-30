@@ -1,14 +1,7 @@
 #!/bin/bash
 
-brew bundle --file=- <<-EOS
-brew "libgc"
-brew "libffi"
-brew "peg"
-brew "cmake"
-brew "pandoc"
-brew "awk"
-brew "make"
-EOS
+set -e
 
-source build.macos.env.sh
-make build
+brew install libgc libffi peg cmake pandoc awk make
+
+make install
