@@ -1,0 +1,65 @@
+{
+	doc %STATUS - experimental
+	type ItermTerminal(AnsiTerminal)
+}
+
+# iTerm2 detection is based on https://iterm2.com/utilities/it2check
+F AnsiTerminal(fd_in:Int, fd_out:Int) {
+	guard 'NGS_NO_ITERM' not in ENV
+	saved_stty=`stty -g 0<${fd_in}`
+	F read_dsr() {
+		debug("file", "AnsiTerminal() read_dsr() reading 2 bytes spam")
+		spam = fd_in.read(2)
+		collector/'' {
+			debug("file", "AnsiTerminal() read_dsr() reading till 'n'")
+			while (byte = fd_in.read(1)) != 'n' {
+				collect(byte)
+			}
+		}
+	}
+	$(stty -echo -icanon raw 0<${fd_in} 1>${fd_out})
+	fd_out.write("\e[1337n") # iTerm2 proprietary code
+	fd_out.write("\e[5n")    # report device status 
+	version_string = read_dsr()
+	if 'ITERM' in version_string {
+		# The seen response was from DSR 1337. Discarding response to DSR 5.
+		read_dsr()
+	} else {
+		# No response to DSR 1337. We are seing response to DSR 5.
+		version_string = null
+	}
+	$(stty $saved_stty 0<${fd_in} 1>${fd_out})
+	guard version_string
+	parts = version_string.split(' ')
+	ItermTerminal(fd_in, fd_out).set('term', parts[0]).set('ver', parts[1])
+}
+
+F init(it:ItermTerminal, *args) {
+	super(it, *args)
+	it._status_set_badge_format_done = false
+
+}
+
+F write_iterm_csi(it:ItermTerminal) it.write("\e]1337;")
+F write_iterm_csi(it:ItermTerminal, s:Str) it.write_iterm_csi().write(s)
+F write_iterm_cmd(it:ItermTerminal, s:Str) it.write_iterm_csi(s).write_st()
+
+# https://www.iterm2.com/documentation-badges.html
+F set_badge_format(it:ItermTerminal, fmt:Str) it.write_iterm_cmd("SetBadgeFormat=${fmt.encode_base64()}")
+
+F set_user_var(it:ItermTerminal, k:Str, v:Str) it.write_iterm_cmd("SetUserVar=${k}=${v.encode_base64()}")
+
+# TODO: Issue #205 - make status() configurable
+F status(it:ItermTerminal, s:Str) {
+	if not(it._status_set_badge_format_done) {
+		it.set_badge_format("\\(user.status)")
+		it._status_set_badge_format_done = true
+		exit_hook["iterm_clear_status_badge:${it.fd_in}:${it.fd_out}"] = {
+			it.set_badge_format("")
+		}
+	}
+	it.set_user_var('status', s)
+}
+
+# TODO: https://iterm2.com/documentation-escape-codes.html
+

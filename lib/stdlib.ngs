@@ -3905,7 +3905,7 @@ ns {
 
 	F status(s) {
 		if status_terminal is Null {
-			status_terminal = Terminal(0, stdlib_error_fd)
+			status_terminal = Terminal(stdlib_error_fd, stdlib_error_fd)
 		}
 		status_terminal.status(s)
 	}
@@ -4778,19 +4778,18 @@ F '$()'(c:Command) {
 	if pid == 0 {
 		# === Child ===
 		# TODO: See https://stackoverflow.com/questions/13101690/c-get-all-open-file-descriptors
+		child_fds_to_keep_open = child_fds + c.redirects.datum.filter(Int) 
+		debug("process2", "CHILD CLOSING FDS 3 TO 100 EXCEPT FOR ${child_fds_to_keep_open}")
 		for(i=3;i<100;i+=1) {
-			if i not in child_fds + c.redirects.datum.filter(Int) {
+			if i not in child_fds_to_keep_open {
 				# XXX child to parent also closed here
-				debug("process2", "CHILD CLOSING $i")
 				# close() throws exception on invalid descriptors, hence c_close()
 				i.c_close()
 			}
 		}
 
 		# Should be after redirects to be able to 2>/dev/null ?
-		if 'cd' in c.options {
-			throw NotImplemented("Changing directory is not implemented yet")
-		}
+		'cd' in c.options throws NotImplemented("Changing directory is not implemented yet")
 
 		marker_to_open_flags = {'<': 'r', '>': 'w', '>>': 'a'}
 		marker_to_default_fd = {'<': 0, '>': 1, '>>': 1}
@@ -4929,7 +4928,7 @@ F '$()'(cp:CommandsPipeline) {
 		do_redir_1 = cp.commands[-1].redirects.none(F(r) {
 			# >${false} OR 1>${false}
 			# 1>? OR 1<?
-			r.datum == false and r.marker == '>' and r.fd in [null, 1] or
+			(r.datum == false and r.marker == '>' and r.fd in [null, 1]) or
 			r.fd == 1
 		})
 		if do_redir_1 {
