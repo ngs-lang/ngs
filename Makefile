@@ -1,5 +1,5 @@
 default:
-	@echo "No option defined"
+	@echo "No target defined"
 
 .PHONY: build
 build:
