@@ -1200,6 +1200,8 @@ AUTOLOAD = ns {
 		table               Table
 	}
 
+	invocation = 0
+
 	doc Called when reading undefined global.
 	doc Implements autoloading.
 	doc Searches in $NGS_DIR/autoload/GLOBAL_NAME.ngs
@@ -1207,15 +1209,23 @@ AUTOLOAD = ns {
 	doc %EX - test("My web server runs") do { .... }  # $NGS_DIR/autoload/test.ngs is automatically loaded.
 	F global_not_found_handler(name:Str) {
 		_lock.acquire() do {
+			i = invocation
+			invocation += 1
+			F local_debug(s:Str) {
+				debug("autoload", "global_not_found_handler() [invocation $i] ${s}")
+			}
+			local_debug("name=${name}")
 			idx = resolve_global_variable(name)
 			is_global_variable_defined(idx) returns
 			if name in _global_name_to_autoload_file {
+				local_debug("loading ${NGS_DIR}/autoload/${_global_name_to_autoload_file[name]}.ngs")
 				require("${NGS_DIR}/autoload/${_global_name_to_autoload_file[name]}.ngs")
 				return
 			}
+			local_debug("loading ${NGS_DIR}/autoload/${name}.ngs")
 			val = require("${NGS_DIR}/autoload/${name}.ngs")
 			if not(is_global_variable_defined(idx)) {
-				# echo("IDX $name $idx")
+				local_debug("global variable ${name} still not set; setting")
 				set_global_variable(idx, val)
 			}
 		}
@@ -3689,6 +3699,43 @@ F '"$*"'(components:Arr) {
 
 TEST "a$*{[1,2]}b$*{10..12}c" == ["a1b10c", "a1b11c", "a2b10c", "a2b11c"]
 
+
+# === Stats ========================================
+
+{
+	doc A group of named counters
+	doc h - The underlying Hash
+	doc %EX - s = Stats().push('a').push('a').push('b')
+	doc %EX - s["a"]  # 2
+	doc %EX - s["b"]  # 1
+	doc %EX -
+	doc %EX - a = ["x", "y", "y"]
+	doc %EX - s = Stats(a)
+	doc %EX - s["x"]  # 1
+	doc %EX - s["y"]  # 2
+	type Stats(HashLike)
+}
+
+doc Makes Stats, with each element in the array counted as if push()ed
+doc %EX - Stats(['a', 'a', 'b']).Hash()  # {'a': 2, 'b': 1}
+F init(s:Stats, a:Arr) {
+	init(s)
+	a.each(push(s, X))
+}
+
+doc Increment the named counter
+doc k - the name of the counter to increment
+doc %EX - Stats().push("a").push("a").push("b")["a"]  # 2
+F push(s:Stats, k) {
+	h = s.attrs().HashLike
+	h[k] = h.get(k, 0) + 1
+	s
+}
+
+TEST Stats().push('a').push('a').push('b').Hash() == {'a': 2, 'b': 1}
+TEST Stats(['a', 'a', 'b']).Hash() == {'a': 2, 'b': 1}
+TEST Stats(['a', 'a', 'b'])['a'] == 2
+TEST Stats(['a', 'a', 'b']).a == 2
 
 # === Thread ========================================
 ns {

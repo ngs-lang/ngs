@@ -6,18 +6,13 @@
 #define COMPILE_MAX_FUNC_DEPTH      (16)
 #define COMPILE_MAX_FILL_IN_LEN     (16)
 
-#include <utarray.h>
 #include "vm.h"
 
-static const UT_icd ut_size_t_icd _UNUSED_ = {sizeof(size_t),NULL,NULL,NULL};
-
-typedef struct symbol_table {
-	char *name;
-	UT_hash_handle hh;
-	UT_array *offsets;
-	int is_predefinded_global;
-	size_t index;
-} SYMBOL_TABLE;
+typedef struct symbol {
+	int is_predefined_global;
+	unsigned int index;
+	VALUE offsets;
+} SYMBOL;
 
 enum identifier_type {
 	NO_IDENTIFIER=0,
@@ -34,9 +29,9 @@ typedef struct identifier_info {
 
 typedef struct compilation_context {
 	VM vm;
-	SYMBOL_TABLE *globals;
-	SYMBOL_TABLE *locals[COMPILE_MAX_FUNC_DEPTH];
-	SYMBOL_TABLE *identifiers_scopes[COMPILE_MAX_FUNC_DEPTH];
+	VALUE globals;
+	VALUE locals[COMPILE_MAX_FUNC_DEPTH];
+	VALUE identifiers_scopes[COMPILE_MAX_FUNC_DEPTH];
 	LOCAL_VAR_INDEX n_locals[COMPILE_MAX_FUNC_DEPTH];
 	UPVAR_INDEX n_uplevels[COMPILE_MAX_FUNC_DEPTH];
 	int stack_depth[COMPILE_MAX_FUNC_DEPTH];
@@ -56,6 +51,6 @@ typedef struct compilation_context {
 
 } COMPILATION_CONTEXT;
 
-SYMBOL_TABLE *get_symbol_table_entry(SYMBOL_TABLE **st, char *name, int create_if_not_exists, int *created);
+SYMBOL *get_symbol_table_entry(VALUE st, char *name, int create_if_not_exists, int *created);
 char *compile(ast_node *node, char *source_file_name, size_t *len);
 #endif

@@ -133,7 +133,7 @@ This is how an instance can be created using NGS (real working code). No state f
 
 ## Install dependencies - Debian-based Linux
 
-	sudo apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c-dev peg libpcre3-dev make cmake pandoc pkg-config build-essential
+	sudo apt-get install libgc-dev libffi6 libffi-dev libjson-c-dev peg libpcre3-dev make cmake pandoc pkg-config build-essential
 	sudo type awk || sudo apt-get install gawk
 	mkdir build && cd build && cmake .. && make && ctest
 	# If NGS is not installed:
@@ -145,16 +145,6 @@ This is how an instance can be created using NGS (real working code). No state f
 
 	brew update
 	brew install cmake peg libgc pcre libffi gnu-sed json-c pkg-config pandoc
-
-	# install macports
-	brew install Caskroom/cask/macports
-	macports_dir=$(brew cask info macports | grep '/usr/local/Caskroom/macports' | awk '{print $1}')
-	macports_pkg=$(brew cask info macports | awk '$2 == "(pkg)" || $2 == "(Pkg)" {print $1}')
-
-	sudo installer -pkg "$macports_dir/$macports_pkg" -target /
-
-	sudo /opt/local/bin/port install uthash
-
 	export PATH="/usr/local/opt/gnu-sed/libexec/gnubin:$PATH"
 	pcp=$(dirname $(brew list pkg-config | grep '/bin/pkg-config'))
 	export PATH="$pcp:$PATH"

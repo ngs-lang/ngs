@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <memory.h>
 #include "ngs.h"
 #include "ast.h"
 #include "compile.h"
@@ -76,73 +77,69 @@ static inline void ensure_room(char **buf, const size_t cur_len, size_t *allocat
 	DEBUG_COMPILER("leaving ensure_room() status=realloc_done buf=%p, cur_len=%zu, allocated=%zu, room=%zu\n", *buf, cur_len, *allocated, room);
 }
 
-SYMBOL_TABLE *get_symbol_table_entry(SYMBOL_TABLE **st, char *name, int create_if_not_exists, int *created) {
-	SYMBOL_TABLE *s;
+SYMBOL *get_symbol_table_entry(VALUE st, char *name, int create_if_not_exists, int *created) {
+	SYMBOL *s;
 	*created = 0;
-	HASH_FIND(hh, *st, name, strlen(name), s);
-	// printf("SYMBOL TABLE QUERY %s (len %zu) %p\n", name, strlen(name), *st);
-	if(s) {
-		// printf("SYMBOL TABLE LOOKUP OK %s -> %p\n", name, s);
-		return s;
+	HASH_OBJECT_ENTRY *entry = get_hash_key(st, make_string(name));
+	if(entry) {
+		return (SYMBOL *)entry->val.ptr;
 	}
 	if(!create_if_not_exists) {
 		return NULL;
 	}
 	s = NGS_MALLOC(sizeof(*s));
-	s->name = ngs_strdup(name);
-	s->is_predefinded_global = 0;
-	// HASH_ADD_STR(*st, name /* field */, s);
-	HASH_ADD_KEYPTR(hh, *st, s->name, strlen(s->name), s);
+	s->is_predefined_global = 0;
+	set_hash_key(st, make_string(name), (VALUE) {.ptr = s});
 	*created = 1;
-	// printf("SYMBOL TABLE ADD OK %s -> %p\n", name, *st);
 	return s;
 }
 
 
-GLOBAL_VAR_INDEX get_global_var_index(COMPILATION_CONTEXT *ctx, char *name, size_t *idx) {
-	SYMBOL_TABLE *st = NULL;
+GLOBAL_VAR_INDEX get_global_var_index(COMPILATION_CONTEXT *ctx, char *name, const size_t *idx) {
+	SYMBOL *s;
 	int created;
-	st = get_symbol_table_entry(&ctx->globals, name, 1, &created);
+	s = get_symbol_table_entry(ctx->globals, name, 1, &created);
 	if(created) {
 		int global_found;
-		st->index = check_global_index(&ctx->vm, name, strlen(name), &global_found);
-		DEBUG_COMPILER("New global symbol name=%s is_predefinded_global=%d\n", name, global_found);
+		s->index = check_global_index(&ctx->vm, name, strlen(name), &global_found);
+		DEBUG_COMPILER("New global symbol name=%s is_predefined_global=%d\n", name, global_found);
 		// global_found = 0; // XXX: test
-		st->is_predefinded_global = global_found;
-		if(!st->is_predefinded_global) {
-			utarray_new(st->offsets, &ut_size_t_icd);
+		s->is_predefined_global = global_found;
+		if(!s->is_predefined_global) {
+			s->offsets = make_array(0);
 		}
 	}
-	if(st->is_predefinded_global) {
-		return st->index;
+	if(s->is_predefined_global) {
+		return (GLOBAL_VAR_INDEX) s->index;
 	}
 
-	utarray_push_back(st->offsets, idx);
+	array_push(s->offsets, MAKE_INT(*idx));
 	DEBUG_COMPILER("Global %s to be patched at offset %zu\n", name, *idx);
 	return 0;
 }
 
 IDENTIFIER_INFO resolve_identifier(COMPILATION_CONTEXT *ctx, const char *name) {
 	IDENTIFIER_INFO ret;
-	SYMBOL_TABLE *s;
+	HASH_OBJECT_ENTRY *e;
 	int locals_idx;
+	VALUE name_val = make_string(name);
 
 	if(ctx->locals_ptr) {
-		HASH_FIND(hh, LOCALS, name, strlen(name), s);
-		if(s) {
+		e = get_hash_key(LOCALS, name_val);
+		if(e) {
 			// printf("xxx-1-1 %s\n", name);
 			ret.type = LOCAL_IDENTIFIER;
-			ret.index = s->index;
+			ret.index = ((SYMBOL *)e->val.ptr)->index;
 			goto exit;
 		}
 		// printf("xxx-1-2 %s\n", name);
 		for(locals_idx = ctx->locals_ptr-1; locals_idx > 0; locals_idx--) {
-			HASH_FIND(hh, ctx->locals[locals_idx-1], name, strlen(name), s);
-			if(s) {
+			e = get_hash_key(ctx->locals[locals_idx-1], name_val);
+			if(e) {
 				// printf("xxx-2 %s\n", name);
 				UPVAR_INDEX u = locals_idx;
 				ret.type = UPVAR_IDENTIFIER;
-				ret.index = s->index;
+				ret.index = ((SYMBOL *)e->val.ptr)->index;
 				ret.uplevel = ctx->locals_ptr - locals_idx - 1; // -1 is to make it zero based
 				// F level1(x) {    -> uplevels=0
 				//   F level2() {   -> uplevels=1
@@ -163,10 +160,10 @@ IDENTIFIER_INFO resolve_identifier(COMPILATION_CONTEXT *ctx, const char *name) {
 		}
 	}
 
-	HASH_FIND(hh, ctx->globals, name, strlen(name), s);
-	if(s) {
+	e = get_hash_key(ctx->globals, name_val);
+	if(e) {
 		ret.type = GLOBAL_IDENTIFIER;
-		ret.index = s->index;
+		ret.index = ((SYMBOL *)e->val.ptr)->index;
 		goto exit;
 	}
 
@@ -178,42 +175,42 @@ exit:
 }
 
 #define REGISTER_IDENTIFIER(t) \
-	SYMBOL_TABLE *s; \
+	SYMBOL *s; \
 	s = NGS_MALLOC(sizeof(*s)); \
-	s->name = ngs_strdup(name); \
-	s->is_predefinded_global = 0; \
+	s->is_predefined_global = 0; \
 	s->index = t; \
-	HASH_ADD_KEYPTR(hh, IDENTIFIERS_SCOPES, s->name, strlen(s->name), s); \
+	set_hash_key(IDENTIFIERS_SCOPES, make_string(name), (VALUE) {.ptr = s}); \
 
 void register_local_identifier(COMPILATION_CONTEXT *ctx, char *name) { REGISTER_IDENTIFIER(LOCAL_IDENTIFIER); }
 void register_upvar_identifier(COMPILATION_CONTEXT *ctx, char *name) { REGISTER_IDENTIFIER(UPVAR_IDENTIFIER); }
 void register_global_identifier(COMPILATION_CONTEXT *ctx, char *name) { REGISTER_IDENTIFIER(GLOBAL_IDENTIFIER); }
 
 void register_local_var(COMPILATION_CONTEXT *ctx, char *name) {
-	SYMBOL_TABLE *s;
-	HASH_FIND(hh, LOCALS, name, strlen(name), s);
-	if(s) {
+	SYMBOL *s;
+	VALUE name_val = make_string(name);
+	HASH_OBJECT_ENTRY *e = get_hash_key(LOCALS, name_val);
+	if(e) {
 		return;
 	}
 	assert(N_LOCALS < MAX_LOCALS);
 	s = NGS_MALLOC(sizeof(*s));
-	s->name = ngs_strdup(name);
 	s->index = N_LOCALS++;
-	HASH_ADD_KEYPTR(hh, LOCALS, s->name, strlen(s->name), s);
-	register_local_identifier(ctx, s->name);
+	set_hash_key(LOCALS, name_val, (VALUE) {.ptr = s});
+	register_local_identifier(ctx, name);
 }
 
 // TODO: maybe do it at parse time? That might be more complex but probably faster
 // TODO: refactor for code deduplication
 void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
-	SYMBOL_TABLE *s;
+	SYMBOL *s;
+	HASH_OBJECT_ENTRY *e;
 	ast_node *ptr, *ptr2;
 	switch(node->type) {
 		case FUNC_NODE:
 			if(node->first_child->next_sibling->next_sibling->next_sibling) {
 				// Function has a name
-				HASH_FIND(hh, IDENTIFIERS_SCOPES, node->first_child->next_sibling->next_sibling->next_sibling->name, strlen(node->first_child->next_sibling->next_sibling->next_sibling->name), s);
-				if(!s) {
+				e = get_hash_key(IDENTIFIERS_SCOPES, make_string(node->first_child->next_sibling->next_sibling->next_sibling->name));
+				if(!e) {
 					register_local_var(ctx, node->first_child->next_sibling->next_sibling->next_sibling->name);
 				}
 			}
@@ -275,20 +272,18 @@ void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 			break;
 		case ASSIGNMENT_NODE:
 			if(node->first_child->type == IDENTIFIER_NODE) {
-				HASH_FIND(hh, IDENTIFIERS_SCOPES, node->first_child->name, strlen(node->first_child->name), s);
-				if(!s) {
+				e = get_hash_key(IDENTIFIERS_SCOPES, make_string(node->first_child->name));
+				if(!e) {
 					IDENTIFIER_INFO identifier_info;
 					identifier_info = resolve_identifier(ctx, node->first_child->name);
 					if(identifier_info.type == UPVAR_IDENTIFIER) {
 						s = NGS_MALLOC(sizeof(*s));
-						s->name = ngs_strdup(node->first_child->name);
-						s->is_predefinded_global = 0;
+						s->is_predefined_global = 0;
 						s->index = UPVAR_IDENTIFIER;
-						HASH_ADD_KEYPTR(hh, IDENTIFIERS_SCOPES, s->name, strlen(s->name), s);
+						set_hash_key(IDENTIFIERS_SCOPES, make_string(node->first_child->name), (VALUE) {.ptr=s});
+					} else {
+						register_local_var(ctx, node->first_child->name);
 					}
-				}
-				if(!s) {
-					register_local_var(ctx, node->first_child->name);
 				}
 			}
 			for(ptr=node->first_child->next_sibling; ptr; ptr=ptr->next_sibling) {
@@ -348,7 +343,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 	UPVAR_INDEX n_uplevels;
 	size_t loop_beg_idx, cond_jump, continue_target_idx, func_jump, end_of_func_idx, if_jump, while_jump;
 	int old_break_addrs_ptr, old_continue_addrs_ptr, i, saved_stack_depth;
-	SYMBOL_TABLE *st;
+	HASH_OBJECT_ENTRY *e;
 
 	// Can probably be overwhelmed by number of local variables with lengthy names
 	ensure_room(buf, *idx, allocated, 1024); // XXX - magic number
@@ -639,8 +634,8 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
 			ctx->locals_ptr++;
 			assert(ctx->locals_ptr < COMPILE_MAX_FUNC_DEPTH);
-			LOCALS = NULL;
-			IDENTIFIERS_SCOPES = NULL;
+			LOCALS = make_hash(4);
+			IDENTIFIERS_SCOPES = make_hash(4);
 			N_LOCALS = 0;
 			N_UPLEVELS = 0;
 			STACK_DEPTH = 0;
@@ -663,9 +658,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 
 			// Local variables names
 			// TODO: something more efficient
-			for(st=LOCALS; st; st=st->hh.next) {
+			for(e=HASH_HEAD(LOCALS); e; e=e->insertion_order_next) {
 				OPCODE(*buf, OP_PUSH_L8_STR);
-				L8_STR(*buf, st->name);
+				L8_STR(*buf, obj_to_cstring(e->key));
 			}
 
 			ctx->locals_ptr--;
@@ -1190,12 +1185,15 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 }
 
 #define FOR_GLOBALS(x) \
-	for(globals=ctx->globals; globals; globals=globals->hh.next) { \
-		if(!globals->is_predefinded_global) { \
-			assert(utarray_len(globals->offsets)); /* there must be offsets, otherwise we got some corrupted data */ \
-			x \
+    { \
+		HASH_OBJECT_ENTRY *global_var; \
+		for(global_var=HASH_HEAD(ctx->globals); global_var; global_var=global_var->insertion_order_next) { \
+			if(!((SYMBOL *)global_var->val.ptr)->is_predefined_global) { \
+				assert(OBJ_LEN(((SYMBOL *)global_var->val.ptr)->offsets)); \
+				x \
+			} \
 		} \
-	}
+    }
 
 //		section type 2 data: globals patching
 //			uint16 - number of items
@@ -1206,13 +1204,12 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 
 size_t calculate_init_section_size(COMPILATION_CONTEXT *ctx) {
 	size_t ret = sizeof(BYTECODE_GLOBALS_COUNT);
-	SYMBOL_TABLE *globals;
 	DEBUG_COMPILER("%s", "entering calculate_init_section_size()\n");
 	FOR_GLOBALS(
 			// Lstr
 			// uint16 - number of locations
 			// uint32[] - locations
-			ret += 1 + strlen(globals->name) + sizeof(BYTECODE_GLOBALS_LOC_COUNT) + utarray_len(globals->offsets) * sizeof(BYTECODE_GLOBALS_OFFSET);
+			ret += 1 + OBJ_LEN(global_var->key) + sizeof(BYTECODE_GLOBALS_LOC_COUNT) + OBJ_LEN(((SYMBOL *)global_var->val.ptr)->offsets) * sizeof(BYTECODE_GLOBALS_OFFSET);
 	)
 
 	DEBUG_COMPILER("leaving calculate_init_section_size() -> %zu\n", ret);
@@ -1223,12 +1220,13 @@ size_t calculate_init_section_size(COMPILATION_CONTEXT *ctx) {
 void compile_init_section(COMPILATION_CONTEXT *ctx, char **init_buf, size_t *idx) {
 	// TODO: check that all offsets are really in UINT16 range.
 	char *buf = NULL;
-	SYMBOL_TABLE *globals;
 	size_t init_section_size;
 	size_t i = 0;
 	DEBUG_COMPILER("%s", "entering compile_init_section()\n");
 	init_section_size = calculate_init_section_size(ctx);
 	buf = NGS_MALLOC_ATOMIC(init_section_size);
+	VALUE offsets, *ptr;
+
 	FOR_GLOBALS(
 		i++;
 	)
@@ -1239,12 +1237,12 @@ void compile_init_section(COMPILATION_CONTEXT *ctx, char **init_buf, size_t *idx
 			// uint16 - number of locations
 			// uint32[] - locations
 			size_t len;
-			L8_STR(buf, globals->name);
-			len = utarray_len(globals->offsets);
+			L8_STR(buf, obj_to_cstring(global_var->key));
+			offsets = ((SYMBOL *)global_var->val.ptr)->offsets;
+			len = OBJ_LEN(offsets);
 			DATA_UINT16(buf, len);
-			for(i = 0; i < len; i++) {
-				// printf("compile_init_section() global i=%zu name=%s offset=%d idx=%zu\n", i, globals->name, *(int *)utarray_eltptr(globals->offsets, i), *idx);
-				DATA_UINT32(buf, *(uint32_t *)utarray_eltptr(globals->offsets, i))
+			for(i=0, ptr=(VALUE *)OBJ_DATA_PTR(offsets); i<len; i++, ptr++) {
+				DATA_UINT32(buf, (uint32_t)GET_INT(*ptr));
 			}
 	);
 	assert(*idx == init_section_size); // the init section size calculations must be correct
@@ -1274,8 +1272,7 @@ char *compile(ast_node *node, char *source_file_name, size_t *len) {
 	BYTECODE_HANDLE *bytecode;
 
 	vm_init(&(ctx.vm), 0, NULL);
-	ctx.globals = NULL;
-	// TODO: assert that got memory?
+	ctx.globals = make_hash(1024);
 	ctx.locals_ptr = 0;
 	ctx.stack_depth[0] = 0;
 	ctx.ns[0] = NULL;
