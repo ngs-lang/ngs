@@ -1216,7 +1216,7 @@ AUTOLOAD = ns {
 			}
 			local_debug("name=${name}")
 			idx = resolve_global_variable(name)
-			is_global_variable_defined(idx) returns
+			ll_is_global_variable_defined(idx) returns
 			if name in _global_name_to_autoload_file {
 				local_debug("loading ${NGS_DIR}/autoload/${_global_name_to_autoload_file[name]}.ngs")
 				require("${NGS_DIR}/autoload/${_global_name_to_autoload_file[name]}.ngs")
@@ -1224,7 +1224,7 @@ AUTOLOAD = ns {
 			}
 			local_debug("loading ${NGS_DIR}/autoload/${name}.ngs")
 			val = require("${NGS_DIR}/autoload/${name}.ngs")
-			if not(is_global_variable_defined(idx)) {
+			if not(ll_is_global_variable_defined(idx)) {
 				local_debug("global variable ${name} still not set; setting")
 				set_global_variable(idx, val)
 			}
