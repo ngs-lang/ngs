@@ -18,6 +18,8 @@ F AnsiTerminal(fd_in:Int, fd_out:Int) {
 		}
 	}
 	$(stty -echo -icanon raw 0<${fd_in} 1>${fd_out})
+	# TODO: read all available input on fd_in in order to prevent key presses
+	#       from messing up read_dsr(). Issue #208.
 	fd_out.write("\e[1337n") # iTerm2 proprietary code
 	fd_out.write("\e[5n")    # report device status 
 	version_string = read_dsr()
