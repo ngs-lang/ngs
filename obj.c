@@ -932,7 +932,7 @@ METHOD_RESULT decode_json(VM *vm, VALUE s, VALUE *result) {
 
 	if(jerr != json_tokener_success) {
 		*result = make_normal_type_instance(vm->JsonDecodeFail);
-		set_normal_type_instance_field(*result, make_string("message"), make_string(json_tokener_error_desc(jerr)));
+		set_normal_type_instance_field(*result, make_string("error"), make_string(json_tokener_error_desc(jerr)));
 		set_normal_type_instance_field(*result, make_string("value"), s);
 		// XXX: Leaking abstraction tok->char_offset. Unfortunately I did not see any alternative.
 		set_normal_type_instance_field(*result, make_string("position"), MAKE_INT(tok->char_offset));

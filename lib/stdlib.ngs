@@ -28,9 +28,13 @@ doc Sets object fields from the supplied parameters
 doc %EX - # sets t.a and t.b
 doc %EX - F init(t:MyType, a, b) init(args())
 F init(h:Hash) {
-	args = Arr(h)
-	dst = args.shift()[1]
-	args.each(F(field_name_value) dst.(field_name_value[0]) = field_name_value[1])
+	dst_kv = ll_hash_head(h)
+	dst = dst_kv.ll_hash_entry_val() # dst - value of first Hash entry
+	e = dst_kv.ll_hash_entry_next()
+	while e != null {
+		dst.(e.ll_hash_entry_key()) = e.ll_hash_entry_val()
+		e .= ll_hash_entry_next()
+	}
 	dst
 }
 
@@ -542,7 +546,7 @@ F reduce(e:Eachable1, f:Fun) {
 			ret = FullBox(elt)
 		}
 	})
-	not(ret) throws EmptyEachableFail("e must have at least one element").set('e', e)
+	not(ret) throws EmptyEachableFail("reduce(e:Eachable1, f:Fun): e must have at least one element").set('e', e)
 	ret.get()
 }
 
@@ -621,6 +625,33 @@ F push_all(dst, e:Eachable1) {
 
 TEST a=[1,2]; a.push_all([3,4]); a==[1,2,3,4]
 
+# === Eachable1 ==================================
+
+# Should be low priority (ordered before others) method
+F +(a:Eachable1, b:Eachable1) {
+	guard typeof(a) === typeof(b)
+	t = typeof(a)
+	guard t != Int
+	guard t != Arr
+	guard t != Str
+	t().push_all(a).push_all(b)
+}
+
+TEST Lines(["ab", "cd"]) + Lines(["ef"]) == Lines(["ab", "cd", "ef"])
+
+doc EXPERIMENTAL! Do not use!
+doc Makes sure returned value is of type t. If x is already of type t, returns x.
+doc Otherwise, returns object of type t with single item x.
+doc t - a subtype of Eachable1
+doc %RET - Object of type t
+doc %STATUS - experimental
+F ensure(x, t:Type) {
+	guard t.is_subtype(Eachable1)
+	typeof(x) === t returns x
+	t().push(x)
+}
+
+
 # === ArrLike ====================================
 # TODO [doc]: examples in methods
 {
@@ -643,11 +674,16 @@ TEST a=[1,2]; a.push_all([3,4]); a==[1,2,3,4]
 	ArrLike.inherit(Eachable1)
 }
 
-doc ArrLike constructor
-doc field - name of the field that holds the underlying array
+doc ArrLike constructor.  TODO: consider removing "field" parameter.
+doc field - name of the field that holds the underlying array.
 F init(al:ArrLike, field:Str='items') {
 	al.arr_like_field = field
 	al.(al.arr_like_field) = []
+}
+
+F init(al:ArrLike, arr:Arr) {
+	al.arr_like_field = 'items'
+	al.(al.arr_like_field) = arr
 }
 
 doc Get length of the underlying array.
@@ -668,8 +704,21 @@ F each(al:ArrLike, cb:Fun) al.(al.arr_like_field).each(cb)
 doc Check whether al has any elements.
 F Bool(al:ArrLike) al.(al.arr_like_field).Bool()
 
+doc Get the underlying array
+F Arr(al:ArrLike) al.(al.arr_like_field)
+
 doc Push an element to the underlying array.
-F push(al:ArrLike, val) al.(al.arr_like_field).push(val)
+F push(al:ArrLike, val) {
+	al.(al.arr_like_field).push(val)
+	al
+}
+
+doc Defines collector { ... collect(...) ... } behaviour for ArrLike.
+doc Very similar to collector for Arr. See collector(Arr,Fun).
+F collector(al:ArrLike, body:Fun) {
+	body(F(elt) al.push(elt))
+	al
+}
 
 # === HashLike ===================================
 # TODO [doc]: examples in methods
@@ -789,7 +838,7 @@ F push(hook:Hook, handler:UserDefinedMethod) {
 # TODO: consider optional? try/catch isolation
 doc Runs all handlers passing all args.
 doc args - Arguments to pass to handlers
-doc %RET - Output of the combiner function applied to all handlers' results
+doc %RET - Arr. Results from all the handlers
 F call(hook:Hook, *args) hook.attrs().HashLike.mapv(X(*args))
 
 # === Real =======================================
@@ -881,6 +930,7 @@ doc %EX - Real.Str().echo()  # Outputs: <Type Real>
 F Str(t:Type) "<Type ${t.name}>"
 
 doc Decode (parse) strings such as command line arguments or environment variables to result given type
+doc TODO: Consider renaming to UnArgv or decode_arg
 doc %STATUS - experimental
 F decode(s:Str, t:Type) {
 	t == Any returns s # For ArgvMatcher
@@ -909,6 +959,27 @@ TEST decode("yes", Bool) == true
 TEST decode("1", Bool) == true
 TEST decode("1", Int) == 1
 TEST decode("1", Real) == 1.0
+
+doc %STATUS - experimental
+doc Check whether t is a subtype of maybe_supertype.
+doc Note that if t and maybe_supertype are same type, this method also returns true.
+doc TODO: consider symbol <: as method name.
+doc %RET - Bool
+doc %EX - Lines.is_subtype(Eachable1)  # true
+doc %EX - Eachable.is_subtype(Lines)  # false
+F is_subtype(t:Type, maybe_supertype:Type) {
+	maybe_supertype === Any returns true
+	F kern(t:Type) {
+		t === maybe_supertype returns true
+		t.parents.any(kern)
+	}
+	kern(t)
+}
+
+TEST Lines.is_subtype(Eachable1)
+TEST Lines.is_subtype(Eachable)
+TEST Int.is_subtype(Any)
+TEST Eachable.is_subtype(Lines) == false
 
 # === NormalType =================================
 
@@ -974,6 +1045,9 @@ doc %EX - t2.a = 1
 doc %EX - echo(t1 == t2)  # Outputs: true
 F ==(a:NormalTypeInstance, b:NormalTypeInstance) {
 	typeof(a) != typeof(b) returns false
+	# TODO: more efficient implementation:
+	#       * Provide low level primitive to either access the fields (ll_nti_hash) or iterate them
+	#       * Use it here
 	Hash(a) == Hash(b)
 }
 
@@ -1126,6 +1200,8 @@ AUTOLOAD = ns {
 		table               Table
 	}
 
+	invocation = 0
+
 	doc Called when reading undefined global.
 	doc Implements autoloading.
 	doc Searches in $NGS_DIR/autoload/GLOBAL_NAME.ngs
@@ -1133,15 +1209,23 @@ AUTOLOAD = ns {
 	doc %EX - test("My web server runs") do { .... }  # $NGS_DIR/autoload/test.ngs is automatically loaded.
 	F global_not_found_handler(name:Str) {
 		_lock.acquire() do {
+			i = invocation
+			invocation += 1
+			F local_debug(s:Str) {
+				debug("autoload", "global_not_found_handler() [invocation $i] ${s}")
+			}
+			local_debug("name=${name}")
 			idx = resolve_global_variable(name)
 			is_global_variable_defined(idx) returns
 			if name in _global_name_to_autoload_file {
+				local_debug("loading ${NGS_DIR}/autoload/${_global_name_to_autoload_file[name]}.ngs")
 				require("${NGS_DIR}/autoload/${_global_name_to_autoload_file[name]}.ngs")
 				return
 			}
+			local_debug("loading ${NGS_DIR}/autoload/${name}.ngs")
 			val = require("${NGS_DIR}/autoload/${name}.ngs")
 			if not(is_global_variable_defined(idx)) {
-				# echo("IDX $name $idx")
+				local_debug("global variable ${name} still not set; setting")
 				set_global_variable(idx, val)
 			}
 		}
@@ -1401,6 +1485,7 @@ F finally(body:Fun, cleanup:Fun) {
 
 TEST a=0; {1/1}.finally({a=10}) == 1 and a == 10
 TEST a=0; (try finally() with {1/0} with {a=10} catch(e:DivisionByZero) "OK") == "OK" and a == 10
+TEST F f() { r=Return(); finally({throw r(7)}, {8}) }; f() == 7
 
 # --- Hash ---
 
@@ -1767,7 +1852,7 @@ TEST [null, false, 10, 20].first() == 10
 
 ns {
 	global index
-	no_default = []  # Just a unique object that nobody else can reference
+	no_default = []  # Just a unique object
 	doc Find index of first value that satisfies the predicate.
 	doc TODO: Make it work on anything with each() method.
 	doc In future, will throw exception if element is not found and default is not provided. Now returns null for backwards compatibilty in this case.
@@ -1916,28 +2001,41 @@ F '[]'(arr:Arr, r:NumRange) {
 
 TEST [10,20,30,40][1..-1] == [20,30]
 
-# TODO: something more effective
-doc Find the indexes of elements of the given PredRange.
-doc Throws IndexNotFound if there is no match between the elements of arr and r.
-doc %RET - NumRange with .include_start=true and .include_end=false
-doc %EX - %[a1 a2 b1 b2 c1].indexes(/^a/../^b/)   # <NumRange 1..2 include_start=true include_end=false step=1>
-doc %EX - %[a1 a2 b1 b2 c1].indexes(/^a/.../^b/)  # <NumRange 0..3 include_start=true include_end=false step=1>
-F indexes(arr:Arr, r:PredRange) {
-	r.step != 1 throws NotImplemented("r.step must be 1")
-	start = if r.start is Null {
-		0
-	} else {
-		index(arr, r.start)
+ns {
+	global indexes
+	no_default = []  # Just a unique object
+	# TODO: something more effective
+	doc Find the indexes of elements of the given PredRange.
+	doc Throws IndexNotFound if there is no match between the elements of arr and r.
+	doc %RET - NumRange with .include_start=true and .include_end=false
+	doc %EX - %[a1 a2 b1 b2 c1].indexes(/^a/../^b/)   # <NumRange 1..2 include_start=true include_end=false step=1>
+	doc %EX - %[a1 a2 b1 b2 c1].indexes(/^a/.../^b/)  # <NumRange 0..3 include_start=true include_end=false step=1>
+	F indexes(arr:Arr, r:PredRange, dflt=no_default) {
+		r.step != 1 throws NotImplemented("r.step must be 1")
+		start = if r.start is Null {
+			0
+		} else {
+			index(arr, r.start, dflt=null)
+		}
+		if start is Null {
+			dflt !== no_default returns dflt
+			throw IndexNotFound("Array did not match PredRange (start)", arr, r)
+		}
+		end = if r.end is Null {
+			len(arr)
+		} else {
+			index(arr, r.end, start=start + Int(r.start is not Null and r.include_start.not()), dflt=null)
+		}
+		if end is Null {
+			dflt !== no_default returns dflt
+			throw IndexNotFound("Array did not match PredRange (end)", arr, r)
+		}
+		NumRange(start + Int(r.start is not Null and r.include_start.not()), end + Int(r.include_end))
 	}
-	start is Null throws IndexNotFound("Array did not match PredRange (start)", arr, r)
-	end = if r.end is Null {
-		len(arr)
-	} else {
-		index(arr, r.end, start + Int(r.start is not Null and r.include_start.not()))
-	}
-	end is Null throws IndexNotFound("Array did not match PredRange (end)", arr, r)
-	NumRange(start + Int(r.start is not Null and r.include_start.not()), end + Int(r.include_end))
 }
+
+TEST try { indexes([1,2,3,4], ((X==1)..(X==14))); false } catch(e:IndexNotFound) true
+TEST indexes([1,2,3,4], ((X==1)..(X==14)), []) == []
 
 doc Extract array elements between the element that matches r.start and the element that matches r.end .
 doc Starting and ending elements are optionally included, depending on r.include_start and r.include_end .
@@ -1972,7 +2070,7 @@ doc %EX - # m.before == ['a1']
 doc %EX - # m.after == ['b1', 'b2']
 doc %RET - MatchResult
 F ~(arr:Arr, r:PredRange) {
-	i = try indexes(arr, r)
+	i = indexes(arr, r, dflt=null)
 	i is Null returns MatchFailure(arr, r)
 	ret = MatchSuccess([arr[i]])
 	ret.named = {}
@@ -2034,12 +2132,12 @@ ns {
 		ret_cb
 	}
 
-	doc Find minimnal element under (<)
+	doc Find minimal element under (<)
 	F min(e:Eachable1) most(e, (<))
 	doc Find maximal element under (>)
 	F max(e:Eachable1) most(e, (>))
 
-	doc Find minimnal element under (<)
+	doc Find minimal element under (<)
 	F min(a, b, *rest) [a, b, *rest].min()
 
 	doc Find maximal element under (>)
@@ -2225,13 +2323,7 @@ doc Optionally, wrap x in an array. Return x if it's already Arr.
 doc %RET - Arr
 doc %EX - ensure_array([1,2])  # [1,2]
 doc %EX - ensure_array("aa")   # ["aa"]
-F ensure_array(x) {
-	if x is Arr {
-		x
-	} else {
-		[x]
-	}
-}
+F ensure_array(x) x.ensure(Arr)
 
 TEST ensure_array([1,2]) == [1,2]
 TEST ensure_array("aa") == ["aa"]
@@ -2247,10 +2339,21 @@ F code(a:Arr) "[" + a.map(code).join(', ') + "]"
 # --- Comparisons ---
 
 doc Compare two Hashes. Hashes must have same keys with same values in same order to return true.
+doc Both hashes must not be modified during comparison. This was not tested.
 doc %RET - Bool
 F ==(a:Hash, b:Hash) {
 	len(a) != len(b) returns false
-	Arr(a) == Arr(b)
+	a === b returns true
+
+	e1 = ll_hash_head(a)
+	e2 = ll_hash_head(b)
+	while e1 != null {
+		e1.ll_hash_entry_key() != e2.ll_hash_entry_key() returns false
+		e1.ll_hash_entry_val() != e2.ll_hash_entry_val() returns false
+		e1 .= ll_hash_entry_next()
+		e2 .= ll_hash_entry_next()
+	}
+	true
 }
 
 F subset(smaller:Hash, larger:Hash) {
@@ -2724,6 +2827,16 @@ doc %RET - eb
 doc %EX - Box(null).each(echo)  # No output
 F each(eb:EmptyBox, cb:Fun) eb
 
+# each() allows any()
+TEST Box(5).any(Int)
+TEST EmptyBox().any(Str) == false
+TEST EmptyBox().any(Int) == false
+
+# each() allows none()
+TEST Box(5).none(Int) == false
+TEST Box(5).none(Str)
+TEST EmptyBox().none(Int)
+
 doc Conditionaly convert FullBox to EmptyBox.
 doc predicate - Test function to be called with the value in the FullBox
 doc %RET - Box. fb if predicate succeeds, EmptyBox if not.
@@ -2739,26 +2852,6 @@ doc Do nothing
 doc %RET - eb
 doc %EX - EmptyBox().filter(X>20)  # <EmptyBox>
 F filter(eb:EmptyBox, predicate) eb
-
-doc Test Box value
-doc %EX - Box(5).any(Int)      # true
-doc %EX - Box(5).any(Str)      # false
-doc %EX - EmptyBox().any(Int)  # false
-F any(b:Box, predicate) Bool(b.filter(predicate))
-
-TEST Box(5).any(Int)
-TEST EmptyBox().any(Str) == false
-TEST EmptyBox().any(Int) == false
-
-doc Test Box value
-doc %EX - Box(5).none(Int)      # false
-doc %EX - Box(5).none(Str)      # true
-doc %EX - EmptyBox().none(Int)  # true
-F none(b:Box, predicate) not(b.filter(predicate))
-
-TEST Box(5).none(Int) == false
-TEST Box(5).none(Str)
-TEST EmptyBox().none(Int)
 
 doc Get FullBox value
 doc %RET - Any
@@ -3213,6 +3306,8 @@ CHARS = ns {
 	base64url = ascii_uppercase + ascii_lowercase + digits + '-_'
 	html_escape = {'&': '&amp;', '<': '&lt;', '>': '&gt;'}
 	html_attr_escape = html_escape + {'"': '&quot;', "'": '&#39;'}
+	shell_escape = {'\\': '\\\\', '"': '\\"', "'": "\\'", '&': '\\&'}
+	shell_escape_with_eq = shell_escape + {'=': '\\='}
 
 }
 
@@ -3433,15 +3528,9 @@ F '>'(a:Str, b:Str)
 	c_strcmp(a, b) > 0
 
 doc Split s to strings using end-of-line separators.
-doc UNIX and Windows line endings supported (Windows - not tested yet).
-doc Warning: Max OS <= 9 line separation of CR (\r) is not supported
-doc %EX - "xx\nyy".lines()  # %[xx yy]
-F lines(s:Str) {
-	# Note: Max OS <= 9 line separation of CR (\r) is not supported
-	not(s) returns []
-	s -= MaybeSfx('\n')
-	s.split('\n').map(X - MaybeSfx('\r'))
-}
+doc Same as Lines(s).Arr()
+doc %RET - Arr
+F lines(s:Str) Lines(s).Arr()
 
 doc Split s to strings using end-of-line separators and call cb for each one of the lines.
 doc TODO: More efficient implementation, which would not have temporary array of all lines.
@@ -3455,19 +3544,30 @@ TEST "xx\nyy".lines() == %[xx yy]
 
 doc Prepend each line in a with s
 doc %EX - "a " + ["1", "2"]  # ["a 1", "a 2"]
-F +(s:Str, a:Arr) {
+doc %RET - Type of ret is same as type of a
+F +(s:Str, a:Eachable1) {
+	guard a is not Str
 	guard a.all(Str)
-	a.map(s+X)
+	a.mapo(s+X)
 }
 TEST "a " + ["1", "2"] == ["a 1", "a 2"]
 
 doc Append s to each line in a
 doc %EX - ["1", "2"] + " a"  # ["1 a", "2 a"]
-F +(a:Arr, s:Str) {
+doc %RET - Type of ret is same as type of a
+F +(a:Eachable1, s:Str) {
+	guard a is not Str
 	guard a.all(Str)
-	a.map(X+s)
+	a.mapo(X+s)
 }
 TEST ["1", "2"] + " a" == ["1 a", "2 a"]
+
+doc Map a string, character by character.
+doc %EX - "abcd".mapo(F(x) if x == "b" then "X" else x)  # "aXcd"
+doc %RET - Str
+F mapo(s:Str, mapper:Fun) s.map(mapper).join('')
+
+TEST "abcd".mapo(F(x) if x == "b" then "X" else x) == "aXcd"
 
 doc Truncate a string if necessary so it would have maximum n characters (currently bytes).
 doc s - The string to (possibly) truncate.
@@ -3600,13 +3700,53 @@ F '"$*"'(components:Arr) {
 TEST "a$*{[1,2]}b$*{10..12}c" == ["a1b10c", "a1b11c", "a2b10c", "a2b11c"]
 
 
+# === Stats ========================================
+
+{
+	doc A group of named counters
+	doc h - The underlying Hash
+	doc %EX - s = Stats().push('a').push('a').push('b')
+	doc %EX - s["a"]  # 2
+	doc %EX - s["b"]  # 1
+	doc %EX -
+	doc %EX - a = ["x", "y", "y"]
+	doc %EX - s = Stats(a)
+	doc %EX - s["x"]  # 1
+	doc %EX - s["y"]  # 2
+	type Stats(HashLike)
+}
+
+doc Makes Stats, with each element in the array counted as if push()ed
+doc %EX - Stats(['a', 'a', 'b']).Hash()  # {'a': 2, 'b': 1}
+F init(s:Stats, a:Arr) {
+	init(s)
+	a.each(push(s, X))
+}
+
+doc Increment the named counter
+doc k - the name of the counter to increment
+doc %EX - Stats().push("a").push("a").push("b")["a"]  # 2
+F push(s:Stats, k) {
+	h = s.attrs().HashLike
+	h[k] = h.get(k, 0) + 1
+	s
+}
+
+TEST Stats().push('a').push('a').push('b').Hash() == {'a': 2, 'b': 1}
+TEST Stats(['a', 'a', 'b']).Hash() == {'a': 2, 'b': 1}
+TEST Stats(['a', 'a', 'b'])['a'] == 2
+TEST Stats(['a', 'a', 'b']).a == 2
+
 # === Thread ========================================
 ns {
-	global Thread, ThreadFail, init, join, pmap, ptimes, Str, (.)
+	global Thread, Threads, ThreadFail, init, join, pmap, ptimes, Str, (.)
 	# TODO: consider *args for consistency with other parts of the language
 
 	doc Execution thread. Currently a POSIX thread.
 	type Thread
+
+	doc Threads
+	type Threads(ArrLike)
 
 	# TODO: expose. Not called automatically because some names are
 	#       already unique.
@@ -3673,10 +3813,14 @@ ns {
 	doc threads - Arr of Thread.
 	doc %RET - Arr, the results from threads, in order.
 	F join(threads:Arr) {
-		# warn("Using deprecated join(threads:Arr)")
+		warn("Using deprecated join(threads:Arr)")
 		guard threads and threads.all(Thread)
 		threads.map(join)
 	}
+
+	doc Joins threads.
+	doc %RET - Arr, the results from threads, in order.
+	F join(threads:Threads) threads.map(join)
 
 	doc Joins on thread. Waits for the thread to finish and returns the result from the thread.
 	doc Currently, if a thread throwed an exception, it will be returned as the value.
@@ -3706,11 +3850,11 @@ ns {
 
 	doc Run cb in n parallel threads. Each thread runs one cb but this might change in future (preserving the total n calls to cb).
 	F ptimes(n:Int, cb:Fun) {
-		threads = collector
+		threads = collector/Threads()
 			for(i;n) {
 				collect(Thread(cb))
 			}
-		threads.map(join)
+		threads.join()
 	}
 
 	TEST (1..3).Arr().pmap(X*10) == [10, 20]
@@ -3802,83 +3946,29 @@ F warn(s:Str) {
 }
 
 ns {
-	# THIS CODE IS NOT ORGANIZED PROPERLY, WIP
 	global status
-	fd_pos = null
-	stderr_is_a_tty = null
-	stdout_is_a_tty = null
-	iterm = (ENV.get('TERM_PROGRAM') == 'iTerm.app') and ('NGS_NO_ITERM' not in ENV)
 
-	# TODO: c_lseek(x, 0, "cur") -> make a special function?
-	doc Send status information to standard error.
-	doc Later status output will be treated specially by the shell. It will have suitable representation in the UI.
-	doc Use status() when it's semantically a status - a task that's being done.
-	F status(s:Str) {
-		echo(stdlib_error_fd, "[STATUS ${Time()}] $s")
-	}
+	status_terminal = null
 
-	doc Send status information to standard error. Works only if stderr is a tty.
-	doc Consequtive status() calls will use tty escape codes to overwrite
-	doc previous status() message (one line up, erase to end of line, write new message).
-	doc Show status on a tty
-	F status(s:Str) {
-		if stderr_is_a_tty is Null {
-			stderr_is_a_tty = isatty(stdlib_error_fd)
+	F status(s) {
+		if status_terminal is Null {
+			status_terminal = Terminal(stdlib_error_fd, stdlib_error_fd)
 		}
-		guard stderr_is_a_tty
-
-		new_fd_pos = c_lseek(stdlib_error_fd, 0, "cur")
-		if fd_pos == new_fd_pos {
-			write(stdlib_error_fd, "\e[A\e[0K")
-		}
-		super(s)
-		fd_pos = c_lseek(stdlib_error_fd, 0, "cur")
-		null
+		status_terminal.status(s)
 	}
-
-	# https://www.iterm2.com/documentation-badges.html
-	doc Show status as iTerm2 badge
-	F status(s:Str) {
-		guard iterm
-		if stdout_is_a_tty is Null {
-			stdout_is_a_tty = isatty(1)
-			if stdout_is_a_tty {
-				iterm_fmt = `echo "\\(user.status)" | base64`
-				write(1, "\e]1337;SetBadgeFormat=${iterm_fmt}" + chr(7))
-				exit_hook['undo_iterm_badge'] = {
-					write(1, "\e]1337;SetBadgeFormat=" + chr(7))
-				}
-			}
-		}
-		guard stdout_is_a_tty
-
-		# OSC 1337 ; SetUserVar=name=Base64-encoded value ST
-
-		iterm_var_val = `echo "${Time().Str("[%H:%M:%S]")} $s" | base64`
-		write(1, "\e]1337;SetUserVar=status=${iterm_var_val}\e\\")
-		null
-	}
-
-	### # Info: printf '\033kWINDOW_NAME\033\\' -- set tmux window name (not title)
-	### # Info: printf '\033]2;My Title\033\\' -- same as select-pane -T -- Problematic: default setting in tmux truncates title at 21 characters
-	### doc Set tmux pane title. Works when TMUX environment variable is set and NGS_NO_TMUX environment variable is not set.
-	### doc Use status() when it's semantically a status - a task that's being done.
-	### F status(s:Str) {
-	### 	guard 'TMUX' in ENV
-	### 	guard 'NGS_NO_TMUX' not in ENV
-	### 	write(0, "\ek${s.replace('\e', '?').limit(80, '...')}\e\\")
-	### 	null
-	### }
 }
 
 doc Write message in s to standard error and exit, printing backtrace
-F die(s:Str, exit_code:Int=1) throw FatalError(s, exit_code)
+doc status - converted to exit code using ExitCode()
+F die(s:Str, status=1) throw FatalError(s, status.ExitCode())
+
+doc Exit with given status
+doc status - converted to exit code using ExitCode()
+F exit(status=1) throw NormalExit(status.ExitCode())
 
 doc Write message in s to standard error and exit
-F exit(s:Str, exit_code:Int=1) throw NormalExit(s, exit_code)
-
-doc Exit with given exit_code
-F exit(exit_code:Int=1) throw NormalExit(exit_code)
+doc status - converted to exit code using ExitCode()
+F exit(s:Str, status=1) throw NormalExit(s, status.ExitCode())
 
 # === Path =======================================
 
@@ -4018,7 +4108,7 @@ doc %EX - find_in_path("ls")  # <Path path=/bin/ls>
 F find_in_path(executable_name:Str) {
 	debug("process", "[find_in_path] got ${executable_name}")
 	if "/" in executable_name {
-		debug("[find_in_path] leaving unprocessed ${executable_name}")
+		debug("process", "[find_in_path] leaving unprocessed ${executable_name}")
 		return Path(executable_name)
 	}
 	# TODO: rethink default PATH
@@ -4487,6 +4577,7 @@ F '.='(p:Process, field:Str, v) {
 }
 
 doc Decide whether process finished normally: exit code must be 0.
+doc Note that processes terminated by a signal will have .exit_code null.
 doc p - any process
 doc %RET - bool
 F finished_ok(p:Process) p.exit_code == 0
@@ -4546,8 +4637,8 @@ F init(p:Process, c:Command) {
 	p.exit_code = null
 	p.exit_signal = null
 	p.outputs = {1:null, 2:null}
-	p.reading_threads = []
-	p.writing_threads = []
+	p.reading_threads = Threads()
+	p.writing_threads = Threads()
 	# p.lock = Lock()
 }
 
@@ -4564,40 +4655,68 @@ doc Waits for the process to finish. Checks whether to throw ProcessFail using f
 doc %RET - p
 F wait(p:Process) {
 
+	# TODO: reading/writing threads failure - throw at the end (allowing resources cleanup in this function)
 	p.pid is Null throws InvalidArgument("Can not wait() on Process without PID")
 
 	p.exit_code is Int returns p
 
+	F join_threads(which:Str) {
+		threads = p.(which)
+		results = threads.join()
+		p.(which) = []
+		first_failure = results.first(Failure, null)
+		if first_failure {
+			throw ProcessFail('Error in reading/writing thread').set('process', p).set('cause', first_failure)
+		}
+	}
+
 	debug("process", "[wait] joining reading and writing threads")
-	if p.reading_threads {
-		p.reading_threads.join()
-		p.reading_threads = []
-	}
-	if p.writing_threads {
-		p.writing_threads.join()
-		p.writing_threads = []
-	}
+	%[reading_threads writing_threads].each(join_threads)
+
 
 	debug("process", "[wait] will waitpid(${p.pid})")
 	w = c_waitpid(p.pid)
 	debug("process", "[wait] waitpid(${p.pid}) -> ${w}")
 	p.exit_code = C_WEXITSTATUS(w[1])
 	p.exit_signal = C_WTERMSIG(w[1])
-	not(finished_ok(p)) throws ProcessFail(p)
-	p
+	finished_ok(p) returns p
+	message = collector/Lines() {
+		argv0 = ("'" + try p.command.argv[0] + "'") tor '(with unknown name)'
+		collect("Executing external process ${argv0} failed")
+		collect("Command: ${p.command.argv.map(escape_bash).join(' ') tor '(unavailable)'}")
+		if p.exit_code is not Null {
+			collect("Command exited with code: ${p.exit_code}")
+		}
+		if p.exit_signal is not Null {
+			collect("Command exited with signal: ${p.exit_signal}")
+		}
+	}
+	throw ProcessFail(p).set('message', message)
 }
 
 doc Wait for all processes to finish.
 F wait(cp:CommandsPipeline) cp.processes.each(wait)
 
-doc Convert Process to exit code. Waits for the process to finish and uses its exit code.
-F ExitCode(p:Process) p.wait().exit_code
+doc Convert Process to exit code. Waits for the process to finish and uses its exit code or
+F ExitCode(p:Process) {
+	ec = p.wait().exit_code
+	ec is Int returns ec
+
+	# http://tldp.org/LDP/abs/html/exitcodes.html
+	es = p.exit_signal
+	# echo("ES $es")
+	es is Int returns 128 + es
+
+	# Don't know what to do
+	# error("Failed to convert process to exit code")
+	240
+}
 
 doc Convert CommandsPipeline to exit code. Waits for the processes to finish.
 doc Returns first non-zero exit code. Returns zero if all exit codes are zero.
 F ExitCode(cp:CommandsPipeline) {
 	cp.wait()
-	e = cp.processes.exit_code.first(X != 0, 0)
+	e = cp.processes.map(ExitCode).first(X != 0, 0)
 }
 
 doc Wait for the process to finish and return its standard output.
@@ -4701,39 +4820,35 @@ F '$()'(c:Command) {
 
 	pipes = c.redirects.filter({A.datum is Pipe})
 	debug("process2", "PIPES FROM REDIRECTS $pipes REDIRECTS ${c.redirects} COMMND ${c.Hash()}")
-	child_fds =  pipes.datum.map(child_fd)
-	parent_fds = pipes.datum.map(parent_fd)
+	child_fds = pipes.datum.map(child_fd)
 
 	if pid == 0 {
 		# === Child ===
 		# TODO: See https://stackoverflow.com/questions/13101690/c-get-all-open-file-descriptors
-		debug("process2", "CHILD FDS $child_fds PARENT FDS $parent_fds")
+		child_fds_to_keep_open = child_fds + c.redirects.datum.filter(Int) 
+		debug("process2", "CHILD CLOSING FDS 3 TO 100 EXCEPT FOR ${child_fds_to_keep_open}")
 		for(i=3;i<100;i+=1) {
-			if i not in child_fds {
+			if i not in child_fds_to_keep_open {
 				# XXX child to parent also closed here
-				# echo("CHILD CLOSING $i")
 				# close() throws exception on invalid descriptors, hence c_close()
 				i.c_close()
 			}
 		}
-		parent_fds % c_close
 
 		# Should be after redirects to be able to 2>/dev/null ?
-		if 'cd' in c.options {
-			throw NotImplemented("Changing directory is not implemented yet")
-		}
+		'cd' in c.options throws NotImplemented("Changing directory is not implemented yet")
 
-		# TODO: Maybe support File or some other datum types later?
+		marker_to_open_flags = {'<': 'r', '>': 'w', '>>': 'a'}
+		marker_to_default_fd = {'<': 0, '>': 1, '>>': 1}
+
 		c.redirects.each(F(r:Redir) {
+			if r.datum is not Pipe {
+				target_fd = r.fd.Box().get(marker_to_default_fd[r.marker])
+			}
 			ematch r.datum {
 				Str {
-					target_fd = eswitch r.marker {
-						'<'  { flags = 'r'; r.fd.Box().get(0); }
-						'>'  { flags = 'w'; r.fd.Box().get(1); }
-						'>>' { flags = 'a'; r.fd.Box().get(1); }
-					}
 					debug("process2", "CHILD FILE REDIRECT ${target_fd} -> ${r.datum}")
-					f = File(r.datum).open(flags)
+					f = File(r.datum).open(marker_to_open_flags[r.marker])
 					dup2(f.fd, target_fd)
 				}
 				Pipe {
@@ -4743,51 +4858,41 @@ F '$()'(c:Command) {
 				}
 				Int {
 					debug("process2", "CHILD DESCRIPTOR REDIRECT ${r.fd} -> ${r.datum}")
-					dup2(r.datum, r.fd)
+					dup2(r.datum, target_fd)
 				}
 			}
 		})
 		debug("process", "will execve()")
 		result = c_execve(process.executable.path, argv, ENV.Strs())
 		# TODO: propagate this error to parent, don't know how yet
-		# Bug #180 occurs on next line.
-		#   Does not happen if replaced with 'throw Error("Process")'.
-		#   On Linux two exceptions are shown and there is no crash.
-		throw ProcessFail(process).set('message', "failed to execve()")
+		error("Process ${c_getpid()} (fork child) failed to execve()")
+		c_exit(250)
 	}
 
 	if pid > 0 {
 		# === Parent ===
 		process.pid = pid
-		# XXX
-		child_fds % c_close
+		child_fds.each(close)
 		debug("process", "Reading all output of the child process")
 		# XXX: maybe make it chunk based with c_poll() and single thread
 		# TODO: some error handling inside these threads and after joining them
-		process.reading_threads = c.redirects.filter(F(r:Redir) r.datum is CollectingPipeFromChildToParentProcess).map(F(r:Redir) {
+		process.reading_threads = c.redirects.filter({'datum': CollectingPipeFromChildToParentProcess}).map(F(r:Redir) {
 			Thread("process-${process.pid}-output-fd-${r.fd}-reader", {
-				debug("process2", "READING ${r.datum}")
-				try {
+				Result({
+					debug("process2", "READING ${r.datum}")
 					process.outputs[r.fd] = r.datum.read()
-				} catch(e) {
-					debug("process2", "READ FAILED: $e")
-				}
-				debug("process2", "READ <<${process.outputs[r.fd].limit(100, '...').SafeStr()}>>")
-				try {
+					debug("process2", "READ <<${process.outputs[r.fd].limit(100, '...').SafeStr()}>>")
 					debug("process2", "DATUM *** ${r.datum}")
 					r.datum.close_reading_end()
 					debug("process2", "CLOSED READING END OF PIPE, REDIRECT ${r}")
-				} catch(e) {
-					debug("process2", "CLOSING READING END OF PIPE FAILED: $e")
-				}
-				debug("process", "Read all output of the child process for descriptor ${r.fd}, closing reading/parent end")
+					debug("process", "Read all output of the child process for descriptor ${r.fd}, closing reading/parent end")
+					null
+				})
 			})
-		})
+		}).Threads()
 	}
 
-	# TODO: pid < 0 => throw exception with errno
-
-	debug("process2", "DOLLAR() returns process ${process.Hash()}")
+	debug("process2", "\$() returns process ${process.Hash()}")
 	process
 }
 
@@ -4868,7 +4973,10 @@ F '$()'(cp:CommandsPipeline) {
 
 	if not(cp.options.get('top_level')) and cp.pipe_out is Null {
 		do_redir_1 = cp.commands[-1].redirects.none(F(r) {
-			r.datum == false and r.marker == '>' and r.fd in [null, 1]
+			# >${false} OR 1>${false}
+			# 1>? OR 1<?
+			(r.datum == false and r.marker == '>' and r.fd in [null, 1]) or
+			r.fd == 1
 		})
 		if do_redir_1 {
 			cp.commands[-1].redirects.unshift(Redir(1, null, CollectingPipeFromChildToParentProcess()))
@@ -4985,7 +5093,7 @@ F kill(cp:CommandsPipeline, sig:Int=SIGNALS.TERM) {
 	cp.processes.map(kill(X, sig))
 }
 
-TEST counter = 0; p=$(sleep 5&); if p.processes[0].stdout == null counter +=1; p.kill(); if p.Str() == "" counter+=1; counter == 2
+TEST counter = 0; p=$(sleep 5&); if p.processes[0].stdout == null counter +=1; p.kill(); try p.wait() catch(e:ProcessFail) true
 TEST p=$(|cat); p.write("abc"); p.close(); p.Str() == "abc"
 TEST p=$(|cat|); p.write("abc"); p.read(3) == "abc"
 TEST $(echo abc | cat).Str().starts_with("abc")
@@ -5324,7 +5432,7 @@ doc %EX - "abcde" - Pfx("xy")  # InvalidArgument exception
 doc %EX - "abcde" - MaybePfx("xy")  # "abcde"
 F -(s:Str, pfx:Pfx) {
 	s.starts_with(pfx.val) returns s[pfx.val.len()..null]
-	pfx is MustPfx throws InvalidArgument("Given string '$s' does not start with prefix '$pfx.val'").set('s', s).set('pfx', pfx)
+	pfx is MustPfx throws InvalidArgument("Given string '$s' does not start with prefix '${pfx.val}'").set('s', s).set('pfx', pfx)
 	s
 }
 
@@ -5342,13 +5450,31 @@ doc %EX - "abcde" - Sfx("xy")  # InvalidArgument exception
 doc %EX - "abcde" - MaybeSfx("xy")  # "abcde"
 F -(s:Str, sfx:Sfx) {
 	s.ends_with(sfx.val) returns s[0 .. (s.len() - sfx.val.len())]
-	sfx is MustSfx throws InvalidArgument("Given string '$s' does not end with suffix '$sfx.val'").set('s', s).set('sfx', sfx)
+	sfx is MustSfx throws InvalidArgument("Given string '$s' does not end with suffix '${sfx.val}'").set('s', s).set('sfx', sfx)
 	s
 }
 
 TEST "abc" - Sfx("c") == "ab"
 TEST try "abc" - Sfx("cd") catch(mf:InvalidArgument) true
 TEST "abc" - MaybeSfx("cd") == "abc"
+
+doc Return string without the infix. Throws InvalidArgument if ifx is MustIfx but s does not contain it.
+doc s - original string
+doc ifx - infix to get rid of
+doc %RET - s without ifx
+doc %EX - "abcde" - Ifx("bc")  # "ade"
+doc %EX - "abcde" - Ifx("xy")  # InvalidArgument exception
+doc %EX - "abcde" - MaybeIfx("xy")  # "abcde"
+F -(s:Str, ifx:Ifx) {
+	p = s.pos(ifx.val)
+	p is not Null returns s[0 .. p] + s[(p + ifx.val.len()) .. s.len()]
+	ifx is MustIfx throws InvalidArgument("Given string '$s' does not contain infix '${ifx.val}'").set('s', s).set('ifx', ifx)
+	s
+}
+
+TEST "abcde" - Ifx("bc") == "ade"
+TEST try "abcde" - Ifx("xy") catch(mf:InvalidArgument) true
+TEST "abcde" - MaybeIfx("xy") == "abcde"
 
 doc Check whether s starts with pfx.
 doc %EX - "abcde" ~ Pfx("ab")  # <MatchSuccess matches=['ab'] before= after=cde>
@@ -5362,6 +5488,8 @@ F ~(s:Str, pfx:Pfx) {
 	ret
 }
 
+doc Check whether s contains i. Same as s ~ i.val
+doc %RET - MatchResult
 F ~(s:Str, i:Ifx) s ~ i.val
 
 doc Check whether s ends with sfx.
@@ -5624,11 +5752,46 @@ F digest(a:Arr, chunk_size:Int, marker:Str='(...)') {
 
 doc Do nothing. Catch-all for exception_specific_message().
 doc %RET - EmptyBox
-F exception_specific_message(e:Exception) EmptyBox()
+F exception_specific_message(e:Exception) null
 
 doc Format GlobalNotFound exception message.
 doc %RET - FullBox with Str
-F exception_specific_message(gnf:GlobalNotFound) FullBox("Global variable '${gnf.name}' not found")
+F exception_specific_message(gnf:GlobalNotFound) "Global variable '${gnf.name}' not found"
+
+doc Format MethodNotFound exception message.
+doc %STATUS - WIP
+F exception_specific_message(mnf:MethodNotFound) {
+	methods_names = mnf.callable.Arr().map(attrs).get('name')
+	mn = if methods_names and methods_names.all(X == methods_names[0]) {
+		methods_names[0]
+	} else {
+		'(method name unavailable, maybe anonymous)'
+	}
+	Lines([
+		"The arguments did not match any of the methods' parameters."
+		"MultiMethod name: ${mn}"
+		"Called with arguments' types: ${mnf.args.map(typeof).name.join(', ')}"
+		"Please check that you pass the right number of arguments."
+		"Please check that arguments' types are matching methods' parameters."
+	])
+}
+
+# TODO: show relevant value part
+doc Format JsonDecodeFail exception message.
+F exception_specific_message(jdf:JsonDecodeFail) {
+	Lines([
+		"Failed to parse JSON"
+		"Error message: ${jdf.error}"
+		"Error position in given JSON: ${jdf.position}"
+		"(TODO: show relevant value part)"
+	])
+}
+
+doc Format KeyNotFound exception message for ENV global variable.
+F exception_specific_message(knf:KeyNotFound) {
+	guard knf.container === ENV
+	"Environment variable '${knf.key}' is not set."
+}
 
 doc Don't use, subject to change, including name
 doc %STATUS - experimental
@@ -5644,50 +5807,51 @@ F SafeStr(val) {
 # TODO: in-depth inspect()
 
 doc Inspect any value.
-doc %RET - Arr with one element, Str
-F inspect(val) [SafeStr(val)]
+doc %RET - Lines with exactly one line
+F inspect(val) Lines([SafeStr(val)])
 
 doc Inspect boolean.
-doc %RET - Arr with one element, Str
-F inspect(b:Bool) ["Bool: $b"]
+doc %RET - Lines with exactly one line
+F inspect(b:Bool) Lines(["Bool: $b"])
 
 # F inspect(mm:MultiMethod) ["MultiMethod "] + mm.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"})
 doc Inspect MultiMethod
-doc %RET - Arr of Str
-F inspect(mm:MultiMethod) ["MultiMethod", "  Methods"] + ("    " + mm.Arr().inspect())
+doc %RET - Lines
+F inspect(mm:MultiMethod) Lines(["MultiMethod", "  Methods"]) + ("    " + mm.Arr().inspect())
 
 doc Inspect Real
-doc %RET - Arr with one element, Str
-F inspect(r:Real) ["Real: $r"]
+doc %RET - Lines with exactly one line
+F inspect(r:Real) Lines(["Real: $r"])
 
 doc Inspect Int
-doc %RET - Arr with one element, Str
-F inspect(i:Int) ["Int: $i"]
+doc %RET - Lines with exactly one line
+F inspect(i:Int) Lines(["Int: $i"])
 
 doc Inspect Str
-doc %RET - Arr with one element, Str
-F inspect(s:Str) ["String(${s.len()}): ${SafeStr(s)}"]
+doc %RET - Lines
+F inspect(s:Str) Lines(["String(${s.len()}): ${SafeStr(s)}"])
 
 doc Inspect Arr
-doc %RET - Arr of Str
-F inspect(a:Arr) ["Array of size ${a.len()}"] + a.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"})
+doc %RET - Lines
+F inspect(a:Arr) Lines(["Array of size ${a.len()}"] + a.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
 
 doc Inspect Hash
-doc %RET - Arr of Str
-F inspect(h:Hash) ["Hash of size ${h.len()}"] + h.map({"  [${SafeStr(A)}] = ${SafeStr(B)}"})
+doc %RET - Lines
+F inspect(h:Hash) Lines(["Hash of size ${h.len()}"] + h.map({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
 
 doc Inspect Process
-doc %RET - Arr of Str
+doc %RET - Lines
 F inspect(p:Process) {
 	# XXX: Are there any platforms with different convention?
 	outputs_names = {1: 'stdout', 2: 'stderr'}
-	collector {
+	collector/Lines() {
 		collect("Process")
 		collect("  command = ${p.command}")
 		collect("  pid = ${p.pid}")
 		collect("  exit_code = ${p.exit_code}")
 		collect("  exit_signal = ${p.exit_signal}")
 		p.outputs.each(F(k, val) {
+			# Replacing 'lines' with 'Lines' does not work. Gives "(Failed to inspect)".
 			val_lines = val.Box().map(lines).get([])
 			name = ', ' +? outputs_names.get(k, '')
 			collect("  output on fd ${k}${name} (${val_lines.len()} lines):")
@@ -5696,12 +5860,14 @@ F inspect(p:Process) {
 	}
 }
 
+doc Inspect CommandsPipeline
+doc %RET - Lines
 F inspect(cp:CommandsPipeline) {
 	F p(idx:Int) {
 		cp.pipes[idx] is Null returns []
 		("  pipe[$idx]: " + inspect(cp.pipes[idx]))
 	}
-	collector {
+	collector/Lines() {
 		collect("CommandsPipeline")
 		if cp.options {
 			("  options: " + inspect(cp.options)) % collect
@@ -5722,53 +5888,56 @@ doc level - indentation level to use (two spaces for each level)
 doc parent - parent exception if print_exception() was called for .cause exception
 F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 
-	F err(message:Str) error("$pfx$message")
+	F err(message) error(pfx + message)
 
 	pfx = "  " * level
 	h = Hash(e)
 
+	F esm() {
+		try {
+			exception_specific_message(e)
+		} catch(e) {
+			guard not(ENV.get('NGS_THROW_ESM'))
+			'(failed to get friendly exception message)'
+		}
+	}
+
+	m =
+		h.get('message') or
+		esm() or
+		Lines(["Unfortunately the exception had no message.", "Exception type might give a hint: ${e.typeof().name}"])
+
+	m .= ensure(Lines)
+
+	m.framed().err()
+
 	err("Exception of type ${e.typeof().name} occurred")
-
-	exception_specific_message(e).each(err)
-
-	h.Box('message').map("Message: $X").each(err)
 
 	info_keys = h.keys() - %[message backtrace cause]
 
-	F print_info(k) {
-		out = inspect(h[k]) tor ["Info: $k - (Failed to inspect)"]
-		assert(out is Arr)
-		assert(out.len() > 0)
-		out .= map(limit(X, 1024, '...'))
+	info_keys.each(F (k) {
+		out = inspect(h[k]) tor Lines(["Info: $k - (Failed to inspect)"])
+		if (out is not Lines) or not(out) {
+			out = Lines(["Info: $k - (Failed to inspect, no inspection info)"])
+		}
+		out .= mapo(limit(X, 128, '...'))
 		if out.len() == 1 {
 			err("Info: $k = ${out[0]}")
 		} else {
 			err("Info: $k:")
-			("  " + out) % err
+			err("  " + out)
 		}
-
-		# err("Info: $k is hash of size ${h[k].len()}")
-	}
-
-	info_keys % print_info
+	})
 
 	if 'backtrace' in h {
 
 		parent_frames = parent.backtrace.frames tor []
 
 		h.backtrace.frames.each_idx_val(F(idx, frame) {
-
 			# Don't print frames that overlap with parent exception
 			frame.ip == (try parent_frames[idx].ip) returns
-
 			l = resolve_instruction_pointer(frame.ip)
 			closure = " [in ${frame.closure.attrs().name}]" tor ''
-			try {
-				doc = frame.closure.attrs().doc
-				if doc is Str {
-					closure = "$closure (${doc.limit(50, '...')})"
-				}
-			}
 			err("Frame $idx: ${l.file}:${l.first_line}:${l.first_column} - ${l.last_line}:${l.last_column}$closure")
 		})
 	}
@@ -5779,8 +5948,12 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 			print_exception(e.cause, level+1, e)
 		} else {
 			err("  (WARNING: cause is not Exception)")
-			("  " + inspect(e.cause)).each(err)
+			err("  " + inspect(e.cause))
 		}
+	}
+
+	if level == 0 {
+		echo(stdlib_error_fd, m.framed())
 	}
 
 }
@@ -5793,7 +5966,6 @@ exit_hook = Hook()
 	#       user-defined cleanups.
 	exit_hook['print_exception'] = F(exit:Exit) {
 		exit.exceptions.reject(NormalExit).each(F(e) {
-			error("--- Exception ---")
 			print_exception(e)
 		})
 	}
@@ -5879,6 +6051,7 @@ F time(cb:Fun) {
 	(finish[0]* 1000000 + finish[1]) - (start[0] * 1000000 + start[1])
 }
 
+F Bool(t:Time) true
 
 # === Random =====================================
 # This is _not_ crypto safe random!
@@ -6020,10 +6193,16 @@ F encode_hex(s:Str) {
 
 TEST encode_hex('ab') == '6162'
 
+doc Decodes each two hex digits into a character (byte). Reverse of encode_hex()
+doc %RET - Str
 F decode_hex(s:Str) {
-	guard len(s) == 2
-	chr(Int(s, 16))
+	len(s) % 2 != 0 throws InvalidArgument("decode_hex() input string must contain even number of bytes")
+	l = len(s) / 2
+	l.map(F(i) chr(Int(s[i*2..(i*2+2)], 16))).join('')
 }
+
+TEST decode_hex("010203") == chr(1) + chr(2) + chr(3)
+TEST try decode_hex("0102034") catch(e:InvalidArgument) true
 
 STDLIB_INVALID_URI_CHAR_RE = /[^-a-zA-Z0-9_.!~*'()]/
 #'
@@ -6058,7 +6237,7 @@ TEST decode_uri_component("ab%2Bc%25") == "ab+c%"
 doc Encodes HTML. Escapes &, < and > .
 doc %RET - Str
 doc %EX - "ab>+c%&'".encode_html()  # "ab&gt;+c%&amp;'"
-F encode_html(s:Str) s.map(CHARS::html_escape.get(X, X)).join('')
+F encode_html(s:Str) s.mapo(CHARS::html_escape.get(X, X))
 
 TEST "ab>+c%&'".encode_html() == "ab&gt;+c%&amp;'"
 
@@ -6066,7 +6245,7 @@ TEST "ab>+c%&'".encode_html() == "ab&gt;+c%&amp;'"
 doc Encodes HTML attribute. Escapes &, <, >, " and ' .
 doc %RET - Str
 doc %EX - "ab>+c%&'".encode_html_attr()  # "ab&gt;+c%&amp;&#39;"
-F encode_html_attr(s:Str) s.map(CHARS::html_attr_escape.get(X, X)).join('')
+F encode_html_attr(s:Str) s.mapo(CHARS::html_attr_escape.get(X, X))
 
 TEST "ab>+c%&'".encode_html_attr() == "ab&gt;+c%&amp;&#39;"
 
@@ -6131,6 +6310,23 @@ F write(f:File, s:Str) {
 	write(if f.fd is Null then f.path else f.fd, s)
 }
 
+# === Misc =======================================
+
+doc %STATUS - experimental
+F encode_base64(s:Str, wrap:Int=0) {
+	guard OS.posix
+	`echo -n $s | base64 -w $wrap`
+}
+
+doc %STATUS - experimental
+F encode_base64(s:Str, wrap:Int=0) {
+	guard OS.darwin
+	`echo -n $s | base64 -b $wrap`
+}
+
+doc %STATUS - experimental
+F decode_base64(s:Str) `echo $s | base64 --decode`
+
 # === Networking =================================
 
 ### F read(s:Str) {
@@ -6162,6 +6358,8 @@ F cached(cb:Fun) {
 		result.get()
 	}
 }
+
+# === Doc ========================================
 
 doc %STATUS - experimental
 doc %AUTO - \name attr1=val1 attr2=val2 ... [ ... ]

@@ -2,7 +2,10 @@
 \#*
 .#*
 *~
+.idea
+.vscode
 build
+clion-build
 node_modules
 small-poc/ssl
 TAGS

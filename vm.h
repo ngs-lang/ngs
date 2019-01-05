@@ -1,7 +1,5 @@
 #ifndef VM_H
 #define VM_H
-#include <utarray.h>
-#include <uthash.h>
 #include "ngs.h"
 #include "obj.h"
 
@@ -78,18 +76,6 @@ typedef int32_t JUMP_OFFSET;
 
 typedef size_t IP;
 
-typedef struct var_index {
-	char *name;
-	GLOBAL_VAR_INDEX index;
-	UT_hash_handle hh;
-} VAR_INDEX;
-
-// WIP
-typedef struct interned_string {
-	char *str;
-	UT_hash_handle hh;
-} INTERNED_STRING;
-
 typedef struct {
 	IP catch_ip;
 	size_t saved_stack_ptr;
@@ -149,7 +135,7 @@ struct VM {
 	size_t bytecode_len;
 	VALUE *globals;
 	size_t globals_len;
-	VAR_INDEX *globals_indexes;
+	VALUE globals_indexes;
 	char **globals_names;
 
 	VM_REGION *regions;
@@ -367,7 +353,6 @@ void ctx_init(CTX *ctx);
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found);
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len);
 
-static const UT_icd ut_value_icd _UNUSED_ = {sizeof(VALUE),NULL,NULL,NULL};
 // typedef int VM_INT;
 void set_global(VM *vm, const char *name, VALUE v);
 METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result);

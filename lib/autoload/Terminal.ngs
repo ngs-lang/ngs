@@ -1,0 +1,55 @@
+# Should typically be up to two
+# * stdin:stdout
+# * stdin:stderr
+STDLIB_TERMINALS = {}
+
+{
+	# TODO: tests
+	doc %STATUS - experimental
+	type Terminal
+}
+
+# TODO: more flexible, correct and extensible terminal type selection
+F Terminal(fd_in:Int, fd_out:Int) {
+	debug("term", "Terminal() choose NoTerminal()")
+	k = "${fd_in}:${fd_out}"
+	k in STDLIB_TERMINALS returns STDLIB_TERMINALS[k]
+	STDLIB_TERMINALS[k] = NoTerminal(fd_in, fd_out)
+}
+
+F Terminal(fd_in:Int, fd_out:Int) {
+	guard isatty(fd_in) and isatty(fd_out)
+	debug("term", "Terminal() choose AnsiTerminal()")
+	k = "${fd_in}:${fd_out}"
+	k in STDLIB_TERMINALS returns STDLIB_TERMINALS[k]
+	STDLIB_TERMINALS[k] = AnsiTerminal(fd_in, fd_out)
+}
+
+F Terminal() Terminal(0,1)
+
+F init(t:Terminal, fd_in:Int, fd_out:Int) {
+	t.term = null
+	t.ver = null
+	t.fd_in = fd_in
+	t.fd_out = fd_out
+}
+
+F init(t:Terminal) t.init(0, 1)
+
+F read(t:Terminal, count:Int=1) t.fd_in.read(count)
+
+F write(t:Terminal, s:Str) {
+	t.fd_out.write(s)
+	t
+}
+
+F echo(t:Terminal, s:Str) {
+	t.fd_out.write(s)
+	t.fd_out.write(STDLIB_EOL)
+	t
+}
+
+F status(t:Terminal, s:Str) t.echo("[STATUS ${Time()}] $s")
+
+F Bool(t:Terminal) true
+F ExitCode(t:Terminal) t.Bool().ExitCode()

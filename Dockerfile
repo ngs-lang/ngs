@@ -1,6 +1,6 @@
 FROM debian:jessie
 
-RUN apt-get update && apt-get -y install cmake pkg-config build-essential devscripts uthash-dev libgc-dev libffi-dev libjson-c-dev peg libpcre3-dev pandoc
+RUN apt-get update && apt-get -y install cmake pkg-config build-essential devscripts libgc-dev libffi-dev libjson-c-dev peg libpcre3-dev pandoc
 
 ADD . /src
 WORKDIR /src

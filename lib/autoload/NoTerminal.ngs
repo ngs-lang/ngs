@@ -1,0 +1,8 @@
+{
+	doc Represents output not connected to a terminal but to
+	doc a file or a pipe.
+	doc %STATUS - experimental
+	type NoTerminal(Terminal)
+}
+
+F Bool(t:NoTerminal) false

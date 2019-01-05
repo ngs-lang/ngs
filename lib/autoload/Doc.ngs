@@ -153,9 +153,9 @@ ns {
 	}
 
 	doc Inspect document node
-	doc %RET - Arr of Str
+	doc %RET - Lines
 	F inspect(n:Node, levels=2) {
-		collector {
+		collector/Lines() {
 			c = collect
 			c("Doc::" + n.typeof().name + (if 'name' in n then " ${n.name}" else "")) # later - maybe typeof can return namespace name?
 

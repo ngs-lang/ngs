@@ -1,0 +1,30 @@
+doc WARNING: incomplete and not properly tested.
+doc TODO: escape unreadable characters?
+doc Escapes single argument for bash.
+doc options - "escape_equals": Bool
+doc %STATUS - experimental
+doc %RET - Str
+F escape_bash(s:Str, options:Hash={}) {
+	has_space = ' ' in s
+	has_backslash = '\\' in s
+	has_single_quote = "'" in s
+	has_double_quote = '"' in s
+
+	do_esacpe_equals = options.get('escape_equals') and '=' in s
+
+	# Simple case: space but no other special characters to quote
+	if has_space {
+		if not(has_backslash) {
+			not(has_single_quote) returns "'" + s + "'"
+			not(has_double_quote) returns '"' + s + '"'
+		}
+	}
+
+	escaping = if options.get('escape_equals') {
+		CHARS::shell_escape_with_eq
+	} else {
+		CHARS::shell_escape
+	}
+
+	s.mapo(escaping.get(X, X))
+}

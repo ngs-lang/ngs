@@ -1,0 +1,49 @@
+{
+	doc %STATUS - experimental
+	type AnsiTerminal(Terminal)
+
+	# Load possible subtypes, which define AnsiTerminal with appropriate guards
+	# so that AnsiTerminal returns the most appropriate subtype of AnsiTerminal
+	ItermTerminal
+}
+
+F init(at:AnsiTerminal, *args) {
+	super(at, *args)
+	at._fd_out_pos = null
+}
+
+F write_csi(at:AnsiTerminal) at.write("\e[")
+F write_csi(at:AnsiTerminal, s:Str) at.write("\e[${s}")
+
+F write_st(at:AnsiTerminal) at.write("\e\\")
+
+# https://en.wikipedia.org/wiki/ANSI_escape_code#Examples
+# "Some terminals require the DEC sequences ESC 7 / ESC 8 instead which is more widely supported."
+# XXX consider moving to ANSI codes
+F save_cursor(at:AnsiTerminal) at.write("\e7")
+F restore_cursor(at:AnsiTerminal) at.write("\e8")
+F set_scroll_area(at:AnsiTerminal, start:Int, end:Int) at.write_csi("${start};${end}r")
+F move_cursor_up(at:AnsiTerminal, n:Int=1) at.write_csi("${n}A")
+F erase_in_line(at:AnsiTerminal, n:Int=0) at.write_csi("${n}K")
+
+
+# See apt/apt-pkg/install-progress.cc
+doc %STATUS - experimental
+F arrange_scroll_area(at:AnsiTerminal, start:Int, end:Int) {
+	at.write("\n")        # avoid glitch
+	at.save_cursor().set_scroll_area(start, end).restore_cursor().move_cursor_up(1)
+	# TODO: flush
+	# TODO: ioctl(pty, TIOCSWINSZ, (char *)&win);
+	null
+}
+
+F status(at:AnsiTerminal, s:Str) {
+	# TODO maybe: F pos(...) c_lseek(..., 0, "cur")
+	new_fd_out_pos = c_lseek(at.fd_out, 0, "cur")
+	if at._fd_out_pos == new_fd_out_pos {
+		at.move_cursor_up().erase_in_line()
+	}
+	super(at, s)
+	at._fd_out_pos = c_lseek(at.fd_out, 0, "cur")
+	null
+}

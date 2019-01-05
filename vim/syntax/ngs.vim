@@ -32,16 +32,19 @@ syn keyword ngsType FileIOFail StatFail
 syn keyword ngsType Hook
 syn keyword ngsType IndexNotFound FieldNotFound InvalidParameter NoNext
 syn keyword ngsType InvalidArgument DivisionByZero
-syn keyword ngsType Lock ReentrantLock Pthread PthreadAttr Thread
+syn keyword ngsType JsonDecodeFail
+syn keyword ngsType Lines
+syn keyword ngsType Lock ReentrantLock Pthread PthreadAttr Thread Threads
 syn keyword ngsType LockFail
+syn keyword ngsType MatchResult MatchSuccess MatchFailure MatchFail SubSeq Pfx MaybePfx MustPfx Ifx MaybeIfx MustIfx Sfx MaybeSfx MustSfx
+syn keyword ngsType NormalExit
+syn keyword ngsType Props
 syn keyword ngsType RegExp RegExpCompileFail
 syn keyword ngsType Redir
 syn keyword ngsType Result Success Failure ResultFail
 syn keyword ngsType Return
 syn keyword ngsType Renderer ItemsContainer ItemsVerticalContainer ItemsHorizontalContainer
-syn keyword ngsType MatchResult MatchSuccess MatchFailure MatchFail SubSeq Pfx MaybePfx MustPfx Ifx MaybeIfx MustIfx Sfx MaybeSfx MustSfx
-syn keyword ngsType Props
-syn keyword ngsType Time TimeFail
+syn keyword ngsType ThreadFail Time TimeFail
 syn keyword ngsTodo TODO FIXME XXX NOTE
 syn keyword ngsConstant true false null
 syn keyword ngsPredefinedVariable ARGV ARGV0 ENV ORIG_ARGV _exports VERSION
@@ -66,9 +69,9 @@ syn keyword ngsFunction bootstrap bootstrap_debug bootstrap_exception_catch_wrap
 
 " stdlib functions
 syn keyword ngsFunction abs Arg Argv access acquire all any assert basename cached chr close close_reading_end close_writing_end cmp code compare count
-syn keyword ngsFunction dflt digest drop dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val eachk eachv ends_with error exit_hook
+syn keyword ngsFunction dflt digest drop dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val eachk eachv ends_with error exit exit_hook
 syn keyword ngsFunction debug die ensure_array filter filterk filterv finally find_in_path finished_ok first flatten fstat global_not_found_handler group has
-syn keyword ngsFunction identity in index indexes inspect intersperse join kill len limit lines log lstat map mapo map_idx_key_val map_idx_val mapk mapv mapkv max merge_sorted min
+syn keyword ngsFunction identity in index indexes inspect intersperse is_subtype join kill len limit lines log lstat map mapo map_idx_key_val map_idx_val mapk mapv mapkv max merge_sorted min
 syn keyword ngsFunction next none nop only open ord partial partial_tail partition peek pmap pos ptimes publish rand read reduce reject rejectk rejectv release replace reverse
 syn keyword ngsFunction set sort sortk split srand starts_with stat status store StrParams Strs subscribe subset sum take tap test the_one uniq unshift update wait warn without write zip
 

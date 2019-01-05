@@ -4,7 +4,6 @@ Priority: optional
 Maintainer: Ilya Sher <ilya.sher@coding-knight.com>
 Build-Depends:
  make,
- uthash-dev,
  libgc-dev,
  libffi-dev,
  libjson-c-dev,

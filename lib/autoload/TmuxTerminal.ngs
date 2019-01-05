@@ -1,0 +1,15 @@
+{
+	doc %STATUS - experimental
+	type TmuxTerminal(AnsiTerminal)
+}
+
+F AnsiTerminal(*args) {
+	guard 'NGS_NO_TMUX' not in ENV
+	# XXX: How to distingush between tmux and screen?
+	#      Locally TMUX environment variable should be enough.
+	#      How about remote (local tmux connected to a remote using SSH)?
+	#      Do we care?
+	guard ENV.get('TERM') == 'screen'
+	TmuxTerminal(*args)
+}
+

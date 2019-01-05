@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <sys/poll.h>
 #include <time.h>
+#include <string.h>
 
 // GETTIMEOFDAY(2)
 #include <sys/time.h>
@@ -17,7 +18,7 @@
 
 #ifdef __APPLE__
 #include "fmemopen.h"
-#endif 
+#endif
 
 // OPEN(2), LSEEK(2), WAIT(2)
 // #define _POSIX_SOURCE
@@ -885,6 +886,14 @@ METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 	yyctx.lines = 0;
 	yyctx.lines_postions[0] = 0;
 	// printf("PT 1 %p\n", OBJ_DATA_PTR(argv[0]));
+
+	if(OBJ_LEN(argv[0]) == 0) {
+		VALUE exc;
+		exc = make_normal_type_instance(vm->CompileFail);
+		set_normal_type_instance_field(exc, make_string("message"), make_string("Empty string was passed as input to compile(). Trying to run an empty file?"));
+		THROW_EXCEPTION_INSTANCE(exc);
+	}
+
 	yyctx.input_file = fmemopen(OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]), "r");
 	parse_ok = yyparse(&yyctx);
 	if(!parse_ok) {
@@ -1274,20 +1283,27 @@ METHOD_RESULT native_c_execve METHOD_PARAMS {
 }
 
 METHOD_RESULT native_C_WEXITSTATUS METHOD_PARAMS {
-	int status = GET_INT(argv[0]);
-	METHOD_RETURN(MAKE_INT(WEXITSTATUS(status)));
+	int status = (int) GET_INT(argv[0]);
+	if(WIFEXITED(status)) {
+		METHOD_RETURN(MAKE_INT(WEXITSTATUS(status)));
+	} else {
+		METHOD_RETURN(MAKE_NULL);
 }
+	}
 METHOD_RESULT native_C_WTERMSIG METHOD_PARAMS {
-	int status = GET_INT(argv[0]);
-	METHOD_RETURN(MAKE_INT(WTERMSIG(status)));
+	int status = (int) GET_INT(argv[0]);
+	if(WIFSIGNALED(status)) {
+		METHOD_RETURN(MAKE_INT(WTERMSIG(status)));
+	} else {
+		METHOD_RETURN(MAKE_NULL);
+	}
 }
 
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
-	VAR_INDEX *var;
-	HASH_FIND(hh, vm->globals_indexes, name, name_len, var);
-	if(var) {
+	HASH_OBJECT_ENTRY *e = get_hash_key(vm->globals_indexes, make_string_of_len(name, name_len));
+	if(e) {
 		*found = 1;
-		return var->index;
+		return (GLOBAL_VAR_INDEX)GET_INT(e->val);
 	}
 	*found = 0;
 	return 0;
@@ -2007,8 +2023,9 @@ METHOD_RESULT native_MultiMethod_arr METHOD_PARAMS {
 }
 
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
-	VAR_INDEX *var;
 	GLOBAL_VAR_INDEX index;
+	VALUE name_val;
+	char *name_dup;
 	int found;
 	DEBUG_VM_RUN("entering get_global_index() vm=%p name=%.*s\n", vm, (int)name_len, name);
 	index = check_global_index(vm, name, name_len, &found);
@@ -2017,16 +2034,18 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 		return index;
 	}
 	assert(vm->globals_len < (MAX_GLOBALS-1));
-	var = NGS_MALLOC(sizeof(*var));
-	var->name = NGS_MALLOC_ATOMIC(name_len+1);
-	memcpy(var->name, name, name_len);
-	var->name[name_len] = 0;
-	var->index = vm->globals_len++;
-	HASH_ADD_KEYPTR(hh, vm->globals_indexes, var->name, name_len, var);
-	GLOBALS[var->index] = MAKE_UNDEF;
-	vm->globals_names[var->index] = var->name;
+	name_val = make_string_of_len(name, name_len);
+	index = vm->globals_len++;
+	set_hash_key(vm->globals_indexes, name_val, MAKE_INT(index));
+	GLOBALS[index] = MAKE_UNDEF;
+
+	name_dup = NGS_MALLOC_ATOMIC(name_len+1);
+	memcpy(name_dup, name, name_len);
+	name_dup[name_len] = 0;
+	vm->globals_names[index] = name_dup;
+
 	DEBUG_VM_RUN("leaving get_global_index() status=new vm=%p name=%.*s -> index=" GLOBAL_VAR_INDEX_FMT "\n", vm, (int)name_len, name, var->index);
-	return var->index;
+	return index;
 }
 
 VALUE _make_func(VM *vm, int pass_extra_params, char *name, void *func_ptr, int argc, va_list varargs) {
@@ -2138,7 +2157,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	int i;
 	vm->bytecode = NULL;
 	vm->bytecode_len = 0;
-	vm->globals_indexes = NULL; // UT_hash_table
+	vm->globals_indexes = make_hash(1024);
 	vm->globals_len = 0;
 	vm->globals = NGS_MALLOC(sizeof(*(vm->globals)) * MAX_GLOBALS);
 	vm->globals_names = NGS_MALLOC(sizeof(char *) * MAX_GLOBALS);
@@ -2537,28 +2556,28 @@ void vm_init(VM *vm, int argc, char **argv) {
 				MKSUBTYPE(JsonDecodeFail, DecodeFail);
 				_doc(vm, "", "Represents an error decoding JSON data.");
 
-	MKTYPE(Return);
-	_doc(vm, "", "Return instance type, when thrown, will exit the call frame where they were created returning given value.");
-	_doc_arr(vm, "%EX",
-		"{",
-		"    F find_the_one(haystack:Arr, needle) {",
-		"        ret_from_find_the_one = Return()",
-		"        echo(ret_from_find_the_one)",
-		"        haystack.each(F(elt) {",
-		"                elt == needle throws ret_from_find_the_one(\"Found it!\")",
-		"        })",
-		"        \"Not found\"",
-		"    }",
-		"    echo([10,20].find_the_one(20))",
-		"    echo([10,20].find_the_one(30))",
-		"}",
-		"# Output:",
-		"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
-		"#   Found it!",
-		"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
-		"#   Not found",
-		NULL
-	);
+		MKSUBTYPE(Return, Exception);
+		_doc(vm, "", "Return instance type, when thrown, will exit the call frame where they were created returning given value.");
+		_doc_arr(vm, "%EX",
+			"{",
+			"    F find_the_one(haystack:Arr, needle) {",
+			"        ret_from_find_the_one = Return()",
+			"        echo(ret_from_find_the_one)",
+			"        haystack.each(F(elt) {",
+			"                elt == needle throws ret_from_find_the_one(\"Found it!\")",
+			"        })",
+			"        \"Not found\"",
+			"    }",
+			"    echo([10,20].find_the_one(20))",
+			"    echo([10,20].find_the_one(30))",
+			"}",
+			"# Output:",
+			"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
+			"#   Found it!",
+			"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
+			"#   Not found",
+			NULL
+		);
 
 	MKTYPE(Backtrace);
 	_doc(vm, "", "Represents stack trace");
@@ -4232,10 +4251,11 @@ main_loop:
 									if(mr == METHOD_EXCEPTION) {
 										set_normal_type_instance_field(exc, make_string("cause"), *result);
 									} else {
+										set_normal_type_instance_field(exc, make_string("global_not_found_handler_ret_val"), *result);
 										if (mr == METHOD_IMPL_MISSING) {
-											set_normal_type_instance_field(exc, make_string("message"), make_string("Additionally, no appropriate global_not_found_handler() found"));
+											set_normal_type_instance_field(exc, make_string("extra_info"), make_string("Additionally, no appropriate global_not_found_handler() found"));
 										} else {
-											set_normal_type_instance_field(exc, make_string("message"), make_string("Additionally, global_not_found_handler() failed to provide the global"));
+											set_normal_type_instance_field(exc, make_string("extra_info"), make_string("Additionally, global_not_found_handler() failed to provide the global"));
 										}
 									}
 									*result = exc;

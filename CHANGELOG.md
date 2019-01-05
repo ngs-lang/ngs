@@ -1,10 +1,43 @@
 ## (UNRELEASED) Version 0.2.6
 
+### New features
+
+* `Lines` type. Array of strings to be processed as a unit for output purposes (`echo`, `warn`, `error`).
+* `inspect()` now returns `Lines`.
+* Add `-pil` command line switch for "Print Inspect()ed Lines"
+* Add `collector` for `ArrLike`. Enables `collector/ArrLike() ...`.
+* Add `mapo(Str, Fun)` (**map** to **o**riginal data type) - map a string to a string, character by character.
+* Add `assert_bool(Any, Str)` to `tests.ngs`
+* Add `+(a:Eachable1, b:Eachable1)` which is only defined for same types of `a` and `b`.
+* Add `-(Str, Ifx)`
+* Add experimental `is_subtype(t:Type, maybe_supertype:Type)`.
+* Add experimental `ensure(x, t:Type)` for `Eachable1` subtypes. Returns either `x` if it's already of type `t` or new object of type `t` with single item `x`.
+* Add `Threads(ArrLike)` type
+
 ### Fixes and improvements
 
 * `indexes(arr:Arr, predicate)` upgraded to handle eachable: `indexes(e:Eachable1, predicate)`
+* `indexes(arr:Arr, r:PredRange)` - now takes optional `dflt` parameter: `indexes(arr:Arr, r:PredRange, dflt=...)`
 * Better `c_dlopen()` error message
-* `T.user = x` for native types now returns `x` and not `T`, consistently with other assignments
+* `T.user = x` for native types now returns `x` and not `T`, consistent with other assignments
+* `Return` is now a subtype of `Exception`. This fixes failing `Failure(Return)`, which only works on `Exception`.
+* Remove `any()` and `none()` for `Box` - they work anyway because `Box` is `Eachable1`. `any()` and `none()` are defined for `Eachable1`.
+* Faster `==(Hash, Hash)`
+* Faster `init(Hash)`
+* Fix `C_WEXITSTATUS` - return null when `WIFEXITED` returns false.
+* Fix `C_WTERMSIG` - return null when `WIFSIGNALED` returns false.
+* Fix `decode_hex()` - now handles inputs of even length, not specifically 2. This makes `decode_hex()` exact reverse of `encode_hex()`.
+* Work around strange error (Issue #180) after `execve()` was failing on MacOS. Now executing minimal amount of code after failing `execve()`.
+* `+(s:Str, a:Eachable1)` and +`(a:Eachable1, s:Str)` now return result of exact the same type as `a`, not `Arr`.
+* Improve `print_exception()`
+* Improved exception message for environment variable access, when the environment variable is not set.
+* Remove MacOS-specific "stupid" malloc. GC library appears to work OK on MacOS now.
+
+### Work in progress
+
+* Terminal
+* Improving error messages shown when exceptions occur.
+* Add experimental `escape_bash(Str)` - quote argument for bash
 
 ## 2018-09-20 Version 0.2.5
 
@@ -19,7 +52,7 @@
 		* Add `init(t:Thread, name:Str, f:Fun)`
 		* Add `init(t:Thread, name:Str, f:Fun, arg)`
 * `aws` command output parsing - `.Reservation` renamed to `._Reservation`
-* Add `eachk()` and `eachv()'
+* Add `eachk()` and `eachv()`
 * `Str(s:Str, target_width:Int)` extended to `Str(s:Str, target_width:Int, ch=' ')`, allowing padding with given character
 * Exiting
 	* Add `ExitException` - parent of all exceptions with `exit_code` field

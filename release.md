@@ -10,6 +10,7 @@ This document describes releasing a new version of NGS.
 * Wait and see that Travis build is OK
 * Checkout `master` branch
 * `git pull`
+* Review the changes made in `master` branch if any. There should not be.
 * `git merge --no-commit dev`
 * Update `version.h`
 	* Remove the `-alpha` or whatever pre-release mark.
