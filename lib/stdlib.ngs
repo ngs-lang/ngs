@@ -5960,22 +5960,25 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 
 exit_hook = Hook()
 
-{
+ns {
+
+	global print_exception
+
+	do_exit_backtrace = ENV.get('NGS_EXIT_BACKTRACE', '0').decode(Bool)
+
+	if not(do_exit_backtrace) {
+		F print_exception(e:NormalExit) {
+			if 'message' in e {
+				echo(stdlib_error_fd, e.message)
+			}
+		}
+	}
+
 	# TODO: consider running this hook item last.
 	#       If it has exception, it could prevent
 	#       user-defined cleanups.
 	exit_hook['print_exception'] = F(exit:Exit) {
-		exit.exceptions.reject(NormalExit).each(F(e) {
-			print_exception(e)
-		})
-	}
-
-	exit_hook['print_exit_message'] = F(exit:Exit) {
-		exit.exceptions.filter(NormalExit).each(F(e) {
-			if 'message' in e {
-				echo(stdlib_error_fd, e.message)
-			}
-		})
+		exit.exceptions.each(print_exception)
 	}
 
 }
