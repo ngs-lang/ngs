@@ -1569,7 +1569,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			warn("Polluting global namespace with AWS-specific variables: ${vars.keys().join(', ')}")
 		}
 
-		vars.mapk(resolve_global_variable).each(set_global_variable)
+		vars.mapk(ll_resolve_global_variable).each(ll_set_global_variable)
 	}
 
 	# ==================================================

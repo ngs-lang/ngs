@@ -1736,7 +1736,7 @@ METHOD_RESULT native_replace EXT_METHOD_PARAMS {
 	METHOD_RETURN(argv[1]);
 }
 
-METHOD_RESULT native_resolve_global_variable EXT_METHOD_PARAMS {
+METHOD_RESULT native_ll_resolve_global_variable EXT_METHOD_PARAMS {
 	(void) ctx;
 	METHOD_RETURN(MAKE_INT(get_global_index(vm, OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]))));
 }
@@ -1753,7 +1753,7 @@ METHOD_RESULT native_ll_is_global_variable_defined EXT_METHOD_PARAMS {
 	METHOD_RETURN(MAKE_BOOL(IS_NOT_UNDEF(GLOBALS[gvi])));
 }
 
-METHOD_RESULT native_set_global_variable EXT_METHOD_PARAMS {
+METHOD_RESULT native_ll_set_global_variable EXT_METHOD_PARAMS {
 	GLOBAL_VAR_INDEX gvi = GET_INT(argv[0]);
 	if(GET_INT(argv[0]) < 0 || gvi >= vm->globals_len) {
 		VALUE e;
@@ -2698,11 +2698,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	// global variables
-	register_global_func(vm, 1, "resolve_global_variable",    &native_resolve_global_variable,     1, "name",   vm->Str);
+	register_global_func(vm, 1, "ll_resolve_global_variable",    &native_ll_resolve_global_variable,     1, "name",   vm->Str);
 	_doc(vm, "", "Do not use directly! Get global variable index by name.");
 	register_global_func(vm, 1, "ll_is_global_variable_defined", &native_ll_is_global_variable_defined,  1, "idx",    vm->Int);
 	_doc(vm, "", "Do not use directly! Check whether global variable is defined by index.");
-	register_global_func(vm, 1, "set_global_variable",        &native_set_global_variable,         2, "idx",    vm->Int,    "val", vm->Any);
+	register_global_func(vm, 1, "ll_set_global_variable",        &native_ll_set_global_variable,         2, "idx",    vm->Int,    "val", vm->Any);
 	_doc(vm, "", "Do not use directly! Set global variable by index.");
 
 	// Return
