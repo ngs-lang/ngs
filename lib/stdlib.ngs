@@ -443,7 +443,7 @@ doc something - Object of any type that has each(something, callback) implemente
 doc %STATUS - deprecated
 doc %RET - Arr (array) of original items without nulls
 F filter(e:Eachable1) {
-	error("USING DEPRECATED filter(e)")
+	warn("USING DEPRECATED filter(e)")
 	filter(e, X is not Null)
 }
 
@@ -948,7 +948,7 @@ F decode(s:Str, t:Type) {
 	if t == Bool {
 		s ~ /^(1)|(y(es?)?)|true|on$/i returns true
 		s ~ /^(0)|(no?)|false|off$/i returns false
-		_fail(e)
+		_fail()
 	}
 	guard false
 }
@@ -3907,6 +3907,25 @@ F ExitCode(ee:ExitException) ee.exit_code
 # Not sure such flexibility is needed (NGS_ERR_FD)
 stdlib_error_fd = ENV.NGS_ERR_FD.Int() tor 2
 
+ns {
+	global maybe_print_stacktrace
+
+	# Set is not available at this point yet so using Hash as Set
+	seen_backtraces = {}
+
+	doc Do not use directly!
+	doc %STATUS - internal
+	F maybe_print_stacktrace(env_var:Str, pfx:Str) {
+		ENV.get(env_var, '0').decode(Bool).not() returns
+		bt = Exception("maybe_print_stacktrace").backtrace
+		k = bt.frames.ip.map(Str).join(':')
+		k in seen_backtraces returns
+		seen_backtraces[k] = true
+		msg = Lines(["(Showing backtrace because ${env_var} environment variable is set)"]) + Lines(bt)
+		echo(stdlib_error_fd, (pfx +? ' ') + msg)
+	}
+}
+
 doc Log to standard error. Later log output will be treated specially by the shell. It will have suitable representation in the UI. Use log() when it's semantically a log.
 F log(s:Str) {
 	echo(stdlib_error_fd, "[LOG ${Time()}] $s")
@@ -3932,6 +3951,7 @@ doc %EX - # Approximate output on stderr:
 doc %EX - # [ERROR 2018-01-01 00:00:00 YOUR_TZ] Failed to read configuration file. Will clean up and exit now.
 F error(s:Str) {
 	echo(stdlib_error_fd, "[ERROR ${Time()}] $s")
+	maybe_print_stacktrace('NGS_ERROR_BACKTRACE', '[ERROR BACKTRACE]')
 }
 
 doc Write warning message to standard error. Prints backtrace if NGS_TRACE_WARNINGS environment variable is not an empty string.
@@ -3940,9 +3960,7 @@ doc %EX - # Approximate output on stderr:
 doc %EX - # [WARNING 2018-01-01 00:00:00 YOUR_TZ] Could not open input file ./my_file , skipping it.
 F warn(s:Str) {
 	echo(stdlib_error_fd, "[WARNING ${Time()}] $s")
-	if ENV.get('NGS_TRACE_WARNINGS') {
-		print_exception(Exception("WARNING"))
-	}
+	maybe_print_stacktrace('NGS_WARN_BACKTRACE', '[WARNING BACKTRACE]')
 }
 
 ns {
@@ -5883,14 +5901,27 @@ F inspect(cp:CommandsPipeline) {
 	}
 }
 
+F init(lines:Lines, backtrace:Backtrace, parent_backtrace=null) {
+	guard (parent_backtrace is Null) or (parent_backtrace is Backtrace)
+	super(lines)
+	parent_frames = parent_backtrace.frames tor []
+	backtrace.frames.each_idx_val(F(idx, frame) {
+		# Don't print frames that overlap with parent exception
+		frame.ip == (try parent_frames[idx].ip) returns
+		l = resolve_instruction_pointer(frame.ip)
+		closure = " [in ${frame.closure.attrs().name}]" tor ''
+		push(lines, "Frame $idx: ${l.file}:${l.first_line}:${l.first_column} - ${l.last_line}:${l.last_column}$closure")
+	})
+}
+
 doc Print exception to stderr. Uses inspect().
 doc level - indentation level to use (two spaces for each level)
 doc parent - parent exception if print_exception() was called for .cause exception
 F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 
-	F err(message) error(pfx + message)
+	F err(message) echo(stdlib_error_fd, pfx + message)
 
-	pfx = "  " * level
+	pfx = "[ERROR ${Time()}] " + "  " * level
 	h = Hash(e)
 
 	F esm() {
@@ -5930,16 +5961,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 	})
 
 	if 'backtrace' in h {
-
-		parent_frames = parent.backtrace.frames tor []
-
-		h.backtrace.frames.each_idx_val(F(idx, frame) {
-			# Don't print frames that overlap with parent exception
-			frame.ip == (try parent_frames[idx].ip) returns
-			l = resolve_instruction_pointer(frame.ip)
-			closure = " [in ${frame.closure.attrs().name}]" tor ''
-			err("Frame $idx: ${l.file}:${l.first_line}:${l.first_column} - ${l.last_line}:${l.last_column}$closure")
-		})
+		err(Lines(h.backtrace, if parent and parent.has('backtrace') then parent.backtrace else null))
 	}
 
 	if 'cause' in h {

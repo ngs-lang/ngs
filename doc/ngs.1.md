@@ -63,8 +63,9 @@ In case of an uncaught exception, the exit code is 240. In cases where additiona
 	* `/usr/share/ngs/bootstrap.ngs`
 * `NGS_BOOTSTRAP_DEBUG` - if defined, show **bootstrap.ngs** debugging information.
 * `NGS_DIR` (defaults to `/usr/share/ngs`) - location of **stdlib.ngs** file and the **autoload** directory. Files are automatically loaded from this directory when an undefined global variable is used.
-* `NGS_EXIT_BACKTRACE` - print backtrace when `exit()`.
-
+* `NGS_EXIT_BACKTRACE` - print backtrace when `exit()` is called.
+* `NGS_WARN_BACKTRACE` - print backtrace when `warn()` is called. Prints only unique backtraces.
+* `NGS_ERROR_BACKTRACE` - print backtrace when `error()` is called. Prints only unique backtraces.
 
 # FILES
 
