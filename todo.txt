@@ -6,17 +6,6 @@ Note that this started as internal document so things here are unformed, not fin
 
 [roadmap]
 
-	* Phase 3 - running code remotely
-
-		* think about serialization and remote execution
-			Probably pushing a bytecode (which we already have because the code was compiled)
-			of a function that does not reference any upper-level variables, only locals and globals,
-			maybe like this:
-
-				RF myfunc(param1:Str, param2:Int, ...)
-
-			RF means remote function and compiler checks for absence of upper-level variables references.
-
 	* Phase 4 - assist developing
 
 		* Local variables values in backtrace
