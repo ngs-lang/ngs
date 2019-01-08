@@ -5961,7 +5961,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 	})
 
 	if 'backtrace' in h {
-		err(Lines(h.backtrace, if parent and parent.has('backtrace') then parent.backtrace else null))
+		err(Lines(h.backtrace, if parent is not Null and parent.has('backtrace') then parent.backtrace else null))
 	}
 
 	if 'cause' in h {
