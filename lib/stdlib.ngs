@@ -2875,10 +2875,23 @@ doc %RET - FullBox with given value
 doc %EX - Box(7).map(X*2).get()  # 14
 F Box(x) FullBox(x)
 
+doc Convert Box with no arg to EmptyBox
+doc %RET - EmptyBox
+doc %EX - Box() == EmptyBox()
+doc %EX - Box().get(10)  # 10
+doc %EX - Box().map(X*2).get()  # InvalidArgument exception (in "get()")
+F Box() EmptyBox()
+
+TEST Box().get(10) == 10
+TEST Box() == EmptyBox()
+
 doc Convert null to Box (always EmptyBox)
 doc %RET - EmptyBox
+doc %EX - Box(null) == EmptyBox()
 doc %EX - Box(null).map(X*2).get()  # InvalidArgument exception (in "get()")
 F Box(n:Null) EmptyBox()
+
+TEST Box(null) == EmptyBox()
 
 doc Convert array value indexed by the given index
 doc idx - key to look in hash
