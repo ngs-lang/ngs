@@ -5914,6 +5914,8 @@ F inspect(cp:CommandsPipeline) {
 	}
 }
 
+doc Convert Backtrace to human-readable format
+doc %EX - Lines(bt).echo()
 F init(lines:Lines, backtrace:Backtrace, parent_backtrace=null) {
 	guard (parent_backtrace is Null) or (parent_backtrace is Backtrace)
 	super(lines)

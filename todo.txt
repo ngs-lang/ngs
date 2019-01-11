@@ -6,83 +6,10 @@ Note that this started as internal document so things here are unformed, not fin
 
 [roadmap]
 
-	* Phase 4 - assist developing
-
-		* Local variables values in backtrace
-
-		* tracing / debug
-
-		* Add profiling info to ngs-debug
-			+ memory allocations - where and how much
-			+ opcodes stats
-			+ method calls: scanned / not scanned (where in Arr the method was found)
-			+ something about call sites?
-
-	* Phase 5 - RESTful client
-
-		* Introduce "FEATURES" global Hash to indicate supported features.
-
-		* Milestone "curl" - integrate libcurl
-			+ Make libcurl optional with compile time switch. If curl is compiled, add "curl": CURL_VERSION pair to FEATURES.
-			+ Use namespace "curl"
-			+ Low level functions in the namespace will be called "c_..." as all other low level c functions that are exposed to NGS language.
-			+ Higher level functions and types also go into the "curl" namespace, these will be the interface used by the rest of NGS code.
-			+ Integration: when read() sees a URL that starts with a scheme that libcurl supports, use libcurl to obtain the resource. Think about passing credentials, etc.
-			+ Think about stream processing for large resources, where read() will not be appropriate
-			+ Think about write() integration. Should it "POST"?
-
-		* Milestone "YAML" - integrate YAML parser and generator
-			+ Implementing YAML parser/generator in NGS will probably result very slow code, so a C library should probably be used
-			+ Same as with libcurl, compile time switch and YAML_LIB_NAME: YAML_LIB_VERSION pair added to FEATURES, and probably "yaml": true pair in FEATURES.
-			+ Look at JSON implementation
-			+ Functions: encode_yaml, decode_yaml
-			+ Integration: when decode() tries JSON, try YAML after that. If the hint says YAML, try just it.
-
-		* Milestone RESTful client
-			+ Think about this!
-			+ Support RAML for
-				+ Constructing queries
-				+ Parsing and validating responses
-				+ Think about how to integrate to the shell (completions, etc) when the shell is ready.
-
 	* Phase 6 - nice to have
 
-		* Think about structured log (and possible ELK and other integrations?)
-			+ Environment variables for
-				+ Directing output
-				+ Adding arbitrary key-value pairs
-				+ Directing output of other programs to logger too?
-		* Iter improvements
-			* If migrating lines() to Iter
-				+ remember to implement ==(Iter, Arr), as used in tests:
-					fqdn = 'example.com'
-					fqdns = `mybin list`.lines()
-					assert(fqdns == [fqdn])
-				+ make sure join() works
-			* Iter[PredRange] - should return new Iter
-			* zip(Iter, Iter)
-			* limit(Iter, n)
-			* intersperse(Iter, ...)
-		* Inheriting built-in types without performance penalty (probably eliminates the need for ArrLike and HashLike)
-		* assert_proc(cp:CommandsPipeline, exit_code, stdout, stderr)
-		* Calling
-			* Predicates in parameters list?
-			* Immediate values in parameters list
-			* Consider OneOf type for nullable parameters: F myfunc(a:Int, b:OneOf(Int, Null))
-				also think about more traditional approach: F myfunc(a:Int, b:Box[Int])
 		* Data manipulation
-			* Make Indexable: Arr, Str, Range - this might save some code
-			* update(Hash, key, value) - update specified key only if exists ?
-			* update(Arr[Hash], key, value / Fun) - update specified key only if exists ?
-			* Implement Hash(Arr[Str]) for strings of form "key=value"?
-			* Add fetch(Path), maybe read(Path). Now have read(File)
-			* "str" / [str]
 			* '.'(Iter, Str) -> AttrIter or alike maybe MappingIter or child
-			* Maybe Iter(b:Box)
-		* Syntax
-			* Conditional presence of an element in an array
-		* assert_file / assert_file_exists ?
-		* assert_has_line / assert_has_line_with ?
 		* make ResDef ArrLike for the resources?
 		* make Res HashLike?
 		* last(?, predicate)
@@ -91,44 +18,26 @@ Note that this started as internal document so things here are unformed, not fin
 		* Address resolution functions
 		* Consider somethig like data_strucure ~ [Capture("x"), 7 , "xx"]
 
-		* Sub-typing built-in types
-			* Subclass Fun? For mapper for example to know which arguments to pass and what to construct
 		* dig with data_struct['a', 10, *, ...]
 			* Not sure about the star, maybe:
 				~All
 				X ~ All
 
-		* Method to push a value into Arr if it's not there already
 		* Function static variables
 			F decode(s:Str, ...)
 			?static? re = /myregex/
 			guard s ~ re
 			...
-		* Possible syntax of Arr[ElementsType]
-			F +(s:Str, a:Arr[Str]) { ... }
-			instead of
-			F +(s:Str, a:Arr) { guard a.all(is, Str); ... }
-			don't see any use now but for completeness: Hash[KeysType, ValuesType]
 		* Completion-safe marker in scripts + completion protocol
-		* Consider Syntax for stripping last newline character in `cmd`
 		* ASN1 parser
 		* while/for should return a value?
-		* Make each(), filter() and friends be able to work on endless lists
 		* Consider having chunk() method as in Ruby
-		* Delimited string type, such as PATH
-			+ ds = DelimStr(ENV.PATH, ':'); ds.each(echo); ds.push('mypath_element')
 
 		* f'file literals'
 
 		* Consider IP and subnet literals of the form:
 			1.2.3.4
 			1.2.3.4/8
-
-		* Consider shortcut syntax for ENV.MYVAR
-			maybe %MYVAR ?
-
-		* Consider shortcut syntax for ARGV[n]
-			feels like less needed than ENV.MYVAR
 
 		* Go over "TODO"s in all *.ngs files
 
@@ -143,14 +52,8 @@ Note that this started as internal document so things here are unformed, not fin
 				PCRE_NOTEOL
 			* c_pcre_study()
 
-		* modules / namespaces
-
 		* implement decode() wherever possible (example: IPAddr, IPNet)
 			+ allow auto-load missing implementations by extension and mime type
-
-		* push/pop/shift/unshift for Hash
-			To be consistent with Arr, which has all of these.
-			The push is regular h[k] = v while others need additional vm functionality.
 
 		* match, ematch - some way to get the match object?
 
@@ -192,14 +95,6 @@ Note that this started as internal document so things here are unformed, not fin
 			+ {[_, dst], **args} = h means also changing function arguments?
 
 		* text templates (stdlib with builtin parse I guess)
-
-		* Nfile - NGS version of Makefile
-
-		* Compile time stack depth check?
-
-		* yaml
-			* parse
-			* generate
 
 		* K M G suffixes for numbers
 
