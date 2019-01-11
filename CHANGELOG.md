@@ -19,6 +19,7 @@
 
 * `indexes(arr:Arr, predicate)` upgraded to handle eachable: `indexes(e:Eachable1, predicate)`
 * `indexes(arr:Arr, r:PredRange)` - now takes optional `dflt` parameter: `indexes(arr:Arr, r:PredRange, dflt=...)`
+* `Box()` now returns an `EmptyBox` (thanks @organom !)
 * Better `c_dlopen()` error message
 * `T.user = x` for native types now returns `x` and not `T`, consistent with other assignments
 * `Return` is now a subtype of `Exception`. This fixes failing `Failure(Return)`, which only works on `Exception`.
@@ -34,6 +35,7 @@
 * Improved exception message for environment variable access, when the environment variable is not set.
 * Remove MacOS-specific "stupid" malloc. GC library appears to work OK on MacOS now.
 * Got rid of uthash dependency
+* Finished moving `todo.txt` to GitHub issues
 
 ### Work in progress
 

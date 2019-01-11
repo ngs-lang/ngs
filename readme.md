@@ -210,7 +210,11 @@ On Mac, follow [the instructions to create case sensitive volume](https://coderw
 
 # Contributing
 
-Fork on GitHub, work on whatever you like, preferably from the top of [the todo](todo.txt), make a pull request (to "dev" branch). If the change is big or involves modifying the syntax, it's better to coordinate with Ilya before you start.
+* Fork on GitHub
+* Work on whatever you like, preferably something from the GitHub issues of this project
+* Make a pull request (to the `dev` branch).
+
+If the change is big or involves modifying the syntax, it's better to coordinate with Ilya before you start.
 
 # Planned Features
 
