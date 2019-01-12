@@ -14,6 +14,8 @@
 * Add experimental `ensure(x, t:Type)` for `Eachable1` subtypes. Returns either `x` if it's already of type `t` or new object of type `t` with single item `x`.
 * Add `Threads(ArrLike)` type
 * Add `NGS_EXIT_BACKTRACE` environment variable. If true, prints backtrace on `exit()`.
+* Add `NGS_WARN_BACKTRACE` environment variable. If true, prints backtrace on `warn()`.
+* Add `NGS_ERROR_BACKTRACE` environment variable. If true, prints backtrace on `error()`.
 
 ### Fixes and improvements
 
