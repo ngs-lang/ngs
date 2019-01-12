@@ -22,7 +22,7 @@ repo() {
 		(cd "$DIR" && git pull)
 	else
 		echo "+ NGS - cloning repo into directory $DIR"
-		git clone https://github.com/ilyash/ngs.git "$DIR"
+		git clone https://github.com/ngs-lang/ngs.git "$DIR"
 	fi
 }
 
