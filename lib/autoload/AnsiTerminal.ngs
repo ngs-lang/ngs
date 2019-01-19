@@ -2,9 +2,6 @@
 	doc %STATUS - experimental
 	type AnsiTerminal(Terminal)
 
-	# Load possible subtypes, which define AnsiTerminal with appropriate guards
-	# so that AnsiTerminal returns the most appropriate subtype of AnsiTerminal
-	ItermTerminal
 }
 
 F init(at:AnsiTerminal, *args) {
@@ -46,4 +43,10 @@ F status(at:AnsiTerminal, s:Str) {
 	super(at, s)
 	at._fd_out_pos = c_lseek(at.fd_out, 0, "cur")
 	null
+}
+
+{
+	# Load possible subtypes, which define AnsiTerminal with appropriate guards
+	# so that AnsiTerminal returns the most appropriate subtype of AnsiTerminal
+	ItermTerminal
 }
