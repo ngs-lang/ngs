@@ -1671,8 +1671,9 @@ TEST [0,1,2].none(X<2).not()
 TEST [1,2,3].map(X*4) == [4,8,12]
 
 F subset(smaller:Arr, larger:Arr) {
+	len(smaller) > len(larger) returns false
 	h = if larger.len() > 10 {
-		larger.Hash({true})
+		larger.Set()
 	} else {
 		larger
 	}
@@ -1790,7 +1791,7 @@ doc %RET - Arr
 doc %EX - [1,2,3] - [5,6,1]  # [2,3]
 F -(a:Arr, b:Arr) {
 	h = if b.len() > 10 {
-		b.Hash({true})
+		b.Set()
 	} else {
 		b
 	}
@@ -1883,7 +1884,7 @@ F indexes(e:Eachable1, predicate) {
 	p = Pred(predicate)
 	collector
 		e.each_idx_val(F(idx, elt) {
-			if(p(elt)) {
+			if p(elt) {
 				collect(idx)
 			}
 		})
@@ -4849,7 +4850,7 @@ F '$()'(c:Command) {
 
 	debug("process", "PID after fork: $pid")
 
-	pipes = c.redirects.filter({A.datum is Pipe})
+	pipes = c.redirects.filter({'datum': Pipe})
 	debug("process2", "PIPES FROM REDIRECTS $pipes REDIRECTS ${c.redirects} COMMND ${c.Hash()}")
 	child_fds = pipes.datum.map(child_fd)
 
