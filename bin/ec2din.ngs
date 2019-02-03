@@ -14,7 +14,7 @@
 	doc filters - i-xxxyyyzz - for specific instance id
 	doc filters - 1.2.3.4 - for instance having given IP
 	doc filters - kkk=vvv - for instances having given tag value
-	F main(filters:Arr, allreg:Bool=false) {
+	F main(filters:Arr, allreg:Bool=false, j:Bool=false) {
 
 		F limit_len(s:Str, l:Int) limit(s, l, '...')
 
@@ -62,6 +62,11 @@
 			``aws ec2 describe-instances $*filters $*reg``
 		}
 		instances .= sort('LaunchTime')
+
+		if j {
+			echo(instances.encode_json())
+			return
+		}
 
 		F tag_has_column(tag_name, _) ["full_tag_${tag_name}", "tag_${tag_name}"].any(X in table.cols_enum)
 
