@@ -133,31 +133,41 @@ This is how an instance can be created using NGS (real working code). No state f
 
 ## Install dependencies - Debian-based Linux
 
-	sudo apt-get install libgc-dev libffi6 libffi-dev libjson-c-dev peg libpcre3-dev make cmake pandoc pkg-config build-essential
+	sudo apt-get install libgc-dev libffi6 libffi-dev libjson-c-dev peg libpcre3-dev make cmake pandoc pkg-config build-essential git
 	sudo type awk || sudo apt-get install gawk
-	mkdir build && cd build && cmake .. && make && ctest
-	# If NGS is not installed:
-	NGS_DIR=../lib NGS_BOOTSTRAP=../lib/bootstrap.ngs ./ngs SCRIPT_NAME.ngs
-	# If NGS is installed:
-	./ngs SCRIPT_NAME.ngs
 
 ## Install dependencies - Mac OS X
 
 	brew update
-	brew install cmake peg libgc pcre libffi gnu-sed json-c pkg-config pandoc
-	export PATH="/usr/local/opt/gnu-sed/libexec/gnubin:$PATH"
-	pcp=$(dirname $(brew list pkg-config | grep '/bin/pkg-config'))
-	export PATH="$pcp:$PATH"
-	export PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig
+	brew install make cmake peg libgc pcre libffi gnu-sed json-c pkg-config pandoc git
 
+## Clone from git
 
-## Compile, test and run
+    git clone https://github.com/ngs-lang/ngs.git
 
-	mkdir -p build && cd build && cmake .. && make && ctest
-	# If NGS is not installed:
-	NGS_DIR=lib NGS_BOOTSTRAP=lib/bootstrap.ngs ./ngs SCRIPT_NAME.ngs
+    # or if using git over ssh
+    git clone git@github.com:ngs-lang/ngs.git
+
+## Install ngs
+
+    cd ngs
+    sudo make install
+
+## Run tests
+
+	make tests
+
+## Compile
+
+	make build
+
+## Run
+
+	# If NGS is not installed (from the root of ngs project):
+	NGS_DIR=lib NGS_BOOTSTRAP=lib/bootstrap.ngs ./build/ngs SCRIPT_NAME.ngs
+
 	# If NGS is installed:
-	./ngs SCRIPT_NAME.ngs
+	ngs SCRIPT_NAME.ngs
 
 Tested as follows (some time ago):
 
@@ -168,24 +178,16 @@ Tested as follows (some time ago):
 
 If you have troubles compiling, please try to compile the commit tagged `tested`.
 
+## Uninstall
+
+	cd build
+	for i in $(<install_manifest.txt);do rm "$i";done
 
 ## Debug - Mac
 
 	# Debug when stuck (note to self mostly)
 	killall -SIGSEGV ngs
 	lldb --core /cores/core.XXXXX
-
-
-## Install
-
-	# after build steps
-	cd build
-	sudo make install
-
-## Uninstall
-
-	cd build
-	for i in $(<install_manifest.txt);do rm "$i";done
 
 ## Generate documentation
 

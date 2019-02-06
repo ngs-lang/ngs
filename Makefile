@@ -9,6 +9,10 @@ else
 	( mkdir -p build && cd build && cmake .. && make )
 endif
 
+.PHONY: tests
+tests:
+	(cd build && ctest)
+
 .PHONY: install
 install: build
 	(cd build && sudo make install)
