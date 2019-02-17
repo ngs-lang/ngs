@@ -13,6 +13,8 @@
 * Add experimental `is_subtype(t:Type, maybe_supertype:Type)`.
 * Add experimental `ensure(x, t:Type)` for `Eachable1` subtypes. Returns either `x` if it's already of type `t` or new object of type `t` with single item `x`.
 * Add `Threads(ArrLike)` type
+* Add `join(ArrLike, Str)`
+* Add `.(ArrLike, Str)`
 * Add `NGS_EXIT_BACKTRACE` environment variable. If true, prints backtrace on `exit()`.
 * Add `NGS_WARN_BACKTRACE` environment variable. If true, prints backtrace on `warn()`.
 * Add `NGS_ERROR_BACKTRACE` environment variable. If true, prints backtrace on `error()`.
@@ -38,6 +40,7 @@
 * Remove MacOS-specific "stupid" malloc. GC library appears to work OK on MacOS now.
 * Got rid of uthash dependency
 * Finished moving `todo.txt` to GitHub issues
+* Improve `ArrLike` implementation
 
 ### Work in progress
 
