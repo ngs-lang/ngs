@@ -1571,6 +1571,13 @@ TEST "ab" + "cd" == "abcd"
 
 # === Arr ========================================
 
+doc Get element by index or null if it does not exist
+doc %RET - Any
+F get(a:Arr, idx:Int) get(a, idx, null)
+
+TEST [1].get(0, 10) == 1
+TEST [1].get(5, 10) == 10
+
 
 doc Checks whether element x is in array arr
 doc x - Needle
