@@ -3432,10 +3432,14 @@ F '[]'(s:Str, r:NumRange) {
 # --- Misc utilities ---
 
 doc Split string by substring
+doc s - String to split
+doc delim - Delimiter to split by
+doc max_parts - Maximum number of resulting parts, 0 - unlimited
 doc %RET - Arr of Str
 doc %EX - ":a:bc:d:".split(":")   # ["", "a", "bc", "d", ""]
+doc %EX - "bucket_name/dir/file".split("/", 2)  # ["bucket_name", "dir/file"]
 doc %EX - ":a:bc:d:".split("bc")  # [":a:", ":d:"]
-F split(s:Str, delim:Str, max_parts:Int=null) {
+F split(s:Str, delim:Str, max_parts:Int=0) {
 	l = delim.len()
 	guard l > 0
 	start = 0
@@ -3444,10 +3448,8 @@ F split(s:Str, delim:Str, max_parts:Int=null) {
 		while (p = pos(s, delim, start)) is not Null {
 			collect(s[start..p])
 			start = p + l
-			if max_parts is not Null {
-				parts += 1
-				parts == max_parts - 1 breaks
-			}
+			parts += 1
+			parts == max_parts - 1 breaks
 		}
 		collect(s[start..null])
 	}
