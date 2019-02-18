@@ -1,0 +1,54 @@
+{
+	doc Method parameter, element of MethodParams(...)
+	type MethodParam
+
+	doc Required method parameter - F(my_req)
+	type RequiredMethodParam(MethodParam)
+
+	doc Optional method parameter - F(my_opt=dflt_value)
+	type OptionalMethodParam(MethodParam)
+
+	doc Splat method parameter
+	type SplatMethodParam(MethodParam)
+
+	doc Arr(ay) splat method parameter - F(*args)
+	type ArrSplatMethodParam(SplatMethodParam)
+
+	doc Hash splat method parameter - F(**kwargs)
+	type HashSplatMethodParam(SplatMethodParam)
+}
+
+doc Initialize MethodParam from params() array element
+F init(mp:MethodParam, h:Hash) {
+	h.each(F(k, v) mp.(k) = v)
+}
+
+doc %RET - RequiredMethodParam
+F MethodParam(h:Hash) RequiredMethodParam(h)
+
+doc Handle param with 'dflt'
+doc %RET - OptionalMethodParam
+F MethodParam(h:Hash) {
+	guard h.has('dflt')
+	OptionalMethodParam(h)
+}
+
+
+doc Handle param with splat == '*'
+doc %RET - ArrSplatMethodParam
+F MethodParam(h:Hash) {
+	guard h.get('splat') == '*'
+	ArrSplatMethodParam(h)
+}
+
+doc Handle param with splat == '**'
+doc %RET - HashSplatMethodParam
+F MethodParam(h:Hash) {
+	guard h.get('splat') == '**'
+	HashSplatMethodParam(h)
+}
+
+TEST p = MethodParams(F(x, y=1, *args, **kwargs) 0); p['x'] is RequiredMethodParam
+TEST p = MethodParams(F(x, y=1, *args, **kwargs) 0); p['y'] is OptionalMethodParam
+TEST p = MethodParams(F(x, y=1, *args, **kwargs) 0); p['args'] is ArrSplatMethodParam
+TEST p = MethodParams(F(x, y=1, *args, **kwargs) 0); p['kwargs'] is HashSplatMethodParam
