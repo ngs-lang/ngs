@@ -3853,8 +3853,8 @@ ns {
 	doc threads - Arr of Thread.
 	doc %RET - Arr, the results from threads, in order.
 	F join(threads:Arr) {
-		warn("Using deprecated join(threads:Arr)")
 		guard threads and threads.all(Thread)
+		warn("Using deprecated join(threads:Arr)")
 		threads.map(join)
 	}
 
