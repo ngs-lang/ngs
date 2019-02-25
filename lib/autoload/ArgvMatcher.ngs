@@ -162,7 +162,7 @@ ns {
 		}
 
 		debug("ARGV_MATCHER", "Matched argv=${argv} udm=${udm}")
-		ParamsMatchY(args.val, kwargs)
+		ParamsMatchY(args.map(get), kwargs)
 	}
 
 	TEST ArgvMatcher; (["--b", "B", "A", "C"] ~ F(a,b,c) 7).args == %[A B C]
