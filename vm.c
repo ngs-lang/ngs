@@ -3633,9 +3633,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 #undef FFI_TYPE
 
-	// // "left shift of negative value" warning
-	// set_global(vm, "INT_MIN", MAKE_INT(NGS_INT_MIN));
-	// set_global(vm, "INT_MAX", MAKE_INT(NGS_INT_MAX));
 	set_global(vm, "INT_MIN", NGS_INT_MIN_VALUE);
 	set_global(vm, "INT_MAX", NGS_INT_MAX_VALUE);
 	set_global(vm, "RAND_MAX", MAKE_INT(NGS_RAND_MAX));
