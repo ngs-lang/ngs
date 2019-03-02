@@ -63,7 +63,12 @@ ns {
 		args = UnmatchedParam * mp.count(RequiredMethodParam)
 		kwargs = {}
 
-		F set_match(v) args[mp[param_name].idx] = MatchedParam(v)
+		F set_match(v) {
+			ematch mp[param_name] {
+				RequiredMethodParam args[mp[param_name].idx] = MatchedParam(v)
+				OptionalMethodParam kwargs[param_name] = v
+			}
+		}
 
 		F next_arg() {
 			try
@@ -173,5 +178,6 @@ ns {
 	TEST ArgvMatcher; (["A"] ~ F(a,b:Int=null) 7).args == %[A]
 	TEST ArgvMatcher; (["A", "10"] ~ F(a,b:Int=null) 7).args == %[A 10]
 	TEST (["A", "C", "D", "--b", "B"] ~ ArgvMatcher("positionals", "a") do F(a,b) 7).args == %[%[A C D] B]
+	TEST ((["A", "C", "D", "--b", "B"] ~ ArgvMatcher("positionals", "a") do F(a,b=null) 7) ~ {"args": [%[A C D]], "kwargs": %{b B}}).Bool()
 	TEST ArgvMatcher; (["1", "1.0"] ~ F(i:Int, r:Real) 7).args == %[1 1.0]
 }
