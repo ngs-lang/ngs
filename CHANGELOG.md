@@ -45,6 +45,10 @@
 * Finished moving `todo.txt` to GitHub issues
 * Improve `ArrLike` implementation
 
+### Removed
+
+* Removed deprecated `nuke_null()`
+
 ### Work in progress
 
 * Terminal

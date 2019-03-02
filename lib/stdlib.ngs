@@ -2234,20 +2234,6 @@ F join(a:Arr, s:Str) {
 	# TODO: consider making Str(x) == x
 }
 
-doc DEPRECATED in favor of Argv facility. Used for command line arguments such as ['--vpc-id', my_vpc_id()].nuke_null()
-doc If my_vpc_id() is null the whole array is not needed
-doc %STATUS - deprecated
-doc %EX - [1,2].nuke_null()  # [1,2]
-doc %EX - [1,null].nuke_null()  # []
-F nuke_null(a:Arr) {
-	warn("Using deprecated nuke_null")
-	a.any(Null) returns []
-	a
-}
-
-TEST [1,2].nuke_null() == [1,2]
-TEST [1,null].nuke_null() == []
-
 # Can be more efficent I guess
 doc Merge sorted arrays.
 doc lte - Less-then-or-equal function to use for comparison of items in a and b
