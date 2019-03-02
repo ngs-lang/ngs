@@ -232,7 +232,11 @@ F set(obj, field:Str, val) {
 doc Convert anything to a predicate.
 doc anything - The value to compare to
 doc %RET - A function that compares the only argument to the given value
-F Pred(anything:BasicTypeInstance) F eq_pred(x) x == anything
+doc %STATUS - deprecated
+F Pred(anything:BasicTypeInstance) {
+	warn("Using deprecated Pred(BasicTypeInstance)")
+	F eq_pred(x) x == anything
+}
 
 doc Convert Hash to a predicate. The predicate asserts that
 doc object fields named after h hash keys return true for predicates made of corresponding hash values.

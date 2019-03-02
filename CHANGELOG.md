@@ -45,6 +45,10 @@
 * Finished moving `todo.txt` to GitHub issues
 * Improve `ArrLike` implementation
 
+### Deprecated
+
+* Deprecated `Pred(BasicTypeInstance)`
+
 ### Removed
 
 * Removed deprecated `nuke_null()`
