@@ -451,7 +451,7 @@ doc something - Object of any type that has each(something, callback) implemente
 doc %STATUS - deprecated
 doc %RET - Arr (array) of original items without nulls
 F filter(e:Eachable1) {
-	warn("USING DEPRECATED filter(e)")
+	warn("Using deprecated filter(e)")
 	filter(e, X is not Null)
 }
 
