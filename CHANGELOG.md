@@ -26,6 +26,7 @@
 * `indexes(arr:Arr, predicate)` upgraded to handle eachable: `indexes(e:Eachable1, predicate)`
 * `indexes(arr:Arr, r:PredRange)` - now takes optional `dflt` parameter: `indexes(arr:Arr, r:PredRange, dflt=...)`
 * `Box()` now returns an `EmptyBox` (thanks @organom !)
+* `Pred` improved so that `.filter({"a": 1})` will not throw exception if there is no `a` field.
 * Better `c_dlopen()` error message
 * `T.user = x` for native types now returns `x` and not `T`, consistent with other assignments
 * `Return` is now a subtype of `Exception`. This fixes failing `Failure(Return)`, which only works on `Exception`.

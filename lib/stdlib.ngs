@@ -240,9 +240,13 @@ doc Inspired by underscorejs' "matcher"
 F Pred(h:Hash) {
 	preds = h.mapv(Pred)
 	F hash_pred(x) {
-		preds.all(F(k, pred) x.(k).pred())
+		preds.all(F(k, pred) (k in x) and x.(k).pred())
 	}
 }
+
+TEST Pred({"a": Any})({"a": 1})
+TEST Pred({"a": Any, "b": Any})({"a": 1}) == false
+TEST Pred({"a": Any, "b": {false}})({"a": 1, "b": 2}) == false
 
 doc Convert a function to predicate.
 doc %RET - The given function, without any transformation
