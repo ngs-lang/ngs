@@ -13,7 +13,7 @@
 		[ parts[0] + '.', parts[1..null].join('.') ]
 	}
 
-	F main(allreg:Bool=false) {
+	F main(allreg:Bool=false, name:Str=null) {
 
 		elbs = if allreg {
 			AWS::regions({``aws elb describe-load-balancers --region $A``})
@@ -27,6 +27,10 @@
 			instances = ``aws ec2 describe-instances``.Hash('InstanceId')
 			# TODO: unhardcode the tags
 			instances_by_lb = instances.values().group(F(i) "${i.Tags.env}-${i.Tags.role}" tor "UNKOWN")
+		}
+		if name {
+			elbs .= filter( F(elb) elb.LoadBalancerName == name )
+			if not(elbs) exit("Load balancer with name $name was not found")
 		}
 		for elb in elbs {
 			elb.DNSName .= short_dns_name()
