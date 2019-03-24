@@ -4628,58 +4628,120 @@ F '.='(p:Process, field:Str, v) {
 	p.outputs[2] = v
 }
 
-doc Decide whether process finished normally: exit code must be 0.
-doc Note that processes terminated by a signal will have .exit_code null.
-doc p - any process
-doc %RET - bool
-F finished_ok(p:Process) p.exit_code == 0
+ns {
 
-doc Decide whether /bin/false process finished normally: exit code must be 1.
-doc p - /bin/false process
-doc %RET - bool
-F finished_ok(p:Process) {
-	guard p.executable.path in ['/bin/false', '/usr/bin/false']
-	p.exit_code == 1
-}
+	global finished_ok
 
-doc Decide whether specific process finished normally: exit code must be 0 or 1.
-doc p - One of the processes: /usr/bin/test, {,/usr}/bin/fuser, {,/usr}/bin/ping
-doc %EX - # Exit code 1 on the line below but no exception thanks to this finished_ok().
-doc %EX - if $(test -f /) echo("/ is a file")  # Outputs nothing, / is a directory
-doc %RET - bool
-F finished_ok(p:Process) {
-	guard p.executable.path in ['/usr/bin/test', '/bin/fuser', '/usr/bin/fuser', '/bin/ping', '/usr/bin/ping']
-	p.exit_code in [0, 1]
-}
+	_finished_ok_exit_codes = {}
 
-doc Decide whether a process finished normally: OK for any process that has "nofail:" option
-doc %EX - $(nofail: ls no-such-file)
-F finished_ok(p:Process) {
-	guard p.command.options.get('nofail')
-	true
-}
-
-doc Decide whether a process finished normally: OK for exit codes given in "ok:" option
-doc %EX - $(ok:2 ls no-such-file)
-doc %EX - $(ok:[0,1,2] ls no-such-file)
-doc %EX - $(ok:0..10 ls no-such-file)
-doc %EX - $(ok:10 ls no-such-file) # ProcessFail exception
-F finished_ok(p:Process) {
-	ok = p.command.options.get('ok')
-	guard ok is not Null
-	econd {
-		ok is Bool { ok }
-		ok is Int  { p.exit_code == ok }
-		(ok is Arr) and len(ok) == 1 and ok[0] is NumRange { throw InvalidArgument("'ok' option is [some..range] but should be some..range") }
-		(ok is Arr) or (ok is NumRange) { p.exit_code in ok }
-		true throw InvalidArgument("'ok' option must be one of: Bool, Int, Arr, NumRange")
+	doc Decide whether process finished normally: exit code must be 0.
+	doc Note that processes terminated by a signal will have .exit_code null.
+	doc p - any process
+	doc %RET - bool
+	F finished_ok(p:Process) {
+		debug("finished_ok", "finished_ok() - default method")
+		p.exit_code == 0
 	}
-}
 
-TEST try $(ok:2 cat NO_SUCH_FILE 2>/dev/null) catch(pf:ProcessFail) true
-TEST $(ok:1 cat NO_SUCH_FILE 2>/dev/null); true
-TEST $(ok:[1,10] cat NO_SUCH_FILE 2>/dev/null); true
-TEST $(ok:1..2 cat NO_SUCH_FILE 2>/dev/null); true
+	doc Decide whether a process finished normally: OK for any process that has "nofail:" option
+	doc %EX - $(nofail: ls no-such-file)
+	doc %STATUS - deprecated
+	F finished_ok(p:Process) {
+		guard p.command.options.get('nofail')
+		debug("finished_ok", "finished_ok() - nofail method")
+		warn("Using deprecated nofail: option, use ok: option instead (when running ${p.command.argv})")
+		true
+	}
+
+	doc %STATUS - internal
+	doc Decide whether a process finished normally.
+	doc %EX - $(ok:0..10 ls no-such-file)
+	F finished_ok(p:Process, field_name:Str, ok:NumRange) p.(field_name) in ok
+
+	doc %STATUS - internal
+	doc Decide whether a process finished normally.
+	doc %EX - $(ok:[0,1,2] ls no-such-file)
+	F finished_ok(p:Process, field_name:Str, ok:Arr) {
+		len(ok) == 1 and ok[0] is NumRange throws InvalidArgument("finished_ok() got [some..range] but should be some..range")
+		p.(field_name) in ok
+	}
+
+	doc %STATUS - internal
+	doc Decide whether a process finished normally.
+	doc %EX - $(ok:1 ls no-such-file)  # No exception
+	doc %EX - $(ok:10 ls no-such-file) # ProcessFail exception
+	F finished_ok(p:Process, field_name:Str, ok:Int) p.(field_name) == ok
+
+	doc %STATUS - internal
+	doc Decide whether a process finished normally.
+	doc %EX - # 'ok' option is set to true when the value is missing after ':'
+	doc %EX - $(ok: ls no-such-file)
+	F finished_ok(p:Process, field_name:Str, ok:Bool) ok
+
+	doc %STATUS - internal
+	doc Decide whether a process with 'ok' option finished normally.
+	doc %EX - $(ok:0..10 ls no-such-file)
+	doc %EX - $(ok:[0,1,2] ls no-such-file)
+	doc %EX - $(ok:1 ls no-such-file)  # No exception
+	doc %EX - $(ok:10 ls no-such-file) # ProcessFail exception
+	doc %EX - $(ok: ls no-such-file)
+	F finished_ok(p:Process) {
+		ok = p.command.options.get('ok')
+		guard ok is not Null
+		debug("finished_ok", "finished_ok(Process) method, 'ok:' option")
+		finished_ok(p, 'exit_code', ok)
+	}
+
+	TEST try $(ok:2 cat NO_SUCH_FILE 2>/dev/null) catch(pf:ProcessFail) true
+	TEST $(ok:1 cat NO_SUCH_FILE 2>/dev/null); true
+	TEST $(ok:[1,10] cat NO_SUCH_FILE 2>/dev/null); true
+	TEST $(ok:1..2 cat NO_SUCH_FILE 2>/dev/null); true
+
+	doc Decide whether a process with 'ok_sig' option finished normally.
+	doc %EX - p=$(sleep 10 &); p.kill(); p.wait()  # ProcessFail exception in wait()
+	doc %EX - p=$(ok_sig:SIGNALS.TERM sleep 10 &); p.kill(); p.wait()  # No exception
+	F finished_ok(p:Process) {
+		ok = p.command.options.get('ok_sig')
+		guard ok is not Null
+		debug("finished_ok", "finished_ok(Process) method, 'ok_sig:' option")
+		finished_ok(p, 'exit_signal', ok)
+	}
+
+	TEST p=$(sleep 10 &); p.kill(); try p.wait() catch(pf:ProcessFail) true
+	TEST p=$(ok_sig:SIGNALS.TERM sleep 10 &); p.kill(); p.wait(); true
+
+	doc Decide whether a process finished normally for known programs
+	doc that return also non-zero exit codes which do not signal a failure.
+	doc %EX - $(test -f my_file_that_might_be_present)
+	doc %EX - $(fuser my_file)  # On Linux, exit code 1 means file is not used
+	F finished_ok(p:Process) {
+		ok = _finished_ok_exit_codes.get(p.executable.path)
+		guard ok is not Null
+		debug("finished_ok", "finished_ok(Process) method, _finished_ok checker method")
+		finished_ok(p, 'exit_code', ok)
+	}
+
+	doc %STATUS - experimental
+	F finished_ok(program_name:Str, ok) {
+		_finished_ok_exit_codes[program_name] = ok
+	}
+
+	_known_programs = %{
+		%[/bin/false /usr/bin/false] 1
+		%[
+			/bin/expr /usr/bin/expr
+			/bin/ping /usr/bin/ping
+			/bin/test /usr/bin/test
+		] %[0 1]
+	}
+	if OS.linux {
+		_known_programs[%[/bin/fuser /usr/bin/fuser]] = %[0 1]
+	}
+	_known_programs.each(F(progs, ok) {
+		debug("finished_ok", "known programs: ${progs} -> ${ok}")
+		progs.each(finished_ok(X, ok))
+	})
+}
 
 doc Process constructor. Initializes fields.
 F init(p:Process, c:Command) {

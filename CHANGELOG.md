@@ -20,6 +20,7 @@
 * Add `NGS_EXIT_BACKTRACE` environment variable. If true, prints backtrace on `exit()`.
 * Add `NGS_WARN_BACKTRACE` environment variable. If true, prints backtrace on `warn()`.
 * Add `NGS_ERROR_BACKTRACE` environment variable. If true, prints backtrace on `error()`.
+* Add `$(ok_sig: ...)` option. If external program terminates by specified signal, NGS will not throw exception.
 
 ### Fixes and improvements
 
@@ -45,6 +46,7 @@
 * Finished moving `todo.txt` to GitHub issues
 * Improve `ArrLike` implementation
 * `bin/elb-describe-lbs.ngs` - Instances are now sorted by LaunchTime
+* Improve `finished_ok` implementation: easier handling of "known programs", refactor to support `ok_sig` option.
 
 ### Deprecated
 
