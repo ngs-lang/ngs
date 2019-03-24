@@ -957,12 +957,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			logger = debug("AWS", X)
 			title = "[waiting intstance ${r.id()} console output]"
 			body = {
-				try {
-					``aws ec2 get-console-output --instance-id ${r.id()}``.Output.lines()
-				} catch(e:KeyNotFound) {
-					guard e.key == 'Output'
-					false
-				}
+				``aws ec2 get-console-output --instance-id ${r.id()}``.Box('Output').map(lines).get(null)
 			}
 		)
 	}
