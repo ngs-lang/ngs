@@ -24,7 +24,7 @@
 		instances_by_lb = {}
 		if not(allreg) {
 			# TODO: implement for allreg too
-			instances = ``aws ec2 describe-instances``.Hash('InstanceId')
+			instances = ``aws ec2 describe-instances``.sort('LaunchTime').Hash('InstanceId')
 			# TODO: unhardcode the tags
 			instances_by_lb = instances.values().group(F(i) "${i.Tags.env}-${i.Tags.role}" tor "UNKOWN")
 		}

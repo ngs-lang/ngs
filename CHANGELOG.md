@@ -44,6 +44,7 @@
 * Got rid of uthash dependency
 * Finished moving `todo.txt` to GitHub issues
 * Improve `ArrLike` implementation
+* `bin/elb-describe-lbs.ngs` - Instances are now sorted by LaunchTime
 
 ### Deprecated
 
