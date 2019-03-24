@@ -24,6 +24,7 @@
 
 ### Fixes and improvements
 
+* Fixed `catch` bug that was resulting `dump Uncaught exception` messages when `catch(e:MyType)` was handling `e` of non-`MyType`.
 * `indexes(arr:Arr, predicate)` upgraded to handle eachable: `indexes(e:Eachable1, predicate)`
 * `indexes(arr:Arr, r:PredRange)` - now takes optional `dflt` parameter: `indexes(arr:Arr, r:PredRange, dflt=...)`
 * `Box()` now returns an `EmptyBox` (thanks @organom !)

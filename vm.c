@@ -4339,6 +4339,8 @@ main_loop:
 								goto exception;
 							}
 							if(mr == METHOD_IMPL_MISSING) {
+								// Stack: null (for vm_call result which did not happen), exception
+								POP(*result);
 								goto exception_return;
 							}
 							if(mr != METHOD_OK) {
