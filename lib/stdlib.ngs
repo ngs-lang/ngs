@@ -4730,6 +4730,7 @@ ns {
 		%[/bin/false /usr/bin/false] 1
 		%[
 			/bin/expr /usr/bin/expr
+			/bin/grep /usr/bin/grep
 			/bin/ping /usr/bin/ping
 			/bin/test /usr/bin/test
 		] %[0 1]
