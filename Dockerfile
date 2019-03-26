@@ -1,4 +1,4 @@
-FROM debian:jessie
+FROM debian:stretch
 
 RUN apt-get update && apt-get -y install cmake pkg-config build-essential devscripts libgc-dev libffi-dev libjson-c-dev peg libpcre3-dev pandoc
 
