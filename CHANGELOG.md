@@ -50,6 +50,7 @@
 * Improve `ArrLike` implementation
 * `bin/elb-describe-lbs.ngs` - Instances are now sorted by LaunchTime
 * Improve `finished_ok` implementation: easier handling of "known programs", refactor to support `ok_sig` option.
+* Warning on usage of `` `line: ` `` option on non-last command.
 
 ### Deprecated
 
