@@ -2,6 +2,7 @@
 
 ### New features
 
+* Add `chdir()`.
 * `Lines` type. Array of strings to be processed as a unit for output purposes (`echo`, `warn`, `error`).
 * `inspect()` now returns `Lines`.
 * Add `-pil` command line switch for "Print Inspect()ed Lines"
@@ -21,6 +22,7 @@
 * Add `NGS_WARN_BACKTRACE` environment variable. If true, prints backtrace on `warn()`.
 * Add `NGS_ERROR_BACKTRACE` environment variable. If true, prints backtrace on `error()`.
 * Add `$(ok_sig: ...)` option. If external program terminates by specified signal, NGS will not throw exception.
+* Add `$(cd: ...)` option. Runs the external program in the specified directory.
 
 ### Fixes and improvements
 

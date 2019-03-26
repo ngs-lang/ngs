@@ -4270,6 +4270,26 @@ doc %EX - conf_files = [Path("/usr/local/etc/some.conf"), Path("/etc/some.conf")
 doc %EX - $(ls -l $*conf_files)
 F Arg(p:Path) p.path
 
+{
+	doc Represents a failure in chdir() system call.
+	type CdFail(CException)
+}
+
+# TODO p must be either Path or a Dir, not any subtype of Path
+doc Change directory. Uses CHDIR(2).
+doc p - Directory to cd to.
+doc %RET - null
+F chdir(p:Path) chdir(p.path)
+
+doc Change directory. Uses CHDIR(2).
+doc s - Directory to cd to.
+doc %RET - null
+F chdir(s:Str) {
+	t = c_chdir(s)
+	t throws CdFail("Failed to chdir to '${s}'").set('dir', s)
+	null
+}
+
 # === Commands and processes (WIP) ===============
 
 doc Duplicate a file descriptor. Uses DUP2(2). Handles EINTR.
@@ -4950,9 +4970,6 @@ F '$()'(c:Command) {
 			}
 		}
 
-		# Should be after redirects to be able to 2>/dev/null ?
-		'cd' in c.options throws NotImplemented("Changing directory is not implemented yet")
-
 		marker_to_open_flags = {'<': 'r', '>': 'w', '>>': 'a'}
 		marker_to_default_fd = {'<': 0, '>': 1, '>>': 1}
 
@@ -4977,6 +4994,9 @@ F '$()'(c:Command) {
 				}
 			}
 		})
+
+		c.options.Box('cd').each(chdir)
+
 		debug("process", "will execve()")
 		result = c_execve(process.executable.path, argv, ENV.Strs())
 		# TODO: propagate this error to parent, don't know how yet
@@ -5110,6 +5130,7 @@ F '$()'(cp:CommandsPipeline) {
 TEST $(true).Bool()
 TEST $(false).Bool() == false
 TEST "$(/bin/echo -n abc)" == 'abc'
+TEST $(cd:"/" pwd).lines()[0] == '/'
 
 doc Write to first process of CommandsPipeline
 doc %EX - p = (|cat -n | tac >/tmp/1)

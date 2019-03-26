@@ -1974,6 +1974,11 @@ METHOD_RESULT native_c_closedir EXT_METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(ret));
 }
 
+METHOD_RESULT native_c_chdir METHOD_PARAMS {
+	int ret = chdir(obj_to_cstring(argv[0]));
+	METHOD_RETURN(MAKE_INT(ret));
+}
+
 #define ELT(value) *p = MAKE_INT(value); p++;
 #define MAKE_STAT_METHOD(cmd, arg_transform) \
 METHOD_RESULT native_c_ ## cmd EXT_METHOD_PARAMS { \
@@ -3024,6 +3029,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Call READDIR(3)");
 	register_global_func(vm, 1, "c_closedir",&native_c_closedir,        1,"dirp",     vm->C_DIR);
 	_doc(vm, "", "Call CLOSEDIR(3)");
+	register_global_func(vm, 0, "c_chdir",   &native_c_chdir,           1,"dir",      vm->Str);
+	_doc(vm, "", "Call CHDIR(2)");
 
 	register_global_func(vm, 1, "c_stat",    &native_c_stat,            1,"pathname", vm->Str);
 	_doc(vm, "", "Call STAT(2)");
