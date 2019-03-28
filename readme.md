@@ -131,27 +131,26 @@ This is how an instance can be created using NGS (real working code). No state f
 
 # Compiling and running
 
-## Install dependencies - Debian-based Linux
-
-	sudo apt-get install libgc-dev libffi6 libffi-dev libjson-c-dev peg libpcre3-dev make cmake pandoc pkg-config build-essential git
-	sudo type awk || sudo apt-get install gawk
-
-## Install dependencies - Mac OS X
-
-	brew update
-	brew install make cmake peg libgc pcre libffi gnu-sed json-c pkg-config pandoc git
-
 ## Clone from git
 
-    git clone https://github.com/ngs-lang/ngs.git
+	git clone https://github.com/ngs-lang/ngs.git
 
-    # or if using git over ssh
-    git clone git@github.com:ngs-lang/ngs.git
+	# or if using git over ssh
+	git clone git@github.com:ngs-lang/ngs.git
 
-## Install ngs
+	cd ngs
 
-    cd ngs
-    sudo make install
+## Install with dependencies - Debian-based Linux
+
+	./install-linux.sh
+	
+## Install with dependencies - MacOS (brew)
+
+	./install-mac.sh
+
+## Install without dependencies
+
+	sudo make install
 
 ## Run tests
 
