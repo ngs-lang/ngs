@@ -1,5 +1,6 @@
 default:
 	@echo "No target defined"
+	exit 1
 
 .PHONY: build
 build:
