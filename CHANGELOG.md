@@ -4,6 +4,7 @@
 
 * Add `chdir()`.
 * Add `set(obj, **kwargs)`. Sets given fields.
+* Add `copy(nti:NormalTypeInstance)`. Make shallow copy of an object.
 * `Lines` type. Array of strings to be processed as a unit for output purposes (`echo`, `warn`, `error`).
 * `inspect()` now returns `Lines`.
 * Add `-pil` command line switch for "Print Inspect()ed Lines"

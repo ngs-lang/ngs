@@ -1092,6 +1092,16 @@ doc %EX - mysomething.dflt(k, []).push(elt)
 doc %RET - Key value, the already-existed or new.
 F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
 
+doc Make shallow copy of an object
+F copy(nti:NormalTypeInstance) {
+	t = typeof(nti)
+	ret = t()
+	nti.Hash().each(ret.set(X, Y))
+	ret
+}
+
+TEST type T; t=T(); t.x=1; t2=t.copy(); t2.x==1
+
 # === Exceptions =================================
 
 {
