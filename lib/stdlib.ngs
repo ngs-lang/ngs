@@ -4940,6 +4940,10 @@ F '$()'(c:Command) {
 
 	debug("process", "Parsed command: ${argv}")
 
+	if c.options.get('log') == true {
+		log("Running command: ${argv.map(escape_bash).join(' ')}")
+	}
+
 	process = Process(c)
 	try {
 		process.executable = find_in_path(argv[0])
