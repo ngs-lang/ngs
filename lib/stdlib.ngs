@@ -229,6 +229,14 @@ F set(obj, field:Str, val) {
 	obj
 }
 
+doc Sets the given fields to the given values
+doc %RET - The modified obj
+doc %EX - my_cond throws InvalidArgument("Out of range").set(min=0, max=10, given=12)
+F set(obj, **kwargs) {
+	kwargs.each(obj.set(X, Y))
+	obj
+}
+
 doc Convert anything to a predicate.
 doc anything - The value to compare to
 doc %RET - A function that compares the only argument to the given value

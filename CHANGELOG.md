@@ -3,6 +3,7 @@
 ### New features
 
 * Add `chdir()`.
+* Add `set(obj, **kwargs)`. Sets given fields.
 * `Lines` type. Array of strings to be processed as a unit for output purposes (`echo`, `warn`, `error`).
 * `inspect()` now returns `Lines`.
 * Add `-pil` command line switch for "Print Inspect()ed Lines"
