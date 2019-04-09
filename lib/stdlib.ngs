@@ -5187,7 +5187,6 @@ F ``(cp:CommandsPipeline) {
 	if cp.commands[-1].options.get('line') == true {
 		ret = ret.lines()[0]
 	}
-	echo(cp.commands[0..-1].options.get('line'))
 	if cp.commands[0..-1].options.get('line') {
 		warn("Using 'line:' option on non-final command had no effect when running ${cp.commands.argv}")
 	}
