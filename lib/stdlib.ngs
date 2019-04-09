@@ -237,6 +237,8 @@ F set(obj, **kwargs) {
 	obj
 }
 
+TEST type T; t=T().set(a=1, b=2); t.a == 1 and t.b == 2
+
 doc Convert anything to a predicate.
 doc anything - The value to compare to
 doc %RET - A function that compares the only argument to the given value
