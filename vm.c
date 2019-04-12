@@ -2600,7 +2600,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MKTYPE(CommandsPipe);
 	MKTYPE(Command);
 
-	MKTYPE(Redir);
+	MKTYPE(CommandRedir);
 	_doc(vm, "", "Input/output redirection");
 
 	// XXX: changing NGS_TYPE_FIELDS of InclusiveRange or ExclusiveRange
@@ -4703,7 +4703,7 @@ do_jump:
 							goto main_loop;
 		case OP_MAKE_REDIR:
 							EXPECT_STACK_DEPTH(3);
-							command = make_normal_type_instance(vm->Redir);
+							command = make_normal_type_instance(vm->CommandRedir);
 							POP_NOCHECK(v);
 							set_normal_type_instance_field(command, make_string("datum"), v);
 							POP_NOCHECK(v);

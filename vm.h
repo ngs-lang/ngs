@@ -216,7 +216,7 @@ struct VM {
 	VALUE CommandsPipeline;
 	VALUE CommandsPipe;
 	VALUE Command;
-	VALUE Redir;
+	VALUE CommandRedir;
 
 	VALUE NumRange;
 

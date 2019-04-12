@@ -1,5 +1,11 @@
 ## (UNRELEASED) Version 0.2.6
 
+
+### Breaking changes
+
+* `$()` now returns `ProcessesPipeline` (a new type). You should check all the places in your code that use `CommandsPipeline`. Code that handles result of `$(...)` should be changed to expect `ProcessesPipeline`, not `CommandsPipeline`.
+* `$(nofail my_command)` was removed. Use `$(ok: my_command)`. Deprecated `$(nofail: my_command)` still works.
+
 ### New features
 
 * Add `chdir()`.
@@ -15,6 +21,9 @@
 * Add `-(Str, Ifx)`
 * Add experimental `is_subtype(t:Type, maybe_supertype:Type)`.
 * Add experimental `ensure(x, t:Type)` for `Eachable1` subtypes. Returns either `x` if it's already of type `t` or new object of type `t` with single item `x`.
+* Add `ProcessesPipeline` type
+* Add `inspect(pp:ProcessesPipeline)`
+* Add `ProcessRedir` type; `Redir` type was renamed to `CommandRedir`. `CommandsPipeline` has `CommandRedir` while `ProcessesPipeline` has `ProcessRedir`.
 * Add `Threads(ArrLike)` type
 * Add `join(ArrLike, Str)`
 * Add `.(ArrLike, Str)`
@@ -25,6 +34,7 @@
 * Add `NGS_ERROR_BACKTRACE` environment variable. If true, prints backtrace on `error()`.
 * Add `$(ok_sig: ...)` option. If external program terminates by specified signal, NGS will not throw exception.
 * Add `$(cd: ...)` option. Runs the external program in the specified directory.
+* Add `$(log: ...)` option. Logs the program to be executed first and then executes the program.
 
 ### Fixes and improvements
 
@@ -53,6 +63,13 @@
 * `bin/elb-describe-lbs.ngs` - Instances are now sorted by LaunchTime
 * Improve `finished_ok` implementation: easier handling of "known programs", refactor to support `ok_sig` option.
 * Warning on usage of `` `line: ` `` option on non-last command.
+* `CommandsPipeline` related changes which have low probability of breaking anything.
+	* `wait(cp:CommandsPipeline)` is now `wait(pp:ProcessesPipeline)` and returns `pp`.
+	* `Str(cp:CommandsPipeline)` is now `Str(pp:ProcessesPipeline)`.
+	* `kill(cp:CommandsPipeline, sig:Int=SIGNALS.TERM)` is now `kill(pp:ProcessesPipeline, sig:Int=SIGNALS.TERM)`
+	* `lines(cp:CommandsPipeline)` is now `lines(pp:ProcessesPipeline)`
+	* `lines(cp:CommandsPipeline, cb:Fun)` is now `lines(pp:ProcessesPipeline, cb:Fun)`
+	* `assert_...(cp:CommandsPipeline, ...)` are now `assert_...(pp:ProcessesPipeline, ...)`
 
 ### Deprecated
 

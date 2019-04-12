@@ -4312,6 +4312,26 @@ F chdir(s:Str) {
 
 # === Commands and processes (WIP) ===============
 
+{
+	type ProcessesPipeline
+	type ProcessRedir
+}
+
+F init(pp:ProcessesPipeline, cp:CommandsPipeline) {
+	pp.cp = cp
+	pp.processes = []
+	pp.pipe_in = null
+	pp.pipe_out = null
+}
+
+F init(pr:ProcessRedir, cr:CommandRedir) {
+	pr.fd = cr.fd
+	pr.marker = cr.marker
+	pr.datum = cr.datum
+}
+
+F init(pr:ProcessRedir, fd, marker, datum) init(args())
+
 doc Duplicate a file descriptor. Uses DUP2(2). Handles EINTR.
 F dup2(oldfd:Int, newfd:Int) {
 	while true {
@@ -4612,11 +4632,11 @@ F store(filename:Str, data, encode_hints:Hash={}) {
 	null
 }
 
-# --- Redir ---
+# --- CommandRedir ---
 
-doc Initialize Redir object. Used internally for commands syntax.
+doc Initialize CommandRedir object. Used internally for commands syntax.
 doc %AUTO - $(my_prog >my_file)
-F init(r:Redir, fd, marker, datum) {
+F init(r:CommandRedir, fd, marker, datum) {
 	guard marker is Str or marker is Null
 	guard datum is Str or datum is Pipe or datum == true or datum is Int
 	init(args())
@@ -4624,7 +4644,7 @@ F init(r:Redir, fd, marker, datum) {
 
 doc Convert Redit to human-readable string.
 doc %RET - Str
-F Str(r:Redir) "<Redirect ${r.fd} ${r.marker} ${r.datum}>"
+F Str(r:CommandRedir) "<${r.typeof().name} ${r.fd} ${r.marker} ${r.datum}>"
 
 # --- Process ---
 
@@ -4797,13 +4817,11 @@ F init(p:Process, c:Command) {
 	# p.lock = Lock()
 }
 
+# Maybe it should be pp.processes.all(Bool)? And implement Bool(p:Process)
 doc Wait for all process to finish and see whether all exit codes are 0
 doc %RET - Bool
 doc %EX - if $(test -f myfile) ... # if runs Bool() on any non-Bool condition expression
-F Bool(cp:CommandsPipeline) {
-	cp.wait()
-	cp.processes.all({A.exit_code == 0})
-}
+F Bool(pp:ProcessesPipeline) pp.wait().processes.all({A.exit_code == 0})
 
 doc Wait for a process. Waits for reading and writing threads to finish.
 doc Waits for the process to finish. Checks whether to throw ProcessFail using finished_ok().
@@ -4820,9 +4838,7 @@ F wait(p:Process) {
 		results = threads.join()
 		p.(which) = []
 		first_failure = results.first(Failure, null)
-		if first_failure {
-			throw ProcessFail('Error in reading/writing thread').set('process', p).set('cause', first_failure)
-		}
+		first_failure throws ProcessFail('Error in reading/writing thread').set(process=p, cause=first_failure)
 	}
 
 	debug("process", "[wait] joining reading and writing threads")
@@ -4850,9 +4866,13 @@ F wait(p:Process) {
 }
 
 doc Wait for all processes to finish.
-F wait(cp:CommandsPipeline) cp.processes.each(wait)
+F wait(pp:ProcessesPipeline) {
+	pp.processes.each(wait)
+	pp
+}
 
-doc Convert Process to exit code. Waits for the process to finish and uses its exit code or
+doc Convert Process to exit code. Waits for the process to finish and uses its exit code.
+doc To be used for NGS process exit such as in "ngs -e 'my_code(); $(ls)'".
 F ExitCode(p:Process) {
 	ec = p.wait().exit_code
 	ec is Int returns ec
@@ -4867,12 +4887,9 @@ F ExitCode(p:Process) {
 	240
 }
 
-doc Convert CommandsPipeline to exit code. Waits for the processes to finish.
+doc Convert ProcessesPipeline to exit code. Waits for the processes to finish.
 doc Returns first non-zero exit code. Returns zero if all exit codes are zero.
-F ExitCode(cp:CommandsPipeline) {
-	cp.wait()
-	e = cp.processes.map(ExitCode).first(X != 0, 0)
-}
+F ExitCode(pp:ProcessesPipeline) pp.wait().processes.map(ExitCode).first(X != 0, 0)
 
 doc Wait for the process to finish and return its standard output.
 doc %RET - Str
@@ -4880,10 +4897,10 @@ F Str(p:Process) p.wait().stdout
 
 doc Wait for the processes to finish and return standard output of the last process in pipeline.
 doc %RET - Str
-F Str(cp:CommandsPipeline) {
-	cp.wait()
-	assert(cp.processes)
-	Str(cp.processes[-1])
+F Str(pp:ProcessesPipeline) {
+	pp.wait()
+	assert(pp.processes)
+	Str(pp.processes[-1])
 }
 
 # TODO: type Arg(Str) -- currently, inheriting built in types is not supported
@@ -4946,29 +4963,21 @@ F Argv(a:Arr) {
 
 # --- $() ---
 
-doc Run a process, described by the command c
-F '$()'(c:Command) {
+doc Run a process
+F '$()'(p:Process) {
 
-	# Removing this fails the test $(nofail cat NO_SUCH_FILE 2>/dev/null)
-	#   TODO: handle later. Ideally this if should be removed.
-	# Special case: $($cmd)
-	if (c.argv.len() == 1) and (c.argv[0] is Command) {
-	        c = c.argv[0]
-	}
-
-	argv = c.argv.map(Arg)
+	argv = p.command.argv.map(Arg)
 
 	debug("process", "Parsed command: ${argv}")
 
-	if c.options.get('log') == true {
+	if p.command.options.get('log') == true {
 		log("Running command: ${argv.map(escape_bash).join(' ')}")
 	}
 
-	process = Process(c)
 	try {
-		process.executable = find_in_path(argv[0])
+		p.executable = find_in_path(argv[0])
 	} catch(nf:ExecutableNotFound) {
-		throw ProcessFail(process).set('cause', nf).set('message', 'Executable not found')
+		throw ProcessFail(p).set('cause', nf).set('message', 'Executable not found')
 	}
 
 	pid = c_fork()
@@ -4977,14 +4986,14 @@ F '$()'(c:Command) {
 
 	debug("process", "PID after fork: $pid")
 
-	pipes = c.redirects.filter({'datum': Pipe})
-	debug("process2", "PIPES FROM REDIRECTS $pipes REDIRECTS ${c.redirects} COMMND ${c.Hash()}")
+	pipes = p.redirects.filter({'datum': Pipe})
+	debug("process2", "PIPES FROM REDIRECTS $pipes REDIRECTS ${p.redirects} COMMND ${p.Hash()}")
 	child_fds = pipes.datum.map(child_fd)
 
 	if pid == 0 {
 		# === Child ===
 		# TODO: See https://stackoverflow.com/questions/13101690/c-get-all-open-file-descriptors
-		child_fds_to_keep_open = child_fds + c.redirects.datum.filter(Int) 
+		child_fds_to_keep_open = child_fds + p.redirects.datum.filter(Int)
 		debug("process2", "CHILD CLOSING FDS 3 TO 100 EXCEPT FOR ${child_fds_to_keep_open}")
 		for(i=3;i<100;i+=1) {
 			if i not in child_fds_to_keep_open {
@@ -4997,7 +5006,7 @@ F '$()'(c:Command) {
 		marker_to_open_flags = {'<': 'r', '>': 'w', '>>': 'a'}
 		marker_to_default_fd = {'<': 0, '>': 1, '>>': 1}
 
-		c.redirects.each(F(r:Redir) {
+		p.redirects.each(F(r:ProcessRedir) {
 			if r.datum is not Pipe {
 				target_fd = r.fd.Box().get(marker_to_default_fd[r.marker])
 			}
@@ -5019,10 +5028,10 @@ F '$()'(c:Command) {
 			}
 		})
 
-		c.options.Box('cd').each(chdir)
+		p.command.options.Box('cd').each(chdir)
 
 		debug("process", "will execve()")
-		result = c_execve(process.executable.path, argv, ENV.Strs())
+		result = c_execve(p.executable.path, argv, ENV.Strs())
 		# TODO: propagate this error to parent, don't know how yet
 		error("Process ${c_getpid()} (fork child) failed to execve()")
 		c_exit(250)
@@ -5030,17 +5039,17 @@ F '$()'(c:Command) {
 
 	if pid > 0 {
 		# === Parent ===
-		process.pid = pid
+		p.pid = pid
 		child_fds.each(close)
 		debug("process", "Reading all output of the child process")
 		# XXX: maybe make it chunk based with c_poll() and single thread
 		# TODO: some error handling inside these threads and after joining them
-		process.reading_threads = c.redirects.filter({'datum': CollectingPipeFromChildToParentProcess}).map(F(r:Redir) {
-			Thread("process-${process.pid}-output-fd-${r.fd}-reader", {
+		p.reading_threads = p.redirects.filter({'datum': CollectingPipeFromChildToParentProcess}).map(F(r:ProcessRedir) {
+			Thread("process-${p.pid}-output-fd-${r.fd}-reader", {
 				Result({
 					debug("process2", "READING ${r.datum}")
-					process.outputs[r.fd] = r.datum.read()
-					debug("process2", "READ <<${process.outputs[r.fd].limit(100, '...').SafeStr()}>>")
+					p.outputs[r.fd] = r.datum.read()
+					debug("process2", "READ <<${p.outputs[r.fd].limit(100, '...').SafeStr()}>>")
 					debug("process2", "DATUM *** ${r.datum}")
 					r.datum.close_reading_end()
 					debug("process2", "CLOSED READING END OF PIPE, REDIRECT ${r}")
@@ -5051,8 +5060,8 @@ F '$()'(c:Command) {
 		}).Threads()
 	}
 
-	debug("process2", "\$() returns process ${process.Hash()}")
-	process
+	debug("process2", "\$() returns process ${p.Hash()}")
+	p
 }
 
 # TODO: Free (close) fds on failure
@@ -5091,64 +5100,73 @@ F '$()'(cp:CommandsPipeline) {
 
 	}
 
-	cp.processes = null
-	cp.pipe_in = null
-	cp.pipe_out = null
-
-	for c in cp.commands {
-		for r in c.redirects {
+	# Validation - start
+	for cmd in cp.commands {
+		for r in cmd.redirects {
 			if r.datum == true {
 				r.marker != '>' throws InvalidArgument("Redirection to 'true' for collecting output can only be done with '>' redirection syntax, not '${r.marker}'").set('cp', cp)
-				r.datum = CollectingPipeFromChildToParentProcess()
 			}
 		}
 	}
+	# Validation - end
+
+	pp = ProcessesPipeline(cp)
+	pp.processes = cp.commands.map(F(cmd) {
+		p = Process(cmd)
+		p.redirects = cmd.redirects.map(ProcessRedir).each(F(r) {
+			if r.datum == true {
+				r.datum = CollectingPipeFromChildToParentProcess()
+			}
+		})
+		p
+	})
 
 	# Commands:    C0    C1    C2
 	# Pipes:    P0    P1    P2    P3
 	# $(| ...) - uses P0
 	# $(... |) - uses P3
+	debug("process2", "cp.pipes.len()=${cp.pipes.len()}")
 	for(i;cp.pipes.len()) {
 		cp.pipes[i] is Null continues
 		debug("process2", "cp.pipes[$i]")
 		econd {
 			i == 0 {
 				debug("process2", "PIPE IN")
-				cp.pipe_in = PipeToChildProcess()
-				cp.commands[i].redirects.unshift(Redir(0, null, cp.pipe_in))
+				pp.pipe_in = PipeToChildProcess()
+				pp.processes[i].redirects.unshift(ProcessRedir(0, null, pp.pipe_in))
 			}
-			i == cp.commands.len() {
+			i == pp.processes.len() {
 				debug("process2", "PIPE OUT")
-				cp.pipe_out = PipeFromChildToParentProcess()
-				cp.commands[i-1].redirects.unshift(Redir(1, null, cp.pipe_out))
+				pp.pipe_out = PipeFromChildToParentProcess()
+				pp.processes[i-1].redirects.unshift(ProcessRedir(1, null, pp.pipe_out))
 			}
 			true {
 				p = Pipe()
-				cp.commands[i-1].redirects.unshift(Redir(1, null, WritingPipeBetweenChildren(p)))
-				cp.commands[i].redirects.unshift(Redir(0, null, ReadingPipeBetweenChildren(p)))
+				pp.processes[i-1].redirects.unshift(ProcessRedir(1, null, WritingPipeBetweenChildren(p)))
+				pp.processes[i].redirects.unshift(ProcessRedir(0, null, ReadingPipeBetweenChildren(p)))
 			}
 		}
 	}
 
-	if not(cp.options.get('top_level')) and cp.pipe_out is Null {
-		do_redir_1 = cp.commands[-1].redirects.none(F(r) {
+	if not(cp.options.get('top_level')) and pp.pipe_out is Null {
+		do_collect_output = pp.processes[-1].redirects.none(F(r) {
 			# >${false} OR 1>${false}
 			# 1>? OR 1<?
-			(r.datum == false and r.marker == '>' and r.fd in [null, 1]) or
+			(r.datum != true and r.marker == '>' and r.fd in [null, 1]) or
 			r.fd == 1
 		})
-		if do_redir_1 {
-			cp.commands[-1].redirects.unshift(Redir(1, null, CollectingPipeFromChildToParentProcess()))
+		if do_collect_output {
+			pp.processes[-1].redirects.unshift(ProcessRedir(1, null, CollectingPipeFromChildToParentProcess()))
 		}
 	}
 
-	cp.processes = cp.commands.map(('$()'))
+	pp.processes = pp.processes.map(('$()'))
 
-	if not(cp.options.get('&')) and cp.pipe_in is Null and cp.pipe_out is Null {
-		cp.wait()
+	if not(cp.options.get('&')) and pp.pipe_in is Null and pp.pipe_out is Null {
+		pp.wait()
 	}
 
-	cp
+	pp
 }
 
 TEST $(true).Bool()
@@ -5156,46 +5174,34 @@ TEST $(false).Bool() == false
 TEST "$(/bin/echo -n abc)" == 'abc'
 TEST $(cd:"/" pwd).lines()[0] == '/'
 
-doc Write to first process of CommandsPipeline
+doc Write to first process of ProcessesPipeline
 doc %EX - p = (|cat -n | tac >/tmp/1)
 doc %EX - p.write("one\n")
 doc %EX - p.write("two\n")
 doc %EX - p.close()
-F write(cp:CommandsPipeline, s:Str) {
-	cp.pipe_in is Null throws InvalidArgument("CommandsPipeline has no input pipe").set('cp', cp)
-	cp.pipe_in.write(s)
-	cp
+F write(pp:ProcessesPipeline, s:Str) {
+	pp.pipe_in is Null throws InvalidArgument("ProcessesPipeline has no input pipe").set('pp', pp)
+	pp.pipe_in.write(s)
+	pp
 }
 
-doc Read from last process of CommandsPipeline
+doc Read from last process of ProcessesPipeline
 doc %EX - p = $(seq 3 | tac |);
 doc %EX - data = read(p);
 doc %EX - p.close()
-F read(cp:CommandsPipeline, count=null) {
+F read(pp:ProcessesPipeline, count=null) {
 	guard count is Int or count is Null
-	cp.pipe_out is Null throws InvalidArgument("CommandsPipeline has no output pipe").set('cp', cp)
-	cp.pipe_out.read(count)
+	pp.pipe_out is Null throws InvalidArgument("ProcessesPipeline has no output pipe").set('pp', pp)
+	pp.pipe_out.read(count)
 }
 
 # TODO: example
-doc Close reading and writing pipes of CommandsPipeline, if they exist
-F close(cp:CommandsPipeline) {
-	cp.pipe_in.Box().map({A.parent_fd().close()})
-	cp.pipe_out.Box().map({A.parent_fd().close()})
-	cp
+doc Close reading and writing pipes of ProcessesPipeline, if they exist
+F close(pp:ProcessesPipeline) {
+	pp.pipe_in.Box().map({A.parent_fd().close()})
+	pp.pipe_out.Box().map({A.parent_fd().close()})
+	pp
 }
-
-doc Enables "nofail" command prefix.
-doc %EX - test
-doc %EX - $(nofail ./NONE).exit_code.echo()  # Would cause exception without "nofail"
-F '$()'(c:Command) {
-	guard c.argv[0] == 'nofail'
-	warn("Using deprecated 'nofail' in command $c")
-	c.options.nofail = true
-	c.argv.shift()
-	$($c)
-}
-
 
 doc Get command standard output. Similar to bash. Does not strip trailing new line character(s)
 doc `line:true my_command` will return the first line, stripping trailing new line character(s)
@@ -5250,10 +5256,9 @@ F kill(p:Process, sig:Int=SIGNALS.TERM) {
 	kill(p.pid, sig)
 }
 
-doc Kill all processes in the CommandsPipeline. Throws InvalidArgument if CommandsPipeline is not running (yet).
-F kill(cp:CommandsPipeline, sig:Int=SIGNALS.TERM) {
-	'processes' not in cp throws InvalidArgument("Can't kill() a pipeline that has no running processes")
-	cp.processes.map(kill(X, sig))
+doc Kill all processes in the ProcessesPipeline. Throws InvalidArgument if ProcessesPipeline is not running (yet).
+F kill(pp:ProcessesPipeline, sig:Int=SIGNALS.TERM) {
+	pp.processes.map(kill(X, sig))
 }
 
 TEST counter = 0; p=$(sleep 5&); if p.processes[0].stdout == null counter +=1; p.kill(); try p.wait() catch(e:ProcessFail) true
@@ -5330,17 +5335,17 @@ F lines(p:Process, cb:Fun) {
 doc Wait for cp and return lines of stdout of the last process.
 doc %RET - Arr of Str
 doc %EX - $(seq 3 | tac).lines().map(Int)  # [3,2,1]
-F lines(cp:CommandsPipeline) {
-	cp.wait()
-	cp.processes[-1].stdout.lines()
+F lines(pp:ProcessesPipeline) {
+	pp.wait()
+	pp.processes[-1].stdout.lines()
 }
 
-doc Wait for cp and return call cb for each line of stdout of last process.
+doc Wait for pp and return call cb for each line of stdout of last process.
 doc Warning: current implementation waits for the processes to finish, accumulates all stdout of the last process, and only then starts calling cb for each line.
 doc %RET - Arr of Str
-F lines(cp:CommandsPipeline, cb:Fun) {
-	cp.wait()
-	cp.processes[-1].stdout.lines(cb)
+F lines(pp:ProcessesPipeline, cb:Fun) {
+	pp.wait()
+	pp.processes[-1].stdout.lines(cb)
 }
 
 # XXX: might not be correct on all platforms
@@ -6013,6 +6018,9 @@ F inspect(p:Process) {
 		collect("  pid = ${p.pid}")
 		collect("  exit_code = ${p.exit_code}")
 		collect("  exit_signal = ${p.exit_signal}")
+		p.redirects.each_idx_val(F(idx, val) {
+			("  redirects[${idx}]: " + p.redirects[idx].inspect()).each(collect)
+		})
 		p.outputs.each(F(k, val) {
 			# Replacing 'lines' with 'Lines' does not work. Gives "(Failed to inspect)".
 			val_lines = val.Box().map(lines).get([])
@@ -6028,10 +6036,10 @@ doc %RET - Lines
 F inspect(cp:CommandsPipeline) {
 	F p(idx:Int) {
 		cp.pipes[idx] is Null returns []
-		("  pipe[$idx]: " + inspect(cp.pipes[idx]))
+		("     pipe[$idx]: " + inspect(cp.pipes[idx]))
 	}
 	collector/Lines() {
-		collect("CommandsPipeline")
+		collect(cp.typeof().name)
 		if cp.options {
 			("  options: " + inspect(cp.options)) % collect
 		}
@@ -6042,6 +6050,20 @@ F inspect(cp:CommandsPipeline) {
 				("  process[$i]: " + inspect(cp.processes[i])) % collect
 			}
 			p(i+1) % collect
+		}
+	}
+}
+
+doc Inspect ProcessesPipeline
+doc %RET - Lines
+F inspect(pp:ProcessesPipeline) {
+	collector/Lines() {
+		collect(pp.typeof().name)
+		%[cp pipe_in pipe_out].each(F(k) {
+			("  ${k}: " + inspect(pp.(k))) % collect
+		})
+		for(i;len(pp.processes)) {
+			("  processes[$i]: " + inspect(pp.processes[i])) % collect
 		}
 	}
 }
