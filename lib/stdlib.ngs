@@ -4923,7 +4923,8 @@ doc Key-value pairs with values of type NoData (null, EmptyBox) are discarded.
 doc Key-value pairs with empty array values are discarded.
 doc Values of type Box are unboxed.
 doc For keys which are arrays of two elements, Bool value selects first (for true) or second (for false) element.
-doc For keys which are arrays of single element, Bool value selects whether the key is present or absent in the output.
+doc For keys which are arrays of a single element, Bool value selects whether the key is present or absent in the output.
+doc For keys which are arrays of a single element, Eachable1 value causes the switch to br repeated for each element, building switch name and switch value pairs.
 doc %EX - # Typical usage:
 doc %EX - argv = Argv({'name1': value1, 'name2': value2, ...})
 doc %EX - $(my_command $*argv)
@@ -4931,17 +4932,30 @@ doc %EX - # Handling of key-value pairs
 doc %EX - Argv({"--a": 1, "-b": null})                         # ['--a', 1]
 doc %EX - Argv({["-y1", "-n1"]: true, ["-y2", "-n2"]: false})  # ['-y1', '-n2']
 doc %EX - Argv({["-y3"]: true, ["-y4"]: false})                # ["-y3"]
+doc %EX - Argv({["--repeat"]: ["a", "b"]})                     # ["--repeat", "a", "--repeat", "b"]
 doc %EX - Argv({"-a1": [], "-a2": [1,2,3]})                    # ["-a2", 1, 2, 3]
 F Argv(h:Hash) {
 	collector
 		h.rejectv(NoData).mapv(only(Box, get)).each(F(k, v) {
-			if k is Arr and v is Bool {
-				# ['--might-be-flag']: my_bool_expr
-				# ['--flag-if-yes', '--flag-if-no']: my_bool_expr
-				k.len() not in 1...2 throws InvalidArgument("Argv key which is array must be of length 1 or 2").set('value', k)
-				# v == true -> use index 0, v == false -> use index 1
-				k.Box(Int(not(v))).map(collect)
-				return
+			if k is Arr {
+				ematch v {
+					Bool {
+						# ['--might-be-flag']: my_bool_expr
+						# ['--flag-if-yes', '--flag-if-no']: my_bool_expr
+						k.len() not in 1...2 throws InvalidArgument("Argv key which is array must be of length 1 or 2").set('value', k)
+						# v == true -> use index 0, v == false -> use index 1
+						k.Box(Int(not(v))).map(collect)
+						return
+					}
+					Eachable1 {
+						# ['--repeat']: my_eachable1
+						v.each(F(elt) {
+							collect(k[0])
+							collect(elt)
+						})
+						return
+					}
+				}
 			}
 
 			# If you have nothing to give to the switch, skip the switch
@@ -4955,6 +4969,7 @@ F Argv(h:Hash) {
 
 TEST Argv({"--a": 1, "-b": null, ["-y1", "-n1"]: true, ["-y2", "-n2"]: false, ["-y3"]: true, ["-y4"]: false}) == ["--a", 1, "-y1", "-n2", "-y3"]
 TEST Argv({"-a1": [], "-a2": [1,2,3]}) == ["-a2", 1, 2, 3]
+TEST Argv({["--repeat"]: ["a", "b"]}) == ["--repeat", "a", "--repeat", "b"]
 
 doc EXPERIMENTAL! Do not use!
 F Argv(a:Arr) {

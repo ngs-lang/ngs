@@ -70,6 +70,7 @@
 	* `lines(cp:CommandsPipeline)` is now `lines(pp:ProcessesPipeline)`
 	* `lines(cp:CommandsPipeline, cb:Fun)` is now `lines(pp:ProcessesPipeline, cb:Fun)`
 	* `assert_...(cp:CommandsPipeline, ...)` are now `assert_...(pp:ProcessesPipeline, ...)`
+* `Argv()` - support for arguments that need repeated argument name
 
 ### Deprecated
 
