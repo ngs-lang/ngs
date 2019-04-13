@@ -4538,15 +4538,24 @@ F open(f:File, flags:Str) {
 # XXX: might not be correct on all platforms
 TEST open(File("/etc/passwd"), "r").fd > 0
 
+{
+	type BasenameArgumentFail(InvalidArgument)
+}
+
 doc Get basename of the file.
 F basename(p:Path) p.path.basename()
 
 doc Get basename of the file.
-F basename(s:Str) s.split('/')[-1]
+F basename(s:Str) {
+	ret = s.split('/')[-1]
+	not(ret) throws BasenameArgumentFail("'${s}' is not a valid input to basename()").set('s', s)
+	ret
+}
 
 TEST basename("/abc") == "abc"
 TEST basename("abc") == "abc"
 TEST basename("abc/def") == "def"
+TEST try basename("abc/def/") catch(e:BasenameArgumentFail) true
 
 
 # TODO: something more efficient than reading all of it. Some kind of streaming.
