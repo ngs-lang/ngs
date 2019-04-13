@@ -27,6 +27,7 @@
 * Add `Threads(ArrLike)` type
 * Add `join(ArrLike, Str)`
 * Add `.(ArrLike, Str)`
+* Add `collector(Set, Fun)`, allowing `collector/Set() ...`
 * Add `MethodParams` type
 * Add `MethodParam` type (and subtypes `RequiredMethodParam`, `OptionalMethodParam`, `SplatMethodParam`, `ArrSplatMethodParam`, `HashSplatMethodParam`)
 * Add `NGS_EXIT_BACKTRACE` environment variable. If true, prints backtrace on `exit()`.
