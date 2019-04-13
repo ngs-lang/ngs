@@ -1,5 +1,6 @@
-## (UNRELEASED) Version 0.2.6
+## (UNRELEASED) Version 0.2.7
 
+## 2019-04-13 Version 0.2.6
 
 ### Breaking changes
 
