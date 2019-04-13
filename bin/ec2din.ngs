@@ -4,11 +4,9 @@
 # Running example: NGS_table_Instances='["InstanceId", "PublicIpAddress", "PrivateIpAddress", "State", "KeyName", "SecurityGroups"]' ./demo/ec2din.ngs
 
 {
-	config('table_Instances', %[InstanceId tag_Name tag_env tag_role IPs InstanceType State KeyName SecurityGroups AZ RestOfTags])
+	config('table_Instances', %[InstanceId tag_Name tag_proj tag_env tag_role IPs InstanceType State KeyName SecurityGroups AZ RestOfTags])
 
 	table = Table('Instances')
-
-	F limit_len(s:Str, l:Int) limit(s, l, '...')
 
 	ArgvMatcher('positionals', 'filters') do
 	doc filters - Show only instances matching the given filters. Possible filter forms are:
@@ -16,7 +14,9 @@
 	doc filters - i-xxxyyyzz - for specific instance id
 	doc filters - 1.2.3.4 - for instance having given IP
 	doc filters - kkk=vvv - for instances having given tag value
-	F main(filters:Arr, allreg:Bool=false) {
+	F main(filters:Arr, allreg:Bool=false, j:Bool=false) {
+
+		F limit_len(s:Str, l:Int) limit(s, l, '...')
 
 		# region to az
 		regions = {}
@@ -58,14 +58,15 @@
 			config('table_Instances', ['AZ'] + config('table_Instances').without('AZ'))
 			AWS::regions({ ``aws ec2 describe-instances --region $A $*filters`` })
 		} else {
-			reg = if len(regions) == 1 {
-				['--region', regions.keys().the_one()]
-			} else {
-				[]
-			}
+			reg = Argv({'--region': regions.keys()})
 			``aws ec2 describe-instances $*filters $*reg``
 		}
 		instances .= sort('LaunchTime')
+
+		if j {
+			echo(instances.encode_json())
+			return
+		}
 
 		F tag_has_column(tag_name, _) ["full_tag_${tag_name}", "tag_${tag_name}"].any(X in table.cols_enum)
 
@@ -85,7 +86,7 @@
 			i.RestOfTags = i.Tags.reject(tag_has_column).map({ "${A.limit_len(10)}=${B.limit_len(15)}" })
 		}
 		# t = Table('Instances', instances)
-		instances % push(table, X)
+		instances.each(push(table, X))
 		echo(table)
 	}
 }

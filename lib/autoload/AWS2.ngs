@@ -625,6 +625,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		ret = x.val
 		ret .= filter(F(k, v) (v is not Arr) or v)
 		ret .= without('IpRanges', [{"CidrIp": "0.0.0.0/0"}])
+		ret .= without('Ipv6Ranges', [{"CidrIpv6": "::/0"}])
 		if 'UserIdGroupPairs' in ret {
 			# Hash is ordered.
 			ret.UserIdGroupPairs .= map(sort)
@@ -1051,12 +1052,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			logger = debug("AWS", X)
 			title = "[waiting intstance ${r.id()} console output]"
 			body = {
-				try {
-					``aws ec2 get-console-output --instance-id ${r.id()}``.Output.lines()
-				} catch(e:KeyNotFound) {
-					guard e.key == 'Output'
-					false
-				}
+				``aws ec2 get-console-output --instance-id ${r.id()}``.Box('Output').map(lines).get(null)
 			}
 		)
 	}
@@ -1867,7 +1863,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			warn("Polluting global namespace with AWS-specific variables: ${vars.keys().join(', ')}")
 		}
 
-		vars.mapk(resolve_global_variable).each(set_global_variable)
+		vars.mapk(ll_resolve_global_variable).each(ll_set_global_variable)
 	}
 
 	# ==================================================

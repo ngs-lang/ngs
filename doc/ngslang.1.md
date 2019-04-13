@@ -1554,19 +1554,22 @@ Here is `collector` for `Hash` and it's usage example:
 
 	proc = $(seq 3)
 	each(inspect(proc), echo)
-	# Output:
-	#   CommandsPipeline
-	#     command[0]: <Command options={} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[seq,3]>
-	#     process[0]: Process
-	#     process[0]:   command = <Command options={} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[seq,3]>
-	#     process[0]:   pid = 43582
-	#     process[0]:   exit_code = 0
-	#     process[0]:   exit_signal = 0
-	#     process[0]:   output on fd 1, stdout (3 lines):
-	#     process[0]:     1
-	#     process[0]:     2
-	#     process[0]:     3
-	#     process[0]:   output on fd 2, stderr (0 lines):
+	# ProcessesPipeline
+	#   cp: CommandsPipeline
+	#   cp:   command[0]: <Command options={} redirects=[] argv=[seq,3]>
+	#   pipe_in: null
+	#   pipe_out: null
+	#   processes[0]: Process
+	#   processes[0]:   command = <Command options={} redirects=[] argv=[seq,3]>
+	#   processes[0]:   pid = 77309
+	#   processes[0]:   exit_code = 0
+	#   processes[0]:   exit_signal = null
+	#   processes[0]:   redirects[0]: <ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>
+	#   processes[0]:   output on fd 1, stdout (3 lines):
+	#   processes[0]:     1
+	#   processes[0]:     2
+	#   processes[0]:     3
+	#   processes[0]:   output on fd 2, stderr (0 lines):
 
 	data = ``echo '{"a": 1}'``
 	echo("Parsed data: $data, a is ${data.a}")
@@ -1657,6 +1660,17 @@ The code below will probably not do what was intended. Note that the default par
 	echo(f(20))  # [10,20]
 
 Same happens in Python and hence already described: http://docs.python-guide.org/en/latest/writing/gotchas/#mutable-default-arguments
+
+## Type system is only used for multi-dispatch
+
+Consider the code:
+
+	F f(x:Int=null) {
+		...
+	}
+
+The `x:Int` only says that when calling `f`, the parameter `x` must be of type `Int`.
+It does *not* mean that `x` must be `Int` inside `f`. Even the default value can be of different type.
 
 # Handlers
 
@@ -1802,35 +1816,41 @@ When a command (more precisely commands pipeline) is parsed, an `CommandsPipelin
 The syntactic options for executing external programs are:
 
 * Being in top level syntax of an NGS script, which is the **commands syntax**
-* In **code syntax**: `$(...)` - run the process and get the reference to it
+* In **code syntax**: `$(...)` - run the process and get the reference to it, a `ProcessesPipeline`.
 * In **code syntax**: `%(...)` - construct the `CommandsPipeline` but do not run it. Useful for passing ready-to-run commands around: `t=%(ls /); ...; $($t)`
 * In **code syntax**: `` `...` `` - capture the output
 * In **code syntax**: ```` ``...`` ```` - capture and decode the output
 
 Note that if you want just to construct the command and not run it
 
-External commands are represented with type `CommandsPipeline`. In the simple case, there is exactly one command. In more complex cases `CommandsPipeline` references several programs and pipes between them, for example constructed by `$(my_prog_1 | my_prog_2 | my_prog_3)` .
+External commands are represented with type `CommandsPipeline`, which defines what should be run. In the simple case, there is exactly one command. In more complex cases `CommandsPipeline` references several programs and pipes between them, for example constructed by `$(my_prog_1 | my_prog_2 | my_prog_3)` . When `CommandsPipeline` is started being executed, a new object of type `ProcessesPipeline` is created using the appropriate `CommandsPipeline` as a blueprint. `ProcessesPipeline` has a `cp` field, which references the corresponding `CommandsPipeline`.
 
 	$ ngs -pi '$(ls | wc -l)'
-	CommandsPipeline
-	  command[0]: <Command options={} redirects=[<Redirect 1 null <WritingPipeBetweenChildren read_fd=4 write_fd=5>>] argv=[ls]>
-	  process[0]: Process
-	  process[0]:   command = <Command options={} redirects=[<Redirect 1 null <WritingPipeBetweenChildren read_fd=4 write_fd=5>>] argv=[ls]>
-	  process[0]:   pid = 87711
-	  process[0]:   exit_code = 0
-	  process[0]:   exit_signal = 0
-	  process[0]:   output on fd 1, stdout (0 lines):
-	  process[0]:   output on fd 2, stderr (0 lines):
-	  pipe[1]: <CommandsPipe options={} name=|>
-	  command[1]: <Command options={} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=6 write_fd=7>>,<Redirect 0 null <ReadingPipeBetweenChildren read_fd=4 write_fd=5>>] argv=[wc,-l]>
-	  process[1]: Process
-	  process[1]:   command = <Command options={} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=6 write_fd=7>>,<Redirect 0 null <ReadingPipeBetweenChildren read_fd=4 write_fd=5>>] argv=[wc,-l]>
-	  process[1]:   pid = 87712
-	  process[1]:   exit_code = 0
-	  process[1]:   exit_signal = 0
-	  process[1]:   output on fd 1, stdout (1 lines):
-	  process[1]:           20
-	  process[1]:   output on fd 2, stderr (0 lines):
+	ProcessesPipeline
+	  cp: CommandsPipeline
+	  cp:   command[0]: <Command options={} redirects=[] argv=[ls]>
+	  cp:      pipe[1]: <CommandsPipe options={} name=|>
+	  cp:   command[1]: <Command options={} redirects=[] argv=[wc,-l]>
+	  pipe_in: null
+	  pipe_out: null
+	  processes[0]: Process
+	  processes[0]:   command = <Command options={} redirects=[] argv=[ls]>
+	  processes[0]:   pid = 77369
+	  processes[0]:   exit_code = 0
+	  processes[0]:   exit_signal = null
+	  processes[0]:   redirects[0]: <ProcessRedir fd=1 marker=null datum=<WritingPipeBetweenChildren read_fd=4 write_fd=5>>
+	  processes[0]:   output on fd 1, stdout (0 lines):
+	  processes[0]:   output on fd 2, stderr (0 lines):
+	  processes[1]: Process
+	  processes[1]:   command = <Command options={} redirects=[] argv=[wc,-l]>
+	  processes[1]:   pid = 77370
+	  processes[1]:   exit_code = 0
+	  processes[1]:   exit_signal = null
+	  processes[1]:   redirects[0]: <ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=6 write_fd=7>>
+	  processes[1]:   redirects[1]: <ProcessRedir fd=0 marker=null datum=<ReadingPipeBetweenChildren read_fd=4 write_fd=5>>
+	  processes[1]:   output on fd 1, stdout (1 lines):
+	  processes[1]:           75
+	  processes[1]:   output on fd 2, stderr (0 lines):
 
 ## Substitution of command line arguments
 
@@ -1874,7 +1894,7 @@ Options:
 
 ## Input/Output Redirections
 
-Redirections are represented by the `Redir` type. When a command is parsed and converted to `CommandsPipeline`, each `Command` gets a (possibly empty) list of redirections (in the `.redirects` property)
+Redirections are represented by the `CommandRedir` type. When a command is parsed and converted to `CommandsPipeline`, each `Command` gets a (possibly empty) list of redirections (in the `.redirects` property)
 
 Redirections syntax (based on bash syntax):
 
@@ -1889,26 +1909,35 @@ Running external programs examples:
 
 	$ ngs -pi '$(ok: ls xxx)'
 	ls: xxx: No such file or directory
-	CommandsPipeline
-	  command[0]: <Command options={ok=true} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[ls,xxx]>
-	  process[0]: Process
-	  process[0]:   command = <Command options={ok=true} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[ls,xxx]>
-	  process[0]:   pid = 26157
-	  process[0]:   exit_code = 1
-	  process[0]:   exit_signal = 0
-	  process[0]:   output on fd 1, stdout (0 lines):
-	  process[0]:   output on fd 2, stderr (0 lines):
+	ProcessesPipeline
+	  cp: CommandsPipeline
+	  cp:   command[0]: <Command options={ok=true} redirects=[] argv=[ls,xxx]>
+	  pipe_in: null
+	  pipe_out: null
+	  processes[0]: Process
+	  processes[0]:   command = <Command options={ok=true} redirects=[] argv=[ls,xxx]>
+	  processes[0]:   pid = 77460
+	  processes[0]:   exit_code = 1
+	  processes[0]:   exit_signal = null
+	  processes[0]:   redirects[0]: <ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>
+	  processes[0]:   output on fd 1, stdout (0 lines):
+	  processes[0]:   output on fd 2, stderr (0 lines):
 	$ ngs -pi '$(ok: ls xxx 2>${true})'
-	CommandsPipeline
-	  command[0]: <Command options={ok=true} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=6 write_fd=7>>,<Redirect 2 > <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[ls,xxx]>
-	  process[0]: Process
-	  process[0]:   command = <Command options={ok=true} redirects=[<Redirect 1 null <CollectingPipeFromChildToParentProcess read_fd=6 write_fd=7>>,<Redirect 2 > <CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>] argv=[ls,xxx]>
-	  process[0]:   pid = 26179
-	  process[0]:   exit_code = 1
-	  process[0]:   exit_signal = 0
-	  process[0]:   output on fd 1, stdout (0 lines):
-	  process[0]:   output on fd 2, stderr (1 lines):
-	  process[0]:     ls: xxx: No such file or directory
+	ProcessesPipeline
+	  cp: CommandsPipeline
+	  cp:   command[0]: <Command options={ok=true} redirects=[<CommandRedir 2 > true>] argv=[ls,xxx]>
+	  pipe_in: null
+	  pipe_out: null
+	  processes[0]: Process
+	  processes[0]:   command = <Command options={ok=true} redirects=[<CommandRedir 2 > true>] argv=[ls,xxx]>
+	  processes[0]:   pid = 77477
+	  processes[0]:   exit_code = 1
+	  processes[0]:   exit_signal = null
+	  processes[0]:   redirects[0]: <ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=6 write_fd=7>>
+	  processes[0]:   redirects[1]: <ProcessRedir fd=2 marker=> datum=<CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>
+	  processes[0]:   output on fd 1, stdout (0 lines):
+	  processes[0]:   output on fd 2, stderr (1 lines):
+	  processes[0]:     ls: xxx: No such file or directory
 
 ## Exit codes handling when running external programs
 
@@ -1922,7 +1951,7 @@ If there is a particular program that you are using which also returns non-zero 
 
 ## External program boolean value
 
-When converting to `Bool`, for example in the expression `if $(test -f my_file) { ... }`, all programs in the `CommandsPipeline` must exit with code zero in order to get `true`, otherwise the result of converting to `Bool` is `false`.
+When converting to `Bool`, for example in the expression `if $(test -f my_file) { ... }`, all processes in the `ProcessesPipeline` must exit with code zero in order to get `true`, otherwise the result of converting to `Bool` is `false`.
 
 ## Constructing command line arguments
 
@@ -1963,7 +1992,7 @@ Built in methods of `ExitCode` do the following conversion:
 * `Success` object - 0
 * `Failure` object - 1
 * `FatalError` objects - using the `exit_code` field of the exception, which if not given to `FatalError` constructor defaults to 1.
-* `CommandsPipeline` / `Process` objects - the exit code of the external command
+* `ProcessesPipeline` / `Process` objects - the exit code of the external command
 * `MatchY` object - 0
 * `MatchN` object - 1
 * All others - 0

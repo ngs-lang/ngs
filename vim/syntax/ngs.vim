@@ -21,27 +21,31 @@ syn keyword ngsRepeat for
 " bootstrap types
 syn keyword ngsType NotImplemented ReadFail RequireFail MainFail
 " other types
-syn keyword ngsType Any ArgvMatcher ArgvMatcherDecorator Arr ArrIter ArrLike BasicType Bool CLib CollectingPipeFromChildToParentProcess Command CommandsPipe CommandsPipeline ConstIter Counter CSym DelimStr Eachable Eachable1 Eachable2 ElementNotFound EmptyEachableFail ExecutableNotFound Exit FFI Fun Hash HashIter HashLike InstantiatingAbstractType Int Iter KillFail MultiMethod NativeMethod NormalType NormalTypeInstance NoData Null Num Path Pipe PipeCreateFail PipeFromChildProcess PipeFromChildToParentProcess PipeFromParentToChildProcess PipeToChildProcess Pred Process ProcessFail Range RangeIter Real ReadingPipeBetweenChildren Seq Set Stats Str Table TableMeta TableMetaNotIfCol TtyCheckFail Type UserDefinedMethod WritingPipeBetweenChildren
+syn keyword ngsType Any ArgvMatcher ArgvMatcherDecorator Arr ArrIter ArrLike BasicType Bool CLib CollectingPipeFromChildToParentProcess Command CommandsPipe CommandsPipeline ConstIter Counter CSym DelimStr Eachable Eachable1 Eachable2 ElementNotFound EmptyEachableFail ExecutableNotFound Exit FFI Fun Hash HashIter HashLike InstantiatingAbstractType Int Iter KillFail MultiMethod NativeMethod NormalType NormalTypeInstance NoData Null Num Path Pipe PipeCreateFail PipeFromChildProcess PipeFromChildToParentProcess PipeFromParentToChildProcess PipeToChildProcess Pred Process ProcessesPipeline ProcessFail ProcessRedir Range RangeIter Real ReadingPipeBetweenChildren Seq Set Stats Str Table TableMeta TableMetaNotIfCol TtyCheckFail Type UserDefinedMethod WritingPipeBetweenChildren
 syn keyword ngsType Box EmptyBox FullBox BoxFail
 syn keyword ngsType Range NumRange PredRange
 syn keyword ngsType Diff ArrDiff HashDiff
 syn keyword ngsType Presence PartialPresence Present Absent ExactPresence
-syn keyword ngsType AssertFail ArgsMismatch CException EmptyArrayFail Error Exception FatalError CompileFail DontKnowHowToCall GlobalNotFound MethodNotFound InternalError LookupFail KeyNotFound StackDepthFail UndefinedLocalVar
+syn keyword ngsType AssertFail ArgsMismatch CException CdFail EmptyArrayFail Error Exception FatalError CompileFail DontKnowHowToCall GlobalNotFound MethodNotFound InternalError LookupFail KeyNotFound StackDepthFail UndefinedLocalVar
 syn keyword ngsType File SocketFile Symlink BlockDevice Dir CharDevice FifoFile MaybeFile
 syn keyword ngsType FileIOFail StatFail
 syn keyword ngsType Hook
 syn keyword ngsType IndexNotFound FieldNotFound InvalidParameter NoNext
 syn keyword ngsType InvalidArgument DivisionByZero
-syn keyword ngsType Lock ReentrantLock Pthread PthreadAttr Thread
+syn keyword ngsType JsonDecodeFail
+syn keyword ngsType Lines
+syn keyword ngsType Lock ReentrantLock Pthread PthreadAttr Thread Threads
 syn keyword ngsType LockFail
+syn keyword ngsType MatchResult MatchSuccess MatchFailure MatchFail SubSeq Pfx MaybePfx MustPfx Ifx MaybeIfx MustIfx Sfx MaybeSfx MustSfx
+syn keyword ngsType MethodParam MethodParams RequiredMethodParam OptionalMethodParam SplatMethodParam ArrSplatMethodParam HashSplatMethodParam
+syn keyword ngsType NormalExit
+syn keyword ngsType Props
 syn keyword ngsType RegExp RegExpCompileFail
-syn keyword ngsType Redir
+syn keyword ngsType CommandRedir
 syn keyword ngsType Result Success Failure ResultFail
 syn keyword ngsType Return
 syn keyword ngsType Renderer ItemsContainer ItemsVerticalContainer ItemsHorizontalContainer
-syn keyword ngsType Match MatchY MatchN MatchFail SubSeq Pfx MaybePfx MustPfx Ifx MaybeIfx MustIfx Sfx MaybeSfx MustSfx
-syn keyword ngsType Props
-syn keyword ngsType Time TimeFail
+syn keyword ngsType ThreadFail Time TimeFail
 syn keyword ngsTodo TODO FIXME XXX NOTE
 syn keyword ngsConstant true false null
 syn keyword ngsPredefinedVariable ARGV ARGV0 ENV ORIG_ARGV _exports VERSION
@@ -60,15 +64,15 @@ syn region  ngsString start=+"+ end=+"+ skip=+\\\\\|\\"+ contains=ngsSpecial
 syn match   ngsNumber "\<\d\+\>"
 
 " builtin functions
-syn keyword ngsFunction c_access c_close c_closedir c_errno c_execve c_exit c_fork c_fstat c_lseek c_lstat copy c_open c_opendir c_stat c_pcre_compile c_pcre_exec c_read c_readdir c_waitpid C_WEXITSTATUS C_WTERMSIG compile defined del dump echo get globals hash method_not_found_handler in inherit is keys len load not decode_json pop push push_all shift typeof values
+syn keyword ngsFunction c_access c_chdir c_close c_closedir c_errno c_execve c_exit c_fork c_fstat c_lseek c_lstat copy c_open c_opendir c_stat c_pcre_compile c_pcre_exec c_read c_readdir c_waitpid C_WEXITSTATUS C_WTERMSIG compile defined del dump echo get globals hash method_not_found_handler in inherit is keys len load not decode_json pop push push_all shift typeof values
 " bootstrap functions (only the ones that are relevant for later usage)
 syn keyword ngsFunction bootstrap bootstrap_debug bootstrap_exception_catch_wrapper bootstrap_find_ngs_dir fetch main print_exception require ExitCode
 
 " stdlib functions
-syn keyword ngsFunction abs Arg Argv access acquire all any assert basename cached chr close close_reading_end close_writing_end cmp code compare count
-syn keyword ngsFunction dflt digest drop dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val ends_with error exit_hook
-syn keyword ngsFunction debug die ensure_array filter filterk filterv finally find_in_path finished_ok first flatten fstat global_not_found_handler group has
-syn keyword ngsFunction identity in index indexes inspect intersperse join kill len limit lines log lstat map mapo map_idx_key_val map_idx_val mapk mapv mapkv max merge_sorted min
+syn keyword ngsFunction abs Arg Argv arr_splat access acquire all any assert basename cached chdir chr close close_reading_end close_writing_end cmp code compare count
+syn keyword ngsFunction dflt digest drop dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val eachk eachv ends_with error exit exit_hook
+syn keyword ngsFunction debug die ensure_array filter filterk filterv finally find_in_path finished_ok first flatten fstat global_not_found_handler group has hash_splat
+syn keyword ngsFunction identity in index indexes inspect intersperse is_subtype join kill len limit lines log lstat map mapo map_idx_key_val map_idx_val mapk mapv mapkv max merge_sorted min
 syn keyword ngsFunction next none nop only open ord partial partial_tail partition peek pmap pos ptimes publish rand read reduce reject rejectk rejectv release replace reverse
 syn keyword ngsFunction set sort sortk split srand starts_with stat status store StrParams Strs subscribe subset sum take tap test the_one uniq unshift update wait warn without write zip
 

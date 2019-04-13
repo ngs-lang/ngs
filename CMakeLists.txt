@@ -8,10 +8,10 @@ project(NGS)
 add_definitions(-D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE=1 -D_DEFAULT_SOURCE=1)
 
 pkg_check_modules(LIBFFI libffi REQUIRED)
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /opt/local/include/uthash /usr/local/include)
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /usr/local/include)
 link_directories(/usr/local/lib)
 
-add_executable(ngs version.h ngs.c syntax.include syntax.auto.h pcre_constants.include errno.include obj.c vm.c compile.c debug.c ast.c malloc.c decompile.c)
+add_executable(ngs version.h ngs.c syntax.include syntax.auto.h pcre_constants.include errno.include obj.c vm.c compile.c debug.c ast.c decompile.c)
 
 include(CheckFunctionExists)
 check_function_exists(fmemopen FMEMOPEN)

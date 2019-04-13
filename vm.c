@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <sys/poll.h>
 #include <time.h>
+#include <string.h>
 
 // GETTIMEOFDAY(2)
 #include <sys/time.h>
@@ -17,7 +18,7 @@
 
 #ifdef __APPLE__
 #include "fmemopen.h"
-#endif 
+#endif
 
 // OPEN(2), LSEEK(2), WAIT(2)
 // #define _POSIX_SOURCE
@@ -638,7 +639,8 @@ METHOD_RESULT native_c_dlopen_str_int EXT_METHOD_PARAMS {
 	if(!out) {
 		VALUE e;
 		e = make_normal_type_instance(vm->DlopenFail);
-		set_normal_type_instance_field(e, make_string("message"), make_string("Failed to dlopen()"));
+		// XXX: Could not find whether we should free the (char *) returned by dlerror()
+		set_normal_type_instance_field(e, make_string("message"), make_string(dlerror()));
 		set_normal_type_instance_field(e, make_string("filename"), argv[0]);
 		THROW_EXCEPTION_INSTANCE(e);
 	}
@@ -884,6 +886,14 @@ METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 	yyctx.lines = 0;
 	yyctx.lines_postions[0] = 0;
 	// printf("PT 1 %p\n", OBJ_DATA_PTR(argv[0]));
+
+	if(OBJ_LEN(argv[0]) == 0) {
+		VALUE exc;
+		exc = make_normal_type_instance(vm->CompileFail);
+		set_normal_type_instance_field(exc, make_string("message"), make_string("Empty string was passed as input to compile(). Trying to run an empty file?"));
+		THROW_EXCEPTION_INSTANCE(exc);
+	}
+
 	yyctx.input_file = fmemopen(OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]), "r");
 	parse_ok = yyparse(&yyctx);
 	if(!parse_ok) {
@@ -1225,7 +1235,7 @@ METHOD_RESULT native_set_field_nt_str EXT_METHOD_PARAMS {
 	(void) ctx;
 	if(!strcmp(field, "user")) {
 		NGS_TYPE_USER(argv[0]) = argv[2];
-		METHOD_RETURN(argv[0]);
+		METHOD_RETURN(argv[1]);
 	}
 
 	exc = make_normal_type_instance(vm->FieldNotFound);
@@ -1273,20 +1283,27 @@ METHOD_RESULT native_c_execve METHOD_PARAMS {
 }
 
 METHOD_RESULT native_C_WEXITSTATUS METHOD_PARAMS {
-	int status = GET_INT(argv[0]);
-	METHOD_RETURN(MAKE_INT(WEXITSTATUS(status)));
+	int status = (int) GET_INT(argv[0]);
+	if(WIFEXITED(status)) {
+		METHOD_RETURN(MAKE_INT(WEXITSTATUS(status)));
+	} else {
+		METHOD_RETURN(MAKE_NULL);
 }
+	}
 METHOD_RESULT native_C_WTERMSIG METHOD_PARAMS {
-	int status = GET_INT(argv[0]);
-	METHOD_RETURN(MAKE_INT(WTERMSIG(status)));
+	int status = (int) GET_INT(argv[0]);
+	if(WIFSIGNALED(status)) {
+		METHOD_RETURN(MAKE_INT(WTERMSIG(status)));
+	} else {
+		METHOD_RETURN(MAKE_NULL);
+	}
 }
 
 GLOBAL_VAR_INDEX check_global_index(VM *vm, const char *name, size_t name_len, int *found) {
-	VAR_INDEX *var;
-	HASH_FIND(hh, vm->globals_indexes, name, name_len, var);
-	if(var) {
+	HASH_OBJECT_ENTRY *e = get_hash_key(vm->globals_indexes, make_string_of_len(name, name_len));
+	if(e) {
 		*found = 1;
-		return var->index;
+		return (GLOBAL_VAR_INDEX)GET_INT(e->val);
 	}
 	*found = 0;
 	return 0;
@@ -1719,12 +1736,12 @@ METHOD_RESULT native_replace EXT_METHOD_PARAMS {
 	METHOD_RETURN(argv[1]);
 }
 
-METHOD_RESULT native_resolve_global_variable EXT_METHOD_PARAMS {
+METHOD_RESULT native_ll_resolve_global_variable EXT_METHOD_PARAMS {
 	(void) ctx;
 	METHOD_RETURN(MAKE_INT(get_global_index(vm, OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]))));
 }
 
-METHOD_RESULT native_is_global_variable_defined EXT_METHOD_PARAMS {
+METHOD_RESULT native_ll_is_global_variable_defined EXT_METHOD_PARAMS {
 	GLOBAL_VAR_INDEX gvi = GET_INT(argv[0]);
 	if(GET_INT(argv[0]) < 0 || gvi >= vm->globals_len) {
 		VALUE e;
@@ -1736,7 +1753,7 @@ METHOD_RESULT native_is_global_variable_defined EXT_METHOD_PARAMS {
 	METHOD_RETURN(MAKE_BOOL(IS_NOT_UNDEF(GLOBALS[gvi])));
 }
 
-METHOD_RESULT native_set_global_variable EXT_METHOD_PARAMS {
+METHOD_RESULT native_ll_set_global_variable EXT_METHOD_PARAMS {
 	GLOBAL_VAR_INDEX gvi = GET_INT(argv[0]);
 	if(GET_INT(argv[0]) < 0 || gvi >= vm->globals_len) {
 		VALUE e;
@@ -1957,6 +1974,11 @@ METHOD_RESULT native_c_closedir EXT_METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(ret));
 }
 
+METHOD_RESULT native_c_chdir METHOD_PARAMS {
+	int ret = chdir(obj_to_cstring(argv[0]));
+	METHOD_RETURN(MAKE_INT(ret));
+}
+
 #define ELT(value) *p = MAKE_INT(value); p++;
 #define MAKE_STAT_METHOD(cmd, arg_transform) \
 METHOD_RESULT native_c_ ## cmd EXT_METHOD_PARAMS { \
@@ -2006,8 +2028,9 @@ METHOD_RESULT native_MultiMethod_arr METHOD_PARAMS {
 }
 
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
-	VAR_INDEX *var;
 	GLOBAL_VAR_INDEX index;
+	VALUE name_val;
+	char *name_dup;
 	int found;
 	DEBUG_VM_RUN("entering get_global_index() vm=%p name=%.*s\n", vm, (int)name_len, name);
 	index = check_global_index(vm, name, name_len, &found);
@@ -2016,16 +2039,18 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 		return index;
 	}
 	assert(vm->globals_len < (MAX_GLOBALS-1));
-	var = NGS_MALLOC(sizeof(*var));
-	var->name = NGS_MALLOC_ATOMIC(name_len+1);
-	memcpy(var->name, name, name_len);
-	var->name[name_len] = 0;
-	var->index = vm->globals_len++;
-	HASH_ADD_KEYPTR(hh, vm->globals_indexes, var->name, name_len, var);
-	GLOBALS[var->index] = MAKE_UNDEF;
-	vm->globals_names[var->index] = var->name;
+	name_val = make_string_of_len(name, name_len);
+	index = vm->globals_len++;
+	set_hash_key(vm->globals_indexes, name_val, MAKE_INT(index));
+	GLOBALS[index] = MAKE_UNDEF;
+
+	name_dup = NGS_MALLOC_ATOMIC(name_len+1);
+	memcpy(name_dup, name, name_len);
+	name_dup[name_len] = 0;
+	vm->globals_names[index] = name_dup;
+
 	DEBUG_VM_RUN("leaving get_global_index() status=new vm=%p name=%.*s -> index=" GLOBAL_VAR_INDEX_FMT "\n", vm, (int)name_len, name, var->index);
-	return var->index;
+	return index;
 }
 
 VALUE _make_func(VM *vm, int pass_extra_params, char *name, void *func_ptr, int argc, va_list varargs) {
@@ -2137,7 +2162,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	int i;
 	vm->bytecode = NULL;
 	vm->bytecode_len = 0;
-	vm->globals_indexes = NULL; // UT_hash_table
+	vm->globals_indexes = make_hash(1024);
 	vm->globals_len = 0;
 	vm->globals = NGS_MALLOC(sizeof(*(vm->globals)) * MAX_GLOBALS);
 	vm->globals_names = NGS_MALLOC(sizeof(char *) * MAX_GLOBALS);
@@ -2536,28 +2561,28 @@ void vm_init(VM *vm, int argc, char **argv) {
 				MKSUBTYPE(JsonDecodeFail, DecodeFail);
 				_doc(vm, "", "Represents an error decoding JSON data.");
 
-	MKTYPE(Return);
-	_doc(vm, "", "Return instance type, when thrown, will exit the call frame where they were created returning given value.");
-	_doc_arr(vm, "%EX",
-		"{",
-		"    F find_the_one(haystack:Arr, needle) {",
-		"        ret_from_find_the_one = Return()",
-		"        echo(ret_from_find_the_one)",
-		"        haystack.each(F(elt) {",
-		"                elt == needle throws ret_from_find_the_one(\"Found it!\")",
-		"        })",
-		"        \"Not found\"",
-		"    }",
-		"    echo([10,20].find_the_one(20))",
-		"    echo([10,20].find_the_one(30))",
-		"}",
-		"# Output:",
-		"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
-		"#   Found it!",
-		"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
-		"#   Not found",
-		NULL
-	);
+		MKSUBTYPE(Return, Exception);
+		_doc(vm, "", "Return instance type, when thrown, will exit the call frame where they were created returning given value.");
+		_doc_arr(vm, "%EX",
+			"{",
+			"    F find_the_one(haystack:Arr, needle) {",
+			"        ret_from_find_the_one = Return()",
+			"        echo(ret_from_find_the_one)",
+			"        haystack.each(F(elt) {",
+			"                elt == needle throws ret_from_find_the_one(\"Found it!\")",
+			"        })",
+			"        \"Not found\"",
+			"    }",
+			"    echo([10,20].find_the_one(20))",
+			"    echo([10,20].find_the_one(30))",
+			"}",
+			"# Output:",
+			"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
+			"#   Found it!",
+			"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
+			"#   Not found",
+			NULL
+		);
 
 	MKTYPE(Backtrace);
 	_doc(vm, "", "Represents stack trace");
@@ -2575,7 +2600,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MKTYPE(CommandsPipe);
 	MKTYPE(Command);
 
-	MKTYPE(Redir);
+	MKTYPE(CommandRedir);
 	_doc(vm, "", "Input/output redirection");
 
 	// XXX: changing NGS_TYPE_FIELDS of InclusiveRange or ExclusiveRange
@@ -2678,11 +2703,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	// global variables
-	register_global_func(vm, 1, "resolve_global_variable",    &native_resolve_global_variable,     1, "name",   vm->Str);
+	register_global_func(vm, 1, "ll_resolve_global_variable",    &native_ll_resolve_global_variable,     1, "name",   vm->Str);
 	_doc(vm, "", "Do not use directly! Get global variable index by name.");
-	register_global_func(vm, 1, "is_global_variable_defined", &native_is_global_variable_defined,  1, "idx",    vm->Int);
+	register_global_func(vm, 1, "ll_is_global_variable_defined", &native_ll_is_global_variable_defined,  1, "idx",    vm->Int);
 	_doc(vm, "", "Do not use directly! Check whether global variable is defined by index.");
-	register_global_func(vm, 1, "set_global_variable",        &native_set_global_variable,         2, "idx",    vm->Int,    "val", vm->Any);
+	register_global_func(vm, 1, "ll_set_global_variable",        &native_ll_set_global_variable,         2, "idx",    vm->Int,    "val", vm->Any);
 	_doc(vm, "", "Do not use directly! Set global variable by index.");
 
 	// Return
@@ -2918,7 +2943,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "Str for \"name\" and MultiMethod for \"constructors\".");
 	_doc_arr(vm, "%EX",
 		"Hash.name  # String: Hash",
-		"Hash.constructors  # [<NativeMethod Hash>,<UserDefinedMethod Hash at ...>,...]",
+		"Hash.constructors  # MultiMethod",
 		NULL
 	);
 
@@ -2927,13 +2952,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Get NormalType (a type that is typically defined by user) field. Throws FieldNotFound.");
 	_doc(vm, "field", "Field to get. Currently only \"name\", \"constructors\", \"parents\" and \"user\" are supported.");
 	_doc(vm, "%AUTO", "obj.field");
-	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
+	_doc(vm, "%RET", "Str for \"name\", MultiMethod for \"constructors\", Arr for \"parents\", Any for \"user\".");
 
 	register_global_func(vm, 1, ".=",       &native_set_field_nt_str,       3, "obj", vm->NormalType,         "field", vm->Str, "v", vm->Any);
 	_doc(vm, "", "Set NormalType (a type that is typically defined by user) field. Throws FieldNotFound.");
 	_doc(vm, "field", "Field to set. Currently only \"user\" is supported.");
 	_doc(vm, "%AUTO", "obj.field = v");
-	_doc(vm, "%RET", "Str for \"name\" and Arr for \"constructors\".");
+	_doc(vm, "%RET", "v");
 
 	register_global_func(vm, 1, ".",        &native_get_field_nti_str,      2, "obj", vm->NormalTypeInstance, "field", vm->Str);
 	_doc(vm, "", "Get NormalType (a type that is typically defined by user) instance field. Throws FieldNotFound.");
@@ -2944,7 +2969,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, ".=",       &native_set_field_nti_str_any,  3, "obj", vm->NormalTypeInstance, "field", vm->Str, "v", vm->Any);
 	_doc(vm, "", "Set Normal type (a type that is typically defined by user) instance field");
 	_doc(vm, "%AUTO", "obj.field = v");
-	_doc(vm, "%RET", "Any");
+	_doc(vm, "%RET", "v");
 	_doc(vm, "%EX", "type T; t=T(); t.x=1");
 
 	register_global_func(vm, 0, "in",       &native_in_nti_str,            2, "field", vm->Str,               "obj", vm->NormalTypeInstance);
@@ -3004,6 +3029,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Call READDIR(3)");
 	register_global_func(vm, 1, "c_closedir",&native_c_closedir,        1,"dirp",     vm->C_DIR);
 	_doc(vm, "", "Call CLOSEDIR(3)");
+	register_global_func(vm, 0, "c_chdir",   &native_c_chdir,           1,"dir",      vm->Str);
+	_doc(vm, "", "Call CHDIR(2)");
 
 	register_global_func(vm, 1, "c_stat",    &native_c_stat,            1,"pathname", vm->Str);
 	_doc(vm, "", "Call STAT(2)");
@@ -3613,9 +3640,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 #undef FFI_TYPE
 
-	// // "left shift of negative value" warning
-	// set_global(vm, "INT_MIN", MAKE_INT(NGS_INT_MIN));
-	// set_global(vm, "INT_MAX", MAKE_INT(NGS_INT_MAX));
 	set_global(vm, "INT_MIN", NGS_INT_MIN_VALUE);
 	set_global(vm, "INT_MAX", NGS_INT_MAX_VALUE);
 	set_global(vm, "RAND_MAX", MAKE_INT(NGS_RAND_MAX));
@@ -4231,10 +4255,11 @@ main_loop:
 									if(mr == METHOD_EXCEPTION) {
 										set_normal_type_instance_field(exc, make_string("cause"), *result);
 									} else {
+										set_normal_type_instance_field(exc, make_string("global_not_found_handler_ret_val"), *result);
 										if (mr == METHOD_IMPL_MISSING) {
-											set_normal_type_instance_field(exc, make_string("message"), make_string("Additionally, no appropriate global_not_found_handler() found"));
+											set_normal_type_instance_field(exc, make_string("extra_info"), make_string("Additionally, no appropriate global_not_found_handler() found"));
 										} else {
-											set_normal_type_instance_field(exc, make_string("message"), make_string("Additionally, global_not_found_handler() failed to provide the global"));
+											set_normal_type_instance_field(exc, make_string("extra_info"), make_string("Additionally, global_not_found_handler() failed to provide the global"));
 										}
 									}
 									*result = exc;
@@ -4321,6 +4346,8 @@ main_loop:
 								goto exception;
 							}
 							if(mr == METHOD_IMPL_MISSING) {
+								// Stack: null (for vm_call result which did not happen), exception
+								POP(*result);
 								goto exception_return;
 							}
 							if(mr != METHOD_OK) {
@@ -4676,7 +4703,7 @@ do_jump:
 							goto main_loop;
 		case OP_MAKE_REDIR:
 							EXPECT_STACK_DEPTH(3);
-							command = make_normal_type_instance(vm->Redir);
+							command = make_normal_type_instance(vm->CommandRedir);
 							POP_NOCHECK(v);
 							set_normal_type_instance_field(command, make_string("datum"), v);
 							POP_NOCHECK(v);

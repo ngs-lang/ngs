@@ -1,0 +1,17 @@
+#!/usr/bin/env ngs
+
+# Due to incomplete AWS2 implementation, this script fails. Just run it again.
+AWS = AWS2
+DOMAIN = ENV.get('NGS_DOMAIN', 'ngs-lang.org')
+BUCKET_NAME = "01.${DOMAIN}"
+# Workaround for f*cked up AWS CLI (yes, one more place)
+# https://github.com/aws/aws-cli/issues/2473
+# Could not aws s3 sync --exclude doc/*
+each(dir('.', true).path.without('doc').reject(/^\./), F(f) {
+	$(top_level:: aws s3 cp --acl public-read ${f} "s3://${BUCKET_NAME}/${f}")
+
+})
+# TODO: sync doc folder
+dist_id = ``aws cloudfront list-distributions``.filter(F(d) d.Aliases.Quantity and d.Aliases.Items.has(DOMAIN)).the_one().Id
+log("Will invalidate dist ${dist_id}")
+aws cloudfront create-invalidation --distribution-id $dist_id --paths '/*'

@@ -1,3 +1,92 @@
+## (UNRELEASED) Version 0.2.6
+
+
+### Breaking changes
+
+* `$()` now returns `ProcessesPipeline` (a new type). You should check all the places in your code that use `CommandsPipeline`. Code that handles result of `$(...)` should be changed to expect `ProcessesPipeline`, not `CommandsPipeline`.
+* `$(nofail my_command)` was removed. Use `$(ok: my_command)`. Deprecated `$(nofail: my_command)` still works.
+
+### New features
+
+* Add `chdir()`.
+* Add `set(obj, **kwargs)`. Sets given fields.
+* Add `copy(nti:NormalTypeInstance)`. Make shallow copy of an object.
+* `Lines` type. Array of strings to be processed as a unit for output purposes (`echo`, `warn`, `error`).
+* `inspect()` now returns `Lines`.
+* Add `-pil` command line switch for "Print Inspect()ed Lines"
+* Add `collector` for `ArrLike`. Enables `collector/ArrLike() ...`.
+* Add `mapo(Str, Fun)` (**map** to **o**riginal data type) - map a string to a string, character by character.
+* Add `assert_bool(Any, Str)` to `tests.ngs`
+* Add `+(a:Eachable1, b:Eachable1)` which is only defined for same types of `a` and `b`.
+* Add `-(Str, Ifx)`
+* Add experimental `is_subtype(t:Type, maybe_supertype:Type)`.
+* Add experimental `ensure(x, t:Type)` for `Eachable1` subtypes. Returns either `x` if it's already of type `t` or new object of type `t` with single item `x`.
+* Add `ProcessesPipeline` type
+* Add `inspect(pp:ProcessesPipeline)`
+* Add `ProcessRedir` type; `Redir` type was renamed to `CommandRedir`. `CommandsPipeline` has `CommandRedir` while `ProcessesPipeline` has `ProcessRedir`.
+* Add `Threads(ArrLike)` type
+* Add `join(ArrLike, Str)`
+* Add `.(ArrLike, Str)`
+* Add `collector(Set, Fun)`, allowing `collector/Set() ...`
+* Add `MethodParams` type
+* Add `MethodParam` type (and subtypes `RequiredMethodParam`, `OptionalMethodParam`, `SplatMethodParam`, `ArrSplatMethodParam`, `HashSplatMethodParam`)
+* Add `NGS_EXIT_BACKTRACE` environment variable. If true, prints backtrace on `exit()`.
+* Add `NGS_WARN_BACKTRACE` environment variable. If true, prints backtrace on `warn()`.
+* Add `NGS_ERROR_BACKTRACE` environment variable. If true, prints backtrace on `error()`.
+* Add `$(ok_sig: ...)` option. If external program terminates by specified signal, NGS will not throw exception.
+* Add `$(cd: ...)` option. Runs the external program in the specified directory.
+* Add `$(log: ...)` option. Logs the program to be executed first and then executes the program.
+
+### Fixes and improvements
+
+* Fixed `catch` bug that was resulting `dump Uncaught exception` messages when `catch(e:MyType)` was handling `e` of non-`MyType`.
+* `indexes(arr:Arr, predicate)` upgraded to handle eachable: `indexes(e:Eachable1, predicate)`
+* `indexes(arr:Arr, r:PredRange)` - now takes optional `dflt` parameter: `indexes(arr:Arr, r:PredRange, dflt=...)`
+* `Box()` now returns an `EmptyBox` (thanks @organom !)
+* `Pred` improved so that `.filter({"a": 1})` will not throw exception if there is no `a` field.
+* Better `c_dlopen()` error message
+* `T.user = x` for native types now returns `x` and not `T`, consistent with other assignments
+* `Return` is now a subtype of `Exception`. This fixes failing `Failure(Return)`, which only works on `Exception`.
+* Remove `any()` and `none()` for `Box` - they work anyway because `Box` is `Eachable1`. `any()` and `none()` are defined for `Eachable1`.
+* Faster `==(Hash, Hash)`
+* Faster `init(Hash)`
+* Fix `C_WEXITSTATUS` - return null when `WIFEXITED` returns false.
+* Fix `C_WTERMSIG` - return null when `WIFSIGNALED` returns false.
+* Fix `decode_hex()` - now handles inputs of even length, not specifically 2. This makes `decode_hex()` exact reverse of `encode_hex()`.
+* Work around strange error (Issue #180) after `execve()` was failing on MacOS. Now executing minimal amount of code after failing `execve()`.
+* `+(s:Str, a:Eachable1)` and +`(a:Eachable1, s:Str)` now return result of exact the same type as `a`, not `Arr`.
+* Improve `print_exception()`
+* Improved exception message for environment variable access, when the environment variable is not set.
+* Remove MacOS-specific "stupid" malloc. GC library appears to work OK on MacOS now.
+* Got rid of uthash dependency
+* Finished moving `todo.txt` to GitHub issues
+* Improve `ArrLike` implementation
+* `bin/elb-describe-lbs.ngs` - Instances are now sorted by LaunchTime
+* Improve `finished_ok` implementation: easier handling of "known programs", refactor to support `ok_sig` option.
+* Warning on usage of `` `line: ` `` option on non-last command.
+* `CommandsPipeline` related changes which have low probability of breaking anything.
+	* `wait(cp:CommandsPipeline)` is now `wait(pp:ProcessesPipeline)` and returns `pp`.
+	* `Str(cp:CommandsPipeline)` is now `Str(pp:ProcessesPipeline)`.
+	* `kill(cp:CommandsPipeline, sig:Int=SIGNALS.TERM)` is now `kill(pp:ProcessesPipeline, sig:Int=SIGNALS.TERM)`
+	* `lines(cp:CommandsPipeline)` is now `lines(pp:ProcessesPipeline)`
+	* `lines(cp:CommandsPipeline, cb:Fun)` is now `lines(pp:ProcessesPipeline, cb:Fun)`
+	* `assert_...(cp:CommandsPipeline, ...)` are now `assert_...(pp:ProcessesPipeline, ...)`
+* `Argv()` - support for arguments that need repeated argument name
+
+### Deprecated
+
+* Deprecated `Pred(BasicTypeInstance)`
+
+### Removed
+
+* Removed deprecated `nuke_null()`
+
+### Work in progress
+
+* Terminal
+* Improving error messages shown when exceptions occur.
+* Add experimental `escape_bash(Str)` - quote argument for bash
+
 ## 2018-09-20 Version 0.2.5
 
 ### New features
@@ -11,7 +100,7 @@
 		* Add `init(t:Thread, name:Str, f:Fun)`
 		* Add `init(t:Thread, name:Str, f:Fun, arg)`
 * `aws` command output parsing - `.Reservation` renamed to `._Reservation`
-* Add `eachk()` and `eachv()'
+* Add `eachk()` and `eachv()`
 * `Str(s:Str, target_width:Int)` extended to `Str(s:Str, target_width:Int, ch=' ')`, allowing padding with given character
 * Exiting
 	* Add `ExitException` - parent of all exceptions with `exit_code` field

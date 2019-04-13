@@ -96,13 +96,12 @@ TEST global a=110; ns1 = ns(outer_a=a) { a=outer_a+1 }; ns1::a == a+1
 # === Process tests ================================
 
 TEST try $(cat NO_SUCH_FILE 2>/dev/null) catch(pf:ProcessFail) true
-TEST $(nofail cat NO_SUCH_FILE 2>/dev/null); true
 TEST x=1; `line: echo a$x b${x}c` == "a1 b1c"
 
 # === Redirections tests ===========================
 # Warning: file name is not unique
 TEST f='/tmp/ngs-redir-test'; $(echo -n abc >$f); $(echo -n def >>$f); txt=`cat $f`; $(rm $f); txt == 'abcdef'
-TEST f='/tmp/ngs-redir-test'; $(nofail cat /NO-SUCH-FILE 2>$f); txt=`cat $f`; $(rm $f); (txt ~ /No such file or directory/) is MatchY
+TEST f='/tmp/ngs-redir-test'; $(nofail: cat /NO-SUCH-FILE 2>$f); txt=`cat $f`; $(rm $f); (txt ~ /No such file or directory/) is MatchSuccess
 
 # TODO
 # TEST F f(a=100,b=200,c=300) [a,b,c]; f(b=10,20,30) # Currently b is not marked as matched and is overridden by 30

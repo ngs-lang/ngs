@@ -22,7 +22,7 @@ repo() {
 		(cd "$DIR" && git pull)
 	else
 		echo "+ NGS - cloning repo into directory $DIR"
-		git clone https://github.com/ilyash/ngs.git "$DIR"
+		git clone https://github.com/ngs-lang/ngs.git "$DIR"
 	fi
 }
 
@@ -49,7 +49,7 @@ else
 	echo "+ Skipping APT cache update"
 fi
 
-for p in git moreutils docker.io bash-completion rsync debootstrap curl vim uthash-dev libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre3-dev make pandoc;do
+for p in git moreutils docker.io bash-completion rsync debootstrap curl vim libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg libpcre3-dev make pandoc;do
 	pkg "$p"
 done
 

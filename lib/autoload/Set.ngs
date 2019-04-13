@@ -69,6 +69,12 @@
 	}
 
 	doc Inspect Set
-	doc %RET - Arr of Str
-	F inspect(a:Set) ["Set of size ${a.len()}"] + a.map({"  ${SafeStr(A)}"})
+	doc %RET - Lines
+	F inspect(a:Set) Lines(["Set of size ${a.len()}"] + a.map({"  ${SafeStr(A)}"}).digest(16, '  (...)'))
+
+	doc Defines collector { ... collect(...) ... } behaviour for Set.
+	F collector(s:Set, body:Fun) {
+		body(F(elt) s.push(elt))
+		s
+	}
 }

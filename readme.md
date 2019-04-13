@@ -7,10 +7,8 @@ Next Generation Shell.
 
 # Quick links
 
-
 * [NGS Website](https://ngs-lang.org/)
-* [NGS Facebook group](https://www.facebook.com/groups/next.generation.shell/)
-* [Reddit](https://www.reddit.com/r/NextGenerationShell/)
+* [Docker repository](https://hub.docker.com/r/ngslang/ngs/)
 
 # The problem
 
@@ -133,43 +131,42 @@ This is how an instance can be created using NGS (real working code). No state f
 
 # Compiling and running
 
-## Install dependencies - Debian-based Linux
+## Clone from git
 
-	sudo apt-get install uthash-dev libgc-dev libffi6 libffi-dev libjson-c-dev peg libpcre3-dev make cmake pandoc pkg-config build-essential
-	sudo type awk || sudo apt-get install gawk
-	mkdir build && cd build && cmake .. && make && ctest
-	# If NGS is not installed:
-	NGS_DIR=../lib NGS_BOOTSTRAP=../lib/bootstrap.ngs ./ngs SCRIPT_NAME.ngs
+	git clone https://github.com/ngs-lang/ngs.git
+
+	# or if using git over ssh
+	git clone git@github.com:ngs-lang/ngs.git
+
+	cd ngs
+
+## Install with dependencies - Debian-based Linux
+
+	./install-linux.sh
+	
+## Install with dependencies - MacOS (brew)
+
+	./install-mac.sh
+
+## Install without dependencies
+
+	sudo make install
+
+## Run tests
+
+	make tests
+
+## Compile
+
+	make build
+
+## Run
+
+	# If NGS is not installed (from the root of ngs project):
+	NGS_DIR=lib NGS_BOOTSTRAP=lib/bootstrap.ngs ./build/ngs SCRIPT_NAME.ngs
+
 	# If NGS is installed:
-	./ngs SCRIPT_NAME.ngs
-
-## Install dependencies - Mac OS X
-
-	brew update
-	brew install cmake peg libgc pcre libffi gnu-sed json-c pkg-config pandoc
-
-	# install macports
-	brew install Caskroom/cask/macports
-	macports_dir=$(brew cask info macports | grep '/usr/local/Caskroom/macports' | awk '{print $1}')
-	macports_pkg=$(brew cask info macports | awk '$2 == "(pkg)" || $2 == "(Pkg)" {print $1}')
-
-	sudo installer -pkg "$macports_dir/$macports_pkg" -target /
-
-	sudo /opt/local/bin/port install uthash
-
-	export PATH="/usr/local/opt/gnu-sed/libexec/gnubin:$PATH"
-	pcp=$(dirname $(brew list pkg-config | grep '/bin/pkg-config'))
-	export PATH="$pcp:$PATH"
-	export PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig
-
-
-## Compile, test and run
-
-	mkdir -p build && cd build && cmake .. && make && ctest
-	# If NGS is not installed:
-	NGS_DIR=lib NGS_BOOTSTRAP=lib/bootstrap.ngs ./ngs SCRIPT_NAME.ngs
-	# If NGS is installed:
-	./ngs SCRIPT_NAME.ngs
+	ngs SCRIPT_NAME.ngs
 
 Tested as follows (some time ago):
 
@@ -180,24 +177,16 @@ Tested as follows (some time ago):
 
 If you have troubles compiling, please try to compile the commit tagged `tested`.
 
+## Uninstall
+
+	cd build
+	for i in $(<install_manifest.txt);do rm "$i";done
 
 ## Debug - Mac
 
 	# Debug when stuck (note to self mostly)
 	killall -SIGSEGV ngs
 	lldb --core /cores/core.XXXXX
-
-
-## Install
-
-	# after build steps
-	cd build
-	sudo make install
-
-## Uninstall
-
-	cd build
-	for i in $(<install_manifest.txt);do rm "$i";done
 
 ## Generate documentation
 
@@ -222,7 +211,11 @@ On Mac, follow [the instructions to create case sensitive volume](https://coderw
 
 # Contributing
 
-Fork on GitHub, work on whatever you like, preferably from the top of [the todo](todo.txt), make a pull request (to "dev" branch). If the change is big or involves modifying the syntax, it's better to coordinate with Ilya before you start.
+* Fork on GitHub
+* Work on whatever you like, preferably something from the GitHub issues of this project
+* Make a pull request (to the `dev` branch).
+
+If the change is big or involves modifying the syntax, it's better to coordinate with Ilya before you start.
 
 # Planned Features
 

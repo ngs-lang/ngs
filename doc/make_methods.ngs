@@ -131,11 +131,11 @@
 		F method_ref_link(display_name:Str, link_data:Str) '<a class="method-ref-link" title="See method" href="methods.html#impl-' + link_data.encode_html_attr() + '">' + display_name + '</a>'
 
 		commit = `git rev-parse HEAD`.lines()[0]
-		# https://github.com/ilyash/ngs/blob/00e547caf492e3ac42d2aca8ef32a28f302c7287/c/stdlib.ngs#L3197
+		# https://github.com/ngs-lang/ngs/blob/00e547caf492e3ac42d2aca8ef32a28f302c7287/c/stdlib.ngs#L3197
 		F make_location_link(dn:LocationDocNode) {
 			{
 				'text': "${dn.file}:${dn.line}"
-				'link': "https://github.com/ilyash/ngs/blob/$commit/lib/${dn.file}#L${dn.line}"
+				'link': "https://github.com/ngs-lang/ngs/blob/$commit/lib/${dn.file}#L${dn.line}"
 			}
 		}
 

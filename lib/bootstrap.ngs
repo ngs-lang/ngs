@@ -151,7 +151,7 @@ F bootstrap() {
 			echo(VERSION)
 			return 0
 		}
-		if (a == '-e' or a == '-E' or a == '-p' or a == '-pj' or a == '-pi' or a == '-pl' or a == '-pjl' or a == '-pc' or a == '-pt') {
+		if (a == '-e' or a == '-E' or a == '-p' or a == '-pj' or a == '-pi' or a == '-pl' or a == '-pil' or a == '-pjl' or a == '-pc' or a == '-pt') {
 			sw = ARGV.shift()
 			# Newline at the end is for avoiding # commenting out the closing }
 			# Newline at the beginning is for symmetry
@@ -212,13 +212,10 @@ F bootstrap() {
 
 	if sw == '-E' {
 	} else {
-		if sw == '-pi' {
-			inspect(result) % echo
-			return 0
-		}
 
 		transformation = {
 			'-pl': identity
+			'-pil': inspect
 			'-pjl': encode_json
 		}
 		if sw in transformation {
@@ -230,6 +227,7 @@ F bootstrap() {
 
 		transformation = {
 			'-p': identity
+			'-pi': inspect
 			'-pj': encode_json
 			'-pc': code
 			'-pt': { Table2::Table(A) }

@@ -1,0 +1,77 @@
+/*
+	https://material.io/guidelines/style/color.html#color-color-palette
+*/
+
+h1, h2, h3, h4, h5, h6 {
+	margin-top: 1em;
+	color: #7B1FA2;
+}
+
+h1, h2 {
+	text-align: center;
+}
+
+a {
+	color: #00897b;
+}
+
+code {
+	color: #d32f2f;
+}
+
+pre {
+	padding: 1em;
+	border-radius: 0.5em;
+	box-shadow: 0 0 1px 0px black;
+}
+
+pre.example {
+	background-color: #E0F2F1;
+}
+
+.underline-on-hover-only {
+	text-decoration: none;
+}
+.underline-on-hover-only:hover {
+	text-decoration: underline;
+}
+
+q {
+    quotes: "\201C" "\201D" "\2018" "\2019";
+}
+
+.unobtrusive {
+	opacity: 0.38;
+}
+
+h1 .unobtrusive,
+nav .unobtrusive {
+	font-size: 0.6em;
+	opacity: 0.3;
+}
+
+.method-status {
+	background-color: #7B1FA2;
+	color: #FFFFFF;
+	margin-left: 1em;
+	border-radius: 0.25em;
+	padding: 0.25em;
+	font-weight: normal;
+	box-shadow: 0 0 1px 0px black;
+	font-size: 80%;
+}
+
+.logo {
+	text-align: right;
+}
+
+.logo > img {
+	width: 150px;
+	height: 40px;
+}
+
+.main-thing-on-page {
+	font-weight: 400;
+	font-size: 120%;
+	font-style: italic;
+}

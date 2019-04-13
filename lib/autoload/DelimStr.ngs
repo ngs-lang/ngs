@@ -6,31 +6,29 @@
 
 doc DelimStr constructor
 F init(ds:DelimStr, s:Str, delim:Str=':') {
-	super(ds)
-	ds.items = s.split(delim)
-	ds.delim = delim
+	super(ds, s.split(delim))
+	ds.attrs().delim = delim
 }
 
 doc DelimStr constructor
 F init(ds:DelimStr, a:Arr, delim:Str=':') {
-	super(ds)
-	ds.items = a
-	ds.delim = delim
+	super(ds, a)
+	ds.attrs().delim = delim
 }
 
 doc Get new DelimStr with some elements filtered out
 doc %EX - DelimStr("/bin:/usr/bin:/usr/local/bin").filter(/usr/).Str()  # "/usr/bin:/usr/local/bin"
-F filter(ds:DelimStr, predicate) DelimStr(ds.items.filter(predicate), delim=ds.delim)
+F filter(ds:DelimStr, predicate) DelimStr(ds.attrs().ArrLike.filter(predicate), delim=ds.attrs().delim)
 
 TEST DelimStr("/bin:/usr/bin:/usr/local/bin").filter(/usr/).Str() == "/usr/bin:/usr/local/bin"
 
 doc Get new DelimStr without the given element
 doc %EX - DelimStr("/bin:/usr/bin:/usr/local/bin").without("/usr/bin").Str()  # "/bin:/usr/local/bin"
-F without(ds:ArrLike, without_elt) DelimStr(ds.items.without(without_elt), delim=ds.delim)
+F without(ds:ArrLike, without_elt) DelimStr(ds.attrs().ArrLike.without(without_elt), delim=ds.attrs().delim)
 
 TEST DelimStr("/bin:/usr/bin:/usr/local/bin").without("/usr/bin")[1] == "/usr/local/bin"
 
-F Str(ds:DelimStr) ds.items.join(ds.delim)
+F Str(ds:DelimStr) ds.join(ds.attrs().delim)
 
 
 # Tests without() and Str()

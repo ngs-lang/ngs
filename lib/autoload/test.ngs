@@ -82,6 +82,18 @@ F assert_match(actual, expected, title:Str=null) {
 TEST test; try assert_match("abc", /^b/, "test match") catch(e:TestFail) true
 TEST test; assert_match("abc", /^a/, "test match") == "abc"
 
+doc Assert actual is a Bool. Throws TestFail.
+doc %RET - actual
+F assert_bool(actual, title:Str=null) {
+	assert_base(actual, "a Bool", X is Bool, "to be", title or "Data type (mis)match")
+	actual
+}
+
+TEST test; try assert_bool(1) catch(e:TestFail) true
+TEST test; try assert_bool("true") catch(e:TestFail) true
+TEST test; assert_bool(true) == true
+TEST test; assert_bool(false) == false
+
 doc Assert actual is a Hash. Throws TestFail.
 doc %RET - actual
 F assert_hash(actual, title:Str=null) {
@@ -160,11 +172,11 @@ doc Assert process exits with the specified exit code. Throws TestFail.
 doc %EX - p = $(true); assert_exit_code(p, 0)   # OK
 doc %EX - p = $(false); assert_exit_code(p, 1)  # OK
 doc %EX - p = $(false); assert_exit_code(p, 0)  # Throws TestFail
-doc %RET - cp
-F assert_exit_code(cp:CommandsPipeline, expected:Int, title:Str=null) {
-	cp.wait()
-	assert_base(cp.processes[-1].exit_code, expected, (==), "to be equal to", title or "Exit code of process '${cp.processes[-1].command.argv.join(' ')}'")
-	cp
+doc %RET - pp
+F assert_exit_code(pp:ProcessesPipeline, expected:Int, title:Str=null) {
+	pp.wait()
+	assert_base(pp.processes[-1].exit_code, expected, (==), "to be equal to", title or "Exit code of process '${pp.processes[-1].command.argv.join(' ')}'")
+	pp
 }
 
 TEST test; try assert_exit_code($(true), 10) catch(e:TestFail) true
@@ -174,9 +186,9 @@ TEST test; p = $(false); assert_exit_code(p, 1) == p
 doc Assert process has given output. Throws TestFail.
 doc %EX - assert_output_has($(echo abc), /xyz/)        # Throws TestFail
 doc %EX - p = $(echo abc); assert_output_has(p, /c$/)  # OK
-F assert_output_has(cp:CommandsPipeline, expected:RegExp, title:Str=null) {
-	assert_base(Str(cp), expected, (~), "to match", title or "Output of process '${cp.processes[-1].command.argv.join(' ')}'")
-	cp
+F assert_output_has(pp:ProcessesPipeline, expected:RegExp, title:Str=null) {
+	assert_base(Str(pp), expected, (~), "to match", title or "Output of process '${pp.processes[-1].command.argv.join(' ')}'")
+	pp
 }
 
 TEST test; try assert_output_has($(echo abc), /xyz/) catch(e:TestFail) true
@@ -185,9 +197,9 @@ TEST test; p = $(echo abc); assert_output_has(p, /c$/) == p
 doc Assert process has given output. Throws TestFail.
 doc %EX - assert_output_has($(echo abc), "xyz")        # Throws TestFail
 doc %EX - p = $(echo abc); assert_output_has(p, "bc")  # OK
-F assert_output_has(cp:CommandsPipeline, expected:Str, title:Str=null) {
-	assert_base(Str(cp), expected, has, "to contain", title or "Output of process '${cp.processes[-1].command.argv.join(' ')}'")
-	cp
+F assert_output_has(pp:ProcessesPipeline, expected:Str, title:Str=null) {
+	assert_base(Str(pp), expected, has, "to contain", title or "Output of process '${pp.processes[-1].command.argv.join(' ')}'")
+	pp
 }
 
 TEST test; try assert_output_has($(echo abc), "xyz") catch(e:TestFail) true

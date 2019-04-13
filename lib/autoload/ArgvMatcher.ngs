@@ -8,8 +8,8 @@ ns {
 	doc ArgvMatcher internal type, do not use!
 	type UnmatchedParam(EmptyBox)
 
-	type ParamsMatchY(MatchY)
-	type ParamsMatchN(MatchN)
+	type ParamsMatchY(MatchSuccess)
+	type ParamsMatchN(MatchFailure)
 
 	F init(pmy:ParamsMatchY, args:Arr, kwargs:Hash) {
 		pmy.args = args
@@ -56,27 +56,19 @@ ns {
 
 		match_ret = Return()
 
-		params_by_pos = udm.params()
+		mp = MethodParams(udm)
 
-		have_arr_splat = false
-		have_hash_splat = false
+		debug("ARGV_MATCHER", "mp=${mp}")
 
-		params_by_pos .= reject(F(p) {
-			splat = p.get('splat')
-			cond {
-				splat == '*'  have_arr_splat = true
-				splat == '**' have_hash_splat = true
+		args = UnmatchedParam * mp.count(RequiredMethodParam)
+		kwargs = {}
+
+		F set_match(v) {
+			ematch mp[param_name] {
+				RequiredMethodParam args[mp[param_name].idx] = MatchedParam(v)
+				OptionalMethodParam kwargs[param_name] = v
 			}
-		})
-		debug("ARGV_MATCHER", "params_by_pos=${params_by_pos}")
-
-		params_by_name = params_by_pos.Hash('name')
-		params_by_name.each_idx_key_val(F(idx, k, v) v.idx = idx)
-
-		matched_args = UnmatchedParam * params_by_name.len()
-		matched_kwargs = {}
-
-		F set_match(v) matched_args[params_by_name[param_name].idx] = MatchedParam(v)
+		}
 
 		F next_arg() {
 			try
@@ -96,7 +88,7 @@ ns {
 				cond {
 					arg == '--' { accepting_named_arguments = false; continue }
 					(m = arg ~ LONG_SW_PFX) { param_name = m.after }
-					(m = arg ~ SHORT_SW_PFX) {
+					(arg != '-' and m = arg ~ SHORT_SW_PFX) {
 						arg.len() != 2 throws SwitchParseFail("Don't know how to parse command line switch ${arg}").set('value', arg)
 						param_name = m.after
 					}
@@ -108,26 +100,26 @@ ns {
 					param_name = negated.after
 				}
 
-				if param_name not in params_by_name {
-					if have_hash_splat {
+				if param_name not in mp {
+					if mp.hash_splat() {
 						if negated {
 							return ParamsMatchN().set('message', "Parameter '${param_name}' is not a boolean (has unknown type due to kwargs) but used with 'no-'")
 						}
-						matched_kwargs[param_name] = next_arg()
+						kwargs[param_name] = next_arg()
 						continue
 					} else {
 						return ParamsMatchN().set('message', "Unknown parameter '${param_name}'")
 					}
 				}
 
-				if params_by_name[param_name].type == Bool {
+				if mp[param_name].type == Bool {
 					set_match(not(negated))
 				} else {
 					if negated {
 						return ParamsMatchN().set('message', "Parameter '${param_name}' is not a boolean but used with 'no-'")
 					}
 					arg = next_arg()
-					set_match(arg.decode(params_by_name[param_name].type))
+					set_match(arg.decode(mp[param_name].type))
 				}
 			} else {
 				# positional parameter
@@ -142,34 +134,40 @@ ns {
 		}
 
 		positionals.each(F(arg) {
-			idx = matched_args.index(UnmatchedParam, dflt=null)
+			idx = args.index(UnmatchedParam, dflt=null)
 			if idx is Null {
-				if have_arr_splat {
-					matched_args.push(MatchedParam(arg))
+				if mp.len() > args.len() {
+					# Optional parameter
+					args.push(UnmatchedParam())
+					idx = args.len() - 1
+				}
+			}
+			if idx is Null {
+				if mp.arr_splat() {
+					args.push(MatchedParam(arg))
 					return null
 				} else {
 					throw match_ret(ParamsMatchN().set('message', "Too many arguments"))
 				}
 			}
-			debug("ARGV_MATCHER", "Setting matched args idx=$idx arg=$arg type-to-convert-to=${params_by_pos[idx].type}")
+			debug("ARGV_MATCHER", "Setting matched args idx=$idx arg=$arg type-to-convert-to=${mp[idx].type}")
 			try {
-				v = arg.decode(params_by_pos[idx].type)
+				v = arg.decode(mp[idx].type)
 			} catch(e) {
-				throw match_ret(ParamsMatchN().set('message', "Failed to convert to desired type for parameter ${params_by_pos[idx].name}"))
+				throw match_ret(ParamsMatchN().set('message', "Failed to convert to desired type for parameter ${mp[idx].name}"))
 
 			}
-			matched_args[idx] = MatchedParam(v)
+			args[idx] = MatchedParam(v)
 		})
 
-		for(i;matched_args.len()) {
-			matched_args[i] continues
-			p = params_by_pos[i]
-			'dflt' not in p returns ParamsMatchN().set('message', "Parameter '${p.name}' missing")
-			matched_args[i] = MatchedParam(p.dflt)
+		for(i;args.len()) {
+			args[i] continues
+			p = mp[i]
+			return ParamsMatchN().set('message', "Parameter '${p.name}' missing")
 		}
 
 		debug("ARGV_MATCHER", "Matched argv=${argv} udm=${udm}")
-		ParamsMatchY(matched_args.val, matched_kwargs)
+		ParamsMatchY(args.map(get), kwargs)
 	}
 
 	TEST ArgvMatcher; (["--b", "B", "A", "C"] ~ F(a,b,c) 7).args == %[A B C]
@@ -177,7 +175,9 @@ ns {
 	TEST ArgvMatcher; (["--b", "B", "A", "C", "D"] ~ F(a,b,c, *d) 7).args == %[A B C D]
 	TEST ArgvMatcher; (["A", "C", "D", "--b", "B"] ~ F(a,b,c, *d) 7).args == %[A B C D]
 	TEST ArgvMatcher; m = (["--b", "B", "A", "C", "--d", "10"] ~ F(a,b,c,*args,**kw) 7); m.args == %[A B C] and m.kwargs == {"d": "10"}
-	# TEST ArgvMatcher; (["A"] ~ F(a,b:Int=null) 7).matches.args == %[A B C D]
+	TEST ArgvMatcher; (["A"] ~ F(a,b:Int=null) 7).args == %[A]
+	TEST ArgvMatcher; (["A", "10"] ~ F(a,b:Int=null) 7).args == %[A 10]
 	TEST (["A", "C", "D", "--b", "B"] ~ ArgvMatcher("positionals", "a") do F(a,b) 7).args == %[%[A C D] B]
+	TEST ((["A", "C", "D", "--b", "B"] ~ ArgvMatcher("positionals", "a") do F(a,b=null) 7) ~ {"args": [%[A C D]], "kwargs": %{b B}}).Bool()
 	TEST ArgvMatcher; (["1", "1.0"] ~ F(i:Int, r:Real) 7).args == %[1 1.0]
 }

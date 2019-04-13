@@ -4,14 +4,13 @@ Priority: optional
 Maintainer: Ilya Sher <ilya.sher@coding-knight.com>
 Build-Depends:
  make,
- uthash-dev,
  libgc-dev,
  libffi-dev,
  libjson-c-dev,
  peg,
  libpcre3-dev,
  pandoc,
-Homepage: https://github.com/ilyash/ngs
+Homepage: https://github.com/ngs-lang/ngs
 
 Package: ngs
 Architecture: any
