@@ -4854,6 +4854,7 @@ F wait(p:Process) {
 	message = collector/Lines() {
 		argv0 = ("'" + try p.command.argv[0] + "'") tor '(with unknown name)'
 		collect("Executing external process ${argv0} failed")
+		collect("Executable was found at ${p.executable.path}")
 		collect("Command: ${p.command.argv.map(escape_bash).join(' ') tor '(unavailable)'}")
 		if p.exit_code is not Null {
 			collect("Command exited with code: ${p.exit_code}")
@@ -6030,6 +6031,7 @@ F inspect(p:Process) {
 	collector/Lines() {
 		collect("Process")
 		collect("  command = ${p.command}")
+		collect("  executable = ${p.executable}")
 		collect("  pid = ${p.pid}")
 		collect("  exit_code = ${p.exit_code}")
 		collect("  exit_signal = ${p.exit_signal}")

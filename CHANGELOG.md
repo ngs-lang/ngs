@@ -1,5 +1,10 @@
 ## (UNRELEASED) Version 0.2.7
 
+### Fixes and improvements
+
+* Add missing brew dependencies to `install-mac.sh` (thanks for reporting, @zzamboni)
+* Add `executable` to `inspect(Process)` and to exception reporting
+
 ## 2019-04-13 Version 0.2.6
 
 ### Breaking changes
