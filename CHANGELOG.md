@@ -3,7 +3,9 @@
 ### Fixes and improvements
 
 * Add missing brew dependencies to `install-mac.sh` (thanks for reporting, @zzamboni)
-* Add `executable` to `inspect(Process)` and to exception reporting
+* Add `executable` to `inspect(Process)` and to exception reporting.
+* `basename()` is now implemented in `stdlib.ngs` as opposed to previously using `BASENAME(1)`.
+* `finished_ok()` now checks for known programs by their basename and not absolute paths (@zzamboni reported failing tests; this changes should fix it)
 
 ## 2019-04-13 Version 0.2.6
 

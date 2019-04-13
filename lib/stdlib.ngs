@@ -4538,11 +4538,15 @@ F open(f:File, flags:Str) {
 # XXX: might not be correct on all platforms
 TEST open(File("/etc/passwd"), "r").fd > 0
 
-doc Get basename of the file. Uses BASENAME(1).
+doc Get basename of the file.
 F basename(p:Path) p.path.basename()
 
-doc Get basename of the file. Uses BASENAME(1).
-F basename(s:Str) `line: basename $s`
+doc Get basename of the file.
+F basename(s:Str) s.split('/')[-1]
+
+TEST basename("/abc") == "abc"
+TEST basename("abc") == "abc"
+TEST basename("abc/def") == "def"
 
 
 # TODO: something more efficient than reading all of it. Some kind of streaming.
@@ -4775,7 +4779,7 @@ ns {
 	doc %EX - $(test -f my_file_that_might_be_present)
 	doc %EX - $(fuser my_file)  # On Linux, exit code 1 means file is not used
 	F finished_ok(p:Process) {
-		ok = _finished_ok_exit_codes.get(p.executable.path)
+		ok = _finished_ok_exit_codes.get(p.executable.path.basename())
 		guard ok is not Null
 		debug("finished_ok", "finished_ok(Process) method, _finished_ok checker method")
 		finished_ok(p, 'exit_code', ok)
@@ -4787,16 +4791,11 @@ ns {
 	}
 
 	_known_programs = %{
-		%[/bin/false /usr/bin/false] 1
-		%[
-			/bin/expr /usr/bin/expr
-			/bin/grep /usr/bin/grep
-			/bin/ping /usr/bin/ping
-			/bin/test /usr/bin/test
-		] %[0 1]
+		%[false] 1
+		%[expr grep ping test] %[0 1]
 	}
 	if OS.linux {
-		_known_programs[%[/bin/fuser /usr/bin/fuser]] = %[0 1]
+		_known_programs[%[fuser]] = %[0 1]
 	}
 	_known_programs.each(F(progs, ok) {
 		debug("finished_ok", "known programs: ${progs} -> ${ok}")
