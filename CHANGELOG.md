@@ -15,6 +15,8 @@
 * `basename()` is now implemented in `stdlib.ngs` as opposed to previously using `BASENAME(1)`.
 * `finished_ok()` now checks for known programs by their basename and not absolute paths (@zzamboni reported failing tests; this changes should fix it)
 * `echo(Int, Lines)` is now `echo(Any, Lines)`
+* Fix `wait(Process)` to behave correctly when `exit_code` is not set but `exit_signal` is set.
+* Fix `$(blah >${true})`
 
 ## 2019-04-13 Version 0.2.6
 

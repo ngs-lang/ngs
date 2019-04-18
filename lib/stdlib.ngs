@@ -4840,15 +4840,20 @@ doc %RET - Bool
 doc %EX - if $(test -f myfile) ... # if runs Bool() on any non-Bool condition expression
 F Bool(pp:ProcessesPipeline) pp.wait().processes.all({A.exit_code == 0})
 
+F finished(p:Process) {
+	p.exit_code is Int or
+	p.exit_signal is Int
+}
+
 doc Wait for a process. Waits for reading and writing threads to finish.
 doc Waits for the process to finish. Checks whether to throw ProcessFail using finished_ok().
 doc %RET - p
 F wait(p:Process) {
 
+	finished(p) returns p
+
 	# TODO: reading/writing threads failure - throw at the end (allowing resources cleanup in this function)
 	p.pid is Null throws InvalidArgument("Can not wait() on Process without PID")
-
-	p.exit_code is Int returns p
 
 	F join_threads(which:Str) {
 		threads = p.(which)
@@ -5040,9 +5045,7 @@ F '$()'(p:Process) {
 		marker_to_default_fd = {'<': 0, '>': 1, '>>': 1}
 
 		p.redirects.each(F(r:ProcessRedir) {
-			if r.datum is not Pipe {
-				target_fd = r.fd.Box().get(marker_to_default_fd[r.marker])
-			}
+			target_fd = if r.fd is Int then r.fd else marker_to_default_fd[r.marker]
 			ematch r.datum {
 				Str {
 					debug("process2", "CHILD FILE REDIRECT ${target_fd} -> ${r.datum}")
@@ -5051,7 +5054,7 @@ F '$()'(p:Process) {
 				}
 				Pipe {
 					debug("process2", "CHILD REDIRECT PIPE ${r.fd} -> ${child_fd(r.datum)}")
-					dup2(child_fd(r.datum), r.fd)
+					dup2(child_fd(r.datum), target_fd)
 					close(child_fd(r.datum)) # Is this needed?
 				}
 				Int {
