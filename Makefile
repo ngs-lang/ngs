@@ -21,3 +21,7 @@ install: build
 .PHONY: clean
 clean:
 	rm -rf build
+
+.PHONY: update-vim-syntax
+update-vim-syntax:
+	./helper-scripts/update-vim-syntax.ngs vim/syntax/ngs.vim

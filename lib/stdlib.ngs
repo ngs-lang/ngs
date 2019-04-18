@@ -1423,6 +1423,15 @@ F has(container, element) element in container
 TEST [1,2,3].has(1)
 TEST [1,2,3].has(10).not()
 
+doc Exactly same as "element not in container". It's just more convenient in specific cases.
+doc %EX - [1,2,3].has_no(2)  # false
+doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(X.has_no(1))  # [ [100,200,300] ]
+doc %RET - Bool
+F has_no(container, element) element not in container
+
+TEST [1,2,3].has_no(1).not()
+TEST [1,2,3].has_no(10)
+
 
 doc Defines collector { ... collect(...) ... } behaviour for arrays
 doc a - Initial array
@@ -2632,23 +2641,23 @@ F Hash(arr:Arr)
 
 TEST Hash([['a', 1], ['c', 3]]) == {'a': 1, 'c': 3}
 
-doc Create Hash with keys being the given field of array elements and the values being corresponding arr elements.
+doc Create Hash with keys being the given field of elements and the values being corresponding elements.
 doc %RET - Hash
 doc %EX - Hash([{'x': 1}, {'x': 2}], 'x')  # {1: {'x': 1}, 2: {'x': 2}}
-F Hash(arr:Arr, field:Str)
+F Hash(e:Eachable1, field:Str)
 	collector/{}
-		arr.each(F(v) collect(v[field], v))
+		e.each(F(v) collect(v.(field), v))
 
 TEST Hash([{'x': 1}, {'x': 2}], 'x') == {1: {'x': 1}, 2: {'x': 2}}
 
-doc Create a Hash from keys in arr using cb for values calculation
-doc arr - Keys of the hash to build
+doc Create a Hash from keys in Eachable1 using cb for values calculation
+doc e - Keys of the hash to build
 doc cb - Function to be called with one key at a time. Should calculate a value for the given key.
 doc %RET - Hash
 doc %EX - Hash([1,2], F(x) x*2)  # {1: 2, 2: 4}
-F Hash(arr:Arr, cb:Fun)
+F Hash(e:Eachable1, cb:Fun)
 	collector/{}
-		arr.each(F(elt) collect(elt, cb(elt)))
+		e.each(F(elt) collect(elt, cb(elt)))
 
 TEST Hash([1,2], F(x) x*2) == {1: 2, 2: 4}
 
@@ -3885,10 +3894,10 @@ ns {
 		join_result = c_pthread_join(t.thread)
 		# join_result: [ join_status, [ result_is_exception:Bool, result ] ]
 		if join_result[0] {
-			throw ThreadJoinFail("Failed to c_pthread_join").set('code', code)
+			throw ThreadJoinFail("Failed to c_pthread_join").set('code', join_result[0])
 		}
 		if join_result[1][0] {
-			throw OtherThreadFail("Joined thread that threw exception").set('cause', join_result[1][1]).set('thread', t)
+			throw OtherThreadFail("Joined thread threw exception").set('cause', join_result[1][1]).set('thread', t)
 		}
 		join_result[1][1]
 	}
@@ -5209,6 +5218,13 @@ F write(pp:ProcessesPipeline, s:Str) {
 	pp
 }
 
+doc Write s and newline character(s) to pp
+F echo(pp:ProcessesPipeline, s:Str) {
+	pp.write(s)
+	pp.write(STDLIB_EOL)
+	pp
+}
+
 doc Read from last process of ProcessesPipeline
 doc %EX - p = $(seq 3 | tac |);
 doc %EX - data = read(p);
@@ -5943,15 +5959,16 @@ F digest(a:Arr, chunk_size:Int, marker:Str='(...)') {
 }
 
 doc Do nothing. Catch-all for exception_specific_message().
-doc %RET - EmptyBox
+doc %RET - null
 F exception_specific_message(e:Exception) null
 
 doc Format GlobalNotFound exception message.
-doc %RET - FullBox with Str
+doc %RET - Str
 F exception_specific_message(gnf:GlobalNotFound) "Global variable '${gnf.name}' not found"
 
 doc Format MethodNotFound exception message.
 doc %STATUS - WIP
+doc %RET - Lines
 F exception_specific_message(mnf:MethodNotFound) {
 	methods_names = mnf.callable.Arr().map(attrs).get('name')
 	mn = if methods_names and methods_names.all(X == methods_names[0]) {
@@ -5970,6 +5987,7 @@ F exception_specific_message(mnf:MethodNotFound) {
 
 # TODO: show relevant value part
 doc Format JsonDecodeFail exception message.
+doc %RET - Lines
 F exception_specific_message(jdf:JsonDecodeFail) {
 	Lines([
 		"Failed to parse JSON"
@@ -5980,6 +5998,7 @@ F exception_specific_message(jdf:JsonDecodeFail) {
 }
 
 doc Format KeyNotFound exception message for ENV global variable.
+doc %RET - Str
 F exception_specific_message(knf:KeyNotFound) {
 	guard knf.container === ENV
 	"Environment variable '${knf.key}' is not set."
@@ -6521,10 +6540,10 @@ F write(fname:Str, s:Str) {
 
 doc Write whole file if it's closed, write to file descriptor if it's open
 F write(s:Str, f:File) {
-	warn("Using deprecated write() arguments order")
 	write(f, s)
 }
 
+doc Write whole file if it's closed, write to file descriptor if it's open
 F write(f:File, s:Str) {
 	write(if f.fd is Null then f.path else f.fd, s)
 }

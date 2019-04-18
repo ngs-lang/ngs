@@ -1,0 +1,33 @@
+#!/usr/bin/env ngs
+
+F main(dst:Str) {
+	# Autoload (copied from doc/make.ngs); TODO: deduplicate
+	AWS
+	AWS2
+	ArgvMatcher
+	DelimStr
+	Doc
+	Iter
+	Res
+	ResDef
+	Set
+	Stats
+	Table
+	Thread
+	test
+
+	types_raw = globals().filterv(Type).keys().sort()
+	# Group into lines by first letter:
+	types = 'syn keyword ngsType ' + types_raw.group(X[0]).values().map(join(X, ' '))
+	l = File(dst).lines()
+	l['" Generated types - start'..'" Generated types - end'] = types
+
+
+	methods_raw = globals().filterv(Fun).rejectv(Type).filterk(/^[A-Za-z_]+$/).keys().sort()
+	# Group into lines by first letter:
+	methods = 'syn keyword ngsFunction ' + methods_raw.group(X[0]).values().map(join(X, ' '))
+	l['" Generated methods - start'..'" Generated methods - end'] = methods
+	write("${dst}.new", l.join("\n"))
+	$(mv "${dst}.new" $dst)
+	log("Types count: ${types_raw.len()}")
+}

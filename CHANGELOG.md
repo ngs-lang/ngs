@@ -1,11 +1,20 @@
 ## (UNRELEASED) Version 0.2.7
 
+### New features
+
+* Add `has_no(container, element)`
+* Add `echo(ProcessesPipeline, Str)`
+* Automate updating `ngs.vim` syntax file
+
 ### Fixes and improvements
 
+* `Hash(Arr, Str)` is now `Hash(Eachable1, Str)` (to support `ArrLike`)
+* `Hash(Arr, Fun)` is now `Hash(Eachable1, Fun)` (to support `ArrLike`)
 * Add missing brew dependencies to `install-mac.sh` (thanks for reporting, @zzamboni)
 * Add `executable` to `inspect(Process)` and to exception reporting.
 * `basename()` is now implemented in `stdlib.ngs` as opposed to previously using `BASENAME(1)`.
 * `finished_ok()` now checks for known programs by their basename and not absolute paths (@zzamboni reported failing tests; this changes should fix it)
+* `echo(Int, Lines)` is now `echo(Any, Lines)`
 
 ## 2019-04-13 Version 0.2.6
 

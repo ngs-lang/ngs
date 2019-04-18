@@ -25,7 +25,9 @@ F test(name:Str, f:Fun) {
 	}
 	msg = f()
 	if msg is TestMessage {
-		echo("  OK: ${msg.val}")
+		echo("  OK: ${msg.get()}")
+	} else {
+		echo("  OK")
 	}
 }
 
