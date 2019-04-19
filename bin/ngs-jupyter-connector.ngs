@@ -8,7 +8,7 @@ ns {
 	output = []
 
 	F handle_logging(type, s:Str, let_through:Fun) {
-		do_capture = Backtrace().frames.get('closure').map(attrs).get('JUNIPER_CAPTURE_OUTPUT').Bool()
+		do_capture = Backtrace().frames.get('closure').map(attrs).get('JUPYTER_CAPTURE_OUTPUT').Bool()
 		# write(1, "S=$s do_capture=${do_capture}\n")
 		if do_capture {
 			output.push([type, s])
@@ -90,7 +90,7 @@ ns {
 
 		# Marker for output capturing - start
 		a = program_func.attrs() or {}
-		a['JUNIPER_CAPTURE_OUTPUT'] = true
+		a['JUPYTER_CAPTURE_OUTPUT'] = true
 		program_func.attrs(a)
 		# Marker for output capturing - end
 
@@ -109,7 +109,6 @@ ns {
 			output = []
 			try {
 				result = eval(l)
-				error("R ${result}")
 				send({'output': output, 'result': result})
 			} catch(e) {
 				print_exception(e, echo=echo_exception)
