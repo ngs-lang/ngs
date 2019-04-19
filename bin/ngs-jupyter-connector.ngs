@@ -1,0 +1,122 @@
+#!/usr/bin/env ngs
+
+ns {
+	global main, error, warn, log, echo
+
+	type JupiterConnectorProtocolError(InvalidArgument)
+
+	output = []
+
+	F handle_logging(type, s:Str, let_through:Fun) {
+		do_capture = Backtrace().frames.get('closure').map(attrs).get('JUNIPER_CAPTURE_OUTPUT').Bool()
+		# write(1, "S=$s do_capture=${do_capture}\n")
+		if do_capture {
+			output.push([type, s])
+			null
+		} else {
+			let_through(s)
+		}
+	}
+
+	F echo(s:Str) handle_logging(0, s, super)
+
+	F echo(fd:Int, s:Str) {
+		sup = super
+		handle_logging(fd, s, sup(fd, X))
+	}
+
+	F error(s:Str) handle_logging('error', s, super)
+	F warn(s:Str)  handle_logging('warn', s, super)
+	F log(s:Str)   handle_logging('log', s, super)
+	# TODO: debug()
+
+	initial_global_vars = []
+	vars = []
+
+	send_lock = Lock()
+
+	F send(data) {
+		j = data.encode_json()
+		send_lock.acquire({
+			log("Sending: $j")
+			write(1, j + "\n")
+		})
+	}
+
+	
+	F save_global_vars_names() {
+		initial_global_vars = globals().keys()
+	}
+
+	F readline() {
+		ret = ''
+		while ch = read(0, 1) {
+			ch == '\n' returns ret
+			ret += ch
+		}
+		if ret {
+			warn("Last line of input did not end with newline character")
+		}
+		ret
+
+	}
+
+	F eval(input_line:Str) {
+		log("_eval() - start: $input_line")
+		try {
+			cmd = input_line.decode_json()
+		} catch(e) {
+			throw JupiterConnectorProtocolError("Failed to parse input JSON").set(cause=e)
+		}
+		# cmd:
+		#   .vars
+		#   .command
+
+		if cmd.has('vars') {
+			w = "Ignoring passed vars: not imlemented yet"
+			warn(w)
+			output.push(['warn', w])
+		}
+		# cmd.get('vars', {}).each(F(k, v) {
+		# 	k in initial_global_vars throws InvalidArgument("Can not set variable '${k}' because it is already used").set('var_name', k)
+		# })
+
+		cmd is not Hash throws JupiterConnectorProtocolError("Top-level expression must be a Hash").set(found=typeof(cmd))
+		'expr' not in cmd throws JupiterConnectorProtocolError("Expected field 'expr' was not found").set(found=cmd.keys())
+		cmd.expr is not Str throws JupiterConnectorProtocolError("'expr' must be a string")
+
+		program_bytecode = compile(cmd.expr, '<Jupyter-expr-program>')
+		program_func = load(program_bytecode, '<Jupyter-expr-func>')
+
+		# Marker for output capturing - start
+		a = program_func.attrs() or {}
+		a['JUNIPER_CAPTURE_OUTPUT'] = true
+		program_func.attrs(a)
+		# Marker for output capturing - end
+
+		ret = program_func()
+		log("_eval() - end")
+		ret
+
+	}
+
+	F echo_exception(x:Str) output.push(['exc', x])
+	F echo_exception(l:Lines) l.each(echo_exception)
+
+	F main() {
+		log("main() - start")
+		while l = readline() {
+			output = []
+			try {
+				result = eval(l)
+				error("R ${result}")
+				send({'output': output, 'result': result})
+			} catch(e) {
+				print_exception(e, echo=echo_exception)
+				# echo(output)
+				send({'output': output})
+			}
+		}
+		log("main() - end")
+	}
+}
