@@ -1,5 +1,7 @@
 #!/usr/bin/env ngs
 
+# Testing: (echo '{"expr": "echo(100); 1+2"}') | ngs-jupyter-connector.ngs 2>/dev/null
+
 ns {
 	global main, error, warn, log, echo
 
