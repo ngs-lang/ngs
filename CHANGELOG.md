@@ -17,6 +17,7 @@
 * `echo(Int, Lines)` is now `echo(Any, Lines)`
 * Fix `wait(Process)` to behave correctly when `exit_code` is not set but `exit_signal` is set.
 * Fix `$(blah >${true})`
+* `print_exception()` - add optional parameter `echo`
 
 ## 2019-04-13 Version 0.2.6
 

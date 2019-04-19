@@ -6133,9 +6133,9 @@ F init(lines:Lines, backtrace:Backtrace, parent_backtrace=null) {
 doc Print exception to stderr. Uses inspect().
 doc level - indentation level to use (two spaces for each level)
 doc parent - parent exception if print_exception() was called for .cause exception
-F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
+F print_exception(e:Exception, level:Int = 0, parent:Exception = null, echo=echo(stdlib_error_fd, X)) {
 
-	F err(message) echo(stdlib_error_fd, pfx + message)
+	F err(message) echo(pfx + message)
 
 	pfx = "[ERROR ${Time()}] " + "  " * level
 	h = Hash(e)
@@ -6191,7 +6191,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null) {
 	}
 
 	if level == 0 {
-		echo(stdlib_error_fd, m.framed())
+		echo(m.framed())
 	}
 
 }
