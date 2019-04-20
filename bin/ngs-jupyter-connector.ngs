@@ -6,6 +6,7 @@ ns {
 	global main, error, warn, log, echo
 
 	type JupiterConnectorProtocolError(InvalidArgument)
+	type JupiterInvalidVariable(InvalidArgument)
 
 	output = []
 
@@ -32,7 +33,7 @@ ns {
 	F log(s:Str)   handle_logging('log', s, super)
 	# TODO: debug()
 
-	vars = []
+	vars = Set()
 
 	send_lock = Lock()
 
@@ -66,12 +67,18 @@ ns {
 		}
 		if cmd.has('vars') {
 			cmd.vars is not Hash throws JupiterConnectorProtocolError("'vars' must be a Hash").set(found=typeof(cmd.vars))
-			w = "Ignoring passed vars: not imlemented yet"
-			warn(w)
-			output.push(['warn', w])
 		}
 		cmd.get('vars', {}).each(F(k, v) {
 			# k in initial_global_vars throws InvalidArgument("Can not set variable '${k}' because it is already used").set('var_name', k)
+			allowed = econd {
+				k in vars { true }
+				k in globals() { false }
+				true { vars.push(k); true }
+			}
+			not(allowed) throws JupiterInvalidVariable("Can not set variable '${k}' sent from Jupyter").set(var=k)
+			idx = ll_resolve_global_variable(k)
+			log("_eval() - setting ${k}=${v}")
+			ll_set_global_variable(idx, v)
 		})
 
 		cmd is not Hash throws JupiterConnectorProtocolError("Top-level expression must be a Hash").set(found=typeof(cmd))
@@ -102,7 +109,7 @@ ns {
 			output = []
 			try {
 				result = eval(l)
-				send({'output': output, 'result': result})
+				send({'output': output, 'result': result, 'vars': globals().filterk(X in vars)})
 			} catch(e) {
 				print_exception(e, echo=echo_exception)
 				m = try {
