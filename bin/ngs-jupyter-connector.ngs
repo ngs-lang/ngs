@@ -20,7 +20,7 @@ ns {
 		}
 	}
 
-	F echo(s:Str) handle_logging(0, s, super)
+	F echo(s:Str) handle_logging(1, s, super)
 
 	F echo(fd:Int, s:Str) {
 		sup = super
@@ -32,22 +32,16 @@ ns {
 	F log(s:Str)   handle_logging('log', s, super)
 	# TODO: debug()
 
-	initial_global_vars = []
 	vars = []
 
 	send_lock = Lock()
 
-	F send(data) {
+	F send(data:Hash) {
 		j = data.encode_json()
 		send_lock.acquire({
-			log("Sending: $j")
+			log("Sending JSON: $j")
 			write(1, j + "\n")
 		})
-	}
-
-	
-	F save_global_vars_names() {
-		initial_global_vars = globals().keys()
 	}
 
 	F readline() {
@@ -70,18 +64,15 @@ ns {
 		} catch(e) {
 			throw JupiterConnectorProtocolError("Failed to parse input JSON").set(cause=e)
 		}
-		# cmd:
-		#   .vars
-		#   .command
-
 		if cmd.has('vars') {
+			cmd.vars is not Hash throws JupiterConnectorProtocolError("'vars' must be a Hash").set(found=typeof(cmd.vars))
 			w = "Ignoring passed vars: not imlemented yet"
 			warn(w)
 			output.push(['warn', w])
 		}
-		# cmd.get('vars', {}).each(F(k, v) {
-		# 	k in initial_global_vars throws InvalidArgument("Can not set variable '${k}' because it is already used").set('var_name', k)
-		# })
+		cmd.get('vars', {}).each(F(k, v) {
+			# k in initial_global_vars throws InvalidArgument("Can not set variable '${k}' because it is already used").set('var_name', k)
+		})
 
 		cmd is not Hash throws JupiterConnectorProtocolError("Top-level expression must be a Hash").set(found=typeof(cmd))
 		'expr' not in cmd throws JupiterConnectorProtocolError("Expected field 'expr' was not found").set(found=cmd.keys())
@@ -114,8 +105,14 @@ ns {
 				send({'output': output, 'result': result})
 			} catch(e) {
 				print_exception(e, echo=echo_exception)
-				# echo(output)
-				send({'output': output})
+				m = try {
+					exception_specific_message(e)
+				} catch(e2) {
+					error("Failed in exception_specific_message():")
+					print_exception(e2)
+					Lines(['(failed to get friendly exception message)'])
+				}
+				send({'output': output, 'error': {'text': m.Arr(), 'class': e.typeof().name}})
 			}
 		}
 		log("main() - end")
