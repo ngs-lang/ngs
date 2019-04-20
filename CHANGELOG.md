@@ -21,6 +21,8 @@
 * Fix `$(blah >${true})`
 * `print_exception()` - add optional parameter `echo`
 * `Lines` type now inherits also from `EncodeJsonArr`
+* `exception_specific_message()` - refactored for reusability
+* Improve error messages for syntax errors
 
 ## 2019-04-13 Version 0.2.6
 
