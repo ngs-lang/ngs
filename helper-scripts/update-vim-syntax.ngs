@@ -22,8 +22,12 @@ F main(dst:Str) {
 	l = File(dst).lines()
 	l['" Generated types - start'..'" Generated types - end'] = types
 
+	keywords = l.filter(/^syn keyword ngsKeyword/).map(X.split(' ')).map(X[3..null]).flatten()
 
-	methods_raw = globals().filterv(Fun).rejectv(Type).filterk(/^[A-Za-z_]+$/).keys().sort()
+
+	methods_raw = globals().filterv(Fun).rejectv(Type).filterk(/^[A-Za-z_]+$/).keys()
+	methods_raw -= keywords
+	methods_raw .= sort()
 	# Group into lines by first letter:
 	methods = 'syn keyword ngsFunction ' + methods_raw.group(X[0]).values().map(join(X, ' '))
 	l['" Generated methods - start'..'" Generated methods - end'] = methods
