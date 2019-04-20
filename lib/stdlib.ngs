@@ -755,6 +755,17 @@ F collector(al:ArrLike, body:Fun) {
 	al
 }
 
+# === EncodeJsonArr ==============================
+
+{
+	doc Signifies that the type should be encoded to JSON as an array.
+	type EncodeJsonArr
+
+	doc Encode to JSON array
+	F encode_json(eja:EncodeJsonArr) eja.Arr().encode_json()
+
+}
+
 # === HashLike ===================================
 # TODO [doc]: examples in methods
 {

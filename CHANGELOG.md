@@ -2,6 +2,8 @@
 
 ### New features
 
+* Add `EncodeJsonArr` type
+	* Add `encode_json(EncodeJsonArr)` method - encodes the object as JSON array
 * Add `has_no(container, element)`
 * Add `echo(ProcessesPipeline, Str)`
 * Automate updating `ngs.vim` syntax file
@@ -18,6 +20,7 @@
 * Fix `wait(Process)` to behave correctly when `exit_code` is not set but `exit_signal` is set.
 * Fix `$(blah >${true})`
 * `print_exception()` - add optional parameter `echo`
+* `Lines` type now inherits also from `EncodeJsonArr` 
 
 ## 2019-04-13 Version 0.2.6
 
