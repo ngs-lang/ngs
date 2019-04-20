@@ -5972,13 +5972,44 @@ F digest(a:Arr, chunk_size:Int, marker:Str='(...)') {
 	a[0..chunk_size] + [marker] + a[(l-chunk_size)..l]
 }
 
-doc Do nothing. Catch-all for exception_specific_message().
-doc %RET - null
-F exception_specific_message(e:Exception) null
+doc Catch-all for exception_specific_message().
+doc %RET - default message
+F exception_specific_message(e:Exception) {
+	Lines(["Unfortunately the exception had no message.", "Exception type might give a hint: ${e.typeof().name}"])
+}
+
+doc Format exception message for any exception that has .message
+F exception_specific_message(e:Exception) {
+	guard e.has('message')
+	e.message.ensure(Lines)
+}
+
+doc Format CompileFail exception message
+F exception_specific_message(cf:CompileFail) {
+	# Lines(["xx"])
+	collector/Lines() {
+		collect("Syntax error in file ${cf.position.file}, line ${cf.position.line}, column ${cf.position.column}")
+		l = cf.given.lines().map(F(line) line.replace('\t', ' '))
+		min_line = max(cf.position.line - 4, 0)
+		max_line = min(cf.position.line + 3, len(l))
+		num_width = max_line.Str().len()
+
+		F pfx(i:Int) "${Str(i, num_width)}: "
+
+		for i in min_line..max_line {
+			collect(pfx(i+1) + l[i])
+			if i+1 == cf.position.line {
+				collect(' ' * (len(pfx(i+1)) + cf.position.column - 1) + "^")
+			}
+		}
+	}
+}
 
 doc Format GlobalNotFound exception message.
 doc %RET - Str
-F exception_specific_message(gnf:GlobalNotFound) "Global variable '${gnf.name}' not found"
+F exception_specific_message(gnf:GlobalNotFound) {
+	Lines(["Global variable '${gnf.name}' not found"])
+}
 
 doc Format MethodNotFound exception message.
 doc %STATUS - WIP
@@ -6015,7 +6046,7 @@ doc Format KeyNotFound exception message for ENV global variable.
 doc %RET - Str
 F exception_specific_message(knf:KeyNotFound) {
 	guard knf.container === ENV
-	"Environment variable '${knf.key}' is not set."
+	Lines(["Environment variable '${knf.key}' is not set."])
 }
 
 doc Don't use, subject to change, including name
@@ -6151,21 +6182,12 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null, echo=echo
 	pfx = "[ERROR ${Time()}] " + "  " * level
 	h = Hash(e)
 
-	F esm() {
-		try {
-			exception_specific_message(e)
-		} catch(e) {
-			guard not(ENV.get('NGS_THROW_ESM'))
-			'(failed to get friendly exception message)'
-		}
+	m = try {
+		exception_specific_message(e)
+	} catch(e) {
+		guard not(ENV.get('NGS_THROW_ESM'))
+		'(failed to get friendly exception message)'
 	}
-
-	m =
-		h.get('message') or
-		esm() or
-		Lines(["Unfortunately the exception had no message.", "Exception type might give a hint: ${e.typeof().name}"])
-
-	m .= ensure(Lines)
 
 	m.framed().err()
 

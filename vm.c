@@ -50,6 +50,10 @@ extern char **environ;
 // in ngs.c:
 char *sprintf_position(yycontext *yy, int pos);
 
+// in syntax.include
+void position_to_line_col(yycontext *yy, int pos, int result[]);
+
+
 // in obj.c:
 VALUE value_type(VM *vm, VALUE val);
 
@@ -897,13 +901,25 @@ METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 	yyctx.input_file = fmemopen(OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]), "r");
 	parse_ok = yyparse(&yyctx);
 	if(!parse_ok) {
-		// TODO: error message and/or exception
 		VALUE exc;
 		char *err = NGS_MALLOC_ATOMIC(1024);
 		exc = make_normal_type_instance(vm->CompileFail);
 		set_normal_type_instance_field(exc, make_string("given"), argv[0]);
-		snprintf(err, 1024, "Failed to parse at position %d (%s), rule %s", yyctx.fail_pos, sprintf_position(&yyctx, yyctx.fail_pos), yyctx.fail_rule);
-		set_normal_type_instance_field(exc, make_string("message"), make_string(err));
+
+//		snprintf(err, 1024, "Failed to parse at position %d (%s), rule %s", yyctx.fail_pos, sprintf_position(&yyctx, yyctx.fail_pos), yyctx.fail_rule);
+//		set_normal_type_instance_field(exc, make_string("message"), make_string(err));
+
+		int *pos_line_col = NGS_MALLOC_ATOMIC(sizeof(int) * 2);
+		position_to_line_col(&yyctx, yyctx.fail_pos, pos_line_col);
+
+		VALUE pos = make_hash(4);
+		set_hash_key(pos, make_string("file"), argv[1]);
+		set_hash_key(pos, make_string("absolute"), MAKE_INT(yyctx.fail_pos));
+		set_hash_key(pos, make_string("line"), MAKE_INT(pos_line_col[0]));
+		set_hash_key(pos, make_string("column"), MAKE_INT(pos_line_col[1]));
+
+		set_normal_type_instance_field(exc, make_string("position"), pos);
+		set_normal_type_instance_field(exc, make_string("rule"), make_string(yyctx.fail_rule));
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	tree = yyctx.__;
