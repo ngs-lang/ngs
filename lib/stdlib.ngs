@@ -739,7 +739,7 @@ F push(al:ArrLike, val) {
 	al
 }
 
-doc Join items to a single string using given seperator s
+doc Join items to a single string using given separator s
 doc %RET - Str
 F join(al:ArrLike, s:Str) al.attrs().ArrLike.join(s)
 
