@@ -85,8 +85,8 @@ ns {
 		'expr' not in cmd throws JupiterConnectorProtocolError("Expected field 'expr' was not found").set(found=cmd.keys())
 		cmd.expr is not Str throws JupiterConnectorProtocolError("'expr' must be a string")
 
-		program_bytecode = compile("{\n${cmd.expr}\n}", '<Jupyter-expr-program>')
-		program_func = load(program_bytecode, '<Jupyter-expr-func>')
+		program_bytecode = compile("{\n${cmd.expr}\n}", '<Jupyter-expr>')
+		program_func = load(program_bytecode, 'UNUSED')
 
 		# Marker for output capturing - start
 		a = program_func.attrs() or {}
