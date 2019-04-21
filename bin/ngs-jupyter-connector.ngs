@@ -3,18 +3,20 @@
 # Testing: echo '{"expr": "echo(100); 1+2"}' | ngs-jupyter-connector.ngs 2>/dev/null
 
 ns {
-	global main, error, warn, log, echo
+	global main, error, warn, log, status, progress, echo
 
 	type JupiterConnectorProtocolError(InvalidArgument)
 	type JupiterInvalidVariable(InvalidArgument)
 
-	output = []
+	F do_capture() {
+		t = Backtrace().frames.get('closure').map(attrs).get('JUPYTER_CAPTURE_OUTPUT')
+		t.has(false) returns false
+		t.Bool()
+	}
 
-	F handle_logging(type, s:Str, let_through:Fun) {
-		do_capture = Backtrace().frames.get('closure').map(attrs).get('JUPYTER_CAPTURE_OUTPUT').Bool()
-		# write(1, "S=$s do_capture=${do_capture}\n")
-		if do_capture {
-			output.push([type, s])
+	F handle_logging(channel, s:Str, let_through:Fun) {
+		if do_capture() {
+			send({'type': 'output', 'channel': channel, 'text': s})
 			null
 		} else {
 			let_through(s)
@@ -31,6 +33,18 @@ ns {
 	F error(s:Str) handle_logging('error', s, super)
 	F warn(s:Str)  handle_logging('warn', s, super)
 	F log(s:Str)   handle_logging('log', s, super)
+
+	F status(s:Str) {
+		guard do_capture()
+		send({'type': 'status', 'text': s})
+		null
+	}
+
+	F progress(cur:Num, total:Num) {
+		guard do_capture()
+		send({'type': 'progress', 'value': [cur, total]})
+		null
+	}
 	# TODO: debug()
 
 	vars = Set()
@@ -44,6 +58,9 @@ ns {
 			write(1, j + "\n")
 		})
 	}
+
+	# Preveng log() collection
+	send.Arr()[0].attrs().JUPYTER_CAPTURE_OUTPUT = false
 
 	F readline() {
 		ret = ''
@@ -85,12 +102,13 @@ ns {
 		'expr' not in cmd throws JupiterConnectorProtocolError("Expected field 'expr' was not found").set(found=cmd.keys())
 		cmd.expr is not Str throws JupiterConnectorProtocolError("'expr' must be a string")
 
-		program_bytecode = compile("{\n${cmd.expr}\n}", '<Jupyter-expr>')
-		program_func = load(program_bytecode, 'UNUSED')
+		program_bytecode = compile("{\n${cmd.expr}\n}", '<Jupyter-expr-file>')
+		program_func = load(program_bytecode, '<UNUSED>')
 
 		# Marker for output capturing - start
 		a = program_func.attrs() or {}
-		a['JUPYTER_CAPTURE_OUTPUT'] = true
+		a.name = '<Jupyter-expr-func>'
+		a.JUPYTER_CAPTURE_OUTPUT = true
 		program_func.attrs(a)
 		# Marker for output capturing - end
 
@@ -100,16 +118,20 @@ ns {
 
 	}
 
-	F echo_exception(x:Str) output.push(['exc', x])
+	F echo_exception(s:Str) send({'type': 'output', 'channel': 'exc', 'text': s})
 	F echo_exception(l:Lines) l.each(echo_exception)
 
 	F main() {
 		log("main() - start")
 		while l = readline() {
-			output = []
 			try {
 				result = eval(l)
-				send({'output': output, 'result': result, 'vars': globals().filterk(X in vars)})
+				# send({'output': output, 'result': result, 'vars': globals().filterk(X in vars)})
+				send({'type': 'result', 'value': result})
+				g = globals()
+				vars.Hash(g[X]).each(F(k, v) {
+					send({'type': 'var', 'name': k, 'value': v})
+				})
 			} catch(e) {
 				print_exception(e, echo=echo_exception)
 				m = try {
@@ -119,9 +141,12 @@ ns {
 					print_exception(e2)
 					Lines(['(failed to get friendly exception message)'])
 				}
-				send({'output': output, 'error': {'text': m.Arr(), 'class': e.typeof().name}})
+				# send({'output': output, 'error': {'text': m.Arr(), 'class': e.typeof().name}})
+				send({'type': 'error', 'text_lines': m.Arr(), 'class': e.typeof().name})
 			}
+			send({'type': 'finish'})
 		}
 		log("main() - end")
 	}
+
 }

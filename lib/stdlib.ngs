@@ -2028,7 +2028,7 @@ doc %EX - zip([1,2,3], [4,5])    # [[1,4], [2,5], [3,null]]
 doc %RET - Arr of form [[arg[0][0], arg[1][0], ... arg[i][0]], [arg[0][1], arg[1][1], ... arg[i][1]], ...]
 F zip(*args) {
 	arrays = args.map(Arr)
-	arrays.max(len).map({ arrays.map(X.get(A, null)) })
+	arrays.map(len).max().map({ arrays.map(X.get(A, null)) })
 }
 
 TEST zip([1,2,3], [4,5,6]) == [[1,4], [2,5], [3,6]]
@@ -3616,6 +3616,10 @@ F lines(s:Str, cb:Fun) {
 
 TEST "xx\nyy".lines() == %[xx yy]
 
+doc Read all data from a file referenced by file descriptor 0 (stdin) and split into lines
+doc %RET - Arr
+F lines() read().lines()
+
 doc Prepend each line in a with s
 doc %EX - "a " + ["1", "2"]  # ["a 1", "a 2"]
 doc %RET - Type of ret is same as type of a
@@ -4042,12 +4046,20 @@ ns {
 
 	status_terminal = null
 
-	F status(s) {
+	doc %RET - s
+	F status(s:Str) {
 		if status_terminal is Null {
 			status_terminal = Terminal(stdlib_error_fd, stdlib_error_fd)
 		}
 		status_terminal.status(s)
+		s
 	}
+}
+
+doc %STATUS - experimental
+F progress(cur:Num, total:Num) {
+	status("Progress: ${cur}/${total}")
+	null
 }
 
 doc Write message in s to standard error and exit, printing backtrace
