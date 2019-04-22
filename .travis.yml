@@ -6,9 +6,9 @@ compiler:
   - gcc
   - clang
 before_script:
-  - sudo apt-get install -y libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg gawk make libpcre3-dev cmake pandoc
+  - sudo apt-get update
 script:
-  - (mkdir build && cd build && cmake .. && make && ctest)
+  - (./install-linux.sh && make tests)
 env:
   global:
   - COMMIT=${TRAVIS_COMMIT::8}

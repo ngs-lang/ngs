@@ -1,10 +1,22 @@
+# build image
 FROM debian:stretch
-
-RUN apt-get update && apt-get -y install cmake pkg-config build-essential devscripts libgc-dev libffi-dev libjson-c-dev peg libpcre3-dev pandoc
-
+RUN apt-get update
+RUN apt-get install -y sudo
 ADD . /src
 WORKDIR /src
+RUN cd /src && ./install-linux.sh && make tests
+CMD ["/bin/bash"]
 
-RUN rm build -rf && mkdir build && cd build && cmake .. && make && ctest && make install
+
+# release image
+FROM debian:stretch
+RUN apt-get update 
+RUN apt-get install -y libgc1c2 libffi6 libjson-c3
+
+WORKDIR /root/
+COPY --from=0 /usr/local/lib/ngs /usr/local/lib/ngs
+COPY --from=0 /usr/local/bin/ngs /usr/local/bin/ngs
+COPY --from=0 /src/test.ngs /root/test.ngs
+RUN ngs test.ngs
 
 CMD ["/bin/bash"]
