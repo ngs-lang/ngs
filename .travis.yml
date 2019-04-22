@@ -20,8 +20,10 @@ deploy:
     on:
       tags: true
       branch: master
+      condition: "$CC = gcc"
   - provider: script
     script: bash build-scripts/docker_push.sh ngslang/ngs $TRAVIS_BRANCH
     on:
       branch: dev
+      condition: "$CC = gcc"
 
