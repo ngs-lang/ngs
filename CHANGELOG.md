@@ -24,6 +24,7 @@
 * `Lines` type now inherits also from `EncodeJsonArr`
 * `exception_specific_message()` - refactored for reusability
 * Improve error messages for syntax errors
+* `push(e:Enum, name:Str)` now returns `e`
 
 ## 2019-04-13 Version 0.2.6
 
