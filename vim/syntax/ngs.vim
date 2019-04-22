@@ -65,7 +65,7 @@ syn keyword ngsFunction latest len limit lines ll_hash_entry_key ll_hash_entry_n
 syn keyword ngsFunction main map map_base_idx map_idx_key_val map_idx_val mapk mapkv mapo mapv max maybe_print_stacktrace merge_sorted method_not_found_handler min myip
 syn keyword ngsFunction n next none nop normalize_presence_list not
 syn keyword ngsFunction only open opt_prop ord
-syn keyword ngsFunction params parent_fd partial partial_tail partition peek pid pmap pop pos ppid print_exception ptimes push push_all
+syn keyword ngsFunction params parent_fd partial partial_tail partition peek pid pmap pop pos ppid print_exception progress ptimes push push_all
 syn keyword ngsFunction rand rand_uniq read reduce register_column reject rejectk rejectv release replace report req_prop require resolve_instruction_pointer retry reverse round run
 syn keyword ngsFunction set shift sort sortk specific split srand starts_with stat status stdlib_aws_straighten_tags store strftime subset sum
 syn keyword ngsFunction table take tap test the_one throw_if_no_next time times to_exit_code trunc typeof
