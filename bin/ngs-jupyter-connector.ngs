@@ -72,7 +72,6 @@ ns {
 			warn("Last line of input did not end with newline character")
 		}
 		ret
-
 	}
 
 	F eval(input_line:Str) {
@@ -86,7 +85,6 @@ ns {
 			cmd.vars is not Hash throws JupiterConnectorProtocolError("'vars' must be a Hash").set(found=typeof(cmd.vars))
 		}
 		cmd.get('vars', {}).each(F(k, v) {
-			# k in initial_global_vars throws InvalidArgument("Can not set variable '${k}' because it is already used").set('var_name', k)
 			allowed = econd {
 				k in vars { true }
 				k in globals() { false }
@@ -115,7 +113,6 @@ ns {
 		ret = program_func()
 		log("_eval() - end")
 		ret
-
 	}
 
 	F echo_exception(s:Str) send({'type': 'output', 'channel': 'exc', 'text': s})
@@ -126,7 +123,6 @@ ns {
 		while l = readline() {
 			try {
 				result = eval(l)
-				# send({'output': output, 'result': result, 'vars': globals().filterk(X in vars)})
 				send({'type': 'result', 'value': result})
 				g = globals()
 				vars.Hash(g[X]).each(F(k, v) {
@@ -141,7 +137,6 @@ ns {
 					print_exception(e2)
 					Lines(['(failed to get friendly exception message)'])
 				}
-				# send({'output': output, 'error': {'text': m.Arr(), 'class': e.typeof().name}})
 				send({'type': 'error', 'text_lines': m.Arr(), 'class': e.typeof().name})
 			}
 			send({'type': 'finish'})
