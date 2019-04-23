@@ -11,6 +11,7 @@
 
 ### Fixes and improvements
 
+* Multi-stage builds for the docker image (thanks, @organom)
 * `Hash(Arr, Str)` is now `Hash(Eachable1, Str)` (to support `ArrLike`)
 * `Hash(Arr, Fun)` is now `Hash(Eachable1, Fun)` (to support `ArrLike`)
 * Add missing brew dependencies to `install-mac.sh` (thanks for reporting, @zzamboni)
