@@ -30,6 +30,16 @@ ns {
 		handle_logging(fd, s, sup(fd, X))
 	}
 
+	F echo(t:Table) {
+		guard do_capture()
+		send({
+			'type': 'table'
+			'columns_names': t.cols_enum.keys()
+			'rows': t.rows
+		});
+		null
+	}
+
 	F error(s:Str) handle_logging('error', s, super)
 	F warn(s:Str)  handle_logging('warn', s, super)
 	F log(s:Str)   handle_logging('log', s, super)
