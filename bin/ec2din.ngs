@@ -68,9 +68,12 @@
 			return
 		}
 
-		F tag_has_column(tag_name, _) ["full_tag_${tag_name}", "tag_${tag_name}"].any(X in table.cols_enum)
+		F tag_has_column(tag_name) ["full_tag_${tag_name}", "tag_${tag_name}"].any(X in table.cols_enum)
 
 		instances % F(i) {
+			if ENV.get('EC2DIN_SHOW_PROFILE', 'true').decode(Bool) {
+				i.InstanceId = [i.InstanceId, i.get('IamInstanceProfile', {}).Box('Arn').map(basename).get('(no profile)')]
+			}
 			i.State = i.State.Name
 			i.SecurityGroups = i.SecurityGroups.map(F(sg) "${limit_len(sg.GroupName, 15)}(${sg.GroupId})")
 			i.AZ = i.Placement.AvailabilityZone
@@ -83,7 +86,7 @@
 				i["tag_${k}"] = v.limit_len(20)
 			})
 			# TODO: Move layout management to Table, don't limit_len() here
-			i.RestOfTags = i.Tags.reject(tag_has_column).map({ "${A.limit_len(10)}=${B.limit_len(15)}" })
+			i.RestOfTags = i.Tags.rejectk(tag_has_column).map({ "${A.limit_len(10)}=${B.limit_len(15)}" })
 		}
 		# t = Table('Instances', instances)
 		instances.each(push(table, X))
