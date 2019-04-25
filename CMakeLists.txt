@@ -19,16 +19,17 @@ IF(NOT FMEMOPEN)
 	target_sources(ngs PRIVATE fmemopen.c)
 ENDIF()
 
+find_program(SED NAMES gsed sed) # gsed - MacOS, sed - all the rest
 find_file(PCRE_H pcre.h)
 add_custom_command(
 	OUTPUT
 		${CMAKE_CURRENT_BINARY_DIR}/syntax.include
 	COMMAND
 		cat ${CMAKE_CURRENT_SOURCE_DIR}/syntax.leg |
-		sed -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-input.sed |
+		${SED} -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-input.sed |
 		leg |
-		sed 's/<stdin>/syntax.leg/' |
-		sed -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-output.sed |
+		${SED} 's/<stdin>/syntax.leg/' |
+		${SED} -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-output.sed |
 		awk -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-output.awk
 		>${CMAKE_CURRENT_BINARY_DIR}/syntax.include
 	DEPENDS
