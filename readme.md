@@ -3,46 +3,60 @@
 [![Join the chat at https://gitter.im/ngs-lang/Lobby](https://badges.gitter.im/ngs-lang/Lobby.svg)](https://gitter.im/ngs-lang/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/ngs-lang/ngs.svg?branch=master)](https://travis-ci.org/ngs-lang/ngs)
 
-Next Generation Shell. 
+
+**Next Generation Shell** is a powerful programming language and a shell designed specifically for Ops. *Because you deserve better*.
 
 # Quick links
 
+* [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases)
 * [NGS Website](https://ngs-lang.org/)
 * [Docker repository](https://hub.docker.com/r/ngslang/ngs/)
 
 # The problem
 
-Shells are [Domain Specific Languages](https://en.wikipedia.org/wiki/Domain-specific_language).  The domain has changed greatly since the shells we use today were conceived.  The shells never caught up.
+* Absence of up-to-date programming language for Ops.
+	* Classical shells were made for completely different situation than what we have today. We typically manage systems using APIs now. Structured data is not a luxury anymore but a necessity. `jq` works. I find it tremendously more convenient when a language itself has data structures.
+	* General purpose programming languages (Python, Ruby, Go, ...) are not a good fit for typical Ops tasks. Show me one where `echo my_string >my_file` is as easy and as concise as in bash.
+* Inadequate shells that Ops use. Like the [dumpster in your terminal](https://en.wikipedia.org/wiki/Redirection_(computing)#Piping) when you can't distinguish between stdout and stderr of several processes? I don't.
 
-What I see is a void. There is no good language for system tasks (and no good shell). What's near this void is classical shells on one hand and general-purpose (non-DSL) programming languages on the other. Both are being (ab)used for system tasks.
+# Suggested solution - NGS
 
-The problem with classical shells looks pretty clear: they were made with one kind of tasks in mind but are used for other, bigger and more complex tasks. Such scripts usually look as a fight against the language and working around it much more than using it to solve the problem.
+I have designed and implemented a programming language with typical Ops tasks in mind. See the use cases below. The next big planned part is the interactive shell.
 
-The problem of using general purpose programming languages (Python, Ruby, Perl, Go) is not so obvious. Domain-specific language makes your life much easier when solving the tasks that the language was built for.  Of course you can write to a file in any language but probably not as easy as `echo something >my_file`. You can run a program but it's probably won't be a simple `ls`. The scripts that I've seen (and written in Python and Ruby) look too verbose and show unnecessary effort. Such scripts do not look an optimal solution (at the very least).
+# NGS use cases
 
-From George Nachman, creator of [iTerm2](https://www.iterm2.com/):
-> Neat! This is totally the project I would do if I had unlimited free time :) I've wished for something like this for a long time. I think there's a lot of room for improvement over a basic TTY, and you've nailed some of the important things
+Here are recommended use cases.
 
-# Vision
+* Data manipulation
+* Testing: CLI programming and API endpoints
+* Typical Ops Scripting
+	* Run external programs
+		* NGS has syntax for pipes and i/o redirection
+		* Use built-in `Argv` facility for convenient building of command line arguments
+		* Let NGS built-in mechanism to throw exceptions when exit codes indicate error
+		* Let NGS built-in mechanism to parse commands' output
+		* Easily pipe data in and out of external program
+	* Easily output JSON or a human-readable table
+	* Use built-in `debug()` output function
+	* Use built-in `status()` reporting function (previous status is overridden with new status on screen)
+	* Use built-in `log()` function which prints timestamps the output
+	* Use built-in `retry()` function which prints timestamps the output
+* WIP: AWS library
+	* Easy integration with existing infra
+	* Create new or modify existing infrastructure
+	* Easier scripting as opposed to declarative tools (CloudFormation, Terraform) allows modeling of processes and not just final state
+* Future: interactive shell
 
-* Create a language that will be domain-specific for system tasks.
-* Create a shell (in that language) that is up to date with today's tasks - working with APIs, cloud, remote execution on a group of hosts.
-
-# About this document
-
-This document started as internal draft. Some sections might not be clear. Still exposing it as per "release early" policy. Feel free to open a GitHub issue or email me directly: ilya (DOT) sher (AT) coding (DASH) knight (DOT) com
+See [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases) wiki page for more information about the use cases and examples.
 
 # Project status
 
-Development. Help is welcome.
+**The language** is very useful. See the the [bin folder](bin) for examples. NGS is used in Beame.io for miscellaneous scripting such as testing CLI tools, performance tests orchestration, cloud manipulation, etc.
 
-**The language** is useful and scripts can be written. See [the utilities folder](bin) for examples. NGS is used in Beame.io for miscellaneous scripting such as testing CLI tools, performance tests orchestration, cloud manipulation, etc.
+**The shell** is not started yet. The shell will be implemented in NGS. See the [design document](https://github.com/ngs-lang/ngs/wiki/UI-Design).
 
-**The shell** is not started yet. That's because the shell has dependency on the language. The shell will be implemented in NGS.
-
-# The language
-
-The language feels (to me) like a mix of Python, bash and a bit less Ruby and Perl 6 with saner syntax, all of it taken to a more functional direction. Unique features are rare but contribute a lot toward solving domain-specific solutions. Most useful of the unique features (in my opinion) is the ```````` ``command`` ```````` syntax which runs the command and parses the output.
+From George Nachman, creator of [iTerm2](https://www.iterm2.com/):
+> Neat! This is totally the project I would do if I had unlimited free time :) I've wished for something like this for a long time. I think there's a lot of room for improvement over a basic TTY, and you've nailed some of the important things
 
 # Code examples
 
@@ -114,7 +128,7 @@ This is how an instance can be created using NGS (real working code). No state f
 		AWS::add_to_known_hosts(instance, 'PublicIpAddress')
 	}
 
-## Full scripts
+## Sample scripts
 
 * [describe ec2 instances](bin/ec2din.ngs). The script has nicely aligned output for humans. It uses `stdlib`'s `Table` to do output layout and columns configuration. `Table` handles columns presence and order and it can be configured via environment variable.
 * [build chunk of hosts file](bin/ec2hostsfile.ngs) for a management machine. Hosts named `env-role` or `env-role-N`, depending on whether you have one or more machines of specific role in the environment.
