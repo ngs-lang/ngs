@@ -28,7 +28,7 @@ I have designed and implemented a programming language with typical Ops tasks in
 Here are recommended use cases.
 
 * Data manipulation: Got some JSON from an API/CLI call and want to do something with it? Maybe extract something? Maybe modify a bit and shove it into next API call?
-* Testing: CLI programming and API endpoints
+* Testing: test CLI programs and API endpoints using built-in testing mini-framework
 * Typical Ops Scripting
 	* Run external programs
 		* NGS has syntax for pipes and i/o redirection
@@ -36,7 +36,7 @@ Here are recommended use cases.
 		* Let NGS built-in mechanism to throw exceptions when exit codes indicate error
 		* Let NGS built-in mechanism to parse commands' output
 		* Easily pipe data in and out of external program
-	* Easily output JSON or a human-readable table
+	* Easily output JSON or a human-readable nicely formatted table
 	* Use built-in `debug()` output function
 	* Use built-in `status()` reporting function (previous status is overridden with new status on screen)
 	* Use built-in `log()` function which prints timestamps the output
