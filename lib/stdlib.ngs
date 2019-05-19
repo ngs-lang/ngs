@@ -242,9 +242,7 @@ TEST type T; t=T().set(a=1, b=2); t.a == 1 and t.b == 2
 doc Convert anything to a predicate.
 doc anything - The value to compare to
 doc %RET - A function that compares the only argument to the given value
-doc %STATUS - deprecated
 F Pred(anything:BasicTypeInstance) {
-	warn("Using deprecated Pred(BasicTypeInstance)")
 	F eq_pred(x) x == anything
 }
 
@@ -1591,7 +1589,7 @@ doc Return array made of given field of each element of given array.
 doc Will throw KeyNotFound if any of the elements does not have the desired field.
 doc Use get() to handle missing field differently.
 doc %EX - [{"x": 1}, {"x": 2}].x               # [1, 2]
-doc %EX - [{"x": 1}, {"y": 2}].x               # KeyNotFound exeption
+doc %EX - [{"x": 1}, {"y": 2}].x               # KeyNotFound exception
 doc %EX - [{"x": 1}, {"y": 2}].get("x")        # [1] - skip
 doc %EX - [{"x": 1}, {"y": 2}].get("x", null)  # [1, null] - use default value
 doc %RET - Arr
@@ -2365,7 +2363,7 @@ F each_chunk(e:Eachable1, n:Int, cb:Fun) {
 
 doc Insert delimiter element between each two elements in an array
 doc %RET - Arr
-doc %EX [1,2,3].intersperse(0)  # [1,0,2,0,3]
+doc %EX - [1,2,3].intersperse(0)  # [1,0,2,0,3]
 F intersperse(a:Arr, delim) {
 	not(a) returns []
 	collector {
