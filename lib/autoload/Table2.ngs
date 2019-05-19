@@ -10,21 +10,17 @@ ns {
 			guard (name is Str) or (name is Null)
 			tv.name = name
 			tv.view_name = view_name or name
-			tv.columns = (columns or []).map(F(c) {
-				ematch c {
-					Str             SimpleTableViewColumn(c)
-					TableViewColumn c
-				}
-			})
+			tv.columns = (columns or []).map(TableViewColumn)
 		}
 
-	doc witdth - Range of desired width
 	doc weight - Width distribution weight when there is not enough space on the screen
 	type TableViewColumn
 
+		F TableViewColumn(tvc:TableViewColumn) tvc
+		F TableViewColumn(s:Str) SimpleTableViewColumn(s)
+
 		F init(tvc:TableViewColumn) {
-			tvc.witdh = 0..null
-			tvc.weight = 1
+			"TODO"
 		}
 
 		type SimpleTableViewColumn(TableViewColumn)
@@ -88,8 +84,12 @@ ns {
 
 		doc Make a cell of given width. Uses _Cell(val).
 		F init(c:_Cell, val, width:Int) {
+			debug("table", "init() _Cell val=$val width=$width")
 			init(c, val)
-			c.items .= map(Str(X, width))
+			# Can't use map() because need to change in-place
+			for i in len(c) {
+				c[i] .= Str(width)
+			}
 		}
 
 		doc Get cell with, defaults to zero.
@@ -160,7 +160,7 @@ ns {
 				columns_names_best_order(cols_names).each(register_column(t, X))
 			}
 			debug("Table", "Table created with fields: ${t.cols_enum}")
-			rows_hashes % push(t, X)
+			rows_hashes.each(push(t, X))
 		}
 
 		doc Create unnamed table containing provided rows
@@ -179,7 +179,7 @@ ns {
 			columns.each(register_column(t, X))
 		}
 
-		doc Append give row to the table
+		doc Append given row to the table
 		doc %RET - t
 		F push(t:Table, row_arr:Arr) {
 			# TODO: handle mismatch in number of columns
@@ -269,6 +269,7 @@ ns {
 				col = t.column(idx)
 				((if do_output_headers [k] []) + col).map(_Cell).map(width).max()
 			})
+			debug("table", "max_colums_widths $max_colums_widths")
 
 			# How much full table columns fit on the screen
 			showing_n_columns = t._calculate_num_cols_to_show(max_colums_widths, cols, len(COLS_SEP))
