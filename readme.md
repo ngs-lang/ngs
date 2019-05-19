@@ -37,10 +37,10 @@ Here are recommended use cases.
 		* Let NGS built-in mechanism to parse commands' output
 		* Easily pipe data in and out of external program
 	* Easily output JSON or a human-readable nicely formatted table
-	* Use built-in `debug()` output function
+	* Use built-in `debug()` function which prints debug information, conditionally, depending on environment variable per-section setting
 	* Use built-in `status()` reporting function (previous status is overridden with new status on screen)
-	* Use built-in `log()` function which prints timestamps the output
-	* Use built-in `retry()` function which prints timestamps the output
+	* Use built-in `log()` function which prints timestamped output
+	* Use built-in `retry()` and stop re-implementing it hundreds of times
 * WIP: AWS library
 	* Easy integration with existing infra
 	* Create new or modify existing infrastructure
