@@ -27,6 +27,10 @@
 * Improve error messages for syntax errors
 * `push(e:Enum, name:Str)` now returns `e`
 
+### Work in progress
+
+* Brew packaging for MacOS
+
 ## 2019-04-13 Version 0.2.6
 
 ### Breaking changes
