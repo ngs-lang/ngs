@@ -27,7 +27,7 @@ I have designed and implemented a programming language with typical Ops tasks in
 
 Here are recommended use cases.
 
-* Data manipulation
+* Data manipulation: Got some JSON from an API/CLI call and want to do something with it? Maybe extract something? Maybe modify a bit and shove it into next API call?
 * Testing: CLI programming and API endpoints
 * Typical Ops Scripting
 	* Run external programs
