@@ -23,7 +23,7 @@
 
 I have designed and implemented a programming language with typical Ops tasks in mind. See the use cases below. The next big planned part is the interactive shell.
 
-# NGS use cases
+# NGS Use Cases
 
 Here are recommended use cases.
 
@@ -58,7 +58,7 @@ See [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases) wiki page for mo
 From George Nachman, creator of [iTerm2](https://www.iterm2.com/):
 > Neat! This is totally the project I would do if I had unlimited free time :) I've wished for something like this for a long time. I think there's a lot of room for improvement over a basic TTY, and you've nailed some of the important things
 
-# Code examples
+# Code Examples
 
 ## Arrays
 
@@ -91,7 +91,7 @@ From George Nachman, creator of [iTerm2](https://www.iterm2.com/):
 
 More information about the language and syntax in particular is in [ngslang.1](doc/ngslang.1.md)
 
-## Basic cloud
+## Basic Cloud
 
 This is how an instance can be created using NGS (real working code). No state file involved!
 
