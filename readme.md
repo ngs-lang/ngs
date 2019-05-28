@@ -6,20 +6,20 @@
 
 **Next Generation Shell** is a powerful programming language and a shell designed specifically for Ops. *Because you deserve better*.
 
-# Quick links
+# Quick Links
 
 * [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases)
 * [NGS Website](https://ngs-lang.org/)
 * [Docker repository](https://hub.docker.com/r/ngslang/ngs/)
 
-# The problem
+# The Problem
 
 * Absence of up-to-date programming language for Ops.
 	* Classical shells were made for completely different situation than what we have today. We typically manage systems using APIs now. Structured data is not a luxury anymore but a necessity. `jq` works. I find it tremendously more convenient when a language itself has data structures.
 	* General purpose programming languages (Python, Ruby, Go, ...) are not a good fit for typical Ops tasks. Show me one where `echo my_string >my_file` is as easy and as concise as in bash.
 * Inadequate shells that Ops use. Like the [dumpster in your terminal](https://en.wikipedia.org/wiki/Redirection_(computing)#Piping) when you can't distinguish between stdout and stderr of several processes? I don't.
 
-# Suggested solution - NGS
+# Suggested Solution - NGS
 
 I have designed and implemented a programming language with typical Ops tasks in mind. See the use cases below. The next big planned part is the interactive shell.
 
@@ -49,7 +49,7 @@ Here are recommended use cases.
 
 See [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases) wiki page for more information about the use cases and examples.
 
-# Project status
+# Project Status
 
 **The language** is very useful. See the the [bin folder](bin) for examples. NGS is used in Beame.io for miscellaneous scripting such as testing CLI tools, performance tests orchestration, cloud manipulation, etc.
 
@@ -128,13 +128,13 @@ This is how an instance can be created using NGS (real working code). No state f
 		AWS::add_to_known_hosts(instance, 'PublicIpAddress')
 	}
 
-## Sample scripts
+## Sample Scripts
 
 * [describe ec2 instances](bin/ec2din.ngs). The script has nicely aligned output for humans. It uses `stdlib`'s `Table` to do output layout and columns configuration. `Table` handles columns presence and order and it can be configured via environment variable.
 * [build chunk of hosts file](bin/ec2hostsfile.ngs) for a management machine. Hosts named `env-role` or `env-role-N`, depending on whether you have one or more machines of specific role in the environment.
 * [Race condition and locks demo](bin/locks.ngs).
 
-# Running using docker
+# Running Using Docker
 
 	# Build the docker
 	docker build -t ngs .
@@ -143,9 +143,9 @@ This is how an instance can be created using NGS (real working code). No state f
 	# Use NGS inside the container
 	ngs -pi 'sum(0..10)'
 
-# Compiling and running
+# Compiling and Running
 
-## Clone from git
+## Clone from Git
 
 	git clone https://github.com/ngs-lang/ngs.git
 
@@ -154,19 +154,19 @@ This is how an instance can be created using NGS (real working code). No state f
 
 	cd ngs
 
-## Install with dependencies - Debian-based Linux
+## Install with Dependencies - Debian-based Linux
 
 	./install-linux.sh
 	
-## Install with dependencies - MacOS (brew)
+## Install with Dependencies - MacOS (brew)
 
 	./install-mac.sh
 
-## Install without dependencies
+## Install without Dependencies
 
 	sudo make install
 
-## Run tests
+## Run Tests
 
 	make tests
 
@@ -202,7 +202,7 @@ If you have troubles compiling, please try to compile the commit tagged `tested`
 	killall -SIGSEGV ngs
 	lldb --core /cores/core.XXXXX
 
-## Generate documentation
+## Generate Documentation
 
 On Linux
 
@@ -255,7 +255,7 @@ You are welcome to open new issues with `feature-request` label if there is some
 * Running scripts will once in a while update current line/column in the job info
 * Ability to start tracing already running scripts
 
-## Later / unformed / unfinished thoughts
+## Later / Unformed / Unfinished Thoughts
 
 * BIG: Arguments / etc. - description language. Think Javadoc.
 	* Python (and other high level languages) is half-way there with argparse.
@@ -274,7 +274,7 @@ You are welcome to open new issues with `feature-request` label if there is some
 			* The format (future feature, low priority) will include version detection and which switches are supported in which versions.
 			* The format will include how to do completion for specific arguments. Think `ec2kill` < `ec2din ...`.
 
-# How to run the POC
+# How to Run the POC
 
 Following instructions should work (tested on Debian)
 
