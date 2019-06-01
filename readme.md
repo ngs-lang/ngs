@@ -358,7 +358,18 @@ Following instructions should work (tested on Debian)
 * [Rash: The Reckless Racket Shell](https://docs.racket-lang.org/rash/index.html)
 	* Similar to NGS, Rash has special commands and expression syntaxes
 	* NGS is a language ground-up built for Ops while Rash is built on top of [Racket](https://racket-lang.org/) Lisp implementation, which is a general purpose language.
-		> Racket is a general-purpose programming language as well as the world’s first ecosystem for language-oriented programming. Make your dream language, or use one of the dozens already available, including these 
+		> Racket is a general-purpose programming language as well as the world’s first ecosystem for language-oriented programming. Make your dream language, or use one of the dozens already available, including these ...
+* [Shell++](https://github.com/alexst07/shell-plus-plus)
+	* Similarity
+		> Shell++ is a programming language that aims bring features from modern languages, as facility to manipulate data structures, object oriented programming, functional programming and others, to shell script.
+	* Differences
+		* Shell++ is heavily influenced by Python while NGS is a new language specifically designed for Ops tasks.
+			> I wanted a language that runs shell commands like Bash, and manipulate data structure with the ease of Python
+		* NGS sees "object oriented programming" very differently: types and methods and no classes.
+		* Shell++ is not aiming for any UI
+		* Shell++ is not intended for anyone else beyond author
+			> MAKE MY LIFE EASIER AND ONLY THAT
+	* Overall impression: if you like Python and you need to do Ops tasks, you should try Shell++. If NGS was heavily influenced by Python, it would look at least somewhat similar to Shell++.
 
 # Discussion / requests / comments
 
