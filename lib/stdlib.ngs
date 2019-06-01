@@ -3040,6 +3040,18 @@ TEST FullBox(1) != FullBox(2)
 		doc val - exception
 		type Failure(Result)
 
+
+	doc Results, an array-like of Result elements
+	type Results(ArrLike)
+
+		F Str(r:Results) "<${r.typeof().name} ${r.group(F(x) x.typeof().name).mapv(len).map("$X:$Y").join(" ")}>"
+
+	type ResultsException(Error)
+	F init(re:ResultsException, msg:Str, results:Results) {
+		super(re, msg)
+		re.set('results', results)
+	}
+
 	doc Runs the computation and wraps the result: a value is wrapped in Success and an exception is wrapped in Failure.
 	doc %RET - Success or Failure
 	F Result(fun:Fun) {
@@ -3896,7 +3908,13 @@ ns {
 
 	doc Joins threads.
 	doc %RET - Arr, the results from threads, in order.
-	F join(threads:Threads) threads.map(join)
+	F join(threads:Threads) {
+		results = threads.map(F(thread) {
+			Result({thread.join()})
+		})
+		results.all(Success) returns results.map(get)
+		throw ResultsException("Exception(s) in threads", Results(results))
+	}
 
 	doc Joins on thread. Waits for the thread to finish and returns the result from the thread.
 	doc Currently, if a thread throwed an exception, it will be returned as the value.
@@ -3921,8 +3939,12 @@ ns {
 	doc %EX - pages_texts = abs_pages_urls.pmap(F(url)  `lynx -dump $url`)
 	F pmap(e:Eachable1, mapper:Fun) {
 		e_hash = hash(e)
-		e.map_idx_val(F(idx, val) Thread("pmap-${e_hash}-${idx}", mapper, val)).map(join)
+		e.map_idx_val(F(idx, val) Thread("pmap-${e_hash}-${idx}", mapper, val)).Threads().join()
 	}
+
+	TEST try pmap(3, F(x) 100+x) == [100, 101, 102]
+	TEST try pmap(3, F(x) 100/x) catch(e:ResultsException) (e.results[0] is Failure)
+    TEST try pmap(3, F(x) 100/x) catch(e:ResultsException) (e.results[2] is Success) and (e.results[2].get() == 50)
 
 	doc Run cb in n parallel threads. Each thread runs one cb but this might change in future (preserving the total n calls to cb).
 	F ptimes(n:Int, cb:Fun) {

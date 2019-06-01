@@ -8,6 +8,8 @@
 * Add `echo(ProcessesPipeline, Str)`
 * Automate updating `ngs.vim` syntax file
 * Add `lines()` - returns all standard input as array of lines.
+* Add `Results` type, array-like with `Result` items.
+* Add `ResultsException` type (with `.results` being `Results` type).
 
 ### Fixes and improvements
 
@@ -27,6 +29,7 @@
 * Improve error messages for syntax errors
 * `push(e:Enum, name:Str)` now returns `e`
 * `stat()` methods now return timestamps too (access/modify/change)
+* `pmap()` now throws `ResultsException` if any of the threads fail 
 
 ### Work in progress
 
