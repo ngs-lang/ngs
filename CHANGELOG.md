@@ -7,9 +7,10 @@
 * Add `has_no(container, element)`
 * Add `echo(ProcessesPipeline, Str)`
 * Automate updating `ngs.vim` syntax file
-* Add `lines()` - returns all standard input as array of lines.
-* Add `Results` type, array-like with `Result` items.
-* Add `ResultsException` type (with `.results` being `Results` type).
+* Add `lines()` - returns all standard input as array of lines
+* Add `Results` type, array-like with `Result` items
+* Add `ResultsException` type (with `.results` being `Results` type)
+* Add `List` type
 
 ### Fixes and improvements
 
