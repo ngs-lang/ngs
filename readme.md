@@ -355,6 +355,10 @@ Following instructions should work (tested on Debian)
 	* Exit codes handling
 		* Similar option to NGS: give "ok" exit codes when running a program. What's not "ok" becomes an exception which you can catch (both in sh and NGS).
 		* I did not see an option to customize the system so that you define once what's an exception for a specific command and then this logic is used every time when you run the specified command. NGS does have this capability.
+* [Rash: The Reckless Racket Shell](https://docs.racket-lang.org/rash/index.html)
+	* Similar to NGS, Rash has special commands and expression syntaxes
+	* NGS is a language ground-up built for Ops while Rash is built on top of [Racket](https://racket-lang.org/) Lisp implementation, which is a general purpose language.
+		> Racket is a general-purpose programming language as well as the world’s first ecosystem for language-oriented programming. Make your dream language, or use one of the dozens already available, including these 
 
 # Discussion / requests / comments
 
