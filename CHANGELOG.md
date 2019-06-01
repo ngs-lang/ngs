@@ -26,6 +26,7 @@
 * `exception_specific_message()` - refactored for reusability
 * Improve error messages for syntax errors
 * `push(e:Enum, name:Str)` now returns `e`
+* `stat()` methods now return timestamps too (access/modify/change)
 
 ### Work in progress
 
