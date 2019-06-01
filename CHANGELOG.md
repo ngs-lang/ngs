@@ -11,6 +11,7 @@
 * Add `Results` type, array-like with `Result` items
 * Add `ResultsException` type (with `.results` being `Results` type)
 * Add `List` type
+* Add `inspect(Eachable1)`
 
 ### Fixes and improvements
 

@@ -3903,7 +3903,7 @@ ns {
 	F join(threads:Arr) {
 		guard threads and threads.all(Thread)
 		warn("Using deprecated join(threads:Arr)")
-		threads.map(join)
+		threads.Threads().join()
 	}
 
 	doc Joins threads.
@@ -6081,6 +6081,15 @@ F exception_specific_message(knf:KeyNotFound) {
 	Lines(["Environment variable '${knf.key}' is not set."])
 }
 
+F exception_specific_message(re:ResultsException) {
+	Lines([
+		"Some of the computations failed: ${re.message}"
+		"Total computations: ${re.results.len()}"
+		"Succeeded: ${re.results.count(Success)}"
+		"Failed: ${re.results.count(Failure)}"
+	])
+}
+
 doc Don't use, subject to change, including name
 doc %STATUS - experimental
 F SafeStr(val) {
@@ -6097,6 +6106,10 @@ F SafeStr(val) {
 doc Inspect any value.
 doc %RET - Lines with exactly one line
 F inspect(val) Lines([SafeStr(val)])
+
+doc Inspect Eachable1
+doc %RET - Lines
+F inspect(e:Eachable1) Lines(["${e.typeof().name} of size ${e.len()}"] + e.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
 
 doc Inspect boolean.
 doc %RET - Lines with exactly one line
@@ -6119,9 +6132,6 @@ doc Inspect Str
 doc %RET - Lines
 F inspect(s:Str) Lines(["String(${s.len()}): ${SafeStr(s)}"])
 
-doc Inspect Arr
-doc %RET - Lines
-F inspect(a:Arr) Lines(["Array of size ${a.len()}"] + a.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
 
 doc Inspect Hash
 doc %RET - Lines
@@ -6248,11 +6258,19 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null, echo=echo
 	if 'cause' in h {
 		err("Cause:")
 		if e.cause is Exception {
-			print_exception(e.cause, level+1, e)
+			print_exception(e.cause, level+1, e, echo)
 		} else {
 			err("  (WARNING: cause is not Exception)")
 			err("  " + inspect(e.cause))
 		}
+	}
+
+	if ('results' in h) and (h.results is Results) {
+		err("Printing up to first 3 exceptions:")
+		h.results.filter(Failure).Arr().limit(3).each_idx_val(F(i:Int, f:Failure) {
+			err("  Results exception #${i+1}")
+			print_exception(f.val, level+2, e, echo)
+		})
 	}
 
 	if level == 0 {
