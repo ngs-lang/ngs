@@ -2008,7 +2008,7 @@ METHOD_RESULT native_c_ ## cmd EXT_METHOD_PARAMS { \
 		METHOD_RETURN(MAKE_NULL); \
 	} \
 	v = make_normal_type_instance(vm->Stat); \
-	OBJ_DATA(v) = make_array(10); /* Make sure to update this number if you add more ELT()s. Also add SETUP_TYPE_FIELD(Stat, ..., ...) below */ \
+	OBJ_DATA(v) = make_array(13); /* Make sure to update this number if you add more ELT()s. Also add SETUP_TYPE_FIELD(Stat, ..., ...) below */ \
 	p = ARRAY_ITEMS(OBJ_DATA(v)); \
 	ELT(buf.st_dev); \
 	ELT(buf.st_ino); \
@@ -2020,6 +2020,9 @@ METHOD_RESULT native_c_ ## cmd EXT_METHOD_PARAMS { \
 	ELT(buf.st_size); \
 	ELT(buf.st_blksize); \
 	ELT(buf.st_blocks); \
+	ELT(buf.st_atime); \
+	ELT(buf.st_mtime); \
+	ELT(buf.st_ctime); \
 	METHOD_RETURN(v); \
 }
 MAKE_STAT_METHOD(stat, obj_to_cstring)
@@ -2632,28 +2635,31 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Numerical range");
 
 	MKTYPE(Stat);
-		SETUP_TYPE_FIELD(Stat, st_dev, 0);
-		SETUP_TYPE_FIELD(Stat, st_ino, 1);
-		SETUP_TYPE_FIELD(Stat, st_mode, 2);
-		SETUP_TYPE_FIELD(Stat, st_nlink, 3);
-		SETUP_TYPE_FIELD(Stat, st_uid, 4);
-		SETUP_TYPE_FIELD(Stat, st_gid, 5);
-		SETUP_TYPE_FIELD(Stat, st_rdev, 6);
-		SETUP_TYPE_FIELD(Stat, st_size, 7);
-		SETUP_TYPE_FIELD(Stat, st_blksize, 8);
-		SETUP_TYPE_FIELD(Stat, st_blocks, 9);
+		SETUP_TYPE_FIELD(Stat, st_dev, 0U);
+		SETUP_TYPE_FIELD(Stat, st_ino, 1U);
+		SETUP_TYPE_FIELD(Stat, st_mode, 2U);
+		SETUP_TYPE_FIELD(Stat, st_nlink, 3U);
+		SETUP_TYPE_FIELD(Stat, st_uid, 4U);
+		SETUP_TYPE_FIELD(Stat, st_gid, 5U);
+		SETUP_TYPE_FIELD(Stat, st_rdev, 6U);
+		SETUP_TYPE_FIELD(Stat, st_size, 7U);
+		SETUP_TYPE_FIELD(Stat, st_blksize, 8U);
+		SETUP_TYPE_FIELD(Stat, st_blocks, 9U);
+		SETUP_TYPE_FIELD(Stat, st_atime, 10);
+		SETUP_TYPE_FIELD(Stat, st_mtime, 11);
+		SETUP_TYPE_FIELD(Stat, st_ctime, 12);
 	_doc(vm, "", "Result of stat() or lstat()");
 
 	MKTYPE(c_tm);
-		SETUP_TYPE_FIELD(c_tm, tm_sec,   0);
-		SETUP_TYPE_FIELD(c_tm, tm_min,   1);
-		SETUP_TYPE_FIELD(c_tm, tm_hour,  2);
-		SETUP_TYPE_FIELD(c_tm, tm_mday,  3);
-		SETUP_TYPE_FIELD(c_tm, tm_mon,   4);
-		SETUP_TYPE_FIELD(c_tm, tm_year,  5);
-		SETUP_TYPE_FIELD(c_tm, tm_wday,  6);
-		SETUP_TYPE_FIELD(c_tm, tm_yday,  7);
-		SETUP_TYPE_FIELD(c_tm, tm_isdst, 8);
+		SETUP_TYPE_FIELD(c_tm, tm_sec,   0U);
+		SETUP_TYPE_FIELD(c_tm, tm_min,   1U);
+		SETUP_TYPE_FIELD(c_tm, tm_hour,  2U);
+		SETUP_TYPE_FIELD(c_tm, tm_mday,  3U);
+		SETUP_TYPE_FIELD(c_tm, tm_mon,   4U);
+		SETUP_TYPE_FIELD(c_tm, tm_year,  5U);
+		SETUP_TYPE_FIELD(c_tm, tm_wday,  6U);
+		SETUP_TYPE_FIELD(c_tm, tm_yday,  7U);
+		SETUP_TYPE_FIELD(c_tm, tm_isdst, 8U);
 
 	// "NgsStrImm${NgsStrExp}$*{NgsStrSplatExp}"
 	MKTYPE(NgsStrComp);
