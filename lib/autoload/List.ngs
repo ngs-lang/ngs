@@ -39,12 +39,16 @@
 		doc Check whether the list is empty
 		F Bool(l:List) l.first != null
 
+		doc Represent List as string
+		doc %RET - Str with length, first and last items of the List
+		F Str(l:List) "<${l.typeof().name} length:${l.len()} first=${l.first} last=${l.last}>"
+
 	doc Exception to be thrown when trying to obtain an item from an empty List
 	type EmptyListFail(Error)
 
 		F init(f:EmptyListFail, l:List) {
-			super(f, "Could not retrieve element from empty queue")
-			f.set('queue', l)
+			super(f, "Could not retrieve element from empty list")
+			f.set('list', l)
 		}
 
 
@@ -67,7 +71,6 @@
 				l.first = qi
 				l.last = qi
 			}
-			echo(inspect(l))
 			l
 		}
 
