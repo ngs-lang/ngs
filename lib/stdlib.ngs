@@ -704,6 +704,11 @@ F init(al:ArrLike, field:Str=null) {
 	super(al)
 }
 
+F init(al:ArrLike, e:Eachable1) {
+	super(al)
+	al.push_all(e)
+}
+
 F init(al:ArrLike, arr:Arr) {
 	super(al)
 	al.attrs().ArrLike = arr
@@ -722,7 +727,11 @@ doc Get element at the given index or return dflt if the index is out of range (
 F get(al:ArrLike, idx:Int, dflt) al.attrs().ArrLike.get(idx, dflt)
 
 doc Call cb for each element in the underlying array.
-F each(al:ArrLike, cb:Fun) al.attrs().ArrLike.each(cb)
+doc %RET - al
+F each(al:ArrLike, cb:Fun) {
+	al.attrs().ArrLike.each(cb)
+	al
+}
 
 doc Check whether al has any elements.
 F Bool(al:ArrLike) al.attrs().ArrLike.Bool()
@@ -2926,6 +2935,14 @@ F get(eb:EmptyBox, dflt) dflt
 
 TEST EmptyBox().get(10) == 10
 
+doc Length of FullBox
+doc %RET - 1
+F len(fb:FullBox) 1
+
+doc Length of EmptyBox
+doc %RET - 0
+F len(eb:EmptyBox) 0
+
 doc Convert anything to Box (always FullBox)
 doc x - value to enclose in a box
 doc %RET - FullBox with given value
@@ -3047,6 +3064,9 @@ TEST FullBox(1) != FullBox(2)
 		F Str(r:Results) "<${r.typeof().name} ${r.group(F(x) x.typeof().name).mapv(len).map("$X:$Y").join(" ")}>"
 
 	type ResultsException(Error)
+		doc ResultsException where only failures are stored
+		type FailuresException(ResultsException)
+
 	F init(re:ResultsException, msg:Str, results:Results) {
 		super(re, msg)
 		re.set('results', results)
@@ -3806,9 +3826,10 @@ TEST "a$*{[1,2]}b$*{10..12}c" == ["a1b10c", "a1b11c", "a2b10c", "a2b11c"]
 
 doc Makes Stats, with each element in the array counted as if push()ed
 doc %EX - Stats(['a', 'a', 'b']).Hash()  # {'a': 2, 'b': 1}
-F init(s:Stats, a:Arr) {
+doc %EX - Stats("AABC").Hash()  # {A=2, B=1, C=1}
+F init(s:Stats, e:Eachable1) {
 	init(s)
-	a.each(push(s, X))
+	e.each(push(s, X))
 }
 
 doc Increment the named counter
@@ -3933,26 +3954,50 @@ ns {
 		join_result[1][1]
 	}
 
-	# TODO: maybe limit number of concurrent threads (default to cores count?)
 	doc Parallel map. Runs mapper in threads. Each thread processes one element from the array but this might change in future (preserving the total number of calls to mapper and the order of results).
 	doc %RET - Arr, result of applying mapper to elements of e, preserving the order.
 	doc %EX - pages_texts = abs_pages_urls.pmap(F(url)  `lynx -dump $url`)
-	F pmap(e:Eachable1, mapper:Fun) {
-		e_hash = hash(e)
-		e.map_idx_val(F(idx, val) Thread("pmap-${e_hash}-${idx}", mapper, val)).Threads().join()
-	}
+	F pmap(e:Eachable1, mapper:Fun) pmap(e, if e is Num e else len(e), mapper)
 
 	TEST try pmap(3, F(x) 100+x) == [100, 101, 102]
 	TEST try pmap(3, F(x) 100/x) catch(e:ResultsException) (e.results[0] is Failure)
     TEST try pmap(3, F(x) 100/x) catch(e:ResultsException) (e.results[2] is Success) and (e.results[2].get() == 50)
 
+	doc Parallel map. Runs mapper in "threads" total threads.
+	doc e - Eachable1 to be mapped
+	doc threads - number of threads to use
+	doc mapper - called with elements from e
+	doc %RET - Arr, result of applying mapper to elements of e, preserving the order.
+	doc %EX - pages_texts = abs_pages_urls.pmap(F(url)  `lynx -dump $url`)
+	F pmap(e:Eachable1, threads:Int, mapper:Fun) {
+		ex = Executor(threads)
+		debug("conc", "pmap uses excutor ${ex}")
+		ret = [null] * if e is Num e else len(e)
+		failed = false
+		e.each_idx_val(F(idx, val) {
+			ex.push({
+				ret[idx] = Result({ mapper(val) })
+				if ret[idx] is Failure {
+					failed = true
+				}
+			})
+		})
+		ex.wait()
+		if failed {
+			throw ResultsException("pmap had failures", Results(ret))
+		}
+		ret.map(get)
+    }
+
+    TEST e=100; e.pmap(2, X*2) == e.map(X*2)
+
 	doc Run cb in n parallel threads. Each thread runs one cb but this might change in future (preserving the total n calls to cb).
 	F ptimes(n:Int, cb:Fun) {
-		threads = collector/Threads()
-			for(i;n) {
-				collect(Thread(cb))
-			}
-		threads.join()
+		e = Executor(n)
+		for(i;n) {
+			e.push(cb)
+		}
+		e.wait()
 	}
 
 	TEST (1..3).Arr().pmap(X*10) == [10, 20]
@@ -5044,9 +5089,13 @@ F Argv(a:Arr) {
 
 # --- $() ---
 
+GGG = Lock()
+
 doc Run a process
 F '$()'(p:Process) {
 
+	GGG.acquire()
+	# acquire - worked
 	argv = p.command.argv.map(Arg)
 
 	debug("process", "Parsed command: ${argv}")
@@ -5061,21 +5110,36 @@ F '$()'(p:Process) {
 		throw ProcessFail(p).set('cause', nf).set('message', 'Executable not found')
 	}
 
+	# acquire - failed
+	# GGG.acquire()
+
 	pid = c_fork()
 
 	pid == -1 throws ProcessFail("Could not spawn a process").set('cause', CException("Failed to fork()"))
 
+
 	debug("process", "PID after fork: $pid")
+	# write(1, "F")
+
+	# GGG.release()
 
 	pipes = p.redirects.filter({'datum': Pipe})
 	debug("process2", "PIPES FROM REDIRECTS $pipes REDIRECTS ${p.redirects} COMMND ${p.Hash()}")
 	child_fds = pipes.datum.map(child_fd)
 
+	# write(1, "G")
+
+	# release - failed
+	# GGG.release()
+
 	if pid == 0 {
+		# release - failed
 		# === Child ===
 		# TODO: See https://stackoverflow.com/questions/13101690/c-get-all-open-file-descriptors
+		# write(1, "a")
 		child_fds_to_keep_open = child_fds + p.redirects.datum.filter(Int)
 		debug("process2", "CHILD CLOSING FDS 3 TO 100 EXCEPT FOR ${child_fds_to_keep_open}")
+		# write(1, "A")
 		for(i=3;i<100;i+=1) {
 			if i not in child_fds_to_keep_open {
 				# XXX child to parent also closed here
@@ -5110,6 +5174,7 @@ F '$()'(p:Process) {
 		p.command.options.Box('cd').each(chdir)
 
 		debug("process", "will execve()")
+		# write(1, "E")
 		result = c_execve(p.executable.path, argv, ENV.Strs())
 		# TODO: propagate this error to parent, don't know how yet
 		error("Process ${c_getpid()} (fork child) failed to execve()")
@@ -5118,6 +5183,7 @@ F '$()'(p:Process) {
 
 	if pid > 0 {
 		# === Parent ===
+		# release - failed
 		p.pid = pid
 		child_fds.each(close)
 		debug("process", "Reading all output of the child process")
@@ -5140,6 +5206,7 @@ F '$()'(p:Process) {
 	}
 
 	debug("process2", "\$() returns process ${p.Hash()}")
+	GGG.release()
 	p
 }
 
@@ -6090,6 +6157,15 @@ F exception_specific_message(re:ResultsException) {
 	])
 }
 
+F exception_specific_message(re:FailuresException) {
+	Lines([
+		"Some of the computations failed: ${re.message}"
+		"Total computations: ${re.succeeded + re.failed}"
+		"Succeeded: ${re.succeeded}"
+		"Failed: ${re.failed}"
+	])
+}
+
 doc Don't use, subject to change, including name
 doc %STATUS - experimental
 F SafeStr(val) {
@@ -6109,7 +6185,10 @@ F inspect(val) Lines([SafeStr(val)])
 
 doc Inspect Eachable1
 doc %RET - Lines
-F inspect(e:Eachable1) Lines(["${e.typeof().name} of size ${e.len()}"] + e.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
+F inspect(e:Eachable1) {
+	guard e is not Box
+	Lines(["${e.typeof().name} of size ${e.len()}"] + e.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
+}
 
 doc Inspect boolean.
 doc %RET - Lines with exactly one line
@@ -6266,9 +6345,8 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null, echo=echo
 	}
 
 	if ('results' in h) and (h.results is Results) {
-		err("Printing up to first 3 exceptions:")
-		h.results.filter(Failure).Arr().limit(3).each_idx_val(F(i:Int, f:Failure) {
-			err("  Results exception #${i+1}")
+		h.results.filter(Failure).Arr().each_idx_val(F(i:Int, f:Failure) {
+			err("  ${h.results.typeof().name} exception #${i+1}")
 			print_exception(f.val, level+2, e, echo)
 		})
 	}

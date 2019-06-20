@@ -2,6 +2,14 @@
 
 ### New features
 
+* Concurrency
+	* Add `c_pthread_cond_*` methods
+	* Add `Cond` type that exposes `pthread_cond_*` functionality
+	* Add `BlockingList` linked list type with bocking `shift()` and `pop()` methods
+	* Add `Executor` type
+	* Add `ThreadedExecutor` type for simplified processing in threads
+	* Add `pmap(Eachable1, Int, Fun)` - parallel map using limited numbers of threads
+* Add `List` linked list type
 * Add `EncodeJsonArr` type
 	* Add `encode_json(EncodeJsonArr)` method - encodes the object as JSON array
 * Add `has_no(container, element)`
@@ -12,9 +20,11 @@
 * Add `ResultsException` type (with `.results` being `Results` type)
 * Add `List` type
 * Add `inspect(Eachable1)`
+* Add `len(Box)`
 
 ### Fixes and improvements
 
+* Rare crashes due to GC fixed
 * Multi-stage builds for the docker image (thanks, @organom)
 * `Hash(Arr, Str)` is now `Hash(Eachable1, Str)` (to support `ArrLike`)
 * `Hash(Arr, Fun)` is now `Hash(Eachable1, Fun)` (to support `ArrLike`)
@@ -32,6 +42,7 @@
 * `push(e:Enum, name:Str)` now returns `e`
 * `stat()` methods now return timestamps too (access/modify/change)
 * `pmap()` now throws `ResultsException` if any of the threads fail 
+* `Stats()` now works with `Eachable1` allowing counting characters in a string for examples
 
 ### Work in progress
 

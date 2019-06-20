@@ -83,6 +83,11 @@ typedef struct {
 
 typedef struct {
 	OBJECT base;
+	pthread_cond_t val;
+} PTHREADCOND_OBJECT;
+
+typedef struct {
+	OBJECT base;
 } FFI_TYPE_OBJECT;
 
 // https://www.igvita.com/2009/02/04/ruby-19-internals-ordered-hash/
@@ -260,11 +265,12 @@ typedef enum {
 	T_DIR           = (18 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_MULMETHOD     = (19 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_LL_HASH_ENTRY = (20 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_PTHREADCOND   = (21 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	// *** Add new T_ itmes above this line ***
 	// *** UPDATE MAX_T_OBJ_TYPE_ID ACCORDINGLY ***
 } IMMEDIATE_TYPE;
 
-#define MAX_T_OBJ_TYPE_ID (T_LL_HASH_ENTRY >> T_OBJ_TYPE_SHIFT_BITS)
+#define MAX_T_OBJ_TYPE_ID (T_PTHREADCOND >> T_OBJ_TYPE_SHIFT_BITS)
 
 // TODO: handle situation when n is wider than size_t - TAG_BITS bits
 #define IS_NULL(v)      ((v).num == V_NULL)
@@ -292,6 +298,8 @@ typedef enum {
 #define GET_PTHREADATTR(v)  (((PTHREADATTR_OBJECT *) v.ptr)->val)
 #define GET_PTHREADMUTEX(v) (((PTHREADMUTEX_OBJECT *) v.ptr)->val)
 #define GET_PTHREADMUTEXATTR(v) (((PTHREADMUTEXATTR_OBJECT *) v.ptr)->val)
+#define GET_PTHREADCOND(v) (((PTHREADCOND_OBJECT *) v.ptr)->val)
+
 #define GET_FFI_TYPE(v) (((FFI_TYPE_OBJECT *) v.ptr)->base.val.ptr)
 #define GET_FFI_CIF(v)  (((FFI_CIF_OBJECT *) v.ptr)->val)
 #define SET_OBJ(v,o)    {(v).ptr = o; OBJ_ATTRS(v) = MAKE_NULL; }
@@ -416,6 +424,7 @@ VALUE make_pthread();
 VALUE make_pthread_attr();
 VALUE make_pthread_mutex();
 VALUE make_pthread_mutexattr();
+VALUE make_pthread_cond();
 VALUE make_ffi_type(ffi_type *t);
 VALUE make_ffi_cif();
 VALUE make_regexp();

@@ -1,0 +1,10 @@
+#!/usr/bin/env ngs
+
+F main() {
+	echo("This script is expected to finish without exceptions")
+	e = Executor(10)
+	1500.each() do F(i) {
+		e.push({ $(echo "aa-$i") })
+	}
+	e.wait()
+}

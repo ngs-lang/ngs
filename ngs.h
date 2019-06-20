@@ -1,10 +1,6 @@
 #ifndef NGS_H
 #define NGS_H
 
-#ifdef __APPLE__
-#define NGS_STUPID_MALLOC_AFTER_FORK
-#endif
-
 #include <stdint.h>
 #include <stdio.h>
 #include <pthread.h>

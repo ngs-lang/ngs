@@ -1435,6 +1435,11 @@ METHOD_RESULT native_c_pthreadmutexattrt METHOD_PARAMS {
 	METHOD_RETURN(make_pthread_mutexattr());
 }
 
+METHOD_RESULT native_c_pthreadcondt METHOD_PARAMS {
+	(void) argv;
+	METHOD_RETURN(make_pthread_cond());
+}
+
 // https://linux.die.net/man/3/pthread_mutexattr_settype
 METHOD_RESULT native_c_pthreadmutexattrsettype_pma_int METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(pthread_mutexattr_settype(&GET_PTHREADMUTEXATTR(argv[0]), GET_INT(argv[1]))));
@@ -1480,7 +1485,7 @@ void *_pthread_start_routine(void *arg) {
 	CTX ctx;
 	VALUE *result;
 	METHOD_RESULT mr;
-	VALUE *ts = NGS_MALLOC(sizeof(VALUE));
+	VALUE *ts = NGS_MALLOC(sizeof(*ts));
 	*ts = make_hash(4);
 	pthread_setspecific(thread_local_key, ts);
 	result = NGS_MALLOC(sizeof(*result));
@@ -1504,6 +1509,7 @@ METHOD_RESULT native_c_pthreadcreate_pthreadattr_startroutine_arg EXT_METHOD_PAR
 	int status;
 	(void) ctx;
 	init = NGS_MALLOC(sizeof(*init));
+	assert(init);
 	init->vm = vm;
 	init->f = argv[1];
 	init->arg = argv[2];
@@ -1545,6 +1551,15 @@ METHOD_RESULT native_c_pthreadmutexinit_pma METHOD_PARAMS {
 METHOD_RESULT native_c_pthreadmutexlock METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_mutex_lock(&GET_PTHREADMUTEX(argv[0])))); }
 
 METHOD_RESULT native_c_pthreadmutexunlock METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_mutex_unlock(&GET_PTHREADMUTEX(argv[0])))); }
+
+METHOD_RESULT native_c_pthreadcondbroadcast METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_cond_broadcast(&GET_PTHREADCOND(argv[0])))); }
+METHOD_RESULT native_c_pthreadconddestroy METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_cond_destroy(&GET_PTHREADCOND(argv[0])))); }
+METHOD_RESULT native_c_pthreadcondinit METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_cond_init(&GET_PTHREADCOND(argv[0]), NULL))); }
+METHOD_RESULT native_c_pthreadcondsignal METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_cond_signal(&GET_PTHREADCOND(argv[0])))); }
+// TODO: pthread_cond_timedwait(3)
+METHOD_RESULT native_c_pthreadcondwait METHOD_PARAMS {
+	METHOD_RETURN(MAKE_INT(pthread_cond_wait(&GET_PTHREADCOND(argv[0]), &GET_PTHREADMUTEX(argv[1]))));
+}
 
 METHOD_RESULT native_c_pthreadself METHOD_PARAMS {
 	VALUE pthread = make_pthread();
@@ -2378,6 +2393,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	MK_BUILTIN_TYPE(c_pthread_mutexattr_t, T_PTHREADMUTEXATTR);
 	vm->type_by_t_obj_type_id[T_PTHREADMUTEXATTR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_pthread_mutexattr_t;
 
+	MK_BUILTIN_TYPE(c_pthread_cond_t, T_PTHREADCOND);
+	vm->type_by_t_obj_type_id[T_PTHREADCOND >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_pthread_cond_t;
+
 	MK_BUILTIN_TYPE_DOC(c_ffi_type, T_FFI_TYPE, "Unfinished feature. Don't use!");
 	vm->type_by_t_obj_type_id[T_FFI_TYPE >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_ffi_type;
 
@@ -2804,6 +2822,18 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Call PTHREAD_MUTEX_LOCK(3)");
 	register_global_func(vm, 0, "c_pthread_mutex_unlock", &native_c_pthreadmutexunlock, 1, "mutex",  vm->c_pthread_mutex_t);
 	_doc(vm, "", "Call PTHREAD_MUTEX_UNLOCK(3)");
+
+	register_global_func(vm, 0, "c_pthread_cond_broadcast",   &native_c_pthreadcondbroadcast,   1, "cond",  vm->c_pthread_cond_t);
+	_doc(vm, "", "Call PTHREAD_COND_BROADCAST(3)");
+	register_global_func(vm, 0, "c_pthread_cond_destroy",   &native_c_pthreadconddestroy,   1, "cond",  vm->c_pthread_cond_t);
+	_doc(vm, "", "Call PTHREAD_COND_DESTROY(3)");
+	register_global_func(vm, 0, "c_pthread_cond_init",   &native_c_pthreadcondinit,   1, "cond",  vm->c_pthread_cond_t);
+	_doc(vm, "", "Call PTHREAD_COND_INIT(3) with NULL as second argument (attr)");
+	register_global_func(vm, 0, "c_pthread_cond_signal",   &native_c_pthreadcondsignal,   1, "cond",  vm->c_pthread_cond_t);
+	_doc(vm, "", "Call PTHREAD_COND_SIGNAL(3)");
+	register_global_func(vm, 0, "c_pthread_cond_wait",   &native_c_pthreadcondwait,   2, "cond",  vm->c_pthread_cond_t, "mutex", vm->c_pthread_mutex_t);
+	_doc(vm, "", "Call PTHREAD_COND_WAIT(3)");
+
 	register_global_func(vm, 0, "c_pthread_self",         &native_c_pthreadself,        0);
 	_doc(vm, "", "Call PTHREAD_SELF(3)");
 	register_global_func(vm, 0, "c_pthread_attr_t",       &native_c_pthreadattrt,       0);
@@ -2814,6 +2844,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Create pthread mutex attribute object");
 	register_global_func(vm, 0, "c_pthread_mutexattr_settype",  &native_c_pthreadmutexattrsettype_pma_int,  2, "mutex", vm->c_pthread_mutexattr_t, "type", vm->Int);
 	_doc(vm, "", "Call PTHREAD_MUTEXATTR_SETTYPE(3)");
+	register_global_func(vm, 0, "c_pthread_cond_t",      &native_c_pthreadcondt,      0);
+	_doc(vm, "", "Create pthread mutex object");
 
 	register_global_func(vm, 0, "id",                     &native_id_pthread,           1, "thread", vm->c_pthread_t);
 	_doc(vm, "", "Get pthread id as string of characters. This is opaque string which can be used for displaying and comparing to other pthreads ids.");

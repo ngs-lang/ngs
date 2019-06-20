@@ -7,6 +7,11 @@ project(NGS)
 # -D_DEFAULT_SOURCE - MAP_ANONYMOUS on Linux
 add_definitions(-D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE=1 -D_DEFAULT_SOURCE=1)
 
+# This is workaround for boehm GC library bug or NGS usage of it
+# which cases sporadic SIGSEGV and other issues after fork() in child process.
+# Use test-gc.ngs to determine if you can remove this setting (test on MacOS and Linux).
+add_compile_definitions(NGS_STUPID_MALLOC_AFTER_FORK)
+
 pkg_check_modules(LIBFFI libffi REQUIRED)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /usr/local/include)
 link_directories(/usr/local/lib)

@@ -1096,6 +1096,16 @@ VALUE make_pthread_mutexattr() {
 	return v;
 }
 
+VALUE make_pthread_cond() {
+	VALUE v;
+	PTHREADCOND_OBJECT *pc;
+	// TODO: NGS_MALLOC_ATOMIC maybe?
+	pc = NGS_MALLOC(sizeof(*pc));
+	pc->base.type.num = T_PTHREADCOND;
+	SET_OBJ(v, pc);
+	return v;
+}
+
 VALUE make_ffi_type(ffi_type *t) {
 	VALUE v;
 	FFI_TYPE_OBJECT *tmp;

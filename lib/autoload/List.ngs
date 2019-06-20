@@ -1,5 +1,5 @@
 {
-	doc Linked list
+	doc Linked list.
 	type List(Eachable1)
 
 		doc Initialize empty List
@@ -41,7 +41,7 @@
 
 		doc Represent List as string
 		doc %RET - Str with length, first and last items of the List
-		F Str(l:List) "<${l.typeof().name} length:${l.len()} first=${l.first} last=${l.last}>"
+		F Str(l:List) "<${l.typeof().name} ${l.hash()} length:${l.len()} first=${l.first} last=${l.last}>"
 
 	doc Exception to be thrown when trying to obtain an item from an empty List
 	type EmptyListFail(Error)
@@ -100,7 +100,7 @@
 			ret
 		}
 
-		doc Prepend item to the
+		doc Prepend item to the List.
 		F unshift(l:List, val) {
             qi = ListItem(val, null, l.first)
             if l {
