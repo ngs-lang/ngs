@@ -21,6 +21,7 @@
 * Add `List` type
 * Add `inspect(Eachable1)`
 * Add `len(Box)`
+* Add `len(NumRange)` for `Int` ranges
 
 ### Fixes and improvements
 

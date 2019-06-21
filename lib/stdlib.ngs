@@ -1389,6 +1389,18 @@ TEST 30 in NumRange(1,30,false,true)
 doc Convert range to human readable representation
 F Str(r:Range) "<${r.typeof().name} ${r.start}..${r.end} include_start=${r.include_start} include_end=${r.include_end} step=${r.step}>"
 
+doc Length of a NumRange. Only defined for Int start and end.
+doc Equals to how many times cb will be invoked in each(r, cb).
+F len(r:NumRange) {
+	guard r.start is Int
+	guard r.end is Int
+	r.end - r.start - 1 + r.include_start.Int() + r.include_end.Int()
+}
+
+TEST len(1..3) == 2
+TEST len(1...3) == 3
+TEST NumRange(1, 3, include_start=false, include_end=false).len() == 1
+
 # TODO: think about multi-valued results (say 10 hosts, 8 succeeded and 2 failed)
 # TODO: think about Argv cooperation. Maybe Failure is NoData and Success is FullBox?
 # === Syntactic sugar ============================
