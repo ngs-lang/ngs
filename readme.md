@@ -1,6 +1,6 @@
 <img alt="NGS logo - cloud and UNIX shell icon" align="right" src="img/ngs-logo-300.png" />
 
-![Commits in dev since last release](https://img.shields.io/github/commits-since/ngs-lang/ngs/latest/dev.svg)
+[![Commits in dev since last release](https://img.shields.io/github/commits-since/ngs-lang/ngs/latest/dev.svg)]()
 [![Join the chat at https://gitter.im/ngs-lang/Lobby](https://badges.gitter.im/ngs-lang/Lobby.svg)](https://gitter.im/ngs-lang/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 [![Build Status from dev](https://travis-ci.org/ngs-lang/ngs.svg?branch=dev)](https://travis-ci.org/ngs-lang/ngs)
