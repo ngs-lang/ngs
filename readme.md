@@ -1,7 +1,10 @@
 <img alt="NGS logo - cloud and UNIX shell icon" align="right" src="img/ngs-logo-300.png" />
 
+![Commits in dev since last release](https://img.shields.io/github/commits-since/ngs-lang/ngs/latest/dev.svg)
 [![Join the chat at https://gitter.im/ngs-lang/Lobby](https://badges.gitter.im/ngs-lang/Lobby.svg)](https://gitter.im/ngs-lang/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/ngs-lang/ngs.svg?branch=dev)](https://travis-ci.org/ngs-lang/ngs)
+
+[![Build Status from dev](https://travis-ci.org/ngs-lang/ngs.svg?branch=dev)](https://travis-ci.org/ngs-lang/ngs)
+[![Docker Build Status](https://img.shields.io/docker/cloud/build/ngslang/ngs.svg)](https://hub.docker.com/r/ngslang/ngs/builds)
 
 
 **Next Generation Shell** is a powerful programming language and a shell designed specifically for Ops. *Because you deserve better*.
