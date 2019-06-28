@@ -667,6 +667,14 @@ F ensure(x, t:Type) {
 	t().push(x)
 }
 
+doc Convert Eachable1 into JSON compatible data structure - array
+F JsonData(e:Eachable1) {
+	guard e is not Int
+	guard e is not Str
+	guard e is not Arr
+	e.map(JsonData)
+}
+
 
 # === ArrLike ====================================
 # TODO [doc]: examples in methods
@@ -762,17 +770,6 @@ F collector(al:ArrLike, body:Fun) {
 	al
 }
 
-# === EncodeJsonArr ==============================
-
-{
-	doc Signifies that the type should be encoded to JSON as an array.
-	type EncodeJsonArr
-
-	doc Encode to JSON array
-	F encode_json(eja:EncodeJsonArr) eja.Arr().encode_json()
-
-}
-
 # === HashLike ===================================
 # TODO [doc]: examples in methods
 {
@@ -863,6 +860,9 @@ doc Note: the returned value is not a copy.
 doc %RET - Hash
 F Hash(hl:HashLike) hl.attrs().HashLike
 
+doc Convert HashLike into JSON compatible data structure - object
+F JsonData(hl:HashLike) hl.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
+
 # === Hook =======================================
 
 {
@@ -911,6 +911,9 @@ F Real(s:Str) {
 }
 
 TEST Real('1.1') == 1.1
+
+doc Convert Real into JSON compatible data structure - number
+F JsonData(r:Real) r
 
 # === Fun helpers ================================
 
@@ -2067,6 +2070,9 @@ doc Make Arr from Arr. A no-op.
 doc %RET - arr
 F Arr(arr:Arr) arr
 
+doc Convert Arr into JSON compatible data structure - array
+F JsonData(arr:Arr) arr.map(JsonData)
+
 # --- Access elements ---
 
 doc Get array element by index from the end (negative indexes handler). Throws IndexNotFound if abs(idx) > len(arr).
@@ -2715,6 +2721,8 @@ F Hash(e:Eachable1, key_field:Str, val_field:Str)
 
 TEST Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}], "Name", "Value") == {"n1": "v1", "n2": "v2"}
 
+doc Convert Hash into JSON compatible data structure - object
+F JsonData(h:Hash) h.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
 
 # --- Misc ---
 
@@ -3052,6 +3060,12 @@ TEST EmptyBox() != FullBox(1)
 TEST FullBox(1) == FullBox(1)
 TEST FullBox(1) != FullBox(2)
 
+doc Convert EmptyBox into JSON compatible data structure - null
+F JsonData(eb:EmptyBox) null
+
+doc Convert FullBox into JSON compatible data structure - the contents of the box
+F JsonData(fb:FullBox) fb.get().JsonData()
+
 # === Result =====================================
 {
 	doc Thrown by get(Failure) as it has no value to get
@@ -3175,6 +3189,9 @@ TEST {read("/etc/passwd")}.Result() is Success
 TEST {read("NO-SUCH-FILE")}.Result() is Failure
 TEST Success(10).map(X*2).get() == 20
 TEST try ({ throw Error("xx") }.Result().map(X*2).get()) catch(rf:ResultFail) true
+
+doc Convert Success into JSON compatible data structure - the value of the computation
+F JsonData(s:Success) s.get().JsonData()
 
 # === Diff =======================================
 {
@@ -3335,11 +3352,18 @@ doc %EX -   }
 doc %EX - }
 F Bool(d:HashDiff) Bool(d.add or d.remove or d.change)
 
+doc Convert Diff into JSON compatible data structure - object with "add" and "remove" fields.
+doc For HashDiff, additional "change" field will be present.
+F JsonData(d:Diff) d.Hash().JsonData()
+
 # === Bool =======================================
 
 doc Convert a Bool to NGS code that would produce the given Bool when executed. Not fully functional yet.
 doc %RET - Str
 F code(b:Bool) Str(b)
+
+doc Convert Bool into JSON compatible data structure - boolean
+F JsonData(b:Bool) b
 
 # === Int ========================================
 
@@ -3404,6 +3428,8 @@ doc Convert an Int to NGS code that would produce the integer when executed. Not
 doc %RET - Str
 F code(n:Int) Str(n)
 
+doc Convert Int into JSON compatible data structure - number
+F JsonData(n:Int) n
 
 # === Str ========================================
 
@@ -3819,6 +3845,8 @@ F '"$*"'(components:Arr) {
 
 TEST "a$*{[1,2]}b$*{10..12}c" == ["a1b10c", "a1b11c", "a2b10c", "a2b11c"]
 
+doc Convert Str into JSON compatible data structure - string
+F JsonData(s:Str) s
 
 # === Stats ========================================
 
@@ -3857,6 +3885,9 @@ TEST Stats().push('a').push('a').push('b').Hash() == {'a': 2, 'b': 1}
 TEST Stats(['a', 'a', 'b']).Hash() == {'a': 2, 'b': 1}
 TEST Stats(['a', 'a', 'b'])['a'] == 2
 TEST Stats(['a', 'a', 'b']).a == 2
+
+doc Convert Stats into JSON compatible data structure - object
+F JsonData(s:Stats) s.Hash().JsonData()
 
 # === Thread ========================================
 ns {
@@ -4418,6 +4449,9 @@ F chdir(s:Str) {
 	t throws CdFail("Failed to chdir to '${s}'").set('dir', s)
 	null
 }
+
+doc Convert Path into JSON compatible data structure - string
+F JsonData(p:Path) p.path
 
 # === Commands and processes (WIP) ===============
 
@@ -5101,13 +5135,9 @@ F Argv(a:Arr) {
 
 # --- $() ---
 
-GGG = Lock()
-
 doc Run a process
 F '$()'(p:Process) {
 
-	GGG.acquire()
-	# acquire - worked
 	argv = p.command.argv.map(Arg)
 
 	debug("process", "Parsed command: ${argv}")
@@ -5122,36 +5152,21 @@ F '$()'(p:Process) {
 		throw ProcessFail(p).set('cause', nf).set('message', 'Executable not found')
 	}
 
-	# acquire - failed
-	# GGG.acquire()
-
 	pid = c_fork()
 
 	pid == -1 throws ProcessFail("Could not spawn a process").set('cause', CException("Failed to fork()"))
 
-
 	debug("process", "PID after fork: $pid")
-	# write(1, "F")
-
-	# GGG.release()
 
 	pipes = p.redirects.filter({'datum': Pipe})
 	debug("process2", "PIPES FROM REDIRECTS $pipes REDIRECTS ${p.redirects} COMMND ${p.Hash()}")
 	child_fds = pipes.datum.map(child_fd)
 
-	# write(1, "G")
-
-	# release - failed
-	# GGG.release()
-
 	if pid == 0 {
-		# release - failed
 		# === Child ===
 		# TODO: See https://stackoverflow.com/questions/13101690/c-get-all-open-file-descriptors
-		# write(1, "a")
 		child_fds_to_keep_open = child_fds + p.redirects.datum.filter(Int)
 		debug("process2", "CHILD CLOSING FDS 3 TO 100 EXCEPT FOR ${child_fds_to_keep_open}")
-		# write(1, "A")
 		for(i=3;i<100;i+=1) {
 			if i not in child_fds_to_keep_open {
 				# XXX child to parent also closed here
@@ -5186,7 +5201,6 @@ F '$()'(p:Process) {
 		p.command.options.Box('cd').each(chdir)
 
 		debug("process", "will execve()")
-		# write(1, "E")
 		result = c_execve(p.executable.path, argv, ENV.Strs())
 		# TODO: propagate this error to parent, don't know how yet
 		error("Process ${c_getpid()} (fork child) failed to execve()")
@@ -5195,7 +5209,6 @@ F '$()'(p:Process) {
 
 	if pid > 0 {
 		# === Parent ===
-		# release - failed
 		p.pid = pid
 		child_fds.each(close)
 		debug("process", "Reading all output of the child process")
@@ -5218,7 +5231,6 @@ F '$()'(p:Process) {
 	}
 
 	debug("process2", "\$() returns process ${p.Hash()}")
-	GGG.release()
 	p
 }
 
@@ -5700,7 +5712,7 @@ doc Successful match constructor
 F init(ms:MatchSuccess, matches:Arr) init(args())
 
 
-doc Unsuccessful construtcor
+doc Unsuccessful constructor
 F init(mf:MatchFailure, data, pattern) init(args())
 
 doc Convert successful match to Bool (true)
@@ -5711,7 +5723,7 @@ doc Convert failed match to Bool (false)
 doc %RET - false
 F Bool(mf:MatchFailure) false
 
-doc Get the values of successfull match
+doc Get the values of successful match
 F get(ms:MatchSuccess) ms
 
 doc Throws ResultFail
@@ -6063,6 +6075,8 @@ doc Convert null to NGS code that would produce null when executed.
 doc %RET - Str
 F code(n:Null) "null"
 
+doc Convert Null into JSON compatible data structure - null
+F JsonData(n:Null) n
 
 # === exit_hook - Print uncaught exception =======
 
@@ -6467,6 +6481,9 @@ F time(cb:Fun) {
 
 F Bool(t:Time) true
 
+doc Convert Time into JSON compatible data structure - number (epoch seconds)
+F JsonData(t:Time) t.epoch
+
 # === Random =====================================
 # This is _not_ crypto safe random!
 
@@ -6722,6 +6739,15 @@ F write(s:Str, f:File) {
 doc Write whole file if it's closed, write to file descriptor if it's open
 F write(f:File, s:Str) {
 	write(if f.fd is Null then f.path else f.fd, s)
+}
+
+# === JSON =======================================
+
+doc Convert data structure into JSON compatible data using JsonData and call built-in encode_json().
+doc Implement JsonData() for your own types to customize converting to JSON.
+doc %RET - Str
+F encode_json(x) {
+	super(JsonData(x))
 }
 
 # === Misc =======================================

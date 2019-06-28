@@ -1,7 +1,7 @@
 {
 	doc Array of strings which comprise a text which is treated as a
 	doc unit for purposes of output (and maybe for other purposes later).
-	type Lines([ArrLike, EncodeJsonArr])
+	type Lines(ArrLike)
 
 	doc Split s to strings using end-of-line separators.
 	doc UNIX and Windows line endings supported (Windows - not tested yet).
