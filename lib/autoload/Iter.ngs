@@ -359,3 +359,6 @@ TEST i = Iter({"a": 1, "b": 2}); [i.next(), i.peek()] == [["a", 1], ["b", 2]]
 TEST try {}.Iter().next() catch(nn:NoNext) true
 
 # F Counter(start:Int=0) Iter(start..null)
+
+doc Convert Iter into JSON compatible data structure - array
+F JsonData(i:Iter) collector i.each(collect + JsonData)
