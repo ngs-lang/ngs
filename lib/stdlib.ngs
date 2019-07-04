@@ -1757,7 +1757,7 @@ doc Check that there is no element in e that satisfies the given predicate. Exac
 doc %RET - Bool
 doc %EX - [0,1,2].none(X>2)  # true
 doc %EX - [0,1,2].none(X<2)  # false
-F none(e:Eachable1, predicate:Fun) not(any(e, predicate))
+F none(e:Eachable1, predicate) not(any(e, predicate))
 
 TEST [0,1,2].none(X>2)
 TEST [0,1,2].none(X<2).not()
