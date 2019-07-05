@@ -21,6 +21,7 @@
 * Add `inspect(Eachable1)`
 * Add `len(Box)`
 * Add `len(NumRange)` for `Int` ranges
+* Add `RetryBodyMissing` exception
 
 ### Fixes and improvements
 

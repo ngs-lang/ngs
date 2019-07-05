@@ -6548,10 +6548,8 @@ F rand(r:NumRange) {
 {
 	doc Represents failure on all retries
 	type RetryFail(Error)
+	type RetryBodyMissing(InvalidArgument)
 }
-
-doc Internal method. Used by retry().
-F body_missing_in_retry() throw InvalidArgument("'body' argument missing in retry()")
 
 # TODO: Handle NoNext that could occur in sleep iterator
 doc Retry. Executes given "body" "times" times. Throws RetryFail if all calls fail and fail_cb is not provided.
@@ -6574,7 +6572,7 @@ F retry(
 	progress_cb:Fun={null},
 	success_cb:Fun=identity,
 	fail_cb={throw RetryFail()},
-	body:Fun=body_missing_in_retry
+	body:Fun={throw RetryBodyMissing("'body' argument missing in retry()")}
 ) {
 	guard sleep is Int or sleep is Iter
 	sleep_iter = if sleep is Int then ConstIter(sleep) else sleep
