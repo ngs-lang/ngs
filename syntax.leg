@@ -45,7 +45,7 @@ void position_to_line_col();
 	name->location.last_column = location[3]; \
 }
 #define MAKE_NODE(name, type_) \
-	ast_node *name = NGS_MALLOC(sizeof(*name)); name->type = type_; name->data = NULL; \
+	ast_node *name = NGS_MALLOC(sizeof(*name)); name->type = type_; name->data = NULL; name->warning = NULL; \
 	CAPTURE_LOCATION(name) \
 	DEBUG_PARSER("[ast_node] at %p type %3d (%-12s) %d:%d-%d:%d\n", name, name->type, NGS_AST_NODE_TYPES_NAMES[name->type], name->location.first_line, name->location.first_column, name->location.last_line, name->location.last_column);
 // TODO: check whether it's appropriate to use Boehm's "atomic" allocation.
@@ -964,7 +964,7 @@ function-call-arguments = "(" space? a:function-call-arguments-without-parens sp
 	$$ = a;
 }
 
-# NOTE: the "=>" syntax is experimental
+# NOTE: the "=>" syntax is deprecated
 function-call-external-argument =
 	("with" | "do") space a:function-call-argument {
 		$$ = a;
@@ -975,6 +975,7 @@ function-call-external-argument =
 		ret->first_child = e;
 		MAKE_STRING_NODE(arg_name, i->name);
 		e->next_sibling = arg_name;
+		ret->warning = ngs_strdup("Using deprecated key/value arrow syntax for external function call argument of the form f() k => v");
 		$$ = ret;
 	}
 

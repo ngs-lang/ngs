@@ -1262,12 +1262,33 @@ void compile_source_location_section(COMPILATION_CONTEXT *ctx, char **buf, size_
 	*idx += ctx->source_tracking_entries_count * sizeof(source_tracking_entry);
 }
 
+void process_warnings(VALUE warnings, ast_node *node) {
+	ast_node *t;
+	if(node->warning) {
+		VALUE w = make_hash(4);
+		set_hash_key(w, make_string("message"), make_string(node->warning));
+
+		VALUE loc = make_hash(8);
+		set_hash_key(loc, make_string("first_line"), MAKE_INT(node->location.first_line));
+		set_hash_key(loc, make_string("first_column"), MAKE_INT(node->location.first_column));
+		set_hash_key(loc, make_string("last_line"), MAKE_INT(node->location.last_line));
+		set_hash_key(loc, make_string("last_column"), MAKE_INT(node->location.last_column));
+		set_hash_key(w, make_string("location"), loc);
+		array_push(warnings, w);
+	}
+	for(t=node->first_child; t; t=t->next_sibling) {
+		process_warnings(warnings, t);
+	}
+}
+
 // ast_node - the top level node
-char *compile(ast_node *node, char *source_file_name, size_t *len) {
+COMPILATION_RESULT *compile(ast_node *node, char *source_file_name) {
 
 	char *buf = NGS_MALLOC_ATOMIC(COMPILE_INITIAL_BUF_SIZE);
 	size_t main_allocated = COMPILE_INITIAL_BUF_SIZE;
 	size_t l;
+	COMPILATION_RESULT *ret = NGS_MALLOC_ATOMIC(sizeof(*ret));
+	assert(ret);
 	COMPILATION_CONTEXT ctx;
 	BYTECODE_HANDLE *bytecode;
 
@@ -1280,6 +1301,7 @@ char *compile(ast_node *node, char *source_file_name, size_t *len) {
 	ctx.source_tracking_entries_count = 0;
 	ctx.source_tracking_entries_allocated = 1024;
 	ctx.source_tracking_entries = NGS_MALLOC_ATOMIC(sizeof(source_tracking_entry) * ctx.source_tracking_entries_allocated);
+	assert(ctx.source_tracking_entries);
 	ctx.fill_in_break_addrs_ptr = 0;
 	ctx.fill_in_continue_addrs_ptr = 0;
 
@@ -1302,8 +1324,12 @@ char *compile(ast_node *node, char *source_file_name, size_t *len) {
 	compile_source_location_section(&ctx, &buf, &l);
 	ngs_add_bytecode_section(bytecode, BYTECODE_SECTION_TYPE_SRCLOC, l, buf);
 
-	*len = bytecode->len;
+	// WARNINGS
+	ret->warnings = make_array(0);
+	process_warnings(ret->warnings, node);
 
-	return bytecode->data;
+	ret->bytecode = bytecode->data;
+	ret->len = bytecode->len;
+	return ret;
 }
 #undef LOCALS

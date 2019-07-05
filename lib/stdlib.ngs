@@ -1551,16 +1551,17 @@ doc %EX -   { while entry = c_readdir(d) { ... } },
 doc %EX -   { ... c_closedir(d) ...}
 doc %EX - )
 doc %EX - # Alternative function call syntax:
-doc %EX - finally()
-doc %EX -   body => {
+doc %EX - finally(
+doc %EX -   body = {
 doc %EX -     while entry = c_readdir(d) {
 doc %EX -       cb(Path(dirname / entry.d_name, subtype=subtype))
 doc %EX -     }
 doc %EX -   }
-doc %EX -   cleanup => {
+doc %EX -   cleanup = {
 doc %EX -     r = c_closedir(d)
 doc %EX -     r != 0 throws DirFail('Failed to close directory after listing').set('dirname', dirname)
 doc %EX -   }
+doc %EX - )
 F finally(body:Fun, cleanup:Fun) {
 	ret = Result(body)
 	cleanup()
@@ -4391,8 +4392,8 @@ F dir(dirname:Str, cb:Fun, subtype=false, raw=false) {
 	d = c_opendir(dirname)
 	d is Null throws DirFail('Failed to list directory contents').set('dirname', dirname)
 	SKIP_DIRS = ['.', '..']
-	finally()
-		body => {
+	finally(
+		body = {
 			while entry = c_readdir(d) {
 				entry.d_name in SKIP_DIRS continues
 				if raw {
@@ -4402,10 +4403,11 @@ F dir(dirname:Str, cb:Fun, subtype=false, raw=false) {
 				}
 			}
 		}
-		cleanup => {
+		cleanup = {
 			r = c_closedir(d)
 			r != 0 throws DirFail('Failed to close directory after listing').set('dirname', dirname)
 		}
+	)
 }
 
 # XXX: might not be correct on all platforms
@@ -4707,13 +4709,14 @@ doc f - Closed File
 doc cb - function to call with successive lines from the file
 F lines(f:File, cb:Fun) {
 	f.open('r')
-	finally()
-		body => {
+	finally(
+		body = {
 			f.fd.read().lines(cb)
 		}
-		cleanup => {
+		cleanup = {
 			f.close()
 		}
+	)
 }
 
 # XXX: might not be correct on all platforms
@@ -4726,15 +4729,16 @@ F lines(f:File) collector f.lines(collect)
 doc Write given lines to the file. Overwrites the file.
 doc %RET - Arr of Str
 F lines(f:File, lines_:Arr) {
-	finally()
-		body => {
+	finally(
+		body = {
 			f.open('w')
 			(lines_ + STDLIB_EOL).each(write(f.fd, X))
 			f
 		}
-		cleanup => {
+		cleanup = {
 			f.close()
 		}
+	)
 }
 
 # Note: EINTR should not be handled

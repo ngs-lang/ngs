@@ -879,8 +879,6 @@ METHOD_RESULT native_not_bool METHOD_PARAMS { METHOD_RETURN(MAKE_BOOL(argv[0].nu
 // XXX: glibc specific fmemopen()
 METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 	ast_node *tree = NULL;
-	char *bytecode;
-	size_t len;
 	yycontext yyctx;
 	int parse_ok;
 	(void) ctx;
@@ -906,9 +904,6 @@ METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 		exc = make_normal_type_instance(vm->CompileFail);
 		set_normal_type_instance_field(exc, make_string("given"), argv[0]);
 
-//		snprintf(err, 1024, "Failed to parse at position %d (%s), rule %s", yyctx.fail_pos, sprintf_position(&yyctx, yyctx.fail_pos), yyctx.fail_rule);
-//		set_normal_type_instance_field(exc, make_string("message"), make_string(err));
-
 		int *pos_line_col = NGS_MALLOC_ATOMIC(sizeof(int) * 2);
 		position_to_line_col(&yyctx, yyctx.fail_pos, pos_line_col);
 
@@ -925,9 +920,11 @@ METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 	tree = yyctx.__;
 	IF_DEBUG(COMPILER, print_ast(tree, 0);)
 	yyrelease(&yyctx);
-	bytecode = compile(tree, obj_to_cstring(argv[1]), &len);
-	// BROKEN SINCE BYTECODE FORMAT CHANGE // IF_DEBUG(COMPILER, decompile(bytecode, 0, len);)
-	METHOD_RETURN(make_string_of_len(bytecode, len));
+	COMPILATION_RESULT *r = compile(tree, obj_to_cstring(argv[1]));
+	VALUE ret = make_string_of_len(r->bytecode, r->len);
+	OBJ_ATTRS(ret) = make_hash(1);
+	set_hash_key(OBJ_ATTRS(ret), make_string("warnings"), r->warnings);
+	METHOD_RETURN(ret);
 }
 
 METHOD_RESULT native_load_str_str EXT_METHOD_PARAMS {

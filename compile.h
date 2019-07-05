@@ -51,6 +51,12 @@ typedef struct compilation_context {
 
 } COMPILATION_CONTEXT;
 
+typedef struct compilation_result {
+	char *bytecode;
+	size_t len;
+	VALUE warnings;
+} COMPILATION_RESULT;
+
 SYMBOL *get_symbol_table_entry(VALUE st, char *name, int create_if_not_exists, int *created);
-char *compile(ast_node *node, char *source_file_name, size_t *len);
+COMPILATION_RESULT *compile(ast_node *node, char *source_file_name);
 #endif

@@ -110,6 +110,19 @@ F read(fname:Str) {
 	}
 }
 
+
+
+F bootstrap_print_compilation_warnings(program_bytecode, fname) {
+
+	warnings = program_bytecode.attrs()['warnings']
+	l = warnings.len()
+	for(i;l) {
+		w = warnings[i]
+		wl = w['location']
+		echo(2, "${fname}:${wl['first_line']}:${wl['first_column']} warning: ${w['message']}")
+	}
+}
+
 doc Runs the given file
 doc %RET - Typically whatever the last expression in the file evaluates to
 F require(fname:Str) {
@@ -117,6 +130,7 @@ F require(fname:Str) {
 		program_text = read(fname)
 		program_bytecode = compile(program_text, fname)
 		bootstrap_debug("require(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
+		bootstrap_print_compilation_warnings(program_bytecode, fname)
 		program_func = load(program_bytecode, "require()d file: $fname")
 		ret = program_func()
 		bootstrap_debug("require(): done requiring ${fname}")
@@ -196,6 +210,7 @@ F bootstrap() {
 
 	program_bytecode = compile(code_to_run, fname)
 	bootstrap_debug("bootstrap(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
+	bootstrap_print_compilation_warnings(program_bytecode, fname)
 	program_func = load(program_bytecode, "bootstrap()ped file: $fname")
 
 	result = program_func()
