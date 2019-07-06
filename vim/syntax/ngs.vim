@@ -24,8 +24,8 @@ syn keyword ngsType Absent Any ArgsMismatch Arr ArrDiff ArrIter ArrLike ArrSplat
 syn keyword ngsType Backtrace BasenameArgumentFail BasicType BasicTypeInstance BlockDevice Bool BootstrapFailedMatchMain BootstrapNoMatchingMain Box BoxFail
 syn keyword ngsType CException CLib CSym C_DIR CallFail CdFail CharDevice CollectingPipeFromChildToParentProcess Command CommandRedir CommandsPipe CommandsPipeline CompileFail ConstIter
 syn keyword ngsType DecodeFail DelimStr Diff Dir DirFail DivisionByZero DlopenFail DontKnowHowToCall
-syn keyword ngsType Eachable Eachable1 Eachable2 ElementNotFound EmptyArrayFail EmptyBox EmptyEachableFail EncodeJsonArr Error ExactPresence Exception ExecutableNotFound Exit ExitCodeFail ExitException
-syn keyword ngsType Failure FatalError FieldNotFound FifoFile File FileIOFail FilterIter FullBox Fun FunIter
+syn keyword ngsType Eachable Eachable1 Eachable2 ElementNotFound EmptyArrayFail EmptyBox EmptyEachableFail Error ExactPresence Exception ExecutableNotFound Exit ExitCodeFail ExitException
+syn keyword ngsType Failure FailuresException FatalError FieldNotFound FifoFile File FileIOFail FilterIter FullBox Fun FunIter
 syn keyword ngsType GlobalNotFound
 syn keyword ngsType Hash HashDiff HashIter HashLike HashSplatMethodParam Hook
 syn keyword ngsType Ifx IndexNotFound InstantiatingAbstractType Int InternalError InvalidArgument Iter
@@ -36,23 +36,24 @@ syn keyword ngsType MainFail MapIter MatchFailure MatchResult MatchSuccess Maybe
 syn keyword ngsType NativeMethod NgsStrComp NgsStrCompExp NgsStrCompImm NgsStrCompSplatExp NoData NoNext NormalExit NormalType NormalTypeConstructor NormalTypeInstance NotImplemented Null Num NumRange
 syn keyword ngsType OptionalMethodParam
 syn keyword ngsType ParamsMatchN ParamsMatchY PartialPresence Path Pfx Pipe PipeCreateFail PipeFromChildProcess PipeFromChildToParentProcess PipeFromParentToChildProcess PipeToChildProcess PredRange Presence Present Process ProcessRedir ProcessesPipeline
-syn keyword ngsType Range RangeIter ReadFail ReadingPipeBetweenChildren Real ReentrantLock RegExp RegExpCompileFail RequireFail RequiredMethodParam Res ResDef Result ResultFail RetryFail Return
+syn keyword ngsType Range RangeIter ReadFail ReadingPipeBetweenChildren Real ReentrantLock RegExp RegExpCompileFail RequireFail RequiredMethodParam Res ResDef Result ResultFail Results ResultsException RetryBodyMissing RetryFail Return
 syn keyword ngsType Seq Set Sfx SocketFile SplatMethodParam StackDepthFail Stat StatFail Stats Str SubSeq Success SwitchFail SwitchParseFail Symlink
 syn keyword ngsType Table TestFail TestMessage TestsResults Thread ThreadFail Threads Time TimeFail TtyCheckFail Type
 syn keyword ngsType UndefinedLocalVar UserDefinedMethod
 syn keyword ngsType WritingPipeBetweenChildren
-syn keyword ngsType c_ffi_cif c_ffi_type c_pthread_attr_t c_pthread_mutex_t c_pthread_mutexattr_t c_pthread_t c_tm
+syn keyword ngsType c_ffi_cif c_ffi_type c_pthread_attr_t c_pthread_cond_t c_pthread_mutex_t c_pthread_mutexattr_t c_pthread_t c_tm
 " Generated types - end
 
 " Generated methods - start
 syn keyword ngsFunction Arg Argv ArgvMatcher
 syn keyword ngsFunction C_WEXITSTATUS C_WTERMSIG
 syn keyword ngsFunction ExitCode
+syn keyword ngsFunction JsonData
 syn keyword ngsFunction Pred
 syn keyword ngsFunction SafeStr StrForTable StrParams Strs
 syn keyword ngsFunction abs access acquire all any args arr_splat assert assert_array assert_base assert_bool assert_eq assert_exit_code assert_has assert_hash assert_hash_keys assert_hash_keys_values assert_in assert_match assert_min_len assert_output_has assert_path_exists assert_resolvable assert_string attempt attrs
-syn keyword ngsFunction band basename body_missing_in_retry bootstrap bootstrap_debug bootstrap_exception_catch_wrapper bootstrap_find_ngs_dir bootstrap_invoke_main bootstrap_try_main bor bxor
-syn keyword ngsFunction c_access c_chdir c_close c_closedir c_dlopen c_errno c_execve c_exit c_ffi_call c_ffi_prep_cif c_fork c_fstat c_getpid c_getppid c_gettimeofday c_gmtime c_isatty c_kill c_localtime c_lseek c_lstat c_mktime c_open c_opendir c_pcre_compile c_pcre_exec c_pipe c_poll c_pthread_attr_init c_pthread_create c_pthread_join c_pthread_mutex_init c_pthread_mutex_lock c_pthread_mutex_unlock c_pthread_mutexattr_init c_pthread_mutexattr_settype c_pthread_self c_read c_readdir c_stat c_strcasecmp c_strcmp c_strerror c_strftime c_strptime c_time c_waitpid c_write cached calculate_num_cols_to_show call ceil cell_display_width chdir child_fd chr close close_reading_end close_writing_end code column columns compile config converge copy count create created
+syn keyword ngsFunction band basename bootstrap bootstrap_debug bootstrap_exception_catch_wrapper bootstrap_find_ngs_dir bootstrap_invoke_main bootstrap_print_compilation_warnings bootstrap_try_main bor bxor
+syn keyword ngsFunction c_access c_chdir c_close c_closedir c_dlopen c_errno c_execve c_exit c_ffi_call c_ffi_prep_cif c_fork c_fstat c_getpid c_getppid c_gettimeofday c_gmtime c_isatty c_kill c_localtime c_lseek c_lstat c_mktime c_open c_opendir c_pcre_compile c_pcre_exec c_pipe c_poll c_pthread_attr_init c_pthread_cond_broadcast c_pthread_cond_destroy c_pthread_cond_init c_pthread_cond_signal c_pthread_cond_wait c_pthread_create c_pthread_join c_pthread_mutex_init c_pthread_mutex_lock c_pthread_mutex_unlock c_pthread_mutexattr_init c_pthread_mutexattr_settype c_pthread_self c_read c_readdir c_stat c_strcasecmp c_strcmp c_strerror c_strftime c_strptime c_time c_waitpid c_write cached calculate_num_cols_to_show call ceil cell_display_width chdir child_fd chr close close_reading_end close_writing_end code column columns compile config converge copy count create created
 syn keyword ngsFunction debug decode decode_hex decode_json decode_uri_component del delete dflt die digest dir drop dump
 syn keyword ngsFunction each each_chunk each_group_test each_idx_key_val each_idx_val eachk eachv echo encode encode_hex encode_html encode_html_attr encode_json encode_uri_component ends_with ensure ensure_array error exception_specific_message exit expect
 syn keyword ngsFunction fetch filter filterk filterv finally find find_if_needed find_in_path finished finished_ok first flatten floor framed
@@ -77,7 +78,7 @@ syn keyword ngsFunction zip
 
 
 " Special methods
-syn keyword ngsPredefinedVariable init call args
+syn keyword ngsPredefinedVariable init call args true false null
 syn keyword ngsKeyword super
 " Namespaces
 syn keyword ngsNamespace AWS CHARS Doc OS

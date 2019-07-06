@@ -4462,18 +4462,20 @@ F JsonData(p:Path) p.path
 	type ProcessRedir
 }
 
-F init(pp:ProcessesPipeline, cp:CommandsPipeline) {
-	pp.cp = cp
-	pp.processes = []
-	pp.pipe_in = null
-	pp.pipe_out = null
-}
+F init(pp:ProcessesPipeline, cp:CommandsPipeline) pp.set(
+	cp = cp
+	processes = []
+	pipe_in = null
+	pipe_out = null
+	stdout = null
+	stderr = null
+)
 
-F init(pr:ProcessRedir, cr:CommandRedir) {
-	pr.fd = cr.fd
-	pr.marker = cr.marker
-	pr.datum = cr.datum
-}
+F init(pr:ProcessRedir, cr:CommandRedir) pr.set(
+	fd = cr.fd
+	marker = cr.marker
+	datum = cr.datum
+)
 
 F init(pr:ProcessRedir, fd, marker, datum) init(args())
 
@@ -4816,38 +4818,6 @@ F Str(r:CommandRedir) "<${r.typeof().name} ${r.fd} ${r.marker} ${r.datum}>"
 	type ExecutableNotFound(Exception)
 }
 
-doc Get process "stdout"
-doc field - "stdout"
-doc %RET - Str
-F '.'(p:Process, field:Str) {
-	guard field == 'stdout'
-	p.outputs[1]
-}
-
-doc Set process "stdout"
-doc field - "stdout"
-doc %RET - Unspecified, do not count on this value
-F '.='(p:Process, field:Str, v) {
-	guard field == 'stdout'
-	p.outputs[1] = v
-}
-
-doc Get process "stderr"
-doc field - "stderr"
-doc %RET - Str
-F '.'(p:Process, field:Str) {
-	guard field == 'stderr'
-	p.outputs[2]
-}
-
-doc Set process "stderr"
-doc field - "stderr"
-doc %RET - Unspecified, do not count on this value
-F '.='(p:Process, field:Str, v) {
-	guard field == 'stderr'
-	p.outputs[2] = v
-}
-
 ns {
 
 	global finished_ok
@@ -4960,17 +4930,18 @@ ns {
 }
 
 doc Process constructor. Initializes fields.
-F init(p:Process, c:Command) {
-	p.command = c
-	p.executable = null
-	p.pid = null
-	p.exit_code = null
-	p.exit_signal = null
-	p.outputs = {1:null, 2:null}
-	p.reading_threads = Threads()
-	p.writing_threads = Threads()
-	# p.lock = Lock()
-}
+F init(p:Process, c:Command) p.set(
+	command = c
+	executable = null
+	pid = null
+	exit_code = null
+	exit_signal = null
+	outputs = {1:null, 2:null}
+	stdout = null
+	stderr = null
+	reading_threads = Threads()
+	writing_threads = Threads()
+)
 
 # Maybe it should be pp.processes.all(Bool)? And implement Bool(p:Process)
 doc Wait for all process to finish and see whether all exit codes are 0
@@ -5029,6 +5000,9 @@ F wait(p:Process) {
 doc Wait for all processes to finish.
 F wait(pp:ProcessesPipeline) {
 	pp.processes.each(wait)
+	last_process = pp.processes[-1]
+	pp.stdout = last_process.stdout
+	pp.stderr = last_process.stderr
 	pp
 }
 
@@ -5223,6 +5197,14 @@ F '$()'(p:Process) {
 				Result({
 					debug("process2", "READING ${r.datum}")
 					p.outputs[r.fd] = r.datum.read()
+					dst_fields = %{
+						1 stdout
+						2 stderr
+					}
+					if r.fd in dst_fields {
+						p.(dst_fields[r.fd]) = p.outputs[r.fd]
+
+					}
 					debug("process2", "READ <<${p.outputs[r.fd].limit(100, '...').SafeStr()}>>")
 					debug("process2", "DATUM *** ${r.datum}")
 					r.datum.close_reading_end()
