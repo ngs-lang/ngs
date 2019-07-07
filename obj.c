@@ -292,6 +292,13 @@ VALUE make_hash(size_t start_buckets) {
 	return ret;
 }
 
+VALUE make_namespace(size_t start_buckets) {
+	VALUE ret;
+	ret = make_hash(start_buckets);
+	OBJ_TYPE_NUM(ret) = T_NAMESPACE;
+	return ret;
+}
+
 VALUE make_normal_type(VALUE name) {
 	VALUE ret;
 	NGS_TYPE *t;

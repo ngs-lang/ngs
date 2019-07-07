@@ -164,6 +164,7 @@ struct VM {
 		VALUE BasicType;
 		VALUE NormalType;
 	VALUE Hash;
+		VALUE Namespace;
 	VALUE LLHashEntry;
 	VALUE CLib;
 	VALUE CSym;

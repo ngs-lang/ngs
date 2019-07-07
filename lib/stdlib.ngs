@@ -6228,6 +6228,10 @@ doc Inspect Hash
 doc %RET - Lines
 F inspect(h:Hash) Lines(["Hash of size ${h.len()}"] + h.map({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
 
+doc Inspect Namespace
+doc %RET - Lines
+F inspect(n:Namespace) Lines(["Namespace with ${n.len()} items"] + n.map({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
+
 doc Inspect Process
 doc %RET - Lines
 F inspect(p:Process) {

@@ -634,6 +634,11 @@ METHOD_RESULT native_Hash_nti METHOD_PARAMS {
 	return METHOD_OK;
 }
 
+METHOD_RESULT native_Namespace METHOD_PARAMS {
+	*result = make_namespace(0);
+	return METHOD_OK;
+};
+
 // TODO: locking for dlerror?
 METHOD_RESULT native_c_dlopen_str_int EXT_METHOD_PARAMS {
 	VALUE v;
@@ -2372,6 +2377,19 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	vm->type_by_t_obj_type_id[T_HASH >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Hash;
 
+	MK_BUILTIN_TYPE(Namespace, T_NAMESPACE);
+	_doc_arr(vm, "",
+			 "Namespace type. Returned by 'ns' keyword. Inherits and functions mostly as Hash.",
+			 NULL
+	);
+	_doc_arr(vm, "%EX",
+			 "ns { F f(x) x * 2; }",
+			 NULL
+	);
+	add_type_inheritance(vm->Namespace, vm->Hash);
+
+	vm->type_by_t_obj_type_id[T_NAMESPACE >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Namespace;
+
 	MK_BUILTIN_TYPE_DOC(CLib, T_CLIB, "C library, result of dlopen(), not used yet");
 	vm->type_by_t_obj_type_id[T_CLIB >> T_OBJ_TYPE_SHIFT_BITS] = &vm->CLib;
 
@@ -3544,6 +3562,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 		"(1..10).Hash()  # Hash {start=1, end=10, step=1}",
 		NULL
 	);
+
+	register_global_func(vm, 0, "Namespace", &native_Namespace, 0);
+	_doc(vm, "", "Creates empty Namespace");
+	_doc(vm, "%RET", "Namespace");
 
 	register_global_func(vm, 1, "ll_hash_head",      &native_ll_hash_head,        1, "h",   vm->Hash);
 	_doc(vm, "", "Low level. Do not use directly.");

@@ -22,6 +22,7 @@
 * Add `len(Box)`
 * Add `len(NumRange)` for `Int` ranges
 * Add `RetryBodyMissing` exception
+* Add `Namespace` type. It is now returned by `ns` block.
 
 ### Fixes and improvements
 

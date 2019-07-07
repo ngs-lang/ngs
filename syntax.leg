@@ -801,7 +801,7 @@ namespace = "ns" opt_params:namespace-optional-parameters c:curly-code-block {
 		// (transforms to)
 		// F(opt_params) {
 		//   local _exports
-		//   _exports = {}
+		//   _exports = Namespace()
 		//   c
 		//   _exports
 		// }()
@@ -814,12 +814,17 @@ namespace = "ns" opt_params:namespace-optional-parameters c:curly-code-block {
 				append_ast_node_child(local_exports, local_exports_identifier);
 			append_ast_node_child(code, local_exports);
 
-			// exports = {}
+			// exports = Namespace()
 			MAKE_NODE(set_exports, ASSIGNMENT_NODE);
 				MAKE_IDENTIFIER_NODE(exports_identifier, "_exports")
 				append_ast_node_child(set_exports, exports_identifier);
-				MAKE_NODE(empty_hash, HASH_LIT_NODE);
-				append_ast_node_child(set_exports, empty_hash);
+				MAKE_NODE(call_namespace_constructor, CALL_NODE);
+                    MAKE_IDENTIFIER_NODE(namespace_constructor, "Namespace");
+                    MAKE_NODE(namespace_constructor_args, ARGS_NODE);
+                    call_namespace_constructor->first_child = namespace_constructor;
+                    namespace_constructor->next_sibling = namespace_constructor_args;
+				append_ast_node_child(set_exports, call_namespace_constructor);
+
 			append_ast_node_child(code, set_exports);
 
 			// SET NAMESPACE FOR COMPILER PHASE

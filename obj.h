@@ -244,7 +244,6 @@ typedef enum {
 	T_ANY           = 42,
 	T_SEQ           = 46,
 	T_TYPE          = (3 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
-	T_HASH          = (4 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_CLIB          = (5 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_CSYM          = (6 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_NORMT         = 66,
@@ -266,11 +265,14 @@ typedef enum {
 	T_MULMETHOD     = (19 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_LL_HASH_ENTRY = (20 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_PTHREADCOND   = (21 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+
+	T_HASH          = (32 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+		T_NAMESPACE     = (33 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	// *** Add new T_ itmes above this line ***
 	// *** UPDATE MAX_T_OBJ_TYPE_ID ACCORDINGLY ***
 } IMMEDIATE_TYPE;
 
-#define MAX_T_OBJ_TYPE_ID (T_PTHREADCOND >> T_OBJ_TYPE_SHIFT_BITS)
+#define MAX_T_OBJ_TYPE_ID (T_NAMESPACE >> T_OBJ_TYPE_SHIFT_BITS)
 
 // TODO: handle situation when n is wider than size_t - TAG_BITS bits
 #define IS_NULL(v)      ((v).num == V_NULL)
@@ -306,7 +308,6 @@ typedef enum {
 #define SET_BOOL(v, b)  (v).num = b ? V_TRUE : V_FALSE
 
 #define OBJ_LEN(v)                ((VAR_LEN_OBJECT *) (v).ptr)->len
-#define OBJ_ALLOCATED(v)          ((VAR_LEN_OBJECT *) (v).ptr)->allocated
 #define CLOSURE_OBJ_IP(v)         ((CLOSURE_OBJECT *) (v).ptr)->ip
 #define CLOSURE_OBJ_N_LOCALS(v)   (((CLOSURE_OBJECT *) v.ptr)->params.n_local_vars)
 #define CLOSURE_OBJ_N_REQ_PAR(v)  (((CLOSURE_OBJECT *) v.ptr)->params.n_params_required)
@@ -335,7 +336,6 @@ typedef enum {
 #define OBJ_TYPE(v)               (((OBJECT *)(v).ptr)->type)
 #define OBJ_ATTRS(v)              (((OBJECT *)(v).ptr)->attrs)
 #define OBJ_TYPE_NUM(v)           (((OBJECT *)(v).ptr)->type.num)
-#define OBJ_TYPE_PTR(v)           (((OBJECT *)(v).ptr)->type.ptr)
 #define IS_OBJ(v)                 (((v).num & TAG_AND) == 0)
 #define IS_STRING(v)              ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_STR)
 #define IS_REAL(v)                ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_REAL)
@@ -349,7 +349,8 @@ typedef enum {
 #define IS_NORMAL_TYPE_INSTANCE(v)((((v).num & TAG_AND) == 0) && ((OBJ_TYPE_NUM(v) & TAG_AND) == 0))
 #define IS_BASIC_TYPE_INSTANCE(v) (!IS_NORMAL_TYPE_INSTANCE(v))
 #define IS_VLO(v)                 (IS_ARRAY(v) || IS_STRING(v))
-#define IS_HASH(v)                ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_HASH)
+#define IS_HASH(v)                ((((v).num & TAG_AND) == 0) && ((OBJ_TYPE_NUM(v) & T_HASH) == T_HASH))
+#define IS_NAMESPACE(v)           ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_NAMESPACE)
 #define IS_CLIB(v)                ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_CLIB)
 #define IS_CSYM(v)                ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_CSYM)
 #define IS_PTHREAD(v)             ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_PTHREAD)
@@ -388,6 +389,7 @@ VALUE make_multimethod();
 VALUE make_multimethod_with_value(const VALUE value);
 VALUE make_multimethod_from_array(const VALUE arr);
 VALUE make_hash(size_t start_buckets);
+VALUE make_namespace(size_t start_buckets);
 VALUE make_normal_type(VALUE name);
 VALUE make_normal_type_constructor(VALUE normal_type);
 VALUE make_normal_type_instance(VALUE normal_type);
