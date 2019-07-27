@@ -23,6 +23,7 @@
 * Add `len(NumRange)` for `Int` ranges
 * Add `RetryBodyMissing` exception
 * Add `Namespace` type. It is now returned by `ns` block.
+* Add `Pred(NumRange)`.
 
 ### Fixes and improvements
 
