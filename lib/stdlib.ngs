@@ -1407,7 +1407,11 @@ TEST NumRange(1, 3, include_start=false, include_end=false).len() == 1
 doc Convert NumRange to a predicate.
 doc %RET - A function that checks whether the only argument is in the range.
 doc %EX - 1 ~ 0..5  # <MatchSuccess matches=[1]>
-F Pred(nr:NumRange) in(X, nr)
+F Pred(nr:NumRange) X in nr
+
+TEST Bool(1 ~ 0..5)
+TEST Bool(0 ~ 0..5)
+TEST not(5 ~ 0..5)
 
 # TODO: think about multi-valued results (say 10 hosts, 8 succeeded and 2 failed)
 # TODO: think about Argv cooperation. Maybe Failure is NoData and Success is FullBox?
