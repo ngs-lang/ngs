@@ -24,6 +24,7 @@
 * Add `RetryBodyMissing` exception
 * Add `Namespace` type. It is now returned by `ns` block.
 * Add `Pred(NumRange)`.
+* Default code to run when not given on command line is `F default_argv_code() { fetch() }()` .
 
 ### Fixes and improvements
 

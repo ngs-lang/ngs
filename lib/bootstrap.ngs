@@ -169,7 +169,8 @@ F bootstrap() {
 			sw = ARGV.shift()
 			# Newline at the end is for avoiding # commenting out the closing }
 			# Newline at the beginning is for symmetry
-			code_to_run = "{\n${ARGV.shift()}\n}"
+			default_code = 'F default_argv_code() { fetch() }()'
+			code_to_run = "{\n${ARGV.shift(default_code)}\n}"
 			bootstrap_debug("Got $sw switch, using command line provided code")
 			if sw == '-E' {
 				bootstrap_debug('Will skip loading stdlib because of -E flag')
