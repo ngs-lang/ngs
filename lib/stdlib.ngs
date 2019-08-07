@@ -5440,9 +5440,9 @@ TEST $(echo abc | cat).Str().starts_with("abc")
 
 doc Attempt to decode JSON. Uses decode_json().
 F decode(s:Str, hints:Hash={}) {
-	ret = FullBox(decode_json(s)) tor EmptyBox()
+	ret = Result({ decode_json(s) })
 	guard ret
-	ret.val
+	ret.get()
 }
 
 # TODO: handle more than one occurrence of kvsep in each line
