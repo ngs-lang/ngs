@@ -6218,7 +6218,7 @@ doc Inspect Eachable1
 doc %RET - Lines
 F inspect(e:Eachable1) {
 	guard e is not Box
-	Lines(["${e.typeof().name} of size ${e.len()}"] + e.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
+	Lines(["${e.typeof().name} of size ${e.len() tor '(unknown size)'}"] + e.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
 }
 
 doc Inspect boolean.
