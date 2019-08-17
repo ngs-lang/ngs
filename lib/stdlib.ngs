@@ -5851,8 +5851,13 @@ F '[]'(ms:MatchSuccess, idx:Int) ms.matches[idx]
 
 TEST ("abc" ~ /a(.)c/)[1] == "b"
 
-F Pred(s:SubSeq) F subseq_pred(x) x ~ s
+F Pred(s:SubSeq) {
+	F subseq_pred(x) false
+	F subseq_pred(x:Str) x ~ s
+	subseq_pred
+}
 
+TEST (1 ~ Pfx("a")) is MatchFailure
 
 # === RegExp =====================================
 
@@ -6037,9 +6042,14 @@ TEST "ab01de12f"[/[0-9]+/] == '01'
 doc Convert regular expression to a predicate.
 doc %RET - A function that checks whether the only argument (of type Str) matches r
 doc %EX - %[w1 w2].filter(/1/)  # %[w1]
-F Pred(r:RegExp) F regexp_pred(x:Str) x ~ r
+F Pred(r:RegExp) {
+	F regexp_pred(x) false
+	F regexp_pred(x:Str) x ~ r
+	regexp_pred
+}
 
 TEST %[w1 w2].filter(/1/) == %[w1]
+TEST %[1 w2].filter(/1/) == []
 
 doc Replace all occurrences of r
 doc mapper - Function that will be called with one matching string at a time that provides the replacement

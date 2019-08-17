@@ -46,6 +46,7 @@
 * `stat()` methods now return timestamps too (access/modify/change)
 * `pmap()` now throws `ResultsException` if any of the threads fail 
 * `Stats()` now works with `Eachable1` allowing counting characters in a string for examples
+* Fix Pred(SubSeq) and Pred(RegExp) to prevent endless recursion
 
 ### Work in progress
 
