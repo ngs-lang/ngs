@@ -4324,7 +4324,7 @@ doc Finds given binary and returns it's full path.
 doc Throws ExecutableNotFound if the binary was not found.
 doc Search strategy: "/" in the name of the binary means that given executable_name is a path so it's returned as-is (wrapped in Path).
 doc If PATH environment variable exists, the given directories are searched.
-doc If PATH is not set built-in value for PATH is used to search: /usr/local/bin:/usr/bin:/bin:/sbin:/usr/sbin
+doc If PATH is not set built-in value for PATH is used to search: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 doc %RET - Path
 doc %EX - find_in_path("ls")  # <Path path=/bin/ls>
 F find_in_path(executable_name:Str) {
@@ -4334,7 +4334,7 @@ F find_in_path(executable_name:Str) {
 		return Path(executable_name)
 	}
 	# TODO: rethink default PATH
-	path = ENV.get('PATH', '/usr/local/bin:/usr/bin:/bin:/sbin:/usr/sbin').split(':')
+	path = ENV.get('PATH', '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin').split(':')
 	debug("process", '[find_in_path] will search')
 	ret = path.map(F(dir) Path(dir / executable_name)).first(identity, null)
 	debug("process", "[find_in_path] ${executable_name} found at ${ret}")
