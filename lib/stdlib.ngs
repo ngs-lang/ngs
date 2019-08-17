@@ -969,7 +969,7 @@ F Type(t:Str, doc, ns, parents:Arr) {
 
 TEST type T1; type T2(T1); T2() is T1
 
-doc EXPERIMENTAL! Do not use! Especially don't count on returned value beyond obvios Bool(x) behaviour. Match anything.
+doc EXPERIMENTAL! Do not use! Especially don't count on returned value beyond obvious Bool(x) behaviour. Match anything.
 doc %STATUS - deprecated
 F ~(something, pred) {
 	warn("Using deprecated ~(something:Any, pred:Any)")
