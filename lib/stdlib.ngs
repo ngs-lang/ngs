@@ -5182,6 +5182,9 @@ F '$()'(p:Process) {
 					debug("process2", "CHILD DESCRIPTOR REDIRECT ${r.fd} -> ${r.datum}")
 					dup2(r.datum, target_fd)
 				}
+				false {
+					debug("process2", "CHILD DOES *NOT* REDIRECT ${r.fd} -> ${false}")
+				}
 			}
 		})
 
