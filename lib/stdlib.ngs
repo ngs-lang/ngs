@@ -4813,7 +4813,7 @@ F init(r:CommandRedir, fd, marker, datum) {
 	init(args())
 }
 
-doc Convert Redit to human-readable string.
+doc Convert CommandRedir to human-readable string.
 doc %RET - Str
 F Str(r:CommandRedir) "<${r.typeof().name} ${r.fd} ${r.marker} ${r.datum}>"
 
