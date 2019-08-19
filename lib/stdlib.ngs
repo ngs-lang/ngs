@@ -4204,6 +4204,8 @@ F exit(s:Str, status=1) throw NormalExit(s, status.ExitCode())
 		type Symlink(Path)     # S_IFLNK
 		doc Represents a file in a file system (S_IFREG)
 		type File(Path)        # S_IFREG
+			doc EXPERIMENTAL! Represents temporary file. Automatically removed when the script exits.
+			type TmpFile(File)
 		doc Represents a block device in a file system (S_IFBLK)
 		type BlockDevice(Path) # S_IFBLK
 		doc Represents a directory in a file system (S_IFBLK)
@@ -4460,6 +4462,24 @@ F chdir(s:Str) {
 	t throws CdFail("Failed to chdir to '${s}'").set('dir', s)
 	null
 }
+
+doc EXPERIMENTAL! Creates temporary file using `mktemp` and arranges deletion of the file upon exit from the NGS script.
+F init(t:TmpFile) {
+	t.path = `line: mktemp`
+	t.fd = null
+	debug("file", "Created temporary file at ${t.path}")
+	exit_hook["TmpFile:${t.path}"] = {
+		debug("file", "Removing temporary file at ${t.path}")
+		try {
+			$(rm ${t.path})
+			debug("file", "Removed temporary file at ${t.path}")
+		} catch(e) {
+			warn("Failed to remove temporary file at ${t.path}")
+			print_exception(e, echo=warn)
+		}
+	}
+}
+
 
 doc Convert Path into JSON compatible data structure - string
 F JsonData(p:Path) p.path
