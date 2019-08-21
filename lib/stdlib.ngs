@@ -91,6 +91,16 @@ F assert(condition, *args) {
 	super(Bool(condition), *args)
 }
 
+doc EXPERIMENTAL! Asserts that external program exists.
+F assert_program(s:Str) {
+	r = Result({ find_in_path(s) })
+	not(r) throws AssertFail("Program not found: ${s}").set(cause = r.val)
+	s
+}
+
+TEST try assert_program('no_such_prog') catch(e) e is AssertFail
+TEST assert_program('ls') == 'ls'
+
 doc Initializes InstantiatingAbstractType.
 F init(e:InstantiatingAbstractType, t:Type) init(args())
 
