@@ -24,7 +24,7 @@ syn keyword ngsType Absent Any ArgsMismatch Arr ArrDiff ArrIter ArrLike ArrSplat
 syn keyword ngsType Backtrace BasenameArgumentFail BasicType BasicTypeInstance BlockDevice Bool BootstrapFailedMatchMain BootstrapNoMatchingMain Box BoxFail
 syn keyword ngsType CException CLib CSym C_DIR CallFail CdFail CharDevice CollectingPipeFromChildToParentProcess Command CommandRedir CommandsPipe CommandsPipeline CompileFail ConstIter
 syn keyword ngsType DecodeFail DelimStr Diff Dir DirFail DivisionByZero DlopenFail DontKnowHowToCall
-syn keyword ngsType Eachable Eachable1 Eachable2 ElementNotFound EmptyArrayFail EmptyBox EmptyEachableFail Error ExactPresence Exception ExecutableNotFound Exit ExitCodeFail ExitException
+syn keyword ngsType Eachable Eachable1 Eachable2 ElementNotFound EmptyArrayFail EmptyBox EmptyEachableFail Error ExactPresence Exception Exit ExitCodeFail ExitException
 syn keyword ngsType Failure FailuresException FatalError FieldNotFound FifoFile File FileIOFail FilterIter FullBox Fun FunIter
 syn keyword ngsType GlobalNotFound
 syn keyword ngsType Hash HashDiff HashIter HashLike HashSplatMethodParam Hook
@@ -33,12 +33,12 @@ syn keyword ngsType JsonDecodeFail
 syn keyword ngsType KeyNotFound KillFail
 syn keyword ngsType LLHashEntry Lines Lock LockFail LookupFail
 syn keyword ngsType MainFail MapIter MatchFailure MatchResult MatchSuccess MaybeIfx MaybePfx MaybeSfx MethodNotFound MethodParam MethodParams MultiMethod MustIfx MustPfx MustSfx
-syn keyword ngsType NativeMethod NgsStrComp NgsStrCompExp NgsStrCompImm NgsStrCompSplatExp NoData NoNext NormalExit NormalType NormalTypeConstructor NormalTypeInstance NotImplemented Null Num NumRange
+syn keyword ngsType Namespace NativeMethod NgsStrComp NgsStrCompExp NgsStrCompImm NgsStrCompSplatExp NoData NoNext NormalExit NormalType NormalTypeConstructor NormalTypeInstance NotImplemented Null Num NumRange
 syn keyword ngsType OptionalMethodParam
-syn keyword ngsType ParamsMatchN ParamsMatchY PartialPresence Path Pfx Pipe PipeCreateFail PipeFromChildProcess PipeFromChildToParentProcess PipeFromParentToChildProcess PipeToChildProcess PredRange Presence Present Process ProcessRedir ProcessesPipeline
+syn keyword ngsType ParamsMatchN ParamsMatchY PartialPresence Path Pfx Pipe PipeCreateFail PipeFromChildProcess PipeFromChildToParentProcess PipeFromParentToChildProcess PipeToChildProcess PredRange Presence Present Process ProcessRedir ProcessesPipeline Program ProgramNotFound
 syn keyword ngsType Range RangeIter ReadFail ReadingPipeBetweenChildren Real ReentrantLock RegExp RegExpCompileFail RequireFail RequiredMethodParam Res ResDef Result ResultFail Results ResultsException RetryBodyMissing RetryFail Return
 syn keyword ngsType Seq Set Sfx SocketFile SplatMethodParam StackDepthFail Stat StatFail Stats Str SubSeq Success SwitchFail SwitchParseFail Symlink
-syn keyword ngsType Table TestFail TestMessage TestsResults Thread ThreadFail Threads Time TimeFail TtyCheckFail Type
+syn keyword ngsType Table TestFail TestMessage TestsResults Thread ThreadFail Threads Time TimeFail TmpFile TtyCheckFail Type
 syn keyword ngsType UndefinedLocalVar UserDefinedMethod
 syn keyword ngsType WritingPipeBetweenChildren
 syn keyword ngsType c_ffi_cif c_ffi_type c_pthread_attr_t c_pthread_cond_t c_pthread_mutex_t c_pthread_mutexattr_t c_pthread_t c_tm

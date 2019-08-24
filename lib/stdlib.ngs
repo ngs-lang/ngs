@@ -91,16 +91,6 @@ F assert(condition, *args) {
 	super(Bool(condition), *args)
 }
 
-doc EXPERIMENTAL! Asserts that external program exists.
-F assert_program(s:Str) {
-	r = Result({ find_in_path(s) })
-	not(r) throws AssertFail("Program not found: ${s}").set(cause = r.val)
-	s
-}
-
-TEST try assert_program('no_such_prog') catch(e) e is AssertFail
-TEST assert_program('ls') == 'ls'
-
 doc Initializes InstantiatingAbstractType.
 F init(e:InstantiatingAbstractType, t:Type) init(args())
 
@@ -4333,7 +4323,7 @@ F Bool(p:Path) {
 # TODO: better exceptions (use correct type, not string, maybe use errno)
 # TODO: support platforms with non ":" path delimiter?
 doc Finds given binary and returns it's full path.
-doc Throws ExecutableNotFound if the binary was not found.
+doc Throws ProgramNotFound if the binary was not found.
 doc Search strategy: "/" in the name of the binary means that given executable_name is a path so it's returned as-is (wrapped in Path).
 doc If PATH environment variable exists, the given directories are searched.
 doc If PATH is not set built-in value for PATH is used to search: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -4350,7 +4340,7 @@ F find_in_path(executable_name:Str) {
 	debug("process", '[find_in_path] will search')
 	ret = path.map(F(dir) Path(dir / executable_name)).first(identity, null)
 	debug("process", "[find_in_path] ${executable_name} found at ${ret}")
-	ret is Null throws ExecutableNotFound().set('path', path).set('name', executable_name)
+	ret is Null throws ProgramNotFound().set('path', path).set('name', executable_name)
 	ret
 }
 
@@ -4497,9 +4487,30 @@ F JsonData(p:Path) p.path
 # === Commands and processes (WIP) ===============
 
 {
+	doc EXPERIMENTAL!
+	doc %EX - for p in %[ls base64 dd] assert(Program(p))
+	type Program
 	type ProcessesPipeline
 	type ProcessRedir
 }
+
+doc EXPERIMENTAL!
+F init(p:Program, name:Str) init(args())
+
+# TODO: Check that the file is executable?
+# TODO: For absolute path - check that the program exists?
+doc Checks whether the given program is found in path.
+doc %RET - Bool. The program is found in path or program name is absolute
+F Bool(p:Program) Result({ find_in_path(p.name) }).Bool()
+
+F assert(p:Program) {
+	r = Result({ find_in_path(p.name) })
+	not(r) throws AssertFail("Program ${p.name} not found in path").set(cause = r.val)
+	p
+}
+
+TEST try assert(Program('no_such_prog')) catch(e) e is AssertFail
+TEST assert(Program('ls')) == Program('ls')
 
 F init(pp:ProcessesPipeline, cp:CommandsPipeline) pp.set(
 	cp = cp
@@ -4854,7 +4865,7 @@ F Str(r:CommandRedir) "<${r.typeof().name} ${r.fd} ${r.marker} ${r.datum}>"
 	type Process
 
 	doc Occurs when executable was not found in path or when executable was absolute or relative and was not found.
-	type ExecutableNotFound(Exception)
+	type ProgramNotFound(Exception)
 }
 
 ns {
@@ -5165,7 +5176,7 @@ F '$()'(p:Process) {
 
 	try {
 		p.executable = find_in_path(argv[0])
-	} catch(nf:ExecutableNotFound) {
+	} catch(nf:ProgramNotFound) {
 		throw ProcessFail(p).set('cause', nf).set('message', 'Executable not found')
 	}
 
