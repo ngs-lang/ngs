@@ -96,7 +96,17 @@ More information about the language and syntax in particular is in [ngslang.1](d
 
 ## Basic Cloud
 
-This is how an instance can be created using NGS (real working code). No state file involved!
+NGS has AWS library based on concept of [Declarative Primitives](https://ilya-sher.org/2016/07/06/declarative-primitives-or-mkdir-p-for-the-cloud/)
+
+TLDR:
+
+	* top-to-bottom execution
+	* resource-level idempotence
+	* just a more convenient scripting
+		* no dependency graph
+		* no state file
+
+This is how an instance can be created using NGS (real working code).
 
 	{
 		NGS_BUILD_CIDR = '192.168.120.0/24'
