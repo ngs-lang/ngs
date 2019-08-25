@@ -100,11 +100,11 @@ NGS has AWS library based on concept of [Declarative Primitives](https://ilya-sh
 
 TLDR:
 
-	* top-to-bottom execution
-	* resource-level idempotence
-	* just a more convenient scripting
-		* no dependency graph
-		* no state file
+* top-to-bottom execution
+* resource-level idempotence
+* just a more convenient scripting
+    * no dependency graph
+    * no state file
 
 This is how an instance can be created using NGS (real working code).
 
