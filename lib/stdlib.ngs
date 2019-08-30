@@ -6543,24 +6543,25 @@ F JsonData(t:Time) t.epoch
 srand(time())
 
 doc Pick n random unique elements from something
-doc %RET - Arr
+doc something - Something that has len(something) and something[idx]
+doc %RET - Arr or Str, depending on something
 F rand_uniq(something, n:Int) {
-	# TODO: Fix the guard - it does not work with NumRange currently
-	# guard n <= something.len()
+	l = len(something)
+	n > l throws InvalidArgument("rand_uniq() - choosing more elements than something has").set(something = something, n=n)
+	indexes = Arr(0..l)
+	indexes_len = l
 	result = []
-	safety_counter = 0
-	while len(result) < n {
-		r = rand(something)
-		if r in result {
-			safety_counter += 1
-			safety_counter == STDLIB_RAND_SAFETY_MAX throws Error("Not making progress in rand_uniq(something, n:Int)")
-		} else {
-			result.push(r)
-			safety_counter = 0
-		}
+	for(i;n) {
+		idx = rand(indexes_len)
+		result.push(something[indexes[idx]])
+		indexes[idx] = indexes[indexes_len-1]
+		indexes_len -= 1
 	}
+	something is Str returns result.join('')
 	result
 }
+
+TEST s=''; for(i;20) s+=chr(ord('A')+i); out=s.rand_uniq(20).Stats(); len(out) == 20 and out.values().all(1)
 
 doc Pick n elements from something. Uniqueness of picked elements is not guaranteed.
 doc %RET - Any
