@@ -91,5 +91,6 @@
 		# t = Table('Instances', instances)
 		instances.each(push(table, X))
 		echo(table)
+		log("Listed ${len(instances)} instances")
 	}
 }
