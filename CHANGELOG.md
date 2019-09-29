@@ -11,6 +11,7 @@
 	* Add `pmap(Eachable1, Int, Fun)` - parallel map using limited numbers of threads
 * Add experimental `TmpFile` - temporary file that is deleted automatically on exit
 * Add experimental `Program` (allows `assert(Program("dd"))`)
+* Add experimental `sortv()`
 * Add `List` linked list type
 * Add `JsonData` method which converts to JSON-compatible data structures; used by `encode_json` now.
 * Add `has_no(container, element)`
