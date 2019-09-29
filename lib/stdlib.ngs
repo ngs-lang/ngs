@@ -67,28 +67,16 @@ doc IndexNotFound exception constructor
 doc %RET - IndexNotFound object with the given message, container and key fields
 F init(e:IndexNotFound, message:Str, container, key) init(args())
 
-doc Throws AssertFail with givens message if condition is false
-doc %RET - Unspecified, do not count on this value
+doc Throws AssertFail with givens message if expr evaluates to false
+doc expr - if evaluates to false, causes AssertFail exception
+doc msg - message for the exception, defaults to "Assertion failed"
+doc %RET - expr
 doc %EX - my_array=[]
 doc %EX - # ... Code that adds elements to my_array ...
 doc %EX - assert(my_array.len() > 3, "my_array must have more than 3 elements")  # AssertFail exception, with the given message
-F assert(condition:Bool, msg:Str) not(condition) throws AssertFail(msg)
-
-doc Throws AssertFail if condition is false
-doc %RET - Unspecified, do not count on this value
-doc %EX - my_array=[]
-doc %EX - # ... Code that adds elements to my_array ...
-doc %EX - assert(my_array.len() > 3)  # AssertFail exception, with "Assertion failed" message
-F assert(condition:Bool) assert(condition, "Assertion failed")
-
-doc Throws AssertFail if condition, after conversion to Bool is false.
-doc Same as super(Bool(condition), *args) .
-doc condition - not Bool
-doc %RET - Unspecified, do not count on this value
-doc %EX - assert(my_array, "my_array must have elements at this point")
-F assert(condition, *args) {
-	guard condition is not Bool
-	super(Bool(condition), *args)
+F assert(expr, msg:Str="Assertion failed") {
+	not(expr) throws AssertFail(msg).set('expr', expr)
+	expr
 }
 
 doc Initializes InstantiatingAbstractType.
