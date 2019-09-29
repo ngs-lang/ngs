@@ -443,9 +443,9 @@ F the_one(e:Eachable1, predicate, body:Fun, found_more:Fun=nop, found_none:Fun=n
 	}
 }
 
-TEST ok = false; [1,2,11,3,4].the_one(X>10, F(the_value) { if(the_value == 11) ok = true }); ok
-TEST ok = false; [1,2,11,3,4].the_one(X>20, { does_not_matter }, found_none = { ok = true }); ok
-TEST ok = false; [1,2,11,3,4].the_one(Int, { does_not_matter }, found_more = { ok = true }); ok
+TEST ok = false; [1,2,11,3,4].the_one(X>10, F(the_value) { ok = the_value == 11 }); ok
+TEST ok = false; [1,2,11,3,4].the_one(X>20, nop, found_none = { ok = true }); ok
+TEST ok = false; [1,2,11,3,4].the_one(Int, nop, found_more = { ok = true }); ok
 
 doc Extract the only element.
 doc Throws ElementNotFound exception if there are no elements or if there is more than one element.
