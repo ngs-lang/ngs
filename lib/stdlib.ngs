@@ -5963,7 +5963,7 @@ F ~~(s:Str, r:RegExp, collect_unmatched:Bool=false) {
 		m = (~)(s, r, 0)
 		if not(m) {
 			if collect_unmatched collect(s)
-			return null
+			return
 		}
 		start_offset = m.positions[0][0]
 		next_offset = m.positions[0][1]
