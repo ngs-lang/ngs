@@ -2,11 +2,8 @@ ns {
 
 	global ArgvMatcher, init, (~), ParamsMatchY, ParamsMatchN, SwitchParseFail
 
-	doc ArgvMatcher internal type, do not use!
-	type MatchedParam(FullBox)
-
-	doc ArgvMatcher internal type, do not use!
-	type UnmatchedParam(EmptyBox)
+	type _MatchedParam(FullBox)
+	type _UnmatchedParam(EmptyBox)
 
 	type ParamsMatchY(MatchSuccess)
 	type ParamsMatchN(MatchFailure)
@@ -60,12 +57,12 @@ ns {
 
 		debug("ARGV_MATCHER", "mp=${mp}")
 
-		args = UnmatchedParam * mp.count(RequiredMethodParam)
+		args = _UnmatchedParam * mp.count(RequiredMethodParam)
 		kwargs = {}
 
 		F set_match(v) {
 			ematch mp[param_name] {
-				RequiredMethodParam args[mp[param_name].idx] = MatchedParam(v)
+				RequiredMethodParam args[mp[param_name].idx] = _MatchedParam(v)
 				OptionalMethodParam kwargs[param_name] = v
 			}
 		}
@@ -134,17 +131,17 @@ ns {
 		}
 
 		positionals.each(F(arg) {
-			idx = args.index(UnmatchedParam, dflt=null)
+			idx = args.index(_UnmatchedParam, dflt=null)
 			if idx is Null {
 				if mp.len() > args.len() {
 					# Optional parameter
-					args.push(UnmatchedParam())
+					args.push(_UnmatchedParam())
 					idx = args.len() - 1
 				}
 			}
 			if idx is Null {
 				if mp.arr_splat() {
-					args.push(MatchedParam(arg))
+					args.push(_MatchedParam(arg))
 					return null
 				} else {
 					throw match_ret(ParamsMatchN().set('message', "Too many arguments"))
@@ -157,7 +154,7 @@ ns {
 				throw match_ret(ParamsMatchN().set('message', "Failed to convert to desired type for parameter ${mp[idx].name}"))
 
 			}
-			args[idx] = MatchedParam(v)
+			args[idx] = _MatchedParam(v)
 		})
 
 		for(i;args.len()) {
