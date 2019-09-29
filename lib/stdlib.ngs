@@ -4560,6 +4560,7 @@ F read(fd:Int, count=null) {
 	ret = []
 	to_read = count
 	while true {
+		debug("file", "[FD $fd] Will c_read()")
 		result = c_read(fd, to_read or 4096)
 		# debug("file", "[FD $fd] Read ${result[0]} bytes <<${result.Box(1).dflt('(none)').get().SafeStr()}>>")
 		debug("file", "[FD $fd] Read ${result[0]} bytes")
