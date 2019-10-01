@@ -2170,7 +2170,7 @@ F ~(arr:Arr, r:PredRange) {
 	i is Null returns MatchFailure(arr, r)
 	ret = MatchSuccess([arr[i]])
 	ret.named = {}
-	ret.positions = [[i.start, i.end]]
+	ret.positions = [i]
 	ret.whole = ret.matches[0]
 	ret.before = arr[0..i.start]
 	ret.after = arr[i.end..null]
@@ -3758,7 +3758,7 @@ F ~(haystack:Str, needle:Str, offset:Int=0) {
 	l = needle.len()
 	ret = MatchSuccess([needle])
 	ret.named = {}
-	ret.positions = [[p, p+l]]
+	ret.positions = [p..p+l]
 	ret.whole = ret.matches[0]
 	ret.before = haystack[0..p]
 	ret.after = haystack[p+l..null]
@@ -3778,8 +3778,8 @@ F ~~(haystack:Str, needle:Str, collect_unmatched:Bool=false) {
 			if collect_unmatched collect(haystack)
 			return null
 		}
-		start_offset = m.positions[0][0]
-		next_offset = m.positions[0][1]
+		start_offset = m.positions[0].start
+		next_offset = m.positions[0].end
 		if collect_unmatched and start_offset then collect(haystack[0..start_offset])
 		collect(m)
 		while true {
@@ -3789,12 +3789,12 @@ F ~~(haystack:Str, needle:Str, collect_unmatched:Bool=false) {
 			m = (~)(haystack, needle, next_offset)
 			if m {
 				if collect_unmatched {
-					if next_offset != m.positions[0][0] {
-						collect(haystack[next_offset..m.positions[0][0]])
+					if next_offset != m.positions[0].start {
+						collect(haystack[next_offset..(m.positions[0].start)])
 					}
 				}
-				start_offset = m.positions[0][0]
-				next_offset = m.positions[0][1]
+				start_offset = m.positions[0].start
+				next_offset = m.positions[0].end
 				collect(m)
 				continue
 			}
@@ -5905,7 +5905,7 @@ doc offset - search start offset
 doc options - options to pass to underlying PCRE_EXEC(3).
 doc %RET - MatchResult
 doc %EX - globals().keys().filter(/^C_PCRE/)  # lists possible options
-doc %EX - "xabcy" ~ /a(.)c/  # <MatchSuccess matches=['abc','b'] named={} positions=[[1,4],[2,3]] whole=abc before=x after=y>
+doc %EX - "xabcy" ~ /a(.)c/  # <MatchSuccess matches=['abc','b'] named={} positions=[<NumRange 1..4 include_start=true include_end=false step=1>,<NumRange 2..3 include_start=true include_end=false step=1>] whole=abc before=x after=y>
 doc %EX - m = ("xabcy" ~ /a(?P<mychar>.)c/)
 doc %EX - echo(m.named.mychar)  # Outputs: b
 doc %AUTO - my_str ~ my_regexp
@@ -5927,7 +5927,7 @@ F ~(s:Str, r:RegExp, offset:Int=0, options:Int=0) {
 		})
 	)
 	ret.named = r.names.mapv(F(capture_num) try ret.matches[capture_num])
-	ret.positions = result.map(2, F(start_pos, end_pos) [start_pos, end_pos])
+	ret.positions = result.map(2, NumRange)
 	ret.whole = ret.matches[0]
 	ret.before = s[0..result[0]]
 	ret.after = s[result[1]..null]
@@ -5959,8 +5959,8 @@ F ~~(s:Str, r:RegExp, collect_unmatched:Bool=false) {
 			if collect_unmatched collect(s)
 			return
 		}
-		start_offset = m.positions[0][0]
-		next_offset = m.positions[0][1]
+		start_offset = m.positions[0].start
+		next_offset = m.positions[0].end
 		if collect_unmatched and start_offset then collect(s[0..start_offset])
 		collect(m)
 		option_bits = r.options
@@ -5977,12 +5977,12 @@ F ~~(s:Str, r:RegExp, collect_unmatched:Bool=false) {
 			m = (~)(s, r, next_offset, options)
 			if m {
 				if collect_unmatched {
-					if next_offset != m.positions[0][0] {
-						collect(s[next_offset..m.positions[0][0]])
+					if next_offset != m.positions[0].start {
+						collect(s[next_offset..m.positions[0].start])
 					}
 				}
-				start_offset = m.positions[0][0]
-				next_offset = m.positions[0][1]
+				start_offset = m.positions[0].start
+				next_offset = m.positions[0].end
 				collect(m)
 				continue
 			}
@@ -6047,7 +6047,7 @@ doc %RET - Str
 F -(s:Str, r:RegExp) {
 	m = s ~ r
 	not(m) throws InvalidArgument('String does not contain the RegExp').set('string', s).set('regexp', r)
-	s[0..m.positions[0][0]] + s[m.positions[0][1]..null]
+	s[0..m.positions[0].start] + s[m.positions[0].end..null]
 }
 
 TEST "abc01def23" - /[0-9]+/ == "abcdef23"
