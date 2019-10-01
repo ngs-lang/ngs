@@ -9,7 +9,7 @@
 		c.lock = if lock is not Null lock else Lock()
 		c.cond = c_pthread_cond_t()
 		result = c.cond.c_pthread_cond_init()
-		result throws CException("pthread_cond_init() failed")
+		result throws CError("pthread_cond_init() failed")
 		debug("conc", "Cond#init - after c_pthread_cond_init (${result})")
 	}
 
@@ -26,7 +26,7 @@
 			while not(check_condition()) {
 				debug("conc", "Cond#wait - in loop, before c_pthread_cond_wait")
 				result = c_pthread_cond_wait(c.cond, c.lock.lock)
-				result throws CException("pthread_cond_wait() failed")
+				result throws CError("pthread_cond_wait() failed")
 				debug("conc", "Cond#wait - in loop, after c_pthread_cond_wait (${result})")
 			}
 			debug("conc", "Cond#wait - after wait loop, will run cb")
@@ -41,7 +41,7 @@
 	F notify(c:Cond) {
 		debug("conc", "Cond#notify - acquired lock")
 		result = c.cond.c_pthread_cond_signal()
-		result throws CException("pthread_cond_signal() failed")
+		result throws CError("pthread_cond_signal() failed")
 		debug("conc", "Cond#notify - releasing lock (${result})")
 	}
 
@@ -49,7 +49,7 @@
 	F notify_all(c:Cond) {
         debug("conc", "Cond#notify - acquired lock")
         result = c.cond.c_pthread_cond_broadcast()
-        result throws CException("pthread_cond_broadcast() failed")
+        result throws CError("pthread_cond_broadcast() failed")
         debug("conc", "Cond#notify - releasing lock (${result})")
     }
 

@@ -1114,21 +1114,21 @@ TEST type T; t=T(); t.x=1; t2=t.copy(); t2.x==1
 # === Exceptions =================================
 
 {
-	# TODO: Investigate why type CException(Error) does not work at this point
+	# TODO: Investigate why type CError(Error) does not work at this point
 	doc Base type for exceptions arising from errors returned by calling C functions
-	type CException
-	CException.inherit(Error)
+	type CError
+	CError.inherit(Error)
 
-	doc CException constructor. In addition to storing message field, adds errno and errno_name fields.
-	F init(e:CException, message:Str) {
+	doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
+	F init(e:CError, message:Str) {
 		errno = c_errno()
 		super(e, message)
 		e.errno = errno
 		e.errno_name = c_strerror(e.errno)
 	}
 
-	doc CException constructor. In addition to storing message field, adds errno and errno_name fields.
-	F init(e:CException, errno:Int, message:Str) {
+	doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
+	F init(e:CError, errno:Int, message:Str) {
 		super(e, message)
 		e.errno = errno
 		e.errno_name = c_strerror(e.errno)
@@ -1136,7 +1136,7 @@ TEST type T; t=T(); t.x=1; t2=t.copy(); t2.x==1
 
 	doc Exception representing a failure to kill() a process
 	type KillFail
-	KillFail.inherit(CException)
+	KillFail.inherit(CError)
 }
 
 # === Lock =======================================
@@ -4210,7 +4210,7 @@ F exit(s:Str, status=1) throw NormalExit(s, status.ExitCode())
 		type FifoFile(Path)    # S_IFIFO
 
 	doc Represents a failure in stat() system call.
-	type StatFail(CException)
+	type StatFail(CError)
 
 }
 
@@ -4377,7 +4377,7 @@ doc %RET - Path
 doc %EX - Path("tmp") / "v8"  # <Path path=tmp/v8>
 F /(a:Path, b:Str) Path(a.path / b)
 
-{ type DirFail(CException) }
+{ type DirFail(CError) }
 
 # TODO: recode after https://github.com/ngs-lang/ngs/issues/45 is solved
 doc List directory contents. Warning: "." and ".." are included.
@@ -4439,7 +4439,7 @@ F Arg(p:Path) p.path
 
 {
 	doc Represents a failure in chdir() system call.
-	type CdFail(CException)
+	type CdFail(CError)
 }
 
 # TODO p must be either Path or a Dir, not any subtype of Path
@@ -4563,7 +4563,7 @@ F read(fd:Int, count=null) {
 			if e != C_EINTR {
 				debug("file", "[FD $fd] read failed, errno $e")
 				# TODO: Better exception
-				throw ReadFail("Failed to read()").set('fd', fd).set('cause', CException("Failed to c_read()"))
+				throw ReadFail("Failed to read()").set('fd', fd).set('cause', CError("Failed to c_read()"))
 			}
 		}
 	}
@@ -4587,7 +4587,7 @@ doc fd - File descriptor to write to
 doc %RET - unspecified at this time, do not count on it
 F write(fd:Int, s:Str) fd.c_write(s)
 
-{ type TtyCheckFail(CException) }
+{ type TtyCheckFail(CError) }
 
 doc Check whether given fd represents a TTY. Uses ISATTY(3).
 doc Throws TtyCheckFail.
@@ -4618,7 +4618,7 @@ F isatty(fd:Int) {
 				type CollectingPipeFromChildToParentProcess(PipeFromChildProcess)
 			type WritingPipeBetweenChildren(PipeFromChildProcess)
 	doc Represents failure of creating a Pipe when calling PIPE(2)
-	type PipeCreateFail(CException)
+	type PipeCreateFail(CError)
 }
 
 # TODO: better exceptions (use correct type, not string, maybe use errno)
@@ -4690,7 +4690,7 @@ F dup2_reading_end(p:Pipe, newfd:Int) dup2(p.read_fd, newfd)
 
 # --- File ---
 
-{ type FileIOFail(CException) }
+{ type FileIOFail(CError) }
 
 doc Create File object from the given path. The file is not open.
 doc %EX - f = File('/tmp/myfile')
@@ -5176,7 +5176,7 @@ F '$()'(p:Process) {
 
 	pid = c_fork()
 
-	pid == -1 throws ProcessFail("Could not spawn a process").set('cause', CException("Failed to fork()"))
+	pid == -1 throws ProcessFail("Could not spawn a process").set('cause', CError("Failed to fork()"))
 
 	debug("process", "PID after fork: $pid")
 
@@ -6459,7 +6459,7 @@ ns {
 
 {
 	type Time
-	type TimeFail(CException)
+	type TimeFail(CError)
 }
 
 TIME_FORMAT = ENV.get('NGS_TIME_FORMAT', '%F %T %Z')
@@ -6738,7 +6738,7 @@ F match(a,b) Pred(b)(a)
 
 # === File =======================================
 
-doc Check whether current process has the specified access to the file. Wrapper around ACCESS(2). Throws CException.
+doc Check whether current process has the specified access to the file. Wrapper around ACCESS(2). Throws CError.
 doc mode - One of the file ACCESS::* modes, defaults to ACCESS::F_OK (test file existance only).
 doc %RET - Bool
 doc %EX - access(File("mydata"), ACCESS::R_OK).not() throws Error("No access to data file").set("file", "mydata")
@@ -6749,7 +6749,7 @@ F access(f:File, mode:Int=ACCESS::F_OK) {
 	e = c_errno()
 	e == C_EACCES returns false
 	# TODO: Better exception
-	throw CException(e, "access() failed")
+	throw CError(e, "access() failed")
 }
 
 # Hope this is correct for all platforms
