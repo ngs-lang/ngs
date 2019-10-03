@@ -3767,10 +3767,6 @@ F ~(haystack:Str, needle:Str, offset:Int=0) {
 
 doc Find all non-overlapping matches of a substring in a string.
 doc %RET - if collect_unmatched - Arr with each element being MatchSuccess or Str, if not collect_unmatched - Arr of MatchSuccess
-doc %EX - ["key=value", "key2=value2"].map(F(kv) {
-doc %EX -   m = kv ~ "="
-doc %EX -   [m.before, m.after]
-doc %EX - }).Hash()  # {'key': 'value', 'key2': 'value2'}
 F ~~(haystack:Str, needle:Str, collect_unmatched:Bool=false) {
 	collector {
 		m = (~)(haystack, needle, 0)
