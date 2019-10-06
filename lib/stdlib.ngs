@@ -5012,25 +5012,15 @@ F wait(p:Process) {
 		first_failure throws ProcessFail('Error in reading/writing thread').set(process=p, cause=first_failure)
 	}
 
+	debug("process", "[wait] joining reading and writing threads")
+	%[reading_threads writing_threads].each(join_threads)
+
+
 	debug("process", "[wait] will waitpid(${p.pid})")
 	w = c_waitpid(p.pid)
 	debug("process", "[wait] waitpid(${p.pid}) -> ${w}")
 	p.exit_code = C_WEXITSTATUS(w[1])
 	p.exit_signal = C_WTERMSIG(w[1])
-
-	# Solves bug #292 - start
-	if p.exit_signal {
-		debug("process", "[wait] process has exit signal, will close readers")
-		p.redirects.filter({'datum': CollectingPipeFromChildToParentProcess}).each(F(r:ProcessRedir) {
-			debug("process", "closing ${r}")
-			r.datum.close_reading_end()
-		})
-	}
-	# Solves bug #292 - end
-
-	debug("process", "[wait] joining reading and writing threads")
-	%[reading_threads writing_threads].each(join_threads)
-
 	finished_ok(p) returns p
 	message = collector/Lines() {
 		argv0 = ("'" + try p.command.argv[0] + "'") tor '(with unknown name)'
@@ -5046,13 +5036,6 @@ F wait(p:Process) {
 	}
 	throw ProcessFail(p).set('message', message)
 }
-
-# Solves bug #292 - start
-# without $(sleep 1) - succeeds also without closing reader end of pipe
-# without echo XYZ - succeeds also without closing reader end of pipe
-# apparently when no data went through pipe, the kill works ok
-TEST time({p=$(ok_sig: bash -c "echo XYZ;sleep 5" &); $(sleep 1); p.kill(); p.wait()}) < 2000000
-# Solves bug #292 - end
 
 doc Wait for all processes to finish.
 F wait(pp:ProcessesPipeline) {
