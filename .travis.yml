@@ -9,3 +9,5 @@ before_script:
   - sudo apt-get update
 script:
   - (./install-linux.sh && make tests)
+after_failure:
+  - cat build/Testing/Temporary/LastTest.log
