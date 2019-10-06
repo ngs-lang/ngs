@@ -4532,8 +4532,6 @@ F dup2(oldfd:Int, newfd:Int) {
 #       This would allow simple handling of modifications
 #       for exec'ed processes.
 
-# TODO: detect and process errors, throw exception(s)
-# TODO: better exceptions (use correct type, not string, maybe use errno)
 doc Read all data from a file referenced by file descriptor without parsing it.
 doc fd - File descriptor to read from
 doc %RET - Str
@@ -4958,7 +4956,7 @@ ns {
 
 	_known_programs = %{
 		%[false] 1
-		%[expr grep ping test] %[0 1]
+		%[expr grep pgrep ping test] %[0 1]
 	}
 	if OS.linux {
 		_known_programs[%[fuser]] = %[0 1]
