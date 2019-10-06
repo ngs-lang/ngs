@@ -52,7 +52,6 @@
 * Fix Pred(SubSeq) and Pred(RegExp) to prevent endless recursion
 * Fix `$(... >${false})` syntax
 * Improve `rand_uniq` implementation
-* Fix issue with child process kill() when capturing child's output
 
 ### Work in progress
 
