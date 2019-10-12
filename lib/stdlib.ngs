@@ -635,9 +635,9 @@ doc %STATUS - deprecated
 F ~(something, pred) {
 	warn("Using deprecated ~(something:Any, pred:Any) with types something:${typeof(something)} pred:${typeof(pred)}")
 	if Pred(pred)(something) {
-		MatchSuccess([something])
+		MatchSuccess([something], pred)
 	} else {
-		MatchFailure()
+		MatchFailure(something, pred)
 	}
 }
 
@@ -791,7 +791,7 @@ F ~(x, o:OneOf) {
 	o.each(F(alt) {
 		if (m = x ~ alt) throw finish(m)
 	})
-	MatchFailure()
+	MatchFailure(x, o)
 }
 
 TEST ("abc" ~ OneOf(/x/, /a/)) is MatchSuccess
@@ -1140,6 +1140,16 @@ F copy(nti:NormalTypeInstance) {
 }
 
 TEST type T; t=T(); t.x=1; t2=t.copy(); t2.x==1
+
+doc Check whether x is of type t
+doc %RET - MatchResult
+F ~(x, t:Type) {
+	if x is t {
+		MatchSuccess([x], t)
+	} else {
+		MatchFailure(x, t)
+	}
+}
 
 # === Exceptions =================================
 
@@ -2198,7 +2208,7 @@ doc %RET - MatchResult
 F ~(arr:Arr, r:PredRange) {
 	i = indexes(arr, r, dflt=null)
 	i is Null returns MatchFailure(arr, r)
-	ret = MatchSuccess([arr[i]])
+	ret = MatchSuccess([arr[i]], r)
 	ret.named = {}
 	ret.positions = [i]
 	ret.whole = ret.matches[0]
@@ -3784,9 +3794,9 @@ doc %EX - "abc" ~ "bc"  # <MatchSuccess ...>
 doc %EX - "abc" ~ "X"   # <MatchFailure>
 F ~(haystack:Str, needle:Str, offset:Int=0) {
 	p = pos(haystack, needle, offset)
-	p is Null returns MatchFailure()
+	p is Null returns MatchFailure(haystack, needle)
 	l = needle.len()
-	ret = MatchSuccess([needle])
+	ret = MatchSuccess([needle], needle)
 	ret.named = {}
 	ret.positions = [p..p+l]
 	ret.whole = ret.matches[0]
@@ -5765,9 +5775,13 @@ F config(k:Str, v) {
 			type MustSfx(Sfx)
 }
 
+# TODO: warn()
 doc Successful match constructor
+doc %STATUS - deprecated
 F init(ms:MatchSuccess, matches:Arr) init(args())
 
+doc Successful match constructor
+F init(ms:MatchSuccess, matches:Arr, pattern) init(args())
 
 doc Unsuccessful constructor
 F init(mf:MatchFailure, data, pattern) init(args())
@@ -5879,12 +5893,12 @@ TEST try "abcde" - Ifx("xy") catch(mf:InvalidArgument) true
 TEST "abcde" - MaybeIfx("xy") == "abcde"
 
 doc Check whether s starts with pfx.
-doc %EX - "abcde" ~ Pfx("ab")  # <MatchSuccess matches=['ab'] before= after=cde>
+doc %EX - "abcde" ~ Pfx("ab")  # <MatchSuccess matches=[ab] pattern=<MustPfx ab> before= after=cde>
 doc %EX - "abcde" ~ Pfx("xy")  # <MatchFailure >
 doc %RET - MatchResult
 F ~(s:Str, pfx:Pfx) {
-	not(s.starts_with(pfx.val)) returns MatchFailure()
-	ret = MatchSuccess([pfx.val])
+	not(s.starts_with(pfx.val)) returns MatchFailure(s, pfx)
+	ret = MatchSuccess([pfx.val], pfx)
 	ret.before = ''
 	ret.after = s[pfx.val.len()..null]
 	ret
@@ -5895,12 +5909,12 @@ doc %RET - MatchResult
 F ~(s:Str, i:Ifx) s ~ i.val
 
 doc Check whether s ends with sfx.
-doc %EX - "abcde" ~ Sfx("de")  # <MatchSuccess matches=['de'] before=abc after=>
+doc %EX - "abcde" ~ Sfx("de")  # <MatchSuccess matches=[de] pattern=<MustSfx de> before=abc after=>
 doc %EX - "abcde" ~ Pfx("xy")  # <MatchFailure >
 doc %RET - MatchResult
 F ~(s:Str, sfx:Sfx) {
-	not(s.ends_with(sfx.val)) returns MatchFailure()
-	ret = MatchSuccess([sfx.val])
+	not(s.ends_with(sfx.val)) returns MatchFailure(s, sfx)
+	ret = MatchSuccess([sfx.val], sfx)
 	ret.before = s[0..(s.len() - sfx.val.len())]
 	ret.after = ''
 	ret
@@ -5929,14 +5943,14 @@ doc offset - search start offset
 doc options - options to pass to underlying PCRE_EXEC(3).
 doc %RET - MatchResult
 doc %EX - globals().keys().filter(/^C_PCRE/)  # lists possible options
-doc %EX - "xabcy" ~ /a(.)c/  # <MatchSuccess matches=['abc','b'] named={} positions=[<NumRange 1..4 include_start=true include_end=false step=1>,<NumRange 2..3 include_start=true include_end=false step=1>] whole=abc before=x after=y>
+doc %EX - "xabcy" ~ /a(.)c/  # <MatchSuccess matches=[abc,b] pattern=<RegExp> named={} positions=[<NumRange 1..4 include_start=true include_end=false step=1>,<NumRange 2..3 include_start=true include_end=false step=1>] whole=abc before=x after=y>
 doc %EX - m = ("xabcy" ~ /a(?P<mychar>.)c/)
 doc %EX - echo(m.named.mychar)  # Outputs: b
 doc %AUTO - my_str ~ my_regexp
 F ~(s:Str, r:RegExp, offset:Int=0, options:Int=0) {
 	result = c_pcre_exec(r, s, offset, options)
 	if result is Int {
-		result == C_PCRE_ERROR_NOMATCH returns MatchFailure()
+		result == C_PCRE_ERROR_NOMATCH returns MatchFailure(s, r)
 		result == 0 throws Error("Too many captures. Max 20")
 		result < 0 throws Error("RegExp matching error in c_pcre_exec").set('code', result)
 		assert(false, "Unexpected integer result from c_pcre_exec")
@@ -5949,6 +5963,7 @@ F ~(s:Str, r:RegExp, offset:Int=0, options:Int=0) {
 			else
 				null
 		})
+		r
 	)
 	ret.named = r.names.mapv(F(capture_num) try ret.matches[capture_num])
 	ret.positions = result.map(2, NumRange)
