@@ -629,6 +629,18 @@ F push_all(dst, e:Eachable1) {
 
 TEST a=[1,2]; a.push_all([3,4]); a==[1,2,3,4]
 
+
+doc EXPERIMENTAL! Do not use! Especially don't count on returned value beyond obvious Bool(x) behaviour. Match anything.
+doc %STATUS - deprecated
+F ~(something, pred) {
+	warn("Using deprecated ~(something:Any, pred:Any) with types something:${typeof(something)} pred:${typeof(pred)}")
+	if Pred(pred)(something) {
+		MatchSuccess([something])
+	} else {
+		MatchFailure()
+	}
+}
+
 # === Eachable1 ==================================
 
 # Should be low priority (ordered before others) method
@@ -757,6 +769,35 @@ F collector(al:ArrLike, body:Fun) {
 	body(F(elt) al.push(elt))
 	al
 }
+
+# === OneOf(ArrLike) =============================
+
+{
+	doc EXPERIMENTAL! Do not use!
+	doc Should probably inherit from Set, not ArrLike.
+	type OneOf
+	OneOf.inherit(ArrLike)
+}
+
+doc EXPERIMENTAL! Do not use!
+F init(o:OneOf, *alternatives) {
+	guard alternatives.len() > 1
+	super(o, alternatives)
+}
+
+doc EXPERIMENTAL! Do not use!
+F ~(x, o:OneOf) {
+	finish = Return()
+	o.each(F(alt) {
+		if (m = x ~ alt) throw finish(m)
+	})
+	MatchFailure()
+}
+
+TEST ("abc" ~ OneOf(/x/, /a/)) is MatchSuccess
+TEST ("abc" ~ OneOf(/x/, /y/)) is MatchFailure
+TEST ("abc" ~ OneOf([Int, Str])) is MatchSuccess
+TEST ("abc" ~ OneOf([Int, Num])) is MatchFailure
 
 # === HashLike ===================================
 # TODO [doc]: examples in methods
@@ -956,17 +997,6 @@ F Type(t:Str, doc, ns, parents:Arr) {
 }
 
 TEST type T1; type T2(T1); T2() is T1
-
-doc EXPERIMENTAL! Do not use! Especially don't count on returned value beyond obvious Bool(x) behaviour. Match anything.
-doc %STATUS - deprecated
-F ~(something, pred) {
-	warn("Using deprecated ~(something:Any, pred:Any) with types something:${typeof(something)} pred:${typeof(pred)}")
-	if Pred(pred)(something) {
-		MatchSuccess([something])
-	} else {
-		MatchFailure()
-	}
-}
 
 doc String representation of a type
 doc %RET - "<Type NAME>"

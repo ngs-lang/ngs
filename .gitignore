@@ -19,3 +19,5 @@ syntax.include
 syntax.auto.h
 pcre_constants.include
 junk
+
+.vagrant/
