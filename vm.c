@@ -300,20 +300,6 @@ METHOD_RESULT native_false METHOD_PARAMS {
 	METHOD_RETURN(MAKE_FALSE);
 }
 
-METHOD_RESULT native_Return EXT_METHOD_PARAMS {
-	(void) vm;
-	(void) argv;
-	if(!IS_NULL(THIS_FRAME.ReturnInstance)) {
-		METHOD_RETURN(THIS_FRAME.ReturnInstance);
-	}
-	*result = make_normal_type_instance(vm->Return);
-	set_normal_type_instance_field(*result, make_string("closure"), THIS_FRAME.closure);
-	set_normal_type_instance_field(*result, make_string("depth"), MAKE_INT(ctx->stack_ptr-1));
-	set_normal_type_instance_field(*result, make_string("val"), MAKE_NULL);
-	THIS_FRAME.ReturnInstance = *result;
-	METHOD_RETURN(*result);
-}
-
 METHOD_RESULT native_plus_arr_arr METHOD_PARAMS {
 	*result = make_array(ARG_LEN(0) + ARG_LEN(1));
 	memcpy(ARRAY_ITEMS(*result)+0, ARG_DATA_PTR(0), sizeof(VALUE)*ARG_LEN(0));
@@ -2613,29 +2599,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 				MKSUBTYPE(JsonDecodeFail, DecodeFail);
 				_doc(vm, "", "Represents an error decoding JSON data.");
 
-		MKSUBTYPE(Return, Exception);
-		_doc(vm, "", "Return instance type, when thrown, will exit the call frame where they were created returning given value.");
-		_doc_arr(vm, "%EX",
-			"{",
-			"    F find_the_one(haystack:Arr, needle) {",
-			"        ret_from_find_the_one = Return()",
-			"        echo(ret_from_find_the_one)",
-			"        haystack.each(F(elt) {",
-			"                elt == needle throws ret_from_find_the_one(\"Found it!\")",
-			"        })",
-			"        \"Not found\"",
-			"    }",
-			"    echo([10,20].find_the_one(20))",
-			"    echo([10,20].find_the_one(30))",
-			"}",
-			"# Output:",
-			"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
-			"#   Found it!",
-			"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
-			"#   Not found",
-			NULL
-		);
-
 	MKTYPE(Backtrace);
 	_doc(vm, "", "Represents stack trace");
 	_doc(vm, "frames", "Array of locations. Each element of the array is a Hash with \"ip\" and \"closure\" properties.");
@@ -2764,22 +2727,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Do not use directly! Check whether global variable is defined by index.");
 	register_global_func(vm, 1, "ll_set_global_variable",        &native_ll_set_global_variable,         2, "idx",    vm->Int,    "val", vm->Any);
 	_doc(vm, "", "Do not use directly! Set global variable by index.");
-
-	// Return
-	register_global_func(vm, 1, "Return",          &native_Return,   0);
-	_doc(vm, "", "Get closure-specific Return type. Throwing it, will return from the closure");
-	_doc_arr(vm, "%EX",
-		"F f() Return(); f()  # <Return closure=<UserDefinedMethod f at <command line -pi switch>:2> depth=4 val=null>",
-		"",
-		"F first(r:NumRange, predicate:Fun) {",
-		"	finish = Return()",
-		"	r.each(F(i) {",
-		"		predicate(i) throws finish(i)",
-		"	})",
-		"	null",
-		"}",
-		NULL
-	);
 
 	// CLib and c calls
 	register_global_func(vm, 1, "c_dlopen",        &native_c_dlopen_str_int,   2, "filename", vm->Str,        "flags",  vm->Int);
@@ -4086,7 +4033,6 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		ctx->frames[ctx->frame_ptr].do_call_method_not_found_handler = 1;
 		ctx->frames[ctx->frame_ptr].do_call_call = 1;
 		ctx->frames[ctx->frame_ptr].last_ip = 0;
-		ctx->frames[ctx->frame_ptr].ReturnInstance = MAKE_NULL;
 		ctx->frame_ptr++;
 		// MAX_FRAMES - 1 to allow DEEPER_FRAME to always work without checks
 		if(ctx->frame_ptr >= MAX_FRAMES-1) {
@@ -4826,11 +4772,6 @@ end_main_loop:
 
 exception:
 	// *result is the exception
-	if (IS_NORMAL_TYPE_INSTANCE(*result) && (result->ptr == THIS_FRAME.ReturnInstance.ptr)) {
-		mr = get_normal_type_instace_field(*result, make_string("val"), result);
-		ctx->stack_ptr = saved_stack_ptr;
-		return mr;
-	}
 	if (THIS_FRAME.try_info_ptr) {
 		// We have local exception handler
 		THIS_FRAME.try_info_ptr--;

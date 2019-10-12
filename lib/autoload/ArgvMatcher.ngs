@@ -43,15 +43,13 @@ ns {
 	doc %RET - Match (ParamsMatchY on success, ParamsMatchN on failure). If ParamsMatchY is returned it has "matches" field with values in suitable order to call c. If ParamsMatchN is returned, it has "message" field explaining why there was no match. Currently it's not printed anywhere.
 	doc %EX - ArgvMatcher; (["--b", "B", "A", "C"] ~ F(a,b,c) 7).matches  # %[A B C]
 	doc %EX - (["A", "C", "D", "--b", "B"] ~ ArgvMatcher("positionals", "a") do F(a,b) 7).matches  # %[%[A C D] B]
-	F ~(argv:Arr, udm:UserDefinedMethod) {
+	F ~(argv:Arr, udm:UserDefinedMethod) block b {
 
 		debug("ARGV_MATCHER", "Trying to match argv=${argv} udm=${udm}")
 
 		LONG_SW_PFX = Pfx('--')
 		SHORT_SW_PFX = Pfx('-')
 		NEG_PFX = Pfx('no-')
-
-		match_ret = Return()
 
 		mp = MethodParams(udm)
 
@@ -144,14 +142,14 @@ ns {
 					args.push(_MatchedParam(arg))
 					return null
 				} else {
-					throw match_ret(ParamsMatchN().set('message', "Too many arguments"))
+					b.return(ParamsMatchN().set('message', "Too many arguments"))
 				}
 			}
 			debug("ARGV_MATCHER", "Setting matched args idx=$idx arg=$arg type-to-convert-to=${mp[idx].type}")
 			try {
 				v = arg.decode(mp[idx].type)
 			} catch(e) {
-				throw match_ret(ParamsMatchN().set('message', "Failed to convert to desired type for parameter ${mp[idx].name}"))
+				b.return(ParamsMatchN().set('message', "Failed to convert to desired type for parameter ${mp[idx].name}"))
 
 			}
 			args[idx] = _MatchedParam(v)

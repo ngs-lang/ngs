@@ -281,6 +281,8 @@ command =
 	|
 	namespace
 	|
+	block
+	|
 	if
 	|
 	while
@@ -653,6 +655,7 @@ basic-expression =
 	| continue
 	| namespace
 	| collector
+	| block
 	| guard
 	| try-catch
 	| throw
@@ -1611,6 +1614,18 @@ collector-init =
 		MAKE_NODE(arr, ARR_LIT_NODE);
 		$$ = arr;
 	}
+
+block = "block" space i:identifier space c:code-block {
+	MAKE_NODE(ret, CALL_NODE);
+		MAKE_IDENTIFIER_NODE(block_identifier, "block");
+		MAKE_NODE(args, ARGS_NODE);
+			MAKE_REQ_ARG_NODE(a1, wrap_in_func(c, 0, location, "Block syntax body", 0, 1, ngs_strdup(i->name), "Any"));
+			args->first_child = a1;
+		ret->first_child = block_identifier;
+		block_identifier->next_sibling = args;
+	$$ = ret;
+	CAPTURE_LOCATION($$);	
+}
 
 guard = "guard" space c:code-block {
 	MAKE_NODE(ret, GUARD_NODE);

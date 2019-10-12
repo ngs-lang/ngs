@@ -652,22 +652,18 @@ Examples of `return`, `returns` and last expression value as result of a method.
 
 ## Returning from inner method
 
-Use `Return` type to return from inner methods.
+Use `block NAME BODY` syntax to return from inner methods.
 
-	F find_the_one(haystack:Arr, needle) {
-		ret_from_find_the_one = Return()
-		echo(ret_from_find_the_one)
+	F find_the_one(haystack:Arr, needle) block b {
 		haystack.each(F(elt) {
-			elt == needle throws ret_from_find_the_one("Found it!")
+			if elt == needle then b.return("Found it!")
 		})
 		"Not found"
 	}
 	echo([10,20].find_the_one(20))
 	echo([10,20].find_the_one(30))
 	# Output:
-	#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>
 	#   Found it!
-	#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>
 	#   Not found
 
 ## Referencing specially named methods

@@ -100,8 +100,6 @@ typedef struct {
 	// For stack trace
 	IP last_ip;
 
-	VALUE ReturnInstance;
-
 } FRAME;
 
 // Plan: have exactly one context per thread.
@@ -210,8 +208,6 @@ struct VM {
 			VALUE DlopenFail;
 			VALUE DecodeFail;
 				VALUE JsonDecodeFail;
-
-	VALUE Return;
 
 	VALUE Backtrace;
 

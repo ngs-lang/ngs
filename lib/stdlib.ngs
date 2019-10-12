@@ -1,3 +1,36 @@
+{
+	doc The type of the NAME variable used in syntax: block NAME BODY
+	doc %AUTO block NAME BODY
+	type Block
+
+	doc %AUTO block NAME { NAME.return(VAL) }
+	type ReturnFromBlock
+	ReturnFromBlock.inherit(Exception)
+
+	doc %STATUS - internal
+	F init(rfb: ReturnFromBlock, block, val) init(args())
+
+	doc %AUTO block NAME BODY
+	doc %EX - block b { calc(); if answer_found then b.return(42); more_calc(); another_answer }
+	F block(body:Fun) {
+		b = Block()
+		try {
+			body(b)
+		} catch(rfb: ReturnFromBlock) {
+			guard rfb.block === b
+			rfb.val
+		}
+	}
+
+	doc %STATUS - internal
+	doc %AUTO block NAME { NAME.return(VAL) }
+	F return(b:Block, val) throw ReturnFromBlock(b, val)
+
+	TEST block b { b.return(1); 2 } == 1
+	TEST block b { "blah"; 2 } == 2
+	TEST block b1 { [block b2 { b2.return(2); 0 }, 1] } == [2, 1]
+}
+
 STDLIB_EOL = "\n"
 STDLIB_PATH_SEP = '/'
 STDLIB_MAX_RAND_REAL = Real(RAND_MAX)
@@ -100,25 +133,9 @@ F '::='(nti:NormalTypeInstance, k, v) nti.(k) = v
 doc Set Hash key. It's implemented to complete the :: operator. There is no particular use case.
 F '::='(h:Hash, k, v) h[k] = v
 
-# === Return =====================================
-
-doc Implements calling of Return type instances
-doc like the finish(i) call in the example below
-doc %EX - F first(r:NumRange, predicate:Fun) {
-doc %EX - 	finish = Return()
-doc %EX - 	r.each(F(i) {
-doc %EX - 		predicate(i) throws finish(i)
-doc %EX - 	})
-doc %EX - 	null
-doc %EX - }
-F call(r:Return, v=null) {
-	r.val = v
-	r
-}
-
 # === MultiMethod ================================
 
-ns {
+block _ {
 	global each
 	# Preventing execution of F Arr(Eachable1) defined below.
 	# It causes infinite loop when tries to convert Eachable1 MultiMethod: it uses this each(), which uses Arr()
@@ -346,37 +363,27 @@ TEST partition([1,10,2,20], X>=10) == [[10, 20], [1, 2]]
 	ElementNotFound.inherit(LookupFail)
 }
 
-doc Find first element in e that satisfies the predicate.
-doc %RET - Either the element or the provided default if element was not found.
-doc %EX - (10..20).first(F(x) x % 3 == 0)        # 12 - first item divisible by 3
-doc %EX - (10..20).first(F(x) x % 50 == 0, 1000) # 1000
-F first(e:Eachable1, predicate, default) {
-	p = Pred(predicate)
-	finish = Return()
-	e.each(F(i) {
-		p(i) throws finish(i)
-	})
-	default
+block u {
+	global first
+	doc Find first element in e that satisfies the predicate.
+	doc %RET - Either the element or the provided default if element was not found.
+	doc %EX - (10..20).first(F(x) x % 3 == 0)        # 12 - first item divisible by 3
+	doc %EX - (10..20).first(F(x) x % 50 == 0, 1000) # 1000
+	F first(e:Eachable1, predicate, default=u) block b {
+		p = Pred(predicate)
+		e.each(F(i) {
+			if p(i) b.return(i)
+		})
+		default !== u returns default
+		throw ElementNotFound("first() did not find the element").set('container', e).set('predicate', predicate)
+	}
+
+	TEST [1,2,3].first(X>1, 10) == 2
+	TEST [1,2,3].first(X>5, 10) == 10
+	TEST [1,2,3].first(X>1) == 2
+	TEST try [1,2,3].first(X>5) catch(e:ElementNotFound) true
 }
 
-TEST [1,2,3].first(X>1, 10) == 2
-TEST [1,2,3].first(X>5, 10) == 10
-
-doc Find first element in e that satisfies the predicate. Throws ElementNotFound exception if no such element is found.
-doc %RET - The element.
-doc %EX - (10..20).first(F(x) x % 3 == 0)  # 12 - first item divisible by 3
-doc %EX - (10..20).first(F(x) x % 50 == 0) # ElementNotFound exception
-F first(e:Eachable1, predicate) {
-	p = Pred(predicate)
-	finish = Return()
-	e.each(F(i) {
-		p(i) throws finish(i)
-	})
-	throw ElementNotFound("first() did not find the element").set('container', e).set('predicate', predicate)
-}
-
-TEST [1,2,3].first(X>1) == 2
-TEST try [1,2,3].first(X>5) catch(e:ElementNotFound) true
 
 doc Find first element in e that satisfies Bool(e) == true.
 doc Exactly same as first(e, identity).
@@ -412,14 +419,13 @@ doc %RET - Result of running on of the following: body, found_more, found_none
 doc %EX - F name(dn:MethodDocNode) {
 doc %EX - 	dn.children.the_one(MethodNameDocNode).text[0]
 doc %EX - }
-F the_one(e:Eachable1, predicate, body:Fun, found_more:Fun=nop, found_none:Fun=nop) {
+F the_one(e:Eachable1, predicate, body:Fun, found_more:Fun=nop, found_none:Fun=nop) block b {
 	p = Pred(predicate)
 	ret = EmptyBox()
-	r = Return()
 	e.each(F(elt) {
 		if p(elt) {
 			if ret {
-				throw r(found_more())
+				b.return(found_more())
 			}
 			ret = FullBox(elt)
 		}
@@ -470,14 +476,13 @@ doc EXPERIMENTAL! Do not use!
 doc %STATUS - experimental
 doc %EX - [1,2,3,1,2].take(X<3)  # [1,2]
 F take(something:Eachable1, predicate)
-	collector {
+	 collector block b {
 		p = Pred(predicate)
-		r = Return()
 		something.each(F(elt) {
 			if p(elt)
 				collect(elt)
 			else
-				throw r()
+				b.return(null)
 		})
 	}
 
@@ -786,10 +791,10 @@ F init(o:OneOf, *alternatives) {
 }
 
 doc EXPERIMENTAL! Do not use!
-F ~(x, o:OneOf) {
-	finish = Return()
+F ~(x, o:OneOf) block b {
 	o.each(F(alt) {
-		if (m = x ~ alt) throw finish(m)
+		if (m = x ~ alt) b.return(m)
+		# b.return_if_true(x ~ alt)
 	})
 	MatchFailure(x, o)
 }
@@ -1552,7 +1557,7 @@ F collector(n:Int, body:Fun) {
 	n
 }
 
-ns {
+block _ {
 	global collector
 	# XXX
 	join_strings = join.Arr()[0]
@@ -1610,7 +1615,7 @@ F finally(body:Fun, cleanup:Fun) {
 
 TEST a=0; {1/1}.finally({a=10}) == 1 and a == 10
 TEST a=0; (try finally() with {1/0} with {a=10} catch(e:DivisionByZero) "OK") == "OK" and a == 10
-TEST F f() { r=Return(); finally({throw r(7)}, {8}) }; f() == 7
+TEST F f() block b { finally({ b.return(7) }, {8}) }; f() == 7
 
 # --- Hash ---
 
@@ -1759,11 +1764,10 @@ doc args - Additional arguments for calling the predicate.
 doc %EX - [1,2,10].any(F(elt) elt > 5)   # true
 doc %EX - [1,2,10].any(F(elt) elt > 15)  # false
 doc %RET - Bool
-F any(e:Eachable1, predicate) {
+F any(e:Eachable1, predicate) block b {
 	p = Pred(predicate)
-	r = Return()
 	e.each(F(x) {
-		p(x) throws r(true)
+		if p(x) b.return(true)
 	})
 	false
 }
@@ -1778,11 +1782,10 @@ doc args - Additional arguments for calling the predicate.
 doc %RET - Bool
 doc %EX - [1,2,3].all(X<10)   # true
 doc %EX - [1,2,10].all(X>5)   # false
-F all(e:Eachable, predicate) {
+F all(e:Eachable, predicate) block b {
 	p = Pred(predicate)
-	r = Return()
 	e.each(F(*x) {
-		not(p(*x)) throws r(false)
+		if not(p(*x)) b.return(false)
 	})
 	true
 }
@@ -1983,9 +1986,8 @@ TEST [1,2,2,3,4,4].uniq() == [1,2,3,4]
 
 TEST [null, false, 10, 20].first() == 10
 
-ns {
+block u {
 	global index
-	no_default = []  # Just a unique object
 	doc Find index of first value that satisfies the predicate.
 	doc TODO: Make it work on anything with each() method.
 	doc In future, will throw exception if element is not found and default is not provided. Now returns null for backwards compatibilty in this case.
@@ -1995,12 +1997,12 @@ ns {
 	doc dflt - default value to return when element is not found
 	doc %RET - Int or dflt. Temporary also null, for backwards compatibilty.
 	doc %EX - [1,2,11,3,4].index(X>10)  # 2
-	F index(arr:Arr, predicate, start:Int=0, dflt=no_default) {
+	F index(arr:Arr, predicate, start:Int=0, dflt=u) {
 		p = Pred(predicate)
 		l = arr.len()
 		for(i=start; i<l; i+=1)
 			p(arr[i]) returns i
-		dflt !== no_default returns dflt
+		dflt !== u returns dflt
 		warn("index() is returning null. In future, this will be an exception. You can change your call to index(..., dflt=null)")
 		null
 	}
@@ -2137,16 +2139,15 @@ F '[]'(arr:Arr, r:NumRange) {
 
 TEST [10,20,30,40][1..-1] == [20,30]
 
-ns {
+block u {
 	global indexes
-	no_default = []  # Just a unique object
 	# TODO: something more effective
 	doc Find the indexes of elements of the given PredRange.
 	doc Throws IndexNotFound if there is no match between the elements of arr and r.
 	doc %RET - NumRange with .include_start=true and .include_end=false
 	doc %EX - %[a1 a2 b1 b2 c1].indexes(/^a/../^b/)   # <NumRange 1..2 include_start=true include_end=false step=1>
 	doc %EX - %[a1 a2 b1 b2 c1].indexes(/^a/.../^b/)  # <NumRange 0..3 include_start=true include_end=false step=1>
-	F indexes(arr:Arr, r:PredRange, dflt=no_default) {
+	F indexes(arr:Arr, r:PredRange, dflt=u) {
 		r.step != 1 throws NotImplemented("r.step must be 1")
 		start = if r.start is Null {
 			0
@@ -2154,7 +2155,7 @@ ns {
 			index(arr, r.start, dflt=null)
 		}
 		if start is Null {
-			dflt !== no_default returns dflt
+			dflt !== u returns dflt
 			throw IndexNotFound("Array did not match PredRange (start)", arr, r)
 		}
 		end = if r.end is Null {
@@ -2163,7 +2164,7 @@ ns {
 			index(arr, r.end, start=start + Int(r.start is not Null and r.include_start.not()), dflt=null)
 		}
 		if end is Null {
-			dflt !== no_default returns dflt
+			dflt !== u returns dflt
 			throw IndexNotFound("Array did not match PredRange (end)", arr, r)
 		}
 		NumRange(start + Int(r.start is not Null and r.include_start.not()), end + Int(r.include_end))
@@ -2245,7 +2246,7 @@ TEST [10,11,12].limit(2) == [10,11]
 
 # --- Misc ---
 
-ns {
+block _ {
 	global min, max
 	F most(e:Eachable1, f:Fun) {
 		guard e
@@ -3930,7 +3931,7 @@ doc Convert Stats into JSON compatible data structure - object
 F JsonData(s:Stats) s.Hash().JsonData()
 
 # === Thread ========================================
-ns {
+block _ {
 	global Thread, Threads, ThreadFail, init, join, pmap, ptimes, Str, (.)
 	# TODO: consider *args for consistency with other parts of the language
 
@@ -4133,7 +4134,7 @@ F ExitCode(ee:ExitException) ee.exit_code
 # Not sure such flexibility is needed (NGS_ERR_FD)
 stdlib_error_fd = ENV.NGS_ERR_FD.Int() tor 2
 
-ns {
+block _ {
 	global maybe_print_stacktrace
 
 	# Set is not available at this point yet so using Hash as Set
@@ -4189,7 +4190,7 @@ F warn(s:Str) {
 	maybe_print_stacktrace('NGS_WARN_BACKTRACE', '[WARNING BACKTRACE]')
 }
 
-ns {
+block _ {
 	global status
 
 	status_terminal = null
@@ -4896,7 +4897,7 @@ F Str(r:CommandRedir) "<${r.typeof().name} ${r.fd} ${r.marker} ${r.datum}>"
 	type ProgramNotFound(Exception)
 }
 
-ns {
+block _ {
 
 	global finished_ok
 
@@ -5810,17 +5811,6 @@ doc %RET - EmptyBox
 doc %EX - Box("a" ~ /^(..)/).map({"First two letters: ${A[1]}"}).get("(too short)")  # (too short)
 F Box(f:Failure) EmptyBox()
 
-doc EXPERIMENTAL! Do not use!
-F attempt(x, *cbs) {
-	guard cbs.all(Fun)
-	r = Return()
-	cbs.each(F(cb) {
-		t = cb(x)
-		t throws r(t.get())
-	})
-	throw Error("attempt() failed").set('x', x).set('cbs', cbs)
-}
-
 doc SubSec construcor
 F init(s:SubSeq, val) s.val = val
 
@@ -6471,7 +6461,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null, echo=echo
 
 exit_hook = Hook()
 
-ns {
+block _ {
 
 	global print_exception
 
