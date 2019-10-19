@@ -1437,12 +1437,12 @@ identifier =
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
-	| "('" <([-|=!@?<>~+*/%()$a-zA-Z0-9.` ]|"["|"]")+> "')" {
+	| "('" <([-|=!@?<>~+*/%()$a-zA-Z0-9.`: ]|"["|"]")+> "')" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
-	| "(" <([-|=!@?~+*/%$<>.\[\]]+ | "is not" | "not in")> ")" {
+	| "(" <([-|=!@?~+*/%$<>.\[\]:]+ | "is not" | "not in")> ")" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
