@@ -55,6 +55,7 @@
 * `Stats()` now works with `Eachable1` allowing counting characters in a string for examples
 * Fix Pred(SubSeq) and Pred(RegExp) to prevent endless recursion
 * Fix `$(... >${false})` syntax
+* Fix `c_strptime()`
 * Improve `rand_uniq` implementation
 * Improve `MatchSuccess` - include pattern
 * Improve `MatchFailure` - include data and pattern

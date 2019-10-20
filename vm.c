@@ -1023,9 +1023,9 @@ METHOD_RESULT native_c_strftime METHOD_PARAMS {
 METHOD_RESULT native_c_strptime EXT_METHOD_PARAMS {
 	VALUE ret = make_array(2);
 	struct tm t;
+	memset(&t, '\0', sizeof(t));
 	char *input = obj_to_cstring(argv[0]);
 	char *next_char = strptime(input, obj_to_cstring(argv[1]), &t);
-	// char *next_char = strptime("2018", "%Y", &t);
 	if(next_char == NULL) {
 		ARRAY_ITEMS(ret)[0] = MAKE_INT(0);
 		ARRAY_ITEMS(ret)[1] = MAKE_NULL;
