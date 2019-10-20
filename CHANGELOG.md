@@ -58,6 +58,7 @@
 * Improve `rand_uniq` implementation
 * Improve `MatchSuccess` - include pattern
 * Improve `MatchFailure` - include data and pattern
+* Move `get(Arr, Int, Any)` from C to stdlib and support negative indexes.
 
 ### Breaking changes
 

@@ -1701,12 +1701,32 @@ TEST "ab" + "cd" == "abcd"
 
 # === Arr ========================================
 
-doc Get element by index or null if it does not exist
+doc Get element at the given index or return dflt if the index is out of range (element at the given index does not exist)
+doc %EX - [1,2,3].get(0, 10)    # 1
+doc %EX - [1,2,3].get(5, 10)    # 10
+doc %EX - [11].get(-1)          # 11
+doc %EX - [10,20].get(-5, "X")  # "X"
 doc %RET - Any
-F get(a:Arr, idx:Int) get(a, idx, null)
+F get(a:Arr, idx:Int, dflt=null) {
+	l = a.len()
+	if idx >= 0 {
+		idx >= l returns dflt
+		i = idx
+	} else {
+		i = l + idx
+		i < 0 returns dflt
+	} 
+	a[i]
+}
 
+TEST [1].get(0) == 1
+TEST [1].get(5) == null
 TEST [1].get(0, 10) == 1
 TEST [1].get(5, 10) == 10
+TEST [10].get(-1) == 10
+TEST [10].get(-1, "X") == 10
+TEST [10,20].get(-5) == null
+TEST [10,20].get(-5, "X") == "X"
 
 
 doc Checks whether element x is in array arr

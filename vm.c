@@ -337,19 +337,6 @@ METHOD_RESULT native_shift_arr_any METHOD_PARAMS {
 	METHOD_RETURN(array_shift(argv[0]));
 }
 
-METHOD_RESULT native_index_get_arr_int_any METHOD_PARAMS {
-	int idx, len;
-	idx = GET_INT(argv[1]);
-	if(idx < 0) {
-		METHOD_RETURN(argv[2]);
-	}
-	len = OBJ_LEN(argv[0]);
-	if(idx<len) {
-		METHOD_RETURN(ARRAY_ITEMS(argv[0])[idx]);
-	}
-	METHOD_RETURN(argv[2]);
-}
-
 METHOD_RESULT native_index_get_arr_int EXT_METHOD_PARAMS {
 	int idx, len;
 	(void) ctx;
@@ -3134,15 +3121,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "len",      &native_len,                     1, "arr", vm->Arr);
 	_doc(vm, "", "Get number of elements in the array");
 	_doc(vm, "%RET", "Int");
-
-	register_global_func(vm, 0, "get",      &native_index_get_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
-	_doc(vm, "", "Get element at the given index or return dflt if the index is out of range (element at the given index does not exist)");
-	_doc(vm, "%RET", "Any");
-	_doc_arr(vm, "%EX",
-		"[1,2,3].get(0, 10)  # 1",
-		"[1,2,3].get(5, 10)  # 10",
-		NULL
-	);
 
 	register_global_func(vm, 1, "[]",       &native_index_get_arr_range,     2, "arr", vm->Arr, "range", vm->NumRange);
 	_doc(vm, "", "Get array elements at specified indexes.");
