@@ -804,6 +804,23 @@ TEST ("abc" ~ OneOf(/x/, /y/)) is MatchFailure
 TEST ("abc" ~ OneOf([Int, Str])) is MatchSuccess
 TEST ("abc" ~ OneOf([Int, Num])) is MatchFailure
 
+doc EXPERIMENTAL!
+doc Convert OneOf to a predicate. The predicate asserts that one of the predicates (elements of OneOf) succeeds
+doc %EX - {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(OneOf("k1", "k3"))  # {"k1": "v1", "k3": "v3"}
+F Pred(o:OneOf) {
+	preds = o.map(Pred)
+	F oneof_pred(x) block b {
+		preds.each(F(p) {
+			if p(x) {
+				b.return(true)
+			}
+		})
+		false
+	}
+}
+
+TEST {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(OneOf("k1", "k3")) == {"k1": "v1", "k3": "v3"}
+
 # === HashLike ===================================
 # TODO [doc]: examples in methods
 {
