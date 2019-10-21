@@ -776,19 +776,19 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc Declarative primitive for finding AWS AMI resources
 	F find(rd:Image) {
 		debug("AWS", "Find Image ${rd}")
-		rd._assert_anchor_has_only_known_keys('OwnerId', 'Name', 'State', 'RootDeviceType', 'VirtualizationType', 'VolumeType', 'ImageId')
-		owners = Argv({'--owners': rd.anchor.Box('OwnerId')})
-		filters = ['--filters'] +? cli_filters({
-			'state':                            rd.anchor.get('State', 'available')
-			'virtualization-type':              rd.anchor.get('VirtualizationType', 'hvm')
-			'name':                             rd.anchor.Box('Name').filter({A is Str or A is Pfx})
-			'root-device-type':                 rd.anchor.Box('RootDeviceType')
-			'block-device-mapping.volume-type': rd.anchor.Box('VolumeType')
-			'image-id':                         rd.anchor.Box('ImageId')
+		rd._assert_anchor_has_only_known_keys('OwnerId', 'Name', 'State', 'RootDeviceType', 'VirtualizationType', 'VolumeType', 'ImageId', 'Tags')
+		args = Argv({
+			'--owners': rd.anchor.Box('OwnerId')
+			'--filters': rd.anchor.Tags.cli_tags_filters() + cli_filters({
+				'state':                            rd.anchor.get('State', 'available')
+				'virtualization-type':              rd.anchor.get('VirtualizationType', 'hvm')
+				'name':                             rd.anchor.Box('Name').filter({A is Str or A is Pfx})
+				'root-device-type':                 rd.anchor.Box('RootDeviceType')
+				'block-device-mapping.volume-type': rd.anchor.Box('VolumeType')
+				'image-id':                         rd.anchor.Box('ImageId')
+				})
 		})
-		# Doesn't work with "self"
-		# 'owner-id':                         rd.anchor.Box('OwnerId')
-		resources = ``aws ec2 describe-images $*owners $*filters``
+		resources = ``aws ec2 describe-images $*args``
 		if 'Name' in rd.anchor and rd.anchor.Name is Pfx {
 			resources .= filter({A.Name ~ rd.anchor.Name})
 		}
