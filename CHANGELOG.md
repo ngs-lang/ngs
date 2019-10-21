@@ -9,7 +9,8 @@
 	* Add `Executor` type
 	* Add `ThreadedExecutor` type for simplified processing in threads
 	* Add `pmap(Eachable1, Int, Fun)` - parallel map using limited numbers of threads
-* Add `block NAME BODY` syntax
+* Add `block IDENTIFIER BODY` syntax
+* Add `section NAME BODY` syntax
 * Add experimental `TmpFile` - temporary file that is deleted automatically on exit
 * Add experimental `Program` (allows `assert(Program("dd"))`)
 * Add experimental `sortv()`

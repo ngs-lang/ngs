@@ -283,6 +283,8 @@ command =
 	|
 	block
 	|
+	section
+	|
 	if
 	|
 	while
@@ -656,6 +658,7 @@ basic-expression =
 	| namespace
 	| collector
 	| block
+	| section
 	| guard
 	| try-catch
 	| throw
@@ -1625,6 +1628,11 @@ block = "block" space i:identifier space c:code-block {
 		block_identifier->next_sibling = args;
 	$$ = ret;
 	CAPTURE_LOCATION($$);	
+}
+
+section = "section" space name:string space c:code-block {
+	$$ = c;
+	CAPTURE_LOCATION($$);
 }
 
 guard = "guard" space c:code-block {

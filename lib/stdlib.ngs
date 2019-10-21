@@ -1,4 +1,4 @@
-{
+section "Block type and methods" {
 	doc The type of the NAME variable used in syntax: block NAME BODY
 	doc %AUTO block NAME BODY
 	type Block
@@ -35,7 +35,8 @@ STDLIB_EOL = "\n"
 STDLIB_PATH_SEP = '/'
 STDLIB_MAX_RAND_REAL = Real(RAND_MAX)
 STDLIB_RAND_SAFETY_MAX = 100
-{
+
+section "Document internal GC namespace" {
 	GC.attrs({'doc': {'': 'Control NGS garbage collection'}})
 	GC['enable'].attrs({'doc': {'': 'Enable garbage collection'}})
 	GC['disable'].attrs({'doc': {'': 'Disable garbage collection'}})
@@ -6570,9 +6571,32 @@ F init(t:Time, epoch:Int) {
 }
 
 F init(t:Time, s:Str, format:Str) {
-	tt = c_strptime(s, format)[1]
-	tt is Null throws InvalidArgument("Failed to parse time").set('s', s).set('format', format)
-	t.epoch = c_mktime(tt)
+	result = c_strptime(s, format)
+	if result[0] != len(s) or result[1] is Null {
+		throw InvalidArgument("Failed to parse time").set(s=s,format=format)
+	}
+	t.epoch = c_mktime(result[1])
+}
+
+F init(t:Time, s:Str) block b {
+	# AWS API returns '%Y-%m-%dT%H:%M:%S.000%Z'
+	# On MacOS "%Z" nor "%z" match 'Z' so working around - start
+	s .= replace(/Z$/, {'+0000'})
+	# On MacOS "%Z" nor "%z" match 'Z' so working around - end
+	formats = [
+		'%Y-%m-%dT%H:%M:%S.000%z'
+		'%F %T'
+		'%F'
+	]
+	formats.each(F(fmt) {
+		try {
+			init(t, s, fmt)
+			b.return(t)
+		} catch(e:InvalidArgument) {
+			"OK"
+		}
+	})
+	throw InvalidArgument("Failed to parse time").set(s=s,formats=formats)
 }
 
 doc String representation of Time
