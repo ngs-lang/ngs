@@ -400,9 +400,10 @@ block u {
 }
 
 doc Find the only element that satisfies the predicate.
+doc predicate - defaults to {true}, allowing my_arr.the_one()
 doc Throws ElementNotFound exception if there are no elements that satisfy the predicate or if there is more than one element that satisfies the predicate.
 doc %RET - The only element that satisfies the predicate.
-F the_one(e:Eachable1, predicate) {
+F the_one(e:Eachable1, predicate={true}) {
 	p = Pred(predicate)
 	ret = EmptyBox()
 	e.each() do F(elt) {
@@ -418,6 +419,9 @@ F the_one(e:Eachable1, predicate) {
 TEST [1,2,11,3,4].the_one(X>10) == 11
 TEST try [1,2,11,12,4].the_one(X>10) catch(e:ElementNotFound) true
 TEST try [1,2,3,4].the_one(X>10) catch(e:ElementNotFound) true
+TEST [1, "a", "b"].the_one(Int) == 1
+TEST [1].the_one() == 1
+TEST try [1, "a", "b"].the_one(Str) catch(e:ElementNotFound) true
 
 doc Find the only element that satisfies the predicate and execute given code with the value
 doc body - The code to execute when exactly one element that satisfies the predicate was found. Executed with the found value. It's value will be returned as result of the_one().
@@ -448,12 +452,6 @@ F the_one(e:Eachable1, predicate, body:Fun, found_more:Fun=nop, found_none:Fun=n
 TEST ok = false; [1,2,11,3,4].the_one(X>10, F(the_value) { ok = the_value == 11 }); ok
 TEST ok = false; [1,2,11,3,4].the_one(X>20, nop, found_none = { ok = true }); ok
 TEST ok = false; [1,2,11,3,4].the_one(Int, nop, found_more = { ok = true }); ok
-
-doc Extract the only element.
-doc Throws ElementNotFound exception if there are no elements or if there is more than one element.
-doc %RET - The only element.
-doc %EX - ``aws ec2 describe-security-groups --group-ids $sg_id``.the_one()  # {OwnerId=..., VpcId=..., GroupId=..., ...}
-F the_one(e:Eachable1) e.the_one({true})
 
 doc Filter something to an Arr (array) of values using predicate
 doc predicate - Decision function to be called with each item as first argument.
