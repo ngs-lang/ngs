@@ -1437,6 +1437,19 @@ Switch and switch-like expressions examples.
 		}
 	}
 
+## Block
+
+The feature was inspired by `block` in Lisp ("structured, lexical, non-local exit facility") and adapted to fit NGS. The `block` evaluates to the first value provided by `return`. If no `return` occurs, the `block` evaluates to the last expression inside the `block`.
+
+	my_result = block b {
+		if i_know_the_answer_by_now() {
+			b.return(42)
+		}
+		if maybe_now() {
+			b.return(7)
+		}
+		0
+	}
 
 # Regular expressions
 
