@@ -34,6 +34,7 @@
 * Add Vagrantfile
 * Add `~(x, t:Type)`
 * Add experimental `Pred(OneOf)`
+* Add experimental `TODO(Str)`
 
 ### Fixes and improvements
 

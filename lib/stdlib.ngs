@@ -43,6 +43,11 @@ section "Document internal GC namespace" {
 	GC['get_parallel'].attrs({'doc': {'': 'Check parallel garbage collection. Please do not use!', '%STATUS': 'internal'}})
 }
 
+doc EXPERIMENTAL! Do not use!
+F TODO(s:Str="TODO") {
+	throw NotImplemented("Functionality not implemented. Info: ${s}")
+}
+
 doc Deprecated. Use ExitCode.
 doc %STATUS - deprecated
 F to_exit_code(x) {
