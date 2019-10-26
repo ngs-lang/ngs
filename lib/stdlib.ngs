@@ -448,18 +448,6 @@ doc %RET - The only element.
 doc %EX - ``aws ec2 describe-security-groups --group-ids $sg_id``.the_one()  # {OwnerId=..., VpcId=..., GroupId=..., ...}
 F the_one(e:Eachable1) e.the_one({true})
 
-doc Filter nulls out.
-doc DEPRECATED, USE something.without(null) INSTEAD.
-doc something - Object of any type that has each(something, callback) implemented
-doc %STATUS - deprecated
-doc %RET - Arr (array) of original items without nulls
-F filter(e:Eachable1) {
-	warn("Using deprecated filter(e)")
-	filter(e, X is not Null)
-}
-
-TEST [1,2,null,3].filter() == [1,2,3]
-
 doc Filter something to an Arr (array) of values using predicate
 doc predicate - Decision function to be called with each item as first argument.
 doc predicate - When predicate(item) returns true, the item will not appear in the resulting array

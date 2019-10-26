@@ -66,6 +66,7 @@
 ### Breaking changes
 
 * Removed `Return` type and associated machinery
+* Removed deprecated `filter(Eachable1)`
 
 ### Work in progress
 
