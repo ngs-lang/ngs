@@ -1019,6 +1019,7 @@ doc %RET - "<Type NAME>"
 doc %EX - Real.Str().echo()  # Outputs: <Type Real>
 F Str(t:Type) "<Type ${t.name}>"
 
+# TODO: Reorganize and move out of Type section
 doc Decode (parse) strings such as command line arguments or environment variables to result given type
 doc TODO: Consider renaming to UnArgv or decode_arg
 doc %STATUS - experimental
