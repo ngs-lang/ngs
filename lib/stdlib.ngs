@@ -378,10 +378,13 @@ TEST partition([1,10,2,20], X>=10) == [[10, 20], [1, 2]]
 block u {
 	global first
 	doc Find first element in e that satisfies the predicate.
+	doc predicate - defaults to identity
 	doc %RET - Either the element or the provided default if element was not found.
 	doc %EX - (10..20).first(F(x) x % 3 == 0)        # 12 - first item divisible by 3
 	doc %EX - (10..20).first(F(x) x % 50 == 0, 1000) # 1000
-	F first(e:Eachable1, predicate, default=u) block b {
+	doc %EX - [false, 0, null, "xyz", 100].first()  # "xyz"
+	doc %EX - [].first()                            # ElementNotFound exception
+	F first(e:Eachable1, predicate=identity, default=u) block b {
 		p = Pred(predicate)
 		e.each(F(i) {
 			if p(i) b.return(i)
@@ -395,13 +398,6 @@ block u {
 	TEST [1,2,3].first(X>1) == 2
 	TEST try [1,2,3].first(X>5) catch(e:ElementNotFound) true
 }
-
-
-doc Find first element in e that satisfies Bool(e) == true.
-doc Exactly same as first(e, identity).
-doc %EX - [false, 0, null, "xyz", 100].first()  # "xyz"
-doc %EX - [].first()                            # ElementNotFound exception
-F first(e:Eachable1) first(e, identity)
 
 doc Find the only element that satisfies the predicate.
 doc Throws ElementNotFound exception if there are no elements that satisfy the predicate or if there is more than one element that satisfies the predicate.
