@@ -121,38 +121,40 @@ F assert(expr, msg:Str="Assertion failed") {
 doc Initializes InstantiatingAbstractType.
 F init(e:InstantiatingAbstractType, t:Type) init(args())
 
-# === Namespaces =================================
+section "Namespaces" {
 
-doc Get NormalType object field. Useful when calling method stored in an field.
-doc %EX - myobj::method_in_field(arg)  # calls method stored in myobj.method_in_field
-doc %EX - (myobj.method_in_field)(arg) # calls method stored in myobj.method_in_field
-doc %EX - myobj.method_in_field(arg)   # calls global "method_in_field"
-F '::'(nti:NormalTypeInstance, k) nti.(k)
+	doc Get NormalType object field. Useful when calling method stored in an field.
+	doc %EX - myobj::method_in_field(arg)  # calls method stored in myobj.method_in_field
+	doc %EX - (myobj.method_in_field)(arg) # calls method stored in myobj.method_in_field
+	doc %EX - myobj.method_in_field(arg)   # calls global "method_in_field"
+	F '::'(nti:NormalTypeInstance, k) nti.(k)
 
-doc Get Hash key. Useful when calling method stored in a Hash key.
-doc Useful for working with namespaces, which are implemented as Hash instances.
-doc %EX - elb = AWS::Elb(...).converge(...)
-F '::'(h:Hash, k) h[k]
+	doc Get Hash key. Useful when calling method stored in a Hash key.
+	doc Useful for working with namespaces, which are implemented as Hash instances.
+	doc %EX - elb = AWS::Elb(...).converge(...)
+	F '::'(h:Hash, k) h[k]
 
-doc Set NormalType object field. It's implemented to complete the :: operator. There is no particular use case.
-F '::='(nti:NormalTypeInstance, k, v) nti.(k) = v
-doc Set Hash key. It's implemented to complete the :: operator. There is no particular use case.
-F '::='(h:Hash, k, v) h[k] = v
-
-# === MultiMethod ================================
-
-block _ {
-	global each
-	# Preventing execution of F Arr(Eachable1) defined below.
-	# It causes infinite loop when tries to convert Eachable1 MultiMethod: it uses this each(), which uses Arr()
-	basic_arr = MultiMethod(Arr.constructors.Arr())
-
-	doc Call cb for each method of the MultiMethod
-	doc %EX - echo.each(F(method) echo("${method.params().name.join(", ")}"))
-	F each(mm:MultiMethod, cb:Fun) mm.basic_arr().each(cb)
+	doc Set NormalType object field. It's implemented to complete the :: operator. There is no particular use case.
+	F '::='(nti:NormalTypeInstance, k, v) nti.(k) = v
+	doc Set Hash key. It's implemented to complete the :: operator. There is no particular use case.
+	F '::='(h:Hash, k, v) h[k] = v
 }
 
-F Str(mm:MultiMethod) "<MultiMethod with ${mm.Arr().len()} method(s)>"
+section "MultiMethod" {
+
+	block _ {
+		global each
+		# Preventing execution of F Arr(Eachable1) defined below.
+		# It causes infinite loop when tries to convert Eachable1 MultiMethod: it uses this each(), which uses Arr()
+		basic_arr = MultiMethod(Arr.constructors.Arr())
+
+		doc Call cb for each method of the MultiMethod
+		doc %EX - echo.each(F(method) echo("${method.params().name.join(", ")}"))
+		F each(mm:MultiMethod, cb:Fun) mm.basic_arr().each(cb)
+	}
+
+	F Str(mm:MultiMethod) "<MultiMethod with ${mm.Arr().len()} method(s)>"
+}
 
 # === Misc functional ============================
 
@@ -250,35 +252,38 @@ F set(obj, **kwargs) {
 
 TEST type T; t=T().set(a=1, b=2); t.a == 1 and t.b == 2
 
-doc Convert anything to a predicate.
-doc anything - The value to compare to
-doc %RET - A function that compares the only argument to the given value
-F Pred(anything:BasicTypeInstance) {
-	F eq_pred(x) x == anything
-}
+section "Pred - convert different types to predicates" {
 
-doc Convert Hash to a predicate. The predicate asserts that
-doc object fields named after h hash keys return true for predicates made of corresponding hash values.
-doc Inspired by underscorejs' "matcher"
-F Pred(h:Hash) {
-	preds = h.mapv(Pred)
-	F hash_pred(x) {
-		preds.all(F(k, pred) (k in x) and x.(k).pred())
+	doc Convert anything to a predicate.
+	doc anything - The value to compare to
+	doc %RET - A function that compares the only argument to the given value
+	F Pred(anything:BasicTypeInstance) {
+		F eq_pred(x) x == anything
 	}
+
+	doc Convert Hash to a predicate. The predicate asserts that
+	doc object fields named after h hash keys return true for predicates made of corresponding hash values.
+	doc Inspired by underscorejs' "matcher"
+	F Pred(h:Hash) {
+		preds = h.mapv(Pred)
+		F hash_pred(x) {
+			preds.all(F(k, pred) (k in x) and x.(k).pred())
+		}
+	}
+
+	TEST Pred({"a": Any})({"a": 1})
+	TEST Pred({"a": Any, "b": Any})({"a": 1}) == false
+	TEST Pred({"a": Any, "b": {false}})({"a": 1, "b": 2}) == false
+
+	doc Convert a function to predicate.
+	doc %RET - The given function, without any transformation
+	F Pred(f:Fun) f
+
+	doc Convert a type to a predicate.
+	doc t - A type
+	doc %RET - A function that checks whether the only argument is of type t
+	F Pred(t:Type) F is_pred(x) x is t
 }
-
-TEST Pred({"a": Any})({"a": 1})
-TEST Pred({"a": Any, "b": Any})({"a": 1}) == false
-TEST Pred({"a": Any, "b": {false}})({"a": 1, "b": 2}) == false
-
-doc Convert a function to predicate.
-doc %RET - The given function, without any transformation
-F Pred(f:Fun) f
-
-doc Convert a type to a predicate.
-doc t - A type
-doc %RET - A function that checks whether the only argument is of type t
-F Pred(t:Type) F is_pred(x) x is t
 
 doc Map e to an Arr (array) of values using mapper.
 doc e - Object of any type that has each(e, callback) implemented
