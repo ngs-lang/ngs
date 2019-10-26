@@ -172,6 +172,17 @@ Comments are allowed in both commands and code syntax. At the beginning of a lin
 
 Also, lines that start with "TEST " (note the trailing space) are considered to be comments. They are ignored. The purpose is to allow an external testing script to extract and run these tests.
 
+The common pattern of marking code sections with comments got it's own syntax. It conveys semantic meaning of sections to the language and IDEs. That will allow additional related functionality in the future. Section does *not* introduce a new scope for variables/methods.
+
+	section "Workaround for API stupidity" {
+		if result is Null {
+			result = []
+		}
+		if result is Str {
+			result .= split(',')
+		}
+	}
+
 # Variables
 
 As in other languages, variables are named locations that can store values. Variables' names should consist of ASCII letters (a-z, A-Z) and numbers (0-9). Variable name must start with a letter. Assignment to variables looks the same in both commands and code syntax. Referencing a variable in the code syntax is just the variable's name while referencing it in commands syntax or inside string interpolation is `$my_var` (not recommended) or `${my_var}` (recommended).
