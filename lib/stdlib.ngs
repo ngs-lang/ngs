@@ -350,6 +350,7 @@ doc DEPRECATED! Do not use!
 doc Use something.filter({field: predicate}) instead.
 doc %STATUS - deprecated
 F filter(something:Eachable1, field:Str, predicate) {
+	warn("Using deprecated filter(Eachable1, Str, predicate)")
 	p = Pred(predicate)
 	something.filter({ p(A.(field)) })
 }
