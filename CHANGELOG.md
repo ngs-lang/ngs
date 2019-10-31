@@ -64,6 +64,7 @@
 * Improve `MatchFailure` - include data and pattern
 * Move `get(Arr, Int, Any)` from C to stdlib and support negative indexes.
 * Merged two `first()` methods into one
+* Fix `Hash` comparison for `null`
 
 ### Breaking changes
 

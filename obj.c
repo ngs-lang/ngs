@@ -412,6 +412,9 @@ int is_equal(VALUE a, VALUE b) {
 	if(IS_OBJ(a) && IS_OBJ(b)) {
 		return a.num == b.num;
 	}
+	if(IS_NULL(a) && IS_NULL(b)) {
+		return 1;
+	}
 	return 0;
 }
 
