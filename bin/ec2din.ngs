@@ -69,10 +69,6 @@ F main(filters:Arr, allreg:Bool=false, j:Bool=false, c:Str=null, out_lines:Int=5
 	}
 	instances .= sort('LaunchTime')
 
-	if j {
-		echo(instances.encode_json())
-		return
-	}
 
 	c.each(F(cmd) {
 		instances.pmap(F(i) {
@@ -91,6 +87,11 @@ F main(filters:Arr, allreg:Bool=false, j:Bool=false, c:Str=null, out_lines:Int=5
 			}
 		})
 	})
+
+	if j {
+		echo(instances.encode_json())
+		return
+	}
 
 	F tag_has_column(tag_name) ["full_tag_${tag_name}", "tag_${tag_name}"].any(X in table.cols_enum)
 
