@@ -3964,7 +3964,7 @@ F JsonData(s:Stats) s.Hash().JsonData()
 
 # === Thread ========================================
 block _ {
-	global Thread, Threads, ThreadFail, init, join, pmap, ptimes, Str, (.)
+	global Thread, Threads, ThreadFail, init, join, pmap, pfilter, ptimes, Str, (.)
 	# TODO: consider *args for consistency with other parts of the language
 
 	doc Execution thread. Currently a POSIX thread.
