@@ -1863,7 +1863,7 @@ unquoted-basic-command-word-node = {
 
 unquoted-basic-command-word = acc:unquoted-basic-command-word-node (
 
-	<[-a-zA-Z0-9/=,._@:]+> {
+	<[-+a-zA-Z0-9/=,._@:]+> {
 		MAKE_NODE(s, STR_COMP_IMM_NODE); \
 		s->name = ngs_strdup(yytext); \
 		append_ast_node_child(acc, s);

@@ -67,6 +67,7 @@
 * Move `get(Arr, Int, Any)` from C to stdlib and support negative indexes.
 * Merged two `first()` methods into one
 * Fix `Hash` comparison for `null`
+* `+` character is now valid "word" symbol - `$(dig +short yahoo.com)` is now valid syntax
 
 ### Breaking changes
 
