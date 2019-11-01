@@ -37,6 +37,7 @@
 * Add `~(x, t:Type)`
 * Add experimental `Pred(OneOf)`
 * Add experimental `TODO(Str)`
+* `ec2din.ngs` now takes expirimental `-c COMMAND`
 
 ### Fixes and improvements
 
