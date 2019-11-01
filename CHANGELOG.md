@@ -9,6 +9,8 @@
 	* Add `Executor` type
 	* Add `ThreadedExecutor` type for simplified processing in threads
 	* Add `pmap(Eachable1, Int, Fun)` - parallel map using limited numbers of threads
+	* Add `pfilter(Eachable1, predicate)` - parallel filter
+	* Add `pfilter(Eachable1, Int, predicate)` - parallel filter using limited numbers of threads
 * Add `block IDENTIFIER BODY` syntax
 * Add `section NAME BODY` syntax
 * Add experimental `TmpFile` - temporary file that is deleted automatically on exit

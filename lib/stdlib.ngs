@@ -4119,6 +4119,32 @@ block _ {
 	TEST (1..3).Arr().pmap(X*10) == [10, 20]
 	TEST 3.pmap(X*10) == [0, 10, 20]
 
+	doc Parallel filter. Typcally should be used with "heavy" predicate such as SSH.
+	doc %EX - Set(1..10).pfilter(X>3)  # <Set 4, 5, 6, 7, 8, 9>
+	doc %RET - Of same type as e
+	F pfilter(e:Eachable1, predicate) pfilter(e, if e is Num e else len(e), predicate)
+
+	TEST Set(1..10).pfilter(X>3) == Set(1..10).filter(X>3)
+
+	doc Parallel filter. Typcally should be used with "heavy" predicate such as SSH.
+	doc %EX - Set(1..10).pfilter(2, X>3)  # <Set 4, 5, 6, 7, 8, 9>
+	doc %RET - Of same type as e
+	F pfilter(e:Eachable1, threads:Int, predicate) {
+		t = typeof(e)
+		ret = t()
+		p = Pred(predicate)
+		a = Arr(e)  # e might not be indexable
+		results = pmap(a, threads, predicate)
+		results.each_idx_val(F(i, val) {
+			if val {
+				ret.push(a[i])
+			}
+		})
+		ret
+	}
+
+	TEST Set(1..10).pfilter(2, X>3) == Set(1..10).filter(X>3)
+
 	F Str(t:c_pthread_t) "<c_pthread_t ${id(t)}>"
 	F Str(t:Thread) "<Thread ${t.id}>"
 
