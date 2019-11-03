@@ -1343,9 +1343,7 @@ AUTOLOAD = ns {
 	}
 }
 
-# === Range ======================================
-
-{
+section "Range" {
 	doc A range
 	type Range
 		NumRange.inherit(Range)
@@ -1354,109 +1352,109 @@ AUTOLOAD = ns {
 	doc A range with start and end expressed as predicates.
 	type PredRange
 		PredRange.inherit(Range)
-}
 
-doc Range constructor. Throws InstantiatingAbstractType if r is exactly of type Range (not a sub-type).
-F init(r:Range, start, end, include_start=true, include_end=false, step=1) {
-	r.typeof() == Range throws InstantiatingAbstractType(Range)
-	init(args())
-}
-
-doc Constructs open-open predicate range
-doc %RET - PredRange
-doc %EX - [10,200,300,40,50][(X==10)..(X==40)]          # [200, 300]
-doc %EX - ["abc", "aaa", "bbb", "def"][/^abc/../^def/]  # ["aaa", "bbb"]
-F ..(start, end)  PredRange(start, end, false, false)
-
-doc Constructs closed-closed predicate range
-doc %RET - PredRange
-doc %EX - [10,200,300,40,50][(X==10)...(X==40)]          # [10,200,300,40]
-doc %EX - ["abc", "aaa", "bbb", "def"][/^abc/.../^bbb/]  # ["abc", "aaa", "bbb"]
-F ...(start, end) PredRange(start, end, true, true)
-
-doc Constructs closed-open numerical range
-doc start - numerical or null (at least one of start or end must be non-null)
-doc end - numerical or null (at least one of start or end must be non-null)
-doc %RET - NumRange
-doc %EX - (1..4).sum()  # 6
-F ..(start, end) {
-	guard start is Num or end is Num
-	guard start is Num or start is Null
-	guard end is Num or end is Null
-	NumRange(start, end, true, false)
-}
-
-doc Constructs closed-closed numerical range
-doc %RET - NumRange
-doc %EX - (1...4).sum()  # 10
-F ...(start, end) {
-	guard start is Num or end is Num
-	guard start is Num or start is Null
-	guard end is Num or end is Null
-	NumRange(start, end, true, true)
-}
-
-TEST 0..null is NumRange
-TEST null..null is PredRange
-TEST null.."xyz" is PredRange
-
-doc Iterates over the elements of r, passing each in turn to cb.
-doc cb - Function to be called with values from r
-doc args - Additional arguments for calling cb
-doc %RET - r
-doc %EX - s=0
-doc %EX - (1...10).each(F(i) { global s; s+=i })
-doc %EX - echo(s)  # Outputs: 55
-F each(r:NumRange, cb:Fun) r.Iter().each(cb)
-
-TEST (1..3).map(X*2) == [2, 4]
-TEST (1...3).map(X*2) == [2, 4, 6]
-
-TEST (10..20).first(F(x) x % 3 == 0) == 12
-
-doc Check whether the number is in range
-doc 10 in 10..20  # true
-doc 1 in 10..20   # false
-F in(n:Int, r:NumRange) {
-	econd {
-		r.include_start and n == r.start true
-		r.start is not Null and n <= r.start false
-		r.include_end and n == r.end true
-		r.end is not Null and r.end <= n false
-		true true
+	doc Range constructor. Throws InstantiatingAbstractType if r is exactly of type Range (not a sub-type).
+	F init(r:Range, start, end, include_start=true, include_end=false, step=1) {
+		r.typeof() == Range throws InstantiatingAbstractType(Range)
+		init(args())
 	}
+
+	doc Constructs open-open predicate range
+	doc %RET - PredRange
+	doc %EX - [10,200,300,40,50][(X==10)..(X==40)]          # [200, 300]
+	doc %EX - ["abc", "aaa", "bbb", "def"][/^abc/../^def/]  # ["aaa", "bbb"]
+	F ..(start, end)  PredRange(start, end, false, false)
+
+	doc Constructs closed-closed predicate range
+	doc %RET - PredRange
+	doc %EX - [10,200,300,40,50][(X==10)...(X==40)]          # [10,200,300,40]
+	doc %EX - ["abc", "aaa", "bbb", "def"][/^abc/.../^bbb/]  # ["abc", "aaa", "bbb"]
+	F ...(start, end) PredRange(start, end, true, true)
+
+	doc Constructs closed-open numerical range
+	doc start - numerical or null (at least one of start or end must be non-null)
+	doc end - numerical or null (at least one of start or end must be non-null)
+	doc %RET - NumRange
+	doc %EX - (1..4).sum()  # 6
+	F ..(start, end) {
+		guard start is Num or end is Num
+		guard start is Num or start is Null
+		guard end is Num or end is Null
+		NumRange(start, end, true, false)
+	}
+
+	doc Constructs closed-closed numerical range
+	doc %RET - NumRange
+	doc %EX - (1...4).sum()  # 10
+	F ...(start, end) {
+		guard start is Num or end is Num
+		guard start is Num or start is Null
+		guard end is Num or end is Null
+		NumRange(start, end, true, true)
+	}
+
+	TEST 0..null is NumRange
+	TEST null..null is PredRange
+	TEST null.."xyz" is PredRange
+
+	doc Iterates over the elements of r, passing each in turn to cb.
+	doc cb - Function to be called with values from r
+	doc args - Additional arguments for calling cb
+	doc %RET - r
+	doc %EX - s=0
+	doc %EX - (1...10).each(F(i) { global s; s+=i })
+	doc %EX - echo(s)  # Outputs: 55
+	F each(r:NumRange, cb:Fun) r.Iter().each(cb)
+
+	TEST (1..3).map(X*2) == [2, 4]
+	TEST (1...3).map(X*2) == [2, 4, 6]
+
+	TEST (10..20).first(F(x) x % 3 == 0) == 12
+
+	doc Check whether the number is in range
+	doc 10 in 10..20  # true
+	doc 1 in 10..20   # false
+	F in(n:Int, r:NumRange) {
+		econd {
+			r.include_start and n == r.start true
+			r.start is not Null and n <= r.start false
+			r.include_end and n == r.end true
+			r.end is not Null and r.end <= n false
+			true true
+		}
+	}
+
+	# TODO: better coverage
+	TEST not(1 in NumRange(1,2,false,true))
+	TEST 2 in NumRange(1,2,false,true)
+	TEST not(10 in NumRange(1,2,false,true))
+	TEST 20 in NumRange(1,30,false,true)
+	TEST 30 in NumRange(1,30,false,true)
+
+	doc Convert range to human readable representation
+	F Str(r:Range) "<${r.typeof().name} ${r.start}..${r.end} include_start=${r.include_start} include_end=${r.include_end} step=${r.step}>"
+
+	doc Length of a NumRange. Only defined for Int start and end.
+	doc Equals to how many times cb will be invoked in each(r, cb).
+	F len(r:NumRange) {
+		guard r.start is Int
+		guard r.end is Int
+		r.end - r.start - 1 + r.include_start.Int() + r.include_end.Int()
+	}
+
+	TEST len(1..3) == 2
+	TEST len(1...3) == 3
+	TEST NumRange(1, 3, include_start=false, include_end=false).len() == 1
+
+	doc Convert NumRange to a predicate.
+	doc %RET - A function that checks whether the only argument is in the range.
+	doc %EX - 1 ~ 0..5  # <MatchSuccess matches=[1]>
+	F Pred(nr:NumRange) X in nr
+
+	TEST Bool(1 ~ 0..5)
+	TEST Bool(0 ~ 0..5)
+	TEST not(5 ~ 0..5)
 }
-
-# TODO: better coverage
-TEST not(1 in NumRange(1,2,false,true))
-TEST 2 in NumRange(1,2,false,true)
-TEST not(10 in NumRange(1,2,false,true))
-TEST 20 in NumRange(1,30,false,true)
-TEST 30 in NumRange(1,30,false,true)
-
-doc Convert range to human readable representation
-F Str(r:Range) "<${r.typeof().name} ${r.start}..${r.end} include_start=${r.include_start} include_end=${r.include_end} step=${r.step}>"
-
-doc Length of a NumRange. Only defined for Int start and end.
-doc Equals to how many times cb will be invoked in each(r, cb).
-F len(r:NumRange) {
-	guard r.start is Int
-	guard r.end is Int
-	r.end - r.start - 1 + r.include_start.Int() + r.include_end.Int()
-}
-
-TEST len(1..3) == 2
-TEST len(1...3) == 3
-TEST NumRange(1, 3, include_start=false, include_end=false).len() == 1
-
-doc Convert NumRange to a predicate.
-doc %RET - A function that checks whether the only argument is in the range.
-doc %EX - 1 ~ 0..5  # <MatchSuccess matches=[1]>
-F Pred(nr:NumRange) X in nr
-
-TEST Bool(1 ~ 0..5)
-TEST Bool(0 ~ 0..5)
-TEST not(5 ~ 0..5)
 
 # TODO: think about multi-valued results (say 10 hosts, 8 succeeded and 2 failed)
 # TODO: think about Argv cooperation. Maybe Failure is NoData and Success is FullBox?
