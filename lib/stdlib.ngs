@@ -3765,6 +3765,14 @@ doc Read all data from a file referenced by file descriptor 0 (stdin) and split 
 doc %RET - Arr
 F lines() read().lines()
 
+# Inspired by https://hackage.haskell.org/package/base-4.12.0.0/docs/Data-String.html#v:words
+doc Split string to words. Word is any non-whitespace.
+doc %RET - Arr of Str
+F words(s:Str) (s ~~ /\S+/m).matches.map(X[0])
+
+TEST "ab cd\nef".words() == %[ab cd ef]
+TEST " x y  ".words() == %[x y]
+
 doc Prepend each line in a with s
 doc %EX - "a " + ["1", "2"]  # ["a 1", "a 2"]
 doc %RET - Type of ret is same as type of a

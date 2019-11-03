@@ -23,6 +23,7 @@
 * Add `echo(ProcessesPipeline, Str)`
 * Automate updating `ngs.vim` syntax file
 * Add `lines()` - returns all standard input as array of lines
+* Add `words(Str)`
 * Add `Results` type, array-like with `Result` items
 * Add `ResultsException` type (with `.results` being `Results` type)
 * Add `List` type
