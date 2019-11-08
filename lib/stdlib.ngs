@@ -676,6 +676,21 @@ F ensure(x, t:Type) {
 	t().push(x)
 }
 
+doc Check whether Eachable1 has the given index: -len(e) <= i < len(e)
+doc %RET - Bool
+F has_index(e:Eachable1, i:Int) {
+	l = len(e)
+	i >= 0 returns i < l
+	0 - i <= l
+}
+
+TEST [].has_index(0) == false
+TEST [].has_index(-1) == false
+TEST [100].has_index(0) == true
+TEST [100].has_index(1) == false
+TEST [100].has_index(-1) == true
+TEST [100].has_index(-2) == false
+
 doc Convert Eachable1 into JSON compatible data structure - array
 F JsonData(e:Eachable1) {
 	guard e is not Int
