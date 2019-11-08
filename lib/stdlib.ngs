@@ -48,13 +48,6 @@ F TODO(s:Str="TODO") {
 	throw NotImplemented("Functionality not implemented. Info: ${s}")
 }
 
-doc Deprecated. Use ExitCode.
-doc %STATUS - deprecated
-F to_exit_code(x) {
-	warn("Using deprecated to_exit_code(). Use ExitCode() instead")
-	ExitCode(x)
-}
-
 doc Do nothing
 doc %RET - null
 F nop(*args, **kwargs) null
@@ -203,30 +196,31 @@ section "MultiMethod" {
 	F Real() { 0.0 }
 }
 
+section "Functional utilities" {
+	doc The identity function. Simply returns the given parameter.
+	doc %RET - The given argument
+	F identity(x)  x
 
-doc The identity function. Simply returns the given parameter.
-doc %RET - The given argument
-F identity(x)  x
-
-TEST identity(10) == 10
-
-
-# TODO: Add more info about the newly created function - useful for debugging
-#       See https://docs.python.org/2/library/functools.html#partial-objects
-doc Returns partially-applied function
-doc f - The base function
-doc Xunderscore_unsupportedXbind_args - The arguments to partial apply (bind the function to)
-F partial(f:Fun, *bind_args)
-	F(*args) f(*bind_args, *args)
-
-TEST p = partial((-), 10); p(7) == 3
+	TEST identity(10) == 10
 
 
-doc Same as partial() but the bound arguments are last ones
-F partial_tail(f:Fun, *bind_args)
-	F(*args) f(*args, *bind_args)
+	# TODO: Add more info about the newly created function - useful for debugging
+	#       See https://docs.python.org/2/library/functools.html#partial-objects
+	doc Returns partially-applied function
+	doc f - The base function
+	doc Xunderscore_unsupportedXbind_args - The arguments to partial apply (bind the function to)
+	F partial(f:Fun, *bind_args)
+		F(*args) f(*bind_args, *args)
 
-TEST p = partial_tail((-), 10); p(7) == -3
+	TEST p = partial((-), 10); p(7) == 3
+
+
+	doc Same as partial() but the bound arguments are last ones
+	F partial_tail(f:Fun, *bind_args)
+		F(*args) f(*args, *bind_args)
+
+	TEST p = partial_tail((-), 10); p(7) == -3
+}
 
 doc Sets the given field to the given value
 doc %RET - The modified obj
@@ -274,6 +268,22 @@ section "Pred - convert different types to predicates" {
 	TEST Pred({"a": Any})({"a": 1})
 	TEST Pred({"a": Any, "b": Any})({"a": 1}) == false
 	TEST Pred({"a": Any, "b": {false}})({"a": 1, "b": 2}) == false
+
+	doc Convert array of one element to a predicate.
+	doc The predicate asserts that
+	doc 1. The value given to test is Eachable1 but not Str or Int
+	doc 2. Each element satisifies the predicate given in a[0]
+	F Pred(a:Arr) {
+		guard a.len() == 1
+		p = Pred(a[0])
+
+		F arr_pred(x) false
+		F arr_pred(e:Eachable1) e.all(p)
+		F arr_pred(x:Int) false
+		F arr_pred(x:Str) false
+
+		arr_pred
+	}
 
 	doc Convert a function to predicate.
 	doc %RET - The given function, without any transformation
@@ -1120,6 +1130,7 @@ doc %EX - my_items.dflt("source", "(unknown)")
 doc %RET - e
 F dflt(e:Eachable1, k, v) {
 	guard e.all({A is NormalTypeInstance or A is Hash})
+	# guard e [OneOf(NormalTypeInstance, Hash)]
 	e.each(X.dflt(k, v))
 	e
 }
@@ -4159,7 +4170,7 @@ block _ {
 		ll_thread_local()
 	}
 
-	# ASSUMPTION: Thread is loadad in main thread
+	# ASSUMPTION: Thread is loaded in main thread
 	assert('thread' not in Thread.local)
 
 	Thread.local.thread = Thread().set('id', 'main').set('thread', 'MAIN THREAD REFERENCE IS NOT IMPLEMENTED YET')

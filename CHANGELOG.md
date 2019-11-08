@@ -73,8 +73,9 @@
 
 ### Breaking changes
 
-* Removed `Return` type and associated machinery
-* Removed deprecated `filter(Eachable1)`
+* Remove `Return` type and associated machinery
+* Remove deprecated `filter(Eachable1)`
+* Remove deprecated `to_exit_code()`
 
 ### Work in progress
 
