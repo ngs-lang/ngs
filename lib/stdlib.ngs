@@ -5276,8 +5276,7 @@ F Argv(h:Hash) {
 			v == [] returns
 
 			collect(k)
-			# Convert non-arrays to FullBox so each() could be used on scalars
-			only(X is not Arr, FullBox)(v).each(collect)
+			v.ensure(Arr).each(collect)
 		})
 }
 
