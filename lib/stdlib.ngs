@@ -3522,430 +3522,429 @@ F code(n:Int) Str(n)
 doc Convert Int into JSON compatible data structure - number
 F JsonData(n:Int) n
 
-# === Str ========================================
+section "Strings and characters" {
 
-# https://docs.python.org/2/library/string.html
-CHARS = ns {
-	ascii_lowercase = 'abcdefghijklmnopqrstuvwxyz'
-	ascii_uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-	ascii_letters = ascii_lowercase + ascii_uppercase
-	digits = '0123456789'
-	hexdigits_uppercase = '0123456789ABCDEF'
-	hexdigits_lowercase = '0123456789abcdef'
-	octdigits = '01234567'
-	base64 = ascii_uppercase + ascii_lowercase + digits + '+/'
-	base64url = ascii_uppercase + ascii_lowercase + digits + '-_'
-	html_escape = {'&': '&amp;', '<': '&lt;', '>': '&gt;'}
-	html_attr_escape = html_escape + {'"': '&quot;', "'": '&#39;'}
-	shell_escape = {'\\': '\\\\', '"': '\\"', "'": "\\'", '&': '\\&'}
-	shell_escape_with_eq = shell_escape + {'=': '\\='}
+	# https://docs.python.org/2/library/string.html
+	CHARS = ns {
+		ascii_lowercase = 'abcdefghijklmnopqrstuvwxyz'
+		ascii_uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+		ascii_letters = ascii_lowercase + ascii_uppercase
+		digits = '0123456789'
+		hexdigits_uppercase = '0123456789ABCDEF'
+		hexdigits_lowercase = '0123456789abcdef'
+		octdigits = '01234567'
+		base64 = ascii_uppercase + ascii_lowercase + digits + '+/'
+		base64url = ascii_uppercase + ascii_lowercase + digits + '-_'
+		html_escape = {'&': '&amp;', '<': '&lt;', '>': '&gt;'}
+		html_attr_escape = html_escape + {'"': '&quot;', "'": '&#39;'}
+		shell_escape = {'\\': '\\\\', '"': '\\"', "'": "\\'", '&': '\\&'}
+		shell_escape_with_eq = shell_escape + {'=': '\\='}
 
-}
-
-# --- Constructors ---
-
-doc No-op constructor
-doc %RET - s
-F Str(s:Str) s
-
-doc Convert Null to string
-doc %RET - the string "null"
-F Str(n:Null) "null"
-F Str(b:Bool) if b "true" "false"
-
-doc Convert Arr to string
-doc %RET - Str
-F Str(a:Arr) "[${a.map(Str).join(',')}]"
-
-doc Convert Hash to string
-doc %RET - Str
-F Str(h:Hash) "{" + h.map(F(k, v) "${k}=${v}").join(", ") + "}"
-
-# --- Functional ---
-
-doc Iterates over all string characters (currently bytes).
-doc cb - Function to be called with each character from s
-doc args - Additional arguments for calling cb
-doc %RET - s
-doc %EX - "abc".each(echo)
-doc %EX - # Output:
-doc %EX - # a
-doc %EX - # b
-doc %EX - # c
-F each(s:Str, cb:Fun) {
-	s.len().each(F(idx) {
-		cb(s[idx])
-	})
-	s
-}
-
-# --- Sugar ---
-
-doc Find substring in a string.
-doc haystack - The string to search in
-doc needle - The string to find
-doc %RET - Int or null
-doc %EX - pos("abc", "cd")     # null
-doc %EX - pos("abcdef", "cd")  # 2
-F pos(haystack:Str, needle:Str) pos(haystack, needle, 0)
-
-TEST pos("abc", "cd") == null
-TEST pos("abcdef", "cd") == 2
-
-TEST pos("a:b:c", ":") == 1
-TEST pos("a:b:c", ":", 2) == 3
-
-doc Determine if needle substring occurs at least once in haystack
-doc haystack - The string to search in
-doc needle - The string to find
-doc %RET - Bool
-doc %EX - "bc" in "abcd"
-doc %EX - "x" not in "abcd"
-F in(needle:Str, haystack:Str) pos(haystack, needle) is not Null
-
-TEST "bc" in "abcd"
-TEST "x" not in "abcd"
-
-doc Get given character (currently byte) of the string
-doc s - Original string
-doc i - Index of the character to return
-doc %EX - "abc"[0]  # "a"
-F '[]'(s:Str, i:Int) s[i..i+1]
-
-TEST ("abc"[0] == "a") and ("abc"[2] == "c")
-TEST try "abc"[3] == "x" catch(e:IndexNotFound) true
-
-doc Get given character (currently byte) of the string (negative indexes handler). Throws IndexNotFound if abs(i) > len(s).
-doc s - Original string.
-doc i - Negative index of the character to return
-doc %EX - "abc"[-1]  # "c"
-F '[]'(s:Str, i:Int) {
-	guard i < 0
-	i < 0-s.len() throws IndexNotFound("Negative index into string is (abs) larger than the string")
-	s[s.len()+i]
-}
-
-TEST ("abc"[-1] == "c") and ("abc"[-3] == "a")
-TEST try "abc"[-4] == "x" catch(e:IndexNotFound) true
-
-doc Get a substring. Indexes in s are specified by NumRange.
-doc s - Original string
-doc r - NumRange with negatve .end
-doc %EX - "(Look ma, no parens)"[1..-1]  # "Look ma, no parens"
-doc %RET - Str
-F '[]'(s:Str, r:NumRange) {
-	guard r.end is Int and r.end < 0
-	r.end < 0 - s.len() throws InvalidArgument("Negative index (range end) into string is (abs) larger than the string")
-	s[r.start..s.len() + r.end]
-}
-
-# --- Misc utilities ---
-
-doc Split string by substring
-doc s - String to split
-doc delim - Delimiter to split by
-doc max_parts - Maximum number of resulting parts, 0 - unlimited
-doc %RET - Arr of Str
-doc %EX - ":a:bc:d:".split(":")   # ["", "a", "bc", "d", ""]
-doc %EX - "bucket_name/dir/file".split("/", 2)  # ["bucket_name", "dir/file"]
-doc %EX - ":a:bc:d:".split("bc")  # [":a:", ":d:"]
-F split(s:Str, delim:Str, max_parts:Int=0) {
-	l = delim.len()
-	guard l > 0
-	start = 0
-	parts = 0
-	collector {
-		while (p = pos(s, delim, start)) is not Null {
-			collect(s[start..p])
-			start = p + l
-			parts += 1
-			parts == max_parts - 1 breaks
-		}
-		collect(s[start..null])
-	}
-}
-
-TEST ":a:bc:d:".split(":") == ["", "a", "bc", "d", ""]
-TEST "bucket_name/dir/file".split("/", 2) == ["bucket_name", "dir/file"]
-TEST ":a:bc:d:".split("bc") == [":a:", ":d:"]
-
-doc Repeat string n times
-doc %EX - "abc" * 3  # "abcabcabc"
-F *(s:Str, n:Int) ([s]*n).join('')
-
-# Tested with Str(Str,Int)
-
-doc Convert anything to Str of a given width
-F Str(x, target_width:Int, ch:Str=' ') x.Str().Str(target_width, ch)
-
-doc Pad a string to given width with spaces
-doc target_width - Positive pads on right, negative pads on left
-doc %EX - Str("x", 3)  # 'x  '
-doc %EX - Str("x",-3)  # '  x'
-F Str(s:Str, target_width:Int, ch:Str=' ') {
-	assert(len(ch) == 1)
-	l = s.len()
-	pad_on_left = target_width < 0
-	if pad_on_left {
-		target_width = 0 - target_width
 	}
 
-	l >= target_width returns s
+	section "Str constructors" {
+		doc No-op constructor
+		doc %RET - s
+		F Str(s:Str) s
 
-	padding = ch * (target_width - l)
-	if pad_on_left {
-		padding + s
-	} else {
-		s + padding
+		doc Convert Null to string
+		doc %RET - the string "null"
+		F Str(n:Null) "null"
+		F Str(b:Bool) if b "true" "false"
+
+		doc Convert Arr to string
+		doc %RET - Str
+		F Str(a:Arr) "[${a.map(Str).join(',')}]"
+
+		doc Convert Hash to string
+		doc %RET - Str
+		F Str(h:Hash) "{" + h.map(F(k, v) "${k}=${v}").join(", ") + "}"
 	}
-}
 
-# Not sure about this, might be confusing behaviour
-doc Convert a number to a string and pad it
-doc target_width - Positive pads on left, negative pads on right
-doc %EX - Str(10,  4)  # '  10'
-doc %EX - Str(10, -4)  # '10  '
-F Str(n:Int, target_width:Int, ch:Str=' ') n.Str().Str(0-target_width, ch)
+	# --- Functional ---
 
-TEST Str(10,  4) == '  10'
-TEST Str(10,  4, '0') == '0010'
-TEST Str(10, -4) == '10  '
-TEST Str('x', 3) == 'x  '
-TEST Str('x',-3) == '  x'
-TEST Str('x',-3, '.') == '..x'
-
-doc Check whether a string starts with another string
-doc %RET - Bool
-doc %EX - "abcd".starts_with("ab")  # true
-doc %EX - "ab".starts_with("abcd")  # false
-F starts_with(haystack:Str, needle:Str) {
-	needle.len() > haystack.len() returns false
-	haystack[0..needle.len()] == needle
-}
-
-TEST "abcd".starts_with("ab")
-TEST "ab".starts_with("abcd") == false
-
-doc Check whether a string ends with another string
-doc %RET - Bool
-doc %EX - "abcd".ends_with("cd")  # true
-doc %EX - "ab".ends_with("cdab")  # false
-F ends_with(haystack:Str, needle:Str) {
-	needle.len() > haystack.len() returns false
-	l = haystack.len()
-	haystack[l - needle.len()..l] == needle
-}
-
-TEST "abcd".ends_with("cd")
-TEST "ab".ends_with("cdab") == false
-
-
-doc Case-insensitive LessThan or Equal comparison for strings
-doc %RET - Bool
-F lte(a:Str, b:Str)
-	c_strcasecmp(a, b) <= 0
-
-doc Case sensitive LessThan or Equal comparison for strings
-doc %RET - Bool
-F '<='(a:Str, b:Str)
-	c_strcmp(a, b) <= 0
-
-doc Case sensitive LessThan comparison for strings
-doc %RET - Bool
-F '<'(a:Str, b:Str)
-	c_strcmp(a, b) < 0
-
-doc Case sensitive GreaterThan comparison for strings
-doc %RET - Bool
-F '>'(a:Str, b:Str)
-	c_strcmp(a, b) > 0
-
-doc Split s to strings using end-of-line separators.
-doc Same as Lines(s).Arr()
-doc %RET - Arr
-F lines(s:Str) Lines(s).Arr()
-
-doc Split s to strings using end-of-line separators and call cb for each one of the lines.
-doc TODO: More efficient implementation, which would not have temporary array of all lines.
-doc cb - Function to be called with each line
-doc args - Additional arguments for calling cb
-F lines(s:Str, cb:Fun) {
-	lines(s).each(cb)
-}
-
-TEST "xx\nyy".lines() == %[xx yy]
-
-doc Read all data from a file referenced by file descriptor 0 (stdin) and split into lines
-doc %RET - Arr
-F lines() read().lines()
-
-# Inspired by https://hackage.haskell.org/package/base-4.12.0.0/docs/Data-String.html#v:words
-doc Split string to words. Word is any non-whitespace.
-doc %RET - Arr of Str
-F words(s:Str) (s ~~ /\S+/m).matches.map(X[0])
-
-TEST "ab cd\nef".words() == %[ab cd ef]
-TEST " x y  ".words() == %[x y]
-
-doc Prepend each line in a with s
-doc %EX - "a " + ["1", "2"]  # ["a 1", "a 2"]
-doc %RET - Type of ret is same as type of a
-F +(s:Str, a:Eachable1) {
-	guard a is not Str
-	guard a.all(Str)
-	a.mapo(s+X)
-}
-TEST "a " + ["1", "2"] == ["a 1", "a 2"]
-
-doc Append s to each line in a
-doc %EX - ["1", "2"] + " a"  # ["1 a", "2 a"]
-doc %RET - Type of ret is same as type of a
-F +(a:Eachable1, s:Str) {
-	guard a is not Str
-	guard a.all(Str)
-	a.mapo(X+s)
-}
-TEST ["1", "2"] + " a" == ["1 a", "2 a"]
-
-doc Map a string, character by character.
-doc %EX - "abcd".mapo(F(x) if x == "b" then "X" else x)  # "aXcd"
-doc %RET - Str
-F mapo(s:Str, mapper:Fun) s.map(mapper).join('')
-
-TEST "abcd".mapo(F(x) if x == "b" then "X" else x) == "aXcd"
-
-doc Truncate a string if necessary so it would have maximum n characters (currently bytes).
-doc s - The string to (possibly) truncate.
-doc n - Maximum characters
-doc marker - The truncation marker
-doc %RET - Either s or new Str of length n
-doc %EX - "abc".limit(5, "...")     # "abc"
-doc %EX - "abcdef".limit(5, "...")  # "ab..."
-doc %EX - "abcdef".limit(2)         # "ab"
-F limit(s:Str, n:Int, marker:Str='') {
-	s.len() <= n returns s
-	if marker {
-		lim = n - len(marker)
-		s[0..lim] + marker
-	} else {
-		s[0..n]
+	doc Iterates over all string characters (currently bytes).
+	doc cb - Function to be called with each character from s
+	doc args - Additional arguments for calling cb
+	doc %RET - s
+	doc %EX - "abc".each(echo)
+	doc %EX - # Output:
+	doc %EX - # a
+	doc %EX - # b
+	doc %EX - # c
+	F each(s:Str, cb:Fun) {
+		s.len().each(F(idx) {
+			cb(s[idx])
+		})
+		s
 	}
-}
 
-TEST "abc".limit(5, "...") == "abc"
-TEST "abcdef".limit(5, "...") == "ab..."
-TEST "abcdef".limit(2) == "ab"
+	# --- Sugar ---
 
-doc Get character (currently byte) code. Throws InvalidArgument if s is not of length 1.
-doc %EX - ord("A")  # 65 on my machine
-F ord(s:Str) {
-	s.len() != 1 throws InvalidArgument("ord() argument must be of length 1 exactly").set('given', s)
-	ord(s, 0)
-}
+	doc Find substring in a string.
+	doc haystack - The string to search in
+	doc needle - The string to find
+	doc %RET - Int or null
+	doc %EX - pos("abc", "cd")     # null
+	doc %EX - pos("abcdef", "cd")  # 2
+	F pos(haystack:Str, needle:Str) pos(haystack, needle, 0)
 
-doc Find substring in string. Uses pos().
-doc %RET - MatchResult
-doc %EX - "abc" ~ "bc"  # <MatchSuccess ...>
-doc %EX - "abc" ~ "X"   # <MatchFailure>
-F ~(haystack:Str, needle:Str, offset:Int=0) {
-	p = pos(haystack, needle, offset)
-	p is Null returns MatchFailure(haystack, needle)
-	l = needle.len()
-	ret = MatchSuccess([needle], needle)
-	ret.named = {}
-	ret.positions = [p..p+l]
-	ret.whole = ret.matches[0]
-	ret.before = haystack[0..p]
-	ret.after = haystack[p+l..null]
-	ret
-}
+	TEST pos("abc", "cd") == null
+	TEST pos("abcdef", "cd") == 2
 
-doc Find all non-overlapping matches of a substring in a string.
-doc %RET - if collect_unmatched - Arr with each element being MatchSuccess or Str, if not collect_unmatched - Arr of MatchSuccess
-F ~~(haystack:Str, needle:Str, collect_unmatched:Bool=false) {
-	collector {
-		m = (~)(haystack, needle, 0)
-		if not(m) {
-			if collect_unmatched collect(haystack)
-			return null
-		}
-		start_offset = m.positions[0].start
-		next_offset = m.positions[0].end
-		if collect_unmatched and start_offset then collect(haystack[0..start_offset])
-		collect(m)
-		while true {
-			if start_offset == next_offset {
-				next_offset == len(haystack) breaks
+	TEST pos("a:b:c", ":") == 1
+	TEST pos("a:b:c", ":", 2) == 3
+
+	doc Determine if needle substring occurs at least once in haystack
+	doc haystack - The string to search in
+	doc needle - The string to find
+	doc %RET - Bool
+	doc %EX - "bc" in "abcd"
+	doc %EX - "x" not in "abcd"
+	F in(needle:Str, haystack:Str) pos(haystack, needle) is not Null
+
+	TEST "bc" in "abcd"
+	TEST "x" not in "abcd"
+
+	doc Get given character (currently byte) of the string
+	doc s - Original string
+	doc i - Index of the character to return
+	doc %EX - "abc"[0]  # "a"
+	F '[]'(s:Str, i:Int) s[i..i+1]
+
+	TEST ("abc"[0] == "a") and ("abc"[2] == "c")
+	TEST try "abc"[3] == "x" catch(e:IndexNotFound) true
+
+	doc Get given character (currently byte) of the string (negative indexes handler). Throws IndexNotFound if abs(i) > len(s).
+	doc s - Original string.
+	doc i - Negative index of the character to return
+	doc %EX - "abc"[-1]  # "c"
+	F '[]'(s:Str, i:Int) {
+		guard i < 0
+		i < 0-s.len() throws IndexNotFound("Negative index into string is (abs) larger than the string")
+		s[s.len()+i]
+	}
+
+	TEST ("abc"[-1] == "c") and ("abc"[-3] == "a")
+	TEST try "abc"[-4] == "x" catch(e:IndexNotFound) true
+
+	doc Get a substring. Indexes in s are specified by NumRange.
+	doc s - Original string
+	doc r - NumRange with negatve .end
+	doc %EX - "(Look ma, no parens)"[1..-1]  # "Look ma, no parens"
+	doc %RET - Str
+	F '[]'(s:Str, r:NumRange) {
+		guard r.end is Int and r.end < 0
+		r.end < 0 - s.len() throws InvalidArgument("Negative index (range end) into string is (abs) larger than the string")
+		s[r.start..s.len() + r.end]
+	}
+
+	# --- Misc utilities ---
+
+	doc Split string by substring
+	doc s - String to split
+	doc delim - Delimiter to split by
+	doc max_parts - Maximum number of resulting parts, 0 - unlimited
+	doc %RET - Arr of Str
+	doc %EX - ":a:bc:d:".split(":")   # ["", "a", "bc", "d", ""]
+	doc %EX - "bucket_name/dir/file".split("/", 2)  # ["bucket_name", "dir/file"]
+	doc %EX - ":a:bc:d:".split("bc")  # [":a:", ":d:"]
+	F split(s:Str, delim:Str, max_parts:Int=0) {
+		l = delim.len()
+		guard l > 0
+		start = 0
+		parts = 0
+		collector {
+			while (p = pos(s, delim, start)) is not Null {
+				collect(s[start..p])
+				start = p + l
+				parts += 1
+				parts == max_parts - 1 breaks
 			}
-			m = (~)(haystack, needle, next_offset)
-			if m {
-				if collect_unmatched {
-					if next_offset != m.positions[0].start {
-						collect(haystack[next_offset..(m.positions[0].start)])
-					}
+			collect(s[start..null])
+		}
+	}
+
+	TEST ":a:bc:d:".split(":") == ["", "a", "bc", "d", ""]
+	TEST "bucket_name/dir/file".split("/", 2) == ["bucket_name", "dir/file"]
+	TEST ":a:bc:d:".split("bc") == [":a:", ":d:"]
+
+	doc Repeat string n times
+	doc %EX - "abc" * 3  # "abcabcabc"
+	F *(s:Str, n:Int) ([s]*n).join('')
+
+	# Tested with Str(Str,Int)
+
+	doc Convert anything to Str of a given width
+	F Str(x, target_width:Int, ch:Str=' ') x.Str().Str(target_width, ch)
+
+	doc Pad a string to given width with spaces
+	doc target_width - Positive pads on right, negative pads on left
+	doc %EX - Str("x", 3)  # 'x  '
+	doc %EX - Str("x",-3)  # '  x'
+	F Str(s:Str, target_width:Int, ch:Str=' ') {
+		assert(len(ch) == 1)
+		l = s.len()
+		pad_on_left = target_width < 0
+		if pad_on_left {
+			target_width = 0 - target_width
+		}
+
+		l >= target_width returns s
+
+		padding = ch * (target_width - l)
+		if pad_on_left {
+			padding + s
+		} else {
+			s + padding
+		}
+	}
+
+	# Not sure about this, might be confusing behaviour
+	doc Convert a number to a string and pad it
+	doc target_width - Positive pads on left, negative pads on right
+	doc %EX - Str(10,  4)  # '  10'
+	doc %EX - Str(10, -4)  # '10  '
+	F Str(n:Int, target_width:Int, ch:Str=' ') n.Str().Str(0-target_width, ch)
+
+	TEST Str(10,  4) == '  10'
+	TEST Str(10,  4, '0') == '0010'
+	TEST Str(10, -4) == '10  '
+	TEST Str('x', 3) == 'x  '
+	TEST Str('x',-3) == '  x'
+	TEST Str('x',-3, '.') == '..x'
+
+	doc Check whether a string starts with another string
+	doc %RET - Bool
+	doc %EX - "abcd".starts_with("ab")  # true
+	doc %EX - "ab".starts_with("abcd")  # false
+	F starts_with(haystack:Str, needle:Str) {
+		needle.len() > haystack.len() returns false
+		haystack[0..needle.len()] == needle
+	}
+
+	TEST "abcd".starts_with("ab")
+	TEST "ab".starts_with("abcd") == false
+
+	doc Check whether a string ends with another string
+	doc %RET - Bool
+	doc %EX - "abcd".ends_with("cd")  # true
+	doc %EX - "ab".ends_with("cdab")  # false
+	F ends_with(haystack:Str, needle:Str) {
+		needle.len() > haystack.len() returns false
+		l = haystack.len()
+		haystack[l - needle.len()..l] == needle
+	}
+
+	TEST "abcd".ends_with("cd")
+	TEST "ab".ends_with("cdab") == false
+
+
+	doc Case-insensitive LessThan or Equal comparison for strings
+	doc %RET - Bool
+	F lte(a:Str, b:Str)
+		c_strcasecmp(a, b) <= 0
+
+	doc Case sensitive LessThan or Equal comparison for strings
+	doc %RET - Bool
+	F '<='(a:Str, b:Str)
+		c_strcmp(a, b) <= 0
+
+	doc Case sensitive LessThan comparison for strings
+	doc %RET - Bool
+	F '<'(a:Str, b:Str)
+		c_strcmp(a, b) < 0
+
+	doc Case sensitive GreaterThan comparison for strings
+	doc %RET - Bool
+	F '>'(a:Str, b:Str)
+		c_strcmp(a, b) > 0
+
+	doc Split s to strings using end-of-line separators.
+	doc Same as Lines(s).Arr()
+	doc %RET - Arr
+	F lines(s:Str) Lines(s).Arr()
+
+	doc Split s to strings using end-of-line separators and call cb for each one of the lines.
+	doc TODO: More efficient implementation, which would not have temporary array of all lines.
+	doc cb - Function to be called with each line
+	doc args - Additional arguments for calling cb
+	F lines(s:Str, cb:Fun) {
+		lines(s).each(cb)
+	}
+
+	TEST "xx\nyy".lines() == %[xx yy]
+
+	doc Read all data from a file referenced by file descriptor 0 (stdin) and split into lines
+	doc %RET - Arr
+	F lines() read().lines()
+
+	# Inspired by https://hackage.haskell.org/package/base-4.12.0.0/docs/Data-String.html#v:words
+	doc Split string to words. Word is any non-whitespace.
+	doc %RET - Arr of Str
+	F words(s:Str) (s ~~ /\S+/m).matches.map(X[0])
+
+	TEST "ab cd\nef".words() == %[ab cd ef]
+	TEST " x y  ".words() == %[x y]
+
+	doc Prepend each line in a with s
+	doc %EX - "a " + ["1", "2"]  # ["a 1", "a 2"]
+	doc %RET - Type of ret is same as type of a
+	F +(s:Str, a:Eachable1) {
+		guard a is not Str
+		guard a.all(Str)
+		a.mapo(s+X)
+	}
+	TEST "a " + ["1", "2"] == ["a 1", "a 2"]
+
+	doc Append s to each line in a
+	doc %EX - ["1", "2"] + " a"  # ["1 a", "2 a"]
+	doc %RET - Type of ret is same as type of a
+	F +(a:Eachable1, s:Str) {
+		guard a is not Str
+		guard a.all(Str)
+		a.mapo(X+s)
+	}
+	TEST ["1", "2"] + " a" == ["1 a", "2 a"]
+
+	doc Map a string, character by character.
+	doc %EX - "abcd".mapo(F(x) if x == "b" then "X" else x)  # "aXcd"
+	doc %RET - Str
+	F mapo(s:Str, mapper:Fun) s.map(mapper).join('')
+
+	TEST "abcd".mapo(F(x) if x == "b" then "X" else x) == "aXcd"
+
+	doc Truncate a string if necessary so it would have maximum n characters (currently bytes).
+	doc s - The string to (possibly) truncate.
+	doc n - Maximum characters
+	doc marker - The truncation marker
+	doc %RET - Either s or new Str of length n
+	doc %EX - "abc".limit(5, "...")     # "abc"
+	doc %EX - "abcdef".limit(5, "...")  # "ab..."
+	doc %EX - "abcdef".limit(2)         # "ab"
+	F limit(s:Str, n:Int, marker:Str='') {
+		s.len() <= n returns s
+		if marker {
+			lim = n - len(marker)
+			s[0..lim] + marker
+		} else {
+			s[0..n]
+		}
+	}
+
+	TEST "abc".limit(5, "...") == "abc"
+	TEST "abcdef".limit(5, "...") == "ab..."
+	TEST "abcdef".limit(2) == "ab"
+
+	doc Get character (currently byte) code. Throws InvalidArgument if s is not of length 1.
+	doc %EX - ord("A")  # 65 on my machine
+	F ord(s:Str) {
+		s.len() != 1 throws InvalidArgument("ord() argument must be of length 1 exactly").set('given', s)
+		ord(s, 0)
+	}
+
+	doc Find substring in string. Uses pos().
+	doc %RET - MatchResult
+	doc %EX - "abc" ~ "bc"  # <MatchSuccess ...>
+	doc %EX - "abc" ~ "X"   # <MatchFailure>
+	F ~(haystack:Str, needle:Str, offset:Int=0) {
+		p = pos(haystack, needle, offset)
+		p is Null returns MatchFailure(haystack, needle)
+		l = needle.len()
+		ret = MatchSuccess([needle], needle)
+		ret.named = {}
+		ret.positions = [p..p+l]
+		ret.whole = ret.matches[0]
+		ret.before = haystack[0..p]
+		ret.after = haystack[p+l..null]
+		ret
+	}
+
+	doc Find all non-overlapping matches of a substring in a string.
+	doc %RET - if collect_unmatched - Arr with each element being MatchSuccess or Str, if not collect_unmatched - Arr of MatchSuccess
+	F ~~(haystack:Str, needle:Str, collect_unmatched:Bool=false) {
+		collector {
+			m = (~)(haystack, needle, 0)
+			if not(m) {
+				if collect_unmatched collect(haystack)
+				return null
+			}
+			start_offset = m.positions[0].start
+			next_offset = m.positions[0].end
+			if collect_unmatched and start_offset then collect(haystack[0..start_offset])
+			collect(m)
+			while true {
+				if start_offset == next_offset {
+					next_offset == len(haystack) breaks
 				}
-				start_offset = m.positions[0].start
-				next_offset = m.positions[0].end
-				collect(m)
-				continue
+				m = (~)(haystack, needle, next_offset)
+				if m {
+					if collect_unmatched {
+						if next_offset != m.positions[0].start {
+							collect(haystack[next_offset..(m.positions[0].start)])
+						}
+					}
+					start_offset = m.positions[0].start
+					next_offset = m.positions[0].end
+					collect(m)
+					continue
+				}
+				break
 			}
-			break
-		}
-		if collect_unmatched and (next_offset < len(haystack)) {
-			collect(haystack[next_offset..null])
+			if collect_unmatched and (next_offset < len(haystack)) {
+				collect(haystack[next_offset..null])
+			}
 		}
 	}
-}
 
-TEST m = (~~)("abcbe", "b", true); m.len() == 5 and m[[0,2,4]] == %[a c e] and m[[1,3]].all(MatchSuccess)
+	TEST m = (~~)("abcbe", "b", true); m.len() == 5 and m[[0,2,4]] == %[a c e] and m[[1,3]].all(MatchSuccess)
 
-doc Replace all occurrences of src with dst in s
-F replace(s:Str, src:Str, dst:Str) (~~)(s, src, true).map(only(MatchSuccess, {dst})).join('')
+	doc Replace all occurrences of src with dst in s
+	F replace(s:Str, src:Str, dst:Str) (~~)(s, src, true).map(only(MatchSuccess, {dst})).join('')
 
-TEST "x10ab20c30y".replace("0", "X") == "x1Xab2Xc3Xy"
+	TEST "x10ab20c30y".replace("0", "X") == "x1Xab2Xc3Xy"
 
-doc Convert a Str to NGS code that would produce the string when executed. Not fully functional yet.
-doc BUG: Does not do escaping.
-doc %RET - Str
-F code(s:Str) {
-	# XXX TODO: escaping
-	"'${s}'"
-}
-
-doc String expansion handler. Called automatically for every double-quoted string that has $* components.
-doc %EX - "$*{ENV.PATH.split(":")}/od".filter(File(X))  # Find out where in PATH is the "od" binary
-doc %AUTO - "abc$*{something}def"
-F '"$*"'(components:Arr) {
-	components.len() == 0 throws InvalidArgument("Must be one or more component")
-	c = components
-	c_len = c.len()
-	cached_str = c.map(F(elt:NgsStrComp) {
-		elt is not NgsStrCompSplatExp returns Str(elt.val)
-	})
-	collector {
-		F kern(acc:Arr, i:Int) {
-			if i == c_len {
-				collect(acc.join(''))
-				return
-			}
-			if c[i] is NgsStrCompSplatExp {
-				c[i].val.each(F(v) kern(acc + [v], i+1))
-			} else {
-				kern(acc + [cached_str[i]], i+1)
-			}
-		}
-		kern([], 0)
+	doc Convert a Str to NGS code that would produce the string when executed. Not fully functional yet.
+	doc BUG: Does not do escaping.
+	doc %RET - Str
+	F code(s:Str) {
+		# XXX TODO: escaping
+		"'${s}'"
 	}
+
+	doc String expansion handler. Called automatically for every double-quoted string that has $* components.
+	doc %EX - "$*{ENV.PATH.split(":")}/od".filter(File(X))  # Find out where in PATH is the "od" binary
+	doc %AUTO - "abc$*{something}def"
+	F '"$*"'(components:Arr) {
+		components.len() == 0 throws InvalidArgument("Must be one or more component")
+		c = components
+		c_len = c.len()
+		cached_str = c.map(F(elt:NgsStrComp) {
+			elt is not NgsStrCompSplatExp returns Str(elt.val)
+		})
+		collector {
+			F kern(acc:Arr, i:Int) {
+				if i == c_len {
+					collect(acc.join(''))
+					return
+				}
+				if c[i] is NgsStrCompSplatExp {
+					c[i].val.each(F(v) kern(acc + [v], i+1))
+				} else {
+					kern(acc + [cached_str[i]], i+1)
+				}
+			}
+			kern([], 0)
+		}
+	}
+
+	TEST "a$*{[1,2]}b$*{10..12}c" == ["a1b10c", "a1b11c", "a2b10c", "a2b11c"]
+
+	doc Convert Str into JSON compatible data structure - string
+	F JsonData(s:Str) s
 }
 
-TEST "a$*{[1,2]}b$*{10..12}c" == ["a1b10c", "a1b11c", "a2b10c", "a2b11c"]
-
-doc Convert Str into JSON compatible data structure - string
-F JsonData(s:Str) s
-
-# === Stats ========================================
-
-{
+section "Stats" {
 	doc A group of named counters
 	doc h - The underlying Hash
 	doc %EX - s = Stats().push('a').push('a').push('b')
@@ -3957,35 +3956,34 @@ F JsonData(s:Str) s
 	doc %EX - s["x"]  # 1
 	doc %EX - s["y"]  # 2
 	type Stats(HashLike)
+
+	doc Makes Stats, with each element in the array counted as if push()ed
+	doc %EX - Stats(['a', 'a', 'b']).Hash()  # {'a': 2, 'b': 1}
+	doc %EX - Stats("AABC").Hash()  # {A=2, B=1, C=1}
+	F init(s:Stats, e:Eachable1) {
+		init(s)
+		e.each(push(s, X))
+	}
+
+	doc Increment the named counter
+	doc k - the name of the counter to increment
+	doc %EX - Stats().push("a").push("a").push("b")["a"]  # 2
+	F push(s:Stats, k) {
+		h = s.attrs().HashLike
+		h[k] = h.get(k, 0) + 1
+		s
+	}
+
+	TEST Stats().push('a').push('a').push('b').Hash() == {'a': 2, 'b': 1}
+	TEST Stats(['a', 'a', 'b']).Hash() == {'a': 2, 'b': 1}
+	TEST Stats(['a', 'a', 'b'])['a'] == 2
+	TEST Stats(['a', 'a', 'b']).a == 2
+
+	doc Convert Stats into JSON compatible data structure - object
+	F JsonData(s:Stats) s.Hash().JsonData()
 }
 
-doc Makes Stats, with each element in the array counted as if push()ed
-doc %EX - Stats(['a', 'a', 'b']).Hash()  # {'a': 2, 'b': 1}
-doc %EX - Stats("AABC").Hash()  # {A=2, B=1, C=1}
-F init(s:Stats, e:Eachable1) {
-	init(s)
-	e.each(push(s, X))
-}
-
-doc Increment the named counter
-doc k - the name of the counter to increment
-doc %EX - Stats().push("a").push("a").push("b")["a"]  # 2
-F push(s:Stats, k) {
-	h = s.attrs().HashLike
-	h[k] = h.get(k, 0) + 1
-	s
-}
-
-TEST Stats().push('a').push('a').push('b').Hash() == {'a': 2, 'b': 1}
-TEST Stats(['a', 'a', 'b']).Hash() == {'a': 2, 'b': 1}
-TEST Stats(['a', 'a', 'b'])['a'] == 2
-TEST Stats(['a', 'a', 'b']).a == 2
-
-doc Convert Stats into JSON compatible data structure - object
-F JsonData(s:Stats) s.Hash().JsonData()
-
-# === Thread ========================================
-block _ {
+section "Thread" block _ {
 	global Thread, Threads, ThreadFail, init, join, pmap, pfilter, ptimes, Str, (.)
 	# TODO: consider *args for consistency with other parts of the language
 
@@ -4182,9 +4180,7 @@ block _ {
 
 }
 
-# === Logging and status reporting (WIP) =========
-
-{
+section "Logging and status reporting" {
 	doc Represents an exception that should cause exit from the program
 	doc exit_code - Contains the exit code to be used by ExitCode
 	type ExitException(Exception)
@@ -4192,121 +4188,122 @@ block _ {
 		doc %EX - throw ExitException("Input file not found")
 		type FatalError(ExitException)
 		type NormalExit(ExitException)
-}
 
-doc Initializes ExitException.
-F init(ee:ExitException, message:Str, exit_code:Int=1) {
-	super(ee, message)
-	ee.exit_code = exit_code
-}
-
-F init(ee:ExitException, exit_code:Int=1) ee.exit_code = exit_code
-
-doc Convert ExitException to an exit code.
-doc %RET - ee.exit_code
-F ExitCode(ee:ExitException) ee.exit_code
-
-# TODO: timestamps
-
-# TODO: allow control by facility and severity
-#       and maybe source component or file.
-
-# Not sure such flexibility is needed (NGS_ERR_FD)
-stdlib_error_fd = ENV.NGS_ERR_FD.Int() tor 2
-
-block _ {
-	global maybe_print_stacktrace
-
-	# Set is not available at this point yet so using Hash as Set
-	seen_backtraces = {}
-
-	doc Do not use directly!
-	doc %STATUS - internal
-	F maybe_print_stacktrace(env_var:Str, pfx:Str) {
-		ENV.get(env_var, '0').decode(Bool).not() returns
-		bt = Exception("maybe_print_stacktrace").backtrace
-		k = bt.frames.ip.map(Str).join(':')
-		k in seen_backtraces returns
-		seen_backtraces[k] = true
-		msg = Lines(["(Showing backtrace because ${env_var} environment variable is set)"]) + Lines(bt)
-		echo(stdlib_error_fd, (pfx +? ' ') + msg)
+	doc Initializes ExitException.
+	F init(ee:ExitException, message:Str, exit_code:Int=1) {
+		super(ee, message)
+		ee.exit_code = exit_code
 	}
-}
 
-doc Log to standard error. Later log output will be treated specially by the shell. It will have suitable representation in the UI. Use log() when it's semantically a log.
-F log(s:Str) {
-	echo(stdlib_error_fd, "[LOG ${Time()}] $s")
-}
+	F init(ee:ExitException, exit_code:Int=1) ee.exit_code = exit_code
 
-doc Same as debug('default', s)
-F debug(s:Str) debug('default', s)
+	doc Convert ExitException to an exit code.
+	doc %RET - ee.exit_code
+	F ExitCode(ee:ExitException) ee.exit_code
 
-# TODO: more efficient
-doc Debug to standard error.
-doc "DEBUG" environment variable must be non-empty string to activate. Otherwise nothing is outputted.
-doc TODO: Not output thread ID if there is only one thread.
-doc TODO: Timestamps? Timestamps acquiring might not be safe after fork before exec.
-F debug(facility:Str, s:Str) {
-	if ENV.Box('DEBUG').map(split(X, ',')).map({facility in A or '*' in A}).get(false) {
-		echo(stdlib_error_fd, "[DEBUG $facility ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] $s")
-	}
-}
+	# TODO: timestamps
 
-doc Write error message to standard error.
-doc %EX - error("Failed to read configuration file. Will clean up and exit now.")
-doc %EX - # Approximate output on stderr:
-doc %EX - # [ERROR 2018-01-01 00:00:00 YOUR_TZ] Failed to read configuration file. Will clean up and exit now.
-F error(s:Str) {
-	echo(stdlib_error_fd, "[ERROR ${Time()}] $s")
-	maybe_print_stacktrace('NGS_ERROR_BACKTRACE', '[ERROR BACKTRACE]')
-}
+	# TODO: allow control by facility and severity
+	#       and maybe source component or file.
 
-doc Write warning message to standard error. Prints backtrace if NGS_TRACE_WARNINGS environment variable is not an empty string.
-doc %EX - warn("Could not open input file $my_file , skipping it.")
-doc %EX - # Approximate output on stderr:
-doc %EX - # [WARNING 2018-01-01 00:00:00 YOUR_TZ] Could not open input file ./my_file , skipping it.
-F warn(s:Str) {
-	echo(stdlib_error_fd, "[WARNING ${Time()}] $s")
-	maybe_print_stacktrace('NGS_WARN_BACKTRACE', '[WARNING BACKTRACE]')
-}
+	# Not sure such flexibility is needed (NGS_ERR_FD)
+	stdlib_error_fd = ENV.NGS_ERR_FD.Int() tor 2
 
-block _ {
-	global status
+	block _ {
+		global maybe_print_stacktrace
 
-	status_terminal = null
+		# Set is not available at this point yet so using Hash as Set
+		seen_backtraces = {}
 
-	doc %RET - s
-	F status(s:Str) {
-		if status_terminal is Null {
-			status_terminal = Terminal(stdlib_error_fd, stdlib_error_fd)
+		doc Do not use directly!
+		doc %STATUS - internal
+		F maybe_print_stacktrace(env_var:Str, pfx:Str) {
+			ENV.get(env_var, '0').decode(Bool).not() returns
+			bt = Exception("maybe_print_stacktrace").backtrace
+			k = bt.frames.ip.map(Str).join(':')
+			k in seen_backtraces returns
+			seen_backtraces[k] = true
+			msg = Lines(["(Showing backtrace because ${env_var} environment variable is set)"]) + Lines(bt)
+			echo(stdlib_error_fd, (pfx +? ' ') + msg)
 		}
-		status_terminal.status(s)
-		s
+	}
+
+	doc Log to standard error. Later log output will be treated specially by the shell. It will have suitable representation in the UI. Use log() when it's semantically a log.
+	F log(s:Str) {
+		echo(stdlib_error_fd, "[LOG ${Time()}] $s")
+	}
+
+	doc Same as debug('default', s)
+	F debug(s:Str) debug('default', s)
+
+	# TODO: more efficient
+	doc Debug to standard error.
+	doc "DEBUG" environment variable must be non-empty string to activate. Otherwise nothing is outputted.
+	doc TODO: Not output thread ID if there is only one thread.
+	doc TODO: Timestamps? Timestamps acquiring might not be safe after fork before exec.
+	F debug(facility:Str, s:Str) {
+		if ENV.Box('DEBUG').map(split(X, ',')).map({facility in A or '*' in A}).get(false) {
+			echo(stdlib_error_fd, "[DEBUG $facility ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] $s")
+		}
+	}
+
+	doc Write error message to standard error.
+	doc %EX - error("Failed to read configuration file. Will clean up and exit now.")
+	doc %EX - # Approximate output on stderr:
+	doc %EX - # [ERROR 2018-01-01 00:00:00 YOUR_TZ] Failed to read configuration file. Will clean up and exit now.
+	F error(s:Str) {
+		echo(stdlib_error_fd, "[ERROR ${Time()}] $s")
+		maybe_print_stacktrace('NGS_ERROR_BACKTRACE', '[ERROR BACKTRACE]')
+	}
+
+	doc Write warning message to standard error. Prints backtrace if NGS_TRACE_WARNINGS environment variable is not an empty string.
+	doc %EX - warn("Could not open input file $my_file , skipping it.")
+	doc %EX - # Approximate output on stderr:
+	doc %EX - # [WARNING 2018-01-01 00:00:00 YOUR_TZ] Could not open input file ./my_file , skipping it.
+	F warn(s:Str) {
+		echo(stdlib_error_fd, "[WARNING ${Time()}] $s")
+		maybe_print_stacktrace('NGS_WARN_BACKTRACE', '[WARNING BACKTRACE]')
+	}
+
+	block _ {
+		global status
+
+		status_terminal = null
+
+		doc %RET - s
+		F status(s:Str) {
+			if status_terminal is Null {
+				status_terminal = Terminal(stdlib_error_fd, stdlib_error_fd)
+			}
+			status_terminal.status(s)
+			s
+		}
+	}
+
+	doc %STATUS - experimental
+	F progress(cur:Num, total:Num) {
+		status("Progress: ${cur}/${total}")
+		null
 	}
 }
 
-doc %STATUS - experimental
-F progress(cur:Num, total:Num) {
-	status("Progress: ${cur}/${total}")
-	null
+section "Exiting" {
+	doc Write message in s to standard error and exit, printing backtrace
+	doc status - converted to exit code using ExitCode()
+	F die(s:Str, status=1) throw FatalError(s, status.ExitCode())
+
+	doc Exit with given status
+	doc status - converted to exit code using ExitCode()
+	F exit(status=1) throw NormalExit(status.ExitCode())
+
+	doc Write message in s to standard error and exit
+	doc status - converted to exit code using ExitCode()
+	F exit(s:Str, status=1) throw NormalExit(s, status.ExitCode())
 }
 
-doc Write message in s to standard error and exit, printing backtrace
-doc status - converted to exit code using ExitCode()
-F die(s:Str, status=1) throw FatalError(s, status.ExitCode())
+section "Path" {
+	# Maybe TODO: F ==(Path,Path) --> https://stackoverflow.com/questions/12502552/can-i-check-if-two-file-or-file-descriptor-numbers-refer-to-the-same-file
 
-doc Exit with given status
-doc status - converted to exit code using ExitCode()
-F exit(status=1) throw NormalExit(status.ExitCode())
-
-doc Write message in s to standard error and exit
-doc status - converted to exit code using ExitCode()
-F exit(s:Str, status=1) throw NormalExit(s, status.ExitCode())
-
-# === Path =======================================
-
-# Maybe TODO: F ==(Path,Path) --> https://stackoverflow.com/questions/12502552/can-i-check-if-two-file-or-file-descriptor-numbers-refer-to-the-same-file
-{
 	doc Represents file system path such as a file, a block device, etc
 	type Path
 		doc Represents a socket file in a file system (S_IFSOCK)
@@ -4329,271 +4326,267 @@ F exit(s:Str, status=1) throw NormalExit(s, status.ExitCode())
 	doc Represents a failure in stat() system call.
 	type StatFail(CError)
 
-}
+	# TODO: reconsider naming
+	STDLIB_FILE_TYPE = {
+		C_S_IFSOCK: SocketFile
+		C_S_IFLNK:  Symlink
+		C_S_IFREG:  File
+		C_S_IFBLK:  BlockDevice
+		C_S_IFDIR:  Dir
+		C_S_IFCHR:  CharDevice
+		C_S_IFIFO:  FifoFile
+	}
+	{ STDLIB_FILE_TYPE.attrs({'doc': {'': 'Mapping between S_IFMT bits of st_mode returned by stat()/lstat() and NGS types. All types in this Namespace are subtypes of Path.'}}) }
 
-# TODO: reconsider naming
-STDLIB_FILE_TYPE = {
-	C_S_IFSOCK: SocketFile
-	C_S_IFLNK:  Symlink
-	C_S_IFREG:  File
-	C_S_IFBLK:  BlockDevice
-	C_S_IFDIR:  Dir
-	C_S_IFCHR:  CharDevice
-	C_S_IFIFO:  FifoFile
-}
-{ STDLIB_FILE_TYPE.attrs({'doc': {'': 'Mapping between S_IFMT bits of st_mode returned by stat()/lstat() and NGS types. All types in this Namespace are subtypes of Path.'}}) }
-
-doc Issue stat() system call. Throws StatFail if the call fails.
-doc %RET - Stat
-doc %EX - stat("/tmp")  # <Stat st_dev=51714 st_ino=25 st_mode=17407 ...>
-F stat(pathname:Str) {
-	ret = c_stat(pathname)
-	ret is Null throws StatFail("Failed to c_stat()").set('pathname', pathname)
-	ret
-}
-
-doc Issue stat() system call. Throws StatFail if the call fails.
-doc %RET - Stat
-F stat(p:Path) super(p.path)
-
-doc Issue lstat() system call. Throws StatFail if the call fails.
-doc %RET - Stat
-doc %EX - stat("/usr/bin/cal").st_mode   # 33261
-doc %EX - lstat("/usr/bin/cal").st_mode  # 41471
-F lstat(pathname:Str) {
-	ret = c_lstat(pathname)
-	ret is Null throws StatFail("Failed to c_lstat()").set('pathname', pathname)
-	ret
-}
-
-doc Issue lstat() system call. Throws StatFail if the call fails.
-doc %RET - Stat
-F lstat(p:Path) super(p.path)
-
-# TODO: better name
-doc EXPERIMENTAL, do not use outside of stdlib!
-doc Instanciates Path sub-type, depending on what p is
-F specific(p:Path) {
-	s = lstat(p)
-	file_type = s.st_mode.band(C_S_IFMT)
-	STDLIB_FILE_TYPE[file_type](p.path).set('stat', s)
-}
-
-doc Path constructor
-doc s - path
-doc subtype - Return Path sub-type, depending on lstat() call
-doc %RET - Path or sub-type of Path
-doc %EX - Path(".")  # <Path path=.>
-doc %EX - Path(".", true)  # <Dir path=.>
-doc %EX - ``find tmp/v8``.map(Path(X, true)).map(typeof).name.Stats()  # <Stats: {Dir=287, File=9220}>
-F Path(s:Str, subtype=false) {
-	ret = Path()
-	ret.path = s
-	if subtype {
-		ret.specific()
-	} else {
+	doc Issue stat() system call. Throws StatFail if the call fails.
+	doc %RET - Stat
+	doc %EX - stat("/tmp")  # <Stat st_dev=51714 st_ino=25 st_mode=17407 ...>
+	F stat(pathname:Str) {
+		ret = c_stat(pathname)
+		ret is Null throws StatFail("Failed to c_stat()").set('pathname', pathname)
 		ret
 	}
-}
 
-doc Path constructor
-doc s - path
-F init(p:Path, s:Str) {
-	p.path = s
-}
+	doc Issue stat() system call. Throws StatFail if the call fails.
+	doc %RET - Stat
+	F stat(p:Path) super(p.path)
 
-doc Path constructor. Duplicates other Path.
-doc other - Path to duplicate
-F init(p:Path, other:Path) {
-	p.path = other.path
-}
-
-doc Checks whether the path is accessible using access(2) and F_OK.
-doc %RET - Bool
-F Bool(p:Path) c_access(p.path, ACCESS::F_OK) == 0
-
-TEST Path('/').Bool()
-TEST Path('/no-such-file').Bool() == false
-TEST Path('/', true) is Dir
-
-doc Check whether file system object at given path
-doc is of the given type.
-doc %EX - if File("myfile.txt") ...
-doc %EX - if Dir("my_tmp_dir") ...
-doc %STATUS - experimental
-F Bool(p:Path) {
-	# Only subclasses
-	guard typeof(p) != Path
-	ok = super(p)
-	not(ok) returns false
-	s = lstat(p)
-	file_type = s.st_mode.band(C_S_IFMT)
-	p is STDLIB_FILE_TYPE[file_type]
-}
-
-# TODO: better exceptions (use correct type, not string, maybe use errno)
-# TODO: support platforms with non ":" path delimiter?
-doc Finds given binary and returns it's full path.
-doc Throws ProgramNotFound if the binary was not found.
-doc Search strategy: "/" in the name of the binary means that given executable_name is a path so it's returned as-is (wrapped in Path).
-doc If PATH environment variable exists, the given directories are searched.
-doc If PATH is not set built-in value for PATH is used to search: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-doc %RET - Path
-doc %EX - find_in_path("ls")  # <Path path=/bin/ls>
-F find_in_path(executable_name:Str) {
-	debug("process", "[find_in_path] got ${executable_name}")
-	if "/" in executable_name {
-		debug("process", "[find_in_path] leaving unprocessed ${executable_name}")
-		return Path(executable_name)
+	doc Issue lstat() system call. Throws StatFail if the call fails.
+	doc %RET - Stat
+	doc %EX - stat("/usr/bin/cal").st_mode   # 33261
+	doc %EX - lstat("/usr/bin/cal").st_mode  # 41471
+	F lstat(pathname:Str) {
+		ret = c_lstat(pathname)
+		ret is Null throws StatFail("Failed to c_lstat()").set('pathname', pathname)
+		ret
 	}
-	# TODO: rethink default PATH
-	path = ENV.get('PATH', '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin').split(':')
-	debug("process", '[find_in_path] will search')
-	ret = path.map(F(dir) Path(dir / executable_name)).first(identity, null)
-	debug("process", "[find_in_path] ${executable_name} found at ${ret}")
-	ret is Null throws ProgramNotFound().set('path', path).set('name', executable_name)
-	ret
-}
 
-doc String representation of a Path (or it's sub-type)
-doc %RET - Str
-doc %EX - find_in_path("ls").Str()  # The string: <Path path=/bin/ls>
-F Str(p:Path) "<${p.typeof().name} path=${p.path}>"
+	doc Issue lstat() system call. Throws StatFail if the call fails.
+	doc %RET - Stat
+	F lstat(p:Path) super(p.path)
 
-doc Concatenate two path parts using STDLIB_PATH_SEP (currently "/") but should be platform-specific later.
-doc %RET - Str
-doc %EX - mydir="tmp"
-doc %EX - mydir / "myfile"  # "tmp/myfile"
-F /(a:Str, b:Str) "$a$STDLIB_PATH_SEP$b"
+	# TODO: better name
+	doc EXPERIMENTAL, do not use outside of stdlib!
+	doc Instanciates Path sub-type, depending on what p is
+	F specific(p:Path) {
+		s = lstat(p)
+		file_type = s.st_mode.band(C_S_IFMT)
+		STDLIB_FILE_TYPE[file_type](p.path).set('stat', s)
+	}
 
-doc Concatenate two path parts using STDLIB_PATH_SEP (currently "/") but should be platform-specific later.
-doc %RET - Str
-doc %EX - mydir="tmp/"
-doc %EX - mydir / "myfile"  # "tmp/myfile"
-F /(a:Str, b:Str) {
-	guard a and (a[-1] == STDLIB_PATH_SEP)
-	"$a$b"
-}
+	doc Path constructor
+	doc s - path
+	doc subtype - Return Path sub-type, depending on lstat() call
+	doc %RET - Path or sub-type of Path
+	doc %EX - Path(".")  # <Path path=.>
+	doc %EX - Path(".", true)  # <Dir path=.>
+	doc %EX - ``find tmp/v8``.map(Path(X, true)).map(typeof).name.Stats()  # <Stats: {Dir=287, File=9220}>
+	F Path(s:Str, subtype=false) {
+		ret = Path()
+		ret.path = s
+		if subtype {
+			ret.specific()
+		} else {
+			ret
+		}
+	}
 
-doc Concatenate two path parts using STDLIB_PATH_SEP (currently "/") but should be platform-specific later.
-doc %RET - Str
-doc %EX - mydir="./"
-doc %EX - mydir / "myfile"  # "myfile"
-F /(a:Str, b:Str) {
-	guard (a == '.') or (a == './')
-	b
-}
+	doc Path constructor
+	doc s - path
+	F init(p:Path, s:Str) {
+		p.path = s
+	}
 
-doc Concatenate two Path-s using /(a:Str, b:Str)
-doc %RET - Path
-doc %EX - Path("tmp") / Path("v8")  # <Path path=tmp/v8>
-F /(a:Path, b:Path) Path(a.path / b.path)
+	doc Path constructor. Duplicates other Path.
+	doc other - Path to duplicate
+	F init(p:Path, other:Path) {
+		p.path = other.path
+	}
 
-doc Concatenate two Path-s using /(a:Str, b:Str)
-doc %RET - Path
-doc %EX - Path("tmp") / "v8"  # <Path path=tmp/v8>
-F /(a:Path, b:Str) Path(a.path / b)
+	doc Checks whether the path is accessible using access(2) and F_OK.
+	doc %RET - Bool
+	F Bool(p:Path) c_access(p.path, ACCESS::F_OK) == 0
 
-{ type DirFail(CError) }
+	TEST Path('/').Bool()
+	TEST Path('/no-such-file').Bool() == false
+	TEST Path('/', true) is Dir
 
-# TODO: recode after https://github.com/ngs-lang/ngs/issues/45 is solved
-doc List directory contents. Warning: "." and ".." are included.
-doc Throws DirFail when directory can not be listed.
-doc subtype - Select type of returned items: true for Path sub-type, false for Path type
-doc %RET - Arr of Path or it's sub-type
-doc %EX - dir("tmp/v8", true).filter(File)  # [ ..., <File path=tmp/v8/README.md fd=null>, <File path=tmp/v8/LICENSE.valgrind fd=null>, ... ]
-doc %EX - dir("tmp/v8", true).filter(Dir)   # [ ..., <Dir path=tmp/v8/tools>, <Dir path=tmp/v8/infra>, ... ]
-F dir(dirname:Str, subtype=false, **kwargs) collector dir(dirname, collect, subtype, **(kwargs.without('subtype')))
+	doc Check whether file system object at given path
+	doc is of the given type.
+	doc %EX - if File("myfile.txt") ...
+	doc %EX - if Dir("my_tmp_dir") ...
+	doc %STATUS - experimental
+	F Bool(p:Path) {
+		# Only subclasses
+		guard typeof(p) != Path
+		ok = super(p)
+		not(ok) returns false
+		s = lstat(p)
+		file_type = s.st_mode.band(C_S_IFMT)
+		p is STDLIB_FILE_TYPE[file_type]
+	}
 
-# TODO: recurse ?
-# TODO: filter out "." and ".." ?
-doc List directory contents and call cb with Path() of each found item. Warning: "." and ".." are included.
-doc %RET - unspecified at this time, do not count on it
-doc %EX - 's=Stats(); dir("tmp/v8", {s.push(A.typeof().name)}, true); s  # <Stats: {File=23, Dir=16}>'
-F dir(dirname:Str, cb:Fun, subtype=false, raw=false) {
-	d = c_opendir(dirname)
-	d is Null throws DirFail('Failed to list directory contents').set('dirname', dirname)
-	SKIP_DIRS = ['.', '..']
-	finally(
-		body = {
-			while entry = c_readdir(d) {
-				entry.d_name in SKIP_DIRS continues
-				if raw {
-					cb(entry.d_name)
-				} else {
-					cb(Path(dirname / entry.d_name, subtype=subtype))
+	# TODO: better exceptions (use correct type, not string, maybe use errno)
+	# TODO: support platforms with non ":" path delimiter?
+	doc Finds given binary and returns it's full path.
+	doc Throws ProgramNotFound if the binary was not found.
+	doc Search strategy: "/" in the name of the binary means that given executable_name is a path so it's returned as-is (wrapped in Path).
+	doc If PATH environment variable exists, the given directories are searched.
+	doc If PATH is not set built-in value for PATH is used to search: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+	doc %RET - Path
+	doc %EX - find_in_path("ls")  # <Path path=/bin/ls>
+	F find_in_path(executable_name:Str) {
+		debug("process", "[find_in_path] got ${executable_name}")
+		if "/" in executable_name {
+			debug("process", "[find_in_path] leaving unprocessed ${executable_name}")
+			return Path(executable_name)
+		}
+		# TODO: rethink default PATH
+		path = ENV.get('PATH', '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin').split(':')
+		debug("process", '[find_in_path] will search')
+		ret = path.map(F(dir) Path(dir / executable_name)).first(identity, null)
+		debug("process", "[find_in_path] ${executable_name} found at ${ret}")
+		ret is Null throws ProgramNotFound().set('path', path).set('name', executable_name)
+		ret
+	}
+
+	doc String representation of a Path (or it's sub-type)
+	doc %RET - Str
+	doc %EX - find_in_path("ls").Str()  # The string: <Path path=/bin/ls>
+	F Str(p:Path) "<${p.typeof().name} path=${p.path}>"
+
+	doc Concatenate two path parts using STDLIB_PATH_SEP (currently "/") but should be platform-specific later.
+	doc %RET - Str
+	doc %EX - mydir="tmp"
+	doc %EX - mydir / "myfile"  # "tmp/myfile"
+	F /(a:Str, b:Str) "$a$STDLIB_PATH_SEP$b"
+
+	doc Concatenate two path parts using STDLIB_PATH_SEP (currently "/") but should be platform-specific later.
+	doc %RET - Str
+	doc %EX - mydir="tmp/"
+	doc %EX - mydir / "myfile"  # "tmp/myfile"
+	F /(a:Str, b:Str) {
+		guard a and (a[-1] == STDLIB_PATH_SEP)
+		"$a$b"
+	}
+
+	doc Concatenate two path parts using STDLIB_PATH_SEP (currently "/") but should be platform-specific later.
+	doc %RET - Str
+	doc %EX - mydir="./"
+	doc %EX - mydir / "myfile"  # "myfile"
+	F /(a:Str, b:Str) {
+		guard (a == '.') or (a == './')
+		b
+	}
+
+	doc Concatenate two Path-s using /(a:Str, b:Str)
+	doc %RET - Path
+	doc %EX - Path("tmp") / Path("v8")  # <Path path=tmp/v8>
+	F /(a:Path, b:Path) Path(a.path / b.path)
+
+	doc Concatenate two Path-s using /(a:Str, b:Str)
+	doc %RET - Path
+	doc %EX - Path("tmp") / "v8"  # <Path path=tmp/v8>
+	F /(a:Path, b:Str) Path(a.path / b)
+
+	type DirFail(CError)
+
+	# TODO: recode after https://github.com/ngs-lang/ngs/issues/45 is solved
+	doc List directory contents. Warning: "." and ".." are included.
+	doc Throws DirFail when directory can not be listed.
+	doc subtype - Select type of returned items: true for Path sub-type, false for Path type
+	doc %RET - Arr of Path or it's sub-type
+	doc %EX - dir("tmp/v8", true).filter(File)  # [ ..., <File path=tmp/v8/README.md fd=null>, <File path=tmp/v8/LICENSE.valgrind fd=null>, ... ]
+	doc %EX - dir("tmp/v8", true).filter(Dir)   # [ ..., <Dir path=tmp/v8/tools>, <Dir path=tmp/v8/infra>, ... ]
+	F dir(dirname:Str, subtype=false, **kwargs) collector dir(dirname, collect, subtype, **(kwargs.without('subtype')))
+
+	# TODO: recurse ?
+	# TODO: filter out "." and ".." ?
+	doc List directory contents and call cb with Path() of each found item. Warning: "." and ".." are included.
+	doc %RET - unspecified at this time, do not count on it
+	doc %EX - 's=Stats(); dir("tmp/v8", {s.push(A.typeof().name)}, true); s  # <Stats: {File=23, Dir=16}>'
+	F dir(dirname:Str, cb:Fun, subtype=false, raw=false) {
+		d = c_opendir(dirname)
+		d is Null throws DirFail('Failed to list directory contents').set('dirname', dirname)
+		SKIP_DIRS = ['.', '..']
+		finally(
+			body = {
+				while entry = c_readdir(d) {
+					entry.d_name in SKIP_DIRS continues
+					if raw {
+						cb(entry.d_name)
+					} else {
+						cb(Path(dirname / entry.d_name, subtype=subtype))
+					}
 				}
 			}
-		}
-		cleanup = {
-			r = c_closedir(d)
-			r != 0 throws DirFail('Failed to close directory after listing').set('dirname', dirname)
-		}
-	)
-}
+			cleanup = {
+				r = c_closedir(d)
+				r != 0 throws DirFail('Failed to close directory after listing').set('dirname', dirname)
+			}
+		)
+	}
 
-# XXX: might not be correct on all platforms
-TEST dir("/").path.has("/var")
-TEST dir("/").all({A.typeof().name == 'Path'})
-TEST dir("/", subtype=true).all({ (A is Path) and (A.typeof().name != 'Path') })
+	# XXX: might not be correct on all platforms
+	TEST dir("/").path.has("/var")
+	TEST dir("/").all({A.typeof().name == 'Path'})
+	TEST dir("/", subtype=true).all({ (A is Path) and (A.typeof().name != 'Path') })
 
-doc Same as dir(dirname.path, *args)
-F dir(dirname:Path, *args, **kwargs) dir(dirname.path, *args, **kwargs)
+	doc Same as dir(dirname.path, *args)
+	F dir(dirname:Path, *args, **kwargs) dir(dirname.path, *args, **kwargs)
 
-doc Same as a.path > b.path
-F '>'(a:Path, b:Path) a.path > b.path
+	doc Same as a.path > b.path
+	F '>'(a:Path, b:Path) a.path > b.path
 
-doc Work in progress, do not use!
-F glob(pattern:Str, start_dir='.') {
-	throw NotImplemented("glob() is not implemented yet")
-}
+	doc Work in progress, do not use!
+	F glob(pattern:Str, start_dir='.') {
+		throw NotImplemented("glob() is not implemented yet")
+	}
 
-doc Convert to string, appropriate for using as argument to external process.
-doc %AUTO - $(mycommand $mypath) # mypath is Path
-doc %EX - conf_files = [Path("/usr/local/etc/some.conf"), Path("/etc/some.conf")].filter(Bool(X))
-doc %EX - $(ls -l $*conf_files)
-F Arg(p:Path) p.path
+	doc Convert to string, appropriate for using as argument to external process.
+	doc %AUTO - $(mycommand $mypath) # mypath is Path
+	doc %EX - conf_files = [Path("/usr/local/etc/some.conf"), Path("/etc/some.conf")].filter(Bool(X))
+	doc %EX - $(ls -l $*conf_files)
+	F Arg(p:Path) p.path
 
-{
 	doc Represents a failure in chdir() system call.
 	type CdFail(CError)
-}
 
-# TODO p must be either Path or a Dir, not any subtype of Path
-doc Change directory. Uses CHDIR(2).
-doc p - Directory to cd to.
-doc %RET - null
-F chdir(p:Path) chdir(p.path)
+	# TODO p must be either Path or a Dir, not any subtype of Path
+	doc Change directory. Uses CHDIR(2).
+	doc p - Directory to cd to.
+	doc %RET - null
+	F chdir(p:Path) chdir(p.path)
 
-doc Change directory. Uses CHDIR(2).
-doc s - Directory to cd to.
-doc %RET - null
-F chdir(s:Str) {
-	t = c_chdir(s)
-	t throws CdFail("Failed to chdir to '${s}'").set('dir', s)
-	null
-}
+	doc Change directory. Uses CHDIR(2).
+	doc s - Directory to cd to.
+	doc %RET - null
+	F chdir(s:Str) {
+		t = c_chdir(s)
+		t throws CdFail("Failed to chdir to '${s}'").set('dir', s)
+		null
+	}
 
-doc EXPERIMENTAL! Creates temporary file using `mktemp` and arranges deletion of the file upon exit from the NGS script.
-F init(t:TmpFile) {
-	t.path = `line: mktemp`
-	t.fd = null
-	debug("file", "Created temporary file at ${t.path}")
-	exit_hook["TmpFile:${t.path}"] = {
-		debug("file", "Removing temporary file at ${t.path}")
-		try {
-			$(rm ${t.path})
-			debug("file", "Removed temporary file at ${t.path}")
-		} catch(e) {
-			warn("Failed to remove temporary file at ${t.path}")
-			print_exception(e, echo=warn)
+	doc EXPERIMENTAL! Creates temporary file using `mktemp` and arranges deletion of the file upon exit from the NGS script.
+	F init(t:TmpFile) {
+		t.path = `line: mktemp`
+		t.fd = null
+		debug("file", "Created temporary file at ${t.path}")
+		exit_hook["TmpFile:${t.path}"] = {
+			debug("file", "Removing temporary file at ${t.path}")
+			try {
+				$(rm ${t.path})
+				debug("file", "Removed temporary file at ${t.path}")
+			} catch(e) {
+				warn("Failed to remove temporary file at ${t.path}")
+				print_exception(e, echo=warn)
+			}
 		}
 	}
+
+	doc Convert Path into JSON compatible data structure - string
+	F JsonData(p:Path) p.path
 }
-
-
-doc Convert Path into JSON compatible data structure - string
-F JsonData(p:Path) p.path
 
 # === Commands and processes (WIP) ===============
 
