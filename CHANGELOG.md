@@ -37,6 +37,7 @@
 * Add Vagrantfile
 * Add `~(x, t:Type)`
 * Add `has_index(Eachable1, Int)`
+* Add `len(Int)`
 * Add experimental `Pred(OneOf)`
 * Add experimental `TODO(Str)`
 * `ec2din.ngs` now takes expirimental `-c COMMAND`

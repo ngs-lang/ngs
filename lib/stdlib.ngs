@@ -3481,6 +3481,11 @@ F abs(i:Int) {
 	0-i
 }
 
+doc Useful for knowing how much times each() callback would be invoked.
+doc Alternatively, how many elements map() result would have.
+doc %RET - i
+F len(i:Int) i
+
 # --- Functional ---
 
 doc Iterate from zero up to but not including n
@@ -4110,7 +4115,7 @@ block _ {
 	doc Parallel map. Runs mapper in threads. Each thread processes one element from the array but this might change in future (preserving the total number of calls to mapper and the order of results).
 	doc %RET - Arr, result of applying mapper to elements of e, preserving the order.
 	doc %EX - pages_texts = abs_pages_urls.pmap(F(url)  `lynx -dump $url`)
-	F pmap(e:Eachable1, mapper:Fun) pmap(e, if e is Num e else len(e), mapper)
+	F pmap(e:Eachable1, mapper:Fun) pmap(e, len(e), mapper)
 
 	TEST try pmap(3, F(x) 100+x) == [100, 101, 102]
 	TEST try pmap(3, F(x) 100/x) catch(e:ResultsException) (e.results[0] is Failure)
@@ -4125,7 +4130,7 @@ block _ {
 	F pmap(e:Eachable1, threads:Int, mapper:Fun) {
 		ex = Executor(threads)
 		debug("conc", "pmap uses excutor ${ex}")
-		ret = [null] * if e is Num e else len(e)
+		ret = [null] * len(e)
 		failed = false
 		e.each_idx_val(F(idx, val) {
 			ex.push({
@@ -4159,7 +4164,7 @@ block _ {
 	doc Parallel filter. Typcally should be used with "heavy" predicate such as SSH.
 	doc %EX - Set(1..10).pfilter(X>3)  # <Set 4, 5, 6, 7, 8, 9>
 	doc %RET - Of same type as e
-	F pfilter(e:Eachable1, predicate) pfilter(e, if e is Num e else len(e), predicate)
+	F pfilter(e:Eachable1, predicate) pfilter(e, len(e), predicate)
 
 	TEST Set(1..10).pfilter(X>3) == Set(1..10).filter(X>3)
 
