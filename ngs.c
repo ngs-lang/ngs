@@ -149,6 +149,7 @@ int main(int argc, char **argv)
 
 	pcre_malloc = GC_malloc;
 	pcre_free = GC_free;
+	// (causes warning) // NGS_GC_THR_INIT();
 
 	pthread_key_create(&thread_local_key, NULL);
 	pthread_setspecific(thread_local_key, &main_thread_local);
@@ -188,12 +189,11 @@ int main(int argc, char **argv)
 	yyrelease(&yyctx);
 
 	// TODO: use native_... methods to load and run the code
-	bytecode = compile(tree, source_file_name, &len);
-	// BROKEN SINCE BYTECODE FORMAT CHANGE // IF_DEBUG(COMPILER, decompile(bytecode, 0, len);)
+	COMPILATION_RESULT *r = compile(tree, source_file_name);
 	vm_init(&vm, argc, argv);
 	set_global(&vm, "BOOTSTRAP_FILE", make_string(bootstrap_file_name));
 	ctx_init(&ctx);
-	ip = vm_load_bytecode(&vm, bytecode);
+	ip = vm_load_bytecode(&vm, r->bytecode);
 	closure = make_closure_obj(ip, 0, 0, 0, 0, 0, NULL, NULL);
 	mr = vm_call(&vm, &ctx, &result, closure, 0, NULL);
 	if(mr == METHOD_OK) {

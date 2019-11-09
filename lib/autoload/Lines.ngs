@@ -20,8 +20,11 @@
 	doc Echo all lines using echo(Str)
 	F echo(lines:Lines) lines.each(echo)
 
-	doc Each all lines to given file descriptor
-	F echo(fd:Int, lines:Lines) lines.each(echo(fd, X))
+	doc Echo all lines to dst
+	F echo(dst, lines:Lines) {
+		lines.each(echo(dst, X))
+		dst
+	}
 
 	doc Write all lines to standard error using warn(Str)
 	F warn(lines:Lines) lines.each(warn)

@@ -3,6 +3,9 @@
 This document describes releasing a new version of NGS.
 
 * Build and run tests
+* `make update-vim-syntax`
+* `git commit -am 'Update vim/syntax/ngs.vim'`
+* `git push`
 * Review the changes between `dev` and `master`
 * Update `CHANGELOG.md`. Place the release date in the section on the top.
 * Commit

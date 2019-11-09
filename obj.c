@@ -292,6 +292,13 @@ VALUE make_hash(size_t start_buckets) {
 	return ret;
 }
 
+VALUE make_namespace(size_t start_buckets) {
+	VALUE ret;
+	ret = make_hash(start_buckets);
+	OBJ_TYPE_NUM(ret) = T_NAMESPACE;
+	return ret;
+}
+
 VALUE make_normal_type(VALUE name) {
 	VALUE ret;
 	NGS_TYPE *t;
@@ -404,6 +411,9 @@ int is_equal(VALUE a, VALUE b) {
 	}
 	if(IS_OBJ(a) && IS_OBJ(b)) {
 		return a.num == b.num;
+	}
+	if(IS_NULL(a) && IS_NULL(b)) {
+		return 1;
 	}
 	return 0;
 }
@@ -1093,6 +1103,16 @@ VALUE make_pthread_mutexattr() {
 	pma = NGS_MALLOC(sizeof(*pma));
 	pma->base.type.num = T_PTHREADMUTEXATTR;
 	SET_OBJ(v, pma);
+	return v;
+}
+
+VALUE make_pthread_cond() {
+	VALUE v;
+	PTHREADCOND_OBJECT *pc;
+	// TODO: NGS_MALLOC_ATOMIC maybe?
+	pc = NGS_MALLOC(sizeof(*pc));
+	pc->base.type.num = T_PTHREADCOND;
+	SET_OBJ(v, pc);
 	return v;
 }
 

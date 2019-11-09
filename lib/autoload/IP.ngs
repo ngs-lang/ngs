@@ -60,3 +60,5 @@ TEST IPNet("192.168.1.0/24").Str() == "192.168.1.0/24"
 F Arg(ip:IP) Str(ip)
 
 # TODO: consider decode() for ipcalc output for "deaggregate" operation for example
+
+F JsonData(ip:IP) Str(ip)

@@ -1,5 +1,5 @@
 default:
-	@echo "No target defined"
+	@echo "No target specified"
 	exit 1
 
 .PHONY: build
@@ -21,3 +21,7 @@ install: build
 .PHONY: clean
 clean:
 	rm -rf build
+
+.PHONY: update-vim-syntax
+update-vim-syntax:
+	./helper-scripts/update-vim-syntax.ngs vim/syntax/ngs.vim

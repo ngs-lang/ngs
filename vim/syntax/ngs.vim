@@ -15,42 +15,71 @@ syn match   ngsComment " #.*" contains=ngsTodo
 syn match   ngsComment "^\s*#.*" contains=ngsTodo
 syn match   ngsComment "^[ \t]*doc .*" contains=ngsTodo
 "syn match   ngsTest "^TEST .*"
-syn keyword ngsKeyword A B C and break breaks catch collector collect cond continue continues econd ematch eswitch do F global guard local match ns or return returns switch TEST throw throws tor try type upvar while with X Y Z .. ...
+syn keyword ngsKeyword A B C and block break breaks catch collector collect cond continue continues econd ematch eswitch do F global guard local match ns or return returns switch TEST throw throws tor try type upvar while with X Y Z .. ...
 syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
-" bootstrap types
-syn keyword ngsType NotImplemented ReadFail RequireFail MainFail
-" other types
-syn keyword ngsType Any ArgvMatcher ArgvMatcherDecorator Arr ArrIter ArrLike BasicType Bool CLib CollectingPipeFromChildToParentProcess Command CommandsPipe CommandsPipeline ConstIter Counter CSym DelimStr Eachable Eachable1 Eachable2 ElementNotFound EmptyEachableFail ExecutableNotFound Exit FFI Fun Hash HashIter HashLike InstantiatingAbstractType Int Iter KillFail MultiMethod NativeMethod NormalType NormalTypeInstance NoData Null Num Path Pipe PipeCreateFail PipeFromChildProcess PipeFromChildToParentProcess PipeFromParentToChildProcess PipeToChildProcess Pred Process ProcessesPipeline ProcessFail ProcessRedir Range RangeIter Real ReadingPipeBetweenChildren Seq Set Stats Str Table TableMeta TableMetaNotIfCol TtyCheckFail Type UserDefinedMethod WritingPipeBetweenChildren
-syn keyword ngsType Box EmptyBox FullBox BoxFail
-syn keyword ngsType Range NumRange PredRange
-syn keyword ngsType Diff ArrDiff HashDiff
-syn keyword ngsType Presence PartialPresence Present Absent ExactPresence
-syn keyword ngsType AssertFail ArgsMismatch CException CdFail EmptyArrayFail Error Exception FatalError CompileFail DontKnowHowToCall GlobalNotFound MethodNotFound InternalError LookupFail KeyNotFound StackDepthFail UndefinedLocalVar
-syn keyword ngsType File SocketFile Symlink BlockDevice Dir CharDevice FifoFile MaybeFile
-syn keyword ngsType FileIOFail StatFail
-syn keyword ngsType Hook
-syn keyword ngsType IndexNotFound FieldNotFound InvalidParameter NoNext
-syn keyword ngsType InvalidArgument DivisionByZero
+
+" Generated types - start
+syn keyword ngsType Absent Any ArgsMismatch Arr ArrDiff ArrIter ArrLike ArrSplatMethodParam AssertFail AwsElb AwsElbRes AwsImage AwsImageRes AwsInstance AwsInstanceRes AwsRecordSet AwsRecordSetRes AwsRes AwsResDef AwsSecGroup AwsSecGroupRes AwsSubnet AwsSubnetRes AwsVpc AwsVpcRes
+syn keyword ngsType Backtrace BasenameArgumentFail BasicType BasicTypeInstance Block BlockDevice Bool BootstrapFailedMatchMain BootstrapNoMatchingMain Box BoxFail
+syn keyword ngsType CError CLib CSym C_DIR CallFail CdFail CharDevice CollectingPipeFromChildToParentProcess Command CommandRedir CommandsPipe CommandsPipeline CompileFail ConstIter
+syn keyword ngsType DecodeFail DelimStr Diff Dir DirFail DivisionByZero DlopenFail DontKnowHowToCall
+syn keyword ngsType Eachable Eachable1 Eachable2 ElementNotFound EmptyArrayFail EmptyBox EmptyEachableFail Error ExactPresence Exception Exit ExitCodeFail ExitException
+syn keyword ngsType Failure FailuresException FatalError FieldNotFound FifoFile File FileIOFail FilterIter FullBox Fun FunIter
+syn keyword ngsType GlobalNotFound
+syn keyword ngsType Hash HashDiff HashIter HashLike HashSplatMethodParam Hook
+syn keyword ngsType Ifx IndexNotFound InstantiatingAbstractType Int InternalError InvalidArgument Iter
 syn keyword ngsType JsonDecodeFail
-syn keyword ngsType Lines
-syn keyword ngsType Lock ReentrantLock Pthread PthreadAttr Thread Threads
-syn keyword ngsType LockFail
-syn keyword ngsType MatchResult MatchSuccess MatchFailure MatchFail SubSeq Pfx MaybePfx MustPfx Ifx MaybeIfx MustIfx Sfx MaybeSfx MustSfx
-syn keyword ngsType MethodParam MethodParams RequiredMethodParam OptionalMethodParam SplatMethodParam ArrSplatMethodParam HashSplatMethodParam
-syn keyword ngsType NormalExit
-syn keyword ngsType Props
-syn keyword ngsType RegExp RegExpCompileFail
-syn keyword ngsType CommandRedir
-syn keyword ngsType Result Success Failure ResultFail
-syn keyword ngsType Return
-syn keyword ngsType Renderer ItemsContainer ItemsVerticalContainer ItemsHorizontalContainer
-syn keyword ngsType ThreadFail Time TimeFail
-syn keyword ngsTodo TODO FIXME XXX NOTE
-syn keyword ngsConstant true false null
-syn keyword ngsPredefinedVariable ARGV ARGV0 ENV ORIG_ARGV _exports VERSION
+syn keyword ngsType KeyNotFound KillFail
+syn keyword ngsType LLHashEntry Lines Lock LockFail LookupFail
+syn keyword ngsType MainFail MapIter MatchFailure MatchResult MatchSuccess MaybeIfx MaybePfx MaybeSfx MethodNotFound MethodParam MethodParams MultiMethod MustIfx MustPfx MustSfx
+syn keyword ngsType Namespace NativeMethod NgsStrComp NgsStrCompExp NgsStrCompImm NgsStrCompSplatExp NoData NoNext NormalExit NormalType NormalTypeConstructor NormalTypeInstance NotImplemented Null Num NumRange
+syn keyword ngsType OneOf OptionalMethodParam
+syn keyword ngsType ParamsMatchN ParamsMatchY PartialPresence Path Pfx Pipe PipeCreateFail PipeFromChildProcess PipeFromChildToParentProcess PipeFromParentToChildProcess PipeToChildProcess PredRange Presence Present Process ProcessRedir ProcessesPipeline Program ProgramNotFound
+syn keyword ngsType Range RangeIter ReadFail ReadingPipeBetweenChildren Real ReentrantLock RegExp RegExpCompileFail RequireFail RequiredMethodParam Res ResDef Result ResultFail Results ResultsException RetryBodyMissing RetryFail ReturnFromBlock
+syn keyword ngsType Seq Set Sfx SocketFile SplatMethodParam StackDepthFail Stat StatFail Stats Str SubSeq Success SwitchFail SwitchParseFail Symlink
+syn keyword ngsType Table TestFail TestMessage TestsResults Thread ThreadFail Threads Time TimeFail TmpFile TtyCheckFail Type
+syn keyword ngsType UndefinedLocalVar UserDefinedMethod
+syn keyword ngsType WritingPipeBetweenChildren
+syn keyword ngsType c_ffi_cif c_ffi_type c_pthread_attr_t c_pthread_cond_t c_pthread_mutex_t c_pthread_mutexattr_t c_pthread_t c_tm
+" Generated types - end
+
+" Generated methods - start
+syn keyword ngsFunction Arg Argv ArgvMatcher
+syn keyword ngsFunction C_WEXITSTATUS C_WTERMSIG
+syn keyword ngsFunction ExitCode
+syn keyword ngsFunction JsonData
+syn keyword ngsFunction Pred
+syn keyword ngsFunction SafeStr StrForTable StrParams Strs
+syn keyword ngsFunction TODO
+syn keyword ngsFunction abs access acquire all any args arr_splat assert assert_array assert_base assert_bool assert_eq assert_exit_code assert_has assert_hash assert_hash_keys assert_hash_keys_values assert_in assert_match assert_min_len assert_output_has assert_path_exists assert_resolvable assert_string attrs
+syn keyword ngsFunction band basename bootstrap bootstrap_debug bootstrap_exception_catch_wrapper bootstrap_find_ngs_dir bootstrap_invoke_main bootstrap_print_compilation_warnings bootstrap_try_main bor bxor
+syn keyword ngsFunction c_access c_chdir c_close c_closedir c_dlopen c_errno c_execve c_exit c_ffi_call c_ffi_prep_cif c_fork c_fstat c_getpid c_getppid c_gettimeofday c_gmtime c_isatty c_kill c_localtime c_lseek c_lstat c_mktime c_open c_opendir c_pcre_compile c_pcre_exec c_pipe c_poll c_pthread_attr_init c_pthread_cond_broadcast c_pthread_cond_destroy c_pthread_cond_init c_pthread_cond_signal c_pthread_cond_wait c_pthread_create c_pthread_join c_pthread_mutex_init c_pthread_mutex_lock c_pthread_mutex_unlock c_pthread_mutexattr_init c_pthread_mutexattr_settype c_pthread_self c_read c_readdir c_stat c_strcasecmp c_strcmp c_strerror c_strftime c_strptime c_time c_waitpid c_write cached calculate_num_cols_to_show call ceil cell_display_width chdir child_fd chr close close_reading_end close_writing_end code column columns compile config converge copy count create created
+syn keyword ngsFunction debug decode decode_hex decode_json decode_uri_component del delete dflt die digest dir drop dump
+syn keyword ngsFunction each each_chunk each_group_test each_idx_key_val each_idx_val eachk eachv echo encode encode_hex encode_html encode_html_attr encode_json encode_uri_component ends_with ensure ensure_array error exception_specific_message exit expect
+syn keyword ngsFunction fetch filter filterk filterv finally find find_if_needed find_in_path finished finished_ok first flatten floor framed
+syn keyword ngsFunction get glob global_not_found_handler globals gmtime group
+syn keyword ngsFunction has has_index has_no hash hash_splat
+syn keyword ngsFunction id identity ids in index indexes inherit init inspect intersperse ip is is_blocked_group is_subtype isatty
+syn keyword ngsFunction join
+syn keyword ngsFunction keys kill
+syn keyword ngsFunction latest len limit lines ll_hash_entry_key ll_hash_entry_next ll_hash_entry_val ll_hash_head ll_hash_tail ll_is_global_variable_defined ll_resolve_global_variable ll_set_global_variable ll_thread_local load localtime log lstat lte
+syn keyword ngsFunction main map map_base_idx map_idx_key_val map_idx_val mapk mapkv mapo mapv max maybe_print_stacktrace merge_sorted method_not_found_handler min myip
+syn keyword ngsFunction n next none nop normalize_presence_list not
+syn keyword ngsFunction only open opt_prop ord
+syn keyword ngsFunction params parent_fd partial partial_tail partition peek pfilter pid pmap pop pos ppid print_exception progress ptimes push push_all
+syn keyword ngsFunction rand rand_uniq read reduce register_column reject rejectk rejectv release replace report req_prop require resolve_instruction_pointer retry reverse round run
+syn keyword ngsFunction set shift sort sortk sortv specific split srand starts_with stat status stdlib_aws_straighten_tags store strftime subset sum
+syn keyword ngsFunction table take tap test the_one throw_if_no_next time times trunc typeof
+syn keyword ngsFunction uniq unshift update users_ids
+syn keyword ngsFunction values
+syn keyword ngsFunction wait warn width without words write
+syn keyword ngsFunction zip
+" Generated methods - end
+
+
 " Special methods
-syn keyword ngsPredefinedVariable init call args
+syn keyword ngsPredefinedVariable init call args true false null
 syn keyword ngsKeyword super
 " Namespaces
 syn keyword ngsNamespace AWS CHARS Doc OS
@@ -62,47 +91,6 @@ syn region  ngsString start=+"+ end=+"+ skip=+\\\\\|\\"+ contains=ngsSpecial
 "syn region  ngsString start=+/+ end=+/+ skip=+\\\\\|\\"+ contains=ngsSpecial
 
 syn match   ngsNumber "\<\d\+\>"
-
-" builtin functions
-syn keyword ngsFunction c_access c_chdir c_close c_closedir c_errno c_execve c_exit c_fork c_fstat c_lseek c_lstat copy c_open c_opendir c_stat c_pcre_compile c_pcre_exec c_read c_readdir c_waitpid C_WEXITSTATUS C_WTERMSIG compile defined del dump echo get globals hash method_not_found_handler in inherit is keys len load not decode_json pop push push_all shift typeof values
-" bootstrap functions (only the ones that are relevant for later usage)
-syn keyword ngsFunction bootstrap bootstrap_debug bootstrap_exception_catch_wrapper bootstrap_find_ngs_dir fetch main print_exception require ExitCode
-
-" stdlib functions
-syn keyword ngsFunction abs Arg Argv arr_splat access acquire all any assert basename cached chdir chr close close_reading_end close_writing_end cmp code compare count
-syn keyword ngsFunction dflt digest drop dup2 dup2_reading_end dup2_writing_end each each_idx_key_val each_idx_val eachk eachv ends_with error exit exit_hook
-syn keyword ngsFunction debug die ensure_array filter filterk filterv finally find_in_path finished_ok first flatten fstat global_not_found_handler group has hash_splat
-syn keyword ngsFunction identity in index indexes inspect intersperse is_subtype join kill len limit lines log lstat map mapo map_idx_key_val map_idx_val mapk mapv mapkv max merge_sorted min
-syn keyword ngsFunction next none nop only open ord partial partial_tail partition peek pmap pos ptimes publish rand read reduce reject rejectk rejectv release replace reverse
-syn keyword ngsFunction set sort sortk split srand starts_with stat status store StrParams Strs subscribe subset sum take tap test the_one uniq unshift update wait warn without write zip
-
-syn keyword ngsFunction c_gettimeofday c_strftime c_strptime c_time gmtime localtime strftime time
-
-syn keyword ngsFunction encode encode_hex encode_html encode_html_attr encode_json encode_uri_component
-syn keyword ngsFunction decode decode_hex decode_uri_component
-
-" resources types
-syn keyword ngsType Res ResDef ResNotFound
-
-syn keyword ngsType AwsRes AwsResDef
-syn keyword ngsType AwsAncor
-
-syn keyword ngsType AwsElb AwsElbRes
-syn keyword ngsType AwsImage AwsImageRes
-syn keyword ngsType AwsInstance AwsInstanceRes
-syn keyword ngsType AwsRecordSet AwsRecordSetRes
-syn keyword ngsType AwsSecGroup AwsSecGroupRes
-syn keyword ngsType AwsVpc AwsVpcRes
-
-" Res library functions
-syn keyword ngsFunction converge create created delete expect find find_if_needed ids opt_prop req_prop validate
-
-" AWS library functions
-syn keyword ngsFunction latest users_ids
-
-" test library functions
-syn keyword ngsFunction log_test_ok
-syn keyword ngsFunction assert_base assert_eq assert_type assert_hash assert_array assert_string assert_hash_keys assert_hash_keys_values assert_min_len assert_exit_code assert_output_has assert_has assert_resolvable assert_path_exists
 
 hi def link ngsComment Comment
 hi def link ngsConditional Conditional
@@ -123,4 +111,3 @@ hi def link ngsNamespace Keyword
 let b:current_syntax = "ngs"
 
 " vim: nowrap sw=4 sts=4 ts=4 et:
-

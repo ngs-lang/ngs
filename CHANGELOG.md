@@ -1,4 +1,87 @@
-## (UNRELEASED) Version 0.2.7
+## 2019-11-09 Version 0.2.7
+
+### New features
+
+* Concurrency
+	* Add `c_pthread_cond_*` methods
+	* Add `Cond` type that exposes `pthread_cond_*` functionality
+	* Add `BlockingList` linked list type with bocking `shift()` and `pop()` methods
+	* Add `Executor` type
+	* Add `ThreadedExecutor` type for simplified processing in threads
+	* Add `pmap(Eachable1, Int, Fun)` - parallel map using limited numbers of threads
+	* Add `pfilter(Eachable1, predicate)` - parallel filter
+	* Add `pfilter(Eachable1, Int, predicate)` - parallel filter using limited numbers of threads
+* Add `block IDENTIFIER BODY` syntax
+* Add `section NAME BODY` syntax
+* Add experimental `TmpFile` - temporary file that is deleted automatically on exit
+* Add experimental `Program` (allows `assert(Program("dd"))`)
+* Add experimental `sortv()`
+* Add experimental `OneOf` type (allows `"abc" ~ OneOf(Int, Str)`)
+* Add `List` linked list type
+* Add `JsonData` method which converts to JSON-compatible data structures; used by `encode_json` now.
+* Add `has_no(container, element)`
+* Add `echo(ProcessesPipeline, Str)`
+* Automate updating `ngs.vim` syntax file
+* Add `lines()` - returns all standard input as array of lines
+* Add `words(Str)`
+* Add `Results` type, array-like with `Result` items
+* Add `ResultsException` type (with `.results` being `Results` type)
+* Add `List` type
+* Add `inspect(Eachable1)`
+* Add `len(Box)`
+* Add `len(NumRange)` for `Int` ranges
+* Add `RetryBodyMissing` exception
+* Add `Namespace` type. It is now returned by `ns` block.
+* Add `Pred(NumRange)`.
+* Default code to run when not given on command line is `F default_argv_code() { fetch() }()` .
+* Add Vagrantfile
+* Add `~(x, t:Type)`
+* Add `has_index(Eachable1, Int)`
+* Add `len(Int)`
+* Add experimental `Pred(OneOf)`
+* Add experimental `TODO(Str)`
+* `ec2din.ngs` now takes expirimental `-c COMMAND`
+
+### Fixes and improvements
+
+* Rare crashes due to GC fixed
+* Multi-stage builds for the docker image (thanks, @organom)
+* `Hash(Arr, Str)` is now `Hash(Eachable1, Str)` (to support `ArrLike`)
+* `Hash(Arr, Fun)` is now `Hash(Eachable1, Fun)` (to support `ArrLike`)
+* Add missing brew dependencies to `install-mac.sh` (thanks for reporting, @zzamboni)
+* Add `executable` to `inspect(Process)` and to exception reporting.
+* `basename()` is now implemented in `stdlib.ngs` as opposed to previously using `BASENAME(1)`.
+* `finished_ok()` now checks for known programs by their basename and not absolute paths (@zzamboni reported failing tests; this changes should fix it)
+* `echo(Int, Lines)` is now `echo(Any, Lines)`
+* Fix `wait(Process)` to behave correctly when `exit_code` is not set but `exit_signal` is set.
+* Fix `$(blah >${true})`
+* `print_exception()` - add optional parameter `echo`
+* `exception_specific_message()` - refactored for reusability
+* Improve error messages for syntax errors
+* `push(e:Enum, name:Str)` now returns `e`
+* `stat()` methods now return timestamps too (access/modify/change)
+* `pmap()` now throws `ResultsException` if any of the threads fail 
+* `Stats()` now works with `Eachable1` allowing counting characters in a string for examples
+* Fix Pred(SubSeq) and Pred(RegExp) to prevent endless recursion
+* Fix `$(... >${false})` syntax
+* Fix `c_strptime()`
+* Improve `rand_uniq` implementation
+* Improve `MatchSuccess` - include pattern
+* Improve `MatchFailure` - include data and pattern
+* Move `get(Arr, Int, Any)` from C to stdlib and support negative indexes.
+* Merged two `first()` methods into one
+* Fix `Hash` comparison for `null`
+* `+` character is now valid "word" symbol - `$(dig +short yahoo.com)` is now valid syntax
+
+### Breaking changes
+
+* Remove `Return` type and associated machinery
+* Remove deprecated `filter(Eachable1)`
+* Remove deprecated `to_exit_code()`
+
+### Work in progress
+
+* Brew packaging for MacOS
 
 ## 2019-04-13 Version 0.2.6
 

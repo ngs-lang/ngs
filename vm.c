@@ -50,6 +50,10 @@ extern char **environ;
 // in ngs.c:
 char *sprintf_position(yycontext *yy, int pos);
 
+// in syntax.include
+void position_to_line_col(yycontext *yy, int pos, int result[]);
+
+
 // in obj.c:
 VALUE value_type(VM *vm, VALUE val);
 
@@ -296,20 +300,6 @@ METHOD_RESULT native_false METHOD_PARAMS {
 	METHOD_RETURN(MAKE_FALSE);
 }
 
-METHOD_RESULT native_Return EXT_METHOD_PARAMS {
-	(void) vm;
-	(void) argv;
-	if(!IS_NULL(THIS_FRAME.ReturnInstance)) {
-		METHOD_RETURN(THIS_FRAME.ReturnInstance);
-	}
-	*result = make_normal_type_instance(vm->Return);
-	set_normal_type_instance_field(*result, make_string("closure"), THIS_FRAME.closure);
-	set_normal_type_instance_field(*result, make_string("depth"), MAKE_INT(ctx->stack_ptr-1));
-	set_normal_type_instance_field(*result, make_string("val"), MAKE_NULL);
-	THIS_FRAME.ReturnInstance = *result;
-	METHOD_RETURN(*result);
-}
-
 METHOD_RESULT native_plus_arr_arr METHOD_PARAMS {
 	*result = make_array(ARG_LEN(0) + ARG_LEN(1));
 	memcpy(ARRAY_ITEMS(*result)+0, ARG_DATA_PTR(0), sizeof(VALUE)*ARG_LEN(0));
@@ -345,19 +335,6 @@ METHOD_RESULT native_shift_arr_any METHOD_PARAMS {
 		METHOD_RETURN(argv[1]);
 	}
 	METHOD_RETURN(array_shift(argv[0]));
-}
-
-METHOD_RESULT native_index_get_arr_int_any METHOD_PARAMS {
-	int idx, len;
-	idx = GET_INT(argv[1]);
-	if(idx < 0) {
-		METHOD_RETURN(argv[2]);
-	}
-	len = OBJ_LEN(argv[0]);
-	if(idx<len) {
-		METHOD_RETURN(ARRAY_ITEMS(argv[0])[idx]);
-	}
-	METHOD_RETURN(argv[2]);
 }
 
 METHOD_RESULT native_index_get_arr_int EXT_METHOD_PARAMS {
@@ -630,6 +607,11 @@ METHOD_RESULT native_Hash_nti METHOD_PARAMS {
 	return METHOD_OK;
 }
 
+METHOD_RESULT native_Namespace METHOD_PARAMS {
+	*result = make_namespace(0);
+	return METHOD_OK;
+};
+
 // TODO: locking for dlerror?
 METHOD_RESULT native_c_dlopen_str_int EXT_METHOD_PARAMS {
 	VALUE v;
@@ -875,8 +857,6 @@ METHOD_RESULT native_not_bool METHOD_PARAMS { METHOD_RETURN(MAKE_BOOL(argv[0].nu
 // XXX: glibc specific fmemopen()
 METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 	ast_node *tree = NULL;
-	char *bytecode;
-	size_t len;
 	yycontext yyctx;
 	int parse_ok;
 	(void) ctx;
@@ -897,21 +877,32 @@ METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 	yyctx.input_file = fmemopen(OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]), "r");
 	parse_ok = yyparse(&yyctx);
 	if(!parse_ok) {
-		// TODO: error message and/or exception
 		VALUE exc;
 		char *err = NGS_MALLOC_ATOMIC(1024);
 		exc = make_normal_type_instance(vm->CompileFail);
 		set_normal_type_instance_field(exc, make_string("given"), argv[0]);
-		snprintf(err, 1024, "Failed to parse at position %d (%s), rule %s", yyctx.fail_pos, sprintf_position(&yyctx, yyctx.fail_pos), yyctx.fail_rule);
-		set_normal_type_instance_field(exc, make_string("message"), make_string(err));
+
+		int *pos_line_col = NGS_MALLOC_ATOMIC(sizeof(int) * 2);
+		position_to_line_col(&yyctx, yyctx.fail_pos, pos_line_col);
+
+		VALUE pos = make_hash(4);
+		set_hash_key(pos, make_string("file"), argv[1]);
+		set_hash_key(pos, make_string("absolute"), MAKE_INT(yyctx.fail_pos));
+		set_hash_key(pos, make_string("line"), MAKE_INT(pos_line_col[0]));
+		set_hash_key(pos, make_string("column"), MAKE_INT(pos_line_col[1]));
+
+		set_normal_type_instance_field(exc, make_string("position"), pos);
+		set_normal_type_instance_field(exc, make_string("rule"), make_string(yyctx.fail_rule));
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 	tree = yyctx.__;
 	IF_DEBUG(COMPILER, print_ast(tree, 0);)
 	yyrelease(&yyctx);
-	bytecode = compile(tree, obj_to_cstring(argv[1]), &len);
-	// BROKEN SINCE BYTECODE FORMAT CHANGE // IF_DEBUG(COMPILER, decompile(bytecode, 0, len);)
-	METHOD_RETURN(make_string_of_len(bytecode, len));
+	COMPILATION_RESULT *r = compile(tree, obj_to_cstring(argv[1]));
+	VALUE ret = make_string_of_len(r->bytecode, r->len);
+	OBJ_ATTRS(ret) = make_hash(1);
+	set_hash_key(OBJ_ATTRS(ret), make_string("warnings"), r->warnings);
+	METHOD_RETURN(ret);
 }
 
 METHOD_RESULT native_load_str_str EXT_METHOD_PARAMS {
@@ -1032,9 +1023,9 @@ METHOD_RESULT native_c_strftime METHOD_PARAMS {
 METHOD_RESULT native_c_strptime EXT_METHOD_PARAMS {
 	VALUE ret = make_array(2);
 	struct tm t;
+	memset(&t, '\0', sizeof(t));
 	char *input = obj_to_cstring(argv[0]);
 	char *next_char = strptime(input, obj_to_cstring(argv[1]), &t);
-	// char *next_char = strptime("2018", "%Y", &t);
 	if(next_char == NULL) {
 		ARRAY_ITEMS(ret)[0] = MAKE_INT(0);
 		ARRAY_ITEMS(ret)[1] = MAKE_NULL;
@@ -1419,6 +1410,11 @@ METHOD_RESULT native_c_pthreadmutexattrt METHOD_PARAMS {
 	METHOD_RETURN(make_pthread_mutexattr());
 }
 
+METHOD_RESULT native_c_pthreadcondt METHOD_PARAMS {
+	(void) argv;
+	METHOD_RETURN(make_pthread_cond());
+}
+
 // https://linux.die.net/man/3/pthread_mutexattr_settype
 METHOD_RESULT native_c_pthreadmutexattrsettype_pma_int METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(pthread_mutexattr_settype(&GET_PTHREADMUTEXATTR(argv[0]), GET_INT(argv[1]))));
@@ -1464,7 +1460,7 @@ void *_pthread_start_routine(void *arg) {
 	CTX ctx;
 	VALUE *result;
 	METHOD_RESULT mr;
-	VALUE *ts = NGS_MALLOC(sizeof(VALUE));
+	VALUE *ts = NGS_MALLOC(sizeof(*ts));
 	*ts = make_hash(4);
 	pthread_setspecific(thread_local_key, ts);
 	result = NGS_MALLOC(sizeof(*result));
@@ -1488,6 +1484,7 @@ METHOD_RESULT native_c_pthreadcreate_pthreadattr_startroutine_arg EXT_METHOD_PAR
 	int status;
 	(void) ctx;
 	init = NGS_MALLOC(sizeof(*init));
+	assert(init);
 	init->vm = vm;
 	init->f = argv[1];
 	init->arg = argv[2];
@@ -1529,6 +1526,15 @@ METHOD_RESULT native_c_pthreadmutexinit_pma METHOD_PARAMS {
 METHOD_RESULT native_c_pthreadmutexlock METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_mutex_lock(&GET_PTHREADMUTEX(argv[0])))); }
 
 METHOD_RESULT native_c_pthreadmutexunlock METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_mutex_unlock(&GET_PTHREADMUTEX(argv[0])))); }
+
+METHOD_RESULT native_c_pthreadcondbroadcast METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_cond_broadcast(&GET_PTHREADCOND(argv[0])))); }
+METHOD_RESULT native_c_pthreadconddestroy METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_cond_destroy(&GET_PTHREADCOND(argv[0])))); }
+METHOD_RESULT native_c_pthreadcondinit METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_cond_init(&GET_PTHREADCOND(argv[0]), NULL))); }
+METHOD_RESULT native_c_pthreadcondsignal METHOD_PARAMS { METHOD_RETURN(MAKE_INT(pthread_cond_signal(&GET_PTHREADCOND(argv[0])))); }
+// TODO: pthread_cond_timedwait(3)
+METHOD_RESULT native_c_pthreadcondwait METHOD_PARAMS {
+	METHOD_RETURN(MAKE_INT(pthread_cond_wait(&GET_PTHREADCOND(argv[0]), &GET_PTHREADMUTEX(argv[1]))));
+}
 
 METHOD_RESULT native_c_pthreadself METHOD_PARAMS {
 	VALUE pthread = make_pthread();
@@ -1992,7 +1998,7 @@ METHOD_RESULT native_c_ ## cmd EXT_METHOD_PARAMS { \
 		METHOD_RETURN(MAKE_NULL); \
 	} \
 	v = make_normal_type_instance(vm->Stat); \
-	OBJ_DATA(v) = make_array(10); /* Make sure to update this number if you add more ELT()s. Also add SETUP_TYPE_FIELD(Stat, ..., ...) below */ \
+	OBJ_DATA(v) = make_array(13); /* Make sure to update this number if you add more ELT()s. Also add SETUP_TYPE_FIELD(Stat, ..., ...) below */ \
 	p = ARRAY_ITEMS(OBJ_DATA(v)); \
 	ELT(buf.st_dev); \
 	ELT(buf.st_ino); \
@@ -2004,6 +2010,9 @@ METHOD_RESULT native_c_ ## cmd EXT_METHOD_PARAMS { \
 	ELT(buf.st_size); \
 	ELT(buf.st_blksize); \
 	ELT(buf.st_blocks); \
+	ELT(buf.st_atime); \
+	ELT(buf.st_mtime); \
+	ELT(buf.st_ctime); \
 	METHOD_RETURN(v); \
 }
 MAKE_STAT_METHOD(stat, obj_to_cstring)
@@ -2341,6 +2350,19 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	vm->type_by_t_obj_type_id[T_HASH >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Hash;
 
+	MK_BUILTIN_TYPE(Namespace, T_NAMESPACE);
+	_doc_arr(vm, "",
+			 "Namespace type. Returned by 'ns' keyword. Inherits and functions mostly as Hash.",
+			 NULL
+	);
+	_doc_arr(vm, "%EX",
+			 "ns { F f(x) x * 2; }",
+			 NULL
+	);
+	add_type_inheritance(vm->Namespace, vm->Hash);
+
+	vm->type_by_t_obj_type_id[T_NAMESPACE >> T_OBJ_TYPE_SHIFT_BITS] = &vm->Namespace;
+
 	MK_BUILTIN_TYPE_DOC(CLib, T_CLIB, "C library, result of dlopen(), not used yet");
 	vm->type_by_t_obj_type_id[T_CLIB >> T_OBJ_TYPE_SHIFT_BITS] = &vm->CLib;
 
@@ -2358,6 +2380,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	MK_BUILTIN_TYPE(c_pthread_mutexattr_t, T_PTHREADMUTEXATTR);
 	vm->type_by_t_obj_type_id[T_PTHREADMUTEXATTR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_pthread_mutexattr_t;
+
+	MK_BUILTIN_TYPE(c_pthread_cond_t, T_PTHREADCOND);
+	vm->type_by_t_obj_type_id[T_PTHREADCOND >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_pthread_cond_t;
 
 	MK_BUILTIN_TYPE_DOC(c_ffi_type, T_FFI_TYPE, "Unfinished feature. Don't use!");
 	vm->type_by_t_obj_type_id[T_FFI_TYPE >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_ffi_type;
@@ -2561,29 +2586,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 				MKSUBTYPE(JsonDecodeFail, DecodeFail);
 				_doc(vm, "", "Represents an error decoding JSON data.");
 
-		MKSUBTYPE(Return, Exception);
-		_doc(vm, "", "Return instance type, when thrown, will exit the call frame where they were created returning given value.");
-		_doc_arr(vm, "%EX",
-			"{",
-			"    F find_the_one(haystack:Arr, needle) {",
-			"        ret_from_find_the_one = Return()",
-			"        echo(ret_from_find_the_one)",
-			"        haystack.each(F(elt) {",
-			"                elt == needle throws ret_from_find_the_one(\"Found it!\")",
-			"        })",
-			"        \"Not found\"",
-			"    }",
-			"    echo([10,20].find_the_one(20))",
-			"    echo([10,20].find_the_one(30))",
-			"}",
-			"# Output:",
-			"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
-			"#   Found it!",
-			"#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>",
-			"#   Not found",
-			NULL
-		);
-
 	MKTYPE(Backtrace);
 	_doc(vm, "", "Represents stack trace");
 	_doc(vm, "frames", "Array of locations. Each element of the array is a Hash with \"ip\" and \"closure\" properties.");
@@ -2616,28 +2618,31 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Numerical range");
 
 	MKTYPE(Stat);
-		SETUP_TYPE_FIELD(Stat, st_dev, 0);
-		SETUP_TYPE_FIELD(Stat, st_ino, 1);
-		SETUP_TYPE_FIELD(Stat, st_mode, 2);
-		SETUP_TYPE_FIELD(Stat, st_nlink, 3);
-		SETUP_TYPE_FIELD(Stat, st_uid, 4);
-		SETUP_TYPE_FIELD(Stat, st_gid, 5);
-		SETUP_TYPE_FIELD(Stat, st_rdev, 6);
-		SETUP_TYPE_FIELD(Stat, st_size, 7);
-		SETUP_TYPE_FIELD(Stat, st_blksize, 8);
-		SETUP_TYPE_FIELD(Stat, st_blocks, 9);
+		SETUP_TYPE_FIELD(Stat, st_dev, 0U);
+		SETUP_TYPE_FIELD(Stat, st_ino, 1U);
+		SETUP_TYPE_FIELD(Stat, st_mode, 2U);
+		SETUP_TYPE_FIELD(Stat, st_nlink, 3U);
+		SETUP_TYPE_FIELD(Stat, st_uid, 4U);
+		SETUP_TYPE_FIELD(Stat, st_gid, 5U);
+		SETUP_TYPE_FIELD(Stat, st_rdev, 6U);
+		SETUP_TYPE_FIELD(Stat, st_size, 7U);
+		SETUP_TYPE_FIELD(Stat, st_blksize, 8U);
+		SETUP_TYPE_FIELD(Stat, st_blocks, 9U);
+		SETUP_TYPE_FIELD(Stat, st_atime, 10);
+		SETUP_TYPE_FIELD(Stat, st_mtime, 11);
+		SETUP_TYPE_FIELD(Stat, st_ctime, 12);
 	_doc(vm, "", "Result of stat() or lstat()");
 
 	MKTYPE(c_tm);
-		SETUP_TYPE_FIELD(c_tm, tm_sec,   0);
-		SETUP_TYPE_FIELD(c_tm, tm_min,   1);
-		SETUP_TYPE_FIELD(c_tm, tm_hour,  2);
-		SETUP_TYPE_FIELD(c_tm, tm_mday,  3);
-		SETUP_TYPE_FIELD(c_tm, tm_mon,   4);
-		SETUP_TYPE_FIELD(c_tm, tm_year,  5);
-		SETUP_TYPE_FIELD(c_tm, tm_wday,  6);
-		SETUP_TYPE_FIELD(c_tm, tm_yday,  7);
-		SETUP_TYPE_FIELD(c_tm, tm_isdst, 8);
+		SETUP_TYPE_FIELD(c_tm, tm_sec,   0U);
+		SETUP_TYPE_FIELD(c_tm, tm_min,   1U);
+		SETUP_TYPE_FIELD(c_tm, tm_hour,  2U);
+		SETUP_TYPE_FIELD(c_tm, tm_mday,  3U);
+		SETUP_TYPE_FIELD(c_tm, tm_mon,   4U);
+		SETUP_TYPE_FIELD(c_tm, tm_year,  5U);
+		SETUP_TYPE_FIELD(c_tm, tm_wday,  6U);
+		SETUP_TYPE_FIELD(c_tm, tm_yday,  7U);
+		SETUP_TYPE_FIELD(c_tm, tm_isdst, 8U);
 
 	// "NgsStrImm${NgsStrExp}$*{NgsStrSplatExp}"
 	MKTYPE(NgsStrComp);
@@ -2710,22 +2715,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, "ll_set_global_variable",        &native_ll_set_global_variable,         2, "idx",    vm->Int,    "val", vm->Any);
 	_doc(vm, "", "Do not use directly! Set global variable by index.");
 
-	// Return
-	register_global_func(vm, 1, "Return",          &native_Return,   0);
-	_doc(vm, "", "Get closure-specific Return type. Throwing it, will return from the closure");
-	_doc_arr(vm, "%EX",
-		"F f() Return(); f()  # <Return closure=<UserDefinedMethod f at <command line -pi switch>:2> depth=4 val=null>",
-		"",
-		"F first(r:NumRange, predicate:Fun) {",
-		"	finish = Return()",
-		"	r.each(F(i) {",
-		"		predicate(i) throws finish(i)",
-		"	})",
-		"	null",
-		"}",
-		NULL
-	);
-
 	// CLib and c calls
 	register_global_func(vm, 1, "c_dlopen",        &native_c_dlopen_str_int,   2, "filename", vm->Str,        "flags",  vm->Int);
 	_doc(vm, "", "Unfinished feature. Don't use!");
@@ -2782,6 +2771,18 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Call PTHREAD_MUTEX_LOCK(3)");
 	register_global_func(vm, 0, "c_pthread_mutex_unlock", &native_c_pthreadmutexunlock, 1, "mutex",  vm->c_pthread_mutex_t);
 	_doc(vm, "", "Call PTHREAD_MUTEX_UNLOCK(3)");
+
+	register_global_func(vm, 0, "c_pthread_cond_broadcast",   &native_c_pthreadcondbroadcast,   1, "cond",  vm->c_pthread_cond_t);
+	_doc(vm, "", "Call PTHREAD_COND_BROADCAST(3)");
+	register_global_func(vm, 0, "c_pthread_cond_destroy",   &native_c_pthreadconddestroy,   1, "cond",  vm->c_pthread_cond_t);
+	_doc(vm, "", "Call PTHREAD_COND_DESTROY(3)");
+	register_global_func(vm, 0, "c_pthread_cond_init",   &native_c_pthreadcondinit,   1, "cond",  vm->c_pthread_cond_t);
+	_doc(vm, "", "Call PTHREAD_COND_INIT(3) with NULL as second argument (attr)");
+	register_global_func(vm, 0, "c_pthread_cond_signal",   &native_c_pthreadcondsignal,   1, "cond",  vm->c_pthread_cond_t);
+	_doc(vm, "", "Call PTHREAD_COND_SIGNAL(3)");
+	register_global_func(vm, 0, "c_pthread_cond_wait",   &native_c_pthreadcondwait,   2, "cond",  vm->c_pthread_cond_t, "mutex", vm->c_pthread_mutex_t);
+	_doc(vm, "", "Call PTHREAD_COND_WAIT(3)");
+
 	register_global_func(vm, 0, "c_pthread_self",         &native_c_pthreadself,        0);
 	_doc(vm, "", "Call PTHREAD_SELF(3)");
 	register_global_func(vm, 0, "c_pthread_attr_t",       &native_c_pthreadattrt,       0);
@@ -2792,6 +2793,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Create pthread mutex attribute object");
 	register_global_func(vm, 0, "c_pthread_mutexattr_settype",  &native_c_pthreadmutexattrsettype_pma_int,  2, "mutex", vm->c_pthread_mutexattr_t, "type", vm->Int);
 	_doc(vm, "", "Call PTHREAD_MUTEXATTR_SETTYPE(3)");
+	register_global_func(vm, 0, "c_pthread_cond_t",      &native_c_pthreadcondt,      0);
+	_doc(vm, "", "Create pthread mutex object");
 
 	register_global_func(vm, 0, "id",                     &native_id_pthread,           1, "thread", vm->c_pthread_t);
 	_doc(vm, "", "Get pthread id as string of characters. This is opaque string which can be used for displaying and comparing to other pthreads ids.");
@@ -3118,15 +3121,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "len",      &native_len,                     1, "arr", vm->Arr);
 	_doc(vm, "", "Get number of elements in the array");
 	_doc(vm, "%RET", "Int");
-
-	register_global_func(vm, 0, "get",      &native_index_get_arr_int_any,   3, "arr", vm->Arr, "idx", vm->Int, "dflt", vm->Any);
-	_doc(vm, "", "Get element at the given index or return dflt if the index is out of range (element at the given index does not exist)");
-	_doc(vm, "%RET", "Any");
-	_doc_arr(vm, "%EX",
-		"[1,2,3].get(0, 10)  # 1",
-		"[1,2,3].get(5, 10)  # 10",
-		NULL
-	);
 
 	register_global_func(vm, 1, "[]",       &native_index_get_arr_range,     2, "arr", vm->Arr, "range", vm->NumRange);
 	_doc(vm, "", "Get array elements at specified indexes.");
@@ -3493,6 +3487,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 		"(1..10).Hash()  # Hash {start=1, end=10, step=1}",
 		NULL
 	);
+
+	register_global_func(vm, 0, "Namespace", &native_Namespace, 0);
+	_doc(vm, "", "Creates empty Namespace");
+	_doc(vm, "%RET", "Namespace");
 
 	register_global_func(vm, 1, "ll_hash_head",      &native_ll_hash_head,        1, "h",   vm->Hash);
 	_doc(vm, "", "Low level. Do not use directly.");
@@ -4013,7 +4011,6 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		ctx->frames[ctx->frame_ptr].do_call_method_not_found_handler = 1;
 		ctx->frames[ctx->frame_ptr].do_call_call = 1;
 		ctx->frames[ctx->frame_ptr].last_ip = 0;
-		ctx->frames[ctx->frame_ptr].ReturnInstance = MAKE_NULL;
 		ctx->frame_ptr++;
 		// MAX_FRAMES - 1 to allow DEEPER_FRAME to always work without checks
 		if(ctx->frame_ptr >= MAX_FRAMES-1) {
@@ -4753,11 +4750,6 @@ end_main_loop:
 
 exception:
 	// *result is the exception
-	if (IS_NORMAL_TYPE_INSTANCE(*result) && (result->ptr == THIS_FRAME.ReturnInstance.ptr)) {
-		mr = get_normal_type_instace_field(*result, make_string("val"), result);
-		ctx->stack_ptr = saved_stack_ptr;
-		return mr;
-	}
 	if (THIS_FRAME.try_info_ptr) {
 		// We have local exception handler
 		THIS_FRAME.try_info_ptr--;

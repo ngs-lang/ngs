@@ -1,0 +1,157 @@
+#!/usr/bin/env ngs
+
+# Testing: echo '{"expr": "echo(100); 1+2"}' | ngs-jupyter-connector.ngs 2>/dev/null
+
+ns {
+	global main, error, warn, log, status, progress, echo
+
+	type JupiterConnectorProtocolError(InvalidArgument)
+	type JupiterInvalidVariable(InvalidArgument)
+
+	F do_capture() {
+		t = Backtrace().frames.get('closure').map(attrs).get('JUPYTER_CAPTURE_OUTPUT')
+		t.has(false) returns false
+		t.Bool()
+	}
+
+	F handle_logging(channel, s:Str, let_through:Fun) {
+		if do_capture() {
+			send({'type': 'output', 'channel': channel, 'text': s})
+			null
+		} else {
+			let_through(s)
+		}
+	}
+
+	F echo(s:Str) handle_logging(1, s, super)
+
+	F echo(fd:Int, s:Str) {
+		sup = super
+		handle_logging(fd, s, sup(fd, X))
+	}
+
+	F echo(t:Table) {
+		guard do_capture()
+		send({
+			'type': 'table'
+			'columns_names': t.cols_enum.keys()
+			'rows': t.rows
+		});
+		null
+	}
+
+	F error(s:Str) handle_logging('error', s, super)
+	F warn(s:Str)  handle_logging('warn', s, super)
+	F log(s:Str)   handle_logging('log', s, super)
+
+	F status(s:Str) {
+		guard do_capture()
+		send({'type': 'status', 'text': s})
+		null
+	}
+
+	F progress(cur:Num, total:Num) {
+		guard do_capture()
+		send({'type': 'progress', 'value': [cur, total]})
+		null
+	}
+	# TODO: debug()
+
+	vars = Set()
+
+	send_lock = Lock()
+
+	F send(data:Hash) {
+		j = data.encode_json()
+		send_lock.acquire({
+			log("Sending JSON: $j")
+			write(1, j + "\n")
+		})
+	}
+
+	# Preveng log() collection
+	send.Arr()[0].attrs().JUPYTER_CAPTURE_OUTPUT = false
+
+	F readline() {
+		ret = ''
+		while ch = read(0, 1) {
+			ch == '\n' returns ret
+			ret += ch
+		}
+		if ret {
+			warn("Last line of input did not end with newline character")
+		}
+		ret
+	}
+
+	F eval(input_line:Str) {
+		log("_eval() - start: $input_line")
+		try {
+			cmd = input_line.decode_json()
+		} catch(e) {
+			throw JupiterConnectorProtocolError("Failed to parse input JSON").set(cause=e)
+		}
+		if cmd.has('vars') {
+			cmd.vars is not Hash throws JupiterConnectorProtocolError("'vars' must be a Hash").set(found=typeof(cmd.vars))
+		}
+		cmd.get('vars', {}).each(F(k, v) {
+			allowed = econd {
+				k in vars { true }
+				k in globals() { false }
+				true { vars.push(k); true }
+			}
+			not(allowed) throws JupiterInvalidVariable("Can not set variable '${k}' sent from Jupyter").set(var=k)
+			idx = ll_resolve_global_variable(k)
+			log("_eval() - setting ${k}=${v}")
+			ll_set_global_variable(idx, v)
+		})
+
+		cmd is not Hash throws JupiterConnectorProtocolError("Top-level expression must be a Hash").set(found=typeof(cmd))
+		'expr' not in cmd throws JupiterConnectorProtocolError("Expected field 'expr' was not found").set(found=cmd.keys())
+		cmd.expr is not Str throws JupiterConnectorProtocolError("'expr' must be a string")
+
+		program_bytecode = compile("{\n${cmd.expr}\n}", '<Jupyter-expr-file>')
+		program_func = load(program_bytecode, '<UNUSED>')
+
+		# Marker for output capturing - start
+		a = program_func.attrs() or {}
+		a.name = '<Jupyter-expr-func>'
+		a.JUPYTER_CAPTURE_OUTPUT = true
+		program_func.attrs(a)
+		# Marker for output capturing - end
+
+		ret = program_func()
+		log("_eval() - end")
+		ret
+	}
+
+	F echo_exception(s:Str) send({'type': 'output', 'channel': 'exc', 'text': s})
+	F echo_exception(l:Lines) l.each(echo_exception)
+
+	F main() {
+		log("main() - start")
+		while l = readline() {
+			try {
+				result = eval(l)
+				send({'type': 'result', 'value': result})
+				g = globals()
+				vars.Hash(g[X]).each(F(k, v) {
+					send({'type': 'var', 'name': k, 'value': v})
+				})
+			} catch(e) {
+				print_exception(e, echo=echo_exception)
+				m = try {
+					exception_specific_message(e)
+				} catch(e2) {
+					error("Failed in exception_specific_message():")
+					print_exception(e2)
+					Lines(['(failed to get friendly exception message)'])
+				}
+				send({'type': 'error', 'text_lines': m.Arr(), 'class': e.typeof().name})
+			}
+			send({'type': 'finish'})
+		}
+		log("main() - end")
+	}
+
+}

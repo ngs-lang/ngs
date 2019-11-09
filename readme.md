@@ -1,29 +1,30 @@
 <img alt="NGS logo - cloud and UNIX shell icon" align="right" src="img/ngs-logo-300.png" />
 
+[![Commits in dev since last release](https://img.shields.io/github/commits-since/ngs-lang/ngs/latest/dev.svg)](https://github.com/ngs-lang/ngs/commits/dev)
 [![Join the chat at https://gitter.im/ngs-lang/Lobby](https://badges.gitter.im/ngs-lang/Lobby.svg)](https://gitter.im/ngs-lang/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/ngs-lang/ngs.svg?branch=master)](https://travis-ci.org/ngs-lang/ngs)
-
+[![Docker Build Status](https://img.shields.io/docker/cloud/build/ngslang/ngs.svg)](https://hub.docker.com/r/ngslang/ngs/builds)
 
 **Next Generation Shell** is a powerful programming language and a shell designed specifically for Ops. *Because you deserve better*.
 
-# Quick links
+# Quick Links
 
 * [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases)
 * [NGS Website](https://ngs-lang.org/)
 * [Docker repository](https://hub.docker.com/r/ngslang/ngs/)
 
-# The problem
+# The Problem
 
 * Absence of up-to-date programming language for Ops.
 	* Classical shells were made for completely different situation than what we have today. We typically manage systems using APIs now. Structured data is not a luxury anymore but a necessity. `jq` works. I find it tremendously more convenient when a language itself has data structures.
 	* General purpose programming languages (Python, Ruby, Go, ...) are not a good fit for typical Ops tasks. Show me one where `echo my_string >my_file` is as easy and as concise as in bash.
 * Inadequate shells that Ops use. Like the [dumpster in your terminal](https://en.wikipedia.org/wiki/Redirection_(computing)#Piping) when you can't distinguish between stdout and stderr of several processes? I don't.
 
-# Suggested solution - NGS
+# Suggested Solution - NGS
 
 I have designed and implemented a programming language with typical Ops tasks in mind. See the use cases below. The next big planned part is the interactive shell.
 
-# NGS use cases
+# NGS Use Cases
 
 Here are recommended use cases.
 
@@ -49,7 +50,7 @@ Here are recommended use cases.
 
 See [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases) wiki page for more information about the use cases and examples.
 
-# Project status
+# Project Status
 
 **The language** is very useful. See the the [bin folder](bin) for examples. NGS is used in Beame.io for miscellaneous scripting such as testing CLI tools, performance tests orchestration, cloud manipulation, etc.
 
@@ -58,7 +59,7 @@ See [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases) wiki page for mo
 From George Nachman, creator of [iTerm2](https://www.iterm2.com/):
 > Neat! This is totally the project I would do if I had unlimited free time :) I've wished for something like this for a long time. I think there's a lot of room for improvement over a basic TTY, and you've nailed some of the important things
 
-# Code examples
+# Code Examples
 
 ## Arrays
 
@@ -91,9 +92,19 @@ From George Nachman, creator of [iTerm2](https://www.iterm2.com/):
 
 More information about the language and syntax in particular is in [ngslang.1](doc/ngslang.1.md)
 
-## Basic cloud
+## Basic Cloud
 
-This is how an instance can be created using NGS (real working code). No state file involved!
+NGS has AWS library based on concept of [Declarative Primitives](https://ilya-sher.org/2016/07/06/declarative-primitives-or-mkdir-p-for-the-cloud/)
+
+TLDR:
+
+* top-to-bottom execution
+* resource-level idempotence
+* just a more convenient scripting
+    * no dependency graph
+    * no state file
+
+This is how an instance can be created using NGS (real working code).
 
 	{
 		NGS_BUILD_CIDR = '192.168.120.0/24'
@@ -128,13 +139,13 @@ This is how an instance can be created using NGS (real working code). No state f
 		AWS::add_to_known_hosts(instance, 'PublicIpAddress')
 	}
 
-## Sample scripts
+## Sample Scripts
 
 * [describe ec2 instances](bin/ec2din.ngs). The script has nicely aligned output for humans. It uses `stdlib`'s `Table` to do output layout and columns configuration. `Table` handles columns presence and order and it can be configured via environment variable.
 * [build chunk of hosts file](bin/ec2hostsfile.ngs) for a management machine. Hosts named `env-role` or `env-role-N`, depending on whether you have one or more machines of specific role in the environment.
 * [Race condition and locks demo](bin/locks.ngs).
 
-# Running using docker
+# Running Using Docker
 
 	# Build the docker
 	docker build -t ngs .
@@ -143,9 +154,9 @@ This is how an instance can be created using NGS (real working code). No state f
 	# Use NGS inside the container
 	ngs -pi 'sum(0..10)'
 
-# Compiling and running
+# Compiling and Running
 
-## Clone from git
+## Clone from Git
 
 	git clone https://github.com/ngs-lang/ngs.git
 
@@ -154,19 +165,19 @@ This is how an instance can be created using NGS (real working code). No state f
 
 	cd ngs
 
-## Install with dependencies - Debian-based Linux
+## Install with Dependencies - Debian-based Linux
 
 	./install-linux.sh
 	
-## Install with dependencies - MacOS (brew)
+## Install with Dependencies - MacOS (brew)
 
 	./install-mac.sh
 
-## Install without dependencies
+## Install without Dependencies
 
 	sudo make install
 
-## Run tests
+## Run Tests
 
 	make tests
 
@@ -202,7 +213,7 @@ If you have troubles compiling, please try to compile the commit tagged `tested`
 	killall -SIGSEGV ngs
 	lldb --core /cores/core.XXXXX
 
-## Generate documentation
+## Generate Documentation
 
 On Linux
 
@@ -255,7 +266,7 @@ You are welcome to open new issues with `feature-request` label if there is some
 * Running scripts will once in a while update current line/column in the job info
 * Ability to start tracing already running scripts
 
-## Later / unformed / unfinished thoughts
+## Later / Unformed / Unfinished Thoughts
 
 * BIG: Arguments / etc. - description language. Think Javadoc.
 	* Python (and other high level languages) is half-way there with argparse.
@@ -274,7 +285,7 @@ You are welcome to open new issues with `feature-request` label if there is some
 			* The format (future feature, low priority) will include version detection and which switches are supported in which versions.
 			* The format will include how to do completion for specific arguments. Think `ec2kill` < `ec2din ...`.
 
-# How to run the POC
+# How to Run the POC
 
 Following instructions should work (tested on Debian)
 
@@ -355,6 +366,21 @@ Following instructions should work (tested on Debian)
 	* Exit codes handling
 		* Similar option to NGS: give "ok" exit codes when running a program. What's not "ok" becomes an exception which you can catch (both in sh and NGS).
 		* I did not see an option to customize the system so that you define once what's an exception for a specific command and then this logic is used every time when you run the specified command. NGS does have this capability.
+* [Rash: The Reckless Racket Shell](https://docs.racket-lang.org/rash/index.html)
+	* Similar to NGS, Rash has special commands and expression syntaxes
+	* NGS is a language ground-up built for Ops while Rash is built on top of [Racket](https://racket-lang.org/) Lisp implementation, which is a general purpose language.
+		> Racket is a general-purpose programming language as well as the world’s first ecosystem for language-oriented programming. Make your dream language, or use one of the dozens already available, including these ...
+* [Shell++](https://github.com/alexst07/shell-plus-plus)
+	* Similarity
+		> Shell++ is a programming language that aims bring features from modern languages, as facility to manipulate data structures, object oriented programming, functional programming and others, to shell script.
+	* Differences
+		* Shell++ is heavily influenced by Python while NGS is a new language specifically designed for Ops tasks.
+			> I wanted a language that runs shell commands like Bash, and manipulate data structure with the ease of Python
+		* NGS sees "object oriented programming" very differently: types and methods and no classes.
+		* Shell++ is not aiming for any UI
+		* Shell++ is not intended for anyone else beyond author
+			> MAKE MY LIFE EASIER AND ONLY THAT
+	* Overall impression: if you like Python and you need to do Ops tasks, you should try Shell++. If NGS was heavily influenced by Python, it would look at least somewhat similar to Shell++.
 
 # Discussion / requests / comments
 

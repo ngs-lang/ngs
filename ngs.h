@@ -14,13 +14,31 @@
 #define THREAD_LOCAL_ALLOC
 
 #include <gc.h>
+#define NGS_GC_THR_INIT() GC_thr_init()
 
-#define NGS_GC_INIT() GC_set_handle_fork(1); GC_INIT()
-#define NGS_MALLOC(n) GC_MALLOC(n)
-#define NGS_MALLOC_ATOMIC(n) GC_MALLOC_ATOMIC(n)
-#define NGS_REALLOC(p, n) GC_REALLOC(p, n)
-#define NGS_SIZE(p) GC_size(p)
-#define NGS_NOTIFY_MALLOC_ABOUT_FORK() (void)0
+#ifdef NGS_STUPID_MALLOC_AFTER_FORK
+extern int_fast8_t ngs_use_stupid_malloc;
+void ngs_malloc_init();
+void *ngs_malloc(size_t size);
+void *ngs_malloc_atomic(size_t size);
+void *ngs_realloc(void *ptr, size_t size);
+#  define NGS_GC_INIT() GC_set_handle_fork(1); GC_INIT(); ngs_use_stupid_malloc = 0;
+#  define NGS_MALLOC(n) ngs_malloc(n)
+#  define NGS_MALLOC_ATOMIC(n) ngs_malloc_atomic(n)
+// There is a problem to know which chunks were allocated with gc malloc and which with standard malloc
+#  define NGS_REALLOC(p, n) ngs_realloc(p, n)
+#  define NGS_GCOLLECT() GC_gcollect()
+#  define NGS_SIZE(p) GC_size(p)
+#  define NGS_NOTIFY_MALLOC_ABOUT_FORK() ngs_use_stupid_malloc = 1; ngs_malloc_init();
+#else
+#  define NGS_GC_INIT() GC_set_handle_fork(1); GC_INIT()
+#  define NGS_MALLOC(n) GC_MALLOC(n)
+#  define NGS_MALLOC_ATOMIC(n) GC_MALLOC_ATOMIC(n)
+#  define NGS_REALLOC(p, n) GC_REALLOC(p, n)
+#  define NGS_GCOLLECT() ngs_gc_collect()
+#  define NGS_SIZE(p) GC_size(p)
+#  define NGS_NOTIFY_MALLOC_ABOUT_FORK() (void)0
+#endif
 
 
 #define NGS_MALLOC_OBJ(dst) dst = NGS_MALLOC(sizeof(*dst)); assert(dst);

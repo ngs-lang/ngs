@@ -3,90 +3,118 @@
 # Running example: ./demo/ec2din.ngs
 # Running example: NGS_table_Instances='["InstanceId", "PublicIpAddress", "PrivateIpAddress", "State", "KeyName", "SecurityGroups"]' ./demo/ec2din.ngs
 
-{
-	config('table_Instances', %[InstanceId tag_Name tag_proj tag_env tag_role IPs InstanceType State KeyName SecurityGroups AZ RestOfTags])
+ArgvMatcher('positionals', 'filters') do
+doc filters - Show only instances matching the given filters. Possible filter forms are:
+doc filters - vpc-xxxyyyzz - for specific vpc
+doc filters - i-xxxyyyzz - for specific instance id
+doc filters - 1.2.3.4 - for instance having given IP
+doc filters - kkk=vvv - for instances having given tag value
+F main(filters:Arr, allreg:Bool=false, j:Bool=false, c:Str=null, out_lines:Int=5, out_columns:Int=20, err_lines:Int=5, err_columns:Int=20) {
+
+	c = Box(c).map(decode_json)
+
+	if c {
+		warn("ec2din.ngs: Using experimental 'c' switch. Behaviour subject to change.")
+		config('table_Instances', %[InstanceId tag_Name tag_proj tag_env tag_role IPs State AZ ec out err])
+	} else {
+		config('table_Instances', %[InstanceId tag_Name tag_proj tag_env tag_role IPs InstanceType State KeyName SecurityGroups AZ RestOfTags])
+	}
 
 	table = Table('Instances')
 
-	ArgvMatcher('positionals', 'filters') do
-	doc filters - Show only instances matching the given filters. Possible filter forms are:
-	doc filters - vpc-xxxyyyzz - for specific vpc
-	doc filters - i-xxxyyyzz - for specific instance id
-	doc filters - 1.2.3.4 - for instance having given IP
-	doc filters - kkk=vvv - for instances having given tag value
-	F main(filters:Arr, allreg:Bool=false, j:Bool=false) {
+	F limit_len(s:Str, l:Int) limit(s, l, '...')
 
-		F limit_len(s:Str, l:Int) limit(s, l, '...')
+	# region to az
+	regions = {}
 
-		# region to az
-		regions = {}
+	filters = ['--filters'] +? collector filters.each(F(arg) {
+		kv = arg.split('=')
+		econd {
 
-		filters = ['--filters'] +? collector filters.each(F(arg) {
-			kv = arg.split('=')
-			econd {
+			arg.starts_with('vpc-') collect("Name=vpc-id,Values=$arg")
 
-				arg.starts_with('vpc-') collect("Name=vpc-id,Values=$arg")
+			arg.starts_with('i-') collect("Name=instance-id,Values=$arg")
 
-				arg.starts_with('i-') collect("Name=instance-id,Values=$arg")
-
-				m = arg ~ /^([a-z]{2}-[a-z]+-[0-9]+)([a-z])?$/ {
-					# region or az
-					regions.dflt(m[0], {})
-					if m.matches.len() == 3 {
-						regions[m[0]][m[1]] = true
-						throw InvalidArgument("Availability zones filtering is not supported yet")
-					}
+			m = arg ~ /^([a-z]{2}-[a-z]+-[0-9]+)([a-z])?$/ {
+				# region or az
+				regions.dflt(m[0], {})
+				if m.matches.len() == 3 {
+					regions[m[0]][m[1]] = true
+					throw InvalidArgument("Availability zones filtering is not supported yet")
 				}
+			}
 
-				arg ~ /^[0-9.]+$/ {
-					filter_name = if IPAddr(arg).is_private() then 'private-ip-address' else 'ip-address'
-					collect("Name=$filter_name,Values=$arg")
-				}
+			arg ~ /^[0-9.]+$/ {
+				filter_name = if IPAddr(arg).is_private() then 'private-ip-address' else 'ip-address'
+				collect("Name=$filter_name,Values=$arg")
+			}
 
-				arg ~ /^[a-z][0-9][.][0-9]*[a-z]+$/ collect("Name=instance-type,Values=$arg")
+			arg ~ /^[a-z][0-9][.][0-9]*[a-z]+$/ collect("Name=instance-type,Values=$arg")
 
-				arg in AWS::INSTANCE_STATES collect("Name=instance-state-name,Values=$arg")
+			arg in AWS::INSTANCE_STATES collect("Name=instance-state-name,Values=$arg")
 
-				kv.len() == 2 collect("Name=tag:${kv[0]},Values=${kv[1]}")
+			kv.len() == 2 collect("Name=tag:${kv[0]},Values=${kv[1]}")
+		}
+	})
+
+	len(regions) > 1 throws InvalidArgument("Multiple regions are not supported yet")
+
+	instances = if allreg {
+		# AZ is now important so moving it to be first
+		config('table_Instances', ['AZ'] + config('table_Instances').without('AZ'))
+		AWS::regions({ ``aws ec2 describe-instances --region $A $*filters`` })
+	} else {
+		reg = Argv({'--region': regions.keys()})
+		``aws ec2 describe-instances $*filters $*reg``
+	}
+	instances .= sort('LaunchTime')
+
+
+	c.each(F(cmd) {
+		instances.pmap(F(i) {
+			try {
+				argv = cmd.map(only(Pfx('i.'), F(arg) {
+					i[arg[2..null]]
+				}))
+				i.argv = argv
+				p=$(ok: $*argv)
+				i.ec = p.processes[-1].exit_code
+				i.out = try p.stdout.lines().limit(out_lines).map(limit(X, out_columns))
+				i.err = try p.stderr.lines().limit(err_lines).map(limit(X, err_columns))
+			} catch(e:KeyNotFound) {
+				guard e.container == i
+				i.err = 'No ' + e.key
 			}
 		})
+	})
 
-		len(regions) > 1 throws InvalidArgument("Multiple regions are not supported yet")
-
-		instances = if allreg {
-			# AZ is now important so moving it to be first
-			config('table_Instances', ['AZ'] + config('table_Instances').without('AZ'))
-			AWS::regions({ ``aws ec2 describe-instances --region $A $*filters`` })
-		} else {
-			reg = Argv({'--region': regions.keys()})
-			``aws ec2 describe-instances $*filters $*reg``
-		}
-		instances .= sort('LaunchTime')
-
-		if j {
-			echo(instances.encode_json())
-			return
-		}
-
-		F tag_has_column(tag_name, _) ["full_tag_${tag_name}", "tag_${tag_name}"].any(X in table.cols_enum)
-
-		instances % F(i) {
-			i.State = i.State.Name
-			i.SecurityGroups = i.SecurityGroups.map(F(sg) "${limit_len(sg.GroupName, 15)}(${sg.GroupId})")
-			i.AZ = i.Placement.AvailabilityZone
-			# Tags here is a Hash (after straightening by stdlib)
-			i.dflt('Tags', {})
-			i.Name = i.Tags.get('Name', '-').limit_len(20)
-			i.IPs = [try i.PublicIpAddress, try i.PrivateIpAddress]
-			i.Tags.each(F(k, v) {
-				i["full_tag_${k}"] = v
-				i["tag_${k}"] = v.limit_len(20)
-			})
-			# TODO: Move layout management to Table, don't limit_len() here
-			i.RestOfTags = i.Tags.reject(tag_has_column).map({ "${A.limit_len(10)}=${B.limit_len(15)}" })
-		}
-		# t = Table('Instances', instances)
-		instances.each(push(table, X))
-		echo(table)
+	if j {
+		echo(instances.encode_json())
+		return
 	}
+
+	F tag_has_column(tag_name) ["full_tag_${tag_name}", "tag_${tag_name}"].any(X in table.cols_enum)
+
+	instances % F(i) {
+		if ENV.get('EC2DIN_SHOW_PROFILE', 'true').decode(Bool) {
+			i.InstanceId = [i.InstanceId, i.get('IamInstanceProfile', {}).Box('Arn').map(basename).get('(no profile)')]
+		}
+		i.State = i.State.Name
+		i.SecurityGroups = i.SecurityGroups.map(F(sg) "${limit_len(sg.GroupName, 15)}(${sg.GroupId})")
+		i.AZ = i.Placement.AvailabilityZone
+		# Tags here is a Hash (after straightening by stdlib)
+		i.dflt('Tags', {})
+		i.Name = i.Tags.get('Name', '-').limit_len(20)
+		i.IPs = [try i.PublicIpAddress, try i.PrivateIpAddress]
+		i.Tags.each(F(k, v) {
+			i["full_tag_${k}"] = v
+			i["tag_${k}"] = v.limit_len(20)
+		})
+		# TODO: Move layout management to Table, don't limit_len() here
+		i.RestOfTags = i.Tags.rejectk(tag_has_column).map({ "${A.limit_len(10)}=${B.limit_len(15)}" })
+	}
+	# t = Table('Instances', instances)
+	instances.each(push(table, X))
+	echo(table)
+	log("Listed ${len(instances)} instances")
 }

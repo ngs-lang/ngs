@@ -83,6 +83,11 @@ typedef struct {
 
 typedef struct {
 	OBJECT base;
+	pthread_cond_t val;
+} PTHREADCOND_OBJECT;
+
+typedef struct {
+	OBJECT base;
 } FFI_TYPE_OBJECT;
 
 // https://www.igvita.com/2009/02/04/ruby-19-internals-ordered-hash/
@@ -186,6 +191,7 @@ typedef struct {
 // 000000 10 - null
 // 000001 10 - undefined (aka undef)
 // 00001X 10 - boolean
+// (Bool values 00001X10)
 // 000010 10 - false
 // 000011 10 - true
 // (types)
@@ -207,6 +213,7 @@ typedef struct {
 #define TAG_BITS    (2)
 #define TAG_AND     (3)
 #define TAG_INT     (1)
+#define TAG_VAL     (2)
 
 // TODO: Make sure it's correct on all architectures - start
 #define NGS_INT_MIN (INTPTR_MIN >> TAG_BITS)
@@ -218,10 +225,10 @@ typedef struct {
 // Make sure it's correct on all architectures - end
 
 typedef enum {
-	V_NULL   =  2,
-	V_UNDEF  =  6,
-	V_FALSE  = 10,
-	V_TRUE   = 14,
+	V_NULL   =  TAG_VAL,
+	V_UNDEF  = 1 << TAG_BITS | TAG_VAL,
+	V_FALSE  = 2 << TAG_BITS | TAG_VAL,
+	V_TRUE   = 3 << TAG_BITS | TAG_VAL,
 	V_KWARGS_MARKER = 90,
 } IMMEDIATE_VALUE;
 
@@ -239,7 +246,6 @@ typedef enum {
 	T_ANY           = 42,
 	T_SEQ           = 46,
 	T_TYPE          = (3 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
-	T_HASH          = (4 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_CLIB          = (5 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_CSYM          = (6 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_NORMT         = 66,
@@ -260,11 +266,15 @@ typedef enum {
 	T_DIR           = (18 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_MULMETHOD     = (19 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_LL_HASH_ENTRY = (20 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_PTHREADCOND   = (21 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+
+	T_HASH          = (32 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+		T_NAMESPACE     = (33 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	// *** Add new T_ itmes above this line ***
 	// *** UPDATE MAX_T_OBJ_TYPE_ID ACCORDINGLY ***
 } IMMEDIATE_TYPE;
 
-#define MAX_T_OBJ_TYPE_ID (T_LL_HASH_ENTRY >> T_OBJ_TYPE_SHIFT_BITS)
+#define MAX_T_OBJ_TYPE_ID (T_NAMESPACE >> T_OBJ_TYPE_SHIFT_BITS)
 
 // TODO: handle situation when n is wider than size_t - TAG_BITS bits
 #define IS_NULL(v)      ((v).num == V_NULL)
@@ -292,13 +302,14 @@ typedef enum {
 #define GET_PTHREADATTR(v)  (((PTHREADATTR_OBJECT *) v.ptr)->val)
 #define GET_PTHREADMUTEX(v) (((PTHREADMUTEX_OBJECT *) v.ptr)->val)
 #define GET_PTHREADMUTEXATTR(v) (((PTHREADMUTEXATTR_OBJECT *) v.ptr)->val)
+#define GET_PTHREADCOND(v) (((PTHREADCOND_OBJECT *) v.ptr)->val)
+
 #define GET_FFI_TYPE(v) (((FFI_TYPE_OBJECT *) v.ptr)->base.val.ptr)
 #define GET_FFI_CIF(v)  (((FFI_CIF_OBJECT *) v.ptr)->val)
 #define SET_OBJ(v,o)    {(v).ptr = o; OBJ_ATTRS(v) = MAKE_NULL; }
 #define SET_BOOL(v, b)  (v).num = b ? V_TRUE : V_FALSE
 
 #define OBJ_LEN(v)                ((VAR_LEN_OBJECT *) (v).ptr)->len
-#define OBJ_ALLOCATED(v)          ((VAR_LEN_OBJECT *) (v).ptr)->allocated
 #define CLOSURE_OBJ_IP(v)         ((CLOSURE_OBJECT *) (v).ptr)->ip
 #define CLOSURE_OBJ_N_LOCALS(v)   (((CLOSURE_OBJECT *) v.ptr)->params.n_local_vars)
 #define CLOSURE_OBJ_N_REQ_PAR(v)  (((CLOSURE_OBJECT *) v.ptr)->params.n_params_required)
@@ -327,32 +338,32 @@ typedef enum {
 #define OBJ_TYPE(v)               (((OBJECT *)(v).ptr)->type)
 #define OBJ_ATTRS(v)              (((OBJECT *)(v).ptr)->attrs)
 #define OBJ_TYPE_NUM(v)           (((OBJECT *)(v).ptr)->type.num)
-#define OBJ_TYPE_PTR(v)           (((OBJECT *)(v).ptr)->type.ptr)
 #define IS_OBJ(v)                 (((v).num & TAG_AND) == 0)
-#define IS_STRING(v)              ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_STR)
-#define IS_REAL(v)                ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_REAL)
-#define IS_NATIVE_METHOD(v)       ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_NATIVE_METHOD)
-#define IS_CLOSURE(v)             ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_CLOSURE)
-#define IS_ARRAY(v)               ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_ARR)
-#define IS_NGS_TYPE(v)            ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_TYPE)
+#define IS_STRING(v)              (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_STR)
+#define IS_REAL(v)                (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_REAL)
+#define IS_NATIVE_METHOD(v)       (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_NATIVE_METHOD)
+#define IS_CLOSURE(v)             (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_CLOSURE)
+#define IS_ARRAY(v)               (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_ARR)
+#define IS_NGS_TYPE(v)            (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_TYPE)
 #define IS_BASIC_TYPE(v)          (IS_NGS_TYPE(v) && NGS_TYPE_ID(v))
 #define IS_NORMAL_TYPE(v)         (IS_NGS_TYPE(v) && !NGS_TYPE_ID(v))
-#define IS_NORMAL_TYPE_CONSTRUCTOR(v)           (((v.num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_UTCTR)
-#define IS_NORMAL_TYPE_INSTANCE(v)((((v).num & TAG_AND) == 0) && ((OBJ_TYPE_NUM(v) & TAG_AND) == 0))
+#define IS_NORMAL_TYPE_CONSTRUCTOR(v)           (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_UTCTR)
+#define IS_NORMAL_TYPE_INSTANCE(v)(IS_OBJ(v) && ((OBJ_TYPE_NUM(v) & TAG_AND) == 0))
 #define IS_BASIC_TYPE_INSTANCE(v) (!IS_NORMAL_TYPE_INSTANCE(v))
 #define IS_VLO(v)                 (IS_ARRAY(v) || IS_STRING(v))
-#define IS_HASH(v)                ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_HASH)
-#define IS_CLIB(v)                ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_CLIB)
-#define IS_CSYM(v)                ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_CSYM)
-#define IS_PTHREAD(v)             ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_PTHREAD)
-#define IS_PTHREADATTR(v)         ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_PTHREADATTR)
-#define IS_PTHREADMUTEX(v)        ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_PTHREADMUTEX)
-#define IS_PTHREADMUTEXATTR(v)    ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_PTHREADMUTEXATTR)
-#define IS_FFI_TYPE(v)            ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_FFI_TYPE)
-#define IS_FFI_CIF(v)             ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_FFI_CIF)
-#define IS_REGEXP(v)              ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_REGEXP)
-#define IS_DIR(v)                 ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_DIR)
-#define IS_MULMETHOD(v)           ((((v).num & TAG_AND) == 0) && OBJ_TYPE_NUM(v) == T_MULMETHOD)
+#define IS_HASH(v)                (IS_OBJ(v) && ((OBJ_TYPE_NUM(v) & T_HASH) == T_HASH))
+#define IS_NAMESPACE(v)           (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_NAMESPACE)
+#define IS_CLIB(v)                (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_CLIB)
+#define IS_CSYM(v)                (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_CSYM)
+#define IS_PTHREAD(v)             (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_PTHREAD)
+#define IS_PTHREADATTR(v)         (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_PTHREADATTR)
+#define IS_PTHREADMUTEX(v)        (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_PTHREADMUTEX)
+#define IS_PTHREADMUTEXATTR(v)    (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_PTHREADMUTEXATTR)
+#define IS_FFI_TYPE(v)            (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_FFI_TYPE)
+#define IS_FFI_CIF(v)             (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_FFI_CIF)
+#define IS_REGEXP(v)              (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_REGEXP)
+#define IS_DIR(v)                 (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_DIR)
+#define IS_MULMETHOD(v)           (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_MULMETHOD)
 // *** Add new IS_... macros above this line ***
 #define ARRAY_ITEMS(v)            ((VALUE *)(OBJ_DATA_PTR(v)))
 #define HASH_BUCKETS_N(v)         (((HASH_OBJECT *)(v).ptr)->n_buckets)
@@ -370,16 +381,16 @@ typedef enum {
 #define MULTIMETHOD_ITEMS(v)      (ARRAY_ITEMS(MULTIMETHOD_METHODS(v)))
 
 
-// Boolean 00001X10
 #define GET_INVERTED_BOOL(v)      ((VALUE){.num = (v).num ^= 4})
 
-VALUE make_var_len_obj(uintptr_t type, const size_t item_size, const size_t len);
+VALUE make_var_len_obj(uintptr_t type, size_t item_size, size_t len);
 VALUE make_array(size_t len);
 VALUE make_array_with_values(size_t len, const VALUE *values);
 VALUE make_multimethod();
-VALUE make_multimethod_with_value(const VALUE value);
-VALUE make_multimethod_from_array(const VALUE arr);
+VALUE make_multimethod_with_value(VALUE value);
+VALUE make_multimethod_from_array(VALUE arr);
 VALUE make_hash(size_t start_buckets);
+VALUE make_namespace(size_t start_buckets);
 VALUE make_normal_type(VALUE name);
 VALUE make_normal_type_constructor(VALUE normal_type);
 VALUE make_normal_type_instance(VALUE normal_type);
@@ -396,7 +407,7 @@ VALUE make_string_of_len(const char *s, size_t len);
 VALUE make_real(double n);
 void vlo_ensure_additional_space(VALUE v, size_t n);
 void array_push(VALUE arr, VALUE v);
-void push_multimethod_method(VALUE multimethod, const VALUE method);
+void push_multimethod_method(VALUE multimethod, VALUE method);
 VALUE array_shift(VALUE arr);
 void array_reverse(VALUE arr);
 VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, int params_flags, VALUE *params, VALUE *locals);
@@ -416,6 +427,7 @@ VALUE make_pthread();
 VALUE make_pthread_attr();
 VALUE make_pthread_mutex();
 VALUE make_pthread_mutexattr();
+VALUE make_pthread_cond();
 VALUE make_ffi_type(ffi_type *t);
 VALUE make_ffi_cif();
 VALUE make_regexp();

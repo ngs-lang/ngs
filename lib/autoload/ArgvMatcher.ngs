@@ -2,11 +2,8 @@ ns {
 
 	global ArgvMatcher, init, (~), ParamsMatchY, ParamsMatchN, SwitchParseFail
 
-	doc ArgvMatcher internal type, do not use!
-	type MatchedParam(FullBox)
-
-	doc ArgvMatcher internal type, do not use!
-	type UnmatchedParam(EmptyBox)
+	type _MatchedParam(FullBox)
+	type _UnmatchedParam(EmptyBox)
 
 	type ParamsMatchY(MatchSuccess)
 	type ParamsMatchN(MatchFailure)
@@ -46,7 +43,7 @@ ns {
 	doc %RET - Match (ParamsMatchY on success, ParamsMatchN on failure). If ParamsMatchY is returned it has "matches" field with values in suitable order to call c. If ParamsMatchN is returned, it has "message" field explaining why there was no match. Currently it's not printed anywhere.
 	doc %EX - ArgvMatcher; (["--b", "B", "A", "C"] ~ F(a,b,c) 7).matches  # %[A B C]
 	doc %EX - (["A", "C", "D", "--b", "B"] ~ ArgvMatcher("positionals", "a") do F(a,b) 7).matches  # %[%[A C D] B]
-	F ~(argv:Arr, udm:UserDefinedMethod) {
+	F ~(argv:Arr, udm:UserDefinedMethod) block b {
 
 		debug("ARGV_MATCHER", "Trying to match argv=${argv} udm=${udm}")
 
@@ -54,18 +51,16 @@ ns {
 		SHORT_SW_PFX = Pfx('-')
 		NEG_PFX = Pfx('no-')
 
-		match_ret = Return()
-
 		mp = MethodParams(udm)
 
 		debug("ARGV_MATCHER", "mp=${mp}")
 
-		args = UnmatchedParam * mp.count(RequiredMethodParam)
+		args = _UnmatchedParam * mp.count(RequiredMethodParam)
 		kwargs = {}
 
 		F set_match(v) {
 			ematch mp[param_name] {
-				RequiredMethodParam args[mp[param_name].idx] = MatchedParam(v)
+				RequiredMethodParam args[mp[param_name].idx] = _MatchedParam(v)
 				OptionalMethodParam kwargs[param_name] = v
 			}
 		}
@@ -134,30 +129,30 @@ ns {
 		}
 
 		positionals.each(F(arg) {
-			idx = args.index(UnmatchedParam, dflt=null)
+			idx = args.index(_UnmatchedParam, dflt=null)
 			if idx is Null {
 				if mp.len() > args.len() {
 					# Optional parameter
-					args.push(UnmatchedParam())
+					args.push(_UnmatchedParam())
 					idx = args.len() - 1
 				}
 			}
 			if idx is Null {
 				if mp.arr_splat() {
-					args.push(MatchedParam(arg))
+					args.push(_MatchedParam(arg))
 					return null
 				} else {
-					throw match_ret(ParamsMatchN().set('message', "Too many arguments"))
+					b.return(ParamsMatchN().set('message', "Too many arguments"))
 				}
 			}
 			debug("ARGV_MATCHER", "Setting matched args idx=$idx arg=$arg type-to-convert-to=${mp[idx].type}")
 			try {
 				v = arg.decode(mp[idx].type)
 			} catch(e) {
-				throw match_ret(ParamsMatchN().set('message', "Failed to convert to desired type for parameter ${mp[idx].name}"))
+				b.return(ParamsMatchN().set('message', "Failed to convert to desired type for parameter ${mp[idx].name}"))
 
 			}
-			args[idx] = MatchedParam(v)
+			args[idx] = _MatchedParam(v)
 		})
 
 		for(i;args.len()) {

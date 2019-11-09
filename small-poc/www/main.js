@@ -63,7 +63,7 @@ $(function() {
 
   Command.prototype.run = function() {
     issued_commands[this.id] = this;
-    socket_io.emit('command', {id: this.id, cmd: this.cmd, args: this.args});
+    socket.emit('command', {id: this.id, cmd: this.cmd, args: this.args});
   }
 
   Command.prototype.toString = function() {
@@ -108,7 +108,6 @@ $(function() {
   };
 
 	$('#command-input').keyup(function(ev) {
-		// console.log(Object.getOwnPropertyNames(ev));
 		if(ev.keyCode == 13) {
 			var cmd_text = $(this).val();
       if(cmd_text === '') { return; }
@@ -118,17 +117,17 @@ $(function() {
 			c.run();
 		}
 	});
-  var socket_io = io.connect('', {
-    transports: ['xhr-polling'],
-    'sync disconnect on unload': true
-  });
-  socket_io.on('error', function(err) {
+  var socket = io.connect();
+  socket.on('connect', function() {
+    console.log('Connected');
+  })
+  socket.on('error', function(err) {
     console.log(err);
     var e = $('<div class="out-err"></div>');
     e.text(err.text);
     $('.out-' + err.id).append(e);
   });
-  socket_io.on('output', function(out) {
+  socket.on('output', function(out) {
     var dst = $('.out-' + out.id);
     var e = $('<div class="out-out"></div>');
     if(!Objects[out.obj.type]) {
@@ -138,11 +137,7 @@ $(function() {
     e.append(Objects[out.obj.type].repr(out.obj, Command.getById(out.id)));
     dst.append(e);
   });
-  socket_io.on('progress', function(out) {
+  socket.on('progress', function(out) {
     Command.getById(out.id).updateProgress(out.obj);
-    // console.log(out);
-    // var dst = $('.out-' + out.id);
-    // var e = $('<div class="out-progress">'+out.obj.text+'</div>');
-    // e.appendTo(dst);
   });
 });

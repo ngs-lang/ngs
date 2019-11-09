@@ -100,8 +100,6 @@ typedef struct {
 	// For stack trace
 	IP last_ip;
 
-	VALUE ReturnInstance;
-
 } FRAME;
 
 // Plan: have exactly one context per thread.
@@ -164,6 +162,7 @@ struct VM {
 		VALUE BasicType;
 		VALUE NormalType;
 	VALUE Hash;
+		VALUE Namespace;
 	VALUE LLHashEntry;
 	VALUE CLib;
 	VALUE CSym;
@@ -176,6 +175,7 @@ struct VM {
 	VALUE c_pthread_attr_t;
 	VALUE c_pthread_mutex_t;
 	VALUE c_pthread_mutexattr_t;
+	VALUE c_pthread_cond_t;
 	// TODO: VALUE c_pthread_mutex_tAttr;
 
 	VALUE c_ffi_type;
@@ -208,8 +208,6 @@ struct VM {
 			VALUE DlopenFail;
 			VALUE DecodeFail;
 				VALUE JsonDecodeFail;
-
-	VALUE Return;
 
 	VALUE Backtrace;
 
@@ -338,11 +336,11 @@ enum opcodes {
 extern char *opcodes_names[NUMBER_OF_OPCODES];
 
 enum range_field {
-	RANGE_FIELD_START = 0,
-	RANGE_FIELD_END = 1,
-	RANGE_FIELD_INCLUDE_START = 2,
-	RANGE_FIELD_INCLUDE_END = 3,
-	RANGE_FIELD_STEP = 4,
+	RANGE_FIELD_START = 0U,
+	RANGE_FIELD_END = 1U,
+	RANGE_FIELD_INCLUDE_START = 2U,
+	RANGE_FIELD_INCLUDE_END = 3U,
+	RANGE_FIELD_STEP = 4U,
 };
 
 typedef METHOD_RESULT (*VM_FUNC)(const VALUE *argv, VALUE *result);

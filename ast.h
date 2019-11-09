@@ -12,6 +12,7 @@ typedef struct {
 typedef struct ast_node {
 	unsigned int type;
 	char *name;
+	char *warning;
 	// MAYBE TODO: make it int but store parsed long int values somewhere else
 	long int number;
 	void *data;

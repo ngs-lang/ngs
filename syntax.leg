@@ -45,7 +45,7 @@ void position_to_line_col();
 	name->location.last_column = location[3]; \
 }
 #define MAKE_NODE(name, type_) \
-	ast_node *name = NGS_MALLOC(sizeof(*name)); name->type = type_; name->data = NULL; \
+	ast_node *name = NGS_MALLOC(sizeof(*name)); name->type = type_; name->data = NULL; name->warning = NULL; \
 	CAPTURE_LOCATION(name) \
 	DEBUG_PARSER("[ast_node] at %p type %3d (%-12s) %d:%d-%d:%d\n", name, name->type, NGS_AST_NODE_TYPES_NAMES[name->type], name->location.first_line, name->location.first_column, name->location.last_line, name->location.last_column);
 // TODO: check whether it's appropriate to use Boehm's "atomic" allocation.
@@ -280,6 +280,10 @@ command =
 	function-call
 	|
 	namespace
+	|
+	block
+	|
+	section
 	|
 	if
 	|
@@ -653,6 +657,8 @@ basic-expression =
 	| continue
 	| namespace
 	| collector
+	| block
+	| section
 	| guard
 	| try-catch
 	| throw
@@ -801,7 +807,7 @@ namespace = "ns" opt_params:namespace-optional-parameters c:curly-code-block {
 		// (transforms to)
 		// F(opt_params) {
 		//   local _exports
-		//   _exports = {}
+		//   _exports = Namespace()
 		//   c
 		//   _exports
 		// }()
@@ -814,12 +820,17 @@ namespace = "ns" opt_params:namespace-optional-parameters c:curly-code-block {
 				append_ast_node_child(local_exports, local_exports_identifier);
 			append_ast_node_child(code, local_exports);
 
-			// exports = {}
+			// exports = Namespace()
 			MAKE_NODE(set_exports, ASSIGNMENT_NODE);
 				MAKE_IDENTIFIER_NODE(exports_identifier, "_exports")
 				append_ast_node_child(set_exports, exports_identifier);
-				MAKE_NODE(empty_hash, HASH_LIT_NODE);
-				append_ast_node_child(set_exports, empty_hash);
+				MAKE_NODE(call_namespace_constructor, CALL_NODE);
+                    MAKE_IDENTIFIER_NODE(namespace_constructor, "Namespace");
+                    MAKE_NODE(namespace_constructor_args, ARGS_NODE);
+                    call_namespace_constructor->first_child = namespace_constructor;
+                    namespace_constructor->next_sibling = namespace_constructor_args;
+				append_ast_node_child(set_exports, call_namespace_constructor);
+
 			append_ast_node_child(code, set_exports);
 
 			// SET NAMESPACE FOR COMPILER PHASE
@@ -964,9 +975,9 @@ function-call-arguments = "(" space? a:function-call-arguments-without-parens sp
 	$$ = a;
 }
 
-# NOTE: the "=>" syntax is experimental
+# NOTE: the "=>" syntax is deprecated
 function-call-external-argument =
-	("with" | "do" | "=>") space a:function-call-argument {
+	("with" | "do") space a:function-call-argument {
 		$$ = a;
 	}
 	|
@@ -975,6 +986,7 @@ function-call-external-argument =
 		ret->first_child = e;
 		MAKE_STRING_NODE(arg_name, i->name);
 		e->next_sibling = arg_name;
+		ret->warning = ngs_strdup("Using deprecated key/value arrow syntax for external function call argument of the form f() k => v");
 		$$ = ret;
 	}
 
@@ -1428,12 +1440,12 @@ identifier =
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
-	| "('" <([-|=!@?<>~+*/%()$a-zA-Z0-9.` ]|"["|"]")+> "')" {
+	| "('" <([-|=!@?<>~+*/%()$a-zA-Z0-9.`: ]|"["|"]")+> "')" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
-	| "(" <([-|=!@?~+*/%$<>.\[\]]+ | "is not" | "not in")> ")" {
+	| "(" <([-|=!@?~+*/%$<>.\[\]:]+ | "is not" | "not in")> ")" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
@@ -1605,6 +1617,23 @@ collector-init =
 		MAKE_NODE(arr, ARR_LIT_NODE);
 		$$ = arr;
 	}
+
+block = "block" space i:identifier space c:code-block {
+	MAKE_NODE(ret, CALL_NODE);
+		MAKE_IDENTIFIER_NODE(block_identifier, "block");
+		MAKE_NODE(args, ARGS_NODE);
+			MAKE_REQ_ARG_NODE(a1, wrap_in_func(c, 0, location, "Block syntax body", 0, 1, ngs_strdup(i->name), "Any"));
+			args->first_child = a1;
+		ret->first_child = block_identifier;
+		block_identifier->next_sibling = args;
+	$$ = ret;
+	CAPTURE_LOCATION($$);	
+}
+
+section = "section" space name:string space c:code-block {
+	$$ = c;
+	CAPTURE_LOCATION($$);
+}
 
 guard = "guard" space c:code-block {
 	MAKE_NODE(ret, GUARD_NODE);
@@ -1834,7 +1863,7 @@ unquoted-basic-command-word-node = {
 
 unquoted-basic-command-word = acc:unquoted-basic-command-word-node (
 
-	<[-a-zA-Z0-9/=,._@:]+> {
+	<[-+a-zA-Z0-9/=,._@:]+> {
 		MAKE_NODE(s, STR_COMP_IMM_NODE); \
 		s->name = ngs_strdup(yytext); \
 		append_ast_node_child(acc, s);

@@ -1,0 +1,77 @@
+{
+	doc Executes jobs (of type Fun) in given number of threads.
+	type ThreadedExecutor(Executor)
+
+	ns {
+		global init, push, wait
+
+		F _executor_thread(params:Arr) {
+			te = params[0]
+			idx = params[1]
+			while true {
+				debug("conc", "waiting for job")
+				job = te.queue.shift()
+				debug("conc", "got job")
+				job is Null breaks
+				r = Result(job)
+				debug("conc", "job result: ${r.typeof().name}")
+				if r is Success {
+					te.successes_lock.acquire({ te.successes_count += 1 })
+				} else {
+					te.failures_lock.acquire({
+						if te.failures_count < te.failures_to_keep {
+							te.first_failures.push(r)
+						} else {
+							te.last_failures.push(r)
+							if te.failures_count > te.failures_to_keep * 2 {
+								te.last_failures.shift()
+							}
+						}
+						te.failures_count += 1
+					})
+				}
+				debug("conc", "job done")
+			}
+		}
+
+		doc Initialize ThreadedExecutor
+		F init(te:ThreadedExecutor, threads:Int, failures_to_keep:Int = 10) {
+
+			te.successes_count = 0
+			te.successes_lock = Lock()
+
+			te.failures_to_keep = failures_to_keep
+			te.first_failures = List()
+			te.last_failures = List()
+			te.failures_lock = Lock()
+			te.failures_count = 0
+
+			te.queue = BlockingList()
+			te.threads = threads.map(F(i) {
+				Thread("${te.typeof().name}-${hash(te)}-thread-${i}", _executor_thread, [te, i])
+			}).Threads()
+		}
+
+		doc Schedule a job to be executed. It will run as soon as any thread is available.
+		F push(te:ThreadedExecutor, job:Fun) {
+			te.queue.push(job)
+			te
+		}
+
+		doc Wait for all jobs to finish. Throws FailuresException if any of the jobs failed.
+		F wait(te:ThreadedExecutor) {
+			te.threads.each({
+				te.queue.push(null) # fix later
+			}).join()
+			if te.first_failures {
+				e = FailuresException("Exceptions in some jobs in ThreadedExecutor", Results(te.first_failures + te.last_failures))
+				e.set(succeeded = te.successes_count, failed = te.failures_count)
+				throw e
+			}
+			te
+		}
+
+		doc Textual representation of ThreadedExecutor
+		F Str(te:ThreadedExecutor) "<${te.typeof().name} queue=${te.queue}>"
+	}
+}

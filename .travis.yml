@@ -6,22 +6,8 @@ compiler:
   - gcc
   - clang
 before_script:
-  - sudo apt-get install -y libgc-dev libffi6 libffi-dev libjson-c2 libjson-c-dev peg gawk make libpcre3-dev cmake pandoc
+  - sudo apt-get update
 script:
-  - (mkdir build && cd build && cmake .. && make && ctest)
-env:
-  global:
-  - COMMIT=${TRAVIS_COMMIT::8}
-  - secure: ZV40iyDZPgi8RZ8kMXy4GHLr6ovh/l8NfTaBYTiPMIXSL1szzO/wQFz9C1LhSXOU7Rur09iPz9gvc55WuWo5pwLECRSDXPoNqZOhzSoNVzYfCe3Hui4S8HQ/SyFqZlcZXTqy1uX4YkEjpSkyOeFU01HMKEg0Jc6Vt/4t946bV5g=
-  - secure: L9jUdyoHTSDFqy4qEgrOvlToo95rcoOO7GO2MYDDF+fs9xf/eJY1wq7tn8IW6vA4BaVfMICT65Afn4J/926WYCEoRjknHvT2eXggznED1ebmgnxCP6n8nYnny0Rf6lbEAdDeLTJSItPspSiQa9vZ3mJX4y7XUesvLQuZiDzlKsE=
-deploy:
-  - provider: script
-    script: bash build-scripts/docker_push.sh ngslang/ngs $TRAVIS_TAG latest
-    on:
-      tags: true
-      branch: master
-  - provider: script
-    script: bash build-scripts/docker_push.sh ngslang/ngs $TRAVIS_BRANCH
-    on:
-      branch: dev
-
+  - (./install-linux.sh && make tests)
+after_failure:
+  - cat build/Testing/Temporary/LastTest.log

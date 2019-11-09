@@ -1,0 +1,65 @@
+{
+	# TODO: Handle C errors (in "result")
+	doc Provides functionality based on pthread_cond_*
+	type Cond
+
+	doc Initialize Cond
+	F init(c:Cond, name:Str='', lock:Lock=null) {
+		c.name = name
+		c.lock = if lock is not Null lock else Lock()
+		c.cond = c_pthread_cond_t()
+		result = c.cond.c_pthread_cond_init()
+		result throws CError("pthread_cond_init() failed")
+		debug("conc", "Cond#init - after c_pthread_cond_init (${result})")
+	}
+
+	doc String representation of Cond
+	F Str(c:Cond) "<${c.typeof().name}${' name=' +? c.name}>"
+
+	doc Wait for condition
+	doc check_condition - when returns true, cb is executed
+	doc cb - callback to be executed when c is signaled with notify() or notify_all() and check_condition returns true
+	doc %RET - result of cb()
+	F wait(c:Cond, check_condition:Fun, cb:Fun) {
+		c.lock.acquire({
+			debug("conc", "Cond#wait - acquired lock")
+			while not(check_condition()) {
+				debug("conc", "Cond#wait - in loop, before c_pthread_cond_wait")
+				result = c_pthread_cond_wait(c.cond, c.lock.lock)
+				result throws CError("pthread_cond_wait() failed")
+				debug("conc", "Cond#wait - in loop, after c_pthread_cond_wait (${result})")
+			}
+			debug("conc", "Cond#wait - after wait loop, will run cb")
+
+			ret = cb()
+			debug("conc", "Cond#wait - releasing lock")
+			ret
+		})
+	}
+
+	doc Wakes one of the threads that did wait() on c
+	F notify(c:Cond) {
+		debug("conc", "Cond#notify - acquired lock")
+		result = c.cond.c_pthread_cond_signal()
+		result throws CError("pthread_cond_signal() failed")
+		debug("conc", "Cond#notify - releasing lock (${result})")
+	}
+
+	doc Wakes all of the threads that did wait() on c
+	F notify_all(c:Cond) {
+        debug("conc", "Cond#notify - acquired lock")
+        result = c.cond.c_pthread_cond_broadcast()
+        result throws CError("pthread_cond_broadcast() failed")
+        debug("conc", "Cond#notify - releasing lock (${result})")
+    }
+
+	doc Acquire the related lock
+	F acquire(c:Cond) c.lock.acquire()
+
+	doc Acquire the related lock
+	F acquire(c:Cond, cb:Fun) c.lock.acquire(cb)
+
+	doc Release the related lock
+	F release(c:Cond) c.lock.release()
+
+}

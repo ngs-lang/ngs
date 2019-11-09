@@ -172,6 +172,17 @@ Comments are allowed in both commands and code syntax. At the beginning of a lin
 
 Also, lines that start with "TEST " (note the trailing space) are considered to be comments. They are ignored. The purpose is to allow an external testing script to extract and run these tests.
 
+The common pattern of marking code sections with comments got it's own syntax. It conveys semantic meaning of sections to the language and IDEs. That will allow additional related functionality in the future. Section does *not* introduce a new scope for variables/methods.
+
+	section "Workaround for API stupidity" {
+		if result is Null {
+			result = []
+		}
+		if result is Str {
+			result .= split(',')
+		}
+	}
+
 # Variables
 
 As in other languages, variables are named locations that can store values. Variables' names should consist of ASCII letters (a-z, A-Z) and numbers (0-9). Variable name must start with a letter. Assignment to variables looks the same in both commands and code syntax. Referencing a variable in the code syntax is just the variable's name while referencing it in commands syntax or inside string interpolation is `$my_var` (not recommended) or `${my_var}` (recommended).
@@ -652,22 +663,18 @@ Examples of `return`, `returns` and last expression value as result of a method.
 
 ## Returning from inner method
 
-Use `Return` type to return from inner methods.
+Use `block NAME BODY` syntax to return from inner methods.
 
-	F find_the_one(haystack:Arr, needle) {
-		ret_from_find_the_one = Return()
-		echo(ret_from_find_the_one)
+	F find_the_one(haystack:Arr, needle) block b {
 		haystack.each(F(elt) {
-			elt == needle throws ret_from_find_the_one("Found it!")
+			if elt == needle then b.return("Found it!")
 		})
 		"Not found"
 	}
 	echo([10,20].find_the_one(20))
 	echo([10,20].find_the_one(30))
 	# Output:
-	#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>
 	#   Found it!
-	#   <Return closure=<UserDefinedMethod find_the_one at 1.ngs:2> depth=7 val=null>
 	#   Not found
 
 ## Referencing specially named methods
@@ -1430,6 +1437,19 @@ Switch and switch-like expressions examples.
 		}
 	}
 
+## Block
+
+The feature was inspired by `block` in Lisp ("structured, lexical, non-local exit facility") and adapted to fit NGS. The `block` evaluates to the first value provided by `return`. If no `return` occurs, the `block` evaluates to the last expression inside the `block`.
+
+	my_result = block b {
+		if i_know_the_answer_by_now() {
+			b.return(42)
+		}
+		if maybe_now() {
+			b.return(7)
+		}
+		0
+	}
 
 # Regular expressions
 

@@ -15,11 +15,13 @@ doc %EX - e.push("x")
 doc %EX - e["x"]  # 0
 doc %EX - e.push("y")
 doc %EX - e["y"]  # 1
+doc %RET - e
 F push(e:Enum, name:Str) {
 	name in e returns
 	idx = e.len()
 	e[name] = idx
 	e.attrs().numbers_to_names[idx] = name
+	e
 }
 
 doc Make new Enum with maximum of l (first) names from given Enum e.

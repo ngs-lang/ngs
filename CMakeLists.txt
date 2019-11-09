@@ -7,11 +7,16 @@ project(NGS)
 # -D_DEFAULT_SOURCE - MAP_ANONYMOUS on Linux
 add_definitions(-D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE=1 -D_DEFAULT_SOURCE=1)
 
+# This is workaround for boehm GC library bug or NGS usage of it
+# which cases sporadic SIGSEGV and other issues after fork() in child process.
+# Use test-gc.ngs to determine if you can remove this setting (test on MacOS and Linux).
+add_definitions(-DNGS_STUPID_MALLOC_AFTER_FORK)
+
 pkg_check_modules(LIBFFI libffi REQUIRED)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /usr/local/include)
 link_directories(/usr/local/lib)
 
-add_executable(ngs version.h ngs.c syntax.include syntax.auto.h pcre_constants.include errno.include obj.c vm.c compile.c debug.c ast.c decompile.c)
+add_executable(ngs version.h ngs.c syntax.include syntax.auto.h pcre_constants.include errno.include obj.c vm.c compile.c debug.c ast.c malloc.c decompile.c)
 
 include(CheckFunctionExists)
 check_function_exists(fmemopen FMEMOPEN)
@@ -19,16 +24,17 @@ IF(NOT FMEMOPEN)
 	target_sources(ngs PRIVATE fmemopen.c)
 ENDIF()
 
+find_program(SED NAMES gsed sed) # gsed - MacOS, sed - all the rest
 find_file(PCRE_H pcre.h)
 add_custom_command(
 	OUTPUT
 		${CMAKE_CURRENT_BINARY_DIR}/syntax.include
 	COMMAND
 		cat ${CMAKE_CURRENT_SOURCE_DIR}/syntax.leg |
-		sed -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-input.sed |
+		${SED} -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-input.sed |
 		leg |
-		sed 's/<stdin>/syntax.leg/' |
-		sed -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-output.sed |
+		${SED} 's/<stdin>/syntax.leg/' |
+		${SED} -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-output.sed |
 		awk -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-output.awk
 		>${CMAKE_CURRENT_BINARY_DIR}/syntax.include
 	DEPENDS

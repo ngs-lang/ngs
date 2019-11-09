@@ -1,10 +1,12 @@
 {
-  "name": "ze",
+  "name": "next-generation-shell-ui-poc",
   "version": "0.0.1",
   "description": "Next generation CLI with GUI additions",
-  "keywords": ["cli"],
+  "keywords": [
+    "cli"
+  ],
   "dependencies": {
-    "socket.io": "0.x",
-    "node-static": "0.6.9"
+    "socket.io": "2.3.0",
+    "node-static": "0.7.11"
   }
 }

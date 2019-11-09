@@ -1,0 +1,10 @@
+{
+	doc Abstract type. Executes jobs.
+	type Executor
+
+	F init(e:Executor) throw InstantiatingAbstractType(Executor)
+
+	doc Create ThreadedExecutor with given numbers of threads.
+	F Executor(threads:Int) ThreadedExecutor(threads)
+
+}
