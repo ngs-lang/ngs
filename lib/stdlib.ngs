@@ -261,6 +261,10 @@ section "Pred - convert different types to predicates" {
 	F Pred(h:Hash) {
 		preds = h.mapv(Pred)
 		F hash_pred(x) {
+			# TODO: Maybe some better detection of x interface required (instead of Eachable2/NormalTypeInstance):
+			# * must support "k in x"
+			# * must support "x.(k)"
+			(x is not Eachable2) and (x is not NormalTypeInstance) returns false
 			preds.all(F(k, pred) (k in x) and x.(k).pred())
 		}
 	}
@@ -268,6 +272,7 @@ section "Pred - convert different types to predicates" {
 	TEST Pred({"a": Any})({"a": 1})
 	TEST Pred({"a": Any, "b": Any})({"a": 1}) == false
 	TEST Pred({"a": Any, "b": {false}})({"a": 1, "b": 2}) == false
+	TEST Pred({"a": Any, "b": {false}})("zz") == false
 
 	doc Convert array of one element to a predicate.
 	doc The predicate asserts that
