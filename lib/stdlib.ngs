@@ -1748,17 +1748,7 @@ doc %EX - [1,2,3].get(5, 10)    # 10
 doc %EX - [11].get(-1)          # 11
 doc %EX - [10,20].get(-5, "X")  # "X"
 doc %RET - Any
-F get(a:Arr, idx:Int, dflt=null) {
-	l = a.len()
-	if idx >= 0 {
-		idx >= l returns dflt
-		i = idx
-	} else {
-		i = l + idx
-		i < 0 returns dflt
-	} 
-	a[i]
-}
+F get(a:Arr, idx:Int, dflt=null) if a.has_index(idx) then a[idx] else dflt
 
 TEST [1].get(0) == 1
 TEST [1].get(5) == null
@@ -3099,15 +3089,7 @@ doc %EX - my_array.Box(1).map(X*2).each(echo)
 doc %EX - # output: 40
 doc %EX - my_array.Box(5).map(X*2).each(echo)
 doc %EX - # no output
-F Box(a:Arr, idx) {
-	l = a.len()
-	if idx >= 0 {
-		l <= idx returns EmptyBox()
-	} else {
-		l < abs(idx) returns EmptyBox()
-	}
-	FullBox(a[idx])
-}
+F Box(a:Arr, idx:Int) if a.has_index(idx) then FullBox(a[idx]) else EmptyBox()
 
 doc Convert hash value indexed by the given key to a Box
 doc k - key to look in hash
