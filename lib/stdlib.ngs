@@ -2399,8 +2399,6 @@ doc %EX - [1,2,3].join("::")  # The string 1::2::3
 F join(a:Arr, s:Str) {
 	guard a.any(X is not Str)
 	a.map(Str).join(s)
-	# TODO: maybe a.map({if A is Str then A else Str(A)}).join(s)
-	# TODO: consider making Str(x) == x
 }
 
 # Can be more efficent I guess
