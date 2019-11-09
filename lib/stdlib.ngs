@@ -6911,68 +6911,61 @@ F write(f:File, s:Str) {
 	write(if f.fd is Null then f.path else f.fd, s)
 }
 
-# === JSON =======================================
-
-doc Convert data structure into JSON compatible data using JsonData and call built-in encode_json().
-doc Implement JsonData() for your own types to customize converting to JSON.
-doc %RET - Str
-F encode_json(x) {
-	super(JsonData(x))
-}
-
-# === Misc =======================================
-
-doc %STATUS - experimental
-F encode_base64(s:Str, wrap:Int=0) {
-	guard OS.posix
-	`echo -n $s | base64 -w $wrap`
-}
-
-doc %STATUS - experimental
-F encode_base64(s:Str, wrap:Int=0) {
-	guard OS.darwin
-	`echo -n $s | base64 -b $wrap`
-}
-
-doc %STATUS - experimental
-F decode_base64(s:Str) `echo $s | base64 --decode`
-
-# === Networking =================================
-
-### F read(s:Str) {
-### 	# impl curl
-### 	guard s ~ /^http[s]?:\/\//i
-### 	guard "curl" found
-### }
-
-F myip() {
-	fetch('https://api.myip.com').ip.IPAddr()
-}
-
-
-# === Caching ====================================
-
-# TODO: *args and per-args combination wrapping
-doc Cache cb results. Runs cb only once. TODO: Support arguments.
-doc %RET - New function which wraps cb.
-doc %EX - my_func = cached( { expensive(); calculation(); steps(); result } )
-doc %EX - use_result_of(my_func())
-doc %EX - ...
-doc %EX - use_result_of(my_func())
-F cached(cb:Fun) {
-	result = EmptyBox()
-	F cached_function_wrapper() {
-		if not(result) {
-			result = FullBox(cb())
-		}
-		result.get()
+section "JSON" {
+	doc Convert data structure into JSON compatible data using JsonData and call built-in encode_json().
+	doc Implement JsonData() for your own types to customize converting to JSON.
+	doc %RET - Str
+	F encode_json(x) {
+		super(JsonData(x))
 	}
 }
 
-# === Doc ========================================
+section "base64" {
+	doc %STATUS - experimental
+	F encode_base64(s:Str, wrap:Int=0) {
+		guard OS.posix
+		`echo -n $s | base64 -w $wrap`
+	}
 
-doc %STATUS - experimental
-doc %AUTO - \name attr1=val1 attr2=val2 ... [ ... ]
-F \(name:Str, attributes:Hash, children:Arr) {
-	Doc::Node(name, children.reject(NoData).map(only(FullBox, get)), **attributes)
+	doc %STATUS - experimental
+	F encode_base64(s:Str, wrap:Int=0) {
+		guard OS.darwin
+		`echo -n $s | base64 -b $wrap`
+	}
+
+	doc %STATUS - experimental
+	F decode_base64(s:Str) `echo $s | base64 --decode`
+}
+
+section "Networking" {
+	F myip() {
+		fetch('https://api.myip.com').ip.IPAddr()
+	}
+}
+
+section "Caching" {
+	# TODO: *args and per-args combination wrapping
+	doc Cache cb results. Runs cb only once. TODO: Support arguments.
+	doc %RET - New function which wraps cb.
+	doc %EX - my_func = cached( { expensive(); calculation(); steps(); result } )
+	doc %EX - use_result_of(my_func())
+	doc %EX - ...
+	doc %EX - use_result_of(my_func())
+	F cached(cb:Fun) {
+		result = EmptyBox()
+		F cached_function_wrapper() {
+			if not(result) {
+				result = FullBox(cb())
+			}
+			result.get()
+		}
+	}
+}
+
+section "Doc" {
+	doc %STATUS - experimental
+	doc %AUTO - \name attr1=val1 attr2=val2 ... [ ... ]
+	F \(name:Str, attributes:Hash, children:Arr) {
+		Doc::Node(name, children.reject(NoData).map(only(FullBox, get)), **attributes)
+	}
 }
