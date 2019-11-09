@@ -701,6 +701,7 @@ F JsonData(e:Eachable1) {
 	guard e is not Int
 	guard e is not Str
 	guard e is not Arr
+	guard e is not MultiMethod
 	e.map(JsonData)
 }
 
@@ -1028,79 +1029,80 @@ F Str(c:UserDefinedMethod) {
 	"<UserDefinedMethod ${c.attrs().name tor "<anonymous>"}${StrParams(c)} at ${location}>"
 }
 
-# === Type =======================================
+section "Type" {
 
-doc Create a new type. Do not use directly.
-doc %AUTO - type MyType2(MyType1)
-F Type(t:Str, doc, ns, parent:Type) Type(t, doc, ns, [parent])
+	doc Create a new type. Do not use directly.
+	doc %AUTO - type MyType2(MyType1)
+	F Type(t:Str, doc, ns, parent:Type) Type(t, doc, ns, [parent])
 
-doc Create a new type. Do not use directly.
-doc %AUTO - type MyType2([MyParent1, MyParent2, ...])
-F Type(t:Str, doc, ns, parents:Arr) {
-	ret = Type(t, doc, ns)
-	parents % ret.inherit(X)
-	ret
-}
-
-TEST type T1; type T2(T1); T2() is T1
-
-doc String representation of a type
-doc %RET - "<Type NAME>"
-doc %EX - Real.Str().echo()  # Outputs: <Type Real>
-F Str(t:Type) "<Type ${t.name}>"
-
-# TODO: Reorganize and move out of Type section
-doc Decode (parse) strings such as command line arguments or environment variables to result given type
-doc TODO: Consider renaming to UnArgv or decode_arg
-doc %STATUS - experimental
-F decode(s:Str, t:Type) {
-	t == Any returns s # For ArgvMatcher
-	F _fail(cause:Exception=null) {
-		args = ["Failed to decode value. Could not convert given value to type ${t.name}", cause].reject(Null)
-		throw DecodeFail(*args).set('value', s).set('target_type', t)
+	doc Create a new type. Do not use directly.
+	doc %AUTO - type MyType2([MyParent1, MyParent2, ...])
+	F Type(t:Str, doc, ns, parents:Arr) {
+		ret = Type(t, doc, ns)
+		parents % ret.inherit(X)
+		ret
 	}
-	if t in [Int, Real, Str] {
-		return try {
-			t(s)
-		} catch(e:InvalidArgument) {
-			_fail(e)
+
+	TEST type T1; type T2(T1); T2() is T1
+
+	doc String representation of a type
+	doc %RET - "<Type NAME>"
+	doc %EX - Real.Str().echo()  # Outputs: <Type Real>
+	F Str(t:Type) "<Type ${t.name}>"
+
+	# TODO: Reorganize and move out of Type section
+	doc Decode (parse) strings such as command line arguments or environment variables to result given type
+	doc TODO: Consider renaming to UnArgv or decode_arg
+	doc %STATUS - experimental
+	F decode(s:Str, t:Type) {
+		t == Any returns s # For ArgvMatcher
+		F _fail(cause:Exception=null) {
+			args = ["Failed to decode value. Could not convert given value to type ${t.name}", cause].reject(Null)
+			throw DecodeFail(*args).set('value', s).set('target_type', t)
 		}
+		if t in [Int, Real, Str] {
+			return try {
+				t(s)
+			} catch(e:InvalidArgument) {
+				_fail(e)
+			}
+		}
+		if t == Bool {
+			s ~ /^(1)|(y(es?)?)|true|on$/i returns true
+			s ~ /^(0)|(no?)|false|off$/i returns false
+			_fail()
+		}
+		guard false
 	}
-	if t == Bool {
-		s ~ /^(1)|(y(es?)?)|true|on$/i returns true
-		s ~ /^(0)|(no?)|false|off$/i returns false
-		_fail()
+
+	TEST decode("no", Bool) == false
+	TEST decode("0", Bool) == false
+	TEST decode("yes", Bool) == true
+	TEST decode("1", Bool) == true
+	TEST decode("1", Int) == 1
+	TEST decode("1", Real) == 1.0
+
+	doc %STATUS - experimental
+	doc Check whether t is a subtype of maybe_supertype.
+	doc Note that if t and maybe_supertype are same type, this method also returns true.
+	doc TODO: consider symbol <: as method name.
+	doc %RET - Bool
+	doc %EX - Lines.is_subtype(Eachable1)  # true
+	doc %EX - Eachable.is_subtype(Lines)  # false
+	F is_subtype(t:Type, maybe_supertype:Type) {
+		maybe_supertype === Any returns true
+		F kern(t:Type) {
+			t === maybe_supertype returns true
+			t.parents.any(kern)
+		}
+		kern(t)
 	}
-	guard false
+
+	TEST Lines.is_subtype(Eachable1)
+	TEST Lines.is_subtype(Eachable)
+	TEST Int.is_subtype(Any)
+	TEST Eachable.is_subtype(Lines) == false
 }
-
-TEST decode("no", Bool) == false
-TEST decode("0", Bool) == false
-TEST decode("yes", Bool) == true
-TEST decode("1", Bool) == true
-TEST decode("1", Int) == 1
-TEST decode("1", Real) == 1.0
-
-doc %STATUS - experimental
-doc Check whether t is a subtype of maybe_supertype.
-doc Note that if t and maybe_supertype are same type, this method also returns true.
-doc TODO: consider symbol <: as method name.
-doc %RET - Bool
-doc %EX - Lines.is_subtype(Eachable1)  # true
-doc %EX - Eachable.is_subtype(Lines)  # false
-F is_subtype(t:Type, maybe_supertype:Type) {
-	maybe_supertype === Any returns true
-	F kern(t:Type) {
-		t === maybe_supertype returns true
-		t.parents.any(kern)
-	}
-	kern(t)
-}
-
-TEST Lines.is_subtype(Eachable1)
-TEST Lines.is_subtype(Eachable)
-TEST Int.is_subtype(Any)
-TEST Eachable.is_subtype(Lines) == false
 
 # === NormalType =================================
 
