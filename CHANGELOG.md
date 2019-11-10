@@ -1,4 +1,4 @@
-## 2019-11-09 Version 0.2.7
+## 2019-11-10 Version 0.2.7
 
 ### New features
 
