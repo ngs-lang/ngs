@@ -748,6 +748,7 @@
 							'='
 							ematch d {
 								Fun { \span class='non-literal' [ 'method' ] }
+								Block { \span class='non-literal' [ 'block' ] }
 								Any d.code()
 							}
 						]
