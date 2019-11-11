@@ -1,5 +1,9 @@
 ## (UNRELEASED) Version 0.2.8
 
+### New features
+
+* Add `setup-dev-env` target in Makefile.
+
 ## 2019-11-10 Version 0.2.7
 
 ### New features
