@@ -914,12 +914,17 @@ F map_idx_key_val(hl:HashLike, mapper:Fun) hl.attrs().HashLike.map_idx_key_val(m
 doc Filter hash. Build new HashLike with kev-value pairs selected by predicate.
 doc predicate - Test function to be called with one key and one value at a time.
 doc %EX - my_hashlike.filter(F(k, v) k == 'a')
-doc %RET - HashLike
-F filter(hl:HashLike, predicate:Fun) {
-	ret = HashLike()
+doc %RET - value of the same type as hl
+F filter(hl:HashLike, predicate) {
+	t = typeof(hl)
+	ret = t()
 	ret.attrs().HashLike = hl.attrs().HashLike.filter(predicate)
 	ret
 }
+
+TEST HashLike({"a": 1, "b": 2}).filter(F(k, v) v==1) == HashLike({"a": 1})
+TEST HashLike({"a": 1}).filter(F(k, v) v==10) == HashLike()
+TEST type MyHashLike(HashLike); MyHashLike({"a": 1, "b": 2}).filter(F(k, v) v==1) == MyHashLike({"a": 1})
 
 doc Create a HashLike.
 doc h - If provided, used as initial value.

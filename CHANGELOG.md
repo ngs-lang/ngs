@@ -4,6 +4,11 @@
 
 * Add `setup-dev-env` target in Makefile.
 
+### Fixes and improvements
+
+* `filter(HashLike, predicate)` - the `predicate` doesn't have to be `Fun` anymore
+* `filter(hl:HashLike, predicate)` now returns value of the same type as `hl`
+
 ## 2019-11-10 Version 0.2.7
 
 ### New features
