@@ -1,26 +1,26 @@
-# === Exception ==================================
+section "Basic Methods for Exception type" {
+	doc Initialize an Exception.
+	doc %RET - Exception with .backtrace and .message
+	doc message - Goes into .message
+	F init(e:Exception, message:Str) {
+		e.message = message
+	}
 
-doc Initialize an Exception.
-doc %RET - Exception with .backtrace and .message
-doc message - Goes into .message
-F init(e:Exception, message:Str) {
-	e.message = message
+	doc Initialize an Exception.
+	doc %RET - Exception with .backtrace and .cause
+	F init(e:Exception, cause:Exception) {
+		e.cause = cause
+	}
+
+	doc Initialize an Exception.
+	doc %RET - Exception with .backtrace, .message, and .cause
+	F init(e:Exception, message:Str, cause:Exception) {
+		e.message = message
+		e.cause = cause
+	}
 }
 
-doc Initialize an Exception.
-doc %RET - Exception with .backtrace and .cause
-F init(e:Exception, cause:Exception) {
-	e.cause = cause
-}
-
-doc Initialize an Exception.
-doc %RET - Exception with .backtrace, .message, and .cause
-F init(e:Exception, message:Str, cause:Exception) {
-	e.message = message
-	e.cause = cause
-}
-
-{
+section "Basic Exception subtypes" {
 	type NotImplemented; NotImplemented.inherit(Exception)
 	type ReadFail; ReadFail.inherit(Exception)
 	type RequireFail; RequireFail.inherit(Exception)
@@ -28,7 +28,9 @@ F init(e:Exception, message:Str, cause:Exception) {
 
 	doc Represents error when converting program execution result to exit code
 	type ExitCodeFail; ExitCodeFail.inherit(Exception)
+}
 
+{
 	doc Information about exiting, used by bootstrap and as argument to exit_hook.
 	doc exit_code - the code to exit with
 	doc exceptions - exceptions that occurred during exit procedure
@@ -37,27 +39,30 @@ F init(e:Exception, message:Str, cause:Exception) {
 
 # === bootstrap ==================================
 
-# *** Convert values returned by the program (or -e/-E expression) to exit codes ***
-doc %RET - always 0
-F ExitCode(x) 0
+section "Basic ExitCode pseudo-constructor methods" {
+	doc %RET - always 0
+	F ExitCode(x) 0
 
-doc %RET - 0 for true, 1 for false
-F ExitCode(b:Bool) if b 0 1
+	doc %RET - 0 for true, 1 for false
+	F ExitCode(b:Bool) if b 0 1
 
-doc %RET - n
-F ExitCode(n:Int) n
+	doc %RET - n
+	F ExitCode(n:Int) n
 
-doc %RET - Always 240
-F ExitCode(e:Exception) 240
+	doc %RET - Always 240
+	F ExitCode(e:Exception) 240
+}
 
-doc Create MultiMethod with no methods
-F MultiMethod() super([])
+section "MultiMethod - constructor and basic methods" {
+	doc Create MultiMethod with no methods
+	F MultiMethod() super([])
 
-doc Number of methods in MultiMethod
-F len(mm:MultiMethod) mm.Arr().len()
+	doc Number of methods in MultiMethod
+	F len(mm:MultiMethod) mm.Arr().len()
 
-doc Whether MultiMethod has any methods
-F Bool(mm:MultiMethod) mm.Arr().Bool()
+	doc Whether MultiMethod has any methods
+	F Bool(mm:MultiMethod) mm.Arr().Bool()
+}
 
 main = MultiMethod()
 
@@ -246,7 +251,7 @@ F bootstrap() {
 			'-pi': inspect
 			'-pj': encode_json
 			'-pc': code
-			'-pt': { Table2::Table(A) }
+			'-pt': Table2::Table
 		}
 		if sw in transformation {
 			echo(transformation[sw](result))
