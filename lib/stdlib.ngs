@@ -6358,31 +6358,21 @@ F SafeStr(val) {
 
 doc Inspect any value.
 doc %RET - Lines with exactly one line
-F inspect(val) Lines([SafeStr(val)])
+F inspect(val) Lines([val.typeof().name + ': ' + SafeStr(val)])
 
 doc Inspect Eachable1
 doc %RET - Lines
 F inspect(e:Eachable1) {
 	guard e is not Box
+	guard e is not Int
+	guard e is not Range
 	Lines(["${e.typeof().name} of size ${e.len() tor '(unknown size)'}"] + e.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
 }
-
-doc Inspect boolean.
-doc %RET - Lines with exactly one line
-F inspect(b:Bool) Lines(["Bool: $b"])
 
 # F inspect(mm:MultiMethod) ["MultiMethod "] + mm.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"})
 doc Inspect MultiMethod
 doc %RET - Lines
-F inspect(mm:MultiMethod) Lines(["MultiMethod", "  Methods"]) + ("    " + mm.Arr().inspect())
-
-doc Inspect Real
-doc %RET - Lines with exactly one line
-F inspect(r:Real) Lines(["Real: $r"])
-
-doc Inspect Int
-doc %RET - Lines with exactly one line
-F inspect(i:Int) Lines(["Int: $i"])
+F inspect(mm:MultiMethod) Lines(["MultiMethod:", "  Methods"]) + ("    " + mm.Arr().inspect())
 
 doc Inspect Str
 doc %RET - Lines
