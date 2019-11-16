@@ -8,7 +8,7 @@
 
 * `filter(HashLike, predicate)` - the `predicate` doesn't have to be `Fun` anymore
 * `filter(hl:HashLike, predicate)` now returns value of the same type as `hl`
-* `escape_bash` - fixed and it's not experimental anymore
+* `escape_bash()` - fixed and it's not experimental anymore
 
 ### Breaking changes
 
