@@ -802,37 +802,38 @@ section "ArrLike" {
 	}
 }
 
-section "AnyOf(ArrLike)" {
+section "OneOf(ArrLike)" {
 	doc EXPERIMENTAL! Do not use!
 	doc Should probably inherit from Set, not ArrLike.
-	type AnyOf
-	AnyOf.inherit(ArrLike)
+	type OneOf
+	OneOf.inherit(ArrLike)
 
 	doc EXPERIMENTAL! Do not use!
-	F init(a:AnyOf, *alternatives) {
+	F init(o:OneOf, *alternatives) {
 		guard alternatives.len() > 1
-		super(a, alternatives)
+		super(o, alternatives)
 	}
 
 	doc EXPERIMENTAL! Do not use!
-	F ~(x, a:AnyOf) block b {
-		a.each(F(alt) {
+	F ~(x, o:OneOf) block b {
+		o.each(F(alt) {
 			if (m = x ~ alt) b.return(m)
+			# b.return_if_true(x ~ alt)
 		})
-		MatchFailure(x, a)
+		MatchFailure(x, o)
 	}
 
-	TEST ("abc" ~ AnyOf(/x/, /a/)) is MatchSuccess
-	TEST ("abc" ~ AnyOf(/x/, /y/)) is MatchFailure
-	TEST ("abc" ~ AnyOf([Int, Str])) is MatchSuccess
-	TEST ("abc" ~ AnyOf([Int, Num])) is MatchFailure
+	TEST ("abc" ~ OneOf(/x/, /a/)) is MatchSuccess
+	TEST ("abc" ~ OneOf(/x/, /y/)) is MatchFailure
+	TEST ("abc" ~ OneOf([Int, Str])) is MatchSuccess
+	TEST ("abc" ~ OneOf([Int, Num])) is MatchFailure
 
 	doc EXPERIMENTAL!
-	doc Convert AnyOf to a predicate. The predicate asserts that one of the predicates (elements of AnyOf) succeeds
-	doc %EX - {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(AnyOf("k1", "k3"))  # {"k1": "v1", "k3": "v3"}
-	F Pred(a:AnyOf) {
-		preds = a.map(Pred)
-		F anyof_pred(x) block b {
+	doc Convert OneOf to a predicate. The predicate asserts that one of the predicates (elements of OneOf) succeeds
+	doc %EX - {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(OneOf("k1", "k3"))  # {"k1": "v1", "k3": "v3"}
+	F Pred(o:OneOf) {
+		preds = o.map(Pred)
+		F oneof_pred(x) block b {
 			preds.each(F(p) {
 				if p(x) {
 					b.return(true)
@@ -842,7 +843,7 @@ section "AnyOf(ArrLike)" {
 		}
 	}
 
-	TEST {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(AnyOf("k1", "k3")) == {"k1": "v1", "k3": "v3"}
+	TEST {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(OneOf("k1", "k3")) == {"k1": "v1", "k3": "v3"}
 }
 
 # === HashLike ===================================
@@ -1156,7 +1157,7 @@ doc %EX - my_items.dflt("source", "(unknown)")
 doc %RET - e
 F dflt(e:Eachable1, k, v) {
 	guard e.all({A is NormalTypeInstance or A is Hash})
-	# guard e [AnyOf(NormalTypeInstance, Hash)]
+	# guard e [OneOf(NormalTypeInstance, Hash)]
 	e.each(X.dflt(k, v))
 	e
 }
