@@ -1,30 +1,7 @@
-doc WARNING: incomplete and not properly tested.
-doc TODO: escape unreadable characters?
-doc Escapes single argument for bash.
-doc options - "escape_equals": Bool
-doc %STATUS - experimental
+doc Escapes s so it could be used as single argument in bash. The method is slow as it uses external program.
 doc %RET - Str
-F escape_bash(s:Str, options:Hash={}) {
-	has_space = ' ' in s
-	has_backslash = '\\' in s
-	has_single_quote = "'" in s
-	has_double_quote = '"' in s
-
-	do_esacpe_equals = options.get('escape_equals') and '=' in s
-
-	# Simple case: space but no other special characters to quote
-	if has_space {
-		if not(has_backslash) {
-			not(has_single_quote) returns "'" + s + "'"
-			not(has_double_quote) returns '"' + s + '"'
-		}
-	}
-
-	escaping = if options.get('escape_equals') {
-		CHARS::shell_escape_with_eq
-	} else {
-		CHARS::shell_escape
-	}
-
-	s.mapo(escaping.get(X, X))
+F escape_bash(s:Str) {
+	# Not using external printf because on Mac it doesn't have %q
+	chr(0) in s throws InvalidArgument("escape_bash doesn't work on strings containing the zero character")
+	`echo -n $s | line: bash -c 'IFS= read -d $\'\\0\' s; printf %q "$s"'`
 }
