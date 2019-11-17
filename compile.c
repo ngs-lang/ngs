@@ -1177,6 +1177,10 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 
+		case SECTION_NODE:
+			// TODO: Save section name somewhere. It's in node->first_child.
+			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, need_result);
+			break;
 
 		default:
 			fprintf(stderr, "Node type %i\n", node->type);

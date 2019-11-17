@@ -78,6 +78,7 @@ typedef enum {
 	TABLE_LIT_NODE,
 	SET_NS_NODE,
 	GET_NS_NODE,
+	SECTION_NODE,
 	NUMBER_OF_AST_NODE_TYPES,
 } ast_node_type;
 

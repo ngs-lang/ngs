@@ -58,6 +58,7 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 	"table",
 	"set_ns",
 	"get_ns",
+	"section"
 };
 
 

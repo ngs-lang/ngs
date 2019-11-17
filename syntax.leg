@@ -227,6 +227,39 @@ int is_exportable(ast_node *node) {
 	return node->name[0] != '_';
 }
 
+void process_namespace(ast_node *first_child, int location[4]) {
+	ast_node *node, *identifier_to_export;
+	for(node = first_child; node ; node = node->next_sibling) {
+		identifier_to_export = NULL;
+		if(node->type == ASSIGNMENT_NODE && node->first_child->type == IDENTIFIER_NODE) {
+			identifier_to_export = node->first_child;
+		}
+		if(node->type == FUNC_NODE) {
+			if(node->first_child->next_sibling->next_sibling->next_sibling) {
+				// Function has a name
+				identifier_to_export = node->first_child->next_sibling->next_sibling->next_sibling;
+			}
+		}
+		if(node->type == SECTION_NODE) {
+			process_namespace(node->first_child->next_sibling->first_child, location);
+			continue;
+		}
+		if(identifier_to_export && is_exportable(identifier_to_export)) {
+			MAKE_NODE(e, ASSIGNMENT_NODE);
+				MAKE_NODE(lhs, INDEX_NODE);
+					MAKE_IDENTIFIER_NODE(exports_identifier, "_exports");
+					append_ast_node_child(lhs, exports_identifier);
+					MAKE_STRING_NODE(exports_key, ngs_strdup(identifier_to_export->name));
+					append_ast_node_child(lhs, exports_key);
+				append_ast_node_child(e, lhs);
+				append_ast_node_child(e, copy_ast_tree(identifier_to_export));
+			e->next_sibling = node->next_sibling;
+			node->next_sibling = e;
+			node = e; // Skip over newly created node
+		}
+	}
+}
+
 %}
 
 start = 
@@ -860,32 +893,7 @@ namespace = "ns" opt_params:namespace-optional-parameters c:curly-code-block {
 			append_ast_node_child(ret, args);
 
 		// TODO: make "exports['var'] = var" conditional - only if "var" is local
-		ast_node *node, *identifier_to_export;
-		for(node = c->first_child; node ; node = node->next_sibling) {
-			identifier_to_export = NULL;
-			if(node->type == ASSIGNMENT_NODE && node->first_child->type == IDENTIFIER_NODE) {
-				identifier_to_export = node->first_child;
-			}
-			if(node->type == FUNC_NODE) {
-				if(node->first_child->next_sibling->next_sibling->next_sibling) {
-					// Function has a name
-					identifier_to_export = node->first_child->next_sibling->next_sibling->next_sibling;
-				}
-			}
-			if(identifier_to_export && is_exportable(identifier_to_export)) {
-				MAKE_NODE(e, ASSIGNMENT_NODE);
-					MAKE_NODE(lhs, INDEX_NODE);
-						MAKE_IDENTIFIER_NODE(exports_identifier, "_exports");
-						append_ast_node_child(lhs, exports_identifier);
-						MAKE_STRING_NODE(exports_key, ngs_strdup(identifier_to_export->name));
-						append_ast_node_child(lhs, exports_key);
-					append_ast_node_child(e, lhs);
-					append_ast_node_child(e, copy_ast_tree(identifier_to_export));
-				e->next_sibling = node->next_sibling;
-				node->next_sibling = e;
-				node = e; // Skip over newly created node
-			}
-		}
+		process_namespace(c->first_child, location);
 
 		$$ = ret;
 	}
@@ -1631,7 +1639,10 @@ block = "block" space i:identifier space c:code-block {
 }
 
 section = "section" space name:string space c:code-block {
-	$$ = c;
+	MAKE_NODE(ret, SECTION_NODE);
+	ret->first_child = name;
+	ret->first_child->next_sibling = c;
+	$$ = ret;
 	CAPTURE_LOCATION($$);
 }
 
