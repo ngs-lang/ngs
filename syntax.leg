@@ -699,7 +699,6 @@ basic-expression =
 	| subshell
 	| super
 	| PRINT_AST
-	| table-literal
 	| identifier
 	| array-literal
 	| imm-array-literal
@@ -1212,21 +1211,6 @@ tree-node = {
 	$$ = ret;
 	CAPTURE_LOCATION($$);
 
-}
-
-table-literal = "table" space? "{" space? table:table-node (ws:imm-array-words {
-		MAKE_NODE(line, ARR_LIT_NODE);
-		append_ast_node_child(line, ws->first_child->next_sibling->first_child);
-		append_ast_node_child(table->first_child, line);
-	} space?)+ "}" {
-	$$ = table;
-}
-
-table-node = {
-	MAKE_NODE(ret, TABLE_LIT_NODE);
-		MAKE_NODE(lines, ARR_LIT_NODE)
-		append_ast_node_child(ret, lines);
-	$$ = ret;
 }
 
 abc-function-literal = c:curly-code-block {

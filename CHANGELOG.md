@@ -14,6 +14,7 @@
 ### Breaking changes
 
 * Experimental `OneOf` renamed to `AnyOf` for naming consistency
+* Remove unused literal syntax for table
 
 ## 2019-11-10 Version 0.2.7
 
