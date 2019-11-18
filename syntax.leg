@@ -748,17 +748,19 @@ function-definition =
 	}
 
 function-definition-name =
-	space+ i:identifier { $$ = i; }
-	| space? "'" <([-|=!@?<>~+*/%()$a-zA-Z0-9.`": ]|"["|"]")+> "'" {
-		MAKE_NODE(ret, IDENTIFIER_NODE);
-		ret->name = ngs_strdup(yytext);
-		$$ = ret;
-	}
-	| space? <[-|=!@?~+*/%$.`\\]+> {
-		MAKE_NODE(ret, IDENTIFIER_NODE);
-		ret->name = ngs_strdup(yytext);
-		$$ = ret;
-	}
+	space+ (
+		i:identifier { $$ = i; }
+		| "'" <([-|=!@?<>~+*/%()$a-zA-Z0-9.`": ]|"["|"]")+> "'" {
+			MAKE_NODE(ret, IDENTIFIER_NODE);
+			ret->name = ngs_strdup(yytext);
+			$$ = ret;
+		}
+		| <[-|=!@?~+*/%$.`\\]+> {
+			MAKE_NODE(ret, IDENTIFIER_NODE);
+			ret->name = ngs_strdup(yytext);
+			$$ = ret;
+		}
+	)
 	| { $$ = NULL; }
 
 function-definition-parameters =

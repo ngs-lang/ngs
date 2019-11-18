@@ -15,6 +15,7 @@
 
 * Experimental `OneOf` renamed to `AnyOf` for naming consistency
 * Remove unused literal syntax for table
+* Syntax: `F` function definition must be followed by a space when the function is named
 
 ## 2019-11-10 Version 0.2.7
 
