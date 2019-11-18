@@ -1233,6 +1233,16 @@ F ~(x, t:Type) {
 	KillFail.inherit(CError)
 }
 
+section "ValueWrapper type and methods" {
+	type ValueWrapper
+
+	F init(vw:ValueWrapper) throw Error("ValueWrapper subtype ${vw.typeof().name} must have init() argument")
+
+	F init(vw:ValueWrapper, val) vw.val = val
+
+	F Str(vw:ValueWrapper) "<${vw.typeof().name} ${vw.val}>"
+}
+
 # === Lock =======================================
 
 {
@@ -1340,10 +1350,6 @@ AUTOLOAD = ns {
 		RangeIter           Iter
 
 		ResDef              Res
-
-		InputStream         Stream
-		InputOutputStream   Stream
-		OutputStream        Stream
 
 		table               Table
 	}
@@ -6935,6 +6941,142 @@ section "base64" {
 
 	doc %STATUS - experimental
 	F decode_base64(s:Str) `echo $s | base64 --decode`
+}
+
+section "Streams" {
+
+	type Stream
+		type InputStream(Stream)
+			type FileDescriptorInputStream(InputStream)
+			type BufferedInputStream(InputStream)
+		type OutputStream(Stream)
+			type FileDescriptorOutputStream(OutputStream)
+			type BufferedOutputStream(OutputStream)
+		type InputOutputStream([InputStream, OutputStream])
+
+	# TODO: Better error. MethodNotFound crashes.
+	F init(fdos:FileDescriptorOutputStream) throw Error("FileDescriptorOutputStream must be called with arguments")
+
+	F init(fdos:FileDescriptorOutputStream, fd:Int) init(args())
+
+	F close(fdos:FileDescriptorOutputStream) fdos.fd.close()
+
+	F write(fdos:FileDescriptorOutputStream, s:Str) fdos.fd.write(s)
+
+	F OutputStream(f:File) {
+		f.open('w')
+		debug("file", "Creating FileDescriptorOutputStream for file ${f}")
+		FileDescriptorOutputStream(f.fd)
+	}
+
+}
+
+section "Serialization" {
+	# Implementation in progress. Do not use!
+
+	doc EXPERIMENTAL! Do not use!
+	doc %STATUS - experimental
+	type CorrelationID(ValueWrapper)
+
+	# TODO: make length configurable
+	doc EXPERIMENTAL! Do not use!
+	doc %STATUS - experimental
+	F init(cid:CorrelationID) cid.val = 'ngs:correlation-id:' + ({ CHARS::ascii_lowercase.rand(3) } * 5).join('-')
+
+	serialization = ns {
+		global init, write, serialize, serialize_to
+
+		signature = 'NGS-SERIALIZED--'
+		version = 1
+
+		meta = ns {
+			keep = 0
+			remove = 1
+			error = 2
+		}
+
+		chunk = ns {
+			end = [1, meta::error]
+		}
+
+		doc EXPERIMENTAL! Do not use!
+		doc %STATUS - experimental
+		type uint16
+		doc EXPERIMENTAL! Do not use!
+		doc %STATUS - experimental
+		type uint32
+
+		F _write(out:OutputStream, b:Int) out.write(chr(b))
+
+		F _init_uint(int_obj, val, upper_limit) {
+			assert(val >= 0)
+			assert(val <= upper_limit)
+			int_obj.val = val
+		}
+
+		doc EXPERIMENTAL! Do not use!
+		doc %STATUS - experimental
+		F init(i:uint16, val:Int) _init_uint(i, val, 0xFFFF)
+
+		doc EXPERIMENTAL! Do not use!
+		doc %STATUS - experimental
+		F init(i:uint32, val:Int) _init_uint(i, val, 0xFFFFFFFF)
+
+		doc EXPERIMENTAL! Do not use!
+		doc %STATUS - experimental
+		F write(out:OutputStream, x:uint16) {
+			out._write(x.val.band(0xFF))
+			out._write(x.val.band(0xFF00) / 0x100)
+		}
+
+		doc EXPERIMENTAL! Do not use!
+		doc %STATUS - experimental
+		F write(out:OutputStream, x:uint32) {
+			out.write(x.val.band(0xFFFF).uint16())
+			out.write((x.val.band(0xFFFF0000) / 0x10000).uint16())
+		}
+
+		doc EXPERIMENTAL! Do not use!
+		doc %STATUS - experimental
+		type SerializationChunk
+			doc EXPERIMENTAL! Do not use!
+			doc %STATUS - experimental
+			type EndMarkerSerializationChunk(SerializationChunk)
+
+		doc EXPERIMENTAL! Do not use!
+		doc %STATUS - experimental
+		F write(out:OutputStream, em:EndMarkerSerializationChunk) {
+			for v in chunk::end {
+				out.write(uint16(v))
+			}
+			out.write(uint32(0))
+		}
+
+		doc EXPERIMENTAL! Do not use!
+		doc %STATUS - experimental
+		F serialize(out:OutputStream, x) {
+			finally({
+				out.write(signature)
+				out.write(x)
+				out.write(EndMarkerSerializationChunk())
+				null
+			}, {
+				out.close()
+			})
+		}
+
+		doc EXPERIMENTAL! Do not use!
+		doc %STATUS - experimental
+		F serialize(f:File, x) serialize(OutputStream(f), x)
+
+		doc EXPERIMENTAL! Do not use!
+		doc %STATUS - experimental
+		F serialize_to(x, out) serialize(out, x)
+
+		doc EXPERIMENTAL! Do not use!
+		doc %STATUS - experimental
+		F serialize_to(x, out:Str) serialize(File(out), x)
+	}
 }
 
 section "Networking" {
