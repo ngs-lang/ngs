@@ -372,11 +372,7 @@ expression-delimiter =
 expression =
 	comment
 	|
-	e:set-item-expression (inline_space comment)? { $$ = e; }
-
-
-set-item-expression =
-	binop-expression
+	e:binop-expression (inline_space comment)? { $$ = e; }
 
 binop-expression = e:binop-expression-inner {
 	// Handle special "and" and "or" nodes.
@@ -1417,11 +1413,7 @@ number =
 		$$ = ret;
 	}
 
-super =
-	"super" {
-		MAKE_NODE(ret, SUPER_NODE);
-		$$ = ret;
-	}
+super = "super" { MAKE_NODE(ret, SUPER_NODE); $$ = ret; }
 
 identifier =
 	<[_a-zA-Z]+[_a-zA-Z0-9]*> {
@@ -1451,10 +1443,8 @@ defined =
 
 var-scope-declaration-keyword =
 	"local" { MAKE_NODE(ret, LOCAL_NODE); $$ = ret }
-	|
-	"upvar" { MAKE_NODE(ret, UPVAR_NODE); $$ = ret }
-	|
-	"global" { MAKE_NODE(ret, GLOBAL_NODE); $$ = ret }
+	| "upvar" { MAKE_NODE(ret, UPVAR_NODE); $$ = ret }
+	| "global" { MAKE_NODE(ret, GLOBAL_NODE); $$ = ret }
 
 var-scope-declaration =
 	l:var-scope-declaration-keyword space var-scope-declaration-item { append_ast_node_child(l, $$); } (space? "," space? var-scope-declaration-item { append_ast_node_child(l, $$); })* {
@@ -1475,9 +1465,7 @@ var-scope-declaration-item = i:identifier e:var-scope-declaration-item-optional-
 
 var-scope-declaration-item-optional-value = (space? "=" space? e:expression) { $$ = e } | { $$ = NULL; }
 
-string =
-	# TODO: backslash sequences
-	string-sq | string-dq
+string = string-sq | string-dq
 
 string-sq =
 	"'" acc:str-comps-node (
@@ -1602,10 +1590,7 @@ collector = "collector" init:collector-init space c:code-block {
 
 collector-init =
 	"/" e:expression { $$ = e; }
-	| {
-		MAKE_NODE(arr, ARR_LIT_NODE);
-		$$ = arr;
-	}
+	| { MAKE_NODE(arr, ARR_LIT_NODE); $$ = arr; }
 
 block = "block" space i:identifier space c:code-block {
 	MAKE_NODE(ret, CALL_NODE);
@@ -1701,11 +1686,7 @@ type = doc:optional-doc inline_space? "type" space i:identifier inline_space? op
 
 optional-function-call-arguments =
 	function-call-arguments
-	|
-	{
-		MAKE_NODE(no, NULL_NODE);
-		$$ = no;
-	}
+	| { MAKE_NODE(no, NULL_NODE); $$ = no; }
 
 subshell =
 	"$(" cmd:commands-pipeline ")" { $$ = cmd; }
@@ -1928,11 +1909,7 @@ redir-fd = <[0-9]+> {
 		ret->number = atoi(yytext);
 		$$ = ret;
 	}
-	|
-	{
-		MAKE_NODE(ret, NULL_NODE);
-		$$ = ret;
-	}
+	| { MAKE_NODE(ret, NULL_NODE); $$ = ret; }
 
 redir-marker =
 	<(">>" | ">" | "<<" | "<")> { MAKE_STRING_NODE(ret, yytext); $$ = ret; }
