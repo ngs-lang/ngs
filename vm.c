@@ -3800,16 +3800,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 				DEEPER_FRAME.arr_callable = NULL;
 				return mr;
 			}
-			if(mr != METHOD_ARGS_MISMATCH) {
-				DEEPER_FRAME.arr_callable = NULL;
-				dump_titled(stderr, "RESULT", *result);
-				VALUE exc;
-				exc = make_normal_type_instance(vm->InternalError);
-				set_normal_type_instance_field(exc, make_string("message"), make_string("Unexpected method result"));
-				set_normal_type_instance_field(exc, make_string("callable"), callable_items[i]);
-				SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv);
-				THROW_EXCEPTION_INSTANCE(exc);
-			}
+			assert(mr == METHOD_ARGS_MISMATCH);
 		}
 		DEEPER_FRAME.arr_callable = NULL;
 		// --- method_not_found_handler() - start ---
@@ -3849,19 +3840,15 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		if(HAVE_KWARGS_MARKER) {
 			return METHOD_ARGS_MISMATCH;
 		}
-		// dump_titled("Native callable", callable);
 		if(argc != NATIVE_METHOD_OBJ_N_REQ_PAR(callable)) {
 			return METHOD_ARGS_MISMATCH;
 		}
-		// printf("PT 0\n");
 		for(lvi=0; lvi<NATIVE_METHOD_OBJ_N_REQ_PAR(callable); lvi++) {
 			// TODO: make sure second argument is type durng closure creation
-			// dump_titled("ARGV[lvi]", argv[lvi]);
 			if(!obj_is_of_type(vm, argv[lvi], NATIVE_METHOD_OBJ_PARAMS(callable)[lvi*2+1])) {
 				return METHOD_ARGS_MISMATCH;
 			}
 		}
-		// printf("PT 2\n");
 		if(NATIVE_METHOD_EXTRA_PARAMS(callable)) {
 			mr = ((VM_EXT_FUNC)OBJ_DATA_PTR(callable))(vm, ctx, argv, result);
 		} else {
@@ -4304,10 +4291,8 @@ main_loop:
 							POP_NOCHECK(v); // number of arguments
 							THIS_FRAME.last_ip = ip;
 							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-GET_INT(v)-1], callable, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
-							// assert(ctx->stack[ctx->stack_ptr-GET_INT(v)-1].num);
 							if(mr == METHOD_EXCEPTION) {
 								*result = ctx->stack[ctx->stack_ptr-GET_INT(v)-1];
-								// dump_titled("E1", *result);
 								goto exception;
 							}
 							if(mr == METHOD_ARGS_MISMATCH) {
@@ -4318,14 +4303,7 @@ main_loop:
 								set_normal_type_instance_field(*result, make_string("backtrace"), make_backtrace(vm, ctx));
 								goto exception;
 							}
-							if(mr != METHOD_OK) {
-								*result = make_normal_type_instance(vm->InternalError);
-								set_normal_type_instance_field(*result, make_string("message"), make_string("Unexpected method result"));
-								set_normal_type_instance_field(*result, make_string("callable"), callable);
-								SET_EXCEPTION_ARGS_KWARGS(*result, GET_INT(v), &ctx->stack[ctx->stack_ptr-GET_INT(v)]);
-								set_normal_type_instance_field(*result, make_string("backtrace"), make_backtrace(vm, ctx));
-								goto exception;
-							}
+							assert(mr == METHOD_OK);
 							REMOVE_TOP_N(GET_INT(v));
 							goto main_loop;
 		case OP_CALL_EXC:
@@ -4347,10 +4325,7 @@ main_loop:
 								POP(*result);
 								goto exception_return;
 							}
-							if(mr != METHOD_OK) {
-								dump_titled(stderr, "Failed callable / 2", callable);
-								assert(0=="Handling failed method calls is not implemented yet");
-							}
+							assert(mr == METHOD_OK);
 							REMOVE_TOP_N(GET_INT(v));
 							goto main_loop;
 		case OP_CALL_ARR:
@@ -4359,9 +4334,7 @@ main_loop:
 							POP(callable);
 							THIS_FRAME.last_ip = ip;
 							mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-2], callable, OBJ_LEN(ctx->stack[ctx->stack_ptr-1]), ARRAY_ITEMS(ctx->stack[ctx->stack_ptr-1]));
-							// assert(ctx->stack[ctx->stack_ptr-2].num);
 							if(mr == METHOD_EXCEPTION) {
-								// printf("E2\n");
 								*result = ctx->stack[ctx->stack_ptr-2];
 								goto exception;
 							}
