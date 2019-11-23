@@ -6003,6 +6003,9 @@ doc Convenience method to access matches in MatchSuccess
 doc %EX - ("abc" ~ /a(.)c/)[1]  # "b"
 F '[]'(ms:MatchSuccess, idx:Int) ms.matches[idx]
 
+doc Get indexed match, returning dflt is the match is not found
+F get(ms:MatchSuccess, idx:Int, dflt=null) ms.matches.get(idx, dflt)
+
 TEST ("abc" ~ /a(.)c/)[1] == "b"
 
 F Pred(s:SubSeq) {

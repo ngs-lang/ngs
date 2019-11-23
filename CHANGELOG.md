@@ -2,7 +2,8 @@
 
 ### New features
 
-* Add `setup-dev-env` target in Makefile.
+* Add `setup-dev-env` target in Makefile
+* Add `get(MatchSuccess, Int, dflt)`
 
 ### Fixes and improvements
 
