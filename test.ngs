@@ -28,6 +28,6 @@
 
 	files.each(perform_tests_in_file)
 
-	assert(tests_counter > 440)
+	assert(tests_counter > 500)
 	echo("OK. Tests: ${tests_counter}")
 }
