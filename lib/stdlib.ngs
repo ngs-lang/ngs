@@ -5271,9 +5271,11 @@ TEST Argv({"--a": 1, "-b": null, ["-y1", "-n1"]: true, ["-y2", "-n2"]: false, ["
 TEST Argv({"-a1": [], "-a2": [1,2,3]}) == ["-a2", 1, 2, 3]
 TEST Argv({["--repeat"]: ["a", "b"]}) == ["--repeat", "a", "--repeat", "b"]
 
-doc EXPERIMENTAL! Do not use!
+doc Deprecated. Do not use!
+doc %STATUS - deprecated
 F Argv(a:Arr) {
-	a.reject(NoData).map(only(Box, get)).map(only(X is not Arr, FullBox)).flatten()
+	warn("Using deprecated Argv(Arr)")
+	a.reject(NoData).map(only(Box, get)).map(X.ensure(Arr)).flatten()
 }
 
 # --- $() ---
