@@ -1350,8 +1350,6 @@ AUTOLOAD = ns {
 		RangeIter           Iter
 
 		ResDef              Res
-
-		table               Table
 	}
 
 	invocation = 0
