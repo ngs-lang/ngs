@@ -413,7 +413,7 @@ block u {
 	TEST [1,2,3].first(X>1, 10) == 2
 	TEST [1,2,3].first(X>5, 10) == 10
 	TEST [1,2,3].first(X>1) == 2
-	TEST try [1,2,3].first(X>5) catch(e:ElementNotFound) true
+	TEST [1,2,3].first(X>5) THROWS ElementNotFound
 }
 
 doc Find the only element that satisfies the predicate.
@@ -434,11 +434,11 @@ F the_one(e:Eachable1, predicate={true}) {
 }
 
 TEST [1,2,11,3,4].the_one(X>10) == 11
-TEST try [1,2,11,12,4].the_one(X>10) catch(e:ElementNotFound) true
-TEST try [1,2,3,4].the_one(X>10) catch(e:ElementNotFound) true
+TEST [1,2,11,12,4].the_one(X>10) THROWS ElementNotFound
+TEST [1,2,3,4].the_one(X>10) THROWS ElementNotFound
 TEST [1, "a", "b"].the_one(Int) == 1
 TEST [1].the_one() == 1
-TEST try [1, "a", "b"].the_one(Str) catch(e:ElementNotFound) true
+TEST [1, "a", "b"].the_one(Str) THROWS ElementNotFound
 
 doc Find the only element that satisfies the predicate and execute given code with the value
 doc body - The code to execute when exactly one element that satisfies the predicate was found. Executed with the found value. It's value will be returned as result of the_one().
@@ -572,7 +572,7 @@ F reduce(e:Eachable1, f:Fun) {
 
 TEST [10].reduce((+)) == 10
 TEST [1,2,3].reduce((+)) == 6
-TEST try [].reduce((+)) catch(e:EmptyEachableFail) true
+TEST [].reduce((+)) THROWS EmptyEachableFail
 
 doc Deprecated.
 doc Map when there is more than one element. If there is exactly one element, it's left as is
@@ -2088,7 +2088,7 @@ F indexes(e:Eachable1, predicate) {
 TEST [1,5,1,10].indexes(X>2) == [1,3]
 
 TEST [5,10,15].first(X>7) == 10
-TEST try [5,10,15].first(X>20) catch(e:ElementNotFound) true
+TEST [5,10,15].first(X>20) THROWS ElementNotFound
 
 doc Make new array which is a reversed given array
 doc %RET - Arr
@@ -2232,7 +2232,7 @@ block u {
 	}
 }
 
-TEST try { indexes([1,2,3,4], ((X==1)..(X==14))); false } catch(e:IndexNotFound) true
+TEST indexes([1,2,3,4], ((X==1)..(X==14))) THROWS IndexNotFound
 TEST indexes([1,2,3,4], ((X==1)..(X==14)), []) == []
 
 doc Extract array elements between the element that matches r.start and the element that matches r.end .
@@ -2246,8 +2246,8 @@ TEST %[a1 a2 b1 b2][/^a/../^b/] == %[a2]
 TEST %[a1 a2 b1 b2][null../^b/] == %[a1 a2]
 TEST %[a1 a2 b1 b2][/^b/..null] == %[b2]
 TEST %[a1 a2 b1 b2][/^a/.../^b/] == %[a1 a2 b1]
-TEST try { %[a1 a2 b1 b2][/^a/.../^x/]; false } catch(e:IndexNotFound) true
-TEST try { %[a1 a2 b1 b2][/^x/.../^b/]; false } catch(e:IndexNotFound) true
+TEST %[a1 a2 b1 b2][/^a/.../^x/] THROWS IndexNotFound
+TEST %[a1 a2 b1 b2][/^x/.../^b/] THROWS IndexNotFound
 
 doc Replace array elements.
 doc arr - Array to operate on.
@@ -3051,7 +3051,7 @@ F get(fb:FullBox, dflt=null) fb.val
 doc Get EmptyBox value. Always throws BoxFail.
 F get(eb:EmptyBox) throw BoxFail("Can not get value from EmptyBox")
 
-TEST try EmptyBox().get() catch(e:BoxFail) true
+TEST EmptyBox().get() THROWS BoxFail
 
 doc Get EmptyBox value
 doc %RET - dflt
@@ -3284,7 +3284,7 @@ F JsonData(fb:FullBox) fb.get().JsonData()
 TEST {read("/etc/passwd")}.Result() is Success
 TEST {read("NO-SUCH-FILE")}.Result() is Failure
 TEST Success(10).map(X*2).get() == 20
-TEST try ({ throw Error("xx") }.Result().map(X*2).get()) catch(rf:ResultFail) true
+TEST { throw Error("xx") }.Result().map(X*2).get() THROWS ResultFail
 
 doc Convert Success into JSON compatible data structure - the value of the computation
 F JsonData(s:Success) s.get().JsonData()
@@ -3513,7 +3513,7 @@ doc %EX - Int(" 100 ")  # 100
 F Int(s:Str) Int(s, 10)
 
 TEST Int(" 100 ") == 100
-TEST try Int(" XX ") catch(e:InvalidArgument) true
+TEST Int(" XX ") THROWS InvalidArgument
 TEST Int(" XX ", 36) == 1221
 
 doc Convert Bool to int.
@@ -3627,7 +3627,7 @@ section "Strings and characters" {
 	F '[]'(s:Str, i:Int) s[i..i+1]
 
 	TEST ("abc"[0] == "a") and ("abc"[2] == "c")
-	TEST try "abc"[3] == "x" catch(e:IndexNotFound) true
+	TEST "abc"[3] == "x" THROWS IndexNotFound
 
 	doc Get given character (currently byte) of the string (negative indexes handler). Throws IndexNotFound if abs(i) > len(s).
 	doc s - Original string.
@@ -3640,7 +3640,7 @@ section "Strings and characters" {
 	}
 
 	TEST ("abc"[-1] == "c") and ("abc"[-3] == "a")
-	TEST try "abc"[-4] == "x" catch(e:IndexNotFound) true
+	TEST "abc"[-4] == "x" THROWS IndexNotFound
 
 	doc Get a substring. Indexes in s are specified by NumRange.
 	doc s - Original string
@@ -4868,7 +4868,7 @@ F basename(s:Str) {
 TEST basename("/abc") == "abc"
 TEST basename("abc") == "abc"
 TEST basename("abc/def") == "def"
-TEST try basename("abc/def/") catch(e:BasenameArgumentFail) true
+TEST basename("abc/def/") THROWS BasenameArgumentFail
 
 
 # TODO: something more efficient than reading all of it. Some kind of streaming.
@@ -5048,7 +5048,7 @@ block _ {
 		finished_ok(p, 'exit_code', ok)
 	}
 
-	TEST try $(ok:2 cat NO_SUCH_FILE 2>/dev/null) catch(pf:ProcessFail) true
+	TEST $(ok:2 cat NO_SUCH_FILE 2>/dev/null) THROWS ProcessFail
 	TEST $(ok:1 cat NO_SUCH_FILE 2>/dev/null); true
 	TEST $(ok:[1,10] cat NO_SUCH_FILE 2>/dev/null); true
 	TEST $(ok:1..2 cat NO_SUCH_FILE 2>/dev/null); true
@@ -5931,7 +5931,7 @@ F -(s:Str, pfx:Pfx) {
 }
 
 TEST "abc" - Pfx("a") == "bc"
-TEST try "abc" - Pfx("wa") catch(mf:InvalidArgument) true
+TEST "abc" - Pfx("wa") THROWS InvalidArgument
 TEST "abc" - MaybePfx("wa") == "abc"
 
 
@@ -5949,7 +5949,7 @@ F -(s:Str, sfx:Sfx) {
 }
 
 TEST "abc" - Sfx("c") == "ab"
-TEST try "abc" - Sfx("cd") catch(mf:InvalidArgument) true
+TEST "abc" - Sfx("cd") THROWS InvalidArgument
 TEST "abc" - MaybeSfx("cd") == "abc"
 
 doc Return string without the infix. Throws InvalidArgument if ifx is MustIfx but s does not contain it.
@@ -5967,7 +5967,7 @@ F -(s:Str, ifx:Ifx) {
 }
 
 TEST "abcde" - Ifx("bc") == "ade"
-TEST try "abcde" - Ifx("xy") catch(mf:InvalidArgument) true
+TEST "abcde" - Ifx("xy") THROWS InvalidArgument
 TEST "abcde" - MaybeIfx("xy") == "abcde"
 
 doc Check whether s starts with pfx.
@@ -6812,7 +6812,7 @@ F decode_hex(s:Str) {
 }
 
 TEST decode_hex("010203") == chr(1) + chr(2) + chr(3)
-TEST try decode_hex("0102034") catch(e:InvalidArgument) true
+TEST decode_hex("0102034") THROWS InvalidArgument
 
 STDLIB_INVALID_URI_CHAR_RE = /[^-a-zA-Z0-9_.!~*'()]/
 #'

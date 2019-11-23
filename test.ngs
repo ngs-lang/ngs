@@ -18,8 +18,12 @@
 		# TODO: also other files
 		File(file).lines(F(line) {
 			# dump(line)
-			if m = line ~ /^\s*TEST (.*)/ {
-				perform_test(m[1])
+			if m = line ~ /^\s*TEST (.*?)( THROWS (\w+))?$/ {
+				test_code = m[1]
+				if e = m.get(3) {
+					test_code = "try { ${test_code} ; false } catch(e:${e}) true"
+				}
+				perform_test(test_code)
 			}
 		})
 	}
