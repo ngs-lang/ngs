@@ -1798,7 +1798,7 @@ TEST [1, 2] == [1, 2]
 TEST [1, 3] != [1, 2]
 TEST [1] != [1, 2]
 
-doc Compare arrays, elemt-wise. If all elements are equal, the longest array considered to be the "big" one.
+doc Compare arrays, element-wise. If all elements are equal, the longest array considered to be the "big" one.
 doc %RET - Bool
 doc %EX -  [1, 2] <= [1, 3]  # true
 doc %EX -  [1] <= [1, 2]     # true
