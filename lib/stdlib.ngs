@@ -6953,23 +6953,93 @@ section "Streams" {
 			type FileDescriptorInputStream(InputStream)
 			type BufferedInputStream(InputStream)
 		type OutputStream(Stream)
+			type TapOutputStream(OutputStream)
+			type FilteringOutputStream(OutputStream)
 			type FileDescriptorOutputStream(OutputStream)
 			type BufferedOutputStream(OutputStream)
 		type InputOutputStream([InputStream, OutputStream])
 
-	# TODO: Better error. MethodNotFound crashes.
-	F init(fdos:FileDescriptorOutputStream) throw Error("FileDescriptorOutputStream must be called with arguments")
+	section "Stream" {
+		doc Many streams are not TTY. This method handles that fact.
+		doc A subtype of Stream than can be a TTY should override this method.
+		doc %RET - false
+		F isatty(s:Stream) false
+	}
 
-	F init(fdos:FileDescriptorOutputStream, fd:Int) init(args())
+	section "FileDescriptorInputStream" {
+		F init(fdis:FileDescriptorInputStream, fd:Int) init(args())
 
-	F close(fdos:FileDescriptorOutputStream) fdos.fd.close()
+		F init(fdis:FileDescriptorInputStream) throw Error("FileDescriptorInputStream must be called with arguments")
 
-	F write(fdos:FileDescriptorOutputStream, s:Str) fdos.fd.write(s)
+		F init(fdos:FileDescriptorOutputStream, fd:Int) init(args())
+	}
 
-	F OutputStream(f:File) {
-		f.open('w')
-		debug("file", "Creating FileDescriptorOutputStream for file ${f}")
-		FileDescriptorOutputStream(f.fd)
+	section "OutputStream" {
+		F OutputStream(f:File) {
+			f.open('w')
+			debug("file", "Creating FileDescriptorOutputStream for file ${f}")
+			FileDescriptorOutputStream(f.fd)
+		}
+
+		F echo(os:OutputStream, x) os.serialize(x)
+
+	}
+
+	section "FileDescriptorOutputStream" {
+		# TODO: Better error. MethodNotFound crashes.
+		F init(fdos:FileDescriptorOutputStream) throw Error("FileDescriptorOutputStream must be called with arguments")
+
+		F close(fdos:FileDescriptorOutputStream) {
+			fdos.fd.close()
+			fdos
+		}
+
+		F write(fdos:FileDescriptorOutputStream, s:Str) {
+			fdos.fd.write(s)
+			fdos
+		}
+
+		F isatty(fdos:FileDescriptorOutputStream) fdos.fd.isatty()
+	}
+
+	section "TapOutputStream" {
+		F init(tos:TapOutputStream) {
+			tos.downstreams = []
+		}
+
+		# Is "connect" the best name?
+		F connect(tos:TapOutputStream, os:OutputStream) {
+			tos.downstreams.push(os)
+		}
+
+		F echo(tos:TapOutputStream, obj) tos.downstreams.each(echo(X, obj))
+
+	}
+
+	section "FilteringOutputStream" {
+
+		# TODO: Low priority
+		F .=(fos:FilteringOutputStream, attr, filter) {
+			guard attr == 'filter'
+			super(fos, attr, filter)
+			fos._filter_predicate = Pred(filter)
+		}
+
+		F init(fos:FilteringOutputStream, os:OutputStream, filter) {
+			fos.os = os
+			fos.filter = filter
+		}
+
+		F echo(fos:FilteringOutputStream, obj) {
+			if fos::_filter_predicate(obj) {
+				echo(fos.os, obj)
+			}
+			fos
+		}
+
+		# FIXME: serialize() closes
+		F close(fos:FilteringOutputStream) close(fos.os)
+
 	}
 
 }
@@ -7113,4 +7183,16 @@ section "Doc" {
 	F \(name:Str, attributes:Hash, children:Arr) {
 		Doc::Node(name, children.reject(NoData).map(only(FullBox, get)), **attributes)
 	}
+}
+
+section "Setup IO" {
+	# TODO: AggregatedInputStreams -- from ARGV files and/or stdin
+	# TODO: how this should be different for
+	#   * Web UI
+	#   * Notebook
+	STDIN = FileDescriptorInputStream(0)
+	STDOUT = FileDescriptorOutputStream(1)
+	STDERR = FileDescriptorOutputStream(2)
+	IN = STDIN # When this is not correct? In Web UI?
+	OUT = null
 }
