@@ -848,6 +848,36 @@ section "AnyOf(ArrLike)" {
 	TEST {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(AnyOf("k1", "k3")) == {"k1": "v1", "k3": "v3"}
 }
 
+section "AllOf(ArrLike)" {
+	doc EXPERIMENTAL! Do not use!
+	doc Should probably inherit from Set, not ArrLike.
+	type AllOf
+	AllOf.inherit(ArrLike)
+
+	doc EXPERIMENTAL! Do not use!
+	F init(a:AllOf, *items) {
+		guard items.len() > 1
+		super(a, items)
+	}
+
+	doc EXPERIMENTAL!
+	doc Convert AllOf to a predicate. The predicate asserts that one of the predicates (elements of AllOf) succeeds
+	doc %EX - {"k1": "v1", "k2": "v2", "kk3": "vv3"}.filterk(AllOf(/^k/, {len(A) <= 2})) == %{k1 v1 k2 v2}
+	F Pred(a:AllOf) {
+		preds = a.map(Pred)
+		F allof_pred(x) block b {
+			preds.each(F(p) {
+				if not(p(x)) {
+					b.return(false)
+				}
+			})
+			true
+		}
+	}
+
+	TEST {"k1": "v1", "k2": "v2", "kk3": "vv3"}.filterk(AllOf(/^k/, {len(A) <= 2})) == %{k1 v1 k2 v2}
+}
+
 # === HashLike ===================================
 # TODO [doc]: examples in methods
 {

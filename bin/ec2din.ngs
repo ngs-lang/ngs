@@ -27,9 +27,14 @@ F main(filters:Arr, allreg:Bool=false, j:Bool=false, c:Str=null, out_lines:Int=5
 	# region to az
 	regions = {}
 
+	local_filters = AllOf()
+
 	filters = ['--filters'] +? collector filters.each(F(arg) {
 		kv = arg.split('=')
 		econd {
+
+			arg == 'windows' collect("Name=platform,Values=windows")
+			arg == 'linux' local_filters.push('Platform' not in X)
 
 			arg.starts_with('vpc-') collect("Name=vpc-id,Values=$arg")
 
@@ -69,6 +74,7 @@ F main(filters:Arr, allreg:Bool=false, j:Bool=false, c:Str=null, out_lines:Int=5
 	}
 	instances .= sort('LaunchTime')
 
+	instances .= filter(local_filters)
 
 	c.each(F(cmd) {
 		instances.pmap(F(i) {
