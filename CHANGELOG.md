@@ -4,6 +4,7 @@
 
 * Add `setup-dev-env` target in Makefile
 * Add `get(MatchSuccess, Int, dflt)`
+* Add `Null()` constructor
 * More concise tests with `THROWS` pseudo-operator
 
 ### Fixes and improvements

@@ -179,6 +179,9 @@ section "Parent types for built-in types" {
 }
 
 section "Default constructors for built-in types" {
+	doc Make null
+	doc %RET - null
+	F Null() null
 	doc Make empty array
 	doc %RET - []
 	F Arr()  { [] }
