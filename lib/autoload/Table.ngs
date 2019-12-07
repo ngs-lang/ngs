@@ -1,11 +1,9 @@
 # === Table ======================================
 
-{
-	doc Holds tabular data
-	doc name - Table name to display and for configuration lookup
-	doc cols_enum - Enum for columns names
-	type Table(Eachable1)
-}
+doc Holds tabular data
+doc name - Table name to display and for configuration lookup
+doc cols_enum - Enum for columns names
+type Table(Eachable1)
 
 doc Internal method. Please do not use.
 F StrForTable(x) Str(x)

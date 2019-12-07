@@ -30,12 +30,10 @@ section "Basic Exception subtypes" {
 	type ExitCodeFail; ExitCodeFail.inherit(Exception)
 }
 
-{
-	doc Information about exiting, used by bootstrap and as argument to exit_hook.
-	doc exit_code - the code to exit with
-	doc exceptions - exceptions that occurred during exit procedure
-	type Exit
-}
+doc Information about exiting, used by bootstrap and as argument to exit_hook.
+doc exit_code - the code to exit with
+doc exceptions - exceptions that occurred during exit procedure
+type Exit
 
 # === bootstrap ==================================
 
@@ -176,6 +174,7 @@ F bootstrap() {
 			# Newline at the beginning is for symmetry
 			default_code = 'F default_argv_code() { fetch() }()'
 			code_to_run = "{\n${ARGV.shift(default_code)}\n}"
+			# code_to_run = ARGV.shift(default_code)
 			bootstrap_debug("Got $sw switch, using command line provided code")
 			if sw == '-E' {
 				bootstrap_debug('Will skip loading stdlib because of -E flag')
@@ -251,7 +250,7 @@ F bootstrap() {
 			'-pi': inspect
 			'-pj': encode_json
 			'-pc': code
-			'-pt': Table2::Table
+			'-pt': { Table2::Table(A) } # Lazy loading of Table2
 		}
 		if sw in transformation {
 			echo(transformation[sw](result))

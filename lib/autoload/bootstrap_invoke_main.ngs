@@ -1,9 +1,6 @@
-# WIP, don't use!
-{
-	ArgvMatcher
-	type BootstrapNoMatchingMain(Exception)
-	type BootstrapFailedMatchMain(Exception)
-}
+ArgvMatcher
+type BootstrapNoMatchingMain(Exception)
+type BootstrapFailedMatchMain(Exception)
 
 doc Internal method. Please do not use.
 doc Tries to run c if it matches argv.

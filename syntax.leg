@@ -312,6 +312,8 @@ command =
 	|
 	function-call
 	|
+	type
+	|
 	namespace
 	|
 	block
@@ -325,6 +327,8 @@ command =
 	switch
 	|
 	for
+	|
+	& (identifier ("." | "::")) expression
 	|
 	comment
 	|

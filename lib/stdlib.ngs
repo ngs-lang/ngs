@@ -72,28 +72,26 @@ F init(h:Hash) {
 
 # === Exceptions ===
 
-{
-	doc Represents failed assertion, thrown by assert(). Should be used to catch programming errors.
-	doc %EXSYN - commands
-	doc %EX - F box_area(x:Int, y:Int) {
-	doc %EX - 	assert(x > 0)
-	doc %EX - 	assert(y > 0)
-	doc %EX - 	x * y
-	doc %EX - }
-	doc %EX - echo(box_area(5, 10))
-	doc %EX - # Output: 50
-	doc %EX - echo(box_area(-5, 10))
-	doc %EX - # ... Exception of type AssertFail ...
-	doc %EX - #
-	doc %EX - # Note that the following is better than using assert():
-	doc %EX - # not(x > 0) throws InvalidArgument('x must be greater than zero').set('x', x)
-	type AssertFail
-	AssertFail.inherit(Exception)
+doc Represents failed assertion, thrown by assert(). Should be used to catch programming errors.
+doc %EXSYN - commands
+doc %EX - F box_area(x:Int, y:Int) {
+doc %EX - 	assert(x > 0)
+doc %EX - 	assert(y > 0)
+doc %EX - 	x * y
+doc %EX - }
+doc %EX - echo(box_area(5, 10))
+doc %EX - # Output: 50
+doc %EX - echo(box_area(-5, 10))
+doc %EX - # ... Exception of type AssertFail ...
+doc %EX - #
+doc %EX - # Note that the following is better than using assert():
+doc %EX - # not(x > 0) throws InvalidArgument('x must be greater than zero').set('x', x)
+type AssertFail
+AssertFail.inherit(Exception)
 
-	doc Represents an attempt to create an instance of an abstract type (not intended for instantiation).
-	type InstantiatingAbstractType
-	InstantiatingAbstractType.inherit(Exception)
-}
+doc Represents an attempt to create an instance of an abstract type (not intended for instantiation).
+type InstantiatingAbstractType
+InstantiatingAbstractType.inherit(Exception)
 
 doc IndexNotFound exception constructor
 doc %RET - IndexNotFound object with the given message, container and key fields
@@ -390,10 +388,8 @@ F partition(something:Eachable1, predicate) {
 
 TEST partition([1,10,2,20], X>=10) == [[10, 20], [1, 2]]
 
-{
-	type ElementNotFound
-	ElementNotFound.inherit(LookupFail)
-}
+type ElementNotFound
+ElementNotFound.inherit(LookupFail)
 
 block u {
 	global first
@@ -547,10 +543,8 @@ F reduce(something:Eachable1, start, f:Fun) {
 
 TEST [1,2,3].reduce(0, (+)) == 6
 
-{
-	type EmptyEachableFail
-	EmptyEachableFail.inherit(InvalidArgument)
-}
+type EmptyEachableFail
+EmptyEachableFail.inherit(InvalidArgument)
 
 doc Combine items to a single value using the supplied binary function
 doc First f is applied to the first two elements of e
@@ -880,11 +874,9 @@ section "AllOf(ArrLike)" {
 
 # === HashLike ===================================
 # TODO [doc]: examples in methods
-{
-	doc Base type for user-defined hash-like types. This is a workaround: it's not possible currently no inherit from the built-in Hash type.
-	type HashLike
-	HashLike.inherit(Eachable2)
-}
+doc Base type for user-defined hash-like types. This is a workaround: it's not possible currently no inherit from the built-in Hash type.
+type HashLike
+HashLike.inherit(Eachable2)
 
 doc Check whether k is in the HashLike
 doc %RET - Bool
@@ -978,11 +970,9 @@ F JsonData(hl:HashLike) hl.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
 
 # === Hook =======================================
 
-{
-	doc Hook is a simple pub-sub
-	type Hook
-	Hook.inherit(HashLike)
-}
+doc Hook is a simple pub-sub
+type Hook
+Hook.inherit(HashLike)
 
 doc Hook constructor.
 doc %RET - Hook
@@ -1240,31 +1230,29 @@ F ~(x, t:Type) {
 
 # === Exceptions =================================
 
-{
-	# TODO: Investigate why type CError(Error) does not work at this point
-	doc Base type for exceptions arising from errors returned by calling C functions
-	type CError
-	CError.inherit(Error)
+# TODO: Investigate why type CError(Error) does not work at this point
+doc Base type for exceptions arising from errors returned by calling C functions
+type CError
+CError.inherit(Error)
 
-	doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
-	F init(e:CError, message:Str) {
-		errno = c_errno()
-		super(e, message)
-		e.errno = errno
-		e.errno_name = c_strerror(e.errno)
-	}
-
-	doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
-	F init(e:CError, errno:Int, message:Str) {
-		super(e, message)
-		e.errno = errno
-		e.errno_name = c_strerror(e.errno)
-	}
-
-	doc Exception representing a failure to kill() a process
-	type KillFail
-	KillFail.inherit(CError)
+doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
+F init(e:CError, message:Str) {
+	errno = c_errno()
+	super(e, message)
+	e.errno = errno
+	e.errno_name = c_strerror(e.errno)
 }
+
+doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
+F init(e:CError, errno:Int, message:Str) {
+	super(e, message)
+	e.errno = errno
+	e.errno_name = c_strerror(e.errno)
+}
+
+doc Exception representing a failure to kill() a process
+type KillFail
+KillFail.inherit(CError)
 
 section "ValueWrapper type and methods" {
 	type ValueWrapper
@@ -1278,87 +1266,85 @@ section "ValueWrapper type and methods" {
 
 # === Lock =======================================
 
-{
-	doc Synchronization lock.
-	type Lock
+doc Synchronization lock.
+type Lock
 
-	doc Re-entrant synchronization lock. Same thread can re-acquire the lock.
-	type ReentrantLock()
-	ReentrantLock.inherit(Lock)
+doc Re-entrant synchronization lock. Same thread can re-acquire the lock.
+type ReentrantLock()
+ReentrantLock.inherit(Lock)
 
-	doc Failure to perform an operation on a lock.
-	type LockFail
-	LockFail.inherit(Exception)
+doc Failure to perform an operation on a lock.
+type LockFail
+LockFail.inherit(Exception)
 
-	doc Initialize LockFail exception.
-	F init(e:LockFail, op:Str, code:Int, msg:Str) init(args())
+doc Initialize LockFail exception.
+F init(e:LockFail, op:Str, code:Int, msg:Str) init(args())
 
-	doc Initialize Lock. Creates and initializes pthread_mutex.
-	F init(l:Lock) {
-		l.lock = c_pthread_mutex_t()
-		code = c_pthread_mutex_init(l.lock)
-		code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
-	}
-
-	doc Block till the lock is avaiable and then acquire the lock.
-	doc %EX - l = Lock()
-	doc %EX - ...
-	doc %EX - l.acquire()
-	doc %EX - modify_global_state_safely(...)
-	doc %EX - l.release()
-	F acquire(l:Lock) {
-		c_pthread_mutex_lock(l.lock)
-		l
-	}
-
-	doc Release the lock
-	doc %EX - l = Lock()
-	doc %EX - ...
-	doc %EX - l.acquire()
-	doc %EX - modify_global_state_safely(...)
-	doc %EX - l.release()
-	F release(l:Lock) {
-		c_pthread_mutex_unlock(l.lock)
-		l
-	}
-
-	doc Call cb with lock l held. Releases the lock after cb returns or throws.
-	doc %EX - l = Lock()
-	doc %EX - ...
-	doc %EX - l.acquire(F() {
-	doc %EX -   modify_global_state_safely(...)
-	doc %EX - })
-	F acquire(l:Lock, cb:Fun) {
-		l.acquire()
-		try {
-			ret = cb()
-			l.release()
-			ret
-		} catch(e:Exception) {
-			l.release()
-			throw e
-		}
-	}
-
-	TEST Lock().acquire(F() 1) == 1
-
-	doc Initialize Lock. Creates and initializes PTHREAD_MUTEX_RECURSIVE pthread_mutex.
-	F init(l:ReentrantLock) {
-		l.lock_attr = c_pthread_mutexattr_t()
-		code = c_pthread_mutexattr_init(l.lock_attr)
-		code throws LockFail("c_pthread_mutexattr_init", code, "Call to underlying API failed")
-		c_pthread_mutexattr_settype(l.lock_attr, C_PTHREAD_MUTEX_RECURSIVE)
-		l.lock = c_pthread_mutex_t()
-		code = c_pthread_mutex_init(l.lock, l.lock_attr)
-		code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
-	}
-
-	doc Convert c_pthread_mutex_t to Str for displaying to humans.
-	F Str(cpm:c_pthread_mutex_t) "<c_pthread_mutex_t>"
-
-	doc Convert c_pthread_mutexattr_t to Str for displaying to humans.
-	F Str(cpma:c_pthread_mutexattr_t) "<c_pthread_mutexattr_t>"
+doc Initialize Lock. Creates and initializes pthread_mutex.
+F init(l:Lock) {
+	l.lock = c_pthread_mutex_t()
+	code = c_pthread_mutex_init(l.lock)
+	code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
 }
+
+doc Block till the lock is avaiable and then acquire the lock.
+doc %EX - l = Lock()
+doc %EX - ...
+doc %EX - l.acquire()
+doc %EX - modify_global_state_safely(...)
+doc %EX - l.release()
+F acquire(l:Lock) {
+	c_pthread_mutex_lock(l.lock)
+	l
+}
+
+doc Release the lock
+doc %EX - l = Lock()
+doc %EX - ...
+doc %EX - l.acquire()
+doc %EX - modify_global_state_safely(...)
+doc %EX - l.release()
+F release(l:Lock) {
+	c_pthread_mutex_unlock(l.lock)
+	l
+}
+
+doc Call cb with lock l held. Releases the lock after cb returns or throws.
+doc %EX - l = Lock()
+doc %EX - ...
+doc %EX - l.acquire(F() {
+doc %EX -   modify_global_state_safely(...)
+doc %EX - })
+F acquire(l:Lock, cb:Fun) {
+	l.acquire()
+	try {
+		ret = cb()
+		l.release()
+		ret
+	} catch(e:Exception) {
+		l.release()
+		throw e
+	}
+}
+
+TEST Lock().acquire(F() 1) == 1
+
+doc Initialize Lock. Creates and initializes PTHREAD_MUTEX_RECURSIVE pthread_mutex.
+F init(l:ReentrantLock) {
+	l.lock_attr = c_pthread_mutexattr_t()
+	code = c_pthread_mutexattr_init(l.lock_attr)
+	code throws LockFail("c_pthread_mutexattr_init", code, "Call to underlying API failed")
+	c_pthread_mutexattr_settype(l.lock_attr, C_PTHREAD_MUTEX_RECURSIVE)
+	l.lock = c_pthread_mutex_t()
+	code = c_pthread_mutex_init(l.lock, l.lock_attr)
+	code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
+}
+
+doc Convert c_pthread_mutex_t to Str for displaying to humans.
+F Str(cpm:c_pthread_mutex_t) "<c_pthread_mutex_t>"
+
+doc Convert c_pthread_mutexattr_t to Str for displaying to humans.
+F Str(cpma:c_pthread_mutexattr_t) "<c_pthread_mutexattr_t>"
 
 # === auto-load ==================================
 
@@ -2985,22 +2971,20 @@ TEST h={"a": 1, "b": 2}; s = h.shift("a"); h == {"b": 2} and s == 1
 
 # Inspired by Option from Scala. http://www.scala-lang.org/api/2.12.x/scala/Option.html
 
-{
-	doc Thrown when trying to get() a value from EmptyBox and no default value given.
-	type BoxFail(Error)
+doc Thrown when trying to get() a value from EmptyBox and no default value given.
+type BoxFail(Error)
 
-	doc A box which might (FullBox) or might not (EmptyBox) contain a value.
-	doc Box is somewhat similar to Arr of zero (EmptyBox) or exactly one (FullBox) element.
-	doc This analogy helps understanding each() and filter() operation.
-	type Box(Eachable1)
+doc A box which might (FullBox) or might not (EmptyBox) contain a value.
+doc Box is somewhat similar to Arr of zero (EmptyBox) or exactly one (FullBox) element.
+doc This analogy helps understanding each() and filter() operation.
+type Box(Eachable1)
 
-		doc Represents presence of a value
-		doc val - The value
-		type FullBox(Box)
+	doc Represents presence of a value
+	doc val - The value
+	type FullBox(Box)
 
-		doc Represents absence of a value
-		type EmptyBox([Box, NoData])
-}
+	doc Represents absence of a value
+	type EmptyBox([Box, NoData])
 
 doc Do not use directly!
 doc Helper constructor that throws InvalidArgument when
@@ -3196,123 +3180,122 @@ doc Convert FullBox into JSON compatible data structure - the contents of the bo
 F JsonData(fb:FullBox) fb.get().JsonData()
 
 # === Result =====================================
-{
-	doc Thrown by get(Failure) as it has no value to get
-	type ResultFail(Error)
 
-	doc Result of a computation
-	doc val - computed value or exception
-	type Result
+doc Thrown by get(Failure) as it has no value to get
+type ResultFail(Error)
 
-		doc Successful computation
-		doc val - computed value
-		type Success(Result)
+doc Result of a computation
+doc val - computed value or exception
+type Result
 
-		doc Failed computation
-		doc val - exception
-		type Failure(Result)
+	doc Successful computation
+	doc val - computed value
+	type Success(Result)
+
+	doc Failed computation
+	doc val - exception
+	type Failure(Result)
 
 
-	doc Results, an array-like of Result elements
-	type Results(ArrLike)
+doc Results, an array-like of Result elements
+type Results(ArrLike)
 
-		F Str(r:Results) "<${r.typeof().name} ${r.group(F(x) x.typeof().name).mapv(len).map("$X:$Y").join(" ")}>"
+	F Str(r:Results) "<${r.typeof().name} ${r.group(F(x) x.typeof().name).mapv(len).map("$X:$Y").join(" ")}>"
 
-	type ResultsException(Error)
-		doc ResultsException where only failures are stored
-		type FailuresException(ResultsException)
+type ResultsException(Error)
+	doc ResultsException where only failures are stored
+	type FailuresException(ResultsException)
 
-	F init(re:ResultsException, msg:Str, results:Results) {
-		super(re, msg)
-		re.set('results', results)
-	}
-
-	doc Runs the computation and wraps the result: a value is wrapped in Success and an exception is wrapped in Failure.
-	doc %RET - Success or Failure
-	F Result(fun:Fun) {
-		try {
-			Success(fun())
-		} catch(e) {
-			Failure(e)
-		}
-	}
-
-	doc Initialize Success with the given value.
-	F init(s:Success, v) s.val = v
-
-	doc Initialize Failure with the given value.
-	F init(f:Failure, e:Exception) f.val = e
-
-	doc Gets wrapped value
-	doc %RET - Any
-	doc %EX - { 1 / 10 }.Result().get()  # 0
-	F get(s:Success) s.val
-
-	doc Throws ResultFail
-	doc %EX - { 1 / 0 }.Result().get()  # ResultFail exception
-	F get(f:Failure) {
-		throw ResultFail("Can not get value of Failure").set('cause', f.val)
-	}
-
-	doc Gets wrapped value
-	doc %RET - Any
-	doc %EX - { 1 / 10 }.Result().get(100)  # 0
-	F get(s:Success, dflt) s.val
-
-	doc Retruns dflt
-	doc %EX - { 1 / 0 }.Result().get(100)  # 100
-	F get(f:Failure, dflt) dflt
-
-	doc Run fun with wrapped value.
-	F each(s:Success, fun:Fun) {
-		fun(s.get())
-		s
-	}
-
-	doc Run fun with wrapped value. If exception is thrown, Failure is returned; otherwise Success with new vaule is returned.
-	doc %RET - Result
-	F map(s:Success, fun:Fun) {
-		try {
-			Success(fun(s.get()))
-		} catch(e) {
-			Failure(e)
-		}
-	}
-
-	doc No-op, returns f
-	doc %RET - f
-	F each(f:Failure, fun:Fun) f
-
-	doc No-op, returns f
-	doc %RET - f
-	F map(f:Failure, fun:Fun) f
-
-	doc Run predicate on wrapped value.
-	doc %RET - s or Failure
-	doc %EX - Success(10).filter(X>5)   # <Success val=10>
-	doc %EX - Success(10).filter(X>15)  # <Failure val=<ResultFail ...>>
-	F filter(s:Success, predicate) {
-		p = Pred(predicate)
-		p(s.val) returns s
-		Failure(ResultFail("Success filtered out, resulting Failure").set('filter_predicate', predicate))
-	}
-
-	doc No-op, returns f
-	doc %RET - f
-	doc %EX - Failure("blah").filter(X>5)  # <Failure val=blah>
-	F filter(f:Failure, predicate) f
-
-	doc Convert Success to Bool (true)
-	doc %RET - true
-	F Bool(s:Success) true
-
-	doc Convert Failure to Bool (false)
-	doc %RET - false
-	F Bool(f:Failure) false
-
-	doc EXPERIMENTAL! Do not use!
-	F ExitCode(r:Result) r.Bool().ExitCode()
+F init(re:ResultsException, msg:Str, results:Results) {
+	super(re, msg)
+	re.set('results', results)
 }
+
+doc Runs the computation and wraps the result: a value is wrapped in Success and an exception is wrapped in Failure.
+doc %RET - Success or Failure
+F Result(fun:Fun) {
+	try {
+		Success(fun())
+	} catch(e) {
+		Failure(e)
+	}
+}
+
+doc Initialize Success with the given value.
+F init(s:Success, v) s.val = v
+
+doc Initialize Failure with the given value.
+F init(f:Failure, e:Exception) f.val = e
+
+doc Gets wrapped value
+doc %RET - Any
+doc %EX - { 1 / 10 }.Result().get()  # 0
+F get(s:Success) s.val
+
+doc Throws ResultFail
+doc %EX - { 1 / 0 }.Result().get()  # ResultFail exception
+F get(f:Failure) {
+	throw ResultFail("Can not get value of Failure").set('cause', f.val)
+}
+
+doc Gets wrapped value
+doc %RET - Any
+doc %EX - { 1 / 10 }.Result().get(100)  # 0
+F get(s:Success, dflt) s.val
+
+doc Retruns dflt
+doc %EX - { 1 / 0 }.Result().get(100)  # 100
+F get(f:Failure, dflt) dflt
+
+doc Run fun with wrapped value.
+F each(s:Success, fun:Fun) {
+	fun(s.get())
+	s
+}
+
+doc Run fun with wrapped value. If exception is thrown, Failure is returned; otherwise Success with new vaule is returned.
+doc %RET - Result
+F map(s:Success, fun:Fun) {
+	try {
+		Success(fun(s.get()))
+	} catch(e) {
+		Failure(e)
+	}
+}
+
+doc No-op, returns f
+doc %RET - f
+F each(f:Failure, fun:Fun) f
+
+doc No-op, returns f
+doc %RET - f
+F map(f:Failure, fun:Fun) f
+
+doc Run predicate on wrapped value.
+doc %RET - s or Failure
+doc %EX - Success(10).filter(X>5)   # <Success val=10>
+doc %EX - Success(10).filter(X>15)  # <Failure val=<ResultFail ...>>
+F filter(s:Success, predicate) {
+	p = Pred(predicate)
+	p(s.val) returns s
+	Failure(ResultFail("Success filtered out, resulting Failure").set('filter_predicate', predicate))
+}
+
+doc No-op, returns f
+doc %RET - f
+doc %EX - Failure("blah").filter(X>5)  # <Failure val=blah>
+F filter(f:Failure, predicate) f
+
+doc Convert Success to Bool (true)
+doc %RET - true
+F Bool(s:Success) true
+
+doc Convert Failure to Bool (false)
+doc %RET - false
+F Bool(f:Failure) false
+
+doc EXPERIMENTAL! Do not use!
+F ExitCode(r:Result) r.Bool().ExitCode()
 
 TEST {read("/etc/passwd")}.Result() is Success
 TEST {read("NO-SUCH-FILE")}.Result() is Failure
@@ -3323,22 +3306,20 @@ doc Convert Success into JSON compatible data structure - the value of the compu
 F JsonData(s:Success) s.get().JsonData()
 
 # === Diff =======================================
-{
 
-	doc Represents desired target configuration list item presence
-	type Presence
+doc Represents desired target configuration list item presence
+type Presence
 
-		type PartialPresence([FullBox, Presence])
+	type PartialPresence([FullBox, Presence])
 
-			doc Represents a target configuration list item that must be present
-			type Present([FullBox, PartialPresence])
+		doc Represents a target configuration list item that must be present
+		type Present([FullBox, PartialPresence])
 
-			doc Represents a target configuration list item that must be absent
-			type Absent([FullBox, PartialPresence])
+		doc Represents a target configuration list item that must be absent
+		type Absent([FullBox, PartialPresence])
 
-		doc Represents a target configuration list item in a list
-		type ExactPresence([FullBox, Presence])
-}
+	doc Represents a target configuration list item in a list
+	type ExactPresence([FullBox, Presence])
 
 doc Internal method. Please do not use.
 doc Converts Presence or Arr[something] to Arr[Presence]. Used by Res and friends.
@@ -3354,14 +3335,12 @@ F normalize_presence_list(x) {
 }
 
 
-{
-	doc Represents difference
-	type Diff
-	doc Represents difference of elements between two arrays (order unimportant)
-	type ArrDiff(Diff)
-	doc Represents difference of elements between two hashes (order unimportant)
-	type HashDiff(Diff)
-}
+doc Represents difference
+type Diff
+doc Represents difference of elements between two arrays (order unimportant)
+type ArrDiff(Diff)
+doc Represents difference of elements between two hashes (order unimportant)
+type HashDiff(Diff)
 
 doc Compare arrays. Warning: by default Hash is used so internal Hash keys comparison is used, not ==
 doc full - Do not use Hash, work slower but use == comparison.
@@ -4637,13 +4616,11 @@ section "Path" {
 
 # === Commands and processes (WIP) ===============
 
-{
-	doc EXPERIMENTAL!
-	doc %EX - for p in %[ls base64 dd] assert(Program(p))
-	type Program
-	type ProcessesPipeline
-	type ProcessRedir
-}
+doc EXPERIMENTAL!
+doc %EX - for p in %[ls base64 dd] assert(Program(p))
+type Program
+type ProcessesPipeline
+type ProcessRedir
 
 doc EXPERIMENTAL!
 F init(p:Program, name:Str) init(args())
@@ -4742,7 +4719,7 @@ doc fd - File descriptor to write to
 doc %RET - unspecified at this time, do not count on it
 F write(fd:Int, s:Str) fd.c_write(s)
 
-{ type TtyCheckFail(CError) }
+type TtyCheckFail(CError)
 
 doc Check whether given fd represents a TTY. Uses ISATTY(3).
 doc Throws TtyCheckFail.
@@ -4762,19 +4739,17 @@ F isatty(fd:Int) {
 
 # http://www.microhowto.info/howto/capture_the_output_of_a_child_process_in_c.html
 
-{
-	doc Wrapper around file descriptors returned by PIPE(2)
-	type Pipe
-		type PipeToChildProcess(Pipe)
-			type PipeFromParentToChildProcess(PipeToChildProcess)
-			type ReadingPipeBetweenChildren(PipeToChildProcess)
-		type PipeFromChildProcess(Pipe)
-			type PipeFromChildToParentProcess(PipeFromChildProcess)
-				type CollectingPipeFromChildToParentProcess(PipeFromChildProcess)
-			type WritingPipeBetweenChildren(PipeFromChildProcess)
-	doc Represents failure of creating a Pipe when calling PIPE(2)
-	type PipeCreateFail(CError)
-}
+doc Wrapper around file descriptors returned by PIPE(2)
+type Pipe
+	type PipeToChildProcess(Pipe)
+		type PipeFromParentToChildProcess(PipeToChildProcess)
+		type ReadingPipeBetweenChildren(PipeToChildProcess)
+	type PipeFromChildProcess(Pipe)
+		type PipeFromChildToParentProcess(PipeFromChildProcess)
+			type CollectingPipeFromChildToParentProcess(PipeFromChildProcess)
+		type WritingPipeBetweenChildren(PipeFromChildProcess)
+doc Represents failure of creating a Pipe when calling PIPE(2)
+type PipeCreateFail(CError)
 
 # TODO: better exceptions (use correct type, not string, maybe use errno)
 doc Pipe constructor. Create UNIX pipe using PIPE(2). Throws PipeCreateFail if pipe can not be created.
@@ -4845,7 +4820,7 @@ F dup2_reading_end(p:Pipe, newfd:Int) dup2(p.read_fd, newfd)
 
 # --- File ---
 
-{ type FileIOFail(CError) }
+type FileIOFail(CError)
 
 doc Create File object from the given path. The file is not open.
 doc %EX - f = File('/tmp/myfile')
@@ -4884,9 +4859,7 @@ F open(f:File, flags:Str) {
 # XXX: might not be correct on all platforms
 TEST open(File("/etc/passwd"), "r").fd > 0
 
-{
-	type BasenameArgumentFail(InvalidArgument)
-}
+type BasenameArgumentFail(InvalidArgument)
 
 doc Get basename of the file.
 F basename(p:Path) p.path.basename()
@@ -5009,13 +4982,11 @@ F Str(r:CommandRedir) "<${r.typeof().name} ${r.fd} ${r.marker} ${r.datum}>"
 
 # --- Process ---
 
-{
-	doc Running or finished process
-	type Process
+doc Running or finished process
+type Process
 
-	doc Occurs when executable was not found in path or when executable was absolute or relative and was not found.
-	type ProgramNotFound(Exception)
-}
+doc Occurs when executable was not found in path or when executable was absolute or relative and was not found.
+type ProgramNotFound(Exception)
 
 block _ {
 
@@ -5865,37 +5836,35 @@ F config(k:Str, v) {
 
 # === MatchResult, Pfx, Sfx ============================
 
-{
-	doc Successful or unsuccessful match result
-	type MatchResult
+doc Successful or unsuccessful match result
+type MatchResult
 
-		doc Successful match result
-		doc matches - Successful matches
-		type MatchSuccess([MatchResult, Success])
+	doc Successful match result
+	doc matches - Successful matches
+	type MatchSuccess([MatchResult, Success])
 
-		doc Unsucessfull match result
-		type MatchFailure([MatchResult, Failure])
+	doc Unsucessfull match result
+	type MatchFailure([MatchResult, Failure])
 
-	type SubSeq
-		doc Prefix subsequence of a sequence
-		type Pfx(SubSeq)
-			doc Prefix that might or might not be present for (-) to succeed
-			type MaybePfx(Pfx)
-			doc Prefix that must be present for ~ matching to succeed
-			type MustPfx(Pfx)
-		doc Infix subsequence of a sequence
-		type Ifx(SubSeq)
-			doc Infix that might or might not be present for (-) to succeed
-			type MaybeIfx(Ifx)
-			doc Infix that must be present for ~ matching to succeed
-			type MustIfx(Ifx)
-		doc Suffix subsequence of a sequence
-		type Sfx(SubSeq)
-			doc Suffix that might or might not be present for (-) to succeed
-			type MaybeSfx(Sfx)
-			doc Suffix that must be present for ~ matching to succeed
-			type MustSfx(Sfx)
-}
+type SubSeq
+	doc Prefix subsequence of a sequence
+	type Pfx(SubSeq)
+		doc Prefix that might or might not be present for (-) to succeed
+		type MaybePfx(Pfx)
+		doc Prefix that must be present for ~ matching to succeed
+		type MustPfx(Pfx)
+	doc Infix subsequence of a sequence
+	type Ifx(SubSeq)
+		doc Infix that might or might not be present for (-) to succeed
+		type MaybeIfx(Ifx)
+		doc Infix that must be present for ~ matching to succeed
+		type MustIfx(Ifx)
+	doc Suffix subsequence of a sequence
+	type Sfx(SubSeq)
+		doc Suffix that might or might not be present for (-) to succeed
+		type MaybeSfx(Sfx)
+		doc Suffix that must be present for ~ matching to succeed
+		type MustSfx(Sfx)
 
 # TODO: warn()
 doc Successful match constructor
@@ -6600,10 +6569,8 @@ block _ {
 
 # === Time =======================================
 
-{
-	type Time
-	type TimeFail(CError)
-}
+type Time
+type TimeFail(CError)
 
 TIME_FORMAT = ENV.get('NGS_TIME_FORMAT', '%F %T %Z')
 
@@ -6759,11 +6726,9 @@ F rand(r:NumRange) {
 
 # === retry facility =============================
 
-{
-	doc Represents failure on all retries
-	type RetryFail(Error)
-	type RetryBodyMissing(InvalidArgument)
-}
+doc Represents failure on all retries
+type RetryFail(Error)
+type RetryBodyMissing(InvalidArgument)
 
 # TODO: Handle NoNext that could occur in sleep iterator
 doc Retry. Executes given "body" "times" times. Throws RetryFail if all calls fail and fail_cb is not provided.

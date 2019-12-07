@@ -1,8 +1,6 @@
-{
-	type IP
-	type IPAddr(IP)
-	type IPNet(IP)
-}
+type IP
+type IPAddr(IP)
+type IPNet(IP)
 
 # TODO: support immediate values larger than 32 bits in parser
 STDLIB_BIT_31 = 128*256*256*256

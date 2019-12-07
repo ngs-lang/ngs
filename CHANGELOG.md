@@ -15,6 +15,7 @@
 * `filter(hl:HashLike, predicate)` now returns value of the same type as `hl`
 * `escape_bash()` - fixed and it's not experimental anymore
 * `section` inside `ns` now working properly
+* Top-level/commands syntax now treats as expression syntax any expression that starts with identifier followed by "." or "::".
 
 ### Breaking changes
 
