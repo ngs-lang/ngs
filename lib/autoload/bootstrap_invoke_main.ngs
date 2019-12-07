@@ -1,4 +1,4 @@
-ArgvMatcher
+{ ArgvMatcher }
 type BootstrapNoMatchingMain(Exception)
 type BootstrapFailedMatchMain(Exception)
 
