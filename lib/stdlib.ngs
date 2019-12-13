@@ -498,18 +498,16 @@ doc EXPERIMENTAL! Do not use!
 doc Filters out items that satisfy predicate at the begginning of e.
 doc %STATUS - experimental
 doc %EX - [1,2,3,1,2].drop(X<3)  # [3,1,2]
-F drop(e:Eachable1, predicate)
-	collector {
-		p = Pred(predicate)
-		found = false
-		e.each(F(elt) {
-			if found { collect(elt); return null; }
-			if not(p(elt)) {
-				collect(elt)
-				found = true
-			}
-		})
-	}
+F drop(e:Eachable1, predicate) collector {
+	p = Pred(predicate)
+	do_collect = false
+	e.each(F(elt) {
+		do_collect = do_collect or not(p(elt))
+		if do_collect {
+			collect(elt)
+		}
+	})
+}
 
 TEST [1,2,3,1,2].drop(X<3) == [3,1,2]
 
