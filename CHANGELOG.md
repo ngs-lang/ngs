@@ -18,6 +18,7 @@
 * Top-level/commands syntax now treats as expression syntax any expression that starts with identifier followed by "." or "::".
 * Support `block.return()` to return `null`
 * `each(MultiMethod, Fun)` now returns the first parameter
+* Improve readability of `partition(Eachable1, predicate)`
 
 ### Breaking changes
 

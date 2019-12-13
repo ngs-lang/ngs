@@ -376,9 +376,10 @@ doc %RET - Array with two arrays in it
 doc %EX - partition([1,10,2,20], X>=10)  # [[10, 20], [1, 2]]
 F partition(something:Eachable1, predicate) {
 	p = Pred(predicate)
-	ret = [[], []]
-	something.each(F(elt) ret[p(elt).not().Int()].push(elt))
-	ret
+	yes = []
+	no = []
+	something.each(F(elt) (if p(elt) yes else no).push(elt))
+	[yes, no]
 }
 
 TEST partition([1,10,2,20], X>=10) == [[10, 20], [1, 2]]
