@@ -481,16 +481,15 @@ F reject(something:Eachable, predicate) {
 doc EXPERIMENTAL! Do not use!
 doc %STATUS - experimental
 doc %EX - [1,2,3,1,2].take(X<3)  # [1,2]
-F take(something:Eachable1, predicate)
-	 collector block b {
-		p = Pred(predicate)
-		something.each(F(elt) {
-			if p(elt)
-				collect(elt)
-			else
-				b.return(null)
-		})
-	}
+F take(something:Eachable1, predicate) collector block b {
+	p = Pred(predicate)
+	something.each(F(elt) {
+		if p(elt)
+			collect(elt)
+		else
+			b.return()
+	})
+}
 
 TEST [1,2,3,1,2].take(X<3) == [1,2]
 
