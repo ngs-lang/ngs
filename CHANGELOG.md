@@ -17,6 +17,7 @@
 * `section` inside `ns` now working properly
 * Top-level/commands syntax now treats as expression syntax any expression that starts with identifier followed by "." or "::".
 * Support `block.return()` to return `null`
+* `each(MultiMethod, Fun)` now returns the first parameter
 
 ### Breaking changes
 

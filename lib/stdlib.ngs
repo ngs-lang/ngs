@@ -142,7 +142,10 @@ section "MultiMethod" {
 
 		doc Call cb for each method of the MultiMethod
 		doc %EX - echo.each(F(method) echo("${method.params().name.join(", ")}"))
-		F each(mm:MultiMethod, cb:Fun) mm.basic_arr().each(cb)
+		F each(mm:MultiMethod, cb:Fun) {
+			mm.basic_arr().each(cb)
+			mm
+		}
 	}
 
 	F Str(mm:MultiMethod) "<MultiMethod with ${mm.Arr().len()} method(s)>"
