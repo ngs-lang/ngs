@@ -582,25 +582,27 @@ F tap(val, cb:Fun) {
 
 TEST ok=false; (7.tap({ if A == 7 ok = true}) == 7) and ok
 
-doc Filter operator.
-doc Same as calling x.filter(predicate)
-doc %EX - [1,2,3,4] ? F(x) x > 2  # [3,4]
-F ?(x, predicate:Fun) x.filter(predicate)
+section "Functional operators" {
+	doc Filter operator.
+	doc Same as calling x.filter(predicate)
+	doc %EX - [1,2,3,4] ? F(x) x > 2  # [3,4]
+	F ?(x, predicate:Fun) x.filter(predicate)
 
-doc Map operator.
-doc Same as calling x.map(mapper)
-doc %EX - [1,2,3,4] / F(x) x * 10
-F /(x, mapper:Fun) x.map(mapper)
+	doc Map operator.
+	doc Same as calling x.map(mapper)
+	doc %EX - [1,2,3,4] / F(x) x * 10
+	F /(x, mapper:Fun) x.map(mapper)
 
-doc Each operator.
-doc Same as calling x.each(cb)
-doc %EX - [1,2,3,4] % echo
-F %(x, cb:Fun) x.each(cb)
+	doc Each operator.
+	doc Same as calling x.each(cb)
+	doc %EX - [1,2,3,4] % echo
+	F %(x, cb:Fun) x.each(cb)
 
-doc Call operator.
-doc Same as calling f(x)
-doc %EX - [1,2,3,4] \ echo
-F \(x, f:Fun) f(x)
+	doc Call operator.
+	doc Same as calling f(x)
+	doc %EX - [1,2,3,4] \ echo
+	F \(x, f:Fun) f(x)
+}
 
 doc Return a+b unless one of the arguments is falsy. In that case return that argument (a if both are falsy). Useful for building strings with optional parts.
 doc %EX - status_detail = ' (' +? maybe_empty_array.join(',') +? ')'
