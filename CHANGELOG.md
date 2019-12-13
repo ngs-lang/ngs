@@ -5,7 +5,7 @@
 * Add `setup-dev-env` target in Makefile
 * Add `get(MatchSuccess, Int, dflt)`
 * Add `Null()` constructor
-* Add expirimental `AllOf()`
+* Add experimental `AllOf()`
 * Add `linux` and `windows` parameter to `ec2din.ngs`
 * More concise tests with `THROWS` pseudo-operator
 
