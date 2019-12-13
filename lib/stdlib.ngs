@@ -23,8 +23,9 @@ section "Block type and methods" {
 	}
 
 	doc %STATUS - internal
+	doc %AUTO block NAME { NAME.return() }
 	doc %AUTO block NAME { NAME.return(VAL) }
-	F return(b:Block, val) throw ReturnFromBlock(b, val)
+	F return(b:Block, val=null) throw ReturnFromBlock(b, val)
 
 	TEST block b { b.return(1); 2 } == 1
 	TEST block b { "blah"; 2 } == 2
