@@ -368,15 +368,6 @@ F filter(e:Eachable1, predicate) {
 }
 
 
-doc DEPRECATED! Do not use!
-doc Use something.filter({field: predicate}) instead.
-doc %STATUS - deprecated
-F filter(something:Eachable1, field:Str, predicate) {
-	warn("Using deprecated filter(Eachable1, Str, predicate)")
-	p = Pred(predicate)
-	something.filter({ p(A.(field)) })
-}
-
 doc Partition elements in something according to the predicate into two arrays.
 doc First array contains all elements for which predicate(elt) is true and
 doc the second array contains all elements for which predicate(elt) is false.

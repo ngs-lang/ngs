@@ -25,6 +25,7 @@
 * Remove unused literal syntax for table
 * Syntax: `F` function definition must be followed by a space when the function is named
 * Remove deprecated `table(Arr)`
+* Remove deprecated `filter(Eachable1, Str, Any)`
 
 ## 2019-11-10 Version 0.2.7
 
