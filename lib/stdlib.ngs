@@ -120,6 +120,7 @@ section "Namespaces" {
 	doc %EX - myobj.method_in_field(arg)   # calls global "method_in_field"
 	F '::'(nti:NormalTypeInstance, k) nti.(k)
 
+	# TODO: There is Namespace type now - do adjusment here
 	doc Get Hash key. Useful when calling method stored in a Hash key.
 	doc Useful for working with namespaces, which are implemented as Hash instances.
 	doc %EX - elb = AWS::Elb(...).converge(...)
