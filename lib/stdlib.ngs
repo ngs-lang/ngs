@@ -35,7 +35,6 @@ section "Block type and methods" {
 STDLIB_EOL = "\n"
 STDLIB_PATH_SEP = '/'
 STDLIB_MAX_RAND_REAL = Real(RAND_MAX)
-STDLIB_RAND_SAFETY_MAX = 100
 
 section "Document internal GC namespace" {
 	GC.attrs({'doc': {'': 'Control NGS garbage collection'}})
