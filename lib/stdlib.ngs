@@ -2412,7 +2412,7 @@ F join(a:Arr, s:Str) {
 	a.map(Str).join(s)
 }
 
-# Can be more efficent I guess
+# Can be more efficient I guess
 doc Merge sorted arrays.
 doc lte - Less-then-or-equal function to use for comparison of items in a and b
 doc %RET - Arr
