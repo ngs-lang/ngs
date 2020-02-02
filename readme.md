@@ -393,7 +393,6 @@ Following instructions should work (tested on Debian)
 			* No documentation of any kind about the programming language.
 			* Only Rust code in the repo.
 			* Tests are in Rust !?
-			* Nu Shell plugins must be in Rust according to the documentation.
 			* Examples show very rudimentary "language".
 			* https://www.nushell.sh/contributor-book/en/values.html
 
