@@ -357,5 +357,6 @@ TEST try {}.Iter().next() catch(nn:NoNext) true
 
 # F Counter(start:Int=0) Iter(start..null)
 
-doc Convert Iter into JSON compatible data structure - array
+doc Convert Iter into JSON compatible data structure - array.
+doc Forces evaluation of MapIter for example.
 F JsonData(i:Iter) collector i.each(collect + JsonData)
