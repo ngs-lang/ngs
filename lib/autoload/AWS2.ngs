@@ -642,19 +642,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		not(Diff(a, b))
 	}
 
-	# doc Declarative primitive for creating AWS Security Group resources
-	# doc %STATUS - internal
-	# F create(rd:SecGroup, **props) {
-	# 	rd.log('Create', 'SG')
-	# 	argv = Argv({'--vpc-id': rd.anchor.Box('VpcId').map(_one_id)})
-	# 	rd.run('Create SG', %(aws ec2 create-security-group --group-name ${rd.anchor.GroupName} --description ${rd.req_prop('Description', props)} $*argv))
-	# 	if not(rd.dry_run) {
-	# 		# XXX use GroupId output of run()
-	# 		rd.find()
-	# 		rd.resources % update(X, props)
-	# 	}
-	# }
-
 	doc Declarative primitive for updating AWS Security Group resources
 	doc %STATUS - internal
 	F update(sg:SecGroupRes, props:Hash) {
