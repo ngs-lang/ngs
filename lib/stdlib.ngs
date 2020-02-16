@@ -580,7 +580,7 @@ F tap(val, cb:Fun) {
 	val
 }
 
-TEST ok=false; (7.tap({ if A == 7 ok = true}) == 7) and ok
+TEST ok=false; 7.tap({ok = A==7}) == 7 and ok
 
 section "Functional operators" {
 	doc Filter operator.
