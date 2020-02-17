@@ -577,6 +577,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			// condition
 			loop_beg_idx = *idx;
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+			OPCODE(*buf, OP_TO_BOOL);
 			OPCODE(*buf, OP_JMP_FALSE);
 			cond_jump = *idx;
 			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
