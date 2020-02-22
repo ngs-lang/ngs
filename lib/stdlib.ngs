@@ -2044,13 +2044,6 @@ F count(e:Eachable1, predicate=identity) {
 }
 
 TEST [1,2,3,11,12].count(X>10) == 2
-
-doc Count all true values.
-doc e - Items to look at
-doc %RET - Int
-doc %EX - [0,1,2,null,false].count()  # 2 (Only 1 and 2 count as true values)
-F count(e:Arr) count(e, identity)
-
 TEST [0,1,2,null,false].count() == 2
 
 doc Flatten one level.
