@@ -31,7 +31,7 @@
 * Syntax: `F` function definition must be followed by a space when the function is named
 * Remove deprecated `table(Arr)`
 * Remove deprecated `filter(Eachable1, Str, Any)`
-
+* Remove experimental `min(Eachable1, Fun)` and `max(Eachable1, Fun)`
 
 ### Deprecated
 

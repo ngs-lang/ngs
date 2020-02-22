@@ -2371,18 +2371,6 @@ block _ {
 	doc Find maximal element under (>)
 	F max(a, b, *rest) [a, b, *rest].max()
 
-	doc EXPERIMENTAL! Do not use!
-	doc %STATUS - deprecated
-	F min(e:Eachable1, cb:Fun) {
-		warn("Using deprecated min(Eachable1, Fun)")
-		most_by_cb(e, (<), cb)
-	}
-	doc EXPERIMENTAL! Do not use!
-	doc %STATUS - deprecated
-	F max(e:Eachable1, cb:Fun) {
-		warn("Using deprecated max(Eachable1, Fun)")
-		most_by_cb(e, (>), cb)
-	}
 }
 
 doc Repeat all elements in arr n times
