@@ -2513,9 +2513,11 @@ F intersperse(a:Arr, delim) {
 TEST [1,2,3].intersperse(0) == [1,0,2,0,3]
 
 doc Optionally, wrap x in an array. Return x if it's already Arr.
+doc Deprecated. Use ensure(x, Arr) instead.
 doc %RET - Arr
 doc %EX - ensure_array([1,2])  # [1,2]
 doc %EX - ensure_array("aa")   # ["aa"]
+doc %STATUS - deprecated
 F ensure_array(x) x.ensure(Arr)
 
 TEST ensure_array([1,2]) == [1,2]

@@ -29,6 +29,11 @@
 * Remove deprecated `table(Arr)`
 * Remove deprecated `filter(Eachable1, Str, Any)`
 
+
+### Deprecated
+
+* Deprecated `ensure_array(x)` in favor of the newer `ensure(x, Arr)`
+
 ## 2019-11-10 Version 0.2.7
 
 ### New features
