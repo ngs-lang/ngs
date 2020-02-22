@@ -356,7 +356,7 @@ doc predicate - When predicate(item) returns true, the item will appear in the r
 doc %EX - (1...10).filter(F(num) num % 2 == 0)  # Gives [2,4,6,8,10]
 doc %EX - (1...10).filter(X<5)  # Gives [1,2,3,4], predicate called as predicate(item, 5)
 doc %RET - Of same type as e
-F filter(e:Eachable1, predicate) {
+F filter(e:Eachable1, predicate=identity) {
 	pred = Pred(predicate)
 	t = typeof(e)
 	ret = t()
@@ -367,6 +367,7 @@ F filter(e:Eachable1, predicate) {
 	ret
 }
 
+TEST [1,null,2,0].filter() == [1, 2]
 
 doc Partition elements in something according to the predicate into two arrays.
 doc First array contains all elements for which predicate(elt) is true and
@@ -390,7 +391,7 @@ ElementNotFound.inherit(LookupFail)
 block u {
 	global first
 	doc Find first element in e that satisfies the predicate.
-	doc predicate - defaults to identity
+    doc predicate - Test function or anything else acceptable by Pred(), defaults to identity
 	doc %RET - Either the element or the provided default if element was not found.
 	doc %EX - (10..20).first(F(x) x % 3 == 0)        # 12 - first item divisible by 3
 	doc %EX - (10..20).first(F(x) x % 50 == 0, 1000) # 1000
@@ -472,7 +473,7 @@ doc something - object of any type that has each(something, callback) implemente
 doc %EX - (1...10).reject(F(num) num % 2 == 0)  # Gives [1,3,5,7,9]
 doc %EX - (1...10).reject(X<5)  # Gives [5,6,7,8,9,10], predicate called as predicate(item, 5)
 doc %RET - Arr
-F reject(something:Eachable, predicate) {
+F reject(something:Eachable, predicate=identity) {
 	p = Pred(predicate)
 	something.filter(not + p)
 }
@@ -1831,12 +1832,12 @@ TEST not([1,2] <= [1])
 # TODO: Make it work on anything with Eachable2 too.
 doc Check whether there is any element in e that satisfies the given predicate.
 doc e - The items to check
-doc predicate - Test function
+doc predicate - Test function or anything else acceptable by Pred(), defaults to identity
 doc args - Additional arguments for calling the predicate.
 doc %EX - [1,2,10].any(F(elt) elt > 5)   # true
 doc %EX - [1,2,10].any(F(elt) elt > 15)  # false
 doc %RET - Bool
-F any(e:Eachable1, predicate) block b {
+F any(e:Eachable1, predicate=identity) block b {
 	p = Pred(predicate)
 	e.each(F(x) {
 		if p(x) b.return(true)
@@ -1846,15 +1847,16 @@ F any(e:Eachable1, predicate) block b {
 
 TEST [1,2,10].any(F(elt) elt > 5)
 TEST [1,2,3].any(F(elt) elt > 5).not()
+TEST [0, 1, null].any()
+TEST [0, null].any().not()
 
 doc Check whether all elements in arr satisfy the given predicate.
 doc e - The items to check
-doc predicate - Test function
-doc args - Additional arguments for calling the predicate.
+doc predicate - Test function or anything else acceptable by Pred(), defaults to identity
 doc %RET - Bool
 doc %EX - [1,2,3].all(X<10)   # true
 doc %EX - [1,2,10].all(X>5)   # false
-F all(e:Eachable, predicate) block b {
+F all(e:Eachable, predicate=identity) block b {
 	p = Pred(predicate)
 	e.each(F(*x) {
 		if not(p(*x)) b.return(false)
@@ -1865,15 +1867,22 @@ F all(e:Eachable, predicate) block b {
 TEST [1,2,3].all(X<10)
 TEST [1,2,10].all(X>5).not()
 TEST {"x": 1, "y": 2}.all(F(k, v) v is Int)
+TEST [1, 1].all()
+TEST [1, 1, false].all().not()
+
 
 doc Check that there is no element in e that satisfies the given predicate. Exactly same as not(any(e, predicate)) .
+doc e - The items to check
+doc predicate - Test function or anything else acceptable by Pred(), defaults to identity
 doc %RET - Bool
 doc %EX - [0,1,2].none(X>2)  # true
 doc %EX - [0,1,2].none(X<2)  # false
-F none(e:Eachable1, predicate) not(any(e, predicate))
+F none(e:Eachable1, predicate=identity) not(any(e, predicate))
 
 TEST [0,1,2].none(X>2)
 TEST [0,1,2].none(X<2).not()
+TEST [0, 0, false].none()
+TEST [0, 0, true].none().not()
 
 TEST [1,2,3].map(X*4) == [4,8,12]
 
@@ -2010,11 +2019,11 @@ TEST [1,2,3] - [5,6,1,1,1,1,1,1,1,1,1,1,1,2] == [3]
 
 doc Count number of items that satisfy the predicate.
 doc e - Items to look at
-doc predicate - Test function
+doc predicate - Test function or anything else acceptable by Pred(), defaults to identity
 doc args - Additional arguments for the predicate
 doc %RET - Int
 doc %EX - [1,2,3,11,12].count(X>10)  # 2
-F count(e:Eachable1, predicate) {
+F count(e:Eachable1, predicate=identity) {
 	p = Pred(predicate)
 	collector/0
 		e.each(F(elt) {
@@ -2064,12 +2073,12 @@ block u {
 	doc TODO: Make it work on anything with each() method.
 	doc In future, will throw exception if element is not found and default is not provided. Now returns null for backwards compatibilty in this case.
 	doc arr - Items to look at
-	doc predicate - Test function
+    doc predicate - Test function or anything else acceptable by Pred(), defaults to identity
 	doc start - Index to start search at
 	doc dflt - default value to return when element is not found
 	doc %RET - Int or dflt. Temporary also null, for backwards compatibilty.
 	doc %EX - [1,2,11,3,4].index(X>10)  # 2
-	F index(arr:Arr, predicate, start:Int=0, dflt=u) {
+	F index(arr:Arr, predicate=identity, start:Int=0, dflt=u) {
 		p = Pred(predicate)
 		l = arr.len()
 		for(i=start; i<l; i+=1)
@@ -2080,13 +2089,15 @@ block u {
 	}
 }
 
+TEST [null, null, 1].index() == 2
+
 doc Find all indexes of values that satisfy the predicate
 doc arr - Items to look at
-doc predicate - Test function
+doc predicate - Test function or anything else acceptable by Pred(), defaults to identity
 doc args - Additional arguments for the predicate
 doc %RET - Arr of Int
 doc %EX - [1,5,1,10].indexes(X>2)  # [1,3]
-F indexes(e:Eachable1, predicate) {
+F indexes(e:Eachable1, predicate=identity) {
 	p = Pred(predicate)
 	collector
 		e.each_idx_val(F(idx, elt) {
@@ -2097,9 +2108,12 @@ F indexes(e:Eachable1, predicate) {
 }
 
 TEST [1,5,1,10].indexes(X>2) == [1,3]
+TEST [1,5,null,10].indexes() == [0,1,3]
+
 
 TEST [5,10,15].first(X>7) == 10
 TEST [5,10,15].first(X>20) THROWS ElementNotFound
+TEST [0, false, null].first() THROWS ElementNotFound
 
 doc Make new array which is a reversed given array
 doc %RET - Arr
@@ -2707,7 +2721,7 @@ TEST mapkv({"a": 1}, {[A+"zz", B+10]}) == {"azz": 11}
 
 doc Filter hash. Build new hash with kev-value pairs selected by predicate.
 doc h - Source hash
-doc predicate - Test function to be called with one key and one value at a time
+doc predicate - Test function or anything else acceptable by Pred() to be called with one key and one value at a time
 doc args - Additional arguments for calling the predicate
 doc %EX - {'a': 1, 'b': 2}.filter(F(k, v) k == 'a')  # {'a': 1}
 F filter(h:Hash, predicate) {
@@ -2751,7 +2765,7 @@ TEST {"a1": 1, "a2": 2, "b1": 10}.rejectv(X>5) == {"a1": 1, "a2": 2}
 
 doc Count number of key-value pairs in Hash that satisfy the predicate.
 doc e - Something to check, typically a Hash
-doc predicate - Test function to be called with one key and one value at a time
+doc predicate - Test function or anything else acceptable by Pred() to be called with one key and one value at a time
 doc args - Additional arguments for calling the predicate.
 doc %RET - Int
 doc %EX - {'a': 1, 'b': 2, 'c': 11}.count(F(k, v) v>10)  # 1
@@ -3038,21 +3052,25 @@ TEST Box(5).none(Int) == false
 TEST Box(5).none(Str)
 TEST EmptyBox().none(Int)
 
-doc Conditionaly convert FullBox to EmptyBox.
-doc predicate - Test function to be called with the value in the FullBox
+doc Conditionally convert FullBox to EmptyBox.
+doc predicate - Test function or anything else acceptable by Pred() to be called with the value in the FullBox, defaults to identity
 doc %RET - Box. fb if predicate succeeds, EmptyBox if not.
 doc %EX - Box(10).filter(X>5)   # <FullBox val=10>
 doc %EX - Box(10).filter(X>20)  # <EmptyBox>
-F filter(fb:FullBox, predicate) {
+F filter(fb:FullBox, predicate=identity) {
 	p = Pred(predicate)
 	p(fb.val) returns fb
 	EmptyBox()
 }
 
+TEST FullBox(null).filter() == EmptyBox()
+
 doc Do nothing
 doc %RET - eb
 doc %EX - EmptyBox().filter(X>20)  # <EmptyBox>
-F filter(eb:EmptyBox, predicate) eb
+F filter(eb:EmptyBox, predicate=identity) eb
+
+TEST EmptyBox().filter() == EmptyBox()
 
 doc Get FullBox value
 doc %RET - Any

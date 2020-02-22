@@ -12,6 +12,7 @@
 ### Fixes and improvements
 
 *  Add missing `Bool()` call in `for(..., HERE, ...)`
+* Functions that take predicates - default the predicates to `identity()` and improve documentation
 * `filter(HashLike, predicate)` - the `predicate` doesn't have to be `Fun` anymore
 * `filter(hl:HashLike, predicate)` now returns value of the same type as `hl`
 * `escape_bash()` - fixed and it's not experimental anymore
