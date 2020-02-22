@@ -1634,8 +1634,7 @@ F collector(n:Int, body:Fun) {
 
 block _ {
 	global collector
-	# XXX
-	join_strings = join.Arr()[0]
+	join_strings = join.Arr()[0]  # Performance hack: 18 sec -> 4.3 sec for 1M collectors
 
 	doc EXPERIMENTAL! Do not use!
 	F collector(s:Str, body:Fun) {
