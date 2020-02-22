@@ -2152,6 +2152,7 @@ doc a - Array of arrays to join
 doc sep - Separator elements
 doc %EX - [[1,2], [3,4]].join([10,20])  # [1,2,10,20,3,4]
 F join(a:Arr, sep:Arr) {
+	warn("Using experimental join(Arr,Arr)")
 	guard a.all(Arr)
 	collector
 		a.each_idx_val(F(idx, subarr) {
