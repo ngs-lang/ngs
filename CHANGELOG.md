@@ -6,6 +6,8 @@
 * Add `get(MatchSuccess, Int, dflt)`
 * Add `Null()` constructor
 * Add experimental `AllOf()`
+* Add experimental `Bool(AllOf)`
+* Add experimental `Bool(AnyOf)`
 * Add `linux` and `windows` parameter to `ec2din.ngs`
 * More concise tests with `THROWS` pseudo-operator
 
