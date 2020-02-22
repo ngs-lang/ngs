@@ -3287,16 +3287,20 @@ doc Run predicate on wrapped value.
 doc %RET - s or Failure
 doc %EX - Success(10).filter(X>5)   # <Success val=10>
 doc %EX - Success(10).filter(X>15)  # <Failure val=<ResultFail ...>>
-F filter(s:Success, predicate) {
+F filter(s:Success, predicate=identity) {
 	p = Pred(predicate)
 	p(s.val) returns s
 	Failure(ResultFail("Success filtered out, resulting Failure").set('filter_predicate', predicate))
 }
 
+TEST Result({100}).filter() == Success(100)
+
 doc No-op, returns f
 doc %RET - f
 doc %EX - Failure("blah").filter(X>5)  # <Failure val=blah>
-F filter(f:Failure, predicate) f
+F filter(f:Failure, predicate=identity) f
+
+TEST Result({1/0}).filter() is Failure
 
 doc Convert Success to Bool (true)
 doc %RET - true
