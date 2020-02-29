@@ -66,7 +66,6 @@ void position_to_line_col();
 		yy->fail_rule = rule_name; \
 	}
 
-
 void append_ast_node_child(ast_node *target, ast_node *child) {
 	// printf("TARGET %p, CHILD %p\n", target, child);
 	if(!target->first_child) {
@@ -995,23 +994,16 @@ function-call-external-argument =
 	}
 
 function-call-arguments-without-parens =
-	arg:function-call-argument items-separator args:function-call-arguments-without-parens {
-		PREPEND_NODE(args, arg);
-		$$ = args;
+	acc:args-node
+	(
+		arg:function-call-argument { append_ast_node_child(acc, $$); }
+		(items-separator arg:function-call-argument { append_ast_node_child(acc, $$); } )*
+	)* {
+		$$ = acc;
 		CAPTURE_LOCATION($$);
 	}
-	|
-	arg:function-call-argument {
-		MAKE_NODE(ret, ARGS_NODE);
-		ret->first_child = arg;
-		ret->last_child = arg;
-		$$ = ret;
-	}
-	|
-	{
-		MAKE_NODE(ret, ARGS_NODE);
-		$$ = ret;
-	}
+
+args-node = { MAKE_NODE(ret, ARGS_NODE); $$ = ret; }
 
 function-call-argument =
 	i:identifier space? "=" space? e:expression {
