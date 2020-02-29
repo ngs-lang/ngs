@@ -758,23 +758,16 @@ function-definition-name =
 	| { $$ = NULL; }
 
 function-definition-parameters =
-	param:function-definition-parameter space? "," space? params:function-definition-parameters {
-		PREPEND_NODE(params, param);
-		$$ = params;
+	acc:params-node
+	(
+		arg:function-definition-parameter { append_ast_node_child(acc, $$); }
+		(items-separator arg:function-definition-parameter { append_ast_node_child(acc, $$); } )*
+	)* {
+		$$ = acc;
 		CAPTURE_LOCATION($$);
 	}
-	|
-	param:function-definition-parameter {
-		MAKE_NODE(ret, PARAMS_NODE);
-		ret->first_child = param;
-		ret->last_child = param;
-		$$ = ret;
-	}
-	|
-	{
-		MAKE_NODE(ret, PARAMS_NODE);
-		$$ = ret;
-	}
+
+params-node = { MAKE_NODE(ret, PARAMS_NODE); $$ = ret; }
 
 # TODO: make sure it's the last one (or the last ones are *args, **kwargs later)
 # *args at any other positon is a syntax error for now
