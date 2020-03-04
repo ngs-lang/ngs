@@ -3527,15 +3527,25 @@ doc Convert Int to Int, a no-op
 doc %RET - i
 F Int(i:Int) i
 
-doc Convert base-10 string to Int.
+doc Convert to Int.
 doc Throws InvalidArgument if the number in s is not well-formatted.
 doc %RET - Int
 doc %EX - Int(" 100 ")  # 100
-F Int(s:Str) Int(s, 10)
+F Int(s:Str, base=10) {
+    base not in 0...36 throws InvalidArgument("Base must be between 0 and 36").set(s=s, base=base)
+    try {
+        super(s, base)
+    } catch(i: InvalidArgument) {
+        # Augment exception with more information
+        throw i.set(s=s, base=base)
+    }
+}
 
-TEST Int(" 100 ") == 100
-TEST Int(" XX ") THROWS InvalidArgument
-TEST Int(" XX ", 36) == 1221
+TEST Int("100") == 100
+TEST Int("100x") THROWS InvalidArgument
+TEST Int(" XX") THROWS InvalidArgument
+TEST Int(" XX", 36) == 1221
+TEST Int("9" * 1000) THROWS InvalidArgument
 
 doc Convert Bool to int.
 doc %RET - Int

@@ -425,19 +425,21 @@ METHOD_RESULT native_Int_real METHOD_PARAMS {
 }
 
 METHOD_RESULT native_Int_str_int EXT_METHOD_PARAMS {
-	char *nptr, *endptr;
-	long long r;
-	nptr = obj_to_cstring(argv[0]);
-	r = strtoll(nptr, &endptr, GET_INT(argv[1]));
-	if(nptr == endptr) {
-		VALUE e;
-		e = make_normal_type_instance(vm->InvalidArgument);
-		set_normal_type_instance_field(e, make_string("which"), make_string("First argument to Int(s:Str, base:Int)"));
-		set_normal_type_instance_field(e, make_string("given"), argv[0]);
-		set_normal_type_instance_field(e, make_string("expected"), make_string("Integer in the specified base"));
-		THROW_EXCEPTION_INSTANCE(e);
-	}
-	METHOD_RETURN(MAKE_INT(r));
+    char *nptr, *endptr;
+    long long r;
+    nptr = obj_to_cstring(argv[0]);
+    // https://en.cppreference.com/w/c/string/byte/strtol
+    r = strtoll(nptr, &endptr, GET_INT(argv[1]));
+    if (
+            nptr == endptr ||
+            endptr - nptr < OBJ_LEN(argv[0]) ||
+            ((r == LONG_MAX || r == LONG_MIN || r == LLONG_MAX || r == LLONG_MIN) && errno == ERANGE)) {
+        VALUE e;
+        e = make_normal_type_instance(vm->InvalidArgument);
+        set_normal_type_instance_field(e, make_string("message"), make_string("Could not convert given string to integer."));
+        THROW_EXCEPTION_INSTANCE(e);
+    }
+    METHOD_RETURN(MAKE_INT(r));
 }
 
 METHOD_RESULT native_is_any_type EXT_METHOD_PARAMS {
