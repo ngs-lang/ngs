@@ -24,6 +24,7 @@
 * `each(MultiMethod, Fun)` now returns the first parameter
 * Improve readability of `partition(Eachable1, predicate)`
 * `Int(Str)` now throws if the string contains garbage in the end
+* `IPAddr()` and `IPNet()` now validate input
 
 ### Breaking changes
 

@@ -2,61 +2,115 @@ type IP
 type IPAddr(IP)
 type IPNet(IP)
 
-# TODO: support immediate values larger than 32 bits in parser
-STDLIB_BIT_31 = 128*256*256*256
+block _ {
 
-# WARNING: Will not work on 32 bit system with current bit tagging for integers !!!
+    global init, is_private, in, Str, Int
 
-# TODO: input validation checks
-F init(addr:IPAddr, s:Str) {
-	addr.ip = s.split('.').map(Int).reduce(0, { A*256 + B })
+    MAX_IP_INT = ([255] * 4).reduce(0, { A*256 + B })
+    
+    # WARNING: Will not work on 32 bit system with current bit tagging for integers !!!
+
+    F _ip2int(s:Str) {
+        F err(e:Str) throw InvalidArgument(e).set(given = s)
+        octets = s.split('.')
+        if octets.len() != 4 {
+            err('IP address should consist of exactly 4 octets, separated by dots')
+        }
+        octets = octets.map(Int) tor err('IP address octets must be valid integer numbers')
+        if not(octets.all(0...255)) {
+            err('IP address octets must be valid integer numbers between 0 and 255, inclusive')
+        }
+        octets.reduce(0, { A*256 + B })
+    }
+
+    section "IP address" {
+    
+        F init(addr:IPAddr, s:Str) {
+            addr.ip = _ip2int(s)
+        }
+
+        TEST IPAddr("1.1.1.1").ip == 16843009
+        TEST IPAddr("1.1.1.2").ip == 16843010
+        TEST IPAddr("1.1.1.255").ip == 16843263
+        TEST IPAddr("1.1.1.256") THROWS InvalidArgument
+        TEST IPAddr("1.1.1") THROWS InvalidArgument
+        TEST IPAddr("1.2.3.4.5") THROWS InvalidArgument
+
+        F init(addr:IPAddr, ip:Int) {
+            ip not in (0...MAX_IP_INT) throws InvalidArgument("IP address must be between 0 and ${MAX_IP_INT}, inclusive").set(given=ip)
+            addr.ip = ip
+        }
+
+        F Int(addr:IPAddr) addr.ip
+
+        TEST IPAddr(16843009).Int() == 16843009
+        TEST IPAddr(-1) THROWS InvalidArgument
+    }
+
+    section "IP subnet" {
+
+        # TODO: support immediate values larger than 32 bits in parser
+        BIT_31 = 128*256*256*256
+    
+        F init(net:IPNet, s:Str) {
+            t = s.split('/')
+            len(t) != 2 throws InvalidArgument('IP subnet expects 1.2.3.4/8 format').set(given=s)
+            net.ip = _ip2int(t[0])
+            net.mask = try Int(t[1]) catch(e) throw InvalidArgument('IP subnet mask must be a valid integer number').set(given=net.mask)
+            net.mask not in (0...32) throws InvalidArgument('IP subnet mask must be a valid integer number between 0 and 32, inclusive').set(given=net.mask)
+            # TODO: add to language and use here bit shift operations
+            net.bit_mask = (0..net.mask).reduce(0, { A / 2 + BIT_31})
+        }
+
+        F init(net:IPNet, ip:Int, mask:Int) {
+            net.ip = IPAddr(ip)
+            net.mask not in (0...32) throws InvalidArgument('IP subnet mask must be a valid integer number between 0 and 32, inclusive').set(given=net.mask)
+        }
+
+        TEST IPNet("1.1.1.0/8").bit_mask == 4278190080
+        TEST IPNet("1.1.0.0/16").bit_mask == 4294901760
+        TEST IPNet("1.1.1.0/-1") THROWS InvalidArgument
+
+        PRIVATE_IP_NETWORKS = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'].map(IPNet)
+
+    }
+
+    doc Check whether the IP address is in the given IP network (subnet)
+    F in(addr:IPAddr, net:IPNet) addr.ip.band(net.bit_mask) == net.ip.band(net.bit_mask)
+
+    doc Check whether the IP address is in one of the given IP networks (subnets)
+    F in(addr:IPAddr, networks:Arr) {
+        guard networks.all(IPNet)
+        networks.any(addr in X)
+    }
+
+    TEST IPAddr("10.1.2.20") in IPNet("10.1.2.3/8")
+    TEST IPAddr("11.1.2.20") not in IPNet("10.1.2.3/8")
+
+    F is_private(addr:IPAddr) addr in PRIVATE_IP_NETWORKS
+    
+    TEST IPAddr("10.1.2.3").is_private()
+    TEST IPAddr("192.168.1.100").is_private()
+    TEST IPAddr("172.31.255.255").is_private()
+    TEST IPAddr("172.32.0.1").is_private().not()
+
+    # TODO: Find cleaner way
+    F Str(ip:IP) {
+        t = ip.ip
+        octets = collector
+            for(i;4) {
+                collect(t.band(255))
+                t = t / 256 # change to bshr() when implemented
+            }
+        octets.reverse().join('.') + if ip is IPNet then "/${ip.mask}" else ""
+    }
+    
+    TEST IPAddr("192.168.1.100").Str() == "192.168.1.100"
+    TEST IPNet("192.168.1.0/24").Str() == "192.168.1.0/24"
+    
+    F Arg(ip:IP) Str(ip)
+    
+    # TODO: consider decode() for ipcalc output for "deaggregate" operation for example
+    
+    F JsonData(ip:IP) Str(ip)
 }
-
-# TODO: input validation checks
-F init(net:IPNet, s:Str) {
-	t = s.split('/')
-	len(t) != 2 throws InvalidArgument('IPNet expects 1.2.3.4/8 format').set('given', s)
-	net.ip = t[0].split('.').map(Int).reduce(0, { A*256 + B })
-	net.mask = Int(t[1])
-	# TODO: add to language and use here bit shift operations
-	net.bit_mask = (0..net.mask).reduce(0, { A / 2 + STDLIB_BIT_31})
-}
-
-STDLIB_PRIVATE_IP_NETWORKS = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'].map(IPNet)
-
-doc Check whether the IP address is in one of the given IP networks
-F in(addr:IPAddr, networks:Arr) {
-	guard networks.all(IPNet)
-	networks.any(addr in X)
-}
-
-F in(addr:IPAddr, net:IPNet) addr.ip.band(net.bit_mask) == net.ip.band(net.bit_mask)
-
-TEST IPAddr("10.1.2.20") in IPNet("10.1.2.3/8")
-TEST IPAddr("11.1.2.20") not in IPNet("10.1.2.3/8")
-
-F is_private(addr:IPAddr) addr in STDLIB_PRIVATE_IP_NETWORKS
-
-TEST IPAddr("10.1.2.3").is_private()
-TEST IPAddr("192.168.1.100").is_private()
-TEST IPAddr("172.31.255.255").is_private()
-TEST IPAddr("172.32.0.1").is_private().not()
-
-F Str(ip:IP) {
-	t = ip.ip
-	octets = collector
-		for(i;4) {
-			collect(t.band(255))
-			t = t / 256 # change to bshr() when implemented
-		}
-	octets.reverse().join('.') + if ip is IPNet then "/${ip.mask}" else ""
-}
-
-TEST IPAddr("192.168.1.100").Str() == "192.168.1.100"
-TEST IPNet("192.168.1.0/24").Str() == "192.168.1.0/24"
-
-F Arg(ip:IP) Str(ip)
-
-# TODO: consider decode() for ipcalc output for "deaggregate" operation for example
-
-F JsonData(ip:IP) Str(ip)
