@@ -2872,11 +2872,14 @@ doc Add Hashes. Builds new hash with key-value pairs from both a and b. If same 
 doc %RET - Hash
 doc %EX - {'a': 1, 'b': 2, 'c': 3} + {'b': 20, 'd': 40}  # {'a': 1, 'b': 20, 'c': 3, 'd': 40}
 F +(a:Hash, b:Hash) {
-	{**a, **b}
+	t = typeof(a)
+	t != typeof(b) throws InvalidArgument("+(a:Hash, b:Hash) requires a and b to be of the same type").set(a=a, b=b)
+	t().update(a).update(b)
 }
 
-
 TEST {'a': 1, 'b': 2, 'c': 3} + {'b': 20, 'd': 40} == {'a': 1, 'b': 20, 'c': 3, 'd': 40}
+TEST section "order matters" { ns { a=1; c=3; } + ns { a=10; b=2; } == ns { a=10; c=3; b=2; } }
+TEST {"a": 1} + ns { b = 2 } THROWS InvalidArgument
 
 doc Build array of Str where each resulting string is of the form "KEY=VALUE"
 doc h - Source hash
