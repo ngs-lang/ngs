@@ -26,6 +26,7 @@
 * `Int(Str)` now throws if the string contains garbage in the end
 * `IPAddr()` and `IPNet()` now validate input
 * `+(Hash, Hash)` now handles subtypes properly (does not return a `Hash` but the subtype)
+* `ns { ... }` syntax now allows empty body - `ns { }`.
 
 ### Breaking changes
 
