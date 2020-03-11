@@ -349,6 +349,12 @@ curly-code-block =
 		$$ = code;
 	}
 
+empty-curly-code-block =
+	space? '{' space? '}' {
+		MAKE_NODE(code, EXPRESSIONS_NODE);
+		$$ = code;
+	}
+
 code-block = curly-code-block | expression
 
 expressions =
@@ -822,9 +828,9 @@ function-definition-default-value =
 		$$ = NULL;
 	}
 
-namespace = "ns" opt_params:namespace-optional-parameters c:curly-code-block {
+namespace = "ns" opt_params:namespace-optional-parameters (c:curly-code-block | c:empty-curly-code-block) {
 
-		// ns(opt_params) { c }
+		// ns(opt_params) { c } OR ns(opt_params) { }
 		// (transforms to)
 		// F(opt_params) {
 		//   local _exports
