@@ -1311,13 +1311,13 @@ METHOD_RESULT native_same_any_any METHOD_PARAMS {
 
 METHOD_RESULT native_attrs METHOD_PARAMS {
 	if(!IS_OBJ(argv[0])) {
-		return METHOD_IMPL_MISSING;
+		return METHOD_ARGS_MISMATCH;
 	}
 	METHOD_RETURN(OBJ_ATTRS(argv[0]));
 }
 METHOD_RESULT native_attrs_any METHOD_PARAMS {
 	if(!IS_OBJ(argv[0])) {
-		return METHOD_IMPL_MISSING;
+		return METHOD_ARGS_MISMATCH;
 	}
 	OBJ_ATTRS(argv[0]) = argv[1]; METHOD_RETURN(argv[1]);
 }

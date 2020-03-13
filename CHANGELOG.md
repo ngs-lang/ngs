@@ -27,6 +27,7 @@
 * `IPAddr()` and `IPNet()` now validate input
 * `+(Hash, Hash)` now handles subtypes properly (does not return a `Hash` but the subtype)
 * `ns { ... }` syntax now allows empty body - `ns { }`.
+* Native `attrs()` methods - not crash on invalid argument
 
 ### Breaking changes
 
