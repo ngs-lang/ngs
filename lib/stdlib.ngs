@@ -730,12 +730,7 @@ section "ArrLike" {
 	type ArrLike
 	ArrLike.inherit(Eachable1)
 
-	F init(al:ArrLike) {
-		if al.attrs() is not Hash {
-			al.attrs({})
-		}
-		al.attrs().ArrLike = []
-	}
+	F init(al:ArrLike) al.attrs().ArrLike = []
 
 	doc ArrLike constructor.
 	doc field - DEPRECATED name of the field that holds the underlying array.
@@ -970,12 +965,7 @@ TEST type MyHashLike(HashLike); MyHashLike({"a": 1, "b": 2}).filter(F(k, v) v==1
 doc Create a HashLike.
 doc h - If provided, used as initial value.
 doc %EX - HashLike(%{a aha b bee}) # <HashLike a=aha b=bee>
-F init(hl:HashLike, h:Hash=null) {
-	if hl.attrs() is not Hash {
-		hl.attrs({})
-	}
-	hl.attrs().HashLike = h or {}
-}
+F init(hl:HashLike, h:Hash=null) hl.attrs().HashLike = h or {}
 
 doc Get the underlying Hash with all the keys/values of the HashLike.
 doc Note: the returned value is not a copy.
