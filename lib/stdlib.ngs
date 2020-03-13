@@ -132,6 +132,18 @@ section "Namespaces" {
 	F '::='(h:Hash, k, v) h[k] = v
 }
 
+section "Attributes convenience methods" {
+	# TODO: Consider switching attrs from Hash to Namespace
+	doc Wraps native attrs() and in case that there are no attributes, sets them to empty hash.
+	F attrs(o:Any) {
+		ret = super(o)
+		ret is not Null returns ret
+		ret = {}
+		super(o, ret)
+		ret
+	}
+}
+
 section "MultiMethod" {
 
 	block _ {

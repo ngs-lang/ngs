@@ -28,6 +28,7 @@
 * `+(Hash, Hash)` now handles subtypes properly (does not return a `Hash` but the subtype)
 * `ns { ... }` syntax now allows empty body - `ns { }`.
 * Native `attrs()` methods - not crash on invalid argument
+* `attrs()` now defaults to empty `Hash`, not to `null`.
 
 ### Breaking changes
 
