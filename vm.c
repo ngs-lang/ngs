@@ -4577,6 +4577,7 @@ do_jump:
 							if(IS_TRUE(v)) {
 								goto main_loop;
 							}
+							POP(v);  // Guard failed so the value is not needed
 							assert(saved_stack_ptr == ctx->stack_ptr);
 							return METHOD_ARGS_MISMATCH;
 		case OP_TRY_START:

@@ -942,8 +942,10 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			break;
 		case GUARD_NODE:
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			OPCODE(*buf, OP_DUP);  // guard evaluates to the argument
 			OPCODE(*buf, OP_TO_BOOL);
 			OPCODE(*buf, OP_GUARD);
+			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 
 		case TRY_CATCH_NODE:

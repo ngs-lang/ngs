@@ -106,3 +106,8 @@ TEST f='/tmp/ngs-redir-test'; $(nofail: cat /NO-SUCH-FILE 2>$f); txt=`cat $f`; $
 
 # TODO
 # TEST F f(a=100,b=200,c=300) [a,b,c]; f(b=10,20,30) # Currently b is not marked as matched and is overridden by 30
+
+# === Guard tests ===
+TEST F guard_yes_use_value() { guard 10 }; guard_yes_use_value() == 10
+TEST F guard_yes_discard_value() { guard 10; 20 }; guard_yes_discard_value() == 20
+TEST F guard_no() { guard 0 }; guard_no() THROWS MethodNotFound
