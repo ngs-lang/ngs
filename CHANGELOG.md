@@ -30,6 +30,7 @@
 * `ns { ... }` syntax now allows empty body - `ns { }`.
 * Native `attrs()` methods - not crash on invalid argument
 * `attrs()` now defaults to empty `Hash`, not to `null`.
+* Improve `Str(Type)`
 
 ### Breaking changes
 

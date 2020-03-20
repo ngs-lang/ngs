@@ -424,6 +424,36 @@ block u {
 	TEST [1,2,3].first(X>5) THROWS ElementNotFound
 }
 
+doc Find the only element that satisfies the predicate and execute given code with the value
+doc body - The code to execute when exactly one element that satisfies the predicate was found. Executed with the found value. It's value will be returned as result of the_one().
+doc found_more - The code to execute when more than one element satisfies the predicate. It's value will be returned as result of the_one(). Defaults to function returning null.
+doc found_none - The code to execute when none of the elements satisfy the predicate. It's value will be returned as result of the_one(). Defaults to function returning null.
+doc %RET - Result of running on of the following: body, found_more, found_none
+doc %EX - F name(dn:MethodDocNode) {
+doc %EX - 	dn.children.the_one(MethodNameDocNode).text[0]
+doc %EX - }
+F the_one(e:Eachable1, predicate={true}, body:Fun=identity, found_more:Fun=nop, found_none:Fun=nop) block b {
+	p = Pred(predicate)
+	ret = EmptyBox()
+	e.each(F(elt) {
+		if p(elt) {
+			if ret {
+				b.return(found_more())
+			}
+			ret = FullBox(elt)
+		}
+	})
+	if ret {
+		body(ret.get())
+	} else {
+		found_none()
+	}
+}
+
+TEST ok = false; [1,2,11,3,4].the_one(X>10, F(the_value) { ok = the_value == 11 }); ok
+TEST ok = false; [1,2,11,3,4].the_one(X>20, nop, found_none = { ok = true }); ok
+TEST ok = false; [1,2,11,3,4].the_one(Int, nop, found_more = { ok = true }); ok
+
 doc Find the only element that satisfies the predicate.
 doc predicate - defaults to {true}, allowing my_arr.the_one()
 doc Throws ElementNotFound exception if there are no elements that satisfy the predicate or if there is more than one element that satisfies the predicate.
@@ -447,36 +477,6 @@ TEST [1,2,3,4].the_one(X>10) THROWS ElementNotFound
 TEST [1, "a", "b"].the_one(Int) == 1
 TEST [1].the_one() == 1
 TEST [1, "a", "b"].the_one(Str) THROWS ElementNotFound
-
-doc Find the only element that satisfies the predicate and execute given code with the value
-doc body - The code to execute when exactly one element that satisfies the predicate was found. Executed with the found value. It's value will be returned as result of the_one().
-doc found_more - The code to execute when more than one element satisfies the predicate. It's value will be returned as result of the_one(). Defaults to function returning null.
-doc found_none - The code to execute when none of the elements satisfy the predicate. It's value will be returned as result of the_one(). Defaults to function returning null.
-doc %RET - Result of running on of the following: body, found_more, found_none
-doc %EX - F name(dn:MethodDocNode) {
-doc %EX - 	dn.children.the_one(MethodNameDocNode).text[0]
-doc %EX - }
-F the_one(e:Eachable1, predicate, body:Fun, found_more:Fun=nop, found_none:Fun=nop) block b {
-	p = Pred(predicate)
-	ret = EmptyBox()
-	e.each(F(elt) {
-		if p(elt) {
-			if ret {
-				b.return(found_more())
-			}
-			ret = FullBox(elt)
-		}
-	})
-	if ret {
-		body(ret.get())
-	} else {
-		found_none()
-	}
-}
-
-TEST ok = false; [1,2,11,3,4].the_one(X>10, F(the_value) { ok = the_value == 11 }); ok
-TEST ok = false; [1,2,11,3,4].the_one(X>20, nop, found_none = { ok = true }); ok
-TEST ok = false; [1,2,11,3,4].the_one(Int, nop, found_more = { ok = true }); ok
 
 doc Filter something to an Arr (array) of values using predicate
 doc predicate - Decision function to be called with each item as first argument.
@@ -1082,7 +1082,7 @@ section "Type" {
 	doc String representation of a type
 	doc %RET - "<Type NAME>"
 	doc %EX - Real.Str().echo()  # Outputs: <Type Real>
-	F Str(t:Type) "<Type ${t.name}>"
+	F Str(t:Type) "<Type ${t.name} with ${t.constructors.len()} constructor(s) and ${t.attrs().len()} attributes>"
 
 	# TODO: Reorganize and move out of Type section
 	doc Decode (parse) strings such as command line arguments or environment variables to result given type
@@ -5925,7 +5925,7 @@ doc %RET - EmptyBox
 doc %EX - Box("a" ~ /^(..)/).map({"First two letters: ${A[1]}"}).get("(too short)")  # (too short)
 F Box(f:Failure) EmptyBox()
 
-doc SubSec construcor
+doc SubSec constructor
 F init(s:SubSeq, val) s.val = val
 
 # The common case
