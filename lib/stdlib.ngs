@@ -1082,7 +1082,7 @@ section "Type" {
 	doc String representation of a type
 	doc %RET - "<Type NAME>"
 	doc %EX - Real.Str().echo()  # Outputs: <Type Real>
-	F Str(t:Type) "<Type ${t.name}>"
+	F Str(t:Type) "<Type ${t.name} with ${t.constructors.len()} constructor(s) and ${t.attrs().len()} attributes>"
 
 	# TODO: Reorganize and move out of Type section
 	doc Decode (parse) strings such as command line arguments or environment variables to result given type
