@@ -250,8 +250,8 @@ ns {
 				}
 			}
 
-			lines = (ENV.get('LINES')   or `tput lines`).Int()
-			cols  = (ENV.get('COLUMNS') or `tput cols`).Int()
+			lines = (ENV.get('LINES')   or `line: tput lines`).Int()
+			cols  = (ENV.get('COLUMNS') or `line: tput cols`).Int()
 			# TODO: special treatment for tmux? can print any width and tmux can be adjusted later.
 			# TODO: support Arr in headers
 

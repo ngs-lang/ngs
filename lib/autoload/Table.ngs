@@ -119,8 +119,8 @@ F calculate_num_cols_to_show(t:Table, max_colums_widths:Arr, available_cols:Int)
 doc Displays a table. Implemented only for tty output (or output_format=text configuration)
 F echo(t:Table) {
 	guard 1.isatty() or (config('output_format') == 'text')
-	lines = (ENV.get('LINES')   or `tput lines`).Int()
-	cols  = (ENV.get('COLUMNS') or `tput cols`).Int()
+	lines = (ENV.get('LINES')   or `line: tput lines`).Int()
+	cols  = (ENV.get('COLUMNS') or `line: tput cols`).Int()
 	# TODO: special treatment for tmux? can print any width and tmux can be adjusted later.
 	# TODO: support Arr in headers
 	# TODO: handle Hash type of cell (maybe allow configuring order of keys etc)
