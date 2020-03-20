@@ -5925,7 +5925,7 @@ doc %RET - EmptyBox
 doc %EX - Box("a" ~ /^(..)/).map({"First two letters: ${A[1]}"}).get("(too short)")  # (too short)
 F Box(f:Failure) EmptyBox()
 
-doc SubSec construcor
+doc SubSec constructor
 F init(s:SubSeq, val) s.val = val
 
 # The common case
