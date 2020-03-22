@@ -975,6 +975,73 @@ F Hash(hl:HashLike) hl.attrs().HashLike
 doc Convert HashLike into JSON compatible data structure - object
 F JsonData(hl:HashLike) hl.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
 
+section "Named Instances" {
+	doc "Named instances" are typically called enums or enumerated values in other languages.
+	doc %EX - type Color(NamedInstances)
+	doc %EX -
+	doc %EX - F init(c:Color, numval:Int) c.numval = numval
+	doc %EX -
+	doc %EX - Color.NamedInstances = ns {
+	doc %EX - 	RED = Color(4)
+	doc %EX - 	GREEN = Color(2)
+	doc %EX - 	BLUE = Color(1)
+	doc %EX - }
+	doc %EX -
+	doc %EX - echo(Color.NamedInstances)  # {RED=<Color numval=4 name=RED>, ...}
+	doc %EX - echo(2.decode(Color))       # <Color numval=2 name=GREEN>
+	doc %EX - echo("RED".decode(Color))   # <Color numval=4 name=RED>
+	type NamedInstances
+
+	doc %AUTO - SUBTYPE_OF_NAMEDINSTANCES.NamedInstances
+	doc %EX - echo(Color.NamedInstances is Namespace)  # true
+	F .(t:Type, field:Str) {
+		guard field == 'NamedInstances'
+		guard t.is_subtype(NamedInstances)
+		ret = t.attrs().NamedInstances
+	}
+
+	doc %AUTO - SUBTYPE_OF_NAMEDINSTANCES.NamedInstances = ...
+	F .=(t:Type, field:Str, ns:Namespace) {
+		guard field == 'NamedInstances'
+		guard t.is_subtype(NamedInstances)
+		ns.each(F(k, v) {
+			v is not t throws InvalidArgument("${t.name}.NamedInstances values must be of type ${t.name}").set(key=k, value=v)
+			v.name = k
+		})
+		t.attrs().NamedInstances = ns
+
+		keys_to_instances = {}
+		t.NamedInstances.each(F(name, instance) {
+			instance.Hash().each(F(field, value) {
+				keys_to_instances.dflt(value, []).push(instance)
+			})
+		})
+		t.attrs().NamedInstancesByAnyValue = keys_to_instances
+	}
+
+	doc %AUTO - SUBTYPE_OF_NAMEDINSTANCES::INSTANCE_NAME
+	doc %EX - echo(Color::RED)   # <Color numval=4 name=RED>
+	F '::'(t:Type, k:Str) {
+		guard t.is_subtype(NamedInstances)
+		t.NamedInstances[k]
+	}
+
+	doc Resolve named instance of t by uniquely-identifying value of any field
+	doc %EX - echo("RED".decode(Color))   # <Color numval=4 name=RED>
+	F decode(value, t:Type) {
+		guard t.is_subtype(NamedInstances)
+
+		F invalid_arg(s) throw InvalidArgument(s).set(value=value, type=t)
+
+		t.attrs().NamedInstancesByAnyValue.get(value, []).the_one(
+			found_none = { invalid_arg("Value ${value} does not identify any named instance of ${t.name}") }
+			found_more = { invalid_arg("Value ${value} is not a unique identifier of an instance of ${t.name}") }
+		)
+	}
+
+	TEST global init; type Color(NamedInstances); F init(c:Color, numval:Int) c.numval = numval; Color.NamedInstances = ns { RED = Color(4); GREEN = Color(2); BLUE = Color(1) ; }; Color.NamedInstances is Namespace and 2.decode(Color) == Color::GREEN and "RED".decode(Color) == Color::RED
+}
+
 # === Hook =======================================
 
 doc Hook is a simple pub-sub

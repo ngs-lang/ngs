@@ -10,6 +10,7 @@
 * Add experimental `Bool(AnyOf)`
 * Add `linux` and `windows` parameter to `ec2din.ngs`
 * More concise tests with `THROWS` pseudo-operator
+* Add `NamedInstances` (aka enums)
 
 ### Fixes and improvements
 
