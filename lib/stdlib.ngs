@@ -4731,6 +4731,9 @@ F assert(p:Program) {
 TEST try assert(Program('no_such_prog')) catch(e) e is AssertFail
 TEST assert(Program('ls')) == Program('ls')
 
+doc EXPERIMENTAL!
+F Arg(p:Program) p.name
+
 F init(pp:ProcessesPipeline, cp:CommandsPipeline) pp.set(
 	cp = cp
 	processes = []

@@ -11,6 +11,7 @@
 * Add `linux` and `windows` parameter to `ec2din.ngs`
 * More concise tests with `THROWS` pseudo-operator
 * Add `NamedInstances` (aka enums)
+* Add experimental `Arg(Program)`
 
 ### Fixes and improvements
 
