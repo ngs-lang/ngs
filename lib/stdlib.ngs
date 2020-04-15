@@ -1019,6 +1019,18 @@ section "Named Instances" {
 		t.attrs().NamedInstancesByAnyValue = keys_to_instances
 	}
 
+	doc %AUTO - SUBTYPE_OF_NAMEDINSTANCES.NamedInstances = ['SOME', 'NAMES', ...]
+	F .=(t:Type, field:Str, a:Arr) {
+		guard field == 'NamedInstances'
+		guard t.is_subtype(NamedInstances)
+		guard a.all(Str)
+		instances = ns {}
+		a.each(F(name) instances::(name) = t())
+		t.NamedInstances = instances
+	}
+
+    TEST type T(NamedInstances); T.NamedInstances = %[RED GREEN BLUE]; i = [T::RED, T::GREEN, T::BLUE]; i.all(T) and T::RED.name == 'RED'
+
 	doc %AUTO - SUBTYPE_OF_NAMEDINSTANCES::INSTANCE_NAME
 	doc %EX - echo(Color::RED)   # <Color numval=4 name=RED>
 	F '::'(t:Type, k:Str) {
