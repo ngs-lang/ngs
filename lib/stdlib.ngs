@@ -4817,13 +4817,43 @@ F write(s:Str, fd:Int) {
 	write(fd, s)
 }
 
+type WriteFail(CError)
+
 doc Write data to a file referenced by file descriptor.
-doc WARNING: Incomplete implementation.
-doc TODO: handle errors, throw exceptions.
-doc TODO: handle possible EINTR.
 doc fd - File descriptor to write to
-doc %RET - unspecified at this time, do not count on it
-F write(fd:Int, s:Str) fd.c_write(s)
+doc Throws WriteFail on failure.
+doc s - String of bytes to write
+doc %RET - fd
+F write(fd:Int, s:Str) {
+	out = s
+	while true {
+		bytes_written = fd.c_write(out)
+		if bytes_written == -1 {
+			if c_errno() == C_EINTR {
+				# Untested
+				continue
+			}
+			throw WriteFail("Failed to write to file descriptor ${fd}").set(fd=fd, s=s)
+		}
+		if bytes_written == len(out) {
+			break
+		}
+		out = out[bytes_written..null]
+	}
+	fd
+}
+
+doc Write a string followed by newline character to a file descriptor.
+doc Throws WriteFail on failure.
+doc %RET - null
+doc %EX - echo(2, "blah")  # Output on stderr: blah"
+F echo(fd:Int, s:Str) {
+	write(fd, "${s}${STDLIB_EOL}")
+	null
+}
+
+TEST write(1, "W1") == 1
+TEST write(10, "W10") THROWS WriteFail
 
 type TtyCheckFail(CError)
 

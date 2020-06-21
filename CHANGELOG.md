@@ -33,6 +33,8 @@
 * Native `attrs()` methods - not crash on invalid argument
 * `attrs()` now defaults to empty `Hash`, not to `null`.
 * Improve `Str(Type)`
+* `echo(INVALID_FILE_DESCRIPTOR, ...)` now throws `WriteFail`
+* `write(INVALID_FILE_DESCRIPTOR, ...)` now throws `WriteFail`
 
 ### Breaking changes
 

@@ -285,16 +285,6 @@ METHOD_RESULT native_dump_any METHOD_PARAMS {
 	return METHOD_OK;
 }
 
-METHOD_RESULT native_echo_str METHOD_PARAMS {
-	printf("%s\n", obj_to_cstring(argv[0]));
-	METHOD_RETURN(MAKE_NULL);
-}
-
-METHOD_RESULT native_echo_int_str METHOD_PARAMS {
-	dprintf(GET_INT(argv[0]), "%s\n", obj_to_cstring(argv[1]));
-	METHOD_RETURN(MAKE_NULL);
-}
-
 METHOD_RESULT native_false METHOD_PARAMS {
 	(void) argv;
 	METHOD_RETURN(MAKE_FALSE);
@@ -3235,16 +3225,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	register_global_func(vm, 0, "dump",     &native_dump_any,          1, "obj", vm->Any);
 	_doc(vm, "", "Low-level data structure dump. Used for debugging NGS itself.");
-
-	register_global_func(vm, 0, "echo",     &native_echo_str,          1, "s",   vm->Str);
-	_doc(vm, "", "Print given string and a newline to stdout.");
-	_doc(vm, "%RET", "Unspecified");
-	_doc(vm, "%EX", "echo(\"blah\")  # Output: blah");
-
-	register_global_func(vm, 0, "echo",     &native_echo_int_str,      2, "fd",  vm->Int, "s", vm->Str);
-	_doc(vm, "", "Print given string and a newline to a file referenced by descriptor.");
-	_doc(vm, "%RET", "Unspecified");
-	_doc(vm, "%EX", "echo(2, \"blah\")  # Output on stderr: blah");
 
 	register_global_func(vm, 0, "Bool",     &native_Bool_any,          1, "x",   vm->Any);
 	_doc(vm, "", "Convert to Bool. Str, Arr and Hash of non-zero size return true. Bool returns as is. Null returns false. Int returns true if it is not zero.");
