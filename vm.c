@@ -410,8 +410,29 @@ METHOD_RESULT native_trunc_real METHOD_PARAMS { METHOD_RETURN(make_real((NGS_REA
 METHOD_RESULT native_floor_real METHOD_PARAMS { METHOD_RETURN(make_real((NGS_REAL) floor(GET_REAL(argv[0])))); }
 METHOD_RESULT native_ceil_real METHOD_PARAMS { METHOD_RETURN(make_real((NGS_REAL) ceil(GET_REAL(argv[0])))); }
 
-METHOD_RESULT native_Int_real METHOD_PARAMS {
-	METHOD_RETURN(MAKE_INT((int) GET_REAL(argv[0])));
+// TODO: Handle precision issue around INT_MAX input. Probably around INT_MIN too.
+//       On my system INT_MAX is 2305843009213693951 and when converted to NGS_REAL becomes 2305843009213693952.0
+//       "r > (NGS_REAL) NGS_INT_MAX" is false for the numbers below so the if is not entered.
+//       "Int(2305843009213693952.0)" is -2305843009213693952
+//       "Int(2305843009213694208.0)" is -2305843009213693952
+//       Also:
+//       "Real(INT_MAX) + 1.0 > Real(INT_MAX)" is false
+//       "Int(Real(INT_MAX))" is -2305843009213693952
+//       "Int(Real(INT_MAX)) == INT_MIN" is true
+METHOD_RESULT native_Int_real EXT_METHOD_PARAMS {
+	NGS_REAL r = GET_REAL(argv[0]);
+	// printf("%d\n", 2305843009213694208.0 > 2305843009213693952.0); // 0
+	if((r > (NGS_REAL) NGS_INT_MAX) || (r < (NGS_REAL) NGS_INT_MIN)) {
+		VALUE e;
+        e = make_normal_type_instance(vm->InvalidArgument);
+        set_normal_type_instance_field(e, make_string("message"), make_string("Could not convert given float to integer: out of supported range."));
+        set_normal_type_instance_field(e, make_string("value"), argv[0]);
+        set_normal_type_instance_field(e, make_string("min"), make_real((NGS_REAL) NGS_INT_MIN));
+        set_normal_type_instance_field(e, make_string("max"), make_real((NGS_REAL) NGS_INT_MAX));
+		// printf("%ld %f\n", NGS_INT_MAX, (NGS_REAL) (NGS_INT_MAX));
+        THROW_EXCEPTION_INSTANCE(e);
+	}
+	METHOD_RETURN(MAKE_INT((intptr_t) r));
 }
 
 METHOD_RESULT native_Int_str_int EXT_METHOD_PARAMS {
@@ -2855,7 +2876,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "MultiMethod");
 
 	// Int
-	register_global_func(vm, 0, "Int",      &native_Int_real,           1, "r",    vm->Real);
+	register_global_func(vm, 1, "Int",      &native_Int_real,           1, "r",    vm->Real);
 	_doc(vm, "", "Convert Real (floating) number to Int. Floating part is truncated.");
 	_doc(vm, "%RET", "Int");
 
