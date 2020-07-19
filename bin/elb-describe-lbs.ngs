@@ -28,7 +28,7 @@ F main(allreg:Bool=false, name:Str=null) {
 		instances_by_desired_lb = instances.values().group(F(i) "${i.Tags.env}-${i.Tags.role}" tor "UNKOWN")
 	}
 	if name {
-		elbs .= filter( F(elb) elb.LoadBalancerName == name )
+		elbs .= filter({"LoadBalancerName": name})
 		if not(elbs) exit("Load balancer with name $name was not found")
 	}
 	for elb in elbs {
