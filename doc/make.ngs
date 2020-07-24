@@ -111,14 +111,14 @@
 
 				if children or (d.path_as_container() == d.path_as_item()[0..-1]) {
 					container_dir = d.path_as_container_str()
-					log("Ensuring directory $container_dir exists")
+					status("Ensuring directory $container_dir exists")
 					$(mkdir -p $container_dir)
 				}
 
 				dst = (d.path_as_item().map(safe_file_name)).reduce(doc_root, (/))
 				p = page(d)
 				file_content = Doc::HtmlRoot(p)
-				log("Writing file=${dst} description=${d} len=${file_content.len()} hash=${file_content.hash()}")
+				status("Writing file=${dst} description=${d} len=${file_content.len()} hash=${file_content.hash()}")
 				write(dst, file_content)
 
 				generate_before_children_hook(d)
