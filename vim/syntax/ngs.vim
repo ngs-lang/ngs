@@ -20,7 +20,7 @@ syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
 
 " Generated types - start
-syn keyword ngsType Absent Any ArgsMismatch Arr ArrDiff ArrIter ArrLike ArrSplatMethodParam AssertFail AwsElb AwsElbRes AwsImage AwsImageRes AwsInstance AwsInstanceRes AwsRecordSet AwsRecordSetRes AwsRes AwsResDef AwsSecGroup AwsSecGroupRes AwsSubnet AwsSubnetRes AwsVpc AwsVpcRes
+syn keyword ngsType Absent AllOf Any AnyOf ArgsMismatch Arr ArrDiff ArrIter ArrLike ArrSplatMethodParam AssertFail AwsElb AwsElbRes AwsImage AwsImageRes AwsInstance AwsInstanceRes AwsRecordSet AwsRecordSetRes AwsRes AwsResDef AwsSecGroup AwsSecGroupRes AwsSubnet AwsSubnetRes AwsVpc AwsVpcRes
 syn keyword ngsType Backtrace BasenameArgumentFail BasicType BasicTypeInstance Block BlockDevice Bool BootstrapFailedMatchMain BootstrapNoMatchingMain Box BoxFail
 syn keyword ngsType CError CLib CSym C_DIR CallFail CdFail CharDevice CollectingPipeFromChildToParentProcess Command CommandRedir CommandsPipe CommandsPipeline CompileFail ConstIter
 syn keyword ngsType DecodeFail DelimStr Diff Dir DirFail DivisionByZero DlopenFail DontKnowHowToCall
@@ -33,14 +33,15 @@ syn keyword ngsType JsonDecodeFail
 syn keyword ngsType KeyNotFound KillFail
 syn keyword ngsType LLHashEntry Lines Lock LockFail LookupFail
 syn keyword ngsType MainFail MapIter MatchFailure MatchResult MatchSuccess MaybeIfx MaybePfx MaybeSfx MethodNotFound MethodParam MethodParams MultiMethod MustIfx MustPfx MustSfx
-syn keyword ngsType Namespace NativeMethod NgsStrComp NgsStrCompExp NgsStrCompImm NgsStrCompSplatExp NoData NoNext NormalExit NormalType NormalTypeConstructor NormalTypeInstance NotImplemented Null Num NumRange
-syn keyword ngsType OneOf OptionalMethodParam
+syn keyword ngsType NamedInstances Namespace NativeMethod NgsStrComp NgsStrCompExp NgsStrCompImm NgsStrCompSplatExp NoData NoNext NormalExit NormalType NormalTypeConstructor NormalTypeInstance NotImplemented Null Num NumRange
+syn keyword ngsType OptionalMethodParam
 syn keyword ngsType ParamsMatchN ParamsMatchY PartialPresence Path Pfx Pipe PipeCreateFail PipeFromChildProcess PipeFromChildToParentProcess PipeFromParentToChildProcess PipeToChildProcess PredRange Presence Present Process ProcessRedir ProcessesPipeline Program ProgramNotFound
 syn keyword ngsType Range RangeIter ReadFail ReadingPipeBetweenChildren Real ReentrantLock RegExp RegExpCompileFail RequireFail RequiredMethodParam Res ResDef Result ResultFail Results ResultsException RetryBodyMissing RetryFail ReturnFromBlock
 syn keyword ngsType Seq Set Sfx SocketFile SplatMethodParam StackDepthFail Stat StatFail Stats Str SubSeq Success SwitchFail SwitchParseFail Symlink
 syn keyword ngsType Table TestFail TestMessage TestsResults Thread ThreadFail Threads Time TimeFail TmpFile TtyCheckFail Type
 syn keyword ngsType UndefinedLocalVar UserDefinedMethod
-syn keyword ngsType WritingPipeBetweenChildren
+syn keyword ngsType ValueWrapper
+syn keyword ngsType WriteFail WritingPipeBetweenChildren
 syn keyword ngsType c_ffi_cif c_ffi_type c_pthread_attr_t c_pthread_cond_t c_pthread_mutex_t c_pthread_mutexattr_t c_pthread_t c_tm
 " Generated types - end
 
@@ -70,7 +71,7 @@ syn keyword ngsFunction only open opt_prop ord
 syn keyword ngsFunction params parent_fd partial partial_tail partition peek pfilter pid pmap pop pos ppid print_exception progress ptimes push push_all
 syn keyword ngsFunction rand rand_uniq read reduce register_column reject rejectk rejectv release replace report req_prop require resolve_instruction_pointer retry reverse round run
 syn keyword ngsFunction set shift sort sortk sortv specific split srand starts_with stat status stdlib_aws_straighten_tags store strftime subset sum
-syn keyword ngsFunction table take tap test the_one throw_if_no_next time times trunc typeof
+syn keyword ngsFunction take tap test the_one throw_if_no_next time times trunc typeof
 syn keyword ngsFunction uniq unshift update users_ids
 syn keyword ngsFunction values
 syn keyword ngsFunction wait warn width without words write
