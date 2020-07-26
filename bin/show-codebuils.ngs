@@ -2,7 +2,7 @@
 
 F main(n:Int=3) {
 	F get_build_project_name(b:Str) b.split(':')[0]
-	F human_time(i) i.Str().Int().Time().Str('%Y-%m-%d %H:%M')
+	F human_time(i) i.Int().Time().Str('%Y-%m-%d %H:%M')
 
 	status("Listing builds")
 	builds_by_project = ``aws codebuild list-builds --sort-order DESCENDING --max-items 1000``.group(get_build_project_name)
