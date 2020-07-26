@@ -1,16 +1,16 @@
 section "Block type and methods" {
 	doc The type of the NAME variable used in syntax: block NAME BODY
-	doc %AUTO block NAME BODY
+	doc %AUTO - block NAME BODY
 	type Block
 
-	doc %AUTO block NAME { NAME.return(VAL) }
+	doc %AUTO - block NAME { NAME.return(VAL) }
 	type ReturnFromBlock
 	ReturnFromBlock.inherit(Exception)
 
 	doc %STATUS - internal
 	F init(rfb: ReturnFromBlock, block, val) init(args())
 
-	doc %AUTO block NAME BODY
+	doc %AUTO - block NAME BODY
 	doc %EX - block b { calc(); if answer_found then b.return(42); more_calc(); another_answer }
 	F block(body:Fun) {
 		b = Block()
@@ -23,8 +23,8 @@ section "Block type and methods" {
 	}
 
 	doc %STATUS - internal
-	doc %AUTO block NAME { NAME.return() }
-	doc %AUTO block NAME { NAME.return(VAL) }
+	doc %AUTO - block NAME { NAME.return() }
+	doc %AUTO - block NAME { NAME.return(VAL) }
 	F return(b:Block, val=null) throw ReturnFromBlock(b, val)
 
 	TEST block b { b.return(1); 2 } == 1
@@ -829,14 +829,7 @@ section "AnyOf(ArrLike)" {
 	doc %EX - {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(AnyOf("k1", "k3"))  # {"k1": "v1", "k3": "v3"}
 	F Pred(a:AnyOf) {
 		preds = a.map(Pred)
-		F anyof_pred(x) block b {
-			preds.each(F(p) {
-				if p(x) {
-					b.return(true)
-				}
-			})
-			false
-		}
+		F anyof_pred(x) preds.any(F(p) p(x))
 	}
 
 	TEST {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(AnyOf("k1", "k3")) == {"k1": "v1", "k3": "v3"}
@@ -866,14 +859,7 @@ section "AllOf(ArrLike)" {
 	doc %EX - {"k1": "v1", "k2": "v2", "kk3": "vv3"}.filterk(AllOf(/^k/, {len(A) <= 2})) == %{k1 v1 k2 v2}
 	F Pred(a:AllOf) {
 		preds = a.map(Pred)
-		F allof_pred(x) block b {
-			preds.each(F(p) {
-				if not(p(x)) {
-					b.return(false)
-				}
-			})
-			true
-		}
+		F allof_pred(x) preds.all(F(p) p(x))
 	}
 
 	TEST {"k1": "v1", "k2": "v2", "kk3": "vv3"}.filterk(AllOf(/^k/, {len(A) <= 2})) == %{k1 v1 k2 v2}
@@ -4238,19 +4224,13 @@ section "Thread" block _ {
 		ex = Executor(threads)
 		debug("conc", "pmap uses excutor ${ex}")
 		ret = [null] * len(e)
-		failed = false
 		e.each_idx_val(F(idx, val) {
 			ex.push({
 				ret[idx] = Result({ mapper(val) })
-				if ret[idx] is Failure {
-					failed = true
-				}
 			})
 		})
 		ex.wait()
-		if failed {
-			throw ResultsException("pmap had failures", Results(ret))
-		}
+		ret.any(Failure) throws ResultsException("pmap had failures", Results(ret))
 		ret.map(get)
     }
 
