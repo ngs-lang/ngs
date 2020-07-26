@@ -1,7 +1,4 @@
-{
-	Table
-	type TestsResults
-}
+type TestsResults
 
 F init(tr:TestsResults) {
 	tr.lock = Lock()
@@ -62,6 +59,7 @@ F each_group_test(tr:TestsResults, cb:Fun) {
 	})
 }
 
+{ Table }
 F Table(name:Str, tr:TestsResults) {
 	total_ok = 0
 	total_failed = 0

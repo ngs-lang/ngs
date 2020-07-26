@@ -381,6 +381,18 @@ Following instructions should work (tested on Debian)
 		* Shell++ is not intended for anyone else beyond author
 			> MAKE MY LIFE EASIER AND ONLY THAT
 	* Overall impression: if you like Python and you need to do Ops tasks, you should try Shell++. If NGS was heavily influenced by Python, it would look at least somewhat similar to Shell++.
+* [Nu Shell](https://github.com/nushell/nushell/) - compared on 2020-02-01, Nu Shell commit dcdfa2a866bbf1e5737d9f77a3ef5ba971b10083
+	* Similarity
+		* Structured data matters
+		* Functional programming aspects are in
+	* Differences
+		* Nu Shell supports several serialization formats while NGS currently works only with JSON.
+		* Programming language for the shell. It seems that a programming language in Nu Shell is not a priority. The guess is based on:
+			* No documentation of any kind about the programming language.
+			* Only Rust code in the repo.
+			* Tests are in Rust !?
+			* Examples show very rudimentary "language".
+			* https://www.nushell.sh/contributor-book/en/values.html
 
 # Discussion / requests / comments
 

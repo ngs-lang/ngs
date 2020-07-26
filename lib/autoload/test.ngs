@@ -1,10 +1,8 @@
-{
-	doc Represents failed test.
-	type TestFail(Error)
+doc Represents failed test.
+type TestFail(Error)
 
-	doc Represents an informational, human readable message a successful test would present to the user.
-	type TestMessage(FullBox)
-}
+doc Represents an informational, human readable message a successful test would present to the user.
+type TestMessage(FullBox)
 
 doc Initialize TestFail.
 F init(tf:TestFail, message:Str) init(args())
@@ -238,4 +236,3 @@ F assert_path_exists(p, title:Str="Check that path exists") {
 	Path(p) returns p
 	throw TestFail("$title: Path ${p} does not exist").set('path', p)
 }
-

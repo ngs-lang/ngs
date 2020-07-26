@@ -1,68 +1,65 @@
-{
-	doc Iterator. Parent type for all specific iterator types.
-	type Iter
+doc Iterator. Parent type for all specific iterator types.
+type Iter
 
-	doc Represents attempt to fetch next value of an iterator when it's exhausted
-	doc %EX - { Iter([]).next() }
-	doc %EX - # ... Exception of type NoNext ...
-	type NoNext(Exception)
+doc Represents attempt to fetch next value of an iterator when it's exhausted
+doc %EX - { Iter([]).next() }
+doc %EX - # ... Exception of type NoNext ...
+type NoNext(Exception)
 
-	doc Arr (array) iterator.
-	doc %EX -
-	doc %EX - my_args = %[--switch val some other positional --sw2 val2]
-	doc %EX - i = Iter(my_args)
-	doc %EX -
-	doc %EX - named = {}
-	doc %EX - positional = []
-	doc %EX -
-	doc %EX - while i {
-	doc %EX - 	t = i.next()
-	doc %EX - 	m = t ~ Pfx('--')
-	doc %EX - 	if m {
-	doc %EX - 		named[m.after] = i.next()
-	doc %EX - 	} else {
-	doc %EX - 		positional.push(t)
-	doc %EX - 	}
-	doc %EX - }
-	doc %EX -
-	doc %EX - echo(named)
-	doc %EX - echo(positional)
-	doc %EX - # Output:
-	doc %EX - #   {switch=val, sw2=val2}
-	doc %EX - #   [some,other,positional]
-	type ArrIter([Iter, Eachable1])
+doc Arr (array) iterator.
+doc %EX -
+doc %EX - my_args = %[--switch val some other positional --sw2 val2]
+doc %EX - i = Iter(my_args)
+doc %EX -
+doc %EX - named = {}
+doc %EX - positional = []
+doc %EX -
+doc %EX - while i {
+doc %EX - 	t = i.next()
+doc %EX - 	m = t ~ Pfx('--')
+doc %EX - 	if m {
+doc %EX - 		named[m.after] = i.next()
+doc %EX - 	} else {
+doc %EX - 		positional.push(t)
+doc %EX - 	}
+doc %EX - }
+doc %EX -
+doc %EX - echo(named)
+doc %EX - echo(positional)
+doc %EX - # Output:
+doc %EX - #   {switch=val, sw2=val2}
+doc %EX - #   [some,other,positional]
+type ArrIter([Iter, Eachable1])
 
-	doc EXPERIMENTAL Hash iterator.
-	type HashIter(Iter)
+doc EXPERIMENTAL Hash iterator.
+type HashIter(Iter)
 
-	doc Iterator that returns given value forever.
-	doc %EX - i = ConstIter(10)
-	doc %EX - echo(i.next())
-	doc %EX - echo(i.next())
-	doc %EX - # Output:
-	doc %EX - #   10
-	doc %EX - #   10
-	type ConstIter([Iter, Eachable1])
+doc Iterator that returns given value forever.
+doc %EX - i = ConstIter(10)
+doc %EX - echo(i.next())
+doc %EX - echo(i.next())
+doc %EX - # Output:
+doc %EX - #   10
+doc %EX - #   10
+type ConstIter([Iter, Eachable1])
 
-	doc Iterates over a Range
-	doc %EX - i = RangeIter(10..20)
-	doc %EX - echo(i.next())
-	doc %EX - echo(i.next())
-	doc %EX - # Output:
-	doc %EX - #   10
-	doc %EX - #   11
-	type RangeIter([Iter, Eachable1])
+doc Iterates over a Range
+doc %EX - i = RangeIter(10..20)
+doc %EX - echo(i.next())
+doc %EX - echo(i.next())
+doc %EX - # Output:
+doc %EX - #   10
+doc %EX - #   11
+type RangeIter([Iter, Eachable1])
 
-	doc EXPERIMENTAL! Do not use!
-	type MapIter([Iter, Eachable1])
+doc EXPERIMENTAL! Do not use!
+type MapIter([Iter, Eachable1])
 
-	doc EXPERIMENTAL! Do not use!
-	type FilterIter([Iter, Eachable1])
+doc EXPERIMENTAL! Do not use!
+type FilterIter([Iter, Eachable1])
 
-	doc EXPERIMENTAL! Do not use!
-	type FunIter([Iter, Eachable1])
-
-}
+doc EXPERIMENTAL! Do not use!
+type FunIter([Iter, Eachable1])
 
 doc Private method of Iter.ngs, will be hidden in future.
 F throw_if_no_next(i:Iter) {
@@ -360,5 +357,6 @@ TEST try {}.Iter().next() catch(nn:NoNext) true
 
 # F Counter(start:Int=0) Iter(start..null)
 
-doc Convert Iter into JSON compatible data structure - array
+doc Convert Iter into JSON compatible data structure - array.
+doc Forces evaluation of MapIter for example.
 F JsonData(i:Iter) collector i.each(collect + JsonData)

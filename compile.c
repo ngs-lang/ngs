@@ -577,6 +577,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			// condition
 			loop_beg_idx = *idx;
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+			OPCODE(*buf, OP_TO_BOOL);
 			OPCODE(*buf, OP_JMP_FALSE);
 			cond_jump = *idx;
 			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
@@ -941,8 +942,10 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			break;
 		case GUARD_NODE:
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
+			OPCODE(*buf, OP_DUP);  // guard evaluates to the argument
 			OPCODE(*buf, OP_TO_BOOL);
 			OPCODE(*buf, OP_GUARD);
+			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 
 		case TRY_CATCH_NODE:
@@ -1168,15 +1171,10 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 
-		case TABLE_LIT_NODE:
-			OPCODE(*buf, OP_PUSH_NULL);
-			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
-			OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 1);
-			compile_identifier(ctx, buf, idx, "table", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
-			OPCODE(*buf, OP_CALL);
-			POP_IF_DONT_NEED_RESULT(*buf);
+		case SECTION_NODE:
+			// TODO: Save section name somewhere. It's in node->first_child.
+			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, need_result);
 			break;
-
 
 		default:
 			fprintf(stderr, "Node type %i\n", node->type);

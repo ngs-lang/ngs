@@ -1,16 +1,16 @@
 section "Block type and methods" {
 	doc The type of the NAME variable used in syntax: block NAME BODY
-	doc %AUTO block NAME BODY
+	doc %AUTO - block NAME BODY
 	type Block
 
-	doc %AUTO block NAME { NAME.return(VAL) }
+	doc %AUTO - block NAME { NAME.return(VAL) }
 	type ReturnFromBlock
 	ReturnFromBlock.inherit(Exception)
 
 	doc %STATUS - internal
 	F init(rfb: ReturnFromBlock, block, val) init(args())
 
-	doc %AUTO block NAME BODY
+	doc %AUTO - block NAME BODY
 	doc %EX - block b { calc(); if answer_found then b.return(42); more_calc(); another_answer }
 	F block(body:Fun) {
 		b = Block()
@@ -23,8 +23,9 @@ section "Block type and methods" {
 	}
 
 	doc %STATUS - internal
-	doc %AUTO block NAME { NAME.return(VAL) }
-	F return(b:Block, val) throw ReturnFromBlock(b, val)
+	doc %AUTO - block NAME { NAME.return() }
+	doc %AUTO - block NAME { NAME.return(VAL) }
+	F return(b:Block, val=null) throw ReturnFromBlock(b, val)
 
 	TEST block b { b.return(1); 2 } == 1
 	TEST block b { "blah"; 2 } == 2
@@ -34,7 +35,6 @@ section "Block type and methods" {
 STDLIB_EOL = "\n"
 STDLIB_PATH_SEP = '/'
 STDLIB_MAX_RAND_REAL = Real(RAND_MAX)
-STDLIB_RAND_SAFETY_MAX = 100
 
 section "Document internal GC namespace" {
 	GC.attrs({'doc': {'': 'Control NGS garbage collection'}})
@@ -72,28 +72,26 @@ F init(h:Hash) {
 
 # === Exceptions ===
 
-{
-	doc Represents failed assertion, thrown by assert(). Should be used to catch programming errors.
-	doc %EXSYN - commands
-	doc %EX - F box_area(x:Int, y:Int) {
-	doc %EX - 	assert(x > 0)
-	doc %EX - 	assert(y > 0)
-	doc %EX - 	x * y
-	doc %EX - }
-	doc %EX - echo(box_area(5, 10))
-	doc %EX - # Output: 50
-	doc %EX - echo(box_area(-5, 10))
-	doc %EX - # ... Exception of type AssertFail ...
-	doc %EX - #
-	doc %EX - # Note that the following is better than using assert():
-	doc %EX - # not(x > 0) throws InvalidArgument('x must be greater than zero').set('x', x)
-	type AssertFail
-	AssertFail.inherit(Exception)
+doc Represents failed assertion, thrown by assert(). Should be used to catch programming errors.
+doc %EXSYN - commands
+doc %EX - F box_area(x:Int, y:Int) {
+doc %EX - 	assert(x > 0)
+doc %EX - 	assert(y > 0)
+doc %EX - 	x * y
+doc %EX - }
+doc %EX - echo(box_area(5, 10))
+doc %EX - # Output: 50
+doc %EX - echo(box_area(-5, 10))
+doc %EX - # ... Exception of type AssertFail ...
+doc %EX - #
+doc %EX - # Note that the following is better than using assert():
+doc %EX - # not(x > 0) throws InvalidArgument('x must be greater than zero').set('x', x)
+type AssertFail
+AssertFail.inherit(Exception)
 
-	doc Represents an attempt to create an instance of an abstract type (not intended for instantiation).
-	type InstantiatingAbstractType
-	InstantiatingAbstractType.inherit(Exception)
-}
+doc Represents an attempt to create an instance of an abstract type (not intended for instantiation).
+type InstantiatingAbstractType
+InstantiatingAbstractType.inherit(Exception)
 
 doc IndexNotFound exception constructor
 doc %RET - IndexNotFound object with the given message, container and key fields
@@ -122,6 +120,7 @@ section "Namespaces" {
 	doc %EX - myobj.method_in_field(arg)   # calls global "method_in_field"
 	F '::'(nti:NormalTypeInstance, k) nti.(k)
 
+	# TODO: There is Namespace type now - do adjusment here
 	doc Get Hash key. Useful when calling method stored in a Hash key.
 	doc Useful for working with namespaces, which are implemented as Hash instances.
 	doc %EX - elb = AWS::Elb(...).converge(...)
@@ -131,6 +130,18 @@ section "Namespaces" {
 	F '::='(nti:NormalTypeInstance, k, v) nti.(k) = v
 	doc Set Hash key. It's implemented to complete the :: operator. There is no particular use case.
 	F '::='(h:Hash, k, v) h[k] = v
+}
+
+section "Attributes convenience methods" {
+	# TODO: Consider switching attrs from Hash to Namespace
+	doc Wraps native attrs() and in case that there are no attributes, sets them to empty hash.
+	F attrs(o:Any) {
+		ret = super(o)
+		ret is not Null returns ret
+		ret = {}
+		super(o, ret)
+		ret
+	}
 }
 
 section "MultiMethod" {
@@ -143,15 +154,16 @@ section "MultiMethod" {
 
 		doc Call cb for each method of the MultiMethod
 		doc %EX - echo.each(F(method) echo("${method.params().name.join(", ")}"))
-		F each(mm:MultiMethod, cb:Fun) mm.basic_arr().each(cb)
+		F each(mm:MultiMethod, cb:Fun) {
+			mm.basic_arr().each(cb)
+			mm
+		}
 	}
 
 	F Str(mm:MultiMethod) "<MultiMethod with ${mm.Arr().len()} method(s)>"
 }
 
-# === Misc functional ============================
-
-{
+section "Parent types for built-in types" {
 	doc Parent type of all types that have each() method
 	type Eachable
 
@@ -178,7 +190,12 @@ section "MultiMethod" {
 	type Num
 	Int.inherit(Num)
 	Real.inherit(Num)
+}
 
+section "Default constructors for built-in types" {
+	doc Make null
+	doc %RET - null
+	F Null() null
 	doc Make empty array
 	doc %RET - []
 	F Arr()  { [] }
@@ -222,29 +239,31 @@ section "Functional utilities" {
 	TEST p = partial_tail((-), 10); p(7) == -3
 }
 
-doc Sets the given field to the given value
-doc %RET - The modified obj
-doc %EX - s.len() != 1 throws InvalidArgument("ord() argument must be of length 1 exactly").set('given', s)
-doc %EX - # Would else be written as
-doc %EX - if s.len() != 1 {
-doc %EX - 	e = InvalidArgument("ord() argument must be of length 1 exactly")
-doc %EX - 	e.given = s
-doc %EX - 	throw e
-doc %EX - }
-F set(obj, field:Str, val) {
-	obj.(field) = val
-	obj
-}
+section "Convenience methods" {
+	doc Sets the given field to the given value
+	doc %RET - The modified obj
+	doc %EX - s.len() != 1 throws InvalidArgument("ord() argument must be of length 1 exactly").set('given', s)
+	doc %EX - # Would else be written as
+	doc %EX - if s.len() != 1 {
+	doc %EX - 	e = InvalidArgument("ord() argument must be of length 1 exactly")
+	doc %EX - 	e.given = s
+	doc %EX - 	throw e
+	doc %EX - }
+	F set(obj, field:Str, val) {
+		obj.(field) = val
+		obj
+	}
 
-doc Sets the given fields to the given values
-doc %RET - The modified obj
-doc %EX - my_cond throws InvalidArgument("Out of range").set(min=0, max=10, given=12)
-F set(obj, **kwargs) {
-	kwargs.each(obj.set(X, Y))
-	obj
-}
+	doc Sets the given fields to the given values
+	doc %RET - The modified obj
+	doc %EX - my_cond throws InvalidArgument("Out of range").set(min=0, max=10, given=12)
+	F set(obj, **kwargs) {
+		kwargs.each(obj.set(X, Y))
+		obj
+	}
 
-TEST type T; t=T().set(a=1, b=2); t.a == 1 and t.b == 2
+	TEST type T; t=T().set(a=1, b=2); t.a == 1 and t.b == 2
+}
 
 section "Pred - convert different types to predicates" {
 
@@ -349,7 +368,7 @@ doc predicate - When predicate(item) returns true, the item will appear in the r
 doc %EX - (1...10).filter(F(num) num % 2 == 0)  # Gives [2,4,6,8,10]
 doc %EX - (1...10).filter(X<5)  # Gives [1,2,3,4], predicate called as predicate(item, 5)
 doc %RET - Of same type as e
-F filter(e:Eachable1, predicate) {
+F filter(e:Eachable1, predicate=identity) {
 	pred = Pred(predicate)
 	t = typeof(e)
 	ret = t()
@@ -360,15 +379,7 @@ F filter(e:Eachable1, predicate) {
 	ret
 }
 
-
-doc DEPRECATED! Do not use!
-doc Use something.filter({field: predicate}) instead.
-doc %STATUS - deprecated
-F filter(something:Eachable1, field:Str, predicate) {
-	warn("Using deprecated filter(Eachable1, Str, predicate)")
-	p = Pred(predicate)
-	something.filter({ p(A.(field)) })
-}
+TEST [1,null,2,0].filter() == [1, 2]
 
 doc Partition elements in something according to the predicate into two arrays.
 doc First array contains all elements for which predicate(elt) is true and
@@ -378,22 +389,21 @@ doc %RET - Array with two arrays in it
 doc %EX - partition([1,10,2,20], X>=10)  # [[10, 20], [1, 2]]
 F partition(something:Eachable1, predicate) {
 	p = Pred(predicate)
-	ret = [[], []]
-	something.each(F(elt) ret[p(elt).not().Int()].push(elt))
-	ret
+	yes = []
+	no = []
+	something.each(F(elt) (if p(elt) yes else no).push(elt))
+	[yes, no]
 }
 
 TEST partition([1,10,2,20], X>=10) == [[10, 20], [1, 2]]
 
-{
-	type ElementNotFound
-	ElementNotFound.inherit(LookupFail)
-}
+type ElementNotFound
+ElementNotFound.inherit(LookupFail)
 
 block u {
 	global first
 	doc Find first element in e that satisfies the predicate.
-	doc predicate - defaults to identity
+    doc predicate - Test function or anything else acceptable by Pred(), defaults to identity
 	doc %RET - Either the element or the provided default if element was not found.
 	doc %EX - (10..20).first(F(x) x % 3 == 0)        # 12 - first item divisible by 3
 	doc %EX - (10..20).first(F(x) x % 50 == 0, 1000) # 1000
@@ -411,32 +421,8 @@ block u {
 	TEST [1,2,3].first(X>1, 10) == 2
 	TEST [1,2,3].first(X>5, 10) == 10
 	TEST [1,2,3].first(X>1) == 2
-	TEST try [1,2,3].first(X>5) catch(e:ElementNotFound) true
+	TEST [1,2,3].first(X>5) THROWS ElementNotFound
 }
-
-doc Find the only element that satisfies the predicate.
-doc predicate - defaults to {true}, allowing my_arr.the_one()
-doc Throws ElementNotFound exception if there are no elements that satisfy the predicate or if there is more than one element that satisfies the predicate.
-doc %RET - The only element that satisfies the predicate.
-F the_one(e:Eachable1, predicate={true}) {
-	p = Pred(predicate)
-	ret = EmptyBox()
-	e.each() do F(elt) {
-		if p(elt) {
-			ret throws ElementNotFound("the_one() had more than one match").set('container', e).set('predicate', predicate)
-			ret = FullBox(elt)
-		}
-	}
-	not(ret) throws ElementNotFound("the_one() had no matches").set('container', e).set('predicate', predicate)
-	ret.get()
-}
-
-TEST [1,2,11,3,4].the_one(X>10) == 11
-TEST try [1,2,11,12,4].the_one(X>10) catch(e:ElementNotFound) true
-TEST try [1,2,3,4].the_one(X>10) catch(e:ElementNotFound) true
-TEST [1, "a", "b"].the_one(Int) == 1
-TEST [1].the_one() == 1
-TEST try [1, "a", "b"].the_one(Str) catch(e:ElementNotFound) true
 
 doc Find the only element that satisfies the predicate and execute given code with the value
 doc body - The code to execute when exactly one element that satisfies the predicate was found. Executed with the found value. It's value will be returned as result of the_one().
@@ -446,7 +432,7 @@ doc %RET - Result of running on of the following: body, found_more, found_none
 doc %EX - F name(dn:MethodDocNode) {
 doc %EX - 	dn.children.the_one(MethodNameDocNode).text[0]
 doc %EX - }
-F the_one(e:Eachable1, predicate, body:Fun, found_more:Fun=nop, found_none:Fun=nop) block b {
+F the_one(e:Eachable1, predicate={true}, body:Fun=identity, found_more:Fun=nop, found_none:Fun=nop) block b {
 	p = Pred(predicate)
 	ret = EmptyBox()
 	e.each(F(elt) {
@@ -468,6 +454,30 @@ TEST ok = false; [1,2,11,3,4].the_one(X>10, F(the_value) { ok = the_value == 11 
 TEST ok = false; [1,2,11,3,4].the_one(X>20, nop, found_none = { ok = true }); ok
 TEST ok = false; [1,2,11,3,4].the_one(Int, nop, found_more = { ok = true }); ok
 
+doc Find the only element that satisfies the predicate.
+doc predicate - defaults to {true}, allowing my_arr.the_one()
+doc Throws ElementNotFound exception if there are no elements that satisfy the predicate or if there is more than one element that satisfies the predicate.
+doc %RET - The only element that satisfies the predicate.
+F the_one(e:Eachable1, predicate={true}) {
+	p = Pred(predicate)
+	ret = EmptyBox()
+	e.each() do F(elt) {
+		if p(elt) {
+			ret throws ElementNotFound("the_one() had more than one match").set('container', e).set('predicate', predicate)
+			ret = FullBox(elt)
+		}
+	}
+	not(ret) throws ElementNotFound("the_one() had no matches").set('container', e).set('predicate', predicate)
+	ret.get()
+}
+
+TEST [1,2,11,3,4].the_one(X>10) == 11
+TEST [1,2,11,12,4].the_one(X>10) THROWS ElementNotFound
+TEST [1,2,3,4].the_one(X>10) THROWS ElementNotFound
+TEST [1, "a", "b"].the_one(Int) == 1
+TEST [1].the_one() == 1
+TEST [1, "a", "b"].the_one(Str) THROWS ElementNotFound
+
 doc Filter something to an Arr (array) of values using predicate
 doc predicate - Decision function to be called with each item as first argument.
 doc predicate - When predicate(item) returns true, the item will not appear in the resulting array
@@ -475,7 +485,7 @@ doc something - object of any type that has each(something, callback) implemente
 doc %EX - (1...10).reject(F(num) num % 2 == 0)  # Gives [1,3,5,7,9]
 doc %EX - (1...10).reject(X<5)  # Gives [5,6,7,8,9,10], predicate called as predicate(item, 5)
 doc %RET - Arr
-F reject(something:Eachable, predicate) {
+F reject(something:Eachable, predicate=identity) {
 	p = Pred(predicate)
 	something.filter(not + p)
 }
@@ -484,16 +494,15 @@ F reject(something:Eachable, predicate) {
 doc EXPERIMENTAL! Do not use!
 doc %STATUS - experimental
 doc %EX - [1,2,3,1,2].take(X<3)  # [1,2]
-F take(something:Eachable1, predicate)
-	 collector block b {
-		p = Pred(predicate)
-		something.each(F(elt) {
-			if p(elt)
-				collect(elt)
-			else
-				b.return(null)
-		})
-	}
+F take(something:Eachable1, predicate) collector block b {
+	p = Pred(predicate)
+	something.each(F(elt) {
+		if p(elt)
+			collect(elt)
+		else
+			b.return()
+	})
+}
 
 TEST [1,2,3,1,2].take(X<3) == [1,2]
 
@@ -502,18 +511,16 @@ doc EXPERIMENTAL! Do not use!
 doc Filters out items that satisfy predicate at the begginning of e.
 doc %STATUS - experimental
 doc %EX - [1,2,3,1,2].drop(X<3)  # [3,1,2]
-F drop(e:Eachable1, predicate)
-	collector {
-		p = Pred(predicate)
-		found = false
-		e.each(F(elt) {
-			if found { collect(elt); return null; }
-			if not(p(elt)) {
-				collect(elt)
-				found = true
-			}
-		})
-	}
+F drop(e:Eachable1, predicate) collector {
+	p = Pred(predicate)
+	do_collect = false
+	e.each(F(elt) {
+		do_collect = do_collect or not(p(elt))
+		if do_collect {
+			collect(elt)
+		}
+	})
+}
 
 TEST [1,2,3,1,2].drop(X<3) == [3,1,2]
 
@@ -542,10 +549,8 @@ F reduce(something:Eachable1, start, f:Fun) {
 
 TEST [1,2,3].reduce(0, (+)) == 6
 
-{
-	type EmptyEachableFail
-	EmptyEachableFail.inherit(InvalidArgument)
-}
+type EmptyEachableFail
+EmptyEachableFail.inherit(InvalidArgument)
 
 doc Combine items to a single value using the supplied binary function
 doc First f is applied to the first two elements of e
@@ -556,21 +561,18 @@ doc e - object of any type that has each(e, callback) implemented
 doc f - The combining function
 doc %EX - F sum(e) e.reduce((+))
 F reduce(e:Eachable1, f:Fun) {
-	ret = EmptyBox()
-	e.each(F(elt) {
-		if ret {
-			ret .= map(F(val) f(val, elt))
-		} else {
-			ret = FullBox(elt)
-		}
-	})
-	not(ret) throws EmptyEachableFail("reduce(e:Eachable1, f:Fun): e must have at least one element").set('e', e)
-	ret.get()
+	i = Iter(e)
+	try {
+		start = i.next()
+	} catch(e:NoNext) {
+		throw EmptyEachableFail("reduce(e:Eachable1, f:Fun): e must have at least one element").set('e', e)
+	}
+	reduce(i, start, f)
 }
 
 TEST [10].reduce((+)) == 10
 TEST [1,2,3].reduce((+)) == 6
-TEST try [].reduce((+)) catch(e:EmptyEachableFail) true
+TEST [].reduce((+)) THROWS EmptyEachableFail
 
 doc Deprecated.
 doc Map when there is more than one element. If there is exactly one element, it's left as is
@@ -591,27 +593,29 @@ F tap(val, cb:Fun) {
 	val
 }
 
-TEST ok=false; (7.tap({ if A == 7 ok = true}) == 7) and ok
+TEST ok=false; 7.tap({ok = A==7}) == 7 and ok
 
-doc Filter operator.
-doc Same as calling x.filter(predicate)
-doc %EX - [1,2,3,4] ? F(x) x > 2  # [3,4]
-F ?(x, predicate:Fun) x.filter(predicate)
+section "Functional operators" {
+	doc Filter operator.
+	doc Same as calling x.filter(predicate)
+	doc %EX - [1,2,3,4] ? F(x) x > 2  # [3,4]
+	F ?(x, predicate:Fun) x.filter(predicate)
 
-doc Map operator.
-doc Same as calling x.map(mapper)
-doc %EX - [1,2,3,4] / F(x) x * 10
-F /(x, mapper:Fun) x.map(mapper)
+	doc Map operator.
+	doc Same as calling x.map(mapper)
+	doc %EX - [1,2,3,4] / F(x) x * 10
+	F /(x, mapper:Fun) x.map(mapper)
 
-doc Each operator.
-doc Same as calling x.each(cb)
-doc %EX - [1,2,3,4] % echo
-F %(x, cb:Fun) x.each(cb)
+	doc Each operator.
+	doc Same as calling x.each(cb)
+	doc %EX - [1,2,3,4] % echo
+	F %(x, cb:Fun) x.each(cb)
 
-doc Call operator.
-doc Same as calling f(x)
-doc %EX - [1,2,3,4] \ echo
-F \(x, f:Fun) f(x)
+	doc Call operator.
+	doc Same as calling f(x)
+	doc %EX - [1,2,3,4] \ echo
+	F \(x, f:Fun) f(x)
+}
 
 doc Return a+b unless one of the arguments is falsy. In that case return that argument (a if both are falsy). Useful for building strings with optional parts.
 doc %EX - status_detail = ' (' +? maybe_empty_array.join(',') +? ')'
@@ -706,9 +710,9 @@ F JsonData(e:Eachable1) {
 }
 
 
-# === ArrLike ====================================
-# TODO [doc]: examples in methods
-{
+section "ArrLike" {
+	# TODO [doc]: examples in methods
+
 	doc Parent type for user-defined types with array-like behaviour. Use in cases when you would like to inherit from built-in Arr. Inheriting from built-ins is not possible for now.
 	doc items - default field for the underlying array
 	doc %EX - type T(ArrLike)
@@ -725,134 +729,152 @@ F JsonData(e:Eachable1) {
 	doc %EX - }
 	type ArrLike
 	ArrLike.inherit(Eachable1)
-}
 
-F init(al:ArrLike) {
-	if al.attrs() is not Hash {
-		al.attrs({})
+	F init(al:ArrLike) al.attrs().ArrLike = []
+
+	doc ArrLike constructor.
+	doc field - DEPRECATED name of the field that holds the underlying array.
+	doc Throws NotImplemented if field is specified
+	F init(al:ArrLike, field:Str=null) {
+		field throws NotImplemented("ArrLike(Str) is deprecated")
+		super(al)
 	}
-	al.attrs().ArrLike = []
+
+	F init(al:ArrLike, e:Eachable1) {
+		super(al)
+		al.push_all(e)
+	}
+
+	F init(al:ArrLike, arr:Arr) {
+		super(al)
+		al.attrs().ArrLike = arr
+	}
+
+	doc Get length of the underlying array.
+	F len(al:ArrLike)               al.attrs().ArrLike.len()
+
+	doc Set element in the underlying array.
+	F '[]'(al:ArrLike, idx:Int)     al.attrs().ArrLike[idx]
+
+	doc Get element from the underlying array.
+	F '[]='(al:ArrLike, idx:Int, x) al.attrs().ArrLike[idx] = x
+
+	doc Get element at the given index or return dflt if the index is out of range (element at the given index does not exist). See get(Arr).
+	F get(al:ArrLike, idx:Int, dflt) al.attrs().ArrLike.get(idx, dflt)
+
+	doc Call cb for each element in the underlying array.
+	doc %RET - al
+	F each(al:ArrLike, cb:Fun) {
+		al.attrs().ArrLike.each(cb)
+		al
+	}
+
+	doc Check whether al has any elements.
+	F Bool(al:ArrLike) al.attrs().ArrLike.Bool()
+
+	# NOTE: Never run because of Arr(Eachable1)
+	doc Get the underlying array
+	F Arr(al:ArrLike) al.attrs().ArrLike
+
+	doc Push an element to the underlying array.
+	F push(al:ArrLike, val) {
+		al.attrs().ArrLike.push(val)
+		al
+	}
+
+	doc Join items to a single string using given separator s
+	doc %RET - Str
+	F join(al:ArrLike, s:Str) al.attrs().ArrLike.join(s)
+
+	doc Return array made of given field of each element of given array.
+	doc Will throw KeyNotFound if any of the elements does not have the desired field.
+	doc Use get() to handle missing field differently.
+	F .(al:ArrLike, s:Str) al.attrs().ArrLike.(s)
+
+	doc Defines collector { ... collect(...) ... } behaviour for ArrLike.
+	doc Very similar to collector for Arr. See collector(Arr,Fun).
+	F collector(al:ArrLike, body:Fun) {
+		body(F(elt) al.push(elt))
+		al
+	}
 }
 
-doc ArrLike constructor.
-doc field - DEPRECATED name of the field that holds the underlying array.
-doc Throws NotImplemented if field is specified
-F init(al:ArrLike, field:Str=null) {
-	field throws NotImplemented("ArrLike(Str) is deprecated")
-	super(al)
-}
-
-F init(al:ArrLike, e:Eachable1) {
-	super(al)
-	al.push_all(e)
-}
-
-F init(al:ArrLike, arr:Arr) {
-	super(al)
-	al.attrs().ArrLike = arr
-}
-
-doc Get length of the underlying array.
-F len(al:ArrLike)               al.attrs().ArrLike.len()
-
-doc Set element in the underlying array.
-F '[]'(al:ArrLike, idx:Int)     al.attrs().ArrLike[idx]
-
-doc Get element from the underlying array.
-F '[]='(al:ArrLike, idx:Int, x) al.attrs().ArrLike[idx] = x
-
-doc Get element at the given index or return dflt if the index is out of range (element at the given index does not exist). See get(Arr).
-F get(al:ArrLike, idx:Int, dflt) al.attrs().ArrLike.get(idx, dflt)
-
-doc Call cb for each element in the underlying array.
-doc %RET - al
-F each(al:ArrLike, cb:Fun) {
-	al.attrs().ArrLike.each(cb)
-	al
-}
-
-doc Check whether al has any elements.
-F Bool(al:ArrLike) al.attrs().ArrLike.Bool()
-
-# NOTE: Never run because of Arr(Eachable1)
-doc Get the underlying array
-F Arr(al:ArrLike) al.attrs().ArrLike
-
-doc Push an element to the underlying array.
-F push(al:ArrLike, val) {
-	al.attrs().ArrLike.push(val)
-	al
-}
-
-doc Join items to a single string using given separator s
-doc %RET - Str
-F join(al:ArrLike, s:Str) al.attrs().ArrLike.join(s)
-
-doc Return array made of given field of each element of given array.
-doc Will throw KeyNotFound if any of the elements does not have the desired field.
-doc Use get() to handle missing field differently.
-F .(al:ArrLike, s:Str) al.attrs().ArrLike.(s)
-
-doc Defines collector { ... collect(...) ... } behaviour for ArrLike.
-doc Very similar to collector for Arr. See collector(Arr,Fun).
-F collector(al:ArrLike, body:Fun) {
-	body(F(elt) al.push(elt))
-	al
-}
-
-# === OneOf(ArrLike) =============================
-
-{
+section "AnyOf(ArrLike)" {
 	doc EXPERIMENTAL! Do not use!
 	doc Should probably inherit from Set, not ArrLike.
-	type OneOf
-	OneOf.inherit(ArrLike)
-}
+	type AnyOf
+	AnyOf.inherit(ArrLike)
 
-doc EXPERIMENTAL! Do not use!
-F init(o:OneOf, *alternatives) {
-	guard alternatives.len() > 1
-	super(o, alternatives)
-}
-
-doc EXPERIMENTAL! Do not use!
-F ~(x, o:OneOf) block b {
-	o.each(F(alt) {
-		if (m = x ~ alt) b.return(m)
-		# b.return_if_true(x ~ alt)
-	})
-	MatchFailure(x, o)
-}
-
-TEST ("abc" ~ OneOf(/x/, /a/)) is MatchSuccess
-TEST ("abc" ~ OneOf(/x/, /y/)) is MatchFailure
-TEST ("abc" ~ OneOf([Int, Str])) is MatchSuccess
-TEST ("abc" ~ OneOf([Int, Num])) is MatchFailure
-
-doc EXPERIMENTAL!
-doc Convert OneOf to a predicate. The predicate asserts that one of the predicates (elements of OneOf) succeeds
-doc %EX - {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(OneOf("k1", "k3"))  # {"k1": "v1", "k3": "v3"}
-F Pred(o:OneOf) {
-	preds = o.map(Pred)
-	F oneof_pred(x) block b {
-		preds.each(F(p) {
-			if p(x) {
-				b.return(true)
-			}
-		})
-		false
+	doc EXPERIMENTAL! Do not use!
+	F init(a:AnyOf, *alternatives) {
+		guard alternatives.len() > 1
+		super(a, alternatives)
 	}
+
+	doc EXPERIMENTAL! Do not use!
+	F ~(x, a:AnyOf) block b {
+		a.each(F(alt) {
+			if (m = x ~ alt) b.return(m)
+		})
+		MatchFailure(x, a)
+	}
+
+	TEST ("abc" ~ AnyOf(/x/, /a/)) is MatchSuccess
+	TEST ("abc" ~ AnyOf(/x/, /y/)) is MatchFailure
+	TEST ("abc" ~ AnyOf([Int, Str])) is MatchSuccess
+	TEST ("abc" ~ AnyOf([Int, Num])) is MatchFailure
+
+	doc EXPERIMENTAL!
+	doc Convert AnyOf to a predicate. The predicate asserts that one of the predicates (elements of AnyOf) succeeds
+	doc %EX - {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(AnyOf("k1", "k3"))  # {"k1": "v1", "k3": "v3"}
+	F Pred(a:AnyOf) {
+		preds = a.map(Pred)
+		F anyof_pred(x) preds.any(F(p) p(x))
+	}
+
+	TEST {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(AnyOf("k1", "k3")) == {"k1": "v1", "k3": "v3"}
+
+	doc EXPERIMENTAL!
+	F Bool(a:AnyOf) a.any()
+
+	TEST AnyOf([1, false]).Bool()
+	TEST AnyOf([0, false]).Bool().not()
+
 }
 
-TEST {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(OneOf("k1", "k3")) == {"k1": "v1", "k3": "v3"}
+section "AllOf(ArrLike)" {
+	doc EXPERIMENTAL! Do not use!
+	doc Should probably inherit from Set, not ArrLike.
+	type AllOf
+	AllOf.inherit(ArrLike)
+
+	doc EXPERIMENTAL! Do not use!
+	F init(a:AllOf, *items) {
+		guard items.len() > 1
+		super(a, items)
+	}
+
+	doc EXPERIMENTAL!
+	doc Convert AllOf to a predicate. The predicate asserts that one of the predicates (elements of AllOf) succeeds
+	doc %EX - {"k1": "v1", "k2": "v2", "kk3": "vv3"}.filterk(AllOf(/^k/, {len(A) <= 2})) == %{k1 v1 k2 v2}
+	F Pred(a:AllOf) {
+		preds = a.map(Pred)
+		F allof_pred(x) preds.all(F(p) p(x))
+	}
+
+	TEST {"k1": "v1", "k2": "v2", "kk3": "vv3"}.filterk(AllOf(/^k/, {len(A) <= 2})) == %{k1 v1 k2 v2}
+
+	F Bool(a:AllOf) a.all()
+
+	TEST AllOf([1, 2]).Bool()
+	TEST AllOf([1, 2, false]).Bool().not()
+}
 
 # === HashLike ===================================
 # TODO [doc]: examples in methods
-{
-	doc Base type for user-defined hash-like types. This is a workaround: it's not possible currently no inherit from the built-in Hash type.
-	type HashLike
-	HashLike.inherit(Eachable2)
-}
+doc Base type for user-defined hash-like types. This is a workaround: it's not possible currently no inherit from the built-in Hash type.
+type HashLike
+HashLike.inherit(Eachable2)
 
 doc Check whether k is in the HashLike
 doc %RET - Bool
@@ -914,22 +936,22 @@ F map_idx_key_val(hl:HashLike, mapper:Fun) hl.attrs().HashLike.map_idx_key_val(m
 doc Filter hash. Build new HashLike with kev-value pairs selected by predicate.
 doc predicate - Test function to be called with one key and one value at a time.
 doc %EX - my_hashlike.filter(F(k, v) k == 'a')
-doc %RET - HashLike
-F filter(hl:HashLike, predicate:Fun) {
-	ret = HashLike()
+doc %RET - value of the same type as hl
+F filter(hl:HashLike, predicate) {
+	t = typeof(hl)
+	ret = t()
 	ret.attrs().HashLike = hl.attrs().HashLike.filter(predicate)
 	ret
 }
 
+TEST HashLike({"a": 1, "b": 2}).filter(F(k, v) v==1) == HashLike({"a": 1})
+TEST HashLike({"a": 1}).filter(F(k, v) v==10) == HashLike()
+TEST type MyHashLike(HashLike); MyHashLike({"a": 1, "b": 2}).filter(F(k, v) v==1) == MyHashLike({"a": 1})
+
 doc Create a HashLike.
 doc h - If provided, used as initial value.
 doc %EX - HashLike(%{a aha b bee}) # <HashLike a=aha b=bee>
-F init(hl:HashLike, h:Hash=null) {
-	if hl.attrs() is not Hash {
-		hl.attrs({})
-	}
-	hl.attrs().HashLike = h or {}
-}
+F init(hl:HashLike, h:Hash=null) hl.attrs().HashLike = h or {}
 
 doc Get the underlying Hash with all the keys/values of the HashLike.
 doc Note: the returned value is not a copy.
@@ -939,13 +961,90 @@ F Hash(hl:HashLike) hl.attrs().HashLike
 doc Convert HashLike into JSON compatible data structure - object
 F JsonData(hl:HashLike) hl.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
 
+section "Named Instances" {
+	doc "Named instances" are typically called enums or enumerated values in other languages.
+	doc %EX - type Color(NamedInstances)
+	doc %EX -
+	doc %EX - F init(c:Color, numval:Int) c.numval = numval
+	doc %EX -
+	doc %EX - Color.NamedInstances = ns {
+	doc %EX - 	RED = Color(4)
+	doc %EX - 	GREEN = Color(2)
+	doc %EX - 	BLUE = Color(1)
+	doc %EX - }
+	doc %EX -
+	doc %EX - echo(Color.NamedInstances)  # {RED=<Color numval=4 name=RED>, ...}
+	doc %EX - echo(2.decode(Color))       # <Color numval=2 name=GREEN>
+	doc %EX - echo("RED".decode(Color))   # <Color numval=4 name=RED>
+	type NamedInstances
+
+	doc %AUTO - SUBTYPE_OF_NAMEDINSTANCES.NamedInstances
+	doc %EX - echo(Color.NamedInstances is Namespace)  # true
+	F .(t:Type, field:Str) {
+		guard field == 'NamedInstances'
+		guard t.is_subtype(NamedInstances)
+		ret = t.attrs().NamedInstances
+	}
+
+	doc %AUTO - SUBTYPE_OF_NAMEDINSTANCES.NamedInstances = ...
+	F .=(t:Type, field:Str, ns:Namespace) {
+		guard field == 'NamedInstances'
+		guard t.is_subtype(NamedInstances)
+		ns.each(F(k, v) {
+			v is not t throws InvalidArgument("${t.name}.NamedInstances values must be of type ${t.name}").set(key=k, value=v)
+			v.name = k
+		})
+		t.attrs().NamedInstances = ns
+
+		keys_to_instances = {}
+		t.NamedInstances.each(F(name, instance) {
+			instance.Hash().each(F(field, value) {
+				keys_to_instances.dflt(value, []).push(instance)
+			})
+		})
+		t.attrs().NamedInstancesByAnyValue = keys_to_instances
+	}
+
+	doc %AUTO - SUBTYPE_OF_NAMEDINSTANCES.NamedInstances = ['SOME', 'NAMES', ...]
+	F .=(t:Type, field:Str, a:Arr) {
+		guard field == 'NamedInstances'
+		guard t.is_subtype(NamedInstances)
+		guard a.all(Str)
+		instances = ns {}
+		a.each(F(name) instances::(name) = t())
+		t.NamedInstances = instances
+	}
+
+    TEST type T(NamedInstances); T.NamedInstances = %[RED GREEN BLUE]; i = [T::RED, T::GREEN, T::BLUE]; i.all(T) and T::RED.name == 'RED'
+
+	doc %AUTO - SUBTYPE_OF_NAMEDINSTANCES::INSTANCE_NAME
+	doc %EX - echo(Color::RED)   # <Color numval=4 name=RED>
+	F '::'(t:Type, k:Str) {
+		guard t.is_subtype(NamedInstances)
+		t.NamedInstances[k]
+	}
+
+	doc Resolve named instance of t by uniquely-identifying value of any field
+	doc %EX - echo("RED".decode(Color))   # <Color numval=4 name=RED>
+	F decode(value, t:Type) {
+		guard t.is_subtype(NamedInstances)
+
+		F invalid_arg(s) throw InvalidArgument(s).set(value=value, type=t)
+
+		t.attrs().NamedInstancesByAnyValue.get(value, []).the_one(
+			found_none = { invalid_arg("Value ${value} does not identify any named instance of ${t.name}") }
+			found_more = { invalid_arg("Value ${value} is not a unique identifier of an instance of ${t.name}") }
+		)
+	}
+
+	TEST global init; type Color(NamedInstances); F init(c:Color, numval:Int) c.numval = numval; Color.NamedInstances = ns { RED = Color(4); GREEN = Color(2); BLUE = Color(1) ; }; Color.NamedInstances is Namespace and 2.decode(Color) == Color::GREEN and "RED".decode(Color) == Color::RED
+}
+
 # === Hook =======================================
 
-{
-	doc Hook is a simple pub-sub
-	type Hook
-	Hook.inherit(HashLike)
-}
+doc Hook is a simple pub-sub
+type Hook
+Hook.inherit(HashLike)
 
 doc Hook constructor.
 doc %RET - Hook
@@ -1048,7 +1147,7 @@ section "Type" {
 	doc String representation of a type
 	doc %RET - "<Type NAME>"
 	doc %EX - Real.Str().echo()  # Outputs: <Type Real>
-	F Str(t:Type) "<Type ${t.name}>"
+	F Str(t:Type) "<Type ${t.name} with ${t.constructors.len()} constructor(s) and ${t.attrs().len()} attributes>"
 
 	# TODO: Reorganize and move out of Type section
 	doc Decode (parse) strings such as command line arguments or environment variables to result given type
@@ -1152,7 +1251,7 @@ doc %EX - my_items.dflt("source", "(unknown)")
 doc %RET - e
 F dflt(e:Eachable1, k, v) {
 	guard e.all({A is NormalTypeInstance or A is Hash})
-	# guard e [OneOf(NormalTypeInstance, Hash)]
+	# guard e [AnyOf(NormalTypeInstance, Hash)]
 	e.each(X.dflt(k, v))
 	e
 }
@@ -1203,115 +1302,121 @@ F ~(x, t:Type) {
 
 # === Exceptions =================================
 
-{
-	# TODO: Investigate why type CError(Error) does not work at this point
-	doc Base type for exceptions arising from errors returned by calling C functions
-	type CError
-	CError.inherit(Error)
+# TODO: Investigate why type CError(Error) does not work at this point
+doc Base type for exceptions arising from errors returned by calling C functions
+type CError
+CError.inherit(Error)
 
-	doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
-	F init(e:CError, message:Str) {
-		errno = c_errno()
-		super(e, message)
-		e.errno = errno
-		e.errno_name = c_strerror(e.errno)
-	}
+doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
+F init(e:CError, message:Str) {
+	errno = c_errno()
+	super(e, message)
+	e.errno = errno
+	e.errno_name = c_strerror(e.errno)
+}
 
-	doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
-	F init(e:CError, errno:Int, message:Str) {
-		super(e, message)
-		e.errno = errno
-		e.errno_name = c_strerror(e.errno)
-	}
+doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
+F init(e:CError, errno:Int, message:Str) {
+	super(e, message)
+	e.errno = errno
+	e.errno_name = c_strerror(e.errno)
+}
 
-	doc Exception representing a failure to kill() a process
-	type KillFail
-	KillFail.inherit(CError)
+doc Exception representing a failure to kill() a process
+type KillFail
+KillFail.inherit(CError)
+
+section "ValueWrapper type and methods" {
+	type ValueWrapper
+
+	F init(vw:ValueWrapper) throw Error("ValueWrapper subtype ${vw.typeof().name} must have init() argument")
+
+	F init(vw:ValueWrapper, val) vw.val = val
+
+	F Str(vw:ValueWrapper) "<${vw.typeof().name} ${vw.val}>"
 }
 
 # === Lock =======================================
 
-{
-	doc Synchronization lock.
-	type Lock
+doc Synchronization lock.
+type Lock
 
-	doc Re-entrant synchronization lock. Same thread can re-acquire the lock.
-	type ReentrantLock()
-	ReentrantLock.inherit(Lock)
+doc Re-entrant synchronization lock. Same thread can re-acquire the lock.
+type ReentrantLock()
+ReentrantLock.inherit(Lock)
 
-	doc Failure to perform an operation on a lock.
-	type LockFail
-	LockFail.inherit(Exception)
+doc Failure to perform an operation on a lock.
+type LockFail
+LockFail.inherit(Exception)
 
-	doc Initialize LockFail exception.
-	F init(e:LockFail, op:Str, code:Int, msg:Str) init(args())
+doc Initialize LockFail exception.
+F init(e:LockFail, op:Str, code:Int, msg:Str) init(args())
 
-	doc Initialize Lock. Creates and initializes pthread_mutex.
-	F init(l:Lock) {
-		l.lock = c_pthread_mutex_t()
-		code = c_pthread_mutex_init(l.lock)
-		code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
-	}
-
-	doc Block till the lock is avaiable and then acquire the lock.
-	doc %EX - l = Lock()
-	doc %EX - ...
-	doc %EX - l.acquire()
-	doc %EX - modify_global_state_safely(...)
-	doc %EX - l.release()
-	F acquire(l:Lock) {
-		c_pthread_mutex_lock(l.lock)
-		l
-	}
-
-	doc Release the lock
-	doc %EX - l = Lock()
-	doc %EX - ...
-	doc %EX - l.acquire()
-	doc %EX - modify_global_state_safely(...)
-	doc %EX - l.release()
-	F release(l:Lock) {
-		c_pthread_mutex_unlock(l.lock)
-		l
-	}
-
-	doc Call cb with lock l held. Releases the lock after cb returns or throws.
-	doc %EX - l = Lock()
-	doc %EX - ...
-	doc %EX - l.acquire(F() {
-	doc %EX -   modify_global_state_safely(...)
-	doc %EX - })
-	F acquire(l:Lock, cb:Fun) {
-		l.acquire()
-		try {
-			ret = cb()
-			l.release()
-			ret
-		} catch(e:Exception) {
-			l.release()
-			throw e
-		}
-	}
-
-	TEST Lock().acquire(F() 1) == 1
-
-	doc Initialize Lock. Creates and initializes PTHREAD_MUTEX_RECURSIVE pthread_mutex.
-	F init(l:ReentrantLock) {
-		l.lock_attr = c_pthread_mutexattr_t()
-		code = c_pthread_mutexattr_init(l.lock_attr)
-		code throws LockFail("c_pthread_mutexattr_init", code, "Call to underlying API failed")
-		c_pthread_mutexattr_settype(l.lock_attr, C_PTHREAD_MUTEX_RECURSIVE)
-		l.lock = c_pthread_mutex_t()
-		code = c_pthread_mutex_init(l.lock, l.lock_attr)
-		code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
-	}
-
-	doc Convert c_pthread_mutex_t to Str for displaying to humans.
-	F Str(cpm:c_pthread_mutex_t) "<c_pthread_mutex_t>"
-
-	doc Convert c_pthread_mutexattr_t to Str for displaying to humans.
-	F Str(cpma:c_pthread_mutexattr_t) "<c_pthread_mutexattr_t>"
+doc Initialize Lock. Creates and initializes pthread_mutex.
+F init(l:Lock) {
+	l.lock = c_pthread_mutex_t()
+	code = c_pthread_mutex_init(l.lock)
+	code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
 }
+
+doc Block till the lock is avaiable and then acquire the lock.
+doc %EX - l = Lock()
+doc %EX - ...
+doc %EX - l.acquire()
+doc %EX - modify_global_state_safely(...)
+doc %EX - l.release()
+F acquire(l:Lock) {
+	c_pthread_mutex_lock(l.lock)
+	l
+}
+
+doc Release the lock
+doc %EX - l = Lock()
+doc %EX - ...
+doc %EX - l.acquire()
+doc %EX - modify_global_state_safely(...)
+doc %EX - l.release()
+F release(l:Lock) {
+	c_pthread_mutex_unlock(l.lock)
+	l
+}
+
+doc Call cb with lock l held. Releases the lock after cb returns or throws.
+doc %EX - l = Lock()
+doc %EX - ...
+doc %EX - l.acquire(F() {
+doc %EX -   modify_global_state_safely(...)
+doc %EX - })
+F acquire(l:Lock, cb:Fun) {
+	l.acquire()
+	try {
+		ret = cb()
+		l.release()
+		ret
+	} catch(e:Exception) {
+		l.release()
+		throw e
+	}
+}
+
+TEST Lock().acquire(F() 1) == 1
+
+doc Initialize Lock. Creates and initializes PTHREAD_MUTEX_RECURSIVE pthread_mutex.
+F init(l:ReentrantLock) {
+	l.lock_attr = c_pthread_mutexattr_t()
+	code = c_pthread_mutexattr_init(l.lock_attr)
+	code throws LockFail("c_pthread_mutexattr_init", code, "Call to underlying API failed")
+	c_pthread_mutexattr_settype(l.lock_attr, C_PTHREAD_MUTEX_RECURSIVE)
+	l.lock = c_pthread_mutex_t()
+	code = c_pthread_mutex_init(l.lock, l.lock_attr)
+	code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
+}
+
+doc Convert c_pthread_mutex_t to Str for displaying to humans.
+F Str(cpm:c_pthread_mutex_t) "<c_pthread_mutex_t>"
+
+doc Convert c_pthread_mutexattr_t to Str for displaying to humans.
+F Str(cpma:c_pthread_mutexattr_t) "<c_pthread_mutexattr_t>"
 
 # === auto-load ==================================
 
@@ -1336,12 +1441,6 @@ AUTOLOAD = ns {
 		RangeIter           Iter
 
 		ResDef              Res
-
-		InputStream         Stream
-		InputOutputStream   Stream
-		OutputStream        Stream
-
-		table               Table
 	}
 
 	invocation = 0
@@ -1602,8 +1701,7 @@ F collector(n:Int, body:Fun) {
 
 block _ {
 	global collector
-	# XXX
-	join_strings = join.Arr()[0]
+	join_strings = join.Arr()[0]  # Performance hack: 18 sec -> 4.3 sec for 1M collectors
 
 	doc EXPERIMENTAL! Do not use!
 	F collector(s:Str, body:Fun) {
@@ -1790,7 +1888,7 @@ TEST [1, 2] == [1, 2]
 TEST [1, 3] != [1, 2]
 TEST [1] != [1, 2]
 
-doc Compare arrays, elemt-wise. If all elements are equal, the longest array considered to be the "big" one.
+doc Compare arrays, element-wise. If all elements are equal, the longest array considered to be the "big" one.
 doc %RET - Bool
 doc %EX -  [1, 2] <= [1, 3]  # true
 doc %EX -  [1] <= [1, 2]     # true
@@ -1812,12 +1910,12 @@ TEST not([1,2] <= [1])
 # TODO: Make it work on anything with Eachable2 too.
 doc Check whether there is any element in e that satisfies the given predicate.
 doc e - The items to check
-doc predicate - Test function
+doc predicate - Test function or anything else acceptable by Pred(), defaults to identity
 doc args - Additional arguments for calling the predicate.
 doc %EX - [1,2,10].any(F(elt) elt > 5)   # true
 doc %EX - [1,2,10].any(F(elt) elt > 15)  # false
 doc %RET - Bool
-F any(e:Eachable1, predicate) block b {
+F any(e:Eachable1, predicate=identity) block b {
 	p = Pred(predicate)
 	e.each(F(x) {
 		if p(x) b.return(true)
@@ -1827,15 +1925,16 @@ F any(e:Eachable1, predicate) block b {
 
 TEST [1,2,10].any(F(elt) elt > 5)
 TEST [1,2,3].any(F(elt) elt > 5).not()
+TEST [0, 1, null].any()
+TEST [0, null].any().not()
 
 doc Check whether all elements in arr satisfy the given predicate.
 doc e - The items to check
-doc predicate - Test function
-doc args - Additional arguments for calling the predicate.
+doc predicate - Test function or anything else acceptable by Pred(), defaults to identity
 doc %RET - Bool
 doc %EX - [1,2,3].all(X<10)   # true
 doc %EX - [1,2,10].all(X>5)   # false
-F all(e:Eachable, predicate) block b {
+F all(e:Eachable, predicate=identity) block b {
 	p = Pred(predicate)
 	e.each(F(*x) {
 		if not(p(*x)) b.return(false)
@@ -1846,15 +1945,22 @@ F all(e:Eachable, predicate) block b {
 TEST [1,2,3].all(X<10)
 TEST [1,2,10].all(X>5).not()
 TEST {"x": 1, "y": 2}.all(F(k, v) v is Int)
+TEST [1, 1].all()
+TEST [1, 1, false].all().not()
+
 
 doc Check that there is no element in e that satisfies the given predicate. Exactly same as not(any(e, predicate)) .
+doc e - The items to check
+doc predicate - Test function or anything else acceptable by Pred(), defaults to identity
 doc %RET - Bool
 doc %EX - [0,1,2].none(X>2)  # true
 doc %EX - [0,1,2].none(X<2)  # false
-F none(e:Eachable1, predicate) not(any(e, predicate))
+F none(e:Eachable1, predicate=identity) not(any(e, predicate))
 
 TEST [0,1,2].none(X>2)
 TEST [0,1,2].none(X<2).not()
+TEST [0, 0, false].none()
+TEST [0, 0, true].none().not()
 
 TEST [1,2,3].map(X*4) == [4,8,12]
 
@@ -1991,11 +2097,11 @@ TEST [1,2,3] - [5,6,1,1,1,1,1,1,1,1,1,1,1,2] == [3]
 
 doc Count number of items that satisfy the predicate.
 doc e - Items to look at
-doc predicate - Test function
+doc predicate - Test function or anything else acceptable by Pred(), defaults to identity
 doc args - Additional arguments for the predicate
 doc %RET - Int
 doc %EX - [1,2,3,11,12].count(X>10)  # 2
-F count(e:Eachable1, predicate) {
+F count(e:Eachable1, predicate=identity) {
 	p = Pred(predicate)
 	collector/0
 		e.each(F(elt) {
@@ -2005,13 +2111,6 @@ F count(e:Eachable1, predicate) {
 }
 
 TEST [1,2,3,11,12].count(X>10) == 2
-
-doc Count all true values.
-doc e - Items to look at
-doc %RET - Int
-doc %EX - [0,1,2,null,false].count()  # 2 (Only 1 and 2 count as true values)
-F count(e:Arr) count(e, identity)
-
 TEST [0,1,2,null,false].count() == 2
 
 doc Flatten one level.
@@ -2045,12 +2144,12 @@ block u {
 	doc TODO: Make it work on anything with each() method.
 	doc In future, will throw exception if element is not found and default is not provided. Now returns null for backwards compatibilty in this case.
 	doc arr - Items to look at
-	doc predicate - Test function
+    doc predicate - Test function or anything else acceptable by Pred(), defaults to identity
 	doc start - Index to start search at
 	doc dflt - default value to return when element is not found
 	doc %RET - Int or dflt. Temporary also null, for backwards compatibilty.
 	doc %EX - [1,2,11,3,4].index(X>10)  # 2
-	F index(arr:Arr, predicate, start:Int=0, dflt=u) {
+	F index(arr:Arr, predicate=identity, start:Int=0, dflt=u) {
 		p = Pred(predicate)
 		l = arr.len()
 		for(i=start; i<l; i+=1)
@@ -2061,13 +2160,15 @@ block u {
 	}
 }
 
+TEST [null, null, 1].index() == 2
+
 doc Find all indexes of values that satisfy the predicate
 doc arr - Items to look at
-doc predicate - Test function
+doc predicate - Test function or anything else acceptable by Pred(), defaults to identity
 doc args - Additional arguments for the predicate
 doc %RET - Arr of Int
 doc %EX - [1,5,1,10].indexes(X>2)  # [1,3]
-F indexes(e:Eachable1, predicate) {
+F indexes(e:Eachable1, predicate=identity) {
 	p = Pred(predicate)
 	collector
 		e.each_idx_val(F(idx, elt) {
@@ -2078,9 +2179,12 @@ F indexes(e:Eachable1, predicate) {
 }
 
 TEST [1,5,1,10].indexes(X>2) == [1,3]
+TEST [1,5,null,10].indexes() == [0,1,3]
+
 
 TEST [5,10,15].first(X>7) == 10
-TEST try [5,10,15].first(X>20) catch(e:ElementNotFound) true
+TEST [5,10,15].first(X>20) THROWS ElementNotFound
+TEST [0, false, null].first() THROWS ElementNotFound
 
 doc Make new array which is a reversed given array
 doc %RET - Arr
@@ -2115,6 +2219,7 @@ doc a - Array of arrays to join
 doc sep - Separator elements
 doc %EX - [[1,2], [3,4]].join([10,20])  # [1,2,10,20,3,4]
 F join(a:Arr, sep:Arr) {
+	warn("Using experimental join(Arr,Arr)")
 	guard a.all(Arr)
 	collector
 		a.each_idx_val(F(idx, subarr) {
@@ -2224,7 +2329,7 @@ block u {
 	}
 }
 
-TEST try { indexes([1,2,3,4], ((X==1)..(X==14))); false } catch(e:IndexNotFound) true
+TEST indexes([1,2,3,4], ((X==1)..(X==14))) THROWS IndexNotFound
 TEST indexes([1,2,3,4], ((X==1)..(X==14)), []) == []
 
 doc Extract array elements between the element that matches r.start and the element that matches r.end .
@@ -2238,8 +2343,8 @@ TEST %[a1 a2 b1 b2][/^a/../^b/] == %[a2]
 TEST %[a1 a2 b1 b2][null../^b/] == %[a1 a2]
 TEST %[a1 a2 b1 b2][/^b/..null] == %[b2]
 TEST %[a1 a2 b1 b2][/^a/.../^b/] == %[a1 a2 b1]
-TEST try { %[a1 a2 b1 b2][/^a/.../^x/]; false } catch(e:IndexNotFound) true
-TEST try { %[a1 a2 b1 b2][/^x/.../^b/]; false } catch(e:IndexNotFound) true
+TEST %[a1 a2 b1 b2][/^a/.../^x/] THROWS IndexNotFound
+TEST %[a1 a2 b1 b2][/^x/.../^b/] THROWS IndexNotFound
 
 doc Replace array elements.
 doc arr - Array to operate on.
@@ -2333,18 +2438,6 @@ block _ {
 	doc Find maximal element under (>)
 	F max(a, b, *rest) [a, b, *rest].max()
 
-	doc EXPERIMENTAL! Do not use!
-	doc %STATUS - deprecated
-	F min(e:Eachable1, cb:Fun) {
-		warn("Using deprecated min(Eachable1, Fun)")
-		most_by_cb(e, (<), cb)
-	}
-	doc EXPERIMENTAL! Do not use!
-	doc %STATUS - deprecated
-	F max(e:Eachable1, cb:Fun) {
-		warn("Using deprecated max(Eachable1, Fun)")
-		most_by_cb(e, (>), cb)
-	}
 }
 
 doc Repeat all elements in arr n times
@@ -2393,7 +2486,7 @@ F join(a:Arr, s:Str) {
 	a.map(Str).join(s)
 }
 
-# Can be more efficent I guess
+# Can be more efficient I guess
 doc Merge sorted arrays.
 doc lte - Less-then-or-equal function to use for comparison of items in a and b
 doc %RET - Arr
@@ -2494,9 +2587,11 @@ F intersperse(a:Arr, delim) {
 TEST [1,2,3].intersperse(0) == [1,0,2,0,3]
 
 doc Optionally, wrap x in an array. Return x if it's already Arr.
+doc Deprecated. Use ensure(x, Arr) instead.
 doc %RET - Arr
 doc %EX - ensure_array([1,2])  # [1,2]
 doc %EX - ensure_array("aa")   # ["aa"]
+doc %STATUS - deprecated
 F ensure_array(x) x.ensure(Arr)
 
 TEST ensure_array([1,2]) == [1,2]
@@ -2686,7 +2781,7 @@ TEST mapkv({"a": 1}, {[A+"zz", B+10]}) == {"azz": 11}
 
 doc Filter hash. Build new hash with kev-value pairs selected by predicate.
 doc h - Source hash
-doc predicate - Test function to be called with one key and one value at a time
+doc predicate - Test function or anything else acceptable by Pred() to be called with one key and one value at a time
 doc args - Additional arguments for calling the predicate
 doc %EX - {'a': 1, 'b': 2}.filter(F(k, v) k == 'a')  # {'a': 1}
 F filter(h:Hash, predicate) {
@@ -2730,7 +2825,7 @@ TEST {"a1": 1, "a2": 2, "b1": 10}.rejectv(X>5) == {"a1": 1, "a2": 2}
 
 doc Count number of key-value pairs in Hash that satisfy the predicate.
 doc e - Something to check, typically a Hash
-doc predicate - Test function to be called with one key and one value at a time
+doc predicate - Test function or anything else acceptable by Pred() to be called with one key and one value at a time
 doc args - Additional arguments for calling the predicate.
 doc %RET - Int
 doc %EX - {'a': 1, 'b': 2, 'c': 11}.count(F(k, v) v>10)  # 1
@@ -2844,11 +2939,14 @@ doc Add Hashes. Builds new hash with key-value pairs from both a and b. If same 
 doc %RET - Hash
 doc %EX - {'a': 1, 'b': 2, 'c': 3} + {'b': 20, 'd': 40}  # {'a': 1, 'b': 20, 'c': 3, 'd': 40}
 F +(a:Hash, b:Hash) {
-	{**a, **b}
+	t = typeof(a)
+	t != typeof(b) throws InvalidArgument("+(a:Hash, b:Hash) requires a and b to be of the same type").set(a=a, b=b)
+	t().update(a).update(b)
 }
 
-
 TEST {'a': 1, 'b': 2, 'c': 3} + {'b': 20, 'd': 40} == {'a': 1, 'b': 20, 'c': 3, 'd': 40}
+TEST section "order matters" { ns { a=1; c=3; } + ns { a=10; b=2; } == ns { a=10; c=3; b=2; } }
+TEST {"a": 1} + ns { b = 2 } THROWS InvalidArgument
 
 doc Build array of Str where each resulting string is of the form "KEY=VALUE"
 doc h - Source hash
@@ -2944,22 +3042,20 @@ TEST h={"a": 1, "b": 2}; s = h.shift("a"); h == {"b": 2} and s == 1
 
 # Inspired by Option from Scala. http://www.scala-lang.org/api/2.12.x/scala/Option.html
 
-{
-	doc Thrown when trying to get() a value from EmptyBox and no default value given.
-	type BoxFail(Error)
+doc Thrown when trying to get() a value from EmptyBox and no default value given.
+type BoxFail(Error)
 
-	doc A box which might (FullBox) or might not (EmptyBox) contain a value.
-	doc Box is somewhat similar to Arr of zero (EmptyBox) or exactly one (FullBox) element.
-	doc This analogy helps understanding each() and filter() operation.
-	type Box(Eachable1)
+doc A box which might (FullBox) or might not (EmptyBox) contain a value.
+doc Box is somewhat similar to Arr of zero (EmptyBox) or exactly one (FullBox) element.
+doc This analogy helps understanding each() and filter() operation.
+type Box(Eachable1)
 
-		doc Represents presence of a value
-		doc val - The value
-		type FullBox(Box)
+	doc Represents presence of a value
+	doc val - The value
+	type FullBox(Box)
 
-		doc Represents absence of a value
-		type EmptyBox([Box, NoData])
-}
+	doc Represents absence of a value
+	type EmptyBox([Box, NoData])
 
 doc Do not use directly!
 doc Helper constructor that throws InvalidArgument when
@@ -3019,21 +3115,25 @@ TEST Box(5).none(Int) == false
 TEST Box(5).none(Str)
 TEST EmptyBox().none(Int)
 
-doc Conditionaly convert FullBox to EmptyBox.
-doc predicate - Test function to be called with the value in the FullBox
+doc Conditionally convert FullBox to EmptyBox.
+doc predicate - Test function or anything else acceptable by Pred() to be called with the value in the FullBox, defaults to identity
 doc %RET - Box. fb if predicate succeeds, EmptyBox if not.
 doc %EX - Box(10).filter(X>5)   # <FullBox val=10>
 doc %EX - Box(10).filter(X>20)  # <EmptyBox>
-F filter(fb:FullBox, predicate) {
+F filter(fb:FullBox, predicate=identity) {
 	p = Pred(predicate)
 	p(fb.val) returns fb
 	EmptyBox()
 }
 
+TEST FullBox(null).filter() == EmptyBox()
+
 doc Do nothing
 doc %RET - eb
 doc %EX - EmptyBox().filter(X>20)  # <EmptyBox>
-F filter(eb:EmptyBox, predicate) eb
+F filter(eb:EmptyBox, predicate=identity) eb
+
+TEST EmptyBox().filter() == EmptyBox()
 
 doc Get FullBox value
 doc %RET - Any
@@ -3043,7 +3143,7 @@ F get(fb:FullBox, dflt=null) fb.val
 doc Get EmptyBox value. Always throws BoxFail.
 F get(eb:EmptyBox) throw BoxFail("Can not get value from EmptyBox")
 
-TEST try EmptyBox().get() catch(e:BoxFail) true
+TEST EmptyBox().get() THROWS BoxFail
 
 doc Get EmptyBox value
 doc %RET - dflt
@@ -3155,149 +3255,150 @@ doc Convert FullBox into JSON compatible data structure - the contents of the bo
 F JsonData(fb:FullBox) fb.get().JsonData()
 
 # === Result =====================================
-{
-	doc Thrown by get(Failure) as it has no value to get
-	type ResultFail(Error)
 
-	doc Result of a computation
-	doc val - computed value or exception
-	type Result
+doc Thrown by get(Failure) as it has no value to get
+type ResultFail(Error)
 
-		doc Successful computation
-		doc val - computed value
-		type Success(Result)
+doc Result of a computation
+doc val - computed value or exception
+type Result
 
-		doc Failed computation
-		doc val - exception
-		type Failure(Result)
+	doc Successful computation
+	doc val - computed value
+	type Success(Result)
+
+	doc Failed computation
+	doc val - exception
+	type Failure(Result)
 
 
-	doc Results, an array-like of Result elements
-	type Results(ArrLike)
+doc Results, an array-like of Result elements
+type Results(ArrLike)
 
-		F Str(r:Results) "<${r.typeof().name} ${r.group(F(x) x.typeof().name).mapv(len).map("$X:$Y").join(" ")}>"
+	F Str(r:Results) "<${r.typeof().name} ${r.group(F(x) x.typeof().name).mapv(len).map("$X:$Y").join(" ")}>"
 
-	type ResultsException(Error)
-		doc ResultsException where only failures are stored
-		type FailuresException(ResultsException)
+type ResultsException(Error)
+	doc ResultsException where only failures are stored
+	type FailuresException(ResultsException)
 
-	F init(re:ResultsException, msg:Str, results:Results) {
-		super(re, msg)
-		re.set('results', results)
-	}
-
-	doc Runs the computation and wraps the result: a value is wrapped in Success and an exception is wrapped in Failure.
-	doc %RET - Success or Failure
-	F Result(fun:Fun) {
-		try {
-			Success(fun())
-		} catch(e) {
-			Failure(e)
-		}
-	}
-
-	doc Initialize Success with the given value.
-	F init(s:Success, v) s.val = v
-
-	doc Initialize Failure with the given value.
-	F init(f:Failure, e:Exception) f.val = e
-
-	doc Gets wrapped value
-	doc %RET - Any
-	doc %EX - { 1 / 10 }.Result().get()  # 0
-	F get(s:Success) s.val
-
-	doc Throws ResultFail
-	doc %EX - { 1 / 0 }.Result().get()  # ResultFail exception
-	F get(f:Failure) {
-		throw ResultFail("Can not get value of Failure").set('cause', f.val)
-	}
-
-	doc Gets wrapped value
-	doc %RET - Any
-	doc %EX - { 1 / 10 }.Result().get(100)  # 0
-	F get(s:Success, dflt) s.val
-
-	doc Retruns dflt
-	doc %EX - { 1 / 0 }.Result().get(100)  # 100
-	F get(f:Failure, dflt) dflt
-
-	doc Run fun with wrapped value.
-	F each(s:Success, fun:Fun) {
-		fun(s.get())
-		s
-	}
-
-	doc Run fun with wrapped value. If exception is thrown, Failure is returned; otherwise Success with new vaule is returned.
-	doc %RET - Result
-	F map(s:Success, fun:Fun) {
-		try {
-			Success(fun(s.get()))
-		} catch(e) {
-			Failure(e)
-		}
-	}
-
-	doc No-op, returns f
-	doc %RET - f
-	F each(f:Failure, fun:Fun) f
-
-	doc No-op, returns f
-	doc %RET - f
-	F map(f:Failure, fun:Fun) f
-
-	doc Run predicate on wrapped value.
-	doc %RET - s or Failure
-	doc %EX - Success(10).filter(X>5)   # <Success val=10>
-	doc %EX - Success(10).filter(X>15)  # <Failure val=<ResultFail ...>>
-	F filter(s:Success, predicate) {
-		p = Pred(predicate)
-		p(s.val) returns s
-		Failure(ResultFail("Success filtered out, resulting Failure").set('filter_predicate', predicate))
-	}
-
-	doc No-op, returns f
-	doc %RET - f
-	doc %EX - Failure("blah").filter(X>5)  # <Failure val=blah>
-	F filter(f:Failure, predicate) f
-
-	doc Convert Success to Bool (true)
-	doc %RET - true
-	F Bool(s:Success) true
-
-	doc Convert Failure to Bool (false)
-	doc %RET - false
-	F Bool(f:Failure) false
-
-	doc EXPERIMENTAL! Do not use!
-	F ExitCode(r:Result) r.Bool().ExitCode()
+F init(re:ResultsException, msg:Str, results:Results) {
+	super(re, msg)
+	re.set('results', results)
 }
+
+doc Runs the computation and wraps the result: a value is wrapped in Success and an exception is wrapped in Failure.
+doc %RET - Success or Failure
+F Result(fun:Fun) {
+	try {
+		Success(fun())
+	} catch(e) {
+		Failure(e)
+	}
+}
+
+doc Initialize Success with the given value.
+F init(s:Success, v) s.val = v
+
+doc Initialize Failure with the given value.
+F init(f:Failure, e:Exception) f.val = e
+
+doc Gets wrapped value
+doc %RET - Any
+doc %EX - { 1 / 10 }.Result().get()  # 0
+F get(s:Success) s.val
+
+doc Throws ResultFail
+doc %EX - { 1 / 0 }.Result().get()  # ResultFail exception
+F get(f:Failure) {
+	throw ResultFail("Can not get value of Failure").set('cause', f.val)
+}
+
+doc Gets wrapped value
+doc %RET - Any
+doc %EX - { 1 / 10 }.Result().get(100)  # 0
+F get(s:Success, dflt) s.val
+
+doc Retruns dflt
+doc %EX - { 1 / 0 }.Result().get(100)  # 100
+F get(f:Failure, dflt) dflt
+
+doc Run fun with wrapped value.
+F each(s:Success, fun:Fun) {
+	fun(s.get())
+	s
+}
+
+doc Run fun with wrapped value. If exception is thrown, Failure is returned; otherwise Success with new vaule is returned.
+doc %RET - Result
+F map(s:Success, fun:Fun) {
+	try {
+		Success(fun(s.get()))
+	} catch(e) {
+		Failure(e)
+	}
+}
+
+doc No-op, returns f
+doc %RET - f
+F each(f:Failure, fun:Fun) f
+
+doc No-op, returns f
+doc %RET - f
+F map(f:Failure, fun:Fun) f
+
+doc Run predicate on wrapped value.
+doc %RET - s or Failure
+doc %EX - Success(10).filter(X>5)   # <Success val=10>
+doc %EX - Success(10).filter(X>15)  # <Failure val=<ResultFail ...>>
+F filter(s:Success, predicate=identity) {
+	p = Pred(predicate)
+	p(s.val) returns s
+	Failure(ResultFail("Success filtered out, resulting Failure").set('filter_predicate', predicate))
+}
+
+TEST Result({100}).filter() == Success(100)
+
+doc No-op, returns f
+doc %RET - f
+doc %EX - Failure("blah").filter(X>5)  # <Failure val=blah>
+F filter(f:Failure, predicate=identity) f
+
+TEST Result({1/0}).filter() is Failure
+
+doc Convert Success to Bool (true)
+doc %RET - true
+F Bool(s:Success) true
+
+doc Convert Failure to Bool (false)
+doc %RET - false
+F Bool(f:Failure) false
+
+doc EXPERIMENTAL! Do not use!
+F ExitCode(r:Result) r.Bool().ExitCode()
 
 TEST {read("/etc/passwd")}.Result() is Success
 TEST {read("NO-SUCH-FILE")}.Result() is Failure
 TEST Success(10).map(X*2).get() == 20
-TEST try ({ throw Error("xx") }.Result().map(X*2).get()) catch(rf:ResultFail) true
+TEST { throw Error("xx") }.Result().map(X*2).get() THROWS ResultFail
 
 doc Convert Success into JSON compatible data structure - the value of the computation
 F JsonData(s:Success) s.get().JsonData()
 
 # === Diff =======================================
-{
 
-	doc Represents desired target configuration list item presence
-	type Presence
+doc Represents desired target configuration list item presence
+type Presence
 
-		type PartialPresence([FullBox, Presence])
+	type PartialPresence([FullBox, Presence])
 
-			doc Represents a target configuration list item that must be present
-			type Present([FullBox, PartialPresence])
+		doc Represents a target configuration list item that must be present
+		type Present([FullBox, PartialPresence])
 
-			doc Represents a target configuration list item that must be absent
-			type Absent([FullBox, PartialPresence])
+		doc Represents a target configuration list item that must be absent
+		type Absent([FullBox, PartialPresence])
 
-		doc Represents a target configuration list item in a list
-		type ExactPresence([FullBox, Presence])
-}
+	doc Represents a target configuration list item in a list
+	type ExactPresence([FullBox, Presence])
 
 doc Internal method. Please do not use.
 doc Converts Presence or Arr[something] to Arr[Presence]. Used by Res and friends.
@@ -3313,14 +3414,12 @@ F normalize_presence_list(x) {
 }
 
 
-{
-	doc Represents difference
-	type Diff
-	doc Represents difference of elements between two arrays (order unimportant)
-	type ArrDiff(Diff)
-	doc Represents difference of elements between two hashes (order unimportant)
-	type HashDiff(Diff)
-}
+doc Represents difference
+type Diff
+doc Represents difference of elements between two arrays (order unimportant)
+type ArrDiff(Diff)
+doc Represents difference of elements between two hashes (order unimportant)
+type HashDiff(Diff)
 
 doc Compare arrays. Warning: by default Hash is used so internal Hash keys comparison is used, not ==
 doc full - Do not use Hash, work slower but use == comparison.
@@ -3498,15 +3597,25 @@ doc Convert Int to Int, a no-op
 doc %RET - i
 F Int(i:Int) i
 
-doc Convert base-10 string to Int.
+doc Convert to Int.
 doc Throws InvalidArgument if the number in s is not well-formatted.
 doc %RET - Int
 doc %EX - Int(" 100 ")  # 100
-F Int(s:Str) Int(s, 10)
+F Int(s:Str, base=10) {
+    base not in 0...36 throws InvalidArgument("Base must be between 0 and 36").set(s=s, base=base)
+    try {
+        super(s, base)
+    } catch(i: InvalidArgument) {
+        # Augment exception with more information
+        throw i.set(s=s, base=base)
+    }
+}
 
-TEST Int(" 100 ") == 100
-TEST try Int(" XX ") catch(e:InvalidArgument) true
-TEST Int(" XX ", 36) == 1221
+TEST Int("100") == 100
+TEST Int("100x") THROWS InvalidArgument
+TEST Int(" XX") THROWS InvalidArgument
+TEST Int(" XX", 36) == 1221
+TEST Int("9" * 1000) THROWS InvalidArgument
 
 doc Convert Bool to int.
 doc %RET - Int
@@ -3539,8 +3648,12 @@ section "Strings and characters" {
 		base64url = ascii_uppercase + ascii_lowercase + digits + '-_'
 		html_escape = {'&': '&amp;', '<': '&lt;', '>': '&gt;'}
 		html_attr_escape = html_escape + {'"': '&quot;', "'": '&#39;'}
-		shell_escape = {'\\': '\\\\', '"': '\\"', "'": "\\'", '&': '\\&'}
-		shell_escape_with_eq = shell_escape + {'=': '\\='}
+
+		section "Unused by stdlib" {
+			# Unused by stdlib. Previously was used by escape_bash().
+			shell_escape = {'\\': '\\\\', '"': '\\"', "'": "\\'", '&': '\\&'}
+			shell_escape_with_eq = shell_escape + {'=': '\\='}
+		}
 
 	}
 
@@ -3615,7 +3728,7 @@ section "Strings and characters" {
 	F '[]'(s:Str, i:Int) s[i..i+1]
 
 	TEST ("abc"[0] == "a") and ("abc"[2] == "c")
-	TEST try "abc"[3] == "x" catch(e:IndexNotFound) true
+	TEST "abc"[3] == "x" THROWS IndexNotFound
 
 	doc Get given character (currently byte) of the string (negative indexes handler). Throws IndexNotFound if abs(i) > len(s).
 	doc s - Original string.
@@ -3628,7 +3741,7 @@ section "Strings and characters" {
 	}
 
 	TEST ("abc"[-1] == "c") and ("abc"[-3] == "a")
-	TEST try "abc"[-4] == "x" catch(e:IndexNotFound) true
+	TEST "abc"[-4] == "x" THROWS IndexNotFound
 
 	doc Get a substring. Indexes in s are specified by NumRange.
 	doc s - Original string
@@ -4111,19 +4224,13 @@ section "Thread" block _ {
 		ex = Executor(threads)
 		debug("conc", "pmap uses excutor ${ex}")
 		ret = [null] * len(e)
-		failed = false
 		e.each_idx_val(F(idx, val) {
 			ex.push({
 				ret[idx] = Result({ mapper(val) })
-				if ret[idx] is Failure {
-					failed = true
-				}
 			})
 		})
 		ex.wait()
-		if failed {
-			throw ResultsException("pmap had failures", Results(ret))
-		}
+		ret.any(Failure) throws ResultsException("pmap had failures", Results(ret))
 		ret.map(get)
     }
 
@@ -4592,13 +4699,11 @@ section "Path" {
 
 # === Commands and processes (WIP) ===============
 
-{
-	doc EXPERIMENTAL!
-	doc %EX - for p in %[ls base64 dd] assert(Program(p))
-	type Program
-	type ProcessesPipeline
-	type ProcessRedir
-}
+doc EXPERIMENTAL!
+doc %EX - for p in %[ls base64 dd] assert(Program(p))
+type Program
+type ProcessesPipeline
+type ProcessRedir
 
 doc EXPERIMENTAL!
 F init(p:Program, name:Str) init(args())
@@ -4617,6 +4722,9 @@ F assert(p:Program) {
 
 TEST try assert(Program('no_such_prog')) catch(e) e is AssertFail
 TEST assert(Program('ls')) == Program('ls')
+
+doc EXPERIMENTAL!
+F Arg(p:Program) p.name
 
 F init(pp:ProcessesPipeline, cp:CommandsPipeline) pp.set(
 	cp = cp
@@ -4689,15 +4797,45 @@ F write(s:Str, fd:Int) {
 	write(fd, s)
 }
 
-doc Write data to a file referenced by file descriptor.
-doc WARNING: Incomplete implementation.
-doc TODO: handle errors, throw exceptions.
-doc TODO: handle possible EINTR.
-doc fd - File descriptor to write to
-doc %RET - unspecified at this time, do not count on it
-F write(fd:Int, s:Str) fd.c_write(s)
+type WriteFail(CError)
 
-{ type TtyCheckFail(CError) }
+doc Write data to a file referenced by file descriptor.
+doc fd - File descriptor to write to
+doc Throws WriteFail on failure.
+doc s - String of bytes to write
+doc %RET - fd
+F write(fd:Int, s:Str) {
+	out = s
+	while true {
+		bytes_written = fd.c_write(out)
+		if bytes_written == -1 {
+			if c_errno() == C_EINTR {
+				# Untested
+				continue
+			}
+			throw WriteFail("Failed to write to file descriptor ${fd}").set(fd=fd, s=s)
+		}
+		if bytes_written == len(out) {
+			break
+		}
+		out = out[bytes_written..null]
+	}
+	fd
+}
+
+doc Write a string followed by newline character to a file descriptor.
+doc Throws WriteFail on failure.
+doc %RET - null
+doc %EX - echo(2, "blah")  # Output on stderr: blah"
+F echo(fd:Int, s:Str) {
+	write(fd, "${s}${STDLIB_EOL}")
+	null
+}
+
+TEST write(1, "W1") == 1
+TEST write(10, "W10") THROWS WriteFail
+
+type TtyCheckFail(CError)
 
 doc Check whether given fd represents a TTY. Uses ISATTY(3).
 doc Throws TtyCheckFail.
@@ -4717,19 +4855,17 @@ F isatty(fd:Int) {
 
 # http://www.microhowto.info/howto/capture_the_output_of_a_child_process_in_c.html
 
-{
-	doc Wrapper around file descriptors returned by PIPE(2)
-	type Pipe
-		type PipeToChildProcess(Pipe)
-			type PipeFromParentToChildProcess(PipeToChildProcess)
-			type ReadingPipeBetweenChildren(PipeToChildProcess)
-		type PipeFromChildProcess(Pipe)
-			type PipeFromChildToParentProcess(PipeFromChildProcess)
-				type CollectingPipeFromChildToParentProcess(PipeFromChildProcess)
-			type WritingPipeBetweenChildren(PipeFromChildProcess)
-	doc Represents failure of creating a Pipe when calling PIPE(2)
-	type PipeCreateFail(CError)
-}
+doc Wrapper around file descriptors returned by PIPE(2)
+type Pipe
+	type PipeToChildProcess(Pipe)
+		type PipeFromParentToChildProcess(PipeToChildProcess)
+		type ReadingPipeBetweenChildren(PipeToChildProcess)
+	type PipeFromChildProcess(Pipe)
+		type PipeFromChildToParentProcess(PipeFromChildProcess)
+			type CollectingPipeFromChildToParentProcess(PipeFromChildProcess)
+		type WritingPipeBetweenChildren(PipeFromChildProcess)
+doc Represents failure of creating a Pipe when calling PIPE(2)
+type PipeCreateFail(CError)
 
 # TODO: better exceptions (use correct type, not string, maybe use errno)
 doc Pipe constructor. Create UNIX pipe using PIPE(2). Throws PipeCreateFail if pipe can not be created.
@@ -4800,7 +4936,7 @@ F dup2_reading_end(p:Pipe, newfd:Int) dup2(p.read_fd, newfd)
 
 # --- File ---
 
-{ type FileIOFail(CError) }
+type FileIOFail(CError)
 
 doc Create File object from the given path. The file is not open.
 doc %EX - f = File('/tmp/myfile')
@@ -4839,9 +4975,7 @@ F open(f:File, flags:Str) {
 # XXX: might not be correct on all platforms
 TEST open(File("/etc/passwd"), "r").fd > 0
 
-{
-	type BasenameArgumentFail(InvalidArgument)
-}
+type BasenameArgumentFail(InvalidArgument)
 
 doc Get basename of the file.
 F basename(p:Path) p.path.basename()
@@ -4856,7 +4990,7 @@ F basename(s:Str) {
 TEST basename("/abc") == "abc"
 TEST basename("abc") == "abc"
 TEST basename("abc/def") == "def"
-TEST try basename("abc/def/") catch(e:BasenameArgumentFail) true
+TEST basename("abc/def/") THROWS BasenameArgumentFail
 
 
 # TODO: something more efficient than reading all of it. Some kind of streaming.
@@ -4964,13 +5098,11 @@ F Str(r:CommandRedir) "<${r.typeof().name} ${r.fd} ${r.marker} ${r.datum}>"
 
 # --- Process ---
 
-{
-	doc Running or finished process
-	type Process
+doc Running or finished process
+type Process
 
-	doc Occurs when executable was not found in path or when executable was absolute or relative and was not found.
-	type ProgramNotFound(Exception)
-}
+doc Occurs when executable was not found in path or when executable was absolute or relative and was not found.
+type ProgramNotFound(Exception)
 
 block _ {
 
@@ -5036,7 +5168,7 @@ block _ {
 		finished_ok(p, 'exit_code', ok)
 	}
 
-	TEST try $(ok:2 cat NO_SUCH_FILE 2>/dev/null) catch(pf:ProcessFail) true
+	TEST $(ok:2 cat NO_SUCH_FILE 2>/dev/null) THROWS ProcessFail
 	TEST $(ok:1 cat NO_SUCH_FILE 2>/dev/null); true
 	TEST $(ok:[1,10] cat NO_SUCH_FILE 2>/dev/null); true
 	TEST $(ok:1..2 cat NO_SUCH_FILE 2>/dev/null); true
@@ -5259,9 +5391,11 @@ TEST Argv({"--a": 1, "-b": null, ["-y1", "-n1"]: true, ["-y2", "-n2"]: false, ["
 TEST Argv({"-a1": [], "-a2": [1,2,3]}) == ["-a2", 1, 2, 3]
 TEST Argv({["--repeat"]: ["a", "b"]}) == ["--repeat", "a", "--repeat", "b"]
 
-doc EXPERIMENTAL! Do not use!
+doc Deprecated. Do not use!
+doc %STATUS - deprecated
 F Argv(a:Arr) {
-	a.reject(NoData).map(only(Box, get)).map(only(X is not Arr, FullBox)).flatten()
+	warn("Using deprecated Argv(Arr)")
+	a.reject(NoData).map(only(Box, get)).map(X.ensure(Arr)).flatten()
 }
 
 # --- $() ---
@@ -5818,37 +5952,35 @@ F config(k:Str, v) {
 
 # === MatchResult, Pfx, Sfx ============================
 
-{
-	doc Successful or unsuccessful match result
-	type MatchResult
+doc Successful or unsuccessful match result
+type MatchResult
 
-		doc Successful match result
-		doc matches - Successful matches
-		type MatchSuccess([MatchResult, Success])
+	doc Successful match result
+	doc matches - Successful matches
+	type MatchSuccess([MatchResult, Success])
 
-		doc Unsucessfull match result
-		type MatchFailure([MatchResult, Failure])
+	doc Unsucessfull match result
+	type MatchFailure([MatchResult, Failure])
 
-	type SubSeq
-		doc Prefix subsequence of a sequence
-		type Pfx(SubSeq)
-			doc Prefix that might or might not be present for (-) to succeed
-			type MaybePfx(Pfx)
-			doc Prefix that must be present for ~ matching to succeed
-			type MustPfx(Pfx)
-		doc Infix subsequence of a sequence
-		type Ifx(SubSeq)
-			doc Infix that might or might not be present for (-) to succeed
-			type MaybeIfx(Ifx)
-			doc Infix that must be present for ~ matching to succeed
-			type MustIfx(Ifx)
-		doc Suffix subsequence of a sequence
-		type Sfx(SubSeq)
-			doc Suffix that might or might not be present for (-) to succeed
-			type MaybeSfx(Sfx)
-			doc Suffix that must be present for ~ matching to succeed
-			type MustSfx(Sfx)
-}
+type SubSeq
+	doc Prefix subsequence of a sequence
+	type Pfx(SubSeq)
+		doc Prefix that might or might not be present for (-) to succeed
+		type MaybePfx(Pfx)
+		doc Prefix that must be present for ~ matching to succeed
+		type MustPfx(Pfx)
+	doc Infix subsequence of a sequence
+	type Ifx(SubSeq)
+		doc Infix that might or might not be present for (-) to succeed
+		type MaybeIfx(Ifx)
+		doc Infix that must be present for ~ matching to succeed
+		type MustIfx(Ifx)
+	doc Suffix subsequence of a sequence
+	type Sfx(SubSeq)
+		doc Suffix that might or might not be present for (-) to succeed
+		type MaybeSfx(Sfx)
+		doc Suffix that must be present for ~ matching to succeed
+		type MustSfx(Sfx)
 
 # TODO: warn()
 doc Successful match constructor
@@ -5885,7 +6017,7 @@ doc %RET - EmptyBox
 doc %EX - Box("a" ~ /^(..)/).map({"First two letters: ${A[1]}"}).get("(too short)")  # (too short)
 F Box(f:Failure) EmptyBox()
 
-doc SubSec construcor
+doc SubSec constructor
 F init(s:SubSeq, val) s.val = val
 
 # The common case
@@ -5917,7 +6049,7 @@ F -(s:Str, pfx:Pfx) {
 }
 
 TEST "abc" - Pfx("a") == "bc"
-TEST try "abc" - Pfx("wa") catch(mf:InvalidArgument) true
+TEST "abc" - Pfx("wa") THROWS InvalidArgument
 TEST "abc" - MaybePfx("wa") == "abc"
 
 
@@ -5935,7 +6067,7 @@ F -(s:Str, sfx:Sfx) {
 }
 
 TEST "abc" - Sfx("c") == "ab"
-TEST try "abc" - Sfx("cd") catch(mf:InvalidArgument) true
+TEST "abc" - Sfx("cd") THROWS InvalidArgument
 TEST "abc" - MaybeSfx("cd") == "abc"
 
 doc Return string without the infix. Throws InvalidArgument if ifx is MustIfx but s does not contain it.
@@ -5953,7 +6085,7 @@ F -(s:Str, ifx:Ifx) {
 }
 
 TEST "abcde" - Ifx("bc") == "ade"
-TEST try "abcde" - Ifx("xy") catch(mf:InvalidArgument) true
+TEST "abcde" - Ifx("xy") THROWS InvalidArgument
 TEST "abcde" - MaybeIfx("xy") == "abcde"
 
 doc Check whether s starts with pfx.
@@ -5988,6 +6120,9 @@ F ~(s:Str, sfx:Sfx) {
 doc Convenience method to access matches in MatchSuccess
 doc %EX - ("abc" ~ /a(.)c/)[1]  # "b"
 F '[]'(ms:MatchSuccess, idx:Int) ms.matches[idx]
+
+doc Get indexed match, returning dflt is the match is not found
+F get(ms:MatchSuccess, idx:Int, dflt=null) ms.matches.get(idx, dflt)
 
 TEST ("abc" ~ /a(.)c/)[1] == "b"
 
@@ -6353,31 +6488,21 @@ F SafeStr(val) {
 
 doc Inspect any value.
 doc %RET - Lines with exactly one line
-F inspect(val) Lines([SafeStr(val)])
+F inspect(val) Lines([val.typeof().name + ': ' + SafeStr(val)])
 
 doc Inspect Eachable1
 doc %RET - Lines
 F inspect(e:Eachable1) {
 	guard e is not Box
+	guard e is not Int
+	guard e is not Range
 	Lines(["${e.typeof().name} of size ${e.len() tor '(unknown size)'}"] + e.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
 }
-
-doc Inspect boolean.
-doc %RET - Lines with exactly one line
-F inspect(b:Bool) Lines(["Bool: $b"])
 
 # F inspect(mm:MultiMethod) ["MultiMethod "] + mm.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"})
 doc Inspect MultiMethod
 doc %RET - Lines
-F inspect(mm:MultiMethod) Lines(["MultiMethod", "  Methods"]) + ("    " + mm.Arr().inspect())
-
-doc Inspect Real
-doc %RET - Lines with exactly one line
-F inspect(r:Real) Lines(["Real: $r"])
-
-doc Inspect Int
-doc %RET - Lines with exactly one line
-F inspect(i:Int) Lines(["Int: $i"])
+F inspect(mm:MultiMethod) Lines(["MultiMethod:", "  Methods"]) + ("    " + mm.Arr().inspect())
 
 doc Inspect Str
 doc %RET - Lines
@@ -6560,10 +6685,8 @@ block _ {
 
 # === Time =======================================
 
-{
-	type Time
-	type TimeFail(CError)
-}
+type Time
+type TimeFail(CError)
 
 TIME_FORMAT = ENV.get('NGS_TIME_FORMAT', '%F %T %Z')
 
@@ -6719,11 +6842,9 @@ F rand(r:NumRange) {
 
 # === retry facility =============================
 
-{
-	doc Represents failure on all retries
-	type RetryFail(Error)
-	type RetryBodyMissing(InvalidArgument)
-}
+doc Represents failure on all retries
+type RetryFail(Error)
+type RetryBodyMissing(InvalidArgument)
 
 # TODO: Handle NoNext that could occur in sleep iterator
 doc Retry. Executes given "body" "times" times. Throws RetryFail if all calls fail and fail_cb is not provided.
@@ -6805,7 +6926,7 @@ F decode_hex(s:Str) {
 }
 
 TEST decode_hex("010203") == chr(1) + chr(2) + chr(3)
-TEST try decode_hex("0102034") catch(e:InvalidArgument) true
+TEST decode_hex("0102034") THROWS InvalidArgument
 
 STDLIB_INVALID_URI_CHAR_RE = /[^-a-zA-Z0-9_.!~*'()]/
 #'

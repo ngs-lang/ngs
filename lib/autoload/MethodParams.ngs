@@ -1,7 +1,5 @@
-{
-	doc Describes parameters of a method
-	type MethodParams(ArrLike)
-}
+doc Describes parameters of a method
+type MethodParams(ArrLike)
 
 F init(mp:MethodParams, f:Fun) {
 	p = params(f).map(MethodParam)

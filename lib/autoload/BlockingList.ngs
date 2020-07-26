@@ -1,55 +1,51 @@
-{
+# https://dzone.com/articles/java-concurrency-blocking-queu
+# https://stackoverflow.com/questions/2085511/wait-and-notify-in-c-c-shared-memory
 
-	# https://dzone.com/articles/java-concurrency-blocking-queu
-	# https://stackoverflow.com/questions/2085511/wait-and-notify-in-c-c-shared-memory
+doc Blocking linked list. pop() and unshift() block until an item is available.
+type BlockingList(List)
 
-	doc Blocking linked list. pop() and unshift() block until an item is available.
-	type BlockingList(List)
+ns {
 
-	ns {
+	global init, push, pop, shift, unshift
 
-		global init, push, pop, shift, unshift
+	doc Initialize empty BlockingList
+	F init(bl:BlockingList) {
+		super(bl)
+		bl.lock = Lock()
+		bl.cond_add = Cond(lock=bl.lock)
+		bl.cond_remove = Cond(lock=bl.lock)
+	}
 
-		doc Initialize empty BlockingList
-		F init(bl:BlockingList) {
-			super(bl)
-			bl.lock = Lock()
-			bl.cond_add = Cond(lock=bl.lock)
-			bl.cond_remove = Cond(lock=bl.lock)
-		}
+	doc Append item to the end of the List
+	F push(bl:BlockingList, val) {
+		s = super
+		bl.lock.acquire({
+			s(bl, val)
+			bl.cond_add.notify()
+		})
+		bl
+	}
 
-		doc Append item to the end of the List
-		F push(bl:BlockingList, val) {
-			s = super
-			bl.lock.acquire({
-				s(bl, val)
-				bl.cond_add.notify()
-			})
-			bl
-		}
+	doc Remove item from the end of the List. Blocks until an item is available.
+	F pop(bl:BlockingList) {
+		s = super
+		bl.cond_add.wait({bl}, {s(bl)})
+	}
 
-		doc Remove item from the end of the List. Blocks until an item is available.
-		F pop(bl:BlockingList) {
-	        s = super
-	        bl.cond_add.wait({bl}, {s(bl)})
-	    }
+	doc Prepend item to the BlockingList.
+	F unshift(bl:BlockingList, val) {
+		s = super
+		bl.lock.acquire({
+			s(bl, val)
+			bl.cond_add.notify()
+		})
+		bl
+	}
 
-		doc Prepend item to the BlockingList.
-		F unshift(bl:BlockingList, val) {
-			s = super
-			bl.lock.acquire({
-				s(bl, val)
-				bl.cond_add.notify()
-			})
-			bl
-		}
-
-		doc Remove item from the beginning of the List. Blocks until an item is available.
-		F shift(bl:BlockingList) {
-			s = super
-			bl.cond_add.wait({bl}, {s(bl)})
-		}
-
+	doc Remove item from the beginning of the List. Blocks until an item is available.
+	F shift(bl:BlockingList) {
+		s = super
+		bl.cond_add.wait({bl}, {s(bl)})
 	}
 
 }

@@ -1,33 +1,35 @@
 #!/usr/bin/env ngs
-{
 
-	tests_counter = 0
+tests_counter = 0
 
-	F perform_test(test_code:Str) {
-		global tests_counter
-		echo("+ Test: $test_code")
-		c = "{ F() { $test_code }() }"
-		program_bytecode = compile(c, '<test>')
-		program_func = load(program_bytecode, '<test>')
-		result = program_func()
-		result != true throws Error("Test failed: $test_code. Returned $result")
-		tests_counter += 1
-	}
-
-	F perform_tests_in_file(file:Str) {
-		# TODO: also other files
-		File(file).lines(F(line) {
-			# dump(line)
-			if m = line ~ /^\s*TEST (.*)/ {
-				perform_test(m[1])
-			}
-		})
-	}
-
-	files = %[bootstrap.ngs stdlib.ngs lang-tests.ngs].map(NGS_DIR / X) + ``find "${NGS_DIR}/autoload" -name '*.ngs'``
-
-	files.each(perform_tests_in_file)
-
-	assert(tests_counter > 440)
-	echo("OK. Tests: ${tests_counter}")
+F perform_test(test_code:Str) {
+	global tests_counter
+	echo("+ Test: $test_code")
+	c = "{ F() { $test_code }() }"
+	program_bytecode = compile(c, '<test>')
+	program_func = load(program_bytecode, '<test>')
+	result = program_func()
+	result != true throws Error("Test failed: $test_code. Returned $result")
+	tests_counter += 1
 }
+
+F perform_tests_in_file(file:Str) {
+	# TODO: also other files
+	File(file).lines(F(line) {
+		# dump(line)
+		if m = line ~ /^\s*TEST (.*?)( THROWS (\w+))?$/ {
+			test_code = m[1]
+			if e = m.get(3) {
+				test_code = "try { ${test_code} ; false } catch(e:${e}) true"
+			}
+			perform_test(test_code)
+		}
+	})
+}
+
+files = %[bootstrap.ngs stdlib.ngs lang-tests.ngs].map(NGS_DIR / X) + ``find "${NGS_DIR}/autoload" -name '*.ngs'``
+
+files.each(perform_tests_in_file)
+
+assert(tests_counter > 540)
+echo("OK. Tests: ${tests_counter}")

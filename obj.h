@@ -288,7 +288,7 @@ typedef enum {
 #define IS_KWARGS_MARKER(v)    ((v).num == V_KWARGS_MARKER)
 
 #define SET_INT(v,n)    (v).num = ((n) << TAG_BITS) | TAG_INT
-#define MAKE_INT(n)     ((VALUE){.num=((n) << TAG_BITS) | TAG_INT})
+#define MAKE_INT(n)     ((VALUE){.num=(((intptr_t) (n)) << TAG_BITS) | TAG_INT})
 #define MAKE_BOOL(b)    ((VALUE){.num=((b) ? V_TRUE : V_FALSE)})
 #define MAKE_OBJ(o)     ((VALUE){.ptr=(o)})
 #define MAKE_NULL       ((VALUE){.num=V_NULL})

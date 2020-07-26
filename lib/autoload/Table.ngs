@@ -1,11 +1,9 @@
 # === Table ======================================
 
-{
-	doc Holds tabular data
-	doc name - Table name to display and for configuration lookup
-	doc cols_enum - Enum for columns names
-	type Table(Eachable1)
-}
+doc Holds tabular data
+doc name - Table name to display and for configuration lookup
+doc cols_enum - Enum for columns names
+type Table(Eachable1)
 
 doc Internal method. Please do not use.
 F StrForTable(x) Str(x)
@@ -121,8 +119,8 @@ F calculate_num_cols_to_show(t:Table, max_colums_widths:Arr, available_cols:Int)
 doc Displays a table. Implemented only for tty output (or output_format=text configuration)
 F echo(t:Table) {
 	guard 1.isatty() or (config('output_format') == 'text')
-	lines = (ENV.get('LINES')   or `tput lines`).Int()
-	cols  = (ENV.get('COLUMNS') or `tput cols`).Int()
+	lines = (ENV.get('LINES')   or `line: tput lines`).Int()
+	cols  = (ENV.get('COLUMNS') or `line: tput cols`).Int()
 	# TODO: special treatment for tmux? can print any width and tmux can be adjusted later.
 	# TODO: support Arr in headers
 	# TODO: handle Hash type of cell (maybe allow configuring order of keys etc)
@@ -225,13 +223,3 @@ F echo(t:Table) {
 TEST Table([{"a": 1}, {"a": 2}]).column("a") == [1,2]
 TEST Table([{"a": 1}, {"a": 2}]).columns() == [[1,2]]
 TEST Table([{"a": 1}, {"a": 2}]).len() == 2
-
-# Where is it used. Can we get rid of this?
-doc DEPRECATED.
-F table(a:Arr) {
-	warn("Using deprecated table(a:Arr)")
-	t = Table()
-	a[0].each(t.register_column(X))
-	a[1..null].each(t.push(X))
-	t
-}

@@ -1,22 +1,20 @@
-{
-	doc Method parameter, element of MethodParams(...)
-	type MethodParam
+doc Method parameter, element of MethodParams(...)
+type MethodParam
 
-	doc Required method parameter - F(my_req)
-	type RequiredMethodParam(MethodParam)
+doc Required method parameter - F(my_req)
+type RequiredMethodParam(MethodParam)
 
-	doc Optional method parameter - F(my_opt=dflt_value)
-	type OptionalMethodParam(MethodParam)
+doc Optional method parameter - F(my_opt=dflt_value)
+type OptionalMethodParam(MethodParam)
 
-	doc Splat method parameter
-	type SplatMethodParam(MethodParam)
+doc Splat method parameter
+type SplatMethodParam(MethodParam)
 
-	doc Arr(ay) splat method parameter - F(*args)
-	type ArrSplatMethodParam(SplatMethodParam)
+doc Arr(ay) splat method parameter - F(*args)
+type ArrSplatMethodParam(SplatMethodParam)
 
-	doc Hash splat method parameter - F(**kwargs)
-	type HashSplatMethodParam(SplatMethodParam)
-}
+doc Hash splat method parameter - F(**kwargs)
+type HashSplatMethodParam(SplatMethodParam)
 
 doc Initialize MethodParam from params() array element
 F init(mp:MethodParam, h:Hash) {

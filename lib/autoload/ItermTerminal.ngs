@@ -6,7 +6,7 @@
 # iTerm2 detection is based on https://iterm2.com/utilities/it2check
 F AnsiTerminal(fd_in:Int, fd_out:Int) {
 	guard 'NGS_NO_ITERM' not in ENV
-	saved_stty=`stty -g 0<${fd_in}`
+	saved_stty=`line: stty -g 0<${fd_in}`
 	F read_dsr() {
 		debug("file", "AnsiTerminal() read_dsr() reading 2 bytes spam")
 		spam = fd_in.read(2)

@@ -60,16 +60,16 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		unboxed.mapv(only(Pfx, { "${A.val}*" })).mapv(only(Arr, X.join(","))).map("Name=$X,Values=$Y")
 	}
 
-	TEST AWS::cli_filters({}) == []
-	TEST AWS::cli_filters({"x": "y", "z": null, "w": FullBox("ww")}) == ['Name=x,Values=y', 'Name=w,Values=ww']
-	TEST AWS::cli_filters({"x": Pfx("aa"), "z": EmptyBox()}) == ['Name=x,Values=aa*']
+	TEST AWS2::cli_filters({}) == []
+	TEST AWS2::cli_filters({"x": "y", "z": null, "w": FullBox("ww")}) == ['Name=x,Values=y', 'Name=w,Values=ww']
+	TEST AWS2::cli_filters({"x": Pfx("aa"), "z": EmptyBox()}) == ['Name=x,Values=aa*']
 
 	doc Convert hash to Name=tag:...,Values=... strings suitable for passing to AWS CLI as filters.
-	doc %EX - filters = AWS::cli_filters({'vpc-id': ...})
+	doc %EX - filters = AWS2::cli_filters({'vpc-id': ...})
 	doc %EX - vpcs = ``aws ec2 describe-vpcs --filters $*filters``
 	F cli_tags_filters(h:Hash) h / "Name=tag:$X,Values=$Y"
-	TEST AWS::cli_tags_filters({}) == []
-	TEST AWS::cli_tags_filters({"x": "y"}) == ['Name=tag:x,Values=y']
+	TEST AWS2::cli_tags_filters({}) == []
+	TEST AWS2::cli_tags_filters({"x": "y"}) == ['Name=tag:x,Values=y']
 
 	_aws_cached_regions = null
 
@@ -89,7 +89,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc Call cb in parallel threads, each with AWS region name as argument.
 	doc cb - Must return an array. regions() sets ._Region in the result and flattens the results
 	doc %RET - Arr
-	doc %EX - ins = AWS::regions({ ``aws ec2 describe-instances --region $A $*filters`` })
+	doc %EX - ins = AWS2::regions({ ``aws ec2 describe-instances --region $A $*filters`` })
 	F regions(cb:Fun) {
 		regs = regions()
 		regs.pmap(F(r) {
@@ -158,7 +158,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	}
 
 	doc Get unique identifier of a resource
-	doc %EX - AWS::Instance().find().resources[0].id()  # i-0011b2.....
+	doc %EX - AWS2::Instance().find().resources[0].id()  # i-0011b2.....
 	F id(r:Res) {
 		r.props.(r.def.typeof().user.id)
 	}
@@ -602,7 +602,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		# delete_command       %[aws ec2 delete-vpc --vpc-id]
 
 	doc Initialize SecGroup from security group name and vpc.
-	doc %EX - AWS::SecGroup("https-server", AWS::Vpc(...))
+	doc %EX - AWS2::SecGroup("https-server", AWS2::Vpc(...))
 	F init(rd:SecGroup, GroupName:Str, VpcId) {
 		guard VpcId is Str or VpcId is Vpc
 		super(rd, GroupName=GroupName, VpcId=VpcId)
@@ -641,19 +641,6 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		a.len() != b.len() returns false
 		not(Diff(a, b))
 	}
-
-	# doc Declarative primitive for creating AWS Security Group resources
-	# doc %STATUS - internal
-	# F create(rd:SecGroup, **props) {
-	# 	rd.log('Create', 'SG')
-	# 	argv = Argv({'--vpc-id': rd.anchor.Box('VpcId').map(_one_id)})
-	# 	rd.run('Create SG', %(aws ec2 create-security-group --group-name ${rd.anchor.GroupName} --description ${rd.req_prop('Description', props)} $*argv))
-	# 	if not(rd.dry_run) {
-	# 		# XXX use GroupId output of run()
-	# 		rd.find()
-	# 		rd.resources % update(X, props)
-	# 	}
-	# }
 
 	doc Declarative primitive for updating AWS Security Group resources
 	doc %STATUS - internal
@@ -801,7 +788,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	#       a property in Anchor for example, so one
 	#       could just select the latest image with Anchor
 	doc Declarative primitive for referencing latest AWS AMI resources. Will probably be reworked to be special anchor item.
-	doc %EX - AWS::Image(OwnerId=AWS_AMI_OWNER_DEBIAN, Name=Pfx('debian-jessie-amd64-hvm'), RootDeviceType='ebs', VolumeType='gp2').latest()
+	doc %EX - AWS2::Image(OwnerId=AWS_AMI_OWNER_DEBIAN, Name=Pfx('debian-jessie-amd64-hvm'), RootDeviceType='ebs', VolumeType='gp2').latest()
 	F latest(rd:Image) {
 		rd.find_if_needed()
 		assert(rd.resources.len() >= 1, "Can not find latest() image because there are no images")
@@ -861,11 +848,11 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		debug("AWS", "Find Instance ${rd}")
 		instance_ids = rd.anchor.get('InstanceId')
 		rd.anchor.Box('_Elb').each(F(elb) {
-			assert(rd.anchor._Elb is Elb, "_Elb must be of type AWS::Elb")
+			assert(rd.anchor._Elb is Elb, "_Elb must be of type AWS2::Elb")
 			instance_ids = elb.map(F(elb) elb.Instances).flatten()
 		})
 		rd.anchor.Box('_Eip').each(F(eip) {
-			assert(rd.anchor._Eip is Eip, "_Eip must be of type AWS::Eip")
+			assert(rd.anchor._Eip is Eip, "_Eip must be of type AWS2::Eip")
 			instance_ids = eip.get('InstanceId').without('')  # '' can happen in "standard" domain
 		})
 		if instance_ids == [] {
@@ -881,7 +868,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			})
 		})
 
-		debug("AWS::Instance", "Filters: $filters")
+		debug("AWS2::Instance", "Filters: $filters")
 
 		regs = cond {
 			rd.anchor._Region is Arr { rd.anchor._Region }
@@ -1145,7 +1132,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			'Tags': p.Tags
 		}
 		F _eq(h:Hash) h.map(F(k,v) "${k}=${code(v)}").join(', ')
-		"AWS::Instance(${_eq(anchor)}).create(${_eq(props)})"
+		"AWS2::Instance(${_eq(anchor)}).create(${_eq(props)})"
 	}
 
 	# --------------------------------------------------

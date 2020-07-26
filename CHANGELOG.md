@@ -1,3 +1,54 @@
+## 2020-07-26 Version 0.2.8
+
+### New features
+
+* Add `setup-dev-env` target in Makefile
+* Add `get(MatchSuccess, Int, dflt)`
+* Add `Null()` constructor
+* Add experimental `AllOf()`
+* Add experimental `Bool(AllOf)`
+* Add experimental `Bool(AnyOf)`
+* Add `linux` and `windows` parameter to `ec2din.ngs`
+* More concise tests with `THROWS` pseudo-operator
+* Add `NamedInstances` (aka enums)
+* Add experimental `Arg(Program)`
+
+### Fixes and improvements
+
+* Function with only guard statement no more crashes NGS
+* Add missing `Bool()` call in `for(..., HERE, ...)`
+* Functions that take predicates - default the predicates to `identity()` and improve documentation
+* `filter(HashLike, predicate)` - the `predicate` doesn't have to be `Fun` anymore
+* `filter(hl:HashLike, predicate)` now returns value of the same type as `hl`
+* `escape_bash()` - fixed and it's not experimental anymore
+* `section` inside `ns` now working properly
+* Top-level/commands syntax now treats as expression syntax any expression that starts with identifier followed by "." or "::".
+* Support `block.return()` to return `null`
+* `each(MultiMethod, Fun)` now returns the first parameter
+* Improve readability of `partition(Eachable1, predicate)`
+* `Int(Str)` now throws if the string contains garbage in the end
+* `IPAddr()` and `IPNet()` now validate input
+* `+(Hash, Hash)` now handles subtypes properly (does not return a `Hash` but the subtype)
+* `ns { ... }` syntax now allows empty body - `ns { }`.
+* Native `attrs()` methods - not crash on invalid argument
+* `attrs()` now defaults to empty `Hash`, not to `null`.
+* Improve `Str(Type)`
+* `echo(INVALID_FILE_DESCRIPTOR, ...)` now throws `WriteFail`
+* `write(INVALID_FILE_DESCRIPTOR, ...)` now throws `WriteFail`
+
+### Breaking changes
+
+* Experimental `OneOf` renamed to `AnyOf` for naming consistency
+* Remove unused literal syntax for table
+* Syntax: `F` function definition must be followed by a space when the function is named
+* Remove deprecated `table(Arr)`
+* Remove deprecated `filter(Eachable1, Str, Any)`
+* Remove experimental `min(Eachable1, Fun)` and `max(Eachable1, Fun)`
+
+### Deprecated
+
+* Deprecated `ensure_array(x)` in favor of the newer `ensure(x, Arr)`
+
 ## 2019-11-10 Version 0.2.7
 
 ### New features

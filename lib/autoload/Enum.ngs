@@ -1,7 +1,5 @@
-{
-	doc Mapping of names to numbers
-	type Enum(HashLike)
-}
+doc Mapping of names to numbers
+type Enum(HashLike)
 
 doc Enum constructor.
 F init(e:Enum) {

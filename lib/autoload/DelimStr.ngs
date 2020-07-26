@@ -1,8 +1,6 @@
-{
-	doc EXPERIMENTAL. Delimited string. Showing ArrLike usage.
-	doc %EX - DelimStr("/bin:/usr/bin:/usr/local/bin").without("/usr/bin").Str()  # "/bin:/usr/local/bin"
-	type DelimStr(ArrLike)
-}
+doc EXPERIMENTAL. Delimited string. Showing ArrLike usage.
+doc %EX - DelimStr("/bin:/usr/bin:/usr/local/bin").without("/usr/bin").Str()  # "/bin:/usr/local/bin"
+type DelimStr(ArrLike)
 
 doc DelimStr constructor
 F init(ds:DelimStr, s:Str, delim:Str=':') {

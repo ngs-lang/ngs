@@ -1,4 +1,4 @@
-{ type ProcessFail(Exception) }
+type ProcessFail(Exception)
 
 F init(pf:ProcessFail, process:Process) {
 	pf.process = process

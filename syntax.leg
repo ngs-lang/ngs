@@ -66,7 +66,6 @@ void position_to_line_col();
 		yy->fail_rule = rule_name; \
 	}
 
-
 void append_ast_node_child(ast_node *target, ast_node *child) {
 	// printf("TARGET %p, CHILD %p\n", target, child);
 	if(!target->first_child) {
@@ -125,7 +124,7 @@ ast_node *call_node_partial_application(ast_node *orig, int location[4]) {
 	//   first_child->next_sibling - args
 	//   first_child->next_sibling children - [arg]
 	// Option 2:
-	//   orig - FIELD_NODE (which is later treated as call node)
+	//   orig - FIELD_NODE or NS_NODE (which are later treated as call nodes)
 
 	// Handle erroneously wrapped X.something when it's actually X.something(blah)
 	if(orig->type == CALL_NODE && orig->first_child->type == FUNC_NODE && orig->first_child->data) {
@@ -134,10 +133,10 @@ ast_node *call_node_partial_application(ast_node *orig, int location[4]) {
 		return wrap_in_func(orig, 0, location, "Partial application syntax - X.something(blah)", 1, 3, "X", "Any", "Y", "Any", "Z", "Any");
 	}
 
-	save_orig = orig->type == FIELD_NODE;
+	save_orig = orig->type == FIELD_NODE || orig->type == NS_NODE;
 
 	p = orig->first_child;
-	if(p->type == FIELD_NODE) {
+	if(p->type == FIELD_NODE || p->type == NS_NODE) {
 		// TODO: apply call_node_partial_application later so it will not be a special case?
 		p = p->first_child;
 	}
@@ -147,7 +146,7 @@ ast_node *call_node_partial_application(ast_node *orig, int location[4]) {
 			return wrap_in_func(orig, save_orig, location, "Partial application syntax", 1, 3, "X", "Any", "Y", "Any", "Z", "Any");
 		}
 	}
-	if(orig->type == FIELD_NODE) {
+	if(orig->type == FIELD_NODE || orig->type == NS_NODE) {
 		if(orig->first_child->next_sibling->type == EXPRESSIONS_NODE) {
 			p = orig->first_child->next_sibling->first_child;
 			if(p && !p->next_sibling && p->type == IDENTIFIER_NODE) {
@@ -227,6 +226,39 @@ int is_exportable(ast_node *node) {
 	return node->name[0] != '_';
 }
 
+void process_namespace(ast_node *first_child, int location[4]) {
+	ast_node *node, *identifier_to_export;
+	for(node = first_child; node ; node = node->next_sibling) {
+		identifier_to_export = NULL;
+		if(node->type == ASSIGNMENT_NODE && node->first_child->type == IDENTIFIER_NODE) {
+			identifier_to_export = node->first_child;
+		}
+		if(node->type == FUNC_NODE) {
+			if(node->first_child->next_sibling->next_sibling->next_sibling) {
+				// Function has a name
+				identifier_to_export = node->first_child->next_sibling->next_sibling->next_sibling;
+			}
+		}
+		if(node->type == SECTION_NODE) {
+			process_namespace(node->first_child->next_sibling->first_child, location);
+			continue;
+		}
+		if(identifier_to_export && is_exportable(identifier_to_export)) {
+			MAKE_NODE(e, ASSIGNMENT_NODE);
+				MAKE_NODE(lhs, INDEX_NODE);
+					MAKE_IDENTIFIER_NODE(exports_identifier, "_exports");
+					append_ast_node_child(lhs, exports_identifier);
+					MAKE_STRING_NODE(exports_key, ngs_strdup(identifier_to_export->name));
+					append_ast_node_child(lhs, exports_key);
+				append_ast_node_child(e, lhs);
+				append_ast_node_child(e, copy_ast_tree(identifier_to_export));
+			e->next_sibling = node->next_sibling;
+			node->next_sibling = e;
+			node = e; // Skip over newly created node
+		}
+	}
+}
+
 %}
 
 start = 
@@ -279,6 +311,8 @@ command =
 	|
 	function-call
 	|
+	type
+	|
 	namespace
 	|
 	block
@@ -292,6 +326,8 @@ command =
 	switch
 	|
 	for
+	|
+	& (identifier ("." | "::")) expression
 	|
 	comment
 	|
@@ -310,6 +346,12 @@ command =
 
 curly-code-block =
 	space? '{' space? code:expressions space? ";"? space? '}' {
+		$$ = code;
+	}
+
+empty-curly-code-block =
+	space? '{' space? '}' {
+		MAKE_NODE(code, EXPRESSIONS_NODE);
 		$$ = code;
 	}
 
@@ -339,11 +381,7 @@ expression-delimiter =
 expression =
 	comment
 	|
-	e:set-item-expression (inline_space comment)? { $$ = e; }
-
-
-set-item-expression =
-	binop-expression
+	e:binop-expression (inline_space comment)? { $$ = e; }
 
 binop-expression = e:binop-expression-inner {
 	// Handle special "and" and "or" nodes.
@@ -666,7 +704,6 @@ basic-expression =
 	| subshell
 	| super
 	| PRINT_AST
-	| table-literal
 	| identifier
 	| array-literal
 	| imm-array-literal
@@ -716,37 +753,27 @@ function-definition =
 	}
 
 function-definition-name =
-	space+ i:identifier { $$ = i; }
-	| space? "'" <([-|=!@?<>~+*/%()$a-zA-Z0-9.`": ]|"["|"]")+> "'" {
-		MAKE_NODE(ret, IDENTIFIER_NODE);
-		ret->name = ngs_strdup(yytext);
-		$$ = ret;
-	}
-	| space? <[-|=!@?~+*/%$.`\\]+> {
-		MAKE_NODE(ret, IDENTIFIER_NODE);
-		ret->name = ngs_strdup(yytext);
-		$$ = ret;
-	}
+	space+ (
+		i:identifier { $$ = i; }
+		| ("'" <([-|=!@?<>~+*/%()$a-zA-Z0-9.`": ]|"["|"]")+> "'" | <[-|=!@?~+*/%$.`\\]+> ) {
+			MAKE_NODE(ret, IDENTIFIER_NODE);
+			ret->name = ngs_strdup(yytext);
+			$$ = ret;
+		}
+	)
 	| { $$ = NULL; }
 
 function-definition-parameters =
-	param:function-definition-parameter space? "," space? params:function-definition-parameters {
-		PREPEND_NODE(params, param);
-		$$ = params;
+	acc:params-node
+	(
+		arg:function-definition-parameter { append_ast_node_child(acc, $$); }
+		(items-separator arg:function-definition-parameter { append_ast_node_child(acc, $$); } )*
+	)* {
+		$$ = acc;
 		CAPTURE_LOCATION($$);
 	}
-	|
-	param:function-definition-parameter {
-		MAKE_NODE(ret, PARAMS_NODE);
-		ret->first_child = param;
-		ret->last_child = param;
-		$$ = ret;
-	}
-	|
-	{
-		MAKE_NODE(ret, PARAMS_NODE);
-		$$ = ret;
-	}
+
+params-node = { MAKE_NODE(ret, PARAMS_NODE); $$ = ret; }
 
 # TODO: make sure it's the last one (or the last ones are *args, **kwargs later)
 # *args at any other positon is a syntax error for now
@@ -801,9 +828,9 @@ function-definition-default-value =
 		$$ = NULL;
 	}
 
-namespace = "ns" opt_params:namespace-optional-parameters c:curly-code-block {
+namespace = "ns" opt_params:namespace-optional-parameters (c:curly-code-block | c:empty-curly-code-block) {
 
-		// ns(opt_params) { c }
+		// ns(opt_params) { c } OR ns(opt_params) { }
 		// (transforms to)
 		// F(opt_params) {
 		//   local _exports
@@ -860,32 +887,7 @@ namespace = "ns" opt_params:namespace-optional-parameters c:curly-code-block {
 			append_ast_node_child(ret, args);
 
 		// TODO: make "exports['var'] = var" conditional - only if "var" is local
-		ast_node *node, *identifier_to_export;
-		for(node = c->first_child; node ; node = node->next_sibling) {
-			identifier_to_export = NULL;
-			if(node->type == ASSIGNMENT_NODE && node->first_child->type == IDENTIFIER_NODE) {
-				identifier_to_export = node->first_child;
-			}
-			if(node->type == FUNC_NODE) {
-				if(node->first_child->next_sibling->next_sibling->next_sibling) {
-					// Function has a name
-					identifier_to_export = node->first_child->next_sibling->next_sibling->next_sibling;
-				}
-			}
-			if(identifier_to_export && is_exportable(identifier_to_export)) {
-				MAKE_NODE(e, ASSIGNMENT_NODE);
-					MAKE_NODE(lhs, INDEX_NODE);
-						MAKE_IDENTIFIER_NODE(exports_identifier, "_exports");
-						append_ast_node_child(lhs, exports_identifier);
-						MAKE_STRING_NODE(exports_key, ngs_strdup(identifier_to_export->name));
-						append_ast_node_child(lhs, exports_key);
-					append_ast_node_child(e, lhs);
-					append_ast_node_child(e, copy_ast_tree(identifier_to_export));
-				e->next_sibling = node->next_sibling;
-				node->next_sibling = e;
-				node = e; // Skip over newly created node
-			}
-		}
+		process_namespace(c->first_child, location);
 
 		$$ = ret;
 	}
@@ -991,23 +993,16 @@ function-call-external-argument =
 	}
 
 function-call-arguments-without-parens =
-	arg:function-call-argument items-separator args:function-call-arguments-without-parens {
-		PREPEND_NODE(args, arg);
-		$$ = args;
+	acc:args-node
+	(
+		arg:function-call-argument { append_ast_node_child(acc, $$); }
+		(items-separator arg:function-call-argument { append_ast_node_child(acc, $$); } )*
+	)* {
+		$$ = acc;
 		CAPTURE_LOCATION($$);
 	}
-	|
-	arg:function-call-argument {
-		MAKE_NODE(ret, ARGS_NODE);
-		ret->first_child = arg;
-		ret->last_child = arg;
-		$$ = ret;
-	}
-	|
-	{
-		MAKE_NODE(ret, ARGS_NODE);
-		$$ = ret;
-	}
+
+args-node = { MAKE_NODE(ret, ARGS_NODE); $$ = ret; }
 
 function-call-argument =
 	i:identifier space? "=" space? e:expression {
@@ -1204,21 +1199,6 @@ tree-node = {
 	$$ = ret;
 	CAPTURE_LOCATION($$);
 
-}
-
-table-literal = "table" space? "{" space? table:table-node (ws:imm-array-words {
-		MAKE_NODE(line, ARR_LIT_NODE);
-		append_ast_node_child(line, ws->first_child->next_sibling->first_child);
-		append_ast_node_child(table->first_child, line);
-	} space?)+ "}" {
-	$$ = table;
-}
-
-table-node = {
-	MAKE_NODE(ret, TABLE_LIT_NODE);
-		MAKE_NODE(lines, ARR_LIT_NODE)
-		append_ast_node_child(ret, lines);
-	$$ = ret;
 }
 
 abc-function-literal = c:curly-code-block {
@@ -1428,11 +1408,7 @@ number =
 		$$ = ret;
 	}
 
-super =
-	"super" {
-		MAKE_NODE(ret, SUPER_NODE);
-		$$ = ret;
-	}
+super = "super" { MAKE_NODE(ret, SUPER_NODE); $$ = ret; }
 
 identifier =
 	<[_a-zA-Z]+[_a-zA-Z0-9]*> {
@@ -1462,10 +1438,8 @@ defined =
 
 var-scope-declaration-keyword =
 	"local" { MAKE_NODE(ret, LOCAL_NODE); $$ = ret }
-	|
-	"upvar" { MAKE_NODE(ret, UPVAR_NODE); $$ = ret }
-	|
-	"global" { MAKE_NODE(ret, GLOBAL_NODE); $$ = ret }
+	| "upvar" { MAKE_NODE(ret, UPVAR_NODE); $$ = ret }
+	| "global" { MAKE_NODE(ret, GLOBAL_NODE); $$ = ret }
 
 var-scope-declaration =
 	l:var-scope-declaration-keyword space var-scope-declaration-item { append_ast_node_child(l, $$); } (space? "," space? var-scope-declaration-item { append_ast_node_child(l, $$); })* {
@@ -1486,9 +1460,7 @@ var-scope-declaration-item = i:identifier e:var-scope-declaration-item-optional-
 
 var-scope-declaration-item-optional-value = (space? "=" space? e:expression) { $$ = e } | { $$ = NULL; }
 
-string =
-	# TODO: backslash sequences
-	string-sq | string-dq
+string = string-sq | string-dq
 
 string-sq =
 	"'" acc:str-comps-node (
@@ -1613,10 +1585,7 @@ collector = "collector" init:collector-init space c:code-block {
 
 collector-init =
 	"/" e:expression { $$ = e; }
-	| {
-		MAKE_NODE(arr, ARR_LIT_NODE);
-		$$ = arr;
-	}
+	| { MAKE_NODE(arr, ARR_LIT_NODE); $$ = arr; }
 
 block = "block" space i:identifier space c:code-block {
 	MAKE_NODE(ret, CALL_NODE);
@@ -1631,7 +1600,10 @@ block = "block" space i:identifier space c:code-block {
 }
 
 section = "section" space name:string space c:code-block {
-	$$ = c;
+	MAKE_NODE(ret, SECTION_NODE);
+	ret->first_child = name;
+	ret->first_child->next_sibling = c;
+	$$ = ret;
 	CAPTURE_LOCATION($$);
 }
 
@@ -1709,11 +1681,7 @@ type = doc:optional-doc inline_space? "type" space i:identifier inline_space? op
 
 optional-function-call-arguments =
 	function-call-arguments
-	|
-	{
-		MAKE_NODE(no, NULL_NODE);
-		$$ = no;
-	}
+	| { MAKE_NODE(no, NULL_NODE); $$ = no; }
 
 subshell =
 	"$(" cmd:commands-pipeline ")" { $$ = cmd; }
@@ -1936,11 +1904,7 @@ redir-fd = <[0-9]+> {
 		ret->number = atoi(yytext);
 		$$ = ret;
 	}
-	|
-	{
-		MAKE_NODE(ret, NULL_NODE);
-		$$ = ret;
-	}
+	| { MAKE_NODE(ret, NULL_NODE); $$ = ret; }
 
 redir-marker =
 	<(">>" | ">" | "<<" | "<")> { MAKE_STRING_NODE(ret, yytext); $$ = ret; }

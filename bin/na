@@ -104,14 +104,6 @@ for obj in processed_argv {
 	references.push(res_def)
 }
 
-# tbl = Table2::Table("Resources")
-# {
-# 	res_def.typeof().user.Box('columns_order').each(F(order) {
-# 		Table2::register_columns(tbl, order)
-# 	})
-# 	res_def.each(push(tbl, X))
-# }
-
 {
 	econd {
 		obj.operation in [null, 'converge'] {
