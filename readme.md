@@ -7,24 +7,24 @@
 
 **Next Generation Shell** is a powerful programming language and a shell designed specifically for Ops. *Because you deserve better*.
 
-# Quick Links
+## Quick Links
 
 * [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases)
 * [NGS Website](https://ngs-lang.org/)
 * [Docker repository](https://hub.docker.com/r/ngslang/ngs/)
 
-# The Problem
+## The Problem
 
 * Absence of up-to-date programming language for Ops.
 	* Classical shells were made for completely different situation than what we have today. We typically manage systems using APIs now. Structured data is not a luxury anymore but a necessity. `jq` works. I find it tremendously more convenient when a language itself has data structures.
 	* General purpose programming languages (Python, Ruby, Go, ...) are not a good fit for typical Ops tasks. Show me one where `echo my_string >my_file` is as easy and as concise as in bash.
 * Inadequate shells that Ops use. Like the [dumpster in your terminal](https://en.wikipedia.org/wiki/Redirection_(computing)#Piping) when you can't distinguish between stdout and stderr of several processes? I don't.
 
-# Suggested Solution - NGS
+## Suggested Solution - NGS
 
 I have designed and implemented a programming language with typical Ops tasks in mind. See the use cases below. The next big planned part is the interactive shell.
 
-# NGS Use Cases
+## NGS Use Cases
 
 Here are recommended use cases.
 
@@ -50,7 +50,7 @@ Here are recommended use cases.
 
 See [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases) wiki page for more information about the use cases and examples.
 
-# Project Status
+## Project Status
 
 **The language** is very useful. See the the [bin folder](bin) for examples. NGS is used in Beame.io for miscellaneous scripting such as testing CLI tools, performance tests orchestration, cloud manipulation, etc.
 
@@ -59,9 +59,9 @@ See [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases) wiki page for mo
 From George Nachman, creator of [iTerm2](https://www.iterm2.com/):
 > Neat! This is totally the project I would do if I had unlimited free time :) I've wished for something like this for a long time. I think there's a lot of room for improvement over a basic TTY, and you've nailed some of the important things
 
-# Code Examples
+## Code Examples
 
-## Arrays
+### Arrays
 
 
 	a = [1, 2, 3]
@@ -70,13 +70,13 @@ From George Nachman, creator of [iTerm2](https://www.iterm2.com/):
 		echo(i)
 	}
 
-### Hashes
+#### Hashes
 
 	h = {"a": 1, "b1": 2, "b2": 3}
 	echo(h.filterk(/^b/).mapv(X+10))  # {b1=12, b2=13}
 
 
-## Functions (multimethods) and multi-dispatch
+### Functions (multimethods) and multi-dispatch
 
 	F my_func(x:Int) x*10 # Single expression does not require { ... } syntax
 
@@ -92,7 +92,7 @@ From George Nachman, creator of [iTerm2](https://www.iterm2.com/):
 
 More information about the language and syntax in particular is in [ngslang.1](doc/ngslang.1.md)
 
-## Basic Cloud
+### Basic Cloud
 
 NGS has AWS library based on concept of [Declarative Primitives](https://ilya-sher.org/2016/07/06/declarative-primitives-or-mkdir-p-for-the-cloud/)
 
@@ -139,13 +139,13 @@ This is how an instance can be created using NGS (real working code).
 		AWS::add_to_known_hosts(instance, 'PublicIpAddress')
 	}
 
-## Sample Scripts
+### Sample Scripts
 
 * [describe ec2 instances](bin/ec2din.ngs). The script has nicely aligned output for humans. It uses `stdlib`'s `Table` to do output layout and columns configuration. `Table` handles columns presence and order and it can be configured via environment variable.
 * [build chunk of hosts file](bin/ec2hostsfile.ngs) for a management machine. Hosts named `env-role` or `env-role-N`, depending on whether you have one or more machines of specific role in the environment.
 * [Race condition and locks demo](bin/locks.ngs).
 
-# Running Using Docker
+## Running Using Docker
 
 	# Build the docker
 	docker build -t ngs .
@@ -154,9 +154,9 @@ This is how an instance can be created using NGS (real working code).
 	# Use NGS inside the container
 	ngs -pi 'sum(0..10)'
 
-# Compiling and Running
+## Compiling and Running
 
-## Clone from Git
+### Clone from Git
 
 	git clone https://github.com/ngs-lang/ngs.git
 
@@ -165,27 +165,27 @@ This is how an instance can be created using NGS (real working code).
 
 	cd ngs
 
-## Install with Dependencies - Debian-based Linux
+### Install with Dependencies - Debian-based Linux
 
 	./install-linux.sh
 	
-## Install with Dependencies - MacOS (brew)
+### Install with Dependencies - MacOS (brew)
 
 	./install-mac.sh
 
-## Install without Dependencies
+### Install without Dependencies
 
 	sudo make install
 
-## Run Tests
+### Run Tests
 
 	make tests
 
-## Compile
+### Compile
 
 	make build
 
-## Run
+### Run
 
 	# If NGS is not installed (from the root of ngs project):
 	NGS_DIR=lib NGS_BOOTSTRAP=lib/bootstrap.ngs ./build/ngs SCRIPT_NAME.ngs
@@ -202,18 +202,18 @@ Tested as follows (some time ago):
 
 If you have troubles compiling, please try to compile the commit tagged `tested`.
 
-## Uninstall
+### Uninstall
 
 	cd build
 	for i in $(<install_manifest.txt);do rm "$i";done
 
-## Debug - Mac
+### Debug - Mac
 
 	# Debug when stuck (note to self mostly)
 	killall -SIGSEGV ngs
 	lldb --core /cores/core.XXXXX
 
-## Generate Documentation
+### Generate Documentation
 
 On Linux
 
@@ -234,7 +234,7 @@ On Mac, follow [the instructions to create case sensitive volume](https://coderw
 	rm -r out/*;
 	./make.ngs out
 
-# Contributing
+## Contributing
 
 * Fork on GitHub
 * Work on whatever you like, preferably something from the GitHub issues of this project
@@ -242,7 +242,7 @@ On Mac, follow [the instructions to create case sensitive volume](https://coderw
 
 If the change is big or involves modifying the syntax, it's better to coordinate with Ilya before you start.
 
-# Planned Features
+## Planned Features
 
 ( This section is moving to Wiki and Issues )
 
@@ -253,20 +253,20 @@ See "feature" issues and wiki: https://github.com/ngs-lang/ngs/issues?q=is%3Aiss
 
 You are welcome to open new issues with `feature-request` label if there is something you would like to see in NGS.
 
-## Cross-system
+### Cross-system
 
 * Toaster/script prepare mode/assist
 	* After a command is run (successfully?) a key shortcut key would
 	  append it (the last command) to a buffer / file.
 
-## Development
+### Development
 
 * Code completion
 * Variables values shown when editing the commands / code (think `ls $a`, when the cursor is on `$a`)
 * Running scripts will once in a while update current line/column in the job info
 * Ability to start tracing already running scripts
 
-## Later / Unformed / Unfinished Thoughts
+### Later / Unformed / Unfinished Thoughts
 
 * BIG: Arguments / etc. - description language. Think Javadoc.
 	* Python (and other high level languages) is half-way there with argparse.
@@ -285,7 +285,7 @@ You are welcome to open new issues with `feature-request` label if there is some
 			* The format (future feature, low priority) will include version detection and which switches are supported in which versions.
 			* The format will include how to do completion for specific arguments. Think `ec2kill` < `ec2din ...`.
 
-# How to Run the POC
+## How to Run the POC
 
 Following instructions should work (tested on Debian)
 
@@ -304,7 +304,7 @@ Following instructions should work (tested on Debian)
 		* `sleep` - a process that sleeps for 5 seconds
 		* `fail` - a process that fails
 
-# Have you heard of project X? How it compares to NGS?
+## Have you heard of project X? How it compares to NGS?
 
 * All of the shells below
   * ... have no interaction with objects on the screen: if you run a command to describe EC2 instances for example, there is no way to interact with the shown list. Such interaction is a planned feature in NGS.
@@ -394,7 +394,7 @@ Following instructions should work (tested on Debian)
 			* Examples show very rudimentary "language".
 			* https://www.nushell.sh/contributor-book/en/values.html
 
-# Discussion / requests / comments
+## Discussion / requests / comments
 
 * If you are totally unsure - open GitHub issues.
 * Feel free to fork/edit/pull-request this document.
