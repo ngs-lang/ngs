@@ -1,5 +1,9 @@
 ## (UNRELEASED) Version 0.2.9
 
+### Fixes and improvements
+
+* `$(log ...)` now logs i/o redirections
+
 ## 2020-07-26 Version 0.2.8
 
 ### New features
