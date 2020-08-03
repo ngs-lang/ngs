@@ -5408,7 +5408,10 @@ F '$()'(p:Process) {
 	debug("process", "Parsed command: ${argv}")
 
 	if p.command.options.get('log') == true {
-		log("Running command: ${argv.map(escape_bash).join(' ')}")
+		F redir_str(r:CommandRedir) {
+			(r.fd or '').Str() + r.marker + escape_bash(r.datum)
+		}
+		log("Running command: ${argv.map(escape_bash).join(' ')}${' ' +? p.command.redirects.map(redir_str).join(' ')}")
 	}
 
 	try {
