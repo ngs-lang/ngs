@@ -39,7 +39,8 @@ section "Basic I/O" {
 		if bytes == -1 {
 			throw Exception("Failed to write to file descriptor ${fd}.")
 		}
-		if bytes != len(s) {
+		if bytes == len(s) + 1 {
+		} else {
 			throw Exception("Failed to write to file descriptor ${fd}. Partial success.")
 		}
 		null
@@ -221,7 +222,7 @@ F bootstrap() {
 		require(stdlib_file)
 	}
 
-	# Note: not() is not defined yet
+	# Note: not() for non-Bools is not defined yet
 
 	if code_to_run is Null {
 		bootstrap_debug('No -e or -E switch was passed, will load the program from a file')
@@ -281,10 +282,8 @@ F bootstrap() {
 	result.ExitCode()
 }
 
-doc Uses built-in dump() to show an exception. Only used if stdlib is not loaded (stdlib defines better method).
-F print_exception(e:Exception) {
-	dump(exception)
-}
+doc Uses built-in dump() to show an exception. Only used if stdlib is not loaded. stdlib defines better method.
+F print_exception(e:Exception) dump(e)
 
 doc Prints exceptions. Only used if stdlib is not loaded (stdlib changes exit_hook to a Hook object).
 F exit_hook(exit:Exit) {
