@@ -1,5 +1,9 @@
 ## (UNRELEASED) Version 0.2.9
 
+### New features
+
+* `main()` can now be defined as part of `Namespace` of the main file: `ns { F main(...) ...}`
+
 ### Fixes and improvements
 
 * `$(log ...)` now logs i/o redirections

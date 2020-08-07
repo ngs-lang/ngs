@@ -32,13 +32,26 @@ doc Internal method. Please do not use.
 doc Find and invoke main() method that matches the passed command line arguments.
 doc Called by bootstrapper in cases where main() is defined.
 doc default - The result of evaluation of the code that was run by bootstrapper. Returned when main is not a MultiMethod or the defined main() was not in the main file.
-F bootstrap_invoke_main(bootstrap_main_file:Str, default) block b {
-	main is not MultiMethod returns default
-	candidate_mains = main.Arr().filter(F(m) m.ip().resolve_instruction_pointer().file == bootstrap_main_file).reverse()
-	not(candidate_mains) returns default
-	bootstrap_debug("Candidate main() functions: $candidate_mains")
+F bootstrap_invoke_main(main, bootstrap_main_file:Str, default) block b {
+	ematch main {
+		MultiMethod {
+			candidate_mains = main.Arr().filter(F(m) m.ip().resolve_instruction_pointer().file == bootstrap_main_file).reverse()
+			# if len(candidate_mains) != len(main) {
+			# 	warn("main() defined outside of the main file was ignored").set(main_file = bootstrap_main_file)
+			# }
+			not(candidate_mains) returns default
+			bootstrap_debug("Candidate main() functions: $candidate_mains")
 
-	candidate_mains.each(bootstrap_try_main(X, ARGV, b))
-	# TODO: print usage examples here and exit with error code
-	throw BootstrapNoMatchingMain("Command line arguments are invalid.")
+			candidate_mains.each(bootstrap_try_main(X, ARGV, b))
+			# TODO: print usage examples here and exit with error code
+			throw BootstrapNoMatchingMain("Command line arguments are invalid.")
+		}
+		Fun {
+			bootstrap_try_main(main, ARGV, b)
+			throw BootstrapNoMatchingMain("Command line arguments are invalid.")
+		}
+		Any {
+			throw MainFail("'main' must be callable").set('value', main)
+		}
+	}
 }

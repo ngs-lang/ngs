@@ -243,12 +243,33 @@ F bootstrap() {
 	result = program_func()
 
 	section "Handle main()" {
-		if main.len() > 0 {
+
+		F invoke(main) {
 			bootstrap_debug("main() defined, using bootstrap_invoke_main()")
 			if global_not_found_handler.len() == 0 {
 				throw MainFail("Autoloading (usually defined in stdlib) is not present but the main() invoking mechanism requires it")
 			}
-			result = bootstrap_invoke_main(fname, result)
+			result = bootstrap_invoke_main(main, fname, result)
+		}
+
+		# Can't use match, it's not defined if stdlib was not loaded
+		econd {
+			result is Namespace {
+				if 'main' in result {
+					invoke(result['main'])
+				}
+			}
+			main is MultiMethod {
+				if main.len() > 0 {
+					invoke(main)
+				}
+			}
+			main is Fun {
+				invoke(main)
+			}
+			true {
+				throw MainFail("'main' must be a Namespace, MultiMethod or a Fun, not ${main.typeof().name}").set('value', main)
+			}
 		}
 	}
 
