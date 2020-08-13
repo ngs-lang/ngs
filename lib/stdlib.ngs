@@ -4982,9 +4982,7 @@ F basename(p:Path) p.path.basename()
 
 doc Get basename of the file.
 F basename(s:Str) {
-	ret = s.split('/')[-1]
-	not(ret) throws BasenameArgumentFail("'${s}' is not a valid input to basename()").set('s', s)
-	ret
+	s.split('/')[-1] or throw BasenameArgumentFail("'${s}' is not a valid input to basename()").set('s', s)
 }
 
 TEST basename("/abc") == "abc"
@@ -5235,10 +5233,7 @@ doc %RET - Bool
 doc %EX - if $(test -f myfile) ... # if runs Bool() on any non-Bool condition expression
 F Bool(pp:ProcessesPipeline) pp.wait().processes.all({A.exit_code == 0})
 
-F finished(p:Process) {
-	p.exit_code is Int or
-	p.exit_signal is Int
-}
+F finished(p:Process) [p.exit_code, p.exit_signal].any(Int)
 
 doc Wait for a process. Waits for reading and writing threads to finish.
 doc Waits for the process to finish. Checks whether to throw ProcessFail using finished_ok().
