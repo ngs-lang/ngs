@@ -361,6 +361,10 @@ F only(predicate, mapper:Fun) {
 
 TEST ["abc", 1, "def", 2].map(only(Int, X*2)) == ["abc", 2, "def", 4]
 
+doc %STATUS - experimental
+doc Same as only(predicate, mapper)(val)
+F only(val, predicate, mapper:Fun) only(predicate, mapper)(val)
+
 doc Filter e using predicate.
 doc e - Eachable1. WARNING: instances of same type as e must have empty constructor and push() method.
 doc predicate - Decision function to be called with each item as first argument.
@@ -372,10 +376,10 @@ F filter(e:Eachable1, predicate=identity) {
 	pred = Pred(predicate)
 	t = typeof(e)
 	ret = t()
-	e.each() do F(elt) {
+	e.each(F(elt) {
 		if pred(elt)
 			ret.push(elt)
-	}
+	})
 	ret
 }
 
@@ -4490,15 +4494,7 @@ section "Path" {
 	doc %EX - Path(".")  # <Path path=.>
 	doc %EX - Path(".", true)  # <Dir path=.>
 	doc %EX - ``find tmp/v8``.map(Path(X, true)).map(typeof).name.Stats()  # <Stats: {Dir=287, File=9220}>
-	F Path(s:Str, subtype=false) {
-		ret = Path()
-		ret.path = s
-		if subtype {
-			ret.specific()
-		} else {
-			ret
-		}
-	}
+	F Path(s:Str, subtype=false) Path().set('path', s).only({subtype}, specific)
 
 	doc Path constructor
 	doc s - path
@@ -5039,11 +5035,13 @@ F close(f:File) {
 	ret = c_close(f.fd)
 	ret < 0 throws FileIOFail("Failed to close the file $f").set('file', f)
 	f.fd = null
+	f
 }
 
 # Note: EINTR should not be handled
 doc Close a file. Uses CLOSE(2).
 doc Throws FileIOFail if an underlying error occurs.
+doc %RET - fd
 F close(fd:Int) {
 	ret = c_close(fd)
 	ret < 0 throws FileIOFail("Failed to close file descriptor $fd").set('fd', fd)
@@ -5279,6 +5277,7 @@ F wait(p:Process) {
 }
 
 doc Wait for all processes to finish.
+doc %RET - pp
 F wait(pp:ProcessesPipeline) {
 	pp.processes.each(wait)
 	last_process = pp.processes[-1]
