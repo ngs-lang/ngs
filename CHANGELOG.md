@@ -3,6 +3,7 @@
 ### New features
 
 * `main()` can now be defined as part of `Namespace` of the main file: `ns { F main(...) ...}`
+* Add experimental `only(val, predicate, mapper)`
 
 ### Fixes and improvements
 
