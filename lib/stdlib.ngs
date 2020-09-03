@@ -465,12 +465,12 @@ doc %RET - The only element that satisfies the predicate.
 F the_one(e:Eachable1, predicate={true}) {
 	p = Pred(predicate)
 	ret = EmptyBox()
-	e.each() do F(elt) {
+	e.each(F(elt) {
 		if p(elt) {
 			ret throws ElementNotFound("the_one() had more than one match").set('container', e).set('predicate', predicate)
 			ret = FullBox(elt)
 		}
-	}
+	})
 	not(ret) throws ElementNotFound("the_one() had no matches").set('container', e).set('predicate', predicate)
 	ret.get()
 }
@@ -943,9 +943,7 @@ doc %EX - my_hashlike.filter(F(k, v) k == 'a')
 doc %RET - value of the same type as hl
 F filter(hl:HashLike, predicate) {
 	t = typeof(hl)
-	ret = t()
-	ret.attrs().HashLike = hl.attrs().HashLike.filter(predicate)
-	ret
+	t(hl.attrs().HashLike.filter(predicate))
 }
 
 TEST HashLike({"a": 1, "b": 2}).filter(F(k, v) v==1) == HashLike({"a": 1})
@@ -1044,34 +1042,34 @@ section "Named Instances" {
 	TEST global init; type Color(NamedInstances); F init(c:Color, numval:Int) c.numval = numval; Color.NamedInstances = ns { RED = Color(4); GREEN = Color(2); BLUE = Color(1) ; }; Color.NamedInstances is Namespace and 2.decode(Color) == Color::GREEN and "RED".decode(Color) == Color::RED
 }
 
-# === Hook =======================================
+section "Hook" {
+	doc Hook is a simple pub-sub
+	type Hook
+	Hook.inherit(HashLike)
 
-doc Hook is a simple pub-sub
-type Hook
-Hook.inherit(HashLike)
+	doc Hook constructor.
+	doc %RET - Hook
+	F init(hook:Hook) {
+		super(hook)
+		hook.attrs().idx = 0
+	}
 
-doc Hook constructor.
-doc %RET - Hook
-F init(hook:Hook) {
-	super(hook)
-	hook.attrs().idx = 0
+	doc Add unnamed handler.
+	doc The hook is automatically named "pushed-N" where N is sequential integer.
+	doc %RET - New hook name
+	F push(hook:Hook, handler:UserDefinedMethod) {
+		name = "pushed-${hook.attrs().idx}"
+		hook.attrs().idx += 1
+		hook[name] = handler
+		name
+	}
+
+	# TODO: consider optional? try/catch isolation
+	doc Runs all handlers passing all args.
+	doc args - Arguments to pass to handlers
+	doc %RET - Arr. Results from all the handlers
+	F call(hook:Hook, *args) hook.attrs().HashLike.mapv(X(*args))
 }
-
-doc Add unnamed handler.
-doc The hook is automatically named "pushed-N" where N is sequential integer.
-doc %RET - New hook name
-F push(hook:Hook, handler:UserDefinedMethod) {
-	name = "pushed-${hook.attrs().idx}"
-	hook.attrs().idx += 1
-	hook[name] = handler
-	name
-}
-
-# TODO: consider optional? try/catch isolation
-doc Runs all handlers passing all args.
-doc args - Arguments to pass to handlers
-doc %RET - Arr. Results from all the handlers
-F call(hook:Hook, *args) hook.attrs().HashLike.mapv(X(*args))
 
 # === Real =======================================
 
@@ -1142,7 +1140,7 @@ section "Type" {
 	doc %AUTO - type MyType2([MyParent1, MyParent2, ...])
 	F Type(t:Str, doc, ns, parents:Arr) {
 		ret = Type(t, doc, ns)
-		parents % ret.inherit(X)
+		parents.each(ret.inherit(X))
 		ret
 	}
 
@@ -1312,33 +1310,19 @@ type CError
 CError.inherit(Error)
 
 doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
-F init(e:CError, message:Str) {
-	errno = c_errno()
-	super(e, message)
-	e.errno = errno
-	e.errno_name = c_strerror(e.errno)
-}
-
-doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
 F init(e:CError, errno:Int, message:Str) {
 	super(e, message)
 	e.errno = errno
 	e.errno_name = c_strerror(e.errno)
 }
 
+doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
+F init(e:CError, message:Str) super(e, c_errno(), message)
+
+
 doc Exception representing a failure to kill() a process
 type KillFail
 KillFail.inherit(CError)
-
-section "ValueWrapper type and methods" {
-	type ValueWrapper
-
-	F init(vw:ValueWrapper) throw Error("ValueWrapper subtype ${vw.typeof().name} must have init() argument")
-
-	F init(vw:ValueWrapper, val) vw.val = val
-
-	F Str(vw:ValueWrapper) "<${vw.typeof().name} ${vw.val}>"
-}
 
 # === Lock =======================================
 
@@ -1573,8 +1557,7 @@ section "Range" {
 	doc Length of a NumRange. Only defined for Int start and end.
 	doc Equals to how many times cb will be invoked in each(r, cb).
 	F len(r:NumRange) {
-		guard r.start is Int
-		guard r.end is Int
+		guard [r.start, r.end].all(Int)
 		r.end - r.start - 1 + r.include_start.Int() + r.include_end.Int()
 	}
 
@@ -1752,14 +1735,12 @@ doc %EX - )
 F finally(body:Fun, cleanup:Fun) {
 	ret = Result(body)
 	cleanup()
-	if ret is Failure {
-		throw ret.val
-	}
+	ret is Failure throws ret.val
 	ret.get()
 }
 
 TEST a=0; {1/1}.finally({a=10}) == 1 and a == 10
-TEST a=0; (try finally() with {1/0} with {a=10} catch(e:DivisionByZero) "OK") == "OK" and a == 10
+TEST a=0; (try finally({1/0}, {a=10}) catch(e:DivisionByZero) "OK") == "OK" and a == 10
 TEST F f() block b { finally({ b.return(7) }, {8}) }; f() == 7
 
 # --- Hash ---
@@ -1780,19 +1761,6 @@ doc %EX - h = {"a": 1}
 doc %EX - h.get("a")  # 1
 doc %EX - h.get("b")  # null
 F get(h:Hash, k) get(h, k, null)
-
-doc Convert hash values to integers where possible
-doc %RET - New Hash
-doc %STATUS - deprecated
-doc %EX - %{k 7 kk "a"}["k"] is Str      # true
-doc %EX - %{k 7 kk "a"}.n()              # {'k': 7, 'kk': 'a'}
-doc %EX - %{k 7 kk "a"}.n()["k"] is Int  # true
-F n(h:Hash) {
-	warn("Using deprecated n(Hash)")
-	h.mapv({Int(A) tor A})
-}
-
-TEST %{k 7 kk "a"}.n() == {'k': 7, 'kk': 'a'}
 
 # --- Arr ---
 
@@ -1970,11 +1938,7 @@ TEST [1,2,3].map(X*4) == [4,8,12]
 
 F subset(smaller:Arr, larger:Arr) {
 	len(smaller) > len(larger) returns false
-	h = if larger.len() > 10 {
-		larger.Set()
-	} else {
-		larger
-	}
+	h = larger.only({A.len() > 10}, Set)
 	smaller.all(X in h)
 }
 
@@ -2023,17 +1987,6 @@ doc %RET - New Arr
 doc %EX - echo("Array items: " + ArrLike().push(10).push(20).push(30).map_idx_val(F(idx, val) "[$idx]=$val").join(", "))
 doc %EX - # Outputs: Array items: [0]=10, [1]=20, [2]=30
 F map_idx_val(e:Eachable1, mapper:Fun) collector each_idx_val(e, collect + mapper)
-
-doc Map an Arr to an Arr (array) of values using mapper
-doc mapper is called as mapper(INDEX, ITEM)
-doc %RET - New Arr
-doc %EX - echo("Array items: " + [10,20,30].map_idx_val(F(idx, val) "[$idx]=$val").join(", "))
-doc %EX - # Outputs: Array items: [0]=10, [1]=20, [2]=30
-F map_idx_val(arr:Arr, mapper:Fun) {
-	l = arr.len()
-	collector
-		for(i;l) collect(mapper(i, arr[i]))
-}
 
 TEST r=[]; ["a", "b"].each_idx_val(F(idx, val) r.push([idx, val])); r == [[0, "a"], [1, "b"]]
 
@@ -2088,11 +2041,7 @@ doc Filter out all values in a that are also in b
 doc %RET - Arr
 doc %EX - [1,2,3] - [5,6,1]  # [2,3]
 F -(a:Arr, b:Arr) {
-	h = if b.len() > 10 {
-		b.Set()
-	} else {
-		b
-	}
+	h = b.only({A.len() > 10}, Set)
 	a.filter(X not in h)
 }
 
@@ -2559,7 +2508,7 @@ F split(e:Eachable1, delim) {
 TEST [1, "a", 2, 3, "a", 4].split("a") == [[1], [2, 3], [4]]
 
 doc Call cb with array of maximum length of n, repeatedely for all items of e.
-doc TODO: better doc
+doc TODO: better doc, rename to each() to be consistent with each(Arr, Int, Fun)?
 doc %STATUS - experimental
 F each_chunk(e:Eachable1, n:Int, cb:Fun) {
 	cur = []
@@ -2659,10 +2608,8 @@ doc cb - Function to call with successive keys and values
 doc %RET - h
 doc %EX - {"a": 1, "b": 2}.each(F(k, v) echo("$k=$v"))  # Outputs: "a=1" and on the next line "b=2"
 F each(h:Hash, cb:Fun) {
-	entry = ll_hash_head(h)
-	while entry != null {
+	for(entry = ll_hash_head(h); entry != null; entry = entry.ll_hash_entry_next()) {
 		cb(entry.ll_hash_entry_key(), entry.ll_hash_entry_val())
-		entry = entry.ll_hash_entry_next()
 	}
 	h
 }
@@ -2671,27 +2618,18 @@ doc Iterate a Hash.
 doc h - Hash to iterate
 doc cb - Function to call with successive keys
 doc %RET - h
-F eachk(h:Hash, cb:Fun) {
-	entry = ll_hash_head(h)
-	while entry != null {
-		cb(entry.ll_hash_entry_key())
-		entry = entry.ll_hash_entry_next()
-	}
-	h
-}
+F eachk(h:Hash, cb:Fun) h.each({cb(A)})
+
+TEST ret = []; {"a": 1, "b": 2}.eachk(ret.push(X)); ret == %[a b]
 
 doc Iterate a Hash.
 doc h - Hash to iterate
 doc cb - Function to call with successive values
 doc %RET - h
-F eachv(h:Hash, cb:Fun) {
-	entry = ll_hash_head(h)
-	while entry != null {
-		cb(entry.ll_hash_entry_val())
-		entry = entry.ll_hash_entry_next()
-	}
-	h
-}
+F eachv(h:Hash, cb:Fun) h.each({cb(B)})
+
+TEST ret = []; {"a": 1, "b": 2}.eachv(ret.push(X)); ret == %[1 2]
+
 
 doc Iterate a Hash.
 doc h - Hash to iterate
@@ -2701,12 +2639,8 @@ doc %RET - h
 doc %EX - {"a": 1, "b": 2}.each_idx_key_val(F(idx, k, v) echo("[$idx] $k=$v"))
 doc %EX - # Outputs: "[0] a=1" and on the next line "[1] b=2"
 F each_idx_key_val(h:Hash, cb:Fun) {
-	entry = ll_hash_head(h)
-	i = 0
-	while entry != null {
-		cb(i, entry.ll_hash_entry_key(), entry.ll_hash_entry_val())
-		entry = entry.ll_hash_entry_next()
-		i += 1
+	for({idx=0; entry=ll_hash_head(h)}; entry != null; {idx+=1; entry = entry.ll_hash_entry_next()}) {
+		cb(idx, entry.ll_hash_entry_key(), entry.ll_hash_entry_val())
 	}
 	h
 }
@@ -2727,18 +2661,7 @@ doc h - Hash with source keys and values
 doc mapper - Function to be called with sequential zero-based index, keys and values from h
 doc %RET - Arr
 doc %EX - {'a': 1, 'b': 2}.map_idx_key_val(F(i, k, v) "${i}-${k}-$v")  # ['0-a-1', '1-b-2']
-F map_idx_key_val(h:Hash, mapper:Fun) {
-	idx = 0
-	collector {
-		entry = ll_hash_head(h)
-		while entry != null {
-			collect(mapper(idx, entry.ll_hash_entry_key(), entry.ll_hash_entry_val()))
-			entry = entry.ll_hash_entry_next()
-			idx += 1
-		}
-	}
-}
-
+F map_idx_key_val(h:Hash, mapper:Fun) collector h.each_idx_key_val(collect + mapper)
 
 doc Map Hash keys. Build new Hash with same values as in h but keys mapped by mapper.
 doc h - Source hash
@@ -2864,11 +2787,14 @@ doc Create a Hash from Arr of Arr[2]
 doc arr - Array of Arrays. Each one of the sub-arrays must have exactly two elements.
 doc %RET - Hash
 doc %EX - Hash([['a', 1], ['c', 3]])  # {'a': 1, 'c': 3}
-F Hash(arr:Arr)
+F Hash(arr:Arr) {
+	guard arr.all(Arr)
+	guard arr.all({A.len() == 2})
 	collector/{}
 		arr.each(F(pair) {
 			collect(*pair)
 		})
+}
 
 TEST Hash([['a', 1], ['c', 3]]) == {'a': 1, 'c': 3}
 
@@ -3125,6 +3051,8 @@ doc %RET - Box. fb if predicate succeeds, EmptyBox if not.
 doc %EX - Box(10).filter(X>5)   # <FullBox val=10>
 doc %EX - Box(10).filter(X>20)  # <EmptyBox>
 F filter(fb:FullBox, predicate=identity) {
+	# Can not use "...super(fb, predicate) or EmptyBox()" because filter(Eachable1, ...) can't create FullBox
+	# ("FullBox must be initialized with exactly one value") on order to push() into it
 	p = Pred(predicate)
 	p(fb.val) returns fb
 	EmptyBox()
@@ -3132,11 +3060,7 @@ F filter(fb:FullBox, predicate=identity) {
 
 TEST FullBox(null).filter() == EmptyBox()
 
-doc Do nothing
-doc %RET - eb
-doc %EX - EmptyBox().filter(X>20)  # <EmptyBox>
-F filter(eb:EmptyBox, predicate=identity) eb
-
+# Done by filter(Eachable1)
 TEST EmptyBox().filter() == EmptyBox()
 
 doc Get FullBox value

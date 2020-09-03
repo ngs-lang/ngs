@@ -8,6 +8,11 @@
 ### Fixes and improvements
 
 * `$(log ...)` now logs i/o redirections
+* Remove unused `ValueWrapper` type
+
+### Breaking changes
+
+* Remove deprecated `n()`
 
 ## 2020-07-26 Version 0.2.8
 
