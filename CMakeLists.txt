@@ -16,7 +16,14 @@ pkg_check_modules(LIBFFI libffi REQUIRED)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /usr/local/include)
 link_directories(/usr/local/lib)
 
-add_executable(ngs version.h ngs.c syntax.include syntax.auto.h pcre_constants.include errno.include obj.c vm.c compile.c debug.c ast.c malloc.c decompile.c)
+add_executable(ngs
+	version.h
+	ngs.c
+	syntax.include syntax.auto.h
+	pcre_constants.include errno.include
+	obj.c vm.c compile.c debug.c ast.c malloc.c decompile.c
+	stdlib.ngs.h
+)
 
 include(CheckFunctionExists)
 check_function_exists(fmemopen FMEMOPEN)
@@ -60,6 +67,13 @@ add_custom_command(
 	DEPENDS
 		${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/include_errno.c
 )
+add_custom_command(
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/stdlib.ngs.h
+	COMMAND xxd -i lib/stdlib.ngs >${CMAKE_CURRENT_BINARY_DIR}/stdlib.ngs.h
+	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/stdlib.ngs
+)
+
 
 target_link_libraries(ngs m pthread gc ffi dl json-c pcre)
 
@@ -78,4 +92,4 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE DESTINATION doc/ngs)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/ DESTINATION man/man1 FILES_MATCHING PATTERN "*.1")
 
 enable_testing()
-add_test(all bash -c "NGS_BOOTSTRAP=${CMAKE_CURRENT_SOURCE_DIR}/lib/bootstrap.ngs NGS_DIR=${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_BINARY_DIR}/ngs ${CMAKE_CURRENT_SOURCE_DIR}/test.ngs")
+add_test(all bash -c "${CMAKE_CURRENT_BINARY_DIR}/ngs ${CMAKE_CURRENT_SOURCE_DIR}/test.ngs")

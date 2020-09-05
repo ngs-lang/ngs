@@ -4,11 +4,14 @@
 
 * `main()` can now be defined as part of `Namespace` of the main file: `ns { F main(...) ...}`
 * Add experimental `only(val, predicate, mapper)`
+* Add `realpath(Str)`
+* Use `NGS_PATH` environment variable for `require()`. `NGS_DIR` is deprecated.
 
 ### Fixes and improvements
 
 * `$(log ...)` now logs i/o redirections
 * Remove unused `ValueWrapper` type
+
 
 ### Breaking changes
 

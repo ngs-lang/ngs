@@ -27,7 +27,8 @@ F perform_tests_in_file(file:Str) {
 	})
 }
 
-files = %[bootstrap.ngs stdlib.ngs lang-tests.ngs].map(NGS_DIR / X) + ``find "${NGS_DIR}/autoload" -name '*.ngs'``
+base_dir = ENV.get('NGS_TESTS_BASE_DIR', `line: dirname ${realpath(ARGV0)}` / 'lib')
+files = %[lang-tests.ngs stdlib.ngs].map(base_dir / X) + ``find "${base_dir}/autoload" -name '*.ngs'``
 
 files.each(perform_tests_in_file)
 

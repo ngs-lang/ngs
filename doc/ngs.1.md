@@ -56,30 +56,18 @@ In case of an uncaught exception, the exit code is 240. In cases where additiona
 # ENVIRONMENT
 
 * `DEBUG` - when non-empty string, switches on `debug` method output (default is off). It's recommended to use `debug("my debug info")` in your scripts for turning debug output on and off easily, using the `DEBUG` environment variable.
-* `NGS_BOOTSTRAP` points to the bootstrap NGS file. On NGS startup this file is always run. Defaults to first of:
-	* `$HOME/.bootstrap.ngs`
-	* `/etc/ngs/bootstrap.ngs`
-	* `/var/lib/ngs/bootstrap.ngs`
-	* `/usr/share/ngs/bootstrap.ngs`
+* `NGS_BOOTSTRAP` points to the bootstrap NGS file. On NGS startup this file is always run. Defaults to built-in stdlib with bootsrapper.
 * `NGS_BOOTSTRAP_DEBUG` - if defined, show **bootstrap.ngs** debugging information.
-* `NGS_DIR` (defaults to `/usr/share/ngs`) - location of **stdlib.ngs** file and the **autoload** directory. Files are automatically loaded from this directory when an undefined global variable is used.
+* `NGS_PATH` (defaults to `$HOME/.ngs:/usr/local/etc/ngs:/usr/local/lib/ngs:/etc/ngs:/usr/lib/ngs`) - location of the **autoload** directory. Files are automatically loaded from this directory when an undefined global variable is used.
 * `NGS_EXIT_BACKTRACE` - print backtrace when `exit()` is called.
 * `NGS_WARN_BACKTRACE` - print backtrace when `warn()` is called. Prints only unique backtraces.
 * `NGS_ERROR_BACKTRACE` - print backtrace when `error()` is called. Prints only unique backtraces.
 
 # FILES
 
-## bootstrap.ngs
-
-Typically located in `NGS_DIR`. Responsible for bootstrapping NGS.
-
-* Loads **stdlib.ngs** if needed.
-* Runs the script specified in the command line or exectes *expression* according to swithces.
-* Prints *expression* value if needed.
-
 ## stdlib.ngs
 
-Located in `NGS_DIR`. Standard library. Defines many methods and autoloading behaviour.
+Packaged into `ngs` binary during build. Standard library. Defines many methods and autoloading behaviour.
 
 # SEE ALSO
 

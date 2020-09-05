@@ -1,3 +1,67 @@
+# WARNING: This file is packaged into the ngs binary at build time
+#          it is shipped for reference only.
+
+section "Basic Methods for Exception type" {
+	doc Initialize an Exception.
+	doc %RET - Exception with .backtrace and .message
+	doc message - Goes into .message
+	F init(e:Exception, message:Str) {
+		e.message = message
+	}
+
+	doc Initialize an Exception.
+	doc %RET - Exception with .backtrace and .cause
+	F init(e:Exception, cause:Exception) {
+		e.cause = cause
+	}
+
+	doc Initialize an Exception.
+	doc %RET - Exception with .backtrace, .message, and .cause
+	F init(e:Exception, message:Str, cause:Exception) {
+		e.message = message
+		e.cause = cause
+	}
+}
+
+section "Basic Exception subtypes" {
+	type NotImplemented; NotImplemented.inherit(Exception)
+	type ReadFail; ReadFail.inherit(Exception)
+	type RequireFail; RequireFail.inherit(Exception)
+	type MainFail; MainFail.inherit(Exception)
+
+	doc Represents error when converting program execution result to exit code
+	type ExitCodeFail; ExitCodeFail.inherit(Exception)
+}
+
+section "Basic I/O" {
+	doc Print given string and a newline to stdout.
+	doc %RET - null
+	doc %EX - echo("blah")  # Output: blah
+	F echo(s:Str) echo(1, s)
+}
+
+
+
+section "Exit type and basic ExitCode pseudo-constructor methods" {
+
+	doc Information about exiting, used by bootstrap and as argument to exit_hook.
+	doc exit_code - the code to exit with
+	doc exceptions - exceptions that occurred during exit procedure
+	type Exit
+
+	doc %RET - always 0
+	F ExitCode(x) 0
+
+	doc %RET - 0 for true, 1 for false
+	F ExitCode(b:Bool) if b 0 1
+
+	doc %RET - n
+	F ExitCode(n:Int) n
+
+	doc %RET - Always 240
+	F ExitCode(e:Exception) 240
+}
+
 section "Block type and methods" {
 	doc The type of the NAME variable used in syntax: block NAME BODY
 	doc %AUTO - block NAME BODY
@@ -145,6 +209,15 @@ section "Attributes convenience methods" {
 }
 
 section "MultiMethod" {
+
+	doc Create MultiMethod with no methods
+	F MultiMethod() super([])
+
+	doc Number of methods in MultiMethod
+	F len(mm:MultiMethod) mm.Arr().len()
+
+	doc Whether MultiMethod has any methods
+	F Bool(mm:MultiMethod) mm.Arr().Bool()
 
 	block _ {
 		global each
@@ -963,6 +1036,93 @@ F Hash(hl:HashLike) hl.attrs().HashLike
 doc Convert HashLike into JSON compatible data structure - object
 F JsonData(hl:HashLike) hl.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
 
+
+
+section "Set" {
+
+	doc Represents a set of items
+	type Set
+	Set.inherit(Eachable1)
+
+	doc Initialize a set
+	F init(s:Set) {
+		s.val = {}
+	}
+
+	doc Convert array to set
+	F init(s:Set, e:Eachable1) {
+		super(s)
+		e.each({ s.val[A] = true })
+	}
+
+	doc Add an element to the set
+	doc %RET - s
+	F push(s:Set, v) {
+		s.val[v] = true
+		s
+	}
+
+	doc Get number of items in the set
+	doc %RET - Int
+	F len(s:Set) s.val.len()
+
+	doc Call cb for each value in the set
+	doc %RET - s
+	F each(s:Set, cb:Fun) {
+		s.val.keys().each(cb)
+		s
+	}
+
+	doc Check if the value is in the set
+	doc %RET - Bool
+	F in(x, s:Set) x in s.val
+
+	doc Check whether the set is not empty
+	F Bool(s:Set) Bool(s.val)
+
+	doc Convert the set to a human-readable representation
+	F Str(s:Set) "<${s.typeof().name} ${s.val.keys().join(', ')}>"
+
+	doc Set difference
+	doc %RET - Set
+	F -(a:Set, b:Set) a.filter(X not in b)
+
+	TEST Set([1,2]) - Set([2]) == Set([1])
+
+	doc Set union
+	doc %RET - Set
+	F +(a:Set, b:Set) Set().set('val', a.val + b.val)
+
+	TEST Set([1,2]) + Set([3]) == Set([1,2,3])
+
+	doc Check whether all values in a are also in b
+	F '<='(a:Set, b:Set) {
+		len(a) <= len(b) and a.all(X in b)
+	}
+
+	TEST Set([1,2]) + Set([3]) <= Set([1,2,3])
+	TEST Set([1,2]) <= Set([1,2,3])
+	TEST not(Set([1,2,4]) <= Set([1,2,3]))
+
+	F copy(s:Set) {
+		ret = Set()
+		s.each(ret.push(X))
+		ret
+	}
+
+	doc Inspect Set
+	doc %RET - Lines
+	F inspect(a:Set) Lines(["Set of size ${a.len()}"] + a.map({"  ${SafeStr(A)}"}).digest(16, '  (...)'))
+
+	doc Defines collector { ... collect(...) ... } behaviour for Set.
+	F collector(s:Set, body:Fun) {
+		body(F(elt) s.push(elt))
+		s
+	}
+
+}
+
+
 section "Named Instances" {
 	doc "Named instances" are typically called enums or enumerated values in other languages.
 	doc %EX - type Color(NamedInstances)
@@ -1405,63 +1565,6 @@ F Str(cpm:c_pthread_mutex_t) "<c_pthread_mutex_t>"
 
 doc Convert c_pthread_mutexattr_t to Str for displaying to humans.
 F Str(cpma:c_pthread_mutexattr_t) "<c_pthread_mutexattr_t>"
-
-# === auto-load ==================================
-
-AUTOLOAD = ns {
-	global global_not_found_handler
-	_lock = ReentrantLock()
-
-	# Sorted by: file, global variable name
-	# Not exposing _global_name_to_autoload_file as use cases are not clear yet.
-	# Also, it's probably better to expose an API and not the data.
-	_global_name_to_autoload_file = %{
-		InMemoryCache       Cache
-		OnDiskCache         Cache
-
-		IPAddr              IP
-		IPNet               IP
-
-		ArrIter             Iter
-		ConstIter           Iter
-		HashIter            Iter
-		NoNext              Iter
-		RangeIter           Iter
-
-		ResDef              Res
-	}
-
-	invocation = 0
-
-	doc Called when reading undefined global.
-	doc Implements autoloading.
-	doc Searches in $NGS_DIR/autoload/GLOBAL_NAME.ngs
-	doc WARNING: May have security implications when looking up a name from untrusted source.
-	doc %EX - test("My web server runs") do { .... }  # $NGS_DIR/autoload/test.ngs is automatically loaded.
-	F global_not_found_handler(name:Str) {
-		_lock.acquire() do {
-			i = invocation
-			invocation += 1
-			F local_debug(s:Str) {
-				debug("autoload", "global_not_found_handler() [invocation $i] ${s}")
-			}
-			local_debug("name=${name}")
-			idx = ll_resolve_global_variable(name)
-			ll_is_global_variable_defined(idx) returns
-			if name in _global_name_to_autoload_file {
-				local_debug("loading ${NGS_DIR}/autoload/${_global_name_to_autoload_file[name]}.ngs")
-				require("${NGS_DIR}/autoload/${_global_name_to_autoload_file[name]}.ngs")
-				return
-			}
-			local_debug("loading ${NGS_DIR}/autoload/${name}.ngs")
-			val = require("${NGS_DIR}/autoload/${name}.ngs")
-			if not(ll_is_global_variable_defined(idx)) {
-				local_debug("global variable ${name} still not set; setting")
-				ll_set_global_variable(idx, val)
-			}
-		}
-	}
-}
 
 section "Range" {
 	doc A range
@@ -3238,7 +3341,7 @@ F get(s:Success) s.val
 doc Throws ResultFail
 doc %EX - { 1 / 0 }.Result().get()  # ResultFail exception
 F get(f:Failure) {
-	throw ResultFail("Can not get value of Failure").set('cause', f.val)
+	throw ResultFail("Can not get value of Failure", f.val)
 }
 
 doc Gets wrapped value
@@ -4128,7 +4231,7 @@ section "Thread" block _ {
 			throw ThreadJoinFail("Failed to c_pthread_join").set('code', join_result[0])
 		}
 		if join_result[1][0] {
-			throw OtherThreadFail("Joined thread threw exception").set('cause', join_result[1][1]).set('thread', t)
+			throw OtherThreadFail("Joined thread threw exception", join_result[1][1]).set('thread', t)
 		}
 		join_result[1][1]
 	}
@@ -6280,6 +6383,56 @@ F code(n:Null) "null"
 doc Convert Null into JSON compatible data structure - null
 F JsonData(n:Null) n
 
+section "Lines" {
+	doc Array of strings which comprise a text which is treated as a
+	doc unit for purposes of output (and maybe for other purposes later).
+	type Lines(ArrLike)
+
+	doc Split s to strings using end-of-line separators.
+	doc UNIX and Windows line endings supported (Windows - not tested yet).
+	doc Warning: Max OS <= 9 line separation of CR (\r) is not supported
+	doc %EX - "xx\nyy".lines()  # %[xx yy]
+	F init(lines:Lines, s:Str) {
+		_lines = if s {
+			s -= MaybeSfx('\n')
+			s.split('\n').map(X - MaybeSfx('\r'))
+		} else {
+			[]
+		}
+		lines.init(_lines)
+	}
+
+	doc Echo all lines using echo(Str)
+	F echo(lines:Lines) lines.each(echo)
+
+	doc Echo all lines to dst
+	F echo(dst, lines:Lines) {
+		lines.each(echo(dst, X))
+		dst
+	}
+
+	doc Write all lines to standard error using warn(Str)
+	F warn(lines:Lines) lines.each(warn)
+
+	doc Write all lines to standard error using error(Str)
+	F error(lines:Lines) lines.each(error)
+
+	# Later this should be a widget which can be displayed
+	# with ASCII art in console or as a box in a browser.
+	# WARNING: only works when one byte is one character.
+	doc %STATUS - experimental
+	F framed(lines:Lines) {
+		not(lines) returns lines
+		m = lines.map(len).max()
+		border = '+' + ('-' * (m+2)) + '+'
+		collector/Lines() {
+			collect(border)
+			lines.each(F(x) collect("| ${x.Str(m)} |"))
+			collect(border)
+		}
+	}
+}
+
 # === exit_hook - Print uncaught exception =======
 
 doc Convert an array to a possibly shorter version, for displaying to human.
@@ -6955,6 +7108,17 @@ F write(f:File, s:Str) {
 	write(if f.fd is Null then f.path else f.fd, s)
 }
 
+# TODO: better exception
+F realpath(path:Str) {
+	c_realpath(path) or throw CError("Faied to realpath()").set(path=path)
+}
+
+doc %RET - Same type as p but using absolute path
+F realpath(p:Path) {
+	t = typeof(p)
+	t(realpath(p.path))
+}
+
 section "JSON" {
 	doc Convert data structure into JSON compatible data using JsonData and call built-in encode_json().
 	doc Implement JsonData() for your own types to customize converting to JSON.
@@ -7012,4 +7176,273 @@ section "Doc" {
 	F \(name:Str, attributes:Hash, children:Arr) {
 		Doc::Node(name, children.reject(NoData).map(only(FullBox, get)), **attributes)
 	}
+}
+
+
+section "Loading code" {
+
+	# TODO: XDG
+	NGS_PATH = %[
+		/usr/local/etc/ngs
+		/usr/local/lib/ngs
+		/etc/ngs
+		/usr/lib/ngs
+	]
+
+	if _h = ENV.get('HOME') {
+		NGS_PATH.unshift(_h / '.ngs')
+	}
+
+	if _d = ENV.get('NGS_DIR') {
+		warn("NGS_DIR environment variable is deprecated. Use NGS_PATH instead.")
+		NGS_PATH = [_d]
+	}
+
+	if _p = ENV.get('NGS_PATH') {
+		debug('autoload', "Using environment variable NGS_PATH: ${_p}")
+		NGS_PATH = _p.split(':')
+	}
+
+
+	F bootstrap_print_compilation_warnings(program_bytecode, fname) {
+		program_bytecode.attrs().warnings.each(F(w) {
+			wl = w.location
+			warn("${fname}:${wl.first_line}:${wl.first_column} warning: ${w.message}")
+		})
+	}
+
+	doc Runs the given file
+	doc %RET - Typically whatever the last expression in the file evaluates to
+	F require(fname:Str) {
+		try {
+			candidates = NGS_PATH.map(X / fname)
+			debug('require', "Candidate files: ${candidates.join(',')}")
+			f = candidates.first(File(X), null)
+			not(f) throws RequireFail("Failed to require() $fname. It was not found in path").set(fname=fname, path=NGS_PATH, candidates=candidates)
+
+			program_text = read(f)
+			program_bytecode = compile(program_text, f)
+			debug('require', "require(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
+			bootstrap_print_compilation_warnings(program_bytecode, f)
+			program_func = load(program_bytecode, "require()d file: $f")
+			ret = program_func()
+			debug('require', "require(): done requiring ${f}")
+			ret
+		} catch(e) {
+			guard e is not RequireFail
+			guard e is not NormalExit # Used by CLI
+			throw RequireFail(e)
+		}
+	}
+
+	AUTOLOAD = ns {
+		global global_not_found_handler
+
+		_lock = ReentrantLock()
+
+		# Sorted by: file, global variable name
+		# Not exposing _global_name_to_autoload_file as use cases are not clear yet.
+		# Also, it's probably better to expose an API and not the data.
+		_global_name_to_autoload_file = %{
+			InMemoryCache       Cache
+			OnDiskCache         Cache
+
+			IPAddr              IP
+			IPNet               IP
+
+			ArrIter             Iter
+			ConstIter           Iter
+			HashIter            Iter
+			NoNext              Iter
+			RangeIter           Iter
+
+			ResDef              Res
+		}
+
+		invocation = 0
+
+		doc Called when reading undefined global.
+		doc Implements autoloading.
+		doc Searches for autoload/GLOBAL_NAME.ngs in NGS_PATH
+		doc WARNING: May have security implications when looking up a name from untrusted source.
+		doc %EX - test("My web server runs") do { .... }  # autoload/test.ngs is automatically loaded.
+		F global_not_found_handler(name:Str) {
+			_lock.acquire() do {
+
+				F _debug(s:Str) debug("autoload", "global_not_found_handler() [invocation $i] ${s}")
+
+				i = invocation
+				invocation += 1
+				_debug("name=${name}")
+				idx = ll_resolve_global_variable(name)
+				ll_is_global_variable_defined(idx) returns
+				if name in _global_name_to_autoload_file {
+					_debug("loading autoload/${_global_name_to_autoload_file[name]}.ngs")
+					require("autoload/${_global_name_to_autoload_file[name]}.ngs")
+					return
+				}
+				_debug("loading autoload/${name}.ngs")
+
+				val = require("autoload/${name}.ngs")
+				if not(ll_is_global_variable_defined(idx)) {
+					_debug("global variable ${name} still not set; setting")
+					ll_set_global_variable(idx, val)
+				}
+
+			}
+		}
+	}
+
+}
+
+
+section "Bootstrap" {
+	main = MultiMethod()
+
+	doc Internal method. Please do not use.
+	doc Main entry point. Executed on NGS boot.
+	doc %STATUS - internal
+	F bootstrap() {
+		global ARGV0
+		global ORIG_ARGV = copy(ARGV)
+
+		if 'NGS_BOOTSTRAP_DEBUG' in ENV {
+			warn("Using deprecated NGS_BOOTSTRAP_DEBUG environment variable. It has no effect. Use DEBUG=bootstrap instead.")
+		}
+
+		code_to_run = null
+
+		debug('bootstrap', 'start')
+
+		ARGV0 = ARGV.shift(null)
+
+		# *** Parse switches ***
+		sw = null
+		if ARGV {
+			a = ARGV[0]
+			if a == '--version' {
+				echo(VERSION)
+				return 0
+			}
+
+			if a in %[-e -p -pj -pi -pl -pil -pjl -pc -pt] {
+				sw = ARGV.shift()
+				# Newline at the end is for avoiding # commenting out the closing }
+				# Newline at the beginning is for symmetry
+				default_code = 'F default_argv_code() { fetch() }()'
+				code_to_run = "{\n${ARGV.shift(default_code)}\n}"
+				debug('bootstrap', "Got $sw switch, using command line provided code")
+				fname = "<command line ${sw} switch>"
+			}
+		}
+
+		if not(code_to_run) {
+			debug('bootstrap', 'No -e switch was passed, will load the program from a file')
+			fname = ARGV.shift(null)
+			if not(fname) {
+				return require("cli.ngs")
+			}
+			ARGV0 = fname
+			code_to_run = read(fname)
+		}
+
+		program_bytecode = compile(code_to_run, fname)
+		debug('bootstrap', "bootstrap(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
+		bootstrap_print_compilation_warnings(program_bytecode, fname)
+		program_func = load(program_bytecode, "bootstrap()ped file: $fname")
+
+		result = program_func()
+
+		section "Handle main()" {
+
+			F invoke(main) {
+				debug('bootstrap', "main() defined, using bootstrap_invoke_main()")
+				if global_not_found_handler.len() == 0 {
+					throw MainFail("Autoloading (usually defined in stdlib) is not present but the main() invoking mechanism requires it")
+				}
+				result = bootstrap_invoke_main(main, fname, result)
+			}
+
+			# Can't use match, it's not defined if stdlib was not loaded
+			econd {
+				result is Namespace {
+					if 'main' in result {
+						invoke(result['main'])
+					}
+				}
+				main is MultiMethod {
+					if main.len() > 0 {
+						invoke(main)
+					}
+				}
+				main is Fun {
+					invoke(main)
+				}
+				true {
+					throw MainFail("'main' must be a Namespace, MultiMethod or a Fun, not ${main.typeof().name}").set('value', main)
+				}
+			}
+		}
+
+		transformation = {
+			'-pl': identity
+			'-pil': inspect
+			'-pjl': encode_json
+		}
+		if sw in transformation {
+			for r in result {
+				transformation[sw](r).echo()
+			}
+			return 0
+		}
+
+		transformation = {
+			'-p': identity
+			'-pi': inspect
+			'-pj': encode_json
+			'-pc': code
+			'-pt': { Table2::Table(A) } # Lazy loading of Table2
+		}
+		if sw in transformation {
+			echo(transformation[sw](result))
+			return 0
+		}
+
+		result.ExitCode()
+	}
+
+	doc Internal method. Please do not use.
+	doc Runs bootstrap() and handles exceptions.
+	doc %STATUS - internal
+	F bootstrap_exception_catch_wrapper() {
+		exit = Exit().set(exit_code=0, exceptions=[])
+		try {
+			exit.exit_code = bootstrap()
+		} catch(e:Exception) {
+			exit.exceptions.push(e)
+			exit.exit_code = 240
+			try {
+				exit.exit_code = e.ExitCode()
+			} catch(e:Exception) {
+				exit.exceptions.push(ExitCodeFail("Failed to convert exception to exit code", e))
+				exit.exit_code = exit.exit_code + 1
+			}
+		}
+
+		try {
+			exit_hook(exit)
+		} catch(e:Exception) {
+			exit.exceptions.push(e)
+			exit.exit_code = exit.exit_code + 2
+			exit.exceptions.each(F(e) {
+				error("[bootstrap_exception_catch_wrapper] --- Uncaught exception ---")
+				dump(e)
+			})
+		}
+
+		c_exit(exit.exit_code)
+	}
+
+	bootstrap_exception_catch_wrapper()
+
 }

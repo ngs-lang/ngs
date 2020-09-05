@@ -8,6 +8,10 @@
 #include <time.h>
 #include <string.h>
 
+// REALPATH(3)
+#include <limits.h>
+#include <stdlib.h>
+
 // GETTIMEOFDAY(2)
 #include <sys/time.h>
 
@@ -686,6 +690,18 @@ METHOD_RESULT native_c_open_str_str METHOD_PARAMS {
 	// if(!flags && !strcmp(flags_str, "rw")) { flags = O_RDWR; }
 	SET_INT(*result, open(pathname, flags, 0666)); // Mode same as in bash
 	return METHOD_OK;
+}
+
+METHOD_RESULT native_c_realpath_str METHOD_PARAMS {
+	const char *path = obj_to_cstring(argv[0]);
+	char resolved_path[PATH_MAX + 1];
+	resolved_path[0] = '\0';
+	if(realpath(path, resolved_path)) {
+		*result = make_string(resolved_path);
+	} else {
+		*result = MAKE_NULL;
+	}
+	METHOD_RETURN(*result);
 }
 
 // READ(2)
@@ -3020,6 +3036,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Open a file. Uses OPEN(2).");
 	_doc(vm, "flags", "r - O_RDONLY; w - O_WRONLY | O_CREAT | O_TRUNC; a - O_WRONLY | O_CREAT | O_APPEND");
 	_doc(vm, "%RET", "Int - file descriptor or -1");
+	register_global_func(vm, 0, "c_realpath",  &native_c_realpath_str, 1, "path",     vm->Str);
+	_doc(vm, "", "Real path. Uses REALPATH(3).");
+	_doc(vm, "%RET", "Str or null");
 	register_global_func(vm, 0, "c_close",  &native_c_close_int,       1, "fd",       vm->Int);
 	_doc(vm, "", "Close a file. Uses CLOSE(2).");
 	_doc(vm, "%RET", "Int - zero on success or -1");

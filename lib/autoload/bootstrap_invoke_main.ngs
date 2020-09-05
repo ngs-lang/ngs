@@ -5,7 +5,7 @@ type BootstrapFailedMatchMain(Exception)
 doc Internal method. Please do not use.
 doc Tries to run c if it matches argv.
 F bootstrap_try_main(c:UserDefinedMethod, argv:Arr, b:Block) {
-	bootstrap_debug("Trying main() candidate $c")
+	debug('bootstrap', "Trying main() candidate $c")
 	try {
 		m = null
 		try {
@@ -14,17 +14,17 @@ F bootstrap_try_main(c:UserDefinedMethod, argv:Arr, b:Block) {
 			throw BootstrapFailedMatchMain("Command line arguments are invalid. Failed to match main() method.").set('cause', e)
 		}
 		if not(m) {
-			bootstrap_debug("Trying main() candidate ${c} - no match before calling")
+			debug('bootstrap', "Trying main() candidate ${c} - no match before calling")
 			return null
 		}
 		# echo("Matched: $m")
 		v = c(*m.args, **m.kwargs)
-		bootstrap_debug("Trying main() candidate ${c} - matched")
+		debug('bootstrap', "Trying main() candidate ${c} - matched")
 		b.return(v)
 	} catch(mnf:MethodNotFound) {
 		# That's fine
 		mnf.callable !== c throws mnf
-		bootstrap_debug("Trying main() candidate ${c} - no match after calling")
+		debug('bootstrap', "Trying main() candidate ${c} - no match after calling")
 	}
 }
 
@@ -40,7 +40,7 @@ F bootstrap_invoke_main(main, bootstrap_main_file:Str, default) block b {
 			# 	warn("main() defined outside of the main file was ignored").set(main_file = bootstrap_main_file)
 			# }
 			not(candidate_mains) returns default
-			bootstrap_debug("Candidate main() functions: $candidate_mains")
+			debug('bootstrap', "Candidate main() functions: $candidate_mains")
 
 			candidate_mains.each(bootstrap_try_main(X, ARGV, b))
 			# TODO: print usage examples here and exit with error code

@@ -197,7 +197,7 @@ This is how an instance can be created using NGS (real working code).
 ### Run
 
 	# If NGS is not installed (from the root of ngs project):
-	NGS_DIR=lib NGS_BOOTSTRAP=lib/bootstrap.ngs ./build/ngs SCRIPT_NAME.ngs
+	NGS_PATH=lib ./build/ngs SCRIPT_NAME.ngs
 
 	# If NGS is installed:
 	ngs SCRIPT_NAME.ngs
