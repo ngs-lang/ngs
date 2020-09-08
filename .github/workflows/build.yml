@@ -1,0 +1,91 @@
+name: Build
+on: push
+
+jobs:
+  build:
+    timeout-minutes: 5
+    name: Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        name: [
+            ubuntu-latest-gcc-6,
+            ubuntu-latest-gcc-7,
+            ubuntu-latest-gcc-8,
+            ubuntu-latest-gcc-9,
+            ubuntu-latest-gcc-10,
+            ubuntu-latest-clang-6.0,
+            ubuntu-latest-clang-7,
+            ubuntu-latest-clang-8,
+            ubuntu-latest-clang-9,
+            ubuntu-latest-clang-10,
+        ]
+        include:
+          - name: ubuntu-latest-gcc-6
+            os: ubuntu-latest
+            compiler: gcc
+            version: "6"
+
+          - name: ubuntu-latest-gcc-7
+            os: ubuntu-latest
+            compiler: gcc
+            version: "7"
+
+          - name: ubuntu-latest-gcc-8
+            os: ubuntu-latest
+            compiler: gcc
+            version: "8"
+
+          - name: ubuntu-latest-gcc-9
+            os: ubuntu-latest
+            compiler: gcc
+            version: "9"
+
+          - name: ubuntu-latest-gcc-10
+            os: ubuntu-latest
+            compiler: gcc
+            version: "10"
+
+          - name: ubuntu-latest-clang-6.0
+            os: ubuntu-latest
+            compiler: clang
+            version: "6.0"
+
+          - name: ubuntu-latest-clang-7
+            os: ubuntu-latest
+            compiler: clang
+            version: "7"
+
+          - name: ubuntu-latest-clang-8
+            os: ubuntu-latest
+            compiler: clang
+            version: "8"
+
+          - name: ubuntu-latest-clang-9
+            os: ubuntu-latest
+            compiler: clang
+            version: "9"
+
+          - name: ubuntu-latest-clang-10
+            os: ubuntu-latest
+            compiler: clang
+            version: "10"
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Compiler (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            sudo apt-get install -y g++-${{ matrix.version }}
+            echo "::set-env name=CC::gcc-${{ matrix.version }}"
+            echo "::set-env name=CXX::g++-${{ matrix.version }}"
+          else
+            sudo apt-get install -y clang-${{ matrix.version }}
+            echo "::set-env name=CC::clang-${{ matrix.version }}"
+            echo "::set-env name=CXX::clang++-${{ matrix.version }}"
+          fi
+      - name: Install and Test (Linux)
+        if: runner.os == 'Linux'
+        run: (./install-linux.sh && make tests)
