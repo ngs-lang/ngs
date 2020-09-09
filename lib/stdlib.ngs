@@ -7263,9 +7263,9 @@ section "Loading code" {
 
 		doc Called when reading undefined global.
 		doc Implements autoloading.
-		doc Searches for autoload/GLOBAL_NAME.ngs in NGS_PATH
+		doc Searches for autoload/globals/GLOBAL_NAME.ngs in NGS_PATH
 		doc WARNING: May have security implications when looking up a name from untrusted source.
-		doc %EX - test("My web server runs") do { .... }  # autoload/test.ngs is automatically loaded.
+		doc %EX - test("My web server runs") do { .... }  # autoload/globals/test.ngs is automatically loaded.
 		F global_not_found_handler(name:Str) {
 			_lock.acquire() do {
 
@@ -7277,13 +7277,13 @@ section "Loading code" {
 				idx = ll_resolve_global_variable(name)
 				ll_is_global_variable_defined(idx) returns
 				if name in _global_name_to_autoload_file {
-					_debug("loading autoload/${_global_name_to_autoload_file[name]}.ngs")
-					require("autoload/${_global_name_to_autoload_file[name]}.ngs")
+					_debug("loading autoload/globals/${_global_name_to_autoload_file[name]}.ngs")
+					require("autoload/globals/${_global_name_to_autoload_file[name]}.ngs")
 					return
 				}
-				_debug("loading autoload/${name}.ngs")
+				_debug("loading autoload/globals/${name}.ngs")
 
-				val = require("autoload/${name}.ngs")
+				val = require("autoload/globals/${name}.ngs")
 				if not(ll_is_global_variable_defined(idx)) {
 					_debug("global variable ${name} still not set; setting")
 					ll_set_global_variable(idx, val)
