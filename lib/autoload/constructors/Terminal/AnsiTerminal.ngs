@@ -1,0 +1,7 @@
+F Terminal(fd_in:Int, fd_out:Int) {
+	guard isatty(fd_in) and isatty(fd_out)
+	debug("term", "Terminal() choose AnsiTerminal()")
+	k = "${fd_in}:${fd_out}"
+	k in STDLIB_TERMINALS returns STDLIB_TERMINALS[k]
+	STDLIB_TERMINALS[k] = AnsiTerminal(fd_in, fd_out)
+}

@@ -7214,24 +7214,40 @@ section "Loading code" {
 	doc Runs the given file
 	doc %RET - Typically whatever the last expression in the file evaluates to
 	F require(fname:Str) {
-		try {
-			candidates = NGS_PATH.map(X / fname)
-			debug('require', "Candidate files: ${candidates.join(',')}")
-			f = candidates.first(File(X), null)
-			not(f) throws RequireFail("Failed to require() $fname. It was not found in path").set(fname=fname, path=NGS_PATH, candidates=candidates)
+		candidates = NGS_PATH.map(X / fname)
+		debug('require', "Candidate files: ${candidates.join(',')}")
+		f = candidates.first(File(X), null)
+		not(f) throws RequireFail("Failed to require() $fname. It was not found in path").set(fname=fname, path=NGS_PATH, candidates=candidates)
+		require(f)
+	}
 
-			program_text = read(f)
-			program_bytecode = compile(program_text, f)
+	F require(fname:Str) {
+		guard fname ~ Pfx('/')
+		try {
+			program_text = read(fname)
+			program_bytecode = compile(program_text, fname)
 			debug('require', "require(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
-			bootstrap_print_compilation_warnings(program_bytecode, f)
-			program_func = load(program_bytecode, "require()d file: $f")
+			bootstrap_print_compilation_warnings(program_bytecode, fname)
+			program_func = load(program_bytecode, "require()d file: $fname")
 			ret = program_func()
-			debug('require', "require(): done requiring ${f}")
+			debug('require', "require(): done requiring ${fname}")
 			ret
 		} catch(e) {
 			guard e is not RequireFail
 			guard e is not NormalExit # Used by CLI
 			throw RequireFail(e)
+		}		
+	}
+
+	F require(p:Path) require(p.path)
+
+	doc %STATUS - experimental
+	F require(d:Dir) {
+		debug('require', "Requiring directory ${d}")
+		for path_dir in NGS_PATH.reverse() {
+			if _d = Dir(path_dir / d.path) {
+				dir(_d).map(require)
+			}
 		}
 	}
 
