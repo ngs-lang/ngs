@@ -2,7 +2,7 @@ name: Build
 on: push
 
 jobs:
-  build:
+  build-internal:
     timeout-minutes: 5
     name: Build
     runs-on: ${{ matrix.os }}
@@ -116,3 +116,51 @@ jobs:
       - name: Install and Test (macOS)
         if: runner.os == 'macOS'
         run: (./install-mac.sh && make tests)
+
+  build-external:
+    timeout-minutes: 5
+    name: Build External
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.container }}
+      options: --user root
+    strategy:
+      matrix:
+        name: [
+            debian-stable-gcc-7,
+            debian-stable-gcc-8,
+            debian-stable-clang-7,
+        ]
+        include:
+          - name: debian-stable-gcc-7
+            container: debian:stable
+            compiler: gcc
+            version: "7"
+
+          - name: debian-stable-gcc-8
+            container: debian:stable
+            compiler: gcc
+            version: "8"
+
+          - name: debian-stable-clang-7
+            container: debian:stable
+            compiler: clang
+            version: "7"
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Compiler
+        run: |
+          apt-get update
+          apt-get install -y sudo   # sudo is not present on the image
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            apt-get install -y g++-${{ matrix.version }}
+            echo "::set-env name=CC::gcc-${{ matrix.version }}"
+            echo "::set-env name=CXX::g++-${{ matrix.version }}"
+          else
+            apt-get install -y clang-${{ matrix.version }}
+            echo "::set-env name=CC::clang-${{ matrix.version }}"
+            echo "::set-env name=CXX::clang++-${{ matrix.version }}"
+          fi
+      - name: Install and Test
+        run: (./install-linux.sh && make tests)
