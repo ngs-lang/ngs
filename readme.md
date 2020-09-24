@@ -7,6 +7,8 @@
 [![Docker Build Status](https://img.shields.io/docker/cloud/build/ngslang/ngs.svg)](https://hub.docker.com/r/ngslang/ngs/builds)
 
 
+[![ngs](https://snapcraft.io//ngs/badge.svg)](https://snapcraft.io/ngs)
+
 **Next Generation Shell** is a powerful programming language and a shell designed specifically for Ops. *Because you deserve better*.
 
 ## Quick Links
