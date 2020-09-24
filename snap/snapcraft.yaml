@@ -7,8 +7,9 @@ description: |
   One way to think about NGS is bash plus data structures plus better syntax and error handling.
   Scripting AWS is much easier with NGS, there is a Declarative Primitives style library for that.
 
-grade: stable # must be 'stable' to release into candidate/stable channels
+grade: devel # Can be either devel (i.e. a development version of the snap, so not to be published to the stable or candidate channels) or stable (i.e. a stable release or release candidate, which can be released to all channels). Example: [stable or devel]
 confinement: strict # use 'strict' once you have the right plugs and slots
+license: GPL-3.0
 
 parts:
   ngs:
