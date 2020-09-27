@@ -1,5 +1,7 @@
 #include <assert.h>
+#ifdef HAVE_EXECINFO_H
 #include <execinfo.h>
+#endif
 #include <inttypes.h>
 #include <string.h>
 
@@ -36,7 +38,13 @@ static void _dump(FILE *f, VALUE v, int level) {
 
 	if(IS_NATIVE_METHOD(v)) {
 		symbols_buffer[0] = OBJ_DATA_PTR(v);
+#ifdef HAVE_EXECINFO_H
 		symbols = backtrace_symbols(symbols_buffer, 1);
+#else
+		symbols = NGS_MALLOC(sizeof(char *));
+		symbols[0] = ngs_strdup("(name unavailable due to missing execinfo.h at build time)");
+
+#endif
 		fprintf(f, "%*s* native method %s at %p req_params=%d\n", level << 1, "", symbols[0], OBJ_DATA_PTR(v), NATIVE_METHOD_OBJ_N_REQ_PAR(v));
 		for(i=0; i<NATIVE_METHOD_OBJ_N_REQ_PAR(v); i++) {
 			fprintf(f, "%*s* required parameter %zu\n", (level+1) << 1, "", i+1);
