@@ -79,7 +79,7 @@ add_custom_command(
 add_custom_command(
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/stdlib.ngs.h
-	COMMAND xxd -i lib/stdlib.ngs >${CMAKE_CURRENT_BINARY_DIR}/stdlib.ngs.h
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/bin2c.sh lib/stdlib.ngs >${CMAKE_CURRENT_BINARY_DIR}/stdlib.ngs.h
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/stdlib.ngs
 )
 
