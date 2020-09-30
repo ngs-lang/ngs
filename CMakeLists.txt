@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 project(NGS)
 
-include(FindPkgConfig)
 include(CheckFunctionExists)
 include(CheckIncludeFile)
+include(FindPkgConfig)
 
 
 # -D_DARWIN_C_SOURCE - SIGWINCH and friends on MacOS
@@ -37,6 +37,11 @@ ENDIF()
 check_include_file(execinfo.h EXECINFO_H)
 IF(EXECINFO_H)
 	add_definitions(-DHAVE_EXECINFO_H)
+ENDIF()
+
+check_include_file(sys/poll.h POLL_H)
+IF(POLL_H)
+	add_definitions(-DHAVE_POLL_H)
 ENDIF()
 
 
