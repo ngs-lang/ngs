@@ -16,6 +16,7 @@
 ### Breaking changes
 
 * Remove deprecated `n()`
+* `switch` and `cond` are now consistent with if, accepting `{...}` code blocks for the LHS (`switch {a=1; a+a} {...}`, `cond { {a=b+c; a>0 } ... }`).
 
 ## 2020-07-26 Version 0.2.8
 
