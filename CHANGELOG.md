@@ -11,6 +11,7 @@
 
 * `$(log ...)` now logs i/o redirections
 * Remove unused `ValueWrapper` type
+* Bootstrapping - `MY_NAMESPACE::main` works even if `main` is not defined in the main file, allowing `ngs -e 'require("my_module.ngs")` to run its own `main()`
 
 
 ### Breaking changes

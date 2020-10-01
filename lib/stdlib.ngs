@@ -233,6 +233,8 @@ section "MultiMethod" {
 		}
 	}
 
+	F filtero(mm:MultiMethod, pred) mm.Arr().filter(pred).MultiMethod()
+
 	F Str(mm:MultiMethod) "<MultiMethod with ${mm.Arr().len()} method(s)>"
 }
 
@@ -7371,24 +7373,29 @@ section "Bootstrap" {
 
 		section "Handle main()" {
 
+			F in_main_file(m) m.ip().resolve_instruction_pointer().file == fname
+
 			F invoke(main) {
 				debug('bootstrap', "main() defined, using bootstrap_invoke_main()")
 				if global_not_found_handler.len() == 0 {
 					throw MainFail("Autoloading (usually defined in stdlib) is not present but the main() invoking mechanism requires it")
 				}
-				result = bootstrap_invoke_main(main, fname, result)
+				bootstrap_invoke_main(main)
 			}
 
 			# Can't use match, it's not defined if stdlib was not loaded
-			econd {
+			result = econd {
 				result is Namespace {
 					if 'main' in result {
 						invoke(result['main'])
 					}
 				}
 				main is MultiMethod {
-					if main.len() > 0 {
-						invoke(main)
+					m = main.filtero(in_main_file)
+					if m.len() > 0 {
+						invoke(m)
+					} else {
+						result
 					}
 				}
 				main is Fun {

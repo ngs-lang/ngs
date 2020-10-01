@@ -32,14 +32,10 @@ doc Internal method. Please do not use.
 doc Find and invoke main() method that matches the passed command line arguments.
 doc Called by bootstrapper in cases where main() is defined.
 doc default - The result of evaluation of the code that was run by bootstrapper. Returned when main is not a MultiMethod or the defined main() was not in the main file.
-F bootstrap_invoke_main(main, bootstrap_main_file:Str, default) block b {
+F bootstrap_invoke_main(main) block b {
 	ematch main {
 		MultiMethod {
-			candidate_mains = main.Arr().filter(F(m) m.ip().resolve_instruction_pointer().file == bootstrap_main_file).reverse()
-			# if len(candidate_mains) != len(main) {
-			# 	warn("main() defined outside of the main file was ignored").set(main_file = bootstrap_main_file)
-			# }
-			not(candidate_mains) returns default
+			candidate_mains = main.Arr().reverse()
 			debug('bootstrap', "Candidate main() functions: $candidate_mains")
 
 			candidate_mains.each(bootstrap_try_main(X, ARGV, b))
