@@ -1,0 +1,26 @@
+ns {
+
+	# Run with: ngs -e 'require("experiments/UI.ngs")'
+
+	type Dimension
+		type CharactersDimension(Dimension)
+		type StretchDimension(Dimension)
+		type PixelsDimension(Dimension)
+
+	type Screen
+		type TerminalScreen(Screen)
+		type WebScreen(Screen)
+	type Widget
+		type ContainerWidget(Widget)
+
+	F init(d:Dimension, val) cd.val = val
+
+
+	# Later - multu-screen sessions
+	F Screen() TerminalScreen() # for now terminal only, later - web
+
+	F main() {
+		s = Screen()
+		echo(s)
+	}
+}
