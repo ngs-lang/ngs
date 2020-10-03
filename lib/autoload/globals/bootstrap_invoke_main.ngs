@@ -33,6 +33,8 @@ doc Find and invoke main() method that matches the passed command line arguments
 doc Called by bootstrapper in cases where main() is defined.
 doc default - The result of evaluation of the code that was run by bootstrapper. Returned when main is not a MultiMethod or the defined main() was not in the main file.
 F bootstrap_invoke_main(main) block b {
+	debug('bootstrap', "In bootstrap_invoke_main()")
+
 	ematch main {
 		MultiMethod {
 			candidate_mains = main.Arr().reverse()
