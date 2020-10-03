@@ -7375,31 +7375,27 @@ section "Bootstrap" {
 
 			F in_main_file(m) m.ip().resolve_instruction_pointer().file == fname
 
-			F invoke(main) {
-				debug('bootstrap', "main() defined, using bootstrap_invoke_main()")
-				if global_not_found_handler.len() == 0 {
-					throw MainFail("Autoloading (usually defined in stdlib) is not present but the main() invoking mechanism requires it")
-				}
-				bootstrap_invoke_main(main)
-			}
-
-			# Can't use match, it's not defined if stdlib was not loaded
 			result = econd {
 				result is Namespace {
 					if 'main' in result {
-						invoke(result['main'])
+						bootstrap_invoke_main(result['main'])
+					} else {
+						result
 					}
 				}
 				main is MultiMethod {
 					m = main.filtero(in_main_file)
-					if m.len() > 0 {
-						invoke(m)
+					if len(main) != len(m) {
+						warn("main method define in non-main file")
+					}
+					if m {
+						bootstrap_invoke_main(m)
 					} else {
 						result
 					}
 				}
 				main is Fun {
-					invoke(main)
+					bootstrap_invoke_main(main)
 				}
 				true {
 					throw MainFail("'main' must be a Namespace, MultiMethod or a Fun, not ${main.typeof().name}").set('value', main)
