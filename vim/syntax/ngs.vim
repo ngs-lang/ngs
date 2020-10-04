@@ -40,7 +40,6 @@ syn keyword ngsType Range RangeIter ReadFail ReadingPipeBetweenChildren Real Ree
 syn keyword ngsType Seq Set Sfx SocketFile SplatMethodParam StackDepthFail Stat StatFail Stats Str SubSeq Success SwitchFail SwitchParseFail Symlink
 syn keyword ngsType Table TestFail TestMessage TestsResults Thread ThreadFail Threads Time TimeFail TmpFile TtyCheckFail Type
 syn keyword ngsType UndefinedLocalVar UserDefinedMethod
-syn keyword ngsType ValueWrapper
 syn keyword ngsType WriteFail WritingPipeBetweenChildren
 syn keyword ngsType c_ffi_cif c_ffi_type c_pthread_attr_t c_pthread_cond_t c_pthread_mutex_t c_pthread_mutexattr_t c_pthread_t c_tm
 " Generated types - end
@@ -54,11 +53,11 @@ syn keyword ngsFunction Pred
 syn keyword ngsFunction SafeStr StrForTable StrParams Strs
 syn keyword ngsFunction TODO
 syn keyword ngsFunction abs access acquire all any args arr_splat assert assert_array assert_base assert_bool assert_eq assert_exit_code assert_has assert_hash assert_hash_keys assert_hash_keys_values assert_in assert_match assert_min_len assert_output_has assert_path_exists assert_resolvable assert_string attrs
-syn keyword ngsFunction band basename bootstrap bootstrap_debug bootstrap_exception_catch_wrapper bootstrap_find_ngs_dir bootstrap_invoke_main bootstrap_print_compilation_warnings bootstrap_try_main bor bxor
-syn keyword ngsFunction c_access c_chdir c_close c_closedir c_dlopen c_errno c_execve c_exit c_ffi_call c_ffi_prep_cif c_fork c_fstat c_getpid c_getppid c_gettimeofday c_gmtime c_isatty c_kill c_localtime c_lseek c_lstat c_mktime c_open c_opendir c_pcre_compile c_pcre_exec c_pipe c_poll c_pthread_attr_init c_pthread_cond_broadcast c_pthread_cond_destroy c_pthread_cond_init c_pthread_cond_signal c_pthread_cond_wait c_pthread_create c_pthread_join c_pthread_mutex_init c_pthread_mutex_lock c_pthread_mutex_unlock c_pthread_mutexattr_init c_pthread_mutexattr_settype c_pthread_self c_read c_readdir c_stat c_strcasecmp c_strcmp c_strerror c_strftime c_strptime c_time c_waitpid c_write cached calculate_num_cols_to_show call ceil cell_display_width chdir child_fd chr close close_reading_end close_writing_end code column columns compile config converge copy count create created
+syn keyword ngsFunction band basename bootstrap bootstrap_exception_catch_wrapper bootstrap_invoke_main bootstrap_print_compilation_warnings bootstrap_try_main bor bxor
+syn keyword ngsFunction c_access c_chdir c_close c_closedir c_dlopen c_errno c_execve c_exit c_ffi_call c_ffi_prep_cif c_fork c_fstat c_getpid c_getppid c_gettimeofday c_gmtime c_isatty c_kill c_localtime c_lseek c_lstat c_mktime c_open c_opendir c_pcre_compile c_pcre_exec c_pipe c_poll c_pthread_attr_init c_pthread_cond_broadcast c_pthread_cond_destroy c_pthread_cond_init c_pthread_cond_signal c_pthread_cond_wait c_pthread_create c_pthread_join c_pthread_mutex_init c_pthread_mutex_lock c_pthread_mutex_unlock c_pthread_mutexattr_init c_pthread_mutexattr_settype c_pthread_self c_read c_readdir c_realpath c_stat c_strcasecmp c_strcmp c_strerror c_strftime c_strptime c_time c_waitpid c_write cached calculate_num_cols_to_show call ceil cell_display_width chdir child_fd chr close close_reading_end close_writing_end code column columns compile config converge copy count create created
 syn keyword ngsFunction debug decode decode_hex decode_json decode_uri_component del delete dflt die digest dir drop dump
 syn keyword ngsFunction each each_chunk each_group_test each_idx_key_val each_idx_val eachk eachv echo encode encode_hex encode_html encode_html_attr encode_json encode_uri_component ends_with ensure ensure_array error exception_specific_message exit expect
-syn keyword ngsFunction fetch filter filterk filterv finally find find_if_needed find_in_path finished finished_ok first flatten floor framed
+syn keyword ngsFunction fetch filter filterk filtero filterv finally find find_if_needed find_in_path finished finished_ok first flatten floor framed
 syn keyword ngsFunction get glob global_not_found_handler globals gmtime group
 syn keyword ngsFunction has has_index has_no hash hash_splat
 syn keyword ngsFunction id identity ids in index indexes inherit init inspect intersperse ip is is_blocked_group is_subtype isatty
@@ -66,10 +65,10 @@ syn keyword ngsFunction join
 syn keyword ngsFunction keys kill
 syn keyword ngsFunction latest len limit lines ll_hash_entry_key ll_hash_entry_next ll_hash_entry_val ll_hash_head ll_hash_tail ll_is_global_variable_defined ll_resolve_global_variable ll_set_global_variable ll_thread_local load localtime log lstat lte
 syn keyword ngsFunction main map map_base_idx map_idx_key_val map_idx_val mapk mapkv mapo mapv max maybe_print_stacktrace merge_sorted method_not_found_handler min myip
-syn keyword ngsFunction n next none nop normalize_presence_list not
+syn keyword ngsFunction next none nop normalize_presence_list not
 syn keyword ngsFunction only open opt_prop ord
 syn keyword ngsFunction params parent_fd partial partial_tail partition peek pfilter pid pmap pop pos ppid print_exception progress ptimes push push_all
-syn keyword ngsFunction rand rand_uniq read reduce register_column reject rejectk rejectv release replace report req_prop require resolve_instruction_pointer retry reverse round run
+syn keyword ngsFunction rand rand_uniq read realpath reduce register_column reject rejectk rejectv release replace report req_prop require resolve_instruction_pointer retry reverse round run
 syn keyword ngsFunction set shift sort sortk sortv specific split srand starts_with stat status stdlib_aws_straighten_tags store strftime subset sum
 syn keyword ngsFunction take tap test the_one throw_if_no_next time times trunc typeof
 syn keyword ngsFunction uniq unshift update users_ids
