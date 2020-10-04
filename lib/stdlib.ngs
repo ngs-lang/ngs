@@ -1,3 +1,67 @@
+# WARNING: This file is packaged into the ngs binary at build time
+#          it is shipped for reference only.
+
+section "Basic Methods for Exception type" {
+	doc Initialize an Exception.
+	doc %RET - Exception with .backtrace and .message
+	doc message - Goes into .message
+	F init(e:Exception, message:Str) {
+		e.message = message
+	}
+
+	doc Initialize an Exception.
+	doc %RET - Exception with .backtrace and .cause
+	F init(e:Exception, cause:Exception) {
+		e.cause = cause
+	}
+
+	doc Initialize an Exception.
+	doc %RET - Exception with .backtrace, .message, and .cause
+	F init(e:Exception, message:Str, cause:Exception) {
+		e.message = message
+		e.cause = cause
+	}
+}
+
+section "Basic Exception subtypes" {
+	type NotImplemented; NotImplemented.inherit(Exception)
+	type ReadFail; ReadFail.inherit(Exception)
+	type RequireFail; RequireFail.inherit(Exception)
+	type MainFail; MainFail.inherit(Exception)
+
+	doc Represents error when converting program execution result to exit code
+	type ExitCodeFail; ExitCodeFail.inherit(Exception)
+}
+
+section "Basic I/O" {
+	doc Print given string and a newline to stdout.
+	doc %RET - null
+	doc %EX - echo("blah")  # Output: blah
+	F echo(s:Str) echo(1, s)
+}
+
+
+
+section "Exit type and basic ExitCode pseudo-constructor methods" {
+
+	doc Information about exiting, used by bootstrap and as argument to exit_hook.
+	doc exit_code - the code to exit with
+	doc exceptions - exceptions that occurred during exit procedure
+	type Exit
+
+	doc %RET - always 0
+	F ExitCode(x) 0
+
+	doc %RET - 0 for true, 1 for false
+	F ExitCode(b:Bool) if b 0 1
+
+	doc %RET - n
+	F ExitCode(n:Int) n
+
+	doc %RET - Always 240
+	F ExitCode(e:Exception) 240
+}
+
 section "Block type and methods" {
 	doc The type of the NAME variable used in syntax: block NAME BODY
 	doc %AUTO - block NAME BODY
@@ -146,6 +210,15 @@ section "Attributes convenience methods" {
 
 section "MultiMethod" {
 
+	doc Create MultiMethod with no methods
+	F MultiMethod() super([])
+
+	doc Number of methods in MultiMethod
+	F len(mm:MultiMethod) mm.Arr().len()
+
+	doc Whether MultiMethod has any methods
+	F Bool(mm:MultiMethod) mm.Arr().Bool()
+
 	block _ {
 		global each
 		# Preventing execution of F Arr(Eachable1) defined below.
@@ -159,6 +232,8 @@ section "MultiMethod" {
 			mm
 		}
 	}
+
+	F filtero(mm:MultiMethod, pred) mm.Arr().filter(pred).MultiMethod()
 
 	F Str(mm:MultiMethod) "<MultiMethod with ${mm.Arr().len()} method(s)>"
 }
@@ -361,6 +436,10 @@ F only(predicate, mapper:Fun) {
 
 TEST ["abc", 1, "def", 2].map(only(Int, X*2)) == ["abc", 2, "def", 4]
 
+doc %STATUS - experimental
+doc Same as only(predicate, mapper)(val)
+F only(val, predicate, mapper:Fun) only(predicate, mapper)(val)
+
 doc Filter e using predicate.
 doc e - Eachable1. WARNING: instances of same type as e must have empty constructor and push() method.
 doc predicate - Decision function to be called with each item as first argument.
@@ -372,10 +451,10 @@ F filter(e:Eachable1, predicate=identity) {
 	pred = Pred(predicate)
 	t = typeof(e)
 	ret = t()
-	e.each() do F(elt) {
+	e.each(F(elt) {
 		if pred(elt)
 			ret.push(elt)
-	}
+	})
 	ret
 }
 
@@ -461,12 +540,12 @@ doc %RET - The only element that satisfies the predicate.
 F the_one(e:Eachable1, predicate={true}) {
 	p = Pred(predicate)
 	ret = EmptyBox()
-	e.each() do F(elt) {
+	e.each(F(elt) {
 		if p(elt) {
 			ret throws ElementNotFound("the_one() had more than one match").set('container', e).set('predicate', predicate)
 			ret = FullBox(elt)
 		}
-	}
+	})
 	not(ret) throws ElementNotFound("the_one() had no matches").set('container', e).set('predicate', predicate)
 	ret.get()
 }
@@ -939,9 +1018,7 @@ doc %EX - my_hashlike.filter(F(k, v) k == 'a')
 doc %RET - value of the same type as hl
 F filter(hl:HashLike, predicate) {
 	t = typeof(hl)
-	ret = t()
-	ret.attrs().HashLike = hl.attrs().HashLike.filter(predicate)
-	ret
+	t(hl.attrs().HashLike.filter(predicate))
 }
 
 TEST HashLike({"a": 1, "b": 2}).filter(F(k, v) v==1) == HashLike({"a": 1})
@@ -960,6 +1037,93 @@ F Hash(hl:HashLike) hl.attrs().HashLike
 
 doc Convert HashLike into JSON compatible data structure - object
 F JsonData(hl:HashLike) hl.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
+
+
+
+section "Set" {
+
+	doc Represents a set of items
+	type Set
+	Set.inherit(Eachable1)
+
+	doc Initialize a set
+	F init(s:Set) {
+		s.val = {}
+	}
+
+	doc Convert array to set
+	F init(s:Set, e:Eachable1) {
+		super(s)
+		e.each({ s.val[A] = true })
+	}
+
+	doc Add an element to the set
+	doc %RET - s
+	F push(s:Set, v) {
+		s.val[v] = true
+		s
+	}
+
+	doc Get number of items in the set
+	doc %RET - Int
+	F len(s:Set) s.val.len()
+
+	doc Call cb for each value in the set
+	doc %RET - s
+	F each(s:Set, cb:Fun) {
+		s.val.keys().each(cb)
+		s
+	}
+
+	doc Check if the value is in the set
+	doc %RET - Bool
+	F in(x, s:Set) x in s.val
+
+	doc Check whether the set is not empty
+	F Bool(s:Set) Bool(s.val)
+
+	doc Convert the set to a human-readable representation
+	F Str(s:Set) "<${s.typeof().name} ${s.val.keys().join(', ')}>"
+
+	doc Set difference
+	doc %RET - Set
+	F -(a:Set, b:Set) a.filter(X not in b)
+
+	TEST Set([1,2]) - Set([2]) == Set([1])
+
+	doc Set union
+	doc %RET - Set
+	F +(a:Set, b:Set) Set().set('val', a.val + b.val)
+
+	TEST Set([1,2]) + Set([3]) == Set([1,2,3])
+
+	doc Check whether all values in a are also in b
+	F '<='(a:Set, b:Set) {
+		len(a) <= len(b) and a.all(X in b)
+	}
+
+	TEST Set([1,2]) + Set([3]) <= Set([1,2,3])
+	TEST Set([1,2]) <= Set([1,2,3])
+	TEST not(Set([1,2,4]) <= Set([1,2,3]))
+
+	F copy(s:Set) {
+		ret = Set()
+		s.each(ret.push(X))
+		ret
+	}
+
+	doc Inspect Set
+	doc %RET - Lines
+	F inspect(a:Set) Lines(["Set of size ${a.len()}"] + a.map({"  ${SafeStr(A)}"}).digest(16, '  (...)'))
+
+	doc Defines collector { ... collect(...) ... } behaviour for Set.
+	F collector(s:Set, body:Fun) {
+		body(F(elt) s.push(elt))
+		s
+	}
+
+}
+
 
 section "Named Instances" {
 	doc "Named instances" are typically called enums or enumerated values in other languages.
@@ -1040,34 +1204,34 @@ section "Named Instances" {
 	TEST global init; type Color(NamedInstances); F init(c:Color, numval:Int) c.numval = numval; Color.NamedInstances = ns { RED = Color(4); GREEN = Color(2); BLUE = Color(1) ; }; Color.NamedInstances is Namespace and 2.decode(Color) == Color::GREEN and "RED".decode(Color) == Color::RED
 }
 
-# === Hook =======================================
+section "Hook" {
+	doc Hook is a simple pub-sub
+	type Hook
+	Hook.inherit(HashLike)
 
-doc Hook is a simple pub-sub
-type Hook
-Hook.inherit(HashLike)
+	doc Hook constructor.
+	doc %RET - Hook
+	F init(hook:Hook) {
+		super(hook)
+		hook.attrs().idx = 0
+	}
 
-doc Hook constructor.
-doc %RET - Hook
-F init(hook:Hook) {
-	super(hook)
-	hook.attrs().idx = 0
+	doc Add unnamed handler.
+	doc The hook is automatically named "pushed-N" where N is sequential integer.
+	doc %RET - New hook name
+	F push(hook:Hook, handler:UserDefinedMethod) {
+		name = "pushed-${hook.attrs().idx}"
+		hook.attrs().idx += 1
+		hook[name] = handler
+		name
+	}
+
+	# TODO: consider optional? try/catch isolation
+	doc Runs all handlers passing all args.
+	doc args - Arguments to pass to handlers
+	doc %RET - Arr. Results from all the handlers
+	F call(hook:Hook, *args) hook.attrs().HashLike.mapv(X(*args))
 }
-
-doc Add unnamed handler.
-doc The hook is automatically named "pushed-N" where N is sequential integer.
-doc %RET - New hook name
-F push(hook:Hook, handler:UserDefinedMethod) {
-	name = "pushed-${hook.attrs().idx}"
-	hook.attrs().idx += 1
-	hook[name] = handler
-	name
-}
-
-# TODO: consider optional? try/catch isolation
-doc Runs all handlers passing all args.
-doc args - Arguments to pass to handlers
-doc %RET - Arr. Results from all the handlers
-F call(hook:Hook, *args) hook.attrs().HashLike.mapv(X(*args))
 
 # === Real =======================================
 
@@ -1138,7 +1302,7 @@ section "Type" {
 	doc %AUTO - type MyType2([MyParent1, MyParent2, ...])
 	F Type(t:Str, doc, ns, parents:Arr) {
 		ret = Type(t, doc, ns)
-		parents % ret.inherit(X)
+		parents.each(ret.inherit(X))
 		ret
 	}
 
@@ -1308,33 +1472,19 @@ type CError
 CError.inherit(Error)
 
 doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
-F init(e:CError, message:Str) {
-	errno = c_errno()
-	super(e, message)
-	e.errno = errno
-	e.errno_name = c_strerror(e.errno)
-}
-
-doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
 F init(e:CError, errno:Int, message:Str) {
 	super(e, message)
 	e.errno = errno
 	e.errno_name = c_strerror(e.errno)
 }
 
+doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
+F init(e:CError, message:Str) super(e, c_errno(), message)
+
+
 doc Exception representing a failure to kill() a process
 type KillFail
 KillFail.inherit(CError)
-
-section "ValueWrapper type and methods" {
-	type ValueWrapper
-
-	F init(vw:ValueWrapper) throw Error("ValueWrapper subtype ${vw.typeof().name} must have init() argument")
-
-	F init(vw:ValueWrapper, val) vw.val = val
-
-	F Str(vw:ValueWrapper) "<${vw.typeof().name} ${vw.val}>"
-}
 
 # === Lock =======================================
 
@@ -1417,63 +1567,6 @@ F Str(cpm:c_pthread_mutex_t) "<c_pthread_mutex_t>"
 
 doc Convert c_pthread_mutexattr_t to Str for displaying to humans.
 F Str(cpma:c_pthread_mutexattr_t) "<c_pthread_mutexattr_t>"
-
-# === auto-load ==================================
-
-AUTOLOAD = ns {
-	global global_not_found_handler
-	_lock = ReentrantLock()
-
-	# Sorted by: file, global variable name
-	# Not exposing _global_name_to_autoload_file as use cases are not clear yet.
-	# Also, it's probably better to expose an API and not the data.
-	_global_name_to_autoload_file = %{
-		InMemoryCache       Cache
-		OnDiskCache         Cache
-
-		IPAddr              IP
-		IPNet               IP
-
-		ArrIter             Iter
-		ConstIter           Iter
-		HashIter            Iter
-		NoNext              Iter
-		RangeIter           Iter
-
-		ResDef              Res
-	}
-
-	invocation = 0
-
-	doc Called when reading undefined global.
-	doc Implements autoloading.
-	doc Searches in $NGS_DIR/autoload/GLOBAL_NAME.ngs
-	doc WARNING: May have security implications when looking up a name from untrusted source.
-	doc %EX - test("My web server runs") do { .... }  # $NGS_DIR/autoload/test.ngs is automatically loaded.
-	F global_not_found_handler(name:Str) {
-		_lock.acquire() do {
-			i = invocation
-			invocation += 1
-			F local_debug(s:Str) {
-				debug("autoload", "global_not_found_handler() [invocation $i] ${s}")
-			}
-			local_debug("name=${name}")
-			idx = ll_resolve_global_variable(name)
-			ll_is_global_variable_defined(idx) returns
-			if name in _global_name_to_autoload_file {
-				local_debug("loading ${NGS_DIR}/autoload/${_global_name_to_autoload_file[name]}.ngs")
-				require("${NGS_DIR}/autoload/${_global_name_to_autoload_file[name]}.ngs")
-				return
-			}
-			local_debug("loading ${NGS_DIR}/autoload/${name}.ngs")
-			val = require("${NGS_DIR}/autoload/${name}.ngs")
-			if not(ll_is_global_variable_defined(idx)) {
-				local_debug("global variable ${name} still not set; setting")
-				ll_set_global_variable(idx, val)
-			}
-		}
-	}
-}
 
 section "Range" {
 	doc A range
@@ -1569,8 +1662,7 @@ section "Range" {
 	doc Length of a NumRange. Only defined for Int start and end.
 	doc Equals to how many times cb will be invoked in each(r, cb).
 	F len(r:NumRange) {
-		guard r.start is Int
-		guard r.end is Int
+		guard [r.start, r.end].all(Int)
 		r.end - r.start - 1 + r.include_start.Int() + r.include_end.Int()
 	}
 
@@ -1748,14 +1840,12 @@ doc %EX - )
 F finally(body:Fun, cleanup:Fun) {
 	ret = Result(body)
 	cleanup()
-	if ret is Failure {
-		throw ret.val
-	}
+	ret is Failure throws ret.val
 	ret.get()
 }
 
 TEST a=0; {1/1}.finally({a=10}) == 1 and a == 10
-TEST a=0; (try finally() with {1/0} with {a=10} catch(e:DivisionByZero) "OK") == "OK" and a == 10
+TEST a=0; (try finally({1/0}, {a=10}) catch(e:DivisionByZero) "OK") == "OK" and a == 10
 TEST F f() block b { finally({ b.return(7) }, {8}) }; f() == 7
 
 # --- Hash ---
@@ -1776,19 +1866,6 @@ doc %EX - h = {"a": 1}
 doc %EX - h.get("a")  # 1
 doc %EX - h.get("b")  # null
 F get(h:Hash, k) get(h, k, null)
-
-doc Convert hash values to integers where possible
-doc %RET - New Hash
-doc %STATUS - deprecated
-doc %EX - %{k 7 kk "a"}["k"] is Str      # true
-doc %EX - %{k 7 kk "a"}.n()              # {'k': 7, 'kk': 'a'}
-doc %EX - %{k 7 kk "a"}.n()["k"] is Int  # true
-F n(h:Hash) {
-	warn("Using deprecated n(Hash)")
-	h.mapv({Int(A) tor A})
-}
-
-TEST %{k 7 kk "a"}.n() == {'k': 7, 'kk': 'a'}
 
 # --- Arr ---
 
@@ -1966,11 +2043,7 @@ TEST [1,2,3].map(X*4) == [4,8,12]
 
 F subset(smaller:Arr, larger:Arr) {
 	len(smaller) > len(larger) returns false
-	h = if larger.len() > 10 {
-		larger.Set()
-	} else {
-		larger
-	}
+	h = larger.only({A.len() > 10}, Set)
 	smaller.all(X in h)
 }
 
@@ -2019,17 +2092,6 @@ doc %RET - New Arr
 doc %EX - echo("Array items: " + ArrLike().push(10).push(20).push(30).map_idx_val(F(idx, val) "[$idx]=$val").join(", "))
 doc %EX - # Outputs: Array items: [0]=10, [1]=20, [2]=30
 F map_idx_val(e:Eachable1, mapper:Fun) collector each_idx_val(e, collect + mapper)
-
-doc Map an Arr to an Arr (array) of values using mapper
-doc mapper is called as mapper(INDEX, ITEM)
-doc %RET - New Arr
-doc %EX - echo("Array items: " + [10,20,30].map_idx_val(F(idx, val) "[$idx]=$val").join(", "))
-doc %EX - # Outputs: Array items: [0]=10, [1]=20, [2]=30
-F map_idx_val(arr:Arr, mapper:Fun) {
-	l = arr.len()
-	collector
-		for(i;l) collect(mapper(i, arr[i]))
-}
 
 TEST r=[]; ["a", "b"].each_idx_val(F(idx, val) r.push([idx, val])); r == [[0, "a"], [1, "b"]]
 
@@ -2084,11 +2146,7 @@ doc Filter out all values in a that are also in b
 doc %RET - Arr
 doc %EX - [1,2,3] - [5,6,1]  # [2,3]
 F -(a:Arr, b:Arr) {
-	h = if b.len() > 10 {
-		b.Set()
-	} else {
-		b
-	}
+	h = b.only({A.len() > 10}, Set)
 	a.filter(X not in h)
 }
 
@@ -2555,7 +2613,7 @@ F split(e:Eachable1, delim) {
 TEST [1, "a", 2, 3, "a", 4].split("a") == [[1], [2, 3], [4]]
 
 doc Call cb with array of maximum length of n, repeatedely for all items of e.
-doc TODO: better doc
+doc TODO: better doc, rename to each() to be consistent with each(Arr, Int, Fun)?
 doc %STATUS - experimental
 F each_chunk(e:Eachable1, n:Int, cb:Fun) {
 	cur = []
@@ -2655,10 +2713,8 @@ doc cb - Function to call with successive keys and values
 doc %RET - h
 doc %EX - {"a": 1, "b": 2}.each(F(k, v) echo("$k=$v"))  # Outputs: "a=1" and on the next line "b=2"
 F each(h:Hash, cb:Fun) {
-	entry = ll_hash_head(h)
-	while entry != null {
+	for(entry = ll_hash_head(h); entry != null; entry = entry.ll_hash_entry_next()) {
 		cb(entry.ll_hash_entry_key(), entry.ll_hash_entry_val())
-		entry = entry.ll_hash_entry_next()
 	}
 	h
 }
@@ -2667,27 +2723,18 @@ doc Iterate a Hash.
 doc h - Hash to iterate
 doc cb - Function to call with successive keys
 doc %RET - h
-F eachk(h:Hash, cb:Fun) {
-	entry = ll_hash_head(h)
-	while entry != null {
-		cb(entry.ll_hash_entry_key())
-		entry = entry.ll_hash_entry_next()
-	}
-	h
-}
+F eachk(h:Hash, cb:Fun) h.each({cb(A)})
+
+TEST ret = []; {"a": 1, "b": 2}.eachk(ret.push(X)); ret == %[a b]
 
 doc Iterate a Hash.
 doc h - Hash to iterate
 doc cb - Function to call with successive values
 doc %RET - h
-F eachv(h:Hash, cb:Fun) {
-	entry = ll_hash_head(h)
-	while entry != null {
-		cb(entry.ll_hash_entry_val())
-		entry = entry.ll_hash_entry_next()
-	}
-	h
-}
+F eachv(h:Hash, cb:Fun) h.each({cb(B)})
+
+TEST ret = []; {"a": 1, "b": 2}.eachv(ret.push(X)); ret == %[1 2]
+
 
 doc Iterate a Hash.
 doc h - Hash to iterate
@@ -2697,12 +2744,8 @@ doc %RET - h
 doc %EX - {"a": 1, "b": 2}.each_idx_key_val(F(idx, k, v) echo("[$idx] $k=$v"))
 doc %EX - # Outputs: "[0] a=1" and on the next line "[1] b=2"
 F each_idx_key_val(h:Hash, cb:Fun) {
-	entry = ll_hash_head(h)
-	i = 0
-	while entry != null {
-		cb(i, entry.ll_hash_entry_key(), entry.ll_hash_entry_val())
-		entry = entry.ll_hash_entry_next()
-		i += 1
+	for({idx=0; entry=ll_hash_head(h)}; entry != null; {idx+=1; entry = entry.ll_hash_entry_next()}) {
+		cb(idx, entry.ll_hash_entry_key(), entry.ll_hash_entry_val())
 	}
 	h
 }
@@ -2723,18 +2766,7 @@ doc h - Hash with source keys and values
 doc mapper - Function to be called with sequential zero-based index, keys and values from h
 doc %RET - Arr
 doc %EX - {'a': 1, 'b': 2}.map_idx_key_val(F(i, k, v) "${i}-${k}-$v")  # ['0-a-1', '1-b-2']
-F map_idx_key_val(h:Hash, mapper:Fun) {
-	idx = 0
-	collector {
-		entry = ll_hash_head(h)
-		while entry != null {
-			collect(mapper(idx, entry.ll_hash_entry_key(), entry.ll_hash_entry_val()))
-			entry = entry.ll_hash_entry_next()
-			idx += 1
-		}
-	}
-}
-
+F map_idx_key_val(h:Hash, mapper:Fun) collector h.each_idx_key_val(collect + mapper)
 
 doc Map Hash keys. Build new Hash with same values as in h but keys mapped by mapper.
 doc h - Source hash
@@ -2800,28 +2832,31 @@ doc %EX - {"a": 1, "b": 2, "ccc": 3}.filterk(/^.$/)    # {a=1, b=2}
 doc %EX - {"aa": 1, "ab": 2, "ba": 3}.filterk(/^a/)    # {aa=1, ab=2}
 doc %EX - {"aa": 1, "ab": 2, 10: 3}.filterk(Int)       # {10=3}
 doc %EX - {10: "a", 20: "b", 30: "c"}.filterk(X > 10)  # {20=b, 30=c}
-F filterk(h:Eachable2, predicate) filter(h, Pred(predicate) + {A})
+F filterk(h:Eachable2, predicate=identity) filter(h, Pred(predicate) + {A})
 
 TEST {"a1": 1, "a2": 2, "b1": 10}.filterk(/^b/) == {"b1": 10}
+TEST {0: "zero", 1: "one"}.filterk() == {1: "one"}
 
 doc Filter hash by keys, removing matched. See filterk().
 doc %EX - {"a1": 1, "a2": 2, "b1": 10}.rejectk(/^b/)  # {"a1": 1, "a2": 2}
-F rejectk(h:Eachable2, predicate) h.filterk(not + Pred(predicate))
+F rejectk(h:Eachable2, predicate=identity) h.filterk(not + Pred(predicate))
 
 TEST {"a1": 1, "a2": 2, "b1": 10}.rejectk(/^b/) == {"a1": 1, "a2": 2}
+TEST {0: "zero", 1: "one"}.rejectk() == {0: "zero"}
 
 
 doc Filter hash by values
 doc %EX - {"a1": 1, "a2": 2, "b1": 10}.filterv(X>5)  # {"b1": 10}
-F filterv(h:Eachable2, predicate) filter(h, Pred(predicate) + {B})
+F filterv(h:Eachable2, predicate=identity) filter(h, Pred(predicate) + {B})
 
 TEST {"a1": 1, "a2": 2, "b1": 10}.filterv(X>5) == {"b1": 10}
-
+TEST {"yes": true, "no": false}.filterv() == {"yes": true}
 
 doc Filter hash by values
-F rejectv(h:Eachable2, predicate) h.filterv(not + Pred(predicate))
+F rejectv(h:Eachable2, predicate=identity) h.filterv(not + Pred(predicate))
 
 TEST {"a1": 1, "a2": 2, "b1": 10}.rejectv(X>5) == {"a1": 1, "a2": 2}
+TEST {"yes": true, "no": false}.rejectv() == {"no": false}
 
 doc Count number of key-value pairs in Hash that satisfy the predicate.
 doc e - Something to check, typically a Hash
@@ -2860,11 +2895,14 @@ doc Create a Hash from Arr of Arr[2]
 doc arr - Array of Arrays. Each one of the sub-arrays must have exactly two elements.
 doc %RET - Hash
 doc %EX - Hash([['a', 1], ['c', 3]])  # {'a': 1, 'c': 3}
-F Hash(arr:Arr)
+F Hash(arr:Arr) {
+	guard arr.all(Arr)
+	guard arr.all({A.len() == 2})
 	collector/{}
 		arr.each(F(pair) {
 			collect(*pair)
 		})
+}
 
 TEST Hash([['a', 1], ['c', 3]]) == {'a': 1, 'c': 3}
 
@@ -3121,6 +3159,8 @@ doc %RET - Box. fb if predicate succeeds, EmptyBox if not.
 doc %EX - Box(10).filter(X>5)   # <FullBox val=10>
 doc %EX - Box(10).filter(X>20)  # <EmptyBox>
 F filter(fb:FullBox, predicate=identity) {
+	# Can not use "...super(fb, predicate) or EmptyBox()" because filter(Eachable1, ...) can't create FullBox
+	# ("FullBox must be initialized with exactly one value") on order to push() into it
 	p = Pred(predicate)
 	p(fb.val) returns fb
 	EmptyBox()
@@ -3128,11 +3168,7 @@ F filter(fb:FullBox, predicate=identity) {
 
 TEST FullBox(null).filter() == EmptyBox()
 
-doc Do nothing
-doc %RET - eb
-doc %EX - EmptyBox().filter(X>20)  # <EmptyBox>
-F filter(eb:EmptyBox, predicate=identity) eb
-
+# Done by filter(Eachable1)
 TEST EmptyBox().filter() == EmptyBox()
 
 doc Get FullBox value
@@ -3310,7 +3346,7 @@ F get(s:Success) s.val
 doc Throws ResultFail
 doc %EX - { 1 / 0 }.Result().get()  # ResultFail exception
 F get(f:Failure) {
-	throw ResultFail("Can not get value of Failure").set('cause', f.val)
+	throw ResultFail("Can not get value of Failure", f.val)
 }
 
 doc Gets wrapped value
@@ -4200,7 +4236,7 @@ section "Thread" block _ {
 			throw ThreadJoinFail("Failed to c_pthread_join").set('code', join_result[0])
 		}
 		if join_result[1][0] {
-			throw OtherThreadFail("Joined thread threw exception").set('cause', join_result[1][1]).set('thread', t)
+			throw OtherThreadFail("Joined thread threw exception", join_result[1][1]).set('thread', t)
 		}
 		join_result[1][1]
 	}
@@ -4490,15 +4526,7 @@ section "Path" {
 	doc %EX - Path(".")  # <Path path=.>
 	doc %EX - Path(".", true)  # <Dir path=.>
 	doc %EX - ``find tmp/v8``.map(Path(X, true)).map(typeof).name.Stats()  # <Stats: {Dir=287, File=9220}>
-	F Path(s:Str, subtype=false) {
-		ret = Path()
-		ret.path = s
-		if subtype {
-			ret.specific()
-		} else {
-			ret
-		}
-	}
+	F Path(s:Str, subtype=false) Path().set('path', s).only({subtype}, specific)
 
 	doc Path constructor
 	doc s - path
@@ -4982,9 +5010,7 @@ F basename(p:Path) p.path.basename()
 
 doc Get basename of the file.
 F basename(s:Str) {
-	ret = s.split('/')[-1]
-	not(ret) throws BasenameArgumentFail("'${s}' is not a valid input to basename()").set('s', s)
-	ret
+	s.split('/')[-1] or throw BasenameArgumentFail("'${s}' is not a valid input to basename()").set('s', s)
 }
 
 TEST basename("/abc") == "abc"
@@ -5041,11 +5067,13 @@ F close(f:File) {
 	ret = c_close(f.fd)
 	ret < 0 throws FileIOFail("Failed to close the file $f").set('file', f)
 	f.fd = null
+	f
 }
 
 # Note: EINTR should not be handled
 doc Close a file. Uses CLOSE(2).
 doc Throws FileIOFail if an underlying error occurs.
+doc %RET - fd
 F close(fd:Int) {
 	ret = c_close(fd)
 	ret < 0 throws FileIOFail("Failed to close file descriptor $fd").set('fd', fd)
@@ -5235,10 +5263,7 @@ doc %RET - Bool
 doc %EX - if $(test -f myfile) ... # if runs Bool() on any non-Bool condition expression
 F Bool(pp:ProcessesPipeline) pp.wait().processes.all({A.exit_code == 0})
 
-F finished(p:Process) {
-	p.exit_code is Int or
-	p.exit_signal is Int
-}
+F finished(p:Process) [p.exit_code, p.exit_signal].any(Int)
 
 doc Wait for a process. Waits for reading and writing threads to finish.
 doc Waits for the process to finish. Checks whether to throw ProcessFail using finished_ok().
@@ -5284,6 +5309,7 @@ F wait(p:Process) {
 }
 
 doc Wait for all processes to finish.
+doc %RET - pp
 F wait(pp:ProcessesPipeline) {
 	pp.processes.each(wait)
 	last_process = pp.processes[-1]
@@ -5408,7 +5434,10 @@ F '$()'(p:Process) {
 	debug("process", "Parsed command: ${argv}")
 
 	if p.command.options.get('log') == true {
-		log("Running command: ${argv.map(escape_bash).join(' ')}")
+		F redir_str(r:CommandRedir) {
+			(r.fd or '').Str() + r.marker + escape_bash(r.datum)
+		}
+		log("Running command: ${argv.map(escape_bash).join(' ')}${' ' +? p.command.redirects.map(redir_str).join(' ')}")
 	}
 
 	try {
@@ -6359,6 +6388,56 @@ F code(n:Null) "null"
 doc Convert Null into JSON compatible data structure - null
 F JsonData(n:Null) n
 
+section "Lines" {
+	doc Array of strings which comprise a text which is treated as a
+	doc unit for purposes of output (and maybe for other purposes later).
+	type Lines(ArrLike)
+
+	doc Split s to strings using end-of-line separators.
+	doc UNIX and Windows line endings supported (Windows - not tested yet).
+	doc Warning: Max OS <= 9 line separation of CR (\r) is not supported
+	doc %EX - "xx\nyy".lines()  # %[xx yy]
+	F init(lines:Lines, s:Str) {
+		_lines = if s {
+			s -= MaybeSfx('\n')
+			s.split('\n').map(X - MaybeSfx('\r'))
+		} else {
+			[]
+		}
+		lines.init(_lines)
+	}
+
+	doc Echo all lines using echo(Str)
+	F echo(lines:Lines) lines.each(echo)
+
+	doc Echo all lines to dst
+	F echo(dst, lines:Lines) {
+		lines.each(echo(dst, X))
+		dst
+	}
+
+	doc Write all lines to standard error using warn(Str)
+	F warn(lines:Lines) lines.each(warn)
+
+	doc Write all lines to standard error using error(Str)
+	F error(lines:Lines) lines.each(error)
+
+	# Later this should be a widget which can be displayed
+	# with ASCII art in console or as a box in a browser.
+	# WARNING: only works when one byte is one character.
+	doc %STATUS - experimental
+	F framed(lines:Lines) {
+		not(lines) returns lines
+		m = lines.map(len).max()
+		border = '+' + ('-' * (m+2)) + '+'
+		collector/Lines() {
+			collect(border)
+			lines.each(F(x) collect("| ${x.Str(m)} |"))
+			collect(border)
+		}
+	}
+}
+
 # === exit_hook - Print uncaught exception =======
 
 doc Convert an array to a possibly shorter version, for displaying to human.
@@ -7034,6 +7113,17 @@ F write(f:File, s:Str) {
 	write(if f.fd is Null then f.path else f.fd, s)
 }
 
+# TODO: better exception
+F realpath(path:Str) {
+	c_realpath(path) or throw CError("Faied to realpath()").set(path=path)
+}
+
+doc %RET - Same type as p but using absolute path
+F realpath(p:Path) {
+	t = typeof(p)
+	t(realpath(p.path))
+}
+
 section "JSON" {
 	doc Convert data structure into JSON compatible data using JsonData and call built-in encode_json().
 	doc Implement JsonData() for your own types to customize converting to JSON.
@@ -7091,4 +7181,290 @@ section "Doc" {
 	F \(name:Str, attributes:Hash, children:Arr) {
 		Doc::Node(name, children.reject(NoData).map(only(FullBox, get)), **attributes)
 	}
+}
+
+
+section "Loading code" {
+
+	# TODO: XDG
+	NGS_PATH = %[
+		/usr/local/etc/ngs
+		/usr/local/lib/ngs
+		/etc/ngs
+		/usr/lib/ngs
+	]
+
+	if _h = ENV.get('HOME') {
+		NGS_PATH.unshift(_h / '.ngs')
+	}
+
+	if _d = ENV.get('NGS_DIR') {
+		warn("NGS_DIR environment variable is deprecated. Use NGS_PATH instead.")
+		NGS_PATH = [_d]
+	}
+
+	if _p = ENV.get('NGS_PATH') {
+		debug('autoload', "Using environment variable NGS_PATH: ${_p}")
+		NGS_PATH = _p.split(':')
+	}
+
+
+	F bootstrap_print_compilation_warnings(program_bytecode, fname) {
+		program_bytecode.attrs().warnings.each(F(w) {
+			wl = w.location
+			warn("${fname}:${wl.first_line}:${wl.first_column} warning: ${w.message}")
+		})
+	}
+
+	doc Runs the given file
+	doc %RET - Typically whatever the last expression in the file evaluates to
+	F require(fname:Str) {
+		candidates = NGS_PATH.map(X / fname)
+		debug('require', "Candidate files: ${candidates.join(',')}")
+		f = candidates.first(File(X), null)
+		not(f) throws RequireFail("Failed to require() $fname. It was not found in path").set(fname=fname, path=NGS_PATH, candidates=candidates)
+		require(f)
+	}
+
+	F require(fname:Str) {
+		guard fname ~ Pfx('/')
+		try {
+			program_text = read(fname)
+			program_bytecode = compile(program_text, fname)
+			debug('require', "require(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
+			bootstrap_print_compilation_warnings(program_bytecode, fname)
+			program_func = load(program_bytecode, "require()d file: $fname")
+			ret = program_func()
+			debug('require', "require(): done requiring ${fname}")
+			ret
+		} catch(e) {
+			guard e is not RequireFail
+			guard e is not NormalExit # Used by CLI
+			throw RequireFail(e)
+		}		
+	}
+
+	F require(p:Path) require(p.path)
+
+	doc %STATUS - experimental
+	F require(d:Dir) {
+		debug('require', "Requiring directory ${d}")
+		for path_dir in NGS_PATH.reverse() {
+			if _d = Dir(path_dir / d.path) {
+				dir(_d).map(require)
+			}
+		}
+	}
+
+	AUTOLOAD = ns {
+		global global_not_found_handler
+
+		_lock = ReentrantLock()
+
+		# Sorted by: file, global variable name
+		# Not exposing _global_name_to_autoload_file as use cases are not clear yet.
+		# Also, it's probably better to expose an API and not the data.
+		_global_name_to_autoload_file = %{
+			InMemoryCache       Cache
+			OnDiskCache         Cache
+
+			IPAddr              IP
+			IPNet               IP
+
+			ArrIter             Iter
+			ConstIter           Iter
+			HashIter            Iter
+			NoNext              Iter
+			RangeIter           Iter
+
+			ResDef              Res
+		}
+
+		invocation = 0
+
+		doc Called when reading undefined global.
+		doc Implements autoloading.
+		doc Searches for autoload/globals/GLOBAL_NAME.ngs in NGS_PATH
+		doc WARNING: May have security implications when looking up a name from untrusted source.
+		doc %EX - test("My web server runs") do { .... }  # autoload/globals/test.ngs is automatically loaded.
+		F global_not_found_handler(name:Str) {
+			_lock.acquire() do {
+
+				F _debug(s:Str) debug("autoload", "global_not_found_handler() [invocation $i] ${s}")
+
+				i = invocation
+				invocation += 1
+				_debug("name=${name}")
+				idx = ll_resolve_global_variable(name)
+				ll_is_global_variable_defined(idx) returns
+				if name in _global_name_to_autoload_file {
+					_debug("loading autoload/globals/${_global_name_to_autoload_file[name]}.ngs")
+					require("autoload/globals/${_global_name_to_autoload_file[name]}.ngs")
+					return
+				}
+				_debug("loading autoload/globals/${name}.ngs")
+
+				val = require("autoload/globals/${name}.ngs")
+				if not(ll_is_global_variable_defined(idx)) {
+					_debug("global variable ${name} still not set; setting")
+					ll_set_global_variable(idx, val)
+				}
+
+			}
+		}
+	}
+
+}
+
+
+section "Bootstrap" {
+	main = MultiMethod()
+
+	doc Internal method. Please do not use.
+	doc Main entry point. Executed on NGS boot.
+	doc %STATUS - internal
+	F bootstrap() {
+		global ARGV0
+		global ORIG_ARGV = copy(ARGV)
+
+		if 'NGS_BOOTSTRAP_DEBUG' in ENV {
+			warn("Using deprecated NGS_BOOTSTRAP_DEBUG environment variable. It has no effect. Use DEBUG=bootstrap instead.")
+		}
+
+		code_to_run = null
+
+		debug('bootstrap', 'start')
+
+		ARGV0 = ARGV.shift(null)
+
+		# *** Parse switches ***
+		sw = null
+		if ARGV {
+			a = ARGV[0]
+			if a == '--version' {
+				echo(VERSION)
+				return 0
+			}
+
+			if a in %[-e -p -pj -pi -pl -pil -pjl -pc -pt] {
+				sw = ARGV.shift()
+				# Newline at the end is for avoiding # commenting out the closing }
+				# Newline at the beginning is for symmetry
+				default_code = 'F default_argv_code() { fetch() }()'
+				code_to_run = "{\n${ARGV.shift(default_code)}\n}"
+				debug('bootstrap', "Got $sw switch, using command line provided code")
+				fname = "<command line ${sw} switch>"
+			}
+		}
+
+		if not(code_to_run) {
+			debug('bootstrap', 'No -e switch was passed, will load the program from a file')
+			fname = ARGV.shift(null)
+			if not(fname) {
+				return require("cli.ngs")
+			}
+			ARGV0 = fname
+			code_to_run = read(fname)
+		}
+
+		program_bytecode = compile(code_to_run, fname)
+		debug('bootstrap', "bootstrap(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
+		bootstrap_print_compilation_warnings(program_bytecode, fname)
+		program_func = load(program_bytecode, "bootstrap()ped file: $fname")
+
+		result = program_func()
+
+		section "Handle main()" {
+
+			F in_main_file(m) m.ip().resolve_instruction_pointer().file == fname
+
+			result = econd {
+				result is Namespace {
+					if 'main' in result {
+						bootstrap_invoke_main(result['main'])
+					} else {
+						result
+					}
+				}
+				main is MultiMethod {
+					m = main.filtero(in_main_file)
+					if len(main) != len(m) {
+						warn("main method define in non-main file")
+					}
+					if m {
+						bootstrap_invoke_main(m)
+					} else {
+						result
+					}
+				}
+				main is Fun {
+					bootstrap_invoke_main(main)
+				}
+				true {
+					throw MainFail("'main' must be a Namespace, MultiMethod or a Fun, not ${main.typeof().name}").set('value', main)
+				}
+			}
+		}
+
+		transformation = {
+			'-pl': identity
+			'-pil': inspect
+			'-pjl': encode_json
+		}
+		if sw in transformation {
+			for r in result {
+				transformation[sw](r).echo()
+			}
+			return 0
+		}
+
+		transformation = {
+			'-p': identity
+			'-pi': inspect
+			'-pj': encode_json
+			'-pc': code
+			'-pt': { Table2::Table(A) } # Lazy loading of Table2
+		}
+		if sw in transformation {
+			echo(transformation[sw](result))
+			return 0
+		}
+
+		result.ExitCode()
+	}
+
+	doc Internal method. Please do not use.
+	doc Runs bootstrap() and handles exceptions.
+	doc %STATUS - internal
+	F bootstrap_exception_catch_wrapper() {
+		exit = Exit().set(exit_code=0, exceptions=[])
+		try {
+			exit.exit_code = bootstrap()
+		} catch(e:Exception) {
+			exit.exceptions.push(e)
+			exit.exit_code = 240
+			try {
+				exit.exit_code = e.ExitCode()
+			} catch(e:Exception) {
+				exit.exceptions.push(ExitCodeFail("Failed to convert exception to exit code", e))
+				exit.exit_code = exit.exit_code + 1
+			}
+		}
+
+		try {
+			exit_hook(exit)
+		} catch(e:Exception) {
+			exit.exceptions.push(e)
+			exit.exit_code = exit.exit_code + 2
+			exit.exceptions.each(F(e) {
+				error("[bootstrap_exception_catch_wrapper] --- Uncaught exception ---")
+				dump(e)
+			})
+		}
+
+		c_exit(exit.exit_code)
+	}
+
+	bootstrap_exception_catch_wrapper()
+
 }

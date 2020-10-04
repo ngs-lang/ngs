@@ -13,6 +13,7 @@
 #include "compile.h"
 #include "decompile.h"
 #include "vm.h"
+#include "stdlib.ngs.h"
 
 char *sprintf_position(yycontext *yy, int pos) {
 	int linecol[2];
@@ -23,39 +24,11 @@ char *sprintf_position(yycontext *yy, int pos) {
 }
 
 char *find_bootstrap_file() {
-	static char *places[] = {
-		"/usr/local/etc/ngs/bootstrap.ngs",
-		"/usr/local/lib/ngs/bootstrap.ngs",
-		"/etc/ngs/bootstrap.ngs",
-		"/usr/lib/ngs/bootstrap.ngs",
-		NULL
-	};
 	char *fname;
-	char *home_dir;
-	int i;
-	int len;
-	char fmt[] = "%s/.bootstrap.ngs";
 
 	fname = getenv("NGS_BOOTSTRAP");
 	if(fname) {
 		return fname;
-	}
-
-	home_dir = getenv("HOME");
-	if(home_dir) {
-		len = snprintf(NULL, 0, fmt, home_dir) + 1;
-		fname = (char *)NGS_MALLOC_ATOMIC(len);
-		snprintf(fname, len, fmt, home_dir);
-		// printf("HOME fname: %s\n", fname);
-		if(access(fname, F_OK) != -1) {
-			return fname;
-		}
-	}
-
-	for(i=0; places[i]; i++) {
-		if(access(places[i], F_OK) != -1) {
-			return places[i];
-		}
 	}
 
 	return NULL;
@@ -145,7 +118,7 @@ int main(int argc, char **argv)
 	if(0) { yymatchDot(NULL); yyAccept(NULL, 0); }
 
 	NGS_GC_INIT();
-	VALUE main_thread_local = make_hash(4);
+	VALUE main_thread_local = make_namespace(4);
 
 	pcre_malloc = GC_malloc;
 	pcre_free = GC_free;
@@ -160,17 +133,19 @@ int main(int argc, char **argv)
 	yyctx.fail_rule = "(unknown)";
 	yyctx.lines = 0;
 	yyctx.lines_postions[0] = 0;
+	yyctx.input_file = NULL;
 	bootstrap_file_name = find_bootstrap_file();
 	if(!bootstrap_file_name) {
-		fprintf(stderr, "Could not find bootstrap file\n");
-		exit(246);
-	}
-	if(!strcmp(bootstrap_file_name, "-")) {
-		source_file_name = ngs_strdup("<stdin>");
-		yyctx.input_file = stdin;
+		source_file_name = ngs_strdup("<builtin-stdlib>");
+		yyctx.input_file = fmemopen(lib_stdlib_ngs, lib_stdlib_ngs_len, "r");
 	} else {
-		source_file_name = bootstrap_file_name;
-		yyctx.input_file = fopen(bootstrap_file_name, "r");
+		if(!strcmp(bootstrap_file_name, "-")) {
+			source_file_name = ngs_strdup("<stdin>");
+			yyctx.input_file = stdin;
+		} else {
+			source_file_name = ngs_strdup(bootstrap_file_name);
+			yyctx.input_file = fopen(bootstrap_file_name, "r");
+		}
 	}
 	if(!yyctx.input_file) {
 		fprintf(stderr, "Error while opening bootstrap file '%s': %d - %s\n", bootstrap_file_name, errno, strerror(errno));
@@ -191,7 +166,7 @@ int main(int argc, char **argv)
 	// TODO: use native_... methods to load and run the code
 	COMPILATION_RESULT *r = compile(tree, source_file_name);
 	vm_init(&vm, argc, argv);
-	set_global(&vm, "BOOTSTRAP_FILE", make_string(bootstrap_file_name));
+	set_global(&vm, "BOOTSTRAP_FILE", make_string(source_file_name));
 	ctx_init(&ctx);
 	ip = vm_load_bytecode(&vm, r->bytecode);
 	closure = make_closure_obj(ip, 0, 0, 0, 0, 0, NULL, NULL);

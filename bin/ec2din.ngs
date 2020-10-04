@@ -30,7 +30,7 @@ F main(filters:Arr, allreg:Bool=false, j:Bool=false, c:Str=null, out_lines:Int=5
 	local_filters = AllOf()
 
 	filters = ['--filters'] +? collector filters.each(F(arg) {
-		kv = arg.split('=')
+
 		econd {
 
 			arg == 'windows' collect("Name=platform,Values=windows")
@@ -58,7 +58,7 @@ F main(filters:Arr, allreg:Bool=false, j:Bool=false, c:Str=null, out_lines:Int=5
 
 			arg in AWS::INSTANCE_STATES collect("Name=instance-state-name,Values=$arg")
 
-			kv.len() == 2 collect("Name=tag:${kv[0]},Values=${kv[1]}")
+			{kv = arg.split('='); kv.len() == 2} collect("Name=tag:${kv[0]},Values=${kv[1]}")
 		}
 	})
 

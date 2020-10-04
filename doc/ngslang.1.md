@@ -1704,11 +1704,7 @@ Handlers are called by NGS when a certain condition occurs.
 
 ## global_not_found_handler
 
-`global_not_found_handler` is called on attempt to read from an undefined global variable. Sample usage from **stdlib.ngs**
-
-	F global_not_found_handler(name:Str) {
-		require("${NGS_DIR}/autoload/${name}.ngs")
-	}
+`global_not_found_handler` is called on attempt to read from an undefined global variable. Uses `NGS_PATH` when looking up the appropriate file.
 
 # Hooks
 

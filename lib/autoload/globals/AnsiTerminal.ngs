@@ -45,8 +45,4 @@ F status(at:AnsiTerminal, s:Str) {
 	null
 }
 
-{
-	# Load possible subtypes, which define AnsiTerminal with appropriate guards
-	# so that AnsiTerminal returns the most appropriate subtype of AnsiTerminal
-	ItermTerminal
-}
+require(Dir("autoload/constructors/AnsiTerminal"))

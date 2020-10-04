@@ -2,8 +2,11 @@
 
 [![Commits in dev since last release](https://img.shields.io/github/commits-since/ngs-lang/ngs/latest/dev.svg)](https://github.com/ngs-lang/ngs/commits/dev)
 [![Join the chat at https://gitter.im/ngs-lang/Lobby](https://badges.gitter.im/ngs-lang/Lobby.svg)](https://gitter.im/ngs-lang/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/ngs-lang/ngs.svg?branch=master)](https://travis-ci.org/ngs-lang/ngs)
+
+[![Build Status](/../../workflows/Build/badge.svg?branch=master)](/../../actions?query=workflow%3A%22Build%22+branch%3Amaster)
 [![Docker Build Status](https://img.shields.io/docker/cloud/build/ngslang/ngs.svg)](https://hub.docker.com/r/ngslang/ngs/builds)
+
+[![Homebrew](https://img.shields.io/badge/dynamic/json.svg?url=https://formulae.brew.sh/api/formula/ngs.json&query=$.versions.stable&label=homebrew&color=orange)](https://formulae.brew.sh/formula/ngs)
 
 **Next Generation Shell** is a powerful programming language and a shell designed specifically for Ops. *Because you deserve better*.
 
@@ -195,7 +198,7 @@ This is how an instance can be created using NGS (real working code).
 ### Run
 
 	# If NGS is not installed (from the root of ngs project):
-	NGS_DIR=lib NGS_BOOTSTRAP=lib/bootstrap.ngs ./build/ngs SCRIPT_NAME.ngs
+	NGS_PATH=lib ./build/ngs SCRIPT_NAME.ngs
 
 	# If NGS is installed:
 	ngs SCRIPT_NAME.ngs

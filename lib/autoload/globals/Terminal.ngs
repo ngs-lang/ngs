@@ -17,14 +17,6 @@ F Terminal(fd_in:Int, fd_out:Int) {
 	STDLIB_TERMINALS[k] = NoTerminal(fd_in, fd_out)
 }
 
-F Terminal(fd_in:Int, fd_out:Int) {
-	guard isatty(fd_in) and isatty(fd_out)
-	debug("term", "Terminal() choose AnsiTerminal()")
-	k = "${fd_in}:${fd_out}"
-	k in STDLIB_TERMINALS returns STDLIB_TERMINALS[k]
-	STDLIB_TERMINALS[k] = AnsiTerminal(fd_in, fd_out)
-}
-
 F Terminal() Terminal(0,1)
 
 F init(t:Terminal, fd_in:Int, fd_out:Int) {
@@ -53,3 +45,5 @@ F status(t:Terminal, s:Str) t.echo("[STATUS ${Time()}] $s")
 
 F Bool(t:Terminal) true
 F ExitCode(t:Terminal) t.Bool().ExitCode()
+
+require(Dir("autoload/constructors/Terminal"))

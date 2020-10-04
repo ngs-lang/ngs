@@ -33,7 +33,7 @@
 		DocGroup = Doc::Group
 
 		commit = `line: git rev-parse HEAD`
-		pfx = Pfx("$NGS_DIR/")
+		pfx = Pfx(realpath('../lib'))
 		github_user = ENV.get('NGS_GITHUB_USER', 'ilyash')
 
 		F is_public_name(s:Str) s ~ /^[^_]/
@@ -779,9 +779,14 @@
 				md.source_ref= Box(if method is UserDefinedMethod {
 					# Handling UserDefinedMethod, not handling built-ins yet
 					location_info = method.ip().resolve_instruction_pointer()
-					if m = location_info.file ~ pfx {
+					f = if location_info.file == '<builtin-stdlib>' {
+						pfx.val / 'stdlib.ngs'
+					} else {
+						location_info.file
+					}
+					if m = f ~ pfx {
 						{
-							'file': m.after
+							'file': m.after[1..null]
 							'line': location_info.first_line
 						}
 					}

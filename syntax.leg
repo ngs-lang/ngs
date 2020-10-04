@@ -1348,7 +1348,7 @@ while =
 	}
 
 switch =
-	acc:any-switch !identifier-continuation space? datum:expression { append_ast_node_child(acc, datum) } space? "{"
+	acc:any-switch !identifier-continuation space? datum:code-block { append_ast_node_child(acc, datum) } space? "{"
 		(
 			space? e:expression space? c:code-block {
 				MAKE_NODE(case_node, EXPRESSIONS_NODE);
@@ -1364,7 +1364,7 @@ switch =
 cond =
 	acc:any-cond { MAKE_NODE(dummy, NULL_NODE); append_ast_node_child(acc, dummy) } space? "{"
 		(
-			space? e:expression space? c:code-block {
+			space? e:code-block space? c:code-block {
 				MAKE_NODE(case_node, EXPRESSIONS_NODE);
 					append_ast_node_child(case_node, e);
 					append_ast_node_child(case_node, c);
@@ -1389,20 +1389,20 @@ econd-keyword   = "econd"   { MAKE_NODE(ret, SWITCH_NODE); ret->number = SWITCH_
 
 
 number = 
-	<[-+]?"0x"[0-9a-fA-F]+> ! [a-zA-Z] {
+	<[-+]?"0x"[0-9a-fA-F]+> ! ([a-zA-Z] | "." [0-9a-fA-F]) {
 		MAKE_NODE(ret, INT_NODE);
 		ret->number = strtol(yytext, NULL, 16);
 		$$ = ret;
 	}
 	|
-	<[-+]?[0-9]+[.][0-9]+> ! [a-zA-Z] {
+	<[-+]?[0-9]+[.][0-9]+> ! ([a-zA-Z] | "." [0-9]) {
 		MAKE_NODE(ret, REAL_NODE);
 		ret->data = NGS_MALLOC(sizeof(NGS_REAL));
 		*(NGS_REAL *)ret->data = strtod(yytext, NULL);
 		$$ = ret;
 	}
 	|
-	<[-+]?[0-9]+> ! [a-zA-Z] {
+	<[-+]?[0-9]+> ! ([a-zA-Z] | "." [0-9])  {
 		MAKE_NODE(ret, INT_NODE);
 		ret->number = atol(yytext);
 		$$ = ret;

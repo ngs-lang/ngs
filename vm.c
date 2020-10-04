@@ -4,9 +4,16 @@
 #include <math.h>
 #include <pthread.h>
 #include <stdarg.h>
-#include <sys/poll.h>
 #include <time.h>
 #include <string.h>
+
+#ifdef HAVE_POLL_H
+#include <sys/poll.h>
+#endif
+
+// REALPATH(3)
+#include <limits.h>
+#include <stdlib.h>
 
 // GETTIMEOFDAY(2)
 #include <sys/time.h>
@@ -686,6 +693,18 @@ METHOD_RESULT native_c_open_str_str METHOD_PARAMS {
 	// if(!flags && !strcmp(flags_str, "rw")) { flags = O_RDWR; }
 	SET_INT(*result, open(pathname, flags, 0666)); // Mode same as in bash
 	return METHOD_OK;
+}
+
+METHOD_RESULT native_c_realpath_str METHOD_PARAMS {
+	const char *path = obj_to_cstring(argv[0]);
+	char resolved_path[PATH_MAX + 1];
+	resolved_path[0] = '\0';
+	if(realpath(path, resolved_path)) {
+		*result = make_string(resolved_path);
+	} else {
+		*result = MAKE_NULL;
+	}
+	METHOD_RETURN(*result);
 }
 
 // READ(2)
@@ -1642,6 +1661,7 @@ METHOD_RESULT native_c_access METHOD_PARAMS {
 		} \
 	};
 
+#ifdef HAVE_POLL_H
 // WIP
 METHOD_RESULT native_c_poll METHOD_PARAMS {
 	VALUE ret, revents;
@@ -1663,6 +1683,7 @@ METHOD_RESULT native_c_poll METHOD_PARAMS {
 	ARRAY_ITEMS(ret)[1] = revents;
 	METHOD_RETURN(ret);
 }
+#endif
 
 METHOD_RESULT native_id_pthread METHOD_PARAMS {
 	unsigned char *p;
@@ -2256,6 +2277,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	#endif
 
 	set_global(vm, "OS", OS);
+
+	VALUE FEATURES = make_hash(4);
+	set_global(vm, "FEATURES", FEATURES);
 
 	MK_BUILTIN_TYPE_DOC(Null, T_NULL, "Null type. Has only one instance, null");
 	vm->type_by_value_tag[V_NULL >> TAG_BITS] = &vm->Null;
@@ -3020,6 +3044,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Open a file. Uses OPEN(2).");
 	_doc(vm, "flags", "r - O_RDONLY; w - O_WRONLY | O_CREAT | O_TRUNC; a - O_WRONLY | O_CREAT | O_APPEND");
 	_doc(vm, "%RET", "Int - file descriptor or -1");
+	register_global_func(vm, 0, "c_realpath",  &native_c_realpath_str, 1, "path",     vm->Str);
+	_doc(vm, "", "Real path. Uses REALPATH(3).");
+	_doc(vm, "%RET", "Str or null");
 	register_global_func(vm, 0, "c_close",  &native_c_close_int,       1, "fd",       vm->Int);
 	_doc(vm, "", "Close a file. Uses CLOSE(2).");
 	_doc(vm, "%RET", "Int - zero on success or -1");
@@ -3030,7 +3057,12 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_write",  &native_c_write_int_str,   2, "fd",       vm->Int, "s",     vm->Str);
 	_doc(vm, "", "Write to a file. Uses WRITE(2).");
 	_doc(vm, "%RET", "Int - number of bytes written or -1");
+#ifdef HAVE_POLL_H
 	register_global_func(vm, 0, "c_poll",   &native_c_poll,            2, "fds_evs",  vm->Arr, "timeout", vm->Int);
+	set_hash_key(FEATURES, make_string("poll"), MAKE_TRUE);
+#else
+	set_hash_key(FEATURES, make_string("poll"), MAKE_FALSE);
+#endif
 	// TODO DOC
 	register_global_func(vm, 1, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
 	_doc(vm, "", "Call LSEEK(2).");
@@ -3551,8 +3583,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	#undef A
 	set_global(vm, "ACCESS", access);
 
+#ifdef HAVE_POLL_H
 	// --- man poll(2) ---
 	E(POLLIN); E(POLLPRI); E(POLLOUT); E(POLLERR); E(POLLHUP); E(POLLNVAL);
+#endif
 
 	// --- man 2 stat ---
 	E(S_IFMT); E(S_IFSOCK); E(S_IFLNK); E(S_IFREG); E(S_IFBLK); E(S_IFDIR); E(S_IFCHR); E(S_IFIFO);
