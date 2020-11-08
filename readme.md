@@ -12,27 +12,38 @@
 
 ## Quick Links
 
-* [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases)
 * [NGS Website](https://ngs-lang.org/)
 * [Docker repository](https://hub.docker.com/r/ngslang/ngs/)
+* Documentation
+	* [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases) -- which problems NGS aims to solve well
+	* [Documentation Index](https://ngs-lang.org/doc/latest/index.html)
+		* [Tutorial](https://ngs-lang.org/doc/latest/man/ngstut.1.html) -- brief introduction through code examples
+		* [Language Reference](https://ngs-lang.org/doc/latest/man/ngslang.1.html) -- language design principles, syntax, and features
+		* [Motivation](https://ngs-lang.org/doc/latest/man/ngswhy.1.html)
+		* [Library reference](https://ngs-lang.org/doc/latest/generated/index.html) -- all available functions
+
 
 ## The Problem
 
-* Absence of up-to-date programming language for Ops.
-	* Classical shells were made for completely different situation than what we have today. We typically manage systems using APIs now. Structured data is not a luxury anymore but a necessity. `jq` works. I find it tremendously more convenient when a language itself has data structures.
-	* General purpose programming languages (Python, Ruby, Go, ...) are not a good fit for typical Ops tasks. Show me one where `echo my_string >my_file` is as easy and as concise as in bash.
-* Inadequate shells that Ops use. Like the [dumpster in your terminal](https://en.wikipedia.org/wiki/Redirection_(computing)#Piping) when you can't distinguish between stdout and stderr of several processes? I don't.
+`bash` or `Python`? That's a square pegs for a round hole situation. Both are inadequate for Ops tasks. NGS aims to reduce your frustration and let you be more productive. There is no reason that you should be in this situation. *(Python here represents also other general purpose programming laguages).*
+
+**bash** does not meet any modern expectations for syntax, error handling nor has ability to work with structured data (beyond arrays and associative arrays which can not be nested). Let it go. You are not usually coding in assembly, FORTRAN, C, or C++, do you? They just don’t match the typical Ops tasks. Don’t make your life harder than it should be. Let it go. (Let’s not make it a blanket statement. Use your own judgement when to make an exception).
+
+**Python** along with many other languages are general purpose programming languages which were not intended to solve specifically Ops problems. The consequence is longer and less readable scripts when dealing with files or running external programs, which are both pretty common for Ops.
+
+**UI** -- Current shells as well as proposed alternatives treat UI as nothing has happened since the 70-s: mostly typing commands and getting some text back.
+
+See [More about square pegs and the round hole](https://ilya-sher.org/2020/10/31/bash-or-python-the-square-pegs-and-a-round-hole-situation/).
 
 ## Suggested Solution - NGS
 
-I have designed and implemented a programming language with typical Ops tasks in mind. See the use cases below. The next big planned part is the interactive shell.
+I like helping people. Reducing frustration and making people more productive just feels good. A scalable way to help is thorugh tools. That is why I created NGS. It is a programming language with typical Ops tasks in mind. See the use cases below. The next big planned part is the interactive shell.
 
 ## NGS Use Cases
 
-Here are recommended use cases.
+You as the Ops person, probably wondering whether NGS would be a good fit for your tasks. NGS aims to be best fit for the use cases below.
 
-* Data manipulation: Got some JSON from an API/CLI call and want to do something with it? Maybe extract something? Maybe modify a bit and shove it into next API call?
-* Testing: test CLI programs and API endpoints using built-in testing mini-framework
+* Data manipulation: Got some JSON from an API call / external program / stdin and want to do something with it? Extract, modify, shove it into next API call / external program / stdout.
 * Typical Ops Scripting
 	* Run external programs
 		* NGS has syntax for pipes and i/o redirection
@@ -45,11 +56,12 @@ Here are recommended use cases.
 	* Use built-in `status()` reporting function (previous status is overridden with new status on screen)
 	* Use built-in `log()` function which prints timestamped output
 	* Use built-in `retry()` and stop re-implementing it hundreds of times
-* WIP: AWS library
+* Testing: test CLI programs and API endpoints using built-in testing mini-framework
+* WIP/PoC: AWS library
 	* Easy integration with existing infra
 	* Create new or modify existing infrastructure
 	* Easier scripting as opposed to declarative tools (CloudFormation, Terraform) allows modeling of processes and not just final state
-* Future: interactive shell
+* Future: interactive shell with [UI which is not from the 70s](https://github.com/ngs-lang/ngs/wiki/UI-Design).
 
 See [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases) wiki page for more information about the use cases and examples.
 
@@ -57,7 +69,7 @@ See [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases) wiki page for mo
 
 **The language** is very useful. See the the [bin folder](bin) for examples. NGS is used in Beame.io for miscellaneous scripting such as testing CLI tools, performance tests orchestration, cloud manipulation, etc.
 
-**The shell** is not started yet. The shell will be implemented in NGS. See the [design document](https://github.com/ngs-lang/ngs/wiki/UI-Design).
+The work on **the shell** has just started. It is not usable yet. The shell is being implemented in NGS. See the [design document](https://github.com/ngs-lang/ngs/wiki/UI-Design).
 
 From George Nachman, creator of [iTerm2](https://www.iterm2.com/):
 > Neat! This is totally the project I would do if I had unlimited free time :) I've wished for something like this for a long time. I think there's a lot of room for improvement over a basic TTY, and you've nailed some of the important things
