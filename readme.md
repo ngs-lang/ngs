@@ -8,6 +8,8 @@
 
 [![Homebrew](https://img.shields.io/badge/dynamic/json.svg?url=https://formulae.brew.sh/api/formula/ngs.json&query=$.versions.stable&label=homebrew&color=orange)](https://formulae.brew.sh/formula/ngs)
 
+[![ngs](https://snapcraft.io//ngs/badge.svg)](https://snapcraft.io/ngs)
+
 **Next Generation Shell** is a powerful programming language and a shell designed specifically for Ops. *Because you deserve better*.
 
 ## Quick Links
