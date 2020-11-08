@@ -10,7 +10,7 @@ This document describes releasing a new version of NGS.
 * Update `CHANGELOG.md`. Place the release date in the section on the top.
 * Commit
 * Push
-* Wait and see that Github Actions build is OK
+* Wait and see that GitHub Actions build is OK - https://github.com/ngs-lang/ngs/actions
 * Checkout `master` branch
 * `git pull`
 * Review the changes made in `master` branch if any. There should not be.
@@ -27,7 +27,7 @@ This document describes releasing a new version of NGS.
 * Build documentation
 	* `(cd doc && ./make.ngs out)`
 * `git push`
-* Wait and see that Github Actions build is OK
+* Wait and see that GitHub Actions build is OK - https://github.com/ngs-lang/ngs/actions
 * Update doc folder so that `latest` link points to the last version: `(cd doc/out && rm latest && ln -s $(ngs -p VERSION) latest)`
 * Sync documentation (to be scripted): `aws s3 sync --acl public-read doc/out/ s3://01.ngs-lang.org/doc/`
 * `(cd site && ./update.ngs)` (must be after syncing documentation because it invalidates caches)

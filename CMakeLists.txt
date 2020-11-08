@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.0)
-include(FindPkgConfig)
 project(NGS)
+
+include(CheckFunctionExists)
+include(CheckIncludeFile)
+include(FindPkgConfig)
+
 
 # -D_DARWIN_C_SOURCE - SIGWINCH and friends on MacOS
 # -D_XOPEN_SOURCE - strptime on Linux
@@ -25,11 +29,21 @@ add_executable(ngs
 	stdlib.ngs.h
 )
 
-include(CheckFunctionExists)
 check_function_exists(fmemopen FMEMOPEN)
 IF(NOT FMEMOPEN)
 	target_sources(ngs PRIVATE fmemopen.c)
 ENDIF()
+
+check_include_file(execinfo.h EXECINFO_H)
+IF(EXECINFO_H)
+	add_definitions(-DHAVE_EXECINFO_H)
+ENDIF()
+
+check_include_file(sys/poll.h POLL_H)
+IF(POLL_H)
+	add_definitions(-DHAVE_POLL_H)
+ENDIF()
+
 
 find_program(SED NAMES gsed sed) # gsed - MacOS, sed - all the rest
 find_file(PCRE_H pcre.h)
@@ -70,7 +84,7 @@ add_custom_command(
 add_custom_command(
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/stdlib.ngs.h
-	COMMAND xxd -i lib/stdlib.ngs >${CMAKE_CURRENT_BINARY_DIR}/stdlib.ngs.h
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/bin2c.sh lib/stdlib.ngs >${CMAKE_CURRENT_BINARY_DIR}/stdlib.ngs.h
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/stdlib.ngs
 )
 

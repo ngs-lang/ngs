@@ -1,7 +1,11 @@
-## (UNRELEASED) Version 0.2.9
+## (UNRELEASED) Version 0.2.10
+
+## 2020-10-04 Version 0.2.9
 
 ### New features
 
+* Homebrew formula and readme instructions (Thanks, @SeekingMeaning)
+* Homebrew badge (Thanks, @organom)
 * `main()` can now be defined as part of `Namespace` of the main file: `ns { F main(...) ...}`
 * Add experimental `only(val, predicate, mapper)`
 * Add `realpath(Str)`
@@ -9,13 +13,19 @@
 
 ### Fixes and improvements
 
+* Github actions instead of Travis (Thanks, @organom)
 * `$(log ...)` now logs i/o redirections
 * Remove unused `ValueWrapper` type
+* Bootstrapping - `MY_NAMESPACE::main` works even if `main` is not defined in the main file, allowing `ngs -e 'require("my_module.ngs")` to run its own `main()`
+* `filterk()`, `rejectk()`, `filterv()`, `rejectv()` - the predicate is now optional and defaults to `identity`.
+* Got rid of `xxd` build time dependency
+* make `sys/poll.h` dependency optional
 
 
 ### Breaking changes
 
 * Remove deprecated `n()`
+* `switch` and `cond` are now consistent with if, accepting `{...}` code blocks for the LHS (`switch {a=1; a+a} {...}`, `cond { {a=b+c; a>0 } ... }`).
 
 ## 2020-07-26 Version 0.2.8
 

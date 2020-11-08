@@ -4,9 +4,12 @@
 #include <math.h>
 #include <pthread.h>
 #include <stdarg.h>
-#include <sys/poll.h>
 #include <time.h>
 #include <string.h>
+
+#ifdef HAVE_POLL_H
+#include <sys/poll.h>
+#endif
 
 // REALPATH(3)
 #include <limits.h>
@@ -1658,6 +1661,7 @@ METHOD_RESULT native_c_access METHOD_PARAMS {
 		} \
 	};
 
+#ifdef HAVE_POLL_H
 // WIP
 METHOD_RESULT native_c_poll METHOD_PARAMS {
 	VALUE ret, revents;
@@ -1679,6 +1683,7 @@ METHOD_RESULT native_c_poll METHOD_PARAMS {
 	ARRAY_ITEMS(ret)[1] = revents;
 	METHOD_RETURN(ret);
 }
+#endif
 
 METHOD_RESULT native_id_pthread METHOD_PARAMS {
 	unsigned char *p;
@@ -2272,6 +2277,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	#endif
 
 	set_global(vm, "OS", OS);
+
+	VALUE FEATURES = make_hash(4);
+	set_global(vm, "FEATURES", FEATURES);
 
 	MK_BUILTIN_TYPE_DOC(Null, T_NULL, "Null type. Has only one instance, null");
 	vm->type_by_value_tag[V_NULL >> TAG_BITS] = &vm->Null;
@@ -3049,7 +3057,12 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_write",  &native_c_write_int_str,   2, "fd",       vm->Int, "s",     vm->Str);
 	_doc(vm, "", "Write to a file. Uses WRITE(2).");
 	_doc(vm, "%RET", "Int - number of bytes written or -1");
+#ifdef HAVE_POLL_H
 	register_global_func(vm, 0, "c_poll",   &native_c_poll,            2, "fds_evs",  vm->Arr, "timeout", vm->Int);
+	set_hash_key(FEATURES, make_string("poll"), MAKE_TRUE);
+#else
+	set_hash_key(FEATURES, make_string("poll"), MAKE_FALSE);
+#endif
 	// TODO DOC
 	register_global_func(vm, 1, "c_lseek",  &native_c_lseek_int_int_str,3,"fd",       vm->Int, "offset", vm->Int, "whence", vm->Str);
 	_doc(vm, "", "Call LSEEK(2).");
@@ -3570,8 +3583,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	#undef A
 	set_global(vm, "ACCESS", access);
 
+#ifdef HAVE_POLL_H
 	// --- man poll(2) ---
 	E(POLLIN); E(POLLPRI); E(POLLOUT); E(POLLERR); E(POLLHUP); E(POLLNVAL);
+#endif
 
 	// --- man 2 stat ---
 	E(S_IFMT); E(S_IFSOCK); E(S_IFLNK); E(S_IFREG); E(S_IFBLK); E(S_IFDIR); E(S_IFCHR); E(S_IFIFO);

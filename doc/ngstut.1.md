@@ -1,6 +1,6 @@
 % NGSTUT(1) NGS User Manual
 % Zeev Glozman (\@zglozman); Ilya Sher
-% 2017
+% 2017-2020
 
 # NAME
 
@@ -217,20 +217,18 @@ In this example we also introduced the usage of `pmap`, in my opinion its one of
 
 
 
-	#!/usr/local/bin/ngs
+	#!/usr/bin/env ngs
 
-	{
-		base_url = "http://www.phrack.org/"
-		phrak = `curl -s $base_url`
-		m = phrak ~ /href="(.*?)" title="Issues"/
-		issue = `curl -s "$base_url/${m[1]}"`;
-		pages = issue ~~ /href=".*?(issues\/\d+\/\d+.html)#article/
-		rel_pages_urls = pages.map(X[1])
-		abs_pages_urls = base_url + rel_pages_urls
-		pages_texts = abs_pages_urls.pmap(F(url)  `lynx -dump $url`);
-		pages_texts % echo
-	}
-
+	assert(Program("lynx"))
+	base_url = "http://www.phrack.org/"
+	phrak = `curl -s $base_url`
+	m = phrak ~ /href="(.*?)" title="Issues"/
+	issue = `curl -s "$base_url/${m[1]}"`;
+	pages = issue ~~ /href=".*?(issues\/\d+\/\d+.html)#article/
+	rel_pages_urls = pages.map(X[1])
+	abs_pages_urls = base_url + rel_pages_urls
+	pages_texts = abs_pages_urls.pmap(F(url)  `lynx -dump $url`);
+	pages_texts.each(echo)
 
 
 # Loops and iterators
