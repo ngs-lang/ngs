@@ -237,6 +237,17 @@ If you have troubles compiling, please try to compile the commit tagged `tested`
 	killall -SIGSEGV ngs
 	lldb --core /cores/core.XXXXX
 
+### Debug - Homebrew builds
+
+* Checkout the relevant Homebrew repository (probably a fork, example: https://github.com/alebcay/homebrew-core.git).
+* Copy the original formula from the original repository (at `Formula/ngs.rb`) somewhere else.
+* In the `ngs.rb` copy, modify:
+	* `url "https://github.com/ngs-lang/ngs/archive/v0.2.8.tar.gz"` -> `url "file:///PATH/TO/ngs.tgz"`
+	* Add `version "0.0.1-dev"` (or alike)
+* Development cycle:
+	* In a folder just above `ngs`, run `tar czf ngs.tgz --exclude=build ngs`
+	* `brew install -d -s ./ngs.rb` (wherever the `ngs.rb` is)
+
 ### Generate Documentation
 
 On Linux
