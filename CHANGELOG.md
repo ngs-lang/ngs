@@ -1,5 +1,8 @@
 ## (UNRELEASED) Version 0.2.10
 
+* Fix Homebrew build (Issue #365)
+
+
 ## 2020-10-04 Version 0.2.9
 
 ### New features
