@@ -4744,7 +4744,7 @@ F Bool(p:Program) Result({ find_in_path(p.name) }).Bool()
 
 F assert(p:Program) {
 	r = Result({ find_in_path(p.name) })
-	not(r) throws AssertFail("Program ${p.name} not found in path").set(cause = r.val)
+	not(r) throws AssertFail("Program ${p.name} not found in path", r.val)
 	p
 }
 
