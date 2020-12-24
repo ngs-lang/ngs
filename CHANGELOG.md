@@ -1,5 +1,11 @@
 ## (UNRELEASED) Version 0.2.10
 
+### New features
+
+* Add `Bool()`
+
+### Fixes and improvements
+
 * Fix Homebrew build (Issue #365)
 
 

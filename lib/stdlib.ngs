@@ -271,6 +271,9 @@ section "Default constructors for built-in types" {
 	doc Make null
 	doc %RET - null
 	F Null() null
+	doc Make false
+	doc %RET - false
+	F Bool() false
 	doc Make empty array
 	doc %RET - []
 	F Arr()  { [] }
