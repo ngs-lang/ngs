@@ -7349,6 +7349,11 @@ section "Bootstrap" {
 				return 0
 			}
 
+			if (a == '--help') or (a == '-h') {
+				require("cli.ngs")::help()
+				return 0
+			}
+
 			if a in %[-e -p -pj -pi -pl -pil -pjl -pc -pt] {
 				sw = ARGV.shift()
 				# Newline at the end is for avoiding # commenting out the closing }
@@ -7363,11 +7368,13 @@ section "Bootstrap" {
 		if not(code_to_run) {
 			debug('bootstrap', 'No -e switch was passed, will load the program from a file')
 			fname = ARGV.shift(null)
-			if not(fname) {
-				return require("cli.ngs")
+			if fname {
+				ARGV0 = fname
+				code_to_run = read(fname)
+			} else {
+				fname = '<builtin-cli-loader>'
+				code_to_run = 'require("cli.ngs")'
 			}
-			ARGV0 = fname
-			code_to_run = read(fname)
 		}
 
 		program_bytecode = compile(code_to_run, fname)
