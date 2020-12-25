@@ -99,7 +99,7 @@ jobs:
           fi
       - name: Install and Test (Linux)
         if: runner.os == 'Linux'
-        run: (sudo ./install-linux.sh && make tests)
+        run: (sudo ./install-linux.sh && mkdir -p build/Testing/Temporary && make tests)
       - name: Install Compiler (macOS)
         if: runner.os == 'macOS'
         run: |
