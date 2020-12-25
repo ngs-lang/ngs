@@ -83,7 +83,7 @@ jobs:
             compiler: gcc
             version: "9"
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Install Compiler (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -152,7 +152,7 @@ jobs:
             version: "7"
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Install Compiler
         run: |
           apt-get update
