@@ -9,7 +9,6 @@ jobs:
     strategy:
       matrix:
         name: [
-            ubuntu-20.04-gcc-6,
             ubuntu-20.04-gcc-7,
             ubuntu-20.04-gcc-8,
             ubuntu-20.04-gcc-9,
@@ -19,15 +18,11 @@ jobs:
             ubuntu-20.04-clang-8,
             ubuntu-20.04-clang-9,
             ubuntu-20.04-clang-10,
+            ubuntu-20.04-clang-11,
             macOS-10.14-xcode-10.3,
             macOS-10.14-gcc-9,
         ]
         include:
-          - name: ubuntu-20.04-gcc-6
-            os: ubuntu-20.04
-            compiler: gcc
-            version: "6"
-
           - name: ubuntu-20.04-gcc-7
             os: ubuntu-20.04
             compiler: gcc
@@ -72,6 +67,11 @@ jobs:
             os: ubuntu-20.04
             compiler: clang
             version: "10"
+
+          - name: ubuntu-20.04-clang-11
+            os: ubuntu-20.04
+            compiler: clang
+            version: "11"
 
           - name: macOS-10.14-xcode-10.3
             os: macOS-10.14
