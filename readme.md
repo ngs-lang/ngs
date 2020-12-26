@@ -12,6 +12,41 @@
 
 **Next Generation Shell** is a powerful programming language and a shell designed specifically for Ops. *Because you deserve better*.
 
+- [Quick Links](#quick-links)
+- [The Problem](#the-problem)
+- [Suggested Solution - NGS](#suggested-solution---ngs)
+- [NGS Use Cases](#ngs-use-cases)
+- [Project Status](#project-status)
+- [Code Examples](#code-examples)
+  * [Arrays](#arrays)
+    + [Hashes](#hashes)
+  * [Functions (multimethods) and multi-dispatch](#functions--multimethods--and-multi-dispatch)
+  * [Basic Cloud](#basic-cloud)
+  * [Sample Scripts](#sample-scripts)
+- [Running](#running)
+  * [Running Using Docker](#running-using-docker)
+  * [Running Using Homebrew](#running-using-homebrew)
+- [Compiling and Running](#compiling-and-running)
+  * [Clone from Git](#clone-from-git)
+  * [Install with Dependencies - Debian-based Linux](#install-with-dependencies---debian-based-linux)
+  * [Install with Dependencies - MacOS (brew)](#install-with-dependencies---macos--brew-)
+  * [Install without Dependencies](#install-without-dependencies)
+  * [Run Tests](#run-tests)
+  * [Compile](#compile)
+  * [Run](#run)
+  * [Uninstall](#uninstall)
+  * [Debug - Mac](#debug---mac)
+  * [Debug - Homebrew builds](#debug---homebrew-builds)
+  * [Generate Documentation](#generate-documentation)
+- [Contributing](#contributing)
+- [Planned Features](#planned-features)
+  * [Cross-system](#cross-system)
+  * [Development](#development)
+  * [Later / Unformed / Unfinished Thoughts](#later---unformed---unfinished-thoughts)
+- [How to Run the POC](#how-to-run-the-poc)
+- [Have you heard of project X? How it compares to NGS?](#have-you-heard-of-project-x--how-it-compares-to-ngs-)
+- [Discussion / requests / comments](#discussion---requests---comments)
+
 ## Quick Links
 
 * [NGS Website](https://ngs-lang.org/)
@@ -192,7 +227,7 @@ This is how an instance can be created using NGS (real working code).
 ### Install with Dependencies - Debian-based Linux
 
 	./install-linux.sh
-	
+
 ### Install with Dependencies - MacOS (brew)
 
 	./install-mac.sh
@@ -394,7 +429,7 @@ Following instructions should work (tested on Debian)
 	* If you are OK with Scala, Ammonite is worth trying. I think Scala is too complicated, especially as a shell language. Looking at [HTTP request](http://www.lihaoyi.com/Ammonite/#HTTPRequests): `val resp = Http("https://api.github.com/repos/scala/scala").asString` and `val parsed = upickle.json.read(resp.body).asInstanceOf[upickle.Js.Obj]`. In NGS that would be ```````` parsed=``curl -s "https://api.github.com/repos/scala/scala"`` ````````. On the other hand [Ammonite-Ops](http://www.lihaoyi.com/Ammonite/#Ammonite-Ops) and [Ammonite-Shell](http://www.lihaoyi.com/Ammonite/#Ammonite-Shell) aim to make common "operations" tasks convenient to handle.
 * [sh module for Python](https://amoffat.github.io/sh/): "sh is a full-fledged subprocess replacement for Python 2.6 - 3.5, PyPy and PyPy3 that allows you to call any program as if it were a function".
 	* It's Python. If you have some code and you just need to run some commands, it's much better than builtin Python facilities.
-	* As modules for other languages - you can't have the convenient syntax for common tasks. 
+	* As modules for other languages - you can't have the convenient syntax for common tasks.
 		* `sh.wc(sh.ls("-1"), "-l")` is really not the same as `ls -1 | wc -l`. BTW, `-1` is not needed because `ls` does that automatically when when `stdout` is not a `tty` (try `ls | cat`).
 		* `p = sh.find("-name", "sh.py", _bg=True)` is not the same as `p = $(find -name sh.py &)` (NGS)
 		* No redirections syntax so `ls >/tmp/dir_contents` (bash, NGS) becomes `with open("/tmp/dir_contents", "w") as h: sh.ls(_out=h)` in sh.
