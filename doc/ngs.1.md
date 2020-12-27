@@ -84,3 +84,4 @@ Packaged into `ngs` binary during build. Standard library. Defines many methods 
 Thanks to Zeev Glozman for Mac support, CMake contribution and other help.
 Thanks to Ricardo Gomes for feedback, fixes to documentation, and other contributions.
 Thanks to Guy Egozy, Avishai Ish-Shalom and other friends for ideas and feedback.
+Thanks to Rui Chen for Homebrew related fixes and GitHub actions fixes.
