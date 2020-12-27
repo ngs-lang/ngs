@@ -7,7 +7,10 @@
 ### Fixes and improvements
 
 * Fix Homebrew build (Issue #365)
-
+* Fix GitHub actions (Thanks, @chenrui333)
+* Add dependabot support to keep actions to the latest (Thanks, @chenrui333)
+* Add toc for README (Thanks, @chenrui333)
+* Improve build (Thanks, @chenrui333)
 
 ## 2020-10-04 Version 0.2.9
 
