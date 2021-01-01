@@ -47,3 +47,7 @@ F Bool(t:Terminal) true
 F ExitCode(t:Terminal) t.Bool().ExitCode()
 
 require(Dir("autoload/constructors/Terminal"))
+
+F stty(t:Terminal, argv:Arr) {
+	`stty $*argv <${t.fd_in}`
+}

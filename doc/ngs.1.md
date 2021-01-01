@@ -12,6 +12,8 @@ ngs - Next Generation Shell.
 
 **ngs** [**-e**|**-E**|**-p**|**-pi**|**-pj**|**-pl**|**-pjl**] *expression*
 
+**ngs** [**-h**|**--help**]
+
 # DESCRIPTION
 
 **ngs** is a Next Generation Shell. It has two main parts: the language and the interactive shell.
@@ -38,9 +40,15 @@ Using *expression* is equivalent to running a script that consists of `{` *expre
 
 **-pjl** prints elements of the result, one per line as JSON (mnemonic "print JSON lines")
 
-## MOTIVATION
+**-h** and **--help** shows help
+
+# MOTIVATION
 
 NGS tries to fill the void between classical shells such as **bash** and general-purpose programming languages such as **Ruby**, **Python**, **Perl**, **Go**. The shells are domain-specific languages but the domain has changed so classical shells are not optimal for today's tasks. General-purpose languages on the other hand are not domain-specific so they are not good as shells and too verbose for system tasks scripting, not a good fit.
+
+# EXAMPLES
+
+For examples, see [ngstut(1)](ngstut.1.md).
 
 # EXIT STATUS
 
@@ -84,3 +92,4 @@ Packaged into `ngs` binary during build. Standard library. Defines many methods 
 Thanks to Zeev Glozman for Mac support, CMake contribution and other help.
 Thanks to Ricardo Gomes for feedback, fixes to documentation, and other contributions.
 Thanks to Guy Egozy, Avishai Ish-Shalom and other friends for ideas and feedback.
+Thanks to Rui Chen for Homebrew related fixes and GitHub actions fixes.

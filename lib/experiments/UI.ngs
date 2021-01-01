@@ -1,26 +1,104 @@
 ns {
 
+	# TODO: Handle resize
+
+	global init, push
+	global Bool, Str
+
 	# Run with: ngs -e 'require("experiments/UI.ngs")'
 
 	type Dimension
-		type CharactersDimension(Dimension)
-		type StretchDimension(Dimension)
-		type PixelsDimension(Dimension)
+		type Characters(Dimension)
+		type Stretch(Dimension)
+		type Pixels(Dimension)
 
-	type Screen
-		type TerminalScreen(Screen)
-		type WebScreen(Screen)
 	type Widget
 		type ContainerWidget(Widget)
+	type UI
 
-	F init(d:Dimension, val) cd.val = val
+	F Bool(w:Widget) true
+
+	F init(d:Dimension, val=null) d.val = val
+
+	_widget_id = 1
+	F init(w:Widget, parent:Widget=null) {
+		w.id = _widget_id
+		_widget_id += 1
+		w.width = null
+		w.height = null
+		w.parent = parent
+		w.calculated = ns {
+			left = null
+			top = null
+			width = null
+			height = null
+		}
+		w.children = []
+	}
+
+	F push(parent:Widget, w:Widget) {
+		w.parent = parent
+		parent.children.push(w)
+		parent
+	}
 
 
-	# Later - multu-screen sessions
-	F Screen() TerminalScreen() # for now terminal only, later - web
+	F init(ui:UI) {
+		# Currently, exactly one terminal
+		# Later, terminals and web with rules what to render where
+		ui.screens = [Terminal()]
+
+		s = ui.screens[0]
+		rows_cols = s.stty(%[size]).words().map(Characters + Int)
+		debug("ui", "terminal size ${rows_cols}") # Not sure it's good idea to log to the terminal here
+		s.top_level_widget = ContainerWidget()
+		s.top_level_widget.calculated.set(
+			left = 0.Characters() # TODO
+			top = 0.Characters() # TODO
+			width = rows_cols[1]
+			height = rows_cols[0]
+		)
+	}
+
+	F render(ui:UI, w:Widget) ui.screens[0].render(w)
+
+
+	F calculate_dimensions(at:AnsiTerminal, w:Widget) {
+		wh = if w.parent {
+			# TODO: padding from parent
+			[w.parent.calculated.width, w.parent.calculated.height]
+		}
+		echo(wh)
+		w.calculated.set(
+			width = w.width.only(Stretch, {wh[0]})
+			height = w.height.only(Stretch, {wh[1]})
+		)
+
+	}
+
+	F render(at:AnsiTerminal, w:Widget) {
+		calculate_dimensions(at, w)
+
+	}
+
+	F Widget(ui:UI) {
+		w = Widget()
+		ui.screens[0].top_level_widget.push(w)
+	}
+
+	F Str(d:Dimension) "<${d.val} ${d.typeof().name}>"
+	F Str(d:Dimension) {
+		guard d.val is Null
+		"<${d.typeof().name}>"
+	}
+
 
 	F main() {
-		s = Screen()
-		echo(s)
+		ui = UI()
+		w = Widget(ui).set(width = 35.Characters(), height=Stretch())
+		ui.render(w)
+		echo(w)
+
 	}
+
 }

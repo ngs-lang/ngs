@@ -271,6 +271,9 @@ section "Default constructors for built-in types" {
 	doc Make null
 	doc %RET - null
 	F Null() null
+	doc Make false
+	doc %RET - false
+	F Bool() false
 	doc Make empty array
 	doc %RET - []
 	F Arr()  { [] }
@@ -4744,7 +4747,7 @@ F Bool(p:Program) Result({ find_in_path(p.name) }).Bool()
 
 F assert(p:Program) {
 	r = Result({ find_in_path(p.name) })
-	not(r) throws AssertFail("Program ${p.name} not found in path").set(cause = r.val)
+	not(r) throws AssertFail("Program ${p.name} not found in path", r.val)
 	p
 }
 
@@ -7346,6 +7349,11 @@ section "Bootstrap" {
 				return 0
 			}
 
+			if (a == '--help') or (a == '-h') {
+				require("cli.ngs")::help()
+				return 0
+			}
+
 			if a in %[-e -p -pj -pi -pl -pil -pjl -pc -pt] {
 				sw = ARGV.shift()
 				# Newline at the end is for avoiding # commenting out the closing }
@@ -7360,11 +7368,13 @@ section "Bootstrap" {
 		if not(code_to_run) {
 			debug('bootstrap', 'No -e switch was passed, will load the program from a file')
 			fname = ARGV.shift(null)
-			if not(fname) {
-				return require("cli.ngs")
+			if fname {
+				ARGV0 = fname
+				code_to_run = read(fname)
+			} else {
+				fname = '<builtin-cli-loader>'
+				code_to_run = 'require("cli.ngs")'
 			}
-			ARGV0 = fname
-			code_to_run = read(fname)
 		}
 
 		program_bytecode = compile(code_to_run, fname)

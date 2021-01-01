@@ -1,3 +1,24 @@
+## 2021-01-01 Version 0.2.10
+
+### New features
+
+* Add `Bool()`
+* snap packaging (Thanks, @organom)
+
+### Work in progress
+
+* CLI
+
+### Fixes and improvements
+
+* Fix Homebrew build (Issue #365)
+* Fix GitHub actions (Thanks, @chenrui333)
+* Add dependabot support to keep actions to the latest (Thanks, @chenrui333)
+* Add toc for README (Thanks, @chenrui333)
+* Improve build (Thanks, @chenrui333)
+* Fix and improve documentation
+* `ngs --help` and `ngs -h` now work
+
 ## 2020-10-04 Version 0.2.9
 
 ### New features
