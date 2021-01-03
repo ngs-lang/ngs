@@ -1,0 +1,57 @@
+name: Release of packages and syntax build
+on:
+  release:
+    types: [published]
+jobs:
+  release:
+    timeout-minutes: 20
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Prepare compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-10 git
+          echo "CC=gcc-10" >> $GITHUB_ENV
+          echo "CXX=g++-10" >> $GITHUB_ENV
+      - name: Install and Test NGS
+        run: (./install-linux.sh && sudo make tests)
+# Others that may improve the current release process, taken from release.md (TODO: talk to Ilya on this before including)
+#      - name: Update syntaxes
+#        run: |
+#          make update-vim-syntax
+#          git commit -am 'Update vim/syntax/ngs.vim'
+#          git config user.name "GitHub Actions"
+#          git config user.email noreply@github.com
+#          git push
+#      - name: Build documentation
+#        run: |
+#          (cd doc && ./make.ngs out)
+#          git push
+      - name: Sed version
+        run: |
+          sed -i 's/%%VERSION%%/$GITHUB_REF/g' snap/snapcraft.yaml
+      - uses: snapcore/action-build@v1
+        id: snapcraft
+      - uses: snapcore/action-publish@v1
+        with:
+          store_login: ${{ secrets.STORE_LOGIN }}
+          snap: ${{ steps.snapcraft.outputs.snap }}
+          release: edge
+
+      - uses: actions/setup-java@v1
+        with:
+          java-version: '1.8'
+      - name: Build KeyCloak Plugin
+        run: ( cd keycloak-token-authenticator && mvn clean install )
+      - name: Copy Jar
+        run: ( mkdir keycloak-docker/TokenAuthenticator && cp -v keycloak-token-authenticator/target/token-authenticator-jar-with-dependencies.jar  keycloak-docker/TokenAuthenticator/token-authenticator.jar )
+      - name: Build and Push DockerImage to GitHub Packages
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: docker.pkg.github.com
+          repository: visiontree-software/keycloak-poc/keycloak-poc
+          path: keycloak-docker
+          tag_with_ref: true

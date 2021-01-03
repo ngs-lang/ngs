@@ -91,13 +91,13 @@ jobs:
             echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
             echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
           fi
-      - name: Install and Test (Linux)
+      - name: Install and Test NGS (Linux)
         if: runner.os == 'Linux'
         # Sudo is required for Ubuntu 18.04 on GitHub.
         # Otherwise "mkdir -p build/Testing/Temporary" fails with
         # "mkdir: cannot create directory ‘build/Testing’: Permission denied"
         # (mkdir itself was a test after "ctest" failed to create the directory)
-        run: (sudo ./install-linux.sh && sudo make tests)
+        run: (./install-linux.sh && sudo make tests)
       - name: Install Compiler (macOS)
         if: runner.os == 'macOS'
         run: |
@@ -111,7 +111,7 @@ jobs:
             echo "CC=clang" >> $GITHUB_ENV
             echo "CXX=clang++" >> $GITHUB_ENV
           fi
-      - name: Install and Test (macOS)
+      - name: Install and Test NGS (macOS)
         if: runner.os == 'macOS'
         run: (./install-mac.sh && make tests)
 
@@ -160,5 +160,5 @@ jobs:
             echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
             echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
           fi
-      - name: Install and Test
-        run: (./install-linux.sh && make tests)
+      - name: Install and Test NGS
+        run: (./install-linux.sh && sudo make tests)
