@@ -4390,7 +4390,8 @@ section "Logging and status reporting" {
 	doc TODO: Not output thread ID if there is only one thread.
 	doc TODO: Timestamps? Timestamps acquiring might not be safe after fork before exec.
 	F debug(facility:Str, s:Str) {
-		if ENV.Box('DEBUG').map(split(X, ',')).map({facility in A or '*' in A}).get(false) {
+		'DEBUG' not in ENV returns
+		if ENV.DEBUG.split(',').any(AnyOf(facility, '*')) {
 			echo(stdlib_error_fd, "[DEBUG $facility ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] $s")
 		}
 	}
