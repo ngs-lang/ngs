@@ -383,14 +383,8 @@ section "=~ Matching" {
 		x.all(X =~ a[0])
 	}
 
-	doc %RET - f(x), which is expected to be Bool
-	F =~(x, f:Fun) {
-		ret = f(x)
-		if ret is not Bool {
-			warn("Result of ${f} was not a Bool when used in (=~)")
-		}
-		ret
-	}
+	doc %RET - f(x) 
+	F =~(x, f:Fun) f(x)
 
 	doc Check whether x is of type t
 	doc %RET - x is t
