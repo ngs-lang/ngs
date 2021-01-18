@@ -2875,10 +2875,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "params",   &native_params_closure,    1, "c",      vm->UserDefinedMethod);
 	_doc(vm, "", "Introspect closure parameters.");
 	_doc_arr(vm, "%EX",
-		"... F the_one(something, predicate, body:Fun, found_more:Fun={null}, found_none:Fun={null}) ...",
+		"... F the_one(something, pattern, body:Fun, found_more:Fun={null}, found_none:Fun={null}) ...",
 		"the_one.Arr()[1].params().each(echo)"
 		"# {name=something, type=<Type Any>}",
-		"# {name=predicate, type=<Type Any>}",
+		"# {name=pattern, type=<Type Any>}",
 		"# {name=body, type=<Type Fun>}",
 		"# {name=found_more, type=<Type Fun>, dflt=<UserDefinedMethod <anonymous> at /usr/share/ngs/stdlib.ngs:198>}",
 		"# {name=found_none, type=<Type Fun>, dflt=<UserDefinedMethod <anonymous> at /usr/share/ngs/stdlib.ngs:198>}",

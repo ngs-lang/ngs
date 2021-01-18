@@ -16,7 +16,7 @@ F init(ds:DelimStr, a:Arr, delim:Str=':') {
 
 doc Get new DelimStr with some elements filtered out
 doc %EX - DelimStr("/bin:/usr/bin:/usr/local/bin").filter(/usr/).Str()  # "/usr/bin:/usr/local/bin"
-F filter(ds:DelimStr, predicate) DelimStr(ds.attrs().ArrLike.filter(predicate), delim=ds.attrs().delim)
+F filter(ds:DelimStr, pattern) DelimStr(ds.attrs().ArrLike.filter(pattern), delim=ds.attrs().delim)
 
 TEST DelimStr("/bin:/usr/bin:/usr/local/bin").filter(/usr/).Str() == "/usr/bin:/usr/local/bin"
 

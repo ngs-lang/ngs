@@ -1,5 +1,10 @@
 ## (UNRELEASED) Version 0.2.11
 
+### Fixes and improvements
+
+* The `Pred` machinery replaced with `=~` and `!~` match/non-match operators for simplification.
+* Some `guard` clauses are now using `=~` and as a result are more concise.
+
 ## 2021-01-01 Version 0.2.10
 
 ### New features

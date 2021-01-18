@@ -422,20 +422,21 @@ In NGS, binary operators are just syntactic sugar for calling methods. The varie
 		}
 	}
 	...
-	F reject(something:Eachable, predicate) {
-		p = Pred(predicate)
-		something.filter(not + p) # Usage
-    }
+	F reject(h:Hash, predicate:Fun) h.filter(not + predicate)
 
 Current methods with special names are listed below.
 
 	# Output wrapped manually for your convenience.
 	# All of them correspond to a syntax, mostly binary operators.
-	$ ngs -p 'globals().filterv(Fun).keys().filter(/[^a-zA-Z0-9_]/).join(", ")'
-	==, ., [], +, *, /, -, <, <=, >, >=,
-	.=, []=, %, ===, ::, is not, ::=,
-	?, \, +?, !=, ~, not in, .., ...,
-	!==, ~~, "$*", $(), ``, ````, %(), //
+	$ ngs -pl 'globals().filterv(Fun).keys().filter(/[^a-zA-Z0-9_]/)' | sort | column -x -c 40
+	!=      !==     !~      %       %()
+	*       +       +?      -       .
+	..      ...     .=      /       //
+	::      ::=     <       <=      ==
+	===     =~      >       >=      ?
+	[]      []=     \       ``      ````
+	~       ~~      "$*"    $()     is not
+	not in
 
 ## Binary operators (methods) and precedence
 
@@ -460,12 +461,15 @@ Higher numbers mean higher precedence. Note that short-circuit operators can not
 	!==    130  "Not same as",                [1, 2] !== [1, 2]
 	==     130  "Equals",                     [1, 2] == [1, 2]
 	!=     130  "Not equals"                  [1, 3] != [1, 2]
+	=~     130  "Matches"                     {"a": 1, "b": 2} =~ {"a": 1}  # true
+	                                          {"a": 1, "b": 2} =~ {"a": Any}  # true
+	!~     130  "Does not match"              {"a": 1, "b": 2} !~ {"z": 1} # true
 	<=     150  "Less than or equals"
 	<      150  "Less than"
 	>=     150  "Greater or equals"
 	>      150  "Greater"
-	~      150  "Match"                       "a1b2c" ~ /[0-9]/
-	~~     150  "Match all"                   "a1b2c" ~~ /[0-9]/
+	~      150  "Match"                       "a1b2c" ~ /[0-9]/   # MatchSuccess
+	~~     150  "Match all"                   "a1b2c" ~~ /[0-9]/  # Arr[MatchSuccess]
 	...    160  "Inclusive range"             0...5               # 0,1,2,3,4,5
 	..     160  "Exclusive range"             0..5                # 0,1,2,3,4
 	+      190  "Plus"
@@ -1741,56 +1745,52 @@ Method signature: `exit_hook(exit:Exit)`. `Exit` currently has two keys: `exit_c
 
 * `print_exception` prints exception details if an exception occurred.
 
-# Predicates
+# Patterns
 
-Methods such as `filter`, `filterk`, `filterv`, etc take predicate as one of the arguments.
-Traditionally, such methods (functions) took a method (function) as the predicate argument.
+Methods such as `filter`, `filterk`, `filterv`, etc take a pattern argument, somewhat similar to Ruby.
+Traditionally, such methods (functions) took a method (function) as the predicate argument instead.
 A predicate function is a function with one parameter and that returns a boolean.
 
-NGS allows more powerful and convenient usage of predicates in these and other methods.
-All kinds of objects can be passed as predicates.
-NGS higher-order methods (functions) that have predicate parameters convert the predicates into predicate methods (functions) using the `Pred` multimethod:
+Using pattern as opposed to predicate allows more dense (meaning per characters of code) expressions.
 
-	# Note that "predicate" can be of any type
-	F filter(e:Eachable1, predicate) {
-		pred = Pred(predicate)  # <-- Converting predicate to a predicate function.
+NGS higher-order methods (functions) that have pattern parameters compare items to patterns using the `=~` operator:
+
+	F filter(e:Eachable1, pattern=Bool.constructors) {
 		t = typeof(e)
 		ret = t()
-		e.each() do F(elt) {
-			if pred(elt)
+		e.each(F(elt) {
+			if elt =~ pattern
 				ret.push(elt)
-		}
+		})
 		ret
 	}
 
-This behaviour allows defining how any given type behaves as a predicate. Several built-in types have `Pred` method defined for them.
-Here are some examples of how predicate conversion described above can shorten the code:
+
+This behaviour allows defining how any given type behaves as a pattern. Several built-in types have `=~` method defined for them.
+Here are some examples of how patterns shorten the code:
 
 
-	# Would be {...}.filterk(F(k) k ~ /^b/)
+	# Same as {...}.filterk(F(k) k ~ /^b/)
 	{"a1": 1, "a2": 2, "b1": 10}.filterk(/^b/)  # {"b1": 10}
 
-	# Would be {...}.filter(F(elt) elt.x == 7)
+	# Same as {...}.filter(F(elt) elt.x == 7)
 	[{"x": 10, "y": 20}, {"x": 7, "y": 30}].filter({"x": 7})  # [{x=7, y=30}]
 
-	# Would be {...}.filter(F(t) t is Str)
+	# Same as {...}.filter(F(t) t is Str)
 	["abc", 1, "def"].filter(Str)  # [abc,def]
 
-One can easily define how a type behaves as a predicate: define appropriate `Pred` method.
-Here is the `Pred` method that allows `.filter(SomeType)` such as `.filter(Str)` example above:
+One can easily define how a type behaves as a pattern: define appropriate `=~` method.
+Here is the `=~` method that allows `.filter(SomeType)` such as `.filter(Str)` example above:
 
-	F Pred(t:Type) F is_pred(x) x is t
+	F =~(x, t:Type) x is t
 
-That's a method (`Pred`) that returns a predicate method (function) which is called `is_pred`.
-Naming the returned method helps a bit when looking at backtrace. `is_pred`, the predicate method, checks whether it's argument is of type `t`.
-
-Note that using a method as predicate is still possible:
+Note that using a method as pattern is still possible:
 
 	[1,2,11].filter(F(x) x > 10)  # [11]
 
-That is because `Pred` method leaves it's argument as is, if it is callable (a method for example):
+That is because `=~` method uses the given function as predicate:
 
-	F Pred(f:Fun) f
+	F =~(x, f:Fun) f(x)
 
 # Iterators
 
