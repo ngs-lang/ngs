@@ -4820,6 +4820,12 @@ F write(s:Str, fd:Int) {
 	write(fd, s)
 }
 
+doc Write a string to stdout. Does not add a newline character, while echo() does.
+doc %RET - 1, the standard output file descriptor
+F write(s:Str) {
+	write(1, s)
+}
+
 type WriteFail(CError)
 
 doc Write data to a file referenced by file descriptor.
@@ -5110,8 +5116,8 @@ F store(filename:Str, data, encode_hints:Hash={}) {
 doc Initialize CommandRedir object. Used internally for commands syntax.
 doc %AUTO - $(my_prog >my_file)
 F init(r:CommandRedir, fd, marker, datum) {
-	guard marker is Str or marker is Null
-	guard datum is Str or datum is Pipe or datum == true or datum is Int
+	guard marker =~ AnyOf(Str, Null)
+	guard datum =~ AnyOf(Str, Pipe, Int, true)
 	init(args())
 }
 
