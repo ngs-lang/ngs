@@ -1,5 +1,9 @@
 ## (UNRELEASED) Version 0.2.11
 
+### New features
+
+* Add `write(Str)`
+
 ### Fixes and improvements
 
 * The `Pred` machinery replaced with `=~` and `!~` match/non-match operators for simplification.
