@@ -12,6 +12,8 @@
 
 **Next Generation Shell** is a powerful programming language and a shell designed specifically for Ops. *Because you deserve better*.
 
+:warning: Join our [meetup on 2021-05-04](https://www.meetup.com/life-michael/events/275961221/) - Uses cases, examples, NGS language design.
+
 * [Quick Links](#quick-links)
 * [The Problem](#the-problem)
 * [Suggested Solution - NGS](#suggested-solution---ngs)
