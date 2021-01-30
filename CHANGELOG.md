@@ -8,6 +8,7 @@
 
 * The `Pred` machinery replaced with `=~` and `!~` match/non-match operators for simplification.
 * Some `guard` clauses are now using `=~` and as a result are more concise.
+* `inspect()` now shows attributes (including documentation) of methods.
 
 ## 2021-01-01 Version 0.2.10
 

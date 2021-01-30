@@ -291,6 +291,135 @@ section "Default constructors for built-in types" {
 	F Real() { 0.0 }
 }
 
+section "Inspect built-in types" block _ {
+	global Str, inspect
+
+	F StrParams(f:Fun) {
+		guard f =~ AnyOf(UserDefinedMethod, NativeMethod)
+		f.params().map(F(p) {
+			d = if 'dflt' in p then '=...' else ''
+			"${p.get('splat', '')}${p.name}:${p.type.name}${d}"
+		}).join(', ') \ "($X)"
+	}
+
+	doc String representation of native method.
+	doc %RET - "<NativeMethod NAME(PARAMS)>"
+	doc %EX - (%).Arr()[0].Str().echo()  # Outputs: <NativeMethod %(a:Int, b:Int)>
+	F Str(nm:NativeMethod) "<${nm.typeof().name} ${nm.attrs().name}${StrParams(nm)}>"
+
+	# TODO: show arguments:
+	#   "<UserDefinedMethod ${c.attrs().name tor "<anonymous>"}(HERE) at ${location}>"
+	doc String representation of a closure
+	doc %RET - Str
+	doc %EX - Real.constructors[-1].Str().echo()  # Outputs: <UserDefinedMethod Real at /usr/share/ngs/stdlib.ngs:350>
+	F Str(c:UserDefinedMethod) {
+		info = c.ip().resolve_instruction_pointer()
+		location = "${info.file}:${info.first_line}" tor "<unknown location>"
+		"<UserDefinedMethod ${c.attrs().name tor "<anonymous>"}${StrParams(c)} at ${location}>"
+	}
+
+	doc Inspect any value.
+	doc %RET - Lines with exactly one line of the form <TYPE_NAME ...>
+	F inspect(val) {
+		# * Some types have Str() which is of the form <TYPE_NAME ...> and some don't
+		# * Ensuring <TYPE_NAME ...> form
+		# * I don't like this. There should be a way for Str() and SafeStr() to indicate
+		#   that the output is acceptable as inspect() result (sans Lines()).
+		# * It will also break if type name will include namespace for example.
+		s = SafeStr(val)
+		t = '<' + val.typeof().name
+		if s !~ Pfx(t) {
+			s = "${t} $s>"
+		}
+		Lines([s])
+	}
+
+	doc Inspect Eachable1
+	doc %RET - Lines
+	F inspect(e:Eachable1) {
+		guard e !~ Int
+		Lines(["${e.typeof().name} of size ${e.len() tor '(unknown size)'}"] + e.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
+	}
+
+	F inspect_attrs(val) {
+		keys_meanings = {
+			'%EX': 'Example'
+			'%RET': 'Returns'
+		}
+		collector/Lines() {
+			a = try val.attrs()
+			not(a) returns Lines()
+			collect("Attributes")
+			a.without('doc').each(F(k, v) {
+				collect("  [${k}] = ${v}")
+			})
+			# doc can be null
+			if d = a.get('doc') {
+				a.get('doc', []).each(F(k, v) {
+					k = cond {
+						k in keys_meanings keys_meanings[k]
+						not(k) k
+						true "Parameter ${k}"
+					}
+					kk = '[' +? k +? '] '
+					v.ensure(Arr).each(F(doc_line) {
+						collect("  [doc] ${kk}${doc_line}")
+					})
+				})
+			}
+		}
+	}
+
+	F inspect(f:Fun) {
+		guard f =~ AnyOf(NativeMethod, UserDefinedMethod)
+		Lines([f.Str()]) + ("  " + inspect_attrs(f))
+	}
+
+	doc Inspect MultiMethod
+	doc %RET - Lines
+	F inspect(mm:MultiMethod) {
+		ms = mm.Arr()
+		collector/Lines() {
+			collect("MultiMethod with ${ms.len()} method(s)")
+			for(i;len(ms)) {
+				("  [$i] " + ms[i].inspect()).each(collect)
+			}
+		}
+	}
+
+	doc Inspect Str
+	doc %RET - Lines
+	F inspect(s:Str) Lines(["String of length ${s.len()}: ${SafeStr(s)}"])
+
+	doc Inspect Hash
+	doc %RET - Lines
+	F inspect(h:Hash) Lines(["Hash of size ${h.len()}"] + h.map({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
+
+	doc Inspect Namespace
+	doc %RET - Lines
+	F inspect(n:Namespace) Lines(["Namespace with ${n.len()} item(s)"] + n.map({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
+
+	doc Inspect CommandsPipeline
+	doc %RET - Lines
+	F inspect(cp:CommandsPipeline) {
+		F p(idx:Int) {
+			cp.pipes[idx] is Null returns []
+			("     pipe[$idx]: " + inspect(cp.pipes[idx]))
+		}
+		collector/Lines() {
+			collect(cp.typeof().name)
+			if cp.options {
+				("  options: " + inspect(cp.options)) % collect
+			}
+			p(0) % collect
+			for(i;len(cp.commands)) {
+				("  command[$i]: " + inspect(cp.commands[i])) % collect
+				p(i+1) % collect
+			}
+		}
+	}
+}
+
 section "Functional utilities" {
 	doc The identity function. Simply returns the given parameter.
 	doc %RET - The given argument
@@ -722,53 +851,52 @@ F ~(something, pattern) {
 	}
 }
 
-# === Eachable1 ==================================
+section "Eachable1" {
+	# Should be low priority (ordered before others) method
+	F +(a:Eachable1, b:Eachable1) {
+		guard typeof(a) === typeof(b)
+		t = typeof(a)
+		guard t != Int
+		guard t != Arr
+		guard t != Str
+		t().push_all(a).push_all(b)
+	}
 
-# Should be low priority (ordered before others) method
-F +(a:Eachable1, b:Eachable1) {
-	guard typeof(a) === typeof(b)
-	t = typeof(a)
-	guard t != Int
-	guard t != Arr
-	guard t != Str
-	t().push_all(a).push_all(b)
+	TEST Lines(["ab", "cd"]) + Lines(["ef"]) == Lines(["ab", "cd", "ef"])
+
+	doc EXPERIMENTAL! Do not use!
+	doc Makes sure returned value is of type t. If x is already of type t, returns x.
+	doc Otherwise, returns object of type t with single item x.
+	doc t - a subtype of Eachable1
+	doc %RET - Object of type t
+	doc %STATUS - experimental
+	F ensure(x, t:Type) {
+		guard t.is_subtype(Eachable1)
+		typeof(x) === t returns x
+		t().push(x)
+	}
+
+	doc Check whether Eachable1 has the given index: -len(e) <= i < len(e)
+	doc %RET - Bool
+	F has_index(e:Eachable1, i:Int) {
+		l = len(e)
+		i >= 0 returns i < l
+		0 - i <= l
+	}
+
+	TEST [].has_index(0) == false
+	TEST [].has_index(-1) == false
+	TEST [100].has_index(0) == true
+	TEST [100].has_index(1) == false
+	TEST [100].has_index(-1) == true
+	TEST [100].has_index(-2) == false
+
+	doc Convert Eachable1 into JSON compatible data structure - array
+	F JsonData(e:Eachable1) {
+		guard e !~ AnyOf(Int, Str, Arr, MultiMethod)
+		e.map(JsonData)
+	}
 }
-
-TEST Lines(["ab", "cd"]) + Lines(["ef"]) == Lines(["ab", "cd", "ef"])
-
-doc EXPERIMENTAL! Do not use!
-doc Makes sure returned value is of type t. If x is already of type t, returns x.
-doc Otherwise, returns object of type t with single item x.
-doc t - a subtype of Eachable1
-doc %RET - Object of type t
-doc %STATUS - experimental
-F ensure(x, t:Type) {
-	guard t.is_subtype(Eachable1)
-	typeof(x) === t returns x
-	t().push(x)
-}
-
-doc Check whether Eachable1 has the given index: -len(e) <= i < len(e)
-doc %RET - Bool
-F has_index(e:Eachable1, i:Int) {
-	l = len(e)
-	i >= 0 returns i < l
-	0 - i <= l
-}
-
-TEST [].has_index(0) == false
-TEST [].has_index(-1) == false
-TEST [100].has_index(0) == true
-TEST [100].has_index(1) == false
-TEST [100].has_index(-1) == true
-TEST [100].has_index(-2) == false
-
-doc Convert Eachable1 into JSON compatible data structure - array
-F JsonData(e:Eachable1) {
-	guard e !~ AnyOf(Int, Str, Arr, MultiMethod)
-	e.map(JsonData)
-}
-
 
 section "ArrLike" {
 	# TODO [doc]: examples in methods
@@ -1229,43 +1357,12 @@ TEST Real('1.1') == 1.1
 doc Convert Real into JSON compatible data structure - number
 F JsonData(r:Real) r
 
-# === Fun helpers ================================
-
-doc Do not use!
-F StrParams(f:Fun) {
-	guard f =~ AnyOf(UserDefinedMethod, NativeMethod)
-	f.params().map(F(p) {
-		d = if 'dflt' in p then '=...' else ''
-		"${p.get('splat', '')}${p.name}:${p.type.name}${d}"
-	}).join(', ') \ "($X)"
-}
-
-# === NativeMethod ===============================
-
-doc String representation of native method.
-doc %RET - "<NativeMethod NAME(PARAMS)>"
-doc %EX - (%).Arr()[0].Str().echo()  # Outputs: <NativeMethod %(a:Int, b:Int)>
-F Str(nm:NativeMethod) "<${nm.typeof().name} ${nm.attrs().name}${StrParams(nm)}>"
-
 # === NormalTypeConstructor ===============================
 
 doc String representation of normal type constructor. NormalTypeConstructor
 doc %RET - "<NormalTypeConstructor>"
 doc %EX - Box.constructors.Arr()[0].Str().echo()  # Outputs: <NormalTypeConstructor>
 F Str(ntc:NormalTypeConstructor) "<NormalTypeConstructor>"
-
-# === UserDefinedMethod ====================================
-
-# TODO: show arguments:
-#   "<UserDefinedMethod ${c.attrs().name tor "<anonymous>"}(HERE) at ${location}>"
-doc String representation of a closure
-doc %RET - Str
-doc %EX - Real.constructors[-1].Str().echo()  # Outputs: <UserDefinedMethod Real at /usr/share/ngs/stdlib.ngs:350>
-F Str(c:UserDefinedMethod) {
-	info = c.ip().resolve_instruction_pointer()
-	location = "${info.file}:${info.first_line}" tor "<unknown location>"
-	"<UserDefinedMethod ${c.attrs().name tor "<anonymous>"}${StrParams(c)} at ${location}>"
-}
 
 section "Type" {
 
@@ -5343,12 +5440,51 @@ doc Wait for the process to finish and return its standard output.
 doc %RET - Str
 F Str(p:Process) p.wait().stdout
 
+doc Inspect Process
+doc %RET - Lines
+F inspect(p:Process) {
+	# XXX: Are there any platforms with different convention?
+	outputs_names = {1: 'stdout', 2: 'stderr'}
+	collector/Lines() {
+		collect("Process")
+		collect("  command = ${p.command}")
+		collect("  executable = ${p.executable}")
+		collect("  pid = ${p.pid}")
+		collect("  exit_code = ${p.exit_code}")
+		collect("  exit_signal = ${p.exit_signal}")
+		p.redirects.each_idx_val(F(idx, val) {
+			("  redirects[${idx}]: " + p.redirects[idx].inspect()).each(collect)
+		})
+		p.outputs.each(F(k, val) {
+			# Replacing 'lines' with 'Lines' does not work. Gives "(Failed to inspect)".
+			val_lines = val.Box().map(lines).get([])
+			name = ', ' +? outputs_names.get(k, '')
+			collect("  output on fd ${k}${name} (${val_lines.len()} lines):")
+			("    " + val_lines.digest(16)).each(collect)
+		})
+	}
+}
+
 doc Wait for the processes to finish and return standard output of the last process in pipeline.
 doc %RET - Str
 F Str(pp:ProcessesPipeline) {
 	pp.wait()
 	assert(pp.processes)
 	Str(pp.processes[-1])
+}
+
+doc Inspect ProcessesPipeline
+doc %RET - Lines
+F inspect(pp:ProcessesPipeline) {
+	collector/Lines() {
+		collect(pp.typeof().name)
+		%[cp pipe_in pipe_out].each(F(k) {
+			("  ${k}: " + inspect(pp.(k))) % collect
+		})
+		for(i;len(pp.processes)) {
+			("  processes[$i]: " + inspect(pp.processes[i])) % collect
+		}
+	}
 }
 
 # TODO: type Arg(Str) -- currently, inheriting built in types is not supported
@@ -6561,99 +6697,6 @@ F SafeStr(val) {
 		o >= 32 and ch != '\\' returns ch
 		'\\x' + encode_hex(ch)
 	}).join('')
-}
-
-# TODO: in-depth inspect()
-
-doc Inspect any value.
-doc %RET - Lines with exactly one line
-F inspect(val) Lines([val.typeof().name + ': ' + SafeStr(val)])
-
-doc Inspect Eachable1
-doc %RET - Lines
-F inspect(e:Eachable1) {
-	guard e !~ AnyOf(Box, Int, Range)
-	Lines(["${e.typeof().name} of size ${e.len() tor '(unknown size)'}"] + e.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
-}
-
-# F inspect(mm:MultiMethod) ["MultiMethod "] + mm.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"})
-doc Inspect MultiMethod
-doc %RET - Lines
-F inspect(mm:MultiMethod) Lines(["MultiMethod:", "  Methods"]) + ("    " + mm.Arr().inspect())
-
-doc Inspect Str
-doc %RET - Lines
-F inspect(s:Str) Lines(["String(${s.len()}): ${SafeStr(s)}"])
-
-
-doc Inspect Hash
-doc %RET - Lines
-F inspect(h:Hash) Lines(["Hash of size ${h.len()}"] + h.map({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
-
-doc Inspect Namespace
-doc %RET - Lines
-F inspect(n:Namespace) Lines(["Namespace with ${n.len()} items"] + n.map({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
-
-doc Inspect Process
-doc %RET - Lines
-F inspect(p:Process) {
-	# XXX: Are there any platforms with different convention?
-	outputs_names = {1: 'stdout', 2: 'stderr'}
-	collector/Lines() {
-		collect("Process")
-		collect("  command = ${p.command}")
-		collect("  executable = ${p.executable}")
-		collect("  pid = ${p.pid}")
-		collect("  exit_code = ${p.exit_code}")
-		collect("  exit_signal = ${p.exit_signal}")
-		p.redirects.each_idx_val(F(idx, val) {
-			("  redirects[${idx}]: " + p.redirects[idx].inspect()).each(collect)
-		})
-		p.outputs.each(F(k, val) {
-			# Replacing 'lines' with 'Lines' does not work. Gives "(Failed to inspect)".
-			val_lines = val.Box().map(lines).get([])
-			name = ', ' +? outputs_names.get(k, '')
-			collect("  output on fd ${k}${name} (${val_lines.len()} lines):")
-			("    " + val_lines.digest(16)).each(collect)
-		})
-	}
-}
-
-doc Inspect CommandsPipeline
-doc %RET - Lines
-F inspect(cp:CommandsPipeline) {
-	F p(idx:Int) {
-		cp.pipes[idx] is Null returns []
-		("     pipe[$idx]: " + inspect(cp.pipes[idx]))
-	}
-	collector/Lines() {
-		collect(cp.typeof().name)
-		if cp.options {
-			("  options: " + inspect(cp.options)) % collect
-		}
-		p(0) % collect
-		for(i;len(cp.commands)) {
-			("  command[$i]: " + inspect(cp.commands[i])) % collect
-			if 'processes' in cp and cp.processes {
-				("  process[$i]: " + inspect(cp.processes[i])) % collect
-			}
-			p(i+1) % collect
-		}
-	}
-}
-
-doc Inspect ProcessesPipeline
-doc %RET - Lines
-F inspect(pp:ProcessesPipeline) {
-	collector/Lines() {
-		collect(pp.typeof().name)
-		%[cp pipe_in pipe_out].each(F(k) {
-			("  ${k}: " + inspect(pp.(k))) % collect
-		})
-		for(i;len(pp.processes)) {
-			("  processes[$i]: " + inspect(pp.processes[i])) % collect
-		}
-	}
 }
 
 doc Convert Backtrace to human-readable format
