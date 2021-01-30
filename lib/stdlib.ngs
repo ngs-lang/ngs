@@ -355,7 +355,7 @@ section "Inspect built-in types" block _ {
 			})
 			# doc can be null
 			if d = a.get('doc') {
-				a.get('doc', []).each(F(k, v) {
+				a.get('doc', {}).each(F(k, v) {
 					k = cond {
 						k in keys_meanings keys_meanings[k]
 						not(k) k
