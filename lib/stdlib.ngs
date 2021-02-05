@@ -7268,7 +7268,7 @@ section "Loading code" {
 	}
 
 	F require(fname:Str) {
-		guard fname ~ Pfx('/')
+		guard fname =~ AnyOf(Pfx('/'), Pfx('./'))
 		try {
 			program_text = read(fname)
 			program_bytecode = compile(program_text, fname)
