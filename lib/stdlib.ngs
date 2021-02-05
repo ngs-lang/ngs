@@ -161,7 +161,15 @@ doc IndexNotFound exception constructor
 doc %RET - IndexNotFound object with the given message, container and key fields
 F init(e:IndexNotFound, message:Str, container, key) init(args())
 
-doc Throws AssertFail with givens message if expr evaluates to false
+doc Throws AssertFail with given message if expr does not match the pattern
+doc %EX - my_template.get('concept', []).assert(Arr)
+doc %RET - val
+F assert(val, pattern, msg:Str="Assertion failed") {
+	not(val =~ pattern) throws AssertFail(msg).set(val=val, pattern=pattern)
+	val
+}
+
+doc Throws AssertFail with given message if expr evaluates to false
 doc expr - if evaluates to false, causes AssertFail exception
 doc msg - message for the exception, defaults to "Assertion failed"
 doc %RET - expr
@@ -169,7 +177,7 @@ doc %EX - my_array=[]
 doc %EX - # ... Code that adds elements to my_array ...
 doc %EX - assert(my_array.len() > 3, "my_array must have more than 3 elements")  # AssertFail exception, with the given message
 F assert(expr, msg:Str="Assertion failed") {
-	not(expr) throws AssertFail(msg).set('expr', expr)
+	not(expr) throws AssertFail(msg).set(expr=expr)
 	expr
 }
 
@@ -5207,6 +5215,9 @@ F store(filename:Str, data, encode_hints:Hash={}) {
 	write(filename, encode(data, {'filename': filename} + encode_hints))
 	null
 }
+
+doc encode() and write() the data to the file
+F store(file:File, data, encode_hints:Hash={}) store(file.path, data, encode_hints)
 
 # --- CommandRedir ---
 
