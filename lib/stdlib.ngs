@@ -1064,95 +1064,95 @@ section "AllOf(ArrLike)" {
 	TEST AllOf([1, 2, false]).Bool().not()
 }
 
-# === HashLike ===================================
-# TODO [doc]: examples in methods
-doc Base type for user-defined hash-like types. This is a workaround: it's not possible currently no inherit from the built-in Hash type.
-type HashLike
-HashLike.inherit(Eachable2)
+section "HashLike" {
+	# TODO [doc]: examples in methods
+	doc Base type for user-defined hash-like types. This is a workaround: it's not possible currently no inherit from the built-in Hash type.
+	type HashLike
+	HashLike.inherit(Eachable2)
 
-doc Check whether k is in the HashLike
-doc %RET - Bool
-F in(k, hl:HashLike)         k in hl.attrs().HashLike
+	doc Check whether k is in the HashLike
+	doc %RET - Bool
+	F in(k, hl:HashLike)         k in hl.attrs().HashLike
 
-doc Get number of key-value pairs in a HashLike
-doc %RET - Int
-F len(hl:HashLike)           hl.attrs().HashLike.len()
+	doc Get number of key-value pairs in a HashLike
+	doc %RET - Int
+	F len(hl:HashLike)           hl.attrs().HashLike.len()
 
 
-doc Get value by key. Throws KeyNotFound.
-doc %AUTO - your_hashlike[k]
-F '[]' (hl:HashLike, k)      hl.attrs().HashLike[k]
+	doc Get value by key. Throws KeyNotFound.
+	doc %AUTO - your_hashlike[k]
+	F '[]' (hl:HashLike, k)      hl.attrs().HashLike[k]
 
-doc Set value.
-doc %AUTO - your_hashlike[k] = v
-F '[]='(hl:HashLike, k, v)   hl.attrs().HashLike[k] = v
+	doc Set value.
+	doc %AUTO - your_hashlike[k] = v
+	F '[]='(hl:HashLike, k, v)   hl.attrs().HashLike[k] = v
 
-doc Get value by key. Throws KeyNotFound.
-doc %AUTO - your_hashlike.literal_key
-doc %RET - Any
-F .(hl:HashLike, k)          hl.attrs().HashLike[k]
+	doc Get value by key. Throws KeyNotFound.
+	doc %AUTO - your_hashlike.literal_key
+	doc %RET - Any
+	F .(hl:HashLike, k)          hl.attrs().HashLike[k]
 
-doc Set value.
-doc %AUTO - your_hashlike.literal_key = v
-doc %RET - v
-F .=(hl:HashLike, k, v)      hl.attrs().HashLike[k] = v
+	doc Set value.
+	doc %AUTO - your_hashlike.literal_key = v
+	doc %RET - v
+	F .=(hl:HashLike, k, v)      hl.attrs().HashLike[k] = v
 
-doc Get value by key or dflt if it does not exist
-doc %RET - Any
-F get(hl:HashLike, k, dflt)  hl.attrs().HashLike.get(k, dflt)
+	doc Get value by key or dflt if it does not exist
+	doc %RET - Any
+	F get(hl:HashLike, k, dflt)  hl.attrs().HashLike.get(k, dflt)
 
-doc Get value by key or null if it does not exist
-doc %RET - Any
-F get(hl:HashLike, k)        hl.get(k, null)
+	doc Get value by key or null if it does not exist
+	doc %RET - Any
+	F get(hl:HashLike, k)        hl.get(k, null)
 
-doc Iterate over keys and values.
-doc %EX - my_hashlike.each(F(k, v) echo("$k=$v"))
-doc %RET - hl
-F each(hl:HashLike, cb:Fun) {
-	hl.attrs().HashLike.each(cb)
-	hl
+	doc Iterate over keys and values.
+	doc %EX - my_hashlike.each(F(k, v) echo("$k=$v"))
+	doc %RET - hl
+	F each(hl:HashLike, cb:Fun) {
+		hl.attrs().HashLike.each(cb)
+		hl
+	}
+
+	doc Get keys
+	doc %RET - Arr
+	F keys(hl:HashLike)          hl.attrs().HashLike.keys()
+
+	doc Get values
+	doc %RET - Arr
+	F values(hl:HashLike)        hl.attrs().HashLike.values()
+
+	doc Check whether hl has any elements.
+	doc %RET - Bool
+	F Bool(hl:HashLike)          hl.attrs().HashLike.Bool()
+
+	F map_idx_key_val(hl:HashLike, mapper:Fun) hl.attrs().HashLike.map_idx_key_val(mapper)
+
+	doc Filter hash. Build new HashLike with kev-value pairs selected by predicate.
+	doc predicate - Test function to be called with one key and one value at a time.
+	doc %EX - my_hashlike.filter(F(k, v) k == 'a')
+	doc %RET - value of the same type as hl
+	F filter(hl:HashLike, predicate:Fun) {
+		t = typeof(hl)
+		t(hl.attrs().HashLike.filter(predicate))
+	}
+
+	TEST HashLike({"a": 1, "b": 2}).filter(F(k, v) v==1) == HashLike({"a": 1})
+	TEST HashLike({"a": 1}).filter(F(k, v) v==10) == HashLike()
+	TEST type MyHashLike(HashLike); MyHashLike({"a": 1, "b": 2}).filter(F(k, v) v==1) == MyHashLike({"a": 1})
+
+	doc Create a HashLike.
+	doc h - If provided, used as initial value.
+	doc %EX - HashLike(%{a aha b bee}) # <HashLike a=aha b=bee>
+	F init(hl:HashLike, h:Hash=null) hl.attrs().HashLike = h or {}
+
+	doc Get the underlying Hash with all the keys/values of the HashLike.
+	doc Note: the returned value is not a copy.
+	doc %RET - Hash
+	F Hash(hl:HashLike) hl.attrs().HashLike
+
+	doc Convert HashLike into JSON compatible data structure - object
+	F JsonData(hl:HashLike) hl.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
 }
-
-doc Get keys
-doc %RET - Arr
-F keys(hl:HashLike)          hl.attrs().HashLike.keys()
-
-doc Get values
-doc %RET - Arr
-F values(hl:HashLike)        hl.attrs().HashLike.values()
-
-doc Check whether hl has any elements.
-doc %RET - Bool
-F Bool(hl:HashLike)          hl.attrs().HashLike.Bool()
-
-F map_idx_key_val(hl:HashLike, mapper:Fun) hl.attrs().HashLike.map_idx_key_val(mapper)
-
-doc Filter hash. Build new HashLike with kev-value pairs selected by predicate.
-doc predicate - Test function to be called with one key and one value at a time.
-doc %EX - my_hashlike.filter(F(k, v) k == 'a')
-doc %RET - value of the same type as hl
-F filter(hl:HashLike, predicate:Fun) {
-	t = typeof(hl)
-	t(hl.attrs().HashLike.filter(predicate))
-}
-
-TEST HashLike({"a": 1, "b": 2}).filter(F(k, v) v==1) == HashLike({"a": 1})
-TEST HashLike({"a": 1}).filter(F(k, v) v==10) == HashLike()
-TEST type MyHashLike(HashLike); MyHashLike({"a": 1, "b": 2}).filter(F(k, v) v==1) == MyHashLike({"a": 1})
-
-doc Create a HashLike.
-doc h - If provided, used as initial value.
-doc %EX - HashLike(%{a aha b bee}) # <HashLike a=aha b=bee>
-F init(hl:HashLike, h:Hash=null) hl.attrs().HashLike = h or {}
-
-doc Get the underlying Hash with all the keys/values of the HashLike.
-doc Note: the returned value is not a copy.
-doc %RET - Hash
-F Hash(hl:HashLike) hl.attrs().HashLike
-
-doc Convert HashLike into JSON compatible data structure - object
-F JsonData(hl:HashLike) hl.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
-
 
 
 section "Set" {
