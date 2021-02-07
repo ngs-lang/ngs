@@ -383,6 +383,8 @@ section "Inspect built-in types" block _ {
 		Lines([f.Str()]) + ("  " + inspect_attrs(f))
 	}
 
+	F inspect(t:Type) Lines([t.Str()]) + ("  " + inspect_attrs(t))
+
 	doc Inspect MultiMethod
 	doc %RET - Lines
 	F inspect(mm:MultiMethod) {
