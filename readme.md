@@ -49,6 +49,7 @@
 ## Quick Links
 
 * [NGS Website](https://ngs-lang.org/)
+* [NGS Discord chat](https://discord.gg/6VqgcpM)
 * [Docker repository](https://hub.docker.com/r/ngslang/ngs/)
 * Documentation
 	* [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases) -- which problems NGS aims to solve well
