@@ -597,9 +597,10 @@ doc Partition elements in something according to the pattern into two arrays.
 doc First array contains all elements that match the pattern.
 doc The second array contains all elements that do not match the pattern.
 doc something - Eachable1
+doc pattern - Test function or anything else acceptable by (=~), defaults to Bool.constructors
 doc %RET - Array with two arrays in it
 doc %EX - partition([1,10,2,20], X>=10)  # [[10, 20], [1, 2]]
-F partition(something:Eachable1, pattern) {
+F partition(something:Eachable1, pattern=Bool.constructors) {
 	yes = []
 	no = []
 	something.each(F(elt) (if elt =~ pattern yes else no).push(elt))
@@ -607,6 +608,7 @@ F partition(something:Eachable1, pattern) {
 }
 
 TEST partition([1,10,2,20], X>=10) == [[10, 20], [1, 2]]
+TEST partition(["abc", "", "def", null]) == [["abc", "def"], ["", null]]
 
 type ElementNotFound
 ElementNotFound.inherit(LookupFail)
