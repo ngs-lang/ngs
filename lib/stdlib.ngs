@@ -5940,7 +5940,7 @@ doc Encode data as JSON if hints say that "filename" ends with ".json"
 doc %RET - Str
 F encode(data, hints:Hash={}) {
 	guard hints =~ {"filename": Sfx(".json")}
-	encode_json(data)
+	encode_json(data, hints)
 }
 
 doc Returns cp, wihout any processing. Convenient way to pass ready-to-run Command as an argument
@@ -7183,9 +7183,15 @@ F realpath(p:Path) {
 section "JSON" {
 	doc Convert data structure into JSON compatible data using JsonData and call built-in encode_json().
 	doc Implement JsonData() for your own types to customize converting to JSON.
+	doc hints - Hash, set 'pretty' to true to pretty-print the JSON
 	doc %RET - Str
-	F encode_json(x) {
-		super(JsonData(x))
+	F encode_json(x, hints:Hash = {}) {
+		ret = super(JsonData(x))
+		if hints =~ {'pretty': true} {
+			assert(Program('jq'), "encode_json() failed to do 'pretty' formatting - jq program is missing")
+			ret = `echo $ret | jq .`
+		}
+		ret
 	}
 }
 
