@@ -2269,11 +2269,24 @@ TEST [[1], [2,3]].flatten() == [1,2,3]
 
 doc Return unique values.
 doc Warning: uses Hash so comparison is not using == but a built-in hash keys comparison.
-doc %RET - Arr
+doc %RET - Of same type as e
 doc %EX - [1,2,2,3,4,4].uniq()  # [1,2,3,4]
-F uniq(arr:Arr) arr.Hash({true}).keys()
+doc %EX - [{"a": 1, "z": 10}, {"a": 1, "z": 20}, {"a": 2, "z": 30}].uniq(X.a)  # [{"a": 1, "z": 10}, {"a": 2, "z": 30}]
+F uniq(e:Eachable1, cb:Fun=identity) {
+	unique_values = Set()
+	t = typeof(e)
+	ret = t()
+	e.each(F(elt) {
+		val = cb(elt)
+		val in unique_values returns
+		ret.push(elt)
+		unique_values.push(val)
+	})
+	ret
+}
 
 TEST [1,2,2,3,4,4].uniq() == [1,2,3,4]
+TEST [{"a": 1, "z": 10}, {"a": 1, "z": 20}, {"a": 2, "z": 30}].uniq(X.a) == [{"a": 1, "z": 10}, {"a": 2, "z": 30}]
 
 TEST [null, false, 10, 20].first() == 10
 
