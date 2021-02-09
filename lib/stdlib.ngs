@@ -3924,6 +3924,9 @@ section "Strings and characters" {
 	TEST "bucket_name/dir/file".split("/", 2) == ["bucket_name", "dir/file"]
 	TEST ":a:bc:d:".split("bc") == [":a:", ":d:"]
 
+	doc Trim whitespace
+	F trim(s:Str) s - /^[[:space:]]*/ - /[[:space:]]*$/
+
 	doc Repeat string n times
 	doc %EX - "abc" * 3  # "abcabcabc"
 	F *(s:Str, n:Int) ([s]*n).join('')
@@ -7412,7 +7415,7 @@ section "Bootstrap" {
 				return 0
 			}
 
-			if a in %[-e -p -pj -pi -pl -pil -pjl -pc -pt] {
+			if a in %[-e -p -pj -ppj -pi -pl -pil -pjl -pc -pt] {
 				sw = ARGV.shift()
 				# Newline at the end is for avoiding # commenting out the closing }
 				# Newline at the beginning is for symmetry
@@ -7490,6 +7493,7 @@ section "Bootstrap" {
 			'-p': identity
 			'-pi': inspect
 			'-pj': encode_json
+			'-ppj': encode_json(X, {'pretty': true})
 			'-pc': code
 			'-pt': { Table2::Table(A) } # Lazy loading of Table2
 		}
