@@ -1140,6 +1140,16 @@ section "HashLike" {
 	TEST HashLike({"a": 1}).filter(F(k, v) v==10) == HashLike()
 	TEST type MyHashLike(HashLike); MyHashLike({"a": 1, "b": 2}).filter(F(k, v) v==1) == MyHashLike({"a": 1})
 
+	doc Remove k from hl
+	doc %RET - hl
+	F del(hl:HashLike, k) {
+		hl.attrs().HashLike.del(k)
+		hl
+	}
+
+	TEST h=HashLike({"a": 1, "b": 2}); h.del("a"); h == HashLike({"b": 2})
+	TEST h=HashLike({"a": 1, "b": 2}); h.del("c") THROWS KeyNotFound
+
 	doc Create a HashLike.
 	doc h - If provided, used as initial value.
 	doc %EX - HashLike(%{a aha b bee}) # <HashLike a=aha b=bee>
