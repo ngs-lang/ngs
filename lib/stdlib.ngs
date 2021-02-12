@@ -765,13 +765,18 @@ doc e - object of any type that has each(e, callback) implemented
 doc f - The combining function
 doc %EX - F sum(e) e.reduce((+))
 F reduce(e:Eachable1, f:Fun) {
-	i = Iter(e)
-	try {
-		start = i.next()
-	} catch(e:NoNext) {
-		throw EmptyEachableFail("reduce(e:Eachable1, f:Fun): e must have at least one element").set('e', e)
-	}
-	reduce(i, start, f)
+	do_reduce = false
+	ret = null
+	e.each(F(elt) {
+		if do_reduce {
+			ret = f(ret, elt)
+			return
+		}
+		ret = elt
+		do_reduce = true
+	})
+	not(do_reduce) throws EmptyEachableFail("reduce(e:Eachable1, f:Fun): e must have at least one element").set('e', e)
+	ret
 }
 
 TEST [10].reduce((+)) == 10

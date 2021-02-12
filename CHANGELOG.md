@@ -10,6 +10,7 @@
 * Some `guard` clauses are now using `=~` and as a result are more concise.
 * `inspect()` now shows attributes (including documentation) of methods and types.
 * `uniq()` now works with `Eachable1` (previously `Arr`) and has optional callback.
+* `reduce(Eachable1, Fun)` now does not assume that the given `Eachable1` supports `Iter()`
 
 ## 2021-01-01 Version 0.2.10
 
