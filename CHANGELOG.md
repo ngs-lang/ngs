@@ -2,7 +2,11 @@
 
 ### New features
 
-* Add `write(Str)`
+* Add `write(Str)` - write to stdout
+* Add `del(HashLike, Any)` - remove item from `HashLike`, similar to `del(Hash, Any)`
+* Add `trim(Str)` - trim whitespace at the beginning and end of the string
+* Add `-ppj` command line switch - print "pretty" JSON. Requires `jq` program.
+* Add `assert(val, pattern, msg)` - `val` must match the `pattern` or `AssertFail` will be thrown.
 
 ### Fixes and improvements
 
@@ -11,6 +15,10 @@
 * `inspect()` now shows attributes (including documentation) of methods and types.
 * `uniq()` now works with `Eachable1` (previously `Arr`) and has optional callback.
 * `reduce(Eachable1, Fun)` now does not assume that the given `Eachable1` supports `Iter()`
+* `encode_json()` now supports `hints` optional prameter (of type `Hash`). `pretty` hint with `true` value will "prettify" the output.
+* `partition(Eachable1, pattern)` now has default pattern (`Bool.constructors`)
+* `store()` now supports `hints` optional prameter (of type `Hash`). `pretty` hint with `true` value will "prettify" the output.
+* `require()` now treats `./something.ngs` as an absolute path (to fix later: treat as relative to the file)
 
 ## 2021-01-01 Version 0.2.10
 
