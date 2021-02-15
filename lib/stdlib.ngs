@@ -513,14 +513,21 @@ section "=~ Matching" {
 
 	doc Checks that
 	doc 1. The x is Eachable1 but not Str or Int
-	doc 2. Each element of x matches (=~) a[0]
-	doc a - Arr of length 1
+	doc 2. Each element of x matches (=~) corresponding element in a
+	doc (If number of elements does not match - there is no match)
 	F =~(x, a:Arr) {
-		guard a.len() == 1
 		x is Int or x is Str returns false
 		x is not Eachable1 returns false
-		x.all(X =~ a[0])
+		l = x.len()
+		l != a.len() returns false
+		for(i;l) {
+			x[i] !~ a[i] returns false
+		}
+		true
 	}
+
+	TEST [1,2] =~ [Int, Any]
+	TEST [1] !~ [Int, Any]
 
 	doc %RET - f(x) 
 	F =~(x, f:Fun) f(x)

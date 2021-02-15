@@ -20,6 +20,10 @@
 * `store()` now supports `hints` optional prameter (of type `Hash`). `pretty` hint with `true` value will "prettify" the output.
 * `require()` now treats `./something.ngs` as an absolute path (to fix later: treat as relative to the file)
 
+### Breaking changes
+
+* `=~` match against `Arr` now matches element-wise. Previously only one-element-array was supported as the second argument and it had to match all elements of the first argument.
+
 ## 2021-01-01 Version 0.2.10
 
 ### New features
