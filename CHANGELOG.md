@@ -7,6 +7,7 @@
 * Add `trim(Str)` - trim whitespace at the beginning and end of the string
 * Add `-ppj` command line switch - print "pretty" JSON. Requires `jq` program.
 * Add `assert(val, pattern, msg)` - `val` must match the `pattern` or `AssertFail` will be thrown.
+* Add `Repeat` type - Signifies repetition of a pattern (or something else), to be used in patterns (and maybe somewhere else).
 
 ### Fixes and improvements
 
@@ -19,6 +20,7 @@
 * `partition(Eachable1, pattern)` now has default pattern (`Bool.constructors`)
 * `store()` now supports `hints` optional prameter (of type `Hash`). `pretty` hint with `true` value will "prettify" the output.
 * `require()` now treats `./something.ngs` as an absolute path (to fix later: treat as relative to the file)
+* `AnyOf` and `AllOf` are no more experimental.
 
 ### Breaking changes
 
