@@ -3186,6 +3186,11 @@ F group(e:Eachable1, cb:Fun)
 			ret.dflt(k, []).push(elt)
 		})
 
+doc Group items from e by the given field
+doc %RET - Hash with Arr values
+doc %EX - [{"id": 100, "a": 1}, {"id": 200, "a": 2}, {"id": 300, "a": 2}].group("a")  # {1=[{id=100, a=1}], 2=[{id=200, a=2},{id=300, a=2}]}
+F group(e:Eachable1, field:Str) e.group(X.(field))
+
 doc Make shallow copy of a Hash
 doc %RET - Hash
 F copy(h:Hash) {

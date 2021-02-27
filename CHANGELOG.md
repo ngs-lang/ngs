@@ -8,6 +8,7 @@
 * Add `-ppj` command line switch - print "pretty" JSON. Requires `jq` program.
 * Add `assert(val, pattern, msg)` - `val` must match the `pattern` or `AssertFail` will be thrown.
 * Add `Repeat` type - Signifies repetition of a pattern (or something else), to be used in patterns (and maybe somewhere else).
+* Add `group(Eachable1, Str)` - group by field
 
 ### Fixes and improvements
 
