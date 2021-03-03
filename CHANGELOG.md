@@ -9,6 +9,7 @@
 * Add `assert(val, pattern, msg)` - `val` must match the `pattern` or `AssertFail` will be thrown.
 * Add `Repeat` type - Signifies repetition of a pattern (or something else), to be used in patterns (and maybe somewhere else).
 * Add `group(Eachable1, Str)` - group by field
+* Add `uniq(Eachable1, Str)` - uniq by field
 
 ### Fixes and improvements
 

@@ -2343,6 +2343,13 @@ TEST [{"a": 1, "z": 10}, {"a": 1, "z": 20}, {"a": 2, "z": 30}].uniq(X.a) == [{"a
 
 TEST [null, false, 10, 20].first() == 10
 
+doc Return unique values.
+doc Warning: uses Hash so comparison is not using == but a built-in hash keys comparison.
+doc %RET - Of same type as e
+doc %EX - [{"id": 100, "a": 1}, {"id": 200, "a": 2}, {"id": 300, "a": 2}].uniq("a")  # [{"id": 100, "a": 1}, {"id": 200, "a": 2}]
+F uniq(e:Eachable1, field:Str) e.uniq(X.(field))
+TEST [{"id": 100, "a": 1}, {"id": 200, "a": 2}, {"id": 300, "a": 2}] == [{"id": 100, "a": 1}, {"id": 200, "a": 2}]
+
 block u {
 	global index
 	doc Find index of the first value that matches the pattern.
