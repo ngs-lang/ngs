@@ -1518,6 +1518,7 @@ doc %EX -   echo(Str(nti)) # <T a=1 b=2>
 doc %EX - }
 doc %RET - "<TYPE_NAME field1=val1 field2=val2 ...>"
 F Str(i:NormalTypeInstance) {
+	guard i is not Set  # Temporary workaround. Str(Set) should come after Str(NormalTypeInstance)
 	h = Hash(i)
 	fields_dots = if len(h) > 10 {
 		h .= limit(10)
@@ -2348,7 +2349,7 @@ doc Warning: uses Hash so comparison is not using == but a built-in hash keys co
 doc %RET - Of same type as e
 doc %EX - [{"id": 100, "a": 1}, {"id": 200, "a": 2}, {"id": 300, "a": 2}].uniq("a")  # [{"id": 100, "a": 1}, {"id": 200, "a": 2}]
 F uniq(e:Eachable1, field:Str) e.uniq(X.(field))
-TEST [{"id": 100, "a": 1}, {"id": 200, "a": 2}, {"id": 300, "a": 2}] == [{"id": 100, "a": 1}, {"id": 200, "a": 2}]
+TEST [{"id": 100, "a": 1}, {"id": 200, "a": 2}, {"id": 300, "a": 2}].uniq("a") == [{"id": 100, "a": 1}, {"id": 200, "a": 2}]
 
 block u {
 	global index
