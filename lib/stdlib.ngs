@@ -3199,6 +3199,12 @@ doc %RET - Hash with Arr values
 doc %EX - [{"id": 100, "a": 1}, {"id": 200, "a": 2}, {"id": 300, "a": 2}].group("a")  # {1=[{id=100, a=1}], 2=[{id=200, a=2},{id=300, a=2}]}
 F group(e:Eachable1, field:Str) e.group(X.(field))
 
+doc Group the items from e and return groups of more than one element
+doc %RET - Arr of Arr
+F duplicates(e:Eachable1, field_or_callback) e.group(field_or_callback).values().filter({len(A) > 1})
+
+TEST ["a1", "a2", "b1", "b2", "c1", "d1"].duplicates(F(x) x[0]) == [["a1", "a2"], ["b1", "b2"]]
+
 doc Make shallow copy of a Hash
 doc %RET - Hash
 F copy(h:Hash) {
