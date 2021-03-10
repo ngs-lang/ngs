@@ -6739,15 +6739,22 @@ doc Format MethodNotFound exception message.
 doc %STATUS - WIP
 doc %RET - Lines
 F exception_specific_message(mnf:MethodNotFound) {
-	methods_names = mnf.callable.Arr().map(attrs).get('name')
-	mn = if methods_names and methods_names.all(X == methods_names[0]) {
-		methods_names[0]
-	} else {
-		'(method name unavailable, maybe anonymous)'
+
+	F name(callable:Fun) {
+		methods_names = callable.Arr().map(attrs).get('name')
+		if methods_names and methods_names.all(X == methods_names[0]) {
+			methods_names[0]
+		}
 	}
+
+	F name(callable:UserDefinedMethod) {
+		callable.attrs().get('name')
+	}
+
+	mn = name(mnf.callable) or '(method name unavailable, maybe anonymous)'
 	Lines([
 		"The arguments did not match any of the methods' parameters."
-		"MultiMethod name: ${mn}"
+		"Method or MultiMethod name: ${mn}"
 		"Called with arguments' types: ${mnf.args.map(typeof).name.join(', ')}"
 		"Please check that you pass the right number of arguments."
 		"Please check that arguments' types are matching methods' parameters."
@@ -6831,7 +6838,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null, echo=echo
 		exception_specific_message(e)
 	} catch(e) {
 		guard not(ENV.get('NGS_THROW_ESM'))
-		'(failed to get friendly exception message)'
+		Lines(['(failed to get friendly exception message)'])
 	}
 
 	m.framed().err()
@@ -6901,7 +6908,16 @@ block _ {
 	#       If it has exception, it could prevent
 	#       user-defined cleanups.
 	exit_hook['print_exception'] = F(exit:Exit) {
-		exit.exceptions.each(print_exception)
+		try {
+			exit.exceptions.each(print_exception)
+		} catch(e) {
+			error("Exit hook 'print_exception' failed to print exception. Following exception is the cause.")
+			try {
+				print_exception(e)
+			} catch(e) {
+				error("Failed to print the casue.")
+			}
+		}
 	}
 
 }
