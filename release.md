@@ -21,6 +21,7 @@ This document describes releasing a new version of NGS.
 * Update `snap/snapcraft.yaml`
 	* Check if `version` is correct
 	* Change `grade` to `stable`
+	* `git add snap/snapcraft.yaml`
 * Review the changes, special attention to `readme.md` as they differ a bit.
 * `git commit`
 * Build and run tests
@@ -48,3 +49,4 @@ This document describes releasing a new version of NGS.
 * Increase version in `snap/snapcraft.yaml` and make sure `grade` is `devel`  (for releasing developer versions, use `snapcraft upload --release=beta ngs_VERSION_amd64.snap`)
 * Make a new entry at the top of `CHANGELOG.md`
 * Build (to get the new version from `version.h`)
+* `git commit -am 'Organizing after release'`
