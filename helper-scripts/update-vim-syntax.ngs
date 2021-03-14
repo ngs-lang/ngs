@@ -31,7 +31,7 @@ F main(dst:Str) {
 	# Group into lines by first letter:
 	methods = 'syn keyword ngsFunction ' + methods_raw.group(X[0]).values().map(join(X, ' '))
 	l['" Generated methods - start'..'" Generated methods - end'] = methods
-	write("${dst}.new", l.join("\n"))
+	write("${dst}.new", l.join("\n") + "\n")
 	$(mv "${dst}.new" $dst)
 	log("Types count: ${types_raw.len()}")
 }
