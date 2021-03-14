@@ -1095,7 +1095,7 @@ section "AllOf(ArrLike)" {
 		super(a, items)
 	}
 
-	doc Checks that one of the predicates (elements of AllOf) succeeds
+	doc Checks whether one of the patterns (elements of AllOf) matches
 	doc %EX - {"k1": "v1", "k2": "v2", "kk3": "vv3"}.filterk(AllOf(/^k/, {len(A) <= 2})) == %{k1 v1 k2 v2}
 	F =~(x, a:AllOf) a.all(x =~ X)
 
