@@ -10,9 +10,11 @@
 * Add `Repeat` type - Signifies repetition of a pattern (or something else), to be used in patterns (and maybe somewhere else).
 * Add `group(Eachable1, Str)` - group by field
 * Add `uniq(Eachable1, Str)` - uniq by field
+* Add `duplicates(Eachable1, field_or_callback)` - find duplicates
 
 ### Fixes and improvements
 
+* Introduced `=~` and `!~` matching operators.
 * The `Pred` machinery replaced with `=~` and `!~` match/non-match operators for simplification.
 * Some `guard` clauses are now using `=~` and as a result are more concise.
 * `inspect()` now shows attributes (including documentation) of methods and types.
@@ -23,6 +25,10 @@
 * `store()` now supports `hints` optional prameter (of type `Hash`). `pretty` hint with `true` value will "prettify" the output.
 * `require()` now treats `./something.ngs` as an absolute path (to fix later: treat as relative to the file)
 * `AnyOf` and `AllOf` are no more experimental.
+* Increase fork-till-exec memory allocation from 1M to 10M (to avoid crashes)
+* `Str(Set)` now works properly.
+* Improve `exit_hook` robustness.
+* Fix exception handling when calling `map()` with invalid arity callback.
 
 ### Breaking changes
 
