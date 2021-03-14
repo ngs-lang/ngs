@@ -1,3 +1,39 @@
+## (UNRELEASED) Version 0.2.11
+
+### New features
+
+* Add `write(Str)` - write to stdout
+* Add `del(HashLike, Any)` - remove item from `HashLike`, similar to `del(Hash, Any)`
+* Add `trim(Str)` - trim whitespace at the beginning and end of the string
+* Add `-ppj` command line switch - print "pretty" JSON. Requires `jq` program.
+* Add `assert(val, pattern, msg)` - `val` must match the `pattern` or `AssertFail` will be thrown.
+* Add `Repeat` type - Signifies repetition of a pattern (or something else), to be used in patterns (and maybe somewhere else).
+* Add `group(Eachable1, Str)` - group by field
+* Add `uniq(Eachable1, Str)` - uniq by field
+* Add `duplicates(Eachable1, field_or_callback)` - find duplicates
+
+### Fixes and improvements
+
+* Introduced `=~` and `!~` matching operators.
+* The `Pred` machinery replaced with `=~` and `!~` match/non-match operators for simplification.
+* Some `guard` clauses are now using `=~` and as a result are more concise.
+* `inspect()` now shows attributes (including documentation) of methods and types.
+* `uniq()` now works with `Eachable1` (previously `Arr`) and has optional callback.
+* `reduce(Eachable1, Fun)` now does not assume that the given `Eachable1` supports `Iter()`
+* `encode_json()` now supports `hints` optional prameter (of type `Hash`). `pretty` hint with `true` value will "prettify" the output.
+* `partition(Eachable1, pattern)` now has default pattern (`Bool.constructors`)
+* `store()` now supports `hints` optional prameter (of type `Hash`). `pretty` hint with `true` value will "prettify" the output.
+* `require()` now treats `./something.ngs` as an absolute path (to fix later: treat as relative to the file)
+* `AnyOf` and `AllOf` are no more experimental.
+* Increase fork-till-exec memory allocation from 1M to 10M (to avoid crashes)
+* `Str(Set)` now works properly.
+* Improve `exit_hook` robustness.
+* Fix exception handling when calling `map()` with invalid arity callback.
+
+### Breaking changes
+
+* `=~` match against `Arr` now matches element-wise. Previously only one-element-array was supported as the second argument and it had to match all elements of the first argument.
+
 ## 2021-01-01 Version 0.2.10
 
 ### New features

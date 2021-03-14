@@ -19,7 +19,7 @@
 * [Code Examples](#code-examples)
   * [Arrays](#arrays)
   * [Hashes](#hashes)
-  * [Functions (multimethods) and multi-dispatch](#functions--multimethods--and-multi-dispatch)
+  * [Functions (multimethods) and multi-dispatch](#functions-multimethods-and-multi-dispatch)
   * [Basic Cloud](#basic-cloud)
   * [Sample Scripts](#sample-scripts)
 * [Running](#running)
@@ -28,7 +28,7 @@
 * [Compiling and Running](#compiling-and-running)
   * [Clone from Git](#clone-from-git)
   * [Install with Dependencies - Debian-based Linux](#install-with-dependencies---debian-based-linux)
-  * [Install with Dependencies - MacOS (brew)](#install-with-dependencies---macos--brew-)
+  * [Install with Dependencies - MacOS (brew)](#install-with-dependencies---macos-brew)
   * [Install without Dependencies](#install-without-dependencies)
   * [Run Tests](#run-tests)
   * [Compile](#compile)
@@ -41,10 +41,10 @@
 * [Planned Features](#planned-features)
   * [Cross-system](#cross-system)
   * [Development](#development)
-  * [Later / Unformed / Unfinished Thoughts](#later---unformed---unfinished-thoughts)
+  * [Later / Unformed / Unfinished Thoughts](#later--unformed--unfinished-thoughts)
 * [How to Run the POC](#how-to-run-the-poc)
-* [Have you heard of project X? How it compares to NGS?](#have-you-heard-of-project-x--how-it-compares-to-ngs-)
-* [Discussion / requests / comments](#discussion---requests---comments)
+* [Have you heard of project X? How it compares to NGS?](#have-you-heard-of-project-x-how-it-compares-to-ngs)
+* [Discussion / requests / comments](#discussion--requests--comments)
 
 ## Quick Links
 

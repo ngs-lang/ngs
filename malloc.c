@@ -17,7 +17,7 @@ size_t ngs_malloc_allocated = 0;
 
 void ngs_malloc_init() {
 	long sz = sysconf(_SC_PAGESIZE);
-	ngs_malloc_allocated = 1*1024*1024;
+	ngs_malloc_allocated = 10*1024*1024;
 	assert(ngs_malloc_allocated % sz == 0);
 	ngs_malloc_base = mmap(NULL, ngs_malloc_allocated, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
 
