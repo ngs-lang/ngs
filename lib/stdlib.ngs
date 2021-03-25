@@ -6615,6 +6615,10 @@ F replace(s:Str, r:RegExp, mapper:Fun) {
 
 TEST "x10ab20c30y".replace(/[0-9]+/, F(match_text) "[$match_text]") == "x[10]ab[20]c[30]y"
 
+F replace(s:Str, r:RegExp, replacement:Str) s.replace(r, {replacement})
+
+TEST "x10ab20c30y".replace(/[0-9]+/, "@") == "x@ab@c@y"
+
 # === Fun ========================================
 
 doc Call cb n times without any parameters and accumulate the results.
