@@ -5669,15 +5669,21 @@ F Argv(a:Arr) {
 doc Run a process
 F '$()'(p:Process) {
 
+	# There are situations (not sure how to reproduce) when
+	# there is a problem to require() this later so loading now:
+	ProcessFail
+
+	F safe_escape_bash(s) escape_bash(s) tor "failed-to-bash-escape"
+
 	argv = p.command.argv.map(Arg)
 
 	debug("process", "Parsed command: ${argv}")
 
 	if p.command.options.get('log') == true {
 		F redir_str(r:CommandRedir) {
-			(r.fd or '').Str() + r.marker + escape_bash(r.datum)
+			(r.fd or '').Str() + r.marker + safe_escape_bash(r.datum)
 		}
-		log("Running command: ${argv.map(escape_bash).join(' ')}${' ' +? p.command.redirects.map(redir_str).join(' ')}")
+		log("Running command: ${argv.map(safe_escape_bash).join(' ')}${' ' +? p.command.redirects.map(redir_str).join(' ')}")
 	}
 
 	try {
@@ -5740,8 +5746,7 @@ F '$()'(p:Process) {
 		debug("process", "will execve()")
 		result = c_execve(p.executable.path, argv, ENV.Strs())
 		# TODO: propagate this error to parent, don't know how yet
-		error("Process ${c_getpid()} (fork child) failed to execve()")
-		c_exit(250)
+		throw CError("Process ${c_getpid()} (fork child) failed to execve()")
 	}
 
 	if pid > 0 {
