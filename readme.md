@@ -23,6 +23,7 @@
 * [Running](#running)
   * [Running Using Docker](#running-using-docker)
   * [Running Using Homebrew](#running-using-homebrew)
+  * [Running Using Snap](#running-using-snap)
 * [Compiling and Running](#compiling-and-running)
   * [Clone from Git](#clone-from-git)
   * [Install with Dependencies - Debian-based Linux](#install-with-dependencies---debian-based-linux)
@@ -34,6 +35,7 @@
   * [Uninstall](#uninstall)
   * [Debug - Mac](#debug---mac)
   * [Debug - Homebrew builds](#debug---homebrew-builds)
+  * [Build and run docker](#build-and-run-docker)
   * [Generate Documentation](#generate-documentation)
 * [Contributing](#contributing)
 * [Planned Features](#planned-features)
@@ -199,16 +201,19 @@ This is how an instance can be created using NGS (real working code).
 
 ### Running Using Docker
 
-	# Build the docker
-	docker build -t ngs .
-	# Run the container
-	docker run -it --rm ngs
+	docker run -it --rm ngslang/ngs
+
 	# Use NGS inside the container
 	ngs -pi 'sum(0..10)'
 
 ### Running Using Homebrew
 
 	brew install ngs
+	ngs -pi 'sum(0..10)'
+
+### Running Using Snap
+
+	sudo snap install ngs
 	ngs -pi 'sum(0..10)'
 
 ## Compiling and Running
@@ -280,6 +285,15 @@ If you have troubles compiling, please try to compile the commit tagged `tested`
 * Development cycle:
 	* In a folder just above `ngs`, run `tar czf ngs.tgz --exclude=build ngs`
 	* `brew install -d -s ./ngs.rb` (wherever the `ngs.rb` is)
+
+### Build and run docker
+
+	# Build the docker
+	docker build -t ngs .
+	# Run the container
+	docker run -it --rm ngs
+	# Use NGS inside the container
+	ngs -pi 'sum(0..10)'
 
 ### Generate Documentation
 
