@@ -216,6 +216,11 @@ section "Attributes convenience methods" {
 	}
 }
 
+section "UserDefinedMethod" {
+	doc %RET - true
+	F Bool(udm:UserDefinedMethod) true
+}
+
 section "MultiMethod" {
 
 	doc Create MultiMethod with no methods
