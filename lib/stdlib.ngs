@@ -7575,7 +7575,7 @@ section "Bootstrap" {
 				main is MultiMethod {
 					m = main.filtero(in_main_file)
 					if len(main) != len(m) {
-						warn("main method define in non-main file")
+						warn("'main' method was defined in non-main file. That is probably a bug. Continuing anyway.")
 					}
 					if m {
 						bootstrap_invoke_main(m)
