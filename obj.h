@@ -6,13 +6,17 @@
 #include <dirent.h>
 #include <ffi.h>
 #include <pcre.h>
+#include <math.h>
 
 typedef uint16_t GLOBAL_VAR_INDEX;
 #define GLOBAL_VAR_INDEX_FMT "%d"
 typedef uint8_t LOCAL_VAR_INDEX;
 typedef uint8_t UPVAR_INDEX;
+
 typedef double NGS_REAL;
+#define NGS_REAL_HUGE_VAL HUGE_VAL
 #define NGS_REAL_FMT "%.10f"
+
 #define MAX_GLOBALS         (65535)
 #define MAX_LOCALS            (255)
 #define INITITAL_ARRAY_SIZE     (8)

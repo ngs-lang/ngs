@@ -416,6 +416,22 @@ METHOD_RESULT native_round_real METHOD_PARAMS { METHOD_RETURN(make_real((NGS_REA
 METHOD_RESULT native_trunc_real METHOD_PARAMS { METHOD_RETURN(make_real((NGS_REAL) trunc(GET_REAL(argv[0])))); }
 METHOD_RESULT native_floor_real METHOD_PARAMS { METHOD_RETURN(make_real((NGS_REAL) floor(GET_REAL(argv[0])))); }
 METHOD_RESULT native_ceil_real METHOD_PARAMS { METHOD_RETURN(make_real((NGS_REAL) ceil(GET_REAL(argv[0])))); }
+METHOD_RESULT native_c_pow_real_real EXT_METHOD_PARAMS {
+	VALUE ret;
+	int status = 0;
+	NGS_REAL t = pow(GET_REAL(argv[0]), GET_REAL(argv[1]));
+	ret = make_array(2);
+	
+	if(t == NGS_REAL_HUGE_VAL) {
+		status = 1;
+	} else if(t == -NGS_REAL_HUGE_VAL) {
+		status = -1;
+	}
+	ARRAY_ITEMS(ret)[0] = MAKE_INT(status);
+	ARRAY_ITEMS(ret)[1] = make_real((NGS_REAL) t);
+	METHOD_RETURN(ret);
+	// ret = make_array_with_values(2, (VALUES *){MAKE_BOOL(ret != HUGE_VAL && ret != -HUGE_VAL), ((NGS_REAL) ret)});
+}
 
 // TODO: Handle precision issue around INT_MAX input. Probably around INT_MIN too.
 //       On my system INT_MAX is 2305843009213693951 and when converted to NGS_REAL becomes 2305843009213693952.0
@@ -2958,6 +2974,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc_arr(vm, "%EX",
 		"ceil(1.1)   # 2.0",
 		"ceil(-1.1)  # -1.0",
+		NULL
+	);
+	register_global_func(vm, 1, "c_pow",     &native_c_pow_real_real,        2, "base", vm->Real, "exponent", vm->Real);
+	_doc(vm, "", "Raise to power");
+	_doc_arr(vm, "%EX",
+		"c_pow(2.0, 10.0)  # [0, 1024]",
+		"c_pow(0.0, -1.0)  # [1, inf]",
 		NULL
 	);
 

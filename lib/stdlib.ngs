@@ -7495,6 +7495,24 @@ section "Loading code" {
 
 }
 
+section "math" {
+
+	doc %RET - base to the power of exponent
+	doc %EX - pow(2, 10) == 1024
+	F pow(base:Real, exponent:Real) {
+		t = c_pow(base, exponent)
+		if t[0] and (e = c_errno()) {
+			throw InvalidArgument("pow() failed", CError(e, "c_pow() failed")).set(sign=t[0], result=t[1])
+		}
+		t[1]
+	}
+
+	doc Calls pow(Real, Real) converting parameters and results to and from Real
+	F pow(base:Int, exponent:Int) Int(pow(Real(base), Real(exponent)))
+
+	TEST pow(2, 10) == 1024
+	TEST pow(0, -1) THROWS InvalidArgument
+}
 
 section "Bootstrap" {
 	main = MultiMethod()

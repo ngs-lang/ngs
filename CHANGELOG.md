@@ -4,6 +4,7 @@
 
 * Add replace(Str, RegExp, Str)
 * Add Bool(UserDefinedMethod)
+* Add c_pow(Real, Real), pow(Real, Real), pow(Int, Int)
 
 ## 2021-03-14 Version 0.2.11
 
