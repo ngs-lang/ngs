@@ -7307,11 +7307,7 @@ section "JSON" {
 		ret = super(JsonData(x))
 		if hints =~ {'pretty': true} {
 			assert(Program('jq'), "encode_json() failed to do 'pretty' formatting - jq program is missing")
-			p = $(| jq .)
-			t = Thread('encode_json writer', { p.write(ret).close() })
-			p.wait()
-			t.join()
-			ret = p.stdout
+			ret = $(| jq .).write(ret).close().wait().stdout
 		}
 		ret
 	}
