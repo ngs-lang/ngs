@@ -6,6 +6,10 @@
 * Add Bool(UserDefinedMethod)
 * Add c_pow(Real, Real), pow(Real, Real), pow(Int, Int)
 
+### Fixes and improvements
+
+* Fix Str(File) - now display correct type name for subtypes
+
 ## 2021-03-14 Version 0.2.11
 
 ### New features

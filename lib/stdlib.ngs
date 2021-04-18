@@ -5186,7 +5186,7 @@ F init(f:File, path:Path) super(f, path.path)
 
 doc String representation of File
 doc %EX - open(File("tmp/v8/LICENSE"), "r").Str().echo()  # Output: <File path=tmp/v8/LICENSE fd=4>
-F Str(f:File) "<File path=${f.path} fd=${f.fd}>"
+F Str(f:File) "<${f.typeof().name} path=${f.path} fd=${f.fd}>"
 
 TEST File('xy').Str() == '<File path=xy fd=null>'
 
