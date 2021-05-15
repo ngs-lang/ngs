@@ -67,73 +67,70 @@ VALUE value_type(VM *vm, VALUE val);
 char BYTECODE_SIGNATURE[] = "NGS BYTECODE";
 
 char *opcodes_names[] = {
-	/*  0 */ "HALT",
-	/*  1 */ "PUSH_NULL",
-	/*  2 */ "PUSH_FALSE",
-	/*  3 */ "PUSH_TRUE",
-	/*  4 */ "PUSH_INT32",
-	/*  5 */ "PUSH_INT64",
-	/*  6 */ "PUSH_REAL",
-	/*  7 */ "PUSH_L8_STR",
-	/*  8 */ "PUSH_L32_STR",
-	/*  9 */ "DUP",
-	/* 10 */ "POP",
-	/* 11 */ "XCHG",
-	/* 12 */ "RESOLVE_GLOBAL",
-	/* 13 */ "PATCH",
-	/* 14 */ "FETCH_GLOBAL",
-	/* 15 */ "STORE_GLOBAL",
-	/* 16 */ "FETCH_LOCAL",
-	/* 17 */ "STORE_LOCAL",
-	/* 18 */ "CALL",
-	/* 19 */ "CALL_EXC",
-	/* 20 */ "CALL_ARR",
-	/* 21 */ "RET",
-	/* 22 */ "JMP",
-	/* 23 */ "JMP_TRUE",
-	/* 24 */ "JMP_FALSE",
-	/* 25 */ "MAKE_ARR",
-	/* 26 */ "MAKE_CLOSURE",
-	/* 27 */ "TO_STR",
-	/* 28 */ "MAKE_STR",
-	/* 29 */ "MAKE_STR_IMM",
-	/* 30 */ "MAKE_STR_EXP",
-	/* 31 */ "MAKE_STR_SPLAT_EXP",
-	/* 32 */ "PUSH_EMPTY_STR",
-	/* 33 */ "GLOBAL_DEF_P",
-	/* 34 */ "LOCAL_DEF_P",
-	/* 35 */ "DEF_GLOBAL_FUNC",
-	/* 36 */ "DEF_LOCAL_FUNC",
-	/* 37 */ "FETCH_UPVAR",
-	/* 38 */ "STORE_UPVAR",
-	/* 39 */ "UPVAR_DEF_P",
-	/* 40 */ "DEF_UPVAR_FUNC",
-	/* 41 */ "MAKE_HASH",
-	/* 42 */ "TO_BOOL",
-	/* 43 */ "TO_ARR",
-	/* 44 */ "TO_HASH",
-	/* 45 */ "ARR_APPEND",
-	/* 46 */ "ARR_APPEND2",
-	/* 47 */ "ARR_CONCAT",
-	/* 48 */ "GUARD",
-	/* 49 */ "TRY_START",
-	/* 50 */ "TRY_END",
-	/* 51 */ "ARR_REVERSE",
-	/* 52 */ "THROW",
-	/* 53 */ "MAKE_CMDS_PIPELINE",
-	/* 54 */ "MAKE_CMDS_PIPE",
-	/* 55 */ "MAKE_CMD",
-	/* 56 */ "SET_CLOSURE_NAME",
-	/* 57 */ "SET_CLOSURE_DOC",
-	/* 58 */ "SET_CLOSURE_NS",
-	/* 59 */ "HASH_SET",
-	/* 60 */ "HASH_UPDATE",
-	/* 61 */ "PUSH_KWARGS_MARKER",
-	/* 62 */ "MAKE_REDIR",
-	/* 63 */ "SUPER",
-	/* 64 */ "MAKE_MULTIMETHOD",
-	/* 65 */ "MULTIMETHOD_APPEND",
-	/* 66 */ "MULTIMETHOD_REVERSE",
+	"HALT",
+	"PUSH_NULL",
+	"PUSH_FALSE",
+	"PUSH_TRUE",
+	"PUSH_INT32",
+	"PUSH_INT64",
+	"PUSH_REAL",
+	"PUSH_L8_STR",
+	"PUSH_L32_STR",
+	"DUP",
+	"POP",
+	"XCHG",
+	"RESOLVE_GLOBAL",
+	"PATCH",
+	"FETCH_GLOBAL",
+	"STORE_GLOBAL",
+	"FETCH_LOCAL",
+	"STORE_LOCAL",
+	"CALL",
+	"CALL_EXC",
+	"CALL_ARR",
+	"RET",
+	"JMP",
+	"JMP_TRUE",
+	"JMP_FALSE",
+	"MAKE_ARR",
+	"MAKE_CLOSURE",
+	"TO_STR",
+	"MAKE_STR",
+	"MAKE_STR_IMM",
+	"MAKE_STR_EXP",
+	"MAKE_STR_SPLAT_EXP",
+	"PUSH_EMPTY_STR",
+	"DEF_GLOBAL_FUNC",
+	"DEF_LOCAL_FUNC",
+	"FETCH_UPVAR",
+	"STORE_UPVAR",
+	"DEF_UPVAR_FUNC",
+	"MAKE_HASH",
+	"TO_BOOL",
+	"TO_ARR",
+	"TO_HASH",
+	"ARR_APPEND",
+	"ARR_APPEND2",
+	"ARR_CONCAT",
+	"GUARD",
+	"TRY_START",
+	"TRY_END",
+	"ARR_REVERSE",
+	"THROW",
+	"MAKE_CMDS_PIPELINE",
+	"MAKE_CMDS_PIPE",
+	"MAKE_CMD",
+	"SET_CLOSURE_NAME",
+	"SET_CLOSURE_DOC",
+	"SET_CLOSURE_NS",
+	"HASH_SET",
+	"HASH_UPDATE",
+	"PUSH_KWARGS_MARKER",
+	"MAKE_REDIR",
+	"SUPER",
+	"MAKE_MULTIMETHOD",
+	"MULTIMETHOD_APPEND",
+	"MULTIMETHOD_REVERSE",
 };
 
 
@@ -4514,14 +4511,6 @@ do_jump:
 		case OP_PUSH_EMPTY_STR:
 							PUSH(make_var_len_obj(T_STR, 1, 0));
 							goto main_loop;
-		case OP_GLOBAL_DEF_P:
-							ARG_GVI;
-							PUSH(MAKE_BOOL(IS_NOT_UNDEF(GLOBALS[gvi])));
-							goto main_loop;
-		case OP_LOCAL_DEF_P:
-							ARG_LVI;
-							PUSH(MAKE_BOOL(IS_NOT_UNDEF(LOCALS[lvi])));
-							goto main_loop;
 		case OP_DEF_GLOBAL_FUNC:
 							// Arg: gvi
 							// In: ..., closure
@@ -4569,14 +4558,6 @@ do_jump:
 							ARG_LVI;
 							POP(v);
 							UPLEVELS[uvi][lvi] = v;
-							goto main_loop;
-		case OP_UPVAR_DEF_P:
-#ifdef DO_NGS_DEBUG
-							assert(ctx->frame_ptr);
-#endif
-							ARG_UVI;
-							ARG_LVI;
-							PUSH(MAKE_BOOL(IS_NOT_UNDEF(UPLEVELS[uvi][lvi])));
 							goto main_loop;
 		case OP_DEF_UPVAR_FUNC:
 							// XXX: untested and not covered by tests yet

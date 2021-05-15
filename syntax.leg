@@ -679,7 +679,6 @@ basic-expression =
 	| while
 	| switch
 	| cond
-	| defined
 	| for
 	| comment
 	| "null"  { MAKE_NODE(ret, NULL_NODE); $$ = ret; }
@@ -1430,13 +1429,6 @@ identifier =
 	}
 
 identifier-continuation = <[_a-zA-Z0-9]+>
-
-defined =
-	"defined" space i:identifier {
-		MAKE_NODE(ret, DEFINED_NODE);
-		ret->first_child = i;
-		$$ = ret;
-	}
 
 var-scope-declaration-keyword =
 	"local" { MAKE_NODE(ret, LOCAL_NODE); $$ = ret }

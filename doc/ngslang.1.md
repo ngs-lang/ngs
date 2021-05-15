@@ -219,17 +219,6 @@ Assigning to a variable works in both commands and code syntax.
 
 Referencing undefined variable will cause `GlobalNotFound` or `UndefinedLocalVar` exceptions.
 
-## Checking whether a variable is defined
-
-	echo(defined a)
-	a = 100
-	echo(defined a)
-	# Output:
-	#   false
-	#   true
-
-It's a rare circumstance that one needs to use `defined`. Please try to avoid such situations.
-
 ## Variables' scoping rules
 
 Variables scoping is similar to Python's.
