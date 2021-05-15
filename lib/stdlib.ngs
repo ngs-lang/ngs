@@ -7327,7 +7327,11 @@ section "base64" {
 	}
 
 	doc %STATUS - experimental
-	F decode_base64(s:Str) `echo $s | base64 --decode`
+	F decode_base64(s:Str) {
+		t = (4 - len(s) % 4) % 4
+		fill = "=" * t
+		`echo "$s$fill" | base64 --decode 2>${true}`
+	}
 }
 
 section "Networking" {
@@ -7513,6 +7517,35 @@ section "math" {
 	TEST pow(2, 10) == 1024
 	TEST pow(0, -1) THROWS InvalidArgument
 }
+
+section "JWT" {
+	type JWT
+
+	doc Decodes JSON Web Token (JWT)
+	F decode(s:Str, hints:Hash={}) {
+
+		F _decode(s) try s.decode_base64().decode_json()
+
+		o = s.trim()
+		parts = o.split('.')
+		guard len(parts) == 3
+		guard all(parts)
+		ret = JWT().set(
+			original = o
+			header = parts[0]._decode()
+			payload = parts[1]._decode()
+			signature = parts[2]
+		)
+		guard ret.header and ret.payload
+		ret
+	}
+
+	doc Convert to JSON compatible data structure - Hash
+	F JsonData(j:JWT) j.Hash()
+
+}
+
+TEST t = decode("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"); t =~ AllOf(JWT, {"header": {"alg": "HS256", "typ": "JWT"}, "payload": {"sub": "1234567890", "name": "John Doe", "iat": 1516239022}})
 
 section "Bootstrap" {
 	main = MultiMethod()

@@ -5,6 +5,7 @@
 * Add replace(Str, RegExp, Str)
 * Add Bool(UserDefinedMethod)
 * Add c_pow(Real, Real), pow(Real, Real), pow(Int, Int)
+* Add decode() for JSON Web Token (JWT)
 
 ### Fixes and improvements
 
