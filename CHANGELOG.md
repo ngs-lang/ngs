@@ -10,6 +10,7 @@
 ### Fixes and improvements
 
 * Fix Str(File) - now display correct type name for subtypes
+* Make decode_base64() more roubst
 
 ## 2021-03-14 Version 0.2.11
 
