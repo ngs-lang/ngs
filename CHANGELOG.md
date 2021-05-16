@@ -6,6 +6,8 @@
 * Add Bool(UserDefinedMethod)
 * Add c_pow(Real, Real), pow(Real, Real), pow(Int, Int)
 * Add decode() for JSON Web Token (JWT)
+* Add echo(File, Str)
+* Add echo(File, Lines)
 
 ### Fixes and improvements
 

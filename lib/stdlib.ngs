@@ -7287,6 +7287,25 @@ F write(f:File, s:Str) {
 	write(if f.fd is Null then f.path else f.fd, s)
 }
 
+doc Write a string followed by newline character to a File.
+doc Throws WriteFail on failure.
+doc %RET - null
+doc %EX - echo(File("1.txt"), "blah")
+F echo(f:File, s:Str) {
+	write(f, "${s}${STDLIB_EOL}")
+	null
+}
+
+doc Write a lines followed by newline character to a File.
+doc Throws WriteFail on failure.
+doc %RET - null
+doc %EX - echo(File("1.txt"), Lines(["aaa", "bbb"]))
+F echo(f:File, l:Lines) {
+	t = l.map("${X}${STDLIB_EOL}").join('')
+	f.write(t)
+	null
+}
+
 # TODO: better exception
 F realpath(path:Str) {
 	c_realpath(path) or throw CError("Faied to realpath()").set(path=path)
