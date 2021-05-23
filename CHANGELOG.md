@@ -2,17 +2,17 @@
 
 ### New features
 
-* Add replace(Str, RegExp, Str)
-* Add Bool(UserDefinedMethod)
-* Add c_pow(Real, Real), pow(Real, Real), pow(Int, Int)
-* Add decode() for JSON Web Token (JWT)
-* Add echo(File, Str)
-* Add echo(File, Lines)
+* Add `replace(Str, RegExp, Str)`
+* Add `Bool(UserDefinedMethod)`
+* Add `c_pow(Real, Real)`, `pow(Real, Real)`, `pow(Int, Int)`
+* Add `decode()` for JSON Web Token (JWT)
+* Add `echo(File, Str)`
+* Add `echo(File, Lines)`
 
 ### Fixes and improvements
 
-* Fix Str(File) - now display correct type name for subtypes
-* Make decode_base64() more roubst
+* Fix `Str(File)` - now display correct type name for subtypes
+* Make `decode_base64()` more roubst
 
 ### Breaking changes
 
