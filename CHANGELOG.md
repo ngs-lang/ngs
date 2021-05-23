@@ -8,6 +8,9 @@
 * Add `decode()` for JSON Web Token (JWT)
 * Add `echo(File, Str)`
 * Add `echo(File, Lines)`
+* Add `C_DEFS` namespace for C `define`d constants (currently only with `_SC_NPROCESSORS_ONLN` but will add more later, issue #113)
+* Add `c_sysconf()`, `sysconf()`
+
 
 ### Fixes and improvements
 

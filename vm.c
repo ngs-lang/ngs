@@ -34,7 +34,7 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <signal.h>
-// READ(2), LSEEK(2), FORK(2), EXECVE(2), DUP2(2)
+// READ(2), LSEEK(2), FORK(2), EXECVE(2), DUP2(2), SYSCONF(3)
 #include <unistd.h>
 
 // DIR
@@ -2083,6 +2083,11 @@ METHOD_RESULT native_MultiMethod_arr METHOD_PARAMS {
 	METHOD_RETURN(make_multimethod_from_array(argv[0]));
 }
 
+METHOD_RESULT native_sysconf_int METHOD_PARAMS {
+	errno = 0;
+	METHOD_RETURN(MAKE_INT(sysconf(GET_INT(argv[0]))));
+}
+
 GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	GLOBAL_VAR_INDEX index;
 	VALUE name_val;
@@ -3567,6 +3572,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Low level. Do not use directly.");
 	_doc(vm, "%RET", "LLHashEntry or null");
 
+	register_global_func(vm, 0, "c_sysconf", &native_sysconf_int, 1, "name", vm->Int);
+
 	// http://stackoverflow.com/questions/3473692/list-environment-variables-with-c-in-unix
 	env_hash = make_hash(32);
 	for (env = environ; *env; ++env) {
@@ -3694,6 +3701,21 @@ void vm_init(VM *vm, int argc, char **argv) {
 	}
 
 #undef FFI_TYPE
+
+	// -- C_DEFS -- start --
+	// TODO: migrate all other c definitions (above) into this namespace
+	// https://github.com/ngs-lang/ngs/issues/113
+
+	#define D(name) { set_hash_key(c_defs, make_string(#name), MAKE_INT(name)); }	
+	VALUE c_defs = make_namespace(128);
+
+	#ifdef _SC_NPROCESSORS_ONLN
+		D(_SC_NPROCESSORS_ONLN)
+	#endif
+
+	set_global(vm, "C_DEFS", c_defs);
+	#undef D
+	// -- C_DEFS -- end --
 
 	set_global(vm, "INT_MIN", NGS_INT_MIN_VALUE);
 	set_global(vm, "INT_MAX", NGS_INT_MAX_VALUE);
