@@ -7501,7 +7501,7 @@ section "Loading code" {
 		doc WARNING: May have security implications when looking up a name from untrusted source.
 		doc %EX - test("My web server runs") do { .... }  # autoload/globals/test.ngs is automatically loaded.
 		F global_not_found_handler(name:Str) {
-			_lock.acquire() do {
+			_lock.acquire({
 
 				F _debug(s:Str) debug("autoload", "global_not_found_handler() [invocation $i] ${s}")
 
@@ -7523,7 +7523,7 @@ section "Loading code" {
 					ll_set_global_variable(idx, val)
 				}
 
-			}
+			})
 		}
 	}
 

@@ -8,6 +8,7 @@
 	DelimStr
 	Doc
 	Iter
+	MaybeFile
 	Res
 	ResDef
 	Set

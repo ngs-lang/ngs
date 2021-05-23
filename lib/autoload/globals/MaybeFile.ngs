@@ -1,9 +1,14 @@
 {
+	doc Like File but the programmer is aware that it might not exist.
+	doc Therefore, no exceptions will be thrown for most operations on the file if it is not present.
 	type MaybeFile(File)
 }
 
+doc Like lines(File) but cb is never called if the file is not present
 F lines(f:MaybeFile, cb:Fun) f returns super(f, cb)
 
+doc Reads the whole file
+doc %RET - Like read(File) or dflt if file is not present.
 F read(f:MaybeFile, dflt=null) {
 	f returns super(f)
 	dflt
