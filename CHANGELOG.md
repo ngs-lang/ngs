@@ -16,6 +16,7 @@
 
 * Fix `Str(File)` - now display correct type name for subtypes
 * Make `decode_base64()` more roubst
+* `pmap(Eachable1, Fun)` now limits number of threads (issue #113)
 
 ### Breaking changes
 

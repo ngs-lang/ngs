@@ -4438,10 +4438,21 @@ section "Thread" block _ {
 		join_result[1][1]
 	}
 
-	doc Parallel map. Runs mapper in threads. Each thread processes one element from the array but this might change in future (preserving the total number of calls to mapper and the order of results).
+	doc Parallel map. Runs mapper in threads.
+	doc Each thread processes one element from the array but this might change in future (preserving the total number of calls to mapper and the order of results).
+	doc Number of threads is limited to the lower of the two: processors * 100 or 1000.
 	doc %RET - Arr, result of applying mapper to elements of e, preserving the order.
 	doc %EX - pages_texts = abs_pages_urls.pmap(F(url)  `lynx -dump $url`)
-	F pmap(e:Eachable1, mapper:Fun) pmap(e, len(e), mapper)
+	F pmap(e:Eachable1, mapper:Fun) {
+		threads = len(e)
+		processors = sysconf(C_DEFS::_SC_NPROCESSORS_ONLN)
+		lim = min(processors * 100, 1000)
+		if threads > lim {
+			warn("pmap(Eachable1, Fun) limited the threads to ${lim}. Use pmap(Eachable1, Int, Fun) to avoid this message.")
+			threads = lim
+		}
+		pmap(e, threads, mapper)
+	}
 
 	TEST try pmap(3, F(x) 100+x) == [100, 101, 102]
 	TEST try pmap(3, F(x) 100/x) catch(e:ResultsException) (e.results[0] is Failure)
