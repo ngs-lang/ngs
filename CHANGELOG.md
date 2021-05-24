@@ -10,7 +10,8 @@
 * Add `echo(File, Lines)`
 * Add `C_DEFS` namespace for C `define`d constants (currently only with `_SC_NPROCESSORS_ONLN` but will add more later, issue #113)
 * Add `c_sysconf()`, `sysconf()`
-
+* Add `CleanupPolicy`, `KeepCleanupPolicy`, `RemoveCleanupPolicy`, `KeepOnErrorCleanupPolicy` to be used with `TmpFile`
+* `TmpFile` now accepts optional `CleanupPolicy` argument (defaults to `RemoveCleanupPolicy`)
 
 ### Fixes and improvements
 
@@ -18,6 +19,7 @@
 * Make `decode_base64()` more roubst
 * `pmap(Eachable1, Fun)` now limits number of threads (issue #113)
 * Add documentation for `MaybeFile`
+* `TmpFile` is not expirimental anymore
 
 ### Breaking changes
 

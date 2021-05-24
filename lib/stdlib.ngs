@@ -4665,7 +4665,7 @@ section "Path" {
 		type Symlink(Path)     # S_IFLNK
 		doc Represents a file in a file system (S_IFREG)
 		type File(Path)        # S_IFREG
-			doc EXPERIMENTAL! Represents temporary file. Automatically removed when the script exits.
+			doc Represents temporary file. Automatically removed when the script exits.
 			type TmpFile(File)
 		doc Represents a block device in a file system (S_IFBLK)
 		type BlockDevice(Path) # S_IFBLK
@@ -4912,21 +4912,51 @@ section "Path" {
 		null
 	}
 
-	doc EXPERIMENTAL! Creates temporary file using `mktemp` and arranges deletion of the file upon exit from the NGS script.
-	F init(t:TmpFile) {
+	doc How a resource cleanup should be handled. See subtypes.
+	type CleanupPolicy
+
+		doc The resource should be kept
+		type KeepCleanupPolicy(CleanupPolicy)
+
+		doc The resource sohuld be removed
+		type RemoveCleanupPolicy(CleanupPolicy)
+
+		doc The resource should be kept if an error occurred, otherwise removed
+		type KeepOnErrorCleanupPolicy(CleanupPolicy)
+
+	doc Creates temporary file using `mktemp` and arranges deletion of the file upon exit from the NGS script.
+	F init(t:TmpFile, cleanup_policy:CleanupPolicy=RemoveCleanupPolicy()) {
 		t.path = `line: mktemp`
 		t.fd = null
+		t.cleanup_policy = cleanup_policy
 		debug("file", "Created temporary file at ${t.path}")
-		exit_hook["TmpFile:${t.path}"] = {
-			debug("file", "Removing temporary file at ${t.path}")
-			try {
-				$(rm ${t.path})
-				debug("file", "Removed temporary file at ${t.path}")
-			} catch(e) {
-				warn("Failed to remove temporary file at ${t.path}")
-				print_exception(e, echo=warn)
-			}
+		exit_hook["TmpFile:${t.path}"] = F cleanup(e:Exit) {
+			debug("file", "Will do cleanup for temporary file at ${t.path}")
+			# Exit is not a subtype of Exception. If anybody complains, this can be fixed and a "real" Exception can be sent.
+			b = if e.exceptions then FullBox(e) else EmptyBox()
+			del(t, t.cleanup_policy, b)
 		}
+	}
+
+	F del(t:TmpFile, kcp:KeepCleanupPolicy, e:Box) {
+		log("Keeping temporary file at ${t.path}")
+		t
+	}
+
+	F del(t:TmpFile, rcp:RemoveCleanupPolicy, e:Box) {
+		try {
+			$(rm ${t.path})
+			debug("file", "Removed temporary file at ${t.path}")
+		} catch(e) {
+			warn("Failed to remove temporary file at ${t.path}")
+			print_exception(e, echo=warn)
+		}
+	}
+
+	F del(t:TmpFile, koecp:KeepOnErrorCleanupPolicy, e:Box) {
+		not(e) returns t.del(RemoveCleanupPolicy(), e)
+		log("Keeping temporary file at ${t.path} because exception occurred: ${e.get()}")
+		t
 	}
 
 	doc Convert Path into JSON compatible data structure - string
