@@ -2,30 +2,31 @@ ns {
 	# WIP, don't use!
 
 	F help() {
-		F e(s:Str) {
-			echo(2, s)
-		}
-		e("Help - Running NGS")
-		e("")
-		e("Option 1: run an ngs script")
-		e("  Run ngs with a file name as an argument:")
-		e("  ngs MY_SCRIPT.ngs")
-		e("")
-		e("Option 2: use ngs as an interpreter")
-		e("  Start your ngs script with the following line (without spaces in the beginning):")
-		e("  #!/usr/bin/env ngs")
-		e("  ... and remember to 'chmod +x' the script file")
-		e("")
-		e("Option 3: use one of the following switches:")
-		e("  ngs -e EXPR     evaluate EXPR")
-		e("  ngs -p EXPR     evaluate EXPR and print the result")
-		e("  ngs -pl EXPR    evaluate EXPR and print each element of result on it's own line")
-		e("  ngs -pj EXPR    evaluate EXPR, convert the result to JSON and print it")
-		e("  ngs -pjl EXPR   evaluate EXPR, convert each element of the result to")
-		e("                  JSON and print one element per line")
-		e("  ngs -pi EXPR    evaluate EXPR and print inspection (detailed information) of the result")
-		e("")
-		e("For more information, see NGS site at https://ngs-lang.org/")
+		echo(2, Lines([
+			"Help - Running NGS"
+			""
+			"Option 1: run an ngs script"
+			"  Run ngs with a file name as an argument:"
+			"  ngs MY_SCRIPT.ngs"
+			""
+			"Option 2: use ngs as an interpreter"
+			"  Start your ngs script with the following line (without spaces in the beginning):"
+			"  #!/usr/bin/env ngs"
+			"  ... and remember to 'chmod +x' the script file"
+			""
+			"Option 3: use one of the following switches:"
+			"  ngs -e EXPR     evaluate EXPR"
+			"  ngs -p EXPR     evaluate EXPR and print the result"
+			"  ngs -pl EXPR    evaluate EXPR and print each element of result on it's own line"
+			"  ngs -pj EXPR    evaluate EXPR, convert the result to JSON and print it"
+			"  ngs -pjl EXPR   evaluate EXPR, convert each element of the result to"
+			"                  JSON and print one element per line"
+			"  ngs -pt EXPR    evaluate EXPR, print the result as a table"
+			"  ngs -pi EXPR    evaluate EXPR and print inspection (detailed information) of the result"
+			"  (in EXPR, _ variable contains (on-demand) read and parsed stdin)"
+			""
+			"For more information, see NGS site at https://ngs-lang.org/"
+		]))
 	}
 
 	F make_prompt() {

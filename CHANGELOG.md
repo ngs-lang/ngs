@@ -12,6 +12,7 @@
 * Add `c_sysconf()`, `sysconf()`
 * Add `CleanupPolicy`, `KeepCleanupPolicy`, `RemoveCleanupPolicy`, `KeepOnErrorCleanupPolicy` to be used with `TmpFile`
 * `TmpFile` now accepts optional `CleanupPolicy` argument (defaults to `RemoveCleanupPolicy`)
+* When running `ngs -e ...`, `ngs -p ...`, etc - allow using `_` instead of `fetch()`.
 
 ### Fixes and improvements
 

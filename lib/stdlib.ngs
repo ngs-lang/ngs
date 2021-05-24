@@ -7659,6 +7659,12 @@ section "Bootstrap" {
 				code_to_run = "{\n${ARGV.shift(default_code)}\n}"
 				debug('bootstrap', "Got $sw switch, using command line provided code")
 				fname = "<command line ${sw} switch>"
+
+				global global_not_found_handler
+				F global_not_found_handler(name:Str) {
+					guard name == '_'
+					global _ = fetch()
+				}
 			}
 		}
 
