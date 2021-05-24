@@ -4,7 +4,7 @@ RUN apt-get update
 RUN apt-get install -y sudo
 ADD . /src
 WORKDIR /src
-RUN cd /src && ./install-linux.sh && make tests
+RUN cd /src && ./install.sh && make tests
 CMD ["/bin/bash"]
 
 

@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-# Migrating from install-mac.sh and install-linux.sh to this file.
-# When tested, the files above can be removed.
-
 set -e
 
 OS=`uname`

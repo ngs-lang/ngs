@@ -227,13 +227,9 @@ This is how an instance can be created using NGS (real working code).
 
 	cd ngs
 
-### Install with Dependencies - Debian-based Linux
+### Install with Dependencies - Debian-based Linux and MacOS
 
-	./install-linux.sh
-
-### Install with Dependencies - MacOS (brew)
-
-	./install-mac.sh
+	./install.sh
 
 ### Install without Dependencies
 

@@ -5,7 +5,7 @@ def linux_provision(branch)
 	return <<-SHELL
 	sudo apt-get update
 	sudo apt-get -y install git # for debian, ubuntu has it
-	sudo bash -c 'git clone https://github.com/ngs-lang/ngs.git && cd ngs && git checkout #{branch} && ./install-linux.sh'
+	sudo bash -c 'git clone https://github.com/ngs-lang/ngs.git && cd ngs && git checkout #{branch} && ./install.sh'
 	SHELL
 end
 
