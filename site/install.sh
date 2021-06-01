@@ -5,6 +5,7 @@
 set -eu
 
 echo "+ Will install Next Generation Shell"
+echo "+ If anything goes wrong, please open an issue at https://github.com/ngs-lang/ngs/issues"
 
 echo "+ Creating temporary directory"
 
