@@ -218,6 +218,12 @@ This is how an instance can be created using NGS (real working code).
 
 ## Compiling and Running
 
+### Pipe to bash
+
+Make sure `curl` and `sudo` are installed (they probably are not if you are in a docker) and then run:
+
+	curl https://ngs-lang.org/install.sh | bash
+
 ### Clone from Git
 
 	git clone https://github.com/ngs-lang/ngs.git
