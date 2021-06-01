@@ -219,7 +219,9 @@ This is how an instance can be created using NGS (real working code).
 
 ### Pipe to bash
 
-Make sure `curl` and `sudo` are installed (they probably are not if you are in a docker) and then run:
+On Linux: make sure `curl` and `sudo` are installed (they probably are not if you are in a docker).
+
+On MacOS: make sure you have `brew` installed.
 
 	curl https://ngs-lang.org/install.sh | bash
 
