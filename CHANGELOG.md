@@ -13,6 +13,7 @@
 * Add `CleanupPolicy`, `KeepCleanupPolicy`, `RemoveCleanupPolicy`, `KeepOnErrorCleanupPolicy` to be used with `TmpFile`
 * `TmpFile` now accepts optional `CleanupPolicy` argument (defaults to `RemoveCleanupPolicy`)
 * When running `ngs -e ...`, `ngs -p ...`, etc - allow using `_` instead of `fetch()`.
+* Add "curl" installer.
 
 ### Fixes and improvements
 
@@ -21,6 +22,7 @@
 * `pmap(Eachable1, Fun)` now limits number of threads (issue #113)
 * Add documentation for `MaybeFile`
 * `TmpFile` is not expirimental anymore
+* `encode_json()` with `pretty=true` can now handle larger inputs
 
 ### Breaking changes
 
