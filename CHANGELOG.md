@@ -1,4 +1,4 @@
-## (UNRELEASED) Version 0.2.12
+## 2021-06-04 Version 0.2.12
 
 ### New features
 
