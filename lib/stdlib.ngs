@@ -216,6 +216,11 @@ section "Attributes convenience methods" {
 	}
 }
 
+section "UserDefinedMethod" {
+	doc %RET - true
+	F Bool(udm:UserDefinedMethod) true
+}
+
 section "MultiMethod" {
 
 	doc Create MultiMethod with no methods
@@ -1095,7 +1100,7 @@ section "AllOf(ArrLike)" {
 		super(a, items)
 	}
 
-	doc Checks that one of the predicates (elements of AllOf) succeeds
+	doc Checks whether one of the patterns (elements of AllOf) matches
 	doc %EX - {"k1": "v1", "k2": "v2", "kk3": "vv3"}.filterk(AllOf(/^k/, {len(A) <= 2})) == %{k1 v1 k2 v2}
 	F =~(x, a:AllOf) a.all(x =~ X)
 
@@ -4433,10 +4438,21 @@ section "Thread" block _ {
 		join_result[1][1]
 	}
 
-	doc Parallel map. Runs mapper in threads. Each thread processes one element from the array but this might change in future (preserving the total number of calls to mapper and the order of results).
+	doc Parallel map. Runs mapper in threads.
+	doc Each thread processes one element from the array but this might change in future (preserving the total number of calls to mapper and the order of results).
+	doc Number of threads is limited to the lower of the two: processors * 100 or 1000.
 	doc %RET - Arr, result of applying mapper to elements of e, preserving the order.
 	doc %EX - pages_texts = abs_pages_urls.pmap(F(url)  `lynx -dump $url`)
-	F pmap(e:Eachable1, mapper:Fun) pmap(e, len(e), mapper)
+	F pmap(e:Eachable1, mapper:Fun) {
+		threads = len(e)
+		processors = sysconf(C_DEFS::_SC_NPROCESSORS_ONLN)
+		lim = min(processors * 100, 1000)
+		if threads > lim {
+			warn("pmap(Eachable1, Fun) limited the threads to ${lim}. Use pmap(Eachable1, Int, Fun) to avoid this message.")
+			threads = lim
+		}
+		pmap(e, threads, mapper)
+	}
 
 	TEST try pmap(3, F(x) 100+x) == [100, 101, 102]
 	TEST try pmap(3, F(x) 100/x) catch(e:ResultsException) (e.results[0] is Failure)
@@ -4649,7 +4665,7 @@ section "Path" {
 		type Symlink(Path)     # S_IFLNK
 		doc Represents a file in a file system (S_IFREG)
 		type File(Path)        # S_IFREG
-			doc EXPERIMENTAL! Represents temporary file. Automatically removed when the script exits.
+			doc Represents temporary file. Automatically removed when the script exits.
 			type TmpFile(File)
 		doc Represents a block device in a file system (S_IFBLK)
 		type BlockDevice(Path) # S_IFBLK
@@ -4896,25 +4912,58 @@ section "Path" {
 		null
 	}
 
-	doc EXPERIMENTAL! Creates temporary file using `mktemp` and arranges deletion of the file upon exit from the NGS script.
-	F init(t:TmpFile) {
+	doc How a resource cleanup should be handled. See subtypes.
+	type CleanupPolicy
+
+		doc The resource should be kept
+		type KeepCleanupPolicy(CleanupPolicy)
+
+		doc The resource sohuld be removed
+		type RemoveCleanupPolicy(CleanupPolicy)
+
+		doc The resource should be kept if an error occurred, otherwise removed
+		type KeepOnErrorCleanupPolicy(CleanupPolicy)
+
+	doc Creates temporary file using `mktemp` and arranges deletion of the file upon exit from the NGS script.
+	F init(t:TmpFile, cleanup_policy:CleanupPolicy=RemoveCleanupPolicy()) {
 		t.path = `line: mktemp`
 		t.fd = null
+		t.cleanup_policy = cleanup_policy
 		debug("file", "Created temporary file at ${t.path}")
-		exit_hook["TmpFile:${t.path}"] = {
-			debug("file", "Removing temporary file at ${t.path}")
-			try {
-				$(rm ${t.path})
-				debug("file", "Removed temporary file at ${t.path}")
-			} catch(e) {
-				warn("Failed to remove temporary file at ${t.path}")
-				print_exception(e, echo=warn)
-			}
+		exit_hook["TmpFile:${t.path}"] = F cleanup(e:Exit) {
+			debug("file", "Will do cleanup for temporary file at ${t.path}")
+			# Exit is not a subtype of Exception. If anybody complains, this can be fixed and a "real" Exception can be sent.
+			b = if e.exceptions then FullBox(e) else EmptyBox()
+			del(t, t.cleanup_policy, b)
 		}
+	}
+
+	F del(t:TmpFile, kcp:KeepCleanupPolicy, e:Box) {
+		log("Keeping temporary file at ${t.path}")
+		t
+	}
+
+	F del(t:TmpFile, rcp:RemoveCleanupPolicy, e:Box) {
+		try {
+			$(rm ${t.path})
+			debug("file", "Removed temporary file at ${t.path}")
+		} catch(e) {
+			warn("Failed to remove temporary file at ${t.path}")
+			print_exception(e, echo=warn)
+		}
+	}
+
+	F del(t:TmpFile, koecp:KeepOnErrorCleanupPolicy, e:Box) {
+		not(e) returns t.del(RemoveCleanupPolicy(), e)
+		log("Keeping temporary file at ${t.path} because exception occurred: ${e.get()}")
+		t
 	}
 
 	doc Convert Path into JSON compatible data structure - string
 	F JsonData(p:Path) p.path
+
+	doc Convert CleanupPolicy to code
+	F code(p:CleanupPolicy) "${p.typeof().name}()"
 }
 
 # === Commands and processes (WIP) ===============
@@ -5181,7 +5230,7 @@ F init(f:File, path:Path) super(f, path.path)
 
 doc String representation of File
 doc %EX - open(File("tmp/v8/LICENSE"), "r").Str().echo()  # Output: <File path=tmp/v8/LICENSE fd=4>
-F Str(f:File) "<File path=${f.path} fd=${f.fd}>"
+F Str(f:File) "<${f.typeof().name} path=${f.path} fd=${f.fd}>"
 
 TEST File('xy').Str() == '<File path=xy fd=null>'
 
@@ -5669,15 +5718,21 @@ F Argv(a:Arr) {
 doc Run a process
 F '$()'(p:Process) {
 
+	# There are situations (not sure how to reproduce) when
+	# there is a problem to require() this later so loading now:
+	ProcessFail
+
+	F safe_escape_bash(s) escape_bash(s) tor "failed-to-bash-escape"
+
 	argv = p.command.argv.map(Arg)
 
 	debug("process", "Parsed command: ${argv}")
 
 	if p.command.options.get('log') == true {
 		F redir_str(r:CommandRedir) {
-			(r.fd or '').Str() + r.marker + escape_bash(r.datum)
+			(r.fd or '').Str() + r.marker + safe_escape_bash(r.datum)
 		}
-		log("Running command: ${argv.map(escape_bash).join(' ')}${' ' +? p.command.redirects.map(redir_str).join(' ')}")
+		log("Running command: ${argv.map(safe_escape_bash).join(' ')}${' ' +? p.command.redirects.map(redir_str).join(' ')}")
 	}
 
 	try {
@@ -5740,8 +5795,7 @@ F '$()'(p:Process) {
 		debug("process", "will execve()")
 		result = c_execve(p.executable.path, argv, ENV.Strs())
 		# TODO: propagate this error to parent, don't know how yet
-		error("Process ${c_getpid()} (fork child) failed to execve()")
-		c_exit(250)
+		throw CError("Process ${c_getpid()} (fork child) failed to execve()")
 	}
 
 	if pid > 0 {
@@ -6610,6 +6664,10 @@ F replace(s:Str, r:RegExp, mapper:Fun) {
 
 TEST "x10ab20c30y".replace(/[0-9]+/, F(match_text) "[$match_text]") == "x[10]ab[20]c[30]y"
 
+F replace(s:Str, r:RegExp, replacement:Str) s.replace(r, {replacement})
+
+TEST "x10ab20c30y".replace(/[0-9]+/, "@") == "x@ab@c@y"
+
 # === Fun ========================================
 
 doc Call cb n times without any parameters and accumulate the results.
@@ -7273,6 +7331,25 @@ F write(f:File, s:Str) {
 	write(if f.fd is Null then f.path else f.fd, s)
 }
 
+doc Write a string followed by newline character to a File.
+doc Throws WriteFail on failure.
+doc %RET - null
+doc %EX - echo(File("1.txt"), "blah")
+F echo(f:File, s:Str) {
+	write(f, "${s}${STDLIB_EOL}")
+	null
+}
+
+doc Write a lines followed by newline character to a File.
+doc Throws WriteFail on failure.
+doc %RET - null
+doc %EX - echo(File("1.txt"), Lines(["aaa", "bbb"]))
+F echo(f:File, l:Lines) {
+	t = l.map("${X}${STDLIB_EOL}").join('')
+	f.write(t)
+	null
+}
+
 # TODO: better exception
 F realpath(path:Str) {
 	c_realpath(path) or throw CError("Faied to realpath()").set(path=path)
@@ -7293,7 +7370,7 @@ section "JSON" {
 		ret = super(JsonData(x))
 		if hints =~ {'pretty': true} {
 			assert(Program('jq'), "encode_json() failed to do 'pretty' formatting - jq program is missing")
-			ret = `echo $ret | jq .`
+			ret = $(| jq .).write(ret).close().wait().stdout
 		}
 		ret
 	}
@@ -7313,7 +7390,11 @@ section "base64" {
 	}
 
 	doc %STATUS - experimental
-	F decode_base64(s:Str) `echo $s | base64 --decode`
+	F decode_base64(s:Str) {
+		t = (4 - len(s) % 4) % 4
+		fill = "=" * t
+		`echo "$s$fill" | base64 --decode 2>${true}`
+	}
 }
 
 section "Networking" {
@@ -7453,7 +7534,7 @@ section "Loading code" {
 		doc WARNING: May have security implications when looking up a name from untrusted source.
 		doc %EX - test("My web server runs") do { .... }  # autoload/globals/test.ngs is automatically loaded.
 		F global_not_found_handler(name:Str) {
-			_lock.acquire() do {
+			_lock.acquire({
 
 				F _debug(s:Str) debug("autoload", "global_not_found_handler() [invocation $i] ${s}")
 
@@ -7475,12 +7556,69 @@ section "Loading code" {
 					ll_set_global_variable(idx, val)
 				}
 
-			}
+			})
 		}
 	}
 
 }
 
+section "math" {
+
+	doc %RET - base to the power of exponent
+	doc %EX - pow(2, 10) == 1024
+	F pow(base:Real, exponent:Real) {
+		t = c_pow(base, exponent)
+		if t[0] and (e = c_errno()) {
+			throw InvalidArgument("pow() failed", CError(e, "c_pow() failed")).set(sign=t[0], result=t[1])
+		}
+		t[1]
+	}
+
+	doc Calls pow(Real, Real) converting parameters and results to and from Real
+	F pow(base:Int, exponent:Int) Int(pow(Real(base), Real(exponent)))
+
+	TEST pow(2, 10) == 1024
+	TEST pow(0, -1) THROWS InvalidArgument
+}
+
+section "JWT" {
+	type JWT
+
+	doc Decodes JSON Web Token (JWT)
+	F decode(s:Str, hints:Hash={}) {
+
+		F _decode(s) try s.decode_base64().decode_json()
+
+		o = s.trim()
+		parts = o.split('.')
+		guard len(parts) == 3
+		guard all(parts)
+		ret = JWT().set(
+			original = o
+			header = parts[0]._decode()
+			payload = parts[1]._decode()
+			signature = parts[2]
+		)
+		guard ret.header and ret.payload
+		ret
+	}
+
+	doc Convert to JSON compatible data structure - Hash
+	F JsonData(j:JWT) j.Hash()
+
+}
+
+TEST t = decode("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"); t =~ AllOf(JWT, {"header": {"alg": "HS256", "typ": "JWT"}, "payload": {"sub": "1234567890", "name": "John Doe", "iat": 1516239022}})
+
+F sysconf(name:Int) {
+	ret = c_sysconf(name)
+	e = c_errno()
+	if ret == -1 {
+		c_errno() throws CError(e, "sysconf() failed")
+		null
+	}
+	ret
+}
 
 section "Bootstrap" {
 	main = MultiMethod()
@@ -7524,6 +7662,12 @@ section "Bootstrap" {
 				code_to_run = "{\n${ARGV.shift(default_code)}\n}"
 				debug('bootstrap', "Got $sw switch, using command line provided code")
 				fname = "<command line ${sw} switch>"
+
+				global global_not_found_handler
+				F global_not_found_handler(name:Str) {
+					guard name == '_'
+					global _ = fetch()
+				}
 			}
 		}
 
@@ -7561,7 +7705,7 @@ section "Bootstrap" {
 				main is MultiMethod {
 					m = main.filtero(in_main_file)
 					if len(main) != len(m) {
-						warn("main method define in non-main file")
+						warn("'main' method was defined in non-main file. That is probably a bug. Continuing anyway.")
 					}
 					if m {
 						bootstrap_invoke_main(m)

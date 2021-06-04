@@ -45,7 +45,7 @@ One of the ways in which NGS shines is how it works with external web services, 
 
 ## Query GitHub and return the SHA signatures of the commits
 
-	curl -s 'https://api.github.com/repos/ngs-lang/ngs/commits?per_page=5' | ngs -pl 'fetch().sha'
+	curl -s 'https://api.github.com/repos/ngs-lang/ngs/commits?per_page=5' | ngs -pl '_.sha'
 
 Output:
 
@@ -56,15 +56,15 @@ Output:
 	f750d7cc025eeac943c86c492c736992a745bd17
 
 
-`fetch()` will read and decode the JSON. Then we select **sha** property of the object.
+`_` will read and decode the JSON. Then we select **sha** property of the object.
 
 ## Query GitHub and return the SHA signatures of commits matching a criteria
 
-	curl -s 'https://api.github.com/repos/ngs-lang/ngs/commits?per_page=2000&sha=3431ff64bb6fc632815481309737eeb1925f2f5e' | ngs -e 'fetch().commit.filter(F(commit) commit.author.name.has("Serge") ).tree.sha.each(F(sha) echo(sha))'
+	curl -s 'https://api.github.com/repos/ngs-lang/ngs/commits?per_page=2000&sha=3431ff64bb6fc632815481309737eeb1925f2f5e' | ngs -e '_.commit.filter(F(commit) commit.author.name.has("Serge") ).tree.sha.each(F(sha) echo(sha))'
 
 which is the same as
 
-	curl -s 'https://api.github.com/repos/ngs-lang/ngs/commits?per_page=2000&sha=3431ff64bb6fc632815481309737eeb1925f2f5e' | ngs -pl 'fetch().commit.filter(F(commit) commit.author.name.has("Serge")).tree.sha'
+	curl -s 'https://api.github.com/repos/ngs-lang/ngs/commits?per_page=2000&sha=3431ff64bb6fc632815481309737eeb1925f2f5e' | ngs -pl '_.commit.filter(F(commit) commit.author.name.has("Serge")).tree.sha'
 
 Output in both cases:
 
@@ -106,7 +106,7 @@ The function
 
 returns `true` for commits made by Serge and `false` for others.
 
-* `fetch()` will read and decode the JSON. The JSON is an array at top level so `fetch()` evaluates to an array at top level.
+* `_` will read and decode the JSON. The JSON is an array at top level so `_` evaluates to an array at top level.
 * Then we select **commit** properties from each element of the array. This requires explanation. `array.property` evaluates to `[array[0].property, array[1].property, ..., array[N].property]`.
 * `filter()` filters the **commit** array, leaving only elements that the function above "approves".
 * `.tree.sha` extracts the SHA of the commits
@@ -117,7 +117,7 @@ returns `true` for commits made by Serge and `false` for others.
 
 In this example we will iterate over all results of the filter of all commits belonging to a specific user, in our case 'Serge', and then execute `git show $sha` with the SHA on all the selected commits.
 
-	curl -s 'https://api.github.com/repos/ngs-lang/ngs/commits?per_page=2000&sha=3431ff64bb6fc632815481309737eeb1925f2f5e' | ngs -e 'fetch().commit.filter(F(commit) commit.author.name.has("Serge") ).tree.sha.each(F(sha) echo(`git show $sha`))'
+	curl -s 'https://api.github.com/repos/ngs-lang/ngs/commits?per_page=2000&sha=3431ff64bb6fc632815481309737eeb1925f2f5e' | ngs -e '_.commit.filter(F(commit) commit.author.name.has("Serge") ).tree.sha.each(F(sha) echo(`git show $sha`))'
 
 ## Query GitHub and show specific properties of selected commits
 
@@ -125,7 +125,7 @@ In this example we complicate it a little further, and we run over all the commi
 
 Command:
 
-	curl -s 'https://api.github.com/repos/ngs-lang/ngs/commits?per_page=2000&sha=3431ff64bb6fc632815481309737eeb1925f2f5e' | ngs -pl 'fetch().commit.filter(F(commit) commit.author.name.has("Serge") ).map(F(commit) "${commit.author.name} -- ${commit.message}")'
+	curl -s 'https://api.github.com/repos/ngs-lang/ngs/commits?per_page=2000&sha=3431ff64bb6fc632815481309737eeb1925f2f5e' | ngs -pl '_.commit.filter(F(commit) commit.author.name.has("Serge") ).map(F(commit) "${commit.author.name} -- ${commit.message}")'
 
 Output:
 
@@ -135,7 +135,7 @@ Output:
 
 Command:
 
-	curl -s 'https://api.github.com/repos/ngs-lang/ngs/commits?per_page=2000&sha=3431ff64bb6fc632815481309737eeb1925f2f5e' | ngs -pj 'fetch().commit.filter(F(commit) commit.author.name.has("Serge") ).map(F(commit) {"name": commit.author.name, "message":  commit.message})' | jq .
+	curl -s 'https://api.github.com/repos/ngs-lang/ngs/commits?per_page=2000&sha=3431ff64bb6fc632815481309737eeb1925f2f5e' | ngs -pj '_.commit.filter(F(commit) commit.author.name.has("Serge") ).map(F(commit) {"name": commit.author.name, "message":  commit.message})' | jq .
 
 Output:
 
@@ -154,7 +154,7 @@ Output:
 
 	To make one JSON structure as an array.
 
-	curl -s 'https://api.github.com/repos/ngs-lang/ngs/commits?per_page=2000&sha=3431ff64bb6fc632815481309737eeb1925f2f5e' | ngs -pj 'fetch().commit.filter(F(commit) commit.author.name.has("Serge") ).map(F(commit) {"name": commit.author.name, "message":  commit.message})'
+	curl -s 'https://api.github.com/repos/ngs-lang/ngs/commits?per_page=2000&sha=3431ff64bb6fc632815481309737eeb1925f2f5e' | ngs -pj '_.commit.filter(F(commit) commit.author.name.has("Serge") ).map(F(commit) {"name": commit.author.name, "message":  commit.message})'
 
 	To make multiple JSON objects on each new line.
 

@@ -23,7 +23,6 @@ char *NGS_AST_NODE_TYPES_NAMES[] = {
 	"null",
 	"true",
 	"false",
-	"defined",
 	"if",
 	"assign_default",
 	"while",

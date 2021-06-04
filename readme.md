@@ -23,10 +23,10 @@
 * [Running](#running)
   * [Running Using Docker](#running-using-docker)
   * [Running Using Homebrew](#running-using-homebrew)
+  * [Running Using Snap](#running-using-snap)
 * [Compiling and Running](#compiling-and-running)
   * [Clone from Git](#clone-from-git)
-  * [Install with Dependencies - Debian-based Linux](#install-with-dependencies---debian-based-linux)
-  * [Install with Dependencies - MacOS (brew)](#install-with-dependencies---macos-brew)
+  * [Install with Dependencies - Debian-based Linux and MacOS](#install-with-dependencies---debian-based-linux-and-macos)
   * [Install without Dependencies](#install-without-dependencies)
   * [Run Tests](#run-tests)
   * [Compile](#compile)
@@ -34,6 +34,7 @@
   * [Uninstall](#uninstall)
   * [Debug - Mac](#debug---mac)
   * [Debug - Homebrew builds](#debug---homebrew-builds)
+  * [Build and run docker](#build-and-run-docker)
   * [Generate Documentation](#generate-documentation)
 * [Contributing](#contributing)
 * [Planned Features](#planned-features)
@@ -199,10 +200,8 @@ This is how an instance can be created using NGS (real working code).
 
 ### Running Using Docker
 
-	# Build the docker
-	docker build -t ngs .
-	# Run the container
-	docker run -it --rm ngs
+	docker run -it --rm ngslang/ngs
+
 	# Use NGS inside the container
 	ngs -pi 'sum(0..10)'
 
@@ -211,7 +210,20 @@ This is how an instance can be created using NGS (real working code).
 	brew install ngs
 	ngs -pi 'sum(0..10)'
 
+### Running Using Snap
+
+	sudo snap install ngs
+	ngs -pi 'sum(0..10)'
+
 ## Compiling and Running
+
+### Pipe to bash
+
+On Linux: make sure `curl` and `sudo` are installed (they probably are not if you are in a docker).
+
+On MacOS: make sure you have `brew` installed.
+
+	curl https://ngs-lang.org/install.sh | bash
 
 ### Clone from Git
 
@@ -222,13 +234,9 @@ This is how an instance can be created using NGS (real working code).
 
 	cd ngs
 
-### Install with Dependencies - Debian-based Linux
+### Install with Dependencies - Debian-based Linux and MacOS
 
-	./install-linux.sh
-
-### Install with Dependencies - MacOS (brew)
-
-	./install-mac.sh
+	./install.sh
 
 ### Install without Dependencies
 
@@ -280,6 +288,15 @@ If you have troubles compiling, please try to compile the commit tagged `tested`
 * Development cycle:
 	* In a folder just above `ngs`, run `tar czf ngs.tgz --exclude=build ngs`
 	* `brew install -d -s ./ngs.rb` (wherever the `ngs.rb` is)
+
+### Build and run docker
+
+	# Build the docker
+	docker build -t ngs .
+	# Run the container
+	docker run -it --rm ngs
+	# Use NGS inside the container
+	ngs -pi 'sum(0..10)'
 
 ### Generate Documentation
 

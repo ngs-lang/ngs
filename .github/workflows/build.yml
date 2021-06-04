@@ -97,7 +97,7 @@ jobs:
         # Otherwise "mkdir -p build/Testing/Temporary" fails with
         # "mkdir: cannot create directory ‘build/Testing’: Permission denied"
         # (mkdir itself was a test after "ctest" failed to create the directory)
-        run: (sudo ./install-linux.sh && sudo make tests)
+        run: (sudo ./install.sh && sudo make tests)
       - name: Install Compiler (macOS)
         if: runner.os == 'macOS'
         run: |
@@ -113,7 +113,7 @@ jobs:
           fi
       - name: Install and Test (macOS)
         if: runner.os == 'macOS'
-        run: (./install-mac.sh && make tests)
+        run: (./install.sh && make tests)
 
   build-external:
     timeout-minutes: 5
@@ -161,4 +161,4 @@ jobs:
             echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
           fi
       - name: Install and Test
-        run: (./install-linux.sh && make tests)
+        run: (./install.sh && make tests)

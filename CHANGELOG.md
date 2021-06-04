@@ -1,3 +1,33 @@
+## 2021-06-04 Version 0.2.12
+
+### New features
+
+* Add `replace(Str, RegExp, Str)`
+* Add `Bool(UserDefinedMethod)`
+* Add `c_pow(Real, Real)`, `pow(Real, Real)`, `pow(Int, Int)`
+* Add `decode()` for JSON Web Token (JWT)
+* Add `echo(File, Str)`
+* Add `echo(File, Lines)`
+* Add `C_DEFS` namespace for C `define`d constants (currently only with `_SC_NPROCESSORS_ONLN` but will add more later, issue #113)
+* Add `c_sysconf()`, `sysconf()`
+* Add `CleanupPolicy`, `KeepCleanupPolicy`, `RemoveCleanupPolicy`, `KeepOnErrorCleanupPolicy` to be used with `TmpFile`
+* `TmpFile` now accepts optional `CleanupPolicy` argument (defaults to `RemoveCleanupPolicy`)
+* When running `ngs -e ...`, `ngs -p ...`, etc - allow using `_` instead of `fetch()`.
+* Add "curl" installer.
+
+### Fixes and improvements
+
+* Fix `Str(File)` - now display correct type name for subtypes
+* Make `decode_base64()` more roubst
+* `pmap(Eachable1, Fun)` now limits number of threads (issue #113)
+* Add documentation for `MaybeFile`
+* `TmpFile` is not expirimental anymore
+* `encode_json()` with `pretty=true` can now handle larger inputs
+
+### Breaking changes
+
+* Remove unused `defined` keyword
+
 ## 2021-03-14 Version 0.2.11
 
 ### New features
