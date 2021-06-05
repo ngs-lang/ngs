@@ -491,7 +491,36 @@ section "Convenience methods" {
 	TEST type T; t=T().set(a=1, b=2); t.a == 1 and t.b == 2
 }
 
+section "Hash" {
+	doc %RET - h
+	F Hash(h:Hash) h
+}
+
 section "=~ Matching" {
+
+	doc A pair of pattern and an action to execute if the pattern matches.
+	doc Currently, only callable actions are supported (Fun).
+	doc %STATUS - experimental
+	type PatternAction
+
+	doc %STATUS - experimental
+	F init(pa:PatternAction, pattern, action) {
+		pa.pattern = pattern
+		pa.action = action
+	}
+
+	doc %AUTO - pattern -> action
+	doc %STATUS - experimental
+	F '->'(pattern, action) PatternAction(pattern, action)
+
+	doc %STATUS - experimental
+	F =~(x, pa:PatternAction) {
+		result = x =~ pa.pattern
+		if result {
+			pa::action(x)
+		}
+		result
+	}
 
 	doc %STATUS - deprecated
 	F Pred(pattern) {
@@ -512,7 +541,17 @@ section "=~ Matching" {
 		# * must support "k in x"
 		# * must support "x.(k)"
 		(x is not Eachable2) and (x is not NormalTypeInstance) returns false
-		h.all(F(k, v) (k in x) and x.(k) =~ v)
+		x_keys = null
+		h.all(F(pat_k, pat_v) {
+			if pat_k =~ AnyOf(Str, Int, Real) {
+				pat_k in x and x.(pat_k) =~ pat_v
+			} else {
+				if x_keys is Null {
+					x_keys = x.Hash().keys()
+				}
+				x_keys.any(F(k) k =~ pat_k and x.(k) =~ pat_v)
+			}
+		})
 	}
 
 	TEST ({"a": 1}) =~ ({"a": Any})
@@ -3138,6 +3177,26 @@ F Hash(e:Eachable1, key_field:Str, val_field:Str)
 		e.each(F(elt) collect(elt.(key_field), elt.(val_field)))
 
 TEST Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}], "Name", "Value") == {"n1": "v1", "n2": "v2"}
+
+# TODO: Consider storing attributes if key/value keys names
+#       for example for converting back to Eachable1:
+doc %STATUS - experimental
+F Hash(e:Eachable1) {
+	guard e.all(F(x) x is Eachable2 and len(x) == 2)
+	not(e) returns {}
+	k = v = null
+	pat = {
+		AnyOf(%[Id id K k Key key Name name]) -> {k=A}: Any
+		AnyOf(%[V v Val val Value value]) -> {v=A}: Any
+	}
+	if not(e[0] =~ pat) {
+		throw InvalidArgument("Hash(Eachable1) did not find key/value keys in first element").set(element=e[0], pattern=pat)
+	}
+	e.Hash(k, v)
+}
+
+TEST Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}]) == {"n1": "v1", "n2": "v2"}
+
 
 doc Convert Hash into JSON compatible data structure - object
 F JsonData(h:Hash) h.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()

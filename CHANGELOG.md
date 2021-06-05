@@ -1,8 +1,17 @@
 ## (UNRELEASED) Version 0.2.13
 
+### New features
+
+* Add `Hash(Hash)` (a no-op)
+* Add experimental `PatternAction` type for combining a pattern and an action to take when there is a match
+* Add experimental `->` syntax for constructing `PatternAction`
+* Add experimental `=~(x, PatternAction)` which checks or the pattern and conditionally runs the action
+* Add `Hash(Eachable1)` - Issue #436 - Add Hash(array_of_key_value_pairs)
+
 ### Fixes and improvements
 
 * `inspect()` fix for partially applied functions: `ngs -pi 'X*2'` does not fail anymore.
+* `=~(x, Hash)` now supports patterns for keys
 
 ## 2021-06-04 Version 0.2.12
 
