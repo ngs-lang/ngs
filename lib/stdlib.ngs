@@ -367,8 +367,12 @@ section "Inspect built-in types" block _ {
 				collect("  [${k}] = ${v}")
 			})
 			# doc can be null
+			# doc can be a string, example: "Partial application syntax" (ngs -pi 'X*2')
 			if d = a.get('doc') {
-				a.get('doc', {}).each(F(k, v) {
+				if d is Str {
+					d = {'': d}
+				}
+				d.each(F(k, v) {
 					k = cond {
 						k in keys_meanings keys_meanings[k]
 						not(k) k

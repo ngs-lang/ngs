@@ -1,5 +1,9 @@
 ## (UNRELEASED) Version 0.2.13
 
+### Fixes and improvements
+
+* `inspect()` fix for partially applied functions: `ngs -pi 'X*2'` does not fail anymore.
+
 ## 2021-06-04 Version 0.2.12
 
 ### New features
