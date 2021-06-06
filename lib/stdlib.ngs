@@ -3622,7 +3622,7 @@ F each(s:Success, fun:Fun) {
 	s
 }
 
-doc Run fun with wrapped value. If exception is thrown, Failure is returned; otherwise Success with new vaule is returned.
+doc Run fun with wrapped value. If exception is thrown, Failure is returned; otherwise Success with new value is returned.
 doc %RET - Result
 F map(s:Success, fun:Fun) {
 	try {
