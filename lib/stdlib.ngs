@@ -6379,14 +6379,6 @@ F init(ms:MatchSuccess, matches:Arr, pattern) init(args())
 doc Unsuccessful constructor
 F init(mf:MatchFailure, data, pattern) init(args())
 
-doc Convert successful match to Bool (true)
-doc %RET - true
-F Bool(ms:MatchSuccess) true
-
-doc Convert failed match to Bool (false)
-doc %RET - false
-F Bool(mf:MatchFailure) false
-
 doc Get the values of successful match
 F get(ms:MatchSuccess) ms
 
