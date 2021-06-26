@@ -3186,8 +3186,8 @@ F Hash(e:Eachable1) {
 	not(e) returns {}
 	k = v = null
 	pat = {
-		AnyOf(%[Id id K k Key key Name name]) -> {k=A}: Any
-		AnyOf(%[V v Val val Value value]) -> {v=A}: Any
+		AnyOf(%[Id id K k Key key Name name ParameterKey]) -> {k=A}: Any
+		AnyOf(%[V v Val val Value value ParameterValue]) -> {v=A}: Any
 	}
 	if not(e[0] =~ pat) {
 		throw InvalidArgument("Hash(Eachable1) did not find key/value keys in first element").set(element=e[0], pattern=pat)
