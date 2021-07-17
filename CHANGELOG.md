@@ -12,6 +12,7 @@
 
 * `inspect()` fix for partially applied functions: `ngs -pi 'X*2'` does not fail anymore.
 * `=~(x, Hash)` now supports patterns for keys
+* Documentation generation now handles well `ENV` as default value for a parameter.
 
 ## 2021-06-04 Version 0.2.12
 
