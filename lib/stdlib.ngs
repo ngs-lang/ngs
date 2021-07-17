@@ -5776,6 +5776,23 @@ F Argv(a:Arr) {
 	a.reject(NoData).map(only(Box, get)).map(X.ensure(Arr)).flatten()
 }
 
+
+section "exec()" {
+	doc Call EXECVE(2)
+	F exec(argv:Arr, env:Hash=ENV) {
+		p = find_in_path(argv[0])
+		result = c_execve(p.path, argv, env.Strs())
+		throw CError("Failed to execve()").set(argv=argv)
+	}
+
+	doc Call EXECVE(2)
+	doc argv - argv, without the program
+	F exec(prog:Str, argv:Arr=[], env:Hash=ENV) exec([prog] + argv, env)
+
+	doc Call EXECVE(2)
+	F exec(prog:Str, env:Hash=ENV) exec([prog], env)
+}
+
 # --- $() ---
 
 doc Run a process
