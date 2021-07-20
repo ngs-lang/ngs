@@ -9,7 +9,7 @@ F perform_test(test_code:Str) {
 	program_bytecode = compile(c, '<test>')
 	program_func = load(program_bytecode, '<test>')
 	result = program_func()
-	result != true throws Error("Test failed: $test_code. Returned $result")
+	(result != true) and (result is not MatchSuccess) throws Error("Test failed: $test_code. Returned $result")
 	tests_counter += 1
 }
 

@@ -496,7 +496,83 @@ section "Hash" {
 	F Hash(h:Hash) h
 }
 
+section "Result and friends - types" {
+	doc Result of a computation
+	doc val - computed value or exception
+	type Result
+
+		doc Successful computation
+		doc val - computed value
+		type Success
+		Success.inherit(Result)
+
+		doc Failed computation
+		doc val - exception
+		type Failure
+		Failure.inherit(Result)
+
+}
+
+
 section "=~ Matching" {
+
+	section "MatchResult and friends - types" {
+		doc Successful or unsuccessful match result
+		type MatchResult
+
+			doc Successful match result
+			doc matches - Successful matches
+			type MatchSuccess
+			MatchSuccess.inherit(MatchResult)
+			MatchSuccess.inherit(Success)
+
+			doc Unsucessfull match result
+			type MatchFailure
+			MatchFailure.inherit(MatchResult)
+			MatchFailure.inherit(Failure)
+
+		doc Successful match constructor
+		doc %STATUS - deprecated
+		F init(ms:MatchSuccess, matches:Arr) init(args())
+
+		doc Successful match constructor
+		F init(ms:MatchSuccess, matches:Arr, pattern) init(args())
+
+		doc Unsuccessful constructor
+		F init(mf:MatchFailure, data, pattern) init(args())
+
+		doc Get the values of successful match
+		F get(ms:MatchSuccess) ms
+
+		doc Throws ResultFail
+		F get(mf:MatchFailure) throw ResultFail("There was no match").set('failure', mf)
+
+
+	}
+
+
+	doc %STATUS - experimental
+	type MatchContext
+
+	doc %STATUS - experimental
+	F init(mc:MatchContext) {
+		mc._positional = []
+		mc._named = {}
+		mc._path = []
+		mc._result = EmptyBox()
+	}
+
+	F =~(x, pattern) {
+		mc = MatchContext().set(_root=x)
+		result = (=~)(x, pattern, mc)
+		mc._result returns mc.get()
+		if result is Bool {
+			# TODO: Review MatchSuccess / MatchFailure construction (convertsion from MatchContext)
+			result returns MatchSuccess([x], pattern)
+			return MatchFailure(x, pattern)
+		}
+		throw Error("=~ is expected to eiter set result or return a boolean").set(given=result)
+	}
 
 	doc A pair of pattern and an action to execute if the pattern matches.
 	doc Currently, only callable actions are supported (Fun).
@@ -514,10 +590,10 @@ section "=~ Matching" {
 	F '->'(pattern, action) PatternAction(pattern, action)
 
 	doc %STATUS - experimental
-	F =~(x, pa:PatternAction) {
-		result = x =~ pa.pattern
+	F =~(x, pa:PatternAction, mc:MatchContext) {
+		result = (=~)(x, pa.pattern, mc)
 		if result {
-			pa::action(x)
+			pa::action(x, mc)
 		}
 		result
 	}
@@ -528,28 +604,31 @@ section "=~ Matching" {
 		F deprecated_pred(x) x =~ pattern
 	}
 
+	# TODO: %RET - MatchResult
 	doc %RET - not(a =~ b)
-	F !~(a, b) not(a =~ b)
+	F !~(x, pattern) not(x =~ pattern)
+
+	F !~(x, pattern, mc:MatchContext) not((=~)(x, pattern, mc))
 
 	doc %RET - x == bti
-	F =~(x, bti:BasicTypeInstance) x == bti
+	F =~(x, bti:BasicTypeInstance, _mc:MatchContext) x == bti
 
 	doc Checks whether object fields named after h hash keys match (=~) the corresponding hash values.
 	doc Inspired by underscorejs' "matcher"
-	F =~(x, h:Hash) {
+	F =~(x, h:Hash, mc:MatchContext) {
 		# TODO: Maybe some better detection of x interface required (instead of Eachable2/NormalTypeInstance):
 		# * must support "k in x"
 		# * must support "x.(k)"
 		(x is not Eachable2) and (x is not NormalTypeInstance) returns false
 		x_keys = null
 		h.all(F(pat_k, pat_v) {
-			if pat_k =~ AnyOf(Str, Int, Real) {
-				pat_k in x and x.(pat_k) =~ pat_v
+			if (=~)(pat_k, AnyOf(Str, Int, Real), mc) {
+				pat_k in x and (=~)(x.(pat_k), pat_v, mc)
 			} else {
 				if x_keys is Null {
 					x_keys = x.Hash().keys()
 				}
-				x_keys.any(F(k) k =~ pat_k and x.(k) =~ pat_v)
+				x_keys.any(F(k) (=~)(k, pat_k, mc) and (=~)(x.(k), pat_v, mc))
 			}
 		})
 	}
@@ -563,13 +642,13 @@ section "=~ Matching" {
 	doc 1. The x is Eachable1 but not Str or Int
 	doc 2. Each element of x matches (=~) corresponding element in a
 	doc (If number of elements does not match - there is no match)
-	F =~(x, a:Arr) {
+	F =~(x, a:Arr, mc:MatchContext) {
 		x is Int or x is Str returns false
 		x is not Eachable1 returns false
 		l = x.len()
 		l != a.len() returns false
 		for(i;l) {
-			x[i] !~ a[i] returns false
+			(!~)(x[i], a[i], mc) returns false
 		}
 		true
 	}
@@ -577,12 +656,13 @@ section "=~ Matching" {
 	TEST [1,2] =~ [Int, Any]
 	TEST [1] !~ [Int, Any]
 
+	# TODO: f(x, MatchContext) - when we know that f expects that
 	doc %RET - f(x) 
-	F =~(x, f:Fun) f(x)
+	F =~(x, f:Fun, _mc:MatchContext) f(x).Bool()
 
 	doc Check whether x is of type t
 	doc %RET - x is t
-	F =~(x, t:Type) x is t
+	F =~(x, t:Type, _mc:MatchContext) x is t
 
 	section "Repeat" {
 
@@ -600,20 +680,26 @@ section "=~ Matching" {
 
 		doc Check that x is a repetition of r.pattern and it occurs r.count times
 		doc %RET - Bool
-		F =~(x:Eachable1, r:Repeat) block b {
+		F =~(x:Eachable1, r:Repeat, mc:MatchContext) block b {
 			matched = 0
+			# TODO: For speed, add "if" and define only one "over_max".
 			F over_max(x:Int) { x >= r.count.end }
 			F over_max(x:Int) { guard r.count.include_end; x > r.count.end }
 			F over_max(x:Int) { guard r.count.end is Null; false }
-			x.each(F(item) {
-				if item !~ r.pattern {
+			mc._path.push(null)
+			path_idx = mc._path.len() - 1
+			x.each_idx_val(F(idx, item) {
+				mc._path[path_idx] = idx
+				if (!~)(item, r.pattern, mc) {
 					b.return(false)
 				}
 				matched += 1
 				if over_max(matched) {
+					mc._path.pop()
 					b.return(false)
 				}
 			})
+			mc._path.pop()
 			matched in r.count
 		}
 
@@ -1122,7 +1208,7 @@ section "AnyOf(ArrLike)" {
 
 	doc Check whether one of the patterns (elements of AnyOf) matches
 	doc %EX - {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(AnyOf("k1", "k3"))  # {"k1": "v1", "k3": "v3"}
-	F =~(x, a:AnyOf) a.any(x =~ X)
+	F =~(x, a:AnyOf, mc:MatchContext) a.any(F(pattern) (=~)(x, pattern, mc))
 
 	TEST {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(AnyOf("k1", "k3")) == {"k1": "v1", "k3": "v3"}
 
@@ -1145,7 +1231,7 @@ section "AllOf(ArrLike)" {
 
 	doc Checks whether one of the patterns (elements of AllOf) matches
 	doc %EX - {"k1": "v1", "k2": "v2", "kk3": "vv3"}.filterk(AllOf(/^k/, {len(A) <= 2})) == %{k1 v1 k2 v2}
-	F =~(x, a:AllOf) a.all(x =~ X)
+	F =~(x, a:AllOf, mc:MatchContext) a.all(F(pattern) (=~)(x, pattern, mc))
 
 	TEST {"k1": "v1", "k2": "v2", "kk3": "vv3"}.filterk(AllOf(/^k/, {len(A) <= 2})) == %{k1 v1 k2 v2}
 
@@ -1857,7 +1943,7 @@ section "Range" {
 
 	doc Checks whether x is in the range.
 	doc %EX - 1 =~ 0..5  # true
-	F =~(x, nr:NumRange) {
+	F =~(x, nr:NumRange, _mc:MatchContext) {
 		x is not Num returns false
 		x in nr
 	}
@@ -3553,17 +3639,6 @@ F JsonData(fb:FullBox) fb.get().JsonData()
 doc Thrown by get(Failure) as it has no value to get
 type ResultFail(Error)
 
-doc Result of a computation
-doc val - computed value or exception
-type Result
-
-	doc Successful computation
-	doc val - computed value
-	type Success(Result)
-
-	doc Failed computation
-	doc val - exception
-	type Failure(Result)
 
 
 doc Results, an array-like of Result elements
@@ -6353,17 +6428,8 @@ F config(k:Str, v) {
 	STDLIB_CONFIG[k] = v
 }
 
-# === MatchResult, Pfx, Sfx ============================
+# === Pfx, Sfx, Ifx ============================
 
-doc Successful or unsuccessful match result
-type MatchResult
-
-	doc Successful match result
-	doc matches - Successful matches
-	type MatchSuccess([MatchResult, Success])
-
-	doc Unsucessfull match result
-	type MatchFailure([MatchResult, Failure])
 
 type SubSeq
 	doc Prefix subsequence of a sequence
@@ -6386,21 +6452,6 @@ type SubSeq
 		type MustSfx(Sfx)
 
 # TODO: warn()
-doc Successful match constructor
-doc %STATUS - deprecated
-F init(ms:MatchSuccess, matches:Arr) init(args())
-
-doc Successful match constructor
-F init(ms:MatchSuccess, matches:Arr, pattern) init(args())
-
-doc Unsuccessful constructor
-F init(mf:MatchFailure, data, pattern) init(args())
-
-doc Get the values of successful match
-F get(ms:MatchSuccess) ms
-
-doc Throws ResultFail
-F get(mf:MatchFailure) throw ResultFail("There was no match").set('failure', mf)
 
 doc Convert Success to FullBox
 doc %RET - FullBox
@@ -6523,7 +6574,7 @@ TEST ("abc" ~ /a(.)c/)[1] == "b"
 
 doc Checks subsequence presence.
 doc %RET - Bool
-F =~(x, s:SubSeq) {
+F =~(x, s:SubSeq, _mc:MatchContext) {
 	x is not Str returns false
 	Bool(x ~ s)
 }
@@ -6713,7 +6764,8 @@ TEST "ab01de12f"[/[0-9]+/] == '01'
 
 doc %RET - Checks whether the only argument is of type Str and matches (~) r
 doc %EX - %[w1 w2].filter(/1/)  # %[w1]
-F =~(x, r:RegExp) {
+F =~(x, r:RegExp, _mc:MatchContext) {
+	# TODO: Maybe merge named matches into MatchContext
 	x is not Str returns false
 	Bool(x ~ r)
 }
@@ -6942,7 +6994,9 @@ F SafeStr(val) {
 doc Convert Backtrace to human-readable format
 doc %EX - Lines(bt).echo()
 F init(lines:Lines, backtrace:Backtrace, parent_backtrace=null) {
-	guard parent_backtrace =~ AnyOf(Null, Backtrace)
+	# guard parent_backtrace =~ AnyOf(Null, Backtrace)
+	# TODO ^
+	guard parent_backtrace is Null or parent_backtrace is Backtrace
 	super(lines)
 	parent_frames = parent_backtrace.frames tor []
 	backtrace.frames.each_idx_val(F(idx, frame) {
