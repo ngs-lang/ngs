@@ -26,9 +26,7 @@ ns {
 		process(x, d, mc, each_idx_val)
 	}
 
-	F =~(x:Eachable2, d:Deep, mc:MatchContext) {
-		process(x, d, mc, each)
-	}
+	F =~(x:Eachable2, d:Deep, mc:MatchContext) process(x, d, mc, each)
 
 	TEST ["a", {"b": ["c", {"d": 1}]}] =~ Deep(Int)
 }
