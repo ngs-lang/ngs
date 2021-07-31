@@ -550,22 +550,35 @@ section "=~ Matching" {
 
 	}
 
+	section "MatchContext" {
+		doc %STATUS - experimental
+		type MatchContext
 
-	doc %STATUS - experimental
-	type MatchContext
+		doc %STATUS - experimental
+		F init(mc:MatchContext) {
+			mc._positional = []
+			mc._named = {}
+			mc._path = []
+			mc._result = EmptyBox()  # maybe use "block" instead?
+		}
 
-	doc %STATUS - experimental
-	F init(mc:MatchContext) {
-		mc._positional = []
-		mc._named = {}
-		mc._path = []
-		mc._result = EmptyBox()
+		F deeper(mc:MatchContext, cb:Fun) {
+			mc._path.push(null)
+			cb.finally({
+				mc._path.pop()
+			})
+		}
+
+		F set_last_path_element(mc:MatchContext, x) {
+			mc._path[mc._path.len() - 1] = x
+			mc
+		}
 	}
 
 	F =~(x, pattern) {
 		mc = MatchContext().set(_root=x)
 		result = (=~)(x, pattern, mc)
-		mc._result returns mc.get()
+		mc._result returns mc._result.get()
 		if result is Bool {
 			# TODO: Review MatchSuccess / MatchFailure construction (convertsion from MatchContext)
 			result returns MatchSuccess([x], pattern)
@@ -621,15 +634,20 @@ section "=~ Matching" {
 		# * must support "x.(k)"
 		(x is not Eachable2) and (x is not NormalTypeInstance) returns false
 		x_keys = null
-		h.all(F(pat_k, pat_v) {
-			if (=~)(pat_k, AnyOf(Str, Int, Real), mc) {
-				pat_k in x and (=~)(x.(pat_k), pat_v, mc)
-			} else {
-				if x_keys is Null {
-					x_keys = x.Hash().keys()
+
+		mc.deeper({
+			h.all(F(pat_k, pat_v) {
+				if (=~)(pat_k, AnyOf(Str, Int, Real), mc) {
+					pat_k in x and (=~)(x.(pat_k), pat_v, mc.set_last_path_element(pat_k))
+				} else {
+					if x_keys is Null {
+						x_keys = x.Hash().keys()
+					}
+					x_keys.any(F(k) {
+						(=~)(k, pat_k, mc) and (=~)(x.(k), pat_v, mc.set_last_path_element(k))
+					})
 				}
-				x_keys.any(F(k) (=~)(k, pat_k, mc) and (=~)(x.(k), pat_v, mc))
-			}
+			})
 		})
 	}
 
@@ -686,20 +704,17 @@ section "=~ Matching" {
 			F over_max(x:Int) { x >= r.count.end }
 			F over_max(x:Int) { guard r.count.include_end; x > r.count.end }
 			F over_max(x:Int) { guard r.count.end is Null; false }
-			mc._path.push(null)
-			path_idx = mc._path.len() - 1
-			x.each_idx_val(F(idx, item) {
-				mc._path[path_idx] = idx
-				if (!~)(item, r.pattern, mc) {
-					b.return(false)
-				}
-				matched += 1
-				if over_max(matched) {
-					mc._path.pop()
-					b.return(false)
-				}
+			mc.deeper({
+				x.each_idx_val(F(idx, item) {
+					if (!~)(item, r.pattern, mc.set_last_path_element(idx)) {
+						b.return(false)
+					}
+					matched += 1
+					if over_max(matched) {
+						b.return(false)
+					}
+				})
 			})
-			mc._path.pop()
 			matched in r.count
 		}
 
