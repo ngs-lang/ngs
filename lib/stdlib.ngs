@@ -573,6 +573,14 @@ section "=~ Matching" {
 			mc._path[mc._path.len() - 1] = x
 			mc
 		}
+
+		F return(mc:MatchContext, x) {
+			mc._result = FullBox(x)
+			# Returning true to make "... -> Y.return(X)" work
+			# Only needed if return() will be used in non "something -> HERE" context,
+			# because "HERE" result is discarded
+			true
+		}
 	}
 
 	F =~(x, pattern) {
