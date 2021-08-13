@@ -7,6 +7,7 @@
 * Add experimental `->` syntax for constructing `PatternAction`
 * Add experimental `=~(x, PatternAction)` which checks or the pattern and conditionally runs the action
 * Add experimental `MatchContext` type
+* Add experimental `Deep` type for deep data structure matching
 * Add `Hash(Eachable1)` - Issue #436 - Add Hash(array_of_key_value_pairs)
 * Add `exec()` methods - Issue #459
 
