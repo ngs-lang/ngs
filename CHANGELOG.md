@@ -6,6 +6,7 @@
 * Add experimental `PatternAction` type for combining a pattern and an action to take when there is a match
 * Add experimental `->` syntax for constructing `PatternAction`
 * Add experimental `=~(x, PatternAction)` which checks or the pattern and conditionally runs the action
+* Add experimental `MatchContext` type
 * Add `Hash(Eachable1)` - Issue #436 - Add Hash(array_of_key_value_pairs)
 * Add `exec()` methods - Issue #459
 
@@ -14,6 +15,7 @@
 * `inspect()` fix for partially applied functions: `ngs -pi 'X*2'` does not fail anymore.
 * `=~(x, Hash)` now supports patterns for keys
 * Documentation generation now handles well `ENV` as default value for a parameter.
+* Reorganize stdlib to eleminate multiple `inherit()` calls
 
 ## 2021-06-04 Version 0.2.12
 

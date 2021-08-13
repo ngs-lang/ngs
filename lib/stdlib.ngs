@@ -1,6 +1,86 @@
 # WARNING: This file is packaged into the ngs binary at build time
 #          it is shipped for reference only.
 
+section "Syntactic sugar for basics" {
+
+	doc Boolean negation for non-boolean values. Converts to boolean first.
+	doc %RET - Bool
+	F not(x) { guard (x is Bool) == false; x.Bool().not() }
+
+	doc Inequality operator
+	doc %EX - 1 !=2  # true, same as not(1==2)
+	F !=(a,b) not(a==b)
+
+	doc Non-sameness operator
+	doc %EX - h1 = {"a": 1}
+	doc %EX - h2 = {"a": 1}
+	doc %EX - h1 !== h2  # true, same as not(h1===h2)
+	doc %EX - h1 == h2   # true
+	F !==(a,b) not(a===b)
+
+	TEST 1 != 2
+	TEST (1 != 1) == false
+
+	TEST 1 !== 2
+	TEST (1 !== 1) == false
+
+
+	doc "not in" operator. Exactly same as "not(a in b)"
+	doc %EX - 10 not in [1,2]  # true
+	doc %EX - 1  not in [1,2]  # false
+	F 'not in'(a,b) not(a in b)
+
+	TEST (1 not in [1,2,3]) == false
+	TEST 10 not in [1,2,3]
+
+	doc "is not" operator. Exactly same as "not(a is b)".
+	doc %EX - 1    is not Null  # true
+	doc %EX - null is not Null  # false
+	F 'is not'(a,b) not(a is b)
+
+	TEST 1 is not Null
+	TEST (null is not Null) == false
+
+
+	doc Exactly same as "element in container". It's just more convenient in specific cases.
+	doc %EX - [1,2,3].has(2)  # true
+	doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(X.has(1))  # [ [1,2,3], [1,20,30] ]
+	doc %RET - Bool
+	F has(container, element) element in container
+
+	TEST [1,2,3].has(1)
+	TEST [1,2,3].has(10).not()
+
+	doc Exactly same as "element not in container". It's just more convenient in specific cases.
+	doc %EX - [1,2,3].has_no(2)  # false
+	doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(X.has_no(1))  # [ [100,200,300] ]
+	doc %RET - Bool
+	F has_no(container, element) element not in container
+
+	TEST [1,2,3].has_no(1).not()
+	TEST [1,2,3].has_no(10)
+
+}
+
+section "inheritance" {
+	doc Create a new type. Do not use directly.
+	doc %AUTO - type MyType2(MyType1)
+	F Type(t:Str, doc, ns, parent:Type) Type(t, doc, ns, [parent])
+
+	doc Create a new type. Do not use directly.
+	doc %AUTO - type MyType2([MyParent1, MyParent2, ...])
+	F Type(t:Str, doc, ns, parents:Arr) {
+		ret = Type(t, doc, ns)
+		l = parents.len()
+		for(i;l) {
+			ret.inherit(parents[i])
+		}
+		ret
+	}
+
+	TEST type T1; type T2(T1); T2() is T1
+}
+
 section "Basic Methods for Exception type" {
 	doc Initialize an Exception.
 	doc %RET - Exception with .backtrace and .message
@@ -24,13 +104,13 @@ section "Basic Methods for Exception type" {
 }
 
 section "Basic Exception subtypes" {
-	type NotImplemented; NotImplemented.inherit(Exception)
-	type ReadFail; ReadFail.inherit(Exception)
-	type RequireFail; RequireFail.inherit(Exception)
-	type MainFail; MainFail.inherit(Exception)
+	type NotImplemented(Exception)
+	type ReadFail(Exception)
+	type RequireFail(Exception)
+	type MainFail(Exception)
 
 	doc Represents error when converting program execution result to exit code
-	type ExitCodeFail; ExitCodeFail.inherit(Exception)
+	type ExitCodeFail(Exception)
 }
 
 section "Basic I/O" {
@@ -68,8 +148,7 @@ section "Block type and methods" {
 	type Block
 
 	doc %AUTO - block NAME { NAME.return(VAL) }
-	type ReturnFromBlock
-	ReturnFromBlock.inherit(Exception)
+	type ReturnFromBlock(Exception)
 
 	doc %STATUS - internal
 	F init(rfb: ReturnFromBlock, block, val) init(args())
@@ -150,12 +229,10 @@ doc %EX - # ... Exception of type AssertFail ...
 doc %EX - #
 doc %EX - # Note that the following is better than using assert():
 doc %EX - # not(x > 0) throws InvalidArgument('x must be greater than zero').set('x', x)
-type AssertFail
-AssertFail.inherit(Exception)
+type AssertFail(Exception)
 
 doc Represents an attempt to create an instance of an abstract type (not intended for instantiation).
-type InstantiatingAbstractType
-InstantiatingAbstractType.inherit(Exception)
+type InstantiatingAbstractType(Exception)
 
 doc IndexNotFound exception constructor
 doc %RET - IndexNotFound object with the given message, container and key fields
@@ -256,12 +333,10 @@ section "Parent types for built-in types" {
 	type Eachable
 
 		doc Eachable which each() calls the callback with one argument
-		type Eachable1
-		Eachable1.inherit(Eachable)
+		type Eachable1(Eachable)
 
 		doc Eachable which each() calls the callback with two arguments
-		type Eachable2
-		Eachable2.inherit(Eachable)
+		type Eachable2(Eachable)
 
 	Int.inherit(Eachable1)
 	Arr.inherit(Eachable1)
@@ -503,13 +578,11 @@ section "Result and friends - types" {
 
 		doc Successful computation
 		doc val - computed value
-		type Success
-		Success.inherit(Result)
+		type Success(Result)
 
 		doc Failed computation
 		doc val - exception
-		type Failure
-		Failure.inherit(Result)
+		type Failure(Result)
 
 }
 
@@ -522,14 +595,10 @@ section "=~ Matching" {
 
 			doc Successful match result
 			doc matches - Successful matches
-			type MatchSuccess
-			MatchSuccess.inherit(MatchResult)
-			MatchSuccess.inherit(Success)
+			type MatchSuccess([MatchResult, Success])
 
 			doc Unsucessfull match result
-			type MatchFailure
-			MatchFailure.inherit(MatchResult)
-			MatchFailure.inherit(Failure)
+			type MatchFailure([MatchResult, Failure])
 
 		doc Successful match constructor
 		doc %STATUS - deprecated
@@ -813,8 +882,7 @@ F partition(something:Eachable1, pattern=Bool.constructors) {
 TEST partition([1,10,2,20], X>=10) == [[10, 20], [1, 2]]
 TEST partition(["abc", "", "def", null]) == [["abc", "def"], ["", null]]
 
-type ElementNotFound
-ElementNotFound.inherit(LookupFail)
+type ElementNotFound(LookupFail)
 
 block u {
 	global first
@@ -956,8 +1024,7 @@ F reduce(something:Eachable1, start, f:Fun) {
 
 TEST [1,2,3].reduce(0, (+)) == 6
 
-type EmptyEachableFail
-EmptyEachableFail.inherit(InvalidArgument)
+type EmptyEachableFail(InvalidArgument)
 
 doc Combine items to a single value using the supplied binary function
 doc First f is applied to the first two elements of e
@@ -1135,8 +1202,7 @@ section "ArrLike" {
 	doc %EX - 	super(t)
 	doc %EX - 	...
 	doc %EX - }
-	type ArrLike
-	ArrLike.inherit(Eachable1)
+	type ArrLike(Eachable1)
 
 	F init(al:ArrLike) al.attrs().ArrLike = []
 
@@ -1209,8 +1275,7 @@ section "ArrLike" {
 
 section "AnyOf(ArrLike)" {
 	doc Should probably inherit from Set, not ArrLike.
-	type AnyOf
-	AnyOf.inherit(ArrLike)
+	type AnyOf(ArrLike)
 
 	F init(a:AnyOf, *alternatives) {
 		guard alternatives.len() > 1
@@ -1244,8 +1309,7 @@ section "AnyOf(ArrLike)" {
 
 section "AllOf(ArrLike)" {
 	doc Should probably inherit from Set, not ArrLike.
-	type AllOf
-	AllOf.inherit(ArrLike)
+	type AllOf(ArrLike)
 
 	F init(a:AllOf, *items) {
 		guard items.len() > 1
@@ -1267,8 +1331,7 @@ section "AllOf(ArrLike)" {
 section "HashLike" {
 	# TODO [doc]: examples in methods
 	doc Base type for user-defined hash-like types. This is a workaround: it's not possible currently no inherit from the built-in Hash type.
-	type HashLike
-	HashLike.inherit(Eachable2)
+	type HashLike(Eachable2)
 
 	doc Check whether k is in the HashLike
 	doc %RET - Bool
@@ -1368,8 +1431,7 @@ section "HashLike" {
 section "Set" {
 
 	doc Represents a set of items
-	type Set
-	Set.inherit(Eachable1)
+	type Set(Eachable1)
 
 	doc Initialize a set
 	F init(s:Set) {
@@ -1531,8 +1593,7 @@ section "Named Instances" {
 
 section "Hook" {
 	doc Hook is a simple pub-sub
-	type Hook
-	Hook.inherit(HashLike)
+	type Hook(HashLike)
 
 	doc Hook constructor.
 	doc %RET - Hook
@@ -1587,20 +1648,6 @@ doc %EX - Box.constructors.Arr()[0].Str().echo()  # Outputs: <NormalTypeConstruc
 F Str(ntc:NormalTypeConstructor) "<NormalTypeConstructor>"
 
 section "Type" {
-
-	doc Create a new type. Do not use directly.
-	doc %AUTO - type MyType2(MyType1)
-	F Type(t:Str, doc, ns, parent:Type) Type(t, doc, ns, [parent])
-
-	doc Create a new type. Do not use directly.
-	doc %AUTO - type MyType2([MyParent1, MyParent2, ...])
-	F Type(t:Str, doc, ns, parents:Arr) {
-		ret = Type(t, doc, ns)
-		parents.each(ret.inherit(X))
-		ret
-	}
-
-	TEST type T1; type T2(T1); T2() is T1
 
 	doc String representation of a type
 	doc %RET - "<Type NAME>"
@@ -1762,8 +1809,7 @@ F ~(x, t:Type) {
 
 # TODO: Investigate why type CError(Error) does not work at this point
 doc Base type for exceptions arising from errors returned by calling C functions
-type CError
-CError.inherit(Error)
+type CError(Error)
 
 doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
 F init(e:CError, errno:Int, message:Str) {
@@ -1777,8 +1823,7 @@ F init(e:CError, message:Str) super(e, c_errno(), message)
 
 
 doc Exception representing a failure to kill() a process
-type KillFail
-KillFail.inherit(CError)
+type KillFail(CError)
 
 # === Lock =======================================
 
@@ -1786,12 +1831,10 @@ doc Synchronization lock.
 type Lock
 
 doc Re-entrant synchronization lock. Same thread can re-acquire the lock.
-type ReentrantLock()
-ReentrantLock.inherit(Lock)
+type ReentrantLock(Lock)
 
 doc Failure to perform an operation on a lock.
-type LockFail
-LockFail.inherit(Exception)
+type LockFail(Exception)
 
 doc Initialize LockFail exception.
 F init(e:LockFail, op:Str, code:Int, msg:Str) init(args())
@@ -1869,8 +1912,7 @@ section "Range" {
 		NumRange.inherit(Eachable1)
 
 	doc A range with start and end expressed as predicates.
-	type PredRange
-		PredRange.inherit(Range)
+	type PredRange(Range)
 
 	doc Range constructor. Throws InstantiatingAbstractType if r is exactly of type Range (not a sub-type).
 	F init(r:Range, start, end, include_start=true, include_end=false, step=1) {
@@ -1979,64 +2021,6 @@ section "Range" {
 # TODO: think about multi-valued results (say 10 hosts, 8 succeeded and 2 failed)
 # TODO: think about Argv cooperation. Maybe Failure is NoData and Success is FullBox?
 # === Syntactic sugar ============================
-
-doc Boolean negation for non-boolean values. Converts to boolean first.
-doc %RET - Bool
-F not(x) { guard (x is Bool) == false; x.Bool().not() }
-
-doc Inequality operator
-doc %EX - 1 !=2  # true, same as not(1==2)
-F !=(a,b) not(a==b)
-
-doc Non-sameness operator
-doc %EX - h1 = {"a": 1}
-doc %EX - h2 = {"a": 1}
-doc %EX - h1 !== h2  # true, same as not(h1===h2)
-doc %EX - h1 == h2   # true
-F !==(a,b) not(a===b)
-
-TEST 1 != 2
-TEST (1 != 1) == false
-
-TEST 1 !== 2
-TEST (1 !== 1) == false
-
-
-doc "not in" operator. Exactly same as "not(a in b)"
-doc %EX - 10 not in [1,2]  # true
-doc %EX - 1  not in [1,2]  # false
-F 'not in'(a,b) not(a in b)
-
-TEST (1 not in [1,2,3]) == false
-TEST 10 not in [1,2,3]
-
-doc "is not" operator. Exactly same as "not(a is b)".
-doc %EX - 1    is not Null  # true
-doc %EX - null is not Null  # false
-F 'is not'(a,b) not(a is b)
-
-TEST 1 is not Null
-TEST (null is not Null) == false
-
-
-doc Exactly same as "element in container". It's just more convenient in specific cases.
-doc %EX - [1,2,3].has(2)  # true
-doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(X.has(1))  # [ [1,2,3], [1,20,30] ]
-doc %RET - Bool
-F has(container, element) element in container
-
-TEST [1,2,3].has(1)
-TEST [1,2,3].has(10).not()
-
-doc Exactly same as "element not in container". It's just more convenient in specific cases.
-doc %EX - [1,2,3].has_no(2)  # false
-doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(X.has_no(1))  # [ [100,200,300] ]
-doc %RET - Bool
-F has_no(container, element) element not in container
-
-TEST [1,2,3].has_no(1).not()
-TEST [1,2,3].has_no(10)
-
 
 doc Defines collector { ... collect(...) ... } behaviour for arrays
 doc a - Initial array
