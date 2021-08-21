@@ -2353,7 +2353,6 @@ F each_idx_val(e:Eachable1, cb:Fun) {
 	})
 }
 
-# TODO: map_idx_val
 doc Iterates over the elements of arr, passing each in turn to cb along with index and args: cb(INDEX, ITEM)
 doc %RET - arr
 doc %EX - [10,20,30].each_idx_val(F(idx, val) echo("Element #$idx equals to $val"))
@@ -2763,20 +2762,6 @@ block _ {
 		ret = e[0]
 		e.each(F(elt) if f(elt, ret) { ret = elt })
 		ret
-	}
-
-	F most_by_cb(e:Eachable1, f:Fun, cb:Fun) {
-		guard e
-		ret = e[0]
-		ret_cb = cb(ret)
-		e.each(F(elt) {
-			elt_cb = cb(elt)
-			if f(elt_cb, ret_cb) {
-				ret = elt
-				ret_cb = elt_cb
-			}
-		})
-		ret_cb
 	}
 
 	doc Find minimal element under (<)

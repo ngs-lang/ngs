@@ -17,6 +17,8 @@
 * `=~(x, Hash)` now supports patterns for keys
 * Documentation generation now handles well `ENV` as default value for a parameter.
 * Reorganize stdlib to eleminate multiple `inherit()` calls
+* Remove unused `most_by_cb()`
+* Booleans now compare correctly when used as `Hash` keys
 
 ## 2021-06-04 Version 0.2.12
 
