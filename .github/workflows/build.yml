@@ -125,25 +125,31 @@ jobs:
     strategy:
       matrix:
         name: [
-            debian-stable-gcc-7,
-            debian-stable-gcc-8,
-            debian-stable-clang-7,
+            debian-stable-gcc-9,
+            debian-stable-gcc-10,
+            debian-stable-clang-9,
+            debian-stable-clang-11,
         ]
         include:
-          - name: debian-stable-gcc-7
+          - name: debian-stable-gcc-9
             container: debian:stable
             compiler: gcc
-            version: "7"
+            version: "9"
 
-          - name: debian-stable-gcc-8
+          - name: debian-stable-gcc-10
             container: debian:stable
             compiler: gcc
-            version: "8"
+            version: "10"
 
-          - name: debian-stable-clang-7
+          - name: debian-stable-clang-9
             container: debian:stable
             compiler: clang
-            version: "7"
+            version: "9"
+
+          - name: debian-stable-clang-11
+            container: debian:stable
+            compiler: clang
+            version: "11"
 
     steps:
       - uses: actions/checkout@v2
