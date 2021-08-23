@@ -821,11 +821,9 @@ doc %STATUS - experimental
 doc %EX - Set([1,2]).mapo(X*2)  # Set([2,4])
 F mapo(e:Eachable1, mapper:Fun) {
 	t = typeof(e)
-	ret = t()
-	e.each(F(elt) {
-		ret.push(mapper(elt))
-	})
-	ret
+	collector/t() {
+		e.each(collect + mapper)
+	}
 }
 
 TEST Set([1,2]).mapo(X*2) == Set([2,4])
