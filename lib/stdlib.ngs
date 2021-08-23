@@ -527,6 +527,7 @@ section "Functional utilities" {
 	doc Returns partially-applied function
 	doc f - The base function
 	doc Xunderscore_unsupportedXbind_args - The arguments to partial apply (bind the function to)
+	doc %STATUS - deprecated
 	F partial(f:Fun, *bind_args)
 		F(*args) f(*bind_args, *args)
 
@@ -534,6 +535,7 @@ section "Functional utilities" {
 
 
 	doc Same as partial() but the bound arguments are last ones
+	doc %STATUS - deprecated
 	F partial_tail(f:Fun, *bind_args)
 		F(*args) f(*args, *bind_args)
 
