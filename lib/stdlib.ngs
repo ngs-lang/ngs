@@ -875,7 +875,7 @@ doc %EX - partition([1,10,2,20], X>=10)  # [[10, 20], [1, 2]]
 F partition(something:Eachable1, pattern=Bool.constructors) {
 	yes = []
 	no = []
-	something.each(F(elt) (if elt =~ pattern yes else no).push(elt))
+	something.each(F(elt) (if elt =~ pattern then yes else no).push(elt))
 	[yes, no]
 }
 
