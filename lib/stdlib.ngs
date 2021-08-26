@@ -568,6 +568,59 @@ section "Convenience methods" {
 	TEST type T; t=T().set(a=1, b=2); t.a == 1 and t.b == 2
 }
 
+section "NormalTypeInstance" {
+	doc String representation of normal type instance i
+	doc Normal type is a user defined type. In addition some types defined by NGS are also normal types.
+	doc %EX - {
+	doc %EX -   type T
+	doc %EX -   # nti - Normal type instance
+	doc %EX -   nti = T()
+	doc %EX -   nti.a = 1
+	doc %EX -   nti.b = 2
+	doc %EX -   echo(Str(nti)) # <T a=1 b=2>
+	doc %EX - }
+	doc %RET - "<TYPE_NAME field1=val1 field2=val2 ...>"
+	F Str(i:NormalTypeInstance) {
+		guard i is not Set  # Temporary workaround. Str(Set) should come after Str(NormalTypeInstance)
+		h = Hash(i)
+		fields_dots = if len(h) > 10 {
+			h .= limit(10)
+			' ...'
+		} else {
+			''
+		}
+		# TODO limit key and value lengths
+		fields = ' ' +? h.Strs().join(' ')
+		"<${i.typeof().name}${fields}${fields_dots}>"
+	}
+
+	TEST type T; t=T(); Str(t) == '<T>'
+	TEST type T; t=T(); t.a=1; t.b=2; Str(t) == '<T a=1 b=2>'
+
+	doc Set object field if it's not already set
+	doc %EX - my_something.dflt(k, []).push(elt)
+	doc %RET - Field value, the already-existed or new.
+	F dflt(i:NormalTypeInstance, k, v) {
+		if k not in i {
+			i.(k) = v
+		}
+		i.(k)
+	}
+
+	TEST type T; t=T(); t.dflt("a", 1); t.a == 1
+	TEST type T; t=T(); t.a = 2; t.dflt("a", 1); t.a == 2
+
+	doc Make shallow copy of an object
+	F copy(nti:NormalTypeInstance) {
+		t = typeof(nti)
+		ret = t()
+		nti.Hash().each(ret.set(X, Y))
+		ret
+	}
+
+	TEST type T; t=T(); t.x=1; t2=t.copy(); t2.x==1
+}
+
 section "Hash" {
 	doc %RET - h
 	F Hash(h:Hash) h
@@ -1493,12 +1546,6 @@ section "Set" {
 	TEST Set([1,2]) <= Set([1,2,3])
 	TEST not(Set([1,2,4]) <= Set([1,2,3]))
 
-	F copy(s:Set) {
-		ret = Set()
-		s.each(ret.push(X))
-		ret
-	}
-
 	doc Inspect Set
 	doc %RET - Lines
 	F inspect(a:Set) Lines(["Set of size ${a.len()}"] + a.map({"  ${SafeStr(A)}"}).digest(16, '  (...)'))
@@ -1508,6 +1555,10 @@ section "Set" {
 		body(F(elt) s.push(elt))
 		s
 	}
+
+	doc Make shallow copy of a Set
+	F copy(s:Set) collector/Set() s.each(collect)
+	TEST s1 = Set([1,2]); s2 = s1.copy(); s1.push(3); s2.Arr() == [1,2]
 
 }
 
@@ -1708,49 +1759,6 @@ section "Type" {
 	TEST Eachable.is_subtype(Lines) == false
 }
 
-# === NormalType =================================
-
-doc String representation of normal type instance i
-doc Normal type is a user defined type. In addition some types defined by NGS are also normal types.
-doc %EX - {
-doc %EX -   type T
-doc %EX -   # nti - Normal type instance
-doc %EX -   nti = T()
-doc %EX -   nti.a = 1
-doc %EX -   nti.b = 2
-doc %EX -   echo(Str(nti)) # <T a=1 b=2>
-doc %EX - }
-doc %RET - "<TYPE_NAME field1=val1 field2=val2 ...>"
-F Str(i:NormalTypeInstance) {
-	guard i is not Set  # Temporary workaround. Str(Set) should come after Str(NormalTypeInstance)
-	h = Hash(i)
-	fields_dots = if len(h) > 10 {
-		h .= limit(10)
-		' ...'
-	} else {
-		''
-	}
-	# TODO limit key and value lengths
-	fields = ' ' +? h.Strs().join(' ')
-	"<${i.typeof().name}${fields}${fields_dots}>"
-}
-
-TEST type T; t=T(); Str(t) == '<T>'
-TEST type T; t=T(); t.a=1; t.b=2; Str(t) == '<T a=1 b=2>'
-
-doc Set object field if it's not already set
-doc %EX - my_something.dflt(k, []).push(elt)
-doc %RET - Field value, the already-existed or new.
-F dflt(i:NormalTypeInstance, k, v) {
-	if k not in i {
-		i.(k) = v
-	}
-	i.(k)
-}
-
-TEST type T; t=T(); t.dflt("a", 1); t.a == 1
-TEST type T; t=T(); t.a = 2; t.dflt("a", 1); t.a == 2
-
 doc Set a field on all elements if it's not already set
 doc e - Eachable1 with elements of type NormalTypeInstance or Hash
 doc %EX - my_items.dflt("source", "(unknown)")
@@ -1784,16 +1792,6 @@ doc Set a key if it's not already set
 doc %EX - mysomething.dflt(k, []).push(elt)
 doc %RET - Key value, the already-existed or new.
 F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
-
-doc Make shallow copy of an object
-F copy(nti:NormalTypeInstance) {
-	t = typeof(nti)
-	ret = t()
-	nti.Hash().each(ret.set(X, Y))
-	ret
-}
-
-TEST type T; t=T(); t.x=1; t2=t.copy(); t2.x==1
 
 doc Check whether x is of type t
 doc %RET - MatchResult
