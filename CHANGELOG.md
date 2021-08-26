@@ -20,6 +20,11 @@
 * Reorganize stdlib to eleminate multiple `inherit()` calls
 * Remove unused `most_by_cb()`
 * Booleans now compare correctly when used as `Hash` keys
+* Deprecate `without(Eachable1, Any)`
+
+### Breaking changes
+
+* Remove deprecated `nofail:` option
 
 ## 2021-06-04 Version 0.2.12
 

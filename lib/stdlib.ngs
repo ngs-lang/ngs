@@ -2229,7 +2229,8 @@ F in(x, arr:Arr) {
 	false
 }
 
-# Tested by has() tests
+TEST 1 in [1,2]
+TEST not(10 in [1,2])
 
 doc Arrays equality test.
 doc True if arrays are of the same length and all elements are equal (==)
@@ -2410,10 +2411,12 @@ F map(arr:Arr, n:Int, mapper:Fun) collector arr.each(n, collect + mapper)
 # Tested by ~(s:Str, r:RegExp)
 
 doc Filter out all occurrences of specific value
+doc Deprecated. Use reject().
 doc e - items to filter
 doc without_elt - The value to filter out
 doc %RET - Arr
 doc %EX - [1,2,3,2].without(2)  # [1,3]
+doc %STATUS - deprecated
 F without(e:Eachable1, without_elt) e.filter(X != without_elt)
 
 TEST [1,2,3,2].without(2) == [1,3]
@@ -3281,19 +3284,23 @@ F JsonData(h:Hash) h.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
 
 # --- Misc ---
 
-doc Filter out specific key
+doc Filter out specific key.
+doc Deprecated. Use rejectk().
 doc e - Source
 doc without_k - The key to filter out
 doc %EX - {'a': 1, 'b': 2, 'c': 3}.without('a')  # {'b': 2, 'c': 3}
+doc %STATUS - deprecated
 F without(e:Eachable2, without_k) e.filter(X != without_k)
 
 TEST {'a': 1, 'b': 2, 'c': 3}.without('a') == {'b': 2, 'c': 3}
 
-doc Filter out specific key-value pair
+doc Filter out specific key-value pair.
+doc Deprecated. Use reject().
 doc e - Source
 doc without_k - The key to filter out
 doc without_v - The value to filter out
 doc %EX - {'a': 1, 'b': 2, 'c': 3}.without('a', 1).without('b', 22)  # {'b': 2, 'c': 3}
+doc %STATUS - deprecated
 F without(e:Eachable2, without_k, without_v)
 	e.reject(F(k, v) (k == without_k) and (v == without_v))
 
@@ -4941,7 +4948,7 @@ section "Path" {
 	doc %EX - mydir="tmp/"
 	doc %EX - mydir / "myfile"  # "tmp/myfile"
 	F /(a:Str, b:Str) {
-		guard a and (a[-1] == STDLIB_PATH_SEP)
+		guard a.ends_with(STDLIB_PATH_SEP)
 		"$a$b"
 	}
 
@@ -5098,13 +5105,12 @@ section "Path" {
 
 # === Commands and processes (WIP) ===============
 
-doc EXPERIMENTAL!
 doc %EX - for p in %[ls base64 dd] assert(Program(p))
 type Program
 type ProcessesPipeline
 type ProcessRedir
 
-doc EXPERIMENTAL!
+doc External Program
 F init(p:Program, name:Str) init(args())
 
 # TODO: Check whether the file is executable?
@@ -5228,6 +5234,9 @@ F write(fd:Int, s:Str) {
 	fd
 }
 
+TEST write(1, "W1") == 1
+TEST write(10, "W10") THROWS WriteFail
+
 doc Write a string followed by newline character to a file descriptor.
 doc Throws WriteFail on failure.
 doc %RET - null
@@ -5236,9 +5245,6 @@ F echo(fd:Int, s:Str) {
 	write(fd, "${s}${STDLIB_EOL}")
 	null
 }
-
-TEST write(1, "W1") == 1
-TEST write(10, "W10") THROWS WriteFail
 
 type TtyCheckFail(CError)
 
@@ -5525,16 +5531,6 @@ block _ {
 	F finished_ok(p:Process) {
 		debug("finished_ok", "finished_ok() - default method")
 		p.exit_code == 0
-	}
-
-	doc Decide whether a process finished normally: OK for any process that has "nofail:" option
-	doc %EX - $(nofail: ls no-such-file)
-	doc %STATUS - deprecated
-	F finished_ok(p:Process) {
-		guard p.command.options.get('nofail')
-		debug("finished_ok", "finished_ok() - nofail method")
-		warn("Using deprecated nofail: option, use ok: option instead (when running ${p.command.argv})")
-		true
 	}
 
 	doc %STATUS - internal
@@ -6016,15 +6012,15 @@ F '$()'(cp:CommandsPipeline) {
 
 	}
 
-	# Validation - start
-	for cmd in cp.commands {
-		for r in cmd.redirects {
-			if r.datum == true {
-				r.marker != '>' throws InvalidArgument("Redirection to 'true' for collecting output can only be done with '>' redirection syntax, not '${r.marker}'").set('cp', cp)
+	section "validate redirects" {
+		for cmd in cp.commands {
+			for r in cmd.redirects {
+				if r.datum == true {
+					r.marker != '>' throws InvalidArgument("Redirection to 'true' for collecting output can only be done with '>' redirection syntax, not '${r.marker}'").set('cp', cp)
+				}
 			}
 		}
 	}
-	# Validation - end
 
 	pp = ProcessesPipeline(cp)
 	pp.processes = cp.commands.map(F(cmd) {
