@@ -10,8 +10,7 @@ ns {
 		FullBox(x)
 	}
 
-	F tr(x:Eachable1, pa:PatternAction, tc:TrContext) {
-		guard x !~ AnyOf(Int, Str)
+	F tr(x:Eachable, pa:PatternAction, tc:TrContext, my_each:Fun, my_result:Fun) {
 
 		if (=~)(x, pa.pattern, tc) {
 			return pa::action(x, tc).FullBox()
@@ -20,37 +19,24 @@ ns {
 		t = typeof(x)
 		ret = t()  # XXX: Assumption about existence of the constructor
 		tc.deeper({
-			x.each_idx_val(F(idx, val) {
-				t = tr(val, pa, tc.set_last_path_element(idx))
+			x.my_each(F(idx_or_key, val) {
+				t = tr(val, pa, tc.set_last_path_element(idx_or_key))
 				ematch t {
-					FullBox ret.push(t.get())
+					FullBox my_result(ret, idx_or_key, t.get())
 					EmptyBox null # do nothing
 				}
 			})
 		})
-
 		FullBox(ret)
 	}
 
+	F tr(x:Eachable1, pa:PatternAction, tc:TrContext) {
+		guard x !~ AnyOf(Int, Str)
+		tr(x, pa, tc, each_idx_val, F(ret, idx, val) ret.push(val))
+	}
+
 	F tr(x:Eachable2, pa:PatternAction, tc:TrContext) {
-
-		if (=~)(x, pa.pattern, tc) {
-			return pa::action(x, tc).FullBox()
-		}
-
-		t = typeof(x)
-		ret = t()  # XXX: Assumption about existence of the constructor
-		tc.deeper({
-			x.each(F(key, val) {
-				t = tr(val, pa, tc.set_last_path_element(key))
-				ematch t {
-					FullBox ret[key] = t.get()
-					EmptyBox null # do nothing
-				}
-			})
-		})
-
-		FullBox(ret)
+		tr(x, pa, tc, each, F(ret, key, val) ret[key] = val)
 	}
 
 
