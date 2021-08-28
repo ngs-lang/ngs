@@ -641,6 +641,14 @@ section "Result and friends - types" {
 
 }
 
+section "Literal" {
+	doc Convey that the value should be used literally
+	type Lit
+	# TODO: Disable defaut constructor
+	F init(l:Lit, val) l.val = val
+}
+
+
 
 section "=~ Matching" {
 
@@ -813,6 +821,10 @@ section "=~ Matching" {
 	doc Check whether x is of type t
 	doc %RET - x is t
 	F =~(x, t:Type, _mc:MatchContext) x is t
+
+	doc Check whether x is the literal value (using ==)
+	F =~(x, l:Lit, _mc:MatchContext) x == l
+	TEST 1 !~ Lit(Int)
 
 	section "Repeat" {
 

@@ -5,15 +5,15 @@ ns {
 
 	F tr(x, pa:PatternAction, tc:TrContext) {
 		if (=~)(x, pa.pattern, tc) {
-			return pa::action(x, tc).FullBox()
+			return pa::action(x, tc).Lit()
 		}
-		FullBox(x)
+		Lit(x)
 	}
 
 	F tr(x:Eachable, pa:PatternAction, tc:TrContext, my_each:Fun, my_result:Fun) {
 
 		if (=~)(x, pa.pattern, tc) {
-			return pa::action(x, tc).FullBox()
+			return pa::action(x, tc).Lit()
 		}
 
 		t = typeof(x)
@@ -22,12 +22,12 @@ ns {
 			x.my_each(F(idx_or_key, val) {
 				t = tr(val, pa, tc.set_last_path_element(idx_or_key))
 				ematch t {
-					FullBox my_result(ret, idx_or_key, t.get())
+					Lit my_result(ret, idx_or_key, t.val)
 					EmptyBox null # do nothing
 				}
 			})
 		})
-		FullBox(ret)
+		Lit(ret)
 	}
 
 	F tr(x:Eachable1, pa:PatternAction, tc:TrContext) {
@@ -43,8 +43,8 @@ ns {
 	F tr(x, transformation) {
 		tc = TrContext().set(_root=x, transformation=transformation)
 		result = tr(x, transformation, tc)
-		assert(result, FullBox, "Transformation failed, top level must return a value")
-		result.get()
+		assert(result, Lit, "Transformation failed, top level must return a value")
+		result.val
 	}
 
 	TEST [1,2,3].tr(Int -> (X+1)) == [2,3,4]
