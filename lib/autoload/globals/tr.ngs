@@ -61,14 +61,7 @@ ns {
 		result.get()
 	}
 
-	global reject
-	doc Skips given item in output
-	doc %EX Int -> reject
-	F reject(x, tc:TrContext) EmptyBox()
-
-	global descend
-	F descend(tc:TrContext) {
-
-	}
+	TEST [1,2,3].tr(Int -> (X+1)) == [2,3,4]
+	TEST {"a": [1,2,3]}.tr(Int -> (X+1)) == {"a": [2,3,4]}
 
 }
