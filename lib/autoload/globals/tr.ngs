@@ -1,11 +1,39 @@
 ns {
+	# EXPERIMENTAL!
+
 	global tr, init
 
+	# TODO: solve: tr([1,2,[3,4]], Arr -> { ["start"] + A + ["end"] } ) -- it (or something like it) should work recursively
+	# Maybe: tr([1,2,[3,4]], Arr -> { ["start", TrChilren()???, "end"] } )
+
+	global TrContext
 	type TrContext(MatchContext)
+
+	global TrCommand
+	type TrCommand
+
+		global TrSkip
+		type TrSkip(TrCommand)
+
+		# Just checking. Not sure it's needed.
+		# tr; ["a", 1].tr(Int -> TrSplice([3,4]))  # ["a", 3, 4]
+		global TrSplice
+		type TrSplice(TrCommand)
+
+		F init(s:TrSplice, val) { s.val = val }
+	
+	F init(cmd:TrCommand, x, ctx:TrContext) {
+		n = cmd.typeof().name
+		throw InvalidArgument("Use ${n}(...) instead of ${n}")
+	}
+
+	F lit_or_cmd(x) Lit(x)
+	F lit_or_cmd(x:TrCommand) x
 
 	F tr(x, pa:PatternAction, tc:TrContext) {
 		if (=~)(x, pa.pattern, tc) {
-			return pa::action(x, tc).Lit()
+			pa.action is TrCommand returns pa.action
+			return pa::action(x, tc).lit_or_cmd()
 		}
 		Lit(x)
 	}
@@ -13,7 +41,7 @@ ns {
 	F tr(x:Eachable, pa:PatternAction, tc:TrContext, my_each:Fun, my_result:Fun) {
 
 		if (=~)(x, pa.pattern, tc) {
-			return pa::action(x, tc).Lit()
+			return pa::action(x, tc).lit_or_cmd()
 		}
 
 		t = typeof(x)
@@ -23,7 +51,10 @@ ns {
 				t = tr(val, pa, tc.set_last_path_element(idx_or_key))
 				ematch t {
 					Lit my_result(ret, idx_or_key, t.val)
-					EmptyBox null # do nothing
+					TrSplice {
+						t.val.each(my_result(ret, idx_or_key, X))
+					}
+					TrSkip null # do nothing
 				}
 			})
 		})
