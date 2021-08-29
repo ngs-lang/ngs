@@ -12,6 +12,7 @@
 * Add `exec()` methods - Issue #459
 * `partial()` is now deprecated because it's not used
 * Add `Lit` type to convey literal value, devoid of any "magical" meaning
+* Add `collector(Stats, Fun)`
 
 ### Fixes and improvements
 

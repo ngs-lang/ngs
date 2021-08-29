@@ -4476,6 +4476,14 @@ section "Stats" {
 
 	doc Convert Stats into JSON compatible data structure - object
 	F JsonData(s:Stats) s.Hash().JsonData()
+
+	F collector(s:Stats, body:Fun) {
+		body(push(s, X))
+		s
+	}
+
+	TEST (collector/Stats() { collect("a"); collect("a"); collect("b")}).Hash() == {"a": 2, "b": 1}
+	TEST Stats().collector(F(c) {c("a"); c("a"); c("b")}).Hash() == {"a": 2, "b": 1}
 }
 
 section "Thread" block _ {
