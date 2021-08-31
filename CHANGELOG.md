@@ -13,6 +13,7 @@
 * `partial()` is now deprecated because it's not used
 * Add `Lit` type to convey literal value, devoid of any "magical" meaning
 * Add `collector(Stats, Fun)`
+* `debug(Str, Fun)` is now supported
 
 ### Fixes and improvements
 

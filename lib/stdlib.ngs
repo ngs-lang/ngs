@@ -4740,19 +4740,28 @@ section "Logging and status reporting" {
 		echo(stdlib_error_fd, "[LOG ${Time()}] $s")
 	}
 
-	doc Same as debug('default', s)
-	F debug(s:Str) debug('default', s)
+	section "Debug" {
 
-	# TODO: more efficient
-	doc Debug to standard error.
-	doc "DEBUG" environment variable must be non-empty string to activate. Otherwise nothing is outputted.
-	doc TODO: Not output thread ID if there is only one thread.
-	doc TODO: Timestamps? Timestamps acquiring might not be safe after fork before exec.
-	F debug(facility:Str, s:Str) {
-		'DEBUG' not in ENV returns
-		if ENV.DEBUG.split(',').any(AnyOf(facility, '*')) {
-			echo(stdlib_error_fd, "[DEBUG $facility ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] $s")
+		DEBUG = ENV.get('DEBUG', '').split(',').filter().Set()
+
+		doc Same as debug('default', str_or_producer)
+		F debug(str_or_producer) debug('default', str_or_producer)
+
+		doc Debug to standard error.
+		doc "DEBUG" environment variable must be non-empty string to activate. Otherwise nothing is outputted.
+		doc TODO: Exclude thread ID if there is only one thread.
+		doc TODO: Timestamps? Timestamps acquiring might not be safe after fork before exec.
+		F debug(facility:Str, str_or_producer) {
+			if facility in DEBUG or '*' in DEBUG {
+				s = if str_or_producer is Fun {
+					str_or_producer()
+				} else {
+					str_or_producer
+				}
+				echo(stdlib_error_fd, "[DEBUG $facility ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] $s")
+			}
 		}
+
 	}
 
 	doc Write error message to standard error.
