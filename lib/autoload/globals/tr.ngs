@@ -1,11 +1,10 @@
 ns {
 	# EXPERIMENTAL!
 
-	global tr, init
+	global tr, init, (=~)
 
-	# TODO: solve: tr([1,2,[3,4]], Arr -> { ["start"] + A + ["end"] } ) -- it (or something like it) should work recursively
-	# Maybe: tr([1,2,[3,4]], Arr -> { ["start", TrChilren()???, "end"] } )
-
+	# Examples:
+	# tr; tr([1,2,[3,4]], TrAfter(Arr) -> { ["start"] + A + ["end"] } )
 	# tr; {"some": "resource", "extension": [{"url": "x", "something": "y"}]}.tr({"url": "x"} -> TrSkip()).tr([] -> TrSkip())
 
 	global TrContext
@@ -24,12 +23,13 @@ ns {
 
 		F init(s:TrSplice, val) { s.val = val }
 
+	# Open issue: the match is on the output or the original?
+	# Temp decision: on the output
 	global TrAfter
-	type TrAfter
-		F init(tra:TrAfter, pattern) { tra.pattern = pattern }
-		F =~(x, tra:TrAfter, ctx:TrContext) {
-			false
-		}
+	type TrAfter()
+		F init(ta:TrAfter) throw InvalidArgument("init(TrAfter) - missing the pattern argument")
+		F init(ta:TrAfter, pattern) ta.pattern = pattern
+		F =~(x, ta:TrAfter, _tc:TrContext) false
 
 	F init(cmd:TrCommand, x, ctx:TrContext) {
 		n = cmd.typeof().name
@@ -74,6 +74,14 @@ ns {
 				}
 			})
 		})
+
+		# Where else TrAfter should be?
+		if pa.pattern is TrAfter {
+			if (=~)(ret, pa.pattern.pattern, tc) {
+				return pa::action(ret, tc).lit_or_cmd()
+			}
+		}
+
 		Lit(ret)
 	}
 
@@ -96,5 +104,6 @@ ns {
 
 	TEST [1,2,3].tr(Int -> (X+1)) == [2,3,4]
 	TEST {"a": [1,2,3]}.tr(Int -> (X+1)) == {"a": [2,3,4]}
+	TEST tr; tr([1,2,[3,4]], TrAfter(Arr) -> { ["start"] + A + ["end"] } ) == ["start", 1, 2, ["start", 3, 4, "end"], "end"]
 
 }
