@@ -6,6 +6,8 @@ ns {
 	# TODO: solve: tr([1,2,[3,4]], Arr -> { ["start"] + A + ["end"] } ) -- it (or something like it) should work recursively
 	# Maybe: tr([1,2,[3,4]], Arr -> { ["start", TrChilren()???, "end"] } )
 
+	# tr; {"some": "resource", "extension": [{"url": "x", "something": "y"}]}.tr({"url": "x"} -> TrSkip()).tr([] -> TrSkip())
+
 	global TrContext
 	type TrContext(MatchContext)
 
@@ -21,7 +23,14 @@ ns {
 		type TrSplice(TrCommand)
 
 		F init(s:TrSplice, val) { s.val = val }
-	
+
+	global TrAfter
+	type TrAfter
+		F init(tra:TrAfter, pattern) { tra.pattern = pattern }
+		F =~(x, tra:TrAfter, ctx:TrContext) {
+			false
+		}
+
 	F init(cmd:TrCommand, x, ctx:TrContext) {
 		n = cmd.typeof().name
 		throw InvalidArgument("Use ${n}(...) instead of ${n}")
@@ -31,6 +40,9 @@ ns {
 	F lit_or_cmd(x:TrCommand) x
 
 	F tr(x, pa:PatternAction, tc:TrContext) {
+
+		debug("tr", {"x:Any - ${x}"})
+
 		if (=~)(x, pa.pattern, tc) {
 			pa.action is TrCommand returns pa.action
 			return pa::action(x, tc).lit_or_cmd()
@@ -40,7 +52,10 @@ ns {
 
 	F tr(x:Eachable, pa:PatternAction, tc:TrContext, my_each:Fun, my_result:Fun) {
 
+		debug("tr", {"x:Eachable - ${x}"})
+
 		if (=~)(x, pa.pattern, tc) {
+			pa.action is TrCommand returns pa.action  # not sure
 			return pa::action(x, tc).lit_or_cmd()
 		}
 
@@ -48,6 +63,7 @@ ns {
 		ret = t()  # XXX: Assumption about existence of the constructor
 		tc.deeper({
 			x.my_each(F(idx_or_key, val) {
+				debug("tr", {"each(${idx_or_key},${val}}"})
 				t = tr(val, pa, tc.set_last_path_element(idx_or_key))
 				ematch t {
 					Lit my_result(ret, idx_or_key, t.val)
