@@ -1,10 +1,10 @@
 ns {
 	# EXPERIMENTAL!
 
-	global tr, init
+	global tr, init, (=~)
 
 	# TODO: solve: tr([1,2,[3,4]], Arr -> { ["start"] + A + ["end"] } ) -- it (or something like it) should work recursively
-	# Maybe: tr([1,2,[3,4]], Arr -> { ["start", TrChilren()???, "end"] } )
+	# Maybe: tr; tr([1,2,[3,4]], TrAfter(Arr) -> { ["start"] + A + ["end"] } )
 
 	global TrContext
 	type TrContext(MatchContext)
@@ -22,6 +22,14 @@ ns {
 
 		F init(s:TrSplice, val) { s.val = val }
 	
+	# Open issue: the match is on the output or the original?
+	# Temp decision: on the output
+	global TrAfter
+	type TrAfter()
+		F init(ta:TrAfter) throw InvalidArgument("init(TrAfter) - missing the pattern argument")
+		F init(ta:TrAfter, pattern) ta.pattern = pattern
+		F =~(x, ta:TrAfter, _tc:TrContext) false
+
 	F init(cmd:TrCommand, x, ctx:TrContext) {
 		n = cmd.typeof().name
 		throw InvalidArgument("Use ${n}(...) instead of ${n}")
@@ -58,6 +66,14 @@ ns {
 				}
 			})
 		})
+
+		# Where else TrAfter should be?
+		if pa.pattern is TrAfter {
+			if (=~)(ret, pa.pattern.pattern, tc) {
+				return pa::action(ret, tc).lit_or_cmd()
+			}
+		}
+
 		Lit(ret)
 	}
 
