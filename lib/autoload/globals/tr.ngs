@@ -96,6 +96,7 @@ ns {
 
 
 	F tr(x, transformation) {
+		warn("Using experimental feature - tr()")
 		tc = TrContext().set(_root=x, transformation=transformation)
 		result = tr(x, transformation, tc)
 		assert(result, Lit, "Transformation failed, top level must return a value")
