@@ -2,7 +2,7 @@ ns {
 	# EXPERIMENTAL!
 	# For examples, see tests in the end of this file
 
-	global tr, init, (=~), descend
+	global tr, init, (=~), descend, skip
 
 	global TrContext
 	type TrContext(MatchContext)
@@ -10,28 +10,19 @@ ns {
 			super(ctx, root)
 			ctx._transformation = transformation
 			ctx._cur = null # current item being processed by tr(), used by descend(TrContext)
+			ctx._cmd = null
 		}
 
-	global TrActionResult
-	type TrActionResult
-		Lit.inherit(TrActionResult)
+	type TrCommand
 
-	global TrCommand
-	type TrCommand(TrActionResult)
-
-		global TrSkip
+		doc Implementation detail of skip(TrContext)
 		type TrSkip(TrCommand)
 
-		global TrNoMatch
-		type TrNoMatch(TrCommand)
 
 	F init(cmd:TrCommand, x, ctx:TrContext) {
 		n = cmd.typeof().name
 		throw InvalidArgument("Use ${n}(...) instead of ${n}")
 	}
-
-	F TrActionResult(x) Lit(x)
-	F TrActionResult(x:TrActionResult) x
 
 	F descend(tc:TrContext, my_each:Fun, my_result:Fun) {
 		debug("tr", {"descend::start ${tc._path}"})
@@ -65,13 +56,21 @@ ns {
 		descend(tc, each, F(ret, key, val) ret[key] = val)
 	}
 
+	F skip(tc:TrContext) tc._cmd = TrSkip()
+
+	doc Implementation detail of tr()
+	type TrNoMatch
+
 	F tr(x, pa:PatternAction, tc:TrContext) {
 
 		debug("tr", {"x:Any - ${x}"})
 
 		if (=~)(x, pa.pattern, tc) {
-			pa.action is TrCommand returns pa.action
-			return tc.deeper({'_cur': x}, { pa::action(x, tc).TrActionResult() })
+			return tc.deeper({'_cur': x, '_cmd': null}, {
+				ret = pa::action(x, tc)
+				tc._cmd is not Null returns tc._cmd
+				Lit(ret)
+			})
 		}
 		TrNoMatch()
 	}
@@ -83,13 +82,13 @@ ns {
 				b.return(result)
 			}
 		})
-		# TODO: Throw an error?
+		throw InvalidArgument("None of the transformations matched").set(transformation=transformation)
 	}
 
 	F tr(x, transformation) {
 		warn("Using experimental feature - tr()")
 		t = transformation.ensure(Arr)
-		# Default rules at the bottom:
+		# Default rules, appended automatically at the bottom:
 		#   * recurse into Eachable1 and Eachable2
 		#   * whatever does not match, returned as is
 		t += [
@@ -99,12 +98,15 @@ ns {
 		]
 		tc = TrContext(x, t)
 		result = tr(x, t, tc)
-		assert(result, Lit, "Transformation failed, top level must return a value")
+		# TODO: better exception
+		assert(tc, {'_cmd': Null}, "Transformation failed, top level must return a value")
 		result.val
 	}
 
 	TEST [1,2,3].tr(Int -> (X+1)) == [2,3,4]
 	TEST {"a": [1,2,3]}.tr(Int -> (X+1)) == {"a": [2,3,4]}
 	TEST tr; tr([1,2,[3,4]], Arr -> { ["start"] + descend(B) + ["end"] } ) == ["start", 1, 2, ["start", 3, 4, "end"], "end"]
+	TEST tr; {"a": 1, "b": "x"}.tr(Str -> Y.skip()) == {"a": 1}
+	TEST tr; [{"a": 1, "b": "x"}].tr([ Str -> Y.skip(), Int -> (X+1), Arr -> {["start", *descend(B)]} ]) == ["start", {"a": 2}]
 
 }
