@@ -1,43 +1,69 @@
 ns {
 	# EXPERIMENTAL!
+	# For examples, see tests in the end of this file
 
-	global tr, init, (=~)
-
-	# Examples:
-	# tr; tr([1,2,[3,4]], TrAfter(Arr) -> { ["start"] + A + ["end"] } )
-	# tr; {"some": "resource", "extension": [{"url": "x", "something": "y"}]}.tr({"url": "x"} -> TrSkip()).tr([] -> TrSkip())
+	global tr, init, (=~), descend
 
 	global TrContext
 	type TrContext(MatchContext)
+		F init(ctx:TrContext, root, transformation) {
+			super(ctx, root)
+			ctx._transformation = transformation
+			ctx._cur = null # current item being processed by tr(), used by descend(TrContext)
+		}
+
+	global TrActionResult
+	type TrActionResult
+		Lit.inherit(TrActionResult)
 
 	global TrCommand
-	type TrCommand
+	type TrCommand(TrActionResult)
 
 		global TrSkip
 		type TrSkip(TrCommand)
 
-		# Just checking. Not sure it's needed.
-		# tr; ["a", 1].tr(Int -> TrSplice([3,4]))  # ["a", 3, 4]
-		global TrSplice
-		type TrSplice(TrCommand)
-
-		F init(s:TrSplice, val) { s.val = val }
-
-	# Open issue: the match is on the output or the original?
-	# Temp decision: on the output
-	global TrAfter
-	type TrAfter()
-		F init(ta:TrAfter) throw InvalidArgument("init(TrAfter) - missing the pattern argument")
-		F init(ta:TrAfter, pattern) ta.pattern = pattern
-		F =~(x, ta:TrAfter, _tc:TrContext) false
+		global TrNoMatch
+		type TrNoMatch(TrCommand)
 
 	F init(cmd:TrCommand, x, ctx:TrContext) {
 		n = cmd.typeof().name
 		throw InvalidArgument("Use ${n}(...) instead of ${n}")
 	}
 
-	F lit_or_cmd(x) Lit(x)
-	F lit_or_cmd(x:TrCommand) x
+	F TrActionResult(x) Lit(x)
+	F TrActionResult(x:TrActionResult) x
+
+	F descend(tc:TrContext, my_each:Fun, my_result:Fun) {
+		debug("tr", {"descend::start ${tc._path}"})
+		t = typeof(tc._cur)
+		ret = t()  # XXX: Assumption about existence of the constructor
+		tc.deeper({
+			tc._cur.my_each(F(idx_or_key, val) {
+				debug("tr", {"${tc._path} descend-tr each(${idx_or_key},${val})"})
+				t = tr(val, tc._transformation, tc.set_last_path_element(idx_or_key))
+				ematch t {
+					Lit my_result(ret, idx_or_key, t.val)
+					TrSkip null # do nothing
+				}
+			})
+		})
+		ret
+	}
+
+	F descend(tc:TrContext) {
+		throw InvalidArgument("Attempted to descend on non-descendable: ${tc._cur} at path ${tc._path}")
+	}
+
+	F descend(tc:TrContext) {
+		guard tc._cur is Eachable1
+		guard tc._cur !~ AnyOf(Int, Str)
+		descend(tc, each_idx_val, F(ret, idx, val) ret.push(val))
+	}
+
+	F descend(tc:TrContext) {
+		guard tc._cur is Eachable2
+		descend(tc, each, F(ret, key, val) ret[key] = val)
+	}
 
 	F tr(x, pa:PatternAction, tc:TrContext) {
 
@@ -45,66 +71,40 @@ ns {
 
 		if (=~)(x, pa.pattern, tc) {
 			pa.action is TrCommand returns pa.action
-			return pa::action(x, tc).lit_or_cmd()
+			return tc.deeper({'_cur': x}, { pa::action(x, tc).TrActionResult() })
 		}
-		Lit(x)
+		TrNoMatch()
 	}
 
-	F tr(x:Eachable, pa:PatternAction, tc:TrContext, my_each:Fun, my_result:Fun) {
-
-		debug("tr", {"x:Eachable - ${x}"})
-
-		if (=~)(x, pa.pattern, tc) {
-			pa.action is TrCommand returns pa.action  # not sure
-			return pa::action(x, tc).lit_or_cmd()
-		}
-
-		t = typeof(x)
-		ret = t()  # XXX: Assumption about existence of the constructor
-		tc.deeper({
-			x.my_each(F(idx_or_key, val) {
-				debug("tr", {"each(${idx_or_key},${val}}"})
-				t = tr(val, pa, tc.set_last_path_element(idx_or_key))
-				ematch t {
-					Lit my_result(ret, idx_or_key, t.val)
-					TrSplice {
-						t.val.each(my_result(ret, idx_or_key, X))
-					}
-					TrSkip null # do nothing
-				}
-			})
-		})
-
-		# Where else TrAfter should be?
-		if pa.pattern is TrAfter {
-			if (=~)(ret, pa.pattern.pattern, tc) {
-				return pa::action(ret, tc).lit_or_cmd()
+	F tr(x, transformation:Arr, tc:TrContext) block b {
+		transformation.each(F(t) {
+			result = tr(x, t, tc)
+			if result is not TrNoMatch	{
+				b.return(result)
 			}
-		}
-
-		Lit(ret)
+		})
+		# TODO: Throw an error?
 	}
-
-	F tr(x:Eachable1, pa:PatternAction, tc:TrContext) {
-		guard x !~ AnyOf(Int, Str)
-		tr(x, pa, tc, each_idx_val, F(ret, idx, val) ret.push(val))
-	}
-
-	F tr(x:Eachable2, pa:PatternAction, tc:TrContext) {
-		tr(x, pa, tc, each, F(ret, key, val) ret[key] = val)
-	}
-
 
 	F tr(x, transformation) {
 		warn("Using experimental feature - tr()")
-		tc = TrContext().set(_root=x, transformation=transformation)
-		result = tr(x, transformation, tc)
+		t = transformation.ensure(Arr)
+		# Default rules at the bottom:
+		#   * recurse into Eachable1 and Eachable2
+		#   * whatever does not match, returned as is
+		t += [
+			AllOf(Eachable1, {A !~ AnyOf(Int, Str)}) -> descend(Y)
+			Eachable2 -> descend(Y)
+			Any -> { A }
+		]
+		tc = TrContext(x, t)
+		result = tr(x, t, tc)
 		assert(result, Lit, "Transformation failed, top level must return a value")
 		result.val
 	}
 
 	TEST [1,2,3].tr(Int -> (X+1)) == [2,3,4]
 	TEST {"a": [1,2,3]}.tr(Int -> (X+1)) == {"a": [2,3,4]}
-	TEST tr; tr([1,2,[3,4]], TrAfter(Arr) -> { ["start"] + A + ["end"] } ) == ["start", 1, 2, ["start", 3, 4, "end"], "end"]
+	TEST tr; tr([1,2,[3,4]], Arr -> { ["start"] + descend(B) + ["end"] } ) == ["start", 1, 2, ["start", 3, 4, "end"], "end"]
 
 }

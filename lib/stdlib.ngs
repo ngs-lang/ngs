@@ -687,10 +687,12 @@ section "=~ Matching" {
 		type MatchContext
 
 		doc %STATUS - experimental
-		F init(mc:MatchContext) {
-			mc._positional = []
-			mc._named = {}
-			mc._path = []
+		F init(mc:MatchContext, root) {
+			mc._root = root
+			mc._positional = []  # Result - positional matches
+			mc._named = {}       # Result - named matches
+			mc._path = []        # Current path in _root
+			mc._deeper_saved_fields = {}
 			mc._result = EmptyBox()  # maybe use "block" instead?
 		}
 
@@ -698,6 +700,18 @@ section "=~ Matching" {
 			mc._path.push(null)
 			cb.finally({
 				mc._path.pop()
+			})
+		}
+
+		F deeper(mc:MatchContext, new_fields:Hash, cb:Fun) {
+			new_fields.each(F(k, v) {
+				mc._deeper_saved_fields.dflt(k, []).push(mc.(k))
+				mc.(k) = v
+			})
+			cb.finally({
+				new_fields.each(F(k, v) {
+					mc.(k) = mc._deeper_saved_fields[k].pop()
+				})
 			})
 		}
 
@@ -716,7 +730,7 @@ section "=~ Matching" {
 	}
 
 	F =~(x, pattern) {
-		mc = MatchContext().set(_root=x)
+		mc = MatchContext(x)
 		result = (=~)(x, pattern, mc)
 		mc._result returns mc._result.get()
 		if result is Bool {
