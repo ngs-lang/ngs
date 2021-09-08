@@ -1,11 +1,12 @@
 <img alt="NGS logo - cloud and UNIX shell icon" align="right" src="img/ngs-logo-300.png" />
 
+[![Discord](https://img.shields.io/discord/681405592732172293.svg?logo=discord)](https://discord.gg/AcTMQzMm)
 [![Commits in dev since last release](https://img.shields.io/github/commits-since/ngs-lang/ngs/latest/dev.svg)](https://github.com/ngs-lang/ngs/commits/dev)
-[![Join the chat at https://gitter.im/ngs-lang/Lobby](https://badges.gitter.im/ngs-lang/Lobby.svg)](https://gitter.im/ngs-lang/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](/../../workflows/Build/badge.svg?branch=dev)](/../../actions?query=workflow%3A%22Build%22+branch%3Adev)
 [![Docker Build Status](https://img.shields.io/docker/cloud/build/ngslang/ngs.svg)](https://hub.docker.com/r/ngslang/ngs/builds)
 [![Homebrew](https://img.shields.io/badge/dynamic/json.svg?url=https://formulae.brew.sh/api/formula/ngs.json&query=$.versions.stable&label=homebrew&color=orange)](https://formulae.brew.sh/formula/ngs)
-[![ngs](https://snapcraft.io//ngs/badge.svg)](https://snapcraft.io/ngs)
+[![snapcraft](https://snapcraft.io//ngs/badge.svg)](https://snapcraft.io/ngs)
+[![license](https://img.shields.io/github/license/ngs-lang/ngs)](https://raw.githubusercontent.com/ngs-lang/ngs/master/LICENSE)
 
 **Next Generation Shell** is a powerful programming language and a shell designed specifically for Ops. *Because you deserve better*.
 
