@@ -1,10 +1,12 @@
-name: 'Setup NGS'
-description: 'Setup NGS in a GitHub action'
+name: 'NGS'
+description: 'Next Generation Shell (NGS)'
+branding:
+  icon: 'award'
+  color: 'purple'
 runs:
   using: "composite"
   steps:
-    - id: setup-ngs
-      name: Install
+    - name: Install
       run: |
         echo "GITHUB_ACTION_PATH=$GITHUB_ACTION_PATH"
         cd $GITHUB_ACTION_PATH
