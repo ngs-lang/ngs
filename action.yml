@@ -1,0 +1,12 @@
+name: 'Setup NGS'
+description: 'Setup NGS in a GitHub action'
+runs:
+  using: "composite"
+  steps:
+    - id: setup-ngs
+      name: Install
+      run: |
+        echo "GITHUB_ACTION_PATH=$GITHUB_ACTION_PATH"
+        cd $GITHUB_ACTION_PATH
+        ./install.sh
+      shell: bash
