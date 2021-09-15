@@ -20,6 +20,8 @@
   * [Using Homebrew](#using-homebrew)
   * [Using Snap](#using-snap)
   * [Using Docker](#using-docker)
+  * [Using Github Action](#using-github-action)
+  * [Using iPython or Jupyter Notebook](#using-ipython-or-jupyter-notebook)
 * [Manually Compiling and Running](#manually-compiling-and-running)
     * [Clone from Git](#clone-from-git)
     * [Install with Dependencies - Debian-based Linux and MacOS](#install-with-dependencies---debian-based-linux-and-macos)
@@ -140,6 +142,27 @@ From George Nachman, creator of [iTerm2](https://www.iterm2.com/):
 
 	# Use NGS inside the container
 	ngs -pi 'sum(0..10)'
+
+### Using GitHub Action
+
+Add to your Github Action the following line (make sure to release the version as required)
+
+```
+steps:
+	- uses: ngs-lang/ngs@v2.1.13
+```
+
+After that, ngs can be used by simply calling ngs in any run step
+
+```
+steps:
+	- uses: ngs-lang/ngs@v2.1.13
+	- run: ngs -pi 'sum(10..100)'
+```
+
+### Using iPython or Jupyter Notebook
+
+Please refer to extension located in https://github.com/ngs-lang/ngs-ipython-extension
 
 
 ## Manually Compiling and Running
