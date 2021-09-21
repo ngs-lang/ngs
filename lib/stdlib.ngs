@@ -240,6 +240,7 @@ F init(e:IndexNotFound, message:Str, container, key) init(args())
 
 doc Throws AssertFail with given message if expr does not match the pattern
 doc %EX - my_template.get('concept', []).assert(Arr)
+doc %EX - assert(loginResult, {'access_token': Str}, "access_token must be present in response")
 doc %RET - val
 F assert(val, pattern, msg:Str="Assertion failed") {
 	not(val =~ pattern) throws AssertFail(msg).set(val=val, pattern=pattern)
