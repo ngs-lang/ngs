@@ -98,8 +98,13 @@
                 <li><a href="https://ngs-lang.org/doc/latest/man/ngstut.1.html" target="_blank">Examples-based tutorial</a> - understand how NGS feels like</li>
                 <li><a href="https://ngs-lang.org/doc/latest/man/ngswhy.1.html" target="_blank">Why use NGS? Why it was created?</a></li>
                 <li><a href="https://ngs-lang.org/doc/latest/man/ngslang.1.html" target="_blank">Language description</a></li>
-                <li><a href="https://ngs-lang.org/doc/latest/generated/index.html" target="_blank">Language Reference</a></li>
+                <li><a href="https://ngs-lang.org/doc/latest/generated/index.html" target="_blank">Language reference</a></li>
                 <li><a href="https://ngs-lang.org/doc/latest/man/ngsstyle.1.html" target="_blank">Coding style guide</a></li>
+            </ul>
+            <h2 class="text-left">Social</h2>
+            <ul>
+                <li><a href="https://discord.gg/6VqgcpM" target="_blank">Discord</a></li>
+                <li><a href="https://m.youtube.com/channel/UC6CL2J6syrV1mfFpxQd89gQ" target="_blank">YouTube</a></li>
             </ul>
         </div>
     </div>
@@ -144,7 +149,7 @@
                     </ul>
                 </li>
                 <li>
-                    And more :)
+                    and much, much more :)
                 </li>
             </ul>
 
@@ -153,17 +158,27 @@
         <div class="col-sm">
             <h2 class="text-left">Quick Start</h2>
             NGS runs on <b>Linux</b> and <b>Mac</b>
-            <h4>Install</h4>
-            <pre><code class="bash hljs">curl https://ngs-lang.org/install.sh | bash
-ngs -pi 'sum(0..10)'</code></pre>
-
-
-            <h4>Docker</h4>
-            <a href="https://github.com/ngs-lang/ngs#running-using-docker" target="_blank">Play with NGS inside docker - instructions</a>
+            <h4>using Script</h4>
+            <pre><code class="bash hljs">curl https://ngs-lang.org/install.sh | bash</code></pre>
+            <h4>using Homebrew</h4>
+            <pre><code class="bash hljs">brew install ngs</code></pre>
+            <h4>using Snap</h4>
+            <pre><code class="bash hljs">sudo snap install ngs</code></pre>
+            <h4>using Docker</h4>
+            <pre><code class="bash hljs">docker run -it --rm ngslang/ngs</code></pre>
+            <h4>from Source</h4>
+            <pre><code class="bash hljs">git clone git@github.com:ngs-lang/ngs.git
+./install.sh</code></pre>
+            <h4>in GitHub Action</h4>
+            <pre><code class="yaml hljs">(...)
+- uses: ngs-lang/ngs@v2.1.12-action
+- run: ngs -pi 'sum(10..100)'</code></pre>
+            <h4>in iPython / Jupyter Notebook</h4>
+            Please check the <a href="https://github.com/ngs-lang/ngs-ipython-extension">iPython extension</a>
         </div>
 
     </div>
-    <div class="row">
+    <div class="row pt-5">
         <div class="col-sm"></div>
         <div class="col-sm text-right">
             <p style="font-size: 12px; vertical-align: bottom;">powered by<a href="https://beame.io" target="_blank"><img style="margin-left: 10px; margin-top: -9px" src="beame-logo-grad.png" height="15"></a></p>
