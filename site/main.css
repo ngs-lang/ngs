@@ -75,3 +75,45 @@ nav .unobtrusive {
 	font-size: 120%;
 	font-style: italic;
 }
+
+.sr-only {
+	position:absolute;
+	width:1px;
+	height:1px;
+	padding:0;
+	margin:-1px;
+	overflow:hidden;
+	clip:rect(0,0,0,0);
+	white-space:nowrap;
+	border-width:0
+}
+.ease-in-out {
+	transition-timing-function: cubic-bezier(.4,0,.2,1);
+}
+.transition {
+	transition-property: background-color,border-color,color,fill,stroke,opacity,box-shadow,transform;
+}
+.duration-150 {
+	transition-duration:.15s
+}
+.icon-link {
+	--text-opacity: 1;
+	color: #6F6F6FFF;
+	color: rgba(111, 111, 111,var(--text-opacity));
+}
+.icon-link:hover {
+	--text-opacity:1;
+	color: #7B1FA2;
+	color:rgba(123,31,162,var(--text-opacity))
+}
+.icon-media {
+	display: inline;
+	width: 2.4rem;
+	height: 2.4rem;
+}
+.icon-docs {
+	display: inline;
+	width: 2.0rem;
+	height: 2.0rem;
+}
+
