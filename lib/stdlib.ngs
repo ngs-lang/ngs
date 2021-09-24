@@ -1351,6 +1351,18 @@ section "ArrLike" {
 		body(F(elt) al.push(elt))
 		al
 	}
+
+    doc t - subtype of ArrLike
+    doc %RET - of type t
+	F ensure(x:Arr, t:Type) {
+		guard t.is_subtype(ArrLike)
+		t(x)
+	}
+
+    # TODO: When convenient from pattern matching perspective, also check instance type
+    TEST type T(ArrLike); [1,2].ensure(T) =~ [1,2]
+    TEST type T(ArrLike); "abc".ensure(T) =~ ["abc"]
+
 }
 
 section "AnyOf(ArrLike)" {

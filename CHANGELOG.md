@@ -14,6 +14,7 @@
 * Add `Lit` type to convey literal value, devoid of any "magical" meaning
 * Add `collector(Stats, Fun)`
 * `debug(Str, Fun)` is now supported
+* Add `ensure(Arr, T)` for `T` being subtype of `ArrLike`
 
 ### Fixes and improvements
 
