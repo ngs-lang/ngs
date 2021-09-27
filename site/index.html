@@ -18,7 +18,7 @@
     <div class="row">
         <div class="col-sm">
             <h1 class="text-center">
-                <span class="align-middle"><img src="ngs-logo-300.png" width="260"></span>
+                <span class="align-middle"><img src="img/ngs.png" width="260"></span>
             </h1>
         </div>
     </div>
@@ -68,7 +68,7 @@
 
     </div>
     <div class="row pt-2">
-        <div class="col-sm">
+        <div class="col-sm" style="text-align: justify">
             <h2 class="text-left">About</h2>
 
             <p>
@@ -89,28 +89,6 @@
                 it's highly probable that it will be included in the language
                 as long as it is for DevOps tasks.
             </p>
-
-
-        </div>
-        <div class="col-sm">
-            <h2 class="text-left">Links</h2>
-            <ul>
-                <li><a href="https://ngs-lang.org/doc/latest/man/ngstut.1.html" target="_blank">Examples-based tutorial</a> - understand how NGS feels like</li>
-                <li><a href="https://ngs-lang.org/doc/latest/man/ngswhy.1.html" target="_blank">Why use NGS? Why it was created?</a></li>
-                <li><a href="https://ngs-lang.org/doc/latest/man/ngslang.1.html" target="_blank">Language description</a></li>
-                <li><a href="https://ngs-lang.org/doc/latest/generated/index.html" target="_blank">Language reference</a></li>
-                <li><a href="https://ngs-lang.org/doc/latest/man/ngsstyle.1.html" target="_blank">Coding style guide</a></li>
-            </ul>
-            <h2 class="text-left">Social</h2>
-            <ul>
-                <li><a href="https://discord.gg/6VqgcpM" target="_blank">Discord</a></li>
-                <li><a href="https://m.youtube.com/channel/UC6CL2J6syrV1mfFpxQd89gQ" target="_blank">YouTube</a></li>
-            </ul>
-        </div>
-    </div>
-    <div class="row">
-
-        <div class="col-sm">
             <h2 class="text-left">Features</h2>
             <ul>
                 <li>
@@ -153,35 +131,68 @@
                 </li>
             </ul>
 
-        </div>
+            <h2 class="text-left">Links</h2>
+            <ul>
+                <li><a href="https://ngs-lang.org/doc/latest/man/ngstut.1.html" target="_blank">Examples-based tutorial</a> - understand how NGS feels like</li>
+                <li><a href="https://ngs-lang.org/doc/latest/man/ngswhy.1.html" target="_blank">Why use NGS? Why it was created?</a></li>
+                <li><a href="https://ngs-lang.org/doc/latest/man/ngslang.1.html" target="_blank">Language description</a></li>
+                <li><a href="https://ngs-lang.org/doc/latest/generated/index.html" target="_blank">Language reference</a></li>
+                <li><a href="https://ngs-lang.org/doc/latest/man/ngsstyle.1.html" target="_blank">Coding style guide</a></li>
+            </ul>
 
-        <div class="col-sm">
+            <h2 class="text-left">Social</h2>
+            <ul>
+                <li><a href="https://discord.gg/6VqgcpM" target="_blank">Discord</a></li>
+                <li><a href="https://m.youtube.com/channel/UC6CL2J6syrV1mfFpxQd89gQ" target="_blank">YouTube</a></li>
+            </ul>
+        </div>
+        <div class="col-sm" style="margin-left: 40px">
             <h2 class="text-left">Quick Start</h2>
             NGS runs on <b>Linux</b> and <b>Mac</b>
             <h4>using Script</h4>
             <pre><code class="bash hljs">curl https://ngs-lang.org/install.sh | bash</code></pre>
-            <h4>using Homebrew</h4>
-            <pre><code class="bash hljs">brew install ngs</code></pre>
-            <h4>using Snap</h4>
-            <pre><code class="bash hljs">sudo snap install ngs</code></pre>
-            <h4>using Docker</h4>
-            <pre><code class="bash hljs">docker run -it --rm ngslang/ngs</code></pre>
             <h4>from Source</h4>
             <pre><code class="bash hljs">git clone git@github.com:ngs-lang/ngs.git
-./install.sh</code></pre>
+cd ngs && ./install.sh</code></pre>
+            <h4>using Homebrew</h4>
+            <pre><code class="bash hljs">brew install ngs</code></pre>
+            <div class="text-right">
+                <a href="https://formulae.brew.sh/formula/ngs" target="_blank">
+                    <img alt="Get it from Homebrew" width=170 src="img/homebrew.jpg" />
+                </a>
+            </div>
+            <h4>using Snap</h4>
+            <pre><code class="bash hljs">sudo snap install ngs</code></pre>
+            <div class="text-right">
+                <a href="https://snapcraft.io/ngs" target="_blank">
+                    <img alt="Get it from the Snap Store" width=180 src="https://snapcraft.io/static/images/badges/en/snap-store-white.svg" />
+                </a>
+            </div>
+            <h4>using Docker</h4>
+            <pre><code class="bash hljs">docker run -it --rm ngslang/ngs</code></pre>
+            <div class="text-right">
+                <a href="https://hub.docker.com/r/ngslang/ngs/" target="_blank">
+                    <img alt="Get it from Docker Hub" width=170 src="img/docker.png"/>
+                </a>
+            </div>
             <h4>in GitHub Action</h4>
             <pre><code class="yaml hljs">(...)
 - uses: ngs-lang/ngs@v2.1.12-action
 - run: ngs -pi 'sum(10..100)'</code></pre>
             <h4>in iPython / Jupyter Notebook</h4>
-            Please check the <a href="https://github.com/ngs-lang/ngs-ipython-extension">iPython extension</a>
+            <div class="text-right">
+                <a href="https://github.com/ngs-lang/ngs-ipython-extension" target="_blank">
+                    <img alt="Use in Google Colab" height="50" src="img/colab.png"/>
+                    <img alt="Use in iPython" width="170" style="margin-left: 40px" src="img/ipython.png"/>
+                    <img alt="Use in Jupyter Notebook" height="40" style="margin-left: 40px" src="img/jupyter.svg"/>
+                </a>
+            </div>
         </div>
-
     </div>
     <div class="row pt-5">
         <div class="col-sm"></div>
         <div class="col-sm text-right">
-            <p style="font-size: 12px; vertical-align: bottom;">powered by<a href="https://beame.io" target="_blank"><img style="margin-left: 10px; margin-top: -9px" src="beame-logo-grad.png" height="15"></a></p>
+            <p style="font-size: 12px; vertical-align: bottom;">powered by<a href="https://beame.io" target="_blank"><img style="margin-left: 10px; margin-top: -9px" src="img/beame.png" height="15"></a></p>
         </div>
     </div>
 </div>
