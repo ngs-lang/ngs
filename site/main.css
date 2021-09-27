@@ -106,14 +106,13 @@ nav .unobtrusive {
 	color: #7B1FA2;
 	color:rgba(123,31,162,var(--text-opacity))
 }
-.icon-media {
-	display: inline;
-	width: 2.4rem;
-	height: 2.4rem;
-}
-.icon-docs {
-	display: inline;
-	width: 2.0rem;
-	height: 2.0rem;
-}
 
+.icon-button {
+	border: lightgray 1px solid;
+	padding: 5px;
+	border-radius: 10px;
+	height: 50px;
+}
+.icon-button:hover {
+	border: gray 1px solid;
+}
