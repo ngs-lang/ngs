@@ -73,7 +73,6 @@ nav .unobtrusive {
 .main-thing-on-page {
 	font-weight: 400;
 	font-size: 120%;
-	font-style: italic;
 }
 
 .sr-only {
@@ -100,14 +99,17 @@ nav .unobtrusive {
 	--text-opacity: 1;
 	color: #6F6F6FFF;
 	color: rgba(111, 111, 111,var(--text-opacity));
+	text-decoration: none;
 }
 .icon-link:hover {
 	--text-opacity:1;
 	color: #7B1FA2;
-	color:rgba(123,31,162,var(--text-opacity))
+	color:rgba(123,31,162,var(--text-opacity));
+	text-decoration: none;
 }
 
 .icon-button {
+	margin-left: 3px;
 	border: lightgray 1px solid;
 	padding: 5px;
 	border-radius: 10px;
@@ -115,4 +117,7 @@ nav .unobtrusive {
 }
 .icon-button:hover {
 	border: gray 1px solid;
+}
+pre, code {
+	white-space: pre-wrap;
 }

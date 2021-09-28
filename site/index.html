@@ -35,37 +35,36 @@
     </div>
     <div class="row pt-4">
         <div class="col-md-1 text-center">
-            <a href="https://ngs-lang.org/doc/latest/generated/index.html" style="line-height: 0;" class="icon-link transition duration-150 ease-in-out" target="_blank">
+            <a href="https://ngs-lang.org/doc/latest/generated/index.html" class="icon-link transition duration-150 ease-in-out" target="_blank">
                 <i class="fas fa-search fa-2x"></i>
-                <span class="sr-only">Reference</span>
+                <span>Reference</span>
             </a>
         </div>
         <div class="col-md-1 text-center">
-            <a href="https://ngs-lang.org/doc/latest/index.html" style="line-height: 0;" class="icon-link transition duration-150 ease-in-out" target="_blank">
+            <a href="https://ngs-lang.org/doc/latest/index.html" class="icon-link transition duration-150 ease-in-out" target="_blank">
                 <i class="far fa-file-alt fa-2x"></i>
-                <span class="sr-only">Documentation</span>
+                <span>Manuals</span>
             </a>
         </div>
         <div class="col-sm text-center"></div>
         <div class="col-md-1 text-center">
-            <a href="https://github.com/ngs-lang/ngs" style="line-height: 0;" class="icon-link transition duration-150 ease-in-out" target="_blank">
+            <a href="https://github.com/ngs-lang/ngs" class="icon-link transition duration-150 ease-in-out" target="_blank">
                 <i class="fab fa-github fa-2x"></i>
-                <span class="sr-only">GitHub</span>
-            </a>
-        </div>
-        <div class="col-md-1 text-center">
-            <a href="https://discord.gg/6VqgcpM" style="line-height: 0;" class="icon-link transition duration-150 ease-in-out" target="_blank">
-                <i class="fab fa-discord fa-2x"></i>
-                <span class="sr-only">Discord</span>
+                <span>GitHub</span>
             </a>
         </div>
         <div class="col-md-1 text-center">
             <a href="https://m.youtube.com/channel/UC6CL2J6syrV1mfFpxQd89gQ" style="line-height: 0;" class="icon-link transition duration-150 ease-in-out" target="_blank">
                 <i class="fab fa-youtube fa-2x"></i>
-                <span class="sr-only">YouTube</span>
+                <span>YouTube</span>
             </a>
         </div>
-
+        <div class="col-md-1 text-center">
+            <a href="https://discord.gg/6VqgcpM" class="icon-link transition duration-150 ease-in-out" target="_blank">
+                <i class="fab fa-discord fa-2x"></i>
+                <span>Discord</span>
+            </a>
+        </div>
     </div>
     <div class="row pt-2">
         <div class="col-sm" style="text-align: justify">
@@ -135,13 +134,10 @@
             <ul>
                 <li><a href="https://ngs-lang.org/doc/latest/man/ngstut.1.html" target="_blank">Examples-based tutorial</a> - understand how NGS feels like</li>
                 <li><a href="https://ngs-lang.org/doc/latest/man/ngswhy.1.html" target="_blank">Why use NGS? Why it was created?</a></li>
-                <li><a href="https://ngs-lang.org/doc/latest/man/ngslang.1.html" target="_blank">Language description</a></li>
-                <li><a href="https://ngs-lang.org/doc/latest/generated/index.html" target="_blank">Language reference</a></li>
-                <li><a href="https://ngs-lang.org/doc/latest/man/ngsstyle.1.html" target="_blank">Coding style guide</a></li>
-            </ul>
-
-            <h2 class="text-left">Social</h2>
-            <ul>
+                <li><a href="https://ngs-lang.org/doc/latest/man/ngslang.1.html" target="_blank">Documentation: Language description</a></li>
+                <li><a href="https://ngs-lang.org/doc/latest/generated/index.html" target="_blank">Documentation: Language reference</a></li>
+                <li><a href="https://ngs-lang.org/doc/latest/man/ngsstyle.1.html" target="_blank">Documentation: Coding style guide</a></li>
+                <li><a href="https://github.com/ngs-lang/ngs" target="_blank">GitHub</a></li>
                 <li><a href="https://discord.gg/6VqgcpM" target="_blank">Discord</a></li>
                 <li><a href="https://m.youtube.com/channel/UC6CL2J6syrV1mfFpxQd89gQ" target="_blank">YouTube</a></li>
             </ul>
@@ -149,44 +145,53 @@
         <div class="col-sm" style="margin-left: 40px">
             <h2 class="text-left">Quick Start</h2>
             NGS runs on <b>Linux</b> and <b>Mac</b>
-            <h4>from Script</h4>
+            <h4>Shell (Mac, Linux)</h4>
             <pre><code class="bash hljs">curl https://ngs-lang.org/install.sh | bash</code></pre>
-            <h4>from Source</h4>
+            <h4>From Source</h4>
             <pre><code class="bash hljs">git clone git@github.com:ngs-lang/ngs.git
 cd ngs && ./install.sh</code></pre>
-            <h4>using Homebrew</h4>
+            <h4>From
+                <a href="https://formulae.brew.sh/formula/ngs" target="_blank">
+                    <img alt="Homebrew" src="img/homebrew.png" class="icon-button" style="padding: 10px;"/>
+                </a>
+            </h4>
             <pre><code class="bash hljs">brew install ngs</code></pre>
-            <div class="text-right">
-                 <a href="https://formulae.brew.sh/formula/ngs" target="_blank">
-                     <img alt="Get it from Homebrew" src="img/homebrew.png" class="icon-button" style="padding: 10px;"/>
-                 </a>
-            </div>
-            <h4>using Snap</h4>
-            <pre><code class="bash hljs">sudo snap install ngs</code></pre>
-            <div class="text-right">
+
+            <h4>From
                 <a href="https://snapcraft.io/ngs" target="_blank">
-                    <img alt="Get it from the Snap Store" src="img/snapstore.png" class="icon-button"/>
+                    <img alt="Snap Store" src="img/snapstore.png" class="icon-button"/>
                 </a>
-            </div>
-            <h4>using Docker</h4>
-            <pre><code class="bash hljs">docker run -it --rm ngslang/ngs</code></pre>
-            <div class="text-right">
+            </h4>
+            <pre><code class="bash hljs">sudo snap install ngs</code></pre>
+
+            <h4>In
                 <a href="https://hub.docker.com/r/ngslang/ngs/" target="_blank">
-                    <img alt="Get it from Docker Hub" src="img/docker.png" class="icon-button" style="padding: 10px;"/>
+                    <img alt="Docker Hub" src="img/docker.png" class="icon-button" style="padding: 10px;"/>
                 </a>
-            </div>
-            <h4>in GitHub Action</h4>
+            </h4>
+            <pre><code class="bash hljs">docker run -it --rm ngslang/ngs</code></pre>
+
+            <h4>In
+                <a href="https://github.com/marketplace/actions/setup-ngs" target="_blank">
+                    <img alt="Github Actions Marketplace" src="img/gh-actions.png" class="icon-button"/>
+                </a>
+            </h4>
             <pre><code class="yaml hljs">(...)
 - uses: ngs-lang/ngs@v2.1.12-action
 - run: ngs -pi 'sum(10..100)'</code></pre>
-            <h4>in iPython / Jupyter Notebook</h4>
-            <div class="text-right">
+            <h4>In
                 <a href="https://github.com/ngs-lang/ngs-ipython-extension" target="_blank" style="text-decoration: none;">
-                    <img alt="Use in Google Colab" src="img/colab.png" class="icon-button"/>
-                    <img alt="Use in iPython" src="img/ipython.png" class="icon-button" style="padding: 10px; margin-left: 10px;"/>
-                    <img alt="Use in Jupyter Notebook" src="img/jupyter.svg" class="icon-button" style="padding: 10px; margin-left: 10px;"/>
+                    <img alt="Google Colab" src="img/colab.png" class="icon-button"/>
+                    <img alt="iPython" src="img/ipython.png" class="icon-button" style="padding: 10px;"/>
+                    <img alt="Jupyter Notebook" src="img/jupyter.svg" class="icon-button" style="padding: 10px;"/>
                 </a>
-            </div>
+            </h4>
+            <pre><code class="plaintext hljs">!curl "https://raw.githubusercontent.com/ngs-lang/ngs-ipython-extension/master/ngs-install.sh" | bash
+
+%load_ext ngs
+%ngs [single line expression]
+%%ngs [multi line code]
+</code></pre>
         </div>
     </div>
     <div class="row pt-5">
