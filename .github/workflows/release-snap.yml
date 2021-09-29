@@ -19,6 +19,12 @@ jobs:
           sed -i "s/#define NGS_VERSION \".*\"/#define NGS_VERSION \"$VERSION\"/" version.h
           sed -i "s/version: '.*'/version: '$VERSION'/" snap/snapcraft.yaml
           sed -i "s/grade: .*/grade: stable/" snap/snapcraft.yaml
+          # Next lines commit and push the changes
+          #          git config --global user.name 'Github Action'
+          #          git config --global user.email 'automation@ngs-lang.org'
+          #          git add version.h snap/snapcraft.yaml
+          #          git commit -m "Version update"
+          #          git push origin HEAD:master
       - name: NGS - Install and Test
         run: (./install.sh && make tests)
       - name: SNAP - Build
