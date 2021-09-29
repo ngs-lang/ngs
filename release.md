@@ -19,8 +19,7 @@ This document describes releasing a new version of NGS.
 	* Remove the `-alpha` or whatever pre-release mark.
 	* `git add version.h`
 * Update `snap/snapcraft.yaml`
-	* Check if `version` is correct
-	* Change `grade` to `stable`
+	*  Remove the `-alpha` or whatever pre-release mark from the `version` field
 	* `git add snap/snapcraft.yaml`
 * Review the changes, special attention to `readme.md` as they differ a bit.
 * `git commit`
@@ -39,14 +38,11 @@ This document describes releasing a new version of NGS.
 	* For description, take most important things from `CHANGELOG.md` and generalize them
 	* At the end of description add: `` Detailed list of changes is in `CHANGELOG.md` ``
 * Release Snap
-	* run `snapcraft` in the root folder (output will be a file like `ngs_VERSION_amd64.snap`)
-	* run `snapcraft login` and login with the snapcraft credentials
-	* release snap in the stable channel `snapcraft upload --release=stable ngs_VERSION_amd64.snap`
-	* check if `https://snapcraft.io/ngs` has the release
-	* delete `ngs_VERSION_amd64.snap` from root folder
+	* access `https://snapcraft.io/ngs/builds`, if the build was not already started (triggered automatically on git push) click the `Trigger new build` button
+	* wait for the build for all arquitectures to finish, then go to `https://snapcraft.io/ngs/releases`, the build should appear released in the `latest/edge` channel, click in the cog and promote it to the desired channel, or just drag it into the wanted channel. Then click `Save` button on top of the page
 * Checkout `dev`
 * Increase version in `version.h`
-* Increase version in `snap/snapcraft.yaml` and make sure `grade` is `devel`  (for releasing developer versions, use `snapcraft upload --release=beta ngs_VERSION_amd64.snap`)
+* Increase version in `snap/snapcraft.yaml`
 * Make a new entry at the top of `CHANGELOG.md`
 * Build (to get the new version from `version.h`)
 * `git commit -am 'Organizing after release'`
