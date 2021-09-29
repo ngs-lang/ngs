@@ -38,8 +38,8 @@ This document describes releasing a new version of NGS.
 	* For description, take most important things from `CHANGELOG.md` and generalize them
 	* At the end of description add: `` Detailed list of changes is in `CHANGELOG.md` ``
 * Release Snap
-	* access `https://snapcraft.io/ngs/builds`, if the build was not already started (triggered automatically on git push) click the `Trigger new build` button
-	* wait for the build for all arquitectures to finish, then go to `https://snapcraft.io/ngs/releases`, the build should appear released in the `latest/edge` channel, click in the cog and promote it to the desired channel, or just drag it into the wanted channel. Then click `Save` button on top of the page
+	* access https://snapcraft.io/ngs/builds, if the build was not already started (triggered automatically on git push) click the `Trigger new build` button
+	* wait for the build for all arquitectures to finish, then go to https://snapcraft.io/ngs/releases, the build should appear released in the `latest/edge` channel, click in the cog and promote it to the desired channel, or just drag it into the wanted channel. Then click `Save` button on top of the page
 * Checkout `dev`
 * Increase version in `version.h`
 * Increase version in `snap/snapcraft.yaml`
