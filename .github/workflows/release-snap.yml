@@ -3,38 +3,34 @@ on:
   release:
     types:
       - created
-    branches:
-      - master
     tags:
       - v*
 
 jobs:
   release:
-    timeout-minutes: 5
+    timeout-minutes: 15
     name: Release Snap
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Updating version in version.h and snap/snapcraft.yaml and pushing
+      - name: Updating version.h and snap/snapcraft.yaml with version
         run: |
           VERSION=${GITHUB_REF##*/v} && echo $VERSION
           sed -i "s/#define NGS_VERSION \".*\"/#define NGS_VERSION \"$VERSION\"/" version.h
           sed -i "s/version: '.*'/version: '$VERSION'/" snap/snapcraft.yaml
           sed -i "s/grade: .*/grade: stable/" snap/snapcraft.yaml
-          git config --global user.name 'Github Action'
-          git config --global user.email 'automation@ngs-lang.org'
-          git add version.h snap/snapcraft.yaml
-          git commit -m "Version update"
-          git push origin HEAD:feature/release-actions
-      - name: Install and Test NGS
+      - name: NGS - Install and Test
         run: (./install.sh && make tests)
-      - uses: snapcore/action-build@v1
+      - name: SNAP - Build
+        uses: snapcore/action-build@v1
         id: build-snap
-      - uses: actions/upload-artifact@v2
+      - name: SNAP - Upload artifact
+        uses: actions/upload-artifact@v2
         with:
           name: snap
           path: ${{ steps.build-snap.outputs.snap }}
-      - uses: snapcore/action-publish@v1
+      - name: SNAP - Publish to store
+        uses: snapcore/action-publish@v1
         with:
           store_login: ${{ secrets.SNAP_LOGIN }}
           snap: ${{ steps.build.outputs.snap }}
