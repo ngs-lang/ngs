@@ -1,4 +1,4 @@
-<img alt="NGS logo - cloud and UNIX shell icon" align="right" src="img/ngs-logo-300.png" />
+<img alt="NGS logo" align="right" src="https://raw.githubusercontent.com/ngs-lang/marketing-material/main/logo/ngs-logo-300.png" />
 
 [![Discord](https://img.shields.io/discord/681405592732172293.svg?logo=discord)](https://discord.gg/6VqgcpM)
 [![Commits in dev since last release](https://img.shields.io/github/commits-since/ngs-lang/ngs/latest/dev.svg)](https://github.com/ngs-lang/ngs/commits/dev)
