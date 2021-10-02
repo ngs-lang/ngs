@@ -14,6 +14,7 @@
 * Add `Lit` type to convey literal value, devoid of any "magical" meaning
 * Add `collector(Stats, Fun)`
 * `debug(Str, Fun)` is now supported
+* Add `fork()`, higher level wrapper around `c_fork()`
 
 ### Fixes and improvements
 
@@ -23,6 +24,7 @@
 * Reorganize stdlib to eleminate multiple `inherit()` calls
 * Remove unused `most_by_cb()`
 * Booleans now compare correctly when used as `Hash` keys
+* `exit_hook` now removes hooks in child `fork()`
 
 ### Breaking changes
 

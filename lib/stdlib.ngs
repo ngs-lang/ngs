@@ -5900,6 +5900,17 @@ section "exec()" {
 
 # --- $() ---
 
+F fork() {
+	pid = c_fork()
+	pid == -1 throws ProcessFail("Could not spawn a process").set('cause', CError("Failed to fork()"))
+	debug("process", "PID after fork: $pid")
+	if pid == 0 section "child" {
+		global exit_hook
+		exit_hook .= filter({ B.attrs() =~ {'keep_after_fork': true} })
+	}
+	pid
+}
+
 doc Run a process
 F '$()'(p:Process) {
 
@@ -5926,18 +5937,13 @@ F '$()'(p:Process) {
 		throw ProcessFail(p).set('cause', nf).set('message', 'Executable not found')
 	}
 
-	pid = c_fork()
-
-	pid == -1 throws ProcessFail("Could not spawn a process").set('cause', CError("Failed to fork()"))
-
-	debug("process", "PID after fork: $pid")
+	pid = fork()
 
 	pipes = p.redirects.filter({'datum': Pipe})
 	debug("process2", "PIPES FROM REDIRECTS $pipes REDIRECTS ${p.redirects} COMMND ${p.Hash()}")
 	child_fds = pipes.datum.map(child_fd)
 
-	if pid == 0 {
-		# === Child ===
+	if pid == 0 section "child" {
 		# TODO: See https://stackoverflow.com/questions/13101690/c-get-all-open-file-descriptors
 		child_fds_to_keep_open = child_fds + p.redirects.datum.filter(Int)
 		debug("process2", "CHILD CLOSING FDS 3 TO 100 EXCEPT FOR ${child_fds_to_keep_open}")
@@ -5983,8 +5989,7 @@ F '$()'(p:Process) {
 		throw CError("Process ${c_getpid()} (fork child) failed to execve()")
 	}
 
-	if pid > 0 {
-		# === Parent ===
+	if pid > 0 section "parent" {
 		p.pid = pid
 		child_fds.each(close)
 		debug("process", "Reading all output of the child process")
@@ -7121,7 +7126,7 @@ block _ {
 	# TODO: consider running this hook item last.
 	#       If it has exception, it could prevent
 	#       user-defined cleanups.
-	exit_hook['print_exception'] = F(exit:Exit) {
+	exit_hook.print_exception = F(exit:Exit) {
 		try {
 			exit.exceptions.each(print_exception)
 		} catch(e) {
@@ -7129,10 +7134,11 @@ block _ {
 			try {
 				print_exception(e)
 			} catch(e) {
-				error("Failed to print the casue.")
+				error("Failed to print the cause.")
 			}
 		}
 	}
+	exit_hook.print_exception.attrs().keep_after_fork = true
 
 }
 
