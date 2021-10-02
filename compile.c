@@ -1059,10 +1059,11 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			break;
 
 		case REDIR_NODE:
+            OPCODE(*buf, OP_PUSH_NULL); // Placeholder for result of calling CommandRedir(...)
 			compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling, buf, idx, allocated, NEED_RESULT);
-			OPCODE(*buf, OP_MAKE_REDIR);
+			OPCODE(*buf, OP_MAKE_REDIR); // Calls CommandRedir(...)
 			break;
 
 		case SWITCH_NODE:

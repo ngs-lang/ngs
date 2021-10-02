@@ -5194,13 +5194,11 @@ F init(pp:ProcessesPipeline, cp:CommandsPipeline) pp.set(
 	stderr = null
 )
 
-F init(pr:ProcessRedir, cr:CommandRedir) pr.set(
-	fd = cr.fd
-	marker = cr.marker
-	datum = cr.datum
-)
+F init(pr:ProcessRedir, cr:CommandRedir) init(pr, cr.fd, cr.marker, cr.datum)
 
 F init(pr:ProcessRedir, fd, marker, datum) init(args())
+
+F init(pr:ProcessRedir, fd, marker, datum:File) init(pr, fd, marker, datum.path)
 
 doc Duplicate a file descriptor. Uses DUP2(2). Handles EINTR.
 F dup2(oldfd:Int, newfd:Int) {
@@ -5556,7 +5554,7 @@ doc Initialize CommandRedir object. Used internally for commands syntax.
 doc %AUTO - $(my_prog >my_file)
 F init(r:CommandRedir, fd, marker, datum) {
 	guard marker =~ AnyOf(Str, Null)
-	guard datum =~ AnyOf(Str, Pipe, Int, true)
+	guard datum =~ AnyOf(Str, Pipe, Int, File, true)
 	init(args())
 }
 
@@ -5952,7 +5950,7 @@ F '$()'(p:Process) {
 	pid = fork()
 
 	pipes = p.redirects.filter({'datum': Pipe})
-	debug("process2", "PIPES FROM REDIRECTS $pipes REDIRECTS ${p.redirects} COMMND ${p.Hash()}")
+	debug("process2", "PIPES FROM REDIRECTS $pipes REDIRECTS ${p.redirects} COMMAND ${p.Hash()}")
 	child_fds = pipes.datum.map(child_fd)
 
 	if pid == 0 section "child" {

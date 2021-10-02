@@ -26,6 +26,7 @@
 * Remove unused `most_by_cb()`
 * Booleans now compare correctly when used as `Hash` keys
 * `exit_hook` now removes hooks in child `fork()`
+* It is now possible to redirect to File without using `.path` - `f=TmpFile(); $(echo a > $f)` - Issue #490
 
 ### Breaking changes
 
