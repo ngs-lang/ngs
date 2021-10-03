@@ -31,6 +31,7 @@
 ### Breaking changes
 
 * Remove deprecated `nofail:` option
+* `write(f:File, s:Str)` now returns `f`
 
 ### Deprecated
 

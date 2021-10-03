@@ -7502,6 +7502,7 @@ F write(s:Str, f:File) {
 doc Write whole file if it's closed, write to file descriptor if it's open
 F write(f:File, s:Str) {
 	write(if f.fd is Null then f.path else f.fd, s)
+	f
 }
 
 doc Write a string followed by newline character to a File.
