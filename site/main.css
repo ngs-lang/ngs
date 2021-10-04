@@ -12,7 +12,12 @@ h1, h2 {
 }
 
 a {
-	color: #00897b;
+	color: #6F6F6FFF;
+	text-decoration: underline;
+}
+a:hover {
+	color: #7B1FA2;
+	text-decoration: none;
 }
 
 code {
@@ -124,6 +129,10 @@ nav .unobtrusive {
 }
 .icon-button:hover {
 	border: gray 1px solid;
+}
+
+.icon-system {
+	color: #6F6F6FFF;
 }
 pre, code {
 	white-space: pre-wrap;
