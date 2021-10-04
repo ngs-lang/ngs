@@ -107,6 +107,13 @@ nav .unobtrusive {
 	color:rgba(123,31,162,var(--text-opacity));
 	text-decoration: none;
 }
+.icon-link i {
+	padding-left: 50%;
+	padding-right: 50%;
+}
+.icon-link p {
+	text-align: center;
+}
 
 .icon-button {
 	margin-left: 3px;
