@@ -119,18 +119,6 @@ nav .unobtrusive {
 .icon-link p {
 	text-align: center;
 }
-
-.icon-button {
-	margin-left: 3px;
-	border: lightgray 1px solid;
-	padding: 5px;
-	border-radius: 10px;
-	height: 50px;
-}
-.icon-button:hover {
-	border: gray 1px solid;
-}
-
 .icon-system {
 	color: #6F6F6FFF;
 }
