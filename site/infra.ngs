@@ -29,7 +29,7 @@
 
     # * Create S3 buckets for REDIRECTS
     REDIRECTS= [{id: "manual", host: "ngs-lang.org", path: "doc/latest/index.html"},
-                {id: "reference", host: "ngs-lang.org", path: "doc/latest/generated/index.html"},
+                {id: "ref", host: "ngs-lang.org", path: "doc/latest/generated/index.html"},
                 {id: "discord", host: "discord.gg", path: "6VqgcpM"},
                 {id: "videos", host: "m.youtube.com", path: "channel/UC6CL2J6syrV1mfFpxQd89gQ"},
                 {id: "source", host: "github.com", path: "ngs-lang/ngs"},
