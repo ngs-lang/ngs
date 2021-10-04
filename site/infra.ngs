@@ -26,4 +26,42 @@
 	# * Create CloudFront distribution with origin s3.amazonaws.com/${BUCKET_NAME}
 	# * Create DNS alias for @
 
+
+    # * Create S3 buckets for REDIRECTS
+    REDIRECTS= [{id: "manual", host: "ngs-lang.org", path: "doc/latest/index.html"},
+                {id: "reference", host: "ngs-lang.org", path: "doc/latest/generated/index.html"},
+                {id: "discord", host: "discord.gg", path: "6VqgcpM"},
+                {id: "videos", host: "m.youtube.com", path: "channel/UC6CL2J6syrV1mfFpxQd89gQ"},
+                {id: "source", host: "github.com", path: "ngs-lang/ngs"},
+                {id: "wiki", host: "github.com", path: "ngs-lang/ngs/wiki"},
+                {id: "meeting", host: "us02web.zoom.us", path: "j/6834451193"},
+                {id: "ipython", host: "github.com", path: "ngs-lang/ngs-ipython-extension"},
+                {id: "tut", host: "ngs-lang.org", path: "doc/latest/man/ngstut.1.html"}
+                {id: "why", host: "ngs-lang.org", path: "doc/latest/man/ngswhy.1.html"}
+                {id: "lang", host: "ngs-lang.org", path: "doc/latest/man/ngslang.1.html"}
+                {id: "style", host: "ngs-lang.org", path: "doc/latest/man/ngsstyle.1.html"}
+                {id: "docker", host: "hub.docker.com", path: "r/ngslang/ngs"},
+                {id: "brew", host: "formulae.brew.sh", path: "formula/ngs"}
+                {id: "snap", host: "snapcraft.io", path: "ngs"},
+                {id: "action", host: "github.com", path: "marketplace/actions/setup-ngs"}]
+
+    REDIRECTS.each({
+        bucketName = "${A.id}.${DOMAIN}"
+        tmpbucket = AWS::Bucket(Name=bucketName).converge()
+        if not($(ok:[0, 255] aws s3api get-bucket-website --bucket ${bucketName})) {
+            tmpbucket.resources[0].run("Setting website", %(aws s3 website "s3://${bucketName}/" --index-document index.html --error-document error.html ), false)
+        }
+    })
+    # Manual steps:
+    # * Edit each S3 bucket that was created in the previous step and add `Redirection rules – optional` as
+    #        [
+    #            {
+    #                "Redirect": {
+    #                    "HostName": "${REDIRECTS.host}",
+    #                    "ReplaceKeyPrefixWith": "${REDIRECTS.path}"
+    #                }
+    #            }
+    #        ]
+    # * Create DNS alias for each REDIRECTS as a CNAME pointing to `s3-website-us-east-1.amazonaws.com.` with simple route
+
 }
