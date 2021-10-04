@@ -4362,6 +4362,7 @@ main_loop:
 							POP(LOCALS[lvi]);
 							goto main_loop;
 		case OP_CALL:
+                            call:
 							// TODO: print arguments of failed call, not just the callable
 							// In (current): ... result_placeholder (null), arg1, ..., argN, argc, callable
 							// Out: ... result
@@ -4736,16 +4737,12 @@ do_jump:
 							PUSH(MAKE_KWARGS_MARKER);
 							goto main_loop;
 		case OP_MAKE_REDIR:
-							EXPECT_STACK_DEPTH(3);
-							command = make_normal_type_instance(vm->CommandRedir);
-							POP_NOCHECK(v);
-							set_normal_type_instance_field(command, make_string("datum"), v);
-							POP_NOCHECK(v);
-							set_normal_type_instance_field(command, make_string("marker"), v);
-							POP_NOCHECK(v);
-							set_normal_type_instance_field(command, make_string("fd"), v);
-							PUSH_NOCHECK(command);
-							goto main_loop;
+                            // In: (null), fd, marker, datum
+                            // OP_CALL - In (current): ... result_placeholder (null), arg1, ..., argN, argc, callable
+							EXPECT_STACK_DEPTH(4);
+                            PUSH(MAKE_INT(3));
+                            PUSH(vm->CommandRedir);
+                            goto call;
 		case OP_SUPER:
 							if(THIS_FRAME.arr_callable) {
 								assert(IS_MULMETHOD(*THIS_FRAME.arr_callable));

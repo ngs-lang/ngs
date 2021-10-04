@@ -14,6 +14,7 @@
 * Add `Lit` type to convey literal value, devoid of any "magical" meaning
 * Add `collector(Stats, Fun)`
 * `debug(Str, Fun)` is now supported
+* Add `ensure(Arr, T)` for `T` being subtype of `ArrLike`
 * Add `fork()`, higher level wrapper around `c_fork()`
 
 ### Fixes and improvements
@@ -25,10 +26,12 @@
 * Remove unused `most_by_cb()`
 * Booleans now compare correctly when used as `Hash` keys
 * `exit_hook` now removes hooks in child `fork()`
+* It is now possible to redirect to File without using `.path` - `f=TmpFile(); $(echo a > $f)` - Issue #490
 
 ### Breaking changes
 
 * Remove deprecated `nofail:` option
+* `write(f:File, s:Str)` now returns `f`
 
 ### Deprecated
 
