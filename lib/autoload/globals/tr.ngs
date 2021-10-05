@@ -2,7 +2,7 @@ ns {
 	# EXPERIMENTAL!
 	# For examples, see tests in the end of this file
 
-	global tr, init, (=~), descend, skip
+	global tr, init, (=~), descend, skip, Str
 
 	global TrContext
 	type TrContext(MatchContext)
@@ -24,16 +24,17 @@ ns {
 		throw InvalidArgument("Use ${n}(...) instead of ${n}")
 	}
 
-	F descend(tc:TrContext, my_each:Fun, my_result:Fun) {
+	F descend(tc:TrContext, my_each:Fun, process_result_item:Fun) {
 		debug("tr", {"descend::start ${tc._path}"})
 		t = typeof(tc._cur)
 		ret = t()  # XXX: Assumption about existence of the constructor
 		tc.deeper({
 			tc._cur.my_each(F(idx_or_key, val) {
-				debug("tr", {"${tc._path} descend-tr each(${idx_or_key},${val})"})
-				t = tr(val, tc._transformation, tc.set_last_path_element(idx_or_key))
+				tc.set_last_path_element(idx_or_key)
+				debug("tr", {"descend path=${tc._path}"})
+				t = tr(val, tc._transformation, tc)
 				ematch t {
-					Lit my_result(ret, idx_or_key, t.val)
+					Lit process_result_item(ret, idx_or_key, t.val)
 					TrSkip null # do nothing
 				}
 			})
@@ -61,9 +62,56 @@ ns {
 	doc Implementation detail of tr()
 	type TrNoMatch
 
+	doc Implementation detail of tr()
+	type TopLevelRules(ArrLike)
+
+		F Str(tlr:TopLevelRules) "<${tlr.typeof().name} ${tlr.Arr()}>"
+
+	F tr(x, pattern, tc:TrContext) {
+		x =~ pattern returns Lit(x)
+		TrNoMatch()
+	}
+
+	F tr(x, a:Arr, tc:TrContext) {
+		debug("tr", "tr(x, Arr, TrContext) - before guards")
+		x is Int or x is Str returns TrNoMatch()
+		x is not Eachable1 returns TrNoMatch()
+		l = x.len()
+		l != a.len() returns TrNoMatch()
+		debug("tr", "tr(x, Arr, TrContext) - after guards")
+
+		section "Construction yard" {
+
+			my_each = each_idx_val
+			process_result_item = push(X, Z)
+
+
+			debug("tr", {"CY descend::start ${tc._path}"})
+			t = typeof(x)
+			ret = t()  # XXX: Assumption about existence of the constructor
+			tc.deeper({
+				x.my_each(F(idx_or_key, val) {
+					tc.set_last_path_element(idx_or_key)
+					debug("tr", {"CY descend path=${tc._path}"})
+					t = tr(val, a[idx_or_key], tc)
+					ematch t {
+						Lit process_result_item(ret, idx_or_key, t.val)
+						TrSkip null # do nothing
+					}
+				})
+			})
+			debug("tr", {"CY DONE ${ret}"})
+			return Lit(ret)
+		}
+
+
+		Lit(x)
+	}
+
+
 	F tr(x, pa:PatternAction, tc:TrContext) {
 
-		debug("tr", {"x:Any - ${x}"})
+		debug("tr", {"tr(x, PatternAction, TrContext) pa=${pa} tc=${tc}"})
 
 		if (=~)(x, pa.pattern, tc) {
 			return tc.deeper({'_cur': x, '_cmd': null}, {
@@ -75,27 +123,30 @@ ns {
 		TrNoMatch()
 	}
 
-	F tr(x, transformation:Arr, tc:TrContext) block b {
+	F tr(x, transformation:TopLevelRules, tc:TrContext) block b {
+		debug("tr", "tr(x, TopLevelRules, TrContext) transformation=${transformation}")
 		transformation.each(F(t) {
 			result = tr(x, t, tc)
 			if result is not TrNoMatch	{
+				debug("tr", "tr(x, TopLevelRules, TrContext) returning ${result}")
 				b.return(result)
 			}
 		})
 		throw InvalidArgument("None of the transformations matched").set(transformation=transformation)
 	}
 
+	doc Public API of the transofmration/tr() experimental facility
 	F tr(x, transformation) {
 		warn("Using experimental feature - tr()")
-		t = transformation.ensure(Arr)
+		t = transformation.ensure(TopLevelRules)
 		# Default rules, appended automatically at the bottom:
 		#   * recurse into Eachable1 and Eachable2
 		#   * whatever does not match, returned as is
-		t += [
+		t += TopLevelRules([
 			AllOf(Eachable1, {A !~ AnyOf(Int, Str)}) -> descend(Y)
 			Eachable2 -> descend(Y)
 			Any -> { A }
-		]
+		])
 		tc = TrContext(x, t)
 		result = tr(x, t, tc)
 		# TODO: better exception
@@ -108,5 +159,5 @@ ns {
 	TEST tr; tr([1,2,[3,4]], Arr -> { ["start"] + descend(B) + ["end"] } ) == ["start", 1, 2, ["start", 3, 4, "end"], "end"]
 	TEST tr; {"a": 1, "b": "x"}.tr(Str -> Y.skip()) == {"a": 1}
 	TEST tr; [{"a": 1, "b": "x"}].tr([ Str -> Y.skip(), Int -> (X+1), Arr -> {["start", *descend(B)]} ]) == ["start", {"a": 2}]
-
+	TEST [10,20].tr([[Int, Int -> (X+1)]]) == [10, 21]
 }
