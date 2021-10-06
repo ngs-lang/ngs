@@ -34,7 +34,6 @@
                 {id: "videos", host: "m.youtube.com", path: "channel/UC6CL2J6syrV1mfFpxQd89gQ"},
                 {id: "source", host: "github.com", path: "ngs-lang/ngs"},
                 {id: "wiki", host: "github.com", path: "ngs-lang/ngs/wiki"},
-                {id: "meeting", host: "us02web.zoom.us", path: "j/6834451193"},
                 {id: "ipython", host: "github.com", path: "ngs-lang/ngs-ipython-extension"},
                 {id: "tut", host: "ngs-lang.org", path: "doc/latest/man/ngstut.1.html"}
                 {id: "why", host: "ngs-lang.org", path: "doc/latest/man/ngswhy.1.html"}
