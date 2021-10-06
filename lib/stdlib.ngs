@@ -1359,6 +1359,9 @@ section "ArrLike" {
 		t(x)
 	}
 
+	doc Convert ArrLike to a human-readable representation
+	F Str(a:ArrLike) "<${a.typeof().name} ${a.Arr().join(', ')}>"
+
     # TODO: When convenient from pattern matching perspective, also check instance type
     TEST type T(ArrLike); [1,2].ensure(T) =~ [1,2]
     TEST type T(ArrLike); "abc".ensure(T) =~ ["abc"]

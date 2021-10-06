@@ -16,6 +16,7 @@
 * `debug(Str, Fun)` is now supported
 * Add `ensure(Arr, T)` for `T` being subtype of `ArrLike`
 * Add `fork()`, higher level wrapper around `c_fork()`
+* Add `Str(ArrLike)`
 
 ### Fixes and improvements
 
