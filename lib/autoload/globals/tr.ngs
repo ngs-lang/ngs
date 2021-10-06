@@ -4,6 +4,12 @@ ns {
 
 	global tr, init, (=~), descend, skip, Str
 
+	DESCENDABLE1 = AllOf(Eachable1, X !~ Int, X !~ Str)
+
+	# TODO: Provide metadata such as "DESCENDABLE" name so that
+	# it will be visisble through Str() and/or inspect(). How?
+	DESCENDABLE = AnyOf(DESCENDABLE1, Eachable2)
+
 	global TrContext
 	type TrContext(MatchContext)
 		F init(ctx:TrContext, root, transformation) {
@@ -13,6 +19,7 @@ ns {
 			ctx._cmd = null
 		}
 
+	doc Implementation details of different operations provided by TrContext
 	type TrCommand
 
 		doc Implementation detail of skip(TrContext)
@@ -24,37 +31,40 @@ ns {
 		throw InvalidArgument("Use ${n}(...) instead of ${n}")
 	}
 
-	F descend(tc:TrContext, my_each:Fun, process_result_item:Fun) {
+	F _unified_each(e:Eachable1, cb:Fun) e.each_idx_val(cb)
+	F _unified_each(e:Eachable2, cb:Fun) e.each(cb)
+
+	F _unified_push(e:Eachable1, _idx:Int, val) e.push(val)
+	F _unified_push(e:Eachable2, key, val) e[key] = val
+
+	F _each(tc:TrContext, cb:Fun) {
+		tc.deeper({
+			tc._cur._unified_each(F(idx_or_key, val) {
+				tc.set_last_path_element(idx_or_key)
+				debug("tr", {"descend path=${tc._path}"})
+				cb(idx_or_key, val)
+			})
+		})
+	}
+
+	F _default_descend_transformation(tc:TrContext, idx_or_key) tc._transformation
+
+	F descend(tc:TrContext, transformation_cb:Fun=_default_descend_transformation) {
+		tc._cur !~ DESCENDABLE throws InvalidArgument("Attempted to descend on non-descendable: ${tc._cur} at path ${tc._path}")
+
 		debug("tr", {"descend::start ${tc._path}"})
 		t = typeof(tc._cur)
 		ret = t()  # XXX: Assumption about existence of the constructor
-		tc.deeper({
-			tc._cur.my_each(F(idx_or_key, val) {
-				tc.set_last_path_element(idx_or_key)
-				debug("tr", {"descend path=${tc._path}"})
-				t = tr(val, tc._transformation, tc)
-				ematch t {
-					Lit process_result_item(ret, idx_or_key, t.val)
-					TrSkip null # do nothing
-				}
-			})
+		tc._each(F(idx_or_key, val) {
+			t = tr(val, transformation_cb(tc, idx_or_key), tc)
+			debug("tr", {"descend value from tr() - ${t}"})
+			### TODO: Handle TrNoMatch ###
+			ematch t {
+				Lit _unified_push(ret, idx_or_key, t.val)
+				TrSkip null # do nothing
+			}
 		})
 		ret
-	}
-
-	F descend(tc:TrContext) {
-		throw InvalidArgument("Attempted to descend on non-descendable: ${tc._cur} at path ${tc._path}")
-	}
-
-	F descend(tc:TrContext) {
-		guard tc._cur is Eachable1
-		guard tc._cur !~ AnyOf(Int, Str)
-		descend(tc, each_idx_val, F(ret, idx, val) ret.push(val))
-	}
-
-	F descend(tc:TrContext) {
-		guard tc._cur is Eachable2
-		descend(tc, each, F(ret, key, val) ret[key] = val)
 	}
 
 	F skip(tc:TrContext) tc._cmd = TrSkip()
@@ -65,8 +75,6 @@ ns {
 	doc Implementation detail of tr()
 	type TopLevelRules(ArrLike)
 
-		F Str(tlr:TopLevelRules) "<${tlr.typeof().name} ${tlr.Arr()}>"
-
 	F tr(x, pattern, tc:TrContext) {
 		x =~ pattern returns Lit(x)
 		TrNoMatch()
@@ -74,38 +82,15 @@ ns {
 
 	F tr(x, a:Arr, tc:TrContext) {
 		debug("tr", "tr(x, Arr, TrContext) - before guards")
-		x is Int or x is Str returns TrNoMatch()
-		x is not Eachable1 returns TrNoMatch()
+		x !~ DESCENDABLE1 returns TrNoMatch()
 		l = x.len()
 		l != a.len() returns TrNoMatch()
 		debug("tr", "tr(x, Arr, TrContext) - after guards")
 
-		section "Construction yard" {
-
-			my_each = each_idx_val
-			process_result_item = push(X, Z)
-
-
-			debug("tr", {"CY descend::start ${tc._path}"})
-			t = typeof(x)
-			ret = t()  # XXX: Assumption about existence of the constructor
-			tc.deeper({
-				x.my_each(F(idx_or_key, val) {
-					tc.set_last_path_element(idx_or_key)
-					debug("tr", {"CY descend path=${tc._path}"})
-					t = tr(val, a[idx_or_key], tc)
-					ematch t {
-						Lit process_result_item(ret, idx_or_key, t.val)
-						TrSkip null # do nothing
-					}
-				})
-			})
-			debug("tr", {"CY DONE ${ret}"})
-			return Lit(ret)
-		}
-
-
-		Lit(x)
+		tc.deeper({'_cur': x, '_cmd': null}, {
+			ret = tc.descend(F(tc:TrContext, idx_or_key) a[idx_or_key])
+			Lit(ret)
+		})
 	}
 
 
@@ -143,14 +128,18 @@ ns {
 		#   * recurse into Eachable1 and Eachable2
 		#   * whatever does not match, returned as is
 		t += TopLevelRules([
-			AllOf(Eachable1, {A !~ AnyOf(Int, Str)}) -> descend(Y)
-			Eachable2 -> descend(Y)
+			DESCENDABLE -> descend(Y)
 			Any -> { A }
 		])
 		tc = TrContext(x, t)
 		result = tr(x, t, tc)
 		# TODO: better exception
 		assert(tc, {'_cmd': Null}, "Transformation failed, top level must return a value")
+
+		# Fails with: tr; [10,20].tr([[Int, Int] -> Y.skip()])
+		# But shuold fail at the assertion above
+		assert(result, Lit, "Transformation must return literal (type Lit), not ${result}")
+
 		result.val
 	}
 
@@ -160,4 +149,5 @@ ns {
 	TEST tr; {"a": 1, "b": "x"}.tr(Str -> Y.skip()) == {"a": 1}
 	TEST tr; [{"a": 1, "b": "x"}].tr([ Str -> Y.skip(), Int -> (X+1), Arr -> {["start", *descend(B)]} ]) == ["start", {"a": 2}]
 	TEST [10,20].tr([[Int, Int -> (X+1)]]) == [10, 21]
+	#FAILS# TEST tr; [1, [10,20]].tr([[Int, Int -> Y.skip()]])
 }
