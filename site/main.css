@@ -122,6 +122,10 @@ nav .unobtrusive {
 .icon-system {
 	color: #6F6F6FFF;
 }
+.meeting-container {
+	background: lightgoldenrodyellow;
+	border-radius: 10px;
+}
 pre, code {
 	white-space: pre-wrap;
 }
