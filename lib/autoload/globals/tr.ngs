@@ -18,6 +18,9 @@ ns {
 			ctx._cur = null # current item being processed by tr(), used by descend(TrContext)
 			ctx._cmd = null
 		}
+	
+	global TrFail
+	type TrFail(InvalidArgument)
 
 	doc Implementation details of different operations provided by TrContext
 	type TrCommand
@@ -56,12 +59,18 @@ ns {
 		t = typeof(tc._cur)
 		ret = t()  # XXX: Assumption about existence of the constructor
 		tc._each(F(idx_or_key, val) {
-			t = tr(val, transformation_cb(tc, idx_or_key), tc)
+			pat = transformation_cb(tc, idx_or_key)
+			t = tr(val, pat, tc)
 			debug("tr", {"descend value from tr() - ${t}"})
 			### TODO: Handle TrNoMatch ###
 			ematch t {
 				Lit _unified_push(ret, idx_or_key, t.val)
 				TrSkip null # do nothing
+				TrNoMatch throw TrFail("tr() match failed at path ${tc._path}").set(
+					val = val
+					path = copy(tc._path)
+					pattern = pat
+				)
 			}
 		})
 		ret
@@ -87,10 +96,13 @@ ns {
 		l != a.len() returns TrNoMatch()
 		debug("tr", "tr(x, Arr, TrContext) - after guards")
 
-		tc.deeper({'_cur': x, '_cmd': null}, {
-			ret = tc.descend(F(tc:TrContext, idx_or_key) a[idx_or_key])
-			Lit(ret)
-		})
+		try {
+			tc.deeper({'_cur': x, '_cmd': null}, {
+				Lit(tc.descend(F(tc:TrContext, idx_or_key) a[idx_or_key]))
+			})
+		} catch(tf:TrFail) {
+			TrNoMatch()
+		}
 	}
 
 
@@ -149,5 +161,5 @@ ns {
 	TEST tr; {"a": 1, "b": "x"}.tr(Str -> Y.skip()) == {"a": 1}
 	TEST tr; [{"a": 1, "b": "x"}].tr([ Str -> Y.skip(), Int -> (X+1), Arr -> {["start", *descend(B)]} ]) == ["start", {"a": 2}]
 	TEST [10,20].tr([[Int, Int -> (X+1)]]) == [10, 21]
-	#FAILS# TEST tr; [1, [10,20]].tr([[Int, Int -> Y.skip()]])
+	TEST tr; [1, [10,20]].tr([[Int, Int -> Y.skip()]]) == [1, [10]]
 }
