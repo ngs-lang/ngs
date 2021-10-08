@@ -46,3 +46,4 @@ This document describes releasing a new version of NGS.
 * Make a new entry at the top of `CHANGELOG.md`
 * Build (to get the new version from `version.h`)
 * `git commit -am 'Organizing after release'`
+* Create PR for homebrew similar to https://github.com/Homebrew/homebrew-core/pull/68148
