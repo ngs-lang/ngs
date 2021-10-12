@@ -4,6 +4,7 @@ ns {
 
 	global tr, init, (=~), descend, skip, Str
 
+	HASHABLE = AnyOf(Bool, Num, Str)
 	DESCENDABLE1 = AllOf(Eachable1, X !~ Int, X !~ Str)
 
 	# TODO: Provide metadata such as "DESCENDABLE" name so that
@@ -54,19 +55,25 @@ ns {
 		})
 	}
 
-	F _default_descend_transformation(tc:TrContext, idx_or_key) tc._transformation
+	F _collector(original, cb:Fun) block b {
+		ret = original.typeof()() # XXX: Assumption about existence of the constructor
+		F collect(idx_or_key, x:Lit) _unified_push(ret, idx_or_key, x.val)
+		F collect(idx_or_key, x:TrSkip) "no-op"
+		F collect(idx_or_key, x:TrNoMatch) b.return(x)
+		cb(collect)
+		Lit(ret)
+	}
 
-	F descend(tc:TrContext, transformation_cb:Fun=_default_descend_transformation) {
+	F descend(tc:TrContext) {
 		tc._cur !~ DESCENDABLE throws InvalidArgument("Attempted to descend on non-descendable: ${tc._cur} at path ${tc._path}")
 
 		debug("tr", {"descend::start ${tc._path}"})
 		t = typeof(tc._cur)
 		ret = t()  # XXX: Assumption about existence of the constructor
 		tc._each(F(idx_or_key, val) {
-			pat = transformation_cb(tc, idx_or_key)
+			pat = tc._transformation
 			t = tr(val, pat, tc)
 			debug("tr", {"descend value from tr() - ${t}"})
-			### TODO: Handle TrNoMatch ###
 			ematch t {
 				Lit _unified_push(ret, idx_or_key, t.val)
 				TrSkip null # do nothing
@@ -100,14 +107,39 @@ ns {
 		l != a.len() returns TrNoMatch()
 		debug("tr", "tr(x, Arr, TrContext) - after guards")
 
-		try {
-			tc.deeper({'_cur': x, '_cmd': null}, {
-				Lit(tc.descend(F(tc:TrContext, idx_or_key) a[idx_or_key]))
+		_collector(x, F(collect) {
+			tc.deeper({
+				# Later, instead of "for", more elaborate algorithms will be employed
+				# to accomodate patterns such as repetition, etc
+				for(i;l) {
+					tc.set_last_path_element(i)
+					debug("tr", "tr(x, Arr, TrContext) path=${tc._path}")
+					collect(i, tr(section "XXX: assuming indexable" x[i], a[i], tc))
+				}
 			})
-		} catch(tf:TrFail) {
-			TrNoMatch()
-		}
+		})
 	}
+
+	# TODO: Support NormalTypeInstance ?
+	F tr(x, h:Hash, tc:TrContext) {
+		x !~ AnyOf(Hash, HashLike) returns TrNoMatch
+		assert(x, Eachable2, "Internal error. Unexpected type in tr(x, Hash, TrContext) - ${x.typeof().name}")
+
+		# XXX: assumption - len() exists for x
+		len(h) > len(x) returns TrNoMatch()
+
+		_collector(x, F(collect) {
+			tc.deeper({
+				x.each(F(k, v) {
+					assert(k, HASHABLE, "Internal error. tr(x, Hash, TrContext) got unsupported key type ${k.typeof().name}")
+					tc.set_last_path_element(k)
+					collect(k, tr(v, h.get(k, identity), tc))
+				})
+			})
+		})
+	}
+
+	# TODO # F tr(x, a:AnyOf, tc:TrContext)
 
 
 	F tr(x, pa:PatternAction, tc:TrContext) {
@@ -163,4 +195,7 @@ ns {
 	TEST [10,20].tr([[Int, Int -> (X+1)]]) == [10, 21]
 	TEST tr; [1, [10,20]].tr([[Int, Int -> Y.skip()]]) == [1, [10]]
 	TEST tr; 1.tr(Int -> skip(Y)) THROWS TrTopLevelSkipFail
+	TEST {"a": {"b": 2}}.tr({"a": {"b": Int -> (X+1)}}) == {"a": {"b": 3}}
+	TEST {"a": {"b": 2}, "extra": 100}.tr({"a": {"b": Int -> (X+1)}}) == {"a": {"b": 3}, "extra": 100}
+	TEST {"a": {"b": 2}, "extra": 100}.tr({"x": {"b": Int -> (X+1)}}) == {"a": {"b": 2}, "extra": 100}
 }
