@@ -20,7 +20,11 @@ ns {
 		}
 	
 	global TrFail
-	type TrFail(InvalidArgument)
+	type TrFail(Error)
+
+		global TrTopLevelSkipFail
+		doc Transformation tried to skip the top-level match
+		type TrTopLevelSkipFail(TrFail)
 
 	doc Implementation details of different operations provided by TrContext
 	type TrCommand
@@ -132,7 +136,7 @@ ns {
 		throw InvalidArgument("None of the transformations matched").set(transformation=transformation)
 	}
 
-	doc Public API of the transofmration/tr() experimental facility
+	doc Public API of the transformation/tr() experimental facility
 	F tr(x, transformation) {
 		warn("Using experimental feature - tr()")
 		t = transformation.ensure(TopLevelRules)
@@ -145,13 +149,9 @@ ns {
 		])
 		tc = TrContext(x, t)
 		result = tr(x, t, tc)
-		# TODO: better exception
-		assert(tc, {'_cmd': Null}, "Transformation failed, top level must return a value")
-
-		# Fails with: tr; [10,20].tr([[Int, Int] -> Y.skip()])
-		# But shuold fail at the assertion above
-		assert(result, Lit, "Transformation must return literal (type Lit), not ${result}")
-
+		assert(tc, {'_cmd': Null}, "Internal error. Transformation failed, top level must return a value")
+		result is TrSkip throws TrTopLevelSkipFail('Transformation tried to skip top-level match')
+		assert(result, Lit, "Internal error. Transformation must return literal (type Lit), not ${result}")
 		result.val
 	}
 
@@ -162,4 +162,5 @@ ns {
 	TEST tr; [{"a": 1, "b": "x"}].tr([ Str -> Y.skip(), Int -> (X+1), Arr -> {["start", *descend(B)]} ]) == ["start", {"a": 2}]
 	TEST [10,20].tr([[Int, Int -> (X+1)]]) == [10, 21]
 	TEST tr; [1, [10,20]].tr([[Int, Int -> Y.skip()]]) == [1, [10]]
+	TEST tr; 1.tr(Int -> skip(Y)) THROWS TrTopLevelSkipFail
 }
