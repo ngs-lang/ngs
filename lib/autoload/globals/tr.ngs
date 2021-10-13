@@ -92,9 +92,6 @@ ns {
 	doc Implementation detail of tr()
 	type TrNoMatch
 
-	doc Implementation detail of tr()
-	type TopLevelRules(ArrLike)
-
 	F tr(x, pattern, tc:TrContext) {
 		x =~ pattern returns Lit(x)
 		TrNoMatch()
@@ -139,7 +136,17 @@ ns {
 		})
 	}
 
-	# TODO # F tr(x, a:AnyOf, tc:TrContext)
+	F tr(x, a:AnyOf, tc:TrContext) block b {
+		debug("tr", "tr(x, AnyOf, TrContext) transformation=${a}")
+		a.each(F(t) {
+			result = tr(x, t, tc)
+			if result is not TrNoMatch	{
+				debug("tr", "tr(x, AnyOf, TrContext) returning ${result}")
+				b.return(result)
+			}
+		})
+		TrNoMatch()
+	}
 
 
 	F tr(x, pa:PatternAction, tc:TrContext) {
@@ -156,26 +163,14 @@ ns {
 		TrNoMatch()
 	}
 
-	F tr(x, transformation:TopLevelRules, tc:TrContext) block b {
-		debug("tr", "tr(x, TopLevelRules, TrContext) transformation=${transformation}")
-		transformation.each(F(t) {
-			result = tr(x, t, tc)
-			if result is not TrNoMatch	{
-				debug("tr", "tr(x, TopLevelRules, TrContext) returning ${result}")
-				b.return(result)
-			}
-		})
-		throw InvalidArgument("None of the transformations matched").set(transformation=transformation)
-	}
-
 	doc Public API of the transformation/tr() experimental facility
 	F tr(x, transformation) {
 		warn("Using experimental feature - tr()")
-		t = transformation.ensure(TopLevelRules)
+		t = transformation.ensure(AnyOf)
 		# Default rules, appended automatically at the bottom:
 		#   * recurse into Eachable1 and Eachable2
 		#   * whatever does not match, returned as is
-		t += TopLevelRules([
+		t += AnyOf([
 			DESCENDABLE -> descend(Y)
 			Any -> { A }
 		])

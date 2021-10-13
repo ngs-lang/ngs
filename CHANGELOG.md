@@ -28,6 +28,7 @@
 * Booleans now compare correctly when used as `Hash` keys
 * `exit_hook` now removes hooks in child `fork()`
 * It is now possible to redirect to File without using `.path` - `f=TmpFile(); $(echo a > $f)` - Issue #490
+* `test.ngs` in the root folder now accepts optional file names; defaults to `lang-tests.ngs`, `stdlib.ngs`, and all `*.ngs` files in `lib/autoload`
 
 ### Breaking changes
 
