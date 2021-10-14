@@ -12,6 +12,10 @@ ns {
 	DESCENDABLE = AnyOf(DESCENDABLE1, Eachable2)
 
 	global TrContext
+	doc Transformation context
+	doc _transformation - current transformation
+	doc _cur - current object being matched
+	doc _cmd - for tr()'s internal mechanism implementing some_op(TrContext)
 	type TrContext(MatchContext)
 		F init(ctx:TrContext, root, transformation) {
 			super(ctx, root)
@@ -21,6 +25,7 @@ ns {
 		}
 	
 	global TrFail
+	doc Represents failed transformation
 	type TrFail(Error)
 
 		global TrTopLevelSkipFail
@@ -64,6 +69,7 @@ ns {
 		Lit(ret)
 	}
 
+	doc 
 	F descend(tc:TrContext) {
 		tc._cur !~ DESCENDABLE throws InvalidArgument("Attempted to descend on non-descendable: ${tc._cur} at path ${tc._path}")
 
@@ -87,16 +93,22 @@ ns {
 		ret
 	}
 
+	doc Skip current object that matched
+	doc %EX [1,2,"aa"].tr(Int -> skip(Y)) # The action is called with (Any, TrContext); Y is TrContext then.
 	F skip(tc:TrContext) tc._cmd = TrSkip()
 
 	doc Implementation detail of tr()
 	type TrNoMatch
 
+	doc Checks whether x matches the pattern
+	doc %RET - Lit(x) or TrNoMatch()
 	F tr(x, pattern, tc:TrContext) {
 		x =~ pattern returns Lit(x)
 		TrNoMatch()
 	}
 
+	doc Match / transform x using the pattern in a
+	doc %RET - Lit or TrCommand
 	F tr(x, a:Arr, tc:TrContext) {
 		debug("tr", "tr(x, Arr, TrContext) - before guards")
 		x !~ DESCENDABLE1 returns TrNoMatch()
@@ -118,6 +130,9 @@ ns {
 	}
 
 	# TODO: Support NormalTypeInstance ?
+	doc Match / transform x using the pattern in h.
+	doc x - Hash or HashLike
+	doc %RET - Lit or TrCommand
 	F tr(x, h:Hash, tc:TrContext) {
 		x !~ AnyOf(Hash, HashLike) returns TrNoMatch
 		assert(x, Eachable2, "Internal error. Unexpected type in tr(x, Hash, TrContext) - ${x.typeof().name}")
@@ -136,6 +151,9 @@ ns {
 		})
 	}
 
+	doc Match / transform x using the pattern in a.
+	doc First match shortcuts the evaluation: further items in a are not tried.
+	doc %RET - Lit or TrNoMatch
 	F tr(x, a:AnyOf, tc:TrContext) block b {
 		debug("tr", "tr(x, AnyOf, TrContext) transformation=${a}")
 		a.each(F(t) {
@@ -148,11 +166,13 @@ ns {
 		TrNoMatch()
 	}
 
-
+	doc Transform x using pa::action of x matches pa::pattern.
+	doc pa::action will be called with (Any, TrContext).
+	doc pa::action can either return new data or perform an operation using TrContext.
+	doc Currently supported operation is skip(TrContext).
+	doc %RET - Lit, TrCommand, or TrNoMatch
 	F tr(x, pa:PatternAction, tc:TrContext) {
-
 		debug("tr", {"tr(x, PatternAction, TrContext) pa=${pa} tc=${tc}"})
-
 		if (=~)(x, pa.pattern, tc) {
 			return tc.deeper({'_cur': x, '_cmd': null}, {
 				ret = pa::action(x, tc)
