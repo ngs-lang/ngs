@@ -164,6 +164,7 @@ ns {
 	}
 
 	doc Public API of the transformation/tr() experimental facility
+	doc %EX - cat fhir_questionnaire_01.json | ngs -ppj '_.tr({"url": AnyOf("http://hl7.org/fhir/StructureDefinition/maxValue", "http://hl7.org/fhir/StructureDefinition/minValue")} -> skip(Y)).tr([] -> skip(Y))' >fhir_questionnaire_01.clean.json
 	F tr(x, transformation) {
 		warn("Using experimental feature - tr()")
 		t = transformation.ensure(AnyOf)

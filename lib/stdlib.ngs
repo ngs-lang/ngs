@@ -5708,13 +5708,14 @@ F wait(p:Process) {
 
 	F join_threads(which:Str) {
 		threads = p.(which)
+		debug("process", {"[wait] joining ${which}: ${threads}"})
 		results = threads.join()
+		debug("process", {"[wait] joined threads"})
 		p.(which) = []
 		first_failure = results.first(Failure, null)
 		first_failure throws ProcessFail('Error in reading/writing thread').set(process=p, cause=first_failure)
 	}
 
-	debug("process", "[wait] joining reading and writing threads")
 	%[reading_threads writing_threads].each(join_threads)
 
 
