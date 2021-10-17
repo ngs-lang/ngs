@@ -205,7 +205,7 @@ cd ngs && ./install.sh</code></pre>
             <pre><code class="yaml hljs">(...)
 - uses: ngs-lang/ngs@v2.1.12-action
 - run: ngs -pi 'sum(10..100)'</code></pre>
-            <h4>In <a href="http://ipython.ngs-lang.org" target="_blank">iPython / Jupyter Notebooks / Google Colab</a></h4>
+            <h4>In <a href="http://ipython.ngs-lang.org" target="_blank">iPython / Jupyter Notebook / Google Colab</a></h4>
             <pre><code class="plaintext hljs">
 !curl "https://raw.githubusercontent.com/ngs-lang/ngs-ipython-extension/master/ngs-install.sh" | bash
 
@@ -213,6 +213,8 @@ cd ngs && ./install.sh</code></pre>
 %ngs [single line expression]
 %%ngs [multi line code]
 </code></pre>
+            <h6>In docker </h6>
+            <pre><code class="bash hljs">docker run -p 8888:8888 ngslang/ngs-jupyter</code></pre>
         </div>
     </div>
     <div class="row pt-3">
@@ -244,18 +246,16 @@ cd ngs && ./install.sh</code></pre>
 
 <!-- highlightjs - code highlighting -->
 <link rel="stylesheet"
-      href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/styles/vs.min.css">
-<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/highlight.min.js"></script>
-<script>hljs.initHighlightingOnLoad()</script>
+      href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.0/styles/vs.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.0/highlight.min.js"></script>
 
 <!-- highlightjs-badge - copy button for highlightjs -->
 <script src="https://unpkg.com/highlightjs-badge/highlightjs-badge.min.js"></script>
 <script>
-	hljs.initHighlightingOnLoad()
 	setTimeout(function () {
 		var pres = document.querySelectorAll("pre>code");
 		for (var i = 0; i < pres.length; i++) {
-			hljs.highlightBlock(pres[i]);
+			hljs.highlightElement(pres[i]);
 		}
 		var options = {
 			contentSelector: ".container",
