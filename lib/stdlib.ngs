@@ -838,8 +838,9 @@ section "=~ Matching" {
 	F =~(x, t:Type, _mc:MatchContext) x is t
 
 	doc Check whether x is the literal value l (using ==)
-	F =~(x, l:Lit, _mc:MatchContext) x == l
+	F =~(x, l:Lit, _mc:MatchContext) x == l.val
 	TEST 1 !~ Lit(Int)
+	TEST Int =~ Lit(Int)
 
 	section "Repeat" {
 
