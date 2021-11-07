@@ -7,6 +7,10 @@ h1, h2, h3, h4, h5, h6 {
 	color: #7B1FA2;
 }
 
+.pitch {
+	color: black;
+}
+
 h1, h2 {
 	text-align: center;
 }
@@ -124,7 +128,6 @@ nav .unobtrusive {
 }
 .meeting-container {
 	background: lightgoldenrodyellow;
-	border-radius: 10px;
 }
 pre, code {
 	white-space: pre-wrap;

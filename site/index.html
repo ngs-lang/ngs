@@ -14,6 +14,12 @@
 </head>
 <body>
 
+<div class="row meeting-container justify-content-center pb-1 pt-1">
+    <div class="col-mr-auto">
+        <span>Join us in <a href="http://discord.ngs-lang.org">Discord</a> for our weekly meeting, every Sunday at 16:00 GMT</span>
+    </div>
+</div>
+
 <div class="container pb-5">
     <div class="row">
         <div class="col">
@@ -22,11 +28,11 @@
             </h1>
         </div>
     </div>
-    <div class="row pt-2 pb-2">
+    <div class="row">
         <div class="col">
-            <p class="text-center text-justify main-thing-on-page">
-                A <b>modern</b> programming <b>language</b> for <b>DevOps</b>
-            </p>
+            <h1 class="pitch text-center text-justify main-thing-on-page">
+                A modern programming language for DevOps
+            </h1>
         </div>
     </div>
     <div class="row pt-3 pb-3">
@@ -76,12 +82,6 @@
                 </div>
                 <div class="col-1"></div>
             </div>
-        </div>
-    </div>
-    <div class="row  justify-content-center">
-        <div class="col-mr-auto meeting-container pt-3 pb-3 pl-3 pr-3">
-            <span class="icon-link far fa-comments fa-2x pr-3"></span>
-            <span class="pb-3">Join us in <a href="http://discord.ngs-lang.org">Discord</a> for our weekly meeting, every Sunday at 16:00 GMT</span>
         </div>
     </div>
     <div class="row pt-2 pb-2">
@@ -162,6 +162,7 @@
         </div>
         <div  style="margin-left: 40px"></div>
         <div class="col-sm">
+            <h2 class="text-left">Quick Start</h2>
             <div class="row justify-content-between">
                 <div class="col-8"><h4>Shell</h4></div>
                 <div class="col-4 align-self-center text-right">
@@ -251,7 +252,7 @@ cd ngs && ./install.sh</code></pre>
 <script src="https://unpkg.com/highlightjs-badge/highlightjs-badge.min.js"></script>
 <script>
 	setTimeout(function () {
-		document.querySelectorAll("pre>code").forEach(hljs.highlightElement);
+		document.querySelectorAll(".hljs").forEach(hljs.highlightElement);
 		var options = {
 			contentSelector: ".container",
 			// Delay in ms used for `setTimeout` before badging is applied
