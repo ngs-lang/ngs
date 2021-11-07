@@ -12,7 +12,7 @@ h1, h2 {
 }
 
 a {
-	color: #6F6F6FFF;
+	color: #6F6F6F;
 	text-decoration: underline;
 }
 a:hover {
@@ -102,7 +102,7 @@ nav .unobtrusive {
 }
 .icon-link {
 	--text-opacity: 1;
-	color: #6F6F6FFF;
+	color: #6F6F6F;
 	color: rgba(111, 111, 111,var(--text-opacity));
 	text-decoration: none;
 }
@@ -120,7 +120,7 @@ nav .unobtrusive {
 	text-align: center;
 }
 .icon-system {
-	color: #6F6F6FFF;
+	color: #6F6F6F;
 }
 .meeting-container {
 	background: lightgoldenrodyellow;

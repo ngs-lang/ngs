@@ -18,7 +18,7 @@
     <div class="row">
         <div class="col">
             <h1 class="text-center">
-                <span class="align-middle"><img src="https://raw.githubusercontent.com/ngs-lang/marketing-material/main/logo/ngs-logo-300.png" width="260"></span>
+                <span class="align-middle"><img alt="NGS logo - cloud and UNIX shell icon" src="https://raw.githubusercontent.com/ngs-lang/marketing-material/main/logo/ngs-logo-300.png" width="260"></span>
             </h1>
         </div>
     </div>
@@ -162,8 +162,6 @@
         </div>
         <div  style="margin-left: 40px"></div>
         <div class="col-sm">
-            <h2 class="text-left">Quick Start</h2>
-            NGS runs on <b>Linux</b> and <b>Mac</b>
             <div class="row justify-content-between">
                 <div class="col-8"><h4>Shell</h4></div>
                 <div class="col-4 align-self-center text-right">
@@ -220,7 +218,7 @@ cd ngs && ./install.sh</code></pre>
     <div class="row pt-3">
         <div class="col-sm"></div>
         <div class="col-sm text-right">
-            <p style="font-size: 12px; vertical-align: bottom;">powered by<a href="https://beame.io" target="_blank"><img style="margin-left: 10px; margin-top: -9px" src="https://raw.githubusercontent.com/ngs-lang/marketing-material/main/external/beame.png" height="15"></a></p>
+            <p style="font-size: 12px; vertical-align: bottom;">powered by<a href="https://beame.io" target="_blank"><img alt="beame.io logo" style="margin-left: 10px; margin-top: -9px" src="https://raw.githubusercontent.com/ngs-lang/marketing-material/main/external/beame.png" height="15"></a></p>
         </div>
     </div>
 </div>
@@ -253,10 +251,7 @@ cd ngs && ./install.sh</code></pre>
 <script src="https://unpkg.com/highlightjs-badge/highlightjs-badge.min.js"></script>
 <script>
 	setTimeout(function () {
-		var pres = document.querySelectorAll("pre>code");
-		for (var i = 0; i < pres.length; i++) {
-			hljs.highlightElement(pres[i]);
-		}
+		document.querySelectorAll("pre>code").forEach(hljs.highlightElement);
 		var options = {
 			contentSelector: ".container",
 			// Delay in ms used for `setTimeout` before badging is applied
@@ -268,10 +263,6 @@ cd ngs && ./install.sh</code></pre>
 			copyIconClass: "fa fa-copy",
 			// CSS class(es) used to render the done icon.
 			checkIconClass: "fa fa-check text-success",
-			// hook to allow modifying the text before it's pasted
-			onBeforeTextCopied: function(text, codeElement) {
-				return text;   //  you can fix up the text here
-			}
 		};
 		window.highlightJsBadge(options);
 	},10);
