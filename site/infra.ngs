@@ -28,17 +28,11 @@
 
 
     # * Create S3 buckets for REDIRECTS
-    REDIRECTS= [{id: "manual", host: "ngs-lang.org", path: "doc/latest/index.html"},
-                {id: "ref", host: "ngs-lang.org", path: "doc/latest/generated/index.html"},
-                {id: "discord", host: "discord.gg", path: "6VqgcpM"},
+    REDIRECTS= [{id: "discord", host: "discord.gg", path: "6VqgcpM"},
                 {id: "videos", host: "m.youtube.com", path: "channel/UC6CL2J6syrV1mfFpxQd89gQ"},
                 {id: "source", host: "github.com", path: "ngs-lang/ngs"},
                 {id: "wiki", host: "github.com", path: "ngs-lang/ngs/wiki"},
                 {id: "ipython", host: "github.com", path: "ngs-lang/ngs-ipython-extension"},
-                {id: "tut", host: "ngs-lang.org", path: "doc/latest/man/ngstut.1.html"}
-                {id: "why", host: "ngs-lang.org", path: "doc/latest/man/ngswhy.1.html"}
-                {id: "lang", host: "ngs-lang.org", path: "doc/latest/man/ngslang.1.html"}
-                {id: "style", host: "ngs-lang.org", path: "doc/latest/man/ngsstyle.1.html"}
                 {id: "docker", host: "hub.docker.com", path: "r/ngslang/ngs"},
                 {id: "brew", host: "formulae.brew.sh", path: "formula/ngs"}
                 {id: "snap", host: "snapcraft.io", path: "ngs"},
@@ -61,6 +55,14 @@
     #                }
     #            }
     #        ]
-    # * Create DNS alias for each REDIRECTS as a CNAME pointing to `s3-website-us-east-1.amazonaws.com.` with simple route
+    # * Create CloudFront distribution pointing to each s3 public address, with alternate domain name (cname) `${REDIRECTS.id}.${REDIRECTS.host}`, with redirect http to http, create ssl cert, TLSv1.2_2018, HTTP/2, no Default root object
+    
+    # this ones don't need S3, since they redirect to an internal AWS hosted resource
+    REDIRECTS.push_all([{id: "manual", host: "ngs-lang.org", path: "/doc/latest"},
+                        {id: "ref", host: "ngs-lang.org", path: "/doc/latest/generated"}])
 
+    # Manual steps:
+    # * Create CloudFront distribution pointing to each s3 public address of ngs-lang.org and Origin path as `${REDIRECTS.path}`, with alternate domain name (cname) `${REDIRECTS.id}.${REDIRECTS.host}`, with redirect http to http, create ssl cert, TLSv1.2_2018, HTTP/2, no Default root object
+    
+    # * Create DNS alias for all addressess that points to each cloudfront address
 }
