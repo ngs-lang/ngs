@@ -143,7 +143,7 @@
 			F head_fragment(from:Description) {
 				\head [
 					\meta charset='UTF-8'
-					\link rel='stylesheet' href='https://manual.ngs-lang.org/main.css' type='text/css'
+					\link rel='stylesheet' href=href(from, from.get_this_version_desc().path_as_container() + ['main.css']) type='text/css'
 					\title [ page_title(from) ]
 				]
 			}
@@ -161,7 +161,7 @@
 				\div class='footer' [
 					\a href='https://ngs-lang.org/' [ "NGS website" ]
 					\br
-					\a href='https://source.ngs-lang.org/' [ "NGS on GitHub" ]
+					\a href='https://github.com/ngs-lang/ngs' [ "NGS on GitHub" ]
 				]
 
 			}
