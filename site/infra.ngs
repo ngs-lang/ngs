@@ -57,6 +57,6 @@
     #                }
     #            }
     #        ]
-    # * Create CloudFront distribution pointing to each s3 public address, with alternate domain name (cname) `${REDIRECTS.id}.${REDIRECTS.host}`, with redirect http to http, create ssl cert, TLSv1.2_2018, HTTP/2, no Default root object
+    # * Create CloudFront distribution pointing to each s3 public address, with alternate domain name (cname) `${REDIRECTS.id}.${REDIRECTS.host}`, use only North America and Europe, with redirect http to http, create ssl cert, TLSv1.2_2018, HTTP/2, no Default root object
     # * Create DNS alias for all addressess that points to each cloudfront address
 }
