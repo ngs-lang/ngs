@@ -36,7 +36,9 @@
                 {id: "docker", host: "hub.docker.com", path: "r/ngslang/ngs"},
                 {id: "brew", host: "formulae.brew.sh", path: "formula/ngs"}
                 {id: "snap", host: "snapcraft.io", path: "ngs"},
-                {id: "action", host: "github.com", path: "marketplace/actions/setup-ngs"}]
+                {id: "action", host: "github.com", path: "marketplace/actions/setup-ngs"},
+                {id: "manual", host: "ngs-lang.org", path: "doc/latest/index.html"},
+                {id: "ref", host: "ngs-lang.org", path: "doc/latest/generated/index.html"}]
 
     REDIRECTS.each({
         bucketName = "${A.id}.${DOMAIN}"
@@ -56,13 +58,5 @@
     #            }
     #        ]
     # * Create CloudFront distribution pointing to each s3 public address, with alternate domain name (cname) `${REDIRECTS.id}.${REDIRECTS.host}`, with redirect http to http, create ssl cert, TLSv1.2_2018, HTTP/2, no Default root object
-    
-    # this ones don't need S3, since they redirect to an internal AWS hosted resource
-    REDIRECTS.push_all([{id: "manual", host: "ngs-lang.org", path: "/doc/latest"},
-                        {id: "ref", host: "ngs-lang.org", path: "/doc/latest/generated"}])
-
-    # Manual steps:
-    # * Create CloudFront distribution pointing to each s3 public address of ngs-lang.org and Origin path as `${REDIRECTS.path}`, with alternate domain name (cname) `${REDIRECTS.id}.${REDIRECTS.host}`, with redirect http to http, create ssl cert, TLSv1.2_2018, HTTP/2, no Default root object
-    
     # * Create DNS alias for all addressess that points to each cloudfront address
 }
