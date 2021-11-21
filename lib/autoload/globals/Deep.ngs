@@ -1,0 +1,32 @@
+ns {
+	global Deep, init, (=~)
+	type Deep
+
+	F init(d:Deep, pattern) d.pattern = pattern
+
+	F process(x:Eachable, d:Deep, mc:MatchContext, my_each:Fun) {
+		result = (=~)(x, d.pattern, mc)
+		result returns result
+
+		result = false
+		mc.deeper({
+			x.my_each(F(key_or_idx, value) {
+				if (=~)(value, d, mc.set_last_path_element(key_or_idx)) {
+					result = true
+				}
+			})
+		})
+		result
+	}
+
+	F =~(x, d:Deep, mc:MatchContext) (=~)(x, d.pattern, mc)
+
+	F =~(x:Eachable1, d:Deep, mc:MatchContext) {
+		guard x is not Str and x is not Int
+		process(x, d, mc, each_idx_val)
+	}
+
+	F =~(x:Eachable2, d:Deep, mc:MatchContext) process(x, d, mc, each)
+
+	TEST ["a", {"b": ["c", {"d": 1}]}] =~ Deep(Int)
+}

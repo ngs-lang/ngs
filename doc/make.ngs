@@ -24,6 +24,15 @@
 
 	# TODO: types trees pages
 
+	global code
+
+	doc Security implications. Not to expose possible secrets (such as AWS_...)
+	doc Do not remove unless you have alternative solution.
+	F code(e)  {
+		guard e === ENV
+		'ENV'
+	}
+
 	F main(doc_root:Str) {
 
 		global init, Str, Bool, ([]=)

@@ -423,6 +423,9 @@ int is_equal(VALUE a, VALUE b) {
 	if(IS_NULL(a) && IS_NULL(b)) {
 		return 1;
 	}
+	if(IS_BOOL(a) && IS_BOOL(b)) {
+		return a.num == b.num;
+	}
 	return 0;
 }
 

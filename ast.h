@@ -16,7 +16,7 @@ typedef struct ast_node {
 	// MAYBE TODO: make it int but store parsed long int values somewhere else
 	long int number;
 	void *data;
-	// Chidren
+	// Children
 	struct ast_node *first_child;
 	struct ast_node *last_child;
 	struct ast_node *next_sibling;

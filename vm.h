@@ -64,8 +64,8 @@ typedef struct {
 
 // --- VM ---------------------------------------
 
-#define MAX_STACK          (1024)
-#define MAX_FRAMES          (256)
+#define MAX_STACK          (2048)
+#define MAX_FRAMES         (1024)
 #define MAX_TRIES_PER_FRAME   (8)
 #define MAX_ARGS             (16)
 

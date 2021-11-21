@@ -1,11 +1,12 @@
 <img alt="NGS logo - cloud and UNIX shell icon" align="right" src="img/ngs-logo-300.png" />
 
+[![Discord](https://img.shields.io/discord/681405592732172293.svg?logo=discord)](https://discord.gg/6VqgcpM)
 [![Commits in dev since last release](https://img.shields.io/github/commits-since/ngs-lang/ngs/latest/dev.svg)](https://github.com/ngs-lang/ngs/commits/dev)
-[![Join the chat at https://gitter.im/ngs-lang/Lobby](https://badges.gitter.im/ngs-lang/Lobby.svg)](https://gitter.im/ngs-lang/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](/../../workflows/Build/badge.svg?branch=master)](/../../actions?query=workflow%3A%22Build%22+branch%3Amaster)
 [![Docker Build Status](https://img.shields.io/docker/cloud/build/ngslang/ngs.svg)](https://hub.docker.com/r/ngslang/ngs/builds)
 [![Homebrew](https://img.shields.io/badge/dynamic/json.svg?url=https://formulae.brew.sh/api/formula/ngs.json&query=$.versions.stable&label=homebrew&color=orange)](https://formulae.brew.sh/formula/ngs)
-[![ngs](https://snapcraft.io//ngs/badge.svg)](https://snapcraft.io/ngs)
+[![snapcraft](https://snapcraft.io//ngs/badge.svg)](https://snapcraft.io/ngs)
+[![license](https://img.shields.io/github/license/ngs-lang/ngs)](https://raw.githubusercontent.com/ngs-lang/ngs/master/LICENSE)
 
 **Next Generation Shell** is a powerful programming language and a shell designed specifically for Ops. *Because you deserve better*.
 
@@ -14,28 +15,31 @@
 * [Suggested Solution - NGS](#suggested-solution---ngs)
 * [NGS Use Cases](#ngs-use-cases)
 * [Project Status](#project-status)
+* [Installing](#installing)
+  * [Using Script](#using-script)
+  * [Using Homebrew](#using-homebrew)
+  * [Using Snap](#using-snap)
+  * [Using Docker](#using-docker)
+  * [Using Github Action](#using-github-action)
+  * [Using iPython or Jupyter Notebook](#using-ipython-or-jupyter-notebook)
+* [Manually Compiling and Running](#manually-compiling-and-running)
+    * [Clone from Git](#clone-from-git)
+    * [Install with Dependencies - Debian-based Linux and MacOS](#install-with-dependencies---debian-based-linux-and-macos)
+    * [Install without Dependencies](#install-without-dependencies)
+    * [Run Tests](#run-tests)
+    * [Compile](#compile)
+    * [Run](#run)
+    * [Uninstall](#uninstall)
+    * [Debug - Mac](#debug---mac)
+    * [Debug - Homebrew builds](#debug---homebrew-builds)
+    * [Build and run docker](#build-and-run-docker)
+    * [Generate Documentation](#generate-documentation)
 * [Code Examples](#code-examples)
   * [Arrays](#arrays)
   * [Hashes](#hashes)
   * [Functions (multimethods) and multi-dispatch](#functions-multimethods-and-multi-dispatch)
   * [Basic Cloud](#basic-cloud)
   * [Sample Scripts](#sample-scripts)
-* [Running](#running)
-  * [Running Using Docker](#running-using-docker)
-  * [Running Using Homebrew](#running-using-homebrew)
-  * [Running Using Snap](#running-using-snap)
-* [Compiling and Running](#compiling-and-running)
-  * [Clone from Git](#clone-from-git)
-  * [Install with Dependencies - Debian-based Linux and MacOS](#install-with-dependencies---debian-based-linux-and-macos)
-  * [Install without Dependencies](#install-without-dependencies)
-  * [Run Tests](#run-tests)
-  * [Compile](#compile)
-  * [Run](#run)
-  * [Uninstall](#uninstall)
-  * [Debug - Mac](#debug---mac)
-  * [Debug - Homebrew builds](#debug---homebrew-builds)
-  * [Build and run docker](#build-and-run-docker)
-  * [Generate Documentation](#generate-documentation)
 * [Contributing](#contributing)
 * [Planned Features](#planned-features)
   * [Cross-system](#cross-system)
@@ -110,120 +114,58 @@ The work on **the shell** has just started. It is not usable yet. The shell is b
 From George Nachman, creator of [iTerm2](https://www.iterm2.com/):
 > Neat! This is totally the project I would do if I had unlimited free time :) I've wished for something like this for a long time. I think there's a lot of room for improvement over a basic TTY, and you've nailed some of the important things
 
-## Code Examples
+## Installing
 
-### Arrays
+### Using Script
 
+**On Linux**: make sure `curl` and `sudo` are installed
 
-	a = [1, 2, 3]
-	arr = a.map(X*2) # arr is now [2, 4, 6]
-	for i in arr {
-		echo(i)
-	}
+**On MacOS**: make sure you have `brew` installed.
 
-#### Hashes
-
-	h = {"a": 1, "b1": 2, "b2": 3}
-	echo(h.filterk(/^b/).mapv(X+10))  # {b1=12, b2=13}
+	curl https://ngs-lang.org/install.sh | bash
+	ngs -pi 'sum(0..10)'
 
 
-### Functions (multimethods) and multi-dispatch
+### Using Homebrew
 
-	F my_func(x:Int) x*10 # Single expression does not require { ... } syntax
+	brew install ngs
+	ngs -pi 'sum(0..10)'
 
-	doc This method is documented!
-	F my_func(s:Str) {
-		t = s * 2
-		"[" + t + "]" # Last value returned as the result
-	}
+### Using Snap
 
-	echo(my_func(1))      # 10
-	echo(my_func("xyz"))  # [xyzxyz]
-	echo(my_func)         # <MultiMethod with 2 method(s)>
+	sudo snap install ngs
+	ngs -pi 'sum(0..10)'
 
-More information about the language and syntax in particular is in [ngslang.1](doc/ngslang.1.md)
-
-### Basic Cloud
-
-NGS has AWS library based on concept of [Declarative Primitives](https://ilya-sher.org/2016/07/06/declarative-primitives-or-mkdir-p-for-the-cloud/)
-
-TLDR:
-
-* top-to-bottom execution
-* resource-level idempotence
-* just a more convenient scripting
-    * no dependency graph
-    * no state file
-
-This is how an instance can be created using NGS (real working code).
-
-	{
-		NGS_BUILD_CIDR = '192.168.120.0/24'
-		NGS_BUILD_TAGS = {'Name': 'ngs-build'}
-
-		vpc    = AWS::Vpc(NGS_BUILD_TAGS).converge(CidrBlock=NGS_BUILD_CIDR, Tags=NGS_BUILD_TAGS)
-		gw     = AWS::Igw(Attachments=[{'VpcId': vpc}]).converge(Tags=NGS_BUILD_TAGS)
-		rtb    = AWS::RouteTable(VpcId=vpc).converge(Routes=Present({"DestinationCidrBlock": "0.0.0.0/0", "GatewayId": gw}))
-		subnet = AWS::Subnet(VpcId=vpc, CidrBlock=NGS_BUILD_CIDR).converge()
-
-		sg = AWS::SecGroup("ngs-build-sg", vpc).converge(
-			Description = "ngs-build-sg"
-			Tags = NGS_BUILD_TAGS
-			IpPermissions = [ AWS::util::world_open_port(22) ]
-		)
-
-		ami = AWS::Image(OwnerId=AWS::AMI_OWNER_DEBIAN, Name=Pfx('debian-jessie-amd64-hvm'), RootDeviceType='ebs', VolumeType='gp2').latest()
-
-		instance = AWS::Instance(
-			ImageId = ami
-			State = null
-			KeyName = ENV.get('AWS_NGS_BUILD_KEY', 'ngs-build')
-			SecurityGroups = sg
-			SubnetId = subnet
-			PublicIpAddress = true
-			Tags = NGS_BUILD_TAGS
-		).converge(
-			State = 'running'
-		)
-
-		# Get SSH fingerprit from machine's console
-		AWS::add_to_known_hosts(instance, 'PublicIpAddress')
-	}
-
-### Sample Scripts
-
-* [describe ec2 instances](bin/ec2din.ngs). The script has nicely aligned output for humans. It uses `stdlib`'s `Table` to do output layout and columns configuration. `Table` handles columns presence and order and it can be configured via environment variable.
-* [build chunk of hosts file](bin/ec2hostsfile.ngs) for a management machine. Hosts named `env-role` or `env-role-N`, depending on whether you have one or more machines of specific role in the environment.
-* [Race condition and locks demo](bin/locks.ngs).
-
-## Running
-
-### Running Using Docker
+### Using Docker
 
 	docker run -it --rm ngslang/ngs
 
 	# Use NGS inside the container
 	ngs -pi 'sum(0..10)'
 
-### Running Using Homebrew
+### Using GitHub Action
 
-	brew install ngs
-	ngs -pi 'sum(0..10)'
+Add to your Github Action the following line (make sure to release the version as required)
 
-### Running Using Snap
+```
+steps:
+	- uses: ngs-lang/ngs@v2.1.13
+```
 
-	sudo snap install ngs
-	ngs -pi 'sum(0..10)'
+After that, ngs can be used by simply calling ngs in any run step
 
-## Compiling and Running
+```
+steps:
+	- uses: ngs-lang/ngs@v2.1.13
+	- run: ngs -pi 'sum(10..100)'
+```
 
-### Pipe to bash
+### Using iPython or Jupyter Notebook
 
-On Linux: make sure `curl` and `sudo` are installed (they probably are not if you are in a docker).
+Please refer to extension located in https://github.com/ngs-lang/ngs-ipython-extension
 
-On MacOS: make sure you have `brew` installed.
 
-	curl https://ngs-lang.org/install.sh | bash
+## Manually Compiling and Running
 
 ### Clone from Git
 
@@ -318,6 +260,93 @@ On Mac, follow [the instructions to create case sensitive volume](https://coderw
 	cd doc/
 	rm -r out/*;
 	./make.ngs out
+
+## Code Examples
+
+### Arrays
+
+
+	a = [1, 2, 3]
+	arr = a.map(X*2) # arr is now [2, 4, 6]
+	for i in arr {
+		echo(i)
+	}
+
+#### Hashes
+
+	h = {"a": 1, "b1": 2, "b2": 3}
+	echo(h.filterk(/^b/).mapv(X+10))  # {b1=12, b2=13}
+
+
+### Functions (multimethods) and multi-dispatch
+
+	F my_func(x:Int) x*10 # Single expression does not require { ... } syntax
+
+	doc This method is documented!
+	F my_func(s:Str) {
+		t = s * 2
+		"[" + t + "]" # Last value returned as the result
+	}
+
+	echo(my_func(1))      # 10
+	echo(my_func("xyz"))  # [xyzxyz]
+	echo(my_func)         # <MultiMethod with 2 method(s)>
+
+More information about the language and syntax in particular is in [ngslang.1](doc/ngslang.1.md)
+
+### Basic Cloud
+
+NGS has AWS library based on concept of [Declarative Primitives](https://ilya-sher.org/2016/07/06/declarative-primitives-or-mkdir-p-for-the-cloud/)
+
+TLDR:
+
+* top-to-bottom execution
+* resource-level idempotence
+* just a more convenient scripting
+	* no dependency graph
+	* no state file
+
+This is how an instance can be created using NGS (real working code).
+
+	{
+		NGS_BUILD_CIDR = '192.168.120.0/24'
+		NGS_BUILD_TAGS = {'Name': 'ngs-build'}
+
+		vpc    = AWS::Vpc(NGS_BUILD_TAGS).converge(CidrBlock=NGS_BUILD_CIDR, Tags=NGS_BUILD_TAGS)
+		gw     = AWS::Igw(Attachments=[{'VpcId': vpc}]).converge(Tags=NGS_BUILD_TAGS)
+		rtb    = AWS::RouteTable(VpcId=vpc).converge(Routes=Present({"DestinationCidrBlock": "0.0.0.0/0", "GatewayId": gw}))
+		subnet = AWS::Subnet(VpcId=vpc, CidrBlock=NGS_BUILD_CIDR).converge()
+
+		sg = AWS::SecGroup("ngs-build-sg", vpc).converge(
+			Description = "ngs-build-sg"
+			Tags = NGS_BUILD_TAGS
+			IpPermissions = [ AWS::util::world_open_port(22) ]
+		)
+
+		ami = AWS::Image(OwnerId=AWS::AMI_OWNER_DEBIAN, Name=Pfx('debian-jessie-amd64-hvm'), RootDeviceType='ebs', VolumeType='gp2').latest()
+
+		instance = AWS::Instance(
+			ImageId = ami
+			State = null
+			KeyName = ENV.get('AWS_NGS_BUILD_KEY', 'ngs-build')
+			SecurityGroups = sg
+			SubnetId = subnet
+			PublicIpAddress = true
+			Tags = NGS_BUILD_TAGS
+		).converge(
+			State = 'running'
+		)
+
+		# Get SSH fingerprit from machine's console
+		AWS::add_to_known_hosts(instance, 'PublicIpAddress')
+	}
+
+### Sample Scripts
+
+* [describe ec2 instances](bin/ec2din.ngs). The script has nicely aligned output for humans. It uses `stdlib`'s `Table` to do output layout and columns configuration. `Table` handles columns presence and order and it can be configured via environment variable.
+* [build chunk of hosts file](bin/ec2hostsfile.ngs) for a management machine. Hosts named `env-role` or `env-role-N`, depending on whether you have one or more machines of specific role in the environment.
+* [Race condition and locks demo](bin/locks.ngs).
+
 
 ## Contributing
 

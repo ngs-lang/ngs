@@ -1,0 +1,219 @@
+ns {
+	# EXPERIMENTAL!
+	# For examples, see tests in the end of this file
+
+	global tr, init, (=~), descend, skip, Str
+
+	HASHABLE = AnyOf(Bool, Num, Str)
+	DESCENDABLE1 = AllOf(Eachable1, X !~ Int, X !~ Str)
+
+	# TODO: Provide metadata such as "DESCENDABLE" name so that
+	# it will be visisble through Str() and/or inspect(). How?
+	DESCENDABLE = AnyOf(DESCENDABLE1, Eachable2)
+
+	global TrContext
+	doc Transformation context
+	doc _transformation - current transformation
+	doc _cur - current object being matched
+	doc _cmd - for tr()'s internal mechanism implementing some_op(TrContext)
+	type TrContext(MatchContext)
+		F init(ctx:TrContext, root, transformation) {
+			super(ctx, root)
+			ctx._transformation = transformation
+			ctx._cur = null # current item being processed by tr(), used by descend(TrContext)
+			ctx._cmd = null
+		}
+	
+	global TrFail
+	doc Represents failed transformation
+	type TrFail(Error)
+
+		global TrTopLevelSkipFail
+		doc Transformation tried to skip the top-level match
+		type TrTopLevelSkipFail(TrFail)
+
+	doc Implementation details of different operations provided by TrContext
+	type TrCommand
+
+		doc Implementation detail of skip(TrContext)
+		type TrSkip(TrCommand)
+
+
+	F init(cmd:TrCommand, x, ctx:TrContext) {
+		n = cmd.typeof().name
+		throw InvalidArgument("Use ${n}(...) instead of ${n}")
+	}
+
+	F _unified_each(e:Eachable1, cb:Fun) e.each_idx_val(cb)
+	F _unified_each(e:Eachable2, cb:Fun) e.each(cb)
+
+	F _unified_push(e:Eachable1, _idx:Int, val) e.push(val)
+	F _unified_push(e:Eachable2, key, val) e[key] = val
+
+	F _each(tc:TrContext, cb:Fun) {
+		tc.deeper({
+			tc._cur._unified_each(F(idx_or_key, val) {
+				tc.set_last_path_element(idx_or_key)
+				debug("tr", {"descend path=${tc._path}"})
+				cb(idx_or_key, val)
+			})
+		})
+	}
+
+	F _collector(original, cb:Fun) block b {
+		ret = original.typeof()() # XXX: Assumption about existence of the constructor
+		F collect(idx_or_key, x:Lit) _unified_push(ret, idx_or_key, x.val)
+		F collect(idx_or_key, x:TrSkip) "no-op"
+		F collect(idx_or_key, x:TrNoMatch) b.return(x)
+		cb(collect)
+		Lit(ret)
+	}
+
+	doc Descend into current data, performing all the same transformations.
+	doc %EX - tr([1,2,[3,4]], Arr -> { ["start"] + descend(B) + ["end"] } )  # ["start", 1, 2, ["start", 3, 4, "end"], "end"]
+	F descend(tc:TrContext) {
+		tc._cur !~ DESCENDABLE throws InvalidArgument("Attempted to descend on non-descendable: ${tc._cur} at path ${tc._path}")
+
+		debug("tr", {"descend::start ${tc._path}"})
+		t = typeof(tc._cur)
+		ret = t()  # XXX: Assumption about existence of the constructor
+		tc._each(F(idx_or_key, val) {
+			pat = tc._transformation
+			t = tr(val, pat, tc)
+			debug("tr", {"descend value from tr() - ${t}"})
+			ematch t {
+				Lit _unified_push(ret, idx_or_key, t.val)
+				TrSkip null # do nothing
+				TrNoMatch throw TrFail("tr() match failed at path ${tc._path}").set(
+					val = val
+					path = copy(tc._path)
+					pattern = pat
+				)
+			}
+		})
+		ret
+	}
+
+	doc Skip current object that matched
+	doc %EX [1,2,"aa"].tr(Int -> skip(Y)) # The action is called with (Any, TrContext); Y is TrContext then.
+	F skip(tc:TrContext) tc._cmd = TrSkip()
+
+	doc Implementation detail of tr()
+	type TrNoMatch
+
+	doc Checks whether x matches the pattern
+	doc %RET - Lit(x) or TrNoMatch()
+	F tr(x, pattern, tc:TrContext) {
+		x =~ pattern returns Lit(x)
+		TrNoMatch()
+	}
+
+	doc Match / transform x using the pattern in a
+	doc %RET - Lit or TrCommand
+	F tr(x, a:Arr, tc:TrContext) {
+		debug("tr", "tr(x, Arr, TrContext) - before guards")
+		x !~ DESCENDABLE1 returns TrNoMatch()
+		l = x.len()
+		l != a.len() returns TrNoMatch()
+		debug("tr", "tr(x, Arr, TrContext) - after guards")
+
+		_collector(x, F(collect) {
+			tc.deeper({
+				# Later, instead of "for", more elaborate algorithms will be employed
+				# to accomodate patterns such as repetition, etc
+				for(i;l) {
+					tc.set_last_path_element(i)
+					debug("tr", "tr(x, Arr, TrContext) path=${tc._path}")
+					collect(i, tr(section "XXX: assuming indexable" x[i], a[i], tc))
+				}
+			})
+		})
+	}
+
+	# TODO: Support NormalTypeInstance ?
+	doc Match / transform x using the pattern in h.
+	doc x - Hash or HashLike
+	doc %RET - Lit or TrCommand
+	F tr(x, h:Hash, tc:TrContext) {
+		x !~ AnyOf(Hash, HashLike) returns TrNoMatch
+		assert(x, Eachable2, "Internal error. Unexpected type in tr(x, Hash, TrContext) - ${x.typeof().name}")
+
+		# XXX: assumption - len() exists for x
+		len(h) > len(x) returns TrNoMatch()
+
+		_collector(x, F(collect) {
+			tc.deeper({
+				x.each(F(k, v) {
+					assert(k, HASHABLE, "Internal error. tr(x, Hash, TrContext) got unsupported key type ${k.typeof().name}")
+					tc.set_last_path_element(k)
+					collect(k, tr(v, h.get(k, identity), tc))
+				})
+			})
+		})
+	}
+
+	doc Match / transform x using the pattern in a.
+	doc First match shortcuts the evaluation: further items in a are not tried.
+	doc %RET - Lit or TrNoMatch
+	F tr(x, a:AnyOf, tc:TrContext) block b {
+		debug("tr", "tr(x, AnyOf, TrContext) transformation=${a}")
+		a.each(F(t) {
+			result = tr(x, t, tc)
+			if result is not TrNoMatch	{
+				debug("tr", "tr(x, AnyOf, TrContext) returning ${result}")
+				b.return(result)
+			}
+		})
+		TrNoMatch()
+	}
+
+	doc Transform x using pa::action of x matches pa::pattern.
+	doc pa::action will be called with (Any, TrContext).
+	doc pa::action can either return new data or perform an operation using TrContext.
+	doc Currently supported operation is skip(TrContext).
+	doc %RET - Lit, TrCommand, or TrNoMatch
+	F tr(x, pa:PatternAction, tc:TrContext) {
+		debug("tr", {"tr(x, PatternAction, TrContext) pa=${pa} tc=${tc}"})
+		if (=~)(x, pa.pattern, tc) {
+			return tc.deeper({'_cur': x, '_cmd': null}, {
+				ret = pa::action(x, tc)
+				tc._cmd is not Null returns tc._cmd
+				Lit(ret)
+			})
+		}
+		TrNoMatch()
+	}
+
+	doc Public API of the transformation/tr() experimental facility
+	doc %EX - cat fhir_questionnaire_01.json | ngs -ppj '_.tr({"url": AnyOf("http://hl7.org/fhir/StructureDefinition/maxValue", "http://hl7.org/fhir/StructureDefinition/minValue")} -> skip(Y)).tr([] -> skip(Y))' >fhir_questionnaire_01.clean.json
+	F tr(x, transformation) {
+		warn("Using experimental feature - tr()")
+		t = transformation.ensure(AnyOf)
+		# Default rules, appended automatically at the bottom:
+		#   * recurse into Eachable1 and Eachable2
+		#   * whatever does not match, returned as is
+		t += AnyOf([
+			DESCENDABLE -> descend(Y)
+			Any -> { A }
+		])
+		tc = TrContext(x, t)
+		result = tr(x, t, tc)
+		assert(tc, {'_cmd': Null}, "Internal error. Transformation failed, top level must return a value")
+		result is TrSkip throws TrTopLevelSkipFail('Transformation tried to skip top-level match')
+		assert(result, Lit, "Internal error. Transformation must return literal (type Lit), not ${result}")
+		result.val
+	}
+
+	TEST [1,2,3].tr(Int -> (X+1)) == [2,3,4]
+	TEST {"a": [1,2,3]}.tr(Int -> (X+1)) == {"a": [2,3,4]}
+	TEST tr; tr([1,2,[3,4]], Arr -> { ["start"] + descend(B) + ["end"] } ) == ["start", 1, 2, ["start", 3, 4, "end"], "end"]
+	TEST tr; {"a": 1, "b": "x"}.tr(Str -> Y.skip()) == {"a": 1}
+	TEST tr; [{"a": 1, "b": "x"}].tr([ Str -> Y.skip(), Int -> (X+1), Arr -> {["start", *descend(B)]} ]) == ["start", {"a": 2}]
+	TEST [10,20].tr([[Int, Int -> (X+1)]]) == [10, 21]
+	TEST tr; [1, [10,20]].tr([[Int, Int -> Y.skip()]]) == [1, [10]]
+	TEST tr; 1.tr(Int -> skip(Y)) THROWS TrTopLevelSkipFail
+	TEST {"a": {"b": 2}}.tr({"a": {"b": Int -> (X+1)}}) == {"a": {"b": 3}}
+	TEST {"a": {"b": 2}, "extra": 100}.tr({"a": {"b": Int -> (X+1)}}) == {"a": {"b": 3}, "extra": 100}
+	TEST {"a": {"b": 2}, "extra": 100}.tr({"x": {"b": Int -> (X+1)}}) == {"a": {"b": 2}, "extra": 100}
+	# TODO: Some tests on https://www.hl7.org/fhir/questionnaire-example.json
+}

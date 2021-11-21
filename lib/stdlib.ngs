@@ -1,6 +1,86 @@
 # WARNING: This file is packaged into the ngs binary at build time
 #          it is shipped for reference only.
 
+section "Syntactic sugar for basics" {
+
+	doc Boolean negation for non-boolean values. Converts to boolean first.
+	doc %RET - Bool
+	F not(x) { guard (x is Bool) == false; x.Bool().not() }
+
+	doc Inequality operator
+	doc %EX - 1 !=2  # true, same as not(1==2)
+	F !=(a,b) not(a==b)
+
+	doc Non-sameness operator
+	doc %EX - h1 = {"a": 1}
+	doc %EX - h2 = {"a": 1}
+	doc %EX - h1 !== h2  # true, same as not(h1===h2)
+	doc %EX - h1 == h2   # true
+	F !==(a,b) not(a===b)
+
+	TEST 1 != 2
+	TEST (1 != 1) == false
+
+	TEST 1 !== 2
+	TEST (1 !== 1) == false
+
+
+	doc "not in" operator. Exactly same as "not(a in b)"
+	doc %EX - 10 not in [1,2]  # true
+	doc %EX - 1  not in [1,2]  # false
+	F 'not in'(a,b) not(a in b)
+
+	TEST (1 not in [1,2,3]) == false
+	TEST 10 not in [1,2,3]
+
+	doc "is not" operator. Exactly same as "not(a is b)".
+	doc %EX - 1    is not Null  # true
+	doc %EX - null is not Null  # false
+	F 'is not'(a,b) not(a is b)
+
+	TEST 1 is not Null
+	TEST (null is not Null) == false
+
+
+	doc Exactly same as "element in container". It's just more convenient in specific cases.
+	doc %EX - [1,2,3].has(2)  # true
+	doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(X.has(1))  # [ [1,2,3], [1,20,30] ]
+	doc %RET - Bool
+	F has(container, element) element in container
+
+	TEST [1,2,3].has(1)
+	TEST [1,2,3].has(10).not()
+
+	doc Exactly same as "element not in container". It's just more convenient in specific cases.
+	doc %EX - [1,2,3].has_no(2)  # false
+	doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(X.has_no(1))  # [ [100,200,300] ]
+	doc %RET - Bool
+	F has_no(container, element) element not in container
+
+	TEST [1,2,3].has_no(1).not()
+	TEST [1,2,3].has_no(10)
+
+}
+
+section "inheritance" {
+	doc Create a new type. Do not use directly.
+	doc %AUTO - type MyType2(MyType1)
+	F Type(t:Str, doc, ns, parent:Type) Type(t, doc, ns, [parent])
+
+	doc Create a new type. Do not use directly.
+	doc %AUTO - type MyType2([MyParent1, MyParent2, ...])
+	F Type(t:Str, doc, ns, parents:Arr) {
+		ret = Type(t, doc, ns)
+		l = parents.len()
+		for(i;l) {
+			ret.inherit(parents[i])
+		}
+		ret
+	}
+
+	TEST type T1; type T2(T1); T2() is T1
+}
+
 section "Basic Methods for Exception type" {
 	doc Initialize an Exception.
 	doc %RET - Exception with .backtrace and .message
@@ -24,13 +104,13 @@ section "Basic Methods for Exception type" {
 }
 
 section "Basic Exception subtypes" {
-	type NotImplemented; NotImplemented.inherit(Exception)
-	type ReadFail; ReadFail.inherit(Exception)
-	type RequireFail; RequireFail.inherit(Exception)
-	type MainFail; MainFail.inherit(Exception)
+	type NotImplemented(Exception)
+	type ReadFail(Exception)
+	type RequireFail(Exception)
+	type MainFail(Exception)
 
 	doc Represents error when converting program execution result to exit code
-	type ExitCodeFail; ExitCodeFail.inherit(Exception)
+	type ExitCodeFail(Exception)
 }
 
 section "Basic I/O" {
@@ -68,8 +148,7 @@ section "Block type and methods" {
 	type Block
 
 	doc %AUTO - block NAME { NAME.return(VAL) }
-	type ReturnFromBlock
-	ReturnFromBlock.inherit(Exception)
+	type ReturnFromBlock(Exception)
 
 	doc %STATUS - internal
 	F init(rfb: ReturnFromBlock, block, val) init(args())
@@ -150,12 +229,10 @@ doc %EX - # ... Exception of type AssertFail ...
 doc %EX - #
 doc %EX - # Note that the following is better than using assert():
 doc %EX - # not(x > 0) throws InvalidArgument('x must be greater than zero').set('x', x)
-type AssertFail
-AssertFail.inherit(Exception)
+type AssertFail(Exception)
 
 doc Represents an attempt to create an instance of an abstract type (not intended for instantiation).
-type InstantiatingAbstractType
-InstantiatingAbstractType.inherit(Exception)
+type InstantiatingAbstractType(Exception)
 
 doc IndexNotFound exception constructor
 doc %RET - IndexNotFound object with the given message, container and key fields
@@ -163,6 +240,7 @@ F init(e:IndexNotFound, message:Str, container, key) init(args())
 
 doc Throws AssertFail with given message if expr does not match the pattern
 doc %EX - my_template.get('concept', []).assert(Arr)
+doc %EX - assert(loginResult, {'access_token': Str}, "access_token must be present in response")
 doc %RET - val
 F assert(val, pattern, msg:Str="Assertion failed") {
 	not(val =~ pattern) throws AssertFail(msg).set(val=val, pattern=pattern)
@@ -256,12 +334,10 @@ section "Parent types for built-in types" {
 	type Eachable
 
 		doc Eachable which each() calls the callback with one argument
-		type Eachable1
-		Eachable1.inherit(Eachable)
+		type Eachable1(Eachable)
 
 		doc Eachable which each() calls the callback with two arguments
-		type Eachable2
-		Eachable2.inherit(Eachable)
+		type Eachable2(Eachable)
 
 	Int.inherit(Eachable1)
 	Arr.inherit(Eachable1)
@@ -367,8 +443,12 @@ section "Inspect built-in types" block _ {
 				collect("  [${k}] = ${v}")
 			})
 			# doc can be null
+			# doc can be a string, example: "Partial application syntax" (ngs -pi 'X*2')
 			if d = a.get('doc') {
-				a.get('doc', {}).each(F(k, v) {
+				if d is Str {
+					d = {'': d}
+				}
+				d.each(F(k, v) {
 					k = cond {
 						k in keys_meanings keys_meanings[k]
 						not(k) k
@@ -448,6 +528,7 @@ section "Functional utilities" {
 	doc Returns partially-applied function
 	doc f - The base function
 	doc Xunderscore_unsupportedXbind_args - The arguments to partial apply (bind the function to)
+	doc %STATUS - deprecated
 	F partial(f:Fun, *bind_args)
 		F(*args) f(*bind_args, *args)
 
@@ -455,6 +536,7 @@ section "Functional utilities" {
 
 
 	doc Same as partial() but the bound arguments are last ones
+	doc %STATUS - deprecated
 	F partial_tail(f:Fun, *bind_args)
 		F(*args) f(*args, *bind_args)
 
@@ -487,7 +569,202 @@ section "Convenience methods" {
 	TEST type T; t=T().set(a=1, b=2); t.a == 1 and t.b == 2
 }
 
+section "NormalTypeInstance" {
+	doc String representation of normal type instance i
+	doc Normal type is a user defined type. In addition some types defined by NGS are also normal types.
+	doc %EX - {
+	doc %EX -   type T
+	doc %EX -   # nti - Normal type instance
+	doc %EX -   nti = T()
+	doc %EX -   nti.a = 1
+	doc %EX -   nti.b = 2
+	doc %EX -   echo(Str(nti)) # <T a=1 b=2>
+	doc %EX - }
+	doc %RET - "<TYPE_NAME field1=val1 field2=val2 ...>"
+	F Str(i:NormalTypeInstance) {
+		guard i is not Set  # Temporary workaround. Str(Set) should come after Str(NormalTypeInstance)
+		h = Hash(i)
+		fields_dots = if len(h) > 10 {
+			h .= limit(10)
+			' ...'
+		} else {
+			''
+		}
+		# TODO limit key and value lengths
+		fields = ' ' +? h.Strs().join(' ')
+		"<${i.typeof().name}${fields}${fields_dots}>"
+	}
+
+	TEST type T; t=T(); Str(t) == '<T>'
+	TEST type T; t=T(); t.a=1; t.b=2; Str(t) == '<T a=1 b=2>'
+
+	doc Set object field if it's not already set
+	doc %EX - my_something.dflt(k, []).push(elt)
+	doc %RET - Field value, the already-existed or new.
+	F dflt(i:NormalTypeInstance, k, v) {
+		if k not in i {
+			i.(k) = v
+		}
+		i.(k)
+	}
+
+	TEST type T; t=T(); t.dflt("a", 1); t.a == 1
+	TEST type T; t=T(); t.a = 2; t.dflt("a", 1); t.a == 2
+
+	doc Make shallow copy of an object
+	F copy(nti:NormalTypeInstance) {
+		t = typeof(nti)
+		ret = t()
+		nti.Hash().each(ret.set(X, Y))
+		ret
+	}
+
+	TEST type T; t=T(); t.x=1; t2=t.copy(); t2.x==1
+}
+
+section "Hash" {
+	doc %RET - h
+	F Hash(h:Hash) h
+}
+
+section "Result and friends - types" {
+	doc Result of a computation
+	doc val - computed value or exception
+	type Result
+
+		doc Successful computation
+		doc val - computed value
+		type Success(Result)
+
+		doc Failed computation
+		doc val - exception
+		type Failure(Result)
+
+}
+
+section "Literal" {
+	doc Convey that the value should be used literally
+	type Lit
+	# TODO: Disable default constructor
+	F init(l:Lit, val) l.val = val
+}
+
+
+
 section "=~ Matching" {
+
+	section "MatchResult and friends - types" {
+		doc Successful or unsuccessful match result
+		type MatchResult
+
+			doc Successful match result
+			doc matches - Successful matches
+			type MatchSuccess([MatchResult, Success])
+
+			doc Unsucessfull match result
+			type MatchFailure([MatchResult, Failure])
+
+		doc Successful match constructor
+		doc %STATUS - deprecated
+		F init(ms:MatchSuccess, matches:Arr) init(args())
+
+		doc Successful match constructor
+		F init(ms:MatchSuccess, matches:Arr, pattern) init(args())
+
+		doc Unsuccessful constructor
+		F init(mf:MatchFailure, data, pattern) init(args())
+
+		doc Get the values of successful match
+		F get(ms:MatchSuccess) ms
+
+		doc Throws ResultFail
+		F get(mf:MatchFailure) throw ResultFail("There was no match").set('failure', mf)
+
+
+	}
+
+	section "MatchContext" {
+		doc %STATUS - experimental
+		type MatchContext
+
+		doc %STATUS - experimental
+		F init(mc:MatchContext, root) {
+			mc._root = root
+			mc._positional = []  # Result - positional matches
+			mc._named = {}       # Result - named matches
+			mc._path = []        # Current path in _root
+			mc._deeper_saved_fields = {}
+			mc._result = EmptyBox()  # maybe use "block" instead?
+		}
+
+		F deeper(mc:MatchContext, cb:Fun) {
+			mc._path.push(null)
+			cb.finally({
+				mc._path.pop()
+			})
+		}
+
+		F deeper(mc:MatchContext, new_fields:Hash, cb:Fun) {
+			new_fields.each(F(k, v) {
+				mc._deeper_saved_fields.dflt(k, []).push(mc.(k))
+				mc.(k) = v
+			})
+			cb.finally({
+				new_fields.each(F(k, v) {
+					mc.(k) = mc._deeper_saved_fields[k].pop()
+				})
+			})
+		}
+
+		F set_last_path_element(mc:MatchContext, x) {
+			mc._path[mc._path.len() - 1] = x
+			mc
+		}
+
+		F return(mc:MatchContext, x) {
+			mc._result = FullBox(x)
+			# Returning true to make "... -> Y.return(X)" work
+			# Only needed if return() will be used in non "something -> HERE" context,
+			# because "HERE" result is discarded
+			true
+		}
+	}
+
+	F =~(x, pattern) {
+		mc = MatchContext(x)
+		result = (=~)(x, pattern, mc)
+		mc._result returns mc._result.get()
+		if result is Bool {
+			# TODO: Review MatchSuccess / MatchFailure construction (convertsion from MatchContext)
+			result returns MatchSuccess([x], pattern)
+			return MatchFailure(x, pattern)
+		}
+		throw Error("=~ is expected to eiter set result or return a boolean").set(given=result)
+	}
+
+	doc A pair of pattern and an action to execute if the pattern matches.
+	doc Currently, only callable actions are supported (Fun).
+	doc %STATUS - experimental
+	type PatternAction
+
+	doc %STATUS - experimental
+	F init(pa:PatternAction, pattern, action) {
+		pa.pattern = pattern
+		pa.action = action
+	}
+
+	doc %AUTO - pattern -> action
+	doc %STATUS - experimental
+	F '->'(pattern, action) PatternAction(pattern, action)
+
+	doc %STATUS - experimental
+	F =~(x, pa:PatternAction, mc:MatchContext) {
+		result = (=~)(x, pa.pattern, mc)
+		if result {
+			pa::action(x, mc)
+		}
+		result
+	}
 
 	doc %STATUS - deprecated
 	F Pred(pattern) {
@@ -495,20 +772,38 @@ section "=~ Matching" {
 		F deprecated_pred(x) x =~ pattern
 	}
 
+	# TODO: %RET - MatchResult
 	doc %RET - not(a =~ b)
-	F !~(a, b) not(a =~ b)
+	F !~(x, pattern) not(x =~ pattern)
+
+	F !~(x, pattern, mc:MatchContext) not((=~)(x, pattern, mc))
 
 	doc %RET - x == bti
-	F =~(x, bti:BasicTypeInstance) x == bti
+	F =~(x, bti:BasicTypeInstance, _mc:MatchContext) x == bti
 
 	doc Checks whether object fields named after h hash keys match (=~) the corresponding hash values.
 	doc Inspired by underscorejs' "matcher"
-	F =~(x, h:Hash) {
+	F =~(x, h:Hash, mc:MatchContext) {
 		# TODO: Maybe some better detection of x interface required (instead of Eachable2/NormalTypeInstance):
 		# * must support "k in x"
 		# * must support "x.(k)"
 		(x is not Eachable2) and (x is not NormalTypeInstance) returns false
-		h.all(F(k, v) (k in x) and x.(k) =~ v)
+		x_keys = null
+
+		mc.deeper({
+			h.all(F(pat_k, pat_v) {
+				if (=~)(pat_k, AnyOf(Str, Int, Real), mc) {
+					pat_k in x and (=~)(x.(pat_k), pat_v, mc.set_last_path_element(pat_k))
+				} else {
+					if x_keys is Null {
+						x_keys = x.Hash().keys()
+					}
+					x_keys.any(F(k) {
+						(=~)(k, pat_k, mc) and (=~)(x.(k), pat_v, mc.set_last_path_element(k))
+					})
+				}
+			})
+		})
 	}
 
 	TEST ({"a": 1}) =~ ({"a": Any})
@@ -520,13 +815,13 @@ section "=~ Matching" {
 	doc 1. The x is Eachable1 but not Str or Int
 	doc 2. Each element of x matches (=~) corresponding element in a
 	doc (If number of elements does not match - there is no match)
-	F =~(x, a:Arr) {
+	F =~(x, a:Arr, mc:MatchContext) {
 		x is Int or x is Str returns false
 		x is not Eachable1 returns false
 		l = x.len()
 		l != a.len() returns false
 		for(i;l) {
-			x[i] !~ a[i] returns false
+			(!~)(x[i], a[i], mc) returns false
 		}
 		true
 	}
@@ -534,12 +829,18 @@ section "=~ Matching" {
 	TEST [1,2] =~ [Int, Any]
 	TEST [1] !~ [Int, Any]
 
+	# TODO: f(x, MatchContext) - when we know that f expects that
 	doc %RET - f(x) 
-	F =~(x, f:Fun) f(x)
+	F =~(x, f:Fun, _mc:MatchContext) f(x).Bool()
 
 	doc Check whether x is of type t
 	doc %RET - x is t
-	F =~(x, t:Type) x is t
+	F =~(x, t:Type, _mc:MatchContext) x is t
+
+	doc Check whether x is the literal value l (using ==)
+	F =~(x, l:Lit, _mc:MatchContext) x == l.val
+	TEST 1 !~ Lit(Int)
+	TEST Int =~ Lit(Int)
 
 	section "Repeat" {
 
@@ -557,19 +858,22 @@ section "=~ Matching" {
 
 		doc Check that x is a repetition of r.pattern and it occurs r.count times
 		doc %RET - Bool
-		F =~(x:Eachable1, r:Repeat) block b {
+		F =~(x:Eachable1, r:Repeat, mc:MatchContext) block b {
 			matched = 0
+			# TODO: For speed, add "if" and define only one "over_max".
 			F over_max(x:Int) { x >= r.count.end }
 			F over_max(x:Int) { guard r.count.include_end; x > r.count.end }
 			F over_max(x:Int) { guard r.count.end is Null; false }
-			x.each(F(item) {
-				if item !~ r.pattern {
-					b.return(false)
-				}
-				matched += 1
-				if over_max(matched) {
-					b.return(false)
-				}
+			mc.deeper({
+				x.each_idx_val(F(idx, item) {
+					if (!~)(item, r.pattern, mc.set_last_path_element(idx)) {
+						b.return(false)
+					}
+					matched += 1
+					if over_max(matched) {
+						b.return(false)
+					}
+				})
 			})
 			matched in r.count
 		}
@@ -598,11 +902,9 @@ doc %STATUS - experimental
 doc %EX - Set([1,2]).mapo(X*2)  # Set([2,4])
 F mapo(e:Eachable1, mapper:Fun) {
 	t = typeof(e)
-	ret = t()
-	e.each(F(elt) {
-		ret.push(mapper(elt))
-	})
-	ret
+	collector/t() {
+		e.each(collect + mapper)
+	}
 }
 
 TEST Set([1,2]).mapo(X*2) == Set([2,4])
@@ -654,15 +956,14 @@ doc %EX - partition([1,10,2,20], X>=10)  # [[10, 20], [1, 2]]
 F partition(something:Eachable1, pattern=Bool.constructors) {
 	yes = []
 	no = []
-	something.each(F(elt) (if elt =~ pattern yes else no).push(elt))
+	something.each(F(elt) (if elt =~ pattern then yes else no).push(elt))
 	[yes, no]
 }
 
 TEST partition([1,10,2,20], X>=10) == [[10, 20], [1, 2]]
 TEST partition(["abc", "", "def", null]) == [["abc", "def"], ["", null]]
 
-type ElementNotFound
-ElementNotFound.inherit(LookupFail)
+type ElementNotFound(LookupFail)
 
 block u {
 	global first
@@ -804,8 +1105,7 @@ F reduce(something:Eachable1, start, f:Fun) {
 
 TEST [1,2,3].reduce(0, (+)) == 6
 
-type EmptyEachableFail
-EmptyEachableFail.inherit(InvalidArgument)
+type EmptyEachableFail(InvalidArgument)
 
 doc Combine items to a single value using the supplied binary function
 doc First f is applied to the first two elements of e
@@ -983,8 +1283,7 @@ section "ArrLike" {
 	doc %EX - 	super(t)
 	doc %EX - 	...
 	doc %EX - }
-	type ArrLike
-	ArrLike.inherit(Eachable1)
+	type ArrLike(Eachable1)
 
 	F init(al:ArrLike) al.attrs().ArrLike = []
 
@@ -1053,12 +1352,26 @@ section "ArrLike" {
 		body(F(elt) al.push(elt))
 		al
 	}
+
+    doc t - subtype of ArrLike
+    doc %RET - of type t
+	F ensure(x:Arr, t:Type) {
+		guard t.is_subtype(ArrLike)
+		t(x)
+	}
+
+	doc Convert ArrLike to a human-readable representation
+	F Str(a:ArrLike) "<${a.typeof().name} ${a.Arr().join(', ')}>"
+
+    # TODO: When convenient from pattern matching perspective, also check instance type
+    TEST type T(ArrLike); [1,2].ensure(T) =~ [1,2]
+    TEST type T(ArrLike); "abc".ensure(T) =~ ["abc"]
+
 }
 
 section "AnyOf(ArrLike)" {
 	doc Should probably inherit from Set, not ArrLike.
-	type AnyOf
-	AnyOf.inherit(ArrLike)
+	type AnyOf(ArrLike)
 
 	F init(a:AnyOf, *alternatives) {
 		guard alternatives.len() > 1
@@ -1079,7 +1392,7 @@ section "AnyOf(ArrLike)" {
 
 	doc Check whether one of the patterns (elements of AnyOf) matches
 	doc %EX - {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(AnyOf("k1", "k3"))  # {"k1": "v1", "k3": "v3"}
-	F =~(x, a:AnyOf) a.any(x =~ X)
+	F =~(x, a:AnyOf, mc:MatchContext) a.any(F(pattern) (=~)(x, pattern, mc))
 
 	TEST {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(AnyOf("k1", "k3")) == {"k1": "v1", "k3": "v3"}
 
@@ -1092,8 +1405,7 @@ section "AnyOf(ArrLike)" {
 
 section "AllOf(ArrLike)" {
 	doc Should probably inherit from Set, not ArrLike.
-	type AllOf
-	AllOf.inherit(ArrLike)
+	type AllOf(ArrLike)
 
 	F init(a:AllOf, *items) {
 		guard items.len() > 1
@@ -1102,7 +1414,7 @@ section "AllOf(ArrLike)" {
 
 	doc Checks whether one of the patterns (elements of AllOf) matches
 	doc %EX - {"k1": "v1", "k2": "v2", "kk3": "vv3"}.filterk(AllOf(/^k/, {len(A) <= 2})) == %{k1 v1 k2 v2}
-	F =~(x, a:AllOf) a.all(x =~ X)
+	F =~(x, a:AllOf, mc:MatchContext) a.all(F(pattern) (=~)(x, pattern, mc))
 
 	TEST {"k1": "v1", "k2": "v2", "kk3": "vv3"}.filterk(AllOf(/^k/, {len(A) <= 2})) == %{k1 v1 k2 v2}
 
@@ -1115,8 +1427,7 @@ section "AllOf(ArrLike)" {
 section "HashLike" {
 	# TODO [doc]: examples in methods
 	doc Base type for user-defined hash-like types. This is a workaround: it's not possible currently no inherit from the built-in Hash type.
-	type HashLike
-	HashLike.inherit(Eachable2)
+	type HashLike(Eachable2)
 
 	doc Check whether k is in the HashLike
 	doc %RET - Bool
@@ -1216,8 +1527,7 @@ section "HashLike" {
 section "Set" {
 
 	doc Represents a set of items
-	type Set
-	Set.inherit(Eachable1)
+	type Set(Eachable1)
 
 	doc Initialize a set
 	F init(s:Set) {
@@ -1279,12 +1589,6 @@ section "Set" {
 	TEST Set([1,2]) <= Set([1,2,3])
 	TEST not(Set([1,2,4]) <= Set([1,2,3]))
 
-	F copy(s:Set) {
-		ret = Set()
-		s.each(ret.push(X))
-		ret
-	}
-
 	doc Inspect Set
 	doc %RET - Lines
 	F inspect(a:Set) Lines(["Set of size ${a.len()}"] + a.map({"  ${SafeStr(A)}"}).digest(16, '  (...)'))
@@ -1294,6 +1598,10 @@ section "Set" {
 		body(F(elt) s.push(elt))
 		s
 	}
+
+	doc Make shallow copy of a Set
+	F copy(s:Set) collector/Set() s.each(collect)
+	TEST s1 = Set([1,2]); s2 = s1.copy(); s1.push(3); s2.Arr() == [1,2]
 
 }
 
@@ -1379,8 +1687,7 @@ section "Named Instances" {
 
 section "Hook" {
 	doc Hook is a simple pub-sub
-	type Hook
-	Hook.inherit(HashLike)
+	type Hook(HashLike)
 
 	doc Hook constructor.
 	doc %RET - Hook
@@ -1435,20 +1742,6 @@ doc %EX - Box.constructors.Arr()[0].Str().echo()  # Outputs: <NormalTypeConstruc
 F Str(ntc:NormalTypeConstructor) "<NormalTypeConstructor>"
 
 section "Type" {
-
-	doc Create a new type. Do not use directly.
-	doc %AUTO - type MyType2(MyType1)
-	F Type(t:Str, doc, ns, parent:Type) Type(t, doc, ns, [parent])
-
-	doc Create a new type. Do not use directly.
-	doc %AUTO - type MyType2([MyParent1, MyParent2, ...])
-	F Type(t:Str, doc, ns, parents:Arr) {
-		ret = Type(t, doc, ns)
-		parents.each(ret.inherit(X))
-		ret
-	}
-
-	TEST type T1; type T2(T1); T2() is T1
 
 	doc String representation of a type
 	doc %RET - "<Type NAME>"
@@ -1509,49 +1802,6 @@ section "Type" {
 	TEST Eachable.is_subtype(Lines) == false
 }
 
-# === NormalType =================================
-
-doc String representation of normal type instance i
-doc Normal type is a user defined type. In addition some types defined by NGS are also normal types.
-doc %EX - {
-doc %EX -   type T
-doc %EX -   # nti - Normal type instance
-doc %EX -   nti = T()
-doc %EX -   nti.a = 1
-doc %EX -   nti.b = 2
-doc %EX -   echo(Str(nti)) # <T a=1 b=2>
-doc %EX - }
-doc %RET - "<TYPE_NAME field1=val1 field2=val2 ...>"
-F Str(i:NormalTypeInstance) {
-	guard i is not Set  # Temporary workaround. Str(Set) should come after Str(NormalTypeInstance)
-	h = Hash(i)
-	fields_dots = if len(h) > 10 {
-		h .= limit(10)
-		' ...'
-	} else {
-		''
-	}
-	# TODO limit key and value lengths
-	fields = ' ' +? h.Strs().join(' ')
-	"<${i.typeof().name}${fields}${fields_dots}>"
-}
-
-TEST type T; t=T(); Str(t) == '<T>'
-TEST type T; t=T(); t.a=1; t.b=2; Str(t) == '<T a=1 b=2>'
-
-doc Set object field if it's not already set
-doc %EX - my_something.dflt(k, []).push(elt)
-doc %RET - Field value, the already-existed or new.
-F dflt(i:NormalTypeInstance, k, v) {
-	if k not in i {
-		i.(k) = v
-	}
-	i.(k)
-}
-
-TEST type T; t=T(); t.dflt("a", 1); t.a == 1
-TEST type T; t=T(); t.a = 2; t.dflt("a", 1); t.a == 2
-
 doc Set a field on all elements if it's not already set
 doc e - Eachable1 with elements of type NormalTypeInstance or Hash
 doc %EX - my_items.dflt("source", "(unknown)")
@@ -1586,16 +1836,6 @@ doc %EX - mysomething.dflt(k, []).push(elt)
 doc %RET - Key value, the already-existed or new.
 F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
 
-doc Make shallow copy of an object
-F copy(nti:NormalTypeInstance) {
-	t = typeof(nti)
-	ret = t()
-	nti.Hash().each(ret.set(X, Y))
-	ret
-}
-
-TEST type T; t=T(); t.x=1; t2=t.copy(); t2.x==1
-
 doc Check whether x is of type t
 doc %RET - MatchResult
 F ~(x, t:Type) {
@@ -1610,8 +1850,7 @@ F ~(x, t:Type) {
 
 # TODO: Investigate why type CError(Error) does not work at this point
 doc Base type for exceptions arising from errors returned by calling C functions
-type CError
-CError.inherit(Error)
+type CError(Error)
 
 doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
 F init(e:CError, errno:Int, message:Str) {
@@ -1625,8 +1864,7 @@ F init(e:CError, message:Str) super(e, c_errno(), message)
 
 
 doc Exception representing a failure to kill() a process
-type KillFail
-KillFail.inherit(CError)
+type KillFail(CError)
 
 # === Lock =======================================
 
@@ -1634,12 +1872,10 @@ doc Synchronization lock.
 type Lock
 
 doc Re-entrant synchronization lock. Same thread can re-acquire the lock.
-type ReentrantLock()
-ReentrantLock.inherit(Lock)
+type ReentrantLock(Lock)
 
 doc Failure to perform an operation on a lock.
-type LockFail
-LockFail.inherit(Exception)
+type LockFail(Exception)
 
 doc Initialize LockFail exception.
 F init(e:LockFail, op:Str, code:Int, msg:Str) init(args())
@@ -1717,8 +1953,7 @@ section "Range" {
 		NumRange.inherit(Eachable1)
 
 	doc A range with start and end expressed as predicates.
-	type PredRange
-		PredRange.inherit(Range)
+	type PredRange(Range)
 
 	doc Range constructor. Throws InstantiatingAbstractType if r is exactly of type Range (not a sub-type).
 	F init(r:Range, start, end, include_start=true, include_end=false, step=1) {
@@ -1814,7 +2049,7 @@ section "Range" {
 
 	doc Checks whether x is in the range.
 	doc %EX - 1 =~ 0..5  # true
-	F =~(x, nr:NumRange) {
+	F =~(x, nr:NumRange, _mc:MatchContext) {
 		x is not Num returns false
 		x in nr
 	}
@@ -1827,64 +2062,6 @@ section "Range" {
 # TODO: think about multi-valued results (say 10 hosts, 8 succeeded and 2 failed)
 # TODO: think about Argv cooperation. Maybe Failure is NoData and Success is FullBox?
 # === Syntactic sugar ============================
-
-doc Boolean negation for non-boolean values. Converts to boolean first.
-doc %RET - Bool
-F not(x) { guard (x is Bool) == false; x.Bool().not() }
-
-doc Inequality operator
-doc %EX - 1 !=2  # true, same as not(1==2)
-F !=(a,b) not(a==b)
-
-doc Non-sameness operator
-doc %EX - h1 = {"a": 1}
-doc %EX - h2 = {"a": 1}
-doc %EX - h1 !== h2  # true, same as not(h1===h2)
-doc %EX - h1 == h2   # true
-F !==(a,b) not(a===b)
-
-TEST 1 != 2
-TEST (1 != 1) == false
-
-TEST 1 !== 2
-TEST (1 !== 1) == false
-
-
-doc "not in" operator. Exactly same as "not(a in b)"
-doc %EX - 10 not in [1,2]  # true
-doc %EX - 1  not in [1,2]  # false
-F 'not in'(a,b) not(a in b)
-
-TEST (1 not in [1,2,3]) == false
-TEST 10 not in [1,2,3]
-
-doc "is not" operator. Exactly same as "not(a is b)".
-doc %EX - 1    is not Null  # true
-doc %EX - null is not Null  # false
-F 'is not'(a,b) not(a is b)
-
-TEST 1 is not Null
-TEST (null is not Null) == false
-
-
-doc Exactly same as "element in container". It's just more convenient in specific cases.
-doc %EX - [1,2,3].has(2)  # true
-doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(X.has(1))  # [ [1,2,3], [1,20,30] ]
-doc %RET - Bool
-F has(container, element) element in container
-
-TEST [1,2,3].has(1)
-TEST [1,2,3].has(10).not()
-
-doc Exactly same as "element not in container". It's just more convenient in specific cases.
-doc %EX - [1,2,3].has_no(2)  # false
-doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(X.has_no(1))  # [ [100,200,300] ]
-doc %RET - Bool
-F has_no(container, element) element not in container
-
-TEST [1,2,3].has_no(1).not()
-TEST [1,2,3].has_no(10)
-
 
 doc Defines collector { ... collect(...) ... } behaviour for arrays
 doc a - Initial array
@@ -2093,7 +2270,8 @@ F in(x, arr:Arr) {
 	false
 }
 
-# Tested by has() tests
+TEST 1 in [1,2]
+TEST not(10 in [1,2])
 
 doc Arrays equality test.
 doc True if arrays are of the same length and all elements are equal (==)
@@ -2217,7 +2395,6 @@ F each_idx_val(e:Eachable1, cb:Fun) {
 	})
 }
 
-# TODO: map_idx_val
 doc Iterates over the elements of arr, passing each in turn to cb along with index and args: cb(INDEX, ITEM)
 doc %RET - arr
 doc %EX - [10,20,30].each_idx_val(F(idx, val) echo("Element #$idx equals to $val"))
@@ -2275,10 +2452,12 @@ F map(arr:Arr, n:Int, mapper:Fun) collector arr.each(n, collect + mapper)
 # Tested by ~(s:Str, r:RegExp)
 
 doc Filter out all occurrences of specific value
+doc Deprecated. Use reject().
 doc e - items to filter
 doc without_elt - The value to filter out
 doc %RET - Arr
 doc %EX - [1,2,3,2].without(2)  # [1,3]
+doc %STATUS - deprecated
 F without(e:Eachable1, without_elt) e.filter(X != without_elt)
 
 TEST [1,2,3,2].without(2) == [1,3]
@@ -2627,20 +2806,6 @@ block _ {
 		ret = e[0]
 		e.each(F(elt) if f(elt, ret) { ret = elt })
 		ret
-	}
-
-	F most_by_cb(e:Eachable1, f:Fun, cb:Fun) {
-		guard e
-		ret = e[0]
-		ret_cb = cb(ret)
-		e.each(F(elt) {
-			elt_cb = cb(elt)
-			if f(elt_cb, ret_cb) {
-				ret = elt
-				ret_cb = elt_cb
-			}
-		})
-		ret_cb
 	}
 
 	doc Find minimal element under (<)
@@ -3135,24 +3300,48 @@ F Hash(e:Eachable1, key_field:Str, val_field:Str)
 
 TEST Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}], "Name", "Value") == {"n1": "v1", "n2": "v2"}
 
+# TODO: Consider storing attributes if key/value keys names
+#       for example for converting back to Eachable1:
+doc %STATUS - experimental
+F Hash(e:Eachable1) {
+	guard e.all(F(x) x is Eachable2 and len(x) == 2)
+	not(e) returns {}
+	k = v = null
+	pat = {
+		AnyOf(%[Id id K k Key key Name name ParameterKey]) -> {k=A}: Any
+		AnyOf(%[V v Val val Value value ParameterValue]) -> {v=A}: Any
+	}
+	if not(e[0] =~ pat) {
+		throw InvalidArgument("Hash(Eachable1) did not find key/value keys in first element").set(element=e[0], pattern=pat)
+	}
+	e.Hash(k, v)
+}
+
+TEST Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}]) == {"n1": "v1", "n2": "v2"}
+
+
 doc Convert Hash into JSON compatible data structure - object
 F JsonData(h:Hash) h.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
 
 # --- Misc ---
 
-doc Filter out specific key
+doc Filter out specific key.
+doc Deprecated. Use rejectk().
 doc e - Source
 doc without_k - The key to filter out
 doc %EX - {'a': 1, 'b': 2, 'c': 3}.without('a')  # {'b': 2, 'c': 3}
+doc %STATUS - deprecated
 F without(e:Eachable2, without_k) e.filter(X != without_k)
 
 TEST {'a': 1, 'b': 2, 'c': 3}.without('a') == {'b': 2, 'c': 3}
 
-doc Filter out specific key-value pair
+doc Filter out specific key-value pair.
+doc Deprecated. Use reject().
 doc e - Source
 doc without_k - The key to filter out
 doc without_v - The value to filter out
 doc %EX - {'a': 1, 'b': 2, 'c': 3}.without('a', 1).without('b', 22)  # {'b': 2, 'c': 3}
+doc %STATUS - deprecated
 F without(e:Eachable2, without_k, without_v)
 	e.reject(F(k, v) (k == without_k) and (v == without_v))
 
@@ -3490,17 +3679,6 @@ F JsonData(fb:FullBox) fb.get().JsonData()
 doc Thrown by get(Failure) as it has no value to get
 type ResultFail(Error)
 
-doc Result of a computation
-doc val - computed value or exception
-type Result
-
-	doc Successful computation
-	doc val - computed value
-	type Success(Result)
-
-	doc Failed computation
-	doc val - exception
-	type Failure(Result)
 
 
 doc Results, an array-like of Result elements
@@ -3559,7 +3737,7 @@ F each(s:Success, fun:Fun) {
 	s
 }
 
-doc Run fun with wrapped value. If exception is thrown, Failure is returned; otherwise Success with new vaule is returned.
+doc Run fun with wrapped value. If exception is thrown, Failure is returned; otherwise Success with new value is returned.
 doc %RET - Result
 F map(s:Success, fun:Fun) {
 	try {
@@ -4329,6 +4507,14 @@ section "Stats" {
 
 	doc Convert Stats into JSON compatible data structure - object
 	F JsonData(s:Stats) s.Hash().JsonData()
+
+	F collector(s:Stats, body:Fun) {
+		body(push(s, X))
+		s
+	}
+
+	TEST (collector/Stats() { collect("a"); collect("a"); collect("b")}).Hash() == {"a": 2, "b": 1}
+	TEST Stats().collector(F(c) {c("a"); c("a"); c("b")}).Hash() == {"a": 2, "b": 1}
 }
 
 section "Thread" block _ {
@@ -4585,19 +4771,28 @@ section "Logging and status reporting" {
 		echo(stdlib_error_fd, "[LOG ${Time()}] $s")
 	}
 
-	doc Same as debug('default', s)
-	F debug(s:Str) debug('default', s)
+	section "Debug" {
 
-	# TODO: more efficient
-	doc Debug to standard error.
-	doc "DEBUG" environment variable must be non-empty string to activate. Otherwise nothing is outputted.
-	doc TODO: Not output thread ID if there is only one thread.
-	doc TODO: Timestamps? Timestamps acquiring might not be safe after fork before exec.
-	F debug(facility:Str, s:Str) {
-		'DEBUG' not in ENV returns
-		if ENV.DEBUG.split(',').any(AnyOf(facility, '*')) {
-			echo(stdlib_error_fd, "[DEBUG $facility ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] $s")
+		DEBUG = ENV.get('DEBUG', '').split(',').filter().Set()
+
+		doc Same as debug('default', str_or_producer)
+		F debug(str_or_producer) debug('default', str_or_producer)
+
+		doc Debug to standard error.
+		doc "DEBUG" environment variable must be non-empty string to activate. Otherwise nothing is outputted.
+		doc TODO: Exclude thread ID if there is only one thread.
+		doc TODO: Timestamps? Timestamps acquiring might not be safe after fork before exec.
+		F debug(facility:Str, str_or_producer) {
+			if facility in DEBUG or '*' in DEBUG {
+				s = if str_or_producer is Fun {
+					str_or_producer()
+				} else {
+					str_or_producer
+				}
+				echo(stdlib_error_fd, "[DEBUG $facility ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] $s")
+			}
 		}
+
 	}
 
 	doc Write error message to standard error.
@@ -4811,7 +5006,7 @@ section "Path" {
 	doc %EX - mydir="tmp/"
 	doc %EX - mydir / "myfile"  # "tmp/myfile"
 	F /(a:Str, b:Str) {
-		guard a and (a[-1] == STDLIB_PATH_SEP)
+		guard a.ends_with(STDLIB_PATH_SEP)
 		"$a$b"
 	}
 
@@ -4968,13 +5163,12 @@ section "Path" {
 
 # === Commands and processes (WIP) ===============
 
-doc EXPERIMENTAL!
 doc %EX - for p in %[ls base64 dd] assert(Program(p))
 type Program
 type ProcessesPipeline
 type ProcessRedir
 
-doc EXPERIMENTAL!
+doc External Program
 F init(p:Program, name:Str) init(args())
 
 # TODO: Check whether the file is executable?
@@ -5004,13 +5198,11 @@ F init(pp:ProcessesPipeline, cp:CommandsPipeline) pp.set(
 	stderr = null
 )
 
-F init(pr:ProcessRedir, cr:CommandRedir) pr.set(
-	fd = cr.fd
-	marker = cr.marker
-	datum = cr.datum
-)
+F init(pr:ProcessRedir, cr:CommandRedir) init(pr, cr.fd, cr.marker, cr.datum)
 
 F init(pr:ProcessRedir, fd, marker, datum) init(args())
+
+F init(pr:ProcessRedir, fd, marker, datum:File) init(pr, fd, marker, datum.path)
 
 doc Duplicate a file descriptor. Uses DUP2(2). Handles EINTR.
 F dup2(oldfd:Int, newfd:Int) {
@@ -5098,6 +5290,9 @@ F write(fd:Int, s:Str) {
 	fd
 }
 
+TEST write(1, "W1") == 1
+TEST write(10, "W10") THROWS WriteFail
+
 doc Write a string followed by newline character to a file descriptor.
 doc Throws WriteFail on failure.
 doc %RET - null
@@ -5106,9 +5301,6 @@ F echo(fd:Int, s:Str) {
 	write(fd, "${s}${STDLIB_EOL}")
 	null
 }
-
-TEST write(1, "W1") == 1
-TEST write(10, "W10") THROWS WriteFail
 
 type TtyCheckFail(CError)
 
@@ -5366,7 +5558,7 @@ doc Initialize CommandRedir object. Used internally for commands syntax.
 doc %AUTO - $(my_prog >my_file)
 F init(r:CommandRedir, fd, marker, datum) {
 	guard marker =~ AnyOf(Str, Null)
-	guard datum =~ AnyOf(Str, Pipe, Int, true)
+	guard datum =~ AnyOf(Str, Pipe, Int, File, true)
 	init(args())
 }
 
@@ -5397,16 +5589,6 @@ block _ {
 		p.exit_code == 0
 	}
 
-	doc Decide whether a process finished normally: OK for any process that has "nofail:" option
-	doc %EX - $(nofail: ls no-such-file)
-	doc %STATUS - deprecated
-	F finished_ok(p:Process) {
-		guard p.command.options.get('nofail')
-		debug("finished_ok", "finished_ok() - nofail method")
-		warn("Using deprecated nofail: option, use ok: option instead (when running ${p.command.argv})")
-		true
-	}
-
 	doc %STATUS - internal
 	doc Decide whether a process finished normally.
 	doc %EX - $(ok:0..10 ls no-such-file)
@@ -5416,7 +5598,7 @@ block _ {
 	doc Decide whether a process finished normally.
 	doc %EX - $(ok:[0,1,2] ls no-such-file)
 	F finished_ok(p:Process, field_name:Str, ok:Arr) {
-		len(ok) == 1 and ok[0] is NumRange throws InvalidArgument("finished_ok() got [some..range] but should be some..range")
+		ok =~ [NumRange] throws InvalidArgument("finished_ok() got [some..range] but should be some..range")
 		p.(field_name) in ok
 	}
 
@@ -5527,13 +5709,14 @@ F wait(p:Process) {
 
 	F join_threads(which:Str) {
 		threads = p.(which)
+		debug("process", {"[wait] joining ${which}: ${threads}"})
 		results = threads.join()
+		debug("process", {"[wait] joined threads"})
 		p.(which) = []
 		first_failure = results.first(Failure, null)
 		first_failure throws ProcessFail('Error in reading/writing thread').set(process=p, cause=first_failure)
 	}
 
-	debug("process", "[wait] joining reading and writing threads")
 	%[reading_threads writing_threads].each(join_threads)
 
 
@@ -5713,7 +5896,35 @@ F Argv(a:Arr) {
 	a.reject(NoData).map(only(Box, get)).map(X.ensure(Arr)).flatten()
 }
 
+
+section "exec()" {
+	doc Call EXECVE(2)
+	F exec(argv:Arr, env:Hash=ENV) {
+		p = find_in_path(argv[0])
+		result = c_execve(p.path, argv, env.Strs())
+		throw CError("Failed to execve()").set(argv=argv)
+	}
+
+	doc Call EXECVE(2)
+	doc argv - argv, without the program
+	F exec(prog:Str, argv:Arr=[], env:Hash=ENV) exec([prog] + argv, env)
+
+	doc Call EXECVE(2)
+	F exec(prog:Str, env:Hash=ENV) exec([prog], env)
+}
+
 # --- $() ---
+
+F fork() {
+	pid = c_fork()
+	pid == -1 throws ProcessFail("Could not spawn a process").set('cause', CError("Failed to fork()"))
+	debug("process", "PID after fork: $pid")
+	if pid == 0 section "child" {
+		global exit_hook
+		exit_hook .= filter({ B.attrs() =~ {'keep_after_fork': true} })
+	}
+	pid
+}
 
 doc Run a process
 F '$()'(p:Process) {
@@ -5741,18 +5952,13 @@ F '$()'(p:Process) {
 		throw ProcessFail(p).set('cause', nf).set('message', 'Executable not found')
 	}
 
-	pid = c_fork()
-
-	pid == -1 throws ProcessFail("Could not spawn a process").set('cause', CError("Failed to fork()"))
-
-	debug("process", "PID after fork: $pid")
+	pid = fork()
 
 	pipes = p.redirects.filter({'datum': Pipe})
-	debug("process2", "PIPES FROM REDIRECTS $pipes REDIRECTS ${p.redirects} COMMND ${p.Hash()}")
+	debug("process2", "PIPES FROM REDIRECTS $pipes REDIRECTS ${p.redirects} COMMAND ${p.Hash()}")
 	child_fds = pipes.datum.map(child_fd)
 
-	if pid == 0 {
-		# === Child ===
+	if pid == 0 section "child" {
 		# TODO: See https://stackoverflow.com/questions/13101690/c-get-all-open-file-descriptors
 		child_fds_to_keep_open = child_fds + p.redirects.datum.filter(Int)
 		debug("process2", "CHILD CLOSING FDS 3 TO 100 EXCEPT FOR ${child_fds_to_keep_open}")
@@ -5798,8 +6004,7 @@ F '$()'(p:Process) {
 		throw CError("Process ${c_getpid()} (fork child) failed to execve()")
 	}
 
-	if pid > 0 {
-		# === Parent ===
+	if pid > 0 section "parent" {
 		p.pid = pid
 		child_fds.each(close)
 		debug("process", "Reading all output of the child process")
@@ -5869,15 +6074,15 @@ F '$()'(cp:CommandsPipeline) {
 
 	}
 
-	# Validation - start
-	for cmd in cp.commands {
-		for r in cmd.redirects {
-			if r.datum == true {
-				r.marker != '>' throws InvalidArgument("Redirection to 'true' for collecting output can only be done with '>' redirection syntax, not '${r.marker}'").set('cp', cp)
+	section "validate redirects" {
+		for cmd in cp.commands {
+			for r in cmd.redirects {
+				if r.datum == true {
+					r.marker != '>' throws InvalidArgument("Redirection to 'true' for collecting output can only be done with '>' redirection syntax, not '${r.marker}'").set('cp', cp)
+				}
 			}
 		}
 	}
-	# Validation - end
 
 	pp = ProcessesPipeline(cp)
 	pp.processes = cp.commands.map(F(cmd) {
@@ -5942,6 +6147,7 @@ TEST $(true).Bool()
 TEST $(false).Bool() == false
 TEST "$(/bin/echo -n abc)" == 'abc'
 TEST $(cd:"/" pwd).lines()[0] == '/'
+TEST t=TmpFile(); $(echo -n abc >$t); t.read() == "abc"
 
 doc Write to first process of ProcessesPipeline
 doc %EX - p = (|cat -n | tac >/tmp/1)
@@ -6273,17 +6479,8 @@ F config(k:Str, v) {
 	STDLIB_CONFIG[k] = v
 }
 
-# === MatchResult, Pfx, Sfx ============================
+# === Pfx, Sfx, Ifx ============================
 
-doc Successful or unsuccessful match result
-type MatchResult
-
-	doc Successful match result
-	doc matches - Successful matches
-	type MatchSuccess([MatchResult, Success])
-
-	doc Unsucessfull match result
-	type MatchFailure([MatchResult, Failure])
 
 type SubSeq
 	doc Prefix subsequence of a sequence
@@ -6306,29 +6503,6 @@ type SubSeq
 		type MustSfx(Sfx)
 
 # TODO: warn()
-doc Successful match constructor
-doc %STATUS - deprecated
-F init(ms:MatchSuccess, matches:Arr) init(args())
-
-doc Successful match constructor
-F init(ms:MatchSuccess, matches:Arr, pattern) init(args())
-
-doc Unsuccessful constructor
-F init(mf:MatchFailure, data, pattern) init(args())
-
-doc Convert successful match to Bool (true)
-doc %RET - true
-F Bool(ms:MatchSuccess) true
-
-doc Convert failed match to Bool (false)
-doc %RET - false
-F Bool(mf:MatchFailure) false
-
-doc Get the values of successful match
-F get(ms:MatchSuccess) ms
-
-doc Throws ResultFail
-F get(mf:MatchFailure) throw ResultFail("There was no match").set('failure', mf)
 
 doc Convert Success to FullBox
 doc %RET - FullBox
@@ -6451,7 +6625,7 @@ TEST ("abc" ~ /a(.)c/)[1] == "b"
 
 doc Checks subsequence presence.
 doc %RET - Bool
-F =~(x, s:SubSeq) {
+F =~(x, s:SubSeq, _mc:MatchContext) {
 	x is not Str returns false
 	Bool(x ~ s)
 }
@@ -6641,7 +6815,8 @@ TEST "ab01de12f"[/[0-9]+/] == '01'
 
 doc %RET - Checks whether the only argument is of type Str and matches (~) r
 doc %EX - %[w1 w2].filter(/1/)  # %[w1]
-F =~(x, r:RegExp) {
+F =~(x, r:RegExp, _mc:MatchContext) {
+	# TODO: Maybe merge named matches into MatchContext
 	x is not Str returns false
 	Bool(x ~ r)
 }
@@ -6870,7 +7045,9 @@ F SafeStr(val) {
 doc Convert Backtrace to human-readable format
 doc %EX - Lines(bt).echo()
 F init(lines:Lines, backtrace:Backtrace, parent_backtrace=null) {
-	guard parent_backtrace =~ AnyOf(Null, Backtrace)
+	# guard parent_backtrace =~ AnyOf(Null, Backtrace)
+	# TODO ^
+	guard parent_backtrace is Null or parent_backtrace is Backtrace
 	super(lines)
 	parent_frames = parent_backtrace.frames tor []
 	backtrace.frames.each_idx_val(F(idx, frame) {
@@ -6965,7 +7142,7 @@ block _ {
 	# TODO: consider running this hook item last.
 	#       If it has exception, it could prevent
 	#       user-defined cleanups.
-	exit_hook['print_exception'] = F(exit:Exit) {
+	exit_hook.print_exception = F(exit:Exit) {
 		try {
 			exit.exceptions.each(print_exception)
 		} catch(e) {
@@ -6973,10 +7150,11 @@ block _ {
 			try {
 				print_exception(e)
 			} catch(e) {
-				error("Failed to print the casue.")
+				error("Failed to print the cause.")
 			}
 		}
 	}
+	exit_hook.print_exception.attrs().keep_after_fork = true
 
 }
 
@@ -7329,6 +7507,7 @@ F write(s:Str, f:File) {
 doc Write whole file if it's closed, write to file descriptor if it's open
 F write(f:File, s:Str) {
 	write(if f.fd is Null then f.path else f.fd, s)
+	f
 }
 
 doc Write a string followed by newline character to a File.

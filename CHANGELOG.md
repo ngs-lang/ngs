@@ -1,3 +1,45 @@
+## 2021-11-21 Version 0.2.13
+
+### New features
+
+* Add `Hash(Hash)` (a no-op)
+* Add experimental `PatternAction` type for combining a pattern and an action to take when there is a match
+* Add experimental `->` syntax for constructing `PatternAction`
+* Add experimental `=~(x, PatternAction)` which checks the pattern and conditionally runs the action
+* Add experimental `MatchContext` type
+* Add experimental `Deep` type for deep data structure matching
+* Add `Hash(Eachable1)` - Issue #436 - Add Hash(array_of_key_value_pairs)
+* Add `exec()` methods - Issue #459
+* `partial()` is now deprecated because it's not used
+* Add `Lit` type to convey literal value, devoid of any "magical" meaning
+* Add `collector(Stats, Fun)`
+* `debug(Str, Fun)` is now supported
+* Add `ensure(Arr, T)` for `T` being subtype of `ArrLike`
+* Add `fork()`, higher level wrapper around `c_fork()`
+* Add `Str(ArrLike)`
+
+### Fixes and improvements
+
+* `inspect()` fix for partially applied functions: `ngs -pi 'X*2'` does not fail anymore.
+* `=~(x, Hash)` now supports patterns for keys
+* Documentation generation now handles well `ENV` as default value for a parameter.
+* Reorganize stdlib to eleminate multiple `inherit()` calls
+* Remove unused `most_by_cb()`
+* Booleans now compare correctly when used as `Hash` keys
+* `exit_hook` now removes hooks in child `fork()`
+* It is now possible to redirect to File without using `.path` - `f=TmpFile(); $(echo a > $f)` - Issue #490
+* `test.ngs` in the root folder now accepts optional file names; defaults to `lang-tests.ngs`, `stdlib.ngs`, and all `*.ngs` files in `lib/autoload`
+
+### Breaking changes
+
+* Remove deprecated `nofail:` option
+* `write(f:File, s:Str)` now returns `f`
+
+### Deprecated
+
+* Deprecate `without(Eachable1, Any)`
+* Deprecate `without(Eachable2, Any)`
+
 ## 2021-06-04 Version 0.2.12
 
 ### New features
