@@ -8,7 +8,7 @@ This document describes releasing a new version of NGS.
 * `git push`
 * Review the changes between `dev` and `master`
 * Update `CHANGELOG.md`. Place the release date in the section on the top.
-* Commit
+* `git commit -am 'Preparing for release'`
 * Push
 * Wait and see that GitHub Actions build is OK - https://github.com/ngs-lang/ngs/actions
 * Checkout `master` branch
