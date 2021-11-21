@@ -69,7 +69,8 @@ ns {
 		Lit(ret)
 	}
 
-	doc 
+	doc Descend into current data, performing all the same transformations.
+	doc %EX - tr([1,2,[3,4]], Arr -> { ["start"] + descend(B) + ["end"] } )  # ["start", 1, 2, ["start", 3, 4, "end"], "end"]
 	F descend(tc:TrContext) {
 		tc._cur !~ DESCENDABLE throws InvalidArgument("Attempted to descend on non-descendable: ${tc._cur} at path ${tc._path}")
 
