@@ -1,5 +1,9 @@
 ## (UNRELEASED) Version 0.2.14
 
+### Fixes and improvements
+
+* Fix #451 - decode(Bool) is not strict enough
+
 ## 2021-11-21 Version 0.2.13
 
 ### New features
