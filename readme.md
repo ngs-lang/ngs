@@ -8,60 +8,53 @@
 [![snapcraft](https://snapcraft.io//ngs/badge.svg)](https://snapcraft.io/ngs)
 [![license](https://img.shields.io/github/license/ngs-lang/ngs)](https://raw.githubusercontent.com/ngs-lang/ngs/master/LICENSE)
 
-**Next Generation Shell** is a powerful programming language and a shell designed specifically for Ops. *Because you deserve better*.
+**Next Generation Shell** is a modern programming language for DevOps.
 
-* [Quick Links](#quick-links)
+* [NGS Website](https://ngs-lang.org/)
+* [NGS Discord chat](https://discord.gg/6VqgcpM)
 * [The Problem](#the-problem)
 * [Suggested Solution - NGS](#suggested-solution---ngs)
 * [NGS Use Cases](#ngs-use-cases)
 * [Project Status](#project-status)
 * [Installing](#installing)
-  * [Using Script](#using-script)
-  * [Using Homebrew](#using-homebrew)
-  * [Using Snap](#using-snap)
-  * [Using Docker](#using-docker)
-  * [Using Github Action](#using-github-action)
-  * [Using iPython or Jupyter Notebook](#using-ipython-or-jupyter-notebook)
+	* [Using Script](#using-script)
+	* [Using Homebrew](#using-homebrew)
+	* [Using Snap](#using-snap)
+	* [Using Docker](#using-docker)
+	* [Using Github Action](#using-github-action)
+	* [Using iPython or Jupyter Notebook](#using-ipython-or-jupyter-notebook)
+* Documentation
+	* [Code Examples](#code-examples)
+		* [Arrays](#arrays)
+		* [Hashes](#hashes)
+		* [Functions (multimethods) and multi-dispatch](#functions-multimethods-and-multi-dispatch)
+		* [Basic Cloud](#basic-cloud)
+		* [Sample Scripts](#sample-scripts)
+	* [Index](https://ngs-lang.org/doc/latest/index.html)
+	* [Tutorial](https://ngs-lang.org/doc/latest/man/ngstut.1.html) -- brief introduction through code examples
+	* [Language Reference](https://ngs-lang.org/doc/latest/man/ngslang.1.html) -- language design principles, syntax, and features
+	* [Motivation](https://ngs-lang.org/doc/latest/man/ngswhy.1.html)
+	* [Library reference](https://ngs-lang.org/doc/latest/generated/index.html) -- all available functions
 * [Manually Compiling and Running](#manually-compiling-and-running)
-    * [Clone from Git](#clone-from-git)
-    * [Install with Dependencies - Debian-based Linux and MacOS](#install-with-dependencies---debian-based-linux-and-macos)
-    * [Install without Dependencies](#install-without-dependencies)
-    * [Run Tests](#run-tests)
-    * [Compile](#compile)
-    * [Run](#run)
-    * [Uninstall](#uninstall)
-    * [Debug - Mac](#debug---mac)
-    * [Debug - Homebrew builds](#debug---homebrew-builds)
-    * [Build and run docker](#build-and-run-docker)
-    * [Generate Documentation](#generate-documentation)
-* [Code Examples](#code-examples)
-  * [Arrays](#arrays)
-  * [Hashes](#hashes)
-  * [Functions (multimethods) and multi-dispatch](#functions-multimethods-and-multi-dispatch)
-  * [Basic Cloud](#basic-cloud)
-  * [Sample Scripts](#sample-scripts)
+	* [Clone from Git](#clone-from-git)
+	* [Install with Dependencies - Debian-based Linux and MacOS](#install-with-dependencies---debian-based-linux-and-macos)
+	* [Install without Dependencies](#install-without-dependencies)
+	* [Run Tests](#run-tests)
+	* [Compile](#compile)
+	* [Run](#run)
+	* [Uninstall](#uninstall)
+	* [Debug - Mac](#debug---mac)
+	* [Debug - Homebrew builds](#debug---homebrew-builds)
+	* [Build and run docker](#build-and-run-docker)
+	* [Generate Documentation](#generate-documentation)
 * [Contributing](#contributing)
 * [Planned Features](#planned-features)
-  * [Cross-system](#cross-system)
-  * [Development](#development)
-  * [Later / Unformed / Unfinished Thoughts](#later--unformed--unfinished-thoughts)
+	* [Cross-system](#cross-system)
+	* [Development](#development)
+	* [Later / Unformed / Unfinished Thoughts](#later--unformed--unfinished-thoughts)
 * [How to Run the POC](#how-to-run-the-poc)
 * [Have you heard of project X? How it compares to NGS?](#have-you-heard-of-project-x-how-it-compares-to-ngs)
 * [Discussion / requests / comments](#discussion--requests--comments)
-
-## Quick Links
-
-* [NGS Website](https://ngs-lang.org/)
-* [NGS Discord chat](https://discord.gg/6VqgcpM)
-* [Docker repository](https://hub.docker.com/r/ngslang/ngs/)
-* Documentation
-	* [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases) -- which problems NGS aims to solve well
-	* [Documentation Index](https://ngs-lang.org/doc/latest/index.html)
-		* [Tutorial](https://ngs-lang.org/doc/latest/man/ngstut.1.html) -- brief introduction through code examples
-		* [Language Reference](https://ngs-lang.org/doc/latest/man/ngslang.1.html) -- language design principles, syntax, and features
-		* [Motivation](https://ngs-lang.org/doc/latest/man/ngswhy.1.html)
-		* [Library reference](https://ngs-lang.org/doc/latest/generated/index.html) -- all available functions
-
 
 ## The Problem
 
@@ -129,23 +122,20 @@ From George Nachman, creator of [iTerm2](https://www.iterm2.com/):
 ### Using Homebrew
 
 	brew install ngs
-	ngs -pi 'sum(0..10)'
 
 ### Using Snap
 
 	sudo snap install ngs
-	ngs -pi 'sum(0..10)'
 
 ### Using Docker
 
-	docker run -it --rm ngslang/ngs
+Docker repository is at https://hub.docker.com/r/ngslang/ngs/
 
-	# Use NGS inside the container
-	ngs -pi 'sum(0..10)'
+	docker run -it --rm ngslang/ngs
 
 ### Using GitHub Action
 
-Add to your Github Action the following line (make sure to release the version as required)
+Add to your Github Action the following (make sure to release the version as required)
 
 ```
 steps:
