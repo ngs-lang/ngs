@@ -956,6 +956,8 @@ METHOD_RESULT decode_json(VM *vm, VALUE s, VALUE *result) {
 		set_normal_type_instance_field(*result, make_string("error"), make_string(json_tokener_error_desc(jerr)));
 		set_normal_type_instance_field(*result, make_string("value"), s);
 		// XXX: Leaking abstraction tok->char_offset. Unfortunately I did not see any alternative.
+		//      2021-11-24 tok->... is now deprecated
+		//      tok->char_offset will be json_tokener_get_parse_end(tok)
 		set_normal_type_instance_field(*result, make_string("position"), MAKE_INT(tok->char_offset));
 		goto error;
 	}
