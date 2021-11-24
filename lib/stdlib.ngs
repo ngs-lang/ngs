@@ -1766,8 +1766,8 @@ section "Type" {
 			}
 		}
 		if t == Bool {
-			s ~ /^(1)|(y(es?)?)|true|on$/i returns true
-			s ~ /^(0)|(no?)|false|off$/i returns false
+			s ~ /^(1|(y(es)?)|true|on)$/i returns true
+			s ~ /^(0|(no?)|false|off)$/i returns false
 			_fail()
 		}
 		guard false
@@ -1776,6 +1776,7 @@ section "Type" {
 	TEST decode("no", Bool) == false
 	TEST decode("0", Bool) == false
 	TEST decode("yes", Bool) == true
+	TEST decode("ya", Bool) THROWS DecodeFail
 	TEST decode("1", Bool) == true
 	TEST decode("1", Int) == 1
 	TEST decode("1", Real) == 1.0
