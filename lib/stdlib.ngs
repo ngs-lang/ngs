@@ -3382,12 +3382,14 @@ TEST {"a": 1, "b": 2}.limit(1) == {"a": 1}
 doc Group items from e by key returned by cb
 doc %RET - Hash with Arr values
 doc %EX - ["ab", "ac", "ba", "bc", "bd"].group(F(x) x[0])  # {a=[ab,ac], b=[ba,bc,bd]}
-F group(e:Eachable1, cb:Fun)
+doc %EX - [["a", 1], ["b", 2], ["a", 3]].group(X[0], X[1])  # {"a": [1,3], "b": [2]}
+F group(e:Eachable1, k:Fun, v:Fun=identity)
 	collector/ret={}
 		e.each(F(elt) {
-			k = cb(elt)
-			ret.dflt(k, []).push(elt)
+			ret.dflt(k(elt), []).push(v(elt))
 		})
+
+TEST [["a", 1], ["b", 2], ["a", 3]].group(X[0], X[1]) == {"a": [1,3], "b": [2]}
 
 doc Group items from e by the given field
 doc %RET - Hash with Arr values
@@ -6283,6 +6285,26 @@ F decode(s:Str, hints:Hash) {
 	decode(s, hints.without('fields_names')).map(F(row) {
 		zip(hints.fields_names, row).Hash()
 	})
+}
+
+doc Decode "curl -i" to {"code": Int, "message": Str, "headers": Hash, "headers_arr": Hash, "body": Str}
+doc .body is not recursively decoded
+doc %RET - Hash
+F decode(s:Str, hints:Hash) {
+	guard try {a=hints.process.command.argv; a[0] == 'curl' and a.has('-i')}
+	sep = "\r\n\r\n"
+	p = s.pos(sep)
+	headers_lines = s[0..p].lines()
+	status_line = headers_lines.shift()
+	status_line_parts = status_line.split(' ', 3)
+	headers_kvs = headers_lines.map(split(X, ': '))
+	{
+		"code": status_line_parts[1].Int()
+		"message": status_line_parts[2]
+		"headers": headers_kvs.Hash()
+		"headers_arr": headers_kvs.group(X[0], X[1])
+		"body": s[(p+len(sep))..null]
+	}
 }
 
 doc Encode data as JSON if hints say that "filename" ends with ".json"

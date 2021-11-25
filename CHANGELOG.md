@@ -1,8 +1,14 @@
 ## (UNRELEASED) Version 0.2.14
 
+### New features
+
+* Parsing of `curl -i ...` command into {"code": Int, "message": Str, "headers": Hash, "headers_arr": Hash, "body": Str}
+
+
 ### Fixes and improvements
 
 * Fix #451 - decode(Bool) is not strict enough
+* `group(Eachable1, Fun)` now has additional parameter `v`: `group(e:Eachable1, k:Fun, v:Fun=...)`. `v` tells how to process values before adding to the resulting multi-value-map.
 
 ## 2021-11-21 Version 0.2.13
 
