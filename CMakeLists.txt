@@ -4,6 +4,7 @@ project(NGS)
 include(CheckFunctionExists)
 include(CheckIncludeFile)
 include(FindPkgConfig)
+include(ExternalProject)
 
 
 # -D_DARWIN_C_SOURCE - SIGWINCH and friends on MacOS
@@ -29,6 +30,27 @@ add_executable(ngs
 	stdlib.ngs.h
 )
 
+# peg/leg - start
+find_program(LEG leg)
+IF(LEG)
+	message(STATUS "leg program found, will use installed one")
+ELSE()
+	message(STATUS "leg program not found, will download and build it")
+	ExternalProject_Add(
+		leg
+		URL https://www.piumarta.com/software/peg/peg-0.1.18.tar.gz
+		URL_HASH SHA1=2390bcf91299aa61c5fa93895151ffeb988357a5
+		CONFIGURE_COMMAND ""
+		BUILD_COMMAND make
+		BUILD_IN_SOURCE true
+		INSTALL_COMMAND ""
+	)
+	ExternalProject_Get_property(leg SOURCE_DIR)
+	SET(LEG "${SOURCE_DIR}/leg")
+	add_dependencies(ngs leg)
+ENDIF()
+# peg/leg - end
+
 check_function_exists(fmemopen FMEMOPEN)
 IF(NOT FMEMOPEN)
 	target_sources(ngs PRIVATE fmemopen.c)
@@ -53,7 +75,7 @@ add_custom_command(
 	COMMAND
 		cat ${CMAKE_CURRENT_SOURCE_DIR}/syntax.leg |
 		${SED} -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-input.sed |
-		leg |
+		${LEG} |
 		${SED} 's/<stdin>/syntax.leg/' |
 		${SED} -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-output.sed |
 		awk -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-output.awk
