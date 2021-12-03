@@ -66,7 +66,7 @@ add_custom_command(
 )
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/syntax.auto.h
-	COMMAND cat ${CMAKE_CURRENT_BINARY_DIR}/syntax.include | ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/make-syntax-auto.sh >${CMAKE_CURRENT_BINARY_DIR}/syntax.auto.h
+	COMMAND cat ${CMAKE_CURRENT_BINARY_DIR}/syntax.include | ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/make-syntax-auto.sh ${SED} >${CMAKE_CURRENT_BINARY_DIR}/syntax.auto.h
 	DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/syntax.include
 )
 add_custom_command(
@@ -84,7 +84,7 @@ add_custom_command(
 add_custom_command(
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/stdlib.ngs.h
-	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/bin2c.sh lib/stdlib.ngs >${CMAKE_CURRENT_BINARY_DIR}/stdlib.ngs.h
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/bin2c.sh ${SED} lib/stdlib.ngs >${CMAKE_CURRENT_BINARY_DIR}/stdlib.ngs.h
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/stdlib.ngs
 )
 
