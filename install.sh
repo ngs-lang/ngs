@@ -21,7 +21,7 @@ else
 		echo "  + On Linux / yum"
 		if type amazon-linux-extras &>/dev/null;then
 			echo "    + Enabling EPEL (provides pandoc)"
-			amazon-linux-extras install epel -y
+			$SUDO amazon-linux-extras install epel -y
 			# * peg/leg is compile by CMake from sources and used during build without installing
 			#   that is because I did not find it packaged.
 			echo "    + Installing yum packages"
