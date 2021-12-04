@@ -2,12 +2,17 @@ default:
 	@echo "No target specified"
 	exit 1
 
+CMAKE := $(shell command -v cmake3 2> /dev/null)
+ifndef CMAKE
+	CMAKE := cmake
+endif
+
 .PHONY: build
 build:
 ifeq ($(shell uname -s),Darwin)
-	( source build.macos.env.sh && mkdir -p build && cd build && cmake .. && make )
+	( source build.macos.env.sh && mkdir -p build && cd build && $(CMAKE) .. && make )
 else
-	( mkdir -p build && cd build && cmake .. && make )
+	( mkdir -p build && cd build && $(CMAKE) .. && make )
 endif
 
 .PHONY: tests
