@@ -7,6 +7,13 @@ ifndef CMAKE
 	CMAKE := cmake
 endif
 
+CTEST := $(shell command -v ctest3 2> /dev/null)
+ifndef CTEST
+	CTEST := ctest
+endif
+
+SUDO := $(shell command -v sudo 2> /dev/null)
+
 .PHONY: build
 build:
 ifeq ($(shell uname -s),Darwin)
@@ -17,11 +24,11 @@ endif
 
 .PHONY: tests
 tests:
-	(cd build && ctest)
+	(cd build && $(CTEST))
 
 .PHONY: install
 install: build
-	(cd build && sudo make install)
+	(cd build && $(SUDO) make install)
 
 .PHONY: clean
 clean:
