@@ -5162,6 +5162,13 @@ section "Path" {
 
 	doc Convert CleanupPolicy to code
 	F code(p:CleanupPolicy) "${p.typeof().name}()"
+
+	doc Decode Path and its subtypes
+	doc %RET - instance of Path or a subtype.
+	F decode(s:Str, p) {
+		guard p.is_subtype(Path)
+		p(s)
+	}
 }
 
 # === Commands and processes (WIP) ===============
