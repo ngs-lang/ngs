@@ -2,21 +2,33 @@ default:
 	@echo "No target specified"
 	exit 1
 
+CMAKE := $(shell command -v cmake3 2> /dev/null)
+ifndef CMAKE
+	CMAKE := cmake
+endif
+
+CTEST := $(shell command -v ctest3 2> /dev/null)
+ifndef CTEST
+	CTEST := ctest
+endif
+
+SUDO := $(shell command -v sudo 2> /dev/null)
+
 .PHONY: build
 build:
 ifeq ($(shell uname -s),Darwin)
-	( source build.macos.env.sh && mkdir -p build && cd build && cmake .. && make )
+	( source build.macos.env.sh && mkdir -p build && cd build && $(CMAKE) .. && make )
 else
-	( mkdir -p build && cd build && cmake .. && make )
+	( mkdir -p build && cd build && $(CMAKE) .. && make )
 endif
 
 .PHONY: tests
 tests:
-	(cd build && ctest)
+	(cd build && $(CTEST))
 
 .PHONY: install
 install: build
-	(cd build && sudo make install)
+	(cd build && $(SUDO) make install)
 
 .PHONY: clean
 clean:
