@@ -24,10 +24,7 @@ ns {
 	doc %EX - ArgvMatcher('positionals', 'filters') do
 	doc %EX - F main(filters:Arr, allreg:Bool=false) ...
 	F ArgvMatcher(option:Str, value, f:UserDefinedMethod) {
-		h = f.attrs()
-		assert(h is Hash)
-		h.dflt('ArgvMatcher', {})
-		h.ArgvMatcher[option] = value
+		f.attrs().dflt('ArgvMatcher', {}).set(option, value)
 		f
 	}
 
