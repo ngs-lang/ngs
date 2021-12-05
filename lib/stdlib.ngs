@@ -4863,16 +4863,27 @@ section "Path" {
 		type Symlink(Path)     # S_IFLNK
 		doc Represents a file in a file system (S_IFREG)
 		type File(Path)        # S_IFREG
-			doc Represents temporary file. Automatically removed when the script exits.
+			doc Represents a temporary file. Automatically removed when the script exits.
 			type TmpFile(File)
 		doc Represents a block device in a file system (S_IFBLK)
 		type BlockDevice(Path) # S_IFBLK
-		doc Represents a directory in a file system (S_IFBLK)
+		doc Represents a directory in a file system (S_IFDIR)
 		type Dir(Path)         # S_IFDIR
 		doc Represents a character device in a file system (S_IFCHR)
 		type CharDevice(Path)  # S_IFCHR
 		doc Represents a fifo file in a file system (S_IFIFO)
 		type FifoFile(Path)    # S_IFIFO
+
+	doc Human readable type name for the Path type and its subtypes. TODO: find better name.
+	doc %STATUS - experimental
+	F human_type_name(p) {
+		guard p.is_subtype(Path)
+		if m = p.attrs().doc[''][0] ~ /Represents a (.+) in a file system/ {
+			m[1]
+		} else {
+			"(failed to extract human readable type desciription of ${p})"
+		}
+	}
 
 	doc Represents a failure in stat() system call.
 	type StatFail(CError)
@@ -5168,6 +5179,10 @@ section "Path" {
 	F decode(s:Str, p) {
 		guard p.is_subtype(Path)
 		p(s)
+	}
+
+	F assert(p:Path) {
+		assert(p, "${p.path} must exist and be a ${p.typeof().human_type_name()}")
 	}
 }
 
