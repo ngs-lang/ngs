@@ -23,7 +23,7 @@ else
 			echo "    + Enabling EPEL (provides pandoc)"
 			$SUDO amazon-linux-extras install epel -y
 		fi
-		# * peg/leg is compile by CMake from sources and used during build without installing
+		# * peg/leg is compiled by CMake from sources and used during build without installing
 		#   that is because I did not find it packaged.
 		echo "    + Installing yum packages"
 		$SUDO yum install -y gc-devel libffi-devel json-c-devel pcre-devel make cmake3 ctest pandoc pkgconfig
