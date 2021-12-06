@@ -2,79 +2,79 @@ name: Build
 on: push
 
 jobs:
-  build-internal:
+  build-linux-internal-gcc:
     timeout-minutes: 5
     name: Build
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        name: [
-            ubuntu-20.04-gcc-9,
-            ubuntu-20.04-gcc-10,
-            ubuntu-20.04-clang-9,
-            ubuntu-20.04-clang-10,
-            macOS-10.14-xcode-10.3,
-            macOS-10.14-gcc-9,
-        ]
-        include:
-
-          - name: ubuntu-20.04-gcc-9
-            os: ubuntu-20.04
-            compiler: gcc
-            version: "9"
-
-          - name: ubuntu-20.04-gcc-10
-            os: ubuntu-20.04
-            compiler: gcc
-            version: "10"
-
-          - name: ubuntu-20.04-clang-9
-            os: ubuntu-20.04
-            compiler: clang
-            version: "9"
-
-          - name: ubuntu-20.04-clang-10
-            os: ubuntu-20.04
-            compiler: clang
-            version: "10"
-
-          - name: macOS-10.14-xcode-10.3
-            os: macOS-10.14
-            compiler: xcode
-            version: "10.3"
-
-          - name: macOS-10.14-gcc-9
-            os: macOS-10.14
-            compiler: gcc
-            version: "9"
+        os: [ "ubuntu-20.04" ]
+        version: [ "9", "10" ]
     steps:
       - uses: actions/checkout@v2
       - name: Install Compiler (Linux)
-        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          if [ "${{ matrix.compiler }}" = "gcc" ]; then
-            sudo apt-get install -y g++-${{ matrix.version }}
-            echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
-            echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
-          else
-            sudo apt-get install -y clang-${{ matrix.version }}
-            echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
-            echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
-          fi
+          sudo apt-get install -y g++-${{ matrix.version }}
+          echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
+          echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
+      - name: Install and Test
+        run: (./install.sh && make tests)
+
+  build-linux-internal-clang:
+    timeout-minutes: 5
+    name: Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ "ubuntu-20.04" ]
+        version: [ "9", "10" ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Compiler (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-${{ matrix.version }}
+          echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
+          echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
+      - name: Install and Test
+        run: (./install.sh && make tests)
+
+  build-mac-gcc:
+    timeout-minutes: 5
+    name: Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ "macOS-10.14" ]
+        version: [ "9" ]
+    steps:
+      - uses: actions/checkout@v2
       - name: Install Compiler (macOS)
-        if: runner.os == 'macOS'
         run: |
           brew install cmake ninja
-          if [ "${{ matrix.compiler }}" = "gcc" ]; then
-            brew install gcc@${{ matrix.version }}
-            echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
-            echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
-          else
-            sudo xcode-select -switch /Applications/Xcode_${{ matrix.version }}.app
-            echo "CC=clang" >> $GITHUB_ENV
-            echo "CXX=clang++" >> $GITHUB_ENV
-          fi
+          brew install gcc@${{ matrix.version }}
+          echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
+          echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
+      - name: Install and Test
+        run: (./install.sh && make tests)
+
+  build-mac-xcode:
+    timeout-minutes: 5
+    name: Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ "macOS-10.14" ]
+        version: [ "10.3" ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Compiler (macOS)
+        run: |
+          brew install cmake ninja
+          sudo xcode-select -switch /Applications/Xcode_${{ matrix.version }}.app
+          echo "CC=clang" >> $GITHUB_ENV
+          echo "CXX=clang++" >> $GITHUB_ENV
       - name: Install and Test
         run: (./install.sh && make tests)
 
