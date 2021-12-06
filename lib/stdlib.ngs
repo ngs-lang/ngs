@@ -1734,6 +1734,8 @@ TEST Real('1.1') == 1.1
 doc Convert Real into JSON compatible data structure - number
 F JsonData(r:Real) r
 
+F Bool(r:Real) r != 0.0
+
 # === NormalTypeConstructor ===============================
 
 doc String representation of normal type constructor. NormalTypeConstructor

@@ -935,6 +935,7 @@ METHOD_RESULT decode_json(VM *vm, VALUE s, VALUE *result) {
 	json_tokener *tok;
 	json_object  *jobj;
 	enum json_tokener_error jerr;
+	int parse_end;
 
 	tok = json_tokener_new();
 	if(!tok) {
@@ -944,6 +945,10 @@ METHOD_RESULT decode_json(VM *vm, VALUE s, VALUE *result) {
 
 	jobj = json_tokener_parse_ex(tok, OBJ_DATA_PTR(s), OBJ_LEN(s));
 	jerr = json_tokener_get_error(tok);
+	// XXX: Leaking abstraction tok->char_offset. Unfortunately I did not see any alternative.
+	//      2021-11-24 tok->... is now deprecated
+	//      tok->char_offset will be json_tokener_get_parse_end(tok)
+	parse_end = tok->char_offset;
 
 	if(jerr == json_tokener_continue) {
 		// See php_json_decode_ex() in php-json-1.3.7/jsonc-1.3.7/json.c
@@ -951,26 +956,18 @@ METHOD_RESULT decode_json(VM *vm, VALUE s, VALUE *result) {
 		jerr = json_tokener_get_error(tok);
 	}
 
-	if(jerr != json_tokener_success) {
+	if(jerr != json_tokener_success || parse_end < OBJ_LEN(s)) {
 		*result = make_normal_type_instance(vm->JsonDecodeFail);
-		set_normal_type_instance_field(*result, make_string("error"), make_string(json_tokener_error_desc(jerr)));
+		set_normal_type_instance_field(*result, make_string("error"), make_string(jerr == json_tokener_success ? "Garbage found" : json_tokener_error_desc(jerr)));
 		set_normal_type_instance_field(*result, make_string("value"), s);
-		// XXX: Leaking abstraction tok->char_offset. Unfortunately I did not see any alternative.
-		//      2021-11-24 tok->... is now deprecated
-		//      tok->char_offset will be json_tokener_get_parse_end(tok)
-		set_normal_type_instance_field(*result, make_string("position"), MAKE_INT(tok->char_offset));
-		goto error;
+		set_normal_type_instance_field(*result, make_string("position"), MAKE_INT(parse_end));
+		json_tokener_free(tok);
+		return METHOD_EXCEPTION;
 	}
 
 	*result = _decode_json_kern(jobj);
-
 	json_tokener_free(tok);
 	return METHOD_OK;
-
-error:
-	json_tokener_free(tok);
-	return METHOD_EXCEPTION;
-
 }
 
 // TODO: include the object and/or it's type in the exception info
