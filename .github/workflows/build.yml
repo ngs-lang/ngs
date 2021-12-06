@@ -2,7 +2,7 @@ name: Build
 on: push
 
 jobs:
-  build-linux-internal-gcc:
+  build-internal-apt-gcc:
     timeout-minutes: 5
     name: Build in GCC
     runs-on: ${{ matrix.os }}
@@ -12,7 +12,7 @@ jobs:
         version: [ "9", "10" ]
     steps:
       - uses: actions/checkout@v2
-      - name: Install Compiler (Linux)
+      - name: Setup Compiler
         run: |
           sudo apt-get update
           sudo apt-get install -y g++-${{ matrix.version }}
@@ -21,7 +21,7 @@ jobs:
       - name: Install and Test
         run: (./install.sh && make tests)
 
-  build-linux-internal-clang:
+  build-internal-apt-clang:
     timeout-minutes: 5
     name: Build in Clang
     runs-on: ${{ matrix.os }}
@@ -31,7 +31,7 @@ jobs:
         version: [ "9", "10" ]
     steps:
       - uses: actions/checkout@v2
-      - name: Install Compiler (Linux)
+      - name: Setup Compiler
         run: |
           sudo apt-get update
           sudo apt-get install -y clang-${{ matrix.version }}
@@ -40,7 +40,7 @@ jobs:
       - name: Install and Test
         run: (./install.sh && make tests)
 
-  build-linux-external-gcc:
+  build-external-apt-gcc:
     timeout-minutes: 5
     name: Build in GCC
     runs-on: ubuntu-20.04
@@ -53,7 +53,7 @@ jobs:
         version: [ "9", "10" ]
     steps:
       - uses: actions/checkout@v2
-      - name: Install Compiler
+      - name: Setup Compiler
         run: |
           apt-get update
           apt-get install -y g++-${{ matrix.version }}
@@ -62,7 +62,7 @@ jobs:
       - name: Install and Test
         run: (./install.sh && make tests)
 
-  build-linux-external-clang:
+  build-external-apt-clang:
     timeout-minutes: 5
     name: Build in Clang
     runs-on: ubuntu-20.04
@@ -75,12 +75,57 @@ jobs:
         version: [ "9", "11" ]
     steps:
       - uses: actions/checkout@v2
-      - name: Install Compiler
+      - name: Setup Compiler
         run: |
           apt-get update
           apt-get install -y clang-${{ matrix.version }}
           echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
           echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
+      - name: Install and Test
+        run: (./install.sh && make tests)
+
+  build-external-centos8-gcc:
+    timeout-minutes: 5
+    name: Build in GCC
+    runs-on: ubuntu-20.04
+    container:
+      image: ${{ matrix.container }}
+      options: --user root
+    strategy:
+      matrix:
+        container: [ "centos:8" ] # "amazonlinux:2", "fedora:34", "fedora:35"
+        version: [ "9", "10" ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Compiler
+        run: |
+          yum update -y
+          yum -y install gcc-toolset-${{ matrix.version }}-gcc-c++
+          echo "source /opt/rh/gcc-toolset-${{ matrix.version }}/enable" >> /etc/bashrc
+          source /opt/rh/gcc-toolset-${{ matrix.version }}/enable
+      - name: Install and Test
+        run: (./install.sh && make tests)
+
+  build-external-centos7-gcc:
+    timeout-minutes: 5
+    name: Build in GCC
+    runs-on: ubuntu-20.04
+    container:
+      image: ${{ matrix.container }}
+      options: --user root
+    strategy:
+      matrix:
+        container: [ "centos:7" ]
+        version: [ "9", "10" ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Compiler
+        run: |
+          yum update -y
+          yum install -y centos-release-scl
+          yum -y install devtoolset-${{ matrix.version }}
+          echo "source /opt/rh/devtoolset-${{ matrix.version }}/enable" >> /etc/bashrc
+          source /opt/rh/devtoolset-${{ matrix.version }}/enable
       - name: Install and Test
         run: (./install.sh && make tests)
 
@@ -94,7 +139,7 @@ jobs:
         version: [ "9" ]
     steps:
       - uses: actions/checkout@v2
-      - name: Install Compiler (macOS)
+      - name: Setup Compiler
         run: |
           brew install cmake ninja
           brew install gcc@${{ matrix.version }}
@@ -113,7 +158,7 @@ jobs:
         version: [ "10.3" ]
     steps:
       - uses: actions/checkout@v2
-      - name: Install Compiler (macOS)
+      - name: Setup Compiler
         run: |
           brew install cmake ninja
           sudo xcode-select -switch /Applications/Xcode_${{ matrix.version }}.app
