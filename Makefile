@@ -13,6 +13,7 @@ endif
 .PHONY: tests
 tests:
 	(cd build && ctest)
+	@echo "-> NGS man is available at: " && man -w ngs1
 
 .PHONY: install
 install: build
