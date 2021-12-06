@@ -126,10 +126,12 @@ jobs:
           yum -y install devtoolset-${{ matrix.version }} cmake3
           echo "source /opt/rh/devtoolset-${{ matrix.version }}/enable" >> /etc/bashrc
           source /opt/rh/devtoolset-${{ matrix.version }}/enable
-          echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
-          echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
+          gcc --version
+          g++ --version
+          echo "CC=gcc" >> $GITHUB_ENV
+          echo "CXX=g++" >> $GITHUB_ENV
       - name: Install and Test
-        run: (./install.sh && make tests)
+        run: (gcc --version && ./install.sh && make tests)
 
   build-mac-gcc:
     timeout-minutes: 10
