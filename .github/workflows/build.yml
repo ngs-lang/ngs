@@ -98,14 +98,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup Compiler
-        run: |
-          yum -y install gcc-toolset-${{ matrix.version }}-gcc-c++
-          echo "source /opt/rh/gcc-toolset-${{ matrix.version }}/enable" >> /etc/bashrc
-          source /opt/rh/gcc-toolset-${{ matrix.version }}/enable
-          echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
-          echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
+        run: yum -y install gcc-toolset-${{ matrix.version }}-gcc-c++
       - name: Install and Test
-        run: (./install.sh && make tests)
+        run: (source /opt/rh/gcc-toolset-${{ matrix.version }}/enable && ./install.sh && make tests)
 
   build-external-centos7-gcc:
     timeout-minutes: 10
