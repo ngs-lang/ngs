@@ -4,7 +4,7 @@ on: push
 jobs:
   build-linux-internal-gcc:
     timeout-minutes: 5
-    name: Build
+    name: Build in GCC
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -23,7 +23,7 @@ jobs:
 
   build-linux-internal-clang:
     timeout-minutes: 5
-    name: Build
+    name: Build in Clang
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -40,9 +40,53 @@ jobs:
       - name: Install and Test
         run: (./install.sh && make tests)
 
+  build-linux-external-gcc:
+    timeout-minutes: 5
+    name: Build in GCC
+    runs-on: ubuntu-20.04
+    container:
+      image: ${{ matrix.container }}
+      options: --user root
+    strategy:
+      matrix:
+        container: [ "debian:11.1" ]
+        version: [ "9", "10" ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Compiler
+        run: |
+          apt-get update
+          apt-get install -y g++-${{ matrix.version }}
+          echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
+          echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
+      - name: Install and Test
+        run: (./install.sh && make tests)
+
+  build-linux-external-clang:
+    timeout-minutes: 5
+    name: Build in Clang
+    runs-on: ubuntu-20.04
+    container:
+      image: ${{ matrix.container }}
+      options: --user root
+    strategy:
+      matrix:
+        container: [ "debian:11.1" ]
+        version: [ "9", "11" ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Compiler
+        run: |
+          apt-get update
+          apt-get install -y clang-${{ matrix.version }}
+          echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
+          echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
+      - name: Install and Test
+        run: (./install.sh && make tests)
+
   build-mac-gcc:
     timeout-minutes: 5
-    name: Build
+    name: Build in GCC
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -60,8 +104,8 @@ jobs:
         run: (./install.sh && make tests)
 
   build-mac-xcode:
-    timeout-minutes: 5
-    name: Build
+    timeout-minutes: 15
+    name: Build in Xcode
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -75,59 +119,5 @@ jobs:
           sudo xcode-select -switch /Applications/Xcode_${{ matrix.version }}.app
           echo "CC=clang" >> $GITHUB_ENV
           echo "CXX=clang++" >> $GITHUB_ENV
-      - name: Install and Test
-        run: (./install.sh && make tests)
-
-  build-external:
-    timeout-minutes: 5
-    name: Build External
-    runs-on: ubuntu-20.04
-    container:
-      image: ${{ matrix.container }}
-      options: --user root
-    strategy:
-      matrix:
-        name: [
-            debian-stable-gcc-9,
-            debian-stable-gcc-10,
-            debian-stable-clang-9,
-            debian-stable-clang-11,
-        ]
-        include:
-          - name: debian-stable-gcc-9
-            container: debian:stable
-            compiler: gcc
-            version: "9"
-
-          - name: debian-stable-gcc-10
-            container: debian:stable
-            compiler: gcc
-            version: "10"
-
-          - name: debian-stable-clang-9
-            container: debian:stable
-            compiler: clang
-            version: "9"
-
-          - name: debian-stable-clang-11
-            container: debian:stable
-            compiler: clang
-            version: "11"
-
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install Compiler
-        run: |
-          apt-get update
-          apt-get install -y sudo   # sudo is not present on the image
-          if [ "${{ matrix.compiler }}" = "gcc" ]; then
-            apt-get install -y g++-${{ matrix.version }}
-            echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
-            echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
-          else
-            apt-get install -y clang-${{ matrix.version }}
-            echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
-            echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
-          fi
       - name: Install and Test
         run: (./install.sh && make tests)
