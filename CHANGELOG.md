@@ -5,7 +5,7 @@
 * Parsing of `curl -i ...` command into {"code": Int, "message": Str, "headers": Hash, "headers_arr": Hash, "body": Str}
 * Add `decode(Str, p)`, where `p` is a `Path` or its subtype.
 * Add `assert(Path)`
-
+* Add `Bool(Real)`
 
 ### Fixes and improvements
 
