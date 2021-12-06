@@ -123,9 +123,9 @@ jobs:
       - name: Setup Compiler
         run: |
           yum install -y centos-release-scl epel-release
-          yum -y install devtoolset-${{ matrix.version }} cmake3
-          echo "CC=gcc" >> $GITHUB_ENV
-          echo "CXX=g++" >> $GITHUB_ENV
+          yum -y install devtoolset-${{ matrix.version }}
+          source /opt/rh/devtoolset-${{ matrix.version }}/enable
+          yum -y install cmake3 sudo
       - name: Install and Test
         run: (source /opt/rh/devtoolset-${{ matrix.version }}/enable && ./install.sh && make tests)
 
