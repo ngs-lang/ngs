@@ -98,7 +98,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup Compiler
-        run: yum -y install gcc-toolset-${{ matrix.version }}-gcc-c++
+        run: |
+          yum -y install gcc-toolset-${{ matrix.version }}-gcc-c++
+          source /opt/rh/gcc-toolset-${{ matrix.version }}/enable
+          yum -y install cmake3 sudo
       - name: Install and Test
         run: (source /opt/rh/gcc-toolset-${{ matrix.version }}/enable && ./install.sh && make tests)
 
