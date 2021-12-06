@@ -120,8 +120,8 @@ jobs:
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
-          yum install -y centos-release-scl
-          yum -y install devtoolset-${{ matrix.version }} cmake
+          yum install -y centos-release-scl epel-release
+          yum -y install devtoolset-${{ matrix.version }} cmake3
           echo "source /opt/rh/devtoolset-${{ matrix.version }}/enable" >> /etc/bashrc
           source /opt/rh/devtoolset-${{ matrix.version }}/enable
       - name: Install and Test
