@@ -121,7 +121,7 @@ jobs:
       - name: Setup Compiler
         run: |
           yum install -y centos-release-scl
-          yum -y install devtoolset-${{ matrix.version }}
+          yum -y install devtoolset-${{ matrix.version }} cmake
           echo "source /opt/rh/devtoolset-${{ matrix.version }}/enable" >> /etc/bashrc
           source /opt/rh/devtoolset-${{ matrix.version }}/enable
       - name: Install and Test
