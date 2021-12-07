@@ -1794,6 +1794,10 @@ METHOD_RESULT native_ll_resolve_global_variable EXT_METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(get_global_index(vm, OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]))));
 }
 
+METHOD_RESULT native_ll_maybe_wrap METHOD_PARAMS {
+	METHOD_RETURN(maybe_wrap(argv[0]));
+};
+
 METHOD_RESULT native_ll_is_global_variable_defined EXT_METHOD_PARAMS {
 	GLOBAL_VAR_INDEX gvi = GET_INT(argv[0]);
 	if(GET_INT(argv[0]) < 0 || gvi >= vm->globals_len) {
@@ -2713,6 +2717,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	vm->eqeq = make_multimethod();
 	set_global(vm, "==", vm->eqeq);
 	// Why is it here? Consider removing - end
+
+	register_global_func(vm, 0, "ll_maybe_wrap", &native_ll_maybe_wrap, 1, "v", vm->Any);
 
 	register_global_func(vm, 0, "==",              &native_false,    2, "a", vm->Any, "b", vm->Any);
 	_doc(vm, "", "Always false. Other == method implementations should compare types they understand. If none of them can handle the comparison, objects are considered non-equal.");

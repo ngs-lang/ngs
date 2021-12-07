@@ -6,6 +6,7 @@
 * Add `decode(Str, p)`, where `p` is a `Path` or its subtype.
 * Add `assert(Path)`
 * Add `Bool(Real)`
+* Add experimental `native_ll_maybe_wrap`
 
 ### Fixes and improvements
 
