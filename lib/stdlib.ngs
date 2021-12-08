@@ -1159,7 +1159,7 @@ section "Functional operators" {
 	doc Filter operator.
 	doc Same as calling x.filter(pattern)
 	doc %EX - [1,2,3,4] ? F(x) x > 2  # [3,4]
-	F ?(x, pattern:Fun) x.filter(pattern)
+	F ?(x, pattern) x.filter(pattern)
 
 	doc Map operator.
 	doc Same as calling x.map(mapper)

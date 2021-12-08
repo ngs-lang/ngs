@@ -12,6 +12,7 @@
 
 * Fix #451 - decode(Bool) is not strict enough
 * `group(Eachable1, Fun)` now has additional parameter `v`: `group(e:Eachable1, k:Fun, v:Fun=...)`. `v` tells how to process values before adding to the resulting multi-value-map.
+* The `?` operator now takes `Any` instead of `Fun` as the right argument.
 
 ## 2021-11-21 Version 0.2.13
 
