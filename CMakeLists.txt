@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 project(NGS)
 
+# TOOD: check how not to use hard coded include and lib directories.
+#       Do something like pkg_check_modules(LIBFFI libffi REQUIRED) but for all libraries?
+
 include(CheckFunctionExists)
 include(CheckIncludeFile)
 include(FindPkgConfig)
@@ -18,8 +21,8 @@ add_definitions(-D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE=1 -D_DEFAULT_SOURCE=1)
 add_definitions(-DNGS_STUPID_MALLOC_AFTER_FORK)
 
 pkg_check_modules(LIBFFI libffi REQUIRED)
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /usr/local/include)
-link_directories(/usr/local/lib)
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /usr/local/include /opt/homebrew/include)
+link_directories(/usr/local/lib /opt/homebrew/lib)
 
 add_executable(ngs
 	version.h
