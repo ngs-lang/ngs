@@ -1808,7 +1808,7 @@ Since `Iter(x:Iter)` is defined as `x`, you can use the following solution if yo
 		BODY # can manipulate my_iter for advanced control
 	}
 
-The above works as follows: `my_iter=Iter(EXPR)` is an assignment which evaluates to an `Iter` object. `for` uses `Iter` on that value to get an iterator but it is the same iterator that `my_iter` references.
+The above works as follows: `my_iter=Iter(EXPR)` is an assignment which evaluates to an `Iter` object. `for` uses `Iter` on that value to get an iterator. `Iter(i:Iter)` is defined as `i`. Therefore, the `Iter` used be for and `my_iter` is the same iterator.
 
 ## Built-in iterators
 
