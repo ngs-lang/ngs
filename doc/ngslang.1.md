@@ -1879,8 +1879,7 @@ Log the command including arguments and redirects before running it:
 log: my_prog my_arg ...
 ```
 
-
-Internally the `&` in `$(my_prog my_arg &)` sets the `&` option to `true`. This mechanism can be used to modify the behaviour of `CommandsPipeline` prepared by `%(...)`.
+Internally, the `&` in `$(my_prog my_arg &)` sets the `&` option to `true`. This mechanism can be used to modify the behaviour of `CommandsPipeline` prepared by `%(...)`.
 
 		ngs -pi '%(ls / &)'
 		CommandsPipeline
@@ -1974,7 +1973,32 @@ External commands are represented with type `CommandsPipeline`, which defines wh
 
 ## Decoding the Output
 
-TODO: describe
+Let's look on what's behind the described above syntax:
+
+* ```` ``my_prog my_arg ...`` ```` - capture and decode the output, an arbitrary structured data.
+
+Internally, the following code is executed:
+
+```
+p.stdout.decode({'process': p, 'pipeline': cp})
+```
+
+The code above calls the multimethod defined as `F decode(s:Str, hints:Hash={})` . Out of the box NGS implements several methods that are able to parse JSON, JWT, output of `aws` and `find` commands.
+
+In case you need to decode a format not known to NGS, you can implement your own parser by defining yet another `decode()` method with appropriate `guard` statement to make sure that `s` is the expected input. It should look roughly like the following (real example from stdlib):
+
+```
+doc Parse the output of "find" command which does not use "-printf". Handles "-print0".
+doc hints - hints.process.command.argv[0] must be 'find'
+doc %RET - Arr of Str
+F decode(s:Str, hints:Hash) {
+	guard try hints['process'].command.argv[0] == 'find'
+	argv = hints['process'].command.argv
+	guard '-printf' not in argv
+	zero_sep = '-print0' in argv
+	if zero_sep then s.split(chr(0))[0..-1] else s.lines()
+}
+```
 
 ## Exit codes handling when running external programs
 
@@ -2016,7 +2040,41 @@ Globbing is not implemented yet.
 
 ## Debugging
 
-TODO: describe
+Use `DEBUG` environment variable to show debug information about processes that NGS runs. Example:
+
+```
+$ DEBUG=process,process2 ngs -e '$(ls)'
+[DEBUG process2 42167 main] cp.pipes.len()=2
+[DEBUG process 42167 main] Parsed command: [ls]
+[DEBUG process 42167 main] [find_in_path] got ls
+[DEBUG process 42167 main] [find_in_path] will search
+[DEBUG process 42167 main] [find_in_path] ls found at <Path path=/bin/ls>
+[DEBUG process 42167 main] PID after fork: 42168
+[DEBUG process 42168 main] PID after fork: 0
+[DEBUG process2 42167 main] PIPES FROM REDIRECTS [<ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>>] REDIRECTS [<ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>>] COMMAND {command=<Command options={} redirects=[] argv=[ls]>, executable=<Path path=/bin/ls>, pid=null, exit_code=null, exit_signal=null, outputs={1=null, 2=null}, stdout=null, stderr=null, reading_threads=<Threads >, writing_threads=<Threads >, redirects=[<ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>>]}
+[DEBUG process 42167 main] Reading all output of the child process
+[DEBUG process 42167 main] Creating thread process-42168-output-fd-1-reader
+[DEBUG process 42167 process-42168-output-fd-1-reader] Thread set up done, will run thread code
+[DEBUG process2 42167 process-42168-output-fd-1-reader] READING <CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>
+[DEBUG process2 42168 main] PIPES FROM REDIRECTS [<ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>>] REDIRECTS [<ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>>] COMMAND {command=<Command options={} redirects=[] argv=[ls]>, executable=<Path path=/bin/ls>, pid=null, exit_code=null, exit_signal=null, outputs={1=null, 2=null}, stdout=null, stderr=null, reading_threads=<Threads >, writing_threads=<Threads >, redirects=[<ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>>]}
+[DEBUG process2 42168 main] CHILD CLOSING FDS 3 TO 100 EXCEPT FOR [4]
+[DEBUG process2 42167 main] $() returns process {command=<Command options={} redirects=[] argv=[ls]>, executable=<Path path=/bin/ls>, pid=42168, exit_code=null, exit_signal=null, outputs={1=null, 2=null}, stdout=null, stderr=null, reading_threads=<Threads <Thread process-42168-output-fd-1-reader>>, writing_threads=<Threads >, redirects=[<ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>>]}
+[DEBUG process2 42168 main] CHILD REDIRECT PIPE 1 -> 4
+[DEBUG process 42168 main] will execve()
+[DEBUG process 42167 main] [wait] joining reading_threads: <Threads <Thread process-42168-output-fd-1-reader>>
+[DEBUG process 42167 main] Joining thread <Thread process-42168-output-fd-1-reader>
+[DEBUG process2 42167 process-42168-output-fd-1-reader] READ <<Makefile\x0Amain.css\x0Amake.ngs\x0Amethods.css\x0Ana.1\x0Ana.1.md\x0Angs.1\x0Angs.1.md\x0Angsint.1\x0Angsint.1.md\x0Angslang.1...>>
+[DEBUG process2 42167 process-42168-output-fd-1-reader] DATUM *** <CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>
+[DEBUG process2 42167 process-42168-output-fd-1-reader] CLOSED READING END OF PIPE, REDIRECT <ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>>
+[DEBUG process 42167 process-42168-output-fd-1-reader] Read all output of the child process for descriptor 1, closing reading/parent end
+[DEBUG process 42167 main] [wait] joined threads
+[DEBUG process 42167 main] [wait] joining writing_threads: <Threads >
+[DEBUG process 42167 main] [wait] joined threads
+[DEBUG process 42167 main] [wait] will waitpid(42168)
+[DEBUG process 42167 main] [wait] waitpid(42168) -> [42168,0]
+```
+
+In most cases `DEBUG=process` should be enough to understand what is happening. `process2` shows lower level details.
 
 # Accessing Environment Variables
 
