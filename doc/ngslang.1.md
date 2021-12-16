@@ -1887,7 +1887,7 @@ Internally, the `&` in `$(my_prog my_arg &)` sets the `&` option to `true`. This
 		  options:   [&] = true
 		  command[0]: <Command options={} redirects=[] argv=[ls,/]>
 
-**WARNING**: unrecognized options are silently ignored. This is considered a bug and should be fixed.
+**WARNING**: unrecognized options are silently ignored. This is considered a bug and should be fixed - https://github.com/ngs-lang/ngs/issues/28
 
 ## Syntax - Input/Output Redirections
 
