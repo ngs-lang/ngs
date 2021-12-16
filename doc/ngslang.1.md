@@ -2000,6 +2000,18 @@ F decode(s:Str, hints:Hash) {
 }
 ```
 
+Before writing your own parser, check whether you can leverage the `jc` project. It can parse many formats and output the information as JSON. In turn, JSON can be easily parsed by NGS. Integration with NGS is as simple as the following:
+
+```
+$ ngs -pl '``jc ifconfig``.name.sort()'  # prints interfaces names
+bridge0
+en0
+utun0
+...
+```
+
+`jc` project is at https://github.com/kellyjonbrazil/jc
+
 ## Exit codes handling when running external programs
 
 Immediately after an external program finishes, it's exit code (and in the future, possibly other aspects) is checked using `finished_ok` multimethod. The multimethod returns a `Bool`. If it's `false`, an exception is thrown.
