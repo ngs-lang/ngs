@@ -1816,8 +1816,6 @@ See `Iter` type documentation to see which iterators are available in NGS.
 
 # Executing External Programs
 
-* `debug()`
-
 ## Syntax - Basics
 
 * In **commands syntax** (default for the top level of an NGS file) just go ahead and `my_prog my_arg ...`
