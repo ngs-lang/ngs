@@ -5894,14 +5894,20 @@ F Argv(h:Hash) {
 						return
 					}
 					Eachable1 {
-						# ['--repeat']: my_eachable1
-						v.each(F(elt) {
-							collect(k[0])
-							collect(elt)
-						})
-						return
+						warn("Argv: use {Repeat('--repeat'): my_eachable1} instead of deprecated ['--repeat']: my_eachable1")
+						k = Repeat(k.the_one())
 					}
 				}
+			}
+
+			if k is Repeat {
+				assert(k, {'pattern': Str, 'count': NumRange }, 'Argv: Repeat() must repeat a string and count must be NumRange')
+				assert(v.len(), k.count, "Switch ${k.pattern} has ${v.len()} values, out of specified range ${k.count}")
+				v.each(F(elt) {
+					collect(k.pattern)
+					collect(elt)
+				})
+				return
 			}
 
 			# If you have nothing to give to the switch, skip the switch

@@ -14,6 +14,11 @@
 * `group(Eachable1, Fun)` now has additional parameter `v`: `group(e:Eachable1, k:Fun, v:Fun=...)`. `v` tells how to process values before adding to the resulting multi-value-map.
 * The `?` operator now takes `Any` instead of `Fun` as the right argument.
 * Fix `tr` exception when pattern is a `Hash` and it should match not at the top level.
+* `Argv` now accepts `Repeat` keys: `{Repeat('--repeat'): my_arr}`
+
+### Deprecated
+
+* `Argv` - `['--repeat']` is deprecated in favor of `Repeat('--repeat')`
 
 ## 2021-11-21 Version 0.2.13
 
