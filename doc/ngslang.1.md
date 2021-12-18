@@ -1555,40 +1555,6 @@ Here is `collector` for `Hash` and it's usage example:
 		collector/{}
 			h.each(F(k, v) collect(mapper(k), v))
 
-# Running external programs
-
-	t = `echo -n text1`
-	echo("[ $t ]")
-	# Output: [ text1 ]
-
-	seq = `seq 5`.lines()
-	echo(seq)
-	# Output: ['1','2','3','4','5']
-
-	proc = $(seq 3)
-	each(inspect(proc), echo)
-	# ProcessesPipeline
-	#   cp: CommandsPipeline
-	#   cp:   command[0]: <Command options={} redirects=[] argv=[seq,3]>
-	#   pipe_in: null
-	#   pipe_out: null
-	#   processes[0]: Process
-	#   processes[0]:   command = <Command options={} redirects=[] argv=[seq,3]>
-	#   processes[0]:   pid = 77309
-	#   processes[0]:   exit_code = 0
-	#   processes[0]:   exit_signal = null
-	#   processes[0]:   redirects[0]: <ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>
-	#   processes[0]:   output on fd 1, stdout (3 lines):
-	#   processes[0]:     1
-	#   processes[0]:     2
-	#   processes[0]:     3
-	#   processes[0]:   output on fd 2, stderr (0 lines):
-
-	data = ``echo '{"a": 1}'``
-	echo("Parsed data: $data, a is ${data.a}")
-	# Output: Parsed data: {a=1}, a is 1
-
-
 # Assignment shortcuts
 
 These are syntactically equivalent expressions:
