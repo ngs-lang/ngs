@@ -1,4 +1,26 @@
-## (UNRELEASED) Version 0.2.13
+## (UNRELEASED) Version 0.2.14
+
+### New features
+
+* Parsing of `curl -i ...` command into {"code": Int, "message": Str, "headers": Hash, "headers_arr": Hash, "body": Str}
+* Add `decode(Str, p)`, where `p` is a `Path` or its subtype.
+* Add `assert(Path)`
+* Add `Bool(Real)`
+* Add experimental `native_ll_maybe_wrap`
+
+### Fixes and improvements
+
+* Fix #451 - decode(Bool) is not strict enough
+* `group(Eachable1, Fun)` now has additional parameter `v`: `group(e:Eachable1, k:Fun, v:Fun=...)`. `v` tells how to process values before adding to the resulting multi-value-map.
+* The `?` operator now takes `Any` instead of `Fun` as the right argument.
+* Fix `tr` exception when pattern is a `Hash` and it should match not at the top level.
+* `Argv` now accepts `Repeat` keys: `{Repeat('--repeat'): my_arr}`
+
+### Deprecated
+
+* `Argv` - `['--repeat']` is deprecated in favor of `Repeat('--repeat')`
+
+## 2021-11-21 Version 0.2.13
 
 ### New features
 
@@ -16,6 +38,7 @@
 * `debug(Str, Fun)` is now supported
 * Add `ensure(Arr, T)` for `T` being subtype of `ArrLike`
 * Add `fork()`, higher level wrapper around `c_fork()`
+* Add `Str(ArrLike)`
 
 ### Fixes and improvements
 
@@ -27,6 +50,7 @@
 * Booleans now compare correctly when used as `Hash` keys
 * `exit_hook` now removes hooks in child `fork()`
 * It is now possible to redirect to File without using `.path` - `f=TmpFile(); $(echo a > $f)` - Issue #490
+* `test.ngs` in the root folder now accepts optional file names; defaults to `lang-tests.ngs`, `stdlib.ngs`, and all `*.ngs` files in `lib/autoload`
 
 ### Breaking changes
 

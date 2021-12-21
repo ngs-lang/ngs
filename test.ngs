@@ -27,10 +27,16 @@ F perform_tests_in_file(file:Str) {
 	})
 }
 
-base_dir = ENV.get('NGS_TESTS_BASE_DIR', `line: dirname ${realpath(ARGV0)}` / 'lib')
-files = %[lang-tests.ngs stdlib.ngs].map(base_dir / X) + ``find "${base_dir}/autoload" -name '*.ngs'``
+if ARGV {
+	files = ARGV
+} else {
+	base_dir = ENV.get('NGS_TESTS_BASE_DIR', `line: dirname ${realpath(ARGV0)}` / 'lib')
+	files = %[lang-tests.ngs stdlib.ngs].map(base_dir / X) + ``find "${base_dir}/autoload" -name '*.ngs'``
+}
 
 files.each(perform_tests_in_file)
 
-assert(tests_counter > 540)
+if not(ARGV) {
+	assert(tests_counter > 540)
+}
 echo("OK. Tests: ${tests_counter}")

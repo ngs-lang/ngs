@@ -838,8 +838,9 @@ section "=~ Matching" {
 	F =~(x, t:Type, _mc:MatchContext) x is t
 
 	doc Check whether x is the literal value l (using ==)
-	F =~(x, l:Lit, _mc:MatchContext) x == l
+	F =~(x, l:Lit, _mc:MatchContext) x == l.val
 	TEST 1 !~ Lit(Int)
+	TEST Int =~ Lit(Int)
 
 	section "Repeat" {
 
@@ -1158,7 +1159,7 @@ section "Functional operators" {
 	doc Filter operator.
 	doc Same as calling x.filter(pattern)
 	doc %EX - [1,2,3,4] ? F(x) x > 2  # [3,4]
-	F ?(x, pattern:Fun) x.filter(pattern)
+	F ?(x, pattern) x.filter(pattern)
 
 	doc Map operator.
 	doc Same as calling x.map(mapper)
@@ -1358,6 +1359,9 @@ section "ArrLike" {
 		guard t.is_subtype(ArrLike)
 		t(x)
 	}
+
+	doc Convert ArrLike to a human-readable representation
+	F Str(a:ArrLike) "<${a.typeof().name} ${a.Arr().join(', ')}>"
 
     # TODO: When convenient from pattern matching perspective, also check instance type
     TEST type T(ArrLike); [1,2].ensure(T) =~ [1,2]
@@ -1730,6 +1734,8 @@ TEST Real('1.1') == 1.1
 doc Convert Real into JSON compatible data structure - number
 F JsonData(r:Real) r
 
+F Bool(r:Real) r != 0.0
+
 # === NormalTypeConstructor ===============================
 
 doc String representation of normal type constructor. NormalTypeConstructor
@@ -1762,8 +1768,8 @@ section "Type" {
 			}
 		}
 		if t == Bool {
-			s ~ /^(1)|(y(es?)?)|true|on$/i returns true
-			s ~ /^(0)|(no?)|false|off$/i returns false
+			s ~ /^(1|(y(es)?)|true|on)$/i returns true
+			s ~ /^(0|(no?)|false|off)$/i returns false
 			_fail()
 		}
 		guard false
@@ -1772,6 +1778,7 @@ section "Type" {
 	TEST decode("no", Bool) == false
 	TEST decode("0", Bool) == false
 	TEST decode("yes", Bool) == true
+	TEST decode("ya", Bool) THROWS DecodeFail
 	TEST decode("1", Bool) == true
 	TEST decode("1", Int) == 1
 	TEST decode("1", Real) == 1.0
@@ -3377,12 +3384,14 @@ TEST {"a": 1, "b": 2}.limit(1) == {"a": 1}
 doc Group items from e by key returned by cb
 doc %RET - Hash with Arr values
 doc %EX - ["ab", "ac", "ba", "bc", "bd"].group(F(x) x[0])  # {a=[ab,ac], b=[ba,bc,bd]}
-F group(e:Eachable1, cb:Fun)
+doc %EX - [["a", 1], ["b", 2], ["a", 3]].group(X[0], X[1])  # {"a": [1,3], "b": [2]}
+F group(e:Eachable1, k:Fun, v:Fun=identity)
 	collector/ret={}
 		e.each(F(elt) {
-			k = cb(elt)
-			ret.dflt(k, []).push(elt)
+			ret.dflt(k(elt), []).push(v(elt))
 		})
+
+TEST [["a", 1], ["b", 2], ["a", 3]].group(X[0], X[1]) == {"a": [1,3], "b": [2]}
 
 doc Group items from e by the given field
 doc %RET - Hash with Arr values
@@ -4856,16 +4865,27 @@ section "Path" {
 		type Symlink(Path)     # S_IFLNK
 		doc Represents a file in a file system (S_IFREG)
 		type File(Path)        # S_IFREG
-			doc Represents temporary file. Automatically removed when the script exits.
+			doc Represents a temporary file. Automatically removed when the script exits.
 			type TmpFile(File)
 		doc Represents a block device in a file system (S_IFBLK)
 		type BlockDevice(Path) # S_IFBLK
-		doc Represents a directory in a file system (S_IFBLK)
+		doc Represents a directory in a file system (S_IFDIR)
 		type Dir(Path)         # S_IFDIR
 		doc Represents a character device in a file system (S_IFCHR)
 		type CharDevice(Path)  # S_IFCHR
 		doc Represents a fifo file in a file system (S_IFIFO)
 		type FifoFile(Path)    # S_IFIFO
+
+	doc Human readable type name for the Path type and its subtypes. TODO: find better name.
+	doc %STATUS - experimental
+	F human_type_name(p) {
+		guard p.is_subtype(Path)
+		if m = p.attrs().doc[''][0] ~ /Represents a (.+) in a file system/ {
+			m[1]
+		} else {
+			"(failed to extract human readable type desciription of ${p})"
+		}
+	}
 
 	doc Represents a failure in stat() system call.
 	type StatFail(CError)
@@ -5155,6 +5175,17 @@ section "Path" {
 
 	doc Convert CleanupPolicy to code
 	F code(p:CleanupPolicy) "${p.typeof().name}()"
+
+	doc Decode Path and its subtypes
+	doc %RET - instance of Path or a subtype.
+	F decode(s:Str, p) {
+		guard p.is_subtype(Path)
+		p(s)
+	}
+
+	F assert(p:Path) {
+		assert(p, "${p.path} must exist and be a ${p.typeof().human_type_name()}")
+	}
 }
 
 # === Commands and processes (WIP) ===============
@@ -5705,13 +5736,14 @@ F wait(p:Process) {
 
 	F join_threads(which:Str) {
 		threads = p.(which)
+		debug("process", {"[wait] joining ${which}: ${threads}"})
 		results = threads.join()
+		debug("process", {"[wait] joined threads"})
 		p.(which) = []
 		first_failure = results.first(Failure, null)
 		first_failure throws ProcessFail('Error in reading/writing thread').set(process=p, cause=first_failure)
 	}
 
-	debug("process", "[wait] joining reading and writing threads")
 	%[reading_threads writing_threads].each(join_threads)
 
 
@@ -5838,7 +5870,7 @@ doc Key-value pairs with empty array values are discarded.
 doc Values of type Box are unboxed.
 doc For keys which are arrays of two elements, Bool value selects first (for true) or second (for false) element.
 doc For keys which are arrays of a single element, Bool value selects whether the key is present or absent in the output.
-doc For keys which are arrays of a single element, Eachable1 value causes the switch to br repeated for each element, building switch name and switch value pairs.
+doc For keys which are Repeat, Eachable1 value causes the switch to be repeated for each element, building switch name and switch value pairs.
 doc %EX - # Typical usage:
 doc %EX - argv = Argv({'name1': value1, 'name2': value2, ...})
 doc %EX - $(my_command $*argv)
@@ -5846,7 +5878,7 @@ doc %EX - # Handling of key-value pairs
 doc %EX - Argv({"--a": 1, "-b": null})                         # ['--a', 1]
 doc %EX - Argv({["-y1", "-n1"]: true, ["-y2", "-n2"]: false})  # ['-y1', '-n2']
 doc %EX - Argv({["-y3"]: true, ["-y4"]: false})                # ["-y3"]
-doc %EX - Argv({["--repeat"]: ["a", "b"]})                     # ["--repeat", "a", "--repeat", "b"]
+doc %EX - Argv({Repeat("--repeat"): ["a", "b"]})               # ["--repeat", "a", "--repeat", "b"]
 doc %EX - Argv({"-a1": [], "-a2": [1,2,3]})                    # ["-a2", 1, 2, 3]
 F Argv(h:Hash) {
 	collector
@@ -5862,14 +5894,20 @@ F Argv(h:Hash) {
 						return
 					}
 					Eachable1 {
-						# ['--repeat']: my_eachable1
-						v.each(F(elt) {
-							collect(k[0])
-							collect(elt)
-						})
-						return
+						warn("Argv: use {Repeat('--repeat'): my_eachable1} instead of deprecated ['--repeat']: my_eachable1")
+						k = Repeat(k.the_one())
 					}
 				}
+			}
+
+			if k is Repeat {
+				assert(k, {'pattern': Str, 'count': NumRange }, 'Argv: Repeat() must repeat a string and count must be NumRange')
+				assert(v.len(), k.count, "Switch ${k.pattern} has ${v.len()} values, out of specified range ${k.count}")
+				v.each(F(elt) {
+					collect(k.pattern)
+					collect(elt)
+				})
+				return
 			}
 
 			# If you have nothing to give to the switch, skip the switch
@@ -5882,7 +5920,7 @@ F Argv(h:Hash) {
 
 TEST Argv({"--a": 1, "-b": null, ["-y1", "-n1"]: true, ["-y2", "-n2"]: false, ["-y3"]: true, ["-y4"]: false}) == ["--a", 1, "-y1", "-n2", "-y3"]
 TEST Argv({"-a1": [], "-a2": [1,2,3]}) == ["-a2", 1, 2, 3]
-TEST Argv({["--repeat"]: ["a", "b"]}) == ["--repeat", "a", "--repeat", "b"]
+TEST Argv({Repeat("--repeat"): ["a", "b"]}) == ["--repeat", "a", "--repeat", "b"]
 
 doc Deprecated. Do not use!
 doc %STATUS - deprecated
@@ -6277,6 +6315,26 @@ F decode(s:Str, hints:Hash) {
 	decode(s, hints.without('fields_names')).map(F(row) {
 		zip(hints.fields_names, row).Hash()
 	})
+}
+
+doc Decode "curl -i" to {"code": Int, "message": Str, "headers": Hash, "headers_arr": Hash, "body": Str}
+doc .body is not recursively decoded
+doc %RET - Hash
+F decode(s:Str, hints:Hash) {
+	guard try {a=hints.process.command.argv; a[0] == 'curl' and a.has('-i')}
+	sep = "\r\n\r\n"
+	p = s.pos(sep)
+	headers_lines = s[0..p].lines()
+	status_line = headers_lines.shift()
+	status_line_parts = status_line.split(' ', 3)
+	headers_kvs = headers_lines.map(split(X, ': '))
+	{
+		"code": status_line_parts[1].Int()
+		"message": status_line_parts[2]
+		"headers": headers_kvs.Hash()
+		"headers_arr": headers_kvs.group(X[0], X[1])
+		"body": s[(p+len(sep))..null]
+	}
 }
 
 doc Encode data as JSON if hints say that "filename" ends with ".json"

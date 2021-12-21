@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 3.0)
 project(NGS)
 
+# TOOD: check how not to use hard coded include and lib directories.
+#       Do something like pkg_check_modules(LIBFFI libffi REQUIRED) but for all libraries?
+
 include(CheckFunctionExists)
 include(CheckIncludeFile)
 include(FindPkgConfig)
+include(ExternalProject)
 
 
 # -D_DARWIN_C_SOURCE - SIGWINCH and friends on MacOS
@@ -17,8 +21,8 @@ add_definitions(-D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE=1 -D_DEFAULT_SOURCE=1)
 add_definitions(-DNGS_STUPID_MALLOC_AFTER_FORK)
 
 pkg_check_modules(LIBFFI libffi REQUIRED)
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /usr/local/include)
-link_directories(/usr/local/lib)
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /usr/local/include /opt/homebrew/include)
+link_directories(/usr/local/lib /opt/homebrew/lib)
 
 add_executable(ngs
 	version.h
@@ -28,6 +32,27 @@ add_executable(ngs
 	obj.c vm.c compile.c debug.c ast.c malloc.c decompile.c
 	stdlib.ngs.h
 )
+
+# peg/leg - start
+find_program(LEG leg)
+IF(LEG)
+	message(STATUS "leg program found, will use installed one")
+ELSE()
+	message(STATUS "leg program not found, will download and build it")
+	ExternalProject_Add(
+		leg
+		URL https://www.piumarta.com/software/peg/peg-0.1.18.tar.gz
+		URL_HASH SHA1=2390bcf91299aa61c5fa93895151ffeb988357a5
+		CONFIGURE_COMMAND ""
+		BUILD_COMMAND make
+		BUILD_IN_SOURCE true
+		INSTALL_COMMAND ""
+	)
+	ExternalProject_Get_property(leg SOURCE_DIR)
+	SET(LEG "${SOURCE_DIR}/leg")
+	add_dependencies(ngs leg)
+ENDIF()
+# peg/leg - end
 
 check_function_exists(fmemopen FMEMOPEN)
 IF(NOT FMEMOPEN)
@@ -53,7 +78,7 @@ add_custom_command(
 	COMMAND
 		cat ${CMAKE_CURRENT_SOURCE_DIR}/syntax.leg |
 		${SED} -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-input.sed |
-		leg |
+		${LEG} |
 		${SED} 's/<stdin>/syntax.leg/' |
 		${SED} -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-output.sed |
 		awk -f ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/patch-leg-output.awk
@@ -66,7 +91,7 @@ add_custom_command(
 )
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/syntax.auto.h
-	COMMAND cat ${CMAKE_CURRENT_BINARY_DIR}/syntax.include | ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/make-syntax-auto.sh >${CMAKE_CURRENT_BINARY_DIR}/syntax.auto.h
+	COMMAND cat ${CMAKE_CURRENT_BINARY_DIR}/syntax.include | ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/make-syntax-auto.sh ${SED} >${CMAKE_CURRENT_BINARY_DIR}/syntax.auto.h
 	DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/syntax.include
 )
 add_custom_command(
@@ -84,7 +109,7 @@ add_custom_command(
 add_custom_command(
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/stdlib.ngs.h
-	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/bin2c.sh lib/stdlib.ngs >${CMAKE_CURRENT_BINARY_DIR}/stdlib.ngs.h
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/bin2c.sh ${SED} lib/stdlib.ngs >${CMAKE_CURRENT_BINARY_DIR}/stdlib.ngs.h
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/stdlib.ngs
 )
 

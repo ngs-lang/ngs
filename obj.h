@@ -274,21 +274,22 @@ typedef enum {
 
 	T_HASH          = (32 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 		T_NAMESPACE     = (33 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_IMM_WRAP      = (34 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ
 	// *** Add new T_ itmes above this line ***
 	// *** UPDATE MAX_T_OBJ_TYPE_ID ACCORDINGLY ***
 } IMMEDIATE_TYPE;
 
-#define MAX_T_OBJ_TYPE_ID (T_NAMESPACE >> T_OBJ_TYPE_SHIFT_BITS)
+#define MAX_T_OBJ_TYPE_ID (T_IMM_WRAP >> T_OBJ_TYPE_SHIFT_BITS)
 
 // TODO: handle situation when n is wider than size_t - TAG_BITS bits
-#define IS_NULL(v)      ((v).num == V_NULL)
-#define IS_TRUE(v)      ((v).num == V_TRUE)
-#define IS_FALSE(v)     ((v).num == V_FALSE)
+#define IS_NULL(v)      (WRAPPED_VAL(v).num == V_NULL)
+#define IS_TRUE(v)      (WRAPPED_VAL(v).num == V_TRUE)
+#define IS_FALSE(v)     (WRAPPED_VAL(v).num == V_FALSE)
 #define IS_UNDEF(v)     ((v).num == V_UNDEF)
 #define IS_NOT_UNDEF(v) ((v).num != V_UNDEF)
 // Boolean 00001X10
-#define IS_BOOL(v)      ((v.num & 0xFB) == 10)
-#define IS_INT(v)       ((v.num & TAG_AND) == TAG_INT)
+#define IS_BOOL(v)      ((WRAPPED_VAL(v).num & 0xFB) == 10)
+#define IS_INT(v)       ((WRAPPED_VAL(v).num & TAG_AND) == TAG_INT)
 #define IS_KWARGS_MARKER(v)    ((v).num == V_KWARGS_MARKER)
 
 #define SET_INT(v,n)    (v).num = ((n) << TAG_BITS) | TAG_INT
@@ -300,7 +301,7 @@ typedef enum {
 #define MAKE_FALSE      ((VALUE){.num=V_FALSE})
 #define MAKE_TRUE       ((VALUE){.num=V_TRUE})
 #define MAKE_KWARGS_MARKER     ((VALUE){.num=V_KWARGS_MARKER})
-#define GET_INT(v)      ((v).num >> TAG_BITS)
+#define GET_INT(v)      (WRAPPED_VAL(v).num >> TAG_BITS)
 #define GET_REAL(v)     (((REAL_OBJECT *) v.ptr)->val)
 #define GET_PTHREAD(v)      (((PTHREAD_OBJECT *) v.ptr)->val)
 #define GET_PTHREADATTR(v)  (((PTHREADATTR_OBJECT *) v.ptr)->val)
@@ -342,7 +343,9 @@ typedef enum {
 #define OBJ_TYPE(v)               (((OBJECT *)(v).ptr)->type)
 #define OBJ_ATTRS(v)              (((OBJECT *)(v).ptr)->attrs)
 #define OBJ_TYPE_NUM(v)           (((OBJECT *)(v).ptr)->type.num)
+#define WRAPPED_VAL(v)            (IS_IMM_WRAP(v) ? OBJ_DATA(v) : (v))
 #define IS_OBJ(v)                 (((v).num & TAG_AND) == 0)
+#define IS_IMM_WRAP(v)            (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_IMM_WRAP)
 #define IS_STRING(v)              (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_STR)
 #define IS_REAL(v)                (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_REAL)
 #define IS_NATIVE_METHOD(v)       (IS_OBJ(v) && OBJ_TYPE_NUM(v) == T_NATIVE_METHOD)
@@ -387,6 +390,7 @@ typedef enum {
 
 #define GET_INVERTED_BOOL(v)      ((VALUE){.num = (v).num ^= 4})
 
+VALUE maybe_wrap(VALUE v);
 VALUE make_var_len_obj(uintptr_t type, size_t item_size, size_t len);
 VALUE make_array(size_t len);
 VALUE make_array_with_values(size_t len, const VALUE *values);
