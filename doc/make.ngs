@@ -161,7 +161,7 @@
 				\div class='footer' [
 					\a href='https://ngs-lang.org/' [ "NGS website" ]
 					\br
-					\a href='https://source.ngs-lang.org/' [ "NGS on GitHub" ]
+					\a href='https://github.com/ngs-lang/ngs' [ "NGS on GitHub" ]
 				]
 
 			}
