@@ -103,43 +103,35 @@
                 Data manipulation is convenient. NGS provides <code>map</code>, <code>filter</code> and other primitives for basic functional programming, uniquely extended to support patterns.
             </p>
 
-            <h2 class="text-left">Sample Features / Examples</h2>
+            <h2 class="text-left">Examples and Sample Features</h2>
+            Standard library instead of repetative re-implementation in each script.
             <ul>
-                <li>
-                    Standard library instead of repetative re-implementation in each script.
-                    <ul>
-                        <li><code>log("my log message")</code></li>
-                        <li><code>debug("facility", "closing file ${f}")</code> and run with <code>DEBUG=facility</code> environment variable</li>
-                        <li><code>status("Reading ${f} - ${p}% done")</code></li>
-                        <li><code>retry</code> function</li>
-                    </ul>
-                </li>
-                <li>
-                    Run external programs ergonomically
-                    <ul>
-                        <li><code>$(your_program --id $id --values $*values)</code></li>
-                        <li><code>p=$(your_program &)</code> ... <code>p.kill()</code></li>
-                        <li><code>output = `your_program --values $*args`</code></li>
-                        <li><code>structured_data = ``curl https://api.example.com/blah.json``</code></li>
-                        <li>smart and customizable handling of processes' exit codes (including throwing exceptions)</li>
-                    </ul>
-                </li>
-                <li>
-                    Manipulate structured data
-                    <ul>
-                        <li><code>map</code>, <code>filter</code>, <code>reject</code> with the usual meanings</li>
-                        <li><code>mapk</code> - maps hash keys</li>
-                        <li><code>mapv</code> - maps hash values</li>
-                        <li><code>filterk / rejectk</code> - filter hash by keys</li>
-                        <li><code>filterv / rejectv</code> - filter hash by values</li>
-                        <li><code>the_one</code> - returns the only element in an array</li>
-                        <li><code>group</code> - group values into hash</li>
-                        <li><code>collector</code> - accumulates result</li>
-                        <li><code>Table</code> - displays tabular data elegantly</li>
-                        <li><code>Stats</code> - counts occurrences</li>
-                        <li><code>fetch</code> - reads and parses a file or a URL</li>
-                    </ul>
-                </li>
+                <li><code>log("my log message")</code></li>
+                <li><code>debug("facility", "closing file ${f}")</code> and run with <code>DEBUG=facility</code> environment variable</li>
+                <li><code>status("Reading ${f} - ${p}% done")</code></li>
+                <li><code>retry</code> function</li>
+            </ul>
+            Run external programs ergonomically
+            <ul>
+                <li><code>$(your_program --id $id --values $*values)</code></li>
+                <li><code>p=$(your_program &)</code> ... <code>p.kill()</code></li>
+                <li><code>output = `your_program --values $*args`</code></li>
+                <li><code>structured_data = ``curl https://api.example.com/blah.json``</code></li>
+                <li>smart and customizable handling of processes' exit codes (including throwing exceptions)</li>
+            </ul>
+            Manipulate structured data
+            <ul>
+                <li><code>map</code>, <code>filter</code>, <code>reject</code> with the usual meanings</li>
+                <li><code>mapk</code> - maps hash keys</li>
+                <li><code>mapv</code> - maps hash values</li>
+                <li><code>filterk / rejectk</code> - filter hash by keys</li>
+                <li><code>filterv / rejectv</code> - filter hash by values</li>
+                <li><code>the_one</code> - returns the only element in an array</li>
+                <li><code>group</code> - group values into hash</li>
+                <li><code>collector</code> - accumulates result</li>
+                <li><code>Table</code> - displays tabular data elegantly</li>
+                <li><code>Stats</code> - counts occurrences</li>
+                <li><code>fetch</code> - reads and parses a file or a URL</li>
             </ul>
 
             <h2 class="text-left">Links</h2>
