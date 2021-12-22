@@ -103,51 +103,48 @@
                 Data manipulation is convenient. NGS provides <code>map</code>, <code>filter</code> and other primitives for basic functional programming, uniquely extended to support patterns.
             </p>
 
-            <h2 class="text-left">Sample Features</h2>
+            <h2 class="text-left">Sample Features / Examples</h2>
             <ul>
                 <li>
-                    Common DevOps scripting aspects are covered
+                    Standard library instead of repetative re-implementation in each script.
                     <ul>
+                        <li><code>log("my log message")</code></li>
+                        <li><code>debug("facility", "closing file ${f}")</code> and run with <code>DEBUG=facility</code> environment variable</li>
+                        <li><code>status("Reading ${f} - ${p}% done")</code></li>
                         <li><code>retry</code> function</li>
-                        <li>environment-variable-controlled <code>debug</code> function</li>
-                        <li><code>log</code> function for neat logging</li>
-                        <li><code>status</code> function for what is semantically a status</li>
                     </ul>
                 </li>
                 <li>
-                    Easy processes handling
+                    Run external programs ergonomically
                     <ul>
-                        <li>small subset of bash syntax for redirections and pipes</li>
+                        <li><code>$(your_program --id $id --values $*values)</code></li>
+                        <li><code>p=$(your_program &)</code> ... <code>p.kill()</code></li>
+                        <li><code>output = `your_program --values $*args`</code></li>
+                        <li><code>structured_data = ``curl https://api.example.com/blah.json``</code></li>
                         <li>smart and customizable handling of processes' exit codes (including throwing exceptions)</li>
-                        <li>syntax for running a command and parsing the output</li>
-                        <li>process control with <code>p=$(my_process &); ... p.kill()</code></li>
                     </ul>
                 </li>
                 <li>
-                    Structured data manipulation. While parsing text remains a necessity, many of today's tasks include talking to APIs.
-                    APIs return structured data.
+                    Manipulate structured data
                     <ul>
-                        <li>Sample functions: <code>map</code>, <code>filter</code>, <code>reject</code>, <code>mapk</code> -
-                            maps hash keys, <code>mapv</code> - maps hash values, <code>group</code> - groups values into hash,
-                            <code>fetch</code> - reads and parses a file.</li>
-                        <li><code>collector</code> facility lets you accumulate result easily into array,
-                            hash or any user defined type.</li>
-                        <li><code>Table</code> for displaying tabular data elegantly</li>
-                        <li><code>Stats</code> type counts occurrences</li>
-                        <li>
-                            <code>Box</code>, <code>FullBox</code> and
-                            <code>EmptyBox</code> types represent containers with or without data in them.
-                        </li>
+                        <li><code>map</code>, <code>filter</code>, <code>reject</code> with the usual meanings</li>
+                        <li><code>mapk</code> - maps hash keys</li>
+                        <li><code>mapv</code> - maps hash values</li>
+                        <li><code>filterk / rejectk</code> - filter hash by keys</li>
+                        <li><code>filterv / rejectv</code> - filter hash by values</li>
+                        <li><code>the_one</code> - returns the only element in an array</li>
+                        <li><code>group</code> - group values into hash</li>
+                        <li><code>collector</code> - accumulates result</li>
+                        <li><code>Table</code> - displays tabular data elegantly</li>
+                        <li><code>Stats</code> - counts occurrences</li>
+                        <li><code>fetch</code> - reads and parses a file or a URL</li>
                     </ul>
-                </li>
-                <li>
-                    and much, much more :)
                 </li>
             </ul>
 
             <h2 class="text-left">Links</h2>
             <ul>
-                <li><a href="https://manual.ngs-lang.org/man/ngstut.1.html" target="_blank">Examples-based tutorial</a> - understand how NGS feels like</li>
+                <li><a href="https://manual.ngs-lang.org/man/ngstut.1.html" target="_blank">Examples-based tutorial</a> - get the feeling of NGS</li>
                 <li><a href="https://manual.ngs-lang.org/man/ngswhy.1.html" target="_blank">Why use NGS? Why it was created?</a></li>
                 <li><a href="https://manual.ngs-lang.org/man/ngslang.1.html" target="_blank">Documentation: Language description</a></li>
                 <li><a href="https://manual.ngs-lang.org/man/ngsstyle.1.html" target="_blank">Documentation: Coding style guide</a></li>
@@ -159,7 +156,7 @@
         </div>
         <div  style="margin-left: 40px"></div>
         <div class="col-sm">
-            <h2 class="text-left">Quick Start</h2>
+            <h2 class="text-left">Install</h2>
             <div class="row justify-content-between">
                 <div class="col-8"><h4>Shell</h4></div>
                 <div class="col-4 align-self-center text-right">
@@ -171,11 +168,11 @@
             </div>
             <pre><code class="bash hljs">curl https://ngs-lang.org/install.sh | bash</code></pre>
             <div class="row justify-content-between">
-                <div class="col-8"><h4>From <a href="https://source.ngs-lang.org" target="_blank">Source</a></h4></div>
+                <div class="col-8"><h4>From Source</h4></div>
                 <div class="col-4 align-self-center text-right">
                     <h4>
                         <span class="fab fa-apple icon-system"></span>
-                        <span class="fab fa-linux icon-system" style="padding-left: 10px"></>
+                        <span class="fab fa-linux icon-system" style="padding-left: 10px"></span>
                     </h4>
                 </div>
             </div>
@@ -183,25 +180,18 @@
 cd ngs && ./install.sh</code></pre>
 
             <div class="row justify-content-between">
-                <div class="col-8"><h4>From <a href="https://brew.ngs-lang.org" target="_blank">Homebrew</a></h4></div>
+                <div class="col-8"><h4>Homebrew</h4></div>
                 <div class="col-2 align-self-center text-right"><h4><span class="fab fa-apple icon-system"></span></h4></div>
             </div>
             <pre><code class="bash hljs">brew install ngs</code></pre>
 
             <div class="row justify-content-between">
-                <div class="col-8"><h4>From <a href="https://snap.ngs-lang.org" target="_blank">Snap</a></h4></div>
+                <div class="col-8"><h4>Snap</h4></div>
                 <div class="col-2 align-self-center text-right"><h4><span class="fab fa-linux icon-system"></span></h4></div>
             </div>
             <pre><code class="bash hljs">sudo snap install ngs</code></pre>
 
-            <h4>In <a href="https://docker.ngs-lang.org" target="_blank">Docker</a></h4>
-            <pre><code class="bash hljs">docker run -it --rm ngslang/ngs</code></pre>
-
-            <h4>In <a href="https://action.ngs-lang.org" target="_blank">Github Actions</a></h4>
-            <pre><code class="yaml hljs">(...)
-- uses: ngs-lang/ngs@v2.1.12-action
-- run: ngs -pi 'sum(10..100)'</code></pre>
-            <h4>In <a href="https://ipython.ngs-lang.org" target="_blank">iPython / Jupyter Notebook / Google Colab</a></h4>
+            <h4>Jupyter Notebook</h4>
             <pre><code class="plaintext hljs">
 !curl "https://raw.githubusercontent.com/ngs-lang/ngs-ipython-extension/master/ngs-install.sh" | bash
 
@@ -209,8 +199,23 @@ cd ngs && ./install.sh</code></pre>
 %ngs [single line expression]
 %%ngs [multi line code]
 </code></pre>
-            <h6>In docker </h6>
+
+
+            <h2 class="text-left">Run Without Installing</h2>
+
+            <h4>Docker</h4>
+            <pre><code class="bash hljs">docker run -it --rm ngslang/ngs</code></pre>
+
+
+            <h4>Docker with Jupyter Notebook</h4>
             <pre><code class="bash hljs">docker run -p 8888:8888 ngslang/ngs-jupyter</code></pre>
+
+
+            <h2 class="text-left">Github Actions</h2>
+            <pre><code class="yaml hljs">- uses: ngs-lang/ngs@v2.1.13
+- run: ngs -pi 'sum(10..100)'</code></pre>
+
+
         </div>
     </div>
     <div class="row pt-3">
