@@ -13,11 +13,15 @@ endif
 .PHONY: tests
 tests:
 	(cd build && ctest)
-	@echo "-> NGS man is available at: " && man -w ngs1
 
 .PHONY: install
 install: build
 	(cd build && sudo make install)
+
+.PHONY: test-installation
+test-installation:
+	@NGS_PATH=$$(command -v ngs) && echo "-> NGS is available at: $${NGS_PATH}"
+	@MAN_PATH=$$(man -w ngs) && echo "-> NGS man is available at: $${MAN_PATH}"
 
 .PHONY: clean
 clean:
