@@ -79,6 +79,12 @@ nav .unobtrusive {
 	height: 40px;
 }
 
+.menu-item {
+	font-size: 110%;
+	padding-left: 12px;
+	padding-right: 12px;
+}
+
 .main-thing-on-page {
 	font-weight: 400;
 	font-size: 120%;
