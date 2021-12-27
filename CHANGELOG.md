@@ -15,6 +15,7 @@
 * The `?` operator now takes `Any` instead of `Fun` as the right argument.
 * Fix `tr` exception when pattern is a `Hash` and it should match not at the top level.
 * `Argv` now accepts `Repeat` keys: `{Repeat('--repeat'): my_arr}`
+* Support `my_arr[idx] = val` for negative `idx`es.
 
 ### Deprecated
 

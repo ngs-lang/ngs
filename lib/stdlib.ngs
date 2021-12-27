@@ -2681,6 +2681,18 @@ F '[]'(arr:Arr, idx:Int) {
 	arr[i]
 }
 
+doc Set array element by index from the end (negative indexes handler). Throws IndexNotFound if abs(idx) > len(arr).
+doc idx - Negative index
+doc %EX - a = [1, 2, 3]; a[-1] = 99  # [1, 2, 99]
+F '[]='(arr:Arr, idx:Int, val) {
+	guard idx < 0
+	i = arr.len() + idx
+	i < 0 throws IndexNotFound("[]=(Arr, Int, Any): Index $idx is illegal for array of size ${arr.len()}", arr, idx)
+	arr[i] = val
+}
+
+TEST a = [1, 2, 3]; a[-1] = 99; a == [1, 2, 99]
+
 # TODO: Make "Indexable" and make this method work with Indexable
 doc Get array elements at specified indexes. Indexes specified by NumRange.
 doc r - NumRange with negatve .end
