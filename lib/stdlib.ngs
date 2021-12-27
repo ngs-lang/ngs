@@ -2880,17 +2880,22 @@ F merge_sorted(a:Arr, b:Arr, lte:Fun) {
 	bi = Iter(b)
 	collector
 		while ai or bi {
-			i = econd {
-				not(ai) bi
-				not(bi) ai
-				lte(ai.peek(), bi.peek()) ai
-				true bi
+			if not(ai) {
+				bi.each(collect)
+				break
 			}
-			collect(i.next())
+			if not(bi) {
+				ai.each(collect)
+				break
+			}
+			(if lte(ai.peek(), bi.peek()) then ai else bi).next().collect()
 		}
 }
 
 TEST merge_sorted([1,3,10], [0, 7], (<=)) == [0, 1, 3, 7, 10]
+TEST merge_sorted([1,3,10], [0, 7, 12, 13, 14], (<=)) == [0, 1, 3, 7, 10, 12, 13, 14]
+TEST merge_sorted([0, 1], [2, 3], (<=)) == [0, 1, 2, 3]
+TEST merge_sorted([2, 3], [0, 1], (<=)) == [0, 1, 2, 3]
 
 # Current implemetation: https://en.wikipedia.org/wiki/Merge_sort
 # TODO: replacte with Timsort https://en.wikipedia.org/wiki/Timsort
