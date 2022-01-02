@@ -418,14 +418,15 @@ Current methods with special names are listed below.
 	# Output wrapped manually for your convenience.
 	# All of them correspond to a syntax, mostly binary operators.
 	$ ngs -pl 'globals().filterv(Fun).keys().filter(/[^a-zA-Z0-9_]/)' | sort | column -x -c 40
-	!=      !==     !~      %       %()
-	*       +       +?      -       .
-	..      ...     .=      /       //
-	::      ::=     <       <=      ==
-	===     =~      >       >=      ?
-	[]      []=     \       ``      ````
-	~       ~~      "$*"    $()     is not
-	not in
+	!=      !==     !~      "$*"    $()
+	%       %()     *       +       +?
+	-       ->      .       ..      ...
+	.=      /       //      ::      ::=
+	<       <=      ==      ===     =~
+	>       >=      ?       []      []=
+	\       ``      ````    is not  not in
+	~       ~~
+
 
 ## Binary operators (methods) and precedence
 
