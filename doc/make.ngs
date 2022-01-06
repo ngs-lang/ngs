@@ -16,6 +16,7 @@
 	Table
 	Thread
 	test
+	tr
 
 	# TODO: Do not list all types on the namespace page,
 	# just up to TYPES_THRESHOLD, probably the parents.
