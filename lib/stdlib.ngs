@@ -5200,6 +5200,8 @@ section "Path" {
 		p(s)
 	}
 
+	doc Checks that the given path exists. Throws AssertFail otherwise.
+	doc %RET - p
 	F assert(p:Path) {
 		assert(p, "${p.path} must exist and be a ${p.typeof().human_type_name()}")
 	}
@@ -5221,6 +5223,8 @@ doc Checks whether the given program is found in path.
 doc %RET - Bool. The program is found in path or program name is absolute
 F Bool(p:Program) Result({ find_in_path(p.name) }).Bool()
 
+doc Checks that given program is found in path. Throws AssertFail otherwise.
+doc %RET - p
 F assert(p:Program) {
 	r = Result({ find_in_path(p.name) })
 	not(r) throws AssertFail("Program ${p.name} not found in path", r.val)
