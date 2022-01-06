@@ -6700,6 +6700,7 @@ TEST ("abc" ~ /a(.)c/)[1] == "b"
 doc Checks subsequence presence.
 doc %RET - Bool
 F =~(x, s:SubSeq, _mc:MatchContext) {
+	s.val is not Str throws NotImplemented("Matching non-Str SubSeq is not implemented yet").set(val=s)
 	x is not Str returns false
 	Bool(x ~ s)
 }
