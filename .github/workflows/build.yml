@@ -93,11 +93,19 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "fedora:34", "fedora:35", "amazonlinux:2", "centos:7" ]
+        container: [ "fedora:34", "fedora:35", "amazonlinux:2", "centos:7", "centos:8" ]
     steps:
-      - name: Install Pre-requisites
+      - name: Install AmazonLinux Deps
         if: startsWith(matrix.container, 'amazonlinux')
         run: yum -y install tar xz gzip
+      - name: Install CentOS:7 Deps
+        if: startsWith(matrix.container, 'centos:7')
+        run: yum -y install centos-release-scl epel-release sudo
+      - name: Install CentOS 8 Deps
+        if: startsWith(matrix.container, 'centos:8')
+        run: |
+          yum -y install epel-release dnf-plugins-core sudo
+          yum config-manager --set-enabled powertools
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
@@ -116,11 +124,19 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "fedora:34", "fedora:35", "amazonlinux:2", "centos:7" ]
+        container: [ "fedora:34", "fedora:35", "amazonlinux:2", "centos:7", "centos:8" ]
     steps:
       - name: Install Pre-requisites
         if: startsWith(matrix.container, 'amazonlinux')
         run: yum -y install tar xz gzip
+      - name: Install CentOS 7 Deps
+        if: startsWith(matrix.container, 'centos:7')
+        run: yum -y install centos-release-scl epel-release sudo
+      - name: Install CentOS 8 Deps
+        if: startsWith(matrix.container, 'centos:8')
+        run: |
+          yum -y install epel-release dnf-plugins-core sudo
+          yum config-manager --set-enabled powertools
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
