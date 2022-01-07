@@ -9,20 +9,6 @@ typedef struct {
 	int is_generated;
 } ast_node_location;
 
-typedef struct ast_node {
-	unsigned int type;
-	char *name;
-	char *warning;
-	// MAYBE TODO: make it int but store parsed long int values somewhere else
-	long int number;
-	void *data;
-	// Children
-	struct ast_node *first_child;
-	struct ast_node *last_child;
-	struct ast_node *next_sibling;
-	ast_node_location location;
-} ast_node;
-
 typedef enum {
 	ASSIGNMENT_NODE=1,
 	IDENTIFIER_NODE,
@@ -79,6 +65,21 @@ typedef enum {
 	SECTION_NODE,
 	NUMBER_OF_AST_NODE_TYPES,
 } ast_node_type;
+
+
+typedef struct ast_node {
+	ast_node_type type;
+	char *name;
+	char *warning;
+	// MAYBE TODO: make it int but store parsed long int values somewhere else
+	long int number;
+	void *data;
+	// Children
+	struct ast_node *first_child;
+	struct ast_node *last_child;
+	struct ast_node *next_sibling;
+	ast_node_location location;
+} ast_node;
 
 typedef enum {
 	SWITCH_NODE_SWITCH  = 2,
