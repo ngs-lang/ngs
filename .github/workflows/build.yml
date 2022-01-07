@@ -97,7 +97,7 @@ jobs:
     steps:
       - name: Install Pre-requisites
         if: startsWith(matrix.container, 'amazonlinux')
-        run: yum -y install tar xz
+        run: yum -y install tar xz gzip
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: yum -y install sudo g++
