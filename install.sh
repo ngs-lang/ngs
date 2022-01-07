@@ -28,7 +28,13 @@ else
 		echo "    + Installing yum packages"
 		$SUDO yum install -y gc-devel libffi-devel json-c-devel pcre-devel make cmake3 pandoc pkgconfig
 		if ! command -v ctest &>/dev/null;then
-		  $SUDO yum install -y ctest
+		  if command -v ctest3 &>/dev/null;then
+		    echo "    + Ctest3 found, configuring as default"
+		    alternatives --install /usr/local/bin/cmake cmake /usr/bin/cmake3 20 --slave /usr/local/bin/ctest ctest /usr/bin/ctest3 --slave /usr/local/bin/cpack cpack /usr/bin/cpack3 --slave /usr/local/bin/ccmake ccmake /usr/bin/ccmake3 --family cmake
+      else
+        echo "    + Installing ctest"
+        $SUDO yum install -y ctest
+		  fi
 		fi
 		$SUDO yum groupinstall -y "Development Tools"
 	else
