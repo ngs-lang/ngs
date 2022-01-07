@@ -100,7 +100,33 @@ jobs:
         run: yum -y install tar xz gzip
       - uses: actions/checkout@v2
       - name: Setup Compiler
-        run: yum -y install sudo g++
+        run: |
+          yum -y install sudo gcc-c++
+          echo "CC=gcc" >> $GITHUB_ENV
+          echo "CXX=g++" >> $GITHUB_ENV
+      - name: Install and Test
+        run: (./install.sh && make tests)
+
+  build-external-yum-clang:
+    timeout-minutes: 10
+    name: Build in Clang
+    runs-on: ubuntu-20.04
+    container:
+      image: ${{ matrix.container }}
+      options: --user root
+    strategy:
+      matrix:
+        container: [ "fedora:34", "fedora:35", "amazonlinux:2" ]
+    steps:
+      - name: Install Pre-requisites
+        if: startsWith(matrix.container, 'amazonlinux')
+        run: yum -y install tar xz gzip
+      - uses: actions/checkout@v2
+      - name: Setup Compiler
+        run: |
+          yum -y install sudo clang
+          echo "CC=clang" >> $GITHUB_ENV
+          echo "CXX=clang++" >> $GITHUB_ENV
       - name: Install and Test
         run: (./install.sh && make tests)
 
