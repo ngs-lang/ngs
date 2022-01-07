@@ -99,11 +99,10 @@ jobs:
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
-          yum install -y epel-release dnf-plugins-core
+          yum -y install epel-release dnf-plugins-core sudo
           yum config-manager --set-enabled powertools
           yum -y install gcc-toolset-${{ matrix.version }}-gcc-c++
           source /opt/rh/gcc-toolset-${{ matrix.version }}/enable
-          yum -y install cmake3 sudo
       - name: Install and Test
         run: (source /opt/rh/gcc-toolset-${{ matrix.version }}/enable && ./install.sh && make tests)
 
@@ -122,10 +121,9 @@ jobs:
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
-          yum install -y centos-release-scl epel-release
+          yum -y install centos-release-scl epel-release sudo
           yum -y install devtoolset-${{ matrix.version }}
           source /opt/rh/devtoolset-${{ matrix.version }}/enable
-          yum -y install cmake3 sudo
       - name: Install and Test
         run: (source /opt/rh/devtoolset-${{ matrix.version }}/enable && ./install.sh && make tests)
 
