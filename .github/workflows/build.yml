@@ -93,8 +93,11 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "fedora:34", "fedora:35" ] # "amazonlinux:2"
+        container: [ "fedora:34", "fedora:35", "amazonlinux:2" ]
     steps:
+      - name: Install Tar
+        if: ${{ matrix.container == "amazonlinux:2" }}
+        run: yum -y install tar
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: yum -y install sudo g++
