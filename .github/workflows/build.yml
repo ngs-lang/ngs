@@ -95,9 +95,9 @@ jobs:
       matrix:
         container: [ "fedora:34", "fedora:35", "amazonlinux:2" ]
     steps:
-      - name: Install Tar
+      - name: Install Pre-requisites
         if: startsWith(matrix.container, 'amazonlinux')
-        run: yum -y install tar
+        run: yum -y install tar xz
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: yum -y install sudo g++
@@ -153,7 +153,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ "macOS-10.14" ]
+        os: [ "macOS-10.15" ]
         version: [ "9" ]
     steps:
       - uses: actions/checkout@v2
@@ -172,7 +172,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ "macOS-10.14" ]
+        os: [ "macOS-10.15" ]
         version: [ "10.3" ]
     steps:
       - uses: actions/checkout@v2
