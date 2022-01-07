@@ -101,7 +101,7 @@ jobs:
       - name: Install CentOS 8 Deps
         if: startsWith(matrix.container, 'centos:8')
         run: |
-          yum -y install epel-release dnf-plugins-core sudo
+          yum -y install epel-release dnf-plugins-core
           yum config-manager --set-enabled powertools
       - uses: actions/checkout@v2
       - name: Setup Compiler
@@ -129,7 +129,7 @@ jobs:
       - name: Install CentOS 8 Deps
         if: startsWith(matrix.container, 'centos:8')
         run: |
-          yum -y install epel-release dnf-plugins-core sudo
+          yum -y install epel-release dnf-plugins-core
           yum config-manager --set-enabled powertools
       - uses: actions/checkout@v2
       - name: Setup Compiler
@@ -155,7 +155,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
-          yum -y install epel-release dnf-plugins-core sudo
+          yum -y install epel-release dnf-plugins-core
           yum config-manager --set-enabled powertools
           yum -y install gcc-toolset-${{ matrix.version }}-gcc-c++
           source /opt/rh/gcc-toolset-${{ matrix.version }}/enable
@@ -172,16 +172,14 @@ jobs:
     strategy:
       matrix:
         container: [ "centos:7" ]
-        version: [ "9", "10" ]
+        version: [ "11" ]
     steps:
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
-          yum -y install centos-release-scl epel-release sudo
+          yum -y install centos-release-scl epel-release
           yum -y install devtoolset-${{ matrix.version }}
           source /opt/rh/devtoolset-${{ matrix.version }}/enable
-          echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
-          echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
       - name: Install and Test
         run: (source /opt/rh/devtoolset-${{ matrix.version }}/enable && ./install.sh && make tests)
 
