@@ -26,6 +26,7 @@ else
 		# * peg/leg is compiled by CMake from sources and used during build without installing
 		#   that is because I did not find it packaged.
 		echo "    + Installing yum packages"
+		$SUDO yum makecache --refresh
 		$SUDO yum install -y gc-devel libffi-devel json-c-devel pcre-devel make cmake3 ctest pandoc pkgconfig
 		$SUDO yum groupinstall -y "Development Tools"
 	else
