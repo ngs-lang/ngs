@@ -84,6 +84,23 @@ jobs:
       - name: Install and Test
         run: (./install.sh && make tests)
 
+  build-external-yum-gcc:
+    timeout-minutes: 10
+    name: Build in GCC
+    runs-on: ubuntu-20.04
+    container:
+      image: ${{ matrix.container }}
+      options: --user root
+    strategy:
+      matrix:
+        container: [ "fedora:34", "fedora:35", "amazonlinux:2" ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Compiler
+        run: yum -y install sudo g++
+      - name: Install and Test
+        run: (./install.sh && make tests)
+
   build-external-centos8-gcc:
     timeout-minutes: 10
     name: Build in GCC
@@ -93,7 +110,7 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "centos:8" ] # "amazonlinux:2", "fedora:34", "fedora:35"
+        container: [ "centos:8" ]
         version: [ "9", "10" ]
     steps:
       - uses: actions/checkout@v2
