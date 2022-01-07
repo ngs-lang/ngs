@@ -93,7 +93,7 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "fedora:34", "fedora:35", "amazonlinux:2" ]
+        container: [ "fedora:34", "fedora:35", "amazonlinux:2", "centos:7" ]
     steps:
       - name: Install Pre-requisites
         if: startsWith(matrix.container, 'amazonlinux')
@@ -116,7 +116,7 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "fedora:34", "fedora:35", "amazonlinux:2" ]
+        container: [ "fedora:34", "fedora:35", "amazonlinux:2", "centos:7" ]
     steps:
       - name: Install Pre-requisites
         if: startsWith(matrix.container, 'amazonlinux')
@@ -162,7 +162,7 @@ jobs:
     strategy:
       matrix:
         container: [ "centos:7" ]
-        version: [ "10" ]
+        version: [ "9", "10" ]
     steps:
       - uses: actions/checkout@v2
       - name: Setup Compiler
