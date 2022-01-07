@@ -93,7 +93,7 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "fedora:34", "fedora:35", "amazonlinux:2" ]
+        container: [ "fedora:34", "fedora:35" ] # "amazonlinux:2"
     steps:
       - uses: actions/checkout@v2
       - name: Setup Compiler
