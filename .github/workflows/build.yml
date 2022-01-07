@@ -99,6 +99,8 @@ jobs:
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
+          yum install -y epel-release dnf-plugins-core
+          yum config-manager --set-enabled powertools
           yum -y install gcc-toolset-${{ matrix.version }}-gcc-c++
           source /opt/rh/gcc-toolset-${{ matrix.version }}/enable
           yum -y install cmake3 sudo
