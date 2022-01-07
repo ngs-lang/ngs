@@ -66,7 +66,6 @@ typedef enum {
 	NUMBER_OF_AST_NODE_TYPES,
 } ast_node_type;
 
-
 typedef struct ast_node {
 	ast_node_type type;
 	char *name;
