@@ -54,9 +54,6 @@
 
 extern char **environ;
 
-// in ngs.c:
-char *sprintf_position(yycontext *yy, int pos);
-
 // in syntax.include
 void position_to_line_col(yycontext *yy, int pos, int result[]);
 
