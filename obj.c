@@ -210,6 +210,18 @@ exit:
 	return;
 }
 
+
+VALUE maybe_wrap(const VALUE v) {
+	if(IS_OBJ(v)) {
+		return v;
+	}
+	OBJECT *o = NGS_MALLOC(sizeof(OBJECT));
+	o->type.num = T_IMM_WRAP;
+	o->val = v;
+	o->attrs = MAKE_NULL;
+	return (VALUE){.ptr = o};
+}
+
 // TODO: consider allocating power-of-two length
 VALUE make_var_len_obj(uintptr_t type, const size_t item_size, const size_t len) {
 
@@ -769,6 +781,10 @@ VALUE join_strings(int argc, VALUE *argv) {
 VALUE value_type(VM *vm, VALUE val) {
 
 	VALUE *p;
+
+	if(IS_IMM_WRAP(val)) {
+		return value_type(vm, OBJ_DATA(val));
+	}
 
 	// Tagged value
 	if(IS_INT(val)) {

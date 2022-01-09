@@ -42,8 +42,8 @@ update-vim-syntax:
 setup-dev-env: dir := $(abspath $(shell pwd))
 setup-dev-env:
 ifeq ($(shell uname -s),Darwin)
-	(cd /usr/local/bin; ln -sf "$(dir)/build/ngs")
-	(cd /usr/local/lib; ln -sf "$(dir)/lib" ngs)
+	(cd /usr/local/bin && ln -sf "$(dir)/build/ngs")
+	(cd /usr/local/lib && ln -sf "$(dir)/lib" ngs)
 else
 	@echo setup-dev-env is not implemented for your platform
 endif

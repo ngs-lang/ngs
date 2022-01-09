@@ -12,3 +12,5 @@ typedef struct ast_node_ll {
 	FILE *input_file; \
 	AST_NODE_TYPE_LL *nodes_for_type_change; \
 	char *source_file_name;
+
+void position_to_line_col();

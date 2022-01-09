@@ -55,7 +55,6 @@ void *ngs_malloc_atomic(size_t size) {
 
 }
 void *ngs_realloc(void *ptr, size_t size) {
-	int i;
 	if(ngs_use_stupid_malloc) {
 		if(ptr == NULL) {
 			return ngs_malloc(size);
