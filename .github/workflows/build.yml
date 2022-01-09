@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         os: [ "ubuntu-20.04" ]
-        version: [ "9", "10" ]
+        version: [ "9", "10", "11" ]
     steps:
       - uses: actions/checkout@v2
       - name: Setup Compiler
@@ -28,7 +28,7 @@ jobs:
     strategy:
       matrix:
         os: [ "ubuntu-20.04" ]
-        version: [ "9", "10" ]
+        version: [ "9", "10", "11" ]
     steps:
       - uses: actions/checkout@v2
       - name: Setup Compiler
@@ -50,7 +50,7 @@ jobs:
     strategy:
       matrix:
         container: [ "debian:11.1" ]
-        version: [ "9", "10" ]
+        version: [ "9", "10", "11" ]
     steps:
       - uses: actions/checkout@v2
       - name: Setup Compiler
@@ -72,7 +72,7 @@ jobs:
     strategy:
       matrix:
         container: [ "debian:11.1" ]
-        version: [ "9", "11" ]
+        version: [ "9", "10", "11" ]
     steps:
       - uses: actions/checkout@v2
       - name: Setup Compiler
@@ -86,7 +86,7 @@ jobs:
 
   build-external-yum-gcc:
     timeout-minutes: 10
-    name: Build in GCC
+    name: Build in default GCC
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
@@ -98,7 +98,7 @@ jobs:
       - name: Install AmazonLinux Deps
         if: startsWith(matrix.container, 'amazonlinux')
         run: yum -y install tar xz gzip
-      - name: Install CentOS 8 Deps
+      - name: Install CentOS Deps
         if: startsWith(matrix.container, 'centos:8')
         run: |
           yum -y install epel-release dnf-plugins-core
@@ -114,7 +114,7 @@ jobs:
 
   build-external-yum-clang:
     timeout-minutes: 10
-    name: Build in Clang
+    name: Build in default Clang
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
@@ -126,7 +126,7 @@ jobs:
       - name: Install AmazonLinux Deps
         if: startsWith(matrix.container, 'amazonlinux')
         run: yum -y install tar xz gzip
-      - name: Install CentOS 8 Deps
+      - name: Install CentOS Deps
         if: startsWith(matrix.container, 'centos:8')
         run: |
           yum -y install epel-release dnf-plugins-core
@@ -150,7 +150,7 @@ jobs:
     strategy:
       matrix:
         container: [ "centos:8" ]
-        version: [ "9", "10" ]
+        version: [ "9", "10", "11" ]
     steps:
       - uses: actions/checkout@v2
       - name: Setup Compiler
@@ -190,7 +190,7 @@ jobs:
     strategy:
       matrix:
         os: [ "macOS-10.15" ]
-        version: [ "9" ]
+        version: [ "9", "10", "11" ]
     steps:
       - uses: actions/checkout@v2
       - name: Setup Compiler
