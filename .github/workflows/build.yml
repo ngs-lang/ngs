@@ -158,7 +158,6 @@ jobs:
           yum -y install epel-release dnf-plugins-core sudo
           yum config-manager --set-enabled powertools
           yum -y install gcc-toolset-${{ matrix.version }}-gcc-c++
-          source /opt/rh/gcc-toolset-${{ matrix.version }}/enable
       - name: Install and Test
         run: (source /opt/rh/gcc-toolset-${{ matrix.version }}/enable && ./install.sh && make tests)
 
@@ -179,13 +178,12 @@ jobs:
         run: |
           yum -y install centos-release-scl epel-release sudo
           yum -y install devtoolset-${{ matrix.version }}
-          source /opt/rh/devtoolset-${{ matrix.version }}/enable
       - name: Install and Test
         run: (source /opt/rh/devtoolset-${{ matrix.version }}/enable && ./install.sh && make tests)
 
   build-external-centos7-clang:
     timeout-minutes: 10
-    name: Build in GCC
+    name: Build in Clang
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
@@ -200,11 +198,10 @@ jobs:
         run: |
           yum -y install centos-release-scl epel-release sudo
           yum -y install llvm-toolset-7.0-clang.x86_64
-          scl enable llvm-toolset-${{ matrix.version }}.0 bash
-          echo "CC=clang" >> $GITHUB_ENV
-          echo "CXX=clang++" >> $GITHUB_ENV
+          echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
+          echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
       - name: Install and Test
-        run: (scl enable llvm-toolset-${{ matrix.version }}.0 bash && ./install.sh && make tests)
+        run: (source /opt/rh/llvm-toolset-${{ matrix.version }}.0/enable && ./install.sh && make tests)
 
   build-mac-gcc:
     timeout-minutes: 10
