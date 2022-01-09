@@ -183,6 +183,29 @@ jobs:
       - name: Install and Test
         run: (source /opt/rh/devtoolset-${{ matrix.version }}/enable && ./install.sh && make tests)
 
+  build-external-centos7-clang:
+    timeout-minutes: 10
+    name: Build in GCC
+    runs-on: ubuntu-20.04
+    container:
+      image: ${{ matrix.container }}
+      options: --user root
+    strategy:
+      matrix:
+        container: [ "centos:7" ]
+        version: [ "7" ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Compiler
+        run: |
+          yum -y install centos-release-scl epel-release sudo
+          yum -y install llvm-toolset-7.0-clang.x86_64
+          scl enable llvm-toolset-${{ matrix.version }}.0 bash
+          echo "CC=clang" >> $GITHUB_ENV
+          echo "CXX=clang++" >> $GITHUB_ENV
+      - name: Install and Test
+        run: (scl enable llvm-toolset-${{ matrix.version }}.0 bash && ./install.sh && make tests)
+
   build-mac-gcc:
     timeout-minutes: 10
     name: Build in GCC

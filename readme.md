@@ -184,16 +184,16 @@ Please refer to extension located in https://github.com/ngs-lang/ngs-ipython-ext
 
 Build is currently tested with the github action present in `.github/workflows/build.yml` and we currently test:
 
-| system        | gcc           | clang        |
-|---------------|---------------|--------------|
-| ubuntu 20.04  | 9, 10, 11     | 9, 10, 11    |
-| debian 11.1   | 9, 10         | 9, 11        |
-| centos 7      | 9, 10, 11     | ---          |
-| centos 8      | 9, 10, 11     | ---          |
-| macOS 10.15   | 9, 10, 11     | 10           |
-| amazonlinux 2 | default - 7.3 | default - 11 |
-| fedora 34     | default - 11  | default - 12 |
-| fedora 35     | default - 11  | default - 13 |
+| system        | gcc                      | clang         |
+|---------------|--------------------------|---------------|
+| ubuntu 20.04  | 9, 10, 11                | 9, 10, 11     |
+| debian 11.1   | 9, 10                    | 9, 11         |
+| macOS 10.15   | 9, 10, 11                | 10            |
+| centos 7      | 9, 10, 11                | 7             |
+| centos 8      | default (8.5), 9, 10, 11 | default (12)  |
+| amazonlinux 2 | default (7.3)            | default (11)  |
+| fedora 34     | default (11)             | default (12)  |
+| fedora 35     | default (11)             | default (13)  |
 
 ### Run
 
