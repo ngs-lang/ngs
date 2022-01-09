@@ -10,7 +10,7 @@ include(ExternalProject)
 # -D_DARWIN_C_SOURCE - SIGWINCH and friends on MacOS
 # -D_XOPEN_SOURCE - strptime on Linux
 # -D_DEFAULT_SOURCE - MAP_ANONYMOUS on Linux
-add_definitions(-D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE=1 -D_DEFAULT_SOURCE=1)
+add_definitions(-D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE=1 -D_DEFAULT_SOURCE=1 -D_BSD_SOURCE)
 
 # This is workaround for boehm GC library bug or NGS usage of it
 # which cases sporadic SIGSEGV and other issues after fork() in child process.
