@@ -582,7 +582,6 @@ section "NormalTypeInstance" {
 	doc %EX - }
 	doc %RET - "<TYPE_NAME field1=val1 field2=val2 ...>"
 	F Str(i:NormalTypeInstance) {
-		guard i is not Set  # Temporary workaround. Str(Set) should come after Str(NormalTypeInstance)
 		h = Hash(i)
 		fields_dots = if len(h) > 10 {
 			h .= limit(10)
