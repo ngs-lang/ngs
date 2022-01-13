@@ -64,9 +64,9 @@ void print_exception(VM *vm, VALUE result) {
 					H(last_line, resolved_ip, "last_line");
 					H(last_column, resolved_ip, "last_column");
 					closure_entry = get_hash_key(frame, make_string("closure"));
-					if(closure_entry && IS_CLOSURE(closure_entry->val) && (IS_HASH(OBJ_ATTRS(closure_entry->val)))) {
+					if(closure_entry && IS_CLOSURE(closure_entry->val) && (IS_HASH(OBJ_META(closure_entry->val)))) {
 						HASH_OBJECT_ENTRY *name_entry;
-						name_entry = get_hash_key(OBJ_ATTRS(closure_entry->val), make_string("name"));
+						name_entry = get_hash_key(OBJ_META(closure_entry->val), make_string("name"));
 						if(name_entry) {
 							closure_name = obj_to_cstring(name_entry->val);
 						}

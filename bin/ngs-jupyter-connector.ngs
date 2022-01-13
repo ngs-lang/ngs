@@ -9,7 +9,7 @@ ns {
 	type JupiterInvalidVariable(InvalidArgument)
 
 	F do_capture() {
-		t = Backtrace().frames.get('closure').map(attrs).get('JUPYTER_CAPTURE_OUTPUT')
+		t = Backtrace().frames.get('closure').map(meta).get('JUPYTER_CAPTURE_OUTPUT')
 		t.has(false) returns false
 		t.Bool()
 	}
@@ -69,8 +69,8 @@ ns {
 		})
 	}
 
-	# Preveng log() collection
-	send.Arr()[0].attrs().JUPYTER_CAPTURE_OUTPUT = false
+	# Prevent log() collection
+	send.Arr()[0].meta().JUPYTER_CAPTURE_OUTPUT = false
 
 	F readline() {
 		ret = ''
@@ -114,10 +114,10 @@ ns {
 		program_func = load(program_bytecode, '<UNUSED>')
 
 		# Marker for output capturing - start
-		a = program_func.attrs() or {}
+		a = program_func.meta() or {}
 		a.name = '<Jupyter-expr-func>'
 		a.JUPYTER_CAPTURE_OUTPUT = true
-		program_func.attrs(a)
+		program_func.meta(a)
 		# Marker for output capturing - end
 
 		ret = program_func()
