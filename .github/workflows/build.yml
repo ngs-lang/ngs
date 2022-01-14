@@ -69,7 +69,7 @@ jobs:
         # Otherwise "mkdir -p build/Testing/Temporary" fails with
         # "mkdir: cannot create directory ‘build/Testing’: Permission denied"
         # (mkdir itself was a test after "ctest" failed to create the directory)
-        run: (./install.sh && make tests test-installation)
+        run: (sudo ./install.sh && sudo make tests test-installation)
       - name: Install Compiler (macOS)
         if: runner.os == 'macOS'
         run: |
