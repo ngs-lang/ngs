@@ -30,7 +30,7 @@ See more about running NGS in [NGS(1)](ngs.1.md).
 * type - Built-in or user-defined data type, similar to Python, Ruby and other languages.
 * object - Instance of a type, similar to Python, Ruby and other languages. The phrase "MyType object" refers to an Instance of "MyType".
 * field - A named slot of an object, similar to field in Python, Java, etc.
-* attributes - Slot for auxiliary data on most types of objects (the ones that are references, i.e. not Int,Bool,Null), typically a `Hash` or `null`. Attributes are not fields and are accessed differently (using `attrs` method).
+* meta - Slot for auxiliary data on most types of objects (the ones that are references, i.e. not Int,Bool,Null), typically a `Hash` or `null`. Meta information is not fields and is accessed differently (using `meta` method).
 * method - Built-in or user-defined function. User defined methods can be closures. Methods are also called functions in several places in the documentation.
 * multimethod - A MultiMethod object containing ordered list of methods. When called, the appropriate method is selected from the list to perform the computation.
 
@@ -418,14 +418,15 @@ Current methods with special names are listed below.
 	# Output wrapped manually for your convenience.
 	# All of them correspond to a syntax, mostly binary operators.
 	$ ngs -pl 'globals().filterv(Fun).keys().filter(/[^a-zA-Z0-9_]/)' | sort | column -x -c 40
-	!=      !==     !~      %       %()
-	*       +       +?      -       .
-	..      ...     .=      /       //
-	::      ::=     <       <=      ==
-	===     =~      >       >=      ?
-	[]      []=     \       ``      ````
-	~       ~~      "$*"    $()     is not
-	not in
+	!=      !==     !~      "$*"    $()
+	%       %()     *       +       +?
+	-       ->      .       ..      ...
+	.=      /       //      ::      ::=
+	<       <=      ==      ===     =~
+	>       >=      ?       []      []=
+	\       ``      ````    is not  not in
+	~       ~~
+
 
 ## Binary operators (methods) and precedence
 
@@ -1555,40 +1556,6 @@ Here is `collector` for `Hash` and it's usage example:
 		collector/{}
 			h.each(F(k, v) collect(mapper(k), v))
 
-# Running external programs
-
-	t = `echo -n text1`
-	echo("[ $t ]")
-	# Output: [ text1 ]
-
-	seq = `seq 5`.lines()
-	echo(seq)
-	# Output: ['1','2','3','4','5']
-
-	proc = $(seq 3)
-	each(inspect(proc), echo)
-	# ProcessesPipeline
-	#   cp: CommandsPipeline
-	#   cp:   command[0]: <Command options={} redirects=[] argv=[seq,3]>
-	#   pipe_in: null
-	#   pipe_out: null
-	#   processes[0]: Process
-	#   processes[0]:   command = <Command options={} redirects=[] argv=[seq,3]>
-	#   processes[0]:   pid = 77309
-	#   processes[0]:   exit_code = 0
-	#   processes[0]:   exit_signal = null
-	#   processes[0]:   redirects[0]: <ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=4 write_fd=5>>
-	#   processes[0]:   output on fd 1, stdout (3 lines):
-	#   processes[0]:     1
-	#   processes[0]:     2
-	#   processes[0]:     3
-	#   processes[0]:   output on fd 2, stderr (0 lines):
-
-	data = ``echo '{"a": 1}'``
-	echo("Parsed data: $data, a is ${data.a}")
-	# Output: Parsed data: {a=1}, a is 1
-
-
 # Assignment shortcuts
 
 These are syntactically equivalent expressions:
@@ -1808,84 +1775,78 @@ Since `Iter(x:Iter)` is defined as `x`, you can use the following solution if yo
 		BODY # can manipulate my_iter for advanced control
 	}
 
-The above works as follows: `my_iter=Iter(EXPR)` is an assignment which evaluates to an `Iter` object. `for` uses `Iter` on that value to get an iterator but it is the same iterator that `my_iter` references.
+The above works as follows: `my_iter=Iter(EXPR)` is an assignment which evaluates to an `Iter` object. `for` uses `Iter` on that value to get an iterator. `Iter(i:Iter)` is defined as `i`. Therefore, the `Iter` used by for and `my_iter` is the same iterator.
 
 ## Built-in iterators
 
 See `Iter` type documentation to see which iterators are available in NGS.
 
-# Executing external programs
+# Executing External Programs
 
-When a command (more precisely commands pipeline) is parsed, an `CommandsPipeline` object is created. Then depending on the syntax, appropriate method is called with the `CommandsPipeline` argument. The methods are: `$()`, ```` `` ````, and ```````` ```` ````````.
+## Syntax - Basics
 
-The syntactic options for executing external programs are:
+* In **commands syntax** (default for the top level of an NGS file) just go ahead and `my_prog my_arg ...`
+* In **code syntax** to be able to get into **commands syntax**, use one of the options below:
+  * `$(my_prog my_arg ...)` - run the process and get the reference to it, a `ProcessesPipeline` object.
+  * `%(my_prog my_arg ...)` - construct the `CommandsPipeline` but do not run it. Useful for passing ready-to-run commands around: `t=%(ls /); ...; $($t)`
+  * `` `my_prog my_arg ...` `` - capture the output as a string, an `Str` object.
+  * ```` ``my_prog my_arg ...`` ```` - capture and decode the output, an arbitrary structured data.
 
-* Being in top level syntax of an NGS script, which is the **commands syntax**
-* In **code syntax**: `$(...)` - run the process and get the reference to it, a `ProcessesPipeline`.
-* In **code syntax**: `%(...)` - construct the `CommandsPipeline` but do not run it. Useful for passing ready-to-run commands around: `t=%(ls /); ...; $($t)`
-* In **code syntax**: `` `...` `` - capture the output
-* In **code syntax**: ```` ``...`` ```` - capture and decode the output
+## Syntax - Substitution of Command Line Arguments
 
-Note that if you want just to construct the command and not run it
+	ls $fname      # $var_name - expands to exactly one argument
+	ls ${ EXPR }   # ${ EXPR } - expands to exactly one argument
+	ls $*fnames    # $*var_name - expands to zero or more arguments
+	ls $*{ EXPR }  # $*{ EXPR } - expands to zero or more arguments
 
-External commands are represented with type `CommandsPipeline`, which defines what should be run. In the simple case, there is exactly one command. In more complex cases `CommandsPipeline` references several programs and pipes between them, for example constructed by `$(my_prog_1 | my_prog_2 | my_prog_3)` . When `CommandsPipeline` is started being executed, a new object of type `ProcessesPipeline` is created using the appropriate `CommandsPipeline` as a blueprint. `ProcessesPipeline` has a `cp` field, which references the corresponding `CommandsPipeline`.
+`EXPR` above can be a single expression or any number expressions, new-line or `;` separated, value of the last one is used for the substitution (consistent with the rest of the language).
 
-	$ ngs -pi '$(ls | wc -l)'
-	ProcessesPipeline
-	  cp: CommandsPipeline
-	  cp:   command[0]: <Command options={} redirects=[] argv=[ls]>
-	  cp:      pipe[1]: <CommandsPipe options={} name=|>
-	  cp:   command[1]: <Command options={} redirects=[] argv=[wc,-l]>
-	  pipe_in: null
-	  pipe_out: null
-	  processes[0]: Process
-	  processes[0]:   command = <Command options={} redirects=[] argv=[ls]>
-	  processes[0]:   pid = 77369
-	  processes[0]:   exit_code = 0
-	  processes[0]:   exit_signal = null
-	  processes[0]:   redirects[0]: <ProcessRedir fd=1 marker=null datum=<WritingPipeBetweenChildren read_fd=4 write_fd=5>>
-	  processes[0]:   output on fd 1, stdout (0 lines):
-	  processes[0]:   output on fd 2, stderr (0 lines):
-	  processes[1]: Process
-	  processes[1]:   command = <Command options={} redirects=[] argv=[wc,-l]>
-	  processes[1]:   pid = 77370
-	  processes[1]:   exit_code = 0
-	  processes[1]:   exit_signal = null
-	  processes[1]:   redirects[0]: <ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=6 write_fd=7>>
-	  processes[1]:   redirects[1]: <ProcessRedir fd=0 marker=null datum=<ReadingPipeBetweenChildren read_fd=4 write_fd=5>>
-	  processes[1]:   output on fd 1, stdout (1 lines):
-	  processes[1]:           75
-	  processes[1]:   output on fd 2, stderr (0 lines):
-
-## Substitution of command line arguments
-
-	$(ls $fname)      # $var_name - expands to exactly one argument
-	$(ls ${ EXPR })   # ${ EXPR } - expands to exactly one argument
-	$(ls $*fnames)    # $*var_name - expands to zero or more arguments
-	$(ls $*{ EXPR })  # $*{ EXPR } - expands to zero or more arguments
-
-`EXPR` above can be a single expression or any number expressions, new-line or `;` separated, value of the last one is used for the substitution.
-
-The examples above show `$()` syntax but the substitution works the same for all syntaxes mentioned in **syntactic options for executing external programs**.
-
-## Options
+## Syntax - Options
 
 Rationale: it is sometimes desirable to alter the behaviour of execution of an external program.
 NGS provides syntax for passing arbitrary key-value pairs to augment `CommandsPipeline` or `Command`.
 
-Syntax:
+```
+option_name:option_value my_prog my_arg ...  # opts for my_prog
+option_name: my_prog my_arg ...  # opts for my_prog
+option_name::option_value command_1 | command_2  # options for the whole pipeline
+option_name:: command_1 | command_2  # options for the while pipeline
+```
 
-* Options for one command: `option1:value1 option2:value2 optionN:valueN command and arguments` inside `$()` and friends and at the top level.
-* Options for one the whole pipeline: `option1::value1 option2::value2 optionN::valueN command_1 | command_2` inside `$()` and friends and at the top level.
+Note that no spaces allowed after `:` or `::` and before the value of the option. Missing value defaults to `true`.
 
-In both cases, the values must follow the colon immediately, no spaces allowed. Missing value defaults to `true`.
+Available options follow. It is possible to extend NGS to handle user defined options. The values for the options are not a special syntax, they are just **expressions syntax** which is used in many other parts of the language.
 
-Options:
 
-* `$(nofail: my_command)` - (deprecated, use `$(ok: my_command)`) no exception will be thrown as `finished_ok` always returns `true` for commands with option.
-* `$(ok:CODES my_command)` - `finished_ok` will return `true` for the listed `CODES`. `CODES` can be a boolean (`Bool`), single integer (`Int`), an array of integers (`Arr` of `Int`), or a `NumRange`.
-* `$(top_level:: my_command)` - do not capture the output of the command. This is the default behaviour of the top-level **commands syntax**: the stdout connected to the stdout of the NGS process.
-* Internally the `&` in `$(my_command &)` sets the `&` option to `true`. This mechanism can be used to modify the behaviour of `CommandsPipeline` prepared by `%(...)`.
+Providing exit codes which will *not throw an exception*
+
+```
+ok: my_prog my_arg ...        # any exit code is ok
+ok:1 my_prog my_arg ...       # only exit code 1 is ok
+ok:[0, 1] my_prog my_arg ...  # only exit codes 0 and 1 are ok
+ok:0..5 my_prog my_arg ...    # only exit codes between 0 and 5 (exclusive) are ok
+ok:0..5 my_prog my_arg ...    # only exit codes between 0 and 5 (inclusive) are ok
+```
+
+Do not capture the output of the command. This is the default behaviour of the top-level **commands syntax**: the stdout connected to the stdout of the NGS process:
+
+```
+top_level:: my_prog my_arg ... 
+```
+
+Return the first line of the output, without the new-line characters
+
+```
+line: my_prog my_arg ... # Usage: t = `line: my_prog my_arg ...`
+```
+
+Log the command including arguments and redirects before running it:
+
+```
+log: my_prog my_arg ...
+```
+
+Internally, the `&` in `$(my_prog my_arg &)` sets the `&` option to `true`. This mechanism can be used to modify the behaviour of `CommandsPipeline` prepared by `%(...)`.
 
 		ngs -pi '%(ls / &)'
 		CommandsPipeline
@@ -1893,22 +1854,22 @@ Options:
 		  options:   [&] = true
 		  command[0]: <Command options={} redirects=[] argv=[ls,/]>
 
-* `` `line: my_prog` `` - return the first line of the output, without the new-line characters
+**WARNING**: unrecognized options are silently ignored. This is considered a bug and should be fixed - https://github.com/ngs-lang/ngs/issues/28
 
-**WARNING**: unrecognized options are silently ignored.
-
-## Input/Output Redirections
+## Syntax - Input/Output Redirections
 
 Redirections are represented by the `CommandRedir` type. When a command is parsed and converted to `CommandsPipeline`, each `Command` gets a (possibly empty) list of redirections (in the `.redirects` property)
 
 Redirections syntax (based on bash syntax):
 
-* Overwrite : `my_command >myfile`
-* Append: `my_command >>myfile`
-* Read from: `my_command  <myfile`
-* Specify file descriptor, overwrite: `my_command 2>myfile`
-* Specify file descriptor, append: `my_command 2>>myfile`
-* Capture: `my_command 2>${true}` . The default is to not capture stderr but rather output it immediately to NGS' process stderr.
+```
+my_prog my_arg ... >myfile    # overwrite
+my_prog my_arg ... <myfile    # read from
+my_prog my_arg ... >>myfile   # append
+my_prog my_arg ... 2>myfile   # overwrite, from stderr
+my_prog my_arg ... 2>>myfile  # append, from stderr
+my_prog my_arg ... 2>${true}  # capture stderr
+```
 
 Running external programs examples:
 
@@ -1944,9 +1905,83 @@ Running external programs examples:
 	  processes[0]:   output on fd 2, stderr (1 lines):
 	  processes[0]:     ls: xxx: No such file or directory
 
+## Internals
+
+At runtime, a `CommandsPipeline` object is created for all the syntaxes mentioned above. Then depending on the specific syntax, appropriate method is called with the `CommandsPipeline` argument. The methods are: `$()`, ```` `` ````, and ```````` ```` ````````.
+
+External commands are represented with type `CommandsPipeline`, which defines what should be run. In the simple case, there is exactly one command. In more complex cases `CommandsPipeline` has several programs and pipes between them, like for `$(my_prog_1 | my_prog_2 | my_prog_3)` . When `CommandsPipeline` is started being executed, a new object of type `ProcessesPipeline` is created using the appropriate `CommandsPipeline` as a blueprint. `ProcessesPipeline` has a `cp` field, which references the corresponding `CommandsPipeline`.
+
+	$ ngs -pi '$(ls | wc -l)'
+	ProcessesPipeline
+	  cp: CommandsPipeline
+	  cp:   command[0]: <Command options={} redirects=[] argv=[ls]>
+	  cp:      pipe[1]: <CommandsPipe options={} name=|>
+	  cp:   command[1]: <Command options={} redirects=[] argv=[wc,-l]>
+	  pipe_in: null
+	  pipe_out: null
+	  processes[0]: Process
+	  processes[0]:   command = <Command options={} redirects=[] argv=[ls]>
+	  processes[0]:   pid = 77369
+	  processes[0]:   exit_code = 0
+	  processes[0]:   exit_signal = null
+	  processes[0]:   redirects[0]: <ProcessRedir fd=1 marker=null datum=<WritingPipeBetweenChildren read_fd=4 write_fd=5>>
+	  processes[0]:   output on fd 1, stdout (0 lines):
+	  processes[0]:   output on fd 2, stderr (0 lines):
+	  processes[1]: Process
+	  processes[1]:   command = <Command options={} redirects=[] argv=[wc,-l]>
+	  processes[1]:   pid = 77370
+	  processes[1]:   exit_code = 0
+	  processes[1]:   exit_signal = null
+	  processes[1]:   redirects[0]: <ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=6 write_fd=7>>
+	  processes[1]:   redirects[1]: <ProcessRedir fd=0 marker=null datum=<ReadingPipeBetweenChildren read_fd=4 write_fd=5>>
+	  processes[1]:   output on fd 1, stdout (1 lines):
+	  processes[1]:           75
+	  processes[1]:   output on fd 2, stderr (0 lines):
+
+## Decoding the Output
+
+Let's look on what's behind the described above syntax:
+
+* ```` ``my_prog my_arg ...`` ```` - capture and decode the output, an arbitrary structured data.
+
+Internally, the following code is executed:
+
+```
+p.stdout.decode({'process': p, 'pipeline': cp})
+```
+
+The code above calls the multimethod defined as `F decode(s:Str, hints:Hash={})` . Out of the box NGS implements several methods that are able to parse JSON, JWT, output of `aws` and `find` commands.
+
+In case you need to decode a format not known to NGS, you can implement your own parser by defining yet another `decode()` method with appropriate `guard` statement to make sure that `s` is the expected input. It should look roughly like the following (real example from stdlib):
+
+```
+doc Parse the output of "find" command which does not use "-printf". Handles "-print0".
+doc hints - hints.process.command.argv[0] must be 'find'
+doc %RET - Arr of Str
+F decode(s:Str, hints:Hash) {
+	guard try hints['process'].command.argv[0] == 'find'
+	argv = hints['process'].command.argv
+	guard '-printf' not in argv
+	zero_sep = '-print0' in argv
+	if zero_sep then s.split(chr(0))[0..-1] else s.lines()
+}
+```
+
+Before writing your own parser, check whether you can leverage the `jc` project. It can parse many formats and output the information as JSON. In turn, JSON can be easily parsed by NGS. Integration with NGS is as simple as the following:
+
+```
+$ ngs -pl '``jc ifconfig``.name.sort()'  # prints interfaces names
+bridge0
+en0
+utun0
+...
+```
+
+`jc` project is at https://github.com/kellyjonbrazil/jc
+
 ## Exit codes handling when running external programs
 
-Immediately after an external program finishes, it's exit code (and in future, possibly other aspects) is checked using `finished_ok` multimethod. The multimethod returns a `Bool`. If it's `false`, an exception is thrown.
+Immediately after an external program finishes, it's exit code (and in the future, possibly other aspects) is checked using `finished_ok` multimethod. The multimethod returns a `Bool`. If it's `false`, an exception is thrown.
 
 For unknown programs, `finished_ok` returns `false` for non-zero exit code and hence an exception is thrown. This behaviour can be modified with the `ok:` option of the command.
 
@@ -1962,13 +1997,65 @@ When converting to `Bool`, for example in the expression `if $(test -f my_file) 
 
 While it's feasible to construct an array with command line arguments for a program, `Argv` makes this task much easier by supporting common cases such as omitting a command line switch which has no corresponding value to use.
 
-See `Argv` multimethod.
+Relatively basic example of using the facility follows. Note that `get()` methods might return `null`. In this case, the corresponding `--switch` will not be present. 
+
+```
+args = Argv({
+	'--destination-cidr-block': route.DestinationCidrBlock
+	'--gateway-id': route.get('GatewayId')
+	'--instance-id': route.get('InstanceId')
+	'--network-interface-id': route.get('NetworkInterfaceId')
+	'--vpc-peering-connection-id': route.get('VpcPeeringConnectionId')
+	'--nat-gateway-id': route.get('NatGatewayId')
+})
+$(aws ec2 create-route --route-table-id ... $*args)
+```
+
+See `Argv` multimethod documentation - https://ngs-lang.org/doc/latest/generated/Argv.html
 
 ## Globbing
 
 Globbing is not implemented yet.
 
-# Accessing environment variables
+## Debugging
+
+Use `DEBUG` environment variable to show debug information about processes that NGS runs. Example:
+
+```
+$ DEBUG=process,process2 ngs -e '$(ls)'
+[DEBUG process2 42167 main] cp.pipes.len()=2
+[DEBUG process 42167 main] Parsed command: [ls]
+[DEBUG process 42167 main] [find_in_path] got ls
+[DEBUG process 42167 main] [find_in_path] will search
+[DEBUG process 42167 main] [find_in_path] ls found at <Path path=/bin/ls>
+[DEBUG process 42167 main] PID after fork: 42168
+[DEBUG process 42168 main] PID after fork: 0
+[DEBUG process2 42167 main] PIPES FROM REDIRECTS [<ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>>] REDIRECTS [<ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>>] COMMAND {command=<Command options={} redirects=[] argv=[ls]>, executable=<Path path=/bin/ls>, pid=null, exit_code=null, exit_signal=null, outputs={1=null, 2=null}, stdout=null, stderr=null, reading_threads=<Threads >, writing_threads=<Threads >, redirects=[<ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>>]}
+[DEBUG process 42167 main] Reading all output of the child process
+[DEBUG process 42167 main] Creating thread process-42168-output-fd-1-reader
+[DEBUG process 42167 process-42168-output-fd-1-reader] Thread set up done, will run thread code
+[DEBUG process2 42167 process-42168-output-fd-1-reader] READING <CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>
+[DEBUG process2 42168 main] PIPES FROM REDIRECTS [<ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>>] REDIRECTS [<ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>>] COMMAND {command=<Command options={} redirects=[] argv=[ls]>, executable=<Path path=/bin/ls>, pid=null, exit_code=null, exit_signal=null, outputs={1=null, 2=null}, stdout=null, stderr=null, reading_threads=<Threads >, writing_threads=<Threads >, redirects=[<ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>>]}
+[DEBUG process2 42168 main] CHILD CLOSING FDS 3 TO 100 EXCEPT FOR [4]
+[DEBUG process2 42167 main] $() returns process {command=<Command options={} redirects=[] argv=[ls]>, executable=<Path path=/bin/ls>, pid=42168, exit_code=null, exit_signal=null, outputs={1=null, 2=null}, stdout=null, stderr=null, reading_threads=<Threads <Thread process-42168-output-fd-1-reader>>, writing_threads=<Threads >, redirects=[<ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>>]}
+[DEBUG process2 42168 main] CHILD REDIRECT PIPE 1 -> 4
+[DEBUG process 42168 main] will execve()
+[DEBUG process 42167 main] [wait] joining reading_threads: <Threads <Thread process-42168-output-fd-1-reader>>
+[DEBUG process 42167 main] Joining thread <Thread process-42168-output-fd-1-reader>
+[DEBUG process2 42167 process-42168-output-fd-1-reader] READ <<Makefile\x0Amain.css\x0Amake.ngs\x0Amethods.css\x0Ana.1\x0Ana.1.md\x0Angs.1\x0Angs.1.md\x0Angsint.1\x0Angsint.1.md\x0Angslang.1...>>
+[DEBUG process2 42167 process-42168-output-fd-1-reader] DATUM *** <CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>
+[DEBUG process2 42167 process-42168-output-fd-1-reader] CLOSED READING END OF PIPE, REDIRECT <ProcessRedir fd=1 marker=null datum=<CollectingPipeFromChildToParentProcess read_fd=3 write_fd=4>>
+[DEBUG process 42167 process-42168-output-fd-1-reader] Read all output of the child process for descriptor 1, closing reading/parent end
+[DEBUG process 42167 main] [wait] joined threads
+[DEBUG process 42167 main] [wait] joining writing_threads: <Threads >
+[DEBUG process 42167 main] [wait] joined threads
+[DEBUG process 42167 main] [wait] will waitpid(42168)
+[DEBUG process 42167 main] [wait] waitpid(42168) -> [42168,0]
+```
+
+In most cases `DEBUG=process` should be enough to understand what is happening. `process2` shows lower level details.
+
+# Accessing Environment Variables
 
 On NGS startup, the global variable `ENV` is populated with the environment variables. `ENV` is a `Hash` object.
 
@@ -1982,7 +2069,19 @@ On NGS startup, the global variable `ENV` is populated with the environment vari
 		$(my_prog)
 	}
 
+Accessing non-existent environment variable throws an exception:
+
+```
+$ ngs -e ENV.X
+[ERROR 2021-12-16 09:31:09 IST] +--------------------------------------+
+[ERROR 2021-12-16 09:31:09 IST] | Environment variable 'X' is not set. |
+[ERROR 2021-12-16 09:31:09 IST] +--------------------------------------+
+...
+```
+
 # NGS exit codes
+
+This section describes exit codes returned by NGS scripts written on exit.
 
 Both regular results of running a program and exceptions are converted to exit code using `ExitCode` MultiMethod.
 

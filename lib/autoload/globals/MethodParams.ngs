@@ -5,7 +5,7 @@ F init(mp:MethodParams, f:Fun) {
 	p = params(f).map(MethodParam)
 	partitioned = p.partition(SplatMethodParam)
 	super(mp, partitioned[1])
-	a = mp.attrs()
+	a = mp.meta()
 	a.by_name = {}
 	p.each_idx_val(F(idx, v) {
 		v.idx = idx
@@ -17,23 +17,23 @@ F init(mp:MethodParams, f:Fun) {
 
 doc Get the ArrSplatMethodParam
 doc %RET - Box
-F arr_splat(mp:MethodParams) mp.attrs().arr_splat
+F arr_splat(mp:MethodParams) mp.meta().arr_splat
 
 doc Get the HashSplatMethodParam
 doc %RET - Box
-F hash_splat(mp:MethodParams) mp.attrs().hash_splat
+F hash_splat(mp:MethodParams) mp.meta().hash_splat
 
 doc Get named parameter
-F '[]'(mp:MethodParams, k:Str) mp.attrs().by_name[k]
+F '[]'(mp:MethodParams, k:Str) mp.meta().by_name[k]
 
 doc Check whether named parameter exists.
-F in(k:Str, mp:MethodParams) k in mp.attrs().by_name
+F in(k:Str, mp:MethodParams) k in mp.meta().by_name
 
 TEST p = MethodParams(F(x, *args) 0); p.has("x") and p.has("args")
 TEST p = MethodParams(F(x, *args) 0); p.has("xyz").not()
 
 F Str(mp:MethodParams) {
-	arr_splat = " arr_splat=" +? mp.attrs().arr_splat.map(Str).get('')
-	hash_splat = " hash_splat" +? mp.attrs().hash_splat.map(Str).get('')
-	"<${mp.typeof().name} ${mp.attrs().ArrLike}${arr_splat}${hash_splat}>"
+	arr_splat = " arr_splat=" +? mp.meta().arr_splat.map(Str).get('')
+	hash_splat = " hash_splat" +? mp.meta().hash_splat.map(Str).get('')
+	"<${mp.typeof().name} ${mp.meta().ArrLike}${arr_splat}${hash_splat}>"
 }

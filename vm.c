@@ -54,9 +54,6 @@
 
 extern char **environ;
 
-// in ngs.c:
-char *sprintf_position(yycontext *yy, int pos);
-
 // in syntax.include
 void position_to_line_col(yycontext *yy, int pos, int result[]);
 
@@ -945,8 +942,8 @@ METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 	yyrelease(&yyctx);
 	COMPILATION_RESULT *r = compile(tree, obj_to_cstring(argv[1]));
 	VALUE ret = make_string_of_len(r->bytecode, r->len);
-	OBJ_ATTRS(ret) = make_hash(1);
-	set_hash_key(OBJ_ATTRS(ret), make_string("warnings"), r->warnings);
+	OBJ_META(ret) = make_hash(1);
+	set_hash_key(OBJ_META(ret), make_string("warnings"), r->warnings);
 	METHOD_RETURN(ret);
 }
 
@@ -1115,8 +1112,8 @@ METHOD_RESULT native_c_mktime METHOD_PARAMS {
 METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_normal_type(argv[0])); }
 METHOD_RESULT native_type_str_doc METHOD_PARAMS {
 	*result = make_normal_type(argv[0]);
-	set_hash_key(OBJ_ATTRS(*result), make_string("doc"), argv[1]);
-	set_hash_key(OBJ_ATTRS(*result), make_string("ns"), argv[2]);
+	set_hash_key(OBJ_META(*result), make_string("doc"), argv[1]);
+	set_hash_key(OBJ_META(*result), make_string("ns"), argv[2]);
 	return METHOD_OK;
 }
 
@@ -1352,17 +1349,17 @@ METHOD_RESULT native_same_any_any METHOD_PARAMS {
 	METHOD_RETURN(MAKE_BOOL(argv[0].ptr == argv[1].ptr));
 }
 
-METHOD_RESULT native_attrs METHOD_PARAMS {
+METHOD_RESULT native_meta METHOD_PARAMS {
 	if(!IS_OBJ(argv[0])) {
 		return METHOD_ARGS_MISMATCH;
 	}
-	METHOD_RETURN(OBJ_ATTRS(argv[0]));
+	METHOD_RETURN(OBJ_META(argv[0]));
 }
-METHOD_RESULT native_attrs_any METHOD_PARAMS {
+METHOD_RESULT native_meta_any METHOD_PARAMS {
 	if(!IS_OBJ(argv[0])) {
 		return METHOD_ARGS_MISMATCH;
 	}
-	OBJ_ATTRS(argv[0]) = argv[1]; METHOD_RETURN(argv[1]);
+	OBJ_META(argv[0]) = argv[1]; METHOD_RETURN(argv[1]);
 }
 
 // TODO: consider returning Hash instead of Arr
@@ -1794,6 +1791,10 @@ METHOD_RESULT native_ll_resolve_global_variable EXT_METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(get_global_index(vm, OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]))));
 }
 
+METHOD_RESULT native_ll_maybe_wrap METHOD_PARAMS {
+	METHOD_RETURN(maybe_wrap(argv[0]));
+};
+
 METHOD_RESULT native_ll_is_global_variable_defined EXT_METHOD_PARAMS {
 	GLOBAL_VAR_INDEX gvi = GET_INT(argv[0]);
 	if(GET_INT(argv[0]) < 0 || gvi >= vm->globals_len) {
@@ -2125,9 +2126,9 @@ VALUE _make_func(VM *vm, int pass_extra_params, char *name, void *func_ptr, int 
 	func->params.n_params_optional = 0; /* currently none of builtins uses optional parameters */
 	func->pass_extra_params = pass_extra_params;
 	vm->last_doc_hash = make_hash(4);
-	func->base.attrs = make_hash(8);
-		set_hash_key(func->base.attrs, make_string("name"), make_string(name));
-		set_hash_key(func->base.attrs, make_string("doc"), vm->last_doc_hash);
+	func->base.meta = make_hash(8);
+		set_hash_key(func->base.meta, make_string("name"), make_string(name));
+		set_hash_key(func->base.meta, make_string("doc"), vm->last_doc_hash);
 	if(argc) {
 		argv = NGS_MALLOC(argc * sizeof(VALUE) * 2);
 		assert(argv);
@@ -2210,9 +2211,9 @@ void set_global(VM *vm, const char *name, VALUE v) {
 	assert(IS_UNDEF(GLOBALS[index]));
 	GLOBALS[index] = ret;
 	vm->last_doc_hash = make_hash(4);
-	OBJ_ATTRS(ret) = make_hash(8);
-		// set_hash_key(OBJ_ATTRS(ret), make_string("name"), make_string(name));
-		set_hash_key(OBJ_ATTRS(ret), make_string("doc"), vm->last_doc_hash);
+	OBJ_META(ret) = make_hash(8);
+		// set_hash_key(OBJ_META(ret), make_string("name"), make_string(name));
+		set_hash_key(OBJ_META(ret), make_string("doc"), vm->last_doc_hash);
 	return ret;
 }
 
@@ -2464,8 +2465,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	set_global(vm, #name, name); \
 	vm->name = name; \
 	vm->last_doc_hash = make_hash(4); \
-	OBJ_ATTRS(name) = make_hash(8); \
-	set_hash_key(OBJ_ATTRS(name), make_string("doc"), vm->last_doc_hash);
+	OBJ_META(name) = make_hash(8); \
+	set_hash_key(OBJ_META(name), make_string("doc"), vm->last_doc_hash);
 
 #define MKSUBTYPE(name, parent) \
 	MKTYPE(name); \
@@ -2713,6 +2714,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	vm->eqeq = make_multimethod();
 	set_global(vm, "==", vm->eqeq);
 	// Why is it here? Consider removing - end
+
+	register_global_func(vm, 0, "ll_maybe_wrap", &native_ll_maybe_wrap, 1, "v", vm->Any);
 
 	register_global_func(vm, 0, "==",              &native_false,    2, "a", vm->Any, "b", vm->Any);
 	_doc(vm, "", "Always false. Other == method implementations should compare types they understand. If none of them can handle the comparison, objects are considered non-equal.");
@@ -2987,15 +2990,15 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	// OBJECT
-	register_global_func(vm, 0, "attrs",    &native_attrs,               1, "obj",      vm->Any);
+	register_global_func(vm, 0, "meta", &native_meta, 1, "obj", vm->Any);
 	_doc_arr(vm, "",
-		"Get attributes. Attributes is auxiliary data slot. It is available on all non-immediate objects.",
+		"Get meta. Meta is auxiliary data slot. It is available on all non-immediate objects.",
 		"The idea is to store additional information that will not get in your way in cases when you don't care about it.",
 		NULL
 	);
-	register_global_func(vm, 0, "attrs",    &native_attrs_any,           2, "obj",      vm->Any, "v", vm->Any);
+	register_global_func(vm, 0, "meta", &native_meta_any, 2, "obj", vm->Any, "v", vm->Any);
 	_doc_arr(vm, "",
-		"Set attributes. Attributes is auxiliary data slot. It is available on all non-immediate objects.",
+		"Set meta. Meta is auxiliary data slot. It is available on all non-immediate objects.",
 		"The idea is to store additional information that will not get in your way in cases when you don't care about it.",
 		NULL
 	);
@@ -4698,27 +4701,27 @@ do_jump:
 							v = make_string_of_len(&vm->bytecode[ip+1], vm->bytecode[ip]);
 							ip += 1 + vm->bytecode[ip];
 							// CLOSURE_OBJ_NAME(TOP) = v;
-							if(!IS_HASH(OBJ_ATTRS(TOP))) {
+							if(!IS_HASH(OBJ_META(TOP))) {
 								goto main_loop;
 							}
-							set_hash_key(OBJ_ATTRS(TOP), make_string("name"), v);
+							set_hash_key(OBJ_META(TOP), make_string("name"), v);
 							goto main_loop;
 		case OP_SET_CLOSURE_DOC:
 							EXPECT_STACK_DEPTH(2);
 							assert(IS_CLOSURE(SECOND));
-							if(!IS_HASH(OBJ_ATTRS(SECOND))) {
+							if(!IS_HASH(OBJ_META(SECOND))) {
 								goto main_loop;
 							}
-							set_hash_key(OBJ_ATTRS(SECOND), make_string("doc"), FIRST);
+							set_hash_key(OBJ_META(SECOND), make_string("doc"), FIRST);
 							REMOVE_TOP_NOCHECK;
 							goto main_loop;
 		case OP_SET_CLOSURE_NS:
 							EXPECT_STACK_DEPTH(2);
 							assert(IS_CLOSURE(SECOND));
-							if(!IS_HASH(OBJ_ATTRS(SECOND))) {
+							if(!IS_HASH(OBJ_META(SECOND))) {
 								goto main_loop;
 							}
-							set_hash_key(OBJ_ATTRS(SECOND), make_string("ns"), FIRST);
+							set_hash_key(OBJ_META(SECOND), make_string("ns"), FIRST);
 							REMOVE_TOP_NOCHECK;
 							goto main_loop;
 		case OP_HASH_SET:
