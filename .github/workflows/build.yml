@@ -53,6 +53,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
+          apt-get install -y man
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
             sudo apt-get install -y g++-${{ matrix.version }}
             echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
@@ -68,7 +69,7 @@ jobs:
         # Otherwise "mkdir -p build/Testing/Temporary" fails with
         # "mkdir: cannot create directory ‘build/Testing’: Permission denied"
         # (mkdir itself was a test after "ctest" failed to create the directory)
-        run: (sudo ./install.sh && sudo make tests)
+        run: (./install.sh && make tests test-installation)
       - name: Install Compiler (macOS)
         if: runner.os == 'macOS'
         run: |
@@ -84,7 +85,7 @@ jobs:
           fi
       - name: Install and Test (macOS)
         if: runner.os == 'macOS'
-        run: (./install.sh && make tests)
+        run: (./install.sh && make tests test-installation)
 
   build-external:
     timeout-minutes: 5
@@ -127,7 +128,7 @@ jobs:
       - name: Install Compiler
         run: |
           apt-get update
-          apt-get install -y sudo   # sudo is not present on the image
+          apt-get install -y man sudo   # sudo is not present on the image
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
             apt-get install -y g++-${{ matrix.version }}
             echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
@@ -138,4 +139,4 @@ jobs:
             echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
           fi
       - name: Install and Test
-        run: (./install.sh && make tests)
+        run: (./install.sh && make tests test-installation)
