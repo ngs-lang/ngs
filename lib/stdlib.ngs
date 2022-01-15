@@ -2501,10 +2501,10 @@ doc %RET - Arr
 doc %EX - [[1], [2,3]].flatten()  # [1,2,3]
 F flatten(e:Eachable1) {
 	guard not(e is Int)
-	guard e.all(Eachable1)
 	collector
-		e.each(F(subarr) {
-			subarr.each(collect)
+		e.each(F(x) {
+			assert(x is Eachable1 and x is not Int, 'flatten() elements must be Eachable1, excluding Int')
+			x.each(collect)
 		})
 }
 
