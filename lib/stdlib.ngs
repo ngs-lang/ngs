@@ -1812,14 +1812,10 @@ section "Type" {
 }
 
 doc Set a field on all elements if it's not already set
-doc e - Eachable1 with elements of type NormalTypeInstance or Hash
+doc e - Eachable1
 doc %EX - my_items.dflt("source", "(unknown)")
 doc %RET - e
-F dflt(e:Eachable1, k, v) {
-	guard e.all(AnyOf(NormalTypeInstance, Hash))
-	e.each(X.dflt(k, v))
-	e
-}
+F dflt(e:Eachable1, k, v) e.each(X.dflt(k, v))
 
 TEST [{}, {"x": 1}].dflt("x", 100) == [{"x": 100}, {"x": 1}]
 
