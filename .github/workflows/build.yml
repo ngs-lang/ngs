@@ -120,7 +120,7 @@ jobs:
       - name: Install Compiler
         run: |
           apt-get update
-          apt-get install -y man sudo   # sudo is not present on the image
+          apt-get install -y man
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
             apt-get install -y g++-${{ matrix.version }}
             echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
