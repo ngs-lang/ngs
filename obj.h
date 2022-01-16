@@ -45,7 +45,7 @@ typedef intptr_t VALUE_NUM;
 typedef struct {
 	VALUE type;
 	VALUE val;
-	VALUE attrs;
+	VALUE meta;
 } OBJECT;
 
 typedef struct {
@@ -311,7 +311,7 @@ typedef enum {
 
 #define GET_FFI_TYPE(v) (((FFI_TYPE_OBJECT *) v.ptr)->base.val.ptr)
 #define GET_FFI_CIF(v)  (((FFI_CIF_OBJECT *) v.ptr)->val)
-#define SET_OBJ(v,o)    {(v).ptr = o; OBJ_ATTRS(v) = MAKE_NULL; }
+#define SET_OBJ(v,o)    {(v).ptr = o; OBJ_META(v) = MAKE_NULL; }
 #define SET_BOOL(v, b)  (v).num = b ? V_TRUE : V_FALSE
 
 #define OBJ_LEN(v)                ((VAR_LEN_OBJECT *) (v).ptr)->len
@@ -341,7 +341,7 @@ typedef enum {
 #define OBJ_DATA(v)               (((OBJECT *)(v).ptr)->val)
 #define OBJ_DATA_PTR(v)           (((OBJECT *)(v).ptr)->val.ptr)
 #define OBJ_TYPE(v)               (((OBJECT *)(v).ptr)->type)
-#define OBJ_ATTRS(v)              (((OBJECT *)(v).ptr)->attrs)
+#define OBJ_META(v)               (((OBJECT *)(v).ptr)->meta)
 #define OBJ_TYPE_NUM(v)           (((OBJECT *)(v).ptr)->type.num)
 #define WRAPPED_VAL(v)            (IS_IMM_WRAP(v) ? OBJ_DATA(v) : (v))
 #define IS_OBJ(v)                 (((v).num & TAG_AND) == 0)

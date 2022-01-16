@@ -63,8 +63,8 @@ static void _dump(FILE *f, VALUE v, int level) {
 			CLOSURE_OBJ_N_UPLEVELS(v),
 			CLOSURE_OBJ_PARAMS_FLAGS(v)
 		);
-		fprintf(f, "%*s* closure attributes\n", (level+1) << 1, "");
-		_dump(f, OBJ_ATTRS(v), level+2);
+		fprintf(f, "%*s* closure meta\n", (level+1) << 1, "");
+		_dump(f, OBJ_META(v), level + 2);
 		for(i=0; i<CLOSURE_OBJ_N_REQ_PAR(v); i++) {
 			fprintf(f, "%*s* required parameter %zu (name and type follow)\n", (level+1) << 1, "", i+1);
 			_dump(f, CLOSURE_OBJ_PARAMS(v)[i*2+0], level+2);
@@ -218,7 +218,7 @@ VALUE maybe_wrap(const VALUE v) {
 	OBJECT *o = NGS_MALLOC(sizeof(OBJECT));
 	o->type.num = T_IMM_WRAP;
 	o->val = v;
-	o->attrs = MAKE_NULL;
+	o->meta = MAKE_NULL;
 	return (VALUE){.ptr = o};
 }
 
@@ -335,7 +335,7 @@ VALUE make_normal_type(VALUE name) {
 	NGS_TYPE_CONSTRUCTORS(ret) = make_multimethod_with_value(ctr);
 	NGS_TYPE_PARENTS(ret) = make_array(0);
 	NGS_TYPE_USER(ret) = make_hash(0);
-	OBJ_ATTRS(ret) = make_hash(2);
+	OBJ_META(ret) = make_hash(2);
 
 	return ret;
 }
@@ -749,7 +749,7 @@ VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX 
 	memcpy(c->params.locals, locals, n_local_vars * sizeof(c->params.locals[0]));
 
 	SET_OBJ(v, c);
-	OBJ_ATTRS(v) = make_hash(2);
+	OBJ_META(v) = make_hash(2);
 
 	return v;
 }

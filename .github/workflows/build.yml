@@ -2,7 +2,7 @@ name: Build
 on: push
 
 jobs:
-  build-internal-apt-gcc:
+  build-internal-apt:
     timeout-minutes: 5
     name: Build in GCC
     runs-on: ${{ matrix.os }}
@@ -10,35 +10,24 @@ jobs:
       matrix:
         os: [ "ubuntu-20.04" ]
         version: [ "9", "10", "11" ]
+        compiler: [ "gcc", "clang" ]
     steps:
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
-          sudo apt-get update
-          sudo apt-get install -y g++-${{ matrix.version }}
-          echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
-          echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
+          apt-get update
+          apt-get install -y man
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            apt-get install -y g++-${{ matrix.version }}
+            echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
+            echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
+          else
+            apt-get install -y clang-${{ matrix.version }}
+            echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
+            echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
+          fi
       - name: Install and Test
-        run: (./install.sh && make tests)
-
-  build-internal-apt-clang:
-    timeout-minutes: 5
-    name: Build in Clang
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ "ubuntu-20.04" ]
-        version: [ "9", "10", "11" ]
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup Compiler
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang-${{ matrix.version }}
-          echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
-          echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
-      - name: Install and Test
-        run: (./install.sh && make tests)
+        run: (./install.sh && make tests test-installation)
 
   build-external-apt-gcc:
     timeout-minutes: 5
@@ -56,11 +45,11 @@ jobs:
       - name: Setup Compiler
         run: |
           apt-get update
-          apt-get install -y g++-${{ matrix.version }}
+          apt-get install -y man g++-${{ matrix.version }}
           echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
           echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
       - name: Install and Test
-        run: (./install.sh && make tests)
+        run: (./install.sh && make tests test-installation)
 
   build-external-apt-clang:
     timeout-minutes: 5
@@ -78,11 +67,11 @@ jobs:
       - name: Setup Compiler
         run: |
           apt-get update
-          apt-get install -y clang-${{ matrix.version }}
+          apt-get install -y man clang-${{ matrix.version }}
           echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
           echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
       - name: Install and Test
-        run: (./install.sh && make tests)
+        run: (./install.sh && make tests test-installation)
 
   build-external-yum-gcc:
     timeout-minutes: 10
@@ -106,11 +95,11 @@ jobs:
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
-          yum -y install sudo gcc-c++
+          yum -y install man gcc-c++
           echo "CC=gcc" >> $GITHUB_ENV
           echo "CXX=g++" >> $GITHUB_ENV
       - name: Install and Test
-        run: (./install.sh && make tests)
+        run: (./install.sh && make tests test-installation)
 
   build-external-yum-clang:
     timeout-minutes: 10
@@ -134,11 +123,11 @@ jobs:
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
-          yum -y install sudo clang
+          yum -y install man clang
           echo "CC=clang" >> $GITHUB_ENV
           echo "CXX=clang++" >> $GITHUB_ENV
       - name: Install and Test
-        run: (./install.sh && make tests)
+        run: (./install.sh && make tests test-installation)
 
   build-external-centos8-gcc:
     timeout-minutes: 10
@@ -155,11 +144,11 @@ jobs:
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
-          yum -y install epel-release dnf-plugins-core sudo
+          yum -y install epel-release dnf-plugins-core man
           yum config-manager --set-enabled powertools
           yum -y install gcc-toolset-${{ matrix.version }}-gcc-c++
       - name: Install and Test
-        run: (source /opt/rh/gcc-toolset-${{ matrix.version }}/enable && ./install.sh && make tests)
+        run: (source /opt/rh/gcc-toolset-${{ matrix.version }}/enable && ./install.sh && make tests test-installation)
 
   build-external-centos7-gcc:
     timeout-minutes: 10
@@ -176,10 +165,10 @@ jobs:
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
-          yum -y install centos-release-scl epel-release sudo
+          yum -y install centos-release-scl epel-release man
           yum -y install devtoolset-${{ matrix.version }}
       - name: Install and Test
-        run: (source /opt/rh/devtoolset-${{ matrix.version }}/enable && ./install.sh && make tests)
+        run: (source /opt/rh/devtoolset-${{ matrix.version }}/enable && ./install.sh && make tests test-installation)
 
   build-mac-gcc:
     timeout-minutes: 10
@@ -198,7 +187,7 @@ jobs:
           echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
           echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
       - name: Install and Test
-        run: (./install.sh && make tests)
+        run: (./install.sh && make tests test-installation)
 
   build-mac-xcode:
     timeout-minutes: 15
@@ -217,4 +206,4 @@ jobs:
           echo "CC=clang" >> $GITHUB_ENV
           echo "CXX=clang++" >> $GITHUB_ENV
       - name: Install and Test
-        run: (./install.sh && make tests)
+        run: (./install.sh && make tests test-installation)

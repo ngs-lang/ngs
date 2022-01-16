@@ -180,10 +180,10 @@ STDLIB_PATH_SEP = '/'
 STDLIB_MAX_RAND_REAL = Real(RAND_MAX)
 
 section "Document internal GC namespace" {
-	GC.attrs({'doc': {'': 'Control NGS garbage collection'}})
-	GC['enable'].attrs({'doc': {'': 'Enable garbage collection'}})
-	GC['disable'].attrs({'doc': {'': 'Disable garbage collection'}})
-	GC['get_parallel'].attrs({'doc': {'': 'Check parallel garbage collection. Please do not use!', '%STATUS': 'internal'}})
+	GC.meta({'doc': {'': 'Control NGS garbage collection'}})
+	GC['enable'].meta({'doc': {'': 'Enable garbage collection'}})
+	GC['disable'].meta({'doc': {'': 'Disable garbage collection'}})
+	GC['get_parallel'].meta({'doc': {'': 'Check parallel garbage collection. Please do not use!', '%STATUS': 'internal'}})
 }
 
 doc EXPERIMENTAL! Do not use!
@@ -282,15 +282,22 @@ section "Namespaces" {
 	F '::='(h:Hash, k, v) h[k] = v
 }
 
-section "Attributes convenience methods" {
-	# TODO: Consider switching attrs from Hash to Namespace
-	doc Wraps native attrs() and in case that there are no attributes, sets them to empty hash.
-	F attrs(o:Any) {
+section "Meta convenience methods" {
+	# TODO: Consider switching meta from Hash to Namespace
+	doc Wraps native meta() and in case that if there is none, sets it to empty hash.
+	F meta(o:Any) {
 		ret = super(o)
 		ret is not Null returns ret
 		ret = {}
 		super(o, ret)
 		ret
+	}
+
+	doc %STATUS - deprecated
+	doc Use meta() instead.
+	F attrs(*args) {
+		warn("Using deprecated method attrs(). Use meta() instead.")
+		meta(*args)
 	}
 }
 
@@ -394,17 +401,17 @@ section "Inspect built-in types" block _ {
 	doc String representation of native method.
 	doc %RET - "<NativeMethod NAME(PARAMS)>"
 	doc %EX - (%).Arr()[0].Str().echo()  # Outputs: <NativeMethod %(a:Int, b:Int)>
-	F Str(nm:NativeMethod) "<${nm.typeof().name} ${nm.attrs().name}${StrParams(nm)}>"
+	F Str(nm:NativeMethod) "<${nm.typeof().name} ${nm.meta().name}${StrParams(nm)}>"
 
 	# TODO: show arguments:
-	#   "<UserDefinedMethod ${c.attrs().name tor "<anonymous>"}(HERE) at ${location}>"
+	#   "<UserDefinedMethod ${c.meta().name tor "<anonymous>"}(HERE) at ${location}>"
 	doc String representation of a closure
 	doc %RET - Str
 	doc %EX - Real.constructors[-1].Str().echo()  # Outputs: <UserDefinedMethod Real at /usr/share/ngs/stdlib.ngs:350>
 	F Str(c:UserDefinedMethod) {
 		info = c.ip().resolve_instruction_pointer()
 		location = "${info.file}:${info.first_line}" tor "<unknown location>"
-		"<UserDefinedMethod ${c.attrs().name tor "<anonymous>"}${StrParams(c)} at ${location}>"
+		"<UserDefinedMethod ${c.meta().name tor "<anonymous>"}${StrParams(c)} at ${location}>"
 	}
 
 	doc Inspect any value.
@@ -430,15 +437,15 @@ section "Inspect built-in types" block _ {
 		Lines(["${e.typeof().name} of size ${e.len() tor '(unknown size)'}"] + e.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
 	}
 
-	F inspect_attrs(val) {
+	F inspect_meta(val) {
 		keys_meanings = {
 			'%EX': 'Example'
 			'%RET': 'Returns'
 		}
 		collector/Lines() {
-			a = try val.attrs()
+			a = try val.meta()
 			not(a) returns Lines()
-			collect("Attributes")
+			collect("Meta")
 			a.without('doc').each(F(k, v) {
 				collect("  [${k}] = ${v}")
 			})
@@ -465,10 +472,10 @@ section "Inspect built-in types" block _ {
 
 	F inspect(f:Fun) {
 		guard f =~ AnyOf(NativeMethod, UserDefinedMethod)
-		Lines([f.Str()]) + ("  " + inspect_attrs(f))
+		Lines([f.Str()]) + ("  " + inspect_meta(f))
 	}
 
-	F inspect(t:Type) Lines([t.Str()]) + ("  " + inspect_attrs(t))
+	F inspect(t:Type) Lines([t.Str()]) + ("  " + inspect_meta(t))
 
 	doc Inspect MultiMethod
 	doc %RET - Lines
@@ -582,7 +589,6 @@ section "NormalTypeInstance" {
 	doc %EX - }
 	doc %RET - "<TYPE_NAME field1=val1 field2=val2 ...>"
 	F Str(i:NormalTypeInstance) {
-		guard i is not Set  # Temporary workaround. Str(Set) should come after Str(NormalTypeInstance)
 		h = Hash(i)
 		fields_dots = if len(h) > 10 {
 			h .= limit(10)
@@ -1285,7 +1291,7 @@ section "ArrLike" {
 	doc %EX - }
 	type ArrLike(Eachable1)
 
-	F init(al:ArrLike) al.attrs().ArrLike = []
+	F init(al:ArrLike) al.meta().ArrLike = []
 
 	doc ArrLike constructor.
 	doc field - DEPRECATED name of the field that holds the underlying array.
@@ -1302,49 +1308,49 @@ section "ArrLike" {
 
 	F init(al:ArrLike, arr:Arr) {
 		super(al)
-		al.attrs().ArrLike = arr
+		al.meta().ArrLike = arr
 	}
 
 	doc Get length of the underlying array.
-	F len(al:ArrLike)               al.attrs().ArrLike.len()
+	F len(al:ArrLike)               al.meta().ArrLike.len()
 
 	doc Set element in the underlying array.
-	F '[]'(al:ArrLike, idx:Int)     al.attrs().ArrLike[idx]
+	F '[]'(al:ArrLike, idx:Int)     al.meta().ArrLike[idx]
 
 	doc Get element from the underlying array.
-	F '[]='(al:ArrLike, idx:Int, x) al.attrs().ArrLike[idx] = x
+	F '[]='(al:ArrLike, idx:Int, x) al.meta().ArrLike[idx] = x
 
 	doc Get element at the given index or return dflt if the index is out of range (element at the given index does not exist). See get(Arr).
-	F get(al:ArrLike, idx:Int, dflt) al.attrs().ArrLike.get(idx, dflt)
+	F get(al:ArrLike, idx:Int, dflt) al.meta().ArrLike.get(idx, dflt)
 
 	doc Call cb for each element in the underlying array.
 	doc %RET - al
 	F each(al:ArrLike, cb:Fun) {
-		al.attrs().ArrLike.each(cb)
+		al.meta().ArrLike.each(cb)
 		al
 	}
 
 	doc Check whether al has any elements.
-	F Bool(al:ArrLike) al.attrs().ArrLike.Bool()
+	F Bool(al:ArrLike) al.meta().ArrLike.Bool()
 
 	# NOTE: Never run because of Arr(Eachable1)
 	doc Get the underlying array
-	F Arr(al:ArrLike) al.attrs().ArrLike
+	F Arr(al:ArrLike) al.meta().ArrLike
 
 	doc Push an element to the underlying array.
 	F push(al:ArrLike, val) {
-		al.attrs().ArrLike.push(val)
+		al.meta().ArrLike.push(val)
 		al
 	}
 
 	doc Join items to a single string using given separator s
 	doc %RET - Str
-	F join(al:ArrLike, s:Str) al.attrs().ArrLike.join(s)
+	F join(al:ArrLike, s:Str) al.meta().ArrLike.join(s)
 
 	doc Return array made of given field of each element of given array.
 	doc Will throw KeyNotFound if any of the elements does not have the desired field.
 	doc Use get() to handle missing field differently.
-	F .(al:ArrLike, s:Str) al.attrs().ArrLike.(s)
+	F .(al:ArrLike, s:Str) al.meta().ArrLike.(s)
 
 	doc Defines collector { ... collect(...) ... } behaviour for ArrLike.
 	doc Very similar to collector for Arr. See collector(Arr,Fun).
@@ -1431,34 +1437,34 @@ section "HashLike" {
 
 	doc Check whether k is in the HashLike
 	doc %RET - Bool
-	F in(k, hl:HashLike)         k in hl.attrs().HashLike
+	F in(k, hl:HashLike)         k in hl.meta().HashLike
 
 	doc Get number of key-value pairs in a HashLike
 	doc %RET - Int
-	F len(hl:HashLike)           hl.attrs().HashLike.len()
+	F len(hl:HashLike)           hl.meta().HashLike.len()
 
 
 	doc Get value by key. Throws KeyNotFound.
 	doc %AUTO - your_hashlike[k]
-	F '[]' (hl:HashLike, k)      hl.attrs().HashLike[k]
+	F '[]' (hl:HashLike, k)      hl.meta().HashLike[k]
 
 	doc Set value.
 	doc %AUTO - your_hashlike[k] = v
-	F '[]='(hl:HashLike, k, v)   hl.attrs().HashLike[k] = v
+	F '[]='(hl:HashLike, k, v)   hl.meta().HashLike[k] = v
 
 	doc Get value by key. Throws KeyNotFound.
 	doc %AUTO - your_hashlike.literal_key
 	doc %RET - Any
-	F .(hl:HashLike, k)          hl.attrs().HashLike[k]
+	F .(hl:HashLike, k)          hl.meta().HashLike[k]
 
 	doc Set value.
 	doc %AUTO - your_hashlike.literal_key = v
 	doc %RET - v
-	F .=(hl:HashLike, k, v)      hl.attrs().HashLike[k] = v
+	F .=(hl:HashLike, k, v)      hl.meta().HashLike[k] = v
 
 	doc Get value by key or dflt if it does not exist
 	doc %RET - Any
-	F get(hl:HashLike, k, dflt)  hl.attrs().HashLike.get(k, dflt)
+	F get(hl:HashLike, k, dflt)  hl.meta().HashLike.get(k, dflt)
 
 	doc Get value by key or null if it does not exist
 	doc %RET - Any
@@ -1468,23 +1474,23 @@ section "HashLike" {
 	doc %EX - my_hashlike.each(F(k, v) echo("$k=$v"))
 	doc %RET - hl
 	F each(hl:HashLike, cb:Fun) {
-		hl.attrs().HashLike.each(cb)
+		hl.meta().HashLike.each(cb)
 		hl
 	}
 
 	doc Get keys
 	doc %RET - Arr
-	F keys(hl:HashLike)          hl.attrs().HashLike.keys()
+	F keys(hl:HashLike)          hl.meta().HashLike.keys()
 
 	doc Get values
 	doc %RET - Arr
-	F values(hl:HashLike)        hl.attrs().HashLike.values()
+	F values(hl:HashLike)        hl.meta().HashLike.values()
 
 	doc Check whether hl has any elements.
 	doc %RET - Bool
-	F Bool(hl:HashLike)          hl.attrs().HashLike.Bool()
+	F Bool(hl:HashLike)          hl.meta().HashLike.Bool()
 
-	F map_idx_key_val(hl:HashLike, mapper:Fun) hl.attrs().HashLike.map_idx_key_val(mapper)
+	F map_idx_key_val(hl:HashLike, mapper:Fun) hl.meta().HashLike.map_idx_key_val(mapper)
 
 	doc Filter hash. Build new HashLike with kev-value pairs selected by predicate.
 	doc predicate - Test function to be called with one key and one value at a time.
@@ -1492,7 +1498,7 @@ section "HashLike" {
 	doc %RET - value of the same type as hl
 	F filter(hl:HashLike, predicate:Fun) {
 		t = typeof(hl)
-		t(hl.attrs().HashLike.filter(predicate))
+		t(hl.meta().HashLike.filter(predicate))
 	}
 
 	TEST HashLike({"a": 1, "b": 2}).filter(F(k, v) v==1) == HashLike({"a": 1})
@@ -1502,7 +1508,7 @@ section "HashLike" {
 	doc Remove k from hl
 	doc %RET - hl
 	F del(hl:HashLike, k) {
-		hl.attrs().HashLike.del(k)
+		hl.meta().HashLike.del(k)
 		hl
 	}
 
@@ -1512,12 +1518,12 @@ section "HashLike" {
 	doc Create a HashLike.
 	doc h - If provided, used as initial value.
 	doc %EX - HashLike(%{a aha b bee}) # <HashLike a=aha b=bee>
-	F init(hl:HashLike, h:Hash=null) hl.attrs().HashLike = h or {}
+	F init(hl:HashLike, h:Hash=null) hl.meta().HashLike = h or {}
 
 	doc Get the underlying Hash with all the keys/values of the HashLike.
 	doc Note: the returned value is not a copy.
 	doc %RET - Hash
-	F Hash(hl:HashLike) hl.attrs().HashLike
+	F Hash(hl:HashLike) hl.meta().HashLike
 
 	doc Convert HashLike into JSON compatible data structure - object
 	F JsonData(hl:HashLike) hl.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
@@ -1628,7 +1634,7 @@ section "Named Instances" {
 	F .(t:Type, field:Str) {
 		guard field == 'NamedInstances'
 		guard t.is_subtype(NamedInstances)
-		ret = t.attrs().NamedInstances
+		ret = t.meta().NamedInstances
 	}
 
 	doc %AUTO - SUBTYPE_OF_NAMEDINSTANCES.NamedInstances = ...
@@ -1639,7 +1645,7 @@ section "Named Instances" {
 			v is not t throws InvalidArgument("${t.name}.NamedInstances values must be of type ${t.name}").set(key=k, value=v)
 			v.name = k
 		})
-		t.attrs().NamedInstances = ns
+		t.meta().NamedInstances = ns
 
 		keys_to_instances = {}
 		t.NamedInstances.each(F(name, instance) {
@@ -1647,7 +1653,7 @@ section "Named Instances" {
 				keys_to_instances.dflt(value, []).push(instance)
 			})
 		})
-		t.attrs().NamedInstancesByAnyValue = keys_to_instances
+		t.meta().NamedInstancesByAnyValue = keys_to_instances
 	}
 
 	doc %AUTO - SUBTYPE_OF_NAMEDINSTANCES.NamedInstances = ['SOME', 'NAMES', ...]
@@ -1676,7 +1682,7 @@ section "Named Instances" {
 
 		F invalid_arg(s) throw InvalidArgument(s).set(value=value, type=t)
 
-		t.attrs().NamedInstancesByAnyValue.get(value, []).the_one(
+		t.meta().NamedInstancesByAnyValue.get(value, []).the_one(
 			found_none = { invalid_arg("Value ${value} does not identify any named instance of ${t.name}") }
 			found_more = { invalid_arg("Value ${value} is not a unique identifier of an instance of ${t.name}") }
 		)
@@ -1693,15 +1699,15 @@ section "Hook" {
 	doc %RET - Hook
 	F init(hook:Hook) {
 		super(hook)
-		hook.attrs().idx = 0
+		hook.meta().idx = 0
 	}
 
 	doc Add unnamed handler.
 	doc The hook is automatically named "pushed-N" where N is sequential integer.
 	doc %RET - New hook name
 	F push(hook:Hook, handler:UserDefinedMethod) {
-		name = "pushed-${hook.attrs().idx}"
-		hook.attrs().idx += 1
+		name = "pushed-${hook.meta().idx}"
+		hook.meta().idx += 1
 		hook[name] = handler
 		name
 	}
@@ -1710,7 +1716,7 @@ section "Hook" {
 	doc Runs all handlers passing all args.
 	doc args - Arguments to pass to handlers
 	doc %RET - Arr. Results from all the handlers
-	F call(hook:Hook, *args) hook.attrs().HashLike.mapv(X(*args))
+	F call(hook:Hook, *args) hook.meta().HashLike.mapv(X(*args))
 }
 
 # === Real =======================================
@@ -1748,7 +1754,7 @@ section "Type" {
 	doc String representation of a type
 	doc %RET - "<Type NAME>"
 	doc %EX - Real.Str().echo()  # Outputs: <Type Real>
-	F Str(t:Type) "<Type ${t.name} with ${t.constructors.len()} constructor(s) and ${t.attrs().len()} attributes>"
+	F Str(t:Type) "<Type ${t.name} with ${t.constructors.len()} constructor(s) and ${t.meta().len()} meta entries>"
 
 	# TODO: Reorganize and move out of Type section
 	doc Decode (parse) strings such as command line arguments or environment variables to result given type
@@ -1806,14 +1812,10 @@ section "Type" {
 }
 
 doc Set a field on all elements if it's not already set
-doc e - Eachable1 with elements of type NormalTypeInstance or Hash
+doc e - Eachable1
 doc %EX - my_items.dflt("source", "(unknown)")
 doc %RET - e
-F dflt(e:Eachable1, k, v) {
-	guard e.all(AnyOf(NormalTypeInstance, Hash))
-	e.each(X.dflt(k, v))
-	e
-}
+F dflt(e:Eachable1, k, v) e.each(X.dflt(k, v))
 
 TEST [{}, {"x": 1}].dflt("x", 100) == [{"x": 100}, {"x": 1}]
 
@@ -1837,7 +1839,7 @@ F ==(a:NormalTypeInstance, b:NormalTypeInstance) {
 doc Set a key if it's not already set
 doc %EX - mysomething.dflt(k, []).push(elt)
 doc %RET - Key value, the already-existed or new.
-F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
+F dflt(hl:HashLike, k, v) hl.meta().HashLike.dflt(k, v)
 
 doc Check whether x is of type t
 doc %RET - MatchResult
@@ -2499,10 +2501,10 @@ doc %RET - Arr
 doc %EX - [[1], [2,3]].flatten()  # [1,2,3]
 F flatten(e:Eachable1) {
 	guard not(e is Int)
-	guard e.all(Eachable1)
 	collector
-		e.each(F(subarr) {
-			subarr.each(collect)
+		e.each(F(x) {
+			assert(x is Eachable1 and x is not Int, 'flatten() elements must be Eachable1, excluding Int')
+			x.each(collect)
 		})
 }
 
@@ -3266,8 +3268,7 @@ doc arr - Array of Arrays. Each one of the sub-arrays must have exactly two elem
 doc %RET - Hash
 doc %EX - Hash([['a', 1], ['c', 3]])  # {'a': 1, 'c': 3}
 F Hash(arr:Arr) {
-	guard arr.all(Arr)
-	guard arr.all({A.len() == 2})
+	guard arr.all(F(x) x is Arr and len(x) == 2)
 	collector/{}
 		arr.each(F(pair) {
 			collect(*pair)
@@ -4517,7 +4518,7 @@ section "Stats" {
 	doc k - the name of the counter to increment
 	doc %EX - Stats().push("a").push("a").push("b")["a"]  # 2
 	F push(s:Stats, k) {
-		h = s.attrs().HashLike
+		h = s.meta().HashLike
 		h[k] = h.get(k, 0) + 1
 		s
 	}
@@ -4897,7 +4898,7 @@ section "Path" {
 	doc %STATUS - experimental
 	F human_type_name(p) {
 		guard p.is_subtype(Path)
-		if m = p.attrs().doc[''][0] ~ /Represents a (.+) in a file system/ {
+		if m = p.meta().doc[''][0] ~ /Represents a (.+) in a file system/ {
 			m[1]
 		} else {
 			"(failed to extract human readable type desciription of ${p})"
@@ -4917,7 +4918,7 @@ section "Path" {
 		C_S_IFCHR:  CharDevice
 		C_S_IFIFO:  FifoFile
 	}
-	{ STDLIB_FILE_TYPE.attrs({'doc': {'': 'Mapping between S_IFMT bits of st_mode returned by stat()/lstat() and NGS types. All types in this Namespace are subtypes of Path.'}}) }
+	{ STDLIB_FILE_TYPE.meta({'doc': {'': 'Mapping between S_IFMT bits of st_mode returned by stat()/lstat() and NGS types. All types in this Namespace are subtypes of Path.'}}) }
 
 	doc Issue stat() system call. Throws StatFail if the call fails.
 	doc %RET - Stat
@@ -5884,7 +5885,7 @@ doc Convert to string, appropriate for using as argument to external process. No
 doc %AUTO - $(mycommand $str) # str is Str
 F Arg(x:Str) x
 
-# TODO: Consider storing original h in one of the attrs() of the result
+# TODO: Consider storing original h in one of the meta() of the result
 doc Convert a Hash, describing command line arguments, to array of strings, appropriate for using as argument to external process.
 doc Key-value pairs with values of type NoData (null, EmptyBox) are discarded.
 doc Key-value pairs with empty array values are discarded.
@@ -5975,7 +5976,7 @@ F fork() {
 	debug("process", "PID after fork: $pid")
 	if pid == 0 section "child" {
 		global exit_hook
-		exit_hook .= filter({ B.attrs() =~ {'keep_after_fork': true} })
+		exit_hook .= filter({ B.meta() =~ {'keep_after_fork': true} })
 	}
 	pid
 }
@@ -7049,14 +7050,14 @@ doc %RET - Lines
 F exception_specific_message(mnf:MethodNotFound) {
 
 	F name(callable:Fun) {
-		methods_names = callable.Arr().map(attrs).get('name')
+		methods_names = callable.Arr().map(meta).get('name')
 		if methods_names and methods_names.all(X == methods_names[0]) {
 			methods_names[0]
 		}
 	}
 
 	F name(callable:UserDefinedMethod) {
-		callable.attrs().get('name')
+		callable.meta().get('name')
 	}
 
 	mn = name(mnf.callable) or '(method name unavailable, maybe anonymous)'
@@ -7129,7 +7130,7 @@ F init(lines:Lines, backtrace:Backtrace, parent_backtrace=null) {
 		# Don't print frames that overlap with parent exception
 		frame.ip == (try parent_frames[idx].ip) returns
 		l = resolve_instruction_pointer(frame.ip)
-		closure = " [in ${frame.closure.attrs().name}]" tor ''
+		closure = " [in ${frame.closure.meta().name}]" tor ''
 		push(lines, "Frame $idx: ${l.file}:${l.first_line}:${l.first_column} - ${l.last_line}:${l.last_column}$closure")
 	})
 }
@@ -7229,7 +7230,7 @@ block _ {
 			}
 		}
 	}
-	exit_hook.print_exception.attrs().keep_after_fork = true
+	exit_hook.print_exception.meta().keep_after_fork = true
 
 }
 
@@ -7711,7 +7712,7 @@ section "Loading code" {
 
 
 	F bootstrap_print_compilation_warnings(program_bytecode, fname) {
-		program_bytecode.attrs().warnings.each(F(w) {
+		program_bytecode.meta().warnings.each(F(w) {
 			wl = w.location
 			warn("${fname}:${wl.first_line}:${wl.first_column} warning: ${w.message}")
 		})

@@ -24,7 +24,7 @@ ns {
 	doc %EX - ArgvMatcher('positionals', 'filters') do
 	doc %EX - F main(filters:Arr, allreg:Bool=false) ...
 	F ArgvMatcher(option:Str, value, f:UserDefinedMethod) {
-		f.attrs().dflt('ArgvMatcher', {}).set(option, value)
+		f.meta().dflt('ArgvMatcher', {}).set(option, value)
 		f
 	}
 
@@ -119,7 +119,7 @@ ns {
 			}
 		}
 
-		if (param_name = try udm.attrs().ArgvMatcher.positionals) {
+		if (param_name = try udm.meta().ArgvMatcher.positionals) {
 			debug("ARGV_MATCHER", "Positionals go to specified parameter positionals=${positionals} parameter=${param_name}")
 			set_match(positionals)
 			positionals = []

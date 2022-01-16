@@ -30,6 +30,11 @@ tests:
 install: build
 	(cd build && $(SUDO) make install)
 
+.PHONY: test-installation
+test-installation:
+	@NGS_PATH=$$(command -v ngs) && echo "-> NGS is available at: $${NGS_PATH}"
+	@MAN_PATH=$$(man -w ngs) && echo "-> NGS man is available at: $${MAN_PATH}"
+
 .PHONY: clean
 clean:
 	rm -rf build
