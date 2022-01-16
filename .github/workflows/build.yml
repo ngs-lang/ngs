@@ -15,14 +15,14 @@ jobs:
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
-          apt-get update
-          apt-get install -y man
+          sudo apt-get update
+          sudo apt-get install -y man
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
-            apt-get install -y g++-${{ matrix.version }}
+            sudo apt-get install -y g++-${{ matrix.version }}
             echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
             echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
           else
-            apt-get install -y clang-${{ matrix.version }}
+            sudo apt-get install -y clang-${{ matrix.version }}
             echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
             echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
           fi
@@ -144,7 +144,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
-          yum -y install epel-release dnf-plugins-core man
+          yum -y install epel-release dnf-plugins-core sudo man
           yum config-manager --set-enabled powertools
           yum -y install gcc-toolset-${{ matrix.version }}-gcc-c++
       - name: Install and Test
@@ -165,7 +165,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
-          yum -y install centos-release-scl epel-release man
+          yum -y install centos-release-scl epel-release sudo man
           yum -y install devtoolset-${{ matrix.version }}
       - name: Install and Test
         run: (source /opt/rh/devtoolset-${{ matrix.version }}/enable && ./install.sh && make tests test-installation)
