@@ -1,0 +1,24 @@
+# TODO: synchronous adapters
+# TODO: search "select vs epoll vs kqueue"
+	# TODO: read http://docs.libuv.org/en/v1.x/design.html
+
+doc Work in progress - https://github.com/ngs-lang/ngs/issues/526
+type Channel
+	type FileChannel
+type ChannelPipeline(ArrLike)  # TODO in push/unshift: handlerAdded, handlerRemoved
+type ChannelHandler
+
+F init(fc:FileChannel, f:File) {
+	fd = c_open(f.path, 'r')  # XXX: how about writing?
+	fd <= 0 throws FileIOFail("Failed to open the file ${f.path}").set('file', f)
+	fc.fd = fd
+	fc.pipeline = ChannelPipeline()
+}
+
+doc %EX - File("vm.h").Channel()  # <FileChannel fd=3>
+F Channel(f:File) FileChannel(f)
+
+F read(fc:FileChannel) {
+	# Start async read operation
+	# TODO: think about synchronous variant
+}
