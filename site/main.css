@@ -14,7 +14,18 @@ h1, h2, h3, h4, h5, h6 {
 h1, h2 {
 	text-align: center;
 }
-
+h2 {
+	font-size: 1.7rem;
+}
+h3, .icon-system {
+	font-size: 1.4rem;
+	display: block;
+	margin-top: 1.5rem;
+	margin-bottom: 0.5rem;
+}
+h4 {
+	font-size: 1.2rem;
+}
 a {
 	color: #6F6F6F;
 	text-decoration: underline;
