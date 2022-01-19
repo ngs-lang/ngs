@@ -14,7 +14,7 @@ const options = {
 const server = https.createServer(options, function (req, res) {
 	fileServer.serve(req, res);
 });
-const io_server = new socketIO.Server(server, {});
+const io_server = new socketIO.Server(server);
 server.listen(8443);
 
 const commands = {
