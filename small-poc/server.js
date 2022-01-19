@@ -1,5 +1,6 @@
 const https = require('https');
 const fs = require('fs');
+const socketIO = require('socket.io');
 const node_static = require('node-static');
 const fileServer = new node_static.Server('./www');
 
@@ -13,9 +14,7 @@ const options = {
 const server = https.createServer(options, function (req, res) {
 	fileServer.serve(req, res);
 });
-
-const io_server = require('socket.io').listen(server);
-
+const io_server = new socketIO.Server(server, {});
 server.listen(8443);
 
 const commands = {
