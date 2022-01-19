@@ -230,7 +230,7 @@ cd ngs && ./install.sh</code></pre>
 <script>
 	setTimeout(function () {
 		document.querySelectorAll(".hljs").forEach(hljs.highlightElement);
-		var options = {
+		window.highlightJsBadge({
 			contentSelector: ".container",
 			// Delay in ms used for `setTimeout` before badging is applied
 			// Use if you need to time highlighting and badge application
@@ -241,8 +241,7 @@ cd ngs && ./install.sh</code></pre>
 			copyIconClass: "fa fa-copy",
 			// CSS class(es) used to render the done icon.
 			checkIconClass: "fa fa-check text-success",
-		};
-		window.highlightJsBadge(options);
+		});
 	},10);
 </script>
 </body>
