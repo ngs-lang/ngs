@@ -132,40 +132,36 @@
         <div class="col-sm">
             <h2 class="text-left">Install</h2>
             <div class="row justify-content-between">
-                <div class="col-8"><h4>curl</h4></div>
+                <div class="col-8"><h3>Curl</h3></div>
                 <div class="col-4 align-self-center text-right">
-                    <h4>
-                        <span class="fab fa-apple icon-system"></span>
-                        <span class="fab fa-linux icon-system" style="padding-left: 10px"></span>
-                    </h4>
+                    <span class="fab fa-apple icon-system"></span>
+                    <span class="fab fa-linux icon-system" style="padding-left: 10px"></span>
                 </div>
             </div>
             <pre><code class="bash hljs">curl https://ngs-lang.org/install.sh | bash</code></pre>
             <div class="row justify-content-between">
-                <div class="col-8"><h4>Git</h4></div>
+                <div class="col-8"><h3>Git</h3></div>
                 <div class="col-4 align-self-center text-right">
-                    <h4>
-                        <span class="fab fa-apple icon-system"></span>
-                        <span class="fab fa-linux icon-system" style="padding-left: 10px"></span>
-                    </h4>
+                    <span class="fab fa-apple icon-system"></span>
+                    <span class="fab fa-linux icon-system" style="padding-left: 10px"></span>
                 </div>
             </div>
             <pre><code class="bash hljs">git clone git@github.com:ngs-lang/ngs.git
 cd ngs && ./install.sh</code></pre>
 
             <div class="row justify-content-between">
-                <div class="col-8"><h4>Homebrew</h4></div>
-                <div class="col-2 align-self-center text-right"><h4><span class="fab fa-apple icon-system"></span></h4></div>
+                <div class="col-8"><h3>Homebrew</h3></div>
+                <div class="col-2 align-self-center text-right"><span class="fab fa-apple icon-system"></span></div>
             </div>
             <pre><code class="bash hljs">brew install ngs</code></pre>
 
             <div class="row justify-content-between">
-                <div class="col-8"><h4>Snap</h4></div>
-                <div class="col-2 align-self-center text-right"><h4><span class="fab fa-linux icon-system"></span></h4></div>
+                <div class="col-8"><h3>Snap</h3></div>
+                <div class="col-2 align-self-center text-right"><span class="fab fa-linux icon-system"></span></div>
             </div>
             <pre><code class="bash hljs">sudo snap install ngs</code></pre>
 
-            <h4>Jupyter Notebook</h4>
+            <h3>Jupyter Notebook</h3>
             <pre><code class="plaintext hljs">
 !curl "https://raw.githubusercontent.com/ngs-lang/ngs-ipython-extension/master/ngs-install.sh" | bash
 
@@ -177,11 +173,11 @@ cd ngs && ./install.sh</code></pre>
 
             <h2 class="text-left">Run Without Installing</h2>
 
-            <h4>Docker</h4>
+            <h3>Docker</h3>
             <pre><code class="bash hljs">docker run -it --rm ngslang/ngs</code></pre>
 
 
-            <h4>Docker with Jupyter Notebook</h4>
+            <h3>Docker with Jupyter Notebook</h3>
             <pre><code class="bash hljs">docker run -p 8888:8888 ngslang/ngs-jupyter</code></pre>
 
 
@@ -220,16 +216,21 @@ cd ngs && ./install.sh</code></pre>
       crossorigin="anonymous">
 
 <!-- highlightjs - code highlighting -->
-<link rel="stylesheet"
-      href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.0/styles/vs.min.css">
-<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.4.0/styles/vs.min.css"
+      integrity="sha512-AVoZ71dJLtHRlsgWwujPT1hk2zxtFWsPlpTPCc/1g0WgpbmlzkqlDFduAvnOV4JJWKUquPc1ZyMc5eq4fRnKOQ=="
+      crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.4.0/highlight.min.js"
+        integrity="sha512-IaaKO80nPNs5j+VLxd42eK/7sYuXQmr+fyywCNA0e+C6gtQnuCXNtORe9xR4LqGPz5U9VpH+ff41wKs/ZmC3iA=="
+        crossorigin="anonymous"></script>
 
 <!-- highlightjs-badge - copy button for highlightjs -->
-<script src="https://unpkg.com/highlightjs-badge/highlightjs-badge.min.js"></script>
+<script src="https://unpkg.com/highlightjs-badge@0.1.9/highlightjs-badge.min.js"
+        integrity="sha512-gguWIqcGs/CaJttRlYrw8Rd904nQI3Y0/wzDFwCs7PtAjXA3gzFzD10XBM2XrUI4K4PNi4N6W6qhTITMS9lBwQ=="
+        crossorigin="anonymous"></script>
 <script>
 	setTimeout(function () {
 		document.querySelectorAll(".hljs").forEach(hljs.highlightElement);
-		var options = {
+		window.highlightJsBadge({
 			contentSelector: ".container",
 			// Delay in ms used for `setTimeout` before badging is applied
 			// Use if you need to time highlighting and badge application
@@ -240,8 +241,7 @@ cd ngs && ./install.sh</code></pre>
 			copyIconClass: "fa fa-copy",
 			// CSS class(es) used to render the done icon.
 			checkIconClass: "fa fa-check text-success",
-		};
-		window.highlightJsBadge(options);
+		});
 	},10);
 </script>
 </body>
