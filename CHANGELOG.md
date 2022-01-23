@@ -15,10 +15,12 @@
 * The `?` operator now takes `Any` instead of `Fun` as the right argument.
 * Fix `tr` exception when pattern is a `Hash` and it should match not at the top level.
 * `Argv` now accepts `Repeat` keys: `{Repeat('--repeat'): my_arr}`
+* Support `my_arr[idx] = val` for negative `idx`es.
 
 ### Deprecated
 
 * `Argv` - `['--repeat']` is deprecated in favor of `Repeat('--repeat')`
+* `attrs()`, use `meta()` instead
 
 ## 2021-11-21 Version 0.2.13
 

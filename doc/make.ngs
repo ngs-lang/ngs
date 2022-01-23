@@ -16,6 +16,7 @@
 	Table
 	Thread
 	test
+	tr
 
 	# TODO: Do not list all types on the namespace page,
 	# just up to TYPES_THRESHOLD, probably the parents.
@@ -67,8 +68,8 @@
 			s.replace(/(^[.]+)|[^-._a-zA-Z0-9]/, F(char) '%' + encode_hex(char)) + sfx
 		}
 
-		F object_attr(x, a:Str) (x.attrs() or {}).get(a).Box()
-		F object_doc(x) x.object_attr('doc')
+		F object_meta(x, a:Str) (x.meta() or {}).get(a).Box()
+		F object_doc(x) x.object_meta('doc')
 		F object_doc_attr(x, a:Str) object_doc(x).filter(a in X).map(X[a]).map(ensure_array)
 
 		obj_to_description = {}
@@ -434,7 +435,7 @@
 				# 	}
 				# 	process_method(Str(name), impls.filter(is_in_ns(X, ns)))
 				# })
-				nd.fields = namespace.attrs().Box().get({}).get('doc', {}).without('').reject(X ~ /^%/).mapv(ensure_array)
+				nd.fields = namespace.meta().Box().get({}).get('doc', {}).without('').reject(X ~ /^%/).mapv(ensure_array)
 				nd.objects_descriptions = {}
 				nd.objects_by_type = {
 					MultiMethodDescription: []
@@ -963,7 +964,7 @@
 			status("Augmenting methods information")
 			methods = obj_to_description.values().filter(MethodDescription)
 			for md in methods {
-				namespace = md.method.object_attr('ns').map(obj_to_description.get(X)).reject(NoData)
+				namespace = md.method.object_meta('ns').map(obj_to_description.get(X)).reject(NoData)
 				md.containing_nd = namespace.get(md.containing_nd)
 			}
 		}

@@ -5,7 +5,7 @@ ns {
 
 	}
 
-	_exports.attrs(_doc.Arr()[0].attrs())
+	_exports.meta(_doc.Arr()[0].meta())
 	global init, push, inspect, Arr
 
 	doc Document part. May represent one element (which might have children) or group of elements.

@@ -1,0 +1,102 @@
+# TODO: synchronous adapters
+# TODO: search "select vs epoll vs kqueue"
+	# TODO: read http://docs.libuv.org/en/v1.x/design.html
+
+doc Work in progress - https://github.com/ngs-lang/ngs/issues/526
+type Channel
+	type FileChannel
+type ChannelPipeline
+	# TODO in push/unshift: handlerAdded, handlerRemoved
+type ChannelHandler
+type ChannelHandlerContext
+
+section "Channel" {
+	# src/main/java/io/netty/bootstrap/ServerBootstrap.java
+	F init(c:Channel) {
+		c.pipeline = ChannelPipeline(c)
+	}
+
+}
+
+section "ChannelHandler" {
+	F on_active(ch:ChannelHandler, chc:ChannelHandlerContext) {
+		# TODO: call next filter
+		chc.fire_on_active()
+
+	}
+
+}
+
+section "ChannelHandlerContext" {
+	F init(chc:ChannelHandlerContext, handler:ChannelHandler) {
+		chc.handler = handler
+	}
+
+	F fire_on_active(chc:ChannelHandlerContext) {
+		if chc.next == null {
+			warn('fire_on_active - no next')
+			return
+		}
+		chc.next.on_active(chc) # chc is not a List and has no .next -> exception
+		chc
+	}
+
+	F on_active(chc:ChannelHandlerContext) {
+		chc.handler.on_active(chc)
+		chc
+	}
+
+	F inspect(chc:ChannelHandlerContext) "<${chc.typeof().name} TODO>"
+
+
+}
+
+section "ChannelPipeline" {
+	F init(cp:ChannelPipeline, channel:Channel) {
+		cp.channel = channel
+		cp.head = null
+		cp.tail = null
+	}
+
+	F Bool(cp:ChannelPipeline) cp.head != null
+
+	F push(cp:ChannelPipeline, ch:ChannelHandler) {
+		chc = ChannelHandlerContext(ch).set(prev=cp.tail, next=null)
+		if cp {
+			cp.tail.next = chc
+			cp.tail = chc
+		} else {
+			cp.head = chc
+			cp.tail = chc
+		}
+	}
+
+	F on_active(cp:ChannelPipeline) {
+		assert(cp.first, 'on_active called on empty ChannelPipeline')
+		cp.first.val.on_active()
+		cp
+	}
+
+	F inspect(cp:ChannelPipeline) "<${cp.typeof().name} TODO>"
+
+}
+
+section "FileChannel" {
+	F init(fc:FileChannel, f:File) {
+		super(fc)
+		fd = c_open(f.path, 'r')  # XXX: how about writing?
+		fd <= 0 throws FileIOFail("Failed to open the file ${f.path}").set('file', f)
+		fc.fd = fd
+	}
+
+	doc %EX - File("vm.h").Channel()  # <FileChannel fd=3>
+	F Channel(f:File) FileChannel(f)
+
+	# TODO: Keep in mind the `for line in File("1.txt") ...` use case
+	F read(fc:FileChannel) {
+		# Start async read operation
+		# TODO: think about synchronous variant
+	}
+}
+
+# Channel().pipeline.push(ChannelHandler()).on_active()

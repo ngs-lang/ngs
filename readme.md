@@ -150,6 +150,10 @@ steps:
 	- run: ngs -pi 'sum(10..100)'
 ```
 
+### Running NGS as AWS Lambda Custom Runtime
+
+To run NGS as AWS Lambda Function see https://github.com/ngs-lang/ngs-aws-lambda
+
 ### Using iPython or Jupyter Notebook
 
 Please refer to extension located in https://github.com/ngs-lang/ngs-ipython-extension
