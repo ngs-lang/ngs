@@ -4,7 +4,7 @@ on: push
 jobs:
   build-internal-apt:
     timeout-minutes: 5
-    name: Build in ${{ matrix.compiler }}
+    name: Build in ${{ matrix.compiler }} (${{ matrix.container }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -31,7 +31,7 @@ jobs:
 
   build-external-pacman:
     timeout-minutes: 5
-    name: Build in ${{ matrix.compiler }}
+    name: Build in ${{ matrix.compiler }} (${{ matrix.container }})
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
