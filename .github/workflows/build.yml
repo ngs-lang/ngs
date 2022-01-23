@@ -4,7 +4,7 @@ on: push
 jobs:
   build-internal-apt:
     timeout-minutes: 5
-    name: Build in ${{ matrix.compiler }} (${{ matrix.container }})
+    name: Build in ${{ matrix.compiler }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
