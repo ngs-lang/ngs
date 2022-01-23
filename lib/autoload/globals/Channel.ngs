@@ -5,7 +5,7 @@
 doc Work in progress - https://github.com/ngs-lang/ngs/issues/526
 type Channel
 	type FileChannel
-type ChannelPipeline(List)
+type ChannelPipeline
 	# TODO in push/unshift: handlerAdded, handlerRemoved
 type ChannelHandler
 type ChannelHandlerContext
@@ -33,6 +33,10 @@ section "ChannelHandlerContext" {
 	}
 
 	F fire_on_active(chc:ChannelHandlerContext) {
+		if chc.next == null {
+			warn('fire_on_active - no next')
+			return
+		}
 		chc.next.on_active(chc) # chc is not a List and has no .next -> exception
 		chc
 	}
@@ -42,18 +46,29 @@ section "ChannelHandlerContext" {
 		chc
 	}
 
+	F inspect(chc:ChannelHandlerContext) "<${chc.typeof().name} TODO>"
+
 
 }
 
 section "ChannelPipeline" {
 	F init(cp:ChannelPipeline, channel:Channel) {
-		super(cp)
 		cp.channel = channel
+		cp.head = null
+		cp.tail = null
 	}
 
+	F Bool(cp:ChannelPipeline) cp.head != null
+
 	F push(cp:ChannelPipeline, ch:ChannelHandler) {
-		chc = ChannelHandlerContext(ch)
-		super(cp, chc)
+		chc = ChannelHandlerContext(ch).set(prev=cp.tail, next=null)
+		if cp {
+			cp.tail.next = chc
+			cp.tail = chc
+		} else {
+			cp.head = chc
+			cp.tail = chc
+		}
 	}
 
 	F on_active(cp:ChannelPipeline) {
@@ -62,6 +77,7 @@ section "ChannelPipeline" {
 		cp
 	}
 
+	F inspect(cp:ChannelPipeline) "<${cp.typeof().name} TODO>"
 
 }
 
