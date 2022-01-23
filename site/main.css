@@ -7,12 +7,32 @@ h1, h2, h3, h4, h5, h6 {
 	color: #7B1FA2;
 }
 
+.pitch {
+	color: black;
+}
+
 h1, h2 {
 	text-align: center;
 }
-
+h2 {
+	font-size: 1.7rem;
+}
+h3, .icon-system {
+	font-size: 1.4rem;
+	display: block;
+	margin-top: 1.5rem;
+	margin-bottom: 0.5rem;
+}
+h4 {
+	font-size: 1.2rem;
+}
 a {
-	color: #00897b;
+	color: #6F6F6F;
+	text-decoration: underline;
+}
+a:hover {
+	color: #7B1FA2;
+	text-decoration: none;
 }
 
 code {
@@ -70,8 +90,64 @@ nav .unobtrusive {
 	height: 40px;
 }
 
+.menu-item {
+	font-size: 110%;
+	padding-left: 12px;
+	padding-right: 12px;
+}
+
 .main-thing-on-page {
 	font-weight: 400;
 	font-size: 120%;
-	font-style: italic;
+}
+
+.sr-only {
+	position:absolute;
+	width:1px;
+	height:1px;
+	padding:0;
+	margin:-1px;
+	overflow:hidden;
+	clip:rect(0,0,0,0);
+	white-space:nowrap;
+	border-width:0
+}
+.ease-in-out {
+	transition-timing-function: cubic-bezier(.4,0,.2,1);
+}
+.transition {
+	transition-property: background-color,border-color,color,fill,stroke,opacity,box-shadow,transform;
+}
+.duration-150 {
+	transition-duration:.15s
+}
+.icon-link {
+	--text-opacity: 1;
+	color: #6F6F6F;
+	color: rgba(111, 111, 111,var(--text-opacity));
+	text-decoration: none;
+	cursor: pointer;
+}
+.icon-link:hover {
+	--text-opacity:1;
+	color: #7B1FA2;
+	color:rgba(123,31,162,var(--text-opacity));
+	text-decoration: none;
+}
+.icon-link i {
+	padding-left: 50%;
+	padding-right: 50%;
+}
+.icon-link p {
+	text-align: center;
+}
+.icon-system {
+	color: #6F6F6F;
+}
+.meeting-container {
+	background: lightgoldenrodyellow;
+	border-radius: 0px 0px 10px 10px;
+}
+pre, code {
+	white-space: pre-wrap;
 }
