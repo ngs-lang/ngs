@@ -29,6 +29,24 @@ jobs:
       - name: Install and Test
         run: (./install.sh && make tests test-installation)
 
+  build-external-pacman:
+    timeout-minutes: 5
+    name: Build in GCC
+    runs-on: ubuntu-20.04
+    container:
+      image: ${{ matrix.container }}
+      options: --user root
+    strategy:
+      matrix:
+        container: [ "archlinux:base-20220116.0.44468" ]
+        compiler: [ "gcc", "clang" ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Compiler
+        run: pacman -Sy --noconfirm man-db ${{ matrix.compiler }}
+      - name: Install and Test
+        run: (./install.sh && make tests test-installation)
+
   build-external-apt-gcc:
     timeout-minutes: 5
     name: Build in GCC
