@@ -37,10 +37,16 @@ else
 		  fi
 		fi
 		$SUDO yum groupinstall -y "Development Tools"
-	else
+	elif type pacman &>/dev/null;then
+		echo "  + On Linux / pacman. Installing apt packages."
+		$SUDO pacman -Sy --noconfirm peg make cmake pandoc pkgconfig
+	elif type apt &>/dev/null;then
 		echo "  + On Linux / apt. Installing apt packages."
 		$SUDO apt-get install -y libgc-dev libffi-dev libjson-c-dev peg libpcre3-dev make cmake pandoc pkg-config build-essential
 		type awk || $SUDO apt-get install -y gawk
+	else
+		echo "ERROR: No supported package manager found! Accepted package managers are: apt, yum and pacman. Open an issue in github if any other is required."
+		exit 1
 	fi
 fi
 
