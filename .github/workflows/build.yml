@@ -4,7 +4,7 @@ on: push
 jobs:
   build-internal-apt:
     timeout-minutes: 5
-    name: Build in GCC
+    name: Build in ${{ matrix.compiler }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -31,7 +31,7 @@ jobs:
 
   build-external-pacman:
     timeout-minutes: 5
-    name: Build in GCC
+    name: Build in ${{ matrix.compiler }}
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
@@ -43,7 +43,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup Compiler
-        run: pacman -Sy --noconfirm man-db ${{ matrix.compiler }}
+        run: |
+          pacman -Sy --noconfirm man-db ${{ matrix.compiler }}
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            echo "CC=gcc" >> $GITHUB_ENV
+            echo "CXX=g++" >> $GITHUB_ENV
+          else
+            echo "CC=clang" >> $GITHUB_ENV
+            echo "CXX=clang++" >> $GITHUB_ENV
+          fi
       - name: Install and Test
         run: (./install.sh && make tests test-installation)
 
