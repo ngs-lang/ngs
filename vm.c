@@ -29,7 +29,6 @@
 
 // OPEN(2), LSEEK(2), WAIT(2)
 // #define _POSIX_SOURCE
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <fcntl.h>
@@ -48,7 +47,6 @@
 #include "vm.h"
 #include "ast.h"
 #include "compile.h"
-#include "decompile.h"
 #include "syntax.h"
 #include "syntax.auto.h"
 
@@ -134,8 +132,8 @@ char *opcodes_names[] = {
 #define EXPECT_STACK_DEPTH(n) assert(ctx->stack_ptr >= (n));
 #define PUSH(v) assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr++] = v
 #define PUSH_NOCHECK(v) ctx->stack[ctx->stack_ptr++] = v
-#define POP(dst) assert(ctx->stack_ptr); ctx->stack_ptr--; dst = ctx->stack[ctx->stack_ptr]
-#define POP_NOCHECK(dst) ctx->stack_ptr--; dst = ctx->stack[ctx->stack_ptr]
+#define POP(dst) assert(ctx->stack_ptr); ctx->stack_ptr--; (dst) = ctx->stack[ctx->stack_ptr]
+#define POP_NOCHECK(dst) ctx->stack_ptr--; (dst) = ctx->stack[ctx->stack_ptr]
 #define FIRST (ctx->stack[ctx->stack_ptr-1])
 #define TOP FIRST
 #define SECOND (ctx->stack[ctx->stack_ptr-2])
@@ -143,12 +141,11 @@ char *opcodes_names[] = {
 #define DUP assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr] = ctx->stack[ctx->stack_ptr-1]; ctx->stack_ptr++;
 #define REMOVE_TOP assert(ctx->stack_ptr); ctx->stack_ptr--
 #define REMOVE_TOP_NOCHECK ctx->stack_ptr--
-#define REMOVE_TOP_N(n) DEBUG_VM_RUN("Popping %d argument(s) after call from stack\n", (int)n); assert(ctx->stack_ptr >= (unsigned int)n); ctx->stack_ptr-=n;
-#define REMOVE_TOP_N_NOCHECK(n) DEBUG_VM_RUN("Popping %d argument(s) after call from stack\n", (int)n); ctx->stack_ptr-=n;
+#define REMOVE_TOP_N(n) DEBUG_VM_RUN("Popping %d argument(s) after call from stack\n", (int)(n)); assert(ctx->stack_ptr >= (unsigned int)(n)); ctx->stack_ptr-=(n);
+#define REMOVE_TOP_N_NOCHECK(n) DEBUG_VM_RUN("Popping %d argument(s) after call from stack\n", (int)(n)); ctx->stack_ptr-=(n);
 #define GLOBALS (vm->globals)
 #define THIS_FRAME (ctx->frames[ctx->frame_ptr-1])
 #define THIS_FRAME_CLOSURE (THIS_FRAME.closure)
-#define UPPER_FRAME (ctx->frames[ctx->frame_ptr-2])
 #define DEEPER_FRAME (ctx->frames[ctx->frame_ptr])
 #define LOCALS (THIS_FRAME.locals)
 #define UPLEVELS CLOSURE_OBJ_UPLEVELS(THIS_FRAME_CLOSURE)
@@ -249,12 +246,12 @@ METHOD_RESULT native_ ## name ## _real_real METHOD_PARAMS { \
 #define ARG_DATA_PTR(n) OBJ_DATA_PTR(argv[n])
 
 #define BYTECODE_ADD(ptr, type, val) \
-	*(type *) ptr = val; \
-	ptr += sizeof(type);
+	*(type *) (ptr) = val; \
+	(ptr) += sizeof(type);
 
 #define BYTECODE_GET(dst, ptr, type) \
-	dst = *(type *) ptr; \
-	ptr += sizeof(type);
+	dst = *(type *) (ptr); \
+	(ptr) += sizeof(type);
 
 INT_METHOD(plus, +)
 INT_METHOD(minus, -)
@@ -1108,8 +1105,6 @@ METHOD_RESULT native_c_mktime METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(tt));
 }
 
-
-METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_normal_type(argv[0])); }
 METHOD_RESULT native_type_str_doc METHOD_PARAMS {
 	*result = make_normal_type(argv[0]);
 	set_hash_key(OBJ_META(*result), make_string("doc"), argv[1]);
@@ -1442,11 +1437,6 @@ METHOD_RESULT native_c_pthreadmutext METHOD_PARAMS {
 	METHOD_RETURN(make_pthread_mutex());
 }
 
-METHOD_RESULT native_c_pthreadmutext_pma METHOD_PARAMS {
-	(void) argv;
-	METHOD_RETURN(make_pthread_mutex());
-}
-
 METHOD_RESULT native_c_pthreadmutexattrt METHOD_PARAMS {
 	(void) argv;
 	METHOD_RETURN(make_pthread_mutexattr());
@@ -1658,18 +1648,6 @@ METHOD_RESULT native_c_ffi_call EXT_METHOD_PARAMS {
 METHOD_RESULT native_c_access METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(access(obj_to_cstring(argv[0]), GET_INT(argv[1]))));
 }
-
-
-
-#define SETUP_FD_SET(name, arg_idx) \
-	FD_ZERO (&name); \
-	for(i=0; i<OBJ_LEN(argv[arg_idx]); i++) { \
-		tmp = GET_INT(ARRAY_ITEMS(argv[arg_idx])[i]); \
-		FD_SET(tmp, &name); \
-		if(tmp > nfds) { \
-			nfds = tmp; \
-		} \
-	};
 
 #ifdef HAVE_POLL_H
 // WIP
@@ -4851,7 +4829,7 @@ BYTECODE_HANDLE *ngs_start_unserializing_bytecode(char *data) {
 	h->data = data;
 	h->next_section_num = 0;
 
-	if(memcmp(p, BYTECODE_SIGNATURE, strlen(BYTECODE_SIGNATURE))) {
+	if(memcmp(p, BYTECODE_SIGNATURE, strlen(BYTECODE_SIGNATURE)) != 0) {
 		assert(0 == "Bytecode has invalid signature");
 	}
 	p += strlen(BYTECODE_SIGNATURE);
