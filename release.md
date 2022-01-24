@@ -53,3 +53,4 @@ This document describes releasing a new version of NGS.
 	* `rm -rf build`
 	* `make build`
 * `git commit -am 'Organizing after release'`
+* [optional - generally maintained by the community] Create PR for homebrew similar to https://github.com/Homebrew/homebrew-core/pull/68148
