@@ -73,11 +73,9 @@ ns {
 		}
 
 		F fire(cp:ChannelPipeline, ev:ChannelEvent, *args) {
-			log("FIRE ${cp.Hash().keys()}")
 			assert(cp.head != null, 'on_active called on empty ChannelPipeline')
 			cp.head.on_event(ev, *args)
 		}
-
 
 		F inspect(cp:ChannelPipeline) "<${cp.typeof().name} TODO>"
 
@@ -101,4 +99,4 @@ ns {
 		}
 	}
 }
-# Channel().pipeline.push(ChannelHandler()).on_active()
+# Channel().pipeline.push(ChannelHandler()).fire(ChannelEvent::active)
