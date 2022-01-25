@@ -128,9 +128,9 @@ char *opcodes_names[] = {
 	"MULTIMETHOD_REVERSE",
 };
 
-
+#define ASSERT_STACK_SPACE if(ctx->stack_ptr>=MAX_STACK) goto stack_overflow_exception;
 #define EXPECT_STACK_DEPTH(n) assert(ctx->stack_ptr >= (n));
-#define PUSH(v) assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr++] = v
+#define PUSH(v) ASSERT_STACK_SPACE; ctx->stack[ctx->stack_ptr++] = v
 #define PUSH_NOCHECK(v) ctx->stack[ctx->stack_ptr++] = v
 #define POP(dst) assert(ctx->stack_ptr); ctx->stack_ptr--; (dst) = ctx->stack[ctx->stack_ptr]
 #define POP_NOCHECK(dst) ctx->stack_ptr--; (dst) = ctx->stack[ctx->stack_ptr]
@@ -138,7 +138,7 @@ char *opcodes_names[] = {
 #define TOP FIRST
 #define SECOND (ctx->stack[ctx->stack_ptr-2])
 #define THIRD (ctx->stack[ctx->stack_ptr-3])
-#define DUP assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr] = ctx->stack[ctx->stack_ptr-1]; ctx->stack_ptr++;
+#define DUP ASSERT_STACK_SPACE; ctx->stack[ctx->stack_ptr] = ctx->stack[ctx->stack_ptr-1]; ctx->stack_ptr++;
 #define REMOVE_TOP assert(ctx->stack_ptr); ctx->stack_ptr--
 #define REMOVE_TOP_NOCHECK ctx->stack_ptr--
 #define REMOVE_TOP_N(n) DEBUG_VM_RUN("Popping %d argument(s) after call from stack\n", (int)(n)); assert(ctx->stack_ptr >= (unsigned int)(n)); ctx->stack_ptr-=(n);
@@ -2620,6 +2620,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 				MKSUBTYPE(JsonDecodeFail, DecodeFail);
 				_doc(vm, "", "Represents an error decoding JSON data.");
 
+			MKSUBTYPE(StackOverflow, Error);
+			_doc(vm, "", "Represents a stack overflow error.");
+
 	MKTYPE(Backtrace);
 	_doc(vm, "", "Represents stack trace");
 	_doc(vm, "frames", "Array of locations. Each element of the array is a Hash with \"ip\" and \"closure\" properties.");
@@ -4761,6 +4764,16 @@ do_jump:
 
 end_main_loop:
 	return METHOD_OK;
+
+stack_overflow_exception:
+	{
+		VALUE exc;
+		exc = make_normal_type_instance(vm->StackOverflow);
+		set_normal_type_instance_field(exc, make_string("message"), make_string("Stack Overflow"));
+		set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+		*result = exc;
+		// goto exception
+	}
 
 exception:
 	// *result is the exception
