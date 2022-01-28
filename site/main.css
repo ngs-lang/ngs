@@ -2,13 +2,47 @@
 	https://material.io/guidelines/style/color.html#color-color-palette
 */
 
-h1, h2, h3, h4, h5, h6 {
-	margin-top: 1em;
-	color: #7B1FA2;
+@media (prefers-color-scheme: light) {
+	:root {
+		--background: #fffcfc;
+		--text: #131516;
+		--title: #7B1FA2;
+		--code: #d32f2f;
+		--link: #888888;
+		--icon: #888888;
+		--code-background: #f8f8f8;
+		--code-border: #181A1B;
+		--code-text: #181A1B;
+		--shadow: black;
+	}
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--background: #131516;
+		--text: #d8d4cf;
+		--title: #bc63e1;
+		--code: #d74343;
+		--link: #9F9F9F;
+		--icon: #9F9F9F;
+		--code-background: #212425;
+		--code-border: #E8E6E3;
+		--code-text: #E8E6E3;
+		--shadow: lightgrey;
+	}
 }
 
-.pitch {
-	color: black;
+body{
+	background-color: var(--background);
+	color: var(--text);
+}
+.hljs {
+	background: var(--code-background) !important;
+	color: var(--code-text) !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	margin-top: 1em;
+	color: var(--title);
 }
 
 h1, h2 {
@@ -27,26 +61,24 @@ h4 {
 	font-size: 1.2rem;
 }
 a {
-	color: #6F6F6F;
+	color: var(--link);
 	text-decoration: underline;
 }
 a:hover {
-	color: #7B1FA2;
+	color: var(--title);
 	text-decoration: none;
 }
 
 code {
-	color: #d32f2f;
+	color: var(--code);
 }
 
 pre {
 	padding: 1em;
 	border-radius: 0.5em;
-	box-shadow: 0 0 1px 0px black;
-}
-
-pre.example {
-	background-color: #E0F2F1;
+	border-color: var(--code-border);
+	box-shadow: 0 0 2px 0px var(--shadow);
+	background-color: var(--code-background);
 }
 
 .underline-on-hover-only {
@@ -71,13 +103,13 @@ nav .unobtrusive {
 }
 
 .method-status {
-	background-color: #7B1FA2;
-	color: #FFFFFF;
+	background-color: var(--title);
+	color: var(--text);
 	margin-left: 1em;
 	border-radius: 0.25em;
 	padding: 0.25em;
 	font-weight: normal;
-	box-shadow: 0 0 1px 0px black;
+	box-shadow: 0 0 1px 0px var(--shadow);
 	font-size: 80%;
 }
 
@@ -123,15 +155,13 @@ nav .unobtrusive {
 }
 .icon-link {
 	--text-opacity: 1;
-	color: #6F6F6F;
-	color: rgba(111, 111, 111,var(--text-opacity));
+	color: var(--link);
 	text-decoration: none;
 	cursor: pointer;
 }
 .icon-link:hover {
 	--text-opacity:1;
-	color: #7B1FA2;
-	color:rgba(123,31,162,var(--text-opacity));
+	color: var(--title);
 	text-decoration: none;
 }
 .icon-link i {
@@ -142,11 +172,7 @@ nav .unobtrusive {
 	text-align: center;
 }
 .icon-system {
-	color: #6F6F6F;
-}
-.meeting-container {
-	background: lightgoldenrodyellow;
-	border-radius: 0px 0px 10px 10px;
+	color: var(--icon);
 }
 pre, code {
 	white-space: pre-wrap;
