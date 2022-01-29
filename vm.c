@@ -1852,7 +1852,7 @@ METHOD_RESULT native_c_pcre_exec METHOD_PARAMS {
 		OVECCOUNT                  /* number of elements in the output vector */
 	);
 
-	if(rc < 0) {
+	if(rc <= 0) {
 		METHOD_RETURN(MAKE_INT(rc));
 	}
 
