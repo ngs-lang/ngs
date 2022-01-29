@@ -3837,6 +3837,32 @@ type Presence
 	doc Represents a target configuration list item in a list
 	type ExactPresence([FullBox, Presence])
 
+	doc Checks element presence.
+	doc %RET - Bool
+	doc %EX - [1,2,3] =~ Present(3)  # MatchSuccess
+	F =~(x, p:Present, mc:MatchContext) block b {
+		x is Int or x is Str returns false
+		x is not Eachable1 returns false
+		mc.deeper({
+			x.each_idx_val(F(idx, item) {
+				if (=~)(item, p.val, mc.set_last_path_element(idx)) {
+					b.return(true)
+				}
+			})
+		})
+		false
+	}
+
+	TEST [1,2,3] =~ Present(3)
+
+	doc Checks element absence.
+	doc %RET - Bool
+	doc %EX - [1,2,3] =~ Absent(0)  # MatchSuccess
+	F =~(x, a:Absent, mc:MatchContext) not((=~)(x, Present(a.val), mc))
+
+	TEST [1,2,3] =~ Absent(0)
+
+
 doc Internal method. Please do not use.
 doc Converts Presence or Arr[something] to Arr[Presence]. Used by Res and friends.
 F normalize_presence_list(x) {
