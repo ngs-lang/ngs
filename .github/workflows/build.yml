@@ -110,6 +110,9 @@ jobs:
       matrix:
         container: [ "fedora:34", "fedora:35", "amazonlinux:2", 'centos:8' ]
     steps:
+      - name: Install AmazonLinux Deps
+        if: startsWith(matrix.container, 'amazonlinux')
+        run: yum -y install tar xz gzip
       - name: Install CentOS Deps
         if: startsWith(matrix.container, 'centos:8')
         run: |
@@ -135,6 +138,9 @@ jobs:
       matrix:
         container: [ "fedora:34", "fedora:35", "amazonlinux:2", "centos:8" ]
     steps:
+      - name: Install AmazonLinux Deps
+        if: startsWith(matrix.container, 'amazonlinux')
+        run: yum -y install tar xz gzip
       - name: Install CentOS Deps
         if: startsWith(matrix.container, 'centos:8')
         run: |
