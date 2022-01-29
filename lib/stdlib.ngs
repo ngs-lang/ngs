@@ -6818,10 +6818,8 @@ F ~~(s:Str, r:RegExp, collect_unmatched:Bool=false) {
 }
 
 # TODO: test ~~() \r\n skipping
-# Crashes on Ubuntu 14.04 clang 3.5.0 (Travis CI)
-TEST (try ENV.TRAVIS and ENV.CC == "clang") returns true; ("ab\r\ncd" ~~ /(*CRLF)|./m).whole.filter(len) == ['a', 'b', 'c', 'd']
-# Crashes on Ubuntu 14.04 clang 3.5.0 (Travis CI)
-TEST (try ENV.TRAVIS and ENV.CC == "clang") returns true; ("ab\r\ncd" ~~ /|./m).whole.filter(len) == ['a', 'b', '\r', 'c', 'd']
+TEST ("ab\r\ncd" ~~ /(*CRLF)|./m).whole.filter(len) == ['a', 'b', 'c', 'd']
+TEST ("ab\r\ncd" ~~ /|./m).whole.filter(len) == ['a', 'b', '\r', 'c', 'd']
 # UTF-8 of "я" is 209(D1), 143(8F)
 # Skip for older library using try ... catch
 TEST try ("aяb" ~~ /(*UTF)|\\x8F|b/).whole.filter(len) == ['b'] catch(e:RegExpCompileFail) 'not recognized' in e.message
@@ -6869,15 +6867,14 @@ doc %RET - Arr of Str
 doc %EX - "x10ab20c30y".split(/[0-9]+/).join(" :: ")  # "x :: ab :: c :: y"
 F split(s:Str, r:RegExp) (~~)(s, r, true).filter(Str)
 
-# Crashes on Ubuntu 14.04 clang 3.5.0 (Travis CI)
-TEST (try ENV.TRAVIS and ENV.CC == "clang") returns true; "ab01de12f".split(/[0-9]+/) == ['ab', 'de', 'f']
+TEST "ab01de12f".split(/[0-9]+/) == ['ab', 'de', 'f']
 
 doc Get string with all occurrences of r removed
 doc %RET - Str
 doc %EX - "x10ab20c30y".without(/[0-9]+/)  # "xabcy"
 F without(s:Str, r:RegExp) s.split(r).join('')
 
-TEST (try ENV.TRAVIS and ENV.CC == "clang") returns true; "ab01de12f".without(/[0-9]+/) == 'abdef'
+TEST "ab01de12f".without(/[0-9]+/) == 'abdef'
 
 # TODO: make it a low priority method implementation
 doc Get substring of a string that corresponds to first match of given regular expression
