@@ -839,7 +839,7 @@ int type_is_type(VALUE ut_child, VALUE ut_parent) {
 	return 0;
 }
 
-#define OBJ_C_OBJ_IS_OF_TYPE(type, check) if(tid == type) { return check(obj); }
+#define OBJ_C_OBJ_IS_OF_TYPE(type, check) if(tid == (type)) { return check(obj); }
 
 // TODO: make it faster, probably using vector of NATIVE_TYPE_IDs and how to detect them
 //       maybe re-work tagged types so the check would be VALUE & TYPE_VAL == TYPE_VAL
