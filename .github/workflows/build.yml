@@ -110,7 +110,7 @@ jobs:
       matrix:
         container: [ "fedora:34", "fedora:35", "amazonlinux:2", 'centos:8' ]
     steps:
-      - name: Install AmazonLinux Deps
+      - name: Install AmazonLinux deps needed specifically for GitHub action
         if: startsWith(matrix.container, 'amazonlinux')
         run: yum -y install tar xz gzip
       - name: Install CentOS Deps
@@ -138,7 +138,7 @@ jobs:
       matrix:
         container: [ "fedora:34", "fedora:35", "amazonlinux:2", "centos:8" ]
     steps:
-      - name: Install AmazonLinux Deps
+      - name: Install AmazonLinux deps needed specifically for GitHub action
         if: startsWith(matrix.container, 'amazonlinux')
         run: yum -y install tar xz gzip
       - name: Install CentOS Deps
