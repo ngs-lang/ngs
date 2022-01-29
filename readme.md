@@ -23,6 +23,7 @@
 	* [Using Docker](#using-docker)
 	* [Using Github Action](#using-github-action)
 	* [Using iPython or Jupyter Notebook](#using-ipython-or-jupyter-notebook)
+	* [Using AWS Lambda](#using-aws-lambda)
 * Documentation
 	* [Code Examples](#code-examples)
 		* [Arrays](#arrays)
@@ -158,6 +159,10 @@ To run NGS as AWS Lambda Function see https://github.com/ngs-lang/ngs-aws-lambda
 
 Please refer to extension located in https://github.com/ngs-lang/ngs-ipython-extension
 
+### Using AWS Lambda
+
+Please refer to extension located in https://github.com/ngs-lang/ngs-aws-lambda
+
 
 ## Manually Compiling and Running
 
@@ -185,6 +190,20 @@ Please refer to extension located in https://github.com/ngs-lang/ngs-ipython-ext
 ### Compile
 
 	make build
+
+Build is currently tested with the github action present in `.github/workflows/build.yml` and we currently test:
+
+| system        | gcc                      | clang         |
+|---------------|--------------------------|---------------|
+| ubuntu 20.04  | 9, 10, 11                | 9, 10, 11     |
+| debian 11.1   | 9, 10                    | 9, 11         |
+| macOS 10.15   | 9, 10, 11                | 10            |
+| centos 7      | 9, 10, 11                | --            |
+| centos 8      | default (8.5), 9, 10, 11 | default (12)  |
+| amazonlinux 2 | default (7.3)            | default (11)  |
+| fedora 34     | default (11)             | default (12)  |
+| fedora 35     | default (11)             | default (13)  |
+| archlinux     | default (11.1)           | default (13)  |
 
 ### Run
 

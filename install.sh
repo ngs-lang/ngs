@@ -26,12 +26,27 @@ else
 		# * peg/leg is compiled by CMake from sources and used during build without installing
 		#   that is because I did not find it packaged.
 		echo "    + Installing yum packages"
-		$SUDO yum install -y gc-devel libffi-devel json-c-devel pcre-devel make cmake3 ctest pandoc pkgconfig
+		$SUDO yum install -y gc-devel libffi-devel json-c-devel pcre-devel make cmake3 pandoc pkgconfig
+		if ! command -v ctest &>/dev/null;then
+			if command -v ctest3 &>/dev/null;then
+				echo "    + Ctest3 found, configuring as default"
+				alternatives --install /usr/local/bin/cmake cmake /usr/bin/cmake3 20 --slave /usr/local/bin/ctest ctest /usr/bin/ctest3 --slave /usr/local/bin/cpack cpack /usr/bin/cpack3 --slave /usr/local/bin/ccmake ccmake /usr/bin/ccmake3 --family cmake
+			else
+				echo "    + Installing ctest"
+				$SUDO yum install -y ctest
+		  fi
+		fi
 		$SUDO yum groupinstall -y "Development Tools"
-	else
+	elif type pacman &>/dev/null;then
+		echo "  + On Linux / pacman. Installing apt packages."
+		$SUDO pacman -Sy --noconfirm peg make cmake pandoc pkgconfig
+	elif type apt &>/dev/null;then
 		echo "  + On Linux / apt. Installing apt packages."
 		$SUDO apt-get install -y libgc-dev libffi-dev libjson-c-dev peg libpcre3-dev make cmake pandoc pkg-config build-essential
 		type awk || $SUDO apt-get install -y gawk
+	else
+		echo "ERROR: Package manager not supported. Supported package managers are: apt, yum and pacman. Open an issue in GitHub to request support for another package manager."
+		exit 1
 	fi
 fi
 
