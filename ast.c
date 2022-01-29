@@ -75,6 +75,8 @@ void print_ast(ast_node *node, int level) {
 		case REAL_NODE:
 			snprintf(info, AST_NODE_INFO_STR_LEN-1, NGS_REAL_FMT, (*(NGS_REAL *)node->data));
 			break;
+		default:
+			break;
 	}
 
 	if(node->name) {

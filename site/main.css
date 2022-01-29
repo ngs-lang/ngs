@@ -2,31 +2,83 @@
 	https://material.io/guidelines/style/color.html#color-color-palette
 */
 
+@media (prefers-color-scheme: light) {
+	:root {
+		--background: #fffcfc;
+		--text: #131516;
+		--title: #7B1FA2;
+		--code: #d32f2f;
+		--link: #888888;
+		--icon: #888888;
+		--code-background: #f8f8f8;
+		--code-border: #181A1B;
+		--code-text: #181A1B;
+		--shadow: black;
+	}
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--background: #131516;
+		--text: #d8d4cf;
+		--title: #bc63e1;
+		--code: #d74343;
+		--link: #9F9F9F;
+		--icon: #9F9F9F;
+		--code-background: #212425;
+		--code-border: #E8E6E3;
+		--code-text: #E8E6E3;
+		--shadow: lightgrey;
+	}
+}
+
+body{
+	background-color: var(--background);
+	color: var(--text);
+}
+.hljs {
+	background: var(--code-background) !important;
+	color: var(--code-text) !important;
+}
+
 h1, h2, h3, h4, h5, h6 {
 	margin-top: 1em;
-	color: #7B1FA2;
+	color: var(--title);
 }
 
 h1, h2 {
 	text-align: center;
 }
-
+h2 {
+	font-size: 1.7rem;
+}
+h3, .icon-system {
+	font-size: 1.4rem;
+	display: block;
+	margin-top: 1.5rem;
+	margin-bottom: 0.5rem;
+}
+h4 {
+	font-size: 1.2rem;
+}
 a {
-	color: #00897b;
+	color: var(--link);
+	text-decoration: underline;
+}
+a:hover {
+	color: var(--title);
+	text-decoration: none;
 }
 
 code {
-	color: #d32f2f;
+	color: var(--code);
 }
 
 pre {
 	padding: 1em;
 	border-radius: 0.5em;
-	box-shadow: 0 0 1px 0px black;
-}
-
-pre.example {
-	background-color: #E0F2F1;
+	border-color: var(--code-border);
+	box-shadow: 0 0 2px 0px var(--shadow);
+	background-color: var(--code-background);
 }
 
 .underline-on-hover-only {
@@ -51,13 +103,13 @@ nav .unobtrusive {
 }
 
 .method-status {
-	background-color: #7B1FA2;
-	color: #FFFFFF;
+	background-color: var(--title);
+	color: var(--text);
 	margin-left: 1em;
 	border-radius: 0.25em;
 	padding: 0.25em;
 	font-weight: normal;
-	box-shadow: 0 0 1px 0px black;
+	box-shadow: 0 0 1px 0px var(--shadow);
 	font-size: 80%;
 }
 
@@ -70,8 +122,58 @@ nav .unobtrusive {
 	height: 40px;
 }
 
+.menu-item {
+	font-size: 110%;
+	padding-left: 12px;
+	padding-right: 12px;
+}
+
 .main-thing-on-page {
 	font-weight: 400;
 	font-size: 120%;
-	font-style: italic;
+}
+
+.sr-only {
+	position:absolute;
+	width:1px;
+	height:1px;
+	padding:0;
+	margin:-1px;
+	overflow:hidden;
+	clip:rect(0,0,0,0);
+	white-space:nowrap;
+	border-width:0
+}
+.ease-in-out {
+	transition-timing-function: cubic-bezier(.4,0,.2,1);
+}
+.transition {
+	transition-property: background-color,border-color,color,fill,stroke,opacity,box-shadow,transform;
+}
+.duration-150 {
+	transition-duration:.15s
+}
+.icon-link {
+	--text-opacity: 1;
+	color: var(--link);
+	text-decoration: none;
+	cursor: pointer;
+}
+.icon-link:hover {
+	--text-opacity:1;
+	color: var(--title);
+	text-decoration: none;
+}
+.icon-link i {
+	padding-left: 50%;
+	padding-right: 50%;
+}
+.icon-link p {
+	text-align: center;
+}
+.icon-system {
+	color: var(--icon);
+}
+pre, code {
+	white-space: pre-wrap;
 }

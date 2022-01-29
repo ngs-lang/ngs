@@ -6,7 +6,7 @@
     "cli"
   ],
   "dependencies": {
-    "socket.io": "2.3.0",
+    "socket.io": "4.4.1",
     "node-static": "0.7.11"
   }
 }
