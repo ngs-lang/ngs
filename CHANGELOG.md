@@ -18,6 +18,8 @@
 * Support `my_arr[idx] = val` for negative `idx`es.
 * `c_pcre_exec` now behaves correctly when too many captures are specified
 * Fix crash when accessing `RegExp#options`.
+* Improve GitHub build action
+* Add Arch Linux build
 
 ### Deprecated
 
