@@ -5611,6 +5611,14 @@ F init(r:CommandRedir, fd, marker, datum) {
 	init(args())
 }
 
+doc Throw exception whend redirecting to/from null
+F init(r:CommandRedir, fd, marker, datum:Null) {
+	if marker == '<' {
+			throw InvalidArgument('Command redirection from <${null} is not supported.')
+	}
+	throw InvalidArgument('Command redirection to >${null} is not supported. Use >${false} to disable capturing.')
+}
+
 doc Convert CommandRedir to human-readable string.
 doc %RET - Str
 F Str(r:CommandRedir) "<${r.typeof().name} ${r.fd} ${r.marker} ${r.datum}>"
