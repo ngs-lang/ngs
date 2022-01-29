@@ -16,6 +16,8 @@
 * Fix `tr` exception when pattern is a `Hash` and it should match not at the top level.
 * `Argv` now accepts `Repeat` keys: `{Repeat('--repeat'): my_arr}`
 * Support `my_arr[idx] = val` for negative `idx`es.
+* `c_pcre_exec` now behaves correctly when too many captures are specified
+* Fix crash when accessing `.names` field on a `RegExp`.
 
 ### Deprecated
 

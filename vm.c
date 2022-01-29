@@ -1886,13 +1886,13 @@ METHOD_RESULT native_c_pcre_exec METHOD_PARAMS {
 	return METHOD_OK;
 }
 
-// http://www.pcre.org/original/doc/html/pcredemo.html
+// https://www.pcre.org/original/doc/html/pcre_fullinfo.html
 METHOD_RESULT native_field_regexp EXT_METHOD_PARAMS {
 	char *field = obj_to_cstring(argv[1]);
 	pcre *re;
 	re = REGEXP_OBJECT_RE(argv[0]);
 	if(!strcmp(field, "options")) {
-		unsigned int option_bits;
+		unsigned long int option_bits;
 		(void)pcre_fullinfo(re, NULL, PCRE_INFO_OPTIONS, &option_bits);
 		METHOD_RETURN(MAKE_INT(option_bits));
 	}
