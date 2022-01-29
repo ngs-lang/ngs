@@ -142,7 +142,9 @@ section "Exit type and basic ExitCode pseudo-constructor methods" {
 	F ExitCode(e:Exception) 240
 }
 
-section "Block type and methods" {
+section "Block type and methods" ns {
+	global Block, ReturnFromBlock, init, block, return
+
 	doc The type of the NAME variable used in syntax: block NAME BODY
 	doc %AUTO - block NAME BODY
 	type Block
@@ -157,8 +159,12 @@ section "Block type and methods" {
 	doc %EX - block b { calc(); if answer_found then b.return(42); more_calc(); another_answer }
 	F block(body:Fun) {
 		b = Block()
+		F block_super_handler(*args, **kwargs) {
+			throw NotImplemented("calling super() from within a block is not implemented")
+		}
+		mm = MultiMethod([block_super_handler, body])
 		try {
-			body(b)
+			mm(b)
 		} catch(rfb: ReturnFromBlock) {
 			guard rfb.block === b
 			rfb.val
