@@ -7,6 +7,7 @@
 * Add `assert(Path)`
 * Add `Bool(Real)`
 * Add experimental `native_ll_maybe_wrap`
+* Add `TmpDir`
 
 ### Fixes and improvements
 

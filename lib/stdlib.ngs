@@ -4907,6 +4907,8 @@ section "Exiting" {
 section "Path" {
 	# Maybe TODO: F ==(Path,Path) --> https://stackoverflow.com/questions/12502552/can-i-check-if-two-file-or-file-descriptor-numbers-refer-to-the-same-file
 
+	type TmpFsObj
+
 	doc Represents file system path such as a file, a block device, etc
 	type Path
 		doc Represents a socket file in a file system (S_IFSOCK)
@@ -4916,11 +4918,13 @@ section "Path" {
 		doc Represents a file in a file system (S_IFREG)
 		type File(Path)        # S_IFREG
 			doc Represents a temporary file. Automatically removed when the script exits.
-			type TmpFile(File)
+			type TmpFile([File, TmpFsObj])
 		doc Represents a block device in a file system (S_IFBLK)
 		type BlockDevice(Path) # S_IFBLK
 		doc Represents a directory in a file system (S_IFDIR)
 		type Dir(Path)         # S_IFDIR
+			doc Represents a temporary directory. Automatically removed when the script exits.
+			type TmpDir([Dir, TmpFsObj])
 		doc Represents a character device in a file system (S_IFCHR)
 		type CharDevice(Path)  # S_IFCHR
 		doc Represents a fifo file in a file system (S_IFIFO)
@@ -5186,37 +5190,48 @@ section "Path" {
 		type KeepOnErrorCleanupPolicy(CleanupPolicy)
 
 	doc Creates temporary file using `mktemp` and arranges deletion of the file upon exit from the NGS script.
-	F init(t:TmpFile, cleanup_policy:CleanupPolicy=RemoveCleanupPolicy()) {
-		t.path = `line: mktemp`
+	F init(t:TmpFsObj, cleanup_policy:CleanupPolicy=RemoveCleanupPolicy()) {
+		assert(t, {'path': Str}, 'init(TmpFsObj, ...) expects path to be set and to be a string')
+		assert(t.path, 'init(TmpFsObj, ...) expects path to be non-empty string')
 		t.fd = null
 		t.cleanup_policy = cleanup_policy
-		debug("file", "Created temporary file at ${t.path}")
-		exit_hook["TmpFile:${t.path}"] = F cleanup(e:Exit) {
-			debug("file", "Will do cleanup for temporary file at ${t.path}")
+		debug("file", "Created ${t.typeof().name} at ${t.path}")
+		exit_hook["${t.typeof().name}:${t.path}"] = F cleanup(e:Exit) {
+			debug("file", "Will do cleanup for ${t.typeof().name} at ${t.path}")
 			# Exit is not a subtype of Exception. If anybody complains, this can be fixed and a "real" Exception can be sent.
 			b = if e.exceptions then FullBox(e) else EmptyBox()
 			del(t, t.cleanup_policy, b)
 		}
 	}
 
-	F del(t:TmpFile, kcp:KeepCleanupPolicy, e:Box) {
-		log("Keeping temporary file at ${t.path}")
+	F init(t:TmpFile, cleanup_policy:CleanupPolicy=RemoveCleanupPolicy()) {
+		t.path = `line: mktemp`
+		super(t, cleanup_policy)
+	}
+
+	F init(t:TmpDir, cleanup_policy:CleanupPolicy=RemoveCleanupPolicy()) {
+		t.path = `line: mktemp -d`
+		super(t, cleanup_policy)
+	}
+
+	F del(t:TmpFsObj, kcp:KeepCleanupPolicy, e:Box) {
+		log("Keeping ${t.typeof().name} at ${t.path}")
 		t
 	}
 
-	F del(t:TmpFile, rcp:RemoveCleanupPolicy, e:Box) {
+	F del(t:TmpFsObj, rcp:RemoveCleanupPolicy, e:Box) {
 		try {
-			$(rm ${t.path})
-			debug("file", "Removed temporary file at ${t.path}")
+			$(rm -rf ${t.path})
+			debug("file", "Removed ${t.typeof().name} at ${t.path}")
 		} catch(e) {
-			warn("Failed to remove temporary file at ${t.path}")
+			warn("Failed to remove ${t.typeof().name} at ${t.path}")
 			print_exception(e, echo=warn)
 		}
 	}
 
-	F del(t:TmpFile, koecp:KeepOnErrorCleanupPolicy, e:Box) {
+	F del(t:TmpFsObj, koecp:KeepOnErrorCleanupPolicy, e:Box) {
 		not(e) returns t.del(RemoveCleanupPolicy(), e)
-		log("Keeping temporary file at ${t.path} because exception occurred: ${e.get()}")
+		log("Keeping ${t.typeof().name} at ${t.path} because exception occurred: ${e.get()}")
 		t
 	}
 
