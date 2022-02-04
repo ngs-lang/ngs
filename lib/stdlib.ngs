@@ -4933,7 +4933,7 @@ section "Path" {
 		if m = p.meta().doc[''][0] ~ /Represents a (.+) in a file system/ {
 			m[1]
 		} else {
-			"(failed to extract human readable type desciription of ${p})"
+			"(failed to extract human readable type description of ${p})"
 		}
 	}
 
@@ -4981,7 +4981,7 @@ section "Path" {
 
 	# TODO: better name
 	doc EXPERIMENTAL, do not use outside of stdlib!
-	doc Instanciates Path sub-type, depending on what p is
+	doc Instantiates Path sub-type, depending on what p is
 	F specific(p:Path) {
 		s = lstat(p)
 		file_type = s.st_mode.band(C_S_IFMT)
