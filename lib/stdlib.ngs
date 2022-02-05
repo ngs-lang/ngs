@@ -6047,7 +6047,8 @@ F '$()'(p:Process) {
 		F redir_str(r:CommandRedir) {
 			(r.fd or '').Str() + r.marker + safe_escape_bash(r.datum)
 		}
-		log("Running command: ${argv.map(safe_escape_bash).join(' ')}${' ' +? p.command.redirects.map(redir_str).join(' ')}")
+		o = ' (' +? p.command.options.without('log').map("$X:$Y").join(' ') +? ')'
+		log("Running command${o}: ${argv.map(safe_escape_bash).join(' ')}${' ' +? p.command.redirects.map(redir_str).join(' ')}")
 	}
 
 	try {
