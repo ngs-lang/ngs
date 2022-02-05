@@ -26,7 +26,7 @@
 ### Deprecated
 
 * `Argv` - `['--repeat']` is deprecated in favor of `Repeat('--repeat')`
-* `attrs()`, use `meta()` instead
+* `attrs()` is deprecated, use `meta()` instead
 
 ## 2021-11-21 Version 0.2.13
 
