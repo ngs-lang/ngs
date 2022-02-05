@@ -108,16 +108,11 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "fedora:34", "fedora:35", "amazonlinux:2", 'centos:8' ]
+        container: [ "fedora:34", "fedora:35", "amazonlinux:2" ]
     steps:
       - name: Install AmazonLinux deps needed specifically for GitHub action
         if: startsWith(matrix.container, 'amazonlinux')
         run: yum -y install tar xz gzip
-      - name: Install CentOS Deps
-        if: startsWith(matrix.container, 'centos:8')
-        run: |
-          yum -y install epel-release dnf-plugins-core
-          yum config-manager --set-enabled powertools
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
@@ -136,16 +131,11 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "fedora:34", "fedora:35", "amazonlinux:2", "centos:8" ]
+        container: [ "fedora:34", "fedora:35", "amazonlinux:2" ]
     steps:
       - name: Install AmazonLinux deps needed specifically for GitHub action
         if: startsWith(matrix.container, 'amazonlinux')
         run: yum -y install tar xz gzip
-      - name: Install CentOS Deps
-        if: startsWith(matrix.container, 'centos:8')
-        run: |
-          yum -y install epel-release dnf-plugins-core
-          yum config-manager --set-enabled powertools
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
@@ -154,27 +144,6 @@ jobs:
           echo "CXX=clang++" >> $GITHUB_ENV
       - name: Install and Test
         run: (./install.sh && make tests test-installation)
-
-  build-external-centos8-gcc:
-    timeout-minutes: 10
-    name: Build in GCC
-    runs-on: ubuntu-20.04
-    container:
-      image: ${{ matrix.container }}
-      options: --user root
-    strategy:
-      matrix:
-        container: [ "centos:8" ]
-        version: [ "9", "10", "11" ]
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup Compiler
-        run: |
-          yum -y install epel-release dnf-plugins-core sudo man
-          yum config-manager --set-enabled powertools
-          yum -y install gcc-toolset-${{ matrix.version }}-gcc-c++
-      - name: Install and Test
-        run: (source /opt/rh/gcc-toolset-${{ matrix.version }}/enable && ./install.sh && make tests test-installation)
 
   build-external-centos7-gcc:
     timeout-minutes: 10
