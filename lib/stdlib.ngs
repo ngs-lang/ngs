@@ -5062,8 +5062,8 @@ section "Path" {
 
 	doc String representation of a Path (or it's sub-type)
 	doc %RET - Str
-	doc %EX - find_in_path("ls").Str()  # The string: <Path path=/bin/ls>
-	F Str(p:Path) "<${p.typeof().name} path=${p.path}>"
+	doc %EX - find_in_path("ls").Str()  # The string: /bin/ls
+	F Str(p:Path) p.path
 
 	doc Concatenate two path parts using STDLIB_PATH_SEP (currently "/") but should be platform-specific later.
 	doc %RET - Str
@@ -5196,8 +5196,8 @@ section "Path" {
 		t.fd = null
 		t.cleanup_policy = cleanup_policy
 		debug("file", "Created ${t.typeof().name} at ${t.path}")
-		exit_hook["${t.typeof().name}:${t.path}"] = F cleanup(e:Exit) {
-			debug("file", "Will do cleanup for ${t.typeof().name} at ${t.path}")
+		exit_hook["${t.typeof().name}:${t}"] = F cleanup(e:Exit) {
+			debug("file", "Will do cleanup for ${t.typeof().name} at ${t}")
 			# Exit is not a subtype of Exception. If anybody complains, this can be fixed and a "real" Exception can be sent.
 			b = if e.exceptions then FullBox(e) else EmptyBox()
 			del(t, t.cleanup_policy, b)
@@ -5215,23 +5215,23 @@ section "Path" {
 	}
 
 	F del(t:TmpFsObj, kcp:KeepCleanupPolicy, e:Box) {
-		log("Keeping ${t.typeof().name} at ${t.path}")
+		log("Keeping ${t.typeof().name} at ${t}")
 		t
 	}
 
 	F del(t:TmpFsObj, rcp:RemoveCleanupPolicy, e:Box) {
 		try {
-			$(rm -rf ${t.path})
-			debug("file", "Removed ${t.typeof().name} at ${t.path}")
+			$(rm -rf ${t})
+			debug("file", "Removed ${t.typeof().name} at ${t}")
 		} catch(e) {
-			warn("Failed to remove ${t.typeof().name} at ${t.path}")
+			warn("Failed to remove ${t.typeof().name} at ${t}")
 			print_exception(e, echo=warn)
 		}
 	}
 
 	F del(t:TmpFsObj, koecp:KeepOnErrorCleanupPolicy, e:Box) {
 		not(e) returns t.del(RemoveCleanupPolicy(), e)
-		log("Keeping ${t.typeof().name} at ${t.path} because exception occurred: ${e.get()}")
+		log("Keeping ${t.typeof().name} at ${t} because exception occurred: ${e.get()}")
 		t
 	}
 
@@ -5251,7 +5251,7 @@ section "Path" {
 	doc Checks that the given path exists. Throws AssertFail otherwise.
 	doc %RET - p
 	F assert(p:Path) {
-		assert(p, "${p.path} must exist and be a ${p.typeof().human_type_name()}")
+		assert(p, "${p} must exist and be a ${p.typeof().human_type_name()}")
 	}
 }
 
@@ -5515,12 +5515,6 @@ F init(f:File, fd:Int) {
 }
 
 F init(f:File, path:Path) super(f, path.path)
-
-doc String representation of File
-doc %EX - open(File("tmp/v8/LICENSE"), "r").Str().echo()  # Output: <File path=tmp/v8/LICENSE fd=4>
-F Str(f:File) "<${f.typeof().name} path=${f.path} fd=${f.fd}>"
-
-TEST File('xy').Str() == '<File path=xy fd=null>'
 
 doc Open a file and set the "fd" field to the file descriptor. Uses OPEN(2).
 doc Throws InvalidArgument if file is already open.
@@ -5833,7 +5827,7 @@ F wait(p:Process) {
 	message = collector/Lines() {
 		argv0 = ("'" + try p.command.argv[0] + "'") tor '(with unknown name)'
 		collect("Executing external process ${argv0} failed")
-		collect("Executable was found at ${p.executable.path}")
+		collect("Executable was found at ${p.executable}")
 		collect("Command: ${p.command.argv.map(escape_bash).join(' ') tor '(unavailable)'}")
 		if p.exit_code is not Null {
 			collect("Command exited with code: ${p.exit_code}")

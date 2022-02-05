@@ -231,7 +231,7 @@
 				tvi.docs = collector dir('.').each(F(p) {
 					m = p.path ~ /\.md$/
 					not(m) returns
-					status("Reading ${p.path}")
+					status("Reading ${p}")
 					# collect(m.before, ``pandoc -f 'markdown+hard_line_breaks' -t json -s ${p}``)
 					collect(MarkdownDescription(tvi, m.before, p))
 				})

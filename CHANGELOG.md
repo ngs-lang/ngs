@@ -29,6 +29,10 @@
 * `Argv` - `['--repeat']` is deprecated in favor of `Repeat('--repeat')`
 * `attrs()` is deprecated, use `meta()` instead
 
+### Breaking changes
+
+* `Str(Path)` is now returning `.path`, not `<Path path=...>`
+
 ## 2021-11-21 Version 0.2.13
 
 ### New features
