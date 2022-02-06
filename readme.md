@@ -199,7 +199,6 @@ Build is currently tested with the github action present in `.github/workflows/b
 | debian 11.1   | 9, 10                    | 9, 11         |
 | macOS 10.15   | 9, 10, 11                | 10            |
 | centos 7      | 9, 10, 11                | --            |
-| centos 8      | default (8.5), 9, 10, 11 | default (12)  |
 | amazonlinux 2 | default (7.3)            | default (11)  |
 | fedora 34     | default (11)             | default (12)  |
 | fedora 35     | default (11)             | default (13)  |
