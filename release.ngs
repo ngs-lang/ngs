@@ -1,0 +1,32 @@
+#!/usr/bin/env ngs
+
+# Source document: release.md
+
+ns {
+
+	source_branch = 'dev'
+	target_branch = 'master'
+
+	F main() {
+		warn("NGS release script - Work in progress")
+		tmp_dir = TmpDir(KeepOnErrorCleanupPolicy())
+		log("Using temporary directory ${tmp_dir}")
+		for b in [source_branch, target_branch] {
+			branch_dir = tmp_dir / b
+			$(log: cp -a . $branch_dir)
+			$(log: cd:branch_dir git reset --hard)
+			$(log: cd:branch_dir git checkout $b)
+		}
+		source_dir = tmp_dir / source_branch
+		target_dir = tmp_dir / target_branch
+
+		$(log: cd:source_dir rm -rf build)
+		$(log: cd:source_dir make build)
+		$(log: cd:source_dir make tests)
+		$(log: cd:source_dir make update-vim-syntax)
+
+		# build_dir = source_dir / 'build'
+		# $(log: cd:build_dir make test)
+
+	}
+}
