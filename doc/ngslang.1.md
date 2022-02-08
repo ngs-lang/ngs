@@ -738,10 +738,12 @@ Type definition is only supported in code syntax.
 * When type definition (`type T`) is executed, NGS defines the `.constructors` MultiMethod that includes one method. This method creates object of type `T`. The type of this method is `NormalTypeConstructor`.
 * After defining a type `T`, one can add methods to `.constructors` using `F T(...) {...}` definitions. If you add your method to the `.constructors` field, please make sure it returns an object of type `T` or object of a type that is a subtype of `T`. Otherwise, it will be surprising for the callers.
 * When you call a user defined type, its `.constructors` MultiMethod is called.
+* In case that no user defined constructor is defined, the default constructor is invoked.
+* If no user defined constructor matches the arguments 
 * If the default constructor added by NGS (method of type `NormalTypeConstructor`) gets executed, it does the following:
-	* Creates object of type `T`
-	* Runs `init()` MultiMethod with the new object as the first argument and the arguments of the call to `T(...)` as second and on arguments to `init(...)`.
-	* Note that calling `init()` might trigger `MethodNotFound` exception. It is ignored if and only if the call to `T()` had no arguments.
+    * Creates object of type `T`
+    * Runs `init()` MultiMethod with the new object as the first argument and the arguments of the call to `T(...)` as second and on arguments to `init(...)`.
+    * Note that calling `init()` might trigger `MethodNotFound` exception. It is ignored if and only if the call to `T()` had no arguments.
 
 Examples:
 
@@ -758,6 +760,34 @@ Examples:
 
 	Box(1)    # FullBox with 1 as value
 	Box(null) # EmptyBox
+
+## Defining type fields
+
+Currently, there is no way to define fields of a type, similar to earlier versions of JavaScript and Python. Assigning to arbitrary field of an object is possible.
+
+	type MyType
+	t = MyType()
+	t.anything = "blah"  # works
+	echo(t)  # <MyType anything=blah>
+
+## Defining type methods
+
+In NGS, a method does not "belong" to a type. Therefore, "defining type methods" is not applicable. You can define a (multi)method to work with your type.
+
+	type MyType
+	F my_method(t:MyType, i:Int) { ... }
+	F my_method(s:Str, t:MyType) { ... }
+	F my_method(t1:MyType, t2:MyType) { ... }
+
+If you would like to be able to call your method as `t.my_method(...)` you should define a method where the first parameter is of type `MyType`.
+
+	type MyType
+	F my_method(t:MyType, i:Int) { ... }
+	t = MyType()
+	t.my_method(10)
+	my_method(t, 10)  # Same as above
+
+This works because NGS supports [UFCS](https://en.wikipedia.org/wiki/Uniform_Function_Call_Syntax) and therefore `t.my_method(...)` is syntactically equivalent to `my_method(t, ...)`.
 
 # Loading and running additional code
 
