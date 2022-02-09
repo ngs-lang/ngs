@@ -35,8 +35,6 @@
 	} \
   }
 
-void position_to_line_col();
-
 #define ALLOC_NODE(dst, type_) (dst) = NGS_MALLOC(sizeof(ast_node)); dst->type=type_
 #define CAPTURE_LOCATION(name) { \
 	name->location.first_line = location[0]; \

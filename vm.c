@@ -29,7 +29,6 @@
 
 // OPEN(2), LSEEK(2), WAIT(2)
 // #define _POSIX_SOURCE
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <fcntl.h>
@@ -48,14 +47,10 @@
 #include "vm.h"
 #include "ast.h"
 #include "compile.h"
-#include "decompile.h"
 #include "syntax.h"
 #include "syntax.auto.h"
 
 extern char **environ;
-
-// in ngs.c:
-char *sprintf_position(yycontext *yy, int pos);
 
 // in syntax.include
 void position_to_line_col(yycontext *yy, int pos, int result[]);
@@ -133,25 +128,24 @@ char *opcodes_names[] = {
 	"MULTIMETHOD_REVERSE",
 };
 
-
+#define ASSERT_STACK_SPACE if(ctx->stack_ptr>=MAX_STACK) goto stack_overflow_exception;
 #define EXPECT_STACK_DEPTH(n) assert(ctx->stack_ptr >= (n));
-#define PUSH(v) assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr++] = v
+#define PUSH(v) ASSERT_STACK_SPACE; ctx->stack[ctx->stack_ptr++] = v
 #define PUSH_NOCHECK(v) ctx->stack[ctx->stack_ptr++] = v
-#define POP(dst) assert(ctx->stack_ptr); ctx->stack_ptr--; dst = ctx->stack[ctx->stack_ptr]
-#define POP_NOCHECK(dst) ctx->stack_ptr--; dst = ctx->stack[ctx->stack_ptr]
+#define POP(dst) assert(ctx->stack_ptr); ctx->stack_ptr--; (dst) = ctx->stack[ctx->stack_ptr]
+#define POP_NOCHECK(dst) ctx->stack_ptr--; (dst) = ctx->stack[ctx->stack_ptr]
 #define FIRST (ctx->stack[ctx->stack_ptr-1])
 #define TOP FIRST
 #define SECOND (ctx->stack[ctx->stack_ptr-2])
 #define THIRD (ctx->stack[ctx->stack_ptr-3])
-#define DUP assert(ctx->stack_ptr<MAX_STACK); ctx->stack[ctx->stack_ptr] = ctx->stack[ctx->stack_ptr-1]; ctx->stack_ptr++;
+#define DUP ASSERT_STACK_SPACE; ctx->stack[ctx->stack_ptr] = ctx->stack[ctx->stack_ptr-1]; ctx->stack_ptr++;
 #define REMOVE_TOP assert(ctx->stack_ptr); ctx->stack_ptr--
 #define REMOVE_TOP_NOCHECK ctx->stack_ptr--
-#define REMOVE_TOP_N(n) DEBUG_VM_RUN("Popping %d argument(s) after call from stack\n", (int)n); assert(ctx->stack_ptr >= (unsigned int)n); ctx->stack_ptr-=n;
-#define REMOVE_TOP_N_NOCHECK(n) DEBUG_VM_RUN("Popping %d argument(s) after call from stack\n", (int)n); ctx->stack_ptr-=n;
+#define REMOVE_TOP_N(n) DEBUG_VM_RUN("Popping %d argument(s) after call from stack\n", (int)(n)); assert(ctx->stack_ptr >= (unsigned int)(n)); ctx->stack_ptr-=(n);
+#define REMOVE_TOP_N_NOCHECK(n) DEBUG_VM_RUN("Popping %d argument(s) after call from stack\n", (int)(n)); ctx->stack_ptr-=(n);
 #define GLOBALS (vm->globals)
 #define THIS_FRAME (ctx->frames[ctx->frame_ptr-1])
 #define THIS_FRAME_CLOSURE (THIS_FRAME.closure)
-#define UPPER_FRAME (ctx->frames[ctx->frame_ptr-2])
 #define DEEPER_FRAME (ctx->frames[ctx->frame_ptr])
 #define LOCALS (THIS_FRAME.locals)
 #define UPLEVELS CLOSURE_OBJ_UPLEVELS(THIS_FRAME_CLOSURE)
@@ -252,12 +246,12 @@ METHOD_RESULT native_ ## name ## _real_real METHOD_PARAMS { \
 #define ARG_DATA_PTR(n) OBJ_DATA_PTR(argv[n])
 
 #define BYTECODE_ADD(ptr, type, val) \
-	*(type *) ptr = val; \
-	ptr += sizeof(type);
+	*(type *) (ptr) = val; \
+	(ptr) += sizeof(type);
 
 #define BYTECODE_GET(dst, ptr, type) \
-	dst = *(type *) ptr; \
-	ptr += sizeof(type);
+	dst = *(type *) (ptr); \
+	(ptr) += sizeof(type);
 
 INT_METHOD(plus, +)
 INT_METHOD(minus, -)
@@ -945,8 +939,8 @@ METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 	yyrelease(&yyctx);
 	COMPILATION_RESULT *r = compile(tree, obj_to_cstring(argv[1]));
 	VALUE ret = make_string_of_len(r->bytecode, r->len);
-	OBJ_ATTRS(ret) = make_hash(1);
-	set_hash_key(OBJ_ATTRS(ret), make_string("warnings"), r->warnings);
+	OBJ_META(ret) = make_hash(1);
+	set_hash_key(OBJ_META(ret), make_string("warnings"), r->warnings);
 	METHOD_RETURN(ret);
 }
 
@@ -1111,12 +1105,10 @@ METHOD_RESULT native_c_mktime METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(tt));
 }
 
-
-METHOD_RESULT native_type_str METHOD_PARAMS { METHOD_RETURN(make_normal_type(argv[0])); }
 METHOD_RESULT native_type_str_doc METHOD_PARAMS {
 	*result = make_normal_type(argv[0]);
-	set_hash_key(OBJ_ATTRS(*result), make_string("doc"), argv[1]);
-	set_hash_key(OBJ_ATTRS(*result), make_string("ns"), argv[2]);
+	set_hash_key(OBJ_META(*result), make_string("doc"), argv[1]);
+	set_hash_key(OBJ_META(*result), make_string("ns"), argv[2]);
 	return METHOD_OK;
 }
 
@@ -1352,17 +1344,17 @@ METHOD_RESULT native_same_any_any METHOD_PARAMS {
 	METHOD_RETURN(MAKE_BOOL(argv[0].ptr == argv[1].ptr));
 }
 
-METHOD_RESULT native_attrs METHOD_PARAMS {
+METHOD_RESULT native_meta METHOD_PARAMS {
 	if(!IS_OBJ(argv[0])) {
 		return METHOD_ARGS_MISMATCH;
 	}
-	METHOD_RETURN(OBJ_ATTRS(argv[0]));
+	METHOD_RETURN(OBJ_META(argv[0]));
 }
-METHOD_RESULT native_attrs_any METHOD_PARAMS {
+METHOD_RESULT native_meta_any METHOD_PARAMS {
 	if(!IS_OBJ(argv[0])) {
 		return METHOD_ARGS_MISMATCH;
 	}
-	OBJ_ATTRS(argv[0]) = argv[1]; METHOD_RETURN(argv[1]);
+	OBJ_META(argv[0]) = argv[1]; METHOD_RETURN(argv[1]);
 }
 
 // TODO: consider returning Hash instead of Arr
@@ -1441,11 +1433,6 @@ METHOD_RESULT native_c_pthreadattrt METHOD_PARAMS {
 }
 
 METHOD_RESULT native_c_pthreadmutext METHOD_PARAMS {
-	(void) argv;
-	METHOD_RETURN(make_pthread_mutex());
-}
-
-METHOD_RESULT native_c_pthreadmutext_pma METHOD_PARAMS {
 	(void) argv;
 	METHOD_RETURN(make_pthread_mutex());
 }
@@ -1662,18 +1649,6 @@ METHOD_RESULT native_c_access METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(access(obj_to_cstring(argv[0]), GET_INT(argv[1]))));
 }
 
-
-
-#define SETUP_FD_SET(name, arg_idx) \
-	FD_ZERO (&name); \
-	for(i=0; i<OBJ_LEN(argv[arg_idx]); i++) { \
-		tmp = GET_INT(ARRAY_ITEMS(argv[arg_idx])[i]); \
-		FD_SET(tmp, &name); \
-		if(tmp > nfds) { \
-			nfds = tmp; \
-		} \
-	};
-
 #ifdef HAVE_POLL_H
 // WIP
 METHOD_RESULT native_c_poll METHOD_PARAMS {
@@ -1794,6 +1769,10 @@ METHOD_RESULT native_ll_resolve_global_variable EXT_METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(get_global_index(vm, OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]))));
 }
 
+METHOD_RESULT native_ll_maybe_wrap METHOD_PARAMS {
+	METHOD_RETURN(maybe_wrap(argv[0]));
+};
+
 METHOD_RESULT native_ll_is_global_variable_defined EXT_METHOD_PARAMS {
 	GLOBAL_VAR_INDEX gvi = GET_INT(argv[0]);
 	if(GET_INT(argv[0]) < 0 || gvi >= vm->globals_len) {
@@ -1873,7 +1852,7 @@ METHOD_RESULT native_c_pcre_exec METHOD_PARAMS {
 		OVECCOUNT                  /* number of elements in the output vector */
 	);
 
-	if(rc < 0) {
+	if(rc <= 0) {
 		METHOD_RETURN(MAKE_INT(rc));
 	}
 
@@ -1885,13 +1864,13 @@ METHOD_RESULT native_c_pcre_exec METHOD_PARAMS {
 	return METHOD_OK;
 }
 
-// http://www.pcre.org/original/doc/html/pcredemo.html
+// https://www.pcre.org/original/doc/html/pcre_fullinfo.html
 METHOD_RESULT native_field_regexp EXT_METHOD_PARAMS {
 	char *field = obj_to_cstring(argv[1]);
 	pcre *re;
 	re = REGEXP_OBJECT_RE(argv[0]);
 	if(!strcmp(field, "options")) {
-		unsigned int option_bits;
+		unsigned long int option_bits;
 		(void)pcre_fullinfo(re, NULL, PCRE_INFO_OPTIONS, &option_bits);
 		METHOD_RETURN(MAKE_INT(option_bits));
 	}
@@ -2125,9 +2104,9 @@ VALUE _make_func(VM *vm, int pass_extra_params, char *name, void *func_ptr, int 
 	func->params.n_params_optional = 0; /* currently none of builtins uses optional parameters */
 	func->pass_extra_params = pass_extra_params;
 	vm->last_doc_hash = make_hash(4);
-	func->base.attrs = make_hash(8);
-		set_hash_key(func->base.attrs, make_string("name"), make_string(name));
-		set_hash_key(func->base.attrs, make_string("doc"), vm->last_doc_hash);
+	func->base.meta = make_hash(8);
+		set_hash_key(func->base.meta, make_string("name"), make_string(name));
+		set_hash_key(func->base.meta, make_string("doc"), vm->last_doc_hash);
 	if(argc) {
 		argv = NGS_MALLOC(argc * sizeof(VALUE) * 2);
 		assert(argv);
@@ -2210,9 +2189,9 @@ void set_global(VM *vm, const char *name, VALUE v) {
 	assert(IS_UNDEF(GLOBALS[index]));
 	GLOBALS[index] = ret;
 	vm->last_doc_hash = make_hash(4);
-	OBJ_ATTRS(ret) = make_hash(8);
-		// set_hash_key(OBJ_ATTRS(ret), make_string("name"), make_string(name));
-		set_hash_key(OBJ_ATTRS(ret), make_string("doc"), vm->last_doc_hash);
+	OBJ_META(ret) = make_hash(8);
+		// set_hash_key(OBJ_META(ret), make_string("name"), make_string(name));
+		set_hash_key(OBJ_META(ret), make_string("doc"), vm->last_doc_hash);
 	return ret;
 }
 
@@ -2464,8 +2443,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	set_global(vm, #name, name); \
 	vm->name = name; \
 	vm->last_doc_hash = make_hash(4); \
-	OBJ_ATTRS(name) = make_hash(8); \
-	set_hash_key(OBJ_ATTRS(name), make_string("doc"), vm->last_doc_hash);
+	OBJ_META(name) = make_hash(8); \
+	set_hash_key(OBJ_META(name), make_string("doc"), vm->last_doc_hash);
 
 #define MKSUBTYPE(name, parent) \
 	MKTYPE(name); \
@@ -2641,6 +2620,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 				MKSUBTYPE(JsonDecodeFail, DecodeFail);
 				_doc(vm, "", "Represents an error decoding JSON data.");
 
+			MKSUBTYPE(StackOverflow, Error);
+			_doc(vm, "", "Represents a stack overflow error.");
+
 	MKTYPE(Backtrace);
 	_doc(vm, "", "Represents stack trace");
 	_doc(vm, "frames", "Array of locations. Each element of the array is a Hash with \"ip\" and \"closure\" properties.");
@@ -2713,6 +2695,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	vm->eqeq = make_multimethod();
 	set_global(vm, "==", vm->eqeq);
 	// Why is it here? Consider removing - end
+
+	register_global_func(vm, 0, "ll_maybe_wrap", &native_ll_maybe_wrap, 1, "v", vm->Any);
 
 	register_global_func(vm, 0, "==",              &native_false,    2, "a", vm->Any, "b", vm->Any);
 	_doc(vm, "", "Always false. Other == method implementations should compare types they understand. If none of them can handle the comparison, objects are considered non-equal.");
@@ -2987,15 +2971,15 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	// OBJECT
-	register_global_func(vm, 0, "attrs",    &native_attrs,               1, "obj",      vm->Any);
+	register_global_func(vm, 0, "meta", &native_meta, 1, "obj", vm->Any);
 	_doc_arr(vm, "",
-		"Get attributes. Attributes is auxiliary data slot. It is available on all non-immediate objects.",
+		"Get meta. Meta is auxiliary data slot. It is available on all non-immediate objects.",
 		"The idea is to store additional information that will not get in your way in cases when you don't care about it.",
 		NULL
 	);
-	register_global_func(vm, 0, "attrs",    &native_attrs_any,           2, "obj",      vm->Any, "v", vm->Any);
+	register_global_func(vm, 0, "meta", &native_meta_any, 2, "obj", vm->Any, "v", vm->Any);
 	_doc_arr(vm, "",
-		"Set attributes. Attributes is auxiliary data slot. It is available on all non-immediate objects.",
+		"Set meta. Meta is auxiliary data slot. It is available on all non-immediate objects.",
 		"The idea is to store additional information that will not get in your way in cases when you don't care about it.",
 		NULL
 	);
@@ -4081,7 +4065,6 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		// MAX_FRAMES - 1 to allow DEEPER_FRAME to always work without checks
 		if(ctx->frame_ptr >= MAX_FRAMES-1) {
 			ctx->frame_ptr--;
-			// TODO: Appropriate exception type, not Exception
 			VALUE exc;
 			exc = make_normal_type_instance(vm->StackDepthFail);
 			set_normal_type_instance_field(exc, make_string("message"), make_string("Max stack depth reached"));
@@ -4362,6 +4345,7 @@ main_loop:
 							POP(LOCALS[lvi]);
 							goto main_loop;
 		case OP_CALL:
+                            call:
 							// TODO: print arguments of failed call, not just the callable
 							// In (current): ... result_placeholder (null), arg1, ..., argN, argc, callable
 							// Out: ... result
@@ -4698,27 +4682,27 @@ do_jump:
 							v = make_string_of_len(&vm->bytecode[ip+1], vm->bytecode[ip]);
 							ip += 1 + vm->bytecode[ip];
 							// CLOSURE_OBJ_NAME(TOP) = v;
-							if(!IS_HASH(OBJ_ATTRS(TOP))) {
+							if(!IS_HASH(OBJ_META(TOP))) {
 								goto main_loop;
 							}
-							set_hash_key(OBJ_ATTRS(TOP), make_string("name"), v);
+							set_hash_key(OBJ_META(TOP), make_string("name"), v);
 							goto main_loop;
 		case OP_SET_CLOSURE_DOC:
 							EXPECT_STACK_DEPTH(2);
 							assert(IS_CLOSURE(SECOND));
-							if(!IS_HASH(OBJ_ATTRS(SECOND))) {
+							if(!IS_HASH(OBJ_META(SECOND))) {
 								goto main_loop;
 							}
-							set_hash_key(OBJ_ATTRS(SECOND), make_string("doc"), FIRST);
+							set_hash_key(OBJ_META(SECOND), make_string("doc"), FIRST);
 							REMOVE_TOP_NOCHECK;
 							goto main_loop;
 		case OP_SET_CLOSURE_NS:
 							EXPECT_STACK_DEPTH(2);
 							assert(IS_CLOSURE(SECOND));
-							if(!IS_HASH(OBJ_ATTRS(SECOND))) {
+							if(!IS_HASH(OBJ_META(SECOND))) {
 								goto main_loop;
 							}
-							set_hash_key(OBJ_ATTRS(SECOND), make_string("ns"), FIRST);
+							set_hash_key(OBJ_META(SECOND), make_string("ns"), FIRST);
 							REMOVE_TOP_NOCHECK;
 							goto main_loop;
 		case OP_HASH_SET:
@@ -4736,16 +4720,12 @@ do_jump:
 							PUSH(MAKE_KWARGS_MARKER);
 							goto main_loop;
 		case OP_MAKE_REDIR:
-							EXPECT_STACK_DEPTH(3);
-							command = make_normal_type_instance(vm->CommandRedir);
-							POP_NOCHECK(v);
-							set_normal_type_instance_field(command, make_string("datum"), v);
-							POP_NOCHECK(v);
-							set_normal_type_instance_field(command, make_string("marker"), v);
-							POP_NOCHECK(v);
-							set_normal_type_instance_field(command, make_string("fd"), v);
-							PUSH_NOCHECK(command);
-							goto main_loop;
+                            // In: (null), fd, marker, datum
+                            // OP_CALL - In (current): ... result_placeholder (null), arg1, ..., argN, argc, callable
+							EXPECT_STACK_DEPTH(4);
+                            PUSH(MAKE_INT(3));
+                            PUSH(vm->CommandRedir);
+                            goto call;
 		case OP_SUPER:
 							if(THIS_FRAME.arr_callable) {
 								assert(IS_MULMETHOD(*THIS_FRAME.arr_callable));
@@ -4784,6 +4764,16 @@ do_jump:
 
 end_main_loop:
 	return METHOD_OK;
+
+stack_overflow_exception:
+	{
+		VALUE exc;
+		exc = make_normal_type_instance(vm->StackOverflow);
+		set_normal_type_instance_field(exc, make_string("message"), make_string("Stack Overflow"));
+		set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+		*result = exc;
+		// goto exception
+	}
 
 exception:
 	// *result is the exception
@@ -4852,7 +4842,7 @@ BYTECODE_HANDLE *ngs_start_unserializing_bytecode(char *data) {
 	h->data = data;
 	h->next_section_num = 0;
 
-	if(memcmp(p, BYTECODE_SIGNATURE, strlen(BYTECODE_SIGNATURE))) {
+	if(memcmp(p, BYTECODE_SIGNATURE, strlen(BYTECODE_SIGNATURE)) != 0) {
 		assert(0 == "Bytecode has invalid signature");
 	}
 	p += strlen(BYTECODE_SIGNATURE);

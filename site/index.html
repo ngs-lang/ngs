@@ -15,137 +15,188 @@
 <body>
 
 <div class="container pb-5">
-    <div class="row">
-        <div class="col-sm">
-            <h1>NGS - Next Generation Shell</h1>
+
+    <div class="row pt-3 pb-3">
+        <div class="col-auto mr-auto">
+            <div class="row justify-content-start menu-item">
+                <span class="align-middle"><img alt="NGS logo - cloud and UNIX shell icon" src="ngs-logo-300.png" height="25"></span>
+            </div>
+        </div>
+
+        <div class="col-auto ml-auto">
+            <div class="row justify-content-end">
+                <div class="mr-auto menu-item">
+                    <a href="https://ngs-lang.org/doc/latest/index.html" class="icon-link transition duration-150 ease-in-out">
+                        <p>Documentation</p>
+                    </a>
+                </div>
+                <div class="mr-auto menu-item">
+                    <a href="https://ngs-lang.org/doc/latest/generated/index.html" class="icon-link transition duration-150 ease-in-out">
+                        <p>Reference</p>
+                    </a>
+                </div>
+                <div class="mr-auto menu-item">
+                    <a href="https://github.com/ngs-lang/ngs/wiki" class="icon-link transition duration-150 ease-in-out">
+                        <p>Wiki</p>
+                    </a>
+                </div>
+                <div class="mr-auto menu-item">
+                    <a href="https://github.com/ngs-lang/ngs" class="icon-link transition duration-150 ease-in-out">
+                        <p>GitHub</p>
+                    </a>
+                </div>
+                <div class="mr-auto menu-item">
+                    <a href="https://www.youtube.com/channel/UC6CL2J6syrV1mfFpxQd89gQ" class="icon-link transition duration-150 ease-in-out">
+                        <p>YouTube</p>
+                    </a>
+                </div>
+                <div class="mr-auto menu-item">
+                    <a href="https://discord.com/invite/6VqgcpM" class="icon-link transition duration-150 ease-in-out">
+                        <p>Discord</p>
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="row pt-2">
-        <div class="col-md-3">
-        </div>
-        <div class="col-md-6">
-            <p class="text-center text-justify main-thing-on-page">
-                NGS is a modern programming language with the focus on systems engineering.
-            </p>
-            <p class="text-center">
-                <span class="align-middle"><img src="ngs-logo-300.png" width="150" height="40"></span>
-            </p>
-        </div>
-        <div class="col-md-3">
+    <div class="row pb-2">
+        <div class="col" style="text-align: center">
+            <h1>Next Generation Shell</h1>
+            <span style="font-size: 1.25rem">A modern programming language for DevOps</span>
         </div>
     </div>
-    <div class="row">
+
+    <div class="row pt-2 pb-2">
         <div class="col-sm">
-            <h2>About NGS</h2>
+            <h2 class="text-left">About</h2>
 
-            <p>
-                NGS is a unique combination of select features borrowed from other languages and original features.
-                NGS was built from the ground up focusing on daily systems engineering tasks.
-            </p>
+            <div  style="text-align: justify">
+                <p>
+                    Next Generation Shell is a modern programming language that focuses on "DevOps"y <a href="https://github.com/ngs-lang/ngs/wiki/Use-Cases">use cases</a>.
+                </p>
 
-            <p>
-                One way to think about NGS is bash plus data structures plus better syntax and error handling.
-            </p>
+                <p>
+                    NGS utilizes a subset of bash syntax for running external programs and provides additional facilities for ergonomic experience: exit codes handling, output parsing, etc.
+                </p>
 
-            <p>
-                Scripting AWS is much easier with NGS, there is a <a href="https://ilya-sher.org/2016/07/06/declarative-primitives-or-mkdir-p-for-the-cloud/">Declarative Primitives style</a> library for that.
-            </p>
+                <p>
+                    Data manipulation is convenient. NGS provides <code>map</code>, <code>filter</code> and other primitives for basic functional programming, uniquely extended to support patterns.
+                </p>
+            </div>
 
-            <p>
-                If you need additional function or syntax in NGS,
-                it's highly probable that it will be included in the language
-                as long as it is for systems engineering tasks.
-            </p>
-
-
-        </div>
-        <div class="col-sm">
-            <h2>Start using NGS</h2>
-            <h4>Install NGS</h4>
-            NGS runs on Linux and Mac.
-            Please follow
-            <a href="https://github.com/ngs-lang/ngs#compiling-and-running">the instructions to build NGS</a> on your
-            computer.
-            Packages (apt, brew and others) are coming soon.
-
-            <h4>Run NGS inside docker</h4>
-            <a href="https://github.com/ngs-lang/ngs#running-using-docker">Play with NGS inside docker - instructions</a>
-            <h4>Documentation for NGS beginners</h4>
+            <h2 class="text-left">Examples and Sample Features</h2>
+            Standard library instead of repetative re-implementation in each script.
             <ul>
-                <li><a href="doc/latest/man/ngstut.1.html">Examples-based tutorial</a> - understand how NGS feels like</li>
-                <li><a href="doc/latest/man/ngslang.1.html">Full language description</a></li>
-                <li><a href="doc/latest/man/ngsstyle.1.html">Coding style guide</a></li>
-                <li><a href="doc/latest/man/ngswhy.1.html">Why use NGS? Why it was created?</a></li>
+                <li><code>log("my log message")</code></li>
+                <li><code>debug("facility", "closing file ${f}")</code> and run with <code>DEBUG=facility</code> environment variable</li>
+                <li><code>status("Reading ${f} - ${p}% done")</code></li>
+                <li><code>retry</code> function</li>
             </ul>
+            Run external programs ergonomically
+            <ul>
+                <li><code>$(your_program --id $id --values $*values)</code></li>
+                <li><code>p=$(your_program &)</code> ... <code>p.kill()</code></li>
+                <li><code>output = `your_program --values $*args`</code></li>
+                <li><code>structured_data = ``curl https://api.example.com/blah.json``</code></li>
+                <li>smart and customizable handling of processes' exit codes (including throwing exceptions)</li>
+            </ul>
+            Manipulate structured data
+            <ul>
+                <li><code>map</code>, <code>filter</code>, <code>reject</code> with the usual meanings</li>
+                <li><code>mapk</code> - maps hash keys</li>
+                <li><code>mapv</code> - maps hash values</li>
+                <li><code>filterk / rejectk</code> - filters hash by keys</li>
+                <li><code>filterv / rejectv</code> - filters hash by values</li>
+                <li><code>the_one</code> - returns the only element in an array</li>
+                <li><code>group</code> - groups values into hash</li>
+                <li><code>collector</code> - accumulates result</li>
+                <li><code>Table</code> - displays tabular data elegantly</li>
+                <li><code>Stats</code> - counts occurrences</li>
+                <li><code>fetch</code> - reads and parses a file or a URL</li>
+            </ul>
+
+            <a href="https://rosettacode.org/wiki/Category:NGS">More examples at RosettaCode</a>
+
+            <h2 class="text-left">Links</h2>
+            <ul>
+                <li><a href="https://ngs-lang.org/doc/latest/man/ngstut.1.html">Examples-based tutorial</a> - get the feeling of NGS</li>
+                <li><a href="https://ngs-lang.org/doc/latest/man/ngswhy.1.html">Why use NGS? Why it was created?</a></li>
+                <li><a href="https://ngs-lang.org/doc/latest/man/ngslang.1.html">Documentation: Language description</a></li>
+                <li><a href="https://ngs-lang.org/doc/latest/man/ngsstyle.1.html">Documentation: Coding style guide</a></li>
+                <li><a href="https://ngs-lang.org/doc/latest/generated/index.html">Documentation: Language reference</a></li>
+                <li><a href="https://github.com/ngs-lang/ngs">GitHub</a></li>
+                <li><a href="https://discord.com/invite/6VqgcpM">Discord</a></li>
+                <li><a href="https://www.youtube.com/channel/UC6CL2J6syrV1mfFpxQd89gQ">YouTube</a></li>
+            </ul>
+        </div>
+        <div  style="margin-left: 40px"></div>
+        <div class="col-sm">
+            <h2 class="text-left">Install</h2>
+            <div class="row justify-content-between">
+                <div class="col-8"><h3>Curl</h3></div>
+                <div class="col-4 align-self-center text-right">
+                    <span class="fab fa-apple icon-system"></span>
+                    <span class="fab fa-linux icon-system" style="padding-left: 10px"></span>
+                </div>
+            </div>
+            <pre><code class="bash hljs">curl https://ngs-lang.org/install.sh | bash</code></pre>
+            <div class="row justify-content-between">
+                <div class="col-8"><h3>Git</h3></div>
+                <div class="col-4 align-self-center text-right">
+                    <span class="fab fa-apple icon-system"></span>
+                    <span class="fab fa-linux icon-system" style="padding-left: 10px"></span>
+                </div>
+            </div>
+            <pre><code class="bash hljs">git clone git@github.com:ngs-lang/ngs.git
+cd ngs && ./install.sh</code></pre>
+
+            <div class="row justify-content-between">
+                <div class="col-8"><h3>Homebrew</h3></div>
+                <div class="col-2 align-self-center text-right"><span class="fab fa-apple icon-system"></span></div>
+            </div>
+            <pre><code class="bash hljs">brew install ngs</code></pre>
+
+            <div class="row justify-content-between">
+                <div class="col-8"><h3>Snap</h3></div>
+                <div class="col-2 align-self-center text-right"><span class="fab fa-linux icon-system"></span></div>
+            </div>
+            <pre><code class="bash hljs">sudo snap install ngs</code></pre>
+
+            <h3>Jupyter Notebook</h3>
+            <pre><code class="plaintext hljs">
+!curl "https://raw.githubusercontent.com/ngs-lang/ngs-ipython-extension/master/ngs-install.sh" | bash
+
+%load_ext ngs
+%ngs [single line expression]
+%%ngs [multi line code]
+</code></pre>
+
+
+            <h2 class="text-left">Run Without Installing</h2>
+
+            <h3>Docker</h3>
+            <pre><code class="bash hljs">docker run -it --rm ngslang/ngs</code></pre>
+
+
+            <h3>Docker with Jupyter Notebook</h3>
+            <pre><code class="bash hljs">docker run -p 8888:8888 ngslang/ngs-jupyter</code></pre>
+
+
+            <h2 class="text-left">Github Actions</h2>
+            <pre><code class="yaml hljs">- uses: ngs-lang/ngs@v2.1.13
+- run: ngs -pi 'sum(10..100)'</code></pre>
+
+
         </div>
     </div>
-    <div class="row">
-
-        <div class="col-sm">
-            <h2>Sample NGS features</h2>
-            <ul>
-                <li>
-                    Common systems engineering scripting aspects are covered
-                    <ul>
-                        <li><code>retry</code> function</li>
-                        <li>environment-variable-controlled <code>debug</code> function</li>
-                        <li><code>log</code> function for neat logging</li>
-                        <li><code>status</code> function for what is semantically a status</li>
-                    </ul>
-                </li>
-                <li>
-                    Easy processes handling
-                    <ul>
-                        <li>small subset of bash syntax for redirections and pipes</li>
-                        <li>smart and customizable handling of processes' exit codes (including throwing exceptions)</li>
-                        <li>syntax for running a command and parsing the output</li>
-                        <li>process control with <code>p=$(my_process &); ... p.kill()</code></li>
-                    </ul>
-                </li>
-                <li>
-                    Structured data manipulation. While parsing text remains a necessity, many of today's tasks include talking to APIs.
-                    APIs return structured data.
-                    <ul>
-                        <li>Sample functions: <code>map</code>, <code>filter</code>, <code>reject</code>, <code>mapk</code> -
-                            maps hash keys, <code>mapv</code> - maps hash values, <code>group</code> - groups values into hash,
-                            <code>fetch</code> - reads and parses a file.</li>
-                        <li><code>collector</code> facility lets you accumulate result easily into array,
-                            hash or any user defined type.</li>
-                        <li><code>Table</code> for displaying tabular data elegantly</li>
-                        <li><code>Stats</code> type counts occurrences</li>
-                        <li>
-                            <code>Box</code>, <code>FullBox</code> and
-                            <code>EmptyBox</code> types represent containers with or without data in them.
-                        </li>
-                    </ul>
-                </li>
-            </ul>
-
-        </div>
-        <div class="col-sm">
-            <h2>Documentation</h2>
-            <ul>
-                <li><a href="doc/latest/index.html">Documentation Index</a> - main entry point to all documentation</li>
-            </ul>
-        </div>
-
-    </div>
-    <div class="row">
-        <div class="col-sm">
-            <h2>Source</h2>
-            <a href="https://github.com/ngs-lang/ngs">https://github.com/ngs-lang/ngs</a>
-        </div>
-        <div class="col-sm">
-            <h2>Thanks</h2>
-            <ul>
-                <li>Thanks to all contributors to NGS.</li>
-                <li>Thanks to Beame.io LTD for hosting this site.</li>
-            </ul>
+    <div class="row pt-3">
+        <div class="col-sm"></div>
+        <div class="col-sm text-right">
+            <p style="font-size: 12px; vertical-align: bottom;">powered by<a href="https://beame.io" target="_blank"><img alt="beame.io logo" style="margin-left: 10px; margin-top: -9px" src="beame.png" height="15"></a></p>
         </div>
     </div>
 </div>
 
-<!-- main advantages, maybe without comparison. multiple dispatch, take most approproiate features from other lang for systems engineering -->
+<!-- main advantages, maybe without comparison. multiple dispatch, take most appropriate features from other lang for DevOps -->
 
 <!-- Optional JavaScript -->
 <!-- jQuery first, then Popper.js, then Bootstrap JS -->
@@ -158,5 +209,40 @@
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"
         integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T"
         crossorigin="anonymous"></script>
+
+<!-- fontawesome - icons (used by site and highlightjs-badge) -->
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css"
+      integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm"
+      crossorigin="anonymous">
+
+<!-- highlightjs - code highlighting -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.4.0/styles/vs.min.css"
+      integrity="sha512-AVoZ71dJLtHRlsgWwujPT1hk2zxtFWsPlpTPCc/1g0WgpbmlzkqlDFduAvnOV4JJWKUquPc1ZyMc5eq4fRnKOQ=="
+      crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.4.0/highlight.min.js"
+        integrity="sha512-IaaKO80nPNs5j+VLxd42eK/7sYuXQmr+fyywCNA0e+C6gtQnuCXNtORe9xR4LqGPz5U9VpH+ff41wKs/ZmC3iA=="
+        crossorigin="anonymous"></script>
+
+<!-- highlightjs-badge - copy button for highlightjs -->
+<script src="https://unpkg.com/highlightjs-badge@0.1.9/highlightjs-badge.min.js"
+        integrity="sha512-gguWIqcGs/CaJttRlYrw8Rd904nQI3Y0/wzDFwCs7PtAjXA3gzFzD10XBM2XrUI4K4PNi4N6W6qhTITMS9lBwQ=="
+        crossorigin="anonymous"></script>
+<script>
+	setTimeout(function () {
+		document.querySelectorAll(".hljs").forEach(hljs.highlightElement);
+		window.highlightJsBadge({
+			contentSelector: ".container",
+			// Delay in ms used for `setTimeout` before badging is applied
+			// Use if you need to time highlighting and badge application
+			// since the badges need to be applied afterwards.
+			// 0 - direct execution (ie. you handle timing
+			loadDelay:0,
+			// CSS class(es) used to render the copy icon.
+			copyIconClass: "fa fa-copy",
+			// CSS class(es) used to render the done icon.
+			checkIconClass: "fa fa-check text-success",
+		});
+	},10);
+</script>
 </body>
 </html>

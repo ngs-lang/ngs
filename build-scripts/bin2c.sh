@@ -5,12 +5,7 @@
 
 set -e
 
-SED=sed
-
-# gsed - MacOS, sed - all the rest
-if which gsed >/dev/null;then
-	SED=gsed
-fi
+SED=$1
 
 if ! $SED --version >/dev/null 2>/dev/null;then
 	echo "Failed to assert GNU sed: failed running sed --version" >&2
@@ -22,7 +17,7 @@ if ! $SED --version | grep -iq 'GNU sed';then
 	exit 2
 fi
 
-file_name=$1
+file_name=$2
 var_name=$(tr /. __ <<eof
 $file_name
 eof

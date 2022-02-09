@@ -2,21 +2,38 @@ default:
 	@echo "No target specified"
 	exit 1
 
+CMAKE := $(shell command -v cmake3 2> /dev/null)
+ifndef CMAKE
+	CMAKE := cmake
+endif
+
+CTEST := $(shell command -v ctest3 2> /dev/null)
+ifndef CTEST
+	CTEST := ctest
+endif
+
+SUDO := $(shell command -v sudo 2> /dev/null)
+
 .PHONY: build
 build:
 ifeq ($(shell uname -s),Darwin)
-	( source build.macos.env.sh && mkdir -p build && cd build && cmake .. && make )
+	( source build.macos.env.sh && mkdir -p build && cd build && $(CMAKE) .. && make )
 else
-	( mkdir -p build && cd build && cmake .. && make )
+	( mkdir -p build && cd build && $(CMAKE) .. && make )
 endif
 
 .PHONY: tests
 tests:
-	(cd build && ctest)
+	(cd build && $(CTEST))
 
 .PHONY: install
 install: build
-	(cd build && sudo make install)
+	(cd build && $(SUDO) make install)
+
+.PHONY: test-installation
+test-installation:
+	@NGS_PATH=$$(command -v ngs) && echo "-> NGS is available at: $${NGS_PATH}"
+	@MAN_PATH=$$(man -w ngs) && echo "-> NGS man is available at: $${MAN_PATH}"
 
 .PHONY: clean
 clean:
@@ -30,8 +47,8 @@ update-vim-syntax:
 setup-dev-env: dir := $(abspath $(shell pwd))
 setup-dev-env:
 ifeq ($(shell uname -s),Darwin)
-	(cd /usr/local/bin; ln -sf "$(dir)/build/ngs")
-	(cd /usr/local/lib; ln -sf "$(dir)/lib" ngs)
+	(cd /usr/local/bin && ln -sf "$(dir)/build/ngs")
+	(cd /usr/local/lib && ln -sf "$(dir)/lib" ngs)
 else
 	@echo setup-dev-env is not implemented for your platform
 endif

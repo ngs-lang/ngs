@@ -1,4 +1,39 @@
-## (UNRELEASED) Version 0.2.13
+## (UNRELEASED) Version 0.2.14
+
+### New features
+
+* Parsing of `curl -i ...` command into {"code": Int, "message": Str, "headers": Hash, "headers_arr": Hash, "body": Str}
+* Add `decode(Str, p)`, where `p` is a `Path` or its subtype.
+* Add `assert(Path)`
+* Add `Bool(Real)`
+* Add experimental `native_ll_maybe_wrap`
+* Add `TmpDir`
+
+### Fixes and improvements
+
+* Fix #451 - decode(Bool) is not strict enough
+* `group(Eachable1, Fun)` now has additional parameter `v`: `group(e:Eachable1, k:Fun, v:Fun=...)`. `v` tells how to process values before adding to the resulting multi-value-map.
+* The `?` operator now takes `Any` instead of `Fun` as the right argument.
+* Fix `tr` exception when pattern is a `Hash` and it should match not at the top level.
+* `Argv` now accepts `Repeat` keys: `{Repeat('--repeat'): my_arr}`
+* Support `my_arr[idx] = val` for negative `idx`es.
+* `c_pcre_exec` now behaves correctly when too many captures are specified
+* Fix crash when accessing `RegExp#options`.
+* Improve GitHub build action
+* Add builds: Arch Linux, centos 7 and 8, fedora 34 and 35, Amazon Linux 2
+* Better exception message when redirecting to `>${null}`.
+* Website update & dark theme support
+
+### Deprecated
+
+* `Argv` - `['--repeat']` is deprecated in favor of `Repeat('--repeat')`
+* `attrs()` is deprecated, use `meta()` instead
+
+### Breaking changes
+
+* `Str(Path)` is now returning `.path`, not `<Path path=...>`
+
+## 2021-11-21 Version 0.2.13
 
 ### New features
 
@@ -15,6 +50,8 @@
 * Add `collector(Stats, Fun)`
 * `debug(Str, Fun)` is now supported
 * Add `ensure(Arr, T)` for `T` being subtype of `ArrLike`
+* Add `fork()`, higher level wrapper around `c_fork()`
+* Add `Str(ArrLike)`
 
 ### Fixes and improvements
 
@@ -24,10 +61,14 @@
 * Reorganize stdlib to eleminate multiple `inherit()` calls
 * Remove unused `most_by_cb()`
 * Booleans now compare correctly when used as `Hash` keys
+* `exit_hook` now removes hooks in child `fork()`
+* It is now possible to redirect to File without using `.path` - `f=TmpFile(); $(echo a > $f)` - Issue #490
+* `test.ngs` in the root folder now accepts optional file names; defaults to `lang-tests.ngs`, `stdlib.ngs`, and all `*.ngs` files in `lib/autoload`
 
 ### Breaking changes
 
 * Remove deprecated `nofail:` option
+* `write(f:File, s:Str)` now returns `f`
 
 ### Deprecated
 

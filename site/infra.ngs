@@ -26,4 +26,37 @@
 	# * Create CloudFront distribution with origin s3.amazonaws.com/${BUCKET_NAME}
 	# * Create DNS alias for @
 
+
+    # * Create S3 buckets for REDIRECTS
+    REDIRECTS= [{id: "discord", host: "discord.gg", path: "6VqgcpM"},
+                {id: "videos", host: "m.youtube.com", path: "channel/UC6CL2J6syrV1mfFpxQd89gQ"},
+                {id: "source", host: "github.com", path: "ngs-lang/ngs"},
+                {id: "wiki", host: "github.com", path: "ngs-lang/ngs/wiki"},
+                {id: "ipython", host: "github.com", path: "ngs-lang/ngs-ipython-extension"},
+                {id: "docker", host: "hub.docker.com", path: "r/ngslang/ngs"},
+                {id: "brew", host: "formulae.brew.sh", path: "formula/ngs"}
+                {id: "snap", host: "snapcraft.io", path: "ngs"},
+                {id: "action", host: "github.com", path: "marketplace/actions/setup-ngs"},
+                {id: "manual", host: "ngs-lang.org", path: "doc/latest/index.html"},
+                {id: "ref", host: "ngs-lang.org", path: "doc/latest/generated/index.html"}]
+
+    REDIRECTS.each({
+        bucketName = "${A.id}.${DOMAIN}"
+        tmpbucket = AWS::Bucket(Name=bucketName).converge()
+        if not($(ok:[0, 255] aws s3api get-bucket-website --bucket ${bucketName})) {
+            tmpbucket.resources[0].run("Setting website", %(aws s3 website "s3://${bucketName}/" --index-document index.html --error-document error.html ), false)
+        }
+    })
+    # Manual steps:
+    # * Edit each S3 bucket that was created in the previous step and add `Redirection rules – optional` as
+    #        [
+    #            {
+    #                "Redirect": {
+    #                    "HostName": "${REDIRECTS.host}",
+    #                    "ReplaceKeyPrefixWith": "${REDIRECTS.path}"
+    #                }
+    #            }
+    #        ]
+    # * Create CloudFront distribution pointing to each s3 public address, with alternate domain name (cname) `${REDIRECTS.id}.${REDIRECTS.host}`, use only North America and Europe, with redirect http to http, create ssl cert, TLSv1.2_2018, HTTP/2, no Default root object
+    # * Create DNS alias for all addressess that points to each cloudfront address
 }
