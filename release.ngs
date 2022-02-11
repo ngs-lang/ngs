@@ -1,6 +1,7 @@
 #!/usr/bin/env ngs
 
 # Source document: release.md
+# Source document: https://github.com/ngs-lang/ngs/blob/feature/release-actions/.github/workflows/release-snap.yml
 
 ns {
 
@@ -8,25 +9,40 @@ ns {
 	target_branch = 'master'
 
 	F main() {
+
+		cur_dir = null
+		F run(cp:CommandsPipeline) {
+			cp.commands.each(F(c) c.options.log = true)
+			if cur_dir {
+				cp.commands.each(F(c) c.options.cd = cur_dir)
+			}
+			$($cp)
+		}
+
 		warn("NGS release script - Work in progress")
 		tmp_dir = TmpDir(KeepOnErrorCleanupPolicy())
 		log("Using temporary directory ${tmp_dir}")
 		for b in [source_branch, target_branch] {
 			branch_dir = tmp_dir / b
-			$(log: cp -a . $branch_dir)
-			$(log: cd:branch_dir git reset --hard)
-			$(log: cd:branch_dir git checkout $b)
+			run(%(cp -a . $branch_dir))
+			run(%(cd:branch_dir git reset --hard))
+			run(%(cd:branch_dir git checkout $b))
 		}
 		source_dir = tmp_dir / source_branch
 		target_dir = tmp_dir / target_branch
 
-		$(log: cd:source_dir rm -rf build)
-		$(log: cd:source_dir make build)
-		$(log: cd:source_dir make tests)
-		$(log: cd:source_dir make update-vim-syntax)
-
-		# build_dir = source_dir / 'build'
-		# $(log: cd:build_dir make test)
+		cur_dir = source_dir
+			run(%(rm -rf build))
+			run(%(make build))
+			run(%(make tests))
+			run(%(make update-vim-syntax))
+			vim_syntax_file = 'vim/syntax/ngs.vim'
+			# https://stackoverflow.com/questions/17797740/check-if-specific-file-in-git-repository-has-changed
+			if run(%(ok:[0,1] git diff --exit-code $vim_syntax_file)).not() {
+				run(%(git commit -m "Update $vim_syntax_file" -i $vim_syntax_file))
+				run(%(git push))
+			}
+		cur_dir = null
 
 	}
 }
