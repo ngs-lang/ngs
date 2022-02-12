@@ -20,6 +20,12 @@ ns {
 		}
 
 		warn("NGS release script - Work in progress")
+
+		run(%(git fetch --all))
+		if `git log --no-merges $target_branch "^${source_branch}"` {
+			exit("There are commits on the ${target_branch} branch which are not in the ${source_branch} branch. Please review the changes")
+		}
+
 		tmp_dir = TmpDir(KeepOnErrorCleanupPolicy())
 		log("Using temporary directory ${tmp_dir}")
 		for b in [source_branch, target_branch] {
@@ -43,6 +49,7 @@ ns {
 				run(%(git push))
 			}
 		cur_dir = null
+
 
 	}
 }
