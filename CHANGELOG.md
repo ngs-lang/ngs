@@ -8,6 +8,7 @@
 * Add `Bool(Real)`
 * Add experimental `native_ll_maybe_wrap`
 * Add `TmpDir`
+* Add `replace(File, Any, Any)` for in-place replacement
 
 ### Fixes and improvements
 

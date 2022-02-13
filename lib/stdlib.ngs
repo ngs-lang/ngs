@@ -5253,6 +5253,15 @@ section "Path" {
 	F assert(p:Path) {
 		assert(p, "${p} must exist and be a ${p.typeof().human_type_name()}")
 	}
+
+	doc Replace in a file. Wrapper around replace(Str, Any, Any).
+	doc %RET - f
+	F replace(f:File, src, dst) {
+		debug("file", "Replacing in ${f}: '${src}' with '${dst}'")
+		data = f.read().replace(src, dst)
+		write(f, data)
+		f
+	}
 }
 
 # === Commands and processes (WIP) ===============
