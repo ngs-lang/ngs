@@ -4,7 +4,7 @@ on: push
 jobs:
   build-internal-apt:
     timeout-minutes: 5
-    name: Build in ${{ matrix.compiler }} (${{ matrix.os }})
+    name: Build in ${{ matrix.compiler }}-${{ matrix.version }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -31,7 +31,7 @@ jobs:
 
   build-external-pacman:
     timeout-minutes: 5
-    name: Build in ${{ matrix.compiler }} (${{ matrix.container }})
+    name: Build in ${{ matrix.compiler }}-default (${{ matrix.container }})
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
@@ -57,7 +57,7 @@ jobs:
 
   build-external-apt-gcc:
     timeout-minutes: 5
-    name: Build in GCC
+    name: Build in gcc-${{ matrix.version }} (${{ matrix.container }})
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
@@ -79,7 +79,7 @@ jobs:
 
   build-external-apt-clang:
     timeout-minutes: 5
-    name: Build in Clang
+    name: Build in clang-${{ matrix.version }} (${{ matrix.container }})
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
@@ -101,7 +101,7 @@ jobs:
 
   build-external-yum-gcc:
     timeout-minutes: 10
-    name: Build in default GCC
+    name: Build in gcc-default
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
@@ -124,7 +124,7 @@ jobs:
 
   build-external-yum-clang:
     timeout-minutes: 10
-    name: Build in default Clang
+    name: Build in clang-default
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
@@ -147,7 +147,7 @@ jobs:
 
   build-external-centos7-gcc:
     timeout-minutes: 10
-    name: Build in GCC
+    name: Build in gcc-${{ matrix.version }} (${{ matrix.container }})
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
@@ -167,11 +167,11 @@ jobs:
 
   build-mac-gcc:
     timeout-minutes: 10
-    name: Build in GCC
-    runs-on: ${{ matrix.os }}
+    name: Build in gcc-${{ matrix.version }} (${{ matrix.container }})
+    runs-on: ${{ matrix.container }}
     strategy:
       matrix:
-        os: [ "macOS-10.15" ]
+        container: [ "macOS-10.15" ]
         version: [ "9", "10", "11" ]
     steps:
       - uses: actions/checkout@v2
@@ -186,11 +186,11 @@ jobs:
 
   build-mac-xcode:
     timeout-minutes: 15
-    name: Build in Xcode
-    runs-on: ${{ matrix.os }}
+    name: Build in Xcode-${{ matrix.version }} (${{ matrix.container }})
+    runs-on: ${{ matrix.container }}
     strategy:
       matrix:
-        os: [ "macOS-10.15" ]
+        container: [ "macOS-10.15" ]
         version: [ "10.3" ]
     steps:
       - uses: actions/checkout@v2
@@ -202,3 +202,37 @@ jobs:
           echo "CXX=clang++" >> $GITHUB_ENV
       - name: Install and Test
         run: (./install.sh && make tests test-installation)
+
+  build-other-arch-gcc:
+    timeout-minutes: 15
+    name: Build in gcc-${{ matrix.version }} (${{ matrix.container }} - ${{ matrix.arch }})
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        container: [ "bullseye" ]
+        version: [ "10" ]
+        arch: [ "aarch64", "s390x", "ppc64le" ]   # , "armv6", "armv7" -- 32 bits archs, currently not supported by ngs
+    steps:
+      - uses: actions/checkout@v2.1.0
+      - uses: uraimo/run-on-arch-action@v2.1.1
+        name: Run commands
+        id: runcmd
+        with:
+          arch: ${{ matrix.arch }}
+          distro: ${{ matrix.container }}
+          # Not required, but speeds up builds by storing container images in GitHub package registry.
+          githubToken: ${{ github.token }}
+          # Mount the local folder as /ngs in the container
+          dockerRunArgs: |
+            --volume "${PWD}:/ngs"
+          env: |
+            CC: gcc-${{ matrix.version }}
+            CXX: g++-${{ matrix.version }}
+          install: |
+            apt-get update
+            apt-get install -y man sudo g++-${{ matrix.version }}
+
+          # Set an output parameter `uname` for use in subsequent steps
+          run: |
+            cd /ngs && ./install.sh && make tests test-installation
+            uname -a
