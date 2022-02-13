@@ -204,6 +204,8 @@ Build is currently tested with the github action present in `.github/workflows/b
 | fedora 35     | default (11)             | default (13)  |
 | archlinux     | default (11.1)           | default (13)  |
 
+Debian 11 with gcc 10 is also tested with the following architectures: aarch64, s390x, ppc64le
+
 ### Run
 
 	# If NGS is not installed (from the root of ngs project):
