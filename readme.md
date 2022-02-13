@@ -204,7 +204,10 @@ Build is currently tested with the GitHub action in `.github/workflows/build.yml
 | fedora 35     | default (11)             | default (13)  |
 | archlinux     | default (11.1)           | default (13)  |
 
-Note that 32-bit architectures are currently **not** supported.
+Notes:
+
+* 32-bit architectures are currently **not** supported.
+* Debian 11 with gcc 10 is also tested with the following architectures: aarch64, s390x, ppc64le
 
 ### Run
 
