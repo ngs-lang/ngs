@@ -191,7 +191,7 @@ Please refer to extension located in https://github.com/ngs-lang/ngs-aws-lambda
 
 	make build
 
-Build is currently tested with the github action present in `.github/workflows/build.yml` and we currently test:
+Build is currently tested with the GitHub action in `.github/workflows/build.yml` and we currently test the following 64-bit architectures:
 
 | system        | gcc                      | clang         |
 |---------------|--------------------------|---------------|
@@ -203,6 +203,8 @@ Build is currently tested with the github action present in `.github/workflows/b
 | fedora 34     | default (11)             | default (12)  |
 | fedora 35     | default (11)             | default (13)  |
 | archlinux     | default (11.1)           | default (13)  |
+
+Note that 32-bit architectures are currently **not** supported.
 
 ### Run
 
