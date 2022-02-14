@@ -2,13 +2,25 @@
 
 # Source document: release.md
 # Source document: https://github.com/ngs-lang/ngs/blob/feature/release-actions/.github/workflows/release-snap.yml
+# GitHub workflow jobs API description: https://docs.github.com/en/rest/reference/actions#workflow-jobs
 
 ns {
 
 	source_branch = 'dev'
 	target_branch = 'master'
 
+	F curl_gh_api(argv:Arr) {
+		argv .= map(F(a) a.replace('{owner}', 'ngs-lang').replace('{repo}', 'ngs').replace(/^\//, 'https://api.github.com/'))
+		``log: curl -sS -H "Accept: application/vnd.github.v3+json" $*argv``
+	}
+
+	F curl_gh_api(s:Str) curl_gh_api([s])
+
 	F main() {
+
+		assert(Program('curl'))
+		# curl_gh_api('/repos/{owner}/{repo}/actions/runs').echo()
+		# $(log: gh run list --workflow build.yml)  # Making sure we are logged in and have permissions
 
 		cur_dir = null
 		F run(cp:CommandsPipeline) {
@@ -48,6 +60,37 @@ ns {
 				run(%(git commit -m "Update $vim_syntax_file" -i $vim_syntax_file))
 				run(%(git push))
 			}
+
+			File(source_dir / 'CHANGELOG.md').replace('(UNRELEASED)', Time().Str("%Y-%m-%d"))
+			run(%(ok:1 git diff --exit-code ${source_dir / 'CHANGELOG.md'})).stdout.has('-## (UNRELEASED)').assert()
+			run(%(git commit -m '[release.ngs testing] Preparing for release' -i 'CHANGELOG.md'))
+			# TODO: git push
+			commit_id = run(%(git log -1 '--pretty=format:%T')).stdout.lines()[0]
+			log("Commit of CHANGELOG.md update: ${commit_id}")
+			log("Waiting for the build to appear")
+			# XXXXX ---
+			# commit_id = '21c533c7c848c97c203479ed6fa7e47d60bd1ba8'
+			# XXXXX ---
+			wf_run = retry(
+				times = 3
+				sleep = 6
+				body = {
+					curl_gh_api('/repos/{owner}/{repo}/actions/runs').workflow_runs.the_one(pattern={'head_commit': {'id': commit_id}}, found_none={null})
+				}
+			)
+			echo(wf_run)
+
+			log("Waiting for the build to finish")
+			gh_run = null
+			retry(
+				times = 60
+				sleep = 10
+				body = {
+					ret = curl_gh_api(wf_run.url).assert({'conclusion': AnyOf(null, 'success')})
+					ret.conclusion == 'success'
+				}
+			)
+
 		cur_dir = null
 
 
