@@ -33,6 +33,7 @@
 ### Breaking changes
 
 * `Str(Path)` is now returning `.path`, not `<Path path=...>`
+* `the_one()` is now fixed and will throw exception instead of returning null when appropriate `found_none` or `found_more` is not specified.
 
 ## 2021-11-21 Version 0.2.13
 
