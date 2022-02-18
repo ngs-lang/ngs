@@ -1082,7 +1082,10 @@ doc TODO: Return same type, not Arr
 doc something - object of any type that has each(something, callback) implemented
 doc %RET - Arr
 doc %EX - ["ssh", "IP", "w"].replace("IP", "10.0.0.100")  # ['ssh','10.0.0.100','w']
-F replace(something:Eachable1, src, dst) map(something, only(X == src, {dst}))
+F replace(e:Eachable1, src, dst) {
+	guard (e is not Str) and (e is not Int)
+	map(e, only(X == src, {dst}))
+}
 
 TEST ["ssh", "IP", "w"].replace("IP", "10.0.0.100") == ['ssh','10.0.0.100','w']
 
@@ -6620,8 +6623,6 @@ type SubSeq
 		type MaybeSfx(Sfx)
 		doc Suffix that must be present for ~ matching to succeed
 		type MustSfx(Sfx)
-
-# TODO: warn()
 
 doc Convert Success to FullBox
 doc %RET - FullBox
