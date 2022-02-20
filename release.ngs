@@ -19,8 +19,6 @@ ns {
 	F main() {
 
 		assert(Program('curl'))
-		# curl_gh_api('/repos/{owner}/{repo}/actions/runs').echo()
-		# $(log: gh run list --workflow build.yml)  # Making sure we are logged in and have permissions
 
 		cur_dir = null
 		F run(cp:CommandsPipeline) {
@@ -64,27 +62,27 @@ ns {
 			File(source_dir / 'CHANGELOG.md').replace('(UNRELEASED)', Time().Str("%Y-%m-%d"))
 			run(%(ok:1 git diff --exit-code ${source_dir / 'CHANGELOG.md'})).stdout.has('-## (UNRELEASED)').assert()
 			run(%(git commit -m '[release.ngs testing] Preparing for release' -i 'CHANGELOG.md'))
-			# TODO: git push
-			commit_id = run(%(git log -1 '--pretty=format:%T')).stdout.lines()[0]
+			run(%(git push))
+			commit_id = run(%(git log -1 '--pretty=format:%H')).stdout.lines()[0]
 			log("Commit of CHANGELOG.md update: ${commit_id}")
-			log("Waiting for the build to appear")
-			# XXXXX ---
-			# commit_id = '21c533c7c848c97c203479ed6fa7e47d60bd1ba8'
-			# XXXXX ---
+			log("Waiting for the build run to appear")
+			F _dbg(x) store("${Time().Int().Str()}.json", x)
+			$(log: sleep 90)
 			wf_run = retry(
-				times = 3
-				sleep = 6
+				times = 5
+				sleep = 60
 				body = {
-					curl_gh_api('/repos/{owner}/{repo}/actions/runs').workflow_runs.the_one(pattern={'head_commit': {'id': commit_id}}, found_none={null})
+					curl_gh_api('/repos/{owner}/{repo}/actions/runs').workflow_runs.tap(_dbg).the_one(pattern={'head_commit': {'id': commit_id}}, found_none={null})
 				}
 			)
-			echo(wf_run)
+			assert(wf_run, {'name': 'Build'})
+			log("Build run appeared: id ${wf_run.id} url ${wf_run.url}")
 
 			log("Waiting for the build to finish")
-			gh_run = null
+			$(log: sleep 120)
 			retry(
-				times = 60
-				sleep = 10
+				times = 10
+				sleep = 60
 				body = {
 					ret = curl_gh_api(wf_run.url).assert({'conclusion': AnyOf(null, 'success')})
 					ret.conclusion == 'success'
