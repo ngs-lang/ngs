@@ -204,6 +204,7 @@ jobs:
         run: (./install.sh && make tests test-installation)
 
   build-other-arch-gcc:
+    if: ${{ false }}  # Disable until https://github.com/ngs-lang/ngs/issues/556 is fixed
     timeout-minutes: 15
     name: Build in gcc-${{ matrix.version }} (${{ matrix.container }} - ${{ matrix.arch }})
     runs-on: ubuntu-20.04
