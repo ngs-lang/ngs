@@ -38,7 +38,7 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "archlinux:latest" ]
+        container: [ "archlinux:base-20220213.0.47747" ]
         compiler: [ "gcc", "clang" ]
     steps:
       - uses: actions/checkout@v2
