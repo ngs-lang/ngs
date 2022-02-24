@@ -311,9 +311,11 @@
 		F process_markdown_table(h:Hash) {
 			# table: 0 - ?, 1 - Alignment, 2 - something about columns?, 3 - ?, 4 - rows
 			assert(h.t == 'Table')
-			DocNode('table', class='markdown-table') with h.c[4].map(F(row) {
-				DocNode('tr') with row.map(F(cell) {
-					DocNode('td') with [ cell[0].to_doc() ]
+			# row: 0 - ?, 1 - cells?
+			DocNode('table', class='markdown-table') with h.c[4].the_one()[3].map(F(row) {
+				DocNode('tr') with row[1].map(F(cell) {
+					# cell: 0 - ?, 1 - Alignment, 2 - RowSpan, 3 - ColSpan, 4 - contents
+					DocNode('td') with [ cell[4].the_one().to_doc() ]
 				})
 			})
 		}
