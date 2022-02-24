@@ -24,6 +24,7 @@
 * Add builds: Arch Linux, centos 7 and 8, fedora 34 and 35, Amazon Linux 2
 * Better exception message when redirecting to `>${null}`.
 * Website update & dark theme support
+* `($())` is now a valid syntax for the identifier `$()`
 
 ### Deprecated
 
