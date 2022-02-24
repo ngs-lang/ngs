@@ -193,21 +193,22 @@ Please refer to extension located in https://github.com/ngs-lang/ngs-aws-lambda
 
 Build is currently tested with the GitHub action in `.github/workflows/build.yml` and we currently test the following 64-bit architectures:
 
-| system        | gcc                      | clang         |
-|---------------|--------------------------|---------------|
-| ubuntu 20.04  | 9, 10, 11                | 9, 10, 11     |
-| debian 11.1   | 9, 10                    | 9, 11         |
-| macOS 10.15   | 9, 10, 11                | 10            |
-| centos 7      | 9, 10, 11                | --            |
-| amazonlinux 2 | default (7.3)            | default (11)  |
-| fedora 34     | default (11)             | default (12)  |
-| fedora 35     | default (11)             | default (13)  |
-| archlinux     | default (11.1)           | default (13)  |
+| OS            | Architecture            | GCC version    | Clang version |
+|---------------|-------------------------|----------------|---------------|
+| ubuntu 20.04  | 64 bit                  | 9, 10, 11      | 9, 10, 11     |
+| debian 11.1   |                         | 9, 10          | 9, 11         |
+| debian 11.1   | aarch64, s390x, ppc64le | 10             | -             |
+| macOS 10.15   |                         | 9, 10, 11      | 10            |
+| centos 7      |                         | 9, 10, 11      | -             |
+| amazonlinux 2 |                         | default (7.3)  | default (11)  |
+| fedora 34     |                         | default (11)   | default (12)  |
+| fedora 35     |                         | default (11)   | default (13)  |
+| archlinux     |                         | default (11.1) | default (13)  |
 
 Notes:
 
 * 32-bit architectures are currently **not** supported.
-* Debian 11 with gcc 10 is also tested with the following architectures: aarch64, s390x, ppc64le
+
 
 ### Run
 
