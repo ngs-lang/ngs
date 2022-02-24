@@ -30,8 +30,6 @@ jobs:
         run: (./install.sh && make tests test-installation)
 
   build-external-pacman:
-    # Disable until https://github.com/ngs-lang/ngs/issues/556 is fixed
-    if: ${{ false }}
     timeout-minutes: 5
     name: Build in ${{ matrix.compiler }}-default (${{ matrix.container }})
     runs-on: ubuntu-20.04
@@ -40,13 +38,15 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "archlinux:base-20220116.0.44468" ]
+        container: [ "archlinux:base-20220213.0.47747" ]
         compiler: [ "gcc", "clang" ]
     steps:
       - uses: actions/checkout@v2
       - name: Setup Compiler
         run: |
-          pacman -Sy --noconfirm man-db ${{ matrix.compiler }}
+          pacman -Sy --noconfirm man-db wget curl ${{ matrix.compiler }}
+          pacman -Syu --noconfirm
+
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
             echo "CC=gcc" >> $GITHUB_ENV
             echo "CXX=g++" >> $GITHUB_ENV
