@@ -16,22 +16,35 @@ ns {
 
 	F curl_gh_api(s:Str) curl_gh_api([s])
 
-	F main() {
+	doc Set do_source_dir - used for development of this script
+	F main(do_source_dir:Bool=true) {
 
 		assert(Program('curl'))
+		read('version.h').assert(Ifx('-alpha'))
 
-		cur_dir = null
-		F run(cp:CommandsPipeline) {
-			cp.commands.each(F(c) c.options.log = true)
-			if cur_dir {
-				cp.commands.each(F(c) c.options.cd = cur_dir)
+		section 'Local, specialized $()' {
+			cur_dir = null
+			# F run(...) { ... } -- super() won't work
+			run = F(cp:CommandsPipeline) {
+				cp.commands.each(F(c) c.options.log = true)
+				if cur_dir {
+					cp.commands.each(F(c) c.options.cd = cur_dir)
+				}
+				super(cp)
 			}
-			$($cp)
+
+			orig_dollar_parens = globals()['$()']
+			($()) = MultiMethod([orig_dollar_parens, run])
+
+			F cd(dir:Path, cb:Fun) {
+				cur_dir = dir
+				finally(cb, {cur_dir = null})
+			}
 		}
 
 		warn("NGS release script - Work in progress")
 
-		run(%(git fetch --all))
+		$(git fetch --all)
 		if `git log --no-merges $target_branch "^${source_branch}"` {
 			exit("There are commits on the ${target_branch} branch which are not in the ${source_branch} branch. Please review the changes")
 		}
@@ -40,57 +53,72 @@ ns {
 		log("Using temporary directory ${tmp_dir}")
 		for b in [source_branch, target_branch] {
 			branch_dir = tmp_dir / b
-			run(%(cp -a . $branch_dir))
-			run(%(cd:branch_dir git reset --hard))
-			run(%(cd:branch_dir git checkout $b))
+			$(cp -a . $branch_dir)
+			$(cd:branch_dir git reset --hard)
+			$(cd:branch_dir git checkout $b)
 		}
 		source_dir = tmp_dir / source_branch
 		target_dir = tmp_dir / target_branch
 
-		cur_dir = source_dir
-			run(%(rm -rf build))
-			run(%(make build))
-			run(%(make tests))
-			run(%(make update-vim-syntax))
-			vim_syntax_file = 'vim/syntax/ngs.vim'
-			# https://stackoverflow.com/questions/17797740/check-if-specific-file-in-git-repository-has-changed
-			if run(%(ok:[0,1] git diff --exit-code $vim_syntax_file)).not() {
-				run(%(git commit -m "Update $vim_syntax_file" -i $vim_syntax_file))
-				run(%(git push))
-			}
-
-			File(source_dir / 'CHANGELOG.md').replace('(UNRELEASED)', Time().Str("%Y-%m-%d"))
-			run(%(ok:1 git diff --exit-code ${source_dir / 'CHANGELOG.md'})).stdout.has('-## (UNRELEASED)').assert()
-			run(%(git commit -m '[release.ngs testing] Preparing for release' -i 'CHANGELOG.md'))
-			run(%(git push))
-			commit_id = run(%(git log -1 '--pretty=format:%H')).stdout.lines()[0]
-			log("Commit of CHANGELOG.md update: ${commit_id}")
-			log("Waiting for the build run to appear")
-			F _dbg(x) store("${Time().Int().Str()}.json", x)
-			$(log: sleep 90)
-			wf_run = retry(
-				times = 5
-				sleep = 60
-				body = {
-					curl_gh_api('/repos/{owner}/{repo}/actions/runs').workflow_runs.tap(_dbg).the_one(pattern={'head_commit': {'id': commit_id}}, found_none={null})
+		if do_source_dir {
+			cd(source_dir, {
+				$(rm -rf build)
+				$(make build)
+				$(env "NGS_PATH=${source_dir / 'lib'}" make tests)
+				$(make update-vim-syntax)
+				vim_syntax_file = 'vim/syntax/ngs.vim'
+				# https://stackoverflow.com/questions/17797740/check-if-specific-file-in-git-repository-has-changed
+				if $(ok:[0,1] git diff --exit-code $vim_syntax_file).not() {
+					$(git commit -m "Update $vim_syntax_file" -i $vim_syntax_file)
+					$(git push)
 				}
-			)
-			assert(wf_run, {'name': 'Build'})
-			log("Build run appeared: id ${wf_run.id} url ${wf_run.url}")
 
-			log("Waiting for the build to finish")
-			$(log: sleep 120)
-			retry(
-				times = 10
-				sleep = 60
-				body = {
-					ret = curl_gh_api(wf_run.url).assert({'conclusion': AnyOf(null, 'success')})
-					ret.conclusion == 'success'
-				}
-			)
+				File(source_dir / 'CHANGELOG.md').replace('(UNRELEASED)', Time().Str("%Y-%m-%d"))
+				$(ok:1 git diff --exit-code ${source_dir / 'CHANGELOG.md'}).stdout.has('-## (UNRELEASED)').assert()
+				$(git commit -m '[release.ngs testing] Preparing for release' -i 'CHANGELOG.md')
+				$(git push)
+				commit_id = $(git log -1 '--pretty=format:%H').stdout.lines()[0]
+				log("Commit of CHANGELOG.md update: ${commit_id}")
+				log("Waiting for the build run to appear")
+				F _dbg(x) store("${Time().Int().Str()}.json", x)
+				$(log: sleep 90)
+				wf_run = retry(
+					times = 5
+					sleep = 60
+					body = {
+						curl_gh_api('/repos/{owner}/{repo}/actions/runs').workflow_runs.tap(_dbg).the_one(pattern={'head_commit': {'id': commit_id}}, found_none={null})
+					}
+				)
+				assert(wf_run, {'name': 'Build'})
+				log("Build run appeared: id ${wf_run.id} url ${wf_run.url}")
 
-		cur_dir = null
+				log("Waiting for the build to finish")
+				$(log: sleep 120)
+				retry(
+					times = 10
+					sleep = 60
+					body = {
+						ret = curl_gh_api(wf_run.url).assert({'conclusion': AnyOf(null, 'success')})
+						ret.conclusion == 'success'
+					}
+				)
+			})
+		}
 
+		cd(target_dir, {
+			$(git remote add source_dir $source_dir)
+			$(git fetch source_dir)
+			$(git merge --no-commit "source_dir/${source_branch}")
+			File(target_dir / 'version.h').replace('-alpha', '')
+			$(ok:1 git diff --exit-code ${target_dir / 'version.h'})
+			$(git add version.h)
+			$(rm -rf build)
+			$(make build)
+			$(env "NGS_PATH=${target_dir / 'lib'}" make tests)
 
+			# TODO # $(git diff)
+			version = $(./build/ngs --version).stdout.lines()[0]
+			$(git commit -am "Releasing version: ${version}")
+		})
 	}
 }
