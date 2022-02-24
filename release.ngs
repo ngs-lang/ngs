@@ -16,7 +16,30 @@ ns {
 
 	F curl_gh_api(s:Str) curl_gh_api([s])
 
-	F
+	F wait_for_build(commit_id) {
+		log("Waiting for the build run to appear")
+		$(log: sleep 90)
+		wf_run = retry(
+			times = 5
+			sleep = 60
+			body = {
+				curl_gh_api('/repos/{owner}/{repo}/actions/runs').workflow_runs.the_one(pattern={'head_commit': {'id': commit_id}}, found_none={null})
+			}
+		)
+		assert(wf_run, {'name': 'Build'})
+		log("Build run appeared: id ${wf_run.id} url ${wf_run.url}")
+
+		log("Waiting for the build to finish")
+		$(log: sleep 120)
+		retry(
+			times = 10
+			sleep = 60
+			body = {
+				ret = curl_gh_api(wf_run.url).assert({'conclusion': AnyOf(null, 'success')})
+				ret.conclusion == 'success'
+			}
+		)
+	}
 
 	doc Set do_source_dir - used for development of this script
 	F main(do_source_dir:Bool=true) {
@@ -92,28 +115,7 @@ ns {
 				$(git push)
 				commit_id = $(git log -1 '--pretty=format:%H').stdout.lines()[0]
 				log("Commit of CHANGELOG.md update: ${commit_id}")
-				log("Waiting for the build run to appear")
-				$(log: sleep 90)
-				wf_run = retry(
-					times = 5
-					sleep = 60
-					body = {
-						curl_gh_api('/repos/{owner}/{repo}/actions/runs').workflow_runs.the_one(pattern={'head_commit': {'id': commit_id}}, found_none={null})
-					}
-				)
-				assert(wf_run, {'name': 'Build'})
-				log("Build run appeared: id ${wf_run.id} url ${wf_run.url}")
-
-				log("Waiting for the build to finish")
-				$(log: sleep 120)
-				retry(
-					times = 10
-					sleep = 60
-					body = {
-						ret = curl_gh_api(wf_run.url).assert({'conclusion': AnyOf(null, 'success')})
-						ret.conclusion == 'success'
-					}
-				)
+				wait_for_build(commit_id)
 			})
 		}
 
