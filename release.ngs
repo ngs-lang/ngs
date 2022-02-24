@@ -16,6 +16,8 @@ ns {
 
 	F curl_gh_api(s:Str) curl_gh_api([s])
 
+	F
+
 	doc Set do_source_dir - used for development of this script
 	F main(do_source_dir:Bool=true) {
 
@@ -28,7 +30,7 @@ ns {
 			run = F(cp:CommandsPipeline) {
 				cp.commands.each(F(c) c.options.log = true)
 				if cur_dir {
-					cp.commands.each(F(c) c.options.cd = cur_dir)
+					cp.commands.each(F(c) c.options.dflt('cd', cur_dir))
 				}
 				super(cp)
 			}
@@ -43,6 +45,17 @@ ns {
 		}
 
 		warn("NGS release script - Work in progress")
+
+		section "Sanity of doc/out/" {
+			log("Checking whether file system at doc/out is case sensitive")
+			$(touch doc/out/a doc/out/A)
+			$(ok:[0,1] rm doc/out/a doc/out/A).assert("File system at doc/out/ is not case sensitive")
+
+			# Setup on MacOS: disk utility, create case sensitive "ngs-doc" volume
+			# mkdir /Volumes/ngs-doc/out
+			# cd doc
+			# ln -s /Volumes/ngs-doc/out
+		}
 
 		$(git fetch --all)
 		if `git log --no-merges $target_branch "^${source_branch}"` {
@@ -80,13 +93,12 @@ ns {
 				commit_id = $(git log -1 '--pretty=format:%H').stdout.lines()[0]
 				log("Commit of CHANGELOG.md update: ${commit_id}")
 				log("Waiting for the build run to appear")
-				F _dbg(x) store("${Time().Int().Str()}.json", x)
 				$(log: sleep 90)
 				wf_run = retry(
 					times = 5
 					sleep = 60
 					body = {
-						curl_gh_api('/repos/{owner}/{repo}/actions/runs').workflow_runs.tap(_dbg).the_one(pattern={'head_commit': {'id': commit_id}}, found_none={null})
+						curl_gh_api('/repos/{owner}/{repo}/actions/runs').workflow_runs.the_one(pattern={'head_commit': {'id': commit_id}}, found_none={null})
 					}
 				)
 				assert(wf_run, {'name': 'Build'})
@@ -118,6 +130,13 @@ ns {
 
 			# TODO # $(git diff)
 			version = $(./build/ngs --version).stdout.lines()[0]
+
+			section "Documentation" {
+				$(rm -rf ${target_dir / 'doc' / 'out' / version})
+				$(cd:(target_dir / 'doc') env "NGS_PATH=${target_dir / 'lib'}" ../build/ngs ./make.ngs out)
+				$(cd:(target_dir / 'doc') open -a Safari -W "out/${version}/index.html")  # XXX: MacOS specific
+			}
+
 			$(git commit -am "Releasing version: ${version}")
 		})
 	}
