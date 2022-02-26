@@ -257,6 +257,13 @@ void process_namespace(ast_node *first_child, int location[4]) {
 	}
 }
 
+void set_each_first_child_name(ast_node *node, char *name) {
+	ast_node *n;
+	for(n = node->first_child; n; n=n->next_sibling) {
+		n->first_child->name = name;
+	}
+}
+
 %}
 
 start = 
@@ -1677,10 +1684,19 @@ optional-function-call-arguments =
 	| { MAKE_NODE(no, NULL_NODE); $$ = no; }
 
 subshell =
-	"$(" cmd:commands-pipeline ")" { $$ = cmd; }
-	| "%(" cmd:commands-pipeline ")" { cmd->first_child->name = ngs_strdup("%()"); $$ = cmd; }
-	| "``" cmd:commands-pipeline "``" { cmd->first_child->name = ngs_strdup("````"); $$ = cmd; }
-	| "`" cmd:commands-pipeline "`" { cmd->first_child->name = ngs_strdup("``");  $$ = cmd; }
+	"$(" cmd:commands-pipelines ")" { $$ = cmd; }
+	| "%(" cmd:commands-pipelines ")" { set_each_first_child_name(cmd, ngs_strdup("%()")); $$ = cmd; }
+	| "``" cmd:commands-pipelines "``" { set_each_first_child_name(cmd,  ngs_strdup("````")); $$ = cmd; }
+	| "`" cmd:commands-pipelines "`" { set_each_first_child_name(cmd, ngs_strdup("``"));  $$ = cmd; }
+
+commands-pipelines = cps:commands-pipelines-node (cp:commands-pipeline {
+	append_ast_node_child(cps, $$);
+} commands-separator? space?)+ {
+	$$ = cps;
+	CAPTURE_LOCATION($$);
+}
+
+commands-pipelines-node = { MAKE_NODE(ret, EXPRESSIONS_NODE); $$ = ret; };
 
 commands-pipeline = inline_space? acc:commands-pipeline-node
 	(
