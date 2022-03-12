@@ -35,7 +35,7 @@ ns {
 			times = 10
 			sleep = 60
 			body = {
-				ret = curl_gh_api(wf_run.url).assert({'conclusion': AnyOf(null, 'success')})
+				ret = curl_gh_api(wf_run.url).assert({'conclusion': AnyOf(null, 'success')}, 'Expected successful build but it failed')
 				ret.conclusion == 'success'
 			}
 		)
@@ -46,6 +46,7 @@ ns {
 
 		assert(Program('curl'))
 		read('version.h').assert(Ifx('-alpha'))
+		$(aws s3 ls s3://01.ngs-lang.org/doc/)
 
 		section 'Local, specialized $()' {
 			cur_dir = null
@@ -122,6 +123,7 @@ ns {
 		cd(target_dir, {
 			$(git remote add source_dir $source_dir)
 			$(git fetch source_dir)
+			$(git checkout -b release-test)  # Cleanup: git push origin --delete release-test
 			$(git merge --no-commit "source_dir/${source_branch}")
 			File(target_dir / 'version.h').replace('-alpha', '')
 			$(ok:1 git diff --exit-code ${target_dir / 'version.h'})
@@ -133,13 +135,41 @@ ns {
 			# TODO # $(git diff)
 			version = $(./build/ngs --version).stdout.lines()[0]
 
-			section "Documentation" {
+			section "Prepare Documentation" {
 				$(rm -rf ${target_dir / 'doc' / 'out' / version})
 				$(cd:(target_dir / 'doc') env "NGS_PATH=${target_dir / 'lib'}" ../build/ngs ./make.ngs out)
+				$(ok:[0, 1] cd:(target_dir / 'doc' / 'out') rm latest)
+				$(cd:(target_dir / 'doc' / 'out') ln -s $version latest)
 				$(cd:(target_dir / 'doc') open -a Safari -W "out/${version}/index.html")  # XXX: MacOS specific
 			}
 
 			$(git commit -am "Releasing version: ${version}")
+			$(git push --set-upstream origin release-test)
+			commit_id = $(git log -1 '--pretty=format:%H').stdout.lines()[0]
+			log("Commit of the release: ${commit_id}")
+			wait_for_build(commit_id)
+			$(git tag "v${version}")
+			$(git push origin ":release-test" "v${version}")
+
+			echo("Please create release on GitHub - https://github.com/ngs-lang/ngs/releases/new - ${version}")
+			echo("Please release snap")
+
+			section "Publish Documentation" {
+				$(aws s3 sync --acl public-read doc/out/ s3://01.ngs-lang.org/doc/)
+				$(cd:(target_dir / 'site') ./update.ngs)
+			}
+
 		})
-	}
-}
+
+		if do_source_dir {
+			cd(source_dir, {
+				version = $(cd:target_dir ./build/ngs --version).stdout.lines()[0]
+				t = version.split(".")
+				new_version="${t[0]}.${t[1]}.${t[2].Int()+1}"
+				File(source_dir / "version.h").replace(/(?<=").+(?=")/, "${new_version}-alpha")
+				File(source_dir / "snap" / "snapcraft.yaml").replace(/(?<=version: ')[0-9.]+(?=')/, new_version)
+			})
+		}
+
+	} # main
+} # ns

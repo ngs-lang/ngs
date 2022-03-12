@@ -30,7 +30,7 @@ This document describes releasing a new version of NGS.
 	* `make build && make tests`
 * Documentation
 	* Build: `(cd doc && ./make.ngs out)`
-	* Take a look at the generated documentaion
+	* Take a look at the generated documentation
 * `git push`
 * Wait and see that GitHub Actions build is OK - https://github.com/ngs-lang/ngs/actions
 * Update doc folder so that `latest` link points to the last version: `(cd doc/out && rm latest && ln -s $(ngs -p VERSION) latest)`
@@ -44,7 +44,7 @@ This document describes releasing a new version of NGS.
 	* At the end of description add: `` Detailed list of changes is in `CHANGELOG.md` ``
 * Release Snap
 	* access https://snapcraft.io/ngs/builds, if the build was not already started (triggered automatically on git push) click the `Trigger new build` button
-	* wait for the build for all arquitectures to finish, then go to https://snapcraft.io/ngs/releases, the build should appear released in the `latest/edge` channel, click in the cog and promote it to the desired channel, or just drag it into the wanted channel. Then click `Save` button on top of the page
+	* wait for the build for all architectures to finish, then go to https://snapcraft.io/ngs/releases, the build should appear released in the `latest/edge` channel, click in the cog and promote it to the desired channel, or just drag it into the wanted channel. Then click `Save` button on top of the page
 * Checkout `dev`
 * Increase version in `version.h`
 * Increase version in `snap/snapcraft.yaml`
