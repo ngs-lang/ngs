@@ -46,7 +46,7 @@ ns {
 
 		assert(Program('curl'))
 		read('version.h').assert(Ifx('-alpha'))
-		$(aws s3 ls s3://01.ngs-lang.org/doc/)
+		`aws s3 ls s3://01.ngs-lang.org/doc/` # $(...) is locally undefined here
 
 		section 'Local, specialized $()' {
 			cur_dir = null
@@ -171,5 +171,5 @@ ns {
 			})
 		}
 
-	} # main
-} # ns
+	}
+}
