@@ -7081,9 +7081,15 @@ F exception_specific_message(cf:CompileFail) {
 }
 
 doc Format GlobalNotFound exception message.
-doc %RET - Str
+doc %RET - Lines
 F exception_specific_message(gnf:GlobalNotFound) {
 	Lines(["Global variable '${gnf.name}' not found"])
+}
+
+doc Format UndefinedLocalVar exception message.
+doc %RET - Lines
+F exception_specific_message(ulv:UndefinedLocalVar) {
+	Lines(["Local variable '${ulv.name}' not found"])
 }
 
 doc Format MethodNotFound exception message.
