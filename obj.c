@@ -63,8 +63,8 @@ static void _dump(FILE *f, VALUE v, int level) {
 			CLOSURE_OBJ_N_UPLEVELS(v),
 			CLOSURE_OBJ_PARAMS_FLAGS(v)
 		);
-		fprintf(f, "%*s* closure attributes\n", (level+1) << 1, "");
-		_dump(f, OBJ_ATTRS(v), level+2);
+		fprintf(f, "%*s* closure meta\n", (level+1) << 1, "");
+		_dump(f, OBJ_META(v), level + 2);
 		for(i=0; i<CLOSURE_OBJ_N_REQ_PAR(v); i++) {
 			fprintf(f, "%*s* required parameter %zu (name and type follow)\n", (level+1) << 1, "", i+1);
 			_dump(f, CLOSURE_OBJ_PARAMS(v)[i*2+0], level+2);
@@ -210,6 +210,18 @@ exit:
 	return;
 }
 
+
+VALUE maybe_wrap(const VALUE v) {
+	if(IS_OBJ(v)) {
+		return v;
+	}
+	OBJECT *o = NGS_MALLOC(sizeof(OBJECT));
+	o->type.num = T_IMM_WRAP;
+	o->val = v;
+	o->meta = MAKE_NULL;
+	return (VALUE){.ptr = o};
+}
+
 // TODO: consider allocating power-of-two length
 VALUE make_var_len_obj(uintptr_t type, const size_t item_size, const size_t len) {
 
@@ -323,7 +335,7 @@ VALUE make_normal_type(VALUE name) {
 	NGS_TYPE_CONSTRUCTORS(ret) = make_multimethod_with_value(ctr);
 	NGS_TYPE_PARENTS(ret) = make_array(0);
 	NGS_TYPE_USER(ret) = make_hash(0);
-	OBJ_ATTRS(ret) = make_hash(2);
+	OBJ_META(ret) = make_hash(2);
 
 	return ret;
 }
@@ -737,7 +749,7 @@ VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX 
 	memcpy(c->params.locals, locals, n_local_vars * sizeof(c->params.locals[0]));
 
 	SET_OBJ(v, c);
-	OBJ_ATTRS(v) = make_hash(2);
+	OBJ_META(v) = make_hash(2);
 
 	return v;
 }
@@ -769,6 +781,10 @@ VALUE join_strings(int argc, VALUE *argv) {
 VALUE value_type(VM *vm, VALUE val) {
 
 	VALUE *p;
+
+	if(IS_IMM_WRAP(val)) {
+		return value_type(vm, OBJ_DATA(val));
+	}
 
 	// Tagged value
 	if(IS_INT(val)) {
@@ -823,7 +839,7 @@ int type_is_type(VALUE ut_child, VALUE ut_parent) {
 	return 0;
 }
 
-#define OBJ_C_OBJ_IS_OF_TYPE(type, check) if(tid == type) { return check(obj); }
+#define OBJ_C_OBJ_IS_OF_TYPE(type, check) if(tid == (type)) { return check(obj); }
 
 // TODO: make it faster, probably using vector of NATIVE_TYPE_IDs and how to detect them
 //       maybe re-work tagged types so the check would be VALUE & TYPE_VAL == TYPE_VAL
@@ -935,6 +951,7 @@ METHOD_RESULT decode_json(VM *vm, VALUE s, VALUE *result) {
 	json_tokener *tok;
 	json_object  *jobj;
 	enum json_tokener_error jerr;
+	int parse_end;
 
 	tok = json_tokener_new();
 	if(!tok) {
@@ -944,6 +961,10 @@ METHOD_RESULT decode_json(VM *vm, VALUE s, VALUE *result) {
 
 	jobj = json_tokener_parse_ex(tok, OBJ_DATA_PTR(s), OBJ_LEN(s));
 	jerr = json_tokener_get_error(tok);
+	// XXX: Leaking abstraction tok->char_offset. Unfortunately I did not see any alternative.
+	//      2021-11-24 tok->... is now deprecated
+	//      tok->char_offset will be json_tokener_get_parse_end(tok)
+	parse_end = tok->char_offset;
 
 	if(jerr == json_tokener_continue) {
 		// See php_json_decode_ex() in php-json-1.3.7/jsonc-1.3.7/json.c
@@ -951,24 +972,18 @@ METHOD_RESULT decode_json(VM *vm, VALUE s, VALUE *result) {
 		jerr = json_tokener_get_error(tok);
 	}
 
-	if(jerr != json_tokener_success) {
+	if(jerr != json_tokener_success || parse_end < OBJ_LEN(s)) {
 		*result = make_normal_type_instance(vm->JsonDecodeFail);
-		set_normal_type_instance_field(*result, make_string("error"), make_string(json_tokener_error_desc(jerr)));
+		set_normal_type_instance_field(*result, make_string("error"), make_string(jerr == json_tokener_success ? "Garbage found" : json_tokener_error_desc(jerr)));
 		set_normal_type_instance_field(*result, make_string("value"), s);
-		// XXX: Leaking abstraction tok->char_offset. Unfortunately I did not see any alternative.
-		set_normal_type_instance_field(*result, make_string("position"), MAKE_INT(tok->char_offset));
-		goto error;
+		set_normal_type_instance_field(*result, make_string("position"), MAKE_INT(parse_end));
+		json_tokener_free(tok);
+		return METHOD_EXCEPTION;
 	}
 
 	*result = _decode_json_kern(jobj);
-
 	json_tokener_free(tok);
 	return METHOD_OK;
-
-error:
-	json_tokener_free(tok);
-	return METHOD_EXCEPTION;
-
 }
 
 // TODO: include the object and/or it's type in the exception info

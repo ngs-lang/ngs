@@ -2,12 +2,7 @@
 
 set -eu
 
-SED=sed
-
-# gsed - MacOS, sed - all the rest
-if which gsed >/dev/null;then
-	SED=gsed
-fi
+SED=$1
 
 if ! $SED --version >/dev/null 2>/dev/null;then
 	echo "Failed to assert GNU sed: failed running sed --version" >&2

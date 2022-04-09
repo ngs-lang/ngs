@@ -135,7 +135,7 @@ ns {
 	doc x - Hash or HashLike
 	doc %RET - Lit or TrCommand
 	F tr(x, h:Hash, tc:TrContext) {
-		x !~ AnyOf(Hash, HashLike) returns TrNoMatch
+		x !~ AnyOf(Hash, HashLike) returns TrNoMatch()
 		assert(x, Eachable2, "Internal error. Unexpected type in tr(x, Hash, TrContext) - ${x.typeof().name}")
 
 		# XXX: assumption - len() exists for x
@@ -215,5 +215,7 @@ ns {
 	TEST {"a": {"b": 2}}.tr({"a": {"b": Int -> (X+1)}}) == {"a": {"b": 3}}
 	TEST {"a": {"b": 2}, "extra": 100}.tr({"a": {"b": Int -> (X+1)}}) == {"a": {"b": 3}, "extra": 100}
 	TEST {"a": {"b": 2}, "extra": 100}.tr({"x": {"b": Int -> (X+1)}}) == {"a": {"b": 2}, "extra": 100}
+	TEST {"a": 1}.tr({"a": Int -> (X+1)}) == {"a": 2}
+	TEST [{"a": 1}].tr({"a": Int -> (X+1)}) == [{"a": 2}]
 	# TODO: Some tests on https://www.hl7.org/fhir/questionnaire-example.json
 }

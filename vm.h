@@ -208,6 +208,7 @@ struct VM {
 			VALUE DlopenFail;
 			VALUE DecodeFail;
 				VALUE JsonDecodeFail;
+			VALUE StackOverflow;
 
 	VALUE Backtrace;
 

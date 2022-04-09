@@ -2,57 +2,21 @@ name: Build
 on: push
 
 jobs:
-  build-internal:
+  build-internal-apt:
     timeout-minutes: 5
-    name: Build
+    name: Build in ${{ matrix.compiler }}-${{ matrix.version }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        name: [
-            ubuntu-20.04-gcc-9,
-            ubuntu-20.04-gcc-10,
-            ubuntu-20.04-clang-9,
-            ubuntu-20.04-clang-10,
-            macOS-10.14-xcode-10.3,
-            macOS-10.14-gcc-9,
-        ]
-        include:
-
-          - name: ubuntu-20.04-gcc-9
-            os: ubuntu-20.04
-            compiler: gcc
-            version: "9"
-
-          - name: ubuntu-20.04-gcc-10
-            os: ubuntu-20.04
-            compiler: gcc
-            version: "10"
-
-          - name: ubuntu-20.04-clang-9
-            os: ubuntu-20.04
-            compiler: clang
-            version: "9"
-
-          - name: ubuntu-20.04-clang-10
-            os: ubuntu-20.04
-            compiler: clang
-            version: "10"
-
-          - name: macOS-10.14-xcode-10.3
-            os: macOS-10.14
-            compiler: xcode
-            version: "10.3"
-
-          - name: macOS-10.14-gcc-9
-            os: macOS-10.14
-            compiler: gcc
-            version: "9"
+        os: [ "ubuntu-20.04" ]
+        version: [ "9", "10", "11" ]
+        compiler: [ "gcc", "clang" ]
     steps:
       - uses: actions/checkout@v3
-      - name: Install Compiler (Linux)
-        if: runner.os == 'Linux'
+      - name: Setup Compiler
         run: |
           sudo apt-get update
+          sudo apt-get install -y man
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
             sudo apt-get install -y g++-${{ matrix.version }}
             echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
@@ -62,80 +26,215 @@ jobs:
             echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
             echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
           fi
-      - name: Install and Test (Linux)
-        if: runner.os == 'Linux'
-        # Sudo is required for Ubuntu 18.04 on GitHub.
-        # Otherwise "mkdir -p build/Testing/Temporary" fails with
-        # "mkdir: cannot create directory ‘build/Testing’: Permission denied"
-        # (mkdir itself was a test after "ctest" failed to create the directory)
-        run: (sudo ./install.sh && sudo make tests)
-      - name: Install Compiler (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install cmake ninja
-          if [ "${{ matrix.compiler }}" = "gcc" ]; then
-            brew install gcc@${{ matrix.version }}
-            echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
-            echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
-          else
-            sudo xcode-select -switch /Applications/Xcode_${{ matrix.version }}.app
-            echo "CC=clang" >> $GITHUB_ENV
-            echo "CXX=clang++" >> $GITHUB_ENV
-          fi
-      - name: Install and Test (macOS)
-        if: runner.os == 'macOS'
-        run: (./install.sh && make tests)
+      - name: Install and Test
+        run: (./install.sh && make tests test-installation)
 
-  build-external:
+  build-external-pacman:
     timeout-minutes: 5
-    name: Build External
+    name: Build in ${{ matrix.compiler }}-default (${{ matrix.container }})
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
       options: --user root
     strategy:
       matrix:
-        name: [
-            debian-stable-gcc-9,
-            debian-stable-gcc-10,
-            debian-stable-clang-9,
-            debian-stable-clang-11,
-        ]
-        include:
-          - name: debian-stable-gcc-9
-            container: debian:stable
-            compiler: gcc
-            version: "9"
-
-          - name: debian-stable-gcc-10
-            container: debian:stable
-            compiler: gcc
-            version: "10"
-
-          - name: debian-stable-clang-9
-            container: debian:stable
-            compiler: clang
-            version: "9"
-
-          - name: debian-stable-clang-11
-            container: debian:stable
-            compiler: clang
-            version: "11"
-
+        container: [ "archlinux:base-20220213.0.47747" ]
+        compiler: [ "gcc", "clang" ]
     steps:
-      - uses: actions/checkout@v3
-      - name: Install Compiler
+      - uses: actions/checkout@v2
+      - name: Setup Compiler
         run: |
-          apt-get update
-          apt-get install -y sudo   # sudo is not present on the image
+          pacman -Sy --noconfirm man-db wget curl ${{ matrix.compiler }}
+          pacman -Syu --noconfirm
+
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
-            apt-get install -y g++-${{ matrix.version }}
-            echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
-            echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
+            echo "CC=gcc" >> $GITHUB_ENV
+            echo "CXX=g++" >> $GITHUB_ENV
           else
-            apt-get install -y clang-${{ matrix.version }}
-            echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
-            echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
+            echo "CC=clang" >> $GITHUB_ENV
+            echo "CXX=clang++" >> $GITHUB_ENV
           fi
       - name: Install and Test
-        run: (./install.sh && make tests)
+        run: (./install.sh && make tests test-installation)
+
+  build-external-apt-gcc:
+    timeout-minutes: 5
+    name: Build in gcc-${{ matrix.version }} (${{ matrix.container }})
+    runs-on: ubuntu-20.04
+    container:
+      image: ${{ matrix.container }}
+      options: --user root
+    strategy:
+      matrix:
+        container: [ "debian:11.1" ]
+        version: [ "9", "10" ] # gcc 11 doesn't exist in debian apt
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Compiler
+        run: |
+          apt-get update
+          apt-get install -y man g++-${{ matrix.version }}
+          echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
+          echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
+      - name: Install and Test
+        run: (./install.sh && make tests test-installation)
+
+  build-external-apt-clang:
+    timeout-minutes: 5
+    name: Build in clang-${{ matrix.version }} (${{ matrix.container }})
+    runs-on: ubuntu-20.04
+    container:
+      image: ${{ matrix.container }}
+      options: --user root
+    strategy:
+      matrix:
+        container: [ "debian:11.1" ]
+        version: [ "9", "11" ] # clang 10 doesn't exist in debian apt
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Compiler
+        run: |
+          apt-get update
+          apt-get install -y man clang-${{ matrix.version }}
+          echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
+          echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
+      - name: Install and Test
+        run: (./install.sh && make tests test-installation)
+
+  build-external-yum-gcc:
+    timeout-minutes: 10
+    name: Build in gcc-default
+    runs-on: ubuntu-20.04
+    container:
+      image: ${{ matrix.container }}
+      options: --user root
+    strategy:
+      matrix:
+        container: [ "fedora:34", "fedora:35", "amazonlinux:2" ]
+    steps:
+      - name: Install AmazonLinux deps needed specifically for GitHub action
+        if: startsWith(matrix.container, 'amazonlinux')
+        run: yum -y install tar xz gzip
+      - uses: actions/checkout@v2
+      - name: Setup Compiler
+        run: |
+          yum -y install man gcc-c++
+          echo "CC=gcc" >> $GITHUB_ENV
+          echo "CXX=g++" >> $GITHUB_ENV
+      - name: Install and Test
+        run: (./install.sh && make tests test-installation)
+
+  build-external-yum-clang:
+    timeout-minutes: 10
+    name: Build in clang-default
+    runs-on: ubuntu-20.04
+    container:
+      image: ${{ matrix.container }}
+      options: --user root
+    strategy:
+      matrix:
+        container: [ "fedora:34", "fedora:35", "amazonlinux:2" ]
+    steps:
+      - name: Install AmazonLinux deps needed specifically for GitHub action
+        if: startsWith(matrix.container, 'amazonlinux')
+        run: yum -y install tar xz gzip
+      - uses: actions/checkout@v2
+      - name: Setup Compiler
+        run: |
+          yum -y install man clang
+          echo "CC=clang" >> $GITHUB_ENV
+          echo "CXX=clang++" >> $GITHUB_ENV
+      - name: Install and Test
+        run: (./install.sh && make tests test-installation)
+
+  build-external-centos7-gcc:
+    timeout-minutes: 10
+    name: Build in gcc-${{ matrix.version }} (${{ matrix.container }})
+    runs-on: ubuntu-20.04
+    container:
+      image: ${{ matrix.container }}
+      options: --user root
+    strategy:
+      matrix:
+        container: [ "centos:7" ]
+        version: [ "9", "10", "11" ]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Compiler
+        run: |
+          yum -y install centos-release-scl epel-release sudo man
+          yum -y install devtoolset-${{ matrix.version }}
+      - name: Install and Test
+        run: (source /opt/rh/devtoolset-${{ matrix.version }}/enable && ./install.sh && make tests test-installation)
+
+  build-mac-gcc:
+    timeout-minutes: 10
+    name: Build in gcc-${{ matrix.version }} (${{ matrix.container }})
+    runs-on: ${{ matrix.container }}
+    strategy:
+      matrix:
+        container: [ "macOS-10.15" ]
+        version: [ "9", "10", "11" ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Compiler
+        run: |
+          brew install cmake ninja
+          brew install gcc@${{ matrix.version }}
+          echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
+          echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
+      - name: Install and Test
+        run: (./install.sh && make tests test-installation)
+
+  build-mac-xcode:
+    timeout-minutes: 15
+    name: Build in Xcode-${{ matrix.version }} (${{ matrix.container }})
+    runs-on: ${{ matrix.container }}
+    strategy:
+      matrix:
+        container: [ "macOS-10.15" ]
+        version: [ "10.3" ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Compiler
+        run: |
+          brew install cmake ninja
+          sudo xcode-select -switch /Applications/Xcode_${{ matrix.version }}.app
+          echo "CC=clang" >> $GITHUB_ENV
+          echo "CXX=clang++" >> $GITHUB_ENV
+      - name: Install and Test
+        run: (./install.sh && make tests test-installation)
+
+  build-other-arch-gcc:
+    timeout-minutes: 15
+    name: Build in gcc-${{ matrix.version }} (${{ matrix.container }} - ${{ matrix.arch }})
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        container: [ "bullseye" ]
+        version: [ "10" ]
+        arch: [ "aarch64", "s390x", "ppc64le" ]   # , "armv6", "armv7" -- 32 bits archs, currently not supported by ngs
+    steps:
+      - uses: actions/checkout@v2.1.0
+      - uses: uraimo/run-on-arch-action@v2.1.1
+        name: Run commands
+        id: runcmd
+        with:
+          arch: ${{ matrix.arch }}
+          distro: ${{ matrix.container }}
+          # Not required, but speeds up builds by storing container images in GitHub package registry.
+          githubToken: ${{ github.token }}
+          # Mount the local folder as /ngs in the container
+          dockerRunArgs: |
+            --volume "${PWD}:/ngs"
+          env: |
+            CC: gcc-${{ matrix.version }}
+            CXX: g++-${{ matrix.version }}
+          install: |
+            apt-get update
+            apt-get install -y man sudo g++-${{ matrix.version }}
+
+          # Set an output parameter `uname` for use in subsequent steps
+          run: |
+            cd /ngs && ./install.sh && make tests test-installation
+            uname -a

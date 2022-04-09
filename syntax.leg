@@ -35,8 +35,6 @@
 	} \
   }
 
-void position_to_line_col();
-
 #define ALLOC_NODE(dst, type_) (dst) = NGS_MALLOC(sizeof(ast_node)); dst->type=type_
 #define CAPTURE_LOCATION(name) { \
 	name->location.first_line = location[0]; \
@@ -1423,7 +1421,7 @@ identifier =
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
-	| "(" <([-|=!@?~+*/%$<>.\[\]:]+ | "is not" | "not in")> ")" {
+	| "(" <("$()" | [-|=!@?~+*/%$<>.\[\]:]+ | "is not" | "not in")> ")" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;

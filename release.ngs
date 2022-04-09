@@ -1,0 +1,175 @@
+#!/usr/bin/env ngs
+
+# Source document: release.md
+# Source document: https://github.com/ngs-lang/ngs/blob/feature/release-actions/.github/workflows/release-snap.yml
+# GitHub workflow jobs API description: https://docs.github.com/en/rest/reference/actions#workflow-jobs
+
+ns {
+
+	source_branch = 'dev'
+	target_branch = 'master'
+
+	F curl_gh_api(argv:Arr) {
+		argv .= map(F(a) a.replace('{owner}', 'ngs-lang').replace('{repo}', 'ngs').replace(/^\//, 'https://api.github.com/'))
+		``log: curl -sS -H "Accept: application/vnd.github.v3+json" $*argv``
+	}
+
+	F curl_gh_api(s:Str) curl_gh_api([s])
+
+	F wait_for_build(commit_id) {
+		log("Waiting for the build run to appear")
+		$(log: sleep 90)
+		wf_run = retry(
+			times = 5
+			sleep = 60
+			body = {
+				curl_gh_api('/repos/{owner}/{repo}/actions/runs').workflow_runs.the_one(pattern={'head_commit': {'id': commit_id}}, found_none={null})
+			}
+		)
+		assert(wf_run, {'name': 'Build'})
+		log("Build run appeared: id ${wf_run.id} url ${wf_run.url}")
+
+		log("Waiting for the build to finish")
+		$(log: sleep 120)
+		retry(
+			times = 10
+			sleep = 60
+			body = {
+				ret = curl_gh_api(wf_run.url).assert({'conclusion': AnyOf(null, 'success')}, 'Expected successful build but it failed')
+				ret.conclusion == 'success'
+			}
+		)
+	}
+
+	doc Set do_source_dir - used for development of this script
+	F main(do_source_dir:Bool=true) {
+
+		assert(Program('curl'))
+		read('version.h').assert(Ifx('-alpha'))
+		`aws s3 ls s3://01.ngs-lang.org/doc/` # $(...) is locally undefined here
+
+		section 'Local, specialized $()' {
+			cur_dir = null
+			# F run(...) { ... } -- super() won't work
+			run = F(cp:CommandsPipeline) {
+				cp.commands.each(F(c) c.options.log = true)
+				if cur_dir {
+					cp.commands.each(F(c) c.options.dflt('cd', cur_dir))
+				}
+				super(cp)
+			}
+
+			orig_dollar_parens = globals()['$()']
+			($()) = MultiMethod([orig_dollar_parens, run])
+
+			F cd(dir:Path, cb:Fun) {
+				cur_dir = dir
+				finally(cb, {cur_dir = null})
+			}
+		}
+
+		warn("NGS release script - Work in progress")
+
+		section "Sanity of doc/out/" {
+			log("Checking whether file system at doc/out is case sensitive")
+			$(touch doc/out/a doc/out/A)
+			$(ok:[0,1] rm doc/out/a doc/out/A).assert("File system at doc/out/ is not case sensitive")
+
+			# Setup on MacOS: disk utility, create case sensitive "ngs-doc" volume
+			# mkdir /Volumes/ngs-doc/out
+			# cd doc
+			# ln -s /Volumes/ngs-doc/out
+		}
+
+		$(git fetch --all)
+		if `git log --no-merges $target_branch "^${source_branch}"` {
+			exit("There are commits on the ${target_branch} branch which are not in the ${source_branch} branch. Please review the changes")
+		}
+
+		tmp_dir = TmpDir(KeepOnErrorCleanupPolicy())
+		log("Using temporary directory ${tmp_dir}")
+		for b in [source_branch, target_branch] {
+			branch_dir = tmp_dir / b
+			$(cp -a . $branch_dir)
+			$(cd:branch_dir git reset --hard)
+			$(cd:branch_dir git checkout $b)
+		}
+		source_dir = tmp_dir / source_branch
+		target_dir = tmp_dir / target_branch
+
+		if do_source_dir {
+			cd(source_dir, {
+				$(rm -rf build)
+				$(make build)
+				$(env "NGS_PATH=${source_dir / 'lib'}" make tests)
+				$(make update-vim-syntax)
+				vim_syntax_file = 'vim/syntax/ngs.vim'
+				# https://stackoverflow.com/questions/17797740/check-if-specific-file-in-git-repository-has-changed
+				if $(ok:[0,1] git diff --exit-code $vim_syntax_file).not() {
+					$(git commit -m "Update $vim_syntax_file" -i $vim_syntax_file)
+					$(git push)
+				}
+
+				File(source_dir / 'CHANGELOG.md').replace('(UNRELEASED)', Time().Str("%Y-%m-%d"))
+				$(ok:1 git diff --exit-code ${source_dir / 'CHANGELOG.md'}).stdout.has('-## (UNRELEASED)').assert()
+				$(git commit -m '[release.ngs testing] Preparing for release' -i 'CHANGELOG.md')
+				$(git push)
+				commit_id = $(git log -1 '--pretty=format:%H').stdout.lines()[0]
+				log("Commit of CHANGELOG.md update: ${commit_id}")
+				wait_for_build(commit_id)
+			})
+		}
+
+		cd(target_dir, {
+			$(git remote add source_dir $source_dir)
+			$(git fetch source_dir)
+			$(git checkout -b release-test)  # Cleanup: git push origin --delete release-test
+			$(git merge --no-commit "source_dir/${source_branch}")
+			File(target_dir / 'version.h').replace('-alpha', '')
+			$(ok:1 git diff --exit-code ${target_dir / 'version.h'})
+			$(git add version.h)
+			$(rm -rf build)
+			$(make build)
+			$(env "NGS_PATH=${target_dir / 'lib'}" make tests)
+
+			# TODO # $(git diff)
+			version = $(./build/ngs --version).stdout.lines()[0]
+
+			section "Prepare Documentation" {
+				$(rm -rf ${target_dir / 'doc' / 'out' / version})
+				$(cd:(target_dir / 'doc') env "NGS_PATH=${target_dir / 'lib'}" ../build/ngs ./make.ngs out)
+				$(ok:[0, 1] cd:(target_dir / 'doc' / 'out') rm latest)
+				$(cd:(target_dir / 'doc' / 'out') ln -s $version latest)
+				$(cd:(target_dir / 'doc') open -a Safari -W "out/${version}/index.html")  # XXX: MacOS specific
+			}
+
+			$(git commit -am "Releasing version: ${version}")
+			$(git push --set-upstream origin release-test)
+			commit_id = $(git log -1 '--pretty=format:%H').stdout.lines()[0]
+			log("Commit of the release: ${commit_id}")
+			wait_for_build(commit_id)
+			$(git tag "v${version}")
+			$(git push origin ":release-test" "v${version}")
+
+			echo("Please create release on GitHub - https://github.com/ngs-lang/ngs/releases/new - ${version}")
+			echo("Please release snap")
+
+			section "Publish Documentation" {
+				$(aws s3 sync --acl public-read doc/out/ s3://01.ngs-lang.org/doc/)
+				$(cd:(target_dir / 'site') ./update.ngs)
+			}
+
+		})
+
+		if do_source_dir {
+			cd(source_dir, {
+				version = $(cd:target_dir ./build/ngs --version).stdout.lines()[0]
+				t = version.split(".")
+				new_version="${t[0]}.${t[1]}.${t[2].Int()+1}"
+				File(source_dir / "version.h").replace(/(?<=").+(?=")/, "${new_version}-alpha")
+				File(source_dir / "snap" / "snapcraft.yaml").replace(/(?<=version: ')[0-9.]+(?=')/, new_version)
+			})
+		}
+
+	}
+}

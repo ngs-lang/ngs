@@ -142,7 +142,9 @@ section "Exit type and basic ExitCode pseudo-constructor methods" {
 	F ExitCode(e:Exception) 240
 }
 
-section "Block type and methods" {
+section "Block type and methods" ns {
+	global Block, ReturnFromBlock, init, block, return
+
 	doc The type of the NAME variable used in syntax: block NAME BODY
 	doc %AUTO - block NAME BODY
 	type Block
@@ -157,8 +159,12 @@ section "Block type and methods" {
 	doc %EX - block b { calc(); if answer_found then b.return(42); more_calc(); another_answer }
 	F block(body:Fun) {
 		b = Block()
+		F block_super_handler(*args, **kwargs) {
+			throw NotImplemented("calling super() from within a block is not implemented")
+		}
+		mm = MultiMethod([block_super_handler, body])
 		try {
-			body(b)
+			mm(b)
 		} catch(rfb: ReturnFromBlock) {
 			guard rfb.block === b
 			rfb.val
@@ -180,10 +186,10 @@ STDLIB_PATH_SEP = '/'
 STDLIB_MAX_RAND_REAL = Real(RAND_MAX)
 
 section "Document internal GC namespace" {
-	GC.attrs({'doc': {'': 'Control NGS garbage collection'}})
-	GC['enable'].attrs({'doc': {'': 'Enable garbage collection'}})
-	GC['disable'].attrs({'doc': {'': 'Disable garbage collection'}})
-	GC['get_parallel'].attrs({'doc': {'': 'Check parallel garbage collection. Please do not use!', '%STATUS': 'internal'}})
+	GC.meta({'doc': {'': 'Control NGS garbage collection'}})
+	GC['enable'].meta({'doc': {'': 'Enable garbage collection'}})
+	GC['disable'].meta({'doc': {'': 'Disable garbage collection'}})
+	GC['get_parallel'].meta({'doc': {'': 'Check parallel garbage collection. Please do not use!', '%STATUS': 'internal'}})
 }
 
 doc EXPERIMENTAL! Do not use!
@@ -282,15 +288,22 @@ section "Namespaces" {
 	F '::='(h:Hash, k, v) h[k] = v
 }
 
-section "Attributes convenience methods" {
-	# TODO: Consider switching attrs from Hash to Namespace
-	doc Wraps native attrs() and in case that there are no attributes, sets them to empty hash.
-	F attrs(o:Any) {
+section "Meta convenience methods" {
+	# TODO: Consider switching meta from Hash to Namespace
+	doc Wraps native meta() and in case that if there is none, sets it to empty hash.
+	F meta(o:Any) {
 		ret = super(o)
 		ret is not Null returns ret
 		ret = {}
 		super(o, ret)
 		ret
+	}
+
+	doc %STATUS - deprecated
+	doc Use meta() instead.
+	F attrs(*args) {
+		warn("Using deprecated method attrs(). Use meta() instead.")
+		meta(*args)
 	}
 }
 
@@ -394,17 +407,17 @@ section "Inspect built-in types" block _ {
 	doc String representation of native method.
 	doc %RET - "<NativeMethod NAME(PARAMS)>"
 	doc %EX - (%).Arr()[0].Str().echo()  # Outputs: <NativeMethod %(a:Int, b:Int)>
-	F Str(nm:NativeMethod) "<${nm.typeof().name} ${nm.attrs().name}${StrParams(nm)}>"
+	F Str(nm:NativeMethod) "<${nm.typeof().name} ${nm.meta().name}${StrParams(nm)}>"
 
 	# TODO: show arguments:
-	#   "<UserDefinedMethod ${c.attrs().name tor "<anonymous>"}(HERE) at ${location}>"
+	#   "<UserDefinedMethod ${c.meta().name tor "<anonymous>"}(HERE) at ${location}>"
 	doc String representation of a closure
 	doc %RET - Str
 	doc %EX - Real.constructors[-1].Str().echo()  # Outputs: <UserDefinedMethod Real at /usr/share/ngs/stdlib.ngs:350>
 	F Str(c:UserDefinedMethod) {
 		info = c.ip().resolve_instruction_pointer()
 		location = "${info.file}:${info.first_line}" tor "<unknown location>"
-		"<UserDefinedMethod ${c.attrs().name tor "<anonymous>"}${StrParams(c)} at ${location}>"
+		"<UserDefinedMethod ${c.meta().name tor "<anonymous>"}${StrParams(c)} at ${location}>"
 	}
 
 	doc Inspect any value.
@@ -430,15 +443,15 @@ section "Inspect built-in types" block _ {
 		Lines(["${e.typeof().name} of size ${e.len() tor '(unknown size)'}"] + e.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
 	}
 
-	F inspect_attrs(val) {
+	F inspect_meta(val) {
 		keys_meanings = {
 			'%EX': 'Example'
 			'%RET': 'Returns'
 		}
 		collector/Lines() {
-			a = try val.attrs()
+			a = try val.meta()
 			not(a) returns Lines()
-			collect("Attributes")
+			collect("Meta")
 			a.without('doc').each(F(k, v) {
 				collect("  [${k}] = ${v}")
 			})
@@ -465,10 +478,10 @@ section "Inspect built-in types" block _ {
 
 	F inspect(f:Fun) {
 		guard f =~ AnyOf(NativeMethod, UserDefinedMethod)
-		Lines([f.Str()]) + ("  " + inspect_attrs(f))
+		Lines([f.Str()]) + ("  " + inspect_meta(f))
 	}
 
-	F inspect(t:Type) Lines([t.Str()]) + ("  " + inspect_attrs(t))
+	F inspect(t:Type) Lines([t.Str()]) + ("  " + inspect_meta(t))
 
 	doc Inspect MultiMethod
 	doc %RET - Lines
@@ -582,7 +595,6 @@ section "NormalTypeInstance" {
 	doc %EX - }
 	doc %RET - "<TYPE_NAME field1=val1 field2=val2 ...>"
 	F Str(i:NormalTypeInstance) {
-		guard i is not Set  # Temporary workaround. Str(Set) should come after Str(NormalTypeInstance)
 		h = Hash(i)
 		fields_dots = if len(h) > 10 {
 			h .= limit(10)
@@ -990,17 +1002,18 @@ block u {
 
 doc Find the only element that matches the pattern and execute given code with the value
 doc body - The code to execute when exactly one element that matches the pattern was found. Executed with the found value. It's value will be returned as result of the_one().
-doc found_more - The code to execute when more than one element matches the pattern. It's value will be returned as result of the_one(). Defaults to function returning null.
-doc found_none - The code to execute when none of the elements match the pattern. It's value will be returned as result of the_one(). Defaults to function returning null.
+doc found_more - The code to execute when more than one element matches the pattern. It's value will be returned as result of the_one(). Defaults to throwing an exception.
+doc found_none - The code to execute when none of the elements match the pattern. It's value will be returned as result of the_one(). Defaults to exception.
 doc %RET - Result of running on of the following: body, found_more, found_none
 doc %EX - F name(dn:MethodDocNode) {
 doc %EX - 	dn.children.the_one(MethodNameDocNode).text[0]
 doc %EX - }
-F the_one(e:Eachable1, pattern=Any, body:Fun=identity, found_more:Fun=nop, found_none:Fun=nop) block b {
+F the_one(e:Eachable1, pattern=Any, body:Fun=identity, found_more:Fun=null, found_none:Fun=null) block b {
 	ret = EmptyBox()
 	e.each(F(elt) {
 		if elt =~ pattern {
 			if ret {
+				not(found_more) throws ElementNotFound("the_one() had more than one match").set('container', e).set('pattern', pattern)
 				b.return(found_more())
 			}
 			ret = FullBox(elt)
@@ -1009,6 +1022,7 @@ F the_one(e:Eachable1, pattern=Any, body:Fun=identity, found_more:Fun=nop, found
 	if ret {
 		body(ret.get())
 	} else {
+		not(found_none) throws ElementNotFound("the_one() had no matches").set('container', e).set('pattern', pattern)
 		found_none()
 	}
 }
@@ -1016,23 +1030,6 @@ F the_one(e:Eachable1, pattern=Any, body:Fun=identity, found_more:Fun=nop, found
 TEST ok = false; [1,2,11,3,4].the_one(X>10, F(the_value) { ok = the_value == 11 }); ok
 TEST ok = false; [1,2,11,3,4].the_one(X>20, nop, found_none = { ok = true }); ok
 TEST ok = false; [1,2,11,3,4].the_one(Int, nop, found_more = { ok = true }); ok
-
-doc Find the only element that matches the pattern.
-doc pattern - defaults to Any, allowing my_arr.the_one()
-doc Throws ElementNotFound exception if there are no elements that match the pattern or if there is more than one element that matches the pattern.
-doc %RET - The only element that matches the pattern.
-F the_one(e:Eachable1, pattern=Any) {
-	ret = EmptyBox()
-	e.each(F(elt) {
-		if elt =~ pattern {
-			ret throws ElementNotFound("the_one() had more than one match").set('container', e).set('pattern', pattern)
-			ret = FullBox(elt)
-		}
-	})
-	not(ret) throws ElementNotFound("the_one() had no matches").set('container', e).set('pattern', pattern)
-	ret.get()
-}
-
 TEST [1,2,11,3,4].the_one(X>10) == 11
 TEST [1,2,11,12,4].the_one(X>10) THROWS ElementNotFound
 TEST [1,2,3,4].the_one(X>10) THROWS ElementNotFound
@@ -1085,7 +1082,10 @@ doc TODO: Return same type, not Arr
 doc something - object of any type that has each(something, callback) implemented
 doc %RET - Arr
 doc %EX - ["ssh", "IP", "w"].replace("IP", "10.0.0.100")  # ['ssh','10.0.0.100','w']
-F replace(something:Eachable1, src, dst) map(something, only(X == src, {dst}))
+F replace(e:Eachable1, src, dst) {
+	guard (e is not Str) and (e is not Int)
+	map(e, only(X == src, {dst}))
+}
 
 TEST ["ssh", "IP", "w"].replace("IP", "10.0.0.100") == ['ssh','10.0.0.100','w']
 
@@ -1159,7 +1159,7 @@ section "Functional operators" {
 	doc Filter operator.
 	doc Same as calling x.filter(pattern)
 	doc %EX - [1,2,3,4] ? F(x) x > 2  # [3,4]
-	F ?(x, pattern:Fun) x.filter(pattern)
+	F ?(x, pattern) x.filter(pattern)
 
 	doc Map operator.
 	doc Same as calling x.map(mapper)
@@ -1285,7 +1285,7 @@ section "ArrLike" {
 	doc %EX - }
 	type ArrLike(Eachable1)
 
-	F init(al:ArrLike) al.attrs().ArrLike = []
+	F init(al:ArrLike) al.meta().ArrLike = []
 
 	doc ArrLike constructor.
 	doc field - DEPRECATED name of the field that holds the underlying array.
@@ -1302,49 +1302,49 @@ section "ArrLike" {
 
 	F init(al:ArrLike, arr:Arr) {
 		super(al)
-		al.attrs().ArrLike = arr
+		al.meta().ArrLike = arr
 	}
 
 	doc Get length of the underlying array.
-	F len(al:ArrLike)               al.attrs().ArrLike.len()
+	F len(al:ArrLike)               al.meta().ArrLike.len()
 
 	doc Set element in the underlying array.
-	F '[]'(al:ArrLike, idx:Int)     al.attrs().ArrLike[idx]
+	F '[]'(al:ArrLike, idx:Int)     al.meta().ArrLike[idx]
 
 	doc Get element from the underlying array.
-	F '[]='(al:ArrLike, idx:Int, x) al.attrs().ArrLike[idx] = x
+	F '[]='(al:ArrLike, idx:Int, x) al.meta().ArrLike[idx] = x
 
 	doc Get element at the given index or return dflt if the index is out of range (element at the given index does not exist). See get(Arr).
-	F get(al:ArrLike, idx:Int, dflt) al.attrs().ArrLike.get(idx, dflt)
+	F get(al:ArrLike, idx:Int, dflt) al.meta().ArrLike.get(idx, dflt)
 
 	doc Call cb for each element in the underlying array.
 	doc %RET - al
 	F each(al:ArrLike, cb:Fun) {
-		al.attrs().ArrLike.each(cb)
+		al.meta().ArrLike.each(cb)
 		al
 	}
 
 	doc Check whether al has any elements.
-	F Bool(al:ArrLike) al.attrs().ArrLike.Bool()
+	F Bool(al:ArrLike) al.meta().ArrLike.Bool()
 
 	# NOTE: Never run because of Arr(Eachable1)
 	doc Get the underlying array
-	F Arr(al:ArrLike) al.attrs().ArrLike
+	F Arr(al:ArrLike) al.meta().ArrLike
 
 	doc Push an element to the underlying array.
 	F push(al:ArrLike, val) {
-		al.attrs().ArrLike.push(val)
+		al.meta().ArrLike.push(val)
 		al
 	}
 
 	doc Join items to a single string using given separator s
 	doc %RET - Str
-	F join(al:ArrLike, s:Str) al.attrs().ArrLike.join(s)
+	F join(al:ArrLike, s:Str) al.meta().ArrLike.join(s)
 
 	doc Return array made of given field of each element of given array.
 	doc Will throw KeyNotFound if any of the elements does not have the desired field.
 	doc Use get() to handle missing field differently.
-	F .(al:ArrLike, s:Str) al.attrs().ArrLike.(s)
+	F .(al:ArrLike, s:Str) al.meta().ArrLike.(s)
 
 	doc Defines collector { ... collect(...) ... } behaviour for ArrLike.
 	doc Very similar to collector for Arr. See collector(Arr,Fun).
@@ -1431,34 +1431,34 @@ section "HashLike" {
 
 	doc Check whether k is in the HashLike
 	doc %RET - Bool
-	F in(k, hl:HashLike)         k in hl.attrs().HashLike
+	F in(k, hl:HashLike)         k in hl.meta().HashLike
 
 	doc Get number of key-value pairs in a HashLike
 	doc %RET - Int
-	F len(hl:HashLike)           hl.attrs().HashLike.len()
+	F len(hl:HashLike)           hl.meta().HashLike.len()
 
 
 	doc Get value by key. Throws KeyNotFound.
 	doc %AUTO - your_hashlike[k]
-	F '[]' (hl:HashLike, k)      hl.attrs().HashLike[k]
+	F '[]' (hl:HashLike, k)      hl.meta().HashLike[k]
 
 	doc Set value.
 	doc %AUTO - your_hashlike[k] = v
-	F '[]='(hl:HashLike, k, v)   hl.attrs().HashLike[k] = v
+	F '[]='(hl:HashLike, k, v)   hl.meta().HashLike[k] = v
 
 	doc Get value by key. Throws KeyNotFound.
 	doc %AUTO - your_hashlike.literal_key
 	doc %RET - Any
-	F .(hl:HashLike, k)          hl.attrs().HashLike[k]
+	F .(hl:HashLike, k)          hl.meta().HashLike[k]
 
 	doc Set value.
 	doc %AUTO - your_hashlike.literal_key = v
 	doc %RET - v
-	F .=(hl:HashLike, k, v)      hl.attrs().HashLike[k] = v
+	F .=(hl:HashLike, k, v)      hl.meta().HashLike[k] = v
 
 	doc Get value by key or dflt if it does not exist
 	doc %RET - Any
-	F get(hl:HashLike, k, dflt)  hl.attrs().HashLike.get(k, dflt)
+	F get(hl:HashLike, k, dflt)  hl.meta().HashLike.get(k, dflt)
 
 	doc Get value by key or null if it does not exist
 	doc %RET - Any
@@ -1468,23 +1468,23 @@ section "HashLike" {
 	doc %EX - my_hashlike.each(F(k, v) echo("$k=$v"))
 	doc %RET - hl
 	F each(hl:HashLike, cb:Fun) {
-		hl.attrs().HashLike.each(cb)
+		hl.meta().HashLike.each(cb)
 		hl
 	}
 
 	doc Get keys
 	doc %RET - Arr
-	F keys(hl:HashLike)          hl.attrs().HashLike.keys()
+	F keys(hl:HashLike)          hl.meta().HashLike.keys()
 
 	doc Get values
 	doc %RET - Arr
-	F values(hl:HashLike)        hl.attrs().HashLike.values()
+	F values(hl:HashLike)        hl.meta().HashLike.values()
 
 	doc Check whether hl has any elements.
 	doc %RET - Bool
-	F Bool(hl:HashLike)          hl.attrs().HashLike.Bool()
+	F Bool(hl:HashLike)          hl.meta().HashLike.Bool()
 
-	F map_idx_key_val(hl:HashLike, mapper:Fun) hl.attrs().HashLike.map_idx_key_val(mapper)
+	F map_idx_key_val(hl:HashLike, mapper:Fun) hl.meta().HashLike.map_idx_key_val(mapper)
 
 	doc Filter hash. Build new HashLike with kev-value pairs selected by predicate.
 	doc predicate - Test function to be called with one key and one value at a time.
@@ -1492,7 +1492,7 @@ section "HashLike" {
 	doc %RET - value of the same type as hl
 	F filter(hl:HashLike, predicate:Fun) {
 		t = typeof(hl)
-		t(hl.attrs().HashLike.filter(predicate))
+		t(hl.meta().HashLike.filter(predicate))
 	}
 
 	TEST HashLike({"a": 1, "b": 2}).filter(F(k, v) v==1) == HashLike({"a": 1})
@@ -1502,7 +1502,7 @@ section "HashLike" {
 	doc Remove k from hl
 	doc %RET - hl
 	F del(hl:HashLike, k) {
-		hl.attrs().HashLike.del(k)
+		hl.meta().HashLike.del(k)
 		hl
 	}
 
@@ -1512,12 +1512,12 @@ section "HashLike" {
 	doc Create a HashLike.
 	doc h - If provided, used as initial value.
 	doc %EX - HashLike(%{a aha b bee}) # <HashLike a=aha b=bee>
-	F init(hl:HashLike, h:Hash=null) hl.attrs().HashLike = h or {}
+	F init(hl:HashLike, h:Hash=null) hl.meta().HashLike = h or {}
 
 	doc Get the underlying Hash with all the keys/values of the HashLike.
 	doc Note: the returned value is not a copy.
 	doc %RET - Hash
-	F Hash(hl:HashLike) hl.attrs().HashLike
+	F Hash(hl:HashLike) hl.meta().HashLike
 
 	doc Convert HashLike into JSON compatible data structure - object
 	F JsonData(hl:HashLike) hl.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
@@ -1628,7 +1628,7 @@ section "Named Instances" {
 	F .(t:Type, field:Str) {
 		guard field == 'NamedInstances'
 		guard t.is_subtype(NamedInstances)
-		ret = t.attrs().NamedInstances
+		ret = t.meta().NamedInstances
 	}
 
 	doc %AUTO - SUBTYPE_OF_NAMEDINSTANCES.NamedInstances = ...
@@ -1639,7 +1639,7 @@ section "Named Instances" {
 			v is not t throws InvalidArgument("${t.name}.NamedInstances values must be of type ${t.name}").set(key=k, value=v)
 			v.name = k
 		})
-		t.attrs().NamedInstances = ns
+		t.meta().NamedInstances = ns
 
 		keys_to_instances = {}
 		t.NamedInstances.each(F(name, instance) {
@@ -1647,7 +1647,7 @@ section "Named Instances" {
 				keys_to_instances.dflt(value, []).push(instance)
 			})
 		})
-		t.attrs().NamedInstancesByAnyValue = keys_to_instances
+		t.meta().NamedInstancesByAnyValue = keys_to_instances
 	}
 
 	doc %AUTO - SUBTYPE_OF_NAMEDINSTANCES.NamedInstances = ['SOME', 'NAMES', ...]
@@ -1676,7 +1676,7 @@ section "Named Instances" {
 
 		F invalid_arg(s) throw InvalidArgument(s).set(value=value, type=t)
 
-		t.attrs().NamedInstancesByAnyValue.get(value, []).the_one(
+		t.meta().NamedInstancesByAnyValue.get(value, []).the_one(
 			found_none = { invalid_arg("Value ${value} does not identify any named instance of ${t.name}") }
 			found_more = { invalid_arg("Value ${value} is not a unique identifier of an instance of ${t.name}") }
 		)
@@ -1693,15 +1693,15 @@ section "Hook" {
 	doc %RET - Hook
 	F init(hook:Hook) {
 		super(hook)
-		hook.attrs().idx = 0
+		hook.meta().idx = 0
 	}
 
 	doc Add unnamed handler.
 	doc The hook is automatically named "pushed-N" where N is sequential integer.
 	doc %RET - New hook name
 	F push(hook:Hook, handler:UserDefinedMethod) {
-		name = "pushed-${hook.attrs().idx}"
-		hook.attrs().idx += 1
+		name = "pushed-${hook.meta().idx}"
+		hook.meta().idx += 1
 		hook[name] = handler
 		name
 	}
@@ -1710,7 +1710,7 @@ section "Hook" {
 	doc Runs all handlers passing all args.
 	doc args - Arguments to pass to handlers
 	doc %RET - Arr. Results from all the handlers
-	F call(hook:Hook, *args) hook.attrs().HashLike.mapv(X(*args))
+	F call(hook:Hook, *args) hook.meta().HashLike.mapv(X(*args))
 }
 
 # === Real =======================================
@@ -1734,6 +1734,8 @@ TEST Real('1.1') == 1.1
 doc Convert Real into JSON compatible data structure - number
 F JsonData(r:Real) r
 
+F Bool(r:Real) r != 0.0
+
 # === NormalTypeConstructor ===============================
 
 doc String representation of normal type constructor. NormalTypeConstructor
@@ -1746,7 +1748,7 @@ section "Type" {
 	doc String representation of a type
 	doc %RET - "<Type NAME>"
 	doc %EX - Real.Str().echo()  # Outputs: <Type Real>
-	F Str(t:Type) "<Type ${t.name} with ${t.constructors.len()} constructor(s) and ${t.attrs().len()} attributes>"
+	F Str(t:Type) "<Type ${t.name} with ${t.constructors.len()} constructor(s) and ${t.meta().len()} meta entries>"
 
 	# TODO: Reorganize and move out of Type section
 	doc Decode (parse) strings such as command line arguments or environment variables to result given type
@@ -1766,8 +1768,8 @@ section "Type" {
 			}
 		}
 		if t == Bool {
-			s ~ /^(1)|(y(es?)?)|true|on$/i returns true
-			s ~ /^(0)|(no?)|false|off$/i returns false
+			s ~ /^(1|(y(es)?)|true|on)$/i returns true
+			s ~ /^(0|(no?)|false|off)$/i returns false
 			_fail()
 		}
 		guard false
@@ -1776,6 +1778,7 @@ section "Type" {
 	TEST decode("no", Bool) == false
 	TEST decode("0", Bool) == false
 	TEST decode("yes", Bool) == true
+	TEST decode("ya", Bool) THROWS DecodeFail
 	TEST decode("1", Bool) == true
 	TEST decode("1", Int) == 1
 	TEST decode("1", Real) == 1.0
@@ -1803,14 +1806,10 @@ section "Type" {
 }
 
 doc Set a field on all elements if it's not already set
-doc e - Eachable1 with elements of type NormalTypeInstance or Hash
+doc e - Eachable1
 doc %EX - my_items.dflt("source", "(unknown)")
 doc %RET - e
-F dflt(e:Eachable1, k, v) {
-	guard e.all(AnyOf(NormalTypeInstance, Hash))
-	e.each(X.dflt(k, v))
-	e
-}
+F dflt(e:Eachable1, k, v) e.each(X.dflt(k, v))
 
 TEST [{}, {"x": 1}].dflt("x", 100) == [{"x": 100}, {"x": 1}]
 
@@ -1834,7 +1833,7 @@ F ==(a:NormalTypeInstance, b:NormalTypeInstance) {
 doc Set a key if it's not already set
 doc %EX - mysomething.dflt(k, []).push(elt)
 doc %RET - Key value, the already-existed or new.
-F dflt(hl:HashLike, k, v) hl.attrs().HashLike.dflt(k, v)
+F dflt(hl:HashLike, k, v) hl.meta().HashLike.dflt(k, v)
 
 doc Check whether x is of type t
 doc %RET - MatchResult
@@ -2496,10 +2495,10 @@ doc %RET - Arr
 doc %EX - [[1], [2,3]].flatten()  # [1,2,3]
 F flatten(e:Eachable1) {
 	guard not(e is Int)
-	guard e.all(Eachable1)
 	collector
-		e.each(F(subarr) {
-			subarr.each(collect)
+		e.each(F(x) {
+			assert(x is Eachable1 and x is not Int, 'flatten() elements must be Eachable1, excluding Int')
+			x.each(collect)
 		})
 }
 
@@ -2677,6 +2676,18 @@ F '[]'(arr:Arr, idx:Int) {
 	i < 0 throws IndexNotFound("[](Arr, Int): Index $idx is illegal for array of size ${arr.len()}", arr, idx)
 	arr[i]
 }
+
+doc Set array element by index from the end (negative indexes handler). Throws IndexNotFound if abs(idx) > len(arr).
+doc idx - Negative index
+doc %EX - a = [1, 2, 3]; a[-1] = 99  # [1, 2, 99]
+F '[]='(arr:Arr, idx:Int, val) {
+	guard idx < 0
+	i = arr.len() + idx
+	i < 0 throws IndexNotFound("[]=(Arr, Int, Any): Index $idx is illegal for array of size ${arr.len()}", arr, idx)
+	arr[i] = val
+}
+
+TEST a = [1, 2, 3]; a[-1] = 99; a == [1, 2, 99]
 
 # TODO: Make "Indexable" and make this method work with Indexable
 doc Get array elements at specified indexes. Indexes specified by NumRange.
@@ -2877,17 +2888,22 @@ F merge_sorted(a:Arr, b:Arr, lte:Fun) {
 	bi = Iter(b)
 	collector
 		while ai or bi {
-			i = econd {
-				not(ai) bi
-				not(bi) ai
-				lte(ai.peek(), bi.peek()) ai
-				true bi
+			if not(ai) {
+				bi.each(collect)
+				break
 			}
-			collect(i.next())
+			if not(bi) {
+				ai.each(collect)
+				break
+			}
+			(if lte(ai.peek(), bi.peek()) then ai else bi).next().collect()
 		}
 }
 
 TEST merge_sorted([1,3,10], [0, 7], (<=)) == [0, 1, 3, 7, 10]
+TEST merge_sorted([1,3,10], [0, 7, 12, 13, 14], (<=)) == [0, 1, 3, 7, 10, 12, 13, 14]
+TEST merge_sorted([0, 1], [2, 3], (<=)) == [0, 1, 2, 3]
+TEST merge_sorted([2, 3], [0, 1], (<=)) == [0, 1, 2, 3]
 
 # Current implemetation: https://en.wikipedia.org/wiki/Merge_sort
 # TODO: replacte with Timsort https://en.wikipedia.org/wiki/Timsort
@@ -3246,8 +3262,7 @@ doc arr - Array of Arrays. Each one of the sub-arrays must have exactly two elem
 doc %RET - Hash
 doc %EX - Hash([['a', 1], ['c', 3]])  # {'a': 1, 'c': 3}
 F Hash(arr:Arr) {
-	guard arr.all(Arr)
-	guard arr.all({A.len() == 2})
+	guard arr.all(F(x) x is Arr and len(x) == 2)
 	collector/{}
 		arr.each(F(pair) {
 			collect(*pair)
@@ -3381,12 +3396,14 @@ TEST {"a": 1, "b": 2}.limit(1) == {"a": 1}
 doc Group items from e by key returned by cb
 doc %RET - Hash with Arr values
 doc %EX - ["ab", "ac", "ba", "bc", "bd"].group(F(x) x[0])  # {a=[ab,ac], b=[ba,bc,bd]}
-F group(e:Eachable1, cb:Fun)
+doc %EX - [["a", 1], ["b", 2], ["a", 3]].group(X[0], X[1])  # {"a": [1,3], "b": [2]}
+F group(e:Eachable1, k:Fun, v:Fun=identity)
 	collector/ret={}
 		e.each(F(elt) {
-			k = cb(elt)
-			ret.dflt(k, []).push(elt)
+			ret.dflt(k(elt), []).push(v(elt))
 		})
+
+TEST [["a", 1], ["b", 2], ["a", 3]].group(X[0], X[1]) == {"a": [1,3], "b": [2]}
 
 doc Group items from e by the given field
 doc %RET - Hash with Arr values
@@ -3807,6 +3824,32 @@ type Presence
 
 	doc Represents a target configuration list item in a list
 	type ExactPresence([FullBox, Presence])
+
+	doc Checks element presence.
+	doc %RET - Bool
+	doc %EX - [1,2,3] =~ Present(3)  # MatchSuccess
+	F =~(x, p:Present, mc:MatchContext) block b {
+		x is Int or x is Str returns false
+		x is not Eachable1 returns false
+		mc.deeper({
+			x.each_idx_val(F(idx, item) {
+				if (=~)(item, p.val, mc.set_last_path_element(idx)) {
+					b.return(true)
+				}
+			})
+		})
+		false
+	}
+
+	TEST [1,2,3] =~ Present(3)
+
+	doc Checks element absence.
+	doc %RET - Bool
+	doc %EX - [1,2,3] =~ Absent(0)  # MatchSuccess
+	F =~(x, a:Absent, mc:MatchContext) not((=~)(x, Present(a.val), mc))
+
+	TEST [1,2,3] =~ Absent(0)
+
 
 doc Internal method. Please do not use.
 doc Converts Presence or Arr[something] to Arr[Presence]. Used by Res and friends.
@@ -4495,7 +4538,7 @@ section "Stats" {
 	doc k - the name of the counter to increment
 	doc %EX - Stats().push("a").push("a").push("b")["a"]  # 2
 	F push(s:Stats, k) {
-		h = s.attrs().HashLike
+		h = s.meta().HashLike
 		h[k] = h.get(k, 0) + 1
 		s
 	}
@@ -4852,6 +4895,8 @@ section "Exiting" {
 section "Path" {
 	# Maybe TODO: F ==(Path,Path) --> https://stackoverflow.com/questions/12502552/can-i-check-if-two-file-or-file-descriptor-numbers-refer-to-the-same-file
 
+	type TmpFsObj
+
 	doc Represents file system path such as a file, a block device, etc
 	type Path
 		doc Represents a socket file in a file system (S_IFSOCK)
@@ -4860,16 +4905,29 @@ section "Path" {
 		type Symlink(Path)     # S_IFLNK
 		doc Represents a file in a file system (S_IFREG)
 		type File(Path)        # S_IFREG
-			doc Represents temporary file. Automatically removed when the script exits.
-			type TmpFile(File)
+			doc Represents a temporary file. Automatically removed when the script exits.
+			type TmpFile([File, TmpFsObj])
 		doc Represents a block device in a file system (S_IFBLK)
 		type BlockDevice(Path) # S_IFBLK
-		doc Represents a directory in a file system (S_IFBLK)
+		doc Represents a directory in a file system (S_IFDIR)
 		type Dir(Path)         # S_IFDIR
+			doc Represents a temporary directory. Automatically removed when the script exits.
+			type TmpDir([Dir, TmpFsObj])
 		doc Represents a character device in a file system (S_IFCHR)
 		type CharDevice(Path)  # S_IFCHR
 		doc Represents a fifo file in a file system (S_IFIFO)
 		type FifoFile(Path)    # S_IFIFO
+
+	doc Human readable type name for the Path type and its subtypes. TODO: find better name.
+	doc %STATUS - experimental
+	F human_type_name(p) {
+		guard p.is_subtype(Path)
+		if m = p.meta().doc[''][0] ~ /Represents a (.+) in a file system/ {
+			m[1]
+		} else {
+			"(failed to extract human readable type description of ${p})"
+		}
+	}
 
 	doc Represents a failure in stat() system call.
 	type StatFail(CError)
@@ -4884,7 +4942,7 @@ section "Path" {
 		C_S_IFCHR:  CharDevice
 		C_S_IFIFO:  FifoFile
 	}
-	{ STDLIB_FILE_TYPE.attrs({'doc': {'': 'Mapping between S_IFMT bits of st_mode returned by stat()/lstat() and NGS types. All types in this Namespace are subtypes of Path.'}}) }
+	{ STDLIB_FILE_TYPE.meta({'doc': {'': 'Mapping between S_IFMT bits of st_mode returned by stat()/lstat() and NGS types. All types in this Namespace are subtypes of Path.'}}) }
 
 	doc Issue stat() system call. Throws StatFail if the call fails.
 	doc %RET - Stat
@@ -4915,7 +4973,7 @@ section "Path" {
 
 	# TODO: better name
 	doc EXPERIMENTAL, do not use outside of stdlib!
-	doc Instanciates Path sub-type, depending on what p is
+	doc Instantiates Path sub-type, depending on what p is
 	F specific(p:Path) {
 		s = lstat(p)
 		file_type = s.st_mode.band(C_S_IFMT)
@@ -4992,8 +5050,8 @@ section "Path" {
 
 	doc String representation of a Path (or it's sub-type)
 	doc %RET - Str
-	doc %EX - find_in_path("ls").Str()  # The string: <Path path=/bin/ls>
-	F Str(p:Path) "<${p.typeof().name} path=${p.path}>"
+	doc %EX - find_in_path("ls").Str()  # The string: /bin/ls
+	F Str(p:Path) p.path
 
 	doc Concatenate two path parts using STDLIB_PATH_SEP (currently "/") but should be platform-specific later.
 	doc %RET - Str
@@ -5120,37 +5178,48 @@ section "Path" {
 		type KeepOnErrorCleanupPolicy(CleanupPolicy)
 
 	doc Creates temporary file using `mktemp` and arranges deletion of the file upon exit from the NGS script.
-	F init(t:TmpFile, cleanup_policy:CleanupPolicy=RemoveCleanupPolicy()) {
-		t.path = `line: mktemp`
+	F init(t:TmpFsObj, cleanup_policy:CleanupPolicy=RemoveCleanupPolicy()) {
+		assert(t, {'path': Str}, 'init(TmpFsObj, ...) expects path to be set and to be a string')
+		assert(t.path, 'init(TmpFsObj, ...) expects path to be non-empty string')
 		t.fd = null
 		t.cleanup_policy = cleanup_policy
-		debug("file", "Created temporary file at ${t.path}")
-		exit_hook["TmpFile:${t.path}"] = F cleanup(e:Exit) {
-			debug("file", "Will do cleanup for temporary file at ${t.path}")
+		debug("file", "Created ${t.typeof().name} at ${t.path}")
+		exit_hook["${t.typeof().name}:${t}"] = F cleanup(e:Exit) {
+			debug("file", "Will do cleanup for ${t.typeof().name} at ${t}")
 			# Exit is not a subtype of Exception. If anybody complains, this can be fixed and a "real" Exception can be sent.
 			b = if e.exceptions then FullBox(e) else EmptyBox()
 			del(t, t.cleanup_policy, b)
 		}
 	}
 
-	F del(t:TmpFile, kcp:KeepCleanupPolicy, e:Box) {
-		log("Keeping temporary file at ${t.path}")
+	F init(t:TmpFile, cleanup_policy:CleanupPolicy=RemoveCleanupPolicy()) {
+		t.path = `line: mktemp`
+		super(t, cleanup_policy)
+	}
+
+	F init(t:TmpDir, cleanup_policy:CleanupPolicy=RemoveCleanupPolicy()) {
+		t.path = `line: mktemp -d`
+		super(t, cleanup_policy)
+	}
+
+	F del(t:TmpFsObj, kcp:KeepCleanupPolicy, e:Box) {
+		log("Keeping ${t.typeof().name} at ${t}")
 		t
 	}
 
-	F del(t:TmpFile, rcp:RemoveCleanupPolicy, e:Box) {
+	F del(t:TmpFsObj, rcp:RemoveCleanupPolicy, e:Box) {
 		try {
-			$(rm ${t.path})
-			debug("file", "Removed temporary file at ${t.path}")
+			$(rm -rf ${t})
+			debug("file", "Removed ${t.typeof().name} at ${t}")
 		} catch(e) {
-			warn("Failed to remove temporary file at ${t.path}")
+			warn("Failed to remove ${t.typeof().name} at ${t}")
 			print_exception(e, echo=warn)
 		}
 	}
 
-	F del(t:TmpFile, koecp:KeepOnErrorCleanupPolicy, e:Box) {
+	F del(t:TmpFsObj, koecp:KeepOnErrorCleanupPolicy, e:Box) {
 		not(e) returns t.del(RemoveCleanupPolicy(), e)
-		log("Keeping temporary file at ${t.path} because exception occurred: ${e.get()}")
+		log("Keeping ${t.typeof().name} at ${t} because exception occurred: ${e.get()}")
 		t
 	}
 
@@ -5159,6 +5228,28 @@ section "Path" {
 
 	doc Convert CleanupPolicy to code
 	F code(p:CleanupPolicy) "${p.typeof().name}()"
+
+	doc Decode Path and its subtypes
+	doc %RET - instance of Path or a subtype.
+	F decode(s:Str, p) {
+		guard p.is_subtype(Path)
+		p(s)
+	}
+
+	doc Checks that the given path exists. Throws AssertFail otherwise.
+	doc %RET - p
+	F assert(p:Path) {
+		assert(p, "${p} must exist and be a ${p.typeof().human_type_name()}")
+	}
+
+	doc Replace in a file. Wrapper around replace(Str, Any, Any).
+	doc %RET - f
+	F replace(f:File, src, dst) {
+		debug("file", "Replacing in ${f}: '${src}' with '${dst}'")
+		data = f.read().replace(src, dst)
+		write(f, data)
+		f
+	}
 }
 
 # === Commands and processes (WIP) ===============
@@ -5177,6 +5268,8 @@ doc Checks whether the given program is found in path.
 doc %RET - Bool. The program is found in path or program name is absolute
 F Bool(p:Program) Result({ find_in_path(p.name) }).Bool()
 
+doc Checks that given program is found in path. Throws AssertFail otherwise.
+doc %RET - p
 F assert(p:Program) {
 	r = Result({ find_in_path(p.name) })
 	not(r) throws AssertFail("Program ${p.name} not found in path", r.val)
@@ -5420,12 +5513,6 @@ F init(f:File, fd:Int) {
 
 F init(f:File, path:Path) super(f, path.path)
 
-doc String representation of File
-doc %EX - open(File("tmp/v8/LICENSE"), "r").Str().echo()  # Output: <File path=tmp/v8/LICENSE fd=4>
-F Str(f:File) "<${f.typeof().name} path=${f.path} fd=${f.fd}>"
-
-TEST File('xy').Str() == '<File path=xy fd=null>'
-
 doc Open a file and set the "fd" field to the file descriptor. Uses OPEN(2).
 doc Throws InvalidArgument if file is already open.
 doc Throws FileIOFail if an underlying error occurs.
@@ -5560,6 +5647,14 @@ F init(r:CommandRedir, fd, marker, datum) {
 	guard marker =~ AnyOf(Str, Null)
 	guard datum =~ AnyOf(Str, Pipe, Int, File, true)
 	init(args())
+}
+
+doc Throw exception whend redirecting to/from null
+F init(r:CommandRedir, fd, marker, datum:Null) {
+	if marker == '<' {
+			throw InvalidArgument('Command redirection from <${null} is not supported.')
+	}
+	throw InvalidArgument('Command redirection to >${null} is not supported. Use >${false} to disable capturing.')
 }
 
 doc Convert CommandRedir to human-readable string.
@@ -5729,7 +5824,7 @@ F wait(p:Process) {
 	message = collector/Lines() {
 		argv0 = ("'" + try p.command.argv[0] + "'") tor '(with unknown name)'
 		collect("Executing external process ${argv0} failed")
-		collect("Executable was found at ${p.executable.path}")
+		collect("Executable was found at ${p.executable}")
 		collect("Command: ${p.command.argv.map(escape_bash).join(' ') tor '(unavailable)'}")
 		if p.exit_code is not Null {
 			collect("Command exited with code: ${p.exit_code}")
@@ -5836,14 +5931,14 @@ doc Convert to string, appropriate for using as argument to external process. No
 doc %AUTO - $(mycommand $str) # str is Str
 F Arg(x:Str) x
 
-# TODO: Consider storing original h in one of the attrs() of the result
+# TODO: Consider storing original h in one of the meta() of the result
 doc Convert a Hash, describing command line arguments, to array of strings, appropriate for using as argument to external process.
 doc Key-value pairs with values of type NoData (null, EmptyBox) are discarded.
 doc Key-value pairs with empty array values are discarded.
 doc Values of type Box are unboxed.
 doc For keys which are arrays of two elements, Bool value selects first (for true) or second (for false) element.
 doc For keys which are arrays of a single element, Bool value selects whether the key is present or absent in the output.
-doc For keys which are arrays of a single element, Eachable1 value causes the switch to br repeated for each element, building switch name and switch value pairs.
+doc For keys which are Repeat, Eachable1 value causes the switch to be repeated for each element, building switch name and switch value pairs.
 doc %EX - # Typical usage:
 doc %EX - argv = Argv({'name1': value1, 'name2': value2, ...})
 doc %EX - $(my_command $*argv)
@@ -5851,7 +5946,7 @@ doc %EX - # Handling of key-value pairs
 doc %EX - Argv({"--a": 1, "-b": null})                         # ['--a', 1]
 doc %EX - Argv({["-y1", "-n1"]: true, ["-y2", "-n2"]: false})  # ['-y1', '-n2']
 doc %EX - Argv({["-y3"]: true, ["-y4"]: false})                # ["-y3"]
-doc %EX - Argv({["--repeat"]: ["a", "b"]})                     # ["--repeat", "a", "--repeat", "b"]
+doc %EX - Argv({Repeat("--repeat"): ["a", "b"]})               # ["--repeat", "a", "--repeat", "b"]
 doc %EX - Argv({"-a1": [], "-a2": [1,2,3]})                    # ["-a2", 1, 2, 3]
 F Argv(h:Hash) {
 	collector
@@ -5867,14 +5962,20 @@ F Argv(h:Hash) {
 						return
 					}
 					Eachable1 {
-						# ['--repeat']: my_eachable1
-						v.each(F(elt) {
-							collect(k[0])
-							collect(elt)
-						})
-						return
+						warn("Argv: use {Repeat('--repeat'): my_eachable1} instead of deprecated ['--repeat']: my_eachable1")
+						k = Repeat(k.the_one())
 					}
 				}
+			}
+
+			if k is Repeat {
+				assert(k, {'pattern': Str, 'count': NumRange }, 'Argv: Repeat() must repeat a string and count must be NumRange')
+				assert(v.len(), k.count, "Switch ${k.pattern} has ${v.len()} values, out of specified range ${k.count}")
+				v.each(F(elt) {
+					collect(k.pattern)
+					collect(elt)
+				})
+				return
 			}
 
 			# If you have nothing to give to the switch, skip the switch
@@ -5887,7 +5988,7 @@ F Argv(h:Hash) {
 
 TEST Argv({"--a": 1, "-b": null, ["-y1", "-n1"]: true, ["-y2", "-n2"]: false, ["-y3"]: true, ["-y4"]: false}) == ["--a", 1, "-y1", "-n2", "-y3"]
 TEST Argv({"-a1": [], "-a2": [1,2,3]}) == ["-a2", 1, 2, 3]
-TEST Argv({["--repeat"]: ["a", "b"]}) == ["--repeat", "a", "--repeat", "b"]
+TEST Argv({Repeat("--repeat"): ["a", "b"]}) == ["--repeat", "a", "--repeat", "b"]
 
 doc Deprecated. Do not use!
 doc %STATUS - deprecated
@@ -5921,7 +6022,7 @@ F fork() {
 	debug("process", "PID after fork: $pid")
 	if pid == 0 section "child" {
 		global exit_hook
-		exit_hook .= filter({ B.attrs() =~ {'keep_after_fork': true} })
+		exit_hook .= filter({ B.meta() =~ {'keep_after_fork': true} })
 	}
 	pid
 }
@@ -5943,7 +6044,8 @@ F '$()'(p:Process) {
 		F redir_str(r:CommandRedir) {
 			(r.fd or '').Str() + r.marker + safe_escape_bash(r.datum)
 		}
-		log("Running command: ${argv.map(safe_escape_bash).join(' ')}${' ' +? p.command.redirects.map(redir_str).join(' ')}")
+		o = ' (' +? p.command.options.without('log').map("$X:$Y").join(' ') +? ')'
+		log("Running command${o}: ${argv.map(safe_escape_bash).join(' ')}${' ' +? p.command.redirects.map(redir_str).join(' ')}")
 	}
 
 	try {
@@ -6284,6 +6386,26 @@ F decode(s:Str, hints:Hash) {
 	})
 }
 
+doc Decode "curl -i" to {"code": Int, "message": Str, "headers": Hash, "headers_arr": Hash, "body": Str}
+doc .body is not recursively decoded
+doc %RET - Hash
+F decode(s:Str, hints:Hash) {
+	guard try {a=hints.process.command.argv; a[0] == 'curl' and a.has('-i')}
+	sep = "\r\n\r\n"
+	p = s.pos(sep)
+	headers_lines = s[0..p].lines()
+	status_line = headers_lines.shift()
+	status_line_parts = status_line.split(' ', 3)
+	headers_kvs = headers_lines.map(split(X, ': '))
+	{
+		"code": status_line_parts[1].Int()
+		"message": status_line_parts[2]
+		"headers": headers_kvs.Hash()
+		"headers_arr": headers_kvs.group(X[0], X[1])
+		"body": s[(p+len(sep))..null]
+	}
+}
+
 doc Encode data as JSON if hints say that "filename" ends with ".json"
 doc %RET - Str
 F encode(data, hints:Hash={}) {
@@ -6502,8 +6624,6 @@ type SubSeq
 		doc Suffix that must be present for ~ matching to succeed
 		type MustSfx(Sfx)
 
-# TODO: warn()
-
 doc Convert Success to FullBox
 doc %RET - FullBox
 doc %EX - Box("abcd" ~ /^(..)/).map({"First two letters: ${A[1]}"}).get("(too short)")  # First two letters: ab
@@ -6626,6 +6746,7 @@ TEST ("abc" ~ /a(.)c/)[1] == "b"
 doc Checks subsequence presence.
 doc %RET - Bool
 F =~(x, s:SubSeq, _mc:MatchContext) {
+	s.val is not Str throws NotImplemented("Matching non-Str SubSeq is not implemented yet").set(val=s)
 	x is not Str returns false
 	Bool(x ~ s)
 }
@@ -6742,10 +6863,8 @@ F ~~(s:Str, r:RegExp, collect_unmatched:Bool=false) {
 }
 
 # TODO: test ~~() \r\n skipping
-# Crashes on Ubuntu 14.04 clang 3.5.0 (Travis CI)
-TEST (try ENV.TRAVIS and ENV.CC == "clang") returns true; ("ab\r\ncd" ~~ /(*CRLF)|./m).whole.filter(len) == ['a', 'b', 'c', 'd']
-# Crashes on Ubuntu 14.04 clang 3.5.0 (Travis CI)
-TEST (try ENV.TRAVIS and ENV.CC == "clang") returns true; ("ab\r\ncd" ~~ /|./m).whole.filter(len) == ['a', 'b', '\r', 'c', 'd']
+TEST ("ab\r\ncd" ~~ /(*CRLF)|./m).whole.filter(len) == ['a', 'b', 'c', 'd']
+TEST ("ab\r\ncd" ~~ /|./m).whole.filter(len) == ['a', 'b', '\r', 'c', 'd']
 # UTF-8 of "я" is 209(D1), 143(8F)
 # Skip for older library using try ... catch
 TEST try ("aяb" ~~ /(*UTF)|\\x8F|b/).whole.filter(len) == ['b'] catch(e:RegExpCompileFail) 'not recognized' in e.message
@@ -6793,15 +6912,14 @@ doc %RET - Arr of Str
 doc %EX - "x10ab20c30y".split(/[0-9]+/).join(" :: ")  # "x :: ab :: c :: y"
 F split(s:Str, r:RegExp) (~~)(s, r, true).filter(Str)
 
-# Crashes on Ubuntu 14.04 clang 3.5.0 (Travis CI)
-TEST (try ENV.TRAVIS and ENV.CC == "clang") returns true; "ab01de12f".split(/[0-9]+/) == ['ab', 'de', 'f']
+TEST "ab01de12f".split(/[0-9]+/) == ['ab', 'de', 'f']
 
 doc Get string with all occurrences of r removed
 doc %RET - Str
 doc %EX - "x10ab20c30y".without(/[0-9]+/)  # "xabcy"
 F without(s:Str, r:RegExp) s.split(r).join('')
 
-TEST (try ENV.TRAVIS and ENV.CC == "clang") returns true; "ab01de12f".without(/[0-9]+/) == 'abdef'
+TEST "ab01de12f".without(/[0-9]+/) == 'abdef'
 
 # TODO: make it a low priority method implementation
 doc Get substring of a string that corresponds to first match of given regular expression
@@ -6963,9 +7081,15 @@ F exception_specific_message(cf:CompileFail) {
 }
 
 doc Format GlobalNotFound exception message.
-doc %RET - Str
+doc %RET - Lines
 F exception_specific_message(gnf:GlobalNotFound) {
 	Lines(["Global variable '${gnf.name}' not found"])
+}
+
+doc Format UndefinedLocalVar exception message.
+doc %RET - Lines
+F exception_specific_message(ulv:UndefinedLocalVar) {
+	Lines(["Local variable '${ulv.name}' not found"])
 }
 
 doc Format MethodNotFound exception message.
@@ -6974,14 +7098,14 @@ doc %RET - Lines
 F exception_specific_message(mnf:MethodNotFound) {
 
 	F name(callable:Fun) {
-		methods_names = callable.Arr().map(attrs).get('name')
+		methods_names = callable.Arr().map(meta).get('name')
 		if methods_names and methods_names.all(X == methods_names[0]) {
 			methods_names[0]
 		}
 	}
 
 	F name(callable:UserDefinedMethod) {
-		callable.attrs().get('name')
+		callable.meta().get('name')
 	}
 
 	mn = name(mnf.callable) or '(method name unavailable, maybe anonymous)'
@@ -7054,7 +7178,7 @@ F init(lines:Lines, backtrace:Backtrace, parent_backtrace=null) {
 		# Don't print frames that overlap with parent exception
 		frame.ip == (try parent_frames[idx].ip) returns
 		l = resolve_instruction_pointer(frame.ip)
-		closure = " [in ${frame.closure.attrs().name}]" tor ''
+		closure = " [in ${frame.closure.meta().name}]" tor ''
 		push(lines, "Frame $idx: ${l.file}:${l.first_line}:${l.first_column} - ${l.last_line}:${l.last_column}$closure")
 	})
 }
@@ -7154,7 +7278,7 @@ block _ {
 			}
 		}
 	}
-	exit_hook.print_exception.attrs().keep_after_fork = true
+	exit_hook.print_exception.meta().keep_after_fork = true
 
 }
 
@@ -7636,7 +7760,7 @@ section "Loading code" {
 
 
 	F bootstrap_print_compilation_warnings(program_bytecode, fname) {
-		program_bytecode.attrs().warnings.each(F(w) {
+		program_bytecode.meta().warnings.each(F(w) {
 			wl = w.location
 			warn("${fname}:${wl.first_line}:${wl.first_column} warning: ${w.message}")
 		})

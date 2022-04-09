@@ -4,7 +4,7 @@ type Enum(HashLike)
 doc Enum constructor.
 F init(e:Enum) {
 	super(e)
-	e.attrs().numbers_to_names = {}
+	e.meta().numbers_to_names = {}
 }
 
 doc Add new name to mapping. Names are mapped to consecutive zero-based integers.
@@ -18,7 +18,7 @@ F push(e:Enum, name:Str) {
 	name in e returns
 	idx = e.len()
 	e[name] = idx
-	e.attrs().numbers_to_names[idx] = name
+	e.meta().numbers_to_names[idx] = name
 	e
 }
 
@@ -32,16 +32,16 @@ doc %EX - e = e.limit(1)
 doc %EX - e is Enum and e.len() == 1  # true
 F limit(e:Enum, l:Int) {
 	ret = Enum()
-	ret.attrs().HashLike = e.attrs().HashLike.limit(l)
-	ret.attrs().numbers_to_names = e.attrs().numbers_to_names.limit(l)
+	ret.meta().HashLike = e.meta().HashLike.limit(l)
+	ret.meta().numbers_to_names = e.meta().numbers_to_names.limit(l)
 	ret
 }
 
 doc Get name of number
-F '[]'(e:Enum, number:Int) e.attrs().numbers_to_names[number]
+F '[]'(e:Enum, number:Int) e.meta().numbers_to_names[number]
 
 doc String representation of Enum
-F Str(e:Enum) "<Enum ${e.attrs().HashLike}>"
+F Str(e:Enum) "<Enum ${e.meta().HashLike}>"
 
 TEST e=Enum(); e.push("x"); e.push("x"); e.len() == 1 and "x" in e
 TEST e=Enum(); e.push("x"); e.push("y"); e = e.limit(1); e is Enum and e.len() == 1

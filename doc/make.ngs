@@ -16,6 +16,7 @@
 	Table
 	Thread
 	test
+	tr
 
 	# TODO: Do not list all types on the namespace page,
 	# just up to TYPES_THRESHOLD, probably the parents.
@@ -67,8 +68,8 @@
 			s.replace(/(^[.]+)|[^-._a-zA-Z0-9]/, F(char) '%' + encode_hex(char)) + sfx
 		}
 
-		F object_attr(x, a:Str) (x.attrs() or {}).get(a).Box()
-		F object_doc(x) x.object_attr('doc')
+		F object_meta(x, a:Str) (x.meta() or {}).get(a).Box()
+		F object_doc(x) x.object_meta('doc')
 		F object_doc_attr(x, a:Str) object_doc(x).filter(a in X).map(X[a]).map(ensure_array)
 
 		obj_to_description = {}
@@ -230,7 +231,7 @@
 				tvi.docs = collector dir('.').each(F(p) {
 					m = p.path ~ /\.md$/
 					not(m) returns
-					status("Reading ${p.path}")
+					status("Reading ${p}")
 					# collect(m.before, ``pandoc -f 'markdown+hard_line_breaks' -t json -s ${p}``)
 					collect(MarkdownDescription(tvi, m.before, p))
 				})
@@ -310,9 +311,11 @@
 		F process_markdown_table(h:Hash) {
 			# table: 0 - ?, 1 - Alignment, 2 - something about columns?, 3 - ?, 4 - rows
 			assert(h.t == 'Table')
-			DocNode('table', class='markdown-table') with h.c[4].map(F(row) {
-				DocNode('tr') with row.map(F(cell) {
-					DocNode('td') with [ cell[0].to_doc() ]
+			# row: 0 - ?, 1 - cells?
+			DocNode('table', class='markdown-table') with h.c[4].the_one()[3].map(F(row) {
+				DocNode('tr') with row[1].map(F(cell) {
+					# cell: 0 - ?, 1 - Alignment, 2 - RowSpan, 3 - ColSpan, 4 - contents
+					DocNode('td') with [ cell[4].the_one().to_doc() ]
 				})
 			})
 		}
@@ -434,7 +437,7 @@
 				# 	}
 				# 	process_method(Str(name), impls.filter(is_in_ns(X, ns)))
 				# })
-				nd.fields = namespace.attrs().Box().get({}).get('doc', {}).without('').reject(X ~ /^%/).mapv(ensure_array)
+				nd.fields = namespace.meta().Box().get({}).get('doc', {}).without('').reject(X ~ /^%/).mapv(ensure_array)
 				nd.objects_descriptions = {}
 				nd.objects_by_type = {
 					MultiMethodDescription: []
@@ -963,7 +966,7 @@
 			status("Augmenting methods information")
 			methods = obj_to_description.values().filter(MethodDescription)
 			for md in methods {
-				namespace = md.method.object_attr('ns').map(obj_to_description.get(X)).reject(NoData)
+				namespace = md.method.object_meta('ns').map(obj_to_description.get(X)).reject(NoData)
 				md.containing_nd = namespace.get(md.containing_nd)
 			}
 		}

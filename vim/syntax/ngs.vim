@@ -37,8 +37,8 @@ syn keyword ngsType NamedInstances Namespace NativeMethod NgsStrComp NgsStrCompE
 syn keyword ngsType OptionalMethodParam
 syn keyword ngsType ParamsMatchN ParamsMatchY PartialPresence Path PatternAction Pfx Pipe PipeCreateFail PipeFromChildProcess PipeFromChildToParentProcess PipeFromParentToChildProcess PipeToChildProcess PredRange Presence Present Process ProcessRedir ProcessesPipeline Program ProgramNotFound
 syn keyword ngsType Range RangeIter ReadFail ReadingPipeBetweenChildren Real ReentrantLock RegExp RegExpCompileFail RemoveCleanupPolicy Repeat RequireFail RequiredMethodParam Res ResDef Result ResultFail Results ResultsException RetryBodyMissing RetryFail ReturnFromBlock
-syn keyword ngsType Seq Set Sfx SocketFile SplatMethodParam StackDepthFail Stat StatFail Stats Str SubSeq Success SwitchFail SwitchParseFail Symlink
-syn keyword ngsType Table TestFail TestMessage TestsResults Thread ThreadFail Threads Time TimeFail TmpFile TtyCheckFail Type
+syn keyword ngsType Seq Set Sfx SocketFile SplatMethodParam StackDepthFail StackOverflow Stat StatFail Stats Str SubSeq Success SwitchFail SwitchParseFail Symlink
+syn keyword ngsType Table TestFail TestMessage TestsResults Thread ThreadFail Threads Time TimeFail TmpDir TmpFile TmpFsObj TtyCheckFail Type
 syn keyword ngsType UndefinedLocalVar UserDefinedMethod
 syn keyword ngsType WriteFail WritingPipeBetweenChildren
 syn keyword ngsType c_ffi_cif c_ffi_type c_pthread_attr_t c_pthread_cond_t c_pthread_mutex_t c_pthread_mutexattr_t c_pthread_t c_tm
@@ -59,12 +59,12 @@ syn keyword ngsFunction debug decode decode_hex decode_json decode_uri_component
 syn keyword ngsFunction each each_chunk each_group_test each_idx_key_val each_idx_val eachk eachv echo encode encode_hex encode_html encode_html_attr encode_json encode_uri_component ends_with ensure ensure_array error exception_specific_message exec exit expect
 syn keyword ngsFunction fetch filter filterk filtero filterv finally find find_if_needed find_in_path finished finished_ok first flatten floor fork framed
 syn keyword ngsFunction get glob global_not_found_handler globals gmtime group
-syn keyword ngsFunction has has_index has_no hash hash_splat
+syn keyword ngsFunction has has_index has_no hash hash_splat human_type_name
 syn keyword ngsFunction id identity ids in index indexes inherit init inspect intersperse ip is is_blocked_group is_subtype isatty
 syn keyword ngsFunction join
 syn keyword ngsFunction keys kill
-syn keyword ngsFunction latest len limit lines ll_hash_entry_key ll_hash_entry_next ll_hash_entry_val ll_hash_head ll_hash_tail ll_is_global_variable_defined ll_resolve_global_variable ll_set_global_variable ll_thread_local load localtime log lstat lte
-syn keyword ngsFunction main map map_base_idx map_idx_key_val map_idx_val mapk mapkv mapo mapv max maybe_print_stacktrace merge_sorted method_not_found_handler min myip
+syn keyword ngsFunction latest len limit lines ll_hash_entry_key ll_hash_entry_next ll_hash_entry_val ll_hash_head ll_hash_tail ll_is_global_variable_defined ll_maybe_wrap ll_resolve_global_variable ll_set_global_variable ll_thread_local load localtime log lstat lte
+syn keyword ngsFunction main map map_base_idx map_idx_key_val map_idx_val mapk mapkv mapo mapv max maybe_print_stacktrace merge_sorted meta method_not_found_handler min myip
 syn keyword ngsFunction next none nop normalize_presence_list not
 syn keyword ngsFunction only open opt_prop ord
 syn keyword ngsFunction params parent_fd partial partial_tail partition peek pfilter pid pmap pop pos pow ppid print_exception progress ptimes push push_all

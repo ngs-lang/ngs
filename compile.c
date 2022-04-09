@@ -290,6 +290,8 @@ void register_local_vars(COMPILATION_CONTEXT *ctx, ast_node *node) {
 				register_local_vars(ctx, ptr);
 			}
 			break;
+		default:
+			break;
 	}
 	for(ptr=node->first_child; ptr; ptr=ptr->next_sibling) {
 		register_local_vars(ctx, ptr);
@@ -755,6 +757,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 						case STR_COMP_IMM_NODE:             OPCODE(*buf, OP_MAKE_STR_IMM); break;
 						case STR_COMP_EXPANSION_NODE:       OPCODE(*buf, OP_MAKE_STR_EXP); break;
 						case STR_COMP_SPLAT_EXPANSION_NODE: OPCODE(*buf, OP_MAKE_STR_SPLAT_EXP); break;
+						default: break;
 					}
 				}
 				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, argc);

@@ -1,13 +1,13 @@
 name: ngs # you probably want to 'snapcraft register <name>'
 base: core18 # the base snap is the execution environment for this snap
-version: '0.2.13' # just for humans, typically '1.2+git' or '1.3.2'
+version: '0.2.14' # just for humans, typically '1.2+git' or '1.3.2'
 summary: A powerful programming language and a shell designed specifically for Ops # 79 char long summary
 description: |
   NGS is a unique combination of select features borrowed from other languages and original features. NGS was built from the ground up focusing on daily systems engineering tasks.
   One way to think about NGS is bash plus data structures plus better syntax and error handling.
   Scripting AWS is much easier with NGS, there is a Declarative Primitives style library for that.
 
-grade: stable # Can be either devel (i.e. a development version of the snap, so not to be published to the stable or candidate channels) or stable (i.e. a stable release or release candidate, which can be released to all channels). Example: [stable or devel]
+grade: devel # Can be either devel (i.e. a development version of the snap, so not to be published to the stable or candidate channels) or stable (i.e. a stable release or release candidate, which can be released to all channels). Example: [stable or devel]
 confinement: strict # use 'strict' once you have the right plugs and slots
 license: GPL-3.0
 

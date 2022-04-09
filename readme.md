@@ -2,66 +2,60 @@
 
 [![Discord](https://img.shields.io/discord/681405592732172293.svg?logo=discord)](https://discord.gg/6VqgcpM)
 [![Commits in dev since last release](https://img.shields.io/github/commits-since/ngs-lang/ngs/latest/dev.svg)](https://github.com/ngs-lang/ngs/commits/dev)
-[![Build Status](/../../workflows/Build/badge.svg?branch=master)](/../../actions?query=workflow%3A%22Build%22+branch%3Amaster)
+[![Build Status](/../../workflows/Build/badge.svg?branch=dev)](/../../actions?query=workflow%3A%22Build%22+branch%3Adev)
 [![Docker Build Status](https://img.shields.io/docker/cloud/build/ngslang/ngs.svg)](https://hub.docker.com/r/ngslang/ngs/builds)
 [![Homebrew](https://img.shields.io/badge/dynamic/json.svg?url=https://formulae.brew.sh/api/formula/ngs.json&query=$.versions.stable&label=homebrew&color=orange)](https://formulae.brew.sh/formula/ngs)
 [![snapcraft](https://snapcraft.io//ngs/badge.svg)](https://snapcraft.io/ngs)
 [![license](https://img.shields.io/github/license/ngs-lang/ngs)](https://raw.githubusercontent.com/ngs-lang/ngs/master/LICENSE)
 
-**Next Generation Shell** is a powerful programming language and a shell designed specifically for Ops. *Because you deserve better*.
+**Next Generation Shell** is a modern programming language for DevOps.
 
-* [Quick Links](#quick-links)
+* [NGS Website](https://ngs-lang.org/)
+* [NGS Discord chat](https://discord.gg/6VqgcpM)
 * [The Problem](#the-problem)
 * [Suggested Solution - NGS](#suggested-solution---ngs)
 * [NGS Use Cases](#ngs-use-cases)
 * [Project Status](#project-status)
 * [Installing](#installing)
-  * [Using Script](#using-script)
-  * [Using Homebrew](#using-homebrew)
-  * [Using Snap](#using-snap)
-  * [Using Docker](#using-docker)
-  * [Using Github Action](#using-github-action)
-  * [Using iPython or Jupyter Notebook](#using-ipython-or-jupyter-notebook)
+	* [Using Script](#using-script)
+	* [Using Homebrew](#using-homebrew)
+	* [Using Snap](#using-snap)
+	* [Using Docker](#using-docker)
+	* [Using Github Action](#using-github-action)
+	* [Using iPython or Jupyter Notebook](#using-ipython-or-jupyter-notebook)
+	* [Using AWS Lambda](#using-aws-lambda)
+* Documentation
+	* [Code Examples](#code-examples)
+		* [Arrays](#arrays)
+		* [Hashes](#hashes)
+		* [Functions (multimethods) and multi-dispatch](#functions-multimethods-and-multi-dispatch)
+		* [Basic Cloud](#basic-cloud)
+		* [Sample Scripts](#sample-scripts)
+	* [Index](https://ngs-lang.org/doc/latest/index.html)
+	* [Tutorial](https://ngs-lang.org/doc/latest/man/ngstut.1.html) -- brief introduction through code examples
+	* [Language Reference](https://ngs-lang.org/doc/latest/man/ngslang.1.html) -- language design principles, syntax, and features
+	* [Motivation](https://ngs-lang.org/doc/latest/man/ngswhy.1.html)
+	* [Library reference](https://ngs-lang.org/doc/latest/generated/index.html) -- all available functions
 * [Manually Compiling and Running](#manually-compiling-and-running)
-    * [Clone from Git](#clone-from-git)
-    * [Install with Dependencies - Debian-based Linux and MacOS](#install-with-dependencies---debian-based-linux-and-macos)
-    * [Install without Dependencies](#install-without-dependencies)
-    * [Run Tests](#run-tests)
-    * [Compile](#compile)
-    * [Run](#run)
-    * [Uninstall](#uninstall)
-    * [Debug - Mac](#debug---mac)
-    * [Debug - Homebrew builds](#debug---homebrew-builds)
-    * [Build and run docker](#build-and-run-docker)
-    * [Generate Documentation](#generate-documentation)
-* [Code Examples](#code-examples)
-  * [Arrays](#arrays)
-  * [Hashes](#hashes)
-  * [Functions (multimethods) and multi-dispatch](#functions-multimethods-and-multi-dispatch)
-  * [Basic Cloud](#basic-cloud)
-  * [Sample Scripts](#sample-scripts)
+	* [Clone from Git](#clone-from-git)
+	* [Install with Dependencies - Debian-based Linux and MacOS](#install-with-dependencies---debian-based-linux-and-macos)
+	* [Install without Dependencies](#install-without-dependencies)
+	* [Run Tests](#run-tests)
+	* [Compile](#compile)
+	* [Run](#run)
+	* [Uninstall](#uninstall)
+	* [Debug - Mac](#debug---mac)
+	* [Debug - Homebrew builds](#debug---homebrew-builds)
+	* [Build and run docker](#build-and-run-docker)
+	* [Generate Documentation](#generate-documentation)
 * [Contributing](#contributing)
 * [Planned Features](#planned-features)
-  * [Cross-system](#cross-system)
-  * [Development](#development)
-  * [Later / Unformed / Unfinished Thoughts](#later--unformed--unfinished-thoughts)
+	* [Cross-system](#cross-system)
+	* [Development](#development)
+	* [Later / Unformed / Unfinished Thoughts](#later--unformed--unfinished-thoughts)
 * [How to Run the POC](#how-to-run-the-poc)
 * [Have you heard of project X? How it compares to NGS?](#have-you-heard-of-project-x-how-it-compares-to-ngs)
 * [Discussion / requests / comments](#discussion--requests--comments)
-
-## Quick Links
-
-* [NGS Website](https://ngs-lang.org/)
-* [NGS Discord chat](https://discord.gg/6VqgcpM)
-* [Docker repository](https://hub.docker.com/r/ngslang/ngs/)
-* Documentation
-	* [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases) -- which problems NGS aims to solve well
-	* [Documentation Index](https://ngs-lang.org/doc/latest/index.html)
-		* [Tutorial](https://ngs-lang.org/doc/latest/man/ngstut.1.html) -- brief introduction through code examples
-		* [Language Reference](https://ngs-lang.org/doc/latest/man/ngslang.1.html) -- language design principles, syntax, and features
-		* [Motivation](https://ngs-lang.org/doc/latest/man/ngswhy.1.html)
-		* [Library reference](https://ngs-lang.org/doc/latest/generated/index.html) -- all available functions
-
 
 ## The Problem
 
@@ -129,23 +123,20 @@ From George Nachman, creator of [iTerm2](https://www.iterm2.com/):
 ### Using Homebrew
 
 	brew install ngs
-	ngs -pi 'sum(0..10)'
 
 ### Using Snap
 
 	sudo snap install ngs
-	ngs -pi 'sum(0..10)'
 
 ### Using Docker
 
-	docker run -it --rm ngslang/ngs
+Docker repository is at https://hub.docker.com/r/ngslang/ngs/
 
-	# Use NGS inside the container
-	ngs -pi 'sum(0..10)'
+	docker run -it --rm ngslang/ngs
 
 ### Using GitHub Action
 
-Add to your Github Action the following line (make sure to release the version as required)
+Add to your Github Action the following (make sure to release the version as required)
 
 ```
 steps:
@@ -160,9 +151,17 @@ steps:
 	- run: ngs -pi 'sum(10..100)'
 ```
 
+### Running NGS as AWS Lambda Custom Runtime
+
+To run NGS as AWS Lambda Function see https://github.com/ngs-lang/ngs-aws-lambda
+
 ### Using iPython or Jupyter Notebook
 
 Please refer to extension located in https://github.com/ngs-lang/ngs-ipython-extension
+
+### Using AWS Lambda
+
+Please refer to extension located in https://github.com/ngs-lang/ngs-aws-lambda
 
 
 ## Manually Compiling and Running
@@ -191,6 +190,24 @@ Please refer to extension located in https://github.com/ngs-lang/ngs-ipython-ext
 ### Compile
 
 	make build
+
+Build is currently tested with the GitHub action in `.github/workflows/build.yml` and we currently test the following 64-bit architectures:
+
+| system        | gcc                      | clang         |
+|---------------|--------------------------|---------------|
+| ubuntu 20.04  | 9, 10, 11                | 9, 10, 11     |
+| debian 11.1   | 9, 10                    | 9, 11         |
+| macOS 10.15   | 9, 10, 11                | 10            |
+| centos 7      | 9, 10, 11                | --            |
+| amazonlinux 2 | default (7.3)            | default (11)  |
+| fedora 34     | default (11)             | default (12)  |
+| fedora 35     | default (11)             | default (13)  |
+| archlinux     | default (11.1)           | default (13)  |
+
+Notes:
+
+* 32-bit architectures are currently **not** supported.
+* Debian 11 with gcc 10 is also tested with the following architectures: aarch64, s390x, ppc64le
 
 ### Run
 
