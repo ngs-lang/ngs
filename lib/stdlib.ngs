@@ -1589,6 +1589,9 @@ section "Set" {
 	TEST Set([1,2]) <= Set([1,2,3])
 	TEST not(Set([1,2,4]) <= Set([1,2,3]))
 
+	doc Check whether all values in b are also in a
+	F '>='(a:Set, b:Set) b <= a
+
 	doc Inspect Set
 	doc %RET - Lines
 	F inspect(a:Set) Lines(["Set of size ${a.len()}"] + a.map({"  ${SafeStr(A)}"}).digest(16, '  (...)'))
@@ -2304,6 +2307,12 @@ TEST [1, 2] <= [1, 3]
 TEST not([1, 3] <= [1, 2])
 TEST [1] <= [1, 2]
 TEST not([1,2] <= [1])
+
+doc Compare arrays, element-wise. If all elements are equal, the longest array considered to be the "big" one.
+doc Exactly the same as b <= a.
+doc %RET - Bool
+F '>='(a:Arr, b:Arr) b <= a
+
 
 # TODO: Make it work on anything with Eachable2 too.
 doc Check whether there is any element in e that satisfies the given pattern.
@@ -4318,6 +4327,11 @@ section "Strings and characters" {
 	doc %RET - Bool
 	F '<='(a:Str, b:Str)
 		c_strcmp(a, b) <= 0
+
+	doc Case sensitive GreaterThan or Equal comparison for strings
+	doc %RET - Bool
+	F '>='(a:Str, b:Str)
+		c_strcmp(a, b) >= 0
 
 	doc Case sensitive LessThan comparison for strings
 	doc %RET - Bool
