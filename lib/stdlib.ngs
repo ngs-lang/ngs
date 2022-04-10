@@ -5773,7 +5773,7 @@ block _ {
 
 	_known_programs = %{
 		%[false] 1
-		%[expr grep pgrep ping test] %[0 1]
+		%[expr grep pgrep ping test which] %[0 1]
 	}
 	if OS.linux {
 		_known_programs[%[fuser]] = %[0 1]
