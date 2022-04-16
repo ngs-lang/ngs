@@ -155,6 +155,8 @@ ns {
 			log("Commit of the release: ${commit_id}")
 			wait_for_build(commit_id)
 			$(git tag "v${version}")
+			$(git push origin "v${version}")
+
 			# Deletes the test branch, not that useful # $(git push origin ":release-test" "v${version}")
 
 			echo("Please create release on GitHub - https://github.com/ngs-lang/ngs/releases/new - ${version}")
