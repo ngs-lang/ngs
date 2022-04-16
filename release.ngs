@@ -42,7 +42,7 @@ ns {
 	}
 
 	doc Set do_source_dir - used for development of this script
-	F main(do_source_dir:Bool=true) {
+	F main(do_source_dir:Bool=true, to_test_branch:Bool=false) {
 
 		assert(Program('curl'))
 		read('version.h').assert(Ifx('-alpha'))
@@ -112,7 +112,7 @@ ns {
 
 				File(source_dir / 'CHANGELOG.md').replace('(UNRELEASED)', Time().Str("%Y-%m-%d"))
 				$(ok:1 git diff --exit-code ${source_dir / 'CHANGELOG.md'}).stdout.has('-## (UNRELEASED)').assert()
-				$(git commit -m '[release.ngs testing] Preparing for release' -i 'CHANGELOG.md')
+				$(git commit -m 'Preparing for release' -i 'CHANGELOG.md')
 				$(git push)
 				commit_id = $(git log -1 '--pretty=format:%H').stdout.lines()[0]
 				log("Commit of CHANGELOG.md update: ${commit_id}")
@@ -123,7 +123,9 @@ ns {
 		cd(target_dir, {
 			$(git remote add source_dir $source_dir)
 			$(git fetch source_dir)
-			$(git checkout -b release-test)  # Cleanup: git push origin --delete release-test
+			if to_test_branch {
+				$(git checkout -b release-test)
+			}
 			$(git merge --no-commit "source_dir/${source_branch}")
 			File(target_dir / 'version.h').replace('-alpha', '')
 			$(ok:1 git diff --exit-code ${target_dir / 'version.h'})
@@ -144,12 +146,16 @@ ns {
 			}
 
 			$(git commit -am "Releasing version: ${version}")
-			$(git push --set-upstream origin release-test)
+			if to_test_branch {
+				$(git push --set-upstream origin release-test)
+			} else {
+				$(git push)
+			}
 			commit_id = $(git log -1 '--pretty=format:%H').stdout.lines()[0]
 			log("Commit of the release: ${commit_id}")
 			wait_for_build(commit_id)
 			$(git tag "v${version}")
-			$(git push origin ":release-test" "v${version}")
+			# Deletes the test branch, not that useful # $(git push origin ":release-test" "v${version}")
 
 			echo("Please create release on GitHub - https://github.com/ngs-lang/ngs/releases/new - ${version}")
 			echo("Please release snap")
@@ -168,7 +174,15 @@ ns {
 				new_version="${t[0]}.${t[1]}.${t[2].Int()+1}"
 				File(source_dir / "version.h").replace(/(?<=").+(?=")/, "${new_version}-alpha")
 				File(source_dir / "snap" / "snapcraft.yaml").replace(/(?<=version: ')[0-9.]+(?=')/, new_version)
+				new_changelog = ["## (UNRELEASED) Version ${new_version}", ""] + File(source_dir / 'CHANGELOG.md').lines()
+				File(source_dir / 'CHANGELOG.md').lines(new_changelog)
+				$(git commit -am 'Organizing after release')
+				$(git push)
 			})
+
+			$(git pull)
+			$(rm -rf build)
+			echo("Review the pull and then build: make build")
 		}
 
 	}
