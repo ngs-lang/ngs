@@ -15,7 +15,7 @@ ns {
 	type ChannelHandlerContext
 
 	type ChannelEvent(NamedInstances)
-	ChannelEvent.NamedInstances = %[active read]
+	ChannelEvent.NamedInstances = %[active read exception]
 
 	section "Channel" {
 		# src/main/java/io/netty/bootstrap/ServerBootstrap.java
@@ -44,7 +44,13 @@ ns {
 		}
 
 		F on_event(chc:ChannelHandlerContext, ev:ChannelEvent, *args) {
-			chc.handler.on_event(chc, ev, *args)
+			try {
+				chc.handler.on_event(chc, ev, *args)
+				# TODO: cut the exception chain somehow
+				#       we should not catch if the handler already called chc.fire()
+			} catch(e) {
+				chc.fire(ChannelEvent::exception, e)
+			}
 			chc
 		}
 
@@ -85,7 +91,7 @@ ns {
 		F init(fc:FileChannel, f:File) {
 			super(fc)
 			fd = c_open(f.path, 'r')  # XXX: how about writing?
-			fd <= 0 throws FileIOFail("Failed to open the file ${f.path}").set('file', f)
+			fd <= 0 throws FileIOFail("Failed to open the file ${f}").set('file', f)
 			fc.fd = fd
 		}
 
@@ -96,6 +102,16 @@ ns {
 		F read(fc:FileChannel) {
 			# Start async read operation
 			# TODO: think about synchronous variant
+		}
+	}
+
+	section "Sample file reader channel handler" {
+		global FR
+		type FR(ChannelHandler)
+
+		F on_event(chc:ChannelHandlerContext, ev:ChannelEvent) {
+			guard ev == ChannelEvent::active
+			log("active")
 		}
 	}
 }
