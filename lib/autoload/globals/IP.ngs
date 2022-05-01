@@ -32,9 +32,9 @@ block _ {
         TEST IPAddr("1.1.1.1").ip == 16843009
         TEST IPAddr("1.1.1.2").ip == 16843010
         TEST IPAddr("1.1.1.255").ip == 16843263
-        TEST IPAddr("1.1.1.256") THROWS InvalidArgument
-        TEST IPAddr("1.1.1") THROWS InvalidArgument
-        TEST IPAddr("1.2.3.4.5") THROWS InvalidArgument
+        TEST { IPAddr("1.1.1.256") }.assert(InvalidArgument)
+        TEST { IPAddr("1.1.1") }.assert(InvalidArgument)
+        TEST { IPAddr("1.2.3.4.5") }.assert(InvalidArgument)
 
         F init(addr:IPAddr, ip:Int) {
             ip not in (0...MAX_IP_INT) throws InvalidArgument("IP address must be between 0 and ${MAX_IP_INT}, inclusive").set(given=ip)
@@ -44,7 +44,7 @@ block _ {
         F Int(addr:IPAddr) addr.ip
 
         TEST IPAddr(16843009).Int() == 16843009
-        TEST IPAddr(-1) THROWS InvalidArgument
+        TEST { IPAddr(-1) }.assert(InvalidArgument)
     }
 
     section "IP subnet" {
@@ -69,7 +69,7 @@ block _ {
 
         TEST IPNet("1.1.1.0/8").bit_mask == 4278190080
         TEST IPNet("1.1.0.0/16").bit_mask == 4294901760
-        TEST IPNet("1.1.1.0/-1") THROWS InvalidArgument
+        TEST { IPNet("1.1.1.0/-1") }.assert(InvalidArgument)
 
         PRIVATE_IP_NETWORKS = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'].map(IPNet)
 

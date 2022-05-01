@@ -6,7 +6,7 @@ TEST a=[{"x": 7}, {"x": 8}]; a .= x; a == [7, 8]
 TEST a=[1,2]; a .= map(F(x) x*2); a[0]+=10; a == [12,4]
 
 TEST o = {'a': 1, 'b': [null, false, true, 3.14], 'nothing': null}; decode_json(encode_json(o)) == o
-TEST decode_json("1xx") THROWS JsonDecodeFail
+TEST {decode_json("1xx")}.assert(JsonDecodeFail)
 TEST h={'a': 1, 'b': 2, 'c': 3}; h.update({'b': 20, 'd': 40}); h == {'a': 1, 'b': 20, 'c': 3, 'd': 40}
 
 TEST F opt(a, b=10, *rest) [b, rest]; opt(1) == [10, []]
@@ -111,4 +111,4 @@ TEST f='/tmp/ngs-redir-test'; $(ok: cat /NO-SUCH-FILE 2>$f); txt=`cat $f`; $(rm 
 # === Guard tests ===
 TEST F guard_yes_use_value() { guard 10 }; guard_yes_use_value() == 10
 TEST F guard_yes_discard_value() { guard 10; 20 }; guard_yes_discard_value() == 20
-TEST F guard_no() { guard 0 }; guard_no() THROWS MethodNotFound
+TEST F guard_no() { guard 0 }; guard_no.assert(MethodNotFound)

@@ -120,6 +120,6 @@ ns {
 
 TEST l=List([1,2,3]); l.push(4); x=l.shift(); x == 1 and Arr(l) == [2, 3, 4]
 TEST l=List([1,2,3]); l.unshift(0); x=l.pop(); x == 3 and Arr(l) == [0, 1, 2]
-TEST List().pop() THROWS EmptyListFail
-TEST List().shift() THROWS EmptyListFail
+TEST { List().pop() }.assert(EmptyListFail)
+TEST { List().shift() }.assert(EmptyListFail)
 TEST List().each({ assert(false) }) == List()

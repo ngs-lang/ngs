@@ -211,7 +211,7 @@ ns {
 	TEST tr; [{"a": 1, "b": "x"}].tr([ Str -> Y.skip(), Int -> (X+1), Arr -> {["start", *descend(B)]} ]) == ["start", {"a": 2}]
 	TEST [10,20].tr([[Int, Int -> (X+1)]]) == [10, 21]
 	TEST tr; [1, [10,20]].tr([[Int, Int -> Y.skip()]]) == [1, [10]]
-	TEST tr; 1.tr(Int -> skip(Y)) THROWS TrTopLevelSkipFail
+	TEST { tr; 1.tr(Int -> skip(Y)) }.assert(TrTopLevelSkipFail)
 	TEST {"a": {"b": 2}}.tr({"a": {"b": Int -> (X+1)}}) == {"a": {"b": 3}}
 	TEST {"a": {"b": 2}, "extra": 100}.tr({"a": {"b": Int -> (X+1)}}) == {"a": {"b": 3}, "extra": 100}
 	TEST {"a": {"b": 2}, "extra": 100}.tr({"x": {"b": Int -> (X+1)}}) == {"a": {"b": 2}, "extra": 100}

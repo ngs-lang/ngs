@@ -265,6 +265,21 @@ F assert(expr, msg:Str="Assertion failed") {
 	expr
 }
 
+doc Throws AssertFail with given function does not throw exception of the given type.
+doc f - Fun
+doc t - Subtype of Exception
+doc %RET - The exception
+doc %EX - assert({1/0}, DivisionByZero)
+F assert(f:Fun, t:Type, msg:Str="Assertion failed") {
+	guard t.is_subtype(Exception)
+	r = Result(f)
+	assert(r, Failure, msg)
+	assert(r.val, t, msg)
+	r.val
+}
+
+TEST assert({1/0}, DivisionByZero) is DivisionByZero
+
 doc Initializes InstantiatingAbstractType.
 F init(e:InstantiatingAbstractType, t:Type) init(args())
 
@@ -997,7 +1012,7 @@ block u {
 	TEST [1,2,3].first(X>1, 10) == 2
 	TEST [1,2,3].first(X>5, 10) == 10
 	TEST [1,2,3].first(X>1) == 2
-	TEST [1,2,3].first(X>5) THROWS ElementNotFound
+	TEST {[1,2,3].first(X>5)}.assert(ElementNotFound)
 }
 
 doc Find the only element that matches the pattern and execute given code with the value
@@ -1031,11 +1046,11 @@ TEST ok = false; [1,2,11,3,4].the_one(X>10, F(the_value) { ok = the_value == 11 
 TEST ok = false; [1,2,11,3,4].the_one(X>20, nop, found_none = { ok = true }); ok
 TEST ok = false; [1,2,11,3,4].the_one(Int, nop, found_more = { ok = true }); ok
 TEST [1,2,11,3,4].the_one(X>10) == 11
-TEST [1,2,11,12,4].the_one(X>10) THROWS ElementNotFound
-TEST [1,2,3,4].the_one(X>10) THROWS ElementNotFound
+TEST { [1,2,11,12,4].the_one(X>10) }.assert(ElementNotFound)
+TEST { [1,2,3,4].the_one(X>10) }.assert(ElementNotFound)
 TEST [1, "a", "b"].the_one(Int) == 1
 TEST [1].the_one() == 1
-TEST [1, "a", "b"].the_one(Str) THROWS ElementNotFound
+TEST { [1, "a", "b"].the_one(Str) }.assert(ElementNotFound)
 
 doc Filter something to an Arr (array) of values matcing rge pattern
 doc pattern - Decision function to be called with each item as first argument.
@@ -1132,7 +1147,7 @@ F reduce(e:Eachable1, f:Fun) {
 
 TEST [10].reduce((+)) == 10
 TEST [1,2,3].reduce((+)) == 6
-TEST [].reduce((+)) THROWS EmptyEachableFail
+TEST { [].reduce((+)) }.assert(EmptyEachableFail)
 
 doc Deprecated.
 doc Map when there is more than one element. If there is exactly one element, it's left as is
@@ -1512,7 +1527,7 @@ section "HashLike" {
 	}
 
 	TEST h=HashLike({"a": 1, "b": 2}); h.del("a"); h == HashLike({"b": 2})
-	TEST h=HashLike({"a": 1, "b": 2}); h.del("c") THROWS KeyNotFound
+	TEST { h=HashLike({"a": 1, "b": 2}); h.del("c") }.assert(KeyNotFound)
 
 	doc Create a HashLike.
 	doc h - If provided, used as initial value.
@@ -1786,7 +1801,7 @@ section "Type" {
 	TEST decode("no", Bool) == false
 	TEST decode("0", Bool) == false
 	TEST decode("yes", Bool) == true
-	TEST decode("ya", Bool) THROWS DecodeFail
+	TEST { decode("ya", Bool) }.assert(DecodeFail)
 	TEST decode("1", Bool) == true
 	TEST decode("1", Int) == 1
 	TEST decode("1", Real) == 1.0
@@ -2591,8 +2606,8 @@ TEST [1,5,null,10].indexes() == [0,1,3]
 
 
 TEST [5,10,15].first(X>7) == 10
-TEST [5,10,15].first(X>20) THROWS ElementNotFound
-TEST [0, false, null].first() THROWS ElementNotFound
+TEST { [5,10,15].first(X>20) }.assert(ElementNotFound)
+TEST { [0, false, null].first() }.assert(ElementNotFound)
 
 doc Make new array which is a reversed given array
 doc %RET - Arr
@@ -2749,7 +2764,7 @@ block u {
 	}
 }
 
-TEST indexes([1,2,3,4], ((X==1)..(X==14))) THROWS IndexNotFound
+TEST { indexes([1,2,3,4], ((X==1)..(X==14))) }.assert(IndexNotFound)
 TEST indexes([1,2,3,4], ((X==1)..(X==14)), []) == []
 
 doc Extract array elements between the element that matches r.start and the element that matches r.end .
@@ -2763,8 +2778,8 @@ TEST %[a1 a2 b1 b2][/^a/../^b/] == %[a2]
 TEST %[a1 a2 b1 b2][null../^b/] == %[a1 a2]
 TEST %[a1 a2 b1 b2][/^b/..null] == %[b2]
 TEST %[a1 a2 b1 b2][/^a/.../^b/] == %[a1 a2 b1]
-TEST %[a1 a2 b1 b2][/^a/.../^x/] THROWS IndexNotFound
-TEST %[a1 a2 b1 b2][/^x/.../^b/] THROWS IndexNotFound
+TEST { %[a1 a2 b1 b2][/^a/.../^x/] }.assert(IndexNotFound)
+TEST { %[a1 a2 b1 b2][/^x/.../^b/] }.assert(IndexNotFound)
 
 doc Replace array elements.
 doc arr - Array to operate on.
@@ -3387,7 +3402,7 @@ F +(a:Hash, b:Hash) {
 
 TEST {'a': 1, 'b': 2, 'c': 3} + {'b': 20, 'd': 40} == {'a': 1, 'b': 20, 'c': 3, 'd': 40}
 TEST section "order matters" { ns { a=1; c=3; } + ns { a=10; b=2; } == ns { a=10; c=3; b=2; } }
-TEST {"a": 1} + ns { b = 2 } THROWS InvalidArgument
+TEST { {"a": 1} + ns { b = 2 } }.assert(InvalidArgument)
 
 doc Build array of Str where each resulting string is of the form "KEY=VALUE"
 doc h - Source hash
@@ -3594,7 +3609,7 @@ F get(fb:FullBox, dflt=null) fb.val
 doc Get EmptyBox value. Always throws BoxFail.
 F get(eb:EmptyBox) throw BoxFail("Can not get value from EmptyBox")
 
-TEST EmptyBox().get() THROWS BoxFail
+TEST { EmptyBox().get() }.assert(BoxFail)
 
 doc Get EmptyBox value
 doc %RET - dflt
@@ -3818,7 +3833,7 @@ F ExitCode(r:Result) r.Bool().ExitCode()
 TEST {read("/etc/passwd")}.Result() is Success
 TEST {read("NO-SUCH-FILE")}.Result() is Failure
 TEST Success(10).map(X*2).get() == 20
-TEST { throw Error("xx") }.Result().map(X*2).get() THROWS ResultFail
+TEST { { throw Error("xx") }.Result().map(X*2).get() }.assert(ResultFail)
 
 doc Convert Success into JSON compatible data structure - the value of the computation
 F JsonData(s:Success) s.get().JsonData()
@@ -4077,10 +4092,10 @@ F Int(s:Str, base=10) {
 }
 
 TEST Int("100") == 100
-TEST Int("100x") THROWS InvalidArgument
-TEST Int(" XX") THROWS InvalidArgument
+TEST { Int("100x") }.assert(InvalidArgument)
+TEST { Int(" XX") }.assert(InvalidArgument)
 TEST Int(" XX", 36) == 1221
-TEST Int("9" * 1000) THROWS InvalidArgument
+TEST { Int("9" * 1000) }.assert(InvalidArgument)
 
 doc Convert Bool to int.
 doc %RET - Int
@@ -4193,7 +4208,7 @@ section "Strings and characters" {
 	F '[]'(s:Str, i:Int) s[i..i+1]
 
 	TEST ("abc"[0] == "a") and ("abc"[2] == "c")
-	TEST "abc"[3] == "x" THROWS IndexNotFound
+	TEST { "abc"[3] == "x" }.assert(IndexNotFound)
 
 	doc Get given character (currently byte) of the string (negative indexes handler). Throws IndexNotFound if abs(i) > len(s).
 	doc s - Original string.
@@ -4206,7 +4221,7 @@ section "Strings and characters" {
 	}
 
 	TEST ("abc"[-1] == "c") and ("abc"[-3] == "a")
-	TEST "abc"[-4] == "x" THROWS IndexNotFound
+	TEST { "abc"[-4] == "x" }.assert(IndexNotFound)
 
 	doc Get a substring. Indexes in s are specified by NumRange.
 	doc s - Original string
@@ -5403,7 +5418,7 @@ F write(fd:Int, s:Str) {
 }
 
 TEST write(1, "W1") == 1
-TEST write(10, "W10") THROWS WriteFail
+TEST { write(10, "W10") }.assert(WriteFail)
 
 doc Write a string followed by newline character to a file descriptor.
 doc Throws WriteFail on failure.
@@ -5561,7 +5576,7 @@ F basename(s:Str) {
 TEST basename("/abc") == "abc"
 TEST basename("abc") == "abc"
 TEST basename("abc/def") == "def"
-TEST basename("abc/def/") THROWS BasenameArgumentFail
+TEST { basename("abc/def/") }.assert(BasenameArgumentFail)
 
 
 # TODO: something more efficient than reading all of it. Some kind of streaming.
@@ -5742,7 +5757,7 @@ block _ {
 		finished_ok(p, 'exit_code', ok)
 	}
 
-	TEST $(ok:2 cat NO_SUCH_FILE 2>/dev/null) THROWS ProcessFail
+	TEST { $(ok:2 cat NO_SUCH_FILE 2>/dev/null) }.assert(ProcessFail)
 	TEST $(ok:1 cat NO_SUCH_FILE 2>/dev/null); true
 	TEST $(ok:[1,10] cat NO_SUCH_FILE 2>/dev/null); true
 	TEST $(ok:1..2 cat NO_SUCH_FILE 2>/dev/null); true
@@ -6685,7 +6700,7 @@ F -(s:Str, pfx:Pfx) {
 }
 
 TEST "abc" - Pfx("a") == "bc"
-TEST "abc" - Pfx("wa") THROWS InvalidArgument
+TEST { "abc" - Pfx("wa") }.assert(InvalidArgument)
 TEST "abc" - MaybePfx("wa") == "abc"
 
 
@@ -6703,7 +6718,7 @@ F -(s:Str, sfx:Sfx) {
 }
 
 TEST "abc" - Sfx("c") == "ab"
-TEST "abc" - Sfx("cd") THROWS InvalidArgument
+TEST { "abc" - Sfx("cd") }.assert(InvalidArgument)
 TEST "abc" - MaybeSfx("cd") == "abc"
 
 doc Return string without the infix. Throws InvalidArgument if ifx is MustIfx but s does not contain it.
@@ -6721,7 +6736,7 @@ F -(s:Str, ifx:Ifx) {
 }
 
 TEST "abcde" - Ifx("bc") == "ade"
-TEST "abcde" - Ifx("xy") THROWS InvalidArgument
+TEST { "abcde" - Ifx("xy") }.assert(InvalidArgument)
 TEST "abcde" - MaybeIfx("xy") == "abcde"
 
 doc Check whether s starts with pfx.
@@ -7544,7 +7559,7 @@ F decode_hex(s:Str) {
 }
 
 TEST decode_hex("010203") == chr(1) + chr(2) + chr(3)
-TEST decode_hex("0102034") THROWS InvalidArgument
+TEST { decode_hex("0102034") }.assert(InvalidArgument)
 
 STDLIB_INVALID_URI_CHAR_RE = /[^-a-zA-Z0-9_.!~*'()]/
 #'
@@ -7900,7 +7915,7 @@ section "math" {
 	F pow(base:Int, exponent:Int) Int(pow(Real(base), Real(exponent)))
 
 	TEST pow(2, 10) == 1024
-	TEST pow(0, -1) THROWS InvalidArgument
+	TEST { pow(0, -1) }.assert(InvalidArgument)
 }
 
 section "JWT" {
