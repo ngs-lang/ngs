@@ -1373,11 +1373,13 @@ section "AnyOf(ArrLike)" {
 	doc Should probably inherit from Set, not ArrLike.
 	type AnyOf(ArrLike)
 
+	doc Initializes AnyIf with the given alternatives.
 	F init(a:AnyOf, *alternatives) {
 		guard alternatives.len() > 1
 		super(a, alternatives)
 	}
 
+	doc Checks whether x matches (~) any of the alternatives.
 	F ~(x, a:AnyOf) block b {
 		a.each(F(alt) {
 			if (m = x ~ alt) b.return(m)
@@ -1396,6 +1398,7 @@ section "AnyOf(ArrLike)" {
 
 	TEST {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(AnyOf("k1", "k3")) == {"k1": "v1", "k3": "v3"}
 
+	doc Checks whether any of the items are truthy.
 	F Bool(a:AnyOf) a.any()
 
 	TEST AnyOf([1, false]).Bool()
@@ -1407,6 +1410,7 @@ section "AllOf(ArrLike)" {
 	doc Should probably inherit from Set, not ArrLike.
 	type AllOf(ArrLike)
 
+	doc Initializes AllOf with the given items.
 	F init(a:AllOf, *items) {
 		guard items.len() > 1
 		super(a, items)
@@ -1418,6 +1422,7 @@ section "AllOf(ArrLike)" {
 
 	TEST {"k1": "v1", "k2": "v2", "kk3": "vv3"}.filterk(AllOf(/^k/, {len(A) <= 2})) == %{k1 v1 k2 v2}
 
+	doc Checks whether all items are truthy.
 	F Bool(a:AllOf) a.all()
 
 	TEST AllOf([1, 2]).Bool()
