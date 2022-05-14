@@ -21,7 +21,7 @@ syn keyword ngsRepeat for
 
 " Generated types - start
 syn keyword ngsType Absent AllOf Any AnyOf ArgsMismatch Arr ArrDiff ArrIter ArrLike ArrSplatMethodParam AssertFail AwsElb AwsElbRes AwsImage AwsImageRes AwsInstance AwsInstanceRes AwsRecordSet AwsRecordSetRes AwsRes AwsResDef AwsSecGroup AwsSecGroupRes AwsSubnet AwsSubnetRes AwsVpc AwsVpcRes
-syn keyword ngsType Backtrace BasenameArgumentFail BasicType BasicTypeInstance Block BlockDevice Bool BootstrapFailedMatchMain BootstrapNoMatchingMain Box BoxFail
+syn keyword ngsType Backtrace BasenameArgumentFail BasicType BasicTypeInstance Block BlockDevice Bool BootstrapFailedMatchMain InvalidCommandLineArguments Box BoxFail
 syn keyword ngsType CError CLib CSym C_DIR CallFail CdFail CharDevice CleanupPolicy CollectingPipeFromChildToParentProcess Command CommandRedir CommandsPipe CommandsPipeline CompileFail ConstIter
 syn keyword ngsType DecodeFail DelimStr Diff Dir DirFail DivisionByZero DlopenFail DontKnowHowToCall
 syn keyword ngsType Eachable Eachable1 Eachable2 ElementNotFound EmptyArrayFail EmptyBox EmptyEachableFail Error ExactPresence Exception Exit ExitCodeFail ExitException

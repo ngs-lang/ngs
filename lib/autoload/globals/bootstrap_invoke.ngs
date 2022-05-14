@@ -1,0 +1,43 @@
+{ ArgvMatcher }
+type InvalidCommandLineArguments(InvalidArgument)
+
+doc Internal method. Please do not use.
+doc Tries to run c if it matches argv.
+doc Calls b.return() with result from c().
+F bootstrap_try_method(c:UserDefinedMethod, argv:Arr, b:Block) {
+	debug('bootstrap', "Trying candidate method $c")
+	try {
+		m = argv ~ c
+		if not(m) {
+			debug('bootstrap', "Trying candidate method ${c} - no match before calling")
+			return
+		}
+		debug('bootstrap', "Trying candidate method ${c} - matched, will call")
+		v = c(*m.args, **m.kwargs)
+		b.return(v)
+	} catch(mnf:MethodNotFound) {
+		guard mnf.callable === c
+		debug('bootstrap', "Trying candidate method ${c} - no match after calling")
+	}
+}
+
+doc Internal method. Please do not use.
+doc Find and invoke a method that matches the passed (command line) arguments.
+doc Called by bootstrapper.
+F bootstrap_invoke(callable:Fun, argv:Arr) block b {
+	debug('bootstrap', "In bootstrap_invoke()")
+
+	ematch callable {
+		MultiMethod {
+			candidate_callables = callable.Arr().reverse()
+			debug('bootstrap', "Candidate callable() functions: $candidate_callables")
+			candidate_callables.each(bootstrap_try_method(X, argv, b))
+		}
+		Fun {
+			bootstrap_try_method(callable, argv, b)
+		}
+	}
+
+	throw InvalidCommandLineArguments("Command line arguments are invalid.")
+
+}

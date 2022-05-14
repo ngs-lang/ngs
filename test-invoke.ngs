@@ -1,0 +1,21 @@
+#!/usr/bin/env ngs
+
+test("main global", {
+	$(ok:3 ngs -e 'F main() 3')
+})
+
+test("main in namespace", {
+	$(ok:3 ngs -e 'ns { F main() 3 }')
+})
+
+test("main precedence over subcommand", {
+	$(ok:3 ngs -e 'ns { F main(x) 3; F sc() 4; }' sc)
+})
+
+test("main subcommand invoked when main() does not match", {
+	$(ok:4 ngs -e 'ns { F main(x) 3; F sc(x) 4; }' sc aa)
+})
+
+test("main subcommand invoked when main() does not match with param match", {
+	$(ok:4 ngs -e 'ns { F main(x) 3; F sc(x) 4; F sc(x:Int) 5}' sc aa)
+})

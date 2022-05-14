@@ -7861,6 +7861,9 @@ section "Loading code" {
 			RangeIter           Iter
 
 			ResDef              Res
+
+			InvalidCommandLineArguments bootstrap_invoke
+
 		}
 
 		invocation = 0
@@ -8012,6 +8015,9 @@ section "Bootstrap" {
 			debug('bootstrap', 'No -e switch was passed, will load the program from a file')
 			fname = ARGV.shift(null)
 			if fname {
+				if fname == '.' {
+					fname = './ngsfile'
+				}
 				ARGV0 = fname
 				code_to_run = read(fname)
 			} else {
@@ -8027,31 +8033,52 @@ section "Bootstrap" {
 
 		result = program_func()
 
-		section "Handle main()" {
-
-			F in_main_file(m) m.ip().resolve_instruction_pointer().file == fname
+		section "Handle NGS program invocation" {
 
 			result = econd {
 				result is Namespace {
+
+					F run_subcommand(namespace:Namespace, argv:Arr) {
+						a = argv.copy()
+						subcommand = a.shift()
+						debug('bootstrap', "bootstrap(): subcommand ${subcommand} argv ${argv}")
+						not(subcommand in namespace) throws InvalidCommandLineArguments("Subcommand ${subcommand} not found").set(subcommand=subcommand)
+						target = namespace[subcommand]
+						target is Namespace returns run_subcommand(target, a)
+						target is not Fun throws InvalidCommandLineArguments("${subcommand} is not a method").set(subcommand=subcommand)
+						bootstrap_invoke(target, a)
+					}
+
 					if 'main' in result {
-						bootstrap_invoke_main(result['main'])
+						try {
+							bootstrap_invoke(result::main, ARGV)
+						} catch(e:InvalidCommandLineArguments) {
+							guard ARGV
+							run_subcommand(result, ARGV)
+						}
 					} else {
-						result
+						if ARGV {
+							run_subcommand(result, ARGV)
+						} else {
+							result
+						}
 					}
 				}
 				main is MultiMethod {
+					F in_main_file(m) m.ip().resolve_instruction_pointer().file == fname
+
 					m = main.filtero(in_main_file)
 					if len(main) != len(m) {
 						warn("'main' method was defined in non-main file. That is probably a bug. Continuing anyway.")
 					}
 					if m {
-						bootstrap_invoke_main(m)
+						bootstrap_invoke(m, ARGV)
 					} else {
 						result
 					}
 				}
 				main is Fun {
-					bootstrap_invoke_main(main)
+					bootstrap_invoke(main, ARGV)
 				}
 				true {
 					throw MainFail("'main' must be a Namespace, MultiMethod or a Fun, not ${main.typeof().name}").set('value', main)

@@ -8,9 +8,9 @@ ngs - Next Generation Shell.
 
 # SYNOPSIS
 
-**ngs** *script_name.ngs*
+**ngs** *script_name.ngs* [arguments]
 
-**ngs** [**-e**|**-E**|**-p**|**-pi**|**-pj**|**-ppj**|**-pl**|**-pjl**|**-pt**] *expression*
+**ngs** [**-e**|**-E**|**-p**|**-pi**|**-pj**|**-ppj**|**-pl**|**-pjl**|**-pt**] *expression* [arguments]
 
 **ngs** [**-h**|**--help**]
 
@@ -18,13 +18,13 @@ ngs - Next Generation Shell.
 
 **ngs** is a Next Generation Shell. It has two main parts: the language and the interactive shell.
 
-This project contains the language part which is under development. The interactive part will be dealt with later. This manual covers both implemented and unimplemented parts.
-
 # OPTIONS
 
-Given *script_name* runs the script.
+Given *script_name*, runs the script. The script runs top to bottom. If the script defines `main` function/multimethod, it is automatically invoked (after the top-to-bottom run), with command line arguments converted to appropriate types. If no `main` is defined (or `main` did not match the arguments) *and* the result of top-to-bottom execution is a Namespace (`ns { ... }`) *and* at least one command line argument was passed, the first command line argument is taken as function/multimethod name in the Namespace to run.
 
-Using *expression* is equivalent to running a script that consists of `{` *expression* `}`.
+If *script_name* is **.**, `ngsfile` is used as the *script_name*.
+
+Using *expression* in the options described below is equivalent to running a script that consists of `{` *expression* `}`.
 
 **-e** evaluates the *expression*.
 
