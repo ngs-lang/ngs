@@ -2439,7 +2439,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 #define MKTYPE(name) \
 	VALUE name; \
-	name = make_normal_type(make_string(#name)); \
+	(name) = make_normal_type(make_string(#name)); \
 	set_global(vm, #name, name); \
 	vm->name = name; \
 	vm->last_doc_hash = make_hash(4); \
@@ -3653,7 +3653,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	}
 
 #define FFI_TYPE(name) \
-	vm->c_ ## name = make_ffi_type(&name); \
+	vm->c_ ## name = make_ffi_type(&(name)); \
 	set_global(vm, "c_" #name, vm->c_ ## name)
 
 	// awk -F '[ ;]' '$1 == "FFI_EXTERN" {print "FFI_TYPE(" $3 ");"}' /usr/include/x86_64-linux-gnu/ffi.h
