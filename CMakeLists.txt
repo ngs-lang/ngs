@@ -8,6 +8,7 @@ include(CheckFunctionExists)
 include(CheckIncludeFile)
 include(FindPkgConfig)
 include(ExternalProject)
+include(GNUInstallDirs)
 
 option(BUILD_DOCS "Build documentation" ON)
 option(INSTALL_EXAMPLE_SCRIPTS "Install example scripts" OFF)
@@ -22,9 +23,6 @@ add_definitions(-D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE=1 -D_DEFAULT_SOURCE=1 -D_
 # Use test-gc.ngs to determine if you can remove this setting (test on MacOS and Linux).
 add_definitions(-DNGS_STUPID_MALLOC_AFTER_FORK)
 
-pkg_check_modules(LIBFFI libffi REQUIRED)
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /usr/local/include /opt/homebrew/include)
-link_directories(/usr/local/lib /opt/homebrew/lib)
 
 add_executable(
   ngs
@@ -35,6 +33,8 @@ add_executable(
   obj.c vm.c compile.c debug.c ast.c malloc.c decompile.c
   stdlib.ngs.h
 )
+
+target_include_directories(ngs PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
 # peg/leg - start
 find_program(LEG leg)
@@ -79,7 +79,10 @@ if(CMAKE_INSTALL_LIBDIR)
 endif()
 
 find_program(SED NAMES gsed sed) # gsed - MacOS, sed - all the rest
-find_file(PCRE_H pcre.h)
+pkg_search_module(PCRE REQUIRED libpcre)
+pkg_search_module(JSONC REQUIRED json-c)
+pkg_search_module(LIBGC REQUIRED bdw-gc)
+pkg_search_module(LIBFFI REQUIRED libffi)
 add_custom_command(
   OUTPUT
   ${CMAKE_CURRENT_BINARY_DIR}/syntax.include
@@ -104,7 +107,7 @@ add_custom_command(
 )
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
-  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/make-pcre-constants.sh ${PCRE_H} >${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
+  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/make-pcre-constants.sh ${PCRE_INCLUDEDIR}/pcre.h >${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
 )
 add_custom_command(
   OUTPUT
@@ -121,7 +124,7 @@ add_custom_command(
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/stdlib.ngs
 )
 
-target_link_libraries(ngs m pthread gc ffi dl json-c pcre)
+target_link_libraries(ngs m ${CMAKE_DL_LIBS} ${LIBGC_LIBRARIES} ${LIBFFI_LIBRARIES} ${JSONC_LIBRARIES} ${PCRE_LIBRARIES})
 
 if(BUILD_DOCS)
   find_program(PANDOC pandoc)
@@ -130,25 +133,20 @@ if(BUILD_DOCS)
   endif()
   add_custom_target(man ALL WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc COMMAND make man DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doc/*.1.md)
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE DESTINATION doc/ngs)
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/ DESTINATION ${CMAKE_INSTALL_MANDIR}/man1 FILES_MATCHING PATTERN "*.1")
 endif()
 
-install(FILES "${PROJECT_BINARY_DIR}/ngs" DESTINATION bin)
-install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/ngs DESTINATION bin)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib/ DESTINATION lib/ngs)
+install(FILES "${PROJECT_BINARY_DIR}/ngs" DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/ngs DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib/ DESTINATION ${CMAKE_INSTALL_LIBDIR}/ngs)
 if(INSTALL_EXAMPLE_SCRIPTS)
   install(
     DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin/
-    DESTINATION bin FILES_MATCHING PATTERN "*.ngs"
+    DESTINATION ${CMAKE_INSTALL_BINDIR} FILES_MATCHING PATTERN "*.ngs"
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_WRITE GROUP_EXECUTE WORLD_READ WORLD_WRITE WORLD_EXECUTE
   )
 endif()
 
-if(APPLE)
-  set(MAN_DIR share/man/man1)
-else()
-  set(MAN_DIR man/man1)
-endif()
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/ DESTINATION ${MAN_DIR} FILES_MATCHING PATTERN "*.1")
 
 enable_testing()
 add_test(all bash -c "NGS_PATH=${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_BINARY_DIR}/ngs ${CMAKE_CURRENT_SOURCE_DIR}/test.ngs")
