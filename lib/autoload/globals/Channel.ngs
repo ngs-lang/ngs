@@ -1,22 +1,18 @@
 ns {
 	global init, on_start
 	global on_read, on_read_error, on_read_end
-	global on_write, on_write_error, on_write_end
 	type Handler
 
 	# F on_read(h:Handler, data)
 	# F on_read_error(h:Handler, e:Error)
 	# F on_read_end(h:Handler)
 
-	# F on_write(h:Handler, data)
-	# F on_write_error(h:Handler, e:Error)
-	# F on_write_end(h:Handler)
-
 	type Pipeline
 	F init(p:Pipeline, handlers:Arr) {
 		p.handlers = handlers
 		prev = null
 		handlers.each(F(handler) {
+			handler.pipeline = p
 			if prev is not Null {
 				prev.next = handler
 				# handler.prev = prev
@@ -61,6 +57,7 @@ ns {
 	F on_read(lh:LinesHandler, buf:Str) {
 		lh.buf += buf
 		while true {
+			# TODO: start the search from previous position
 			# TODO: handle "\r\n"
 			p = pos(lh.buf, "\n")
 			p == null breaks
