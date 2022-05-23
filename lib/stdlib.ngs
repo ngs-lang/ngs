@@ -5160,7 +5160,7 @@ section "Path" {
 	}
 
 	# XXX: might not be correct on all platforms
-	TEST dir("/").path.has("/var")
+	TEST dir("/").path.any(AnyOf("/var", "/etc", "/bin"))
 	TEST dir("/").all({A.typeof().name == 'Path'})
 	TEST dir("/", subtype=true).all({ (A is Path) and (A.typeof().name != 'Path') })
 
