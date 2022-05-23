@@ -9,6 +9,7 @@ include(CheckIncludeFile)
 include(FindPkgConfig)
 include(ExternalProject)
 
+set(BUILD_DOCS TRUE CACHE BOOL "Build documentation")
 
 # -D_DARWIN_C_SOURCE - SIGWINCH and friends on MacOS
 # -D_XOPEN_SOURCE - strptime on Linux
@@ -69,6 +70,12 @@ IF(POLL_H)
 	add_definitions(-DHAVE_POLL_H)
 ENDIF()
 
+if(CMAKE_INSTALL_LIBDIR)
+    file(READ lib/stdlib.ngs FILE_CONTENTS)
+    string(REPLACE "#@INSTALL_LIBDIR@" ${CMAKE_INSTALL_LIBDIR}/ngs FILE_CONTENTS "${FILE_CONTENTS}")
+    file(WRITE lib/stdlib.ngs "${FILE_CONTENTS}")
+endif()
+
 
 find_program(SED NAMES gsed sed) # gsed - MacOS, sed - all the rest
 find_file(PCRE_H pcre.h)
@@ -116,7 +123,14 @@ add_custom_command(
 
 target_link_libraries(ngs m pthread gc ffi dl json-c pcre)
 
-add_custom_target(man ALL WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc COMMAND make man DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doc/*.1.md)
+if(BUILD_DOCS)
+    find_program(PANDOC pandoc)
+    if(NOT PANDOC)
+        message(FATAL_ERROR "Could not find pandoc")
+    endif()
+    add_custom_target(man ALL WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc COMMAND make man DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doc/*.1.md)
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE DESTINATION doc/ngs)
+endif()
 
 
 install(FILES "${PROJECT_BINARY_DIR}/ngs" DESTINATION bin)
@@ -127,7 +141,6 @@ install(
 	DESTINATION bin FILES_MATCHING PATTERN "*.ngs"
 	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_WRITE GROUP_EXECUTE WORLD_READ WORLD_WRITE WORLD_EXECUTE
 )
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE DESTINATION doc/ngs)
 
 if(APPLE)
     set(MAN_DIR share/man/man1)
@@ -137,4 +150,4 @@ endif()
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/ DESTINATION ${MAN_DIR} FILES_MATCHING PATTERN "*.1")
 
 enable_testing()
-add_test(all bash -c "${CMAKE_CURRENT_BINARY_DIR}/ngs ${CMAKE_CURRENT_SOURCE_DIR}/test.ngs")
+add_test(all bash -c "NGS_PATH=${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_BINARY_DIR}/ngs ${CMAKE_CURRENT_SOURCE_DIR}/test.ngs")

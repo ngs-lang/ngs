@@ -857,7 +857,7 @@ section "=~ Matching" {
 	TEST [1] !~ [Int, Any]
 
 	# TODO: f(x, MatchContext) - when we know that f expects that
-	doc %RET - f(x) 
+	doc %RET - f(x)
 	F =~(x, f:Fun, _mc:MatchContext) f(x).Bool()
 
 	doc Check whether x is of type t
@@ -7772,6 +7772,7 @@ section "Loading code" {
 
 	# TODO: XDG
 	NGS_PATH = %[
+        #@INSTALL_LIBDIR@
 		/usr/local/etc/ngs
 		/usr/local/lib/ngs
 		/etc/ngs
@@ -7824,7 +7825,7 @@ section "Loading code" {
 		} catch(e) {
 			guard e !~ AnyOf(RequireFail, NormalExit)
 			throw RequireFail(e)
-		}		
+		}
 	}
 
 	F require(p:Path) require(p.path)
