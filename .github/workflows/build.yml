@@ -1,5 +1,7 @@
 name: Build
-on: push
+on:
+  push
+  pull_request_target
 
 jobs:
   build-internal-apt:
