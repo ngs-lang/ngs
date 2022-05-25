@@ -35,6 +35,8 @@
 #include <signal.h>
 // READ(2), LSEEK(2), FORK(2), EXECVE(2), DUP2(2), SYSCONF(3)
 #include <unistd.h>
+// SOCKET(2), ...
+#include <sys/socket.h>
 
 // DIR
 #include <dirent.h>
@@ -2047,6 +2049,12 @@ MAKE_STAT_METHOD(fstat, GET_INT)
 #undef MAKE_STAT_METHOD
 #undef ELT
 
+METHOD_RESULT native_c_socket METHOD_PARAMS {
+	// socket(int domain, int type, int protocol)
+	int ret = socket(GET_INT(argv[0]), GET_INT(argv[1]), GET_INT(argv[2]));
+	METHOD_RETURN(MAKE_INT(ret));
+}
+
 METHOD_RESULT native_gc_enable  METHOD_PARAMS { (void) argv; GC_enable();  METHOD_RETURN(MAKE_NULL); }
 METHOD_RESULT native_gc_disable METHOD_PARAMS { (void) argv; GC_disable(); METHOD_RETURN(MAKE_NULL); }
 METHOD_RESULT native_gc_get_parallel METHOD_PARAMS { (void) argv; METHOD_RETURN(MAKE_INT(GC_get_parallel())); }
@@ -3099,6 +3107,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 1, "c_fstat",   &native_c_fstat,           1,"fd",       vm->Int);
 	_doc(vm, "", "Call FSTAT(2)");
 
+	// sockets
+	register_global_func(vm, 0, "c_socket", &native_c_socket, 3, "domain", vm->Int, "type", vm->Int, "protocol", vm->Int);
+
 	// low level misc
 	register_global_func(vm, 0, "c_access", &native_c_access,          2, "pathname", vm->Str, "mode", vm->Int);
 	_doc(vm, "", "Call ACCESS(2)");
@@ -3621,6 +3632,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 #include "pcre_constants.include"
 	#pragma GCC diagnostic pop
 
+	// --- sockets ---
+	E(PF_UNIX);
+	E(PF_INET);
+
+	E(SOCK_STREAM);
+	E(SOCK_DGRAM);
+	E(SOCK_RAW);
 #undef E
 
 
