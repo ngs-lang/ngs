@@ -2055,6 +2055,15 @@ METHOD_RESULT native_c_socket METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(ret));
 }
 
+METHOD_RESULT native_c_sockaddr METHOD_PARAMS {METHOD_RETURN(make_sockaddr()); };
+METHOD_RESULT native_c_sockaddr_un METHOD_PARAMS {METHOD_RETURN(make_sockaddr_un()); };
+METHOD_RESULT native_c_sockaddr_un_str METHOD_PARAMS {
+	VALUE ret = make_sockaddr_un();
+	strncpy(GET_SOCKADDR_UN(ret).sun_path, obj_to_cstring(argv[0]), 100); // TODO: replace 100
+	METHOD_RETURN(ret);
+};
+METHOD_RESULT native_c_sockaddr_in METHOD_PARAMS {METHOD_RETURN(make_sockaddr_in()); };
+
 METHOD_RESULT native_gc_enable  METHOD_PARAMS { (void) argv; GC_enable();  METHOD_RETURN(MAKE_NULL); }
 METHOD_RESULT native_gc_disable METHOD_PARAMS { (void) argv; GC_disable(); METHOD_RETURN(MAKE_NULL); }
 METHOD_RESULT native_gc_get_parallel METHOD_PARAMS { (void) argv; METHOD_RETURN(MAKE_INT(GC_get_parallel())); }
@@ -2440,6 +2449,17 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	MK_BUILTIN_TYPE(LLHashEntry, T_LL_HASH_ENTRY);
 	vm->type_by_t_obj_type_id[T_LL_HASH_ENTRY >> T_OBJ_TYPE_SHIFT_BITS] = &vm->LLHashEntry;
+
+	MK_BUILTIN_TYPE(c_sockaddr, T_SOCKADDR);
+	vm->type_by_t_obj_type_id[T_SOCKADDR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_sockaddr;
+
+	MK_BUILTIN_TYPE(c_sockaddr_un, T_SOCKADDR_UN);
+	vm->type_by_t_obj_type_id[T_SOCKADDR_UN >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_sockaddr_un;
+	add_type_inheritance(vm->c_sockaddr_un, vm->c_sockaddr);
+
+	MK_BUILTIN_TYPE(c_sockaddr_in, T_SOCKADDR_IN);
+	vm->type_by_t_obj_type_id[T_SOCKADDR_IN >> T_OBJ_TYPE_SHIFT_BITS] = &vm->c_sockaddr_in;
+	add_type_inheritance(vm->c_sockaddr_in, vm->c_sockaddr);
 
 	// *** Add new MKTYPE / MKSUBTYPE above this line ***
 
@@ -3109,6 +3129,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// sockets
 	register_global_func(vm, 0, "c_socket", &native_c_socket, 3, "domain", vm->Int, "type", vm->Int, "protocol", vm->Int);
+
+	register_global_func(vm, 0, "c_sockaddr", &native_c_sockaddr, 0);
+	register_global_func(vm, 0, "c_sockaddr_un", &native_c_sockaddr_un, 0);
+	register_global_func(vm, 0, "c_sockaddr_un", &native_c_sockaddr_un_str, 1, "path", vm->Str);
+	register_global_func(vm, 0, "c_sockaddr_in", &native_c_sockaddr_in, 0);
 
 	// low level misc
 	register_global_func(vm, 0, "c_access", &native_c_access,          2, "pathname", vm->Str, "mode", vm->Int);

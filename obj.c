@@ -1172,6 +1172,38 @@ VALUE make_DIR() {
 	return v;
 }
 
+VALUE make_sockaddr() {
+	VALUE v;
+	SOCKADDR_OBJECT *sa;
+	sa = NGS_MALLOC_ATOMIC(sizeof(*sa));
+	memset(&sa->val, 0, sizeof(sa->val));
+	sa->base.type.num = T_SOCKADDR;
+	SET_OBJ(v, sa);
+	return v;
+}
+
+VALUE make_sockaddr_un() {
+	VALUE v;
+	SOCKADDR_UN_OBJECT *sa;
+	sa = NGS_MALLOC_ATOMIC(sizeof(*sa));
+	memset(&sa->val, 0, sizeof(sa->val));
+	sa->base.type.num = T_SOCKADDR_UN;
+	SET_OBJ(v, sa);
+	return v;
+}
+
+VALUE make_sockaddr_in() {
+	VALUE v;
+	SOCKADDR_IN_OBJECT *sa;
+	sa = NGS_MALLOC_ATOMIC(sizeof(*sa));
+	memset(&sa->val, 0, sizeof(sa->val));
+	sa->base.type.num = T_SOCKADDR_IN;
+	SET_OBJ(v, sa);
+	return v;
+}
+
+
+
 VALUE resolve_instruction_pointer(VM *vm, IP ip) {
 	// Find region
 	// TODO: Something faster then sequential scan

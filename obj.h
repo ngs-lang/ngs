@@ -7,6 +7,9 @@
 #include <ffi.h>
 #include <pcre.h>
 #include <math.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <netinet/in.h>
 
 typedef uint16_t GLOBAL_VAR_INDEX;
 #define GLOBAL_VAR_INDEX_FMT "%d"
@@ -184,6 +187,22 @@ typedef struct {
 	int_fast8_t is_open;
 } DIR_OBJECT;
 
+typedef struct {
+	OBJECT base;
+	struct sockaddr val;
+} SOCKADDR_OBJECT;
+
+typedef struct {
+	OBJECT base;
+	struct sockaddr_un val;
+} SOCKADDR_UN_OBJECT;
+
+typedef struct {
+	OBJECT base;
+	struct sockaddr_in val;
+} SOCKADDR_IN_OBJECT;
+
+
 // *** Add new ..._OBJECT typedefs above this line ***
 
 // malloc() / NGS_MALLOC() memory is 8 bytes aligned, should be at least 4 bytes aligned
@@ -271,6 +290,9 @@ typedef enum {
 	T_MULMETHOD     = (19 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_LL_HASH_ENTRY = (20 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 	T_PTHREADCOND   = (21 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_SOCKADDR      = (22 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_SOCKADDR_UN   = (23 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
+	T_SOCKADDR_IN   = (24 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 
 	T_HASH          = (32 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
 		T_NAMESPACE     = (33 << T_OBJ_TYPE_SHIFT_BITS) + T_OBJ,
@@ -308,6 +330,10 @@ typedef enum {
 #define GET_PTHREADMUTEX(v) (((PTHREADMUTEX_OBJECT *) v.ptr)->val)
 #define GET_PTHREADMUTEXATTR(v) (((PTHREADMUTEXATTR_OBJECT *) v.ptr)->val)
 #define GET_PTHREADCOND(v) (((PTHREADCOND_OBJECT *) v.ptr)->val)
+
+#define GET_SOCKADDR(v) (((SOCKADDR_OBJECT *) v.ptr)->val)
+#define GET_SOCKADDR_UN(v) (((SOCKADDR_UN_OBJECT *) v.ptr)->val)
+#define GET_SOCKADDR_IN(v) (((SOCKADDR_IN_OBJECT *) v.ptr)->val)
 
 #define GET_FFI_TYPE(v) (((FFI_TYPE_OBJECT *) v.ptr)->base.val.ptr)
 #define GET_FFI_CIF(v)  (((FFI_CIF_OBJECT *) v.ptr)->val)
@@ -440,6 +466,9 @@ VALUE make_ffi_type(ffi_type *t);
 VALUE make_ffi_cif();
 VALUE make_regexp();
 VALUE make_DIR();
+VALUE make_sockaddr();
+VALUE make_sockaddr_un();
+VALUE make_sockaddr_in();
 // *** Add new make_MYTPE(...) functions above this line ***
 
 #endif

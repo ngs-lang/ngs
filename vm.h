@@ -254,6 +254,11 @@ struct VM {
 
 	VALUE c_ffi_type_string;
 
+	// networking
+	VALUE c_sockaddr;
+	VALUE c_sockaddr_un;
+	VALUE c_sockaddr_in;
+
 };
 
 

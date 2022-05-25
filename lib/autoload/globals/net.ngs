@@ -1,0 +1,14 @@
+ns {
+	global socket
+	F socket(domain:Int, type:Int, protocol:Int=0) {
+		ret = c_socket(domain, type, protocol)
+		e = c_errno()
+		if ret == -1 {
+			c_errno() throws CError(e, "socket() failed").set(domain=domain, type=type)
+		}
+		assert(ret > 0)
+		ret
+	}
+
+	TEST socket(C_PF_UNIX, C_SOCK_DGRAM) >= 0
+}
