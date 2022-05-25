@@ -2,10 +2,10 @@
 
 ### New features
 * Add `assert(Fun, Type, Str)` for asserting that the code throws the given exception. The type must be subtype of Exception.
-* Add `c_socket(domain:Int, type:Int, protocol:Int)` and related constants: `C_PF_UNIX`, `C_PF_INET`, `C_SOCK_STREAM`, `C_SOCK_DGRAM`, `C_SOCK_RAW`
-* Add `socket(domain:Int, type:Int, protocol:Int=0)` exception throwing wrapper around `c_socket()`
 * Add namespace `net`
-* Add types `c_sockaddr`, `c_sockaddr_un`, `c_sockaddr_in`
+* Add networking `c_sockaddr`, `c_sockaddr_un`, `c_sockaddr_in`
+* Add networking functions: `socket()`, `bind()`, `listen()`, `accept()`, `recvfrom()`, `send()`
+* Add networking constants: `SOCK_STREAM`, `SOCK_DGRAM`, `SOCK_RAW`, `MSG_OOB`, `MSG_PEEK`, `MSG_WAITALL` (all prefixed with `C_`)
 
 ## 2022-04-16 Version 0.2.14
 

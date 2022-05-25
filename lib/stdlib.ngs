@@ -7865,6 +7865,7 @@ section "Loading code" {
 			InvalidCommandLineArguments bootstrap_invoke
 
 			socket              net
+			bind                net
 
 		}
 
