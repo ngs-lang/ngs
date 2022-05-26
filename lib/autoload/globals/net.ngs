@@ -1,5 +1,7 @@
 ns {
 
+	# Work in progress!
+
 	section "Wrappers around C functions" {
 		F _assert(code:Int, func:Str) {
 			e = c_errno()
@@ -56,7 +58,8 @@ ns {
 		F close(c:Connection) c.sock.close()
 		F send(c:Connection, data:Str) c.sock.send(data)
 
-		F listen(tus:ThreadedUnixServer, path:Str, on_connect=nop, on_data=nop) {
+		F listen(tus:ThreadedUnixServer, path:Str, on_connect:Fun) {
+			id = 1
 			sock = socket(C_PF_UNIX, C_SOCK_STREAM)
 			tus.sock = sock
 			debug('server', "Sock: ${sock}")
@@ -67,30 +70,37 @@ ns {
 			while true {
 				accepted = accept(sock, remote_addr)
 				debug('server', "Connection socket: ${accepted}")
-				c = Connection(tus, accepted)
+				c = Connection(tus, accepted).set('id', id)
+				id += 1
 				# TODO: join the thread / use Executor
 				Thread("connection-${accepted}", {
-					on_connect(c)
+					handler = on_connect(c)
+					echo("H $handler")
 					while true {
 						data = recvfrom(c.sock, 1024, 0, c_sockaddr_un())
 						data == '' breaks
 						debug('server', "Data: ${data.SafeStr().limit(1024)}")
 						# c.send("[${c.sock}] Echoing back: ${data}")
-						on_data(c, data)
+						handler::on_data(data)
+						debug('server', "After handler::on_data()")
 					}
 					close(c)
+					handler::on_end()
 				})
 			}
 		}
 
 		F test_un_server() {
-			F on_connect(c:Connection) {
-				log("Connection ${c}")
-			}
-			F on_data(c:Connection, data:Str) {
-				c.send("[${c.sock}] Echoing back: ${data}")
-			}
-			net::ThreadedUnixServer().listen("sock_test", on_connect=on_connect, on_data=on_data)
+			net::ThreadedUnixServer().listen("sock_test", F(c:Connection) {
+				ns {
+					F on_data(data:Str) {
+						c.send("[${c.id}] Echoing back (escaped): ${data.SafeStr()}\n")
+					}
+					F on_end() {
+						log("Done")
+					}
+				}
+			})
 		}
 
 		# DEBUG=server ngs -pi 'net::test_un_server()'
