@@ -203,11 +203,28 @@ ns {
 
 		section "JSON-RPC ConnectionHandler" {
 
-			# TODO: optional "params" and "id"
-			_valid_json_rpc_request = {
+			_valid_json_rpc_request_base = {
 				'jsonrpc': '2.0'
 				'method': Str
 			}
+
+			section "Refactor when patterns support optional keys" {
+				F _valid_json_rpc_request_id(req) {
+					'id' not in req returns true
+					req =~ {'id': AnyOf(Num, Str, Null)}
+				}
+
+				F _valid_json_rpc_request_params(req) {
+					'params' not in req returns true
+					req =~ {'params': AnyOf(Arr, Hash)}
+				}
+			}
+
+			_valid_json_rpc_request = AllOf(
+				_valid_json_rpc_request_base
+				_valid_json_rpc_request_id
+				_valid_json_rpc_request_params
+			)
 
 			# https://www.jsonrpc.org/specification
 			type JsonRpcConnectionHandler(ConnectionHandler)
@@ -233,7 +250,6 @@ ns {
 					}
 					jrch.connection.send(ret.encode_json() + "\n")
 					b.return()
-
 				}
 
 				req = try {
