@@ -41,66 +41,165 @@ ns {
 	section "Higher level networking" {
 
 		type Server
-		type ThreadedServer(Server)
-		type ThreadedUnixServer(ThreadedServer)
-		type Connection
+		type UnixStreamServer(Server)
 
 		global init
 
-		F init(c:Connection, server:Server, sock:Int) {
-			c.server = server
-			c.sock = sock
-			# For user data
-			c.user = {}
+		section "Connection" {
+			type Connection
+			F init(c:Connection, server:Server, sock:Int) {
+				c.server = server
+				c.sock = sock
+				# For user data
+				c.user = {}
+			}
+
+			global close
+			F close(c:Connection) c.sock.close()
+
+			global send
+			F send(c:Connection, data:Str) c.sock.send(data)
 		}
 
-		global close
-		F close(c:Connection) c.sock.close()
-		F send(c:Connection, data:Str) c.sock.send(data)
+		section "ConnectionHandler" {
+			type ConnectionHandler
 
-		F listen(tus:ThreadedUnixServer, path:Str, on_connect:Fun) {
-			id = 1
-			sock = socket(C_PF_UNIX, C_SOCK_STREAM)
-			tus.sock = sock
-			debug('server', "Sock: ${sock}")
-			$(ok:[0, 1] rm $path)
-			bind(sock, c_sockaddr_un(path))
-			remote_addr = c_sockaddr_un()
-			listen(sock, 5)
-			while true {
-				accepted = accept(sock, remote_addr)
-				debug('server', "Connection socket: ${accepted}")
-				c = Connection(tus, accepted).set('id', id)
-				id += 1
+			global on_connect
+			F on_connect(ch:ConnectionHandler, c:Connection) {
+				debug('server', 'ConnectionHandler on_connect()')
+				ch.connection = c
+			}
+
+			global on_data
+			F on_data(ch:ConnectionHandler, data:Str) {
+				debug('server', 'ConnectionHandler on_data()')
+			}
+
+			global on_remote_close
+			F on_remote_close(ch:ConnectionHandler) {
+				debug('server', 'ConnectionHandler on_remote_close()')
+				ch.connection.close()
+			}
+		}
+
+		section "ServerHandler" {
+			type ServerHandler
+			F init(sh:ServerHandler) throw InvalidArgument()
+			F init(sh:ServerHandler, make_connection_handler:Fun) init(args())
+
+			global on_listen
+			F on_listen(sh:ServerHandler, s:Server) {
+				debug('server', 'ServerHandler on_listen()')
+			}
+
+			global on_end
+			F on_end(sh:ServerHandler, s:Server) {
+				debug('server', 'ServerHandler on_end()')
+			}
+
+		}
+
+		section "ThreadedServerHandler" {
+			type ThreadedServerHandler(ServerHandler)
+
+
+			global on_connect
+			F on_connect(sh:ThreadedServerHandler, c:Connection) {
+				debug('server', 'ThreadedServerHandler on_connect()')
+
 				# TODO: join the thread / use Executor
-				Thread("connection-${accepted}", {
-					handler = on_connect(c)
-					echo("H $handler")
-					while true {
-						data = recvfrom(c.sock, 1024, 0, c_sockaddr_un())
-						data == '' breaks
-						debug('server', "Data: ${data.SafeStr().limit(1024)}")
-						# c.send("[${c.sock}] Echoing back: ${data}")
-						handler::on_data(data)
-						debug('server', "After handler::on_data()")
+				Thread("connection-${c.id}", {
+					try {
+						debug('server', 'ThreadedServerHandler on_listen() - new thread')
+						handler = sh::make_connection_handler()
+						handler.on_connect(c)
+						echo("H $handler")
+						while true {
+							data = recvfrom(c.sock, 1024, 0, c_sockaddr_un())
+							if data == '' {
+								handler.on_remote_close()
+								debug('server', "After handler.on_remote_close()")
+								break
+							}
+							debug('server', "Data: ${data.SafeStr().limit(1024)}")
+							# c.send("[${c.sock}] Echoing back: ${data}")
+							handler.on_data(data)
+							debug('server', "ThreadedServerHandler on_connect -- after handler.on_data()")
+						}
+					} catch(e) {
+						log("ThreadedServerHandler - exception in thread: ${e}")
+						guard false
 					}
-					close(c)
-					handler::on_end()
 				})
+			}
+
+		}
+
+		section "UnixStreamServer" {
+			F listen(tus:UnixStreamServer, path:Str, sh:ServerHandler) {
+				id = 1
+				sock = socket(C_PF_UNIX, C_SOCK_STREAM)
+				tus.sock = sock
+				debug('server', "Sock: ${sock}")
+				$(ok:[0, 1] rm $path)
+				bind(sock, c_sockaddr_un(path))
+				remote_addr = c_sockaddr_un()
+				listen(sock, 5)
+				sh.on_listen(tus)
+				while true {
+					accepted = accept(sock, remote_addr)
+					debug('server', "Connection socket: ${accepted}")
+					c = Connection(tus, accepted).set('id', id)
+					id += 1
+					sh.on_connect(c)
+					# TODO: how to break the loop?
+				}
+				sh.on_end(tus)
+			}
+		}
+
+		section "LinesConnectionHandler" {
+			type LinesConnectionHandler(ConnectionHandler)
+			doc make_connection_handler - next ConnectionHandler in chain
+			F init(lch:LinesConnectionHandler) throw InvalidArgument()
+			F init(lch:LinesConnectionHandler, make_connection_handler:Fun) {
+				debug('server', "LinesConnectionHandler init()")
+				init(args())
+			}
+			F on_connect(lch:LinesConnectionHandler, c:Connection) {
+				lch.connection = c
+				lch.next = lch::make_connection_handler()
+				lch::next.on_connect(c)
+			}
+			F on_data(lch:LinesConnectionHandler, data:Str) {
+				echo("blah")
+				lch::next.on_data("line")
+			}
+			F on_remote_close(lch:LinesConnectionHandler) {
+				lch::next.on_remote_close()
 			}
 		}
 
 		F test_un_server() {
-			net::ThreadedUnixServer().listen("sock_test", F(c:Connection) {
-				ns {
-					F on_data(data:Str) {
-						c.send("[${c.id}] Echoing back (escaped): ${data.SafeStr()}\n")
-					}
-					F on_end() {
-						log("Done")
-					}
+			section "EchoConnectionHandler" {
+				type EchoConnectionHandler(ConnectionHandler)
+				global on_data
+				F on_data(ech:EchoConnectionHandler, data:Str) {
+					debug('server', 'EchoConnectionHandler on_data()')
+					ech.connection.send("[${ech.connection.id}] Echoing back (escaped) line: ${data.SafeStr()}\n")
 				}
+
+				global on_remote_close
+				F on_remote_close(ech:EchoConnectionHandler) {
+					debug('server', 'EchoConnectionHandler on_remote_close()')
+					super(ech)
+				}
+			}
+			# sh = ThreadedServerHandler(EchoConnectionHandler)
+			sh = ThreadedServerHandler(F on_connect() {
+				LinesConnectionHandler(EchoConnectionHandler)
 			})
+			net::UnixStreamServer().listen("sock_test", sh)
 		}
 
 		# DEBUG=server ngs -pi 'net::test_un_server()'
