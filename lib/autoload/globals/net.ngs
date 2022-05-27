@@ -242,9 +242,9 @@ ns {
 					send_error(-32700, 'Parse error', e.Hash().filterk(AnyOf('error', 'value', 'position')))
 				}
 
-				if not(req =~ _valid_json_rpc_request) send_error(-32600, 'Invalid Request')
+				if (req !~ _valid_json_rpc_request) send_error(-32600, 'Invalid Request', 'See https://www.jsonrpc.org/specification')
 
-				if not(req.method in jrch.methods) send_error(-32601, 'Method not found', "Method ${req.method} not found. Available methods: ${jrch.methods.keys()}")
+				if (req.method not in jrch.methods) send_error(-32601, 'Method not found', "Method ${req.method} not found. Available methods: ${jrch.methods.keys()}")
 
 				# TODO: Implement "Invalid params" mechanism
 				result = try {
@@ -289,6 +289,18 @@ ns {
 				LinesConnectionHandler(EchoConnectionHandler)
 			})
 			net::UnixStreamServer().listen("sock_test", sh)
+		}
+
+		F unix_json_rpc_server(path:Str, methods:Namespace) {
+			sh = net::ThreadedServerHandler(F on_connect() {
+				F make_json_rpc_handler() {
+					debug('server', 'make_json_rpc_handler()')
+					net::JsonRpcConnectionHandler(methods)
+				}
+				net::LinesConnectionHandler(make_json_rpc_handler)
+			})
+			log("JSON RPC server is starting to listen on Unix socket ${path}")
+			net::UnixStreamServer().listen(path, sh)
 		}
 
 		# DEBUG=server ngs -pi 'net::test_un_server()'
