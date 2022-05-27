@@ -1,6 +1,7 @@
 ns {
 
 	# Work in progress!
+	# Flimsy code, needs refactor!
 
 	section "Wrappers around C functions" {
 		F _assert(code:Int, func:Str) {
@@ -113,7 +114,6 @@ ns {
 						debug('server', 'ThreadedServerHandler on_listen() - new thread')
 						handler = sh::make_connection_handler()
 						handler.on_connect(c)
-						echo("H $handler")
 						while true {
 							data = recvfrom(c.sock, 1024, 0, c_sockaddr_un())
 							if data == '' {
@@ -121,7 +121,7 @@ ns {
 								debug('server', "After handler.on_remote_close()")
 								break
 							}
-							debug('server', "Data: ${data.SafeStr().limit(1024)}")
+							debug('server', "ThreadedServerHandler data -- ${data.SafeStr().limit(1024)}")
 							# c.send("[${c.sock}] Echoing back: ${data}")
 							handler.on_data(data)
 							debug('server', "ThreadedServerHandler on_connect -- after handler.on_data()")
@@ -159,25 +159,114 @@ ns {
 		}
 
 		section "LinesConnectionHandler" {
+			# TODO: refactor. creating "next" ConnectionHandler should not be
+			#       the responsibility of the previous ConnectionHandler.
+
 			type LinesConnectionHandler(ConnectionHandler)
+
 			doc make_connection_handler - next ConnectionHandler in chain
 			F init(lch:LinesConnectionHandler) throw InvalidArgument()
+
 			F init(lch:LinesConnectionHandler, make_connection_handler:Fun) {
 				debug('server', "LinesConnectionHandler init()")
 				init(args())
 			}
+
 			F on_connect(lch:LinesConnectionHandler, c:Connection) {
 				lch.connection = c
+				lch.buf = ''
 				lch.next = lch::make_connection_handler()
 				lch::next.on_connect(c)
 			}
+
 			F on_data(lch:LinesConnectionHandler, data:Str) {
-				echo("blah")
-				lch::next.on_data("line")
+				lch.buf += data
+				while true {
+					# TODO: start the search from previous position
+					# TODO: handle "\r\n"
+					p = pos(lch.buf, "\n")
+					p == null breaks
+					line = lch.buf[0..p]
+					lch::next.on_data(line)
+					lch.buf = lch.buf[(p+1)..null]
+				}
 			}
+
 			F on_remote_close(lch:LinesConnectionHandler) {
+				if lch.buf {
+					lch::next.on_data(lch.buf)
+					lch.buf = ''
+				}
 				lch::next.on_remote_close()
 			}
+		}
+
+		section "JSON-RPC ConnectionHandler" {
+
+			# TODO: optional "params" and "id"
+			_valid_json_rpc_request = {
+				'jsonrpc': '2.0'
+				'method': Str
+			}
+
+			# https://www.jsonrpc.org/specification
+			type JsonRpcConnectionHandler(ConnectionHandler)
+			F init(jrch:JsonRpcConnectionHandler) throw InvalidArgument()
+
+			F init(jrch:JsonRpcConnectionHandler, methods:Namespace) {
+				debug('server', "JsonRpcConnectionHandler init()")
+				init(args())
+			}
+
+			F on_data(jrch:JsonRpcConnectionHandler, data:Str) block b {
+				debug('server', "JsonRpcConnectionHandler on_data()")
+
+				F send_error(code, message, data=null) {
+					error("JsonRpcConnectionHandler on_data send_error -- ${code} ${message} ${data}")
+					ret = {
+						'jsonrpc': '2.0'
+						'error': {
+							'code': code
+							'message': message
+							'data': data
+						}.filterv()
+					}
+					jrch.connection.send(ret.encode_json() + "\n")
+					b.return()
+
+				}
+
+				req = try {
+					data.decode_json()
+				} catch(e:JsonDecodeFail) {
+					send_error(-32700, 'Parse error', e.Hash().filterk(AnyOf('error', 'value', 'position')))
+				}
+
+				if not(req =~ _valid_json_rpc_request) send_error(-32600, 'Invalid Request')
+
+				if not(req.method in jrch.methods) send_error(-32601, 'Method not found', "Method ${req.method} not found. Available methods: ${jrch.methods.keys()}")
+
+				# TODO: Implement "Invalid params" mechanism
+				result = try {
+					debug('server', "JsonRpcConnectionHandler on_data -- invoking ${req.method}")
+					jrch.methods[req.method](req)
+				} catch(e) {
+					send_error(-32603, 'Internal error', e.Str())
+				}
+
+				if 'id' in req {
+					# response expected
+					ret = {
+						'jsonrpc': '2.0'
+						'id': req.id
+						'result': result
+					}.filterv()
+					debug('server', 'JsonRpcConnectionHandler on_data -- sending reply')
+					jrch.connection.send(ret.encode_json() + "\n")
+				}
+
+			}
+
 		}
 
 		F test_un_server() {

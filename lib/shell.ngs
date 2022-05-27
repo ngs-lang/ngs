@@ -1,0 +1,20 @@
+ns {
+	F main() {
+		sh = net::ThreadedServerHandler(F on_connect() {
+			F make_json_rpc_handler() {
+				debug('server', 'make_json_rpc_handler()')
+				net::JsonRpcConnectionHandler(ns {
+					F test(req) {
+						"test method active"
+					}
+					F div_by_zero(req) {
+						1 / 0
+					}
+
+				})
+			}
+			net::LinesConnectionHandler(make_json_rpc_handler)
+		})
+		net::UnixStreamServer().listen("ngs-shell.sock", sh)
+	}
+}
