@@ -262,11 +262,22 @@ ns {
 
 				if (req.method not in jrch.methods) send_error(-32601, 'Method not found', "Method ${req.method} not found. Available methods: ${jrch.methods.keys()}")
 
-				# TODO: Implement "Invalid params" mechanism
+				args = []
+				kwargs = {}
+				if 'params' in req {
+					match req.params {
+						Arr args = req.params
+						Hash kwargs = req.params
+					}
+				}
+
+				debug('server', "JsonRpcConnectionHandler on_data -- invoking ${req.method}")
 				result = try {
-					debug('server', "JsonRpcConnectionHandler on_data -- invoking ${req.method}")
-					jrch.methods[req.method](req)
-				} catch(e) {
+					jrch.methods[req.method](*args, **kwargs)
+				} catch(mnf:MethodNotFound) {
+					guard mnf.callable === jrch.methods[req.method]
+					send_error(-32602, 'Invalid params', "Correct parameters can be seen in methods' descriptions: ${jrch.methods[req.method].Arr()}")
+				} catch(e:Error) {
 					send_error(-32603, 'Internal error', e.Str())
 				}
 

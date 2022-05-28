@@ -1,8 +1,13 @@
 net::unix_json_rpc_server("ngs-shell.sock", ns {
-	F test(req) {
+	F test() {
 		"test method active"
 	}
-	F div_by_zero(req) {
+
+	F add_one(n:Int) {
+		n + 1
+	}
+
+	F div_by_zero() {
 		1 / 0
 	}
 })
