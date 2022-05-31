@@ -16,7 +16,7 @@ net::unix_json_rpc_server("ngs-shell.sock", ns {
 		#})
 
 		func = load(bytecode, "<shell line func>")
-		result = func()
+		result = ui::JsonData(func())
 	}
 
 	section "tests" {

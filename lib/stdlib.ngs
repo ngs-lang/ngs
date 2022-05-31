@@ -5293,11 +5293,6 @@ type Program
 type ProcessesPipeline
 type ProcessRedir
 
-doc Temporary Hack
-doc %STATUS - experimental
-F JsonData(p:ProcessesPipeline) p.processes[-1].JsonData()
-
-
 doc External Program
 F init(p:Program, name:Str) init(args())
 
@@ -5704,17 +5699,6 @@ F Str(r:CommandRedir) "<${r.typeof().name} ${r.fd} ${r.marker} ${r.datum}>"
 
 doc Running or finished process
 type Process
-
-doc Temporary Hack
-doc %STATUS - experimental
-F JsonData(p:Process) {
-	{
-		'comment': 'This JSON encoding is temporary for UI testing'
-		'type': 'Process'
-		'stdout': p.stdout
-		'stderr': p.stderr
-	}
-}
 
 doc Occurs when executable was not found in path or when executable was absolute or relative and was not found.
 type ProgramNotFound(Exception)

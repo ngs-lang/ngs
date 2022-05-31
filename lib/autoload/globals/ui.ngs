@@ -1,0 +1,47 @@
+ns {
+	# WIP
+	# Warning: low quality, hacky code
+
+	global id
+	doc Warning! Not sure about correctness!
+	F id(t:Type) {
+		m = t.meta()
+		has_ns = m =~ {'ns': Namespace}
+		not(has_ns) returns "ngs:type:${t.name}"
+		throw NotImplemented("id() for types in namespaces is not implemented yet")
+	}
+
+	F _json_data_fields(x, fields:Arr) {
+		{
+			'type': id(x.typeof())
+			'fields': fields.Hash({ JsonData(x.(A)) })
+		}
+	}
+
+	section "JsonData - scalars" {
+		F JsonData(x) {
+			guard x =~ AnyOf(Num, Str, Bool, Null)
+			{ 'type': id(x.typeof()), 'value': x }
+		}
+		F JsonData(p:Path) { 'type': id(p.typeof()), 'value': p.path }
+	}
+
+	section "JsonData - lists" {
+		F JsonData(a) {
+			guard a =~ AnyOf(Arr, ArrLike)
+			{ 'type': id(a.typeof()), 'items': a.map(JsonData) }
+		}
+
+	}
+
+	F JsonData(c:Command) c._json_data_fields(%[argv])
+
+	F JsonData(p:Process) p._json_data_fields(%[command executable pid exit_code exit_signal stdout stderr])
+
+	doc Incorrect, should pass the whole pipeline
+	F JsonData(p:ProcessesPipeline) p.processes[-1].JsonData()
+	F JsonData(p:ProcessesPipeline) {
+		guard p.processes.len() > 1
+		throw NotImplemented()
+	}
+}
