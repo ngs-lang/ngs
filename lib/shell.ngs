@@ -1,13 +1,37 @@
+# XXX: Ugly hack to prevent direct output to stdout.
+F '$()'(cp:CommandsPipeline) {
+	cp.options .= without('top_level')
+	guard false
+}
+
 net::unix_json_rpc_server("ngs-shell.sock", ns {
-	F test() {
-		"test method active"
+
+	F eval(line:Str) {
+		fname = '<shell line file>'
+		bytecode = compile(line, fname)
+		# TODO: pass warnings
+		#bytecode.meta().warnings.each(F(w) {
+		#	wl = w.location
+		#	warn("${fname}:${wl.first_line}:${wl.first_column} warning: ${w.message}")
+		#})
+
+		func = load(bytecode, "<shell line func>")
+		result = func()
 	}
 
-	F add_one(n:Int) {
-		n + 1
+	section "tests" {
+
+		F test() {
+			"test method active"
+		}
+
+		F test_add_one(n:Int) {
+			n + 1
+		}
+
+		F test_div_by_zero() {
+			1 / 0
+		}
 	}
 
-	F div_by_zero() {
-		1 / 0
-	}
 })

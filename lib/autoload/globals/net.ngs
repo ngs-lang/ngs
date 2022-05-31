@@ -242,6 +242,7 @@ ns {
 					error("JsonRpcConnectionHandler on_data send_error -- ${code} ${message} ${data}")
 					ret = {
 						'jsonrpc': '2.0'
+						'id': req.get('id')
 						'error': {
 							'code': code
 							'message': message
