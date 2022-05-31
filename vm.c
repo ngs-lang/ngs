@@ -1107,7 +1107,7 @@ METHOD_RESULT native_c_mktime METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(tt));
 }
 
-METHOD_RESULT native_type_str_doc METHOD_PARAMS {
+METHOD_RESULT native_type_str_doc_ns METHOD_PARAMS {
 	*result = make_normal_type(argv[0]);
 	set_hash_key(OBJ_META(*result), make_string("doc"), argv[1]);
 	set_hash_key(OBJ_META(*result), make_string("ns"), argv[2]);
@@ -3103,7 +3103,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	);
 
 	// Type
-	register_global_func(vm, 0, "Type",     &native_type_str_doc      ,3, "name",   vm->Str, "doc", vm->Any, "ns", vm->Any);
+	register_global_func(vm, 0, "Type", &native_type_str_doc_ns      , 3, "name", vm->Str, "doc", vm->Any, "ns", vm->Any);
 	_doc(vm, "", "Create a new type. Do not use directly.");
 	_doc(vm, "%AUTO", "type MyType");
 
