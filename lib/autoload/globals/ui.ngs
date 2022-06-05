@@ -8,7 +8,11 @@ ns {
 		m = t.meta()
 		has_ns = m =~ {'ns': Namespace}
 		not(has_ns) returns "ngs:type:${t.name}"
-		throw NotImplemented("id() for types in namespaces is not implemented yet")
+		if m.ns.meta().has(JsonData) {
+			# Maybe :: separator here is not a good idea
+			return "ngs:type:${m.ns.meta()[JsonData].ns}::${t.name}"
+		}
+		throw NotImplemented("id() for types in namespaces (without .meta()[JsonData].ns} is not implemented yet")
 	}
 
 	F _json_data_fields(x, fields:Arr) {
@@ -31,7 +35,16 @@ ns {
 			guard a =~ AnyOf(Arr, ArrLike)
 			{ 'type': id(a.typeof()), 'items': a.map(JsonData) }
 		}
+	}
 
+	section "JsonData - maps" {
+		F JsonData(h) {
+			guard h =~ AnyOf(Hash, HashLike)
+			{
+				'type': id(h.typeof())
+				'fields': h.mapkv(F(k, v) [k.JsonData(), v.JsonData()])
+			}
+		}
 	}
 
 	F JsonData(c:Command) c._json_data_fields(%[argv])
@@ -43,5 +56,19 @@ ns {
 	F JsonData(p:ProcessesPipeline) {
 		guard p.processes.len() > 1
 		throw NotImplemented()
+	}
+
+	section "AWS2" {
+		# TODO: generalize
+
+		AWS2.meta()[JsonData] = {'ns': 'AWS2'}
+		i = AWS2::Instance
+		# AWS2::Instance is Eachable1
+		F JsonData(i:i) {
+			id(i.typeof())
+			"INSTANCE + ${id(i.typeof())}"
+			{ 'type': id(i.typeof()), 'items': i.map(JsonData) }
+
+		}
 	}
 }
