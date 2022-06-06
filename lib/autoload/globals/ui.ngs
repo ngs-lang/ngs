@@ -42,7 +42,7 @@ ns {
 			guard h =~ AnyOf(Hash, HashLike)
 			{
 				'type': id(h.typeof())
-				'fields': h.mapkv(F(k, v) [k.JsonData(), v.JsonData()])
+				'items': h.map(F(k, v) [k.JsonData(), v.JsonData()])
 			}
 		}
 	}
