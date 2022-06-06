@@ -1012,6 +1012,7 @@ json_object *_encode_json_kern(VALUE obj, VALUE *result) {
 		for(e=HASH_HEAD(obj); e; e=e->insertion_order_next) {
 			if(!IS_STRING(e->key)) {
 				*result = make_string("Hash keys must be strings");
+				return NULL;
 			}
 			v = _encode_json_kern(e->val, result);
 			if(!IS_UNDEF(*result)) return NULL; // Exception occurred
