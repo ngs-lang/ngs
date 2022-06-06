@@ -9,6 +9,7 @@
 
 ### Fixes and improvements
 * Add `UndefinedUpVar` exception, thrown when accessing undefined "upvar"
+* Following types now inherit from `Error`, not `Exception`: `NotImplemented`, `ReadFail`, `RequireFail`, `MainFail`
 
 ## 2022-04-16 Version 0.2.14
 

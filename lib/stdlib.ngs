@@ -103,14 +103,14 @@ section "Basic Methods for Exception type" {
 	}
 }
 
-section "Basic Exception subtypes" {
-	type NotImplemented(Exception)
-	type ReadFail(Exception)
-	type RequireFail(Exception)
-	type MainFail(Exception)
+section "Basic Error subtypes" {
+	type NotImplemented(Error)
+	type ReadFail(Error)
+	type RequireFail(Error)
+	type MainFail(Error)
 
 	doc Represents error when converting program execution result to exit code
-	type ExitCodeFail(Exception)
+	type ExitCodeFail(Error)
 }
 
 section "Basic I/O" {
