@@ -33,7 +33,15 @@ ns {
 		F listen(sock:Int, backlog:Int) c_listen(sock, backlog)._assert('listen')
 
 		global accept
-		F accept(sock:Int, address:c_sockaddr) c_accept(sock, address)._assert('accept')
+		F accept(sock:Int, address:c_sockaddr) block b {
+			while true {
+				try {
+					b.return(c_accept(sock, address)._assert('accept'))
+				} catch(intr:CError) {
+					guard intr.errno = C_EINTR
+				}
+			}
+		}
 
 		global send
 		F send(socket: Int, buffer:Str, flags:Int=0) c_send(socket, buffer, flags)._assert('send')
