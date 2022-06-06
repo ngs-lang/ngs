@@ -22,6 +22,8 @@ ns {
 		}
 	}
 
+	F JsonData(x) throw NotImplemented("JsonData() for type ${x.typeof()} is not implemented yet").set(val=x)
+
 	section "JsonData - scalars" {
 		F JsonData(x) {
 			guard x =~ AnyOf(Num, Str, Bool, Null)
@@ -58,17 +60,11 @@ ns {
 		throw NotImplemented()
 	}
 
+	F JsonData(rd:ResDef) rd.find().resources.map(JsonData)
+	F JsonData(r:Res) r.Hash().without('def').JsonData().set(type=id(r.typeof()))
+
 	section "AWS2" {
 		# TODO: generalize
-
 		AWS2.meta()[JsonData] = {'ns': 'AWS2'}
-		i = AWS2::Instance
-		# AWS2::Instance is Eachable1
-		F JsonData(i:i) {
-			id(i.typeof())
-			"INSTANCE + ${id(i.typeof())}"
-			{ 'type': id(i.typeof()), 'items': i.map(JsonData) }
-
-		}
 	}
 }
