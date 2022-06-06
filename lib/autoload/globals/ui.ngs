@@ -53,6 +53,8 @@ ns {
 
 	F JsonData(p:Process) p._json_data_fields(%[command executable pid exit_code exit_signal stdout stderr])
 
+	F JsonData(f:Fun) f.Str().JsonData()
+
 	doc Incorrect, should pass the whole pipeline
 	F JsonData(p:ProcessesPipeline) p.processes[-1].JsonData()
 	F JsonData(p:ProcessesPipeline) {
