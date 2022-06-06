@@ -60,7 +60,15 @@ ns {
 		throw NotImplemented()
 	}
 
-	F JsonData(rd:ResDef) rd.find().resources.map(JsonData)
+	F JsonData(rd:ResDef) {
+		resources = rd.find().resources
+		ret = { 'type': id(rd.typeof()), 'items': resources.map(JsonData) }
+		if resources {
+			cols_names = resources[0].props.Hash().keys()
+			ret.cols_names = cols_names.JsonData()
+		}
+		ret
+	}
 	F JsonData(r:Res) r.Hash().without('def').JsonData().set(type=id(r.typeof()))
 
 	section "AWS2" {
