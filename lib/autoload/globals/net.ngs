@@ -261,6 +261,7 @@ ns {
 					b.return()
 				}
 
+				req = {}  # allow send_error() to do req.get('id') if we crash in try
 				req = try {
 					data.decode_json()
 				} catch(e:JsonDecodeFail) {
