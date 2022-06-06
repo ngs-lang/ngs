@@ -1542,7 +1542,9 @@ METHOD_RESULT native_c_pthreadjoin METHOD_PARAMS {
 }
 
 METHOD_RESULT native_c_pthreadattrinit METHOD_PARAMS  {
-	METHOD_RETURN(MAKE_INT(pthread_attr_init(&GET_PTHREADATTR(argv[0]))));
+	int i = pthread_attr_init(&GET_PTHREADATTR(argv[0]));
+	pthread_attr_setstacksize(&GET_PTHREADATTR(argv[0]), 8*1024*1024);
+	METHOD_RETURN(MAKE_INT(i));
 }
 
 METHOD_RESULT native_c_pthreadmutexattrinit METHOD_PARAMS  {
