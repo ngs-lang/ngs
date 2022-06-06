@@ -195,6 +195,7 @@ struct VM {
 				VALUE FieldNotFound;
 				VALUE GlobalNotFound;
 			VALUE UndefinedLocalVar;
+			VALUE UndefinedUpVar;
 			VALUE InvalidArgument;
 				VALUE DivisionByZero;
 			VALUE CompileFail;

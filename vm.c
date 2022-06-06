@@ -414,7 +414,7 @@ METHOD_RESULT native_c_pow_real_real EXT_METHOD_PARAMS {
 	int status = 0;
 	NGS_REAL t = pow(GET_REAL(argv[0]), GET_REAL(argv[1]));
 	ret = make_array(2);
-	
+
 	if(t == NGS_REAL_HUGE_VAL) {
 		status = 1;
 	} else if(t == -NGS_REAL_HUGE_VAL) {
@@ -2591,7 +2591,15 @@ void vm_init(VM *vm, int argc, char **argv) {
 				NULL
 			);
 
-			MKSUBTYPE(InvalidArgument, Error);
+			MKSUBTYPE(UndefinedUpVar, Exception);
+			_doc(vm, "", "Represents an error of reading undefined upvar variable.");
+			_doc_arr(vm, "%EX",
+					 "F() { F inner() a; try { 1/0; a=1 }; inner }()()",
+					 "# ... Exception of type UndefinedUpVar ...",
+					 NULL
+			);
+
+	MKSUBTYPE(InvalidArgument, Error);
 			_doc(vm, "", "Represents an error of calling a method with incorrect argument.");
 			_doc_arr(vm, "%EX",
 				"ord(\"ab\")",
@@ -3783,7 +3791,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	// TODO: migrate all other c definitions (above) into this namespace
 	// https://github.com/ngs-lang/ngs/issues/113
 
-	#define D(name) { set_hash_key(c_defs, make_string(#name), MAKE_INT(name)); }	
+	#define D(name) { set_hash_key(c_defs, make_string(#name), MAKE_INT(name)); }
 	VALUE c_defs = make_namespace(128);
 
 	#ifdef _SC_NPROCESSORS_ONLN
@@ -4424,7 +4432,6 @@ main_loop:
 							if(IS_UNDEF(LOCALS[lvi])) {
 								VALUE exc;
 								exc = make_normal_type_instance(vm->UndefinedLocalVar);
-								// TODO: variable name
 								set_normal_type_instance_field(exc, make_string("name"), CLOSURE_OBJ_LOCALS(THIS_FRAME_CLOSURE)[lvi]);
 								set_normal_type_instance_field(exc, make_string("index"), MAKE_INT(lvi));
 								set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
@@ -4647,6 +4654,19 @@ do_jump:
 							ARG_UVI;
 							ARG_LVI;
 							// printf("uvi=%d lvi=%d\n", uvi, lvi);
+
+							if(IS_UNDEF(UPLEVELS[uvi][lvi])) {
+								VALUE exc;
+								exc = make_normal_type_instance(vm->UndefinedUpVar);
+								// TODO: variable name
+								// set_normal_type_instance_field(exc, make_string("name"), CLOSURE_OBJ_LOCALS(THIS_FRAME_CLOSURE)[lvi]);
+								set_normal_type_instance_field(exc, make_string("level"), MAKE_INT(uvi));
+								set_normal_type_instance_field(exc, make_string("index"), MAKE_INT(lvi));
+								set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+								*result = exc;
+								goto exception;
+							}
+
 							PUSH(UPLEVELS[uvi][lvi]);
 							goto main_loop;
 		case OP_STORE_UPVAR:

@@ -7,6 +7,9 @@
 * Add networking functions: `socket()`, `bind()`, `listen()`, `accept()`, `recvfrom()`, `send()`
 * Add networking constants: `SOCK_STREAM`, `SOCK_DGRAM`, `SOCK_RAW`, `MSG_OOB`, `MSG_PEEK`, `MSG_WAITALL` (all prefixed with `C_`)
 
+### Fixes and improvements
+* Add `UndefinedUpVar` exception, thrown when accessing undefined "upvar"
+
 ## 2022-04-16 Version 0.2.14
 
 ### New features
