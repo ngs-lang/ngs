@@ -7770,28 +7770,19 @@ section "Doc" {
 
 section "Loading code" {
 
-	# TODO: XDG
-	NGS_PATH = %[
-		/usr/local/etc/ngs
-		/usr/local/lib/ngs
-		/etc/ngs
-		/usr/lib/ngs
-	]
-
-	if _h = ENV.get('HOME') {
-		NGS_PATH.unshift(_h / '.ngs')
-	}
-
-	if _d = ENV.get('NGS_DIR') {
-		warn("NGS_DIR environment variable is deprecated. Use NGS_PATH instead.")
-		NGS_PATH = [_d]
-	}
-
-	if _p = ENV.get('NGS_PATH') {
+	NGS_PATH = if (_p = ENV.get('NGS_PATH')) {
 		debug('autoload', "Using environment variable NGS_PATH: ${_p}")
-		NGS_PATH = _p.split(':')
+		 _p.split(':')
+	} else {
+		# TODO: XDG
+		%[
+			${ try ENV.HOME / '.ngs' }
+			/usr/local/etc/ngs
+			/usr/local/lib/ngs
+			/etc/ngs
+			/usr/lib/ngs
+		].filter()
 	}
-
 
 	F bootstrap_print_compilation_warnings(program_bytecode, fname) {
 		program_bytecode.meta().warnings.each(F(w) {
