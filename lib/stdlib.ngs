@@ -238,7 +238,7 @@ doc %EX - # not(x > 0) throws InvalidArgument('x must be greater than zero').set
 type AssertFail(Exception)
 
 doc Represents an attempt to create an instance of an abstract type (not intended for instantiation).
-type InstantiatingAbstractType(Exception)
+type InstantiatingAbstractType(Error)
 
 doc IndexNotFound exception constructor
 doc %RET - IndexNotFound object with the given message, container and key fields
@@ -1388,7 +1388,7 @@ section "AnyOf(ArrLike)" {
 	doc Should probably inherit from Set, not ArrLike.
 	type AnyOf(ArrLike)
 
-	doc Initializes AnyIf with the given alternatives.
+	doc Initializes AnyOf with the given alternatives.
 	F init(a:AnyOf, *alternatives) {
 		guard alternatives.len() > 1
 		super(a, alternatives)
@@ -1736,28 +1736,28 @@ section "Hook" {
 	F call(hook:Hook, *args) hook.meta().HashLike.mapv(X(*args))
 }
 
-# === Real =======================================
+section "Real" {
+	# TODO: something more efficient
+	doc Convert a string to real (floating) number, inefficiently
+	doc %RET - Real
+	doc %EX - Real("1.1")  # 1.1
+	F Real(s:Str) {
+		parts = s.split('.')
+		parts.len() == 1 returns Real(Int(parts[0]))
+		parts.len() != 2 throws InvalidArgument("Invalid argument ${s}")
+		l = parts[1].len()
+		frac = Real(Int(parts[1]))
+		for(i;l) frac = frac / 10.0
+		Real(Int(parts[0])) + frac
+	}
 
-# TODO: something more efficient
-doc Convert a string to real (floating) number, inefficiently
-doc %RET - Real
-doc %EX - Real("1.1")  # 1.1
-F Real(s:Str) {
-	parts = s.split('.')
-	parts.len() == 1 returns Real(Int(parts[0]))
-	parts.len() != 2 throws InvalidArgument("Invalid argument ${s}")
-	l = parts[1].len()
-	frac = Real(Int(parts[1]))
-	for(i;l) frac = frac / 10.0
-	Real(Int(parts[0])) + frac
+	TEST Real('1.1') == 1.1
+
+	doc Convert Real into JSON compatible data structure - number
+	F JsonData(r:Real) r
+
+	F Bool(r:Real) r != 0.0
 }
-
-TEST Real('1.1') == 1.1
-
-doc Convert Real into JSON compatible data structure - number
-F JsonData(r:Real) r
-
-F Bool(r:Real) r != 0.0
 
 # === NormalTypeConstructor ===============================
 
@@ -3085,7 +3085,7 @@ F each(h:Hash, cb:Fun) {
 	h
 }
 
-doc Checks whether any of the key-value pairs satisifies the predicate: predicate(k, v)
+doc Checks whether any of the key-value pairs satisfies the predicate: predicate(k, v)
 doc %RET - Bool
 F any(e:Eachable2, predicate:Fun) block b {
 	e.each(F(k, v) {
@@ -3396,7 +3396,7 @@ doc %RET - Hash
 doc %EX - {'a': 1, 'b': 2, 'c': 3} + {'b': 20, 'd': 40}  # {'a': 1, 'b': 20, 'c': 3, 'd': 40}
 F +(a:Hash, b:Hash) {
 	t = typeof(a)
-	t != typeof(b) throws InvalidArgument("+(a:Hash, b:Hash) requires a and b to be of the same type").set(a=a, b=b)
+	t !== typeof(b) throws InvalidArgument("+(a:Hash, b:Hash) requires a and b to be of the same type").set(a=a, b=b)
 	t().update(a).update(b)
 }
 
