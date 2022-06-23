@@ -630,11 +630,11 @@ chain-expression = b:basic-expression (
 			b = ret;
 		}
 		|
-		"." i:identifier {
+		"." (e:identifier | e:array-literal | e:number | e:string) {
 			MAKE_NODE(ret, FIELD_NODE);
 				ret->number = 902;
 				ret->first_child = b;
-				ret->first_child->next_sibling = i;
+				ret->first_child->next_sibling = e;
 				ret = call_node_partial_application(ret, location);
 			b = ret;
 		}
