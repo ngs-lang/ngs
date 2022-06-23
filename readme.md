@@ -114,11 +114,10 @@ From George Nachman, creator of [iTerm2](https://www.iterm2.com/):
 
 **On Linux**: make sure `curl` and `sudo` are installed
 
-**On MacOS**: make sure you have `brew` installed.
-
 	curl https://ngs-lang.org/install.sh | bash
 	ngs -pi 'sum(0..10)'
 
+**On MacOS**: make sure you have `brew` installed.
 
 ### Using Homebrew
 
