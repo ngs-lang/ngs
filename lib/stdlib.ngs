@@ -3484,11 +3484,7 @@ doc Get the given key from a Hash and remove it from the Hash.
 doc Underlying h[k] may throw KeyNotFound.
 doc %EX - h = {"a": 1}
 doc %EX - s = h.shift("a")  # h == {} and s == 1
-F shift(h:Hash, k) {
-	ret = h[k]
-	del(h, k)
-	ret
-}
+F shift(h:Hash, k) h[k].tap({ del(h, k) })
 
 doc Get a key from a Hash and remove it from the Hash.
 doc If they key is not in the Hash, return dflt
@@ -3496,9 +3492,7 @@ doc %EX - h = {}
 doc %EX - h.shift("a", 7)  # 7
 F shift(h:Hash, k, dflt) {
 	k not in h returns dflt
-	ret = h[k]
-	del(h, k)
-	ret
+	h[k].tap({ del(h, k) })
 }
 
 TEST h={"a": 1}; s = h.shift("a"); h == {} and s == 1
@@ -3785,13 +3779,7 @@ F each(s:Success, fun:Fun) {
 
 doc Run fun with wrapped value. If exception is thrown, Failure is returned; otherwise Success with new value is returned.
 doc %RET - Result
-F map(s:Success, fun:Fun) {
-	try {
-		Success(fun(s.get()))
-	} catch(e) {
-		Failure(e)
-	}
-}
+F map(s:Success, fun:Fun) Result({ fun(s.get()) })
 
 doc No-op, returns f
 doc %RET - f
@@ -3992,11 +3980,11 @@ doc %EX - if (tags = diff.remove / "Key=$X") {
 doc %EX - 	r.run('update_tags/remove', %(aws ec2 delete-tags --resources ${r.id()} --tags $*tags))
 doc %EX - }
 F Diff(a:Hash, b:Hash) {
-	d = HashDiff()
-	d.add    = b.reject(X in a)
-	d.change = b.filter(X in a).filter(F(k, v) a[k] != v)
-	d.remove = a.reject(X in b).keys()
-	d
+	HashDiff().set(
+		add    = b.reject(X in a)
+		change = b.filter(X in a).filter(F(k, v) a[k] != v)
+		remove = a.reject(X in b).keys()
+	)
 }
 
 TEST Diff({"a": 1, "b":2}, {"b": 3, "d": 4}).Hash().sort() == {"add":{"d":4}, "change":{"b":3}, "remove":["a"]}
@@ -6457,10 +6445,7 @@ F '%()'(cp:CommandsPipeline) cp
 doc Wait for the process and return lines of its stdout.
 doc %RET - Arr of Str
 doc %EX - $(seq 10 2 20).lines().map(Int)  # [10,12,14,16,18,20]
-F lines(p:Process) {
-	p.wait()
-	p.stdout.lines()
-}
+F lines(p:Process) p.wait().stdout.lines()
 
 # TODO: ability to handle running process & its streaming stdout
 doc Iterate lines of Process' stdout, calling cb with successive lines.
