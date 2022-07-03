@@ -3906,7 +3906,7 @@ F Diff(a:Arr, b:Arr, full:Bool=false) {
 	d
 }
 
-TEST Diff([1,2], [2,3]).Hash().sort() == {'add': [3], 'remove': [1]}
+TEST Diff([1,2], [2,3]) =~ {'add': [3], 'remove': [1]}
 
 doc EXPERIMENTAL! Do not use!
 doc Compare arrays using eq as equality test. 2*n*m comparisons
@@ -3943,8 +3943,8 @@ F Diff(a:Arr, b:Arr, full:Bool=false) {
 	d
 }
 
-TEST Diff(["a", "b"], [Present("a"), Present("c"), Absent("b"), Absent("d")], false).Hash().sort() == {"add": ["c"], "remove": ["b"]}
-TEST Diff(["a", "b"], [Present("a"), Present("c"), Absent("b"), Absent("d")], true).Hash().sort() == {"add": ["c"], "remove": ["b"]}
+TEST Diff(["a", "b"], [Present("a"), Present("c"), Absent("b"), Absent("d")], false) =~ {"add": ["c"], "remove": ["b"]}
+TEST Diff(["a", "b"], [Present("a"), Present("c"), Absent("b"), Absent("d")], true) =~ {"add": ["c"], "remove": ["b"]}
 
 doc Compare arrays. Warning: by default Hash is used so internal Hash keys comparison is used, not ==.
 doc Calls Diff(a, b.map(get), full)
@@ -3987,7 +3987,7 @@ F Diff(a:Hash, b:Hash) {
 	)
 }
 
-TEST Diff({"a": 1, "b":2}, {"b": 3, "d": 4}).Hash().sort() == {"add":{"d":4}, "change":{"b":3}, "remove":["a"]}
+TEST Diff({"a": 1, "b":2}, {"b": 3, "d": 4}) =~ {"add":{"d":4}, "change":{"b":3}, "remove":["a"]}
 
 doc Whether there is a difference
 doc %RET - Bool
