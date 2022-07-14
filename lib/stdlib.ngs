@@ -271,7 +271,7 @@ doc t - Subtype of Exception
 doc %RET - The exception
 doc %EX - assert({1/0}, DivisionByZero)
 F assert(f:Fun, t:Type, msg:Str="Assertion failed") {
-	guard t.is_subtype(Exception)
+	guard t <= Exception
 	r = Result(f)
 	assert(r, Failure, msg)
 	assert(r.val, t, msg)
@@ -1254,7 +1254,7 @@ section "Eachable1" {
 	doc %RET - Object of type t
 	doc %STATUS - experimental
 	F ensure(x, t:Type) {
-		guard t.is_subtype(Eachable1)
+		guard t <= Eachable1
 		typeof(x) === t returns x
 		t().push(x)
 	}
@@ -1371,7 +1371,7 @@ section "ArrLike" {
     doc t - subtype of ArrLike
     doc %RET - of type t
 	F ensure(x:Arr, t:Type) {
-		guard t.is_subtype(ArrLike)
+		guard t <= ArrLike
 		t(x)
 	}
 
@@ -1650,14 +1650,14 @@ section "Named Instances" {
 	doc %EX - echo(Color.NamedInstances is Namespace)  # true
 	F .(t:Type, field:Str) {
 		guard field == 'NamedInstances'
-		guard t.is_subtype(NamedInstances)
+		guard t <= NamedInstances
 		ret = t.meta().NamedInstances
 	}
 
 	doc %AUTO - SUBTYPE_OF_NAMEDINSTANCES.NamedInstances = ...
 	F .=(t:Type, field:Str, ns:Namespace) {
 		guard field == 'NamedInstances'
-		guard t.is_subtype(NamedInstances)
+		guard t <= NamedInstances
 		ns.each(F(k, v) {
 			v is not t throws InvalidArgument("${t.name}.NamedInstances values must be of type ${t.name}").set(key=k, value=v)
 			v.name = k
@@ -1676,7 +1676,7 @@ section "Named Instances" {
 	doc %AUTO - SUBTYPE_OF_NAMEDINSTANCES.NamedInstances = ['SOME', 'NAMES', ...]
 	F .=(t:Type, field:Str, a:Arr) {
 		guard field == 'NamedInstances'
-		guard t.is_subtype(NamedInstances)
+		guard t <= NamedInstances
 		guard a.all(Str)
 		instances = ns {}
 		a.each(F(name) instances::(name) = t())
@@ -1688,14 +1688,14 @@ section "Named Instances" {
 	doc %AUTO - SUBTYPE_OF_NAMEDINSTANCES::INSTANCE_NAME
 	doc %EX - echo(Color::RED)   # <Color numval=4 name=RED>
 	F '::'(t:Type, k:Str) {
-		guard t.is_subtype(NamedInstances)
+		guard t <= NamedInstances
 		t.NamedInstances[k]
 	}
 
 	doc Resolve named instance of t by uniquely-identifying value of any field
 	doc %EX - echo("RED".decode(Color))   # <Color numval=4 name=RED>
 	F decode(value, t:Type) {
-		guard t.is_subtype(NamedInstances)
+		guard t <= NamedInstances
 
 		F invalid_arg(s) throw InvalidArgument(s).set(value=value, type=t)
 
@@ -1806,14 +1806,12 @@ section "Type" {
 	TEST decode("1", Int) == 1
 	TEST decode("1", Real) == 1.0
 
-	doc %STATUS - experimental
-	doc Check whether t is a subtype of maybe_supertype.
+	doc Check whether t is maybe_supertype or its subtype
 	doc Note that if t and maybe_supertype are same type, this method also returns true.
-	doc TODO: consider symbol <: as method name.
 	doc %RET - Bool
-	doc %EX - Lines.is_subtype(Eachable1)  # true
-	doc %EX - Eachable.is_subtype(Lines)  # false
-	F is_subtype(t:Type, maybe_supertype:Type) {
+	doc %EX - Lines <= Eachable1  # true
+	doc %EX - Eachable <= Lines  # false
+	F '<='(t:Type, maybe_supertype:Type) {
 		maybe_supertype === Any returns true
 		F kern(t:Type) {
 			t === maybe_supertype returns true
@@ -1822,10 +1820,24 @@ section "Type" {
 		kern(t)
 	}
 
-	TEST Lines.is_subtype(Eachable1)
-	TEST Lines.is_subtype(Eachable)
-	TEST Int.is_subtype(Any)
-	TEST Eachable.is_subtype(Lines) == false
+	TEST Lines <= Eachable1
+	TEST Lines <= Eachable
+	TEST Int <= Any
+	TEST Eachable <= Lines == false
+
+	doc Similar to t <= maybe_supertype but returns false if t === maybe_supertype
+	doc %RET - Bool
+	F '<'(t:Type, maybe_supertype:Type) t !== maybe_supertype and t <= maybe_supertype
+
+	doc %STATUS - deprecated
+	doc Use t < maybe_supertype
+	F is_subtype(t:Type, maybe_supertype:Type) {
+		# warn("is_subtype(Type, Type) is deprecated")  # fails because Time is not defined yet
+		echo(2, 'is_subtype(Type, Type) is deprecated')
+		t < maybe_supertype
+	}
+
+
 }
 
 doc Set a field on all elements if it's not already set
@@ -4943,7 +4955,7 @@ section "Path" {
 	doc Human readable type name for the Path type and its subtypes. TODO: find better name.
 	doc %STATUS - experimental
 	F human_type_name(p) {
-		guard p.is_subtype(Path)
+		guard p <= Path
 		if m = p.meta().doc[''][0] ~ /Represents a (.+) in a file system/ {
 			m[1]
 		} else {
@@ -5254,7 +5266,7 @@ section "Path" {
 	doc Decode Path and its subtypes
 	doc %RET - instance of Path or a subtype.
 	F decode(s:Str, p) {
-		guard p.is_subtype(Path)
+		guard p <= Path
 		p(s)
 	}
 

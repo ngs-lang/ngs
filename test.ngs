@@ -4,7 +4,7 @@ tests_counter = 0
 
 doc Mark Exception objects which are coming out of successful assert()
 F assert(f:Fun, t:Type, msg:Str="Assertion failed") {
-	guard t.is_subtype(Exception)
+	guard t <= Exception
 	r = super(f, t, msg)
 	r.meta().test_ngs = true
 	r
