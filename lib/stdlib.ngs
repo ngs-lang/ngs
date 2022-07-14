@@ -1830,11 +1830,10 @@ section "Type" {
 	F '<'(t:Type, maybe_supertype:Type) t !== maybe_supertype and t <= maybe_supertype
 
 	doc %STATUS - deprecated
-	doc Use t < maybe_supertype
+	doc Use t <= maybe_supertype
 	F is_subtype(t:Type, maybe_supertype:Type) {
-		# warn("is_subtype(Type, Type) is deprecated")  # fails because Time is not defined yet
-		echo(2, 'is_subtype(Type, Type) is deprecated')
-		t < maybe_supertype
+		warn("is_subtype(t:Type, maybe_supertype:Type) is deprecated, use t <= maybe_supertype")
+		t <= maybe_supertype
 	}
 
 
