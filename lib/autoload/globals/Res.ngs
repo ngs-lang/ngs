@@ -32,13 +32,13 @@ F Str(rd:ResDef) {
 	anchor = rd.anchor.without('META').filterv({ Bool(a) tor true })
 	resources = if rd.resources is Arr then " resources:${len(rd.resources)}" else ""
 	# (${rd.ids().limit(3).join(', ')})
-	"<${rd.typeof().name} anchor=${anchor}$props$multi$dry_run$resources>"
+	"<${rd.Type().name} anchor=${anchor}$props$multi$dry_run$resources>"
 }
 
 doc Formats and logs message s for resource definition rd.
 doc method - the name of calling method which also goes to the formatted message.
 F log(rd:ResDef, method:Str, s:Str) {
-	log("[${rd.typeof().name} ${rd.anchor}] [$method] $s")
+	log("[${rd.Type().name} ${rd.anchor}] [$method] $s")
 }
 
 doc Populates .resources by running .find(), if it was not done yet.
@@ -58,7 +58,7 @@ doc %EX - subnets = AWS::Subnet(my_vpc_anchor).expect(2)
 doc %RET - rd
 F expect(rd:ResDef, e:Int) {
 	rd.find_if_needed()
-	assert(rd.resources.len() == e, "Expected exactly ${e} ${rd.typeof().name} resource instances but found ${rd.resources.len()}: ${rd}")
+	assert(rd.resources.len() == e, "Expected exactly ${e} ${rd.Type().name} resource instances but found ${rd.resources.len()}: ${rd}")
 	rd
 }
 
@@ -68,7 +68,7 @@ doc %EX - instances = AWS::Instance({'env': env, 'role': role}).expect()
 doc %RET - rd
 F expect(rd:ResDef) {
 	rd.find_if_needed()
-	assert(rd.len() > 0, "Expected one or more ${rd.typeof().name} resource instances but found none: ${rd}")
+	assert(rd.len() > 0, "Expected one or more ${rd.Type().name} resource instances but found none: ${rd}")
 	rd
 }
 
@@ -90,7 +90,7 @@ doc %EX - # Get instances with last private IP octet less than 20:
 doc %EX - AWS::Instance().filter({A.PrivateIpAddress.split(".")[-1].Int()<20})
 F filter(rd:ResDef, predicate:Fun) {
 	rd.find_if_needed()
-	t = rd.typeof()
+	t = rd.Type()
 	ret = t(rd.anchor)
 	ret.resources = rd.resources.filter(F(r) predicate(r.props))
 	ret
@@ -123,12 +123,12 @@ doc Stores def and props in r
 F init(r:Res, def:ResDef, props:Hash) init(args())
 
 doc Converts resource to a string, for displaying purposes.
-F Str(r:Res) "<${r.typeof().name} ${r.id() tor 'id-not-available'}>"
+F Str(r:Res) "<${r.Type().name} ${r.id() tor 'id-not-available'}>"
 
 doc Formats and logs message s for resource r.
 doc method - the name of calling method which also goes to the formatted message.
 F log(r:Res, method:Str, s:Str) {
-	log("[${r.typeof().name} ${r.id()}] [$method] $s")
+	log("[${r.Type().name} ${r.id()}] [$method] $s")
 }
 
 doc Ensure that resources matching resource definition have given properties. This operation will do necessary changes, including creating the resource(s) if they do not exist.
@@ -153,7 +153,7 @@ F converge(rd:ResDef, **props) {
 	if n is Null {
 		debug("ResDef", "converge() - Count unspecified, not creating or deleting resources")
 	} else {
-		rd.log('converge', "${rd.resources.len()} of $n ${rd.typeof().name} resources exist")
+		rd.log('converge', "${rd.resources.len()} of $n ${rd.Type().name} resources exist")
 		if n < rd.resources.len() {
 			rd.log('converge', 'deleting extra resource instances')
 			# TODO: make sure that oldest resources are deleted first
@@ -171,7 +171,7 @@ doc Create n resources with given props. Typically called by converge().
 doc %RET - rd
 F create(rd:ResDef, n:Int, **props) {
 	for(i;n) {
-		debug("ResDef", "converge() - Creating ${rd.typeof().name} ${i+1} of $n")
+		debug("ResDef", "converge() - Creating ${rd.Type().name} ${i+1} of $n")
 		create(rd, **props)
 	}
 	rd
@@ -215,6 +215,6 @@ F opt_prop(rd:ResDef, name:Str, props:Hash, cb:Fun) opt_prop(rd, name, props).ea
 doc Get resource property, looking up in properties first and then in anchor
 F req_prop(rd:ResDef, name:Str, props:Hash) {
 	ret = [props, rd.anchor].get(name)
-	not(ret) throws InvalidArgument("$name must be present in either anchor or props of a ${rd.typeof().name}")
+	not(ret) throws InvalidArgument("$name must be present in either anchor or props of a ${rd.Type().name}")
 	ret[0]
 }

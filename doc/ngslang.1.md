@@ -1742,7 +1742,7 @@ Using pattern as opposed to predicate allows more dense (meaning per characters 
 NGS higher-order methods (functions) that have pattern parameters compare items to patterns using the `=~` operator:
 
 	F filter(e:Eachable1, pattern=Bool.constructors) {
-		t = typeof(e)
+		t = Type(e)
 		ret = t()
 		e.each(F(elt) {
 			if elt =~ pattern
@@ -2157,8 +2157,8 @@ Resources references are created using constructors, such as `AWS::Vpc`. Resourc
 
 	my_vpc = AWS::Vpc()                # Reference to all VPCs that can be fetched using AWS CLI
 	echo(my_vpc)                       # Output: <Aws::Vpc anchor={regions=null, Tags={}}>
-	echo(AWS::Vpc().typeof())          # Output: <Type Vpc>
-	echo(AWS::Vpc().typeof().parents)  # Output: [<Type ResDef>]
+	echo(AWS::Vpc().Type())            # Output: <Type Vpc>
+	echo(AWS::Vpc().Type().parents)    # Output: [<Type ResDef>]
 
 **find**
 

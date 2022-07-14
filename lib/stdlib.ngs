@@ -422,7 +422,7 @@ section "Inspect built-in types" block _ {
 	doc String representation of native method.
 	doc %RET - "<NativeMethod NAME(PARAMS)>"
 	doc %EX - (%).Arr()[0].Str().echo()  # Outputs: <NativeMethod %(a:Int, b:Int)>
-	F Str(nm:NativeMethod) "<${nm.typeof().name} ${nm.meta().name}${StrParams(nm)}>"
+	F Str(nm:NativeMethod) "<${nm.Type().name} ${nm.meta().name}${StrParams(nm)}>"
 
 	# TODO: show arguments:
 	#   "<UserDefinedMethod ${c.meta().name tor "<anonymous>"}(HERE) at ${location}>"
@@ -444,7 +444,7 @@ section "Inspect built-in types" block _ {
 		#   that the output is acceptable as inspect() result (sans Lines()).
 		# * It will also break if type name will include namespace for example.
 		s = SafeStr(val)
-		t = '<' + val.typeof().name
+		t = '<' + val.Type().name
 		if s !~ Pfx(t) {
 			s = "${t} $s>"
 		}
@@ -455,7 +455,7 @@ section "Inspect built-in types" block _ {
 	doc %RET - Lines
 	F inspect(e:Eachable1) {
 		guard e !~ Int
-		Lines(["${e.typeof().name} of size ${e.len() tor '(unknown size)'}"] + e.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
+		Lines(["${e.Type().name} of size ${e.len() tor '(unknown size)'}"] + e.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
 	}
 
 	F inspect_meta(val) {
@@ -530,7 +530,7 @@ section "Inspect built-in types" block _ {
 			("     pipe[$idx]: " + inspect(cp.pipes[idx]))
 		}
 		collector/Lines() {
-			collect(cp.typeof().name)
+			collect(cp.Type().name)
 			if cp.options {
 				("  options: " + inspect(cp.options)) % collect
 			}
@@ -619,7 +619,7 @@ section "NormalTypeInstance" {
 		}
 		# TODO limit key and value lengths
 		fields = ' ' +? h.Strs().join(' ')
-		"<${i.typeof().name}${fields}${fields_dots}>"
+		"<${i.Type().name}${fields}${fields_dots}>"
 	}
 
 	TEST type T; t=T(); Str(t) == '<T>'
@@ -640,7 +640,7 @@ section "NormalTypeInstance" {
 
 	doc Make shallow copy of an object
 	F copy(nti:NormalTypeInstance) {
-		t = typeof(nti)
+		t = Type(nti)
 		ret = t()
 		nti.Hash().each(ret.set(X, Y))
 		ret
@@ -928,7 +928,7 @@ doc %RET - Of same type as e
 doc %STATUS - experimental
 doc %EX - Set([1,2]).mapo(X*2)  # Set([2,4])
 F mapo(e:Eachable1, mapper:Fun) {
-	t = typeof(e)
+	t = Type(e)
 	collector/t() {
 		e.each(collect + mapper)
 	}
@@ -962,7 +962,7 @@ doc %EX - (1...10).filter(F(num) num % 2 == 0)  # Gives [2,4,6,8,10]
 doc %EX - (1...10).filter(X<5)  # Gives [1,2,3,4]
 doc %RET - Of same type as e
 F filter(e:Eachable1, pattern=Bool.constructors) {
-	t = typeof(e)
+	t = Type(e)
 	ret = t()
 	e.each(F(elt) {
 		if elt =~ pattern
@@ -1226,7 +1226,7 @@ TEST a=[1,2]; a.push_all([3,4]); a==[1,2,3,4]
 doc EXPERIMENTAL! Do not use! Especially don't count on returned value beyond obvious Bool(x) behaviour. Match anything.
 doc %STATUS - deprecated
 F ~(something, pattern) {
-	warn("Using deprecated ~(something:Any, pattern:Any) with types something:${typeof(something)} pattern:${typeof(pattern)}")
+	warn("Using deprecated ~(something:Any, pattern:Any) with types something:${Type(something)} pattern:${Type(pattern)}")
 	if something =~ pattern {
 		MatchSuccess([something], pattern)
 	} else {
@@ -1237,8 +1237,8 @@ F ~(something, pattern) {
 section "Eachable1" {
 	# Should be low priority (ordered before others) method
 	F +(a:Eachable1, b:Eachable1) {
-		guard typeof(a) === typeof(b)
-		t = typeof(a)
+		guard Type(a) === Type(b)
+		t = Type(a)
 		guard t != Int
 		guard t != Arr
 		guard t != Str
@@ -1255,7 +1255,7 @@ section "Eachable1" {
 	doc %STATUS - experimental
 	F ensure(x, t:Type) {
 		guard t <= Eachable1
-		typeof(x) === t returns x
+		Type(x) === t returns x
 		t().push(x)
 	}
 
@@ -1376,7 +1376,7 @@ section "ArrLike" {
 	}
 
 	doc Convert ArrLike to a human-readable representation
-	F Str(a:ArrLike) "<${a.typeof().name} ${a.Arr().join(', ')}>"
+	F Str(a:ArrLike) "<${a.Type().name} ${a.Arr().join(', ')}>"
 
     # TODO: When convenient from pattern matching perspective, also check instance type
     TEST type T(ArrLike); [1,2].ensure(T) =~ [1,2]
@@ -1511,7 +1511,7 @@ section "HashLike" {
 	doc %EX - my_hashlike.filter(F(k, v) k == 'a')
 	doc %RET - value of the same type as hl
 	F filter(hl:HashLike, predicate:Fun) {
-		t = typeof(hl)
+		t = Type(hl)
 		t(hl.meta().HashLike.filter(predicate))
 	}
 
@@ -1586,7 +1586,7 @@ section "Set" {
 	F Bool(s:Set) Bool(s.val)
 
 	doc Convert the set to a human-readable representation
-	F Str(s:Set) "<${s.typeof().name} ${s.val.keys().join(', ')}>"
+	F Str(s:Set) "<${s.Type().name} ${s.val.keys().join(', ')}>"
 
 	doc Set difference
 	doc %RET - Set
@@ -1836,7 +1836,13 @@ section "Type" {
 		t <= maybe_supertype
 	}
 
-
+	doc %STATUS - deprecated
+	doc Use Type(x)
+	doc %RET - Type
+	F typeof(x) {
+		warn("typeof(Any) is deprecated")
+		Type(x)
+	}
 }
 
 doc Set a field on all elements if it's not already set
@@ -1856,7 +1862,7 @@ doc %EX - t2 = T()
 doc %EX - t2.a = 1
 doc %EX - echo(t1 == t2)  # Outputs: true
 F ==(a:NormalTypeInstance, b:NormalTypeInstance) {
-	typeof(a) != typeof(b) returns false
+	Type(a) != Type(b) returns false
 	# TODO: more efficient implementation:
 	#       * Provide low level primitive to either access the fields (ll_nti_hash) or iterate them
 	#       * Use it here
@@ -1990,7 +1996,7 @@ section "Range" {
 
 	doc Range constructor. Throws InstantiatingAbstractType if r is exactly of type Range (not a sub-type).
 	F init(r:Range, start, end, include_start=true, include_end=false, step=1) {
-		r.typeof() == Range throws InstantiatingAbstractType(Range)
+		r.Type() == Range throws InstantiatingAbstractType(Range)
 		init(args())
 	}
 
@@ -2067,7 +2073,7 @@ section "Range" {
 	TEST 30 in NumRange(1,30,false,true)
 
 	doc Convert range to human readable representation
-	F Str(r:Range) "<${r.typeof().name} ${r.start}..${r.end} include_start=${r.include_start} include_end=${r.include_end} step=${r.step}>"
+	F Str(r:Range) "<${r.Type().name} ${r.start}..${r.end} include_start=${r.include_start} include_end=${r.include_end} step=${r.step}>"
 
 	doc Length of a NumRange. Only defined for Int start and end.
 	doc Equals to how many times cb will be invoked in each(r, cb).
@@ -2551,7 +2557,7 @@ doc %EX - [1,2,2,3,4,4].uniq()  # [1,2,3,4]
 doc %EX - [{"a": 1, "z": 10}, {"a": 1, "z": 20}, {"a": 2, "z": 30}].uniq(X.a)  # [{"a": 1, "z": 10}, {"a": 2, "z": 30}]
 F uniq(e:Eachable1, cb:Fun=identity) {
 	unique_values = Set()
-	t = typeof(e)
+	t = Type(e)
 	ret = t()
 	e.each(F(elt) {
 		val = cb(elt)
@@ -3406,8 +3412,8 @@ doc Add Hashes. Builds new hash with key-value pairs from both a and b. If same 
 doc %RET - Hash
 doc %EX - {'a': 1, 'b': 2, 'c': 3} + {'b': 20, 'd': 40}  # {'a': 1, 'b': 20, 'c': 3, 'd': 40}
 F +(a:Hash, b:Hash) {
-	t = typeof(a)
-	t !== typeof(b) throws InvalidArgument("+(a:Hash, b:Hash) requires a and b to be of the same type").set(a=a, b=b)
+	t = Type(a)
+	t !== Type(b) throws InvalidArgument("+(a:Hash, b:Hash) requires a and b to be of the same type").set(a=a, b=b)
 	t().update(a).update(b)
 }
 
@@ -3735,7 +3741,7 @@ type ResultFail(Error)
 doc Results, an array-like of Result elements
 type Results(ArrLike)
 
-	F Str(r:Results) "<${r.typeof().name} ${r.group(F(x) x.typeof().name).mapv(len).map("$X:$Y").join(" ")}>"
+	F Str(r:Results) "<${r.Type().name} ${r.group(F(x) x.Type().name).mapv(len).map("$X:$Y").join(" ")}>"
 
 type ResultsException(Error)
 	doc ResultsException where only failures are stored
@@ -4765,7 +4771,7 @@ section "Thread" block _ {
 	doc %EX - Set(1..10).pfilter(2, X>3)  # <Set 4, 5, 6, 7, 8, 9>
 	doc %RET - Of same type as e
 	F pfilter(e:Eachable1, threads:Int, pattern) {
-		t = typeof(e)
+		t = Type(e)
 		ret = t()
 		a = Arr(e)  # e might not be indexable
 		results = pmap(a, threads, pattern)
@@ -5019,7 +5025,7 @@ section "Path" {
 	doc %RET - Path or sub-type of Path
 	doc %EX - Path(".")  # <Path path=.>
 	doc %EX - Path(".", true)  # <Dir path=.>
-	doc %EX - ``find tmp/v8``.map(Path(X, true)).map(typeof).name.Stats()  # <Stats: {Dir=287, File=9220}>
+	doc %EX - ``find tmp/v8``.map(Path(X, true)).map(Type).name.Stats()  # <Stats: {Dir=287, File=9220}>
 	F Path(s:Str, subtype=false) Path().set('path', s).only({subtype}, specific)
 
 	doc Path constructor
@@ -5049,7 +5055,7 @@ section "Path" {
 	doc %STATUS - experimental
 	F Bool(p:Path) {
 		# Only subclasses
-		guard typeof(p) != Path
+		guard Type(p) != Path
 		ok = super(p)
 		not(ok) returns false
 		s = lstat(p)
@@ -5135,7 +5141,7 @@ section "Path" {
 	# TODO: filter out "." and ".." ?
 	doc List directory contents and call cb with Path() of each found item. Warning: "." and ".." are included.
 	doc %RET - unspecified at this time, do not count on it
-	doc %EX - 's=Stats(); dir("tmp/v8", {s.push(A.typeof().name)}, true); s  # <Stats: {File=23, Dir=16}>'
+	doc %EX - 's=Stats(); dir("tmp/v8", {s.push(A.Type().name)}, true); s  # <Stats: {File=23, Dir=16}>'
 	F dir(dirname:Str, cb:Fun, subtype=false, raw=false) {
 		d = c_opendir(dirname)
 		d is Null throws DirFail('Failed to list directory contents').set('dirname', dirname)
@@ -5160,8 +5166,8 @@ section "Path" {
 
 	# XXX: might not be correct on all platforms
 	TEST dir("/").path.any(AnyOf("/var", "/etc", "/bin"))
-	TEST dir("/").all({A.typeof().name == 'Path'})
-	TEST dir("/", subtype=true).all({ (A is Path) and (A.typeof().name != 'Path') })
+	TEST dir("/").all({A.Type().name == 'Path'})
+	TEST dir("/", subtype=true).all({ (A is Path) and (A.Type().name != 'Path') })
 
 	doc Same as dir(dirname.path, *args)
 	F dir(dirname:Path, *args, **kwargs) dir(dirname.path, *args, **kwargs)
@@ -5216,9 +5222,9 @@ section "Path" {
 		assert(t.path, 'init(TmpFsObj, ...) expects path to be non-empty string')
 		t.fd = null
 		t.cleanup_policy = cleanup_policy
-		debug("file", "Created ${t.typeof().name} at ${t.path}")
-		exit_hook["${t.typeof().name}:${t}"] = F cleanup(e:Exit) {
-			debug("file", "Will do cleanup for ${t.typeof().name} at ${t}")
+		debug("file", "Created ${t.Type().name} at ${t.path}")
+		exit_hook["${t.Type().name}:${t}"] = F cleanup(e:Exit) {
+			debug("file", "Will do cleanup for ${t.Type().name} at ${t}")
 			# Exit is not a subtype of Exception. If anybody complains, this can be fixed and a "real" Exception can be sent.
 			b = if e.exceptions then FullBox(e) else EmptyBox()
 			del(t, t.cleanup_policy, b)
@@ -5236,23 +5242,23 @@ section "Path" {
 	}
 
 	F del(t:TmpFsObj, kcp:KeepCleanupPolicy, e:Box) {
-		log("Keeping ${t.typeof().name} at ${t}")
+		log("Keeping ${t.Type().name} at ${t}")
 		t
 	}
 
 	F del(t:TmpFsObj, rcp:RemoveCleanupPolicy, e:Box) {
 		try {
 			$(rm -rf ${t})
-			debug("file", "Removed ${t.typeof().name} at ${t}")
+			debug("file", "Removed ${t.Type().name} at ${t}")
 		} catch(e) {
-			warn("Failed to remove ${t.typeof().name} at ${t}")
+			warn("Failed to remove ${t.Type().name} at ${t}")
 			print_exception(e, echo=warn)
 		}
 	}
 
 	F del(t:TmpFsObj, koecp:KeepOnErrorCleanupPolicy, e:Box) {
 		not(e) returns t.del(RemoveCleanupPolicy(), e)
-		log("Keeping ${t.typeof().name} at ${t} because exception occurred: ${e.get()}")
+		log("Keeping ${t.Type().name} at ${t} because exception occurred: ${e.get()}")
 		t
 	}
 
@@ -5260,7 +5266,7 @@ section "Path" {
 	F JsonData(p:Path) p.path
 
 	doc Convert CleanupPolicy to code
-	F code(p:CleanupPolicy) "${p.typeof().name}()"
+	F code(p:CleanupPolicy) "${p.Type().name}()"
 
 	doc Decode Path and its subtypes
 	doc %RET - instance of Path or a subtype.
@@ -5272,7 +5278,7 @@ section "Path" {
 	doc Checks that the given path exists. Throws AssertFail otherwise.
 	doc %RET - p
 	F assert(p:Path) {
-		assert(p, "${p} must exist and be a ${p.typeof().human_type_name()}")
+		assert(p, "${p} must exist and be a ${p.Type().human_type_name()}")
 	}
 
 	doc Replace in a file. Wrapper around replace(Str, Any, Any).
@@ -5469,7 +5475,7 @@ F init(pipe:Pipe) {
 	result[0] != 0 throws PipeCreateFail("Failed to create Pipe")
 	pipe.read_fd = result[1]
 	pipe.write_fd = result[2]
-	debug("file", "${pipe.typeof().name} created pipe with read_fd=${pipe.read_fd} and write_fd=${pipe.write_fd}")
+	debug("file", "${pipe.Type().name} created pipe with read_fd=${pipe.read_fd} and write_fd=${pipe.write_fd}")
 }
 
 doc Initializes Pipe, copying read_fd and write_fd from another Pipe.
@@ -5492,7 +5498,7 @@ F parent_fd(pipe:PipeToChildProcess) pipe.write_fd
 doc Get parent process end file descriptor of Pipe.
 F parent_fd(pipe:PipeFromChildProcess) pipe.read_fd
 
-F Str(p:Pipe) "<${p.typeof().name} read_fd=${p.read_fd} write_fd=${p.write_fd}>"
+F Str(p:Pipe) "<${p.Type().name} read_fd=${p.read_fd} write_fd=${p.write_fd}>"
 
 # TODO: exception on fail, maybe close() wrapper for c_close()
 
@@ -5692,7 +5698,7 @@ F init(r:CommandRedir, fd, marker, datum:Null) {
 
 doc Convert CommandRedir to human-readable string.
 doc %RET - Str
-F Str(r:CommandRedir) "<${r.typeof().name} ${r.fd} ${r.marker} ${r.datum}>"
+F Str(r:CommandRedir) "<${r.Type().name} ${r.fd} ${r.marker} ${r.datum}>"
 
 # --- Process ---
 
@@ -5940,7 +5946,7 @@ doc Inspect ProcessesPipeline
 doc %RET - Lines
 F inspect(pp:ProcessesPipeline) {
 	collector/Lines() {
-		collect(pp.typeof().name)
+		collect(pp.Type().name)
 		%[cp pipe_in pipe_out].each(F(k) {
 			("  ${k}: " + inspect(pp.(k))) % collect
 		})
@@ -6680,7 +6686,7 @@ doc Convenience method for creating MustSfx
 doc %RET - MustSfx
 F Sfx(val) MustSfx(val)
 
-F Str(s:SubSeq) "<${s.typeof().name} ${s.val}>"
+F Str(s:SubSeq) "<${s.Type().name} ${s.val}>"
 
 doc Return string without the prefix. Throws InvalidArgument if pfx is MustPfx but s does not start with it.
 doc s - original string
@@ -7080,7 +7086,7 @@ F digest(a:Arr, chunk_size:Int, marker:Str='(...)') {
 doc Catch-all for exception_specific_message().
 doc %RET - default message
 F exception_specific_message(e:Exception) {
-	Lines(["Unfortunately the exception had no message.", "Exception type might give a hint: ${e.typeof().name}"])
+	Lines(["Unfortunately the exception had no message.", "Exception type might give a hint: ${e.Type().name}"])
 }
 
 doc Format exception message for any exception that has .message
@@ -7142,7 +7148,7 @@ F exception_specific_message(mnf:MethodNotFound) {
 	Lines([
 		"The arguments did not match any of the methods' parameters."
 		"Method or MultiMethod name: ${mn}"
-		"Called with arguments' types: ${mnf.args.map(typeof).name.join(', ')}"
+		"Called with arguments' types: ${mnf.args.map(Type).name.join(', ')}"
 		"Please check that you pass the right number of arguments."
 		"Please check that arguments' types are matching methods' parameters."
 	])
@@ -7188,7 +7194,7 @@ F exception_specific_message(re:FailuresException) {
 doc Don't use, subject to change, including name
 doc %STATUS - experimental
 F SafeStr(val) {
-	v = "$val" tor "(Failed to inspect <${val.typeof().name tor '(unknown type)'}>)"
+	v = "$val" tor "(Failed to inspect <${val.Type().name tor '(unknown type)'}>)"
 	v.map(F(ch) {
 		o = ord(ch)
 		o >= 32 and ch != '\\' returns ch
@@ -7232,7 +7238,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null, echo=echo
 
 	m.framed().err()
 
-	err("Exception of type ${e.typeof().name} occurred")
+	err("Exception of type ${e.Type().name} occurred")
 
 	info_keys = h.keys() - %[message backtrace cause]
 
@@ -7266,7 +7272,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null, echo=echo
 
 	if ('results' in h) and (h.results is Results) {
 		h.results.filter(Failure).Arr().each_idx_val(F(i:Int, f:Failure) {
-			err("  ${h.results.typeof().name} exception #${i+1}")
+			err("  ${h.results.Type().name} exception #${i+1}")
 			print_exception(f.val, level+2, e, echo)
 		})
 	}
@@ -7690,7 +7696,7 @@ F realpath(path:Str) {
 
 doc %RET - Same type as p but using absolute path
 F realpath(p:Path) {
-	t = typeof(p)
+	t = Type(p)
 	t(realpath(p.path))
 }
 
@@ -8071,7 +8077,7 @@ section "Bootstrap" {
 					bootstrap_invoke(main, ARGV)
 				}
 				true {
-					throw MainFail("'main' must be a Namespace, MultiMethod or a Fun, not ${main.typeof().name}").set('value', main)
+					throw MainFail("'main' must be a Namespace, MultiMethod or a Fun, not ${main.Type().name}").set('value', main)
 				}
 			}
 		}

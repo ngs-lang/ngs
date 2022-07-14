@@ -88,7 +88,7 @@ ns {
 
 	F Transformer(x:Hash) {
 		t = F generated_transformer(p) {
-			k = if p is Node then p.name else p.typeof()
+			k = if p is Node then p.name else p.Type()
 			k not in x throws NotImplemented("Doc::transform was not given transformer for Doc::Part '$k'").set('key', k)
 			x[k](p)
 		}
@@ -146,7 +146,7 @@ ns {
 	if ENV.get('NGS_DOC_HTML_STATS') {
 		s = Stats()
 		F Html(x) {
-			s.push(x.typeof())
+			s.push(x.Type())
 			super(x)
 		}
 		exit_hook.push({echo(s)})
@@ -157,7 +157,7 @@ ns {
 	F inspect(n:Node, levels=2) {
 		collector/Lines() {
 			c = collect
-			c("Doc::" + n.typeof().name + (if 'name' in n then " ${n.name}" else "")) # later - maybe typeof can return namespace name?
+			c("Doc::" + n.Type().name + (if 'name' in n then " ${n.name}" else "")) # later - maybe Type can return namespace name?
 
 			n.attrs.each(F(k, v) {
 				c("  Attribute [${SafeStr(k)}] = ${SafeStr(v)}")

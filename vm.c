@@ -3117,7 +3117,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Create a new type. Do not use directly.");
 	_doc(vm, "%AUTO", "type MyType");
 
-	register_global_func(vm, 1, "typeof",   &native_typeof_any        ,1, "x",      vm->Any);
+	register_global_func(vm, 1, "Type",   &native_typeof_any        ,1, "x",      vm->Any);
 	_doc(vm, "", "Returns type of the given object");
 	_doc(vm, "x", "Object. Currently only objects of NormalType are supported.");
 

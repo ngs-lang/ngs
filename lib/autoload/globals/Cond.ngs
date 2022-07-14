@@ -13,7 +13,7 @@ F init(c:Cond, name:Str='', lock:Lock=null) {
 }
 
 doc String representation of Cond
-F Str(c:Cond) "<${c.typeof().name}${' name=' +? c.name}>"
+F Str(c:Cond) "<${c.Type().name}${' name=' +? c.name}>"
 
 doc Wait for condition
 doc check_condition - when returns true, cb is executed

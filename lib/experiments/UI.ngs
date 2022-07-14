@@ -86,10 +86,10 @@ ns {
 		ui.screens[0].top_level_widget.push(w)
 	}
 
-	F Str(d:Dimension) "<${d.val} ${d.typeof().name}>"
+	F Str(d:Dimension) "<${d.val} ${d.Type().name}>"
 	F Str(d:Dimension) {
 		guard d.val is Null
-		"<${d.typeof().name}>"
+		"<${d.Type().name}>"
 	}
 
 
