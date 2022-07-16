@@ -3888,9 +3888,9 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 					global_name[global_name_len] = 0;
 					p += global_name_len;
 					BYTECODE_GET(l_max, p, BYTECODE_GLOBALS_LOC_COUNT);
+					gvi = get_global_index(vm, global_name, global_name_len);
 					for(l=0; l<l_max; l++) {
 						BYTECODE_GET(o, p, BYTECODE_GLOBALS_OFFSET);
-						gvi = get_global_index(vm, global_name, global_name_len);
 						DEBUG_VM_API("vm_load_bytecode() processing global patching num=%i name=%s offset=%i resolved_index=%i\n", g, global_name, o, gvi);
 						*(GLOBAL_VAR_INDEX *)(&vm->bytecode[ip + o]) = gvi;
 					}
