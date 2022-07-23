@@ -175,7 +175,7 @@ jobs:
     runs-on: ${{ matrix.container }}
     strategy:
       matrix:
-        container: [ "macOS-11" ]
+        container: [ "macOS-12" ]
         version: [ "9", "10", "11" ]
     steps:
       - uses: actions/checkout@v3
@@ -194,14 +194,12 @@ jobs:
     runs-on: ${{ matrix.container }}
     strategy:
       matrix:
-        container: [ "macOS-11" ]
-        version: [ "10.3" ]
+        container: [ "macOS-12" ]
     steps:
       - uses: actions/checkout@v3
       - name: Setup Compiler
         run: |
           brew install cmake ninja
-          sudo xcode-select -switch /Applications/Xcode_${{ matrix.version }}.app
           echo "CC=clang" >> $GITHUB_ENV
           echo "CXX=clang++" >> $GITHUB_ENV
       - name: Install and Test
