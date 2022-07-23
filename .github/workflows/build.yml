@@ -171,7 +171,7 @@ jobs:
 
   build-mac-gcc:
     timeout-minutes: 10
-    name: Build in gcc-${{ matrix.version }} (${{ matrix.container }})
+    name: Build with gcc-${{ matrix.version }} (${{ matrix.container }})
     runs-on: ${{ matrix.container }}
     strategy:
       matrix:
@@ -190,7 +190,7 @@ jobs:
 
   build-mac-xcode:
     timeout-minutes: 15
-    name: Build in Xcode-${{ matrix.version }} (${{ matrix.container }})
+    name: Build with default Xcode (${{ matrix.container }})
     runs-on: ${{ matrix.container }}
     strategy:
       matrix:
