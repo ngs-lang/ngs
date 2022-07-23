@@ -175,7 +175,7 @@ jobs:
     runs-on: ${{ matrix.container }}
     strategy:
       matrix:
-        container: [ "macOS-10.15" ]
+        container: [ "macOS-11" ]
         version: [ "9", "10", "11" ]
     steps:
       - uses: actions/checkout@v3
@@ -194,7 +194,7 @@ jobs:
     runs-on: ${{ matrix.container }}
     strategy:
       matrix:
-        container: [ "macOS-10.15" ]
+        container: [ "macOS-11" ]
         version: [ "10.3" ]
     steps:
       - uses: actions/checkout@v3
