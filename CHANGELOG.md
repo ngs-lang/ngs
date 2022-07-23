@@ -10,6 +10,7 @@
 ### Fixes and improvements
 * Add `UndefinedUpVar` exception, thrown when accessing undefined "upvar"
 * Following types now inherit from `Error`, not `Exception`: `NotImplemented`, `ReadFail`, `RequireFail`, `MainFail`
+* Experimental syntax - allow many additional elements `x.HERE` and `x::HERE`
 
 ### Deprecated
 * `is_subtype(Type, Type)` is now deprecated, use `<=` operator, example: `T1 <= T2`. Solves #391.

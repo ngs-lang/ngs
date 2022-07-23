@@ -549,6 +549,21 @@ inplace-assignment-op = <[-+*/%]> {
 	$$ = ret;
 }
 
+chain-item = e:identifier
+		| e:array-literal
+		| e:imm-array-literal
+		| e:number
+		| e:string
+		| e:parenthesized-expr
+		| e:hash-literal
+		| e:imm-hash-literal
+		| e:abc-function-literal
+		| e:subshell
+abc-function-literal {
+	$$ = e;
+	CAPTURE_LOCATION($$)
+};
+
 chain-expression = b:basic-expression (
 		inline_space? a:function-call-arguments {
 			// printf("CHAIN/FCALL\n");
@@ -617,20 +632,7 @@ chain-expression = b:basic-expression (
 			b = ret;
 		}
 		|
-		".(" space? e:expression space? ")" {
-			MAKE_NODE(ret, FIELD_NODE);
-				ret->number = 902;
-				ret->first_child = b;
-				// Expressions node is needed because otherwise if e is identifier
-				// x.(y) will be syntactically equivalent to x.y
-				MAKE_NODE(es, EXPRESSIONS_NODE);
-					append_ast_node_child(es, e);
-				ret->first_child->next_sibling = es;
-				ret = call_node_partial_application(ret, location);
-			b = ret;
-		}
-		|
-		"." (e:identifier | e:array-literal | e:number | e:string) {
+		"." e:chain-item {
 			MAKE_NODE(ret, FIELD_NODE);
 				ret->number = 902;
 				ret->first_child = b;
@@ -639,22 +641,11 @@ chain-expression = b:basic-expression (
 			b = ret;
 		}
 		|
-		"::(" space? e:expression space? ")" {
+		"::" e:chain-item {
 			MAKE_NODE(ret, NS_NODE);
 				ret->number = 903;
 				ret->first_child = b;
-				MAKE_NODE(es, EXPRESSIONS_NODE);
-					append_ast_node_child(es, e);
-				ret->first_child->next_sibling = es;
-				ret = call_node_partial_application(ret, location);
-			b = ret;
-		}
-		|
-		"::" i:identifier {
-			MAKE_NODE(ret, NS_NODE);
-				ret->number = 903;
-				ret->first_child = b;
-				ret->first_child->next_sibling = i;
+				ret->first_child->next_sibling = e;
 				ret = call_node_partial_application(ret, location);
 			b = ret;
 		}
@@ -702,7 +693,15 @@ basic-expression =
 	| abc-function-literal
 	| imm-hash-literal
 	| tree-literal
-	| "(" space? e:expression space? ")" { MAKE_NODE(ret, EXPRESSIONS_NODE); ret->name = "()"; ret->first_child = e; ret->last_child = e; $$ = ret; }
+	| parenthesized-expr
+
+parenthesized-expr = "(" space? e:expression space? ")" {
+		MAKE_NODE(ret, EXPRESSIONS_NODE);
+		ret->name = "()";
+		ret->first_child = e;
+		ret->last_child = e;
+		$$ = ret;
+}
 
 assignment =
 	i:identifier space? "=" space? e:expression {

@@ -307,6 +307,14 @@ section "Namespaces" {
 	F '::='(nti:NormalTypeInstance, k, v) nti.(k) = v
 	doc Set Hash key. It's implemented to complete the :: operator. There is no particular use case.
 	F '::='(h:Hash, k, v) h[k] = v
+
+	doc %STATUS - EXPERIMENTAL
+	doc Executes f(x)
+	doc %RET - x
+	F '::'(x, f:Fun) {
+		f(x)
+		x
+	}
 }
 
 section "Meta convenience methods" {
@@ -575,6 +583,11 @@ section "Functional utilities" {
 		F(*args) f(*args, *bind_args)
 
 	TEST p = partial_tail((-), 10); p(7) == -3
+
+	doc %STATUS - EXPERIMENTAL
+	doc %RET - f(x)
+	doc %AUTO - x.{ ... }
+	F .(x, f:Fun) f(x)
 }
 
 section "Convenience methods" {
@@ -647,9 +660,9 @@ section "NormalTypeInstance" {
 	doc Make shallow copy of an object
 	F copy(nti:NormalTypeInstance) {
 		t = Type(nti)
-		ret = t()
-		nti.Hash().each(ret.set(X, Y))
-		ret
+		t()::{
+			nti.Hash().each(A.set(X, Y))
+		}
 	}
 
 	TEST type T; t=T(); t.x=1; t2=t.copy(); t2.x==1
@@ -1340,10 +1353,7 @@ section "ArrLike" {
 
 	doc Call cb for each element in the underlying array.
 	doc %RET - al
-	F each(al:ArrLike, cb:Fun) {
-		al.meta().ArrLike.each(cb)
-		al
-	}
+	F each(al:ArrLike, cb:Fun) al::{ A.meta().ArrLike.each(cb) }
 
 	doc Check whether al has any elements.
 	F Bool(al:ArrLike) al.meta().ArrLike.Bool()
@@ -1353,10 +1363,7 @@ section "ArrLike" {
 	F Arr(al:ArrLike) al.meta().ArrLike
 
 	doc Push an element to the underlying array.
-	F push(al:ArrLike, val) {
-		al.meta().ArrLike.push(val)
-		al
-	}
+	F push(al:ArrLike, val) al::{ A.meta().ArrLike.push(val) }
 
 	doc Join items to a single string using given separator s
 	doc %RET - Str
@@ -1369,10 +1376,7 @@ section "ArrLike" {
 
 	doc Defines collector { ... collect(...) ... } behaviour for ArrLike.
 	doc Very similar to collector for Arr. See collector(Arr,Fun).
-	F collector(al:ArrLike, body:Fun) {
-		body(F(elt) al.push(elt))
-		al
-	}
+	F collector(al:ArrLike, body:Fun) al::{ body(F(elt) A.push(elt)) }
 
     doc t - subtype of ArrLike
     doc %RET - of type t
@@ -1493,10 +1497,7 @@ section "HashLike" {
 	doc Iterate over keys and values.
 	doc %EX - my_hashlike.each(F(k, v) echo("$k=$v"))
 	doc %RET - hl
-	F each(hl:HashLike, cb:Fun) {
-		hl.meta().HashLike.each(cb)
-		hl
-	}
+	F each(hl:HashLike, cb:Fun) hl::{ A.meta().HashLike.each(cb) }
 
 	doc Get keys
 	doc %RET - Arr
@@ -1527,10 +1528,7 @@ section "HashLike" {
 
 	doc Remove k from hl
 	doc %RET - hl
-	F del(hl:HashLike, k) {
-		hl.meta().HashLike.del(k)
-		hl
-	}
+	F del(hl:HashLike, k) hl::{ A.meta().HashLike.del(k) }
 
 	TEST h=HashLike({"a": 1, "b": 2}); h.del("a"); h == HashLike({"b": 2})
 	TEST { h=HashLike({"a": 1, "b": 2}); h.del("c") }.assert(KeyNotFound)
@@ -1568,10 +1566,7 @@ section "Set" {
 
 	doc Add an element to the set
 	doc %RET - s
-	F push(s:Set, v) {
-		s.val[v] = true
-		s
-	}
+	F push(s:Set, v) s::{ A.val[v] = true }
 
 	doc Get number of items in the set
 	doc %RET - Int
@@ -1579,10 +1574,7 @@ section "Set" {
 
 	doc Call cb for each value in the set
 	doc %RET - s
-	F each(s:Set, cb:Fun) {
-		s.val.keys().each(cb)
-		s
-	}
+	F each(s:Set, cb:Fun) s::{ A.val.keys().each(cb) }
 
 	doc Check if the value is in the set
 	doc %RET - Bool
@@ -1962,11 +1954,8 @@ doc %EX -   modify_global_state_safely(...)
 doc %EX - })
 F acquire(l:Lock, cb:Fun) {
 	l.acquire()
-	try {
-		ret = cb()
-		l.release()
-		ret
-	} catch(e:Exception) {
+	try cb()::{ l.release() }
+	catch(e:Exception) {
 		l.release()
 		throw e
 	}
@@ -2253,10 +2242,7 @@ doc %EX - a=[{"x": 1}, {"x": 2}]
 doc %EX - a.y = 10
 doc %EX - # a == [{"x": 1, "y": 10}, {"x": 2, "y": 10}]
 doc %RET - v
-F .=(a:Arr, field:Str, v) {
-	a.each(F(elt) elt.(field) = v)
-	v
-}
+F .=(a:Arr, field:Str, v) v::{ a.each(F(elt) elt.(field) = A) }
 
 TEST a=[{"x": 1}, {"x": 2}]; a.y = 10; a == [{"x": 1, "y": 10}, {"x": 2, "y": 10}]
 
@@ -3507,7 +3493,7 @@ doc Get the given key from a Hash and remove it from the Hash.
 doc Underlying h[k] may throw KeyNotFound.
 doc %EX - h = {"a": 1}
 doc %EX - s = h.shift("a")  # h == {} and s == 1
-F shift(h:Hash, k) h[k].tap({ del(h, k) })
+F shift(h:Hash, k) h[k]::{ del(h, k) }
 
 doc Get a key from a Hash and remove it from the Hash.
 doc If they key is not in the Hash, return dflt
@@ -3515,7 +3501,7 @@ doc %EX - h = {}
 doc %EX - h.shift("a", 7)  # 7
 F shift(h:Hash, k, dflt) {
 	k not in h returns dflt
-	h[k].tap({ del(h, k) })
+	h[k]::{ del(h, k) }
 }
 
 TEST h={"a": 1}; s = h.shift("a"); h == {} and s == 1
@@ -4077,10 +4063,7 @@ doc Call cb n times without arguments.
 doc cb - Function to call
 doc args - Arguments for calling cb
 doc %EX - r=0; 5.times(F() r=r+2);  # r is now 10
-F times(n:Int, cb:Fun) {
-	for(i;n) cb()
-	n
-}
+F times(n:Int, cb:Fun) n::{ for(i;A) cb() }
 
 TEST r=0; 5.times(F() r=r+2); r==10
 
@@ -4993,9 +4976,9 @@ section "Path" {
 	doc %RET - Stat
 	doc %EX - stat("/tmp")  # <Stat st_dev=51714 st_ino=25 st_mode=17407 ...>
 	F stat(pathname:Str) {
-		ret = c_stat(pathname)
-		ret is Null throws StatFail("Failed to c_stat()").set('pathname', pathname)
-		ret
+		c_stat(pathname)::{
+			A is Null throws StatFail("Failed to c_stat()").set('pathname', pathname)
+		}
 	}
 
 	doc Issue stat() system call. Throws StatFail if the call fails.
@@ -5007,9 +4990,9 @@ section "Path" {
 	doc %EX - stat("/usr/bin/cal").st_mode   # 33261
 	doc %EX - lstat("/usr/bin/cal").st_mode  # 41471
 	F lstat(pathname:Str) {
-		ret = c_lstat(pathname)
-		ret is Null throws StatFail("Failed to c_lstat()").set('pathname', pathname)
-		ret
+		c_lstat(pathname)::{
+			A is Null throws StatFail("Failed to c_lstat()").set('pathname', pathname)
+		}
 	}
 
 	doc Issue lstat() system call. Throws StatFail if the call fails.
@@ -6368,10 +6351,10 @@ doc Send signal to a process. Uses KILL(2). Throws KillFail on error.
 doc sig - Signal to send. Defaults to SIGNALS.TERM
 doc %RET - unspecified at this time, do not count on it
 F kill(pid:Int, sig:Int=SIGNALS.TERM) {
-	ret = c_kill(pid, sig)
-	ret == -1 throws KillFail("Failed to kill pid $pid with signal $sig")
-	ret != 0 throws Error("c_kill() did not return 0 or -1")
-	ret
+	c_kill(pid, sig)::{
+		A == -1 throws KillFail("Failed to kill pid $pid with signal $sig")
+		A != 0 throws Error("c_kill() did not return 0 or -1")
+	}
 }
 
 # XXX: Must join reader/writer threads!
