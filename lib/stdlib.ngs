@@ -7240,7 +7240,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null, echo=echo
 
 	err("Exception of type ${e.Type().name} occurred")
 
-	info_keys = h.keys() - %[message backtrace cause]
+	info_keys = h.keys() - %[backtrace cause]
 
 	info_keys.each(F (k) {
 		out = inspect(h[k]) tor Lines(["Info: $k - (Failed to inspect)"])

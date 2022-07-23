@@ -3990,6 +3990,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			// or we don't have method_not_found_handler
 			VALUE exc;
 			exc = make_normal_type_instance(vm->MethodNotFound);
+			set_normal_type_instance_field(exc, make_string("message"), make_string("Failed to call method_not_found_handler()"));
 			set_normal_type_instance_field(exc, make_string("callable"), callable);
 			SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv);
 			THROW_EXCEPTION_INSTANCE(exc);
