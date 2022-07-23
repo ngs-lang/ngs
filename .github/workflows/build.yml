@@ -159,7 +159,7 @@ jobs:
     strategy:
       matrix:
         container: [ "centos:7" ]
-        version: [ "9", "10", "11" ]
+        version: [ "9", "10" ]
     steps:
       - uses: actions/checkout@v3
       - name: Setup Compiler
