@@ -129,7 +129,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	F run(r:Res, log_pfx:Str, cp:CommandsPipeline, do_decode=true) r.def.run("${r} ${log_pfx}", cp, do_decode)
 
 	F _diff_tags(current_tags:Hash, target_tags:Hash) {
-		# target_tags.mapv(typeof).echo()
+		# target_tags.mapv(Type).echo()
 		d = HashDiff()
 		d.add = target_tags.rejectv(NoData).reject(X in current_tags)
 		d.change = target_tags.rejectv(NoData).filter(X in current_tags).filter(F(k, v) current_tags[k] != v)
@@ -160,7 +160,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc Get unique identifier of a resource
 	doc %EX - AWS2::Instance().find().resources[0].id()  # i-0011b2.....
 	F id(r:Res) {
-		r.props.(r.def.typeof().user.id)
+		r.props.(r.def.Type().user.id)
 	}
 
 	# --------------------------------------------------
@@ -176,7 +176,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			rd.related_to = kw._RelatedTo
 			kw.del('_RelatedTo')
 			rd.related_to.ensure_array().each(F(rel) {
-				prop = rd.typeof().user.related_to[rel.typeof()]
+				prop = rd.Type().user.related_to[rel.Type()]
 				kw.(prop) = rel
 			})
 		}
@@ -263,7 +263,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 				diff.(op).each(F(item) {
 					cmd = process_command(r, commands[op], item)
 					echo("list_updater() cmd: $cmd")
-					result = r.def.run('Updating ' + r.def.typeof().user.display_name, %($*cmd))
+					result = r.def.run('Updating ' + r.def.Type().user.display_name, %($*cmd))
 				})
 			}
 		}
@@ -293,7 +293,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# --------------------------------------------------
 
 	F find(rd:ResDef) {
-		type_user_data = rd.typeof().user
+		type_user_data = rd.Type().user
 		allowed_keys_sources = %[find_props_to_filters find_props_to_args find_props_to_post_filters]
 		allowed_keys = allowed_keys_sources.map(F(aks) type_user_data.get(aks, {}).keys()).flatten()
 		if %[find_supports_tags find_tags_command_1].any(X in type_user_data) {
@@ -352,7 +352,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# TODO: give error when getting create only property not wrapped in CreateOnly
 	F create(rd:ResDef, **orig_props) {
 		props = orig_props.mapv(only(CreateOnly, get))
-		type_user_data = rd.typeof().user
+		type_user_data = rd.Type().user
 		allowed_keys = type_user_data.get('create_props_to_args', {}).keys() # + type_user_data.get('create_opt', [])
 		if type_user_data.get('find_supports_tags') {
 			allowed_keys .= push('Tags')
@@ -370,7 +370,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			}
 			[arg, rd.opt_prop(prop, props).map(F(x) only(ResDef, ids)(x))]
 		}).Argv()
-		result = rd.run('Creating ' + rd.typeof().user.display_name, %($*{type_user_data.create_command} $*argv))
+		result = rd.run('Creating ' + rd.Type().user.display_name, %($*{type_user_data.create_command} $*argv))
 		rd.dry_run returns []
 		if (result is Hash) and (result.len() == 1) {
 			result = result.values()[0]
@@ -398,7 +398,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	#       create only (unrecognized by update) property
 	F update(r:Res, orig_props:Hash) {
 		props = orig_props.rejectv(CreateOnly)
-		type_user_data = r.def.typeof().user
+		type_user_data = r.def.Type().user
 		allowed_keys = type_user_data.get('update_methods', {}).keys()
 		if type_user_data.get('find_supports_tags') {
 			allowed_keys .= push('Tags')
@@ -417,7 +417,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	}
 
 	F delete(r:Res) {
-		type_user_data = r.def.typeof().user
+		type_user_data = r.def.Type().user
 		r.run('Deleting ' + type_user_data.display_name, %($*{type_user_data.delete_command} ${r.props.(type_user_data.id)}))
 	}
 
@@ -780,7 +780,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			resources .= filter({A.Name ~ rd.anchor.Name})
 		}
 		rd.resources = resources / ImageRes(rd, X)
-		debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources")
+		debug("AWS", "found ${resources.len()} ${rd.Type().name} resources")
 		rd
 	}
 
@@ -887,9 +887,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 
 		if regs {
-			debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources in ${resources.group({A._Region}).len()} regions (${resources.group({A.Placement.AvailabilityZone}).len()} zones)")
+			debug("AWS", "found ${resources.len()} ${rd.Type().name} resources in ${resources.group({A._Region}).len()} regions (${resources.group({A.Placement.AvailabilityZone}).len()} zones)")
 		} else {
-			debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources in ${resources.group({A.Placement.AvailabilityZone}).len()} zones")
+			debug("AWS", "found ${resources.len()} ${rd.Type().name} resources in ${resources.group({A.Placement.AvailabilityZone}).len()} zones")
 		}
 
 		rd.resources = resources / InstanceRes(rd, X)
@@ -991,7 +991,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 				# XXX: [sg] is not right, not the same type!
 				arr = if sg.val is ResDef then sg.val.expect().ids() else [sg]
 				# arr = sg.filter(ResDef).map(ids + expect).get([sg])
-				t = sg.typeof()
+				t = sg.Type()
 				arr.map(t)
 			}).flatten()
 		})
@@ -1391,7 +1391,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	}
 
 	F delete(z:ZoneRes) {
-		type_user_data = z.def.typeof().user
+		type_user_data = z.def.Type().user
 		z.run('Deleting ' + type_user_data.display_name, %(aws route53 delete-hosted-zone --id ${z.props.Id}))
 	}
 
@@ -1574,7 +1574,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		resources = ``aws ec2 describe-volumes $*filters``
 		rd.resources = resources / VolumeRes(rd, X)
 		rd.resources .= sort({ A.props.CreateTime <= B.props.CreateTime })
-		debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources")
+		debug("AWS", "found ${resources.len()} ${rd.Type().name} resources")
 		rd
 	}
 
@@ -1626,7 +1626,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			resources .= filter(F(r) r._AMI == _AMI)
 		})
 		rd.resources = resources / SnapshotRes(rd, X)
-		debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources")
+		debug("AWS", "found ${resources.len()} ${rd.Type().name} resources")
 		rd
 	}
 
@@ -1654,7 +1654,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		})
 		resources = ``aws ec2 describe-addresses $*filters``
 		rd.resources = resources / EipRes(rd, X)
-		debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources")
+		debug("AWS", "found ${resources.len()} ${rd.Type().name} resources")
 		rd
 	}
 
@@ -1858,7 +1858,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# ==================================================
 
 	_rd_types = _exports.without('ResDef').values().filter(Type).filter(F(t) t.parents.has(ResDef))
-	# echo(_exports.without('ResDef').values().map(typeof))
+	# echo(_exports.without('ResDef').values().map(Type))
 	_rd_types_with_prefixes = _rd_types.filter(F(t) t.user.has('prefix'))
 
 	RESOURCE_CODE_TO_RESOURCE_TYPE = _rd_types_with_prefixes.map(F(t) {

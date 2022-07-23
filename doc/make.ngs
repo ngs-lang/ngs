@@ -113,7 +113,7 @@
 				# status("Generating page for descriptors ${d}")
 				o = ENV.Box('NGS_DOC_ONLY').map(X.split(','))
 				if o {
-					if not(o.get().has(d.typeof().name)) {
+					if not(o.get().has(d.Type().name)) {
 						return
 					}
 				}
@@ -222,7 +222,7 @@
 
 			F Bool(d:Description) true
 
-			F Str(d:Description) "<${d.typeof().name} ${d.name}>"
+			F Str(d:Description) "<${d.Type().name} ${d.name}>"
 
 
 		type ThisVersionIndex(Description)
@@ -250,7 +250,7 @@
 			F path_as_item(tvi:ThisVersionIndex) [Str(VERSION), 'index.html']
 			F path_as_container(tvi:ThisVersionIndex) [Str(VERSION)]
 
-			F Str(tvi:ThisVersionIndex) "<${tvi.typeof().name} for version ${VERSION}>"
+			F Str(tvi:ThisVersionIndex) "<${tvi.Type().name} for version ${VERSION}>"
 
 			F get_children(tvi:ThisVersionIndex) {
 				tvi.docs + [tvi.global_ns]
@@ -369,7 +369,7 @@
 
 			F get_this_version_desc(md:MarkdownDescription) md.tvi
 
-			F Str(md:MarkdownDescription) "<${md.typeof().name} ${md.output_name}>"
+			F Str(md:MarkdownDescription) "<${md.Type().name} ${md.output_name}>"
 
 			F nav_fragment(md:MarkdownDescription) {
 				DocGroup() with [
@@ -455,7 +455,7 @@
 						}
 						if t = Description(nd, k, v) {
 							nd.objects_descriptions[k] = t
-							nd.objects_by_type[t.typeof()].push(t)
+							nd.objects_by_type[t.Type()].push(t)
 						}
 					})
 				})
@@ -560,7 +560,7 @@
 			}
 
 			F Str(nd:NamespaceDescription) {
-				"<${nd.typeof().name} ${nd.name} with ${nd.objects_descriptions.len()} items>"
+				"<${nd.Type().name} ${nd.name} with ${nd.objects_descriptions.len()} items>"
 			}
 
 		type GlobalNamespaceDescription(NamespaceDescription)
@@ -584,7 +584,7 @@
 			F description_fragment(gnd:GlobalNamespaceDescription) 'The main entry point to generated documentation'
 
 			F Str(gnd:GlobalNamespaceDescription) {
-				"<${gnd.typeof().name} with ${gnd.objects_descriptions.len()} items>"
+				"<${gnd.Type().name} with ${gnd.objects_descriptions.len()} items>"
 			}
 
 
@@ -893,7 +893,7 @@
 
 		F Description(containing_nd:NamespaceDescription, name:Str, x) {
 			if ENV.get('SHOW_IGNORED') {
-				warn("Ignoring ${containing_nd} ${x.typeof()} ${name}")
+				warn("Ignoring ${containing_nd} ${x.Type()} ${name}")
 			}
 			null
 		}

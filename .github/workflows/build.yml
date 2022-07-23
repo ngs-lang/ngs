@@ -159,7 +159,7 @@ jobs:
     strategy:
       matrix:
         container: [ "centos:7" ]
-        version: [ "9", "10", "11" ]
+        version: [ "9", "10" ]
     steps:
       - uses: actions/checkout@v3
       - name: Setup Compiler
@@ -171,11 +171,11 @@ jobs:
 
   build-mac-gcc:
     timeout-minutes: 10
-    name: Build in gcc-${{ matrix.version }} (${{ matrix.container }})
+    name: Build with gcc-${{ matrix.version }} (${{ matrix.container }})
     runs-on: ${{ matrix.container }}
     strategy:
       matrix:
-        container: [ "macOS-10.15" ]
+        container: [ "macOS-12" ]
         version: [ "9", "10", "11" ]
     steps:
       - uses: actions/checkout@v3
@@ -190,18 +190,16 @@ jobs:
 
   build-mac-xcode:
     timeout-minutes: 15
-    name: Build in Xcode-${{ matrix.version }} (${{ matrix.container }})
+    name: Build with default Xcode (${{ matrix.container }})
     runs-on: ${{ matrix.container }}
     strategy:
       matrix:
-        container: [ "macOS-10.15" ]
-        version: [ "10.3" ]
+        container: [ "macOS-12" ]
     steps:
       - uses: actions/checkout@v3
       - name: Setup Compiler
         run: |
           brew install cmake ninja
-          sudo xcode-select -switch /Applications/Xcode_${{ matrix.version }}.app
           echo "CC=clang" >> $GITHUB_ENV
           echo "CXX=clang++" >> $GITHUB_ENV
       - name: Install and Test

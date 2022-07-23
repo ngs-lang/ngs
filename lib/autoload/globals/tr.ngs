@@ -40,7 +40,7 @@ ns {
 
 
 	F init(cmd:TrCommand, x, ctx:TrContext) {
-		n = cmd.typeof().name
+		n = cmd.Type().name
 		throw InvalidArgument("Use ${n}(...) instead of ${n}")
 	}
 
@@ -61,7 +61,7 @@ ns {
 	}
 
 	F _collector(original, cb:Fun) block b {
-		ret = original.typeof()() # XXX: Assumption about existence of the constructor
+		ret = original.Type()() # XXX: Assumption about existence of the constructor
 		F collect(idx_or_key, x:Lit) _unified_push(ret, idx_or_key, x.val)
 		F collect(idx_or_key, x:TrSkip) "no-op"
 		F collect(idx_or_key, x:TrNoMatch) b.return(x)
@@ -75,7 +75,7 @@ ns {
 		tc._cur !~ DESCENDABLE throws InvalidArgument("Attempted to descend on non-descendable: ${tc._cur} at path ${tc._path}")
 
 		debug("tr", {"descend::start ${tc._path}"})
-		t = typeof(tc._cur)
+		t = Type(tc._cur)
 		ret = t()  # XXX: Assumption about existence of the constructor
 		tc._each(F(idx_or_key, val) {
 			pat = tc._transformation
@@ -136,7 +136,7 @@ ns {
 	doc %RET - Lit or TrCommand
 	F tr(x, h:Hash, tc:TrContext) {
 		x !~ AnyOf(Hash, HashLike) returns TrNoMatch()
-		assert(x, Eachable2, "Internal error. Unexpected type in tr(x, Hash, TrContext) - ${x.typeof().name}")
+		assert(x, Eachable2, "Internal error. Unexpected type in tr(x, Hash, TrContext) - ${x.Type().name}")
 
 		# XXX: assumption - len() exists for x
 		len(h) > len(x) returns TrNoMatch()
@@ -144,7 +144,7 @@ ns {
 		_collector(x, F(collect) {
 			tc.deeper({
 				x.each(F(k, v) {
-					assert(k, HASHABLE, "Internal error. tr(x, Hash, TrContext) got unsupported key type ${k.typeof().name}")
+					assert(k, HASHABLE, "Internal error. tr(x, Hash, TrContext) got unsupported key type ${k.Type().name}")
 					tc.set_last_path_element(k)
 					collect(k, tr(v, h.get(k, identity), tc))
 				})

@@ -37,7 +37,7 @@ type List(Eachable1)
 
 	doc Represent List as string
 	doc %RET - Str with length, head and tail items of the List
-	F Str(l:List) "<${l.typeof().name} ${l.hash()} length:${l.len()} head=${l.head} tail=${l.tail}>"
+	F Str(l:List) "<${l.Type().name} ${l.hash()} length:${l.len()} head=${l.head} tail=${l.tail}>"
 
 doc Exception to be thrown when trying to obtain an item from an empty List
 type EmptyListFail(Error)
@@ -114,7 +114,7 @@ ns {
 	F Bool(li:ListItem) true
 
 	doc Represent ListItem as a string
-	F Str(li:ListItem) "<${li.typeof().name} ${li.val}>"
+	F Str(li:ListItem) "<${li.Type().name} ${li.val}>"
 
 }
 

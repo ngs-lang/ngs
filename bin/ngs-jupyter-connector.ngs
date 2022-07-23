@@ -92,7 +92,7 @@ ns {
 			throw JupiterConnectorProtocolError("Failed to parse input JSON").set(cause=e)
 		}
 		if cmd.has('vars') {
-			cmd.vars is not Hash throws JupiterConnectorProtocolError("'vars' must be a Hash").set(found=typeof(cmd.vars))
+			cmd.vars is not Hash throws JupiterConnectorProtocolError("'vars' must be a Hash").set(found=Type(cmd.vars))
 		}
 		cmd.get('vars', {}).each(F(k, v) {
 			allowed = econd {
@@ -106,7 +106,7 @@ ns {
 			ll_set_global_variable(idx, v)
 		})
 
-		cmd is not Hash throws JupiterConnectorProtocolError("Top-level expression must be a Hash").set(found=typeof(cmd))
+		cmd is not Hash throws JupiterConnectorProtocolError("Top-level expression must be a Hash").set(found=Type(cmd))
 		'expr' not in cmd throws JupiterConnectorProtocolError("Expected field 'expr' was not found").set(found=cmd.keys())
 		cmd.expr is not Str throws JupiterConnectorProtocolError("'expr' must be a string")
 
@@ -147,7 +147,7 @@ ns {
 					print_exception(e2)
 					Lines(['(failed to get friendly exception message)'])
 				}
-				send({'type': 'error', 'text_lines': m.Arr(), 'class': e.typeof().name})
+				send({'type': 'error', 'text_lines': m.Arr(), 'class': e.Type().name})
 			}
 			send({'type': 'finish'})
 		}

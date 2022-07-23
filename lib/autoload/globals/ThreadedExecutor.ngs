@@ -13,7 +13,7 @@ ns {
 			debug("conc", "got job")
 			job is Null breaks
 			r = Result(job)
-			debug("conc", "job result: ${r.typeof().name}")
+			debug("conc", "job result: ${r.Type().name}")
 			if r is Success {
 				te.successes_lock.acquire({ te.successes_count += 1 })
 			} else {
@@ -47,7 +47,7 @@ ns {
 
 		te.queue = BlockingList()
 		te.threads = threads.map(F(i) {
-			Thread("${te.typeof().name}-${hash(te)}-thread-${i}", _executor_thread, [te, i])
+			Thread("${te.Type().name}-${hash(te)}-thread-${i}", _executor_thread, [te, i])
 		}).Threads()
 	}
 
@@ -71,5 +71,5 @@ ns {
 	}
 
 	doc Textual representation of ThreadedExecutor
-	F Str(te:ThreadedExecutor) "<${te.typeof().name} queue=${te.queue}>"
+	F Str(te:ThreadedExecutor) "<${te.Type().name} queue=${te.queue}>"
 }

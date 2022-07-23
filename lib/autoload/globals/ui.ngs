@@ -17,25 +17,25 @@ ns {
 
 	F _json_data_fields(x, fields:Arr) {
 		{
-			'type': id(x.typeof())
+			'type': id(x.Type())
 			'fields': fields.Hash({ JsonData(x.(A)) })
 		}
 	}
 
-	F JsonData(x) throw NotImplemented("JsonData() for type ${x.typeof()} is not implemented yet").set(val=x)
+	F JsonData(x) throw NotImplemented("JsonData() for type ${x.Type()} is not implemented yet").set(val=x)
 
 	section "JsonData - scalars" {
 		F JsonData(x) {
 			guard x =~ AnyOf(Num, Str, Bool, Null)
-			{ 'type': id(x.typeof()), 'value': x }
+			{ 'type': id(x.Type()), 'value': x }
 		}
-		F JsonData(p:Path) { 'type': id(p.typeof()), 'value': p.path }
+		F JsonData(p:Path) { 'type': id(p.Type()), 'value': p.path }
 	}
 
 	section "JsonData - lists" {
 		F JsonData(a) {
 			guard a =~ AnyOf(Arr, ArrLike)
-			{ 'type': id(a.typeof()), 'items': a.map(JsonData) }
+			{ 'type': id(a.Type()), 'items': a.map(JsonData) }
 		}
 	}
 
@@ -43,7 +43,7 @@ ns {
 		F JsonData(h) {
 			guard h =~ AnyOf(Hash, HashLike)
 			{
-				'type': id(h.typeof())
+				'type': id(h.Type())
 				'items': h.map(F(k, v) [k.JsonData(), v.JsonData()])
 			}
 		}
@@ -64,14 +64,14 @@ ns {
 
 	F JsonData(rd:ResDef) {
 		resources = rd.find().resources
-		ret = { 'type': id(rd.typeof()), 'items': resources.map(JsonData) }
+		ret = { 'type': id(rd.Type()), 'items': resources.map(JsonData) }
 		if resources {
 			cols_names = resources[0].props.Hash().keys()
 			ret.cols_names = cols_names.JsonData()
 		}
 		ret
 	}
-	F JsonData(r:Res) r.Hash().without('def').JsonData().set(type=id(r.typeof()))
+	F JsonData(r:Res) r.Hash().without('def').JsonData().set(type=id(r.Type()))
 
 	section "AWS2" {
 		# TODO: generalize

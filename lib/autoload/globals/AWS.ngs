@@ -153,7 +153,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc Get unique identifier of a resource
 	doc %EX - AWS::Instance().find().resources[0].id()  # i-0011b2.....
 	F id(r:Res) {
-		r.props.(r.def.typeof().user.id)
+		r.props.(r.def.Type().user.id)
 	}
 
 	# --------------------------------------------------
@@ -169,7 +169,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			rd.related_to = kw._RelatedTo
 			kw.del('_RelatedTo')
 			rd.related_to.ensure_array().each(F(rel) {
-				prop = rd.typeof().user.related_to[rel.typeof()]
+				prop = rd.Type().user.related_to[rel.Type()]
 				kw.(prop) = rel
 			})
 		}
@@ -719,7 +719,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 		resources .= sort('CreationDate')
 		rd.resources = resources / ImageRes(rd, X)
-		debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources")
+		debug("AWS", "found ${resources.len()} ${rd.Type().name} resources")
 		rd
 	}
 
@@ -810,9 +810,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		}
 
 		if regs {
-			debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources in ${resources.group({A.Region}).len()} regions (${resources.group({A.Placement.AvailabilityZone}).len()} zones)")
+			debug("AWS", "found ${resources.len()} ${rd.Type().name} resources in ${resources.group({A.Region}).len()} regions (${resources.group({A.Placement.AvailabilityZone}).len()} zones)")
 		} else {
-			debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources in ${resources.group({A.Placement.AvailabilityZone}).len()} zones")
+			debug("AWS", "found ${resources.len()} ${rd.Type().name} resources in ${resources.group({A.Placement.AvailabilityZone}).len()} zones")
 		}
 
 		rd.resources = resources / InstanceRes(rd, X)
@@ -909,7 +909,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 				# XXX: [sg] is not right, not the same type!
 				arr = if sg.val is ResDef then sg.val.expect().ids() else [sg]
 				# arr = sg.filter(ResDef).map(ids + expect).get([sg])
-				t = sg.typeof()
+				t = sg.Type()
 				arr.map(t)
 			}).flatten()
 		})
@@ -1402,7 +1402,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		resources = ``aws ec2 describe-volumes $*filters``
 		rd.resources = resources / VolumeRes(rd, X)
 		rd.resources .= sort({ A.props.CreateTime <= B.props.CreateTime })
-		debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources")
+		debug("AWS", "found ${resources.len()} ${rd.Type().name} resources")
 		rd
 	}
 
@@ -1454,7 +1454,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			resources .= filter(F(r) r._AMI == _AMI)
 		})
 		rd.resources = resources / SnapshotRes(rd, X)
-		debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources")
+		debug("AWS", "found ${resources.len()} ${rd.Type().name} resources")
 		rd
 	}
 
@@ -1480,7 +1480,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		})
 		resources = ``aws ec2 describe-addresses $*filters``
 		rd.resources = resources / EipRes(rd, X)
-		debug("AWS", "found ${resources.len()} ${rd.typeof().name} resources")
+		debug("AWS", "found ${resources.len()} ${rd.Type().name} resources")
 		rd
 	}
 
@@ -1572,7 +1572,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	# ==================================================
 
 	_rd_types = _exports.without('ResDef').values().filter(Type).filter(F(t) t.parents.has(ResDef))
-	# echo(_exports.without('ResDef').values().map(typeof))
+	# echo(_exports.without('ResDef').values().map(Type))
 	_rd_types_with_prefixes = _rd_types.filter(F(t) t.user.has('prefix'))
 
 	RESOURCE_CODE_TO_RESOURCE_TYPE = _rd_types_with_prefixes.map(F(t) {

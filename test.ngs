@@ -4,14 +4,14 @@ tests_counter = 0
 
 doc Mark Exception objects which are coming out of successful assert()
 F assert(f:Fun, t:Type, msg:Str="Assertion failed") {
-	guard t.is_subtype(Exception)
+	guard t <= Exception
 	r = super(f, t, msg)
 	r.meta().test_ngs = true
 	r
 }
 
 F perform_test(test_code:Str) {
-	F ok(x) throw Error("Don't know how to check test result of type ${x.typeof()}")
+	F ok(x) throw Error("Don't know how to check test result of type ${x.Type()}")
 	F ok(x:Bool) x
 	F ok(ms:MatchSuccess) true
 	F ok(e:Exception) { e.meta() =~ {'test_ngs': true} }

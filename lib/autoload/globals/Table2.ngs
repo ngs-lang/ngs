@@ -364,7 +364,7 @@ ns {
 		}
 
 		F Str(t:Table) {
-			"<${t.typeof().name} columns=${t.cols_enum.keys().join(',')} rows:${t.len()}>"
+			"<${t.Type().name} columns=${t.cols_enum.keys().join(',')} rows:${t.len()}>"
 		}
 
 }

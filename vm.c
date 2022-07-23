@@ -3117,7 +3117,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Create a new type. Do not use directly.");
 	_doc(vm, "%AUTO", "type MyType");
 
-	register_global_func(vm, 1, "typeof",   &native_typeof_any        ,1, "x",      vm->Any);
+	register_global_func(vm, 1, "Type",   &native_typeof_any        ,1, "x",      vm->Any);
 	_doc(vm, "", "Returns type of the given object");
 	_doc(vm, "x", "Object. Currently only objects of NormalType are supported.");
 
@@ -3888,9 +3888,9 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 					global_name[global_name_len] = 0;
 					p += global_name_len;
 					BYTECODE_GET(l_max, p, BYTECODE_GLOBALS_LOC_COUNT);
+					gvi = get_global_index(vm, global_name, global_name_len);
 					for(l=0; l<l_max; l++) {
 						BYTECODE_GET(o, p, BYTECODE_GLOBALS_OFFSET);
-						gvi = get_global_index(vm, global_name, global_name_len);
 						DEBUG_VM_API("vm_load_bytecode() processing global patching num=%i name=%s offset=%i resolved_index=%i\n", g, global_name, o, gvi);
 						*(GLOBAL_VAR_INDEX *)(&vm->bytecode[ip + o]) = gvi;
 					}
@@ -3990,6 +3990,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			// or we don't have method_not_found_handler
 			VALUE exc;
 			exc = make_normal_type_instance(vm->MethodNotFound);
+			set_normal_type_instance_field(exc, make_string("message"), make_string("Failed to call method_not_found_handler()"));
 			set_normal_type_instance_field(exc, make_string("callable"), callable);
 			SET_EXCEPTION_ARGS_KWARGS(exc, argc, argv);
 			THROW_EXCEPTION_INSTANCE(exc);

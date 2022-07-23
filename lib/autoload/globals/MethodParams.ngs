@@ -35,5 +35,5 @@ TEST p = MethodParams(F(x, *args) 0); p.has("xyz").not()
 F Str(mp:MethodParams) {
 	arr_splat = " arr_splat=" +? mp.meta().arr_splat.map(Str).get('')
 	hash_splat = " hash_splat" +? mp.meta().hash_splat.map(Str).get('')
-	"<${mp.typeof().name} ${mp.meta().ArrLike}${arr_splat}${hash_splat}>"
+	"<${mp.Type().name} ${mp.meta().ArrLike}${arr_splat}${hash_splat}>"
 }

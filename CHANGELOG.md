@@ -11,6 +11,10 @@
 * Add `UndefinedUpVar` exception, thrown when accessing undefined "upvar"
 * Following types now inherit from `Error`, not `Exception`: `NotImplemented`, `ReadFail`, `RequireFail`, `MainFail`
 
+### Deprecated
+* `is_subtype(Type, Type)` is now deprecated, use `<=` operator, example: `T1 <= T2`. Solves #391.
+* `typeof(Any)` is now deprecated, use `Type(Any)` instead.
+
 ## 2022-04-16 Version 0.2.14
 
 ### New features
