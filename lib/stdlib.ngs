@@ -1,6 +1,12 @@
 # WARNING: This file is packaged into the ngs binary at build time
 #          it is shipped for reference only.
 
+section "Base" {
+	doc No op.
+	doc %RET - null
+	F init(x) null
+}
+
 section "Syntactic sugar for basics" {
 
 	doc Boolean negation for non-boolean values. Converts to boolean first.
