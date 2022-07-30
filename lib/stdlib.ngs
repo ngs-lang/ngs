@@ -776,6 +776,10 @@ section "=~ Matching" {
 		}
 	}
 
+	doc Negation. Intended use - in pattern matching.
+	type Not
+	F init(n:Not, val) { n.val = val }
+
 	F =~(x, pattern) {
 		mc = MatchContext(x)
 		result = (=~)(x, pattern, mc)
@@ -929,6 +933,16 @@ section "=~ Matching" {
 		TEST [1,2,3] =~ Repeat(Int)
 		TEST [1,2,3] !~ Repeat(Str)
 	}
+
+	doc Negate the match
+	doc %RET - Bool
+	F =~(x, n:Not, mc:MatchContext) {
+		(=~)(x, n.val, mc).not()
+	}
+
+	TEST 1 =~ Not(3)
+	TEST not(1 =~ Not(1))
+
 }
 
 doc Map e to an Arr (array) of values using mapper.
