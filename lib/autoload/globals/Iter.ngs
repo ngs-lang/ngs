@@ -172,7 +172,7 @@ ns {
 doc EXPERIMENTAL! Do not use!
 F filter(i:Iter, pattern) FilterIter(i, pattern)
 doc EXPERIMENTAL! Do not use!
-F reject(i:Iter, pattern) FilterIter(i, X !~ pattern)
+F reject(i:Iter, pattern) FilterIter(i, Not(pattern))
 
 TEST Iter(1...10).map(X*2).reject(X>7).map(X*2).Arr() == [4, 8, 12]
 TEST Iter(1...10).map(X*2).filter(X>15).map(X*2).Arr() == [32, 36, 40]

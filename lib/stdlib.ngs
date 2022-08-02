@@ -1085,14 +1085,14 @@ TEST [1, "a", "b"].the_one(Int) == 1
 TEST [1].the_one() == 1
 TEST { [1, "a", "b"].the_one(Str) }.assert(ElementNotFound)
 
-doc Filter something to an Arr (array) of values matcing rge pattern
+doc Filter something to an Arr (array) of values matching the pattern
 doc pattern - Decision function to be called with each item as first argument.
 doc pattern - When item matches the pattern, the item will not appear in the resulting array
 doc something - object of any type that has each(something, callback) implemented
 doc %EX - (1...10).reject(F(num) num % 2 == 0)  # Gives [1,3,5,7,9]
 doc %EX - (1...10).reject(X<5)  # Gives [5,6,7,8,9,10]
 doc %RET - Arr
-F reject(something:Eachable1, pattern=Bool.constructors) something.filter(X !~ pattern)
+F reject(something:Eachable1, pattern=Bool.constructors) something.filter(Not(pattern))
 
 doc EXPERIMENTAL! Do not use!
 doc %STATUS - experimental
@@ -3258,7 +3258,7 @@ TEST {0: "zero", 1: "one"}.filterk() == {1: "one"}
 
 doc Filter hash by keys, removing matched. See filterk().
 doc %EX - {"a1": 1, "a2": 2, "b1": 10}.rejectk(/^b/)  # {"a1": 1, "a2": 2}
-F rejectk(h:Eachable2, pattern=Bool.constructors) h.filterk(X !~ pattern)
+F rejectk(h:Eachable2, pattern=Bool.constructors) h.filterk(Not(pattern))
 
 TEST {"a1": 1, "a2": 2, "b1": 10}.rejectk(/^b/) == {"a1": 1, "a2": 2}
 TEST {0: "zero", 1: "one"}.rejectk() == {0: "zero"}
@@ -3272,7 +3272,7 @@ TEST {"a1": 1, "a2": 2, "b1": 10}.filterv(X>5) == {"b1": 10}
 TEST {"yes": true, "no": false}.filterv() == {"yes": true}
 
 doc Filter hash by values
-F rejectv(h:Eachable2, pattern=Bool.constructors) h.filterv(X !~ pattern)
+F rejectv(h:Eachable2, pattern=Bool.constructors) h.filterv(Not(pattern))
 
 TEST {"a1": 1, "a2": 2, "b1": 10}.rejectv(X>5) == {"a1": 1, "a2": 2}
 TEST {"yes": true, "no": false}.rejectv() == {"no": false}

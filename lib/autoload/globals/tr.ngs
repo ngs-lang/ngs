@@ -5,7 +5,7 @@ ns {
 	global tr, init, (=~), descend, skip, Str
 
 	HASHABLE = AnyOf(Bool, Num, Str)
-	DESCENDABLE1 = AllOf(Eachable1, X !~ Int, X !~ Str)
+	DESCENDABLE1 = AllOf(Eachable1, Not(Int), Not(Str))
 
 	# TODO: Provide metadata such as "DESCENDABLE" name so that
 	# it will be visisble through Str() and/or inspect(). How?
