@@ -18,13 +18,13 @@
 }
 @media (prefers-color-scheme: dark) {
 	:root {
-		--background: #131516;
+		--background: #272a2b;
 		--text: #d8d4cf;
 		--title: #bc63e1;
-		--code: #d74343;
+		--code: #c83f3f;
 		--link: #9F9F9F;
 		--icon: #9F9F9F;
-		--code-background: #212425;
+		--code-background: #323638;
 		--code-border: #E8E6E3;
 		--code-text: #E8E6E3;
 		--shadow: lightgrey;
@@ -176,4 +176,14 @@ nav .unobtrusive {
 }
 pre, code {
 	white-space: pre-wrap;
+}
+
+.hljs-built_in {
+	color: var(--text) !important;
+}
+.hljs-attr {
+	color: var(--link) !important;
+}
+.hljs-string {
+	color: var(--code) !important;
 }
