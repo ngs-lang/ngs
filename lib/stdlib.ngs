@@ -6143,7 +6143,7 @@ F '$()'(p:Process) {
 		p.command.options.Box('cd').each(chdir)
 
 		debug("process", "will execve()")
-		result = c_execve(p.executable.path, argv, ENV.Strs())
+		result = c_execve(p.executable.path, argv, p.command.options.get('env', ENV).assert(Hash, 'Environment variables must be a Hash').Strs())
 		# TODO: propagate this error to parent, don't know how yet
 		throw CError("Process ${c_getpid()} (fork child) failed to execve()")
 	}
