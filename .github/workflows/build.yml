@@ -40,7 +40,7 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "archlinux:base-20220403.0.51871" ]
+        container: [ "archlinux:base-20220918.0.86346" ]
         compiler: [ "gcc", "clang" ]
     steps:
       - uses: actions/checkout@v3
