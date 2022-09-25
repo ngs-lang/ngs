@@ -2251,14 +2251,18 @@ F .(a:Arr, field:Str) a.map(X.(field))
 
 TEST [{"x": 1}, {"x": 2}].x == [1, 2]
 
-doc Set field of every element in array to v
+doc Set field of every element in array to corresponding item in e. Uses Iter(e) internally.
 doc %EX - a=[{"x": 1}, {"x": 2}]
-doc %EX - a.y = 10
-doc %EX - # a == [{"x": 1, "y": 10}, {"x": 2, "y": 10}]
-doc %RET - v
-F .=(a:Arr, field:Str, v) v::{ a.each(F(elt) elt.(field) = A) }
+doc %EX - a.y = [10, 20]
+doc %EX - # a == [{"x": 1, "y": 10}, {"x": 2, "y": 20}]
+doc %RET - a
+F .=(a:Arr, field:Str, e:Eachable1) {
+	i = Iter(e)
+	a.each(F(elt) elt.(field) = i.next())
+	a
+}
 
-TEST a=[{"x": 1}, {"x": 2}]; a.y = 10; a == [{"x": 1, "y": 10}, {"x": 2, "y": 10}]
+TEST a=[{"x": 1}, {"x": 2}]; a.y = [10, 20]; a == [{"x": 1, "y": 10}, {"x": 2, "y": 20}]
 
 doc Return array made of given field of each element of given Eachable1 where present
 doc %EX - [{"x": 1}, {"y": 2}].get("x")  # [1]
