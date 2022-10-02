@@ -369,6 +369,7 @@ This is how an instance can be created using NGS (real working code).
 
 * Fork on GitHub
 * Work on whatever you like, preferably something from the GitHub issues of this project
+* Remember to add entry to `CHANGELOG.md`
 * Make a pull request (to the `dev` branch).
 
 If the change is big or involves modifying the syntax, it's better to coordinate with Ilya before you start.
