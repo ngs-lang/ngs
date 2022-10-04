@@ -2107,25 +2107,39 @@ section "Range" {
 	TEST 5 !~ 0..5
 
 	doc Ensure that n is in the range. 
-	doc n in range returns n
 	doc %EX - ensure(1, 3..10) #3
 	F ensure(n:Int, r:NumRange){
 		
-		if n in r {
-        	n
-    	} else if n > r.end {
-        	r.end
-    	} else if n > r.start {
-        	n
-    	} else {
-        	r.start
+		n in r returns n
+
+		#if n is not in the range return the closest element to n
+    	result = cond {
+			#if the range includes the end 
+        	not(r.include_end) {
+            	cond {
+                	n > r.end r.end - r.step
+                	n < r.start r.start
+            	} 
+        	}
+
+        	r.include_end {
+            	cond {
+                	n > r.end r.end
+                	n < r.start r.start
+            	}
+        	}
     	}
+
+    	return result
 	}
 
 	TEST ensure(5, 1..10) == 5
 	TEST ensure(1, 3..10) == 3
 	TEST ensure(20, 3..null) == 20
 	TEST ensure(20, 45..10) == 10
+	TEST ensure(20, 45..10) == 10
+	Test ensure(30, 3...null) == 30
+    Test ensure(20, null..1) == 0
 	
 }
 
