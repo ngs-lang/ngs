@@ -8,6 +8,7 @@
 * Add networking constants: `SOCK_STREAM`, `SOCK_DGRAM`, `SOCK_RAW`, `MSG_OOB`, `MSG_PEEK`, `MSG_WAITALL` (all prefixed with `C_`)
 * Add `Not` type and support in pattern matching
 * Add `env:` option to pass environment when running external programs
+* Add `ensure(Int, NumRange)`
 
 ### Fixes and improvements
 * Add `UndefinedUpVar` exception, thrown when accessing undefined "upvar"
