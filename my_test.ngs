@@ -1,0 +1,3 @@
+F main(){
+    echo(ensure(20, 3...10))
+}
