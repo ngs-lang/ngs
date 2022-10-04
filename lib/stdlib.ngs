@@ -2115,6 +2115,12 @@ section "Range" {
         n > r.end and not(r.include_end) r.end - r.step				#if n is greater than the end and the range does not include the end, return end - range step
         n > r.end and r.include_end r.end							#if n is greater than the end and the ranges includes the end, return the end
 	}
+
+	TEST ensure(1, 3..10)   == 3
+	TEST ensure(20, 3...10) == 10
+	TEST ensure(12, 3...null) == 12
+	TEST ensure(40, 3..35) == 34
+	
 }
 
 # TODO: think about multi-valued results (say 10 hosts, 8 succeeded and 2 failed)
