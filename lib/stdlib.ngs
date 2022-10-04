@@ -2112,18 +2112,21 @@ section "Range" {
 		tmp = null
     	last = 0
 
-    	if r.include_end {
-        	tmp = r.map(X*1)
-        	last = len(tm) - 1
-        	if n in tmp or tmp[last] == null {
-            	n
-        	} else if n > tmp[last] {
-            	tmp[last] + 1
-        	} else {
-            	tmp[0]
-        	} 
-    	} else {
+    	if r.include_end == false {
+        	null
+    	}
+
+    	tmp = r.map(X*1)
+    	last = len(tmp) - 1
+
+    	if n in tmp {
         	n
+    	} else if n > tmp[last] {
+        	tmp[last] + 1
+    	} else if n > tmp[0] {
+        	n
+    	} else {
+        	tmp[0]
     	}
 	}
 }
