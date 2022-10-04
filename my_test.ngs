@@ -3,7 +3,7 @@ F main(){
     echo(ensure(5, 1..10) == 5)
     echo(ensure(1, 3..10) == 3)
     echo(ensure(20, 3...10) == 10)
-    echo(ensure(20, 3..null) == 20)
+    echo(ensure(12, 3...null) == 12)
     echo(ensure(40, 3..35) == 34)
     echo(ensure(-40, NumRange(3, 35, include_start=false, include_end=true)) == 4)
 }

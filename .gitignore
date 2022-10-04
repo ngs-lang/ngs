@@ -21,4 +21,4 @@ pcre_constants.include
 junk
 
 .vagrant/
-my_stest.ngs
+my_test.ngs
