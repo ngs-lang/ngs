@@ -2108,19 +2108,13 @@ section "Range" {
 
 	doc Checks that x is in the range.
 	doc %EX - ensure(3, 3..10)  # 3
-	F ensure(n:Int, r:NumRange){
-		n in r returns n
-    	result = cond {
-        		n < r.start and r.include_start r.start
-        		n < r.start and not(r.include_start) r.start + r.step
-        		n < r.end r.start
-        		n > r.end and not(r.include_end) r.end - r.step
-        		n > r.end and r.include_end r.end
-    		}
-    	
-		return result
+	F ensure(n:Int, r:NumRange) cond {
+		n in r n 													#if n is in the range return n, else
+        n < r.start and r.include_start r.start 					#if the range includes the start and n is less than the start return start, else
+        n < r.start and not(r.include_start) r.start + r.step 		#n is less than start and the range does not include the start, return start + range step
+        n > r.end and not(r.include_end) r.end - r.step				#if n is greater than the end and the range does not include the end, return end - range step
+        n > r.end and r.include_end r.end							#if n is greater than the end and the ranges includes the end, return the end
 	}
-	
 }
 
 # TODO: think about multi-valued results (say 10 hosts, 8 succeeded and 2 failed)
