@@ -1047,6 +1047,11 @@ block u {
 	TEST [1,2,3].first(X>1) == 2
 	TEST {[1,2,3].first(X>5)}.assert(ElementNotFound)
 
+	doc Find last element in e that matches the pattern.
+	doc pattern - Test function or anything else acceptable by =~, defaults to Bool.constructors
+	doc %RET - Either the element or the provided default if element was not found.
+	doc %EX - [1,2,3].last(X>1, 10) == 3
+	doc %EX - [].last()  # ElementNotFound exception
 	F last(e:Eachable1, pattern=Bool.constructors, default=u) {
 		result = Box()
 		e.each(F(i){
