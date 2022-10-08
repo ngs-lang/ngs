@@ -365,7 +365,7 @@ F skip(i:Iter, count:Int){
 	try {
 		for(_; count) i.next()
 	} catch(nn: NoNext) {
-		throw SkipError("Cannot skip", nn)
+		throw SkipError("Invalid value: Greater than the length of the Iter", nn)
 	} 
 	
 	i
