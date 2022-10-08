@@ -355,3 +355,21 @@ TEST { {}.Iter().next() }.assert(NoNext)
 doc Convert Iter into JSON compatible data structure - array.
 doc Forces evaluation of MapIter for example.
 F JsonData(i:Iter) collector i.each(collect + JsonData)
+
+type SkipError(Error)
+
+doc Returns the given Iter after consuming first count elements.
+doc %EX - [3, 4, 5, 34, 5].Iter().skip(3).Arr() == [34, 5] 
+doc %RET - Iter
+F skip(i:Iter, count:Int){
+	try {
+		for(_; count) i.next()
+	} catch(nn: NoNext) {
+		throw SkipError("Invalid value: Greater than the length of the Iter", nn)
+	} 
+	i
+}
+
+TEST [3, 4, 5, 34, 5].Iter().skip(3).Arr() == [34, 5] 
+TEST [3, 40, 15, 34, 5].Iter().skip(2).Arr() == [15, 34, 5] 
+TEST {[3, 40, 15, 34, 5].Iter().skip(10)}.assert(SkipError)

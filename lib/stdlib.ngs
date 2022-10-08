@@ -1132,7 +1132,7 @@ TEST [1,2,3,1,2].take(X<3) == [1,2]
 
 # Would look much better with an iterator of e.
 doc EXPERIMENTAL! Do not use!
-doc Filters out items that match the pattern at the begginning of e.
+doc Filters out items that match the pattern at the beginning of e.
 doc %STATUS - experimental
 doc %EX - [1,2,3,1,2].drop(X<3)  # [3,1,2]
 F drop(e:Eachable1, pattern) collector {

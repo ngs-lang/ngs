@@ -9,6 +9,7 @@
 * Add `Not` type and support in pattern matching
 * Add `env:` option to pass environment when running external programs
 * Add `ensure(Int, NumRange)`
+* Add `skip(Iter, Int)`
 * Add `last(Eachable1, Any)`, the counterpart of first()
 
 ### Fixes and improvements
