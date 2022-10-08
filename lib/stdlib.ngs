@@ -1026,7 +1026,7 @@ TEST partition(["abc", "", "def", null]) == [["abc", "def"], ["", null]]
 type ElementNotFound(LookupFail)
 
 block u {
-	global first
+	global first, last
 	doc Find first element in e that matches the pattern.
 	doc pattern - Test function or anything else acceptable by =~, defaults to Bool.constructors
 	doc %RET - Either the element or the provided default if element was not found.
@@ -1046,6 +1046,28 @@ block u {
 	TEST [1,2,3].first(X>5, 10) == 10
 	TEST [1,2,3].first(X>1) == 2
 	TEST {[1,2,3].first(X>5)}.assert(ElementNotFound)
+
+	doc Find last element in e that matches the pattern.
+	doc pattern - Test function or anything else acceptable by =~, defaults to Bool.constructors
+	doc %RET - Either the element or the provided default if element was not found.
+	doc %EX - [1,2,3].last(X>1, 10) == 3
+	doc %EX - [].last()  # ElementNotFound exception
+	F last(e:Eachable1, pattern=Bool.constructors, default=u) {
+		result = Box()
+		e.each(F(i){
+			if i =~ pattern {
+				result = FullBox(i)
+			}
+		})
+		result returns result.get()
+		default !== u returns default
+		throw ElementNotFound("last() did not find the element").set('container', e).set('pattern', pattern)
+	}
+
+	TEST [1,2,3].last(X>1, 10) == 3
+	TEST [1,2,3].last(X>5, 10) == 10
+	TEST [1,2,3].last(X>1) == 3
+	TEST {[1,2,3].last(X>5)}.assert(ElementNotFound)
 }
 
 doc Find the only element that matches the pattern and execute given code with the value

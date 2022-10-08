@@ -10,6 +10,7 @@
 * Add `env:` option to pass environment when running external programs
 * Add `ensure(Int, NumRange)`
 * Add `skip(Iter, Int)`
+* Add `last(Eachable1, Any)`, the counterpart of first()
 
 ### Fixes and improvements
 * Add `UndefinedUpVar` exception, thrown when accessing undefined "upvar"
