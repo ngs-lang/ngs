@@ -358,7 +358,7 @@ F JsonData(i:Iter) collector i.each(collect + JsonData)
 
 type SkipError(Error)
 
-doc Returns an Iter that provides all except the first count elements.
+doc Returns the given Iter after consuming first count elements.
 doc %EX - [3, 4, 5, 34, 5].Iter().skip(3).Arr() == [34, 5] 
 doc %RET - Iter
 F skip(i:Iter, count:Int){
@@ -367,7 +367,6 @@ F skip(i:Iter, count:Int){
 	} catch(nn: NoNext) {
 		throw SkipError("Invalid value: Greater than the length of the Iter", nn)
 	} 
-	
 	i
 }
 
