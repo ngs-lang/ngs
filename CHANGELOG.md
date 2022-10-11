@@ -121,10 +121,10 @@
 ### Fixes and improvements
 
 * Fix `Str(File)` - now display correct type name for subtypes
-* Make `decode_base64()` more roubst
+* Make `decode_base64()` more robust
 * `pmap(Eachable1, Fun)` now limits number of threads (issue #113)
 * Add documentation for `MaybeFile`
-* `TmpFile` is not expirimental anymore
+* `TmpFile` is not experimental anymore
 * `encode_json()` with `pretty=true` can now handle larger inputs
 
 ### Breaking changes
@@ -308,7 +308,7 @@
 * Add `len(Int)`
 * Add experimental `Pred(OneOf)`
 * Add experimental `TODO(Str)`
-* `ec2din.ngs` now takes expirimental `-c COMMAND`
+* `ec2din.ngs` now takes experimental `-c COMMAND`
 
 ### Fixes and improvements
 
@@ -514,7 +514,7 @@ if no other output was sent between the calls
 * Update Mac installation instructions
 * Automatically set reference to namespace in methods defined in `ns { ... }`
 * Improve memory allocation - use "atomic" memory in few additional places
-* Rename "Method" to "Multimethod" and "Method imlementation" to "Method" all over
+* Rename "Method" to "Multimethod" and "Method implementation" to "Method" all over
 * Rename "attribute" to "field" all over
 * Deprecate KV
 * Rename `to_exit_code` to `ExitCode` for consistency (deprecate `to_exit_code`)
