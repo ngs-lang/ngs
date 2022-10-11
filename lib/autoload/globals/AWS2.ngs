@@ -123,7 +123,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	type Res(GlobalRes)
 
 	# TODO: always output at least ID of the creates resources
-	#       because if update() fails the resourcs is difficult to find
+	#       because if update() fails the resources is difficult to find
 	doc Run a command. Internal method. Please do not use outside the AWS library.
 	doc %STATUS - internal
 	F run(r:Res, log_pfx:Str, cp:CommandsPipeline, do_decode=true) r.def.run("${r} ${log_pfx}", cp, do_decode)
@@ -999,7 +999,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	F _image_id(rd:Instance) {
 		guard rd.anchor.ImageId is Image
-		assert(rd.anchor.ImageId.resources.len() == 1, "Expecting exacty one image described by Image resource definition")
+		assert(rd.anchor.ImageId.resources.len() == 1, "Expecting exactly one image described by Image resource definition")
 		rd.anchor.ImageId.ids()[0]
 	}
 
@@ -1891,7 +1891,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	F q(s:Str, **kw) {
 		detected = detect(s).values().reject(NoData).map(ensure_array).flatten()
 		debug("AWS", "q() detected ${detected}")
-		not(detected) throws InvalidArgument("Unkown resource").set('s', s)
+		not(detected) throws InvalidArgument("Unknown resource").set('s', s)
 		detected.len() > 1 throws Error("TODO")
 		d = detected[0]
 		d is Type returns d(**kw)

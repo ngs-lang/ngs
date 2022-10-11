@@ -59,7 +59,7 @@
 
 ## The Problem
 
-`bash` or `Python`? That's a square pegs for a round hole situation. Both are inadequate for Ops tasks. NGS aims to reduce your frustration and let you be more productive. There is no reason that you should be in this situation. *(Python here represents also other general purpose programming laguages).*
+`bash` or `Python`? That's a square pegs for a round hole situation. Both are inadequate for Ops tasks. NGS aims to reduce your frustration and let you be more productive. There is no reason that you should be in this situation. *(Python here represents also other general purpose programming languages).*
 
 **bash** does not meet any modern expectations for syntax, error handling nor has ability to work with structured data (beyond arrays and associative arrays which can not be nested). Let it go. You are not usually coding in assembly, FORTRAN, C, or C++, do you? They just don’t match the typical Ops tasks. Don’t make your life harder than it should be. Let it go. (Let’s not make it a blanket statement. Use your own judgement when to make an exception).
 
@@ -354,7 +354,7 @@ This is how an instance can be created using NGS (real working code).
 			State = 'running'
 		)
 
-		# Get SSH fingerprit from machine's console
+		# Get SSH fingerprint from machine's console
 		AWS::add_to_known_hosts(instance, 'PublicIpAddress')
 	}
 
@@ -444,7 +444,7 @@ Following instructions should work (tested on Debian)
   * ... have no CLI (planned NGS feature) that is written in the shell language itself.
 
 
-* [oil shell](http://www.oilshell.org/) is a very promising project with motiviation similar to that behind NGS. It's too early to tell the differences.
+* [oil shell](http://www.oilshell.org/) is a very promising project with motivation similar to that behind NGS. It's too early to tell the differences.
 	* [Oil goals](https://github.com/oilshell/oil/wiki/Project-Goals)
 	* Current (2017-01) work in the project is on the importer that could import existing bash scripts. NGS does not have such importer and it's not currently planned.
 	* The project also has a [good page listing other shells](https://github.com/oilshell/oil/wiki/ExternalResources)
@@ -468,7 +468,7 @@ Following instructions should work (tested on Debian)
 		* PowerShell has also two syntaxes. They are called [parsing modes](https://technet.microsoft.com/en-us/library/hh847892.aspx). These roughly correspond to commands and expression mode of NGS. Compared to NGS, the rules of switching between the two parsing modes are numerous and complex.
 		* PowerShell is too verbose by default.
 		* NGS syntax is much better in my opinion than syntax of PowerShell.
-	* Extending PowerShell is either inconvenient because you have to write in PowerShell which is inconvenient by itself or you have to know C# (or other .NET laguage?).
+	* Extending PowerShell is either inconvenient because you have to write in PowerShell which is inconvenient by itself or you have to know C# (or other .NET language?).
 	* PowerShell got some things right compared to other shells: structured data and consistent `$` in front of variables come to mind.
 	* Despite some similarities, writing a script in PowerShell and NGS is a completely different experience. You should try both and pick NGS without any doubt :)
 * [Shill - Scripting with Least Privilege](http://shill.seas.harvard.edu/) . Security focused (capability-based), runs on FreeBSD only (looks like Shill kernel module is required), examples mostly show security features, written in Racket. Not much development since initial commit at 2014. Real world usability is unclear. At this point I assume NGS as a programming language is much more usable.
@@ -477,7 +477,7 @@ Following instructions should work (tested on Debian)
 		* We can do much better.
 		* Current attempts at solutions do not solve the problem.
 		* New shell is needed
-		* New programming languag
+		* New programming language
 	* Similarity: two-modes syntax. Apparently @nfomon also haven't figured out a way to have one syntax.
 	* Difference: Shok shell is in C++. NGS' shell is not implemented yet but it will be in NGS.
 	* Difference: Shok has [modular design](http://shok.io/info/implementation.html) .

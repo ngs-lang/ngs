@@ -297,7 +297,7 @@ section "Namespaces" {
 	doc %EX - myobj.method_in_field(arg)   # calls global "method_in_field"
 	F '::'(nti:NormalTypeInstance, k) nti.(k)
 
-	# TODO: There is Namespace type now - do adjusment here
+	# TODO: There is Namespace type now - do adjustment here
 	doc Get Hash key. Useful when calling method stored in a Hash key.
 	doc Useful for working with namespaces, which are implemented as Hash instances.
 	doc %EX - elb = AWS::Elb(...).converge(...)
@@ -785,11 +785,11 @@ section "=~ Matching" {
 		result = (=~)(x, pattern, mc)
 		mc._result returns mc._result.get()
 		if result is Bool {
-			# TODO: Review MatchSuccess / MatchFailure construction (convertsion from MatchContext)
+			# TODO: Review MatchSuccess / MatchFailure construction (conversion from MatchContext)
 			result returns MatchSuccess([x], pattern)
 			return MatchFailure(x, pattern)
 		}
-		throw Error("=~ is expected to eiter set result or return a boolean").set(given=result)
+		throw Error("=~ is expected to either set result or return a boolean").set(given=result)
 	}
 
 	doc A pair of pattern and an action to execute if the pattern matches.
@@ -1132,7 +1132,7 @@ TEST [1,2,3,1,2].take(X<3) == [1,2]
 
 # Would look much better with an iterator of e.
 doc EXPERIMENTAL! Do not use!
-doc Filters out items that match the pattern at the begginning of e.
+doc Filters out items that match the pattern at the beginning of e.
 doc %STATUS - experimental
 doc %EX - [1,2,3,1,2].drop(X<3)  # [3,1,2]
 F drop(e:Eachable1, pattern) collector {
@@ -2633,12 +2633,12 @@ block u {
 	global index
 	doc Find index of the first value that matches the pattern.
 	doc TODO: Make it work on anything with each() method.
-	doc In future, will throw exception if element is not found and default is not provided. Now returns null for backwards compatibilty in this case.
+	doc In future, will throw exception if element is not found and default is not provided. Now returns null for backwards compatibility in this case.
 	doc arr - Items to look at
 	doc pattern - Test function or anything else acceptable by (=~), defaults to Bool.constructors
 	doc start - Index to start search at
 	doc dflt - default value to return when element is not found
-	doc %RET - Int or dflt. Temporary also null, for backwards compatibilty.
+	doc %RET - Int or dflt. Temporary also null, for backwards compatibility.
 	doc %EX - [1,2,11,3,4].index(X>10)  # 2
 	F index(arr:Arr, pattern=Bool.constructors, start:Int=0, dflt=u) {
 		l = arr.len()
@@ -2786,7 +2786,7 @@ TEST a = [1, 2, 3]; a[-1] = 99; a == [1, 2, 99]
 
 # TODO: Make "Indexable" and make this method work with Indexable
 doc Get array elements at specified indexes. Indexes specified by NumRange.
-doc r - NumRange with negatve .end
+doc r - NumRange with negative .end
 doc %EX - [10,20,30,40][1..-1]  # [20,30]
 doc %RET - Arr
 F '[]'(arr:Arr, r:NumRange) {
@@ -3000,8 +3000,8 @@ TEST merge_sorted([1,3,10], [0, 7, 12, 13, 14], (<=)) == [0, 1, 3, 7, 10, 12, 13
 TEST merge_sorted([0, 1], [2, 3], (<=)) == [0, 1, 2, 3]
 TEST merge_sorted([2, 3], [0, 1], (<=)) == [0, 1, 2, 3]
 
-# Current implemetation: https://en.wikipedia.org/wiki/Merge_sort
-# TODO: replacte with Timsort https://en.wikipedia.org/wiki/Timsort
+# Current implementation: https://en.wikipedia.org/wiki/Merge_sort
+# TODO: replace with Timsort https://en.wikipedia.org/wiki/Timsort
 doc Sort an array.
 doc lte - Less-then-or-equal function to use for comparison of the items in a
 doc %RET - Arr
@@ -3046,7 +3046,7 @@ F split(e:Eachable1, delim) {
 
 TEST [1, "a", 2, 3, "a", 4].split("a") == [[1], [2, 3], [4]]
 
-doc Call cb with array of maximum length of n, repeatedely for all items of e.
+doc Call cb with array of maximum length of n, repeatedly for all items of e.
 doc TODO: better doc, rename to each() to be consistent with each(Arr, Int, Fun)?
 doc %STATUS - experimental
 F each_chunk(e:Eachable1, n:Int, cb:Fun) {
@@ -3166,7 +3166,7 @@ TEST {"x": 1, "y": 2}.any(F(k, v) v is Int)
 TEST {"x": 1, "y": 2}.any(F(k, v) v is Str).not()
 
 
-doc Checks whether all of the key-value pairs satisifies the predicate: predicate(k, v)
+doc Checks whether all of the key-value pairs satisfies the predicate: predicate(k, v)
 doc %RET - Bool
 F all(e:Eachable2, predicate:Fun) block b {
 	e.each(F(k, v) {

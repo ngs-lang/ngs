@@ -8,7 +8,7 @@ ns {
 	DESCENDABLE1 = AllOf(Eachable1, Not(Int), Not(Str))
 
 	# TODO: Provide metadata such as "DESCENDABLE" name so that
-	# it will be visisble through Str() and/or inspect(). How?
+	# it will be visible through Str() and/or inspect(). How?
 	DESCENDABLE = AnyOf(DESCENDABLE1, Eachable2)
 
 	global TrContext
@@ -120,7 +120,7 @@ ns {
 		_collector(x, F(collect) {
 			tc.deeper({
 				# Later, instead of "for", more elaborate algorithms will be employed
-				# to accomodate patterns such as repetition, etc
+				# to accommodate patterns such as repetition, etc
 				for(i;l) {
 					tc.set_last_path_element(i)
 					debug("tr", "tr(x, Arr, TrContext) path=${tc._path}")

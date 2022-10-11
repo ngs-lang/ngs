@@ -50,7 +50,7 @@ F find_if_needed(rd:ResDef) {
 	rd
 }
 
-# TODO: throw ExpectFail or somthing similar
+# TODO: throw ExpectFail or something similar
 doc Throw an exception unless there is exactly e resources were found.
 doc Useful to express assumptions before operating.
 doc %EX - slave_build_server = AWS::Instance(Tags={'env': 'aux', 'role': 'build-slave'}).expect(1)
