@@ -917,7 +917,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	F _image_id(rd:Instance) {
 		guard rd.anchor.ImageId is Image
-		assert(rd.anchor.ImageId.resources.len() == 1, "Expecting exacty one image described by Image resource definition")
+		assert(rd.anchor.ImageId.resources.len() == 1, "Expecting exactly one image described by Image resource definition")
 		rd.anchor.ImageId.ids()[0]
 	}
 
@@ -928,7 +928,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 
 	# TODO: handle regions
 	doc Declarative primitive for waiting for AWS Instance resource to reach given state
-	doc state_name - typeically "running" or "stopped" (less common)
+	doc state_name - typically "running" or "stopped" (less common)
 	doc %RET - r
 	F wait_state(r:InstanceRes, state_name:Str) {
 		retry(
@@ -997,7 +997,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		scanned_keys_parts_to_compare = scanned_keys.map({A.split(' ')[1..3].join(' ')})
 		# echo("S $keys_from_console, $scanned_keys")
 		if d = Diff(keys_from_console, scanned_keys_parts_to_compare) {
-			# throw SecurtyFail(
+			# throw SecurityFail(
 			throw Exception("Scanned SSH keys and SSH keys from console did not match").set('diff', d)
 		}
 		# echo("SCANNED $scanned_keys")
