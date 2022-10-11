@@ -707,7 +707,7 @@ section "=~ Matching" {
 			doc matches - Successful matches
 			type MatchSuccess([MatchResult, Success])
 
-			doc Unsucessfull match result
+			doc Unsuccessful match result
 			type MatchFailure([MatchResult, Failure])
 
 		doc Successful match constructor
