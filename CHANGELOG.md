@@ -10,12 +10,12 @@
 * Add `env:` option to pass environment when running external programs
 * Add `ensure(Int, NumRange)`
 * Add `last(Eachable1, Any)`, the counterpart of first()
-* Add `Documentation improved`
 
 ### Fixes and improvements
 * Add `UndefinedUpVar` exception, thrown when accessing undefined "upvar"
 * Following types now inherit from `Error`, not `Exception`: `NotImplemented`, `ReadFail`, `RequireFail`, `MainFail`
 * Experimental syntax - allow many additional elements `x.HERE` and `x::HERE`
+* Fix and improve documentation
 
 ### Deprecated
 * `is_subtype(Type, Type)` is now deprecated, use `<=` operator, example: `T1 <= T2`. Solves #391.
