@@ -362,13 +362,11 @@ doc If all the elements matches the pattern the Iter will be empty.
 doc %EX - [0, 2, 3, 25, 19, 7].Iter().skip(F(x) x != 3).Arr() returns [3, 25, 19, 7]
 doc %RET - Iter
 F skip(i:Iter, pattern=Bool.constructors){
-	flag = true
 	for e in i {
-		if e =~ pattern and flag {
+		if e =~ pattern {
 			continue
 		}
-		flag = false
-		i.next()
+		break
 	}
 	i
 }
