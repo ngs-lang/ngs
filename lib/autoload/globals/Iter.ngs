@@ -371,7 +371,7 @@ F skip(i:Iter, pattern=Bool.constructors){
 	i
 }
 
-#TEST [1, 3, 4, 5, 34, 5].Iter().skip_while(F(x) x != 3).Arr() == [3, 4, 5, 34, 5]
+TEST [1, 3, 4, 5, 34, 5].Iter().skip(F(x) x != 3).Arr() == [4, 5, 34, 5]
 
 doc Returns the given Iter after consuming first count elements.
 doc %EX - [3, 4, 5, 34, 5].Iter().skip(3).Arr() == [34, 5] 
