@@ -357,6 +357,23 @@ doc Forces evaluation of MapIter for example.
 F JsonData(i:Iter) collector i.each(collect + JsonData)
 
 type SkipError(Error)
+doc Returns the given Iter but skipping leading elements while the pattern matches. 
+doc If all the elements matches the pattern the Iter will be empty.
+doc %EX - [0, 2, 3, 25, 19, 7].Iter().skip(F(x) x != 3).Arr() returns [3, 25, 19, 7]
+doc %RET - Iter
+F skip(i:Iter, pattern=Bool.constructors){
+	flag = true
+	for e in i {
+		if e =~ pattern and flag {
+			continue
+		}
+		flag = false
+		i.next()
+	}
+	i
+}
+
+#TEST [1, 3, 4, 5, 34, 5].Iter().skip_while(F(x) x != 3).Arr() == [3, 4, 5, 34, 5]
 
 doc Returns the given Iter after consuming first count elements.
 doc %EX - [3, 4, 5, 34, 5].Iter().skip(3).Arr() == [34, 5] 
@@ -373,19 +390,3 @@ F skip(i:Iter, count:Int){
 TEST [3, 4, 5, 34, 5].Iter().skip(3).Arr() == [34, 5] 
 TEST [3, 40, 15, 34, 5].Iter().skip(2).Arr() == [15, 34, 5] 
 TEST {[3, 40, 15, 34, 5].Iter().skip(10)}.assert(SkipError)
-
-
-doc Returns the given Iter but skipping leading elements while the pattern matches. 
-doc If all the elements matches the pattern the Iter will be empty.
-doc %EX - [0, 2, 3, 25, 19, 7].Iter().skip_while(F(x) x != 3).Arr() returns [3, 25, 19, 7]
-doc %RET - Iter
-F skip_while(i:Iter, pattern=Bool.constructors){
-	for e in i{
-		if e =~ pattern {
-			i.next()
-		}
-	}
-	i
-}
-
-#TEST [1, 3, 4, 5, 34, 5].Iter().skip_while(F(x) x != 3).Arr() == [3, 4, 5, 34, 5]
