@@ -365,7 +365,6 @@ doc %RET - Iter
 F skip(i:Iter, pattern=Bool.constructors){
 	while i {
 		if i.peek() !~ pattern {
-			echo("match")
 			break
 		}
 		i.next()
