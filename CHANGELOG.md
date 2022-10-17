@@ -11,6 +11,7 @@
 * Add `ensure(Int, NumRange)`
 * Add `skip(Iter, Int)`
 * Add `last(Eachable1, Any)`, the counterpart of first()
+* Add  Iter(Dir) and each(Dir, Fun)`
 
 ### Fixes and improvements
 * Add `UndefinedUpVar` exception, thrown when accessing undefined "upvar"
