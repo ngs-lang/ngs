@@ -55,7 +55,6 @@ type RangeIter([Iter, Eachable1])
 doc EXPERIMENTAL! Do not use!
 type MapIter([Iter, Eachable1])
 
-type DirIter([Iter, Dir])
 
 doc EXPERIMENTAL! Do not use!
 type FilterIter([Iter, Eachable1])
@@ -375,11 +374,3 @@ F skip(i:Iter, count:Int){
 TEST [3, 4, 5, 34, 5].Iter().skip(3).Arr() == [34, 5] 
 TEST [3, 40, 15, 34, 5].Iter().skip(2).Arr() == [15, 34, 5] 
 TEST {[3, 40, 15, 34, 5].Iter().skip(10)}.assert(SkipError)
-
-F each(i:Dir){
-	
-}
-
-F Iter(d:Dir){
-	
-}
