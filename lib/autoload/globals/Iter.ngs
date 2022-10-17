@@ -55,7 +55,6 @@ type RangeIter([Iter, Eachable1])
 doc EXPERIMENTAL! Do not use!
 type MapIter([Iter, Eachable1])
 
-
 doc EXPERIMENTAL! Do not use!
 type FilterIter([Iter, Eachable1])
 
