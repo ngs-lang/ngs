@@ -364,9 +364,7 @@ doc %EX - [0, 2, 3, 25, 19, 7].Iter().skip(F(x) x != 3).Arr() returns [3, 25, 19
 doc %RET - Iter
 F skip(i:Iter, pattern=Bool.constructors){
 	while i {
-		if i.peek() !~ pattern {
-			break
-		}
+		i.peek() !~ pattern breaks
 		i.next()
 	}
 	i
