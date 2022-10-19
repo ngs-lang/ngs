@@ -1120,14 +1120,14 @@ METHOD_RESULT native_typeof_any EXT_METHOD_PARAMS {
 }
 
 METHOD_RESULT native_get_field_nti_str EXT_METHOD_PARAMS {
-	// WARNING: for now get_normal_type_instace_field can only throw FieldNotFound
+	// WARNING: for now get_normal_type_instance_field can only throw FieldNotFound
 	//          if it changes in future the calling convention below should be changed
 	//          The reason for such calling convention is not to pass the VM to
-	//          get_normal_type_instace_field() just so it will have access to the
+	//          get_normal_type_instance_field() just so it will have access to the
 	//          exceptions.
 	METHOD_RESULT mr;
 	(void) ctx;
-	mr = get_normal_type_instace_field(argv[0], argv[1], result);
+	mr = get_normal_type_instance_field(argv[0], argv[1], result);
 	if(mr == METHOD_EXCEPTION) {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->FieldNotFound);
@@ -1141,7 +1141,7 @@ METHOD_RESULT native_set_field_nti_str_any METHOD_PARAMS { set_normal_type_insta
 
 METHOD_RESULT native_in_nti_str METHOD_PARAMS {
 	METHOD_RESULT mr;
-	mr = get_normal_type_instace_field(argv[1], argv[0], result);
+	mr = get_normal_type_instance_field(argv[1], argv[0], result);
 	METHOD_RETURN(MAKE_BOOL(mr != METHOD_EXCEPTION));
 }
 
@@ -4237,7 +4237,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 			if(mr == METHOD_EXCEPTION) {
 				VALUE r = MAKE_NULL;
 				if(obj_is_of_type(vm, *result, vm->MethodNotFound)) {
-					get_normal_type_instace_field(*result, make_string("callable"), &r);
+					get_normal_type_instance_field(*result, make_string("callable"), &r);
 					if(r.ptr == vm->call.ptr) {
 						// Don't know how to call
 						mr = METHOD_IMPL_MISSING;

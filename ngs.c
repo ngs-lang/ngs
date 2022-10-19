@@ -47,7 +47,7 @@ void print_exception(VM *vm, VALUE result) {
 			// Backtrace.frames = [{"closure": ..., "ip": ...}, ...]
 			VALUE backtrace = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)];
 			VALUE frames;
-			assert(get_normal_type_instace_field(backtrace, make_string("frames"), &frames) == METHOD_OK);
+			assert(get_normal_type_instance_field(backtrace, make_string("frames"), &frames) == METHOD_OK);
 			unsigned int i;
 			for(i = 0; i < OBJ_LEN(frames); i++) {
 				VALUE frame, resolved_ip, ip;
