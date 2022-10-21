@@ -6621,7 +6621,7 @@ F decode(s:Str, hints:Hash) {
 	if data.all('ReservationId' in X) {
 		# Put reservation data into ._Reservation field of each instance, just in case
 		data.each(F(reservation) {
-			reservation.Instances._Reservation = reservation.without('Instances')
+			reservation.Instances._Reservation = [ reservation.without('Instances') ] * len(reservation.Instances)
 		})
 		data = data.Instances.flatten()
 	}
