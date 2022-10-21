@@ -367,7 +367,7 @@ VALUE make_normal_type_instance(VALUE normal_type) {
 	return ret;
 }
 
-METHOD_RESULT get_normal_type_instace_field(VALUE obj, VALUE field, VALUE *result) {
+METHOD_RESULT get_normal_type_instance_field(VALUE obj, VALUE field, VALUE *result) {
 	VALUE ut;
 	HASH_OBJECT_ENTRY *e;
 	size_t n;
