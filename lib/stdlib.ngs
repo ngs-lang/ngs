@@ -47,7 +47,6 @@ section "Syntactic sugar for basics" {
 	TEST 1 is not Null
 	TEST (null is not Null) == false
 
-
 	doc Exactly same as "element in container". It's just more convenient in specific cases.
 	doc %EX - [1,2,3].has(2)  # true
 	doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(X.has(1))  # [ [1,2,3], [1,20,30] ]
