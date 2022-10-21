@@ -100,7 +100,7 @@ TEST ns { section "x" { a = 1; _c = 10 }; b = 2; _d = 20 } == %{a 1 b 2}
 TEST try $(cat NO_SUCH_FILE 2>/dev/null) catch(pf:ProcessFail) true
 TEST x=1; `line: echo a$x b${x}c` == "a1 b1c"
 
-# === Redirections tests ===========================
+# === Redirection tests ===========================
 # Warning: file name is not unique
 TEST f='/tmp/ngs-redir-test'; $(echo -n abc >$f); $(echo -n def >>$f); txt=`cat $f`; $(rm $f); txt == 'abcdef'
 TEST f='/tmp/ngs-redir-test'; $(ok: cat /NO-SUCH-FILE 2>$f); txt=`cat $f`; $(rm $f); txt ~ /No such file or directory/
