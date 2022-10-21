@@ -53,7 +53,7 @@ ns {
 
 	}
 
-	# TOOD: something more efficient
+	# TODO: something more efficient
 	F on_read(lh:LinesHandler, buf:Str) {
 		lh.buf += buf
 		while true {

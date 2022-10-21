@@ -104,11 +104,11 @@ doc Check whether there are any rows in the table.
 F Bool(t:Table) t.len().Bool()
 
 doc Internal method. Please do not use.
-F calculate_num_cols_to_show(t:Table, max_colums_widths:Arr, available_cols:Int) {
+F calculate_num_cols_to_show(t:Table, max_columns_widths:Arr, available_cols:Int) {
 	cols_to_show = 0
-	for(i; max_colums_widths.len()) {
+	for(i; max_columns_widths.len()) {
 		# TODO: unhardcode the "+1" spacing width
-		cols_to_show += max_colums_widths[i] + 1
+		cols_to_show += max_columns_widths[i] + 1
 		cols_to_show > available_cols returns i
 	}
 	i
@@ -127,13 +127,13 @@ F echo(t:Table) {
 	# TODO: handle limiting width of a cell, probably using subtype of TableMeta
 
 	do_output_headers = config('output_headers') in [null, true]
-	max_colums_widths = t.cols_enum.map(F(k, idx) {
+	max_columns_widths = t.cols_enum.map(F(k, idx) {
 		col = t.column(idx)
 		((if do_output_headers [k] [])+ col).map(cell_display_width).max()
 	})
 
 	# How much full table columns fit on the screen
-	showing_n_columns = t.calculate_num_cols_to_show(max_colums_widths, cols)
+	showing_n_columns = t.calculate_num_cols_to_show(max_columns_widths, cols)
 
 	# Setup line spacing
 	do_line_spacing = t.any(F(row) {
@@ -152,7 +152,7 @@ F echo(t:Table) {
 
 	# Headers
 	if(do_output_headers) {
-		t.cols_enum.limit(showing_n_columns).map(F(k, idx) StrForTable(k, max_colums_widths[idx])).join(' ').echo()
+		t.cols_enum.limit(showing_n_columns).map(F(k, idx) StrForTable(k, max_columns_widths[idx])).join(' ').echo()
 		do_line_spacing()
 	}
 
@@ -179,7 +179,7 @@ F echo(t:Table) {
 					}
 				}
 				# Format later maybe? Just before printing?
-				StrForTable(subrow_content, max_colums_widths[idx])
+				StrForTable(subrow_content, max_columns_widths[idx])
 			})
 			if not(done) {
 				subrow_content_arr.join(' ').echo()

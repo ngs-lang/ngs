@@ -223,11 +223,11 @@ ns {
 		doc Check whether there are any rows in the table.
 		F Bool(t:Table) t.len().Bool()
 
-		F _calculate_num_cols_to_show(t:Table, max_colums_widths:Arr, available_cols:Int, sep_len:Int) {
+		F _calculate_num_cols_to_show(t:Table, max_columns_widths:Arr, available_cols:Int, sep_len:Int) {
 			cols_to_show = 0
-			for(i; max_colums_widths.len()) {
-				cols_to_show + max_colums_widths[i] > available_cols returns i
-				cols_to_show += max_colums_widths[i] + sep_len
+			for(i; max_columns_widths.len()) {
+				cols_to_show + max_columns_widths[i] > available_cols returns i
+				cols_to_show += max_columns_widths[i] + sep_len
 			}
 			i
 		}
@@ -244,7 +244,7 @@ ns {
 			F maybe_output_headers() {
 				if(do_output_headers) {
 					cols_enum.map_idx_key_val(F(width_idx, k, row_idx) {
-						_Cell(k, max_colums_widths[width_idx])[0]
+						_Cell(k, max_columns_widths[width_idx])[0]
 					}).join(COLS_SEP).echo()
 					do_line_spacing()
 				}
@@ -265,14 +265,14 @@ ns {
 			columns_to_show.each(F(c) cols_enum[c] = t.cols_enum[c])
 
 			do_output_headers = config('output_headers') in [null, true]
-			max_colums_widths = cols_enum.map(F(k, idx) {
+			max_columns_widths = cols_enum.map(F(k, idx) {
 				col = t.column(idx)
 				((if do_output_headers [k] []) + col).map(_Cell).map(width).max()
 			})
-			debug("table", "max_colums_widths $max_colums_widths")
+			debug("table", "max_columns_widths $max_columns_widths")
 
 			# How much full table columns fit on the screen
-			showing_n_columns = t._calculate_num_cols_to_show(max_colums_widths, cols, len(COLS_SEP))
+			showing_n_columns = t._calculate_num_cols_to_show(max_columns_widths, cols, len(COLS_SEP))
 			cols_enum .= limit(showing_n_columns)
 
 			# Setup line spacing
@@ -297,12 +297,12 @@ ns {
 			# Rows
 			t.rows.each(F(row) {
 				row_cells = cols_enum.map_idx_key_val(F(width_idx, k, row_idx) {
-					_Cell(row[row_idx], max_colums_widths[width_idx])
+					_Cell(row[row_idx], max_columns_widths[width_idx])
 				})
 				screen_lines_for_row = row_cells.map(height).max()
 				for(screen_line; screen_lines_for_row) {
 					screen_line_items = row_cells.map_idx_val(F(idx, cell) {
-						cell.get(screen_line, Str('', max_colums_widths[idx]))
+						cell.get(screen_line, Str('', max_columns_widths[idx]))
 					})
 					echo(screen_line_items.join(COLS_SEP))
 				}

@@ -428,7 +428,7 @@ VALUE make_namespace(size_t start_buckets);
 VALUE make_normal_type(VALUE name);
 VALUE make_normal_type_constructor(VALUE normal_type);
 VALUE make_normal_type_instance(VALUE normal_type);
-METHOD_RESULT get_normal_type_instace_field(VALUE obj, VALUE field, VALUE *result);
+METHOD_RESULT get_normal_type_instance_field(VALUE obj, VALUE field, VALUE *result);
 void set_normal_type_instance_field(VALUE obj, VALUE field, VALUE v);
 void add_type_inheritance(VALUE type, VALUE parent_type);
 uint32_t hash(VALUE v);

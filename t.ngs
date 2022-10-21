@@ -1,0 +1,17 @@
+F m_limit(i:Iter, n:Int){
+  counter = 0
+  for (_; n) {
+    if counter < n {
+      echo("$counter and ${i.peek()}")
+    } 
+    i.next()
+    counter = counter + 1
+  }
+  i
+}
+
+F main(){
+    n = c_opendir(".")
+    c = c_readdir(n)
+    echo(c)
+}
