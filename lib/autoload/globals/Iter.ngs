@@ -411,10 +411,4 @@ F Iter(d:Dir){
 
 doc Calls cb with each path from the directory
 doc %RET - i
-F each(d:Dir, cb:Fun){
-	i = DirIter(d)
-	for e in i {
-		cb(e)
-	}
-	i
-}
+F each(d:Dir, cb:Fun) DirIter(d).Iter().each(cb)
