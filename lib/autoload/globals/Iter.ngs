@@ -402,13 +402,6 @@ F next(d:DirIter) {
 	ret
 }
 
-doc Method that allows us to iterate the specified Dir()
-doc %RET - DirIter
-F Iter(d:Dir){
-	i = DirIter(d)
-	i
-}
-
 doc Calls cb with each path from the directory
 doc %RET - i
 F each(d:Dir, cb:Fun) DirIter(d).Iter().each(cb)
