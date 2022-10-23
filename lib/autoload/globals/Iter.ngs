@@ -388,3 +388,34 @@ F skip(i:Iter, count:Int){
 TEST [3, 4, 5, 34, 5].Iter().skip(3).Arr() == [34, 5] 
 TEST [3, 40, 15, 34, 5].Iter().skip(2).Arr() == [15, 34, 5] 
 TEST {[3, 40, 15, 34, 5].Iter().skip(10)}.assert(SkipError)
+
+doc Type that allows us to iterate over a directory.
+type DirIter(Iter)
+
+# ---------- DirIter ----------
+doc Calls DirIter constructor.
+doc %RET - DirIter which allows us to iterate over a directory
+F Iter(d:Dir) DirIter(d)
+
+doc Initialize the DirIter with specific Dir
+F init(i:DirIter, d:Dir) i.dir = c_opendir(d.path)
+
+doc Check whether there are more paths to iterate over.
+doc %RET - Bool. true: next() will return next element. false: next() will throw NoNext
+F Bool(i:DirIter) {
+
+}
+
+doc Get next path of a directory iterated over.
+doc %RET - Path
+F next(d:DirIter) {
+	SKIP_DIRS = ['.', '..']
+	#throw_if_no_next(d)
+	ret = c_readdir(d.dir)
+	ret.d_name in SKIP_DIRS continues
+	ret
+}
+
+doc Calls cb with each path from the directory
+doc %RET - i
+F each(d:Dir, cb:Fun) DirIter(d).Iter().each(cb)
