@@ -8016,9 +8016,15 @@ section "Bootstrap" {
 	F echo_cli(a:Arr) {
 		guard a
 		guard isatty(1)
+		guard a[0] is Hash
 		pattern = a[0].keys().Hash({Any})
 		guard all(a, pattern)
 		Table2::Table(a).echo()
+	}
+
+	F echo_cli(h:Hash) {
+		guard isatty(1)
+		h.map("${X}: ${Y}").each(echo)
 	}
 
 	F echo_cli(s:Str) echo(s)
