@@ -8002,6 +8002,27 @@ F sysconf(name:Int) {
 }
 
 section "Bootstrap" {
+
+	F echo_cli(x) echo(x)
+
+	F echo_cli(x) {
+		j = { x.encode_json() }.Result()
+		guard j
+		echo(j.get())
+	}
+
+	F echo_cli(n:Null) nop
+
+	F echo_cli(a:Arr) {
+		guard a
+		guard isatty(1)
+		pattern = a[0].keys().Hash({Any})
+		guard all(a, pattern)
+		Table2::Table(a).echo()
+	}
+
+	F echo_cli(s:Str) echo(s)
+
 	main = MultiMethod()
 
 	doc Internal method. Please do not use.
@@ -8087,7 +8108,8 @@ section "Bootstrap" {
 						target = namespace[subcommand]
 						target is Namespace returns run_subcommand(target, a)
 						target is not Fun throws InvalidCommandLineArguments("${subcommand} is not a method").set(subcommand=subcommand)
-						bootstrap_invoke(target, a)
+						ret = bootstrap_invoke(target, a)
+						echo_cli(ret)
 					}
 
 					if 'main' in result {

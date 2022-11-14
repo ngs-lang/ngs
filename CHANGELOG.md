@@ -12,6 +12,7 @@
 * Add `skip(Iter, Int)`
 * Add `last(Eachable1, Any)`, the counterpart of first()
 * Add `skip(Iter, Any)`
+* When a function is called from CLI, the output is now displayed using `echo_cli()`
 
 ### Fixes and improvements
 * Add `UndefinedUpVar` exception, thrown when accessing undefined "upvar"
