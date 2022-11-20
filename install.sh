@@ -39,7 +39,7 @@ else
 		$SUDO yum groupinstall -y "Development Tools"
 	elif type pacman &>/dev/null;then
 		echo "  + On Linux / pacman. Installing apt packages."
-		$SUDO pacman -Sy --noconfirm peg make cmake pandoc pkgconfig
+		$SUDO pacman -Sy --noconfirm peg make cmake pandoc pkgconfig pcre
 	elif type apt &>/dev/null;then
 		echo "  + On Linux / apt. Installing apt packages."
 		$SUDO apt-get install -y libgc-dev libffi-dev libjson-c-dev peg libpcre3-dev make cmake pandoc pkg-config build-essential
