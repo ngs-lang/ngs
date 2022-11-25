@@ -8107,10 +8107,12 @@ section "Bootstrap" {
 				result is Namespace {
 
 					F run_subcommand(namespace:Namespace, argv:Arr) {
+						F list_subcommands() namespace.filterv(AnyOf(Fun, Namespace)).keys().sort()
+						not(argv) throws InvalidCommandLineArguments("Subcommand not specified").set(subcommands=list_subcommands())
 						a = argv.copy()
 						subcommand = a.shift()
 						debug('bootstrap', "bootstrap(): subcommand ${subcommand} argv ${argv}")
-						not(subcommand in namespace) throws InvalidCommandLineArguments("Subcommand ${subcommand} not found").set(subcommand=subcommand)
+						not(subcommand in namespace) throws InvalidCommandLineArguments("Subcommand ${subcommand} not found").set(subcommand=subcommand, subcommands=list_subcommands())
 						target = namespace[subcommand]
 						target is Namespace returns run_subcommand(target, a)
 						target is not Fun throws InvalidCommandLineArguments("${subcommand} is not a method").set(subcommand=subcommand)
