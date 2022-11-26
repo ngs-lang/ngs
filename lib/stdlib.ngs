@@ -1240,9 +1240,11 @@ section "Functional operators" {
 	doc %EX - [1,2,3,4] % echo
 	F %(x, cb:Fun) x.each(cb)
 
+	doc Deprecated. Use expr.f() and expr.{ your_code }
 	doc Call operator.
 	doc Same as calling f(x)
 	doc %EX - [1,2,3,4] \ echo
+	doc %STATUS - deprecated
 	F \(x, f:Fun) f(x)
 }
 
