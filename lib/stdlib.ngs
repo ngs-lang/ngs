@@ -5954,7 +5954,7 @@ F ExitCode(pp:ProcessesPipeline) pp.wait().processes.map(ExitCode).first(X != 0,
 
 doc Wait for the process to finish and return its standard output.
 doc %RET - Str
-F Str(p:Process) p.wait().stdout
+F Str(p:Process) p.wait().stdout or ''
 
 doc Inspect Process
 doc %RET - Lines
