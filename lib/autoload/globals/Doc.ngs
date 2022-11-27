@@ -152,28 +152,4 @@ ns {
 		exit_hook.push({echo(s)})
 	}
 
-	doc Inspect document node
-	doc %RET - Lines
-	F inspect(n:Node, levels=2) {
-		collector/Lines() {
-			c = collect
-			c("Doc::" + n.Type().name + (if 'name' in n then " ${n.name}" else "")) # later - maybe Type can return namespace name?
-
-			n.attrs.each(F(k, v) {
-				c("  Attribute [${SafeStr(k)}] = ${SafeStr(v)}")
-			})
-
-			if levels > 0 {
-				n.children.each_idx_val(F(idx, val) {
-					# echo("child $levels - $idx")
-					("  Child $idx: " + inspect(val, levels-1)) % c
-				})
-			} else {
-				n.children.each_idx_val(F(idx, val) {
-					c("  Child $idx: ${SafeStr(val)}")
-				})
-			}
-		}
-	}
-
 }

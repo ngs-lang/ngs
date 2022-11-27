@@ -448,9 +448,26 @@ section "Inspect built-in types" block _ {
 		"<UserDefinedMethod ${c.meta().name tor "<anonymous>"}${StrParams(c)} at ${location}>"
 	}
 
+	global _inspect_path_to_str
+	doc Internal method. Please do not use.
+	F _inspect_path_to_str(path:Arr) {
+		not(path) returns '(root)'
+		F kern(x) "[<object of type ${x.Type().name}>]"
+		F kern(l:Lit) l.val
+		F kern(x:Int) "[$x]"
+		F kern(x:Str) "['${SafeStr(x)}']"
+		F kern(x:Str) {
+			guard x =~ /^[a-zA-Z_][a-zA-Z0-9_]*$/
+			".${x}"
+		}
+		path.map(kern).join('')
+	}
+
+	doc %STATUS - internal
+	doc Internal method. Please do not use.
 	doc Inspect any value.
-	doc %RET - Lines with exactly one line of the form <TYPE_NAME ...>
-	F inspect(val) {
+	doc %RET - Arr with exactly one Str of the form <TYPE_NAME ...>
+	F inspect(path:Arr, val) {
 		# * Some types have Str() which is of the form <TYPE_NAME ...> and some don't
 		# * Ensuring <TYPE_NAME ...> form
 		# * I don't like this. There should be a way for Str() and SafeStr() to indicate
@@ -461,27 +478,36 @@ section "Inspect built-in types" block _ {
 		if s !~ Pfx(t) {
 			s = "${t} $s>"
 		}
-		Lines([s])
+		[_inspect_path_to_str(path) + " = " + s]
 	}
 
+	doc %STATUS - internal
+	doc Internal method. Please do not use.
 	doc Inspect Eachable1
-	doc %RET - Lines
-	F inspect(e:Eachable1) {
+	doc %RET - Arr of Str
+	F inspect(path:Arr, e:Eachable1) {
 		guard e !~ Int
-		Lines(["${e.Type().name} of size ${e.len() tor '(unknown size)'}"] + e.map_idx_val({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
+		# TODO: Limit number of displayed items
+		["${_inspect_path_to_str(path)} - ${e.Type().name} of size ${e.len() tor '(unknown size)'}"] + e.map_idx_val({
+			inspect(path + [A], B)
+		}).flatten()
 	}
 
-	F inspect_meta(val) {
+	doc %STATUS - internal
+	doc Internal method. Please do not use.
+	doc Inspect meta() of Type or Fun
+	doc %RET - Arr of Str
+	F inspect_meta(path:Arr, val) {
 		keys_meanings = {
 			'%EX': 'Example'
 			'%RET': 'Returns'
 		}
-		collector/Lines() {
+		p = _inspect_path_to_str(path)
+		collector {
 			a = try val.meta()
-			not(a) returns Lines()
-			collect("Meta")
+			not(a) returns []
 			a.without('doc').each(F(k, v) {
-				collect("  [${k}] = ${v}")
+				inspect(path + [k], v).each(collect)
 			})
 			# doc can be null
 			# doc can be a string, example: "Partial application syntax" (ngs -pi 'X*2')
@@ -495,65 +521,76 @@ section "Inspect built-in types" block _ {
 						not(k) k
 						true "Parameter ${k}"
 					}
-					kk = '[' +? k +? '] '
+					kk = '[' +? k +? ']'
 					v.ensure(Arr).each(F(doc_line) {
-						collect("  [doc] ${kk}${doc_line}")
+						collect("${p}.doc<${kk}> = ${doc_line}")
 					})
 				})
 			}
 		}
 	}
 
-	F inspect(f:Fun) {
-		guard f =~ AnyOf(NativeMethod, UserDefinedMethod)
-		Lines([f.Str()]) + ("  " + inspect_meta(f))
+	doc %STATUS - internal
+	doc Internal method. Please do not use.
+	doc For Type, NativeMethod, UserDefinedMethod
+	doc %RET - Arr of Str
+	F inspect(path:Arr, x) {
+		guard x =~ AnyOf(Type, NativeMethod, UserDefinedMethod)
+		["${_inspect_path_to_str(path)} - ${x.Str()}"] + inspect_meta(path + [Lit('.meta()')], x)
 	}
 
-	F inspect(t:Type) Lines([t.Str()]) + ("  " + inspect_meta(t))
-
+	doc %STATUS - internal
+	doc Internal method. Please do not use.
 	doc Inspect MultiMethod
-	doc %RET - Lines
-	F inspect(mm:MultiMethod) {
-		ms = mm.Arr()
-		collector/Lines() {
-			collect("MultiMethod with ${ms.len()} method(s)")
-			for(i;len(ms)) {
-				("  [$i] " + ms[i].inspect()).each(collect)
-			}
-		}
+	doc %RET - Arr of Str
+	F inspect(path:Arr, mm:MultiMethod) {
+		["${_inspect_path_to_str(path)} - MultiMethod"] + inspect(path + [Lit('.Arr()')], mm.Arr())
 	}
 
+	doc %STATUS - internal
+	doc Internal method. Please do not use.
 	doc Inspect Str
-	doc %RET - Lines
-	F inspect(s:Str) Lines(["String of length ${s.len()}: ${SafeStr(s)}"])
+	doc %RET - Arr of Str
+	F inspect(path:Arr, s:Str) ["${_inspect_path_to_str(path)} = String of length ${s.len()}: ${SafeStr(s)}"]
 
-	doc Inspect Hash
-	doc %RET - Lines
-	F inspect(h:Hash) Lines(["Hash of size ${h.len()}"] + h.map({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
+	doc %STATUS - internal
+	doc Internal method. Please do not use.
+	doc Inspect Hash and similar data structures
+	doc %RET - Arr of Str
+	F inspect(path:Arr, h) {
+		guard h =~ AnyOf(Hash, HashLike, Namespace, NormalTypeInstance)
+		guard h !~ ArrLike  # Handled as Eachable1
+		hh = h.Hash()
+		["${_inspect_path_to_str(path)} - ${h.Type().name} with ${hh.len()} key/value pair(s)"] + hh.map({
+			inspect(path + [A], B)
+		}).flatten()
+	}
 
-	doc Inspect Namespace
-	doc %RET - Lines
-	F inspect(n:Namespace) Lines(["Namespace with ${n.len()} item(s)"] + n.map({"  [${SafeStr(A)}] = ${SafeStr(B)}"}))
-
+	doc %STATUS - internal
+	doc Internal method. Please do not use.
 	doc Inspect CommandsPipeline
-	doc %RET - Lines
-	F inspect(cp:CommandsPipeline) {
+	doc %RET - Arr of Str
+	F inspect(path:Arr, cp:CommandsPipeline) {
 		F p(idx:Int) {
 			cp.pipes[idx] is Null returns []
-			("     pipe[$idx]: " + inspect(cp.pipes[idx]))
+			inspect(path + ['pipes', idx], cp.pipes[idx])
 		}
-		collector/Lines() {
-			collect(cp.Type().name)
+		collector {
+			collect("${_inspect_path_to_str(path)} - ${cp.Type().name}")
 			if cp.options {
-				("  options: " + inspect(cp.options)) % collect
+				inspect(path + ['options'], cp.options) % collect
 			}
 			p(0) % collect
 			for(i;len(cp.commands)) {
-				("  command[$i]: " + inspect(cp.commands[i])) % collect
+				inspect(path + ['commands', i], cp.commands[i]) % collect
 				p(i+1) % collect
 			}
 		}
 	}
+
+	doc Inspect any object
+	doc %RET - Human readable representation of the object
+	F inspect(x) inspect([], x).Lines()
 }
 
 section "Functional utilities" {
@@ -1648,8 +1685,12 @@ section "Set" {
 	F '>='(a:Set, b:Set) b <= a
 
 	doc Inspect Set
-	doc %RET - Lines
-	F inspect(a:Set) Lines(["Set of size ${a.len()}"] + a.map({"  ${SafeStr(A)}"}).digest(16, '  (...)'))
+	doc %RET - Arr of Str
+	F inspect(path:Arr, a:Set) {
+		["${_inspect_path_to_str(path)} - Set of size ${a.len()}"] + a.map_idx_val({
+			inspect(path + [A], B)
+		}).flatten()
+	}
 
 	doc Defines collector { ... collect(...) ... } behaviour for Set.
 	F collector(s:Set, body:Fun) {
@@ -5956,51 +5997,12 @@ doc Wait for the process to finish and return its standard output.
 doc %RET - Str
 F Str(p:Process) p.wait().stdout or ''
 
-doc Inspect Process
-doc %RET - Lines
-F inspect(p:Process) {
-	# XXX: Are there any platforms with different convention?
-	outputs_names = {1: 'stdout', 2: 'stderr'}
-	collector/Lines() {
-		collect("Process")
-		collect("  command = ${p.command}")
-		collect("  executable = ${p.executable}")
-		collect("  pid = ${p.pid}")
-		collect("  exit_code = ${p.exit_code}")
-		collect("  exit_signal = ${p.exit_signal}")
-		p.redirects.each_idx_val(F(idx, val) {
-			("  redirects[${idx}]: " + p.redirects[idx].inspect()).each(collect)
-		})
-		p.outputs.each(F(k, val) {
-			# Replacing 'lines' with 'Lines' does not work. Gives "(Failed to inspect)".
-			val_lines = val.Box().map(lines).get([])
-			name = ', ' +? outputs_names.get(k, '')
-			collect("  output on fd ${k}${name} (${val_lines.len()} lines):")
-			("    " + val_lines.digest(16)).each(collect)
-		})
-	}
-}
-
 doc Wait for the processes to finish and return standard output of the last process in pipeline.
 doc %RET - Str
 F Str(pp:ProcessesPipeline) {
 	pp.wait()
 	assert(pp.processes)
 	Str(pp.processes[-1])
-}
-
-doc Inspect ProcessesPipeline
-doc %RET - Lines
-F inspect(pp:ProcessesPipeline) {
-	collector/Lines() {
-		collect(pp.Type().name)
-		%[cp pipe_in pipe_out].each(F(k) {
-			("  ${k}: " + inspect(pp.(k))) % collect
-		})
-		for(i;len(pp.processes)) {
-			("  processes[$i]: " + inspect(pp.processes[i])) % collect
-		}
-	}
 }
 
 # TODO: type Arg(Str) -- currently, inheriting built in types is not supported
@@ -7242,7 +7244,8 @@ doc Don't use, subject to change, including name
 doc %STATUS - experimental
 F SafeStr(val) {
 	v = "$val" tor "(Failed to inspect <${val.Type().name tor '(unknown type)'}>)"
-	v.map(F(ch) {
+	assert(v, Str, "Str(${val.Type().name}) must return an Str, not ${v.Type().name}")
+	v.limit(128*1024, '...').map(F(ch) {
 		o = ord(ch)
 		o >= 32 and ch != '\\' returns ch
 		'\\x' + encode_hex(ch)
