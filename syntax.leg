@@ -294,7 +294,7 @@ commands-separator = newline_space | inline_space? [;] inline_space?
 items-separator = newline_space | inline_space? [,] space?
 
 comment =
-  "#" [^\n]+ { $$ = NULL; }
+  "#" [^\n]* { $$ = NULL; }
   |
   "TEST " [^\n]+ { $$ = NULL; }
 
