@@ -93,9 +93,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	F regions(cb:Fun) {
 		regs = regions()
 		regs.pmap(F(r) {
-			data = cb(r)
-			data._Region = ConstIter(r)
-			data
+			data = cb(r)::{
+				A._Region = ConstIter(r)
+			}
 		}).flatten()
 	}
 
