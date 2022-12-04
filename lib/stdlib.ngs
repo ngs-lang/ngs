@@ -6571,7 +6571,7 @@ TEST instances = ["something"]; stdlib_aws_straighten_tags(instances); instances
 doc Parse the output of "aws" command. Extracts the array (see "s" below"). For "describe-instances", flattens the instance list.
 doc s - Str containing JSON with a Hash at top level with exactly one Arr as value
 doc hints - hints.process.command.argv[0] must be 'aws'
-doc %RET - data structure, tyically an Arr at top level. If s is empty string - null.
+doc %RET - data structure, typically an Arr at top level. If s is empty string - null.
 F decode(s:Str, hints:Hash) {
 	guard (try hints.process.command.argv[0] == 'aws') or (try hints.process.command.options.decode == 'aws')
 
