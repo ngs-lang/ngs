@@ -13,6 +13,7 @@
 * Add `last(Eachable1, Any)`, the counterpart of first()
 * Add `skip(Iter, Any)`
 * When a function is called from CLI, the output is now displayed using `echo_cli()`
+* Add `AWS2::regions(CommandsPipeline, Arr)`
 
 ### Fixes and improvements
 * Add `UndefinedUpVar` exception, thrown when accessing undefined "upvar"
@@ -20,6 +21,7 @@
 * Experimental syntax - allow many additional elements `x.HERE` and `x::HERE`
 * Fix and improve documentation
 * Improve `inspect()`
+* Add `regs` parameter to `AWS2::regions(Fun)`
 
 ### Deprecated
 * `is_subtype(Type, Type)` is now deprecated, use `<=` operator, example: `T1 <= T2`. Solves #391.

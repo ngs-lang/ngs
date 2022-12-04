@@ -90,13 +90,27 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc cb - Must return an array. regions() sets ._Region in the result and flattens the results
 	doc %RET - Arr
 	doc %EX - ins = AWS2::regions({ ``aws ec2 describe-instances --region $A $*filters`` })
-	F regions(cb:Fun) {
-		regs = regions()
+	F regions(cb:Fun, regs:Arr=[]) {
+		regs = regs or regions()
 		regs.pmap(F(r) {
-			data = cb(r)
-			data._Region = ConstIter(r)
-			data
+			data = cb(r)::{
+				A._Region = ConstIter(r)
+			}
 		}).flatten()
+	}
+
+	F regions(cp:CommandsPipeline, regs:Arr=[]) {
+		guard cp =~ {'commands': [Command]}
+		# Requires deep version of copy() for ...argv += ['--region', r]
+		regions(F(r) {
+			# TODO: check which exactly copy()ies are needed
+			t = cp.copy()
+			t.commands .= copy()
+			t.commands[0] .= copy()
+			t.commands[0].argv .= copy()
+			t.commands[0].argv += ['--region', r]
+			``$t``
+		}, regs)
 	}
 
 	# --- zones ---

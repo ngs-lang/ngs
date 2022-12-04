@@ -6587,6 +6587,11 @@ F decode(s:Str, hints:Hash) {
 	data = decode_json(s)
 	guard data is Hash
 
+	# try - because argv might be shorter than 3 elements
+	if try hints.process.command.argv[0..3] =~ %[aws resource-explorer-2 get-index] {
+		return data
+	}
+
 	if hints.process.command.argv.get(1, null) == 'cloudfront' {
 		# TODO: eliminate stupid 'Quantity' field.
 		# Can not convert {'Quantity': ..., 'Items': [ iii ]} to just [ iii ]

@@ -1,0 +1,88 @@
+#!/usr/bin/env ngs
+ns {
+
+	# WIP
+	# Ngs Amazon Swiss army Knife
+	# This is an experiment towards creating the shell UI.
+
+	RESOURCE_TYPES = %[
+		to
+		do
+	]
+
+	F watch() {
+		log("Starting to watch AWS profile ${profile}")
+		while true {
+			inspect()
+			sleep(30)
+		}
+	}
+
+	doc Ensure given AWS profile has the necessary setup
+	F setup() {
+		log("Checking resource-explorer status")
+
+		# Arn, Region, Type
+		# Type: LOCAL, AGGREGATOR
+		indexes = ``log: aws resource-explorer-2 list-indexes``
+
+		# RegionName, Endpoint, OptInStatus
+		regions = ``log: aws ec2 describe-regions``
+
+		d = Diff(indexes.Region, regions.RegionName)
+		d.add.each(F(r) {
+			$(log: aws resource-explorer-2 create-index --region $r)
+		})
+
+		if indexes.none({"Type": "AGGREGATOR"}) {
+			r = `line: aws configure get region`
+			log("No AGGREGATOR index found. Making one in ${r}")
+			i = indexes.the_one({'Region': r})
+			$(log: aws resource-explorer-2 update-index-type --arn ${i.Arn} --type AGGREGATOR --region ${r})
+			indexes = ``log: aws resource-explorer-2 list-indexes``
+		}
+
+
+		agg = indexes.the_one({"Type": "AGGREGATOR"})
+		rf = ``log: aws resource-explorer-2 get-index --region ${agg.Region}``.ReplicatingFrom
+
+		d = Diff(rf, indexes.Region - [agg.Region]) # AGGREGATOR regions won't be in ReplicatingFrom
+		assert(not(d), "Un-replicated regions exist: ${d}")  # Didn't see this once
+
+		views = ``log: aws resource-explorer-2 list-views``
+		if not(views) {
+			$(log: aws resource-explorer-2 create-view --view-name nask)
+			views = ``log: aws resource-explorer-2 list-views``
+		}
+		echo(views)
+
+		# view validation - wip - start
+		dv = ``aws resource-explorer-2 get-default-view`` # .ViewArn
+		if not(dv) {
+			$(log: aws resource-explorer-2 associate-default-view --view-arn X)
+		}
+
+		dv = ``aws resource-explorer-2 get-view --view-arn ${dv}``
+		dv.assert({'View': {'Filters': {'FilterString': ''}}})
+		# view validation - wip - end
+
+	}
+
+	F inspect() {
+		log("Looking up stacks")
+		stacks = AWS2::regions(%(aws cloudformation describe-stacks))
+		log("Stacks found in regions: ${stacks._Region.sort().Stats()}")
+
+		log("Listing regions with codepipeline service")
+		pipelines_regions = ``aws ssm get-parameters-by-path --path /aws/service/global-infrastructure/services/codepipeline/regions``.Value
+		pipelines_regions .= filter(AnyOf(AWS2::regions()))  # Intersection of regions we are in and where the service is available
+		# log("Pipelines are supported in regions: ${pipelines_regions}")
+
+		log("Looking up pipelines")
+		pipelines = AWS2::regions(%(aws codepipeline list-pipelines), pipelines_regions)
+		log("Pipelines found in regions: ${pipelines._Region.sort().Stats()}")
+
+
+	}
+
+}
