@@ -7751,7 +7751,7 @@ F echo(f:File, l:Lines) {
 
 # TODO: better exception
 F realpath(path:Str) {
-	c_realpath(path) or throw CError("Faied to realpath()").set(path=path)
+	c_realpath(path) or throw CError("Failed to realpath()").set(path=path)
 }
 
 doc %RET - Same type as p but using absolute path
