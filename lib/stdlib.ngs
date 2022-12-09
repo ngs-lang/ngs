@@ -3854,7 +3854,7 @@ F Result(fun:Fun) {
 }
 
 doc Initialize Success with the given value.
-F init(s:Success, v) s.val = v
+F init(s:Success, v=null) s.val = v
 
 doc Initialize Failure with the given value.
 F init(f:Failure, e:Exception) f.val = e
