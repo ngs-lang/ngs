@@ -3875,7 +3875,7 @@ doc %RET - Any
 doc %EX - { 1 / 10 }.Result().get(100)  # 0
 F get(s:Success, dflt) s.val
 
-doc Retruns dflt
+doc Returns dflt
 doc %EX - { 1 / 0 }.Result().get(100)  # 100
 F get(f:Failure, dflt) dflt
 
