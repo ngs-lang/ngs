@@ -7433,11 +7433,14 @@ F init(t:Time, s:Str, format:Str) {
 }
 
 F init(t:Time, s:Str) block b {
-	# AWS API returns '%Y-%m-%dT%H:%M:%S.000%Z'
-	# On MacOS "%Z" nor "%z" match 'Z' so working around - start
-	s .= replace(/Z$/, {'+0000'})
+	# AWS API returns (different formats of course)
+	#  * %Y-%m-%dT%H:%M:%S.000%Z
+	#  * 2022-11-03T09:14:25.219000+04:00
+	s .= replace(/Z$/, {'+0000'}) # On MacOS "%Z" nor "%z" match 'Z' so working around - start
+	s .= replace(/(?<=\+\d\d):(?=\d\d)/, '')  # +04:00 --> +0400 (arbitrary -> %z)
 	# On MacOS "%Z" nor "%z" match 'Z' so working around - end
 	formats = [
+		'%Y-%m-%dT%H:%M:%S.%f%z'
 		'%Y-%m-%dT%H:%M:%S.000%z'
 		'%F %T'
 		'%F'
