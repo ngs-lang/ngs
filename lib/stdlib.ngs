@@ -7436,12 +7436,13 @@ F init(t:Time, s:Str) block b {
 	# AWS API returns (different formats of course)
 	#  * %Y-%m-%dT%H:%M:%S.000%Z
 	#  * 2022-11-03T09:14:25.219000+04:00
-	s .= replace(/Z$/, {'+0000'}) # On MacOS "%Z" nor "%z" match 'Z' so working around - start
+	orig_s = s
+	s .= replace(/\.\d+/, '')  # Can't handle fractions of a second (yet?)
+	s .= replace(/Z$/, {'+0000'})  # On MacOS "%Z" nor "%z" match 'Z' so working around - start
 	s .= replace(/(?<=\+\d\d):(?=\d\d)/, '')  # +04:00 --> +0400 (arbitrary -> %z)
 	# On MacOS "%Z" nor "%z" match 'Z' so working around - end
 	formats = [
-		'%Y-%m-%dT%H:%M:%S.%f%z'
-		'%Y-%m-%dT%H:%M:%S.000%z'
+		'%Y-%m-%dT%H:%M:%S%z'
 		'%F %T'
 		'%F'
 	]
@@ -7453,7 +7454,7 @@ F init(t:Time, s:Str) block b {
 			"OK"
 		}
 	})
-	throw InvalidArgument("Failed to parse time").set(s=s,formats=formats)
+	throw InvalidArgument("Failed to parse time").set(s=orig_s, s_transformed=s, formats=formats)
 }
 
 doc String representation of Time
