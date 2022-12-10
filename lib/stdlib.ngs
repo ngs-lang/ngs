@@ -7578,6 +7578,7 @@ F retry(
 			throw e
 		}
 		if success_predicate(result) {
+			logger("$title Success")
 			return success_cb(result)
 		}
 		if(i < times - 1) {
@@ -7586,6 +7587,7 @@ F retry(
 			$(sleep "$s")
 		}
 	}
+	logger("$title Failure")
 	fail_cb()
 }
 

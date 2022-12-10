@@ -23,6 +23,7 @@
 * Improve `inspect()`
 * Add `regs` parameter to `AWS2::regions(Fun)`
 * `$(log: ...)` can now take Str to prefix the message
+* Improve `retry()` logging
 
 ### Deprecated
 * `is_subtype(Type, Type)` is now deprecated, use `<=` operator, example: `T1 <= T2`. Solves #391.
