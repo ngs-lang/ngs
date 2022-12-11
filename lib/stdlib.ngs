@@ -8055,6 +8055,11 @@ section "Bootstrap" {
 		h.map("${X}: ${Y}").each(echo)
 	}
 
+	F echo_cli(t:Time) {
+		guard isatty(1)
+		t.Str().echo_cli()
+	}
+
 	F echo_cli(s:Str) echo(s)
 
 	main = MultiMethod()
