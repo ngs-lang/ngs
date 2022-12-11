@@ -7457,6 +7457,13 @@ F init(t:Time, s:Str) block b {
 	throw InvalidArgument("Failed to parse time").set(s=orig_s, s_transformed=s, formats=formats)
 }
 
+# TODO: dedup. Time only should say that Int() should be used for comparing.
+F '=='(a:Time, b:Time) a.Int() == b.Int()
+F '<='(a:Time, b:Time) a.Int() <= b.Int()
+F '<'(a:Time, b:Time) a.Int() < b.Int()
+F '>='(a:Time, b:Time) a.Int() >= b.Int()
+F '>'(a:Time, b:Time) a.Int() > b.Int()
+
 doc String representation of Time
 doc format - strftime(3) format
 doc gmt - Use GMT time zone (defaults to local time zone)
