@@ -10,6 +10,9 @@ ns {
 		do
 	]
 
+	Timeline  # autoload TimelineItem
+	type PipelineExecution(HashLike)
+
 	F watch() {
 		log("Starting to watch AWS profile ${profile}")
 		while true {
@@ -68,6 +71,11 @@ ns {
 
 	}
 
+	F horizon() {
+		seconds = ENV.get('HORIZON', '3600').Int()
+		Time(Time().Int() - seconds)
+	}
+
 	F inspect() {
 		log("Looking up stacks")
 		stacks = AWS2::regions(%(aws cloudformation describe-stacks))
@@ -82,7 +90,37 @@ ns {
 		pipelines = AWS2::regions(%(aws codepipeline list-pipelines), pipelines_regions)
 		log("Pipelines found in regions: ${pipelines._Region.sort().Stats()}")
 
+		# pipelines.pmap(4, inspect_pipeline)
+		inspect_pipeline(pipelines[0])
 
+		# TODO: AMIs creation
+	}
+
+	global TimelineItem
+	F TimelineItem(pe:PipelineExecution) {
+		TimelineItem().set(time_start=pe.startTime, time_last_update=pe.lastUpdateTime, data=pe)
+	}
+
+	# TODO: AWS types such as CodePipeline
+	F inspect_pipeline(pipeline:Hash) {
+		assert(pipeline, {'name': Str, 'version': Int, 'created': Str, 'updated': Str, '_Region': Str})
+
+		pipelineExecutionSummaries = ``aws codepipeline list-pipeline-executions --pipeline-name ${pipeline.name} --region ${pipeline._Region}``
+		pipelineExecutionSummaries._Region = ConstIter(pipeline._Region)
+		pipelineExecutionSummaries .= map(PipelineExecution)
+
+		# lastUpdateTime pipelineExecutionId sourceRevisions startTime status trigger _Region
+		pipelineExecutionSummaries.each(F(s) {
+			s.startTime .= Time()
+			s.lastUpdateTime .= Time()
+		})
+		pipelineExecutionSummaries.map(F(s) {
+			TimelineItem(s)
+		}).filter(F(ti) ti.Time() > horizon()).Timeline().set(name="Pipeline ${pipeline.name} after ${horizon()}")
+	}
+
+	F inspect_pipeline(name:Str) {
+		``aws codepipeline list-pipelines``.the_one({'name': name}).set(_Region=`line: aws configure get region`).inspect_pipeline()
 	}
 
 }

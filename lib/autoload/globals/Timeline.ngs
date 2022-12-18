@@ -1,0 +1,73 @@
+ns {
+
+	global Timeline, TimelineItem, Time, Lines, init, each, map, sort, push, echo_cli
+	type Timeline
+
+	doc time_start - Time
+	doc time_last_update - Time
+	doc time_end - Null or Time
+	doc data - Any
+	type TimelineItem
+
+	F init(t:Timeline) {
+		t.id = "tl-${`line: uuidgen`}" # temporary
+		t.name = '(unnamed)'
+		# later # t.time_start = null
+		# later # t.time_last_update = null
+		# later # t.time_end = null
+		t.items = []
+	}
+
+	F init(t:Timeline, items:Arr) {
+		super(t)
+		t.items = items
+		t.sort()
+	}
+
+	F each(t:Timeline, cb:Fun) t::{A.items.each(cb)}
+	F map(t:Timeline, mapper:Fun) t.items.map(mapper)
+
+	F sort(t:Timeline) t::{
+		A.items .= sort(F(a, b) a.Time() <= b.Time())
+	}
+
+	F push(t:Timeline, ti:TimelineItem) t::{
+		A.items.push(ti)
+		A.sort() # TODO: insert in the correct place, keeping .items sorted by time
+	}
+
+	F init(ti:TimelineItem) {
+		ti.id = "tli-${`line: uuidgen`}" # temporary
+		ti.time_start = null
+		ti.time_last_update = null
+		ti.time_end = null
+	}
+
+	F Time(ti:TimelineItem) ti.time_end or ti.time_last_update or ti.time_start
+
+	section "Formatting" {
+
+		type _Ctx
+		F init(ctx:_Ctx) {
+			ctx.depth = 0
+		}
+
+		F _pfx(ctx:_Ctx) "    " * ctx.depth
+		F _deeper(ctx:_Ctx) ctx.copy()::{ A.depth += 1 }
+
+		# not global
+		F inspect(t:Timeline, ctx:_Ctx) {
+			[
+				"${t.Type().name}: ${t.name}"
+				ctx._deeper()._pfx() + "id: ${t.id}"
+				ctx._deeper()._pfx() + "items (${t.items.len()}):"
+			]
+		}
+
+		F Lines(t:Timeline) Lines(inspect(t, _Ctx()))
+
+		F echo_cli(t:Timeline) {
+			t.Lines().echo()
+		}
+	}
+}
