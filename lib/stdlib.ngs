@@ -4826,7 +4826,14 @@ section "Thread" block _ {
 		ret = [null] * len(e)
 		e.each_idx_val(F(idx, val) {
 			ex.push({
-				ret[idx] = Result({ mapper(val) })
+				ret[idx] = Result({ mapper(val) })::{
+				    if A is Failure {
+				        A.val.input = {
+				            'idx': idx
+				            'val': val
+				        }
+				    }
+				}
 			})
 		})
 		ex.wait()
@@ -4835,6 +4842,7 @@ section "Thread" block _ {
     }
 
     TEST e=100; e.pmap(2, X*2) == e.map(X*2)
+    # TEST try { [1,0,2].pmap(10 / X) } catch(e:ResultsException) { (e.results =~ [Success, Failure, Success]) and e.results[1].has("input") } # To investigate: stack overflow when dealing with e.results
 
 	doc Run cb in n parallel threads. Each thread runs one cb but this might change in future (preserving the total n calls to cb).
 	F ptimes(n:Int, cb:Fun) {
