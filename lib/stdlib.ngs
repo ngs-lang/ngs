@@ -4822,7 +4822,7 @@ section "Thread" block _ {
 	doc %EX - pages_texts = abs_pages_urls.pmap(F(url)  `lynx -dump $url`)
 	F pmap(e:Eachable1, threads:Int, mapper:Fun) {
 		ex = Executor(threads)
-		debug("conc", "pmap uses excutor ${ex}")
+		debug("conc", "pmap uses executor ${ex}")
 		ret = [null] * len(e)
 		e.each_idx_val(F(idx, val) {
 			ex.push({
