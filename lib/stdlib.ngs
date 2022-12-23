@@ -5319,12 +5319,12 @@ section "Path" {
 		t.fd = null
 		t.cleanup_policy = cleanup_policy
 		debug("file", "Created ${t.Type().name} at ${t.path}")
-		#exit_hook["${t.Type().name}:${t}"] = F cleanup(e:Exit) {
-		#	debug("file", "Will do cleanup for ${t.Type().name} at ${t}")
-		#	# Exit is not a subtype of Exception. If anybody complains, this can be fixed and a "real" Exception can be sent.
-		#	b = if e.exceptions then FullBox(e) else EmptyBox()
-		#	del(t, t.cleanup_policy, b)
-		#}
+		exit_hook["${t.Type().name}:${t}"] = F cleanup(e:Exit) {
+			debug("file", "Will do cleanup for ${t.Type().name} at ${t}")
+			# Exit is not a subtype of Exception. If anybody complains, this can be fixed and a "real" Exception can be sent.
+			b = if e.exceptions then FullBox(e) else EmptyBox()
+			del(t, t.cleanup_policy, b)
+		}
 	}
 
 	F init(t:TmpFile, cleanup_policy:CleanupPolicy=RemoveCleanupPolicy()) {
