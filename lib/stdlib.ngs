@@ -5319,12 +5319,12 @@ section "Path" {
 		t.fd = null
 		t.cleanup_policy = cleanup_policy
 		debug("file", "Created ${t.Type().name} at ${t.path}")
-		exit_hook["${t.Type().name}:${t}"] = F cleanup(e:Exit) {
-			debug("file", "Will do cleanup for ${t.Type().name} at ${t}")
-			# Exit is not a subtype of Exception. If anybody complains, this can be fixed and a "real" Exception can be sent.
-			b = if e.exceptions then FullBox(e) else EmptyBox()
-			del(t, t.cleanup_policy, b)
-		}
+		#exit_hook["${t.Type().name}:${t}"] = F cleanup(e:Exit) {
+		#	debug("file", "Will do cleanup for ${t.Type().name} at ${t}")
+		#	# Exit is not a subtype of Exception. If anybody complains, this can be fixed and a "real" Exception can be sent.
+		#	b = if e.exceptions then FullBox(e) else EmptyBox()
+		#	del(t, t.cleanup_policy, b)
+		#}
 	}
 
 	F init(t:TmpFile, cleanup_policy:CleanupPolicy=RemoveCleanupPolicy()) {
@@ -6113,12 +6113,14 @@ section "exec()" {
 # --- $() ---
 
 F fork() {
+	global exit_hook
+	child_exit_hook = exit_hook.filter({ B.meta() =~ {'keep_after_fork': true} })
 	pid = c_fork()
 	pid == -1 throws ProcessFail("Could not spawn a process").set('cause', CError("Failed to fork()"))
 	debug("process", "PID after fork: $pid")
 	if pid == 0 section "child" {
-		global exit_hook
-		exit_hook .= filter({ B.meta() =~ {'keep_after_fork': true} })
+		# #618 - filter() in child was causing out-of-memory, hence, filter() is now before c_fork()
+		exit_hook = child_exit_hook
 	}
 	pid
 }
