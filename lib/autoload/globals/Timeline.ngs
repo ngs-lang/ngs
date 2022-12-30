@@ -1,42 +1,10 @@
 ns {
 
-	global Timeline, TimelineItem, TimelineItemStatus, Time, Lines, init, each, map, sort, push, echo_cli
-	type Timeline
+	global Timeline, TimelineStatus, Time, Lines, init, each, map, sort, push, echo_cli
 
-	doc time_start - Time
-	doc time_last_update - Time
-	doc time_end - Null or Time
-	doc data - Any
-	type TimelineItem
+	section "TimelineStatus" {
 
-	section "Timeline" {
-
-		F init(t:Timeline) {
-			t.id = "tl-${`line: uuidgen`}" # temporary
-			t.name = '(unnamed)'
-			# later # t.time_start = null
-			# later # t.time_last_update = null
-			# later # t.time_end = null
-			t.items = []
-		}
-
-		F init(t:Timeline, items:Arr) {
-			super(t)
-			t.items = items
-			t.sort()
-		}
-
-		F each(t:Timeline, cb:Fun) t::{A.items.each(cb)}
-		F map(t:Timeline, mapper:Fun) t.items.map(mapper)
-
-		F sort(t:Timeline) t::{
-			A.items .= sort(F(a, b) a.Time() <= b.Time())
-		}
-	}
-
-	section "TimelineItemStatus" {
-
-		TimelineItemStatus = ns {
+		TimelineStatus = ns {
 			type Status
 				type Unknown(Status)
 				type Running(Status)
@@ -50,64 +18,78 @@ ns {
 	}
 
 
+	section "Timeline" {
 
-	F push(t:Timeline, ti:TimelineItem) t::{
-		A.items.push(ti)
-		A.sort() # TODO: insert in the correct place, keeping .items sorted by time
-	}
+		doc time_start - Time
+		doc time_last_update - Time
+		doc time_end - Null or Time
+		doc data - Any
+		type Timeline
 
-	section "TimelineItem" {
 
-		F init(ti:TimelineItem) {
-			ti.id = "tli-${`line: uuidgen`}" # temporary
-			ti.name = '(unnamed)'
-			ti.time_start = null
-			ti.time_last_update = null
-			ti.time_end = null
-			ti.status = TimelineItemStatus::Unknown()
-			ti.data = null
-			ti.sub_timeline = Timeline()
+		F init(t:Timeline) {
+			t.id = "tl-${`line: uuidgen`}" # temporary
+			t.name = '(unnamed)'
+			t.status = TimelineStatus::Unknown()
+			t.time_start = null
+			t.time_last_update = null
+			t.time_end = null
+			t.data = null
+			t.items = []
 		}
 
-		F Time(ti:TimelineItem) ti.time_end or ti.time_last_update or ti.time_start
-	}
-
-	section "Formatting" {
-
-		type _Ctx
-		F init(ctx:_Ctx) {
-			ctx.depth = 0
+		F init(t:Timeline, items:Arr) {
+			super(t)
+			t.items = items
+			t.sort()
 		}
 
-		F _pfx(ctx:_Ctx) "    " * ctx.depth
-		F _deeper(ctx:_Ctx, n:Int=1) ctx.copy()::{ A.depth += n }
-
-		# not global
-		F inspect(t:Timeline, ctx:_Ctx) {
-			[
-				ctx._pfx() + "${t.Type().name}: ${t.name}"
-				ctx._deeper()._pfx() + "id: ${t.id}"
-				ctx._deeper()._pfx() + "items (${t.items.len()}):"
-			] + t.items.map(F(ti) inspect(ti, ctx._deeper(2))).flatten()
+		F push(t:Timeline, x:Timeline) t::{
+			A.items.push(x)
+			A.sort() # TODO: insert in the correct place, keeping .items sorted by time
+			# TODO: maximize time_last_update and time_end into t
+			# TODO: minimize time_start into t
 		}
 
-		F inspect(ti:TimelineItem, ctx:_Ctx) {
-			dp = ctx._deeper()._pfx()
-			collector {
-				collect(ctx._pfx() + "${ti.Type().name}: ${ti.name}")
-				for k in %[id time_start time_last_update time_end status] {
-					k == 'time_last_update' and ti.time_last_update == ti.time_end continues
-					k == 'time_end' and ti.time_end is Null continues
-					collect(dp + "${k}: ${ti.(k)}")
-				}
-				# collect(dp + Str(ti.data))
+		F each(t:Timeline, cb:Fun) t::{A.items.each(cb)}
+		F map(t:Timeline, mapper:Fun) t.items.map(mapper)
+		F sort(t:Timeline) t::{ A.items .= sort(F(a, b) a.Time() <= b.Time()) }
+		F Time(t:Timeline) t.time_end or t.time_last_update or t.time_start
+
+
+		section "Lines(Timeline)" {
+
+			type _Ctx
+			F init(ctx:_Ctx) {
+				ctx.depth = 0
 			}
-		}
 
-		F Lines(t:Timeline) Lines(inspect(t, _Ctx()))
+			F _pfx(ctx:_Ctx) "    " * ctx.depth
+			F _deeper(ctx:_Ctx, n:Int=1) ctx.copy()::{ A.depth += n }
 
-		F echo_cli(t:Timeline) {
-			t.Lines().echo()
+			F Lines(t:Timeline, ctx:_Ctx) {
+				dp = ctx._deeper()._pfx()
+				collector {
+					collect(ctx._pfx() + "${t.Type().name}: ${t.name}")
+					for k in %[id time_start time_last_update time_end status] {
+						k == 'time_last_update' and t.time_last_update == t.time_end continues
+						k == 'time_end' and t.time_end is Null continues
+						collect(dp + "${k}: ${t.(k)}")
+					}
+					# collect(dp + Str(t.data))
+					if(t.items) {
+						collect(dp + "items: ${t.items.len()}")
+					}
+				} + t.items.map(F(sub_timeline) Lines(sub_timeline, ctx._deeper(2))).flatten()
+			}
+
+			F Lines(t:Timeline) Lines(Lines(t, _Ctx()))
+
 		}
 	}
+
+	F echo_cli(t:Timeline) {
+		t.Lines().echo()
+	}
+
 }

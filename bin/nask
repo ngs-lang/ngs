@@ -1,11 +1,11 @@
 #!/usr/bin/env ngs
-ns {
+ns(global_inspect=inspect) {
 
 	# WIP
 	# Ngs Amazon Swiss army Knife
 	# This is an experiment towards creating the shell UI.
 
-	Timeline  # autoload TimelineItem
+	Timeline  # autoload TimelineStatus
 	type PipelineExecution(HashLike)
 	type PipelineActionExecution(HashLike)
 
@@ -92,11 +92,11 @@ ns {
 		# TODO: AMIs creation
 	}
 
-	global TimelineItem
-	F TimelineItem(pe:PipelineExecution) {
+	global Timeline
+	F Timeline(pe:PipelineExecution) {
 
 		# pe.status: InProgress, Stopped, Stopping, Succeeded, Superseded, Failed - https://docs.aws.amazon.com/cli/latest/reference/codepipeline/list-pipeline-executions.html
-		s = TimelineItemStatus
+		s = TimelineStatus
 		status_translation = {
 			'InProgress': s::Running()
 			'Stopped': s::Cancelled()
@@ -106,7 +106,7 @@ ns {
 			'Failed': s::Failed()
 		}
 
-		TimelineItem()::{
+		Timeline()::{
 			A.time_start = pe.startTime
 			A.time_last_update = pe.lastUpdateTime
 			A.data = pe
@@ -125,7 +125,7 @@ ns {
 		guard pe.status == 'Failed'
 		log("Augmenting failed PipelineExecution ${pe.pipelineExecutionId}")
 		actionExecutionDetails = ``aws codepipeline list-action-executions --pipeline-name ${pe._Name} --filter "pipelineExecutionId=${pe.pipelineExecutionId}" --region ${pe._Region}``
-		echo((actionExecutionDetails).Table())
+		echo(actionExecutionDetails.global_inspect())
 	}
 
 
@@ -143,7 +143,7 @@ ns {
 			s.startTime .= Time()
 			s.lastUpdateTime .= Time()
 			augment(s)
-			TimelineItem(s)::{
+			Timeline(s)::{
 				A.name = "Pipeline Execution ${s.pipelineExecutionId} (${s.status})"
 			}
 		}).filter(F(ti) ti.Time() > horizon()).Timeline().set(name="Pipeline ${pipeline.name} after ${horizon()}")
