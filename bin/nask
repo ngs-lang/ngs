@@ -5,13 +5,9 @@ ns {
 	# Ngs Amazon Swiss army Knife
 	# This is an experiment towards creating the shell UI.
 
-	RESOURCE_TYPES = %[
-		to
-		do
-	]
-
 	Timeline  # autoload TimelineItem
 	type PipelineExecution(HashLike)
+	type PipelineActionExecution(HashLike)
 
 	F watch() {
 		log("Starting to watch AWS profile ${profile}")
@@ -98,8 +94,40 @@ ns {
 
 	global TimelineItem
 	F TimelineItem(pe:PipelineExecution) {
-		TimelineItem().set(time_start=pe.startTime, time_last_update=pe.lastUpdateTime, data=pe)
+
+		# pe.status: InProgress, Stopped, Stopping, Succeeded, Superseded, Failed - https://docs.aws.amazon.com/cli/latest/reference/codepipeline/list-pipeline-executions.html
+		s = TimelineItemStatus
+		status_translation = {
+			'InProgress': s::Running()
+			'Stopped': s::Cancelled()
+			'Stopping': s::Stopping()
+			'Succeeded': s::Succeeded()
+			'Superseded': s::Cancelled()
+			'Failed': s::Failed()
+		}
+
+		TimelineItem()::{
+			A.time_start = pe.startTime
+			A.time_last_update = pe.lastUpdateTime
+			A.data = pe
+			A.status = status_translation[pe.status]
+			if A.status =~ Not(s::Running) {
+				A.time_end = pe.lastUpdateTime
+			}
+		}
 	}
+
+	F augment(pe:PipelineExecution) {
+		log("Not augmenting PipelineExecution ${pe.pipelineExecutionId}")
+	}
+
+	F augment(pe:PipelineExecution) {
+		guard pe.status == 'Failed'
+		log("Augmenting failed PipelineExecution ${pe.pipelineExecutionId}")
+		actionExecutionDetails = ``aws codepipeline list-action-executions --pipeline-name ${pe._Name} --filter "pipelineExecutionId=${pe.pipelineExecutionId}" --region ${pe._Region}``
+		echo((actionExecutionDetails).Table())
+	}
+
 
 	# TODO: AWS types such as CodePipeline
 	F inspect_pipeline(pipeline:Hash) {
@@ -107,15 +135,17 @@ ns {
 
 		pipelineExecutionSummaries = ``aws codepipeline list-pipeline-executions --pipeline-name ${pipeline.name} --region ${pipeline._Region}``
 		pipelineExecutionSummaries._Region = ConstIter(pipeline._Region)
+		pipelineExecutionSummaries._Name = ConstIter(pipeline.name)
 		pipelineExecutionSummaries .= map(PipelineExecution)
 
 		# lastUpdateTime pipelineExecutionId sourceRevisions startTime status trigger _Region
-		pipelineExecutionSummaries.each(F(s) {
+		pipelineExecutionSummaries.map(F(s) {
 			s.startTime .= Time()
 			s.lastUpdateTime .= Time()
-		})
-		pipelineExecutionSummaries.map(F(s) {
-			TimelineItem(s)
+			augment(s)
+			TimelineItem(s)::{
+				A.name = "Pipeline Execution ${s.pipelineExecutionId} (${s.status})"
+			}
 		}).filter(F(ti) ti.Time() > horizon()).Timeline().set(name="Pipeline ${pipeline.name} after ${horizon()}")
 	}
 
