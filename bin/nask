@@ -45,7 +45,7 @@ ns(global_inspect=inspect) {
 	global Timeline
 	F Timeline(pe:PipelineExecution) {
 
-		# pe.status: InProgress, Stopped, Stopping, Succeeded, Superseded, Failed - https://docs.aws.amazon.com/cli/latest/reference/codepipeline/list-pipeline-executions.html
+		# pe.status: InProgress, Stopped, Stopping, Succeeded, Superseded, Failed - https://awscli.amazonaws.com/v2/documentation/api/latest/reference/codepipeline/list-pipeline-executions.html
 		s = TimelineStatus
 		status_translation = {
 			'InProgress': s::Running()
