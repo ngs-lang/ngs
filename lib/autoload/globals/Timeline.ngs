@@ -24,6 +24,7 @@ ns {
 		doc time_last_update - Time
 		doc time_end - Null or Time
 		doc data - Any
+		doc error - AnyOf(Str, Lines)
 		type Timeline
 
 
@@ -31,6 +32,7 @@ ns {
 			t.id = "tl-${`line: uuidgen`}" # temporary
 			t.name = '(unnamed)'
 			t.status = TimelineStatus::Unknown()
+			t.error = null
 			t.time_start = null
 			t.time_last_update = null
 			t.time_end = null
@@ -71,9 +73,14 @@ ns {
 				dp = ctx._deeper()._pfx()
 				collector {
 					collect(ctx._pfx() + "${t.Type().name}: ${t.name}")
-					for k in %[id time_start time_last_update time_end status] {
+					for k in %[id time_start time_last_update time_end status error] {
 						k == 'time_last_update' and t.time_last_update == t.time_end continues
 						k == 'time_end' and t.time_end is Null continues
+						if k == 'error' {
+							t.error is Null continues
+							t.error.Lines().each(F(line) collect(dp + "${k}: ${line}"))
+							continue
+						}
 						collect(dp + "${k}: ${t.(k)}")
 					}
 					# collect(dp + Str(t.data))

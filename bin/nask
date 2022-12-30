@@ -1,6 +1,8 @@
 #!/usr/bin/env ngs
 ns(global_inspect=inspect) {
 
+	global init
+
 	# WIP
 	# Ngs Amazon Swiss army Knife
 	# This is an experiment towards creating the shell UI.
@@ -8,6 +10,18 @@ ns(global_inspect=inspect) {
 	Timeline  # autoload TimelineStatus
 	type PipelineExecution(HashLike)
 	type PipelineActionExecution(HashLike)
+
+	F init(pe:PipelineExecution, h:Hash) {
+		super(pe, h)
+		pe.startTime .= Time()
+		pe.lastUpdateTime .= Time()
+	}
+
+	F init(pae:PipelineActionExecution, h:Hash) {
+		super(pae, h)
+		pae.startTime .= Time()
+		pae.lastUpdateTime .= Time()
+	}
 
 	F watch() {
 		log("Starting to watch AWS profile ${profile}")
@@ -42,7 +56,45 @@ ns(global_inspect=inspect) {
 		# TODO: AMIs creation
 	}
 
+
+	F extract_error(pae:PipelineActionExecution) pae.output.executionResult.externalExecutionSummary
+
+	F extract_error(pae:PipelineActionExecution) {
+		guard pae =~ {"input": {"actionTypeId": {"owner": "AWS", "category": "Deploy", "provider": "CloudFormation"}}}
+		# Following changeset failed - no way to correlate stack events with the changeset
+		echo(pae)
+		"<<<TODO CloudFormation>>> ${pae.output.executionResult.externalExecutionSummary}"
+	}
+
 	global Timeline
+
+	F Timeline(pae:PipelineActionExecution) {
+		# pipelineExecutionId, actionExecutionId, pipelineVersion, stageName, actionName, startTime, lastUpdateTime, status (InProgress, Succeeded, Failed), input, output,
+
+		s = TimelineStatus
+		status_translation = {
+			'InProgress': s::Running()
+			'Succeeded': s::Succeeded()
+			'Failed': s::Failed()
+		}
+
+		Timeline()::{
+			a = pae.input.actionTypeId
+			A.name = "Pipeline Action Execution ${pae.actionExecutionId} ${pae.stageName}->${pae.actionName} [${a.owner} ${a.category} ${a.provider}] (${pae.status})"
+			A.time_start = pae.startTime
+			A.time_last_update = pae.lastUpdateTime
+			A.data = pae
+			A.status = status_translation[pae.status]
+			if A.status =~ Not(s::Running) {
+				A.time_end = pae.lastUpdateTime
+			}
+			if A.status is s::Failed {
+				A.error = extract_error(pae)
+			}
+		}
+	}
+
+
 	F Timeline(pe:PipelineExecution) {
 
 		# pe.status: InProgress, Stopped, Stopping, Succeeded, Superseded, Failed - https://awscli.amazonaws.com/v2/documentation/api/latest/reference/codepipeline/list-pipeline-executions.html
@@ -57,6 +109,7 @@ ns(global_inspect=inspect) {
 		}
 
 		Timeline()::{
+			A.name = "Pipeline Execution ${pe.pipelineExecutionId} (${pe.status})"
 			A.time_start = pe.startTime
 			A.time_last_update = pe.lastUpdateTime
 			A.data = pe
@@ -64,39 +117,33 @@ ns(global_inspect=inspect) {
 			if A.status =~ Not(s::Running) {
 				A.time_end = pe.lastUpdateTime
 			}
+			if A.status =~ AnyOf(s::Failed, s::Running) {
+				# https://awscli.amazonaws.com/v2/documentation/api/latest/reference/codepipeline/list-action-executions.html
+				# pipelineExecutionId, actionExecutionId, pipelineVersion, stageName, actionName, startTime, lastUpdateTime, status (InProgress, Succeeded, Failed), input, output,
+				actionExecutionDetails = ``aws codepipeline list-action-executions --pipeline-name ${pe._Name} --filter "pipelineExecutionId=${pe.pipelineExecutionId}" --region ${pe._Region}``
+				actionExecutionDetails .= map(PipelineActionExecution)
+				actionExecutionDetails._Region = ConstIter(pe._Region)
+				# echo(actionExecutionDetails.global_inspect())
+				A.items = actionExecutionDetails.map(Timeline)
+				A.sort()
+			}
 		}
 	}
-
-	F augment(pe:PipelineExecution) {
-		log("Not augmenting PipelineExecution ${pe.pipelineExecutionId}")
-	}
-
-	F augment(pe:PipelineExecution) {
-		guard pe.status == 'Failed'
-		log("Augmenting failed PipelineExecution ${pe.pipelineExecutionId}")
-		actionExecutionDetails = ``aws codepipeline list-action-executions --pipeline-name ${pe._Name} --filter "pipelineExecutionId=${pe.pipelineExecutionId}" --region ${pe._Region}``
-		echo(actionExecutionDetails.global_inspect())
-	}
-
 
 	# TODO: AWS types such as CodePipeline
 	F inspect_pipeline(pipeline:Hash) {
 		assert(pipeline, {'name': Str, 'version': Int, 'created': Str, 'updated': Str, '_Region': Str})
 
+		# lastUpdateTime pipelineExecutionId sourceRevisions startTime status trigger _Region
 		pipelineExecutionSummaries = ``aws codepipeline list-pipeline-executions --pipeline-name ${pipeline.name} --region ${pipeline._Region}``
 		pipelineExecutionSummaries._Region = ConstIter(pipeline._Region)
 		pipelineExecutionSummaries._Name = ConstIter(pipeline.name)
 		pipelineExecutionSummaries .= map(PipelineExecution)
 
-		# lastUpdateTime pipelineExecutionId sourceRevisions startTime status trigger _Region
-		pipelineExecutionSummaries.map(F(s) {
-			s.startTime .= Time()
-			s.lastUpdateTime .= Time()
-			augment(s)
-			Timeline(s)::{
-				A.name = "Pipeline Execution ${s.pipelineExecutionId} (${s.status})"
-			}
-		}).filter(F(ti) ti.Time() > horizon()).Timeline().set(name="Pipeline ${pipeline.name} after ${horizon()}")
+		pipelineExecutionSummaries.map(Timeline).filter(F(ti) ti.Time() > horizon()).Timeline()::{
+			A.name="Pipeline ${pipeline.name}"
+			A.time_start = horizon()
+		}
 	}
 
 	F inspect_pipeline(name:Str) {
