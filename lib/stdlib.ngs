@@ -3530,7 +3530,7 @@ F limit(h:Hash, l:Int) h.keys().limit(l).Hash(h[X])
 TEST {"a": 1, "b": 2}.limit(3) == {"a": 1, "b": 2}
 TEST {"a": 1, "b": 2}.limit(1) == {"a": 1}
 
-doc Group items from e by key returned by cb
+doc Group items from e by key returned by k
 doc %RET - Hash with Arr values
 doc %EX - ["ab", "ac", "ba", "bc", "bd"].group(F(x) x[0])  # {a=[ab,ac], b=[ba,bc,bd]}
 doc %EX - [["a", 1], ["b", 2], ["a", 3]].group(X[0], X[1])  # {"a": [1,3], "b": [2]}
@@ -5235,7 +5235,7 @@ section "Path" {
 
 	# TODO: recurse ?
 	# TODO: filter out "." and ".." ?
-	doc List directory contents and call cb with Path() of each found item. Warning: "." and ".." are included.
+	doc List directory contents and call cb with Path() of each found item. "." and ".." are excluded.
 	doc %RET - unspecified at this time, do not count on it
 	doc %EX - 's=Stats(); dir("tmp/v8", {s.push(A.Type().name)}, true); s  # <Stats: {File=23, Dir=16}>'
 	F dir(dirname:Str, cb:Fun, subtype=false, raw=false) {
@@ -5265,6 +5265,7 @@ section "Path" {
 	TEST dir("/").all({A.Type().name == 'Path'})
 	TEST dir("/", subtype=true).all({ (A is Path) and (A.Type().name != 'Path') })
 
+	doc List directory contents and call cb with Path() of each found item. "." and ".." are excluded.
 	doc Same as dir(dirname.path, *args)
 	F dir(dirname:Path, *args, **kwargs) dir(dirname.path, *args, **kwargs)
 
