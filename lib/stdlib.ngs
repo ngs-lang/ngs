@@ -307,7 +307,6 @@ section "Namespaces" {
 	doc Set Hash key. It's implemented to complete the :: operator. There is no particular use case.
 	F '::='(h:Hash, k, v) h[k] = v
 
-	doc %STATUS - EXPERIMENTAL
 	doc Executes f(x)
 	doc %RET - x
 	F '::'(x, f:Fun) {
