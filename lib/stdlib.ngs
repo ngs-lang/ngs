@@ -593,9 +593,9 @@ section "Inspect built-in types" block _ {
 }
 
 section "Functional utilities" {
-	doc The identity function. Simply returns the given parameter.
-	doc %RET - The given argument
-	F identity(x)  x
+	doc The identity function.
+	doc %RET - x
+	F identity(x) x
 
 	TEST identity(10) == 10
 
