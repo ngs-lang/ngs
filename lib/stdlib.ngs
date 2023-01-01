@@ -724,9 +724,9 @@ section "Result and friends - types" {
 }
 
 section "Literal" {
-	doc Convey that the value should be used literally
+	doc Convey that the value should be used literally, not as a pattern
 	type Lit
-	# TODO: Disable default constructor
+	F init(l:Lit) throw MethodNotFound("Lit() must have an argument")
 	F init(l:Lit, val) l.val = val
 }
 
