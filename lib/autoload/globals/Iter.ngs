@@ -303,6 +303,7 @@ TEST { [].Iter().next() }.assert(NoNext)
 
 # EXPERIMENTAL
 # Not sure it's needed but it's good to have it for completeness
+# Problem: HashIter(my_hash).each(F(pair) ...) vs my_hash.each(F(k, v) ...)
 # ---------- HashIter ----------
 F Iter(h:Hash) HashIter(h)
 
