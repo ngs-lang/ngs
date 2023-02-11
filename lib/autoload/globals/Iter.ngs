@@ -255,20 +255,7 @@ doc Check whether there is at least one uniterated item in range.
 doc %RET - Bool. true: next() will return next element. false: next() will throw NoNext
 F Bool(i:RangeIter) {
 	r = i.val
-	# Copy+paste from each(r:NumRange, cb:Fun) from stdlib
-	# TODO: deduplicate the code
-	econd {
-		(r.end is NoData) or (r.step == 0) {
-			cmp = F(a,b) true
-		}
-		r.step > 0 {
-			cmp = if r.include_end (<=) (<)
-		}
-		r.step < 0 {
-			cmp = if r.include_end (>=) (>)
-		}
-	}
-	cmp(i.elt, r.end)
+	i.elt in r
 }
 
 TEST NumRange(1, 4, false, false).Iter().Arr() == [2,3]
