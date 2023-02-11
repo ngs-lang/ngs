@@ -253,10 +253,7 @@ F next(i:RangeIter) {
 
 doc Check whether there is at least one uniterated item in range.
 doc %RET - Bool. true: next() will return next element. false: next() will throw NoNext
-F Bool(i:RangeIter) {
-	r = i.val
-	i.elt in r
-}
+F Bool(i:RangeIter) i.elt in i.val
 
 TEST NumRange(1, 4, false, false).Iter().Arr() == [2,3]
 TEST NumRange(1, 4, false, true).Iter().Arr() == [2,3,4]
