@@ -176,7 +176,7 @@ jobs:
     strategy:
       matrix:
         container: [ "macOS-12" ]
-        version: [ "9", "10", "11" ]
+        version: [ "10", "11" ]
     steps:
       - uses: actions/checkout@v3
       - name: Setup Compiler
