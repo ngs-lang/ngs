@@ -867,6 +867,10 @@ section "=~ Matching" {
 	F =~(x, bti:BasicTypeInstance, _mc:MatchContext) x == bti
 
 	section "IfExists" {
+		doc Pattern for optionally present fields.
+		doc %EX - ({"a": 1}) =~ ({"a": Any, "b": IfExists(Int)})
+		doc %EX - ({"a": 1, "b": 2}) =~ ({"a": Any, "b": IfExists(Int)})
+		doc %EX - ({"a": 1, "b": "x"}) !~ ({"a": Any, "b": IfExists(Int)})
 		type IfExists
 		F init(ie:IfExists, pat) ie.pat = pat
 		F =~(x, ie:IfExists, mc:MatchContext) (=~)(x, ie.pat, mc)
