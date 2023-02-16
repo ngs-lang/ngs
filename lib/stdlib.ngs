@@ -866,6 +866,12 @@ section "=~ Matching" {
 	doc %RET - x == bti
 	F =~(x, bti:BasicTypeInstance, _mc:MatchContext) x == bti
 
+	section "IfExists" {
+		type IfExists
+		F init(ie:IfExists, pat) ie.pat = pat
+		F =~(x, ie:IfExists, mc:MatchContext) (=~)(x, ie.pat, mc)
+	}
+
 	doc Checks whether object fields named after h hash keys match (=~) the corresponding hash values.
 	doc Inspired by underscorejs' "matcher"
 	F =~(x, h:Hash, mc:MatchContext) {
@@ -878,8 +884,13 @@ section "=~ Matching" {
 		mc.deeper({
 			h.all(F(pat_k, pat_v) {
 				if (=~)(pat_k, AnyOf(Str, Int, Real), mc) {
-					pat_k in x and (=~)(x.(pat_k), pat_v, mc.set_last_path_element(pat_k))
+					if pat_k in x {
+						(=~)(x.(pat_k), pat_v, mc.set_last_path_element(pat_k))
+					} else {
+						pat_v is IfExists
+					}
 				} else {
+					assert(pat_v is not IfExists, 'IfExists value only works with keys of types: Str, Int, Real')
 					if x_keys is Null {
 						x_keys = x.Hash().keys()
 					}
@@ -895,6 +906,9 @@ section "=~ Matching" {
 	TEST ({"a": 1}) !~ ({"a": Any, "b": Any})
 	TEST ({"a": 1, "b": 2}) !~ ({"a": Any, "b": {false}})
 	TEST ("zz") !~ ({"a": Any, "b": {false}})
+	TEST ({"a": 1}) =~ ({"a": Any, "b": IfExists(Int)})
+	TEST ({"a": 1, "b": 2}) =~ ({"a": Any, "b": IfExists(Int)})
+	TEST ({"a": 1, "b": "x"}) !~ ({"a": Any, "b": IfExists(Int)})
 
 	doc Checks that
 	doc 1. The x is Eachable1 but not Str or Int
