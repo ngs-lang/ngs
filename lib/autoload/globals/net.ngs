@@ -211,28 +211,12 @@ ns {
 
 		section "JSON-RPC ConnectionHandler" {
 
-			_valid_json_rpc_request_base = {
+			VALID_JSON_RPC_REQUEST = {
 				'jsonrpc': '2.0'
 				'method': Str
+				'id': IfExists(AnyOf(Num, Str, Null))
+				'params': IfExists(AnyOf(Arr, Hash))
 			}
-
-			section "Refactor when patterns support optional keys" {
-				F _valid_json_rpc_request_id(req) {
-					'id' not in req returns true
-					req =~ {'id': AnyOf(Num, Str, Null)}
-				}
-
-				F _valid_json_rpc_request_params(req) {
-					'params' not in req returns true
-					req =~ {'params': AnyOf(Arr, Hash)}
-				}
-			}
-
-			_valid_json_rpc_request = AllOf(
-				_valid_json_rpc_request_base
-				_valid_json_rpc_request_id
-				_valid_json_rpc_request_params
-			)
 
 			# https://www.jsonrpc.org/specification
 			type JsonRpcConnectionHandler(ConnectionHandler)
@@ -268,7 +252,7 @@ ns {
 					send_error(-32700, 'Parse error', e.Hash().filterk(AnyOf('error', 'value', 'position')))
 				}
 
-				if (req !~ _valid_json_rpc_request) send_error(-32600, 'Invalid Request', 'See https://www.jsonrpc.org/specification')
+				if (req !~ VALID_JSON_RPC_REQUEST) send_error(-32600, 'Invalid Request', 'See https://www.jsonrpc.org/specification')
 
 				if (req.method not in jrch.methods) send_error(-32601, 'Method not found', "Method ${req.method} not found. Available methods: ${jrch.methods.keys()}")
 
