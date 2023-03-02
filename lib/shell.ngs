@@ -1,7 +1,23 @@
 # XXX: Ugly hack to prevent direct output to stdout.
 F '$()'(cp:CommandsPipeline) {
 	cp.options .= without('top_level')
+	if cp.options.get('x_top_level') {
+		cp.options.top_level = cp.options.x_top_level
+	}
 	guard false
+}
+
+PROXY_DIR = Dir(".." / "ngs-web-ui-proxy").assert()
+
+# Hack - names, because parameters' types can only be identifiers
+ServerHandler = net::ServerHandler
+Server = net::Server
+# Hack - on_listen() can happen for any ServerHandler, not necessarily the one used below.
+F on_listen(sh:ServerHandler, s:Server) {
+	super(sh, s)
+	p = $(x_top_level:: cd:PROXY_DIR npx ts-node src/server.ts ../ngs/ngs-shell.sock &)
+	echo("Proxy PID: ${p.processes[0].pid}")
+	# TODO: open the web app
 }
 
 net::unix_json_rpc_server("ngs-shell.sock", ns {

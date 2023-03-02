@@ -14,6 +14,7 @@
 * Add `skip(Iter, Any)`
 * When a function is called from CLI, the output is now displayed using `echo_cli()`
 * Add `AWS2::regions(CommandsPipeline, Arr)`
+* Add `IfExists` pattern for optionally present fields
 
 ### Fixes and improvements
 * Add `UndefinedUpVar` exception, thrown when accessing undefined "upvar"
@@ -29,6 +30,9 @@
 ### Deprecated
 * `is_subtype(Type, Type)` is now deprecated, use `<=` operator, example: `T1 <= T2`. Solves #391.
 * `typeof(Any)` is now deprecated, use `Type(Any)` instead.
+
+### Misc
+* GCC 9 on macOS is not supported anymore - it's broken
 
 ## 2022-04-16 Version 0.2.14
 
