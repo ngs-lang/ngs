@@ -7,9 +7,9 @@
 doc Like lines(File) but cb is never called if the file is not present
 F lines(f:MaybeFile, cb:Fun) f returns super(f, cb)
 
-doc Reads the whole file
-doc %RET - Like read(File) or dflt if file is not present.
+doc Reads the whole file using previously defined read()
+doc %RET - Like read(File) or dflt if the file is not present.
 F read(f:MaybeFile, dflt=null) {
-	f returns super(f)
+	guard not(f)
 	dflt
 }
