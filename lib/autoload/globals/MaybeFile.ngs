@@ -13,3 +13,10 @@ F read(f:MaybeFile, dflt=null) {
 	guard not(f)
 	dflt
 }
+
+doc Fetches the file using previously defined fetch()
+doc %RET - Like fetch(File, ...) or dflt if the file is not present.
+F fetch(f:MaybeFile, decode_hints:Hash={}, dflt=null) {
+	guard not(f)
+	dflt
+}
