@@ -3473,12 +3473,12 @@ TEST Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}], "Name",
 #       for example for converting back to Eachable1:
 doc %STATUS - experimental
 F Hash(e:Eachable1) {
-	guard e.all(F(x) x is Eachable2 and len(x) == 2)
 	not(e) returns {}
+	guard e.all(F(x) x is Eachable2 and len(x) == 2)
 	k = v = null
 	pat = {
-		AnyOf(%[Id id K k Key key Name name ParameterKey]) -> {k=A}: Any
-		AnyOf(%[V v Val val Value value ParameterValue]) -> {v=A}: Any
+		AnyOf(%[Id id K k Key key Name name OutputKey ParameterKey]) -> {k=A}: Any
+		AnyOf(%[V v Val val Value value OutputValue ParameterValue ]) -> {v=A}: Any
 	}
 	if not(e[0] =~ pat) {
 		throw InvalidArgument("Hash(Eachable1) did not find key/value keys in first element").set(element=e[0], pattern=pat)
