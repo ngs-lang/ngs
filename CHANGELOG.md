@@ -15,6 +15,8 @@
 * When a function is called from CLI, the output is now displayed using experimental `echo_cli()`
 * Add `AWS2::regions(CommandsPipeline, Arr)`
 * Add `IfExists` pattern for optionally present fields
+* Add `before_first(Str, Str)` - get the piece before first occurrence of the delimiter
+* Add `after_last(Str, Str)` - get the piece after the last occurrence of the delimiter
 
 ### Fixes and improvements
 * Add `UndefinedUpVar` exception, thrown when accessing undefined "upvar"
