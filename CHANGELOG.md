@@ -1,4 +1,4 @@
-## (UNRELEASED) Version 0.2.15
+## 2023-03-18 Version 0.2.15
 
 ### New features
 * Add `assert(Fun, Type, Str)` for asserting that the code throws the given exception. The type must be subtype of Exception.
