@@ -4374,6 +4374,30 @@ section "Strings and characters" {
 	TEST "bucket_name/dir/file".split("/", 2) == ["bucket_name", "dir/file"]
 	TEST ":a:bc:d:".split("bc") == [":a:", ":d:"]
 
+	# Candidate to move out of stdlib
+	doc Split the string by delimiter and return the last part
+	doc %RET - Str
+	F before_first(s:Str, delim:Str) {
+		p = s.pos(delim)
+		p is Null throws InvalidArgument("Delimiter not found in before_first()").set(val=s, delim=delim)
+		s[0..p]
+	}
+
+	TEST "a:b".before_first(":") == "a"
+	TEST {"a:b".before_first("*")}.assert(InvalidArgument)
+
+	doc Split the string by delimiter and return the last part
+	doc %RET - Str
+	F after_last(s:Str, delim:Str) {
+		# s.split(delim)[-1]
+		p = s.pos(delim)
+		p is Null throws InvalidArgument("Delimiter not found in after_last()").set(val=s, delim=delim)
+		s[(p+len(delim))..null]
+	}
+
+	TEST "a:b".after_last(":") == "b"
+	TEST {"a:b".after_last("*")}.assert(InvalidArgument)
+
 	doc Trim whitespace
 	F trim(s:Str) s - /^[[:space:]]*/ - /[[:space:]]*$/
 
