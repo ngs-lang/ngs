@@ -9,10 +9,10 @@
 * Add `Not` type and support in pattern matching
 * Add `env:` option to pass environment when running external programs
 * Add `ensure(Int, NumRange)`
-* Add `skip(Iter, Int)`
 * Add `last(Eachable1, Any)`, the counterpart of first()
-* Add `skip(Iter, Any)`
-* When a function is called from CLI, the output is now displayed using `echo_cli()`
+* Add `skip(Iter, Any)` - skip elements matching the pattern
+* Add `skip(Iter, Int)` - skip given number of elements
+* When a function is called from CLI, the output is now displayed using experimental `echo_cli()`
 * Add `AWS2::regions(CommandsPipeline, Arr)`
 * Add `IfExists` pattern for optionally present fields
 
@@ -30,6 +30,7 @@
 ### Deprecated
 * `is_subtype(Type, Type)` is now deprecated, use `<=` operator, example: `T1 <= T2`. Solves #391.
 * `typeof(Any)` is now deprecated, use `Type(Any)` instead.
+* `x \ f` syntax is now deprecated, use `x.f()` and `x.{...}` instead.
 
 ### Misc
 * GCC 9 on macOS is not supported anymore - it's broken

@@ -1,5 +1,7 @@
 ns {
 
+	# WIP - timeline, mainly for UI
+
 	global Timeline, TimelineStatus, Time, Lines, init, each, map, sort, push, echo_cli
 
 	section "TimelineStatus" {

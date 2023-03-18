@@ -7460,6 +7460,7 @@ F init(t:Time, s:Str, format:Str) {
 	t.epoch = c_mktime(result[1])
 }
 
+doc Parse known date/time formats
 F init(t:Time, s:Str) block b {
 	# AWS API returns (different formats of course)
 	#  * %Y-%m-%dT%H:%M:%S.000%Z
@@ -8059,16 +8060,25 @@ F sysconf(name:Int) {
 
 section "Bootstrap" {
 
+	doc Echo the value before exiting the program, when the value is a result of evaluating the whole program
+	doc %STATUS - experimental
 	F echo_cli(x) echo(x)
 
+	doc Echo the value as JSON before exiting the program, when the value is a result of evaluating the whole program
+	doc %STATUS - experimental
 	F echo_cli(x) {
 		j = { x.encode_json() }.Result()
 		guard j
 		echo(j.get())
 	}
 
+	doc Do nothing, when the value, which is a Null, is a result of evaluating the whole program
+	doc %STATUS - experimental
 	F echo_cli(n:Null) nop
 
+	doc Echo the value as a table before exiting the program, when the value is a result of evaluating the whole program.
+	doc Only works with TTY and when each element of the array is a Hash and all elements have the same keys.
+	doc %STATUS - experimental
 	F echo_cli(a:Arr) {
 		guard a
 		guard isatty(1)
@@ -8078,16 +8088,24 @@ section "Bootstrap" {
 		Table2::Table(a).echo()
 	}
 
+	doc Echo the value before exiting the program, when the value is a result of evaluating the whole program.
+	doc Only works with TTY. Prints each key-value pair as "K: V" on its own line.
+	doc %STATUS - experimental
 	F echo_cli(h:Hash) {
 		guard isatty(1)
 		h.map("${X}: ${Y}").each(echo)
 	}
 
+	doc Echo the value before exiting the program, when the value is a result of evaluating the whole program.
+	doc Only works with TTY.
+	doc %STATUS - experimental
 	F echo_cli(t:Time) {
 		guard isatty(1)
 		t.Str().echo_cli()
 	}
 
+	doc Echo the value before exiting the program, when the value is a result of evaluating the whole program.
+	doc %STATUS - experimental
 	F echo_cli(s:Str) echo(s)
 
 	main = MultiMethod()
