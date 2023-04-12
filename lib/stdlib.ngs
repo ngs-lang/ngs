@@ -6677,6 +6677,12 @@ F decode(s:Str, hints:Hash) {
 		}
 	}
 
+	section "aws ecs describe-task-definition" {
+		if data =~ {'taskDefinition': Hash, 'tags': Arr} {
+			return data.taskDefinition
+		}
+	}
+
 	# Use the only top-level key that has array as it's value
 	# Thanks goes to Elastic Beanstalk which complicates this,
 	# all other APIs seem to return only one top-level key.
