@@ -6671,16 +6671,22 @@ F decode(s:Str, hints:Hash) {
 		return data.DistributionList.Items
 	}
 
+	section "aws logs filter-log-events" {
+		if data =~ {'events': Arr, 'searchedLogStreams': Arr} {
+			return data.events
+		}
+	}
+
 	# Use the only top-level key that has array as it's value
 	# Thanks goes to Elastic Beanstalk which complicates this,
 	# all other APIs seem to return only one top-level key.
 	# ( aws elasticbeanstalk describe-configuration-options )
 
-	top_level_vals = data.values().filter(Arr)
+	top_level_vals = data.values()
 
-	guard top_level_vals.len() == 1
+	guard top_level_vals =~ [Arr]
 
-	data = top_level_vals[0]
+	data = top_level_vals.the_one()
 
 	# Anyone cares about Reservations? Certainly it's not the common case so...
 	if data.all('ReservationId' in X) {
