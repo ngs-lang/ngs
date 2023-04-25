@@ -827,6 +827,8 @@ section "=~ Matching" {
 		throw Error("=~ is expected to either set result or return a boolean").set(given=result)
 	}
 
+	F =~(x, pattern, _mc:MatchContext) false
+
 	doc A pair of pattern and an action to execute if the pattern matches.
 	doc Currently, only callable actions are supported (Fun).
 	doc %STATUS - experimental
@@ -6495,6 +6497,31 @@ TEST p=$(|cat); p.write("abc"); p.close(); p.Str() == "abc"
 TEST p=$(|cat|); p.write("abc"); p.read(3) == "abc"
 TEST $(echo abc | cat).Str().starts_with("abc")
 
+section "DecodeHints" {
+	# Should simplify: guard (try hints.process.command.argv[0] == 'aws') or (try hints.process.command.options.decode == 'aws')
+
+	type DecodeHints(HashLike)
+	F =~(x:DecodeHints, cp:CommandsPipeline, mc:MatchContext) {
+		not(x =~ {'process': Process}) returns false
+		not(cp.commands.len() == 1) returns false
+		mc.deeper({
+			mc.set_last_path_element('process')
+			mc.deeper({
+				mc.set_last_path_element('command')
+				(=~)(x.process.command, cp.commands[0], mc)
+			})
+		})
+	}
+
+	doc Match command based on argv and options
+	F =~(x:Command, c:Command, mc:MatchContext) {
+		(=~)(x, {
+			'argv': Pfx(c.argv)
+			'options': c.options
+		}, mc)
+	}
+}
+
 doc Attempt to decode JSON. Uses decode_json().
 F decode(s:Str, hints:Hash={}) {
 	ret = Result({ decode_json(s) })
@@ -6630,26 +6657,24 @@ doc s - Str containing JSON with a Hash at top level with exactly one Arr as val
 doc hints - hints.process.command.argv[0] must be 'aws'
 doc %RET - data structure, typically an Arr at top level. If s is empty string - null.
 F decode(s:Str, hints:Hash) {
-	guard (try hints.process.command.argv[0] == 'aws') or (try hints.process.command.options.decode == 'aws')
+	dh = DecodeHints(hints)
+	guard dh =~ AnyOf(
+		 %(aws)
+		 %(decode: aws)
+	)
 
 	if s == '' {
-		# cloudfront empty list
-		if hints.process.command.argv.get(1, null) == 'cloudfront' and hints.process.command.argv.get(2, null) ~ /^list/ {
-			return []
-		}
-		# aws ec2 create-tags/delete-tags
+		dh =~ %(aws cloudfront ${/^list/}) returns []
+		# aws ec2 create-tags/delete-tags, maybe others
 		return null
 	}
 
 	data = decode_json(s)
 	guard data is Hash
 
-	# try - because argv might be shorter than 3 elements
-	if try hints.process.command.argv[0..3] =~ %[aws resource-explorer-2 get-index] {
-		return data
-	}
+	dh =~ %(aws resource-explorer-2 get-index) returns data
 
-	if hints.process.command.argv.get(1, null) == 'cloudfront' {
+	if dh =~ %(aws cloudfront) {
 		# TODO: eliminate stupid 'Quantity' field.
 		# Can not convert {'Quantity': ..., 'Items': [ iii ]} to just [ iii ]
 		# because _some_ (of course, AWS) Hashes contain additional keys:
@@ -6661,6 +6686,7 @@ F decode(s:Str, hints:Hash) {
 	# CloudFront
 	# aws cloudfront list-invalidations --distribution-id --> { "InvalidationList": { "Items": [ ... ] } }
 
+	# Later, when exact keys matching is implemented: if data =~ {Str: {Str: Arr}} { ... }
 	if (len(data) == 1) and (data.values()[0] is Hash) and (data.values()[0].len() == 1) {
 		candidate = data.values()[0].values().the_one()
 		candidate is Arr returns candidate
@@ -6793,7 +6819,7 @@ doc %RET - EmptyBox
 doc %EX - Box("a" ~ /^(..)/).map({"First two letters: ${A[1]}"}).get("(too short)")  # (too short)
 F Box(f:Failure) EmptyBox()
 
-doc SubSec constructor
+doc SubSeq constructor
 F init(s:SubSeq, val) s.val = val
 
 # The common case
@@ -6892,6 +6918,31 @@ F ~(s:Str, sfx:Sfx) {
 	ret
 }
 
+doc %EX - [1,2,3] =~ Pfx([1,2])
+F =~(x:Eachable1, pfx:Pfx, mc:MatchContext) {
+	guard x is not Str and x is not Int
+	block b {
+		i = Iter(pfx)
+		mc.deeper({
+			x.each(F(elt) {
+				if not(i) {
+					b.return(true)
+				}
+				mc.set_last_path_element(elt)
+				if not((=~)(elt, i.next(), mc)) {
+					b.return(false)
+				}
+			})
+			not(i)  # Whole prefix was consumed
+		})
+	}
+}
+
+TEST [1,2,3] =~ Pfx([1,2])
+TEST [1,2] =~ Pfx([1,2])
+TEST [1,2,3] !~ Pfx([2])
+TEST [1,2] !~ Pfx([1,2,3])
+
 # TODO: make it a low priority method implementation
 doc Convenience method to access matches in MatchSuccess
 doc %EX - ("abc" ~ /a(.)c/)[1]  # "b"
@@ -6902,11 +6953,11 @@ F get(ms:MatchSuccess, idx:Int, dflt=null) ms.matches.get(idx, dflt)
 
 TEST ("abc" ~ /a(.)c/)[1] == "b"
 
-doc Checks subsequence presence.
+doc Checks subsequence presence
+doc s - SubSeq of Str
 doc %RET - Bool
-F =~(x, s:SubSeq, _mc:MatchContext) {
-	s.val is not Str throws NotImplemented("Matching non-Str SubSeq is not implemented yet").set(val=s)
-	x is not Str returns false
+F =~(x:Str, s:SubSeq, _mc:MatchContext) {
+	guard s.val is Str
 	Bool(x ~ s)
 }
 

@@ -1,5 +1,16 @@
 ## (UNRELEASED) Version 0.2.16
 
+### New features
+* Add `Iter(SubSeq)`
+* Add `=~(Eachable1, Pfx, MatchContext)`
+* Add `DecodeHints`
+* Add `=~(DecodeHints, ProcessesPipeline, MatchContext)`
+
+### Fixes and improvements
+* Add default `=~(Any, Any, MatchContext)` which returns `false`
+* Improve `decode()` implementation for `aws` command
+* Improve `=~(Str, SubSeq, MatchContext)`
+
 ## 2023-03-18 Version 0.2.15
 
 ### New features
