@@ -7759,7 +7759,7 @@ F match(a,b) a =~ b
 # === File =======================================
 
 doc Check whether current process has the specified access to the file. Wrapper around ACCESS(2). Throws CError.
-doc mode - One of the file ACCESS::* modes, defaults to ACCESS::F_OK (test file existance only).
+doc mode - One of the file ACCESS::* modes, defaults to ACCESS::F_OK (test file existence only).
 doc %RET - Bool
 doc %EX - access(File("mydata"), ACCESS::R_OK).not() throws Error("No access to data file").set("file", "mydata")
 F access(f:File, mode:Int=ACCESS::F_OK) {
