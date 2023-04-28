@@ -5,6 +5,8 @@
 * Add `=~(Eachable1, Pfx, MatchContext)`
 * Add `DecodeHints`
 * Add `=~(DecodeHints, ProcessesPipeline, MatchContext)`
+* Add `AtPath` pattern
+* Add experimental `ResetPath` pattern
 
 ### Fixes and improvements
 * Add default `=~(Any, Any, MatchContext)` which returns `false`

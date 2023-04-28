@@ -1000,6 +1000,68 @@ section "=~ Matching" {
 	TEST 1 =~ Not(3)
 	TEST not(1 =~ Not(1))
 
+	section "AtPath" {
+
+		doc Pattern that matches at given path
+		doc %EX - [1] =~ AtPath([Any], Int)
+		type AtPath
+		F init(ap:AtPath, path_pattern, value_pattern) init(args())
+
+		F =~(x, ap:AtPath, mc:MatchContext) {
+
+			debug('AtPath', { "Entering $x $ap $mc" })
+
+			DESCENDABLE = AnyOf(Eachable2, AllOf(Eachable1, Not(Int), Not(Str)))
+
+			F each2(e:Eachable1, cb:Fun) {
+				(e is Int) or (e is Str) returns
+				each_idx_val(e, cb)
+			}
+
+			F each2(e:Eachable2, cb:Fun) each(e, cb)
+
+			if mc._path =~ ap.path_pattern {
+				m = (=~)(x, ap.value_pattern, mc)
+				m returns m
+			}
+			ret = false
+			mc.deeper({
+				x.each2(F(idx_or_key, val) {
+					if (=~)(val, ap, mc.set_last_path_element(idx_or_key)) {
+						ret = true
+					}
+				})
+			})
+			ret
+		}
+
+		TEST 1 =~ AtPath(Any, Int)
+		TEST [1] =~ AtPath(Any, Int)
+		TEST [1] =~ AtPath([Any], Int)
+		TEST [1] =~ AtPath([0], Int)
+		TEST [1] !~ AtPath([Any, Any], Int)
+
+		doc %STATUS - experimental
+		doc Resets the path so that AtPath sees [] at this point
+		doc %EX - [1] =~ [ResetPath(AtPath([], Int))]
+		type ResetPath
+
+		doc %STATUS - experimental
+		F init(rp:ResetPath, pattern) init(args())
+
+		doc %STATUS - experimental
+		F =~(x, rp:ResetPath, mc:MatchContext) {
+			mc.deeper({'_path': []}, {
+				(=~)(x, rp.pattern, mc)
+			})
+		}
+
+		TEST [1] =~ [ResetPath(AtPath([], Int))]
+		TEST [1] !~ [ResetPath(AtPath([Any], Int))]
+
+	}
+
+
 }
 
 doc Map e to an Arr (array) of values using mapper.
