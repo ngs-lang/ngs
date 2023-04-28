@@ -925,10 +925,12 @@ section "=~ Matching" {
 		x is not Eachable1 returns false
 		l = x.len()
 		l != a.len() returns false
-		for(i;l) {
-			(!~)(x[i], a[i], mc) returns false
-		}
-		true
+		mc.deeper({
+			for(i;l) {
+				(!~)(x[i], a[i], mc.set_last_path_element(i)) returns false
+			}
+			true
+		})
 	}
 
 	TEST [1,2] =~ [Int, Any]

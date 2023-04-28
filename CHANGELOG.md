@@ -10,6 +10,7 @@
 * Add default `=~(Any, Any, MatchContext)` which returns `false`
 * Improve `decode()` implementation for `aws` command
 * Improve `=~(Str, SubSeq, MatchContext)`
+* Fix MatchContext._path when matching elements in =~(Any, Arr, MatchContext)
 
 ## 2023-03-18 Version 0.2.15
 
