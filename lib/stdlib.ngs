@@ -959,7 +959,7 @@ section "=~ Matching" {
 			r.count = count
 		}
 
-		F init(r:Repeat, pattern, count:Int) init(r, pattern, NumRange(count, count, include_start=1, include_end=1))
+		F init(r:Repeat, pattern, count:Int) init(r, pattern, NumRange(count, count, include_start=true, include_end=true))
 
 		F init(r:Repeat, pattern) init(r, pattern, 0..null)
 
@@ -2212,13 +2212,13 @@ section "Range" {
 	doc 10 in 10..20  # true
 	doc 1 in 10..20   # false
 	F in(n:Int, r:NumRange) {
-		econd {
-			r.include_start and n == r.start true
-			r.start is not Null and n <= r.start false
-			r.include_end and n == r.end true
-			r.end is not Null and r.end <= n false
-			true true
+		F compare(inclusive:Bool, a:Int, b:Int) {
+			inclusive returns a <= b
+			a < b
 		}
+		start_ok = r.start is Null or compare(r.include_start, r.start, n)
+		end_ok = r.end is Null or compare(r.include_end, n, r.end)
+		start_ok and end_ok
 	}
 
 	# TODO: better coverage
@@ -2227,6 +2227,7 @@ section "Range" {
 	TEST not(10 in NumRange(1,2,false,true))
 	TEST 20 in NumRange(1,30,false,true)
 	TEST 30 in NumRange(1,30,false,true)
+	TEST not(0 in NumRange(0,0,true,false))
 
 	doc Convert range to human readable representation
 	F Str(r:Range) "<${r.Type().name} ${r.start}..${r.end} include_start=${r.include_start} include_end=${r.include_end} step=${r.step}>"
@@ -3539,7 +3540,8 @@ TEST Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}], "Name",
 #       for example for converting back to Eachable1:
 doc %STATUS - experimental
 F Hash(e:Eachable1) {
-	not(e) returns {}
+	guard e =~ AnyOf(Arr, ArrLike)  # Containers only
+	not(e) returns {}  # Was failing for NumRange
 	guard e.all(F(x) x is Eachable2 and len(x) == 2)
 	k = v = null
 	pat = {

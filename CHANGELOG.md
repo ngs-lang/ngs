@@ -13,6 +13,7 @@
 * Improve `decode()` implementation for `aws` command
 * Improve `=~(Str, SubSeq, MatchContext)`
 * Fix MatchContext._path when matching elements in =~(Any, Arr, MatchContext)
+* Fix `in(Int, NumRange)` which was causing `for i in 0 ...` to run once instead of not running
 
 ## 2023-03-18 Version 0.2.15
 
