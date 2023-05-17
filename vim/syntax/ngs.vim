@@ -20,10 +20,10 @@ syn keyword ngsConditional if then else
 syn keyword ngsRepeat for
 
 " Generated types - start
-syn keyword ngsType Absent AllOf Any AnyOf ArgsMismatch Arr ArrDiff ArrIter ArrLike ArrSplatMethodParam AssertFail AwsElb AwsElbRes AwsImage AwsImageRes AwsInstance AwsInstanceRes AwsRecordSet AwsRecordSetRes AwsRes AwsResDef AwsSecGroup AwsSecGroupRes AwsSubnet AwsSubnetRes AwsVpc AwsVpcRes
+syn keyword ngsType Absent AllOf Any AnyOf ArgsMismatch Arr ArrDiff ArrIter ArrLike ArrSplatMethodParam AssertFail AtPath AwsElb AwsElbRes AwsImage AwsImageRes AwsInstance AwsInstanceRes AwsRecordSet AwsRecordSetRes AwsRes AwsResDef AwsSecGroup AwsSecGroupRes AwsSubnet AwsSubnetRes AwsVpc AwsVpcRes
 syn keyword ngsType Backtrace BasenameArgumentFail BasicType BasicTypeInstance Block BlockDevice Bool Box BoxFail
 syn keyword ngsType CError CLib CSym C_DIR CallFail CdFail CharDevice CleanupPolicy CollectingPipeFromChildToParentProcess Command CommandRedir CommandsPipe CommandsPipeline CompileFail ConstIter
-syn keyword ngsType DecodeFail DelimStr Diff Dir DirFail DivisionByZero DlopenFail DontKnowHowToCall
+syn keyword ngsType DecodeFail DecodeHints DelimStr Diff Dir DirFail DivisionByZero DlopenFail DontKnowHowToCall
 syn keyword ngsType Eachable Eachable1 Eachable2 ElementNotFound EmptyArrayFail EmptyBox EmptyEachableFail Error ExactPresence Exception Exit ExitCodeFail ExitException
 syn keyword ngsType Failure FailuresException FatalError FieldNotFound FifoFile File FileIOFail FilterIter FullBox Fun FunIter
 syn keyword ngsType GlobalNotFound
@@ -36,7 +36,7 @@ syn keyword ngsType MainFail MapIter MatchContext MatchFailure MatchResult Match
 syn keyword ngsType NamedInstances Namespace NativeMethod NgsStrComp NgsStrCompExp NgsStrCompImm NgsStrCompSplatExp NoData NoNext NormalExit NormalType NormalTypeConstructor NormalTypeInstance Not NotImplemented Null Num NumRange
 syn keyword ngsType OptionalMethodParam
 syn keyword ngsType ParamsMatchN ParamsMatchY PartialPresence Path PatternAction Pfx Pipe PipeCreateFail PipeFromChildProcess PipeFromChildToParentProcess PipeFromParentToChildProcess PipeToChildProcess PredRange Presence Present Process ProcessRedir ProcessesPipeline Program ProgramNotFound
-syn keyword ngsType Range RangeIter ReadFail ReadingPipeBetweenChildren Real ReentrantLock RegExp RegExpCompileFail RemoveCleanupPolicy Repeat RequireFail RequiredMethodParam Res ResDef Result ResultFail Results ResultsException RetryBodyMissing RetryFail ReturnFromBlock
+syn keyword ngsType Range RangeIter ReadFail ReadingPipeBetweenChildren Real ReentrantLock RegExp RegExpCompileFail RemoveCleanupPolicy Repeat RequireFail RequiredMethodParam Res ResDef ResetPath Result ResultFail Results ResultsException RetryBodyMissing RetryFail ReturnFromBlock
 syn keyword ngsType Seq Set Sfx SkipError SocketFile SplatMethodParam StackDepthFail StackOverflow Stat StatFail Stats Str SubSeq Success SwitchFail SwitchParseFail Symlink
 syn keyword ngsType Table TestFail TestMessage TestsResults Thread ThreadFail Threads Time TimeFail TmpDir TmpFile TmpFsObj TtyCheckFail Type
 syn keyword ngsType UndefinedLocalVar UndefinedUpVar UserDefinedMethod
