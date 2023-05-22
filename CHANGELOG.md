@@ -1,5 +1,9 @@
 ## (UNRELEASED) Version 0.2.17
 
+### Fixes and improvements
+
+* Fix `AtPath` for non-eachables
+
 ## 2023-05-17 Version 0.2.16
 
 ### New features

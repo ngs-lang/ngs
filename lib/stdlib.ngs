@@ -1013,8 +1013,10 @@ section "=~ Matching" {
 
 			DESCENDABLE = AnyOf(Eachable2, AllOf(Eachable1, Not(Int), Not(Str)))
 
+			F each2(_non_descendable, cb:Fun) nop
+
 			F each2(e:Eachable1, cb:Fun) {
-				(e is Int) or (e is Str) returns
+				guard e !~ AnyOf(Int, Str)
 				each_idx_val(e, cb)
 			}
 
