@@ -1,5 +1,10 @@
 ## (UNRELEASED) Version 0.2.17
 
+### New features
+
+* Add `each(Dir, Fun)`
+* Add `filter(Dir, Any)`
+
 ### Fixes and improvements
 
 * Fix `AtPath` for non-eachables

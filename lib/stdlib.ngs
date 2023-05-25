@@ -5156,7 +5156,7 @@ section "Path" {
 		doc Represents a block device in a file system (S_IFBLK)
 		type BlockDevice(Path) # S_IFBLK
 		doc Represents a directory in a file system (S_IFDIR)
-		type Dir(Path)         # S_IFDIR
+		type Dir([Path, Eachable1])         # S_IFDIR
 			doc Represents a temporary directory. Automatically removed when the script exits.
 			type TmpDir([Dir, TmpFsObj])
 		doc Represents a character device in a file system (S_IFCHR)
@@ -5379,6 +5379,20 @@ section "Path" {
 	doc List directory contents and call cb with Path() of each found item. "." and ".." are excluded.
 	doc Same as dir(dirname.path, *args)
 	F dir(dirname:Path, *args, **kwargs) dir(dirname.path, *args, **kwargs)
+
+	doc Call cb for each entry in the directory with a subtype of Path as an argument
+	doc %RET - d
+	F each(d:Dir, cb:Fun) dir(d.path, cb, subtype=true)
+
+	doc Filter entries in d
+	doc %RET - Arr
+	doc %EX - parent_dir.filter(Dir).each(F(sub_dir) echo(sub_dir))
+	F filter(d:Dir, pattern) d.Arr().filter(pattern)
+
+	# XXX: might not be correct on all platforms
+	TEST Dir("/").filter(Dir).path.any(AnyOf("/var", "/etc", "/bin"))
+
+	# TEST Dir("/").filter(Dir).any({"path": AnyOf("/var", "/etc", "/bin")})
 
 	doc Same as a.path > b.path
 	F '>'(a:Path, b:Path) a.path > b.path
