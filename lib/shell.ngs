@@ -8,6 +8,11 @@ F '$()'(cp:CommandsPipeline) {
 	guard false
 }
 
+WEB_SERVER_DIR = Dir(".." / "ngs-web-ui").assert()
+ENV.BROWSER = 'none'
+web_server = $(cd:WEB_SERVER_DIR npm start &)
+echo("Web server PID: ${web_server.processes[0].pid}")
+
 PROXY_DIR = Dir(".." / "ngs-web-ui-proxy").assert()
 
 # Hack - names, because parameters' types can only be identifiers
