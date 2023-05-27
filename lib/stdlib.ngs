@@ -6602,6 +6602,9 @@ section "DecodeHints" {
 			'options': c.options
 		}, mc)
 	}
+
+	doc Match process based on argv and options
+	F =~(x:Process, cp:CommandsPipeline, mc:MatchContext) (=~)(DecodeHints({'process': x}), cp, mc)
 }
 
 doc Attempt to decode JSON. Uses decode_json().
