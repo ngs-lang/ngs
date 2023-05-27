@@ -29,7 +29,36 @@ F on_listen(sh:ServerHandler, s:Server) {
 net::unix_json_rpc_server("ngs-shell.sock", ns {
 
 	F eval(line:Str) {
+
+		F transform(x) x
+
+		F transform(a:Arr) {
+        	guard a
+        	guard all(a, Hash)
+        	Table2::Table(a)
+        }
+
+		# Based on: F ````(cp:CommandsPipeline)
+        F transform(pp:ProcessesPipeline) {
+			processes = pp.processes
+			guard processes
+			p = processes[-1]
+			r = Result({ p.stdout.decode({'process': p}) })
+			guard r
+			r.get().transform()
+        }
+
+
 		fname = '<shell line file>'
+
+		section "Frequent testing assist" {
+			if line == 't1' {
+				line = 'aws ec2 describe-vpcs'
+			}
+			if line == 't2' {
+				line = 'aws codepipeline list-pipelines'
+			}
+		}
 		bytecode = compile(line, fname)
 		# TODO: pass warnings
 		#bytecode.meta().warnings.each(F(w) {
@@ -38,7 +67,11 @@ net::unix_json_rpc_server("ngs-shell.sock", ns {
 		#})
 
 		func = load(bytecode, "<shell line func>")
-		result = ui::JsonData(func())
+		result = func()
+		echo("Result type ${result.Type().name}")
+		result .= transform()
+		echo("Result type after transform() ${result.Type().name}")
+		result = ui::JsonData(result)
 	}
 
 	section "tests" {

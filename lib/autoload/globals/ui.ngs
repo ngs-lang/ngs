@@ -49,6 +49,20 @@ ns {
 		}
 	}
 
+	section "JsonData - table" {
+		Table2.meta()[JsonData] = {'ns': 'Table2'}
+		T2 = Table2::Table
+		F JsonData(t:T2) {
+			{
+				'type': id(t.Type())
+				'name': t.name.JsonData()
+				'columns_names': t.cols_enum.keys().JsonData()
+				'rows': t.rows.JsonData()
+			}
+		}
+
+	}
+
 	F JsonData(c:Command) c._json_data_fields(%[argv])
 
 	F JsonData(p:Process) p._json_data_fields(%[command executable pid exit_code exit_signal stdout stderr])
