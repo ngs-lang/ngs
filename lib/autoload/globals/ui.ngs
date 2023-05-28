@@ -12,7 +12,16 @@ ns {
 			# Maybe :: separator here is not a good idea
 			return "ngs:type:${m.ns.meta()[JsonData].ns}::${t.name}"
 		}
-		throw NotImplemented("id() for types in namespaces (without .meta()[JsonData].ns} is not implemented yet")
+		throw NotImplemented("id() for types in namespaces (without .meta()[JsonData].ns} is not implemented yet").set('type', t)
+	}
+
+	doc To Do: better naming
+	type InteractiveObject
+
+	doc Can't use JsonData for anything in this namespace, it clashes with the multimethod
+	F id(t:Type) {
+		guard t === InteractiveObject
+		'ngs:type:ui::InteractiveObject'
 	}
 
 	F _json_data_fields(x, fields:Arr) {
@@ -60,7 +69,6 @@ ns {
 				'rows': t.rows.JsonData()
 			}
 		}
-
 	}
 
 	F JsonData(c:Command) c._json_data_fields(%[argv])
@@ -86,6 +94,10 @@ ns {
 		ret
 	}
 	F JsonData(r:Res) r.Hash().without('def').JsonData().set(type=id(r.Type()))
+
+	section "InteractiveObject" {
+		F JsonData(i:InteractiveObject) i._json_data_fields(%[id text obj_type default_action])
+	}
 
 	section "AWS2" {
 		# TODO: generalize

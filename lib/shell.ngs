@@ -26,6 +26,8 @@ F on_listen(sh:ServerHandler, s:Server) {
 	# TODO: open the web app
 }
 
+{ ui }
+
 net::unix_json_rpc_server("ngs-shell.sock", ns {
 
 	F eval(line:Str) {
@@ -44,8 +46,23 @@ net::unix_json_rpc_server("ngs-shell.sock", ns {
 			guard processes
 			p = processes[-1]
 			r = Result({ p.stdout.decode({'process': p}) })
+			if r is Failure {
+				error("In shell.ngs, trying to decode:")
+				print_exception(r.val)
+			}
 			guard r
-			r.get().transform()
+			decoded = r.get()
+			if p =~ %(aws codepipeline list-pipelines) {
+				for pipeline in decoded {
+					pipeline.name = ui::InteractiveObject().set(
+						id = pipeline.name
+						text = pipeline.name
+						obj_type = 'AlphaTypeAwsPipeline'
+						default_action = 'View CodePipeline'
+					)
+				}
+			}
+			decoded.transform()
         }
 
 
