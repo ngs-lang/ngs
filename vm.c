@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <stdarg.h>
 #include <time.h>
+#include <string.h>
 #include <strings.h>
 
 #ifdef HAVE_POLL_H

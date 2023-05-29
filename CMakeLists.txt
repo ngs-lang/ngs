@@ -13,7 +13,8 @@ include(ExternalProject)
 # -D_DARWIN_C_SOURCE - SIGWINCH and friends on MacOS
 # -D_XOPEN_SOURCE - strptime on Linux
 # -D_DEFAULT_SOURCE - MAP_ANONYMOUS on Linux
-add_definitions(-D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE=1 -D_DEFAULT_SOURCE=1 -D_BSD_SOURCE)
+# -D__BSD_VISIBLE - AF_UNIX on FreeBSD
+add_definitions(-D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE=1 -D_DEFAULT_SOURCE=1 -D_BSD_SOURCE -D__BSD_VISIBLE)
 
 # This is workaround for boehm GC library bug or NGS usage of it
 # which cases sporadic SIGSEGV and other issues after fork() in child process.
@@ -70,7 +71,7 @@ IF(POLL_H)
 ENDIF()
 
 
-find_program(SED NAMES gsed sed) # gsed - MacOS, sed - all the rest
+find_program(SED NAMES gsed sed) # gsed - MacOS and FreeBSD, sed - all the rest
 find_file(PCRE_H pcre.h)
 add_custom_command(
 	OUTPUT
