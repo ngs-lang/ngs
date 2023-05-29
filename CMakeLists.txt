@@ -8,7 +8,7 @@ include(CheckFunctionExists)
 include(CheckIncludeFile)
 include(FindPkgConfig)
 include(ExternalProject)
-
+include(FindBacktrace)
 
 # -D_DARWIN_C_SOURCE - SIGWINCH and friends on MacOS
 # -D_XOPEN_SOURCE - strptime on Linux
@@ -115,7 +115,7 @@ add_custom_command(
 )
 
 
-target_link_libraries(ngs m pthread gc ffi dl json-c pcre)
+target_link_libraries(ngs m pthread gc ffi dl json-c pcre ${Backtrace_LIBRARY})
 
 add_custom_target(man ALL WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc COMMAND make man DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doc/*.1.md)
 
