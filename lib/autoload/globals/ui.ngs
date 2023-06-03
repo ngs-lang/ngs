@@ -86,12 +86,7 @@ ns {
 
 	F JsonData(rd:ResDef) {
 		resources = rd.find().resources
-		ret = { 'type': id(rd.Type()), 'items': resources.map(JsonData) }
-		if resources {
-			cols_names = resources[0].props.Hash().keys()
-			ret.cols_names = cols_names.JsonData()
-		}
-		ret
+		Table2::Table(resources.props).JsonData()
 	}
 	F JsonData(r:Res) r.Hash().without('def').JsonData().set(type=id(r.Type()))
 
