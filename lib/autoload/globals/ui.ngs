@@ -91,7 +91,8 @@ ns {
 	F JsonData(r:Res) r.Hash().without('def').JsonData().set(type=id(r.Type()))
 
 	section "InteractiveObject" {
-		F JsonData(i:InteractiveObject) i._json_data_fields(%[id text obj_type default_action])
+		# TODO: Send context so that interaction could be seen as part of the bigger picture
+		F JsonData(i:InteractiveObject) i._json_data_fields(%[type id text default_action])
 	}
 
 	section "AWS2" {

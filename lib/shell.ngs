@@ -55,9 +55,9 @@ net::unix_json_rpc_server("ngs-shell.sock", ns {
 			if p =~ %(aws codepipeline list-pipelines) {
 				for pipeline in decoded {
 					pipeline.name = ui::InteractiveObject().set(
+						type = 'AWS::CodePipeline::Pipeline'
 						id = pipeline.name
 						text = pipeline.name
-						obj_type = 'AlphaTypeAwsPipeline'
 						default_action = 'View CodePipeline'
 					)
 				}
@@ -69,12 +69,12 @@ net::unix_json_rpc_server("ngs-shell.sock", ns {
 		fname = '<shell line file>'
 
 		section "Frequent testing assist" {
-			if line == 't1' {
-				line = 'aws ec2 describe-vpcs'
+			_assist = {
+				't1': 'aws ec2 describe-vpcs'
+				't2': 'aws codepipeline list-pipelines'
+				't3': 'aws cloudformation list-stacks'
 			}
-			if line == 't2' {
-				line = 'aws codepipeline list-pipelines'
-			}
+			line = _assist.get(line, line)
 		}
 		bytecode = compile(line, fname)
 		# TODO: pass warnings
@@ -85,9 +85,9 @@ net::unix_json_rpc_server("ngs-shell.sock", ns {
 
 		func = load(bytecode, "<shell line func>")
 		result = func()
-		echo("Result type ${result.Type().name}")
+		log("Result type ${result.Type().name}")
 		result .= transform()
-		echo("Result type after transform() ${result.Type().name}")
+		log("Result type after transform() ${result.Type().name}")
 		result = ui::JsonData(result)
 	}
 
@@ -104,6 +104,24 @@ net::unix_json_rpc_server("ngs-shell.sock", ns {
 		F test_div_by_zero() {
 			1 / 0
 		}
+	}
+
+	doc TODO - plugins fan-out / plugins register to serve
+	F ui_default_action(type, id) {
+		debug("ui_default_action on object ${type} ${id} was not handled")
+	}
+
+	doc Unusable output
+	F ui_default_action(type, id) {
+		guard type == 'AWS::CodePipeline::Pipeline'
+		log('ui_default_action for AWS::CodePipeline::Pipeline')
+		# TODO: escape_bash() version of the command too
+		# TODO: deduplicate the command
+		ui::JsonData({
+			'type': 'timeline_new_command'
+			'command': %[aws codepipeline get-pipeline --name $id]
+			'output': ``aws codepipeline get-pipeline --name $id``
+		})
 	}
 
 })
