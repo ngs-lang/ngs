@@ -958,6 +958,8 @@ section "=~ Matching" {
 			h.pattern = pattern
 		}
 
+		doc Check that x has an element that matches h.pattern
+		doc %RET - Bool
 		F =~(x:Eachable1, h:Has, mc:MatchContext) block b {
 			mc.deeper({
 				x.each_idx_val(F(idx, item) {
