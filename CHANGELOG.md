@@ -4,6 +4,7 @@
 
 * Add `each(Dir, Fun)`
 * Add `filter(Dir, Any)`
+* Add `Has` pattern
 
 ### Fixes and improvements
 

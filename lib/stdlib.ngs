@@ -949,6 +949,30 @@ section "=~ Matching" {
 	TEST 1 !~ Lit(Int)
 	TEST Int =~ Lit(Int)
 
+	section "Has" {
+
+		doc Represents occurrence of pattern in Eachable1
+		type Has
+
+		F init(h:Has, pattern) {
+			h.pattern = pattern
+		}
+
+		F =~(x:Eachable1, h:Has, mc:MatchContext) block b {
+			mc.deeper({
+				x.each_idx_val(F(idx, item) {
+					if (=~)(item, h.pattern, mc.set_last_path_element(idx)) {
+						b.return(true)
+					}
+				})
+			})
+			false
+		}
+
+		TEST [1,2,3] =~ Has(2)
+		TEST [1,2,3] !~ Has(20)
+	}
+
 	section "Repeat" {
 
 		doc Represents repetition of a pattern (or potentially arbitrary data)
