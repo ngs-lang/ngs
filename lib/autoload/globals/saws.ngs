@@ -36,8 +36,8 @@ ns {
 									"latestExecution": {
 										"pipelineExecutionId": e.pipelineExecutionId
 									}
-									"actionStates": Has({"actionName": action.name} -> { status = A.latestExecution.status } )
 									"stageName": stage.name
+									"actionStates": Has({"actionName": action.name} -> { status = A.latestExecution.status })
 								})
 
 								collect(Action(stage.name, action.name, status))
