@@ -3,15 +3,17 @@
 ns {
 	global init, Str, JsonData
 
+	# TODO: ensure alignment with AWS output
 	type Source
 	F init(s:Source, repo:Str, branch:Str) init(args())
 	F Str(s:Source) "${s.repo}@${s.branch}"
 	F JsonData(s:Source) s.Hash().JsonData()
 
-	# TODO
-	# type Action
-	# F init(a:Action, stage_name:Str, action_name: Str) init(args())
-	# F Str(a:Action) ...
+	# TODO: ensure alignment with AWS output
+	type Action
+	F init(a:Action, stage_name:Str, action_name:Str, status:Str) init(args())
+	F Str(a:Action) "${a.stage_name}/${a.action_name}: ${a.status}"
+	F JsonData(a:Action) a.Hash().JsonData()
 
 	F pipes() {
 		# List of AWS::CodePipeline::Pipeline
@@ -22,9 +24,6 @@ ns {
 			# echo(e)
 
 			if e {
-				# TODO: show if it's stuck on manual approval
-				# details = ``aws codepipeline get-pipeline-execution --pipeline-name ${p.name} --pipeline-execution-id ${e.pipelineExecutionId}``
-				# echo(details)
 				pipeline = ``aws codepipeline get-pipeline --name ${p.name}``
 				state = ``aws codepipeline get-pipeline-state --name ${p.name}``
 
@@ -32,34 +31,27 @@ ns {
 					approval_actions = collector
 						pipeline.pipeline.stages.each(F(stage) {
 							stage.actions.filter({'actionTypeId': {'category': 'Approval', 'provider': 'Manual'}}).each(F(action) {
-								collect([stage.name, action.name])
+								status = 'ahead'
+								state =~ Has({
+									"latestExecution": {
+										"pipelineExecutionId": e.pipelineExecutionId
+									}
+									"actionStates": Has({"actionName": action.name} -> { status = A.latestExecution.status } )
+									"stageName": stage.name
+								})
+
+								collect(Action(stage.name, action.name, status))
 							})
 						})
-					approval_actions.each(F(a) {
-						m = state =~ Has({
-							"latestExecution": {
-								"pipelineExecutionId": e.pipelineExecutionId
-							}
-							"actionStates": Has({"actionName": a[1]} -> {a.push(A.latestExecution.status)} )
-							"stageName": a[0]
-						})
-						if not(m) {
-							a.push('ahead')
-						}
-					})
-
-					approval_actions .= map({ "${A[0]} -> ${A[1]}: ${A[2]}" })  # XXX: semantics mixed with representation
 				}
 
 				section "sources" {
 					sources = collector
 						pipeline.pipeline.stages.each(F(stage) {
 							stage.actions.filter({'actionTypeId': {'category': 'Source', 'provider': 'CodeStarSourceConnection'}}).each(F(action) {
-								# collect([action.configuration.FullRepositoryId, action.configuration.BranchName])
 								collect(Source(action.configuration.FullRepositoryId, action.configuration.BranchName))
 							})
 						})
-					# sources .= map({ "${A[0]}@${A[1]}" })  # XXX: semantics mixed with representation
 				}
 
 			} else {
