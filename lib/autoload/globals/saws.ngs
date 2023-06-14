@@ -3,6 +3,8 @@
 ns {
 	global init, Str, JsonData
 
+	# TODO: consider showing sources and revisions together
+
 	# TODO: ensure alignment with AWS output
 	type Source
 	F init(s:Source, repo:Str, branch:Str) init(args())
@@ -15,21 +17,32 @@ ns {
 	F Str(a:Action) "${a.stage_name}/${a.action_name}: ${a.status}"
 	F JsonData(a:Action) a.Hash().JsonData()
 
+	# TODO: ensure alignment with AWS output
+	type Revision
+	F init(r:Revision, action_name:Str, id:Str, message:Str) init(args())
+	F Str(r:Revision) "${r.action_name}: ${r.id.limit(8)} ${r.message.limit(30).replace('\n', ' ')}"
+	F JsonData(r:Revision) r.Hash().JsonData()
+
+	type Progress
+	F init(p:Progress, step:Int, total_steps:Int) init(args())
+	F Str(p:Progress) "${p.step}/${p.total_steps}"
+	F JsonData(p:Progress) p.Hash().JsonData()
+
+
 	F pipes() {
 		# List of AWS::CodePipeline::Pipeline
 		pipelines = ``aws codepipeline list-pipelines``
 		pipelines.pmap(2, F(p) {
-			e = ``aws codepipeline list-pipeline-executions --pipeline-name ${p.name} --max-results 1``
-			e = e.get('pipelineExecutionSummaries', []).get(0, {})
-			# echo(e)
+			e = ``aws codepipeline list-pipeline-executions --pipeline-name ${p.name} --max-results 1``.get(0, {})
 
+			# TODO: eliminate e.attr references outside this if
 			if e {
 				pipeline = ``aws codepipeline get-pipeline --name ${p.name}``
 				state = ``aws codepipeline get-pipeline-state --name ${p.name}``
 
 				section "approvals" {
-					approval_actions = collector
-						pipeline.pipeline.stages.each(F(stage) {
+					approval_actions = collector {
+						pipeline.stages.each(F(stage) {
 							stage.actions.filter({'actionTypeId': {'category': 'Approval', 'provider': 'Manual'}}).each(F(action) {
 								status = 'ahead'
 								state =~ Has({
@@ -39,35 +52,39 @@ ns {
 									"stageName": stage.name
 									"actionStates": Has({"actionName": action.name} -> { status = A.latestExecution.status })
 								})
-
 								collect(Action(stage.name, action.name, status))
 							})
 						})
+					}
 				}
-
-				section "sources" {
-					sources = collector
-						pipeline.pipeline.stages.each(F(stage) {
-							stage.actions.filter({'actionTypeId': {'category': 'Source', 'provider': 'CodeStarSourceConnection'}}).each(F(action) {
-								collect(Source(action.configuration.FullRepositoryId, action.configuration.BranchName))
-							})
-						})
-				}
-
 			} else {
 				approval_actions = []
-				sources = []
 			}
 
-			# echo(e)
+			section "sources" {
+				sources = collector {
+					pipeline.stages.each(F(stage) {
+						stage.actions.filter({'actionTypeId': {'category': 'Source', 'provider': 'CodeStarSourceConnection'}}).each(F(action) {
+							collect(Source(action.configuration.FullRepositoryId, action.configuration.BranchName))
+						})
+					})
+				}
+			}
+
+			section "progress" {
+				# TODO
+				total_actions = pipeline.stages.actions.flatten().len()
+				# 'progress': Progress(0, total_actions)
+
+
+			}
+
+
 			{
 				'name': p.name
 				'status': e.status
 				'sources': sources
-				'revisions': e.sourceRevisions.map(F(r) {
-					# TODO: semantically correct data structure, not just form string for output
-					"${r.actionName}: ${r.revisionId.limit(8)} ${r.revisionSummary.decode_json().CommitMessage.limit(30).replace('\n', ' ')}"
-				})
+				'revisions': e.sourceRevisions.map(F(r) Revision(r.actionName, r.revisionId, r.revisionSummary.CommitMessage))
 				'last_executed': e.lastUpdateTime
 				'approvals': approval_actions
 			}

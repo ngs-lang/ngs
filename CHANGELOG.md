@@ -9,6 +9,7 @@
 ### Fixes and improvements
 
 * Fix `AtPath` for non-eachables
+* Improve `decode()` for AWS CLI commands
 
 ## 2023-05-17 Version 0.2.16
 

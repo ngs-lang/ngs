@@ -6826,10 +6826,24 @@ F decode(s:Str, hints:Hash) {
 		}
 	}
 
+	section "aws codepipeline get-pipeline --name" {
+		if data =~ {'pipeline': Hash, 'metadata': Hash} {
+			return data.pipeline::{ A._metadata = data.metadata }
+		}
+	}
+
 	# Use the only top-level key that has array as it's value
 	# Thanks goes to Elastic Beanstalk which complicates this,
 	# all other APIs seem to return only one top-level key.
 	# ( aws elasticbeanstalk describe-configuration-options )
+
+	top_level_keys = data.keys()
+
+	next_token_key = top_level_keys.the_one(/nexttoken/i, found_none={null})
+	if next_token_key {
+		next_token_val = data[next_token_key]
+		data .= rejectk(next_token_key)
+	}
 
 	top_level_vals = data.values()
 
@@ -6845,7 +6859,20 @@ F decode(s:Str, hints:Hash) {
 		})
 		data = data.Instances.flatten()
 	}
-	data.stdlib_aws_straighten_tags()
+	data::{
+		A.stdlib_aws_straighten_tags()
+		if next_token_key {
+			A.meta()[next_token_key] = next_token_val
+		}
+		section "aws codepipeline list-pipeline-executions" {
+			if A.all({'sourceRevisions': Repeat({'revisionSummary': Str})}) {
+				# .sourceRevisions in all executions, hence flatten()
+				A.sourceRevisions.flatten().each(F(r) {
+					r.revisionSummary .= decode_json()
+				})
+			}
+		}
+	}
 }
 
 doc Parse the output of "find" command which does not use "-printf". Handles "-print0".
