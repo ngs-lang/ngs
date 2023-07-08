@@ -7064,7 +7064,7 @@ F ~(s:Str, sfx:Sfx) {
 
 doc %EX - [1,2,3] =~ Pfx([1,2])
 F =~(x:Eachable1, pfx:Pfx, mc:MatchContext) {
-	guard x is not Str and x is not Int
+	guard x is not Str and x is not Int and pfx.val is not Str
 	block b {
 		i = Iter(pfx)
 		mc.deeper({
