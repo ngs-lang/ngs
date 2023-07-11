@@ -23,6 +23,8 @@ ns {
 	F Str(r:Revision) "${r.action_name}: ${r.id.limit(8)} ${r.message.limit(30).replace('\n', ' ')}"
 	F JsonData(r:Revision) r.Hash().JsonData()
 
+	# TODO: "not applicable or unknown" subtype
+	# TODO: "N out of M" subtype (that's what current Progress is)
 	type Progress
 	F init(p:Progress, step:Int, total_steps:Int) init(args())
 	F Str(p:Progress) "${p.step}/${p.total_steps}"
@@ -74,9 +76,16 @@ ns {
 			section "progress" {
 				# TODO
 				total_actions = pipeline.stages.actions.flatten().len()
-				# 'progress': Progress(0, total_actions)
 
-
+				# TODO: make sure that not matching Repeat(HERE) does not affect the counting
+				statuses = collector/Stats() {
+					state =~ Repeat({
+						"latestExecution": {
+							"pipelineExecutionId": e.pipelineExecutionId
+						}
+						"actionStates": Repeat({"latestExecution": {"status": collect}})
+					})
+				}
 			}
 
 
@@ -87,8 +96,27 @@ ns {
 				'revisions': e.sourceRevisions.map(F(r) Revision(r.actionName, r.revisionId, r.revisionSummary.CommitMessage))
 				'last_executed': e.lastUpdateTime
 				'approvals': approval_actions
+				'progress': if statuses { Progress(statuses.Succeeded, total_actions) }
 			}
 		})
+	}
+
+	type LongValue
+	F init(lv:LongValue, val) init(args())
+	F Str(lv:LongValue) lv.val.Arr().digest(4).join('')
+	F JsonData(lv:LongValue) lv.val.JsonData()
+
+	F stacks() {
+		``aws cloudformation describe-stacks``::{
+			A.each_idx_val(F(i, stack) {
+				A[i] = stack.mapkv({
+					A =~ 'StackName' returns [A, B]
+					B =~ AllOf(Str, AnyOf(Pfx('arn'), {A.len() > 20})) returns [A, LongValue(B)]
+					[A, B]
+				})
+			})
+
+		}
 	}
 
 }
