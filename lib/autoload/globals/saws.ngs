@@ -3,32 +3,40 @@
 ns {
 	global init, Str, JsonData
 
+	# Poorly named hack for UI
+	type SendAllFields
+
 	# TODO: consider showing sources and revisions together
 
 	# TODO: ensure alignment with AWS output
-	type Source
+	type Source(SendAllFields)
 	F init(s:Source, repo:Str, branch:Str) init(args())
 	F Str(s:Source) "${s.repo}@${s.branch}"
 	F JsonData(s:Source) s.Hash().JsonData()
 
 	# TODO: ensure alignment with AWS output
-	type Action
+	type Action(SendAllFields)
 	F init(a:Action, stage_name:Str, action_name:Str, status:Str) init(args())
 	F Str(a:Action) "${a.stage_name}/${a.action_name}: ${a.status}"
 	F JsonData(a:Action) a.Hash().JsonData()
 
 	# TODO: ensure alignment with AWS output
-	type Revision
+	type Revision(SendAllFields)
 	F init(r:Revision, action_name:Str, id:Str, message:Str) init(args())
 	F Str(r:Revision) "${r.action_name}: ${r.id.limit(8)} ${r.message.limit(30).replace('\n', ' ')}"
 	F JsonData(r:Revision) r.Hash().JsonData()
 
 	# TODO: "not applicable or unknown" subtype
 	# TODO: "N out of M" subtype (that's what current Progress is)
-	type Progress
+	type Progress(SendAllFields)
 	F init(p:Progress, step:Int, total_steps:Int) init(args())
 	F Str(p:Progress) "${p.step}/${p.total_steps}"
 	F JsonData(p:Progress) p.Hash().JsonData()
+
+	type LongValue(SendAllFields)
+	F init(lv:LongValue, val) init(args())
+	F Str(lv:LongValue) lv.val.Arr().digest(4).join('')
+	F JsonData(lv:LongValue) lv.val.JsonData()
 
 
 	F pipes() {
@@ -101,14 +109,10 @@ ns {
 		})
 	}
 
-	type LongValue
-	F init(lv:LongValue, val) init(args())
-	F Str(lv:LongValue) lv.val.Arr().digest(4).join('')
-	F JsonData(lv:LongValue) lv.val.JsonData()
-
 	F stacks() {
 		``aws cloudformation describe-stacks``::{
 			A.each_idx_val(F(i, stack) {
+				# TODO: something more elegant here
 				A[i] = stack.mapkv({
 					A =~ 'StackName' returns [A, B]
 					B =~ AllOf(Str, AnyOf(Pfx('arn'), {A.len() > 20})) returns [A, LongValue(B)]
