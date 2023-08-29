@@ -86,7 +86,7 @@ ns {
 				total_actions = pipeline.stages.actions.flatten().len()
 
 				# TODO: make sure that not matching Repeat(HERE) does not affect the counting
-				statuses = collector/Stats() {
+				statuses = collector/Stats({'Succeeded': 0}) {
 					state =~ Repeat({
 						"latestExecution": {
 							"pipelineExecutionId": e.pipelineExecutionId
