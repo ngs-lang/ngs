@@ -5,6 +5,7 @@
 * Add `each(Dir, Fun)`
 * Add `filter(Dir, Any)`
 * Add `Has` pattern
+* Add `Iter(Set)`
 
 ### Fixes and improvements
 
