@@ -337,6 +337,15 @@ TEST { {}.Iter().next() }.assert(NoNext)
 
 # F Counter(start:Int=0) Iter(start..null)
 
+section "Iter for Set" {
+	# TODO: improve and work with underlying Hash, similar to HashIter (and avoid Arr() copying)
+	doc Iterator for Set. Currently implemented as ArrIter for the Set elements.
+	doc %RET - ArrIter
+	F Iter(s:Set) s.Arr().Iter()
+}
+
+TEST Set([1,2]).Iter().Arr() == [1,2]
+
 doc Convert Iter into JSON compatible data structure - array.
 doc Forces evaluation of MapIter for example.
 F JsonData(i:Iter) collector i.each(collect + JsonData)
