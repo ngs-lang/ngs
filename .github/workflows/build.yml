@@ -40,7 +40,7 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "archlinux:base-20221225.0.113672" ] # https://hub.docker.com/_/archlinux/
+        container: [ "archlinux:base" ] # https://hub.docker.com/_/archlinux/
         compiler: [ "gcc", "clang" ]
     steps:
       - uses: actions/checkout@v3
