@@ -31,6 +31,13 @@ ns {
 		}
 	}
 
+	F _json_data_fields(x) {
+		{
+			'type': id(x.Type())
+			'fields': x.Hash().mapv(JsonData)
+		}
+	}
+
 	F JsonData(x) throw NotImplemented("JsonData() for type ${x.Type()} is not implemented yet").set(val=x)
 
 	section "JsonData - scalars" {
@@ -98,5 +105,13 @@ ns {
 	section "AWS2" {
 		# TODO: generalize
 		AWS2.meta()[JsonData] = {'ns': 'AWS2'}
+	}
+
+	section "saws" {
+		# TODO: factor out
+		saws.meta()[JsonData] = {'ns': 'saws'}
+
+		SendAllFields = saws::SendAllFields
+		F JsonData(saf:SendAllFields) saf._json_data_fields()
 	}
 }
