@@ -40,6 +40,7 @@ net::unix_json_rpc_server("ngs-shell.sock", ns {
         	Table2::Table(a)
         }
 
+		# TODO: find better place for this
 		# Based on: F ````(cp:CommandsPipeline)
         F transform(pp:ProcessesPipeline) {
 			processes = pp.processes

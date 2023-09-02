@@ -120,5 +120,15 @@ ns {
 
 		SendAllFields = saws::SendAllFields
 		F JsonData(saf:SendAllFields) saf._json_data_fields()
+
+		Pipeline = saws::Pipeline
+		F JsonData(p:Pipeline) {
+			ui::InteractiveObject().set(
+				type = 'AWS::CodePipeline::Pipeline'
+				id = p.name
+				text = p.name
+				default_action = 'View CodePipeline'
+			).JsonData()
+		}
 	}
 }

@@ -39,10 +39,22 @@ ns {
 	F Str(ls:LongStr) ls.val.Arr().digest(4).join('')
 	F JsonData(ls:LongStr) ls.val.JsonData()
 
+	section "Pipeline" {
+		# Warning: for unique reference should have AWS account and region
+		# AWS::CodePipeline::Pipeline
+		type Pipeline
+		F init(p:Pipeline, name:Str) {
+			p.name = name
+		}
+
+		F Str(p:Pipeline) p.name
+		F JsonData(p:Pipeline) p.name
+	}
+
 	F pipes() {
 		# List of AWS::CodePipeline::Pipeline
 		pipelines = ``aws codepipeline list-pipelines``
-		pipelines.pmap(2, F(p) {
+		pipelines.pmap(4, F(p) {
 			e = ``aws codepipeline list-pipeline-executions --pipeline-name ${p.name} --max-results 1``.get(0, {})
 
 			# TODO: eliminate e.attr references outside this if
@@ -98,7 +110,7 @@ ns {
 
 
 			{
-				'name': p.name
+				'name': Pipeline(p.name)
 				'status': ProcessStatus::Status(e.status)
 				'sources': sources
 				'revisions': e.sourceRevisions.map(F(r) Revision(r.actionName, r.revisionId, r.revisionSummary.CommitMessage))
