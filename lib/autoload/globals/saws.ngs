@@ -33,11 +33,11 @@ ns {
 	F Str(p:Progress) "${p.step}/${p.total_steps}"
 	F JsonData(p:Progress) p.Hash().JsonData()
 
-	type LongValue(SendAllFields)
-	F init(lv:LongValue, val) init(args())
-	F Str(lv:LongValue) lv.val.Arr().digest(4).join('')
-	F JsonData(lv:LongValue) lv.val.JsonData()
-
+	# Messes semantics and UI hints?
+	type LongStr(SendAllFields)
+	F init(ls:LongStr, val:Str) init(args())
+	F Str(ls:LongStr) ls.val.Arr().digest(4).join('')
+	F JsonData(ls:LongStr) ls.val.JsonData()
 
 	F pipes() {
 		# List of AWS::CodePipeline::Pipeline
@@ -99,7 +99,7 @@ ns {
 
 			{
 				'name': p.name
-				'status': e.status
+				'status': ProcessStatus::Status(e.status)
 				'sources': sources
 				'revisions': e.sourceRevisions.map(F(r) Revision(r.actionName, r.revisionId, r.revisionSummary.CommitMessage))
 				'last_executed': e.lastUpdateTime
@@ -109,18 +109,15 @@ ns {
 		})
 	}
 
-	F stacks() {
-		``aws cloudformation describe-stacks``::{
-			A.each_idx_val(F(i, stack) {
-				# TODO: something more elegant here
-				A[i] = stack.mapkv({
-					A =~ 'StackName' returns [A, B]
-					B =~ AllOf(Str, AnyOf(Pfx('arn'), {A.len() > 20})) returns [A, LongValue(B)]
-					[A, B]
-				})
+	F stacks(pat:Hash={}) {
+		``aws cloudformation describe-stacks``.filter({'StackStatus': Not('DELETE_COMPLETE')} + pat).map(F(stack) {
+			# TODO: something more elegant here
+			stack.mapkv({
+				A =~ 'StackName' returns [A, B]
+				B is not Str returns [A, B]
+				[A, LongStr(B)]
 			})
-
-		}
+		})
 	}
 
 }

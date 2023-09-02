@@ -1,0 +1,28 @@
+ns {
+	type Status
+		type Unknown(Status)
+		type Running(Status)
+			type Stopping(Running)
+		type Paused(Status)
+		type Finished(Status)
+			type Succeeded(Finished)
+			type Failed(Finished)
+			type Cancelled(Finished)
+
+	global init
+	F init(s:Status) { s.text = null }
+	F init(s:Status, text:Str) { s.text = text }
+
+	F Status(s:Str) {
+		s =~ /^succe/i returns Succeeded(s)
+		s =~ /^fail/i returns Failed(s)
+		throw InvalidArgument("Could not make TimelineStatus::Status from '${s}'").set('s', s)
+	}
+
+	global Str
+	F Str(s:Status) s.text or s.Type().name
+
+	# TODO: maybe concatentae the text
+	global JsonData
+	F JsonData(s:Status) s.Type().name
+}

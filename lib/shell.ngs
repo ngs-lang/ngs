@@ -70,10 +70,11 @@ net::unix_json_rpc_server("ngs-shell.sock", ns {
 
 		section "Frequent testing assist" {
 			_assist = {
-				't1': 'aws ec2 describe-vpcs'
-				't2': 'aws codepipeline list-pipelines'
-				't2a': 'saws::pipes()'
-				't3': 'aws cloudformation list-stacks'
+				'v': 'aws ec2 describe-vpcs'
+				'p-': 'aws codepipeline list-pipelines'
+				'p': 'saws::pipes()'
+				's-': 'aws cloudformation list-stacks'
+				's': 'saws::stacks()'
 			}
 			line = _assist.get(line, line)
 		}

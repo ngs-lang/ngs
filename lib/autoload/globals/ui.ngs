@@ -97,6 +97,9 @@ ns {
 	}
 	F JsonData(r:Res) r.Hash().without('def').JsonData().set(type=id(r.Type()))
 
+	_pss = ProcessStatus::Status
+	F JsonData(ps:_pss) ps._json_data_fields(%[text])
+
 	section "InteractiveObject" {
 		# TODO: Send context so that interaction could be seen as part of the bigger picture
 		F JsonData(i:InteractiveObject) i._json_data_fields(%[type id text default_action])
@@ -105,6 +108,10 @@ ns {
 	section "AWS2" {
 		# TODO: generalize
 		AWS2.meta()[JsonData] = {'ns': 'AWS2'}
+	}
+
+	section "ProcessStatus" {
+		ProcessStatus.meta()[JsonData] = {'ns': 'ProcessStatus'}
 	}
 
 	section "saws" {

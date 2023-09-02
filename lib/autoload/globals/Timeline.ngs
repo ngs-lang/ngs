@@ -2,23 +2,7 @@ ns {
 
 	# WIP - timeline, mainly for UI
 
-	global Timeline, TimelineStatus, Time, Lines, init, each, map, sort, push, echo_cli
-
-	section "TimelineStatus" {
-
-		TimelineStatus = ns {
-			type Status
-				type Unknown(Status)
-				type Running(Status)
-					type Stopping(Running)
-				type Finished(Status)
-					type Succeeded(Finished)
-					type Failed(Finished)
-					type Cancelled(Finished)
-		}
-
-	}
-
+	global Timeline, Time, Lines, init, each, map, sort, push, echo_cli
 
 	section "Timeline" {
 
@@ -33,7 +17,7 @@ ns {
 		F init(t:Timeline) {
 			t.id = "tl-${`line: uuidgen`}" # temporary
 			t.name = '(unnamed)'
-			t.status = TimelineStatus::Unknown()
+			t.status = 'TODO'
 			t.error = null
 			t.time_start = null
 			t.time_last_update = null
