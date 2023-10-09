@@ -6854,19 +6854,12 @@ F decode(s:Str, hints:Hash) {
 	# all other APIs seem to return only one top-level key.
 	# ( aws elasticbeanstalk describe-configuration-options )
 
-	top_level_keys = data.keys()
+	p = partitionv(data, Arr)
+	guard p[0].len() == 1
 
-	next_token_key = top_level_keys.the_one(/nexttoken/i, found_none={null})
-	if next_token_key {
-		next_token_val = data[next_token_key]
-		data .= rejectk(next_token_key)
-	}
-
-	top_level_vals = data.values()
-
-	guard top_level_vals =~ [Arr]
-
-	data = top_level_vals.the_one()
+	data = p[0].values().the_one()  # Core of the answer
+	data.meta(p[1])                 # Metadata such as next token, counts, etc
+	# Maybe: data.meta()._DataKey = p[0].keys().the_one()
 
 	# Anyone cares about Reservations? Certainly it's not the common case so...
 	if data.all('ReservationId' in X) {
@@ -6878,9 +6871,6 @@ F decode(s:Str, hints:Hash) {
 	}
 	data::{
 		A.stdlib_aws_straighten_tags()
-		if next_token_key {
-			A.meta()[next_token_key] = next_token_val
-		}
 		section "aws codepipeline list-pipeline-executions" {
 			if A.all({'sourceRevisions': Repeat({'revisionSummary': Str})}) {
 				# .sourceRevisions in all executions, hence flatten()
