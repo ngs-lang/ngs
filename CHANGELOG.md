@@ -6,6 +6,8 @@
 * Add `filter(Dir, Any)`
 * Add `Has` pattern
 * Add `Iter(Set)`
+* Add `partitionk(Eachable2, pattern)`
+* Add `partitionv(Eachable2, pattern)`
 
 ### Fixes and improvements
 

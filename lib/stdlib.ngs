@@ -3474,6 +3474,29 @@ F rejectv(h:Eachable2, pattern=Bool.constructors) h.filterv(Not(pattern))
 TEST {"a1": 1, "a2": 2, "b1": 10}.rejectv(X>5) == {"a1": 1, "a2": 2}
 TEST {"yes": true, "no": false}.rejectv() == {"no": false}
 
+block _ {
+
+	F p(something:Eachable2, pattern, selector) {
+		yes = {}
+		no = {}
+		something.each(F(k, v) (if selector(k, v) =~ pattern then yes else no)[k] = v)
+		[yes, no]
+	}
+
+	global partitionk
+	F partitionk(something:Eachable2, pattern=Bool.constructors) p(something, pattern, F(k, v) k)
+
+	TEST p = {"abc": [1], "def": "X"}.partitionk(Str); p == [{"abc": [1], "def": "X"}, {}]
+
+	global partitionv
+	F partitionv(something:Eachable2, pattern=Bool.constructors) p(something, pattern, F(k, v) v)
+
+	TEST p = {"abc": [1], "def": "X"}.partitionv(Arr); p == [{"abc": [1]}, {"def": "X"}]
+
+}
+
+
+
 doc Count number of key-value pairs in Hash that satisfy the predicate.
 doc e - Something to check, typically a Hash
 doc predicate - Test function to be called with one key and one value at a time: predicate(k, v)
@@ -6817,12 +6840,6 @@ F decode(s:Str, hints:Hash) {
 	section "aws ecs describe-task-definition" {
 		if data =~ {'taskDefinition': Hash, 'tags': Arr} {
 			return data.taskDefinition
-		}
-	}
-
-	section "aws codepipeline get-pipeline-state" {
-		if data =~ {'stageStates': Arr} {
-			return data.stageStates
 		}
 	}
 
