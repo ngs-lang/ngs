@@ -67,12 +67,12 @@ ns {
 						pipeline.stages.each(F(stage) {
 							stage.actions.filter({'actionTypeId': {'category': 'Approval', 'provider': 'Manual'}}).each(F(action) {
 								status = 'ahead'
-								state =~ Has({
+								state =~ Present({
 									"latestExecution": {
 										"pipelineExecutionId": e.pipelineExecutionId
 									}
 									"stageName": stage.name
-									"actionStates": Has({"actionName": action.name} -> { status = A.latestExecution.status })
+									"actionStates": Present({"actionName": action.name} -> { status = A.latestExecution.status })
 								})
 								collect(Action(stage.name, action.name, status))
 							})
