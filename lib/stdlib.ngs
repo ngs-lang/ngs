@@ -6303,7 +6303,7 @@ F '$()'(p:Process) {
 	try {
 		p.executable = find_in_path(argv[0])
 	} catch(nf:ProgramNotFound) {
-		throw ProcessFail(p).set('cause', nf).set('message', 'Executable not found')
+		throw ProcessFail(p).set('cause', nf).set('message', "Executable not found: ${argv[0]}")
 	}
 
 	pid = fork()
@@ -8280,7 +8280,17 @@ section "JWT" {
 	doc Decodes JSON Web Token (JWT)
 	F decode(s:Str, hints:Hash={}) {
 
-		F _decode(s) try s.decode_base64().decode_json()
+		F _decode(s) {
+			# All failures to decode are ignored as they are expected, except for missing base64 binary
+			try {
+				s.decode_base64().decode_json()
+			} catch(pf:ProcessFail) {
+				guard pf =~ {'cause': ProgramNotFound}
+				throw pf
+			} catch(x) {
+				null
+			}
+		}
 
 		o = s.trim()
 		parts = o.split('.')
