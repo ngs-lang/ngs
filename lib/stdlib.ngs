@@ -7397,6 +7397,9 @@ section "Lines" {
 	F framed(lines:Lines) {
 		not(lines) returns lines
 		m = lines.map(len).max()
+		if m > 80 {
+			return lines.mapo("*** $X")
+		}
 		border = '+' + ('-' * (m+2)) + '+'
 		collector/Lines() {
 			collect(border)
@@ -7622,6 +7625,12 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null, echo=echo
 
 	if level == 0 {
 		echo(m.framed())
+	}
+
+	# TODO: unhack
+	if (e is ProcessFail) and ('process' in e) and ('stderr' in e.process) and (e.process.stderr) {
+		echo("stderr follows:")
+		echo(e.process.stderr.limit(16384))
 	}
 
 }
