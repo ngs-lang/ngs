@@ -16,6 +16,7 @@ ns {
 	F Status(s:Str) {
 		s =~ /^succe/i returns Succeeded(s)
 		s =~ /^fail/i returns Failed(s)
+		s =~ /progress/i returns Running(s)
 		throw InvalidArgument("Could not make TimelineStatus::Status from '${s}'").set('s', s)
 	}
 
