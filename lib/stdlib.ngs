@@ -6746,8 +6746,13 @@ doc %EX - t = {"Tags": [{"Key": "k", "Value": "v"},{"Key": "k2", "Value": "v2"}]
 doc %EX - t.stdlib_aws_straighten_tags()
 doc %EX - t  # {Tags={k=v, k2=v2}}
 F stdlib_aws_straighten_tags(h:Hash) {
-	if 'Tags' in h {
+	# TODO: something more elegant than almost identical stanzas
+	if h =~ {'Tags': Repeat({'Key': Str, 'Value': Str})} {
 		h.Tags = Hash(h.Tags.Key, h.Tags.Value)
+	}
+	# RDS snapshots, maybe others
+	if h =~ {'TagList': Repeat({'Key': Str, 'Value': Str})} {
+		h.TagList = Hash(h.TagList.Key, h.TagList.Value)
 	}
 }
 
