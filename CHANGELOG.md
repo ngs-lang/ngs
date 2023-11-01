@@ -3,10 +3,11 @@
 ### New features
 
 * Add `each(Dir, Fun)`
-* Add `filter(Dir, Any)`
+* Add `filter(Dir, pattern)`
 * Add `Iter(Set)`
 * Add `partitionk(Eachable2, pattern)`
 * Add `partitionv(Eachable2, pattern)`
+* Add experimental fields()
 
 ### Fixes and improvements
 

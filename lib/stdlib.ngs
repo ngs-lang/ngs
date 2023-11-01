@@ -3501,6 +3501,12 @@ F sortv(h:Hash, lte:Fun=(<=)) h.Arr().sort({ lte(A[1], B[1]) }).Hash()
 TEST {"a": 1, "b": 10, "c": 5}.sortv() == {"a": 1, "c": 5, "b": 10}
 TEST {"a": 1, "b": 10, "c": 5}.sortv() != {"a": 1, "b": 10, "c": 5}
 
+doc %STATUS - experimental
+F fields(e:Eachable2, patterns:Arr) e.filterk(AnyOf(patterns))
+
+doc %STATUS - experimental
+F fields(e:Eachable1, patterns:Arr) e.map(F(elt:Eachable2) elt.fields(patterns))
+
 # --- Conversions ---
 
 doc Create a Hash from Arr of Arr[2]
