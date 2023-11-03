@@ -6835,6 +6835,12 @@ F decode(s:Str, hints:Hash) {
 	}
 
 	section "dynamodb lib" {
+		# TODO: maybe move out so it could be used independently
+		# https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html
+		# https://github.com/aws/aws-sdk-js/blob/master/lib/dynamodb/converter.js
+		F dynamodb_decoder_not_implemented(t, x) {
+			throw NotImplemented("dynamodb decoder for type ${t} is not implemented yet")
+		}
 		dynamodb_decoders = {
 			'S': identity
 			'N': F(x) Int(x) tor Real(x)
@@ -6842,7 +6848,7 @@ F decode(s:Str, hints:Hash) {
 			'BOOL': Bool  # not tested
 			'NULL': { null }  # not tested
 			'M': dynamodb_decoder_not_implemented('M', X)
-			'L': dynamodb_decoder_not_implemented('L', X)
+			'L': X.map(F(elt) dynamodb_decoders[elt.keys().the_one()](elt.values().the_one()))
 			'SS': identity  # not tested
 			'NS': dynamodb_decoder_not_implemented('NS', X)
 			'BS': dynamodb_decoder_not_implemented('BS', X)
@@ -6897,12 +6903,6 @@ F decode(s:Str, hints:Hash) {
 			}
 		}
 		section "aws dynamodb scan (and friends probably)" {
-			# TODO: maybe move out so it could be used independently
-			# https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html
-			# https://github.com/aws/aws-sdk-js/blob/master/lib/dynamodb/converter.js
-			F dynamodb_decoder_not_implemented(t, x) {
-				throw NotImplemented("dynamodb decoder for type ${t} is not implemented yet")
-			}
 			if A.all(dynamodb_row) {
 				A.each(dynamodb_decode_row)
 			}
