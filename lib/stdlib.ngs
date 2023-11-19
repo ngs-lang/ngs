@@ -861,12 +861,6 @@ section "=~ Matching" {
 		result
 	}
 
-	doc %STATUS - deprecated
-	F Pred(pattern) {
-		warn("Using deprecated Pred()")
-		F deprecated_pred(x) x =~ pattern
-	}
-
 	# TODO: %RET - MatchResult
 	doc %RET - not(a =~ b)
 	F !~(x, pattern) not(x =~ pattern)
