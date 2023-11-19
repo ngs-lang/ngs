@@ -13,7 +13,7 @@ F assert(f:Fun, t:Type, msg:Str="Assertion failed") {
 F perform_test(test_code:Str) {
 	F ok(x) throw Error("Don't know how to check test result of type ${x.Type()}")
 	F ok(x:Bool) x
-	F ok(ms:MatchSuccess) true
+	F ok(mr:MatchResult) mr.Bool()
 	F ok(e:Exception) { e.meta() =~ {'test_ngs': true} }
 
 	global tests_counter
