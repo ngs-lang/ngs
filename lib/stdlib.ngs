@@ -1148,10 +1148,9 @@ doc pattern - Test function or anything else acceptable by (=~), defaults to Boo
 doc %RET - Array with two arrays in it
 doc %EX - partition([1,10,2,20], X>=10)  # [[10, 20], [1, 2]]
 F partition(something:Eachable1, pattern=Bool.constructors) {
-	yes = []
-	no = []
-	something.each(F(elt) (if elt =~ pattern then yes else no).push(elt))
-	[yes, no]
+	[[], []]::{
+		something.each(F(elt) (if elt =~ pattern then A[0] else A[1]).push(elt))
+	}
 }
 
 TEST partition([1,10,2,20], X>=10) == [[10, 20], [1, 2]]
