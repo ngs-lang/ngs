@@ -1006,7 +1006,7 @@ section "=~ Matching" {
 	doc Negate the match
 	doc %RET - Bool
 	F =~(x, n:Not, mc:MatchContext) {
-		(=~)(x, n.val, mc).not()
+		(=~)(x, n.pattern, mc).not()
 	}
 
 	TEST 1 =~ Not(3)
