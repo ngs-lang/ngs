@@ -3591,9 +3591,7 @@ TEST Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}], "Name",
 #       for example for converting back to Eachable1:
 doc %STATUS - experimental
 F Hash(e:Eachable1) {
-	guard e =~ AnyOf(Arr, ArrLike)  # Containers only
-	not(e) returns {}  # Was failing for NumRange
-	guard e.all(F(x) x is Eachable2 and len(x) == 2)
+	guard e =~ Repeat(AllOf(Eachable2, Transformed(len, 2)), 1..null)
 	k = v = null
 	pat = {
 		AnyOf(%[Id id K k Key key Name name OutputKey ParameterKey]) -> {k=A}: Any
