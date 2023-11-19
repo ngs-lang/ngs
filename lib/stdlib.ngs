@@ -3534,6 +3534,7 @@ doc %RET - Hash
 doc %EX - Hash([['a', 1], ['c', 3]])  # {'a': 1, 'c': 3}
 F Hash(arr:Arr) {
 	guard arr.all(F(x) x is Arr and len(x) == 2)
+	# Maybe (think performance): guard arr =~ Repeat([Any, Any])
 	collector/{}
 		arr.each(F(pair) {
 			collect(*pair)
