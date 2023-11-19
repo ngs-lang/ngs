@@ -47,19 +47,23 @@ section "Syntactic sugar for basics" {
 	TEST 1 is not Null
 	TEST (null is not Null) == false
 
+	doc Deprecated in favor of a any(container, pattern).
 	doc Exactly same as "element in container". It's just more convenient in specific cases.
 	doc %EX - [1,2,3].has(2)  # true
 	doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(X.has(1))  # [ [1,2,3], [1,20,30] ]
 	doc %RET - Bool
+	doc %STATUS - deprecated
 	F has(container, element) element in container
 
 	TEST [1,2,3].has(1)
 	TEST [1,2,3].has(10).not()
 
+	doc Deprecated in favor of a none(container, pattern).
 	doc Exactly same as "element not in container". It's just more convenient in specific cases.
 	doc %EX - [1,2,3].has_no(2)  # false
 	doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(X.has_no(1))  # [ [100,200,300] ]
 	doc %RET - Bool
+	doc %STATUS - deprecated
 	F has_no(container, element) element not in container
 
 	TEST [1,2,3].has_no(1).not()
