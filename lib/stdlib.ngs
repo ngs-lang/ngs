@@ -1130,13 +1130,12 @@ doc %EX - (1...10).filter(F(num) num % 2 == 0)  # Gives [2,4,6,8,10]
 doc %EX - (1...10).filter(X<5)  # Gives [1,2,3,4]
 doc %RET - Of same type as e
 F filter(e:Eachable1, pattern=Bool.constructors) {
-	t = Type(e)
-	ret = t()
-	e.each(F(elt) {
-		if elt =~ pattern
-			ret.push(elt)
-	})
-	ret
+	Type(e)()::{
+		e.each(F(elt) {
+			if elt =~ pattern
+				A.push(elt)
+		})
+	}
 }
 
 TEST [1,null,2,0].filter() == [1, 2]
