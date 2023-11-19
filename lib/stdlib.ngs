@@ -3471,10 +3471,9 @@ TEST {"yes": true, "no": false}.rejectv() == {"no": false}
 block _ {
 
 	F p(something:Eachable2, pattern, selector) {
-		yes = {}
-		no = {}
-		something.each(F(k, v) (if selector(k, v) =~ pattern then yes else no)[k] = v)
-		[yes, no]
+		[{}, {}]::{
+			something.each(F(k, v) (if selector(k, v) =~ pattern then A[0] else A[1])[k] = v)
+		}
 	}
 
 	global partitionk
