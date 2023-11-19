@@ -819,7 +819,7 @@ section "=~ Matching" {
 
 	doc Negation. Intended use - in pattern matching.
 	type Not
-	F init(n:Not, val) { n.val = val }
+	F init(n:Not, pattern) { n.pattern = pattern }
 
 	F =~(x, pattern) {
 		mc = MatchContext(x)
