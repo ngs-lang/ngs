@@ -1,7 +1,6 @@
 ## (UNRELEASED) Version 0.2.17
 
 ### New features
-
 * Add `each(Dir, Fun)`
 * Add `filter(Dir, pattern)`
 * Add `Iter(Set)`
@@ -9,11 +8,17 @@
 * Add `partitionv(Eachable2, pattern)`
 * Add experimental `fields()`
 * Add experimental `retry_assert()`
+* Add `Transformed` pattern
 
 ### Fixes and improvements
-
 * Fix `AtPath` for non-eachables
 * Improve `decode()` for AWS CLI commands
+
+### Deprecated
+* Deprecated `Deep` in favor of `AtPath`
+
+### Breaking changes
+* Remove deprecated `Pred`
 
 ## 2023-05-17 Version 0.2.16
 

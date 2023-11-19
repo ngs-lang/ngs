@@ -111,7 +111,7 @@ ns {
 
 			{
 				'name': Pipeline(p.name)
-				'status': ProcessStatus::Status(e.status)
+				'status': AbstractProcess::Status::Status(e.status)
 				'sources': sources
 				'revisions': e.sourceRevisions.map(F(r) Revision(r.actionName, r.revisionId, r.revisionSummary.CommitMessage))
 				'last_executed': e.lastUpdateTime

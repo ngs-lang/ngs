@@ -97,7 +97,7 @@ ns {
 	}
 	F JsonData(r:Res) r.Hash().without('def').JsonData().set(type=id(r.Type()))
 
-	_pss = ProcessStatus::Status
+	_pss = AbstractProcess::Status::Status
 	F JsonData(ps:_pss) ps._json_data_fields(%[text])
 
 	section "InteractiveObject" {
@@ -110,8 +110,8 @@ ns {
 		AWS2.meta()[JsonData] = {'ns': 'AWS2'}
 	}
 
-	section "ProcessStatus" {
-		ProcessStatus.meta()[JsonData] = {'ns': 'ProcessStatus'}
+	section "Process Status" {
+		AbstractProcess::Status.meta()[JsonData] = {'ns': 'ProcessStatus'}
 	}
 
 	section "saws" {

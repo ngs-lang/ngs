@@ -1,0 +1,43 @@
+ns {
+	# global_methods
+	global init
+
+	type Process(JsonDataViaHash)
+	F init(p:Process) {
+		p.status = Status::Unknown('status was never set')
+		p.output = []
+	}
+
+	Status = ns {
+    	global init
+    	type Status
+    		type Unknown(Status)
+    		type NotStarted(Status)
+    		type Running(Status)
+    			type Stopping(Running)
+    		type Paused(Status)
+    		type Finished(Status)
+    			type Succeeded(Finished)
+    			type Failed(Finished)
+    			type Cancelled(Finished)
+
+    	F init(s:Status, text:Str=null) { s.text = text }
+
+    	F Status(s:Str) {
+    		s =~ /^succe/i returns Succeeded(s)
+    		s =~ /^fail/i returns Failed(s)
+    		s =~ /progress/i returns Running(s)
+    		throw InvalidArgument("Could not make TimelineStatus::Status from '${s}'").set('s', s)
+    	}
+
+    	TEST s=AbstractProcess::Status; s::Status("fail") is s::Failed
+
+    	global Str
+    	F Str(s:Status) s.text or s.Type().name
+
+    	# TODO: maybe concatentae the text
+    	global JsonData
+    	F JsonData(s:Status) s.Type().name
+    }
+
+}
