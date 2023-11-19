@@ -368,7 +368,7 @@ section "MultiMethod" {
 		}
 	}
 
-	F filtero(mm:MultiMethod, pred) mm.Arr().filter(pred).MultiMethod()
+	F filtero(mm:MultiMethod, pattern) mm.Arr().filter(pattern).MultiMethod()
 
 	F Str(mm:MultiMethod) "<MultiMethod with ${mm.Arr().len()} method(s)>"
 }
