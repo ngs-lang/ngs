@@ -4109,6 +4109,19 @@ type Presence
 
 	TEST [1,2,3] =~ Absent(0)
 
+	doc Ensure a value is present.
+	doc Does e.push(p.val) conditionally.
+	doc %EX - [1,2].ensure(Present(3)) == [1,2,3]
+	doc %EX - [1,2].ensure(Present(2)) == [1,2]
+	F ensure(e:Eachable1, p:Present) e::{
+		if p.val not in A {
+			A.push(p.val)
+		}
+	}
+
+	TEST [1,2].ensure(Present(3)) == [1,2,3]
+	TEST [1,2].ensure(Present(2)) == [1,2]
+
 
 doc Internal method. Please do not use.
 doc Converts Presence or Arr[something] to Arr[Presence]. Used by Res and friends.
