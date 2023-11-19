@@ -911,6 +911,7 @@ section "=~ Matching" {
 					if x_keys is Null {
 						x_keys = x.Hash().keys()
 					}
+					# TODO: should be all()?
 					x_keys.any(F(k) {
 						(=~)(k, pat_k, mc) and (=~)(x.(k), pat_v, mc.set_last_path_element(k))
 					})
