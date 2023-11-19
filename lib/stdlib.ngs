@@ -1424,6 +1424,14 @@ F ~(something, pattern) {
 	}
 }
 
+section "Base JSON" {
+	type JsonDataViaHash
+	F JsonData(jdvh: JsonDataViaHash) jdvh.Hash().JsonData()
+
+	type JsonDataViaGet
+	F JsonData(jdvg: JsonDataViaGet) jdvh.get().JsonData()
+}
+
 section "Eachable1" {
 	# Should be low priority (ordered before others) method
 	F +(a:Eachable1, b:Eachable1) {
