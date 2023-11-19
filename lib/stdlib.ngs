@@ -806,7 +806,9 @@ section "=~ Matching" {
 			mc
 		}
 
+		doc %STATUS - deprecated
 		F return(mc:MatchContext, x) {
+			warn("Using deprecated return(MatchContext)")
 			mc._result = FullBox(x)
 			# Returning true to make "... -> Y.return(X)" work
 			# Only needed if return() will be used in non "something -> HERE" context,
