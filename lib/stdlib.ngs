@@ -1038,6 +1038,8 @@ section "=~ Matching" {
 				m = (=~)(x, ap.value_pattern, mc)
 				m returns m
 			}
+
+			# TODO: use any()?
 			ret = false
 			mc.deeper({
 				x.each2(F(idx_or_key, val) {
