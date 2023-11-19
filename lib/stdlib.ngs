@@ -1913,7 +1913,7 @@ section "Hook" {
 	# TODO: consider optional? try/catch isolation
 	doc Runs all handlers passing all args.
 	doc args - Arguments to pass to handlers
-	doc %RET - Arr. Results from all the handlers
+	doc %RET - Hash. Results from all the handlers
 	F call(hook:Hook, *args) hook.meta().HashLike.mapv(X(*args))
 }
 
