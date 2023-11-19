@@ -833,6 +833,8 @@ section "=~ Matching" {
 		throw Error("=~ is expected to either set result or return a boolean").set(given=result)
 	}
 
+	doc Fallback for pattern matching
+	doc %RET - false
 	F =~(x, pattern, _mc:MatchContext) false
 
 	doc A pair of pattern and an action to execute if the pattern matches.
