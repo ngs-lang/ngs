@@ -876,8 +876,17 @@ section "=~ Matching" {
 		doc %EX - ({"a": 1, "b": 2}) =~ ({"a": Any, "b": IfExists(Int)})
 		doc %EX - ({"a": 1, "b": "x"}) !~ ({"a": Any, "b": IfExists(Int)})
 		type IfExists
-		F init(ie:IfExists, pat) ie.pat = pat
-		F =~(x, ie:IfExists, mc:MatchContext) (=~)(x, ie.pat, mc)
+		F init(ie:IfExists, pattern) ie.pattern = pattern
+		F =~(x, ie:IfExists, mc:MatchContext) (=~)(x, ie.pattern, mc)
+	}
+
+	section "Transformed" {
+		doc Check for pattern against transformed value
+		doc %EX - "abc" =~ Transformed(len, 3)
+		type Transformed
+		F init(t:Transformed, transformation:Fun, pattern) init(args())
+		F =~(x, t:Transformed, mc:MatchContext) Bool(t::transformation(x) =~ t.pattern)
+		TEST "abc" =~ Transformed(len, 3)
 	}
 
 	doc Checks whether object fields named after h hash keys match (=~) the corresponding hash values.
