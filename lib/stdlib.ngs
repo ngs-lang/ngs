@@ -833,9 +833,10 @@ section "=~ Matching" {
 		throw Error("=~ is expected to either set result or return a boolean").set(given=result)
 	}
 
-	doc Fallback for pattern matching
-	doc %RET - false
-	F =~(x, pattern, _mc:MatchContext) false
+	doc Fallback for pattern matching. Throws NotImplemented.
+	F =~(x, pattern, _mc:MatchContext) {
+		throw NotImplemented("=~ is not implemented for pattern of type ${pattern.Type().name} or specific values of that type").set(pattern=pattern)
+	}
 
 	doc A pair of pattern and an action to execute if the pattern matches.
 	doc Currently, only callable actions are supported (Fun).
@@ -975,6 +976,7 @@ section "=~ Matching" {
 
 		F init(r:Repeat, pattern) init(r, pattern, 0..null)
 
+		# TODO =~ straightening
 		doc Check that x is a repetition of r.pattern and it occurs r.count times
 		doc %RET - Bool
 		F =~(x:Eachable1, r:Repeat, mc:MatchContext) block b {
@@ -7129,8 +7131,10 @@ F ~(s:Str, sfx:Sfx) {
 }
 
 doc %EX - [1,2,3] =~ Pfx([1,2])
-F =~(x:Eachable1, pfx:Pfx, mc:MatchContext) {
-	guard x is not Str and x is not Int and pfx.val is not Str
+F =~(x, pfx:Pfx, mc:MatchContext) {
+	guard pfx.val is Arr
+	x is not Eachable1 returns false
+	x is Str or x is Int returns false
 	block b {
 		i = Iter(pfx)
 		mc.deeper({
@@ -7166,8 +7170,9 @@ TEST ("abc" ~ /a(.)c/)[1] == "b"
 doc Checks subsequence presence
 doc s - SubSeq of Str
 doc %RET - Bool
-F =~(x:Str, s:SubSeq, _mc:MatchContext) {
+F =~(x, s:SubSeq, _mc:MatchContext) {
 	guard s.val is Str
+	x is not Str returns false
 	Bool(x ~ s)
 }
 
@@ -8232,8 +8237,12 @@ section "Loading code" {
 		require(f)
 	}
 
+	# Internal, don't use outside of stdlib
+	_REQUIRED = {}
+
 	F require(fname:Str) {
 		guard fname =~ AnyOf(Pfx('/'), Pfx('./'))
+		fname in _REQUIRED returns _REQUIRED[fname]
 		try {
 			program_text = read(fname)
 			program_bytecode = compile(program_text, fname)
@@ -8242,6 +8251,7 @@ section "Loading code" {
 			program_func = load(program_bytecode, "require()d file: $fname")
 			ret = program_func()
 			debug('require', "require(): done requiring ${fname}")
+			_REQUIRED[fname] = ret
 			ret
 		} catch(e) {
 			guard e !~ AnyOf(RequireFail, NormalExit)
