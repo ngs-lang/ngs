@@ -5036,6 +5036,9 @@ section "Thread" block _ {
 
 	TEST Set(1..10).pfilter(X>3) == Set(1..10).filter(X>3)
 
+	# TODO: Decide what to do with this.
+	#   * It is not parallel filter. It's parallel map() followed by filter.
+	#   * Pattern is not a pattern, it's a callback
 	doc Parallel filter. Typcally should be used with "heavy" pattern such as SSH.
 	doc %EX - Set(1..10).pfilter(2, X>3)  # <Set 4, 5, 6, 7, 8, 9>
 	doc %RET - Of same type as e
