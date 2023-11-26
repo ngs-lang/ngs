@@ -3058,7 +3058,7 @@ TEST [10,11,12].limit(2) == [10,11]
 block _ {
 	global min, max
 	F most(e:Eachable1, f:Fun) {
-		guard e
+		not(e) throws InvalidArgument('min()/max()/most() require at least one element')
 		ret = e[0]
 		e.each(F(elt) if f(elt, ret) { ret = elt })
 		ret

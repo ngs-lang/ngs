@@ -1,0 +1,69 @@
+ns {
+	global init, hydrate
+
+	Status = AbstractProcess::Status::Status
+
+	type Execution(AbstractProcess::Process)
+	type ExecutionStage(AbstractProcess::Process)
+	type ExecutionStageAction(AbstractProcess::Process)  # TODO: subtypes?
+
+	# TODO: support "latest" execution
+	F init(e:Execution, pipelineName:Str, pipelineExecutionId:Str) {
+		init(args())
+		# TODO: something better
+		# TODO: how to reference the thing that is corresponding to binary (in our case pipeline + version)?
+		e.name = "${pipelineName}/${pipelineExecutionId}"
+	}
+
+	F hydrate(e:Execution) e::{
+		pe = ``log: aws codepipeline get-pipeline-execution --pipeline-name ${e.pipelineName} --pipeline-execution-id ${e.pipelineExecutionId}``
+		A.status = Status(pe.pipelineExecution.status)
+
+		aes = ``log: aws codepipeline list-action-executions --pipeline-name ${e.pipelineName} --filter "pipelineExecutionId=${e.pipelineExecutionId}"``
+		pipeline_version = aes.pipelineVersion.uniq().the_one()
+
+		pipeline = ``log: aws codepipeline get-pipeline --name ${e.pipelineName} --pipeline-version ${pipeline_version}``
+		# echo(inspect(pipeline))
+
+		section "Processes that should have happened, from pipeline definition" {
+			stages_actions = {}  # stage name + '::' + action name -> ExecutionStageAction
+			e.sub = pipeline.stages.map(F(stage) {
+				ExecutionStage().set(
+					not_status = AbstractProcess::Status::NotStarted()
+					name = stage.name
+					sub = stage.actions.map(F(action) {
+						ExecutionStageAction().set(
+							status = AbstractProcess::Status::NotStarted()
+							name = action.name
+						)::{
+							stages_actions["${stage.name}::${action.name}"] = A
+						}
+					})
+				)
+			})
+		}
+
+		section "Update processes with info from list-action-executions" {
+			aes.each(F(ae) {
+				stages_actions["${ae.stageName}::${ae.actionName}"]::{
+					A.status = Status(ae.status)
+				}
+			})
+		}
+
+		e.compute_status()
+
+	}
+
+	F executions(pipelineName:Str) {
+		``aws codepipeline list-pipeline-executions --pipeline-name ${pipelineName}``.map(X.rejectk(AnyOf(%[sourceRevisions trigger])))
+	}
+
+	F test(pipelineName:Str) {
+		executions(pipelineName).filter({'status': 'Failed'}).limit(1).each(F(e) {
+			log("test()ing Execution $e")
+			ee = Execution(pipelineName, e.pipelineExecutionId).hydrate()
+			echo(inspect(ee))
+		})
+	}
+}

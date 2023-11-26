@@ -4,13 +4,15 @@ ns {
 
 	type Process(JsonDataViaHash)
 	F init(p:Process) {
-		p.status = Status::Unknown('status was never set')
+		p.status = Status::Unset()
 		p.output = []
+		p.sub = []
 	}
 
 	Status = ns {
     	global init
     	type Status
+    		type Unset(Status)
     		type Unknown(Status)
     		type NotStarted(Status)
     		type Running(Status)
@@ -20,6 +22,23 @@ ns {
     			type Succeeded(Finished)
     			type Failed(Finished)
     			type Cancelled(Finished)
+
+		# TODO: think whether it's the best
+		_scalar = {
+			Unset: 0
+			Unknown: 10
+			NotStarted: 20
+			Running: 1000
+			Stopping: 900
+			Paused: 800
+			Finished: 2000
+			Succeeded: 3000
+			Failed: -200
+			Cancelled: -100
+		}
+
+		global (<)
+		F '<'(a:Status, b:Status) _scalar[a.Type()] < _scalar[b.Type()]
 
     	F init(s:Status, text:Str=null) { s.text = text }
 
@@ -38,6 +57,34 @@ ns {
     	# TODO: maybe concatentae the text
     	global JsonData
     	F JsonData(s:Status) s.Type().name
+    }
+
+    global compute_status
+    F compute_status(p:Process) {
+    	p.sub.each(compute_status)
+    	s = min(p.sub.status)  # the "worst" status
+    	assert(p.status.Type(), AnyOf(
+			Lit(Status::Unset)
+			Lit(s.Type())  # if not unset, the computed status and current status must match
+		))
+    	p.status = s.assert(Not(Status::Unset))
+    }
+
+    F compute_status(p:Process) {
+		guard not(p.sub)
+		assert(p.status, Not(Status::Unset))
+    }
+
+    global inspect
+    F inspect(p:Process) {
+    	h = p.Hash()
+    	collector/Lines() {
+			collect("${p.Type().name} ${h.get('name', '-')} (${p.status})")
+			p.sub.each_idx_val(F(sub_idx, sub) {
+				# collect("  Subprocess ${sub_idx}")
+				inspect(sub).each(F(line) collect("    ${line}"))
+			})
+		}
     }
 
 }
