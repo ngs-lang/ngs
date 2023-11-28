@@ -46,7 +46,7 @@ ns {
     		s =~ /^succe/i returns Succeeded(s)
     		s =~ /^fail/i returns Failed(s)
     		s =~ /progress/i returns Running(s)
-    		throw InvalidArgument("Could not make TimelineStatus::Status from '${s}'").set('s', s)
+    		throw InvalidArgument("Could not make AbstractProcess::Status from '${s}'").set('s', s)
     	}
 
     	TEST s=AbstractProcess::Status; s::Status("fail") is s::Failed
@@ -77,6 +77,13 @@ ns {
 
     global inspect
     F inspect(p:Process) {
+
+    	F marker(line:Str) '>'
+    	F marker(line:Str) {
+    		guard line =~ /invalid|error|fail|reason/i
+    		'*'
+    	}
+
     	h = p.Hash()
     	collector/Lines() {
 			collect("${p.Type().name} ${h.get('name', '-')} (${p.status})")
@@ -84,6 +91,7 @@ ns {
 				# collect("  Subprocess ${sub_idx}")
 				inspect(sub).each(F(line) collect("    ${line}"))
 			})
+			p.output.reverse().limit(50).reverse().map(SafeStr).each(F(line) collect("    ${marker(line)} ${line}"))
 		}
     }
 

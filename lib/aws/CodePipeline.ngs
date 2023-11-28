@@ -7,8 +7,92 @@ ns {
 	type ExecutionStage(AbstractProcess::Process)
 	type ExecutionStageAction(AbstractProcess::Process)  # TODO: subtypes?
 
+	F init(esa:ExecutionStageAction, action:Hash) {
+		super(esa)
+		esa.name = action.name
+		esa.status = AbstractProcess::Status::NotStarted()
+	}
+
+	F hydrate(esa:ExecutionStageAction) warn("hydrate(${esa.Type().name}) is not implemented yet")
+
+	section "CodeBuildPhase" {
+		type CodeBuildPhase(AbstractProcess::Process)
+
+		F init(c:CodeBuildPhase, phase:Hash) {
+			super(c)
+			c.name = phase.phaseType
+			c.status = Status(phase.phaseStatus)
+			# HERE # c.output.push
+			# statusCode message # temp: making a string out of structured data, generally a bad idea
+			phase.get('contexts', []).each(F(context) {
+				text = context.statusCode +? ' ' +? context.message
+				not(text) returns
+				c.output.push(text)
+			})
+		}
+
+		F hydrate(c:CodeBuildPhase) {
+		}
+
+	}
+
+	section "CodeBuild action" {
+		type CodeBuildExecutionStageAction(ExecutionStageAction)
+
+		F ExecutionStageAction(action:Hash) {
+			guard action =~ {
+				'actionTypeId': {
+					'owner': 'AWS'
+					'provider': 'CodeBuild'
+				}
+			}
+			CodeBuildExecutionStageAction(action)
+		}
+
+		F hydrate(c:CodeBuildExecutionStageAction) c::{
+			c.status.text = c.action_execution.output.executionResult.externalExecutionSummary
+			eid = c.action_execution.output.executionResult.externalExecutionId
+			build = ``aws codebuild batch-get-builds --ids ${eid}``.the_one()
+			# echo("BUILD $build")
+			# Filter below is needed for {"phaseType": "COMPLETED", ...} phase
+			c.sub = build.phases.filter({'phaseStatus': Str}).map(CodeBuildPhase)
+
+			phase_name_to_phase = Hash(c.sub.name, c.sub)
+
+			# logs: {groupName=/aws/codebuild/..., streamName=..., deepLink=..., cloudWatchLogsArn=}
+			events = ``aws logs get-log-events --log-group-name ${build.logs.groupName} --log-stream-name ${build.logs.streamName} --start-from-head``
+
+			phase = null
+			events.message.each(F(message) {
+				message .= trim()
+				if m = message ~ /Container.*(Entering phase|Phase is) (.*)$/ {
+					phase = m[2]
+					return
+				}
+				if message ~ /Container.*Phase complete:/ {
+					phase = null
+					return
+				}
+				if message ~ /Container.*Phase context status code/ {
+					return
+				}
+				if not(phase) {
+					c.output.push(message)
+					return
+				}
+				phase_name_to_phase[phase].output.push(message)
+			})
+
+
+		}
+	}
+
+	# Info from https://docs.aws.amazon.com/codepipeline/latest/userguide/concepts.html#concepts-stage-executions :
+	# "Valid statuses for stages are InProgress, Stopping, Stopped, Succeeded, and Failed. You can retry a failed stage unless the failed stage is not retryable. For more information, see StageExecution."
 	# TODO: support "latest" execution
+	# TODO: un-pollute AbstractProcess::Process fields (pipelineName and pipelineExecutionId can not be at top level, polluting AbstractProcess::Process)
 	F init(e:Execution, pipelineName:Str, pipelineExecutionId:Str) {
+		super(e)
 		init(args())
 		# TODO: something better
 		# TODO: how to reference the thing that is corresponding to binary (in our case pipeline + version)?
@@ -16,8 +100,6 @@ ns {
 	}
 
 	F hydrate(e:Execution) e::{
-		pe = ``log: aws codepipeline get-pipeline-execution --pipeline-name ${e.pipelineName} --pipeline-execution-id ${e.pipelineExecutionId}``
-		A.status = Status(pe.pipelineExecution.status)
 
 		aes = ``log: aws codepipeline list-action-executions --pipeline-name ${e.pipelineName} --filter "pipelineExecutionId=${e.pipelineExecutionId}"``
 		pipeline_version = aes.pipelineVersion.uniq().the_one()
@@ -32,11 +114,10 @@ ns {
 					not_status = AbstractProcess::Status::NotStarted()
 					name = stage.name
 					sub = stage.actions.map(F(action) {
-						ExecutionStageAction().set(
-							status = AbstractProcess::Status::NotStarted()
-							name = action.name
-						)::{
-							stages_actions["${stage.name}::${action.name}"] = A
+						ExecutionStageAction(action)::{
+							k = "${stage.name}::${action.name}"
+							assert(k not in stages_actions)
+							stages_actions[k] = A
 						}
 					})
 				)
@@ -47,9 +128,13 @@ ns {
 			aes.each(F(ae) {
 				stages_actions["${ae.stageName}::${ae.actionName}"]::{
 					A.status = Status(ae.status)
+					A.action_execution = ae  # TODO: un-pollute AbstractProcess::Process fields
 				}
 			})
 		}
+
+		# TODO: flexible logic for what to hydrate
+		stages_actions.values().filter({'status': AbstractProcess::Status::Failed}).each(hydrate)
 
 		e.compute_status()
 
@@ -59,8 +144,8 @@ ns {
 		``aws codepipeline list-pipeline-executions --pipeline-name ${pipelineName}``.map(X.rejectk(AnyOf(%[sourceRevisions trigger])))
 	}
 
-	F test(pipelineName:Str) {
-		executions(pipelineName).filter({'status': 'Failed'}).limit(1).each(F(e) {
+	F main(pipelineName:Str) {
+		executions(pipelineName).filter({'status': 'Failed'}).limit(5).each(F(e) {
 			log("test()ing Execution $e")
 			ee = Execution(pipelineName, e.pipelineExecutionId).hydrate()
 			echo(inspect(ee))
