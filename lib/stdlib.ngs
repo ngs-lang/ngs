@@ -6870,6 +6870,15 @@ F decode(s:Str, hints:Hash) {
 		}
 	}
 
+	section "aws codebuild batch-get-builds --ids" {
+		if data =~ {'builds': Arr, 'buildsNotFound': Arr} {
+			return data.builds
+		}
+		# Thoughts:
+		# b.candidate(data, {'builds': SOMETHING(Arr), 'buildsNotFound': Arr})
+		# candidate({'builds': SOMETHING(Arr), 'buildsNotFound': Arr})
+	}
+
 	section "dynamodb lib" {
 		# TODO: maybe move out so it could be used independently
 		# https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html
