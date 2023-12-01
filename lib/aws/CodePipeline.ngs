@@ -50,40 +50,8 @@ ns {
 		}
 
 		F hydrate(c:CodeBuildExecutionStageAction) c::{
-			c.status.text = c.action_execution.output.executionResult.externalExecutionSummary
 			eid = c.action_execution.output.executionResult.externalExecutionId
-			build = ``aws codebuild batch-get-builds --ids ${eid}``.the_one()
-			# echo("BUILD $build")
-			# Filter below is needed for {"phaseType": "COMPLETED", ...} phase
-			c.sub = build.phases.filter({'phaseStatus': Str}).map(CodeBuildPhase)
-
-			phase_name_to_phase = Hash(c.sub.name, c.sub)
-
-			# logs: {groupName=/aws/codebuild/..., streamName=..., deepLink=..., cloudWatchLogsArn=}
-			events = ``aws logs get-log-events --log-group-name ${build.logs.groupName} --log-stream-name ${build.logs.streamName} --start-from-head``
-
-			phase = null
-			events.message.each(F(message) {
-				message .= trim()
-				if m = message ~ /Container.*(Entering phase|Phase is) (.*)$/ {
-					phase = m[2]
-					return
-				}
-				if message ~ /Container.*Phase complete:/ {
-					phase = null
-					return
-				}
-				if message ~ /Container.*Phase context status code/ {
-					return
-				}
-				if not(phase) {
-					c.output.push(message)
-					return
-				}
-				phase_name_to_phase[phase].output.push(message)
-			})
-
-
+			c.sub.push(require('aws/CodeBuild.ngs')::Build(eid).hydrate())
 		}
 	}
 
