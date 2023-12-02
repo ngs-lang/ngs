@@ -539,7 +539,13 @@ section "Inspect built-in types" block _ {
 	doc %RET - Arr of Str
 	F inspect(path:Arr, x) {
 		guard x =~ AnyOf(Type, NativeMethod, UserDefinedMethod)
-		["${_inspect_path_to_str(path)} - ${x.Str()}"] + inspect_meta(path + [Lit('.meta()')], x)
+		im = try {
+			inspect_meta(path + [Lit('.meta()')], x)
+		} catch(e) {
+			# echo(e)
+			['inspect_meta() failed']
+		}
+		["${_inspect_path_to_str(path)} - ${x.Str()}"] + im
 	}
 
 	doc %STATUS - internal
