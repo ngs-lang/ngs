@@ -169,7 +169,7 @@ section "Block type and methods" ns {
 	F block(body:Fun) {
 		b = Block()
 		F block_super_handler(*args, **kwargs) {
-			throw NotImplemented("calling super() from within a block is not implemented")
+			throw NotImplemented("calling super() / using 'guard' from within a block is not implemented")
 		}
 		mm = MultiMethod([block_super_handler, body])
 		try {
@@ -314,7 +314,11 @@ section "Namespaces" {
 	doc Executes f(x)
 	doc %RET - x
 	F '::'(x, f:Fun) {
-		f(x)
+		F double_colon_super_handler(*args, **kwargs) {
+			throw NotImplemented("calling super() / using 'guard' is not implemented for ::(Any, Fun)")
+		}
+		mm = MultiMethod([double_colon_super_handler, f])
+		mm(x)
 		x
 	}
 }
@@ -509,7 +513,8 @@ section "Inspect built-in types" block _ {
 		collector {
 			a = try val.meta()
 			not(a) returns []
-			a.without('doc').each(F(k, v) {
+			# TODO: .without('ns') is temporary until fixed (probably endless recursion)
+			a.without('doc').without('ns').each(F(k, v) {
 				inspect(path + [k], v).each(collect)
 			})
 			# doc can be null
