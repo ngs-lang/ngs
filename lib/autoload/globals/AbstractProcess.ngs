@@ -93,7 +93,7 @@ ns {
     	h = p.Hash()
     	collector/Lines() {
     		t = if any([p.start, p.end]) {
-    			" ${p.start} - ${p.end}"
+    			", ${p.start} - ${p.end}"
     		} else {
     			""
     		}

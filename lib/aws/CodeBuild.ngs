@@ -56,7 +56,8 @@ ns {
 			super(c)
 			c.name = phase.phaseType
 			c.status = Status::Status(phase.phaseStatus)
-			# HERE # c.output.push
+			c.start = phase.Box('startTime').map(Time).get(null)
+			c.end = phase.Box('endTime').map(Time).get(null)
 			# statusCode message # temp: making a string out of structured data, generally a bad idea
 			phase.get('contexts', []).each(F(context) {
 				text = context.statusCode +? ' ' +? context.message

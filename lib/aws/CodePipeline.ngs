@@ -15,29 +15,6 @@ ns {
 
 	F hydrate(esa:ExecutionStageAction) warn("hydrate(${esa.Type().name}) is not implemented yet")
 
-	section "CodeBuildPhase" {
-		type CodeBuildPhase(AbstractProcess::Process)
-
-		F init(c:CodeBuildPhase, phase:Hash) {
-			super(c)
-			c.name = phase.phaseType
-			c.status = Status(phase.phaseStatus)
-			c.start = phase.Box('startTime').map(Time).get(null)
-			c.end = phase.Box('endTime').map(Time).get(null)
-			# HERE # c.output.push
-			# statusCode message # temp: making a string out of structured data, generally a bad idea
-			phase.get('contexts', []).each(F(context) {
-				text = context.statusCode +? ' ' +? context.message
-				not(text) returns
-				c.output.push(text)
-			})
-		}
-
-		F hydrate(c:CodeBuildPhase) {
-		}
-
-	}
-
 	section "CodeBuild action" {
 		type CodeBuildExecutionStageAction(ExecutionStageAction)
 
