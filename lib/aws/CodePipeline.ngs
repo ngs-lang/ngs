@@ -59,8 +59,6 @@ ns {
 			# c.status = require('aws/CloudFormation.ngs')::Status(c.action_execution.)
 			c.status = Status(c.action_execution.status)
 			c.action_execution.output.inspect().each({ c.output.push(A) })
-			c.output.push("PT10")
-			# die("$c")
 			c
 		}
 
@@ -68,10 +66,6 @@ ns {
 			input = c.action_execution.input
 			conf = input.configuration
 			guard conf.ActionMode == 'CHANGE_SET_EXECUTE'
-			# exit("AA ${stack_arn} ${c.action_execution}")
-
-			# output={outputArtifacts=[], executionResult={externalExecutionId=stack/detail?stackId=arn:aws:cloudformation:eu-central-1:704328435781:stack/demo-session-manager-cdk-app/05c9e9b0-7ef5-11ee-a85c-0a0c2a8fe1e7
-
 			# It looks like there is no way to access history of change sets, operating based on time of events
 			# https://stackoverflow.com/questions/41841083/cloudformation-vieweing-inactive-deleted-change-sets
 			stack_arn = c.action_execution.output.executionResult.externalExecutionId.split('stackId=')[1]
