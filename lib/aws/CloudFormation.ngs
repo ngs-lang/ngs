@@ -1,0 +1,128 @@
+ns {
+	global init, hydrate
+
+	StatusNS = AbstractProcess::Status
+
+	# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-describing-stacks.html
+	_s = {
+		'CREATE_COMPLETE': StatusNS::Succeeded
+		'CREATE_FAILED': StatusNS::Failed
+		'CREATE_IN_PROGRESS': StatusNS::Running
+		'DELETE_COMPLETE': StatusNS::Succeeded
+		'DELETE_FAILED': StatusNS::Failed
+		'DELETE_IN_PROGRESS': StatusNS::Running
+		'DELETE_SKIPPED': StatusNS::Cancelled # Missing in AWS docs
+		'IMPORT_COMPLETE': StatusNS::Succeeded
+		'IMPORT_IN_PROGRESS': StatusNS::Running
+		'IMPORT_ROLLBACK_COMPLETE': StatusNS::Failed
+		'IMPORT_ROLLBACK_FAILED': StatusNS::Failed
+		'IMPORT_ROLLBACK_IN_PROGRESS': StatusNS::Failing
+		'REVIEW_IN_PROGRESS': StatusNS::Running
+		'ROLLBACK_COMPLETE': StatusNS::Failed
+		'ROLLBACK_FAILED': StatusNS::Failed
+		'ROLLBACK_IN_PROGRESS': StatusNS::Failing
+		'UPDATE_COMPLETE': StatusNS::Succeeded
+		'UPDATE_COMPLETE_CLEANUP_IN_PROGRESS': StatusNS::Succeeding
+		'UPDATE_FAILED': StatusNS::Failed
+		'UPDATE_IN_PROGRESS': StatusNS::Running
+		'UPDATE_ROLLBACK_COMPLETE': StatusNS::Failed
+		'UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS': StatusNS::Failing
+		'UPDATE_ROLLBACK_FAILED': StatusNS::Failed
+		'UPDATE_ROLLBACK_IN_PROGRESS': StatusNS::Failing
+		'_CANCELLED': StatusNS::Cancelled
+	}
+
+	_running = AnyOf(_s.filterv(X <= StatusNS::Running).keys())
+	_finished = AnyOf(_s.filterv(X <= StatusNS::Finished).keys())
+
+	section "Status" {
+		type Status
+		F init(s:Status, val:Str) {
+			assert(val, AnyOf(_s.keys()), "Unknown CloudFormation status: ${val}")
+			init(args())
+		}
+		
+		F init(s:Status, event:Hash) {
+			event =~ {'ResourceStatusReason': /cancelled$/} returns init(s, '_CANCELLED')
+			init(s, event.ResourceStatus)
+		}
+
+		# TODO: make it a constructor for AbstractProcess::Status::Status
+		F to_abstract_status(s:Status) {
+			t = _s[s.val]
+			assert(t <= AbstractProcess::Status::Status)
+			t(s.val)
+		}
+	}
+
+	section "ResourceOperations" {
+
+		doc Operations on single logical resource during one CF run
+		type ResourceOperations(AbstractProcess::Process)
+
+		F init(ro:ResourceOperations, events:Arr) {
+			super(ro)
+			ro.name = "Operation on CF resource ${events[0].ResourceType} ${events[0].LogicalResourceId}"
+
+			ro.status = min(events.map(Status).map(to_abstract_status))
+
+			F cleanup(e) {
+				e.rejectk(AnyOf(%[StackId EventId StackName LogicalResourceId PhysicalResourceId ResourceType]))
+			}
+
+			# The mini sub-processes are represented as output
+			ro.output = events.map(cleanup).inspect().Arr()
+		}
+
+	}
+
+	# Single CF run
+	section "StackOperation" {
+
+		# TODO: un-pollute
+		type StackOperation(AbstractProcess::Process)
+		F init(so:StackOperation, stack_name:Str, after:Time) {
+			super(so)
+			so.name = "Stack operation on ${stack_name}"
+			init(args())
+		}
+
+		# HERE
+		# TODO: flexible filter
+		F hydrate(so:StackOperation) so::{
+log("hydrating ${so.name}")
+			events = ``log: aws cloudformation describe-stack-events --stack-name ${so.stack_name}``.reverse()
+			_start = {
+				'ResourceType': 'AWS::CloudFormation::Stack'
+				'ResourceStatus': _running
+				'Timestamp': {A.Time() >= so.after}
+			}
+			_end = {
+				'ResourceType': 'AWS::CloudFormation::Stack'
+				'ResourceStatus': _finished
+			}
+
+			debug('CloudFormation', "Stack ${so.stack_name} events: len=${events.len()} first at ${events[0].Timestamp.Time()} last at ${events[-1].Timestamp.Time()}")
+			debug('CloudFormation', "Need events just after ${so.after}")
+
+			events = events[_start..._end]
+			if not(events) {
+				so.status = StatusNS::Unknown("Did not find corresponding stack events")
+				debug('CloudFormation', "No events after ${so.after}")
+				return
+			}
+
+			if events[0].Timestamp.Time() > so.after + Duration(10) {
+				so.status = StatusNS::Unknown("Did not find corresponding stack events adjacent in time")
+				debug('CloudFormation', "No events after ${so.after} adjacent in time")
+				# TODO: status details - first event was at blah
+				return
+			}
+
+			debug('CloudFormation', "Stack ${so.stack_name} stack operation events: len=${events.len()} first at ${events[0].Timestamp.Time()} last at ${events[-1].Timestamp.Time()}")
+
+			so.sub = events.reject({'ResourceType': 'AWS::CloudFormation::Stack'}).group('LogicalResourceId').mapv(ResourceOperations).values().filter({'status': AnyOf(StatusNS::Failed, StatusNS::Failing)})
+
+		}
+	}
+}

@@ -22,6 +22,8 @@ ns {
 			super(c)
 			c.name = phase.phaseType
 			c.status = Status(phase.phaseStatus)
+			c.start = phase.Box('startTime').map(Time).get(null)
+			c.end = phase.Box('endTime').map(Time).get(null)
 			# HERE # c.output.push
 			# statusCode message # temp: making a string out of structured data, generally a bad idea
 			phase.get('contexts', []).each(F(context) {
@@ -52,6 +54,52 @@ ns {
 		F hydrate(c:CodeBuildExecutionStageAction) c::{
 			eid = c.action_execution.output.executionResult.externalExecutionId
 			c.sub.push(require('aws/CodeBuild.ngs')::Build(eid).hydrate())
+		}
+	}
+
+	section "CloudFormation action" {
+		type CloudFormationStageAction(ExecutionStageAction)
+
+		F ExecutionStageAction(action:Hash) {
+			guard action =~ {
+				'actionTypeId': {
+					'owner': 'AWS'
+					'provider': 'CloudFormation'
+				}
+			}
+			CloudFormationStageAction(action)
+		}
+
+		F hydrate(c:CloudFormationStageAction) c::{
+			throw NotImplemented("hydrate() not implemented for ${c}")
+			c
+		}
+
+		F hydrate(c:CloudFormationStageAction) {
+			input = c.action_execution.input
+			conf = input.configuration
+			guard conf.ActionMode == 'CHANGE_SET_REPLACE'
+			# c.status = require('aws/CloudFormation.ngs')::Status(c.action_execution.)
+			c.status = Status(c.action_execution.status)
+			c.action_execution.output.inspect().each({ c.output.push(A) })
+			c.output.push("PT10")
+			# die("$c")
+			c
+		}
+
+		F hydrate(c:CloudFormationStageAction) {
+			input = c.action_execution.input
+			conf = input.configuration
+			guard conf.ActionMode == 'CHANGE_SET_EXECUTE'
+			# exit("AA ${stack_arn} ${c.action_execution}")
+
+			# output={outputArtifacts=[], executionResult={externalExecutionId=stack/detail?stackId=arn:aws:cloudformation:eu-central-1:704328435781:stack/demo-session-manager-cdk-app/05c9e9b0-7ef5-11ee-a85c-0a0c2a8fe1e7
+
+			# It looks like there is no way to access history of change sets, operating based on time of events
+			# https://stackoverflow.com/questions/41841083/cloudformation-vieweing-inactive-deleted-change-sets
+			stack_arn = c.action_execution.output.executionResult.externalExecutionId.split('stackId=')[1]
+			c.sub.push(require('aws/CloudFormation.ngs')::StackOperation(stack_arn, Time(c.action_execution.startTime)).hydrate())
+			c
 		}
 	}
 
@@ -115,6 +163,7 @@ ns {
 	F main(pipelineName:Str) {
 		executions(pipelineName).filter({'status': 'Failed'}).limit(5).each(F(e) {
 			log("test()ing Execution $e")
+			# TODO: .start and .end
 			ee = Execution(pipelineName, e.pipelineExecutionId).hydrate()
 			echo(inspect(ee))
 		})

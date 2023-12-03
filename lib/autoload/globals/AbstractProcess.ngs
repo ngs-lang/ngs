@@ -5,6 +5,8 @@ ns {
 	type Process(JsonDataViaHash)
 	F init(p:Process) {
 		p.status = Status::Unset()
+		p.start = null
+		p.end = null
 		p.output = []
 		p.sub = []
 	}
@@ -17,6 +19,8 @@ ns {
     		type NotStarted(Status)
     		type Running(Status)
     			type Stopping(Running)
+	    			type Succeeding(Running)
+    				type Failing(Stopping)
     		type Paused(Status)
     		type Finished(Status)
     			type Succeeded(Finished)
@@ -29,12 +33,14 @@ ns {
 			Unknown: 10
 			NotStarted: 20
 			Running: 1000
-			Stopping: 900
+				Stopping: 900
+				Succeeding: 1100
+				Failing: -180
 			Paused: 800
 			Finished: 2000
-			Succeeded: 3000
-			Failed: -200
-			Cancelled: -100
+				Succeeded: 3000
+				Failed: -200
+				Cancelled: -100
 		}
 
 		global (<)
@@ -66,13 +72,13 @@ ns {
     	assert(p.status.Type(), AnyOf(
 			Lit(Status::Unset)
 			Lit(s.Type())  # if not unset, the computed status and current status must match
-		))
+		), 'Computed status of subprocesses can either be Unset or it must match the status of the parent')
     	p.status = s.assert(Not(Status::Unset))
     }
 
     F compute_status(p:Process) {
 		guard not(p.sub)
-		assert(p.status, Not(Status::Unset))
+		assert(p, {'status': Not(Status::Unset)}, 'Status of a leaf Process can not be Unset')
     }
 
     global inspect
@@ -86,7 +92,12 @@ ns {
 
     	h = p.Hash()
     	collector/Lines() {
-			collect("${p.Type().name} ${h.get('name', '-')} (${p.status})")
+    		t = if any([p.start, p.end]) {
+    			" ${p.start} - ${p.end}"
+    		} else {
+    			""
+    		}
+			collect("${p.Type().name} ${h.get('name', '-')} (${p.status}${t})")
 			p.sub.each_idx_val(F(sub_idx, sub) {
 				# collect("  Subprocess ${sub_idx}")
 				inspect(sub).each(F(line) collect("    ${line}"))
