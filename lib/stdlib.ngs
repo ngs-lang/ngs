@@ -7849,6 +7849,22 @@ F Bool(t:Time) true
 doc Convert Time into JSON compatible data structure - number (epoch seconds)
 F JsonData(t:Time) t.epoch
 
+section "Duration" {
+
+	type Duration
+
+	F init(d:Duration, seconds:Int) init(args())
+
+	F Int(d:Duration) d.seconds
+
+	doc %RET - Time
+	F +(t:Time, d:Duration) Time(t.Int() + d.seconds)
+
+	F +(d1:Duration, d2:Duration) Duration(d1.seconds + d2.seconds)
+	F -(d1:Duration, d2:Duration) Duration(d1.seconds - d2.seconds)
+
+}
+
 # === Random =====================================
 # This is _not_ crypto safe random!
 

@@ -9,6 +9,7 @@
 * Add experimental `fields()`
 * Add experimental `retry_assert()`
 * Add `Transformed` pattern
+* Add `Duration` type
 
 ### Fixes and improvements
 * Fix `AtPath` for non-eachables
