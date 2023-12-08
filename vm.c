@@ -3672,6 +3672,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	set_global(vm, "global_not_found_handler", vm->global_not_found_handler = make_multimethod());
 	set_global(vm, "init", vm->init = make_multimethod());
 	set_global(vm, "call", vm->call = make_multimethod());
+	set_global(vm, "=~", vm->pattern_match = make_multimethod());
 
 	#define E(name) set_global(vm, "C_" #name, MAKE_INT(name))
 	#include "errno.include"
@@ -3949,6 +3950,58 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 	} \
 }
 
+int vm_call_match_arg_to_type(VM *vm, CTX *ctx, VALUE arg, VALUE t, VALUE *result) {
+	return obj_is_of_type(vm, arg, t);
+}
+
+int vm_call_match_arg_to_pattern(VM *vm, CTX *ctx, VALUE arg, VALUE pattern, VALUE *result) {
+	METHOD_RESULT mr;
+	VALUE pattern_matching_args[2] = {arg, pattern};
+	VALUE pattern_matching_result;
+	VALUE to_bool_result;
+	mr = vm_call(vm, ctx, &pattern_matching_result, vm->pattern_match, 2, pattern_matching_args);
+	if (mr != METHOD_OK) {
+		VALUE exc;
+		exc = make_normal_type_instance(vm->CallFail);
+		set_normal_type_instance_field(exc, make_string("message"), make_string("vm_call_match_arg_to_pattern() failed to pattern match"));
+		set_normal_type_instance_field(exc, make_string("argument"), arg);
+		set_normal_type_instance_field(exc, make_string("pattern"), pattern);
+		if (mr == METHOD_EXCEPTION) {
+			set_normal_type_instance_field(exc, make_string("cause"), pattern_matching_result);
+		}
+		set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+		*result = exc;
+		return 0;
+	}
+
+	mr = vm_call(vm, ctx, &to_bool_result, vm->Bool, 1, &pattern_matching_result);
+	if (mr != METHOD_OK) {
+		VALUE exc;
+		exc = make_normal_type_instance(vm->CallFail);
+		set_normal_type_instance_field(exc, make_string("message"), make_string("vm_call_match_arg_to_pattern() failed to convert pattern matching result to Bool"));
+		set_normal_type_instance_field(exc, make_string("pattern_matching_result"), pattern_matching_result);
+		if (mr == METHOD_EXCEPTION) {
+			set_normal_type_instance_field(exc, make_string("cause"), to_bool_result);
+		}
+		set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+		*result = exc;
+		return 0;
+	}
+
+	if(!IS_BOOL(to_bool_result)) {
+		VALUE exc;
+		exc = make_normal_type_instance(vm->CallFail);
+		set_normal_type_instance_field(exc, make_string("message"), make_string("vm_call_match_arg_to_pattern() - Bool() returned not a Bool"));
+		set_normal_type_instance_field(exc, make_string("pattern_matching_result"), pattern_matching_result);
+		set_normal_type_instance_field(exc, make_string("to_bool_result"), to_bool_result);
+		set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+		*result = exc;
+		return 0;
+	}
+
+	return IS_TRUE(to_bool_result);
+}
+
 // XXX: Factor out to "define"s access to parameters. Coupling to this data structure is all over.
 #define HAVE_KWARGS_MARKER ((argc >= 2) && IS_KWARGS_MARKER(argv[argc-1]))
 METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int argc, const VALUE *argv) {
@@ -4036,6 +4089,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		VALUE kw, *params;
 		HASH_OBJECT_ENTRY *e;
 		VALUE named_arguments[MAX_ARGS];
+		VALUE param_match_result;
 
 		// TODO: handle (exception?) keyword arguments providing required parameter which was also given as positional argument
 
@@ -4072,7 +4126,13 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		params = CLOSURE_OBJ_PARAMS(callable);
 		j = MIN(argc, n_params_required);
 		for(i=0; i<j; i++) {
-			if(!obj_is_of_type(vm, argv[i], params[i*2+1])) {
+			param_match_result = MAKE_NULL;
+			int did_match = CLOSURE_OBJ_PARAMS_CMPS(callable)[i](vm, ctx, argv[i], params[i*2+1], &param_match_result);
+			if(!IS_NULL(param_match_result)) {
+				*result = param_match_result;
+				return METHOD_EXCEPTION;
+			}
+			if(!did_match) {
 				return METHOD_ARGS_MISMATCH;
 			}
 		}

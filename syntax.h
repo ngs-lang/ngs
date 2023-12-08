@@ -14,3 +14,4 @@ typedef struct ast_node_ll {
 	char *source_file_name;
 
 void position_to_line_col();
+// void position_to_line_col(yycontext *yy, int pos, int result[]); --> error: unknown type name 'YYSTYPE'

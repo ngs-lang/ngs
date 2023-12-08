@@ -112,3 +112,6 @@ TEST f='/tmp/ngs-redir-test'; $(ok: cat /NO-SUCH-FILE 2>$f); txt=`cat $f`; $(rm 
 TEST F guard_yes_use_value() { guard 10 }; guard_yes_use_value() == 10
 TEST F guard_yes_discard_value() { guard 10; 20 }; guard_yes_discard_value() == 20
 TEST F guard_no() { guard 0 }; guard_no.assert(MethodNotFound)
+
+# Pattern matching in parameters
+TEST F f(x) 0; F f(x:"yes") 1; f("blah") == 0 and f("yes") == 1

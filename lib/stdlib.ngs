@@ -435,7 +435,12 @@ section "Inspect built-in types" block _ {
 		guard f =~ AnyOf(UserDefinedMethod, NativeMethod)
 		f.params().map(F(p) {
 			d = if 'dflt' in p then '=...' else ''
-			"${p.get('splat', '')}${p.name}:${p.type.name}${d}"
+			name = if p.type is Type {
+				p.type.name
+			} else {
+				code(p.type) tor '(failed to inspect)'
+			}
+			"${p.get('splat', '')}${p.name}:${name}${d}"
 		}).join(', ') \ "($X)"
 	}
 

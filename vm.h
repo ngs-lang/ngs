@@ -103,7 +103,7 @@ typedef struct {
 } FRAME;
 
 // Plan: have exactly one context per thread.
-typedef struct context {
+typedef struct CTX {
 	VALUE stack[MAX_STACK];
 	size_t stack_ptr;
 
@@ -232,6 +232,7 @@ struct VM {
 	VALUE global_not_found_handler;
 	VALUE init;
 	VALUE call;
+	VALUE pattern_match; // =~
 
 	VALUE eqeq;
 
@@ -358,7 +359,9 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len);
 // typedef int VM_INT;
 void set_global(VM *vm, const char *name, VALUE v);
 METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result);
-METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int argc, const VALUE *argv);
+int vm_call_match_arg_to_type(VM *vm, CTX *ctx, VALUE arg, VALUE t, VALUE *result);
+int vm_call_match_arg_to_pattern(VM *vm, CTX *ctx, VALUE arg, VALUE pattern, VALUE *result);
+METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, int argc, const VALUE *argv);
 BYTECODE_HANDLE *ngs_create_bytecode();
 void ngs_add_bytecode_section(BYTECODE_HANDLE *h, BYTECODE_SECTION_TYPE type, BYTECODE_SECTION_LEN len, char *data);
 BYTECODE_HANDLE *ngs_start_unserializing_bytecode(char *data);
