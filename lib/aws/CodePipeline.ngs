@@ -56,7 +56,6 @@ ns {
 			input = c.action_execution.input
 			conf = input.configuration
 			guard conf.ActionMode == 'CHANGE_SET_REPLACE'
-			# c.status = require('aws/CloudFormation.ngs')::Status(c.action_execution.)
 			c.status = Status(c.action_execution.status)
 			c.action_execution.output.inspect().each({ c.output.push(A) })
 			c
@@ -78,6 +77,7 @@ ns {
 	# "Valid statuses for stages are InProgress, Stopping, Stopped, Succeeded, and Failed. You can retry a failed stage unless the failed stage is not retryable. For more information, see StageExecution."
 	# TODO: support "latest" execution
 	# TODO: un-pollute AbstractProcess::Process fields (pipelineName and pipelineExecutionId can not be at top level, polluting AbstractProcess::Process)
+	# TODO: support unfinished execution
 	F init(e:Execution, pipelineName:Str, pipelineExecutionId:Str) {
 		super(e)
 		init(args())
@@ -128,7 +128,7 @@ ns {
 	}
 
 	F executions(pipelineName:Str) {
-		``aws codepipeline list-pipeline-executions --pipeline-name ${pipelineName}``.map(X.rejectk(AnyOf(%[sourceRevisions trigger])))
+		``aws codepipeline list-pipeline-executions --pipeline-name ${pipelineName}``
 	}
 
 	F main(pipelineName:Str) {
