@@ -11,6 +11,8 @@
 * Add `Transformed` pattern
 * Add `Duration` type
 * Add experimental `finally(Block, Fun)`
+* Add `F f(x:PATTERN_HERE) ...` named parameter pattern syntax (previously `PATTERN_HERE` had to be a type)
+* Add `F f(PATTERN_HERE) ...` unnamed parameter pattern syntax (can be a type)
 
 ### Fixes and improvements
 * Fix `AtPath` for non-eachables
