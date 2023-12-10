@@ -70,6 +70,11 @@ ns {
 			arg
 		}
 
+		# TODO: check, one of the calls is outside try-catch
+		F decode_hack(arg, t:Type) arg.decode(t)
+		F decode_hack(arg, n:Int) arg.decode(Int).assert(n)
+		F decode_hack(arg, s:Str) arg.assert(s)
+
 		accepting_named_arguments = true
 		positionals = []
 		for arg in argv_iter = Iter(argv) {
@@ -111,7 +116,12 @@ ns {
 						return ParamsMatchN().set('message', "Parameter '${param_name}' is not a boolean but used with 'no-'")
 					}
 					arg = next_arg()
-					set_match(arg.decode(mp[param_name].type))
+					try {
+						set_match(arg.decode_hack(mp[param_name].type))
+					} catch(e) {
+						b.return(ParamsMatchN().set('message', "Failed to decode parameter ${mp[param_name].name} - type or pattern mismatch"))
+
+					}
 				}
 			} else {
 				# positional parameter
@@ -144,9 +154,9 @@ ns {
 			}
 			debug("ARGV_MATCHER", "Setting matched args idx=$idx arg=$arg type-to-convert-to=${mp[idx].type}")
 			try {
-				v = arg.decode(mp[idx].type)
+				v = arg.decode_hack(mp[idx].type)
 			} catch(e) {
-				b.return(ParamsMatchN().set('message', "Failed to convert to desired type for parameter ${mp[idx].name}"))
+				b.return(ParamsMatchN().set('message', "Failed to decode parameter ${mp[idx].name} - type or pattern mismatch"))
 
 			}
 			args[idx] = _MatchedParam(v)
