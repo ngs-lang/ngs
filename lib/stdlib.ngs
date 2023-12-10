@@ -152,11 +152,16 @@ section "Exit type and basic ExitCode pseudo-constructor methods" {
 }
 
 section "Block type and methods" ns {
-	global Block, ReturnFromBlock, init, block, return
+	global Block, ReturnFromBlock, init, block, return, finally
 
 	doc The type of the NAME variable used in syntax: block NAME BODY
 	doc %AUTO - block NAME BODY
 	type Block
+
+	doc %AUTO - block NAME BODY
+	F init(b:Block) {
+		b.finally = []
+	}
 
 	doc %AUTO - block NAME { NAME.return(VAL) }
 	type ReturnFromBlock(Exception)
@@ -172,11 +177,21 @@ section "Block type and methods" ns {
 			throw NotImplemented("calling super() / using 'guard' from within a block is not implemented")
 		}
 		mm = MultiMethod([block_super_handler, body])
+		F run_finally() {
+			l = len(b.finally)
+			for(i=l-1; i>=0; i-=1) b::finally[i]()
+		}
 		try {
-			mm(b)
+			ret = mm(b)
+			run_finally()
+			ret
 		} catch(rfb: ReturnFromBlock) {
 			guard rfb.block === b
+			run_finally()
 			rfb.val
+		} catch(e) {
+			run_finally()
+			throw e
 		}
 	}
 
@@ -188,6 +203,17 @@ section "Block type and methods" ns {
 	TEST block b { b.return(1); 2 } == 1
 	TEST block b { "blah"; 2 } == 2
 	TEST block b1 { [block b2 { b2.return(2); 0 }, 1] } == [2, 1]
+
+	doc Add function to run before exiting the block.
+	doc The functions added will be run in reverse order.
+	doc %STATUS - experimental
+	F finally(b:Block, cleanup:Fun) {
+		b.finally.push(cleanup)
+	}
+
+	TEST x=1; block b { b.finally({x=2}) }; x == 2
+	TEST x=1; block b { b.finally({x=2}); b.return("blah") }; x == 2
+	TEST x=1; try block b { b.finally({x=2}); 1/0 }; x == 2
 }
 
 STDLIB_EOL = "\n"
@@ -5893,6 +5919,7 @@ doc f - Closed File
 doc cb - function to call with successive lines from the file
 F lines(f:File, cb:Fun) {
 	f.open('r')
+	# TODO: finally() should be moved to a new method open(f:File, flags:Str, cb:Fun)
 	finally(
 		body = {
 			f.fd.read().lines(cb)

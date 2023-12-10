@@ -10,6 +10,7 @@
 * Add experimental `retry_assert()`
 * Add `Transformed` pattern
 * Add `Duration` type
+* Add experimental `finally(Block, Fun)`
 
 ### Fixes and improvements
 * Fix `AtPath` for non-eachables
