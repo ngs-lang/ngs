@@ -17,6 +17,7 @@
 ### Fixes and improvements
 * Fix `AtPath` for non-eachables
 * Improve `decode()` for AWS CLI commands
+* `Set` comparison now ignores order
 
 ### Deprecated
 * Deprecated `Deep` in favor of `AtPath`

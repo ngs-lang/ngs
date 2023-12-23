@@ -747,6 +747,22 @@ section "NormalTypeInstance" {
 	}
 
 	TEST type T; t=T(); t.x=1; t2=t.copy(); t2.x==1
+
+	doc Equality test for normal type instances: must be of same type and have same fields and their values
+	doc %RET - Bool
+	doc %EX - type T
+	doc %EX - t1 = T()
+	doc %EX - t1.a = 1
+	doc %EX - t2 = T()
+	doc %EX - t2.a = 1
+	doc %EX - echo(t1 == t2)  # Outputs: true
+	F ==(a:NormalTypeInstance, b:NormalTypeInstance) {
+		Type(a) != Type(b) returns false
+		# TODO: more efficient implementation:
+		#       * Provide low level primitive to either access the fields (ll_nti_hash) or iterate them
+		#       * Use it here
+		Hash(a) == Hash(b)
+	}
 }
 
 section "Hash" {
@@ -1821,6 +1837,13 @@ section "Set" {
 
 	TEST Set([1,2]) + Set([3]) == Set([1,2,3])
 
+	F ==(a:Set, b:Set) {
+		a.len() != b.len() returns false
+		a.all(X in b)
+	}
+	TEST Set([1,2]) == Set([2,1])
+	TEST Set([1,2]) != Set([1])
+
 	doc Check whether all values in a are also in b
 	F '<='(a:Set, b:Set) {
 		len(a) <= len(b) and a.all(X in b)
@@ -2077,22 +2100,6 @@ doc %RET - e
 F dflt(e:Eachable1, k, v) e.each(X.dflt(k, v))
 
 TEST [{}, {"x": 1}].dflt("x", 100) == [{"x": 100}, {"x": 1}]
-
-doc Equality test for normal type instances: must be of same type and have same fields and their values
-doc %RET - Bool
-doc %EX - type T
-doc %EX - t1 = T()
-doc %EX - t1.a = 1
-doc %EX - t2 = T()
-doc %EX - t2.a = 1
-doc %EX - echo(t1 == t2)  # Outputs: true
-F ==(a:NormalTypeInstance, b:NormalTypeInstance) {
-	Type(a) != Type(b) returns false
-	# TODO: more efficient implementation:
-	#       * Provide low level primitive to either access the fields (ll_nti_hash) or iterate them
-	#       * Use it here
-	Hash(a) == Hash(b)
-}
 
 # TODO: move to somewhere more appropriate, keep in mind - must be after dflt(NormalTypeInstance, ...)
 doc Set a key if it's not already set
