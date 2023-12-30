@@ -90,7 +90,6 @@ ns {
 		# HERE
 		# TODO: flexible filter
 		F hydrate(so:StackOperation) so::{
-log("hydrating ${so.name}")
 			events = ``log: aws cloudformation describe-stack-events --stack-name ${so.stack_name}``.reverse()
 			_start = {
 				'ResourceType': 'AWS::CloudFormation::Stack'
