@@ -3025,12 +3025,13 @@ block u {
 			dflt !== u returns dflt
 			throw IndexNotFound("Array did not match PredRange (end)", arr, r)
 		}
-		NumRange(start + Int(r.start is not Null and r.include_start.not()), end + Int(r.include_end))
+		NumRange(start + Int(r.start is not Null and r.include_start.not()), end + Int(r.end is not Null and r.include_end))
 	}
 }
 
 TEST { indexes([1,2,3,4], ((X==1)..(X==14))) }.assert(IndexNotFound)
 TEST indexes([1,2,3,4], ((X==1)..(X==14)), []) == []
+TEST indexes([0,1,2], Any...null).Hash() =~ {'start': 0, 'end': 3, 'include_start': true, 'include_end': false}
 
 doc Extract array elements between the element that matches r.start and the element that matches r.end .
 doc Starting and ending elements are optionally included, depending on r.include_start and r.include_end .
@@ -4570,13 +4571,14 @@ section "Strings and characters" {
 	doc Split the string by delimiter and return the last part
 	doc %RET - Str
 	F after_last(s:Str, delim:Str) {
-		# s.split(delim)[-1]
-		p = s.pos(delim)
-		p is Null throws InvalidArgument("Delimiter not found in after_last()").set(val=s, delim=delim)
-		s[(p+len(delim))..null]
+		# TODO: something more efficient
+		parts = s.split(delim)
+		parts.len() < 2 throws InvalidArgument("Delimiter not found in after_last()").set(val=s, delim=delim)
+		parts[-1]
 	}
 
 	TEST "a:b".after_last(":") == "b"
+	TEST "a:b:c".after_last(":") == "c"
 	TEST {"a:b".after_last("*")}.assert(InvalidArgument)
 
 	doc Trim whitespace
