@@ -5449,6 +5449,14 @@ section "Path" {
 	doc %EX - Path("tmp") / "v8"  # <Path path=tmp/v8>
 	F /(a:Path, b:Str) Path(a.path / b)
 
+	doc Concatenate
+	doc %RET - Path
+	F +(a:Path, b:Str) Path(a.path + b)
+
+	doc Concatenate
+	doc %RET - Path
+	F +(a:Str, b:Path) Path(a + b.path)
+
 	type DirFail(CError)
 
 	# TODO: recode after https://github.com/ngs-lang/ngs/issues/45 is solved
