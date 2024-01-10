@@ -8444,6 +8444,7 @@ section "math" {
 	TEST { pow(0, -1) }.assert(InvalidArgument)
 
 	doc Average
+	doc %RET - Real
 	F avg(e:Eachable1) {
 		count = 0
 		sum = 0
@@ -8451,10 +8452,10 @@ section "math" {
 			sum += x
 			count += 1
 		})
-		sum / count
+		Real(sum) / Real(count)
 	}
 
-	TEST avg([1,2,3]) == 2
+	TEST avg([1,2,3]) == 2.0
 }
 
 section "JWT" {
