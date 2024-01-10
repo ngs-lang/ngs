@@ -8442,6 +8442,19 @@ section "math" {
 
 	TEST pow(2, 10) == 1024
 	TEST { pow(0, -1) }.assert(InvalidArgument)
+
+	doc Average
+	F avg(e:Eachable1) {
+		count = 0
+		sum = 0
+		e.each(F(x) {
+			sum += x
+			count += 1
+		})
+		sum / count
+	}
+
+	TEST avg([1,2,3]) == 2
 }
 
 section "JWT" {
