@@ -8456,6 +8456,16 @@ section "math" {
 	}
 
 	TEST avg([1,2,3]) == 2.0
+
+	F '+'(a: Int, b: Real) Real(a) + b
+	F '+'(a: Real, b: Int) a + Real(b)
+	F '-'(a: Int, b: Real) Real(a) - b
+	F '-'(a: Real, b: Int) a - Real(b)
+	F '/'(a: Int, b: Real) Real(a) / b
+	F '/'(a: Real, b: Int) a / Real(b)
+	F '*'(a: Int, b: Real) Real(a) * b
+	F '*'(a: Real, b: Int) a * Real(b)
+
 }
 
 section "JWT" {
