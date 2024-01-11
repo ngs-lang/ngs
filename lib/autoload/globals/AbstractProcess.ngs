@@ -97,7 +97,8 @@ ns {
     		} else {
     			""
     		}
-			collect("${p.Type().name} ${h.get('name', '-')} (${p.status}${t})")
+    		name = ('"' +? h.get('name', '') +? '"') or '-'
+			collect("${p.Type().name} ${name} (${p.status}${t})")
 			p.sub.each_idx_val(F(sub_idx, sub) {
 				# collect("  Subprocess ${sub_idx}")
 				inspect(sub).each(F(line) collect("    ${line}"))
