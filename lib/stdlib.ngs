@@ -953,15 +953,16 @@ section "=~ Matching" {
 	F =~(x, h:Hash, mc:MatchContext) {
 		# TODO: Maybe some better detection of x interface required (instead of Eachable2/NormalTypeInstance):
 		# * must support "k in x"
-		# * must support "x.(k)"
 		(x is not Eachable2) and (x is not NormalTypeInstance) returns false
 		x_keys = null
+
+		key_access_func = if (x is Hash) or (x is HashLike) then ([]) else (.)
 
 		mc.deeper({
 			h.all(F(pat_k, pat_v) {
 				if (=~)(pat_k, AnyOf(Str, Int, Real), mc) {
 					if pat_k in x {
-						(=~)(x.(pat_k), pat_v, mc.set_last_path_element(pat_k))
+						(=~)(x.key_access_func(pat_k), pat_v, mc.set_last_path_element(pat_k))
 					} else {
 						pat_v is IfExists
 					}
@@ -986,6 +987,8 @@ section "=~ Matching" {
 	TEST ({"a": 1}) =~ ({"a": Any, "b": IfExists(Int)})
 	TEST ({"a": 1, "b": 2}) =~ ({"a": Any, "b": IfExists(Int)})
 	TEST ({"a": 1, "b": "x"}) !~ ({"a": Any, "b": IfExists(Int)})
+	TEST type T; T().set(a=1) =~ {"a": 1}
+	TEST type T; T().set(a=1) !~ {"b": 1}
 
 	doc Checks that
 	doc 1. The x is Eachable1 but not Str or Int
