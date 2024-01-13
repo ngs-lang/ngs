@@ -2110,9 +2110,11 @@ doc %EX - mysomething.dflt(k, []).push(elt)
 doc %RET - Key value, the already-existed or new.
 F dflt(hl:HashLike, k, v) hl.meta().HashLike.dflt(k, v)
 
+doc %STATUS - deprecated
 doc Check whether x is of type t
 doc %RET - MatchResult
 F ~(x, t:Type) {
+	warn("Using deprecated ~(Any, Type). Use =~(Any, Type) instead.")
 	if x is t {
 		MatchSuccess([x], t)
 	} else {

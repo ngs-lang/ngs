@@ -24,6 +24,7 @@
 
 ### Deprecated
 * Deprecated `Deep` in favor of `AtPath`
+* Deprecated `~(Any, Type)` in favor of `=~(Any, Type)`
 
 ### Breaking changes
 * Remove deprecated `Pred`
