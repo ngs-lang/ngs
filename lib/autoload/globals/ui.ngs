@@ -41,23 +41,20 @@ ns {
 	F JsonData(x) throw NotImplemented("JsonData() for type ${x.Type()} is not implemented yet").set(val=x)
 
 	section "JsonData - scalars" {
-		F JsonData(x) {
-			guard x =~ AnyOf(Num, Str, Bool, Null)
+		F JsonData(x:AnyOf(Num, Str, Bool, Null)) {
 			{ 'type': id(x.Type()), 'value': x }
 		}
 		F JsonData(p:Path) { 'type': id(p.Type()), 'value': p.path }
 	}
 
 	section "JsonData - lists" {
-		F JsonData(a) {
-			guard a =~ AnyOf(Arr, ArrLike)
+		F JsonData(a:AnyOf(Arr, ArrLike)) {
 			{ 'type': id(a.Type()), 'items': a.map(JsonData) }
 		}
 	}
 
 	section "JsonData - maps" {
-		F JsonData(h) {
-			guard h =~ AnyOf(Hash, HashLike)
+		F JsonData(h:AnyOf(Hash, HashLike)) {
 			{
 				'type': id(h.Type())
 				'items': h.map(F(k, v) [k.JsonData(), v.JsonData()])
@@ -67,8 +64,7 @@ ns {
 
 	section "JsonData - table" {
 		Table2.meta()[JsonData] = {'ns': 'Table2'}
-		T2 = Table2::Table
-		F JsonData(t:T2) {
+		F JsonData(t:Table2::Table) {
 			{
 				'type': id(t.Type())
 				'name': t.name.JsonData()
@@ -92,13 +88,13 @@ ns {
 	}
 
 	F JsonData(rd:ResDef) {
+		warn("Unexpected use of JsonData(ResDef)")
 		resources = rd.find().resources
 		Table2::Table(resources.props).JsonData()
 	}
 	F JsonData(r:Res) r.Hash().without('def').JsonData().set(type=id(r.Type()))
 
-	_pss = AbstractProcess::Status::Status
-	F JsonData(ps:_pss) ps._json_data_fields(%[text])
+	F JsonData(ps:AbstractProcess::Status::Status) ps._json_data_fields(%[text])
 
 	section "InteractiveObject" {
 		# TODO: Send context so that interaction could be seen as part of the bigger picture
@@ -114,15 +110,14 @@ ns {
 		AbstractProcess::Status.meta()[JsonData] = {'ns': 'ProcessStatus'}
 	}
 
-	section "saws" {
+	section "aws/*.ngs" {
+		_cp = require("aws/CodePipeline.ngs")
 		# TODO: factor out
-		saws.meta()[JsonData] = {'ns': 'saws'}
+		_cp.meta()[JsonData] = {'ns': 'CodePipeline'}
 
-		SendAllFields = saws::SendAllFields
-		F JsonData(saf:SendAllFields) saf._json_data_fields()
+		F JsonData(saf:_cp::SendAllFields) saf._json_data_fields()
 
-		Pipeline = saws::Pipeline
-		F JsonData(p:Pipeline) {
+		F JsonData(p:_cp::Pipeline) {
 			ui::InteractiveObject().set(
 				type = 'AWS::CodePipeline::Pipeline'
 				id = p.name

@@ -73,7 +73,7 @@ net::unix_json_rpc_server("ngs-shell.sock", ns {
 			_assist = {
 				'v': 'aws ec2 describe-vpcs'
 				'p-': 'aws codepipeline list-pipelines'
-				'p': 'saws::pipes()'
+				'p': '{ require("aws/CodePipeline.ngs")::pipelines::list() }'
 				's-': 'aws cloudformation list-stacks'
 				's': 'saws::stacks()'
 			}
