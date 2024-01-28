@@ -1490,9 +1490,11 @@ F ~(something, pattern) {
 section "Base JSON" {
 	type JsonDataViaHash
 	F JsonData(jdvh: JsonDataViaHash) jdvh.Hash().JsonData()
+	TEST type T(JsonDataViaHash); t=T(); t.x=1; t.JsonData() == {'x': 1}
 
 	type JsonDataViaGet
-	F JsonData(jdvg: JsonDataViaGet) jdvh.get().JsonData()
+	F JsonData(jdvg: JsonDataViaGet) jdvg.get().JsonData()
+	TEST type T(JsonDataViaGet); global get; F get(t:T) 7; T().JsonData() == 7
 }
 
 section "Eachable1" {
