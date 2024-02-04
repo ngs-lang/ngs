@@ -2124,25 +2124,25 @@ F ~(x, t:Type) {
 	}
 }
 
-# === Exceptions =================================
+section "Exceptions" {
+	# TODO: Investigate why type CError(Error) does not work at this point
+	doc Base type for exceptions arising from errors returned by calling C functions
+	type CError(Error)
 
-# TODO: Investigate why type CError(Error) does not work at this point
-doc Base type for exceptions arising from errors returned by calling C functions
-type CError(Error)
+	doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
+	F init(e:CError, errno:Int, message:Str) {
+		super(e, message)
+		e.errno = errno
+		e.errno_name = c_strerror(e.errno)
+	}
 
-doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
-F init(e:CError, errno:Int, message:Str) {
-	super(e, message)
-	e.errno = errno
-	e.errno_name = c_strerror(e.errno)
+	doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
+	F init(e:CError, message:Str) super(e, c_errno(), message)
+
+
+	doc Exception representing a failure to kill() a process
+	type KillFail(CError)
 }
-
-doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
-F init(e:CError, message:Str) super(e, c_errno(), message)
-
-
-doc Exception representing a failure to kill() a process
-type KillFail(CError)
 
 # === Lock =======================================
 
