@@ -2144,82 +2144,83 @@ section "Exceptions" {
 	type KillFail(CError)
 }
 
-# === Lock =======================================
+section "Lock and friends" {
 
-doc Synchronization lock.
-type Lock
+	doc Synchronization lock.
+	type Lock
 
-doc Re-entrant synchronization lock. Same thread can re-acquire the lock.
-type ReentrantLock(Lock)
+	doc Re-entrant synchronization lock. Same thread can re-acquire the lock.
+	type ReentrantLock(Lock)
 
-doc Failure to perform an operation on a lock.
-type LockFail(Exception)
+	doc Failure to perform an operation on a lock.
+	type LockFail(Exception)
 
-doc Initialize LockFail exception.
-F init(e:LockFail, op:Str, code:Int, msg:Str) init(args())
+	doc Initialize LockFail exception.
+	F init(e:LockFail, op:Str, code:Int, msg:Str) init(args())
 
-doc Initialize Lock. Creates and initializes pthread_mutex.
-F init(l:Lock) {
-	l.lock = c_pthread_mutex_t()
-	code = c_pthread_mutex_init(l.lock)
-	code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
-}
-
-doc Block till the lock is avaiable and then acquire the lock.
-doc %EX - l = Lock()
-doc %EX - ...
-doc %EX - l.acquire()
-doc %EX - modify_global_state_safely(...)
-doc %EX - l.release()
-F acquire(l:Lock) {
-	c_pthread_mutex_lock(l.lock)
-	l
-}
-
-doc Release the lock
-doc %EX - l = Lock()
-doc %EX - ...
-doc %EX - l.acquire()
-doc %EX - modify_global_state_safely(...)
-doc %EX - l.release()
-F release(l:Lock) {
-	c_pthread_mutex_unlock(l.lock)
-	l
-}
-
-doc Call cb with lock l held. Releases the lock after cb returns or throws.
-doc %EX - l = Lock()
-doc %EX - ...
-doc %EX - l.acquire(F() {
-doc %EX -   modify_global_state_safely(...)
-doc %EX - })
-F acquire(l:Lock, cb:Fun) {
-	l.acquire()
-	try cb()::{ l.release() }
-	catch(e:Exception) {
-		l.release()
-		throw e
+	doc Initialize Lock. Creates and initializes pthread_mutex.
+	F init(l:Lock) {
+		l.lock = c_pthread_mutex_t()
+		code = c_pthread_mutex_init(l.lock)
+		code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
 	}
+
+	doc Block till the lock is avaiable and then acquire the lock.
+	doc %EX - l = Lock()
+	doc %EX - ...
+	doc %EX - l.acquire()
+	doc %EX - modify_global_state_safely(...)
+	doc %EX - l.release()
+	F acquire(l:Lock) {
+		c_pthread_mutex_lock(l.lock)
+		l
+	}
+
+	doc Release the lock
+	doc %EX - l = Lock()
+	doc %EX - ...
+	doc %EX - l.acquire()
+	doc %EX - modify_global_state_safely(...)
+	doc %EX - l.release()
+	F release(l:Lock) {
+		c_pthread_mutex_unlock(l.lock)
+		l
+	}
+
+	doc Call cb with lock l held. Releases the lock after cb returns or throws.
+	doc %EX - l = Lock()
+	doc %EX - ...
+	doc %EX - l.acquire(F() {
+	doc %EX -   modify_global_state_safely(...)
+	doc %EX - })
+	F acquire(l:Lock, cb:Fun) {
+		l.acquire()
+		try cb()::{ l.release() }
+		catch(e:Exception) {
+			l.release()
+			throw e
+		}
+	}
+
+	TEST Lock().acquire(F() 1) == 1
+
+	doc Initialize Lock. Creates and initializes PTHREAD_MUTEX_RECURSIVE pthread_mutex.
+	F init(l:ReentrantLock) {
+		l.lock_attr = c_pthread_mutexattr_t()
+		code = c_pthread_mutexattr_init(l.lock_attr)
+		code throws LockFail("c_pthread_mutexattr_init", code, "Call to underlying API failed")
+		c_pthread_mutexattr_settype(l.lock_attr, C_PTHREAD_MUTEX_RECURSIVE)
+		l.lock = c_pthread_mutex_t()
+		code = c_pthread_mutex_init(l.lock, l.lock_attr)
+		code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
+	}
+
+	doc Convert c_pthread_mutex_t to Str for displaying to humans.
+	F Str(cpm:c_pthread_mutex_t) "<c_pthread_mutex_t>"
+
+	doc Convert c_pthread_mutexattr_t to Str for displaying to humans.
+	F Str(cpma:c_pthread_mutexattr_t) "<c_pthread_mutexattr_t>"
 }
-
-TEST Lock().acquire(F() 1) == 1
-
-doc Initialize Lock. Creates and initializes PTHREAD_MUTEX_RECURSIVE pthread_mutex.
-F init(l:ReentrantLock) {
-	l.lock_attr = c_pthread_mutexattr_t()
-	code = c_pthread_mutexattr_init(l.lock_attr)
-	code throws LockFail("c_pthread_mutexattr_init", code, "Call to underlying API failed")
-	c_pthread_mutexattr_settype(l.lock_attr, C_PTHREAD_MUTEX_RECURSIVE)
-	l.lock = c_pthread_mutex_t()
-	code = c_pthread_mutex_init(l.lock, l.lock_attr)
-	code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
-}
-
-doc Convert c_pthread_mutex_t to Str for displaying to humans.
-F Str(cpm:c_pthread_mutex_t) "<c_pthread_mutex_t>"
-
-doc Convert c_pthread_mutexattr_t to Str for displaying to humans.
-F Str(cpma:c_pthread_mutexattr_t) "<c_pthread_mutexattr_t>"
 
 section "Range" {
 	doc A range
