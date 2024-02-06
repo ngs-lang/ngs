@@ -2353,72 +2353,70 @@ section "Range" {
 
 }
 
-# TODO: think about multi-valued results (say 10 hosts, 8 succeeded and 2 failed)
-# TODO: think about Argv cooperation. Maybe Failure is NoData and Success is FullBox?
-# === Syntactic sugar ============================
-
-doc Defines collector { ... collect(...) ... } behaviour for arrays
-doc a - Initial array
-doc body - The body after collector keyword and possible initial value, wrapped in a function
-doc body - "collector THIS_CODE" or "collector/my_init THIS_CODE"
-doc %RET - Constructed array
-doc %EX - items = collector {
-doc %EX -   collect(10)
-doc %EX -   for(i;2) collect(i)
-doc %EX -   collect(20)
-doc %EX - }
-doc %EX - echo(items)  # Outputs: [10,0,1,20]
-doc %EX -
-doc %EX - # Or start with few items:
-doc %EX - items = collector/[100,200] {
-doc %EX -   collect(10)
-doc %EX -   for(i;2) collect(i)
-doc %EX -   collect(20)
-doc %EX - }
-doc %EX - echo(items)  # Outputs: [100,200,10,0,1,20]
-F collector(a:Arr, body:Fun) {
-	body(F(elt) a.push(elt))
-	a
-}
-
-doc Defines collector { ... collect(...) ... } behaviour for hashes
-doc h - Initial hash
-doc body - The body after collector keyword and initial value, wrapped in a function
-doc body - "collector/{'my': 'hash'} THIS_CODE"
-doc %RET - Constructed array
-doc %EX - arr = [{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}]
-doc %EX - my_hash = collector/{}
-doc %EX - 	arr.each(F(elt) collect(elt.Name, elt.Value))
-doc %EX - echo(my_hash)  # Outputs: {n1=v1, n2=v2}
-F collector(h:Hash, body:Fun) {
-	body(F(k, v) h[k] = v)
-	h
-}
-
-doc Defines collector { ... collect(...) ... } behaviour for integers (summarizes collected items).
-doc n - Initial number
-doc body - The body after collector keyword and initial value, wrapped in a function
-doc body - "collector/100 THIS_CODE"
-doc %RET - Constructed array
-doc %EX - collector/0 { (1...10).each(collect) }  # 55
-F collector(n:Int, body:Fun) {
-	body(F(incr) n=n+incr)
-	n
-}
-
-block _ {
-	global collector
-	join_strings = join.Arr()[0]  # Performance hack: 18 sec -> 4.3 sec for 1M collectors
-
-	doc EXPERIMENTAL! Do not use!
-	F collector(s:Str, body:Fun) {
-		ret = [s]
-		body(ret.push(X))
-		ret.join_strings('')
+section "collector" {
+	doc Defines collector { ... collect(...) ... } behaviour for arrays
+	doc a - Initial array
+	doc body - The body after collector keyword and possible initial value, wrapped in a function
+	doc body - "collector THIS_CODE" or "collector/my_init THIS_CODE"
+	doc %RET - Constructed array
+	doc %EX - items = collector {
+	doc %EX -   collect(10)
+	doc %EX -   for(i;2) collect(i)
+	doc %EX -   collect(20)
+	doc %EX - }
+	doc %EX - echo(items)  # Outputs: [10,0,1,20]
+	doc %EX -
+	doc %EX - # Or start with few items:
+	doc %EX - items = collector/[100,200] {
+	doc %EX -   collect(10)
+	doc %EX -   for(i;2) collect(i)
+	doc %EX -   collect(20)
+	doc %EX - }
+	doc %EX - echo(items)  # Outputs: [100,200,10,0,1,20]
+	F collector(a:Arr, body:Fun) {
+		body(F(elt) a.push(elt))
+		a
 	}
-}
 
-TEST (collector/"a" collect("b")) == "ab"
+	doc Defines collector { ... collect(...) ... } behaviour for hashes
+	doc h - Initial hash
+	doc body - The body after collector keyword and initial value, wrapped in a function
+	doc body - "collector/{'my': 'hash'} THIS_CODE"
+	doc %RET - Constructed array
+	doc %EX - arr = [{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}]
+	doc %EX - my_hash = collector/{}
+	doc %EX - 	arr.each(F(elt) collect(elt.Name, elt.Value))
+	doc %EX - echo(my_hash)  # Outputs: {n1=v1, n2=v2}
+	F collector(h:Hash, body:Fun) {
+		body(F(k, v) h[k] = v)
+		h
+	}
+
+	doc Defines collector { ... collect(...) ... } behaviour for integers (summarizes collected items).
+	doc n - Initial number
+	doc body - The body after collector keyword and initial value, wrapped in a function
+	doc body - "collector/100 THIS_CODE"
+	doc %RET - Constructed array
+	doc %EX - collector/0 { (1...10).each(collect) }  # 55
+	F collector(n:Int, body:Fun) {
+		body(F(incr) n=n+incr)
+		n
+	}
+
+	block _ {
+		global collector
+		join_strings = join.Arr()[0]  # Performance hack: 18 sec -> 4.3 sec for 1M collectors
+
+		doc EXPERIMENTAL! Do not use!
+		F collector(s:Str, body:Fun) {
+			ret = [s]
+			body(ret.push(X))
+			ret.join_strings('')
+		}
+	}
+
+	TEST (collector/"a" collect("b")) == "ab"
+}
 
 doc Compare to null
 doc %RET - false
