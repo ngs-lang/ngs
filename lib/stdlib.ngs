@@ -2418,17 +2418,19 @@ section "collector" {
 	TEST (collector/"a" collect("b")) == "ab"
 }
 
-doc Compare to null
-doc %RET - false
-F ==(a:Null, b) false
+section "Comparison to null" {
+	doc Compare to null
+	doc %RET - false
+	F ==(a:Null, b) false
 
-doc Compare to null
-doc %RET - false
-F ==(a, b:Null) false
+	doc Compare to null
+	doc %RET - false
+	F ==(a, b:Null) false
 
-doc Compare to null
-doc %RET - true
-F ==(a:Null, b:Null) true
+	doc Compare to null
+	doc %RET - true
+	F ==(a:Null, b:Null) true
+}
 
 doc Run cleanup after successful execution of body or exception in body
 doc body - Main code to execute
