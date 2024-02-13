@@ -933,11 +933,11 @@ section "=~ Matching" {
 
 	doc %STATUS - experimental
 	F =~(x, pa:PatternAction, mc:MatchContext) {
-		result = (=~)(x, pa.pattern, mc)
-		if result {
-			pa::action(x, mc)
+		(=~)(x, pa.pattern, mc)::{
+			if A {
+				pa::action(x, mc)
+			}
 		}
-		result
 	}
 
 	# TODO: %RET - MatchResult
