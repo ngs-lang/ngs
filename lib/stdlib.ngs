@@ -768,6 +768,23 @@ section "NormalTypeInstance" {
 section "Hash" {
 	doc %RET - h
 	F Hash(h:Hash) h
+
+	doc Get hash key.
+	doc %EX - h = {"a": 1}
+	doc %EX - h.a  # 1, Same as h["a"]
+	F .(h:Hash, field:Str) h[field]
+
+	doc Set hash key.
+	doc %EX - h = {"a": 1}
+	doc %EX - h.a = 2  # 2, Same as h["a"] = 2
+	doc %RET - v
+	F .=(h:Hash, field:Str, v) h[field] = v
+
+	doc Get hash value by key or null if it does not exist
+	doc %EX - h = {"a": 1}
+	doc %EX - h.get("a")  # 1
+	doc %EX - h.get("b")  # null
+	F get(h:Hash, k) get(h, k, null)
 }
 
 section "Result and friends - types" {
@@ -2462,25 +2479,6 @@ F finally(body:Fun, cleanup:Fun) {
 TEST a=0; {1/1}.finally({a=10}) == 1 and a == 10
 TEST a=0; (try finally({1/0}, {a=10}) catch(e:DivisionByZero) "OK") == "OK" and a == 10
 TEST F f() block b { finally({ b.return(7) }, {8}) }; f() == 7
-
-# --- Hash ---
-
-doc Get hash key.
-doc %EX - h = {"a": 1}
-doc %EX - h.a  # 1, Same as h["a"]
-F .(h:Hash, field:Str) h[field]
-
-doc Set hash key.
-doc %EX - h = {"a": 1}
-doc %EX - h.a = 2  # 2, Same as h["a"] = 2
-doc %RET - v
-F .=(h:Hash, field:Str, v) h[field] = v
-
-doc Get hash value by key or null if it does not exist
-doc %EX - h = {"a": 1}
-doc %EX - h.get("a")  # 1
-doc %EX - h.get("b")  # null
-F get(h:Hash, k) get(h, k, null)
 
 # --- Arr ---
 
