@@ -902,8 +902,11 @@ section "=~ Matching" {
 		mc._result returns mc._result.get()
 		if result is Bool {
 			# TODO: Review MatchSuccess / MatchFailure construction (conversion from MatchContext)
-			result returns MatchSuccess([x], pattern)
-			return MatchFailure(x, pattern)
+			return if result {
+				MatchSuccess([x], pattern)
+			} else {
+				MatchFailure(x, pattern)
+			}
 		}
 		throw Error("=~ is expected to either set result or return a boolean").set(given=result)
 	}
