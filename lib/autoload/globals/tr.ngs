@@ -146,7 +146,7 @@ ns {
 				x.each(F(k, v) {
 					assert(k, HASHABLE, "Internal error. tr(x, Hash, TrContext) got unsupported key type ${k.Type().name}")
 					tc.set_last_path_element(k)
-					collect(k, tr(v, h.get(k, identity), tc))
+					collect(k, tr(v, h.get(k, {identity}), tc))
 				})
 			})
 		})

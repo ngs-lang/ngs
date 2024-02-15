@@ -671,6 +671,16 @@ section "Functional utilities" {
 	F .(x, f:Fun) f(x)
 }
 
+section "Value" {
+	doc Used for converting default values or functions to values
+	doc %RET - x
+	F Value(x, *args) x
+
+	doc Used for converting default values or functions to values
+	doc %RET - x(*args)
+	F Value(x:Fun, *args) x(*args)
+}
+
 section "Convenience methods" {
 	doc Sets the given field to the given value
 	doc %RET - The modified obj
@@ -730,7 +740,7 @@ section "NormalTypeInstance" {
 	doc %RET - Field value, the already-existed or new.
 	F dflt(i:NormalTypeInstance, k, v) {
 		if k not in i {
-			i.(k) = v
+			i.(k) = Value(v, k)
 		}
 		i.(k)
 	}
@@ -784,7 +794,8 @@ section "Hash" {
 	doc %EX - h = {"a": 1}
 	doc %EX - h.get("a")  # 1
 	doc %EX - h.get("b")  # null
-	F get(h:Hash, k) get(h, k, null)
+	F get(h:Hash, k, dflt=null) super(h, k, Value(dflt, k))
+
 }
 
 section "Result and friends - types" {
@@ -808,8 +819,6 @@ section "Literal" {
 	F init(l:Lit) throw MethodNotFound("Lit() must have an argument")
 	F init(l:Lit, val) l.val = val
 }
-
-
 
 section "=~ Matching" {
 
@@ -1254,12 +1263,13 @@ block u {
 		e.each(F(i) {
 			if i =~ pattern b.return(i)
 		})
-		default !== u returns default
+		default !== u returns Value(default)
 		throw ElementNotFound("first() did not find the element").set('container', e).set('pattern', pattern)
 	}
 
 	TEST [1,2,3].first(X>1, 10) == 2
 	TEST [1,2,3].first(X>5, 10) == 10
+	TEST [1,2,3].first(X>5, {5+5}) == 10
 	TEST [1,2,3].first(X>1) == 2
 	TEST {[1,2,3].first(X>5)}.assert(ElementNotFound)
 
@@ -1276,12 +1286,13 @@ block u {
 			}
 		})
 		result returns result.get()
-		default !== u returns default
+		default !== u returns Value(default)
 		throw ElementNotFound("last() did not find the element").set('container', e).set('pattern', pattern)
 	}
 
 	TEST [1,2,3].last(X>1, 10) == 3
 	TEST [1,2,3].last(X>5, 10) == 10
+	TEST [1,2,3].last(X>5, {5+5}) == 10
 	TEST [1,2,3].last(X>1) == 3
 	TEST {[1,2,3].last(X>5)}.assert(ElementNotFound)
 }
@@ -1294,13 +1305,13 @@ doc %RET - Result of running on of the following: body, found_more, found_none
 doc %EX - F name(dn:MethodDocNode) {
 doc %EX - 	dn.children.the_one(MethodNameDocNode).text[0]
 doc %EX - }
-F the_one(e:Eachable1, pattern=Any, body:Fun=identity, found_more:Fun=null, found_none:Fun=null) block b {
+F the_one(e:Eachable1, pattern=Any, body:Fun=identity, found_more=null, found_none=null) block b {
 	ret = EmptyBox()
 	e.each(F(elt) {
 		if elt =~ pattern {
 			if ret {
 				not(found_more) throws ElementNotFound("the_one() had more than one match").set('container', e).set('pattern', pattern)
-				b.return(found_more())
+				b.return(found_more.Value())
 			}
 			ret = FullBox(elt)
 		}
@@ -1309,7 +1320,7 @@ F the_one(e:Eachable1, pattern=Any, body:Fun=identity, found_more:Fun=null, foun
 		body(ret.get())
 	} else {
 		not(found_none) throws ElementNotFound("the_one() had no matches").set('container', e).set('pattern', pattern)
-		found_none()
+		found_none.Value()
 	}
 }
 
@@ -2125,6 +2136,7 @@ doc %RET - e
 F dflt(e:Eachable1, k, v) e.each(X.dflt(k, v))
 
 TEST [{}, {"x": 1}].dflt("x", 100) == [{"x": 100}, {"x": 1}]
+TEST [{}, {"x": 1}].dflt("x", {50+50}) == [{"x": 100}, {"x": 1}]
 
 # TODO: move to somewhere more appropriate, keep in mind - must be after dflt(NormalTypeInstance, ...)
 doc Set a key if it's not already set
@@ -2542,7 +2554,7 @@ doc %EX - [1,2,3].get(5, 10)    # 10
 doc %EX - [11].get(-1)          # 11
 doc %EX - [10,20].get(-5, "X")  # "X"
 doc %RET - Any
-F get(a:Arr, idx:Int, dflt=null) if a.has_index(idx) then a[idx] else dflt
+F get(a:Arr, idx:Int, dflt=null) if a.has_index(idx) then a[idx] else dflt.Value(idx)
 
 TEST [1].get(0) == 1
 TEST [1].get(5) == null
@@ -3767,7 +3779,7 @@ doc %EX - my_hash.dflt(k, []).push(elt)
 doc %RET - Hash value, the already-existed or new.
 F dflt(h:Hash, k, v) {
 	if k not in h {
-		h[k] = v
+		h[k] = v.Value()
 	}
 	h[k]
 }
@@ -3794,7 +3806,7 @@ doc If they key is not in the Hash, return dflt
 doc %EX - h = {}
 doc %EX - h.shift("a", 7)  # 7
 F shift(h:Hash, k, dflt) {
-	k not in h returns dflt
+	k not in h returns dflt.Value(k)
 	h[k]::{ del(h, k) }
 }
 
@@ -3910,9 +3922,10 @@ TEST { EmptyBox().get() }.assert(BoxFail)
 
 doc Get EmptyBox value
 doc %RET - dflt
-F get(eb:EmptyBox, dflt) dflt
+F get(eb:EmptyBox, dflt) dflt.Value()
 
 TEST EmptyBox().get(10) == 10
+TEST EmptyBox().get({5+5}) == 10
 
 doc Length of FullBox
 doc %RET - 1
@@ -3989,7 +4002,7 @@ doc %EX - # output: 40
 doc %EX - # dflt on EmptyBox creates FullBox with the given value
 doc %EX - my_array.Box(5).dflt(100).map(X*2).each(echo) # HERE
 doc %EX - # output: 200
-F dflt(eb: EmptyBox, x) FullBox(x)
+F dflt(eb: EmptyBox, x) FullBox(x.Value())
 
 doc Compare boxes. Empty boxes and boxes with same content are considered to be equal.
 doc %RET - Bool
@@ -4072,7 +4085,16 @@ F get(s:Success, dflt) s.val
 
 doc Returns dflt
 doc %EX - { 1 / 0 }.Result().get(100)  # 100
-F get(f:Failure, dflt) dflt
+F get(f:Failure, dflt) dflt.Value()
+
+doc %RET - s
+F dflt(s:Success, x) s
+
+doc %RET - Value(x,f)
+F dflt(f:Failure, x) Success(x.Value(f))
+
+TEST Success(1).dflt(2).get() == 1
+TEST Failure(Error("test")).dflt(2).get() == 2
 
 doc Run fun with wrapped value.
 F each(s:Success, fun:Fun) {
@@ -4828,6 +4850,7 @@ section "Strings and characters" {
 
 	TEST m = (~~)("abcbe", "b", true); m.len() == 5 and m[[0,2,4]] == %[a c e] and m[[1,3]].all(MatchSuccess)
 
+	# TODO: dst.Value()
 	doc Replace all occurrences of src with dst in s
 	F replace(s:Str, src:Str, dst:Str) (~~)(s, src, true).map(only(MatchSuccess, {dst})).join('')
 
@@ -5198,11 +5221,7 @@ section "Logging and status reporting" {
 		doc TODO: Timestamps? Timestamps acquiring might not be safe after fork before exec.
 		F debug(facility:Str, str_or_producer) {
 			if facility in DEBUG or '*' in DEBUG {
-				s = if str_or_producer is Fun {
-					str_or_producer()
-				} else {
-					str_or_producer
-				}
+				s = str_or_producer.Value()
 				echo(stdlib_error_fd, "[DEBUG $facility ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] $s")
 			}
 		}

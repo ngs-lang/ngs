@@ -15,6 +15,7 @@
 * Add `F f(PATTERN_HERE) ...` unnamed parameter pattern syntax (can be a type)
 * Add `Path + Str` and `Str + Path`
 * Add `avg(Eachable1)`
+* Add `Value` pseudo-type for converting values and functions into values
 
 ### Fixes and improvements
 * Fix `AtPath` for non-eachables
