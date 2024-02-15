@@ -941,7 +941,7 @@ section "=~ Matching" {
 	}
 
 	# TODO: %RET - MatchResult
-	doc %RET - not(a =~ b)
+	doc %RET - not(x =~ pattern)
 	F !~(x, pattern) not(x =~ pattern)
 
 	F !~(x, pattern, mc:MatchContext) not((=~)(x, pattern, mc))
