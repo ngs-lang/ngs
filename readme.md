@@ -65,9 +65,9 @@
 
 **Python** along with many other languages are general purpose programming languages which were not intended to solve specifically Ops problems. The consequence is longer and less readable scripts when dealing with files or running external programs, which are both pretty common for Ops.
 
-**UI** -- Current shells as well as proposed alternatives treat UI as nothing has happened since the 70-s: mostly typing commands and getting some text back.
+See [bash or Python? The Square Pegs and a Round Hole Situation](https://ilya-sher.org/2020/10/31/bash-or-python-the-square-pegs-and-a-round-hole-situation/) blog post.
 
-See [More about square pegs and the round hole](https://ilya-sher.org/2020/10/31/bash-or-python-the-square-pegs-and-a-round-hole-situation/).
+**Shell user interface**, the atrocity. Current shells as well as proposed alternatives treat UI as if nothing happened since the 70-s: mostly typing commands and getting some text back. Watch [Unix shell - We can do better now](https://youtu.be/J4_DGkKGWIo) 15 minutes video about what's wrong with the user interface and how NGS is fixing (WIP) that.
 
 ## Suggested Solution - NGS
 
