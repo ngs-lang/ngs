@@ -669,6 +669,15 @@ section "Functional utilities" {
 	doc %RET - f(x)
 	doc %AUTO - x.{ ... }
 	F .(x, f:Fun) f(x)
+
+	doc Compose functions
+    doc %RET - Fun f(g(...))
+    doc %EX - F reject(h:Hash, predicate:Fun) h.filter(not + predicate)
+    F +(f:Fun, g:Fun) {
+    	F composed_function(*args) {
+    		f(g(*args))
+    	}
+    }
 }
 
 section "Value" {
@@ -1529,13 +1538,11 @@ section "Base JSON" {
 }
 
 section "Eachable1" {
-	# Should be low priority (ordered before others) method
+	doc %RET - a and b concatenated
 	F +(a:Eachable1, b:Eachable1) {
 		guard Type(a) === Type(b)
 		t = Type(a)
-		guard t != Int
-		guard t != Arr
-		guard t != Str
+		guard (a is not Int) and (a is not Arr) and (a is not Str) and (a is not Fun)
 		t().push_all(a).push_all(b)
 	}
 
@@ -3349,15 +3356,6 @@ TEST subset({"a": 1, "b":2}, {"b": 3, "d": 4}) == false
 TEST subset({"a": 1}, {"a": 10}) == false
 
 # --- Functional ---
-
-doc Compose functions
-doc %RET - Fun f(g(...))
-doc %EX - F reject(h:Hash, predicate:Fun) h.filter(not + predicate)
-F +(f:Fun, g:Fun) {
-	F composed_function(*args) {
-		f(g(*args))
-	}
-}
 
 # Make it built in for speed?
 doc Iterate a Hash.
