@@ -1266,11 +1266,11 @@ block u {
 	doc %EX - (10..20).first(F(x) x % 50 == 0, 1000) # 1000
 	doc %EX - [false, 0, null, "xyz", 100].first()  # "xyz"
 	doc %EX - [].first()                            # ElementNotFound exception
-	F first(e:Eachable1, pattern=Bool.constructors, default=u) block b {
+	F first(e:Eachable1, pattern=Bool.constructors, dflt=u) block b {
 		e.each(F(i) {
 			if i =~ pattern b.return(i)
 		})
-		default !== u returns Value(default)
+		dflt !== u returns Value(dflt)
 		throw ElementNotFound("first() did not find the element").set('container', e).set('pattern', pattern)
 	}
 
@@ -1285,7 +1285,7 @@ block u {
 	doc %RET - Either the element or the provided default if element was not found.
 	doc %EX - [1,2,3].last(X>1, 10) == 3
 	doc %EX - [].last()  # ElementNotFound exception
-	F last(e:Eachable1, pattern=Bool.constructors, default=u) {
+	F last(e:Eachable1, pattern=Bool.constructors, dflt=u) {
 		result = Box()
 		e.each(F(i){
 			if i =~ pattern {
@@ -1293,7 +1293,7 @@ block u {
 			}
 		})
 		result returns result.get()
-		default !== u returns Value(default)
+		dflt !== u returns Value(dflt)
 		throw ElementNotFound("last() did not find the element").set('container', e).set('pattern', pattern)
 	}
 
@@ -2869,7 +2869,7 @@ block u {
 		l = arr.len()
 		for(i=start; i<l; i+=1)
 			arr[i] =~ pattern returns i
-		dflt !== u returns dflt
+		dflt !== u returns Value(dflt)
 		warn("index() is returning null. In future, this will be an exception. You can change your call to index(..., dflt=null)")
 		null
 	}
@@ -3039,7 +3039,7 @@ block u {
 			index(arr, r.start, dflt=null)
 		}
 		if start is Null {
-			dflt !== u returns dflt
+			dflt !== u returns Value(dflt)
 			throw IndexNotFound("Array did not match PredRange (start)", arr, r)
 		}
 		end = if r.end is Null {
@@ -3048,7 +3048,7 @@ block u {
 			index(arr, r.end, start=start + Int(r.start is not Null and r.include_start.not()), dflt=null)
 		}
 		if end is Null {
-			dflt !== u returns dflt
+			dflt !== u returns Value(dflt)
 			throw IndexNotFound("Array did not match PredRange (end)", arr, r)
 		}
 		NumRange(start + Int(r.start is not Null and r.include_start.not()), end + Int(r.end is not Null and r.include_end))
