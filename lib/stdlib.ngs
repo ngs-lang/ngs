@@ -1124,8 +1124,6 @@ section "=~ Matching" {
 
 			debug('AtPath', { "Entering $x $ap $mc" })
 
-			DESCENDABLE = AnyOf(Eachable2, AllOf(Eachable1, Not(Int), Not(Str)))
-
 			F each2(_non_descendable, cb:Fun) nop
 
 			F each2(e:Eachable1, cb:Fun) {
@@ -1140,16 +1138,16 @@ section "=~ Matching" {
 				m returns m
 			}
 
-			# TODO: use any()?
-			ret = false
-			mc.deeper({
-				x.each2(F(idx_or_key, val) {
-					if (=~)(val, ap, mc.set_last_path_element(idx_or_key)) {
-						ret = true
-					}
+			block b {
+				mc.deeper({
+					x.each2(F(idx_or_key, val) {
+						if (=~)(val, ap, mc.set_last_path_element(idx_or_key)) {
+							b.return(true)
+						}
+					})
 				})
-			})
-			ret
+				false
+			}
 		}
 
 		TEST 1 =~ AtPath(Any, Int)
