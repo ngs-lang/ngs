@@ -3094,13 +3094,13 @@ doc %RET - MatchResult
 F ~(arr:Arr, r:PredRange) {
 	i = indexes(arr, r, dflt=null)
 	i is Null returns MatchFailure(arr, r)
-	ret = MatchSuccess([arr[i]], r)
-	ret.named = {}
-	ret.positions = [i]
-	ret.whole = ret.matches[0]
-	ret.before = arr[0..i.start]
-	ret.after = arr[i.end..null]
-	ret
+	MatchSuccess([arr[i]], r)::{
+		A.named = {}
+		A.positions = [i]
+		A.whole = A.matches[0]
+		A.before = arr[0..i.start]
+		A.after = arr[i.end..null]
+	}
 }
 
 TEST a = %[a1 a2 b1 b2]; m = a ~ /^a/../^b/; m.matches == [['a2']] and m.before == ['a1'] and m.after == ['b1', 'b2']
