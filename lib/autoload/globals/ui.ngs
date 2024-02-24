@@ -1,129 +1,121 @@
 ns {
 	# WIP
-	# Warning: low quality, hacky code
+	global init, JsonData
 
-	global id
-	doc Warning! Not sure about correctness!
-	F id(t:Type) {
-		m = t.meta()
-		has_ns = m =~ {'ns': Namespace}
-		not(has_ns) returns "ngs:type:${t.name}"
-		if m.ns.meta().has(JsonData) {
-			# Maybe :: separator here is not a good idea
-			return "ngs:type:${m.ns.meta()[JsonData].ns}::${t.name}"
+	# TODO:
+	# * Recreate previous version but cleanly
+	# * Move transformation to table from shell.ngs to this file
+	# * Add row/object-fields semantics
+	# * Consider add nested context to render()
+	# * UI action should have
+	#	* Reference to the original command and the output
+	#   * ID of the object
+	#   * Action name
+
+	type Element()
+
+		type Screen(Element)
+		type Object(Element)
+
+		type Scalar(Element)
+		type Table(Element)
+			type Columns(Element)
+			type Column(Element)
+			type Rows(Element)
+			type Row(Element)
+		type Properties(Element)
+		type List(Element)
+		type ProcessStatus(Element)
+		type Progress(Element)
+
+	F raw(h:Hash) h + {'$type': '$raw'}
+
+	F init(e:Element, children:Arr) {
+		# assert(children, Repeat(Element))
+		children.each({ assert(A, Element, "All children of Element must be of type Element") })
+		# echo("init(${e.Type().name}, Arr)")
+		init(args())
+	}
+	# TODO: serialization design
+	F JsonData(e:Element) {
+		# Note: all Element subtypes need to reside in this namespace
+		#       if they don't, there could be name collisions
+		{'$type': e.Type().name} + e.Hash().JsonData()
+	}
+
+	F init(s:Scalar, value) init(args())
+	F init(c:Column, name:Str) init(args())
+	F init(p:Properties, props:Hash) init(args())
+	F init(p:ProcessStatus, name:Str, text:Str) init(args())  # TODO: improve + add semantics
+	F init(p:Progress, step:Int, total_steps:Int) init(args())
+
+
+	F Element(x:AnyOf(Num, Str, Bool, Null)) Scalar(x)
+	F Element(a:AnyOf(Arr, ArrLike)) List(a.map(Element))
+
+	# TODO: improve heuristics of detection when to render to table
+	F Element(a:Arr) {
+		guard a
+		guard all(a, Hash)
+		t = Table2::Table(a)
+
+		Table().set(
+			columns = t.cols_enum.keys().map(Column).Columns()
+			rows = t.rows.map(F(row) {
+				Row(row.map(Element)) # map each cell
+			}).Rows()
+		)
+	}
+
+	F keys_are_strings(h) h.keys().all(Str)
+	F Element(h:AnyOf(Hash, HashLike)) Properties(h.assert(keys_are_strings, "Element(Hash) - keys must be strings").mapv(Element))
+
+
+	# TODO: Fix later. It's semantically incorrect to display path as just a string
+	F Element(p:Path) Scalar(p.path)
+
+	section "ProcessesPipeline" {
+		# TODO: Use AbstractProcess
+		F Element(pp:ProcessesPipeline) {
+			processes = pp.processes
+			guard processes
+			p = processes[-1]
+			{ p.stdout.decode({'process': p}) }.Result().dflt({
+				error("In shell.ngs, trying to decode:")
+				print_exception(A.val)
+				# throw InvalidArgument("Element() could not decode process output").set(process=p)
+				p.stdout  # TODO: maybe split into lines
+			}).get().Element()
 		}
-		throw NotImplemented("id() for types in namespaces (without .meta()[JsonData].ns} is not implemented yet").set('type', t)
 	}
 
-	doc To Do: better naming
-	type InteractiveObject
-
-	doc Can't use JsonData for anything in this namespace, it clashes with the multimethod
-	F id(t:Type) {
-		guard t === InteractiveObject
-		'ngs:type:ui::InteractiveObject'
-	}
-
-	F _json_data_fields(x, fields:Arr) {
-		{
-			'type': id(x.Type())
-			'fields': fields.Hash({ JsonData(x.(A)) })
-		}
-	}
-
-	F _json_data_fields(x) {
-		{
-			'type': id(x.Type())
-			'fields': x.Hash().mapv(JsonData)
-		}
-	}
-
-	F JsonData(x) throw NotImplemented("JsonData() for type ${x.Type()} is not implemented yet").set(val=x)
-
-	section "JsonData - scalars" {
-		F JsonData(x:AnyOf(Num, Str, Bool, Null)) {
-			{ 'type': id(x.Type()), 'value': x }
-		}
-		F JsonData(p:Path) { 'type': id(p.Type()), 'value': p.path }
-	}
-
-	section "JsonData - lists" {
-		F JsonData(a:AnyOf(Arr, ArrLike)) {
-			{ 'type': id(a.Type()), 'items': a.map(JsonData) }
-		}
-	}
-
-	section "JsonData - maps" {
-		F JsonData(h:AnyOf(Hash, HashLike)) {
-			{
-				'type': id(h.Type())
-				'items': h.map(F(k, v) [k.JsonData(), v.JsonData()])
-			}
-		}
-	}
-
-	section "JsonData - table" {
-		Table2.meta()[JsonData] = {'ns': 'Table2'}
-		F JsonData(t:Table2::Table) {
-			{
-				'type': id(t.Type())
-				'name': t.name.JsonData()
-				'columns_names': t.cols_enum.keys().JsonData()
-				'rows': t.rows.JsonData()
-			}
-		}
-	}
-
-	F JsonData(c:Command) c._json_data_fields(%[argv])
-
-	F JsonData(p:Process) p._json_data_fields(%[command executable pid exit_code exit_signal stdout stderr])
-
-	F JsonData(f:Fun) f.Str().JsonData()
-
-	doc Incorrect, should pass the whole pipeline
-	F JsonData(p:ProcessesPipeline) p.processes[-1].JsonData()
-	F JsonData(p:ProcessesPipeline) {
-		guard p.processes.len() > 1
-		throw NotImplemented()
-	}
-
-	F JsonData(rd:ResDef) {
-		warn("Unexpected use of JsonData(ResDef)")
-		resources = rd.find().resources
-		Table2::Table(resources.props).JsonData()
-	}
-	F JsonData(r:Res) r.Hash().without('def').JsonData().set(type=id(r.Type()))
-
-	F JsonData(ps:AbstractProcess::Status::Status) ps._json_data_fields(%[text])
-
-	section "InteractiveObject" {
-		# TODO: Send context so that interaction could be seen as part of the bigger picture
-		F JsonData(i:InteractiveObject) i._json_data_fields(%[type id text default_action])
-	}
-
-	section "AWS2" {
-		# TODO: generalize
-		AWS2.meta()[JsonData] = {'ns': 'AWS2'}
-	}
-
-	section "Process Status" {
-		AbstractProcess::Status.meta()[JsonData] = {'ns': 'ProcessStatus'}
-	}
-
-	section "aws/*.ngs" {
+	section "AWS" {
+		# TODO: Move whatever possible from CodePipeline.ngs to AbstractProcess.ngs
 		_cp = require("aws/CodePipeline.ngs")
-		# TODO: factor out
-		_cp.meta()[JsonData] = {'ns': 'CodePipeline'}
 
-		F JsonData(saf:_cp::SendAllFields) saf._json_data_fields()
+		F Element(s:AbstractProcess::Status::Status) ProcessStatus(s.Type().name, s.text)
 
-		F JsonData(p:_cp::Pipeline) {
-			ui::InteractiveObject().set(
-				type = 'AWS::CodePipeline::Pipeline'
-				id = p.name
-				text = p.name
-				default_action = 'View CodePipeline'
-			).JsonData()
+		# TODO: .total_steps might not be known
+		F Element(p:_cp::Progress) Progress(p.step, p.total_steps)
+
+		# WIP
+		F Element(cp:_cp::Pipeline) {
+			Object([Element(Str(cp))])::{
+				A.('$id') = raw({
+					"type": "AWS::CodePipeline::Pipeline"
+					"id": cp.name
+					"blah-str": "s123"
+					"blah-num": 123
+				})
+			}
 		}
+
+		# Later
+		F Element(r:_cp::Revision) Element(Str(r))
+		F Element(s:_cp::Source) Element(Str(s))
+		F Element(a:_cp::Action) Element(Str(a))
 	}
+
+	# ngs -ppj 'require("aws/CodePipeline.ngs")::pipelines::list().(ui::Element)'
+	# ngs -ppj '$(ls).(ui::Element)'
 }
