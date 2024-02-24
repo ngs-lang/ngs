@@ -3399,7 +3399,7 @@ doc Iterate a Hash.
 doc h - Hash to iterate
 doc cb - Function to call with successive keys
 doc %RET - h
-F eachk(h:Hash, cb:Fun) h.each({cb(A)})
+F eachk(h:Hash, cb:Fun) h.each(cb(X))
 
 TEST ret = []; {"a": 1, "b": 2}.eachk(ret.push(X)); ret == %[a b]
 
@@ -3407,7 +3407,7 @@ doc Iterate a Hash.
 doc h - Hash to iterate
 doc cb - Function to call with successive values
 doc %RET - h
-F eachv(h:Hash, cb:Fun) h.each({cb(B)})
+F eachv(h:Hash, cb:Fun) h.each(cb(Y))
 
 TEST ret = []; {"a": 1, "b": 2}.eachv(ret.push(X)); ret == %[1 2]
 
