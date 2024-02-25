@@ -28,7 +28,7 @@ ns {
 		type ProcessStatus(Element)
 		type Progress(Element)
 
-	F raw(h:Hash) h + {'$type': '$raw'}
+	F raw(h:Hash) {'$type': '$raw'} + h
 
 	F init(e:Element, children:Arr) {
 		# assert(children, Repeat(Element))
@@ -97,21 +97,32 @@ ns {
 		# TODO: Move whatever possible from CodePipeline.ngs to AbstractProcess.ngs
 		_cp = require("aws/CodePipeline.ngs")
 
-		F Element(s:AbstractProcess::Status::Status) ProcessStatus(s.Type().name, s.text)
+		# WIP
+		F Element(s:AbstractProcess::Status::Status) {
+			Object([ProcessStatus(s.Type().name, s.text)]).set(
+				ref = raw({
+					"parent": {
+						"type": "AWS::CodePipeline::Pipeline"
+						"id": "PIPELINE-NAME"
+					}
+					"id": "EXECUTION-ID"
+				})
+			)
+		}
 
 		# TODO: .total_steps might not be known
 		F Element(p:_cp::Progress) Progress(p.step, p.total_steps)
 
 		# WIP
 		F Element(cp:_cp::Pipeline) {
-			Object([Element(Str(cp))])::{
-				A.('$id') = raw({
+			Object([Element(Str(cp))]).set(
+				ref = raw({
 					"type": "AWS::CodePipeline::Pipeline"
 					"id": cp.name
 					"blah-str": "s123"
 					"blah-num": 123
 				})
-			}
+			)
 		}
 
 		# Later

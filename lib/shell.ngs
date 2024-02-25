@@ -58,6 +58,10 @@ net::unix_json_rpc_server("ngs-shell.sock", ns {
 		result.JsonData()
 	}
 
+	F ui_default_action(ref) {
+		log("UI default action on ${ref}")
+	}
+
 	section "tests" {
 
 		F test() {
