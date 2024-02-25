@@ -43,6 +43,10 @@ ns {
 		{'$type': e.Type().name} + e.Hash().JsonData()
 	}
 
+	F JsonData(p:Properties) {
+		{'$type': p.Type().name} + p.Hash().JsonData()::{A.props = {'$type': 'Hash'} + A.props}
+	}
+
 	F init(s:Scalar, value) init(args())
 	F init(c:Column, name:Str) init(args())
 	F init(p:Properties, props:Hash) init(args())
