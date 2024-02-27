@@ -3812,219 +3812,220 @@ TEST h={}; h.shift("a", 7) == 7
 TEST h={"a": 1, "b": 2}; s = h.shift("a"); h == {"b": 2} and s == 1
 
 
-# === Box ========================================
+section "Box" {
 
-# Inspired by Option from Scala. http://www.scala-lang.org/api/2.12.x/scala/Option.html
+	# Inspired by Option from Scala. http://www.scala-lang.org/api/2.12.x/scala/Option.html
 
-doc Thrown when trying to get() a value from EmptyBox and no default value given.
-type BoxFail(Error)
+	doc Thrown when trying to get() a value from EmptyBox and no default value given.
+	type BoxFail(Error)
 
-doc A box which might (FullBox) or might not (EmptyBox) contain a value.
-doc Box is somewhat similar to Arr of zero (EmptyBox) or exactly one (FullBox) element.
-doc This analogy helps understanding each() and filter() operation.
-type Box(Eachable1)
+	doc A box which might (FullBox) or might not (EmptyBox) contain a value.
+	doc Box is somewhat similar to Arr of zero (EmptyBox) or exactly one (FullBox) element.
+	doc This analogy helps understanding each() and filter() operation.
+	type Box(Eachable1)
 
-	doc Represents presence of a value
-	doc val - The value
-	type FullBox(Box)
+		doc Represents presence of a value
+		doc val - The value
+		type FullBox(Box)
 
-	doc Represents absence of a value
-	type EmptyBox([Box, NoData])
+		doc Represents absence of a value
+		type EmptyBox([Box, NoData])
 
-doc Do not use directly!
-doc Helper constructor that throws InvalidArgument when
-doc FullBox is created with zero or more than one argument.
-F init(b:FullBox, *args) throw InvalidArgument("FullBox must be initialized with exactly one value")
+	doc Do not use directly!
+	doc Helper constructor that throws InvalidArgument when
+	doc FullBox is created with zero or more than one argument.
+	F init(b:FullBox, *args) throw InvalidArgument("FullBox must be initialized with exactly one value")
 
-doc FullBox constructor. Saves val into .val
-doc %EX - # Simplified code from the_one() method:
-doc %EX - ret = EmptyBox()
-doc %EX - something.each(F(elt) {
-doc %EX - 	if elt =~ pattern {
-doc %EX - 		ret throws ElementNotFound("the_one() had more than one match")
-doc %EX - 	}
-doc %EX - 	ret = FullBox(elt)
-doc %EX - })
-doc %EX - not(ret) throws ElementNotFound("the_one() had no matches")
-doc %EX - ret.val # Has the value
-F init(b:FullBox, val) b.val = val
+	doc FullBox constructor. Saves val into .val
+	doc %EX - # Simplified code from the_one() method:
+	doc %EX - ret = EmptyBox()
+	doc %EX - something.each(F(elt) {
+	doc %EX - 	if elt =~ pattern {
+	doc %EX - 		ret throws ElementNotFound("the_one() had more than one match")
+	doc %EX - 	}
+	doc %EX - 	ret = FullBox(elt)
+	doc %EX - })
+	doc %EX - not(ret) throws ElementNotFound("the_one() had no matches")
+	doc %EX - ret.val # Has the value
+	F init(b:FullBox, val) b.val = val
 
-doc Always true
-F Bool(fb:FullBox) true
+	doc Always true
+	F Bool(fb:FullBox) true
 
-doc Always false
-F Bool(eb:EmptyBox) false
+	doc Always false
+	F Bool(eb:EmptyBox) false
 
-doc Zero for FullBox and one for EmptyBox
-F ExitCode(b:Box) b.Bool().ExitCode()
+	doc Zero for FullBox and one for EmptyBox
+	F ExitCode(b:Box) b.Bool().ExitCode()
 
-doc Map FullBox value
-doc mapper - mapper to be called with the FullBox value
-doc %RET - FullBox with value returned by mapper
-doc %EX - Box(10).map(X*2)  # <FullBox val=20>
-F map(fb:FullBox, mapper:Fun) FullBox(mapper(fb.val))
+	doc Map FullBox value
+	doc mapper - mapper to be called with the FullBox value
+	doc %RET - FullBox with value returned by mapper
+	doc %EX - Box(10).map(X*2)  # <FullBox val=20>
+	F map(fb:FullBox, mapper:Fun) FullBox(mapper(fb.val))
 
-doc Do nothing
-doc %RET - eb
-doc %EX - EmptyBox().map(X*2)  # <EmptyBox>
-F map(eb:EmptyBox, mapper:Fun) eb
+	doc Do nothing
+	doc %RET - eb
+	doc %EX - EmptyBox().map(X*2)  # <EmptyBox>
+	F map(eb:EmptyBox, mapper:Fun) eb
 
-doc Call cb with the value of the FullBox
-doc %RET - fb
-doc %EX - Box(10).each(echo)  # Output: 10
-F each(fb:FullBox, cb:Fun) { cb(fb.val); fb }
+	doc Call cb with the value of the FullBox
+	doc %RET - fb
+	doc %EX - Box(10).each(echo)  # Output: 10
+	F each(fb:FullBox, cb:Fun) { cb(fb.val); fb }
 
-doc Do nothing
-doc %RET - eb
-doc %EX - Box(null).each(echo)  # No output
-F each(eb:EmptyBox, cb:Fun) eb
+	doc Do nothing
+	doc %RET - eb
+	doc %EX - Box(null).each(echo)  # No output
+	F each(eb:EmptyBox, cb:Fun) eb
 
-# each() allows any()
-TEST Box(5).any(Int)
-TEST EmptyBox().any(Str) == false
-TEST EmptyBox().any(Int) == false
+	# each() allows any()
+	TEST Box(5).any(Int)
+	TEST EmptyBox().any(Str) == false
+	TEST EmptyBox().any(Int) == false
 
-# each() allows none()
-TEST Box(5).none(Int) == false
-TEST Box(5).none(Str)
-TEST EmptyBox().none(Int)
+	# each() allows none()
+	TEST Box(5).none(Int) == false
+	TEST Box(5).none(Str)
+	TEST EmptyBox().none(Int)
 
-doc Conditionally convert FullBox to EmptyBox.
-doc pattern - Test function or anything else acceptable by =~ to be called with the value in the FullBox, defaults to Bool.constructors
-doc %RET - Box. fb if pattern succeeds, EmptyBox if not.
-doc %EX - Box(10).filter(X>5)   # <FullBox val=10>
-doc %EX - Box(10).filter(X>20)  # <EmptyBox>
-F filter(fb:FullBox, pattern=Bool.constructors) {
-	# Can not use "...super(fb, pattern) or EmptyBox()" because filter(Eachable1, ...) can't create FullBox
-	# ("FullBox must be initialized with exactly one value") on order to push() into it
-	fb.val =~ pattern returns fb
-	EmptyBox()
+	doc Conditionally convert FullBox to EmptyBox.
+	doc pattern - Test function or anything else acceptable by =~ to be called with the value in the FullBox, defaults to Bool.constructors
+	doc %RET - Box. fb if pattern succeeds, EmptyBox if not.
+	doc %EX - Box(10).filter(X>5)   # <FullBox val=10>
+	doc %EX - Box(10).filter(X>20)  # <EmptyBox>
+	F filter(fb:FullBox, pattern=Bool.constructors) {
+		# Can not use "...super(fb, pattern) or EmptyBox()" because filter(Eachable1, ...) can't create FullBox
+		# ("FullBox must be initialized with exactly one value") on order to push() into it
+		fb.val =~ pattern returns fb
+		EmptyBox()
+	}
+
+	TEST FullBox(null).filter() == EmptyBox()
+
+	# Done by filter(Eachable1)
+	TEST EmptyBox().filter() == EmptyBox()
+
+	doc Get FullBox value
+	doc %RET - Any
+	doc %EX - Box(10).get()  # 10
+	F get(fb:FullBox, dflt=null) fb.val
+
+	doc Get EmptyBox value. Always throws BoxFail.
+	F get(eb:EmptyBox) throw BoxFail("Can not get value from EmptyBox")
+
+	TEST { EmptyBox().get() }.assert(BoxFail)
+
+	doc Get EmptyBox value
+	doc %RET - dflt
+	F get(eb:EmptyBox, dflt) dflt.Value()
+
+	TEST EmptyBox().get(10) == 10
+	TEST EmptyBox().get({5+5}) == 10
+
+	doc Length of FullBox
+	doc %RET - 1
+	F len(fb:FullBox) 1
+
+	doc Length of EmptyBox
+	doc %RET - 0
+	F len(eb:EmptyBox) 0
+
+	doc Convert anything to Box (always FullBox)
+	doc x - value to enclose in a box
+	doc %RET - FullBox with given value
+	doc %EX - Box(7).map(X*2).get()  # 14
+	F Box(x) FullBox(x)
+
+	doc Convert Box with no arg to EmptyBox
+	doc %RET - EmptyBox
+	doc %EX - Box() == EmptyBox()
+	doc %EX - Box().get(10)  # 10
+	doc %EX - Box().map(X*2).get()  # InvalidArgument exception (in "get()")
+	F Box() EmptyBox()
+
+	TEST Box().get(10) == 10
+	TEST Box() == EmptyBox()
+
+	doc Convert null to Box (always EmptyBox)
+	doc %RET - EmptyBox
+	doc %EX - Box(null) == EmptyBox()
+	doc %EX - Box(null).map(X*2).get()  # InvalidArgument exception (in "get()")
+	F Box(n:Null) EmptyBox()
+
+	TEST Box(null) == EmptyBox()
+
+	doc Convert array value indexed by the given index
+	doc idx - key to look in hash
+	doc %RET - Box. FullBox if the array has the element indexed by idx, EmptyBox otherwise.
+	doc %EX - my_array = [10, 20]
+	doc %EX - my_array.Box(1).map(X*2).each(echo)
+	doc %EX - # output: 40
+	doc %EX - my_array.Box(5).map(X*2).each(echo)
+	doc %EX - # no output
+	F Box(a:Arr, idx:Int) if a.has_index(idx) then FullBox(a[idx]) else EmptyBox()
+
+	doc Convert hash value indexed by the given key to a Box
+	doc k - key to look in hash
+	doc %RET - Box. FullBox if the hash has the element referenced by k, EmptyBox otherwise.
+	doc %EX - my_hash = {"a": 10, "b": 300}
+	doc %EX - my_hash.Box("a").map(X*2).each(echo)
+	doc %EX - # output: 20
+	doc %EX - my_hash.Box("nope").map(X*2).each(echo)
+	doc %EX - # no output
+	F Box(h:Hash, k) {
+		k not in h returns EmptyBox()
+		FullBox(h[k])
+	}
+
+	doc Do nothing
+	doc %RET - fb
+	doc %EX - my_array = [10, 20]
+	doc %EX - # dflt on FullBox has no effect
+	doc %EX - my_array.Box(1).dflt(100).map(X*2).each(echo) # HERE
+	doc %EX - # output: 40
+	doc %EX - # dflt on EmptyBox creates FullBox with the given value
+	doc %EX - my_array.Box(5).dflt(100).map(X*2).each(echo)
+	doc %EX - # output: 200
+	F dflt(fb: FullBox, x) fb
+
+	doc Wrap x in a Box
+	doc %RET - FullBox with the value x
+	doc %EX - my_array = [10, 20]
+	doc %EX - # dflt on FullBox has no effect
+	doc %EX - my_array.Box(1).dflt(100).map(X*2).each(echo)
+	doc %EX - # output: 40
+	doc %EX - # dflt on EmptyBox creates FullBox with the given value
+	doc %EX - my_array.Box(5).dflt(100).map(X*2).each(echo) # HERE
+	doc %EX - # output: 200
+	F dflt(eb: EmptyBox, x) FullBox(x.Value())
+
+	doc Compare boxes. Empty boxes and boxes with same content are considered to be equal.
+	doc %RET - Bool
+	doc %EX - EmptyBox() == EmptyBox()
+	doc %EX - EmptyBox() != FullBox(1)
+	doc %EX - FullBox(1) == FullBox(1)
+	doc %EX - FullBox(1) != FullBox(2)
+	F ==(b1:Box, b2:Box) {
+		# Boxes comparison stolen from
+		# http://learnyouahaskell.com/making-our-own-types-and-typeclasses
+		# "instance Eq (Maybe m) where"
+		b1 is EmptyBox and b2 is EmptyBox returns true
+		b1 is FullBox and b2 is FullBox and b1.val == b2.val returns true
+		false
+	}
+
+	TEST EmptyBox() == EmptyBox()
+	TEST EmptyBox() != FullBox(1)
+	TEST FullBox(1) == FullBox(1)
+	TEST FullBox(1) != FullBox(2)
+
+	doc Convert EmptyBox into JSON compatible data structure - null
+	F JsonData(eb:EmptyBox) null
+
+	doc Convert FullBox into JSON compatible data structure - the contents of the box
+	F JsonData(fb:FullBox) fb.get().JsonData()
 }
-
-TEST FullBox(null).filter() == EmptyBox()
-
-# Done by filter(Eachable1)
-TEST EmptyBox().filter() == EmptyBox()
-
-doc Get FullBox value
-doc %RET - Any
-doc %EX - Box(10).get()  # 10
-F get(fb:FullBox, dflt=null) fb.val
-
-doc Get EmptyBox value. Always throws BoxFail.
-F get(eb:EmptyBox) throw BoxFail("Can not get value from EmptyBox")
-
-TEST { EmptyBox().get() }.assert(BoxFail)
-
-doc Get EmptyBox value
-doc %RET - dflt
-F get(eb:EmptyBox, dflt) dflt.Value()
-
-TEST EmptyBox().get(10) == 10
-TEST EmptyBox().get({5+5}) == 10
-
-doc Length of FullBox
-doc %RET - 1
-F len(fb:FullBox) 1
-
-doc Length of EmptyBox
-doc %RET - 0
-F len(eb:EmptyBox) 0
-
-doc Convert anything to Box (always FullBox)
-doc x - value to enclose in a box
-doc %RET - FullBox with given value
-doc %EX - Box(7).map(X*2).get()  # 14
-F Box(x) FullBox(x)
-
-doc Convert Box with no arg to EmptyBox
-doc %RET - EmptyBox
-doc %EX - Box() == EmptyBox()
-doc %EX - Box().get(10)  # 10
-doc %EX - Box().map(X*2).get()  # InvalidArgument exception (in "get()")
-F Box() EmptyBox()
-
-TEST Box().get(10) == 10
-TEST Box() == EmptyBox()
-
-doc Convert null to Box (always EmptyBox)
-doc %RET - EmptyBox
-doc %EX - Box(null) == EmptyBox()
-doc %EX - Box(null).map(X*2).get()  # InvalidArgument exception (in "get()")
-F Box(n:Null) EmptyBox()
-
-TEST Box(null) == EmptyBox()
-
-doc Convert array value indexed by the given index
-doc idx - key to look in hash
-doc %RET - Box. FullBox if the array has the element indexed by idx, EmptyBox otherwise.
-doc %EX - my_array = [10, 20]
-doc %EX - my_array.Box(1).map(X*2).each(echo)
-doc %EX - # output: 40
-doc %EX - my_array.Box(5).map(X*2).each(echo)
-doc %EX - # no output
-F Box(a:Arr, idx:Int) if a.has_index(idx) then FullBox(a[idx]) else EmptyBox()
-
-doc Convert hash value indexed by the given key to a Box
-doc k - key to look in hash
-doc %RET - Box. FullBox if the hash has the element referenced by k, EmptyBox otherwise.
-doc %EX - my_hash = {"a": 10, "b": 300}
-doc %EX - my_hash.Box("a").map(X*2).each(echo)
-doc %EX - # output: 20
-doc %EX - my_hash.Box("nope").map(X*2).each(echo)
-doc %EX - # no output
-F Box(h:Hash, k) {
-	k not in h returns EmptyBox()
-	FullBox(h[k])
-}
-
-doc Do nothing
-doc %RET - fb
-doc %EX - my_array = [10, 20]
-doc %EX - # dflt on FullBox has no effect
-doc %EX - my_array.Box(1).dflt(100).map(X*2).each(echo) # HERE
-doc %EX - # output: 40
-doc %EX - # dflt on EmptyBox creates FullBox with the given value
-doc %EX - my_array.Box(5).dflt(100).map(X*2).each(echo)
-doc %EX - # output: 200
-F dflt(fb: FullBox, x) fb
-
-doc Wrap x in a Box
-doc %RET - FullBox with the value x
-doc %EX - my_array = [10, 20]
-doc %EX - # dflt on FullBox has no effect
-doc %EX - my_array.Box(1).dflt(100).map(X*2).each(echo)
-doc %EX - # output: 40
-doc %EX - # dflt on EmptyBox creates FullBox with the given value
-doc %EX - my_array.Box(5).dflt(100).map(X*2).each(echo) # HERE
-doc %EX - # output: 200
-F dflt(eb: EmptyBox, x) FullBox(x.Value())
-
-doc Compare boxes. Empty boxes and boxes with same content are considered to be equal.
-doc %RET - Bool
-doc %EX - EmptyBox() == EmptyBox()
-doc %EX - EmptyBox() != FullBox(1)
-doc %EX - FullBox(1) == FullBox(1)
-doc %EX - FullBox(1) != FullBox(2)
-F ==(b1:Box, b2:Box) {
-	# Boxes comparison stolen from
-	# http://learnyouahaskell.com/making-our-own-types-and-typeclasses
-	# "instance Eq (Maybe m) where"
-	b1 is EmptyBox and b2 is EmptyBox returns true
-	b1 is FullBox and b2 is FullBox and b1.val == b2.val returns true
-	false
-}
-
-TEST EmptyBox() == EmptyBox()
-TEST EmptyBox() != FullBox(1)
-TEST FullBox(1) == FullBox(1)
-TEST FullBox(1) != FullBox(2)
-
-doc Convert EmptyBox into JSON compatible data structure - null
-F JsonData(eb:EmptyBox) null
-
-doc Convert FullBox into JSON compatible data structure - the contents of the box
-F JsonData(fb:FullBox) fb.get().JsonData()
 
 # === Result =====================================
 
