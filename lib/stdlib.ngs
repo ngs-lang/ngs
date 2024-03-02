@@ -3775,7 +3775,7 @@ doc %EX - my_hash.dflt(k, []).push(elt)
 doc %RET - Hash value, the already-existed or new.
 F dflt(h:Hash, k, v) {
 	if k not in h {
-		h[k] = v.Value()
+		h[k] = v.Value(k)
 	}
 	h[k]
 }
