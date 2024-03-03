@@ -16,6 +16,7 @@
 * Add `Path + Str` and `Str + Path`
 * Add `avg(Eachable1)`
 * Add `Value` pseudo-type for converting values and functions into values
+* Add `when(val, pattern, new_val)`
 
 ### Fixes and improvements
 * Fix `AtPath` for non-eachables
@@ -26,6 +27,7 @@
 ### Deprecated
 * Deprecated `Deep` in favor of `AtPath`
 * Deprecated `~(Any, Type)` in favor of `=~(Any, Type)`
+* Deprecated `only()` in favor if `when()`
 
 ### Breaking changes
 * Remove deprecated `Pred`

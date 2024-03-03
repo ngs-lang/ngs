@@ -1203,24 +1203,41 @@ F mapo(e:Eachable1, mapper:Fun) {
 
 TEST Set([1,2]).mapo(X*2) == Set([2,4])
 
-
+doc Deprecated. Use when(val, pat, new_val) instead.
 doc Transform mapper to handle only items matching pattern. Non-matching items will be returned as is.
 doc %EX - ["abc", 1, "def", 2].map(only(Int, X*2))  # ["abc", 2, "def", 4]
+doc %STATUS - deprecated
 F only(pattern, mapper:Fun) {
-	F wrapped_in_only(elt) {
-		if elt =~ pattern {
-			mapper(elt)
-		} else {
-			elt
-		}
-	}
+	warn("Using deprecated only(). Use when() instead.")
+	X.when(pattern, mapper)
 }
 
 TEST ["abc", 1, "def", 2].map(only(Int, X*2)) == ["abc", 2, "def", 4]
 
-doc %STATUS - experimental
-doc Same as only(pattern, mapper)(val)
-F only(val, pattern, mapper:Fun) only(pattern, mapper)(val)
+doc Deprecated. Use when(val, pat, new_val) instead.
+doc %STATUS - deprecated
+doc Same as val.when(pattern, mapper)
+F only(val, pattern, mapper:Fun) {
+	warn("Using deprecated only(). Use when() instead.")
+	val.when(pattern, mapper)
+}
+
+doc If val matches pat, return new_val.Value(val); otherwise return val
+doc Use instead of older only()
+doc %EX - "abcd".mapo(X.when("b", "*"))  # a*cd
+doc %EX - "abcd".mapo(F(x) x.when("b", "[$X]"))  # a[b]cd
+F when(val, pat, new_val) {
+	# Maybe TODO: If new_val is a callback provide a way to call it with both val and the match m. Maybe with new types:
+	#             Could be blah.when(pat, WithMatch(F(val, m) ...))
+	#             Could be blah.when(pat, ExtendedArgs(F(val, m) ...))
+	m = val =~ pat
+	not(m) returns val
+	new_val.Value(val)
+}
+
+TEST 1.when(1, 2) == 2
+TEST 3.when(1, 2) == 3
+TEST 10.when(10, X*2) == 20
 
 doc Filter e using pattern.
 doc e - Eachable1. WARNING: instances of same type as e must have empty constructor and push() method.
@@ -1388,7 +1405,7 @@ doc %RET - Arr
 doc %EX - ["ssh", "IP", "w"].replace("IP", "10.0.0.100")  # ['ssh','10.0.0.100','w']
 F replace(e:Eachable1, src, dst) {
 	guard (e is not Str) and (e is not Int)
-	map(e, only(X == src, {dst}))
+	map(e, X.when(src, dst))
 }
 
 TEST ["ssh", "IP", "w"].replace("IP", "10.0.0.100") == ['ssh','10.0.0.100','w']
@@ -2681,7 +2698,7 @@ TEST [1,2,3].map(X*4) == [4,8,12]
 
 F subset(smaller:Arr, larger:Arr) {
 	len(smaller) > len(larger) returns false
-	h = larger.only({A.len() > 10}, Set)
+	h = larger.when({A.len() > 10}, Set)
 	smaller.all(X in h)
 }
 
@@ -2785,7 +2802,7 @@ doc Filter out all values in a that are also in b
 doc %RET - Arr
 doc %EX - [1,2,3] - [5,6,1]  # [2,3]
 F -(a:Arr, b:Arr) {
-	h = b.only({A.len() > 10}, Set)
+	h = b.when({A.len() > 10}, Set)
 	a.filter(X not in h)
 }
 
@@ -4757,6 +4774,7 @@ section "Strings and characters" {
 
 	doc Map a string, character by character.
 	doc %EX - "abcd".mapo(F(x) if x == "b" then "X" else x)  # "aXcd"
+	doc %EX - "abcd".mapo(X.when("b", "*"))  # "a*cd"
 	doc %RET - Str
 	F mapo(s:Str, mapper:Fun) s.map(mapper).join('')
 
@@ -4849,7 +4867,7 @@ section "Strings and characters" {
 
 	# TODO: dst.Value()
 	doc Replace all occurrences of src with dst in s
-	F replace(s:Str, src:Str, dst:Str) (~~)(s, src, true).map(only(MatchSuccess, {dst})).join('')
+	F replace(s:Str, src:Str, dst:Str) (~~)(s, src, true).map(X.when(MatchSuccess, dst)).join('')
 
 	TEST "x10ab20c30y".replace("0", "X") == "x1Xab2Xc3Xy"
 
@@ -5374,7 +5392,7 @@ section "Path" {
 	doc %EX - Path(".")  # <Path path=.>
 	doc %EX - Path(".", true)  # <Dir path=.>
 	doc %EX - ``find tmp/v8``.map(Path(X, true)).map(Type).name.Stats()  # <Stats: {Dir=287, File=9220}>
-	F Path(s:Str, subtype=false) Path().set('path', s).only({subtype}, specific)
+	F Path(s:Str, subtype=false) Path().set('path', s).when({subtype}, specific)
 
 	doc Path constructor
 	doc s - path
@@ -6322,7 +6340,7 @@ doc %EX - Argv({Repeat("--repeat"): ["a", "b"]})               # ["--repeat", "a
 doc %EX - Argv({"-a1": [], "-a2": [1,2,3]})                    # ["-a2", 1, 2, 3]
 F Argv(h:Hash) {
 	collector
-		h.rejectv(NoData).mapv(only(Box, get)).each(F(k, v) {
+		h.rejectv(NoData).mapv(X.when(Box, get)).each(F(k, v) {
 			if k is Arr {
 				ematch v {
 					Bool {
@@ -6366,7 +6384,7 @@ doc Deprecated. Do not use!
 doc %STATUS - deprecated
 F Argv(a:Arr) {
 	warn("Using deprecated Argv(Arr)")
-	a.reject(NoData).map(only(Box, get)).map(X.ensure(Arr)).flatten()
+	a.reject(NoData).map(X.when(Box, get)).map(X.ensure(Arr)).flatten()
 }
 
 
@@ -8031,7 +8049,7 @@ section "retry() and friends" {
 		body:Fun={throw RetryBodyMissing("'body' argument missing in retry()")}
 	) {
 		guard sleep =~ AnyOf(Num, Iter)  # Can't move to parameters as Iter is not defined at this point
-		sleep_iter = if sleep is Num then ConstIter(sleep) else sleep
+		sleep_iter = sleep.when(Num, ConstIter)
 		result = null  # otherwise it will be local to try { ... }
 		for(i;times) {
 			n = i + 1
@@ -8127,12 +8145,10 @@ F decode_uri_component(s:Str) {
 	l = s.len()
 	ret = ''
 	for(i;l) {
-		ret += if s[i] == '%' {
+		ret += s[i].when('%', {
 			i += 2
 			decode_hex(s[i-1..i+1])
-		} else {
-			s[i]
-		}
+		})
 	}
 	ret
 }
@@ -8212,9 +8228,8 @@ F write(s:Str, f:File) {
 }
 
 doc Write whole file if it's closed, write to file descriptor if it's open
-F write(f:File, s:Str) {
-	write(if f.fd is Null then f.path else f.fd, s)
-	f
+F write(f:File, s:Str) f::{
+	write(f.fd.when(Null, f.path), s)
 }
 
 doc Write a string followed by newline character to a File.
@@ -8312,7 +8327,7 @@ section "Doc" {
 	doc %STATUS - experimental
 	doc %AUTO - \name attr1=val1 attr2=val2 ... [ ... ]
 	F \(name:Str, attributes:Hash, children:Arr) {
-		Doc::Node(name, children.reject(NoData).map(only(FullBox, get)), **attributes)
+		Doc::Node(name, children.reject(NoData).map(X.when(FullBox, get)), **attributes)
 	}
 }
 
