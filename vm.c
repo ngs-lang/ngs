@@ -4004,25 +4004,29 @@ int vm_call_match_arg_to_pattern(VM *vm, CTX *ctx, VALUE arg, VALUE pattern, VAL
 
 // XXX: Factor out to "define"s access to parameters. Coupling to this data structure is all over.
 #define HAVE_KWARGS_MARKER ((argc >= 2) && IS_KWARGS_MARKER(argv[argc-1]))
-METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int argc, const VALUE *argv) {
+METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, int argc, const VALUE *argv) {
 	LOCAL_VAR_INDEX lvi;
 	int i;
 	METHOD_RESULT mr;
 	VALUE *callable_items;
 
 	if(IS_MULMETHOD(callable)) {
-		int len = MULTIMETHOD_LEN(callable);
+		VALUE *save_arr_callable = DEEPER_FRAME.arr_callable;
+		int *save_arr_callable_idx = DEEPER_FRAME.arr_callable_idx;
 		DEEPER_FRAME.arr_callable = &callable;
 		DEEPER_FRAME.arr_callable_idx = &i;
+		int len = MULTIMETHOD_LEN(callable);
 		for(i=len-1, callable_items = MULTIMETHOD_ITEMS(callable); i>=0; i--) {
 			mr = vm_call(vm, ctx, result, callable_items[i], argc, argv);
 			if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION) || (mr == METHOD_IMPL_MISSING)) {
-				DEEPER_FRAME.arr_callable = NULL;
+				DEEPER_FRAME.arr_callable = save_arr_callable;
+				DEEPER_FRAME.arr_callable_idx = save_arr_callable_idx;
 				return mr;
 			}
 			assert(mr == METHOD_ARGS_MISMATCH);
 		}
-		DEEPER_FRAME.arr_callable = NULL;
+		DEEPER_FRAME.arr_callable = save_arr_callable;
+		DEEPER_FRAME.arr_callable_idx = save_arr_callable_idx;
 		// --- method_not_found_handler() - start ---
 		if(THIS_FRAME.do_call_method_not_found_handler) {
 			// method_not_found_handler == [] when stdlib is not loaded (-E bootstrap switch / during basic tests)
@@ -4126,6 +4130,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		params = CLOSURE_OBJ_PARAMS(callable);
 		j = MIN(argc, n_params_required);
 		for(i=0; i<j; i++) {
+			// TODO: dedup A
 			param_match_result = MAKE_NULL;
 			int did_match = CLOSURE_OBJ_PARAMS_CMPS(callable)[i](vm, ctx, argv[i], params[i*2+1], &param_match_result);
 			if(!IS_NULL(param_match_result)) {
@@ -4147,7 +4152,15 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 					// Required parameter is not in keyword arguments
 					return METHOD_ARGS_MISMATCH;
 				}
-				if(!obj_is_of_type(vm, e->val, params[i*2+1])) {
+				// F f(x:AnyOf(Str, Null)) 1; f(x="x") == 1
+				// TODO: dedup B
+				param_match_result = MAKE_NULL;
+				int did_match = CLOSURE_OBJ_PARAMS_CMPS(callable)[i](vm, ctx, e->val, params[i*2+1], &param_match_result);
+				if(!IS_NULL(param_match_result)) {
+					*result = param_match_result;
+					return METHOD_EXCEPTION;
+				}
+				if(!did_match) {
 					return METHOD_ARGS_MISMATCH;
 				}
 				named_arguments[i] = e->val;
@@ -4158,18 +4171,15 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		// Check optional parameters given as positional arguments
 		j = MIN(argc, n_params_required + n_params_optional);
 		for(i=n_params_required; i < j; i++) {
-			// XXX temp - start
-			if(!IS_NGS_TYPE(params[n_params_required*2 + (i-n_params_required)*3 + 1])) {
-				VALUE exc;
-				exc = make_normal_type_instance(vm->InvalidArgument);
-				set_normal_type_instance_field(exc, make_string("message"), make_string("Parameter type expected"));
-				set_normal_type_instance_field(exc, make_string("callable"), callable);
-				set_normal_type_instance_field(exc, make_string("parameter_index"), MAKE_INT(i));
-				set_normal_type_instance_field(exc, make_string("got"), params[n_params_required*2 + (i-n_params_required)*3 + 1]);
-				THROW_EXCEPTION_INSTANCE(exc);
+			// F f(x:AnyOf(Str, Null)=null) 1; f("x") == 1
+			// TODO: dedup C
+			param_match_result = MAKE_NULL;
+			int did_match = CLOSURE_OBJ_PARAMS_CMPS(callable)[i](vm, ctx, argv[i], params[n_params_required*2 + (i-n_params_required)*3 + 1], &param_match_result);
+			if(!IS_NULL(param_match_result)) {
+				*result = param_match_result;
+				return METHOD_EXCEPTION;
 			}
-			// XXX temp - end
-			if(!obj_is_of_type(vm, argv[i], params[n_params_required*2 + (i-n_params_required)*3 + 1])) {
+			if(!did_match) {
 				return METHOD_ARGS_MISMATCH;
 			}
 			named_arguments[i] = params[n_params_required*2 + (i-n_params_required)*3 + 2];
@@ -4189,7 +4199,15 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 				named_arguments[i] = params[n_params_required*2 + (i-n_params_required)*3+2];
 				continue;
 			}
-			if(!obj_is_of_type(vm, e->val, params[n_params_required*2 + (i-n_params_required)*3+1])) {
+			// F f(x:AnyOf(Str, Null)=null) 1; f(x="x") == 1
+			// TODO: dedup D
+			param_match_result = MAKE_NULL;
+			int did_match = CLOSURE_OBJ_PARAMS_CMPS(callable)[i](vm, ctx, e->val, params[n_params_required*2 + (i-n_params_required)*3 + 1], &param_match_result);
+			if(!IS_NULL(param_match_result)) {
+				*result = param_match_result;
+				return METHOD_EXCEPTION;
+			}
+			if(!did_match) {
 				return METHOD_ARGS_MISMATCH;
 			}
 			named_arguments[i] = e->val;

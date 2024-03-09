@@ -87,7 +87,7 @@ typedef struct {
 	VALUE *locals;
 	VALUE closure;
 
-	const VALUE *arr_callable;
+	VALUE *arr_callable;
 	int *arr_callable_idx;
 
 	TRY_INFO try_info[MAX_TRIES_PER_FRAME];
