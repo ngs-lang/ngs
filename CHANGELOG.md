@@ -17,6 +17,8 @@
 * Add `avg(Eachable1)`
 * Add `Value` pseudo-type for converting values and functions into values
 * Add `when(val, pattern, new_val)`
+* Add `code(ArrLike)`
+* Add `code(Type)`
 
 ### Fixes and improvements
 * Fix `AtPath` for non-eachables
