@@ -149,9 +149,8 @@ ns {
 		doc Create named table containing provided rows
 		doc name - name of the table for display and for configuration purposes
 		doc rows_hashes - rows, each row is a Hash
-		F init(t:Table, name, rows_hashes:Arr) {
-			guard name is Str or name is Null
-			guard rows_hashes.all(Hash)
+		F init(t:Table, name:AnyOf(Str, Null), rows_hashes:Arr) {
+			guard rows_hashes =~ Repeat(AnyOf(Hash, HashLike))
 			super(t, name)
 
 			if not(t.cols_enum) {
@@ -189,7 +188,7 @@ ns {
 
 		doc Append give row to the table
 		doc %RET - t
-		F push(t:Table, row_hash:Hash) {
+		F push(t:Table, row_hash:AnyOf(Hash, HashLike)) {
 			# TODO: handle mismatch of columns
 			row = t.cols_enum / get(row_hash, X, null)
 			t.push(row)
