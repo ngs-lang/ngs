@@ -3695,6 +3695,7 @@ F Hash(e:Eachable1) {
 }
 
 TEST Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}]) == {"n1": "v1", "n2": "v2"}
+TEST { Hash([{"XName": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}]) }.assert(InvalidArgument)
 
 
 doc Convert Hash into JSON compatible data structure - object
