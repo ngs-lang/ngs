@@ -2149,6 +2149,11 @@ section "Type" {
 		warn("typeof(Any) is deprecated. Use Type(Any).")
 		Type(x)
 	}
+
+	# TODO: Namespaces
+	doc Convert a type to NGS code that would produce the type. Not fully functional yet. Namespaces are not supported.
+	doc %RET - Str
+	F code(t:Type) t.name
 }
 
 doc Set a field on all elements if it's not already set
