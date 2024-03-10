@@ -12,7 +12,7 @@ PROXY_DIR = Dir(".." / "ngs-web-ui-proxy").assert()
 
 WEB_SERVER_DIR = Dir(".." / "ngs-web-ui").assert()
 ENV.BROWSER = 'none'
-
+WEB_SERVER_PORT = 52000
 
 # Hack - names, because parameters' types can only be identifiers
 ServerHandler = net::ServerHandler
@@ -59,8 +59,9 @@ net::unix_json_rpc_server("ngs-shell.sock", ns {
 		result.JsonData()
 	}
 
-	F ui_default_action(ref) {
-		log("UI default action on ${ref}")
+	# event example: {cur={type=AWS::CodePipeline::Pipeline, id=XXXX}, ref={type=AWS::CodePipeline::Execution, id=XXXX}}
+	F ui_default_action(event) {
+		log("UI default action on ${event}")
 	}
 
 	section "tests" {

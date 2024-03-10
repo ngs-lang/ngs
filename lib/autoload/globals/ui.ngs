@@ -23,6 +23,7 @@ ns {
 			type Column(Element)
 			type Rows(Element)
 			type Row(Element)
+			# TODO: Cell
 		type Properties(Element)
 		type List(Element)
 		type ProcessStatus(Element)
@@ -31,9 +32,7 @@ ns {
 	F raw(h:Hash) {'$type': '$raw'} + h
 
 	F init(e:Element, children:Arr) {
-		# assert(children, Repeat(Element))
-		children.each({ assert(A, Element, "All children of Element must be of type Element") })
-		# echo("init(${e.Type().name}, Arr)")
+		children.assert(Repeat(Element), "All children of Element must be of type Element. Have ${children}")
 		init(args())
 	}
 	# TODO: serialization design
@@ -57,17 +56,23 @@ ns {
 	F Element(x:AnyOf(Num, Str, Bool, Null)) Scalar(x)
 	F Element(a:AnyOf(Arr, ArrLike)) List(a.map(Element))
 
+	F init(r:Row, fields_names, h:AnyOf(Hash, HashLike)) {
+		super(r)
+		r.children = fields_names.map(F(field_name) {
+			val = h.get(field_name)
+			Element(val)
+		})
+	}
+
 	# TODO: improve heuristics of detection when to render to table
 	F Element(a:Arr) {
-		guard a
-		guard all(a, Hash)
-		t = Table2::Table(a)
+		guard a =~ Repeat(AnyOf(Hash, HashLike), 1..null)
+
+		fields_names = a.map(keys).flatten().uniq()  # TODO: make fields order configurable?
 
 		Table().set(
-			columns = t.cols_enum.keys().map(Column).Columns()
-			rows = t.rows.map(F(row) {
-				Row(row.map(Element)) # map each cell
-			}).Rows()
+			columns = fields_names.map(Column).Columns()
+			rows = a.map(Row(fields_names, X)).Rows()
 		)
 	}
 
@@ -99,30 +104,29 @@ ns {
 
 		# WIP
 		F Element(s:AbstractProcess::Status::Status) {
-			Object([ProcessStatus(s.Type().name, s.text)]).set(
-				ref = raw({
-					"parent": {
-						"type": "AWS::CodePipeline::Pipeline"
-						"id": "PIPELINE-NAME"
-					}
-					"id": "EXECUTION-ID"
-				})
-			)
+			Object([
+				ProcessStatus(s.Type().name, s.text)
+			])
 		}
 
 		# TODO: .total_steps might not be known
 		F Element(p:_cp::Progress) Progress(p.step, p.total_steps)
 
-		# WIP
 		F Element(cp:_cp::Pipeline) {
-			Object([Element(Str(cp))]).set(
-				ref = raw({
-					"type": "AWS::CodePipeline::Pipeline"
-					"id": cp.name
-					"blah-str": "s123"
-					"blah-num": 123
+			throw NotImplemented("Converting AWS CodePipeline to arbitrary Element is not implemented yet")
+		}
+
+		# WIP
+		F init(r:Row, fields_names:Arr, pipeline:_cp::Pipeline) {
+			super(r, fields_names, pipeline)
+			idx = Iter(0..null)
+			idxs = fields_names.Hash({idx.next()})  # Ex: {name=0, status=1, sources=2, revisions=3, last_executed=4, approvals=5, progress=6}
+			r.children.filter(Object).each(F(o) o.cur = raw({'type': 'AWS::CodePipeline::Pipeline', 'id': pipeline.name}))
+			for k in %[status last_executed last_execution_id progress] {
+				r.children[idxs[k]].when(Object, {
+					A.ref = raw({'type': 'AWS::CodePipeline::Execution', 'id': pipeline.last_execution_id})
 				})
-			)
+			}
 		}
 
 		# Later

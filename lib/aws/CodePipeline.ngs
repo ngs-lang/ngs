@@ -43,13 +43,7 @@ ns {
 	section "Pipeline" {
 		# Warning: for unique reference should have AWS account and region
 		# AWS::CodePipeline::Pipeline
-		type Pipeline
-		F init(p:Pipeline, name:Str) {
-			p.name = name
-		}
-
-		F Str(p:Pipeline) p.name
-		F JsonData(p:Pipeline) p.name
+		type Pipeline(HashLike)
 	}
 
 
@@ -245,15 +239,16 @@ ns {
 				}
 
 
-				{
-					'name': Pipeline(p.name)
+				Pipeline({
+					'name': p.name
 					'status': AbstractProcess::Status::Status(e.status)
 					'sources': sources
 					'revisions': e.sourceRevisions.map(F(r) Revision(r.actionName, r.revisionId, r.revisionSummary.CommitMessage))
+					'last_execution_id': e.pipelineExecutionId
 					'last_executed': e.lastUpdateTime
 					'approvals': approval_actions
 					'progress': if statuses { Progress(statuses.Succeeded, total_actions) }
-				}
+				})
 			})
 		}
 
