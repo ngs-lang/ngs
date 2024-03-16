@@ -36,7 +36,7 @@ ns {
 		if c.children is Null {
 			c.children = []
 		}
-		c.children .= map(only(Str, Text))
+		c.children .= map(X.when(Str, Text))
 	}
 
 	doc Initialize document node
