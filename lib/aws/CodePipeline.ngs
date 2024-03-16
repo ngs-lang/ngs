@@ -185,11 +185,15 @@ ns {
 			# List of AWS::CodePipeline::Pipeline
 			pipelines = ``aws codepipeline list-pipelines``
 			pipelines.pmap(4, F(p) {
-				e = ``aws codepipeline list-pipeline-executions --pipeline-name ${p.name} --max-results 1``.get(0, {})
+				pipeline = ``aws codepipeline get-pipeline --name ${p.name}``
+				e = ``aws codepipeline list-pipeline-executions --pipeline-name ${p.name} --max-results 1``.get(0, {
+					'pipelineExecutionId': null
+					'sourceRevisions': []
+					'lastUpdateTime': null
+				})
 
 				# TODO: eliminate e.attr references outside this if
 				if e {
-					pipeline = ``aws codepipeline get-pipeline --name ${p.name}``
 					state = ``aws codepipeline get-pipeline-state --name ${p.name}``
 
 					section "approvals" {
@@ -211,6 +215,7 @@ ns {
 					}
 				} else {
 					approval_actions = []
+					state = []
 				}
 
 				section "sources" {
@@ -241,7 +246,7 @@ ns {
 
 				Pipeline({
 					'name': p.name
-					'status': AbstractProcess::Status::Status(e.status)
+					'status': AbstractProcess::Status::Status(e.get('status'))
 					'sources': sources
 					'revisions': e.sourceRevisions.map(F(r) Revision(r.actionName, r.revisionId, r.revisionSummary.CommitMessage))
 					'last_execution_id': e.pipelineExecutionId

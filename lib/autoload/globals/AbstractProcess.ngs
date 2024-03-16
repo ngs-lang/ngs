@@ -57,10 +57,12 @@ ns {
 
     	TEST s=AbstractProcess::Status; s::Status("fail") is s::Failed
 
+    	F Status(n:Null) Unknown('(null)')
+
     	global Str
     	F Str(s:Status) s.text or s.Type().name
 
-    	# TODO: maybe concatentae the text
+    	# TODO: maybe concatenate the text
     	global JsonData
     	F JsonData(s:Status) s.Type().name
     }
