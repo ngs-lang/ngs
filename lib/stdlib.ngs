@@ -2479,14 +2479,6 @@ section "collector" {
 
 section "Comparison to null" {
 	doc Compare to null
-	doc %RET - false
-	F ==(a:Null, b) false
-
-	doc Compare to null
-	doc %RET - false
-	F ==(a, b:Null) false
-
-	doc Compare to null
 	doc %RET - true
 	F ==(a:Null, b:Null) true
 }
