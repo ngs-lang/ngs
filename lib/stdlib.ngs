@@ -239,6 +239,8 @@ F nop(*args, **kwargs) null
 
 # === Trivial init() helper ===
 
+# TODO: rethink when HashLike will be gone, probably args() should return a subtype of Hash or
+#       something else entirely and this init() should handle that type.
 doc Trivial initialization helper for init(o, ...)
 doc Sets object fields from the supplied parameters
 doc %EX - # sets t.a and t.b
