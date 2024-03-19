@@ -281,7 +281,7 @@ doc IndexNotFound exception constructor
 doc %RET - IndexNotFound object with the given message, container and key fields
 F init(e:IndexNotFound, message:Str, container, key) init(args())
 
-doc Throws AssertFail with given message if expr does not match the pattern
+doc Throws AssertFail with given message if val does not match the pattern
 doc %EX - my_template.get('concept', []).assert(Arr)
 doc %EX - assert(loginResult, {'access_token': Str}, "access_token must be present in response")
 doc %RET - val
@@ -290,16 +290,16 @@ F assert(val, pattern, msg:Str="Assertion failed") {
 	val
 }
 
-doc Throws AssertFail with given message if expr evaluates to false
-doc expr - if evaluates to false, causes AssertFail exception
+doc Throws AssertFail with given message if val is falsy
+doc val - if evaluates to false, causes AssertFail exception
 doc msg - message for the exception, defaults to "Assertion failed"
-doc %RET - expr
+doc %RET - val
 doc %EX - my_array=[]
 doc %EX - # ... Code that adds elements to my_array ...
 doc %EX - assert(my_array.len() > 3, "my_array must have more than 3 elements")  # AssertFail exception, with the given message
-F assert(expr, msg:Str="Assertion failed") {
-	not(expr) throws AssertFail(msg).set(expr=expr)
-	expr
+F assert(val, msg:Str="Assertion failed") {
+	not(val) throws AssertFail(msg).set(val=val)
+	val
 }
 
 doc Throws AssertFail with given function does not throw exception of the given type.
@@ -8089,9 +8089,9 @@ section "retry() and friends" {
 
     doc Similar to assert(). Caught and ignored by nearest retry() on all but last retry.
     doc %STATUS - experimental
-    F retry_assert(expr, msg:Str="Assertion failed") {
-    	not(expr) throws RetryAssertFail(msg).set(expr=expr)
-    	expr
+    F retry_assert(val, msg:Str="Assertion failed") {
+    	not(val) throws RetryAssertFail(msg).set(val=val)
+    	val
     }
 
 }
