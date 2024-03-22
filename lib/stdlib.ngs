@@ -320,7 +320,7 @@ TEST assert({1/0}, DivisionByZero) is DivisionByZero
 doc Initializes InstantiatingAbstractType.
 F init(e:InstantiatingAbstractType, t:Type) init(args())
 
-section "Namespaces" {
+section "The :: operator" {
 
 	doc Get NormalType object field. Useful when calling method stored in an field.
 	doc %EX - myobj::method_in_field(arg)  # calls method stored in myobj.method_in_field
