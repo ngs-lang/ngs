@@ -6974,7 +6974,7 @@ F decode(s:Str, hints:Hash) {
 	dh = DecodeHints(hints)
 	guard dh =~ AnyOf(
 		 %(aws)
-		 %(decode: aws)
+		 %(decode: aws)  # TODO: fix
 	)
 
 	if s == '' {
