@@ -1846,6 +1846,63 @@ section "HashLike" {
 	F JsonData(hl:HashLike) hl.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
 }
 
+section "DeprecatedTopLevelHashlike" {
+	doc Base type for user-defined hash-like types. This is a workaround: it's not possible currently no inherit from the built-in Hash type.
+	type DeprecatedTopLevelHashlike(HashLike)
+
+	doc Get value by key. Throws KeyNotFound.
+	doc %AUTO - your_hashlike[k]
+	F '[]' (hl:DeprecatedTopLevelHashlike, k) {
+		if k == hl.meta().DeprecatedTopLevelHashlike {
+			warn("Reading deprecated top level key ${k}")
+			return hl
+		}
+		super(hl, k)
+	}
+
+	doc Set value.
+	doc %AUTO - your_hashlike[k] = v
+	F '[]='(hl:DeprecatedTopLevelHashlike, k, v) {
+		if k == hl.meta().DeprecatedTopLevelHashlike {
+			throw InvalidArgument("Writing to deprecated top level key ${k}")
+		}
+		super(hl, k, v)
+	}
+
+	doc Get value by key. Throws KeyNotFound.
+	doc %AUTO - your_hashlike.literal_key
+	doc %RET - Any
+	F .(hl:DeprecatedTopLevelHashlike, k) {
+		if k == hl.meta().DeprecatedTopLevelHashlike {
+			warn("Reading deprecated top level key ${k}")
+			return hl
+		}
+		super(hl, k)
+	}
+
+	doc Set value.
+	doc %AUTO - your_hashlike.literal_key = v
+	doc %RET - v
+	F .=(hl:DeprecatedTopLevelHashlike, k, v) {
+		if k == hl.meta().DeprecatedTopLevelHashlike {
+			throw InvalidArgument("Writing to deprecated top level key ${k}")
+		}
+		super(hl, k, v)
+	}
+
+	doc Create a HashLike.
+	doc h - If provided, used as initial value.
+	doc %EX - HashLike(%{a aha b bee}) # <HashLike a=aha b=bee>
+	F init(hl:DeprecatedTopLevelHashlike, deprecated_field, h:Hash=null) {
+		super(hl, h)
+		hl.meta()::{
+			A.HashLike = h or {}
+			A.DeprecatedTopLevelHashlike = deprecated_field
+		}
+	}
+
+	TEST dhl = DeprecatedTopLevelHashlike('Blah', {'a': 1}); dhl.a == 1 and dhl.Blah.a == 1
+}
 
 section "Set" {
 
@@ -7017,6 +7074,21 @@ F decode(s:Str, hints:Hash) {
 		if data =~ {'Item': Hash} and data.Item.dynamodb_row() {
 			return data.Item.dynamodb_decode_row()
 		}
+	}
+
+	# Use {'some_key': THIS}
+	h = data.values().the_one(found_none={null}, found_more={null})
+	if h is Hash {
+		k = data.keys().the_one()
+		if k in h {
+			# Untested
+			warn("decode() for 'aws' command is unable to use DeprecatedTopLevelHashlike, run with DEBUG=decode_aws for more information")
+			debug('decode_aws', {
+				"Clashing key is ${k}. Result is ${h}"
+			})
+			return h
+		}
+		return DeprecatedTopLevelHashlike(k, h)
 	}
 
 	# Use the only top-level key that has array as it's value
