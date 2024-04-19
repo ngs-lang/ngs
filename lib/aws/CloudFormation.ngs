@@ -4,6 +4,7 @@ ns {
 	StatusNS = AbstractProcess::Status
 
 	# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-describing-stacks.html
+	# TODO: CONFIGURATION_COMPLETE - https://aws.amazon.com/about-aws/whats-new/2024/03/aws-cloudformation-40-percent-faster-stack-creation/
 	_s = {
 		'CREATE_COMPLETE': StatusNS::Succeeded
 		'CREATE_FAILED': StatusNS::Failed
@@ -123,5 +124,21 @@ ns {
 			so.sub = events.reject({'ResourceType': 'AWS::CloudFormation::Stack'}).group('LogicalResourceId').mapv(ResourceOperations).values().filter({'status': AnyOf(StatusNS::Failed, StatusNS::Failing)})
 
 		}
+	}
+
+	doc WIP
+	F list() {
+		``aws cloudformation list-stacks``.filter({'StackStatus': Not('DELETE_COMPLETE')})
+	}
+
+	doc WIP
+	F list_runs(stack_name:Str) {
+		_start = {
+			'ResourceType': 'AWS::CloudFormation::Stack'
+			'ResourceStatus': _running
+		}
+		_start = Any
+		events = ``log: aws cloudformation describe-stack-events --stack-name ${stack_name} --max-items 5000``.filter(_start).reverse()
+
 	}
 }
