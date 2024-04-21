@@ -15,10 +15,9 @@ ENV.BROWSER = 'none'
 WEB_SERVER_PORT = 52000
 
 # Hack - names, because parameters' types can only be identifiers
-ServerHandler = net::ServerHandler
 Server = net::Server
 # Hack - on_listen() can happen for any ServerHandler, not necessarily the one used below.
-F on_listen(sh:ServerHandler, s:Server) {
+F on_listen(sh:net::ServerDelegate, s:net::Server) {
 	super(sh, s)
 	p = $(x_top_level:: cd:PROXY_DIR npx ts-node src/server.ts ../ngs/ngs-shell.sock &)
 	echo("Proxy PID: ${p.processes[0].pid}")
@@ -27,55 +26,67 @@ F on_listen(sh:ServerHandler, s:Server) {
     echo("Web server PID: ${web_server.processes[0].pid}")
 }
 
-net::unix_json_rpc_server("ngs-shell.sock", ns {
+net::unix_json_rpc_server("ngs-shell.sock", section "events (aka delegate)" ns {
 
-	F eval(line:Str) {
+	# TODO: change to event, something like 'command_line_input'
+	methods = ns {
+		F eval(line:Str) {
 
-		fname = '<shell line file>'
+			fname = '<shell line file>'
 
-		section "Shortcuts" {
-			shortcuts = {
-				'v': 'aws ec2 describe-vpcs'
-				'p-': 'aws codepipeline list-pipelines'
-				'p': '{ require("aws/CodePipeline.ngs")::pipelines::list() }'
-				'p_censored': '{ require("aws/CodePipeline.ngs")::pipelines::list().map(F(p) p.filterk(Not(AnyOf(%[sources revisions])))) }'
-				's-': 'aws cloudformation list-stacks'
-				's': 'saws::stacks()'
+			section "Shortcuts" {
+				shortcuts = {
+					'v': 'aws ec2 describe-vpcs'
+					'p-': 'aws codepipeline list-pipelines'
+					'p': '{ require("aws/CodePipeline.ngs")::pipelines::list() }'
+					'p_censored': '{ require("aws/CodePipeline.ngs")::pipelines::list().map(F(p) p.filterk(Not(AnyOf(%[sources revisions])))) }'
+					's-': 'aws cloudformation list-stacks'
+					's': 'saws::stacks()'
+				}
+				line = shortcuts.get(line, line)
 			}
-			line = shortcuts.get(line, line)
-		}
-		bytecode = compile(line, fname)
-		# TODO: pass warnings
-		#bytecode.meta().warnings.each(F(w) {
-		#	wl = w.location
-		#	warn("${fname}:${wl.first_line}:${wl.first_column} warning: ${w.message}")
-		#})
+			bytecode = compile(line, fname)
+			# TODO: pass warnings
+			#bytecode.meta().warnings.each(F(w) {
+			#	wl = w.location
+			#	warn("${fname}:${wl.first_line}:${wl.first_column} warning: ${w.message}")
+			#})
 
-		func = load(bytecode, "<shell line func>")
-		result = func()
-		log("Result type ${result.Type().name}")
-		result = ui::Element(result)
-		log("Result type after transform() ${result.Type().name}")
-		result.JsonData()
-	}
-
-	# event example: {cur={type=AWS::CodePipeline::Pipeline, id=XXXX}, ref={type=AWS::CodePipeline::Execution, id=XXXX}}
-	F ui_default_action(event) {
-		log("UI default action on ${event}")
-	}
-
-	section "tests" {
-
-		F test() {
-			"test method active"
+			func = load(bytecode, "<shell line func>")
+			result = func()
+			log("Result type ${result.Type().name}")
+			result = ui::Element(result)
+			log("Result type after transform() ${result.Type().name}")
+			result.JsonData()
 		}
 
-		F test_add_one(n:Int) {
-			n + 1
+		# event example: {cur={type=AWS::CodePipeline::Pipeline, id=XXXX}, ref={type=AWS::CodePipeline::Execution, id=XXXX}}
+		F ui_default_action(event) {
+			log("UI default action on ${event}")
+
+			# TODO: move somewhere else
+			# TODO: un-hardcode
+			id = null
+			if event =~ {'ref': {'type': 'AWS::CodePipeline::Execution', 'id': { id=A } }} {
+				log("ui_default_action navigate to AWS::CodePipeline::Execution $id")
+			}
+
+
 		}
 
-		F test_div_by_zero() {
-			1 / 0
+		section "tests" {
+
+			F test() {
+				"test method active"
+			}
+
+			F test_add_one(n:Int) {
+				n + 1
+			}
+
+			F test_div_by_zero() {
+				1 / 0
+			}
 		}
 	}
 })

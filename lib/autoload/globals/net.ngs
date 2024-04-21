@@ -7,10 +7,21 @@ ns {
 		F _assert(code:Int, func:Str) {
 			e = c_errno()
 			if code == -1 {
-				c_errno() throws CError(e, "${func}() failed")
+				e throws CError(e, "${func}() failed")
 				throw InvalidArgument("C code returned -1 but errno is not set")
 			}
 			code
+		}
+
+		# TODO: consider retry()
+		F _while_eintr(body:Fun) {
+			while true {
+				try {
+					return body()
+				} catch(intr:CError) {
+					guard intr.errno = C_EINTR
+				}
+			}
 		}
 
 		global socket
@@ -24,7 +35,9 @@ ns {
 
 		global recvfrom
 		F recvfrom(sock:Int, length:Int, flags:Int, address:c_sockaddr) {
-			ret = c_recvfrom(sock, length, flags, address)
+			ret = _while_eintr({
+				c_recvfrom(sock, length, flags, address)
+			})
 			ret[0]._assert('recvfrom')
 			ret[1]
 		}
@@ -33,18 +46,14 @@ ns {
 		F listen(sock:Int, backlog:Int) c_listen(sock, backlog)._assert('listen')
 
 		global accept
-		F accept(sock:Int, address:c_sockaddr) block b {
-			while true {
-				try {
-					b.return(c_accept(sock, address)._assert('accept'))
-				} catch(intr:CError) {
-					guard intr.errno = C_EINTR
-				}
-			}
-		}
+		F accept(sock:Int, address:c_sockaddr) _while_eintr({
+			c_accept(sock, address)._assert('accept')
+		})
 
 		global send
-		F send(socket: Int, buffer:Str, flags:Int=0) c_send(socket, buffer, flags)._assert('send')
+		F send(socket: Int, buffer:Str, flags:Int=0) _while_eintr({
+			c_send(socket, buffer, flags)._assert('send')
+		})
 	}
 
 	section "Higher level networking" {
@@ -70,56 +79,64 @@ ns {
 			F send(c:Connection, data:Str) c.sock.send(data)
 		}
 
-		section "ConnectionHandler" {
-			type ConnectionHandler
+		section "ConnectionDelegate" {
+			type ConnectionDelegate
 
 			global on_connect
-			F on_connect(ch:ConnectionHandler, c:Connection) {
-				debug('server', 'ConnectionHandler on_connect()')
+			F on_connect(ch:ConnectionDelegate, c:Connection) {
+				debug('server', 'ConnectionDelegate on_connect()')
 				ch.connection = c
 			}
 
 			global on_data
-			F on_data(ch:ConnectionHandler, data:Str) {
-				debug('server', 'ConnectionHandler on_data()')
+			F on_data(ch:ConnectionDelegate, data:Str) {
+				debug('server', 'ConnectionDelegate on_data()')
 			}
 
 			global on_remote_close
-			F on_remote_close(ch:ConnectionHandler) {
-				debug('server', 'ConnectionHandler on_remote_close()')
+			F on_remote_close(ch:ConnectionDelegate) {
+				debug('server', 'ConnectionDelegate on_remote_close()')
 				ch.connection.close()
 			}
 		}
 
-		section "ServerHandler" {
-			type ServerHandler
-			F init(sh:ServerHandler) throw InvalidArgument()
-			F init(sh:ServerHandler, make_connection_handler:Fun) init(args())
+		section "ServerDelegate" {
+			type ServerDelegate
+			F init(sh:ServerDelegate) throw InvalidArgument()
+			F init(sh:ServerDelegate, make_connection_handler:Fun) init(args())
 
 			global on_listen
-			F on_listen(sh:ServerHandler, s:Server) {
-				debug('server', 'ServerHandler on_listen()')
+			F on_listen(sh:ServerDelegate, s:Server) {
+				debug('server', 'ServerDelegate on_listen()')
+			}
+
+			global on_connect
+			F on_connect(sh:ServerDelegate, c:Connection) {
+				debug('server', 'ServerDelegate on_connect()')
+				throw NotImplemented("on_connect(ServerDelegate) is not implemented in a subtype")
 			}
 
 			global on_end
-			F on_end(sh:ServerHandler, s:Server) {
-				debug('server', 'ServerHandler on_end()')
+			F on_end(sh:ServerDelegate, s:Server) {
+				debug('server', 'ServerDelegate on_end()')
 			}
 
 		}
 
-		section "ThreadedServerHandler" {
-			type ThreadedServerHandler(ServerHandler)
 
 
-			global on_connect
-			F on_connect(sh:ThreadedServerHandler, c:Connection) {
-				debug('server', 'ThreadedServerHandler on_connect()')
+		# ---
+
+		section "ThreadedServerDelegate" {
+			type ThreadedServerDelegate(ServerDelegate)
+
+			F on_connect(sh:ThreadedServerDelegate, c:Connection) {
+				debug('server', 'ThreadedServerDelegate on_connect()')
 
 				# TODO: join the thread / use Executor
 				Thread("connection-${c.id}", {
 					try {
-						debug('server', 'ThreadedServerHandler on_listen() - new thread')
+						debug('server', 'ThreadedServerDelegate on_listen() - new thread')
 						handler = sh::make_connection_handler()
 						handler.on_connect(c)
 						while true {
@@ -129,13 +146,13 @@ ns {
 								debug('server', "After handler.on_remote_close()")
 								break
 							}
-							debug('server', "ThreadedServerHandler data -- ${data.SafeStr().limit(1024)}")
+							debug('server', "ThreadedServerDelegate data -- ${data.SafeStr().limit(1024)}")
 							# c.send("[${c.sock}] Echoing back: ${data}")
 							handler.on_data(data)
-							debug('server', "ThreadedServerHandler on_connect -- after handler.on_data()")
+							debug('server', "ThreadedServerDelegate on_connect -- after handler.on_data()")
 						}
 					} catch(e) {
-						log("ThreadedServerHandler - exception in thread: ${e}")
+						log("ThreadedServerDelegate - exception in thread: ${e}")
 						guard false
 					}
 				})
@@ -144,50 +161,50 @@ ns {
 		}
 
 		section "UnixStreamServer" {
-			F listen(tus:UnixStreamServer, path:Str, sh:ServerHandler) {
+			F listen(uss:UnixStreamServer, path:Str, sh:ServerDelegate) {
 				id = 1
 				sock = socket(C_PF_UNIX, C_SOCK_STREAM)
-				tus.sock = sock
+				uss.sock = sock
 				debug('server', "Sock: ${sock}")
 				$(ok:[0, 1] rm $path)
 				bind(sock, c_sockaddr_un(path))
 				remote_addr = c_sockaddr_un()
 				listen(sock, 5)
-				sh.on_listen(tus)
+				sh.on_listen(uss)
 				while true {
 					accepted = accept(sock, remote_addr)
 					debug('server', "Connection socket: ${accepted}")
-					c = Connection(tus, accepted).set('id', id)
+					c = Connection(uss, accepted).set('id', id)
 					id += 1
 					sh.on_connect(c)
 					# TODO: how to break the loop?
 				}
-				sh.on_end(tus)
+				sh.on_end(uss)
 			}
 		}
 
-		section "LinesConnectionHandler" {
-			# TODO: refactor. creating "next" ConnectionHandler should not be
-			#       the responsibility of the previous ConnectionHandler.
+		section "LinesConnectionDelegate" {
+			# TODO: refactor. creating "next" ConnectionDelegate should not be
+			#       the responsibility of the previous ConnectionDelegate.
 
-			type LinesConnectionHandler(ConnectionHandler)
+			type LinesConnectionDelegate(ConnectionDelegate)
 
-			doc make_connection_handler - next ConnectionHandler in chain
-			F init(lch:LinesConnectionHandler) throw InvalidArgument()
+			doc make_connection_handler - next ConnectionDelegate in chain
+			F init(lch:LinesConnectionDelegate) throw InvalidArgument()
 
-			F init(lch:LinesConnectionHandler, make_connection_handler:Fun) {
-				debug('server', "LinesConnectionHandler init()")
+			F init(lch:LinesConnectionDelegate, make_connection_handler:Fun) {
+				debug('server', "LinesConnectionDelegate init()")
 				init(args())
 			}
 
-			F on_connect(lch:LinesConnectionHandler, c:Connection) {
+			F on_connect(lch:LinesConnectionDelegate, c:Connection) {
 				lch.connection = c
 				lch.buf = ''
 				lch.next = lch::make_connection_handler()
 				lch::next.on_connect(c)
 			}
 
-			F on_data(lch:LinesConnectionHandler, data:Str) {
+			F on_data(lch:LinesConnectionDelegate, data:Str) {
 				lch.buf += data
 				while true {
 					# TODO: start the search from previous position
@@ -200,7 +217,7 @@ ns {
 				}
 			}
 
-			F on_remote_close(lch:LinesConnectionHandler) {
+			F on_remote_close(lch:LinesConnectionDelegate) {
 				if lch.buf {
 					lch::next.on_data(lch.buf)
 					lch.buf = ''
@@ -209,7 +226,7 @@ ns {
 			}
 		}
 
-		section "JSON-RPC ConnectionHandler" {
+		section "JSON-RPC ConnectionDelegate" {
 
 			VALID_JSON_RPC_REQUEST = {
 				'jsonrpc': '2.0'
@@ -219,10 +236,10 @@ ns {
 			}
 
 			# https://www.jsonrpc.org/specification
-			type JsonRpcConnectionHandler(ConnectionHandler)
+			type JsonRpcConnectionHandler(ConnectionDelegate)
 			F init(jrch:JsonRpcConnectionHandler) throw InvalidArgument()
 
-			F init(jrch:JsonRpcConnectionHandler, methods:Namespace) {
+			F init(jrch:JsonRpcConnectionHandler, events:Namespace) {
 				debug('server', "JsonRpcConnectionHandler init()")
 				init(args())
 			}
@@ -254,7 +271,7 @@ ns {
 
 				if (req !~ VALID_JSON_RPC_REQUEST) send_error(-32600, 'Invalid Request', 'See https://www.jsonrpc.org/specification')
 
-				if (req.method not in jrch.methods) send_error(-32601, 'Method not found', "Method ${req.method} not found. Available methods: ${jrch.methods.keys()}")
+				if (req.method not in jrch.events.methods) send_error(-32601, 'Method not found', "Method ${req.method} not found. Available methods: ${jrch.events.methods.keys()}")
 
 				args = []
 				kwargs = {}
@@ -267,10 +284,10 @@ ns {
 
 				debug('server', "JsonRpcConnectionHandler on_data -- invoking ${req.method}")
 				result = try {
-					jrch.methods[req.method](*args, **kwargs)
+					jrch.events.methods[req.method](*args, **kwargs)
 				} catch(mnf:MethodNotFound) {
-					guard mnf.callable === jrch.methods[req.method]
-					send_error(-32602, 'Invalid params', "Correct parameters can be seen in methods' descriptions: ${jrch.methods[req.method].Arr()}")
+					guard mnf.callable === jrch.events.methods[req.method]
+					send_error(-32602, 'Invalid params', "Correct parameters can be seen in methods' descriptions: ${jrch.events.methods[req.method].Arr()}")
 				} catch(e:Error) {
 					send_error(-32603, 'Internal error', e.Str())
 				}
@@ -292,7 +309,7 @@ ns {
 
 		F test_un_server() {
 			section "EchoConnectionHandler" {
-				type EchoConnectionHandler(ConnectionHandler)
+				type EchoConnectionHandler(ConnectionDelegate)
 				global on_data
 				F on_data(ech:EchoConnectionHandler, data:Str) {
 					debug('server', 'EchoConnectionHandler on_data()')
@@ -305,20 +322,19 @@ ns {
 					super(ech)
 				}
 			}
-			# sh = ThreadedServerHandler(EchoConnectionHandler)
-			sh = ThreadedServerHandler(F on_connect() {
-				LinesConnectionHandler(EchoConnectionHandler)
+			sh = ThreadedServerDelegate(F on_connect() {
+				LinesConnectionDelegate(EchoConnectionHandler)
 			})
 			net::UnixStreamServer().listen("sock_test", sh)
 		}
 
-		F unix_json_rpc_server(path:Str, methods:Namespace) {
-			sh = net::ThreadedServerHandler(F on_connect() {
+		F unix_json_rpc_server(path:Str, events:Namespace) {
+			sh = net::ThreadedServerDelegate(F on_connect() {
 				F make_json_rpc_handler() {
 					debug('server', 'make_json_rpc_handler()')
-					net::JsonRpcConnectionHandler(methods)
+					net::JsonRpcConnectionHandler(events)
 				}
-				net::LinesConnectionHandler(make_json_rpc_handler)
+				net::LinesConnectionDelegate(make_json_rpc_handler)
 			})
 			log("JSON RPC server is starting to listen on Unix socket ${path}")
 			net::UnixStreamServer().listen(path, sh)
