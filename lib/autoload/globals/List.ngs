@@ -116,6 +116,14 @@ ns {
 	doc Represent ListItem as a string
 	F Str(li:ListItem) "<${li.Type().name} ${li.val}>"
 
+	global inspect
+	doc Inspect list item. Does not inspect .prev and .next values to avoid circular inspection.
+	F inspect(path:Arr, li:ListItem) {
+		["${_inspect_path_to_str(path)} - ${li.Type().name}"] + inspect(path + ["val"], li.val) + %[prev next].map(F(field) {
+			"${_inspect_path_to_str(path)}.${field} - ${if li.(field) then 'not null' else 'null'}"
+		})
+	}
+
 }
 
 TEST l=List([1,2,3]); l.push(4); x=l.shift(); x == 1 and Arr(l) == [2, 3, 4]
