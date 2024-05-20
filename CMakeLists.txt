@@ -1,4 +1,6 @@
-cmake_minimum_required(VERSION 3.0)
+# TODO: check what should be changed in the file after migration from cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
+
 project(NGS)
 
 # TOOD: check how not to use hard coded include and lib directories.
