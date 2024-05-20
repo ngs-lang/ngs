@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ "ubuntu-20.04" ]
+        os: [ "ubuntu-24.04" ]
         version: [ "9", "10", "11" ]
         compiler: [ "gcc", "clang" ]
     steps:
