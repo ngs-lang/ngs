@@ -14,7 +14,7 @@ jobs:
         version: [ "9", "10", "11" ]
         compiler: [ "gcc", "clang" ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
       - name: Setup Compiler
         run: |
           sudo apt-get update
@@ -43,7 +43,7 @@ jobs:
         container: [ "archlinux:base" ] # https://hub.docker.com/_/archlinux/
         compiler: [ "gcc", "clang" ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
       - name: Setup Compiler
         run: |
           pacman -Sy --noconfirm man-db wget curl ${{ matrix.compiler }}
@@ -71,7 +71,7 @@ jobs:
         container: [ "debian:11.1" ]
         version: [ "9", "10" ] # gcc 11 doesn't exist in debian apt
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
       - name: Setup Compiler
         run: |
           apt-get update
@@ -93,7 +93,7 @@ jobs:
         container: [ "debian:11.1" ]
         version: [ "9", "11" ] # clang 10 doesn't exist in debian apt
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
       - name: Setup Compiler
         run: |
           apt-get update
@@ -117,7 +117,7 @@ jobs:
       - name: Install AmazonLinux deps needed specifically for GitHub action
         if: startsWith(matrix.container, 'amazonlinux')
         run: yum -y install tar xz gzip
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
       - name: Setup Compiler
         run: |
           yum -y install man gcc-c++
@@ -140,7 +140,7 @@ jobs:
       - name: Install AmazonLinux deps needed specifically for GitHub action
         if: startsWith(matrix.container, 'amazonlinux')
         run: yum -y install tar xz gzip
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
       - name: Setup Compiler
         run: |
           yum -y install man clang
@@ -161,7 +161,7 @@ jobs:
         container: [ "centos:7" ]
         version: [ "9", "10" ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
       - name: Setup Compiler
         run: |
           yum -y install centos-release-scl epel-release sudo man
@@ -178,7 +178,7 @@ jobs:
         container: [ "macOS-12" ]
         version: [ "10", "11" ]  # On 2023-02-11, version 9 was already broken: "g++-9: warning: '12.6' is not valid for 'mmacosx-version-min'"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
       - name: Setup Compiler
         run: |
           brew install cmake ninja
@@ -196,7 +196,7 @@ jobs:
       matrix:
         container: [ "macOS-12" ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
       - name: Setup Compiler
         run: |
           brew install cmake ninja
@@ -215,7 +215,7 @@ jobs:
         version: [ "10" ]
         arch: [ "aarch64", "s390x", "ppc64le" ]   # , "armv6", "armv7" -- 32 bits archs, currently not supported by ngs
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
       - uses: uraimo/run-on-arch-action@v2.5.1
         name: Run commands
         id: runcmd
