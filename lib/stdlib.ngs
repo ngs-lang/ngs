@@ -801,11 +801,19 @@ section "Hash" {
 	doc %RET - v
 	F .=(h:Hash, field:Str, v) h[field] = v
 
+	# TODO: Check if removing built-in get() makes sense
 	doc Get hash value by key or null if it does not exist
 	doc %EX - h = {"a": 1}
 	doc %EX - h.get("a")  # 1
 	doc %EX - h.get("b")  # null
-	F get(h:Hash, k, dflt=null) super(h, k, Value(dflt, k))
+	F get(h:Hash, k, dflt=null) {
+		k in h returns h[k]
+		Value(dflt, k)
+	}
+
+	TEST {"a": 1}.get("a", { throw Error("Should not run") }) == 1
+	TEST {"a": 1}.get("b", { 2 }) == 2
+	TEST {"a": 1}.get("b", 3) == 3
 
 }
 
@@ -6591,6 +6599,34 @@ F '$()'(p:Process) {
 
 	debug("process2", "\$() returns process ${p.Hash()}")
 	p
+}
+
+block _ {
+	global ($())
+
+	F _command_key(c:Command) {
+		c.argv.map(encode_uri_component).join('=')
+	}
+
+	doc Mock external processes - record
+	F '$()'(p:Process) {
+		super(p)::{
+			return  # WIP
+			ENV !~ {'NGS_RECORD_PROCESSES'} returns
+			# p.Hash().keys().echo()
+			if p.command =~ {'options': '&'} {
+				warn("[mock] Not recording background process. This is not supported yet.")
+				return
+			}
+			if p.command.redirects {
+				warn("[mock] Not recording process with redirects. This is not supported yet. ${p.redirects}")
+				return
+			}
+			# TODO: take into account current directory and environment variables
+			k = p.command._command_key()
+			echo("K $k")
+		}
+	}
 }
 
 # TODO: Free (close) fds on failure
