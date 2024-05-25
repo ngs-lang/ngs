@@ -1,0 +1,158 @@
+ns {
+	# Rudimentary Chain of Responsibility / Intercepting Filters
+	# Inspired by Netty but completely agnostic
+
+	global init, fire, handle
+
+	doc Pipeline for handlers, element is HandlerContext
+	type Pipeline(Eachable1)
+
+	doc Various callbacks from Pipeline
+	type PipelineDelegate
+
+	type Handler
+
+	type HandlerContext
+	type _InternalHandlerContext
+		type _HeadHandlerContext(_InternalHandlerContext)
+		type _TailHandlerContext(_InternalHandlerContext)
+
+	doc Different from Netty, where events are methods on objects.
+	doc Somewhat similar to "msg" convention.
+	type Event
+		# TODO: add super(e) if anything is added to init(e:Event) below
+		type IncomingEvent(Event)
+		type OutgoingEvent(Event)
+
+	# doc Throws NotImplemented
+	# F handle(pd:PipelineDelegate, e:Event) throw NotImplemented("X")
+
+	section "Pipeline" {
+		F init(p:Pipeline) throw InvalidArgument('Pipeline must be initialized with PipelineDelegate')
+		F init(p:Pipeline, delegate:PipelineDelegate) {
+			init(args())
+			p.head = _HeadHandlerContext(p)
+			p.tail = _TailHandlerContext(p)
+			p.head.next = p.tail
+			p.tail.prev = p.head
+		}
+		global each
+		F each(p:Pipeline, cb:Fun) {
+			for(hc = p.head.next; hc !== p.tail; hc .= next) {
+				cb(hc) # .handler?
+			}
+			p
+		}
+
+		global Bool
+		F Bool(p:Pipeline) p.len() > 0
+
+		global len
+		F len(p:Pipeline) {
+			ret = 0
+			p.each({ ret += 1 })
+			ret
+		}
+
+		global push
+		F push(p:Pipeline, h:Handler) {
+			hc = HandlerContext(p, h)
+			hc.prev = p.tail.prev
+			hc.next = p.tail
+			p.tail.prev.next = hc
+			p.tail.prev = hc
+			p
+		}
+
+		F fire(p:Pipeline, e:Event) {
+			debug('COR', {
+				"fire(Pipeline, Event) - ${e.Type().name}"
+			})
+			p.head.next.handle(e)
+		}
+	}
+
+
+	section "Handler" {
+		F handle(h:Handler, hc:HandlerContext, e:Event) {
+			debug('COR', {
+				"handle(Handler, HandlerContext, Event) - ${e.Type().name}. Will call fire(HandlerContext, Event)"
+			})
+			hc.fire(e)
+		}
+	}
+
+	section "HandlerContext" {
+		F init(hc:HandlerContext, pipeline:Pipeline, handler:Handler) {
+			super(hc)
+			init(args())
+			hc.prev = null
+			hc.next = null
+		}
+
+		F handle(hc:HandlerContext, e:Event) {
+			debug('COR', {
+				"handle(HandlerContext, Event) - ${e.Type().name}. Will call Handler#handle(Handler, HandlerContext, Event) ${hc.handler.Type().name}"
+			})
+			hc.handler.handle(hc, e)
+		}
+
+		F fire(hc:HandlerContext, e:Event) {
+			logical_next = ematch e {
+				IncomingEvent hc.next
+				OutgoingEvent hc.prev
+			}
+			debug('COR', {
+				"fire(HandlerContext, Event) - ${e.Type().name}"
+			})
+			logical_next.handle(e)
+			null  # for now
+		}
+	}
+
+	F init(ihc:_InternalHandlerContext, pipeline:Pipeline) init(args())
+
+	F handle(ihc:_InternalHandlerContext, e:Event) {
+		try {
+			debug('COR', "handle(_InternalHandlerContext, Event) ${ihc.Type().name} ${e.Type().name} - before")
+			ihc.pipeline.delegate.handle(e)
+			debug('COR', "handle(_InternalHandlerContext, Event) ${ihc.Type().name} ${e.Type().name} - after")
+		} catch(ex) {
+			throw Error("handle(_InternalHandlerContext, Event) ${ihc.Type().name} ${e.Type().name} - failed to call pipeline delegate")
+		}
+	}
+
+	F init(e:Event) {
+		assert(e, AnyOf(IncomingEvent, OutgoingEvent), 'COR::Event must be either IncomingEvent or OutgoingEvent')
+	}
+
+
+
+	global inspect
+	doc Workaround to avoid circular
+	F inspect(path:Arr, p:Pipeline) {
+		["${_inspect_path_to_str(path)} - ${p.Type().name} of length ${p.len()}"] + p.map_idx_val(F(idx:Int, hc:HandlerContext) "${_inspect_path_to_str(path + [idx])} <${hc.Type().name}>")
+	}
+
+
+	TEST COR::tests::event_handling()
+
+	tests = ns {
+		# TODO: more test
+		# TODO: introduce and use MyHandler instead of Handler
+		type MyDelegate(PipelineDelegate)
+		type MyInEvent(IncomingEvent)
+		F event_handling() {
+			ok = false
+			p = Pipeline(MyDelegate())
+			h = Handler()
+			p.push(h)
+			global handle
+			F handle(h:Handler, hc:HandlerContext, ie:MyInEvent) {
+				ok = true
+			}
+			p.fire(MyInEvent())
+			ok
+		}
+	}
+}

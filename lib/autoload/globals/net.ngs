@@ -63,13 +63,29 @@ ns {
 
 		global init
 
+		type Connection
+
+		type ConnectionPipelineDelegate(COR::PipelineDelegate)
+		F init(cpd:ConnectionPipelineDelegate, connection:Connection) init(args())
+
+		global handle
+		F handle(cpd:ConnectionPipelineDelegate, e:IO::events::Write) {
+			debug('server', "ConnectionPipelineDelegate Write")
+			cpd.connection.send(e.data)
+		}
+		F handle(cpd:ConnectionPipelineDelegate, e:IO::events::Active) {
+			debug('server', 'ConnectionPipelineDelegate Active')
+		}
+		F handle(cpd:ConnectionPipelineDelegate, e:IO::events::Inactive) {
+			debug('server', 'ConnectionPipelineDelegate Inactive')
+		}
+
 		section "Connection" {
-			type Connection
 			F init(c:Connection, server:Server, sock:Int) {
 				c.server = server
 				c.sock = sock
-				# For user data
-				c.user = {}
+				c.pipeline = COR::Pipeline(ConnectionPipelineDelegate(c))
+				c.user = {} # For user data
 			}
 
 			global close
@@ -102,57 +118,54 @@ ns {
 
 		section "ServerDelegate" {
 			type ServerDelegate
-			F init(sh:ServerDelegate) throw InvalidArgument()
-			F init(sh:ServerDelegate, make_connection_handler:Fun) init(args())
+			# F init(sd:ServerDelegate) throw InvalidArgument()
+			# F init(sd:ServerDelegate, make_connection_handler:Fun) init(args())
 
 			global on_listen
-			F on_listen(sh:ServerDelegate, s:Server) {
+			F on_listen(sd:ServerDelegate, s:Server) {
 				debug('server', 'ServerDelegate on_listen()')
 			}
 
 			global on_connect
-			F on_connect(sh:ServerDelegate, c:Connection) {
+			F on_connect(sd:ServerDelegate, c:Connection) {
 				debug('server', 'ServerDelegate on_connect()')
 				throw NotImplemented("on_connect(ServerDelegate) is not implemented in a subtype")
 			}
 
 			global on_end
-			F on_end(sh:ServerDelegate, s:Server) {
+			F on_end(sd:ServerDelegate, s:Server) {
 				debug('server', 'ServerDelegate on_end()')
 			}
 
 		}
 
-
-
-		# ---
-
 		section "ThreadedServerDelegate" {
 			type ThreadedServerDelegate(ServerDelegate)
 
-			F on_connect(sh:ThreadedServerDelegate, c:Connection) {
+			F on_connect(sd:ThreadedServerDelegate, c:Connection) {
 				debug('server', 'ThreadedServerDelegate on_connect()')
 
 				# TODO: join the thread / use Executor
 				Thread("connection-${c.id}", {
 					try {
 						debug('server', 'ThreadedServerDelegate on_listen() - new thread')
-						handler = sh::make_connection_handler()
-						handler.on_connect(c)
+						c.pipeline.fire(IO::events::Active())
+						debug('server', 'ThreadedServerDelegate on_listen() - after IO::events::Active')
 						while true {
 							data = recvfrom(c.sock, 1024, 0, c_sockaddr_un())
 							if data == '' {
-								handler.on_remote_close()
-								debug('server', "After handler.on_remote_close()")
+								debug('server', 'ThreadedServerDelegate Remote closed connection')
+								c.pipeline.fire(IO::events::Inactive())
 								break
 							}
 							debug('server', "ThreadedServerDelegate data -- ${data.SafeStr().limit(1024)}")
-							# c.send("[${c.sock}] Echoing back: ${data}")
-							handler.on_data(data)
+							c.pipeline.fire(IO::events::Read(data))
 							debug('server', "ThreadedServerDelegate on_connect -- after handler.on_data()")
 						}
 					} catch(e) {
+						debug('server', "ThreadedServerDelegate before logging")
 						log("ThreadedServerDelegate - exception in thread: ${e}")
+						debug('server', "ThreadedServerDelegate after logging")
 						guard false
 					}
 				})
@@ -161,7 +174,7 @@ ns {
 		}
 
 		section "UnixStreamServer" {
-			F listen(uss:UnixStreamServer, path:Str, sh:ServerDelegate) {
+			F listen(uss:UnixStreamServer, path:Str, sd:ServerDelegate) {
 				id = 1
 				sock = socket(C_PF_UNIX, C_SOCK_STREAM)
 				uss.sock = sock
@@ -170,166 +183,48 @@ ns {
 				bind(sock, c_sockaddr_un(path))
 				remote_addr = c_sockaddr_un()
 				listen(sock, 5)
-				sh.on_listen(uss)
+				sd.on_listen(uss)
 				while true {
 					accepted = accept(sock, remote_addr)
 					debug('server', "Connection socket: ${accepted}")
 					c = Connection(uss, accepted).set('id', id)
 					id += 1
-					sh.on_connect(c)
+					debug('server', 'Calling delegate on_connect')
+					sd.on_connect(c)
+					debug('server', 'After delegate on_connect')
 					# TODO: how to break the loop?
 				}
-				sh.on_end(uss)
+				sd.on_end(uss)
 			}
 		}
 
-		section "LinesConnectionDelegate" {
-			# TODO: refactor. creating "next" ConnectionDelegate should not be
-			#       the responsibility of the previous ConnectionDelegate.
-
-			type LinesConnectionDelegate(ConnectionDelegate)
-
-			doc make_connection_handler - next ConnectionDelegate in chain
-			F init(lch:LinesConnectionDelegate) throw InvalidArgument()
-
-			F init(lch:LinesConnectionDelegate, make_connection_handler:Fun) {
-				debug('server', "LinesConnectionDelegate init()")
-				init(args())
-			}
-
-			F on_connect(lch:LinesConnectionDelegate, c:Connection) {
-				lch.connection = c
-				lch.buf = ''
-				lch.next = lch::make_connection_handler()
-				lch::next.on_connect(c)
-			}
-
-			F on_data(lch:LinesConnectionDelegate, data:Str) {
-				lch.buf += data
-				while true {
-					# TODO: start the search from previous position
-					# TODO: handle "\r\n"
-					p = pos(lch.buf, "\n")
-					p == null breaks
-					line = lch.buf[0..p]
-					lch::next.on_data(line)
-					lch.buf = lch.buf[(p+1)..null]
-				}
-			}
-
-			F on_remote_close(lch:LinesConnectionDelegate) {
-				if lch.buf {
-					lch::next.on_data(lch.buf)
-					lch.buf = ''
-				}
-				lch::next.on_remote_close()
-			}
-		}
-
-		section "JSON-RPC ConnectionDelegate" {
-
-			VALID_JSON_RPC_REQUEST = {
-				'jsonrpc': '2.0'
-				'method': Str
-				'id': IfExists(AnyOf(Num, Str, Null))
-				'params': IfExists(AnyOf(Arr, Hash))
-			}
-
-			# https://www.jsonrpc.org/specification
-			type JsonRpcConnectionHandler(ConnectionDelegate)
-			F init(jrch:JsonRpcConnectionHandler) throw InvalidArgument()
-
-			F init(jrch:JsonRpcConnectionHandler, events:Namespace) {
-				debug('server', "JsonRpcConnectionHandler init()")
-				init(args())
-			}
-
-			F on_data(jrch:JsonRpcConnectionHandler, data:Str) block b {
-				debug('server', "JsonRpcConnectionHandler on_data()")
-
-				F send_error(code, message, data=null) {
-					error("JsonRpcConnectionHandler on_data send_error -- ${code} ${message} ${data}")
-					ret = {
-						'jsonrpc': '2.0'
-						'id': req.get('id')
-						'error': {
-							'code': code
-							'message': message
-							'data': data
-						}.filterv()
-					}
-					jrch.connection.send(ret.encode_json() + "\n")
-					b.return()
-				}
-
-				req = {}  # allow send_error() to do req.get('id') if we crash in try
-				req = try {
-					data.decode_json()
-				} catch(e:JsonDecodeFail) {
-					send_error(-32700, 'Parse error', e.Hash().filterk(AnyOf('error', 'value', 'position')))
-				}
-
-				if (req !~ VALID_JSON_RPC_REQUEST) send_error(-32600, 'Invalid Request', 'See https://www.jsonrpc.org/specification')
-
-				if (req.method not in jrch.events.methods) send_error(-32601, 'Method not found', "Method ${req.method} not found. Available methods: ${jrch.events.methods.keys()}")
-
-				args = []
-				kwargs = {}
-				if 'params' in req {
-					match req.params {
-						Arr args = req.params
-						Hash kwargs = req.params
-					}
-				}
-
-				debug('server', "JsonRpcConnectionHandler on_data -- invoking ${req.method}")
-				result = try {
-					jrch.events.methods[req.method](*args, **kwargs)
-				} catch(mnf:MethodNotFound) {
-					guard mnf.callable === jrch.events.methods[req.method]
-					send_error(-32602, 'Invalid params', "Correct parameters can be seen in methods' descriptions: ${jrch.events.methods[req.method].Arr()}")
-				} catch(e:Error) {
-					send_error(-32603, 'Internal error', e.Str())
-				}
-
-				if 'id' in req {
-					# response expected
-					ret = {
-						'jsonrpc': '2.0'
-						'id': req.id
-						'result': result
-					}.filterv()
-					debug('server', 'JsonRpcConnectionHandler on_data -- sending reply')
-					jrch.connection.send(ret.encode_json() + "\n")
-				}
-
-			}
-
-		}
 
 		F test_un_server() {
-			section "EchoConnectionHandler" {
-				type EchoConnectionHandler(ConnectionDelegate)
-				global on_data
-				F on_data(ech:EchoConnectionHandler, data:Str) {
-					debug('server', 'EchoConnectionHandler on_data()')
-					ech.connection.send("[${ech.connection.id}] Echoing back (escaped) line: ${data.SafeStr()}\n")
-				}
 
-				global on_remote_close
-				F on_remote_close(ech:EchoConnectionHandler) {
-					debug('server', 'EchoConnectionHandler on_remote_close()')
-					super(ech)
-				}
+			type MyDelegate(ThreadedServerDelegate)
+
+			type MyHandler(COR::Handler)
+
+			global on_connect
+			F on_connect(md:MyDelegate, c:Connection) {
+				c.pipeline.push(IO::handlers::Splitter("\n"))
+				c.pipeline.push(MyHandler())
+				super(md, c)
 			}
-			sh = ThreadedServerDelegate(F on_connect() {
-				LinesConnectionDelegate(EchoConnectionHandler)
-			})
-			net::UnixStreamServer().listen("sock_test", sh)
+			md = MyDelegate()
+
+			global handle
+			F handle(mh:MyHandler, hc:COR::HandlerContext, r:IO::events::Read) {
+				hc.fire(IO::events::Write(r.data + "\n"))
+			}
+
+
+			net::UnixStreamServer().listen("sock_test", md)
 		}
 
+		# TODO: Fix for COR
 		F unix_json_rpc_server(path:Str, events:Namespace) {
-			sh = net::ThreadedServerDelegate(F on_connect() {
+			sd = net::ThreadedServerDelegate(F on_connect() {
 				F make_json_rpc_handler() {
 					debug('server', 'make_json_rpc_handler()')
 					net::JsonRpcConnectionHandler(events)
@@ -337,7 +232,7 @@ ns {
 				net::LinesConnectionDelegate(make_json_rpc_handler)
 			})
 			log("JSON RPC server is starting to listen on Unix socket ${path}")
-			net::UnixStreamServer().listen(path, sh)
+			net::UnixStreamServer().listen(path, sd)
 		}
 
 		# DEBUG=server ngs -pi 'net::test_un_server()'

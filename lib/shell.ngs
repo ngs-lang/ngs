@@ -14,11 +14,10 @@ WEB_SERVER_DIR = Dir(".." / "ngs-web-ui").assert()
 ENV.BROWSER = 'none'
 WEB_SERVER_PORT = 52000
 
-# Hack - names, because parameters' types can only be identifiers
-Server = net::Server
-# Hack - on_listen() can happen for any ServerHandler, not necessarily the one used below.
-F on_listen(sh:net::ServerDelegate, s:net::Server) {
-	super(sh, s)
+type ShellServerDelegate(net::ThreadedServerDelegate)
+
+F on_listen(ssd:ShellServerDelegate, s:net::Server) {
+	super(ssd, s)
 	p = $(x_top_level:: cd:PROXY_DIR npx ts-node src/server.ts ../ngs/ngs-shell.sock &)
 	echo("Proxy PID: ${p.processes[0].pid}")
 
@@ -26,67 +25,75 @@ F on_listen(sh:net::ServerDelegate, s:net::Server) {
     echo("Web server PID: ${web_server.processes[0].pid}")
 }
 
-net::unix_json_rpc_server("ngs-shell.sock", section "events (aka delegate)" ns {
+SHELL_METHODS = ns {
+	F eval(line:Str) {
 
-	# TODO: change to event, something like 'command_line_input'
-	methods = ns {
-		F eval(line:Str) {
+		fname = '<shell line file>'
 
-			fname = '<shell line file>'
-
-			section "Shortcuts" {
-				shortcuts = {
-					'v': 'aws ec2 describe-vpcs'
-					'p-': 'aws codepipeline list-pipelines'
-					'p': '{ require("aws/CodePipeline.ngs")::pipelines::list() }'
-					'p_censored': '{ require("aws/CodePipeline.ngs")::pipelines::list().map(F(p) p.filterk(Not(AnyOf(%[sources revisions])))) }'
-					's-': 'aws cloudformation list-stacks'
-					's': 'saws::stacks()'
-				}
-				line = shortcuts.get(line, line)
+		section "Shortcuts" {
+			shortcuts = {
+				'v': 'aws ec2 describe-vpcs'
+				'p-': 'aws codepipeline list-pipelines'
+				'p': '{ require("aws/CodePipeline.ngs")::pipelines::list() }'
+				'p_censored': '{ require("aws/CodePipeline.ngs")::pipelines::list().map(F(p) p.filterk(Not(AnyOf(%[sources revisions])))) }'
+				's-': 'aws cloudformation list-stacks'
+				's': 'saws::stacks()'
 			}
-			bytecode = compile(line, fname)
-			# TODO: pass warnings
-			#bytecode.meta().warnings.each(F(w) {
-			#	wl = w.location
-			#	warn("${fname}:${wl.first_line}:${wl.first_column} warning: ${w.message}")
-			#})
+			line = shortcuts.get(line, line)
+		}
+		bytecode = compile(line, fname)
+		# TODO: pass warnings
+		#bytecode.meta().warnings.each(F(w) {
+		#	wl = w.location
+		#	warn("${fname}:${wl.first_line}:${wl.first_column} warning: ${w.message}")
+		#})
 
-			func = load(bytecode, "<shell line func>")
-			result = func()
-			log("Result type ${result.Type().name}")
-			result = ui::Element(result)
-			log("Result type after transform() ${result.Type().name}")
-			result.JsonData()
+		func = load(bytecode, "<shell line func>")
+		result = func()
+		log("Result type ${result.Type().name}")
+		result = ui::Element(result)
+		log("Result type after transform() ${result.Type().name}")
+		result.JsonData()
+	}
+
+	# event example: {cur={type=AWS::CodePipeline::Pipeline, id=XXXX}, ref={type=AWS::CodePipeline::Execution, id=XXXX}}
+	F ui_default_action(event) {
+		log("UI default action on ${event}")
+
+		# TODO: move somewhere else
+		# TODO: un-hardcode
+		id = null
+		if event =~ {'ref': {'type': 'AWS::CodePipeline::Execution', 'id': { id=A } }} {
+			log("ui_default_action navigate to AWS::CodePipeline::Execution $id")
 		}
 
-		# event example: {cur={type=AWS::CodePipeline::Pipeline, id=XXXX}, ref={type=AWS::CodePipeline::Execution, id=XXXX}}
-		F ui_default_action(event) {
-			log("UI default action on ${event}")
 
-			# TODO: move somewhere else
-			# TODO: un-hardcode
-			id = null
-			if event =~ {'ref': {'type': 'AWS::CodePipeline::Execution', 'id': { id=A } }} {
-				log("ui_default_action navigate to AWS::CodePipeline::Execution $id")
-			}
+	}
 
+	section "tests" {
 
+		F test() {
+			"test method active"
 		}
 
-		section "tests" {
+		F test_add_one(n:Int) {
+			n + 1
+		}
 
-			F test() {
-				"test method active"
-			}
-
-			F test_add_one(n:Int) {
-				n + 1
-			}
-
-			F test_div_by_zero() {
-				1 / 0
-			}
+		F test_div_by_zero() {
+			1 / 0
 		}
 	}
-})
+}
+
+F on_connect(ssd:ShellServerDelegate, c:net::Connection) {
+	debug('server', 'ShellServerDelegate#on_connect()')
+	c.pipeline.push(IO::handlers::Splitter("\n"))
+	c.pipeline.push(IO::handlers::JsonRpc(SHELL_METHODS))
+	super(ssd, c)
+}
+
+uss = net::UnixStreamServer()
+uss.listen("ngs-shell.sock", ShellServerDelegate())
+
+net::unix_stream_server("ngs-shell.sock", ShellServerDelegate())
