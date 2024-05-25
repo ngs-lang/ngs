@@ -817,7 +817,7 @@ section "Hash" {
 
 }
 
-section "Result and friends - types" {
+section "Result and friends" {
 	doc Result of a computation
 	doc val - computed value or exception
 	type Result
@@ -829,6 +829,109 @@ section "Result and friends - types" {
 		doc Failed computation
 		doc val - exception
 		type Failure(Result)
+
+	doc Thrown by get(Failure) as it has no value to get
+	type ResultFail(Error)
+
+	doc Runs the computation and wraps the result: a value is wrapped in Success and an exception is wrapped in Failure.
+	doc %RET - Success or Failure
+	F Result(fun:Fun) {
+		try {
+			Success(fun())
+		} catch(e) {
+			Failure(e)
+		}
+	}
+
+	doc Initialize Success with the given value.
+	F init(s:Success, v=null) s.val = v
+
+	doc Initialize Failure with the given value.
+	F init(f:Failure, e:Exception) f.val = e
+
+	doc Gets wrapped value
+	doc %RET - Any
+	doc %EX - { 1 / 10 }.Result().get()  # 0
+	F get(s:Success) s.val
+
+	doc Throws ResultFail
+	doc %EX - { 1 / 0 }.Result().get()  # ResultFail exception
+	F get(f:Failure) {
+		throw ResultFail("Can not get value of Failure", f.val)
+	}
+
+	doc Gets wrapped value
+	doc %RET - Any
+	doc %EX - { 1 / 10 }.Result().get(100)  # 0
+	F get(s:Success, dflt) s.val
+
+	doc Returns dflt
+	doc %EX - { 1 / 0 }.Result().get(100)  # 100
+	F get(f:Failure, dflt) dflt.Value()
+
+	doc %RET - s
+	F dflt(s:Success, x) s
+
+	doc %RET - Value(x,f)
+	F dflt(f:Failure, x) Success(x.Value(f))
+
+	TEST Success(1).dflt(2).get() == 1
+	TEST Failure(Error("test")).dflt(2).get() == 2
+
+	doc Run fun with wrapped value.
+	F each(s:Success, fun:Fun) {
+		fun(s.get())
+		s
+	}
+
+	doc Run fun with wrapped value. If exception is thrown, Failure is returned; otherwise Success with new value is returned.
+	doc %RET - Result
+	F map(s:Success, fun:Fun) Result({ fun(s.get()) })
+
+	doc No-op, returns f
+	doc %RET - f
+	F each(f:Failure, fun:Fun) f
+
+	doc No-op, returns f
+	doc %RET - f
+	F map(f:Failure, fun:Fun) f
+
+	doc Check whether wrapped value matches the pattern.
+	doc %RET - s or Failure
+	doc %EX - Success(10).filter(X>5)   # <Success val=10>
+	doc %EX - Success(10).filter(X>15)  # <Failure val=<ResultFail ...>>
+	F filter(s:Success, pattern=Bool.constructors) {
+		s.val =~ pattern returns s
+		Failure(ResultFail("Success filtered out, resulting Failure").set('pattern', pattern))
+	}
+
+	TEST Result({100}).filter() == Success(100)
+
+	doc No-op, returns f
+	doc %RET - f
+	doc %EX - Failure("blah").filter(X>5)  # <Failure val=blah>
+	F filter(f:Failure, pattern=Bool.constructors) f
+
+	TEST Result({1/0}).filter() is Failure
+
+	doc Convert Success to Bool (true)
+	doc %RET - true
+	F Bool(s:Success) true
+
+	doc Convert Failure to Bool (false)
+	doc %RET - false
+	F Bool(f:Failure) false
+
+	doc EXPERIMENTAL! Do not use!
+	F ExitCode(r:Result) r.Bool().ExitCode()
+
+	TEST {read("/etc/passwd")}.Result() is Success
+	TEST {read("NO-SUCH-FILE")}.Result() is Failure
+	TEST Success(10).map(X*2).get() == 20
+	TEST { { throw Error("xx") }.Result().map(X*2).get() }.assert(ResultFail)
+
+	doc Convert Success into JSON compatible data structure - the value of the computation
+	F JsonData(s:Success) s.get().JsonData()
 
 }
 
@@ -1196,6 +1299,21 @@ doc %EX - [1,2,3].map(X*4)  # [4,8,12]
 F map(e:Eachable, mapper:Fun)
 	collector
 		e.each(collect + mapper)
+
+doc Map and flatten.
+doc Applies mapper to each element of e, collects results, and flattens the results (one level).
+doc %EX - [2,0,4].flat_map(F(e) Result({ 12 / e}).Box())  # [6, 3]
+doc %EX - [2,0,4].flat_map(F(e) [1, e*2])  # [1,4, 1,0, 1,8]
+F flat_map(e:Eachable1, mapper:Fun) {
+	collector {
+		e.each(F(elt) {
+			elt.mapper().each(collect)
+		})
+	}
+}
+
+TEST [2,0,4].flat_map(F(e) Result({ 12 / e}).Box()) == [6, 3]
+TEST [2,0,4].flat_map(F(e) [1, e*2]) == [1,4, 1,0, 1,8]
 
 doc EXPERIMENTAL! Do not use!
 doc Map e to same type. Mnemonics: "map original" / "MAP to Original type".
@@ -4109,126 +4227,24 @@ section "Box" {
 	F JsonData(fb:FullBox) fb.get().JsonData()
 }
 
-# === Result =====================================
+section "Results" {
 
-doc Thrown by get(Failure) as it has no value to get
-type ResultFail(Error)
+	doc Results, an array-like of Result elements
+	type Results(ArrLike)
 
+		F Str(r:Results) "<${r.Type().name} ${r.group(F(x) x.Type().name).mapv(len).map("$X:$Y").join(" ")}>"
 
+	type ResultsException(Error)
+		doc ResultsException where only failures are stored
+		type FailuresException(ResultsException)
 
-doc Results, an array-like of Result elements
-type Results(ArrLike)
-
-	F Str(r:Results) "<${r.Type().name} ${r.group(F(x) x.Type().name).mapv(len).map("$X:$Y").join(" ")}>"
-
-type ResultsException(Error)
-	doc ResultsException where only failures are stored
-	type FailuresException(ResultsException)
-
-F init(re:ResultsException, msg:Str, results:Results) {
-	super(re, msg)
-	re.set('results', results)
-}
-
-doc Runs the computation and wraps the result: a value is wrapped in Success and an exception is wrapped in Failure.
-doc %RET - Success or Failure
-F Result(fun:Fun) {
-	try {
-		Success(fun())
-	} catch(e) {
-		Failure(e)
+	F init(re:ResultsException, msg:Str, results:Results) {
+		super(re, msg)
+		re.set('results', results)
 	}
 }
 
-doc Initialize Success with the given value.
-F init(s:Success, v=null) s.val = v
 
-doc Initialize Failure with the given value.
-F init(f:Failure, e:Exception) f.val = e
-
-doc Gets wrapped value
-doc %RET - Any
-doc %EX - { 1 / 10 }.Result().get()  # 0
-F get(s:Success) s.val
-
-doc Throws ResultFail
-doc %EX - { 1 / 0 }.Result().get()  # ResultFail exception
-F get(f:Failure) {
-	throw ResultFail("Can not get value of Failure", f.val)
-}
-
-doc Gets wrapped value
-doc %RET - Any
-doc %EX - { 1 / 10 }.Result().get(100)  # 0
-F get(s:Success, dflt) s.val
-
-doc Returns dflt
-doc %EX - { 1 / 0 }.Result().get(100)  # 100
-F get(f:Failure, dflt) dflt.Value()
-
-doc %RET - s
-F dflt(s:Success, x) s
-
-doc %RET - Value(x,f)
-F dflt(f:Failure, x) Success(x.Value(f))
-
-TEST Success(1).dflt(2).get() == 1
-TEST Failure(Error("test")).dflt(2).get() == 2
-
-doc Run fun with wrapped value.
-F each(s:Success, fun:Fun) {
-	fun(s.get())
-	s
-}
-
-doc Run fun with wrapped value. If exception is thrown, Failure is returned; otherwise Success with new value is returned.
-doc %RET - Result
-F map(s:Success, fun:Fun) Result({ fun(s.get()) })
-
-doc No-op, returns f
-doc %RET - f
-F each(f:Failure, fun:Fun) f
-
-doc No-op, returns f
-doc %RET - f
-F map(f:Failure, fun:Fun) f
-
-doc Check whether wrapped value matches the pattern.
-doc %RET - s or Failure
-doc %EX - Success(10).filter(X>5)   # <Success val=10>
-doc %EX - Success(10).filter(X>15)  # <Failure val=<ResultFail ...>>
-F filter(s:Success, pattern=Bool.constructors) {
-	s.val =~ pattern returns s
-	Failure(ResultFail("Success filtered out, resulting Failure").set('pattern', pattern))
-}
-
-TEST Result({100}).filter() == Success(100)
-
-doc No-op, returns f
-doc %RET - f
-doc %EX - Failure("blah").filter(X>5)  # <Failure val=blah>
-F filter(f:Failure, pattern=Bool.constructors) f
-
-TEST Result({1/0}).filter() is Failure
-
-doc Convert Success to Bool (true)
-doc %RET - true
-F Bool(s:Success) true
-
-doc Convert Failure to Bool (false)
-doc %RET - false
-F Bool(f:Failure) false
-
-doc EXPERIMENTAL! Do not use!
-F ExitCode(r:Result) r.Bool().ExitCode()
-
-TEST {read("/etc/passwd")}.Result() is Success
-TEST {read("NO-SUCH-FILE")}.Result() is Failure
-TEST Success(10).map(X*2).get() == 20
-TEST { { throw Error("xx") }.Result().map(X*2).get() }.assert(ResultFail)
-
-doc Convert Success into JSON compatible data structure - the value of the computation
-F JsonData(s:Success) s.get().JsonData()
 
 # === Diff =======================================
 
@@ -7246,7 +7262,9 @@ type SubSeq
 doc Convert Success to FullBox
 doc %RET - FullBox
 doc %EX - Box("abcd" ~ /^(..)/).map({"First two letters: ${A[1]}"}).get("(too short)")  # First two letters: ab
-F Box(s:Success) FullBox(ms)
+F Box(s:Success) FullBox(s.get())
+
+TEST Box("abcd" ~ /^(..)/).map({"First two letters: ${A[1]}"}).get("(too short)") == "First two letters: ab"
 
 doc Convert failure to EmptyBox
 doc %RET - EmptyBox
