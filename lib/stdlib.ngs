@@ -5075,6 +5075,7 @@ section "Thread" block _ {
 	doc Creates and runs a thread. The code that the created thread runs is f, which is passed arg.
 	F init(t:Thread, name:Str, f:Fun, arg) {
 		t.id = name
+		t.do_print_exception = true
 		debug("process", "Creating thread ${t.id}")
 		thread_attr = c_pthread_attr_t()
 		c_pthread_attr_init(thread_attr)
@@ -5083,7 +5084,14 @@ section "Thread" block _ {
 			# might have been removed already, so passing t via the argument
 			Thread.local.thread = t_arg[0]
 			debug("process", "Thread set up done, will run thread code")
-			f(t_arg[1])
+			try {
+				f(t_arg[1])
+			} catch(e:Exception) {
+				if t.do_print_exception {
+					print_exception(e)
+				}
+				throw e
+			}
 		}
 		create_result = c_pthread_create(thread_attr, thread_setup_wrapper, [t, arg])
 		code = create_result[0]
@@ -5317,7 +5325,7 @@ section "Logging and status reporting" {
 		F debug(facility:Str, str_or_producer) {
 			if facility in DEBUG or '*' in DEBUG {
 				s = str_or_producer.Value()
-				echo(stdlib_error_fd, "[DEBUG $facility ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] $s")
+				echo(stdlib_error_fd, "[DEBUG ${Time()} ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()} $facility] $s")
 			}
 		}
 
@@ -5328,7 +5336,7 @@ section "Logging and status reporting" {
 	doc %EX - # Approximate output on stderr:
 	doc %EX - # [ERROR 2018-01-01 00:00:00 YOUR_TZ] Failed to read configuration file. Will clean up and exit now.
 	F error(s:Str) {
-		echo(stdlib_error_fd, "[ERROR ${Time()}] $s")
+		echo(stdlib_error_fd, "[ERROR ${Time()} ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] $s")
 		maybe_print_stacktrace('NGS_ERROR_BACKTRACE', '[ERROR BACKTRACE]')
 	}
 
@@ -7859,7 +7867,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null, echo=echo
 
 	F err(message) echo(pfx + message)
 
-	pfx = "[ERROR ${Time()}] " + "  " * level
+	pfx = "[ERROR ${Time()} ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] " + "  " * level
 	h = Hash(e)
 
 	m = try {
