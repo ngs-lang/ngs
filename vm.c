@@ -3954,6 +3954,10 @@ int vm_call_match_arg_to_type(VM *vm, CTX *ctx, VALUE arg, VALUE t, VALUE *resul
 	return obj_is_of_type(vm, arg, t);
 }
 
+int vm_call_match_arg_to_any(VM *vm, CTX *ctx, VALUE arg, VALUE type_any, VALUE *result) {
+	return 1;
+}
+
 int vm_call_match_arg_to_pattern(VM *vm, CTX *ctx, VALUE arg, VALUE pattern, VALUE *result) {
 	METHOD_RESULT mr;
 	VALUE pattern_matching_args[2] = {arg, pattern};

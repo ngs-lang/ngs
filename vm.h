@@ -360,6 +360,7 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len);
 void set_global(VM *vm, const char *name, VALUE v);
 METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result);
 int vm_call_match_arg_to_type(VM *vm, CTX *ctx, VALUE arg, VALUE t, VALUE *result);
+int vm_call_match_arg_to_any(VM *vm, CTX *ctx, VALUE arg, VALUE type_any, VALUE *result);
 int vm_call_match_arg_to_pattern(VM *vm, CTX *ctx, VALUE arg, VALUE pattern, VALUE *result);
 METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, int argc, const VALUE *argv);
 BYTECODE_HANDLE *ngs_create_bytecode();
