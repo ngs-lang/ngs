@@ -3963,7 +3963,7 @@ int vm_call_match_arg_to_pattern(VM *vm, CTX *ctx, VALUE arg, VALUE pattern, VAL
 	if (mr != METHOD_OK) {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->CallFail);
-		set_normal_type_instance_field(exc, make_string("message"), make_string("vm_call_match_arg_to_pattern() failed to pattern match"));
+		set_normal_type_instance_field(exc, make_string("message"), make_string("vm_call_match_arg_to_pattern() - error occurred while matching"));
 		set_normal_type_instance_field(exc, make_string("argument"), arg);
 		set_normal_type_instance_field(exc, make_string("pattern"), pattern);
 		if (mr == METHOD_EXCEPTION) {
@@ -3978,7 +3978,7 @@ int vm_call_match_arg_to_pattern(VM *vm, CTX *ctx, VALUE arg, VALUE pattern, VAL
 	if (mr != METHOD_OK) {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->CallFail);
-		set_normal_type_instance_field(exc, make_string("message"), make_string("vm_call_match_arg_to_pattern() failed to convert pattern matching result to Bool"));
+		set_normal_type_instance_field(exc, make_string("message"), make_string("vm_call_match_arg_to_pattern() - error converting pattern matching result to Bool"));
 		set_normal_type_instance_field(exc, make_string("pattern_matching_result"), pattern_matching_result);
 		if (mr == METHOD_EXCEPTION) {
 			set_normal_type_instance_field(exc, make_string("cause"), to_bool_result);
