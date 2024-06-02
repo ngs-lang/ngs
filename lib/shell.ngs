@@ -1,119 +1,129 @@
-# WIP
-# XXX: Ugly hack to prevent direct output to stdout.
-F '$()'(cp:CommandsPipeline) {
-	cp.options .= without('top_level')
-	if cp.options.get('x_top_level') {
-		cp.options.top_level = cp.options.x_top_level
+ns {
+	# WIP
+	# Run with: ngs -e 'require("./lib/shell.ngs")' server
+	SOCK_FILE = "ngs-shell.sock"
+	PROXY_DIR = Dir(".." / "ngs-web-ui-proxy").assert()
+	WEB_SERVER_DIR = Dir(".." / "ngs-web-ui").assert()
+	WEB_SERVER_PORT = 52000
+
+	doc Rudimentary client as phase 1.
+	doc Not implemented yet.
+	doc Send a command and poll for results.
+	F client(cmd:Str) {
+		throw NotImplemented()
 	}
-	guard false
-}
 
-PROXY_DIR = Dir(".." / "ngs-web-ui-proxy").assert()
+	doc Starts shell server, JSON RPC proxy, and a browser client
+	F server() {
+		ENV.BROWSER = 'none'
 
-WEB_SERVER_DIR = Dir(".." / "ngs-web-ui").assert()
-ENV.BROWSER = 'none'
-WEB_SERVER_PORT = 52000
-
-section "Censoring for demo purposes" {
-	_DESCENDABLE1 = AllOf(Eachable1, Not(Int), Not(Str))
-
-	F _censor(x) x
-
-	NGS_CENSOR = ENV.get('NGS_CENSOR')
-	if NGS_CENSOR {
-		words = NGS_CENSOR.split(',')
-		F _censor(x:Str) {
-			ret = x
-			words.each_idx_val(F(i, v) {
-				ret .= replace(v, "CENSORED${i+1}")
-			})
-			ret
-		}
-		F _censor(x:_DESCENDABLE1) x.map(_censor)
-		F _censor(x:Eachable2) x.mapv(_censor)
-	}
-}
-
-type ShellServerDelegate(net::ThreadedServerDelegate)
-
-F on_listen(ssd:ShellServerDelegate, s:net::Server) {
-	super(ssd, s)
-	p = $(x_top_level:: cd:PROXY_DIR npx ts-node src/server.ts ../ngs/ngs-shell.sock &)
-	echo("Proxy PID: ${p.processes[0].pid}")
-
-	web_server = $(cd:WEB_SERVER_DIR npm start &)
-    echo("Web server PID: ${web_server.processes[0].pid}")
-}
-
-SHELL_METHODS = ns {
-	F eval(line:Str) {
-
-		fname = '<shell line file>'
-
-		section "Shortcuts" {
-			shortcuts = {
-				'v': 'aws ec2 describe-vpcs'
-				'p-': 'aws codepipeline list-pipelines'
-				'p': '{ require("aws/CodePipeline.ngs")::pipelines::list() }'
-				'p_censored': '{ require("aws/CodePipeline.ngs")::pipelines::list().map(F(p) p.filterk(Not(AnyOf(%[sources revisions])))) }'
-				's-': 'aws cloudformation list-stacks'
-				's': 'saws::stacks()'
+		# XXX: Ugly hack to prevent direct output to stdout.
+		global ($())
+		F '$()'(cp:CommandsPipeline) {
+			cp.options .= without('top_level')
+			if cp.options.get('x_top_level') {
+				cp.options.top_level = cp.options.x_top_level
 			}
-			line = shortcuts.get(line, line)
-		}
-		bytecode = compile(line, fname)
-		# TODO: pass warnings
-		#bytecode.meta().warnings.each(F(w) {
-		#	wl = w.location
-		#	warn("${fname}:${wl.first_line}:${wl.first_column} warning: ${w.message}")
-		#})
-
-		func = load(bytecode, "<shell line func>")
-		result = func()
-		log("Result type ${result.Type().name}")
-		result = ui::Element(result)
-		log("Result type after transform() ${result.Type().name}")
-		result.JsonData()._censor()
-	}
-
-	# event example: {cur={type=AWS::CodePipeline::Pipeline, id=XXXX}, ref={type=AWS::CodePipeline::Execution, id=XXXX}}
-	F ui_default_action(event) {
-		log("UI default action on ${event}")
-
-		# TODO: move somewhere else
-		# TODO: un-hardcode
-		id = null
-		if event =~ {'ref': {'type': 'AWS::CodePipeline::Execution', 'id': { id=A } }} {
-			log("ui_default_action navigate to AWS::CodePipeline::Execution $id")
+			guard false
 		}
 
 
-	}
+		section "Censoring for demo purposes" {
+			_DESCENDABLE1 = AllOf(Eachable1, Not(Int), Not(Str))
 
-	section "tests" {
+			F _censor(x) x
 
-		F test() {
-			"test method active"
+			NGS_CENSOR = ENV.get('NGS_CENSOR')
+			if NGS_CENSOR {
+				words = NGS_CENSOR.split(',')
+				F _censor(x:Str) {
+					ret = x
+					words.each_idx_val(F(i, v) {
+						ret .= replace(v, "CENSORED${i+1}")
+					})
+					ret
+				}
+				F _censor(x:_DESCENDABLE1) x.map(_censor)
+				F _censor(x:Eachable2) x.mapv(_censor)
+			}
 		}
 
-		F test_add_one(n:Int) {
-			n + 1
+		type ShellServerDelegate(net::ThreadedServerDelegate)
+
+		global on_listen
+		F on_listen(ssd:ShellServerDelegate, s:net::Server) {
+			super(ssd, s)
+			p = $(x_top_level:: cd:PROXY_DIR npx ts-node src/server.ts ../ngs/ngs-shell.sock &)
+			echo("Proxy PID: ${p.processes[0].pid}")
+
+			web_server = $(cd:WEB_SERVER_DIR npm start &)
+			echo("Web server PID: ${web_server.processes[0].pid}")
 		}
 
-		F test_div_by_zero() {
-			1 / 0
+		tl = Timeline()
+		SHELL_METHODS = ns {
+			F eval(line:Str) {
+
+				fname = '<shell line file>'
+
+				section "Shortcuts" {
+					shortcuts = {
+						'v': 'aws ec2 describe-vpcs'
+						'p-': 'aws codepipeline list-pipelines'
+						'p': '{ require("aws/CodePipeline.ngs")::pipelines::list() }'
+						'p_censored': '{ require("aws/CodePipeline.ngs")::pipelines::list().map(F(p) p.filterk(Not(AnyOf(%[sources revisions])))) }'
+						's-': 'aws cloudformation list-stacks'
+						's': 'saws::stacks()'
+					}
+					line = shortcuts.get(line, line)
+				}
+				bytecode = compile(line, fname)
+				# TODO: pass warnings
+				#bytecode.meta().warnings.each(F(w) {
+				#	wl = w.location
+				#	warn("${fname}:${wl.first_line}:${wl.first_column} warning: ${w.message}")
+				#})
+
+				func = load(bytecode, "<shell line func>")
+				result = func()
+				log("Result type ${result.Type().name}")
+				result = ui::Element(result)
+				log("Result type after transform() ${result.Type().name}")
+				result.JsonData()._censor()
+			}
+
+			# event example: {cur={type=AWS::CodePipeline::Pipeline, id=XXXX}, ref={type=AWS::CodePipeline::Execution, id=XXXX}}
+			F ui_default_action(event) {
+				log("UI default action on ${event}")
+
+				# TODO: move somewhere else
+				# TODO: un-hardcode
+				id = null
+				if event =~ {'ref': {'type': 'AWS::CodePipeline::Execution', 'id': { id=A } }} {
+					log("ui_default_action navigate to AWS::CodePipeline::Execution $id")
+				}
+
+
+			}
+
+			section "tests" {
+				F test() "test method active"
+				F test_add_one(n:Int) n + 1
+				F test_div_by_zero() 1 / 0
+			}
 		}
+
+		global on_connect
+		F on_connect(ssd:ShellServerDelegate, c:net::Connection) {
+			debug('server', 'ShellServerDelegate#on_connect()')
+			c.pipeline.push(IO::handlers::Splitter("\n"))
+			c.pipeline.push(IO::handlers::JsonRpc(SHELL_METHODS))
+			super(ssd, c)
+		}
+
+		uss = net::UnixStreamServer()
+		uss.listen(SOCK_FILE, ShellServerDelegate())
+
+		net::unix_stream_server(SOCK_FILE, ShellServerDelegate())
 	}
 }
-
-F on_connect(ssd:ShellServerDelegate, c:net::Connection) {
-	debug('server', 'ShellServerDelegate#on_connect()')
-	c.pipeline.push(IO::handlers::Splitter("\n"))
-	c.pipeline.push(IO::handlers::JsonRpc(SHELL_METHODS))
-	super(ssd, c)
-}
-
-uss = net::UnixStreamServer()
-uss.listen("ngs-shell.sock", ShellServerDelegate())
-
-net::unix_stream_server("ngs-shell.sock", ShellServerDelegate())
