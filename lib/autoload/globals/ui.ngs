@@ -2,6 +2,8 @@ ns {
 	# WIP
 	global init, JsonData
 
+	_cp = require("aws/CodePipeline.ngs")
+
 	# TODO:
 	# * Recreate previous version but cleanly
 	# * Move transformation to table from shell.ngs to this file
@@ -70,6 +72,10 @@ ns {
 
 		fields_names = a.map(keys).flatten().uniq()  # TODO: make fields order configurable?
 
+		if a[0] is _cp::Pipeline {
+			fields_names .= reject('last_execution_id')  # Temp hack
+		}
+
 		Table().set(
 			columns = fields_names.map(Column).Columns()
 			rows = a.map(Row(fields_names, X)).Rows()
@@ -100,9 +106,9 @@ ns {
 
 	section "AWS" {
 		# TODO: Move whatever possible from CodePipeline.ngs to AbstractProcess.ngs
-		_cp = require("aws/CodePipeline.ngs")
 
 		# WIP
+		# Think: it's probably not always the case that Status should be a UI object
 		F Element(s:AbstractProcess::Status::Status) {
 			Object([
 				ProcessStatus(s.Type().name, s.text)
@@ -122,8 +128,10 @@ ns {
 			idx = Iter(0..null)
 			idxs = fields_names.Hash({idx.next()})  # Ex: {name=0, status=1, sources=2, revisions=3, last_executed=4, approvals=5, progress=6}
 			r.children.filter(Object).each(F(o) o.cur = raw({'type': 'AWS::CodePipeline::Pipeline', 'id': pipeline.name}))
-			for k in %[status last_executed last_execution_id progress] {
+			for k in %[status last_executed progress] {
 				r.children[idxs[k]].when(Object, {
+					# Later: A.action = 'navigate'
+					# For now, deduce that "ref" means navigate
 					A.ref = raw({'type': 'AWS::CodePipeline::Execution', 'id': pipeline.last_execution_id})
 				})
 			}
