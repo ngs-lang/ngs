@@ -14,6 +14,26 @@ WEB_SERVER_DIR = Dir(".." / "ngs-web-ui").assert()
 ENV.BROWSER = 'none'
 WEB_SERVER_PORT = 52000
 
+section "Censoring for demo purposes" {
+	_DESCENDABLE1 = AllOf(Eachable1, Not(Int), Not(Str))
+
+	F _censor(x) x
+
+	NGS_CENSOR = ENV.get('NGS_CENSOR')
+	if NGS_CENSOR {
+		words = NGS_CENSOR.split(',')
+		F _censor(x:Str) {
+			ret = x
+			words.each_idx_val(F(i, v) {
+				ret .= replace(v, "CENSORED${i+1}")
+			})
+			ret
+		}
+		F _censor(x:_DESCENDABLE1) x.map(_censor)
+		F _censor(x:Eachable2) x.mapv(_censor)
+	}
+}
+
 type ShellServerDelegate(net::ThreadedServerDelegate)
 
 F on_listen(ssd:ShellServerDelegate, s:net::Server) {
@@ -53,7 +73,7 @@ SHELL_METHODS = ns {
 		log("Result type ${result.Type().name}")
 		result = ui::Element(result)
 		log("Result type after transform() ${result.Type().name}")
-		result.JsonData()
+		result.JsonData()._censor()
 	}
 
 	# event example: {cur={type=AWS::CodePipeline::Pipeline, id=XXXX}, ref={type=AWS::CodePipeline::Execution, id=XXXX}}
