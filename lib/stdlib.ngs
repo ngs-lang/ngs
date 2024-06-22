@@ -5798,6 +5798,8 @@ TEST assert(Program('ls')) == Program('ls')
 doc EXPERIMENTAL!
 F Arg(p:Program) p.name
 
+F Str(p:Program) p.name
+
 F init(pp:ProcessesPipeline, cp:CommandsPipeline) pp.set(
 	cp = cp
 	processes = []
@@ -6339,10 +6341,10 @@ F wait(p:Process) {
 	p.exit_signal = C_WTERMSIG(w[1])
 	finished_ok(p) returns p
 	message = collector/Lines() {
-		argv0 = ("'" + try p.command.argv[0] + "'") tor '(with unknown name)'
+		argv0 = ("'" + (try p.command.argv[0].Str()) + "'")
 		collect("Executing external process ${argv0} failed")
 		collect("Executable was found at ${p.executable}")
-		collect("Command: ${p.command.argv.map(escape_bash).join(' ') tor '(unavailable)'}")
+		collect("Command: ${p.command.argv.map(Str).map(escape_bash).join(' ') tor '(unavailable)'}")
 		if p.exit_code is not Null {
 			collect("Command exited with code: ${p.exit_code}")
 		}
