@@ -5747,7 +5747,7 @@ section "Path" {
 
 	doc Decode Path and its subtypes
 	doc %RET - instance of Path or a subtype.
-	F decode(s:Str, p) {
+	F decode(s:Str, p:Type) {
 		guard p <= Path
 		p(s)
 	}
