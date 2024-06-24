@@ -290,6 +290,17 @@ F assert(val, pattern, msg:Str="Assertion failed") {
 	val
 }
 
+doc Throws e with given message if val does not match the pattern
+doc %RET - val
+F assert(val, pattern, e:Exception) {
+	not(val =~ pattern) throws e::{
+		A.dflt('cause', { AssertFail("Assertion failed").set(val=val, pattern=pattern) })
+	}
+	val
+}
+
+TEST type MyExc(Exception); { assert(1, Str, MyExc("blah")) }.assert(MyExc)
+
 doc Throws AssertFail with given message if val is falsy
 doc val - if evaluates to false, causes AssertFail exception
 doc msg - message for the exception, defaults to "Assertion failed"
@@ -1118,7 +1129,7 @@ section "=~ Matching" {
 						pat_v is IfExists
 					}
 				} else {
-					assert(pat_v is not IfExists, 'IfExists value only works with keys of types: Str, Int, Real')
+					assert(pat_v, Not(IfExists), NotImplemented('IfExists value only works with keys of types: Str, Int, Real'))
 					if x_keys is Null {
 						x_keys = x.Hash().keys()
 					}
@@ -3016,7 +3027,7 @@ F flatten(e:Eachable1) {
 	guard not(e is Int)
 	collector
 		e.each(F(x) {
-			assert(x is Eachable1 and x is not Int, 'flatten() elements must be Eachable1, excluding Int')
+			assert(x, AllOf(Eachable1, Not(Int)), InvalidArgument('flatten() elements must be Eachable1, excluding Int'))
 			x.each(collect)
 		})
 }
@@ -4723,7 +4734,7 @@ section "Strings and characters" {
 	doc %EX - Str("x", 3)  # 'x  '
 	doc %EX - Str("x",-3)  # '  x'
 	F Str(s:Str, target_width:Int, ch:Str=' ') {
-		assert(len(ch) == 1)
+		assert(len(ch), 1, InvalidArgument("ch must be an Str of length 1"))
 		l = s.len()
 		pad_on_left = target_width < 0
 		if pad_on_left {
@@ -5695,8 +5706,7 @@ section "Path" {
 
 	doc Creates temporary file using `mktemp` and arranges deletion of the file upon exit from the NGS script.
 	F init(t:TmpFsObj, cleanup_policy:CleanupPolicy=RemoveCleanupPolicy()) {
-		assert(t, {'path': Str}, 'init(TmpFsObj, ...) expects path to be set and to be a string')
-		assert(t.path, 'init(TmpFsObj, ...) expects path to be non-empty string')
+		assert(t, {'path': AllOf(Str, Bool.constructors)}, InvalidArgument('init(TmpFsObj, ...) expects path to be non-empty string'))
 		t.fd = null
 		t.cleanup_policy = cleanup_policy
 		debug("file", "Created ${t.Type().name} at ${t.path}")
@@ -6449,7 +6459,7 @@ F Argv(h:Hash) {
 			}
 
 			if k is Repeat {
-				assert(k, {'pattern': Str, 'count': NumRange }, 'Argv: Repeat() must repeat a string and count must be NumRange')
+				assert(k, {'pattern': Str, 'count': NumRange }, InvalidArgument('Argv: Repeat() must repeat a string and count must be NumRange'))
 				assert(v.len(), k.count, "Switch ${k.pattern} has ${v.len()} values, out of specified range ${k.count}")
 				v.each(F(elt) {
 					collect(k.pattern)
@@ -6523,7 +6533,7 @@ F '$()'(p:Process) {
 	debug("process", "Parsed command: ${argv}")
 
 	if log_opt = p.command.options.get('log') {
-		assert(log_opt, AnyOf(true, Str), 'log: option must be either true or a string')
+		assert(log_opt, AnyOf(true, Str), InvalidArgument('log: option must be either true or a string'))
 		F redir_str(r:CommandRedir) {
 			(r.fd or '').Str() + r.marker + safe_escape_bash(r.datum)
 		}
@@ -8222,6 +8232,8 @@ section "retry() and friends" {
     	not(val =~ pattern) throws RetryAssertFail(msg).set(val=val, pattern=pattern)
     	val
     }
+
+    # TODO: retry_assert(val, pattern, Exception) # needs design
 
     doc Similar to assert(). Caught and ignored by nearest retry() on all but last retry.
     doc %STATUS - experimental

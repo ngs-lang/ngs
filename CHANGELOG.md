@@ -21,6 +21,7 @@
 * Add `code(Type)`
 * Add `flat_map(Eachable1, Fun)`
 * Add `COR` - Chain of Responsibility
+* Add `assert(val, pattern, Exception)`
 
 ### Fixes and improvements
 * Fix `AtPath` for non-eachables

@@ -123,7 +123,7 @@ ns {
 	}
 
 	F init(e:Event) {
-		assert(e, AnyOf(IncomingEvent, OutgoingEvent), 'COR::Event must be either IncomingEvent or OutgoingEvent')
+		assert(e, AnyOf(IncomingEvent, OutgoingEvent), InvalidArgument('COR::Event must be either IncomingEvent or OutgoingEvent'))
 	}
 
 

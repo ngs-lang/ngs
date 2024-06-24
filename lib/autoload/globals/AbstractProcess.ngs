@@ -80,7 +80,7 @@ ns {
 
     F compute_status(p:Process) {
 		guard not(p.sub)
-		assert(p, {'status': Not(Status::Unset)}, 'Status of a leaf Process can not be Unset')
+		assert(p, {'status': Not(Status::Unset)}, InvalidArgument('Status of a leaf Process can not be Unset'))
     }
 
     global inspect
