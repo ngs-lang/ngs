@@ -7121,9 +7121,9 @@ F decode(s:Str, hints:Hash) {
 			'S': identity
 			'N': F(x) Int(x) tor Real(x)
 			'B': dynamodb_decoder_not_implemented('B', X)
-			'BOOL': Bool  # not tested
-			'NULL': { null }  # not tested
-			'M': dynamodb_decoder_not_implemented('M', X)
+			'BOOL': Bool
+			'NULL': { null }
+			'M': X.mapv(dynamodb_decode_cell)
 			'L': X.map(F(elt) dynamodb_decoders[elt.keys().the_one()](elt.values().the_one()))
 			'SS': identity  # not tested
 			'NS': dynamodb_decoder_not_implemented('NS', X)
@@ -7135,9 +7135,13 @@ F decode(s:Str, hints:Hash) {
 		F dynamodb_row(x) false
 		F dynamodb_row(row:Eachable2) row.values().all(dynamodb_cell)
 
+		F dynamodb_decode_cell(cell) {
+			dynamodb_decoders[cell.keys().the_one()](cell.values().the_one())
+		}
+
 		F dynamodb_decode_row(row:Eachable2) {
 			row.each(F(k, v) {
-				row[k] = dynamodb_decoders[v.keys().the_one()](v.values().the_one())
+				row[k] = dynamodb_decode_cell(v)
 			})
 		}
 	}
