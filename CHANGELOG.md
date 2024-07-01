@@ -8,11 +8,8 @@
 * Add `partitionv(Eachable2, pattern)`
 * Add experimental `fields()`
 * Add experimental `retry_assert()`
-* Add `Transformed` pattern
 * Add `Duration` type
 * Add experimental `finally(Block, Fun)`
-* Add `F f(x:PATTERN_HERE) ...` named parameter pattern syntax (previously `PATTERN_HERE` had to be a type)
-* Add `F f(PATTERN_HERE) ...` unnamed parameter pattern syntax (can be a type)
 * Add `Path + Str` and `Str + Path`
 * Add `avg(Eachable1)`
 * Add `Value` pseudo-type for converting values and functions into values
@@ -22,6 +19,12 @@
 * Add `flat_map(Eachable1, Fun)`
 * Add `COR` - Chain of Responsibility
 * Add `assert(val, pattern, Exception)`
+* Patterns
+  * Add `F f(x:PATTERN_HERE) ...` named parameter pattern syntax (previously `PATTERN_HERE` had to be a type)
+  * Add `F f(PATTERN_HERE) ...` unnamed parameter pattern syntax (can be a type)
+  * Add `Transformed` pattern
+  * Add experimental `Capture` pattern for capturing values
+  * Add experimental `Branch` pattern for 
 
 ### Fixes and improvements
 * Fix `AtPath` for non-eachables

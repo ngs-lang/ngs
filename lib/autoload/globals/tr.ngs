@@ -54,7 +54,7 @@ ns {
 		tc.deeper({
 			tc._cur._unified_each(F(idx_or_key, val) {
 				tc.set_last_path_element(idx_or_key)
-				debug("tr", {"descend path=${tc._path}"})
+				debug("tr", {"descend path=${tc.path}"})
 				cb(idx_or_key, val)
 			})
 		})
@@ -72,9 +72,9 @@ ns {
 	doc Descend into current data, performing all the same transformations.
 	doc %EX - tr([1,2,[3,4]], Arr -> { ["start"] + descend(B) + ["end"] } )  # ["start", 1, 2, ["start", 3, 4, "end"], "end"]
 	F descend(tc:TrContext) {
-		tc._cur !~ DESCENDABLE throws InvalidArgument("Attempted to descend on non-descendable: ${tc._cur} at path ${tc._path}")
+		tc._cur !~ DESCENDABLE throws InvalidArgument("Attempted to descend on non-descendable: ${tc._cur} at path ${tc.path}")
 
-		debug("tr", {"descend::start ${tc._path}"})
+		debug("tr", {"descend::start ${tc.path}"})
 		t = Type(tc._cur)
 		ret = t()  # XXX: Assumption about existence of the constructor
 		tc._each(F(idx_or_key, val) {
@@ -84,9 +84,9 @@ ns {
 			ematch t {
 				Lit _unified_push(ret, idx_or_key, t.val)
 				TrSkip null # do nothing
-				TrNoMatch throw TrFail("tr() match failed at path ${tc._path}").set(
+				TrNoMatch throw TrFail("tr() match failed at path ${tc.path}").set(
 					val = val
-					path = copy(tc._path)
+					path = copy(tc.path)
 					pattern = pat
 				)
 			}
@@ -123,7 +123,7 @@ ns {
 				# to accommodate patterns such as repetition, etc
 				for(i;l) {
 					tc.set_last_path_element(i)
-					debug("tr", "tr(x, Arr, TrContext) path=${tc._path}")
+					debug("tr", "tr(x, Arr, TrContext) path=${tc.path}")
 					collect(i, tr(section "XXX: assuming indexable" x[i], a[i], tc))
 				}
 			})

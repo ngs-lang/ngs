@@ -991,18 +991,17 @@ section "=~ Matching" {
 
 		doc %STATUS - experimental
 		F init(mc:MatchContext, root) {
-			mc._root = root
-			mc._positional = []  # Result - positional matches
-			mc._named = {}       # Result - named matches
-			mc._path = []        # Current path in _root
+			mc.root = root
+			mc.positional = []  # positional matches
+			mc.named = {}       # named matches
+			mc.path = []        # Current path relative to root
 			mc._deeper_saved_fields = {}
-			mc._result = EmptyBox()  # maybe use "block" instead?
 		}
 
 		F deeper(mc:MatchContext, cb:Fun) {
-			mc._path.push(null)
+			mc.path.push(null)
 			cb.finally({
-				mc._path.pop()
+				mc.path.pop()
 			})
 		}
 
@@ -1019,7 +1018,7 @@ section "=~ Matching" {
 		}
 
 		F set_last_path_element(mc:MatchContext, x) {
-			mc._path[mc._path.len() - 1] = x
+			mc.path[mc.path.len() - 1] = x
 			mc
 		}
 
@@ -1041,16 +1040,13 @@ section "=~ Matching" {
 	F =~(x, pattern) {
 		mc = MatchContext(x)
 		result = (=~)(x, pattern, mc)
-		mc._result returns mc._result.get()
-		if result is Bool {
-			# TODO: Review MatchSuccess / MatchFailure construction (conversion from MatchContext)
-			return if result {
-				MatchSuccess([x], pattern)
-			} else {
-				MatchFailure(x, pattern)
-			}
+		# Not using assert(result, Bool, ...) to prevent loop
+		if result is not Bool {
+			throw Error("=~ is expected to either set result or return a boolean").set(given=result)
 		}
-		throw Error("=~ is expected to either set result or return a boolean").set(given=result)
+		# TODO: Review MatchSuccess / MatchFailure construction (conversion from MatchContext)
+		result returns MatchSuccess([x], pattern)
+		MatchFailure(x, pattern)
 	}
 
 	doc Fallback for pattern matching. Throws NotImplemented.
@@ -1091,6 +1087,22 @@ section "=~ Matching" {
 	doc %RET - x == bti
 	F =~(x, bti:BasicTypeInstance, _mc:MatchContext) x == bti
 
+	section "Capture" {
+		type Capture
+		F init(c:Capture, name:Str, pattern=Any) init(args())
+
+		F =~(x, c:Capture, mc:MatchContext) {
+			(=~)(x, c.pattern, mc)::{
+				if A {
+					mc.named[c.name] = x
+				}
+			}
+		}
+    }
+
+    TEST m = 1 =~ Capture("n", Int)
+    TEST m = 1 =~ Capture("n", Str); not(m)
+
 	section "IfExists" {
 		doc Pattern for optionally present fields.
 		doc %EX - ({"a": 1}) =~ ({"a": Any, "b": IfExists(Int)})
@@ -1099,6 +1111,16 @@ section "=~ Matching" {
 		type IfExists
 		F init(ie:IfExists, pattern) ie.pattern = pattern
 		F =~(x, ie:IfExists, mc:MatchContext) (=~)(x, ie.pattern, mc)
+	}
+
+	section "Branch" {
+		doc Pattern for trying all possible branches. Always reports positive match.
+		doc %STATUS - experimental
+		type Branch
+		F init(b:Branch, pattern) {
+			b.pattern = pattern
+		}
+		F =~(x, b:Branch, mc:MatchContext) (=~)(x, b.pattern, mc)
 	}
 
 	section "Transformed" {
@@ -1123,15 +1145,18 @@ section "=~ Matching" {
 		mc.deeper({
 			h.all(F(pat_k, pat_v) {
 				if (=~)(pat_k, AnyOf(Str, Int, Real), mc) {
-					if pat_k in x {
-						(=~)(x.key_access_func(pat_k), pat_v, mc.set_last_path_element(pat_k))
-					} else {
-						pat_v is IfExists
-					}
+					pat_k in x returns (=~)(x.key_access_func(pat_k), pat_v, mc.set_last_path_element(pat_k))
+					pat_v is IfExists
 				} else {
 					assert(pat_v, Not(IfExists), NotImplemented('IfExists value only works with keys of types: Str, Int, Real'))
 					if x_keys is Null {
 						x_keys = x.Hash().keys()
+					}
+					if pat_k is Branch {
+						x_keys.each(F(k) {
+							(=~)(k, pat_k.pattern, mc) and (=~)(x.(k), pat_v, mc.set_last_path_element(k))
+						})
+						return true # TODO: not sure it's correct
 					}
 					# TODO: should be all()?
 					x_keys.any(F(k) {
@@ -1151,6 +1176,7 @@ section "=~ Matching" {
 	TEST ({"a": 1, "b": "x"}) !~ ({"a": Any, "b": IfExists(Int)})
 	TEST type T; T().set(a=1) =~ {"a": 1}
 	TEST type T; T().set(a=1) !~ {"b": 1}
+	TEST (collector/0 {"a1": 1, "a2": 2, "b1": 10} =~ {Branch(/^a/): Int -> collect(X) }) == 3
 
 	doc Checks that
 	doc 1. The x is Eachable1 but not Str or Int
@@ -1257,19 +1283,21 @@ section "=~ Matching" {
 
 			F each2(e:Eachable2, cb:Fun) each(e, cb)
 
-			if mc._path =~ ap.path_pattern {
-				m = (=~)(x, ap.value_pattern, mc)
-				m returns m
+			if mc.path =~ ap.path_pattern {
+				(=~)(x, ap.value_pattern, mc) returns true
 			}
 
 			block b {
 				mc.deeper({
 					x.each2(F(idx_or_key, val) {
 						if (=~)(val, ap, mc.set_last_path_element(idx_or_key)) {
-							b.return(true)
+							if ap.path_pattern is not Branch {
+								b.return(true)
+							}
 						}
 					})
 				})
+				ap.path_pattern is Branch returns true
 				false
 			}
 		}
@@ -1279,6 +1307,7 @@ section "=~ Matching" {
 		TEST [1] =~ AtPath([Any], Int)
 		TEST [1] =~ AtPath([0], Int)
 		TEST [1] !~ AtPath([Any, Any], Int)
+		TEST (collector/0 {"a": [10, 20], "b": [100, 200]} =~ AtPath(Branch([Str, 0]), Int -> collect(X))) == 110
 
 		doc %STATUS - experimental
 		doc Resets the path so that AtPath sees [] at this point
@@ -1290,7 +1319,7 @@ section "=~ Matching" {
 
 		doc %STATUS - experimental
 		F =~(x, rp:ResetPath, mc:MatchContext) {
-			mc.deeper({'_path': []}, {
+			mc.deeper({'path': []}, {
 				(=~)(x, rp.pattern, mc)
 			})
 		}
@@ -4283,14 +4312,18 @@ type Presence
 		mc.deeper({
 			x.each_idx_val(F(idx, item) {
 				if (=~)(item, p.val, mc.set_last_path_element(idx)) {
-					b.return(true)
+					if p.val is not Branch {
+						b.return(true)
+					}
 				}
 			})
 		})
+		p.val is Branch returns true
 		false
 	}
 
 	TEST [1,2,3] =~ Present(3)
+	TEST (collector/0 [1,2,3, "a"] =~ Present(Branch(Int -> collect(X)))) == 6
 
 	doc Checks element absence.
 	doc %RET - Bool
@@ -7436,6 +7469,7 @@ doc Checks subsequence presence
 doc s - SubSeq of Str
 doc %RET - Bool
 F =~(x, s:SubSeq, _mc:MatchContext) {
+	# TODO: Support Branch. Open issue: support overlapping?
 	guard s.val is Str
 	x is not Str returns false
 	Bool(x ~ s)
@@ -7624,6 +7658,7 @@ TEST "ab01de12f"[/[0-9]+/] == '01'
 doc %RET - Checks whether the only argument is of type Str and matches (~) r
 doc %EX - %[w1 w2].filter(/1/)  # %[w1]
 F =~(x, r:RegExp, _mc:MatchContext) {
+	# TODO: Support Branch. Open issue: support overlapping?
 	# TODO: Maybe merge named matches into MatchContext
 	x is not Str returns false
 	Bool(x ~ r)
