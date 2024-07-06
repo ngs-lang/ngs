@@ -58,8 +58,8 @@ jobs:
       - uses: actions/checkout@v3
       - name: Setup Compiler
         run: |
-          pacman -Sy --noconfirm man-db wget curl ${{ matrix.compiler }}
           pacman -Syu --noconfirm
+          pacman -Sy --noconfirm man-db wget curl ${{ matrix.compiler }}
 
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
             echo "CC=gcc" >> $GITHUB_ENV
