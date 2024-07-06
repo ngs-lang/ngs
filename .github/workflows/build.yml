@@ -161,26 +161,6 @@ jobs:
       - name: Install and Test
         run: (./install.sh && make tests test-installation)
 
-  build-external-centos7-gcc:
-    timeout-minutes: 10
-    name: Build in gcc-${{ matrix.version }} (${{ matrix.container }})
-    runs-on: ubuntu-20.04
-    container:
-      image: ${{ matrix.container }}
-      options: --user root
-    strategy:
-      matrix:
-        container: [ "centos:7" ]
-        version: [ "9", "10" ]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Compiler
-        run: |
-          yum -y install centos-release-scl epel-release sudo man
-          yum -y install devtoolset-${{ matrix.version }}
-      - name: Install and Test
-        run: (source /opt/rh/devtoolset-${{ matrix.version }}/enable && ./install.sh && make tests test-installation)
-
   build-mac-gcc:
     timeout-minutes: 10
     name: Build with gcc-${{ matrix.version }} (${{ matrix.container }})
