@@ -14,6 +14,7 @@
 	Set
 	Stats
 	Table
+	Table2
 	Thread
 	test
 	tr
@@ -781,6 +782,13 @@
 					pd = ParamDescription()
 					pd.name = p.name
 					pd.type = p.get('type', Any)
+					if pd.type is not Type {
+						# F something(param:PATTERN_HERE)
+						# TODO: Improve handling of patterns
+						pd.type = {
+							'name': pd.type.code()
+						}
+					}
 					pd.dflt = p.Box('dflt')
 					pd.splat = p.Box('splat')
 					pd.doc = method.object_doc_attr(p.name)

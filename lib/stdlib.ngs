@@ -1270,10 +1270,12 @@ section "=~ Matching" {
 	section "AtPath" {
 
 		doc Pattern that matches at given path
-		doc %EX - [1] =~ AtPath([Any], Int)
+		doc %EX - [1] =~ AtPath([0], Int)  # Does match
 		type AtPath
 		F init(ap:AtPath, path_pattern, value_pattern) init(args())
 
+		doc Do not use directly!
+		doc %STATUS - internal
 		F =~(x, ap:AtPath, mc:MatchContext) {
 
 			debug('AtPath', { "Entering ${mc.path}" })
@@ -1891,6 +1893,10 @@ section "AnyOf(ArrLike)" {
 	TEST AnyOf([1, false]).Bool()
 	TEST AnyOf([0, false]).Bool().not()
 
+	doc Convert to NGS code that would produce the type. Not fully functional yet. Namespaces are not supported.
+	doc %RET - Str
+	F code(a:AnyOf) "AnyOf(${a.map(code).join(', ')})"
+
 }
 
 section "AllOf(ArrLike)" {
@@ -1914,6 +1920,11 @@ section "AllOf(ArrLike)" {
 
 	TEST AllOf([1, 2]).Bool()
 	TEST AllOf([1, 2, false]).Bool().not()
+
+	doc Convert to NGS code that would produce the type. Not fully functional yet. Namespaces are not supported.
+	doc %RET - Str
+	F code(a:AllOf) "AllOf(${a.map(code).join(', ')})"
+
 }
 
 section "HashLike" {

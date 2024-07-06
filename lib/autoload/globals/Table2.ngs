@@ -186,7 +186,7 @@ ns {
 			t
 		}
 
-		doc Append give row to the table
+		doc Append given row to the table
 		doc %RET - t
 		F push(t:Table, row_hash:AnyOf(Hash, HashLike)) {
 			# TODO: handle mismatch of columns
