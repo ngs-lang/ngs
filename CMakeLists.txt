@@ -1,10 +1,9 @@
 # TODO: check what should be changed in the file after migration from cmake_minimum_required(VERSION 3.0)
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 
 project(NGS)
 
 # TOOD: check how not to use hard coded include and lib directories.
-#       Do something like pkg_check_modules(LIBFFI libffi REQUIRED) but for all libraries?
 
 include(CheckFunctionExists)
 include(CheckIncludeFile)
@@ -22,11 +21,6 @@ add_definitions(-D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE=1 -D_DEFAULT_SOURCE=1 -D_
 # which cases sporadic SIGSEGV and other issues after fork() in child process.
 # Use test-gc.ngs to determine if you can remove this setting (test on MacOS and Linux).
 add_definitions(-DNGS_STUPID_MALLOC_AFTER_FORK)
-
-pkg_check_modules(LIBFFI libffi REQUIRED)
-pkg_check_modules(GC bdw-gc-threaded)
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /usr/local/include /opt/homebrew/include)
-link_directories(/usr/local/lib /opt/homebrew/lib)
 
 add_executable(ngs
 	version.h
@@ -75,7 +69,18 @@ ENDIF()
 
 
 find_program(SED NAMES gsed sed) # gsed - MacOS and FreeBSD, sed - all the rest
-find_file(PCRE_H pcre.h)
+
+pkg_search_module(PCRE REQUIRED libpcre)
+pkg_search_module(JSONC REQUIRED json-c)
+pkg_search_module(LIBGC REQUIRED bdw-gc-threaded bdw-gc)
+pkg_search_module(LIBFFI REQUIRED libffi)
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /usr/local/include /opt/homebrew/include)
+link_directories(/usr/local/lib /opt/homebrew/lib)
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 add_custom_command(
 	OUTPUT
 		${CMAKE_CURRENT_BINARY_DIR}/syntax.include
@@ -100,7 +105,7 @@ add_custom_command(
 )
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
-	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/make-pcre-constants.sh ${PCRE_H} >${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/make-pcre-constants.sh ${PCRE_INCLUDEDIR}/pcre.h >${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
 )
 add_custom_command(
 	OUTPUT
@@ -118,7 +123,7 @@ add_custom_command(
 )
 
 
-target_link_libraries(ngs m pthread gc ${GC_LIBRARIES} ffi dl json-c pcre ${Backtrace_LIBRARY})
+target_link_libraries(ngs m Threads::Threads ${CMAKE_DL_LIBS} ${LIBGC_LIBRARIES} ${LIBFFI_LIBRARIES} ${JSONC_LIBRARIES} ${PCRE_LIBRARIES} ${Backtrace_LIBRARY})
 
 add_custom_target(man ALL WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc COMMAND make man DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doc/*.1.md)
 
