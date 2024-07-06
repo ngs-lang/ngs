@@ -203,8 +203,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        container: [ "bullseye" ]
-        version: [ "10" ]
+        container: [ "bookworm" ] # Has GCC 12
         arch: [ "aarch64", "s390x", "ppc64le" ]   # , "armv6", "armv7" -- 32 bits archs, currently not supported by ngs
     steps:
       - uses: actions/checkout@v4
@@ -219,12 +218,9 @@ jobs:
           # Mount the local folder as /ngs in the container
           dockerRunArgs: |
             --volume "${PWD}:/ngs"
-          env: |
-            CC: gcc-${{ matrix.version }}
-            CXX: g++-${{ matrix.version }}
           install: |
             apt-get update
-            apt-get install -y man sudo g++-${{ matrix.version }}
+            apt-get install -y man sudo
 
           # Set an output parameter `uname` for use in subsequent steps
           run: |
