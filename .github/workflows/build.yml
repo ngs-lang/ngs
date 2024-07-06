@@ -147,7 +147,7 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "fedora:34", "fedora:35", "amazonlinux:2" ]
+        container: [ "fedora:34", "fedora:35", "amazonlinux:2023" ]
     steps:
       - name: Install AmazonLinux deps needed specifically for GitHub action
         if: startsWith(matrix.container, 'amazonlinux')
