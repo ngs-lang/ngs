@@ -2,7 +2,7 @@
 
 [![Discord](https://img.shields.io/discord/681405592732172293.svg?logo=discord)](https://discord.gg/6VqgcpM)
 [![Commits in dev since last release](https://img.shields.io/github/commits-since/ngs-lang/ngs/latest/dev.svg)](https://github.com/ngs-lang/ngs/commits/dev)
-[![Build Status](/../../workflows/Build/badge.svg?branch=master)](/../../actions?query=workflow%3A%22Build%22+branch%3Adev)
+[![Build Status](/../../workflows/Build/badge.svg?branch=master)](/../../actions?query=workflow%3A%22Build%22+branch%3Amaster)
 [![Docker Build Status](https://img.shields.io/docker/cloud/build/ngslang/ngs.svg)](https://hub.docker.com/r/ngslang/ngs/builds)
 [![Homebrew](https://img.shields.io/badge/dynamic/json.svg?url=https://formulae.brew.sh/api/formula/ngs.json&query=$.versions.stable&label=homebrew&color=orange)](https://formulae.brew.sh/formula/ngs)
 [![snapcraft](https://snapcraft.io//ngs/badge.svg)](https://snapcraft.io/ngs)
