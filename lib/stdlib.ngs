@@ -8532,6 +8532,7 @@ section "Loading code" {
 			/usr/local/lib/ngs
 			/etc/ngs
 			/usr/lib/ngs
+			#@INSTALL_LIBDIR@
 		].filter()
 	}
 

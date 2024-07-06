@@ -82,6 +82,10 @@ link_directories(/usr/local/lib /opt/homebrew/lib)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
+file(READ lib/stdlib.ngs FILE_CONTENTS)
+string(REPLACE "#@INSTALL_LIBDIR@" ${CMAKE_INSTALL_LIBDIR}/ngs FILE_CONTENTS "${FILE_CONTENTS}")
+file(WRITE lib/stdlib.ngs "${FILE_CONTENTS}")
+
 add_custom_command(
 	OUTPUT
 		${CMAKE_CURRENT_BINARY_DIR}/syntax.include
@@ -144,4 +148,5 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_DO
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/ DESTINATION ${CMAKE_INSTALL_MANDIR}/man1 FILES_MATCHING PATTERN "*.1")
 
 enable_testing()
-add_test(all bash -c "${CMAKE_CURRENT_BINARY_DIR}/ngs ${CMAKE_CURRENT_SOURCE_DIR}/test.ngs")
+# NGS_PATH is set because the files are not installed yet
+add_test(all bash -c "NGS_PATH=${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_BINARY_DIR}/ngs ${CMAKE_CURRENT_SOURCE_DIR}/test.ngs")
