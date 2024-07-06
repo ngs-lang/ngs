@@ -199,7 +199,7 @@ jobs:
 
   build-other-arch-gcc:
     timeout-minutes: 15
-    name: Build in gcc-${{ matrix.version }} (${{ matrix.container }} - ${{ matrix.arch }})
+    name: Build in (${{ matrix.container }} - ${{ matrix.arch }})
     runs-on: ubuntu-20.04
     strategy:
       matrix:
