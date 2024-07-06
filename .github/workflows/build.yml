@@ -10,11 +10,23 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ "ubuntu-20.04" ]
-        version: [ "9", "10", "11" ]
         compiler: [ "gcc", "clang" ]
+        include:
+          - os: "ubuntu-24.04"
+          - compiler: clang
+            version: 16
+          - compiler: clang
+            version: 17
+          - compiler: clang
+            version: 18
+          - compiler: gcc
+            version: 12
+          - compiler: gcc
+            version: 13
+          - compiler: gcc
+            version: 14
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Compiler
         run: |
           sudo apt-get update
@@ -40,14 +52,14 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "archlinux:base-20221225.0.113672" ] # https://hub.docker.com/_/archlinux/
+        container: [ "archlinux:base" ] # https://hub.docker.com/_/archlinux/
         compiler: [ "gcc", "clang" ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Compiler
         run: |
-          pacman -Sy --noconfirm man-db wget curl ${{ matrix.compiler }}
           pacman -Syu --noconfirm
+          pacman -Sy --noconfirm man-db wget curl ${{ matrix.compiler }}
 
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
             echo "CC=gcc" >> $GITHUB_ENV
@@ -71,7 +83,7 @@ jobs:
         container: [ "debian:11.1" ]
         version: [ "9", "10" ] # gcc 11 doesn't exist in debian apt
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Compiler
         run: |
           apt-get update
@@ -93,7 +105,7 @@ jobs:
         container: [ "debian:11.1" ]
         version: [ "9", "11" ] # clang 10 doesn't exist in debian apt
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Compiler
         run: |
           apt-get update
@@ -112,12 +124,12 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "fedora:34", "fedora:35", "amazonlinux:2" ]
+        container: [ "fedora:34", "fedora:35"  ] # "amazonlinux:2023" is broken because of missing pandoc
     steps:
       - name: Install AmazonLinux deps needed specifically for GitHub action
         if: startsWith(matrix.container, 'amazonlinux')
         run: yum -y install tar xz gzip
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Compiler
         run: |
           yum -y install man gcc-c++
@@ -135,12 +147,12 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "fedora:34", "fedora:35", "amazonlinux:2" ]
+        container: [ "fedora:34", "fedora:35"  ] # "amazonlinux:2023" is broken because of missing pandoc
     steps:
       - name: Install AmazonLinux deps needed specifically for GitHub action
         if: startsWith(matrix.container, 'amazonlinux')
         run: yum -y install tar xz gzip
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Compiler
         run: |
           yum -y install man clang
@@ -148,26 +160,6 @@ jobs:
           echo "CXX=clang++" >> $GITHUB_ENV
       - name: Install and Test
         run: (./install.sh && make tests test-installation)
-
-  build-external-centos7-gcc:
-    timeout-minutes: 10
-    name: Build in gcc-${{ matrix.version }} (${{ matrix.container }})
-    runs-on: ubuntu-20.04
-    container:
-      image: ${{ matrix.container }}
-      options: --user root
-    strategy:
-      matrix:
-        container: [ "centos:7" ]
-        version: [ "9", "10" ]
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup Compiler
-        run: |
-          yum -y install centos-release-scl epel-release sudo man
-          yum -y install devtoolset-${{ matrix.version }}
-      - name: Install and Test
-        run: (source /opt/rh/devtoolset-${{ matrix.version }}/enable && ./install.sh && make tests test-installation)
 
   build-mac-gcc:
     timeout-minutes: 10
@@ -178,7 +170,7 @@ jobs:
         container: [ "macOS-12" ]
         version: [ "10", "11" ]  # On 2023-02-11, version 9 was already broken: "g++-9: warning: '12.6' is not valid for 'mmacosx-version-min'"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Compiler
         run: |
           brew install cmake ninja
@@ -196,7 +188,7 @@ jobs:
       matrix:
         container: [ "macOS-12" ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Compiler
         run: |
           brew install cmake ninja
@@ -207,16 +199,15 @@ jobs:
 
   build-other-arch-gcc:
     timeout-minutes: 15
-    name: Build in gcc-${{ matrix.version }} (${{ matrix.container }} - ${{ matrix.arch }})
+    name: Build in (${{ matrix.container }} - ${{ matrix.arch }})
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        container: [ "bullseye" ]
-        version: [ "10" ]
+        container: [ "bookworm" ] # Has GCC 12
         arch: [ "aarch64", "s390x", "ppc64le" ]   # , "armv6", "armv7" -- 32 bits archs, currently not supported by ngs
     steps:
-      - uses: actions/checkout@v3
-      - uses: uraimo/run-on-arch-action@v2.5.0
+      - uses: actions/checkout@v4
+      - uses: uraimo/run-on-arch-action@v2.7.2
         name: Run commands
         id: runcmd
         with:
@@ -227,12 +218,9 @@ jobs:
           # Mount the local folder as /ngs in the container
           dockerRunArgs: |
             --volume "${PWD}:/ngs"
-          env: |
-            CC: gcc-${{ matrix.version }}
-            CXX: g++-${{ matrix.version }}
           install: |
             apt-get update
-            apt-get install -y man sudo g++-${{ matrix.version }}
+            apt-get install -y man sudo
 
           # Set an output parameter `uname` for use in subsequent steps
           run: |
