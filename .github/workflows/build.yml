@@ -26,7 +26,7 @@ jobs:
           - compiler: gcc
             version: 14
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Compiler
         run: |
           sudo apt-get update
