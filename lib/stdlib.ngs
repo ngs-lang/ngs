@@ -1045,7 +1045,8 @@ section "=~ Matching" {
 			throw Error("=~ is expected to either set result or return a boolean").set(given=result)
 		}
 		# TODO: Review MatchSuccess / MatchFailure construction (conversion from MatchContext)
-		result returns MatchSuccess([x], pattern)
+		# TODO: Review Success / Failure inheritance
+		result returns MatchSuccess(mc.positional, pattern).set('named', mc.named)
 		MatchFailure(x, pattern)
 	}
 
@@ -1089,12 +1090,20 @@ section "=~ Matching" {
 
 	section "Capture" {
 		type Capture
+		F init(c:Capture, pattern=Any) {
+			init(args())
+			c.name = null
+		}
 		F init(c:Capture, name:Str, pattern=Any) init(args())
 
 		F =~(x, c:Capture, mc:MatchContext) {
 			(=~)(x, c.pattern, mc)::{
 				if A {
-					mc.named[c.name] = x
+					if c.name is not Null {
+						mc.named[c.name] = x
+					} else {
+						mc.positional.push(x)
+					}
 				}
 			}
 		}
