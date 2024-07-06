@@ -6802,7 +6802,7 @@ F '$()'(cp:CommandsPipeline) {
 
 TEST $(true).Bool()
 TEST $(false).Bool() == false
-TEST "$(/bin/echo -n abc)" == 'abc'
+TEST "$(echo -n abc)" == 'abc'
 TEST $(cd:"/" pwd).lines()[0] == '/'
 TEST t=TmpFile(); $(echo -n abc >$t); t.read() == "abc"
 
@@ -8571,7 +8571,7 @@ section "Loading code" {
 		} catch(e) {
 			guard e !~ AnyOf(RequireFail, NormalExit)
 			throw RequireFail(e)
-		}		
+		}
 	}
 
 	F require(p:Path) require(p.path)
