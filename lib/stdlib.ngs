@@ -1272,7 +1272,7 @@ section "=~ Matching" {
 
 		F =~(x, ap:AtPath, mc:MatchContext) {
 
-			debug('AtPath', { "Entering $x $ap $mc" })
+			debug('AtPath', { "Entering ${mc.path}" })
 
 			F each2(_non_descendable, cb:Fun) nop
 
@@ -1284,13 +1284,17 @@ section "=~ Matching" {
 			F each2(e:Eachable2, cb:Fun) each(e, cb)
 
 			if mc.path =~ ap.path_pattern {
-				(=~)(x, ap.value_pattern, mc) returns true
+				m = (=~)(x, ap.value_pattern, mc)
+				if ap.path_pattern is not Branch {
+					return true
+				}
 			}
 
 			block b {
 				mc.deeper({
 					x.each2(F(idx_or_key, val) {
 						if (=~)(val, ap, mc.set_last_path_element(idx_or_key)) {
+							debug("AtPath Branch ${ap.path_pattern is Branch}")
 							if ap.path_pattern is not Branch {
 								b.return(true)
 							}
@@ -1308,6 +1312,7 @@ section "=~ Matching" {
 		TEST [1] =~ AtPath([0], Int)
 		TEST [1] !~ AtPath([Any, Any], Int)
 		TEST (collector/0 {"a": [10, 20], "b": [100, 200]} =~ AtPath(Branch([Str, 0]), Int -> collect(X))) == 110
+		TEST (collector/0 {"item": [{"item": {}}]} =~ AtPath(Branch(Any), {"item": { collect(1) }})) == 2
 
 		doc %STATUS - experimental
 		doc Resets the path so that AtPath sees [] at this point
