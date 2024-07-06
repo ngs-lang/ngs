@@ -24,7 +24,7 @@
   * Add `F f(PATTERN_HERE) ...` unnamed parameter pattern syntax (can be a type)
   * Add `Transformed` pattern
   * Add experimental `Capture` pattern for capturing values
-  * Add experimental `Branch` pattern for 
+  * Add experimental `Branch` pattern for multiple matches
 
 ### Fixes and improvements
 * Fix `AtPath` for non-eachables
@@ -39,6 +39,10 @@
 
 ### Breaking changes
 * Remove deprecated `Pred`
+* Remove deprecated `~(Any, Any)` adapter for `=~`
+* Remove deprecated `~(Any, Type)`
+* Remove unused `get(MatchSuccess)`
+* Remove unused `get(MatchFailure)`
 
 ## 2023-05-17 Version 0.2.16
 

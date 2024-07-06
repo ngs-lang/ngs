@@ -961,27 +961,22 @@ section "=~ Matching" {
 
 			doc Successful match result
 			doc matches - Successful matches
-			type MatchSuccess([MatchResult, Success])
+			type MatchSuccess(MatchResult)
+
+			doc %RET - true
+			F Bool(ms:MatchSuccess) true
 
 			doc Unsuccessful match result
-			type MatchFailure([MatchResult, Failure])
+			type MatchFailure(MatchResult)
 
-		doc Successful match constructor
-		doc %STATUS - deprecated
-		F init(ms:MatchSuccess, matches:Arr) init(args())
+			doc %RET - false
+			F Bool(mf:MatchFailure) false
 
 		doc Successful match constructor
 		F init(ms:MatchSuccess, matches:Arr, pattern) init(args())
 
 		doc Unsuccessful constructor
 		F init(mf:MatchFailure, data, pattern) init(args())
-
-		doc Get the values of successful match
-		F get(ms:MatchSuccess) ms
-
-		doc Throws ResultFail
-		F get(mf:MatchFailure) throw ResultFail("There was no match").set('failure', mf)
-
 
 	}
 
@@ -1712,18 +1707,6 @@ F push_all(dst, e:Eachable1) {
 
 TEST a=[1,2]; a.push_all([3,4]); a==[1,2,3,4]
 
-
-doc EXPERIMENTAL! Do not use! Especially don't count on returned value beyond obvious Bool(x) behaviour. Match anything.
-doc %STATUS - deprecated
-F ~(something, pattern) {
-	warn("Using deprecated ~(something:Any, pattern:Any) with types something:${Type(something)} pattern:${Type(pattern)}")
-	if something =~ pattern {
-		MatchSuccess([something], pattern)
-	} else {
-		MatchFailure(something, pattern)
-	}
-}
-
 section "Base JSON" {
 	type JsonDataViaHash
 	F JsonData(jdvh: JsonDataViaHash) jdvh.Hash().JsonData()
@@ -1891,10 +1874,10 @@ section "AnyOf(ArrLike)" {
 		MatchFailure(x, a)
 	}
 
-	TEST ("abc" ~ AnyOf(/x/, /a/)) is MatchSuccess
-	TEST ("abc" ~ AnyOf(/x/, /y/)) is MatchFailure
-	TEST ("abc" ~ AnyOf([Int, Str])) is MatchSuccess
-	TEST ("abc" ~ AnyOf([Int, Num])) is MatchFailure
+	TEST ("abc" =~ AnyOf(/x/, /a/)) is MatchSuccess
+	TEST ("abc" =~ AnyOf(/x/, /y/)) is MatchFailure
+	TEST ("abc" =~ AnyOf([Int, Str])) is MatchSuccess
+	TEST ("abc" =~ AnyOf([Int, Num])) is MatchFailure
 
 	doc Check whether one of the patterns (elements of AnyOf) matches
 	doc %EX - {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(AnyOf("k1", "k3"))  # {"k1": "v1", "k3": "v3"}
@@ -2409,18 +2392,6 @@ doc Set a key if it's not already set
 doc %EX - mysomething.dflt(k, []).push(elt)
 doc %RET - Key value, the already-existed or new.
 F dflt(hl:HashLike, k, v) hl.meta().HashLike.dflt(k, v)
-
-doc %STATUS - deprecated
-doc Check whether x is of type t
-doc %RET - MatchResult
-F ~(x, t:Type) {
-	warn("Using deprecated ~(Any, Type). Use =~(Any, Type) instead.")
-	if x is t {
-		MatchSuccess([x], t)
-	} else {
-		MatchFailure(x, t)
-	}
-}
 
 section "Exceptions" {
 	# TODO: Investigate why type CError(Error) does not work at this point
@@ -7671,11 +7642,15 @@ TEST "ab01de12f"[/[0-9]+/] == '01'
 
 doc %RET - Checks whether the only argument is of type Str and matches (~) r
 doc %EX - %[w1 w2].filter(/1/)  # %[w1]
-F =~(x, r:RegExp, _mc:MatchContext) {
+F =~(x, r:RegExp, mc:MatchContext) {
 	# TODO: Support Branch. Open issue: support overlapping?
 	# TODO: Maybe merge named matches into MatchContext
 	x is not Str returns false
-	Bool(x ~ r)
+	if (m = x ~ r) {
+		mc.positional = m.matches[1..null]
+		mc.named = m.named
+	}
+	m.Bool()
 }
 
 TEST %[w1 w2].filter(/1/) == %[w1]
