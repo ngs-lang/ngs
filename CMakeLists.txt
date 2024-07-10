@@ -23,10 +23,17 @@ add_definitions(-D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE=1 -D_DEFAULT_SOURCE=1 -D_
 # Use test-gc.ngs to determine if you can remove this setting (test on MacOS and Linux).
 add_definitions(-DNGS_STUPID_MALLOC_AFTER_FORK)
 
-pkg_check_modules(LIBFFI libffi REQUIRED)
-pkg_check_modules(GC bdw-gc-threaded)
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} /usr/local/include /opt/homebrew/include)
-link_directories(/usr/local/lib /opt/homebrew/lib)
+pkg_search_module(JSONC REQUIRED json-c)
+pkg_search_module(LIBFFI REQUIRED libffi)
+pkg_search_module(LIBGC REQUIRED bdw-gc-threaded bdw-gc)
+pkg_search_module(PCRE REQUIRED libpcre)
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} ${LIBGC_INCLUDE_DIRS} ${PCRE_INCLUDE_DIRS} ${Backtrace_INCLUDE_DIR} ${JSONC_INCLUDE_DIRS})
+
+link_directories(${LIBFFI_LIBRARY_DIRS} ${LIBGC_LIBRARY_DIRS} ${PCRE_LIBRARY_DIRS} ${JSONC_LIBRARY_DIRS})
 
 add_executable(ngs
 	version.h
@@ -75,7 +82,7 @@ ENDIF()
 
 
 find_program(SED NAMES gsed sed) # gsed - MacOS and FreeBSD, sed - all the rest
-find_file(PCRE_H pcre.h)
+#find_file(PCRE_H pcre.h)
 add_custom_command(
 	OUTPUT
 		${CMAKE_CURRENT_BINARY_DIR}/syntax.include
@@ -100,7 +107,7 @@ add_custom_command(
 )
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
-	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/make-pcre-constants.sh ${PCRE_H} >${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/make-pcre-constants.sh ${PCRE_INCLUDEDIR}/pcre.h >${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
 )
 add_custom_command(
 	OUTPUT
@@ -118,7 +125,7 @@ add_custom_command(
 )
 
 
-target_link_libraries(ngs m pthread gc ${GC_LIBRARIES} ffi dl json-c pcre ${Backtrace_LIBRARY})
+target_link_libraries(ngs m Threads::Threads ${CMAKE_DL_LIBS} ${LIBGC_LIBRARIES} ${LIBFFI_LIBRARIES} ${JSONC_LIBRARIES} ${PCRE_LIBRARIES} ${Backtrace_LIBRARY})
 
 add_custom_target(man ALL WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc COMMAND make man DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doc/*.1.md)
 
