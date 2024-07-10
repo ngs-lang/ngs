@@ -1084,21 +1084,46 @@ section "=~ Matching" {
 	F =~(x, bti:BasicTypeInstance, _mc:MatchContext) x == bti
 
 	section "Capture" {
+		doc A pattern that captures the matching value.
+		doc name - capture name (or null)
+		doc dflt - Default value
 		type Capture
+
+		doc Make a pattern that captures the matching value.
+		doc The matched value will be stored in MatchContext.positional
+		doc pattern - Optional pattern to match. Defaults to Any.
+		doc %EX - m = [1,2] =~ Capture([Capture(Int), Capture(Int)])  # m.matches =~ [Arr, 1, 2]
 		F init(c:Capture, pattern=Any) {
 			init(args())
 			c.name = null
+			c.dflt = null
 		}
-		F init(c:Capture, name:Str, pattern=Any) init(args())
 
+		doc Make a pattern that captures the matching value.
+		doc The matched value will be stored in MatchContext.named[name]
+		doc pattern - Optional pattern to match. Defaults to Any.
+		doc %EX - m = {"a": 1, "b": 2} =~ {"a": Capture("arg1"), "b": Capture("arg2")}; m.named.arg1 + m.named.arg2  # 3
+		doc %EX - m = {"a": 1, "b": 2} =~ {"a": Capture("arg1", Int), "b": Capture("arg2", Str)}  # Doesn't match - b is Int
+		F init(c:Capture, name:Str, pattern=Any) {
+			init(args())
+			c.dflt = null
+		}
+
+		doc %STATUS - internal
 		F =~(x, c:Capture, mc:MatchContext) {
+			if c.name is not Null {
+				container = mc.named
+				key = c.name
+				container[key] = c.dflt
+			} else {
+				container = mc.positional
+				key = len(mc.positional)
+				container.push(c.dflt)
+			}
+
 			(=~)(x, c.pattern, mc)::{
 				if A {
-					if c.name is not Null {
-						mc.named[c.name] = x
-					} else {
-						mc.positional.push(x)
-					}
+					container[key] = x
 				}
 			}
 		}
@@ -1106,6 +1131,9 @@ section "=~ Matching" {
 
     TEST m = 1 =~ Capture("n", Int)
     TEST m = 1 =~ Capture("n", Str); not(m)
+    TEST m = {"a": 1, "b": 2} =~ {"a": Capture("arg1", Int), "b": Capture("arg2")}; m.named.arg1 + m.named.arg2 == 3
+    TEST m = {"a": 1, "b": 2} =~ {"a": Capture("arg1", Int), "b": Capture("arg2", Str)}; not(m)
+    TEST m = [1,2] =~ Capture([Capture(Int), Capture(Int)]); m.matches =~ [Arr, 1, 2]
 
 	section "IfExists" {
 		doc Pattern for optionally present fields.
@@ -1119,13 +1147,24 @@ section "=~ Matching" {
 
 	section "Branch" {
 		doc Pattern for trying all possible branches. Always reports positive match.
+		doc %EX - (collector/0 {"a": 1, "b": [2,3]} =~ AtPath(Branch(Any), Int -> collect(X)))  # 6, all Ints
+		doc %EX - (collector/0 {"a": 1, "b": [2,3]} =~ AtPath(Any, Int -> collect(X)))  # 1, first Int
 		doc %STATUS - experimental
 		type Branch
+
+		doc Pattern for trying all possible branches. Always reports positive match.
 		F init(b:Branch, pattern) {
 			b.pattern = pattern
 		}
+
+		doc Returns result of (=~)(x, b.pattern, mc)
+		doc %RET - Bool
+		doc %STATUS - internal
 		F =~(x, b:Branch, mc:MatchContext) (=~)(x, b.pattern, mc)
 	}
+
+	TEST (collector/0 {"a": 1, "b": [2,3]} =~ AtPath(Branch(Any), Int -> collect(X))) == 6
+	TEST (collector/0 {"a": 1, "b": [2,3]} =~ AtPath(Any, Int -> collect(X))) == 1
 
 	section "Transformed" {
 		doc Check for pattern against transformed value
@@ -1181,6 +1220,7 @@ section "=~ Matching" {
 	TEST type T; T().set(a=1) =~ {"a": 1}
 	TEST type T; T().set(a=1) !~ {"b": 1}
 	TEST (collector/0 {"a1": 1, "a2": 2, "b1": 10} =~ {Branch(/^a/): Int -> collect(X) }) == 3
+	TEST (collector/0 {"a1": 1, "a2": 2, "b1": 10} =~ {/^a/: Int -> collect(X) }) == 1
 
 	doc Checks that
 	doc 1. The x is Eachable1 but not Str or Int
@@ -1278,7 +1318,7 @@ section "=~ Matching" {
 		doc %STATUS - internal
 		F =~(x, ap:AtPath, mc:MatchContext) {
 
-			debug('AtPath', { "Entering ${mc.path}" })
+			debug('AtPath', { "Entering ${mc.path}. ap.path_pattern is Branch ${ap.path_pattern is Branch}" })
 
 			F each2(_non_descendable, cb:Fun) nop
 
@@ -1291,7 +1331,7 @@ section "=~ Matching" {
 
 			if mc.path =~ ap.path_pattern {
 				m = (=~)(x, ap.value_pattern, mc)
-				if ap.path_pattern is not Branch {
+				if m and (ap.path_pattern is not Branch) {
 					return true
 				}
 			}
@@ -1300,7 +1340,6 @@ section "=~ Matching" {
 				mc.deeper({
 					x.each2(F(idx_or_key, val) {
 						if (=~)(val, ap, mc.set_last_path_element(idx_or_key)) {
-							debug("AtPath Branch ${ap.path_pattern is Branch}")
 							if ap.path_pattern is not Branch {
 								b.return(true)
 							}
@@ -1313,11 +1352,13 @@ section "=~ Matching" {
 		}
 
 		TEST 1 =~ AtPath(Any, Int)
+		TEST 1 !~ AtPath(Any, Str)
 		TEST [1] =~ AtPath(Any, Int)
 		TEST [1] =~ AtPath([Any], Int)
 		TEST [1] =~ AtPath([0], Int)
 		TEST [1] !~ AtPath([Any, Any], Int)
 		TEST (collector/0 {"a": [10, 20], "b": [100, 200]} =~ AtPath(Branch([Str, 0]), Int -> collect(X))) == 110
+		TEST (collector/0 {"a": [10, 20], "b": [100, 200]} =~ AtPath([Str, 0], Int -> collect(X))) == 10
 		TEST (collector/0 {"item": [{"item": {}}]} =~ AtPath(Branch(Any), {"item": { collect(1) }})) == 2
 
 		doc %STATUS - experimental
@@ -4320,6 +4361,7 @@ type Presence
 
 	TEST [1,2,3] =~ Present(3)
 	TEST (collector/0 [1,2,3, "a"] =~ Present(Branch(Int -> collect(X)))) == 6
+	TEST (collector/0 [1,2,3, "a"] =~ Present(Int -> collect(X))) == 1
 
 	doc Checks element absence.
 	doc %RET - Bool
@@ -7667,6 +7709,7 @@ F =~(x, r:RegExp, mc:MatchContext) {
 	x is not Str returns false
 	if (m = x ~ r) {
 		mc.positional = m.matches[1..null]
+		mc.whole = m.matches[0]
 		mc.named = m.named
 	}
 	m.Bool()
@@ -8368,13 +8411,13 @@ TEST "ab>+c%&'".encode_html_attr() == "ab&gt;+c%&amp;&#39;"
 
 doc Used by match EXPR { ... } construct to check whether the expression matches the case.
 doc %AUTO match EXPR { ... }
-doc %RET - a =~ b
+doc %RET - val =~ pattern
 doc %EX - r = match x {
 doc %EX -   Int  "Got integer"
 doc %EX -   /^a/ "Got special string"
 doc %EX -   Str  "Got regular string"
 doc %EX - }
-F match(a,b) a =~ b
+F match(val, pattern) val =~ pattern
 
 # === File =======================================
 
