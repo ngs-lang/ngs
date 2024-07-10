@@ -960,7 +960,9 @@ section "=~ Matching" {
 		type MatchResult
 
 			doc Successful match result
-			doc matches - Successful matches
+			doc matches - Successful positional matches (captures). matches[0] is the first Capture(), not the whole match.
+			doc named - Successful named matches
+			doc whole - Whole match (WIP, not always present)
 			type MatchSuccess(MatchResult)
 
 			doc %RET - true
