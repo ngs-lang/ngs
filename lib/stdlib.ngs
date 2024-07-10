@@ -963,6 +963,8 @@ section "=~ Matching" {
 			doc matches - Successful positional matches (captures). matches[0] is the first Capture(), not the whole match.
 			doc named - Successful named matches
 			doc whole - Whole match (WIP, not always present)
+			doc before - Data before the start of the match (WIP, not always present)
+			doc after - Data after the end of the match (WIP, not always present)
 			type MatchSuccess(MatchResult)
 
 			doc %RET - true
