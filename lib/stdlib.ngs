@@ -8511,6 +8511,9 @@ section "JSON" {
 	doc %RET - Str
 	F encode_json(x, hints:Hash = {}) {
 		ret = super(JsonData(x))
+		if (hints =~ {'pretty': 'best-effort'}) and Program('jq') {
+			ret = $(| jq .).write(ret).close().wait().stdout
+		}
 		if hints =~ {'pretty': true} {
 			assert(Program('jq'), "encode_json() failed to do 'pretty' formatting - jq program is missing")
 			ret = $(| jq .).write(ret).close().wait().stdout

@@ -32,6 +32,7 @@
 * Improve `decode()` for AWS CLI commands
 * `Set` comparison now ignores order
 * Fix `after_last(Str, Str)`
+* `encode_json()` - now supports `{'pretty': 'best-effort'}` hint
 
 ### Deprecated
 * Deprecated `Deep` in favor of `AtPath`
