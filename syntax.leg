@@ -1464,7 +1464,7 @@ identifier =
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
-	| "(" <("$()" | [-|=!@?~+*/%$<>.\[\]:]+ | "is not" | "not in")> ")" {
+	| "(" <("$()" | "$[]" | [-|=!@?~+*/%$<>.\[\]:]+ | "is not" | "not in")> ")" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
@@ -1721,6 +1721,7 @@ optional-function-call-arguments =
 
 subshell =
 	"$(" cmd:commands-pipeline ")" { $$ = cmd; }
+	| "$[" cmd:commands-pipeline "]" { $$ = cmd; cmd->first_child->name = ngs_strdup("$[]"); $$ = cmd; }
 	| "%(" cmd:commands-pipeline ")" { cmd->first_child->name = ngs_strdup("%()"); $$ = cmd; }
 	| "``" cmd:commands-pipeline "``" { cmd->first_child->name = ngs_strdup("````"); $$ = cmd; }
 	| "`" cmd:commands-pipeline "`" { cmd->first_child->name = ngs_strdup("``");  $$ = cmd; }

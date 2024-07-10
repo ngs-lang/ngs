@@ -6806,6 +6806,14 @@ TEST "$(/bin/echo -n abc)" == 'abc'
 TEST $(cd:"/" pwd).lines()[0] == '/'
 TEST t=TmpFile(); $(echo -n abc >$t); t.read() == "abc"
 
+doc Same as $(top_level:: ...) - run the commands without capturing the stdout/stderr.
+doc Use the same stdout/stderr as the parent process (your script).
+F '$[]'(cp:CommandsPipeline) {
+	debug("process2", { "Using \$[] to set top_level:: for ${cp}" })
+	cp.options.top_level = true
+	$($cp)
+}
+
 doc Write to first process of ProcessesPipeline
 doc %EX - p = (|cat -n | tac >/tmp/1)
 doc %EX - p.write("one\n")

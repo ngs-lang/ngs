@@ -25,6 +25,7 @@
   * Add `Transformed` pattern
   * Add experimental `Capture` pattern for capturing values
   * Add experimental `Branch` pattern for multiple matches
+* Add `$[...]` syntax for running external programs without capturing output
 
 ### Fixes and improvements
 * Fix `AtPath` for non-eachables
