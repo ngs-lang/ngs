@@ -1,10 +1,6 @@
-# TODO: check what should be changed in the file after migration from cmake_minimum_required(VERSION 3.0)
 cmake_minimum_required(VERSION 3.5)
 
 project(NGS)
-
-# TOOD: check how not to use hard coded include and lib directories.
-#       Do something like pkg_check_modules(LIBFFI libffi REQUIRED) but for all libraries?
 
 include(CheckFunctionExists)
 include(CheckIncludeFile)
@@ -82,7 +78,6 @@ ENDIF()
 
 
 find_program(SED NAMES gsed sed) # gsed - MacOS and FreeBSD, sed - all the rest
-#find_file(PCRE_H pcre.h)
 add_custom_command(
 	OUTPUT
 		${CMAKE_CURRENT_BINARY_DIR}/syntax.include
