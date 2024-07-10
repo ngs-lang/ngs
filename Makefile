@@ -16,11 +16,7 @@ SUDO := $(shell command -v sudo 2> /dev/null)
 
 .PHONY: build
 build:
-ifeq ($(shell uname -s),Darwin)
-	( source build.macos.env.sh && mkdir -p build && cd build && $(CMAKE) .. && make )
-else
 	( mkdir -p build && cd build && $(CMAKE) .. && make )
-endif
 
 .PHONY: tests
 tests:
