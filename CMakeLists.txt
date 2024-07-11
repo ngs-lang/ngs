@@ -15,7 +15,7 @@ include(GNUInstallDirs)
 # -D_XOPEN_SOURCE - strptime on Linux
 # -D_DEFAULT_SOURCE - MAP_ANONYMOUS on Linux
 # -D__BSD_VISIBLE - AF_UNIX on FreeBSD
-add_definitions(-D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE=1 -D_DEFAULT_SOURCE=1 -D_BSD_SOURCE -D__BSD_VISIBLE)
+add_definitions(-D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE=1 -D_DEFAULT_SOURCE=1 -D_BSD_SOURCE -D__BSD_VISIBLE -DINSTALL_LIBDIR=${CMAKE_INSTALL_FULL_LIBDIR})
 
 # This is workaround for boehm GC library bug or NGS usage of it
 # which cases sporadic SIGSEGV and other issues after fork() in child process.

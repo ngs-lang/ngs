@@ -3757,6 +3757,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 		set_global(vm, "PCRE_NEWLINE", MAKE_INT(d));
 	}
 
+	// INSTALL_LIBDIR - https://stackoverflow.com/questions/47346133/how-to-use-a-define-inside-a-format-string
+#define NGS_STR_TMP(X) #X
+#define NGS_STR_TMP2(X) NGS_STR_TMP(X)
+	set_global(vm, "C_INSTALL_LIBDIR", make_string(NGS_STR_TMP2(INSTALL_LIBDIR)));
+#undef NGS_STR_TMP2
+#undef NGS_STR_TMP
+
 #define FFI_TYPE(name) \
 	vm->c_ ## name = make_ffi_type(&(name)); \
 	set_global(vm, "c_" #name, vm->c_ ## name)
