@@ -8588,7 +8588,7 @@ section "Loading code" {
 			${ try ENV.HOME / '.ngs' }
 			/usr/local/etc/ngs
 			/etc/ngs
-			${C_INSTALL_LIBDIR}
+			${C_INSTALL_LIBDIR / 'ngs'}
 		].filter()
 	}
 
