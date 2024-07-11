@@ -33,6 +33,7 @@
 * `Set` comparison now ignores order
 * Fix `after_last(Str, Str)`
 * `encode_json()` - now supports `{'pretty': 'best-effort'}` hint
+* Various build improvements
 
 ### Deprecated
 * Deprecated `Deep` in favor of `AtPath`
