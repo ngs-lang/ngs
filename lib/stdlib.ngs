@@ -8629,7 +8629,7 @@ section "Loading code" {
 		} catch(e) {
 			guard e !~ AnyOf(RequireFail, NormalExit)
 			throw RequireFail(e)
-		}		
+		}
 	}
 
 	F require(p:Path) require(p.path)
