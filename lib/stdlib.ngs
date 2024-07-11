@@ -8588,6 +8588,7 @@ section "Loading code" {
 			${ try ENV.HOME / '.ngs' }
 			/usr/local/etc/ngs
 			/usr/local/lib/ngs
+			/usr/local/lib64/ngs
 			/etc/ngs
 			/usr/lib/ngs
 		].filter()
