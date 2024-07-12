@@ -8539,7 +8539,7 @@ section "base64" {
 	F decode_base64(s:Str) {
 		t = (4 - len(s) % 4) % 4
 		fill = "=" * t
-		`echo "$s$fill" | base64 --decode 2>${true}`
+		`echo "$s$fill" | base64 -d 2>${true}`
 	}
 }
 
