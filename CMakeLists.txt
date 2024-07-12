@@ -4,6 +4,9 @@ project(NGS)
 
 option(INSTALL_EXAMPLE_SCRIPTS "Install example scripts" OFF)
 
+set(BUILD_MAN AUTO CACHE STRING "Build documentation")
+set_property(CACHE BUILD_MAN PROPERTY STRINGS AUTO ON OFF)
+
 include(CheckFunctionExists)
 include(CheckIncludeFile)
 include(FindPkgConfig)
@@ -125,7 +128,23 @@ add_custom_command(
 
 target_link_libraries(ngs m Threads::Threads ${CMAKE_DL_LIBS} ${LIBGC_LIBRARIES} ${LIBFFI_LIBRARIES} ${JSONC_LIBRARIES} ${PCRE_LIBRARIES} ${Backtrace_LIBRARY})
 
-add_custom_target(man ALL WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc COMMAND make man DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doc/*.1.md)
+
+if(BUILD_MAN STREQUAL "AUTO")
+	find_program(PANDOC pandoc)
+elseif(BUILD_MAN)
+	find_program(PANDOC pandoc REQUIRED)
+endif()
+
+if((BUILD_MAN OR BUILD_MAN STREQUAL "AUTO") AND PANDOC)
+	message(STATUS "pandoc program found, building manpages.")
+	add_custom_target(man ALL WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc COMMAND make man DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doc/*.1.md)
+	find_program(PANDOC pandoc)
+	install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/ DESTINATION ${CMAKE_INSTALL_MANDIR}/man1 FILES_MATCHING PATTERN "*.1")
+elseif(BUILD_MAN STREQUAL "AUTO")
+	message(STATUS "pandoc program not found, not building manpages.")
+else()
+	message(STATUS "Not building manpages.")
+endif()
 
 
 install(FILES "${PROJECT_BINARY_DIR}/ngs" DESTINATION ${CMAKE_INSTALL_BINDIR})
@@ -140,7 +159,6 @@ if(INSTALL_EXAMPLE_SCRIPTS)
 	)
 endif()
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR})
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/ DESTINATION ${CMAKE_INSTALL_MANDIR}/man1 FILES_MATCHING PATTERN "*.1")
 
 enable_testing()
 # NGS_PATH is set because the files are not installed yet.
