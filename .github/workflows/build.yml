@@ -6,7 +6,7 @@ on:
 jobs:
   build-internal-apt:
     timeout-minutes: 5
-    name: Build in ${{ matrix.compiler.type }}-${{ matrix.version }} on ${{ matrix.os }}
+    name: Build in ${{ matrix.compiler.type }}-${{ matrix.compiler.version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -31,7 +31,6 @@ jobs:
             package: clang
             cc: clang
             cxx: clang++
-
     steps:
       - uses: actions/checkout@v4
       - name: Setup Compiler
