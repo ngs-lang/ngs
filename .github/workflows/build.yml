@@ -19,7 +19,7 @@ jobs:
           - {type: gcc, version: 14}
         include:
           - os: "ubuntu-24.04"
-          - compiler: {type: gcc}
+          - compiler: {type: gcc, version: 14}
             package: g++
             cc: gcc
             cxx: g++
