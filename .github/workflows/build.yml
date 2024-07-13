@@ -33,30 +33,27 @@ jobs:
 
   build-external-pacman:
     timeout-minutes: 5
-    name: Build in ${{ matrix.compiler }}-default (${{ matrix.container }})
+    name: ${{ matrix.compiler.type }} on ${{ matrix.container }}
     runs-on: ubuntu-24.04
-    container:
-      image: ${{ matrix.container }}
-      options: --user root
     strategy:
       matrix:
         container: [ "archlinux:base" ] # https://hub.docker.com/_/archlinux/
-        compiler: [ "gcc", "clang" ]
+        compiler:
+          - {type: gcc, package: gcc, cc: gcc, cxx: g++}
+          - {type: clang, package: clang, cc: clang, cxx: clang++}
+    container:
+      image: ${{ matrix.container }}
+      options: --user root
     steps:
       - uses: actions/checkout@v4
       - name: Setup Compiler
         run: |
           pacman -Syu --noconfirm
-          pacman -Sy --noconfirm man-db wget curl ${{ matrix.compiler }}
-
-          if [ "${{ matrix.compiler }}" = "gcc" ]; then
-            echo "CC=gcc" >> $GITHUB_ENV
-            echo "CXX=g++" >> $GITHUB_ENV
-          else
-            echo "CC=clang" >> $GITHUB_ENV
-            echo "CXX=clang++" >> $GITHUB_ENV
-          fi
+          pacman -Sy --noconfirm man-db wget curl ${{ matrix.compiler.package }}
       - name: Install and Test
+        env:
+          CC: ${{ matrix.compiler.cc }}
+          CXX: ${{ matrix.compiler.cxx }}
         run: (./install.sh && make tests test-installation)
 
   build-external-apt-gcc:
