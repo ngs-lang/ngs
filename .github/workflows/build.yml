@@ -17,10 +17,6 @@ jobs:
           - {type: gcc, version: 12}
           - {type: gcc, version: 13}
           - {type: gcc, version: 14}
-          - type: clang
-            package: clang
-            cc: clang
-            cxx: clang++
         include:
           - os: "ubuntu-24.04"
           - compiler.type: gcc
