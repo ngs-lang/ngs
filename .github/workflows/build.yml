@@ -6,11 +6,15 @@ on:
 jobs:
   build-internal-apt:
     timeout-minutes: 5
-    name: Build in ${{ matrix.compiler }}-${{ matrix.version }} (${{ matrix.os }})
+    name: Build in ${{ matrix.compiler.type }}-${{ matrix.version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        compiler: [ "gcc", "clang" ]
+        compiler:
+          - type: gcc
+            package: g++-${{ matrix.version }}
+          - type: clang
+            package: clang-${{ matrix.version }}
         include:
           - os: "ubuntu-24.04"
           - compiler: clang
@@ -30,13 +34,11 @@ jobs:
       - name: Setup Compiler
         run: |
           sudo apt-get update
-          sudo apt-get install -y man
-          if [ "${{ matrix.compiler }}" = "gcc" ]; then
-            sudo apt-get install -y g++-${{ matrix.version }}
+          sudo apt-get install -y man ${{ matrix.compiler.package }}
+          if [ "${{ matrix.compiler.type }}" = "gcc" ]; then
             echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
             echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
           else
-            sudo apt-get install -y clang-${{ matrix.version }}
             echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
             echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
           fi
