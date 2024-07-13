@@ -37,11 +37,11 @@ jobs:
       - name: Setup Compiler
         run: |
           sudo apt-get update
-          sudo apt-get install -y man ${{ matrix.compiler.package }}-${{ matrix.version }}
+          sudo apt-get install -y man ${{ matrix.compiler.package }}-${{ matrix.compiler.version }}
       - name: Install and Test
         env:
-          CC: ${{ matrix.compiler.cc }}-${{ matrix.version }}
-          CXX: ${{ matrix.compiler.cxx }}-${{ matrix.version }}
+          CC: ${{ matrix.compiler.cc }}-${{ matrix.compiler.version }}
+          CXX: ${{ matrix.compiler.cxx }}-${{ matrix.compiler.version }}
         run: (./install.sh && make tests test-installation)
 
   build-external-pacman:
