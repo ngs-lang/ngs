@@ -11,12 +11,12 @@ jobs:
     strategy:
       matrix:
         compiler:
-          - {type: clang, version: 16, package: clang, cc: clang, cxx: clang++}
-          - {type: clang, version: 17, package: clang, cc: clang, cxx: clang++}
-          - {type: clang, version: 18, package: clang, cc: clang, cxx: clang++}
           - {type: gcc, version: 12, package: g++, cc: gcc, cxx: g++}
           - {type: gcc, version: 13, package: g++, cc: gcc, cxx: g++}
           - {type: gcc, version: 14, package: g++, cc: gcc, cxx: g++}
+          - {type: clang, version: 16, package: clang, cc: clang, cxx: clang++}
+          - {type: clang, version: 17, package: clang, cc: clang, cxx: clang++}
+          - {type: clang, version: 18, package: clang, cc: clang, cxx: clang++}
         include:
           - os: "ubuntu-24.04"
     steps:
@@ -24,7 +24,6 @@ jobs:
       - name: Setup Compiler
         run: |
           sudo apt-get update
-          echo DEBUG: sudo apt-get install -y man ${{ matrix.compiler.package }}-${{ matrix.compiler.version }}
           sudo apt-get install -y man ${{ matrix.compiler.package }}-${{ matrix.compiler.version }}
       - name: Install and Test
         env:
