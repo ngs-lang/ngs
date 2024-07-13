@@ -34,7 +34,7 @@ jobs:
   build-external-pacman:
     timeout-minutes: 5
     name: Build in ${{ matrix.compiler }}-default (${{ matrix.container }})
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     container:
       image: ${{ matrix.container }}
       options: --user root
