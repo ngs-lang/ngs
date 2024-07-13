@@ -11,27 +11,29 @@ jobs:
     strategy:
       matrix:
         compiler:
-          - type: gcc
-            package: g++
-            cc: gcc
-            cxx: g++
-          - type: clang
+          - gcc
+          - clang
+        include:
+          - os: "ubuntu-24.04"
+          - compiler: clang
             package: clang
             cc: clang
             cxx: clang++
-        include:
-          - os: "ubuntu-24.04"
-          - compiler.type: clang
+          - compiler: gcc
+            package: g++
+            cc: gcc
+            cxx: g++
+          - compiler: clang
             version: 16
-          - compiler.type: clang
+          - compiler: clang
             version: 17
-          - compiler.type: clang
+          - compiler: clang
             version: 18
-          - compiler.type: gcc
+          - compiler: gcc
             version: 12
-          - compiler.type: gcc
+          - compiler: gcc
             version: 13
-          - compiler.type: gcc
+          - compiler: gcc
             version: 14
     steps:
       - uses: actions/checkout@v4
