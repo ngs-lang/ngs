@@ -12,9 +12,9 @@ jobs:
       matrix:
         compiler:
           - type: gcc
-            package: g++-${{ matrix.version }}
+            package: g++
           - type: clang
-            package: clang-${{ matrix.version }}
+            package: clang
         include:
           - os: "ubuntu-24.04"
           - compiler: clang
@@ -34,7 +34,7 @@ jobs:
       - name: Setup Compiler
         run: |
           sudo apt-get update
-          sudo apt-get install -y man ${{ matrix.compiler.package }}
+          sudo apt-get install -y man ${{ matrix.compiler.package }}-${{ matrix.version }}
           if [ "${{ matrix.compiler.type }}" = "gcc" ]; then
             echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
             echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
