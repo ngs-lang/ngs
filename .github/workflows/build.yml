@@ -17,17 +17,17 @@ jobs:
             package: clang
         include:
           - os: "ubuntu-24.04"
-          - compiler: clang
+          - compiler.type: clang
             version: 16
-          - compiler: clang
+          - compiler.type: clang
             version: 17
-          - compiler: clang
+          - compiler.type: clang
             version: 18
-          - compiler: gcc
+          - compiler.type: gcc
             version: 12
-          - compiler: gcc
+          - compiler.type: gcc
             version: 13
-          - compiler: gcc
+          - compiler.type: gcc
             version: 14
     steps:
       - uses: actions/checkout@v4
