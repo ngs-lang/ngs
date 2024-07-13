@@ -11,30 +11,27 @@ jobs:
     strategy:
       matrix:
         compiler:
-          - gcc
-          - clang
-        include:
-          - os: "ubuntu-24.04"
-          - compiler: clang
+          - {type: clang, version: 16}
+          - {type: clang, version: 17}
+          - {type: clang, version: 18}
+          - {type: gcc, version: 12}
+          - {type: gcc, version: 13}
+          - {type: gcc, version: 14}
+          - type: clang
             package: clang
             cc: clang
             cxx: clang++
-          - compiler: gcc
+        include:
+          - os: "ubuntu-24.04"
+          - compiler.type: gcc
             package: g++
             cc: gcc
             cxx: g++
-          - compiler: clang
-            version: 16
-          - compiler: clang
-            version: 17
-          - compiler: clang
-            version: 18
-          - compiler: gcc
-            version: 12
-          - compiler: gcc
-            version: 13
-          - compiler: gcc
-            version: 14
+          - compiler.type: clang
+            package: clang
+            cc: clang
+            cxx: clang++
+
     steps:
       - uses: actions/checkout@v4
       - name: Setup Compiler
