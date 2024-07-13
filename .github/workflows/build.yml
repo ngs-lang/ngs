@@ -36,13 +36,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup Compiler
-        env:
-          CC: ${{ matrix.compiler.cc }}-${{ matrix.version }}
-          CXX: ${{ matrix.compiler.cxx }}-${{ matrix.version }}
         run: |
           sudo apt-get update
           sudo apt-get install -y man ${{ matrix.compiler.package }}-${{ matrix.version }}
       - name: Install and Test
+        env:
+          CC: ${{ matrix.compiler.cc }}-${{ matrix.version }}
+          CXX: ${{ matrix.compiler.cxx }}-${{ matrix.version }}
         run: (./install.sh && make tests test-installation)
 
   build-external-pacman:
