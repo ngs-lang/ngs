@@ -5412,7 +5412,7 @@ section "Logging and status reporting" {
 		F debug(facility:Str, str_or_producer) {
 			if facility in DEBUG or '*' in DEBUG {
 				s = str_or_producer.Value()
-				echo(stdlib_error_fd, "[DEBUG ${Time()} ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()} $facility] $s")
+				echo(stdlib_error_fd, "[DEBUG ${Time() tor '-'} ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()} $facility] $s")
 			}
 		}
 
