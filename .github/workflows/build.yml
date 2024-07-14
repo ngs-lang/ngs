@@ -102,7 +102,7 @@ jobs:
 
   build-external-yum-gcc:
     timeout-minutes: 10
-    name: Build with gcc-default
+    name: Build with gcc
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
@@ -125,7 +125,7 @@ jobs:
 
   build-external-yum-clang:
     timeout-minutes: 10
-    name: Build with clang-default
+    name: Build with clang
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
