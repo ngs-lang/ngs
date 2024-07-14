@@ -7,7 +7,9 @@ ns {
 		F _assert(code:Int, func:Str) {
 			e = c_errno()
 			if code == -1 {
-				e throws CError(e, "${func}() failed")
+				e throws CError(e, '')::{
+					A::message = "${A.errno_name} in ${func}()"
+				}
 				throw InvalidArgument("C code returned -1 but errno is not set")
 			}
 			code
@@ -27,11 +29,17 @@ ns {
 		global socket
 		F socket(domain:Int, type:Int, protocol:Int=0) c_socket(domain, type, protocol)._assert('socket').assert(X>0)
 
+		TEST socket(C_PF_UNIX, C_SOCK_DGRAM) >= 0
+
 		global bind
 		F bind(socket:Int, address:c_sockaddr) c_bind(socket, address)._assert('bind').assert(0)
 
-		TEST socket(C_PF_UNIX, C_SOCK_DGRAM) >= 0
 		TEST $(ok:[0, 1] rm sock_test); bind(socket(C_PF_UNIX, C_SOCK_DGRAM), c_sockaddr_un("sock_test")) == 0
+
+		global connect
+		F connect(socket:Int, address:c_sockaddr) c_connect(socket, address)._assert('connect').assert(0)
+
+		TEST $(ok:[0, 1] rm sock_test); sock = socket(C_PF_UNIX, C_SOCK_STREAM); bind(sock, c_sockaddr_un("sock_test")); listen(sock, 1); connect(socket(C_PF_UNIX, C_SOCK_STREAM), c_sockaddr_un("sock_test")) == 0
 
 		global recvfrom
 		F recvfrom(sock:Int, length:Int, flags:Int, address:c_sockaddr) {

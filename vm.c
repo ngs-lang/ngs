@@ -2075,6 +2075,14 @@ METHOD_RESULT native_c_bind_Int_sockaddr_in METHOD_PARAMS {
 	int ret = bind(GET_INT(argv[0]), (struct sockaddr *) &GET_SOCKADDR_IN(argv[1]), sizeof(GET_SOCKADDR_IN(argv[1])));
 	METHOD_RETURN(MAKE_INT(ret));
 }
+METHOD_RESULT native_c_connect_Int_sockaddr_un METHOD_PARAMS {
+	int ret = connect(GET_INT(argv[0]), (struct sockaddr *) &GET_SOCKADDR_UN(argv[1]), sizeof(GET_SOCKADDR_UN(argv[1])));
+	METHOD_RETURN(MAKE_INT(ret));
+};
+METHOD_RESULT native_c_connect_Int_sockaddr_in METHOD_PARAMS {
+	int ret = connect(GET_INT(argv[0]), (struct sockaddr *) &GET_SOCKADDR_IN(argv[1]), sizeof(GET_SOCKADDR_IN(argv[1])));
+	METHOD_RETURN(MAKE_INT(ret));
+}
 
 METHOD_RESULT native_c_listen METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(listen(GET_INT(argv[0]), GET_INT(argv[1]))));
@@ -3186,6 +3194,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_sockaddr_un", &native_c_sockaddr_un_str, 1, "path", vm->Str);
 	register_global_func(vm, 0, "c_bind", &native_c_bind_Int_sockaddr_un, 2, "socket", vm->Int, "address", vm->c_sockaddr_un);
 	register_global_func(vm, 0, "c_bind", &native_c_bind_Int_sockaddr_in, 2, "socket", vm->Int, "address", vm->c_sockaddr_in);
+	register_global_func(vm, 0, "c_connect", &native_c_connect_Int_sockaddr_un, 2, "socket", vm->Int, "address", vm->c_sockaddr_un);
+	register_global_func(vm, 0, "c_connect", &native_c_connect_Int_sockaddr_in, 2, "socket", vm->Int, "address", vm->c_sockaddr_in);
 	register_global_func(vm, 0, "c_accept", &native_c_accept_sockaddr_un, 2, "socket", vm->Int, "address", vm->c_sockaddr_un);
 	register_global_func(vm, 0, "c_listen", &native_c_listen, 2, "socket", vm->Int, "backlog", vm->Int);
 	register_global_func(vm, 0, "c_recvfrom", &native_c_recvfrom_un, 4, "socket", vm->Int, "length", vm->Int, "flags", vm->Int, "address", vm->c_sockaddr_un);
