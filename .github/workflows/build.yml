@@ -33,7 +33,7 @@ jobs:
 
   build-external-pacman:
     timeout-minutes: 5
-    name: ${{ matrix.compiler.type }} on ${{ matrix.container }}
+    name: Build with ${{ matrix.compiler.type }} on ${{ matrix.container }}
     runs-on: ubuntu-24.04
     strategy:
       matrix:
