@@ -184,7 +184,7 @@ jobs:
 
   build-other-arch-gcc:
     timeout-minutes: 15
-    name: Build on (${{ matrix.container }} ${{ matrix.arch }})
+    name: Build on ${{ matrix.container }} ${{ matrix.arch }}
     runs-on: ubuntu-20.04
     strategy:
       matrix:
