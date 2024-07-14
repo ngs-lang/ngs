@@ -66,12 +66,17 @@ ns {
 
 	section "Higher level networking" {
 
+		type Client
+		type UnixStreamClient(Client)
+
 		type Server
 		type UnixStreamServer(Server)
 
-		global init
-
 		type Connection
+			type ClientConnection(Connection)
+			type ServerConnection(Connection)
+
+		global init
 
 		type ConnectionPipelineDelegate(COR::PipelineDelegate)
 		F init(cpd:ConnectionPipelineDelegate, connection:Connection) init(args())
@@ -89,9 +94,23 @@ ns {
 		}
 
 		section "Connection" {
-			F init(c:Connection, server:Server, sock:Int) {
-				c.server = server
+
+			F init(c:Connection, sock:Int) {
 				c.sock = sock
+				c.user = {} # For user data
+				# c.pipeline is not here as expecting to change COR::Pipeline() call to have client/server specific arguments
+			}
+
+			F init(c:ClientConnection, client:Client, sock:Int) {
+				super(c, sock)
+				c.client = client
+				c.pipeline = COR::Pipeline(ConnectionPipelineDelegate(c))
+				c.user = {} # For user data
+			}
+
+			F init(c:ServerConnection, server:Server, sock:Int) {
+				super(c, sock)
+				c.server = server
 				c.pipeline = COR::Pipeline(ConnectionPipelineDelegate(c))
 				c.user = {} # For user data
 			}
@@ -101,6 +120,9 @@ ns {
 
 			global send
 			F send(c:Connection, data:Str) c.sock.send(data)
+
+			F Connection(c:Client, sock:Int) ClientConnection(c, sock)
+			F Connection(s:Server, sock:Int) ServerConnection(s, sock)
 		}
 
 		section "ConnectionDelegate" {
@@ -245,6 +267,43 @@ ns {
 
 		# DEBUG=server ngs -pi 'net::test_un_server()'
 		# echo wwwxyz | nc -U build/sock_test
+
+		section "ClientDelegate" {
+			type ClientDelegate
+
+			global on_connect
+			F on_connect(cd:ClientDelegate, c:Connection) {
+				debug('client', 'ClientDelegate on_connect()')
+			}
+
+			global on_data
+			F on_data(cd:ClientDelegate, data:Str) {
+				debug('client', 'ClientDelegate on_data()')
+			}
+
+			global on_remote_close
+			F on_remote_close(cd:ClientDelegate) {
+				debug('client', 'ClientDelegate on_remote_close()')
+			}
+		}
+
+		section "UnixStreamClient" {
+			F connect(usc:UnixStreamClient, path:Str, cd:ClientDelegate) {
+				sock = socket(C_PF_UNIX, C_SOCK_STREAM)
+				usc.sock = sock
+				connect(sock, c_sockaddr_un(path))
+				c = Connection(usc, sock)
+				cd.on_connect(c)
+				while true {
+					data = recvfrom(sock, 1024, 0, c_sockaddr_un())
+					if data == '' {
+						cd.on_remote_close()
+						break
+					}
+					cd.on_data(data)
+				}
+			}
+		}
 	}
 }
 
