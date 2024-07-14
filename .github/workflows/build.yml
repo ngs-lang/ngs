@@ -6,7 +6,7 @@ on:
 jobs:
   build-internal-apt:
     timeout-minutes: 5
-    name: Build in ${{ matrix.compiler.type }}-${{ matrix.compiler.version }} on ${{ matrix.os }}
+    name: Build with ${{ matrix.compiler.type }}-${{ matrix.compiler.version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -58,7 +58,7 @@ jobs:
 
   build-external-apt-gcc:
     timeout-minutes: 5
-    name: Build in gcc-${{ matrix.version }} (${{ matrix.container }})
+    name: Build with gcc-${{ matrix.version }} (${{ matrix.container }})
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
@@ -80,7 +80,7 @@ jobs:
 
   build-external-apt-clang:
     timeout-minutes: 5
-    name: Build in clang-${{ matrix.version }} (${{ matrix.container }})
+    name: Build with clang-${{ matrix.version }} (${{ matrix.container }})
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
@@ -102,7 +102,7 @@ jobs:
 
   build-external-yum-gcc:
     timeout-minutes: 10
-    name: Build in gcc-default
+    name: Build with gcc-default
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
@@ -125,7 +125,7 @@ jobs:
 
   build-external-yum-clang:
     timeout-minutes: 10
-    name: Build in clang-default
+    name: Build with clang-default
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.container }}
@@ -184,7 +184,7 @@ jobs:
 
   build-other-arch-gcc:
     timeout-minutes: 15
-    name: Build in (${{ matrix.container }} - ${{ matrix.arch }})
+    name: Build on (${{ matrix.container }} ${{ matrix.arch }})
     runs-on: ubuntu-20.04
     strategy:
       matrix:
