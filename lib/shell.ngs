@@ -9,8 +9,27 @@ ns {
 	doc Rudimentary client as phase 1.
 	doc Not implemented yet.
 	doc Send a command and poll for results.
-	F client(cmd:Str) {
-		throw NotImplemented()
+	F eval(cmd:Str) {
+
+		type ShellClientDelegate(net::ClientDelegate)
+		scd = ShellClientDelegate()
+
+		global on_connect
+		F on_connect(scd:ShellClientDelegate, c:net::Connection) {
+			debug('client', 'ShellClientDelegate#on_connect()')
+			c.pipeline.push(IO::handlers::Splitter("\n"))
+			# c.pipeline.push(IO::handlers::JsonRpc())
+			c.send({"jsonrpc": "2.0", "id": 1, "method": "eval", "params": [cmd] }.encode_json() + "\n")
+		}
+
+		global on_data
+		F on_data(scd:ShellClientDelegate, data:Str) {
+			debug('client', 'ShellClientDelegate#on_data()')
+			log("Received: ${data}")
+		}
+
+		client = net::UnixStreamClient()
+		client.connect(SOCK_FILE, scd)
 	}
 
 	doc Starts shell server, JSON RPC proxy, and a browser client
@@ -49,7 +68,6 @@ ns {
 		}
 
 		type ShellServerDelegate(net::ThreadedServerDelegate)
-
 		global on_listen
 		F on_listen(ssd:ShellServerDelegate, s:net::Server) {
 			super(ssd, s)
@@ -102,8 +120,10 @@ ns {
 				if event =~ {'ref': {'type': 'AWS::CodePipeline::Execution', 'id': { id=A } }} {
 					log("ui_default_action navigate to AWS::CodePipeline::Execution $id")
 				}
+			}
 
-
+			F poll() {
+				log("poll() - not implemented yet")
 			}
 
 			section "tests" {

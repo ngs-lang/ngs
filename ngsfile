@@ -1,0 +1,10 @@
+#!/usr/bin/env ngs
+ns {
+	F server() {
+		require("./lib/shell.ngs")::server()
+	}
+
+	F eval(cmd:Str) {
+		require("./lib/shell.ngs")::eval(cmd)
+	}
+}
