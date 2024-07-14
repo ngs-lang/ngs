@@ -2072,7 +2072,7 @@ METHOD_RESULT native_c_bind_Int_sockaddr_un METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(ret));
 };
 METHOD_RESULT native_c_bind_Int_sockaddr_in METHOD_PARAMS {
-	int ret = bind(GET_INT(argv[0]), (struct sockaddr *) &GET_SOCKADDR_IN(argv[1]), sizeof(GET_SOCKADDR_UN(argv[1])));
+	int ret = bind(GET_INT(argv[0]), (struct sockaddr *) &GET_SOCKADDR_IN(argv[1]), sizeof(GET_SOCKADDR_IN(argv[1])));
 	METHOD_RETURN(MAKE_INT(ret));
 }
 
