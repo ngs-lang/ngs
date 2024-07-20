@@ -8825,7 +8825,7 @@ section "Bootstrap" {
 	F echo_cli(a:Arr) {
 		guard a
 		guard isatty(1)
-		guard a[0] is Hash
+		guard (a[0] is Hash) or (a[0] is HashLike)
 		pattern = a[0].keys().Hash({Any})
 		guard all(a, pattern)
 		Table2::Table(a).echo()
