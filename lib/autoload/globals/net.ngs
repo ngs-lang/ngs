@@ -252,19 +252,6 @@ ns {
 			net::UnixStreamServer().listen("sock_test", md)
 		}
 
-		# TODO: Fix for COR
-		F unix_json_rpc_server(path:Str, events:Namespace) {
-			sd = net::ThreadedServerDelegate(F on_connect() {
-				F make_json_rpc_handler() {
-					debug('server', 'make_json_rpc_handler()')
-					net::JsonRpcConnectionHandler(events)
-				}
-				net::LinesConnectionDelegate(make_json_rpc_handler)
-			})
-			log("JSON RPC server is starting to listen on Unix socket ${path}")
-			net::UnixStreamServer().listen(path, sd)
-		}
-
 		# DEBUG=server ngs -pi 'net::test_un_server()'
 		# echo wwwxyz | nc -U build/sock_test
 
