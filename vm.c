@@ -2159,7 +2159,7 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	return index;
 }
 
-VALUE _make_func(VM *vm, int pass_extra_params, char *name, void *func_ptr, int argc, va_list varargs) {
+VALUE _make_func(VM *vm, int_fast8_t pass_extra_params, char *name, void *func_ptr, int argc, va_list varargs) {
 	int i;
 	NATIVE_METHOD_OBJECT *func;
 	VALUE *argv = NULL;
