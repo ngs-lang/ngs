@@ -51,7 +51,7 @@ ns {
 		}
 
 
-		section "JSON-RPC Handler" {
+		section "JSON-RPC Server Handler" {
 
 			_VALID_JSON_RPC_REQUEST = {
 				'jsonrpc': '2.0'
@@ -61,18 +61,18 @@ ns {
 			}
 
 			# https://www.jsonrpc.org/specification
-			type JsonRpc(COR::Handler)
+			type JsonRpcServer(COR::Handler)
 
-			F init(jrh:JsonRpc) throw InvalidArgument("JsonRpc() was called without arguments")
+			F init(jrs:JsonRpcServer) throw InvalidArgument("JsonRpcServer() was called without arguments")
 
-			F init(jrh:JsonRpc, methods:Namespace) init(args())
+			F init(jrs:JsonRpcServer, methods:Namespace) init(args())
 
-			F handle(jrh:JsonRpc, hc:COR::HandlerContext, r:events::Read) block b {
+			F handle(jrs:JsonRpcServer, hc:COR::HandlerContext, r:events::Read) block b {
 				data = r.data
-				debug('server', "JsonRpc Read")
+				debug('server', "JsonRpcServer Read")
 
 				F send_error(code, message, data=null) {
-					error("JsonRpc on_data send_error -- ${code} ${message} ${data}")
+					error("JsonRpcServer on_data send_error -- ${code} ${message} ${data}")
 					ret = {
 						'jsonrpc': '2.0'
 						'id': req.get('id')
@@ -95,7 +95,7 @@ ns {
 
 				if (req !~ _VALID_JSON_RPC_REQUEST) send_error(-32600, 'Invalid Request', 'See https://www.jsonrpc.org/specification')
 
-				if (req.method not in jrh.methods) send_error(-32601, 'Method not found', "Method ${req.method} not found. Available methods: ${jrh.methods.keys()}")
+				if (req.method not in jrs.methods) send_error(-32601, 'Method not found', "Method ${req.method} not found. Available methods: ${jrs.methods.keys()}")
 
 				args = []
 				kwargs = {}
@@ -106,12 +106,12 @@ ns {
 					}
 				}
 
-				debug('server', "JsonRpc on_data -- invoking ${req.method}")
+				debug('server', "JsonRpcServer on_data -- invoking ${req.method}")
 				result = try {
-					jrh.methods[req.method](*args, **kwargs)
+					jrs.methods[req.method](*args, **kwargs)
 				} catch(mnf:MethodNotFound) {
-					guard mnf.callable === jrh.methods[req.method]
-					send_error(-32602, 'Invalid params', "Correct parameters can be seen in methods' descriptions: ${jrh.methods[req.method].Arr()}")
+					guard mnf.callable === jrs.methods[req.method]
+					send_error(-32602, 'Invalid params', "Correct parameters can be seen in methods' descriptions: ${jrs.methods[req.method].Arr()}")
 				} catch(e:Error) {
 					send_error(-32603, 'Internal error', e.Str())
 				}
@@ -123,13 +123,68 @@ ns {
 						'id': req.id
 						'result': result
 					}.filterv() # Why filterv()?
-					debug('server', 'JsonRpc on_data -- sending reply')
+					debug('server', 'JsonRpcServer on_data -- sending reply')
 					hc.fire(events::Write(ret.encode_json() + "\n"))
 				}
 
 			} # handle Read
 
-		} # "JSON-RPC handler"
+		} # "JSON-RPC Server Handler"
+
+		section "JSON-RPC Client Handler" {
+
+			type JsonRpcClient(COR::Handler)
+
+			# Note: Not thread safe
+			F init(jrc:JsonRpcClient) {
+				jrc.callbacks = {}
+				jrc.id = Iter(1..null)
+				debug('client', 'JsonRpcClient()')
+			}
+
+			F handle(jrc:JsonRpcClient, hc:COR::HandlerContext, r:events::Read) block b {
+				data = r.data
+				debug('client', "JsonRpcClient Read")
+			}
+
+			F handle(jrc:JsonRpcClient, hc:COR::HandlerContext, w:events::Write) block b {
+				data = w.data
+				debug('client', "JsonRpcClient Write")
+				id = w.data.get('id', { jrc.id.next() })
+				w2 = events::Write({
+					'jsonrpc': '2.0'
+					'id': id
+					'method': w.data.call.method
+					'params': w.data.call.params
+				}.encode_json() + "\n")  # TODO: move + "\n" to another handler
+
+				jrc.callbacks[id] = w.data.callback
+
+				hc.fire(w2)
+			}
+
+			# TODO: make this more resilient
+			F handle(jrc:JsonRpcClient, hc:COR::HandlerContext, r:events::Read) block b {
+				data = r.data
+				debug('client', "JsonRpcClient Read ${data}")
+
+				res = try {
+					data.decode_json()
+				} catch(e:JsonDecodeFail) {
+					throw Error("JsonRpcClient Read - failed to decode JSON", e)
+				}
+
+				'id' not in res throws Error("JsonRpcClient Read - no id in response")
+
+				res.id not in jrc.callbacks throws Error("JsonRpcClient Read - no callback for id ${res.id}")
+
+				finally(
+					{ jrc.callbacks[res.id](res.result) }
+					{ jrc.callbacks.del(res.id) }
+				)
+			}
+
+		}
 
 
 	} # ns handlers

@@ -125,27 +125,6 @@ ns {
 			F Connection(s:Server, sock:Int) ServerConnection(s, sock)
 		}
 
-		section "ConnectionDelegate" {
-			type ConnectionDelegate
-
-			global on_connect
-			F on_connect(ch:ConnectionDelegate, c:Connection) {
-				debug('server', 'ConnectionDelegate on_connect()')
-				ch.connection = c
-			}
-
-			global on_data
-			F on_data(ch:ConnectionDelegate, data:Str) {
-				debug('server', 'ConnectionDelegate on_data()')
-			}
-
-			global on_remote_close
-			F on_remote_close(ch:ConnectionDelegate) {
-				debug('server', 'ConnectionDelegate on_remote_close()')
-				ch.connection.close()
-			}
-		}
-
 		section "ServerDelegate" {
 			type ServerDelegate
 			# F init(sd:ServerDelegate) throw InvalidArgument()
@@ -287,7 +266,7 @@ ns {
 						cd.on_remote_close()
 						break
 					}
-					cd.on_data(data)
+					c.pipeline.fire(IO::events::Read(data))
 				}
 			}
 		}

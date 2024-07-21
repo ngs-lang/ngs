@@ -9,8 +9,9 @@ ns {
 	doc Rudimentary client as phase 1.
 	doc Not implemented yet.
 	doc Send a command and poll for results.
-	F eval(cmd:Str) {
+	F eval(cmd:Str, exit:Bool=true) {
 
+		# TODO: make this method less verbose by adding functionality to libraries
 		type ShellClientDelegate(net::ClientDelegate)
 		scd = ShellClientDelegate()
 
@@ -18,14 +19,17 @@ ns {
 		F on_connect(scd:ShellClientDelegate, c:net::Connection) {
 			debug('client', 'ShellClientDelegate#on_connect()')
 			c.pipeline.push(IO::handlers::Splitter("\n"))
-			# c.pipeline.push(IO::handlers::JsonRpc())
-			c.send({"jsonrpc": "2.0", "id": 1, "method": "eval", "params": [cmd] }.encode_json() + "\n")
-		}
-
-		global on_data
-		F on_data(scd:ShellClientDelegate, data:Str) {
-			debug('client', 'ShellClientDelegate#on_data()')
-			log("Received: ${data}")
+			c.pipeline.push(IO::handlers::JsonRpcClient())
+			c.pipeline.fire(IO::events::Active())
+			c.pipeline.fire(IO::events::Write({
+				'call': {
+					"method": "eval"
+					"params": [cmd]
+				}
+				'callback': F(response) {
+					debug('client', "CLIENT RESPONSE ${response}")
+				}
+			}))
 		}
 
 		client = net::UnixStreamClient()
@@ -137,7 +141,7 @@ ns {
 		F on_connect(ssd:ShellServerDelegate, c:net::Connection) {
 			debug('server', 'ShellServerDelegate#on_connect()')
 			c.pipeline.push(IO::handlers::Splitter("\n"))
-			c.pipeline.push(IO::handlers::JsonRpc(SHELL_METHODS))
+			c.pipeline.push(IO::handlers::JsonRpcServer(SHELL_METHODS))
 			super(ssd, c)
 		}
 
