@@ -68,7 +68,11 @@ ns {
 			debug('COR', {
 				"fire(Pipeline, Event) - ${e.Type().name}"
 			})
-			p.head.next.handle(e)
+			handler = ematch e {
+				IncomingEvent p.head.next
+				OutgoingEvent p.tail.prev
+			}
+			handler.handle(e)
 		}
 	}
 
@@ -118,7 +122,7 @@ ns {
 			ihc.pipeline.delegate.handle(e)
 			debug('COR', "handle(_InternalHandlerContext, Event) ${ihc.Type().name} ${e.Type().name} - after")
 		} catch(ex) {
-			throw Error("handle(_InternalHandlerContext, Event) ${ihc.Type().name} ${e.Type().name} - failed to call pipeline delegate")
+			throw Error("handle(_InternalHandlerContext, Event) ${ihc.Type().name} ${e.Type().name} - failed to call pipeline delegate", ex)
 		}
 	}
 
