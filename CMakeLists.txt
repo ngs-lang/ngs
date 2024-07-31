@@ -128,22 +128,26 @@ add_custom_command(
 
 target_link_libraries(ngs m Threads::Threads ${CMAKE_DL_LIBS} ${LIBGC_LIBRARIES} ${LIBFFI_LIBRARIES} ${JSONC_LIBRARIES} ${PCRE_LIBRARIES} ${Backtrace_LIBRARY})
 
-
+set(DO_BUILD_MAN_PAGES ON)
 if(BUILD_MAN STREQUAL "AUTO")
 	find_program(PANDOC pandoc)
+	if(PANDOC)
+		message(STATUS "BUILD_MAN is AUTO - pandoc program found, building man pages.")
+	else()
+		message(STATUS "BUILD_MAN is AUTO - pandoc program not found, not building man pages.")
+	endif()
 elseif(BUILD_MAN)
+	message(STATUS "BUILD_MAN is ON - looking for pandoc, it's required for building the man pages")
 	find_program(PANDOC pandoc REQUIRED)
+else()
+	message(STATUS "BUILD_MAN is OFF - not building man pages")
+	set(DO_BUILD_MAN_PAGES OFF)
 endif()
 
-if((BUILD_MAN OR BUILD_MAN STREQUAL "AUTO") AND PANDOC)
-	message(STATUS "pandoc program found, building manpages.")
+if(DO_BUILD_MAN_PAGES)
 	add_custom_target(man ALL WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc COMMAND make man DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doc/*.1.md)
 	find_program(PANDOC pandoc)
 	install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/ DESTINATION ${CMAKE_INSTALL_MANDIR}/man1 FILES_MATCHING PATTERN "*.1")
-elseif(BUILD_MAN STREQUAL "AUTO")
-	message(STATUS "pandoc program not found, not building manpages.")
-else()
-	message(STATUS "Not building manpages.")
 endif()
 
 
