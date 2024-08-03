@@ -1,7 +1,11 @@
 #!/usr/bin/env ngs
 ns {
 	F server() {
-		require("./lib/shell.ngs")::server()
+		require("./lib/shell.ngs")::server(false)
+	}
+
+	F ui() {
+		require("./lib/shell.ngs")::server(true)
 	}
 
 	F eval(cmd:Str) {

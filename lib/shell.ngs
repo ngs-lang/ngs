@@ -37,7 +37,7 @@ ns {
 	}
 
 	doc Starts shell server, JSON RPC proxy, and a browser client
-	F server() {
+	F server(launch_browser:Bool=true) {
 		ENV.BROWSER = 'none'
 
 		# XXX: Ugly hack to prevent direct output to stdout.
@@ -75,11 +75,14 @@ ns {
 		global on_listen
 		F on_listen(ssd:ShellServerDelegate, s:net::Server) {
 			super(ssd, s)
-			p = $(x_top_level:: cd:PROXY_DIR npx ts-node src/server.ts ../ngs/ngs-shell.sock &)
-			echo("Proxy PID: ${p.processes[0].pid}")
+			log("Listening on ${SOCK_FILE}")
+			if launch_browser {
+				p = $(x_top_level:: cd:PROXY_DIR npx ts-node src/server.ts ../ngs/ngs-shell.sock &)
+				echo("Proxy PID: ${p.processes[0].pid}")
 
-			web_server = $(cd:WEB_SERVER_DIR npm start &)
-			echo("Web server PID: ${web_server.processes[0].pid}")
+				web_server = $(cd:WEB_SERVER_DIR npm start &)
+				echo("Web server PID: ${web_server.processes[0].pid}")
+			}
 		}
 
 		tl = Timeline()
@@ -108,9 +111,9 @@ ns {
 
 				func = load(bytecode, "<shell line func>")
 				result = func()
-				log("Result type ${result.Type().name}")
+				debug('server', "Result type ${result.Type().name}")
 				result = ui::Element(result)
-				log("Result type after transform() ${result.Type().name}")
+				debug('server', "Result type after transform() ${result.Type().name}")
 				result.JsonData()._censor()
 			}
 
