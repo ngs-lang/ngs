@@ -6,7 +6,7 @@
 * Add `Iter(Set)`
 * Add `partitionk(Eachable2, pattern)`
 * Add `partitionv(Eachable2, pattern)`
-* Add experimental `fields()`
+* Add `fields()`
 * Add experimental `retry_assert()`
 * Add `Duration` type
 * Add experimental `finally(Block, Fun)`
