@@ -3866,11 +3866,40 @@ F sortv(h:Hash, lte:Fun=(<=)) h.Arr().sort({ lte(A[1], B[1]) }).Hash()
 TEST {"a": 1, "b": 10, "c": 5}.sortv() == {"a": 1, "c": 5, "b": 10}
 TEST {"a": 1, "b": 10, "c": 5}.sortv() != {"a": 1, "b": 10, "c": 5}
 
-doc %STATUS - experimental
-F fields(e:Eachable2, patterns:Arr) e.filterk(AnyOf(patterns))
+section "fields()" {
+	doc Only keep fields matching the pattern.
+	doc Same as e.filterk(pattern).
+	doc %EX - {"a": 1, "b": 2}.fields(AnyOf("a", "a2"))  # {"a": 1}
+	F fields(e:Eachable2, pattern) e.filterk(pattern)
 
-doc %STATUS - experimental
-F fields(e:Eachable1, patterns:Arr) e.map(F(elt:Eachable2) elt.fields(patterns))
+	doc Remove fields matching the pattern.
+	doc Same as e.fields(Not(AnyOf(n.pattern))).
+	doc n - Not(Arr)
+	doc %EX - {"a": 1, "b": 2}.fields(Not(%[a c d]))  # {"b": 2}
+	F fields(e:Eachable2, n:Not) {
+		guard n.pattern is Arr
+		e.fields(Not(AnyOf(n.pattern)))
+	}
+
+	doc Same as e.fields(AnyOf(patterns))
+	doc %EX - {"a": 1, "b": 2}.fields(["a", "a2"])  # {"a": 1}
+	F fields(e:Eachable2, patterns:Arr) e.fields(AnyOf(patterns))
+
+	doc Only keep specified fields in each element of e
+	doc %EX - [{"a": 1, "b": 2}].fields(%[a])  # [{"a": 1}]
+	F fields(e:Eachable1, pat) {
+		e.map(F(elt) {
+			assert(elt, Eachable2, InvalidArgument('fields(Eachable1, pat) requires elements of Eachable1 to be Eachable2'))
+			elt.fields(pat)
+		})
+	}
+
+	TEST [{"a": 1, "b": 2}].fields(%[a]) == [{"a": 1}]
+	TEST [{"a": 1, "ab": 2}].fields([/a/]) == [{"a": 1, "ab": 2}]
+	TEST [{"a": 1, "b": 2}].fields(Not(%[a c d])) == [{"b": 2}]
+	TEST [{"a": 1, "ab": 2}].fields(Not([/a/])) == [{}]
+	TEST {[[]].fields("a")}.assert(InvalidArgument)
+}
 
 # --- Conversions ---
 
@@ -3960,7 +3989,7 @@ F JsonData(h:Hash) h.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
 # --- Misc ---
 
 doc Filter out specific key.
-doc Deprecated. Use rejectk().
+doc Deprecated. Use rejectk() or fields(Not(...)).
 doc e - Source
 doc without_k - The key to filter out
 doc %EX - {'a': 1, 'b': 2, 'c': 3}.without('a')  # {'b': 2, 'c': 3}
