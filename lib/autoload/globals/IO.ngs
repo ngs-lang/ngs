@@ -139,7 +139,14 @@ ns {
 			F init(jrc:JsonRpcClient) {
 				jrc.callbacks = {}
 				jrc.id = Iter(1..null)
+				jrc.pipeline = null
 				debug('client', 'JsonRpcClient()')
+			}
+
+			F handle(jrc:JsonRpcClient, hc:COR::HandlerContext, a:events::Active) {
+				debug('client', 'JsonRpcClient Active')
+				jrc.pipeline = hc.pipeline
+				hc.fire(a)
 			}
 
 			F handle(jrc:JsonRpcClient, hc:COR::HandlerContext, r:events::Read) block b {
@@ -149,7 +156,7 @@ ns {
 
 			F handle(jrc:JsonRpcClient, hc:COR::HandlerContext, w:events::Write) block b {
 				data = w.data
-				debug('client', "JsonRpcClient Write")
+				debug('client', "JsonRpcClient Write ${w.data.SafeStr()}")
 				id = w.data.get('id', { jrc.id.next() })
 				w2 = events::Write({
 					'jsonrpc': '2.0'
@@ -166,7 +173,7 @@ ns {
 			# TODO: make this more resilient
 			F handle(jrc:JsonRpcClient, hc:COR::HandlerContext, r:events::Read) block b {
 				data = r.data
-				debug('client', "JsonRpcClient Read ${data}")
+				debug('client', "JsonRpcClient Read ${data.SafeStr()}")
 
 				res = try {
 					data.decode_json()
@@ -184,6 +191,17 @@ ns {
 				)
 			}
 
+			global call
+			F call(jrc:JsonRpcClient, method:Str, params=[], callback:Fun=nop) {
+				assert(jrc.pipeline, 'Before using JsonRpcClient#call, call fire(COR::Pipeline, IO::events::Active()) on the pipeline where JsonRpcClient were pushed')
+				jrc.pipeline.fire(events::Write({
+					'call': {
+						'method': method
+						'params': params
+					}
+					'callback': callback
+				}))
+			}
 		}
 
 

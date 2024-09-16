@@ -4,6 +4,33 @@ ns {
 
 	global Timeline, Time, Lines, init, each, map, sort, push, echo_cli
 
+	section "TimelineItem" {
+
+		global TimelineItem
+		doc time - Time
+		type TimelineItem
+
+		F init(ti:TimelineItem, time:Time) {
+			ti.id = "ti-${`line: uuidgen`}" # temporary
+			ti.time = time
+		}
+
+		F Time(ti:TimelineItem) ti.time
+	}
+
+	section "TextualCommandTimelineItem" {
+
+		global TextualCommandTimelineItem
+		type TextualCommandTimelineItem(TimelineItem)
+
+		F init(ti:TextualCommandTimelineItem) throw InvalidArgument("TextualCommandTimelineItem() was called without arguments")
+
+		F init(ti:TextualCommandTimelineItem, time:Time, command:Str) {
+			super(ti, time)
+			ti.command = command
+		}
+	}
+
 	section "Timeline" {
 
 		doc time_start - Time
@@ -32,8 +59,8 @@ ns {
 			t.sort()
 		}
 
-		F push(t:Timeline, x:Timeline) t::{
-			A.items.push(x)
+		F push(t:Timeline, ti:TimelineItem) t::{
+			A.items.push(ti)
 			A.sort() # TODO: insert in the correct place, keeping .items sorted by time
 			# TODO: maximize time_last_update and time_end into t
 			# TODO: minimize time_start into t

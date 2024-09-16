@@ -1,4 +1,4 @@
-ns {
+ns(TL=Timeline, TCTI=TextualCommandTimelineItem) {
 	# WIP
 	global init, JsonData
 
@@ -17,6 +17,8 @@ ns {
 	type Element()
 
 		type Screen(Element)
+		type Timeline(Element)
+		type TimelineItem(Element)
 		type Object(Element)
 
 		type Scalar(Element)
@@ -85,6 +87,13 @@ ns {
 	F keys_are_strings(h) h.keys().all(Str)
 	F Element(h:AnyOf(Hash, HashLike)) Properties(h.assert(keys_are_strings, "Element(Hash) - keys must be strings").mapv(Element))
 
+	F Element(tcti:TCTI) {
+		tcti.command.Element()
+	}
+
+	F Element(tl:TL) {
+		Timeline(tl.items.map(Element))
+	}
 
 	# TODO: Fix later. It's semantically incorrect to display path as just a string
 	F Element(p:Path) Scalar(p.path)

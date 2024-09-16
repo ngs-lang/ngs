@@ -83,7 +83,7 @@ ns {
 
 		global handle
 		F handle(cpd:ConnectionPipelineDelegate, e:IO::events::Write) {
-			debug('server', "ConnectionPipelineDelegate Write")
+			debug('server', "ConnectionPipelineDelegate Write ${e.data.SafeStr()}")
 			cpd.connection.send(e.data)
 		}
 		F handle(cpd:ConnectionPipelineDelegate, e:IO::events::Active) {
@@ -255,13 +255,17 @@ ns {
 
 		section "UnixStreamClient" {
 			F connect(usc:UnixStreamClient, path:Str, cd:ClientDelegate) {
+				debug('client', 'UnixStreamClient#connect')
 				sock = socket(C_PF_UNIX, C_SOCK_STREAM)
 				usc.sock = sock
 				connect(sock, c_sockaddr_un(path))
 				c = Connection(usc, sock)
+				debug('client', 'UnixStreamClient will call on_connect')
 				cd.on_connect(c)
 				while true {
+					debug('client', 'UnixStreamClient will recvfrom()')
 					data = recvfrom(sock, 1024, 0, c_sockaddr_un())
+					debug('client', "UnixStreamClient did recvfrom() ${data.SafeStr()}")
 					if data == '' {
 						cd.on_remote_close()
 						break

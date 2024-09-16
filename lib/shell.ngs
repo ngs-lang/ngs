@@ -19,17 +19,16 @@ ns {
 		F on_connect(scd:ShellClientDelegate, c:net::Connection) {
 			debug('client', 'ShellClientDelegate#on_connect()')
 			c.pipeline.push(IO::handlers::Splitter("\n"))
-			c.pipeline.push(IO::handlers::JsonRpcClient())
+			jrc = IO::handlers::JsonRpcClient()
+			c.pipeline.push(jrc)
 			c.pipeline.fire(IO::events::Active())
-			c.pipeline.fire(IO::events::Write({
-				'call': {
-					"method": "eval"
-					"params": [cmd]
-				}
-				'callback': F(response) {
-					debug('client', "CLIENT RESPONSE ${response}")
-				}
-			}))
+
+			# TODO: something not callback-based
+			jrc.call('eval', [cmd], {
+				jrc.call('poll', [], {
+					echo("POLL RESULT ${A.SafeStr()}")
+				})
+			})
 		}
 
 		client = net::UnixStreamClient()
@@ -131,6 +130,8 @@ ns {
 
 			F poll() {
 				log("poll() - not implemented yet")
+				result = ui::Element(tl)
+				result.JsonData()._censor()
 			}
 
 			section "tests" {
