@@ -512,6 +512,7 @@ void resize_hash_for_new_len(VALUE h, RESIZE_HASH_AFTER after) {
 
 	if(!new_buckets_n) {
 		OBJ_DATA_PTR(h) = NULL;
+		HASH_BUCKETS_N(h) = new_buckets_n;
 		return;
 	}
 

@@ -35,6 +35,7 @@
 * Fix `after_last(Str, Str)`
 * `encode_json()` - now supports `{'pretty': 'best-effort'}` hint
 * Various build improvements
+* Fix edge case in `del(Hash, Any)`
 
 ### Deprecated
 * Deprecated `Deep` in favor of `AtPath`
