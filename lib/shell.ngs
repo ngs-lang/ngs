@@ -7,13 +7,24 @@ ns {
 	WEB_SERVER_PORT = 52000
 
 	# Temporary name "repr"
-	F repr(x:NormalTypeInstance, level:Int=0) {
-		h = x.Hash()
-
+	F repr(h:Hash, level:Int=0) collector {
+		pfx = '  ' * level
+		h.each(F(k, v) {
+			if [k, v] =~ ['time', Int] {
+				v = "${v} (${v.Time().Str()})"
+			}
+			if k == 'children' {
+				v.each_idx_val(F(i, v) {
+					collect("${pfx}  [${i}]")
+					repr(v, level + 2).each(collect)
+				})
+				return
+			}
+			collect("${pfx}${k} = ${v.SafeStr()}")
+		})
 	}
 
 	doc Rudimentary client as phase 1.
-	doc Not implemented yet.
 	doc Send a command and poll for results.
 	F eval(cmd:Str, exit:Bool=true) {
 
@@ -33,7 +44,6 @@ ns {
 		client = net::UnixStreamClient()
 		client.connect(SOCK_FILE, scd)
 
-		# TODO: something not callback-based
 		e = jrc.call('eval', [cmd])
 		log("Eval result ${e.SafeStr()}")
 
@@ -41,7 +51,7 @@ ns {
 			log("Polling")
 			p = jrc.call('poll')
 			log("Poll result")
-			echo(inspect(p))
+			echo(p.repr().Lines())
 			exit breaks
 		}
 

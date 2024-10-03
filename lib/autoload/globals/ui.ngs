@@ -19,6 +19,7 @@ ns(TL=Timeline, TCTI=TextualCommandTimelineItem) {
 		type Screen(Element)
 		type Timeline(Element)
 		type TimelineItem(Element)
+			type TextualCommandTimelineItem(TimelineItem)
 		type Object(Element)
 
 		type Scalar(Element)
@@ -87,13 +88,16 @@ ns(TL=Timeline, TCTI=TextualCommandTimelineItem) {
 	F keys_are_strings(h) h.keys().all(Str)
 	F Element(h:AnyOf(Hash, HashLike)) Properties(h.assert(keys_are_strings, "Element(Hash) - keys must be strings").mapv(Element))
 
-	F Element(tcti:TCTI) {
-		tcti.command.Element()
+	F init(tcti:TextualCommandTimelineItem, id:Str, time:Time, command:Str) init(args())
+
+	F Element(tcti:TCTI) TextualCommandTimelineItem(tcti.id, tcti.time, tcti.command)
+
+	F init(tl:Timeline, id:Str, items:Arr) {
+		tl.id = id
+		tl.children = items.map(Element)
 	}
 
-	F Element(tl:TL) {
-		Timeline(tl.items.map(Element))
-	}
+	F Element(tl:TL) Timeline(tl.id, tl.items)
 
 	# TODO: Fix later. It's semantically incorrect to display path as just a string
 	F Element(p:Path) Scalar(p.path)
