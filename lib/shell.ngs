@@ -14,25 +14,32 @@ ns {
 		# TODO: make this method less verbose by adding functionality to libraries
 		type ShellClientDelegate(net::ClientDelegate)
 		scd = ShellClientDelegate()
+		jrc = IO::handlers::JsonRpcClient()
 
 		global on_connect
 		F on_connect(scd:ShellClientDelegate, c:net::Connection) {
 			debug('client', 'ShellClientDelegate#on_connect()')
 			c.pipeline.push(IO::handlers::Splitter("\n"))
-			jrc = IO::handlers::JsonRpcClient()
 			c.pipeline.push(jrc)
 			c.pipeline.fire(IO::events::Active())
-
-			# TODO: something not callback-based
-			jrc.call('eval', [cmd], {
-				jrc.call('poll', [], {
-					echo("POLL RESULT ${A.SafeStr()}")
-				})
-			})
 		}
 
 		client = net::UnixStreamClient()
 		client.connect(SOCK_FILE, scd)
+
+		# TODO: something not callback-based
+		jrc.call('eval', [cmd], {
+			log("EVAL RESULT ${A.SafeStr()}")
+		})
+		while true {
+			log("Polling")
+			jrc.call('poll', [], {
+				echo("POLL RESULT ${A.SafeStr()}")
+			})
+			$(log: sleep 5)
+		}
+
+
 	}
 
 	doc Starts shell server, JSON RPC proxy, and a browser client
@@ -129,7 +136,7 @@ ns {
 			}
 
 			F poll() {
-				log("poll() - not implemented yet")
+				log("poll() - work in progress - returning Timeline")
 				result = ui::Element(tl)
 				result.JsonData()._censor()
 			}

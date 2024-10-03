@@ -254,6 +254,16 @@ ns {
 		}
 
 		section "UnixStreamClient" {
+
+			block _ {
+				id = Iter(1..null)
+				global init
+				F init(usc:UnixStreamClient) {
+					super(usc)
+					usc.id = id.next()
+				}
+			}
+
 			F connect(usc:UnixStreamClient, path:Str, cd:ClientDelegate) {
 				debug('client', 'UnixStreamClient#connect')
 				sock = socket(C_PF_UNIX, C_SOCK_STREAM)
@@ -262,16 +272,19 @@ ns {
 				c = Connection(usc, sock)
 				debug('client', 'UnixStreamClient will call on_connect')
 				cd.on_connect(c)
-				while true {
-					debug('client', 'UnixStreamClient will recvfrom()')
-					data = recvfrom(sock, 1024, 0, c_sockaddr_un())
-					debug('client', "UnixStreamClient did recvfrom() ${data.SafeStr()}")
-					if data == '' {
-						cd.on_remote_close()
-						break
+				usc.reader = Thread("UnixStreamClient-${usc.id}-receiver", {
+					while true {
+						debug('client', 'UnixStreamClient will recvfrom()')
+						data = recvfrom(sock, 1024, 0, c_sockaddr_un())
+						debug('client', "UnixStreamClient did recvfrom() ${data.SafeStr()}")
+						if data == '' {
+							cd.on_remote_close()
+							break
+						}
+						c.pipeline.fire(IO::events::Read(data))
 					}
-					c.pipeline.fire(IO::events::Read(data))
-				}
+				})
+				usc
 			}
 		}
 	}
