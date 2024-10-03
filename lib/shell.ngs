@@ -6,6 +6,12 @@ ns {
 	WEB_SERVER_DIR = Dir(".." / "ngs-web-ui").assert()
 	WEB_SERVER_PORT = 52000
 
+	# Temporary name "repr"
+	F repr(x:NormalTypeInstance, level:Int=0) {
+		h = x.Hash()
+
+	}
+
 	doc Rudimentary client as phase 1.
 	doc Not implemented yet.
 	doc Send a command and poll for results.
@@ -28,15 +34,15 @@ ns {
 		client.connect(SOCK_FILE, scd)
 
 		# TODO: something not callback-based
-		jrc.call('eval', [cmd], {
-			log("EVAL RESULT ${A.SafeStr()}")
-		})
+		e = jrc.call('eval', [cmd])
+		log("Eval result ${e.SafeStr()}")
+
 		while true {
 			log("Polling")
-			jrc.call('poll', [], {
-				echo("POLL RESULT ${A.SafeStr()}")
-			})
-			$(log: sleep 5)
+			p = jrc.call('poll')
+			log("Poll result")
+			echo(inspect(p))
+			exit breaks
 		}
 
 
@@ -95,6 +101,10 @@ ns {
 		SHELL_METHODS = ns {
 			F eval(line:Str) {
 
+				section "Append line to the Timeline" {
+					tc = TextualCommandTimelineItem(Time(), line)
+					tl.push(tc)
+				}
 				fname = '<shell line file>'
 
 				section "Shortcuts" {
@@ -136,7 +146,7 @@ ns {
 			}
 
 			F poll() {
-				log("poll() - work in progress - returning Timeline")
+				log("poll() - work in progress - returning the whole Timeline")
 				result = ui::Element(tl)
 				result.JsonData()._censor()
 			}

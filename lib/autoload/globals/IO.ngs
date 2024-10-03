@@ -191,8 +191,24 @@ ns {
 				)
 			}
 
+			# Is this the right way to do sync and async?
+			# TODO: what async should return?
 			global call
-			F call(jrc:JsonRpcClient, method:Str, params=[], callback:Fun=nop) {
+			F call(jrc:JsonRpcClient, method:Str, params=[], callback:Fun=null) {
+				sync = not(callback)
+
+				lock = Lock()
+				result = null
+				if sync {
+					lock.acquire()
+					callback = F json_rpc_client_sync_callback(data) {
+						# Runs in the reader thread
+						debug('client', 'JsonRpcClient callback')
+						result = data
+						lock.release()
+					}
+				}
+
 				assert(jrc.pipeline, 'Before using JsonRpcClient#call, call fire(COR::Pipeline, IO::events::Active()) on the pipeline where JsonRpcClient were pushed')
 				jrc.pipeline.fire(events::Write({
 					'call': {
@@ -201,6 +217,13 @@ ns {
 					}
 					'callback': callback
 				}))
+
+				not(sync) returns
+
+				debug('client', 'JsonRpcClient blocked on waiting for result')
+				lock.acquire().release()
+				debug('client', 'JsonRpcClient got result')
+				result
 			}
 		}
 
