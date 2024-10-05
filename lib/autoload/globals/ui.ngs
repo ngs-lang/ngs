@@ -110,12 +110,13 @@ ns(TL=Timeline) {
 
 	F Element(tcti:TL::TextualCommandItem) TextualCommandTimelineItem(tcti.id, tcti.time, tcti.command)
 
-	F init(tl:Timeline, id:Str, items:Arr) {
+	F init(tl:Timeline, id:Str, version, items:Arr) {
 		tl.id = id
+		tl.version = version
 		tl.children = items.map(Element)
 	}
 
-	F Element(tl:TL::Timeline) Timeline(tl.id, tl.items)
+	F Element(tl:TL::Timeline) Timeline(tl.id, tl.version, tl.items)
 
 	# TODO: Fix later. It's semantically incorrect to display path as just a string
 	F Element(p:Path) Scalar(p.path)

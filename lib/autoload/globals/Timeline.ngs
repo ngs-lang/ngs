@@ -70,6 +70,7 @@ ns {
 
 		F init(t:Timeline) {
 			t.id = "tl-${`line: uuidgen`}" # temporary
+			t.version = 1  # TODO: make sure it's thread safe
 			t.name = '(unnamed)'
 			t.status = 'TODO'
 			t.error = null
@@ -91,6 +92,7 @@ ns {
 			A.sort() # TODO: insert in the correct place, keeping .items sorted by time
 			# TODO: maximize time_last_update and time_end into t
 			# TODO: minimize time_start into t
+			t.version += 1
 		}
 
 		F each(t:Timeline, cb:Fun) t::{A.items.each(cb)}

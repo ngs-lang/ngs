@@ -47,15 +47,17 @@ ns {
 		e = jrc.call('eval', [cmd])
 		log("Eval result ${e.SafeStr()}")
 
+		last_seen_version = null
 		while true {
-			log("Polling")
-			p = jrc.call('poll')
-			log("Poll result")
-			echo(p.repr().Lines())
+			log("Polling last_seen_version=${last_seen_version}")
+			p = jrc.call('poll', {
+				'last_seen_version': last_seen_version
+			})
+			log("Poll result - timeline (ver. ${p.version})")
+			echo(p.timeline.repr().Lines())
+			last_seen_version = p.version
 			exit breaks
 		}
-
-
 	}
 
 	doc Starts shell server, JSON RPC proxy, and a browser client
@@ -143,6 +145,7 @@ ns {
 					result = func()
 					debug('server', "Eval end: ${line}")
 					g.push(Timeline::ResultItem(Time(), result))
+					tl.version += 1  # FIXME: Flimsy
 				})
 				{'ti': tc.id}  # Timeline Item ID
 			}
@@ -159,10 +162,22 @@ ns {
 				}
 			}
 
-			F poll() {
-				log("poll() - work in progress - returning the whole Timeline")
-				result = ui::Element(tl)
-				# 'token': if tl.items then tl.items[-1].id
+			# TODO: handle broken pipe
+			F poll(last_seen_version) {
+				log("poll(last_seen_version=${last_seen_version}) - work in progress - returning the whole Timeline")
+				section "Wait for later version before retuning the result" block b {
+					not(last_seen_version) returns
+					while true {
+						if tl.version > last_seen_version {
+							b.return()
+						}
+						$(sleep 0.1)
+					}
+				}
+				result = {
+					'timeline': ui::Element(tl)
+					'version': tl.version
+				}
 				result.JsonData()._censor()
 			}
 
