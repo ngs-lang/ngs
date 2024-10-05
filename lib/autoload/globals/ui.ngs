@@ -1,4 +1,4 @@
-ns(TL=Timeline, TCTI=TextualCommandTimelineItem, GTI=GroupTimelineItem, RTI=ResultTimelineItem) {
+ns(TL=Timeline) {
 	# WIP
 	global init, JsonData
 
@@ -96,7 +96,7 @@ ns(TL=Timeline, TCTI=TextualCommandTimelineItem, GTI=GroupTimelineItem, RTI=Resu
 		super(gti, items)
 	}
 
-	F Element(gti:GTI) GroupTimelineItem(gti.id, gti.time, gti.items.map(Element))
+	F Element(gti:TL::GroupItem) GroupTimelineItem(gti.id, gti.time, gti.items.map(Element))
 
 	F init(rti:ResultTimelineItem, id:Str, time:Time, result) {
 		rti.id = id
@@ -104,18 +104,18 @@ ns(TL=Timeline, TCTI=TextualCommandTimelineItem, GTI=GroupTimelineItem, RTI=Resu
 		super(rti, [Element(result)])
 	}
 
-	F Element(rti:RTI) ResultTimelineItem(rti.id, rti.time, rti.result)
+	F Element(rti:TL::ResultItem) ResultTimelineItem(rti.id, rti.time, rti.result)
 
 	F init(tcti:TextualCommandTimelineItem, id:Str, time:Time, command:Str) init(args())
 
-	F Element(tcti:TCTI) TextualCommandTimelineItem(tcti.id, tcti.time, tcti.command)
+	F Element(tcti:TL::TextualCommandItem) TextualCommandTimelineItem(tcti.id, tcti.time, tcti.command)
 
 	F init(tl:Timeline, id:Str, items:Arr) {
 		tl.id = id
 		tl.children = items.map(Element)
 	}
 
-	F Element(tl:TL) Timeline(tl.id, tl.items)
+	F Element(tl:TL::Timeline) Timeline(tl.id, tl.items)
 
 	# TODO: Fix later. It's semantically incorrect to display path as just a string
 	F Element(p:Path) Scalar(p.path)

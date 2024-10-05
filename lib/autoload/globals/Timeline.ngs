@@ -2,35 +2,33 @@ ns {
 
 	# WIP - timeline, mainly for UI
 
-	global Timeline, Time, Lines, init, each, map, sort, push, echo_cli
+	global Time, Lines, init, each, map, sort, push, echo_cli
 
-	section "TimelineItem" {
+	section "Item" {
 
-		global TimelineItem
 		doc time - Time
-		type TimelineItem
+		type Item
 
-		F init(ti:TimelineItem) throw InvalidArgument("TimelineItem() was called without arguments")
+		F init(ti:Item) throw InvalidArgument("Item() was called without arguments")
 
-		F init(ti:TimelineItem, time:Time=null) {
+		F init(ti:Item, time:Time=null) {
 			ti.id = "ti-${`line: uuidgen`}" # temporary
 			ti.time = time
 		}
 
-		F Time(ti:TimelineItem) ti.time
+		F Time(ti:Item) ti.time
 	}
 
-	section "GroupTimelineItem" {
+	section "GroupItem" {
 
-		global GroupTimelineItem
-		type GroupTimelineItem(TimelineItem)
+		type GroupItem(Item)
 
-		F init(ti:GroupTimelineItem) {
+		F init(ti:GroupItem) {
 			super(ti)
 			ti.items = []
 		}
 
-		F push(gti:GroupTimelineItem, ti:TimelineItem) gti::{
+		F push(gti:GroupItem, ti:Item) gti::{
 			if not(gti.items) {
 				gti.time = ti.time
 			}
@@ -38,26 +36,23 @@ ns {
 		}
 	}
 
-	section "ResultTimelineItem" {
+	section "ResultItem" {
 
-		global ResultTimelineItem
-		type ResultTimelineItem(TimelineItem)
+		type ResultItem(Item)
 
-		F init(ti:ResultTimelineItem, time:Time, result) {
+		F init(ti:ResultItem, time:Time, result) {
 			super(ti, time)
 			ti.result = result
 		}
-
 	}
 
-	section "TextualCommandTimelineItem" {
+	section "TextualCommandItem" {
 
-		global TextualCommandTimelineItem
-		type TextualCommandTimelineItem(TimelineItem)
+		type TextualCommandItem(Item)
 
-		F init(ti:TextualCommandTimelineItem) throw InvalidArgument("TextualCommandTimelineItem() was called without arguments")
+		F init(ti:TextualCommandItem) throw InvalidArgument("TextualCommandItem() was called without arguments")
 
-		F init(ti:TextualCommandTimelineItem, time:Time, command:Str) {
+		F init(ti:TextualCommandItem, time:Time, command:Str) {
 			super(ti, time)
 			ti.command = command
 		}
@@ -91,7 +86,7 @@ ns {
 			t.sort()
 		}
 
-		F push(t:Timeline, ti:TimelineItem) t::{
+		F push(t:Timeline, ti:Item) t::{
 			A.items.push(ti)
 			A.sort() # TODO: insert in the correct place, keeping .items sorted by time
 			# TODO: maximize time_last_update and time_end into t

@@ -107,13 +107,13 @@ ns {
 			}
 		}
 
-		tl = Timeline()
+		tl = Timeline::Timeline()
 		SHELL_METHODS = ns {
 			F eval(line:Str) {
 
 				section "Append line to the Timeline" {
-					tc = TextualCommandTimelineItem(Time(), line)
-					g = GroupTimelineItem().push(tc)
+					tc = Timeline::TextualCommandItem(Time(), line)
+					g = Timeline::GroupItem().push(tc)
 					tl.push(g)
 				}
 				fname = '<shell line file>'
@@ -142,7 +142,7 @@ ns {
 					func = load(bytecode, "<shell line func>")
 					result = func()
 					debug('server', "Eval end: ${line}")
-					g.push(ResultTimelineItem(Time(), result))
+					g.push(Timeline::ResultItem(Time(), result))
 				})
 				{'ti': tc.id}  # Timeline Item ID
 			}
