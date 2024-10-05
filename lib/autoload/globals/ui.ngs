@@ -1,4 +1,4 @@
-ns(TL=Timeline, TCTI=TextualCommandTimelineItem) {
+ns(TL=Timeline, TCTI=TextualCommandTimelineItem, GTI=GroupTimelineItem, RTI=ResultTimelineItem) {
 	# WIP
 	global init, JsonData
 
@@ -19,7 +19,9 @@ ns(TL=Timeline, TCTI=TextualCommandTimelineItem) {
 		type Screen(Element)
 		type Timeline(Element)
 		type TimelineItem(Element)
+			type GroupTimelineItem(TimelineItem)
 			type TextualCommandTimelineItem(TimelineItem)
+			type ResultTimelineItem(TimelineItem)
 		type Object(Element)
 
 		type Scalar(Element)
@@ -87,6 +89,22 @@ ns(TL=Timeline, TCTI=TextualCommandTimelineItem) {
 
 	F keys_are_strings(h) h.keys().all(Str)
 	F Element(h:AnyOf(Hash, HashLike)) Properties(h.assert(keys_are_strings, "Element(Hash) - keys must be strings").mapv(Element))
+
+	F init(gti:GroupTimelineItem, id:Str, time:Time, items:Arr) {
+		gti.id = id
+		gti.time = time
+		super(gti, items)
+	}
+
+	F Element(gti:GTI) GroupTimelineItem(gti.id, gti.time, gti.items.map(Element))
+
+	F init(rti:ResultTimelineItem, id:Str, time:Time, result) {
+		rti.id = id
+		rti.time = time
+		super(rti, [Element(result)])
+	}
+
+	F Element(rti:RTI) ResultTimelineItem(rti.id, rti.time, rti.result)
 
 	F init(tcti:TextualCommandTimelineItem, id:Str, time:Time, command:Str) init(args())
 

@@ -10,12 +10,44 @@ ns {
 		doc time - Time
 		type TimelineItem
 
-		F init(ti:TimelineItem, time:Time) {
+		F init(ti:TimelineItem) throw InvalidArgument("TimelineItem() was called without arguments")
+
+		F init(ti:TimelineItem, time:Time=null) {
 			ti.id = "ti-${`line: uuidgen`}" # temporary
 			ti.time = time
 		}
 
 		F Time(ti:TimelineItem) ti.time
+	}
+
+	section "GroupTimelineItem" {
+
+		global GroupTimelineItem
+		type GroupTimelineItem(TimelineItem)
+
+		F init(ti:GroupTimelineItem) {
+			super(ti)
+			ti.items = []
+		}
+
+		F push(gti:GroupTimelineItem, ti:TimelineItem) gti::{
+			if not(gti.items) {
+				gti.time = ti.time
+			}
+			gti.items.push(ti)
+		}
+	}
+
+	section "ResultTimelineItem" {
+
+		global ResultTimelineItem
+		type ResultTimelineItem(TimelineItem)
+
+		F init(ti:ResultTimelineItem, time:Time, result) {
+			super(ti, time)
+			ti.result = result
+		}
+
 	}
 
 	section "TextualCommandTimelineItem" {

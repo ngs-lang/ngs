@@ -8,7 +8,7 @@ ns {
 		require("./lib/shell.ngs")::server(true)
 	}
 
-	F eval(cmd:Str) {
-		require("./lib/shell.ngs")::eval(cmd)
+	F eval(cmd:Str, exit:Bool=true) {
+		require("./lib/shell.ngs")::eval(cmd, exit)
 	}
 }

@@ -155,7 +155,7 @@ ns {
 				debug('server', 'ThreadedServerDelegate on_connect()')
 
 				# TODO: join the thread / use Executor
-				Thread("connection-${c.id}", {
+				Thread("ThreadedServerDelegate-Connection-${c.id}", {
 					try {
 						debug('server', 'ThreadedServerDelegate on_listen() - new thread')
 						c.pipeline.fire(IO::events::Active())

@@ -113,7 +113,8 @@ ns {
 
 				section "Append line to the Timeline" {
 					tc = TextualCommandTimelineItem(Time(), line)
-					tl.push(tc)
+					g = GroupTimelineItem().push(tc)
+					tl.push(g)
 				}
 				fname = '<shell line file>'
 
@@ -128,19 +129,22 @@ ns {
 					}
 					line = shortcuts.get(line, line)
 				}
-				bytecode = compile(line, fname)
-				# TODO: pass warnings
-				#bytecode.meta().warnings.each(F(w) {
-				#	wl = w.location
-				#	warn("${fname}:${wl.first_line}:${wl.first_column} warning: ${w.message}")
-				#})
 
-				func = load(bytecode, "<shell line func>")
-				result = func()
-				debug('server', "Result type ${result.Type().name}")
-				result = ui::Element(result)
-				debug('server', "Result type after transform() ${result.Type().name}")
-				result.JsonData()._censor()
+				# TODO: join these sometimes
+				Thread(SeqId("shell-eval-"), {
+					debug('server', "Eval start: ${line}")
+					bytecode = compile(line, fname)
+					# TODO: pass warnings
+					#bytecode.meta().warnings.each(F(w) {
+					#	wl = w.location
+					#	warn("${fname}:${wl.first_line}:${wl.first_column} warning: ${w.message}")
+					#})
+					func = load(bytecode, "<shell line func>")
+					result = func()
+					debug('server', "Eval end: ${line}")
+					g.push(ResultTimelineItem(Time(), result))
+				})
+				{'ti': tc.id}  # Timeline Item ID
 			}
 
 			# event example: {cur={type=AWS::CodePipeline::Pipeline, id=XXXX}, ref={type=AWS::CodePipeline::Execution, id=XXXX}}
@@ -158,6 +162,7 @@ ns {
 			F poll() {
 				log("poll() - work in progress - returning the whole Timeline")
 				result = ui::Element(tl)
+				# 'token': if tl.items then tl.items[-1].id
 				result.JsonData()._censor()
 			}
 
