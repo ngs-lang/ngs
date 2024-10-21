@@ -207,7 +207,7 @@ jobs:
         arch: [ "aarch64", "s390x", "ppc64le" ]   # , "armv6", "armv7" -- 32 bits archs, currently not supported by ngs
     steps:
       - uses: actions/checkout@v4
-      - uses: uraimo/run-on-arch-action@v2.7.2
+      - uses: uraimo/run-on-arch-action@v2.8.1
         name: Run commands
         id: runcmd
         with:
