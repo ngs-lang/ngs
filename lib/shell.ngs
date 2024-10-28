@@ -24,6 +24,52 @@ ns {
 		})
 	}
 
+	section "Shell Client" {
+		type Client()
+
+
+		type ShellClientDelegate(net::ClientDelegate)
+
+		global on_connect
+		F on_connect(scd:ShellClientDelegate, c:net::Connection) {
+			debug('client', 'ShellClientDelegate#on_connect()')
+			scd.jrc = IO::handlers::JsonRpcClient()
+			c.pipeline.push(IO::handlers::Splitter("\n"))
+			c.pipeline.push(scd.jrc)
+			c.pipeline.fire(IO::events::Active())
+		}
+
+		global init
+		F init(c:Client) {
+			c.last_seen_version = null
+			c.last_eval_result = null
+			c.scd = ShellClientDelegate()
+			c.client = net::UnixStreamClient()
+			c.client.connect(SOCK_FILE, c.scd)
+		}
+
+		global eval
+		F eval(c:Client, cmd:Str) {
+			c.last_eval_result = c.scd.jrc.call('eval', [cmd])::{
+				debug('client', {"Eval result ${A.SafeStr()}"})
+			}
+		}
+
+		global poll
+		F poll(c:Client, cb:Fun) {
+			while true {
+				debug('client', "Polling last_seen_version=${c.last_seen_version}")
+				p = c.scd.jrc.call('poll', {
+					'last_seen_version': c.last_seen_version
+				})
+				debug('client', "Poll result - timeline (ver. ${p.version})")
+				# echo(p.timeline.repr().Lines())
+				c.last_seen_version = p.version
+				not(cb(p)) returns p
+			}
+		}
+	}
+
 	doc Rudimentary client as phase 1.
 	doc Send a command and poll for results.
 	F eval(cmd:Str, exit:Bool=true) {
@@ -56,7 +102,7 @@ ns {
 			log("Poll result - timeline (ver. ${p.version})")
 			echo(p.timeline.repr().Lines())
 			last_seen_version = p.version
-			exit breaks
+			exit returns p
 		}
 	}
 
@@ -164,7 +210,7 @@ ns {
 
 			# TODO: handle broken pipe
 			F poll(last_seen_version) {
-				log("poll(last_seen_version=${last_seen_version}) - work in progress - returning the whole Timeline")
+				debug('client', "poll(last_seen_version=${last_seen_version}) - work in progress - returning the whole Timeline")
 				section "Wait for later version before retuning the result" block b {
 					not(last_seen_version) returns
 					while true {

@@ -173,7 +173,7 @@ ns {
 						}
 					} catch(e) {
 						debug('server', "ThreadedServerDelegate before logging")
-						log("ThreadedServerDelegate - exception in thread: ${e}")
+						log("ThreadedServerDelegate - exception in thread: ${Str(e) tor '<Unable to convert exception to string>'}")
 						debug('server', "ThreadedServerDelegate after logging")
 						guard false
 					}
