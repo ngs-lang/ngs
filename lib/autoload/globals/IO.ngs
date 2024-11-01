@@ -106,26 +106,30 @@ ns {
 					}
 				}
 
-				debug('server', "JsonRpcServer on_data -- invoking ${req.method}")
-				result = try {
-					jrs.methods[req.method](*args, **kwargs)
-				} catch(mnf:MethodNotFound) {
-					guard mnf.callable === jrs.methods[req.method]
-					send_error(-32602, 'Invalid params', "Correct parameters can be seen in methods' descriptions: ${jrs.methods[req.method].Arr()}")
-				} catch(e:Error) {
-					send_error(-32603, 'Internal error', e.Str())
-				}
+				debug('server', "JsonRpcServer on_data -- invoking ${req.method} in a thread")
 
-				if 'id' in req {
-					# response expected
-					ret = {
-						'jsonrpc': '2.0'
-						'id': req.id
-						'result': result
-					}.filterv() # Why filterv()?
-					debug('server', 'JsonRpcServer on_data -- sending reply')
-					hc.fire(events::Write(ret.encode_json() + "\n"))
-				}
+				# TODO: join this thread
+				Thread(SeqId("JsonRpcServer-Request"), {
+					result = try {
+						jrs.methods[req.method](*args, **kwargs)
+					} catch(mnf:MethodNotFound) {
+						guard mnf.callable === jrs.methods[req.method]
+						send_error(-32602, 'Invalid params', "Correct parameters can be seen in methods' descriptions: ${jrs.methods[req.method].Arr()}")
+					} catch(e:Error) {
+						send_error(-32603, 'Internal error', e.Str())
+					}
+
+					if 'id' in req {
+						# response expected
+						ret = {
+							'jsonrpc': '2.0'
+							'id': req.id
+							'result': result
+						}.filterv() # Why filterv()?
+						debug('server', 'JsonRpcServer on_data -- sending reply')
+						hc.fire(events::Write(ret.encode_json() + "\n"))
+					}
+				})
 
 			} # handle Read
 
