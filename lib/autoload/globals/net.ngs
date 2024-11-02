@@ -83,7 +83,7 @@ ns {
 
 		global handle
 		F handle(cpd:ConnectionPipelineDelegate, e:IO::events::Write) {
-			debug('server', "ConnectionPipelineDelegate Write")
+			debug('server', "ConnectionPipelineDelegate Write ${e.data.SafeStr()}")
 			cpd.connection.send(e.data)
 		}
 		F handle(cpd:ConnectionPipelineDelegate, e:IO::events::Active) {
@@ -155,7 +155,7 @@ ns {
 				debug('server', 'ThreadedServerDelegate on_connect()')
 
 				# TODO: join the thread / use Executor
-				Thread("connection-${c.id}", {
+				Thread("ThreadedServerDelegate-Connection-${c.id}", {
 					try {
 						debug('server', 'ThreadedServerDelegate on_listen() - new thread')
 						c.pipeline.fire(IO::events::Active())
@@ -173,7 +173,7 @@ ns {
 						}
 					} catch(e) {
 						debug('server', "ThreadedServerDelegate before logging")
-						log("ThreadedServerDelegate - exception in thread: ${e}")
+						log("ThreadedServerDelegate - exception in thread: ${Str(e) tor '<Unable to convert exception to string>'}")
 						debug('server', "ThreadedServerDelegate after logging")
 						guard false
 					}
@@ -254,20 +254,37 @@ ns {
 		}
 
 		section "UnixStreamClient" {
+
+			block _ {
+				id = Iter(1..null)
+				global init
+				F init(usc:UnixStreamClient) {
+					super(usc)
+					usc.id = id.next()
+				}
+			}
+
 			F connect(usc:UnixStreamClient, path:Str, cd:ClientDelegate) {
+				debug('client', 'UnixStreamClient#connect')
 				sock = socket(C_PF_UNIX, C_SOCK_STREAM)
 				usc.sock = sock
 				connect(sock, c_sockaddr_un(path))
 				c = Connection(usc, sock)
+				debug('client', 'UnixStreamClient will call on_connect')
 				cd.on_connect(c)
-				while true {
-					data = recvfrom(sock, 1024, 0, c_sockaddr_un())
-					if data == '' {
-						cd.on_remote_close()
-						break
+				usc.reader = Thread("UnixStreamClient-${usc.id}-receiver", {
+					while true {
+						debug('client', 'UnixStreamClient will recvfrom()')
+						data = recvfrom(sock, 1024, 0, c_sockaddr_un())
+						debug('client', "UnixStreamClient did recvfrom() ${data.SafeStr()}")
+						if data == '' {
+							cd.on_remote_close()
+							break
+						}
+						c.pipeline.fire(IO::events::Read(data))
 					}
-					c.pipeline.fire(IO::events::Read(data))
-				}
+				})
+				usc
 			}
 		}
 	}

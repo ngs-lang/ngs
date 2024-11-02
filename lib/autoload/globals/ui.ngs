@@ -1,4 +1,4 @@
-ns {
+ns(TL=Timeline) {
 	# WIP
 	global init, JsonData
 
@@ -17,6 +17,11 @@ ns {
 	type Element()
 
 		type Screen(Element)
+		type Timeline(Element)
+		type TimelineItem(Element)
+			type GroupTimelineItem(TimelineItem)
+			type TextualCommandTimelineItem(TimelineItem)
+			type ResultTimelineItem(TimelineItem)
 		type Object(Element)
 
 		type Scalar(Element)
@@ -85,6 +90,33 @@ ns {
 	F keys_are_strings(h) h.keys().all(Str)
 	F Element(h:AnyOf(Hash, HashLike)) Properties(h.assert(keys_are_strings, "Element(Hash) - keys must be strings").mapv(Element))
 
+	F init(gti:GroupTimelineItem, id:Str, time:Time, items:Arr) {
+		gti.id = id
+		gti.time = time
+		super(gti, items)
+	}
+
+	F Element(gti:TL::GroupItem) GroupTimelineItem(gti.id, gti.time, gti.items.map(Element))
+
+	F init(rti:ResultTimelineItem, id:Str, time:Time, result) {
+		rti.id = id
+		rti.time = time
+		super(rti, [Element(result)])
+	}
+
+	F Element(rti:TL::ResultItem) ResultTimelineItem(rti.id, rti.time, rti.result)
+
+	F init(tcti:TextualCommandTimelineItem, id:Str, time:Time, command:Str) init(args())
+
+	F Element(tcti:TL::TextualCommandItem) TextualCommandTimelineItem(tcti.id, tcti.time, tcti.command)
+
+	F init(tl:Timeline, id:Str, version, items:Arr) {
+		tl.id = id
+		tl.version = version
+		tl.children = items.map(Element)
+	}
+
+	F Element(tl:TL::Timeline) Timeline(tl.id, tl.version, tl.items)
 
 	# TODO: Fix later. It's semantically incorrect to display path as just a string
 	F Element(p:Path) Scalar(p.path)

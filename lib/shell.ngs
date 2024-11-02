@@ -6,34 +6,104 @@ ns {
 	WEB_SERVER_DIR = Dir(".." / "ngs-web-ui").assert()
 	WEB_SERVER_PORT = 52000
 
+	# Temporary name "repr"
+	F repr(h:Hash, level:Int=0) collector {
+		pfx = '  ' * level
+		h.each(F(k, v) {
+			if [k, v] =~ ['time', Int] {
+				v = "${v} (${v.Time().Str()})"
+			}
+			if k == 'children' {
+				v.each_idx_val(F(i, v) {
+					collect("${pfx}  [${i}]")
+					repr(v, level + 2).each(collect)
+				})
+				return
+			}
+			collect("${pfx}${k} = ${v.SafeStr()}")
+		})
+	}
+
+	section "Shell Client" {
+		type Client()
+
+
+		type ShellClientDelegate(net::ClientDelegate)
+
+		global on_connect
+		F on_connect(scd:ShellClientDelegate, c:net::Connection) {
+			debug('client', 'ShellClientDelegate#on_connect()')
+			scd.jrc = IO::handlers::JsonRpcClient()
+			c.pipeline.push(IO::handlers::Splitter("\n"))
+			c.pipeline.push(scd.jrc)
+			c.pipeline.fire(IO::events::Active())
+		}
+
+		global init
+		F init(c:Client) {
+			c.last_seen_version = null
+			c.last_eval_result = null
+			c.scd = ShellClientDelegate()
+			c.client = net::UnixStreamClient()
+			c.client.connect(SOCK_FILE, c.scd)
+		}
+
+		global eval
+		F eval(c:Client, cmd:Str) {
+			c.last_eval_result = c.scd.jrc.call('eval', [cmd])::{
+				debug('client', {"Eval result ${A.SafeStr()}"})
+			}
+		}
+
+		global poll
+		F poll(c:Client, cb:Fun) {
+			while true {
+				debug('client', "Polling last_seen_version=${c.last_seen_version}")
+				p = c.scd.jrc.call('poll', {
+					'last_seen_version': c.last_seen_version
+				})
+				debug('client', "Poll result - timeline (ver. ${p.version})")
+				# echo(p.timeline.repr().Lines())
+				c.last_seen_version = p.version
+				not(cb(p)) returns p
+			}
+		}
+	}
+
 	doc Rudimentary client as phase 1.
-	doc Not implemented yet.
 	doc Send a command and poll for results.
 	F eval(cmd:Str, exit:Bool=true) {
 
 		# TODO: make this method less verbose by adding functionality to libraries
 		type ShellClientDelegate(net::ClientDelegate)
 		scd = ShellClientDelegate()
+		jrc = IO::handlers::JsonRpcClient()
 
 		global on_connect
 		F on_connect(scd:ShellClientDelegate, c:net::Connection) {
 			debug('client', 'ShellClientDelegate#on_connect()')
 			c.pipeline.push(IO::handlers::Splitter("\n"))
-			c.pipeline.push(IO::handlers::JsonRpcClient())
+			c.pipeline.push(jrc)
 			c.pipeline.fire(IO::events::Active())
-			c.pipeline.fire(IO::events::Write({
-				'call': {
-					"method": "eval"
-					"params": [cmd]
-				}
-				'callback': F(response) {
-					debug('client', "CLIENT RESPONSE ${response}")
-				}
-			}))
 		}
 
 		client = net::UnixStreamClient()
 		client.connect(SOCK_FILE, scd)
+
+		e = jrc.call('eval', [cmd])
+		log("Eval result ${e.SafeStr()}")
+
+		last_seen_version = null
+		while true {
+			log("Polling last_seen_version=${last_seen_version}")
+			p = jrc.call('poll', {
+				'last_seen_version': last_seen_version
+			})
+			log("Poll result - timeline (ver. ${p.version})")
+			echo(p.timeline.repr().Lines())
+			last_seen_version = p.version
+			exit returns p
+		}
 	}
 
 	doc Starts shell server, JSON RPC proxy, and a browser client
@@ -85,10 +155,15 @@ ns {
 			}
 		}
 
-		tl = Timeline()
+		tl = Timeline::Timeline()
 		SHELL_METHODS = ns {
 			F eval(line:Str) {
 
+				section "Append line to the Timeline" {
+					tc = Timeline::TextualCommandItem(Time(), line)
+					g = Timeline::GroupItem().push(tc)
+					tl.push(g)
+				}
 				fname = '<shell line file>'
 
 				section "Shortcuts" {
@@ -102,19 +177,23 @@ ns {
 					}
 					line = shortcuts.get(line, line)
 				}
-				bytecode = compile(line, fname)
-				# TODO: pass warnings
-				#bytecode.meta().warnings.each(F(w) {
-				#	wl = w.location
-				#	warn("${fname}:${wl.first_line}:${wl.first_column} warning: ${w.message}")
-				#})
 
-				func = load(bytecode, "<shell line func>")
-				result = func()
-				debug('server', "Result type ${result.Type().name}")
-				result = ui::Element(result)
-				debug('server', "Result type after transform() ${result.Type().name}")
-				result.JsonData()._censor()
+				# TODO: join these sometimes
+				Thread(SeqId("shell-eval-"), {
+					debug('server', "Eval start: ${line}")
+					bytecode = compile(line, fname)
+					# TODO: pass warnings
+					#bytecode.meta().warnings.each(F(w) {
+					#	wl = w.location
+					#	warn("${fname}:${wl.first_line}:${wl.first_column} warning: ${w.message}")
+					#})
+					func = load(bytecode, "<shell line func>")
+					result = func()
+					debug('server', "Eval end: ${line}")
+					g.push(Timeline::ResultItem(Time(), result))
+					tl.version += 1  # FIXME: Flimsy
+				})
+				{'ti': tc.id}  # Timeline Item ID
 			}
 
 			# event example: {cur={type=AWS::CodePipeline::Pipeline, id=XXXX}, ref={type=AWS::CodePipeline::Execution, id=XXXX}}
@@ -129,8 +208,23 @@ ns {
 				}
 			}
 
-			F poll() {
-				log("poll() - not implemented yet")
+			# TODO: handle broken pipe
+			F poll(last_seen_version) {
+				debug('client', "poll(last_seen_version=${last_seen_version}) - work in progress - returning the whole Timeline")
+				section "Wait for later version before retuning the result" block b {
+					not(last_seen_version) returns
+					while true {
+						if tl.version > last_seen_version {
+							b.return()
+						}
+						$(sleep 0.1)
+					}
+				}
+				result = {
+					'timeline': ui::Element(tl)
+					'version': tl.version
+				}
+				result.JsonData()._censor()
 			}
 
 			section "tests" {

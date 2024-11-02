@@ -51,6 +51,7 @@ TEST a=[1,2,3,4]; a[4..4]=["END"]; a[2..2]=["MIDDLE"]; a[0..0]=["START"]; a[0..1
 
 # === Hash tests =================================
 TEST h={"a": 1}; h.del("a"); h == {}
+TEST h={"a": 1}; h.del("a"); h["b"]=2; h == {"b": 2}
 TEST h={}; try h.del("a") catch(e:KeyNotFound) true
 TEST h={"a": 1, "b": 2}; h.del("a"); h == {"b": 2}
 

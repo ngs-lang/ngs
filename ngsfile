@@ -1,14 +1,93 @@
 #!/usr/bin/env ngs
-ns {
-	F server() {
-		require("./lib/shell.ngs")::server(false)
-	}
+ns(t=test) {
 
-	F ui() {
-		require("./lib/shell.ngs")::server(true)
-	}
+	sh = require("./lib/shell.ngs")
 
-	F eval(cmd:Str) {
-		require("./lib/shell.ngs")::eval(cmd)
+	F server() sh::server(false)
+	F ui() sh::server(true)
+
+	# "eval" would conflict with the global eval(c:Client, ...)
+	# which is called from tests below.
+	F _eval(cmd:Str, exit:Bool=true) sh::eval(cmd, exit)
+	_exports.eval = _eval
+
+	F test() {
+		# Tests where the server and the client run in the same process
+		# fail sporadically. Therefore, running the server in external process.
+		# srv = Thread("test-server", {
+		# 	log("Starting server")
+		# 	server()
+		# })
+		srv = $(ngs . server &)
+		$(sleep 1)
+		c = sh::Client()
+
+		F make_textual_command_timeline_result_pattern(ti:Str, cmd:Str, pat) {
+			{
+				'timeline': {
+					'children': Present({
+						'$type': 'GroupTimelineItem'
+						'children': [{
+							'$type': 'TextualCommandTimelineItem'
+							'id': ti
+							'command': cmd
+						}, {
+							'$type': 'ResultTimelineItem'
+							'children': [
+								pat
+							]
+						}]
+					})
+				}
+			}
+		}
+
+		test_ti = null
+		t("basic eval", {
+			test_ti = c.eval("{1+1}").assert({
+				'ti': Pfx('ti-')
+			}).ti
+		})
+
+		t("poll after basic eval", {
+			c.poll(F(response) {
+				# The response was observed to be already there. I don't think it's guaranteed. May need refactoring.
+				assert(response, make_textual_command_timeline_result_pattern(test_ti, '{1+1}', { '$type': 'Scalar', 'value': 2 }))
+				false
+			})
+		})
+
+		t("eval with sleep", {
+			# Valid JSON for decode_json()
+			test_ti = c.eval("sleep 2 | echo 3").assert({
+				'ti': Pfx('ti-')
+			}).ti
+		})
+
+		t("poll immediately after eval with sleep", {
+			c.poll(F(response) {
+				assert(response, {
+					'timeline': {
+						'children': Present({
+							'$type': 'GroupTimelineItem'
+							'children': [{
+								'$type': 'TextualCommandTimelineItem'
+								'id': test_ti
+								'command': 'sleep 2 | echo 3'
+							}]
+						})
+					}
+				})
+				false
+			})
+		})
+
+		t("poll later after eval with sleep", {
+			$(sleep 2)
+			c.poll(F(response) {
+				assert(response, make_textual_command_timeline_result_pattern(test_ti, 'sleep 2 | echo 3', { '$type': 'Scalar', 'value': 3 }))
+				false
+			})
+		})
 	}
 }

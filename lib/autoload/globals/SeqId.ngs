@@ -1,0 +1,15 @@
+ns {
+	# TODO: more fine grained locking or lock-less mechanism
+	l = Lock()
+	ids = {}
+
+	global SeqId
+	doc %STATUS - Experimental
+	F SeqId(s:Str) {
+		i = l.acquire({
+			ids.dflt(s, 0)
+			ids[s] += 1
+		})
+		"${s}${i}"
+	}
+}
