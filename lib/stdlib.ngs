@@ -1,5 +1,5 @@
-# WARNING: This file is packaged into the ngs binary at build time
-#          it is shipped for reference only.
+# WARNING: This file is packaged into the ngs binary at build time.
+#          It is shipped for reference only.
 
 section "Base" {
 	doc No op.
