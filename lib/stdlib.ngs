@@ -4799,7 +4799,7 @@ section "Strings and characters" {
 	doc Split the string by delimiter and return the last part
 	doc %RET - Str
 	F before_first(s:Str, delim:Str) {
-		p = s.pos(delim).when(Null, { throw InvalidArgument("Delimiter not found in before_first()").set(val=s, delim=delim) })
+		p = s.pos(delim).assert(Not(null), InvalidArgument("Delimiter not found in before_first()").set(val=s, delim=delim))
 		s[0..p]
 	}
 
