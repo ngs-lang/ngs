@@ -5026,7 +5026,7 @@ section "Strings and characters" {
 			m = (~)(haystack, needle, 0)
 			if not(m) {
 				if collect_unmatched collect(haystack)
-				return null
+				return
 			}
 			start_offset = m.positions[0].start
 			next_offset = m.positions[0].end
