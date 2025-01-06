@@ -22,7 +22,7 @@ ns(TL=Timeline) {
 			type GroupTimelineItem(TimelineItem)
 			type TextualCommandTimelineItem(TimelineItem)
 			type ResultTimelineItem(TimelineItem)
-		type Object(Element)
+		type Object(Element)  # An interactive object
 
 		type Scalar(Element)
 		type Table(Element)
@@ -165,6 +165,7 @@ ns(TL=Timeline) {
 					# Later: A.action = 'navigate'
 					# For now, deduce that "ref" means navigate
 					A.ref = raw({'type': 'AWS::CodePipeline::Execution', 'id': pipeline.last_execution_id})
+					A.field_name = k
 				})
 			}
 		}
