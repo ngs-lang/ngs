@@ -28,11 +28,11 @@ ns {
 			ti.items = []
 		}
 
-		F push(gti:GroupItem, ti:Item) gti::{
-			if not(gti.items) {
-				gti.time = ti.time
+		F push(gi:GroupItem, ti:Item) gi::{
+			if not(gi.items) {
+				gi.time = ti.time
 			}
-			gti.items.push(ti)
+			gi.items.push(ti)
 		}
 	}
 
