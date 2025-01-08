@@ -18,11 +18,20 @@ ns(TL=Timeline) {
 		type _Ctx
 		F init(c:_Ctx) {
 			c.path = []
+			c.ti = null
 		}
 
 		doc Context for one element down/deeper (farther from the root) in the tree.
 		F _down(c:_Ctx, path_item) _Ctx()::{
 			A.path = c.path + [	path_item ]
+			A.ti = c.ti
+		}
+
+		doc New context with timeline ID added
+		F _with_ti(c:_Ctx, ti) _Ctx()::{
+			A.path = c.path
+			assert(A.ti, null, "Programming error: Nested timeline items are not supported.")
+			A.ti = ti
 		}
 
 		doc init(Hash)-like helper for Element type that excludes the context (_Ctx)
@@ -121,7 +130,7 @@ ns(TL=Timeline) {
 	F init(rti:ResultTimelineItem, ctx:_Ctx, id:Str, time:Time, result) {
 		rti.id = id
 		rti.time = time
-		super(rti, ctx, [Element(result)])
+		super(rti, ctx, [Element(ctx._with_ti(rti.id), result)])
 	}
 
 	F Element(ctx:_Ctx, rti:TL::ResultItem) ResultTimelineItem(ctx, rti.id, rti.time, rti.result)
@@ -183,7 +192,7 @@ ns(TL=Timeline) {
 				r.children[idxs[k]].when(Object, {
 					# Later: A.action = 'navigate'
 					# For now, deduce that "ref" means navigate
-					A.cur = raw({'path': ctx._down(k).path})
+					A.cur = raw({'ti': ctx.ti, 'path': ctx._down(k).path})
 					A.ref = raw({'type': 'AWS::CodePipeline::Execution', 'id': pipeline.last_execution_id})
 				})
 			}
@@ -198,7 +207,7 @@ ns(TL=Timeline) {
 	doc Entry point to recursively convert data to UI Elements
 	F Element(x) Element(_Ctx(), x)
 
-	# ngs -ppj 'require("aws/CodePipeline.ngs")::pipelines::list().(ui::Element)'
 	# ngs -pi 'ui::Element(require("aws/CodePipeline.ngs")::pipelines::list())'
+	# ngs -pi 'ui::Element(Timeline::ResultItem(Time(), require("aws/CodePipeline.ngs")::pipelines::list()))'
 	# ngs -ppj '$(ls).(ui::Element)'
 }
