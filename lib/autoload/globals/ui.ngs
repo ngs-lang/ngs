@@ -14,6 +14,23 @@ ns(TL=Timeline) {
 	#   * ID of the object
 	#   * Action name
 
+	section "_Ctx - Context for converting to a tree of Elements" {
+		type _Ctx
+		F init(c:_Ctx) {
+			c.path = []
+		}
+
+		doc Context for one element down/deeper (farther from the root) in the tree.
+		F _down(c:_Ctx, path_item) _Ctx()::{
+			A.path = c.path + [	path_item ]
+		}
+
+		doc init(Hash)-like helper for Element type that excludes the context (_Ctx)
+		doc _Ctx is only needed to assist conversion to Element tree
+		doc _Ctx is not and should not be part of the Element tree
+		F _init(h:Hash) init(h.rejectv(_Ctx))
+	}
+
 	type Element()
 
 		type Screen(Element)
@@ -38,10 +55,13 @@ ns(TL=Timeline) {
 
 	F raw(h:Hash) {'$type': '$raw'} + h
 
-	F init(e:Element, children:Arr) {
+	F init(e:Element, ctx:_Ctx, children:Arr) {
 		children.assert(Repeat(Element), "All children of Element must be of type Element. Have ${children}")
-		init(args())
+		_init(args())
 	}
+
+	F init(e:Element, ctx:_Ctx) init(e, ctx, [])
+
 	# TODO: serialization design
 	F JsonData(e:Element) {
 		# Note: all Element subtypes need to reside in this namespace
@@ -53,26 +73,26 @@ ns(TL=Timeline) {
 		{'$type': p.Type().name} + p.Hash().JsonData()::{A.props = {'$type': 'Hash'} + A.props}
 	}
 
-	F init(s:Scalar, value) init(args())
-	F init(c:Column, name:Str) init(args())
-	F init(p:Properties, props:Hash) init(args())
-	F init(p:ProcessStatus, name:Str, text:Str) init(args())  # TODO: improve + add semantics
-	F init(p:Progress, step:Int, total_steps:Int) init(args())
+	F init(s:Scalar, ctx:_Ctx, value) _init(args())
+	F init(c:Column, ctx:_Ctx, name:Str) _init(args())
+	F init(p:Properties, ctx:_Ctx, props:Hash) _init(args())
+	F init(p:ProcessStatus, ctx:_Ctx, name:Str, text:Str) _init(args())  # TODO: improve + add semantics
+	F init(p:Progress, ctx:_Ctx, step:Int, total_steps:Int) _init(args())
 
 
-	F Element(x:AnyOf(Num, Str, Bool, Null)) Scalar(x)
-	F Element(a:AnyOf(Arr, ArrLike)) List(a.map(Element))
+	F Element(ctx:_Ctx, x:AnyOf(Num, Str, Bool, Null)) Scalar(ctx, x)
+	F Element(ctx:_Ctx, a:AnyOf(Arr, ArrLike)) List(ctx, a.map(Element))
 
-	F init(r:Row, fields_names, h:AnyOf(Hash, HashLike)) {
-		super(r)
+	F init(r:Row, ctx:_Ctx, fields_names, h:AnyOf(Hash, HashLike)) {
+		super(r, ctx)
 		r.children = fields_names.map(F(field_name) {
 			val = h.get(field_name)
-			Element(val)
+			Element(ctx._down(field_name), val)
 		})
 	}
 
 	# TODO: improve heuristics of detection when to render to table
-	F Element(a:Arr) {
+	F Element(ctx:_Ctx, a:Arr) {
 		guard a =~ Repeat(AnyOf(Hash, HashLike), 1..null)
 
 		fields_names = a.map(keys).flatten().uniq()  # TODO: make fields order configurable?
@@ -82,48 +102,48 @@ ns(TL=Timeline) {
 		}
 
 		Table().set(
-			columns = fields_names.map(Column).Columns()
-			rows = a.map(Row(fields_names, X)).Rows()
+			columns = fields_names.map(Column(ctx, X)).{ Columns(ctx, A) }
+			rows = a.map_idx_val(F(idx, row) Row(ctx._down(idx), fields_names, row)).{ Rows(ctx, A) }
 		)
 	}
 
 	F keys_are_strings(h) h.keys().all(Str)
-	F Element(h:AnyOf(Hash, HashLike)) Properties(h.assert(keys_are_strings, "Element(Hash) - keys must be strings").mapv(Element))
+	F Element(ctx:_Ctx, h:AnyOf(Hash, HashLike)) Properties(ctx, h.assert(keys_are_strings, "Element(Hash) - keys must be strings").mapv(Element))
 
-	F init(gti:GroupTimelineItem, id:Str, time:Time, items:Arr) {
+	F init(gti:GroupTimelineItem, ctx:_Ctx, id:Str, time:Time, items:Arr) {
 		gti.id = id
 		gti.time = time
-		super(gti, items)
+		super(gti, ctx, items)
 	}
 
-	F Element(gti:TL::GroupItem) GroupTimelineItem(gti.id, gti.time, gti.items.map(Element))
+	F Element(ctx:_Ctx, gti:TL::GroupItem) GroupTimelineItem(ctx, gti.id, gti.time, gti.items.map(Element))
 
-	F init(rti:ResultTimelineItem, id:Str, time:Time, result) {
+	F init(rti:ResultTimelineItem, ctx:_Ctx, id:Str, time:Time, result) {
 		rti.id = id
 		rti.time = time
-		super(rti, [Element(result)])
+		super(rti, ctx, [Element(result)])
 	}
 
-	F Element(rti:TL::ResultItem) ResultTimelineItem(rti.id, rti.time, rti.result)
+	F Element(ctx:_Ctx, rti:TL::ResultItem) ResultTimelineItem(ctx, rti.id, rti.time, rti.result)
 
-	F init(tcti:TextualCommandTimelineItem, id:Str, time:Time, command:Str) init(args())
+	F init(tcti:TextualCommandTimelineItem, ctx:_Ctx, id:Str, time:Time, command:Str) _init(args())
 
-	F Element(tcti:TL::TextualCommandItem) TextualCommandTimelineItem(tcti.id, tcti.time, tcti.command)
+	F Element(ctx:_Ctx, tcti:TL::TextualCommandItem) TextualCommandTimelineItem(ctx, tcti.id, tcti.time, tcti.command)
 
-	F init(tl:Timeline, id:Str, version, items:Arr) {
+	F init(tl:Timeline, ctx:_Ctx, id:Str, version, items:Arr) {
 		tl.id = id
 		tl.version = version
 		tl.children = items.map(Element)
 	}
 
-	F Element(tl:TL::Timeline) Timeline(tl.id, tl.version, tl.items)
+	F Element(ctx:_Ctx, tl:TL::Timeline) Timeline(ctx, tl.id, tl.version, tl.items)
 
 	# TODO: Fix later. It's semantically incorrect to display path as just a string
-	F Element(p:Path) Scalar(p.path)
+	F Element(ctx:_Ctx, p:Path) Scalar(ctx, p.path)
 
 	section "ProcessesPipeline" {
 		# TODO: Use AbstractProcess
-		F Element(pp:ProcessesPipeline) {
+		F Element(ctx:_Ctx, pp:ProcessesPipeline) {
 			processes = pp.processes
 			guard processes
 			p = processes[-1]
@@ -132,7 +152,7 @@ ns(TL=Timeline) {
 				print_exception(A.val)
 				# throw InvalidArgument("Element() could not decode process output").set(process=p)
 				p.stdout  # TODO: maybe split into lines
-			}).get().Element()
+			}).get().{ Element(ctx, A) }
 		}
 	}
 
@@ -141,41 +161,44 @@ ns(TL=Timeline) {
 
 		# WIP
 		# Think: it's probably not always the case that Status should be a UI object
-		F Element(s:AbstractProcess::Status::Status) {
-			Object([
-				ProcessStatus(s.Type().name, s.text)
+		F Element(ctx:_Ctx, s:AbstractProcess::Status::Status) {
+			Object(ctx, [
+				ProcessStatus(ctx, s.Type().name, s.text)
 			])
 		}
 
 		# TODO: .total_steps might not be known
-		F Element(p:_cp::Progress) Progress(p.step, p.total_steps)
+		F Element(ctx:_Ctx, p:_cp::Progress) Progress(ctx, p.step, p.total_steps)
 
-		F Element(cp:_cp::Pipeline) {
+		F Element(ctx:_Ctx, cp:_cp::Pipeline) {
 			throw NotImplemented("Converting AWS CodePipeline to arbitrary Element is not implemented yet")
 		}
 
 		# WIP
-		F init(r:Row, fields_names:Arr, pipeline:_cp::Pipeline) {
-			super(r, fields_names, pipeline)
+		F init(r:Row, ctx:_Ctx, fields_names:Arr, pipeline:_cp::Pipeline) {
+			super(r, ctx, fields_names, pipeline)
 			idx = Iter(0..null)
 			idxs = fields_names.Hash({idx.next()})  # Ex: {name=0, status=1, sources=2, revisions=3, last_executed=4, approvals=5, progress=6}
-			r.children.filter(Object).each(F(o) o.cur = raw({'type': 'AWS::CodePipeline::Pipeline', 'id': pipeline.name}))
 			for k in %[status last_executed progress] {
 				r.children[idxs[k]].when(Object, {
 					# Later: A.action = 'navigate'
 					# For now, deduce that "ref" means navigate
+					A.cur = raw({'path': ctx._down(k).path})
 					A.ref = raw({'type': 'AWS::CodePipeline::Execution', 'id': pipeline.last_execution_id})
-					A.field_name = k
 				})
 			}
 		}
 
 		# Later
-		F Element(r:_cp::Revision) Element(Str(r))
-		F Element(s:_cp::Source) Element(Str(s))
-		F Element(a:_cp::Action) Element(Str(a))
+		F Element(ctx:_Ctx, r:_cp::Revision) Element(Str(r))
+		F Element(ctx:_Ctx, s:_cp::Source) Element(Str(s))
+		F Element(ctx:_Ctx, a:_cp::Action) Element(Str(a))
 	}
 
+	doc Entry point to recursively convert data to UI Elements
+	F Element(x) Element(_Ctx(), x)
+
 	# ngs -ppj 'require("aws/CodePipeline.ngs")::pipelines::list().(ui::Element)'
+	# ngs -pi 'ui::Element(require("aws/CodePipeline.ngs")::pipelines::list())'
 	# ngs -ppj '$(ls).(ui::Element)'
 }
