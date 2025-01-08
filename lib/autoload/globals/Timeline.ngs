@@ -2,7 +2,7 @@ ns {
 
 	# WIP - timeline, mainly for UI
 
-	global Time, Lines, init, each, map, sort, push, echo_cli
+	global Time, Lines, init, each, map, sort, push, echo_cli, ([])
 
 	doc time_start - Time
 	doc time_last_update - Time
@@ -114,6 +114,25 @@ ns {
 		F sort(t:Timeline) t::{ A.items .= sort(F(a, b) a.Time() <= b.Time()) }
 		F Time(t:Timeline) t.time_end or t.time_last_update or t.time_start
 
+		doc Find Item by ID, even if it resides in a group
+		doc TODO(correctness) proper recursion
+		doc TODO(performance) index instead of scan
+		doc %RET - Item
+		F '[]'(t:Timeline, id:Str) block b {
+			t.items.each(F(i) {
+				if i.id == id {
+					b.return(i)
+				}
+				if i is GroupItem {
+					result = i.items.the_one({'id': id}, found_none={null})
+					if result != null {
+						b.return(result)
+					}
+				}
+			})
+			throw InvalidArgument("Item with ID ${id} not found")
+		}
+
 
 		section "Lines(Timeline)" {
 
@@ -155,4 +174,6 @@ ns {
 		t.Lines().echo()
 	}
 
+	TEST tl = Timeline::Timeline(); i = Timeline::Item(); tl.push(i); tl[i.id] == i
+	TEST tl = Timeline::Timeline(); g = Timeline::GroupItem(); i = Timeline::Item(); g.push(i); tl.push(g); tl[i.id] == i
 }
