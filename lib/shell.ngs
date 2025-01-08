@@ -191,7 +191,6 @@ ns {
 					result = func()
 					debug('server', "Eval end: ${line}")
 					g.push(Timeline::ResultItem(Time(), result))
-					tl.version += 1  # FIXME: Flimsy
 				})
 				{'ti': tc.id}  # Timeline Item ID
 			}
@@ -205,7 +204,24 @@ ns {
 				id = null
 				if event =~ {'ref': {'type': 'AWS::CodePipeline::Execution', 'id': { id=A } }} {
 					log("ui_default_action navigate to AWS::CodePipeline::Execution $id")
+
+					i = tl[event.cur.ti]
+					g = Timeline::GroupItem()
+						tc = Timeline::TextualCommandItem(Time(), "Interaction: you have interacted with ${event.cur} << ${i} >> and navigated to ${event.ref}")
+						g.push(tc)
+						tc = Timeline::TextualCommandItem(Time(), "This is WIP. Nobody navigates to object with specific ID. You navigate to an object because of some semantic meaning.")
+						g.push(tc)
+					tl.push(g)
+
+					### # TODO: join these sometimes
+					### Thread(SeqId("shell-action-"), {
+					### 	debug('server', "Action start")
+					### 	g.push(Timeline::ResultItem(Time(), "TODO"))
+					### })
+
 				}
+				# TODO: check why result of ui_default_action() is used in Bool() and causing exception
+				null
 			}
 
 			# TODO: handle broken pipe
