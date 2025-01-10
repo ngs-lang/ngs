@@ -72,7 +72,7 @@ ns {
 				debug('server', "JsonRpcServer Read")
 
 				F send_error(code, message, data=null) {
-					error("JsonRpcServer on_data (or spawned thread) send_error -- ${code} ${message} ${data}")
+					error("JsonRpcServer on_data (or spawned thread) send_error -- ${code} ${message} ${data.limit(128, '...')}")
 					ret = {
 						'jsonrpc': '2.0'
 						'id': req.get('id')
@@ -124,6 +124,8 @@ ns {
 							send_error(-32602, 'Invalid params', "Correct parameters can be seen in methods' descriptions: ${jrs.methods[req.method].Arr()}")
 							b.return()
 						} catch(e:Error) {
+							error("JsonRpcServer on_data spawned thread caught exception:")
+							print_exception(e)
 							send_error(-32603, 'Internal error', e.Str())
 							b.return()
 						}
