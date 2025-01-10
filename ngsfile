@@ -8,7 +8,7 @@ ns(t=test) {
 
 	# "eval" would conflict with the global eval(c:Client, ...)
 	# which is called from tests below.
-	F _eval(cmd:Str, exit:Bool=true) sh::eval(cmd, exit)
+	F _eval(cmd:Str, dua:Arr=[]) sh::eval(cmd, dua)
 	_exports.eval = _eval
 
 	F test() {
@@ -22,14 +22,14 @@ ns(t=test) {
 		$(sleep 1)
 		c = sh::Client()
 
-		F make_textual_command_timeline_result_pattern(ti:Str, cmd:Str, pat) {
+		F make_textual_command_timeline_result_pattern(gti:Str, cmd:Str, pat) {
 			{
 				'timeline': {
 					'children': Present({
 						'$type': 'GroupTimelineItem'
+						'id': gti
 						'children': [{
 							'$type': 'TextualCommandTimelineItem'
-							'id': ti
 							'command': cmd
 						}, {
 							'$type': 'ResultTimelineItem'
@@ -70,9 +70,9 @@ ns(t=test) {
 					'timeline': {
 						'children': Present({
 							'$type': 'GroupTimelineItem'
+							'id': test_ti
 							'children': [{
 								'$type': 'TextualCommandTimelineItem'
-								'id': test_ti
 								'command': 'sleep 2 | echo 3'
 							}]
 						})

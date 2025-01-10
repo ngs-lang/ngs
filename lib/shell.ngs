@@ -72,7 +72,8 @@ ns {
 
 	doc Rudimentary client as phase 1.
 	doc Send a command and poll for results.
-	F eval(cmd:Str, exit:Bool=true) {
+	doc dua - Default UI action
+	F eval(cmd:Str, dua:Arr=[]) {
 
 		# TODO: make this method less verbose by adding functionality to libraries
 		type ShellClientDelegate(net::ClientDelegate)
@@ -92,6 +93,7 @@ ns {
 
 		e = jrc.call('eval', [cmd])
 		log("Eval result ${e.SafeStr()}")
+		$(sleep 1)  # XXX: timing with eval(["p"]) # JsonRPC server or its callbacks are probably not thread safe
 
 		last_seen_version = null
 		while true {
@@ -102,7 +104,12 @@ ns {
 			log("Poll result - timeline (ver. ${p.version})")
 			echo(p.timeline.repr().Lines())
 			last_seen_version = p.version
-			exit returns p
+
+			# To think: maybe only display this group and not the whole timeline?
+			my_group = p.timeline.children.the_one({'$type': 'GroupTimelineItem', 'id': e.ti})
+			if my_group.children.any({'$type': 'ResultTimelineItem'}) {
+				return p
+			}
 		}
 	}
 
@@ -192,7 +199,7 @@ ns {
 					debug('server', "Eval end: ${line}")
 					g.push(Timeline::ResultItem(Time(), result))
 				})
-				{'ti': tc.id}  # Timeline Item ID
+				{'ti': g.id}  # Timeline Item ID
 			}
 
 			# event example: {cur={type=AWS::CodePipeline::Pipeline, id=XXXX}, ref={type=AWS::CodePipeline::Execution, id=XXXX}}
