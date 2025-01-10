@@ -90,7 +90,7 @@ ns(TL=Timeline) {
 
 
 	F Element(ctx:_Ctx, x:AnyOf(Num, Str, Bool, Null)) Scalar(ctx, x)
-	F Element(ctx:_Ctx, a:AnyOf(Arr, ArrLike)) List(ctx, a.map(Element))
+	F Element(ctx:_Ctx, a:AnyOf(Arr, ArrLike)) List(ctx, a.map(Element(ctx, X)))
 
 	F init(r:Row, ctx:_Ctx, fields_names, h:AnyOf(Hash, HashLike)) {
 		super(r, ctx)
@@ -117,7 +117,7 @@ ns(TL=Timeline) {
 	}
 
 	F keys_are_strings(h) h.keys().all(Str)
-	F Element(ctx:_Ctx, h:AnyOf(Hash, HashLike)) Properties(ctx, h.assert(keys_are_strings, "Element(Hash) - keys must be strings").mapv(Element))
+	F Element(ctx:_Ctx, h:AnyOf(Hash, HashLike)) Properties(ctx, h.assert(keys_are_strings, "Element(Hash) - keys must be strings").mapv(Element(ctx, X)))
 
 	F init(gti:GroupTimelineItem, ctx:_Ctx, id:Str, time:Time, items:Arr) {
 		gti.id = id
@@ -125,7 +125,7 @@ ns(TL=Timeline) {
 		super(gti, ctx, items)
 	}
 
-	F Element(ctx:_Ctx, gti:TL::GroupItem) GroupTimelineItem(ctx, gti.id, gti.time, gti.items.map(Element))
+	F Element(ctx:_Ctx, gti:TL::GroupItem) GroupTimelineItem(ctx, gti.id, gti.time, gti.items.map(Element(ctx, X)))
 
 	F init(rti:ResultTimelineItem, ctx:_Ctx, id:Str, time:Time, result) {
 		rti.id = id
@@ -142,7 +142,7 @@ ns(TL=Timeline) {
 	F init(tl:Timeline, ctx:_Ctx, id:Str, version, items:Arr) {
 		tl.id = id
 		tl.version = version
-		tl.children = items.map(Element)
+		tl.children = items.map(Element(ctx, X))
 	}
 
 	F Element(ctx:_Ctx, tl:TL::Timeline) Timeline(ctx, tl.id, tl.version, tl.items)
@@ -199,9 +199,9 @@ ns(TL=Timeline) {
 		}
 
 		# Later
-		F Element(ctx:_Ctx, r:_cp::Revision) Element(Str(r))
-		F Element(ctx:_Ctx, s:_cp::Source) Element(Str(s))
-		F Element(ctx:_Ctx, a:_cp::Action) Element(Str(a))
+		F Element(ctx:_Ctx, r:_cp::Revision) Element(ctx, Str(r))
+		F Element(ctx:_Ctx, s:_cp::Source) Element(ctx, Str(s))
+		F Element(ctx:_Ctx, a:_cp::Action) Element(ctx, Str(a))
 	}
 
 	doc Entry point to recursively convert data to UI Elements
