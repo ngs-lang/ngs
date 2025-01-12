@@ -982,6 +982,9 @@ section "=~ Matching" {
 		doc Unsuccessful constructor
 		F init(mf:MatchFailure, data, pattern) init(args())
 
+		doc Get capture by name
+		F '[]'(ms:MatchSuccess, name:Str) ms.named[name]
+
 	}
 
 	section "MatchContext" {
@@ -1044,7 +1047,6 @@ section "=~ Matching" {
 			throw Error("=~ is expected to either set result or return a boolean").set(given=result)
 		}
 		# TODO: Review MatchSuccess / MatchFailure construction (conversion from MatchContext)
-		# TODO: Review Success / Failure inheritance
 		result returns MatchSuccess(mc.positional, pattern).set('named', mc.named)
 		MatchFailure(x, pattern)
 	}
@@ -1136,6 +1138,7 @@ section "=~ Matching" {
     TEST m = 1 =~ Capture("n", Int)
     TEST m = 1 =~ Capture("n", Str); not(m)
     TEST m = {"a": 1, "b": 2} =~ {"a": Capture("arg1", Int), "b": Capture("arg2")}; m.named.arg1 + m.named.arg2 == 3
+    TEST m = {"a": 1, "b": 2} =~ {"a": Capture("arg1", Int), "b": Capture("arg2")}; m["arg1"] + m["arg2"] == 3
     TEST m = {"a": 1, "b": 2} =~ {"a": Capture("arg1", Int), "b": Capture("arg2", Str)}; not(m)
     TEST m = [1,2] =~ Capture([Capture(Int), Capture(Int)]); m.matches =~ [Arr, 1, 2]
 
