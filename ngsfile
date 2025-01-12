@@ -8,7 +8,7 @@ ns(t=test) {
 
 	# "eval" would conflict with the global eval(c:Client, ...)
 	# which is called from tests below.
-	F _eval(cmd:Str, dua:Arr=[]) sh::eval(cmd, dua)
+	F _eval(cmd:Str, dua:Str='') sh::eval(cmd, dua.split(',').map(X.when(/^[0-9]+/, Int)))
 	_exports.eval = _eval
 
 	F test() {

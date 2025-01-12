@@ -102,14 +102,32 @@ ns {
 				'last_seen_version': last_seen_version
 			})
 			log("Poll result - timeline (ver. ${p.version})")
-			echo(p.timeline.repr().Lines())
 			last_seen_version = p.version
 
 			# To think: maybe only display this group and not the whole timeline?
-			my_group = p.timeline.children.the_one({'$type': 'GroupTimelineItem', 'id': e.ti})
-			if my_group.children.any({'$type': 'ResultTimelineItem'}) {
-				return p
+			gti = p.timeline.children.the_one({'$type': 'GroupTimelineItem', 'id': e.ti})
+			rti = gti.children.the_one({'$type': 'ResultTimelineItem'}, found_none={null})
+			if rti == null continue
+
+			if dua {
+				log("Will take default ui action ${dua}")
+				obj = null
+				rti =~ AtPath(Any, {
+					'$type': 'Object'
+					'cur': {
+						'path': dua
+					}
+				} -> {
+					obj = A
+				})
+				if obj {
+					log("Found the Object $obj")
+					dua_result = jrc.call('ui_default_action', [{'cur': obj.cur, 'ref': obj.ref}])
+					log("Call to ui_default_action result: ${dua_result}")
+				}
 			}
+
+			return p
 		}
 	}
 
@@ -226,8 +244,10 @@ ns {
 					### 	g.push(Timeline::ResultItem(Time(), "TODO"))
 					### })
 
+					return {'ti': g.id}
 				}
 				# TODO: check why result of ui_default_action() is used in Bool() and causing exception
+				# TODO: return error if this point is reached
 				null
 			}
 
