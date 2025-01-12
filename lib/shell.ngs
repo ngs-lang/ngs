@@ -111,16 +111,14 @@ ns {
 
 			if dua {
 				log("Will take default ui action ${dua}")
-				obj = null
-				rti =~ AtPath(Any, {
+				m = rti =~ AtPath(Any, Capture("obj", {
 					'$type': 'Object'
 					'cur': {
 						'path': dua
 					}
-				} -> {
-					obj = A
-				})
-				if obj {
+				}))
+				if m {
+					obj = m["obj"]
 					log("Found the Object $obj")
 					dua_result = jrc.call('ui_default_action', [{'cur': obj.cur, 'ref': obj.ref}])
 					log("Call to ui_default_action result: ${dua_result}")
