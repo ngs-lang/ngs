@@ -42,20 +42,27 @@ ns {
 		global init
 		F init(c:Client) {
 			c.last_seen_version = null
+			c.last_call_result = null
 			c.last_eval_result = null
 			c.scd = ShellClientDelegate()
 			c.client = net::UnixStreamClient()
 			c.client.connect(SOCK_FILE, c.scd)
 		}
 
-		global eval
-		F eval(c:Client, cmd:Str) {
-			c.last_eval_result = c.scd.jrc.call('eval', [cmd])::{
-				debug('client', {"Eval result ${A.SafeStr()}"})
+		global call
+		F call(c:Client, method:Str, args) {
+			c.last_call_result = c.scd.jrc.call(method, args)::{
+				debug('client', {"Call result ${A.SafeStr()}"})
 			}
 		}
 
+		global eval
+		F eval(c:Client, cmd:Str) {
+			c.last_eval_result = c.call('eval', [cmd])
+		}
+
 		global poll
+		doc cb - returns a Box. FullBox signals stop polling and return the value in the box
 		F poll(c:Client, cb:Fun) {
 			while true {
 				debug('client', "Polling last_seen_version=${c.last_seen_version}")
@@ -65,8 +72,25 @@ ns {
 				debug('client', "Poll result - timeline (ver. ${p.version})")
 				# echo(p.timeline.repr().Lines())
 				c.last_seen_version = p.version
-				not(cb(p)) returns p
+				result = cb(p)
+				result returns result.get()
 			}
+		}
+
+		doc Poll till given GroupTimelineItem has ResultTimelineItem
+		F poll(c:Client, gti_id:Str) {
+			c.poll(F(p) {
+				debug('client', 'poll(Client, Str) callback')
+				gti = p.timeline.children.the_one({'$type': 'GroupTimelineItem', 'id': gti_id})
+				rti = gti.children.the_one({'$type': 'ResultTimelineItem'}, found_none={null})
+				debug('client', "poll(Client, Str) callback result ${rti}")
+				if rti then FullBox(gti) else EmptyBox()
+			})
+		}
+
+		F poll(c:Client) {
+			debug('client', "poll(Client) using ti ${c.last_eval_result.ti}")
+			c.poll(c.last_eval_result.ti)
 		}
 	}
 
@@ -74,59 +98,32 @@ ns {
 	doc Send a command and poll for results.
 	doc dua - Default UI action
 	F eval(cmd:Str, dua:Arr=[]) {
-
-		# TODO: make this method less verbose by adding functionality to libraries
-		type ShellClientDelegate(net::ClientDelegate)
-		scd = ShellClientDelegate()
-		jrc = IO::handlers::JsonRpcClient()
-
-		global on_connect
-		F on_connect(scd:ShellClientDelegate, c:net::Connection) {
-			debug('client', 'ShellClientDelegate#on_connect()')
-			c.pipeline.push(IO::handlers::Splitter("\n"))
-			c.pipeline.push(jrc)
-			c.pipeline.fire(IO::events::Active())
-		}
-
-		client = net::UnixStreamClient()
-		client.connect(SOCK_FILE, scd)
-
-		e = jrc.call('eval', [cmd])
-		log("Eval result ${e.SafeStr()}")
+		client = Client()
+		e = client.eval(cmd)
 		$(sleep 1)  # XXX: timing with eval(["p"]) # JsonRPC server or its callbacks are probably not thread safe
+		p = client.poll()
 
-		last_seen_version = null
-		while true {
-			log("Polling last_seen_version=${last_seen_version}")
-			p = jrc.call('poll', {
-				'last_seen_version': last_seen_version
-			})
-			log("Poll result - timeline (ver. ${p.version})")
-			last_seen_version = p.version
-
-			# To think: maybe only display this group and not the whole timeline?
-			gti = p.timeline.children.the_one({'$type': 'GroupTimelineItem', 'id': e.ti})
-			rti = gti.children.the_one({'$type': 'ResultTimelineItem'}, found_none={null})
-			if rti == null continue
-
-			if dua {
-				log("Will take default ui action ${dua}")
-				m = rti =~ AtPath(Any, Capture("obj", {
-					'$type': 'Object'
-					'cur': {
-						'path': dua
-					}
-				}))
-				if m {
-					obj = m["obj"]
-					log("Found the Object $obj")
-					dua_result = jrc.call('ui_default_action', [{'cur': obj.cur, 'ref': obj.ref}])
-					log("Call to ui_default_action result: ${dua_result}")
+		if dua {
+			log("Will take default ui action ${dua}")
+			# TODO: check that it's the only match. Not sure how.
+			m = p =~ AtPath(Any, Capture("obj", {
+				'$type': 'Object'
+				'cur': {
+					'path': dua
 				}
+			}))
+			if m {
+				obj = m["obj"]
+				log("Found the Object $obj")
+				dua_result = client.call('ui_default_action', [{'cur': obj.cur, 'ref': obj.ref}])
+				log("Call to ui_default_action result: ${dua_result}")
 			}
-
-			return p
 		}
+
+		# TODO: decide what to return
+		#       p is a candidate but it's {$type: GroupTimelineItem}
+		#       which is not sure is useful.
+		null
 	}
 
 	doc Starts shell server, JSON RPC proxy, and a browser client
