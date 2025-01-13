@@ -33,10 +33,11 @@ ns {
 
 		type GroupItem(Item)
 
-		F init(gi:GroupItem) {
+		F init(gi:GroupItem, items:Arr=[]) {
 			super(gi)
 			gi.items = []
 			gi.meta().timeline = null
+			items.each(push(gi, X))
 		}
 
 		F push(gi:GroupItem, ti:Item) gi::{
@@ -71,6 +72,18 @@ ns {
 		F init(ti:TextualCommandItem, time:Time, command:Str) {
 			super(ti, time)
 			ti.command = command
+		}
+	}
+
+	section "InfoItem" {
+
+		type InfoItem(Item)
+
+		F init(ti:InfoItem) throw InvalidArgument("InfoItem() was called without arguments")
+
+		F init(ti:InfoItem, time:Time, info:Str) {
+			super(ti, time)
+			ti.info = info
 		}
 	}
 

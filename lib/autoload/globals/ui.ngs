@@ -47,6 +47,7 @@ ns(TL=Timeline) {
 		type TimelineItem(Element)
 			type GroupTimelineItem(TimelineItem)
 			type TextualCommandTimelineItem(TimelineItem)
+			type InfoTimelineItem(TimelineItem)
 			type ResultTimelineItem(TimelineItem)
 		type Object(Element)  # An interactive object
 
@@ -138,6 +139,10 @@ ns(TL=Timeline) {
 	F init(tcti:TextualCommandTimelineItem, ctx:_Ctx, id:Str, time:Time, command:Str) _init(args())
 
 	F Element(ctx:_Ctx, tcti:TL::TextualCommandItem) TextualCommandTimelineItem(ctx, tcti.id, tcti.time, tcti.command)
+
+	F init(iti:InfoTimelineItem, ctx:_Ctx, id:Str, time:Time, info:Str) _init(args())
+
+	F Element(ctx:_Ctx, iti:TL::InfoItem) InfoTimelineItem(ctx, iti.id, iti.time, iti.info)
 
 	F init(tl:Timeline, ctx:_Ctx, id:Str, version, items:Arr) {
 		tl.id = id

@@ -225,11 +225,9 @@ ns {
 					log("ui_default_action navigate to AWS::CodePipeline::Execution $id")
 
 					i = tl[event.cur.ti]
-					g = Timeline::GroupItem()
-						tc = Timeline::TextualCommandItem(Time(), "Interaction: you have interacted with ${event.cur} (type ${i.Type()}) and navigated to ${event.ref}")
-						g.push(tc)
-						tc = Timeline::TextualCommandItem(Time(), "This is WIP. Nobody navigates to object with specific ID. You navigate to an object because of some semantic meaning.")
-						g.push(tc)
+					g = Timeline::GroupItem([
+						Timeline::InfoItem(Time(), "WIP(interaction): you have interacted with ${event.cur} (type ${i.Type()}) and navigated to ${event.ref}")
+					])
 					tl.push(g)
 
 					# TODO: join these sometimes
