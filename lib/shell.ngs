@@ -95,6 +95,73 @@ ns {
 		}
 	}
 
+	section "Interaction Guesser (WIP)" {
+
+		type Guess
+			type UniqueColumnTypeGuess(Guess)
+			type UniqueColumnValueGuess(Guess)
+
+		F init(uctg:UniqueColumnTypeGuess, field:Str, type:Type) {
+			init(args())
+		}
+
+		F _fields(item: Timeline::ResultItem) item.result[0].Hash().keys()::{
+			debug("guesser", "fields=${A}")
+		}
+
+		F _value(item: Timeline::ResultItem, path) item.result[path[0]].(path[1])::{
+			debug("guesser", "value=${A} value_type=${A.Type()}")
+		}
+
+		F _column_values(item: Timeline::ResultItem, path) {
+			item.result.map(F(i) i.(path[1]))
+		}
+
+		# TODO: check parent types to see if the value is uniquely of a parent type
+		# TODO(think): would types for fields make sense? different tables can name differently fields with same semantic meaning
+		# TODO: handle all columns, not just the one that was interacted with
+		# TODO(ui): phrasing "where FIELD_NAME is TYPE_NAME"
+		F unique_column_type_guesser(timeline: Timeline::Timeline, item: Timeline::ResultItem, path) collector {
+			fields = _fields(item)
+			values = _column_values(item, path)
+			types = values.map(Type).Stats()
+			debug("guesser", "types=${types}")
+			t = _value(item, path).Type()
+			if types[t] == 1 {
+				collect(UniqueColumnTypeGuess(path[1], t))
+			}
+		}
+
+		# TODO(think): values guesser should work only for "simple" types such as Int and Str?
+		F unique_column_value_guesser(timeline: Timeline::Timeline, item: Timeline::ResultItem, path) {
+			fields = _fields(item)
+			value = _value(item, path)
+			["unique_column_value_guesser to do"]
+		}
+
+		guessers = [
+			unique_column_type_guesser,
+			unique_column_value_guesser
+		]
+
+		# TODO: each guesser should be able to return several guesses
+		# TODO(decide): special case single item result?
+		# TODO(decide): what if several guessers match? Present several in order of decreasing probability? Still enable manual adjustment.
+		# TODO(decide): what if several columns have unique values at that row?
+		# TODO(decide): allow marking guess as correct in the UI? Or just assume correct until changed?
+		F guess(timeline: Timeline::Timeline, item: Timeline::ResultItem, path:Arr) {
+			debug("guesser", "data=${item} path=${path}")
+			assert(item, {'result': Arr}, InvalidArgument("guess() can only handle Arr"))
+			assert(item.result, Transformed(len, Not(0)), InvalidArgument("guess() can only handle non-empty Arr"))
+			assert(item.result.map(Type).uniq(), Transformed(len, 1), InvalidArgument("guess() can only handle Arr with single type"))
+			assert(path, [Int, Str], InvalidArgument("guess() can only handle path where the first element is Int and the second is Str"))
+
+			guesses = guessers.flat_map(X(timeline, item, path))
+
+			debug("guesser", "item=${item} path=${path} guesses=${guesses}")
+		}
+	}
+
 	doc Rudimentary client as phase 1.
 	doc Send a command and poll for results.
 	doc dua - Default UI action
@@ -225,6 +292,9 @@ ns {
 					log("ui_default_action navigate to AWS::CodePipeline::Execution $id")
 
 					i = tl[event.cur.ti]
+
+					guess(tl, i, event.cur.path)
+
 					g = Timeline::GroupItem([
 						Timeline::InfoItem(Time(), "WIP(interaction): you have interacted with ${event.cur} (type ${i.Type()}) and navigated to ${event.ref}")
 					])
