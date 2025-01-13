@@ -90,7 +90,8 @@ ns {
 
 		F poll(c:Client) {
 			debug('client', "poll(Client) using ti ${c.last_eval_result.ti}")
-			c.poll(c.last_eval_result.ti)
+			assert(c, {'last_call_result': {'ti': Str}})
+			c.poll(c.last_call_result.ti)
 		}
 	}
 
@@ -115,15 +116,13 @@ ns {
 			if m {
 				obj = m["obj"]
 				log("Found the Object $obj")
-				dua_result = client.call('ui_default_action', [{'cur': obj.cur, 'ref': obj.ref}])
-				log("Call to ui_default_action result: ${dua_result}")
+				client.call('ui_default_action', [{'cur': obj.cur, 'ref': obj.ref}])
+				$(sleep 1)  # XXX: possible timing issue (did not observe an error, preventively added)
+				p = client.poll()
 			}
 		}
 
-		# TODO: decide what to return
-		#       p is a candidate but it's {$type: GroupTimelineItem}
-		#       which is not sure is useful.
-		null
+		p
 	}
 
 	doc Starts shell server, JSON RPC proxy, and a browser client
@@ -227,17 +226,17 @@ ns {
 
 					i = tl[event.cur.ti]
 					g = Timeline::GroupItem()
-						tc = Timeline::TextualCommandItem(Time(), "Interaction: you have interacted with ${event.cur} << ${i} >> and navigated to ${event.ref}")
+						tc = Timeline::TextualCommandItem(Time(), "Interaction: you have interacted with ${event.cur} (type ${i.Type()}) and navigated to ${event.ref}")
 						g.push(tc)
 						tc = Timeline::TextualCommandItem(Time(), "This is WIP. Nobody navigates to object with specific ID. You navigate to an object because of some semantic meaning.")
 						g.push(tc)
 					tl.push(g)
 
-					### # TODO: join these sometimes
-					### Thread(SeqId("shell-action-"), {
-					### 	debug('server', "Action start")
-					### 	g.push(Timeline::ResultItem(Time(), "TODO"))
-					### })
+					# TODO: join these sometimes
+					Thread(SeqId("shell-action-"), {
+						debug('server', "Action start")
+						g.push(Timeline::ResultItem(Time(), "TODO"))
+					})
 
 					return {'ti': g.id}
 				}
