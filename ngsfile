@@ -8,7 +8,17 @@ ns(t=test) {
 
 	# "eval" would conflict with the global eval(c:Client, ...)
 	# which is called from tests below.
-	F _eval(cmd:Str, dua:Str='') sh::eval(cmd, dua.split(',').map(X.when(/^[0-9]+/, Int)))
+	F _eval(cmd:Str, dua:Str='') {
+		# TODO: better error handling in sh::Client and upstream
+		server_running = (try sh::Client()) != null  # Assumption: an error is due to server that is not running
+		if not(server_running) {
+			Thread("server", {
+				sh::server(false)
+			})
+			$(sleep 1)
+		}
+		sh::eval(cmd, dua.split(',').map(X.when(/^[0-9]+/, Int)))
+	}
 	_exports.eval = _eval
 
 	F test() {
