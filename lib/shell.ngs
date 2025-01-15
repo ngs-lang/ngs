@@ -98,12 +98,7 @@ ns {
 	section "Interaction Guesser (WIP)" {
 
 		type Guess
-			type UniqueColumnTypeGuess(Guess)
-			type UniqueColumnValueGuess(Guess)
-
-		F init(uctg:UniqueColumnTypeGuess, field:Str, type:Type) {
-			init(args())
-		}
+		F init(g:Guess, pattern, description) init(args())
 
 		F _fields(item: Timeline::ResultItem) item.result[0].Hash().keys()::{
 			debug("guesser", "fields=${A}")
@@ -117,7 +112,7 @@ ns {
 			item.result.map(F(i) i.(path[1]))
 		}
 
-		# TODO: check parent types to see if the value is uniquely of a parent type
+		# TODO: check parent types to see if the value is uniquely of a parent type. How to prioritze answers from different parent types?
 		# TODO(think): would types for fields make sense? different tables can name differently fields with same semantic meaning
 		# TODO: handle all columns, not just the one that was interacted with
 		# TODO(ui): phrasing "where FIELD_NAME is TYPE_NAME"
@@ -128,7 +123,7 @@ ns {
 			debug("guesser", "types=${types}")
 			t = _value(item, path).Type()
 			if types[t] == 1 {
-				collect(UniqueColumnTypeGuess(path[1], t))
+				collect(Guess({path[1]: t}, "The only item/row where ${path[1]} is ${t.name}"))
 			}
 		}
 
