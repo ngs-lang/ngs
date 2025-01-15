@@ -9,13 +9,15 @@ ns(t=test) {
 	# "eval" would conflict with the global eval(c:Client, ...)
 	# which is called from tests below.
 	F _eval(cmd:Str, dua:Str='') {
-		# TODO: better error handling in sh::Client and upstream
-		server_running = (try sh::Client()) != null  # Assumption: an error is due to server that is not running
-		if not(server_running) {
+		F is_server_running() {
+			# TODO: better error handling in sh::Client and upstream
+			(try sh::Client()) != null  # Assumption: an error is due to server that is not running
+		}
+		if not(is_server_running()) {
 			Thread("server", {
 				sh::server(false)
 			})
-			$(sleep 1)
+			retry(sleep=0.1, body=is_server_running)
 		}
 		sh::eval(cmd, dua.split(',').map(X.when(/^[0-9]+/, Int)))
 	}
