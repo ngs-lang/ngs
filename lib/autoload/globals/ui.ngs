@@ -48,6 +48,7 @@ ns(TL=Timeline) {
 			type GroupTimelineItem(TimelineItem)
 			type TextualCommandTimelineItem(TimelineItem)
 			type InfoTimelineItem(TimelineItem)
+			type GuessTimelineItem(TimelineItem)
 			type ResultTimelineItem(TimelineItem)
 		type Object(Element)  # An interactive object
 
@@ -63,6 +64,7 @@ ns(TL=Timeline) {
 		type ProcessStatus(Element)
 		type Progress(Element)
 
+	F raw(s:Str) s
 	F raw(h:Hash) {'$type': '$raw'} + h
 
 	F init(e:Element, ctx:_Ctx, children:Arr) {
@@ -71,6 +73,8 @@ ns(TL=Timeline) {
 	}
 
 	F init(e:Element, ctx:_Ctx) init(e, ctx, [])
+
+	F JsonData(t:Type) super(t) tor "<<Type: ${t.name}>>"
 
 	# TODO: serialization design
 	F JsonData(e:Element) {
@@ -143,6 +147,15 @@ ns(TL=Timeline) {
 	F init(iti:InfoTimelineItem, ctx:_Ctx, id:Str, time:Time, info:Str) _init(args())
 
 	F Element(ctx:_Ctx, iti:TL::InfoItem) InfoTimelineItem(ctx, iti.id, iti.time, iti.info)
+
+	F init(gti:GuessTimelineItem, ctx:_Ctx, id:Str, time:Time, pattern, description:Str) {
+		super(gti, ctx)
+		gti.time = time
+		gti.pattern = raw(pattern)  # TODO: rethink serialization
+		gti.description = description
+	}
+
+	F Element(ctx:_Ctx, gti:TL::GuessItem) GuessTimelineItem(ctx, gti.id, gti.time, gti.pattern, gti.description)
 
 	F init(tl:Timeline, ctx:_Ctx, id:Str, version, items:Arr) {
 		tl.id = id

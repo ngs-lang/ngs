@@ -87,6 +87,15 @@ ns {
 		}
 	}
 
+	section "GuessItem" {
+		type GuessItem([Item, NoEmptyInit])
+		F init(gi:GuessItem, time:Time, pattern, description:Str) {
+			super(gi, time)
+			gi.pattern = pattern
+			gi.description = description
+		}
+	}
+
 	section "Timeline" {
 
 		F init(t:Timeline) {

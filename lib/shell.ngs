@@ -97,9 +97,6 @@ ns {
 
 	section "Interaction Guesser (WIP)" {
 
-		type Guess
-		F init(g:Guess, pattern, description) init(args())
-
 		F _fields(item: Timeline::ResultItem) item.result[0].Hash().keys()::{
 			debug("guesser", "fields=${A}")
 		}
@@ -123,7 +120,7 @@ ns {
 			debug("guesser", "types=${types}")
 			t = _value(item, path).Type()
 			if types[t] == 1 {
-				collect(Guess({path[1]: t}, "The only item/row where ${path[1]} is ${t.name}"))
+				collect(Timeline::GuessItem(Time(), {path[1]: t}, "The only item/row where ${path[1]} is ${t.name}"))
 			}
 		}
 
@@ -131,7 +128,8 @@ ns {
 		F unique_column_value_guesser(timeline: Timeline::Timeline, item: Timeline::ResultItem, path) {
 			fields = _fields(item)
 			value = _value(item, path)
-			["unique_column_value_guesser to do"]
+			[Timeline::GuessItem(Time(), {path[1]: value}, "TODO")]
+			[]
 		}
 
 		guessers = [
@@ -151,9 +149,9 @@ ns {
 			assert(item.result.map(Type).uniq(), Transformed(len, 1), InvalidArgument("guess() can only handle Arr with single type"))
 			assert(path, [Int, Str], InvalidArgument("guess() can only handle path where the first element is Int and the second is Str"))
 
-			guesses = guessers.flat_map(X(timeline, item, path))
-
-			debug("guesser", "item=${item} path=${path} guesses=${guesses}")
+			guessers.flat_map(X(timeline, item, path))::{
+				debug("guesser", "item=${item} path=${path} guesses=${A}")
+			}
 		}
 	}
 
@@ -288,17 +286,21 @@ ns {
 
 					i = tl[event.cur.ti]
 
-					guess(tl, i, event.cur.path)
+					guessed_items = guess(tl, i, event.cur.path)
+					debug('guesser', "Guessed: ${guessed_items}")
 
+					# TODO: better UI for displaying multiple guesses
 					g = Timeline::GroupItem([
-						Timeline::InfoItem(Time(), "WIP(interaction): you have interacted with ${event.cur} (type ${i.Type()}) and navigated to ${event.ref}")
+						Timeline::InfoItem(Time(), "DEBUG: you have interacted with ${event.cur} (type ${i.Type()}) and navigated to ${event.ref}")
+						*guessed_items
+						Timeline::InfoItem(Time(), "WIP: Here will be the command, as defined for the default UI action or the object you interacted with")
 					])
 					tl.push(g)
 
 					# TODO: join these sometimes
 					Thread(SeqId("shell-action-"), {
 						debug('server', "Action start")
-						g.push(Timeline::ResultItem(Time(), "TODO"))
+						g.push(Timeline::InfoItem(Time(), "WIP: here will be the output of the command."))
 					})
 
 					return {'ti': g.id}
