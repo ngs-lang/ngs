@@ -122,6 +122,18 @@ section "Basic Error subtypes" {
 	type ExitCodeFail(Error)
 }
 
+section "NoEmptyInit" {
+	doc EXPERIMENTAL! Do not use!
+	type NoEmptyInit
+
+	doc EXPERIMENTAL! Do not use!
+	doc Throws InvalidArgument
+	F init(nei:NoEmptyInit) {
+		throw InvalidArgument("Type ${nei.Type().name} does not have empty constructor")
+	}
+	TEST { type T(NoEmptyInit); T() }.assert(InvalidArgument)
+}
+
 section "Basic I/O" {
 	doc Print given string and a newline to stdout.
 	doc %RET - null
