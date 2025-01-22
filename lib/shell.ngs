@@ -286,12 +286,13 @@ ns {
 
 					i = tl[event.cur.ti]
 
+					# TODO: move guessing out of ui_default_action, it's not specific to action nor to referenced type.
 					guessed_items = guess(tl, i, event.cur.path)
 					debug('guesser', "Guessed: ${guessed_items}")
 
 					# TODO: better UI for displaying multiple guesses
 					g = Timeline::GroupItem([
-						Timeline::InfoItem(Time(), "DEBUG: you have interacted with ${event.cur} (type ${i.Type()}) and navigated to ${event.ref}")
+						# Timeline::InfoItem(Time(), "DEBUG: you have interacted with ${event.cur} (type ${i.Type()}) and navigated to ${event.ref}")
 						*guessed_items
 						Timeline::InfoItem(Time(), "WIP: Here will be the command, as defined for the default UI action or the object you interacted with")
 					])
