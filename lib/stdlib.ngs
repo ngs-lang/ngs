@@ -2041,6 +2041,12 @@ section "HashLike" {
 	doc %RET - Bool
 	F Bool(hl:HashLike)          hl.meta().HashLike.Bool()
 
+	F each_idx_key_val(hl:HashLike, cb:Fun) {
+		hl.meta().HashLike.each_idx_key_val(cb)
+		hl
+	}
+	TEST (collector HashLike({"a": 1, "b": 2}).each_idx_key_val(F(idx, k, v) collect([idx, k, v]))) == [[0, "a", 1], [1, "b", 2]]
+
 	F map_idx_key_val(hl:HashLike, mapper:Fun) hl.meta().HashLike.map_idx_key_val(mapper)
 
 	doc Filter hash. Build new HashLike with kev-value pairs selected by predicate.
