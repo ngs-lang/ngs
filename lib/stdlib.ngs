@@ -703,6 +703,22 @@ section "Functional utilities" {
     		f(g(*args))
     	}
     }
+
+	doc Applies f to arguments in x
+	doc Same as calling f(*x)
+    F apply(x:Eachable1, f:Fun) f(*x)
+
+    TEST [1,2].apply((+)) == 3
+    TEST { [1,2,3].apply((+)) }.assert(MethodNotFound)
+
+	doc Applies f to arguments in x
+	doc Same as calling f(**x)
+    F apply(x:Eachable2, f:Fun) f(**x)
+
+    TEST {"a": 1, "b": 2}.apply(F(a, b) a+b) == 3
+    TEST {"a": 1, "b": 2, "c": 3}.apply(F(a, b, **kw) a+b) == 3
+    TEST { {"a": 1, "b": 2, "c": 3}.apply(F(a, b) a+b) }.assert(ArgsMismatch)
+
 }
 
 section "Value" {
@@ -6082,11 +6098,11 @@ type PipeCreateFail(CError)
 doc Pipe constructor. Create UNIX pipe using PIPE(2). Throws PipeCreateFail if pipe can not be created.
 doc %EX - p = Pipe()
 F init(pipe:Pipe) {
-	result = c_pipe()
-	# result: [result_code, read_end, write_end]
-	result[0] != 0 throws PipeCreateFail("Failed to create Pipe")
-	pipe.read_fd = result[1]
-	pipe.write_fd = result[2]
+	c_pipe().apply(F(status, read_fd, write_fd) {
+		assert(status, 0, PipeCreateFail("Failed to create Pipe"))
+		pipe.read_fd = read_fd
+		pipe.write_fd = write_fd
+	})
 	debug("file", "${pipe.Type().name} created pipe with read_fd=${pipe.read_fd} and write_fd=${pipe.write_fd}")
 }
 
@@ -8166,12 +8182,15 @@ F init(t:Time, epoch:Int) {
 }
 
 F init(t:Time, s:Str, format:Str) {
-	result = c_strptime(s, format)
-	if result[0] != len(s) or result[1] is Null {
-		throw InvalidArgument("Failed to parse time").set(s=s,format=format)
-	}
-	t.epoch = c_mktime(result[1])
+	c_strptime(s, format).apply(F(l, result) {
+		if l != len(s) or result is Null {
+			throw InvalidArgument("Failed to parse time").set(s=s,format=format)
+		}
+		t.epoch = c_mktime(result)
+	})
 }
+
+TEST Time("2020-01-02", "%Y-%m-%d").Str("%Y", true) == "2020"
 
 doc Parse known date/time formats
 F init(t:Time, s:Str) block b {
@@ -8821,12 +8840,14 @@ section "JWT" {
 		parts = o.split('.')
 		guard len(parts) == 3
 		guard all(parts)
-		ret = JWT().set(
-			original = o
-			header = parts[0]._decode()
-			payload = parts[1]._decode()
-			signature = parts[2]
-		)
+		ret = parts.apply(F(header, payload, signature) {
+			JWT().set(
+				original = o
+				header = header._decode()
+				payload = payload._decode()
+				signature = signature
+			)
+		})
 		guard ret.header and ret.payload
 		ret
 	}

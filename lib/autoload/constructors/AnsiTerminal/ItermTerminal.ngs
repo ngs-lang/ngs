@@ -22,11 +22,12 @@ F AnsiTerminal(fd_in:Int, fd_out:Int) {
 		# The seen response was from DSR 1337. Discarding response to DSR 5.
 		read_dsr()
 	} else {
-		# No response to DSR 1337. We are seing response to DSR 5.
+		# No response to DSR 1337. We are seeing response to DSR 5.
 		version_string = null
 	}
 	$(stty $saved_stty 0<${fd_in} 1>${fd_out})
 	guard version_string
-	parts = version_string.split(' ')
-	ItermTerminal(fd_in, fd_out).set('term', parts[0]).set('ver', parts[1])
+	version_string.split(' ').apply(F(term, ver) {
+		ItermTerminal(fd_in, fd_out).set('term', term).set('ver', ver)
+	})
 }
