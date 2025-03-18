@@ -21,6 +21,7 @@
 * Add `assert(val, pattern, Exception)`
 * Add `connect()`
 * Add `apply(Eachable1, Fun)` and `apply(Eachable2, Fun)`
+* Add experimental `ensure(x, pat, how)`
 * Patterns
   * Add `F f(x:PATTERN_HERE) ...` named parameter pattern syntax (previously `PATTERN_HERE` had to be a type)
   * Add `F f(PATTERN_HERE) ...` unnamed parameter pattern syntax (can be a type)

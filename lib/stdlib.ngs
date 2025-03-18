@@ -1494,6 +1494,21 @@ TEST 1.when(1, 2) == 2
 TEST 3.when(1, 2) == 3
 TEST 10.when(10, X*2) == 20
 
+doc EXPERIMENTAL! Do not use!
+doc Ensures that value matches pattern.
+doc If the value matches, it is returned as is.
+doc If not, Value(how, x) is used instead.
+doc In this case, there is assert() to see that the new value is matching pat.
+doc %EX - ensure(param, Str, encode_json)
+doc %STATUS - experimental
+F ensure(x, pat, how) {
+	x.when(Not(pat), {
+		how.Value(x)::{
+			assert(A, pat, Error('ensure() failed to transform to desired pattern').set(x=x, pat=pat, how=how))
+		}
+	})
+}
+
 doc Filter e using pattern.
 doc e - Eachable1. WARNING: instances of same type as e must have empty constructor and push() method.
 doc pattern - When item =~ pattern returns true, the item will appear in the resulting array.
