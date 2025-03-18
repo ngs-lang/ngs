@@ -3517,7 +3517,7 @@ F echo(x) {
 }
 
 # Built-in join() can only handle Str elements
-doc Join non-strings. Converts a elements to string first, then uses built-in join().
+doc Join non-strings. Converts elements to string first, then uses native join().
 doc Warning - behaviour subject to change!
 doc a - Array to join
 doc s - Delimiter
@@ -3673,7 +3673,7 @@ F ==(a:Hash, b:Hash) {
 }
 
 F subset(smaller:Hash, larger:Hash) {
-	not(len(smaller) <= len(larger)) returns false
+	len(smaller) > len(larger) returns false
 	smaller.all(F(k, v) k in larger and larger[k] == v)
 }
 
@@ -3716,7 +3716,9 @@ doc Checks whether all of the key-value pairs satisfies the predicate: predicate
 doc %RET - Bool
 F all(e:Eachable2, predicate:Fun) block b {
 	e.each(F(k, v) {
-		if not(predicate(k, v)) b.return(false)
+		if not(predicate(k, v)) {
+			b.return(false)
+		}
 	})
 	true
 }
@@ -5258,12 +5260,11 @@ section "Thread" block _ {
 				throw e
 			}
 		}
-		create_result = c_pthread_create(thread_attr, thread_setup_wrapper, [t, arg])
-		code = create_result[0]
-		if code {
-			throw ThreadCreateFail("Failed to c_pthread_create").set('code', code)
-		}
-		t.thread = create_result[1]
+
+		c_pthread_create(thread_attr, thread_setup_wrapper, [t, arg]).apply(F(code, thread) {
+			code throws ThreadCreateFail("Failed to c_pthread_create").set('code', code)
+			t.thread = thread
+		})
 	}
 
 	doc Creates and runs a thread. The code that the created thread runs is f, which is passed arg.
@@ -5366,7 +5367,7 @@ section "Thread" block _ {
     }
 
     TEST e=100; e.pmap(2, X*2) == e.map(X*2)
-    # TEST try { [1,0,2].pmap(10 / X) } catch(e:ResultsException) { (e.results =~ [Success, Failure, Success]) and e.results[1].has("input") } # To investigate: stack overflow when dealing with e.results
+    TEST try { [1,0,2].pmap(10 / X) } catch(e:ResultsException) { (e.results =~ [Success, Failure, Success]) }
 
 	doc Run cb in n parallel threads. Each thread runs one cb but this might change in future (preserving the total n calls to cb).
 	F ptimes(n:Int, cb:Fun) {
