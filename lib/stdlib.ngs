@@ -3923,11 +3923,13 @@ TEST {"a": 1, "b": 10, "c": 5}.sortv() != {"a": 1, "b": 10, "c": 5}
 section "fields()" {
 	doc Only keep fields matching the pattern.
 	doc Same as e.filterk(pattern).
+	doc In some other languages, similar functionality is called "project".
 	doc %EX - {"a": 1, "b": 2}.fields(AnyOf("a", "a2"))  # {"a": 1}
 	F fields(e:Eachable2, pattern) e.filterk(pattern)
 
 	doc Remove fields matching the pattern.
 	doc Same as e.fields(Not(AnyOf(n.pattern))).
+	doc In some other languages, similar functionality is called "project".
 	doc n - Not(Arr)
 	doc %EX - {"a": 1, "b": 2}.fields(Not(%[a c d]))  # {"b": 2}
 	F fields(e:Eachable2, n:Not) {
@@ -3936,10 +3938,12 @@ section "fields()" {
 	}
 
 	doc Same as e.fields(AnyOf(patterns))
+	doc In some other languages, similar functionality is called "project".
 	doc %EX - {"a": 1, "b": 2}.fields(["a", "a2"])  # {"a": 1}
 	F fields(e:Eachable2, patterns:Arr) e.fields(AnyOf(patterns))
 
 	doc Only keep specified fields in each element of e
+	doc In some other languages, similar functionality is called "project".
 	doc %EX - [{"a": 1, "b": 2}].fields(%[a])  # [{"a": 1}]
 	F fields(e:Eachable1, pat) {
 		e.map(F(elt) {
