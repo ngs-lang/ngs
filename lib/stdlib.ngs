@@ -8238,6 +8238,8 @@ F init(t:Time, s:Str) block b {
 	throw InvalidArgument("Failed to parse time").set(s=orig_s, s_transformed=s, formats=formats)
 }
 
+TEST Time("2020-01-01T01:01:03Z").Str("%S") == '03'
+
 # TODO: dedup. Time only should say that Int() should be used for comparing.
 F '=='(a:Time, b:Time) a.Int() == b.Int()
 F '<='(a:Time, b:Time) a.Int() <= b.Int()
