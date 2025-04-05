@@ -38,6 +38,7 @@
 * `encode_json()` - now supports `{'pretty': 'best-effort'}` hint
 * Various build improvements
 * Fix edge case in `del(Hash, Any)`
+* `echo(Table2::Table)` now warns about hidden columns
 
 ### Deprecated
 * Deprecated `Deep` in favor of `AtPath`
