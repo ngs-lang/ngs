@@ -1,3 +1,58 @@
+## 2025-04-05 Version 0.2.17
+
+### New features
+* Add `each(Dir, Fun)`
+* Add `filter(Dir, pattern)`
+* Add `Iter(Set)`
+* Add `partitionk(Eachable2, pattern)`
+* Add `partitionv(Eachable2, pattern)`
+* Add `fields()`
+* Add experimental `retry_assert()`
+* Add `Duration` type
+* Add experimental `finally(Block, Fun)`
+* Add `Path + Str` and `Str + Path`
+* Add `avg(Eachable1)`
+* Add `Value` pseudo-type for converting values and functions into values
+* Add `when(val, pattern, new_val)`
+* Add `code(ArrLike)`
+* Add `code(Type)`
+* Add `flat_map(Eachable1, Fun)`
+* Add `COR` - Chain of Responsibility
+* Add `assert(val, pattern, Exception)`
+* Add `connect()`
+* Add `apply(Eachable1, Fun)` and `apply(Eachable2, Fun)`
+* Add experimental `ensure(x, pat, how)`
+* Patterns
+  * Add `F f(x:PATTERN_HERE) ...` named parameter pattern syntax (previously `PATTERN_HERE` had to be a type)
+  * Add `F f(PATTERN_HERE) ...` unnamed parameter pattern syntax (can be a type)
+  * Add `Transformed` pattern
+  * Add experimental `Capture` pattern for capturing values
+  * Add experimental `Branch` pattern for multiple matches
+* Add `$[...]` syntax for running external programs without capturing output
+* Add `x::{ ... }` syntax and `::(x, f:Fun)` method definition. Works like `tap()`.
+
+### Fixes and improvements
+* Fix `AtPath` for non-eachables
+* Improve `decode()` for AWS CLI commands
+* `Set` comparison now ignores order
+* Fix `after_last(Str, Str)`
+* `encode_json()` - now supports `{'pretty': 'best-effort'}` hint
+* Various build improvements
+* Fix edge case in `del(Hash, Any)`
+* `echo(Table2::Table)` now warns about hidden columns
+
+### Deprecated
+* Deprecated `Deep` in favor of `AtPath`
+* Deprecated `~(Any, Type)` in favor of `=~(Any, Type)`
+* Deprecated `only()` in favor if `when()`
+
+### Breaking changes
+* Remove deprecated `Pred`
+* Remove deprecated `~(Any, Any)` adapter for `=~`
+* Remove deprecated `~(Any, Type)`
+* Remove unused `get(MatchSuccess)`
+* Remove unused `get(MatchFailure)`
+
 ## 2023-05-17 Version 0.2.16
 
 ### New features

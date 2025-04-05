@@ -2,38 +2,107 @@ ns {
 
 	# WIP - timeline, mainly for UI
 
-	global Timeline, TimelineStatus, Time, Lines, init, each, map, sort, push, echo_cli
+	global Time, Lines, init, each, map, sort, push, echo_cli, ([])
 
-	section "TimelineStatus" {
+	doc time_start - Time
+	doc time_last_update - Time
+	doc time_end - Null or Time
+	doc data - Any
+	doc error - AnyOf(Str, Lines)
+	type Timeline
 
-		TimelineStatus = ns {
-			type Status
-				type Unknown(Status)
-				type Running(Status)
-					type Stopping(Running)
-				type Finished(Status)
-					type Succeeded(Finished)
-					type Failed(Finished)
-					type Cancelled(Finished)
+
+	section "Item" {
+
+		doc time - Time
+		type Item
+
+		F init(ti:Item) throw InvalidArgument("Item() was called without arguments")
+
+		F init(ti:Item, time:Time=null) {
+			ti.id = "ti-${`line: uuidgen`}" # temporary
+			ti.time = time
 		}
 
+		F Time(ti:Item) ti.time
+
+		F pushed_into(ti:Item, t:Timeline) null
 	}
 
+	section "GroupItem" {
+
+		type GroupItem(Item)
+
+		F init(gi:GroupItem, items:Arr=[]) {
+			super(gi)
+			gi.items = []
+			gi.meta().timeline = null
+			items.each(push(gi, X))
+		}
+
+		F push(gi:GroupItem, ti:Item) gi::{
+			if not(gi.items) {
+				gi.time = ti.time
+			}
+			gi.items.push(ti)
+			gi.meta().timeline.Box().each(incr_version)
+		}
+
+		F pushed_into(gi:GroupItem, t:Timeline) {
+			gi.meta().timeline = t
+		}
+	}
+
+	section "ResultItem" {
+
+		type ResultItem(Item)
+
+		F init(ti:ResultItem, time:Time, result) {
+			super(ti, time)
+			ti.result = result
+		}
+	}
+
+	section "TextualCommandItem" {
+
+		type TextualCommandItem(Item)
+
+		F init(ti:TextualCommandItem) throw InvalidArgument("TextualCommandItem() was called without arguments")
+
+		F init(ti:TextualCommandItem, time:Time, command:Str) {
+			super(ti, time)
+			ti.command = command
+		}
+	}
+
+	section "InfoItem" {
+
+		type InfoItem(Item)
+
+		F init(ti:InfoItem) throw InvalidArgument("InfoItem() was called without arguments")
+
+		F init(ti:InfoItem, time:Time, info:Str) {
+			super(ti, time)
+			ti.info = info
+		}
+	}
+
+	section "GuessItem" {
+		type GuessItem([Item, NoEmptyInit])
+		F init(gi:GuessItem, time:Time, pattern, description:Str) {
+			super(gi, time)
+			gi.pattern = pattern
+			gi.description = description
+		}
+	}
 
 	section "Timeline" {
 
-		doc time_start - Time
-		doc time_last_update - Time
-		doc time_end - Null or Time
-		doc data - Any
-		doc error - AnyOf(Str, Lines)
-		type Timeline
-
-
 		F init(t:Timeline) {
 			t.id = "tl-${`line: uuidgen`}" # temporary
+			t.version = 1  # TODO: make sure it's thread safe
 			t.name = '(unnamed)'
-			t.status = TimelineStatus::Unknown()
+			t.status = 'TODO'
 			t.error = null
 			t.time_start = null
 			t.time_last_update = null
@@ -48,17 +117,43 @@ ns {
 			t.sort()
 		}
 
-		F push(t:Timeline, x:Timeline) t::{
-			A.items.push(x)
+		F incr_version(t:Timeline) {
+			# TODO: lock?
+			t.version += 1
+		}
+
+		F push(t:Timeline, ti:Item) t::{
+			A.items.push(ti)
 			A.sort() # TODO: insert in the correct place, keeping .items sorted by time
 			# TODO: maximize time_last_update and time_end into t
 			# TODO: minimize time_start into t
+			ti.pushed_into(t)
+			t.incr_version()
 		}
 
 		F each(t:Timeline, cb:Fun) t::{A.items.each(cb)}
 		F map(t:Timeline, mapper:Fun) t.items.map(mapper)
 		F sort(t:Timeline) t::{ A.items .= sort(F(a, b) a.Time() <= b.Time()) }
 		F Time(t:Timeline) t.time_end or t.time_last_update or t.time_start
+
+		doc Find Item by ID, even if it resides in a group
+		doc TODO(correctness) proper recursion
+		doc TODO(performance) index instead of scan
+		doc %RET - Item
+		F '[]'(t:Timeline, id:Str) block b {
+			t.items.each(F(i) {
+				if i.id == id {
+					b.return(i)
+				}
+				if i is GroupItem {
+					result = i.items.the_one({'id': id}, found_none={null})
+					if result != null {
+						b.return(result)
+					}
+				}
+			})
+			throw InvalidArgument("Item with ID ${id} not found")
+		}
 
 
 		section "Lines(Timeline)" {
@@ -101,4 +196,6 @@ ns {
 		t.Lines().echo()
 	}
 
+	TEST tl = Timeline::Timeline(); i = Timeline::Item(); tl.push(i); tl[i.id] == i
+	TEST tl = Timeline::Timeline(); g = Timeline::GroupItem(); i = Timeline::Item(); g.push(i); tl.push(g); tl[i.id] == i
 }

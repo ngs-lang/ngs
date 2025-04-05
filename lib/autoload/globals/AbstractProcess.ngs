@@ -1,0 +1,112 @@
+ns {
+	# global_methods
+	global init
+
+	type Process(JsonDataViaHash)
+	F init(p:Process) {
+		p.status = Status::Unset()
+		p.start = null
+		p.end = null
+		p.output = []
+		p.sub = []
+	}
+
+	Status = ns {
+    	global init
+    	type Status
+    		type Unset(Status)
+    		type Unknown(Status)
+    		type NotStarted(Status)
+    		type Running(Status)
+    			type Stopping(Running)
+	    			type Succeeding(Running)
+    				type Failing(Stopping)
+    		type Paused(Status)
+    		type Finished(Status)
+    			type Succeeded(Finished)
+    			type Failed(Finished)
+    			type Cancelled(Finished)
+
+		# TODO: think whether it's the best
+		_scalar = {
+			Unset: 0
+			Unknown: 10
+			NotStarted: 20
+			Running: 1000
+				Stopping: 900
+				Succeeding: 1100
+				Failing: -180
+			Paused: 800
+			Finished: 2000
+				Succeeded: 3000
+				Failed: -200
+				Cancelled: -100
+		}
+
+		global (<)
+		F '<'(a:Status, b:Status) _scalar[a.Type()] < _scalar[b.Type()]
+
+    	F init(s:Status, text:Str=null) { s.text = text }
+
+    	F Status(s:Str) {
+    		s =~ /^succe/i returns Succeeded(s)
+    		s =~ /^fail/i returns Failed(s)
+    		s =~ /progress/i returns Running(s)
+    		throw InvalidArgument("Could not make AbstractProcess::Status from '${s}'").set('s', s)
+    	}
+
+    	TEST s=AbstractProcess::Status; s::Status("fail") is s::Failed
+
+    	F Status(n:Null) Unknown('(null)')
+
+    	global Str
+    	F Str(s:Status) s.text or s.Type().name
+
+    	# TODO: maybe concatenate the text
+    	global JsonData
+    	F JsonData(s:Status) s.Type().name
+    }
+
+    global compute_status
+    F compute_status(p:Process) {
+    	p.sub.each(compute_status)
+    	s = min(p.sub.status)  # the "worst" status
+    	assert(p.status.Type(), AnyOf(
+			Lit(Status::Unset)
+			Lit(s.Type())  # if not unset, the computed status and current status must match
+		), 'Computed status of subprocesses can either be Unset or it must match the status of the parent')
+    	p.status = s.assert(Not(Status::Unset))
+    }
+
+    F compute_status(p:Process) {
+		guard not(p.sub)
+		assert(p, {'status': Not(Status::Unset)}, InvalidArgument('Status of a leaf Process can not be Unset'))
+    }
+
+    global inspect
+    F inspect(p:Process) {
+
+    	F marker(line:Str) '>'
+    	F marker(line:Str) {
+    		guard line =~ /invalid|error|fail|reason/i
+    		'*'
+    	}
+
+    	h = p.Hash()
+    	collector/Lines() {
+    		t = if any([p.start, p.end]) {
+    			", ${p.start} - ${p.end}"
+    		} else {
+    			""
+    		}
+    		name = ('"' +? h.get('name', '') +? '"') or '-'
+			collect("${p.Type().name} ${name} (${p.status}${t})")
+			p.sub.each_idx_val(F(sub_idx, sub) {
+				# collect("  Subprocess ${sub_idx}")
+				inspect(sub).each(F(line) collect("    ${line}"))
+			})
+			p.output.reverse().limit(50).reverse().map(SafeStr).each(F(line) collect("    ${marker(line)} ${line}"))
+		}
+    }
+
+}

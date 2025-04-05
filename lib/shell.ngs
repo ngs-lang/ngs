@@ -1,54 +1,353 @@
-# WIP
-# XXX: Ugly hack to prevent direct output to stdout.
-F '$()'(cp:CommandsPipeline) {
-	cp.options .= without('top_level')
-	if cp.options.get('x_top_level') {
-		cp.options.top_level = cp.options.x_top_level
+ns {
+	# WIP
+	# Run with: ngs -e 'require("./lib/shell.ngs")' server
+	SOCK_FILE = "ngs-shell.sock"
+	PROXY_DIR = Dir(".." / "ngs-web-ui-proxy").assert()
+	WEB_SERVER_DIR = Dir(".." / "ngs-web-ui").assert()
+	WEB_SERVER_PORT = 52000
+
+	# Temporary name "repr"
+	F repr(h:Hash, level:Int=0) collector {
+		pfx = '  ' * level
+		h.each(F(k, v) {
+			if [k, v] =~ ['time', Int] {
+				v = "${v} (${v.Time().Str()})"
+			}
+			if k == 'children' {
+				v.each_idx_val(F(i, v) {
+					collect("${pfx}  [${i}]")
+					repr(v, level + 2).each(collect)
+				})
+				return
+			}
+			collect("${pfx}${k} = ${v.SafeStr()}")
+		})
 	}
-	guard false
+
+	section "Shell Client" {
+		type Client()
+
+
+		type ShellClientDelegate(net::ClientDelegate)
+
+		global on_connect
+		F on_connect(scd:ShellClientDelegate, c:net::Connection) {
+			debug('client', 'ShellClientDelegate#on_connect()')
+			scd.jrc = IO::handlers::JsonRpcClient()
+			c.pipeline.push(IO::handlers::Splitter("\n"))
+			c.pipeline.push(scd.jrc)
+			c.pipeline.fire(IO::events::Active())
+		}
+
+		global init
+		F init(c:Client) {
+			c.last_seen_version = null
+			c.last_call_result = null
+			c.last_eval_result = null
+			c.scd = ShellClientDelegate()
+			c.client = net::UnixStreamClient()
+			c.client.connect(SOCK_FILE, c.scd)
+		}
+
+		global call
+		F call(c:Client, method:Str, args) {
+			c.last_call_result = c.scd.jrc.call(method, args)::{
+				debug('client', {"Call result ${A.SafeStr()}"})
+			}
+		}
+
+		global eval
+		F eval(c:Client, cmd:Str) {
+			c.last_eval_result = c.call('eval', [cmd])
+		}
+
+		global poll
+		doc cb - returns a Box. FullBox signals stop polling and return the value in the box
+		F poll(c:Client, cb:Fun) {
+			while true {
+				debug('client', "Polling last_seen_version=${c.last_seen_version}")
+				p = c.scd.jrc.call('poll', {
+					'last_seen_version': c.last_seen_version
+				})
+				debug('client', "Poll result - timeline (ver. ${p.version})")
+				# echo(p.timeline.repr().Lines())
+				c.last_seen_version = p.version
+				result = cb(p)
+				result returns result.get()
+			}
+		}
+
+		doc Poll till given GroupTimelineItem has ResultTimelineItem
+		F poll(c:Client, gti_id:Str) {
+			c.poll(F(p) {
+				debug('client', 'poll(Client, Str) callback')
+				gti = p.timeline.children.the_one({'$type': 'GroupTimelineItem', 'id': gti_id})
+				rti = gti.children.the_one({'$type': 'ResultTimelineItem'}, found_none={null})
+				debug('client', "poll(Client, Str) callback result ${rti}")
+				if rti then FullBox(gti) else EmptyBox()
+			})
+		}
+
+		F poll(c:Client) {
+			debug('client', "poll(Client) using ti ${c.last_eval_result.ti}")
+			assert(c, {'last_call_result': {'ti': Str}})
+			c.poll(c.last_call_result.ti)
+		}
+	}
+
+	section "Interaction Guesser (WIP)" {
+
+		F _fields(item: Timeline::ResultItem) item.result[0].Hash().keys()::{
+			debug("guesser", "fields=${A}")
+		}
+
+		F _value(item: Timeline::ResultItem, path) item.result[path[0]].(path[1])::{
+			debug("guesser", "value=${A} value_type=${A.Type()}")
+		}
+
+		F _column_values(item: Timeline::ResultItem, path) {
+			item.result.map(F(i) i.(path[1]))
+		}
+
+		# TODO: check parent types to see if the value is uniquely of a parent type. How to prioritze answers from different parent types?
+		# TODO(think): would types for fields make sense? different tables can name differently fields with same semantic meaning
+		# TODO: handle all columns, not just the one that was interacted with
+		# TODO(ui): phrasing "where FIELD_NAME is TYPE_NAME"
+		F unique_column_type_guesser(timeline: Timeline::Timeline, item: Timeline::ResultItem, path) collector {
+			fields = _fields(item)
+			values = _column_values(item, path)
+			types = values.map(Type).Stats()
+			debug("guesser", "types=${types}")
+			t = _value(item, path).Type()
+			if types[t] == 1 {
+				collect(Timeline::GuessItem(Time(), {path[1]: t}, "The only item/row where ${path[1]} is ${t.name}"))
+			}
+		}
+
+		# TODO(think): values guesser should work only for "simple" types such as Int and Str?
+		F unique_column_value_guesser(timeline: Timeline::Timeline, item: Timeline::ResultItem, path) {
+			fields = _fields(item)
+			value = _value(item, path)
+			[Timeline::GuessItem(Time(), {path[1]: value}, "TODO")]
+			[]
+		}
+
+		guessers = [
+			unique_column_type_guesser,
+			unique_column_value_guesser
+		]
+
+		# TODO: each guesser should be able to return several guesses
+		# TODO(decide): special case single item result?
+		# TODO(decide): what if several guessers match? Present several in order of decreasing probability? Still enable manual adjustment.
+		# TODO(decide): what if several columns have unique values at that row?
+		# TODO(decide): allow marking guess as correct in the UI? Or just assume correct until changed?
+		F guess(timeline: Timeline::Timeline, item: Timeline::ResultItem, path:Arr) {
+			debug("guesser", "data=${item} path=${path}")
+			assert(item, {'result': Arr}, InvalidArgument("guess() can only handle Arr"))
+			assert(item.result, Transformed(len, Not(0)), InvalidArgument("guess() can only handle non-empty Arr"))
+			assert(item.result.map(Type).uniq(), Transformed(len, 1), InvalidArgument("guess() can only handle Arr with single type"))
+			assert(path, [Int, Str], InvalidArgument("guess() can only handle path where the first element is Int and the second is Str"))
+
+			guessers.flat_map(X(timeline, item, path))::{
+				debug("guesser", "item=${item} path=${path} guesses=${A}")
+			}
+		}
+	}
+
+	doc Rudimentary client as phase 1.
+	doc Send a command and poll for results.
+	doc dua - Default UI action
+	F eval(cmd:Str, dua:Arr=[]) {
+		client = Client()
+		e = client.eval(cmd)
+		$(sleep 1)  # XXX: timing with eval(["p"]) # JsonRPC server or its callbacks are probably not thread safe
+		p = client.poll()
+
+		if dua {
+			log("Will take default ui action ${dua}")
+			# TODO: check that it's the only match. Not sure how.
+			m = p =~ AtPath(Any, Capture("obj", {
+				'$type': 'Object'
+				'cur': {
+					'path': dua
+				}
+			}))
+			if m {
+				obj = m["obj"]
+				log("Found the Object $obj")
+				client.call('ui_default_action', [{'cur': obj.cur, 'ref': obj.ref}])
+				$(sleep 1)  # XXX: possible timing issue (did not observe an error, preventively added)
+				p = client.poll()
+			}
+		}
+
+		p
+	}
+
+	doc Starts shell server, JSON RPC proxy, and a browser client
+	F server(launch_browser:Bool=true) {
+		ENV.BROWSER = 'none'
+
+		# XXX: Ugly hack to prevent direct output to stdout.
+		global ($())
+		F '$()'(cp:CommandsPipeline) {
+			cp.options .= without('top_level')
+			if cp.options.get('x_top_level') {
+				cp.options.top_level = cp.options.x_top_level
+			}
+			guard false
+		}
+
+
+		section "Censoring for demo purposes" {
+			_DESCENDABLE1 = AllOf(Eachable1, Not(Int), Not(Str))
+
+			F _censor(x) x
+
+			NGS_CENSOR = ENV.get('NGS_CENSOR')
+			if NGS_CENSOR {
+				words = NGS_CENSOR.split(',')
+				F _censor(x:Str) {
+					ret = x
+					words.each_idx_val(F(i, v) {
+						ret .= replace(v, "CENSORED${i+1}")
+					})
+					ret
+				}
+				F _censor(x:_DESCENDABLE1) x.map(_censor)
+				F _censor(x:Eachable2) x.mapv(_censor)
+			}
+		}
+
+		type ShellServerDelegate(net::ThreadedServerDelegate)
+		global on_listen
+		F on_listen(ssd:ShellServerDelegate, s:net::Server) {
+			super(ssd, s)
+			log("Listening on ${SOCK_FILE}")
+			if launch_browser {
+				p = $(x_top_level:: cd:PROXY_DIR npx ts-node src/server.ts ../ngs/ngs-shell.sock &)
+				echo("Proxy PID: ${p.processes[0].pid}")
+
+				web_server = $(cd:WEB_SERVER_DIR npm start &)
+				echo("Web server PID: ${web_server.processes[0].pid}")
+			}
+		}
+
+		tl = Timeline::Timeline()
+		SHELL_METHODS = ns {
+			F eval(line:Str) {
+
+				section "Append line to the Timeline" {
+					tc = Timeline::TextualCommandItem(Time(), line)
+					g = Timeline::GroupItem().push(tc)
+					tl.push(g)
+				}
+				fname = '<shell line file>'
+
+				section "Shortcuts" {
+					shortcuts = {
+						'v': 'aws ec2 describe-vpcs'
+						'p-': 'aws codepipeline list-pipelines'
+						'p': '{ require("aws/CodePipeline.ngs")::pipelines::list() }'
+						'p_censored': '{ require("aws/CodePipeline.ngs")::pipelines::list().map(F(p) p.filterk(Not(AnyOf(%[sources revisions])))) }'
+						's-': 'aws cloudformation list-stacks'
+						's': 'saws::stacks()'
+					}
+					line = shortcuts.get(line, line)
+				}
+
+				# TODO: join these sometimes
+				Thread(SeqId("shell-eval-"), {
+					debug('server', "Eval start: ${line}")
+					bytecode = compile(line, fname)
+					# TODO: pass warnings
+					#bytecode.meta().warnings.each(F(w) {
+					#	wl = w.location
+					#	warn("${fname}:${wl.first_line}:${wl.first_column} warning: ${w.message}")
+					#})
+					func = load(bytecode, "<shell line func>")
+					result = func()
+					debug('server', "Eval end: ${line}")
+					g.push(Timeline::ResultItem(Time(), result))
+				})
+				{'ti': g.id}  # Timeline Item ID
+			}
+
+			# event example: {cur={type=AWS::CodePipeline::Pipeline, id=XXXX}, ref={type=AWS::CodePipeline::Execution, id=XXXX}}
+			F ui_default_action(event) {
+				log("UI default action on ${event}")
+
+				# TODO: move somewhere else
+				# TODO: un-hardcode
+				id = null
+				if event =~ {'ref': {'type': 'AWS::CodePipeline::Execution', 'id': { id=A } }} {
+					log("ui_default_action navigate to AWS::CodePipeline::Execution $id")
+
+					i = tl[event.cur.ti]
+
+					# TODO: move guessing out of ui_default_action, it's not specific to action nor to referenced type.
+					guessed_items = guess(tl, i, event.cur.path)
+					debug('guesser', "Guessed: ${guessed_items}")
+
+					# TODO: better UI for displaying multiple guesses
+					g = Timeline::GroupItem([
+						# Timeline::InfoItem(Time(), "DEBUG: you have interacted with ${event.cur} (type ${i.Type()}) and navigated to ${event.ref}")
+						*guessed_items
+						Timeline::InfoItem(Time(), "WIP: Here will be the command, as defined for the default UI action or the object you interacted with")
+					])
+					tl.push(g)
+
+					# TODO: join these sometimes
+					Thread(SeqId("shell-action-"), {
+						debug('server', "Action start")
+						g.push(Timeline::InfoItem(Time(), "WIP: here will be the output of the command."))
+					})
+
+					return {'ti': g.id}
+				}
+				# TODO: check why result of ui_default_action() is used in Bool() and causing exception
+				# TODO: return error if this point is reached
+				null
+			}
+
+			# TODO: handle broken pipe
+			F poll(last_seen_version) {
+				debug('client', "poll(last_seen_version=${last_seen_version}) - work in progress - returning the whole Timeline")
+				section "Wait for later version before retuning the result" block b {
+					not(last_seen_version) returns
+					while true {
+						if tl.version > last_seen_version {
+							b.return()
+						}
+						$(sleep 0.1)
+					}
+				}
+				result = {
+					'timeline': ui::Element(tl)
+					'version': tl.version
+				}
+				result.JsonData()._censor()
+			}
+
+			section "tests" {
+				F test() "test method active"
+				F test_add_one(n:Int) n + 1
+				F test_div_by_zero() 1 / 0
+			}
+		}
+
+		global on_connect
+		F on_connect(ssd:ShellServerDelegate, c:net::Connection) {
+			debug('server', 'ShellServerDelegate#on_connect()')
+			c.pipeline.push(IO::handlers::Splitter("\n"))
+			c.pipeline.push(IO::handlers::JsonRpcServer(SHELL_METHODS))
+			super(ssd, c)
+		}
+
+		uss = net::UnixStreamServer()
+		uss.listen(SOCK_FILE, ShellServerDelegate())
+
+		net::unix_stream_server(SOCK_FILE, ShellServerDelegate())
+	}
 }
-
-PROXY_DIR = Dir(".." / "ngs-web-ui-proxy").assert()
-
-# Hack - names, because parameters' types can only be identifiers
-ServerHandler = net::ServerHandler
-Server = net::Server
-# Hack - on_listen() can happen for any ServerHandler, not necessarily the one used below.
-F on_listen(sh:ServerHandler, s:Server) {
-	super(sh, s)
-	p = $(x_top_level:: cd:PROXY_DIR npx ts-node src/server.ts ../ngs/ngs-shell.sock &)
-	echo("Proxy PID: ${p.processes[0].pid}")
-	# TODO: open the web app
-}
-
-net::unix_json_rpc_server("ngs-shell.sock", ns {
-
-	F eval(line:Str) {
-		fname = '<shell line file>'
-		bytecode = compile(line, fname)
-		# TODO: pass warnings
-		#bytecode.meta().warnings.each(F(w) {
-		#	wl = w.location
-		#	warn("${fname}:${wl.first_line}:${wl.first_column} warning: ${w.message}")
-		#})
-
-		func = load(bytecode, "<shell line func>")
-		result = ui::JsonData(func())
-	}
-
-	section "tests" {
-
-		F test() {
-			"test method active"
-		}
-
-		F test_add_one(n:Int) {
-			n + 1
-		}
-
-		F test_div_by_zero() {
-			1 / 0
-		}
-	}
-
-})

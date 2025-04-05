@@ -1,0 +1,272 @@
+ns {
+	# Some chunks are fom saws.ngs
+	global init, hydrate
+	global init, Str, JsonData
+
+	# Poorly named hack for UI
+	type SendAllFields
+
+	# TODO: consider showing sources and revisions together
+
+	# TODO: ensure alignment with AWS output
+	type Source(SendAllFields)
+	F init(s:Source, repo:Str, branch:Str) init(args())
+	F Str(s:Source) "${s.repo}@${s.branch}"
+	F JsonData(s:Source) s.Hash().JsonData()
+
+	# TODO: ensure alignment with AWS output
+	type Action(SendAllFields)
+	F init(a:Action, stage_name:Str, action_name:Str, status:Str) init(args())
+	F Str(a:Action) "${a.stage_name}/${a.action_name}: ${a.status}"
+	F JsonData(a:Action) a.Hash().JsonData()
+
+	# TODO: ensure alignment with AWS output
+	type Revision(SendAllFields)
+	F init(r:Revision, action_name:Str, id:Str, message:Str) init(args())
+	F Str(r:Revision) "${r.action_name}: ${r.id.limit(8)} ${r.message.limit(30).replace('\n', ' ')}"
+	F JsonData(r:Revision) r.Hash().JsonData()
+
+	# TODO: "not applicable or unknown" subtype
+	# TODO: "N out of M" subtype (that's what current Progress is)
+	type Progress(SendAllFields)
+	F init(p:Progress, step:Int, total_steps:Int) init(args())
+	F Str(p:Progress) "${p.step}/${p.total_steps}"
+	F JsonData(p:Progress) p.Hash().JsonData()
+
+	# Messes semantics and UI hints?
+	type LongStr(SendAllFields)
+	F init(ls:LongStr, val:Str) init(args())
+	F Str(ls:LongStr) ls.val.Arr().digest(4).join('')
+	F JsonData(ls:LongStr) ls.val.JsonData()
+
+
+	section "Pipeline" {
+		# Warning: for unique reference should have AWS account and region
+		# AWS::CodePipeline::Pipeline
+		type Pipeline(HashLike)
+	}
+
+
+	Status = AbstractProcess::Status::Status
+
+	type Execution(AbstractProcess::Process)
+	type ExecutionStage(AbstractProcess::Process)
+	type ExecutionStageAction(AbstractProcess::Process)  # TODO: subtypes?
+
+	F init(esa:ExecutionStageAction, action:Hash) {
+		super(esa)
+		esa.name = action.name
+		esa.status = AbstractProcess::Status::NotStarted()
+	}
+
+	F hydrate(esa:ExecutionStageAction) warn("hydrate(${esa.Type().name}) is not implemented yet")
+
+	section "CodeBuild action" {
+		type CodeBuildExecutionStageAction(ExecutionStageAction)
+
+		F ExecutionStageAction(action:Hash) {
+			guard action =~ {
+				'actionTypeId': {
+					'owner': 'AWS'
+					'provider': 'CodeBuild'
+				}
+			}
+			CodeBuildExecutionStageAction(action)
+		}
+
+		F hydrate(c:CodeBuildExecutionStageAction) c::{
+			eid = c.action_execution.output.executionResult.externalExecutionId
+			c.sub.push(require('aws/CodeBuild.ngs')::Build(eid).hydrate())
+		}
+	}
+
+	section "CloudFormation action" {
+		type CloudFormationStageAction(ExecutionStageAction)
+
+		F ExecutionStageAction(action:Hash) {
+			guard action =~ {
+				'actionTypeId': {
+					'owner': 'AWS'
+					'provider': 'CloudFormation'
+				}
+			}
+			CloudFormationStageAction(action)
+		}
+
+		F hydrate(c:CloudFormationStageAction) c::{
+			throw NotImplemented("hydrate() not implemented for ${c}")
+			c
+		}
+
+		F hydrate(c:CloudFormationStageAction) {
+			input = c.action_execution.input
+			conf = input.configuration
+			guard conf.ActionMode == 'CHANGE_SET_REPLACE'
+			c.status = Status(c.action_execution.status)
+			c.action_execution.output.inspect().each({ c.output.push(A) })
+			c
+		}
+
+		F hydrate(c:CloudFormationStageAction) {
+			input = c.action_execution.input
+			conf = input.configuration
+			guard conf.ActionMode == 'CHANGE_SET_EXECUTE'
+			# It looks like there is no way to access history of change sets, operating based on time of events
+			# https://stackoverflow.com/questions/41841083/cloudformation-vieweing-inactive-deleted-change-sets
+			stack_arn = c.action_execution.output.executionResult.externalExecutionId.split('stackId=')[1]
+			c.sub.push(require('aws/CloudFormation.ngs')::StackOperation(stack_arn, Time(c.action_execution.startTime)).hydrate())
+			c
+		}
+	}
+
+	# Info from https://docs.aws.amazon.com/codepipeline/latest/userguide/concepts.html#concepts-stage-executions :
+	# "Valid statuses for stages are InProgress, Stopping, Stopped, Succeeded, and Failed. You can retry a failed stage unless the failed stage is not retryable. For more information, see StageExecution."
+	# TODO: support "latest" execution
+	# TODO: un-pollute AbstractProcess::Process fields (pipelineName and pipelineExecutionId can not be at top level, polluting AbstractProcess::Process)
+	# TODO: support unfinished execution
+	F init(e:Execution, pipelineName:Str, pipelineExecutionId:Str) {
+		super(e)
+		init(args())
+		# TODO: something better
+		# TODO: how to reference the thing that is corresponding to binary (in our case pipeline + version)?
+		e.name = "${pipelineName}/${pipelineExecutionId}"
+	}
+
+	F hydrate(e:Execution) e::{
+
+		aes = ``log: aws codepipeline list-action-executions --pipeline-name ${e.pipelineName} --filter "pipelineExecutionId=${e.pipelineExecutionId}"``
+		pipeline_version = aes.pipelineVersion.uniq().the_one()
+
+		pipeline = ``log: aws codepipeline get-pipeline --name ${e.pipelineName} --pipeline-version ${pipeline_version}``
+		# echo(inspect(pipeline))
+
+		section "Processes that should have happened, from pipeline definition" {
+			stages_actions = {}  # stage name + '::' + action name -> ExecutionStageAction
+			e.sub = pipeline.stages.map(F(stage) {
+				ExecutionStage().set(
+					not_status = AbstractProcess::Status::NotStarted()
+					name = stage.name
+					sub = stage.actions.map(F(action) {
+						ExecutionStageAction(action)::{
+							k = "${stage.name}::${action.name}"
+							assert(k not in stages_actions)
+							stages_actions[k] = A
+						}
+					})
+				)
+			})
+		}
+
+		section "Update processes with info from list-action-executions" {
+			aes.each(F(ae) {
+				stages_actions["${ae.stageName}::${ae.actionName}"]::{
+					A.status = Status(ae.status)
+					A.action_execution = ae  # TODO: un-pollute AbstractProcess::Process fields
+				}
+			})
+		}
+
+		# TODO: flexible logic for what to hydrate
+		stages_actions.values().filter({'status': AbstractProcess::Status::Failed}).each(hydrate)
+
+		e.compute_status()
+
+	}
+
+	executions = ns {
+		F list(pipelineName:Str) {
+			``log: aws codepipeline list-pipeline-executions --pipeline-name ${pipelineName}``
+		}
+	}
+
+	pipelines = ns {
+
+		F list() {
+			# List of AWS::CodePipeline::Pipeline
+			pipelines = ``aws codepipeline list-pipelines``
+			pipelines.pmap(4, F(p) {
+				pipeline = ``aws codepipeline get-pipeline --name ${p.name}``
+				e = ``aws codepipeline list-pipeline-executions --pipeline-name ${p.name} --max-results 1``.get(0, {
+					'pipelineExecutionId': null
+					'sourceRevisions': []
+					'lastUpdateTime': null
+				})
+
+				# TODO: eliminate e.attr references outside this if
+				if e {
+					state = ``aws codepipeline get-pipeline-state --name ${p.name}``
+
+					section "approvals" {
+						approval_actions = collector {
+							pipeline.stages.each(F(stage) {
+								stage.actions.filter({'actionTypeId': {'category': 'Approval', 'provider': 'Manual'}}).each(F(action) {
+									status = 'ahead'
+									state =~ Present({
+										"latestExecution": {
+											"pipelineExecutionId": e.pipelineExecutionId
+										}
+										"stageName": stage.name
+										"actionStates": Present({"actionName": action.name} -> { status = A.latestExecution.status })
+									})
+									collect(Action(stage.name, action.name, status))
+								})
+							})
+						}
+					}
+				} else {
+					approval_actions = []
+					state = []
+				}
+
+				section "sources" {
+					sources = collector {
+						pipeline.stages.each(F(stage) {
+							stage.actions.filter({'actionTypeId': {'category': 'Source', 'provider': 'CodeStarSourceConnection'}}).each(F(action) {
+								collect(Source(action.configuration.FullRepositoryId, action.configuration.BranchName))
+							})
+						})
+					}
+				}
+
+				section "progress" {
+					# TODO
+					total_actions = pipeline.stages.actions.flatten().len()
+
+					# TODO: make sure that not matching Repeat(HERE) does not affect the counting
+					statuses = collector/Stats({'Succeeded': 0}) {
+						state =~ Repeat({
+							"latestExecution": {
+								"pipelineExecutionId": e.pipelineExecutionId
+							}
+							"actionStates": Repeat({"latestExecution": {"status": collect}})
+						})
+					}
+				}
+
+
+				Pipeline({
+					'name': p.name
+					'status': AbstractProcess::Status::Status(e.get('status'))
+					'sources': sources
+					'revisions': e.sourceRevisions.map(F(r) Revision(r.actionName, r.revisionId, r.revisionSummary.CommitMessage))
+					'last_execution_id': e.pipelineExecutionId
+					'last_executed': e.lastUpdateTime
+					'approvals': approval_actions
+					'progress': if statuses { Progress(statuses.Succeeded, total_actions) }
+				})
+			})
+		}
+
+
+		F list_old() {
+			``aws codepipeline list-pipelines``.fields(%[name created updated])
+		}
+
+		F show_last_failed(pipelineName:Str, n:Int=1) {
+			executions::list(pipelineName).filter({'status': 'Failed'}).limit(n).each(F(e) {
+				ee = Execution(pipelineName, e.pipelineExecutionId).hydrate()
+				echo(inspect(ee))
+			})
+		}
+	}
+}

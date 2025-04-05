@@ -512,6 +512,7 @@ void resize_hash_for_new_len(VALUE h, RESIZE_HASH_AFTER after) {
 
 	if(!new_buckets_n) {
 		OBJ_DATA_PTR(h) = NULL;
+		HASH_BUCKETS_N(h) = new_buckets_n;
 		return;
 	}
 
@@ -724,6 +725,19 @@ void array_reverse(VALUE arr) {
 	}
 }
 
+PARAM_COMPARATOR comparator_for_param_pattern(VALUE pattern) {
+	if (IS_NGS_TYPE(pattern)) {
+		if (NGS_TYPE_ID(pattern) == T_ANY) {
+			// relatively common case
+			return vm_call_match_arg_to_any;
+		} else {
+			return vm_call_match_arg_to_type;
+		}
+	} else {
+		return vm_call_match_arg_to_pattern;
+	}
+}
+
 VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, int params_flags, VALUE *params, VALUE *locals) {
 
 	VALUE v;
@@ -742,6 +756,16 @@ VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX 
 	c->params.params = NGS_MALLOC(params_size);
 	assert(c->params.params);
 	memcpy(c->params.params, params, params_size);
+	c->params_comparators = NGS_MALLOC((n_params_required + n_params_optional) * sizeof(PARAM_COMPARATOR));
+	assert(c->params_comparators);
+	for (int i = 0; i < n_params_required; i++) {
+		// TODO: Maybe optimize '{...}' syntax - all parameters are optional but we know they are all of type 'All'
+		c->params_comparators[i] = comparator_for_param_pattern(c->params.params[i*2+1]);
+	}
+	for (int i = n_params_required; i < n_params_required + n_params_optional; i++) {
+		c->params_comparators[i] = comparator_for_param_pattern(c->params.params[n_params_required*2 + (i-n_params_required)*3 + 1]);
+	}
+
 	c->n_uplevels = n_uplevels;
 
 	c->params.locals = NGS_MALLOC(n_local_vars * sizeof(c->params.locals[0]));

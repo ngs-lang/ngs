@@ -140,12 +140,15 @@ typedef struct params {
 	VALUE *locals;
 } PARAMS_DESC;
 
+typedef int (*PARAM_COMPARATOR)(VM *vm, CTX *ctx, VALUE arg, VALUE t, VALUE *result);
+
 typedef struct closure {
 	OBJECT base;
 	size_t ip;
 	PARAMS_DESC params;
 	VALUE **uplevels;
 	UPVAR_INDEX n_uplevels;
+	PARAM_COMPARATOR *params_comparators;
 } CLOSURE_OBJECT;
 
 typedef struct native_method {
@@ -346,6 +349,7 @@ typedef enum {
 #define CLOSURE_OBJ_N_REQ_PAR(v)  (((CLOSURE_OBJECT *) v.ptr)->params.n_params_required)
 #define CLOSURE_OBJ_N_OPT_PAR(v)  (((CLOSURE_OBJECT *) v.ptr)->params.n_params_optional)
 #define CLOSURE_OBJ_PARAMS(v)     (((CLOSURE_OBJECT *) v.ptr)->params.params)
+#define CLOSURE_OBJ_PARAMS_CMPS(v)(((CLOSURE_OBJECT *) v.ptr)->params_comparators)
 #define CLOSURE_OBJ_LOCALS(v)     (((CLOSURE_OBJECT *) v.ptr)->params.locals)
 #define CLOSURE_OBJ_N_UPLEVELS(v) (((CLOSURE_OBJECT *) v.ptr)->n_uplevels)
 #define CLOSURE_OBJ_UPLEVELS(v)   (((CLOSURE_OBJECT *) v.ptr)->uplevels)

@@ -14,14 +14,10 @@ instances = AWS::regions(F(r) {
 
 echo "# Found ${instances.len()} instances in ${instances.group(F(i) i.Placement.AvailabilityZone).len()} AZs"
 
-have_placeholder = 'IP' in ARGV
+ensure(ARGV, Present('IP'))
 
 results = instances.pmap(F(i) {
-	argv = if have_placeholder {
-		ARGV.replace('IP', i.PublicIpAddress)
-	} else {
-		ARGV + [i.PublicIpAddress]
-	}
+	argv = ARGV.replace('IP', i.PublicIpAddress)
 	[i, `$*argv`]
 })
 

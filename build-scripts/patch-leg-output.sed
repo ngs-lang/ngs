@@ -35,3 +35,5 @@ s/yyDo%%/yyDo/g
 #                                     +++++++++++++++++
 s/thunk->action(\([^)]\+\))/thunk->action(\1, thunk->location)/
 
+# End of "static char *preamble" in peg's src/compile.c
+/#define\s\+YYACCEPT/a void position_to_line_col(yycontext *yy, int pos, int result[]);

@@ -1,0 +1,249 @@
+ns {
+
+	# Events for COR filters
+	events = ns {
+		global init
+		type Read(COR::IncomingEvent)
+		F init(r:Read, data) {
+			r.data = data
+		}
+
+		type Write(COR::OutgoingEvent)
+		F init(w:Write, data) {
+			w.data = data
+		}
+
+		type Active(COR::IncomingEvent)
+		type Inactive(COR::IncomingEvent)
+	}
+
+	# COR filters
+	handlers = ns {
+		global init, handle
+		type Splitter(COR::Handler)
+		F init(s:Splitter, sep:Str) {
+			s.sep = sep
+			s.buf = ''
+		}
+
+		F handle(s:Splitter, hc:COR::HandlerContext, r:events::Read) {
+			debug('IO', "handle(IO::handlers::Splitter,...,Read) got data of len ${r.data.len()}")
+
+			s.buf += r.data
+			while true {
+				# TODO: start the search from previous position
+				# TODO: handle "\r\n"
+				p = pos(s.buf, "\n")
+				p == null breaks
+				line = s.buf[0..p]
+				s.buf = s.buf[(p+1)..null]
+				# echo("LINE $line")
+				hc.fire(events::Read(line))
+			}
+		}
+
+		F handle(s:Splitter, hc:COR::HandlerContext, i:events::Inactive) {
+			if s.buf {
+				debug('IO', "handle(IO::handlers::Splitter,...,Inactive) passing leftover of len ${s.buf.len()}")
+				hc.fire(events::Read(s.buf))
+			}
+			hc.fire(i)
+		}
+
+
+		section "JSON-RPC Server Handler" {
+
+			_VALID_JSON_RPC_REQUEST = {
+				'jsonrpc': '2.0'
+				'method': Str
+				'id': IfExists(AnyOf(Num, Str, Null))
+				'params': IfExists(AnyOf(Arr, Hash))
+			}
+
+			# https://www.jsonrpc.org/specification
+			type JsonRpcServer(COR::Handler)
+
+			F init(jrs:JsonRpcServer) throw InvalidArgument("JsonRpcServer() was called without arguments")
+
+			F init(jrs:JsonRpcServer, methods:Namespace) init(args())
+
+			F handle(jrs:JsonRpcServer, hc:COR::HandlerContext, r:events::Read) block b {
+				data = r.data
+				debug('server', "JsonRpcServer Read")
+
+				F send_error(code, message, data=null) {
+					error("JsonRpcServer on_data (or spawned thread) send_error -- ${code} ${message} ${data.limit(128, '...')}")
+					ret = {
+						'jsonrpc': '2.0'
+						'id': req.get('id')
+						'error': {
+							'code': code
+							'message': message
+							'data': data
+						}.filterv()
+					}
+					hc.fire(events::Write(ret.encode_json() + "\n"))
+				}
+
+				req = {}  # allow send_error() to do req.get('id') if we crash in try
+				req = try {
+					data.decode_json()
+				} catch(e:JsonDecodeFail) {
+					send_error(-32700, 'Parse error', e.Hash().filterk(AnyOf('error', 'value', 'position')))
+					b.return()
+				}
+
+				if (req !~ _VALID_JSON_RPC_REQUEST) {
+					send_error(-32600, 'Invalid Request', 'See https://www.jsonrpc.org/specification')
+					b.return()
+				}
+
+				if (req.method not in jrs.methods) {
+					send_error(-32601, 'Method not found', "Method ${req.method} not found. Available methods: ${jrs.methods.keys()}")
+					b.return()
+				}
+
+				args = []
+				kwargs = {}
+				if 'params' in req {
+					match req.params {
+						Arr args = req.params
+						Hash kwargs = req.params
+					}
+				}
+
+				debug('server', "JsonRpcServer on_data -- invoking ${req.method} in a thread")
+
+				# TODO: join this thread
+				Thread(SeqId("JsonRpcServer-request-"), {
+					block b {
+						result = try {
+							jrs.methods[req.method](*args, **kwargs)
+						} catch(mnf:MethodNotFound) {
+							guard mnf.callable === jrs.methods[req.method]
+							send_error(-32602, 'Invalid params', "Correct parameters can be seen in methods' descriptions: ${jrs.methods[req.method].Arr()}")
+							b.return()
+						} catch(e:Error) {
+							error("JsonRpcServer on_data spawned thread caught exception:")
+							print_exception(e)
+							send_error(-32603, 'Internal error', e.Str())
+							b.return()
+						}
+
+						if 'id' in req {
+							# response expected
+							ret = {
+								'jsonrpc': '2.0'
+								'id': req.id
+								'result': result
+							}.filterv() # Why filterv()?
+							debug('server', 'JsonRpcServer on_data -- sending reply')
+							hc.fire(events::Write(ret.encode_json() + "\n"))
+						}
+					}
+				})
+
+			} # handle Read
+
+		} # "JSON-RPC Server Handler"
+
+		section "JSON-RPC Client Handler" {
+
+			type JsonRpcClient(COR::Handler)
+
+			# Note: Not thread safe
+			F init(jrc:JsonRpcClient) {
+				jrc.callbacks = {}
+				jrc.id = Iter(1..null)
+				jrc.pipeline = null
+				debug('client', 'JsonRpcClient()')
+			}
+
+			F handle(jrc:JsonRpcClient, hc:COR::HandlerContext, a:events::Active) {
+				debug('client', 'JsonRpcClient Active')
+				jrc.pipeline = hc.pipeline
+				hc.fire(a)
+			}
+
+			F handle(jrc:JsonRpcClient, hc:COR::HandlerContext, r:events::Read) block b {
+				data = r.data
+				debug('client', "JsonRpcClient Read")
+			}
+
+			F handle(jrc:JsonRpcClient, hc:COR::HandlerContext, w:events::Write) block b {
+				data = w.data
+				debug('client', "JsonRpcClient Write ${w.data.SafeStr()}")
+				id = w.data.get('id', { jrc.id.next() })
+				w2 = events::Write({
+					'jsonrpc': '2.0'
+					'id': id
+					'method': w.data.call.method
+					'params': w.data.call.params
+				}.encode_json() + "\n")  # TODO: move + "\n" to another handler
+
+				jrc.callbacks[id] = w.data.callback
+
+				hc.fire(w2)
+			}
+
+			# TODO: make this more resilient
+			F handle(jrc:JsonRpcClient, hc:COR::HandlerContext, r:events::Read) block b {
+				data = r.data
+				debug('client', "JsonRpcClient Read ${data.SafeStr()}")
+
+				res = try {
+					data.decode_json()
+				} catch(e:JsonDecodeFail) {
+					throw Error("JsonRpcClient Read - failed to decode JSON", e)
+				}
+
+				'id' not in res throws Error("JsonRpcClient Read - no id in response")
+
+				res.id not in jrc.callbacks throws Error("JsonRpcClient Read - no callback for id ${res.id}")
+
+				finally(
+					{ jrc.callbacks[res.id](res.result) }
+					{ jrc.callbacks.del(res.id) }
+				)
+			}
+
+			# Is this the right way to do sync and async?
+			# TODO: what async should return?
+			global call
+			F call(jrc:JsonRpcClient, method:Str, params=[], callback:Fun=null) {
+				sync = not(callback)
+
+				lock = Lock()
+				result = null
+				if sync {
+					lock.acquire()
+					callback = F json_rpc_client_sync_callback(data) {
+						# Runs in the reader thread
+						debug('client', 'JsonRpcClient callback')
+						result = data
+						lock.release()
+					}
+				}
+
+				assert(jrc.pipeline, 'Before using JsonRpcClient#call, call fire(COR::Pipeline, IO::events::Active()) on the pipeline where JsonRpcClient were pushed')
+				jrc.pipeline.fire(events::Write({
+					'call': {
+						'method': method
+						'params': params
+					}
+					'callback': callback
+				}))
+
+				not(sync) returns
+
+				debug('client', 'JsonRpcClient blocked on waiting for result')
+				lock.acquire().release()
+				debug('client', 'JsonRpcClient got result')
+				result
+			}
+		}
+
+
+	} # ns handlers
+
+}

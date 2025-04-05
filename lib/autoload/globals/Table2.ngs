@@ -149,9 +149,8 @@ ns {
 		doc Create named table containing provided rows
 		doc name - name of the table for display and for configuration purposes
 		doc rows_hashes - rows, each row is a Hash
-		F init(t:Table, name, rows_hashes:Arr) {
-			guard name is Str or name is Null
-			guard rows_hashes.all(Hash)
+		F init(t:Table, name:AnyOf(Str, Null), rows_hashes:Arr) {
+			guard rows_hashes =~ Repeat(AnyOf(Hash, HashLike))
 			super(t, name)
 
 			if not(t.cols_enum) {
@@ -187,9 +186,9 @@ ns {
 			t
 		}
 
-		doc Append give row to the table
+		doc Append given row to the table
 		doc %RET - t
-		F push(t:Table, row_hash:Hash) {
+		F push(t:Table, row_hash:AnyOf(Hash, HashLike)) {
 			# TODO: handle mismatch of columns
 			row = t.cols_enum / get(row_hash, X, null)
 			t.push(row)
@@ -265,15 +264,27 @@ ns {
 			columns_to_show.each(F(c) cols_enum[c] = t.cols_enum[c])
 
 			do_output_headers = config('output_headers') in [null, true]
-			max_columns_widths = cols_enum.map(F(k, idx) {
-				col = t.column(idx)
-				((if do_output_headers [k] []) + col).map(_Cell).map(width).max()
-			})
-			debug("table", "max_columns_widths $max_columns_widths")
 
-			# How much full table columns fit on the screen
-			showing_n_columns = t._calculate_num_cols_to_show(max_columns_widths, cols, len(COLS_SEP))
-			cols_enum .= limit(showing_n_columns)
+			section "Overflow columns calculation" {
+
+				max_columns_widths = cols_enum.map(F(k, idx) {
+					col = t.column(idx)
+					((if do_output_headers [k] []) + col).map(_Cell).map(width).max()
+				})
+				debug("table", "max_columns_widths $max_columns_widths")
+
+				# How much full table columns fit on the screen
+				showing_n_columns = t._calculate_num_cols_to_show(max_columns_widths, cols, len(COLS_SEP))
+
+				new_cols_enum = Enum()
+				hidden_cols_enum = Enum()
+				cols_enum.each_idx_key_val(F(i, k, v) {
+					target = if i < showing_n_columns then new_cols_enum else hidden_cols_enum
+					target[k] = v
+				})
+				cols_enum = new_cols_enum
+
+			}
 
 			# Setup line spacing
 			do_line_spacing = t.any(F(row) {
@@ -310,6 +321,10 @@ ns {
 			})
 
 			maybe_output_headers()
+			if hidden_cols_enum {
+				echo("# Hidden columns: ${hidden_cols_enum.keys().join(',')}")
+				echo("# Use wider terminal to see them.")
+			}
 		}
 
 		doc Output (echo) CSV table with cells that contain arrays converted to columns.

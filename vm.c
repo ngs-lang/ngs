@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <time.h>
 #include <string.h>
+#include <strings.h>
 
 #ifdef HAVE_POLL_H
 #include <sys/poll.h>
@@ -2071,7 +2072,15 @@ METHOD_RESULT native_c_bind_Int_sockaddr_un METHOD_PARAMS {
 	METHOD_RETURN(MAKE_INT(ret));
 };
 METHOD_RESULT native_c_bind_Int_sockaddr_in METHOD_PARAMS {
-	int ret = bind(GET_INT(argv[0]), (struct sockaddr *) &GET_SOCKADDR_IN(argv[1]), sizeof(GET_SOCKADDR_UN(argv[1])));
+	int ret = bind(GET_INT(argv[0]), (struct sockaddr *) &GET_SOCKADDR_IN(argv[1]), sizeof(GET_SOCKADDR_IN(argv[1])));
+	METHOD_RETURN(MAKE_INT(ret));
+}
+METHOD_RESULT native_c_connect_Int_sockaddr_un METHOD_PARAMS {
+	int ret = connect(GET_INT(argv[0]), (struct sockaddr *) &GET_SOCKADDR_UN(argv[1]), sizeof(GET_SOCKADDR_UN(argv[1])));
+	METHOD_RETURN(MAKE_INT(ret));
+};
+METHOD_RESULT native_c_connect_Int_sockaddr_in METHOD_PARAMS {
+	int ret = connect(GET_INT(argv[0]), (struct sockaddr *) &GET_SOCKADDR_IN(argv[1]), sizeof(GET_SOCKADDR_IN(argv[1])));
 	METHOD_RETURN(MAKE_INT(ret));
 }
 
@@ -2150,7 +2159,7 @@ GLOBAL_VAR_INDEX get_global_index(VM *vm, const char *name, size_t name_len) {
 	return index;
 }
 
-VALUE _make_func(VM *vm, int pass_extra_params, char *name, void *func_ptr, int argc, va_list varargs) {
+VALUE _make_func(VM *vm, int_fast8_t pass_extra_params, char *name, void *func_ptr, int argc, va_list varargs) {
 	int i;
 	NATIVE_METHOD_OBJECT *func;
 	VALUE *argv = NULL;
@@ -3185,6 +3194,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_sockaddr_un", &native_c_sockaddr_un_str, 1, "path", vm->Str);
 	register_global_func(vm, 0, "c_bind", &native_c_bind_Int_sockaddr_un, 2, "socket", vm->Int, "address", vm->c_sockaddr_un);
 	register_global_func(vm, 0, "c_bind", &native_c_bind_Int_sockaddr_in, 2, "socket", vm->Int, "address", vm->c_sockaddr_in);
+	register_global_func(vm, 0, "c_connect", &native_c_connect_Int_sockaddr_un, 2, "socket", vm->Int, "address", vm->c_sockaddr_un);
+	register_global_func(vm, 0, "c_connect", &native_c_connect_Int_sockaddr_in, 2, "socket", vm->Int, "address", vm->c_sockaddr_in);
 	register_global_func(vm, 0, "c_accept", &native_c_accept_sockaddr_un, 2, "socket", vm->Int, "address", vm->c_sockaddr_un);
 	register_global_func(vm, 0, "c_listen", &native_c_listen, 2, "socket", vm->Int, "backlog", vm->Int);
 	register_global_func(vm, 0, "c_recvfrom", &native_c_recvfrom_un, 4, "socket", vm->Int, "length", vm->Int, "flags", vm->Int, "address", vm->c_sockaddr_un);
@@ -3671,6 +3682,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	set_global(vm, "global_not_found_handler", vm->global_not_found_handler = make_multimethod());
 	set_global(vm, "init", vm->init = make_multimethod());
 	set_global(vm, "call", vm->call = make_multimethod());
+	set_global(vm, "=~", vm->pattern_match = make_multimethod());
 
 	#define E(name) set_global(vm, "C_" #name, MAKE_INT(name))
 	#include "errno.include"
@@ -3754,6 +3766,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 		(void)pcre_config(PCRE_CONFIG_NEWLINE, &d);
 		set_global(vm, "PCRE_NEWLINE", MAKE_INT(d));
 	}
+
+	// INSTALL_LIBDIR - https://stackoverflow.com/questions/47346133/how-to-use-a-define-inside-a-format-string
+#define NGS_STR_TMP(X) #X
+#define NGS_STR_TMP2(X) NGS_STR_TMP(X)
+	set_global(vm, "C_INSTALL_LIBDIR", make_string(NGS_STR_TMP2(INSTALL_LIBDIR)));
+#undef NGS_STR_TMP2
+#undef NGS_STR_TMP
 
 #define FFI_TYPE(name) \
 	vm->c_ ## name = make_ffi_type(&(name)); \
@@ -3948,27 +3967,87 @@ size_t vm_load_bytecode(VM *vm, char *bc) {
 	} \
 }
 
+int vm_call_match_arg_to_type(VM *vm, CTX *ctx, VALUE arg, VALUE t, VALUE *result) {
+	return obj_is_of_type(vm, arg, t);
+}
+
+int vm_call_match_arg_to_any(VM *vm, CTX *ctx, VALUE arg, VALUE type_any, VALUE *result) {
+	return 1;
+}
+
+int vm_call_match_arg_to_pattern(VM *vm, CTX *ctx, VALUE arg, VALUE pattern, VALUE *result) {
+	METHOD_RESULT mr;
+	VALUE pattern_matching_args[2] = {arg, pattern};
+	VALUE pattern_matching_result;
+	VALUE to_bool_result;
+	mr = vm_call(vm, ctx, &pattern_matching_result, vm->pattern_match, 2, pattern_matching_args);
+	if (mr != METHOD_OK) {
+		VALUE exc;
+		exc = make_normal_type_instance(vm->CallFail);
+		set_normal_type_instance_field(exc, make_string("message"), make_string("vm_call_match_arg_to_pattern() - error occurred while matching"));
+		set_normal_type_instance_field(exc, make_string("argument"), arg);
+		set_normal_type_instance_field(exc, make_string("pattern"), pattern);
+		if (mr == METHOD_EXCEPTION) {
+			set_normal_type_instance_field(exc, make_string("cause"), pattern_matching_result);
+		}
+		set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+		*result = exc;
+		return 0;
+	}
+
+	mr = vm_call(vm, ctx, &to_bool_result, vm->Bool, 1, &pattern_matching_result);
+	if (mr != METHOD_OK) {
+		VALUE exc;
+		exc = make_normal_type_instance(vm->CallFail);
+		set_normal_type_instance_field(exc, make_string("message"), make_string("vm_call_match_arg_to_pattern() - error converting pattern matching result to Bool"));
+		set_normal_type_instance_field(exc, make_string("pattern_matching_result"), pattern_matching_result);
+		if (mr == METHOD_EXCEPTION) {
+			set_normal_type_instance_field(exc, make_string("cause"), to_bool_result);
+		}
+		set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+		*result = exc;
+		return 0;
+	}
+
+	if(!IS_BOOL(to_bool_result)) {
+		VALUE exc;
+		exc = make_normal_type_instance(vm->CallFail);
+		set_normal_type_instance_field(exc, make_string("message"), make_string("vm_call_match_arg_to_pattern() - Bool() returned not a Bool"));
+		set_normal_type_instance_field(exc, make_string("pattern_matching_result"), pattern_matching_result);
+		set_normal_type_instance_field(exc, make_string("to_bool_result"), to_bool_result);
+		set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+		*result = exc;
+		return 0;
+	}
+
+	return IS_TRUE(to_bool_result);
+}
+
 // XXX: Factor out to "define"s access to parameters. Coupling to this data structure is all over.
 #define HAVE_KWARGS_MARKER ((argc >= 2) && IS_KWARGS_MARKER(argv[argc-1]))
-METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int argc, const VALUE *argv) {
+METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, int argc, const VALUE *argv) {
 	LOCAL_VAR_INDEX lvi;
 	int i;
 	METHOD_RESULT mr;
 	VALUE *callable_items;
 
 	if(IS_MULMETHOD(callable)) {
-		int len = MULTIMETHOD_LEN(callable);
+		VALUE *save_arr_callable = DEEPER_FRAME.arr_callable;
+		int *save_arr_callable_idx = DEEPER_FRAME.arr_callable_idx;
 		DEEPER_FRAME.arr_callable = &callable;
 		DEEPER_FRAME.arr_callable_idx = &i;
+		int len = MULTIMETHOD_LEN(callable);
 		for(i=len-1, callable_items = MULTIMETHOD_ITEMS(callable); i>=0; i--) {
 			mr = vm_call(vm, ctx, result, callable_items[i], argc, argv);
 			if((mr == METHOD_OK) || (mr == METHOD_EXCEPTION) || (mr == METHOD_IMPL_MISSING)) {
-				DEEPER_FRAME.arr_callable = NULL;
+				DEEPER_FRAME.arr_callable = save_arr_callable;
+				DEEPER_FRAME.arr_callable_idx = save_arr_callable_idx;
 				return mr;
 			}
 			assert(mr == METHOD_ARGS_MISMATCH);
 		}
-		DEEPER_FRAME.arr_callable = NULL;
+		DEEPER_FRAME.arr_callable = save_arr_callable;
+		DEEPER_FRAME.arr_callable_idx = save_arr_callable_idx;
 		// --- method_not_found_handler() - start ---
 		if(THIS_FRAME.do_call_method_not_found_handler) {
 			// method_not_found_handler == [] when stdlib is not loaded (-E bootstrap switch / during basic tests)
@@ -4035,6 +4114,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		VALUE kw, *params;
 		HASH_OBJECT_ENTRY *e;
 		VALUE named_arguments[MAX_ARGS];
+		VALUE param_match_result;
 
 		// TODO: handle (exception?) keyword arguments providing required parameter which was also given as positional argument
 
@@ -4071,7 +4151,14 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		params = CLOSURE_OBJ_PARAMS(callable);
 		j = MIN(argc, n_params_required);
 		for(i=0; i<j; i++) {
-			if(!obj_is_of_type(vm, argv[i], params[i*2+1])) {
+			// TODO: dedup A
+			param_match_result = MAKE_NULL;
+			int did_match = CLOSURE_OBJ_PARAMS_CMPS(callable)[i](vm, ctx, argv[i], params[i*2+1], &param_match_result);
+			if(!IS_NULL(param_match_result)) {
+				*result = param_match_result;
+				return METHOD_EXCEPTION;
+			}
+			if(!did_match) {
 				return METHOD_ARGS_MISMATCH;
 			}
 		}
@@ -4086,7 +4173,15 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 					// Required parameter is not in keyword arguments
 					return METHOD_ARGS_MISMATCH;
 				}
-				if(!obj_is_of_type(vm, e->val, params[i*2+1])) {
+				// F f(x:AnyOf(Str, Null)) 1; f(x="x") == 1
+				// TODO: dedup B
+				param_match_result = MAKE_NULL;
+				int did_match = CLOSURE_OBJ_PARAMS_CMPS(callable)[i](vm, ctx, e->val, params[i*2+1], &param_match_result);
+				if(!IS_NULL(param_match_result)) {
+					*result = param_match_result;
+					return METHOD_EXCEPTION;
+				}
+				if(!did_match) {
 					return METHOD_ARGS_MISMATCH;
 				}
 				named_arguments[i] = e->val;
@@ -4097,18 +4192,15 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 		// Check optional parameters given as positional arguments
 		j = MIN(argc, n_params_required + n_params_optional);
 		for(i=n_params_required; i < j; i++) {
-			// XXX temp - start
-			if(!IS_NGS_TYPE(params[n_params_required*2 + (i-n_params_required)*3 + 1])) {
-				VALUE exc;
-				exc = make_normal_type_instance(vm->InvalidArgument);
-				set_normal_type_instance_field(exc, make_string("message"), make_string("Parameter type expected"));
-				set_normal_type_instance_field(exc, make_string("callable"), callable);
-				set_normal_type_instance_field(exc, make_string("parameter_index"), MAKE_INT(i));
-				set_normal_type_instance_field(exc, make_string("got"), params[n_params_required*2 + (i-n_params_required)*3 + 1]);
-				THROW_EXCEPTION_INSTANCE(exc);
+			// F f(x:AnyOf(Str, Null)=null) 1; f("x") == 1
+			// TODO: dedup C
+			param_match_result = MAKE_NULL;
+			int did_match = CLOSURE_OBJ_PARAMS_CMPS(callable)[i](vm, ctx, argv[i], params[n_params_required*2 + (i-n_params_required)*3 + 1], &param_match_result);
+			if(!IS_NULL(param_match_result)) {
+				*result = param_match_result;
+				return METHOD_EXCEPTION;
 			}
-			// XXX temp - end
-			if(!obj_is_of_type(vm, argv[i], params[n_params_required*2 + (i-n_params_required)*3 + 1])) {
+			if(!did_match) {
 				return METHOD_ARGS_MISMATCH;
 			}
 			named_arguments[i] = params[n_params_required*2 + (i-n_params_required)*3 + 2];
@@ -4128,7 +4220,15 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, const VALUE callable, int
 				named_arguments[i] = params[n_params_required*2 + (i-n_params_required)*3+2];
 				continue;
 			}
-			if(!obj_is_of_type(vm, e->val, params[n_params_required*2 + (i-n_params_required)*3+1])) {
+			// F f(x:AnyOf(Str, Null)=null) 1; f(x="x") == 1
+			// TODO: dedup D
+			param_match_result = MAKE_NULL;
+			int did_match = CLOSURE_OBJ_PARAMS_CMPS(callable)[i](vm, ctx, e->val, params[n_params_required*2 + (i-n_params_required)*3 + 1], &param_match_result);
+			if(!IS_NULL(param_match_result)) {
+				*result = param_match_result;
+				return METHOD_EXCEPTION;
+			}
+			if(!did_match) {
 				return METHOD_ARGS_MISMATCH;
 			}
 			named_arguments[i] = e->val;

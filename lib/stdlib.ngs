@@ -1,5 +1,5 @@
-# WARNING: This file is packaged into the ngs binary at build time
-#          it is shipped for reference only.
+# WARNING: This file is packaged into the ngs binary at build time.
+#          It is shipped for reference only.
 
 section "Base" {
 	doc No op.
@@ -47,19 +47,23 @@ section "Syntactic sugar for basics" {
 	TEST 1 is not Null
 	TEST (null is not Null) == false
 
+	doc Deprecated in favor of a any(container, pattern).
 	doc Exactly same as "element in container". It's just more convenient in specific cases.
 	doc %EX - [1,2,3].has(2)  # true
 	doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(X.has(1))  # [ [1,2,3], [1,20,30] ]
 	doc %RET - Bool
+	doc %STATUS - deprecated
 	F has(container, element) element in container
 
 	TEST [1,2,3].has(1)
 	TEST [1,2,3].has(10).not()
 
+	doc Deprecated in favor of a none(container, pattern).
 	doc Exactly same as "element not in container". It's just more convenient in specific cases.
 	doc %EX - [1,2,3].has_no(2)  # false
 	doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(X.has_no(1))  # [ [100,200,300] ]
 	doc %RET - Bool
+	doc %STATUS - deprecated
 	F has_no(container, element) element not in container
 
 	TEST [1,2,3].has_no(1).not()
@@ -118,6 +122,18 @@ section "Basic Error subtypes" {
 	type ExitCodeFail(Error)
 }
 
+section "NoEmptyInit" {
+	doc EXPERIMENTAL! Do not use!
+	type NoEmptyInit
+
+	doc EXPERIMENTAL! Do not use!
+	doc Throws InvalidArgument
+	F init(nei:NoEmptyInit) {
+		throw InvalidArgument("Type ${nei.Type().name} does not have empty constructor")
+	}
+	TEST { type T(NoEmptyInit); T() }.assert(InvalidArgument)
+}
+
 section "Basic I/O" {
 	doc Print given string and a newline to stdout.
 	doc %RET - null
@@ -148,11 +164,16 @@ section "Exit type and basic ExitCode pseudo-constructor methods" {
 }
 
 section "Block type and methods" ns {
-	global Block, ReturnFromBlock, init, block, return
+	global Block, ReturnFromBlock, init, block, return, finally
 
 	doc The type of the NAME variable used in syntax: block NAME BODY
 	doc %AUTO - block NAME BODY
 	type Block
+
+	doc %AUTO - block NAME BODY
+	F init(b:Block) {
+		b.finally = []
+	}
 
 	doc %AUTO - block NAME { NAME.return(VAL) }
 	type ReturnFromBlock(Exception)
@@ -165,14 +186,24 @@ section "Block type and methods" ns {
 	F block(body:Fun) {
 		b = Block()
 		F block_super_handler(*args, **kwargs) {
-			throw NotImplemented("calling super() from within a block is not implemented")
+			throw NotImplemented("calling super() / using 'guard' from within a block is not implemented")
 		}
 		mm = MultiMethod([block_super_handler, body])
+		F run_finally() {
+			l = len(b.finally)
+			for(i=l-1; i>=0; i-=1) b::finally[i]()
+		}
 		try {
-			mm(b)
+			ret = mm(b)
+			run_finally()
+			ret
 		} catch(rfb: ReturnFromBlock) {
 			guard rfb.block === b
+			run_finally()
 			rfb.val
+		} catch(e) {
+			run_finally()
+			throw e
 		}
 	}
 
@@ -184,6 +215,17 @@ section "Block type and methods" ns {
 	TEST block b { b.return(1); 2 } == 1
 	TEST block b { "blah"; 2 } == 2
 	TEST block b1 { [block b2 { b2.return(2); 0 }, 1] } == [2, 1]
+
+	doc Add function to run before exiting the block.
+	doc The functions added will be run in reverse order.
+	doc %STATUS - experimental
+	F finally(b:Block, cleanup:Fun) {
+		b.finally.push(cleanup)
+	}
+
+	TEST x=1; block b { b.finally({x=2}) }; x == 2
+	TEST x=1; block b { b.finally({x=2}); b.return("blah") }; x == 2
+	TEST x=1; try block b { b.finally({x=2}); 1/0 }; x == 2
 }
 
 STDLIB_EOL = "\n"
@@ -209,6 +251,8 @@ F nop(*args, **kwargs) null
 
 # === Trivial init() helper ===
 
+# TODO: rethink when HashLike will be gone, probably args() should return a subtype of Hash or
+#       something else entirely and this init() should handle that type.
 doc Trivial initialization helper for init(o, ...)
 doc Sets object fields from the supplied parameters
 doc %EX - # sets t.a and t.b
@@ -249,7 +293,7 @@ doc IndexNotFound exception constructor
 doc %RET - IndexNotFound object with the given message, container and key fields
 F init(e:IndexNotFound, message:Str, container, key) init(args())
 
-doc Throws AssertFail with given message if expr does not match the pattern
+doc Throws AssertFail with given message if val does not match the pattern
 doc %EX - my_template.get('concept', []).assert(Arr)
 doc %EX - assert(loginResult, {'access_token': Str}, "access_token must be present in response")
 doc %RET - val
@@ -258,16 +302,27 @@ F assert(val, pattern, msg:Str="Assertion failed") {
 	val
 }
 
-doc Throws AssertFail with given message if expr evaluates to false
-doc expr - if evaluates to false, causes AssertFail exception
+doc Throws e with given message if val does not match the pattern
+doc %RET - val
+F assert(val, pattern, e:Exception) {
+	not(val =~ pattern) throws e::{
+		A.dflt('cause', { AssertFail("Assertion failed").set(val=val, pattern=pattern) })
+	}
+	val
+}
+
+TEST type MyExc(Exception); { assert(1, Str, MyExc("blah")) }.assert(MyExc)
+
+doc Throws AssertFail with given message if val is falsy
+doc val - if evaluates to false, causes AssertFail exception
 doc msg - message for the exception, defaults to "Assertion failed"
-doc %RET - expr
+doc %RET - val
 doc %EX - my_array=[]
 doc %EX - # ... Code that adds elements to my_array ...
 doc %EX - assert(my_array.len() > 3, "my_array must have more than 3 elements")  # AssertFail exception, with the given message
-F assert(expr, msg:Str="Assertion failed") {
-	not(expr) throws AssertFail(msg).set(expr=expr)
-	expr
+F assert(val, msg:Str="Assertion failed") {
+	not(val) throws AssertFail(msg).set(val=val)
+	val
 }
 
 doc Throws AssertFail with given function does not throw exception of the given type.
@@ -288,7 +343,7 @@ TEST assert({1/0}, DivisionByZero) is DivisionByZero
 doc Initializes InstantiatingAbstractType.
 F init(e:InstantiatingAbstractType, t:Type) init(args())
 
-section "Namespaces" {
+section "The :: operator" {
 
 	doc Get NormalType object field. Useful when calling method stored in an field.
 	doc %EX - myobj::method_in_field(arg)  # calls method stored in myobj.method_in_field
@@ -310,7 +365,11 @@ section "Namespaces" {
 	doc Executes f(x)
 	doc %RET - x
 	F '::'(x, f:Fun) {
-		f(x)
+		F double_colon_super_handler(*args, **kwargs) {
+			throw NotImplemented("calling super() / using 'guard' is not implemented for ::(Any, Fun)")
+		}
+		mm = MultiMethod([double_colon_super_handler, f])
+		mm(x)
 		x
 	}
 }
@@ -364,7 +423,7 @@ section "MultiMethod" {
 		}
 	}
 
-	F filtero(mm:MultiMethod, pred) mm.Arr().filter(pred).MultiMethod()
+	F filtero(mm:MultiMethod, pattern) mm.Arr().filter(pattern).MultiMethod()
 
 	F Str(mm:MultiMethod) "<MultiMethod with ${mm.Arr().len()} method(s)>"
 }
@@ -427,7 +486,12 @@ section "Inspect built-in types" block _ {
 		guard f =~ AnyOf(UserDefinedMethod, NativeMethod)
 		f.params().map(F(p) {
 			d = if 'dflt' in p then '=...' else ''
-			"${p.get('splat', '')}${p.name}:${p.type.name}${d}"
+			name = if p.type is Type {
+				p.type.name
+			} else {
+				code(p.type) tor '(failed to inspect)'
+			}
+			"${p.get('splat', '')}${p.name}:${name}${d}"
 		}).join(', ') \ "($X)"
 	}
 
@@ -505,7 +569,8 @@ section "Inspect built-in types" block _ {
 		collector {
 			a = try val.meta()
 			not(a) returns []
-			a.without('doc').each(F(k, v) {
+			# TODO: .without('ns') is temporary until fixed (probably endless recursion)
+			a.without('doc').without('ns').each(F(k, v) {
 				inspect(path + [k], v).each(collect)
 			})
 			# doc can be null
@@ -535,7 +600,13 @@ section "Inspect built-in types" block _ {
 	doc %RET - Arr of Str
 	F inspect(path:Arr, x) {
 		guard x =~ AnyOf(Type, NativeMethod, UserDefinedMethod)
-		["${_inspect_path_to_str(path)} - ${x.Str()}"] + inspect_meta(path + [Lit('.meta()')], x)
+		im = try {
+			inspect_meta(path + [Lit('.meta()')], x)
+		} catch(e) {
+			# echo(e)
+			['inspect_meta() failed']
+		}
+		["${_inspect_path_to_str(path)} - ${x.Str()}"] + im
 	}
 
 	doc %STATUS - internal
@@ -623,6 +694,41 @@ section "Functional utilities" {
 	doc %RET - f(x)
 	doc %AUTO - x.{ ... }
 	F .(x, f:Fun) f(x)
+
+	doc Compose functions
+    doc %RET - Fun f(g(...))
+    doc %EX - F reject(h:Hash, predicate:Fun) h.filter(not + predicate)
+    F +(f:Fun, g:Fun) {
+    	F composed_function(*args) {
+    		f(g(*args))
+    	}
+    }
+
+	doc Applies f to arguments in x
+	doc Same as calling f(*x)
+    F apply(x:Eachable1, f:Fun) f(*x)
+
+    TEST [1,2].apply((+)) == 3
+    TEST { [1,2,3].apply((+)) }.assert(MethodNotFound)
+
+	doc Applies f to arguments in x
+	doc Same as calling f(**x)
+    F apply(x:Eachable2, f:Fun) f(**x)
+
+    TEST {"a": 1, "b": 2}.apply(F(a, b) a+b) == 3
+    TEST {"a": 1, "b": 2, "c": 3}.apply(F(a, b, **kw) a+b) == 3
+    TEST { {"a": 1, "b": 2, "c": 3}.apply(F(a, b) a+b) }.assert(ArgsMismatch)
+
+}
+
+section "Value" {
+	doc Used for converting default values or functions to values
+	doc %RET - x
+	F Value(x, *args) x
+
+	doc Used for converting default values or functions to values
+	doc %RET - x(*args)
+	F Value(x:Fun, *args) x(*args)
 }
 
 section "Convenience methods" {
@@ -684,7 +790,7 @@ section "NormalTypeInstance" {
 	doc %RET - Field value, the already-existed or new.
 	F dflt(i:NormalTypeInstance, k, v) {
 		if k not in i {
-			i.(k) = v
+			i.(k) = Value(v, k)
 		}
 		i.(k)
 	}
@@ -701,14 +807,56 @@ section "NormalTypeInstance" {
 	}
 
 	TEST type T; t=T(); t.x=1; t2=t.copy(); t2.x==1
+
+	doc Equality test for normal type instances: must be of same type and have same fields and their values
+	doc %RET - Bool
+	doc %EX - type T
+	doc %EX - t1 = T()
+	doc %EX - t1.a = 1
+	doc %EX - t2 = T()
+	doc %EX - t2.a = 1
+	doc %EX - echo(t1 == t2)  # Outputs: true
+	F ==(a:NormalTypeInstance, b:NormalTypeInstance) {
+		Type(a) != Type(b) returns false
+		# TODO: more efficient implementation:
+		#       * Provide low level primitive to either access the fields (ll_nti_hash) or iterate them
+		#       * Use it here
+		Hash(a) == Hash(b)
+	}
 }
 
 section "Hash" {
 	doc %RET - h
 	F Hash(h:Hash) h
+
+	doc Get hash key.
+	doc %EX - h = {"a": 1}
+	doc %EX - h.a  # 1, Same as h["a"]
+	F .(h:Hash, field:Str) h[field]
+
+	doc Set hash key.
+	doc %EX - h = {"a": 1}
+	doc %EX - h.a = 2  # 2, Same as h["a"] = 2
+	doc %RET - v
+	F .=(h:Hash, field:Str, v) h[field] = v
+
+	# TODO: Check if removing built-in get() makes sense
+	doc Get hash value by key or null if it does not exist
+	doc %EX - h = {"a": 1}
+	doc %EX - h.get("a")  # 1
+	doc %EX - h.get("b")  # null
+	F get(h:Hash, k, dflt=null) {
+		k in h returns h[k]
+		Value(dflt, k)
+	}
+
+	TEST {"a": 1}.get("a", { throw Error("Should not run") }) == 1
+	TEST {"a": 1}.get("b", { 2 }) == 2
+	TEST {"a": 1}.get("b", 3) == 3
+
 }
 
-section "Result and friends - types" {
+section "Result and friends" {
 	doc Result of a computation
 	doc val - computed value or exception
 	type Result
@@ -721,6 +869,109 @@ section "Result and friends - types" {
 		doc val - exception
 		type Failure(Result)
 
+	doc Thrown by get(Failure) as it has no value to get
+	type ResultFail(Error)
+
+	doc Runs the computation and wraps the result: a value is wrapped in Success and an exception is wrapped in Failure.
+	doc %RET - Success or Failure
+	F Result(fun:Fun) {
+		try {
+			Success(fun())
+		} catch(e) {
+			Failure(e)
+		}
+	}
+
+	doc Initialize Success with the given value.
+	F init(s:Success, v=null) s.val = v
+
+	doc Initialize Failure with the given value.
+	F init(f:Failure, e:Exception) f.val = e
+
+	doc Gets wrapped value
+	doc %RET - Any
+	doc %EX - { 1 / 10 }.Result().get()  # 0
+	F get(s:Success) s.val
+
+	doc Throws ResultFail
+	doc %EX - { 1 / 0 }.Result().get()  # ResultFail exception
+	F get(f:Failure) {
+		throw ResultFail("Can not get value of Failure", f.val)
+	}
+
+	doc Gets wrapped value
+	doc %RET - Any
+	doc %EX - { 1 / 10 }.Result().get(100)  # 0
+	F get(s:Success, dflt) s.val
+
+	doc Returns dflt
+	doc %EX - { 1 / 0 }.Result().get(100)  # 100
+	F get(f:Failure, dflt) dflt.Value()
+
+	doc %RET - s
+	F dflt(s:Success, x) s
+
+	doc %RET - Value(x,f)
+	F dflt(f:Failure, x) Success(x.Value(f))
+
+	TEST Success(1).dflt(2).get() == 1
+	TEST Failure(Error("test")).dflt(2).get() == 2
+
+	doc Run fun with wrapped value.
+	F each(s:Success, fun:Fun) {
+		fun(s.get())
+		s
+	}
+
+	doc Run fun with wrapped value. If exception is thrown, Failure is returned; otherwise Success with new value is returned.
+	doc %RET - Result
+	F map(s:Success, fun:Fun) Result({ fun(s.get()) })
+
+	doc No-op, returns f
+	doc %RET - f
+	F each(f:Failure, fun:Fun) f
+
+	doc No-op, returns f
+	doc %RET - f
+	F map(f:Failure, fun:Fun) f
+
+	doc Check whether wrapped value matches the pattern.
+	doc %RET - s or Failure
+	doc %EX - Success(10).filter(X>5)   # <Success val=10>
+	doc %EX - Success(10).filter(X>15)  # <Failure val=<ResultFail ...>>
+	F filter(s:Success, pattern=Bool.constructors) {
+		s.val =~ pattern returns s
+		Failure(ResultFail("Success filtered out, resulting Failure").set('pattern', pattern))
+	}
+
+	TEST Result({100}).filter() == Success(100)
+
+	doc No-op, returns f
+	doc %RET - f
+	doc %EX - Failure("blah").filter(X>5)  # <Failure val=blah>
+	F filter(f:Failure, pattern=Bool.constructors) f
+
+	TEST Result({1/0}).filter() is Failure
+
+	doc Convert Success to Bool (true)
+	doc %RET - true
+	F Bool(s:Success) true
+
+	doc Convert Failure to Bool (false)
+	doc %RET - false
+	F Bool(f:Failure) false
+
+	doc EXPERIMENTAL! Do not use!
+	F ExitCode(r:Result) r.Bool().ExitCode()
+
+	TEST {read("/etc/passwd")}.Result() is Success
+	TEST {read("NO-SUCH-FILE")}.Result() is Failure
+	TEST Success(10).map(X*2).get() == 20
+	TEST { { throw Error("xx") }.Result().map(X*2).get() }.assert(ResultFail)
+
+	doc Convert Success into JSON compatible data structure - the value of the computation
+	F JsonData(s:Success) s.get().JsonData()
+
 }
 
 section "Literal" {
@@ -730,8 +981,6 @@ section "Literal" {
 	F init(l:Lit, val) l.val = val
 }
 
-
-
 section "=~ Matching" {
 
 	section "MatchResult and friends - types" {
@@ -739,15 +988,21 @@ section "=~ Matching" {
 		type MatchResult
 
 			doc Successful match result
-			doc matches - Successful matches
-			type MatchSuccess([MatchResult, Success])
+			doc matches - Successful positional matches (captures). matches[0] is the first Capture(), not the whole match.
+			doc named - Successful named matches
+			doc whole - Whole match (WIP, not always present)
+			doc before - Data before the start of the match (WIP, not always present)
+			doc after - Data after the end of the match (WIP, not always present)
+			type MatchSuccess(MatchResult)
+
+			doc %RET - true
+			F Bool(ms:MatchSuccess) true
 
 			doc Unsuccessful match result
-			type MatchFailure([MatchResult, Failure])
+			type MatchFailure(MatchResult)
 
-		doc Successful match constructor
-		doc %STATUS - deprecated
-		F init(ms:MatchSuccess, matches:Arr) init(args())
+			doc %RET - false
+			F Bool(mf:MatchFailure) false
 
 		doc Successful match constructor
 		F init(ms:MatchSuccess, matches:Arr, pattern) init(args())
@@ -755,12 +1010,8 @@ section "=~ Matching" {
 		doc Unsuccessful constructor
 		F init(mf:MatchFailure, data, pattern) init(args())
 
-		doc Get the values of successful match
-		F get(ms:MatchSuccess) ms
-
-		doc Throws ResultFail
-		F get(mf:MatchFailure) throw ResultFail("There was no match").set('failure', mf)
-
+		doc Get capture by name
+		F '[]'(ms:MatchSuccess, name:Str) ms.named[name]
 
 	}
 
@@ -770,18 +1021,17 @@ section "=~ Matching" {
 
 		doc %STATUS - experimental
 		F init(mc:MatchContext, root) {
-			mc._root = root
-			mc._positional = []  # Result - positional matches
-			mc._named = {}       # Result - named matches
-			mc._path = []        # Current path in _root
+			mc.root = root
+			mc.positional = []  # positional matches
+			mc.named = {}       # named matches
+			mc.path = []        # Current path relative to root
 			mc._deeper_saved_fields = {}
-			mc._result = EmptyBox()  # maybe use "block" instead?
 		}
 
 		F deeper(mc:MatchContext, cb:Fun) {
-			mc._path.push(null)
+			mc.path.push(null)
 			cb.finally({
-				mc._path.pop()
+				mc.path.pop()
 			})
 		}
 
@@ -798,11 +1048,13 @@ section "=~ Matching" {
 		}
 
 		F set_last_path_element(mc:MatchContext, x) {
-			mc._path[mc._path.len() - 1] = x
+			mc.path[mc.path.len() - 1] = x
 			mc
 		}
 
+		doc %STATUS - deprecated
 		F return(mc:MatchContext, x) {
+			warn("Using deprecated return(MatchContext)")
 			mc._result = FullBox(x)
 			# Returning true to make "... -> Y.return(X)" work
 			# Only needed if return() will be used in non "something -> HERE" context,
@@ -813,21 +1065,24 @@ section "=~ Matching" {
 
 	doc Negation. Intended use - in pattern matching.
 	type Not
-	F init(n:Not, val) { n.val = val }
+	F init(n:Not, pattern) { n.pattern = pattern }
 
 	F =~(x, pattern) {
 		mc = MatchContext(x)
 		result = (=~)(x, pattern, mc)
-		mc._result returns mc._result.get()
-		if result is Bool {
-			# TODO: Review MatchSuccess / MatchFailure construction (conversion from MatchContext)
-			result returns MatchSuccess([x], pattern)
-			return MatchFailure(x, pattern)
+		# Not using assert(result, Bool, ...) to prevent loop
+		if result is not Bool {
+			throw Error("=~ is expected to either set result or return a boolean").set(given=result)
 		}
-		throw Error("=~ is expected to either set result or return a boolean").set(given=result)
+		# TODO: Review MatchSuccess / MatchFailure construction (conversion from MatchContext)
+		result returns MatchSuccess(mc.positional, pattern).set('named', mc.named)
+		MatchFailure(x, pattern)
 	}
 
-	F =~(x, pattern, _mc:MatchContext) false
+	doc Fallback for pattern matching. Throws NotImplemented.
+	F =~(x, pattern, _mc:MatchContext) {
+		throw NotImplemented("=~ is not implemented for pattern of type ${pattern.Type().name} or specific values of that type").set(pattern=pattern)
+	}
 
 	doc A pair of pattern and an action to execute if the pattern matches.
 	doc Currently, only callable actions are supported (Fun).
@@ -846,21 +1101,15 @@ section "=~ Matching" {
 
 	doc %STATUS - experimental
 	F =~(x, pa:PatternAction, mc:MatchContext) {
-		result = (=~)(x, pa.pattern, mc)
-		if result {
-			pa::action(x, mc)
+		(=~)(x, pa.pattern, mc)::{
+			if A {
+				pa::action(x, mc)
+			}
 		}
-		result
-	}
-
-	doc %STATUS - deprecated
-	F Pred(pattern) {
-		warn("Using deprecated Pred()")
-		F deprecated_pred(x) x =~ pattern
 	}
 
 	# TODO: %RET - MatchResult
-	doc %RET - not(a =~ b)
+	doc %RET - not(x =~ pattern)
 	F !~(x, pattern) not(x =~ pattern)
 
 	F !~(x, pattern, mc:MatchContext) not((=~)(x, pattern, mc))
@@ -868,14 +1117,97 @@ section "=~ Matching" {
 	doc %RET - x == bti
 	F =~(x, bti:BasicTypeInstance, _mc:MatchContext) x == bti
 
+	section "Capture" {
+		doc A pattern that captures the matching value.
+		doc name - capture name (or null)
+		doc dflt - Default value
+		type Capture
+
+		doc Make a pattern that captures the matching value.
+		doc The matched value will be stored in MatchContext.positional
+		doc pattern - Optional pattern to match. Defaults to Any.
+		doc %EX - m = [1,2] =~ Capture([Capture(Int), Capture(Int)])  # m.matches =~ [Arr, 1, 2]
+		F init(c:Capture, pattern=Any) {
+			init(args())
+			c.name = null
+			c.dflt = null
+		}
+
+		doc Make a pattern that captures the matching value.
+		doc The matched value will be stored in MatchContext.named[name]
+		doc pattern - Optional pattern to match. Defaults to Any.
+		doc %EX - m = {"a": 1, "b": 2} =~ {"a": Capture("arg1"), "b": Capture("arg2")}; m.named.arg1 + m.named.arg2  # 3
+		doc %EX - m = {"a": 1, "b": 2} =~ {"a": Capture("arg1", Int), "b": Capture("arg2", Str)}  # Doesn't match - b is Int
+		F init(c:Capture, name:Str, pattern=Any) {
+			init(args())
+			c.dflt = null
+		}
+
+		doc %STATUS - internal
+		F =~(x, c:Capture, mc:MatchContext) {
+			if c.name is not Null {
+				container = mc.named
+				key = c.name
+				container[key] = c.dflt
+			} else {
+				container = mc.positional
+				key = len(mc.positional)
+				container.push(c.dflt)
+			}
+
+			(=~)(x, c.pattern, mc)::{
+				if A {
+					container[key] = x
+				}
+			}
+		}
+    }
+
+    TEST m = 1 =~ Capture("n", Int)
+    TEST m = 1 =~ Capture("n", Str); not(m)
+    TEST m = {"a": 1, "b": 2} =~ {"a": Capture("arg1", Int), "b": Capture("arg2")}; m.named.arg1 + m.named.arg2 == 3
+    TEST m = {"a": 1, "b": 2} =~ {"a": Capture("arg1", Int), "b": Capture("arg2")}; m["arg1"] + m["arg2"] == 3
+    TEST m = {"a": 1, "b": 2} =~ {"a": Capture("arg1", Int), "b": Capture("arg2", Str)}; not(m)
+    TEST m = [1,2] =~ Capture([Capture(Int), Capture(Int)]); m.matches =~ [Arr, 1, 2]
+
 	section "IfExists" {
 		doc Pattern for optionally present fields.
 		doc %EX - ({"a": 1}) =~ ({"a": Any, "b": IfExists(Int)})
 		doc %EX - ({"a": 1, "b": 2}) =~ ({"a": Any, "b": IfExists(Int)})
 		doc %EX - ({"a": 1, "b": "x"}) !~ ({"a": Any, "b": IfExists(Int)})
 		type IfExists
-		F init(ie:IfExists, pat) ie.pat = pat
-		F =~(x, ie:IfExists, mc:MatchContext) (=~)(x, ie.pat, mc)
+		F init(ie:IfExists, pattern) ie.pattern = pattern
+		F =~(x, ie:IfExists, mc:MatchContext) (=~)(x, ie.pattern, mc)
+	}
+
+	section "Branch" {
+		doc Pattern for trying all possible branches. Always reports positive match.
+		doc %EX - (collector/0 {"a": 1, "b": [2,3]} =~ AtPath(Branch(Any), Int -> collect(X)))  # 6, all Ints
+		doc %EX - (collector/0 {"a": 1, "b": [2,3]} =~ AtPath(Any, Int -> collect(X)))  # 1, first Int
+		doc %STATUS - experimental
+		type Branch
+
+		doc Pattern for trying all possible branches. Always reports positive match.
+		F init(b:Branch, pattern) {
+			b.pattern = pattern
+		}
+
+		doc Returns result of (=~)(x, b.pattern, mc)
+		doc %RET - Bool
+		doc %STATUS - internal
+		F =~(x, b:Branch, mc:MatchContext) (=~)(x, b.pattern, mc)
+	}
+
+	TEST (collector/0 {"a": 1, "b": [2,3]} =~ AtPath(Branch(Any), Int -> collect(X))) == 6
+	TEST (collector/0 {"a": 1, "b": [2,3]} =~ AtPath(Any, Int -> collect(X))) == 1
+
+	section "Transformed" {
+		doc Check for pattern against transformed value
+		doc %EX - "abc" =~ Transformed(len, 3)
+		type Transformed
+		F init(t:Transformed, transformation:Fun, pattern) init(args())
+		F =~(x, t:Transformed, mc:MatchContext) Bool(t::transformation(x) =~ t.pattern)
+		TEST "abc" =~ Transformed(len, 3)
 	}
 
 	doc Checks whether object fields named after h hash keys match (=~) the corresponding hash values.
@@ -883,23 +1215,28 @@ section "=~ Matching" {
 	F =~(x, h:Hash, mc:MatchContext) {
 		# TODO: Maybe some better detection of x interface required (instead of Eachable2/NormalTypeInstance):
 		# * must support "k in x"
-		# * must support "x.(k)"
 		(x is not Eachable2) and (x is not NormalTypeInstance) returns false
 		x_keys = null
+
+		key_access_func = if (x is Hash) or (x is HashLike) then ([]) else (.)
 
 		mc.deeper({
 			h.all(F(pat_k, pat_v) {
 				if (=~)(pat_k, AnyOf(Str, Int, Real), mc) {
-					if pat_k in x {
-						(=~)(x.(pat_k), pat_v, mc.set_last_path_element(pat_k))
-					} else {
-						pat_v is IfExists
-					}
+					pat_k in x returns (=~)(x.key_access_func(pat_k), pat_v, mc.set_last_path_element(pat_k))
+					pat_v is IfExists
 				} else {
-					assert(pat_v is not IfExists, 'IfExists value only works with keys of types: Str, Int, Real')
+					assert(pat_v, Not(IfExists), NotImplemented('IfExists value only works with keys of types: Str, Int, Real'))
 					if x_keys is Null {
 						x_keys = x.Hash().keys()
 					}
+					if pat_k is Branch {
+						x_keys.each(F(k) {
+							(=~)(k, pat_k.pattern, mc) and (=~)(x.(k), pat_v, mc.set_last_path_element(k))
+						})
+						return true # TODO: not sure it's correct
+					}
+					# TODO: should be all()?
 					x_keys.any(F(k) {
 						(=~)(k, pat_k, mc) and (=~)(x.(k), pat_v, mc.set_last_path_element(k))
 					})
@@ -915,6 +1252,10 @@ section "=~ Matching" {
 	TEST ({"a": 1}) =~ ({"a": Any, "b": IfExists(Int)})
 	TEST ({"a": 1, "b": 2}) =~ ({"a": Any, "b": IfExists(Int)})
 	TEST ({"a": 1, "b": "x"}) !~ ({"a": Any, "b": IfExists(Int)})
+	TEST type T; T().set(a=1) =~ {"a": 1}
+	TEST type T; T().set(a=1) !~ {"b": 1}
+	TEST (collector/0 {"a1": 1, "a2": 2, "b1": 10} =~ {Branch(/^a/): Int -> collect(X) }) == 3
+	TEST (collector/0 {"a1": 1, "a2": 2, "b1": 10} =~ {/^a/: Int -> collect(X) }) == 1
 
 	doc Checks that
 	doc 1. The x is Eachable1 but not Str or Int
@@ -937,7 +1278,7 @@ section "=~ Matching" {
 	TEST [1] !~ [Int, Any]
 
 	# TODO: f(x, MatchContext) - when we know that f expects that
-	doc %RET - f(x) 
+	doc %RET - f(x).Bool()
 	F =~(x, f:Fun, _mc:MatchContext) f(x).Bool()
 
 	doc Check whether x is of type t
@@ -963,6 +1304,7 @@ section "=~ Matching" {
 
 		F init(r:Repeat, pattern) init(r, pattern, 0..null)
 
+		# TODO =~ straightening
 		doc Check that x is a repetition of r.pattern and it occurs r.count times
 		doc %RET - Bool
 		F =~(x:Eachable1, r:Repeat, mc:MatchContext) block b {
@@ -994,7 +1336,7 @@ section "=~ Matching" {
 	doc Negate the match
 	doc %RET - Bool
 	F =~(x, n:Not, mc:MatchContext) {
-		(=~)(x, n.val, mc).not()
+		(=~)(x, n.pattern, mc).not()
 	}
 
 	TEST 1 =~ Not(3)
@@ -1003,43 +1345,56 @@ section "=~ Matching" {
 	section "AtPath" {
 
 		doc Pattern that matches at given path
-		doc %EX - [1] =~ AtPath([Any], Int)
+		doc %EX - [1] =~ AtPath([0], Int)  # Does match
 		type AtPath
 		F init(ap:AtPath, path_pattern, value_pattern) init(args())
 
+		doc Do not use directly!
+		doc %STATUS - internal
 		F =~(x, ap:AtPath, mc:MatchContext) {
 
-			debug('AtPath', { "Entering $x $ap $mc" })
+			debug('AtPath', { "Entering ${mc.path}. ap.path_pattern is Branch ${ap.path_pattern is Branch}" })
 
-			DESCENDABLE = AnyOf(Eachable2, AllOf(Eachable1, Not(Int), Not(Str)))
+			F each2(_non_descendable, cb:Fun) nop
 
 			F each2(e:Eachable1, cb:Fun) {
-				(e is Int) or (e is Str) returns
+				guard e !~ AnyOf(Int, Str)
 				each_idx_val(e, cb)
 			}
 
 			F each2(e:Eachable2, cb:Fun) each(e, cb)
 
-			if mc._path =~ ap.path_pattern {
+			if mc.path =~ ap.path_pattern {
 				m = (=~)(x, ap.value_pattern, mc)
-				m returns m
+				if m and (ap.path_pattern is not Branch) {
+					return true
+				}
 			}
-			ret = false
-			mc.deeper({
-				x.each2(F(idx_or_key, val) {
-					if (=~)(val, ap, mc.set_last_path_element(idx_or_key)) {
-						ret = true
-					}
+
+			block b {
+				mc.deeper({
+					x.each2(F(idx_or_key, val) {
+						if (=~)(val, ap, mc.set_last_path_element(idx_or_key)) {
+							if ap.path_pattern is not Branch {
+								b.return(true)
+							}
+						}
+					})
 				})
-			})
-			ret
+				ap.path_pattern is Branch returns true
+				false
+			}
 		}
 
 		TEST 1 =~ AtPath(Any, Int)
+		TEST 1 !~ AtPath(Any, Str)
 		TEST [1] =~ AtPath(Any, Int)
 		TEST [1] =~ AtPath([Any], Int)
 		TEST [1] =~ AtPath([0], Int)
 		TEST [1] !~ AtPath([Any, Any], Int)
+		TEST (collector/0 {"a": [10, 20], "b": [100, 200]} =~ AtPath(Branch([Str, 0]), Int -> collect(X))) == 110
+		TEST (collector/0 {"a": [10, 20], "b": [100, 200]} =~ AtPath([Str, 0], Int -> collect(X))) == 10
+		TEST (collector/0 {"item": [{"item": {}}]} =~ AtPath(Branch(Any), {"item": { collect(1) }})) == 2
 
 		doc %STATUS - experimental
 		doc Resets the path so that AtPath sees [] at this point
@@ -1051,7 +1406,7 @@ section "=~ Matching" {
 
 		doc %STATUS - experimental
 		F =~(x, rp:ResetPath, mc:MatchContext) {
-			mc.deeper({'_path': []}, {
+			mc.deeper({'path': []}, {
 				(=~)(x, rp.pattern, mc)
 			})
 		}
@@ -1072,6 +1427,21 @@ F map(e:Eachable, mapper:Fun)
 	collector
 		e.each(collect + mapper)
 
+doc Map and flatten.
+doc Applies mapper to each element of e, collects results, and flattens the results (one level).
+doc %EX - [2,0,4].flat_map(F(e) Result({ 12 / e}).Box())  # [6, 3]
+doc %EX - [2,0,4].flat_map(F(e) [1, e*2])  # [1,4, 1,0, 1,8]
+F flat_map(e:Eachable1, mapper:Fun) {
+	collector {
+		e.each(F(elt) {
+			elt.mapper().each(collect)
+		})
+	}
+}
+
+TEST [2,0,4].flat_map(F(e) Result({ 12 / e}).Box()) == [6, 3]
+TEST [2,0,4].flat_map(F(e) [1, e*2]) == [1,4, 1,0, 1,8]
+
 doc EXPERIMENTAL! Do not use!
 doc Map e to same type. Mnemonics: "map original" / "MAP to Original type".
 doc e - object of any type that has each(e, callback) implemented
@@ -1088,24 +1458,56 @@ F mapo(e:Eachable1, mapper:Fun) {
 
 TEST Set([1,2]).mapo(X*2) == Set([2,4])
 
-
+doc Deprecated. Use when(val, pat, new_val) instead.
 doc Transform mapper to handle only items matching pattern. Non-matching items will be returned as is.
 doc %EX - ["abc", 1, "def", 2].map(only(Int, X*2))  # ["abc", 2, "def", 4]
+doc %STATUS - deprecated
 F only(pattern, mapper:Fun) {
-	F wrapped_in_only(elt) {
-		if elt =~ pattern {
-			mapper(elt)
-		} else {
-			elt
-		}
-	}
+	warn("Using deprecated only(). Use when() instead.")
+	X.when(pattern, mapper)
 }
 
 TEST ["abc", 1, "def", 2].map(only(Int, X*2)) == ["abc", 2, "def", 4]
 
+doc Deprecated. Use when(val, pat, new_val) instead.
+doc %STATUS - deprecated
+doc Same as val.when(pattern, mapper)
+F only(val, pattern, mapper:Fun) {
+	warn("Using deprecated only(). Use when() instead.")
+	val.when(pattern, mapper)
+}
+
+doc If val matches pat, return new_val.Value(val); otherwise return val.
+doc Use instead of older only()
+doc %EX - "abcd".mapo(X.when("b", "*"))  # a*cd
+doc %EX - "abcd".mapo(F(x) x.when("b", "[$X]"))  # a[b]cd
+F when(val, pat, new_val) {
+	# Maybe TODO: If new_val is a callback provide a way to call it with both val and the match m. Maybe with new types:
+	#             Could be blah.when(pat, WithMatch(F(val, m) ...))
+	#             Could be blah.when(pat, ExtendedArgs(F(val, m) ...))
+	m = val =~ pat
+	not(m) returns val
+	new_val.Value(val)
+}
+
+TEST 1.when(1, 2) == 2
+TEST 3.when(1, 2) == 3
+TEST 10.when(10, X*2) == 20
+
+doc EXPERIMENTAL! Do not use!
+doc Ensures that value matches pattern.
+doc If the value matches, it is returned as is.
+doc If not, Value(how, x) is used instead.
+doc In this case, there is assert() to see that the new value is matching pat.
+doc %EX - ensure(param, Str, encode_json)
 doc %STATUS - experimental
-doc Same as only(pattern, mapper)(val)
-F only(val, pattern, mapper:Fun) only(pattern, mapper)(val)
+F ensure(x, pat, how) {
+	x.when(Not(pat), {
+		how.Value(x)::{
+			assert(A, pat, Error('ensure() failed to transform to desired pattern').set(x=x, pat=pat, how=how))
+		}
+	})
+}
 
 doc Filter e using pattern.
 doc e - Eachable1. WARNING: instances of same type as e must have empty constructor and push() method.
@@ -1114,13 +1516,12 @@ doc %EX - (1...10).filter(F(num) num % 2 == 0)  # Gives [2,4,6,8,10]
 doc %EX - (1...10).filter(X<5)  # Gives [1,2,3,4]
 doc %RET - Of same type as e
 F filter(e:Eachable1, pattern=Bool.constructors) {
-	t = Type(e)
-	ret = t()
-	e.each(F(elt) {
-		if elt =~ pattern
-			ret.push(elt)
-	})
-	ret
+	Type(e)()::{
+		e.each(F(elt) {
+			if elt =~ pattern
+				A.push(elt)
+		})
+	}
 }
 
 TEST [1,null,2,0].filter() == [1, 2]
@@ -1133,10 +1534,9 @@ doc pattern - Test function or anything else acceptable by (=~), defaults to Boo
 doc %RET - Array with two arrays in it
 doc %EX - partition([1,10,2,20], X>=10)  # [[10, 20], [1, 2]]
 F partition(something:Eachable1, pattern=Bool.constructors) {
-	yes = []
-	no = []
-	something.each(F(elt) (if elt =~ pattern then yes else no).push(elt))
-	[yes, no]
+	[[], []]::{
+		something.each(F(elt) (if elt =~ pattern then A[0] else A[1]).push(elt))
+	}
 }
 
 TEST partition([1,10,2,20], X>=10) == [[10, 20], [1, 2]]
@@ -1145,7 +1545,7 @@ TEST partition(["abc", "", "def", null]) == [["abc", "def"], ["", null]]
 type ElementNotFound(LookupFail)
 
 block u {
-	global first, last
+	global first, last, the_one
 	doc Find first element in e that matches the pattern.
 	doc pattern - Test function or anything else acceptable by =~, defaults to Bool.constructors
 	doc %RET - Either the element or the provided default if element was not found.
@@ -1153,16 +1553,17 @@ block u {
 	doc %EX - (10..20).first(F(x) x % 50 == 0, 1000) # 1000
 	doc %EX - [false, 0, null, "xyz", 100].first()  # "xyz"
 	doc %EX - [].first()                            # ElementNotFound exception
-	F first(e:Eachable1, pattern=Bool.constructors, default=u) block b {
+	F first(e:Eachable1, pattern=Bool.constructors, dflt=u) block b {
 		e.each(F(i) {
 			if i =~ pattern b.return(i)
 		})
-		default !== u returns default
+		dflt !== u returns Value(dflt)
 		throw ElementNotFound("first() did not find the element").set('container', e).set('pattern', pattern)
 	}
 
 	TEST [1,2,3].first(X>1, 10) == 2
 	TEST [1,2,3].first(X>5, 10) == 10
+	TEST [1,2,3].first(X>5, {5+5}) == 10
 	TEST [1,2,3].first(X>1) == 2
 	TEST {[1,2,3].first(X>5)}.assert(ElementNotFound)
 
@@ -1171,7 +1572,7 @@ block u {
 	doc %RET - Either the element or the provided default if element was not found.
 	doc %EX - [1,2,3].last(X>1, 10) == 3
 	doc %EX - [].last()  # ElementNotFound exception
-	F last(e:Eachable1, pattern=Bool.constructors, default=u) {
+	F last(e:Eachable1, pattern=Bool.constructors, dflt=u) {
 		result = Box()
 		e.each(F(i){
 			if i =~ pattern {
@@ -1179,52 +1580,50 @@ block u {
 			}
 		})
 		result returns result.get()
-		default !== u returns default
+		dflt !== u returns Value(dflt)
 		throw ElementNotFound("last() did not find the element").set('container', e).set('pattern', pattern)
 	}
 
 	TEST [1,2,3].last(X>1, 10) == 3
 	TEST [1,2,3].last(X>5, 10) == 10
+	TEST [1,2,3].last(X>5, {5+5}) == 10
 	TEST [1,2,3].last(X>1) == 3
 	TEST {[1,2,3].last(X>5)}.assert(ElementNotFound)
-}
 
-doc Find the only element that matches the pattern and execute given code with the value
-doc body - The code to execute when exactly one element that matches the pattern was found. Executed with the found value. It's value will be returned as result of the_one().
-doc found_more - The code to execute when more than one element matches the pattern. It's value will be returned as result of the_one(). Defaults to throwing an exception.
-doc found_none - The code to execute when none of the elements match the pattern. It's value will be returned as result of the_one(). Defaults to exception.
-doc %RET - Result of running on of the following: body, found_more, found_none
-doc %EX - F name(dn:MethodDocNode) {
-doc %EX - 	dn.children.the_one(MethodNameDocNode).text[0]
-doc %EX - }
-F the_one(e:Eachable1, pattern=Any, body:Fun=identity, found_more:Fun=null, found_none:Fun=null) block b {
-	ret = EmptyBox()
-	e.each(F(elt) {
-		if elt =~ pattern {
-			if ret {
-				not(found_more) throws ElementNotFound("the_one() had more than one match").set('container', e).set('pattern', pattern)
-				b.return(found_more())
+	doc Find the only element that matches the pattern and execute given code with the value
+	doc body - The code to execute when exactly one element that matches the pattern was found. Executed with the found value. It's value will be returned as result of the_one().
+	doc found_more - The code to execute when more than one element matches the pattern. It's value will be returned as result of the_one(). Defaults to throwing an exception.
+	doc found_none - The code to execute when none of the elements match the pattern. It's value will be returned as result of the_one(). Defaults to exception.
+	doc %RET - Result of running on of the following: body, found_more, found_none
+	doc %EX - F name(dn:MethodDocNode) {
+	doc %EX - 	dn.children.the_one(MethodNameDocNode).text[0]
+	doc %EX - }
+	F the_one(e:Eachable1, pattern=Any, body:Fun=identity, found_more=u, found_none=u) block b {
+		ret = EmptyBox()
+		e.each(F(elt) {
+			if elt =~ pattern {
+				if ret {
+					found_more == u throws ElementNotFound("the_one() had more than one match").set('container', e).set('pattern', pattern)
+					b.return(found_more.Value())
+				}
+				ret = FullBox(elt)
 			}
-			ret = FullBox(elt)
-		}
-	})
-	if ret {
-		body(ret.get())
-	} else {
-		not(found_none) throws ElementNotFound("the_one() had no matches").set('container', e).set('pattern', pattern)
-		found_none()
+		})
+		ret returns body(ret.get())
+		found_none == u throws ElementNotFound("the_one() had no matches").set('container', e).set('pattern', pattern)
+		found_none.Value()
 	}
-}
 
-TEST ok = false; [1,2,11,3,4].the_one(X>10, F(the_value) { ok = the_value == 11 }); ok
-TEST ok = false; [1,2,11,3,4].the_one(X>20, nop, found_none = { ok = true }); ok
-TEST ok = false; [1,2,11,3,4].the_one(Int, nop, found_more = { ok = true }); ok
-TEST [1,2,11,3,4].the_one(X>10) == 11
-TEST { [1,2,11,12,4].the_one(X>10) }.assert(ElementNotFound)
-TEST { [1,2,3,4].the_one(X>10) }.assert(ElementNotFound)
-TEST [1, "a", "b"].the_one(Int) == 1
-TEST [1].the_one() == 1
-TEST { [1, "a", "b"].the_one(Str) }.assert(ElementNotFound)
+	TEST ok = false; [1,2,11,3,4].the_one(X>10, F(the_value) { ok = the_value == 11 }); ok
+	TEST ok = false; [1,2,11,3,4].the_one(X>20, nop, found_none = { ok = true }); ok
+	TEST ok = false; [1,2,11,3,4].the_one(Int, nop, found_more = { ok = true }); ok
+	TEST [1,2,11,3,4].the_one(X>10) == 11
+	TEST { [1,2,11,12,4].the_one(X>10) }.assert(ElementNotFound)
+	TEST { [1,2,3,4].the_one(X>10) }.assert(ElementNotFound)
+	TEST [1, "a", "b"].the_one(Int) == 1
+	TEST [1].the_one() == 1
+	TEST { [1, "a", "b"].the_one(Str) }.assert(ElementNotFound)
+}
 
 doc Filter something to an Arr (array) of values matching the pattern
 doc pattern - Decision function to be called with each item as first argument.
@@ -1273,7 +1672,7 @@ doc %RET - Arr
 doc %EX - ["ssh", "IP", "w"].replace("IP", "10.0.0.100")  # ['ssh','10.0.0.100','w']
 F replace(e:Eachable1, src, dst) {
 	guard (e is not Str) and (e is not Int)
-	map(e, only(X == src, {dst}))
+	map(e, X.when(src, dst))
 }
 
 TEST ["ssh", "IP", "w"].replace("IP", "10.0.0.100") == ['ssh','10.0.0.100','w']
@@ -1398,26 +1797,22 @@ F push_all(dst, e:Eachable1) {
 
 TEST a=[1,2]; a.push_all([3,4]); a==[1,2,3,4]
 
+section "Base JSON" {
+	type JsonDataViaHash
+	F JsonData(jdvh: JsonDataViaHash) jdvh.Hash().JsonData()
+	TEST type T(JsonDataViaHash); t=T(); t.x=1; t.JsonData() == {'x': 1}
 
-doc EXPERIMENTAL! Do not use! Especially don't count on returned value beyond obvious Bool(x) behaviour. Match anything.
-doc %STATUS - deprecated
-F ~(something, pattern) {
-	warn("Using deprecated ~(something:Any, pattern:Any) with types something:${Type(something)} pattern:${Type(pattern)}")
-	if something =~ pattern {
-		MatchSuccess([something], pattern)
-	} else {
-		MatchFailure(something, pattern)
-	}
+	type JsonDataViaGet
+	F JsonData(jdvg: JsonDataViaGet) jdvg.get().JsonData()
+	TEST type T(JsonDataViaGet); global get; F get(t:T) 7; T().JsonData() == 7
 }
 
 section "Eachable1" {
-	# Should be low priority (ordered before others) method
+	doc %RET - a and b concatenated
 	F +(a:Eachable1, b:Eachable1) {
 		guard Type(a) === Type(b)
 		t = Type(a)
-		guard t != Int
-		guard t != Arr
-		guard t != Str
+		guard (a is not Int) and (a is not Arr) and (a is not Str) and (a is not Fun)
 		t().push_all(a).push_all(b)
 	}
 
@@ -1569,10 +1964,10 @@ section "AnyOf(ArrLike)" {
 		MatchFailure(x, a)
 	}
 
-	TEST ("abc" ~ AnyOf(/x/, /a/)) is MatchSuccess
-	TEST ("abc" ~ AnyOf(/x/, /y/)) is MatchFailure
-	TEST ("abc" ~ AnyOf([Int, Str])) is MatchSuccess
-	TEST ("abc" ~ AnyOf([Int, Num])) is MatchFailure
+	TEST ("abc" =~ AnyOf(/x/, /a/)) is MatchSuccess
+	TEST ("abc" =~ AnyOf(/x/, /y/)) is MatchFailure
+	TEST ("abc" =~ AnyOf([Int, Str])) is MatchSuccess
+	TEST ("abc" =~ AnyOf([Int, Num])) is MatchFailure
 
 	doc Check whether one of the patterns (elements of AnyOf) matches
 	doc %EX - {"k1": "v1", "k2": "v2", "k3": "v3"}.filterk(AnyOf("k1", "k3"))  # {"k1": "v1", "k3": "v3"}
@@ -1585,6 +1980,10 @@ section "AnyOf(ArrLike)" {
 
 	TEST AnyOf([1, false]).Bool()
 	TEST AnyOf([0, false]).Bool().not()
+
+	doc Convert to NGS code that would produce the type. Not fully functional yet. Namespaces are not supported.
+	doc %RET - Str
+	F code(a:AnyOf) "AnyOf(${a.map(code).join(', ')})"
 
 }
 
@@ -1609,6 +2008,11 @@ section "AllOf(ArrLike)" {
 
 	TEST AllOf([1, 2]).Bool()
 	TEST AllOf([1, 2, false]).Bool().not()
+
+	doc Convert to NGS code that would produce the type. Not fully functional yet. Namespaces are not supported.
+	doc %RET - Str
+	F code(a:AllOf) "AllOf(${a.map(code).join(', ')})"
+
 }
 
 section "HashLike" {
@@ -1668,6 +2072,12 @@ section "HashLike" {
 	doc %RET - Bool
 	F Bool(hl:HashLike)          hl.meta().HashLike.Bool()
 
+	F each_idx_key_val(hl:HashLike, cb:Fun) {
+		hl.meta().HashLike.each_idx_key_val(cb)
+		hl
+	}
+	TEST (collector HashLike({"a": 1, "b": 2}).each_idx_key_val(F(idx, k, v) collect([idx, k, v]))) == [[0, "a", 1], [1, "b", 2]]
+
 	F map_idx_key_val(hl:HashLike, mapper:Fun) hl.meta().HashLike.map_idx_key_val(mapper)
 
 	doc Filter hash. Build new HashLike with kev-value pairs selected by predicate.
@@ -1704,6 +2114,63 @@ section "HashLike" {
 	F JsonData(hl:HashLike) hl.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
 }
 
+section "DeprecatedTopLevelHashlike" {
+	doc Base type for user-defined hash-like types. This is a workaround: it's not possible currently no inherit from the built-in Hash type.
+	type DeprecatedTopLevelHashlike(HashLike)
+
+	doc Get value by key. Throws KeyNotFound.
+	doc %AUTO - your_hashlike[k]
+	F '[]' (hl:DeprecatedTopLevelHashlike, k) {
+		if k == hl.meta().DeprecatedTopLevelHashlike {
+			warn("Reading deprecated top level key ${k}")
+			return hl
+		}
+		super(hl, k)
+	}
+
+	doc Set value.
+	doc %AUTO - your_hashlike[k] = v
+	F '[]='(hl:DeprecatedTopLevelHashlike, k, v) {
+		if k == hl.meta().DeprecatedTopLevelHashlike {
+			throw InvalidArgument("Writing to deprecated top level key ${k}")
+		}
+		super(hl, k, v)
+	}
+
+	doc Get value by key. Throws KeyNotFound.
+	doc %AUTO - your_hashlike.literal_key
+	doc %RET - Any
+	F .(hl:DeprecatedTopLevelHashlike, k) {
+		if k == hl.meta().DeprecatedTopLevelHashlike {
+			warn("Reading deprecated top level key ${k}")
+			return hl
+		}
+		super(hl, k)
+	}
+
+	doc Set value.
+	doc %AUTO - your_hashlike.literal_key = v
+	doc %RET - v
+	F .=(hl:DeprecatedTopLevelHashlike, k, v) {
+		if k == hl.meta().DeprecatedTopLevelHashlike {
+			throw InvalidArgument("Writing to deprecated top level key ${k}")
+		}
+		super(hl, k, v)
+	}
+
+	doc Create a HashLike.
+	doc h - If provided, used as initial value.
+	doc %EX - HashLike(%{a aha b bee}) # <HashLike a=aha b=bee>
+	F init(hl:DeprecatedTopLevelHashlike, deprecated_field, h:Hash=null) {
+		super(hl, h)
+		hl.meta()::{
+			A.HashLike = h or {}
+			A.DeprecatedTopLevelHashlike = deprecated_field
+		}
+	}
+
+	TEST dhl = DeprecatedTopLevelHashlike('Blah', {'a': 1}); dhl.a == 1 and dhl.Blah.a == 1
+}
 
 section "Set" {
 
@@ -1754,6 +2221,13 @@ section "Set" {
 	F +(a:Set, b:Set) Set().set('val', a.val + b.val)
 
 	TEST Set([1,2]) + Set([3]) == Set([1,2,3])
+
+	F ==(a:Set, b:Set) {
+		a.len() != b.len() returns false
+		a.all(X in b)
+	}
+	TEST Set([1,2]) == Set([2,1])
+	TEST Set([1,2]) != Set([1])
 
 	doc Check whether all values in a are also in b
 	F '<='(a:Set, b:Set) {
@@ -1891,7 +2365,7 @@ section "Hook" {
 	# TODO: consider optional? try/catch isolation
 	doc Runs all handlers passing all args.
 	doc args - Arguments to pass to handlers
-	doc %RET - Arr. Results from all the handlers
+	doc %RET - Hash. Results from all the handlers
 	F call(hook:Hook, *args) hook.meta().HashLike.mapv(X(*args))
 }
 
@@ -1991,7 +2465,7 @@ section "Type" {
 	doc %STATUS - deprecated
 	doc Use t <= maybe_supertype
 	F is_subtype(t:Type, maybe_supertype:Type) {
-		warn("is_subtype(t:Type, maybe_supertype:Type) is deprecated, use t <= maybe_supertype")
+		warn("is_subtype(t:Type, maybe_supertype:Type) is deprecated. Use t <= maybe_supertype")
 		t <= maybe_supertype
 	}
 
@@ -1999,9 +2473,14 @@ section "Type" {
 	doc Use Type(x)
 	doc %RET - Type
 	F typeof(x) {
-		warn("typeof(Any) is deprecated")
+		warn("typeof(Any) is deprecated. Use Type(Any).")
 		Type(x)
 	}
+
+	# TODO: Namespaces
+	doc Convert a type to NGS code that would produce the type. Not fully functional yet. Namespaces are not supported.
+	doc %RET - Str
+	F code(t:Type) t.name
 }
 
 doc Set a field on all elements if it's not already set
@@ -2011,22 +2490,7 @@ doc %RET - e
 F dflt(e:Eachable1, k, v) e.each(X.dflt(k, v))
 
 TEST [{}, {"x": 1}].dflt("x", 100) == [{"x": 100}, {"x": 1}]
-
-doc Equality test for normal type instances: must be of same type and have same fields and their values
-doc %RET - Bool
-doc %EX - type T
-doc %EX - t1 = T()
-doc %EX - t1.a = 1
-doc %EX - t2 = T()
-doc %EX - t2.a = 1
-doc %EX - echo(t1 == t2)  # Outputs: true
-F ==(a:NormalTypeInstance, b:NormalTypeInstance) {
-	Type(a) != Type(b) returns false
-	# TODO: more efficient implementation:
-	#       * Provide low level primitive to either access the fields (ll_nti_hash) or iterate them
-	#       * Use it here
-	Hash(a) == Hash(b)
-}
+TEST [{}, {"x": 1}].dflt("x", {50+50}) == [{"x": 100}, {"x": 1}]
 
 # TODO: move to somewhere more appropriate, keep in mind - must be after dflt(NormalTypeInstance, ...)
 doc Set a key if it's not already set
@@ -2034,112 +2498,103 @@ doc %EX - mysomething.dflt(k, []).push(elt)
 doc %RET - Key value, the already-existed or new.
 F dflt(hl:HashLike, k, v) hl.meta().HashLike.dflt(k, v)
 
-doc Check whether x is of type t
-doc %RET - MatchResult
-F ~(x, t:Type) {
-	if x is t {
-		MatchSuccess([x], t)
-	} else {
-		MatchFailure(x, t)
+section "Exceptions" {
+	# TODO: Investigate why type CError(Error) does not work at this point
+	doc Base type for exceptions arising from errors returned by calling C functions
+	type CError(Error)
+
+	doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
+	F init(e:CError, errno:Int, message:Str) {
+		super(e, message)
+		e.errno = errno
+		e.errno_name = c_strerror(e.errno)
 	}
+
+	doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
+	F init(e:CError, message:Str) super(e, c_errno(), message)
+
+
+	doc Exception representing a failure to kill() a process
+	type KillFail(CError)
 }
 
-# === Exceptions =================================
+section "Lock and friends" {
 
-# TODO: Investigate why type CError(Error) does not work at this point
-doc Base type for exceptions arising from errors returned by calling C functions
-type CError(Error)
+	doc Synchronization lock.
+	type Lock
 
-doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
-F init(e:CError, errno:Int, message:Str) {
-	super(e, message)
-	e.errno = errno
-	e.errno_name = c_strerror(e.errno)
-}
+	doc Re-entrant synchronization lock. Same thread can re-acquire the lock.
+	type ReentrantLock(Lock)
 
-doc CError constructor. In addition to storing message field, adds errno and errno_name fields.
-F init(e:CError, message:Str) super(e, c_errno(), message)
+	doc Failure to perform an operation on a lock.
+	type LockFail(Exception)
 
+	doc Initialize LockFail exception.
+	F init(e:LockFail, op:Str, code:Int, msg:Str) init(args())
 
-doc Exception representing a failure to kill() a process
-type KillFail(CError)
-
-# === Lock =======================================
-
-doc Synchronization lock.
-type Lock
-
-doc Re-entrant synchronization lock. Same thread can re-acquire the lock.
-type ReentrantLock(Lock)
-
-doc Failure to perform an operation on a lock.
-type LockFail(Exception)
-
-doc Initialize LockFail exception.
-F init(e:LockFail, op:Str, code:Int, msg:Str) init(args())
-
-doc Initialize Lock. Creates and initializes pthread_mutex.
-F init(l:Lock) {
-	l.lock = c_pthread_mutex_t()
-	code = c_pthread_mutex_init(l.lock)
-	code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
-}
-
-doc Block till the lock is avaiable and then acquire the lock.
-doc %EX - l = Lock()
-doc %EX - ...
-doc %EX - l.acquire()
-doc %EX - modify_global_state_safely(...)
-doc %EX - l.release()
-F acquire(l:Lock) {
-	c_pthread_mutex_lock(l.lock)
-	l
-}
-
-doc Release the lock
-doc %EX - l = Lock()
-doc %EX - ...
-doc %EX - l.acquire()
-doc %EX - modify_global_state_safely(...)
-doc %EX - l.release()
-F release(l:Lock) {
-	c_pthread_mutex_unlock(l.lock)
-	l
-}
-
-doc Call cb with lock l held. Releases the lock after cb returns or throws.
-doc %EX - l = Lock()
-doc %EX - ...
-doc %EX - l.acquire(F() {
-doc %EX -   modify_global_state_safely(...)
-doc %EX - })
-F acquire(l:Lock, cb:Fun) {
-	l.acquire()
-	try cb()::{ l.release() }
-	catch(e:Exception) {
-		l.release()
-		throw e
+	doc Initialize Lock. Creates and initializes pthread_mutex.
+	F init(l:Lock) {
+		l.lock = c_pthread_mutex_t()
+		code = c_pthread_mutex_init(l.lock)
+		code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
 	}
+
+	doc Block till the lock is avaiable and then acquire the lock.
+	doc %EX - l = Lock()
+	doc %EX - ...
+	doc %EX - l.acquire()
+	doc %EX - modify_global_state_safely(...)
+	doc %EX - l.release()
+	F acquire(l:Lock) {
+		c_pthread_mutex_lock(l.lock)
+		l
+	}
+
+	doc Release the lock
+	doc %EX - l = Lock()
+	doc %EX - ...
+	doc %EX - l.acquire()
+	doc %EX - modify_global_state_safely(...)
+	doc %EX - l.release()
+	F release(l:Lock) {
+		c_pthread_mutex_unlock(l.lock)
+		l
+	}
+
+	doc Call cb with lock l held. Releases the lock after cb returns or throws.
+	doc %EX - l = Lock()
+	doc %EX - ...
+	doc %EX - l.acquire(F() {
+	doc %EX -   modify_global_state_safely(...)
+	doc %EX - })
+	F acquire(l:Lock, cb:Fun) {
+		l.acquire()
+		try cb()::{ l.release() }
+		catch(e:Exception) {
+			l.release()
+			throw e
+		}
+	}
+
+	TEST Lock().acquire(F() 1) == 1
+
+	doc Initialize Lock. Creates and initializes PTHREAD_MUTEX_RECURSIVE pthread_mutex.
+	F init(l:ReentrantLock) {
+		l.lock_attr = c_pthread_mutexattr_t()
+		code = c_pthread_mutexattr_init(l.lock_attr)
+		code throws LockFail("c_pthread_mutexattr_init", code, "Call to underlying API failed")
+		c_pthread_mutexattr_settype(l.lock_attr, C_PTHREAD_MUTEX_RECURSIVE)
+		l.lock = c_pthread_mutex_t()
+		code = c_pthread_mutex_init(l.lock, l.lock_attr)
+		code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
+	}
+
+	doc Convert c_pthread_mutex_t to Str for displaying to humans.
+	F Str(cpm:c_pthread_mutex_t) "<c_pthread_mutex_t>"
+
+	doc Convert c_pthread_mutexattr_t to Str for displaying to humans.
+	F Str(cpma:c_pthread_mutexattr_t) "<c_pthread_mutexattr_t>"
 }
-
-TEST Lock().acquire(F() 1) == 1
-
-doc Initialize Lock. Creates and initializes PTHREAD_MUTEX_RECURSIVE pthread_mutex.
-F init(l:ReentrantLock) {
-	l.lock_attr = c_pthread_mutexattr_t()
-	code = c_pthread_mutexattr_init(l.lock_attr)
-	code throws LockFail("c_pthread_mutexattr_init", code, "Call to underlying API failed")
-	c_pthread_mutexattr_settype(l.lock_attr, C_PTHREAD_MUTEX_RECURSIVE)
-	l.lock = c_pthread_mutex_t()
-	code = c_pthread_mutex_init(l.lock, l.lock_attr)
-	code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
-}
-
-doc Convert c_pthread_mutex_t to Str for displaying to humans.
-F Str(cpm:c_pthread_mutex_t) "<c_pthread_mutex_t>"
-
-doc Convert c_pthread_mutexattr_t to Str for displaying to humans.
-F Str(cpma:c_pthread_mutexattr_t) "<c_pthread_mutexattr_t>"
 
 section "Range" {
 	doc A range
@@ -2272,84 +2727,76 @@ section "Range" {
 
 }
 
-# TODO: think about multi-valued results (say 10 hosts, 8 succeeded and 2 failed)
-# TODO: think about Argv cooperation. Maybe Failure is NoData and Success is FullBox?
-# === Syntactic sugar ============================
-
-doc Defines collector { ... collect(...) ... } behaviour for arrays
-doc a - Initial array
-doc body - The body after collector keyword and possible initial value, wrapped in a function
-doc body - "collector THIS_CODE" or "collector/my_init THIS_CODE"
-doc %RET - Constructed array
-doc %EX - items = collector {
-doc %EX -   collect(10)
-doc %EX -   for(i;2) collect(i)
-doc %EX -   collect(20)
-doc %EX - }
-doc %EX - echo(items)  # Outputs: [10,0,1,20]
-doc %EX -
-doc %EX - # Or start with few items:
-doc %EX - items = collector/[100,200] {
-doc %EX -   collect(10)
-doc %EX -   for(i;2) collect(i)
-doc %EX -   collect(20)
-doc %EX - }
-doc %EX - echo(items)  # Outputs: [100,200,10,0,1,20]
-F collector(a:Arr, body:Fun) {
-	body(F(elt) a.push(elt))
-	a
-}
-
-doc Defines collector { ... collect(...) ... } behaviour for hashes
-doc h - Initial hash
-doc body - The body after collector keyword and initial value, wrapped in a function
-doc body - "collector/{'my': 'hash'} THIS_CODE"
-doc %RET - Constructed array
-doc %EX - arr = [{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}]
-doc %EX - my_hash = collector/{}
-doc %EX - 	arr.each(F(elt) collect(elt.Name, elt.Value))
-doc %EX - echo(my_hash)  # Outputs: {n1=v1, n2=v2}
-F collector(h:Hash, body:Fun) {
-	body(F(k, v) h[k] = v)
-	h
-}
-
-doc Defines collector { ... collect(...) ... } behaviour for integers (summarizes collected items).
-doc n - Initial number
-doc body - The body after collector keyword and initial value, wrapped in a function
-doc body - "collector/100 THIS_CODE"
-doc %RET - Constructed array
-doc %EX - collector/0 { (1...10).each(collect) }  # 55
-F collector(n:Int, body:Fun) {
-	body(F(incr) n=n+incr)
-	n
-}
-
-block _ {
-	global collector
-	join_strings = join.Arr()[0]  # Performance hack: 18 sec -> 4.3 sec for 1M collectors
-
-	doc EXPERIMENTAL! Do not use!
-	F collector(s:Str, body:Fun) {
-		ret = [s]
-		body(ret.push(X))
-		ret.join_strings('')
+section "collector" {
+	doc Defines collector { ... collect(...) ... } behaviour for arrays
+	doc a - Initial array
+	doc body - The body after collector keyword and possible initial value, wrapped in a function
+	doc body - "collector THIS_CODE" or "collector/my_init THIS_CODE"
+	doc %RET - Constructed array
+	doc %EX - items = collector {
+	doc %EX -   collect(10)
+	doc %EX -   for(i;2) collect(i)
+	doc %EX -   collect(20)
+	doc %EX - }
+	doc %EX - echo(items)  # Outputs: [10,0,1,20]
+	doc %EX -
+	doc %EX - # Or start with few items:
+	doc %EX - items = collector/[100,200] {
+	doc %EX -   collect(10)
+	doc %EX -   for(i;2) collect(i)
+	doc %EX -   collect(20)
+	doc %EX - }
+	doc %EX - echo(items)  # Outputs: [100,200,10,0,1,20]
+	F collector(a:Arr, body:Fun) {
+		body(F(elt) a.push(elt))
+		a
 	}
+
+	doc Defines collector { ... collect(...) ... } behaviour for hashes
+	doc h - Initial hash
+	doc body - The body after collector keyword and initial value, wrapped in a function
+	doc body - "collector/{'my': 'hash'} THIS_CODE"
+	doc %RET - Constructed array
+	doc %EX - arr = [{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}]
+	doc %EX - my_hash = collector/{}
+	doc %EX - 	arr.each(F(elt) collect(elt.Name, elt.Value))
+	doc %EX - echo(my_hash)  # Outputs: {n1=v1, n2=v2}
+	F collector(h:Hash, body:Fun) {
+		body(F(k, v) h[k] = v)
+		h
+	}
+
+	doc Defines collector { ... collect(...) ... } behaviour for integers (summarizes collected items).
+	doc n - Initial number
+	doc body - The body after collector keyword and initial value, wrapped in a function
+	doc body - "collector/100 THIS_CODE"
+	doc %RET - Constructed array
+	doc %EX - collector/0 { (1...10).each(collect) }  # 55
+	F collector(n:Int, body:Fun) {
+		body(F(incr) n=n+incr)
+		n
+	}
+
+	block _ {
+		global collector
+		join_strings = join.Arr()[0]  # Performance hack: 18 sec -> 4.3 sec for 1M collectors
+
+		doc EXPERIMENTAL! Do not use!
+		F collector(s:Str, body:Fun) {
+			ret = [s]
+			body(ret.push(X))
+			ret.join_strings('')
+		}
+	}
+
+	TEST (collector/"a" collect("b")) == "ab"
 }
 
-TEST (collector/"a" collect("b")) == "ab"
-
-doc Compare to null
-doc %RET - false
-F ==(a:Null, b) false
-
-doc Compare to null
-doc %RET - false
-F ==(a, b:Null) false
-
-doc Compare to null
-doc %RET - true
-F ==(a:Null, b:Null) true
+section "Comparison to null" {
+	doc Compare to null
+	doc %RET - true
+	F ==(a:Null, b:Null) true
+}
 
 doc Run cleanup after successful execution of body or exception in body
 doc body - Main code to execute
@@ -2381,25 +2828,6 @@ F finally(body:Fun, cleanup:Fun) {
 TEST a=0; {1/1}.finally({a=10}) == 1 and a == 10
 TEST a=0; (try finally({1/0}, {a=10}) catch(e:DivisionByZero) "OK") == "OK" and a == 10
 TEST F f() block b { finally({ b.return(7) }, {8}) }; f() == 7
-
-# --- Hash ---
-
-doc Get hash key.
-doc %EX - h = {"a": 1}
-doc %EX - h.a  # 1, Same as h["a"]
-F .(h:Hash, field:Str) h[field]
-
-doc Set hash key.
-doc %EX - h = {"a": 1}
-doc %EX - h.a = 2  # 2, Same as h["a"] = 2
-doc %RET - v
-F .=(h:Hash, field:Str, v) h[field] = v
-
-doc Get hash value by key or null if it does not exist
-doc %EX - h = {"a": 1}
-doc %EX - h.get("a")  # 1
-doc %EX - h.get("b")  # null
-F get(h:Hash, k) get(h, k, null)
 
 # --- Arr ---
 
@@ -2460,7 +2888,7 @@ doc %EX - [1,2,3].get(5, 10)    # 10
 doc %EX - [11].get(-1)          # 11
 doc %EX - [10,20].get(-5, "X")  # "X"
 doc %RET - Any
-F get(a:Arr, idx:Int, dflt=null) if a.has_index(idx) then a[idx] else dflt
+F get(a:Arr, idx:Int, dflt=null) if a.has_index(idx) then a[idx] else dflt.Value(idx)
 
 TEST [1].get(0) == 1
 TEST [1].get(5) == null
@@ -2582,7 +3010,7 @@ TEST [1,2,3].map(X*4) == [4,8,12]
 
 F subset(smaller:Arr, larger:Arr) {
 	len(smaller) > len(larger) returns false
-	h = larger.only({A.len() > 10}, Set)
+	h = larger.when({A.len() > 10}, Set)
 	smaller.all(X in h)
 }
 
@@ -2686,7 +3114,7 @@ doc Filter out all values in a that are also in b
 doc %RET - Arr
 doc %EX - [1,2,3] - [5,6,1]  # [2,3]
 F -(a:Arr, b:Arr) {
-	h = b.only({A.len() > 10}, Set)
+	h = b.when({A.len() > 10}, Set)
 	a.filter(X not in h)
 }
 
@@ -2718,7 +3146,7 @@ F flatten(e:Eachable1) {
 	guard not(e is Int)
 	collector
 		e.each(F(x) {
-			assert(x is Eachable1 and x is not Int, 'flatten() elements must be Eachable1, excluding Int')
+			assert(x, AllOf(Eachable1, Not(Int)), InvalidArgument('flatten() elements must be Eachable1, excluding Int'))
 			x.each(collect)
 		})
 }
@@ -2770,7 +3198,7 @@ block u {
 		l = arr.len()
 		for(i=start; i<l; i+=1)
 			arr[i] =~ pattern returns i
-		dflt !== u returns dflt
+		dflt !== u returns Value(dflt)
 		warn("index() is returning null. In future, this will be an exception. You can change your call to index(..., dflt=null)")
 		null
 	}
@@ -2940,7 +3368,7 @@ block u {
 			index(arr, r.start, dflt=null)
 		}
 		if start is Null {
-			dflt !== u returns dflt
+			dflt !== u returns Value(dflt)
 			throw IndexNotFound("Array did not match PredRange (start)", arr, r)
 		}
 		end = if r.end is Null {
@@ -2949,15 +3377,16 @@ block u {
 			index(arr, r.end, start=start + Int(r.start is not Null and r.include_start.not()), dflt=null)
 		}
 		if end is Null {
-			dflt !== u returns dflt
+			dflt !== u returns Value(dflt)
 			throw IndexNotFound("Array did not match PredRange (end)", arr, r)
 		}
-		NumRange(start + Int(r.start is not Null and r.include_start.not()), end + Int(r.include_end))
+		NumRange(start + Int(r.start is not Null and r.include_start.not()), end + Int(r.end is not Null and r.include_end))
 	}
 }
 
 TEST { indexes([1,2,3,4], ((X==1)..(X==14))) }.assert(IndexNotFound)
 TEST indexes([1,2,3,4], ((X==1)..(X==14)), []) == []
+TEST indexes([0,1,2], Any...null).Hash() =~ {'start': 0, 'end': 3, 'include_start': true, 'include_end': false}
 
 doc Extract array elements between the element that matches r.start and the element that matches r.end .
 doc Starting and ending elements are optionally included, depending on r.include_start and r.include_end .
@@ -2994,13 +3423,13 @@ doc %RET - MatchResult
 F ~(arr:Arr, r:PredRange) {
 	i = indexes(arr, r, dflt=null)
 	i is Null returns MatchFailure(arr, r)
-	ret = MatchSuccess([arr[i]], r)
-	ret.named = {}
-	ret.positions = [i]
-	ret.whole = ret.matches[0]
-	ret.before = arr[0..i.start]
-	ret.after = arr[i.end..null]
-	ret
+	MatchSuccess([arr[i]], r)::{
+		A.named = {}
+		A.positions = [i]
+		A.whole = A.matches[0]
+		A.before = arr[0..i.start]
+		A.after = arr[i.end..null]
+	}
 }
 
 TEST a = %[a1 a2 b1 b2]; m = a ~ /^a/../^b/; m.matches == [['a2']] and m.before == ['a1'] and m.after == ['b1', 'b2']
@@ -3034,7 +3463,7 @@ TEST [10,11,12].limit(2) == [10,11]
 block _ {
 	global min, max
 	F most(e:Eachable1, f:Fun) {
-		guard e
+		not(e) throws InvalidArgument('min()/max()/most() require at least one element')
 		ret = e[0]
 		e.each(F(elt) if f(elt, ret) { ret = elt })
 		ret
@@ -3088,7 +3517,7 @@ F echo(x) {
 }
 
 # Built-in join() can only handle Str elements
-doc Join non-strings. Converts a elements to string first, then uses built-in join().
+doc Join non-strings. Converts elements to string first, then uses native join().
 doc Warning - behaviour subject to change!
 doc a - Array to join
 doc s - Delimiter
@@ -3244,7 +3673,7 @@ F ==(a:Hash, b:Hash) {
 }
 
 F subset(smaller:Hash, larger:Hash) {
-	not(len(smaller) <= len(larger)) returns false
+	len(smaller) > len(larger) returns false
 	smaller.all(F(k, v) k in larger and larger[k] == v)
 }
 
@@ -3254,15 +3683,6 @@ TEST subset({"a": 1, "b":2}, {"b": 3, "d": 4}) == false
 TEST subset({"a": 1}, {"a": 10}) == false
 
 # --- Functional ---
-
-doc Compose functions
-doc %RET - Fun f(g(...))
-doc %EX - F reject(h:Hash, predicate:Fun) h.filter(not + predicate)
-F +(f:Fun, g:Fun) {
-	F composed_function(*args) {
-		f(g(*args))
-	}
-}
 
 # Make it built in for speed?
 doc Iterate a Hash.
@@ -3296,7 +3716,9 @@ doc Checks whether all of the key-value pairs satisfies the predicate: predicate
 doc %RET - Bool
 F all(e:Eachable2, predicate:Fun) block b {
 	e.each(F(k, v) {
-		if not(predicate(k, v)) b.return(false)
+		if not(predicate(k, v)) {
+			b.return(false)
+		}
 	})
 	true
 }
@@ -3308,7 +3730,7 @@ doc Iterate a Hash.
 doc h - Hash to iterate
 doc cb - Function to call with successive keys
 doc %RET - h
-F eachk(h:Hash, cb:Fun) h.each({cb(A)})
+F eachk(h:Hash, cb:Fun) h.each(cb(X))
 
 TEST ret = []; {"a": 1, "b": 2}.eachk(ret.push(X)); ret == %[a b]
 
@@ -3316,7 +3738,7 @@ doc Iterate a Hash.
 doc h - Hash to iterate
 doc cb - Function to call with successive values
 doc %RET - h
-F eachv(h:Hash, cb:Fun) h.each({cb(B)})
+F eachv(h:Hash, cb:Fun) h.each(cb(Y))
 
 TEST ret = []; {"a": 1, "b": 2}.eachv(ret.push(X)); ret == %[1 2]
 
@@ -3446,6 +3868,28 @@ F rejectv(h:Eachable2, pattern=Bool.constructors) h.filterv(Not(pattern))
 TEST {"a1": 1, "a2": 2, "b1": 10}.rejectv(X>5) == {"a1": 1, "a2": 2}
 TEST {"yes": true, "no": false}.rejectv() == {"no": false}
 
+block _ {
+
+	F p(something:Eachable2, pattern, selector) {
+		[{}, {}]::{
+			something.each(F(k, v) (if selector(k, v) =~ pattern then A[0] else A[1])[k] = v)
+		}
+	}
+
+	global partitionk
+	F partitionk(something:Eachable2, pattern=Bool.constructors) p(something, pattern, F(k, v) k)
+
+	TEST p = {"abc": [1], "def": "X"}.partitionk(Str); p == [{"abc": [1], "def": "X"}, {}]
+
+	global partitionv
+	F partitionv(something:Eachable2, pattern=Bool.constructors) p(something, pattern, F(k, v) v)
+
+	TEST p = {"abc": [1], "def": "X"}.partitionv(Arr); p == [{"abc": [1]}, {"def": "X"}]
+
+}
+
+
+
 doc Count number of key-value pairs in Hash that satisfy the predicate.
 doc e - Something to check, typically a Hash
 doc predicate - Test function to be called with one key and one value at a time: predicate(k, v)
@@ -3476,6 +3920,45 @@ F sortv(h:Hash, lte:Fun=(<=)) h.Arr().sort({ lte(A[1], B[1]) }).Hash()
 TEST {"a": 1, "b": 10, "c": 5}.sortv() == {"a": 1, "c": 5, "b": 10}
 TEST {"a": 1, "b": 10, "c": 5}.sortv() != {"a": 1, "b": 10, "c": 5}
 
+section "fields()" {
+	doc Only keep fields matching the pattern.
+	doc Same as e.filterk(pattern).
+	doc In some other languages, similar functionality is called "project".
+	doc %EX - {"a": 1, "b": 2}.fields(AnyOf("a", "a2"))  # {"a": 1}
+	F fields(e:Eachable2, pattern) e.filterk(pattern)
+
+	doc Remove fields matching the pattern.
+	doc Same as e.fields(Not(AnyOf(n.pattern))).
+	doc In some other languages, similar functionality is called "project".
+	doc n - Not(Arr)
+	doc %EX - {"a": 1, "b": 2}.fields(Not(%[a c d]))  # {"b": 2}
+	F fields(e:Eachable2, n:Not) {
+		guard n.pattern is Arr
+		e.fields(Not(AnyOf(n.pattern)))
+	}
+
+	doc Same as e.fields(AnyOf(patterns))
+	doc In some other languages, similar functionality is called "project".
+	doc %EX - {"a": 1, "b": 2}.fields(["a", "a2"])  # {"a": 1}
+	F fields(e:Eachable2, patterns:Arr) e.fields(AnyOf(patterns))
+
+	doc Only keep specified fields in each element of e
+	doc In some other languages, similar functionality is called "project".
+	doc %EX - [{"a": 1, "b": 2}].fields(%[a])  # [{"a": 1}]
+	F fields(e:Eachable1, pat) {
+		e.map(F(elt) {
+			assert(elt, Eachable2, InvalidArgument('fields(Eachable1, pat) requires elements of Eachable1 to be Eachable2'))
+			elt.fields(pat)
+		})
+	}
+
+	TEST [{"a": 1, "b": 2}].fields(%[a]) == [{"a": 1}]
+	TEST [{"a": 1, "ab": 2}].fields([/a/]) == [{"a": 1, "ab": 2}]
+	TEST [{"a": 1, "b": 2}].fields(Not(%[a c d])) == [{"b": 2}]
+	TEST [{"a": 1, "ab": 2}].fields(Not([/a/])) == [{}]
+	TEST {[[]].fields("a")}.assert(InvalidArgument)
+}
+
 # --- Conversions ---
 
 doc Create a Hash from Arr of Arr[2]
@@ -3484,6 +3967,7 @@ doc %RET - Hash
 doc %EX - Hash([['a', 1], ['c', 3]])  # {'a': 1, 'c': 3}
 F Hash(arr:Arr) {
 	guard arr.all(F(x) x is Arr and len(x) == 2)
+	# Maybe (think performance): guard arr =~ Repeat([Any, Any])
 	collector/{}
 		arr.each(F(pair) {
 			collect(*pair)
@@ -3540,13 +4024,11 @@ TEST Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}], "Name",
 #       for example for converting back to Eachable1:
 doc %STATUS - experimental
 F Hash(e:Eachable1) {
-	guard e =~ AnyOf(Arr, ArrLike)  # Containers only
-	not(e) returns {}  # Was failing for NumRange
-	guard e.all(F(x) x is Eachable2 and len(x) == 2)
+	guard e =~ Repeat(AllOf(Eachable2, Transformed(len, 2)), 1..null)
 	k = v = null
 	pat = {
 		AnyOf(%[Id id K k Key key Name name OutputKey ParameterKey]) -> {k=A}: Any
-		AnyOf(%[V v Val val Value value OutputValue ParameterValue ]) -> {v=A}: Any
+		AnyOf(%[V v Val val Value value OutputValue ParameterValue]) -> {v=A}: Any
 	}
 	if not(e[0] =~ pat) {
 		throw InvalidArgument("Hash(Eachable1) did not find key/value keys in first element").set(element=e[0], pattern=pat)
@@ -3555,6 +4037,7 @@ F Hash(e:Eachable1) {
 }
 
 TEST Hash([{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}]) == {"n1": "v1", "n2": "v2"}
+TEST { Hash([{"XName": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}]) }.assert(InvalidArgument)
 
 
 doc Convert Hash into JSON compatible data structure - object
@@ -3563,7 +4046,7 @@ F JsonData(h:Hash) h.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
 # --- Misc ---
 
 doc Filter out specific key.
-doc Deprecated. Use rejectk().
+doc Deprecated. Use rejectk() or fields(Not(...)).
 doc e - Source
 doc without_k - The key to filter out
 doc %EX - {'a': 1, 'b': 2, 'c': 3}.without('a')  # {'b': 2, 'c': 3}
@@ -3657,7 +4140,7 @@ doc %EX - my_hash.dflt(k, []).push(elt)
 doc %RET - Hash value, the already-existed or new.
 F dflt(h:Hash, k, v) {
 	if k not in h {
-		h[k] = v
+		h[k] = v.Value(k)
 	}
 	h[k]
 }
@@ -3684,7 +4167,7 @@ doc If they key is not in the Hash, return dflt
 doc %EX - h = {}
 doc %EX - h.shift("a", 7)  # 7
 F shift(h:Hash, k, dflt) {
-	k not in h returns dflt
+	k not in h returns dflt.Value(k)
 	h[k]::{ del(h, k) }
 }
 
@@ -3694,330 +4177,239 @@ TEST h={}; h.shift("a", 7) == 7
 TEST h={"a": 1, "b": 2}; s = h.shift("a"); h == {"b": 2} and s == 1
 
 
-# === Box ========================================
+section "Box" {
 
-# Inspired by Option from Scala. http://www.scala-lang.org/api/2.12.x/scala/Option.html
+	# Inspired by Option from Scala. http://www.scala-lang.org/api/2.12.x/scala/Option.html
 
-doc Thrown when trying to get() a value from EmptyBox and no default value given.
-type BoxFail(Error)
+	doc Thrown when trying to get() a value from EmptyBox and no default value given.
+	type BoxFail(Error)
 
-doc A box which might (FullBox) or might not (EmptyBox) contain a value.
-doc Box is somewhat similar to Arr of zero (EmptyBox) or exactly one (FullBox) element.
-doc This analogy helps understanding each() and filter() operation.
-type Box(Eachable1)
+	doc A box which might (FullBox) or might not (EmptyBox) contain a value.
+	doc Box is somewhat similar to Arr of zero (EmptyBox) or exactly one (FullBox) element.
+	doc This analogy helps understanding each() and filter() operation.
+	type Box(Eachable1)
 
-	doc Represents presence of a value
-	doc val - The value
-	type FullBox(Box)
+		doc Represents presence of a value
+		doc val - The value
+		type FullBox(Box)
 
-	doc Represents absence of a value
-	type EmptyBox([Box, NoData])
+		doc Represents absence of a value
+		type EmptyBox([Box, NoData])
 
-doc Do not use directly!
-doc Helper constructor that throws InvalidArgument when
-doc FullBox is created with zero or more than one argument.
-F init(b:FullBox, *args) throw InvalidArgument("FullBox must be initialized with exactly one value")
+	doc Do not use directly!
+	doc Helper constructor that throws InvalidArgument when
+	doc FullBox is created with zero or more than one argument.
+	F init(b:FullBox, *args) throw InvalidArgument("FullBox must be initialized with exactly one value")
 
-doc FullBox constructor. Saves val into .val
-doc %EX - # Simplified code from the_one() method:
-doc %EX - ret = EmptyBox()
-doc %EX - something.each(F(elt) {
-doc %EX - 	if elt =~ pattern {
-doc %EX - 		ret throws ElementNotFound("the_one() had more than one match")
-doc %EX - 	}
-doc %EX - 	ret = FullBox(elt)
-doc %EX - })
-doc %EX - not(ret) throws ElementNotFound("the_one() had no matches")
-doc %EX - ret.val # Has the value
-F init(b:FullBox, val) b.val = val
+	doc FullBox constructor. Saves val into .val
+	doc %EX - # Simplified code from the_one() method:
+	doc %EX - ret = EmptyBox()
+	doc %EX - something.each(F(elt) {
+	doc %EX - 	if elt =~ pattern {
+	doc %EX - 		ret throws ElementNotFound("the_one() had more than one match")
+	doc %EX - 	}
+	doc %EX - 	ret = FullBox(elt)
+	doc %EX - })
+	doc %EX - not(ret) throws ElementNotFound("the_one() had no matches")
+	doc %EX - ret.val # Has the value
+	F init(b:FullBox, val) b.val = val
 
-doc Always true
-F Bool(fb:FullBox) true
+	doc Always true
+	F Bool(fb:FullBox) true
 
-doc Always false
-F Bool(eb:EmptyBox) false
+	doc Always false
+	F Bool(eb:EmptyBox) false
 
-doc Zero for FullBox and one for EmptyBox
-F ExitCode(b:Box) b.Bool().ExitCode()
+	doc Zero for FullBox and one for EmptyBox
+	F ExitCode(b:Box) b.Bool().ExitCode()
 
-doc Map FullBox value
-doc mapper - mapper to be called with the FullBox value
-doc %RET - FullBox with value returned by mapper
-doc %EX - Box(10).map(X*2)  # <FullBox val=20>
-F map(fb:FullBox, mapper:Fun) FullBox(mapper(fb.val))
+	doc Map FullBox value
+	doc mapper - mapper to be called with the FullBox value
+	doc %RET - FullBox with value returned by mapper
+	doc %EX - Box(10).map(X*2)  # <FullBox val=20>
+	F map(fb:FullBox, mapper:Fun) FullBox(mapper(fb.val))
 
-doc Do nothing
-doc %RET - eb
-doc %EX - EmptyBox().map(X*2)  # <EmptyBox>
-F map(eb:EmptyBox, mapper:Fun) eb
+	doc Do nothing
+	doc %RET - eb
+	doc %EX - EmptyBox().map(X*2)  # <EmptyBox>
+	F map(eb:EmptyBox, mapper:Fun) eb
 
-doc Call cb with the value of the FullBox
-doc %RET - fb
-doc %EX - Box(10).each(echo)  # Output: 10
-F each(fb:FullBox, cb:Fun) { cb(fb.val); fb }
+	doc Call cb with the value of the FullBox
+	doc %RET - fb
+	doc %EX - Box(10).each(echo)  # Output: 10
+	F each(fb:FullBox, cb:Fun) { cb(fb.val); fb }
 
-doc Do nothing
-doc %RET - eb
-doc %EX - Box(null).each(echo)  # No output
-F each(eb:EmptyBox, cb:Fun) eb
+	doc Do nothing
+	doc %RET - eb
+	doc %EX - Box(null).each(echo)  # No output
+	F each(eb:EmptyBox, cb:Fun) eb
 
-# each() allows any()
-TEST Box(5).any(Int)
-TEST EmptyBox().any(Str) == false
-TEST EmptyBox().any(Int) == false
+	# each() allows any()
+	TEST Box(5).any(Int)
+	TEST EmptyBox().any(Str) == false
+	TEST EmptyBox().any(Int) == false
 
-# each() allows none()
-TEST Box(5).none(Int) == false
-TEST Box(5).none(Str)
-TEST EmptyBox().none(Int)
+	# each() allows none()
+	TEST Box(5).none(Int) == false
+	TEST Box(5).none(Str)
+	TEST EmptyBox().none(Int)
 
-doc Conditionally convert FullBox to EmptyBox.
-doc pattern - Test function or anything else acceptable by =~ to be called with the value in the FullBox, defaults to Bool.constructors
-doc %RET - Box. fb if pattern succeeds, EmptyBox if not.
-doc %EX - Box(10).filter(X>5)   # <FullBox val=10>
-doc %EX - Box(10).filter(X>20)  # <EmptyBox>
-F filter(fb:FullBox, pattern=Bool.constructors) {
-	# Can not use "...super(fb, pattern) or EmptyBox()" because filter(Eachable1, ...) can't create FullBox
-	# ("FullBox must be initialized with exactly one value") on order to push() into it
-	fb.val =~ pattern returns fb
-	EmptyBox()
+	doc Conditionally convert FullBox to EmptyBox.
+	doc pattern - Test function or anything else acceptable by =~ to be called with the value in the FullBox, defaults to Bool.constructors
+	doc %RET - Box. fb if pattern succeeds, EmptyBox if not.
+	doc %EX - Box(10).filter(X>5)   # <FullBox val=10>
+	doc %EX - Box(10).filter(X>20)  # <EmptyBox>
+	F filter(fb:FullBox, pattern=Bool.constructors) {
+		# Can not use "...super(fb, pattern) or EmptyBox()" because filter(Eachable1, ...) can't create FullBox
+		# ("FullBox must be initialized with exactly one value") on order to push() into it
+		fb.val =~ pattern returns fb
+		EmptyBox()
+	}
+
+	TEST FullBox(null).filter() == EmptyBox()
+
+	# Done by filter(Eachable1)
+	TEST EmptyBox().filter() == EmptyBox()
+
+	doc Get FullBox value
+	doc %RET - Any
+	doc %EX - Box(10).get()  # 10
+	F get(fb:FullBox, dflt=null) fb.val
+
+	doc Get EmptyBox value. Always throws BoxFail.
+	F get(eb:EmptyBox) throw BoxFail("Can not get value from EmptyBox")
+
+	TEST { EmptyBox().get() }.assert(BoxFail)
+
+	doc Get EmptyBox value
+	doc %RET - dflt
+	F get(eb:EmptyBox, dflt) dflt.Value()
+
+	TEST EmptyBox().get(10) == 10
+	TEST EmptyBox().get({5+5}) == 10
+
+	doc Length of FullBox
+	doc %RET - 1
+	F len(fb:FullBox) 1
+
+	doc Length of EmptyBox
+	doc %RET - 0
+	F len(eb:EmptyBox) 0
+
+	doc Convert anything to Box (always FullBox)
+	doc x - value to enclose in a box
+	doc %RET - FullBox with given value
+	doc %EX - Box(7).map(X*2).get()  # 14
+	F Box(x) FullBox(x)
+
+	doc Convert Box with no arg to EmptyBox
+	doc %RET - EmptyBox
+	doc %EX - Box() == EmptyBox()
+	doc %EX - Box().get(10)  # 10
+	doc %EX - Box().map(X*2).get()  # InvalidArgument exception (in "get()")
+	F Box() EmptyBox()
+
+	TEST Box().get(10) == 10
+	TEST Box() == EmptyBox()
+
+	doc Convert null to Box (always EmptyBox)
+	doc %RET - EmptyBox
+	doc %EX - Box(null) == EmptyBox()
+	doc %EX - Box(null).map(X*2).get()  # InvalidArgument exception (in "get()")
+	F Box(n:Null) EmptyBox()
+
+	TEST Box(null) == EmptyBox()
+
+	doc Convert array value indexed by the given index
+	doc idx - key to look in hash
+	doc %RET - Box. FullBox if the array has the element indexed by idx, EmptyBox otherwise.
+	doc %EX - my_array = [10, 20]
+	doc %EX - my_array.Box(1).map(X*2).each(echo)
+	doc %EX - # output: 40
+	doc %EX - my_array.Box(5).map(X*2).each(echo)
+	doc %EX - # no output
+	F Box(a:Arr, idx:Int) if a.has_index(idx) then FullBox(a[idx]) else EmptyBox()
+
+	doc Convert hash value indexed by the given key to a Box
+	doc k - key to look in hash
+	doc %RET - Box. FullBox if the hash has the element referenced by k, EmptyBox otherwise.
+	doc %EX - my_hash = {"a": 10, "b": 300}
+	doc %EX - my_hash.Box("a").map(X*2).each(echo)
+	doc %EX - # output: 20
+	doc %EX - my_hash.Box("nope").map(X*2).each(echo)
+	doc %EX - # no output
+	F Box(h:Hash, k) {
+		k not in h returns EmptyBox()
+		FullBox(h[k])
+	}
+
+	doc Do nothing
+	doc %RET - fb
+	doc %EX - my_array = [10, 20]
+	doc %EX - # dflt on FullBox has no effect
+	doc %EX - my_array.Box(1).dflt(100).map(X*2).each(echo) # HERE
+	doc %EX - # output: 40
+	doc %EX - # dflt on EmptyBox creates FullBox with the given value
+	doc %EX - my_array.Box(5).dflt(100).map(X*2).each(echo)
+	doc %EX - # output: 200
+	F dflt(fb: FullBox, x) fb
+
+	doc Wrap x in a Box
+	doc %RET - FullBox with the value x
+	doc %EX - my_array = [10, 20]
+	doc %EX - # dflt on FullBox has no effect
+	doc %EX - my_array.Box(1).dflt(100).map(X*2).each(echo)
+	doc %EX - # output: 40
+	doc %EX - # dflt on EmptyBox creates FullBox with the given value
+	doc %EX - my_array.Box(5).dflt(100).map(X*2).each(echo) # HERE
+	doc %EX - # output: 200
+	F dflt(eb: EmptyBox, x) FullBox(x.Value())
+
+	doc Compare boxes. Empty boxes and boxes with same content are considered to be equal.
+	doc %RET - Bool
+	doc %EX - EmptyBox() == EmptyBox()
+	doc %EX - EmptyBox() != FullBox(1)
+	doc %EX - FullBox(1) == FullBox(1)
+	doc %EX - FullBox(1) != FullBox(2)
+	F ==(b1:Box, b2:Box) {
+		# Boxes comparison stolen from
+		# http://learnyouahaskell.com/making-our-own-types-and-typeclasses
+		# "instance Eq (Maybe m) where"
+		b1 is EmptyBox and b2 is EmptyBox returns true
+		b1 is FullBox and b2 is FullBox and b1.val == b2.val returns true
+		false
+	}
+
+	TEST EmptyBox() == EmptyBox()
+	TEST EmptyBox() != FullBox(1)
+	TEST FullBox(1) == FullBox(1)
+	TEST FullBox(1) != FullBox(2)
+
+	doc Convert EmptyBox into JSON compatible data structure - null
+	F JsonData(eb:EmptyBox) null
+
+	doc Convert FullBox into JSON compatible data structure - the contents of the box
+	F JsonData(fb:FullBox) fb.get().JsonData()
 }
 
-TEST FullBox(null).filter() == EmptyBox()
+section "Results" {
 
-# Done by filter(Eachable1)
-TEST EmptyBox().filter() == EmptyBox()
+	doc Results, an array-like of Result elements
+	type Results(ArrLike)
 
-doc Get FullBox value
-doc %RET - Any
-doc %EX - Box(10).get()  # 10
-F get(fb:FullBox, dflt=null) fb.val
+		F Str(r:Results) "<${r.Type().name} ${r.group(F(x) x.Type().name).mapv(len).map("$X:$Y").join(" ")}>"
 
-doc Get EmptyBox value. Always throws BoxFail.
-F get(eb:EmptyBox) throw BoxFail("Can not get value from EmptyBox")
+	type ResultsException(Error)
+		doc ResultsException where only failures are stored
+		type FailuresException(ResultsException)
 
-TEST { EmptyBox().get() }.assert(BoxFail)
-
-doc Get EmptyBox value
-doc %RET - dflt
-F get(eb:EmptyBox, dflt) dflt
-
-TEST EmptyBox().get(10) == 10
-
-doc Length of FullBox
-doc %RET - 1
-F len(fb:FullBox) 1
-
-doc Length of EmptyBox
-doc %RET - 0
-F len(eb:EmptyBox) 0
-
-doc Convert anything to Box (always FullBox)
-doc x - value to enclose in a box
-doc %RET - FullBox with given value
-doc %EX - Box(7).map(X*2).get()  # 14
-F Box(x) FullBox(x)
-
-doc Convert Box with no arg to EmptyBox
-doc %RET - EmptyBox
-doc %EX - Box() == EmptyBox()
-doc %EX - Box().get(10)  # 10
-doc %EX - Box().map(X*2).get()  # InvalidArgument exception (in "get()")
-F Box() EmptyBox()
-
-TEST Box().get(10) == 10
-TEST Box() == EmptyBox()
-
-doc Convert null to Box (always EmptyBox)
-doc %RET - EmptyBox
-doc %EX - Box(null) == EmptyBox()
-doc %EX - Box(null).map(X*2).get()  # InvalidArgument exception (in "get()")
-F Box(n:Null) EmptyBox()
-
-TEST Box(null) == EmptyBox()
-
-doc Convert array value indexed by the given index
-doc idx - key to look in hash
-doc %RET - Box. FullBox if the array has the element indexed by idx, EmptyBox otherwise.
-doc %EX - my_array = [10, 20]
-doc %EX - my_array.Box(1).map(X*2).each(echo)
-doc %EX - # output: 40
-doc %EX - my_array.Box(5).map(X*2).each(echo)
-doc %EX - # no output
-F Box(a:Arr, idx:Int) if a.has_index(idx) then FullBox(a[idx]) else EmptyBox()
-
-doc Convert hash value indexed by the given key to a Box
-doc k - key to look in hash
-doc %RET - Box. FullBox if the hash has the element referenced by k, EmptyBox otherwise.
-doc %EX - my_hash = {"a": 10, "b": 300}
-doc %EX - my_hash.Box("a").map(X*2).each(echo)
-doc %EX - # output: 20
-doc %EX - my_hash.Box("nope").map(X*2).each(echo)
-doc %EX - # no output
-F Box(h:Hash, k) {
-	k not in h returns EmptyBox()
-	FullBox(h[k])
-}
-
-doc Do nothing
-doc %RET - fb
-doc %EX - my_array = [10, 20]
-doc %EX - # dflt on FullBox has no effect
-doc %EX - my_array.Box(1).dflt(100).map(X*2).each(echo) # HERE
-doc %EX - # output: 40
-doc %EX - # dflt on EmptyBox creates FullBox with the given value
-doc %EX - my_array.Box(5).dflt(100).map(X*2).each(echo)
-doc %EX - # output: 200
-F dflt(fb: FullBox, x) fb
-
-doc Wrap x in a Box
-doc %RET - FullBox with the value x
-doc %EX - my_array = [10, 20]
-doc %EX - # dflt on FullBox has no effect
-doc %EX - my_array.Box(1).dflt(100).map(X*2).each(echo)
-doc %EX - # output: 40
-doc %EX - # dflt on EmptyBox creates FullBox with the given value
-doc %EX - my_array.Box(5).dflt(100).map(X*2).each(echo) # HERE
-doc %EX - # output: 200
-F dflt(eb: EmptyBox, x) FullBox(x)
-
-doc Compare boxes. Empty boxes and boxes with same content are considered to be equal.
-doc %RET - Bool
-doc %EX - EmptyBox() == EmptyBox()
-doc %EX - EmptyBox() != FullBox(1)
-doc %EX - FullBox(1) == FullBox(1)
-doc %EX - FullBox(1) != FullBox(2)
-F ==(b1:Box, b2:Box) {
-	# Boxes comparison stolen from
-	# http://learnyouahaskell.com/making-our-own-types-and-typeclasses
-	# "instance Eq (Maybe m) where"
-	b1 is EmptyBox and b2 is EmptyBox returns true
-	b1 is FullBox and b2 is FullBox and b1.val == b2.val returns true
-	false
-}
-
-TEST EmptyBox() == EmptyBox()
-TEST EmptyBox() != FullBox(1)
-TEST FullBox(1) == FullBox(1)
-TEST FullBox(1) != FullBox(2)
-
-doc Convert EmptyBox into JSON compatible data structure - null
-F JsonData(eb:EmptyBox) null
-
-doc Convert FullBox into JSON compatible data structure - the contents of the box
-F JsonData(fb:FullBox) fb.get().JsonData()
-
-# === Result =====================================
-
-doc Thrown by get(Failure) as it has no value to get
-type ResultFail(Error)
-
-
-
-doc Results, an array-like of Result elements
-type Results(ArrLike)
-
-	F Str(r:Results) "<${r.Type().name} ${r.group(F(x) x.Type().name).mapv(len).map("$X:$Y").join(" ")}>"
-
-type ResultsException(Error)
-	doc ResultsException where only failures are stored
-	type FailuresException(ResultsException)
-
-F init(re:ResultsException, msg:Str, results:Results) {
-	super(re, msg)
-	re.set('results', results)
-}
-
-doc Runs the computation and wraps the result: a value is wrapped in Success and an exception is wrapped in Failure.
-doc %RET - Success or Failure
-F Result(fun:Fun) {
-	try {
-		Success(fun())
-	} catch(e) {
-		Failure(e)
+	F init(re:ResultsException, msg:Str, results:Results) {
+		super(re, msg)
+		re.set('results', results)
 	}
 }
 
-doc Initialize Success with the given value.
-F init(s:Success, v=null) s.val = v
 
-doc Initialize Failure with the given value.
-F init(f:Failure, e:Exception) f.val = e
-
-doc Gets wrapped value
-doc %RET - Any
-doc %EX - { 1 / 10 }.Result().get()  # 0
-F get(s:Success) s.val
-
-doc Throws ResultFail
-doc %EX - { 1 / 0 }.Result().get()  # ResultFail exception
-F get(f:Failure) {
-	throw ResultFail("Can not get value of Failure", f.val)
-}
-
-doc Gets wrapped value
-doc %RET - Any
-doc %EX - { 1 / 10 }.Result().get(100)  # 0
-F get(s:Success, dflt) s.val
-
-doc Returns dflt
-doc %EX - { 1 / 0 }.Result().get(100)  # 100
-F get(f:Failure, dflt) dflt
-
-doc Run fun with wrapped value.
-F each(s:Success, fun:Fun) {
-	fun(s.get())
-	s
-}
-
-doc Run fun with wrapped value. If exception is thrown, Failure is returned; otherwise Success with new value is returned.
-doc %RET - Result
-F map(s:Success, fun:Fun) Result({ fun(s.get()) })
-
-doc No-op, returns f
-doc %RET - f
-F each(f:Failure, fun:Fun) f
-
-doc No-op, returns f
-doc %RET - f
-F map(f:Failure, fun:Fun) f
-
-doc Check whether wrapped value matches the pattern.
-doc %RET - s or Failure
-doc %EX - Success(10).filter(X>5)   # <Success val=10>
-doc %EX - Success(10).filter(X>15)  # <Failure val=<ResultFail ...>>
-F filter(s:Success, pattern=Bool.constructors) {
-	s.val =~ pattern returns s
-	Failure(ResultFail("Success filtered out, resulting Failure").set('pattern', pattern))
-}
-
-TEST Result({100}).filter() == Success(100)
-
-doc No-op, returns f
-doc %RET - f
-doc %EX - Failure("blah").filter(X>5)  # <Failure val=blah>
-F filter(f:Failure, pattern=Bool.constructors) f
-
-TEST Result({1/0}).filter() is Failure
-
-doc Convert Success to Bool (true)
-doc %RET - true
-F Bool(s:Success) true
-
-doc Convert Failure to Bool (false)
-doc %RET - false
-F Bool(f:Failure) false
-
-doc EXPERIMENTAL! Do not use!
-F ExitCode(r:Result) r.Bool().ExitCode()
-
-TEST {read("/etc/passwd")}.Result() is Success
-TEST {read("NO-SUCH-FILE")}.Result() is Failure
-TEST Success(10).map(X*2).get() == 20
-TEST { { throw Error("xx") }.Result().map(X*2).get() }.assert(ResultFail)
-
-doc Convert Success into JSON compatible data structure - the value of the computation
-F JsonData(s:Success) s.get().JsonData()
 
 # === Diff =======================================
 
@@ -4044,14 +4436,19 @@ type Presence
 		mc.deeper({
 			x.each_idx_val(F(idx, item) {
 				if (=~)(item, p.val, mc.set_last_path_element(idx)) {
-					b.return(true)
+					if p.val is not Branch {
+						b.return(true)
+					}
 				}
 			})
 		})
+		p.val is Branch returns true
 		false
 	}
 
 	TEST [1,2,3] =~ Present(3)
+	TEST (collector/0 [1,2,3, "a"] =~ Present(Branch(Int -> collect(X)))) == 6
+	TEST (collector/0 [1,2,3, "a"] =~ Present(Int -> collect(X))) == 1
 
 	doc Checks element absence.
 	doc %RET - Bool
@@ -4059,6 +4456,19 @@ type Presence
 	F =~(x, a:Absent, mc:MatchContext) not((=~)(x, Present(a.val), mc))
 
 	TEST [1,2,3] =~ Absent(0)
+
+	doc Ensure a value is present.
+	doc Does e.push(p.val) conditionally.
+	doc %EX - [1,2].ensure(Present(3)) == [1,2,3]
+	doc %EX - [1,2].ensure(Present(2)) == [1,2]
+	F ensure(e:Eachable1, p:Present) e::{
+		if p.val not in A {
+			A.push(p.val)
+		}
+	}
+
+	TEST [1,2].ensure(Present(3)) == [1,2,3]
+	TEST [1,2].ensure(Present(2)) == [1,2]
 
 
 doc Internal method. Please do not use.
@@ -4446,8 +4856,7 @@ section "Strings and characters" {
 	doc Split the string by delimiter and return the last part
 	doc %RET - Str
 	F before_first(s:Str, delim:Str) {
-		p = s.pos(delim)
-		p is Null throws InvalidArgument("Delimiter not found in before_first()").set(val=s, delim=delim)
+		p = s.pos(delim).assert(Not(null), InvalidArgument("Delimiter not found in before_first()").set(val=s, delim=delim))
 		s[0..p]
 	}
 
@@ -4457,13 +4866,14 @@ section "Strings and characters" {
 	doc Split the string by delimiter and return the last part
 	doc %RET - Str
 	F after_last(s:Str, delim:Str) {
-		# s.split(delim)[-1]
-		p = s.pos(delim)
-		p is Null throws InvalidArgument("Delimiter not found in after_last()").set(val=s, delim=delim)
-		s[(p+len(delim))..null]
+		# TODO: something more efficient
+		parts = s.split(delim)
+		parts.len() < 2 throws InvalidArgument("Delimiter not found in after_last()").set(val=s, delim=delim)
+		parts[-1]
 	}
 
 	TEST "a:b".after_last(":") == "b"
+	TEST "a:b:c".after_last(":") == "c"
 	TEST {"a:b".after_last("*")}.assert(InvalidArgument)
 
 	doc Trim whitespace
@@ -4483,7 +4893,7 @@ section "Strings and characters" {
 	doc %EX - Str("x", 3)  # 'x  '
 	doc %EX - Str("x",-3)  # '  x'
 	F Str(s:Str, target_width:Int, ch:Str=' ') {
-		assert(len(ch) == 1)
+		assert(len(ch), 1, InvalidArgument("ch must be an Str of length 1"))
 		l = s.len()
 		pad_on_left = target_width < 0
 		if pad_on_left {
@@ -4614,6 +5024,7 @@ section "Strings and characters" {
 
 	doc Map a string, character by character.
 	doc %EX - "abcd".mapo(F(x) if x == "b" then "X" else x)  # "aXcd"
+	doc %EX - "abcd".mapo(X.when("b", "*"))  # "a*cd"
 	doc %RET - Str
 	F mapo(s:Str, mapper:Fun) s.map(mapper).join('')
 
@@ -4672,7 +5083,7 @@ section "Strings and characters" {
 			m = (~)(haystack, needle, 0)
 			if not(m) {
 				if collect_unmatched collect(haystack)
-				return null
+				return
 			}
 			start_offset = m.positions[0].start
 			next_offset = m.positions[0].end
@@ -4704,8 +5115,9 @@ section "Strings and characters" {
 
 	TEST m = (~~)("abcbe", "b", true); m.len() == 5 and m[[0,2,4]] == %[a c e] and m[[1,3]].all(MatchSuccess)
 
+	# TODO: dst.Value()
 	doc Replace all occurrences of src with dst in s
-	F replace(s:Str, src:Str, dst:Str) (~~)(s, src, true).map(only(MatchSuccess, {dst})).join('')
+	F replace(s:Str, src:Str, dst:Str) (~~)(s, src, true).map(X.when(MatchSuccess, dst)).join('')
 
 	TEST "x10ab20c30y".replace("0", "X") == "x1Xab2Xc3Xy"
 
@@ -4833,6 +5245,7 @@ section "Thread" block _ {
 	doc Creates and runs a thread. The code that the created thread runs is f, which is passed arg.
 	F init(t:Thread, name:Str, f:Fun, arg) {
 		t.id = name
+		t.do_print_exception = true
 		debug("process", "Creating thread ${t.id}")
 		thread_attr = c_pthread_attr_t()
 		c_pthread_attr_init(thread_attr)
@@ -4841,14 +5254,20 @@ section "Thread" block _ {
 			# might have been removed already, so passing t via the argument
 			Thread.local.thread = t_arg[0]
 			debug("process", "Thread set up done, will run thread code")
-			f(t_arg[1])
+			try {
+				f(t_arg[1])
+			} catch(e:Exception) {
+				if t.do_print_exception {
+					print_exception(e)
+				}
+				throw e
+			}
 		}
-		create_result = c_pthread_create(thread_attr, thread_setup_wrapper, [t, arg])
-		code = create_result[0]
-		if code {
-			throw ThreadCreateFail("Failed to c_pthread_create").set('code', code)
-		}
-		t.thread = create_result[1]
+
+		c_pthread_create(thread_attr, thread_setup_wrapper, [t, arg]).apply(F(code, thread) {
+			code throws ThreadCreateFail("Failed to c_pthread_create").set('code', code)
+			t.thread = thread
+		})
 	}
 
 	doc Creates and runs a thread. The code that the created thread runs is f, which is passed arg.
@@ -4951,7 +5370,7 @@ section "Thread" block _ {
     }
 
     TEST e=100; e.pmap(2, X*2) == e.map(X*2)
-    # TEST try { [1,0,2].pmap(10 / X) } catch(e:ResultsException) { (e.results =~ [Success, Failure, Success]) and e.results[1].has("input") } # To investigate: stack overflow when dealing with e.results
+    TEST try { [1,0,2].pmap(10 / X) } catch(e:ResultsException) { (e.results =~ [Success, Failure, Success]) }
 
 	doc Run cb in n parallel threads. Each thread runs one cb but this might change in future (preserving the total n calls to cb).
 	F ptimes(n:Int, cb:Fun) {
@@ -4972,6 +5391,9 @@ section "Thread" block _ {
 
 	TEST Set(1..10).pfilter(X>3) == Set(1..10).filter(X>3)
 
+	# TODO: Decide what to do with this.
+	#   * It is not parallel filter. It's parallel map() followed by filter.
+	#   * Pattern is not a pattern, it's a callback
 	doc Parallel filter. Typcally should be used with "heavy" pattern such as SSH.
 	doc %EX - Set(1..10).pfilter(2, X>3)  # <Set 4, 5, 6, 7, 8, 9>
 	doc %RET - Of same type as e
@@ -5071,12 +5493,8 @@ section "Logging and status reporting" {
 		doc TODO: Timestamps? Timestamps acquiring might not be safe after fork before exec.
 		F debug(facility:Str, str_or_producer) {
 			if facility in DEBUG or '*' in DEBUG {
-				s = if str_or_producer is Fun {
-					str_or_producer()
-				} else {
-					str_or_producer
-				}
-				echo(stdlib_error_fd, "[DEBUG $facility ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] $s")
+				s = str_or_producer.Value()
+				echo(stdlib_error_fd, "[DEBUG ${Time() tor '-'} ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()} $facility] $s")
 			}
 		}
 
@@ -5087,7 +5505,7 @@ section "Logging and status reporting" {
 	doc %EX - # Approximate output on stderr:
 	doc %EX - # [ERROR 2018-01-01 00:00:00 YOUR_TZ] Failed to read configuration file. Will clean up and exit now.
 	F error(s:Str) {
-		echo(stdlib_error_fd, "[ERROR ${Time()}] $s")
+		echo(stdlib_error_fd, "[ERROR ${Time()} ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] $s")
 		maybe_print_stacktrace('NGS_ERROR_BACKTRACE', '[ERROR BACKTRACE]')
 	}
 
@@ -5154,7 +5572,7 @@ section "Path" {
 		doc Represents a block device in a file system (S_IFBLK)
 		type BlockDevice(Path) # S_IFBLK
 		doc Represents a directory in a file system (S_IFDIR)
-		type Dir(Path)         # S_IFDIR
+		type Dir([Path, Eachable1])         # S_IFDIR
 			doc Represents a temporary directory. Automatically removed when the script exits.
 			type TmpDir([Dir, TmpFsObj])
 		doc Represents a character device in a file system (S_IFCHR)
@@ -5231,7 +5649,7 @@ section "Path" {
 	doc %EX - Path(".")  # <Path path=.>
 	doc %EX - Path(".", true)  # <Dir path=.>
 	doc %EX - ``find tmp/v8``.map(Path(X, true)).map(Type).name.Stats()  # <Stats: {Dir=287, File=9220}>
-	F Path(s:Str, subtype=false) Path().set('path', s).only({subtype}, specific)
+	F Path(s:Str, subtype=false) Path().set('path', s).when({subtype}, specific)
 
 	doc Path constructor
 	doc s - path
@@ -5331,6 +5749,14 @@ section "Path" {
 	doc %EX - Path("tmp") / "v8"  # <Path path=tmp/v8>
 	F /(a:Path, b:Str) Path(a.path / b)
 
+	doc Concatenate
+	doc %RET - Path
+	F +(a:Path, b:Str) Path(a.path + b)
+
+	doc Concatenate
+	doc %RET - Path
+	F +(a:Str, b:Path) Path(a + b.path)
+
 	type DirFail(CError)
 
 	# TODO: recode after https://github.com/ngs-lang/ngs/issues/45 is solved
@@ -5378,6 +5804,20 @@ section "Path" {
 	doc Same as dir(dirname.path, *args)
 	F dir(dirname:Path, *args, **kwargs) dir(dirname.path, *args, **kwargs)
 
+	doc Call cb for each entry in the directory with a subtype of Path as an argument
+	doc %RET - d
+	F each(d:Dir, cb:Fun) dir(d.path, cb, subtype=true)
+
+	doc Filter entries in d
+	doc %RET - Arr
+	doc %EX - parent_dir.filter(Dir).each(F(sub_dir) echo(sub_dir))
+	F filter(d:Dir, pattern) d.Arr().filter(pattern)
+
+	# XXX: might not be correct on all platforms
+	TEST Dir("/").filter(Dir).path.any(AnyOf("/var", "/etc", "/bin"))
+
+	# TEST Dir("/").filter(Dir).any({"path": AnyOf("/var", "/etc", "/bin")})
+
 	doc Same as a.path > b.path
 	F '>'(a:Path, b:Path) a.path > b.path
 
@@ -5424,8 +5864,7 @@ section "Path" {
 
 	doc Creates temporary file using `mktemp` and arranges deletion of the file upon exit from the NGS script.
 	F init(t:TmpFsObj, cleanup_policy:CleanupPolicy=RemoveCleanupPolicy()) {
-		assert(t, {'path': Str}, 'init(TmpFsObj, ...) expects path to be set and to be a string')
-		assert(t.path, 'init(TmpFsObj, ...) expects path to be non-empty string')
+		assert(t, {'path': AllOf(Str, Bool.constructors)}, InvalidArgument('init(TmpFsObj, ...) expects path to be non-empty string'))
 		t.fd = null
 		t.cleanup_policy = cleanup_policy
 		debug("file", "Created ${t.Type().name} at ${t.path}")
@@ -5476,7 +5915,7 @@ section "Path" {
 
 	doc Decode Path and its subtypes
 	doc %RET - instance of Path or a subtype.
-	F decode(s:Str, p) {
+	F decode(s:Str, p:Type) {
 		guard p <= Path
 		p(s)
 	}
@@ -5526,6 +5965,8 @@ TEST assert(Program('ls')) == Program('ls')
 
 doc EXPERIMENTAL!
 F Arg(p:Program) p.name
+
+F Str(p:Program) p.name
 
 F init(pp:ProcessesPipeline, cp:CommandsPipeline) pp.set(
 	cp = cp
@@ -5676,11 +6117,11 @@ type PipeCreateFail(CError)
 doc Pipe constructor. Create UNIX pipe using PIPE(2). Throws PipeCreateFail if pipe can not be created.
 doc %EX - p = Pipe()
 F init(pipe:Pipe) {
-	result = c_pipe()
-	# result: [result_code, read_end, write_end]
-	result[0] != 0 throws PipeCreateFail("Failed to create Pipe")
-	pipe.read_fd = result[1]
-	pipe.write_fd = result[2]
+	c_pipe().apply(F(status, read_fd, write_fd) {
+		assert(status, 0, PipeCreateFail("Failed to create Pipe"))
+		pipe.read_fd = read_fd
+		pipe.write_fd = write_fd
+	})
 	debug("file", "${pipe.Type().name} created pipe with read_fd=${pipe.read_fd} and write_fd=${pipe.write_fd}")
 }
 
@@ -5796,6 +6237,7 @@ doc f - Closed File
 doc cb - function to call with successive lines from the file
 F lines(f:File, cb:Fun) {
 	f.open('r')
+	# TODO: finally() should be moved to a new method open(f:File, flags:Str, cb:Fun)
 	finally(
 		body = {
 			f.fd.read().lines(cb)
@@ -6067,10 +6509,10 @@ F wait(p:Process) {
 	p.exit_signal = C_WTERMSIG(w[1])
 	finished_ok(p) returns p
 	message = collector/Lines() {
-		argv0 = ("'" + try p.command.argv[0] + "'") tor '(with unknown name)'
+		argv0 = ("'" + (try p.command.argv[0].Str()) + "'")
 		collect("Executing external process ${argv0} failed")
 		collect("Executable was found at ${p.executable}")
-		collect("Command: ${p.command.argv.map(escape_bash).join(' ') tor '(unavailable)'}")
+		collect("Command: ${p.command.argv.map(Str).map(escape_bash).join(' ') tor '(unavailable)'}")
 		if p.exit_code is not Null {
 			collect("Command exited with code: ${p.exit_code}")
 		}
@@ -6156,7 +6598,7 @@ doc %EX - Argv({Repeat("--repeat"): ["a", "b"]})               # ["--repeat", "a
 doc %EX - Argv({"-a1": [], "-a2": [1,2,3]})                    # ["-a2", 1, 2, 3]
 F Argv(h:Hash) {
 	collector
-		h.rejectv(NoData).mapv(only(Box, get)).each(F(k, v) {
+		h.rejectv(NoData).mapv(X.when(Box, get)).each(F(k, v) {
 			if k is Arr {
 				ematch v {
 					Bool {
@@ -6175,7 +6617,7 @@ F Argv(h:Hash) {
 			}
 
 			if k is Repeat {
-				assert(k, {'pattern': Str, 'count': NumRange }, 'Argv: Repeat() must repeat a string and count must be NumRange')
+				assert(k, {'pattern': Str, 'count': NumRange }, InvalidArgument('Argv: Repeat() must repeat a string and count must be NumRange'))
 				assert(v.len(), k.count, "Switch ${k.pattern} has ${v.len()} values, out of specified range ${k.count}")
 				v.each(F(elt) {
 					collect(k.pattern)
@@ -6200,7 +6642,7 @@ doc Deprecated. Do not use!
 doc %STATUS - deprecated
 F Argv(a:Arr) {
 	warn("Using deprecated Argv(Arr)")
-	a.reject(NoData).map(only(Box, get)).map(X.ensure(Arr)).flatten()
+	a.reject(NoData).map(X.when(Box, get)).map(X.ensure(Arr)).flatten()
 }
 
 
@@ -6249,7 +6691,7 @@ F '$()'(p:Process) {
 	debug("process", "Parsed command: ${argv}")
 
 	if log_opt = p.command.options.get('log') {
-		assert(log_opt, AnyOf(true, Str), 'log: option must be either true or a string')
+		assert(log_opt, AnyOf(true, Str), InvalidArgument('log: option must be either true or a string'))
 		F redir_str(r:CommandRedir) {
 			(r.fd or '').Str() + r.marker + safe_escape_bash(r.datum)
 		}
@@ -6264,7 +6706,7 @@ F '$()'(p:Process) {
 	try {
 		p.executable = find_in_path(argv[0])
 	} catch(nf:ProgramNotFound) {
-		throw ProcessFail(p).set('cause', nf).set('message', 'Executable not found')
+		throw ProcessFail(p).set('cause', nf).set('message', "Executable not found: ${argv[0]}")
 	}
 
 	pid = fork()
@@ -6353,6 +6795,34 @@ F '$()'(p:Process) {
 	p
 }
 
+block _ {
+	global ($())
+
+	F _command_key(c:Command) {
+		c.argv.map(encode_uri_component).join('=')
+	}
+
+	doc Mock external processes - record
+	F '$()'(p:Process) {
+		super(p)::{
+			return  # WIP
+			ENV !~ {'NGS_RECORD_PROCESSES'} returns
+			# p.Hash().keys().echo()
+			if p.command =~ {'options': '&'} {
+				warn("[mock] Not recording background process. This is not supported yet.")
+				return
+			}
+			if p.command.redirects {
+				warn("[mock] Not recording process with redirects. This is not supported yet. ${p.redirects}")
+				return
+			}
+			# TODO: take into account current directory and environment variables
+			k = p.command._command_key()
+			echo("K $k")
+		}
+	}
+}
+
 # TODO: Free (close) fds on failure
 # TODO: better exceptions (use correct type, not string)
 # TODO: c_waitpid() - handle signals
@@ -6377,7 +6847,7 @@ F '$()'(cp:CommandsPipeline) {
 
 		# Special case: $($cmd)
 		c = cp.commands[0]
-		if (c.argv.len() == 1) and (c.argv[0] is CommandsPipeline) {
+		if c.argv =~ [CommandsPipeline] {
 			cp = c.argv[0]
 		}
 
@@ -6460,9 +6930,18 @@ F '$()'(cp:CommandsPipeline) {
 
 TEST $(true).Bool()
 TEST $(false).Bool() == false
-TEST "$(/bin/echo -n abc)" == 'abc'
+TEST "$(echo -n abc)" == 'abc'
 TEST $(cd:"/" pwd).lines()[0] == '/'
 TEST t=TmpFile(); $(echo -n abc >$t); t.read() == "abc"
+TEST c=%(echo -n aa); `$c` == "aa"
+
+doc Same as $(top_level:: ...) - run the commands without capturing the stdout/stderr.
+doc Use the same stdout/stderr as the parent process (your script).
+F '$[]'(cp:CommandsPipeline) {
+	debug("process2", { "Using \$[] to set top_level:: for ${cp}" })
+	cp.options.top_level = true
+	$($cp)
+}
 
 doc Write to first process of ProcessesPipeline
 doc %EX - p = (|cat -n | tac >/tmp/1)
@@ -6586,6 +7065,9 @@ section "DecodeHints" {
 			'options': c.options
 		}, mc)
 	}
+
+	doc Match process based on argv and options
+	F =~(x:Process, cp:CommandsPipeline, mc:MatchContext) (=~)(DecodeHints({'process': x}), cp, mc)
 }
 
 doc Attempt to decode JSON. Uses decode_json().
@@ -6704,8 +7186,13 @@ doc %EX - t = {"Tags": [{"Key": "k", "Value": "v"},{"Key": "k2", "Value": "v2"}]
 doc %EX - t.stdlib_aws_straighten_tags()
 doc %EX - t  # {Tags={k=v, k2=v2}}
 F stdlib_aws_straighten_tags(h:Hash) {
-	if 'Tags' in h {
+	# TODO: something more elegant than almost identical stanzas
+	if h =~ {'Tags': Repeat({'Key': Str, 'Value': Str})} {
 		h.Tags = Hash(h.Tags.Key, h.Tags.Value)
+	}
+	# RDS snapshots, maybe others
+	if h =~ {'TagList': Repeat({'Key': Str, 'Value': Str})} {
+		h.TagList = Hash(h.TagList.Key, h.TagList.Value)
 	}
 }
 
@@ -6726,7 +7213,7 @@ F decode(s:Str, hints:Hash) {
 	dh = DecodeHints(hints)
 	guard dh =~ AnyOf(
 		 %(aws)
-		 %(decode: aws)
+		 %(decode: aws)  # TODO: fix
 	)
 
 	if s == '' {
@@ -6775,16 +7262,89 @@ F decode(s:Str, hints:Hash) {
 		}
 	}
 
+	section "aws codepipeline get-pipeline --name" {
+		if data =~ {'pipeline': Hash, 'metadata': Hash} {
+			return data.pipeline::{ A._metadata = data.metadata }
+		}
+	}
+
+	section "aws codebuild batch-get-builds --ids" {
+		if data =~ {'builds': Arr, 'buildsNotFound': Arr} {
+			return data.builds
+		}
+		# Thoughts:
+		# b.candidate(data, {'builds': SOMETHING(Arr), 'buildsNotFound': Arr})
+		# candidate({'builds': SOMETHING(Arr), 'buildsNotFound': Arr})
+	}
+
+	section "dynamodb lib" {
+		# TODO: maybe move out so it could be used independently
+		# https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html
+		# https://github.com/aws/aws-sdk-js/blob/master/lib/dynamodb/converter.js
+		F dynamodb_decoder_not_implemented(t, x) {
+			throw NotImplemented("dynamodb decoder for type ${t} is not implemented yet")
+		}
+		dynamodb_decoders = {
+			'S': identity
+			'N': F(x) Int(x) tor Real(x)
+			'B': dynamodb_decoder_not_implemented('B', X)
+			'BOOL': Bool
+			'NULL': { null }
+			'M': X.mapv(dynamodb_decode_cell)
+			'L': X.map(F(elt) dynamodb_decoders[elt.keys().the_one()](elt.values().the_one()))
+			'SS': identity  # not tested
+			'NS': dynamodb_decoder_not_implemented('NS', X)
+			'BS': dynamodb_decoder_not_implemented('BS', X)
+		}
+
+		F dynamodb_cell(x) false
+		F dynamodb_cell(x:Eachable2) (x.len() == 1) and (x.keys().the_one() in dynamodb_decoders)
+		F dynamodb_row(x) false
+		F dynamodb_row(row:Eachable2) row.values().all(dynamodb_cell)
+
+		F dynamodb_decode_cell(cell) {
+			dynamodb_decoders[cell.keys().the_one()](cell.values().the_one())
+		}
+
+		F dynamodb_decode_row(row:Eachable2) {
+			row.each(F(k, v) {
+				row[k] = dynamodb_decode_cell(v)
+			})
+		}
+	}
+
+	section "aws dynamodb get-item --table-name T --key K" {
+		if data =~ {'Item': Hash} and data.Item.dynamodb_row() {
+			return data.Item.dynamodb_decode_row()
+		}
+	}
+
+	# Use {'some_key': THIS}
+	h = data.values().the_one(found_none={null}, found_more={null})
+	if h is Hash {
+		k = data.keys().the_one()
+		if k in h {
+			# Untested
+			warn("decode() for 'aws' command is unable to use DeprecatedTopLevelHashlike, run with DEBUG=decode_aws for more information")
+			debug('decode_aws', {
+				"Clashing key is ${k}. Result is ${h}"
+			})
+			return h
+		}
+		return DeprecatedTopLevelHashlike(k, h)
+	}
+
 	# Use the only top-level key that has array as it's value
 	# Thanks goes to Elastic Beanstalk which complicates this,
 	# all other APIs seem to return only one top-level key.
 	# ( aws elasticbeanstalk describe-configuration-options )
 
-	top_level_vals = data.values()
+	p = partitionv(data, Arr)
+	guard p[0].len() == 1
 
-	guard top_level_vals =~ [Arr]
-
-	data = top_level_vals.the_one()
+	data = p[0].values().the_one()  # Core of the answer
+	data.meta(p[1])                 # Metadata such as next token, counts, etc
+	# Maybe: data.meta()._DataKey = p[0].keys().the_one()
 
 	# Anyone cares about Reservations? Certainly it's not the common case so...
 	if data.all('ReservationId' in X) {
@@ -6794,7 +7354,22 @@ F decode(s:Str, hints:Hash) {
 		})
 		data = data.Instances.flatten()
 	}
-	data.stdlib_aws_straighten_tags()
+	data::{
+		A.stdlib_aws_straighten_tags()
+		section "aws codepipeline list-pipeline-executions" {
+			if A.all({'sourceRevisions': Repeat({'revisionSummary': Str})}) {
+				# .sourceRevisions in all executions, hence flatten()
+				A.sourceRevisions.flatten().each(F(r) {
+					r.revisionSummary .= decode_json()
+				})
+			}
+		}
+		section "aws dynamodb scan (and friends probably)" {
+			if A.all(dynamodb_row) {
+				A.each(dynamodb_decode_row)
+			}
+		}
+	}
 }
 
 doc Parse the output of "find" command which does not use "-printf". Handles "-print0".
@@ -6878,7 +7453,9 @@ type SubSeq
 doc Convert Success to FullBox
 doc %RET - FullBox
 doc %EX - Box("abcd" ~ /^(..)/).map({"First two letters: ${A[1]}"}).get("(too short)")  # First two letters: ab
-F Box(s:Success) FullBox(ms)
+F Box(s:Success) FullBox(s.get())
+
+TEST Box("abcd" ~ /^(..)/).map({"First two letters: ${A[1]}"}).get("(too short)") == "First two letters: ab"
 
 doc Convert failure to EmptyBox
 doc %RET - EmptyBox
@@ -6985,8 +7562,10 @@ F ~(s:Str, sfx:Sfx) {
 }
 
 doc %EX - [1,2,3] =~ Pfx([1,2])
-F =~(x:Eachable1, pfx:Pfx, mc:MatchContext) {
-	guard x is not Str and x is not Int
+F =~(x, pfx:Pfx, mc:MatchContext) {
+	guard pfx.val is Arr
+	x is not Eachable1 returns false
+	x is Str or x is Int returns false
 	block b {
 		i = Iter(pfx)
 		mc.deeper({
@@ -7022,8 +7601,10 @@ TEST ("abc" ~ /a(.)c/)[1] == "b"
 doc Checks subsequence presence
 doc s - SubSeq of Str
 doc %RET - Bool
-F =~(x:Str, s:SubSeq, _mc:MatchContext) {
+F =~(x, s:SubSeq, _mc:MatchContext) {
+	# TODO: Support Branch. Open issue: support overlapping?
 	guard s.val is Str
+	x is not Str returns false
 	Bool(x ~ s)
 }
 
@@ -7209,10 +7790,16 @@ TEST "ab01de12f"[/[0-9]+/] == '01'
 
 doc %RET - Checks whether the only argument is of type Str and matches (~) r
 doc %EX - %[w1 w2].filter(/1/)  # %[w1]
-F =~(x, r:RegExp, _mc:MatchContext) {
+F =~(x, r:RegExp, mc:MatchContext) {
+	# TODO: Support Branch. Open issue: support overlapping?
 	# TODO: Maybe merge named matches into MatchContext
 	x is not Str returns false
-	Bool(x ~ r)
+	if (m = x ~ r) {
+		mc.positional = m.matches[1..null]
+		mc.whole = m.matches[0]
+		mc.named = m.named
+	}
+	m.Bool()
 }
 
 TEST %[w1 w2].filter(/1/) == %[w1]
@@ -7295,6 +7882,9 @@ section "Lines" {
 	F framed(lines:Lines) {
 		not(lines) returns lines
 		m = lines.map(len).max()
+		if m > 80 {
+			return lines.mapo("*** $X")
+		}
 		border = '+' + ('-' * (m+2)) + '+'
 		collector/Lines() {
 			collect(border)
@@ -7467,7 +8057,7 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null, echo=echo
 
 	F err(message) echo(pfx + message)
 
-	pfx = "[ERROR ${Time()}] " + "  " * level
+	pfx = "[ERROR ${Time()} ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] " + "  " * level
 	h = Hash(e)
 
 	m = try {
@@ -7520,6 +8110,12 @@ F print_exception(e:Exception, level:Int = 0, parent:Exception = null, echo=echo
 
 	if level == 0 {
 		echo(m.framed())
+	}
+
+	# TODO: unhack
+	if (e is ProcessFail) and ('process' in e) and ('stderr' in e.process) and (e.process.stderr) {
+		echo("stderr follows:")
+		echo(e.process.stderr.limit(16384))
 	}
 
 }
@@ -7606,12 +8202,15 @@ F init(t:Time, epoch:Int) {
 }
 
 F init(t:Time, s:Str, format:Str) {
-	result = c_strptime(s, format)
-	if result[0] != len(s) or result[1] is Null {
-		throw InvalidArgument("Failed to parse time").set(s=s,format=format)
-	}
-	t.epoch = c_mktime(result[1])
+	c_strptime(s, format).apply(F(l, result) {
+		if l != len(s) or result is Null {
+			throw InvalidArgument("Failed to parse time").set(s=s,format=format)
+		}
+		t.epoch = c_mktime(result)
+	})
 }
+
+TEST Time("2020-01-02", "%Y-%m-%d").Str("%Y", true) == "2020"
 
 doc Parse known date/time formats
 F init(t:Time, s:Str) block b {
@@ -7638,6 +8237,8 @@ F init(t:Time, s:Str) block b {
 	})
 	throw InvalidArgument("Failed to parse time").set(s=orig_s, s_transformed=s, formats=formats)
 }
+
+TEST Time("2020-01-01T01:01:03Z").Str("%S") == '03'
 
 # TODO: dedup. Time only should say that Int() should be used for comparing.
 F '=='(a:Time, b:Time) a.Int() == b.Int()
@@ -7667,6 +8268,22 @@ F Bool(t:Time) true
 
 doc Convert Time into JSON compatible data structure - number (epoch seconds)
 F JsonData(t:Time) t.epoch
+
+section "Duration" {
+
+	type Duration
+
+	F init(d:Duration, seconds:Int) init(args())
+
+	F Int(d:Duration) d.seconds
+
+	doc %RET - Time
+	F +(t:Time, d:Duration) Time(t.Int() + d.seconds)
+
+	F +(d1:Duration, d2:Duration) Duration(d1.seconds + d2.seconds)
+	F -(d1:Duration, d2:Duration) Duration(d1.seconds - d2.seconds)
+
+}
 
 # === Random =====================================
 # This is _not_ crypto safe random!
@@ -7728,64 +8345,87 @@ F rand(r:NumRange) {
 	rand(points) + r.start + if r.include_start then 0 else r.step
 }
 
-# === retry facility =============================
+section "retry() and friends" {
 
-doc Represents failure on all retries
-type RetryFail(Error)
-type RetryBodyMissing(InvalidArgument)
+	doc Represents failure on all retries
+	type RetryFail(Error)
+	type RetryBodyMissing(InvalidArgument)
 
-# TODO: Handle NoNext that could occur in sleep iterator
-doc Retry. Executes given "body" "times" times. Throws RetryFail if all calls fail and fail_cb is not provided.
-doc times - Limit of times to run "body"
-doc sleep - Either sleep in seconds between tries or Iter that returns successive sleep times in seconds
-doc logger - Function to use to log attempts, caught body exceptions and sleep times. Defaults to stdlib's debug.
-doc success_predicate - CANDIDATE FOR REMOVAL. Run against body results to. Says whether the attempt succeeded. Defaults to Bool.
-doc title - Prefix strings sent to logger with this string. Defaults to "<retry>".
-doc progress_cb - Called before each attempt with (1) current attempt number and (2) limit of attempts ("times"). Defaults to do nothing.
-doc success_cb - Called when body succeeds with the result that comes from body. Defaults to identity function.
-doc fail_cb - If passed, called if all attempts fail. Defaults to null.
-doc %RET - Any. Result of success_cb or result of fail_cb.
-doc %EX - page = retry(times=10, sleep=ExpBackIter(), body={ try `curl "http://flaky-site.com"` })
-F retry(
-	times:Int=60,
-	sleep=1,
-	logger:Fun=debug("retry", X),
-	success_predicate=Bool,
-	title="<retry>",
-	progress_cb:Fun={null},
-	success_cb:Fun=identity,
-	fail_cb={throw RetryFail()},
-	body:Fun={throw RetryBodyMissing("'body' argument missing in retry()")}
-) {
-	guard sleep =~ AnyOf(Int, Iter)
-	sleep_iter = if sleep is Int then ConstIter(sleep) else sleep
-	result = null  # otherwise it will be local to try { ... }
-	for(i;times) {
-		n = i + 1
-		progress_cb(n, times)
-		logger("$title Attempt $n out of ${times}")
-		try {
-			result = body()
-		} catch(e:Exception) {
-			logger("$title Exception $e")
-			throw e
+	type RetryAssertFail(AssertFail)
+
+	# TODO: Handle NoNext that could occur in sleep iterator
+	doc Retry. Executes given "body" "times" times. Throws RetryFail if all calls fail and fail_cb is not provided.
+	doc times - Limit of times to run "body"
+	doc sleep - Either sleep in seconds between tries or Iter that returns successive sleep times in seconds
+	doc logger - Function to use to log attempts, caught body exceptions and sleep times. Defaults to stdlib's debug.
+	doc success_predicate - CANDIDATE FOR REMOVAL. Run against body results to. Says whether the attempt succeeded. Defaults to Bool.
+	doc title - Prefix strings sent to logger with this string. Defaults to "<retry>".
+	doc progress_cb - Called before each attempt with (1) current attempt number and (2) limit of attempts ("times"). Defaults to do nothing.
+	doc success_cb - Called when body succeeds with the result that comes from body. Defaults to identity function.
+	doc fail_cb - If passed, called if all attempts fail. Defaults to null.
+	doc %RET - Any. Result of success_cb or result of fail_cb.
+	doc %EX - page = retry(times=10, sleep=ExpBackIter(), body={ try `curl "http://flaky-site.com"` })
+	F retry(
+		times:Int=60,
+		sleep=1,
+		logger:Fun=debug("retry", X),
+		success_predicate=Bool,
+		title="<retry>",
+		progress_cb:Fun={null},
+		success_cb:Fun=identity,
+		fail_cb={throw RetryFail()},
+		body:Fun={throw RetryBodyMissing("'body' argument missing in retry()")}
+	) {
+		guard sleep =~ AnyOf(Num, Iter)  # Can't move to parameters as Iter is not defined at this point
+		sleep_iter = sleep.when(Num, ConstIter)
+		result = null  # otherwise it will be local to try { ... }
+		for(i;times) {
+			n = i + 1
+			progress_cb(n, times)
+			logger("$title Attempt $n out of ${times}")
+			try {
+				result = body()
+			} catch(ra:RetryAssertFail) {
+				guard i < times - 1
+				# Ignoring the assert as long as it's not last iteration
+			} catch(e:Exception) {
+				logger("$title Exception $e")
+				throw e
+			}
+			if success_predicate(result) {
+				logger("$title Success")
+				return success_cb(result)
+			}
+			if(i < times - 1) {
+				s = sleep_iter.next()
+				logger("$title Sleeping ${s} seconds")
+				$(sleep "$s")
+			}
 		}
-		if success_predicate(result) {
-			logger("$title Success")
-			return success_cb(result)
-		}
-		if(i < times - 1) {
-			s = sleep_iter.next()
-			logger("$title Sleeping ${s} seconds")
-			$(sleep "$s")
-		}
+		logger("$title Failure")
+		fail_cb()
 	}
-	logger("$title Failure")
-	fail_cb()
-}
 
-TEST t = 0; retry(body={t+=1; false}, fail_cb={"OK"}, times=5, sleep=0) == "OK" and t == 5
-TEST t = 0; retry(body={t+=1; "OK"}, fail_cb={"NOTOK"}, sleep=0) == "OK" and t == 1
+	TEST t = 0; retry(body={t+=1; false}, fail_cb={"OK"}, times=5, sleep=0) == "OK" and t == 5
+	TEST t = 0; retry(body={t+=1; "OK"}, fail_cb={"NOTOK"}, sleep=0) == "OK" and t == 1
+
+    doc Similar to assert(). Caught and ignored by nearest retry() on all but last retry.
+    doc %STATUS - experimental
+	F retry_assert(val, pattern, msg:Str="Assertion failed") {
+    	not(val =~ pattern) throws RetryAssertFail(msg).set(val=val, pattern=pattern)
+    	val
+    }
+
+    # TODO: retry_assert(val, pattern, Exception) # needs design
+
+    doc Similar to assert(). Caught and ignored by nearest retry() on all but last retry.
+    doc %STATUS - experimental
+    F retry_assert(val, msg:Str="Assertion failed") {
+    	not(val) throws RetryAssertFail(msg).set(val=val)
+    	val
+    }
+
+}
 
 # === Misc =======================================
 
@@ -7835,12 +8475,10 @@ F decode_uri_component(s:Str) {
 	l = s.len()
 	ret = ''
 	for(i;l) {
-		ret += if s[i] == '%' {
+		ret += s[i].when('%', {
 			i += 2
 			decode_hex(s[i-1..i+1])
-		} else {
-			s[i]
-		}
+		})
 	}
 	ret
 }
@@ -7865,13 +8503,13 @@ TEST "ab>+c%&'".encode_html_attr() == "ab&gt;+c%&amp;&#39;"
 
 doc Used by match EXPR { ... } construct to check whether the expression matches the case.
 doc %AUTO match EXPR { ... }
-doc %RET - a =~ b
+doc %RET - val =~ pattern
 doc %EX - r = match x {
 doc %EX -   Int  "Got integer"
 doc %EX -   /^a/ "Got special string"
 doc %EX -   Str  "Got regular string"
 doc %EX - }
-F match(a,b) a =~ b
+F match(val, pattern) val =~ pattern
 
 # === File =======================================
 
@@ -7920,9 +8558,8 @@ F write(s:Str, f:File) {
 }
 
 doc Write whole file if it's closed, write to file descriptor if it's open
-F write(f:File, s:Str) {
-	write(if f.fd is Null then f.path else f.fd, s)
-	f
+F write(f:File, s:Str) f::{
+	write(f.fd.when(Null, f.path), s)
 }
 
 doc Write a string followed by newline character to a File.
@@ -7962,6 +8599,9 @@ section "JSON" {
 	doc %RET - Str
 	F encode_json(x, hints:Hash = {}) {
 		ret = super(JsonData(x))
+		if (hints =~ {'pretty': 'best-effort'}) and Program('jq') {
+			ret = $(| jq .).write(ret).close().wait().stdout
+		}
 		if hints =~ {'pretty': true} {
 			assert(Program('jq'), "encode_json() failed to do 'pretty' formatting - jq program is missing")
 			ret = $(| jq .).write(ret).close().wait().stdout
@@ -7987,7 +8627,7 @@ section "base64" {
 	F decode_base64(s:Str) {
 		t = (4 - len(s) % 4) % 4
 		fill = "=" * t
-		`echo "$s$fill" | base64 --decode 2>${true}`
+		`echo "$s$fill" | base64 -d 2>${true}`
 	}
 }
 
@@ -8020,7 +8660,7 @@ section "Doc" {
 	doc %STATUS - experimental
 	doc %AUTO - \name attr1=val1 attr2=val2 ... [ ... ]
 	F \(name:Str, attributes:Hash, children:Arr) {
-		Doc::Node(name, children.reject(NoData).map(only(FullBox, get)), **attributes)
+		Doc::Node(name, children.reject(NoData).map(X.when(FullBox, get)), **attributes)
 	}
 }
 
@@ -8035,9 +8675,8 @@ section "Loading code" {
 		%[
 			${ try ENV.HOME / '.ngs' }
 			/usr/local/etc/ngs
-			/usr/local/lib/ngs
 			/etc/ngs
-			/usr/lib/ngs
+			${C_INSTALL_LIBDIR / 'ngs'}
 		].filter()
 	}
 
@@ -8058,8 +8697,12 @@ section "Loading code" {
 		require(f)
 	}
 
+	# Internal, don't use outside of stdlib
+	_REQUIRED = {}
+
 	F require(fname:Str) {
 		guard fname =~ AnyOf(Pfx('/'), Pfx('./'))
+		fname in _REQUIRED returns _REQUIRED[fname]
 		try {
 			program_text = read(fname)
 			program_bytecode = compile(program_text, fname)
@@ -8068,11 +8711,12 @@ section "Loading code" {
 			program_func = load(program_bytecode, "require()d file: $fname")
 			ret = program_func()
 			debug('require', "require(): done requiring ${fname}")
+			_REQUIRED[fname] = ret
 			ret
 		} catch(e) {
 			guard e !~ AnyOf(RequireFail, NormalExit)
 			throw RequireFail(e)
-		}		
+		}
 	}
 
 	F require(p:Path) require(p.path)
@@ -8170,6 +8814,30 @@ section "math" {
 
 	TEST pow(2, 10) == 1024
 	TEST { pow(0, -1) }.assert(InvalidArgument)
+
+	doc Average
+	doc %RET - Real
+	F avg(e:Eachable1) {
+		count = 0
+		sum = 0
+		e.each(F(x) {
+			sum += x
+			count += 1
+		})
+		Real(sum) / Real(count)
+	}
+
+	TEST avg([1,2,3]) == 2.0
+
+	F '+'(a: Int, b: Real) Real(a) + b
+	F '+'(a: Real, b: Int) a + Real(b)
+	F '-'(a: Int, b: Real) Real(a) - b
+	F '-'(a: Real, b: Int) a - Real(b)
+	F '/'(a: Int, b: Real) Real(a) / b
+	F '/'(a: Real, b: Int) a / Real(b)
+	F '*'(a: Int, b: Real) Real(a) * b
+	F '*'(a: Real, b: Int) a * Real(b)
+
 }
 
 section "JWT" {
@@ -8178,18 +8846,30 @@ section "JWT" {
 	doc Decodes JSON Web Token (JWT)
 	F decode(s:Str, hints:Hash={}) {
 
-		F _decode(s) try s.decode_base64().decode_json()
+		F _decode(s) {
+			# All failures to decode are ignored as they are expected, except for missing base64 binary
+			try {
+				s.decode_base64().decode_json()
+			} catch(pf:ProcessFail) {
+				guard pf =~ {'cause': ProgramNotFound}
+				throw pf
+			} catch(x) {
+				null
+			}
+		}
 
 		o = s.trim()
 		parts = o.split('.')
 		guard len(parts) == 3
 		guard all(parts)
-		ret = JWT().set(
-			original = o
-			header = parts[0]._decode()
-			payload = parts[1]._decode()
-			signature = parts[2]
-		)
+		ret = parts.apply(F(header, payload, signature) {
+			JWT().set(
+				original = o
+				header = header._decode()
+				payload = payload._decode()
+				signature = signature
+			)
+		})
 		guard ret.header and ret.payload
 		ret
 	}
@@ -8235,7 +8915,7 @@ section "Bootstrap" {
 	F echo_cli(a:Arr) {
 		guard a
 		guard isatty(1)
-		guard a[0] is Hash
+		guard (a[0] is Hash) or (a[0] is HashLike)
 		pattern = a[0].keys().Hash({Any})
 		guard all(a, pattern)
 		Table2::Table(a).echo()

@@ -1,0 +1,74 @@
+ns {
+	global init, hydrate
+
+	Status = AbstractProcess::Status
+
+	type Build(AbstractProcess::Process)
+	type BuildPhase(AbstractProcess::Process)
+
+
+	section "Build" {
+
+		# TODO: un-pollute
+		F init(b:Build, id:Str) {
+			super(b)
+			init(args())
+		}
+
+		F hydrate(b:Build) b::{
+			build = ``aws codebuild batch-get-builds --ids ${b.id}``.the_one()
+
+			A.name = "${build.projectName} ${build.buildNumber}"  # TODO build.id should be stored somewhere
+			A.status = Status::Status(build.buildStatus)
+
+			# echo("BUILD $build")
+			# Filter below is needed for {"phaseType": "COMPLETED", ...} phase
+			A.sub = build.phases.filter({'phaseStatus': Str}).map(BuildPhase)
+
+			phase_name_to_phase = Hash(A.sub.name, A.sub)
+
+			# logs: {groupName=/aws/codebuild/..., streamName=..., deepLink=..., cloudWatchLogsArn=}
+			events = ``aws logs get-log-events --log-group-name ${build.logs.groupName} --log-stream-name ${build.logs.streamName} --start-from-head``
+
+			phase = null
+			events.message.each(F(message) {
+				message .= trim()
+				if m = message ~ /Container.*(Entering phase|Phase is) (.*)$/ {
+					phase = m[2]
+					return
+				}
+				if message ~ /Container.*Phase complete:/ {
+					phase = null
+					return
+				}
+				if message ~ /Container.*Phase context status code/ {
+					return
+				}
+				o = if phase then phase_name_to_phase[phase].output else A.output
+				o.push(message)
+			})
+		}
+	}
+
+
+	section "BuildPhase" {
+		F init(c:BuildPhase, phase:Hash) {
+			super(c)
+			c.name = phase.phaseType
+			c.status = Status::Status(phase.phaseStatus)
+			c.start = phase.Box('startTime').map(Time).get(null)
+			c.end = phase.Box('endTime').map(Time).get(null)
+			# statusCode message # temp: making a string out of structured data, generally a bad idea
+			phase.get('contexts', []).each(F(context) {
+				text = context.statusCode +? ' ' +? context.message
+				not(text) returns
+				c.output.push(text)
+			})
+		}
+	}
+
+
+	F main(id:Str) {
+		Build(id).hydrate().inspect().echo()
+	}
+}

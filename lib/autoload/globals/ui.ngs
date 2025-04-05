@@ -1,80 +1,231 @@
-ns {
+ns(TL=Timeline) {
 	# WIP
-	# Warning: low quality, hacky code
+	global init, JsonData
 
-	global id
-	doc Warning! Not sure about correctness!
-	F id(t:Type) {
-		m = t.meta()
-		has_ns = m =~ {'ns': Namespace}
-		not(has_ns) returns "ngs:type:${t.name}"
-		if m.ns.meta().has(JsonData) {
-			# Maybe :: separator here is not a good idea
-			return "ngs:type:${m.ns.meta()[JsonData].ns}::${t.name}"
+	_cp = require("aws/CodePipeline.ngs")
+
+	# TODO:
+	# * Recreate previous version but cleanly
+	# * Move transformation to table from shell.ngs to this file
+	# * Add row/object-fields semantics
+	# * Consider add nested context to render()
+	# * UI action should have
+	#	* Reference to the original command and the output
+	#   * ID of the object
+	#   * Action name
+
+	section "_Ctx - Context for converting to a tree of Elements" {
+		type _Ctx
+		F init(c:_Ctx) {
+			c.path = []
+			c.ti = null
 		}
-		throw NotImplemented("id() for types in namespaces (without .meta()[JsonData].ns} is not implemented yet")
+
+		doc Context for one element down/deeper (farther from the root) in the tree.
+		F _down(c:_Ctx, path_item) _Ctx()::{
+			A.path = c.path + [	path_item ]
+			A.ti = c.ti
+		}
+
+		doc New context with timeline ID added
+		F _with_ti(c:_Ctx, ti) _Ctx()::{
+			A.path = c.path
+			assert(A.ti, null, "Programming error: Nested timeline items are not supported.")
+			A.ti = ti
+		}
+
+		doc init(Hash)-like helper for Element type that excludes the context (_Ctx)
+		doc _Ctx is only needed to assist conversion to Element tree
+		doc _Ctx is not and should not be part of the Element tree
+		F _init(h:Hash) init(h.rejectv(_Ctx))
 	}
 
-	F _json_data_fields(x, fields:Arr) {
-		{
-			'type': id(x.Type())
-			'fields': fields.Hash({ JsonData(x.(A)) })
+	type Element()
+
+		type Screen(Element)
+		type Timeline(Element)
+		type TimelineItem(Element)
+			type GroupTimelineItem(TimelineItem)
+			type TextualCommandTimelineItem(TimelineItem)
+			type InfoTimelineItem(TimelineItem)
+			type GuessTimelineItem(TimelineItem)
+			type ResultTimelineItem(TimelineItem)
+		type Object(Element)  # An interactive object
+
+		type Scalar(Element)
+		type Table(Element)
+			type Columns(Element)
+			type Column(Element)
+			type Rows(Element)
+			type Row(Element)
+			# TODO: Cell
+		type Properties(Element)
+		type List(Element)
+		type ProcessStatus(Element)
+		type Progress(Element)
+
+	F raw(s:Str) s
+	F raw(h:Hash) {'$type': '$raw'} + h
+
+	F init(e:Element, ctx:_Ctx, children:Arr) {
+		children.assert(Repeat(Element), "All children of Element must be of type Element. Have ${children}")
+		_init(args())
+	}
+
+	F init(e:Element, ctx:_Ctx) init(e, ctx, [])
+
+	F JsonData(t:Type) super(t) tor "<<Type: ${t.name}>>"
+
+	# TODO: serialization design
+	F JsonData(e:Element) {
+		# Note: all Element subtypes need to reside in this namespace
+		#       if they don't, there could be name collisions
+		{'$type': e.Type().name} + e.Hash().JsonData()
+	}
+
+	F JsonData(p:Properties) {
+		{'$type': p.Type().name} + p.Hash().JsonData()::{A.props = {'$type': 'Hash'} + A.props}
+	}
+
+	F init(s:Scalar, ctx:_Ctx, value) _init(args())
+	F init(c:Column, ctx:_Ctx, name:Str) _init(args())
+	F init(p:Properties, ctx:_Ctx, props:Hash) _init(args())
+	F init(p:ProcessStatus, ctx:_Ctx, name:Str, text:Str) _init(args())  # TODO: improve + add semantics
+	F init(p:Progress, ctx:_Ctx, step:Int, total_steps:Int) _init(args())
+
+
+	F Element(ctx:_Ctx, x:AnyOf(Num, Str, Bool, Null)) Scalar(ctx, x)
+	F Element(ctx:_Ctx, a:AnyOf(Arr, ArrLike)) List(ctx, a.map(Element(ctx, X)))
+
+	F init(r:Row, ctx:_Ctx, fields_names, h:AnyOf(Hash, HashLike)) {
+		super(r, ctx)
+		r.children = fields_names.map(F(field_name) {
+			val = h.get(field_name)
+			Element(ctx._down(field_name), val)
+		})
+	}
+
+	# TODO: improve heuristics of detection when to render to table
+	F Element(ctx:_Ctx, a:Arr) {
+		guard a =~ Repeat(AnyOf(Hash, HashLike), 1..null)
+
+		fields_names = a.map(keys).flatten().uniq()  # TODO: make fields order configurable?
+
+		if a[0] is _cp::Pipeline {
+			fields_names .= reject('last_execution_id')  # Temp hack
+		}
+
+		Table().set(
+			columns = fields_names.map(Column(ctx, X)).{ Columns(ctx, A) }
+			rows = a.map_idx_val(F(idx, row) Row(ctx._down(idx), fields_names, row)).{ Rows(ctx, A) }
+		)
+	}
+
+	F keys_are_strings(h) h.keys().all(Str)
+	F Element(ctx:_Ctx, h:AnyOf(Hash, HashLike)) Properties(ctx, h.assert(keys_are_strings, "Element(Hash) - keys must be strings").mapv(Element(ctx, X)))
+
+	F init(gti:GroupTimelineItem, ctx:_Ctx, id:Str, time:Time, items:Arr) {
+		gti.id = id
+		gti.time = time
+		super(gti, ctx, items)
+	}
+
+	F Element(ctx:_Ctx, gti:TL::GroupItem) GroupTimelineItem(ctx, gti.id, gti.time, gti.items.map(Element(ctx, X)))
+
+	F init(rti:ResultTimelineItem, ctx:_Ctx, id:Str, time:Time, result) {
+		rti.id = id
+		rti.time = time
+		super(rti, ctx, [Element(ctx._with_ti(rti.id), result)])
+	}
+
+	F Element(ctx:_Ctx, rti:TL::ResultItem) ResultTimelineItem(ctx, rti.id, rti.time, rti.result)
+
+	F init(tcti:TextualCommandTimelineItem, ctx:_Ctx, id:Str, time:Time, command:Str) _init(args())
+
+	F Element(ctx:_Ctx, tcti:TL::TextualCommandItem) TextualCommandTimelineItem(ctx, tcti.id, tcti.time, tcti.command)
+
+	F init(iti:InfoTimelineItem, ctx:_Ctx, id:Str, time:Time, info:Str) _init(args())
+
+	F Element(ctx:_Ctx, iti:TL::InfoItem) InfoTimelineItem(ctx, iti.id, iti.time, iti.info)
+
+	F init(gti:GuessTimelineItem, ctx:_Ctx, id:Str, time:Time, pattern, description:Str) {
+		super(gti, ctx)
+		gti.time = time
+		gti.pattern = raw(pattern)  # TODO: rethink serialization
+		gti.description = description
+	}
+
+	F Element(ctx:_Ctx, gti:TL::GuessItem) GuessTimelineItem(ctx, gti.id, gti.time, gti.pattern, gti.description)
+
+	F init(tl:Timeline, ctx:_Ctx, id:Str, version, items:Arr) {
+		tl.id = id
+		tl.version = version
+		tl.children = items.map(Element(ctx, X))
+	}
+
+	F Element(ctx:_Ctx, tl:TL::Timeline) Timeline(ctx, tl.id, tl.version, tl.items)
+
+	# TODO: Fix later. It's semantically incorrect to display path as just a string
+	F Element(ctx:_Ctx, p:Path) Scalar(ctx, p.path)
+
+	section "ProcessesPipeline" {
+		# TODO: Use AbstractProcess
+		F Element(ctx:_Ctx, pp:ProcessesPipeline) {
+			processes = pp.processes
+			guard processes
+			p = processes[-1]
+			{ p.stdout.decode({'process': p}) }.Result().dflt({
+				error("In shell.ngs, trying to decode:")
+				print_exception(A.val)
+				# throw InvalidArgument("Element() could not decode process output").set(process=p)
+				p.stdout  # TODO: maybe split into lines
+			}).get().{ Element(ctx, A) }
 		}
 	}
 
-	F JsonData(x) throw NotImplemented("JsonData() for type ${x.Type()} is not implemented yet").set(val=x)
+	section "AWS" {
+		# TODO: Move whatever possible from CodePipeline.ngs to AbstractProcess.ngs
 
-	section "JsonData - scalars" {
-		F JsonData(x) {
-			guard x =~ AnyOf(Num, Str, Bool, Null)
-			{ 'type': id(x.Type()), 'value': x }
+		# WIP
+		# Think: it's probably not always the case that Status should be a UI object
+		F Element(ctx:_Ctx, s:AbstractProcess::Status::Status) {
+			Object(ctx, [
+				ProcessStatus(ctx, s.Type().name, s.text)
+			])
 		}
-		F JsonData(p:Path) { 'type': id(p.Type()), 'value': p.path }
-	}
 
-	section "JsonData - lists" {
-		F JsonData(a) {
-			guard a =~ AnyOf(Arr, ArrLike)
-			{ 'type': id(a.Type()), 'items': a.map(JsonData) }
+		# TODO: .total_steps might not be known
+		F Element(ctx:_Ctx, p:_cp::Progress) Progress(ctx, p.step, p.total_steps)
+
+		F Element(ctx:_Ctx, cp:_cp::Pipeline) {
+			throw NotImplemented("Converting AWS CodePipeline to arbitrary Element is not implemented yet")
 		}
-	}
 
-	section "JsonData - maps" {
-		F JsonData(h) {
-			guard h =~ AnyOf(Hash, HashLike)
-			{
-				'type': id(h.Type())
-				'items': h.map(F(k, v) [k.JsonData(), v.JsonData()])
+		# WIP
+		F init(r:Row, ctx:_Ctx, fields_names:Arr, pipeline:_cp::Pipeline) {
+			super(r, ctx, fields_names, pipeline)
+			idx = Iter(0..null)
+			idxs = fields_names.Hash({idx.next()})  # Ex: {name=0, status=1, sources=2, revisions=3, last_executed=4, approvals=5, progress=6}
+			for k in %[status last_executed progress] {
+				r.children[idxs[k]].when(Object, {
+					# Later: A.action = 'navigate'
+					# For now, deduce that "ref" means navigate
+					A.cur = raw({'ti': ctx.ti, 'path': ctx._down(k).path})
+					A.ref = raw({'type': 'AWS::CodePipeline::Execution', 'id': pipeline.last_execution_id})
+				})
 			}
 		}
+
+		# Later
+		F Element(ctx:_Ctx, r:_cp::Revision) Element(ctx, Str(r))
+		F Element(ctx:_Ctx, s:_cp::Source) Element(ctx, Str(s))
+		F Element(ctx:_Ctx, a:_cp::Action) Element(ctx, Str(a))
 	}
 
-	F JsonData(c:Command) c._json_data_fields(%[argv])
+	doc Entry point to recursively convert data to UI Elements
+	F Element(x) Element(_Ctx(), x)
 
-	F JsonData(p:Process) p._json_data_fields(%[command executable pid exit_code exit_signal stdout stderr])
-
-	F JsonData(f:Fun) f.Str().JsonData()
-
-	doc Incorrect, should pass the whole pipeline
-	F JsonData(p:ProcessesPipeline) p.processes[-1].JsonData()
-	F JsonData(p:ProcessesPipeline) {
-		guard p.processes.len() > 1
-		throw NotImplemented()
-	}
-
-	F JsonData(rd:ResDef) {
-		resources = rd.find().resources
-		ret = { 'type': id(rd.Type()), 'items': resources.map(JsonData) }
-		if resources {
-			cols_names = resources[0].props.Hash().keys()
-			ret.cols_names = cols_names.JsonData()
-		}
-		ret
-	}
-	F JsonData(r:Res) r.Hash().without('def').JsonData().set(type=id(r.Type()))
-
-	section "AWS2" {
-		# TODO: generalize
-		AWS2.meta()[JsonData] = {'ns': 'AWS2'}
-	}
+	# ngs -pi 'ui::Element(require("aws/CodePipeline.ngs")::pipelines::list())'
+	# ngs -pi 'ui::Element(Timeline::ResultItem(Time(), require("aws/CodePipeline.ngs")::pipelines::list()))'
+	# ngs -ppj '$(ls).(ui::Element)'
 }

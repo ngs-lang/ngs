@@ -564,6 +564,49 @@ abc-function-literal {
 	CAPTURE_LOCATION($$)
 };
 
+chain-expression-without-assignments = b:chain-item (
+		inline_space? a:function-call-arguments {
+			// TODO: deduplicate chain-expression-without-assignments/chain-expression
+			// printf("CHAIN/FCALL\n");
+			MAKE_NODE(ret, CALL_NODE);
+			ret->first_child = b;
+			ret->first_child->next_sibling = a;
+			ret = call_node_partial_application(ret, location);
+			b = ret;
+		}
+		|
+		"[" space? idx:expression space? "]" {
+			MAKE_NODE(ret, INDEX_NODE);
+			ret->first_child = b;
+			ret->first_child->next_sibling = idx;
+			ret = index_node_partial_application(ret, location);
+			b = ret;
+		}
+		|
+		"." e:chain-item {
+			MAKE_NODE(ret, FIELD_NODE);
+				ret->number = 902;
+				ret->first_child = b;
+				ret->first_child->next_sibling = e;
+				ret = call_node_partial_application(ret, location);
+			b = ret;
+		}
+		|
+		"::" e:chain-item {
+			MAKE_NODE(ret, NS_NODE);
+				ret->number = 903;
+				ret->first_child = b;
+				ret->first_child->next_sibling = e;
+				ret = call_node_partial_application(ret, location);
+			b = ret;
+		}
+	)*
+	{
+		$$ = b;
+		CAPTURE_LOCATION($$)
+	}
+
+
 chain-expression = b:basic-expression (
 		inline_space? a:function-call-arguments {
 			// printf("CHAIN/FCALL\n");
@@ -797,13 +840,23 @@ function-definition-parameter =
 		t->next_sibling = d;
 		$$ = ret;
 	}
+	|
+	t:chain-expression-without-assignments {
+		MAKE_NODE(ret, PARAM_NODE);
+			MAKE_NODE(unnamed, IDENTIFIER_NODE);
+			unnamed->name = "_unnamed";
+			ret->first_child = unnamed;
+			unnamed->next_sibling = t;
+			t->next_sibling = NULL;
+		$$ = ret;
+	}
 
 # TODO: check if we can remove c:identifier limitation and let it be something
 #       like expression. Currently the problem with expression is that it
 #       captures assignment so you can't do "x:Int=10". It gives var "x" and type "10"
 #       when evaluated.
 function-definition-parameter-type =
-	space? ":" space? c:identifier { $$ = c; }
+	space? ":" space? c:chain-expression-without-assignments { $$ = c; }
 	|
 	{
 		MAKE_NODE(ret, IDENTIFIER_NODE);
@@ -1411,7 +1464,7 @@ identifier =
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
 	}
-	| "(" <("$()" | [-|=!@?~+*/%$<>.\[\]:]+ | "is not" | "not in")> ")" {
+	| "(" <("$()" | "$[]" | [-|=!@?~+*/%$<>.\[\]:]+ | "is not" | "not in")> ")" {
 		MAKE_NODE(ret, IDENTIFIER_NODE);
 		ret->name = ngs_strdup(yytext);
 		$$ = ret;
@@ -1668,6 +1721,7 @@ optional-function-call-arguments =
 
 subshell =
 	"$(" cmd:commands-pipeline ")" { $$ = cmd; }
+	| "$[" cmd:commands-pipeline "]" { $$ = cmd; cmd->first_child->name = ngs_strdup("$[]"); $$ = cmd; }
 	| "%(" cmd:commands-pipeline ")" { cmd->first_child->name = ngs_strdup("%()"); $$ = cmd; }
 	| "``" cmd:commands-pipeline "``" { cmd->first_child->name = ngs_strdup("````"); $$ = cmd; }
 	| "`" cmd:commands-pipeline "`" { cmd->first_child->name = ngs_strdup("``");  $$ = cmd; }

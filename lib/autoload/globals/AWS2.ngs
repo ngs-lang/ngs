@@ -783,15 +783,15 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 			'--filters': rd.anchor.Tags.cli_tags_filters() + cli_filters({
 				'state':                            rd.anchor.get('State', 'available')
 				'virtualization-type':              rd.anchor.get('VirtualizationType', 'hvm')
-				'name':                             rd.anchor.Box('Name').filter({A is Str or A is Pfx})
+				'name':                             rd.anchor.Box('Name').filter(AnyOf(Str, Pfx))
 				'root-device-type':                 rd.anchor.Box('RootDeviceType')
 				'block-device-mapping.volume-type': rd.anchor.Box('VolumeType')
 				'image-id':                         rd.anchor.Box('ImageId')
 				})
 		})
 		resources = ``aws ec2 describe-images $*args``
-		if 'Name' in rd.anchor and rd.anchor.Name is Pfx {
-			resources .= filter({A.Name ~ rd.anchor.Name})
+		if rd.anchor =~ {'Name': Pfx} {
+			resources .= filter({'Name': rd.anchor.Name})
 		}
 		rd.resources = resources / ImageRes(rd, X)
 		debug("AWS", "found ${resources.len()} ${rd.Type().name} resources")

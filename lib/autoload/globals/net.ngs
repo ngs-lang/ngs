@@ -7,24 +7,45 @@ ns {
 		F _assert(code:Int, func:Str) {
 			e = c_errno()
 			if code == -1 {
-				c_errno() throws CError(e, "${func}() failed")
+				e throws CError(e, '')::{
+					A::message = "${A.errno_name} in ${func}()"
+				}
 				throw InvalidArgument("C code returned -1 but errno is not set")
 			}
 			code
 		}
 
+		# TODO: consider retry()
+		F _while_eintr(body:Fun) {
+			while true {
+				try {
+					return body()
+				} catch(intr:CError) {
+					guard intr.errno = C_EINTR
+				}
+			}
+		}
+
 		global socket
 		F socket(domain:Int, type:Int, protocol:Int=0) c_socket(domain, type, protocol)._assert('socket').assert(X>0)
+
+		TEST socket(C_PF_UNIX, C_SOCK_DGRAM) >= 0
 
 		global bind
 		F bind(socket:Int, address:c_sockaddr) c_bind(socket, address)._assert('bind').assert(0)
 
-		TEST socket(C_PF_UNIX, C_SOCK_DGRAM) >= 0
 		TEST $(ok:[0, 1] rm sock_test); bind(socket(C_PF_UNIX, C_SOCK_DGRAM), c_sockaddr_un("sock_test")) == 0
+
+		global connect
+		F connect(socket:Int, address:c_sockaddr) c_connect(socket, address)._assert('connect').assert(0)
+
+		TEST $(ok:[0, 1] rm sock_test); sock = socket(C_PF_UNIX, C_SOCK_STREAM); bind(sock, c_sockaddr_un("sock_test")); listen(sock, 1); connect(socket(C_PF_UNIX, C_SOCK_STREAM), c_sockaddr_un("sock_test")) == 0
 
 		global recvfrom
 		F recvfrom(sock:Int, length:Int, flags:Int, address:c_sockaddr) {
-			ret = c_recvfrom(sock, length, flags, address)
+			ret = _while_eintr({
+				c_recvfrom(sock, length, flags, address)
+			})
 			ret[0]._assert('recvfrom')
 			ret[1]
 		}
@@ -33,34 +54,65 @@ ns {
 		F listen(sock:Int, backlog:Int) c_listen(sock, backlog)._assert('listen')
 
 		global accept
-		F accept(sock:Int, address:c_sockaddr) block b {
-			while true {
-				try {
-					b.return(c_accept(sock, address)._assert('accept'))
-				} catch(intr:CError) {
-					guard intr.errno = C_EINTR
-				}
-			}
-		}
+		F accept(sock:Int, address:c_sockaddr) _while_eintr({
+			c_accept(sock, address)._assert('accept')
+		})
 
 		global send
-		F send(socket: Int, buffer:Str, flags:Int=0) c_send(socket, buffer, flags)._assert('send')
+		F send(socket: Int, buffer:Str, flags:Int=0) _while_eintr({
+			c_send(socket, buffer, flags)._assert('send')
+		})
 	}
 
 	section "Higher level networking" {
 
+		type Client
+		type UnixStreamClient(Client)
+
 		type Server
 		type UnixStreamServer(Server)
 
+		type Connection
+			type ClientConnection(Connection)
+			type ServerConnection(Connection)
+
 		global init
 
+		type ConnectionPipelineDelegate(COR::PipelineDelegate)
+		F init(cpd:ConnectionPipelineDelegate, connection:Connection) init(args())
+
+		global handle
+		F handle(cpd:ConnectionPipelineDelegate, e:IO::events::Write) {
+			debug('server', "ConnectionPipelineDelegate Write ${e.data.SafeStr()}")
+			cpd.connection.send(e.data)
+		}
+		F handle(cpd:ConnectionPipelineDelegate, e:IO::events::Active) {
+			debug('server', 'ConnectionPipelineDelegate Active')
+		}
+		F handle(cpd:ConnectionPipelineDelegate, e:IO::events::Inactive) {
+			debug('server', 'ConnectionPipelineDelegate Inactive')
+		}
+
 		section "Connection" {
-			type Connection
-			F init(c:Connection, server:Server, sock:Int) {
-				c.server = server
+
+			F init(c:Connection, sock:Int) {
 				c.sock = sock
-				# For user data
-				c.user = {}
+				c.user = {} # For user data
+				# c.pipeline is not here as expecting to change COR::Pipeline() call to have client/server specific arguments
+			}
+
+			F init(c:ClientConnection, client:Client, sock:Int) {
+				super(c, sock)
+				c.client = client
+				c.pipeline = COR::Pipeline(ConnectionPipelineDelegate(c))
+				c.user = {} # For user data
+			}
+
+			F init(c:ServerConnection, server:Server, sock:Int) {
+				super(c, sock)
+				c.server = server
+				c.pipeline = COR::Pipeline(ConnectionPipelineDelegate(c))
+				c.user = {} # For user data
 			}
 
 			global close
@@ -68,74 +120,61 @@ ns {
 
 			global send
 			F send(c:Connection, data:Str) c.sock.send(data)
+
+			F Connection(c:Client, sock:Int) ClientConnection(c, sock)
+			F Connection(s:Server, sock:Int) ServerConnection(s, sock)
 		}
 
-		section "ConnectionHandler" {
-			type ConnectionHandler
-
-			global on_connect
-			F on_connect(ch:ConnectionHandler, c:Connection) {
-				debug('server', 'ConnectionHandler on_connect()')
-				ch.connection = c
-			}
-
-			global on_data
-			F on_data(ch:ConnectionHandler, data:Str) {
-				debug('server', 'ConnectionHandler on_data()')
-			}
-
-			global on_remote_close
-			F on_remote_close(ch:ConnectionHandler) {
-				debug('server', 'ConnectionHandler on_remote_close()')
-				ch.connection.close()
-			}
-		}
-
-		section "ServerHandler" {
-			type ServerHandler
-			F init(sh:ServerHandler) throw InvalidArgument()
-			F init(sh:ServerHandler, make_connection_handler:Fun) init(args())
+		section "ServerDelegate" {
+			type ServerDelegate
+			# F init(sd:ServerDelegate) throw InvalidArgument()
+			# F init(sd:ServerDelegate, make_connection_handler:Fun) init(args())
 
 			global on_listen
-			F on_listen(sh:ServerHandler, s:Server) {
-				debug('server', 'ServerHandler on_listen()')
+			F on_listen(sd:ServerDelegate, s:Server) {
+				debug('server', 'ServerDelegate on_listen()')
+			}
+
+			global on_connect
+			F on_connect(sd:ServerDelegate, c:Connection) {
+				debug('server', 'ServerDelegate on_connect()')
+				throw NotImplemented("on_connect(ServerDelegate) is not implemented in a subtype")
 			}
 
 			global on_end
-			F on_end(sh:ServerHandler, s:Server) {
-				debug('server', 'ServerHandler on_end()')
+			F on_end(sd:ServerDelegate, s:Server) {
+				debug('server', 'ServerDelegate on_end()')
 			}
 
 		}
 
-		section "ThreadedServerHandler" {
-			type ThreadedServerHandler(ServerHandler)
+		section "ThreadedServerDelegate" {
+			type ThreadedServerDelegate(ServerDelegate)
 
-
-			global on_connect
-			F on_connect(sh:ThreadedServerHandler, c:Connection) {
-				debug('server', 'ThreadedServerHandler on_connect()')
+			F on_connect(sd:ThreadedServerDelegate, c:Connection) {
+				debug('server', 'ThreadedServerDelegate on_connect()')
 
 				# TODO: join the thread / use Executor
-				Thread("connection-${c.id}", {
+				Thread("ThreadedServerDelegate-Connection-${c.id}", {
 					try {
-						debug('server', 'ThreadedServerHandler on_listen() - new thread')
-						handler = sh::make_connection_handler()
-						handler.on_connect(c)
+						debug('server', 'ThreadedServerDelegate on_listen() - new thread')
+						c.pipeline.fire(IO::events::Active())
+						debug('server', 'ThreadedServerDelegate on_listen() - after IO::events::Active')
 						while true {
 							data = recvfrom(c.sock, 1024, 0, c_sockaddr_un())
 							if data == '' {
-								handler.on_remote_close()
-								debug('server', "After handler.on_remote_close()")
+								debug('server', 'ThreadedServerDelegate Remote closed connection')
+								c.pipeline.fire(IO::events::Inactive())
 								break
 							}
-							debug('server', "ThreadedServerHandler data -- ${data.SafeStr().limit(1024)}")
-							# c.send("[${c.sock}] Echoing back: ${data}")
-							handler.on_data(data)
-							debug('server', "ThreadedServerHandler on_connect -- after handler.on_data()")
+							debug('server', "ThreadedServerDelegate data -- ${data.SafeStr().limit(1024)}")
+							c.pipeline.fire(IO::events::Read(data))
+							debug('server', "ThreadedServerDelegate on_connect -- after handler.on_data()")
 						}
 					} catch(e) {
-						log("ThreadedServerHandler - exception in thread: ${e}")
+						debug('server', "ThreadedServerDelegate before logging")
+						log("ThreadedServerDelegate - exception in thread: ${Str(e) tor '<Unable to convert exception to string>'}")
+						debug('server', "ThreadedServerDelegate after logging")
 						guard false
 					}
 				})
@@ -144,188 +183,110 @@ ns {
 		}
 
 		section "UnixStreamServer" {
-			F listen(tus:UnixStreamServer, path:Str, sh:ServerHandler) {
+			F listen(uss:UnixStreamServer, path:Str, sd:ServerDelegate) {
 				id = 1
 				sock = socket(C_PF_UNIX, C_SOCK_STREAM)
-				tus.sock = sock
+				uss.sock = sock
 				debug('server', "Sock: ${sock}")
 				$(ok:[0, 1] rm $path)
 				bind(sock, c_sockaddr_un(path))
 				remote_addr = c_sockaddr_un()
 				listen(sock, 5)
-				sh.on_listen(tus)
+				sd.on_listen(uss)
 				while true {
 					accepted = accept(sock, remote_addr)
 					debug('server', "Connection socket: ${accepted}")
-					c = Connection(tus, accepted).set('id', id)
+					c = Connection(uss, accepted).set('id', id)
 					id += 1
-					sh.on_connect(c)
+					debug('server', 'Calling delegate on_connect')
+					sd.on_connect(c)
+					debug('server', 'After delegate on_connect')
 					# TODO: how to break the loop?
 				}
-				sh.on_end(tus)
+				sd.on_end(uss)
 			}
 		}
 
-		section "LinesConnectionHandler" {
-			# TODO: refactor. creating "next" ConnectionHandler should not be
-			#       the responsibility of the previous ConnectionHandler.
-
-			type LinesConnectionHandler(ConnectionHandler)
-
-			doc make_connection_handler - next ConnectionHandler in chain
-			F init(lch:LinesConnectionHandler) throw InvalidArgument()
-
-			F init(lch:LinesConnectionHandler, make_connection_handler:Fun) {
-				debug('server', "LinesConnectionHandler init()")
-				init(args())
-			}
-
-			F on_connect(lch:LinesConnectionHandler, c:Connection) {
-				lch.connection = c
-				lch.buf = ''
-				lch.next = lch::make_connection_handler()
-				lch::next.on_connect(c)
-			}
-
-			F on_data(lch:LinesConnectionHandler, data:Str) {
-				lch.buf += data
-				while true {
-					# TODO: start the search from previous position
-					# TODO: handle "\r\n"
-					p = pos(lch.buf, "\n")
-					p == null breaks
-					line = lch.buf[0..p]
-					lch::next.on_data(line)
-					lch.buf = lch.buf[(p+1)..null]
-				}
-			}
-
-			F on_remote_close(lch:LinesConnectionHandler) {
-				if lch.buf {
-					lch::next.on_data(lch.buf)
-					lch.buf = ''
-				}
-				lch::next.on_remote_close()
-			}
-		}
-
-		section "JSON-RPC ConnectionHandler" {
-
-			VALID_JSON_RPC_REQUEST = {
-				'jsonrpc': '2.0'
-				'method': Str
-				'id': IfExists(AnyOf(Num, Str, Null))
-				'params': IfExists(AnyOf(Arr, Hash))
-			}
-
-			# https://www.jsonrpc.org/specification
-			type JsonRpcConnectionHandler(ConnectionHandler)
-			F init(jrch:JsonRpcConnectionHandler) throw InvalidArgument()
-
-			F init(jrch:JsonRpcConnectionHandler, methods:Namespace) {
-				debug('server', "JsonRpcConnectionHandler init()")
-				init(args())
-			}
-
-			F on_data(jrch:JsonRpcConnectionHandler, data:Str) block b {
-				debug('server', "JsonRpcConnectionHandler on_data()")
-
-				F send_error(code, message, data=null) {
-					error("JsonRpcConnectionHandler on_data send_error -- ${code} ${message} ${data}")
-					ret = {
-						'jsonrpc': '2.0'
-						'id': req.get('id')
-						'error': {
-							'code': code
-							'message': message
-							'data': data
-						}.filterv()
-					}
-					jrch.connection.send(ret.encode_json() + "\n")
-					b.return()
-				}
-
-				req = {}  # allow send_error() to do req.get('id') if we crash in try
-				req = try {
-					data.decode_json()
-				} catch(e:JsonDecodeFail) {
-					send_error(-32700, 'Parse error', e.Hash().filterk(AnyOf('error', 'value', 'position')))
-				}
-
-				if (req !~ VALID_JSON_RPC_REQUEST) send_error(-32600, 'Invalid Request', 'See https://www.jsonrpc.org/specification')
-
-				if (req.method not in jrch.methods) send_error(-32601, 'Method not found', "Method ${req.method} not found. Available methods: ${jrch.methods.keys()}")
-
-				args = []
-				kwargs = {}
-				if 'params' in req {
-					match req.params {
-						Arr args = req.params
-						Hash kwargs = req.params
-					}
-				}
-
-				debug('server', "JsonRpcConnectionHandler on_data -- invoking ${req.method}")
-				result = try {
-					jrch.methods[req.method](*args, **kwargs)
-				} catch(mnf:MethodNotFound) {
-					guard mnf.callable === jrch.methods[req.method]
-					send_error(-32602, 'Invalid params', "Correct parameters can be seen in methods' descriptions: ${jrch.methods[req.method].Arr()}")
-				} catch(e:Error) {
-					send_error(-32603, 'Internal error', e.Str())
-				}
-
-				if 'id' in req {
-					# response expected
-					ret = {
-						'jsonrpc': '2.0'
-						'id': req.id
-						'result': result
-					}.filterv()
-					debug('server', 'JsonRpcConnectionHandler on_data -- sending reply')
-					jrch.connection.send(ret.encode_json() + "\n")
-				}
-
-			}
-
-		}
 
 		F test_un_server() {
-			section "EchoConnectionHandler" {
-				type EchoConnectionHandler(ConnectionHandler)
-				global on_data
-				F on_data(ech:EchoConnectionHandler, data:Str) {
-					debug('server', 'EchoConnectionHandler on_data()')
-					ech.connection.send("[${ech.connection.id}] Echoing back (escaped) line: ${data.SafeStr()}\n")
-				}
 
-				global on_remote_close
-				F on_remote_close(ech:EchoConnectionHandler) {
-					debug('server', 'EchoConnectionHandler on_remote_close()')
-					super(ech)
-				}
+			type MyDelegate(ThreadedServerDelegate)
+
+			type MyHandler(COR::Handler)
+
+			global on_connect
+			F on_connect(md:MyDelegate, c:Connection) {
+				c.pipeline.push(IO::handlers::Splitter("\n"))
+				c.pipeline.push(MyHandler())
+				super(md, c)
 			}
-			# sh = ThreadedServerHandler(EchoConnectionHandler)
-			sh = ThreadedServerHandler(F on_connect() {
-				LinesConnectionHandler(EchoConnectionHandler)
-			})
-			net::UnixStreamServer().listen("sock_test", sh)
-		}
+			md = MyDelegate()
 
-		F unix_json_rpc_server(path:Str, methods:Namespace) {
-			sh = net::ThreadedServerHandler(F on_connect() {
-				F make_json_rpc_handler() {
-					debug('server', 'make_json_rpc_handler()')
-					net::JsonRpcConnectionHandler(methods)
-				}
-				net::LinesConnectionHandler(make_json_rpc_handler)
-			})
-			log("JSON RPC server is starting to listen on Unix socket ${path}")
-			net::UnixStreamServer().listen(path, sh)
+			global handle
+			F handle(mh:MyHandler, hc:COR::HandlerContext, r:IO::events::Read) {
+				hc.fire(IO::events::Write(r.data + "\n"))
+			}
+
+
+			net::UnixStreamServer().listen("sock_test", md)
 		}
 
 		# DEBUG=server ngs -pi 'net::test_un_server()'
 		# echo wwwxyz | nc -U build/sock_test
+
+		section "ClientDelegate" {
+			type ClientDelegate
+
+			global on_connect
+			F on_connect(cd:ClientDelegate, c:Connection) {
+				debug('client', 'ClientDelegate on_connect()')
+			}
+
+			global on_data
+			F on_data(cd:ClientDelegate, data:Str) {
+				debug('client', 'ClientDelegate on_data()')
+			}
+
+			global on_remote_close
+			F on_remote_close(cd:ClientDelegate) {
+				debug('client', 'ClientDelegate on_remote_close()')
+			}
+		}
+
+		section "UnixStreamClient" {
+
+			block _ {
+				id = Iter(1..null)
+				global init
+				F init(usc:UnixStreamClient) {
+					super(usc)
+					usc.id = id.next()
+				}
+			}
+
+			F connect(usc:UnixStreamClient, path:Str, cd:ClientDelegate) {
+				debug('client', 'UnixStreamClient#connect')
+				sock = socket(C_PF_UNIX, C_SOCK_STREAM)
+				usc.sock = sock
+				connect(sock, c_sockaddr_un(path))
+				c = Connection(usc, sock)
+				debug('client', 'UnixStreamClient will call on_connect')
+				cd.on_connect(c)
+				usc.reader = Thread("UnixStreamClient-${usc.id}-receiver", {
+					while true {
+						debug('client', 'UnixStreamClient will recvfrom()')
+						data = recvfrom(sock, 1024, 0, c_sockaddr_un())
+						debug('client', "UnixStreamClient did recvfrom() ${data.SafeStr()}")
+						if data == '' {
+							cd.on_remote_close()
+							break
+						}
+						c.pipeline.fire(IO::events::Read(data))
+					}
+				})
+				usc
+			}
+		}
 	}
 }
 

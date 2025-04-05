@@ -50,6 +50,7 @@ void *ngs_realloc(void *ptr, size_t size);
 // GC - end
 
 typedef struct VM VM;
+typedef struct CTX CTX;
 
 // XXX: don't do NGS_REALLOC all the time. Maybe re-use some
 //      other code here instead of reinventing the wheel
