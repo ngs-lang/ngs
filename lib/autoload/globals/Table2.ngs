@@ -323,6 +323,7 @@ ns {
 			maybe_output_headers()
 			if hidden_cols_enum {
 				echo("# Hidden columns: ${hidden_cols_enum.keys().join(',')}")
+				echo("# Use wider terminal to see them.")
 			}
 		}
 
