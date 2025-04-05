@@ -29,6 +29,7 @@
   * Add experimental `Capture` pattern for capturing values
   * Add experimental `Branch` pattern for multiple matches
 * Add `$[...]` syntax for running external programs without capturing output
+* Add `x::{ ... }` syntax and `::(x, f:Fun)` method definition. Works like `tap()`.
 
 ### Fixes and improvements
 * Fix `AtPath` for non-eachables
