@@ -1477,7 +1477,7 @@ F only(val, pattern, mapper:Fun) {
 	val.when(pattern, mapper)
 }
 
-doc If val matches pat, return new_val.Value(val); otherwise return val
+doc If val matches pat, return new_val.Value(val); otherwise return val.
 doc Use instead of older only()
 doc %EX - "abcd".mapo(X.when("b", "*"))  # a*cd
 doc %EX - "abcd".mapo(F(x) x.when("b", "[$X]"))  # a[b]cd
