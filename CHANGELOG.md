@@ -1,4 +1,4 @@
-## (UNRELEASED) Version 0.2.17
+## 2025-04-05 Version 0.2.17
 
 ### New features
 * Add `each(Dir, Fun)`
