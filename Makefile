@@ -20,7 +20,7 @@ build:
 
 .PHONY: tests
 tests:
-	(cd build && $(CTEST --rerun-failed --output-on-failure))
+	(cd build && $(CTEST) --rerun-failed --output-on-failure)
 
 .PHONY: install
 install: build
