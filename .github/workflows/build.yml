@@ -65,8 +65,8 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        container: [ "debian:11.1" ]
-        version: [ "9", "10" ] # gcc 11 doesn't exist in debian apt
+        container: [ "debian:12" ]
+        version: [ "11", "12" ]
     steps:
       - uses: actions/checkout@v4
       - name: Setup Compiler
