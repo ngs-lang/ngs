@@ -171,7 +171,7 @@ jobs:
     runs-on: ${{ matrix.container }}
     strategy:
       matrix:
-        container: [ "macOS-14" ]
+        container: [ "macOS-15" ]
     steps:
       - uses: actions/checkout@v4
       - name: Setup Compiler
