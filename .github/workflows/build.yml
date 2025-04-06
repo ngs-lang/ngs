@@ -152,8 +152,8 @@ jobs:
     runs-on: ${{ matrix.container }}
     strategy:
       matrix:
-        container: [ "macOS-12" ]
-        version: [ "10", "11" ]  # On 2023-02-11, version 9 was already broken: "g++-9: warning: '12.6' is not valid for 'mmacosx-version-min'"
+        container: [ "macOS-15" ]
+        version: [ "12", "13" ]  # On 2023-02-11, version 9 was already broken: "g++-9: warning: '12.6' is not valid for 'mmacosx-version-min'"
     steps:
       - uses: actions/checkout@v4
       - name: Setup Compiler
