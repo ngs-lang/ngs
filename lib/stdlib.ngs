@@ -979,7 +979,10 @@ section "Literal" {
 	type Lit
 	F init(l:Lit) throw MethodNotFound("Lit() must have an argument")
 	F init(l:Lit, val) l.val = val
+	F code(l:Lit) "Lit(${l.val.code()})"
 }
+
+TEST Lit(1).code() == 'Lit(1)'
 
 section "=~ Matching" {
 
