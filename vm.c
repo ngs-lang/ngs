@@ -2942,14 +2942,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 		NULL
 	);
 
-
-	// Type
-	// needed for switch
-	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->Type, "b", vm->Type);
-	_doc(vm, "", "Compare types. Implemented as sameness comparison.");
-	_doc(vm, "%EX", "type T; T==T  # true");
-	_doc(vm, "%EX", "type T1; type T2; T1==T2  # false");
-
 	// UserDefinedMethod
 	register_global_func(vm, 0, "==",       &native_same_any_any,      2, "a",      vm->UserDefinedMethod, "b", vm->UserDefinedMethod);
 	_doc(vm, "", "Compare closures. Implemented as sameness comparison.");

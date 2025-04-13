@@ -2442,6 +2442,10 @@ section "Type" {
 	TEST decode("1", Int) == 1
 	TEST decode("1", Real) == 1.0
 
+	doc Compare types. Same as a===b.
+	doc %RET - Bool
+	F ==(a:Type, b:Type) a === b
+
 	doc Check whether t is maybe_supertype or its subtype
 	doc Note that if t and maybe_supertype are same type, this method also returns true.
 	doc %RET - Bool
