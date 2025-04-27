@@ -426,6 +426,12 @@ section "MultiMethod" {
 	F filtero(mm:MultiMethod, pattern) mm.Arr().filter(pattern).MultiMethod()
 
 	F Str(mm:MultiMethod) "<MultiMethod with ${mm.Arr().len()} method(s)>"
+
+	doc Defined as a === b
+	doc %RET - Bool
+	F ==(a:MultiMethod, b:MultiMethod) a === b
+
+	TEST echo == echo
 }
 
 section "Parent types for built-in types" {
