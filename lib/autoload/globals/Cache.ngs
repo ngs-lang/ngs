@@ -1,0 +1,101 @@
+# Work in progress!
+
+ns(orig_debug=debug) {
+	global init, get, del
+
+	F debug(s:Str) orig_debug("cache", s)
+
+
+	F _Key(k:Str) k
+	F _Key(h:Hash) {
+		k.encode_json()::{
+			debug("_Key $k $A")
+		}
+	}
+
+	section "Rudimentary serialization" {
+		F _serialize(x) {
+			doc Can do lossless serialization to JSON?
+			F can_serialize(x) x =~ AnyOf(Str, Int, Real, Bool)
+			F can_serialize(h:Hash) h.keys().all(Str) and h.values().all(can_serialize)
+			F can_serialize(a:Arr) a.all(can_serialize)
+			assert(x, can_serialize, 'Data to be cached could not be serialized to JSON')
+			x.encode_json()
+		}
+		F _deserialize(x) {
+			x.decode_json()
+		}
+	}
+
+	section "Cache" {
+		doc %STATUS - experimental
+		type Cache
+		F init(c:Cache, name:Str='default') {
+			c.name = name
+		}
+	}
+
+	section "DiskCache" {
+		doc %STATUS - experimental
+		type DiskCache(Cache)
+
+		F init(dc:DiskCache, name:Str='default') {
+			super(dc, name)
+		}
+
+		F _Dir(dc:DiskCache, k) {
+			# TODO: better directory
+			# TODO: watch out for non-string k (currently, k is not used)
+			Dir(ENV.HOME / '.cache' / 'ngs' / 'v1' / encode_uri_component(dc.name))
+		}
+
+		F _File(dc:DiskCache, k) {
+			File(_Dir(dc, k) / encode_uri_component(k._Key()))
+		}
+
+		doc %STATUS - experimental
+		F get(dc:DiskCache, k, compute:Fun) {
+			f = _File(dc, k)
+			if f {
+				# TODO: check TTL
+				debug("Hit ${k}")
+				return read(f)._deserialize()
+			}
+			debug("Miss ${k}")
+			compute()::{
+				d = _Dir(dc, k)
+				$(mkdir -p ${d})
+				f.write(A._serialize())
+			}
+		}
+
+		doc %STATUS - experimental
+		F del(dc:DiskCache, k) {
+			debug("Removing ${k}")
+			try {
+				$(rm ${_File(dc, k)} 2>/dev/null)
+			} catch(pf:ProcessFail) {
+				guard pf.process.exit_code == 1
+				"OK"
+			}
+			dc
+		}
+
+		# Cache::test(Cache::DiskCache())
+		doc %STATUS - experimental
+		F test(c:DiskCache) {
+			c.del('test')
+
+			did_run = false
+			c.get('test', { did_run=true; 1 }).assert(1)
+			assert(did_run)
+
+			did_run = false
+			c.get('test', { did_run=true; 2 }).assert(1)
+			assert(not(did_run))
+
+			c.del('test')
+		}
+	}
+
+}
