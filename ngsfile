@@ -6,12 +6,18 @@ ns(t=test) {
 	F server() sh::server(false)
 	F ui() sh::server(true)
 
+	# Ex: DEBUG=guesser ngs . eval 'p' --dua 2,status
 	# "eval" would conflict with the global eval(c:Client, ...)
 	# which is called from tests below.
 	F _eval(cmd:Str, dua:Str='') {
 		F is_server_running() {
 			# TODO: better error handling in sh::Client and upstream
-			(try sh::Client()) != null  # Assumption: an error is due to server that is not running
+			try {
+				sh::Client()
+				true
+			} catch(e:(net::NetworkError)) {
+				false
+			}
 		}
 		if not(is_server_running()) {
 			Thread("server", {

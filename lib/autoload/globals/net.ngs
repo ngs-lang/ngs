@@ -3,17 +3,10 @@ ns {
 	# Work in progress!
 	# Flimsy code, needs refactor!
 
+	type NetworkError(Error)
+
 	section "Wrappers around C functions" {
-		F _assert(code:Int, func:Str) {
-			e = c_errno()
-			if code == -1 {
-				e throws CError(e, '')::{
-					A::message = "${A.errno_name} in ${func}()"
-				}
-				throw InvalidArgument("C code returned -1 but errno is not set")
-			}
-			code
-		}
+		F _assert(code:Int, func:Str) code.assert(Not(-1), { NetworkError('Networking error', CError("net::${func}() failed")) })
 
 		# TODO: consider retry()
 		F _while_eintr(body:Fun) {

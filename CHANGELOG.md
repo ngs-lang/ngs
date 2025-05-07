@@ -1,5 +1,9 @@
 ## (UNRELEASED) Version 0.2.18
 
+### New features
+* Add `assert(val, pattern, Fun)`
+
+
 ## 2025-04-05 Version 0.2.17
 
 ### New features
