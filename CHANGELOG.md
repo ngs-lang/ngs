@@ -2,7 +2,7 @@
 
 ### New features
 * Add `assert(val, pattern, Fun)`
-
+* Add `parallel(*funcs)`
 
 ## 2025-04-05 Version 0.2.17
 

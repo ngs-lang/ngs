@@ -315,6 +315,7 @@ TEST type MyExc(Exception); { assert(1, Str, MyExc("blah")) }.assert(MyExc)
 
 doc Throws whatever f(val) returns if val does not match the pattern
 doc %RET - val
+doc %EX - assert(n, Int, { InvalidArgument("n must be integer").set('n', n) })
 F assert(val, pattern, f:Fun) {
 	not(val =~ pattern) throws f(val)
 	val
@@ -5229,7 +5230,7 @@ section "Stats" {
 }
 
 section "Thread" block _ {
-	global Thread, Threads, ThreadFail, init, join, pmap, pfilter, ptimes, Str, (.)
+	global Thread, Threads, ThreadFail, init, join, pmap, pfilter, ptimes, parallel, Str, (.)
 	# TODO: consider *args for consistency with other parts of the language
 
 	doc Execution thread. Currently a POSIX thread.
@@ -5431,6 +5432,21 @@ section "Thread" block _ {
 	}
 
 	TEST Set(1..10).pfilter(2, X>3) == Set(1..10).filter(X>3)
+
+	doc Execute given functions in parallel
+	doc funcs - Zero arguments functions to run in parallel
+	doc %RET - Arr with results matching the order of funcs
+	F parallel(*funcs) {
+		funcs.assert(Repeat(Fun), InvalidArgument("parallel() expects functions"))
+		l = len(funcs)
+		debug("conc", "parallel() starts with ${l} functions")
+		l.pmap(F(idx) {
+			debug("conc", "parallel() ${idx} started")
+			funcs[idx]()
+		})
+	}
+
+	TEST parallel({1+2}, {2+3}) == [3, 5]
 
 	F Str(t:c_pthread_t) "<c_pthread_t ${id(t)}>"
 	F Str(t:Thread) "<Thread ${t.id}>"
