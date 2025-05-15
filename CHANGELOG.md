@@ -3,6 +3,7 @@
 ### New features
 * Add `assert(val, pattern, Fun)`
 * Add `parallel(*funcs)`
+* Add `peach(Eachable1, ...)`
 
 ## 2025-04-05 Version 0.2.17
 
