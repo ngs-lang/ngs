@@ -113,7 +113,7 @@ ns {
 				'name': Pipeline(p.name)
 				'status': AbstractProcess::Status::Status(e.status)
 				'sources': sources
-				'revisions': e.sourceRevisions.map(F(r) Revision(r.actionName, r.revisionId, r.revisionSummary.CommitMessage))
+				'revisions': e.sourceRevisions.map(F(r) Revision(r.actionName, r.revisionId, r.revisionSummary.when(Hash, X.CommitMessage)))
 				'last_executed': e.lastUpdateTime
 				'approvals': approval_actions
 				'progress': if statuses { Progress(statuses.Succeeded, total_actions) }

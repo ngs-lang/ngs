@@ -7402,7 +7402,11 @@ F decode(s:Str, hints:Hash) {
 			if A.all({'sourceRevisions': Repeat({'revisionSummary': Str})}) {
 				# .sourceRevisions in all executions, hence flatten()
 				A.sourceRevisions.flatten().each(F(r) {
-					r.revisionSummary .= decode_json()
+					try {
+						r.revisionSummary .= decode_json()
+					} catch(e:JsonDecodeFail) {
+						# Sometimes it's not JSON. Leaving as is.
+					}
 				})
 			}
 		}
