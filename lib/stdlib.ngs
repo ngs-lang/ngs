@@ -8745,24 +8745,34 @@ section "Loading code" {
 
 	# Internal, don't use outside of stdlib
 	_REQUIRED = {}
+	_REQUIRE_LOCK = ReentrantLock()
 
 	F require(fname:Str) {
 		guard fname =~ AnyOf(Pfx('/'), Pfx('./'))
-		fname in _REQUIRED returns _REQUIRED[fname]
-		try {
-			program_text = read(fname)
-			program_bytecode = compile(program_text, fname)
-			debug('require', "require(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
-			bootstrap_print_compilation_warnings(program_bytecode, fname)
-			program_func = load(program_bytecode, "require()d file: $fname")
-			ret = program_func()
-			debug('require', "require(): done requiring ${fname}")
-			_REQUIRED[fname] = ret
-			ret
-		} catch(e) {
-			guard e !~ AnyOf(RequireFail, NormalExit)
-			throw RequireFail(e)
-		}
+		debug('require', 'before lock')
+		_REQUIRE_LOCK.acquire({
+			debug('require', 'in lock')
+			fname in _REQUIRED returns _REQUIRED[fname]
+			try {
+				program_text = read(fname)
+				program_bytecode = compile(program_text, fname)
+				debug('require', "require(): bytecode for ${fname} has length of ${program_bytecode.len()} bytes")
+				bootstrap_print_compilation_warnings(program_bytecode, fname)
+				debug('require', 'loading')
+				program_func = load(program_bytecode, "require()d file: $fname")
+				debug('require', "running ${fname}")
+				ret = program_func()
+				debug('require', "require(): done requiring ${fname}")
+				_REQUIRED[fname] = ret
+				debug('require', 'finishing lock')
+				ret
+			} catch(e) {
+				debug('require', 'in catch')
+				guard e !~ AnyOf(RequireFail, NormalExit)
+				debug('require', 'will throw RequireFail')
+				throw RequireFail(e)
+			}
+		})
 	}
 
 	F require(p:Path) require(p.path)
@@ -8807,37 +8817,31 @@ section "Loading code" {
 
 		}
 
-		invocation = 0
-
 		doc Called when reading undefined global.
 		doc Implements autoloading.
 		doc Searches for autoload/globals/GLOBAL_NAME.ngs in NGS_PATH
 		doc WARNING: May have security implications when looking up a name from untrusted source.
 		doc %EX - test("My web server runs") do { .... }  # autoload/globals/test.ngs is automatically loaded.
 		F global_not_found_handler(name:Str) {
-			_lock.acquire({
 
-				F _debug(s:Str) debug("autoload", "global_not_found_handler() [invocation $i] ${s}")
+			F _debug(s:Str) debug("autoload", "global_not_found_handler() [${name}] ${s}")
 
-				i = invocation
-				invocation += 1
-				_debug("name=${name}")
-				idx = ll_resolve_global_variable(name)
-				ll_is_global_variable_defined(idx) returns
-				if name in _global_name_to_autoload_file {
-					_debug("loading autoload/globals/${_global_name_to_autoload_file[name]}.ngs")
-					require("autoload/globals/${_global_name_to_autoload_file[name]}.ngs")
-					return
-				}
-				_debug("loading autoload/globals/${name}.ngs")
+			_debug("name=${name}")
+			idx = ll_resolve_global_variable(name)
+			ll_is_global_variable_defined(idx) returns
+			if name in _global_name_to_autoload_file {
+				_debug("loading autoload/globals/${_global_name_to_autoload_file[name]}.ngs")
+				require("autoload/globals/${_global_name_to_autoload_file[name]}.ngs")
+				return
+			}
+			_debug("loading autoload/globals/${name}.ngs")
 
-				val = require("autoload/globals/${name}.ngs")
-				if not(ll_is_global_variable_defined(idx)) {
-					_debug("global variable ${name} still not set; setting")
-					ll_set_global_variable(idx, val)
-				}
+			val = require("autoload/globals/${name}.ngs")
+			if not(ll_is_global_variable_defined(idx)) {
+				_debug("global variable ${name} still not set; setting")
+				ll_set_global_variable(idx, val)
+			}
 
-			})
 		}
 	}
 
