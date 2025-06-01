@@ -201,6 +201,8 @@ ns {
 
 				res.id not in jrc.callbacks throws Error("JsonRpcClient Read - no callback for id ${res.id}")
 
+				'result' not in res throws Error("JsonRpcClient Read - remote error").set(remote_error = res.get('error'))
+
 				finally(
 					{ jrc.callbacks[res.id](res.result) }
 					{ jrc.callbacks.del(res.id) }
