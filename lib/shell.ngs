@@ -7,6 +7,7 @@ ns {
 	WEB_SERVER_PORT = 52000
 
 	# Temporary name "repr"
+	# TODO: $type Table
 	F repr(h:Hash, level:Int=0) collector {
 		pfx = '  ' * level
 		h.each(F(k, v) {
@@ -62,7 +63,7 @@ ns {
 		}
 
 		global poll
-		doc cb - returns a Box. FullBox signals stop polling and return the value in the box
+		doc cb - returns a Box. FullBox signals stop polling and return the unboxed value
 		F poll(c:Client, cb:Fun) {
 			while true {
 				debug('client', "Polling last_seen_version=${c.last_seen_version}")
