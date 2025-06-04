@@ -6,22 +6,25 @@ ns {
 	WEB_SERVER_DIR = Dir(".." / "ngs-web-ui").assert()
 	WEB_SERVER_PORT = 52000
 
-	# Temporary name "repr"
-	# TODO: $type Table
-	F repr(h:Hash, level:Int=0) collector {
+	F repr(x, level:Int=0) {
 		pfx = '  ' * level
-		h.each(F(k, v) {
-			if [k, v] =~ ['time', Int] {
+		["${pfx}${x.SafeStr()}"]
+	}
+
+	F repr(x, level:Int=0) {
+		method = {
+			Arr: each_idx_val
+			Hash: each
+		}.get(Type(x))
+		guard method
+
+		pfx = '  ' * level
+		collector x.(method)(F(i, v) {
+			if [i, v] =~ ['time', Int] {
 				v = "${v} (${v.Time().Str()})"
 			}
-			if k == 'children' {
-				v.each_idx_val(F(i, v) {
-					collect("${pfx}  [${i}]")
-					repr(v, level + 2).each(collect)
-				})
-				return
-			}
-			collect("${pfx}${k} = ${v.SafeStr()}")
+			collect("${pfx}[${i}]")
+			repr(v, level + 2).each(collect)
 		})
 	}
 
@@ -83,9 +86,9 @@ ns {
 			c.poll(F(p) {
 				debug('client', 'poll(Client, Str) callback')
 				gti = p.timeline.children.the_one({'$type': 'GroupTimelineItem', 'id': gti_id})
-				rti = gti.children.the_one({'$type': 'ResultTimelineItem'}, found_none={null})
-				debug('client', "poll(Client, Str) callback result ${rti}")
-				if rti then FullBox(gti) else EmptyBox()
+				rti = gti.children.the_one({'$type': 'ResultTimelineItem'}, body=FullBox, found_none=EmptyBox)::{
+					debug('client', "poll(Client, Str) callback result ${A}")
+				}
 			})
 		}
 
@@ -162,7 +165,6 @@ ns {
 	F eval(cmd:Str, dua:Arr=[]) {
 		client = Client()
 		e = client.eval(cmd)
-		$(sleep 1)  # XXX: timing with eval(["p"]) # JsonRPC server or its callbacks are probably not thread safe
 		p = client.poll()
 
 		if dua {
@@ -351,4 +353,92 @@ ns {
 
 		net::unix_stream_server(SOCK_FILE, ShellServerDelegate())
 	}
+
+	_exports.test = {
+
+		F make_textual_command_timeline_result_pattern(gti:Str, cmd:Str, pat) {
+			{
+				'timeline': {
+					'children': Present({
+						'$type': 'GroupTimelineItem'
+						'id': gti
+						'children': [{
+							'$type': 'TextualCommandTimelineItem'
+							'command': cmd
+						}, {
+							'$type': 'ResultTimelineItem'
+							'children': [
+								pat
+							]
+						}]
+					})
+				}
+			}
+		}
+
+
+		srv = Thread('shell_test_server', {
+			server(false)
+		})
+		$(sleep 0.1)
+
+		c = Client()
+
+		test_ti = null
+
+		test("eval(Client, Str)", {
+			test_ti = c.eval("{1+1}").assert({
+				'ti': Pfx('ti-')
+			}).ti
+		})
+
+		test("poll(Client, Fun)", {
+			c.poll(F(response) {
+				# The response was observed to be already there. I don't think it's guaranteed. May need refactoring.
+				assert(response, make_textual_command_timeline_result_pattern(test_ti, '{1+1}', { '$type': 'Scalar', 'value': 2 }))
+				FullBox(null)
+			})
+		})
+
+		test("WIP Pick pipeline", {
+			# fixtures = fetch('lib/shell.test-fixtures.json')
+			# pipelines = fixtures.'CodePipeline-pipelines' # ngs -pj 'require("aws/CodePipeline.ngs")::pipelines::list()', anonymized
+
+			section "mock" {
+				global ($())
+				F '$()'(p:Process) {
+					# echo(inspect(args))
+					super(p)::{
+						# echo(inspect(A))
+					}
+				}
+				# echo(($()).Arr())
+			}
+
+			line = '{ require("aws/CodePipeline.ngs")::pipelines::list() }'
+
+			c = Client()
+			test_ti = c.eval(line).ti
+			response = c.poll(test_ti)
+
+			pat = {
+				'$type': 'ResultTimelineItem',
+				'children': [
+					{
+						'$type': 'Table'
+					}
+				]
+			}
+
+			assert(response, pat)
+
+			response.repr().Lines().echo()
+		})
+
+		# TODO: graceful server shutdown
+
+	}
+	# moved # _exports.test = _test
+
+
 }
