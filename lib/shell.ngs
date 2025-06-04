@@ -11,19 +11,14 @@ ns {
 		["${pfx}${x.SafeStr()}"]
 	}
 
-	F repr(x, level:Int=0) {
-		method = {
-			Arr: each_idx_val
-			Hash: each
-		}.get(Type(x))
-		guard method
+	F repr(x:AnyOf(Arr, Hash), level:Int=0) {
 
 		pfx = '  ' * level
-		collector x.(method)(F(i, v) {
-			if [i, v] =~ ['time', Int] {
+		collector x.each_ik_val(F(ik, v) {
+			if [ik, v] =~ ['time', Int] {
 				v = "${v} (${v.Time().Str()})"
 			}
-			collect("${pfx}[${i}]")
+			collect("${pfx}[${ik}]")
 			repr(v, level + 2).each(collect)
 		})
 	}

@@ -1372,6 +1372,7 @@ section "=~ Matching" {
 
 			debug('AtPath', { "Entering ${mc.path}. ap.path_pattern is Branch ${ap.path_pattern is Branch}" })
 
+			# Consider using each_ik_val but taking care of ignoring non-containers
 			F each2(_non_descendable, cb:Fun) nop
 
 			F each2(e:Eachable1, cb:Fun) {
@@ -4197,6 +4198,20 @@ TEST h={}; try h.shift("a") catch(e:KeyNotFound) true
 TEST h={}; h.shift("a", 7) == 7
 TEST h={"a": 1, "b": 2}; s = h.shift("a"); h == {"b": 2} and s == 1
 
+section "Unified each() for Eachable1 and Eachable2" {
+
+	doc Same as each_idx_val() but only for e that is not Int or Str. Mnemonic: each index-or-key value.
+	doc %RET - e
+	F each_ik_val(e:Eachable1, cb:Fun) {
+		guard e !~ AnyOf(Int, Str)
+		each_idx_val(e, cb)
+	}
+
+	doc Same as each(e, cb). Mnemonic: each index-or-key value.
+	doc %RET - e
+	F each_ik_val(e:Eachable2, cb:Fun) each(e, cb)
+
+}
 
 section "Box" {
 
