@@ -5541,6 +5541,8 @@ section "Logging and status reporting" {
 
 		DEBUG = ENV.get('DEBUG', '').split(',').filter().Set()
 
+		F debug_enabled(facility:Str) facility in DEBUG or '*' in DEBUG
+
 		doc Same as debug('default', str_or_producer)
 		F debug(str_or_producer) debug('default', str_or_producer)
 
@@ -5549,7 +5551,7 @@ section "Logging and status reporting" {
 		doc TODO: Exclude thread ID if there is only one thread.
 		doc TODO: Timestamps? Timestamps acquiring might not be safe after fork before exec.
 		F debug(facility:Str, str_or_producer) {
-			if facility in DEBUG or '*' in DEBUG {
+			if debug_enabled(facility) {
 				s = str_or_producer.Value()
 				echo(stdlib_error_fd, "[DEBUG ${Time() tor '-'} ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()} $facility] $s")
 			}
