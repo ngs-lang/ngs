@@ -395,19 +395,42 @@ ns {
 			})
 		})
 
+		section "Capture output of AWS CLI" {
+			if 'NGS_SHELL_TEST_CAPTURE' in ENV {
+				_cache = {}
+				global wait
+				F wait(p:Process) {
+					guard p =~ %(aws)
+					# Check if exit code is OK. Otherwise throw?
+					super(p)::{
+						# TODO: count same command and add run number to k
+						k = A.command.argv.join(' ')
+						_cache[k] = p.stdout
+					}
+				}
+				exit_hook.ngs_shell_test_capture = {
+					# echo(_cache)
+					store('lib/shell.test-fixtures.json', _cache, {'pretty': true})
+				}
+			}
+		}
+
 		test("WIP Pick pipeline", {
-			# fixtures = fetch('lib/shell.test-fixtures.json')
-			# pipelines = fixtures.'CodePipeline-pipelines' # ngs -pj 'require("aws/CodePipeline.ngs")::pipelines::list()', anonymized
+			fixtures = fetch('lib/shell.test-fixtures.json')
 
 			section "mock" {
 				global ($())
 				F '$()'(p:Process) {
-					# echo(inspect(args))
-					super(p)::{
-						# echo(inspect(A))
-					}
+					guard 'NGS_SHELL_TEST_CAPTURE' not in ENV
+					guard p =~ %(aws)
+					# echo(p.command.argv)
+					p.executable = find_in_path(p.command.argv[0])
+					p.pid = 0
+					p.exit_code = 0
+					p.exit_signal = 0
+					p.stdout = fixtures[p.command.argv.join(' ')]
+					p
 				}
-				# echo(($()).Arr())
 			}
 
 			line = '{ require("aws/CodePipeline.ngs")::pipelines::list() }'
@@ -427,7 +450,7 @@ ns {
 
 			assert(response, pat)
 
-			response.repr().Lines().echo()
+			# response.repr().Lines().echo()
 		})
 
 		# TODO: graceful server shutdown
