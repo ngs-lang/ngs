@@ -416,9 +416,10 @@ ns {
 		}
 
 		test("WIP Pick pipeline", {
-			fixtures = fetch('lib/shell.test-fixtures.json')
 
 			section "mock" {
+				fixtures = fetch('lib/shell.test-fixtures.json')
+
 				global ($())
 				F '$()'(p:Process) {
 					guard 'NGS_SHELL_TEST_CAPTURE' not in ENV
