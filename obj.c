@@ -700,7 +700,7 @@ void push_multimethod_method(VALUE multimethod, const VALUE method) {
 	array_push(MULTIMETHOD_METHODS(multimethod), method);
 }
 
-// TODO: shring allocated memory
+// TODO: shrink allocated memory
 VALUE array_shift(VALUE arr) {
 	VALUE ret;
 	assert(OBJ_LEN(arr));
