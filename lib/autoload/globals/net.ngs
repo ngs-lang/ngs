@@ -72,11 +72,14 @@ ns {
 		global init
 
 		type ConnectionPipelineDelegate(COR::PipelineDelegate)
-		F init(cpd:ConnectionPipelineDelegate, connection:Connection) init(args())
+		F init(cpd:ConnectionPipelineDelegate, connection:Connection) {
+			cpd.id = SeqId('cpd-')
+			init(args())
+		}
 
 		global handle
 		F handle(cpd:ConnectionPipelineDelegate, e:IO::events::Write) {
-			debug('server', "ConnectionPipelineDelegate Write ${e.data.SafeStr()}")
+			debug('server', "ConnectionPipelineDelegate ${cpd.id} Write ${e.data.SafeStr()}")
 			cpd.connection.send(e.data)
 		}
 		F handle(cpd:ConnectionPipelineDelegate, e:IO::events::Active) {

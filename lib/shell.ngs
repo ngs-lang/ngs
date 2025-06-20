@@ -23,6 +23,54 @@ ns {
 		})
 	}
 
+
+	section "Decode" {
+
+		# _decode_sh is temporary name
+
+		type _Object
+
+		_SIMPLE_CONTAINER = AnyOf('List', 'Columns', 'Row', 'Rows', 'ResultTimelineItem')
+
+		F _decode_sh(x, children=null) throw InvalidArgument("Don't know how to ngs-shell-decode ${x.Type().name} / ${x['$type'] tor '-'}").set(val=x).set(children=children)
+
+		F _decode_sh(x:{'$type': '$raw'}) x.fields(Not('$type'))
+
+		F _decode_sh(x:{'$type': 'Scalar'}) x.value
+
+		F _decode_sh(x:{'$type': _SIMPLE_CONTAINER}, children) children
+
+		F _decode_sh(x:{'$type': 'Object'}, children) {
+			'cur': x.cur._decode_sh()
+			'ref': x.ref._decode_sh()
+			'children': children
+		}
+
+		F _decode_sh(x:{'$type': 'ProcessStatus'}) "ProcessStatus ${x.name}/${x.text}"
+		F _decode_sh(x:{'$type': 'Progress'}) "Progress ${x.step}/${x.total_steps}"
+
+		F _decode_sh(x:{'$type': 'Column'}) x.name
+
+		F _decode_sh(x:{'$type': 'Table'}) {
+			# .columns and .rows
+			cols_names = x.columns._decode_sh()
+			rows = x.rows._decode_sh()
+			rows.map(F(row) {
+				Hash(cols_names, row)
+			})
+		}
+
+		F _decode_sh(x:{'children': Arr}) {
+			_decode_sh(x, x.children.map(_decode_sh))
+		}
+
+		F _decode_sh(x, *args) super(x, *args)::{
+			A.meta().'$type' = x.'$type'
+		}
+
+
+	}
+
 	section "Shell Client" {
 		type Client()
 
@@ -456,9 +504,20 @@ ns {
 
 			assert(response, pat)
 
-			if debug_enabled('test') {
-				response.inspect().each(debug('test', X))
+			F _debug_inspect(title, x) {
+				not(debug_enabled('test')) returns
+				debug('test', "${title}:")
+				x.inspect().each(debug('test', X))
 			}
+
+			_debug_inspect('response', response)
+
+			section "Find the pipeline we want to act on" {
+				x = _decode_sh(response)
+				_debug_inspect('decoded response', x)
+			}
+
+
 		})
 
 		# TODO: graceful server shutdown
