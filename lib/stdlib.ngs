@@ -7851,22 +7851,25 @@ F '[]'(s:Str, r:RegExp) {
 
 TEST "ab01de12f"[/[0-9]+/] == '01'
 
-doc %RET - Checks whether the only argument is of type Str and matches (~) r
+doc %STATUS - internal
+doc Checks for RegExp match. Updates MatchContext.
+doc %RET - Checks whether the argument is of type Str and matches (~) r
 doc %EX - %[w1 w2].filter(/1/)  # %[w1]
 F =~(x, r:RegExp, mc:MatchContext) {
 	# TODO: Support Branch. Open issue: support overlapping?
-	# TODO: Maybe merge named matches into MatchContext
 	x is not Str returns false
 	if (m = x ~ r) {
-		mc.positional = m.matches[1..null]
+		mc.positional.push_all(m.matches[1..null])
 		mc.whole = m.matches[0]
-		mc.named = m.named
+		m.named.each(F(k, v) mc.named[k] = v)
 	}
 	m.Bool()
 }
 
 TEST %[w1 w2].filter(/1/) == %[w1]
 TEST %[1 w2].filter(/1/) == []
+TEST m = "abc" =~ Capture(/(a)(b)(c)/); m.matches == %[abc a b c]
+TEST m = "abc" =~ Capture(/(?P<AAA>a)/); m.named.get("AAA") == 'a'
 
 doc Replace all occurrences of r
 doc mapper - Function that will be called with one matching string at a time that provides the replacement
