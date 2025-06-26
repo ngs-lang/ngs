@@ -69,6 +69,9 @@ ns {
 			type ClientConnection(Connection)
 			type ServerConnection(Connection)
 
+		F _dbg(cc:ClientConnection) 'client'
+		F _dbg(sc:ServerConnection) 'server'
+
 		global init
 
 		type ConnectionPipelineDelegate(COR::PipelineDelegate)
@@ -79,14 +82,14 @@ ns {
 
 		global handle
 		F handle(cpd:ConnectionPipelineDelegate, e:IO::events::Write) {
-			debug('server', "ConnectionPipelineDelegate ${cpd.id} Write ${e.data.SafeStr()}")
+			debug(cpd.connection._dbg(), "ConnectionPipelineDelegate ${cpd.id} Write ${e.data.SafeStr()}")
 			cpd.connection.send(e.data)
 		}
 		F handle(cpd:ConnectionPipelineDelegate, e:IO::events::Active) {
-			debug('server', 'ConnectionPipelineDelegate Active')
+			debug(cpd.connection._dbg(), 'ConnectionPipelineDelegate Active')
 		}
 		F handle(cpd:ConnectionPipelineDelegate, e:IO::events::Inactive) {
-			debug('server', 'ConnectionPipelineDelegate Inactive')
+			debug(cpd.connection._dbg(), 'ConnectionPipelineDelegate Inactive')
 		}
 
 		section "Connection" {

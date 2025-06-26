@@ -529,7 +529,7 @@ ns {
 
 
 			c.call('ui_default_action', [{'cur': my_pipe.status.cur, 'ref': my_pipe.status.ref}])
-			$(sleep 1)  # XXX: possible timing issue (did not observe an error, preventively added)
+			# $(sleep 10)  # XXX: possible timing issue (did not observe an error, preventively added)
 			p = c.poll()
 
 
