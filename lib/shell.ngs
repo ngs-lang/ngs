@@ -518,12 +518,25 @@ ns {
 			}
 
 
+			m = x.match(AtPath(Any, Capture({
+				'status': {
+					'children': [/ProcessStatus Failed/]
+				}
+			}))).assert('Failed to find the failing processes (pipeline)')
+
+			my_pipe = m.matches.the_one(Not(null))
+			_debug_inspect('my_pipe', my_pipe)
+
+
+			c.call('ui_default_action', [{'cur': my_pipe.status.cur, 'ref': my_pipe.status.ref}])
+			$(sleep 1)  # XXX: possible timing issue (did not observe an error, preventively added)
+			p = c.poll()
+
+
 		})
 
 		# TODO: graceful server shutdown
 
 	}
 	# moved # _exports.test = _test
-
-
 }
