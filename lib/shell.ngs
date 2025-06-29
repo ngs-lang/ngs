@@ -341,6 +341,7 @@ ns {
 						# Timeline::InfoItem(Time(), "DEBUG: you have interacted with ${event.cur} (type ${i.Type()}) and navigated to ${event.ref}")
 						*guessed_items
 						Timeline::InfoItem(Time(), "WIP: Here will be the command, as defined for the default UI action or the object you interacted with")
+						Timeline::ResultItem(Time(), "GUESSING_DONE") # Letting poll() on the client side know that we are done
 					])
 					tl.push(g)
 
@@ -530,7 +531,15 @@ ns {
 
 			c.call('ui_default_action', [{'cur': my_pipe.status.cur, 'ref': my_pipe.status.ref}])
 			# $(sleep 10)  # XXX: possible timing issue (did not observe an error, preventively added)
-			p = c.poll()
+
+			gti_id = c.last_call_result.ti
+			p = c.poll(F(p) {
+				gti = p.timeline.children.the_one({'$type': 'GroupTimelineItem', 'id': gti_id})
+				gti.children.any({'$type': 'ResultTimelineItem'}) returns FullBox(gti)
+				EmptyBox()
+			})
+
+			_debug_inspect('ui_default_action/GroupTimelineItem', p)
 
 
 		})
