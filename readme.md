@@ -18,6 +18,7 @@
 * [Project Status](#project-status)
 * [Installing](#installing)
 	* [Using Script](#using-script)
+ 	* [Using MacPorts](#using-macports)
 	* [Using Homebrew](#using-homebrew)
 	* [Using Snap](#using-snap)
 	* [Using Docker](#using-docker)
@@ -119,6 +120,9 @@ From George Nachman, creator of [iTerm2](https://www.iterm2.com/):
 	curl https://ngs-lang.org/install.sh | bash
 	ngs -pi 'sum(0..10)'
 
+### Using MacPorts
+
+	sudo port install ngs
 
 ### Using Homebrew
 
