@@ -707,6 +707,7 @@ section "Functional utilities" {
 	doc %STATUS - EXPERIMENTAL
 	doc %RET - f(x)
 	doc %AUTO - x.{ ... }
+	doc %AUTO - x.(F(blah) blah+1)
 	F .(x, f:Fun) f(x)
 
 	doc Compose functions
