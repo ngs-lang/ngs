@@ -104,7 +104,6 @@ jobs:
         run: yum -y install tar xz gzip
       - name: Setup Compiler
         run: |
-          dnf group install workstation-product-environments
           yum -y install man ${{ matrix.compiler.package }}
       - name: Install and Test
         env:
