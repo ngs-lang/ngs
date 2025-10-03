@@ -98,14 +98,13 @@ jobs:
       image: ${{ matrix.container }}
       options: --user root
     steps:
+      - uses: actions/checkout@v5
       - name: Install AmazonLinux deps needed specifically for GitHub action
         if: startsWith(matrix.container, 'amazonlinux')
-        run: |
-          yum -y install tar xz gzip
-          dnf group install workstation-product-environments
-      - uses: actions/checkout@v5
+        run: yum -y install tar xz gzip
       - name: Setup Compiler
         run: |
+          dnf group install workstation-product-environments
           yum -y install man ${{ matrix.compiler.package }}
       - name: Install and Test
         env:
