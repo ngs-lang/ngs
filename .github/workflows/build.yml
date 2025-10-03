@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        container: [ "fedora:latest"  ] # "amazonlinux:2023" is broken because of missing pandoc # https://hub.docker.com/_/fedora/
+        container: [ "fedora:latest"  ] # https://hub.docker.com/_/fedora/  # "amazonlinux:2023" is broken because of missing pandoc
         compiler:
           - { package: gcc-c++, cc: gcc, cxx: g++ }
           - { package: clang, cc: clang, cxx: clang++ }
@@ -104,7 +104,6 @@ jobs:
         run: yum -y install tar xz gzip
       - name: Setup Compiler
         run: |
-          dnf5 install 'dnf5-command(groupinstall)'
           yum -y install man ${{ matrix.compiler.package }}
       - name: Install and Test
         env:
