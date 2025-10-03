@@ -100,7 +100,9 @@ jobs:
     steps:
       - name: Install AmazonLinux deps needed specifically for GitHub action
         if: startsWith(matrix.container, 'amazonlinux')
-        run: yum -y install tar xz gzip
+        run: |
+          yum -y install tar xz gzip
+          dnf group install workstation-product-environments
       - uses: actions/checkout@v5
       - name: Setup Compiler
         run: |
