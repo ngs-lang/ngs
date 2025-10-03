@@ -6,7 +6,7 @@ on:
 jobs:
   build-internal-apt:
     timeout-minutes: 5
-    name: ${{ matrix.container }} APT - ${{ matrix.compiler.cc }}-${{ matrix.compiler.version }}
+    name: ${{ matrix.container }} - ${{ matrix.compiler.cc }}-${{ matrix.compiler.version }}
     runs-on: ${{ matrix.container }}
     strategy:
       matrix:
@@ -32,7 +32,7 @@ jobs:
 
   build-external-apt:
     timeout-minutes: 5
-    name: ${{ matrix.container }} APT - ${{ matrix.compiler.cc }}-${{ matrix.compiler.version }}
+    name: ${{ matrix.container }} - ${{ matrix.compiler.cc }}-${{ matrix.compiler.version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -61,7 +61,7 @@ jobs:
 
   build-external-pacman:
     timeout-minutes: 5
-    name: ${{ matrix.container }} Pacman - ${{ matrix.compiler.cc }}
+    name: ${{ matrix.container }} - ${{ matrix.compiler.cc }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -86,7 +86,7 @@ jobs:
 
   build-external-yum:
     timeout-minutes: 10
-    name: ${{ matrix.container }} Yum - ${{ matrix.compiler.cc }}
+    name: ${{ matrix.container }} - ${{ matrix.compiler.cc }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -118,7 +118,7 @@ jobs:
     runs-on: ${{ matrix.container }}
     strategy:
       matrix:
-        container: [ "macos-latest", "macos-latest-large" ]
+        container: [ "macos-latest" ]
         compiler:
           - { version: 14, package: gcc, cc: gcc, cxx: g++ }
           - { version: 15, package: gcc, cc: gcc, cxx: g++ }
