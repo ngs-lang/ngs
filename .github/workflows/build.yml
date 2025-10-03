@@ -6,7 +6,7 @@ on:
 jobs:
   build-internal-apt:
     timeout-minutes: 5
-    name: ${{ matrix.container }} internal APT - Build with ${{ matrix.compiler.cc }}-${{ matrix.compiler.version }}
+    name: ${{ matrix.container }} APT - ${{ matrix.compiler.cc }}-${{ matrix.compiler.version }}
     runs-on: ${{ matrix.container }}
     strategy:
       matrix:
@@ -32,7 +32,7 @@ jobs:
 
   build-external-apt:
     timeout-minutes: 5
-    name: ${{ matrix.container }} external APT - Build with ${{ matrix.compiler.cc }}-${{ matrix.compiler.version }}
+    name: ${{ matrix.container }} APT - ${{ matrix.compiler.cc }}-${{ matrix.compiler.version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -61,7 +61,7 @@ jobs:
 
   build-external-pacman:
     timeout-minutes: 5
-    name: ${{ matrix.container }} external Pacman - Build with ${{ matrix.compiler.cc }}
+    name: ${{ matrix.container }} Pacman - ${{ matrix.compiler.cc }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -86,7 +86,7 @@ jobs:
 
   build-external-yum:
     timeout-minutes: 10
-    name: ${{ matrix.container }} external Yum - Build with ${{ matrix.compiler.cc }}
+    name: ${{ matrix.container }} Yum - ${{ matrix.compiler.cc }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -113,7 +113,7 @@ jobs:
 
   build-mac:
     timeout-minutes: 10
-    name: ${{ matrix.container }} - Build with ${{ matrix.compiler.cc }}-${{ matrix.compiler.version }}
+    name: ${{ matrix.container }} - ${{ matrix.compiler.cc }}-${{ matrix.compiler.version }}
     runs-on: ${{ matrix.container }}
     strategy:
       matrix:
@@ -142,11 +142,11 @@ jobs:
 
   build-other-arch-gcc:
     timeout-minutes: 15
-    name: ${{ matrix.container }} on arch ${{ matrix.arch }} - Build with gcc
+    name: ${{ matrix.container }} [${{ matrix.arch }}] - gcc
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        container: [ "debian:12" ] # Has GCC 12
+        container: [ "bookworm" ] # Has GCC 12
         arch: [ "aarch64", "s390x", "ppc64le" ]   # , "armv6", "armv7" -- 32 bits archs, currently not supported by ngs
     steps:
       - uses: actions/checkout@v5
