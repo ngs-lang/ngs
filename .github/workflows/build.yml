@@ -104,6 +104,7 @@ jobs:
         run: yum -y install tar xz gzip
       - name: Setup Compiler
         run: |
+          dnf5 install 'dnf5-command(groupinstall)'
           yum -y install man ${{ matrix.compiler.package }}
       - name: Install and Test
         env:
