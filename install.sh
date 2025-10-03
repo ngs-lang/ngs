@@ -36,7 +36,7 @@ else
 				$SUDO yum install -y ctest
 		  fi
 		fi
-		$SUDO dnf5 group install development-tools
+		$SUDO yum group install -y development-tools
 	elif type pacman &>/dev/null;then
 		echo "  + On Linux / pacman. Installing apt packages."
 		$SUDO pacman -Sy --noconfirm peg make cmake pandoc pkgconfig pcre
