@@ -6,21 +6,20 @@ on:
 jobs:
   build-internal-apt:
     timeout-minutes: 5
-    name: Build with ${{ matrix.compiler.type }}-${{ matrix.compiler.version }} on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.container }} internal APT - Build with ${{ matrix.compiler.cc }}-${{ matrix.compiler.version }}
+    runs-on: ${{ matrix.container }}
     strategy:
       matrix:
+        container: [ "ubuntu-24.04" ]
         compiler:
-          - {type: gcc, version: 12, package: g++, cc: gcc, cxx: g++}
-          - {type: gcc, version: 13, package: g++, cc: gcc, cxx: g++}
-          - {type: gcc, version: 14, package: g++, cc: gcc, cxx: g++}
-          - {type: clang, version: 16, package: clang, cc: clang, cxx: clang++}
-          - {type: clang, version: 17, package: clang, cc: clang, cxx: clang++}
-          - {type: clang, version: 18, package: clang, cc: clang, cxx: clang++}
-        include:
-          - os: "ubuntu-24.04"
+          - {version: 12, package: g++, cc: gcc, cxx: g++}
+          - {version: 13, package: g++, cc: gcc, cxx: g++}
+          - {version: 14, package: g++, cc: gcc, cxx: g++}
+          - {version: 16, package: clang, cc: clang, cxx: clang++}
+          - {version: 17, package: clang, cc: clang, cxx: clang++}
+          - {version: 18, package: clang, cc: clang, cxx: clang++}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup Compiler
         run: |
           sudo apt-get update
@@ -31,21 +30,50 @@ jobs:
           CXX: ${{ matrix.compiler.cxx }}-${{ matrix.compiler.version }}
         run: (./install.sh && make tests test-installation)
 
-  build-external-pacman:
+  build-external-apt:
     timeout-minutes: 5
-    name: Build with ${{ matrix.compiler.type }} on ${{ matrix.container }}
-    runs-on: ubuntu-24.04
+    name: ${{ matrix.container }} external APT - Build with ${{ matrix.compiler.cc }}-${{ matrix.compiler.version }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        container: [ "archlinux:base" ] # https://hub.docker.com/_/archlinux/
+        container: [ "debian:12" ] # https://hub.docker.com/_/debian/
         compiler:
-          - {type: gcc, package: gcc, cc: gcc, cxx: g++}
-          - {type: clang, package: clang, cc: clang, cxx: clang++}
+          - { version: 11, package: g++, cc: gcc, cxx: g++ }
+          - { version: 12, package: g++, cc: gcc, cxx: g++ }
+          - { version: 13, package: clang, cc: clang, cxx: clang++ }
+          - { version: 14, package: clang, cc: clang, cxx: clang++ }
+          - { version: 15, package: clang, cc: clang, cxx: clang++ }
+          - { version: 16, package: clang, cc: clang, cxx: clang++ }
     container:
       image: ${{ matrix.container }}
       options: --user root
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      - name: Setup Compiler
+        run: |
+          apt-get update
+          apt-get install -y man ${{ matrix.compiler.package }}-${{ matrix.compiler.version }} uuid-runtime
+      - name: Install and Test
+        env:
+          CC: ${{ matrix.compiler.cc }}-${{ matrix.compiler.version }}
+          CXX: ${{ matrix.compiler.cxx }}-${{ matrix.compiler.version }}
+        run: (./install.sh && make tests test-installation)
+
+  build-external-pacman:
+    timeout-minutes: 5
+    name: ${{ matrix.container }} external Pacman - Build with ${{ matrix.compiler.cc }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        container: [ "archlinux:latest" ] # https://hub.docker.com/_/archlinux/
+        compiler:
+          - {package: gcc, cc: gcc, cxx: g++}
+          - {package: clang, cc: clang, cxx: clang++}
+    container:
+      image: ${{ matrix.container }}
+      options: --user root
+    steps:
+      - uses: actions/checkout@v5
       - name: Setup Compiler
         run: |
           pacman -Syu --noconfirm
@@ -56,142 +84,72 @@ jobs:
           CXX: ${{ matrix.compiler.cxx }}
         run: (./install.sh && make tests test-installation)
 
-  build-external-apt-gcc:
-    timeout-minutes: 5
-    name: Build with gcc-${{ matrix.version }} (${{ matrix.container }})
-    runs-on: ubuntu-20.04
-    container:
-      image: ${{ matrix.container }}
-      options: --user root
-    strategy:
-      matrix:
-        container: [ "debian:12" ]
-        version: [ "11", "12" ]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Compiler
-        run: |
-          apt-get update
-          apt-get install -y man g++-${{ matrix.version }} uuid-runtime
-          echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
-          echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
-      - name: Install and Test
-        run: (./install.sh && make tests test-installation)
-
-  build-external-apt-clang:
-    timeout-minutes: 5
-    name: Build with clang-${{ matrix.version }} (${{ matrix.container }})
-    runs-on: ubuntu-20.04
-    container:
-      image: ${{ matrix.container }}
-      options: --user root
-    strategy:
-      matrix:
-        container: [ "debian:12" ]
-        version: [ "13", "14", "15", "16" ]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Compiler
-        run: |
-          apt-get update
-          apt-get install -y man clang-${{ matrix.version }} uuid-runtime
-          echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
-          echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
-      - name: Install and Test
-        run: (./install.sh && make tests test-installation)
-
-  build-external-yum-gcc:
+  build-external-yum:
     timeout-minutes: 10
-    name: Build with gcc
-    runs-on: ubuntu-20.04
+    name: ${{ matrix.container }} external Yum - Build with ${{ matrix.compiler.cc }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        container: [ "fedora:latest"  ] # "amazonlinux:2023" is broken because of missing pandoc # https://hub.docker.com/_/fedora/
+        compiler:
+          - { package: gcc-c++, cc: gcc, cxx: g++ }
+          - { package: clang, cc: clang, cxx: clang++ }
     container:
       image: ${{ matrix.container }}
       options: --user root
-    strategy:
-      matrix:
-        container: [ "fedora:34", "fedora:35"  ] # "amazonlinux:2023" is broken because of missing pandoc
     steps:
       - name: Install AmazonLinux deps needed specifically for GitHub action
         if: startsWith(matrix.container, 'amazonlinux')
         run: yum -y install tar xz gzip
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup Compiler
         run: |
-          yum -y install man gcc-c++
-          echo "CC=gcc" >> $GITHUB_ENV
-          echo "CXX=g++" >> $GITHUB_ENV
+          yum -y install man ${{ matrix.compiler.package }}
       - name: Install and Test
+        env:
+          CC: ${{ matrix.compiler.cc }}
+          CXX: ${{ matrix.compiler.cxx }}
         run: (./install.sh && make tests test-installation)
 
-  build-external-yum-clang:
+  build-mac:
     timeout-minutes: 10
-    name: Build with clang
-    runs-on: ubuntu-20.04
-    container:
-      image: ${{ matrix.container }}
-      options: --user root
-    strategy:
-      matrix:
-        container: [ "fedora:34", "fedora:35"  ] # "amazonlinux:2023" is broken because of missing pandoc
-    steps:
-      - name: Install AmazonLinux deps needed specifically for GitHub action
-        if: startsWith(matrix.container, 'amazonlinux')
-        run: yum -y install tar xz gzip
-      - uses: actions/checkout@v4
-      - name: Setup Compiler
-        run: |
-          yum -y install man clang
-          echo "CC=clang" >> $GITHUB_ENV
-          echo "CXX=clang++" >> $GITHUB_ENV
-      - name: Install and Test
-        run: (./install.sh && make tests test-installation)
-
-  build-mac-gcc:
-    timeout-minutes: 10
-    name: Build with gcc-${{ matrix.version }} (${{ matrix.container }})
+    name: ${{ matrix.container }} - Build with ${{ matrix.compiler.cc }}-${{ matrix.compiler.version }}
     runs-on: ${{ matrix.container }}
     strategy:
       matrix:
-        container: [ "macOS-15" ]
-        version: [ "13" ]
+        container: [ "macos-latest", "macos-latest-large" ]
+        compiler:
+          - { version: 14, package: gcc, cc: gcc, cxx: g++ }
+          - { version: 15, package: gcc, cc: gcc, cxx: g++ }
+          - { version: latest, package: clang, cc: clang, cxx: clang++ }
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Compiler
+      - uses: actions/checkout@v5
+      - name: Setup Dependencies
+        run: brew install cmake ninja
+      - name: Setup gcc
+        if: startsWith(matrix.compiler.package, 'gcc')
         run: |
-          brew install cmake ninja
-          brew install gcc@${{ matrix.version }}
-          echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
-          echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
-      - name: Install and Test
-        run: (./install.sh && make tests test-installation)
-
-  build-mac-xcode:
-    timeout-minutes: 15
-    name: Build with default Xcode (${{ matrix.container }})
-    runs-on: ${{ matrix.container }}
-    strategy:
-      matrix:
-        container: [ "macOS-15" ]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Compiler
+          brew install ${{ matrix.compiler.package }}@${{ matrix.compiler.version }}
+          echo "CC=${{ matrix.compiler.cc }}-${{ matrix.compiler.version }}" >> $GITHUB_ENV
+          echo "CXX=${{ matrix.compiler.cxx }}-${{ matrix.compiler.version }}" >> $GITHUB_ENV
+      - name: Setup clang
+        if: startsWith(matrix.compiler.package, 'clang')
         run: |
-          brew install cmake ninja
-          echo "CC=clang" >> $GITHUB_ENV
-          echo "CXX=clang++" >> $GITHUB_ENV
+          echo "CC=${{ matrix.compiler.cc }}" >> $GITHUB_ENV
+          echo "CXX=${{ matrix.compiler.cxx }}" >> $GITHUB_ENV
       - name: Install and Test
         run: (./install.sh && make tests test-installation)
 
   build-other-arch-gcc:
     timeout-minutes: 15
-    name: Build on ${{ matrix.container }} ${{ matrix.arch }}
-    runs-on: ubuntu-20.04
+    name: ${{ matrix.container }} on arch ${{ matrix.arch }} - Build with gcc
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        container: [ "bookworm" ] # Has GCC 12
+        container: [ "debian:12" ] # Has GCC 12
         arch: [ "aarch64", "s390x", "ppc64le" ]   # , "armv6", "armv7" -- 32 bits archs, currently not supported by ngs
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: uraimo/run-on-arch-action@v3
         name: Run commands
         id: runcmd
