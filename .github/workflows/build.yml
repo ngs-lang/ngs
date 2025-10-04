@@ -124,8 +124,6 @@ jobs:
           - { version: latest, package: clang, cc: clang, cxx: clang++ }
     steps:
       - uses: actions/checkout@v5
-      - name: Setup Dependencies
-        run: brew install cmake ninja
       - name: Setup gcc
         if: startsWith(matrix.compiler.package, 'gcc')
         run: |
