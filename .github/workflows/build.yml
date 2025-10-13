@@ -20,7 +20,7 @@ jobs:
         include:
           - os: "ubuntu-24.04"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup Compiler
         run: |
           sudo apt-get update
@@ -45,7 +45,7 @@ jobs:
       image: ${{ matrix.container }}
       options: --user root
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup Compiler
         run: |
           pacman -Syu --noconfirm
@@ -68,7 +68,7 @@ jobs:
         container: [ "debian:12" ]
         version: [ "11", "12" ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup Compiler
         run: |
           apt-get update
@@ -90,7 +90,7 @@ jobs:
         container: [ "debian:12" ]
         version: [ "13", "14", "15", "16" ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup Compiler
         run: |
           apt-get update
@@ -114,7 +114,7 @@ jobs:
       - name: Install AmazonLinux deps needed specifically for GitHub action
         if: startsWith(matrix.container, 'amazonlinux')
         run: yum -y install tar xz gzip
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup Compiler
         run: |
           yum -y install man gcc-c++
@@ -137,7 +137,7 @@ jobs:
       - name: Install AmazonLinux deps needed specifically for GitHub action
         if: startsWith(matrix.container, 'amazonlinux')
         run: yum -y install tar xz gzip
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup Compiler
         run: |
           yum -y install man clang
@@ -155,7 +155,7 @@ jobs:
         container: [ "macOS-12" ]
         version: [ "10", "11" ]  # On 2023-02-11, version 9 was already broken: "g++-9: warning: '12.6' is not valid for 'mmacosx-version-min'"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup Compiler
         run: |
           brew install cmake ninja
@@ -173,7 +173,7 @@ jobs:
       matrix:
         container: [ "macOS-12" ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup Compiler
         run: |
           brew install cmake ninja
@@ -191,7 +191,7 @@ jobs:
         container: [ "bookworm" ] # Has GCC 12
         arch: [ "aarch64", "s390x", "ppc64le" ]   # , "armv6", "armv7" -- 32 bits archs, currently not supported by ngs
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: uraimo/run-on-arch-action@v3
         name: Run commands
         id: runcmd
