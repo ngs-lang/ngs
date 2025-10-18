@@ -2004,6 +2004,20 @@ section "AnyOf(ArrLike)" {
 	doc %RET - Str
 	F code(a:AnyOf) "AnyOf(${a.map(code).join(', ')})"
 
+	doc Try to decode to any of the alternatives in a.
+	doc Throws DecodeFail if none of the alternatives worked.
+	doc %RET - result of decoding one of the alternatives in a.
+	F decode(s:Str, a:AnyOf) block b {
+		a.each({
+			try {
+				b.return(decode(s, A))
+			} catch(df:DecodeFail) {
+				# nothing, continue with next
+			}
+		})
+		throw DecodeFail("Failed to decode value").set('value', s).set('target', a)
+	}
+
 }
 
 section "AllOf(ArrLike)" {
