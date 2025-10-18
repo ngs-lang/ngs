@@ -56,8 +56,8 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc TODO: make it JSON when keys or values contain special characters such as = or ,
 	doc %RET - Arr of Str
 	F cli_filters(h:Hash) {
-		unboxed = h.rejectv(NoData).mapv(only(Box, get)).reject(X == [])
-		unboxed.mapv(only(Pfx, { "${A.val}*" })).mapv(only(Arr, X.join(","))).map("Name=$X,Values=$Y")
+		unboxed = h.rejectv(NoData).mapv(X.when(Box, get)).reject(X == [])
+		unboxed.mapv(X.when(Pfx, { "${A.val}*" })).mapv(X.when(Arr, X.join(","))).map("Name=$X,Values=$Y")
 	}
 
 	TEST AWS2::cli_filters({}) == []
@@ -344,7 +344,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 					assert(props is Hash)
 					assert(props.len() == 1)
 					props = props.values().the_one()
+					# TODO: props.assert(Hash).values().the_one()
 				}
+				# TODO: looks like pattern matching, check if can be refactored
 				props.each(F(k, v) {
 					if k in r.props {
 						assert(r.props[k] == v)
