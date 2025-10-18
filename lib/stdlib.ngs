@@ -2449,6 +2449,7 @@ section "Type" {
 			args = ["Failed to decode value. Could not convert given value to type ${t.name}", cause].reject(Null)
 			throw DecodeFail(*args).set('value', s).set('target_type', t)
 		}
+		# TODO: check for subtypes, not exact types
 		if t in [Int, Real, Str] {
 			return try {
 				t(s)
