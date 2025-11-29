@@ -6,8 +6,14 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
@@ -15,16 +21,12 @@
         localSrc = builtins.path {
           path = ./.;
           name = "ngs-source";
-          filter = path: type:
+          filter =
+            path: type:
             let
               baseName = baseNameOf path;
             in
-            !(
-              baseName == "build" ||
-              baseName == "result" ||
-              baseName == ".git" ||
-              baseName == ".direnv"
-            );
+            !(baseName == "build" || baseName == "result" || baseName == ".git" || baseName == ".direnv");
         };
 
         # For local development, override the package to use local source
@@ -42,14 +44,17 @@
         devShells.default = pkgs.mkShell {
           inputsFrom = [ ngs ];
 
-          packages = with pkgs; [
-            # Development tools
-            gdb
-            clang-tools # clangd, clang-format
-          ] ++ lib.optionals stdenv.isLinux [
-            valgrind
-            strace
-          ];
+          packages =
+            with pkgs;
+            [
+              # Development tools
+              gdb
+              clang-tools # clangd, clang-format
+            ]
+            ++ lib.optionals stdenv.isLinux [
+              valgrind
+              strace
+            ];
 
           shellHook = ''
             echo "╔══════════════════════════════════════════════════════════╗"

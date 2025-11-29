@@ -36,15 +36,17 @@ stdenv.mkDerivation (finalAttrs: {
     hash = "sha256-IBk73Wc/x0h6OJN+KX//CKpzdRtjOghqwow7NIkPkIQ=";
   };
 
-  nativeBuildInputs = [
-    cmake
-    pkg-config
-    pandoc
-    gawk
-    makeWrapper
-  ] ++ lib.optionals stdenv.isDarwin [
-    gnused
-  ];
+  nativeBuildInputs =
+    [
+      cmake
+      pkg-config
+      pandoc
+      gawk
+      makeWrapper
+    ]
+    ++ lib.optionals stdenv.isDarwin [
+      gnused
+    ];
 
   buildInputs = [
     boehmgc
@@ -55,15 +57,17 @@ stdenv.mkDerivation (finalAttrs: {
 
   # The build scripts require GNU sed; on Darwin we need to ensure it's found
   # Also pre-populate the peg source to avoid network access during build
-  preConfigure = ''
-    # Create the external project download directory
-    mkdir -p build/leg-prefix/src
+  preConfigure =
+    ''
+      # Create the external project download directory
+      mkdir -p build/leg-prefix/src
 
-    # Copy peg source to where CMake ExternalProject expects it
-    cp ${finalAttrs.pegSrc} build/leg-prefix/src/peg-0.1.18.tar.gz
-  '' + lib.optionalString stdenv.isDarwin ''
-    export PATH="${gnused}/bin:$PATH"
-  '';
+      # Copy peg source to where CMake ExternalProject expects it
+      cp ${finalAttrs.pegSrc} build/leg-prefix/src/peg-0.1.18.tar.gz
+    ''
+    + lib.optionalString stdenv.isDarwin ''
+      export PATH="${gnused}/bin:$PATH"
+    '';
 
   cmakeFlags = [
     "-DBUILD_MAN=ON"
