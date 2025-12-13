@@ -100,6 +100,11 @@ F each(i:Iter, cb:Fun) {
 
 TEST s=0; NumRange(1,10,true,true).Iter().each({ s+= A }); s==55
 
+doc Calls cb with each value from i.
+doc Same as next(i) except for key-value containers,
+doc where next() returns [key, value] but nextv() returns value.
+F nextv(i:Iter) next(i)
+
 # ---------- MapIter ----------
 # WIP
 
@@ -327,6 +332,10 @@ doc Get next key-value of the hash iterated over.
 doc %RET - Any
 F next(i:HashIter) { ret = i.peek(); i.entry = i.entry.ll_hash_entry_next(); ret  }
 
+doc Get next value of the hash iterated over.
+doc Same as next(i)[1]
+F nextv(i:HashIter) next(i)[1]
+
 doc Preview key-value of the next pair of the hash iterated over.
 doc Does not affect internal pointer which means it does not affect of value returned by next().
 doc %RET - Any
@@ -342,9 +351,73 @@ section "Iter for Set" {
 	doc Iterator for Set. Currently implemented as ArrIter for the Set elements.
 	doc %RET - ArrIter
 	F Iter(s:Set) s.Arr().Iter()
+
+	TEST Set([1,2]).Iter().Arr() == [1,2]
 }
 
-TEST Set([1,2]).Iter().Arr() == [1,2]
+section "Recursive Iterator" {
+	# TODO: distingush between Eachable1 and Eachable2 iterators because of the
+	#       shapes of next() result and the callback arguments in each()?
+	ns {
+		# From tr.ngs
+		_DESCENDABLE1 = AllOf(Eachable1, Not(Int), Not(Str))
+		_DESCENDABLE = AnyOf(_DESCENDABLE1, Eachable2)
+
+		global RecIter, init, Bool, next
+
+		doc %STATUS - experimental
+		doc Recursively iterates x.
+		doc Depth-first-search (DFS), pre-order (NLR).
+		doc See https://en.wikipedia.org/wiki/Tree_traversal
+		type RecIter([Iter, Eachable1])
+		F init(ri:RecIter, x) {
+			ri.val = x
+			ri.state = []  # Arr of Iter
+			ri.elt = x
+			ri.elt_loaded = true
+			ri.finished = false
+		}
+
+		F _load(ri:RecIter) {
+			ri.elt_loaded returns
+
+			# track back
+			while ri.state and not(ri.state[-1]) {
+				ri.state.pop()
+			}
+
+			if not(ri.state) {
+				ri.finished = true
+				return
+			}
+
+			ri.elt = ri.state[-1].nextv()
+			ri.elt_loaded = true
+
+		}
+
+		F Bool(ri:RecIter) {
+			# TODO: check if generic Bool(Iter) could be implemented
+			ri.finished returns false
+			ri.elt_loaded returns true
+			ri._load()
+			not(ri.finished)
+		}
+
+		F next(ri:RecIter) {
+			ri.throw_if_no_next()
+			assert(ri.elt_loaded)
+			ri.elt_loaded = false
+			if ri.elt =~ _DESCENDABLE {
+				ri.state.push(Iter(ri.elt))
+			}
+			return ri.elt
+		}
+	}
+
+	TEST i = RecIter([1, 5, [6,7]]); i.Arr() == [[1,5,[6,7]], 1, 5, [6,7],6,7]
+	TEST i = RecIter([1,2, {"x": 7}]); i.Arr() == [ [ 1, 2, { "x": 7 } ], 1, 2, { "x": 7 }, 7 ]
+}
 
 doc Convert Iter into JSON compatible data structure - array.
 doc Forces evaluation of MapIter for example.

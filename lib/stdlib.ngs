@@ -8843,6 +8843,7 @@ section "Loading code" {
 			HashIter            Iter
 			NoNext              Iter
 			RangeIter           Iter
+			RecIter             Iter
 
 			ResDef              Res
 
