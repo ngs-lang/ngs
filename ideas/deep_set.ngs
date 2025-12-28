@@ -1,0 +1,189 @@
+# Following line will be needed when files will be auto-wrapped in "ns { ... }"
+{ global deep_get, deep_set, deep_get_step, deep_set_step, deep_index_to_container_type }
+
+doc %STATUS - experimental
+F deep_get_step(node, _) {
+	throw LookupFail().set(container=node)
+}
+
+doc %STATUS - experimental
+F deep_set_step(container, idx_or_key, next_idx_or_key) throw NotImplemented()
+
+doc %STATUS - experimental
+F deep_get_step(node, key) {
+	guard node =~ AnyOf(Hash, HashLike)
+	node[key]
+}
+
+doc %STATUS - experimental
+F deep_set_step(node, key, val) {
+	guard node =~ AnyOf(Hash, HashLike)
+	node[key] = val
+}
+
+doc %STATUS - experimental
+F deep_index_to_container_type(key) Hash
+
+
+doc %STATUS - experimental
+F deep_get_step(node:NormalTypeInstance, field:Str) {
+	node.(field)
+}
+
+doc %STATUS - experimental
+F deep_set_step(node:NormalTypeInstance, field:Str, val) {
+	node.(field) = val
+}
+
+doc %STATUS - experimental
+F deep_get_step(node, idx:Int) {
+	guard node =~ AnyOf(Arr, ArrLike)
+	node[idx]
+}
+
+doc %STATUS - experimental
+F deep_set_step(node, idx:Int, val) {
+	guard node =~ AnyOf(Arr, ArrLike)
+	section "Ensure array is long enough" for(i=len(node);i<=idx;i+=1) {
+		node.push(null)
+	}
+	node[idx] = val
+}
+
+doc %STATUS - experimental
+F deep_index_to_container_type(idx:Int) Arr
+
+doc %STATUS - experimental
+F deep_get(root, path, default=null) block b {
+	node = root
+	for p in path {
+		try {
+			node = deep_get_step(node, p)
+		} catch(lf:LookupFail) {
+			guard lf.container === node
+			b.return(default)
+		}
+	}
+	node
+}
+
+doc %STATUS - experimental
+F deep_set(root, path:Arr, val) {
+
+	assert(path, 'path is expected to have at least one element, deep_set can not set the root')
+
+	path_iter = Iter(path)
+	container = null
+	idx_or_key = null
+
+	node = section "Navigate to last present element" block b {
+		node = root
+		while path_iter {
+			try {
+				container = node
+				idx_or_key = path_iter.next()
+				node = deep_get_step(node, idx_or_key)
+			} catch(lf:LookupFail) {
+				guard lf.container === node
+				b.return(node)
+			}
+		}
+		node
+	}
+
+	# echo("P $path_iter")
+	for p in path_iter {
+		# echo("P $path_iter $p")
+		next_container = deep_index_to_container_type(p)()
+		node = deep_set_step(container, idx_or_key, next_container)
+		container = next_container
+		idx_or_key = p
+		# echo("for end: container $container idx_or_key $idx_or_key")
+	}
+
+	deep_set_step(container, idx_or_key, val)
+
+	root
+}
+
+test("get existing hash->hash", {
+	h = {"a": {"b": 1}}
+	deep_get(h, ['a', 'b']).assert(1)
+})
+
+test("get non-existing hash->hash", {
+	h = {"a": {"b": 1}}
+	deep_get(h, ['a', 'bx']).assert(null)
+	deep_get(h, ['a', 'b', 'c']).assert(null)
+})
+
+test("set first level on custom type", {
+	type T
+	t = T()
+	t.deep_set(['field1'], 'val1').assert(T, 'deep_set should return object of type T')
+	t.assert({"field1": "val1"})
+})
+
+test("set two levels on custom type (hash)", {
+	type T
+	t = T()
+	t.deep_set(['field1', 'key1'], 'val1').assert(T, 'deep_set should return object of type T')
+	t.assert({"field1": {"key1": "val1"}})
+})
+
+test("set two levels on custom type (arr)", {
+	type T
+	t = T()
+	t.deep_set(['field1', 2], 'val1').assert(T, 'deep_set should return object of type T')
+	t.assert({"field1": [null, null, "val1"]})
+})
+
+F recurse_hash(h:Hash, cb:Fun) {
+	F is_not_hash(x) x is not Hash
+	h.tr(is_not_hash -> F(val, ctx) {
+		cb(val, ctx.path)
+	})
+}
+
+test("recurse_hash(Hash, Fun) sum", {
+	h = {
+		'a': {'b': 2}
+		'c': 3
+	}
+	sum = collector/0 {
+		recurse_hash(h, F(val, path) collect(val))
+		# Shorter alternative to the above line:
+		# recurse_hash(h, collect(X))
+	}
+	assert(sum, 5)
+})
+
+F recurse_hash(h:Hash, pa:PatternAction) {
+	F is_not_hash(x) x is not Hash
+	h.tr(is_not_hash -> F(val, ctx) {
+		if val =~ pa.pattern {
+			pa::action(val, ctx.path)
+		}
+		# val.match(pa.pattern, { pa::action(val, ctx.path) })
+	})
+}
+
+test("recurse_hash(Hash, PatternAction) sum", {
+	h = {
+		'a': {'b': 2}
+		'c': 3
+		'd': 'a string'
+		'e': 10
+	}
+	r = Result({ collector/0 recurse_hash(h, F(val, path) collect(val)) })
+	assert(r, Failure)
+	assert(r, {'val': MethodNotFound})
+	assert(r, {'val': {'args': [5, 'a string']}})
+
+	# assert(r, Failure(val=MethodNotFound(args=[5, 'a string'])))
+	# assert(r, Failure(MethodNotFound(args=[5, 'a string'])))
+
+	sum = collector/0 recurse_hash(h, Int -> F(val, path) collect(val))
+
+	assert(sum, 15)
+})

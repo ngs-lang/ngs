@@ -1,0 +1,30 @@
+F select(data, *args) {
+
+	F col_name(a:Arr) a[0]
+	F col_name(s:Str) s
+
+	filters = collector/{} args.filter(Arr).each(F(name_pat) { collect(name_pat[0], name_pat[1]) })
+	columns = args.map(col_name)
+	data.filter(filters).map(F(row) row.filterk(AnyOf(columns)))
+}
+
+data = [
+	{'a': 1}
+	{'a': 1, 'b': 10, 'c': 1000}
+	{'a': 2, 'b': 20, 'c': 2000}
+	{'a': 'aha', 'b': 30}
+]
+
+data.select(['a', 1], 'b').Table().echo()
+echo('')
+data.select(['a', Int], 'b').Table().echo()
+echo('')
+data.select(['a', Int], ['b', 10]).Table().echo()
+
+# data.select('a' -> Int, 'b' -> 10).Table().echo() ???
+# data.select('a' @ Int, 'b' @ 10).Table().echo() ???
+# data.select(a:Int, b:10).Table().echo() ???
+# data.[['a', Int], ['b', 10]].Table().echo() ???
+# data | select a b=10
+# data.['a', 'b', 'c']
+
