@@ -175,8 +175,8 @@ ns(TL=Timeline) {
 			guard processes
 			p = processes[-1]
 			{ p.stdout.decode({'process': p}) }.Result().dflt({
-				error("In shell.ngs, trying to decode:")
-				print_exception(A.val)
+				# error("In shell.ngs, trying to decode:")
+				# print_exception(A.val)
 				# throw InvalidArgument("Element() could not decode process output").set(process=p)
 				p.stdout  # TODO: maybe split into lines
 			}).get().{ Element(ctx, A) }
@@ -206,12 +206,20 @@ ns(TL=Timeline) {
 			super(r, ctx, fields_names, pipeline)
 			idx = Iter(0..null)
 			idxs = fields_names.Hash({idx.next()})  # Ex: {name=0, status=1, sources=2, revisions=3, last_executed=4, approvals=5, progress=6}
+
+			ref = raw({'type': 'AWS::CodePipeline::Execution', 'id': pipeline.last_execution_id})
+
+			r.children[idxs.last_executed] = Object(ctx, [r.children[idxs.last_executed]]).set('ref', ref)
+			r.children[idxs.progress] = Object(ctx, [r.children[idxs.progress]]).set('ref', ref)
+
 			for k in %[status last_executed progress] {
 				r.children[idxs[k]].when(Object, {
 					# Later: A.action = 'navigate'
 					# For now, deduce that "ref" means navigate
+					# log("OBJECT FOUND, ${k}") # just status as of writing
+					# Setting .cur should be generic functionality, not _cp::Pipeline related
+					# Would .cur work with nested tables or other complex situations? Would the backend be able to understand what was interacted with?
 					A.cur = raw({'ti': ctx.ti, 'path': ctx._down(k).path})
-					A.ref = raw({'type': 'AWS::CodePipeline::Execution', 'id': pipeline.last_execution_id})
 				})
 			}
 		}
