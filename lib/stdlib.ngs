@@ -5942,7 +5942,7 @@ section "Path" {
 		# .Hash() is a workaround for pattern matching failing to check
 		# << 'path' in Dir >>
 		# because 'in' for Eachable1 uses each() to check for presence
-		# and for Dir, each() gets directory enttries
+		# and for Dir, each() gets directory entries
 		assert(t.Hash(), {'path': AllOf(Str, Bool.constructors)}, InvalidArgument('init(TmpFsObj, ...) expects path to be non-empty string'))
 		t.fd = null
 		t.cleanup_policy = cleanup_policy
