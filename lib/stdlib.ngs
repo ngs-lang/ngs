@@ -1228,25 +1228,6 @@ section "=~ Matching" {
 		TEST "abc" =~ Transformed(len, 3)
 	}
 
-	# Don't use outside of stdlib
-	STDLIB_NATIVE_IN = block _ {
-		# each() is not defined yet
-		ret = []
-		arr = (in).Arr()
-		l = arr.len()
-		for(i;l) {
-			if arr[i] is NativeMethod {
-				ret.push(arr[i])
-			} else {
-				# Native methods will be at the beginning.
-				# First non-native method means we won't see
-				# native methods from this point on.
-				break
-			}
-		}
-		MultiMethod(arr)
-	}
-
 	doc Checks whether object fields named after h hash keys match (=~) the corresponding hash values.
 	doc Inspired by underscorejs' "matcher"
 	F =~(x, h:Hash, mc:MatchContext) {
@@ -1260,7 +1241,7 @@ section "=~ Matching" {
 		mc.deeper({
 			h.all(F(pat_k, pat_v) {
 				if (=~)(pat_k, AnyOf(Str, Int, Real), mc) {
-					STDLIB_NATIVE_IN(pat_k, x) returns (=~)(x.key_access_func(pat_k), pat_v, mc.set_last_path_element(pat_k))
+					pat_k in x returns (=~)(x.key_access_func(pat_k), pat_v, mc.set_last_path_element(pat_k))
 					pat_v is IfExists
 				} else {
 					assert(pat_v, Not(IfExists), NotImplemented('IfExists value only works with keys of types: Str, Int, Real'))
@@ -5958,7 +5939,11 @@ section "Path" {
 
 	doc Creates temporary file using `mktemp` and arranges deletion of the file upon exit from the NGS script.
 	F init(t:TmpFsObj, cleanup_policy:CleanupPolicy=RemoveCleanupPolicy()) {
-		assert(t, {'path': AllOf(Str, Bool.constructors)}, InvalidArgument('init(TmpFsObj, ...) expects path to be non-empty string'))
+		# .Hash() is a workaround for pattern matching failing to check
+		# << 'path' in Dir >>
+		# because 'in' for Eachable1 uses each() to check for presence
+		# and for Dir, each() gets directory enttries
+		assert(t.Hash(), {'path': AllOf(Str, Bool.constructors)}, InvalidArgument('init(TmpFsObj, ...) expects path to be non-empty string'))
 		t.fd = null
 		t.cleanup_policy = cleanup_policy
 		debug("file", "Created ${t.Type().name} at ${t.path}")
