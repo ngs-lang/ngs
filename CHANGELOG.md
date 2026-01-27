@@ -8,6 +8,9 @@
 * Add `debug_enabled(facility)`
 * Add experimental `RecIter` for recursive iteration of data structures.
 
+### Fixes and improvements
+* Fix `=~` use of `in` operator (was breaking `TmpDir`)
+
 ## 2025-04-05 Version 0.2.17
 
 ### New features
