@@ -2747,8 +2747,9 @@ section "Range" {
 	TEST 0 =~ 0..5
 	TEST 5 !~ 0..5
 
-	doc Checks that x is in the range.
-	doc %EX - ensure(3, 3..10)  # 3
+	doc Ensures that x is in the range.
+	doc %EX - ensure(1, 3..10)    # 3
+	doc %EX - ensure(20, 3...10)  # 10
 	F ensure(n:Int, r:NumRange) cond {
 		n in r n
 		n < r.start and r.include_start r.start
