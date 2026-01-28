@@ -1949,8 +1949,11 @@ section "ArrLike" {
 	doc Very similar to collector for Arr. See collector(Arr,Fun).
 	F collector(al:ArrLike, body:Fun) al::{ body(F(elt) A.push(elt)) }
 
-    doc t - subtype of ArrLike
-    doc %RET - of type t
+	doc Ensures x is of type t.
+	doc Note that non-Arr x are handled in another implementation,
+	doc ensure(x, t:Type), where t is Eachable1 or a subtype of Eachable1.
+	doc t - ArrLike or a subtype of ArrLike
+	doc %RET - An instance of type t, with elements from x.
 	F ensure(x:Arr, t:Type) {
 		guard t <= ArrLike
 		t(x)
@@ -1959,9 +1962,8 @@ section "ArrLike" {
 	doc Convert ArrLike to a human-readable representation
 	F Str(a:ArrLike) "<${a.Type().name} ${a.Arr().join(', ')}>"
 
-    # TODO: When convenient from pattern matching perspective, also check instance type
-    TEST type T(ArrLike); [1,2].ensure(T) =~ [1,2]
-    TEST type T(ArrLike); "abc".ensure(T) =~ ["abc"]
+	TEST type T(ArrLike); [1,2].ensure(T) =~ AllOf([1,2], T)
+	TEST type T(ArrLike); "abc".ensure(T) =~ AllOf(["abc"], T)
 
 }
 
