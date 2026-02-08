@@ -1,6 +1,8 @@
 #!/usr/bin/env ngs
 ns(t=test) {
 
+	ENV.dflt('AWS_PROFILE', 'experiments')
+
 	sh = require("./lib/shell.ngs")
 
 	F server() sh::server(false)
