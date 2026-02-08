@@ -6,6 +6,8 @@ ns {
 	WEB_SERVER_DIR = Dir(".." / "ngs-web-ui").assert()
 	WEB_SERVER_PORT = 52000
 
+	_test_mode = false
+
 	F repr(x, level:Int=0) {
 		pfx = '  ' * level
 		["${pfx}${x.SafeStr()}"]
@@ -42,7 +44,6 @@ ns {
 
 		F _decode_sh(x:{'$type': 'Object'}, children) {
 			'cur': x.cur._decode_sh()
-			'ref': x.ref._decode_sh()
 			'children': children
 		}
 
@@ -222,7 +223,7 @@ ns {
 			if m {
 				obj = m["obj"]
 				log("Found the Object $obj")
-				client.call('ui_default_action', [{'cur': obj.cur, 'ref': obj.ref}])
+				client.call('ui_default_action', [{'cur': obj.cur}])
 				$(sleep 1)  # XXX: possible timing issue (did not observe an error, preventively added)
 				p = client.poll()
 			}
@@ -320,42 +321,36 @@ ns {
 				{'ti': g.id}  # Timeline Item ID
 			}
 
-			# event example: {cur={type=AWS::CodePipeline::Pipeline, id=XXXX}, ref={type=AWS::CodePipeline::Execution, id=XXXX}}
+			# event example: {cur={type=AWS::CodePipeline::Pipeline, id=XXXX}}
 			F ui_default_action(event) {
 				log("UI default action on ${event}")
 
 				# TODO: move somewhere else
 				# TODO: un-hardcode
 				id = null
-				if event =~ {'ref': {'type': 'AWS::CodePipeline::Execution', 'id': { id=A } }} {
-					log("ui_default_action navigate to AWS::CodePipeline::Execution $id")
 
-					i = tl[event.cur.ti]
+				i = tl[event.cur.ti]
 
-					# TODO: move guessing out of ui_default_action, it's not specific to action nor to referenced type.
-					guessed_items = guess(tl, i, event.cur.path)
-					debug('guesser', "Guessed: ${guessed_items}")
+				# TODO: move guessing out of ui_default_action, it's not specific to action nor to referenced type.
+				guessed_items = guess(tl, i, event.cur.path)
+				debug('guesser', "Guessed: ${guessed_items}")
 
-					# TODO: better UI for displaying multiple guesses
-					g = Timeline::GroupItem([
-						# Timeline::InfoItem(Time(), "DEBUG: you have interacted with ${event.cur} (type ${i.Type()}) and navigated to ${event.ref}")
-						*guessed_items
-						Timeline::InfoItem(Time(), "WIP: Here will be the command, as defined for the default UI action or the object you interacted with")
-						Timeline::ResultItem(Time(), "GUESSING_DONE") # Letting poll() on the client side know that we are done
-					])
-					tl.push(g)
+				# TODO: better UI for displaying multiple guesses
+				g = Timeline::GroupItem([
+					Timeline::InfoItem(Time(), "DEBUG: you have interacted with ${event.cur}")
+					*guessed_items
+					Timeline::InfoItem(Time(), "WIP: Here will be the command, as defined for the default UI action or the object you interacted with")
+					* if _test_mode [Timeline::ResultItem(Time(), "GUESSING_DONE")] else [] # Letting poll() on the client side know that we are done - used for tests
+				])
+				tl.push(g)
 
-					# TODO: join these sometimes
-					Thread(SeqId("shell-action-"), {
-						debug('server', "Action start")
-						g.push(Timeline::InfoItem(Time(), "WIP: here will be the output of the command."))
-					})
+				# TODO: join these sometimes
+				Thread(SeqId("shell-action-"), {
+					debug('server', "Action start")
+					g.push(Timeline::InfoItem(Time(), "WIP: here will be the output of the command."))
+				})
 
-					return {'ti': g.id}
-				}
-				# TODO: check why result of ui_default_action() is used in Bool() and causing exception
-				# TODO: return error if this point is reached
-				null
+				return {'ti': g.id}
 			}
 
 			# TODO: handle broken pipe
@@ -399,6 +394,8 @@ ns {
 	}
 
 	_exports.test = {
+
+		_test_mode = true
 
 		F make_textual_command_timeline_result_pattern(gti:Str, cmd:Str, pat) {
 			{
@@ -529,7 +526,7 @@ ns {
 			_debug_inspect('my_pipe', my_pipe)
 
 
-			c.call('ui_default_action', [{'cur': my_pipe.status.cur, 'ref': my_pipe.status.ref}])
+			c.call('ui_default_action', [{'cur': my_pipe.status.cur}])
 			# $(sleep 10)  # XXX: possible timing issue (did not observe an error, preventively added)
 
 			gti_id = c.last_call_result.ti

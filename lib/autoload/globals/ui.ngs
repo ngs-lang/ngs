@@ -207,15 +207,8 @@ ns(TL=Timeline) {
 			idx = Iter(0..null)
 			idxs = fields_names.Hash({idx.next()})  # Ex: {name=0, status=1, sources=2, revisions=3, last_executed=4, approvals=5, progress=6}
 
-			ref = raw({'type': 'AWS::CodePipeline::Execution', 'id': pipeline.last_execution_id})
-
-			r.children[idxs.last_executed] = Object(ctx, [r.children[idxs.last_executed]]).set('ref', ref)
-			r.children[idxs.progress] = Object(ctx, [r.children[idxs.progress]]).set('ref', ref)
-
 			for k in %[status last_executed progress] {
 				r.children[idxs[k]].when(Object, {
-					# Later: A.action = 'navigate'
-					# For now, deduce that "ref" means navigate
 					# log("OBJECT FOUND, ${k}") # just status as of writing
 					# Setting .cur should be generic functionality, not _cp::Pipeline related
 					# Would .cur work with nested tables or other complex situations? Would the backend be able to understand what was interacted with?
