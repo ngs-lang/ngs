@@ -7130,7 +7130,7 @@ section "DecodeHints" {
 	type DecodeHints(HashLike)
 	F =~(x:DecodeHints, cp:CommandsPipeline, mc:MatchContext) {
 		not(x =~ {'process': Process}) returns false
-		not(cp.commands.len() == 1) returns false
+		not(cp.commands.len() == 1) returns false  # should throw - unsupported pattern
 		mc.deeper({
 			mc.set_last_path_element('process')
 			mc.deeper({
