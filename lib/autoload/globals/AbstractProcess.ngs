@@ -19,7 +19,7 @@ ns {
     		type NotStarted(Status)
     		type Running(Status)
     			type Stopping(Running)
-	    			type Succeeding(Running)
+	    			type Succeeding(Running)  # Should be Succeeding(Stopping)?
     				type Failing(Stopping)
     		type Paused(Status)
     		type Finished(Status)
@@ -48,6 +48,7 @@ ns {
 
     	F init(s:Status, text:Str=null) { s.text = text }
 
+		# How this should relate to decode(x, Status) ?
     	F Status(s:Str) {
     		s =~ /^succe/i returns Succeeded(s)
     		s =~ /^fail/i returns Failed(s)
