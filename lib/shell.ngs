@@ -118,7 +118,9 @@ ns {
 					'last_seen_version': c.last_seen_version
 				})
 				debug('client', "Poll result - timeline (ver. ${p.version})")
-				# echo(p.timeline.repr().Lines())
+				if ENV.get('REPR') {
+					echo(p.timeline.repr().Lines())
+				}
 				c.last_seen_version = p.version
 				result = cb(p)
 				result returns result.get()
@@ -325,17 +327,18 @@ ns {
 			F ui_default_action(event) {
 				log("UI default action on ${event}")
 
-				# TODO: move somewhere else
-				# TODO: un-hardcode
-				id = null
+				item = tl[event.cur.ti] # Fields: id,time,result
 
-				i = tl[event.cur.ti]
-
-				# TODO: move guessing out of ui_default_action, it's not specific to action nor to referenced type.
-				guessed_items = guess(tl, i, event.cur.path)
+				# TODO(later): move guessing out of ui_default_action, it's not specific to the action.
+				guessed_items = guess(tl, item, event.cur.path)
 				debug('guesser', "Guessed: ${guessed_items}")
 
-				# TODO: better UI for displaying multiple guesses
+				# TODO: which command to run?
+				#   see git log, look for "ref".
+				#   That's old thinking, where what to do is decided during output handling of previous command and is already encoded.
+				#   New thinking is to encode what the current object is.
+
+				# TODO(later): better UI for displaying multiple guesses
 				g = Timeline::GroupItem([
 					Timeline::InfoItem(Time(), "DEBUG: you have interacted with ${event.cur}")
 					*guessed_items
