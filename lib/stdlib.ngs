@@ -7478,6 +7478,20 @@ F decode(s:Str, hints:Hash) {
 	s.lines()
 }
 
+section "Pagination" {
+	F paginate(body:Fun) {
+		token = null
+		while true {
+			token = body(token)
+			not(token) breaks
+		}
+	}
+
+	TEST calls=0; paginate(F(token) { calls += 1; null }); calls == 1
+	TEST tokens=[]; paginate(F(token) { tokens.push(token); tokens.len() == 3 returns null; tokens.len() }); tokens == [null, 1, 2]
+}
+
+
 # === config =====================================
 
 STDLIB_CONFIG = {}

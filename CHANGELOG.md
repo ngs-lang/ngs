@@ -6,6 +6,7 @@
 * Add `peach(Eachable1, ...)`
 * Add `each_ik_val(Eachable, Fun)`
 * Add `debug_enabled(facility)`
+* Add `paginate(body)`
 * Add experimental `RecIter` for recursive iteration of data structures.
 
 ### Fixes and improvements
