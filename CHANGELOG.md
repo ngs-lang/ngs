@@ -7,6 +7,8 @@
 * Add `each_ik_val(Eachable, Fun)`
 * Add `debug_enabled(facility)`
 * Add `paginate(body)`
+* Add `after_first(Str, Str)`
+* Add `before_last(Str, Str)`
 * Add experimental `RecIter` for recursive iteration of data structures.
 
 ### Fixes and improvements

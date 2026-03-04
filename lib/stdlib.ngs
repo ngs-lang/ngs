@@ -4916,20 +4916,40 @@ section "Strings and characters" {
 	}
 
 	TEST "a:b".before_first(":") == "a"
-	TEST {"a:b".before_first("*")}.assert(InvalidArgument)
+	TEST "a:b:c".before_first(":") == "a"
+
+	doc Split the string by delimiter and return the part after the first occurrence
+	doc %RET - Str
+	F after_first(s:Str, delim:Str) {
+		p = s.pos(delim).assert(Not(null), InvalidArgument("Delimiter not found in after_first()").set(val=s, delim=delim))
+		s[p+delim.len()..null]
+	}
+
+	TEST "a:b".after_first(":") == "b"
+	TEST "a:b:c".after_first(":") == "b:c"
+
+	F stdlib_split_on_delim(s:Str, delim:Str, fname:Str) {
+		# TODO: something more efficient
+		parts = s.split(delim)
+		parts.len() < 2 throws InvalidArgument("Delimiter not found in ${fname}()").set(val=s, delim=delim)
+		parts
+	}
+
+	doc Split the string by delimiter and return the part before the last occurrence
+	doc %RET - Str
+	F before_last(s:Str, delim:Str) stdlib_split_on_delim(s, delim, "before_last")[0..-1].join(delim)
+
+	TEST "a:b".before_last(":") == "a"
+	TEST "a:b:c".before_last(":") == "a:b"
 
 	doc Split the string by delimiter and return the last part
 	doc %RET - Str
-	F after_last(s:Str, delim:Str) {
-		# TODO: something more efficient
-		parts = s.split(delim)
-		parts.len() < 2 throws InvalidArgument("Delimiter not found in after_last()").set(val=s, delim=delim)
-		parts[-1]
-	}
+	F after_last(s:Str, delim:Str) stdlib_split_on_delim(s, delim, "after_last")[-1]
 
 	TEST "a:b".after_last(":") == "b"
 	TEST "a:b:c".after_last(":") == "c"
-	TEST {"a:b".after_last("*")}.assert(InvalidArgument)
+
+	TEST [before_first, after_first, before_last, after_last].each(F(f) { {f("a:b", "*")}.assert(InvalidArgument) }); true
 
 	doc Trim whitespace
 	F trim(s:Str) s - /^[[:space:]]*/ - /[[:space:]]*$/
