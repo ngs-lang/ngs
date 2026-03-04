@@ -2906,7 +2906,12 @@ doc %RET - Arr
 F get(e:Eachable1, field:Str)
 	collector
 		e.each(F(item) {
-			try collect(item.(field))
+			try {
+				collect(item.(field))
+			} catch(e:KeyNotFound) {
+				guard e.container === item and e.key == field
+				null
+			}
 		})
 
 doc Return array made of given field of each element of given Eachable1 where present or default value where the field is not present.
