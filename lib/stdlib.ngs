@@ -1913,10 +1913,10 @@ section "ArrLike" {
 	doc Get length of the underlying array.
 	F len(al:ArrLike)               al.meta().ArrLike.len()
 
-	doc Set element in the underlying array.
+	doc Get element from the underlying array.
 	F '[]'(al:ArrLike, idx:Int)     al.meta().ArrLike[idx]
 
-	doc Get element from the underlying array.
+	doc Set element in the underlying array.
 	F '[]='(al:ArrLike, idx:Int, x) al.meta().ArrLike[idx] = x
 
 	doc Get element at the given index or return dflt if the index is out of range (element at the given index does not exist). See get(Arr).
@@ -2437,8 +2437,8 @@ F Str(ntc:NormalTypeConstructor) "<NormalTypeConstructor>"
 section "Type" {
 
 	doc String representation of a type
-	doc %RET - "<Type NAME>"
-	doc %EX - Real.Str().echo()  # Outputs: <Type Real>
+	doc %RET - "<Type NAME ...>"
+	doc %EX - Real.Str().echo()  # Outputs: <Type Real with 3 constructor(s) and 1 meta entries>
 	F Str(t:Type) "<Type ${t.name} with ${t.constructors.len()} constructor(s) and ${t.meta().len()} meta entries>"
 
 	# TODO: Reorganize and move out of Type section
@@ -2797,7 +2797,7 @@ section "collector" {
 	doc h - Initial hash
 	doc body - The body after collector keyword and initial value, wrapped in a function
 	doc body - "collector/{'my': 'hash'} THIS_CODE"
-	doc %RET - Constructed array
+	doc %RET - Constructed Hash
 	doc %EX - arr = [{"Name": "n1", "Value": "v1"},{"Name": "n2", "Value": "v2"}]
 	doc %EX - my_hash = collector/{}
 	doc %EX - 	arr.each(F(elt) collect(elt.Name, elt.Value))
@@ -2811,7 +2811,7 @@ section "collector" {
 	doc n - Initial number
 	doc body - The body after collector keyword and initial value, wrapped in a function
 	doc body - "collector/100 THIS_CODE"
-	doc %RET - Constructed array
+	doc %RET - The sum
 	doc %EX - collector/0 { (1...10).each(collect) }  # 55
 	F collector(n:Int, body:Fun) {
 		body(F(incr) n=n+incr)
@@ -3165,7 +3165,6 @@ TEST [1,2,3] - [5,6,1,1,1,1,1,1,1,1,1,1,1,2] == [3]
 doc Count number of items that match the pattern.
 doc e - Items to look at
 doc pattern - Test function or anything else acceptable by (=~), defaults to Bool.constructors
-doc args - Additional arguments for the pattern
 doc %RET - Int
 doc %EX - [1,2,3,11,12].count(X>10)  # 2
 F count(e:Eachable1, pattern=Bool.constructors) {
@@ -4908,7 +4907,7 @@ section "Strings and characters" {
 	TEST ":a:bc:d:".split("bc") == [":a:", ":d:"]
 
 	# Candidate to move out of stdlib
-	doc Split the string by delimiter and return the last part
+	doc Split the string by delimiter and return the first part
 	doc %RET - Str
 	F before_first(s:Str, delim:Str) {
 		p = s.pos(delim).assert(Not(null), InvalidArgument("Delimiter not found in before_first()").set(val=s, delim=delim))
@@ -5360,10 +5359,10 @@ section "Thread" block _ {
 		init(t, name, F thread_arg_discard_wrapper(discard) f(), null)
 	}
 
-	# Not sure yet: %STATUS - deprecated
 	doc Joins threads.
 	doc threads - Arr of Thread.
 	doc %RET - Arr, the results from threads, in order.
+	doc %STATUS - deprecated
 	F join(threads:Arr) {
 		guard threads and threads.all(Thread)
 		warn("Using deprecated join(threads:Arr)")
@@ -6358,7 +6357,7 @@ doc %RET - Arr of Str
 F lines(f:File) collector f.lines(collect)
 
 doc Write given lines to the file. Overwrites the file.
-doc %RET - Arr of Str
+doc %RET - f
 F lines(f:File, lines_:Arr) {
 	finally(
 		body = {
