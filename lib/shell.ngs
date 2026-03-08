@@ -1,4 +1,7 @@
 ns {
+	# This require supposed to be temporary until better place is found for default action handling per type
+	CodePipeline = require("aws/CodePipeline.ngs")
+
 	# WIP
 	# Run with: ngs -e 'require("./lib/shell.ngs")' server
 	SOCK_FILE = "ngs-shell.sock"
@@ -328,6 +331,17 @@ ns {
 				log("UI default action on ${event}")
 
 				item = tl[event.cur.ti] # Fields: id,time,result
+				debug('ui_default_action', "ITEM ${item}")
+
+				# TODO: more resilient input handling
+				obj = item.result[event.cur.path[0]]
+				debug('ui_default_action', "OBJ ${obj}")
+				# Let's ignore field for now and navigate to the target object
+
+				# TODO: move to more appropriate place
+				if obj is CodePipeline::Pipeline {
+					debug('ui_default_action', "OBJ - CodePipeline::Pipeline")
+				}
 
 				# TODO(later): move guessing out of ui_default_action, it's not specific to the action.
 				guessed_items = guess(tl, item, event.cur.path)
