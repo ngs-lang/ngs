@@ -358,7 +358,7 @@ ns {
 					debug('ui_default_action', "OBJ - CodePipeline::Pipeline")
 					# Later: different fields might produce different commands
 					# TODO: Add semantics of selection (guess)
-					#       Either dst should be semantic and add field for tracking which "real" object 
+					#       Either dst should be semantic and add field for tracking which "real" object
 					#       or keep dst the "real" object and and field for selection semantic.
 					#       ... or separate the guess from the command completely?
 					#       Think how recording and replaying would be most semantically and visually aligned.
