@@ -5086,20 +5086,24 @@ section "Strings and characters" {
 	doc %RET - Type of ret is same as type of a
 	F +(s:Str, a:Eachable1) {
 		guard a is not Str
+		guard a is not Int
 		guard a.all(Str)
 		a.mapo(s+X)
 	}
 	TEST "a " + ["1", "2"] == ["a 1", "a 2"]
+	TEST { "" + 0 }.assert(MethodNotFound)
 
 	doc Append s to each line in a
 	doc %EX - ["1", "2"] + " a"  # ["1 a", "2 a"]
 	doc %RET - Type of ret is same as type of a
 	F +(a:Eachable1, s:Str) {
 		guard a is not Str
+		guard a is not Int
 		guard a.all(Str)
 		a.mapo(X+s)
 	}
 	TEST ["1", "2"] + " a" == ["1 a", "2 a"]
+	TEST { 0 + "" }.assert(MethodNotFound)
 
 	doc Map a string, character by character.
 	doc %EX - "abcd".mapo(F(x) if x == "b" then "X" else x)  # "aXcd"
