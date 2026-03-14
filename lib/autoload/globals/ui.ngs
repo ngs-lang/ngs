@@ -50,6 +50,7 @@ ns(TL=Timeline) {
 			type InfoTimelineItem(TimelineItem)
 			type GuessTimelineItem(TimelineItem)
 			type ResultTimelineItem(TimelineItem)
+			type InteractionRecordTimelineItem(TimelineItem)
 		type Object(Element)  # An interactive object
 
 		type Scalar(Element)
@@ -150,12 +151,22 @@ ns(TL=Timeline) {
 
 	F init(gti:GuessTimelineItem, ctx:_Ctx, id:Str, time:Time, pattern, description:Str) {
 		super(gti, ctx)
+		gti.id = id
 		gti.time = time
 		gti.pattern = raw(pattern)  # TODO: rethink serialization
 		gti.description = description
 	}
 
 	F Element(ctx:_Ctx, gti:TL::GuessItem) GuessTimelineItem(ctx, gti.id, gti.time, gti.pattern, gti.description)
+
+	F init(irti:InteractionRecordTimelineItem, ctx:_Ctx, id:Str, time:Time, ir) {
+		super(irti, ctx)
+		irti.id = id
+		irti.time = time
+		irti.ir = raw(ir.Hash())
+	}
+
+	F Element(ctx:_Ctx, iri:TL::InteractionRecordItem) InteractionRecordTimelineItem(ctx, iri.id, iri.time, iri.ir)
 
 	F init(tl:Timeline, ctx:_Ctx, id:Str, version, items:Arr) {
 		tl.id = id

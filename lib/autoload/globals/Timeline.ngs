@@ -96,6 +96,14 @@ ns {
 		}
 	}
 
+	section "InteractionRecordItem" {
+		type InteractionRecordItem([Item, NoEmptyInit])
+		F init(iri:InteractionRecordItem, time:Time, ir) {
+			super(iri, time)
+			iri.ir = ir
+		}
+	}
+
 	section "Timeline" {
 
 		F init(t:Timeline) {
