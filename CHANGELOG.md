@@ -12,6 +12,7 @@
 * Add experimental `RecIter` for recursive iteration of data structures.
 
 ### Fixes and improvements
+* Add `peek(RangeIter)` - fixes `skip(pattern)` on `RangeIter`
 * Fix `Str(HashIter)` always showing index 0
 * Workaround for broken `TmpDir`
 
