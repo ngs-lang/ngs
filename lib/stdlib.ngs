@@ -2670,8 +2670,6 @@ section "Range" {
 	doc %EX - (1..4).sum()  # 6
 	F ..(start, end) {
 		guard start is Num or end is Num
-		guard start is Num or start is Null
-		guard end is Num or end is Null
 		NumRange(start, end, true, false)
 	}
 
@@ -2680,14 +2678,26 @@ section "Range" {
 	doc %EX - (1...4).sum()  # 10
 	F ...(start, end) {
 		guard start is Num or end is Num
-		guard start is Num or start is Null
-		guard end is Num or end is Null
 		NumRange(start, end, true, true)
 	}
 
 	TEST 0..null is NumRange
 	TEST null..null is PredRange
 	TEST null.."xyz" is PredRange
+
+	doc NumRange constructor. Validates that start and end are Num or Null, step is Num.
+	F init(r:NumRange, start, end, include_start=true, include_end=false, step=1) {
+		not(start is Num or start is Null) throws InvalidArgument("NumRange start must be Num or Null").set('start', start)
+		not(end   is Num or end   is Null) throws InvalidArgument("NumRange end must be Num or Null").set('end', end)
+		not(start is not Null or end is not Null) throws InvalidArgument("NumRange start and end cannot both be Null")
+		not(step  is Num)                  throws InvalidArgument("NumRange step must be Num").set('step', step)
+		init(args())
+	}
+
+	TEST { NumRange("a", 10) }.assert(InvalidArgument)
+	TEST { NumRange(1, "b") }.assert(InvalidArgument)
+	TEST { NumRange(null, null) }.assert(InvalidArgument)
+	TEST { NumRange(1, 10, step="x") }.assert(InvalidArgument)
 
 	doc Iterates over the elements of r, passing each in turn to cb.
 	doc cb - Function to be called with values from r
