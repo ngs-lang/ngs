@@ -118,6 +118,11 @@ doc EXPERIMENTAL! Do not use!
 F next(i:MapIter) i::mapper(i.val.next())
 
 doc EXPERIMENTAL! Do not use!
+F peek(i:MapIter) i::mapper(i.val.peek())
+
+TEST i = Iter([1,2,3]).map(X*2); [i.next(), i.peek(), i.next()] == [2, 4, 4]
+
+doc EXPERIMENTAL! Do not use!
 F Bool(i:MapIter) Bool(i.val)
 
 doc EXPERIMENTAL! Do not use!

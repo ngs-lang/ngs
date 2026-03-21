@@ -10,6 +10,7 @@
 * Add `after_first(Str, Str)`
 * Add `before_last(Str, Str)`
 * Add experimental `RecIter` for recursive iteration of data structures.
+* Add `peek(MapIter)`
 
 ### Fixes and improvements
 * Add `peek(RangeIter)` - fixes `skip(pattern)` on `RangeIter`
