@@ -12,6 +12,7 @@
 * Add experimental `RecIter` for recursive iteration of data structures.
 
 ### Fixes and improvements
+* Fix `Str(HashIter)` always showing index 0
 * Workaround for broken `TmpDir`
 
 ## 2025-04-05 Version 0.2.17

@@ -330,7 +330,7 @@ F Bool(i:HashIter) i.entry != null
 
 doc Get next key-value of the hash iterated over.
 doc %RET - Any
-F next(i:HashIter) { ret = i.peek(); i.entry = i.entry.ll_hash_entry_next(); ret  }
+F next(i:HashIter) { ret = i.peek(); i.entry = i.entry.ll_hash_entry_next(); i.idx += 1; ret  }
 
 doc Get next value of the hash iterated over.
 doc Same as next(i)[1]
@@ -425,9 +425,11 @@ F JsonData(i:Iter) collector i.each(collect + JsonData)
 
 type SkipError(Error)
 
-doc Returns the given Iter but skipping leading elements while the pattern matches. 
-doc If all the elements matches the pattern the Iter will be empty.
-doc %EX - [0, 2, 3, 25, 19, 7].Iter().skip(F(x) x != 3).Arr() returns [3, 25, 19, 7]
+doc Returns the given Iter but skipping leading elements while the pattern matches.
+doc If all elements match the pattern, the Iter will be empty.
+doc Default pattern skips leading truthy elements (stops at first falsy).
+doc %EX - [1, 2, null, 3].Iter().skip().Arr() == [null, 3]
+doc %EX - [0, 2, 3, 25, 19, 7].Iter().skip(X != 3).Arr() == [3, 25, 19, 7]
 doc %RET - Iter
 F skip(i:Iter, pattern=Bool.constructors){
 	while i {
@@ -439,6 +441,7 @@ F skip(i:Iter, pattern=Bool.constructors){
 
 TEST [1, 2, 3, 4, 5, 34, 5].Iter().skip(X != 3).Arr() == [3, 4, 5, 34, 5]
 TEST [1, 2, 3, 5, 34, 5].Iter().skip(X != 4).Arr() == []
+TEST [1, 2, null, 3].Iter().skip().Arr() == [null, 3]
 
 doc Returns the given Iter after consuming first count elements.
 doc %EX - [3, 4, 5, 34, 5].Iter().skip(3).Arr() == [34, 5] 
