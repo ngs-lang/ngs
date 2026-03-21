@@ -246,7 +246,7 @@ void process_namespace(ast_node *first_child, int location[4]) {
 				MAKE_NODE(lhs, INDEX_NODE);
 					MAKE_IDENTIFIER_NODE(exports_identifier, "_exports");
 					append_ast_node_child(lhs, exports_identifier);
-					MAKE_STRING_NODE(exports_key, ngs_strdup(identifier_to_export->name));
+					MAKE_STRING_NODE(exports_key, identifier_to_export->name);
 					append_ast_node_child(lhs, exports_key);
 				append_ast_node_child(e, lhs);
 				append_ast_node_child(e, copy_ast_tree(identifier_to_export));
