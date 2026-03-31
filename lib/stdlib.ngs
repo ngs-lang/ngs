@@ -8610,13 +8610,14 @@ F encode_uri_component(s:Str) s.replace(STDLIB_INVALID_URI_CHAR_RE, F(char) '%' 
 TEST encode_uri_component("ab+c%") == "ab%2Bc%25"
 
 # TODO: more efficient
-doc Decodes URI component, unsecaping %XX hexadecimals
+doc Decodes URI component, unescaping %XX hexadecimals
 doc %EX - decode_uri_component("ab%2Bc%25")  # "ab+c%"
 F decode_uri_component(s:Str) {
 	l = s.len()
 	ret = ''
 	for(i;l) {
 		ret += s[i].when('%', {
+			i + 2 >= l throws InvalidArgument("Malformed percent encoding in URI component").set(given=s)
 			i += 2
 			decode_hex(s[i-1..i+1])
 		})
@@ -8625,6 +8626,8 @@ F decode_uri_component(s:Str) {
 }
 
 TEST decode_uri_component("ab%2Bc%25") == "ab+c%"
+TEST { decode_uri_component("bad%") }.assert(InvalidArgument)
+TEST { decode_uri_component("bad%2") }.assert(InvalidArgument)
 
 
 doc Encodes HTML. Escapes &, < and > .
