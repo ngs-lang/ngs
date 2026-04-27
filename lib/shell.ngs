@@ -368,6 +368,7 @@ ns {
 						cmd = 'show'
 						dst = obj
 					))
+					# new # dst = guessed_items
 				}
 
 				# TODO(later): better UI for displaying multiple guesses
@@ -385,7 +386,7 @@ ns {
 					# TODO: move to more appropriate place
 					if obj is CodePipeline::Pipeline {
 						debug('ui_default_action', "OBJ - CodePipeline::Pipeline")
-						g.push(Timeline::InfoItem(Time(), "WIP: Will show CodePipeline::Pipeline."))
+						g.push(Timeline::ResultItem(Time(), obj))
 					}
 					g.push(Timeline::InfoItem(Time(), "WIP: here will be the output of the command."))
 				})

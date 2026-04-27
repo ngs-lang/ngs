@@ -209,7 +209,9 @@ ns(TL=Timeline) {
 		F Element(ctx:_Ctx, p:_cp::Progress) Progress(ctx, p.step, p.total_steps)
 
 		F Element(ctx:_Ctx, cp:_cp::Pipeline) {
-			throw NotImplemented("Converting AWS CodePipeline to arbitrary Element is not implemented yet")
+			log("Element(Ctx, CodePipeline::Pipeline): ${cp}")
+			# throw NotImplemented("Converting AWS CodePipeline to arbitrary Element is not implemented yet")
+			Element(ctx, "WIP: CodePipeline::Pipeline ${cp.name}")
 		}
 
 		# WIP
