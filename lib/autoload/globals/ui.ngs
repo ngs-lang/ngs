@@ -197,21 +197,16 @@ ns(TL=Timeline) {
 	section "AWS" {
 		# TODO: Move whatever possible from CodePipeline.ngs to AbstractProcess.ngs
 
-		# WIP
-		# Think: it's probably not always the case that Status should be a UI object
 		F Element(ctx:_Ctx, s:AbstractProcess::Status::Status) {
-			Object(ctx, [
-				ProcessStatus(ctx, s.Type().name, s.text)
-			])
+			ProcessStatus(ctx, s.Type().name, s.text)
 		}
 
 		# TODO: .total_steps might not be known
 		F Element(ctx:_Ctx, p:_cp::Progress) Progress(ctx, p.step, p.total_steps)
 
 		F Element(ctx:_Ctx, cp:_cp::Pipeline) {
-			log("Element(Ctx, CodePipeline::Pipeline): ${cp}")
-			# throw NotImplemented("Converting AWS CodePipeline to arbitrary Element is not implemented yet")
-			Element(ctx, "WIP: CodePipeline::Pipeline ${cp.name}")
+			fields = %[name status progress last_executed revisions sources approvals]
+			Properties(ctx, fields.Hash(F(k) Element(ctx._down(k), cp[k])))
 		}
 
 		# WIP
@@ -221,12 +216,9 @@ ns(TL=Timeline) {
 			idxs = fields_names.Hash({idx.next()})  # Ex: {name=0, status=1, sources=2, revisions=3, last_executed=4, approvals=5, progress=6}
 
 			for k in %[status last_executed progress] {
-				r.children[idxs[k]].when(Object, {
-					# log("OBJECT FOUND, ${k}") # just status as of writing
-					# Setting .cur should be generic functionality, not _cp::Pipeline related
-					# Would .cur work with nested tables or other complex situations? Would the backend be able to understand what was interacted with?
-					A.cur = raw({'ti': ctx.ti, 'path': ctx._down(k).path})
-				})
+				obj = Object(ctx._down(k), [r.children[idxs[k]]])
+				obj.cur = raw({'ti': ctx.ti, 'path': ctx._down(k).path})
+				r.children[idxs[k]] = obj
 			}
 		}
 

@@ -579,6 +579,19 @@ ns {
 
 			_debug_inspect('ui_default_action/GroupTimelineItem', p)
 
+			assert(p, {
+				'children': Present({
+					'$type': 'ResultTimelineItem'
+					'children': [{
+						'$type': 'Properties'
+						'props': {
+							'name': {'$type': 'Scalar'}
+							'status': {'$type': 'ProcessStatus'}
+							'progress': {'$type': 'Progress'}
+						}
+					}]
+				})
+			})
 
 		})
 
