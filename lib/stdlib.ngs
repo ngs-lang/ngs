@@ -9167,7 +9167,16 @@ section "Bootstrap" {
 			result = econd {
 				result is Namespace {
 
-					F run_subcommand(namespace:Namespace, argv:Arr) {
+					F run_namespace(namespace:Namespace, argv:Arr, top_level=false) block b {
+						if 'main' in namespace {
+							try {
+								b.return(bootstrap_invoke(namespace::main, argv))
+							} catch(e:InvalidCommandLineArguments) {
+								guard argv
+							}
+						}
+						not(argv) and top_level returns namespace
+
 						F list_subcommands() namespace.filterv(AnyOf(Fun, Namespace)).keys().sort()
 						not(argv) throws InvalidCommandLineArguments("Subcommand not specified").set(subcommands=list_subcommands())
 						a = argv.copy()
@@ -9175,26 +9184,14 @@ section "Bootstrap" {
 						debug('bootstrap', "bootstrap(): subcommand ${subcommand} argv ${argv}")
 						not(subcommand in namespace) throws InvalidCommandLineArguments("Subcommand ${subcommand} not found").set(subcommand=subcommand, subcommands=list_subcommands())
 						target = namespace[subcommand]
-						target is Namespace returns run_subcommand(target, a)
+						target is Namespace returns run_namespace(target, a)
 						target is not Fun throws InvalidCommandLineArguments("${subcommand} is not a method").set(subcommand=subcommand)
 						ret = bootstrap_invoke(target, a)
 						echo_cli(ret)
 					}
 
-					if 'main' in result {
-						try {
-							bootstrap_invoke(result::main, ARGV)
-						} catch(e:InvalidCommandLineArguments) {
-							guard ARGV
-							run_subcommand(result, ARGV)
-						}
-					} else {
-						if ARGV {
-							run_subcommand(result, ARGV)
-						} else {
-							result
-						}
-					}
+					# Top level is special - missing ARGV is not an exception
+					run_namespace(result, ARGV, true)
 				}
 				main is MultiMethod {
 					F in_main_file(m) m.ip().resolve_instruction_pointer().file == fname

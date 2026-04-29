@@ -11,6 +11,7 @@
 * Add `before_last(Str, Str)`
 * Add experimental `RecIter` for recursive iteration of data structures.
 * Add `peek(MapIter)`
+* Invoke `main` in sub-namespaces, enabling local help/usage for nested CLI namespaces
 
 ### Fixes and improvements
 * Add `peek(RangeIter)` - fixes `skip(pattern)` on `RangeIter`
