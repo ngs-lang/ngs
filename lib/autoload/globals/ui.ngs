@@ -91,7 +91,7 @@ ns(TL=Timeline) {
 	F init(s:Scalar, ctx:_Ctx, value) _init(args())
 	F init(c:Column, ctx:_Ctx, name:Str) _init(args())
 	F init(p:Properties, ctx:_Ctx, props:Hash) _init(args())
-	F init(p:ProcessStatus, ctx:_Ctx, name:Str, text:Str) _init(args())  # TODO: improve + add semantics
+	F init(p:ProcessStatus, ctx:_Ctx, name:Str, text:AnyOf(Str, null)) _init(args())  # TODO: improve + add semantics
 	F init(p:Progress, ctx:_Ctx, step:Int, total_steps:Int) _init(args())
 
 
@@ -220,6 +220,24 @@ ns(TL=Timeline) {
 				obj.cur = raw({'ti': ctx.ti, 'path': ctx._down(k).path})
 				r.children[idxs[k]] = obj
 			}
+		}
+
+		F Element(ctx:_Ctx, e:_cp::Execution) {
+			fields = %[name status sub]
+			h = e.Hash()
+			Properties(ctx, fields.Hash(F(k) Element(ctx._down(k), h[k])))
+		}
+
+		F Element(ctx:_Ctx, s:_cp::ExecutionStage) {
+			fields = %[name status sub]
+			h = s.Hash()
+			Properties(ctx, fields.Hash(F(k) Element(ctx._down(k), h[k])))
+		}
+
+		F Element(ctx:_Ctx, a:_cp::ExecutionStageAction) {
+			fields = %[name status]
+			h = a.Hash()
+			Properties(ctx, fields.Hash(F(k) Element(ctx._down(k), h[k])))
 		}
 
 		# Later

@@ -386,7 +386,8 @@ ns {
 					# TODO: move to more appropriate place
 					if obj is CodePipeline::Pipeline {
 						debug('ui_default_action', "OBJ - CodePipeline::Pipeline")
-						g.push(Timeline::ResultItem(Time(), obj))
+						execution = CodePipeline::Execution(obj.name, obj.last_execution_id).hydrate()
+						g.push(Timeline::ResultItem(Time(), execution))
 					}
 					g.push(Timeline::InfoItem(Time(), "WIP: here will be the output of the command."))
 				})
@@ -587,7 +588,7 @@ ns {
 						'props': {
 							'name': {'$type': 'Scalar'}
 							'status': {'$type': 'ProcessStatus'}
-							'progress': {'$type': 'Progress'}
+							'sub': {'$type': 'List'}
 						}
 					}]
 				})
