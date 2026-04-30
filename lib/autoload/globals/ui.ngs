@@ -62,6 +62,7 @@ ns(TL=Timeline) {
 			# TODO: Cell
 		type Properties(Element)
 		type List(Element)
+		type Tree(Element)
 		type ProcessStatus(Element)
 		type Progress(Element)
 
@@ -91,8 +92,14 @@ ns(TL=Timeline) {
 	F init(s:Scalar, ctx:_Ctx, value) _init(args())
 	F init(c:Column, ctx:_Ctx, name:Str) _init(args())
 	F init(p:Properties, ctx:_Ctx, props:Hash) _init(args())
+	F init(t:Tree, ctx:_Ctx, node:Element, children:Arr) {
+		super(t, ctx, children)
+		t.node = node
+	}
 	F init(p:ProcessStatus, ctx:_Ctx, name:Str, text:AnyOf(Str, null)) _init(args())  # TODO: improve + add semantics
 	F init(p:Progress, ctx:_Ctx, step:Int, total_steps:Int) _init(args())
+
+	TEST ui::Element(ui::mock_tree()).JsonData() =~ {'$type': 'Tree', 'node': {'$type': 'Scalar'}}
 
 
 	F Element(ctx:_Ctx, x:AnyOf(Num, Str, Bool, Null)) Scalar(ctx, x)
@@ -244,6 +251,23 @@ ns(TL=Timeline) {
 		F Element(ctx:_Ctx, r:_cp::Revision) Element(ctx, Str(r))
 		F Element(ctx:_Ctx, s:_cp::Source) Element(ctx, Str(s))
 		F Element(ctx:_Ctx, a:_cp::Action) Element(ctx, Str(a))
+	}
+
+	section "Mock data for visual testing of Tree element" {
+		type _MockTree
+		F init(m:_MockTree, name:Str, children:Arr) {
+			children.assert(Repeat(_MockTree), "_MockTree children must be _MockTree")
+			m.name = name
+			m.children = children
+		}
+
+		F mock_tree() _MockTree("root", [
+			_MockTree("compile", [])
+			_MockTree("link",    [_MockTree("strip", [])])
+			_MockTree("test",    [])
+		])
+
+		F Element(ctx:_Ctx, m:_MockTree) Tree(ctx, Scalar(ctx, m.name), m.children.map(Element(ctx, X)))
 	}
 
 	doc Entry point to recursively convert data to UI Elements
