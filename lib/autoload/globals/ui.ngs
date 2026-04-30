@@ -63,6 +63,7 @@ ns(TL=Timeline) {
 		type Properties(Element)
 		type List(Element)
 		type Tree(Element)
+		type Section(Element)
 		type ProcessStatus(Element)
 		type Progress(Element)
 
@@ -95,6 +96,11 @@ ns(TL=Timeline) {
 	F init(t:Tree, ctx:_Ctx, node:Element, children:Arr) {
 		super(t, ctx, children)
 		t.node = node
+	}
+	F init(s:Section, ctx:_Ctx, header:Element, body:Element) {
+		super(s, ctx, [])
+		s.header = header
+		s.body = body
 	}
 	F init(p:ProcessStatus, ctx:_Ctx, name:Str, text:AnyOf(Str, null)) _init(args())  # TODO: improve + add semantics
 	F init(p:Progress, ctx:_Ctx, step:Int, total_steps:Int) _init(args())
@@ -269,6 +275,17 @@ ns(TL=Timeline) {
 
 		F Element(ctx:_Ctx, m:_MockTree) Tree(ctx, Scalar(ctx, m.name), m.children.map(Element(ctx, X)))
 	}
+
+	section "Mock data for visual testing of Section element" {
+		type _MockSection
+		F init(m:_MockSection, header:Str, body:Str) init(args())
+
+		F mock_section() _MockSection("My Section Header", "My Section Body")
+
+		F Element(ctx:_Ctx, m:_MockSection) Section(ctx, Scalar(ctx, m.header), Scalar(ctx, m.body))
+	}
+
+	TEST ui::Element(ui::mock_section()).JsonData() =~ {'$type': 'Section', 'header': {'$type': 'Scalar'}, 'body': {'$type': 'Scalar'}}
 
 	doc Entry point to recursively convert data to UI Elements
 	F Element(x) Element(_Ctx(), x)

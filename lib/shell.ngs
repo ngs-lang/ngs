@@ -309,7 +309,8 @@ ns {
 						'p_censored': '{ require("aws/CodePipeline.ngs")::pipelines::list().map(F(p) p.filterk(Not(AnyOf(%[sources revisions])))) }'
 						's-': 'aws cloudformation list-stacks'
 						's': 'saws::stacks()'
-						't': 'ui::mock_tree()'
+						'mock_section': 'ui::mock_section()'
+						'mock_tree': 'ui::mock_tree()'
 					}
 					line = shortcuts.get(line, line)
 				}
