@@ -586,11 +586,10 @@ ns {
 				'children': Present({
 					'$type': 'ResultTimelineItem'
 					'children': [{
-						'$type': 'Properties'
-						'props': {
-							'name': {'$type': 'Scalar'}
-							'status': {'$type': 'ProcessStatus'}
-							'sub': {'$type': 'List'}
+						'$type': 'Tree'
+						'node': {
+							'$type': 'Horizontal'
+							'children': [{'$type': 'Scalar'}, {'$type': 'ProcessStatus'}]
 						}
 					}]
 				})
