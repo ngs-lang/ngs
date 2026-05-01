@@ -5570,6 +5570,39 @@ section "Logging and status reporting" {
 	# Not sure such flexibility is needed (NGS_ERR_FD)
 	stdlib_error_fd = ENV.NGS_ERR_FD.Int() tor 2
 
+	doc Do not use. For stdlib only for now.
+	doc Carries a string together with its semantic category for colored (terminal) output.
+	doc %STATUS - internal
+	type SemanticOutput
+	F init(ss:SemanticOutput, category:Str, s) {
+		ss.category = category
+		ss.s = s
+	}
+
+	block _ {
+		global STDLIB_OUTPUT_COLORS
+
+		STDLIB_OUTPUT_COLORS = {
+			'error':   1
+			'warning': 3
+			'log':     6
+			'debug':   ['dim', 6]
+		}
+
+		F decode(s:Str) try { s.Int() } catch(e) { s }
+
+		ENV.get('NGS_COLORS', '').split(',').filter().each(F(item) {
+			item.split(':').apply(F(cat, spec_str) {
+				STDLIB_OUTPUT_COLORS[cat] = spec_str.split('+').map(decode)
+			})
+		})
+	}
+
+	doc Using only while loading.
+	doc Real implementation is towards the end of this file.
+	doc backtick syntax and running external processes is defined by then.
+	F echo(fd:Int, ss:SemanticOutput) echo(fd, ss.s)
+
 	block _ {
 		global maybe_print_stacktrace
 
@@ -5591,7 +5624,7 @@ section "Logging and status reporting" {
 
 	doc Log to standard error. Later log output will be treated specially by the shell. It will have suitable representation in the UI. Use log() when it's semantically a log.
 	F log(s:Str) {
-		echo(stdlib_error_fd, "[LOG ${Time()}] $s")
+		echo(stdlib_error_fd, SemanticOutput('log', "[LOG ${Time()}] $s"))
 	}
 
 	section "Debug" {
@@ -5610,7 +5643,7 @@ section "Logging and status reporting" {
 		F debug(facility:Str, str_or_producer) {
 			if debug_enabled(facility) {
 				s = str_or_producer.Value()
-				echo(stdlib_error_fd, "[DEBUG ${Time() tor '-'} ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()} $facility] $s")
+				echo(stdlib_error_fd, SemanticOutput('debug', "[DEBUG ${Time() tor '-'} ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()} $facility] $s"))
 			}
 		}
 
@@ -5621,7 +5654,7 @@ section "Logging and status reporting" {
 	doc %EX - # Approximate output on stderr:
 	doc %EX - # [ERROR 2018-01-01 00:00:00 YOUR_TZ] Failed to read configuration file. Will clean up and exit now.
 	F error(s:Str) {
-		echo(stdlib_error_fd, "[ERROR ${Time()} ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] $s")
+		echo(stdlib_error_fd, SemanticOutput('error', "[ERROR ${Time()} ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] $s"))
 		maybe_print_stacktrace('NGS_ERROR_BACKTRACE', '[ERROR BACKTRACE]')
 	}
 
@@ -5630,7 +5663,7 @@ section "Logging and status reporting" {
 	doc %EX - # Approximate output on stderr:
 	doc %EX - # [WARNING 2018-01-01 00:00:00 YOUR_TZ] Could not open input file ./my_file , skipping it.
 	F warn(s:Str) {
-		echo(stdlib_error_fd, "[WARNING ${Time()}] $s")
+		echo(stdlib_error_fd, SemanticOutput('warning', "[WARNING ${Time()}] $s"))
 		maybe_print_stacktrace('NGS_WARN_BACKTRACE', '[WARNING BACKTRACE]')
 	}
 
@@ -8196,7 +8229,7 @@ doc level - indentation level to use (two spaces for each level)
 doc parent - parent exception if print_exception() was called for .cause exception
 F print_exception(e:Exception, level:Int = 0, parent:Exception = null, echo=echo(stdlib_error_fd, X)) {
 
-	F err(message) echo(pfx + message)
+	F err(message) echo(SemanticOutput('error', pfx + message))
 
 	pfx = "[ERROR ${Time()} ${c_getpid()} ${Thread.local.thread.id tor c_pthread_self().id()}] " + "  " * level
 	h = Hash(e)
@@ -9038,6 +9071,34 @@ F sysconf(name:Int) {
 		null
 	}
 	ret
+}
+
+# echo(fd:Int, ss:SemanticOutput) and friends
+block _ {
+	global echo
+
+	color_cache = {}
+
+	F color_seq(spec:Int) color_cache.dflt(spec, { try { `line: tput setaf $A` } catch(e) { '' } })
+	F color_seq(spec:Str) color_cache.dflt(spec, { try { `line: tput $A` } catch(e) { '' } })
+	F color_seq(spec:Arr) spec.map(color_seq).join('')
+
+	F reset_seq() color_cache.dflt('reset', { try { `line: tput sgr0` } catch(e) { '' } })
+
+	F colorize(s:Str, seq, reset) "${seq}${s}${reset}"
+	F colorize(lines:Lines, seq, reset) Lines(lines.map(colorize(X, seq, reset)))
+
+	doc Colored output - NO_COLOR is not set and TTY and color category known
+	F echo(fd:Int, ss:SemanticOutput) {
+		seq = color_seq(STDLIB_OUTPUT_COLORS[ss.category])
+		echo(fd, ss.s.when({seq}, {colorize(A, seq, reset_seq())}))
+	}
+
+	doc Not colored output - NO_COLOR set or not a TTY or color category unknown
+	F echo(fd:Int, ss:SemanticOutput) {
+		guard not(isatty(fd)) or 'NO_COLOR' in ENV or ss.category not in STDLIB_OUTPUT_COLORS
+		echo(fd, ss.s)
+	}
 }
 
 section "Bootstrap" {
