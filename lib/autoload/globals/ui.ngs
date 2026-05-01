@@ -248,8 +248,21 @@ ns(TL=Timeline) {
 		}
 
 		F Element(ctx:_Ctx, a:_cp::ExecutionStageAction) {
-			node = Horizontal(ctx, [Scalar(ctx, a.name), Element(ctx, a.status)])
-			Tree(ctx, node, [])
+			header = Horizontal(ctx, [Scalar(ctx, a.name), Element(ctx, a.status)])
+			body = if 'action_execution' in a.Hash() {
+				ae = a.action_execution
+				start_time = Time(ae.startTime)
+				finished = a.status is AbstractProcess::Status::Finished
+				elapsed = Int(if finished then Time(ae.lastUpdateTime) else Time()) - Int(start_time)
+				duration_str = if elapsed >= 60 then "${elapsed / 60}m ${elapsed % 60}s" else "${elapsed}s"
+				props = {'start': Scalar(ctx, Str(start_time))}
+				if finished { props['end'] = Scalar(ctx, Str(Time(ae.lastUpdateTime))) }
+				props['elapsed'] = Scalar(ctx, duration_str)
+				Properties(ctx, props)
+			} else {
+				List(ctx, [])
+			}
+			Section(ctx, header, body)
 		}
 
 		# Later
