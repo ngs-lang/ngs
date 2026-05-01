@@ -1,7 +1,7 @@
 # === Table ======================================
 
-ns {
-	global init, push, each, len, echo, digest, Str
+ns(GlobalTable=Table) {
+	global init, push, each, len, echo, digest, Str, Bool
 
 	# --- TableView ---
 	type TableView
@@ -132,6 +132,10 @@ ns {
 	doc Holds tabular data
 	doc name - Table name to display and for configuration lookup
 	doc cols_enum - Enum for columns names
+	doc
+	doc rows.meta()[Table] = {'name':my_str, 'columns':my_arr, 'allow_extra_columns':my_bool}
+	doc name: explicit arg > meta.name > null.
+	doc columns: config('table_NAME') > meta.columns+allow_extra_columns > meta.columns > heuristic.
 	type Table(Eachable1)
 
 		doc Initialize rows to an empty array
@@ -151,12 +155,24 @@ ns {
 		doc rows_hashes - rows, each row is a Hash
 		F init(t:Table, name:AnyOf(Str, Null), rows_hashes:Arr) {
 			guard rows_hashes =~ Repeat(AnyOf(Hash, HashLike))
-			super(t, name)
+			table_meta = rows_hashes.meta().get(GlobalTable, {}).assert({
+				'name': IfExists(Str)
+				'columns': IfExists(AllOf(Arr, Not([])))
+				'allow_extra_columns': IfExists(Bool)
+			}, InvalidArgument("meta()[Table] invalid field types"))
+			super(t, name or table_meta.get('name'))
 
 			if not(t.cols_enum) {
-				# rows_hashes.map(keys).flatten().each(register_column(t, X))
-				cols_names = rows_hashes.map(keys).flatten().uniq()
-				columns_names_best_order(cols_names).each(register_column(t, X))
+				meta_cols = table_meta.get('columns')
+				allow_extra = table_meta.get('allow_extra_columns')
+				if allow_extra and not(meta_cols) { throw InvalidArgument("meta()[Table].allow_extra_columns requires 'columns' to be set") }
+				all_keys = rows_hashes.map(keys).flatten().uniq()
+				cols_names = cond {
+					meta_cols and allow_extra  meta_cols + columns_names_best_order(all_keys.filter({not(A in meta_cols)}))
+					meta_cols                  meta_cols
+					true                       columns_names_best_order(all_keys)
+				}
+				cols_names.each(register_column(t, X))
 			}
 			debug("Table", "Table created with fields: ${t.cols_enum}")
 			rows_hashes.each(push(t, X))
@@ -169,6 +185,16 @@ ns {
 		F init(t:Table, row_hash:Hash) super(t, null, [row_hash])
 
 		TEST Table2::columns(Table2::Table({"a": 1, "b": 2})) == [[1], [2]]
+
+		# meta()[Table] tests
+		TEST Table2::Table([{"a": 1, "b": 2, "c": 3}]).cols_enum.keys() == %[a b c]
+		TEST { rows = [{"a": 1, "b": 2, "c": 3}]; rows.meta()[Table] = {"columns": %[c a b]}; Table2::Table(rows).cols_enum.keys() }() == %[c a b]
+		TEST { rows = [{"a": 1, "b": 2, "c": 3}]; rows.meta()[Table] = {"columns": %[a]}; Table2::Table(rows).cols_enum.keys() }() == %[a]
+		TEST { rows = [{"a": 1, "b": 2, "c": 3}]; rows.meta()[Table] = {"name": "A"}; Table2::Table("B", rows).name }() == "B"
+		TEST { rows = [{"a": 1, "b": 2, "c": 3}]; rows.meta()[Table] = {"name": "A"}; Table2::Table(null, rows).name }() == "A"
+		TEST { rows = [{"a": 1, "b": 2, "c": 3}]; rows.meta()[Table] = {"columns": %[c a], "allow_extra_columns": true}; Table2::Table(rows).cols_enum.keys() }() == %[c a b]
+		TEST { rows = [{"a": 1}]; rows.meta()[Table] = {"columns": []}; assert({ Table2::Table(rows) }, InvalidArgument) }()
+		TEST { rows = [{"a": 1}]; rows.meta()[Table] = {"allow_extra_columns": true}; assert({ Table2::Table(rows) }, InvalidArgument) }()
 
 		doc Internal method. Please do not use.
 		F register_column(t:Table, k) t.cols_enum.push(k)
