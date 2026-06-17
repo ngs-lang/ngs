@@ -258,6 +258,12 @@ ns(TL=Timeline) {
 				props = {'start': Scalar(ctx, Str(start_time))}
 				if finished { props['end'] = Scalar(ctx, Str(Time(ae.lastUpdateTime))) }
 				props['elapsed'] = Scalar(ctx, duration_str)
+				props.error = if a.status is AbstractProcess::Status::Failed {
+					summary = ae.get('output', {}).get('executionResult', {}).get('externalExecutionSummary')
+					if summary {
+						Scalar(ctx, summary)
+					}
+				}
 				Properties(ctx, props)
 			} else {
 				List(ctx, [])
