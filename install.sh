@@ -14,7 +14,7 @@ echo "+ Installing dependencies"
 
 if [[ "$OS" == "Darwin" ]]; then
 	echo "  + On Mac, installing brew packages"
-	brew install libgc libffi peg cmake pandoc awk make pkg-config json-c pcre gnu-sed
+	brew install libgc libffi peg cmake pandoc awk make pkg-config json-c libfyaml pcre gnu-sed
 else
 	# Presumably Linux
 	if type yum &>/dev/null;then
@@ -26,7 +26,7 @@ else
 		# * peg/leg is compiled by CMake from sources and used during build without installing
 		#   that is because I did not find it packaged.
 		echo "    + Installing yum packages"
-		$SUDO yum install -y gc-devel libffi-devel json-c-devel pcre-devel make cmake3 pandoc pkgconfig
+		$SUDO yum install -y gc-devel libffi-devel json-c-devel libfyaml-devel pcre-devel make cmake3 pandoc pkgconfig
 		if ! command -v ctest &>/dev/null;then
 			if command -v ctest3 &>/dev/null;then
 				echo "    + Ctest3 found, configuring as default"
@@ -39,10 +39,10 @@ else
 		$SUDO yum group install -y development-tools
 	elif type pacman &>/dev/null;then
 		echo "  + On Linux / pacman. Installing apt packages."
-		$SUDO pacman -Sy --noconfirm peg make cmake pandoc pkgconfig pcre
+		$SUDO pacman -Sy --noconfirm peg make cmake pandoc pkgconfig pcre libfyaml
 	elif type apt &>/dev/null;then
 		echo "  + On Linux / apt. Installing apt packages."
-		$SUDO apt-get install -y libgc-dev libffi-dev libjson-c-dev peg libpcre3-dev make cmake pandoc pkg-config build-essential
+		$SUDO apt-get install -y libgc-dev libffi-dev libjson-c-dev libfyaml-dev peg libpcre3-dev make cmake pandoc pkg-config build-essential
 		type awk || $SUDO apt-get install -y gawk
 	else
 		echo "ERROR: Package manager not supported. Supported package managers are: apt, yum and pacman. Open an issue in GitHub to request support for another package manager."

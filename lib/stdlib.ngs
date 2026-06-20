@@ -8170,6 +8170,18 @@ F exception_specific_message(jdf:JsonDecodeFail) {
 	])
 }
 
+# TODO: show relevant value part
+doc Format YamlDecodeFail exception message.
+doc %RET - Lines
+F exception_specific_message(ydf:YamlDecodeFail) {
+	Lines([
+		"Failed to parse YAML"
+		"Error message: ${ydf.error}"
+		"Error position in given YAML: ${ydf.position}"
+		"(TODO: show relevant value part)"
+	])
+}
+
 doc Format KeyNotFound exception message for ENV global variable.
 doc %RET - Str
 F exception_specific_message(knf:KeyNotFound) {
