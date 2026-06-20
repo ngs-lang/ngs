@@ -26,6 +26,7 @@ add_definitions(-D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE=1 -D_DEFAULT_SOURCE=1 -D_
 add_definitions(-DNGS_STUPID_MALLOC_AFTER_FORK)
 
 pkg_search_module(JSONC REQUIRED json-c)
+pkg_search_module(LIBFYAML REQUIRED libfyaml)
 pkg_search_module(LIBFFI REQUIRED libffi)
 pkg_search_module(LIBGC REQUIRED bdw-gc-threaded bdw-gc)
 pkg_search_module(PCRE REQUIRED libpcre)
@@ -33,9 +34,9 @@ pkg_search_module(PCRE REQUIRED libpcre)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} ${LIBGC_INCLUDE_DIRS} ${PCRE_INCLUDE_DIRS} ${Backtrace_INCLUDE_DIR} ${JSONC_INCLUDE_DIRS})
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${LIBFFI_INCLUDE_DIRS} ${LIBGC_INCLUDE_DIRS} ${PCRE_INCLUDE_DIRS} ${Backtrace_INCLUDE_DIR} ${JSONC_INCLUDE_DIRS} ${LIBFYAML_INCLUDE_DIRS})
 
-link_directories(${LIBFFI_LIBRARY_DIRS} ${LIBGC_LIBRARY_DIRS} ${PCRE_LIBRARY_DIRS} ${JSONC_LIBRARY_DIRS})
+link_directories(${LIBFFI_LIBRARY_DIRS} ${LIBGC_LIBRARY_DIRS} ${PCRE_LIBRARY_DIRS} ${JSONC_LIBRARY_DIRS} ${LIBFYAML_LIBRARY_DIRS})
 
 add_executable(ngs
 	version.h
@@ -126,7 +127,7 @@ add_custom_command(
 )
 
 
-target_link_libraries(ngs m Threads::Threads ${CMAKE_DL_LIBS} ${LIBGC_LIBRARIES} ${LIBFFI_LIBRARIES} ${JSONC_LIBRARIES} ${PCRE_LIBRARIES} ${Backtrace_LIBRARY})
+target_link_libraries(ngs m Threads::Threads ${CMAKE_DL_LIBS} ${LIBGC_LIBRARIES} ${LIBFFI_LIBRARIES} ${JSONC_LIBRARIES} ${LIBFYAML_LIBRARIES} ${PCRE_LIBRARIES} ${Backtrace_LIBRARY})
 
 set(DO_BUILD_MAN_PAGES ON)
 if(BUILD_MAN STREQUAL "AUTO")

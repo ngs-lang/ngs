@@ -458,6 +458,8 @@ char *obj_to_cstring(VALUE v);
 char **obj_to_cstring_array(VALUE v);
 METHOD_RESULT decode_json(VM *vm, VALUE s, VALUE *result);
 METHOD_RESULT encode_json(VALUE obj, VALUE *result);
+METHOD_RESULT decode_yaml(VM *vm, VALUE s, VALUE *result);
+METHOD_RESULT encode_yaml(VALUE obj, VALUE *result);
 void *ngs_memmem(const void *haystack_start, size_t haystack_len, const void *needle_start, size_t needle_len);
 char *ngs_strdup(const char *src);
 char *ngs_strcat(const char *s1, const char *s2);

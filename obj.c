@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include <json-c/json.h>
+#include <libfyaml.h>
 
 #include "ngs.h"
 #include "obj.h"
@@ -1058,6 +1059,80 @@ METHOD_RESULT encode_json(VALUE obj, VALUE *result) {
 	}
 	*result = make_string(json_object_to_json_string(jobj));
 	json_object_put(jobj);
+	return METHOD_OK;
+}
+
+// YAML support is implemented as a bridge over the JSON code: libfyaml does the
+// YAML<->JSON translation and the existing decode_json/_encode_json_kern do the
+// JSON<->NGS conversion (including scalar typing). See obj.c decode_json / encode_json.
+METHOD_RESULT decode_yaml(VM *vm, VALUE s, VALUE *result) {
+	struct fy_document *fyd;
+	char *json;
+	VALUE json_str;
+	METHOD_RESULT mr;
+
+	fyd = fy_document_build_from_string(NULL, OBJ_DATA_PTR(s), OBJ_LEN(s));
+	if(!fyd) {
+		*result = make_normal_type_instance(vm->YamlDecodeFail);
+		set_normal_type_instance_field(*result, make_string("error"), make_string("Failed to parse YAML"));
+		set_normal_type_instance_field(*result, make_string("value"), s);
+		set_normal_type_instance_field(*result, make_string("position"), MAKE_INT(0));
+		return METHOD_EXCEPTION;
+	}
+
+	json = fy_emit_document_to_string(fyd, FYECF_MODE_JSON_ONELINE);
+	fy_document_destroy(fyd);
+	if(!json) {
+		*result = make_normal_type_instance(vm->YamlDecodeFail);
+		set_normal_type_instance_field(*result, make_string("error"), make_string("Failed to serialize parsed YAML"));
+		set_normal_type_instance_field(*result, make_string("value"), s);
+		set_normal_type_instance_field(*result, make_string("position"), MAKE_INT(0));
+		return METHOD_EXCEPTION;
+	}
+
+	// make_string copies the bytes, so the libfyaml-allocated buffer can be freed after.
+	json_str = make_string(json);
+	free(json);
+
+	mr = decode_json(vm, json_str, result);
+	return mr;
+}
+
+// XXX: free the memory on fails
+METHOD_RESULT encode_yaml(VALUE obj, VALUE *result) {
+	json_object *jobj;
+	const char *json;
+	struct fy_document *fyd;
+	char *yaml;
+
+	*result = MAKE_UNDEF;
+	jobj = _encode_json_kern(obj, result);
+	if(!IS_UNDEF(*result)) {
+		return METHOD_EXCEPTION;
+	}
+
+	json = json_object_to_json_string(jobj);
+	// NOTE: pass the explicit length; libfyaml 0.9.6 does not treat FY_NT ((size_t)-1)
+	//       as "null-terminated" the way the docs imply, which yields a corrupt document.
+	fyd = fy_document_build_from_string(NULL, json, strlen(json));
+	if(!fyd) {
+		json_object_put(jobj);
+		*result = make_string("Failed to build YAML document from encoded JSON");
+		return METHOD_EXCEPTION;
+	}
+	yaml = fy_emit_document_to_string(fyd, FYECF_MODE_BLOCK);
+	fy_document_destroy(fyd);
+	// jobj must outlive fyd: libfyaml builds the document referencing the JSON
+	// string buffer owned by jobj, so free jobj only after the document is emitted.
+	json_object_put(jobj);
+	if(!yaml) {
+		*result = make_string("Failed to emit YAML");
+		return METHOD_EXCEPTION;
+	}
+
+	// make_string copies the bytes, so the libfyaml-allocated buffer can be freed after.
+	*result = make_string(yaml);
+	free(yaml);
 	return METHOD_OK;
 }
 

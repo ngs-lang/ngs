@@ -980,6 +980,32 @@ METHOD_RESULT native_encode_json_obj EXT_METHOD_PARAMS {
 	return mr;
 }
 
+METHOD_RESULT native_decode_yaml_str EXT_METHOD_PARAMS {
+	METHOD_RESULT mr;
+	(void) ctx;
+	mr = decode_yaml(vm, argv[0], result);
+	if(mr == METHOD_EXCEPTION) {
+		set_normal_type_instance_field(*result, make_string("backtrace"), make_backtrace(vm, ctx));
+	}
+	return mr;
+}
+
+METHOD_RESULT native_encode_yaml_obj EXT_METHOD_PARAMS {
+	METHOD_RESULT mr;
+	(void) ctx;
+	mr = encode_yaml(argv[0], result);
+	if(mr == METHOD_EXCEPTION) {
+		VALUE exc;
+		// TODO: more specific error
+		exc = make_normal_type_instance(vm->Error);
+		// could be big... // set_normal_type_instance_field(exc, make_string("data"), argv[0]);
+		set_normal_type_instance_field(exc, make_string("message"), *result);
+		set_normal_type_instance_field(exc, make_string("backtrace"), make_backtrace(vm, ctx));
+		*result = exc;
+	}
+	return mr;
+}
+
 METHOD_RESULT native_backtrace EXT_METHOD_PARAMS { (void) argv; METHOD_RETURN(make_backtrace(vm, ctx)); }
 METHOD_RESULT native_resolve_instruction_pointer EXT_METHOD_PARAMS { (void) ctx; METHOD_RETURN(resolve_instruction_pointer(vm, GET_INT(argv[0]))); }
 
@@ -2705,6 +2731,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 				MKSUBTYPE(JsonDecodeFail, DecodeFail);
 				_doc(vm, "", "Represents an error decoding JSON data.");
 
+				MKSUBTYPE(YamlDecodeFail, DecodeFail);
+				_doc(vm, "", "Represents an error decoding YAML data.");
+
 			MKSUBTYPE(StackOverflow, Error);
 			_doc(vm, "", "Represents a stack overflow error.");
 
@@ -3440,6 +3469,22 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "Str");
 	_doc_arr(vm, "%EX",
 		"encode_json({\"a\": 1+1})  # The string { \"a\": 2 }",
+		NULL
+	);
+
+	register_global_func(vm, 1, "decode_yaml",&native_decode_yaml_str, 1, "s", vm->Str);
+	_doc(vm, "", "Decode (parse) YAML.");
+	_doc(vm, "%RET", "Any");
+	_doc_arr(vm, "%EX",
+		"decode_yaml('a: 1')  # {a=1}",
+		NULL
+	);
+
+	register_global_func(vm, 1, "encode_yaml",&native_encode_yaml_obj, 1, "obj", vm->Any);
+	_doc(vm, "", "Encode YAML (serialize a data structure to YAML)");
+	_doc(vm, "%RET", "Str");
+	_doc_arr(vm, "%EX",
+		"encode_yaml({\"a\": 1+1})  # The string \"a: 2\\n\"",
 		NULL
 	);
 
