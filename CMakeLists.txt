@@ -20,6 +20,9 @@ include(GNUInstallDirs)
 # -D__BSD_VISIBLE - AF_UNIX on FreeBSD
 add_definitions(-D_XOPEN_SOURCE=700 -D_DARWIN_C_SOURCE=1 -D_DEFAULT_SOURCE=1 -D_BSD_SOURCE -D__BSD_VISIBLE -DINSTALL_LIBDIR=${CMAKE_INSTALL_FULL_LIBDIR})
 
+# NGS uses 8-bit code unit consistently
+add_definitions(-DPCRE2_CODE_UNIT_WIDTH=8)
+
 # This is workaround for boehm GC library bug or NGS usage of it
 # which cases sporadic SIGSEGV and other issues after fork() in child process.
 # Use test-gc.ngs to determine if you can remove this setting (test on MacOS and Linux).
@@ -28,7 +31,7 @@ add_definitions(-DNGS_STUPID_MALLOC_AFTER_FORK)
 pkg_search_module(JSONC REQUIRED json-c)
 pkg_search_module(LIBFFI REQUIRED libffi)
 pkg_search_module(LIBGC REQUIRED bdw-gc-threaded bdw-gc)
-pkg_search_module(PCRE REQUIRED libpcre)
+pkg_search_module(PCRE REQUIRED libpcre2-8)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -108,7 +111,8 @@ add_custom_command(
 )
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
-	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/make-pcre-constants.sh ${PCRE_INCLUDEDIR}/pcre.h >${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/make-pcre-constants.sh ${PCRE_INCLUDEDIR}/pcre2.h >${CMAKE_CURRENT_BINARY_DIR}/pcre_constants.include
+	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/make-pcre-constants.sh ${PCRE_INCLUDEDIR}/pcre2.h
 )
 add_custom_command(
 	OUTPUT

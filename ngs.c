@@ -1,12 +1,12 @@
-// apt-get install libgc-dev libffi6 libjson-c2 build-essential libpcre3-dev
+// apt-get install libgc-dev libffi6 libjson-c2 build-essential libpcre2-dev
 // libgc-dev - 1:7.2d-6.4, 1:7.4.2-7.3
 // libffi6 - 3.2.1-4
 // libjson-c2, libjson-c-dev - 0.11-4
-// libpcre3-dev - 2:8.39-2
+// libpcre2-dev - 10.x
 #include <assert.h>
 #include <errno.h>
 #include <unistd.h>
-#include <pcre.h>
+#include <pcre2.h>
 #include "ngs.h"
 #include "syntax.include"
 #undef __
@@ -100,6 +100,19 @@ void print_exception(VM *vm, VALUE result) {
 
 pthread_key_t thread_local_key;
 
+pcre2_general_context *ngs_pcre2_gcontext;
+pcre2_compile_context *ngs_pcre2_ccontext;
+
+static void *ngs_pcre2_malloc(PCRE2_SIZE size, void *data) {
+	(void) data;
+	return GC_malloc(size);
+}
+
+static void ngs_pcre2_free(void *ptr, void *data) {
+	(void) data;
+	GC_free(ptr);
+}
+
 int main(int argc, char **argv)
 {
 	ast_node *tree = NULL;
@@ -120,8 +133,8 @@ int main(int argc, char **argv)
 	NGS_GC_INIT();
 	VALUE main_thread_local = make_namespace(4);
 
-	pcre_malloc = GC_malloc;
-	pcre_free = GC_free;
+	ngs_pcre2_gcontext = pcre2_general_context_create(ngs_pcre2_malloc, ngs_pcre2_free, NULL);
+	ngs_pcre2_ccontext = pcre2_compile_context_create(ngs_pcre2_gcontext);
 	// (causes warning) // NGS_GC_THR_INIT();
 
 	pthread_key_create(&thread_local_key, NULL);

@@ -44,7 +44,7 @@
 
 #include <errno.h>
 
-#include <pcre.h>
+#include <pcre2.h>
 
 #include "ngs.h"
 #include "vm.h"
@@ -1803,27 +1803,31 @@ METHOD_RESULT native_ll_set_global_variable EXT_METHOD_PARAMS {
 	METHOD_RETURN(argv[1]);
 }
 
-// http://www.pcre.org/original/doc/html/pcredemo.html
-METHOD_RESULT native_c_pcre_compile EXT_METHOD_PARAMS {
+// https://www.pcre.org/current/doc/html/pcre2demo.html
+METHOD_RESULT native_c_pcre2_compile EXT_METHOD_PARAMS {
 
-	pcre *re;
-	const char *error;
-	int erroffset;
+	pcre2_code *re;
+	int errorcode;
+	PCRE2_SIZE erroffset;
 
-	re = pcre_compile(
-		obj_to_cstring(argv[0]),    /* the pattern */
-		GET_INT(argv[1]),           /* options */
-		&error,                     /* for error message */
-		&erroffset,                 /* for error offset */
-		NULL                        /* use default character tables */
+	re = pcre2_compile(
+		(PCRE2_SPTR) OBJ_DATA_PTR(argv[0]),   /* the pattern (NULL with length 0 == empty pattern) */
+		OBJ_LEN(argv[0]),                     /* pattern length */
+		GET_INT(argv[1]),                     /* options */
+		&errorcode,                           /* for error number */
+		&erroffset,                           /* for error offset */
+		ngs_pcre2_ccontext                    /* compile context (GC allocator) */
 	);
 
 	if(re == NULL) {
+		PCRE2_UCHAR errbuf[256];
 		VALUE exc;
+		pcre2_get_error_message(errorcode, errbuf, sizeof(errbuf));
 		exc = make_normal_type_instance(vm->RegExpCompileFail);
-		set_normal_type_instance_field(exc, make_string("message"), make_string(error));
+		set_normal_type_instance_field(exc, make_string("message"), make_string((const char *)errbuf));
 		set_normal_type_instance_field(exc, make_string("regexp"), argv[0]);
 		set_normal_type_instance_field(exc, make_string("offset"), MAKE_INT(erroffset));
+		set_normal_type_instance_field(exc, make_string("error_code"), MAKE_INT(errorcode));
 		THROW_EXCEPTION_INSTANCE(exc);
 	}
 
@@ -1839,75 +1843,66 @@ METHOD_RESULT native_Str_regexp METHOD_PARAMS {
 	return METHOD_OK;
 }
 
-#define OVECCOUNT 60 /* should be a multiple of 3 */
-METHOD_RESULT native_c_pcre_exec METHOD_PARAMS {
+#define OVECPAIRS 20 /* preserves the historical "max 20 captures" limit; pcre2_match returns 0 when exceeded */
+METHOD_RESULT native_c_pcre2_match METHOD_PARAMS {
 
 	int rc;
-	int ovector[OVECCOUNT];
 	int i;
+	PCRE2_SIZE *ovector;
+	pcre2_match_data *match_data;
 
-	rc = pcre_exec(
-		REGEXP_OBJECT_RE(argv[0]), /* the compiled pattern */
-		NULL,                      /* no extra data - we didn't study the pattern */
-		OBJ_DATA_PTR(argv[1]) ? OBJ_DATA_PTR(argv[1]) : "",     /* the subject string */
-		OBJ_LEN(argv[1]),          /* the length of the subject */
-		GET_INT(argv[2]),          /* start offset */
-		GET_INT(argv[3]),          /* options */
-		ovector,                   /* output vector for substring information */
-		OVECCOUNT                  /* number of elements in the output vector */
+	match_data = pcre2_match_data_create(OVECPAIRS, ngs_pcre2_gcontext);
+
+	rc = pcre2_match(
+		REGEXP_OBJECT_RE(argv[0]),                                        /* the compiled pattern */
+		(PCRE2_SPTR) OBJ_DATA_PTR(argv[1]),                               /* the subject (NULL with length 0 == empty subject) */
+		OBJ_LEN(argv[1]),                                                 /* the length of the subject */
+		GET_INT(argv[2]),                                                 /* start offset */
+		GET_INT(argv[3]),                                                 /* options */
+		match_data,                                                       /* block for substring information */
+		NULL                                                              /* default match context */
 	);
 
 	if(rc <= 0) {
+		pcre2_match_data_free(match_data);
 		METHOD_RETURN(MAKE_INT(rc));
 	}
 
+	ovector = pcre2_get_ovector_pointer(match_data);
 	*result = make_array(rc*2);
 	for(i=0; i < rc * 2; i++) {
-		ARRAY_ITEMS(*result)[i] = MAKE_INT(ovector[i]);
+		// PCRE2_UNSET -> -1, PCRE1 compatibility.
+		int offset = (ovector[i] == PCRE2_UNSET) ? -1 : (int) ovector[i];
+		ARRAY_ITEMS(*result)[i] = MAKE_INT(offset);
 	}
+	pcre2_match_data_free(match_data);
 
 	return METHOD_OK;
 }
 
-// https://www.pcre.org/original/doc/html/pcre_fullinfo.html
+// https://www.pcre.org/current/doc/html/pcre2_pattern_info.html
 METHOD_RESULT native_field_regexp EXT_METHOD_PARAMS {
 	char *field = obj_to_cstring(argv[1]);
-	pcre *re;
+	pcre2_code *re;
 	re = REGEXP_OBJECT_RE(argv[0]);
 	if(!strcmp(field, "options")) {
-		unsigned long int option_bits;
-		(void)pcre_fullinfo(re, NULL, PCRE_INFO_OPTIONS, &option_bits);
+		uint32_t option_bits;
+		(void)pcre2_pattern_info(re, PCRE2_INFO_ALLOPTIONS, &option_bits);
 		METHOD_RETURN(MAKE_INT(option_bits));
 	}
 
 	if(!strcmp(field, "names")) {
 		VALUE ret;
-		int namecount, name_entry_size, i;
-		unsigned char *name_table;
+		uint32_t namecount, name_entry_size, i;
+		PCRE2_SPTR name_table;
 
-		(void)pcre_fullinfo(
-			re,                   /* the compiled pattern */
-			NULL,                 /* no extra data - we didn't study the pattern */
-			PCRE_INFO_NAMECOUNT,  /* number of named substrings */
-			&namecount            /* where to put the answer */
-		);
-		if(namecount <= 0) {
+		(void)pcre2_pattern_info(re, PCRE2_INFO_NAMECOUNT, &namecount);
+		if(namecount == 0) {
 			METHOD_RETURN(make_hash(0));
 		}
 
-		(void)pcre_fullinfo(
-			re,                       /* the compiled pattern */
-			NULL,                     /* no extra data - we didn't study the pattern */
-			PCRE_INFO_NAMETABLE,      /* address of the table */
-			&name_table               /* where to put the answer */
-		);
-
-		(void)pcre_fullinfo(
-			re,                       /* the compiled pattern */
-			NULL,                     /* no extra data - we didn't study the pattern */
-			PCRE_INFO_NAMEENTRYSIZE,  /* size of each entry in the table */
-			&name_entry_size          /* where to put the answer */
-		);
+		(void)pcre2_pattern_info(re, PCRE2_INFO_NAMETABLE, &name_table);
+		(void)pcre2_pattern_info(re, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
 
 		ret = make_hash(namecount);
 		for(i=0; i < namecount; i++, name_table += name_entry_size) {
@@ -1915,6 +1910,13 @@ METHOD_RESULT native_field_regexp EXT_METHOD_PARAMS {
 			set_hash_key(ret, make_string((const char *)&name_table[2]), MAKE_INT(n));
 		}
 		METHOD_RETURN(ret);
+	}
+
+	if(!strcmp(field, "newline")) {
+		// Effective newline convention, as one of the C_PCRE2_NEWLINE_* values.
+		uint32_t nl;
+		(void)pcre2_pattern_info(re, PCRE2_INFO_NEWLINE, &nl);
+		METHOD_RETURN(MAKE_INT(nl));
 	}
 
 	VALUE exc;
@@ -2788,13 +2790,13 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "false");
 
 	// Regex
-	register_global_func(vm, 1, "c_pcre_compile", &native_c_pcre_compile,   2, "regexp", vm->Str,    "flags",   vm->Int);
-	_doc(vm, "", "Compile regular expression. Uses PCRE_COMPILE(3). Do not use this function directly!");
+	register_global_func(vm, 1, "c_pcre2_compile", &native_c_pcre2_compile,   2, "regexp", vm->Str,    "flags",   vm->Int);
+	_doc(vm, "", "Compile regular expression. Uses PCRE2_COMPILE(3). Do not use this function directly!");
 	_doc(vm, "", "Throws RegExpCompileFail on errors.");
 	_doc(vm, "%RET", "RegExp");
 
-	register_global_func(vm, 0, "c_pcre_exec",    &native_c_pcre_exec,      4, "regexp", vm->RegExp, "subject", vm->Str, "offset", vm->Int, "options", vm->Int);
-	_doc(vm, "", "Search string for regular expression. Uses PCRE_EXEC(3). Do not use this function directly!");
+	register_global_func(vm, 0, "c_pcre2_match",  &native_c_pcre2_match,      4, "regexp", vm->RegExp, "subject", vm->Str, "offset", vm->Int, "options", vm->Int);
+	_doc(vm, "", "Search string for regular expression. Uses PCRE2_MATCH(3). Do not use this function directly!");
 	_doc(vm, "%RET", "Int or Arr of Int");
 
 	register_global_func(vm, 0, "Str",            &native_Str_regexp,       1, "regexp", vm->RegExp);
@@ -2803,10 +2805,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	register_global_func(vm, 1, ".",              &native_field_regexp,      2, "regexp", vm->RegExp, "field", vm->Str);
 	_doc(vm, "", "Get fields of a RegExp. Throws FieldNotFound if field is not one of the allowed values. You should not use this directly. Use \"~\" and \"~~\" operators.");
-	_doc(vm, "field", "\"options\" or \"names\"");
-	_doc(vm, "%RET", "Int for \"options\". Hash of names/indexes of named groups for \"names\".");
+	_doc(vm, "field", "\"options\", \"names\", or \"newline\"");
+	_doc(vm, "%RET", "Int for \"options\" and \"newline\". Hash of names/indexes of named groups for \"names\".");
 	_doc_arr(vm, "%EX",
-		"/abc/i.options  # 1 - case insensitive (C_PCRE_CASELESS)",
+		"/abc/i.options  # 8 - case insensitive (C_PCRE2_CASELESS)",
 		"/(?P<name1>abc)/i.names  # Name to index Hash: {name1=1}",
 		NULL
 	);
@@ -3705,7 +3707,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 	E(PTHREAD_MUTEX_RECURSIVE);
 
 
-	// awk '/^#define PCRE/ && $3 {print "E("$2");"}' /usr/include/pcre.h | grep -v 'PCRE_UCHAR\|PCRE_SPTR' | sort | xargs -n5
 	#pragma GCC diagnostic push
 	// Silence clang unknown pragmas
 	#pragma GCC diagnostic ignored "-Wunknown-pragmas"
@@ -3713,6 +3714,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 	#pragma GCC diagnostic ignored "-Wpragmas"
 	// Silence GCC 6 warnings (negative value)
 	#pragma GCC diagnostic ignored "-Wshift-negative-value"
+	// Register the C_PCRE2_* constants, generated from pcre2.h by
+	// build-scripts/make-pcre-constants.sh.
 #include "pcre_constants.include"
 	#pragma GCC diagnostic pop
 
@@ -3752,12 +3755,6 @@ void vm_init(VM *vm, int argc, char **argv) {
 #undef S
 	set_global(vm, "SIGNALS", signals);
 	// based on procps/proc/sig.c - end
-
-	{
-		int d;
-		(void)pcre_config(PCRE_CONFIG_NEWLINE, &d);
-		set_global(vm, "PCRE_NEWLINE", MAKE_INT(d));
-	}
 
 	// INSTALL_LIBDIR - https://stackoverflow.com/questions/47346133/how-to-use-a-define-inside-a-format-string
 #define NGS_STR_TMP(X) #X

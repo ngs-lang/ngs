@@ -8,7 +8,7 @@ Build-Depends:
  libffi-dev,
  libjson-c-dev,
  peg,
- libpcre3-dev,
+ libpcre2-dev,
  pandoc,
 Homepage: https://github.com/ngs-lang/ngs
 

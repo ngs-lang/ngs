@@ -14,11 +14,16 @@
 * Invoke `main` in sub-namespaces, enabling local help/usage for nested CLI namespaces
 * `Arr` return values rendered as tables: now column order and name can be set via `rows.meta()[Table]`
 * Add colored TTY output to `error()`, `warn()`, `log()`, etc. Respects `NO_COLOR`. Override with `NGS_COLORS=category:N,...`.
+* Add `RegExp` field `newline` returning the effective newline convention (a `C_PCRE2_NEWLINE_*` value).
+* Add `error_code` field (numeric PCRE2 error code) to `RegExpCompileFail` exceptions.
 
 ### Fixes and improvements
 * Add `peek(RangeIter)` - fixes `skip(pattern)` on `RangeIter`
 * Fix `Str(HashIter)` always showing index 0
 * Workaround for broken `TmpDir`
+* Migrate from EOL PCRE1 (`libpcre3-dev`) to PCRE2 (`libpcre2-dev`). Regex constants are now `C_PCRE2_*` (`C_PCRE_*` removed). `RegExp#newline` field.
+* Fix regex patterns containing a NUL byte being silently truncated at the NUL.
+* Remove the regex `n` flag, it never worked.
 
 ## 2025-04-05 Version 0.2.17
 

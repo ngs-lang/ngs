@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <dirent.h>
 #include <ffi.h>
-#include <pcre.h>
+#include <pcre2.h>
 #include <math.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -123,7 +123,7 @@ typedef struct {
 typedef struct {
 	OBJECT base;
 	// Or maybe use base.val for the pointer?
-	pcre *re;
+	pcre2_code *re;
 } REGEXP_OBJECT;
 
 typedef struct {
@@ -474,5 +474,9 @@ VALUE make_sockaddr();
 VALUE make_sockaddr_un();
 VALUE make_sockaddr_in();
 // *** Add new make_MYTPE(...) functions above this line ***
+
+// GC-backed PCRE2 allocation contexts, initialized in main() (ngs.c).
+extern pcre2_general_context *ngs_pcre2_gcontext;
+extern pcre2_compile_context *ngs_pcre2_ccontext;
 
 #endif

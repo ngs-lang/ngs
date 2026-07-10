@@ -7786,7 +7786,7 @@ TEST 1 !~ Pfx("a")
 # TODO: better exceptions
 doc Find PCRE regular expression in s. Empty string without options returns MatchFailure. Throws Error if more than 20 captures are used or if there is an error during matching.
 doc offset - search start offset
-doc options - options to pass to underlying PCRE_EXEC(3).
+doc options - options to pass to underlying PCRE2_MATCH(3).
 doc %RET - MatchResult
 doc %EX - globals().keys().filter(/^C_PCRE/)  # lists possible options
 doc %EX - "xabcy" ~ /a(.)c/  # <MatchSuccess matches=[abc,b] pattern=<RegExp> named={} positions=[<NumRange 1..4 include_start=true include_end=false step=1>,<NumRange 2..3 include_start=true include_end=false step=1>] whole=abc before=x after=y>
@@ -7794,14 +7794,14 @@ doc %EX - m = ("xabcy" ~ /a(?P<mychar>.)c/)
 doc %EX - echo(m.named.mychar)  # Outputs: b
 doc %AUTO - my_str ~ my_regexp
 F ~(s:Str, r:RegExp, offset:Int=0, options:Int=0) {
-	result = c_pcre_exec(r, s, offset, options)
+	result = c_pcre2_match(r, s, offset, options)
 	if result is Int {
-		result == C_PCRE_ERROR_NOMATCH returns MatchFailure(s, r)
+		result == C_PCRE2_ERROR_NOMATCH returns MatchFailure(s, r)
 		result == 0 throws Error("Too many captures. Max 20")
-		result < 0 throws Error("RegExp matching error in c_pcre_exec").set('code', result)
-		assert(false, "Unexpected integer result from c_pcre_exec")
+		result < 0 throws Error("RegExp matching error in c_pcre2_match").set('code', result)
+		assert(false, "Unexpected integer result from c_pcre2_match")
 	}
-	assert(result is Arr, "c_pcre_exec must return either integer or an array")
+	assert(result is Arr, "c_pcre2_match must return either integer or an array")
 	ret = MatchSuccess(
 		result.map(2, F(start_pos, end_pos) {
 			if start_pos >= 0
@@ -7822,14 +7822,6 @@ F ~(s:Str, r:RegExp, offset:Int=0, options:Int=0) {
 TEST m = "xabcy" ~ /a(.)c/; m.matches == ["abc", "b"] and m.before == 'x' and m.after == 'y' and m.whole == 'abc'
 TEST m = "xAbcy" ~ /a(.)c/; m is MatchFailure
 
-PCRE_NEWLINE_TO_OPTIONS = {
-	         13: C_PCRE_NEWLINE_CR,
-	         10: C_PCRE_NEWLINE_LF,
-	13*256 + 10: C_PCRE_NEWLINE_CRLF,
-	         -2: C_PCRE_NEWLINE_ANYCRLF,
-	         -1: C_PCRE_NEWLINE_ANY,
-}
-
 doc Find all non-overlapping matches of regular expression in a string.
 doc %RET - if collect_unmatched - Arr with each element being MatchSuccess or Str, if not collect_unmatched - Arr of MatchSuccess
 doc %EX - ("x10ab20c30y" ~~ /[0-9]+/).whole.map(Int).sum()  # 60
@@ -7848,16 +7840,13 @@ F ~~(s:Str, r:RegExp, collect_unmatched:Bool=false) {
 		next_offset = m.positions[0].end
 		if collect_unmatched and start_offset then collect(s[0..start_offset])
 		collect(m)
-		option_bits = r.options
-		utf8 = option_bits.band(C_PCRE_UTF8).Bool()
-		option_bits = option_bits.band([C_PCRE_NEWLINE_CR, C_PCRE_NEWLINE_LF, C_PCRE_NEWLINE_CRLF, C_PCRE_NEWLINE_ANY, C_PCRE_NEWLINE_ANYCRLF].reduce(0, bor))
-		option_bits = option_bits or PCRE_NEWLINE_TO_OPTIONS.get(PCRE_NEWLINE, 0)
-		crlf_is_newline = option_bits in [C_PCRE_NEWLINE_ANY, C_PCRE_NEWLINE_CRLF, C_PCRE_NEWLINE_ANYCRLF]
+		utf8 = r.options.band(C_PCRE2_UTF).Bool()
+		crlf_is_newline = r.newline in [C_PCRE2_NEWLINE_ANY, C_PCRE2_NEWLINE_CRLF, C_PCRE2_NEWLINE_ANYCRLF]
 		while true {
 			options = 0
 			if start_offset == next_offset {
 				next_offset == len(s) breaks
-				options = bor(C_PCRE_NOTEMPTY_ATSTART, C_PCRE_ANCHORED)
+				options = bor(C_PCRE2_NOTEMPTY_ATSTART, C_PCRE2_ANCHORED)
 			}
 			m = (~)(s, r, next_offset, options)
 			if m {
@@ -7897,15 +7886,14 @@ TEST ("ab\r\ncd" ~~ /|./m).whole.filter(len) == ['a', 'b', '\r', 'c', 'd']
 # Skip for older library using try ... catch
 TEST try ("aяb" ~~ /(*UTF)|\\x8F|b/).whole.filter(len) == ['b'] catch(e:RegExpCompileFail) 'not recognized' in e.message
 
-# Last two are for repeated searches
+# 'a' is for repeated searches
 STDLIB_REGEXP_FLAGS = {
-	'i': C_PCRE_CASELESS
-	'm': C_PCRE_MULTILINE
-	's': C_PCRE_DOTALL
-	'x': C_PCRE_EXTENDED
+	'i': C_PCRE2_CASELESS
+	'm': C_PCRE2_MULTILINE
+	's': C_PCRE2_DOTALL
+	'x': C_PCRE2_EXTENDED
 
-	'a': C_PCRE_ANCHORED
-	'n': C_PCRE_NOTEMPTY_ATSTART
+	'a': C_PCRE2_ANCHORED
 }
 
 doc Regular expression constructor.
@@ -7919,10 +7907,12 @@ F //(regexp:Str, flags:Str) {
 		STDLIB_REGEXP_FLAGS[flag] tor throw RegExpCompileFail("Unknown flag $flag").set('regexp', regexp).set('flags', flags)
 	}).sum()
 
-	c_pcre_compile(regexp, options)
+	c_pcre2_compile(regexp, options)
 }
 
 TEST Bool("A" ~ /a/i)
+# error_code carries the numeric PCRE2 error code
+TEST try { c_pcre2_compile("+", 0); false } catch(e:RegExpCompileFail) e.error_code == C_PCRE2_ERROR_QUANTIFIER_INVALID
 
 doc Returns the string with one occurrence of regexp cut out of it. Throws InvalidArgument if s does not contain r.
 doc %EX - "abc01def23" - /[0-9]+/  # "abcdef23"

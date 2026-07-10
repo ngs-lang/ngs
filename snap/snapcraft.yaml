@@ -20,13 +20,13 @@ parts:
       - libgc-dev
       - libffi-dev
       - libjson-c-dev
-      - libpcre3-dev
+      - libpcre2-dev
     build-packages:
       - libgc-dev
       - libffi-dev
       - libjson-c-dev
       - peg
-      - libpcre3-dev
+      - libpcre2-dev
       - make
       - cmake
       - pandoc
