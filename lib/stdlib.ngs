@@ -5839,17 +5839,14 @@ section "Path" {
 	# TODO: support platforms with non ":" path delimiter?
 	doc Finds given binary and returns it's full path.
 	doc Throws ProgramNotFound if the binary was not found.
-	doc Search strategy: "/" in the name of the binary means that given executable_name is a path so it's returned as-is (wrapped in Path).
+	doc Throws InvalidArgument if the name contains "/".
 	doc If PATH environment variable exists, the given directories are searched.
 	doc If PATH is not set built-in value for PATH is used to search: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 	doc %RET - Path
 	doc %EX - find_in_path("ls")  # <Path path=/bin/ls>
 	F find_in_path(executable_name:Str) {
 		debug("process", "[find_in_path] got ${executable_name}")
-		if "/" in executable_name {
-			debug("process", "[find_in_path] leaving unprocessed ${executable_name}")
-			return Path(executable_name)
-		}
+		"/" in executable_name throws InvalidArgument("find_in_path: name must not contain '/'").set('name', executable_name)
 		# TODO: rethink default PATH
 		path = ENV.get('PATH', '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin').split(':')
 		debug("process", '[find_in_path] will search')
@@ -6099,19 +6096,34 @@ type ProcessRedir
 doc External Program
 F init(p:Program, name:Str) init(args())
 
+doc Path of a program.
+doc As-is for program names containing a slash.
+doc Lookup in PATH otherwise.
+doc Can throw ProgramNotFound when looking up in PATH.
+doc %RET - Path
+F Path(p:Program) {
+	'/' in p.name returns Path(p.name)
+	find_in_path(p.name)
+}
+
 # TODO: Check whether the file is executable?
-# TODO: For absolute path - check that the program exists?
 doc Checks whether the given program is found in path.
 doc %RET - Bool. The program is found in path or program name is absolute
-F Bool(p:Program) Result({ find_in_path(p.name) }).Bool()
-
-doc Checks that given program is found in path. Throws AssertFail otherwise.
-doc %RET - p
-F assert(p:Program) {
-	r = Result({ find_in_path(p.name) })
-	not(r) throws AssertFail("Program ${p.name} not found in path", r.val)
-	p
+F Bool(p:Program) {
+	try {
+		p.Path().Bool()
+	} catch(e:ProgramNotFound) {
+		false
+	}
 }
+
+TEST Program("ls").Bool()
+TEST Program("ls-no-such-prog").Bool().not()
+TEST Program("./no-such-prog").Bool().not()
+
+doc Checks that given program is found (in path). Throws AssertFail otherwise.
+doc %RET - p
+F assert(p:Program) p.assert("Program ${p.name} not found")
 
 TEST try assert(Program('no_such_prog')) catch(e) e is AssertFail
 TEST assert(Program('ls')) == Program('ls')
@@ -6802,7 +6814,7 @@ F Argv(a:Arr) {
 section "exec()" {
 	doc Call EXECVE(2)
 	F exec(argv:Arr, env:Hash=ENV) {
-		p = find_in_path(argv[0])
+		p = argv[0].Program().Path()
 		result = c_execve(p.path, argv, env.Strs())
 		throw CError("Failed to execve()").set(argv=argv)
 	}
@@ -6857,7 +6869,7 @@ F '$()'(p:Process) {
 	}
 
 	try {
-		p.executable = find_in_path(argv[0])
+		p.executable = argv[0].Program().Path()
 	} catch(nf:ProgramNotFound) {
 		throw ProcessFail(p).set('cause', nf).set('message', "Executable not found: ${argv[0]}")
 	}

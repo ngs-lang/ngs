@@ -520,7 +520,7 @@ ns {
 					guard 'NGS_SHELL_TEST_CAPTURE' not in ENV
 					guard p =~ %(aws)
 					# echo(p.command.argv)
-					p.executable = find_in_path(p.command.argv[0])
+					p.executable = p.command.argv[0].Program().Path()
 					p.pid = 0
 					p.exit_code = 0
 					p.exit_signal = 0

@@ -24,6 +24,7 @@
 * Migrate from EOL PCRE1 (`libpcre3-dev`) to PCRE2 (`libpcre2-dev`). Regex constants are now `C_PCRE2_*` (`C_PCRE_*` removed). `RegExp#newline` field.
 * Fix regex patterns containing a NUL byte being silently truncated at the NUL.
 * Remove the regex `n` flag, it never worked.
+* Fix `assert(Program)` false positives on paths with slashes.
 
 ## 2025-04-05 Version 0.2.17
 
