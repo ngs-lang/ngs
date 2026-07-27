@@ -2660,8 +2660,8 @@ void vm_init(VM *vm, int argc, char **argv) {
 				MKSUBTYPE(MethodNotFound, CallFail);
 				_doc(vm, "", "Represents calling failure when arguments do not match any method implementation.");
 				_doc_arr(vm, "%EX",
-					"F f(x:Int) 1"
-					"F f(x:Str) 2"
+					"F f(x:Int) 1",
+					"F f(x:Str) 2",
 					"f(true)",
 					"# ... Exception of type MethodNotFound ...",
 					NULL
@@ -2670,7 +2670,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 				MKSUBTYPE(StackDepthFail, CallFail);
 				_doc(vm, "", "Represents stack overflow error.");
 				_doc_arr(vm, "%EX",
-					"F f(x:Int) f(x+1)"
+					"F f(x:Int) f(x+1)",
 					"f(0)",
 					"# ... Exception of type StackDepthFail ...",
 					NULL
