@@ -47,6 +47,7 @@ void decompile(const char *buf, const size_t start, const size_t end) {
 			case OP_FETCH_LOCAL:
 			case OP_STORE_LOCAL:
 			case OP_DEF_LOCAL_FUNC:
+			case OP_INSTANTIATE_PARAM_DFLT:
 				sprintf(info_buf, " %d", *(LOCAL_VAR_INDEX *)&buf[idx]); idx+=sizeof(LOCAL_VAR_INDEX); break;
 			case OP_FETCH_UPVAR:
 			case OP_STORE_UPVAR:

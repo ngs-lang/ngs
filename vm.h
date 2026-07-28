@@ -232,6 +232,7 @@ struct VM {
 	VALUE global_not_found_handler;
 	VALUE init;
 	VALUE call;
+	VALUE instantiate_param_dflt;
 	VALUE pattern_match; // =~
 
 	VALUE eqeq;
@@ -298,6 +299,7 @@ enum opcodes {
 	OP_JMP_FALSE,
 	OP_MAKE_ARR,
 	OP_MAKE_CLOSURE,
+	OP_INSTANTIATE_PARAM_DFLT,
 	OP_TO_STR,
 	OP_MAKE_STR,
 	OP_MAKE_STR_IMM,

@@ -92,6 +92,7 @@ char *opcodes_names[] = {
 	"JMP_FALSE",
 	"MAKE_ARR",
 	"MAKE_CLOSURE",
+	"INSTANTIATE_PARAM_DFLT",
 	"TO_STR",
 	"MAKE_STR",
 	"MAKE_STR_IMM",
@@ -3676,6 +3677,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	set_global(vm, "global_not_found_handler", vm->global_not_found_handler = make_multimethod());
 	set_global(vm, "init", vm->init = make_multimethod());
 	set_global(vm, "call", vm->call = make_multimethod());
+	set_global(vm, "instantiate_param_dflt", vm->instantiate_param_dflt = make_multimethod());
 	set_global(vm, "=~", vm->pattern_match = make_multimethod());
 
 	#define E(name) set_global(vm, "C_" #name, MAKE_INT(name))
@@ -4192,7 +4194,6 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, int argc,
 			if(!did_match) {
 				return METHOD_ARGS_MISMATCH;
 			}
-			named_arguments[i] = params[n_params_required*2 + (i-n_params_required)*3 + 2];
 		}
 
 		// Check optional parameters given as keyword arguments
@@ -4205,8 +4206,8 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, int argc,
 				e = NULL;
 			}
 			if(!e) {
-				// Required parameter is not in keyword arguments, use default value
-				named_arguments[i] = params[n_params_required*2 + (i-n_params_required)*3+2];
+				// Optional parameter was not passed
+				named_arguments[i] = MAKE_UNDEF;
 				continue;
 			}
 			// F f(x:AnyOf(Str, Null)=null) 1; f(x="x") == 1
@@ -4682,6 +4683,32 @@ do_jump:
 							}
 							PUSH(v);
 							goto main_loop;
+		case OP_INSTANTIATE_PARAM_DFLT:
+							// Arg: index of the parameter among the optional parameters, zero based (not a local variable index)
+							ARG_LVI;
+							{
+								LOCAL_VAR_INDEX n_req = CLOSURE_OBJ_N_REQ_PAR(THIS_FRAME_CLOSURE);
+								if(IS_NOT_UNDEF(LOCALS[n_req + lvi])) {
+									// Optional parameter was passed
+									goto main_loop;
+								}
+								PUSH(MAKE_NULL);
+								// Same params table arithmetic as in _native_params()
+								PUSH(CLOSURE_OBJ_PARAMS(THIS_FRAME_CLOSURE)[n_req*2 + lvi*3 + 2]);
+								THIS_FRAME.last_ip = ip;
+								mr = vm_call(vm, ctx, &ctx->stack[ctx->stack_ptr-2], vm->instantiate_param_dflt, 1, &ctx->stack[ctx->stack_ptr-1]);
+								if(mr == METHOD_EXCEPTION) {
+									*result = ctx->stack[ctx->stack_ptr-2];
+									goto exception;
+								}
+								if(mr != METHOD_OK) {
+									REMOVE_TOP_N(2);
+									return mr;
+								}
+								LOCALS[n_req + lvi] = ctx->stack[ctx->stack_ptr-2];
+								REMOVE_TOP_N(2);
+								goto main_loop;
+							}
 		case OP_TO_STR:
 							CONVERTING_OP(IS_STRING, Str);
 		case OP_MAKE_STR:

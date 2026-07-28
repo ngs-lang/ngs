@@ -338,10 +338,10 @@ void compile_field_name(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, si
 }
 
 void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
-	ast_node *ptr, *callable;
+	ast_node *ptr, *callable, *dflt;
 	int argc, have_arr_splat, have_hash_splat, params_flags;
 	int doing_named_args = 0;
-	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
+	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional, dflt_idx;
 	UPVAR_INDEX n_uplevels;
 	size_t loop_beg_idx, cond_jump, continue_target_idx, func_jump, end_of_func_idx, if_jump, while_jump;
 	int old_break_addrs_ptr, old_continue_addrs_ptr, i, saved_stack_depth;
@@ -652,6 +652,21 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			// Body
 			register_local_vars(ctx, node->first_child->next_sibling);
 			// if(N_UPLEVELS) printf("UPLEVELS %d\n", N_UPLEVELS);
+			// Skip the required parameters, they have no default value
+			for(ptr=node->first_child->first_child; ptr && !ptr->first_child->next_sibling->next_sibling; ptr=ptr->next_sibling) ;
+			// Instantiate values for parameters that were not passed
+			for(dflt_idx=0; ptr; ptr=ptr->next_sibling, dflt_idx++) {
+				// ptr children: identifier, type, (default value | splat indicator)
+				dflt = ptr->first_child->next_sibling->next_sibling;
+				// Splat parameters are always the last ones. A required parameter
+				// here means invalid parameters order, asserted below.
+				if(!dflt || dflt->type == ARR_SPLAT_NODE || dflt->type == HASH_SPLAT_NODE) {
+					break;
+				}
+				ensure_room(buf, *idx, allocated, 1 + sizeof(LOCAL_VAR_INDEX));
+				OPCODE(*buf, OP_INSTANTIATE_PARAM_DFLT);
+				DATA_N_LOCAL_VARS(*buf, dflt_idx);
+			}
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 			OPCODE(*buf, OP_RET);
 			end_of_func_idx = *idx;

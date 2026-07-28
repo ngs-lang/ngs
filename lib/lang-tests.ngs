@@ -116,3 +116,23 @@ TEST F guard_no() { guard 0 }; guard_no.assert(MethodNotFound)
 
 # Pattern matching in parameters
 TEST F f(x) 0; F f(x:"yes") 1; f("blah") == 0 and f("yes") == 1
+
+# === Parameter defaults tests ===
+# Default instantiate_param_dflt - deep_copy
+TEST F f(a=[]) { a.push(1); a }; f() == [1] and f() == [1]
+TEST F f(a={}) { a[a.len()]=1; a }; f() == {0: 1} and f() == {0: 1}
+TEST F f(s=Set([1])) { s.push(s.len()+1); s }; f() == Set([1,2]) and f() == Set([1,2])
+
+# Default instantiate_param_dflt - passing the argument when provided
+TEST F f(a=[]) a; x=[1]; f(x) === x
+TEST F f(a=[]) a; x=[1]; f(a=x) === x
+
+# Default instantiate_param_dflt - identity
+TEST F g() 1; F f(a=g) a; f() === g
+TEST F f(a={5+5}) a; f() === f()
+TEST F f(t=Int) t; f() === Int
+TEST n = ns { type T }; F f(x=n) x; f() === n
+TEST [1,2,3].first() == 1
+
+# instantiate_param_dflt, deep_copy - can not have optional parameter - recursion
+TEST [instantiate_param_dflt, deep_copy].all(F(mm) mm.Arr().all(F(m) params(m).all(F(p) 'dflt' not in p)))

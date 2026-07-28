@@ -1,6 +1,36 @@
 # WARNING: This file is packaged into the ngs binary at build time.
 #          It is shipped for reference only.
 
+section "deep_copy" {
+	doc Return as is for Int, Real, Bool, Null
+	F deep_copy(x) {
+		guard x is Int or x is Real or x is Bool or x is Null
+		x
+	}
+
+	doc Returns a copy
+	F deep_copy(s:Str) s + ''
+
+	doc Inherit from DeepCopyable to make a normal type deep-copyable by deep_copy()
+	type DeepCopyable
+
+	doc Make deep copy
+	F deep_copy(dc:DeepCopyable) {
+		t = Type(dc)
+		t()::{
+			dc.Hash().each(F(k, v) A.set(k, deep_copy(v)))
+		}
+	}
+
+	TEST type T(DeepCopyable); t=T(); t.a=[1]; c=t.deep_copy(); (c == t) and (c.a !== t.a)
+	TEST type T(DeepCopyable); type T2(T); Type(T2().deep_copy()) === T2
+}
+
+section "instantiate_param_dflt" {
+	doc Returns deep_copy(x)
+	F instantiate_param_dflt(x) deep_copy(x)
+}
+
 section "Base" {
 	doc No op.
 	doc %RET - null
@@ -164,7 +194,7 @@ section "Exit type and basic ExitCode pseudo-constructor methods" {
 }
 
 section "Block type and methods" ns {
-	global Block, ReturnFromBlock, init, block, return, finally
+	global Block, ReturnFromBlock, init, block, return, finally, instantiate_param_dflt
 
 	doc The type of the NAME variable used in syntax: block NAME BODY
 	doc %AUTO - block NAME BODY
@@ -174,6 +204,9 @@ section "Block type and methods" ns {
 	F init(b:Block) {
 		b.finally = []
 	}
+
+	doc Returns b
+	F instantiate_param_dflt(b:Block) b
 
 	doc %AUTO - block NAME { NAME.return(VAL) }
 	type ReturnFromBlock(Exception)
@@ -406,6 +439,11 @@ section "UserDefinedMethod" {
 	F Bool(udm:UserDefinedMethod) true
 }
 
+section "Fun" {
+	doc Returns f
+	F instantiate_param_dflt(f:Fun) f
+}
+
 section "MultiMethod" {
 
 	doc Create MultiMethod with no methods
@@ -440,6 +478,9 @@ section "MultiMethod" {
 	F ==(a:MultiMethod, b:MultiMethod) a === b
 
 	TEST echo == echo
+
+	doc Returns mm
+	F instantiate_param_dflt(mm:MultiMethod) mm
 }
 
 section "Parent types for built-in types" {
@@ -869,6 +910,11 @@ section "Hash" {
 	TEST {"a": 1}.get("b", { 2 }) == 2
 	TEST {"a": 1}.get("b", 3) == 3
 
+}
+
+section "Namespace" {
+	doc Returns n
+	F instantiate_param_dflt(n:Namespace) n
 }
 
 section "Result and friends" {
@@ -1869,6 +1915,14 @@ section "Eachable1" {
 		guard e !~ AnyOf(Int, Str, Arr, MultiMethod)
 		e.map(JsonData)
 	}
+
+	doc Returns a copy of the same type, with elements recursively deep-copied
+	F deep_copy(e:Eachable1) {
+		guard (e is not Int) and (e is not Str)
+		Type(e)()::{
+			e.each(F(elt) A.push(deep_copy(elt)))
+		}
+	}
 }
 
 section "ArrLike" {
@@ -2147,6 +2201,13 @@ section "HashLike" {
 
 	doc Convert HashLike into JSON compatible data structure - object
 	F JsonData(hl:HashLike) hl.map(F(k, v) [JsonData(k), JsonData(v)]).Hash()
+
+	doc Returns a copy of the same type, with keys and values recursively deep-copied
+	F deep_copy(h:Eachable2) {
+		Type(h)()::{
+			h.each(F(k, v) A[deep_copy(k)] = deep_copy(v))
+		}
+	}
 }
 
 section "DeprecatedTopLevelHashlike" {
@@ -2253,9 +2314,14 @@ section "Set" {
 
 	doc Set union
 	doc %RET - Set
-	F +(a:Set, b:Set) Set().set('val', a.val + b.val)
+	F +(a:Set, b:Set) {
+		assert(Type(a), Lit(Type(b)), InvalidArgument("Both sets must be of the same type"))
+		Type(a)().set('val', a.val + b.val)
+	}
 
 	TEST Set([1,2]) + Set([3]) == Set([1,2,3])
+	TEST type MySet(Set); (MySet([1,2]) + MySet([3])) is MySet
+	TEST type MySet(Set); { MySet([1]) + Set([2]) }.assert(InvalidArgument)
 
 	F ==(a:Set, b:Set) {
 		a.len() != b.len() returns false
@@ -2279,7 +2345,7 @@ section "Set" {
 	doc Inspect Set
 	doc %RET - Arr of Str
 	F inspect(path:Arr, a:Set) {
-		["${_inspect_path_to_str(path)} - Set of size ${a.len()}"] + a.map_idx_val({
+		["${_inspect_path_to_str(path)} - ${a.Type().name} of size ${a.len()}"] + a.map_idx_val({
 			inspect(path + [A], B)
 		}).flatten()
 	}
@@ -2291,8 +2357,9 @@ section "Set" {
 	}
 
 	doc Make shallow copy of a Set
-	F copy(s:Set) collector/Set() s.each(collect)
+	F copy(s:Set) collector/Type(s)() s.each(collect)
 	TEST s1 = Set([1,2]); s2 = s1.copy(); s1.push(3); s2.Arr() == [1,2]
+	TEST type MySet(Set); MySet([1,2]).copy() is MySet
 
 }
 
@@ -2478,6 +2545,9 @@ section "Type" {
 	doc Compare types. Same as a===b.
 	doc %RET - Bool
 	F ==(a:Type, b:Type) a === b
+
+	doc Returns t
+	F instantiate_param_dflt(t:Type) t
 
 	doc Check whether t is maybe_supertype or its subtype
 	doc Note that if t and maybe_supertype are same type, this method also returns true.
@@ -6062,6 +6132,9 @@ section "Path" {
 
 	doc Convert CleanupPolicy to code
 	F code(p:CleanupPolicy) "${p.Type().name}()"
+
+	doc Returns cp
+	F instantiate_param_dflt(cp:CleanupPolicy) cp
 
 	doc Decode Path and its subtypes
 	doc %RET - instance of Path or a subtype.
