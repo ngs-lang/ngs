@@ -1657,20 +1657,6 @@ The correct version to add method to a global multimethod is
 
 Comments syntax is implemented in many places but not everywhere. If you get syntax error regarding comment, move it to somewhere nearby.
 
-## Mutable default parameter gotchas
-
-The code below will probably not do what was intended. Note that the default parameter value is only computed once, at method definition time.
-
-	F f(x, a:Arr=[]) {
-		a.push(x)
-		a
-	}
-
-	echo(f(10))  # [10]
-	echo(f(20))  # [10,20]
-
-Same happens in Python and hence already described: http://docs.python-guide.org/en/latest/writing/gotchas/#mutable-default-arguments
-
 ## Type system is only used for multi-dispatch
 
 Consider the code:
