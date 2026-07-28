@@ -1668,14 +1668,14 @@ block u {
 		e.each(F(elt) {
 			if elt =~ pattern {
 				if ret {
-					found_more == u throws ElementNotFound("the_one() had more than one match").set('container', e).set('pattern', pattern)
+					found_more === u throws ElementNotFound("the_one() had more than one match").set('container', e).set('pattern', pattern)
 					b.return(found_more.Value())
 				}
 				ret = FullBox(elt)
 			}
 		})
 		ret returns body(ret.get())
-		found_none == u throws ElementNotFound("the_one() had no matches").set('container', e).set('pattern', pattern)
+		found_none === u throws ElementNotFound("the_one() had no matches").set('container', e).set('pattern', pattern)
 		found_none.Value()
 	}
 
