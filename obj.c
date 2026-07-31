@@ -738,7 +738,7 @@ PARAM_COMPARATOR comparator_for_param_pattern(VALUE pattern) {
 	}
 }
 
-VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, int params_flags, VALUE *params, VALUE *locals) {
+VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, PARAMS_FLAGS params_flags, VALUE *params, VALUE *locals) {
 
 	VALUE v;
 	CLOSURE_OBJECT *c;

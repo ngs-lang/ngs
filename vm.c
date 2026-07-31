@@ -50,6 +50,7 @@
 #include "vm.h"
 #include "ast.h"
 #include "compile.h"
+#include "decompile.h"
 #include "syntax.h"
 #include "syntax.auto.h"
 
@@ -1362,7 +1363,7 @@ METHOD_RESULT native_meta_any METHOD_PARAMS {
 }
 
 // TODO: consider returning Hash instead of Arr
-VALUE _native_params(VALUE *params, int n_params_required, int n_params_optional, int params_flags) {
+VALUE _native_params(VALUE *params, int n_params_required, int n_params_optional, PARAMS_FLAGS params_flags) {
 	// See vm_call()
 	VALUE ret;
 	VALUE param;
@@ -4369,7 +4370,7 @@ METHOD_RESULT vm_run(VM *vm, CTX *ctx, IP ip, VALUE *result) {
 	// for OP_MAKE_CLOSURE
 	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional;
 	UPVAR_INDEX n_uplevels, uvi;
-	int params_flags;
+	PARAMS_FLAGS params_flags;
 
 main_loop:
 	opcode = vm->bytecode[ip++];
@@ -4664,7 +4665,7 @@ do_jump:
 							ARG(n_params_optional, LOCAL_VAR_INDEX);
 							ARG(n_locals, LOCAL_VAR_INDEX);
 							ARG(n_uplevels, UPVAR_INDEX);
-							ARG(params_flags, int);
+							ARG(params_flags, PARAMS_FLAGS);
 							ctx->stack_ptr -= (n_params_required + ADDITIONAL_PARAMS_COUNT)*2 + n_params_optional*3;
 							v = make_closure_obj(
 									ip+jo,

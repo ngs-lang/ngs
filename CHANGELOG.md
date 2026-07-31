@@ -30,6 +30,7 @@
 * Fix regex patterns containing a NUL byte being silently truncated at the NUL.
 * Remove the regex `n` flag, it never worked.
 * Fix `assert(Program)` false positives on paths with slashes.
+* `decompile()` going out of sync and related fixes.
 
 ### Breaking changes
 * Parameter defaults are now instantiated per call through `instantiate_param_dflt(DEFAULT_FROM_DEFINITION)`, which can throw `MethodNotFound`.

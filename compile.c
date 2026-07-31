@@ -24,6 +24,7 @@
 #define DATA_N_LOCAL_VARS(buf, x) { *(LOCAL_VAR_INDEX *)&(buf)[*idx] = x; (*idx)+=sizeof(LOCAL_VAR_INDEX); }
 #define DATA_N_GLOBAL_VARS(buf, x) { *(GLOBAL_VAR_INDEX *)&(buf)[*idx] = x; (*idx)+=sizeof(GLOBAL_VAR_INDEX); }
 #define DATA_N_UPVAR_INDEX(buf, x) { *(UPVAR_INDEX *)&(buf)[*idx] = x; (*idx)+=sizeof(UPVAR_INDEX); }
+#define DATA_PARAMS_FLAGS(buf, x) { *(PARAMS_FLAGS *)&(buf)[*idx] = x; (*idx)+=sizeof(PARAMS_FLAGS); }
 
 // Symbol table:
 // symbol -> [offset1, offset2, ..., offsetN]
@@ -339,7 +340,8 @@ void compile_field_name(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, si
 
 void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, size_t *idx, size_t *allocated, int need_result) {
 	ast_node *ptr, *callable, *dflt;
-	int argc, have_arr_splat, have_hash_splat, params_flags;
+	int argc, have_arr_splat, have_hash_splat;
+	PARAMS_FLAGS params_flags;
 	int doing_named_args = 0;
 	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional, dflt_idx;
 	UPVAR_INDEX n_uplevels;
@@ -718,12 +720,12 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 
 			*(JUMP_OFFSET *)&(*buf)[func_jump] = (end_of_func_idx - func_jump - sizeof(JUMP_OFFSET));
 			OPCODE(*buf, OP_MAKE_CLOSURE);
-			DATA_JUMP_OFFSET(*buf, -(*idx - func_jump + 3*sizeof(LOCAL_VAR_INDEX) + sizeof(UPVAR_INDEX) + sizeof(int)));
+			DATA_JUMP_OFFSET(*buf, -(*idx - func_jump + 3*sizeof(LOCAL_VAR_INDEX) + sizeof(UPVAR_INDEX) + sizeof(PARAMS_FLAGS)));
 			DATA_N_LOCAL_VARS(*buf, n_params_required);
 			DATA_N_LOCAL_VARS(*buf, n_params_optional);
 			DATA_N_LOCAL_VARS(*buf, n_locals);
 			DATA_N_UPVAR_INDEX(*buf, n_uplevels);
-			DATA_INT32(*buf, params_flags);
+			DATA_PARAMS_FLAGS(*buf, params_flags);
 
 			// Doc
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling, buf, idx, allocated, NEED_RESULT);

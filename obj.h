@@ -15,6 +15,7 @@ typedef uint16_t GLOBAL_VAR_INDEX;
 #define GLOBAL_VAR_INDEX_FMT "%d"
 typedef uint8_t LOCAL_VAR_INDEX;
 typedef uint8_t UPVAR_INDEX;
+typedef int32_t PARAMS_FLAGS;
 
 typedef double NGS_REAL;
 #define NGS_REAL_HUGE_VAL HUGE_VAL
@@ -134,7 +135,7 @@ typedef struct params {
 	LOCAL_VAR_INDEX n_local_vars; // number of local variables including arguments
 	LOCAL_VAR_INDEX n_params_required;
 	LOCAL_VAR_INDEX n_params_optional;
-	int flags;
+	PARAMS_FLAGS flags;
 	VALUE *params;
 	// maybe not the best place but convenient and related to n_local_vars
 	VALUE *locals;
@@ -448,7 +449,7 @@ void array_push(VALUE arr, VALUE v);
 void push_multimethod_method(VALUE multimethod, VALUE method);
 VALUE array_shift(VALUE arr);
 void array_reverse(VALUE arr);
-VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, int params_flags, VALUE *params, VALUE *locals);
+VALUE make_closure_obj(size_t ip, LOCAL_VAR_INDEX n_local_vars, LOCAL_VAR_INDEX n_params_required, LOCAL_VAR_INDEX n_params_optional, UPVAR_INDEX n_uplevels, PARAMS_FLAGS params_flags, VALUE *params, VALUE *locals);
 VALUE join_strings(int argc, VALUE *argv);
 // VALUE value_type(VM *vm, VALUE val);
 // int obj_is_of_type(VM *vm, VALUE obj, VALUE t);
