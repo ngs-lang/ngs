@@ -128,7 +128,7 @@ static void _dump(FILE *f, VALUE v, int level) {
 		fprintf(f, "%*s* type (name and optionally constructors and parents follow) id=%" PRIdPTR " ptr=%p\n", level << 1, "", NGS_TYPE_ID(v), IS_NORMAL_TYPE(v) ? v.ptr : 0);
 		_dump(f, NGS_TYPE_NAME(v), level + 1);
 		if(level < 3) {
-			_dump(f, NGS_TYPE_FIELDS(v), level + 1);
+			_dump(f, NGS_TYPE_FIELDS_ACQUIRE(v), level + 1);
 			_dump(f, NGS_TYPE_CONSTRUCTORS(v), level + 1);
 			_dump(f, NGS_TYPE_PARENTS(v), level + 1);
 		}
@@ -161,7 +161,7 @@ static void _dump(FILE *f, VALUE v, int level) {
 		// level < 4 so that uncaught exception MethodNotFound could display the type of the arguments
 		if(level < 4) {
 			HASH_OBJECT_ENTRY *e;
-			VALUE fields = NGS_TYPE_FIELDS(NORMAL_TYPE_INSTANCE_TYPE(v));
+			VALUE fields = NGS_TYPE_FIELDS_ACQUIRE(NORMAL_TYPE_INSTANCE_TYPE(v));
 			assert(IS_HASH(fields));
 			_dump(f, NORMAL_TYPE_INSTANCE_TYPE(v), level + 1);
 			for(e=HASH_HEAD(fields); e; e=e->insertion_order_next) {
@@ -331,6 +331,7 @@ VALUE make_normal_type(VALUE name) {
 	VALUE ctr = make_normal_type_constructor(ret);
 
 	NGS_TYPE_NAME(ret) = name;
+	pthread_mutex_init(&NGS_TYPE_FIELDS_MUTEX(ret), NULL);
 	NGS_TYPE_FIELDS(ret) = make_hash(8); // Hash: name->index
 	NGS_TYPE_CONSTRUCTORS(ret) = make_multimethod_with_value(ctr);
 	NGS_TYPE_PARENTS(ret) = make_array(0);
@@ -338,6 +339,33 @@ VALUE make_normal_type(VALUE name) {
 	OBJ_META(ret) = make_hash(2);
 
 	return ret;
+}
+
+static size_t type_field_index(VALUE ut, VALUE field) {
+	VALUE fields, new_fields;
+	HASH_OBJECT_ENTRY *e;
+	size_t n;
+
+	fields = NGS_TYPE_FIELDS_ACQUIRE(ut);
+	e = get_hash_key(fields, field);
+	if(e) {
+		return GET_INT(e->val);
+	}
+
+	pthread_mutex_lock(&NGS_TYPE_FIELDS_MUTEX(ut));
+	fields.ptr = __atomic_load_n(&NGS_TYPE_FIELDS(ut).ptr, __ATOMIC_RELAXED);
+	e = get_hash_key(fields, field);
+	if(e) {
+		n = GET_INT(e->val);
+	} else {
+		n = OBJ_LEN(fields);
+		new_fields = make_hash(n + 1);
+		update_hash(new_fields, fields);
+		set_hash_key(new_fields, field, MAKE_INT(n));
+		__atomic_store_n(&NGS_TYPE_FIELDS(ut).ptr, new_fields.ptr, __ATOMIC_RELEASE);
+	}
+	pthread_mutex_unlock(&NGS_TYPE_FIELDS_MUTEX(ut));
+	return n;
 }
 
 VALUE make_normal_type_constructor(VALUE normal_type) {
@@ -372,7 +400,7 @@ METHOD_RESULT get_normal_type_instance_field(VALUE obj, VALUE field, VALUE *resu
 	HASH_OBJECT_ENTRY *e;
 	size_t n;
 	ut = NORMAL_TYPE_INSTANCE_TYPE(obj);
-	e = get_hash_key(NGS_TYPE_FIELDS(ut), field);
+	e = get_hash_key(NGS_TYPE_FIELDS_ACQUIRE(ut), field);
 	if(!e) {
 		return METHOD_EXCEPTION;
 	}
@@ -389,16 +417,9 @@ METHOD_RESULT get_normal_type_instance_field(VALUE obj, VALUE field, VALUE *resu
 
 void set_normal_type_instance_field(VALUE obj, VALUE field, VALUE v) {
 	VALUE ut;
-	HASH_OBJECT_ENTRY *e;
 	size_t n;
 	ut = NORMAL_TYPE_INSTANCE_TYPE(obj);
-	e = get_hash_key(NGS_TYPE_FIELDS(ut), field);
-	if(e) {
-		n = GET_INT(e->val);
-	} else {
-		n = OBJ_LEN(NGS_TYPE_FIELDS(ut));
-		set_hash_key(NGS_TYPE_FIELDS(ut), field, MAKE_INT(n));
-	}
+	n = type_field_index(ut, field);
 	// TODO: more optimized
 	while(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(obj)) < n) {
 		array_push(NORMAL_TYPE_INSTANCE_FIELDS(obj), MAKE_UNDEF);

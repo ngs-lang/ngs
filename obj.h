@@ -167,6 +167,7 @@ typedef struct ngs_type {
 	VALUE constructors; // Arr[F]
 	VALUE parents; // Arr[NGS_TYPE]
 	VALUE user; // Hash, user defined
+	pthread_mutex_t fields_mutex;
 } NGS_TYPE;
 
 typedef struct {
@@ -366,6 +367,8 @@ typedef enum {
 #define NGS_TYPE_NAME(v)          (((NGS_TYPE *)(v).ptr)->name)
 #define NGS_TYPE_ID(v)            (((NGS_TYPE *)(v).ptr)->base.val.num)
 #define NGS_TYPE_FIELDS(v)        (((NGS_TYPE *)(v).ptr)->fields)
+#define NGS_TYPE_FIELDS_MUTEX(v)  (((NGS_TYPE *)(v).ptr)->fields_mutex)
+#define NGS_TYPE_FIELDS_ACQUIRE(v) ((VALUE){.ptr = __atomic_load_n(&NGS_TYPE_FIELDS(v).ptr, __ATOMIC_ACQUIRE)})
 #define NGS_TYPE_PARENTS(v)       (((NGS_TYPE *)(v).ptr)->parents)
 #define NGS_TYPE_USER(v)          (((NGS_TYPE *)(v).ptr)->user)
 // TODO: rename OBJ_DATA to OBJ_VAL

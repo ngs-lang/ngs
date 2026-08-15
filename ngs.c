@@ -39,7 +39,7 @@ void print_exception(VM *vm, VALUE result) {
 	// TODO: fprintf to stderr and teach dump_titled to optionally fprintf to stderr too
 	printf("====== Exception of type '%s' ======\n", obj_to_cstring(NGS_TYPE_NAME(NORMAL_TYPE_INSTANCE_TYPE(result))));
 	// TODO: maybe macro to iterate fields
-	VALUE fields = NGS_TYPE_FIELDS(NORMAL_TYPE_INSTANCE_TYPE(result));
+	VALUE fields = NGS_TYPE_FIELDS_ACQUIRE(NORMAL_TYPE_INSTANCE_TYPE(result));
 	HASH_OBJECT_ENTRY *e;
 	for(e=HASH_HEAD(fields); e; e=e->insertion_order_next) {
 		if(obj_is_of_type(vm, ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)], vm->Backtrace)) {
