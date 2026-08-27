@@ -50,35 +50,30 @@ ns(GlobalTable=Table) {
 
 		doc An Eachable1 value is a table cell with all elements one below the other.
 		doc Converts elements to strings using _Cell().
+		doc Elements are separated by "---" when at least one of them is more than one line.
 		F init(c:_Cell, val:Eachable1) {
 			guard val is not Str
 			guard val is not Int
 			super(c)
 			c.val = val
-			# TODO: If array elements are more than one line, put a separator
-			val.each(F(v) {
-				t = _Cell(v)
-				t.each(c.push(X))
+			subcells = val.map(_Cell)
+			do_sep = subcells.any({ A.height() > 1 })
+			subcells.each(F(subcell) {
+				if do_sep and c and subcell {
+					c.push('---')
+				}
+				subcell.each(c.push(X))
 			})
-			# cells = val.map(_Cell)
-			# do_separators = cells.max(len) > 1
-
-			# aws ec2 describe-route-tables
-			# WIP # cells = val.each(_Cell)
-			# WIP # do_sep = any(cells, {A.height() > 1})
 		}
 
 		doc An Eachable2 value is a table cell with all pairs one below the other.
 		doc Converts values to strings using _Cell().
 		F init(c:_Cell, val:Eachable2) {
-			guard val is not Str
 			super(c)
 			c.val = val
 			val.each(F(k, v) {
-				assert(k is Str)
-				c.push("${k}:")
-				t = _Cell(v)
-				t.each({ c.push("  ${A}") })
+				c.push("${k.assert(Str)}:")
+				v._Cell().each({ c.push("  ${A}") })
 			})
 		}
 
@@ -408,4 +403,21 @@ ns(GlobalTable=Table) {
 			"<${t.Type().name} columns=${t.cols_enum.keys().join(',')} rows:${t.len()}>"
 		}
 
+	F test() {
+		F t(val, expected) assert(_Cell(val).Arr(), expected)
+
+		t(%[a b c], %[a b c])
+		t([], [])
+		t([%[a b]], %[a b])
+		t([%[a b], 'c'], %[a b --- c])
+		t(['c', %[a b]], %[c --- a b])
+		t([%[a b], %[c d]], %[a b --- c d])
+		t([{'k': %[a b]}, {'m': 'n'}], ['k:', '  a', '  b', '---', 'm:', '  n'])
+		t([{'k': [%[a b], %[c d]]}], ['k:', '  a', '  b', '  ---', '  c', '  d'])
+		t([null, %[a b]], ['-', '---', 'a', 'b'])
+
+		true
+	}
+
+	TEST Table2::test()
 }

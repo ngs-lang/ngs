@@ -32,6 +32,7 @@
 * Fix `assert(Program)` false positives on paths with slashes.
 * `decompile()` going out of sync and related fixes.
 * Adding a field to a type is now thread safe.
+* Table multi-row cells - elements are now separated by `---`.
 
 ### Breaking changes
 * Parameter defaults are now instantiated per call through `instantiate_param_dflt(DEFAULT_FROM_DEFINITION)`, which can throw `MethodNotFound`.
