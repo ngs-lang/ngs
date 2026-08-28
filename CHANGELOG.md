@@ -21,6 +21,8 @@
 * Add `instantiate_param_dflt(x)` - per-call instantiation of parameter defaults when the argument is not provided.
   * Simple data structures are copied.
   * Some can not be reasonably copied and left as is:  `Type`, `Block`, `MultiMethod`, `CleanupPolicy`, `Fun`, `Namespace`
+* Add `Holder` - a mutable container
+* Add `get_and_update(Holder, ...)` methods
 
 ### Fixes and improvements
 * Add `peek(RangeIter)` - fixes `skip(pattern)` on `RangeIter`
