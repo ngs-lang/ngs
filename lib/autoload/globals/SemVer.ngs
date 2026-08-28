@@ -8,27 +8,28 @@ ns() {
 	doc Surrounding whitespace and a leading "v" or "=" are accepted and dropped.
 	doc %EX - SemVer::Version('1.2.3-rc.1+build.7')
 	F init(v:Version, s:Str) {
-		NUMERIC_RE = /\A[0-9]+\z/
+		DIGITS_RE = /\A[0-9]+\z/
+		IDENTIFIER_CHARACTERS_RE = /\A[0-9A-Za-z-]+\z/
 
 		F validate_argument(ok, message:Str) not(ok) throws InvalidArgument("Not a valid semantic version - ${message}").set(given=s)
 
-		F numeric(id:Str) {
+		F numeric_identifier(id:Str) {
 			validate_argument(id, 'empty numeric identifier')
-			validate_argument(id =~ NUMERIC_RE, "not a number: ${id}")
+			validate_argument(id =~ DIGITS_RE, "not a number: ${id}")
 			validate_argument(id.len() == 1 or id[0] != '0', "leading zero: ${id}")
 			n = Int(id) tor null
 			validate_argument(Str(n) == id, "does not fit in an Int: ${id}")
 			n
 		}
 
-		F identifier(id:Str) {
+		F identifier_characters(id:Str) {
 			validate_argument(id, 'empty identifier')
-			validate_argument(id =~ /\A[0-9A-Za-z-]+\z/, "invalid character in identifier: ${id}")
+			validate_argument(id =~ IDENTIFIER_CHARACTERS_RE, "invalid character in identifier: ${id}")
 			id
 		}
 
-		F prerelease_identifier(id:Str) identifier(id)
-		F prerelease_identifier(id:NUMERIC_RE) numeric(id)
+		F prerelease_identifier(id:Str) identifier_characters(id)
+		F prerelease_identifier(id:DIGITS_RE) numeric_identifier(id)
 
 		F take_after_first(h:Holder, delim:Str) h.get_and_update(F(text) text.split(delim, 2), X.get(1), X[0])
 
@@ -41,11 +42,11 @@ ns() {
 		core = src.get().split('.')
 
 		validate_argument(core.len() == 3, "expected major.minor.patch, got ${core.len()} component(s)")
-		v.major = numeric(core[0])
-		v.minor = numeric(core[1])
-		v.patch = numeric(core[2])
+		v.major = numeric_identifier(core[0])
+		v.minor = numeric_identifier(core[1])
+		v.patch = numeric_identifier(core[2])
 		v.prerelease = prerelease.split_nullable_by_dot().map(prerelease_identifier)
-		v.build = build.split_nullable_by_dot().map(identifier)
+		v.build = build.split_nullable_by_dot().map(identifier_characters)
 	}
 
 	TEST v = SemVer::Version('1.2.3-rc.1+build.7'); [v.major, v.minor, v.patch, v.prerelease, v.build] == [1, 2, 3, ['rc', 1], ['build', '7']]
@@ -54,5 +55,18 @@ ns() {
 	TEST SemVer::Version('1.2.3-0a').prerelease == ['0a']
 	TEST SemVer::Version('1.2.3+001').build == ['001']
 
-	TEST ['1.2', '1.2.3.4', '1.2.x', '01.2.3', '1.2.3-01', '1.2.3-', '1.2.3-a..b', '1.2.3-a_b', '1.2.3-ab\n.x'].each(F(s) { { SemVer::Version(s) }.assert(InvalidArgument, "should have been be rejected: ${s}") }); true
+	TEST ['1.2', '1.2.3.4', '1.2.x', '01.2.3', '1.2.3-01', '1.2.3-', '1.2.3-a..b', '1.2.3-a_b', '1.2.3-ab\n.x', '1.2.3+', '1.2.3+a..b', '1.2.3+a_b'].each(F(s) { { SemVer::Version(s) }.assert(InvalidArgument, "should have been rejected: ${s}") }); true
+
+	global Str
+	doc Canonical semver.org 2.0.0 form.
+	doc %EX - SemVer::Version('  v1.2.3-rc.1+build.7  ').Str()  # '1.2.3-rc.1+build.7'
+	F Str(v:Version) {
+		prerelease = if v.prerelease then "-${v.prerelease.join('.')}" else ''
+		build = if v.build then "+${v.build.join('.')}" else ''
+		"${v.major}.${v.minor}.${v.patch}${prerelease}${build}"
+	}
+
+	TEST ['0.0.0', '1.2.3', '1.2.3-0', '1.2.3-rc.1', '1.2.3+build.7', '1.2.3-rc.1+build.7', '1.2.3+001', '1.0.0--', '1.0.0+-'].each(F(s) { SemVer::Version(s).Str().assert(s, "did not round-trip: ${s}") }); true
+	TEST SemVer::Version('  v1.2.3  ').Str() == '1.2.3'
+	TEST SemVer::Version('=1.2.3').Str() == '1.2.3'
 }
