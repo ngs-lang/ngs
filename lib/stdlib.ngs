@@ -4540,6 +4540,10 @@ section "Holder" {
 	doc Holder constructor
 	F init(h:Holder, val) h.val = val
 
+	doc Get the held value
+	doc %EX - Holder(10).get()  # 10
+	F get(h:Holder) h.val
+
 	doc Extract a value and modify .val in place.
 	doc preprocessor - Called with the held value.
 	doc extractor - Called with the preprocessed value
