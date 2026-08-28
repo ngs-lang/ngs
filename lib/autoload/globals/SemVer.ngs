@@ -1,0 +1,58 @@
+ns() {
+	type Version
+	type Range
+
+	global init
+
+	doc Parse a semantic version, as specified by semver.org 2.0.0.
+	doc Surrounding whitespace and a leading "v" or "=" are accepted and dropped.
+	doc %EX - SemVer::Version('1.2.3-rc.1+build.7')
+	F init(v:Version, s:Str) {
+		NUMERIC_RE = /\A[0-9]+\z/
+
+		F validate_argument(ok, message:Str) not(ok) throws InvalidArgument("Not a valid semantic version - ${message}").set(given=s)
+
+		F numeric(id:Str) {
+			validate_argument(id, 'empty numeric identifier')
+			validate_argument(id =~ NUMERIC_RE, "not a number: ${id}")
+			validate_argument(id.len() == 1 or id[0] != '0', "leading zero: ${id}")
+			n = Int(id) tor null
+			validate_argument(Str(n) == id, "does not fit in an Int: ${id}")
+			n
+		}
+
+		F identifier(id:Str) {
+			validate_argument(id, 'empty identifier')
+			validate_argument(id =~ /\A[0-9A-Za-z-]+\z/, "invalid character in identifier: ${id}")
+			id
+		}
+
+		F prerelease_identifier(id:Str) identifier(id)
+		F prerelease_identifier(id:NUMERIC_RE) numeric(id)
+
+		F take_after_first(h:Holder, delim:Str) h.get_and_update(F(text) text.split(delim, 2), X.get(1), X[0])
+
+		F split_nullable_by_dot(s:Str) s.split('.')
+		F split_nullable_by_dot(n:Null) []
+
+		src = Holder(s.trim() - /\A[v=]?/)
+		build = src.take_after_first('+')
+		prerelease = src.take_after_first('-')
+		core = src.get().split('.')
+
+		validate_argument(core.len() == 3, "expected major.minor.patch, got ${core.len()} component(s)")
+		v.major = numeric(core[0])
+		v.minor = numeric(core[1])
+		v.patch = numeric(core[2])
+		v.prerelease = prerelease.split_nullable_by_dot().map(prerelease_identifier)
+		v.build = build.split_nullable_by_dot().map(identifier)
+	}
+
+	TEST v = SemVer::Version('1.2.3-rc.1+build.7'); [v.major, v.minor, v.patch, v.prerelease, v.build] == [1, 2, 3, ['rc', 1], ['build', '7']]
+	TEST v = SemVer::Version('  v1.2.3  '); [v.major, v.minor, v.patch, v.prerelease, v.build] == [1, 2, 3, [], []]
+	TEST SemVer::Version('=0.0.0').patch == 0
+	TEST SemVer::Version('1.2.3-0a').prerelease == ['0a']
+	TEST SemVer::Version('1.2.3+001').build == ['001']
+
+	TEST ['1.2', '1.2.3.4', '1.2.x', '01.2.3', '1.2.3-01', '1.2.3-', '1.2.3-a..b', '1.2.3-a_b', '1.2.3-ab\n.x'].each(F(s) { { SemVer::Version(s) }.assert(InvalidArgument, "should have been be rejected: ${s}") }); true
+}
