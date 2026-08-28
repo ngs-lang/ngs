@@ -31,14 +31,17 @@ ns() {
 		F prerelease_identifier(id:Str) identifier_characters(id)
 		F prerelease_identifier(id:DIGITS_RE) numeric_identifier(id)
 
-		F take_after_first(h:Holder, delim:Str) h.get_and_update(F(text) text.split(delim, 2), X.get(1), X[0])
+		F get_rhs(h:Holder, delim:Str) h.get_and_update(F(text) {
+			parts = text.split(delim, 2)
+			[parts.get(1), parts[0]]
+		})
 
 		F split_nullable_by_dot(s:Str) s.split('.')
 		F split_nullable_by_dot(n:Null) []
 
 		src = Holder(s.trim() - /\A[v=]?/)
-		build = src.take_after_first('+')
-		prerelease = src.take_after_first('-')
+		build = src.get_rhs('+')
+		prerelease = src.get_rhs('-')
 		core = src.get().split('.')
 
 		validate_argument(core.len() == 3, "expected major.minor.patch, got ${core.len()} component(s)")

@@ -4545,35 +4545,13 @@ section "Holder" {
 	F get(h:Holder) h.val
 
 	doc Extract a value and modify .val in place.
-	doc preprocessor - Called with the held value.
-	doc extractor - Called with the preprocessed value
-	doc modifier - Called with the preprocessed value. Returns the new held value.
-	doc %RET - extractor(...)
-	doc %EX - h = Holder([3, 1, 2])
-	doc %EX - h.get_and_update(F(a) a.sort(), F(a) a[0], F(a) a[1..null])  # 1
+	doc cb - Called with the old value. Returns [value_to_return, new_value_to_hold].
+	doc %RET - cb(...)[0]
+	doc %EX - h = Holder([1, 2, 3])
+	doc %EX - h.get_and_update(F(a) [a[0], a[1..null]])  # 1
 	doc %EX - h.val  # [2, 3]
-	F get_and_update(h:Holder, preprocessor:Fun, extractor:Fun, modifier:Fun) {
-		p = preprocessor(h.val)
-		# if extractor or modifier throw - .val stays as is
-		ret = extractor(p)
-		h.val = modifier(p)
-		ret
-	}
-
-	TEST h = Holder([3, 1, 2]); ret = h.get_and_update(F(a) a.sort(), F(a) a[0], F(a) a[1..null]); (ret == 1) and (h.val == [2, 3])
-
-	doc Same as get_and_update(h, identity, extractor, modifier)
-	F get_and_update(h:Holder, extractor:Fun, modifier:Fun) {
-		ret = extractor(h.val)
-		h.val = modifier(h.val)
-		ret
-	}
-
-	TEST h = Holder([1, 2, 3]); ret = h.get_and_update(F(a) a[0], F(a) a[1..null]); (ret == 1) and (h.val == [2, 3])
-
-	doc Same as get_and_update(h, extractor_modifier, X[0], X[1])
-	F get_and_update(h:Holder, extractor_modifier:Fun) {
-		p = extractor_modifier(h.val).assert([Any, Any], { InvalidArgument('get_and_update() callback must return an Arr of two elements') })
+	F get_and_update(h:Holder, cb:Fun) {
+		p = cb(h.val).assert([Any, Any], { InvalidArgument('get_and_update() callback must return an Arr of two elements') })
 		h.val = p[1]
 		p[0]
 	}
