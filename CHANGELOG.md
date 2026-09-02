@@ -22,7 +22,8 @@
   * Simple data structures are copied.
   * Some can not be reasonably copied and left as is:  `Type`, `Block`, `MultiMethod`, `CleanupPolicy`, `Fun`, `Namespace`
 * Add `Holder` - a mutable container
-* Add `get_and_update(Holder, ...)` methods
+* Add `get(Holder)`
+* Add `get_and_update(Holder, cb)`
 
 ### Fixes and improvements
 * Add `peek(RangeIter)` - fixes `skip(pattern)` on `RangeIter`
