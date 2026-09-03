@@ -162,18 +162,25 @@ static void _dump(FILE *f, VALUE v, int level) {
 		if(level < 4) {
 			HASH_OBJECT_ENTRY *e;
 			VALUE fields = NGS_TYPE_FIELDS_ACQUIRE(NORMAL_TYPE_INSTANCE_TYPE(v));
+			VALUE inst_fields = NORMAL_TYPE_INSTANCE_FIELDS(v);
 			assert(IS_HASH(fields));
 			_dump(f, NORMAL_TYPE_INSTANCE_TYPE(v), level + 1);
 			for(e=HASH_HEAD(fields); e; e=e->insertion_order_next) {
-				if(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(v)) <= (size_t)GET_INT(e->val)) {
+				size_t field_idx = GET_INT(e->val);
+				fprintf(f, "%*s* key:\n", (level+1) << 1, "");
+				_dump(f, e->key, level + 2);
+				if(field_idx >= OBJ_LEN(inst_fields)) {
+					// ngs -e 'type T; t1 = T(); t1.a = 1; t2=T(); t2.b=2; dump(t1)'
+					fprintf(f, "%*s* (no value - field key is out of bounds)\n", (level+1) << 1, "");
 					continue;
 				}
-				if(!IS_UNDEF(ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(v))[GET_INT(e->val)])) {
-					fprintf(f, "%*s* key:\n", (level+1) << 1, "");
-					_dump(f, e->key, level + 2);
-					fprintf(f, "%*s* value:\n", (level+1) << 1, "");
-					_dump(f, ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(v))[GET_INT(e->val)], level + 2);
+				if(IS_UNDEF(ARRAY_ITEMS(inst_fields)[field_idx])) {
+					// ngs -e 'type T; t1 = T(); t1.a = 1; t2=T(); t2.b=2; dump(t2)'
+					fprintf(f, "%*s* (value undefined)\n", (level+1) << 1, "");
+					continue;
 				}
+				fprintf(f, "%*s* value:\n", (level+1) << 1, "");
+				_dump(f, ARRAY_ITEMS(inst_fields)[field_idx], level + 2);
 			}
 		}
 		goto exit;

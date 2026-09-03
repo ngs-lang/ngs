@@ -40,12 +40,23 @@ void print_exception(VM *vm, VALUE result) {
 	printf("====== Exception of type '%s' ======\n", obj_to_cstring(NGS_TYPE_NAME(NORMAL_TYPE_INSTANCE_TYPE(result))));
 	// TODO: maybe macro to iterate fields
 	VALUE fields = NGS_TYPE_FIELDS_ACQUIRE(NORMAL_TYPE_INSTANCE_TYPE(result));
+	VALUE inst_fields = NORMAL_TYPE_INSTANCE_FIELDS(result);
 	HASH_OBJECT_ENTRY *e;
 	for(e=HASH_HEAD(fields); e; e=e->insertion_order_next) {
-		if(obj_is_of_type(vm, ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)], vm->Backtrace)) {
+		size_t field_idx = GET_INT(e->val);
+		if(field_idx >= OBJ_LEN(inst_fields)) {
+			dump_titled(stderr, "field key is out of bounds", e->key);
+			continue;
+		}
+		VALUE field_value = ARRAY_ITEMS(inst_fields)[field_idx];
+		if(IS_UNDEF(field_value)) {
+			dump_titled(stderr, "value is undefined", e->key);
+			continue;
+		}
+		if(obj_is_of_type(vm, field_value, vm->Backtrace)) {
 			printf("=== [ backtrace ] ===\n");
 			// Backtrace.frames = [{"closure": ..., "ip": ...}, ...]
-			VALUE backtrace = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)];
+			VALUE backtrace = field_value;
 			VALUE frames;
 			assert(get_normal_type_instance_field(backtrace, make_string("frames"), &frames) == METHOD_OK);
 			unsigned int i;
@@ -79,19 +90,19 @@ void print_exception(VM *vm, VALUE result) {
 			}
 			continue;
 		}
-		if(obj_is_of_type(vm, ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)], vm->Exception)) {
+		if(obj_is_of_type(vm, field_value, vm->Exception)) {
 			assert(IS_STRING(e->key));
 			fprintf(stderr, "---8<--- %s - start ---8<---\n", obj_to_cstring(e->key));
-			print_exception(vm, ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
+			print_exception(vm, field_value);
 			fprintf(stderr, "---8<--- %s - end ---8<---\n", obj_to_cstring(e->key));
 			continue;
 		}
 		if(IS_STRING(e->key)) {
-			dump_titled(stderr, obj_to_cstring(e->key), ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
+			dump_titled(stderr, obj_to_cstring(e->key), field_value);
 		} else {
 			// Should not happen
 			dump_titled(stderr, "field key", e->key);
-			dump_titled(stderr, "field value", ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(result))[GET_INT(e->val)]);
+			dump_titled(stderr, "field value", field_value);
 		}
 	}
 }

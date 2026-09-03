@@ -621,18 +621,21 @@ METHOD_RESULT native_ll_hash_entry_next EXT_METHOD_PARAMS {
 }
 
 METHOD_RESULT native_Hash_nti METHOD_PARAMS {
-	VALUE ut, fields, item;
+	VALUE ut, fields, inst_fields, item;
 	HASH_OBJECT_ENTRY *e;
+	size_t field_idx;
 
 	ut = NORMAL_TYPE_INSTANCE_TYPE(argv[0]);
 	fields = NGS_TYPE_FIELDS_ACQUIRE(ut);
+	inst_fields = NORMAL_TYPE_INSTANCE_FIELDS(argv[0]);
 	// TODO: round to nearest power of 2?
 	*result = make_hash(OBJ_LEN(fields));
 	for(e=HASH_HEAD(fields); e; e=e->insertion_order_next) {
-		if(OBJ_LEN(NORMAL_TYPE_INSTANCE_FIELDS(argv[0])) <= (size_t)GET_INT(e->val)) {
+		field_idx = GET_INT(e->val);
+		if(field_idx >= OBJ_LEN(inst_fields)) {
 			continue;
 		}
-		item = ARRAY_ITEMS(NORMAL_TYPE_INSTANCE_FIELDS(argv[0]))[(size_t)GET_INT(e->val)];
+		item = ARRAY_ITEMS(inst_fields)[field_idx];
 		if(!IS_UNDEF(item)) {
 			set_hash_key(*result, e->key, item);
 		}
