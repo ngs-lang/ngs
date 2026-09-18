@@ -2323,6 +2323,13 @@ section "Set" {
 	TEST type MySet(Set); (MySet([1,2]) + MySet([3])) is MySet
 	TEST type MySet(Set); { MySet([1]) + Set([2]) }.assert(InvalidArgument)
 
+	doc Set intersection
+	doc %RET - Set
+	F intersect(a:Set, b:Set) a.filter(X in b)
+
+	TEST Set([1,2,3]).intersect(Set([2,3,4])) == Set([2,3])
+	TEST type MySet(Set); MySet([1,2]).intersect(Set([2])) is MySet
+
 	F ==(a:Set, b:Set) {
 		a.len() != b.len() returns false
 		a.all(X in b)
