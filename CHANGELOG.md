@@ -24,6 +24,7 @@
 * Add `Holder` - a mutable container
 * Add `get(Holder)`
 * Add `get_and_update(Holder, cb)`
+* Add `intersect(Set, Set)` and `intersect(Arr, Arr)` - intersection
 
 ### Fixes and improvements
 * Add `peek(RangeIter)` - fixes `skip(pattern)` on `RangeIter`
