@@ -26,6 +26,8 @@
 * Add `get_and_update(Holder, cb)`
 * Add `intersect(Set, Set)` and `intersect(Arr, Arr)` - intersection
 * Add `validate(val, param:Str, pattern)` - for argument checking
+* Add `write_to(data, target)` - same as `write(target, data)`
+* Add `store_to(data, target, encode_hints)` - same as `store(target, data, encode_hints)`
 
 ### Fixes and improvements
 * Add `peek(RangeIter)` - fixes `skip(pattern)` on `RangeIter`

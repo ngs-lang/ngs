@@ -6634,6 +6634,9 @@ F store(filename:Str, data, encode_hints:Hash={}) {
 doc encode() and write() the data to the file
 F store(file:File, data, encode_hints:Hash={}) store(file.path, data, encode_hints)
 
+doc Same as store(target, data, encode_hints)
+F store_to(data, target, encode_hints:Hash={}) store(target, data, encode_hints)
+
 # --- CommandRedir ---
 
 doc Initialize CommandRedir object. Used internally for commands syntax.
@@ -8884,6 +8887,9 @@ doc Write whole file if it's closed, write to file descriptor if it's open
 F write(f:File, s:Str) f::{
 	write(f.fd.when(Null, f.path), s)
 }
+
+doc Same as write(target, data)
+F write_to(data, target) write(target, data)
 
 doc Write a string followed by newline character to a File.
 doc Throws WriteFail on failure.
