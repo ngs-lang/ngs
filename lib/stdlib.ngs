@@ -1302,8 +1302,9 @@ section "=~ Matching" {
 		doc %EX - "abc" =~ Transformed(len, 3)
 		type Transformed
 		F init(t:Transformed, transformation:Fun, pattern) init(args())
-		F =~(x, t:Transformed, mc:MatchContext) Bool(t::transformation(x) =~ t.pattern)
+		F =~(x, t:Transformed, mc:MatchContext) (=~)(t::transformation(x), t.pattern, mc)
 		TEST "abc" =~ Transformed(len, 3)
+		TEST m = "abc" =~ Transformed(len, Capture(Int)); m.matches == [3]
 	}
 
 	doc Checks whether object fields named after h hash keys match (=~) the corresponding hash values.
