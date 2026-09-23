@@ -397,6 +397,10 @@ F validate(val, param:Str, pattern) {
 		info = f.ip().resolve_instruction_pointer()
 		"expected to pass the check at " + ("${info.file}:${info.first_line}" tor "<unknown location>")
 	}
+	F expected(f:UserDefinedMethod) {
+		guard 'name' in f.meta()
+		"expected to pass ${f.meta().name}()"
+	}
 	throw InvalidArgument("Invalid argument '${param}', got ${code_or_str(val)}, ${expected(pattern)}").set(val=val, pattern=pattern, param=param)
 }
 
@@ -405,6 +409,7 @@ TEST e = { validate('a', 'x', Int) }.assert(InvalidArgument); [e.message, e.val,
 TEST type T; { validate(T(), 'x', Int) }.assert(InvalidArgument).message == "Invalid argument 'x', got <T>, expected Int"
 TEST { validate('b', 'x', Pfx('a')) }.assert(InvalidArgument).message == "Invalid argument 'x', got 'b', expected <MustPfx a>"
 TEST F pos(x) x > 0; { validate(-5, 'x', pos) }.assert(InvalidArgument).message == "Invalid argument 'x', got -5, expected to pass pos()"
+TEST { validate(-5, 'x', F pos(x) x > 0) }.assert(InvalidArgument).message == "Invalid argument 'x', got -5, expected to pass pos()"
 TEST { validate(-5, 'x', { A > 0 }) }.assert(InvalidArgument).message.starts_with("Invalid argument 'x', got -5, expected to pass the check at <test>:")
 TEST { validate([1] * 100, 'x', [2] * 100) }.assert(InvalidArgument).message == "Invalid argument 'x', got ${code([1] * 100).limit(128, '...')}, expected ${code([2] * 100).limit(128, '...')}"
 
