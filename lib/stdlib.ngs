@@ -7894,11 +7894,11 @@ F =~(x, pfx:Pfx, mc:MatchContext) {
 	block b {
 		i = Iter(pfx)
 		mc.deeper({
-			x.each(F(elt) {
+			x.each_idx_val(F(idx, elt) {
 				if not(i) {
 					b.return(true)
 				}
-				mc.set_last_path_element(elt)
+				mc.set_last_path_element(idx)
 				if not((=~)(elt, i.next(), mc)) {
 					b.return(false)
 				}
@@ -7912,6 +7912,7 @@ TEST [1,2,3] =~ Pfx([1,2])
 TEST [1,2] =~ Pfx([1,2])
 TEST [1,2,3] !~ Pfx([2])
 TEST [1,2] !~ Pfx([1,2,3])
+TEST [10,20] =~ Pfx([Any, AtPath([1], Int)])
 
 # TODO: make it a low priority method implementation
 doc Convenience method to access matches in MatchSuccess
