@@ -381,6 +381,33 @@ F assert(f:Fun, t:Type, msg:Str="Assertion failed") {
 
 TEST assert({1/0}, DivisionByZero) is DivisionByZero
 
+doc Throws InvalidArgument naming the parameter if val does not match the pattern. Use for checking arguments.
+doc val - Argument value to check
+doc param - Name of the parameter
+doc pattern - Pattern val must match
+doc %RET - val
+doc %EX - validate(-5, 'x', Int)  # InvalidArgument: Invalid argument 'x', got -5, expected Int
+doc %EX - validate(-5, 'x', { A > 0 })  # InvalidArgument: Invalid argument 'x', got -5, expected to pass the check at my.ngs:10
+F validate(val, param:Str, pattern) {
+	val =~ pattern returns val
+	F code_or_str(x) (try code(x) catch(e:MethodNotFound) Str(x)).limit(128, '...')
+	F expected(p) "expected ${code_or_str(p)}"
+	F expected(mm:MultiMethod) "expected to pass ${mm.Arr()[0].meta().name}()"
+	F expected(f:UserDefinedMethod) {
+		info = f.ip().resolve_instruction_pointer()
+		"expected to pass the check at " + ("${info.file}:${info.first_line}" tor "<unknown location>")
+	}
+	throw InvalidArgument("Invalid argument '${param}', got ${code_or_str(val)}, ${expected(pattern)}").set(val=val, pattern=pattern, param=param)
+}
+
+TEST validate(5, 'x', Int) == 5
+TEST e = { validate('a', 'x', Int) }.assert(InvalidArgument); [e.message, e.val, e.pattern, e.param] == ["Invalid argument 'x', got 'a', expected Int", 'a', Int, 'x']
+TEST type T; { validate(T(), 'x', Int) }.assert(InvalidArgument).message == "Invalid argument 'x', got <T>, expected Int"
+TEST { validate('b', 'x', Pfx('a')) }.assert(InvalidArgument).message == "Invalid argument 'x', got 'b', expected <MustPfx a>"
+TEST F pos(x) x > 0; { validate(-5, 'x', pos) }.assert(InvalidArgument).message == "Invalid argument 'x', got -5, expected to pass pos()"
+TEST { validate(-5, 'x', { A > 0 }) }.assert(InvalidArgument).message.starts_with("Invalid argument 'x', got -5, expected to pass the check at <test>:")
+TEST { validate([1] * 100, 'x', [2] * 100) }.assert(InvalidArgument).message == "Invalid argument 'x', got ${code([1] * 100).limit(128, '...')}, expected ${code([2] * 100).limit(128, '...')}"
+
 doc Initializes InstantiatingAbstractType.
 F init(e:InstantiatingAbstractType, t:Type) init(args())
 

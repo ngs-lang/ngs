@@ -25,6 +25,7 @@
 * Add `get(Holder)`
 * Add `get_and_update(Holder, cb)`
 * Add `intersect(Set, Set)` and `intersect(Arr, Arr)` - intersection
+* Add `validate(val, param:Str, pattern)` - for argument checking
 
 ### Fixes and improvements
 * Add `peek(RangeIter)` - fixes `skip(pattern)` on `RangeIter`
