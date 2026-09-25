@@ -8910,6 +8910,9 @@ F echo(f:File, l:Lines) {
 	null
 }
 
+doc Same as echo(target, data)
+F echo_to(data, target) echo(target, data)
+
 # TODO: better exception
 F realpath(path:Str) {
 	c_realpath(path) or throw CError("Failed to realpath()").set(path=path)
