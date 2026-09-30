@@ -413,6 +413,22 @@ TEST { validate(-5, 'x', F pos(x) x > 0) }.assert(InvalidArgument).message == "I
 TEST { validate(-5, 'x', { A > 0 }) }.assert(InvalidArgument).message.starts_with("Invalid argument 'x', got -5, expected to pass the check at <test>:")
 TEST { validate([1] * 100, 'x', [2] * 100) }.assert(InvalidArgument).message == "Invalid argument 'x', got ${code([1] * 100).limit(128, '...')}, expected ${code([2] * 100).limit(128, '...')}"
 
+doc Validate arguments
+doc a - Arguments, typically args()
+doc params_patterns - Parameter name -> pattern
+doc %RET - a
+doc %EX - F f(x, y) validate(args(), {'x': Int, 'y': { A > 0 }})
+F validate(a:Hash, params_patterns:Hash) {
+	params_patterns.each(F(param, pattern) {
+		param not in a throws InvalidArgument("Invalid argument 'params_patterns', unknown parameter ${code(param)}").set(val=params_patterns, param='params_patterns', key=param)
+		validate(a[param], param, pattern)
+	})
+	a
+}
+
+TEST validate({'x': 1, 'y': 2}, {'x': Int, 'y': Int}) == {'x': 1, 'y': 2}
+TEST e = { validate({'x': 1, 'y': 'a'}, {'x': Int, 'y': Int}) }.assert(InvalidArgument); [e.message, e.val, e.pattern, e.param] == ["Invalid argument 'y', got 'a', expected Int", 'a', Int, 'y']
+
 doc Initializes InstantiatingAbstractType.
 F init(e:InstantiatingAbstractType, t:Type) init(args())
 
