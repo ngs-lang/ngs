@@ -26,7 +26,9 @@
 * Add `get_and_update(Holder, cb)`
 * Add `intersect(Set, Set)` and `intersect(Arr, Arr)` - intersection
 * Add `validate(val, param:Str, pattern)` - for argument checking
+* Add `validate(a:Hash, params_patterns:Hash)` - for checking multiple arguments, typically `args()`
 * Add `write_to(data, target)` - same as `write(target, data)`
+* Add `echo_to(data, target)` - same as `echo(target, data)`
 * Add `store_to(data, target, encode_hints)` - same as `store(target, data, encode_hints)`
 
 ### Fixes and improvements
