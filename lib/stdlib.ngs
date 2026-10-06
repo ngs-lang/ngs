@@ -8727,6 +8727,7 @@ section "retry() and friends" {
 			} catch(ra:RetryAssertFail) {
 				guard i < times - 1
 				# Ignoring the assert as long as it's not last iteration
+				logger("$title ${ra.message}")
 			} catch(e:Exception) {
 				logger("$title Exception $e")
 				throw e
