@@ -30,6 +30,7 @@
 * Add `write_to(data, target)` - same as `write(target, data)`
 * Add `echo_to(data, target)` - same as `echo(target, data)`
 * Add `store_to(data, target, encode_hints)` - same as `store(target, data, encode_hints)`
+* Add `can(val, fun)` - check whether `fun(val)` throws
 
 ### Fixes and improvements
 * Add `peek(RangeIter)` - fixes `skip(pattern)` on `RangeIter`

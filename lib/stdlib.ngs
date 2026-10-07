@@ -991,6 +991,15 @@ section "Result and friends" {
 		}
 	}
 
+	doc Checks whether fun(val) throws
+	doc %RET - Bool - when fun does not throw
+	doc %EX - "10".can(Int)   # true
+	doc %EX - "abc".can(Int)  # false
+	F can(val, fun:Fun) try { fun(val); true } catch(e:Error) false
+
+	TEST "10".can(Int)
+	TEST not("abc".can(Int))
+
 	doc Initialize Success with the given value.
 	F init(s:Success, v=null) s.val = v
 
