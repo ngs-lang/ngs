@@ -4237,7 +4237,7 @@ METHOD_RESULT vm_call(VM *vm, CTX *ctx, VALUE *result, VALUE callable, int argc,
 		if(CLOSURE_OBJ_N_LOCALS(callable)) {
 			ctx->frames[ctx->frame_ptr].locals = NGS_MALLOC(CLOSURE_OBJ_N_LOCALS(callable) * sizeof(VALUE));
 			j = MIN(argc, n_params_required + n_params_optional);
-			memcpy(ctx->frames[ctx->frame_ptr].locals, argv, (j + have_arr_splat + have_hash_splat) * sizeof(*argv));
+			memcpy(ctx->frames[ctx->frame_ptr].locals, argv, j * sizeof(*argv));
 			// TODO: memcpy?
 			for(i = j; i < n_params_required + n_params_optional; i++) {
 				ctx->frames[ctx->frame_ptr].locals[i] = named_arguments[i];

@@ -23,6 +23,10 @@ TEST F f(a) a; f(**{"a": 10}) == 10
 TEST F f(a=7) a; f(**{"a": 10}) == 10
 TEST F f(a,b,*args,**kwargs) [a,b,args,kwargs]; f(kw1=100, 1, 2, 3, kw2=200) == [1, 2, [3], {"kw1":100, "kw2":200}]
 
+# Empty array splat argument
+TEST F f(*a) a; f(*[]) == []
+TEST F f(**kw) kw; f(*[]) == {}
+
 TEST F construct(x:Int) F() x; f1=construct(1); f2=construct(2); (f1==f1) and (f1!=f2)
 TEST 1.1 < 1.11
 TEST 1.1 + 1.1 == 2.2
