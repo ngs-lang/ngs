@@ -6638,7 +6638,7 @@ doc Fetch HTTP(S) file and decode() it
 doc %EX - fetch('https://api.myip.com')  # Data structure, the parsed JSON
 F fetch(url:Str, decode_hints:Hash={}) {
 	guard url ~ /^(https?):\/\//
-	decode(`curl -s $url`, {'url': url})
+	decode(`curl -s $url`, decode_hints + {'url': url})
 }
 
 doc Read standard input and decode() it, passing "source" equals "stdin" hint.

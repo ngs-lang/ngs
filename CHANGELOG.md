@@ -47,6 +47,7 @@
 * Fix `=~(Any, Pfx, MatchContext)` path tracking
 * Fix `=~(Any, Transformed, MatchContext)` context passing
 * Fix segfault `F f(*args)` and `F f(**kwargs)` called with `f(*[])`
+* Fix `fetch(url:Str, decode_hints)` ignoring `decode_hints`
 
 ### Breaking changes
 * Parameter defaults are now instantiated per call through `instantiate_param_dflt(DEFAULT_FROM_DEFINITION)`, which can throw `MethodNotFound`.
