@@ -2144,7 +2144,7 @@ section "AllOf(ArrLike)" {
 		super(a, items)
 	}
 
-	doc Checks whether one of the patterns (elements of AllOf) matches
+	doc Checks whether all of the patterns (elements of AllOf) match
 	doc %EX - {"k1": "v1", "k2": "v2", "kk3": "vv3"}.filterk(AllOf(/^k/, {len(A) <= 2})) == %{k1 v1 k2 v2}
 	F =~(x, a:AllOf, mc:MatchContext) a.all(F(pattern) (=~)(x, pattern, mc))
 
@@ -4326,6 +4326,7 @@ F code(h:Hash) {
 }
 
 doc Set a key in a Hash if it's not already set
+doc v - The value to set when k is not in h. If v is a Fun, v(k) is set instead, only when k is not in h.
 doc %EX - my_hash.dflt(k, []).push(elt)
 doc %RET - Hash value, the already-existed or new.
 F dflt(h:Hash, k, v) {
@@ -7394,7 +7395,7 @@ section "DecodeHints" {
 		})
 	}
 
-	doc Match command based on argv and options
+	doc Match command based on argv and options. c.argv is matched as a prefix of x.argv: x with additional arguments also matches.
 	F =~(x:Command, c:Command, mc:MatchContext) {
 		(=~)(x, {
 			'argv': Pfx(c.argv)

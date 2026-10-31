@@ -1862,6 +1862,13 @@ Log the command including arguments and redirects before running it:
 log: my_prog my_arg ...
 ```
 
+Run the command with the given environment variables instead of `ENV`.
+
+```
+env:{'LANG': 'C'} my_prog my_arg ...        # my_prog sees only LANG
+env:ENV + {'LANG': 'C'} my_prog my_arg ...  # ENV with LANG set to C
+```
+
 Internally, the `&` in `$(my_prog my_arg &)` sets the `&` option to `true`. This mechanism can be used to modify the behaviour of `CommandsPipeline` prepared by `%(...)`.
 
 		ngs -pi '%(ls / &)'
