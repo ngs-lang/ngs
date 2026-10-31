@@ -6637,7 +6637,7 @@ F fetch(filename:Str, decode_hints:Hash={}) {
 doc Fetch HTTP(S) file and decode() it
 doc %EX - fetch('https://api.myip.com')  # Data structure, the parsed JSON
 F fetch(url:Str, decode_hints:Hash={}) {
-	guard url ~ /^(https?):\/\//
+	guard url ~ /^(https?):\/\//i
 	decode(`curl -s $url`, decode_hints + {'url': url})
 }
 
@@ -7412,6 +7412,23 @@ F decode(s:Str, hints:Hash={}) {
 	guard ret
 	ret.get()
 }
+
+doc Detects single line, no whitespace, scheme://...
+doc %RET - URL
+doc %EX - "https://example.com/a".decode().host  # "example.com"
+F decode(s:Str, hints:Hash={}) {
+	t = s.trim()
+	guard t =~ /^[A-Za-z][A-Za-z0-9+.-]*:\/\/\S*\z/
+	ret = Result({ URL(t) })
+	guard ret
+	ret.get()
+}
+
+TEST "https://h/a\n".decode() is URL
+TEST { "http://h/%zz".decode() }.assert(MethodNotFound)
+TEST { "https://h/a\nhttps://h/b".decode() }.assert(MethodNotFound)
+TEST { "mailto:a@b".decode() }.assert(MethodNotFound)
+TEST "https://h/a".decode({'FS': ' '}) == [['https://h/a']]
 
 # TODO: handle more than one occurrence of kvsep in each line
 doc EXPERIMENTAL. KVS (key-value separator) hint for decode()
@@ -9122,6 +9139,11 @@ section "Loading code" {
 			RecIter             Iter
 
 			ResDef              Res
+
+			QueryParams         URI
+			URL                 URI
+			URLPath             URI
+			URN                 URI
 
 			InvalidCommandLineArguments bootstrap_invoke
 

@@ -1,0 +1,823 @@
+# RFC 3986
+type URI
+	# RFC 8141 - https://www.rfc-editor.org/rfc/rfc8141
+	type URN(URI)
+	# RFC 3986 with WHATWG URL §5 - https://url.spec.whatwg.org/#application/x-www-form-urlencoded
+	type URL(URI)
+
+# WHATWG URL §5; names in parse order in meta().order
+type QueryParams(MultiHash)
+
+# RFC 3986 §3.3 - decoded path segments
+type URLPath(ArrLike)
+
+ns {
+	global init, URI, Str, (==), decode, fetch, (.), (.=), in, Hash, QueryParams, URLPath, ([]), ([]=), get, push, update
+
+	# RFC 3986 §2.1 - a component subject to percent-encoding
+	type _Component
+	type _Host(_Component)
+
+	# allowed: grammar term for one character the component allows as is
+	F init(c:_Component, name:Str, allowed) {
+		c.name = name
+		c.allowed = allowed
+	}
+
+	# Calls cb(text, true) for each match of term allowed in s, cb(byte, false) for each byte between
+	F _each_char(s:Str, allowed, cb:Fun) {
+		i = _Input(s)
+		while not(i._parse(_End())) {
+			start = i.pos
+			if i._parse(allowed) {
+				cb(s[start..i.pos], true)
+			} else {
+				cb(s[i.pos], false)
+				i.pos += 1
+			}
+		}
+		s
+	}
+
+	# allowed: c.allowed or pct-encoded; any other "%" throws
+	F _each_char(c:_Component, s:Str, cb:Fun) _each_char(s, _Choice(c.allowed, pct_encoded), F(text, allowed) {
+		text == '%' throws InvalidArgument("Malformed percent encoding in URI ${c.name}").set(given=s)
+		cb(text, allowed)
+	})
+
+	# %RET - text if allowed, else %XX
+	F _pct_encode(text:Str, allowed:Bool) if allowed then text else '%' + encode_hex(text)
+
+	F _validate(c:_Component, s:Str) _each_char(c, s, F(text, allowed) not(allowed) throws InvalidArgument("Invalid character in URI ${c.name}").set(given=s))
+
+	F _encode(c:_Component, s:Str) collector/'' _each_char(c, s, F(text, allowed) collect(_pct_encode(text, allowed)))
+
+	# RFC 3986 §3.2.2 IP-literal - verbatim
+	F _validate(c:_Host, s:Str) {
+		guard _matches(s, IP_literal)
+		s
+	}
+
+	F _encode(c:_Host, s:Str) {
+		guard _matches(s, IP_literal)
+		s
+	}
+
+	# x: URI or the _components() Hash
+	F _validate(x) {
+		COMPONENTS.each(F(c) x.(c.name).when(Not(null), _validate(c, X)))
+		x
+	}
+
+	# %RET - Hash: field -> encoded text; null stays null
+	F _encoded(u:URI) COMPONENTS.map(F(c) [c.name, u.(c.name).when(Not(null), _encode(c, X))]).Hash()
+
+	section "PEG" {
+
+		# Text being parsed, how far parsing got, and what _Capture terms matched
+		type _Input
+
+		F init(i:_Input, text:Str) {
+			i.text = text
+			i.pos = 0
+			# Replaced, never changed in place, so copy(i) keeps them
+			i.captures = {}
+		}
+
+		type _Sequence
+		type _Choice
+		type _Repeat
+		type _Optional
+		# One character of a class
+		type _Char
+		type _End
+		# A run of characters: a class with a quantifier, one regex instead of _Repeat of _Char, for speed
+		type _Chars
+		# Records the text its term matched in captures of _Input, under its name
+		type _Capture
+		# Matches empty text where its term does not match
+		type _Not
+
+		F init(s:_Sequence, *terms) s.terms = terms
+		F init(c:_Choice, *alternatives) c.alternatives = alternatives
+
+		# ABNF min*max; max null: unbounded
+		F init(r:_Repeat, term, min:Int, max:AnyOf(Int, null)) {
+			max == null and _Input('')._parse(term) throws InvalidArgument("Unbounded _Repeat of a term that matches empty text never ends")
+			r.term = term
+			r.min = min
+			r.max = max
+		}
+
+		# ABNF n
+		F init(r:_Repeat, term, n:Int) init(r, term, n, n)
+
+		F init(o:_Optional, term) o.term = term
+		F init(n:_Not, term) n.term = term
+		F init(c:_Char, class:RegExp) c.class = class
+		F init(c:_Chars, regex:RegExp) c.regex = regex
+
+		F init(c:_Capture, name:Str, term) {
+			c.name = name
+			c.term = term
+		}
+
+		# i._parse(term): on success, moves i.pos past what it matched; on failure, leaves i as it was
+
+		# Undoes parsing done since start = copy(i)
+		F _backtrack(i:_Input, start:_Input) {
+			i.pos = start.pos
+			i.captures = start.captures
+		}
+
+		F _parse(i:_Input, literal:Str) {
+			found = i.text[i.pos..null].starts_with(literal)
+			if found {
+				i.pos += literal.len()
+			}
+			found
+		}
+
+		F _parse(i:_Input, c:_Char) {
+			found = i.pos < i.text.len() and Bool(i.text[i.pos] =~ c.class)
+			if found {
+				i.pos += 1
+			}
+			found
+		}
+
+		F _parse(i:_Input, c:_Chars) {
+			result = c_pcre2_match(c.regex, i.text, i.pos, C_PCRE2_ANCHORED)
+			result == C_PCRE2_ERROR_NOMATCH returns false
+			result is Int throws Error("RegExp matching error in c_pcre2_match").set(code=result)
+			i.pos = result[1]
+			true
+		}
+
+		F _parse(i:_Input, e:_End) i.pos == i.text.len()
+
+		F _parse(i:_Input, s:_Sequence) {
+			start = copy(i)
+			s.terms.all(i._parse(X)) returns true
+			i._backtrack(start)
+			false
+		}
+
+		# Ordered: the first alternative that matches wins
+		F _parse(i:_Input, c:_Choice) c.alternatives.any(i._parse(X))
+
+		# Greedy, never gives back
+		F _parse(i:_Input, r:_Repeat) {
+			start = copy(i)
+			n = 0
+			while n != r.max and i._parse(r.term) {
+				n += 1
+			}
+			n >= r.min returns true
+			i._backtrack(start)
+			false
+		}
+
+		F _parse(i:_Input, o:_Optional) {
+			i._parse(o.term)
+			true
+		}
+
+		F _parse(i:_Input, n:_Not) {
+			start = copy(i)
+			found = i._parse(n.term)
+			i._backtrack(start)
+			not(found)
+		}
+
+		F _parse(i:_Input, c:_Capture) {
+			start = i.pos
+			found = i._parse(c.term)
+			if found {
+				i.captures += {c.name: i.text[start..i.pos]}
+			}
+			found
+		}
+	}
+
+	section "RFC 3986 §2, §3.1, §3.2.2 and §3.3, reordered where PEG needs it" {
+
+		ALPHA = _Char(/[A-Za-z]/)
+		DIGIT = _Char(/[0-9]/)
+		HEXDIG = _Char(/[0-9A-Fa-f]/)
+
+		# scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
+		scheme = _Sequence(ALPHA, _Repeat(_Choice(ALPHA, DIGIT, '+', '-', '.'), 0, null))
+
+		# unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
+		unreserved = _Char(/[-A-Za-z0-9._~]/)
+
+		# sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
+		sub_delims = _Char(/[!$&'()*+,;=]/)
+
+		# pct-encoded = "%" HEXDIG HEXDIG
+		pct_encoded = _Sequence('%', HEXDIG, HEXDIG)
+
+		# pchar = unreserved / pct-encoded / sub-delims / ":" / "@"
+		pchar_literal = _Choice(unreserved, sub_delims, ':', '@')
+		pchar = _Choice(pchar_literal, pct_encoded)
+
+		# h16 = 1*4HEXDIG
+		h16 = _Repeat(HEXDIG, 1, 4)
+
+		# dec-octet = DIGIT / %x31-39 DIGIT / "1" 2DIGIT / "2" %x30-34 DIGIT / "25" %x30-35
+		# Longest first, else "25" in "250" wins
+		dec_octet = _Choice(
+			_Sequence('25', _Char(/[0-5]/))
+			_Sequence('2', _Char(/[0-4]/), DIGIT)
+			_Sequence('1', DIGIT, DIGIT)
+			_Sequence(_Char(/[1-9]/), DIGIT)
+			DIGIT
+		)
+
+		# IPv4address = dec-octet "." dec-octet "." dec-octet "." dec-octet
+		IPv4address = _Sequence(dec_octet, '.', dec_octet, '.', dec_octet, '.', dec_octet)
+
+		# ls32 = ( h16 ":" h16 ) / IPv4address
+		ls32 = _Choice(_Sequence(h16, ':', h16), IPv4address)
+
+		h16_colon = _Sequence(h16, ':')
+
+		# [ *n( h16 ":" ) h16 ] as [ h16 *n( ":" h16 ) ], else _Repeat takes the ":" of "::"
+		F h16s(n:Int) _Optional(_Sequence(h16, _Repeat(_Sequence(':', h16), 0, n)))
+
+		IPv6address_alternatives = [
+			_Sequence(_Repeat(h16_colon, 6), ls32)
+			_Sequence('::', _Repeat(h16_colon, 5), ls32)
+			_Sequence(h16s(0), '::', _Repeat(h16_colon, 4), ls32)
+			_Sequence(h16s(1), '::', _Repeat(h16_colon, 3), ls32)
+			_Sequence(h16s(2), '::', _Repeat(h16_colon, 2), ls32)
+			_Sequence(h16s(3), '::', h16_colon, ls32)
+			_Sequence(h16s(4), '::', ls32)
+			_Sequence(h16s(5), '::', h16)
+			_Sequence(h16s(6), '::')
+		]
+
+		# IPvFuture = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
+		IPvFuture = _Sequence(_Char(/[vV]/), _Repeat(HEXDIG, 1, null), '.', _Repeat(_Choice(unreserved, sub_delims, ':'), 1, null))
+
+		# IP-literal = "[" ( IPv6address / IPvFuture ) "]"
+		# Each IPv6address alternative followed by "]", else "1::" wins in "1::2"
+		IP_literal = _Sequence('[', _Choice(*IPv6address_alternatives.map(_Sequence(X, ']')), _Sequence(IPvFuture, ']')))
+	}
+
+	# RFC 3986 §3 - characters each component allows as is, besides pct-encoded
+	COMPONENTS = [
+		_Component('userinfo', _Choice(unreserved, sub_delims, ':'))
+		_Host('host', _Choice(unreserved, sub_delims))
+		_Component('path', _Choice(pchar_literal, '/'))
+		_Component('query', _Choice(pchar_literal, '/', '?'))
+		_Component('fragment', _Choice(pchar_literal, '/', '?'))
+	]
+
+	section "RFC 3986 Appendix B and §3.2 - split only; COMPONENTS validate the parts" {
+
+		# ^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?
+		URI_reference_split = _Sequence(
+			_Optional(_Sequence(_Capture('scheme', _Chars(/[^:\/?#]+/)), ':'))
+			_Optional(_Sequence('//', _Capture('authority', _Chars(/[^\/?#]*/))))
+			_Capture('path', _Chars(/[^?#]*/))
+			_Optional(_Sequence('?', _Capture('query', _Chars(/[^#]*/))))
+			_Optional(_Sequence('#', _Capture('fragment', _Chars(/.*/))))
+			_End()
+		)
+
+		# [ ":" port ] to the end
+		port_to_end = _Sequence(_Optional(_Sequence(':', _Capture('port', _Chars(/.*/)))), _End())
+
+		# host: bracketed, else up to ":"; each alternative to the end, else "[a]" wins in "[a]b"
+		host_port_to_end = _Choice(
+			_Sequence(_Capture('host', _Sequence('[', _Chars(/[^\]]*/), ']')), port_to_end)
+			_Sequence(_Capture('host', _Chars(/[^:]*/)), port_to_end)
+		)
+
+		# authority = [ userinfo "@" ] host [ ":" port ]
+		# [ userinfo "@" ] as a choice: with it, else without it, as ABNF and the regex allow
+		authority_split = _Choice(
+			_Sequence(_Capture('userinfo', _Chars(/[^@]*/)), '@', host_port_to_end)
+			host_port_to_end
+		)
+	}
+
+	# s is entirely term
+	F _matches(s:Str, term) _Input(s)._parse(_Sequence(term, _End()))
+
+	F _decode(s:Str, t:Type) {
+		try {
+			t(s)
+		} catch(e:InvalidArgument) {
+			throw DecodeFail("Failed to decode value. Could not convert given value to type ${t.name}", e).set(value=s, target_type=t)
+		}
+	}
+
+	# RFC 3986 Appendix B, §3.2
+	# Same keys as URI fields
+	F _components(s:Str) {
+		i = _Input(s)
+		not(i._parse(URI_reference_split)) throws InvalidArgument("Invalid URI").set(given=s)
+		c = i.captures
+		'scheme' in c and not(_matches(c.scheme, scheme)) throws InvalidArgument("Invalid URI scheme").set(given=s)
+		a = {}
+		if 'authority' in c {
+			i = _Input(c.authority)
+			not(i._parse(authority_split)) throws InvalidArgument("Invalid URI authority").set(given=s)
+			a = i.captures
+		}
+		'port' in a and not(a.port =~ /^[0-9]*\z/) throws InvalidArgument("Invalid URI port").set(given=s)
+		port = try {
+			if a.get('port') then Int(a.port)
+		} catch(e:InvalidArgument) {
+			throw InvalidArgument("Invalid URI port", e).set(given=s)
+		}
+		_validate({
+			'scheme': c.get('scheme')
+			'userinfo': a.get('userinfo')
+			'host': a.get('host')
+			'port': port
+			'path': c.path
+			'query': c.get('query')
+			'fragment': c.get('fragment')
+			'orig': {'port': a.get('port')}
+		})
+	}
+
+	section "URI" {
+		doc RFC 3986 §3
+		doc Throws InvalidArgument when s is not a URI
+		F init(u:URI, s:Str) {
+			c = _components(s)
+			c.scheme == null throws InvalidArgument("URI requires a scheme").set(given=s)
+			c.each(F(k, v) u.(k) = v)
+		}
+
+		doc Duplicates other - parses Str(other)
+		F init(u:URI, other:URI) init(u, Str(other))
+
+		doc %RET - URL, URN or URI - the most specific type for s
+		F URI(s:Str) {
+			_components(s).host != null returns URL(s)
+			if s =~ /^urn:/i {
+				urn = try URN(s) catch(e:InvalidArgument) null
+				urn != null returns urn
+			}
+			super(s)
+		}
+
+		doc Duplicates other - parses Str(other)
+		doc %RET - URL, URN or URI - the most specific type for Str(other)
+		F URI(other:URI) URI(Str(other))
+
+		doc Fields encoded per component
+		doc Existing %XX kept, malformed % throws
+		doc Throws when host is not null and path is neither "" nor starts with "/"
+		doc %RET - Str
+		F Str(u:URI) {
+			F invalid(msg:Str, given) throw InvalidArgument(msg).set(given=given)
+			F pfx(p:Str, s) if s == null then '' else p + s
+			not(u.scheme is Str and _matches(u.scheme, scheme)) throws invalid("Invalid URI scheme", u.scheme)
+			not(u.path is Str) throws invalid("URI path must be a Str", u.path)
+			%[userinfo host query fragment].each(F(k) not(u.(k) =~ AnyOf(Str, null)) throws invalid("URI ${k} must be null or a Str", u.(k)))
+			e = _encoded(u)
+			path = e.path
+			authority = if u.host == null {
+				u.userinfo != null throws invalid("URI userinfo requires a host", u.userinfo)
+				u.port != null throws invalid("URI port requires a host", u.port)
+				path.starts_with('//') throws invalid("URI path can not start with // when there is no host", path)
+				null
+			} else {
+				path != '' and not(path.starts_with('/')) throws invalid('URI path must be empty or start with / when there is a host', path)
+				o = u.orig.port
+				port = cond {
+					o != null and (if o == '' then null else Int(o)) == u.port ':' + o
+					u.port == null ''
+					u.port is Int and u.port >= 0 ':' + Str(u.port)
+					true invalid("URI port must be null or a non-negative Int", u.port)
+				}
+				(if u.userinfo == null then '' else e.userinfo + '@') + e.host + port
+			}
+			u.scheme + ':' + pfx('//', authority) + path + pfx('?', e.query) + pfx('#', e.fragment)
+		}
+
+		doc RFC 3986 §6.2.1 simple string comparison: Str(a) == Str(b)
+		doc %RET - Bool
+		F ==(a:URI, b:URI) Str(a) == Str(b)
+
+		doc Guard t <= URI
+		doc %RET - t(s)
+		F decode(s:Str, t:Type) {
+			guard t <= URI
+			_decode(s, t)
+		}
+
+		TEST [URI("https://h/x"), URI("urn:isbn:1"), URI("mailto:a@b"), URI("urn:x:a")].map(Type) == [URL, URN, URI, URI]
+		TEST { URI("/x") }.assert(InvalidArgument)
+		TEST { URI("a:b c") }.assert(InvalidArgument)
+		TEST { URI("a:b%zz") }.assert(InvalidArgument)
+		TEST { URI("1a:b") }.assert(InvalidArgument)
+		TEST URI("http://[::1]:8080/").host == "[::1]"
+		TEST { URI("http://[::1x]/") }.assert(InvalidArgument)
+		TEST { URI("http://[1.2.3.4::]/") }.assert(InvalidArgument)
+		TEST s = "HTTP://u@H:080/a%2fb/../c?q=1#f"; Str(URI(s)) == s
+		TEST u = URI("http://h:080/"); u.port = 81; Str(u) == "http://h:81/"
+		TEST u = URI("http://h/x"); u.path = "/x%zz"; { Str(u) }.assert(InvalidArgument)
+		TEST u = URI("http://h/x"); u.path = "a"; { Str(u) }.assert(InvalidArgument)
+		TEST [URI("http://h/a") == URL("http://h/a"), URI("HTTP://H/a") == URI("http://h/a")] == [true, false]
+		TEST "urn:ex:a".decode(URI) is URN
+		TEST { "a:b c".decode(URI) }.assert(DecodeFail)
+		TEST { URI("http://h:x/") }.assert(InvalidArgument)
+		TEST s = "http://h:99999999999999999999999/"; { URI(s) }.assert(InvalidArgument).given == s
+		TEST ["http://[v7.a:b]/", "http://[::ffff:1.2.3.4]/"].all(F(s) Str(URI(s)) == s)
+		TEST u = URI("http://h/"); u.userinfo = "a b"; u.host = "h h"; u.path = "/a%2Fb c"; u.query = "q q"; u.fragment = "f f"; Str(u) == "http://a%20b@h%20h/a%2Fb%20c?q%20q#f%20f"
+		TEST u = URI("a:b"); u.userinfo = "x"; { Str(u) }.assert(InvalidArgument)
+		TEST u = URI("a:b"); u.port = 1; { Str(u) }.assert(InvalidArgument)
+		TEST u = URI("a:b"); u.path = "//x"; { Str(u) }.assert(InvalidArgument)
+		TEST u = URI("http://h/"); u.port = -1; { Str(u) }.assert(InvalidArgument)
+		TEST %[userinfo host query fragment].all(F(k) { u = URI("http://h/"); u.(k) = 5; { Str(u) }.assert(InvalidArgument) is InvalidArgument })
+		TEST [URL(URL("http://h/a")), URN(URN("urn:ex:a")), URI(URL("http://h/a")), URI(URI("a:b"))].map(F(u) [Type(u), Str(u)]) == [[URL, "http://h/a"], [URN, "urn:ex:a"], [URL, "http://h/a"], [URI, "a:b"]]
+		TEST { URL(URI("a:b")) }.assert(InvalidArgument)
+	}
+
+	section "URL" {
+		doc Requires scheme://
+		F init(u:URL, s:Str) {
+			super(u, s)
+			u.host == null throws InvalidArgument("URL requires scheme://").set(given=s)
+		}
+
+		doc RFC 3986 §5.2 - resolve ref against base
+		F init(u:URL, base:URL, ref:Str) {
+			# RFC 3986 §5.2.4
+			F remove_dot_segments(path:Str) {
+				inp = path
+				out = []
+				F up() if out { out.pop() }
+				while inp {
+					cond {
+						inp.starts_with('../') inp = inp[3..null]
+						inp.starts_with('./') inp = inp[2..null]
+						inp.starts_with('/./') inp = inp[2..null]
+						inp == '/.' inp = '/'
+						inp.starts_with('/../') { inp = inp[3..null]; up() }
+						inp == '/..' { inp = '/'; up() }
+						inp in ['.', '..'] inp = ''
+						true {
+							n = inp.pos('/', 1) or inp.len()
+							out.push(inp[0..n])
+							inp = inp[n..null]
+						}
+					}
+				}
+				out.join('')
+			}
+			# RFC 3986 §5.2.3
+			F merge(path:Str) {
+				base.host != null and base.path == '' returns '/' + path
+				base.path.replace(/[^\/]*\z/, '') + path
+			}
+			# RFC 3986 §5.2.2
+			t = _components(ref)
+			if t.scheme == null and t.host == null {
+				%[userinfo host port].each(F(k) t[k] = base.(k))
+				t.orig = copy(base.orig)
+				if t.path == '' {
+					t.path = base.path
+					if t.query == null {
+						t.query = base.query
+					}
+				} else {
+					t.path = remove_dot_segments(if t.path.starts_with('/') then t.path else merge(t.path))
+				}
+			} else {
+				t.path = remove_dot_segments(t.path)
+			}
+			if t.scheme == null {
+				t.scheme = base.scheme
+			}
+			t.host == null throws InvalidArgument("URL requires scheme://").set(base=base, ref=ref)
+			t.each(F(k, v) u.(k) = v)
+		}
+
+		doc RFC 3986 §5.2 - resolve ref against base
+		F init(u:URL, base:Str, ref:Str) init(u, URL(base), ref)
+
+		doc RFC 3986 §5.2 - resolve ref against base
+		F init(u:URL, base:URL, ref:URL) init(u, base, Str(ref))
+
+		doc RFC 3986 §5.2 - resolve ref against base
+		F init(u:URL, base:Str, ref:URL) init(u, URL(base), Str(ref))
+
+		doc Throws InvalidArgument when URL() would reject the result
+		doc %RET - Str
+		F Str(u:URL) super(u).tap(URL)
+
+		# Views attached by QueryParams(u) / URLPath(u)
+		# u.meta().URL: field -> {'view': view, 'text': Str(view) when parsed}
+		F _view(u:URL, k:Str, t:Type) {
+			u.meta().dflt('URL', {}).dflt(k, {
+				v = t(u.(k) or '')
+				{'view': v, 'text': Str(v)}
+			}).view
+		}
+
+		doc query, path - the field while the attached view is as parsed, else Str() of the view
+		doc Other fields via super(u, k)
+		F .(u:URL, k:Str) {
+			raw = super(u, k)
+			attached = u.meta().get('URL', {}).get(k)
+			not(attached) returns raw
+			s = Str(attached.view)
+			if s == attached.text then raw else s
+		}
+
+		doc query, path - re-parse into the attached view when there is one
+		doc Throws InvalidArgument when there is one and v is neither null nor a Str
+		F .=(u:URL, k:Str, v) {
+			attached = u.meta().get('URL', {}).get(k)
+			if attached {
+				not(v =~ AnyOf(Str, null)) throws InvalidArgument("URI ${k} must be null or a Str").set(given=v)
+				init(attached.view, v or '')
+				attached.text = Str(attached.view)
+			}
+			super(u, k, v)
+		}
+
+		doc Get all fields and their values as key-value pairs in the resulting Hash.
+		doc Values as u.(k) gives them
+		doc %RET - Hash
+		F Hash(u:URL) super(u).keys().Hash(F(k) u.(k))
+
+		doc Guard u.scheme is http or https, any case
+		doc %RET - Str(u).fetch(decode_hints)
+		F fetch(u:URL, decode_hints:Hash={}) {
+			guard u.scheme =~ /^https?\z/i
+			Str(u).fetch(decode_hints)
+		}
+
+		TEST URL("foo://example.com:8042/over/there?name=ferret#nose") =~ {"scheme": Str, "userinfo": null, "host": Str, "port": Int, "path": Str, "query": Str, "fragment": Str, "orig": {"port": Str}}
+		TEST URL("file:///etc/x").host == ""
+		TEST { URL("mailto:a@b") }.assert(InvalidArgument)
+		TEST Str(URL(URL("http://h/a/b"), "c")) == "http://h/a/c"
+		TEST ["//g", "?y", "#s", "", "../../../g", "g;x=1/../y", "./g/."].map(F(r) Str(URL("http://a/b/c/d;p?q", r))) == ["http://g", "http://a/b/c/d;p?y", "http://a/b/c/d;p?q#s", "http://a/b/c/d;p?q", "http://a/g", "http://a/b/c/y", "http://a/b/c/g/"]
+		TEST { URL("http://h/", "mailto:a@b") }.assert(InvalidArgument)
+		TEST [URL(URL("http://h/a"), URL("http://g/b")), URL("http://h/a", URL("http://g/b"))].map(Str) == ["http://g/b", "http://g/b"]
+		TEST u = URL("http://h/x"); u.host = null; { Str(u) }.assert(InvalidArgument)
+		TEST { fetch(URL("ftp://h/x")) }.assert(MethodNotFound)
+		TEST ["http://us%40er:p%20w@old:080/a%2Fb/c%20d?q=a+b&x=1&x=2&r=a/b#f%41", "http://u%20s@old:/a%2fb?#f%41"].all(F(s) { u = URL(s); u.host = "new-host"; Str(u) == s.replace("@old", "@new-host") })
+		TEST ["http://us%40er:p%20w@old:080/a%2Fb/c%20d?q=a+b&x=1&x=2&r=a/b#f%41", "http://u%20s@old:/a%2fb?#f%41"].all(F(s) { u = URL(s); QueryParams(u); URLPath(u); u.host = "new-host"; Str(u) == s.replace("@old", "@new-host") })
+	}
+
+	section "URN" {
+		section "RFC 8141 §2" {
+
+			# NID = (alphanum) 0*30(ldh) (alphanum)
+			# One regex: greedy 0*30(ldh) takes the closing alphanum
+			NID = _Chars(/[A-Za-z0-9][A-Za-z0-9-]{0,30}[A-Za-z0-9]/)
+
+			# NSS = pchar *(pchar / "/")
+			NSS = _Sequence(pchar, _Repeat(_Choice(pchar, '/'), 0, null))
+
+			# assigned-name = "urn" ":" NID ":" NSS - without "urn:", as in the path
+			assigned_name_path = _Sequence(_Capture('nid', NID), ':', _Capture('nss', NSS), _End())
+
+			# r-component = pchar *( pchar / "/" / "?" ) - up to "?=", which starts q-component
+			r_component = _Sequence(pchar, _Repeat(_Sequence(_Not('?='), _Choice(pchar, '/', '?')), 0, null))
+
+			# q-component = pchar *( pchar / "/" / "?" )
+			q_component = _Sequence(pchar, _Repeat(_Choice(pchar, '/', '?'), 0, null))
+
+			# rq-components = [ "?+" r-component ] [ "?=" q-component ] - without the first "?", as in the query
+			rq_components_query = _Choice(
+				_Sequence('+', _Capture('r_component', r_component), _Optional(_Sequence('?=', _Capture('q_component', q_component))), _End())
+				_Sequence('=', _Capture('q_component', q_component), _End())
+			)
+		}
+
+		# %RET - Hash: nid, nss, r_component, q_component; absent ones missing
+		F _parts(u:URN) {
+			i = _Input(u.path)
+			not(i._parse(assigned_name_path)) throws InvalidArgument("URN requires urn:NID:NSS").set(given=u.path)
+			parts = i.captures
+			if u.query != null {
+				i = _Input(u.query)
+				not(i._parse(rq_components_query)) throws InvalidArgument("Invalid URN query, expected ?+r-component and/or ?=q-component").set(given=u.query)
+				parts += i.captures
+			}
+			parts
+		}
+
+		doc Requires "urn:" scheme
+		F init(u:URN, s:Str) {
+			super(u, s)
+			not(u.scheme =~ /^urn\z/i) throws InvalidArgument("URN requires urn: scheme").set(given=s)
+			u.host != null throws InvalidArgument("URN requires urn:NID:NSS").set(given=s)
+			_parts(u)
+		}
+
+		doc Throws InvalidArgument when URN() would reject the result
+		doc %RET - Str
+		F Str(u:URN) super(u).tap(URN)
+
+		doc nid, nss, r_component, q_component, f_component - computed from path, query, fragment
+		doc Other fields via super(u, k)
+		doc %RET - Field value
+		F .(u:URN, k:Str) {
+			k in %[nid nss r_component q_component] returns _parts(u).get(k)
+			k == 'f_component' returns u.fragment
+			super(u, k)
+		}
+
+		doc nid, nss, r_component, q_component, f_component - always
+		doc Other fields via super(k, u)
+		doc %RET - Bool
+		F in(k:Str, u:URN) (k in %[nid nss r_component q_component f_component]) or super(k, u)
+
+		doc RFC 8141 §3.1 URN-equivalence
+		doc %RET - Bool
+		F ==(a:URN, b:URN) {
+			F lower(s:Str) s.replace(/[A-Z]/, F(c) chr(ord(c) + 32))
+			F upper(s:Str) s.replace(/[a-z]/, F(c) chr(ord(c) - 32))
+			F key(u:URN) [lower(u.scheme), lower(u.nid), u.nss.replace(/%[0-9A-Fa-f]{2}/, upper)]
+			key(a) == key(b)
+		}
+
+		TEST URN("urn:example:foo-bar-baz-qux#somepart") =~ {"scheme": Str, "userinfo": null, "host": null, "port": null, "path": Str, "query": null, "fragment": Str, "orig": {"port": null}}
+		TEST { URN("http://h/") }.assert(InvalidArgument)
+		TEST { URN("urn:x:a") }.assert(InvalidArgument)
+		TEST { URN("urn:ex:a?q") }.assert(InvalidArgument)
+		TEST u = URN("urn:ex:a/b?+r1?=q1#f1"); [u.nid, u.nss, u.r_component, u.q_component, u.f_component, u.path] == ["ex", "a/b", "r1", "q1", "f1", "ex:a/b"]
+		TEST URN("urn:ex:a?=q1").r_component == null
+		TEST u = URN("urn:ex:a?+r?x?=q?y"); [u.r_component, u.q_component] == ["r?x", "q?y"]
+		TEST URI("URN:EX:a%2fb?=q1#f1") == URI("urn:ex:a%2Fb")
+		TEST not(URN("urn:ex:a") == URN("urn:ex:A"))
+		TEST u = URN("urn:ex:a"); u.path = "x"; { Str(u) }.assert(InvalidArgument)
+		TEST URN("urn:ex:a?+r1") =~ {"nid": "ex", "nss": "a", "r_component": "r1", "q_component": null}
+	}
+
+	section "QueryParams" {
+		# WHATWG URL §5.2 application/x-www-form-urlencoded percent-encode set, space as +
+		F _form_encode(s:Str) s.replace(/[^-A-Za-z0-9*._ ]/, F(c) '%' + encode_hex(c)).replace(' ', '+')
+
+		# WHATWG URL §5.1
+		F _form_decode(s:Str) decode_uri_component(s.replace('+', ' '))
+
+		F _text(x, param:Str) x.validate(param, AnyOf(Str, Int, Real, Bool)).Str()
+
+		doc Form-decode
+		F init(qp:QueryParams, s:Str) init(qp, s.split('&').filter().map(F(seq) {
+			kv = seq.split('=', 2).map(_form_decode)
+			[kv[0], kv.get(1, '')]
+		}))
+
+		doc Int, Real, Bool names and values converted with Str()
+		doc Other non-Str throw
+		F init(qp:QueryParams, h:Hash=null) {
+			super(qp, h or {})
+			qp.meta().order = []
+		}
+
+		doc Pairs [k, v] in order
+		doc Int, Real, Bool names and values converted with Str()
+		doc Other non-Str throw
+		F init(qp:QueryParams, pairs:Arr) {
+			pairs = pairs.validate('pairs', Repeat([Any, Any])).map(F(kv) [_text(kv[0], 'k'), _text(kv[1], 'v')])
+			super(qp, pairs)
+			qp.meta().order = pairs.map(X[0])
+		}
+
+		doc Live view of u.query, attached to u.meta()
+		doc Same object on each call
+		F QueryParams(u:URL) _view(u, 'query', QueryParams)
+
+		doc Guard t <= QueryParams
+		F decode(s:Str, t:Type) {
+			guard t <= QueryParams
+			_decode(s, t)
+		}
+
+		doc Form-encode
+		doc Names in meta().order first, then the rest
+		doc Missing values skipped
+		F Str(qp:QueryParams) {
+			h = Hash(qp)
+			used = {}
+			pairs = collector {
+				qp.meta().order.each(F(k) {
+					i = used.get(k, 0)
+					used[k] = i + 1
+					if (k in h) and (i < h[k].len()) {
+						collect([k, h[k][i]])
+					}
+				})
+				h.each(F(k, vs) vs.each_idx_val(F(i, v) if i >= used.get(k, 0) { collect([k, v]) }))
+			}
+			pairs.map(F(kv) kv.map(F(x) _form_encode(_text(x, 'qp'))).join('=')).join('&')
+		}
+
+		doc the_one() of the values
+		F .(qp:QueryParams, k) super(qp, k).the_one()
+
+		doc the_one() of the values
+		F '[]'(qp:QueryParams, k) super(qp, k).the_one()
+
+		doc the_one() of the values
+		doc dflt when k is absent
+		F get(qp:QueryParams, k, dflt) if k in qp then qp[k] else Value(dflt, k)
+
+		doc the_one() of the values
+		doc null when k is absent
+		F get(qp:QueryParams, k) qp.get(k, null)
+
+		doc Int, Real, Bool converted with Str()
+		doc %RET - The stored Arr: v converted
+		F .=(qp:QueryParams, k, v) super(qp, _text(k, 'k'), v.validate('v', Arr).map(F(x) _text(x, 'v')))
+
+		doc Int, Real, Bool converted with Str()
+		doc %RET - The stored Arr: v converted
+		F '[]='(qp:QueryParams, k, v) super(qp, _text(k, 'k'), v.validate('v', Arr).map(F(x) _text(x, 'v')))
+
+		doc Int, Real, Bool converted with Str()
+		doc %RET - qp
+		F push(qp:QueryParams, k, v) super(qp, _text(k, 'k'), _text(v, 'v'))
+
+		doc Int, Real, Bool converted with Str()
+		doc %RET - qp
+		F update(qp:QueryParams, src:Hash) super(qp, src.map(F(k, v) [_text(k, 'k'), ensure(v, Arr).map(F(x) _text(x, 'v'))]).Hash())
+
+		TEST Str(QueryParams("a=1&b=2&a=3")) == "a=1&b=2&a=3"
+		TEST QueryParams("a=b+c%2B&&d&e==f").Hash() == {"a": ["b c+"], "d": [""], "e": ["=f"]}
+		TEST { QueryParams("a=%zz") }.assert(InvalidArgument)
+		TEST QueryParams({"q": "x y", 1: [true, 1.5]}).Hash() == {"q": ["x y"], "1": ["true", "1.5"]}
+		TEST { QueryParams({"a": null}) }.assert(InvalidArgument)
+		TEST Str(QueryParams([["b", 1], ["a", "x y"], ["b", 2]])) == "b=1&a=x+y&b=2"
+		TEST u = URL("http://h/x?a=1"); qp = QueryParams(u); qp.push("b", 2); [QueryParams(u) === qp, Str(u)] == [true, "http://h/x?a=1&b=2"]
+		TEST [URL("http://h/x?"), URL("http://h/x"), URL("http://h/x?a=1")].map(F(u) { QueryParams(u).push("a", 1).del("a"); Str(u) }) == ["http://h/x?", "http://h/x", "http://h/x?"]
+		TEST u = URL("http://h/x?a=1"); qp = QueryParams(u); u.query = "b=2"; [qp.Hash(), Str(u)] == [{"b": ["2"]}, "http://h/x?b=2"]
+		TEST u = URL("http://h/x?a=1"); qp = QueryParams(u); { u.query = "a=%zz" }.assert(InvalidArgument); [u.query, qp.Hash()] == ["a=1", {"a": ["1"]}]
+		TEST u = URL("http://h/x?a=1"); qp = QueryParams(u); { u.query = {"b": 2} }.assert(InvalidArgument); [u.query, qp.Hash()] == ["a=1", {"a": ["1"]}]
+		TEST u = URL("http://h/x?a=1"); qp = QueryParams(u); qp.push("b", 2); u.query = null; [u.query, Str(u), qp.len()] == [null, "http://h/x", 0]
+		TEST u = URL("http://h/x?a=1"); Hash(QueryParams(u)).a.push("4"); u.query == "a=1&a=4"
+		TEST u = URL("http://h/x?a=1"); QueryParams(u).push("b", 2); Hash(u).query == "a=1&b=2"
+		TEST "a=1".decode(QueryParams).a == "1"
+		TEST qp = QueryParams("a=1&b=2"); qp.push("a", 9); qp.push("c", 5); Str(qp) == "a=1&b=2&a=9&c=5"
+		TEST qp = QueryParams("a=1&b=2&a=3"); qp.a = ["9"]; Str(qp) == "a=9&b=2"
+		TEST Str(QueryParams({"k": "a b*~/é-._"})) == "k=a+b*%7E%2F%C3%A9-._"
+		TEST { QueryParams("b=2&b=3").b }.assert(ElementNotFound)
+		TEST { QueryParams("b=2&b=3")["b"] }.assert(ElementNotFound)
+		TEST qp = QueryParams("a=1"); [qp.a, qp["a"], qp.get("a", "d"), qp.get("z", "d")] == ["1", "1", "1", "d"]
+		TEST qp = QueryParams(); [qp.get("z"), qp.len()] == [null, 0]
+		TEST qp = QueryParams(); qp.a = [1, true]; qp[2] = [1.5]; qp.Hash() == {"a": ["1", "true"], "2": ["1.5"]}
+		TEST { QueryParams().a = [null] }.assert(InvalidArgument)
+		TEST { QueryParams().a = "1" }.assert(InvalidArgument)
+		TEST { QueryParams()["a"] = "1" }.assert(InvalidArgument)
+		TEST QueryParams().push(1, 2).Hash() == {"1": ["2"]}
+		TEST Str(QueryParams("a=1&page=1&b=2&page=3").update({"page": 2, "q": "x"})) == "a=1&page=2&b=2&q=x"
+	}
+
+	section "URLPath" {
+		doc Split on "/", then decode each segment
+		F init(p:URLPath, s:Str) super(p, s.split('/').map(decode_uri_component))
+
+		doc Decoded segments
+		doc Int, Real, Bool converted with Str()
+		doc Other non-Str throw
+		F init(p:URLPath, arr:Arr) super(p, arr.map(F(x) _text(x, 'arr')))
+
+		doc Live view of u.path, attached to u.meta()
+		doc Same object on each call
+		F URLPath(u:URL) _view(u, 'path', URLPath)
+
+		doc Guard t <= URLPath
+		F decode(s:Str, t:Type) {
+			guard t <= URLPath
+			_decode(s, t)
+		}
+
+		# RFC 3986 §3.3: segment = *pchar; segments are decoded, so "%" is encoded too
+		doc Encode each segment, join with "/"
+		F Str(p:URLPath) p.map(F(seg) collector/'' _each_char(_text(seg, 'p'), pchar_literal, F(text, allowed) collect(_pct_encode(text, allowed)))).join('/')
+
+		doc Int, Real, Bool converted with Str()
+		doc %RET - x converted
+		F '[]='(p:URLPath, idx:Int, x) super(p, idx, _text(x, 'x'))
+
+		doc Int, Real, Bool converted with Str()
+		doc %RET - p
+		F push(p:URLPath, val) super(p, _text(val, 'val'))
+
+		TEST Arr(URLPath("/a%2Fb/c%20d")) == ["", "a/b", "c d"]
+		TEST { URLPath("/a%zz") }.assert(InvalidArgument)
+		TEST u = URL("https://h/a%2Fb/c%20d"); p = URLPath(u); p.push("e/f"); [URLPath(u) === p, u.path] == [true, "/a%2Fb/c%20d/e%2Ff"]
+		TEST u = URL("http://h/a"); p = URLPath(u); u.path = "/x"; Arr(p) == ["", "x"]
+		TEST u = URL("http://h/a"); URLPath(u)[0] = "x"; { Str(u) }.assert(InvalidArgument)
+		TEST "/a/b".decode(URLPath).Arr() == ["", "a", "b"]
+		TEST Str(URLPath(["", "a/b", "c d%", "~:@"])) == "/a%2Fb/c%20d%25/~:@"
+		TEST Arr(URLPath(["", 1])) == ["", "1"]
+		TEST p = URLPath("/a"); p[1] = true; Arr(p) == ["", "true"]
+		TEST URLPath("/a").push(1.5).Arr() == ["", "a", "1.5"]
+	}
+}

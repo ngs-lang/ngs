@@ -1,0 +1,64 @@
+#!/usr/bin/env ngs
+
+# On demand, not part of test.ngs: run on big changes in lib/autoload/globals/URI.ngs
+# Web Platform Tests URL cases (WHATWG URL Standard) that need no WHATWG normalization:
+# no base and input == href. Lists the failure cases URI() accepts separately.
+# Known differences, by reason: test-url-wpt.known.json; exit code 1 on any other, or on a known one gone.
+
+F main() {
+	cases = fetch('https://raw.githubusercontent.com/web-platform-tests/wpt/master/url/resources/urltestdata.json').filter(Hash)
+	no_base = cases.filter(F(c) c.get('base') == null)
+	known = fetch(`line: dirname ${realpath(ARGV0)}` / 'test-url-wpt.known.json').mapv(F(reasons) reasons.values().flatten())
+
+	# WHATWG search and hash: empty when the RFC 3986 part is null or empty
+	F pfx(p:Str, s) if s in [null, ''] then '' else p + s
+
+	F expected(c:Hash) {
+		'protocol': c.protocol
+		'userinfo': c.username + pfx(':', c.password)
+		'host': c.hostname
+		'port': c.port
+		'path': c.pathname
+		'search': c.search
+		'hash': c.hash
+	}
+
+	F actual(u:URI) {
+		'protocol': u.scheme + ':'
+		'userinfo': u.userinfo or ''
+		'host': u.host or ''
+		'port': if u.port == null then '' else Str(u.port)
+		'path': u.path
+		'search': pfx('?', u.query)
+		'hash': pfx('#', u.fragment)
+	}
+
+	plain = no_base.reject({'failure': true}).filter(F(c) c.input == c.href)
+	mismatches = collector plain.each(F(c) {
+		u = try URI(c.input) catch(e:InvalidArgument) e
+		if u is Exception {
+			collect([c.input, 'URI()', c.href, u.message])
+		} else {
+			e = expected(c)
+			actual(u).each(F(field, v) {
+				v != e[field] and collect([c.input, field, e[field], v])
+			})
+		}
+	})
+
+	failures = no_base.filter({'failure': true})
+	accepted = failures.input.filter(F(s) try { URI(s); true } catch(e:InvalidArgument) false)
+
+	new_mismatches = mismatches.reject(F(m) m[0] in known.mismatches)
+	new_accepted = accepted.reject(AnyOf(known.accepted_failures))
+	gone = known.mismatches.reject(AnyOf(mismatches.map(X[0]))) + known.accepted_failures.reject(AnyOf(accepted))
+
+	echo("Plain cases: ${plain.len()}, mismatches: ${new_mismatches.len()} (known: ${mismatches.len() - new_mismatches.len()})")
+	new_mismatches.each(F(m) echo("  ${m[0].encode_json()} ${m[1]}: expected ${m[2].encode_json()}, got ${m[3].encode_json()}"))
+	echo("WHATWG failure cases: ${failures.len()}, accepted by URI(): ${new_accepted.len()} (known: ${accepted.len() - new_accepted.len()})")
+	new_accepted.each(F(s) echo("  ${s.encode_json()}"))
+	echo("Known, not seen: ${gone.len()}")
+	gone.each(F(s) echo("  ${s.encode_json()}"))
+
+	not(new_mismatches or new_accepted or gone)
+}

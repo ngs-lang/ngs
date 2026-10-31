@@ -31,6 +31,8 @@
 * Add `echo_to(data, target)` - same as `echo(target, data)`
 * Add `store_to(data, target, encode_hints)` - same as `store(target, data, encode_hints)`
 * Add `can(val, fun)` - check whether `fun(val)` throws
+* Add `MultiHash` - MultiMap
+* Add `URI`, `URL`, `URN`, `URLPath`, `QueryParams`
 
 ### Fixes and improvements
 * Add `peek(RangeIter)` - fixes `skip(pattern)` on `RangeIter`
@@ -48,6 +50,7 @@
 * Fix `=~(Any, Transformed, MatchContext)` context passing
 * Fix segfault `F f(*args)` and `F f(**kwargs)` called with `f(*[])`
 * Fix `fetch(url:Str, decode_hints)` ignoring `decode_hints`
+* Fix `fetch(url:Str, decode_hints)` reading `HTTP://...` (uppercase scheme) as a file
 
 ### Breaking changes
 * Parameter defaults are now instantiated per call through `instantiate_param_dflt(DEFAULT_FROM_DEFINITION)`, which can throw `MethodNotFound`.
