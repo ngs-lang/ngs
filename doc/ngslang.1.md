@@ -1869,6 +1869,21 @@ env:{'LANG': 'C'} my_prog my_arg ...        # my_prog sees only LANG
 env:ENV + {'LANG': 'C'} my_prog my_arg ...  # ENV with LANG set to C
 ```
 
+Run the command in the given directory. The directory of the NGS process does not change. Redirects such as `>out.txt` are relative to the directory of the NGS process, not to the given directory.
+
+```
+cd:"/tmp" my_prog my_arg ...
+```
+
+Providing signals which, when they terminate the command, will *not throw an exception*. The value is a signal number, an array or a range of signal numbers, or none for any signal. A command that is not terminated by a signal is checked by its exit code as usual, see `ok:` above.
+
+```
+ok_sig:SIGNALS.TERM my_prog my_arg ...                  # terminated by SIGTERM is ok
+ok_sig:[SIGNALS.TERM, SIGNALS.INT] my_prog my_arg ...   # terminated by SIGTERM or SIGINT is ok
+ok_sig: my_prog my_arg ...                              # terminated by any signal is ok
+ok_sig:SIGNALS.TERM ok:1 my_prog my_arg ...             # terminated by SIGTERM or exit code 1 is ok
+```
+
 Internally, the `&` in `$(my_prog my_arg &)` sets the `&` option to `true`. This mechanism can be used to modify the behaviour of `CommandsPipeline` prepared by `%(...)`.
 
 		ngs -pi '%(ls / &)'

@@ -6755,18 +6755,24 @@ block _ {
 	TEST $(ok:[1,10] cat NO_SUCH_FILE 2>/dev/null); true
 	TEST $(ok:1..2 cat NO_SUCH_FILE 2>/dev/null); true
 
-	doc Decide whether a process with 'ok_sig' option finished normally.
+	doc Decide whether a process with 'ok_sig' option, terminated by a signal, finished normally.
+	doc A process with 'ok_sig' option that exited normally is checked as usual, by its exit code.
 	doc %EX - p=$(sleep 10 &); p.kill(); p.wait()  # ProcessFail exception in wait()
 	doc %EX - p=$(ok_sig:SIGNALS.TERM sleep 10 &); p.kill(); p.wait()  # No exception
 	F finished_ok(p:Process) {
 		ok = p.command.options.get('ok_sig')
 		guard ok is not Null
+		guard p.exit_signal is not Null
 		debug("finished_ok", "finished_ok(Process) method, 'ok_sig:' option")
 		finished_ok(p, 'exit_signal', ok)
 	}
 
 	TEST p=$(sleep 10 &); p.kill(); try p.wait() catch(pf:ProcessFail) true
 	TEST p=$(ok_sig:SIGNALS.TERM sleep 10 &); p.kill(); p.wait(); true
+	TEST $(ok_sig:SIGNALS.TERM true); true
+	TEST $(ok_sig:SIGNALS.TERM ok:3 sh -c "exit 3"); true
+	TEST { $(ok_sig:SIGNALS.TERM sh -c "exit 3") }.assert(ProcessFail)
+	TEST { p=$(ok_sig:SIGNALS.INT sleep 10 &); p.kill(); p.wait() }.assert(ProcessFail)
 
 	doc Decide whether a process finished normally for known programs
 	doc that return also non-zero exit codes which do not signal a failure.

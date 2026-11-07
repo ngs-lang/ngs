@@ -54,6 +54,8 @@
 * Fix `fetch(url:Str, decode_hints)` ignoring `decode_hints`
 * Fix `fetch(url:Str, decode_hints)` reading `HTTP://...` (uppercase scheme) as a file
 * Fix and improve documentation
+* Document `cd:` and `ok_sig:` command options
+* Fix `ok_sig:` command option failing commands that exit normally, including with exit code 0
 * Document `null` range end in `[]` and `[]=` with `NumRange`, `null` range start/end with `PredRange`
 
 ### Breaking changes
