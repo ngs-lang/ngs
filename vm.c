@@ -2542,7 +2542,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	vm->type_by_t_obj_type_id[T_UTCTR >> T_OBJ_TYPE_SHIFT_BITS] = &vm->NormalTypeConstructor;
 
 	MKTYPE(Exception);
-	_doc(vm, "", "Represents exceptional situaution. All thrown things shouhld inherit Exception.");
+	_doc(vm, "", "Represents exceptional situation. All thrown things should inherit Exception.");
 	_doc(vm, "backtrace", "Automatic field set when creating Exception type objects (including sub-types, as long as super() is called.");
 
 		MKSUBTYPE(Error, Exception);
@@ -2643,7 +2643,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 			);
 
 			MKSUBTYPE(RegExpCompileFail, Error);
-			_doc(vm, "", "Represents a regulat expression compilation error.");
+			_doc(vm, "", "Represents a regular expression compilation error.");
 			_doc_arr(vm, "%EX",
 				"\"aaa\" ~ /+/",
 				"# ... Exception of type RegExpCompileFail ...",
@@ -3271,7 +3271,7 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "%RET", "Any");
 
 	register_global_func(vm, 0, "shift",    &native_shift_arr_any,           2, "arr", vm->Arr, "dflt", vm->Any);
-	_doc(vm, "", "Get the first element and remove it from the array. Returns dlft if there are no elements in the array.");
+	_doc(vm, "", "Get the first element and remove it from the array. Returns dflt if there are no elements in the array.");
 	_doc(vm, "%RET", "Any");
 
 	register_global_func(vm, 0, "len",      &native_len,                     1, "arr", vm->Arr);

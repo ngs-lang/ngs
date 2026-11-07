@@ -110,7 +110,7 @@ returns `true` for commits made by Serge and `false` for others.
 * Then we select **commit** properties from each element of the array. This requires explanation. `array.property` evaluates to `[array[0].property, array[1].property, ..., array[N].property]`.
 * `filter()` filters the **commit** array, leaving only elements that the function above "approves".
 * `.tree.sha` extracts the SHA of the commits
-* `.each(F(sha) echo(sha))` prints each SHA on it's own line. This is piece of code is equivalent to using **-pl** switch instead of **-e** switch.
+* `.each(F(sha) echo(sha))` prints each SHA on its own line. This piece of code is equivalent to using **-pl** switch instead of **-e** switch.
 
 
 ## Query GitHub and show commits matching a criteria

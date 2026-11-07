@@ -68,7 +68,7 @@ In case of an uncaught exception, the exit code is 240. In cases where additiona
 # ENVIRONMENT
 
 * `DEBUG` - when non-empty string, switches on `debug` method output (default is off). It's recommended to use `debug("my debug info")` in your scripts for turning debug output on and off easily, using the `DEBUG` environment variable.
-* `NGS_BOOTSTRAP` points to the bootstrap NGS file. On NGS startup this file is always run. Defaults to built-in stdlib with bootsrapper.
+* `NGS_BOOTSTRAP` points to the bootstrap NGS file. On NGS startup this file is always run. Defaults to built-in stdlib with bootstrapper.
 * `NGS_BOOTSTRAP_DEBUG` - if defined, show **bootstrap.ngs** debugging information.
 * `NGS_PATH` (defaults to `$HOME/.ngs:/usr/local/etc/ngs:/usr/local/lib/ngs:/etc/ngs:/usr/lib/ngs`) - location of the **autoload** directory. Files are automatically loaded from this directory when an undefined global variable is used.
 * `NGS_EXIT_BACKTRACE` - print backtrace when `exit()` is called.

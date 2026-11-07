@@ -92,7 +92,7 @@ Many concepts and syntax constructs come from other languages.
 Reasoning behind `TransformationName`:
 
 * Transforms data into something else, like many other constructors
-* The output data might get it's own data type some day
+* The output data might get its own data type some day
 
 # The two syntaxes
 
@@ -172,7 +172,7 @@ Comments are allowed in both commands and code syntax. At the beginning of a lin
 
 Also, lines that start with "TEST " (note the trailing space) are considered to be comments. They are ignored. The purpose is to allow an external testing script to extract and run these tests.
 
-The common pattern of marking code sections with comments got it's own syntax. It conveys semantic meaning of sections to the language and IDEs. That will allow additional related functionality in the future. Section does *not* introduce a new scope for variables/methods.
+The common pattern of marking code sections with comments got its own syntax. It conveys semantic meaning of sections to the language and IDEs. That will allow additional related functionality in the future. Section does *not* introduce a new scope for variables/methods.
 
 	section "Workaround for API stupidity" {
 		if result is Null {
@@ -194,11 +194,11 @@ Note that it is not recommended to use names which are not valid identifiers. As
 Assigning to a variable works in both commands and code syntax.
 
 	# Assigning value to a variable.
-	# Note that syntax to the right of = is code syntax even if the surrouning syntax is commands syntax.
+	# Note that syntax to the right of = is code syntax even if the surrounding syntax is commands syntax.
 	a = 1 + 2
 
 	# Referencing a variable in code syntax.
-	# Not that arguments to method call are in code syntax even if the surrouning syntax is commands syntax.
+	# Note that arguments to method call are in code syntax even if the surrounding syntax is commands syntax.
 	echo(a)
 	# Output:
 	#   3
@@ -325,7 +325,7 @@ Syntax for `Hash` destructuring is not clear yet:
 Destructuring should also be available in `for`:
 
 	# Hash iterator gives Arr of two elements each iteration.
-	# Destructuring would place the two elements in k and v varaibles.
+	# Destructuring would place the two elements in k and v variables.
 	for [k, v] in my_hash {
 		...
 	}
@@ -446,7 +446,7 @@ Higher numbers mean higher precedence. Note that short-circuit operators can not
 	is not  90  Not-instance-of check         1 is not Str
 
 
-	|      120  "Pipe", currenty not used
+	|      120  "Pipe", currently not used
 	===    130  "Same as"                     v = [1, 2]; v === v
 	!==    130  "Not same as",                [1, 2] !== [1, 2]
 	==     130  "Equals",                     [1, 2] == [1, 2]
@@ -906,7 +906,7 @@ Note that when `ns(PARAMETERS) { ... }` syntax is converted to `F(PARAMETERS) { 
 
 ## Planned future changes to namespaces
 
-The `ns { ... }` construct will probably not return a `Hash` object but object of a new type, `Namespace` which will probably be subtype of `Hash`. In any case, the `::` operator will be defined in such way that `my_namspace::my_method()` will continue to work.
+The `ns { ... }` construct will probably not return a `Hash` object but object of a new type, `Namespace` which will probably be subtype of `Hash`. In any case, the `::` operator will be defined in such way that `my_namespace::my_method()` will continue to work.
 
 
 # Frequently used types and methods
@@ -1826,7 +1826,7 @@ NGS provides syntax for passing arbitrary key-value pairs to augment `CommandsPi
 option_name:option_value my_prog my_arg ...  # opts for my_prog
 option_name: my_prog my_arg ...  # opts for my_prog
 option_name::option_value command_1 | command_2  # options for the whole pipeline
-option_name:: command_1 | command_2  # options for the while pipeline
+option_name:: command_1 | command_2  # options for the whole pipeline
 ```
 
 Note that no spaces allowed after `:` or `::` and before the value of the option. Missing value defaults to `true`.
@@ -1841,7 +1841,7 @@ ok: my_prog my_arg ...        # any exit code is ok
 ok:1 my_prog my_arg ...       # only exit code 1 is ok
 ok:[0, 1] my_prog my_arg ...  # only exit codes 0 and 1 are ok
 ok:0..5 my_prog my_arg ...    # only exit codes between 0 and 5 (exclusive) are ok
-ok:0..5 my_prog my_arg ...    # only exit codes between 0 and 5 (inclusive) are ok
+ok:0...5 my_prog my_arg ...   # only exit codes between 0 and 5 (inclusive) are ok
 ```
 
 Do not capture the output of the command. This is the default behaviour of the top-level **commands syntax**: the stdout connected to the stdout of the NGS process:

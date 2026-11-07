@@ -17,7 +17,7 @@ ns {
 			"Option 3: use one of the following switches:"
 			"  ngs -e EXPR     evaluate EXPR"
 			"  ngs -p EXPR     evaluate EXPR and print the result"
-			"  ngs -pl EXPR    evaluate EXPR and print each element of result on it's own line"
+			"  ngs -pl EXPR    evaluate EXPR and print each element of result on its own line"
 			"  ngs -pj EXPR    evaluate EXPR, convert the result to JSON and print it"
 			"  ngs -pjl EXPR   evaluate EXPR, convert each element of the result to"
 			"                  JSON and print one element per line"

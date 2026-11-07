@@ -133,7 +133,7 @@ ns {
 		}
 	}
 
-	doc Create HTML document from the give top level document node
+	doc Create HTML document from the given top level document node
 	doc %RET - Str
 	F HtmlRoot(n:Node) {
 		'<!DOCTYPE html>\n' + Html(n)

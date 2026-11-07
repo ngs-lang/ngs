@@ -87,7 +87,7 @@ ns(GlobalTable=Table) {
 			}
 		}
 
-		doc Get cell with, defaults to zero.
+		doc Get cell width, defaults to zero.
 		F width(c:_Cell) (c or [""]).map(len).max()
 
 		doc Get cell height.

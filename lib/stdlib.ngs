@@ -77,7 +77,7 @@ section "Syntactic sugar for basics" {
 	TEST 1 is not Null
 	TEST (null is not Null) == false
 
-	doc Deprecated in favor of a any(container, pattern).
+	doc Deprecated in favor of any(container, pattern).
 	doc Exactly same as "element in container". It's just more convenient in specific cases.
 	doc %EX - [1,2,3].has(2)  # true
 	doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(X.has(1))  # [ [1,2,3], [1,20,30] ]
@@ -88,7 +88,7 @@ section "Syntactic sugar for basics" {
 	TEST [1,2,3].has(1)
 	TEST [1,2,3].has(10).not()
 
-	doc Deprecated in favor of a none(container, pattern).
+	doc Deprecated in favor of none(container, pattern).
 	doc Exactly same as "element not in container". It's just more convenient in specific cases.
 	doc %EX - [1,2,3].has_no(2)  # false
 	doc %EX - [[1,2,3], [1,20,30], [100,200,300]].filter(X.has_no(1))  # [ [100,200,300] ]
@@ -2714,7 +2714,7 @@ section "Lock and friends" {
 		code throws LockFail("c_pthread_mutex_init", code, "Call to underlying API failed")
 	}
 
-	doc Block till the lock is avaiable and then acquire the lock.
+	doc Block till the lock is available and then acquire the lock.
 	doc %EX - l = Lock()
 	doc %EX - ...
 	doc %EX - l.acquire()
@@ -5051,7 +5051,7 @@ section "Strings and characters" {
 
 	doc Get a substring. Indexes in s are specified by NumRange.
 	doc s - Original string
-	doc r - NumRange with negatve .end
+	doc r - NumRange with negative .end
 	doc %EX - "(Look ma, no parens)"[1..-1]  # "Look ma, no parens"
 	doc %RET - Str
 	F '[]'(s:Str, r:NumRange) {
@@ -5500,7 +5500,7 @@ section "Thread" block _ {
 		doc Thrown when joining a thread (currently - c_pthread_join()) fails
 		type ThreadJoinFail(ThreadFail)
 
-		doc Thrown where join()ing another thread that threw an exception
+		doc Thrown when join()ing another thread that threw an exception
 		doc %EX - Thread(F() 1/0).join()  # OtherThreadFail with .cause DivisionByZero
 		type OtherThreadFail(ThreadFail)
 
@@ -5568,8 +5568,7 @@ section "Thread" block _ {
 	}
 
 	doc Joins on thread. Waits for the thread to finish and returns the result from the thread.
-	doc Currently, if a thread throwed an exception, it will be returned as the value.
-	doc In future it might re-throw the exception, probably wrapped in ThreadExeption.
+	doc If the thread threw an exception, throws OtherThreadFail with .cause set to that exception.
 	doc %RET - Any
 	F join(t:Thread) {
 		debug("process", "Joining thread ${t}")
@@ -5652,7 +5651,7 @@ section "Thread" block _ {
 		e.wait()
 	}
 
-	doc Parallel filter. Typcally should be used with "heavy" pattern such as SSH.
+	doc Parallel filter. Typically should be used with "heavy" pattern such as SSH.
 	doc %EX - Set(1..10).pfilter(X>3)  # <Set 4, 5, 6, 7, 8, 9>
 	doc %RET - Of same type as e
 	F pfilter(e:Eachable1, pattern) pfilter(e, len(e), pattern)
@@ -5662,7 +5661,7 @@ section "Thread" block _ {
 	# TODO: Decide what to do with this.
 	#   * It is not parallel filter. It's parallel map() followed by filter.
 	#   * Pattern is not a pattern, it's a callback
-	doc Parallel filter. Typcally should be used with "heavy" pattern such as SSH.
+	doc Parallel filter. Typically should be used with "heavy" pattern such as SSH.
 	doc %EX - Set(1..10).pfilter(2, X>3)  # <Set 4, 5, 6, 7, 8, 9>
 	doc %RET - Of same type as e
 	F pfilter(e:Eachable1, threads:Int, pattern) {
@@ -6171,7 +6170,7 @@ section "Path" {
 		doc The resource should be kept
 		type KeepCleanupPolicy(CleanupPolicy)
 
-		doc The resource sohuld be removed
+		doc The resource should be removed
 		type RemoveCleanupPolicy(CleanupPolicy)
 
 		doc The resource should be kept if an error occurred, otherwise removed
@@ -7496,7 +7495,7 @@ F encode(data, hints:Hash={}) {
 	encode_json(data, hints)
 }
 
-doc Returns cp, wihout any processing. Convenient way to pass ready-to-run Command as an argument
+doc Returns cp, without any processing. Convenient way to pass ready-to-run Command as an argument
 doc %EX - F run_when_needed(cp:CommandsPipeline) { ... $(cp) ... }
 doc %EX - ...
 doc %EX - run_when_needed(%(ls >/tmp/my_ls))
@@ -7975,7 +7974,7 @@ doc Convenience method to access matches in MatchSuccess
 doc %EX - ("abc" ~ /a(.)c/)[1]  # "b"
 F '[]'(ms:MatchSuccess, idx:Int) ms.matches[idx]
 
-doc Get indexed match, returning dflt is the match is not found
+doc Get indexed match, returning dflt if the match is not found
 F get(ms:MatchSuccess, idx:Int, dflt=null) ms.matches.get(idx, dflt)
 
 TEST ("abc" ~ /a(.)c/)[1] == "b"
@@ -8630,7 +8629,7 @@ F Str(t:Time, format:Str=TIME_FORMAT, gmt:Bool=false) strftime([localtime, gmtim
 F Int(t:Time) t.epoch
 
 
-doc Mesure running time of cb in microseconds
+doc Measure running time of cb in microseconds
 doc %RET - Int
 F time(cb:Fun) {
 	start = c_gettimeofday()

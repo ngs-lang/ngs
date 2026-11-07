@@ -508,7 +508,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc Looks like it's badly named. Candidate for renaming.
 	doc Additional plan is to eliminate the need for this method.
 	doc %RET - Arr of Hash. Each Hash has: GroupId, UserId
-	doc %EX - sg = AwsSecGroup(...) # servers behing ELB
+	doc %EX - sg = AwsSecGroup(...) # servers behind ELB
 	doc %EX - # Allow traffic from ELB to the servers
 	doc %EX - sg.converge(..., IpPermissions = [{UserIdGroupPairs = elb_sg.users_ids(), ...}])
 	doc %EX - # In future, should be:
@@ -934,7 +934,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 		retry(
 			sleep = 10
 			logger = debug("AWS", X)
-			title = "[waiting intstance ${r.id()} to be in state $state_name]"
+			title = "[waiting instance ${r.id()} to be in state $state_name]"
 			body = {
 				# When we enter wait_state, the instance might already by in
 				# the desired state.
@@ -953,9 +953,9 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	F get_console_output(r:InstanceRes) {
 		retry(
 			sleep = 5
-			title = "[waiting intstance ${r.id()} to have console output]"
+			title = "[waiting instance ${r.id()} to have console output]"
 			logger = debug("AWS", X)
-			title = "[waiting intstance ${r.id()} console output]"
+			title = "[waiting instance ${r.id()} console output]"
 			body = {
 				``aws ec2 get-console-output --instance-id ${r.id()}``.Box('Output').map(lines).get(null)
 			}
@@ -967,7 +967,7 @@ ns(GlobalRes=Res, GlobalResDef=ResDef) {
 	doc Declarative primitive for getting ssh host fingerprints of AWS Instance resource
 	doc %RET - Array of Str. Each Str format "key-type base64key"
 	F get_ssh_host_keys(r:InstanceRes) {
-		# Observed bahviour, which might not always be true: when console output is ready, it already has the needed output
+		# Observed behaviour, which might not always be true: when console output is ready, it already has the needed output
 		r.get_console_output()["-----BEGIN SSH HOST KEY KEYS-----".."-----END SSH HOST KEY KEYS-----"].map({A.split(' ')[0..2].join(' ')})
 	}
 
