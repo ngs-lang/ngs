@@ -7281,7 +7281,7 @@ F '$[]'(cp:CommandsPipeline) {
 }
 
 doc Write to first process of ProcessesPipeline
-doc %EX - p = (|cat -n | tac >/tmp/1)
+doc %EX - p = $(|cat -n | tac >/tmp/1)
 doc %EX - p.write("one\n")
 doc %EX - p.write("two\n")
 doc %EX - p.close()
