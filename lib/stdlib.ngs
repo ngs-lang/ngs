@@ -3580,7 +3580,10 @@ TEST indexes([0,1,2], Any...null).Hash() =~ {'start': 0, 'end': 3, 'include_star
 
 doc Extract array elements between the element that matches r.start and the element that matches r.end .
 doc Starting and ending elements are optionally included, depending on r.include_start and r.include_end .
+doc null r.start means from the first element, null r.end means to the last element, both inclusive regardless of .. or ... .
 doc %EX - %[a1 a2 b1 b2][/^a/../^b/]   # ['a2']
+doc %EX - %[a1 a2 b1 b2][null../^b/]   # ['a1', 'a2']
+doc %EX - %[a1 a2 b1 b2][/^b/..null]   # ['b2']
 doc %EX - %[a1 a2 b1 b2][/^a/.../^b/]  # ['a1', 'a2', 'b1']
 doc %EX - %[a1 a2 b1 b2][/^a/.../^x/]  # IndexNotFound exception
 F '[]'(arr:Arr, r:PredRange) arr[indexes(arr, r)]
@@ -3594,7 +3597,7 @@ TEST { %[a1 a2 b1 b2][/^x/.../^b/] }.assert(IndexNotFound)
 
 doc Replace array elements.
 doc arr - Array to operate on.
-doc r - Range of elements to replace.
+doc r - Range of elements to replace. null r.start means from the first element, null r.end means to the last element, both inclusive regardless of .. or ... .
 doc replacement - New elements.
 doc %EX - a = %[a1 a2 b1 b2]
 doc %EX - a[/^a/.../^b/] = [7]  # a == [7, 'b2']

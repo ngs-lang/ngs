@@ -54,6 +54,7 @@
 * Fix `fetch(url:Str, decode_hints)` ignoring `decode_hints`
 * Fix `fetch(url:Str, decode_hints)` reading `HTTP://...` (uppercase scheme) as a file
 * Fix and improve documentation
+* Document `null` range end in `[]` and `[]=` with `NumRange`, `null` range start/end with `PredRange`
 
 ### Breaking changes
 * Parameter defaults are now instantiated per call through `instantiate_param_dflt(DEFAULT_FROM_DEFINITION)`, which can throw `MethodNotFound`.

@@ -3280,13 +3280,23 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	register_global_func(vm, 1, "[]",       &native_index_get_arr_range,     2, "arr", vm->Arr, "range", vm->NumRange);
 	_doc(vm, "", "Get array elements at specified indexes.");
-	_doc(vm, "r", "NumRange with positive .start and .end");
+	_doc(vm, "range", "NumRange, exclusive end. Non-negative Int .start. Non-negative Int .end, or null .end for the end of the array");
 	_doc(vm, "%RET", "Arr");
+	_doc_arr(vm, "%EX",
+		"[10,20,30,40][1..3]  # [20,30]",
+		"[10,20,30,40][1..null]  # [20,30,40]",
+		NULL
+	);
 
 	register_global_func(vm, 1, "[]=",      &native_index_set_arr_range_arr, 3, "arr", vm->Arr, "range", vm->NumRange, "replacement", vm->Arr);
 	_doc(vm, "", "Set array elements at specified indexes.");
-	_doc(vm, "r", "NumRange with positive .start and .end");
+	_doc(vm, "range", "NumRange, exclusive end. Non-negative Int .start. Non-negative Int .end, or null .end for the end of the array");
 	_doc(vm, "%RET", "replacement");
+	_doc_arr(vm, "%EX",
+		"a=[1,2,3,4]; a[1..3]=[9]; a  # [1,9,4]",
+		"a=[1,2,3,4]; a[1..null]=[9]; a  # [1,9]",
+		NULL
+	);
 
 	register_global_func(vm, 1, "[]",       &native_index_get_arr_int,       2, "arr", vm->Arr, "idx", vm->Int);
 	_doc(vm, "", "Get element at the given index or throw IndexNotFound if the index is out of range (element at the given index does not exist).");
@@ -3320,12 +3330,22 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	register_global_func(vm, 1, "[]",       &native_index_get_str_range,     2, "s", vm->Str, "range", vm->NumRange);
 	_doc(vm, "", "Get substring");
-	_doc(vm, "%EX", "\"abcd\"[1..3]  # \"bc\"");
+	_doc(vm, "range", "NumRange, exclusive end. Non-negative Int .start. Non-negative Int .end, or null .end for the end of the string");
+	_doc_arr(vm, "%EX",
+		"\"abcd\"[1..3]  # \"bc\"",
+		"\"abcd\"[1..null]  # \"bcd\"",
+		NULL
+	);
 
 	register_global_func(vm, 1, "[]=",      &native_index_set_str_range_str, 3, "s", vm->Str, "range", vm->NumRange, "replacement", vm->Str);
 	_doc(vm, "", "Change substring");
+	_doc(vm, "range", "NumRange, exclusive end. Non-negative Int .start. Non-negative Int .end, or null .end for the end of the string");
 	_doc(vm, "%RET", "replacement");
-	_doc(vm, "%EX", "s=\"abcd\"; s[1..3]=\"X\"; s  # \"aXd\"");
+	_doc_arr(vm, "%EX",
+		"s=\"abcd\"; s[1..3]=\"X\"; s  # \"aXd\"",
+		"s=\"abcd\"; s[1..null]=\"XY\"; s  # \"aXY\"",
+		NULL
+	);
 
 	register_global_func(vm, 1, "ord",      &native_ord_str_int,             2, "s", vm->Str, "idx", vm->Int);
 	_doc(vm, "", "Get character (byte) ordinal value. Throws InvalidArgument if idx is not pointing into s.");
