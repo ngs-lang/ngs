@@ -2,6 +2,8 @@
 
 This document describes releasing a new version of NGS.
 
+`release.ngs` automates parts of this procedure (work in progress).
+
 * Build and run tests
 	* `rm -rf build`
 	* `make build && make tests`
@@ -34,7 +36,7 @@ This document describes releasing a new version of NGS.
 * `git push`
 * Wait and see that GitHub Actions build is OK - https://github.com/ngs-lang/ngs/actions
 * Update doc folder so that `latest` link points to the last version: `(cd doc/out && rm latest && ln -s $(ngs -p VERSION) latest)`
-* Sync documentation (to be scripted): `aws s3 sync --acl public-read doc/out/ s3://01.ngs-lang.org/doc/`
+* Sync documentation (scripted in `release.ngs`): `aws s3 sync --acl public-read doc/out/ s3://01.ngs-lang.org/doc/`
 * `(cd site && ./update.ngs)` (must be after syncing documentation because it invalidates caches)
 * Tag the release: `git tag v$(ngs -p VERSION)`
 * Push the tag: `git push origin v$(ngs -p VERSION)`

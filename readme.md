@@ -144,15 +144,15 @@ Add to your Github Action the following (make sure to release the version as req
 
 ```
 steps:
-	- uses: ngs-lang/ngs@v0.2.13
+  - uses: ngs-lang/ngs@v0.2.17
 ```
 
 After that, ngs can be used by simply calling ngs in any run step
 
 ```
 steps:
-	- uses: ngs-lang/ngs@v0.2.13
-	- run: ngs -pi 'sum(10..100)'
+  - uses: ngs-lang/ngs@v0.2.17
+  - run: ngs -pi 'sum(10..100)'
 ```
 
 ### Running NGS as AWS Lambda Custom Runtime
