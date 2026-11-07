@@ -84,8 +84,23 @@ block _ {
         networks.any(addr in X)
     }
 
+    doc Check whether the inner IP network (subnet) is within the outer IP network (subnet)
+    F in(inner:IPNet, outer:IPNet) (inner.mask >= outer.mask) and (inner.ip.band(outer.bit_mask) == outer.ip.band(outer.bit_mask))
+
+    doc Check whether the IP network (subnet) is within one of the given IP networks (subnets)
+    F in(net:IPNet, networks:Arr) {
+        guard networks.all(IPNet)
+        networks.any(net in X)
+    }
+
     TEST IPAddr("10.1.2.20") in IPNet("10.1.2.3/8")
     TEST IPAddr("11.1.2.20") not in IPNet("10.1.2.3/8")
+    TEST IPNet("10.1.2.0/24") in IPNet("10.0.0.0/8")
+    TEST IPNet("10.0.0.0/8") not in IPNet("10.0.0.0/16")
+    TEST IPNet("10.1.0.0/16") in IPNet("10.1.0.0/16")
+    TEST IPNet("11.1.2.0/24") not in IPNet("10.0.0.0/8")
+    TEST IPNet("10.1.2.0/24") in [IPNet("192.168.0.0/16"), IPNet("10.0.0.0/8")]
+    TEST IPNet("11.1.2.0/24") not in [IPNet("192.168.0.0/16"), IPNet("10.0.0.0/8")]
 
     F is_private(addr:IPAddr) addr in PRIVATE_IP_NETWORKS
     

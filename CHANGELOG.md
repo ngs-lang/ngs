@@ -33,6 +33,8 @@
 * Add `can(val, fun)` - check whether `fun(val)` throws
 * Add `MultiHash` - MultiMap
 * Add `URI`, `URL`, `URN`, `URLPath`, `QueryParams`
+* Add `in(IPNet, IPNet)` - check whether a subnet is within another subnet
+* Add `in(IPNet, Arr)` - check whether a subnet is within one of the given subnets
 
 ### Fixes and improvements
 * Add `peek(RangeIter)` - fixes `skip(pattern)` on `RangeIter`
