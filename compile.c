@@ -346,7 +346,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 	LOCAL_VAR_INDEX n_locals, n_params_required, n_params_optional, dflt_idx;
 	UPVAR_INDEX n_uplevels;
 	size_t loop_beg_idx, cond_jump, continue_target_idx, func_jump, end_of_func_idx, if_jump, while_jump;
-	int old_break_addrs_ptr, old_continue_addrs_ptr, i, saved_stack_depth;
+	int old_break_addrs_ptr, old_continue_addrs_ptr, i, saved_stack_depth, saved_loop_stack_depth;
+	size_t *switch_end_jumps;
+	int n_switch_arms;
 	HASH_OBJECT_ENTRY *e;
 
 	// Can probably be overwhelmed by number of local variables with lengthy names
@@ -405,6 +407,8 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				compile_main_section(ctx, node->first_child->first_child, buf, idx, allocated, NEED_RESULT);
 				if(have_arr_splat) {
 					OPCODE(*buf, OP_ARR_APPEND);
+				} else {
+					STACK_DEPTH++;
 				}
 				argc++;
 			}
@@ -423,10 +427,11 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					continue;
 				}
 				compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
-				STACK_DEPTH++;
 				argc++;
 				if(have_arr_splat) {
 					OPCODE(*buf, ptr->first_child->type == ARR_SPLAT_NODE ? OP_ARR_CONCAT : OP_ARR_APPEND);
+				} else {
+					STACK_DEPTH++;
 				}
 			}
 			doing_named_args = 0;
@@ -445,9 +450,11 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					}
 					// argument name
 					compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+					STACK_DEPTH++;
 					// argument value
 					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
 					OPCODE(*buf, OP_HASH_SET);
+					STACK_DEPTH--;
 					continue;
 				}
 				if(ptr->first_child->type == HASH_SPLAT_NODE) {
@@ -457,7 +464,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 						// TODO: maybe special opcode for creating an empty hash?
 						OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0);
 						OPCODE(*buf, OP_MAKE_HASH);
-						// XXX needed? /// STACK_DEPTH++;
+						STACK_DEPTH++;
 						argc++;
 					}
 					compile_main_section(ctx, ptr->first_child->first_child, buf, idx, allocated, NEED_RESULT);
@@ -471,6 +478,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				argc++;
 				if(have_arr_splat) {
 					OPCODE(*buf, OP_ARR_APPEND2);
+					STACK_DEPTH--; // The hash of named arguments
+				} else {
+					STACK_DEPTH++;
 				}
 			}
 			if(!have_arr_splat) {
@@ -542,9 +552,14 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					break;
 				case INDEX_NODE:
 					OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
+					saved_stack_depth = STACK_DEPTH;
+					STACK_DEPTH++;
 					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+					STACK_DEPTH++;
 					compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+					STACK_DEPTH++;
 					compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+					STACK_DEPTH = saved_stack_depth;
 					OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 3);
 					compile_identifier(ctx, buf, idx, "[]=", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 					OPCODE(*buf, OP_CALL);
@@ -553,9 +568,14 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				case FIELD_NODE:
 				case NS_NODE:
 					OPCODE(*buf, OP_PUSH_NULL); // Placeholder for return value
+					saved_stack_depth = STACK_DEPTH;
+					STACK_DEPTH++;
 					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+					STACK_DEPTH++;
 					compile_field_name(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+					STACK_DEPTH++;
 					compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+					STACK_DEPTH = saved_stack_depth;
 					OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 3);
 					compile_identifier(ctx, buf, idx, ptr->type == FIELD_NODE ? ".=" : "::=", OP_FETCH_LOCAL, OP_FETCH_UPVAR, OP_FETCH_GLOBAL);
 					OPCODE(*buf, OP_CALL);
@@ -587,7 +607,10 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
 			// body
 			SETUP_ADDRESS_FILLING();
+			saved_loop_stack_depth = ctx->loop_stack_depth;
+			ctx->loop_stack_depth = STACK_DEPTH;
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
+			ctx->loop_stack_depth = saved_loop_stack_depth;
 			// increment
 			continue_target_idx = *idx;
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
@@ -610,9 +633,11 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					break;
 				}
 			}
+			saved_stack_depth = STACK_DEPTH;
 			if(have_arr_splat) {
 				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0);
 				OPCODE(*buf, OP_MAKE_ARR);
+				STACK_DEPTH++;
 			}
 			for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
 				if(ptr->type == ARR_SPLAT_NODE) {
@@ -623,12 +648,15 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				}
 				if(have_arr_splat) {
 					OPCODE(*buf, ptr->type == ARR_SPLAT_NODE ? OP_ARR_CONCAT : OP_ARR_APPEND);
+				} else {
+					STACK_DEPTH++;
 				}
 			}
 			if(!have_arr_splat) {
 				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, argc);
 				OPCODE(*buf, OP_MAKE_ARR);
 			}
+			STACK_DEPTH = saved_stack_depth;
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 		case FUNC_NODE:
@@ -766,10 +794,13 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					break;
 				}
 			}
+			saved_stack_depth = STACK_DEPTH;
 			if(have_splat) {
 				OPCODE(*buf, OP_PUSH_NULL);
+				STACK_DEPTH++;
 				for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
 					compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
+					STACK_DEPTH++;
 					switch(ptr->type) {
 						case STR_COMP_IMM_NODE:             OPCODE(*buf, OP_MAKE_STR_IMM); break;
 						case STR_COMP_EXPANSION_NODE:       OPCODE(*buf, OP_MAKE_STR_EXP); break;
@@ -787,6 +818,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			} else {
 				for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
 					compile_main_section(ctx, ptr, buf, idx, allocated, NEED_RESULT);
+					STACK_DEPTH++;
 					if(ptr->type != STR_COMP_IMM_NODE) {
 						OPCODE(*buf, OP_TO_STR);
 					}
@@ -803,6 +835,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 						OPCODE(*buf, OP_MAKE_STR);
 				}
 			}
+			STACK_DEPTH = saved_stack_depth;
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 		}
@@ -849,7 +882,10 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
 			SETUP_ADDRESS_FILLING();
 			continue_target_idx = loop_beg_idx; // For HANDLE_ADDRESS_FILLING
+			saved_loop_stack_depth = ctx->loop_stack_depth;
+			ctx->loop_stack_depth = STACK_DEPTH;
 			compile_main_section(ctx, node->first_child->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
+			ctx->loop_stack_depth = saved_loop_stack_depth;
 			OPCODE(*buf, OP_JMP);
 			DATA_JUMP_OFFSET(*buf, -(*idx - loop_beg_idx + sizeof(JUMP_OFFSET)));
 			*(JUMP_OFFSET *)&(*buf)[while_jump] = *idx - while_jump - sizeof(JUMP_OFFSET);
@@ -874,9 +910,11 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					break;
 				}
 			}
+			saved_stack_depth = STACK_DEPTH;
 			if(have_hash_splat) {
 				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, 0);
 				OPCODE(*buf, OP_MAKE_HASH);
+				STACK_DEPTH++;
 				for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
 					if(ptr->type == HASH_SPLAT_NODE) {
 						compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
@@ -884,18 +922,23 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 						OPCODE(*buf, OP_HASH_UPDATE);
 					} else {
 						compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+						STACK_DEPTH++;
 						compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
 						OPCODE(*buf, OP_HASH_SET);
+						STACK_DEPTH--;
 					}
 				}
 			} else {
 				for(argc=0, ptr=node->first_child; ptr; argc++, ptr=ptr->next_sibling) {
 					compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+					STACK_DEPTH++;
 					compile_main_section(ctx, ptr->first_child->next_sibling, buf, idx, allocated, NEED_RESULT);
+					STACK_DEPTH++;
 				}
 				OPCODE(*buf, OP_PUSH_INT32); DATA_INT32(*buf, argc);
 				OPCODE(*buf, OP_MAKE_HASH);
 			}
+			STACK_DEPTH = saved_stack_depth;
 			POP_IF_DONT_NEED_RESULT(*buf);
 			break;
 		case RETURN_NODE:
@@ -1066,6 +1109,10 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 
 		case BREAK_NODE:
 			assert(ctx->fill_in_break_addrs_ptr < COMPILE_MAX_FILL_IN_LEN);
+			// Pop what enclosing expressions pushed inside the loop, for example the value of switch
+			for(i=ctx->loop_stack_depth; i<STACK_DEPTH; i++) {
+				OPCODE(*buf, OP_POP);
+			}
 			OPCODE(*buf, OP_JMP);
 			ctx->fill_in_break_addrs[ctx->fill_in_break_addrs_ptr++] = *idx;
 			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
@@ -1073,6 +1120,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 
 		case CONTINUE_NODE:
 			assert(ctx->fill_in_continue_addrs_ptr < COMPILE_MAX_FILL_IN_LEN);
+			for(i=ctx->loop_stack_depth; i<STACK_DEPTH; i++) {
+				OPCODE(*buf, OP_POP);
+			}
 			OPCODE(*buf, OP_JMP);
 			ctx->fill_in_continue_addrs[ctx->fill_in_continue_addrs_ptr++] = *idx;
 			DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
@@ -1087,16 +1137,19 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			break;
 
 		case SWITCH_NODE:
-			// XXX: Fix and test STACK_DEPTH
-			// XXX: Check for/while { ... case { ... break } ... } situation because break addresses are used in switch too.
 			// TODO: assert jump ranges
 			IF_NOT_SWITCH_COND {
 				compile_main_section(ctx, node->first_child, buf, idx, allocated, NEED_RESULT);
 				STACK_DEPTH++;
 			}
-			SETUP_ADDRESS_FILLING();
-			continue_target_idx = 0; // Should not appear there!
-			// TODO: make sure that leaving the section pops the switch value from the stack
+			// Own jump addresses, not fill_in_break_addrs, so that break and continue in an arm reach the enclosing loop
+			n_switch_arms = 0;
+			for(ptr=node->first_child->next_sibling; ptr; ptr=ptr->next_sibling) {
+				n_switch_arms++;
+			}
+			switch_end_jumps = NGS_MALLOC_ATOMIC(sizeof(*switch_end_jumps) * (n_switch_arms ? n_switch_arms : 1));
+			assert(switch_end_jumps);
+			n_switch_arms = 0;
 			cond_jump = 0;
 			for(ptr=node->first_child->next_sibling; ptr; ptr=ptr->next_sibling) {
 				if(cond_jump) {
@@ -1108,9 +1161,13 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					OPCODE(*buf, OP_DUP);
 					OPCODE(*buf, OP_PUSH_NULL); // Result placeholder
 					OPCODE(*buf, OP_XCHG);
+					STACK_DEPTH += 2;
 				}
 				// The value to compare to
 				compile_main_section(ctx, ptr->first_child, buf, idx, allocated, NEED_RESULT);
+				IF_NOT_SWITCH_COND {
+					STACK_DEPTH -= 2;
+				}
 				switch((switch_node_subtype)node->number) {
 					case SWITCH_NODE_SWITCH:
 					case SWITCH_NODE_ESWITCH:
@@ -1141,10 +1198,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 					OPCODE(*buf, OP_XCHG);
 					OPCODE(*buf, OP_POP);
 				}
-				// Break
-				assert(ctx->fill_in_break_addrs_ptr < COMPILE_MAX_FILL_IN_LEN);
+				// Jump to the end of switch
 				OPCODE(*buf, OP_JMP);
-				ctx->fill_in_break_addrs[ctx->fill_in_break_addrs_ptr++] = *idx;
+				switch_end_jumps[n_switch_arms++] = *idx;
 				DATA_JUMP_OFFSET_PLACEHOLDER(*buf);
 			}
 			if(cond_jump) {
@@ -1164,7 +1220,9 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				}
 				OPCODE(*buf, OP_PUSH_NULL);
 			}
-			HANDLE_ADDRESS_FILLING();
+			for(i=0; i<n_switch_arms; i++) {
+				*(JUMP_OFFSET *)&(*buf)[switch_end_jumps[i]] = *idx - (switch_end_jumps[i] + sizeof(JUMP_OFFSET));
+			}
 			POP_IF_DONT_NEED_RESULT(*buf);
 			IF_NOT_SWITCH_COND {
 				STACK_DEPTH--;
@@ -1174,7 +1232,6 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 		case SUPER_NODE:
 			if(need_result) {
 				OPCODE(*buf, OP_SUPER);
-				STACK_DEPTH++;
 			}
 			break;
 
@@ -1319,6 +1376,7 @@ COMPILATION_RESULT *compile(ast_node *node, char *source_file_name) {
 	assert(ctx.source_tracking_entries);
 	ctx.fill_in_break_addrs_ptr = 0;
 	ctx.fill_in_continue_addrs_ptr = 0;
+	ctx.loop_stack_depth = 0;
 
 	bytecode = ngs_create_bytecode();
 

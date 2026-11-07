@@ -53,6 +53,9 @@
 * Fix segfault `F f(*args)` and `F f(**kwargs)` called with `f(*[])`
 * Fix `fetch(url:Str, decode_hints)` ignoring `decode_hints`
 * Fix `fetch(url:Str, decode_hints)` reading `HTTP://...` (uppercase scheme) as a file
+* Fix `break` and `continue` in a `switch`/`cond`/`match` arm not reaching the enclosing loop. Fixes `ngs my.ngs cmd -- arg ...` failing with `KeyNotFound`.
+* Fix `switch`/`cond`/`match` with more than 16 arms aborting the compiler
+* Fix `return`, `break` and `continue` inside method call arguments, named arguments, array and hash literals, assignments, string interpolation and `switch` arm values corrupting the stack
 * Fix and improve documentation
 * Document `cd:` and `ok_sig:` command options
 * Fix `ok_sig:` command option failing commands that exit normally, including with exit code 0

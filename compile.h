@@ -46,6 +46,7 @@ typedef struct compilation_context {
 	int fill_in_break_addrs_ptr;
 	size_t fill_in_continue_addrs[COMPILE_MAX_FILL_IN_LEN];
 	int fill_in_continue_addrs_ptr;
+	int loop_stack_depth; // STACK_DEPTH at the start of the innermost loop; break and continue pop down to it
 
 	ast_node *ns[COMPILE_MAX_FUNC_DEPTH];
 
