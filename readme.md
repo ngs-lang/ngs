@@ -373,7 +373,12 @@ This is how an instance can be created using NGS (real working code).
 
 * Fork on GitHub
 * Work on whatever you like, preferably something from the GitHub issues of this project
-* Remember to add entry to `CHANGELOG.md`
+* Remember to add entry to `CHANGELOG.md` for any user-facing change, under the unreleased version
+* Add `TEST`s for code changes. Test the observable outcome, not internals or stderr text.
+* Avoid new syntax. Use it only as a last resort.
+* stdlib: prefer the IETF RFC; decoders and encoders throw on malformed input; reuse existing verbs via multiple dispatch.
+* Run one file's tests: `NGS_PATH=$PWD/lib ./build/ngs test.ngs FILE` (relative `NGS_PATH` fails).
+* Run `make build` after editing `lib/stdlib.ngs` - it is packed into the binary.
 * Make a pull request (to the `dev` branch).
 
 If the change is big or involves modifying the syntax, it's better to coordinate with Ilya before you start.
