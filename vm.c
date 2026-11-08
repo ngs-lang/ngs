@@ -331,11 +331,10 @@ METHOD_RESULT native_shift_arr_any METHOD_PARAMS {
 }
 
 METHOD_RESULT native_index_get_arr_int EXT_METHOD_PARAMS {
-	int idx, len;
+	intptr_t idx;
 	(void) ctx;
-	len = OBJ_LEN(argv[0]);
 	idx = GET_INT(argv[1]);
-	if((idx < 0) || (idx >= len)) {
+	if((idx < 0) || ((size_t) idx >= OBJ_LEN(argv[0]))) {
 		VALUE e;
 		e = make_normal_type_instance(vm->IndexNotFound);
 		set_normal_type_instance_field(e, make_string("container"), argv[0]);
@@ -347,11 +346,10 @@ METHOD_RESULT native_index_get_arr_int EXT_METHOD_PARAMS {
 }
 
 METHOD_RESULT native_index_set_arr_int_any EXT_METHOD_PARAMS {
-	int idx, len;
+	intptr_t idx;
 	(void) ctx;
-	len = OBJ_LEN(argv[0]);
 	idx = GET_INT(argv[1]);
-	if((idx < 0) || (idx >= len)) {
+	if((idx < 0) || ((size_t) idx >= OBJ_LEN(argv[0]))) {
 		VALUE e;
 		e = make_normal_type_instance(vm->IndexNotFound);
 		set_normal_type_instance_field(e, make_string("container"), argv[0]);
@@ -1786,8 +1784,8 @@ METHOD_RESULT native_ll_maybe_wrap METHOD_PARAMS {
 };
 
 METHOD_RESULT native_ll_is_global_variable_defined EXT_METHOD_PARAMS {
-	GLOBAL_VAR_INDEX gvi = GET_INT(argv[0]);
-	if(GET_INT(argv[0]) < 0 || gvi >= vm->globals_len) {
+	intptr_t gvi = GET_INT(argv[0]);
+	if(gvi < 0 || (size_t) gvi >= vm->globals_len) {
 		VALUE e;
 		e = make_normal_type_instance(vm->IndexNotFound);
 		set_normal_type_instance_field(e, make_string("message"), make_string("Global variable with given index was not found"));
@@ -1798,8 +1796,8 @@ METHOD_RESULT native_ll_is_global_variable_defined EXT_METHOD_PARAMS {
 }
 
 METHOD_RESULT native_ll_set_global_variable EXT_METHOD_PARAMS {
-	GLOBAL_VAR_INDEX gvi = GET_INT(argv[0]);
-	if(GET_INT(argv[0]) < 0 || gvi >= vm->globals_len) {
+	intptr_t gvi = GET_INT(argv[0]);
+	if(gvi < 0 || (size_t) gvi >= vm->globals_len) {
 		VALUE e;
 		e = make_normal_type_instance(vm->IndexNotFound);
 		set_normal_type_instance_field(e, make_string("message"), make_string("Global variable with given index was not found"));
@@ -1939,9 +1937,9 @@ METHOD_RESULT native_field_regexp EXT_METHOD_PARAMS {
 }
 
 METHOD_RESULT native_ord_str_int EXT_METHOD_PARAMS {
-	int idx;
+	intptr_t idx;
 	idx = GET_INT(argv[1]);
-	if(idx < 0 || idx >= (int) OBJ_LEN(argv[0])) {
+	if(idx < 0 || (size_t) idx >= OBJ_LEN(argv[0])) {
 		VALUE exc;
 		exc = make_normal_type_instance(vm->InvalidArgument);
 		set_normal_type_instance_field(exc, make_string("message"), make_string("String index out of range"));
