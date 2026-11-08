@@ -616,9 +616,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 			compile_main_section(ctx, node->first_child->next_sibling->next_sibling, buf, idx, allocated, DONT_NEED_RESULT);
 			// jump to condition
 			OPCODE(*buf, OP_JMP);
-			assert(*idx - cond_jump < 0x7FFF);
 			*(JUMP_OFFSET *)&(*buf)[cond_jump] = *idx - cond_jump;
-			assert((*idx - loop_beg_idx) < 0x7FFF);
 			DATA_JUMP_OFFSET(*buf, -(*idx - loop_beg_idx + sizeof(JUMP_OFFSET)));
 			HANDLE_ADDRESS_FILLING();
 			if(need_result) OPCODE(*buf, OP_PUSH_NULL);

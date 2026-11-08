@@ -37,6 +37,7 @@
 * Add `in(IPNet, Arr)` - check whether a subnet is within one of the given subnets
 
 ### Fixes and improvements
+* Fix `for(i;n)` and `for(init;cond;incr)` loops over 32 KB of bytecode aborting the compiler
 * Add `peek(RangeIter)` - fixes `skip(pattern)` on `RangeIter`
 * Fix `Str(HashIter)` always showing index 0
 * Workaround for broken `TmpDir`
