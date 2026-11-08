@@ -9008,13 +9008,15 @@ section "base64" {
 	doc %STATUS - experimental
 	F encode_base64(s:Str, wrap:Int=0) {
 		guard OS.posix
-		`echo -n $s | base64 -w $wrap`
+		validate(wrap, 'wrap', F non_negative(x) x >= 0)
+		$(| base64 -w $wrap).write(s).close().Str()
 	}
 
 	doc %STATUS - experimental
 	F encode_base64(s:Str, wrap:Int=0) {
 		guard OS.darwin
-		`echo -n $s | base64 -b $wrap`
+		validate(wrap, 'wrap', F non_negative(x) x >= 0)
+		$(| base64 -b $wrap).write(s).close().Str()
 	}
 
 	doc %STATUS - experimental
@@ -9023,6 +9025,9 @@ section "base64" {
 		fill = "=" * t
 		`echo "$s$fill" | base64 -d 2>${true}`
 	}
+
+	TEST encode_base64("ab" + chr(0) + "cd").trim() == "YWIAY2Q="
+	TEST { encode_base64('x', -1) }.assert(InvalidArgument)
 }
 
 section "Networking" {
