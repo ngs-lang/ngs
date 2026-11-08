@@ -7282,6 +7282,8 @@ TEST $(true).Bool()
 TEST $(false).Bool() == false
 TEST "$(echo -n abc)" == 'abc'
 TEST $(cd:"/" pwd).lines()[0] == '/'
+TEST try { compile('$(log: top_level:: echo hi)', "pipeline-option-after-command-option"); false } catch(e:CompileFail) true
+TEST try { compile('%(echo a | top_level:: cat)', "pipeline-option-after-pipe"); false } catch(e:CompileFail) true
 TEST t=TmpFile(); $(echo -n abc >$t); t.read() == "abc"
 TEST c=%(echo -n aa); `$c` == "aa"
 

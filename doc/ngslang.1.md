@@ -1831,6 +1831,8 @@ option_name:: command_1 | command_2  # options for the whole pipeline
 
 Note that no spaces allowed after `:` or `::` and before the value of the option. Missing value defaults to `true`.
 
+Pipeline options (`::`) must come before all the options (`:`) of `command_1`: `top_level:: log: my_prog` is correct, while `log: top_level:: my_prog` is a syntax error. A pipeline option after `|` (`command_1 | top_level:: command_2`) is also a syntax error.
+
 Available options follow. It is possible to extend NGS to handle user defined options. The values for the options are not a special syntax, they are just **expressions syntax** which is used in many other parts of the language.
 
 

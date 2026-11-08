@@ -1841,6 +1841,9 @@ command-words = acc:command-words-node
 		}
 		inline_space?
 	)*
+	# A pipeline option ("name::") is allowed only before all command options of command_1
+	# (handled in commands-pipeline). Anywhere else, at an option position, it is a syntax error.
+	!(identifier "::")
 	(
 		(
 			command-redirect {
@@ -1930,7 +1933,7 @@ hash-command-word =
 	}
 
 command-option =
-	i:identifier ":" (
+	i:identifier ":" !":" (
 		e:expression {
 			MAKE_NODE(ret, EXPRESSIONS_NODE);
 				MAKE_STRING_NODE(option_k, i->name);
