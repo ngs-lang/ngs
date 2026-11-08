@@ -27,12 +27,12 @@ ns {
 		global bind
 		F bind(socket:Int, address:c_sockaddr) c_bind(socket, address)._assert('bind').assert(0)
 
-		TEST $(ok:[0, 1] rm sock_test); bind(socket(C_PF_UNIX, C_SOCK_DGRAM), c_sockaddr_un("sock_test")) == 0
+		TEST d=TmpDir(); block b { b.finally({ $(rm -rf $d) }); bind(socket(C_PF_UNIX, C_SOCK_DGRAM), c_sockaddr_un("${d}/sock_test")) } == 0
 
 		global connect
 		F connect(socket:Int, address:c_sockaddr) c_connect(socket, address)._assert('connect').assert(0)
 
-		TEST $(ok:[0, 1] rm sock_test); sock = socket(C_PF_UNIX, C_SOCK_STREAM); bind(sock, c_sockaddr_un("sock_test")); listen(sock, 1); connect(socket(C_PF_UNIX, C_SOCK_STREAM), c_sockaddr_un("sock_test")) == 0
+		TEST d=TmpDir(); block b { b.finally({ $(rm -rf $d) }); sock = socket(C_PF_UNIX, C_SOCK_STREAM); bind(sock, c_sockaddr_un("${d}/sock_test")); listen(sock, 1); connect(socket(C_PF_UNIX, C_SOCK_STREAM), c_sockaddr_un("${d}/sock_test")) } == 0
 
 		global recvfrom
 		F recvfrom(sock:Int, length:Int, flags:Int, address:c_sockaddr) {
