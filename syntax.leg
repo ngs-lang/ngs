@@ -325,7 +325,18 @@ command =
 	|
 	for
 	|
-	& (identifier ("." | "::")) expression
+	cond
+	|
+	# "collector/x y" is also a command: a relative path. Require "{" after "collector/INIT".
+	& ("collector" (space | collector-init space "{")) collector
+	|
+	try-catch
+	|
+	throw
+	|
+	& (identifier ("." | "::" | "[")) expression
+	|
+	& ("(" | "[" | "%") expression
 	|
 	comment
 	|

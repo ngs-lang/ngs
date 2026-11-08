@@ -158,3 +158,13 @@ TEST F f() { r=[]; for i in 3 { r.push("a${i}b${switch i { 1 { continue } 0 {5} 
 TEST F g(*a, **kw) [a, kw]; F f(c) (if c {return 5} else {g})(*[1], x=1); [f(true), f(false)] == [5, [[1], {"x": 1}]]
 TEST F f() { r=[]; for i in 3 { r.push(switch i { (if i==1 {continue} else {i}) { i * 10 } }) }; r }; f() == [0, 20]
 TEST F g(x) "base"; F g(x:Int) { for i in 2 { s = super; continue }; s(x) }; g(1) == "base"
+
+# === Code-syntax constructs at the top level of a file (commands syntax), via compile()
+TEST load(compile('try { throw Error("x") } catch(e:Error) { 2 }', "t"), "t")() == 2
+TEST load(compile("cond {\n  false 1\n  true 2\n}", "t"), "t")() == 2
+TEST load(compile("collector/0 { collect(5) }", "t"), "t")() == 5
+TEST try load(compile('throw Error("top")', "t"), "t")() catch(e:Error) e.message == "top"
+TEST load(compile("[1, 2].len()", "t"), "t")() == 2
+TEST load(compile("w35a = [1, 2]\nw35a[0] = 5\n{ w35a }", "t"), "t")() == [5, 2]
+# "collector/INIT" not followed by "{" is a command (relative path)
+TEST d = TmpDir(); $(mkdir "${d.path}/collector"); write("${d.path}/collector/w35", "#!/bin/sh\nexit 0\n"); $(chmod +x "${d.path}/collector/w35"); old = `line: pwd`; {chdir(d.path); load(compile("collector/w35 x", "t"), "t")()}.finally({chdir(old)}).processes[0].command.argv == ["collector/w35", "x"]
