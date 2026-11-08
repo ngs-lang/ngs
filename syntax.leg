@@ -1893,9 +1893,14 @@ unquoted-basic-command-word = acc:unquoted-basic-command-word-node (
 basic-command-word = string | unquoted-basic-command-word
 
 command-word =
-	"$*" c:code-block {
+	"$*" c:curly-code-block {
 		MAKE_NODE(splat, ARR_SPLAT_NODE);
 			splat->first_child = c;
+		$$ = splat;
+	}
+	| "$*" i:identifier {
+		MAKE_NODE(splat, ARR_SPLAT_NODE);
+			splat->first_child = i;
 		$$ = splat;
 	}
 	| "$" c:curly-code-block { $$ = c; }
@@ -1913,9 +1918,14 @@ hash-command-word =
 	| command-word
 	| imm-array-literal
 	| imm-hash-literal
-	| "$**" c:code-block {
+	| "$**" c:curly-code-block {
 		MAKE_NODE(splat, HASH_SPLAT_NODE);
 			splat->first_child = c;
+		$$ = splat;
+	}
+	| "$**" i:identifier {
+		MAKE_NODE(splat, HASH_SPLAT_NODE);
+			splat->first_child = i;
 		$$ = splat;
 	}
 
