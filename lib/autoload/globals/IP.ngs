@@ -55,21 +55,27 @@ block _ {
         F init(net:IPNet, s:Str) {
             t = s.split('/')
             len(t) != 2 throws InvalidArgument('IP subnet expects 1.2.3.4/8 format').set(given=s)
-            net.ip = _ip2int(t[0])
-            net.mask = try Int(t[1]) catch(e) throw InvalidArgument('IP subnet mask must be a valid integer number').set(given=net.mask)
-            net.mask not in (0...32) throws InvalidArgument('IP subnet mask must be a valid integer number between 0 and 32, inclusive').set(given=net.mask)
-            # TODO: add to language and use here bit shift operations
-            net.bit_mask = (0..net.mask).reduce(0, { A / 2 + BIT_31})
+            ip = _ip2int(t[0])
+            mask = try Int(t[1]) catch(e) throw InvalidArgument('IP subnet mask must be a valid integer number').set(given=t[1])
+            init(net, ip, mask)
         }
 
         F init(net:IPNet, ip:Int, mask:Int) {
-            net.ip = IPAddr(ip)
-            net.mask not in (0...32) throws InvalidArgument('IP subnet mask must be a valid integer number between 0 and 32, inclusive').set(given=net.mask)
+            ip not in (0...MAX_IP_INT) throws InvalidArgument("IP address must be between 0 and ${MAX_IP_INT}, inclusive").set(given=ip)
+            mask not in (0...32) throws InvalidArgument('IP subnet mask must be a valid integer number between 0 and 32, inclusive').set(given=mask)
+            net.ip = ip
+            net.mask = mask
+            # TODO: add to language and use here bit shift operations
+            net.bit_mask = (0..mask).reduce(0, { A / 2 + BIT_31})
         }
 
         TEST IPNet("1.1.1.0/8").bit_mask == 4278190080
         TEST IPNet("1.1.0.0/16").bit_mask == 4294901760
         TEST { IPNet("1.1.1.0/-1") }.assert(InvalidArgument)
+        TEST { IPNet("1.1.1.0/x") }.assert(InvalidArgument)
+        TEST a = IPNet(167772160, 8); b = IPNet("10.0.0.0/8"); [a.ip, a.mask, a.bit_mask] == [b.ip, b.mask, b.bit_mask]
+        TEST { IPNet(0, 33) }.assert(InvalidArgument)
+        TEST { IPNet(-1, 8) }.assert(InvalidArgument)
 
         PRIVATE_IP_NETWORKS = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'].map(IPNet)
 

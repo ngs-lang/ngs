@@ -42,6 +42,8 @@
 * Workaround for broken `TmpDir`
 * Migrate from EOL PCRE1 (`libpcre3-dev`) to PCRE2 (`libpcre2-dev`). Regex constants are now `C_PCRE2_*` (`C_PCRE_*` removed). `RegExp#newline` field.
 * Fix regex patterns containing a NUL byte being silently truncated at the NUL.
+* Fix `IPNet(ip:Int, mask:Int)` - it always threw `FieldNotFound`.
+* Fix `IPNet(Str)` throwing `FieldNotFound` instead of `InvalidArgument` on a non-integer mask.
 * Remove the regex `n` flag, it never worked.
 * Fix `assert(Program)` false positives on paths with slashes.
 * `decompile()` going out of sync and related fixes.
