@@ -78,6 +78,7 @@ TEST try NO_SUCH_GLOBAL catch(e:GlobalNotFound) true
 TEST try c_lseek(0, 0, "bad arg") catch(e:InvalidArgument) true
 TEST try compile("xyz(", "something") catch(e:CompileFail) true
 TEST { compile('{ $(echo x > $*a) }', "t") }.assert(CompileFail)
+TEST load(compile("", "empty"), "empty")() == null
 TEST try 1(2, 3) catch(e:DontKnowHowToCall) true
 TEST type T; try echo(T(), T()) catch(e:MethodNotFound) true
 TEST try F f() f(); try f() catch(e:StackDepthFail) true

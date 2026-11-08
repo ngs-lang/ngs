@@ -916,13 +916,14 @@ METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 	// printf("PT 1 %p\n", OBJ_DATA_PTR(argv[0]));
 
 	if(OBJ_LEN(argv[0]) == 0) {
-		VALUE exc;
-		exc = make_normal_type_instance(vm->CompileFail);
-		set_normal_type_instance_field(exc, make_string("message"), make_string("Empty string was passed as input to compile(). Trying to run an empty file?"));
-		THROW_EXCEPTION_INSTANCE(exc);
+		// Empty source is an empty program.
+		// fmemopen() with size 0 fails on macOS (EINVAL), so read a 1-byte buffer and consume its byte.
+		static char empty_source[1] = "";
+		yyctx.input_file = fmemopen(empty_source, 1, "r");
+		getc(yyctx.input_file);
+	} else {
+		yyctx.input_file = fmemopen(OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]), "r");
 	}
-
-	yyctx.input_file = fmemopen(OBJ_DATA_PTR(argv[0]), OBJ_LEN(argv[0]), "r");
 	parse_ok = yyparse(&yyctx);
 	if(!parse_ok) {
 		VALUE exc;

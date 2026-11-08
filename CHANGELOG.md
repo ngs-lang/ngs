@@ -60,6 +60,7 @@
 * Fix `switch`/`cond`/`match` with more than 16 arms aborting the compiler
 * Fix `$*` as a redirect target (e.g. `$(echo x > $*a)`) aborting the compiler. It is now a syntax error.
 * Fix `Arr(ArrLike)` returning a copy instead of the underlying array
+* Empty source (`compile("")`, an empty file) is now an empty program, not `CompileFail`
 * Fix `return`, `break` and `continue` inside method call arguments, named arguments, array and hash literals, assignments, string interpolation and `switch` arm values corrupting the stack
 * Fix `MatchSuccess` from a `RegExp` match dropping trailing capture groups that did not participate. They are now `null` in `matches` (and present in `positions`), like leading and middle ones. `matches`/`positions` length now always equals the pattern's group count + 1, which also affects `get(MatchSuccess, idx, dflt)` (now `null`, not `dflt`, for such a group) and positional captures after a `RegExp` in composite patterns.
 * Fix code constructs at the top level of a file (commands syntax).
