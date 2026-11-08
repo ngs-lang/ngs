@@ -43,7 +43,7 @@ F main(filters:Arr, allreg:Bool=false, j:Bool=false, c:Str=null, out_lines:Int=5
 			m = arg ~ /^([a-z]{2}-[a-z]+-[0-9]+)([a-z])?$/ {
 				# region or az
 				regions.dflt(m[0], {})
-				if m.matches.len() == 3 {
+				if m[2] != null {
 					regions[m[0]][m[1]] = true
 					throw InvalidArgument("Availability zones filtering is not supported yet")
 				}

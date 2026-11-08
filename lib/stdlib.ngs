@@ -8026,7 +8026,7 @@ F ~(s:Str, r:RegExp, offset:Int=0, options:Int=0) {
 		})
 		r
 	)
-	ret.named = r.names.mapv(F(capture_num) try ret.matches[capture_num])
+	ret.named = r.names.mapv(F(capture_num) ret.matches[capture_num])
 	ret.positions = result.map(2, NumRange)
 	ret.whole = ret.matches[0]
 	ret.before = s[0..result[0]]
@@ -8036,6 +8036,9 @@ F ~(s:Str, r:RegExp, offset:Int=0, options:Int=0) {
 
 TEST m = "xabcy" ~ /a(.)c/; m.matches == ["abc", "b"] and m.before == 'x' and m.after == 'y' and m.whole == 'abc'
 TEST m = "xAbcy" ~ /a(.)c/; m is MatchFailure
+TEST m = "5" ~ /^(\d+)(?:-(\w+))?$/; m.matches == ["5", "5", null] and m[2] == null and m.positions.len() == 3
+TEST m = "5" ~ /^(?P<num>\d+)(?:-(?P<suffix>\w+))?$/; m.matches == ["5", "5", null] and m.named == {"num": "5", "suffix": null}
+TEST m = "a" ~ /a|(b)|(c)/; m.matches == ["a", null, null] and m.positions.len() == 3
 
 doc Find all non-overlapping matches of regular expression in a string.
 doc %RET - if collect_unmatched - Arr with each element being MatchSuccess or Str, if not collect_unmatched - Arr of MatchSuccess

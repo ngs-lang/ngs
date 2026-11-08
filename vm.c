@@ -1854,6 +1854,7 @@ METHOD_RESULT native_c_pcre2_match METHOD_PARAMS {
 
 	int rc;
 	int i;
+	uint32_t capture_count;
 	PCRE2_SIZE *ovector;
 	pcre2_match_data *match_data;
 
@@ -1874,11 +1875,14 @@ METHOD_RESULT native_c_pcre2_match METHOD_PARAMS {
 		METHOD_RETURN(MAKE_INT(rc));
 	}
 
+	// rc is one more than the highest group that participated. Size by the pattern's group count so that
+	// trailing groups which did not participate are present (as -1) too.
+	(void)pcre2_pattern_info(REGEXP_OBJECT_RE(argv[0]), PCRE2_INFO_CAPTURECOUNT, &capture_count);
 	ovector = pcre2_get_ovector_pointer(match_data);
-	*result = make_array(rc*2);
-	for(i=0; i < rc * 2; i++) {
-		// PCRE2_UNSET -> -1, PCRE1 compatibility.
-		int offset = (ovector[i] == PCRE2_UNSET) ? -1 : (int) ovector[i];
+	*result = make_array((capture_count + 1) * 2);
+	for(i=0; i < (int) (capture_count + 1) * 2; i++) {
+		// PCRE2_UNSET -> -1, PCRE1 compatibility. Groups at or beyond rc did not participate.
+		int offset = (i >= rc * 2 || ovector[i] == PCRE2_UNSET) ? -1 : (int) ovector[i];
 		ARRAY_ITEMS(*result)[i] = MAKE_INT(offset);
 	}
 	pcre2_match_data_free(match_data);
