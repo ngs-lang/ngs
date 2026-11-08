@@ -1928,7 +1928,7 @@ command-option =
 	)
 
 command-redirect =
-	rfd:redir-fd rm:redir-marker inline_space? dst:command-word {
+	rfd:redir-fd rm:redir-marker inline_space? !"$*" dst:command-word {
 		MAKE_NODE(ret, REDIR_NODE);
 		append_ast_node_child(ret, rfd);
 		append_ast_node_child(ret, rm);
