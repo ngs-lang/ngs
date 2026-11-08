@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include <dlfcn.h>
 #include <inttypes.h>
 #include <math.h>
@@ -457,14 +458,28 @@ METHOD_RESULT native_Int_str_int EXT_METHOD_PARAMS {
     long long r;
     nptr = obj_to_cstring(argv[0]);
     // https://en.cppreference.com/w/c/string/byte/strtol
+    errno = 0;
     r = strtoll(nptr, &endptr, GET_INT(argv[1]));
+    // Trailing whitespace is accepted, as strtoll() accepts leading whitespace
+    if(endptr != nptr) {
+        while(isspace((unsigned char) *endptr)) {
+            endptr++;
+        }
+    }
     if (
             nptr == endptr ||
-            endptr - nptr < OBJ_LEN(argv[0]) ||
-            ((r == LONG_MAX || r == LONG_MIN || r == LLONG_MAX || r == LLONG_MIN) && errno == ERANGE)) {
+            endptr - nptr < OBJ_LEN(argv[0])) {
         VALUE e;
         e = make_normal_type_instance(vm->InvalidArgument);
         set_normal_type_instance_field(e, make_string("message"), make_string("Could not convert given string to integer."));
+        THROW_EXCEPTION_INSTANCE(e);
+    }
+    if((errno == ERANGE) || (r > NGS_INT_MAX) || (r < NGS_INT_MIN)) {
+        VALUE e;
+        e = make_normal_type_instance(vm->InvalidArgument);
+        set_normal_type_instance_field(e, make_string("message"), make_string("Could not convert given string to integer: out of supported range."));
+        set_normal_type_instance_field(e, make_string("min"), NGS_INT_MIN_VALUE);
+        set_normal_type_instance_field(e, make_string("max"), NGS_INT_MAX_VALUE);
         THROW_EXCEPTION_INSTANCE(e);
     }
     METHOD_RETURN(MAKE_INT(r));

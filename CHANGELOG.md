@@ -66,6 +66,10 @@
 * Fix code constructs at the top level of a file (commands syntax).
 * Fix `$*NAME` in commands (and `$**NAME` in `%{...}`) syntax
 * Fix huge `Int` indexes wrapping instead of throwing (`[](Arr, Int)`, `ord()` etc.)
+* Fix `Int(s:Str)` silently wrapping numbers outside `INT_MIN`..`INT_MAX`; it now throws `InvalidArgument`
+* `Int(s:Str)` now accepts trailing whitespace
+* Fix `Real(s:Str)` with a negative number and a fraction (`Real("-1.5")` was `-0.5`, `Real("-0.5")` was `0.5`)
+* `Real(s:Str)` now accepts surrounding whitespace and rejects a sign or whitespace after the dot (`Real("1.-5")`, `Real("1. 5")`)
 * Fix and improve documentation
 * Document `cd:` and `ok_sig:` command options
 * Fix `ok_sig:` command option failing commands that exit normally, including with exit code 0

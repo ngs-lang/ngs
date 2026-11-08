@@ -2543,18 +2543,28 @@ section "Real" {
 	# TODO: something more efficient
 	doc Convert a string to real (floating) number, inefficiently
 	doc %RET - Real
+	doc Surrounding whitespace is ignored.
 	doc %EX - Real("1.1")  # 1.1
 	F Real(s:Str) {
-		parts = s.split('.')
-		parts.len() == 1 returns Real(Int(parts[0]))
-		parts.len() != 2 throws InvalidArgument("Invalid argument ${s}")
-		l = parts[1].len()
-		frac = Real(Int(parts[1]))
+		m = s ~ /^\s*([-+]?[0-9]+)(?:\.([0-9]+))?\s*\z/
+		not(m) throws InvalidArgument("Invalid argument ${s}")
+		ret = Real(Int(m.matches[1]))
+		m.matches[2] is Null returns ret
+		l = m.matches[2].len()
+		frac = Real(Int(m.matches[2]))
 		for(i;l) frac = frac / 10.0
-		Real(Int(parts[0])) + frac
+		# The sign applies to the fraction too: -1.5 is -1 - 0.5
+		m.matches[1].starts_with('-') returns ret - frac
+		ret + frac
 	}
 
 	TEST Real('1.1') == 1.1
+	TEST Real(" 1.5 ") == 1.5
+	TEST Real("2") == 2.0
+	TEST Real("-1.5") == -1.5
+	TEST Real("-0.5") == -0.5
+	TEST { Real("1 .5") }.assert(InvalidArgument)
+	TEST { Real("1.-5") }.assert(InvalidArgument)
 
 	doc Convert Real into JSON compatible data structure - number
 	F JsonData(r:Real) r
@@ -4909,6 +4919,7 @@ doc %RET - i
 F Int(i:Int) i
 
 doc Convert to Int.
+doc Surrounding whitespace is ignored.
 doc Throws InvalidArgument if the number in s is not well-formatted.
 doc %RET - Int
 doc %EX - Int(" 100 ")  # 100
@@ -4927,6 +4938,8 @@ TEST { Int("100x") }.assert(InvalidArgument)
 TEST { Int(" XX") }.assert(InvalidArgument)
 TEST Int(" XX", 36) == 1221
 TEST { Int("9" * 1000) }.assert(InvalidArgument)
+TEST Int(" 100 ") == 100
+TEST { Int("100 x") }.assert(InvalidArgument)
 
 doc Convert Bool to int.
 doc %RET - Int
