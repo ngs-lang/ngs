@@ -14,6 +14,6 @@ if ! $SED --version | grep -iq 'GNU sed';then
 	exit 2
 fi
 
-$SED -n '/^typedef/p; /^struct/,/^$/p; /define YY_MAX_LINES/p;'
+$SED -n '/^typedef/p; /^struct/,/^$/p;'
 echo 'int yyparse(yycontext *yyctx);'
 echo 'yycontext * yyrelease(yycontext *yyctx);'

@@ -156,6 +156,8 @@ int main(int argc, char **argv)
 	yyctx.fail_pos = -1;
 	yyctx.fail_rule = "(unknown)";
 	yyctx.lines = 0;
+	yyctx.lines_allocated = 1024;
+	yyctx.lines_postions = NGS_MALLOC_ATOMIC(yyctx.lines_allocated * sizeof(int));
 	yyctx.lines_postions[0] = 0;
 	yyctx.input_file = NULL;
 	bootstrap_file_name = find_bootstrap_file();

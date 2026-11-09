@@ -925,6 +925,8 @@ METHOD_RESULT native_compile_str_str EXT_METHOD_PARAMS {
 	yyctx.fail_pos = -1;
 	yyctx.fail_rule = "(unknown)";
 	yyctx.lines = 0;
+	yyctx.lines_allocated = 1024;
+	yyctx.lines_postions = NGS_MALLOC_ATOMIC(yyctx.lines_allocated * sizeof(int));
 	yyctx.lines_postions[0] = 0;
 	// printf("PT 1 %p\n", OBJ_DATA_PTR(argv[0]));
 

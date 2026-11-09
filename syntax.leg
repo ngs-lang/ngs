@@ -14,8 +14,6 @@
 
 #define YY_CTX_LOCAL 1
 
-#define YY_MAX_LINES (10000)
-
 // TODO: use read()
 #define YY_INPUT(yy, buf, result, max_size)		\
   { \
@@ -27,7 +25,10 @@
 		yy->seq_pos++; \
 		if(yyc == '\n') { \
 			yy->lines++; \
-			assert(yy->lines < YY_MAX_LINES); \
+			if(yy->lines >= yy->lines_allocated) { \
+				yy->lines_allocated *= 2; \
+				yy->lines_postions = NGS_REALLOC(yy->lines_postions, yy->lines_allocated * sizeof(int)); \
+			} \
 			yy->lines_postions[yy->lines] = yy->seq_pos; \
 		} \
 		yyprintf((stderr, "<%c>", yyc)); \

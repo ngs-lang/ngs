@@ -75,6 +75,7 @@
 * Fix `ok_sig:` command option failing commands that exit normally, including with exit code 0
 * Document `null` range end in `[]` and `[]=` with `NumRange`, `null` range start/end with `PredRange`
 * Fix `encode_base64()` truncating its input at the first NUL byte
+* Unhardcode 10000 lines limit for source files
 
 ### Breaking changes
 * Parameter defaults are now instantiated per call through `instantiate_param_dflt(DEFAULT_FROM_DEFINITION)`, which can throw `MethodNotFound`.

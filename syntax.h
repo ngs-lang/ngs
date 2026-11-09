@@ -8,7 +8,7 @@ typedef struct ast_node_ll {
 #define YY_CTX_MEMBERS \
 	int fail_pos, seq_pos; \
 	char *fail_rule; \
-	int lines, lines_postions[YY_MAX_LINES]; \
+	int lines, lines_allocated, *lines_postions; \
 	FILE *input_file; \
 	AST_NODE_TYPE_LL *nodes_for_type_change; \
 	char *source_file_name;
