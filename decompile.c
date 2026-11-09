@@ -76,4 +76,5 @@ void decompile(const char *buf, const size_t start, const size_t end) {
 			printf("DECOMPILE [%04zu] %s%s\n", orig_idx, opcodes_names[opcode], info_buf);
 		}
 	}
+	fflush(stdout);
 }
