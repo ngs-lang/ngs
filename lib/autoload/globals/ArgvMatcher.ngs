@@ -32,7 +32,6 @@ ns {
 	# --- "~" matcher ---
 
 	# TODO: *args, **kwargs
-	# TODO: replace '-' in argv parameters names with '_' when matching
 	doc Please do not use directly!
 	doc Tries to match command line arguments with closure parameters.
 	doc argv - Command line arguments, typically ARGV
@@ -96,6 +95,8 @@ ns {
 				if (negated = param_name ~ NEG_PFX) {
 					param_name = negated.after
 				}
+
+				param_name = param_name.replace('-', '_')
 
 				if param_name not in mp {
 					if mp.hash_splat() {
@@ -182,4 +183,6 @@ ns {
 	TEST (["A", "C", "D", "--b", "B"] ~ ArgvMatcher("positionals", "a") do F(a,b) 7).args == %[%[A C D] B]
 	TEST ((["A", "C", "D", "--b", "B"] ~ ArgvMatcher("positionals", "a") do F(a,b=null) 7) =~ {"args": [%[A C D]], "kwargs": %{b B}})
 	TEST ArgvMatcher; (["1", "1.0"] ~ F(i:Int, r:Real) 7).args == %[1 1.0]
+	TEST ArgvMatcher; (["--a-b"] ~ F(a_b:Bool=false) 7).kwargs == {"a_b": true}
+	TEST ArgvMatcher; (["--a-b", "X"] ~ F(**kw) 7).kwargs == {"a_b": "X"}
 }
