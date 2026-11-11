@@ -7411,6 +7411,10 @@ section "DecodeHints" {
 	# Should simplify: guard (try hints.process.command.argv[0] == 'aws') or (try hints.process.command.options.decode == 'aws')
 
 	type DecodeHints(HashLike)
+
+	doc A value that is not a commands pipeline, process or DecodeHints does not match a commands pipeline pattern.
+	F =~(x, cp:CommandsPipeline, _mc:MatchContext) false
+
 	F =~(x:DecodeHints, cp:CommandsPipeline, mc:MatchContext) {
 		not(x =~ {'process': Process}) returns false
 		not(cp.commands.len() == 1) returns false  # should throw - unsupported pattern
@@ -7430,6 +7434,10 @@ section "DecodeHints" {
 			'options': c.options
 		}, mc)
 	}
+
+	doc Match commands pipeline command by command: same number of commands, each matched as in =~(Command, Command).
+	doc Pipes, redirects and pipeline options (e.g. &) are not compared.
+	F =~(x:CommandsPipeline, cp:CommandsPipeline, mc:MatchContext) (=~)(x, {'commands': cp.commands}, mc)
 
 	doc Match process based on argv and options
 	F =~(x:Process, cp:CommandsPipeline, mc:MatchContext) (=~)(DecodeHints({'process': x}), cp, mc)

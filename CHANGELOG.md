@@ -36,6 +36,7 @@
 * Add `URI`, `URL`, `URN`, `URLPath`, `QueryParams`
 * Add `in(IPNet, IPNet)` - check whether a subnet is within another subnet
 * Add `in(IPNet, Arr)` - check whether a subnet is within one of the given subnets
+* Add `=~(CommandsPipeline, CommandsPipeline)`
 
 ### Fixes and improvements
 * `retry()` sleeps in-process instead of running external `sleep`
