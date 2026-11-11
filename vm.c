@@ -1033,6 +1033,22 @@ METHOD_RESULT native_c_gettimeofday METHOD_PARAMS {
 	METHOD_RETURN(ret);
 }
 
+METHOD_RESULT native_c_nanosleep METHOD_PARAMS {
+	struct timespec req, rem;
+	int status;
+	VALUE ret;
+	req.tv_sec = GET_INT(argv[0]);
+	req.tv_nsec = GET_INT(argv[1]);
+	rem.tv_sec = 0;
+	rem.tv_nsec = 0;
+	status = nanosleep(&req, &rem);
+	ret = make_array(3);
+	ARRAY_ITEMS(ret)[0] = MAKE_INT(status);
+	ARRAY_ITEMS(ret)[1] = MAKE_INT(rem.tv_sec);
+	ARRAY_ITEMS(ret)[2] = MAKE_INT(rem.tv_nsec);
+	METHOD_RETURN(ret);
+}
+
 #define ELT(value) *p = MAKE_INT(value); p++;
 METHOD_RESULT native_c_gmtime EXT_METHOD_PARAMS {
 		struct tm t;
@@ -3515,6 +3531,10 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_gettimeofday",     &native_c_gettimeofday,         0);
 	_doc(vm, "", "Wraps GETTIMEOFDAY(2).");
 	_doc(vm, "%RET", "Arr[Int] - [tv_sec, tv_usec]");
+
+	register_global_func(vm, 0, "c_nanosleep",     &native_c_nanosleep,         2, "tv_sec", vm->Int, "tv_nsec", vm->Int);
+	_doc(vm, "", "Wraps NANOSLEEP(2).");
+	_doc(vm, "%RET", "Arr[Int] - [status, rem_tv_sec, rem_tv_nsec]. On EINTR, rem_tv_sec and rem_tv_nsec hold the unslept remainder.");
 
 	// TODO: check for errors, probably wrap in stdlib.
 	register_global_func(vm, 0, "c_time",     &native_c_time,         0);

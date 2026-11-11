@@ -8556,6 +8556,7 @@ block _ {
 
 type Time
 type TimeFail(CError)
+type SleepFail(CError)
 
 TIME_FORMAT = ENV.get('NGS_TIME_FORMAT', '%F %T %Z')
 
@@ -8565,6 +8566,39 @@ F time() {
 	ret = c_time()
 	ret == -1 throws TimeFail("Failed to get time")
 	ret
+}
+
+doc Sleep for the given seconds and nanoseconds. Uses NANOSLEEP(2). When interrupted by a signal, sleeps for the remainder.
+doc Throws InvalidArgument if sec is negative or nsec is not in 0..999999999.
+doc %RET - null
+doc %EX - sleep(1, 500000000)  # 1.5 seconds
+F sleep(sec:Int, nsec:Int) {
+	(sec < 0 or nsec < 0 or nsec > 999999999) throws InvalidArgument("sleep() - sec must be non-negative and nsec in 0..999999999").set(sec=sec, nsec=nsec)
+	rem_sec = sec
+	rem_nsec = nsec
+	while true {
+		r = c_nanosleep(rem_sec, rem_nsec)
+		r[0] == 0 returns null
+		c_errno() != C_EINTR throws SleepFail("Failed to sleep").set(sec=sec, nsec=nsec)
+		rem_sec = r[1]
+		rem_nsec = r[2]
+	}
+}
+
+doc Sleep for the given number of seconds. Uses NANOSLEEP(2). When interrupted by a signal, sleeps for the remainder.
+doc Throws InvalidArgument if seconds is negative.
+doc %RET - null
+doc %EX - sleep(2)
+F sleep(seconds:Int) sleep(seconds, 0)
+
+doc Sleep for the given number of seconds, including the fractional part. Uses NANOSLEEP(2). When interrupted by a signal, sleeps for the remainder.
+doc Throws InvalidArgument if seconds is negative or NaN.
+doc %RET - null
+doc %EX - sleep(0.5)
+F sleep(seconds:Real) {
+	not(seconds >= 0.0) throws InvalidArgument("sleep() - seconds must be a non-negative number").set(seconds=seconds)
+	sec = Int(seconds)
+	sleep(sec, Int((seconds - Real(sec)) * 1000000000.0))
 }
 
 # TODO: handle errors
@@ -8680,6 +8714,10 @@ section "Duration" {
 	F +(d1:Duration, d2:Duration) Duration(d1.seconds + d2.seconds)
 	F -(d1:Duration, d2:Duration) Duration(d1.seconds - d2.seconds)
 
+	doc Sleep for the given Duration
+	doc %RET - null
+	F sleep(d:Duration) sleep(d.seconds)
+
 }
 
 # === Random =====================================
@@ -8742,7 +8780,11 @@ F rand(r:NumRange) {
 	rand(points) + r.start + if r.include_start then 0 else r.step
 }
 
-section "retry() and friends" {
+section "retry() and friends" block _ {
+	global RetryFail, RetryBodyMissing, RetryAssertFail, retry, retry_assert
+
+	# retry() has a parameter named sleep
+	global_sleep = sleep
 
 	doc Represents failure on all retries
 	type RetryFail(Error)
@@ -8797,7 +8839,7 @@ section "retry() and friends" {
 			if(i < times - 1) {
 				s = sleep_iter.next()
 				logger("$title Sleeping ${s} seconds")
-				$(sleep "$s")
+				global_sleep(s)
 			}
 		}
 		logger("$title Failure")

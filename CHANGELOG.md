@@ -24,6 +24,7 @@
 * Add `Holder` - a mutable container
 * Add `get(Holder)`
 * Add `get_and_update(Holder, cb)`
+* Add `sleep(Int)`, `sleep(Real)`, `sleep(Int, Int)`, `sleep(Duration)` and `c_nanosleep(tv_sec, tv_nsec)`
 * Add `intersect(Set, Set)` and `intersect(Arr, Arr)` - intersection
 * Add `validate(val, param:Str, pattern)` - for argument checking
 * Add `validate(a:Hash, params_patterns:Hash)` - for checking multiple arguments, typically `args()`
@@ -37,6 +38,7 @@
 * Add `in(IPNet, Arr)` - check whether a subnet is within one of the given subnets
 
 ### Fixes and improvements
+* `retry()` sleeps in-process instead of running external `sleep`
 * Fix `for(i;n)` and `for(init;cond;incr)` loops over 32 KB of bytecode aborting the compiler
 * Add `peek(RangeIter)` - fixes `skip(pattern)` on `RangeIter`
 * Fix `Str(HashIter)` always showing index 0
