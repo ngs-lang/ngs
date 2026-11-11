@@ -561,7 +561,8 @@ inplace-assignment-op = <[-+*/%]> {
 	$$ = ret;
 }
 
-chain-item = e:identifier
+chain-item = (
+		e:identifier
 		| e:array-literal
 		| e:imm-array-literal
 		| e:number
@@ -571,7 +572,7 @@ chain-item = e:identifier
 		| e:imm-hash-literal
 		| e:abc-function-literal
 		| e:subshell
-abc-function-literal {
+	) {
 	$$ = e;
 	CAPTURE_LOCATION($$)
 };
