@@ -26,6 +26,7 @@
 * Add `get_and_update(Holder, cb)`
 * Add `sleep(Int)`, `sleep(Real)`, `sleep(Int, Int)`, `sleep(Duration)` and `c_nanosleep(tv_sec, tv_nsec)`
 * Add `c_waitpid(pid, options)` and `C_WNOHANG`
+* Add `c_waitid(idtype, id, options)`, `C_P_*`, `C_WEXITED`, `C_WSTOPPED`, `C_WCONTINUED`, `C_WNOWAIT`, `C_CLD_*`
 * Add `intersect(Set, Set)` and `intersect(Arr, Arr)` - intersection
 * Add `validate(val, param:Str, pattern)` - for argument checking
 * Add `validate(a:Hash, params_patterns:Hash)` - for checking multiple arguments, typically `args()`

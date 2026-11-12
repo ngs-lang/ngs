@@ -1253,6 +1253,26 @@ METHOD_RESULT native_c_waitpid METHOD_PARAMS {
 	METHOD_RETURN(ret);
 }
 
+#define SI_FIELD(name) set_hash_key(info, make_string(#name), MAKE_INT(si.name))
+METHOD_RESULT native_c_waitid METHOD_PARAMS {
+	VALUE ret, info;
+	int status;
+	siginfo_t si;
+	memset(&si, 0, sizeof(si));
+	status = waitid(GET_INT(argv[0]), GET_INT(argv[1]), &si, GET_INT(argv[2]));
+	info = make_hash(5);
+	SI_FIELD(si_pid);
+	SI_FIELD(si_uid);
+	SI_FIELD(si_signo);
+	SI_FIELD(si_status);
+	SI_FIELD(si_code);
+	ret = make_array(2);
+	ARRAY_ITEMS(ret)[0] = MAKE_INT(status);
+	ARRAY_ITEMS(ret)[1] = info;
+	METHOD_RETURN(ret);
+}
+#undef SI_FIELD
+
 // TODO: dedup native_get_field_bt_str / native_get_field_nt_str
 METHOD_RESULT native_get_field_bt_str EXT_METHOD_PARAMS {
 	VALUE exc;
@@ -3260,6 +3280,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	register_global_func(vm, 0, "c_waitpid",&native_c_waitpid,         2, "pid",      vm->Int, "options", vm->Int);
 	_doc(vm, "", "Call WAITPID(2)");
 	_doc(vm, "%RET", "Array with 2 items: waitpid() return value (0 with C_WNOHANG when no child changed state, -1 on error), status");
+	register_global_func(vm, 0, "c_waitid", &native_c_waitid,          3, "idtype",   vm->Int, "id", vm->Int, "options", vm->Int);
+	_doc(vm, "", "Call WAITID(2)");
+	_doc(vm, "%RET", "Array with 2 items: waitid() return value (0 on success, -1 on error), Hash with keys: si_pid (0 with C_WNOHANG when no child changed state), si_uid (not filled on macOS), si_signo, si_status, si_code");
 	register_global_func(vm, 0, "c_execve", &native_c_execve,          3, "filename", vm->Str, "argv", vm->Arr, "envp", vm->Arr);
 	_doc(vm, "", "Call EXECVE(2)");
 	register_global_func(vm, 0, "C_WEXITSTATUS", &native_C_WEXITSTATUS,1, "status",   vm->Int);
@@ -3773,6 +3796,11 @@ void vm_init(VM *vm, int argc, char **argv) {
 
 	// --- man 2 waitpid ---
 	E(WNOHANG);
+
+	// --- man 2 waitid ---
+	E(P_PID); E(P_PGID); E(P_ALL);
+	E(WEXITED); E(WSTOPPED); E(WCONTINUED); E(WNOWAIT);
+	E(CLD_EXITED); E(CLD_KILLED); E(CLD_DUMPED); E(CLD_TRAPPED); E(CLD_STOPPED); E(CLD_CONTINUED);
 
 	// --- pthread ---
 	E(PTHREAD_MUTEX_RECURSIVE);
