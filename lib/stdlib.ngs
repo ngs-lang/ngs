@@ -2766,6 +2766,10 @@ section "Lock and friends" {
 
 	TEST Lock().acquire(F() 1) == 1
 
+	doc Defined as a === b
+	doc %RET - Bool
+	F ==(a:Lock, b:Lock) a === b
+
 	doc Initialize Lock. Creates and initializes PTHREAD_MUTEX_RECURSIVE pthread_mutex.
 	F init(l:ReentrantLock) {
 		l.lock_attr = c_pthread_mutexattr_t()

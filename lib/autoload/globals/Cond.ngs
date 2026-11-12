@@ -15,6 +15,10 @@ F init(c:Cond, name:Str='', lock:Lock=null) {
 doc String representation of Cond
 F Str(c:Cond) "<${c.Type().name}${' name=' +? c.name}>"
 
+doc Defined as a === b
+doc %RET - Bool
+F ==(a:Cond, b:Cond) a === b
+
 doc Wait for condition
 doc check_condition - when returns true, cb is executed
 doc cb - callback to be executed when c is signaled with notify() or notify_all() and check_condition returns true

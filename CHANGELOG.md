@@ -81,6 +81,7 @@
 * Fix `encode_base64()` truncating its input at the first NUL byte
 * Unhardcode 10000 lines limit for source files
 * Support `--dashed-command-line-switches`
+* Fix `==(Lock, Lock)` and `==(Cond, Cond)`
 
 ### Breaking changes
 * Parameter defaults are now instantiated per call through `instantiate_param_dflt(DEFAULT_FROM_DEFINITION)`, which can throw `MethodNotFound`.
