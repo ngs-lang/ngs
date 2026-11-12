@@ -1245,8 +1245,8 @@ METHOD_RESULT native_c_fork METHOD_PARAMS {
 METHOD_RESULT native_c_waitpid METHOD_PARAMS {
 	VALUE ret;
 	pid_t pid;
-	int status;
-	pid = waitpid(GET_INT(argv[0]), &status, 0);
+	int status = 0;
+	pid = waitpid(GET_INT(argv[0]), &status, GET_INT(argv[1]));
 	ret = make_array(2);
 	ARRAY_ITEMS(ret)[0] = MAKE_INT(pid);
 	ARRAY_ITEMS(ret)[1] = MAKE_INT(status);
@@ -3257,8 +3257,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	_doc(vm, "", "Call PIPE(2)");
 	_doc(vm, "%RET", "Array with 3 items: error code, reading end file descriptor, writing end file descriptor");
 
-	register_global_func(vm, 0, "c_waitpid",&native_c_waitpid,         1, "pid",      vm->Int);
+	register_global_func(vm, 0, "c_waitpid",&native_c_waitpid,         2, "pid",      vm->Int, "options", vm->Int);
 	_doc(vm, "", "Call WAITPID(2)");
+	_doc(vm, "%RET", "Array with 2 items: waitpid() return value (0 with C_WNOHANG when no child changed state, -1 on error), status");
 	register_global_func(vm, 0, "c_execve", &native_c_execve,          3, "filename", vm->Str, "argv", vm->Arr, "envp", vm->Arr);
 	_doc(vm, "", "Call EXECVE(2)");
 	register_global_func(vm, 0, "C_WEXITSTATUS", &native_C_WEXITSTATUS,1, "status",   vm->Int);
@@ -3769,6 +3770,9 @@ void vm_init(VM *vm, int argc, char **argv) {
 	E(S_ISUID); E(S_ISGID); E(S_ISVTX); E(S_IRWXU); E(S_IRUSR); E(S_IWUSR); E(S_IXUSR); E(S_IRWXG); E(S_IRGRP); E(S_IWGRP);
 	E(S_IXGRP); E(S_IRWXO); E(S_IROTH); E(S_IWOTH); E(S_IXOTH);
 
+
+	// --- man 2 waitpid ---
+	E(WNOHANG);
 
 	// --- pthread ---
 	E(PTHREAD_MUTEX_RECURSIVE);

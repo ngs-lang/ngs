@@ -6846,6 +6846,9 @@ F Bool(pp:ProcessesPipeline) pp.wait().processes.all({A.exit_code == 0})
 
 F finished(p:Process) [p.exit_code, p.exit_signal].any(Int)
 
+doc Same as c_waitpid(pid, 0). For compatibility.
+F c_waitpid(pid:Int) c_waitpid(pid, 0)
+
 doc Wait for a process. Waits for reading and writing threads to finish.
 doc Waits for the process to finish. Checks whether to throw ProcessFail using finished_ok().
 doc %RET - p
