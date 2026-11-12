@@ -5099,10 +5099,10 @@ section "Strings and characters" {
 		parts = 0
 		collector {
 			while (p = pos(s, delim, start)) is not Null {
+				parts == max_parts - 1 breaks
 				collect(s[start..p])
 				start = p + l
 				parts += 1
-				parts == max_parts - 1 breaks
 			}
 			collect(s[start..null])
 		}
@@ -5111,6 +5111,7 @@ section "Strings and characters" {
 	TEST ":a:bc:d:".split(":") == ["", "a", "bc", "d", ""]
 	TEST "bucket_name/dir/file".split("/", 2) == ["bucket_name", "dir/file"]
 	TEST ":a:bc:d:".split("bc") == [":a:", ":d:"]
+	TEST "a/b/c/d".split("/", 1) == ["a/b/c/d"]
 
 	# Candidate to move out of stdlib
 	doc Split the string by delimiter and return the first part
