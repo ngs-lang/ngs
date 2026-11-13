@@ -6907,7 +6907,7 @@ section "finished() and wait()" block _ {
 	TEST pp=$(true &); p=pp.processes[0]; c_waitid(C_P_PID, p.pid, C_WEXITED.bor(C_WNOWAIT)); pp.finished() and (p.exit_code == 0)
 
 	doc Wait for a process. Waits for reading and writing threads to finish.
-	doc Waits for the process to finish. Checks whether to throw ProcessFail using finished_ok().
+	doc Waits for the process to finish. Checks whether to throw ProcessFail using finished_ok(), on every call.
 	doc %RET - p
 	F wait(p:Process) {
 
@@ -6917,46 +6917,47 @@ section "finished() and wait()" block _ {
 		}
 
 		# One thread does the waiting (joins reading/writing threads, reaps); the others wait for it.
+		# Every wait() then reports the outcome (throws ProcessFail if not ok), like a future.
 		waiter = p.exit_cond.wait({ (p.waited) or (not(p.waiting)) }, {
 			p.waited returns false
 			p.waiting = true
 		})
-		not(waiter) returns p
+		if waiter {
+			# TODO: reading/writing threads failure - throw at the end (allowing resources cleanup in this function)
 
-		# TODO: reading/writing threads failure - throw at the end (allowing resources cleanup in this function)
+			F join_threads(which:Str) {
+				threads = p.(which)
+				# Joined at most once, also when joining fails
+				p.(which) = Threads()
+				debug("process", {"[wait] joining ${which}: ${threads}"})
+				results = threads.join()
+				debug("process", {"[wait] joined threads"})
+				first_failure = results.first(Failure, null)
+				first_failure throws ProcessFail('Error in reading/writing thread').set(process=p, cause=first_failure)
+			}
 
-		F join_threads(which:Str) {
-			threads = p.(which)
-			# Joined at most once, also when joining fails
-			p.(which) = Threads()
-			debug("process", {"[wait] joining ${which}: ${threads}"})
-			results = threads.join()
-			debug("process", {"[wait] joined threads"})
-			first_failure = results.first(Failure, null)
-			first_failure throws ProcessFail('Error in reading/writing thread').set(process=p, cause=first_failure)
-		}
-
-		finally(
-			body = {
-				%[reading_threads writing_threads].each(join_threads)
-				if not(p.has_exit_info()) {
-					p.wait_exit()
-				}
-				p.exit_cond.acquire({
+			finally(
+				body = {
+					%[reading_threads writing_threads].each(join_threads)
 					if not(p.has_exit_info()) {
-						p.reap().assert("waitid() reported the exit, waitpid() did not")
+						p.wait_exit()
 					}
-					p.waited = true
-				})
-			}
-			cleanup = {
-				# Also on failure: another wait() then takes over
-				p.exit_cond.acquire({
-					p.waiting = false
-					p.exit_cond.notify_all()
-				})
-			}
-		)
+					p.exit_cond.acquire({
+						if not(p.has_exit_info()) {
+							p.reap().assert("waitid() reported the exit, waitpid() did not")
+						}
+						p.waited = true
+					})
+				}
+				cleanup = {
+					# Also on failure: another wait() then takes over
+					p.exit_cond.acquire({
+						p.waiting = false
+						p.exit_cond.notify_all()
+					})
+				}
+			)
+		}
 
 		finished_ok(p) returns p
 		message = collector/Lines() {
@@ -6973,6 +6974,8 @@ section "finished() and wait()" block _ {
 		}
 		throw ProcessFail(p).set('message', message)
 	}
+
+	TEST p=$(sh -c "exit 3" &).processes[0]; { p.wait() }.assert(ProcessFail); { p.wait() }.assert(ProcessFail)
 
 	# XXX: Must join reader/writer threads!
 	doc Send signal to a Process. Uses KILL(2).

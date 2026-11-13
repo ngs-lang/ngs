@@ -98,6 +98,7 @@
 * Fix `copy(Set)`, `Set + Set` and `inspect(Set)` hardcoding `Set` instead of the value's exact type.
 * `Set + Set` now throws `InvalidArgument` unless both operands are of the same type.
 * A `::` (pipeline) option after a `:` (command) option or after `|` is now a syntax error.
+* `wait(Process)` on a failed process throws `ProcessFail` on every call, not only the first.
 
 ## 2025-04-05 Version 0.2.17
 
