@@ -129,7 +129,7 @@ jobs:
         run: yum -y install tar xz gzip
       - name: Setup Compiler
         run: |
-          yum -y install man ${{ matrix.compiler.package }}
+          yum -y install man ${{ matrix.compiler.package }} util-linux
       - name: Install and Test
         env:
           CC: ${{ matrix.compiler.cc }}
