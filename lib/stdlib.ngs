@@ -6832,6 +6832,9 @@ F init(p:Process, c:Command) p.set(
 	pid = null
 	exit_code = null
 	exit_signal = null
+	waited = false
+	waiting = false
+	exit_cond = Cond("process-exit")
 	outputs = {1:null, 2:null}
 	stdout = null
 	stderr = null
@@ -6850,48 +6853,98 @@ F finished(p:Process) [p.exit_code, p.exit_signal].any(Int)
 doc Same as c_waitpid(pid, 0). For compatibility.
 F c_waitpid(pid:Int) c_waitpid(pid, 0)
 
-doc Wait for a process. Waits for reading and writing threads to finish.
-doc Waits for the process to finish. Checks whether to throw ProcessFail using finished_ok().
-doc %RET - p
-F wait(p:Process) {
+section "wait()" block _ {
+	global wait
 
-	finished(p) returns p
-
-	# TODO: reading/writing threads failure - throw at the end (allowing resources cleanup in this function)
-	p.pid is Null throws InvalidArgument("Can not wait() on Process without PID")
-
-	F join_threads(which:Str) {
-		threads = p.(which)
-		debug("process", {"[wait] joining ${which}: ${threads}"})
-		results = threads.join()
-		debug("process", {"[wait] joined threads"})
-		p.(which) = []
-		first_failure = results.first(Failure, null)
-		first_failure throws ProcessFail('Error in reading/writing thread').set(process=p, cause=first_failure)
+	# Call with p.exit_cond held
+	doc %RET - Bool: whether the process exited
+	F reap(p:Process) {
+		debug("process", "[reap] will waitpid(${p.pid}, C_WNOHANG)")
+		c_waitpid(p.pid, C_WNOHANG).apply(F(pid, status) {
+			pid == -1 throws CError("Failed to c_waitpid()").set(pid=p.pid)
+			debug("process", "[reap] waitpid(${p.pid}, C_WNOHANG) -> ${[pid, status]}")
+			pid == 0 returns false
+			p.exit_code = C_WEXITSTATUS(status)
+			p.exit_signal = C_WTERMSIG(status)
+			true
+		})
 	}
 
-	%[reading_threads writing_threads].each(join_threads)
-
-
-	debug("process", "[wait] will waitpid(${p.pid})")
-	w = c_waitpid(p.pid)
-	debug("process", "[wait] waitpid(${p.pid}) -> ${w}")
-	p.exit_code = C_WEXITSTATUS(w[1])
-	p.exit_signal = C_WTERMSIG(w[1])
-	finished_ok(p) returns p
-	message = collector/Lines() {
-		argv0 = ("'" + (try p.command.argv[0].Str()) + "'")
-		collect("Executing external process ${argv0} failed")
-		collect("Executable was found at ${p.executable}")
-		collect("Command: ${p.command.argv.map(Str).map(escape_bash).join(' ') tor '(unavailable)'}")
-		if p.exit_code is not Null {
-			collect("Command exited with code: ${p.exit_code}")
-		}
-		if p.exit_signal is not Null {
-			collect("Command exited with signal: ${p.exit_signal}")
-		}
+	# Blocks until the process exits. Does not reap it (C_WNOWAIT), so the pid stays reserved.
+	F wait_exit(p:Process) {
+		debug("process", "[wait_exit] will waitid(C_P_PID, ${p.pid}, C_WEXITED | C_WNOWAIT)")
+		c_waitid(C_P_PID, p.pid, C_WEXITED.bor(C_WNOWAIT)).apply(F(status, _info) {
+			status == -1 throws CError("Failed to c_waitid()").set(pid=p.pid)
+		})
 	}
-	throw ProcessFail(p).set('message', message)
+
+	doc Wait for a process. Waits for reading and writing threads to finish.
+	doc Waits for the process to finish. Checks whether to throw ProcessFail using finished_ok().
+	doc %RET - p
+	F wait(p:Process) {
+
+		if p.pid is Null {
+			p.finished() returns p
+			throw InvalidArgument("Can not wait() on Process without PID")
+		}
+
+		# One thread does the waiting (joins reading/writing threads, reaps); the others wait for it.
+		waiter = p.exit_cond.wait({ (p.waited) or (not(p.waiting)) }, {
+			p.waited returns false
+			p.waiting = true
+		})
+		not(waiter) returns p
+
+		# TODO: reading/writing threads failure - throw at the end (allowing resources cleanup in this function)
+
+		F join_threads(which:Str) {
+			threads = p.(which)
+			# Joined at most once, also when joining fails
+			p.(which) = Threads()
+			debug("process", {"[wait] joining ${which}: ${threads}"})
+			results = threads.join()
+			debug("process", {"[wait] joined threads"})
+			first_failure = results.first(Failure, null)
+			first_failure throws ProcessFail('Error in reading/writing thread').set(process=p, cause=first_failure)
+		}
+
+		finally(
+			body = {
+				%[reading_threads writing_threads].each(join_threads)
+				if not(p.finished()) {
+					p.wait_exit()
+				}
+				p.exit_cond.acquire({
+					if not(p.finished()) {
+						p.reap().assert("waitid() reported the exit, waitpid() did not")
+					}
+					p.waited = true
+				})
+			}
+			cleanup = {
+				# Also on failure: another wait() then takes over
+				p.exit_cond.acquire({
+					p.waiting = false
+					p.exit_cond.notify_all()
+				})
+			}
+		)
+
+		finished_ok(p) returns p
+		message = collector/Lines() {
+			argv0 = ("'" + (try p.command.argv[0].Str()) + "'")
+			collect("Executing external process ${argv0} failed")
+			collect("Executable was found at ${p.executable}")
+			collect("Command: ${p.command.argv.map(Str).map(escape_bash).join(' ') tor '(unavailable)'}")
+			if p.exit_code is not Null {
+				collect("Command exited with code: ${p.exit_code}")
+			}
+			if p.exit_signal is not Null {
+				collect("Command exited with signal: ${p.exit_signal}")
+			}
+		}
+		throw ProcessFail(p).set('message', message)
+	}
 }
 
 doc Wait for all processes to finish.
