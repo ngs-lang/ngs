@@ -41,6 +41,7 @@
 * Add `=~(CommandsPipeline, CommandsPipeline)`
 
 ### Fixes and improvements
+* Fix `escape_bash()` losing backslashes; it now single-quotes, without external programs (faster `log:`)
 * Faster compilation of large files
 * `retry()` sleeps in-process instead of running external `sleep`
 * Fix `for(i;n)` and `for(init;cond;incr)` loops over 32 KB of bytecode aborting the compiler

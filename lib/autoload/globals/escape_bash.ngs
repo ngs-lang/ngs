@@ -1,7 +1,17 @@
-doc Escapes s so it could be used as single argument in bash. The method is slow as it uses external program.
+doc Escapes s so it could be used as single argument in bash.
+doc Words of letters, digits and _./:,@+- that are not bash reserved words are returned as is; anything else is single-quoted.
 doc %RET - Str
+doc %EX - escape_bash("ab")  # ab
+doc %EX - escape_bash("a b")  # 'a b'
+doc %EX - escape_bash("a'b")  # 'a'\''b'
 F escape_bash(s:Str) {
-	# Not using external printf because on Mac it doesn't have %q
 	chr(0) in s throws InvalidArgument("escape_bash doesn't work on strings containing the zero character")
-	`echo -n $s | line: bash -c 'IFS= read -d $\'\\0\' s; printf %q "$s"'`
+	# No "=": FOO=bar as the first word is an assignment. Reserved words are special as the first word.
+	if s =~ /^[A-Za-z0-9_.\/:,@+-]+\z/ and s not in %[case coproc do done elif else esac fi for function if in select then until while time] {
+		return s
+	}
+	"'" + s.replace("'", "'\\''") + "'"
 }
+
+TEST ['', "a\\b'c\n"].map(escape_bash) == ["''", "'a\\b'\\''c\n'"]
+TEST ['time', 'FOO=bar'].all(F(s) escape_bash(s) == "'$s'")
