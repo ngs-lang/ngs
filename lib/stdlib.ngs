@@ -6848,13 +6848,13 @@ doc %RET - Bool
 doc %EX - if $(test -f myfile) ... # if runs Bool() on any non-Bool condition expression
 F Bool(pp:ProcessesPipeline) pp.wait().processes.all({A.exit_code == 0})
 
-F finished(p:Process) [p.exit_code, p.exit_signal].any(Int)
-
 doc Same as c_waitpid(pid, 0). For compatibility.
 F c_waitpid(pid:Int) c_waitpid(pid, 0)
 
-section "wait()" block _ {
-	global wait
+section "finished() and wait()" block _ {
+	global finished, wait
+
+	F has_exit_info(p:Process) [p.exit_code, p.exit_signal].any(Int)
 
 	# Call with p.exit_cond held
 	doc %RET - Bool: whether the process exited
@@ -6870,6 +6870,14 @@ section "wait()" block _ {
 		})
 	}
 
+	# Call with p.exit_cond held
+	F exited(p:Process) {
+		p.has_exit_info() returns true
+		# Another thread's wait() waits for the exit with waitid(): reaping here would free the pid it waits on
+		p.waiting returns false
+		p.reap()
+	}
+
 	# Blocks until the process exits. Does not reap it (C_WNOWAIT), so the pid stays reserved.
 	F wait_exit(p:Process) {
 		debug("process", "[wait_exit] will waitid(C_P_PID, ${p.pid}, C_WEXITED | C_WNOWAIT)")
@@ -6878,13 +6886,33 @@ section "wait()" block _ {
 		})
 	}
 
+	doc Check whether the process has exited, without waiting. Records exit_code and exit_signal when it has.
+	doc While another thread's wait() is in progress, returns false until that wait() records the exit.
+	doc %RET - Bool
+	doc %EX - p = $(sleep 1 &).processes[0]
+	doc %EX - finished(p)  # false
+	doc %EX - $(sleep 2)
+	doc %EX - finished(p)  # true
+	F finished(p:Process) {
+		# Check has_exit_info() first because fake processes can have pid null
+		p.has_exit_info() returns true
+		p.pid is Null returns false
+		p.exit_cond.acquire({ p.exited() })
+	}
+
+	doc Check whether all processes of the pipeline have exited, without waiting.
+	doc %RET - Bool
+	F finished(pp:ProcessesPipeline) pp.processes.all(finished)
+
+	TEST pp=$(true &); p=pp.processes[0]; c_waitid(C_P_PID, p.pid, C_WEXITED.bor(C_WNOWAIT)); pp.finished() and (p.exit_code == 0)
+
 	doc Wait for a process. Waits for reading and writing threads to finish.
 	doc Waits for the process to finish. Checks whether to throw ProcessFail using finished_ok().
 	doc %RET - p
 	F wait(p:Process) {
 
 		if p.pid is Null {
-			p.finished() returns p
+			p.has_exit_info() returns p
 			throw InvalidArgument("Can not wait() on Process without PID")
 		}
 
@@ -6911,11 +6939,11 @@ section "wait()" block _ {
 		finally(
 			body = {
 				%[reading_threads writing_threads].each(join_threads)
-				if not(p.finished()) {
+				if not(p.has_exit_info()) {
 					p.wait_exit()
 				}
 				p.exit_cond.acquire({
-					if not(p.finished()) {
+					if not(p.has_exit_info()) {
 						p.reap().assert("waitid() reported the exit, waitpid() did not")
 					}
 					p.waited = true

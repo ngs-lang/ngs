@@ -26,6 +26,7 @@
 * Add `get_and_update(Holder, cb)`
 * Add `sleep(Int)`, `sleep(Real)`, `sleep(Int, Int)`, `sleep(Duration)` and `c_nanosleep(tv_sec, tv_nsec)`
 * Add `c_waitpid(pid, options)` and `C_WNOHANG`
+* Add `finished(ProcessesPipeline)`
 * Add `c_waitid(idtype, id, options)`, `C_P_*`, `C_WEXITED`, `C_WSTOPPED`, `C_WCONTINUED`, `C_WNOWAIT`, `C_CLD_*`
 * Add `intersect(Set, Set)` and `intersect(Arr, Arr)` - intersection
 * Add `validate(val, param:Str, pattern)` - for argument checking
@@ -88,6 +89,7 @@
 * Support `--dashed-command-line-switches`
 * Fix `==(Lock, Lock)` and `==(Cond, Cond)`
 * Fix concurrent `wait(Process)` calls on the same process failing to join its threads
+* Fix `finished(Process)` returning `false` for an exited process until `wait()`
 
 ### Breaking changes
 * Parameter defaults are now instantiated per call through `instantiate_param_dflt(DEFAULT_FROM_DEFINITION)`, which can throw `MethodNotFound`.
