@@ -7305,6 +7305,7 @@ TEST "$(echo -n abc)" == 'abc'
 TEST $(cd:"/" pwd).lines()[0] == '/'
 TEST try { compile('$(log: top_level:: echo hi)', "pipeline-option-after-command-option"); false } catch(e:CompileFail) true
 TEST try { compile('%(echo a | top_level:: cat)', "pipeline-option-after-pipe"); false } catch(e:CompileFail) true
+TEST try { compile("x = 1\ny = 2\n  z = (1 +", "t"); false } catch(e:CompileFail) e.position == {"file": "t", "absolute": 22, "line": 3, "column": 11}
 TEST t=TmpFile(); $(echo -n abc >$t); t.read() == "abc"
 TEST c=%(echo -n aa); `$c` == "aa"
 

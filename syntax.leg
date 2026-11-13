@@ -1987,16 +1987,22 @@ PRINT_AST = "PRINT_AST" space e:expression {
 #undef HANDLE_FAILED_MATCH
 #pragma GCC diagnostic pop
 
-// TODO: more efficient implementation
+// Binary search: lines_postions[0..lines] is ascending (YY_INPUT appends line starts)
 void position_to_line_col(yycontext *yy, int pos, int result[]) {
-	int line;
+	int lo = 0, hi = yy->lines + 1, mid;
 	result[0] = -1;
 	result[1] = -1;
-	for(line=yy->lines; line>=0; line--) {
-		if(yy->lines_postions[line] <= pos) {
-			result[0] = line+1;
-			result[1] = pos-yy->lines_postions[line]+1;
-			return;
+	// lo becomes the number of lines starting at or before pos, which is pos's 1-based line
+	while(lo < hi) {
+		mid = (lo + hi) / 2;
+		if(yy->lines_postions[mid] <= pos) {
+			lo = mid + 1;
+		} else {
+			hi = mid;
 		}
+	}
+	if(lo > 0) {
+		result[0] = lo;
+		result[1] = pos - yy->lines_postions[lo-1] + 1;
 	}
 }
