@@ -90,6 +90,8 @@
 * Fix `==(Lock, Lock)` and `==(Cond, Cond)`
 * Fix concurrent `wait(Process)` calls on the same process failing to join its threads
 * Fix `finished(Process)` returning `false` for an exited process until `wait()`
+* Fix `kill(Process)` and `kill(ProcessesPipeline)` signalling an exited process
+* `kill(ProcessesPipeline)` now returns the pipeline, like `wait(ProcessesPipeline)`
 
 ### Breaking changes
 * Parameter defaults are now instantiated per call through `instantiate_param_dflt(DEFAULT_FROM_DEFINITION)`, which can throw `MethodNotFound`.

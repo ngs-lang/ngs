@@ -6852,11 +6852,11 @@ doc Same as c_waitpid(pid, 0). For compatibility.
 F c_waitpid(pid:Int) c_waitpid(pid, 0)
 
 section "finished() and wait()" block _ {
-	global finished, wait
+	global finished, wait, kill
 
 	F has_exit_info(p:Process) [p.exit_code, p.exit_signal].any(Int)
 
-	# Call with p.exit_cond held
+	# Call with p.exit_cond held, so that kill() does not signal a reaped (and maybe reused) pid
 	doc %RET - Bool: whether the process exited
 	F reap(p:Process) {
 		debug("process", "[reap] will waitpid(${p.pid}, C_WNOHANG)")
@@ -6972,6 +6972,35 @@ section "finished() and wait()" block _ {
 			}
 		}
 		throw ProcessFail(p).set('message', message)
+	}
+
+	# XXX: Must join reader/writer threads!
+	doc Send signal to a Process. Uses KILL(2).
+	doc Throws InvalidArgument if Process does not have "pid".
+	doc Throws KillFail on error.
+	doc Sends nothing if the process has exited: its pid may already belong to another process.
+	doc While another thread's wait() is in progress, signals the process even if it has exited (its pid is not reused until that wait() reaps it).
+	doc sig - Signal to send. Defaults to SIGNALS.TERM
+	doc %RET - unspecified at this time, do not count on it
+	F kill(p:Process, sig:Int=SIGNALS.TERM) {
+		# Check has_exit_info() first because fake processes can have pid null
+		p.has_exit_info() returns
+		p.pid is Null throws InvalidArgument("Can't kill() a process that does not have a pid")
+		# The exit check and the signal are under p.exit_cond, which reaping holds, so the pid is not reaped (and reused) in between
+		p.exit_cond.acquire({
+			p.exited() returns
+			kill(p.pid, sig)
+		})
+	}
+
+	TEST p=$(true &).processes[0]; p.wait(); p.kill(); p.exit_code == 0
+
+	doc Kill all processes in the ProcessesPipeline. Throws InvalidArgument if ProcessesPipeline is not running (yet).
+	doc Skips processes that have exited.
+	doc %RET - pp
+	F kill(pp:ProcessesPipeline, sig:Int=SIGNALS.TERM) {
+		pp.processes.each(kill(X, sig))
+		pp
 	}
 }
 
@@ -7474,22 +7503,6 @@ F kill(pid:Int, sig:Int=SIGNALS.TERM) {
 		A == -1 throws KillFail("Failed to kill pid $pid with signal $sig")
 		A != 0 throws Error("c_kill() did not return 0 or -1")
 	}
-}
-
-# XXX: Must join reader/writer threads!
-doc Send signal to a Process. Uses KILL(2).
-doc Throws InvalidArgument if Process does not have "pid".
-doc Throws KillFail on error.
-doc sig - Signal to send. Defaults to SIGNALS.TERM
-doc %RET - unspecified at this time, do not count on it
-F kill(p:Process, sig:Int=SIGNALS.TERM) {
-	p.pid is Null throws InvalidArgument("Can't kill() a process that does not have a pid")
-	kill(p.pid, sig)
-}
-
-doc Kill all processes in the ProcessesPipeline. Throws InvalidArgument if ProcessesPipeline is not running (yet).
-F kill(pp:ProcessesPipeline, sig:Int=SIGNALS.TERM) {
-	pp.processes.map(kill(X, sig))
 }
 
 TEST counter = 0; p=$(sleep 5&); if p.processes[0].stdout == null counter +=1; p.kill(); try p.wait() catch(e:ProcessFail) true
