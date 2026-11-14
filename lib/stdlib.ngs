@@ -8931,24 +8931,24 @@ section "retry() and friends" block _ {
 	) {
 		guard sleep =~ AnyOf(Num, Iter)  # Can't move to parameters as Iter is not defined at this point
 		sleep_iter = sleep.when(Num, ConstIter)
-		result = null  # otherwise it will be local to try { ... }
 		for(i;times) {
 			n = i + 1
 			progress_cb(n, times)
 			logger("$title Attempt $n out of ${times}")
-			try {
-				result = body()
-			} catch(ra:RetryAssertFail) {
-				guard i < times - 1
-				# Ignoring the assert as long as it's not last iteration
-				logger("$title ${ra.message}")
-			} catch(e:Exception) {
-				logger("$title Exception $e")
-				throw e
+			result = Result(body)
+			if result is Failure {
+				e = result.val
+				if (e is RetryAssertFail) and (i < times - 1) {
+					# Ignoring the assert as long as it's not last iteration
+					logger("$title ${e.message}")
+				} else {
+					logger("$title Exception $e")
+					throw e
+				}
 			}
-			if success_predicate(result) {
+			if result and success_predicate(result.get()) {
 				logger("$title Success")
-				return success_cb(result)
+				return success_cb(result.get())
 			}
 			if(i < times - 1) {
 				s = sleep_iter.next()
@@ -8962,6 +8962,7 @@ section "retry() and friends" block _ {
 
 	TEST t = 0; retry(body={t+=1; false}, fail_cb={"OK"}, times=5, sleep=0) == "OK" and t == 5
 	TEST t = 0; retry(body={t+=1; "OK"}, fail_cb={"NOTOK"}, sleep=0) == "OK" and t == 1
+	TEST t = 0; seen = []; retry(body={t+=1; if t == 1 { retry_assert(false) }; "r$t"}, success_predicate={seen.push(A); true}, times=2, sleep=0) == "r2" and seen == ["r2"]
 
     doc Similar to assert(). Caught and ignored by nearest retry() on all but last retry.
     doc %STATUS - experimental

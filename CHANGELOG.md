@@ -81,6 +81,7 @@
 * `Real(s:Str)` now accepts surrounding whitespace and rejects a sign or whitespace after the dot (`Real("1.-5")`, `Real("1. 5")`)
 * Fix `split(Str, Str, Int)` with `max_parts=1` splitting fully
 * Fix `compile()` output not being reproducible
+* Fix `retry()` running `success_predicate` after a swallowed `RetryAssertFail`
 * Fix and improve documentation
 * Document `cd:` and `ok_sig:` command options
 * Fix `ok_sig:` command option failing commands that exit normally, including with exit code 0
