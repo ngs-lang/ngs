@@ -372,6 +372,7 @@ void compile_main_section(COMPILATION_CONTEXT *ctx, ast_node *node, char **buf, 
 				ctx->source_tracking_entries = NGS_REALLOC(ctx->source_tracking_entries, ctx->source_tracking_entries_allocated * sizeof(source_tracking_entry));
 			}
 			ste = &ctx->source_tracking_entries[ctx->source_tracking_entries_count++];
+			memset(ste, 0, sizeof(*ste)); // Zero the padding: it is written to the bytecode as is
 		}
 		ste->source_file_name_idx = 0; // XXX: currently only one source file per compile() is supported
 		ste->ip = *idx;
